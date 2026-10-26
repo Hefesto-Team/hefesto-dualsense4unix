@@ -786,7 +786,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:233-235` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:924-928`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1332-1334`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:122` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:924-928`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1355-1357`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:122` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: um ajuste acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
@@ -866,9 +866,23 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
   **canais 1-2 = fone/alto-falante, canais 3-4 = os dois motores voice-coil.**
   O jogo toca PCM nos canais traseiros. Em Linux, o perfil precisa ser
   `Analog Surround 4.0` e o node precisa expor FL/FR/RL/RR.
-- ATENÇÃO: **O bit que MATA os haptics:** `valid_flag0` bit1 (`HAPTICS_SELECT`). O
-  SDL o liga em **todo rumble**, com o comentário `// Disable audio haptics`.
-  Quem asserta esse bit troca os VCM de "PCM do jogo" para "rumble emulado".
+- ATENÇÃO: **O bit que MATA os haptics, e que o motor exige:** `valid_flag0` bit1
+  (`HAPTICS_SELECT`). O SDL o liga em **todo rumble**, com o comentário
+  `// Disable audio haptics`. Quem asserta esse bit troca os VCM de "PCM do jogo" para
+  "rumble emulado". **ALTA**, medido no aparelho em 26/10/2026 (cabo e rádio, na mão de quem
+  testou, estímulos alternados, sem dizer o esperado):
+  - **o motor só obedece ao report com o `HAPTICS_SELECT`** (com o `0x04` do `valid_flag2` na
+    v2). O `COMPATIBLE_VIBRATION` sozinho e a forma `0xfc`/`0xc1` do daemon, sem o bit, chegam
+    ao fio e **não vibram**;
+  - **o bit cala o PCM dos canais 3-4 e fica preso** até chegar um report sem `0x01` nem
+    `0x02` (o «leaving emulated rumble bits off» do SDL). O report do kernel que para a
+    vibração (`02 02 00 00`) deixa o controle preso; uma soltura (todos os flags a 0) o solta;
+  - no **rádio** o `0x36` da ponte leva o `common` zerado (~94 quadros/s): cada quadro é uma
+    soltura, e o motor pelo `0x31` não dura um quadro enquanto a ponte está de pé;
+  - a vibração tocada **como áudio** (um seno de 60 Hz nos canais 3-4) se sente nos dois
+    transportes, e só no controle que o recebe.
+  Logo, motor e háptica por áudio não andam juntos pelo report: com a háptica tocando, a
+  vibração do jogo vai como áudio no endpoint e o report sai sem os dois bits.
 - **Por Bluetooth não é áudio, é HID** — palavras do autor do driver:
   *"special HID packets using Bluetooth"*. Corpo TLV, o bloco `0x12` (a tag `0x92`
   no report) para a háptica (64 bytes), CRC-32 semente `0xA2`. PCM de 3000 Hz, 2

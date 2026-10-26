@@ -750,19 +750,10 @@ def _levar_a_haptica_fina(
 ) -> bool:
     """O rumble do pad SEM háptica vai à háptica fina do lugar. True = ela leva.
 
-    ``weak``/``strong`` são o par já escalado pela barra dela; ``cru`` é o pedido
-    do jogo antes dela. A borda e o lado do tiro saem do cru, e a energia, do
-    escalado: a barra potencializa o toque, nunca apaga o tiro.
-
-    NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4, 29/09/2026. Só o pad ``uinput``
-    converte: ele é o pad de todo cartão no modo Xbox (o Xbox 360 vestido), e
-    o do cartão Xbox ou Nintendo no modo DualSense — o jogo não tem canal de
-    háptica nenhum ali, só os dois motores. O pad ``uhid`` é um DualSense para
-    o jogo, e o jogo escolhe sozinho entre o rumble e a háptica dele.
-
-    O pad que não converte manda ZERO ao dono: o tocador que tocava o rumble
-    daquele controle (o pad que acabou de sair do ``uinput``, o rumble fixado
-    pela tela) cala. Sem endereço não há lugar, e nada se pergunta.
+    ``weak``/``strong`` são o par escalado pela barra; ``cru``, o pedido do jogo (a borda e
+    o lado do tiro saem dele). O pad ``uinput`` converte sempre; o ``uhid`` só com a háptica do
+    jogo tocando no controle (o bit do report que acorda o motor a calaria), e anota o rumble
+    (``vivo``) para a volta reaplicá-lo na borda. Quem não converte manda ZERO ao dono.
     """
     if not isinstance(target_uniq, str) or not target_uniq:
         return False
@@ -770,26 +761,41 @@ def _levar_a_haptica_fina(
     levar = getattr(alto_falante, "levar_o_rumble", None)
     if not callable(levar):
         return False
-    converte = getattr(vpad, "backend", None) == "uinput"
+    e_xbox = getattr(vpad, "backend", None) == "uinput"
+    converte = e_xbox or _o_jogo_toca_a_haptica(alto_falante, target_uniq)
     # O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01: a onda do periódico que o jogo pediu.
-    onda = getattr(vpad, "onda_do_periodico", None) if converte else None
+    onda = getattr(vpad, "onda_do_periodico", None) if e_xbox else None
     extra: dict[str, Any] = {"onda": onda} if isinstance(onda, str) else {}
+    vivo = bool(weak or strong) and not e_xbox
+    if vivo:
+        extra["vivo"] = True
     try:
         leva = levar(
             target_uniq,
             weak if converte else 0,
             strong if converte else 0,
-            reaplicar=reaplicar if converte else None,
+            reaplicar=reaplicar if (converte or vivo) else None,
             **extra,
         )
     except Exception as exc:
         logger.debug("haptica_fina_do_rumble_falhou", err=str(exc))
         return False
-    if converte:  # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble vira tiro.
+    if e_xbox:  # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble vira tiro.
         from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import anotar_o_rumble
         fraco_cru, forte_cru = cru if cru is not None else (weak, strong)
         anotar_o_rumble(daemon, target_uniq, fraco_cru, forte_cru, efetivo=(weak, strong))
     return converte and leva is True
+
+
+def _o_jogo_toca_a_haptica(alto_falante: Any, target_uniq: str) -> bool:
+    """A háptica por áudio do jogo toca no endpoint deste controle e chega a ele? Nunca levanta."""
+    pergunta = getattr(alto_falante, "o_jogo_toca_a_haptica_em", None)
+    if not callable(pergunta):
+        return False
+    try:
+        return pergunta(target_uniq) is True
+    except Exception:
+        return False
 
 
 def apply_game_trigger(

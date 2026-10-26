@@ -367,14 +367,14 @@ def test_a_rota_diz_leva_no_rumble_vivo_e_sem_rumble_no_ocioso(
     assert mundo.sub.por_onde_vai_o_rumble(_P1)["porque"] == "sem_rumble_agora"
 
 
-def test_a_rota_diz_que_o_jogo_toca_no_aparelho(mundo: _Mundo) -> None:  # noqa: F811
+def test_a_rota_com_o_jogo_tocando_no_aparelho_segue_a_haptica_fina(mundo: _Mundo) -> None:  # noqa: F811
     controles = _no_cabo_os_quatro(mundo)
     mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_P1))
     mundo.mesa.volta(*controles)
     mundo.rumble(_P1, 100, 200)
     mundo.mesa.volta(*controles)
     assert mundo.sub.por_onde_vai_o_rumble(_P1) == {
-        "rota": "motores_do_hid", "porque": "o_jogo_toca_no_aparelho"}
+        "rota": "haptica_fina", "porque": "leva", "timbre": None}
 
 
 @pytest.mark.parametrize("backend", ["uhid", None])

@@ -64,7 +64,7 @@ série (`core/backend_pydualsense.py:3640`, `flag = bool(aceso)`, e `:275`,
 fixa onde devia piscar, que se lê como *"a PEÇA B não está detectando som"*. O
 único caminho de produção que carrega o nível é
 `PyDualSenseController.set_microphone_led(aceso, *, uniq=)`
-(`core/backend_pydualsense.py:3361`), medido: `0->0, 1->1, 2->2, 3->3`.
+(`core/backend_pydualsense.py:3446`), medido: `0->0, 1->1, 2->2, 3->3`.
 
 **DUAS CADÊNCIAS NUM LAÇO SÓ, e o número tem razão.** A decisão roda a
 `INTERVALO_S` (4 Hz) porque o `2` é atividade de voz e a 1 Hz a luz acompanha o
@@ -580,7 +580,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
 
     **NÃO É `set_mic_led`.** Aquele esmaga em `bool` duas vezes em série e faz
     o `2` e o `3` virarem `1` sem erro e sem log (medido em 03/09/2026,
-    `core/backend_pydualsense.py:3635` e `:275`).
+    `core/backend_pydualsense.py:3658` e `:275`).
 
     `valor is None` é a DEVOLUÇÃO DA POSSE (o bit `0x01` do flag1 cai e o
     kernel volta a escrever a luz na borda do botão); `0` é uma ORDEM

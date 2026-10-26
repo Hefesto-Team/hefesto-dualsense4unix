@@ -606,8 +606,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
     _brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
 
-    #: A háptica por áudio toca neste controle (ponte `0x32` no rádio, laço do cabo): o rumble
-    #: sai sem `HAPTICS_SELECT`. A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01; ver
+    #: A háptica por áudio toca neste controle (ponte `0x36` no rádio, laço do cabo): a vibração
+    #: do jogo vai pelo mesmo caminho, como áudio, e o report não leva `COMPATIBLE_VIBRATION` nem
+    #: `HAPTICS_SELECT`. A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01; ver
     #: :meth:`set_haptica_de_audio`.
     _haptica_de_audio: bool = False
 
@@ -736,6 +737,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self.conType = self.determineConnectionType()
         if self.conType is ConnectionType.ERROR:
             raise Exception("Couldn't determine connection type")
+        self.soltar_o_motor_preso()
         self.ds_thread = True
         self.connected = True
         self.report_thread = threading.Thread(
@@ -743,6 +745,25 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         )
         self.report_thread.start()
         self.states = None
+
+    def soltar_o_motor_preso(self) -> None:
+        """No cabo, escreve a soltura ao abrir o hidraw: um report com todos os flags a 0.
+
+        A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01, item 3. Medido em 26/10/2026: o
+        `HAPTICS_SELECT` que outro processo deixou (o kernel ao parar o rumble com `02 02 00 00`,
+        o `cosmic-osk`) cala o PCM da háptica até chegar um report sem `COMPATIBLE_VIBRATION` e
+        sem `HAPTICS_SELECT`. A soltura não muda estado nenhum do controle (nenhum flag válido) e
+        desfaz o bit preso antes de a volta escrever o primeiro report. No rádio a ponte do `0x36`
+        faz isso a cada quadro, e nada se escreve. Nunca levanta.
+        """
+        if getattr(self, "conType", None) != ConnectionType.USB:
+            return
+        from hefesto_dualsense4unix.core import ds_output_report as rep
+
+        try:
+            self.writeReport(list(rep.build_usb_report(bytearray(rep.COMMON_LEN))))
+        except Exception as exc:
+            logger.debug("soltura_do_motor_preso_falhou", err=str(exc))
 
     def _nome_da_thread(self) -> str:
         """`hefesto-report-hidrawN`: o nó, nunca o endereço do controle."""
@@ -1166,12 +1187,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 self.audio.setMicrophoneLED(bool(aceso))
 
     def set_haptica_de_audio(self, ativa: bool) -> None:
-        """A háptica por áudio passou a tocar (ou parou) NESTE controle
-        (A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01).
+        """A háptica por áudio passou a tocar (ou parou) NESTE controle.
 
-        Com háptica tocando, o rumble sai com `COMPATIBLE_VIBRATION` e sem `HAPTICS_SELECT`, que
-        cala a háptica e fazia os dois alternarem. Quem diz é o `AltoFalanteSubsystem`, por
-        `set_haptica_de_audio_for`.
+        O motor só obedece ao report com o `HAPTICS_SELECT`, que cala o PCM (medido 26/10/2026).
+        Com a háptica tocando, a vibração do jogo vira áudio no endpoint e o report sai SEM os
+        dois bits; sem ela, o motor vai pelo report. Quem diz é o `AltoFalanteSubsystem`.
         """
         self._haptica_de_audio = bool(ativa)
 
@@ -1296,7 +1316,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             flag1 &= ~rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
         if mic_led is None:
             flag1 &= ~rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
-        if not rumble_asserted:
+        # A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01: com a háptica por áudio
+        # tocando, a vibração do jogo vai como áudio, e o motor do report não é assunto dele. A
+        # soltura do motor (motores a 0, `rumble_stop_pending`) segue com os bits: é ela que
+        # para o motor, e o report seguinte, sem os bits, devolve o PCM.
+        vibra_pelo_audio = bool(
+            self._haptica_de_audio and (self.leftMotor or self.rightMotor)
+        )
+        if not rumble_asserted or vibra_pelo_audio:
             flag0 &= ~(
                 rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
             )
@@ -1309,10 +1336,6 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             if self._vibracao_v2:
                 flag0 &= ~rep.VALID_FLAG0_COMPATIBLE_VIBRATION
                 flag2 |= rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
-            if self._haptica_de_audio:
-                # A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01: `HAPTICS_SELECT` cala a háptica por áudio;
-                # com ela tocando, o rumble vai sem ele.
-                flag0 &= ~rep.VALID_FLAG0_HAPTICS_SELECT
         if suppress_leds:
             flag1 &= ~(
                 rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE

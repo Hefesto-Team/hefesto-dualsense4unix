@@ -532,17 +532,24 @@ def test_pelo_radio_o_alto_falante_tocando_e_o_rumble_chegam_juntos(
     assert mundo.backend.do(_P1)[-1] == (0, 0), "o HID voltou a levar com a háptica no ar"
 
 
-def test_onde_o_jogo_toca_a_haptica_e_a_dele(mundo: _Mundo) -> None:
-    """O jogo que toca no endpoint do aparelho é a háptica dali: o rumble segue pelo HID."""
+def test_onde_o_jogo_toca_a_haptica_o_rumble_soma_nela_como_audio(mundo: _Mundo) -> None:
+    """O jogo toca no endpoint do aparelho: o rumble vira áudio nele, e o HID não leva o motor.
+
+    A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01: o `HAPTICS_SELECT` do report
+    calaria a háptica do jogo, então os dois somam no endpoint e o motor do HID fica em zero.
+
+    MORDIDA: devolva o ramo `o_jogo_toca_no_aparelho` a `por_onde_vai_o_rumble` e
+    ao `_quer_o_rumble_pelo_audio`, e o tocador fica a zero com o HID a (100, 200).
+    """
     controles = _no_cabo_os_quatro(mundo)
     mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_P1))
     mundo.mesa.volta(*controles)
     mundo.rumble(_P1, 100, 200)
     mundo.mesa.volta(*controles)
     assert _MARCA[_P1] in mundo.sub._aparelhos_com_jogo
-    assert mundo.tocador(_P1).nivel == (0, 0), "o rumble convertido soma na háptica do jogo"
-    assert mundo.backend.do(_P1)[-1] == (100, 200)
-    assert _motores(mundo, _P1) == _FECHADO
+    assert mundo.tocador(_P1).nivel == (100, 200), "o rumble não somou na háptica do jogo"
+    assert mundo.backend.do(_P1)[-1] == (0, 0)
+    assert _motores(mundo, _P1) == _ABERTO
 
 
 def test_o_nosso_tocador_nao_abre_a_partida(mundo: _Mundo) -> None:
@@ -631,7 +638,7 @@ def test_o_stop_derruba_os_tocadores(mundo: _Mundo) -> None:
     assert mundo.sub._tocadores == {}
 
 
-def test_o_pad_uhid_nunca_converte(mundo: _Mundo) -> None:
+def test_o_pad_uhid_sem_a_haptica_do_jogo_nunca_converte(mundo: _Mundo) -> None:
     """O pad ``uhid`` é um DualSense para o jogo, e ele escolhe a própria háptica.
 
     E o pad que deixou o ``uinput`` cala o tocador que tocava por ele.
@@ -652,10 +659,15 @@ def test_o_pad_uhid_nunca_converte(mundo: _Mundo) -> None:
 
 
 @pytest.mark.parametrize("transporte", ["cabo", "radio"])
-def test_o_pad_que_volta_ao_uhid_com_o_caminho_de_pe_segue_no_hid(
+def test_o_pad_que_volta_ao_uhid_com_o_caminho_de_pe_segue_como_audio(
     mundo: _Mundo, transporte: str
 ) -> None:
-    """O pad trocou de ``uinput`` para ``uhid`` com o caminho da háptica ainda de pé."""
+    """O pad trocou de ``uinput`` para ``uhid`` com o caminho da háptica ainda de pé.
+
+    O tocador do rumble segue tocando no endpoint, e o report sem os bits deixaria o motor do
+    HID mudo (A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01): o rumble do pad
+    ``uhid`` segue como áudio enquanto o caminho está de pé, e o HID não leva o motor.
+    """
     montar = _no_cabo_os_quatro if transporte == "cabo" else _no_radio_os_quatro
     controles = montar(mundo)
     mundo.mesa.volta(*controles)
@@ -665,8 +677,8 @@ def test_o_pad_que_volta_ao_uhid_com_o_caminho_de_pe_segue_no_hid(
     assert mundo.tocador(_P1).vivo
     uhid = UhidDualSense(player=1)
     assert mundo.rumble(_P1, 90, 90, vpad=uhid) == (90, 90)
-    assert mundo.tocador(_P1).nivel == (0, 0)
-    assert mundo.backend.do(_P1)[-1] == (90, 90), "o rumble do pad uhid não chegou ao HID"
+    assert mundo.tocador(_P1).nivel == (90, 90)
+    assert mundo.backend.do(_P1)[-1] == (0, 0), "o motor do HID calaria o caminho que toca"
 
 
 def test_o_rumble_fixado_pela_tela_cala_a_haptica_fina(mundo: _Mundo) -> None:

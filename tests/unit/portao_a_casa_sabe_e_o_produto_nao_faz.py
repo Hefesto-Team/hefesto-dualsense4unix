@@ -2924,7 +2924,7 @@ class TestOPortaoMorde:
         ), (
             "a varredura não vê chamada direta "
             "(`sync_steam_input_exception` em "
-            "`src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:1234`) — e é ela que "
+            "`src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:1240`) — e é ela que "
             "prova que a exceção do Steam Input continua viva"
         )
         assert (

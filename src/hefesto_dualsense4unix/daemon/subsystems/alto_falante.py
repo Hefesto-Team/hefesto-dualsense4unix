@@ -775,7 +775,9 @@ class AltoFalanteSubsystem:
     _estalos: Mapping[str, Any] = MappingProxyType({})
     #: ``{uniq: vaga}`` da ponte do rádio de pé: o estalo lê dela se o rádio está cedendo.
     _vaga_da_ponte: Mapping[str, Any] = MappingProxyType({})
-    _rumble_vivo: Mapping[str, tuple[Any, tuple[str | None, bool, bool]]] = MappingProxyType({})
+    _rumble_vivo: Mapping[str, tuple[Any, tuple[str | None, bool, bool, bool]]] = (
+        MappingProxyType({})
+    )
     _clientes_do_rumble: frozenset[str] = frozenset()
     _aparelhos_com_jogo: frozenset[str] = frozenset()
     _sem_registro_no_jogo: frozenset[str] = frozenset()
@@ -1201,16 +1203,18 @@ class AltoFalanteSubsystem:
         *,
         reaplicar: Callable[[], object] | None = None,
         onda: str | None = None,
+        vivo: bool = False,
     ) -> bool:
         """O rumble de um pad sem háptica vira háptica no endpoint do aparelho de ``uniq``.
 
-        O tocador toca cada classe do rumble no timbre do estilo e da forma deste controle;
-        ``onda`` é a do ``FF_PERIODIC`` que o jogo pediu (O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE).
+        Toca no timbre do estilo e da forma do controle (``onda`` é a do ``FF_PERIODIC``), TAMBÉM
+        com o jogo tocando no endpoint: o PipeWire soma os dois. ``vivo`` é o pad que não converte
+        (zero aqui) mas vibra: a volta o reaplica quando o caminho muda.
         """
-        if not self._tocadores and not (fraco or forte):
+        if not self._tocadores and not (fraco or forte) and not vivo:
             return False
         chave = self._chave_do_rumble(uniq)
-        quer = chave is not None and self._quer_a_haptica_fina(chave)
+        quer = chave is not None and self._quer_o_rumble_pelo_audio(chave)
         marca = self._aparelho_de.get(chave) if chave is not None else None
         for outro, tocador in list(self._tocadores.items()):
             if any(tocador.nivel) and _mesmo_controle(tocador.dono, uniq) and (
@@ -1219,6 +1223,9 @@ class AltoFalanteSubsystem:
                 tocador.calar()
         if not quer or chave is None or marca is None:
             self._esquecer_o_rumble(uniq)
+            return False
+        if not (fraco or forte) and not self._tocadores:
+            self._anotar_o_rumble_vivo(chave, reaplicar, vivo=vivo)
             return False
         endpoint = self._endpoints.get(marca)
         tocador = self._tocador_do_aparelho(marca)
@@ -1229,13 +1236,33 @@ class AltoFalanteSubsystem:
             fraco, forte, sink=str(getattr(endpoint, "nome", "") or ""), dono=chave,
             estilo=estilo, forma=forma, onda=onda,
         )
+        retrato = self._anotar_o_rumble_vivo(chave, reaplicar, vivo=vivo or bool(fraco or forte))
+        return retrato[2]
+
+    def _anotar_o_rumble_vivo(
+        self, chave: str, reaplicar: Callable[[], object] | None, *, vivo: bool
+    ) -> tuple[str | None, bool, bool, bool]:
+        """Guarda (ou esquece) o rumble em curso deste controle, com o retrato do caminho."""
         retrato = self._retrato_do_rumble(chave)
         with self._trava_do_rumble:
             vivos = {u: v for u, v in self._rumble_vivo.items() if u != chave}
-            if fraco or forte:
+            if vivo:
                 vivos[chave] = (reaplicar, retrato)
             self._rumble_vivo = MappingProxyType(vivos)
-        return retrato[2]
+        return retrato
+
+    def o_jogo_toca_a_haptica_em(self, uniq: str) -> bool:
+        """A háptica por áudio toca no endpoint deste controle e o caminho até ele está de pé.
+
+        É o mesmo dado que o controlador recebe em ``set_haptica_de_audio_for`` (o endpoint com
+        fluxo e o laço do cabo ou a ponte do rádio de pé). Quem o pergunta é a porta do rumble do
+        jogo: com a háptica tocando, a vibração do pad DualSense também vai como áudio, porque o
+        bit do report que acorda o motor cala o PCM. Nunca levanta.
+        """
+        try:
+            return any(_mesmo_controle(u, uniq) for u in self._com_haptica_de_audio)
+        except Exception:
+            return False
 
     def tocar_o_toque(
         self, uniq: str, energia: float, lado: str, duracao_ms: int, forma: str = "toque"
@@ -1425,8 +1452,6 @@ class AltoFalanteSubsystem:
             marca = self._aparelho_de.get(chave) if chave is not None else None
             if chave is None or marca is None:
                 return {"rota": "motores_do_hid", "porque": "sem_aparelho"}
-            if marca in self._aparelhos_com_jogo:
-                return {"rota": "motores_do_hid", "porque": "o_jogo_toca_no_aparelho"}
             endpoint = self._endpoints.get(marca)
             if endpoint is None or getattr(endpoint, "module_id", None) is None or not getattr(
                 endpoint, "nome", ""
@@ -1515,12 +1540,13 @@ class AltoFalanteSubsystem:
                 logger.info("haptica_teste_solto_sem_rebate", controle=self._aparelho_de.get(chave))
                 self._soltar_o_teste_da_haptica(chave)
 
-    def _retrato_do_rumble(self, chave: str) -> tuple[str | None, bool, bool]:
-        """``(marca, quer a háptica fina, a háptica leva)`` deste controle agora."""
+    def _retrato_do_rumble(self, chave: str) -> tuple[str | None, bool, bool, bool]:
+        """``(marca, quer o rumble pelo áudio, a háptica leva, o jogo toca a háptica)`` agora."""
         return (
             self._aparelho_de.get(chave),
-            self._quer_a_haptica_fina(chave),
+            self._quer_o_rumble_pelo_audio(chave),
             self._a_haptica_leva(chave),
+            self.o_jogo_toca_a_haptica_em(chave),
         )
 
     def _esquecer_o_rumble(self, uniq: str) -> None:
@@ -1568,10 +1594,15 @@ class AltoFalanteSubsystem:
             )
         tocador.parar()
 
-    def _quer_a_haptica_fina(self, chave: str) -> bool:
-        """O aparelho tem endpoint, o jogo não toca nele, e a háptica dele não está em 0."""
+    def _quer_o_rumble_pelo_audio(self, chave: str) -> bool:
+        """O aparelho tem endpoint e a háptica dele não está em 0: o rumble pode tocar ali.
+
+        Com o jogo tocando no endpoint ou sem ele (A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-
+        A-HAPTICA-01): o motor só acorda no report com o bit que cala o PCM, então com o jogo
+        tocando a vibração dele vai como áudio, somada à háptica dele.
+        """
         marca = self._aparelho_de.get(chave)
-        if marca is None or marca in self._aparelhos_com_jogo:
+        if marca is None:
             return False
         endpoint = self._endpoints.get(marca)
         return bool(
@@ -1580,12 +1611,23 @@ class AltoFalanteSubsystem:
             and getattr(endpoint, "nome", "")
         )
 
+    def _quer_a_haptica_fina(self, chave: str) -> bool:
+        """O que é NOSSO (o toque, o corpo, o estalo): só onde o jogo não toca a háptica dele.
+
+        O rumble não passa por aqui: a vibração do jogo soma na háptica do jogo
+        (:meth:`_quer_o_rumble_pelo_audio`).
+        """
+        marca = self._aparelho_de.get(chave)
+        if marca is None or marca in self._aparelhos_com_jogo:
+            return False
+        return self._quer_o_rumble_pelo_audio(chave)
+
     def _recebe_o_rumble(self, uniq: str) -> bool:
         """O tocador do aparelho deste controle está de pé tocando o rumble DELE."""
         if not self._tocadores:
             return False
         chave = self._chave_do_rumble(uniq)
-        if chave is None or not self._quer_a_haptica_fina(chave):
+        if chave is None or not self._quer_o_rumble_pelo_audio(chave):
             return False
         marca = self._aparelho_de.get(chave)
         tocador = self._tocadores.get(marca) if marca is not None else None
@@ -2437,23 +2479,17 @@ class AltoFalanteSubsystem:
         )
         self._conferir_os_estalos()
         self._conferir_o_teste_da_haptica()
-        self._conferir_o_rumble()
         self._dizer_a_haptica_aos_controles(controles)
+        self._conferir_o_rumble()
 
     def _dizer_a_haptica_aos_controles(self, controles: list[Any]) -> None:
-        """Quem tem a háptica por áudio tocando AGORA, dito ao controlador.
+        """Quem tem a háptica por áudio tocando AGORA, dito ao controlador (só a borda).
 
-        A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01 (03/10/2026): com a háptica
-        tocando, o rumble do controle sai sem `HAPTICS_SELECT`, o bit que
-        cala a háptica (`_PinnedPyDualSense.set_haptica_de_audio`). Tocando
-        quer dizer o endpoint do aparelho com fluxo E o caminho dele ao
-        controle de pé: a ponte do rádio levando a háptica, o laço com o portão aberto no
-        cabo. Só a BORDA vai ao controlador, nos dois sentidos; o servidor de
-        som que não respondeu deixa tudo como estava.
+        Tocando = o endpoint com fluxo E o caminho de pé (a ponte do rádio levando a háptica,
+        o laço aberto no cabo). O conjunto se guarda mesmo sem controlador que ouça a borda:
+        :meth:`o_jogo_toca_a_haptica_em` o lê. Servidor de som mudo deixa tudo como estava.
         """
         definir = getattr(self._backend, "set_haptica_de_audio_for", None)
-        if not callable(definir):
-            return
         from hefesto_dualsense4unix.integrations.alto_falante_bt import sinks_que_tocam
 
         caminhos: dict[str, tuple[str, str, str]] = {}
@@ -2480,7 +2516,7 @@ class AltoFalanteSubsystem:
         }
         antes = self._com_haptica_de_audio
         for uniq in sorted({*antes, *ativos}):
-            if (uniq in ativos) == (uniq in antes):
+            if (uniq in ativos) == (uniq in antes) or not callable(definir):
                 continue
             try:
                 definir(uniq, uniq in ativos)

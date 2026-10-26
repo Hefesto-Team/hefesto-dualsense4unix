@@ -8,9 +8,12 @@ pydualsense troca os atuadores para a vibração emulada e cala a háptica por
 áudio até o bit cair.
 
 A cura do passo 1: com a háptica por áudio tocando no controle, o rumble vai
-com `COMPATIBLE_VIBRATION` (bit 0) e sem `HAPTICS_SELECT`; sem háptica, como
-sempre. Quem diz que a háptica toca é o dono das pontes, o
-`AltoFalanteSubsystem`, pelo `set_haptica_de_audio_for` do controlador.
+sem `HAPTICS_SELECT`; sem háptica, como sempre. (26/10/2026: medido que sem o
+`HAPTICS_SELECT` o motor não vibra, a cura passou a levar a vibração como áudio
+e o report sai sem o bit 0 também; a régua nova é a de
+A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01.) Quem diz que a háptica
+toca é o dono das pontes, o `AltoFalanteSubsystem`, pelo `set_haptica_de_audio_for`
+do controlador.
 
 A BANCADA: o handle é o `_PinnedPyDualSense` real, sem device (o mesmo molde
 das réguas da AUDIO-OWNER-01), e o report de rádio sai do montador real
@@ -68,25 +71,23 @@ def _flag0_no_radio(h: Any, *, rumble: bool) -> int:
     return int(report[3])
 
 
-def test_com_a_haptica_tocando_o_rumble_vai_sem_haptics_select() -> None:
-    """Régua 1: háptica ativa e rumble pedido → bit 0 ligado, bit 1 desligado.
+def test_com_a_haptica_tocando_o_rumble_vai_sem_nenhum_bit() -> None:
+    """Régua 1: háptica ativa e motor pedido → o report não leva o bit 0 nem o bit 1.
 
-    No `0x31` do rádio e no `0x02` do cabo, que leva o mesmo `common`.
+    A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01: o `HAPTICS_SELECT` cala o
+    PCM da háptica, então a vibração do jogo vai como áudio no endpoint, e o report só leva
+    o que não toca no PCM. No `0x31` do rádio e no `0x02` do cabo, que levam o mesmo `common`.
 
-    MORDIDA: tire o ramo `elif self._haptica_de_audio` de `_build_common` e o
-    `flag0` leva o bit 1, que cala a háptica.
+    MORDIDA: devolva o `flag0` com os bits ao caso `_haptica_de_audio` de `_build_common` e
+    o `flag0` leva o bit 1, que cala a háptica.
     """
     h = _handle(haptica=True, motores=(255, 255))
 
     flag0 = _flag0_no_radio(h, rumble=True)
-    assert flag0 & BIT0, "o rumble perdeu o COMPATIBLE_VIBRATION: os motores não tocariam"
-    assert not flag0 & BIT1, "o rumble com a háptica tocando levou o HAPTICS_SELECT"
+    assert not flag0 & (BIT0 | BIT1), f"o rumble com a háptica tocando levou bit: {flag0:#04x}"
     usb = rep.build_usb_report(h._build_common(rumble_asserted=True))
     assert usb[0] == rep.USB_REPORT_ID
-    assert usb[1] & BIT0 and not usb[1] & BIT1
-    common = h._build_common(rumble_asserted=True)
-    assert common[1] & rep.VALID_FLAG1_MOTOR_POWER, "a potência do motor caiu junto"
-    assert (common[2], common[3]) == (255, 255)
+    assert not usb[1] & (BIT0 | BIT1)
 
 
 def test_sem_haptica_o_rumble_segue_como_hoje() -> None:
@@ -170,16 +171,19 @@ def test_o_handle_novo_herda_a_haptica_que_ja_tocava() -> None:
     assert ctl.set_haptica_de_audio_for(KEY_1, True) is True
 
     novo = _reconectar(ctl, radio=False)
+    novo.leftMotor = 255
     flag0 = novo._build_common(rumble_asserted=True)[0]
-    assert flag0 & BIT0 and not flag0 & BIT1, f"o handle novo perdeu a háptica: {flag0:#04x}"
+    assert not flag0 & (BIT0 | BIT1), f"o handle novo perdeu a háptica: {flag0:#04x}"
 
     vizinho = _handle_recem_nascido(radio=True)
     ctl._handles[KEY_2] = vizinho
     ctl._reapply_desired(KEY_2, vizinho)
+    vizinho.leftMotor = 255
     assert vizinho._build_common(rumble_asserted=True)[0] & BIT1, "o vizinho herdou a háptica"
 
     ctl.set_haptica_de_audio_for(KEY_1, False)
     de_novo = _reconectar(ctl, radio=True)
+    de_novo.leftMotor = 255
     assert de_novo._build_common(rumble_asserted=True)[0] & BIT1, "a háptica parada ficou no mapa"
 
 

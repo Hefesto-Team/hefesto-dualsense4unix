@@ -172,13 +172,31 @@ def test_sem_rumble_nosso_nenhum_dos_dois_bits_sai(v2: bool) -> None:
 
 
 @pytest.mark.parametrize("v2", [True, False])
-def test_a_haptica_por_audio_tira_o_haptics_select_nos_dois_modos(v2: bool) -> None:
+def test_a_haptica_por_audio_com_motor_nao_leva_nenhum_bit_de_vibracao(v2: bool) -> None:
+    """A vibração do jogo vai como áudio: o report não leva nenhum dos bits, v1 ou v2.
+
+    A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01. MORDIDA: devolva o ramo
+    `if self._vibracao_v2:` ao caso da háptica e o `flag2` leva o V2.
+    """
     handle = _handle()
     handle.set_vibracao_v2(v2)
     handle.set_haptica_de_audio(True)
     common = handle._build_common(rumble_asserted=True)
 
     assert not common[0] & rep.VALID_FLAG0_HAPTICS_SELECT
+    assert not common[0] & FLAG0_V1
+    assert not common[rep.COMMON_VALID_FLAG2] & FLAG2_V2
+
+
+@pytest.mark.parametrize("v2", [True, False])
+def test_a_haptica_por_audio_com_o_motor_parado_leva_a_soltura(v2: bool) -> None:
+    """Os motores a 0 com a háptica tocando: o report de soltura leva os bits (para o motor)."""
+    handle = _handle()
+    handle.leftMotor = handle.rightMotor = 0
+    handle.set_vibracao_v2(v2)
+    handle.set_haptica_de_audio(True)
+    common = handle._build_common(rumble_asserted=True)
+
     assert bool(common[rep.COMMON_VALID_FLAG2] & FLAG2_V2) is v2
     assert bool(common[0] & FLAG0_V1) is (not v2)
 
