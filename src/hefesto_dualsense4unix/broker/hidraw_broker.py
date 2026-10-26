@@ -1165,12 +1165,20 @@ class FsAclOps:
         fcntl.ioctl(fd, EVIOCREVOKE, 0)
 
     @staticmethod
-    def _mesma_descricao(pid_a: int, fd_a: int, pid_b: int, fd_b: int) -> bool | None:
-        """Os dois descritores são a MESMA descrição (``kcmp``)? ``None`` = sem resposta."""
-        try:
-            return _syscall(_SYS_KCMP, pid_a, pid_b, _KCMP_FILE, fd_a, fd_b) == 0
-        except OSError:
-            return None
+    def _mesma_descricao(pid_a: int, fd_a: int, pid_b: int, fd_b: int) -> bool:
+        """Os dois descritores são a MESMA descrição (``kcmp``)? Sem resposta, ``OSError``."""
+        return _syscall(_SYS_KCMP, pid_a, pid_b, _KCMP_FILE, fd_a, fd_b) == 0
+
+    def _divide_a_descricao(self, pid: int, fd: int, donos: list[tuple[int, int]]) -> bool | None:
+        """O ``fd`` de ``pid`` é a descrição de um dono? ``None`` = sem resposta do ``kcmp``."""
+        sem_resposta = False
+        for dono, fd_do_dono in donos:
+            try:
+                if self._mesma_descricao(pid, fd, dono, fd_do_dono):
+                    return True
+            except OSError:
+                sem_resposta = True
+        return None if sem_resposta else False
 
     def _revogar_um(self, pid: int, fd: int, node: str, alvo: os.stat_result) -> str | None:
         """Tira o nó do descritor de fora; ``None`` = já revogado ou já é outro arquivo."""
@@ -1221,10 +1229,10 @@ class FsAclOps:
             proc = processos.get(pid)
             if proc is None or de_direito(pid):
                 continue
-            respostas = [self._mesma_descricao(pid, fd, p, f) for p, f, n in donos if n == node]
-            if True in respostas:
+            divide = self._divide_a_descricao(pid, fd, [(p, f) for p, f, n in donos if n == node])
+            if divide:
                 continue
-            desfecho = "sem_kcmp" if None in respostas else self._revogar_um(pid, fd, node, alvo)
+            desfecho = "sem_kcmp" if divide is None else self._revogar_um(pid, fd, node, alvo)
             if desfecho is not None:
                 saida.append((node, pid, proc.comm, desfecho))
         return saida
