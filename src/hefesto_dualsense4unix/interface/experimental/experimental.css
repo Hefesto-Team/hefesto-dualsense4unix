@@ -515,7 +515,8 @@
 #mod-janela .mj-abas > input:checked + label + .mj-tela { visibility:visible }
 #mod-janela .ja-opcoes:has(> .mj-abas) { overflow:hidden;display:grid;grid-template-rows:minmax(0,1fr) }
 #mod-janela .ja-opcoes > .ac-card.mj-abas { grid-template-rows:auto minmax(0,1fr);min-height:0;overflow:hidden }
-#mod-janela .mj-abas > .mj-tela { overflow:auto;padding-bottom:6px }
+#mod-janela .mj-abas > .mj-tela { overflow:auto;padding-bottom:6px;padding-right:12px;scrollbar-width:thin;
+  scrollbar-color:var(--border-forte) transparent }
 #mod-janela .tq-lista { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px;padding-top:4px }
 #mod-janela .tql { display:flex;align-items:center;gap:10px;height:32px;border-bottom:1px solid var(--border-sutil);min-width:0 }
 #mod-janela .tq-gl { flex:none;color:var(--fg) }
