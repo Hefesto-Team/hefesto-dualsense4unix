@@ -21,4 +21,56 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 01-jogar.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 02-controles.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 03-gatilhos.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 04-iluminacao.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 05-vibracao.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 06-navegacao.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 07-lancadores.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+- **26/10/2026** — O-CONTADOR-DE-JOGOS-DA-07-USA-A-FONTE-DO-TEXTO-01: o contador de jogos de cada lançador
+  usa a fonte do texto, com o número tabular; o `--publicar 07` o leva.
+
+## 08-conexoes.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 09-sistema.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+
+## 10-perfis.html
+- **26/10/2026** — A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO-DE-NOVO-01: na fita apertada o rótulo «Perfil ativo»
+  cede antes do nome do perfil, que guarda um piso de 3em. Até publicar, o produto mostra a fita de antes, em que
+  o nome some a 940 px e, com quatro controles, a 1212 px; o `--publicar` sai na costura.
+- **26/10/2026** — O-CABECALHO-DAS-TABELAS-TEM-UM-TOM-SO-01: o cabeçalho das tabelas tem um tom só, o roxo
+  da opção C; o `--publicar 10` o leva.
