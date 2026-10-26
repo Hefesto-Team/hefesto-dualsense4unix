@@ -35,22 +35,22 @@ ENTRADAS = [("entrada_l2", "Gatilho esquerdo (L2)"), ("entrada_r2", "Gatilho dir
 
 def _deslizante(id_: str, rotulo: str, grupo: str) -> dict[str, Any]:
     return {"id": id_, "rotulo": rotulo, "tipo": "deslizante",
-            "minimo": 0, "maximo": 100,  # (noqa-acento) chave
-            "passo": 5, "padrao": 50, "grupo": grupo}  # (noqa-acento) chave
+            "minimo": 0, "maximo": 100,  # (noqa-acento)
+            "passo": 5, "padrao": 50, "grupo": grupo}  # (noqa-acento)
 
 
 def _chave(id_: str, rotulo: str, grupo: str) -> dict[str, Any]:
     return {"id": id_, "rotulo": rotulo, "tipo": "ligado",
-            "padrao": True, "grupo": grupo}  # (noqa-acento) chave
+            "padrao": True, "grupo": grupo}  # (noqa-acento)
 
 
 def pecas_da_lovense() -> dict[str, Any]:
     """A forma do manifesto da Lovense: três grupos de opções, as ações, os aparelhos e o livre."""
     escolha = {"tipo": "escolha", "escolhas": ["Nenhum", "Direto", "Suave"],
-               "padrao": "Nenhum", "grupo": "Toques"}  # (noqa-acento) chave
+               "padrao": "Nenhum", "grupo": "Toques"}  # (noqa-acento)
     por_botao = {"id": "toques_dos_botoes", "rotulo": "Botões", "tipo": "por_botao",
                  "formas": FORMAS, "botoes": BOTOES, "grupo": "Toques",
-                 "padrao": {b: "Toque" for b in BOTOES}}  # (noqa-acento) chave
+                 "padrao": {b: "Toque" for b in BOTOES}}  # (noqa-acento)
     lista = [
         _chave("toques", "Toques", "Toques"),
         por_botao,
@@ -68,11 +68,11 @@ def pecas_da_lovense() -> dict[str, Any]:
     parear = {"id": "parear", "rotulo": "Parear", "grupo": "Brinquedos", "icone": "procurar"}
     nos_aparelhos = [{"id": "ligar", "rotulo": "Ligado", "icone": "ligar"},
                      {"id": "testar", "rotulo": "Testar", "icone": "testar"}]
-    return {"opcoes": lista, "parar_tudo": True,  # (noqa-acento) chave
-            "agora": ["conexoes", "aparelhos"],  # (noqa-acento) chave
-            "acoes": [parear],  # (noqa-acento) chave
+    return {"opcoes": lista, "parar_tudo": True,  # (noqa-acento)
+            "agora": ["conexoes", "aparelhos"],  # (noqa-acento)
+            "acoes": [parear],  # (noqa-acento)
             "aparelhos_acoes": {"grupo": "Brinquedos",
-                                "acoes": nos_aparelhos},  # (noqa-acento) chave
+                                "acoes": nos_aparelhos},  # (noqa-acento)
             "aparelhos_controles": {"grupo": "Luz"}}
 
 
@@ -104,8 +104,8 @@ _ABRIR = """(function(endereco, h, aba){
   lista.scrollTop = lista.scrollHeight;
   return 'ok';
 })(%s, %s, %s)"""
-ENDERECO = "#modificacao"  # (noqa-acento) o endereço da janela no desenho
-ENDERECO = "#modificacao"  # (noqa-acento) o endereço da janela no desenho
+ENDERECO = "#modificacao"  # (noqa-acento)
+ENDERECO = "#modificacao"  # (noqa-acento)
 _PINTAR = "(function(b){ window.__hef.pintar({blocos: b}); return 'ok'; })(%s)"
 _LER = """(function(){
   const j = document.getElementById('mod-janela'), lista = j.querySelector('.ja-opcoes');
