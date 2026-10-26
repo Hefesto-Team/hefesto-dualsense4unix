@@ -7,8 +7,11 @@ ficou órfão (device HID existente, driver NENHUM). Cura de PRIMEIRA LINHA da
 contenção de probe: um rebind no driver VANILLA in-tree, sem patch de kernel,
 sem reboot e sem tocar em quem já está funcionando.
 
-  playstation 0005:054C:0CE6.000F: Failed to retrieve feature with reportID 32: -5
-  playstation 0005:054C:0CE6.000F: probe with driver playstation failed with error -5
+Uso:
+  bt_rebind_orphans.sh              cura (requer root p/ escrever no sysfs)
+  bt_rebind_orphans.sh --dry-run    só relata o que faria (não requer root)
+  bt_rebind_orphans.sh --quiet      só fala quando age ou falha
+  bt_rebind_orphans.sh --evento     a passada do aviso do kernel
 AJUDA
 }
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then

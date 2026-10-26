@@ -6,7 +6,11 @@ bancada.sh — o semáforo do recurso FÍSICO: 1 daemon, 1 broker de hidraw,
 1 controle na mesa, 3 adaptadores de rádio. Isolar árvore de git não divide
 aparelho, e é por isso que o worktree não basta.
 
-  Se a liberação depende de um `finally` do detentor, o desenho está errado.
+Uso:
+  scripts/bancada.sh reservar "medição de BT" [--horas 4]
+  scripts/bancada.sh status      uma linha, e é a que o despachante imprime
+  scripts/bancada.sh exigir      rc=1 com motivo e hora -> quem chamou NÃO passa
+  scripts/bancada.sh liberar
 AJUDA
 }
 

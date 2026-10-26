@@ -6,8 +6,24 @@ _ajuda() {
 CI-INSTALL-USUARIA-01 — executa o `install.sh` DE VERDADE, dentro do
 contêiner da distro, COMO USUÁRIA COMUM.
 
-    libhidapi-hidraw.so.0: AUSENTE (falso!)
-    libopus.so.0:          AUSENTE (falso!)
+Uso (dentro do contêiner, como root):
+    scripts/ci/instalar_como_usuaria.sh --presente hidapi
+    scripts/ci/instalar_como_usuaria.sh --fontes pop --so-fontes
+    scripts/ci/instalar_como_usuaria.sh --so-dkms
+
+  --fontes pop  antes de tudo, põe o repositório do Pop!_OS sobre o
+                ubuntu:24.04, com a chave conferida pela impressão digital
+  --so-fontes   só prepara as fontes e sai (o smoke do wheel usa)
+  --so-dkms     não instala nada do produto: instala o dkms e os headers mais
+                novos da distro e roda o `dkms build -k` de cada módulo de
+                assets/dkms/. Código 77 é o BUILD_EXCLUSIVE_KERNEL recusando
+                um kernel fora do pino; qualquer outro código diferente de 0
+                reprova
+
+Variáveis:
+    HEFESTO_CI_USUARIA   nome da usuária criada (default: jogadora)
+    HEFESTO_CI_LOG       caminho do log (default: /tmp/install-como-usuaria.log)
+    HEFESTO_CI_FLAGS     flags EXTRAS para o install.sh, além do `--yes`
 AJUDA
 }
 

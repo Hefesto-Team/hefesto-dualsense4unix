@@ -4,9 +4,12 @@ _ajuda() {
   cat <<'AJUDA'
 mesa-de-medicao.sh — sobe A MESA DE MEDIÇÃO e a abre na tela do usuário.
 
-    "a ideia é termos uma página pra medirmos o que falta no specs. (…) eu
-    registro lá que tal controle ficou x com o teste y clico em avançar, o
-    novo teste inicia eu relato o estado dos 4 controles"
+Uso:
+  scripts/mesa-de-medicao.sh                 liga o daemon se preciso, sobe e abre na tela do usuário
+  scripts/mesa-de-medicao.sh --sem-abrir     sobe e só imprime o endereço (é o que a régua usa)
+  scripts/mesa-de-medicao.sh --sem-daemon    não liga o daemon, mesmo parado
+  scripts/mesa-de-medicao.sh --porta 8765    escolhe a porta (0 = a primeira livre)
+  scripts/mesa-de-medicao.sh --censo         o retrato dos testes, sem servir nada
 AJUDA
 }
 
