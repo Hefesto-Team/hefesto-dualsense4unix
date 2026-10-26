@@ -1,17 +1,17 @@
 """As linhas da janela «Configurar» usam o glifo do mapa do controle.
 
-AS-LINHAS-DA-JANELA-CONFIGURAR-USAM-O-GLIFO-DO-MAPA-DO-CONTROLE-01 (26/10/2026).
+AS-LINHAS-DA-JANELA-CONFIGURAR-USAM-O-GLIFO-DO-MAPA-DO-CONTROLE-01 (26/10/2026). A lista com glifo
+usa quantas colunas couberem (D-2610-A-TOQUES-EM-TRES-COLUNAS), e as entradas seguem a ordem de
+leitura, da esquerda para a direita e linha a linha.
 """
 
 from __future__ import annotations
 
 import csv
+import itertools
 import json
-import os
 import pathlib
 import re
-import subprocess
-import sys
 from typing import Any
 
 import pytest
@@ -31,6 +31,10 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
     VIVO,
     _Ponte,
     janela,
+)
+from tests.unit.test_a_linha_sem_aparelho_fica_a_direita_do_parear import (  # noqa: F401
+    no_webkit,
+    pagina_fresca,
 )
 from tests.unit.test_a_lista_da_janela_configurar_nao_pula_ao_clicar_um_efeito import (
     ENDERECO,
@@ -124,10 +128,10 @@ _LER = """(function(){
 })()"""
 
 
-def test_as_entradas_desenham_o_glifo_em_duas_colunas_sem_rolagem_nova(
-        janela: Any, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+def test_as_entradas_desenham_o_glifo_em_colunas_sem_rolagem_nova(
+        janela: Any, monkeypatch: pytest.MonkeyPatch,  # noqa: F811
+        pagina_fresca: pathlib.Path) -> None:  # noqa: F811
     from hefesto_dualsense4unix.interface import hefesto_vivo
-    from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import SONDA
 
     com_glifo = _montada(janela)
     monkeypatch.setattr(exp, "GLIFO_DA_ENTRADA", {})
@@ -140,12 +144,7 @@ def test_as_entradas_desenham_o_glifo_em_duas_colunas_sem_rolagem_nova(
         ["js", hefesto_vivo.BOOTSTRAP],
         ["js", _ABRIR % (json.dumps(ENDERECO), json.dumps(html))], ["espera", 0.3], ["js", _LER]])
         for nome, html in (("glifo", com_glifo), ("texto", so_texto)) for w, h in VISTAS}
-    filho = subprocess.run([sys.executable, "-c", SONDA, str(DESENHO)], input=json.dumps(casos),
-                           env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
-                           capture_output=True, text=True, timeout=600)
-    if filho.returncode != 0:
-        pytest.skip(f"o WebKit não subiu na tela de mentira: {filho.stderr.strip()[-300:]}")
-    medidas = json.loads(filho.stdout.strip().splitlines()[-1])
+    medidas = no_webkit(pagina_fresca, casos)
     print(json.dumps(medidas, ensure_ascii=False))
     falhas = []
     for w, h in VISTAS:
@@ -157,9 +156,13 @@ def test_as_entradas_desenham_o_glifo_em_duas_colunas_sem_rolagem_nova(
         assert len(linhas) == len(ENTRADAS), linhas
         falhas += [f"{w}x{h} {li['id']}: o glifo não desenha" for li in linhas
                    if li["desenho"] <= 0]
-        pares = [(a, b) for a, b in zip(linhas[::2], linhas[1::2], strict=False)]
-        falhas += [f"{w}x{h} {a['id']} e {b['id']} não dividem a linha" for a, b in pares
-                   if a["y"] != b["y"] or a["x"] >= b["x"]]
+        esquerda = min(li["x"] for li in linhas)
+        falhas += [f"{w}x{h} {b['id']} não segue {a['id']} na leitura da linha"
+                   for a, b in itertools.pairwise(linhas)
+                   if not ((a["y"] == b["y"] and a["x"] < b["x"])
+                           or (a["y"] < b["y"] and b["x"] == esquerda))]
+        if len({li["x"] for li in linhas}) < 2:
+            falhas.append(f"{w}x{h}: as entradas ficaram numa coluna só")
         if lido["altura"] >= texto["altura"]:
             falhas.append(f"{w}x{h}: a lista ficou com {lido['altura']}px, "
                           f"e com as linhas escritas tinha {texto['altura']}px")
