@@ -13,6 +13,8 @@ import json
 import math
 import pathlib
 import re
+import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from html.parser import HTMLParser
 from typing import Any, NamedTuple
@@ -1382,12 +1384,107 @@ def aparelhos_geridos_html(g: Gestao) -> str:
             f'{_chave_do_aparelho(g, ap)}</div>'
             f'<div class="mj-ap-meio">{vivo}</div>'
             f'<div class="mj-ap-pe">{_botoes_do_aparelho(g, ap)}</div></div>')
+    busca = ANDAMENTO_DO_PAREAR.ver(g.mod, g.estado)
     if not cartoes:
-        return f'<div class="mj-ap-vazio">{SEM_APARELHOS}</div>'
-    return "".join(cartoes)
+        return busca.html(vazio=True) or f'<div class="mj-ap-vazio">{SEM_APARELHOS}</div>'
+    return busca.html(vazio=False) + "".join(cartoes)
 
 
 SEM_APARELHOS = "Nenhum aparelho por aqui ainda."
+COMECO_DO_MOTIVO_DA_BUSCA = "Procurando"
+CHAVE_DAS_CONEXOES = "conexoes"  # (noqa-acento)
+PRAZO_DA_BUSCA_S = 20.0
+FIM_DA_BUSCA_VISIVEL_S = 12.0
+SEM_RAZAO_DA_BUSCA = "Ligue o aparelho e deixe-o perto."
+
+
+class Andamento(NamedTuple):
+    """O que a janela diz do «Parear» agora: ``busca`` (os segundos que faltam, ``None`` passado o
+    prazo) ou o fim dela (``achou``, os nomes; ``razao``, a dica quando não achou nenhum)."""
+
+    fase: str = ""
+    restam: int | None = None
+    achou: tuple[str, ...] = ()
+    razao: str = ""
+
+    def html(self, *, vazio: bool) -> str:
+        """A faixa do andamento; vazia quando não há busca nem fim a mostrar. Sem aparelho, ela é a
+        própria linha do aviso (``mj-ap-vazio``) e divide a linha do Parear."""
+        if not self.fase:
+            return ""
+        if self.fase == "busca":
+            corpo = ('<span class="est est-amarelo"><i></i>Procurando aparelhos</span>'
+                     + (f'<span class="mj-busca-resta">{self.restam} s</span>'
+                        if self.restam is not None else ""))
+            dica = ""
+        elif self.achou:
+            corpo = f'<span class="mj-busca-fim">Achou {_e(", ".join(self.achou))}</span>'
+            dica = ""
+        else:
+            corpo = '<span class="mj-busca-fim">Não achou nenhum aparelho</span>'
+            dica = f' data-dica="{_a(self.razao)}"'
+        classe = "mj-busca" + (" mj-ap-vazio" if vazio else "") + f" mj-busca-{self.fase}"
+        return f'<div class="{classe}" role="status"{dica}>{corpo}</div>'
+
+
+class AndamentoDoPareamento:
+    """O dono do andamento do «Parear» de cada extensão, lido do estado que ela devolve: a busca
+    começa quando uma conexão «procurando» tem o motivo começado por
+    :data:`COMECO_DO_MOTIVO_DA_BUSCA` e termina quando ela deixa de tê-lo. O fim fica à vista
+    :data:`FIM_DA_BUSCA_VISIVEL_S`, com o que apareceu de novo ou a razão."""
+
+    def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
+        self._relogio = relogio
+        self._trava = threading.Lock()
+        self._buscas: dict[str, tuple[float, frozenset[str]]] = {}
+        self._fins: dict[str, tuple[float, Andamento]] = {}
+
+    def limpar(self) -> None:
+        with self._trava:
+            self._buscas.clear()
+            self._fins.clear()
+
+    @staticmethod
+    def _procurando(estado: Mapping[str, Any] | None) -> bool:
+        return any(c.get("estado") == "procurando"
+                   and str(c.get("motivo") or "").startswith(COMECO_DO_MOTIVO_DA_BUSCA)
+                   for c in itens_do_estado(estado, CHAVE_DAS_CONEXOES))
+
+    @staticmethod
+    def _nomes(estado: Mapping[str, Any] | None) -> dict[str, str]:
+        return {str(ap.get("id") or ap.get("nome")): str(ap.get("nome") or ap.get("id"))
+                for ap in itens_do_estado(estado, "aparelhos")}
+
+    @staticmethod
+    def _razao(estado: Mapping[str, Any] | None) -> str:
+        motivos = [f'{c.get("tipo") or "Conexão"}: {c.get("motivo") or PALAVRA_DO_ESTADO[c["estado"]]}'
+                   for c in itens_do_estado(estado, CHAVE_DAS_CONEXOES)
+                   if c.get("estado") in ("falhou", "procurando")]
+        return ". ".join(motivos) + "." if motivos else SEM_RAZAO_DA_BUSCA
+
+    def ver(self, mod: str, estado: Mapping[str, Any] | None) -> Andamento:
+        agora = self._relogio()
+        with self._trava:
+            procurando = self._procurando(estado)
+            nomes = self._nomes(estado)
+            if procurando:
+                desde, antes = self._buscas.setdefault(mod, (agora, frozenset(nomes)))
+                self._fins.pop(mod, None)
+                restam = PRAZO_DA_BUSCA_S - (agora - desde)
+                return Andamento("busca", max(0, math.ceil(restam)) if restam > 0 else None)
+            if mod in self._buscas:
+                _, antes = self._buscas.pop(mod)
+                novos = tuple(n for i, n in nomes.items() if i not in antes)
+                self._fins[mod] = (agora, Andamento(
+                    "fim", None, novos, "" if novos else self._razao(estado)))
+            quando, fim = self._fins.get(mod, (0.0, Andamento()))
+            if fim.fase and agora - quando <= FIM_DA_BUSCA_VISIVEL_S:
+                return fim
+            self._fins.pop(mod, None)
+            return Andamento()
+
+
+ANDAMENTO_DO_PAREAR = AndamentoDoPareamento()
 
 
 def aparelhos_na_coluna_html(g: Gestao) -> str:
