@@ -319,6 +319,9 @@ class OpcaoDaJanela(NamedTuple):
     formas: tuple[tuple[str, tuple[tuple[float, float], ...]], ...] = ()
     botoes: tuple[str, ...] = ()
     modo: str = ""
+    dica: str = ""
+    unidade: str = ""
+    zero: str = ""
 
 
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
@@ -399,9 +402,9 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
     if o.tipo == "deslizante":
         return (f'<span class="ext-desl"><input type="range" min="{o.minimo:g}" '
                 f'max="{o.maximo:g}" step="{o.passo:g}" value="{_a(o.valor)}" {alvo} '
-                f'aria-label="{_a(o.rotulo)}" '
-                f'oninput="this.nextElementSibling.textContent=this.value">'
-                f'<b>{_e(o.valor)}</b></span>')
+                f'aria-label="{_a(o.rotulo)}" oninput="{_NUMERO_AO_ARRASTAR}">'
+                f'<b data-unidade="{_a(o.unidade)}" data-zero="{_a(o.zero)}">'
+                f'{_e(numero_do_deslizante(o.valor, o.unidade, o.zero))}</b></span>')
     if o.tipo == "jogos":
         return _jogos_da_opcao(o)
     if o.tipo == "por_botao":
@@ -535,7 +538,7 @@ def _linha_da_entrada(o: OpcaoDaJanela) -> str:
     """A linha da entrada no arranjo dos botões de cima: o glifo, o desenho do efeito escolhido,
     o rótulo na dica e a lista."""
     onda = _onda_da_entrada(o.valor) if o.tipo == "escolha" else ""
-    return (f'<div class="tql" id="{PEDACO}op-{_a(o.id)}" data-dica="{_a(o.rotulo)}">'
+    return (f'<div class="tql" id="{PEDACO}op-{_a(o.id)}" data-dica="{_a(o.dica or o.rotulo)}">'
             f'<svg class="tq-gl" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">'
             f'<use href="#en-{_a(entrada_da_opcao(o) or "")}"/></svg>'
             f'{onda}{_controle_da_opcao(o)}</div>')
@@ -639,12 +642,33 @@ def _linhas_da_aba(n: int | str, itens: Sequence[OpcaoDaJanela], chave: OpcaoDaJ
 _EMPILHADAS = ("jogos", "por_botao")
 
 
+_NUMERO_AO_ARRASTAR = ("const b=this.nextElementSibling;b.textContent=Number(this.value)===0"
+                       "&amp;&amp;b.dataset.zero?b.dataset.zero:this.value+(b.dataset.unidade?"
+                       "&#39; &#39;+b.dataset.unidade:&#39;&#39;)")
+
+
+def numero_do_deslizante(valor: Any, unidade: str = "", zero: str = "") -> str:
+    """O número ao lado do deslizante: o texto do ``zero`` no 0, senão o valor com a unidade."""
+    try:
+        no_zero = float(valor) == 0
+    except (TypeError, ValueError):
+        no_zero = False
+    if zero and no_zero:
+        return zero
+    return f"{valor} {unidade}" if unidade else str(valor)
+
+
+def _dica_da_linha(o: OpcaoDaJanela) -> str:
+    return f' data-dica="{_a(o.dica)}"' if o.dica else ""
+
+
 def _linha_da_opcao(o: OpcaoDaJanela) -> str:
     """A linha de uma opção: rótulo à esquerda e controle à direita, ou a lista embaixo."""
     if o.tipo in _EMPILHADAS:
-        return (f'<div id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span></div>'
-                f'{_controle_da_opcao(o)}</div>')
-    return (f'<div class="ky-linha" id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span>'
+        return (f'<div id="{PEDACO}op-{_a(o.id)}"{_dica_da_linha(o)}><div class="ky-rot">'
+                f'<span>{_e(o.rotulo)}</span></div>{_controle_da_opcao(o)}</div>')
+    return (f'<div class="ky-linha" id="{PEDACO}op-{_a(o.id)}"{_dica_da_linha(o)}>'
+            f'<div class="ky-rot"><span>{_e(o.rotulo)}</span>'
             f'{_nota_da_opcao(o)}</div>'
             f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>')
 

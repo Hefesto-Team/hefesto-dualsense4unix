@@ -1549,7 +1549,8 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         nota=nota if x.tipo == "css" else "",
         formas=_formas_da_opcao(manifesto, x, valores),
         botoes=x.botoes_da_janela if x.tipo == "por_botao" else (),
-        modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "")
+        modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "",
+        dica=x.dica or "", unidade=x.unidade or "", zero=x.zero or "")
         for x in manifesto.opcoes if x.id in aparecem]
     _MEXIDA.mod = mod_id
     _VIVA.com_o_modo(mod_id, _o_modo_de(manifesto, valores) or None)
