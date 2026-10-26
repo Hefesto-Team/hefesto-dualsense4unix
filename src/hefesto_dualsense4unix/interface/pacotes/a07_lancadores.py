@@ -2823,7 +2823,10 @@ def gravar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> d
     item = _a_instalada(mod_id)
     livre = _o_livre_de(item, opcao_id)
     formas = _formas_do_livre_na_janela(item)
-    if len(formas) >= FORMAS_POR_OPCAO and not _VIVA.ao_vivo(mod_id).gravando:
+    gravando = _VIVA.ao_vivo(mod_id).gravando
+    if not gravando and _sem_alvo(mod_id):
+        raise RuntimeError(f"{exp.DICA_DA_BARRA_SEM_ALVO} Nada foi gravado.")
+    if len(formas) >= FORMAS_POR_OPCAO and not gravando:
         raise RuntimeError(
             f"Já há {FORMAS_POR_OPCAO} formas gravadas: esqueça uma antes de gravar.")
     amostras = _VIVA.gravar(mod_id)

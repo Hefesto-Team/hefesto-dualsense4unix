@@ -631,6 +631,7 @@
   white-space:nowrap;flex:none }
 #mod-janela .mj-gravar i { width:10px;height:10px;border-radius:50%;background:var(--red) }
 #mod-janela .mj-gravar.on { border-color:var(--red);color:var(--red) }
+#mod-janela .mj-faixa:has(> .mj-trilho.fora) .mj-gravar:not(.on) { opacity:.5 }
 #mod-janela .mj-alvos, #mod-janela .mj-formas { display:flex;gap:6px;min-width:0 }
 #mod-janela .mj-formas { margin-left:auto;overflow:hidden }
 #mod-janela .mj-faixa .chip { height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--border-forte);

@@ -13,7 +13,10 @@ MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas):
 - a aba nascida do estado (``com_controles``) reprova a das abas iguais;
 - o glifo arrancado reprova o da chave da luz e a leitura do WebKit;
 - o guarda do ``mover`` arrancado reprova os dois casos do «Ao vivo» sem aparelho;
-- o chip sem o ``.mj-alvo.fora`` no CSS e o tique sem a ``gestao`` na dica reprovam o WebKit.
+- o chip sem o ``.mj-alvo.fora`` no CSS e o tique sem a ``gestao`` na dica reprovam o WebKit;
+- o guarda do «Gravar» arrancado reprova os dois casos do «Ao vivo» sem aparelho, e o apagado
+  dele arrancado do CSS reprova o WebKit;
+- o glifo da luz diferente da ``i-lampada`` do desenho do rádio reprova o do glifo da casa.
 """
 
 from __future__ import annotations
@@ -140,6 +143,16 @@ def test_a_porta_guarda_o_icone_do_conjunto_e_recusa_o_de_fora() -> None:
         estado_dos_acessorios(MOD, _estado(torto))
 
 
+def test_o_glifo_da_luz_e_a_lampada_do_desenho_do_radio() -> None:
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+
+    desenho = (pathlib.Path(__file__).resolve().parents[2] / "mockup" / "mapa-do-radio.html")
+    casa = re.search(r'<symbol id="i-lampada"[^>]*>(.*?)</symbol>',
+                     desenho.read_text(encoding="utf-8"), re.S)
+    assert casa, "o desenho do rádio perdeu a i-lampada"
+    assert exp.GLIFO_DO_CONTROLE["lampada"] == casa.group(1).strip()
+
+
 def _abas(html: str) -> list[str]:
     return re.findall(r'<label for="mj-aba-\d+">([^<]*)', html)
 
@@ -168,6 +181,9 @@ def test_sem_aparelho_ativo_o_ao_vivo_nao_chega_a_porta(
     assert a07.mover_o_livre_da_modificacao(ctx, o, ponte) == {}
     with pytest.raises(RuntimeError, match="Nenhum aparelho ligado"):
         a07.soltar_o_livre_da_modificacao(ctx, {**o, "evento": "change"}, ponte)
+    with pytest.raises(RuntimeError, match="Nada foi gravado"):
+        a07.gravar_o_livre_da_modificacao(ctx, {"v": f"{MOD}:ao_vivo"}, ponte)
+    assert not a07._VIVA.ao_vivo(MOD).gravando, "o «Gravar» começou sem aparelho"
     assert not [m for m, _ in ponte.chamadas if m == "mods.livre"], ponte.chamadas
     chegou = _tique(a07, ponte, _estado(_aparelho(1), serie=2))
     assert json.loads(chegou["mesa"])[exp.CAMPO_DA_BARRA_FORA] == "", "o aparelho não acendeu"
@@ -198,6 +214,7 @@ _LER = """(function(){
     cartao: o(j.querySelector('.mj-ap:not(.mj-cc)[data-alvo="g2"]')),
     controles: o(j.querySelector('.mj-cc[data-alvo="g2"]')),
     chip: o(j.querySelector('.mj-alvo[data-v$=":g2"]')),
+    gravar: o(j.querySelector('.mj-gravar')),
     trilho: trilho.classList.contains('fora'), dica: trilho.getAttribute('data-dica') || ''});
 })()"""
 _LUZ = """(function(){
@@ -243,6 +260,7 @@ def test_no_webkit_os_quatro_se_apagam_juntos_e_a_luz_tem_o_glifo(
         assert religado == ligado, (caso, religado)
         assert not ligado["trilho"] and not desligado["trilho"], (caso, desligado)
         assert nenhum["trilho"], (caso, nenhum)
+        assert ligado["gravar"] == 1.0 and nenhum["gravar"] == 0.5, (caso, "o Gravar aceso", nenhum)
         assert nenhum["dica"].startswith("Nenhum aparelho ligado"), (caso, nenhum)
         luz = json.loads(luz)
         assert luz["glifo"] == [16, 16] and luz["antes"] and luz["dentro"], (caso, luz)
