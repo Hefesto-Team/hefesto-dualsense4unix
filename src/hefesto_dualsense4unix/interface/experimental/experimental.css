@@ -551,6 +551,12 @@
 #mod-janela .mj-ap-pe { display:flex;gap:8px }
 #mod-janela .mj-ap-pe .btn { flex:1 }
 #mod-janela .mj-ap-vazio { grid-column:1 / -1;font-size:12px;color:var(--texto-mudo);padding:8px 0 }
+#mod-janela .mj-sec { display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:center;column-gap:12px;
+  row-gap:4px;padding-bottom:8px }
+#mod-janela .mj-sec > .mj-acoes { grid-column:1;padding:4px 0 }
+#mod-janela .mj-sec > .mj-aps { grid-column:1 / -1;padding-bottom:0;min-width:0 }
+#mod-janela .mj-sec > .mj-aps:has(> .mj-ap-vazio) { grid-column:2;grid-row:1 }
+#mod-janela .mj-sec .mj-ap-vazio { padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
 #mod-janela .mj-chave { position:relative;width:36px;height:20px;border-radius:10px;background:var(--border-forte);
   cursor:pointer;flex:none }
 #mod-janela .mj-chave::after { content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;
