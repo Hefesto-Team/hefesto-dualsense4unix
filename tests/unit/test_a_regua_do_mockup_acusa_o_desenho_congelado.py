@@ -196,12 +196,15 @@ def test_os_perigosos_saem_da_lista_mas_contam_como_cobertos():
 
 
 def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
-    """A afirmação acima, conferida contra o ARQUIVO e não contra a memória."""
+    """A afirmação acima, conferida contra o ARQUIVO e não contra a memória.
+
+    O `travar-navegacao` é o cadeado da moldura de toda aba
+    (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01, publicado em 26/10/2026)."""
     texto = _texto("05-vibracao.html")
     do_html = {g.nome for g in regua._gestos_cravados(texto)}
     assert not (do_html - {"aplicar", "salvar", "importar", "exportar",
                            "lado", "haptica", "modo-da-vibracao", "criar-efeito", "testar",
-                           "efeito-haptico", "efeito-imersao"}), (
+                           "efeito-haptico", "efeito-imersao", "travar-navegacao"}), (
         f"a 05-vibracao passou a ter `data-gesto` próprio: {sorted(do_html)}. "
         f"Se isso é intencional, esta régua fica mais fácil — mas o teste tem "
         f"de saber, porque a união com os registrados existe por causa disto.")
