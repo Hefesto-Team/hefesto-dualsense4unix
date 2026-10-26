@@ -22,32 +22,32 @@ seção daqui**: a aba deixou de estar em trabalho.
 ---
 
 ## 01-jogar.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 02-controles.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 03-gatilhos.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 04-iluminacao.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 05-vibracao.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 06-navegacao.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 07-lancadores.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 08-conexoes.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 - **26/10/2026** — a linha do controle no cabo ganhou a regra que tira o esmaecido da silhueta e o selo «● Cor ● Pn» (A-LINHA-DO-CABO-NAS-CONEXOES-TEM-A-COR-DO-CONTROLE-01); até publicar, a janela pinta a cor e o selo (pelo produto), mas a silhueta do cabo sai esmaecida.
 
 ## 09-sistema.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.
 
 ## 10-perfis.html
-- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (a Interna segue ligada e só o «Interna» da 06 a desliga); o `--publicar` leva às dez de uma vez.
+- **26/10/2026** — o botão que trava a navegação dos controles entrou na moldura (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01); até publicar, a janela do produto fica sem o botão (nenhum outro lugar da janela trava a Interna; a regra de um controle por vez já vale, porque mora no código da janela); o `--publicar` leva às dez de uma vez.

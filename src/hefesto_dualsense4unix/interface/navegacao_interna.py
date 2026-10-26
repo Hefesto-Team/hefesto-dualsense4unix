@@ -33,6 +33,11 @@ REPETICAO_DO_ANALOGICO_S = 0.25
 
 DIRECOES = ("cima", "baixo", "esquerda", "direita")
 
+#: Um controle navega por vez (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01): quem mexe primeiro
+#: fica com a navegação até passar isto sem mexer, pelo botão, pelo analógico ou pelo touchpad.
+#: O Start fica de fora: ele guarda o perfil de todos, de qualquer controle (22/10/2026).
+PRAZO_DO_DONO_S = 3.0
+
 
 @dataclass(frozen=True)
 class Ato:
@@ -178,6 +183,8 @@ class Navegador:
     relogio: Callable[[], float] = time.monotonic
     _vistos: dict[str, dict[str, int]] = field(default_factory=dict)
     _analogicos: dict[str, _Analogico] = field(default_factory=dict)
+    _dono: str = ""
+    _dono_ate: float = float("-inf")
 
     def _diferenca(self, toques: Mapping[str, Mapping[str, int]]) -> dict[str, dict[str, int]]:
         novos: dict[str, dict[str, int]] = {}
@@ -209,7 +216,16 @@ class Navegador:
         novos = self._diferenca(toques)
         if not ativa:
             self._analogicos.clear()
+            self._dono = ""
             return []
+        fora = set(sem_selecao)
+        agora = self.relogio()
+        # O Start de todo controle guarda, também o de quem navega o PC com o mouse
+        # ligado (22/10/2026); a seleção e o cursor, esses, não são dele.
+        salvar = any(d.get("start", 0) > 0 for d in novos.values())
+        dono = self._o_dono(sorted(set(novos) | set(inputs or {})), novos, inputs or {}, fora,
+                            agora)
+        novos = {dono: novos[dono]} if dono in novos else {}
         atos: list[Ato] = []
         aba = pagina
         abas = abas_da_volta(dez)
@@ -222,14 +238,10 @@ class Navegador:
                         aba = seguinte
         if aba != pagina:
             atos.append(Ato("ir", pagina=aba))
-        fora = set(sem_selecao)
-        # O Start de todo controle guarda, também o de quem navega o PC com o mouse
-        # ligado (22/10/2026); a seleção e o cursor, esses, não são dele.
-        if any(d.get("start", 0) > 0 for d in novos.values()):
+        if salvar:
             atos.append(Ato("salvar"))
-        agora = self.relogio()
         for uniq in sorted(set(novos) | set(inputs or {})):
-            if uniq in fora:
+            if uniq in fora or uniq != dono:
                 self._analogicos.pop(uniq, None)
                 continue
             d = novos.get(uniq, {})
@@ -243,6 +255,27 @@ class Navegador:
             atos.extend(Ato("x", uniq=uniq) for _ in range(max(0, d.get("x", 0))))
             atos.extend(Ato("o", uniq=uniq) for _ in range(max(0, d.get("o", 0))))
         return atos
+
+    def _o_dono(self, uniqs: Sequence[str], novos: Mapping[str, Mapping[str, int]],
+                inputs: Mapping[str, Mapping[str, Any]], fora: set[str], agora: float) -> str:
+        """Quem navega neste tique, ou vazio: o dono segue até ficar ``PRAZO_DO_DONO_S`` parado
+        (ou sair), e só então o primeiro que mexer assume. O toque de quem não é dono se perde."""
+
+        def mexeu(uniq: str) -> bool:
+            if any(n > 0 for k, n in novos.get(uniq, {}).items() if k != "start"):
+                return True
+            if uniq in fora:
+                return False
+            entrada = inputs.get(uniq)
+            return bool(direcao_do_analogico(entrada)) or ponto_do_dedo(entrada) is not None
+
+        if self._dono and (agora > self._dono_ate or self._dono not in uniqs):
+            self._dono = ""
+        if not self._dono:
+            self._dono = next((u for u in uniqs if mexeu(u)), "")
+        if self._dono and mexeu(self._dono):
+            self._dono_ate = agora + PRAZO_DO_DONO_S
+        return self._dono
 
     def _do_analogico(self, uniq: str, inputs: Mapping[str, Any] | None,
                       agora: float) -> list[Ato]:

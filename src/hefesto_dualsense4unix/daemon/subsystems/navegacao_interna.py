@@ -36,10 +36,6 @@ TIPOS = (TIPO_INTERNA, TIPO_COMPUTADOR)
 #: Sem renovação por mais que isto, o foco cai e os botões voltam ao jogo.
 PRAZO_DO_FOCO_S = 1.0
 
-#: Quem navega fica com a navegação até passar isto sem um toque dele; só então outro controle
-#: assume. Os toques dos outros, nesse intervalo, não se contam.
-PRAZO_DO_DONO_S = 3.0
-
 #: Os botões que navegam, no nome do leitor evdev, e o nome do toque na
 #: resposta do ``navegacao.foco``. Os analógicos e os gatilhos nunca (D-22).
 #: O Start (``options``) entra pelo desenho de 03/10: com a Interna ele
@@ -85,8 +81,6 @@ class NavegacaoInterna:
         self._foco_ate = float("-inf")
         self._vistos: dict[str, dict[str, int]] = {}
         self._toques: dict[str, dict[str, int]] = {}
-        self._dono: str | None = None
-        self._dono_ate = float("-inf")
 
     @classmethod
     def da_sessao(cls) -> NavegacaoInterna:
@@ -151,52 +145,23 @@ class NavegacaoInterna:
         Só com a Interna agindo: fora dela a leitura só ressincroniza a base,
         e o R1 que saiu como Alt+Tab não vira aba depois. Um leitor reiniciado
         (o contador dele voltou para trás) conta a partir do zero novo.
-
-        Um controle navega por vez (``_o_dono_de``): o toque dos outros se descarta.
         """
         agindo = self.age()
-        agora = self._relogio()
         with self._lock:
-            diferencas: dict[str, dict[str, int]] = {}
             for uniq, apertos in apertos_por_uniq.items():
                 if not isinstance(apertos, Mapping):
                     continue
                 vistos = self._vistos.get(uniq, {})
-                self._toques.setdefault(uniq, dict.fromkeys(TOQUES.values(), 0))
+                toques = self._toques.setdefault(uniq, dict.fromkeys(TOQUES.values(), 0))
                 novos: dict[str, int] = {}
-                dif: dict[str, int] = {}
                 for botao, nome in TOQUES.items():
-                    atual = int(apertos.get(botao, 0) or 0)
-                    novos[botao] = atual
+                    agora = int(apertos.get(botao, 0) or 0)
+                    novos[botao] = agora
                     if not agindo or uniq not in self._vistos:
                         continue
                     antes = vistos.get(botao, 0)
-                    dif[nome] = atual - antes if atual >= antes else atual
+                    toques[nome] += agora - antes if agora >= antes else agora
                 self._vistos[uniq] = novos
-                diferencas[uniq] = dif
-            dono = self._o_dono_de(diferencas, agindo, agora)
-            if dono is not None:
-                toques = self._toques[dono]
-                for nome, n in diferencas[dono].items():
-                    toques[nome] += n
-
-    def _o_dono_de(
-        self, diferencas: Mapping[str, Mapping[str, int]], agindo: bool, agora: float
-    ) -> str | None:
-        """Quem navega nesta leitura (com o ``_lock`` na mão); ``None`` se ninguém tocou."""
-        if not agindo:
-            self._dono = None
-            return None
-        if self._dono is not None and agora > self._dono_ate:
-            self._dono = None
-        if self._dono is None:
-            self._dono = next((u for u, d in diferencas.items() if any(d.values())), None)
-        dono = self._dono
-        if dono is None or dono not in diferencas:
-            return None
-        if any(diferencas[dono].values()):
-            self._dono_ate = agora + PRAZO_DO_DONO_S
-        return dono
 
     def toques(self, uniqs: Iterable[str] | None = None) -> dict[str, dict[str, int]]:
         """Os contadores de cada controle, que só sobem."""

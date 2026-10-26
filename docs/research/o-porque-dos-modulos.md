@@ -1745,11 +1745,14 @@ rota `gamepad.mask.set` espera esse desfecho pelo mesmo dono da `gamepad.emulati
 (`gamepad.esperar_o_p1_que_nasce`, prazo `PRAZO_DO_P1_QUE_NASCE_S`), e a interface lhe dá esse prazo com folga
 (`TETO_DO_GESTO_QUE_PEDE_O_P1_S`). O PS + L3 roda no tique e não pode esperar: ele deixa o passo para o desfecho.
 
-## A Navegação Interna tem um dono por vez (`daemon/subsystems/navegacao_interna.py`), 26/10/2026
+## A Navegação Interna tem um dono por vez (`interface/navegacao_interna.py`), 26/10/2026
 
 **Um controle navega por vez** (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01). Com dois a quatro controles na mão e
-a Interna destravada, cada um movia a seleção ao mesmo tempo, e a tela virava um caos. Quem toca primeiro fica com a
-navegação até ficar parado por `PRAZO_DO_DONO_S` (3 s); os toques dos outros se descartam nesse tempo, com a base
-avançando (o toque ignorado não volta depois). O dono é o primeiro que toca, na ordem em que a leitura os traz (o do
-posto, depois os do co-op), e o prazo dele renova a cada toque dele. A trava (`ligada` falsa, escrita pelo botão da
-moldura de toda aba pelo `navegacao.interna.set`) cala todos: nenhum toque se conta e nenhum botão sai do jogo.
+a Interna destravada, cada um movia a seleção ao mesmo tempo, e a tela virava um caos. A regra mora no `Navegador` da
+janela, e não no daemon, porque só ele vê as três fontes da navegação: os toques que o daemon conta (o direcional, o
+X, o O, o R1 e o L1) e o analógico esquerdo e o touchpad, que ele lê do `inputs` de cada controle. Uma regra só nos
+toques do daemon deixava o analógico e o dedo de todos andarem juntos, e uma segunda regra na janela brigaria com ela.
+Quem mexe primeiro fica com a navegação até ficar parado por `PRAZO_DO_DONO_S` (3 s), ou até sair; o que os outros
+fazem nesse tempo se perde (não volta depois). O Start fica de fora: ele guarda o perfil de todos, de qualquer
+controle (a escolha de 22/10). A trava (`ligada` falsa, escrita pelo botão da moldura de toda aba pelo
+`navegacao.interna.set`) cala todos no daemon: nenhum toque se conta, nenhum botão sai do jogo e a janela não navega.
