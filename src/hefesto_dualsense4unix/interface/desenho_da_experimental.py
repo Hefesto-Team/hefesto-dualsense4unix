@@ -594,11 +594,46 @@ def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
     caixas embaixo, na largura do cartão.
     """
     cartoes = []
-    for nome, itens in _grupos_das_opcoes(opcoes).items():
+    for n, (nome, itens) in enumerate(_grupos_das_opcoes(opcoes).items()):
+        chave, linhas = chave_da_aba(nome, itens)
         cartoes.append(f'<div class="ac-card"><div class="ac-topo">'
-                       f'<span class="ac-tit">{_e(nome or "Opções")}</span></div>'
-                       f'{_linhas_das_opcoes(itens)}</div>')
+                       f'<span class="ac-tit">{_e(nome or "Opções")}'
+                       f'{_bolinha_da_aba(f"cartao-{n}", chave)}</span></div>'
+                       f'{_linhas_da_aba(f"cartao-{n}", linhas, chave)}</div>')
     return f'<div class="ky-grade">{"".join(cartoes)}</div>'
+
+
+def chave_da_aba(nome: str, itens: Sequence[OpcaoDaJanela]
+                 ) -> tuple[OpcaoDaJanela | None, list[OpcaoDaJanela]]:
+    """A chave da aba e as linhas que ficam: a opção ``ligado`` de rótulo igual ao nome do grupo
+    liga e desliga a aba inteira, e por isso sai da lista e vira a bolinha do rótulo da aba."""
+    alvo = nome.strip().casefold()
+    chave = next((o for o in itens if o.tipo == "ligado" and alvo
+                  and o.rotulo.strip().casefold() == alvo), None)
+    return chave, [o for o in itens if o is not chave]
+
+
+def _bolinha_da_aba(n: int | str, chave: OpcaoDaJanela | None) -> str:
+    """A bolinha da chave da aba, verde ligada e cinza desligada; o clique é o da chave de
+    ``ligado`` (``guardar-opcao-da-modificacao``). Pedaço próprio: o clique repinta só ela."""
+    if chave is None:
+        return ""
+    ligada = bool(chave.valor)
+    estado = "Ligado" if ligada else "Desligado"
+    return (f'<span class="mj-aba-chave" id="{PEDACO}chave-da-aba-{n}">'
+            f'<i class="mj-bolinha{" on" if ligada else ""}" role="switch" '
+            f'aria-checked="{str(ligada).lower()}" aria-label="{_a(chave.rotulo)}" '
+            f'data-dica="{_a(chave.rotulo)}: {estado}" data-gesto="guardar-opcao-da-modificacao" '
+            f'data-v="{_a(chave.mod)}:{_a(chave.id)}"></i></span>')
+
+
+def _linhas_da_aba(n: int | str, itens: Sequence[OpcaoDaJanela], chave: OpcaoDaJanela | None) -> str:
+    """As linhas de uma aba; com a chave da aba desligada, apagadas e ainda mexíveis."""
+    linhas = _linhas_das_opcoes(itens)
+    if chave is None:
+        return linhas
+    return (f'<div class="mj-da-chave{"" if chave.valor else " apagada"}" '
+            f'id="{PEDACO}da-chave-{n}">{linhas}</div>')
 
 
 _EMPILHADAS = ("jogos", "por_botao")
@@ -640,11 +675,14 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
     if len(grupos) < 2:
         return _cartoes_das_opcoes(opcoes)
     aberta = aba if aba in grupos else next(iter(grupos))
-    partes = "".join(
-        f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
-        f'<label for="mj-aba-{n}">{_e(nome)}</label>'
-        f'<div class="mj-tela" id="{PEDACO}tela-{n}">{_linhas_das_opcoes(itens)}</div>'
-        for n, (nome, itens) in enumerate(grupos.items()))
+    telas = []
+    for n, (nome, itens) in enumerate(grupos.items()):
+        chave, linhas = chave_da_aba(nome, itens)
+        telas.append(
+            f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
+            f'<label for="mj-aba-{n}">{_e(nome)}{_bolinha_da_aba(n, chave)}</label>'
+            f'<div class="mj-tela" id="{PEDACO}tela-{n}">{_linhas_da_aba(n, linhas, chave)}</div>')
+    partes = "".join(telas)
     return f'<div class="ac-card mj-abas" style="--n:{len(grupos)}">{partes}</div>'
 
 
@@ -1661,11 +1699,12 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                       else fileira + lista)
         if controles[0] and controles[0] == nome:
             partes.append(f'<div class="mj-aps mj-ccs" id="mod-controles">{controles[1]}</div>')
-        if por_aba[nome]:
-            partes.append(_linhas_das_opcoes(por_aba[nome]))
+        chave, linhas = chave_da_aba(nome, por_aba[nome])
+        if linhas:
+            partes.append(_linhas_da_aba(n, linhas, chave))
         telas.append(
             f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
-            f'<label for="mj-aba-{n}">{_e(nome)}</label>'
+            f'<label for="mj-aba-{n}">{_e(nome)}{_bolinha_da_aba(n, chave)}</label>'
             f'<div class="mj-tela" id="{PEDACO}tela-{n}">{"".join(partes)}</div>')
     return f'<div class="ac-card mj-abas" style="--n:{len(nomes)}">{"".join(telas)}</div>'
 
