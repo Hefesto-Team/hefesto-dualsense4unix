@@ -288,3 +288,31 @@ def test_o_valor_e_a_chave_do_js_na_string_dispensam_a_marca_que_saiu(tmp_path: 
         '"""\n'
     )
     assert _acusadas(tmp_path, corpo) == [7, 7]
+
+
+def _scripts_com_ajuda() -> list[str]:
+    feito = subprocess.run(["git", "-C", str(RAIZ), "grep", "-l", "<<'AJUDA'", "--", "*.sh"],
+                           capture_output=True, text=True, check=True)
+    return [r for r in feito.stdout.split("\n") if r]
+
+
+FORA_DA_AJUDA_DESDE_ANTES = {
+    "install.sh": {"--disable-cosmic-applet", "--uhid-contrapressao"},
+    "scripts/ci-local.sh": {"--ajuda"},
+    "scripts/install_fonts.sh": {"--remove"},
+    "scripts/install_snd_quirk.sh": {"--delete"},
+    "scripts/portoes.sh": {"--aceite"},
+}
+
+
+@pytest.mark.parametrize("rel", _scripts_com_ajuda())
+def test_a_ajuda_que_era_cabecalho_cita_toda_opcao_que_o_script_aceita(rel: str) -> None:
+    """O ``--help`` que saiu do comentário de cabeçalho para o ``_ajuda`` não perdeu o Uso."""
+    texto = (RAIZ / rel).read_text(encoding="utf-8")
+    ajuda = re.search(r"<<'AJUDA'\n(.*?)\nAJUDA\n", texto, re.S)
+    assert ajuda, f"{rel}: o _ajuda sem o texto"
+    bracos = re.findall(r"^\s+((?:-\w\|)?--[\w-]+(?:\|-{1,2}[\w-]+)*)\)", texto, re.M)
+    aceitas = {o for b in bracos for o in re.findall(r"--[\w-]+", b)} - {"--help"}
+    aceitas -= FORA_DA_AJUDA_DESDE_ANTES.get(rel, set())
+    faltam = sorted(o for o in aceitas if o not in ajuda.group(1))
+    assert not faltam, f"{rel}: o --help não cita {faltam}"

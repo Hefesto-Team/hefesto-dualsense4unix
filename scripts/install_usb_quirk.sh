@@ -15,6 +15,16 @@ install_usb_quirk.sh — alavanca de boot que PRESERVA o áudio do DualSense.
     CAVEAT: preserva o áudio no nível do KERNEL (sem storm); com os WP 52/53
     instalados o nó segue suprimido no PipeWire até removê-los ou definir
     HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1.
+
+Uso:
+  scripts/install_usb_quirk.sh            aplica o quirk (default; requer root)
+  scripts/install_usb_quirk.sh --remove   reverte o quirk (requer root)
+  scripts/install_usb_quirk.sh --status   read-only: ativo/agendado/runtime (sem sudo)
+  scripts/install_usb_quirk.sh --check     alias de --status
+  scripts/install_usb_quirk.sh --delete    alias de --remove
+  scripts/install_usb_quirk.sh --runtime  escreve no sysfs (best-effort; só vale
+                                           na próxima reenumeração/replug; NÃO
+                                           substitui o cmdline). Requer root.
 AJUDA
 }
 
