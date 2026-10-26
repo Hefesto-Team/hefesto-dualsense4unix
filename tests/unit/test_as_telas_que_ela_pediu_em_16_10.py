@@ -180,7 +180,7 @@ def test_as_notas_do_status_saem_em_tercos() -> None:
     contas = [c.count('class="saude') for c in resto.split('<div class="risco"></div>')]
     assert contas == [3, 2], contas
     doc = _pagina("09-sistema.html")
-    faixa = doc.split('<div class="status3">')[1].split("<!-- ---------- 2.")[0]
+    faixa = doc[doc.index('<div class="status3">'):doc.index('<div class="sec-rot sr-avancadas">')]
     por_coluna = [len(re.findall(r'class="saude[" ]', c))
                   for c in faixa.split('class="col-lista"')[1:]]
     assert por_coluna == [2, 2, 2], por_coluna
