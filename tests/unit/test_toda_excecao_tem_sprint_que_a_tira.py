@@ -362,6 +362,10 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "os desalinhamentos que a régua de geometria não cobra, cada um com a data, a medida e o "
         "porquê: o acordeão fechado que mede zero, o padding da Navegação, as colunas que mudam de "
         "altura com o modo; é escolha justificada, não defeito a curar"),
+    "tests/unit/test_o_codigo_nao_tem_comentario.py::DIRETIVAS_ACEITAS": (
+        "os casos que o portão do código sem comentário tem de aceitar (o shebang, o `noqa`, o "
+        "`type: ignore`, a marca da lista de exceção…): é o contrato que a régua prova, não um "
+        "arquivo isento"),
     "tests/unit/test_o_codigo_de_src_tem_quem_o_chame.py::_FORA_DO_PRODUTO": (
         "os módulos de `src/` sem caminho do produto, cada um com o porquê e o endereço de quem o "
         "chama (o gerador do desenho, o retratista, o GERADO pelo portão): é o contrato que a "
