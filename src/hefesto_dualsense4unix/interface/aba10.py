@@ -73,20 +73,7 @@ DICA_DA_MASCARA = "Máscara: {mascara}"
 MASCARA_QUE_ACENDE = "DualSense"
 DICA_DO_STATUS = "Aceso: ligado agora; o ponto: só deste controle"
 
-CSS = CSS_GLIFO + """
-  /* ---------- Perfis ---------- */
-  /* UM FUNDO SÓ, com os dois blocos dentro. Eles continuam sendo dois — mesma
-     largura, mesma altura, cada um com o seu título e os seus três botões — mas
-     a moldura é uma, e o vão entre eles vira uma divisória fina. Pedido em
-     27/08: "deixa um só, pra causar a ilusão de um único bloco". */
-  /* A CORRENTE DA ALTURA: o quadro `estica` cresce até o rodapé, e daí para baixo
-     cada elo precisa passar a altura adiante — corpo, grade, coluna, moldura,
-     lista. Faltando um elo, a lista volta a parar no tamanho do conteúdo.
-     `flex:1;min-height:0` e NÃO `height:100%`: a porcentagem se resolve contra a
-     altura do pai, que aqui é automática — a conta fica circular, o navegador cai
-     no `auto`, e o quadro cresceu 116px além do miolo levando a fileira de botões
-     para fora da janela. */
-  .perfis{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;
+CSS = CSS_GLIFO + """  .perfis{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;
           border:1px solid var(--linha);border-radius:7px;background:var(--app-bg);
           overflow:hidden}
   .perfis > div{display:flex;flex-direction:column;padding:10px 14px;min-height:0;min-width:0}
@@ -110,6 +97,7 @@ CSS = CSS_GLIFO + """
   .tab thead th{position:sticky;top:0;z-index:2;text-align:left;font-weight:700;font-size:10px;
           color:var(--fg);
           padding:7px 10px;background:var(--elevated);
+          background-image:linear-gradient(color-mix(in srgb, var(--purple) 16%, transparent),color-mix(in srgb, var(--purple) 16%, transparent));
           border-bottom:1px solid var(--linha)}
   .tab td{padding:8px 10px;color:var(--texto-suave);cursor:pointer;
           border-bottom:1px solid var(--linha)}
@@ -201,25 +189,11 @@ CSS = CSS_GLIFO + """
   .guarda table{height:100%}
   .tab.miuda thead th{padding:5px 8px;background-color:var(--panel);border-bottom:1px solid var(--linha)}
 
-  .tab thead th:nth-child(1){background-image:linear-gradient(color-mix(in srgb, var(--cyan) 14%, transparent),color-mix(in srgb, var(--cyan) 14%, transparent))}
-  .tab thead th:nth-child(2){background-image:linear-gradient(color-mix(in srgb, var(--purple) 20%, transparent),color-mix(in srgb, var(--purple) 20%, transparent))}
-  .tab thead th:nth-child(3){background-image:linear-gradient(color-mix(in srgb, var(--orange) 14%, transparent),color-mix(in srgb, var(--orange) 14%, transparent))}
   .tab.miuda td{padding:1px 8px;cursor:default}
   .gd-nome{vertical-align:middle;white-space:nowrap;font-size:11px}
   .tab.miuda{min-width:524px}
   .gd-pecas{width:271px}
-  /* 16/10/2026: com a ativação dos botões e a curva dos analógicos são DEZ seções, e com 6px a
-     última passava 3px da célula. O vão entre seções desceu a 5px (o de dentro segue 2px).
-     19/10/2026: a fileira pede 271px (catorze glifos de 15px, quatro vãos de 2px e nove de 5px), e a
-     coluna de 255px só a continha a 1272 px porque a folga da tabela a alargava: a 940 px a última
-     seção passava 16px da célula. A coluna passa a 271px; a tabela já rola na horizontal ali. */
   .gd-pecas .gls{display:flex;width:100%;gap:clamp(5px,calc((100% - 218px) / 9),14px)}
-  /* O GLIFO DIZ O CONTROLE AGORA, E O PONTO EMBAIXO DIZ O DISCO — 02/10/2026,
-     decidido pelo usuário em 29/09 («Ponto embaixo»): aceso = ligado agora neste
-     controle · apagado = desligado · tracejado = o controle não diz · o ponto
-     = o perfil aberto no editor guarda esta seção só para ele. O ponto mora
-     FORA do `.gr`, e por isso não herda a cor nem o halo do aceso: as duas
-     camadas não se confundem. */
   .gc{position:relative;display:inline-flex}
   .gq{display:inline-flex;align-items:center;gap:2px;border-radius:3px}
   .gq.nd{outline:1px dashed var(--comment);outline-offset:1px}
@@ -229,36 +203,6 @@ CSS = CSS_GLIFO + """
   .gr{display:inline-flex;align-items:center;gap:2px;color:var(--fg)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
-  /* A COR DO PLÁSTICO NA BORDA DA LINHA, pela mesma razão do chip da fita: num
-     desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
-     A cor vem de `cor_da_zona()` — do `<style>` que o gerador escreveu no SVG —,
-     nunca de um hexadecimal digitado. É a mesma gramática do `tr.ativo` da tabela
-     ao lado: uma barra fina à esquerda diz de quem é a linha.
-
-     ELA DEIXOU DE SER `box-shadow` NA CÉLULA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
-     O `--plastico` morava no `<tr>`, **sem endereço nenhum**, e por isso ficava com
-     a cor do DESENHO enquanto o nome ao lado já vinha do aparelho: a linha dizia
-     `P1 • White • USB` com a barra do controle do mockup. Agora a barra é um
-     elemento PRÓPRIO e endereçado por `guarda.plastico`, e quem escreve a cor é
-     o pacote `a10_perfis`, com o que leu da mesa.
-
-     O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO: a régua do gerador conta as
-     ocorrências do atributo na página, e um comentário que o soletra some com a
-     conta. (Custou uma reprovação, e ela estava certa.)
-
-     O ALVO É `cor`, E NÃO `fundo`, e a escolha é medida: o `escrever()` do piloto
-     guarda `#ae335a` em `style.background` e lê `rgb(174, 51, 90)` de volta —
-     a comparação nunca casa e o contador soma uma pintura por tique, para sempre
-     (é o defeito que já tirou a `largura` do travessão). O ramo `cor` ESCREVE e
-     depois COMPARA, então é o único idempotente para hexadecimal.
-
-     `background:currentColor` COM `color:transparent` NO PADRÃO: sem cor lida, o
-     piloto escreve `''`, o inline cai, o `transparent` da classe volta e a barra
-     SOME. Campo sem informação não mostra nada — regra de produto.
-
-     A CAIXA É A MESMA: `inset 3px 0 0` pinta os 3px da esquerda da caixa de borda
-     da célula, e é exatamente o que `position:absolute;left:0;top:0;bottom:0` dá
-     num `<td>` posicionado, que não tem borda. Zero pixel de diferença. */
   .tab.miuda td:first-child{position:relative}
   .gd-nome .pl{position:absolute;left:0;top:0;bottom:0;width:3px;
                background:currentColor;color:transparent}
@@ -1032,9 +976,12 @@ def _conferir(html: str) -> None:
            "a lista voltou às colunas Preferência e Funciona em — a Perfis do todo mostra "
            "Nome, Criado em e Modificado em")
 
-    fundos = re.findall(r"\.tab thead th:nth-child\(\d\)\{background-image:([^}]*)\}", html)
-    exigir(len(fundos) == 3, f"não são 3 fundos de coluna no CSS, e sim {len(fundos)}")
-    exigir(len(set(fundos)) == 3, "os fundos das três colunas não são cores diferentes")
+    exigir(not re.search(r"thead th:nth-(?:child|of-type)\([^)]*\)\{[^}]*background", html),
+           "uma coluna do cabeçalho voltou a ter fundo próprio: o cabeçalho tem um tom só")
+    cabeca_css = re.search(r"\.tab thead th\{[^}]*\}", html)
+    exigir(cabeca_css is not None and "background-image:linear-gradient(color-mix(in srgb, "
+           "var(--purple) 16%" in cabeca_css.group(0),
+           "o cabeçalho das tabelas perdeu o tom único dele")
 
     fora = [c for c in MESA if not c.get("conectado", True)]
     exigir("Desconectado</span>" not in html,
