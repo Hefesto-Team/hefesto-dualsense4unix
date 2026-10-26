@@ -59,9 +59,20 @@ def _entre(doc: str, abre: str, fecha: str) -> str:
     return doc[i: doc.index(fecha, i)]
 
 
+def _bloco(doc: str, abre: str) -> str:
+    """O ``<div>`` de ``abre`` até o ``</div>`` que o fecha: a seção como a tela a mostra."""
+    i = doc.index(abre)
+    fundo = 0
+    for marca in re.finditer(r"<div\b|</div>", doc[i:]):
+        fundo += -1 if marca.group() == "</div>" else 1
+        if fundo == 0:
+            return doc[i: i + marca.end()]
+    raise AssertionError(f"`{abre}` não fecha no desenho")
+
+
 def test_o_status_tem_seis_linhas_em_tres_colunas() -> None:
     """Duas linhas no Status e quatro no exame (duas colunas de duas): seis ao todo."""
-    status3 = _entre(_desenho(), '<div class="status3">', "<!-- ---------- 2.")
+    status3 = _bloco(_desenho(), '<div class="status3">')
     colunas = status3.split('<div class="col-lista"')[1:]
     assert len(colunas) == 3, f"o Status tem {len(colunas)} colunas, e o desenho tem três"
     por_coluna = [len(re.findall(r'class="saude(?: vai)?(?: longa)?"', c)) for c in colunas]
@@ -82,7 +93,7 @@ def test_as_quatro_colunas_estao_na_ordem_dela() -> None:
                          _entre(doc, '<div class="sec-rot sr-avancadas">', "</div>"))
     assert rotulos == ["Funcionamento do app", "Interface", "Perfil global de bateria",
                        "Saúde do app"], rotulos
-    avancadas = _entre(doc, '<div class="avancadas">', "<!-- ---------- 3.")
+    avancadas = _bloco(doc, '<div class="avancadas">')
     colunas = re.split(r'<div class="risco"></div>', avancadas)
     assert len(colunas) == 4, f"{len(colunas)} colunas de botões"
     textos = [re.findall(r">([^<>]+)</button>", c) for c in colunas]
