@@ -240,31 +240,17 @@ def gerar_style(
     à duplicata que este gerador existe para matar. Com ela, todo consumidor lê
     `var(--z-casca-solida)` e a fonte continua sendo o CSV.
     """
-    linhas = [
-        '  <style id="cores-do-dualsense-folha">',
-        "    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna",
-        "       `zona` de docs/data/pecas-do-dualsense.csv (as peças).",
-        "",
-        "       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas",
-        "       do indicador de jogador ficam de fora, e é por isso que eles não",
-        "       somem sobre a borda do touchpad. */",
-    ]
+    linhas = ['  <style id="cores-do-dualsense-folha">']
     incompletos = []
     ordem = sorted(mods, key=lambda k: (next(iter(mods[k].values()))["codigo_da_cor"], k))
     zonas_com_alvo = [z for z in ZONAS_DE_SUPERFICIE
                       if z == "simbolos" or por_zona.get(z)]
     for mid in ordem:
         z = mods[mid]
-        qualquer = next(iter(z.values()))
         obrigatorias = [x for x in ZONAS_DE_SUPERFICIE if x != "casca"] + list(ZONAS_DA_CASCA)
         faltam = [x for x in obrigatorias if x not in z]
         if faltam:
             incompletos.append(f"{mid}: {', '.join(faltam)}")
-        linhas.append(
-            f"\n    /* {qualquer['nome']} · código {qualquer['codigo_da_cor']}"
-            + (f" · SEM AMOSTRAGEM em {len(faltam)} zonas" if faltam else "")
-            + " */"
-        )
         tintas = tintas_do_modelo(mid, z)
         decl = ";".join(f"--z-{k}:{v}" for k, v in tintas.items())
         linhas.append(f'    svg[data-colorway="{mid}"]{{{decl}}}')
@@ -305,12 +291,7 @@ def montar(svg: str) -> tuple[str, list[str]]:
     por_zona = zonas_das_pecas()
     mods = modelos()
     style, incompletos = gerar_style(mods, por_zona)
-    miolo = (
-        "    <!-- GERADO por scripts/gerar_cores_do_dualsense.py — não editar à mão. -->\n"
-        + gerar_defs(mods)
-        + "\n"
-        + style
-    )
+    miolo = gerar_defs(mods) + "\n" + style
 
     svg = marcar_zonas(svg, por_zona)
     cabeca = svg[: svg.index(">", svg.index("<svg ")) + 1]

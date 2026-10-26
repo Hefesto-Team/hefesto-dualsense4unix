@@ -33,7 +33,7 @@ def _acessibilidade() -> str:
     bruto = MOCKUP.read_text(encoding="utf-8")
     sem = re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "", bruto, flags=re.S)
     inicio = sem.index('id="acessibilidade"')
-    return sem[inicio:sem.index("<!-- ====", inicio)]
+    return sem[inicio:sem.index("</body>", inicio)]
 
 
 def test_todo_controle_da_acessibilidade_sem_dono_esta_apagado_e_inerte() -> None:

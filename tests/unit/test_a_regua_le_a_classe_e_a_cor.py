@@ -203,7 +203,7 @@ def test_o_token_que_nenhum_degrau_conhece_e_endereco_morto():
         "os três degraus que a tela mostra apagados E o arquivo cravou apagados "
         f"têm de acusar o token que ninguém conhece: {conta}")
     mortos = [v for v in vereditos if "ENDEREÇO MORTO" in v.nota]
-    assert len(mortos) == 3 and "'maximo'" in mortos[0].nota, (  # (noqa-acento)
+    assert len(mortos) == 3 and "'maximo'" in mortos[0].nota, (
         "a nota tem de NOMEAR o token que o pacote emitiu — senão quem lê o "
         "relato não sabe o que procurar no código")
 

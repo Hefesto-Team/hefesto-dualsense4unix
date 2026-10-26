@@ -27,7 +27,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     SCROLL_SPEED_MIN,
 )
 from hefesto_dualsense4unix.profiles.loader import MOLDES_DE_PERFIL
-from monta import CONECTADOS, CSS_GLIFO, DADOS_DO_REPO, MESA, glifo, monta
+from monta import CONECTADOS, CSS_GLIFO, DADOS_DO_REPO, FIM_DA_ABA, MESA, glifo, monta
 from pacotes.a06_navegacao import (
     DO_PERMITIR,
     PERMITIR,
@@ -379,7 +379,7 @@ MIOLO = f'''
     </div>
 '''
 
-SCRIPT = """<script>/* o desenho: quem navega troca as linhas; os seletores acendem o que se escolhe */
+SCRIPT = """<script>
 (() => {
   const nav = document.querySelector('.nav2');
   const quem = nav.querySelector('.seg.quem');
@@ -394,7 +394,6 @@ SCRIPT = """<script>/* o desenho: quem navega troca as linhas; os seletores acen
     nav.dataset.quem = b.value === 'steam' ? 'steam' : 'hefesto';
     acende(quem, b);
   });
-  /* «+ Gesto»: o botão usado ou proibido não se clica, sem frase; escolher fecha a escolha */
   const escolha = nav.querySelector('.novo-gesto');
   const trava = () => escolha.querySelectorAll('.b-gesto').forEach(b => {
     b.disabled = b.dataset.livre !== 'sim';
@@ -410,13 +409,11 @@ SCRIPT = """<script>/* o desenho: quem navega troca as linhas; os seletores acen
   }));
   document.documentElement.classList.add('alvos-24');
   const piso = () => document.querySelectorAll('body *').forEach(e => {
-    /* a fita é da base comum e mede igual nas dez abas: o piso não a toca */
     if (e.closest('svg, .fita') || ['SCRIPT', 'STYLE'].includes(e.tagName)) return;
     const texto = ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.tagName)
       || [...e.childNodes].some(n => n.nodeType === 3 && n.nodeValue.trim());
     if (texto && parseFloat(getComputedStyle(e).fontSize) < 12) e.style.setProperty('font-size', '12px', 'important');
   });
-  /* o `title` de cada seletor devolve o que ele escolheu, para a janela estreita que corta o texto */
   const titulos = () => document.querySelectorAll('select').forEach(s => {
     const o = s.options[s.selectedIndex];
     if (o && s.title !== o.textContent.trim()) s.title = o.textContent.trim();
@@ -689,9 +686,6 @@ CSS = CSS_GLIFO + """
 .ac2-ctl .nj-tog { height:28px;border-radius:7px }
 @media (max-height:860px){.nav2 .tab.bt2 td{height:30px!important} .nav2 .tab.bt2 select{height:26px} .nav2 .op2{height:31px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:26px} .nav2 .tab.ges2 td{height:25px!important} .nav2 .tab.ges2 select{height:23px}}
 @media (max-height:780px){.nav2 .tab.bt2 td{height:26px!important} .nav2 .tab.bt2 select{height:23px} .nav2 .op2{height:27px} .nav2 .op2 :is(.campo-linha,.campo-num,.seg.mini button){height:23px} .nav2 .tab.ges2 td{height:22px!important} .nav2 .tab.ges2 select{height:20px} .nav2-botoes,.nav2-opcoes{padding-block:8px} .nav2 > .quadro-corpo{padding-block:10px}}
-/* AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01 (16/10/2026): «Opções» com título, o touchpad nele, os gestos
-   que se acrescentam e removem, e a altura repartida (N9): as duas colunas de botões e as opções
-   esticam até a fila de baixo, com o vão saindo da sobra. */
 .nav2-botoes,.nav2-opcoes { display:flex;flex-direction:column;min-height:0 }
 .nav2-duas { flex:1 1 auto;min-height:0;align-items:stretch }
 .nav2-duas > .tab.bt2 { height:100% }
@@ -779,7 +773,7 @@ def _gerar() -> None:
                    + m.group(2) + chips_da_fita(MESA_DA_FITA) + m.group(4)),
         s, count=1)
 
-    marca = "<!-- ===== fim da aba ===== -->"
+    marca = FIM_DA_ABA
     if marca not in s:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
     s = s.replace(marca, TELA_ACESSIBILIDADE.strip() + "\n\n" + marca, 1)

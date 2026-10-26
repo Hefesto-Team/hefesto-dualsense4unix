@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 from typing import Any
 
@@ -57,7 +58,9 @@ def test_o_botao_que_ela_mandou_deixar_ficou() -> None:
         onde_ = "publicado" if publicado else "bancada"
         assert corpo.count('data-gesto="reconectar"') == 1, (
             f"{onde_}: o botão Reconectar Controles não está exatamente uma vez")
-        assert "Reconectar Controles" in corpo, f"{onde_}: o rótulo dele sumiu"
+        botao = re.search(r'data-gesto="reconectar"[^>]*>(.*?)</button>', corpo, re.S)
+        assert botao and re.sub(r"<[^>]+>", "", botao.group(1)).strip() == "Reconectar", (
+            f"{onde_}: o rótulo dele sumiu")
 
 
 def test_o_pacote_parou_de_emitir_os_quatro_enderecos() -> None:

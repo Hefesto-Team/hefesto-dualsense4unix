@@ -237,7 +237,7 @@ def padrao() -> dict[str, str]:
 
     O CASO QUE TORNA ISSO VISÍVEL É O `r3`: o mouse o quer como Botão do meio e
     o teclado como "Fechar o teclado na tela", e o produto faz **os dois**. O
-    comentário de `keyboard_mappings.py:37-42` já registrava a colisão e dizia
+    comentário de `keyboard_mappings.py:36-40` já registrava a colisão e dizia
     que ela é resolvida "por quem habilita mouse+teclado juntos". A tela mostra
     o do mouse; a colisão continua no produto, e continua escrita lá.
     """
@@ -312,7 +312,7 @@ def tabela_efetiva(
     `— Nada —`.
 
     ELA NÃO MESCLA COM O DE FÁBRICA, e isso é medido, não escolhido:
-    `resolve_key_bindings` (`profiles/manager.py:2324`) devolve só as chaves do
+    `resolve_key_bindings` (`profiles/manager.py:2278`) devolve só as chaves do
     dict, e é ele quem alimenta o device no `apply_keyboard`. Mesclar aqui faria
     esta tabela discordar do device que ela mesma vai reescrever um método
     depois — que é o defeito que esta camada existe para fechar.

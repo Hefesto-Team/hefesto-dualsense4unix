@@ -788,7 +788,7 @@ def test_o_cartao_da_steam_nao_achada_mantem_os_enderecos_da_pagina(desenho):
         "um travessão solto no pé do cartão")
 
 
-_FIM_DA_ABA = "<!-- ===== fim da aba ===== -->"
+_FIM_DA_ABA = '<script id="base-comum">'
 
 
 def _publicada(com_a_legenda: bool = False) -> str:

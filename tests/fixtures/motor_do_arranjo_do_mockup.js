@@ -1,22 +1,3 @@
-/* motor_do_arranjo_do_mockup.js — o ORÁCULO da porta para Python.
- *
- * Ele não copia o motor: EXTRAI o `<script>` de `mapa-das-portas.html` (a
- * página que o gerador `interface/pagina_do_mapa.py` escreve, a que o
- * `--publicar` leva ao produto), corta fora a camada de interação e desenho, e
- * chama as funções puras sobre os mesmos cenários que
- * `tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py` dá ao Python.
- *
- * Copiar o motor para cá seria a segunda verdade que esta leva existe para
- * matar: a cópia envelheceria em silêncio no dia em que o mockup mudasse. E
- * ler o congelado de 24/08, que é só a origem do gerador, mediria a regra de
- * antes: a página viva já diz a entrada pelo `naFraseDe` do dono e entrega o
- * arranjo por `window.hefestoArranjo`.
- *
- *   node tests/fixtures/motor_do_arranjo_do_mockup.js > saida.json
- *
- * `Infinity` não existe em JSON: sai como a string "Infinity", e o lado Python
- * a lê de volta como `math.inf`.
- */
 "use strict";
 var fs = require("fs");
 var path = require("path");
@@ -32,7 +13,6 @@ if (ini === -1 || fim === -1 || fim <= ini) {
 }
 var fonte = linhas.slice(ini, fim).join("\n");
 
-/* o motor, sem a camada de interação, mais o bloco que o exporta */
 var motor = fonte + "\n" + [
   "  global.__motor = {",
   "    set MAPA(v){ MAPA = v; },",
@@ -69,8 +49,6 @@ var motor = fonte + "\n" + [
   "})();",
 ].join("\n");
 
-/* o motor define funções de desenho que tocam `document`; nenhuma delas roda
-   aqui, mas a referência precisa existir para o `eval` não estourar */
 global.document = { getElementById: function () { return null; },
                     addEventListener: function () {}, querySelector: function () { return null; } };
 eval(motor);
@@ -94,8 +72,6 @@ function reset() {
   m.DECLARADO = {};
 }
 
-/* a mesa dela às 02:36 de 25/08/2026: o hub saiu do barramento e levou os três
-   adaptadores Bluetooth com ele. Estado de primeira classe, não borda. */
 var SEM_HUB_APARELHOS = [
   { id: "wifi",    tipo: "Wi-Fi",   nome: "Archer T3U",       cor: "#ff5555", classe: "wifi",    usb: 3, mA: 504 },
   { id: "teclado", tipo: "Teclado", nome: "Receptor 2,4 GHz", cor: "#ffb86c", classe: "teclado", usb: 2, mA: 100 },
@@ -131,17 +107,13 @@ m.VARIANTES.forEach(function (v) {
   out["qualidade/" + v.id] = m.qualidade(v.op);
 });
 
-/* a regra "ficar parado vale bônus", arrancada */
 reset();
 out["receita/sem-bonus-parado"] = m.receita({ bonusParado: 0 });
 out["planejar/sem-bonus-parado"] = m.planejar({ bonusParado: 0 });
 
-/* ponto fixo: aplicar o plano e replanejar dá zero movimentos */
 m.VARIANTES.forEach(function (v) {
   reset();
   var plano = m.planejar(v.op).plano;
-  /* aplicar = o mapa passa a dizer que cada entrada do plano é o caminho de
-     quem foi para lá; a leitura não muda, só o cabo mudou de soquete */
   var leitura = LEITURAS_PADRAO.agora.caminho;
   var novoMapa = {};
   Object.keys(plano).forEach(function (n) { novoMapa[n] = leitura[plano[n]]; });
@@ -157,14 +129,11 @@ m.VARIANTES.forEach(function (v) {
   });
 });
 
-/* segurando: o filtro de região entra antes do veredito por classe */
 reset();
 m.segurando = "bt-c";
 m.naMao = "bt";
 ["1", "2", "10", "15a"].forEach(function (n) { out["julgar-segurando/bt-c/" + n] = m.julgar(n); });
 
-/* a ponta do extensor LIVRE: no exemplo ela está ocupada, e só com ela vazia o aparelho na mão
-   chega à regra da entrada esticada («na ponta do extensor») e à da entrada-mãe livre */
 ["15", "15a"].forEach(function (n) {
   ["bt", "wifi", "teclado", "mouse", "webcam", null].forEach(function (mao) {
     reset();
@@ -176,8 +145,6 @@ m.naMao = "bt";
   });
 });
 
-/* duas entradas COM NOME, como o mapa dela as guarda: a página diz a entrada pelo `naFraseDe` do
-   dono («entrada Atrás») e o porte em Python tem de dizer o mesmo, frase a frase */
 var NOMES = { "9": { nome: "Atrás" }, "15a": { nome: "Ponta" }, "13": { nome: "Alto" }, "5": { nome: "Meio" } };
 m.VARIANTES.forEach(function (v) {
   reset();
@@ -200,7 +167,6 @@ reset();
 out["reexame/antes-agora"] = m.reexame("antes", "agora");
 out["reexame/agora-agora"] = m.reexame("agora", "agora");
 
-/* os controles: o padrão, e os casos da mordida da MOTOR-4 */
 reset();
 out["controles/padrao"] = m.planoDosControles();
 [1, 2, 3, 4].forEach(function (q) {
@@ -218,7 +184,6 @@ reset();
 m.CONTROLES = CONTROLES_PADRAO.map(function (c) { return Object.assign({}, c, { onde: "sumiu" }); });
 out["controles/adaptador-sumiu"] = m.planoDosControles();
 
-/* mapa vazio e mapa com entrada inexistente — dois estados da fumaça */
 reset();
 m.MAPA = {};
 out["mapa-vazio/alocacao"] = m.alocacao();
@@ -230,7 +195,6 @@ m.MAPA = { "99": "9-9" };
 out["mapa-inexistente/alocacao"] = m.alocacao();
 out["mapa-inexistente/receita"] = m.receita({});
 
-/* A MESA DELA DE AGORA: o hub sumiu, e com ele os três adaptadores */
 reset();
 m.APARELHOS = copia(SEM_HUB_APARELHOS);
 m.LEITURAS = { agora: { rotulo: "02h36 — sem o hub", caminho: copia(SEM_HUB_LEITURA) },

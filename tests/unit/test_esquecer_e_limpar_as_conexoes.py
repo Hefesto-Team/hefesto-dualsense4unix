@@ -760,4 +760,4 @@ def test_o_desenho_nao_tem_linha_sem_aparelho() -> None:
     assert [a["id"] for a in linhas if not a.get("aparelho")] == []
     assert all(nome_na_conexoes(a) and a.get("cor") and a.get("cor_nome") for a in linhas), linhas
     mockup = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
-    assert "Não Conectou" in mockup
+    assert 'aria-label="Não conectou"' in mockup

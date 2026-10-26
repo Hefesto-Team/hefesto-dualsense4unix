@@ -356,7 +356,10 @@ def _varrer_sh(texto: str, i: int, achados: list[Comentario], dentro: bool = Fal
                 continue
             i += 2 if i + 1 < n and texto[i + 1] != "\n" else 1
             continue
-        if texto.startswith("<<", i) and not texto.startswith("<<<", i):
+        if texto.startswith("<<<", i):
+            i += 3
+            continue
+        if texto.startswith("<<", i):
             lido = _heredoc(texto, i)
             if lido is not None:
                 i, delim, tira_tab = lido
@@ -531,8 +534,24 @@ def comentarios_html(texto: str) -> list[Comentario]:
                     achados += comentarios_js(texto, m.end(), fim)
             i = n if fecho is None else fecho.end()
             continue
+        if texto[i] == "<" and i + 1 < n and (texto[i + 1].isalpha() or texto[i + 1] == "/"):
+            i = _fim_da_etiqueta(texto, i + 1, n)
+            continue
         i += 1
     return achados
+
+
+def _fim_da_etiqueta(texto: str, i: int, n: int) -> int:
+    while i < n:
+        ch = texto[i]
+        if ch in "'\"":
+            fecha = texto.find(ch, i + 1)
+            i = n if fecha == -1 else fecha + 1
+            continue
+        if ch == ">":
+            return i + 1
+        i += 1
+    return i
 
 
 LEITORES = {

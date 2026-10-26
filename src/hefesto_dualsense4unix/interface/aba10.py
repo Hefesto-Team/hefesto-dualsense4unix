@@ -76,99 +76,20 @@ DICA_DO_STATUS = "Aceso: ligado agora; o ponto: só deste controle"
 ID_DA_PECA = {"p1": "AA:BB:CC:00:00:01", "p2": "AA:BB:CC:00:00:02",
               "p3": "AA:BB:CC:00:00:03", "p4": "AA:BB:CC:00:00:04"}
 
-CSS = CSS_GLIFO + """
-  /* ---------- Perfis ---------- */
-  /* UM FUNDO SÓ, com os dois blocos dentro. Eles continuam sendo dois — mesma
-     largura, mesma altura, cada um com o seu título e os seus três botões — mas
-     a moldura é uma, e o vão entre eles vira uma divisória fina. Pedido em
-     27/08: "deixa um só, pra causar a ilusão de um único bloco". */
-  /* A CORRENTE DA ALTURA: o quadro `estica` cresce até o rodapé, e daí para baixo
-     cada elo precisa passar a altura adiante — corpo, grade, coluna, moldura,
-     lista. Faltando um elo, a lista volta a parar no tamanho do conteúdo.
-     `flex:1;min-height:0` e NÃO `height:100%`: a porcentagem se resolve contra a
-     altura do pai, que aqui é automática — a conta fica circular, o navegador cai
-     no `auto`, e o quadro cresceu 116px além do miolo levando a fileira de botões
-     para fora da janela. */
-  .perfis{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;
+CSS = CSS_GLIFO + """  .perfis{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;
           border:1px solid var(--linha);border-radius:7px;background:var(--app-bg);
           overflow:hidden}
-  /* `min-height:0` em cada elo: por padrão um filho de flex não encolhe abaixo do
-     próprio conteúdo. Sem ele, a lista sem teto empurrou a coluna para baixo e a
-     fileira `Ativar · Novo · Remover` saiu pela borda do quadro — sumiu da tela. */
-  /* E `min-width:0` PELA MESMA RAZÃO, no outro eixo — 11/09/2026. O piso
-     da tabela por controle (`.tab.miuda{min-width:524px}`) é conteúdo, e
-     um item de grade com `min-width:auto` NÃO encolhe abaixo do próprio
-     conteúdo: a coluna da direita empurrava 4px para fora do quadro e
-     levava junto o rótulo «Definições» e o botão «Ativar». Com o zero a
-     coluna cede e quem rola é a `.guarda`, que é quem tem a barra. */
   .perfis > div{display:flex;flex-direction:column;padding:10px 14px;min-height:0;min-width:0}
   .perfis > div:first-child{padding-right:7px}
   .perfis > div:last-child{padding-left:7px}
 
   .perfis > div > .moldura{flex:1;min-height:0;display:flex;flex-direction:column}
   .moldura{border:none;background:none;padding:0}
-  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
-     PRIMEIRA LETRA, e o usuário confirmou: *"a maiúscula a regra é sobre a primeira
-     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
-     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
-     o usuário apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
-     é a forma mais difícil de ler que existe.
-     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
-     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
-     player"), então nada precisou ser reescrito. */
-  /* O TÍTULO DE BLOCO CONTINUA VERDE — 31/08/2026, o usuário decidiu no mesmo turno
-     em que mandou tirar o verde dos nomes: *"coloca essa na cor ver[de] e o
-     Definições também"*. E é coerente com a regra que ela desenhou: o verde
-     saiu de quem NOMEIA UMA LINHA (rótulo de campo, cabeçalho de coluna) e
-     ficou em quem ABRE UM BLOCO — são dois, `Perfis salvos` e `Editar`, e
-     eles é que dizem onde a pessoa está. (Os dois rótulos mudaram de caixa e
-     de palavra em 11/09/2026, A5-033 e A5-041; a decisão do VERDE é a mesma.) */
   .sec-rot{font-size:12px;font-weight:700;color:var(--rot-campo);
            margin-bottom:10px;display:flex;align-items:center;gap:6px;height:15px}
-  /* A LISTA LÊ COMO TABELA: cabeçalho com fundo próprio e linhas zebradas. Quem
-     diz que há mais perfis abaixo é a barra de rolagem de verdade (ver abaixo). */
-  /* SEM `max-height`. Ela tinha teto de 236px: a lista parava em sete perfis e
-     meio — a linha `Faith` ficava cortada ao meio — com o bloco inteiro sobrando
-     embaixo. Ela, 27/08: "pq esse bloco aqui é super capado assim? ... aqui tem
-     literalmente zero necessidade de não usar ele". Agora ela ocupa o que o bloco
-     tem, e o bloco ocupa até o rodapé. */
   .lista{position:relative;flex:1;display:flex;min-height:0}
-  /* A ROLAGEM ENCOSTA EM LINHA INTEIRA — 30/08/2026.
-     A barra de verdade (cura de 28/08) funciona: 12px, e os 3 perfis de baixo
-     são alcançáveis. O que sobrava era a FRAÇÃO: a caixa mede 363px e a linha
-     32, então a 12ª aparecia com 11px — a faixa acima da linha de base, ou
-     seja, uma tira VAZIA. Meia linha com meio texto diz "tem mais abaixo";
-     meia linha sem texto nenhum lê como quebrada, que foi o que a medição
-     apontou.
-     `scroll-snap` não muda a altura de nada e não esconde perfil nenhum: ele só
-     faz a rolagem PARAR em fronteira de linha. `proximity` e não `mandatory` —
-     o mandatory sequestra o gesto e brigaria com a barra que ela acabou de
-     ganhar. */
   .rolo{scroll-snap-type:y proximity}
   .rolo tr{scroll-snap-align:start}
-  /* A BARRA É A DE VERDADE, CLÁSSICA, E OCUPA ESPAÇO — a mesma cura que a 02 já
-     aplicou no `.quadro-corpo`.
-     O QUE ESTAVA AQUI ESCONDIA A LISTA. `.rolo` trazia `scrollbar-width:none` e
-     `::-webkit-scrollbar{display:none}`, e no lugar da barra real vinha uma
-     DESENHADA — `.nav-trilho` + `.nav-polegar`, um par de spans com
-     `position:absolute` e um polegar de altura fixa em `46%`. Medido em 28/08:
-     dos 14 perfis a lista mostrava 11; **116px** ficavam fora (≈3,6 linhas),
-     atrás de 2px que eram a BORDA do `.rolo`, não uma barra — a barra media  (noqa-acento: verbo medir, imperfeito)
-     zero. E o polegar desenhado mentia duas vezes: não andava ao rolar e os
-     46% não tinham relação com a proporção real (359 de 475 = 75,6%).
-     As regras de `width:9px` logo abaixo eram letra morta: `display:none` já
-     tinha vindo antes, e `width` não desfaz `display`.
-     Barra de verdade porque ela nasce só quando há o que rolar, mede a
-     proporção sozinha e anda junto — os estados em que a lista cabe não pagam
-     nada por ela. É por isso que ela vale mais que `scrollbar-gutter:stable`,
-     que reservaria a faixa em toda tela. */
-  /* SEM MOLDURA — 31/08/2026. `.rolo` e `.campos` moram DENTRO do `.perfis`,
-     que já é uma moldura, e cada um tem o fundo `--panel` sobre o `--app-bg`
-     dela. A borda era a terceira linha do mesmo contorno, e é metade do que
-     ela chamou de *"borda dupla"*: *"os campos ... com borda dura em volta de
-     cada um, e a caixa que os contém com outra borda por fora"*. O que separa
-     os dois blocos é o fundo e o vão — que é a *"ilusão de um único bloco"*
-     que o usuário pediu em 27/08, e que a moldura de dentro desfazia. */
   .rolo{flex:1;overflow-y:auto;border-radius:6px;
         background:var(--panel)}
   .rolo::-webkit-scrollbar{width:10px}
@@ -184,59 +105,8 @@ CSS = CSS_GLIFO + """
           border-bottom:1px solid var(--linha)}
   .tab tbody tr:nth-child(even) td{background:rgba(255,255,255,.018)}
   .tab tbody tr:last-child td{border-bottom:none}
-  /* OS TRÊS ESTADOS DA LINHA, e são TRÊS porque são duas verdades diferentes —
-     queixa, 04/09/2026: *"quando clica em algum nome do perfis salvos nada
-     indica que tal coisa tá selecionado"*.
-
-       VALENDO       o perfil que o daemon está aplicando agora  → `class="ativo"`
-       ABERTO        a linha em que o editor ao lado está aberto → `aria-selected`
-       VALENDO+ABERTO os dois na mesma linha — é o estado em que a aba ABRE,
-                     porque `a10_perfis._escolhido` sincroniza o escolhido com o
-                     ativo enquanto ela não clicou em nada.
-
-     A janela GTK antiga já tinha os dois separados — `Gtk.TreeSelection` para a
-     seleção e `Pango.AttrList` para o ativo (`profiles_actions.py`, sprint
-     `2026-08-10-PERFIL-ATUAL-01`) —, e o HTML tinha implementado só o segundo:
-     clicar num perfil mudava o alvo de nove botões e a tela não dizia uma letra.
-
-     A COR DIZ *VALENDO*, O FUNDO DIZ *ABERTO*, e por isso os dois se somam sem se
-     apagar: verde é o plástico do "está no ar" em toda esta casa, e o par
-     `--purple`/`--sel-bg` é o "isto está escolhido" das dez abas (o `.chip.on` do
-     topo, o `.rota button.on`, o `.mm-ap.on`). Quem está nos dois estados mostra
-     a barra DUPLA — 3px de verde por cima de 6px de roxo.
-
-     O ESTADO MORA NUM ATRIBUTO E NÃO NUMA SEGUNDA CLASSE, e a razão é medida:
-     `test_a_lista_de_perfis_cabe_inteira.py:159` procura a SUBSTRING
-     `class="ativo"`, e um `class="ativo escolhido"` a apaga — a régua do realce
-     ficaria verde sobre uma linha que ela não acha mais. `aria-selected` é o que
-     o papel `row` já define para isto, é uma verdade só, e leitor de tela lê.
-
-     `tbody` NOS SELETORES NÃO É ENFEITE: sem ele a regra empata com
-     `.tab tbody tr:nth-child(even) td` (0,2,3) e a zebra come o fundo da linha
-     escolhida nas posições pares — metade das linhas sem marca. */
   .tab tr.ativo td{color:var(--green);font-weight:600}
   .tab tr.ativo td:first-child{box-shadow:inset 3px 0 0 var(--green)}
-  /* O REALCE DA ESCOLHIDA NÃO PODE SER A COR DO `:hover` — 05/09/2026, e a
-     queixa é do usuário: *"caso eu clicasse em outro perfil dos disponíveis ele não
-     tinha nada selecionado em termo visual pra divergir dos demais e do
-     ativo"*.
-
-     MEDIDO: o dado estava CERTO. O produto escreve `aria-selected="true"` na
-     linha clicada e `false` nas outras — conferido chamando `selecionar` e
-     lendo o `<tbody>` que o pacote emite. O que estava errado era a COR: a
-     linha escolhida e a linha sob o mouse usavam as duas `var(--sel-bg)`, a
-     mesma `rgba(189,147,249,.16)`. Ela passa o mouse pela lista e toda linha
-     acende igual à escolhida; a marca existia e não marcava nada.
-
-     OS TRÊS ESTADOS PASSAM A SER TRÊS COISAS DIFERENTES:
-
-       passando o mouse   um véu BRANCO fraco — "estou por cima", nada mais
-       escolhida          roxo FORTE, negrito, e a barra roxa de 3px
-       ativa              verde no texto e barra verde (a cor não muda aqui)
-
-     O roxo da escolhida dobrou (.16 -> .30). Ele não é gosto: com o `:hover`
-     por cima ele ainda precisa ler como "esta é OUTRA coisa", e .16 sobre um
-     véu branco de .06 é indistinguível a olho nu. */
   .tab tbody tr[aria-selected="true"] td{background:rgba(189,147,249,.30);
           color:var(--fg);font-weight:600}
   .tab tbody tr[aria-selected="true"] td:first-child{box-shadow:inset 3px 0 0 var(--purple)}
@@ -245,23 +115,8 @@ CSS = CSS_GLIFO + """
           box-shadow:inset 3px 0 0 var(--green),inset 6px 0 0 var(--purple)}
   .tab tbody tr:hover:not(.ativo):not([aria-selected="true"]) td{
           background:rgba(255,255,255,.06)}
-  /* E a linha ATIVA também responde ao mouse, sem virar a escolhida: ela não
-     entrava em regra de `:hover` nenhuma e ficava morta sob o cursor. */
   .tab tbody tr.ativo:hover:not([aria-selected="true"]) td{
           background:rgba(255,255,255,.06)}
-  /* ------------------------------------------------------------------
-     A LUPA, OS DOIS ÍCONES, A SETA E A DIVISA — PERFIS-LIMPA-01, 11/09/2026.
-
-     O ALVO DO CLIQUE TEM TAMANHO, e o desenho NÃO É O ALVO. O SVG mede 11px
-     (o mesmo do CADEADO, que era o único ícone desta aba), e 11px é desenho
-     — ela clica isto com o mouse. Os 24x24 são o mínimo de alvo, e eles cabem
-     na linha de 15px do `.sec-rot` porque o botão é `align-self:center` com
-     `margin` negativa vertical: ele SOBRA para cima e para baixo sem empurrar
-     nada. É assim que os dois ícones entram em linhas que já existem sem
-     acrescentar um pixel de altura — que é o que a ordem de produto pedia.
-
-     ELES SÃO `<button>` E NÃO HERDAM NADA DE `.btn`: o botão desta casa tem
-     borda, fundo e 11,5px de texto, e é justamente o que sai de cena aqui. */
   .icone-rot{-webkit-appearance:none;appearance:none;border:none;background:none;
              padding:0;margin:-5px 0;width:24px;height:24px;flex:0 0 24px;
              display:inline-flex;align-items:center;justify-content:center;
@@ -269,154 +124,37 @@ CSS = CSS_GLIFO + """
   .icone-rot:hover{background:rgba(255,255,255,.09)}
   .icone-rot:active{background:rgba(255,255,255,.15)}
   .icone-rot.on{background:var(--sel-bg,rgba(189,147,249,.30))}
-  /* O CAMPO DA LUPA NASCE FECHADO — decisão de produto em uma frase: *"Temos que  (noqa-acento) citação
-     deixar o layout mais limpo"*. Um campo de busca sempre visível ACRESCENTA  (noqa-acento) citação
-     uma linha ao bloco em vez de tirar; ele nasce do clique na lupa e some no
-     clique seguinte. `width:0` em vez de `display:none` para a abertura ter
-     movimento — e `padding:0` junto, senão o campo fechado continua com 12px
-     de folga ocupando a linha. */
   .procura{-webkit-appearance:none;appearance:none;width:0;padding:0;border:none;
            background:var(--panel);color:var(--fg);font:inherit;font-weight:400;
            font-size:11px;border-radius:5px;min-width:0;
            transition:width .12s ease,padding .12s ease}
   .procura.on{width:150px;padding:3px 7px;border:1px solid var(--border-forte)}
   .procura::placeholder{color:var(--fg)}
-  /* QUANTOS A LUPA ESCONDEU. Ela nasce vazia e o `ligado()` do piloto lê o
-     vazio como apagado — sem filtro, nada aparece. */
   .fora-da-busca{font-size:10.5px;color:var(--fg);font-weight:400;
                  letter-spacing:0;text-transform:none;display:none}
   .fora-da-busca.on{display:inline}
-  /* A SETA DA COLUNA ORDENADA — do tamanho do ícone, e sem texto novo.
-
-     `pointer-events:none` NÃO É ENFEITE, É A TRAVA DO DUPLO CLIQUE: este
-     `<span>` é o elemento que carrega `data-hef-gesto="ordenar"`, e o ouvinte
-     do piloto despacha no PRIMEIRO clique. Sem esta linha, um clique simples
-     no cabeçalho ordenaria — e o cabeçalho é `position:sticky` a um pixel da
-     célula do nome, que é o gesto `selecionar` e troca o perfil aberto no
-     editor. Com ela, mouse nenhum alcança este nó; quem o aciona é o roteiro
-     da página, no `dblclick`, por `.click()`. O usuário pediu duplo clique. */
-  /* O GLIFO VEM DO CSS, E NÃO DO PILOTO — 11/09/2026, e o defeito era duplo.
-     A seta nasceu com `data-hef-alvo="classe"`, e o ramo `classe` do
-     `escrever()` (`hefesto_vivo.py:458`) só liga classe e RETORNA: nunca
-     escreve texto. Medido na conferência: com `perfis.ordem.nome = "↑"` o
-     span ficava `class="ordena on"`, `opacity:1`, `textContent:""` e
-     **0px de largura** — a seta que diz qual coluna ordena NÃO EXISTIA na
-     tela, nos três estados. E o alvo `texto` não servia: com valor vazio o
-     `escrever()` põe o travessão do lugar vazio (`:382`), e as duas colunas
-     não ordenadas mostrariam «—».
-     O alvo é `atributo`, que é o único que APAGA quando o valor é vazio
-     (`hefesto_vivo.py:626`). O glifo é `content` do CSS; o Python só diz
-     qual, pelo `data-ordem`.
-
-     E A MARGEM SÓ EXISTE QUANDO HÁ SETA. Os 4px de um span vazio cortaram
-     «Priorização» para «Priorizaçã…» — medido em duas larguras de janela,
-     scrollWidth 90 num clientWidth 86. Sem a seta, o mesmo `<th>` mede 86/86.
-
-     `pointer-events:none` NÃO É ENFEITE — a razão inteira está no bloco de
-     comentário acima desta regra. */
   .ordena{pointer-events:none;font-size:10px;line-height:1;color:var(--purple)}
   .ordena[data-ordem]{margin-left:4px}
   .ordena[data-ordem="↑"]::after{content:"↑"}
   .ordena[data-ordem="↓"]::after{content:"↓"}
-  /* A DIVISA QUE ELA ARRASTA. O cursor muda quando ela chega perto — é
-     literalmente o que ela descreveu: *"quando o cursor muda e permite  (noqa-acento) citação
-     alterar a largura da coluna"*. 9px de faixa, metade para cada lado da
-     borda, é o que a mão acha sem procurar. */
   .puxador{position:absolute;top:0;bottom:0;right:0;width:9px;z-index:3;
            cursor:col-resize;background:none}
   .puxador:hover{background:linear-gradient(90deg,transparent 3px,
                  var(--purple) 3px,var(--purple) 5px,transparent 5px)}
   .arrastando,.arrastando *{cursor:col-resize !important;user-select:none}
-  /* A LARGURA DA COLUNA SÓ MANDA COM `table-layout:fixed` — MEDIDO, e é a
-     armadilha que o próprio arquivo já registrava: `.tab .pri` dizia 46px e o
-     navegador media 86px  (noqa-acento: verbo medir, imperfeito), porque com
-     `auto` a `width` é SUGESTÃO. Uma largura
-     arrastada sobre `auto` é uma largura que o navegador reescreve no repinte
-     seguinte, e a coluna volta sozinha ao que o texto mandar.
-
-     O PREÇO, declarado: com `fixed` o texto mais largo que a coluna não a
-     ESTICA mais — ele precisa de onde parar, e é por isso que as três células
-     ganham reticência aqui embaixo. É o que torna o arraste útil: ela alarga a
-     coluna para ler o nome inteiro do jogo, em vez de a coluna decidir por ela.
-
-     O `<colgroup>` É QUEM CARREGA O NÚMERO, e não a `width` da `<th>`: é o
-     único elemento da tabela que existe para isso, ele não é reescrito pelo
-     `blocos` do piloto (que só troca o `<tbody>`), e um `<col>` por coluna dá
-     ao roteiro um lugar só para escrever. */
   .tab{table-layout:fixed}
-  /* AS LARGURAS DE PARTIDA. As duas datas levam 104px (o rótulo mais a seta da ordem: uma coluna
-     que se ordena tem de caber no próprio rótulo com a marca) e o `Nome` NÃO ganha `<col>` de
-     propósito: sem largura escrita ele fica com o resto, o único jeito de uma tabela `fixed` ter
-     uma coluna elástica. Com os 185px que o `Nome` tinha, a soma dava menos que a tabela e o
-     motor esticava as TRÊS colunas em proporção: as datas saíam com 151px, e a largura que ela
-     gravava deixava de ser a que se via (o rótulo «Criado em» tinha 69 num cabeçalho de 68).
-
-     O `<colgroup>` é quem carrega o número e não a `width` da `<th>`; quem
-     arrastar ganha um `style` inline no mesmo `<col>`, e inline vence folha. */
   .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
   .tab tbody td{white-space:nowrap}
   .conta-perfis{font-size:10.5px;color:var(--fg);margin-left:auto;text-transform:none;
                 letter-spacing:0}
-  /* os campos do editor, todos na mesma grade */
-  /* os campos ficam sobre o MESMO fundo da tabela ao lado, e assim os três botões
-     de baixo nascem na mesma base nos dois blocos. */
-  /* `min-height:0` aqui é o que impede a coluna da direita de EMPURRAR a fileira
-     de botões para fora da moldura: sem ele um filho de flex não encolhe abaixo do
-     próprio conteúdo, e a tabela de baixo levou `Duplicar · Voltar · Recarregar`
-     19px além da borda do quadro — que tem `overflow:hidden`, então os três
-     simplesmente sumiam da tela. Medido em 27/08, no primeiro desenho desta tabela. */
   .campos{flex:1;min-height:0;border-radius:6px;
           background:var(--panel);
           padding:10px 12px;display:flex;flex-direction:column;justify-content:flex-start}
-  /* `flex-start` e não `center`: com a lista limitada a 236px o bloco era baixo e
-     centrar não aparecia. Solto o teto, os campos passaram a flutuar no meio, com
-     um vão em cima e a lista da esquerda começando bem mais acima. */
-  /* O RÓTULO ALINHA À ESQUERDA — 31/08/2026, pedido olhando a aba:
-     *"alinha os nomes a esquerda e trás os slicers pra iniciarem deles"*.
-     Ele alinhava à direita, como nas outras nove; aqui não alinha mais, e a
-     divergência é a que o usuário pediu.
-     `nowrap` porque a coluna passou a ser JUSTA: sem ele um rótulo que crescer
-     vira duas linhas e estoura a altura do campo, que nesta aba é medida contra
-     o `overflow` do quadro. */
-  /* MENOS VERDE — 31/08/2026, pedido olhando a aba: *"acho que tem muito
-     verde na página. Talvez alterar com um branco com negrito ativado em alguns
-     cantos"*.
-     A REGRA QUE ESCOLHI, e ela é o que decide QUAIS cantos: **o verde fica onde
-     significa ESTADO; o que só NOMEIA vira branco em negrito.** Havia 20 pedaços
-     verdes na janela e a maior parte só dava nome a uma coisa — cabeçalho de
-     coluna, título de bloco, rótulo de campo —, então o verde tinha deixado de
-     querer dizer alguma coisa: quando tudo é verde, o perfil ATIVO em verde não
-     salta.
-     Continuam verdes, e cada um por um motivo: a linha do perfil ativo (é o
-     estado da lista), o botão `Ativar` (a ação primária) e o cabeçalho do topo
-     (que é do `topo.html` e vale para as dez).
-     O NEGRITO É QUEM PAGA O CONTRASTE PERDIDO: `--fg` sobre `--elevated` é mais
-     claro que o verde, mas sem peso um cabeçalho de coluna vira dado. */
   .campo > span:first-child{color:var(--fg);font-weight:700;text-align:left;
                             white-space:nowrap}
-  /* `minmax(0,1fr)` E NÃO `1fr`, e a diferença é MEDIDA — 06/09/2026. Uma pista
-     `1fr` é `minmax(auto,1fr)`, e o mínimo `auto` de uma pista de grade é o
-     MIN-CONTENT do que está dentro: a pista CRESCE para caber o conteúdo, em
-     vez de apertá-lo. Enquanto os campos eram `<input>` e `<select>` isso não
-     aparecia — nenhum dos dois cresce com o valor. O rótulo do jogo (10-Q4) é
-     TEXTO, e cresce: medido no Chrome com um nome de 300 caracteres, a segunda
-     coluna passou de 412px para **1990px** dentro de uma página de 1180px, e o
-     `Detectar` saiu do quadro junto com ela. O `min-width:0` dos filhos não
-     alcança isto — ele deixa o FLEX apertar, e aqui quem não apertava era a
-     GRADE. */
   .campo{display:grid;grid-template-columns:var(--rot-p) minmax(0,1fr);align-items:center;gap:12px;
          height:var(--h-escolha);font-size:12px;color:var(--fg);margin-bottom:4px}
 
-  /* AS DIVISÓRIAS SAÍRAM DESTE TRECHO — 31/08/2026, pedido olhando a aba:
-     *"remove as linhas horizontais desse trecho"*.
-     Elas nasceram de um pedido de 30/08 — *"as linhas divisórias em todas
-     as páginas (…) a primeira coluna serve como nome da linha e a divisória
-     entre eles tem que estar clara. pra todas as abas"* — e esse pedido CONTINUA
-     valendo nas outras nove: o molde está no `aba04.py`, com a razão escrita lá.
-     O que mudou foi o TRABALHO da divisória. Ela separava duas colunas distantes:
-     o rótulo terminava a 22px do campo, alinhado à direita. Com o rótulo à
-     esquerda e a coluna justa, o nome já encosta no campo — e a linha deixou de
-     separar para virar mais uma borda ao lado das cinco que os campos já têm. */
   .campo .val{display:flex;align-items:center;gap:10px}
   .campo input[type=text],.campo select{
     flex:1;min-width:0;height:var(--h-escolha);border-radius:7px;font-size:12.5px;font-family:inherit;
@@ -425,102 +163,8 @@ CSS = CSS_GLIFO + """
   .campo select{cursor:pointer}
   .campo select.destaque{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
-  /* ---------- O QUADRO "MODO" NÃO MORA MAIS AQUI ----------
-     11/09/2026, ordem de produto: *"em perfis ainda aparece modo. Isso deve aparecer
-     só na aba jogar."* Saíram com ele as três regras que a PERFIL-MODO-01
-     escrevera em 06/09 para a fileira dos quatro botões — a altura solta, a
-     fileira que não quebra, e os 11,5px do rótulo em duas linhas dentro do
-     botão.
-
-     O SELETOR NÃO SE ESCREVE NESTE COMENTÁRIO, e isso não é asseio: a régua
-     `_conferir` reprova a página em que ele reaparecer, e um comentário CSS
-     viaja INTEIRO para dentro do HTML. Escrevê-lo aqui faria o aviso virar a
-     primeira ocorrência do defeito que ele descreve — que é uma armadilha já
-     paga nesta casa, três vezes em três dias.
-
-     O QUE A RETIRADA DEVOLVE, medido no WebKit em 11/09/2026 a 1212x809, com a
-     tabela pintada como o PRODUTO a pinta (dois lugares vazios e o travessão no
-     ID da peça), e não como o desenho a congela:
-
-       a fileira do Modo             36px
-       ANTES, sem a tira            115px de espaço · 107 pedidos · sobra  +8
-       ANTES, com a tira acesa       78px de espaço · 107 pedidos · sobra -29
-       DEPOIS, sem a tira           155px de espaço · 107 pedidos · sobra +48
-       DEPOIS, com a tira acesa     118px de espaço · 107 pedidos · sobra +11
-
-     A LINHA DE -29 É A QUEIXA DE USO. Com a tira do desfecho acesa — e ela acende
-     a cada gesto, por 30 segundos — a tabela rolava 36px e a linha do P4 ficava
-     **15px FORA** do quadro. Os 36px da fileira do Modo eram exatamente os 37
-     que a tira pede: as duas queixas de uso eram uma. */
-  /* A COLUNA DO RÓTULO É JUSTA — remedida no Chrome em 31/08/2026, DEPOIS que o usuário
-     pediu os dois pontos e a maiúscula — com a preposição minúscula, que foi a
-     segunda palavra de produto: `Nome:` 36px · `Prioridade:` 63 · `Funciona em:` 77 ·
-     `Estilo de jogo:` 85 · `Nome do jogo:` **86** — que trocou de dono, era o
-     `Estilo de jogo` com 82 antes dos dois pontos.
-     Os 104 antigos deixavam 17px de vão morto à direita de todo rótulo — e é
-     esse vão que os campos ganharam.
-     NÃO dá para usar `max-content`: cada `.campo` é um grid PRÓPRIO, então a
-     coluna se resolveria linha a linha e as cinco desalinhariam. Quem mudar o
-     texto de um rótulo tem de remedir no Chrome e trazer o número para cá. */
   :root{--rot-p:86px}
 
-  /* ---------- A TIRA DO DESFECHO — o toast que esta janela não tinha ----------
-     PARIDADE COM A JANELA ESTÁVEL, 03/09/2026. Lá, TODO gesto desta aba termina
-     num `_toast_profile` no rodapé (`profiles_actions.py:420`): "Perfil
-     removido: X", "Lista recarregada", `mensagem_de_ativacao`. Aqui só a
-     RECUSA falava — `RuntimeError` vira tarja no piloto — e o SUCESSO era
-     silêncio. Para os NOVE gestos desta aba que ESCREVEM NO DISCO DO USUÁRIO,
-     silêncio no sucesso é o botão que responde calado.
-
-     O ESPAÇO ERA RESERVADO SEMPRE, E O USUÁRIO VIU — 05/09/2026: *"a aba dez tem um
-     espaço vertical bizarro desnecessário no título"*. A tira mora entre o
-     `.quadro-topo` e o `.quadro-corpo`, e reservada com `height:30px` +
-     `margin-top:7px` ela punha **37px de banda morta logo abaixo do título
-     "Perfis"** — medido no Chrome nas dez páginas publicadas, e a aba 10 era a
-     ÚNICA das dez com vão entre topo e corpo (as outras nove: 0px). O custo
-     estava sendo pago em toda a vida da tela para poupar um pulo que acontece
-     nove vezes por sessão, e nas outras nove abas o recado do piloto
-     (`.hef-recado`) já não paga nada: ele nasce quando há notícia.
-
-     A CAIXA COLAPSA VAZIA E ABRE CHEIA. `visibility` continua no lugar de
-     `display` — quem some é a ALTURA, não o elemento —, e a razão é o alvo
-     `classe` do piloto: ele acha a tira por `querySelectorAll` e alterna `on`,
-     e um `display:none` faria o `-webkit-line-clamp` recalcular do zero a cada
-     clique. Vazia ela mede **zero**; acesa ela volta aos MESMOS 30px de duas
-     linhas mais os 7px de folga — a frase longa chega igual à de antes.
-
-     O QUE ISSO DEVOLVE, e está declarado: o pulo de 37px na primeira notícia do
-     gesto. É o preço que o usuário escolheu ao chamar a banda de bizarra, e ele é
-     pago por clique, não por segundo de tela aberta.
-
-     VERDE porque é desfecho BOM: a recusa já tem cor e lugar próprios (a tarja
-     do piloto). Dois canais, duas cores, nenhuma dúvida sobre qual é qual.
-
-     DUAS LINHAS, E A SEGUNDA É A QUE AVISA — decisão [05] do PO, 04/09/2026.
-     Aqui estava escrito *"UMA LINHA SÓ, com reticências"*, e o preço estava
-     medido do lado errado: o que a reticência come é o FIM da frase, e o fim é
-     sempre a metade que avisa. A carona da Steam sozinha tem 218 caracteres
-     («Reposta a Opção de Inicialização … Sem ela, no Bluetooth o jogo tende a
-     não enxergar controle nenhum»), vem grudada na frase de ativação, e as
-     duas passam de 280. O que sumia era exatamente o *"sem ela, o jogo tende a
-     não enxergar controle nenhum"*.
-
-     O `~200` DE ESTIMATIVA VIROU MEDIDA — 06/09/2026: as duas linhas comportam
-     413 caracteres, medidos por bissecção no Chrome. O número tem dono
-     (`CABEM_NA_TIRA`, no alto deste arquivo) e a régua o lê de lá.
-
-     AS DUAS LINHAS CONTINUAM FIXAS — o que mudou em 05/09 foi só o repouso.
-     Uma tira que crescesse com o tamanho da frase daria um pulo DIFERENTE a
-     cada clique, que é a quarta opção que o PO recusou; a altura de ACESA
-     continua uma só, 30px, e a frase longa para na segunda linha como antes.
-
-     `-webkit-line-clamp` E NÃO `text-overflow`: a reticência de `text-overflow`
-     é de UMA linha só. A janela é um `WebKit2.WebView` e o Chrome da bancada é
-     a mesma família, então o prefixo `-webkit-` é o que os dois leem — a mesma
-     razão do `::-webkit-slider-thumb` da Prioridade, logo acima.
-
-     A ALTURA E A FOLGA MORAM NA REGRA `.on`, e não na de repouso: é o que faz a
-     banda vazia medir zero sem tirar um pixel da tira quando há recado. */
   .desfecho{padding:0 14px;margin-top:0;height:0;line-height:15px;
             font-size:11px;color:var(--green);
             display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
@@ -528,10 +172,6 @@ CSS = CSS_GLIFO + """
             visibility:hidden}
   .desfecho.on{visibility:visible;margin-top:7px;height:30px}
 
-  /* ---------- O PONTO DE ALERTA do campo do jogo ----------
-     O ponto laranja acende quando o produto recusa o que se digitou (o
-     Freestyle, desenho de 19/10/2026), com a frase na `.dica` que a página já
-     tem. Nasce escondido e o PRODUTO o acende, pelo alvo `classe`. */
   .campo .exige{
     display:none;flex:0 0 13px;width:13px;height:13px;position:relative;
     cursor:help;color:var(--orange);align-items:center;justify-content:center}
@@ -539,312 +179,71 @@ CSS = CSS_GLIFO + """
   .campo .exige:hover .dica{display:block}
   .campo .exige::after{content:"";width:7px;height:7px;border-radius:50%;
                        background:currentColor}
-  /* A DICA ABRE PARA A ESQUERDA: o ponto mora no fim de um campo
-     que já encosta na borda direita do quadro, e uma caixa de 330px a 22px
-     para a direita sairia da janela. É a mesma cura que o `.tn-cx .dica` do
-     `monta` já faz na aba Conexões. */
   .campo .exige .dica{left:auto;right:20px;width:300px}
 
-  /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
-     O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
-     isso vivia escondida na dica do "Perfil ativo": *"cada controle guarda a sua
-     configuração aqui dentro, pelo ID da peça"*. Com um controle na mesa dava
-     para não reparar; com quatro, a tela que promete e não mostra vira a pergunta
-     "então o que exatamente eu salvei?".
-
-     Fica no MESMO quadro, embaixo dos campos, separado por uma linha — e não num
-     quadro novo: não é outra tela, é o resto DESTE perfil. E é LEITURA: quem
-     escolhe o alvo de um ajuste é a fita, que aqui continua esmaecida. */
-  /* A BARRA DE VERDADE, PELA MESMA RAZÃO DO `.rolo` — 06/09/2026, e ela é a
-     cura de um CORTE EM SILÊNCIO que o quadro Modo revelou.
-
-     O que estava aqui era `overflow:hidden`, e o `.guarda` é `flex:1` — ele
-     ABSORVE o que sobra da coluna. Medido a 1212x809: a folga era de 41px, e a
-     tira do desfecho (`.desfecho.on`, decisão 10-Q5 dela) come **37** quando
-     acende. Com a fileira do Modo (36px) a conta virou negativa, e as linhas do
-     P3 e do P4 sumiam por 30 segundos a cada gesto — sem barra, sem reticência,
-     sem nada que dissesse que faltava algo.
-
-     **A DOUTRINA É DA PRÓPRIA RÉGUA** (`test_a_janela_estreita_nao_engole_o_
-     desenho`): *"Rolar é aceitável; reticências com `title` também. Cortar em
-     silêncio não: quem olha não vê que falta nada, e não há gesto que devolva o
-     que foi cortado."*
-
-     E O ARGUMENTO É O QUE O `.rolo` já escreveu logo acima: *"barra de verdade
-     porque ela nasce só quando há o que rolar (…) os estados em que a lista
-     cabe não pagam nada por ela"*. No tamanho do desenho, sem tira, ela não
-     nasce — as quatro linhas cabem inteiras.
-
-     A BARRA DEIXOU DE NASCER NO ESTADO EM QUE ELA A VIU — 11/09/2026. Com o
-     quadro Modo fora do editor, a conta desta coluna passou a fechar **com a
-     tira acesa**: 118px de espaço para 107 pedidos, sobra +11. Os números dos
-     quatro estados estão no bloco do Modo, lá em cima. A barra fica: ela
-     continua sendo a rede para a janela que ela arrastar, e no tamanho do
-     desenho não custa um pixel. */
   .guarda{flex:1;min-height:0;display:flex;flex-direction:column;
-          /* ROLA DE LADO EM VEZ DE ENGOLIR — 11/09/2026. Era
-             `overflow-x:hidden`, e com o `table-layout:fixed` que a
-             PERFIS-LIMPA-01 deu ao `.tab` isso virou perda de dado: as
-             duas colunas de largura CRAVADA (`.gd-pecas` 255px e
-             `.gd-id` 118px) somam 373 dos 374px que a tabela tem numa
-             janela de 940px, e sobrava **1px** para o nome do controle.
-             Medido, não estimado. `title` aqui não serve — o `<td>` é
-             estático e quem pinta o nome é o `guarda.nome` de dentro,
-             então a dica ficaria com o nome do MOCKUP sobre o controle
-             da bancada. Rolar é a afordância que
-             `test_a_janela_estreita_nao_engole_o_desenho` nomeia, e na
-             vista do usuário (1918x840) nada muda: a tabela cabe e não rola. */
           overflow-y:auto;overflow-x:auto;
           margin-top:7px;padding-top:7px;border-top:1px solid var(--linha)}
   .guarda::-webkit-scrollbar{width:10px}
   .guarda::-webkit-scrollbar-track{background:transparent}
   .guarda::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
   .guarda::-webkit-scrollbar-thumb:hover{background:var(--comment)}
-  /* `height:100%` na tabela e as quatro linhas dividem a altura que sobra — a
-     cura do vão é na ALTURA, nunca `space-between`, que ela reprovou com todas
-     as letras. Aqui o vão nem chega a nascer: se sobrar espaço, ele vira altura
-     de linha, distribuída igual entre os quatro. */
   .guarda table{height:100%}
-  /* A TABELA DE BAIXO É MIÚDA POR CONTA: o que manda no tamanho dela é a altura
-     que sobra do editor, e ela tem de caber INTEIRA — quatro linhas e o cabeçalho —
-     sem empurrar a fileira de botões nem um pixel. Cada valor aqui foi medido
-     contra o `overflow` do quadro, não escolhido. */
   .tab.miuda thead th{padding:5px 8px;background-color:var(--panel);border-bottom:1px solid var(--linha)}
 
-  /* UM FUNDO POR COLUNA — 31/08/2026, pedido: *"deixa o background do nome
-     das 3 colunas com outras cores, pra diferenciar e ajudar no suspiro ali
-     dessa seção"*.
-     AS DUAS TABELAS DESTA ABA TÊM TRÊS COLUNAS e são lidas juntas, então as duas
-     recebem a mesma escala: 1ª cyan · 2ª roxo · 3ª laranja. Dar a uma só faria a
-     outra parecer quebrada — a mesma cicatriz da aba que nasceu sem `Gtk.Frame`
-     em 22/08 e foi lida como defeito.
-     `color-mix` E NÃO UM HEXADECIMAL DIGITADO: a cor sai das mesmas variáveis da
-     casa, então quem trocar a paleta troca isto junto. Baixa o suficiente para o
-     fundo separar a coluna sem competir com o dado — o texto continua `--fg` em
-     negrito.
-     O `padding` subiu de 3 para 5px porque fundo sem respiro é mancha, não faixa:
-     é a metade *"suspiro"* do pedido. */
-  /* A COR VEM COMO `background-image`, E ISSO NÃO É ESTILO — É O QUE IMPEDE UM
-     DEFEITO: o cabeçalho é `position:sticky` e a lista de perfis ROLA por baixo
-     dele. Uma cor translúcida em `background-color` deixaria os nomes dos perfis
-     aparecerem ATRAVÉS do cabeçalho ao rolar. Como `background-image` ela se
-     empilha sobre a cor opaca da base (`--elevated` na lista, `--panel` na
-     tabela por controle), e o resultado é opaco. */
   .tab thead th:nth-child(1){background-image:linear-gradient(color-mix(in srgb, var(--cyan) 14%, transparent),color-mix(in srgb, var(--cyan) 14%, transparent))}
   .tab thead th:nth-child(2){background-image:linear-gradient(color-mix(in srgb, var(--purple) 20%, transparent),color-mix(in srgb, var(--purple) 20%, transparent))}
   .tab thead th:nth-child(3){background-image:linear-gradient(color-mix(in srgb, var(--orange) 14%, transparent),color-mix(in srgb, var(--orange) 14%, transparent))}
   .tab.miuda td{padding:1px 8px;cursor:default}
-  /* O NOME VOLTOU A SER CÉLULA DE TABELA — 11/09/2026, e esta é a SEGUNDA
-     metade da queixa de uso: *"em perfis as linhas dos controles e ajustes
-     proprios quebram"*.
-
-     O QUE ESTAVA AQUI: `display:flex;align-items:center;gap:8px`. Um `<td>` com
-     `display:flex` deixa de ser célula de tabela — e perde o
-     `vertical-align:middle` que as outras duas colunas têm de graça. O texto do
-     nome passa a pousar no TOPO da linha enquanto o glifo e o ID se centram
-     nela.
-
-     E O FLEX NÃO REPARTIA NADA. Os filhos do `<td>` são dois: a barra da cor
-     (`.pl`) e o `<span>` do nome. A barra é `position:absolute`, logo está FORA
-     do fluxo — em flex também. Sobrava UM item, e o `gap:8px` entre um item só
-     e ninguém. O respiro à esquerda sempre foi o `padding:1px 8px` do `<td>`.
-
-     MEDIDO NO WEBKIT, a 1212x809, com a tabela pintada como o produto a pinta —
-     o espalhamento vertical entre os centros de texto das três colunas da mesma
-     linha:
-
-       linhas apertadas (21,25px, com o quadro Modo ainda lá)   3,13px
-       linhas soltas    (31,25px, com o Modo já fora)           8,13px
-       com esta regra                                           1,50px
-
-     A SEGUNDA LINHA É O PONTO, e é por isso que as duas queixas vinham juntas:
-     **tirar o Modo devolve altura às linhas e a altura ESCANCARA o desalinho.**
-     Curar só a primeira metade teria piorado a segunda de 3,13 para 8,13px — a
-     cura de uma queixa de uso agravando a outra, na mesma tela.
-
-     O 1,50px QUE SOBRA é o glifo, não o texto: o `.gls` é SVG com
-     `vertical-align:-3px` (o deslocamento ótico que a coluna do meio pede), e o
-     nome fecha EXATO com o ID da peça — 16,13 contra 16,13. */
-  /* O NOME DO CONTROLE QUEBRA EM VEZ DE SUMIR — 11/09/2026. A PERFIS-LIMPA-01
-     deu `table-layout:fixed` ao `.tab` para a divisa arrastável valer, e com ele
-     a `.tab tbody td{white-space:nowrap}` passou a CORTAR esta célula: a 940px
-     de janela «P1 • Cosmic Red • USB» sobrava 119px para fora e virava
-     reticências, sem `title` que devolvesse o nome. Um nome de controle cortado
-     é a informação que esta tabela existe para dar.
-     `title` AQUI NÃO SERVE, e a razão é de dono: o `<td>` é estático e quem
-     pinta é o `guarda.nome` de dentro — um `title` cravado no desenho ficaria
-     com o nome do MOCKUP enquanto o texto traz o da bancada, que é o defeito
-     que `test_aba10_a_dica_da_linha_nao_e_do_mockup` caça. Quebrar a linha não
-     tem dono nenhum: ela cabe inteira, em duas linhas, quando a janela aperta.
-     Na vista do usuário (1918x840) nada muda — o nome cabe numa linha só. */
   .gd-nome{vertical-align:middle;white-space:nowrap;font-size:11px}
-  /* O PISO DA TABELA POR CONTROLE. 151px para o nome mais longo do
-     desenho («P2 • Starlight Blue • BT», medido a 11px com os 16px de
-     padding) mais os 255 e os 118 cravados das outras duas. Sem ele o
-     `overflow-x:auto` acima não tem o que rolar: a tabela encolhe até
-     caber e a coluna do nome é a única que cede. */
   .tab.miuda{min-width:524px}
-  /* O DESENHO DE 32px SAIU, e a barrinha de plástico ficou com o trabalho.
-     Ele existia para dizer QUAL controle é a linha, e não dizia: medido em
-     28/08 no 1x da tela do usuário, com os quatro desenhos comparados pixel a pixel,
-     o par mais próximo — Cosmic Red × Galactic Purple — se distinguia em
-     **33 pixels de 736**, 4,5% do desenho. Os quatro liam como quatro cinzas.
-
-     A causa é que a cor do plástico neste desenho é um TRAÇO, não um
-     preenchimento: a 32px o traço vale um terço de pixel e some no
-     antisserrilhado. Crescer não estava disponível — a 64px, onde o par pior
-     chega a 9,1%, as quatro linhas passam a pedir 209px de altura, e a tabela
-     tem 132px (o editor acima já está cheio: sobram 11px até a fileira de
-     botões). Um desenho que não cabe no tamanho em que se lê não é escolha de
-     layout; é um desenho que esta linha não comporta.
-
-     Quem identifica a peça agora são as duas coisas que JÁ funcionavam e foram
-     medidas: a barra de 3px na primeira célula (cor cheia, sem
-     antisserrilhado) e o rótulo curto do controle. Se ela quiser o
-     desenho de volta, é esta regra e a linha do `svg()` em `linha_do_controle`.
-
-     Foi junto o que o desenho carregava e ninguém via: as cinco lâmpadas do
-     jogador mediam **0,5 × 0,2 px** — e vinham com a classe `led-on` CERTA e
-     SEM regra que a pintasse, então acesa e apagada tinham o mesmo
-     `fill: rgb(107,115,133)`. É o defeito que a `aba04.py` cura com
-     `.ctrl .led-on{fill:var(--led-aceso)}` e que esta aba não tinha. */
-  /* AS OITO SEÇÕES TÊM DE SE LER COMO OITO. Com o mesmo vão entre todos os
-     glifos, eles viravam um borrão só e ninguém achava onde a luz acaba e o
-     gatilho começa: 2px DENTRO de uma seção, 6px ENTRE elas. Eram 11px até
-     02/10/2026, e com a máscara (08/09) e os comandos virtuais (24/09) a
-     fileira passou a pedir 265px numa coluna de 255: o oitavo grupo ficava
-     inteiro fora da célula, nas quatro linhas (a foto dela de 29/09). Com 6px
-     ela pede 230 (os doze glifos de 15px com os vãos de dentro, 188, e sete
-     vãos de 6), e cabe nos 235 que a folga de 20 deixa. */
-  /* O NÚMERO É MEDIDO, e ele mudou de dono em 11/09/2026. Com `table-layout`
-     em `auto` esta coluna media  (noqa-acento: verbo medir, imperfeito) 255px
-     na tela (a fileira de glifos pede 239 e a
-     folga da célula 16), e o `150px` escrito aqui era SUGESTÃO que o navegador
-     ignorava. Com `fixed` a sugestão virou ordem: mantido o 150, a fileira de
-     glifos era CORTADA — fotografado. O valor agora é o que a tela
-     media.  (noqa-acento: verbo medir, imperfeito) */
   .gd-pecas{width:271px}
-  /* 16/10/2026: com a ativação dos botões e a curva dos analógicos são DEZ seções, e com 6px a
-     última passava 3px da célula. O vão entre seções desceu a 5px (o de dentro segue 2px).
-     19/10/2026: a fileira pede 271px (catorze glifos de 15px, quatro vãos de 2px e nove de 5px), e a
-     coluna de 255px só a continha a 1272 px porque a folga da tabela a alargava: a 940 px a última
-     seção passava 16px da célula. A coluna passa a 271px; a tabela já rola na horizontal ali. */
   .gd-pecas .gls{gap:5px}
-  /* O GLIFO DIZ O CONTROLE AGORA, E O PONTO EMBAIXO DIZ O DISCO — 02/10/2026,
-     decidido pelo usuário em 29/09 («Ponto embaixo»): aceso = ligado agora neste
-     controle · apagado = desligado · tracejado = o controle não diz · o ponto
-     = o perfil aberto no editor guarda esta seção só para ele. O ponto mora
-     FORA do `.gr`, e por isso não herda a cor nem o halo do aceso: as duas
-     camadas não se confundem. */
   .gc{position:relative;display:inline-flex}
   .gq{display:inline-flex;align-items:center;gap:2px;border-radius:3px}
   .gq.nd{outline:1px dashed var(--comment);outline-offset:1px}
   .gp{position:absolute;left:50%;bottom:-6px;width:4px;height:4px;margin-left:-2px;
       border-radius:50%;background:var(--fg);visibility:hidden}
   .gp.on{visibility:visible}
-  /* O APAGADO PASSOU DE `--border-forte` PARA `--comment` — 30/08/2026.
-     #44475a sobre o painel dá **1,56:1**: não era glifo apagado, era glifo
-     INVISÍVEL — e um estado que não se vê não comunica estado nenhum, só
-     ausência. #8896c4 dá 4,89:1 e continua nitidamente mais fosco que o
-     aceso (roxo #bd93f9 com o halo do `drop-shadow`), que é o que separa os
-     dois. Ela: *"sobe também"*. */
   .gr{display:inline-flex;align-items:center;gap:2px;color:var(--fg)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
-  /* MESMA CURA, MESMO DIA: o endereço de rádio mede 118px em JetBrains Mono de
-     10px mais a folga, e o `112` cortava o último octeto com reticências. */
   .gd-id{width:118px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
          color:var(--fg)}
-  /* A COR DO PLÁSTICO NA BORDA DA LINHA, pela mesma razão do chip da fita: num
-     desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
-     A cor vem de `cor_da_zona()` — do `<style>` que o gerador escreveu no SVG —,
-     nunca de um hexadecimal digitado. É a mesma gramática do `tr.ativo` da tabela
-     ao lado: uma barra fina à esquerda diz de quem é a linha.
-
-     ELA DEIXOU DE SER `box-shadow` NA CÉLULA — 03/09/2026, IDENTIDADE-VEM-DE-CIMA.
-     O `--plastico` morava no `<tr>`, **sem endereço nenhum**, e por isso ficava com
-     a cor do DESENHO enquanto o nome ao lado já vinha do aparelho: a linha dizia
-     `P1 • White • USB` com a barra do controle do mockup. Agora a barra é um
-     elemento PRÓPRIO e endereçado por `guarda.plastico`, e quem escreve a cor é
-     o pacote `a10_perfis`, com o que leu da mesa.
-
-     O ENDEREÇO NÃO SE ESCREVE NESTE COMENTÁRIO: a régua do gerador conta as
-     ocorrências do atributo na página, e um comentário que o soletra some com a
-     conta. (Custou uma reprovação, e ela estava certa.)
-
-     O ALVO É `cor`, E NÃO `fundo`, e a escolha é medida: o `escrever()` do piloto
-     guarda `#ae335a` em `style.background` e lê `rgb(174, 51, 90)` de volta —
-     a comparação nunca casa e o contador soma uma pintura por tique, para sempre
-     (é o defeito que já tirou a `largura` do travessão). O ramo `cor` ESCREVE e
-     depois COMPARA, então é o único idempotente para hexadecimal.
-
-     `background:currentColor` COM `color:transparent` NO PADRÃO: sem cor lida, o
-     piloto escreve `''`, o inline cai, o `transparent` da classe volta e a barra
-     SOME. Campo sem informação não mostra nada — regra de produto.
-
-     A CAIXA É A MESMA: `inset 3px 0 0` pinta os 3px da esquerda da caixa de borda
-     da célula, e é exatamente o que `position:absolute;left:0;top:0;bottom:0` dá
-     num `<td>` posicionado, que não tem borda. Zero pixel de diferença. */
   .tab.miuda td:first-child{position:relative}
   .gd-nome .pl{position:absolute;left:0;top:0;bottom:0;width:3px;
                background:currentColor;color:transparent}
-  /* O LUGAR SEM CONTROLE — a cor é a do `.vazio` da Gatilhos (`--comment`), que é
-     a página que o usuário mandou copiar. O contraste está medido no comentário da
-     régua: aqui o fundo é `--panel`, não o `--app-bg` da Jogar, e foi por olhar
-     só o token — e não o CONTRASTE contra o fundo de CADA aba — que o lugar
-     vazio da Jogar saiu mais aceso que o controle na mesa, em 31/08. */
   .tab.miuda tr.fora .gd-nome{color:var(--fg)}
-  /* O GLIFO SOME NO LUGAR SEM CONTROLE — 05/09/2026, palavra de produto.
-     `visibility` e não `display`: a fileira guarda a altura da linha, e um
-     `display:none` faria as quatro linhas da tabela mudarem de altura conforme
-     a mesa — a tabela inteira pulando quando um controle entra ou sai. */
   .tab.miuda tr.fora .gr,.tab.miuda tr.fora .gp{visibility:hidden}
 
-  /* ---------- A Perfis do todo (15/10/2026) ---------- */
-  /* Os quatro botões ficam NO FIM DO QUADRO, sob as duas colunas, todos da mesma largura. */
   .barra-quatro{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px}
   .barra-quatro .btn{width:100%;height:36px;justify-content:center;font-size:12.5px}
-  /* O «Ativar» é a ação principal: sólido, como o «Aplicar» do rodapé. */
   .barra-quatro .btn.verde,.barra-quatro .btn.verde:hover{background:var(--green);
       color:var(--app-bg);border-color:var(--green);font-weight:700}
-  /* O ATIVAR QUE RECUSOU FICA CINZA (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01): com o
-     serviço parado ele segue verde, porque o clique religa e troca; só o serviço que não subiu o
-     apaga. A cara é a do `.btn.apagado` das dez abas; a razão mora na dica do próprio botão. */
   .barra-quatro .btn.verde.apagado,.barra-quatro .btn.verde.apagado:hover{background:transparent;
       color:var(--fg);border-color:var(--border-sutil);font-weight:inherit;cursor:not-allowed}
   .perfis > div{padding:12px 16px}
   .perfis > div:first-child{padding-right:8px}
   .perfis > div:last-child{padding-left:8px}
-  /* A LISTA ROLA DENTRO DO `.rolo`, com a barra de verdade lá de cima: na janela baixa as linhas de
-     baixo descem para fora do quadro, e um corte as sumia sem barra nenhuma
-     (D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO). No tamanho do desenho a lista cabe e a barra não nasce. */
   .rolo .tab tbody td{height:26px;padding-top:0;padding-bottom:0}
   .rolo .tab thead th[data-coluna]{cursor:pointer;user-select:none}
   .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
   .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
-  /* O campo do renomear ocupa a célula do nome, na altura da linha. */
   .tab td .renome{width:100%;box-sizing:border-box;height:22px;font:inherit;padding:0 6px;
                   border:1px solid var(--purple);border-radius:5px;background:var(--app-bg);color:var(--fg)}
   .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:400;
                white-space:nowrap}
   .tab th.data{white-space:nowrap}
   .campos{gap:4px}
-  /* «Aplicar em»: quatro botões de escolha na largura do campo */
   .campo .seg.alvos{flex-wrap:nowrap;gap:6px;flex:1;min-width:0}
   .campo .seg.alvos button{flex:1 1 0;min-width:0;height:var(--h-escolha);padding:0 8px}
-  /* «Quando» só existe com «Eventos»; a classe `on` vem do botão (pintura) ou do roteiro (desenho) */
   .campo.so-eventos{display:none}
   .campo.so-eventos.on{display:grid}
   .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
-  /* O comando é do «Meu comando» e só dele (19/10/2026): a linha abaixo do «Quando» aparece quando o
-     momento escolhido é esse, e some em qualquer outro. O `:has` lê o `<option>` marcado, então o
-     desenho responde sozinho e a pintura do produto (que só escolhe o `<option>`) faz o mesmo. */
   .campo.so-comando{display:none}
   .campo.so-eventos.on:has(option[value="meu_comando"]:checked) + .campo.so-comando{display:grid}
   .campo select.estreito{flex:1 1 auto;width:100%}
-  /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */
   .ordem-vale{margin:4px 0 8px;display:none}
-  /* a classe vem do pacote: o `:has(ol:empty)` não se recalcula no WebKitGTK quando o `<ol>` enche */
   .ordem-vale.on{display:block}
   .ordem-vale .cab{font-size:11.5px;font-weight:700;color:var(--fg);margin:0 0 4px}
   .ordem-vale ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
@@ -856,18 +255,11 @@ CSS = CSS_GLIFO + """
   .ordem-vale .pos{flex:0 0 18px;font-family:'JetBrains Mono',monospace;color:var(--fg);
                    text-align:right}
   .ordem-vale .pega{color:var(--fg);letter-spacing:-2px}
-  /* a tabela por controle: três colunas fixas, o endereço em fonte miúda */
   .guarda table{table-layout:fixed;width:100%;min-width:0 !important}
   .guarda col[data-coluna="controle"]{width:136px}
   .guarda col[data-coluna="id"]{width:114px}
   .guarda td.gd-id,.guarda th.gd-id{font-size:10px;letter-spacing:-.2px;padding-left:6px;
                                     padding-right:6px}
-  /* o ID da peça cede a partir daqui — 20/10/2026. A 1212px o Status de 271px e o respiro não
-     deixam lugar para os 114px do ID, e a guarda rolava 14px de lado cortando a coluna. A escolha de
-     20/10 foi esconder o ID nessa largura, em vez de encolher o respiro ou quebrar as seções. O dado
-     segue no pacote (`guarda.id`); só a coluna some, o `<col>` junto, e a tabela divide o que sobra.
-     O corte não é 1212: medido no Chrome, a guarda com o ID ainda rola 13px a 1213 e só cabe a partir de
-     1240 (1px a cada 2px de largura). A regra vale até 1259, com folga para a letra do WebKit. */
   @media (max-width:1259px){
     .guarda col[data-coluna="id"],.guarda th.gd-id,.guarda td.gd-id{display:none}
   }
@@ -1168,10 +560,6 @@ ROTEIRO = """
     'use strict';
     var PISO = 48, TETO = 900;
 
-    // ---- a lupa: abre, fecha e limpa --------------------------------------
-    // FECHAR LIMPA, e é decisão: um campo fechado com termo dentro é uma lista
-    // curta sem nada na tela dizendo por quê. O `input` sintético é o que avisa
-    // o Python — é o mesmo evento que a digitação dispara, pela mesma porta.
     function oCampo(){ return document.querySelector('.procura'); }
     document.addEventListener('click', function(ev){
       var b = ev.target.closest ? ev.target.closest('.icone-rot.lupa') : null;
@@ -1188,11 +576,6 @@ ROTEIRO = """
       }
     }, false);
 
-    // ---- o duplo clique do cabeçalho --------------------------------------
-    // ELE NÃO ORDENA: ele CLICA no elemento que carrega o gesto, e quem ordena
-    // é o Python. A seta é `pointer-events:none`, então este `.click()` é o
-    // único caminho até ela — um clique simples no cabeçalho não chega lá, que
-    // é exatamente o que o usuário pediu ao dizer DUPLO clique.
     document.addEventListener('dblclick', function(ev){
       var nome = ev.target.closest ? ev.target.closest('td[data-hef="perfis.linha.nome"]') : null;
       if(nome){ renomear(nome); return; }
@@ -1202,12 +585,6 @@ ROTEIRO = """
       if(seta) seta.click();
     }, false);
 
-    // ---- o duplo clique no nome renomeia (19/10/2026) -------------------------
-    // A célula vira campo; Enter ou sair dele grava (o `change` leva o gesto
-    // `perfis.renomear` com o nome velho no `data-hef-perfil`), Esc desiste. O
-    // nome velho fica num `<span hidden>` ao lado: o `textContent` da célula
-    // segue igual ao que o Python pinta, e o tique não apaga o campo no meio da
-    // digitação. Renomeado, o `<tbody>` novo chega e leva o campo junto.
     function renomear(td){
       if(td.querySelector('input')) return;
       var tr = td.closest('tr[data-hef-perfil]');
@@ -1238,12 +615,6 @@ ROTEIRO = """
       });
     }
 
-    // ---- a divisa arrastada -----------------------------------------------
-    // O CURSOR MUDA PORQUE A ALÇA EXISTE (`cursor:col-resize` no `.puxador`), e
-    // é o que ela descreveu. Enquanto arrasta, quem desenha é este roteiro, no
-    // `<col>`; ao soltar, o número vai para o Python, que o apara pelo piso e o
-    // grava. O piso está nos DOIS lados de propósito: aqui para o desenho não
-    // passar dele durante o arraste, e lá porque o disco é para sempre.
     var voo = null;
     function colDe(pux){
       var tab = pux.closest('table');
@@ -1251,15 +622,6 @@ ROTEIRO = """
       return {tabela: tab, col: col};
     }
 
-    // ---- o piso de cada coluna é o rótulo dela ------------------------------
-    // A-LINHA-INTEIRA-ABRE-O-PERFIL-01, 02/10/2026. Com a coluna nos 48 px que
-    // ela gravou, o cabeçalho saía «Pri…»: o `PISO` é um número só, e o rótulo
-    // pedia 80. O piso passa a ser o maior entre o `PISO` e o próprio rótulo
-    // (o `scrollWidth` do `<th>`: o texto, a seta da ordem e o preenchimento),
-    // medido no motor que pinta. O disco não muda; quem sobe é a tela.
-    // Mede de novo depois de cada acréscimo: a tabela é `width:100%` em layout fixo, então a soma
-    // das colunas menor que a tela as estica em proporção, e o `<th>` rende mais que o `<col>`.
-    // Uma medida só deixava o rótulo «Criado em» 1 px curto (69 num cabeçalho de 68).
     function caber(th, col, px){
       col.style.width = px + 'px';
       for(var i = 0; th && i < 8; i++){
@@ -1305,9 +667,6 @@ ROTEIRO = """
       document.body.classList.remove('arrastando');
       pux.click();
     }, false);
-    // O TECLADO ANDA A DIVISA (A-INTERFACE-INTEIRA-SE-ALCANCA-…-01): a alça tem parada no Tab
-    // (a base comum põe o `tabindex` em todo `data-hef-gesto`), e ← e → mudam a largura 8 px por
-    // vez, com o mesmo piso e teto do arraste. O gesto vai ao Python pelo mesmo `.click()`.
     document.addEventListener('keydown', function(ev){
       if(ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
       var pux = ev.target.closest ? ev.target.closest('.puxador') : null;
@@ -1322,11 +681,6 @@ ROTEIRO = """
       pux.click();
     }, false);
 
-    // ---- as larguras que voltam do disco ----------------------------------
-    // O FORMATO É `coluna:px` separado por `·`, e o travessão é o VAZIO — o
-    // `escrever()` do piloto escreve `—` no lugar de um valor em branco, e ler
-    // isso como uma largura poria a coluna em zero em toda janela de quem nunca
-    // arrastou nada.
     function espalhar(tab){
       var bruto = tab.getAttribute('data-larguras') || '';
       if(!bruto || bruto === '\\u2014') return;
@@ -1344,10 +698,6 @@ ROTEIRO = """
         if(pux) pux.dataset.px = String(px);
       });
     }
-    // E AS QUE NUNCA SAÍRAM DO DISCO: em repouso o `data-px` da alça tem de
-    // dizer a largura que a coluna JÁ tem, senão o primeiro clique sem arraste
-    // gravaria zero. É o que torna o gesto idempotente, e é o que autoriza a
-    // régua de clique a acioná-lo.
     function medir(tab){
       tab.querySelectorAll('.puxador').forEach(function(pux){
         var th = pux.closest('th');
@@ -1358,14 +708,6 @@ ROTEIRO = """
     }
     function tabelas(){ return document.querySelectorAll('table[data-tabela]'); }
     function assentar(){ tabelas().forEach(function(t){ espalhar(t); medir(t); ajustar(t); }); }
-    // O OBSERVADOR VIGIA O ATRIBUTO, e só ele. Uma largura que volta do disco
-    // chega por `data-larguras` (o pintor escreve o atributo), e é o único
-    // caminho de fora para dentro — o `blocos` desta aba não toca o
-    // `<colgroup>`. Vigiar o `<tbody>` seria acordar dez vezes por segundo
-    // para não fazer nada.
-    //
-    // E A SETA DA ORDEM, que alarga o rótulo: o `data-ordem` que o pintor põe
-    // na seta faz a coluna estreita caber de novo no próprio rótulo (02/10).
     tabelas().forEach(function(t){
       new MutationObserver(function(){ espalhar(t); }).observe(
         t, {attributes: true, attributeFilter: ['data-larguras']});
@@ -1373,9 +715,6 @@ ROTEIRO = """
       if(cabeca) new MutationObserver(function(){ ajustar(t); }).observe(
         cabeca, {attributes: true, subtree: true, attributeFilter: ['data-ordem']});
     });
-    // ---- «Aplicar em»: só o quarto lugar abre o «Quando» ------------------
-    // No produto quem acende os botões e a linha é a pintura (`editor.alvo.<lugar>`); aqui o
-    // desenho faz o mesmo no clique, e a pintura seguinte diz a mesma coisa (idempotente).
     document.addEventListener('click', function(ev){
       var b = ev.target.closest ? ev.target.closest('.seg.alvos button') : null;
       if(!b) return;
@@ -1384,17 +723,10 @@ ROTEIRO = """
       });
       var quando = document.querySelector('.so-eventos');
       if(quando) quando.classList.toggle('on', b.dataset.v === 'eventos');
-      // Perfil de evento não tem jogo, então não tem «Qual vale primeiro»: o produto apaga o bloco
-      // pelo `editor.ordem.ha`, e o desenho faz o mesmo para a tela não ganhar uma linha de rolagem.
       var ordem = document.querySelector('.ordem-vale');
       if(ordem) ordem.classList.toggle('on', b.dataset.v !== 'eventos');
     }, false);
 
-    // ---- «Qual vale primeiro»: arrastar um perfil acima ou abaixo do outro -----
-    // O roteiro só MEXE NO DOM e avisa: ao soltar, a posição nova (de 1) vai em `posNova` e o
-    // `click` leva o gesto `editor.ordem` ao Python, que regrava as preferências. O `<ol>` é
-    // reescrito pelo `blocos` só quando o texto do Python muda, então a ordem arrastada fica
-    // até a gravação confirmar.
     var puxado = null;
     document.addEventListener('dragstart', function(ev){
       var li = ev.target.closest ? ev.target.closest('.ordem-vale li') : null;
@@ -1404,7 +736,7 @@ ROTEIRO = """
       if(ev.dataTransfer){
         ev.dataTransfer.effectAllowed = 'move';
         try { ev.dataTransfer.setData('text/plain', li.getAttribute('data-hef-perfil') || ''); }
-        catch(e) { /* o WebKit antigo recusa dado vazio */ }
+        catch(e) { }
       }
     }, false);
     document.addEventListener('dragover', function(ev){
@@ -1442,9 +774,6 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Um perfil guarda tudo que você ajustou nas abas">Perfis</span>
       </div>
-      <!-- O DESFECHO DO ÚLTIMO GESTO — ver `.desfecho` no CSS. A caixa usa o alvo `classe` (acende
-           a tira quando há notícia) e o texto de dentro escreve a frase. NÃO se escreve a tag de
-           caixa por extenso em comentário: o balanço do `monta` conta SUBSTRING no documento. -->
       <div class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"><span data-hef="perfis.desfecho"></span></div>
       <div class="quadro-corpo">
         <div class="perfis">
@@ -1475,8 +804,6 @@ MIOLO = f'''
 
           <div>
             <div class="moldura">
-              <!-- OS CAMPOS PEDEM `data-hef-alvo="valor"`: sem ele o `textContent` apagaria as
-                   opções de um `select` e não apareceria num `input` (medido em 01/09/2026). -->
               <div class="sec-rot">Editar</div>
               <div class="campos">
 
@@ -2094,7 +1421,7 @@ def _conferir(html: str) -> None:
                 ("dblclick", "o roteiro parou de ouvir o DUPLO clique — e um "
                              "clique simples no cabeçalho é vizinho de um "
                              "gesto que troca o perfil aberto no editor"),
-                ("col-resize", "o roteiro perdeu o arraste da divisa"),
+                ("classList.add('arrastando')", "o roteiro perdeu o arraste da divisa"),
                 ("MutationObserver", "o roteiro parou de vigiar o "
                                      "`data-larguras` — a largura que volta do "
                                      "disco chega por ali, e só por ali")):

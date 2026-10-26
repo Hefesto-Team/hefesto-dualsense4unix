@@ -26,6 +26,8 @@ from __future__ import annotations
 import argparse
 import ast
 import collections
+import dataclasses
+import difflib
 import html.parser
 import importlib.util
 import io
@@ -91,7 +93,8 @@ def limpar(texto: str, tipo: str, rel: str = "") -> tuple[str, int, int]:
             if forma != c.texto:
                 trocas.append((c.inicio, c.fim, forma + ("\n" + MARCA) * quebras))
     if not trocas:
-        return texto, saiu, ficou
+        novo, sobrou = _escapes_a_mais(texto, tipo, rel)
+        return novo, saiu + sobrou, ficou - sobrou
     novo = texto
     for ini, fim, troca in sorted(trocas, reverse=True):
         novo = novo[:ini] + troca + novo[fim:]
@@ -436,7 +439,13 @@ def limpar_string_de_pagina(conteudo: str) -> str:
     """
     if not _ABRE_PAGINA.search(conteudo):
         return conteudo
-    if "<" in conteudo and re.search(r"</?[a-zA-Z][\w-]*[\s>/]", conteudo):
+    if "\n" not in conteudo and "\\n" in conteudo and "\\\\" not in conteudo:
+        return limpar_string_de_pagina(conteudo.replace("\\n", "\n")).replace("\n", "\\n")
+    comeco = re.sub(r"^(?:\s+|/\*.*?\*/|//[^\n]*|<!--.*?-->)*", "", conteudo, flags=re.S)
+    if not comeco.startswith("<") and _js_em_string(conteudo):
+        return limpar(conteudo, "js")[0] if _fechados(conteudo, "js") else conteudo
+    sem_css = _sem_trechos(conteudo, [(c.inicio, c.fim) for c in G.comentarios_css(conteudo)])
+    if "<" in sem_css and re.search(r"</?[a-zA-Z][\w-]*[\s>/]|<!--", sem_css):
         return limpar(conteudo, "html")[0] if _fechados(conteudo, "html") else conteudo
     if _js_em_string(conteudo):
         return limpar(conteudo, "js")[0] if _fechados(conteudo, "js") else conteudo
@@ -488,8 +497,21 @@ def aplicar(arquivos: list[tuple[str, str]], raiz: Path, gravar: bool) -> int:
     return 1 if recusados else 0
 
 
-def _strings_do_gerador(texto: str) -> list[tuple[int, int, str]]:
-    """``(início, fim, miolo)`` de cada string não crua e não docstring, onde o miolo começa e acaba."""
+@dataclasses.dataclass
+class _FAberta:
+    tok: int
+    miolo: int
+    fundura: int = 0
+    campo: int = 0
+    campos: list[tuple[int, int]] = dataclasses.field(default_factory=list)
+
+
+def _strings_do_gerador(texto: str) -> list[tuple[int, int, str, int, int, tuple[tuple[int, int], ...]]]:
+    """Cada string não crua e não docstring de ``texto``.
+
+    ``(início do miolo, fim do miolo, tipo, início do token, fim do token, campos)``; ``tipo`` é ``s`` ou ``f``,
+    e ``campos`` são os ``{…}`` de primeiro nível da f-string, que a limpeza não toca.
+    """
     inicios = [0] + [m.end() for m in re.finditer("\n", texto)]
     docstrings = set()
     for no in ast.walk(ast.parse(texto)):
@@ -498,38 +520,228 @@ def _strings_do_gerador(texto: str) -> list[tuple[int, int, str]]:
             if isinstance(primeiro, ast.Expr) and isinstance(primeiro.value, ast.Constant) \
                     and isinstance(primeiro.value.value, str):
                 docstrings.add((primeiro.value.lineno, primeiro.value.col_offset))
-    saida = []
-    meio = getattr(tokenize, "FSTRING_MIDDLE", None)
+    saida: list[tuple[int, int, str, int, int, tuple[tuple[int, int], ...]]] = []
+    abertas: list[_FAberta] = []
+    inicio_f = getattr(tokenize, "FSTRING_START", None)
+    fim_f = getattr(tokenize, "FSTRING_END", None)
     for tok in tokenize.generate_tokens(io.StringIO(texto).readline):
         (la, ca), (lb, cb) = tok.start, tok.end
         ini, fim = inicios[la - 1] + ca, inicios[lb - 1] + cb
+        if inicio_f is not None and tok.type == inicio_f:
+            abertas.append(_FAberta(ini, fim))
+            continue
+        if abertas:
+            topo = abertas[-1]
+            if tok.type == fim_f:
+                abertas.pop()
+                if not abertas:
+                    saida.append((topo.miolo, ini, "f", topo.tok, fim, tuple(topo.campos)))
+                continue
+            if tok.type == tokenize.OP and tok.string == "{":
+                if topo.fundura == 0:
+                    topo.campo = ini
+                topo.fundura += 1
+            elif tok.type == tokenize.OP and tok.string == "}":
+                topo.fundura -= 1
+                if topo.fundura == 0:
+                    topo.campos.append((topo.campo, fim))
+            continue
         if tok.type == tokenize.STRING:
             if (la, ca) in docstrings:
                 continue
-            m = re.match(r"(?i)([bu]?)('''|\"\"\"|'|\")", tok.string)
+            m = re.match(r"(?i)([bur]?)('''|\"\"\"|'|\")", tok.string)
             if m is None:
                 continue
             abre = len(m.group(0))
-            saida.append((ini + abre, fim - len(m.group(2)), "s"))
-        elif meio is not None and tok.type == meio:
-            saida.append((ini, fim, "f"))
+            saida.append((ini + abre, fim - len(m.group(2)), "s", ini, fim, ()))
     return saida
 
 
+_LUGAR = "\x02{}\x03"
+
+
+def limpar_fstring(texto: str, ini: int, fim: int, campos: tuple[tuple[int, int], ...]) -> str:
+    """O miolo de uma f-string limpo inteiro, com cada ``{…}`` guardado num lugar que não é espaço nem comentário."""
+    partes = []
+    pos = ini
+    for k, (a, b) in enumerate(campos):
+        partes.append(texto[pos:a])
+        partes.append(_LUGAR.format(k))
+        pos = b
+    partes.append(texto[pos:fim])
+    molde = "".join(partes)
+    limpo = limpar_string_de_pagina(molde)
+    if limpo == molde:
+        return texto[ini:fim]
+    for k, (a, b) in enumerate(campos):
+        lugar = _LUGAR.format(k)
+        if limpo.count(lugar) > 1:
+            raise ValueError(f"o campo {texto[a:b]!r} da f-string apareceu duas vezes")
+        limpo = limpo.replace(lugar, texto[a:b])
+    if "\x02" in limpo or "\x03" in limpo:
+        raise ValueError("sobrou um lugar de campo na f-string")
+    return limpo
+
+
+@dataclasses.dataclass
+class _Pedaco:
+    ini: int
+    fim: int
+    miolo_ini: int
+    miolo_fim: int
+    cru: bool = False
+
+
+_ESCAPE_DE_STRING = re.compile(r"\\(?:\n|[\\'\"abfnrtv]|[0-7]{1,3}|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|N\{[^}]*\})")
+
+
+def _grupos_de_strings(texto: str) -> list[list[_Pedaco]]:
+    """As concatenações implícitas (``"a" "b"``) de duas ou mais strings comuns, sem prefixo."""
+    inicios = [0] + [m.end() for m in re.finditer("\n", texto)]
+    grupos: list[list[_Pedaco]] = []
+    atual: list[_Pedaco] = []
+    for tok in tokenize.generate_tokens(io.StringIO(texto).readline):
+        if tok.type == tokenize.STRING and tok.string.lstrip("rR")[:1] in ("'", '"'):
+            (la, ca), (lb, cb) = tok.start, tok.end
+            ini, fim = inicios[la - 1] + ca, inicios[lb - 1] + cb
+            cru = tok.string[0] in "rR"
+            aspas = 3 if tok.string[cru:cru + 3] in ('"""', "'''") else 1
+            atual.append(_Pedaco(ini, fim, ini + cru + aspas, fim - aspas, cru))
+            continue
+        if tok.type in (tokenize.NL, tokenize.COMMENT) and atual:
+            continue
+        if len(atual) >= 2:
+            grupos.append(atual)
+        atual = []
+    return grupos
+
+
+def _unidades(cru: str, sem_escape: bool = False) -> list[tuple[str, str]]:
+    """O miolo cru de uma string comum em ``(cru, valor)``: um caractere ou uma sequência de escape."""
+    if sem_escape:
+        return [(c, c) for c in cru]
+    saida, i = [], 0
+    while i < len(cru):
+        m = _ESCAPE_DE_STRING.match(cru, i) if cru[i] == "\\" else None
+        pedaco = m.group(0) if m else (cru[i:i + 2] if cru[i] == "\\" else cru[i])
+        saida.append((pedaco, ast.literal_eval(f'"""{pedaco} """')[:-1]))
+        i += len(pedaco)
+    return saida
+
+
+_FUNCOES_DE_REGEX = {"compile", "sub", "subn", "search", "match", "fullmatch", "findall", "finditer", "split"}
+
+
+def _padroes_de_regex(texto: str) -> set[int]:
+    """O início de cada string que é o padrão de uma chamada do ``re``: ela é regex, nunca página."""
+    inicios = [0] + [m.end() for m in re.finditer("\n", texto)]
+    linhas = texto.split("\n")
+    saida = set()
+    for no in ast.walk(ast.parse(texto)):
+        if isinstance(no, ast.Call) and isinstance(no.func, ast.Attribute) and no.args \
+                and isinstance(no.func.value, ast.Name) and no.func.value.id == "re" \
+                and no.func.attr in _FUNCOES_DE_REGEX:
+            alvo = no.args[0]
+            coluna = len(linhas[alvo.lineno - 1].encode()[:alvo.col_offset].decode())
+            saida.add(inicios[alvo.lineno - 1] + coluna)
+    return saida
+
+
+def _limpar_grupos(texto: str) -> tuple[str, int]:
+    """O texto com cada concatenação implícita limpa como UMA string: o comentário que atravessa os pedaços sai.
+
+    A limpeza só apaga, e a apagada volta a cada pedaço pelo alinhamento das duas sequências; o pedaço que
+    esvazia sai com a linha dele. A prova é o valor: a concatenação nova é igual à limpeza da velha.
+    """
+    trocas = 0
+    padroes = _padroes_de_regex(texto)
+    for grupo in reversed(_grupos_de_strings(texto)):
+        if grupo[0].ini in padroes:
+            continue
+        unidades = [_unidades(texto[p.miolo_ini:p.miolo_fim], p.cru) for p in grupo]
+        dono = [(k, u) for k, us in enumerate(unidades) for u, (_, v) in enumerate(us) for _ in v]
+        junto = "".join(v for us in unidades for _, v in us)
+        if junto != "".join(ast.literal_eval(texto[p.ini:p.fim]) for p in grupo):
+            raise ValueError(f"o escape de uma string não se leu na linha {texto.count(chr(10), 0, grupo[0].ini) + 1}")
+        if _COMENTARIO_INTEIRO.fullmatch(junto):
+            continue
+        limpo = limpar_string_de_pagina(junto)
+        if limpo == junto:
+            continue
+        apagado = [False] * len(junto)
+        for op, a1, a2, _, _ in difflib.SequenceMatcher(None, junto, limpo, autojunk=False).get_opcodes():
+            if op not in ("equal", "delete"):
+                raise ValueError("a limpeza de uma concatenação fez mais que apagar")
+            if op == "delete":
+                apagado[a1:a2] = [True] * (a2 - a1)
+        sai: set[tuple[int, int]] = set()
+        fica: set[tuple[int, int]] = set()
+        for pos, chave in enumerate(dono):
+            (sai if apagado[pos] else fica).add(chave)
+        if sai & fica:
+            raise ValueError("a limpeza cortou uma sequência de escape ao meio")
+        novos = ["".join(c for u, (c, v) in enumerate(us) if not v or (k, u) not in sai)
+                 for k, us in enumerate(unidades)]
+        if "".join(v for k, us in enumerate(unidades) for u, (_, v) in enumerate(us) if (k, u) not in sai) != limpo:
+            raise ValueError("a concatenação limpa não vale o que a limpeza pediu")
+        vazios = [k for k, n in enumerate(novos) if not n]
+        if len(vazios) == len(grupo):
+            vazios = vazios[1:]
+        for k in reversed(range(len(grupo))):
+            p = grupo[k]
+            if k in vazios:
+                texto = _sem_o_pedaco(texto, p)
+            else:
+                texto = texto[:p.miolo_ini] + novos[k] + texto[p.miolo_fim:]
+        trocas += 1
+    return texto, trocas
+
+
+def _sem_o_pedaco(texto: str, p: _Pedaco) -> str:
+    """O texto sem um pedaço de concatenação: a linha inteira, se ele a ocupa sozinho; senão, ele e o espaço."""
+    linha_ini = texto.rfind("\n", 0, p.ini) + 1
+    linha_fim = texto.find("\n", p.fim)
+    linha_fim = len(texto) if linha_fim == -1 else linha_fim
+    if not texto[linha_ini:p.ini].strip() and not texto[p.fim:linha_fim].strip():
+        return texto[:linha_ini] + texto[linha_fim + 1:]
+    fim = p.fim
+    while fim < len(texto) and texto[fim] in " \t":
+        fim += 1
+    return texto[:p.ini] + texto[fim:]
+
+
+_COMENTARIO_INTEIRO = re.compile(r"<!--(?:(?!-->).)*-->", re.S)
+
+
 def aplicar_strings(arquivos: list[str], raiz: Path, gravar: bool) -> int:
-    """Tira o comentário de página das strings dos geradores; a prova é a página regerada (fora daqui)."""
+    """Tira o comentário de página das strings dos geradores; a prova é a página regerada (fora daqui).
+
+    A string que é um comentário HTML inteiro e nada mais é um valor, não um comentário de página: o
+    produto a escreve num campo vivo como o vazio que não desenha nada (o ``:empty`` o ignora e o
+    ``escrever()`` não o troca por travessão), ou a compara como âncora. Ela fica.
+    """
     for rel in arquivos:
         caminho = raiz / rel
-        texto = caminho.read_text(encoding="utf-8")
+        original = caminho.read_text(encoding="utf-8")
+        texto, trocas = _limpar_grupos(original)
         novo = texto
-        trocas = 0
-        for ini, fim, tipo in sorted(_strings_do_gerador(texto), reverse=True):
+        padroes = _padroes_de_regex(texto)
+        juntas = {t.ini for g in _grupos_de_strings(texto) for t in g}
+        for ini, fim, tipo, tok_ini, tok_fim, campos in sorted(_strings_do_gerador(texto), reverse=True):
+            if tok_ini in juntas or tok_ini in padroes:
+                continue
             miolo = texto[ini:fim]
-            limpo = _limpar_fstring(miolo) if tipo == "f" else limpar_string_de_pagina(miolo)
-            if limpo != miolo:
+            if tipo == "s" and _COMENTARIO_INTEIRO.fullmatch(miolo):
+                continue
+            limpo = limpar_fstring(texto, ini, fim, campos) if tipo == "f" else limpar_string_de_pagina(miolo)
+            if limpo == miolo:
+                continue
+            trocas += 1
+            if limpo == "":
+                novo = _sem_a_string_vazia(novo, tok_ini, tok_fim, ini, fim)
+            else:
                 novo = novo[:ini] + limpo + novo[fim:]
-                trocas += 1
-        if novo != texto:
+        if novo != original:
             ast.parse(novo)
             if gravar:
                 caminho.write_text(novo, encoding="utf-8")
@@ -537,8 +749,29 @@ def aplicar_strings(arquivos: list[str], raiz: Path, gravar: bool) -> int:
     return 0
 
 
-def _limpar_fstring(miolo: str) -> str:
-    return limpar_string_de_pagina(miolo)
+def _sem_a_string_vazia(texto: str, ini: int, fim: int, miolo_ini: int, miolo_fim: int) -> str:
+    """O texto sem a string que ficou vazia: a linha dela, ou ela e o ``+`` vizinho; senão, só o miolo."""
+    linha_ini = texto.rfind("\n", 0, ini) + 1
+    linha_fim = texto.find("\n", fim)
+    linha_fim = len(texto) if linha_fim == -1 else linha_fim
+    antes, depois = texto[linha_ini:ini], texto[fim:linha_fim]
+    if not antes.strip() and re.fullmatch(r"\s*(?:\+\s*)?", depois):
+        resto = texto[linha_fim + 1:]
+        if "+" not in depois:
+            mais = re.match(r"([ \t]*)\+[ \t]*", resto)
+            if mais:
+                return texto[:linha_ini] + mais.group(1) + resto[mais.end():]
+            fim_anterior = re.search(r"[ \t]*\+[ \t]*\n$", texto[:linha_ini])
+            if fim_anterior and not re.match(r"\s*[\"'(\w]", resto):
+                return texto[:fim_anterior.start()] + "\n" + resto
+        return texto[:linha_ini] + resto
+    mais = re.match(r"[ \t]*\+[ \t]*", depois)
+    if mais:
+        return texto[:ini] + texto[fim + mais.end():]
+    mais = re.search(r"[ \t]*\+[ \t]*$", antes)
+    if mais:
+        return texto[:linha_ini + mais.start()] + texto[fim:]
+    return texto[:miolo_ini] + texto[miolo_fim:]
 
 
 def main(argv: list[str] | None = None) -> int:

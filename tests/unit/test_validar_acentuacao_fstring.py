@@ -149,7 +149,7 @@ def test_o_codigo_longe_da_chave_tem_a_mesma_resposta_nas_tres_versoes(
         'a = f"o total de {len(unicos)} textos"\n'  # (noqa-acento)
         "b = f\"{', '.join(paginas)}\"\n"  # (noqa-acento)
         'c = f"{len(x)} nao tem"\n'  # (noqa-acento)
-        "d = f\"{'acao' if x else y}\"\n"  # (noqa-acento)
+        "d = f\"{'acao' if x else y}\"\n"
     )
     alvo = _escreve(sandbox, "src/chaves.py", fonte)
 

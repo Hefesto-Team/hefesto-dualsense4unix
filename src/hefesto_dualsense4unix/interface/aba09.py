@@ -159,131 +159,67 @@ def impoe(perfil):
     return f"Vibração em {forca}" if forca else "Nada é limitado"
 
 
-CSS = """
-  /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
-     Pedido: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
-     1. Status (seis linhas, em três colunas);
-     2. Configurações avançadas (quatro colunas de botões);
-     3. os Detalhes técnicos, com a altura que sobra.
-     O quadro é `estica`: a seção 3 é a única que sabe crescer, e cresce. */
-
-  /* `minmax(0,1fr)` EM TODA FAIXA — a lição de 31/08 continua valendo: `1fr` tem
-     por piso o CONTEÚDO, e uma frase longa do exame empurraria a coluna vizinha
-     para fora do quadro. A régua 5, lá embaixo, cobra as duas. */
-  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);
+CSS = """  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr);
            gap:0 20px;align-items:start}
   .avancadas{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
              minmax(0,1fr) 1px minmax(0,1fr);gap:0 22px;align-items:start}
   .risco{background:var(--border-sutil);align-self:stretch}
 
-  /* o rótulo de cada coluna nasce no x da coluna que ele nomeia — por isso o
-     `sec-rot` repete o `grid-template-columns` da faixa que encabeça. */
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
            margin-bottom:8px;height:17px;display:grid;gap:0 22px;align-items:center}
   .sec-rot > span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
   .sr-status3{grid-template-columns:minmax(0,1fr)}
   .sr-avancadas{grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
                 minmax(0,1fr) 1px minmax(0,1fr)}
-  /* A LINHA DO TÍTULO DA SEÇÃO 3 LEVA O «Copiar» E O «Salvar», que são mais altos que os 17px
-     de um rótulo: ela mede o que tem dentro, e a borda de cima fica nela. */
   .sr-log{grid-template-columns:minmax(0,1fr) auto;height:auto}
   .sr-log > span:last-child{gap:6px}
-  /* NENHUMA FAIXA ENCOLHE — o quadro é `estica` e o corpo é uma coluna flex:
-     sem isto o navegador espreme os rótulos para dar altura ao registro. Quem
-     cresce e encolhe é só o `.registro`. */
   .quadro-corpo > *{flex-shrink:0}
-  /* o título da seção 2 — o nome que o usuário deu, uma linha acima dos quatro rótulos.
-     A LETRA É A DO «Sistema», e o pedido é de produto (25/09/2026, 22h13):
-     *«Configurações avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
-     Quem pinta é o `.quadro-titulo` do topo, no `<span>` de dentro; aqui fica
-     só o lugar: o vão e o risco de cima. */
   .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
   .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
-  /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido: *«no MESMO
-     estilo das linhas do O exame de hoje (a pílula à esquerda e o texto
-     curto)»*. 25,5px por linha, e duas linhas em cada uma das três colunas:
-     elas acabam no mesmo y. */
   .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
          color:var(--texto-suave);border-bottom:1px solid var(--border-sutil);
          text-decoration:none}
   .saude:last-child{border-bottom:none}
-  /* 76px E NÃO 68 — a pílula do Status diz a palavra do estado («PAUSADO»,
-     «SEM VER»), e ela tem nove letras. As três colunas usam a mesma largura:
-     pílula de tamanho diferente na mesma faixa seria duas peças. */
   .saude .selo{flex:0 0 76px;text-align:center}
   .selo .sg{margin-right:4px;font-weight:700}
-  /* O QUE ESTÁ BEM É VERDE DE CONTORNO — 21/10/2026, O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-
-     VERDE-E-SO-AVISA-O-QUE-PEDE-ACAO-01, a variante A escolhida. A pílula neutra da conferência de
-     14/10 (que tirou o verde CHEIO) lia-se como desligada; agora é a peça do «Ligada» da
-     Experimental: contorno e texto no verde do tema, fundo transparente. O laranja pede atenção e
-     o vermelho é a linha que FALHA, sem troca de um pelo outro. */
   .selo.ok{background:transparent;color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
   .selo.aviso{background:var(--orange);color:var(--app-bg)}
   .selo.nt{background:var(--comment);color:var(--app-bg)}
   .selo.falha{background:var(--red);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* A frase do aviso é a inteira, em duas linhas se preciso: cortar com reticências esconderia o
-     gesto. O produto põe o `.longa` na linha que pede ação (`a09_sistema.PEDEM_ACAO`). A linha
-     cresce com a frase: na altura fixa de 25,5px a segunda linha invadia a de cima (medido na
-     bancada de 21/10, a frase de três linhas com 45px numa linha de 26px). */
   .saude.longa{height:auto;min-height:25.5px}
   .saude.longa .txt span:last-child{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
-  /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
-     aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
   a.saude.vai{cursor:pointer}
   a.saude.vai:hover .txt{color:var(--fg)}
-  /* O EXAME ENTRA NA GRADE DO STATUS: o produto troca o conteúdo de `.saude-cols` (duas colunas
-     e o risco entre elas) e as duas viram as colunas 2 e 3 de `.status3`, na mesma largura. */
   .saude-cols{display:contents}
   .col-lista{display:flex;flex-direction:column;min-width:0}
 
-  /* AS QUATRO COLUNAS DE BOTÕES — três itens em cada, na vertical, da mesma
-     altura (`--h-acao`) e com o mesmo vão: as quatro acabam no mesmo y. */
   .coluna{display:flex;flex-direction:column;gap:6px;min-width:0}
   .coluna .btn{width:100%;justify-content:center;padding:0 8px}
-  /* O BOTÃO QUE SÓ NASCE NUM ESTADO — o «Corrigir o serviço» do modo
-     improvisado. Fora dele sai do FLUXO (`display:none`, e não `visibility`),
-     e quando aparece entra NO LUGAR do Reiniciar, que é o clique que não
-     funciona nesse modo (o `+` alcança a `.acao` vizinha). */
   .so-avulso:not(.mostra){display:none}
   .so-avulso.mostra + .acao{display:none}
-  /* a caixa do botão que pode ficar cinza: a altura é a mesma nos dois estados (régua 8). */
   .acao{display:flex;align-items:center}
   .coluna .acao > .btn{flex:1;min-width:0;width:auto}
-  /* O BOTÃO DO SERVIÇO TEM DUAS CORES, e quem escolhe é o produto: vermelho
-     quando o clique PARA, verde quando ele DEVOLVE o serviço (a pausa ativa,
-     ou ele parado). A classe `verde` é acesa pelo campo que o pacote escreve
-     todo tique; a regra de baixo só a deixa vencer o vermelho. */
   .btn.vermelho.verde{color:var(--green)}
   .btn.vermelho.verde:hover{border-color:var(--green);color:var(--green)}
-  /* O «Parar» tem borda e letra vermelhas; no «Retomar» as duas ficam verdes (S2, 16/10). O
-     «Restaurar de fábrica» usa o amarelo do «Voltar ao padrão» (`.btn.amarelo-padrao`, topo). */
   .btn.borda-vermelha{border-color:var(--red);color:var(--red)}
   .btn.borda-vermelha:hover{background:rgba(255,85,85,.08)}
   .btn.borda-vermelha.verde{border-color:var(--green);color:var(--green)}
   .btn.borda-vermelha.verde:hover{background:rgba(80,250,123,.08)}
 
-  /* O PERFIL GLOBAL DE BATERIA E O TAMANHO DA INTERFACE, NA VERTICAL — os três botões da aba
-     Vibração (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
-     é o `on`, e o nome de cada um vem do produto. */
   .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:6px}
   .seg.bat-perfis button{flex:0 0 var(--h-acao);height:var(--h-acao);min-width:0;
                          padding:0 8px;overflow:hidden;text-overflow:ellipsis;
                          white-space:nowrap}
 
-  /* A SAÚDE DO APP É UMA COLUNA DE TRÊS: os dois interruptores e o «Restaurar de fábrica», nas
-     três alturas das vizinhas. */
   .saude-app{display:grid;grid-template-columns:minmax(0,1fr);grid-auto-flow:row;
              grid-template-rows:repeat(3,var(--h-acao));gap:6px 8px;min-width:0}
   .saude-app .cadeado,.saude-app .btn{width:100%;min-width:0;padding:0 10px;overflow:hidden;
                                       text-overflow:ellipsis}
   .saude-app .btn{justify-content:center}
 
-  /* OS LIGÁVEIS SÃO A PÍLULA DO «Modo Freestyle» DA ABA JOGAR — a mesma peça
-     (`aba01.py`, `.cadeado` e `.ligada`): verde e com o ponto aceso quando
-     ligado, apagado quando não. O estado vem do produto, nunca do clique. */
   .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:7px;
            height:var(--h-acao);width:100%;white-space:nowrap;
            border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
@@ -295,27 +231,11 @@ CSS = """
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
-  /* «Ícone na bandeja» no canto do quadro, na medida do «Modo Freestyle» (`aba01.py`). */
   .quadro-topo > .cadeado{flex:0 0 auto;margin-left:auto;width:auto;min-width:166px;
     height:34px;gap:9px;padding:0 16px 0 12px;border-radius:999px;
     font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
   .quadro-topo > .cadeado .p{width:11px;height:11px}
 
-  /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA — pedido: *«ganhar altura pra
-     ocupar melhor esse espaço abaixo dele. e ser mais fácil de ser lido»*.
-     A seção cresce com o quadro (`estica`), e a caixa é ABSOLUTA dentro dela:
-     um filho absoluto não conta para a altura do pai, então o registro vivo,
-     com as suas oitenta linhas, ROLA POR DENTRO em vez de empurrar a página
-     (a cura da ROLAGEM-01, de 09/09, continua a mesma).
-
-     O REGISTRO É A ÚNICA FAIXA QUE ENCOLHE, E ATÉ ZERO — 15/10/2026 (T5). Era
-     `flex:1 1 auto` com piso de 120px: em 1212x700 o fundo do registro passava 50px do quadro.
-     `flex:1 1 0` com `min-height:0` devolve ao registro só o que sobrou das outras faixas.
-
-     A LINHA QUEBRA, E NÃO SAI PELA DIREITA — 25/09/2026. Era `pre`, e a linha
-     do journal (uns 200 caracteres) saía cortada: para ler uma linha inteira
-     era preciso rolar de lado, e o usuário pediu o painel «mais fácil de ser lido».
-     `pre-wrap` guarda as quebras do texto e dobra o que não cabe. */
   .registro{flex:1 1 0;min-height:0;position:relative}
   .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
   .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
@@ -464,9 +384,6 @@ MIOLO = f'''
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS: AS NOTAS EM TERÇOS ---------- -->
-        <!-- O Status e o exame numa lista só, por igual nas três colunas. O que não está aqui só
-             aparece se FALHAR, e então em vermelho até se curar. -->
         <div class="sec-rot sr-status3">
           <span data-dica="{DICA_DO_STATUS}">Status</span>
         </div>
@@ -486,7 +403,6 @@ MIOLO = f'''
           </div>
         </div>
 
-        <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
         <div class="sec-grupo"><span class="quadro-titulo">Configurações avançadas</span></div>
         <div class="sec-rot sr-avancadas">
           <span data-dica="{DICA_DO_FUNCIONAMENTO}">Funcionamento do app</span><span></span>
@@ -516,7 +432,6 @@ MIOLO = f'''
           </div>
         </div>
 
-        <!-- ---------- 3. DETALHES TÉCNICOS ---------- -->
         <div class="sec-rot sr-log sec-alta">
           <span data-dica="{DICA_DO_REGISTRO}">Detalhes técnicos</span>
           <span>{item("Copiar", "Copia o registro inteiro", "btn copiar", gesto=_gesto("copiar-registro")).strip()}{item("Salvar", "Guarda o registro num arquivo", "btn copiar", gesto=_gesto("salvar-registro")).strip()}</span>
@@ -566,7 +481,7 @@ H_ACAO = _token(_TOPO, "--h-acao")
 
 _ESCONDE_O_AVULSO = ".so-avulso:not(.mostra){display:none}" in CSS
 _COLUNAS = re.findall(r'<div class="coluna[^"]*">(.*?)\n          </div>\n',
-                      _entre(MIOLO, '<div class="avancadas">', "3. DETALHES"), re.S)
+                      _entre(MIOLO, '<div class="avancadas">', '<div class="sec-rot sr-log'), re.S)
 if len(_COLUNAS) != 4:
     raise SystemExit(f"ERRO: a seção configurações avançadas tem {len(_COLUNAS)} "
                      "colunas e ela pediu quatro — ou a régua deixou de achá-las.")

@@ -6,7 +6,7 @@
 <style>
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
-    --fundo-da-pagina:#11121a;  /* o fundo em volta da caixa, o do `topo.html` */
+    --fundo-da-pagina:#11121a;
     --border-sutil:#343746; --border-forte:#44475a;
     --branco:#ffffff; --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
@@ -54,17 +54,12 @@
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
   .voltar2:hover{border-color:var(--purple);color:var(--fg)}
   .mc-topo > .mc-rot{margin-left:auto}
-  /* O nome do controle corta com reticências, com o nome inteiro na dica (`base-comum.js`), quando a barra dos
-     chips não cabe. */
   .mc-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
   .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
     background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center;
     overflow:hidden;text-overflow:ellipsis}
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
   .chip .pt{color:var(--fg);margin:0 2px}
-  /* Abaixo de 1000 px o título fica em duas linhas, de largura fixa, e os chips tomam o resto da barra: cada
-     coluna segue o texto do seu chip (`auto`) e cresce com a folga. Sem a folga, o texto cabia no chip por
-     centésimos de pixel, e a reticência cortava o nome de exemplo à toa; com ela, só o nome comprido corta. */
   @media (max-width:1000px){.mc-chips{flex:1 1 auto;gap:5px;grid-auto-columns:auto}.chip{padding:0 7px}
     .mc-topo h1{flex:none;width:6em}}
   .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
@@ -85,9 +80,6 @@
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
-  /* Abaixo de 1000 px as duas colunas laterais (292) deixariam ao centro 162 px na vista de 860: o Toque, o Meio
-     e o PS cruzavam a coluna da direita. A 252 px a ação mais longa do exemplo («Movimento do cursor») ainda cabe
-     na linha do lado, e o centro fica com 260 px, com as linhas dele uma embaixo da outra (regra mais abaixo). */
   @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:252px minmax(0,1fr) 252px;gap:12px}}
   .mc-lado{display:flex;flex-direction:column;gap:7px;justify-content:space-between}
   .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
@@ -110,8 +102,6 @@
   .mc-baixo{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
   .mc-baixo .b2{grid-template-columns:24px 58px minmax(0,1fr);gap:8px}
   .mc-baixo .b2:last-child{grid-column:1 / -1;justify-self:center;width:calc(50% - 6px)}
-  /* Abaixo de 1000 px a linha aperta o nome (60 px cabem «R3 direção») e o centro empilha as cinco linhas: em
-     duas colunas de 124 px a ação não cabia. */
   @media (max-width:1000px){.b2,.mc-baixo .b2{grid-template-columns:24px 60px minmax(0,1fr);gap:6px;padding:0 8px}
     .mc-baixo{grid-template-columns:minmax(0,1fr)}
     .mc-baixo .b2:last-child{grid-column:auto;justify-self:stretch;width:auto}}
@@ -288,13 +278,6 @@
   .mc .mapa:has(.item-triangle:hover) .s-triangle, .mc .mapa:has(.a-triangle:hover) .s-triangle{color:var(--fg) !important;opacity:1}
 </style>
 <style id="base-comum">
-/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
-   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
-   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
-
-/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
-      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
-      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
 [data-dica]{cursor:help}
 button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
 #hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
@@ -302,12 +285,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.da-base.visivel{opacity:1;transform:none}
-/* O foco num título, rótulo ou frase com dica (o `tabindex` vem da base) aparece com o mesmo contorno do Modo automático. */
 [data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 
-/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
-      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
-      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
 .modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
   border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
   font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
@@ -319,7 +298,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 .governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
 
-/* 3. O menu do botão direito, no visual das abas. */
 .menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
   background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
@@ -440,7 +418,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </bx:export>
   </defs>
   <defs id="mp-cores-do-dualsense">
-    <!-- GERADO por scripts/gerar_cores_do_dualsense.py — não editar à mão. -->
     <pattern id="mp-hachura-sem-hex" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="4" height="4" fill="#5A5A64"/>
       <rect width="2" height="4" fill="#8A8A96"/>
@@ -454,14 +431,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <stop offset="50%" stop-color="#a24046"/>
     </linearGradient>
   <style id="mp-cores-do-dualsense-folha">
-    /* Fonte: docs/data/cores-do-dualsense.csv (as cores) e a coluna
-       `zona` de docs/data/pecas-do-dualsense.csv (as peças).
-
-       A cor de plástico nunca pinta a LUZ: o lightbar e as cinco lâmpadas
-       do indicador de jogador ficam de fora, e é por isso que eles não
-       somem sobre a borda do touchpad. */
-
-    /* White · código 00 */
     svg[data-colorway="white"]{--z-casca-crua:#E4E0D8;--z-casca:#e4e0d8;--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="white"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="white"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -471,8 +440,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="white"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="white"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="white"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Midnight Black · código 01 */
     svg[data-colorway="midnight-black"]{--z-casca-crua:#1C1C1E;--z-casca:#606062;--z-casca-solida-crua:#1C1C1E;--z-casca-solida:#606062;--z-painel-crua:#121214;--z-painel:#656566;--z-touch-crua:#121214;--z-touch:#656566;--z-gatilhos-crua:#1C1C1E;--z-gatilhos:#606062;--z-dpad-crua:#1C1C1E;--z-dpad:#606062;--z-analogicos-crua:#121214;--z-analogicos:#656566;--z-botoes_face-crua:#1C1C1E;--z-botoes_face:#606062;--z-simbolos-crua:#C8C8C4;--z-simbolos:#c8c8c4}
     svg[data-colorway="midnight-black"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="midnight-black"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -482,8 +449,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="midnight-black"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="midnight-black"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="midnight-black"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Cosmic Red · código 02 */
     svg[data-colorway="cosmic-red"]{--z-casca-crua:#A51C48;--z-casca:#ae335a;--z-casca-solida-crua:#A51C48;--z-casca-solida:#ae335a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#A51C48;--z-gatilhos:#ae335a;--z-dpad-crua:#A51C48;--z-dpad:#ae335a;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#A51C48;--z-botoes_face:#ae335a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="cosmic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="cosmic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -493,8 +458,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="cosmic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="cosmic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="cosmic-red"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Nova Pink · código 03 */
     svg[data-colorway="nova-pink"]{--z-casca-crua:#E35B8C;--z-casca:#e35b8c;--z-casca-solida-crua:#E35B8C;--z-casca-solida:#e35b8c;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E35B8C;--z-gatilhos:#e35b8c;--z-dpad-crua:#E35B8C;--z-dpad:#e35b8c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E35B8C;--z-botoes_face:#e35b8c;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="nova-pink"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="nova-pink"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -504,8 +467,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="nova-pink"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="nova-pink"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="nova-pink"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Galactic Purple · código 04 */
     svg[data-colorway="galactic-purple"]{--z-casca-crua:#5B3A7A;--z-casca:#74588e;--z-casca-solida-crua:#5B3A7A;--z-casca-solida:#74588e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#5B3A7A;--z-gatilhos:#74588e;--z-dpad-crua:#5B3A7A;--z-dpad:#74588e;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#5B3A7A;--z-botoes_face:#74588e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="galactic-purple"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="galactic-purple"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -515,8 +476,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="galactic-purple"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="galactic-purple"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="galactic-purple"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Starlight Blue · código 05 */
     svg[data-colorway="starlight-blue"]{--z-casca-crua:#7EB8D4;--z-casca:#7eb8d4;--z-casca-solida-crua:#7EB8D4;--z-casca-solida:#7eb8d4;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#7EB8D4;--z-gatilhos:#7eb8d4;--z-dpad-crua:#7EB8D4;--z-dpad:#7eb8d4;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#7EB8D4;--z-botoes_face:#7eb8d4;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="starlight-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="starlight-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -526,8 +485,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="starlight-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="starlight-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="starlight-blue"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Grey Camouflage · código 06 */
     svg[data-colorway="grey-camouflage"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:#6B6E72;--z-dpad:#6b6e72;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#6B6E72;--z-botoes_face:#6b6e72;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="grey-camouflage"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="grey-camouflage"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -537,8 +494,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="grey-camouflage"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="grey-camouflage"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="grey-camouflage"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Volcanic Red · código 07 */
     svg[data-colorway="volcanic-red"]{--z-casca-crua:#8B1A1A;--z-casca:#a24848;--z-casca-solida-crua:#8B1A1A;--z-casca-solida:#a24848;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#8B1A1A;--z-gatilhos:#a24848;--z-dpad-crua:#8B1A1A;--z-dpad:#a24848;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#8B1A1A;--z-botoes_face:#a24848;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="volcanic-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="volcanic-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -548,8 +503,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="volcanic-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="volcanic-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="volcanic-red"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Sterling Silver · código 08 */
     svg[data-colorway="sterling-silver"]{--z-casca-crua:#C5C8CC;--z-casca:#c5c8cc;--z-casca-solida-crua:#C5C8CC;--z-casca-solida:#c5c8cc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#C5C8CC;--z-gatilhos:#c5c8cc;--z-dpad-crua:#C5C8CC;--z-dpad:#c5c8cc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#C5C8CC;--z-botoes_face:#c5c8cc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="sterling-silver"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="sterling-silver"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -559,8 +512,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="sterling-silver"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="sterling-silver"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="sterling-silver"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Cobalt Blue · código 09 */
     svg[data-colorway="cobalt-blue"]{--z-casca-crua:#1E4B8C;--z-casca:#40669d;--z-casca-solida-crua:#1E4B8C;--z-casca-solida:#40669d;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1E4B8C;--z-gatilhos:#40669d;--z-dpad-crua:#1E4B8C;--z-dpad:#40669d;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1E4B8C;--z-botoes_face:#40669d;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="cobalt-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="cobalt-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -570,8 +521,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="cobalt-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="cobalt-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="cobalt-blue"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Chroma Teal · código 10 */
     svg[data-colorway="chroma-teal"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:url(#mp-hachura-sem-hex);--z-dpad:url(#mp-hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#mp-hachura-sem-hex);--z-botoes_face:url(#mp-hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="chroma-teal"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="chroma-teal"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -581,8 +530,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="chroma-teal"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="chroma-teal"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="chroma-teal"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Chroma Indigo · código 11 */
     svg[data-colorway="chroma-indigo"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:url(#mp-hachura-sem-hex);--z-dpad:url(#mp-hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#mp-hachura-sem-hex);--z-botoes_face:url(#mp-hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="chroma-indigo"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="chroma-indigo"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -592,8 +539,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="chroma-indigo"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="chroma-indigo"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="chroma-indigo"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Chroma Pearl · código 12 */
     svg[data-colorway="chroma-pearl"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:url(#mp-hachura-sem-hex);--z-gatilhos:url(#mp-hachura-sem-hex);--z-dpad-crua:url(#mp-hachura-sem-hex);--z-dpad:url(#mp-hachura-sem-hex);--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:url(#mp-hachura-sem-hex);--z-botoes_face:url(#mp-hachura-sem-hex);--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="chroma-pearl"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="chroma-pearl"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -603,8 +548,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="chroma-pearl"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="chroma-pearl"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="chroma-pearl"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* HyperPop Techno Red · código 13 */
     svg[data-colorway="hyperpop-techno-red"]{--z-casca-crua:#E11D2E;--z-casca:#e11d2e;--z-casca-solida-crua:#E11D2E;--z-casca-solida:#e11d2e;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#E11D2E;--z-dpad:#e11d2e;--z-analogicos-crua:#E11D2E;--z-analogicos:#e11d2e;--z-botoes_face-crua:#E11D2E;--z-botoes_face:#e11d2e;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="hyperpop-techno-red"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="hyperpop-techno-red"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -614,8 +557,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="hyperpop-techno-red"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="hyperpop-techno-red"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="hyperpop-techno-red"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* HyperPop Remix Green · código 14 */
     svg[data-colorway="hyperpop-remix-green"]{--z-casca-crua:#8FBF3A;--z-casca:#8fbf3a;--z-casca-solida-crua:#8FBF3A;--z-casca-solida:#8fbf3a;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#8FBF3A;--z-dpad:#8fbf3a;--z-analogicos-crua:#8FBF3A;--z-analogicos:#8fbf3a;--z-botoes_face-crua:#8FBF3A;--z-botoes_face:#8fbf3a;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="hyperpop-remix-green"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="hyperpop-remix-green"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -625,8 +566,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="hyperpop-remix-green"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="hyperpop-remix-green"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="hyperpop-remix-green"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* HyperPop Rhythm Blue · código 15 */
     svg[data-colorway="hyperpop-rhythm-blue"]{--z-casca-crua:#3AA0E8;--z-casca:#3aa0e8;--z-casca-solida-crua:#3AA0E8;--z-casca-solida:#3aa0e8;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#3AA0E8;--z-dpad:#3aa0e8;--z-analogicos-crua:#3AA0E8;--z-analogicos:#3aa0e8;--z-botoes_face-crua:#3AA0E8;--z-botoes_face:#3aa0e8;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="hyperpop-rhythm-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="hyperpop-rhythm-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -636,8 +575,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="hyperpop-rhythm-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="hyperpop-rhythm-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="hyperpop-rhythm-blue"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* 30th Anniversary · código 30 */
     svg[data-colorway="30th-anniversary"]{--z-casca-crua:#A8A8B0;--z-casca:#a8a8b0;--z-casca-solida-crua:#A8A8B0;--z-casca-solida:#a8a8b0;--z-painel-crua:#A8A8B0;--z-painel:#a8a8b0;--z-touch-crua:#A8A8B0;--z-touch:#a8a8b0;--z-gatilhos-crua:#A8A8B0;--z-gatilhos:#a8a8b0;--z-dpad-crua:#3A3A40;--z-dpad:#616166;--z-analogicos-crua:#2A2A2E;--z-analogicos:#5f5f62;--z-botoes_face-crua:#3A3A40;--z-botoes_face:#616166;--z-simbolos-crua:url(#mp-hachura-sem-hex);--z-simbolos:url(#mp-hachura-sem-hex)}
     svg[data-colorway="30th-anniversary"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="30th-anniversary"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -647,8 +584,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="30th-anniversary"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="30th-anniversary"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="30th-anniversary"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* God of War Ragnarök · código Z1 */
     svg[data-colorway="god-of-war-ragnarok"]{--z-casca-crua:#2C3A6E;--z-casca:#56618b;--z-casca-solida-crua:#2C3A6E;--z-casca-solida:#56618b;--z-painel-crua:#E8E4DC;--z-painel:#e8e4dc;--z-touch-crua:#E8E4DC;--z-touch:#e8e4dc;--z-gatilhos-crua:#2C3A6E;--z-gatilhos:#56618b;--z-dpad-crua:#2C3A6E;--z-dpad:#56618b;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#2C3A6E;--z-botoes_face:#56618b;--z-simbolos-crua:#E8E4DC;--z-simbolos:#e8e4dc}
     svg[data-colorway="god-of-war-ragnarok"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="god-of-war-ragnarok"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -658,8 +593,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="god-of-war-ragnarok"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="god-of-war-ragnarok"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="god-of-war-ragnarok"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Marvel's Spider-Man 2 · código Z2 */
     svg[data-colorway="spider-man-2"]{--z-casca-crua:url(#mp-casca-spider-man-2);--z-casca:url(#mp-casca-spider-man-2);--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#D0D0D0;--z-simbolos:#d0d0d0}
     svg[data-colorway="spider-man-2"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="spider-man-2"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -669,8 +602,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="spider-man-2"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="spider-man-2"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="spider-man-2"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Astro Bot · código Z3 */
     svg[data-colorway="astro-bot"]{--z-casca-crua:#E8E4DC;--z-casca:#e8e4dc;--z-casca-solida-crua:#E8E4DC;--z-casca-solida:#e8e4dc;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E8E4DC;--z-gatilhos:#e8e4dc;--z-dpad-crua:#E8E4DC;--z-dpad:#e8e4dc;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E8E4DC;--z-botoes_face:#e8e4dc;--z-simbolos-crua:#1A1A1C;--z-simbolos:#5f5f60}
     svg[data-colorway="astro-bot"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="astro-bot"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -680,8 +611,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="astro-bot"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="astro-bot"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="astro-bot"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Fortnite · código Z4 */
     svg[data-colorway="fortnite"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:url(#mp-hachura-sem-hex);--z-touch:url(#mp-hachura-sem-hex);--z-gatilhos-crua:#1A1A1C;--z-gatilhos:#5f5f60;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#F2C200;--z-simbolos:#f2c200}
     svg[data-colorway="fortnite"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="fortnite"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -691,8 +620,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="fortnite"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="fortnite"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="fortnite"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* The Last of Us · código Z6 */
     svg[data-colorway="the-last-of-us"]{--z-casca-crua:#1A1A1C;--z-casca:#5f5f60;--z-casca-solida-crua:#1A1A1C;--z-casca-solida:#5f5f60;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#1A1A1C;--z-touch:#5f5f60;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#1A1A1C;--z-dpad:#5f5f60;--z-analogicos-crua:#E4E0D8;--z-analogicos:#e4e0d8;--z-botoes_face-crua:#1A1A1C;--z-botoes_face:#5f5f60;--z-simbolos-crua:#E4E0D8;--z-simbolos:#e4e0d8}
     svg[data-colorway="the-last-of-us"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="the-last-of-us"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -702,8 +629,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="the-last-of-us"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="the-last-of-us"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="the-last-of-us"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* God of War 20th Anniversary · código ZA */
     svg[data-colorway="god-of-war-20th"]{--z-casca-crua:url(#mp-casca-god-of-war-20th);--z-casca:url(#mp-casca-god-of-war-20th);--z-casca-solida-crua:#E4E0D8;--z-casca-solida:#e4e0d8;--z-painel-crua:#E4E0D8;--z-painel:#e4e0d8;--z-touch-crua:#E4E0D8;--z-touch:#e4e0d8;--z-gatilhos-crua:#E4E0D8;--z-gatilhos:#e4e0d8;--z-dpad-crua:#E4E0D8;--z-dpad:#e4e0d8;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#E4E0D8;--z-botoes_face:#e4e0d8;--z-simbolos-crua:#C41E3A;--z-simbolos:#c41e3a}
     svg[data-colorway="god-of-war-20th"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="god-of-war-20th"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -713,8 +638,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="god-of-war-20th"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="god-of-war-20th"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="god-of-war-20th"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Icon Blue Special Edition · código ZB */
     svg[data-colorway="icon-blue"]{--z-casca-crua:#1E4A8C;--z-casca:#40659d;--z-casca-solida-crua:#1E4A8C;--z-casca-solida:#40659d;--z-painel-crua:#1E4A8C;--z-painel:#40659d;--z-touch-crua:#163A72;--z-touch:#45618e;--z-gatilhos-crua:#163A72;--z-gatilhos:#45618e;--z-dpad-crua:#1E4A8C;--z-dpad:#40659d;--z-analogicos-crua:#1E4A8C;--z-analogicos:#40659d;--z-botoes_face-crua:#1E4A8C;--z-botoes_face:#40659d;--z-simbolos-crua:#9EC0E8;--z-simbolos:#9ec0e8}
     svg[data-colorway="icon-blue"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="icon-blue"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -724,8 +647,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="icon-blue"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="icon-blue"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="icon-blue"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Ghost of Yōtei Limited Edition · código ZC · SEM AMOSTRAGEM em 6 zonas */
     svg[data-colorway="ghost-of-yotei"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
     svg[data-colorway="ghost-of-yotei"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="ghost-of-yotei"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -735,8 +656,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="ghost-of-yotei"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="ghost-of-yotei"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="ghost-of-yotei"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Marathon Limited Edition · código ZD · SEM AMOSTRAGEM em 6 zonas */
     svg[data-colorway="marathon"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
     svg[data-colorway="marathon"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="marathon"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -746,8 +665,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="marathon"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="marathon"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="marathon"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* Genshin Impact Limited Edition · código ZE · SEM AMOSTRAGEM em 6 zonas */
     svg[data-colorway="genshin-impact"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#1A1A1C;--z-analogicos:#5f5f60;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
     svg[data-colorway="genshin-impact"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="genshin-impact"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -757,8 +674,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     svg[data-colorway="genshin-impact"] .z-analogicos :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-analogicos) !important}
     svg[data-colorway="genshin-impact"] .z-botoes_face :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-botoes_face) !important}
     svg[data-colorway="genshin-impact"] .z-simbolos{color:var(--z-simbolos) !important}
-
-    /* 007 First Light Limited Edition · código ZF · SEM AMOSTRAGEM em 7 zonas */
     svg[data-colorway="007-first-light"]{--z-casca-crua:url(#mp-hachura-sem-hex);--z-casca:url(#mp-hachura-sem-hex);--z-casca-solida-crua:url(#mp-hachura-sem-hex);--z-casca-solida:url(#mp-hachura-sem-hex);--z-painel-crua:#1A1A1C;--z-painel:#5f5f60;--z-touch-crua:#4A4A52;--z-touch:#65656c;--z-gatilhos-crua:#4A4A52;--z-gatilhos:#65656c;--z-dpad-crua:#4A4A52;--z-dpad:#65656c;--z-analogicos-crua:#4A4A52;--z-analogicos:#65656c;--z-botoes_face-crua:#4A4A52;--z-botoes_face:#65656c;--z-simbolos-crua:#4A4A52;--z-simbolos:#65656c}
     svg[data-colorway="007-first-light"] .z-casca :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-casca) !important}
     svg[data-colorway="007-first-light"] .z-painel :is(path,rect,circle,ellipse,polygon):not([fill="none"]){fill:var(--z-painel) !important}
@@ -1267,12 +1182,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     mostra(atual.startsWith('sequencia:') && troca ? 'sequencia' : atual.startsWith('troca:') && troca ? 'controle' : em('mouse') ? 'mouse' : atual && !em('controle') ? 'teclado' : troca ? 'controle' : 'mouse');
     pop.hidden = false;
   };
-  /* A linha escolhida só fica acesa enquanto o seletor dela está aberto: fechar manda `mapa-botao` sem
-     botão, e o pacote apaga o `on`. O `setTimeout` deixa passar antes o clique da opção que fechou. */
   const solta = () => setTimeout(() => $('#mapa-solta').click(), 0);
   const fecha = () => { escuta(false); pop.hidden = true; solta(); };
 
-  /* a captura: a tecla, o botão do mouse ou o botão do controle que a pessoa aperta */
   const MODIFICADOR = {ControlLeft: 'LEFTCTRL', ControlRight: 'RIGHTCTRL', ShiftLeft: 'LEFTSHIFT', ShiftRight: 'RIGHTSHIFT',
     AltLeft: 'LEFTALT', AltRight: 'RIGHTALT', MetaLeft: 'LEFTMETA', MetaRight: 'RIGHTMETA'};
   const NOMEADA = {ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', Space: 'SPACE', Enter: 'ENTER',
@@ -1319,7 +1231,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (BOTAO_DO_MOUSE[e.button]) { e.preventDefault(); e.stopPropagation(); manda('tecla', BOTAO_DO_MOUSE[e.button]); }
   }, true);
   document.addEventListener('contextmenu', e => { if (ouvindo) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
-  /* o botão do controle: a linha que ganha `pisca` enquanto a captura escuta vira a troca */
   const olho = new MutationObserver(lista => {
     if (!ouvindo) return;
     for (const m of lista) {
@@ -1339,7 +1250,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   $('.seg2', pop).addEventListener('click', e => { const t = e.target.closest('button'); if (t) mostra(t.dataset.aba); });
   $('.sel2-x', pop).addEventListener('click', fecha);
   gravar.addEventListener('click', () => escuta(!ouvindo));
-  /* a gravação da sequência é do controle: o botão só vira «Parar» até a página repintar */
   const ROTULO_SEQ = grava_seq.querySelector('span:last-child').textContent;
   grava_seq.addEventListener('click', () => {
     const on = grava_seq.dataset.gravando !== 'sim';
@@ -1351,7 +1261,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (o && o !== gravar && !o.closest('.seq-grade')) fecha();
   });
 
-  /* o controle escolhido pinta o casco, os cinco pontos do jogador e a barra de luz do desenho */
   const acende = c => {
     if (!c) return;
     ds.dataset.colorway = c.dataset.colorway || '';
@@ -1371,14 +1280,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   const bloqueia = () => { nome.readOnly = $('.mc-perfil').dataset.fixo === 'sim'; };
   new MutationObserver(bloqueia).observe($('.mc-perfil'), {attributes: true, attributeFilter: ['data-fixo']});
   bloqueia();
-  /* A ÂNCORA DO ENDEREÇO escolhe o perfil de abertura (O-MAPA-DO-CONTROLE-ABRE-NO-PERFIL-QUE-A-ANCORA-PEDE-E-LE-A-ESCOLHA-DO-POINT-AND-CLICK-01).
-     `#point-and-click` e `#trocar` vêm da aba Navegação; o produto pinta, no `data-chave` de dois marcadores
-     que não aparecem, a chave que cada uma pede. Sem âncora, ou com outra, nada muda: abre em Navegar. */
   const MARCADOR = {'#point-and-click': 'ancora-pac', '#trocar': 'ancora-trocar'};
   const lista = $('#perfil');
-  /* A âncora se segue UMA vez por chegada (a carga ou o `hashchange`), quando a chave pintada já tem
-     lugar no seletor. Depois o seletor é de quem usa: o perfil ativo que troca no meio da edição
-     não muda a escolha feita nem larga o que não se salvou. */
   let seguida = null;
   const seguirAncora = () => {
     if (seguida === location.hash) return;
@@ -1391,8 +1294,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     lista.value = chave;
     lista.dispatchEvent(new Event('change', {bubbles: true}));
   };
-  /* O TÍTULO DIZ QUAL DAS DUAS TELAS É: a Navegação abre o mesmo mapa por «Trocar os botões» e por
-     «Point and click», e o `<h1>`, o `aria-label` e o `<title>` seguem a âncora. */
   const TITULO = {'#trocar': 'Trocar os botões', '#point-and-click': 'Point and click'};
   const titula = () => {
     const t = TITULO[location.hash] || 'Mapa do controle';
@@ -1408,14 +1309,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 })();
 </script>
 <script id="base-comum">
-/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
 (() => {
-  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
-     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
-     camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
-  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
-     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
   const descrever = (el, liga) => {
     const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
     if (liga) lista.push('hef-dica');
@@ -1434,11 +1329,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     dica.classList.add('visivel');
   };
   const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
-  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
-     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
-     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
-     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
-     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
   document.addEventListener('mousemove', e => {
     let el = e.target && e.target.nodeType === 1 ? e.target : null;
     for (let n = 0; el && n < 4; el = el.parentElement, n++) {
@@ -1461,9 +1351,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
       if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
     });
-  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
-     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
-     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
   const sincronizar = b => {
     const on = b.getAttribute('aria-pressed') === 'true';
     const pedido = on ? 'personalizado' : 'automatico';
@@ -1480,10 +1367,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     const b = e.target.closest && e.target.closest('.modo-auto');
     if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
   });
-  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar,
-     Reconectar controles (o mesmo «Reconectar» da aba Jogar, desde 19/10/2026), Fechar.
-     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
-     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
   const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
   document.addEventListener('contextmenu', e => {
     e.preventDefault(); fechar();
@@ -1510,18 +1393,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (!b) { fechar(); return; }
     if (b.disabled) return;
     if (b.dataset.menu === 'copiar') document.execCommand('copy');
-    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
     if (b.dataset.menu === 'desligar') {
       if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
     }
     setTimeout(fechar, 0);
   });
 })();
-/* O alcance pelo teclado e pelo controle (A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01).
-   Dois contratos, para toda página e para as telas que vierem depois:
-   1. o que o mouse aciona (`data-gesto`, `data-hef-gesto`) tem parada no Tab e responde a Enter e Espaço;
-   2. a tela que abre por cima (`.tela-nova`, por `:target`) é um diálogo: o foco entra nela, o Tab fica
-      nela, Esc a fecha e o foco volta a quem a abriu. */
 (() => {
   const NATIVO = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[contenteditable=""],[contenteditable="true"]';
   const GESTO = '[data-gesto],[data-hef-gesto]';
@@ -1529,10 +1406,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
     || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
-  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
-     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
-     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
-     própria: o foco dele já abre a dica do que o contém. */
   const PEDE_PARADA = GESTO + ',[data-dica]';
   const marcar = raiz => {
     const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
@@ -1546,7 +1419,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
     }
   }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
-  /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
   document.addEventListener('keydown', e => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -1555,7 +1427,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     e.preventDefault();
     el.click();
   });
-  /* A tela por cima. A caixa dela é o diálogo; o nome vem do título quando a página não deu um. */
   const caixaDe = tela => tela.querySelector('.tn-cx') || tela.firstElementChild;
   const prepararTelas = () => document.querySelectorAll('.tela-nova').forEach(tela => {
     const caixa = caixaDe(tela);
@@ -1572,7 +1443,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   const aberta = () => document.querySelector('.tela-nova:target');
   let quemAbriu = null, ultimo = null, estavaAberta = false;
   document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
-  /* O X do controle clica sem dar foco: o link do clique é quem abriu, e o O devolve o foco a ele. */
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a[href^="#"]');
     if (a && !a.closest('.tela-nova')) ultimo = a;
@@ -1590,7 +1460,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     }
     estavaAberta = !!tela;
   };
-  /* A âncora do endereço só vira `:target` com a página já lida: o foco entra na volta também. */
   addEventListener('hashchange', aoMudar);
   addEventListener('DOMContentLoaded', aoMudar);
   addEventListener('load', aoMudar);

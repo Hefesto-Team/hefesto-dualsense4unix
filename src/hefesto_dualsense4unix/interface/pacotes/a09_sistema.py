@@ -8,8 +8,8 @@ mesmo dado do perfil de bateria desta aba) e quantos controles ela alcança.
 O ALCANCE É A LINHA QUE MAIS ERRA, e errou hoje: ela dizia *"Os 4 controles"*
 com dois na mesa. Aqui ele sai de `conectados`, e a régua da aba o cobra.
 
-O QUE NÃO TEM: as versões, os plugins e o estado dos consertos automáticos —
-tudo isso é do `doctor` e do instalador, não do `state_full`.
+O QUE NÃO TEM: as versões, os plugins (D-OS-PLUGINS-APARECEM-ONDE-AGEM) e os consertos —
+do `doctor` e do instalador, não do `state_full` —, nem a contagem (D-A-CONTAGEM-DO-EXAME-SAIU).
 
 A MEIA LIGAÇÃO DE 01/09, MEDIDA E FECHADA EM 02/09/2026
 -------------------------------------------------------
@@ -505,7 +505,7 @@ def _perguntar_o_prontuario() -> None:
         examinar=True      6.900 ms       22 jogos   veredito: None
 
     **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
-    encosta na varredura: `prontuario_dos_jogos.py:456` o define como *"há
+    encosta na varredura: `prontuario_dos_jogos.py:446` o define como *"há
     carimbo de ponte confirmada"* contra *"a lista de exceções de hoje"*, os dois
     lidos do disco em milissegundos. Quem diz isso é o docstring do
     dono, em `:559`: *"O carimbo não depende de ler executável nenhum"*. A
@@ -1691,7 +1691,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:142-170`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
-    `interface/hefesto_vivo.py:3287`) e
+    `interface/hefesto_vivo.py:1963`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para
@@ -1763,7 +1763,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `ipc_bridge`. Não é uma segunda porta para o disco.
 
     E ELE PEGA NA HORA, sem reiniciar nada: o `_handle_machine_declare`
-    (`daemon/ipc_handlers.py:5021`) relê o `maquina.json` e **rebinda**
+    (`daemon/ipc_handlers.py:4910`) relê o `maquina.json` e **rebinda**
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:95`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no

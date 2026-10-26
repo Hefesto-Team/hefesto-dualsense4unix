@@ -103,58 +103,12 @@ CHAVES_QUE_O_VIVO_RECUSA = ("blocos", "fita", "recado", "recados")
 BOOTSTRAP = r"""
 (function(){
   window.__hef = window.__hef || {};
-  // O QUE CONTA COMO LIGADO, e vale só para o alvo `classe`. A lista é a mesma
-  // dos dois lados — `regua_do_mockup._ligado` repete estas nove palavras — e
-  // é ela que faz o `True` do Python e o `true` do JS quererem dizer a mesma
-  // coisa neste alvo. O travessão entra porque é o que o `escrever` põe no
-  // lugar de um valor vazio: um lugar VAZIO da mesa apaga a classe.
   function ligado(t){
     const b = String(t).trim().toLowerCase();
     return !(b === '' || b === '—' || b === '0' || b === 'false'
-             || b === 'nao' || b === 'não' || b === 'off'  // (noqa-acento) valores
+             || b === 'nao' || b === 'não' || b === 'off'
              || b === 'none' || b === 'null');
   }
-  // O QUE O ALVO `atributo` PODE ESCREVER, e a lista é curta de propósito.
-  //
-  // O NOME VEM DA PÁGINA (do `data-hef-atributo` que o gerador escreve), não do
-  // daemon — então isto não é guarda contra invasor, é guarda contra ERRO DE
-  // GERADOR. Sem ela, um `data-hef-atributo="style"` apagaria, no mesmo tique, o
-  // `--plastico` e a `width` que os outros alvos acabaram de pintar no MESMO
-  // elemento; um `class` apagaria o alvo `classe`; um `id` quebraria os `url(#…)`
-  // que o `monta.svg` prefixa por controle.
-  //
-  // E A RAZÃO MAIS DURA É O SELO: `escrever()` carimba `data-hef-visto`, e é ele
-  // que decide um INDECIDÍVEL na régua do mockup. Um alvo capaz de escrever
-  // `data-hef-visto` é um alvo capaz de FORJAR a medição desta casa — por isso
-  // todo o prefixo `data-hef` está fora, e não só o selo.
-  //
-  // Os cinco nomeados são o vocabulário de ENDEREÇO do próprio piloto (`achar()`,
-  // os donos de bloco e o ouvinte de gesto): o alvo não pode reescrever a placa
-  // da porta por onde ele mesmo entrou.
-  //
-  // `data-*` e `aria-*` é o que SOBRA, e chega para quase tudo que a lei pede: o
-  // `data-colorway` do SVG, o `data-modelo`, e o `aria-label` que um leitor de
-  // tela anuncia. Uma lista de proibidos, em vez desta de permitidos, teria de
-  // crescer toda vez que o HTML crescer.
-  //
-  // O `title` É A ÚNICA EXCEÇÃO, e ela é NOMEADA — 03/09/2026. O `fim.html`, que
-  // é um só para as dez páginas, pede `data-hef-alvo="atributo"
-  // data-hef-atributo="title"` nos botões Salvar e Exportar, para a dica dizer o
-  // NOME do perfil ativo em vez de congelar um exemplo (`7325132e`). Aquele
-  // commit deu por certo que este alvo "sabe escrever num `title`" — e a guarda o
-  // recusava CALADA: as 20 páginas (dez publicadas, dez da bancada) pediam um
-  // atributo que nunca pintava, e o único barulho veio do portão
-  // `test_todo_data_hef_atributo_publicado_e_escrevivel`.
-  //
-  // ELE PODE ENTRAR, e as três razões da lista curta não o alcançam: `title` não
-  // é `data-hef` (não forja o selo), não é vocabulário de endereço (não move a
-  // placa da porta) e não é `style`/`class`/`id` (não desfaz o que outro alvo
-  // acabou de pintar no mesmo elemento). É texto de dica, e nada mais.
-  //
-  // E ELE MUDA UMA DECISÃO DE OUTRA ABA: a dica da linha por controle da
-  // `10-perfis` foi REMOVIDA em 03/09 por não haver canal de pintura
-  // (`test_aba10_a_dica_da_linha_nao_e_do_mockup`, §4). O canal existe agora —
-  // aquela dica pode voltar VIVA, com o modelo e a conta do aparelho.
   const ATRIBUTO_DE_ENDERECO = ['data-campo', 'data-papel', 'data-controle',
                                 'data-uniq', 'data-gesto'];
   const ATRIBUTO_A_MAIS = ['title'];
@@ -168,155 +122,25 @@ BOOTSTRAP = r"""
   function escrever(el, v){
     if(!el) return 0;
     const vazio = (v === null || v === undefined || v === '');
-    // O TRAVESSÃO NÃO ENTRA NUM CAMPO QUE A PESSOA DIGITA — 11/09/2026.
-    //
-    // O `—` existe para MOSTRAR AUSÊNCIA num lugar de leitura (um slot vazio da
-    // mesa, uma coluna sem dado). Num campo de digitar ele é LIXO: ela abre a
-    // busca e acha um travessão escrito lá, que ela tem de apagar antes de
-    // procurar. Medido na aba Perfis: `perfis.procura` sai `""` em todo tique,
-    // e o campo da lupa nascia com `—` no PRIMEIRO tique em repouso — antes de
-    // ela clicar, e de volta a cada fechamento. A guarda `sob_o_dedo` só
-    // protege enquanto o campo TEM foco, e o travessão entra antes disso.
-    //
-    // O ALVO É `data-hef-vivo`, que é a QUARTA PORTA (`:1391`) — o gesto que LÊ
-    // e não grava, ou seja, exatamente os campos que a PESSOA dirige. São UM na
-    // casa inteira hoje (`procurar`, na 10-perfis), então o alcance é o defeito
-    // e nada mais; e no dia em que houver um segundo ele já nasce curado.
-    //
-    // É A MESMA DISCIPLINA DO `<select>` E DO `<input type=range>` logo abaixo,
-    // e a razão é a que aquelas duas guardas já escrevem: uma aba não pode ter
-    // de lembrar-se disto — quem esquecer publica o defeito sem erro e sem
-    // aviso.
-    //
-    // E TODO CAMPO DE TEXTO É DE DIGITAR (08/10/2026): os oito campos de
-    // «Teclas do teclado» (aba 06) não são `data-hef-vivo`, recebiam o `—` no
-    // botão que não digita nada, e o «Guardar» recusava a tela inteira
-    // («token '—' fora do padrão»). Apagar uma tecla só chegava ao disco com os
-    // oito campos preenchidos. O campo vazio mostra o `placeholder` dele.
     const tipo = String(el.type || '').toLowerCase();
     const digitavel = !!(el.dataset && el.dataset.hefVivo !== undefined
                          && String(el.dataset.hefVivo).trim() !== '')
       || el.tagName === 'TEXTAREA'
       || (el.tagName === 'INPUT' && (tipo === 'text' || tipo === 'search'));
     const t = vazio ? (digitavel ? '' : '—') : String(v);
-    // O ALVO PADRÃO É O TEXTO. `data-hef-alvo` desvia para um atributo quando a
-    // tela precisa de outra coisa — a largura de uma barra, o `value` de um
-    // campo. Sem isso, pintar uma barra escreveria o número DENTRO dela.
     const alvo = el.dataset.hefAlvo || 'texto';
-    // O SELO DA VISITA, e ele é O QUE DECIDE UM INDECIDÍVEL. A régua do mockup
-    // lê a TELA e por isso não consegue separar "o produto pintou o mesmo valor
-    // que o desenho cravou" de "ninguém tocou aqui" — eram 74 campos em 330.
-    // Este selo é o único fato que a tela não mostra: o piloto ESTEVE neste
-    // elemento com um valor. Ele é escrito a cada visita, mesmo quando nada
-    // muda, porque é justamente a visita SEM mudança que não deixa rastro.
-    //
-    // ELE NÃO É "LER O CÓDIGO". A casa já se enganou lendo o fonte e publicando
-    // 77% onde a tela mostrava 36%. O selo não afirma que um endereço existe no
-    // pacote: ele registra que o valor emitido CHEGOU a um elemento desta
-    // página — que é exatamente o degrau que faltava entre o `declarado` e o
-    // `vivo`. Endereço morto continua sem selo, e continua acusado.
-    //
-    // E ELE SÓ ESCREVE UMA VEZ — A-TELA-SAMBA-01, 06/09/2026, e é a MAIOR
-    // parcela do samba que ela relatou. `el.dataset.hefVisto = '1'` num
-    // elemento que já traz `'1'` **é uma mutação de DOM**: a especificação manda
-    // enfileirar um `MutationRecord` em toda troca de atributo, e não só quando
-    // o valor difere. Medido com `--conta-mutacoes 100`, mesa parada:
-    //
-    //     01-jogar     7.100 mutações em 100 tiques — 6.700 são este selo
-    //     03-gatilhos  6.400 mutações em 100 tiques — 4.700 são este selo
-    //
-    // O SELO NÃO PERDE NADA COM ISSO, e é o que separa esta cura de uma
-    // regressão: o valor dele nunca muda — é `'1'` ou é ausência. A visita SEM
-    // mudança continua deixando rastro, porque o rastro é o atributo ESTAR lá,
-    // não o ato de reescrevê-lo. Quem nasce sem selo (um nó recriado por uma
-    // troca de bloco) ganha o dele no tique seguinte, como sempre ganhou.
     if(el.dataset.hefVisto !== '1'){ el.dataset.hefVisto = '1'; }
-    // ESCREVE E DEPOIS RELÊ, como o `cor`, o `plastico` e o `atributo` — e a
-    // razão aqui é a MESMA que aqueles três já pagaram: **o CSSOM normaliza**.
-    //
-    // MEDIDO NESTE MOTOR em 11/09/2026 (F3-CALIBRAR), com a página de
-    // calibração e a bancada PARADA::
-    //
-    //     escreve "5.0%"   →  el.style.width devolve "5%"     (o `.0` some)
-    //     escreve "22.0%"  →  el.style.width devolve "22%"
-    //     escreve "0.4%"   →  el.style.width devolve "0.4%"    (casa)
-    //
-    // Com a comparação ANTES da escrita, os dois primeiros nunca casam: o
-    // piloto reescrevia a mesma largura e somava +1 **a cada tique, para
-    // sempre**, em toda barra cuja largura desse número redondo. E o pior é
-    // que ISSO NÃO É SAMBA — o DOM não muta, porque a declaração serializada é
-    // a mesma: `--conta-mutacoes 40` dava ZERO com 69 valores por tique. O
-    // contador de pinturas é O instrumento com que esta casa prova que um
-    // endereço existe, e ele estava inflado sem que a régua do samba pudesse
-    // ver.
-    //
-    // QUEM PAGA: todo eixo de `mesa_viva._barra_bipolar`, que emite
-    // `f"{largura:.1f}"` — as barras de giro e acelerômetro da `02-controles`,
-    // as da calibração, e qualquer barra futura com uma casa decimal. A cura
-    // aqui cobre TODOS os chamadores; curá-la num pacote cobriria um.
-    //
-    // E ELA TAMBÉM CURA O VALOR INVÁLIDO: uma largura que o CSSOM RECUSA (o
-    // travessão de um lugar sem dono, `—%`) não muda nada e agora conta 0, em
-    // vez de contar uma pintura que não aconteceu a cada tique.
     if(alvo === 'largura'){
       const antes = el.style.width;
       el.style.width = t + '%';
       return el.style.width === antes ? 0 : 1;
     }
-    // O ALVO `altura` — O DÉCIMO PRIMEIRO, e ele é o gêmeo vertical do
-    // `largura`. Nasceu em 05/09/2026 para as ONDAS SONORAS da aba 02: as
-    // barrinhas do microfone e do alto-falante crescem em `height`, e dos dez
-    // alvos que havia nenhum escrevia essa propriedade.
-    //
-    // POR QUE NÃO O `html` NO CONTÊINER, que era a alternativa e não custava
-    // motor nenhum: a régua do mockup lê o alvo `html` **pelo texto visível**
-    // (`regua_do_mockup._Leitor`, ramo `alvo in ("fundo", "html")`), e o texto
-    // de catorze `<i>` vazios é vazio nos DOIS lados — desenho e produto. As
-    // 56 barrinhas ficariam INDECIDÍVEIS para sempre, que é justamente o balde
-    // que esta casa passou 02/09 tentando esvaziar. Com `altura` a régua lê
-    // `style.height` e decide, exatamente como já decide as barras horizontais.
-    //
-    // E o `innerHTML` recriaria 56 nós a dez vezes por segundo; este alvo
-    // escreve estilo e devolve 0 quando nada mudou, que é o que mantém o
-    // contador de pinturas honesto.
-    // NÃO SE PINTA O QUE ESTÁ SOB O DEDO DO USUÁRIO — 09/09/2026, e a queixa é do usuário:
-    // *"o slicer do brilho tá super estranho"*, *"oscila, aplica e não aplica"*.
-    //
-    // O DEFEITO, medido: o trilho do brilho carrega `data-campo="brilho-pct"`
-    // com alvo `valor`, e o tique repinta `el.value` dez vezes por segundo com
-    // o número que está NO DISCO. Enquanto ela arrasta, o polegar dela vai para
-    // 60 e o tique seguinte o devolve para 82 — a cada 100 ms. O gesto só grava
-    // no `change`, ou seja no SOLTAR, então o que ela vê durante o arraste é o
-    // trilho brigando com o próprio dedo. "Aplica e não aplica" descreve isso
-    // com precisão: aplica no soltar, e não aplica no caminho.
-    //
-    // A CURA É NO MOTOR, e não em cada aba lembrar-se dela — é o mesmo cuidado
-    // que a guarda do `<select>` e a do `<input type=range>` sem número já
-    // tomam logo abaixo, pela mesma razão: uma aba não pode ter de saber disso.
-    //
-    // DOIS TESTES, e os dois são necessários: `activeElement` pega o foco (o
-    // arraste dá foco, e as setas do teclado também), e `:active` pega o botão
-    // do mouse pressionado sobre o elemento. Um sem o outro deixa metade dos
-    // caminhos passando.
-    //
-    // O QUE ISSO CUSTA, declarado: enquanto o foco estiver no controle, um
-    // valor que mude POR FORA (o daemon, outro cliente) não aparece ali. É o
-    // mal menor — e é o que qualquer campo de formulário faz. Sem o foco, o
-    // tique seguinte repinta.
-    //
-    // ELE NÃO AFETA MEDIÇÃO AUTOMÁTICA: sem ninguém tocando a tela o
-    // `activeElement` é o `<body>` e nada casa, então a contagem de pinturas do
-    // passeio e das réguas continua a mesma.
     function sob_o_dedo(el){
       try{
         if(el === document.activeElement) return true;
         return !!(el.matches && el.matches(':active'));
       }catch(e){ return false; }
     }
-    // O GÊMEO VERTICAL DO `largura`, e ele vai junto pela mesma medição — ver
-    // o bloco daquele alvo. Cobrir um e deixar o outro é a correção pela metade
-    // que esta casa persegue: a normalização do CSSOM não distingue eixo, e a
-    // primeira barra de altura com uma casa decimal repetiria o defeito inteiro.
     if(alvo === 'altura'){
       const antes = el.style.height;
       el.style.height = t + '%';
@@ -328,22 +152,7 @@ BOOTSTRAP = r"""
     }
     if(alvo === 'valor'){
       if(sob_o_dedo(el)) return 0;
-      // UM <select> SÓ ACEITA O QUE ELE OFERECE, e escrever nele qualquer outra
-      // coisa deixa `selectedIndex = -1` e `value = ''` — o campo RENDERIZA EM
-      // BRANCO e, como `el.value` nunca volta igual ao que se escreveu, o
-      // contador conta uma pintura NOVA a cada tique, para sempre. Um contador
-      // que mente é pior que um campo parado, e ele é O instrumento com que esta
-      // casa prova que um endereço existe.
-      //
-      // MEDIDO em 01/09/2026: o lugar VAZIO da mesa (P2, com um controle só)
-      // recebe o travessão de `dict.fromkeys(chaves, "—")`, e o `<select>` do
-      // teto da vibração ficava em branco somando +1 por tique. A cura é aqui, e
-      // não em cada aba lembrar-se dela — é o mesmo cuidado que
-      // `interface.conexoes.teto_que_vale` já tomava do lado Python.
       if(el.tagName === 'SELECT'){
-        // PELO ÍNDICE, e não pelo `value` (19/10/2026): a opção do travessão
-        // tem `value=""` e texto «—», e `el.value = '—'` não casa valor nenhum
-        // e deixa o campo em branco. Quem casa pelo texto escolhe pela posição.
         const op = Array.prototype.find.call(el.options,
                                              function(o){ return o.value === t; })
           || Array.prototype.find.call(el.options, function(o){ return o.text === t; });
@@ -351,57 +160,11 @@ BOOTSTRAP = r"""
         if(el.selectedIndex !== op.index){ el.selectedIndex = op.index; return 1; }
         return 0;
       }
-      // E UM <input type=range> SÓ ACEITA NÚMERO, com um desfecho PIOR que o do
-      // `<select>` acima: ele não devolve vazio, ele SANEIA. Escrever o
-      // travessão de um valor vazio faz o navegador trocar o `value` pelo meio
-      // da escala, o polegar SALTA para um número que ninguém pediu, e como
-      // `el.value` nunca volta igual ao que se escreveu o contador soma uma
-      // pintura NOVA a cada tique, para sempre — que é o contador com que esta
-      // casa prova que um endereço existe.
-      //
-      // MEDIDO NESTE MOTOR em 05/09/2026, na barra da Navegação (1..12):
-      //
-      //     sem esta guarda   pintar({"vel-cursor": null})  →  value "7", +1
-      //                       de novo, no tique seguinte    →  value "7", +1 …
-      //     com esta guarda                                 →  value "6",  0
-      //
-      // O CASO NÃO É HIPOTÉTICO: `a06_navegacao` emite as duas velocidades como
-      // `rato.get("speed")`, e sem o bloco `mouse_emulation` no estado isso é
-      // `None`. É o mesmo chão do `<select>` do teto da vibração, medido em
-      // 01/09/2026, e a cura é aqui pela mesma razão: uma aba não pode ter de
-      // lembrar-se dela — as três barras da Vibração ganham a mesma rede.
-      //
-      // ZERO É NÚMERO, e por isso a guarda é `isFinite` sobre `Number(t)` e não
-      // um teste de vazio — um trilho cujo piso é 0 (as barras de motor da aba
-      // Vibração) tem de aceitar o zero que o produto mandou.
       if(el.tagName === 'INPUT' && String(el.type).toLowerCase() === 'range'
          && !isFinite(Number(t))) return 0;
       if(el.value !== t){ el.value = t; return 1; }
       return 0;
     }
-    // O ALVO `marcado` — O DÉCIMO, e o único que escreve `el.checked`.
-    //
-    // A DECISÃO, 04/09/2026: opção **a**, *décimo alvo `marcado`*. O
-    // acordeão do alto-falante da aba 02 é um `<input type="checkbox">` em CSS
-    // puro, e o estado da saída não tinha como chegar nele: dos nove alvos, o
-    // `valor` escreve `el.value` (que num checkbox é a string `"on"`, e não o
-    // estado) e nenhum toca a propriedade que decide se ele está marcado.
-    //
-    // A LÍNGUA É `sim`, e é a mesma do alvo `classe` booleano — que é quem já
-    // responde `sim` na leitura de volta (ver `LER_CAMPOS`). Uma segunda palavra
-    // para o mesmo "ligado" seria a terceira maneira de dizer a mesma coisa.
-    // Vazio, travessão e qualquer outra palavra DESMARCAM: o lugar sem dono da
-    // mesa leva `—` (`pacotes.TRAVESSAO`), e um acordeão que abrisse sozinho num
-    // lugar vazio seria a tela afirmando o que não é.
-    //
-    // IDEMPOTENTE COMO OS OUTROS NOVE: compara antes de mexer e devolve 0
-    // quando nada mudou. Um alvo que devolve 1 sempre infla a contagem de
-    // pinturas de toda aba que o use — e ela é O instrumento com que esta casa
-    // prova que um endereço existe.
-    //
-    // ELE VALE PARA TODO CHECKBOX E RADIO das dez abas. A metade que falta é o
-    // ENDEREÇO — o `data-hef-alvo="marcado"` no elemento —, e essa é da frente
-    // da aba que o publicar: atributo invisível, zero pixel.
     if(alvo === 'marcado'){
       const querido = (t === 'sim');
       if(sob_o_dedo(el)) return 0;
@@ -409,100 +172,13 @@ BOOTSTRAP = r"""
       el.checked = querido;
       return 1;
     }
-    // O ALVO `html` EXISTE PARA UM BLOCO COM MARCAÇÃO — a dica do `?` do teto
-    // da vibração (`aba08.teto_dica`) traz `<b>` e `<code>` no desenho dela, e o
-    // `textContent` do ramo padrão escreveria os marcadores como texto literal
-    // na tela. Acrescentado em 01/09/2026.
-    //
-    // POR QUE NÃO O `blocos:` QUE JÁ EXISTE: aquele troca UM elemento por
-    // `document.querySelector`, e o `?` do teto é um POR CONTROLE. É o mesmo
-    // degrau, um tamanho menor — o endereço é `data-campo`, distribuído.
-    //
-    // E ELE LEMBRA O QUE ESCREVEU — A-TELA-SAMBA-01, 06/09/2026, pela MESMA
-    // razão dos blocos (ver o laço `p.blocos` mais abaixo) e com o mesmo
-    // mecanismo dos alvos `cor` e `plastico`. `innerHTML` de volta é a
-    // SERIALIZAÇÃO do navegador, não o texto que entrou: a indentação some, o
-    // atributo é reescrito com aspas duplas, a entidade vira caractere. Onde
-    // uma dessas diferenças existir, `el.innerHTML !== t` é verdade para
-    // sempre — e o miolo é recriado dez vezes por segundo com o mesmo desenho.
-    // Medido com `--conta-mutacoes 40`, mesa parada: `luz` e `players` na
-    // `04-iluminacao` (24 nós por tique) e `adaptadores-tabela` na
-    // `08-conexoes`.
     if(alvo === 'html'){
-      // O TRAVESSÃO TAMBÉM NÃO ENTRA NUM BLOCO DE HTML — 11/09/2026, e é a
-      // irmã da guarda do campo digitável logo acima. O `—` marca VALOR
-      // AUSENTE num lugar de leitura: uma coluna sem dado, um slot vazio da
-      // mesa. Um alvo `html` não recebe um valor — recebe um PEDAÇO DE PÁGINA
-      // já montado, e um pedaço de página vazio é ausência de página, não um
-      // valor desconhecido a anunciar.
-      //
-      // MEDIDO NA ABA LANÇADORES, no mesmo dia em que o usuário mandou calar os
-      // cinco cartões achados: com a frase vazia, os cinco passaram a mostrar
-      // um `—` solto no lugar do parágrafo — um travessão anunciando a
-      // ausência de uma frase que ela acabara de mandar tirar.
       const h = (v === null || v === undefined || v === '') ? '' : t;
       if(el.__hefHtml === h) return 0;
       if(el.innerHTML !== h){ el.innerHTML = h; el.__hefHtml = h; return 1; }
       el.__hefHtml = h;
       return 0;
     }
-    // O ALVO `classe` — o ESTADO, que na tela do usuário é uma classe e não uma
-    // palavra. Ele destrava cinco coisas que a página já desenha e o produto
-    // não alcançava: qual dos quatro degraus da Vibração está aceso, o rótulo
-    // `Máx` do teto, qual botão de jogador acende na Iluminação, o clique do
-    // analógico e a coluna "Ajuste próprio" da Perfis.
-    //
-    // A SEMÂNTICA, e ela é a que os CINCO pilotos de aba já usavam — só que
-    // escrita cinco vezes e nunca no piloto único:
-    //
-    //     cls(b, 'on', b.dataset.rota === d.alto.rota)      controles_vivos:427
-    //     cls(chip, 'on', chip.dataset.mascara === d.mascara)  jogar_vivo:297
-    //     cls(b, 'on', p.autostart === true)                  sistema_viva:284
-    //
-    // Cada elemento do grupo diz QUEM ELE É em `data-hef-quando`, e a classe
-    // acende no que casar com o valor pintado. `data-hef-classe` nomeia a
-    // classe (`on` por omissão).
-    //
-    // LIGAR UM DESLIGA AS IRMÃS, e não por lista de irmãs: os quatro degraus
-    // compartilham o MESMO `data-campo`, então o `achar()` os visita todos com
-    // o mesmo valor e cada um decide por si. Um segundo clique não pode deixar
-    // dois acesos porque não há caminho no código em que dois casem — é a
-    // diferença entre apagar o vizinho e nunca ter acendido dois.
-    //
-    // SEM `data-hef-quando` O ALVO É BOOLEANO — o elemento acende por si, que é
-    // o caso do rótulo `Máx` e da coluna "Ajuste próprio".
-    //
-    // IDEMPOTENTE: compara antes de mexer e devolve 0 quando nada mudou. O
-    // `cls()` dos pilotos velhos devolvia 1 SEMPRE, e um alvo assim infla a
-    // contagem de pinturas de toda aba que o use — que é o instrumento com que
-    // esta casa prova que um endereço existe.
-    // E ELE VESTE UM ATRIBUTO JUNTO, quando o elemento pedir — 04/09/2026, e a
-    // dívida foi achada pela frente da FOLHA no dia em que ela construiu o botão
-    // cinza (S-03): *"nenhum alvo do `hefesto_vivo.py` escreve atributo E classe
-    // no mesmo elemento, e o `aria-disabled` do botão cinza precisa disso"*.
-    //
-    // O PROBLEMA É REAL E É DE FORMA: `data-hef-alvo` é UM por elemento, e um
-    // botão que fica cinza precisa das duas metades ao mesmo tempo — a classe,
-    // que é o que a folha pinta, e o `aria-disabled`, que é o que um leitor de
-    // tela anuncia. Sem as duas, ou o botão fica cinza sem dizer por quê a quem
-    // não vê, ou diz e não fica cinza.
-    //
-    // POR QUE NÃO UM ALVO COMPOSTO, nem um segundo `data-campo`: alvo composto
-    // quebraria tudo que LÊ o alvo por igualdade (o `LER_CAMPOS` aqui embaixo,
-    // o `regua_do_mockup._campo`, os `campo.alvo == "…"`), e o comentário do
-    // alvo `atributo` já paga essa lição. Dois endereços para o mesmo fato seria
-    // pior: dois campos que podem DIVERGIR na tela, e a casa persegue o oposto.
-    //
-    // A VERDADE É UMA SÓ e ela mora na classe; o atributo é DERIVADO dela, na
-    // língua do ARIA (`true`/`false`, que é o que a especificação exige — um
-    // `aria-disabled` ausente e um `aria-disabled="false"` NÃO são a mesma coisa
-    // para um leitor de tela). O nome vem do MESMO `data-hef-atributo` que o alvo
-    // `atributo` já usa, e passa pela MESMA guarda: `aria-*` entra, `data-hef` e
-    // o vocabulário de endereço não.
-    //
-    // A LEITURA DE VOLTA CONTINUA LENDO A CLASSE, de propósito: um endereço, uma
-    // leitura. O atributo não é um segundo campo a medir — é a mesma verdade
-    // dita para quem não enxerga a cor.
     if(alvo === 'classe'){
       const c = el.dataset.hefClasse || 'on';
       const quando = el.dataset.hefQuando;
@@ -516,8 +192,6 @@ BOOTSTRAP = r"""
           n += 1;
         }
       }
-      // A RAZÃO DO BOTÃO CINZA É A DICA DELE (`monta.botao_cinza`, 13/10/2026): o campo que
-      // acende o cinza escreve o `data-dica` do mesmo botão, e sem razão o atributo some.
       if(el.hasAttribute('data-hef-razao')){
         const razao = aceso && !vazio ? t : '';
         if(razao){
@@ -530,97 +204,17 @@ BOOTSTRAP = r"""
       el.classList.toggle(c, aceso);
       return n + 1;
     }
-    // O ALVO `cor` — o `color` do elemento, e ele é o par que faltava do
-    // `fundo`. O clique do analógico é COR na GTK
-    // (`interface/cartao_do_controle.py`, "accent do CONTROLE quando
-    // pressionados") e era cor no piloto velho desta aba
-    // (`interface/controles_vivos.py:328`,
-    // `{color: s.on ? 'var(--plastico)' : ''}`). Sem este alvo, o pacote da
-    // aba Controles teve de escrever `[L3]` em TEXTO e deixou a razão escrita
-    // em `a02_controles.py:63` — *"enquanto o piloto não tiver o alvo, o texto
-    // é o canal honesto"*. Agora tem.
-    //
-    // ESCREVE E DEPOIS COMPARA, ao contrário dos outros alvos, e é a única
-    // forma de ser idempotente aqui: o CSSOM NORMALIZA na atribuição
-    // (`#6272a4` volta `rgb(98, 114, 164)` — medido no WebKit desta máquina em
-    // 02/09/2026), então comparar o que se vai escrever com o que está escrito
-    // acusaria mudança em TODO tique. De quebra, uma cor inválida é recusada
-    // pelo CSSOM sem mexer no valor antigo, e isto devolve 0 — em vez de somar
-    // uma pintura que não aconteceu.
-    //
-    // VAZIO APAGA a cor de linha, devolvendo o elemento à folha de estilo. É o
-    // que o piloto velho fazia com `''`, e é o que faz um analógico solto
-    // voltar à cor de sempre em vez de ficar aceso para sempre.
-    //
-    // E ESCREVER O MESMO VALOR AQUI NÃO É MUTAÇÃO — MEDIDO em 06/09/2026, na
-    // A-TELA-SAMBA-01, e o resultado DERRUBOU a hipótese da sprint.
-    //
-    // Ela dizia que este ramo era um dos três culpados do samba, por escrever
-    // antes de comparar. Escrever antes de comparar ele escreve; o que não
-    // acontece é a mutação: o CSSOM só reescreve o atributo `style` quando a
-    // DECLARAÇÃO muda, e atribuir a mesma cor não muda declaração nenhuma.
-    // Com o observador ligado por 100 tiques e a mesa parada, este ramo não
-    // produziu **uma** mutação em nenhuma das dez abas — o que a tabela acusava
-    // nos elementos de cor era o SELO da visita, que é outro ramo e foi curado.
-    //
-    // Por isso a forma FICA como estava. Uma memória de elemento aqui — a que
-    // os alvos `html` e os blocos ganharam, onde ela cura de verdade — passaria
-    // por cura e não curaria nada, e a régua que a guardasse ficaria verde com
-    // ela arrancada. `test_a_cor_e_o_plastico_repetidos_nao_mutam` guarda o
-    // CONTRATO (o dia em que alguém trocar o CSSOM por um `setAttribute`
-    // direto no `style`, ela reprova), e o docstring dela diz isso.
     if(alvo === 'cor'){
       const antes = el.style.color;
       el.style.color = vazio ? '' : t;
       return el.style.color === antes ? 0 : 1;
     }
-    // O ALVO `plastico` — A COR DO APARELHO COMO VARIÁVEL, e é o que a lei de
-    // 03/09/2026 pede com todas as letras: *"se identificou o controle como
-    // modelo White a cor do card em volta tem que ser branco"*.
-    //
-    // POR QUE NÃO O `cor` NEM O `fundo`: `--plastico` não pinta UM elemento —
-    // ele governa a borda da moldura E o halo do lado que treme, que é um
-    // descendente. Escrever `color` obrigaria toda a coluna a herdar o tom do
-    // plástico, e `background` pintaria o retângulo inteiro. Uma variável de
-    // CSS é exatamente o mecanismo que o desenho já usa (`var(--plastico)` nas
-    // dez páginas): o que faltava era o produto poder escrevê-la.
-    //
-    // VAZIO E TRAVESSÃO APAGAM — e os dois entram porque chegam por caminhos
-    // diferentes: `""` é a cor que o aparelho não respondeu (pelo rádio o mapa
-    // diz que ela não se lê), e `—` é o que o molde escreve num lugar sem dono
-    // (`pacotes.TRAVESSAO`). Apagar devolve a borda ao tom neutro da folha de
-    // estilo (`var(--plastico, …)`) em vez de deixar a cor do MOCKUP na tela —
-    // regra de produto: campo sem informação não mostra nada. Escrever `—` numa
-    // variável usada em `border` deixaria a declaração inválida no cálculo e a
-    // borda sumiria de vez.
-    //
-    // ESCREVE E DEPOIS COMPARA, como o `cor`: uma propriedade personalizada
-    // aceita qualquer texto, então só a releitura diz se algo mudou — e é isso
-    // que impede o contador de somar uma pintura que não aconteceu.
-    //
-    // E ELE TAMBÉM NÃO MUTA AO REPETIR — ver a nota do alvo `cor` logo acima,
-    // que é a mesma medição de 06/09/2026 e a mesma hipótese derrubada:
-    // `setProperty` com o mesmo valor e `removeProperty` do que já não está lá
-    // não reescrevem o atributo `style`, e o observador não conta nada.
     if(alvo === 'plastico'){
       const antes = el.style.getPropertyValue('--plastico');
       if(vazio || t === '—'){ el.style.removeProperty('--plastico'); }
       else { el.style.setProperty('--plastico', t); }
       return el.style.getPropertyValue('--plastico') === antes ? 0 : 1;
     }
-    // O ALVO `posicao` — ONDE O PONTINHO ESTÁ, e ele não reescreve folha
-    // nenhuma. A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01, 25/09/2026.
-    //
-    // O valor é `x,y` em por cento, e o alvo escreve só `--hef-x` e `--hef-y`
-    // no próprio elemento. Quem os usa é a regra da página,
-    // `left:var(--hef-x,50.2%);top:var(--hef-y,50.2%)`. Antes, a posição era
-    // uma folha endereçada trocada inteira a cada tique: o WebKit refazia o
-    // estilo das 1.955 peças da 02 e repintava a janela toda, dez vezes por
-    // segundo (37,7% de um núcleo contra 1,13% por aqui, na banca).
-    //
-    // O VAZIO E O TRAVESSÃO TIRAM AS DUAS VARIÁVEIS, e o pontinho volta ao
-    // REPOUSO do `var()`. É o que o lugar vazio mostrava pelo piso da folha, e
-    // `--hef-x:—` invalidaria a regra. Apagar o que já não está lá conta 0.
     if(alvo === 'posicao'){
       const ax = el.style.getPropertyValue('--hef-x').trim();
       const ay = el.style.getPropertyValue('--hef-y').trim();
@@ -638,71 +232,9 @@ BOOTSTRAP = r"""
       if(ay !== y){ el.style.setProperty('--hef-y', y); mudou = 1; }
       return mudou;
     }
-    // O ALVO `atributo` — UM ATRIBUTO DA TAG, e é o que faltava para o desenho
-    // do controle seguir o aparelho. A lei de produto, 03/09/2026: *"os svgs do
-    // dualsense (…) mudam de acordo com o controle identificado no canto
-    // superior. É white no p1, mas (…) os svgs não são os que o meu mapa
-    // cataloga. Isso tá errado."*
-    //
-    // O SVG ESCOLHE A COR POR ATRIBUTO: o `monta.svg()` grava
-    // `<svg data-colorway="cosmic-red">` e a folha embutida pinta as dez zonas
-    // com `svg[data-colorway="…"] .z-casca{fill:var(--z-casca)}`. Havia 181
-    // `data-colorway` nas dez páginas publicadas e NENHUM alcançável: dos oito
-    // alvos do `escrever()`, nenhum escrevia atributo. A aba 08 desistiu com a
-    // razão escrita no próprio HTML publicado (`08-conexoes.html:1033`) —
-    // *"a cura certa é um alvo de atributo no piloto"*. É este.
-    //
-    // O NOME VEM DE `data-hef-atributo`, E NÃO DE UM `data-hef-alvo`
-    // COMPOSTO. `atributo:data-colorway` no `data-hef-alvo` seria mais curto de
-    // escrever e quebraria tudo que LÊ o alvo: `regua_do_mockup._campo`, o
-    // `LER_CAMPOS` aqui embaixo e cada `campo.alvo == "…"` comparam o alvo por
-    // IGUALDADE, e um alvo composto viraria 181 palavras diferentes onde hoje
-    // há oito. O par alvo/parâmetro em atributos separados é o que o alvo
-    // `classe` já faz com `data-hef-classe` e `data-hef-quando` — a casa tem a
-    // forma, e inventar uma segunda seria a terceira maneira de dizer o mesmo.
-    //
-    // VAZIO E TRAVESSÃO APAGAM O ATRIBUTO, e a razão foi MEDIDA antes de
-    // escolhida. Sem `data-colorway` nenhuma regra da folha casa, e o desenho
-    // cai nos `fill` crus do `ds_limpo.svg`: 62 formas em `#3a3f4b` — um cinza
-    // neutro, com o contorno intacto. Não é um SVG quebrado nem invisível: é o
-    // controle SEM identidade, que é exatamente o que a regra de produto pede quando
-    // não há informação. Deixar o atributo faria o contrário — manteria na tela
-    // o colorway do MOCKUP sobre um aparelho que é outro, que é o defeito que
-    // este alvo nasceu para curar.
-    //
-    // ESCREVE E DEPOIS RELÊ, como o `cor` e o `plastico`: um atributo aceita
-    // qualquer texto, então só a releitura diz se algo mudou. `getAttribute`
-    // devolve `null` quando não há atributo, e `null === null` conta 0 — que é o
-    // que impede o contador de somar uma pintura que não aconteceu ao apagar o
-    // que já estava apagado.
-    //
-    // ELE É NECESSÁRIO E NÃO É SUFICIENTE, e quem for ligar uma aba precisa
-    // saber: `monta._so_o_colorway` guarda na folha de cada SVG **só as regras
-    // do modelo pedido** — 3.082 bytes dos 45.452 dos 28. Escrever aqui um
-    // colorway que não está embutido dá o MESMO cinza do atributo apagado. Ou o
-    // `monta.svg()` deixa de podar, ou a página publica a folha inteira uma vez.
     if(alvo === 'atributo'){
       const nome = (el.dataset.hefAtributo || '').trim().toLowerCase();
-      // NOME RECUSADO NÃO PINTA E NÃO MENTE. O selo já foi carimbado acima, mas
-      // a tela continua mostrando o valor velho e o pacote continua declarando
-      // outro — então a régua do mockup acusa este endereço, que é o barulho
-      // certo para um `data-hef-atributo` mal escrito.
       if(!atributo_escrevivel(nome)) return 0;
-      // A DICA QUE ESTÁ SOB O PONTEIRO NÃO MORA MAIS NO `title` — TOOLTIP-C1,
-      // 11/09/2026. A camada da dica (`DICA_DA_CASA`) guarda o texto em
-      // `data-hef-dica` enquanto o ponteiro está em cima, justamente para o
-      // popup do sistema não aparecer junto. Escrever `title` aqui
-      // ressuscitaria esse popup NO MEIO da dica aberta — os dois na tela, um
-      // por cima do outro.
-      //
-      // ENTÃO O ALVO SEGUE O TEXTO até onde ele está, e avisa a camada para a
-      // dica aberta trocar de frase no mesmo tique. Fora da hover não há
-      // `data-hef-dica` e este ramo não existe: o `title` é escrito como
-      // sempre foi.
-      //
-      // O VAZIO APAGA DOS DOIS LADOS, como o ramo de baixo: uma dica sem texto
-      // é dica que não existe, e deixar um travessão ali seria a tela
-      // explicando um botão com um traço.
       if(nome === 'title' && el.hasAttribute('data-hef-dica')){
         const dica = (vazio || t === '—') ? '' : t;
         if(el.getAttribute('data-hef-dica') === dica) return 0;
@@ -712,28 +244,6 @@ BOOTSTRAP = r"""
         return 1;
       }
       const antes = el.getAttribute(nome);
-      // COMPARA ANTES DE ESCREVER — A-TELA-SAMBA-01, 06/09/2026, e é a cura do
-      // *"algo ativa o tooltip mas ele se desativa"* que o usuário escreveu com o
-      // produto aberto.
-      //
-      // O RAMO ESCREVIA E DEPOIS RELIA, e o comentário acima explica por quê:
-      // um atributo aceita qualquer texto, então só a releitura diria se algo
-      // mudou. **A premissa é falsa para um atributo comum**: `setAttribute`
-      // não normaliza nada, e `getAttribute` devolve exatamente a string que
-      // entrou — logo comparar ANTES dá a mesma resposta sem tocar no DOM.
-      //
-      // E TOCAR NO DOM ERA O DEFEITO INTEIRO. `setAttribute` com o mesmo valor
-      // enfileira um `MutationRecord` na mesma medida que um valor novo, e a
-      // DICA NATIVA do WebKit fecha quando o `title` do elemento sob o cursor
-      // muda. As dicas vivas desta casa — os `dica-modo-*` da `03-gatilhos`, o
-      // `title` do Salvar e do Exportar em todas as dez — passavam por aqui
-      // DEZ VEZES POR SEGUNDO: a dica abria e morria antes de ela conseguir
-      // ler. Medido com `--conta-mutacoes 100`, mesa parada, na `03-gatilhos`:
-      // 1.200 trocas de `title` em 100 tiques, com o texto sempre igual.
-      //
-      // O `null` DO `getAttribute` É O VAZIO DESTE RAMO, e por isso a
-      // comparação do apagamento é contra ele: apagar o que já não existe volta
-      // 0 e não escreve, como antes.
       if(vazio || t === '—'){
         if(antes === null) return 0;
         el.removeAttribute(nome);
@@ -743,95 +253,21 @@ BOOTSTRAP = r"""
       el.setAttribute(nome, t);
       return el.getAttribute(nome) === antes ? 0 : 1;
     }
-    // O TEXTO IGUAL COM MARCAÇÃO POR DENTRO TAMBÉM SE ESCREVE — 21/09/2026. O
-    // rótulo do lugar que NASCE vazio vem do desenho como `P3 <span
-    // class="pt">•</span> Desconectado`; o `textContent` dele é igual ao que o
-    // pacote manda, e a comparação sozinha o deixava como estava. Numa caixa
-    // `flex` os espaços em volta do `<span>` somem, e a tela dizia
-    // `P3•Desconectado` ao lado de um `P1 • Desconectado` — o usuário viu: *"p1,p2
-    // tão diferentes do p3 e p4"*. Escrever uma vez deixa os quatro com a
-    // mesma forma.
-    //
-    // SÓ QUANDO OS FILHOS SÃO O SEPARADOR, e nenhum outro: o `.pt` é o único
-    // filho que o texto devolve inteiro (o `•` está na string). Qualquer outro
-    // — a bolinha de quem navega, um endereço, um botão — o texto apagaria e
-    // não devolveria, que é o defeito que `enderecos_que_o_texto_apaga` guarda.
     const so_o_ponto = !!el.firstElementChild
       && Array.prototype.every.call(el.children, function(f){
            return f.classList.contains('pt') && !f.firstElementChild; });
     if(el.textContent !== t || so_o_ponto){
       el.textContent = t;
-      // O PAINEL QUE MOSTRA O FIM. Um registro tem ordem: o que acabou de
-      // acontecer é a última linha, e um painel de seis linhas que abre nas
-      // seis PRIMEIRAS de oitenta mostra o mais velho — inútil para quem
-      // clicou "Ver detalhes" agora. Fotografado em 01/09/2026.
-      //
-      // É UM ATRIBUTO, e não uma regra geral por altura: rolar todo elemento
-      // que transborde mexeria em painéis onde o começo é o que importa.
       if(el.dataset.hefRolar === 'fim'){ el.scrollTop = el.scrollHeight; }
       return 1;
     }
     return 0;
   }
-  // OS TRÊS VOCABULÁRIOS DE ENDEREÇO, e nenhum se aposenta. Medido em
-  // 01/09/2026, nas dez páginas publicadas:
-  //
-  //     data-campo   oito abas          o mais novo, e o do piloto único
-  //     data-papel   só a Vibração (28) um PAR com `data-lado`
-  //     data-hef     só a Perfis (77)   nomes com ponto: `perfis.linha.nome`
-  //
-  // Cada um nasceu com o piloto da sua aba, e os pilotos ainda os usam. Trocar
-  // tudo por um só renomearia 105 endereços e quebraria cinco pilotos vivos
-  // para ganhar consistência de nome — o piloto único aceita os três, que é o
-  // que custa uma linha aqui.
   function achar(raiz, chave){
     const esc = chave.replace(/"/g, '\\"');
     return raiz.querySelectorAll(
       '[data-campo="' + esc + '"],[data-papel="' + esc + '"],[data-hef="' + esc + '"]');
   }
-  // O RECADO NA TELA SAIU — 13/09/2026, FRASES-E-DICAS-01.
-  //
-  // Aqui moravam `pintar_recados` e os quatro estilos dele (a cara do aviso, a
-  // cor do sucesso, a tarja de rodapé e o recado na grade). Era o canal que
-  // levava a frase de um gesto ao CARTÃO do controle: nasceu em 02/09/2026
-  // porque `RuntimeError` era *"o produto recusou, e a frase VAI PARA A TELA"*,
-  // e a recusa saía só no terminal de quem lançou a janela.
-  //
-  // O CONTRATO CADUCOU EM DUAS METADES. O sucesso saiu na TELA-CALADA-01 (*"em
-  // todas as abas da interface"*); a recusa saiu na FRASES-E-DICAS-01, com a
-  // foto da caixa laranja que o `player` da aba 04 pousava no cartão (o índice
-  // da leva, `2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19). O defeito
-  // de origem continua curado por outra peça: o clique recusado não responde
-  // calado — ele pisca no botão (ver `voltouDoVoo`), e a frase fica no diário.
-  //
-  // O QUE A MEDIÇÃO DE 04/09 ENSINOU FICA VALENDO para quem um dia desenhar um
-  // nó dentro de um cartão: num `[data-controle]` de linhas fixas (grid ou
-  // flex), um filho inserido pela ORDEM ocupa uma célula e desloca a coluna
-  // inteira — 65 px no desenho da aba 05.
-  // O ESTADO "EM VOO" DO BOTÃO — decisão de produto, `09` [03], 04/09/2026: **o botão
-  // diz que está trabalhando**, e diz DURANTE a espera, no lugar exato do
-  // clique.
-  //
-  // O DEFEITO MEDIDO: `daemon.reload` leva **9,5 segundos** (medido no daemon
-  // dela em 01/09), o gesto corre em thread para a janela não congelar, e
-  // NENHUMA das dez abas tinha estado "em voo" — o clique sumia por nove
-  // segundos e meio e o segundo clique parecia o primeiro. É o mesmo enunciado
-  // da recusa que ia para o terminal, um degrau antes: ali a resposta existia e
-  // não chegava; aqui a ESPERA não tinha como se anunciar.
-  //
-  // AS DUAS METADES, e a segunda é opcional de propósito:
-  //
-  //   a CLASSE `hef-em-voo`   sempre. Mora na folha do módulo
-  //                           (`interface/janela.FOLHA_DA_CASA`), vale nas dez
-  //                           abas sem republicar desenho, e não inventa texto.
-  //   `data-hef-em-voo="…"`   quando a página publica um rótulo, ele entra no
-  //                           lugar do original — *"Reaplicando…"* na `09`. O
-  //                           texto continua sendo dela; o piloto só o troca.
-  //
-  // O ORIGINAL VOLTA INTEIRO, e por isso ele é guardado como `innerHTML` num
-  // mapa, e não como texto num `data-`: os botões desta casa têm `<span>` dentro
-  // (o `.pt` da fita, os ícones), e devolver `textContent` os achataria — o
-  // botão voltaria da espera diferente de como entrou.
   window.__hef.voo = 0;
   window.__hef.rotulos = {};
   function em_voo(el){
@@ -845,42 +281,6 @@ BOOTSTRAP = r"""
     }
     return n;
   }
-  // E ELE VOLTA SOZINHO. Um botão que ficasse "trabalhando" para sempre é pior
-  // que um botão calado: o calado ao menos não afirma nada.
-  //
-  // O `querySelectorAll` E NÃO UMA REFERÊNCIA GUARDADA: entre o clique e a
-  // volta, a pintura pode ter trocado o bloco inteiro (a fita, a tabela de
-  // perfis, o mapa do gabinete). Uma referência apontaria para um nó que já saiu
-  // do documento, e o botão que está na tela ficaria em voo para sempre. Zero
-  // elementos é a resposta certa nesse caso, e o rótulo guardado é jogado fora
-  // junto — senão o mapa cresce a cada gesto, para sempre.
-  //
-  // E O POUSO PISCA — 05/09/2026, decisão de produto na `03-Q4`, e desde 13/09/2026
-  // em DUAS CORES (FRASES-E-DICAS-01). O `certo` chega do `finally` do piloto,
-  // que é quem sabe qual dos desfechos aconteceu; o JS não adivinha:
-  //
-  //   true     aplicou              `hef-deu-certo`, a borda verde
-  //   false    recusou, ou sem dono `hef-recusou`, a borda de aviso
-  //   outro    só armou, ou quem    nenhuma piscada: o botão só volta do voo
-  //            chama sem dizer      (`voltouDoVoo(n)` à mão, numa régua)
-  //
-  // A RECUSA PISCA EM VEZ DE FALAR: a frase que ia ao cartão saiu da tela, e o
-  // botão é o único lugar em que a resposta ao clique mora sem texto. O `false`
-  // é ESTRITO de propósito — um `undefined` que acendesse a recusa faria toda
-  // régua que chama `voltouDoVoo(n)` medir uma recusa que não houve.
-  //
-  // UMA ACENDE, A OUTRA APAGA: dois cliques no mesmo botão dentro de um segundo
-  // e meio, um que aplicou e outro que recusou, não podem deixar as duas bordas
-  // vestidas — a tela diria as duas coisas sobre o mesmo campo.
-  //
-  // A CLASSE SAI SOZINHA em MS_DA_PISCADA, e o número é dela (*"cerca de um
-  // segundo e meio"*). Um campo que ficasse aceso para sempre afirmaria um
-  // clique de dez minutos atrás — a mesma doença do botão que fica em voo, que
-  // este arquivo já nomeia acima.
-  //
-  // O `data-hef-voo` SAI ANTES DA PISCADA, e a ordem importa: se ele ficasse
-  // até a classe apagar, o pouso seguinte acharia dois elementos com o mesmo
-  // número. Por isso a retirada agendada procura pela CLASSE, não pelo número.
   window.__hef.voltouDoVoo = function(n, certo){
     const chave = String(n);
     const acende = certo === true ? 'hef-deu-certo'
@@ -901,82 +301,20 @@ BOOTSTRAP = r"""
     if(piscando.length){
       setTimeout(function(){
         for(const el of piscando){ el.classList.remove(acende); }
-      }, 1500);  // MS_DA_PISCADA — ver o portão logo abaixo do BOOTSTRAP
+      }, 1500);
     }
     return k;
   };
   window.__hef.pintar = function(p){
     let n = 0;
-    // A DICA CONFERE O PRÓPRIO ALVO ANTES DE O TIQUE MEXER NA PÁGINA —
-    // TOOLTIP-C1, 11/09/2026. Um bloco trocado inteiro leva embora o nó em que
-    // a dica está pousada, e uma dica aberta sobre um nó que saiu do documento
-    // é a tela afirmando o que já não existe. Ela NÃO conta como pintura: não
-    // há pixel do produto aqui, e um contador que subisse a cada tique faria
-    // toda aba parecer inquieta — a quietude é o que aquele número mede.
     if(window.__hefDica) window.__hefDica.varrer();
-    // O ALVO QUE A FITA ESCOLHEU. Ele NÃO conta como pintura — não há pixel
-    // aqui —, e por isso `n` não sobe: um contador que subisse a cada tique
-    // faria toda aba parecer inquieta, e a quietude é o que este número mede.
-    //
-    // ELE É REESCRITO EM TODO TIQUE de propósito: `window.__hef` morre com o
-    // documento, e sem isto a escolha do usuário sobreviveria no Python e sumiria da
-    // página na primeira troca de aba — o alvo voltaria a ser vazio sem que
-    // nada na tela mudasse.
     if('alvo' in p){ window.__hef.alvoPadrao = p.alvo || ''; }
-    // A FITA SE TROCA INTEIRA, e não campo a campo: o número de chips muda com
-    // a mesa, e não há endereço para um chip que ainda não existe.
     if(p.fita){
       const f = document.querySelector('.fita');
       if(f){
-        // O SELO SAI DA COMPARAÇÃO, e sem isto a fita se trocava A CADA TIQUE.
-        // Medido em 03/09/2026: o laço abaixo escreve `data-hef-visto` nos
-        // chips, o `outerHTML` do DOM passa a trazer o atributo, o texto que o
-        // Python emitiu nunca o traz — e a igualdade nunca mais casava. Treze
-        // tiques, treze pinturas, com a mesa parada. Um contador que mente é
-        // pior que um campo parado: é O instrumento com que esta casa prova que
-        // um endereço existe.
-        // A INDENTAÇÃO SAI DOS DOIS LADOS, e sem isto a comparação NUNCA casa:
-        // `monta.fita()` devolve o bloco com os quatro espaços com que ele
-        // entra no esqueleto (`f'    <div class="fita…'`), e `outerHTML` começa
-        // no `<`. Medido em 03/09/2026: treze tiques, treze trocas da fita
-        // inteira, com a mesa parada — e cada troca deixava mais um nó de texto
-        // de quatro espaços ao lado dela, porque `outerHTML =` insere o
-        // fragmento inteiro, espaço e tudo.
-        //
-        // O DEFEITO É VELHO E ESTAVA DORMINDO: até hoje `_fita` devolvia `""`
-        // sempre que UM controle não tinha cor — e pelo rádio nenhum tem —,
-        // então o ramo quase nunca corria na bancada. Curar a guarda acordou
-        // o contador.
-        // E NUNCA COM UM CHIP EM VOO DENTRO — A-TELA-SAMBA-01, 06/09/2026, e é
-        // o mesmo cuidado do laço de blocos lá embaixo, aqui no caso mais
-        // extremo dele: a fita não troca o MIOLO, ela troca o próprio nó
-        // (`outerHTML`), então TUDO o que está dentro dela morre junto. Os
-        // chips da fita são clicáveis — são eles que escolhem o alvo —, e um
-        // chip clicado veste `hef-em-voo` até o gesto responder. Sem esta
-        // guarda, um chip em voo desaparece no primeiro tique, com o clique
-        // dela no meio do caminho.
         const desejado = String(p.fita).trim();
         const agora = f.outerHTML.split(' data-hef-visto="1"').join('');
-        // A MEMÓRIA DO QUE ESTE LAÇO ESCREVEU, e ela é a única comparação que
-        // sobrevive à camada da dica — TOOLTIP-C1, 11/09/2026.
-        //
-        // O DEFEITO MEDIDO: a `DICA_DA_CASA` colhe o `title` de todo elemento
-        // para `data-hef-dica`, e a fita tem dois (a tarja e o chip). O
-        // `outerHTML` passa a trazer um atributo com outro NOME e em outra
-        // POSIÇÃO — `removeAttribute` + `setAttribute` mandam o atributo para o
-        // fim da tag —, e o texto que o Python emitiu nunca vai casar com isso.
-        // Sem esta memória a fita se trocava inteira DEZ VEZES POR SEGUNDO, com
-        // a mesa parada: é o defeito de 03/09 de volta, com outra causa.
-        //
-        // É O MESMO REMÉDIO DOS BLOCOS (`alvo.__hefBloco`, três passos abaixo),
-        // com uma diferença de forma: a fita se troca por `outerHTML`, ou seja
-        // o NÓ morre a cada troca e uma memória pendurada nele morreria junto.
-        // Por isso ela mora em `window.__hef`, que vive enquanto o documento.
-        //
-        // A COMPARAÇÃO VELHA FICA AO LADO, e não é redundância: no primeiro
-        // tique de cada carga não há memória nenhuma, e é ela que impede a
-        // primeira troca inútil enquanto a colheita ainda não aconteceu.
-        if(window.__hef.fitaEscrita === desejado){ /* já é esta */ }
+        if(window.__hef.fitaEscrita === desejado){ }
         else if(agora === desejado){ window.__hef.fitaEscrita = desejado; }
         else if(f.querySelector('.hef-em-voo') || f.closest('.hef-em-voo')){
           window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
@@ -984,91 +322,15 @@ BOOTSTRAP = r"""
           f.outerHTML = desejado; n += 1;
           window.__hef.fitaEscrita = desejado;
         }
-        // O SELO DA VISITA NOS CHIPS, e sem ele o endereço deles pareceria
-        // MORTO. Os chips ganharam `data-campo` em 03/09/2026 (`monta.fita`)
-        // para que a régua da identidade saiba que ali não há desenho
-        // congelado — mas quem os escreve é esta troca de bloco, e não o laço
-        // de campos: sem o selo, a régua do mockup os contaria como endereço
-        // que ninguém pinta. Ele é escrito a cada tique, mesmo quando o HTML
-        // não mudou, porque é a visita SEM mudança que não deixa rastro.
-        // UMA VEZ SÓ, pela mesma razão do selo em `escrever()`: reescrever `'1'`
-        // sobre `'1'` é uma mutação de DOM, e o chip da fita é clicável.
         for(const c of document.querySelectorAll('.fita [data-campo]')){
           if(c.dataset.hefVisto !== '1'){ c.dataset.hefVisto = '1'; }
         }
       }
     }
-    // OS BLOCOS QUE SE TROCAM INTEIROS, e a fita acima é o primeiro deles —
-    // esta é a mesma ideia, com endereço. Um bloco cujo NÚMERO DE FILHOS muda
-    // com o dado não tem como ser pintado campo a campo: não há endereço para
-    // um filho que ainda não existe.
-    //
-    // O SEGUNDO CASO É O MAPA DO GABINETE (01/09/2026): as faces e as entradas
-    // são as que o usuário declarou, e podem ser zero. Enquanto o bloco era estático,
-    // a aba mostrava um gabinete de bancada — e os seis botões que mexem no
-    // mapa não podiam ser ligados, porque clicar declararia no disco do usuário o
-    // desenho de um exemplo.
-    //
-    // TROCA O MIOLO, e não o próprio nó: `outerHTML` no container mataria o
-    // elemento que o seletor achou, e a próxima pintura não teria onde pousar.
-    //
-    // E NUNCA COM UM BOTÃO EM VOO DENTRO — A-TELA-SAMBA-01, 06/09/2026, e é a
-    // cura de *"botões não funcionam"* e *"cliques não aplicam ou atrasam"*.
-    //
-    // O DEFEITO É DE TEMPO, e por isso régua nenhuma o via numa foto: um bloco
-    // cujo HTML carregue um valor que muda a cada tique (uma contagem, uma
-    // bateria, uma hora) é reconstruído DEZ VEZES POR SEGUNDO, e `innerHTML =`
-    // destrói todos os descendentes. Quem clicou fica com o `mousedown` num nó
-    // que já não existe — o `click` nunca completa — e o `hef-em-voo`, que é a
-    // única coisa na tela dizendo *"estou trabalhando"*, some com o nó que o
-    // vestia. Um gesto lento desta casa leva 9,5 s (`daemon.reload`): são 95
-    // chances de o botão ser arrancado debaixo do dedo do usuário.
-    //
-    // ADIAR É A RESPOSTA CERTA, e não "trocar só o pedaço que mudou": o HTML do
-    // bloco vem pronto do pacote, e casar filho a filho aqui seria escrever um
-    // segundo motor de reconciliação no piloto. O voo dura o gesto; assim que
-    // ele pousa, o tique seguinte aplica o bloco inteiro. O que se perde é
-    // atualização de UM bloco por alguns tiques; o que se ganha é o clique.
-    //
-    // O CONTADOR SAI NA TABELA do `--conta-mutacoes`: um bloco que fica adiado
-    // para sempre é defeito, e sem contá-lo ele seria invisível.
-    // E A COMPARAÇÃO É COM O QUE ESTE LAÇO ESCREVEU, não com o `innerHTML` de
-    // agora — A-TELA-SAMBA-01, 06/09/2026, e é o que fazia CINCO abas
-    // reconstruírem bloco a dez vezes por segundo com a mesa parada.
-    //
-    // O DEFEITO É UM CICLO, e ele se fecha DENTRO do mesmo tique: o bloco entra
-    // com os endereços que o pacote desenhou; o laço de campos, três passos
-    // abaixo, escreve nesses endereços e carimba `data-hef-visto` em cada um;
-    // o `innerHTML` do bloco passa a trazer o selo, o texto que o Python emitiu
-    // nunca o traz — e a igualdade nunca mais casa. No tique seguinte o bloco é
-    // reconstruído inteiro, os selos somem com os nós, e recomeça.
-    //
-    // **É O MESMO DEFEITO QUE A FITA JÁ TINHA MEDIDO** três dias antes (ver o
-    // `split(' data-hef-visto="1"')` logo acima) — e a cura de lá nunca foi
-    // trazida para cá. Medido com `--conta-mutacoes 40`, mesa parada:
-    //
-    //     10-perfis    4.000 mutações em 40 tiques — a lista dos 33 perfis
-    //                  inteira, 132 nós por tique, dez vezes por segundo
-    //     04-iluminacao  a barra de luz e os players, 24 nós por tique
-    //     08-conexoes    a tabela de adaptadores
-    //
-    // POR QUE A MEMÓRIA E NÃO O `split` DA FITA: o selo é UM dos jeitos de o
-    // DOM divergir do texto emitido, e não o único — o CSSOM normaliza cor, um
-    // `style` esvaziado deixa `style=""` na tag, e o próximo alvo que nascer
-    // trará a sua. Guardar o que ESTE laço escreveu compara duas strings da
-    // MESMA língua e fica imune a todas elas de uma vez. É a mesma memória de
-    // elemento dos alvos `cor` e `plastico`, e morre com o nó pelo mesmo
-    // motivo.
     for(const [seletor, html] of Object.entries(p.blocos || {})){
       const alvo = document.querySelector(seletor);
       if(!alvo) continue;
       if(alvo.__hefBloco === html) continue;
-      // A MEMÓRIA SE ESCREVE TAMBÉM QUANDO NADA PRECISOU MUDAR — TOOLTIP-C1,
-      // 11/09/2026. Sem esta linha, o bloco que já nasce igual nunca ganha
-      // memória; a camada da dica colhe os `title` de dentro dele logo depois,
-      // o `innerHTML` passa a divergir do texto do Python, e o tique seguinte
-      // reconstrói um bloco que ninguém mudou — uma vez por carga, em cada
-      // bloco de cada aba.
       if(alvo.innerHTML === html){ alvo.__hefBloco = html; continue; }
       if(alvo.querySelector('.hef-em-voo') || alvo.closest('.hef-em-voo')){
         window.__hef.blocosAdiados = (window.__hef.blocosAdiados || 0) + 1;
@@ -1078,38 +340,6 @@ BOOTSTRAP = r"""
       alvo.__hefBloco = html;
       n += 1;
     }
-    // 0b. O MOLDE QUE CLONA — 19/09/2026, decisão de produto: *a lista rola, sem teto*.
-    //
-    // O QUE ISTO CURA, e são DUAS pontas do mesmo defeito, as duas medidas no
-    // Check-up da aba Conexões em 19/09 com o Chrome dirigindo a página
-    // PUBLICADA:
-    //
-    //   * a lista que SOBRA some. O desenho tinha cinco blocos e o exame da
-    //     bancada devolve sete: dois achados sumiam, e a tira ficava com
-    //     cinco CERTO — a tela dizendo "está tudo bem" com dois achados
-    //     abertos escondidos no fim;
-    //   * a lista que FALTA mente. Com três achados (medido numa máquina sem a
-    //     bancada), os dois blocos que sobravam ficavam com o travessão de
-    //     `escrever(el, '')` — a tela INVENTANDO duas linhas.
-    //
-    // UM TETO MAIOR NÃO RESOLVERIA, e é por isso que a peça é esta: as
-    // conferências do exame devolvem LISTAS (`a08_conexoes._conferencias`), uma
-    // porta problemática por item. O número de achados não tem máximo, e todo
-    // número cravado no desenho seria o mesmo defeito com outra data.
-    //
-    // O CONTRATO É DE DUAS LINHAS no HTML: a caixa diz o SELETOR do bloco que
-    // se repete (`data-hef-molde`) e a CHAVE da lista que manda na contagem
-    // (`data-hef-molde-conta`). O bloco original mais à frente é o molde.
-    //
-    // OS CLONES SE MARCAM (`data-hef-clone`), e é o que torna isto idempotente:
-    // sem a marca, o tique seguinte leria os clones como originais e a lista
-    // dobraria de tamanho a cada volta. Com ela, o piloto sabe o que ele mesmo
-    // pôs e converge para o número certo — clona o que falta, remove o que
-    // sobra, esconde o original excedente.
-    //
-    // ESCONDER O EXCEDENTE E NÃO REMOVÊ-LO: os originais são o DESENHO, e são
-    // eles que o mockup mostra. Removê-los deixaria a aba sem molde no dia em
-    // que a lista voltasse a crescer.
     for(const caixa of document.querySelectorAll('[data-hef-molde]')){
       const seletor = caixa.dataset.hefMolde;
       const chave = caixa.dataset.hefMoldeConta;
@@ -1130,18 +360,11 @@ BOOTSTRAP = r"""
       while(originais.length + clones.length < querido){
         const copia = molde.cloneNode(true);
         copia.setAttribute('data-hef-clone', '1');
-        // O `__hefBloco` é memória de PINTURA e viaja no clone como lixo: o
-        // laço dos blocos compararia o HTML novo com o do molde e pularia a
-        // escrita. `cloneNode` não copia propriedades de objeto, mas o
-        // `dataset` e os atributos sim — e é só o atributo que interessa aqui.
         if(cauda.parentNode) cauda.parentNode.insertBefore(copia, cauda.nextSibling);
         clones.push(copia);
         cauda = copia;
         n += 1;
       }
-      // E O EXCEDENTE SOME. A classe é da FOLHA DA CASA
-      // (`folha_da_casa.FOLHA_DA_CASA`), porque é peça do piloto e não do tema:
-      // ela vale nas dez páginas e não depende de nenhuma aba declará-la.
       Array.from(caixa.querySelectorAll(seletor)).forEach(function(el, i){
         const sobra = i >= querido;
         if(el.classList.contains('hef-sem-item') !== sobra){
@@ -1150,14 +373,8 @@ BOOTSTRAP = r"""
         }
       });
     }
-    // 1. OS CAMPOS DA MESA — soltos no documento, valem para a página toda.
     for(const [k, v] of Object.entries(p.mesa || {})){
       const alvos = achar(document, k);
-      // UMA LISTA SE DISTRIBUI pelos elementos de mesmo endereço, na ordem.
-      // É como a aba Conexões mostra os achados do exame e a Perfis a lista de
-      // perfis: N blocos iguais, um por item, todos com o mesmo `data-campo`.
-      // Sem isto o pacote teria de emitir `achado-0`, `achado-1`… e o gerador
-      // teria de saber de antemão QUANTOS itens o exame acha.
       if(Array.isArray(v)){
         alvos.forEach(function(el, i){ n += escrever(el, i < v.length ? v[i] : ''); });
         continue;
@@ -1165,51 +382,23 @@ BOOTSTRAP = r"""
       if(v !== null && typeof v === 'object') continue;
       for(const el of alvos) n += escrever(el, v);
     }
-    // 1b. OS LUGARES VAZIOS ganham a marca do desenho. `data-conectado` e a
-    // classe `off` são o que o gerador escreve nos dois lugares que o usuário mandou
-    // deixar desconectados — usar as MESMAS marcas é o que faz o produto
-    // parecer o desenho, em vez de inventar um terceiro estado.
     for(const pref of (p.vazios || [])){
       for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
-        if(el.dataset.conectado !== 'nao'){  // (noqa-acento) valor do atributo
-          el.dataset.conectado = 'nao'; n += 1;  // (noqa-acento) idem
+        if(el.dataset.conectado !== 'nao'){
+          el.dataset.conectado = 'nao'; n += 1;
         }
         if(!el.classList.contains('off')){ el.classList.add('off'); }
-        // O `remove` TAMBÉM PERGUNTA ANTES — A-TELA-SAMBA-01, 06/09/2026.
-        // `classList.remove` de uma classe AUSENTE reserializa o atributo
-        // `class` do mesmo jeito, e cada reserialização é uma mutação: 400 por
-        // 100 tiques na `01-jogar`, com a mesa parada e nenhum lugar mudando de
-        // dono. O `add` acima já perguntava; faltava o irmão.
         if(el.classList.contains('alvo')){ el.classList.remove('alvo'); }
       }
     }
-    // 1c. E OS LUGARES QUE TÊM DONO REABREM — o simétrico do passo acima, e
-    // ele faltava. Sem esta linha a marca é de mão única: o piloto fechava o
-    // cartão de um controle que sai e NUNCA o reabria quando ele voltava. Quem
-    // liga o controle depois de a aba estar aberta via o cabeçalho contar `1
-    // controle` e o cartão continuar em 24 px, com o travessão — o dado dela
-    // chegando invisível. Só recarregar a página desfazia.
     for(const pref of (p.ocupados || [])){
       for(const el of document.querySelectorAll('[data-controle="' + pref + '"]')){
-        // COMPARA COM `sim`, e não com o valor de desconectado — a diferença
-        // foi medida no DOM vivo em 03/09/2026: nas abas 02, 05 e 08 o lugar
-        // CHEIO nasce SEM o atributo, e a versão anterior, que só trocava um
-        // valor pelo outro, deixava os três em `null`. A folha não tem como vestir de conectado
-        // um lugar sobre o qual a tela não afirma nada.
         if(el.dataset.conectado !== 'sim'){
           el.dataset.conectado = 'sim'; n += 1;
         }
-        // PERGUNTA ANTES — ver a nota do `alvo` no passo `1b` logo acima. Este
-        // é o pior dos dois, porque roda para todo lugar OCUPADO: numa mesa de
-        // dois controles são dois `class` reserializados por tique, para
-        // sempre, sem que um lugar tenha mudado de dono.
         if(el.classList.contains('off')){ el.classList.remove('off'); }
       }
     }
-    // 1d. AS MARCAS DO LUGAR — 21/09/2026, `pacotes.MARCAS_DO_LUGAR`. A classe
-    // acende nos lugares da lista e apaga nos outros; a que o pacote não nomeia
-    // fica como está. Sem isto o `navega` da Navegação ficava no P1 do desenho
-    // para sempre: verde com a mesa vazia, verde com o P2 no comando.
     for(const [classe, com] of Object.entries(p.marcas || {})){
       for(const pref of ['p1', 'p2', 'p3', 'p4']){
         const quer = (com || []).indexOf(pref) >= 0;
@@ -1220,7 +409,6 @@ BOOTSTRAP = r"""
         }
       }
     }
-    // 2. OS CAMPOS POR CONTROLE — dentro do bloco daquele `data-controle`.
     for(const [pref, campos] of Object.entries(p.colunas || {})){
       for(const raiz of document.querySelectorAll('[data-controle="' + pref + '"]')){
         for(const [k, v] of Object.entries(campos)){
@@ -1229,70 +417,20 @@ BOOTSTRAP = r"""
         }
       }
     }
-    // 3. OS RECADOS SAÍRAM DA PINTURA — 13/09/2026, FRASES-E-DICAS-01. Este
-    // passo pintava a lista `p.recados` que o tique mandava; nenhuma carga a
-    // traz mais. Ver a nota no lugar em que `pintar_recados` morava.
-    //
-    // 4. A PÁGINA APARECE — 22/09/2026, DEPOIS da primeira pintura (ver
-    // `folha_da_casa.CLASSE_DA_ESPERA`). A GUARDA É DO SAMBA: `remove` de
-    // classe ausente reescreve o atributo — 40 mutações em 40 tiques, medido.
     if(document.documentElement.classList.contains('hef-esperando'))
       document.documentElement.classList.remove('hef-esperando');
     return n;
   };
-  // O OUVINTE DE CLIQUE, e ele é UM SÓ para a página inteira. Um
-  // `addEventListener` por botão seria N ouvintes a religar a cada repintura —
-  // e um botão que a pintura substitua perde o seu, calado. Delegar no
-  // documento sobrevive a qualquer troca de HTML, que é o que a fita faz a
-  // cada mudança de mesa.
   if(!window.__hef.ouvindo){
     window.__hef.ouvindo = true;
-    // O `change` ALÉM DO `click`, e ele é o que faltava para metade dos botões
-    // sem dono. Um `<select>` não se "clica" no sentido útil — ele MUDA; e um
-    // `<input>` de texto nunca dispara clique com o valor novo. Medido em
-    // 01/09/2026: os quatro campos do editor da aba Perfis, os selects da
-    // Conexões e o nome da face nova ficaram sem dono por isto, e a causa é a
-    // mesma em cada aba: o ouvinte manda `texto: alvo.textContent`, que num
-    // `<input>` é vazio.
     document.addEventListener('change', function(ev){ manda_do_alvo(ev); }, true);
     document.addEventListener('click', function(ev){
-      // Os quatro atributos que marcam algo CLICÁVEL nas dez páginas. Eles já
-      // existiam — cada piloto de aba usava o seu.
       manda_do_alvo(ev);
     }, true);
-    // E O `blur`, que é a TERCEIRA porta e faltava — achado pela frente da aba
-    // 08 em 04/09/2026, e a forma do defeito é a mesma das outras duas: um
-    // `contenteditable` (o apelido do adaptador) **não dispara `click` nem
-    // `change`** ao perder o foco. O motor do apelido estava de pé, completo e
-    // testado, e simplesmente NUNCA era acionado — o gesto existia e a tela
-    // não tinha como chamá-lo.
-    //
-    // `blur` não borbulha, por isso a captura (`true`) é obrigatória, e não
-    // uma preferência de estilo.
-    //
-    // A LIÇÃO É A DE 01/09, repetida com outro elemento: **o ouvinte único só
-    // ouve o que alguém lembrou de ensinar a ele.** Quem puser na tela um
-    // elemento novo que carregue valor confere se ele fala por uma destas três
-    // portas — senão o gesto nasce mudo, e mudo dá verde em toda régua que
-    // pergunte se o motor existe.
     document.addEventListener('blur', function(ev){
       if(ev.target && ev.target.isContentEditable) manda_do_alvo(ev);
     }, true);
-    // E O `input`, QUE É A QUARTA PORTA — ver `manda_do_vivo` logo abaixo. Ela
-    // é a única das quatro que NÃO despacha o gesto de `data-hef-gesto`, e a
-    // razão é que ali o gesto grava no disco do usuário.
     document.addEventListener('input', function(ev){ manda_do_vivo(ev); }, true);
-    // A JANELA ESCONDIDA — A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01. Quem
-    // sabe se a janela está à vista é o WebKit, e ele diz isso por
-    // `document.hidden`, o mesmo sinal com que para de pintar. O aviso vai
-    // pelo canal de sempre, sem `gesto`, e o `_gesto` do Python o separa antes
-    // de contar clique.
-    //
-    // TROCAR DE ABA NÃO É ESCONDER. O documento que sai passa a `hidden`
-    // antes de morrer, e o `pagehide` vem antes disso: sem esta marca, cada
-    // troca de aba escreveria no diário que a janela foi escondida, e a linha
-    // que prova o minimizar na máquina do usuário não provaria nada. A página nova
-    // diz `vista` assim que nasce; a que volta do cache diz no `pageshow`.
     window.addEventListener('pagehide', function(){ window.__hefSaindo = true; });
     window.addEventListener('pageshow', function(){
       window.__hefSaindo = false;
@@ -1303,18 +441,13 @@ BOOTSTRAP = r"""
     });
   }
   function dizer_a_vista(){
-    // SEM O CANAL NÃO HÁ A QUEM DIZER: as réguas rodam este BOOTSTRAP num
-    // WebView sem o `hefesto`, e um erro aqui derrubaria a instalação inteira.
     const canal = window.webkit && window.webkit.messageHandlers
                   && window.webkit.messageHandlers.hefesto;
     if(!canal) return;
     canal.postMessage(JSON.stringify({
       visibilidade: document.hidden ? 'escondida' : 'vista',
-      pagina: location.pathname.split('/').pop()}));  // (noqa-acento) a chave das outras mensagens
+      pagina: location.pathname.split('/').pop()}));
   }
-  // A SÉRIE DO GESTO VIVO. Ela é própria e não o contador do voo: o voo carimba
-  // o elemento e volta pelo `voltouDoVoo`; a série do vivo nunca toca o DOM —
-  // ela só diz ao Python qual leitura é a mais nova.
   window.__hef.vivoN = window.__hef.vivoN || 0;
   function manda_do_alvo(ev){
       const alvo = ev.target.closest(
@@ -1323,64 +456,17 @@ BOOTSTRAP = r"""
         '.r-aplicar,.r-salvar,.r-importar,.r-exportar');
       if(!alvo) return;
       const d = alvo.dataset;
-      // O RODAPÉ ENDEREÇA POR CLASSE, e não por `data-`: ele mora no
-      // `topo.html`, o esqueleto das dez, e um `data-gesto` ali mudaria as dez
-      // páginas de uma vez. A classe `r-<nome>` já era o endereço dele no
-      // `jogar_vivo.py` — este é o quarto vocabulário, e é o último.
-      // A classe se lê pelo ATRIBUTO: num elemento do SVG o `className` não é
-      // texto, e o `match` levantava antes de o gesto sair (o botão do desenho
-      // da janela do acionador, 20/10/2026, nascia mudo).
       const doRodape = ((alvo.getAttribute('class') || '').match(/\br-([a-z]+)\b/) || [])[1];
-      // O CARIMBO DO VOO, e ele é aplicado ANTES de a mensagem sair: a resposta
-      // tem de ser do CLIQUE, não da volta do Python. O gesto atravessa uma
-      // thread e o IPC; esperar por ele para dizer "estou trabalhando" seria
-      // dizê-lo tarde demais — que é o defeito inteiro.
-      //
-      // TODO CLIQUE QUE VAI PARA O PYTHON É CARIMBADO, inclusive o que vai ser
-      // recusado por não ter dono. O piloto despacha o pouso nos TRÊS desfechos
-      // (aplicou, recusou, sem dono), e um botão que ficasse em voo porque o
-      // gesto não existia seria a tela mentindo sobre um trabalho que ninguém
-      // começou.
       manda(carga_do_alvo(
         alvo, ev, d.gesto || d.hefGesto || d.papel || doRodape || 'clique',
         em_voo(alvo)));
   }
-  // A QUARTA PORTA — `data-hef-vivo`, o gesto que LÊ e não grava.
-  //
-  // POR QUE ELA PRECISOU EXISTIR, e o relato é da `ONDA5-10-02`: a decisão
-  // 10-Q4 dela pede o rótulo do jogo *"ao vivo"*, e `input` é o único evento que
-  // um campo de texto dispara a cada TECLA. As três portas de hoje despacham o
-  // gesto de `data-hef-gesto` — que naquele campo é `editor.jogo`, e ele GRAVA
-  // O PERFIL DO USUÁRIO. Ligar `input` ao mesmo atributo regravaria o `.json` a cada
-  // letra digitada.
-  //
-  // ENTÃO O ENDEREÇO É PRÓPRIO, e é essa a peça inteira: um elemento pode
-  // carregar `data-hef-vivo="<gesto>"`, e o `input` despacha ESSE gesto — nunca
-  // o de `data-hef-gesto`, ainda que o mesmo elemento traga os dois.
-  //
-  // SEM O ATRIBUTO O `input` NÃO FAZ NADA. Nenhuma das dez abas muda de
-  // comportamento por esta porta nascer: quem a usa é quem publicar o atributo,
-  // e publicar é ato dela.
-  //
-  // ELE NÃO VESTE O `em_voo`, e é decisão: o cursor `progress` e a opacidade a
-  // cada tecla seriam a tela dizendo *"trabalhando"* sobre uma leitura de
-  // milissegundos — o oposto do que aquele sinal existe para dizer.
-  //
-  // UM VIVO EM VOO POR ELEMENTO. Cada disparo leva um número de série e a
-  // identidade do elemento; o Python guarda o último e DESCARTA a resposta que
-  // chegar fora de ordem. Sem isso, a leitura da tecla `1` pode voltar depois da
-  // leitura de `15` e pintar o rótulo do jogo errado — e ficar assim até a
-  // próxima tecla.
   function manda_do_vivo(ev){
       const alvo = ev.target.closest('[data-hef-vivo]');
       if(!alvo) return;
       const g = String(alvo.dataset.hefVivo || '').trim();
       if(!g) return;
       const o = carga_do_alvo(alvo, ev, g, '');
-      // A IDENTIDADE DO ELEMENTO, e ela é o endereço que ele já tem: o
-      // `data-campo`/`data-hef`/`data-papel` do próprio campo mais o dono. Dois
-      // campos vivos diferentes na mesma coluna não compartilham série; dois
-      // disparos do MESMO campo, sim — que é exatamente o que se quer cancelar.
       o.vivoChave = g + '|'
         + (alvo.dataset.campo || alvo.dataset.hef || alvo.dataset.papel || '')
         + '|' + String(o.controle || '');
@@ -1389,125 +475,34 @@ BOOTSTRAP = r"""
   }
   function carga_do_alvo(alvo, ev, gesto, voo){
       const d = alvo.dataset;
-      // DE QUAL CONTROLE, e sem isto o gesto é ambíguo: a mesa tem quatro
-      // colunas iguais e um "Desligar" clicado na terceira não diz em qual
-      // barra de luz mexer. O `closest` sobe até o bloco do controle — é o
-      // mesmo `data-controle` que a pintura usa para achar onde escrever.
-      //
-      // O DONO É O ASSENTO, e o seletor é uma lista de PERMITIDOS — ver
-      // `SELETOR_DO_DONO` no Python, que é quem tem a razão inteira e a régua.
-      // Em uma linha: o desenho compartilhado carrega o MODELO no mesmo
-      // atributo, e um botão posto dentro dele chegaria aqui dizendo que o
-      // controle se chama como o plástico.
       const dono = alvo.closest(
         '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]');
-      // O DATASET INTEIRO VAI JUNTO, e ele vem PRIMEIRO para que a lista
-      // explícita abaixo continue mandando no que ela nomeia.
-      //
-      // POR QUE ISTO PRECISOU EXISTIR, medido em 02/09/2026: a lista explícita
-      // tinha catorze nomes, escritos à mão, e os gestos da aba Conexões leem
-      // `caminho`, `entrada` e `face` — NENHUM dos três estava nela. O botão
-      // "escolher aparelho" traz `data-caminho` (o pacote o gera em
-      // `a08_conexoes.py:1026`), as entradas do gabinete trazem `data-entrada`
-      // no HTML publicado, e o clique chegava ao Python sem eles. Resultado:
-      // SEIS gestos recusavam dizendo *"o clique não disse qual aparelho"* — e
-      // recusavam para ELA também, não só para a régua. O diagnóstico que
-      // circulava era outro: que faltava dizer em qual CONTROLE agir. Não é o
-      // controle; é o argumento do próprio botão.
-      //
-      // UMA LISTA ESCRITA À MÃO DE ATRIBUTOS QUE A PÁGINA PODE TER É A MESMA
-      // FORMA DE DEFEITO QUE ESTA CASA JÁ NOMEOU: ela só cresce quando alguém
-      // se lembra, e o esquecimento é silencioso. O dataset inteiro não
-      // esquece — e o custo é uma cópia de meia dúzia de strings por clique.
       const tudo = Object.assign({}, d);
       return Object.assign(tudo, {
         voo: voo,
         gesto: gesto,
-        // A MARCA DO VIVO NASCE VAZIA AQUI, e quem a preenche é o
-        // `manda_do_vivo`. Sem esta linha, uma página que um dia escrevesse
-        // `data-vivo` num botão faria um CLIQUE cair no caminho do gesto vivo —
-        // sem voo, sem recado e com a guarda de gravação por cima. É a mesma
-        // razão de a lista explícita vir depois do dataset, um risco abaixo:
-        // aqui o defeito seria calado.
         vivo: '', vivoChave: '',
         modo: d.modo || '', forca: d.forca || '', player: d.player || '',
         lado: d.lado || '', campo: d.campo || '', hef: d.hef || '',
         hex: d.hex || '', sensor: d.sensor || '', rota: d.rota || '',
         mudo: d.mudo || '', micModo: d.micModo || '', v: d.v || '',
-        // O ALVO PADRÃO — O CONTROLE QUE A FITA APONTOU.
-        //
-        // FATO SUBSTITUÍDO EM 06/09/2026, e ele estava aqui desde que a fita
-        // aprendeu a escolher. Esta linha dizia que o alvo padrão *"é da RÉGUA —
-        // no produto fica indefinido"*. **Não fica**: o tique escreve
-        // `carga["alvo"]` nas abas cuja fita ESCOLHE, e o `pintar` o guarda em
-        // `window.__hef.alvoPadrao` (ver a nota do `carga["alvo"]` no `_tique`).
-        // No produto, um botão que não mora em coluna de controle nenhuma chega
-        // ao Python com o controle que o usuário apontou na fita — e isso é DESENHO,
-        // não acidente: *"Esta aba passa a mirar o P2."*
-        //
-        // O QUE ISSO CUSTAVA, medido pela ONDA5-01-03 em 06/09 com foto: a
-        // recusa de um gesto de PÁGINA (o cadeado da 01, que liga o Hefesto
-        // inteiro) seguia o mesmo alvo e pousava no cartão do P1, cobrindo o
-        // nome dele (`ONDA5-P-01` §7).
-        // **Deixou de custar em 13/09/2026** (FRASES-E-DICAS-01): a recusa não
-        // pousa em cartão nenhum — pisca no botão clicado.
-        //
-        // ELE CURA A VIBRAÇÃO, e só ela. Medido com dublê em 02/09/2026:
-        // `testar` e `parar` recusam com *"o clique não disse em qual controle
-        // — e sem alvo a mesa inteira treme"*, e passam a chamar a ponte assim
-        // que o clique traz um `controle`. Os botões do gabinete da aba
-        // Conexões NÃO se curam com isto: o que falta a eles é o argumento do
-        // próprio botão (`caminho`, `entrada`, `face`), que o dataset acima
-        // agora carrega.
-        //
-        // POR QUE NÃO NO PRODUTO: escolher o primeiro controle conectado por
-        // conta própria é uma DECISÃO de produto — se o botão não diz em qual
-        // aparelho age, quem decide é ela, com a tela dizendo. A régua só o usa
-        // para conseguir medir, e o relato marca esses cliques como ALVO
-        // FORÇADO, para ninguém ler a ajuda dela como o produto funcionando.
         controle: dono ? (dono.dataset.controle || dono.dataset.uniq || '')
                        : (window.__hef.alvoPadrao || ''),
-        // O VALOR, e ele é o que o `textContent` não alcança: num `<input>` o
-        // texto é vazio, e num `<select>` é a lista INTEIRA de opções. Sem
-        // isto, um campo digitado chega ao Python sem o que o usuário digitou.
         valor: (('value' in alvo) ? String(alvo.value ?? '') : ''),
-        // `selectedOptions` dá o rótulo VISÍVEL da opção escolhida — o que ela
-        // leu na tela — enquanto `value` dá a chave do contrato. Os dois vão,
-        // porque o gesto precisa de um e a mensagem de erro do outro.
         rotulo: (alvo.selectedOptions && alvo.selectedOptions[0]
                  ? alvo.selectedOptions[0].textContent.trim() : ''),
         tipo: (alvo.tagName || '').toLowerCase(),
         evento: ev.type,
-        // A HORA DO CLIQUE, em ms desde a época, carimbada pelo próprio evento. O gesto roda
-        // depois, numa fila e numa thread, e a hora em que ele roda carrega o atraso do laço:
-        // quem conta o duplo clique compara estes carimbos, nunca o relógio do Python.
         carimbo: (performance.timeOrigin || 0) + ev.timeStamp,
-        // A FORMA INTEIRA, e ela nasceu em 01/09/2026 para os três "Guardar"
-        // das telas de pop-up. O ouvinte manda o valor do elemento CLICADO — e
-        // o Guardar é OUTRO elemento, a três telas de distância dos 21
-        // `<select>` que ele promete gravar. Sem isto, o botão só podia
-        // recusar: não tinha como saber o que estava escolhido em cada linha.
-        //
-        // SÓ QUANDO O BOTÃO PEDE. `data-hef-forma` nomeia o container a
-        // recolher; um clique comum não paga a varredura, e nenhum outro gesto
-        // recebe um campo que não pediu.
         forma: (function(){
           const pedido = alvo.dataset.hefForma;
           if(!pedido) return null;
-          // DOIS RECIPIENTES, e o segundo nasceu em 01/09/2026 para a aba
-          // Gatilhos: lá o "Guardar" é da COLUNA de um controle, e as colunas
-          // não têm `id` — elas se endereçam por `data-controle`, que é o
-          // vocabulário que a mesa inteira já usa. `@controle` quer dizer "o
-          // bloco do controle em que eu estou".
           const cx = pedido === '@controle'
             ? alvo.closest(
                 '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]')
             : document.getElementById(pedido);
           if(!cx) return null;
           const fora = {};
-          // A CHAVE É O `data-linha` (Navegação) OU o `data-campo` (Gatilhos) —
-          // nunca os dois. O RÁDIO (21/09/2026, a escolha do jogo da aba 07) divide
-          // UM endereço entre as opções: só a MARCADA responde, senão vence a última.
           for(const el of cx.querySelectorAll('[data-linha],[data-campo]')){
             if(el.type === 'radio' && !el.checked) continue;
             const chave = el.dataset.linha || el.dataset.campo;
@@ -1523,8 +518,6 @@ BOOTSTRAP = r"""
     o.pagina = location.pathname.split('/').pop();
     window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(o));
   }
-  // UMA VEZ NA CARGA, e a cada troca pelo ouvinte lá em cima: a página que
-  // nasce com a janela minimizada já diz que ninguém a vê.
   dizer_a_vista();
   return 'ok';
 })();
@@ -1536,16 +529,10 @@ DICA_DA_CASA = r"""
   if(window.__hefDica && window.__hefDica.instalada) return 'ja';
   if(!document.body) return 'sem body';
   var SVG = 'http://www.w3.org/2000/svg';
-  // MEIO SEGUNDO, o mesmo do GTK (`HOVER_TIMEOUT`). Copiar o número é
-  // deliberado: a dica tem de parecer a mesma coisa que ela já conhece.
   var ATRASO = 500;
   var caixa = document.createElement('div');
   caixa.id = 'hef-dica';
   caixa.setAttribute('role', 'tooltip');
-  // A CARA É A DA `.dica` DA CASA (`interface/topo.html`), variável a variável,
-  // com literal de reserva para a página que não as definir. `pointer-events`
-  // desligado: a dica não pode roubar o ponteiro de quem ela explica — seria o
-  // mesmo defeito de novo, um elemento por cima comendo o evento.
   caixa.style.cssText =
     'position:fixed;left:0;top:0;z-index:2147483000;display:none;'
     + 'max-width:340px;pointer-events:none;white-space:pre-line;'
@@ -1558,56 +545,19 @@ DICA_DA_CASA = r"""
   var E = {alvo: null, texto: '', tempo: 0, x: 0, y: 0, aberta: false, abriu: 0,
            peloFoco: false, descrito: null};
 
-  // O NOME ACESSÍVEL — F7, 11/09/2026, e ele é a DÍVIDA QUE A COLHEITA CRIOU.
-  //
-  // A colheita abaixo tira o `title` do DOM vivo para o popup do compositor não
-  // ter de que nascer. Só que o `title` não era só a dica: quando o elemento
-  // não tem outro rótulo, ele é também o NOME que um leitor de tela anuncia.
-  // Sem ele, um botão de ícone vira *«botão»* — e a queixa de quem não enxerga
-  // é a mesma dela, com outro nome: o produto deixa de se explicar.
-  //
-  // **MEDIDO NO DOM VIVO das treze páginas publicadas, com esta camada de pé:**
-  // 693 `title` colhidos com texto, e destes 388 já tinham nome por outra via
-  // (357 pelo próprio conteúdo, 31 por `aria-label` que a aba escreveu) e 215
-  // estão em `span`/`div`/`label` — casca sem papel, que nome nenhum alcança.
-  // **90 ficavam mudos**: 52 botões de ícone, 14 deslizantes, 12 campos de
-  // digitar, 12 listas. Mais **1.930 `<title>` de SVG**, nenhum com outra via.
-  //
-  // A REGRA É UMA SÓ, E ELA É NEGATIVA: veste `aria-label` **só em quem ficaria
-  // sem nome**. Um `aria-label` por cima de um botão que já diz «Aplicar» faz o
-  // leitor de tela ler duas vezes — é pior do que não fazer nada, e é por isso
-  // que `tem_nome()` abaixo é tão detalhado quanto a conta do HTML-AAM.
-  //
-  // E A DESCRIÇÃO: nos 388 que já têm nome o `title` era a DESCRIÇÃO. Ela volta
-  // pela dica aberta (`descrever`, abaixo): enquanto a caixa está na tela, o
-  // elemento a aponta pelo `aria-describedby`, como na `base-comum.js`.
   var PAPEL_SEM_NOME = {presentation: 1, none: 1, generic: 1};
-  //: Quem aceita um nome acessível SEM papel declarado. A lista é a do
-  //: HTML-AAM, podada ao que existe nestas dez abas — `div` e `span` ficam de
-  //: fora de propósito: o papel deles é genérico, e o ARIA proíbe nomeá-lo.
   var TAG_QUE_ACEITA_NOME = {a: 1, button: 1, input: 1, select: 1, textarea: 1,
     summary: 1, img: 1, area: 1, iframe: 1, meter: 1, progress: 1, output: 1,
     details: 1, dialog: 1, fieldset: 1, optgroup: 1, option: 1, audio: 1,
     video: 1, th: 1, table: 1, svg: 1};
-  //: Quem tira o nome do PRÓPRIO CONTEÚDO — o botão que diz «Aplicar» dentro.
   var TAG_NOME_DO_CONTEUDO = {a: 1, button: 1, summary: 1, th: 1, td: 1,
     option: 1, optgroup: 1, legend: 1};
   var PAPEL_NOME_DO_CONTEUDO = {button: 1, link: 1, tab: 1, menuitem: 1,
     menuitemcheckbox: 1, menuitemradio: 1, option: 1, checkbox: 1, radio: 1,
     switch: 1, heading: 1, treeitem: 1, gridcell: 1, cell: 1, columnheader: 1,
     rowheader: 1, tooltip: 1};
-  //: QUEM VESTIMOS, e o valor que vestimos. É um `WeakMap` e não um atributo
-  //: novo no DOM: `data-hef-*` é território de endereço desta casa, e um
-  //: marcador a mais ali seria mais uma coisa para as réguas tropeçarem. O
-  //: valor guardado é o que permite largar a posse sem briga — se a aba
-  //: escrever outro `aria-label` por cima, o nosso deixa de ser nosso.
   var NOSSOS = (typeof WeakMap === 'function') ? new WeakMap() : null;
 
-  // O TEXTO QUE NOMEIA, e ele NÃO é o `textContent` cru. Duas podas, e as duas
-  // são medidas: um `<title>` de SVG está DENTRO do elemento e não é texto de
-  // tela — contá-lo faria todo botão de ícone passar por botão com rótulo, que
-  // é exatamente o botão que perde o nome aqui; e uma subárvore com
-  // `aria-hidden` não conta para nome nenhum, por definição.
   function texto_que_nomeia(no, fundo){
     if(!no || fundo > 12) return '';
     if(no.nodeType === 3) return no.nodeValue || '';
@@ -1632,11 +582,6 @@ DICA_DA_CASA = r"""
     }
     return false;
   }
-  // JÁ TEM NOME? A conta do HTML-AAM na ordem de produto: o que vem ANTES do `title`
-  // é nome; o que vem depois não salva ninguém. O `placeholder` é o caso que
-  // decide sozinho — ele vem DEPOIS do `title`, e rotular por `placeholder` é
-  // falha conhecida de acessibilidade; então um campo que só tem `placeholder`
-  // conta como MUDO aqui, e ganha o `aria-label`.
   function tem_nome(el){
     if(String(el.getAttribute('aria-label') || '').trim()) return true;
     var lb = String(el.getAttribute('aria-labelledby') || '').trim();
@@ -1673,7 +618,6 @@ DICA_DA_CASA = r"""
     if(papel) return !PAPEL_SEM_NOME[papel];
     return !!TAG_QUE_ACEITA_NOME[el.localName];
   }
-  //: O NOSSO `aria-label`, e só ele, pode ser trocado ou tirado depois.
   function e_nosso(el){
     if(!NOSSOS || !NOSSOS.has(el)) return false;
     return el.getAttribute('aria-label') === NOSSOS.get(el);
@@ -1684,30 +628,11 @@ DICA_DA_CASA = r"""
     el.setAttribute('aria-label', t);
     if(NOSSOS) NOSSOS.set(el, t);
   }
-  // O NOME QUE TROCA DE TEXTO. O alvo `atributo` do piloto escreve `title` nas
-  // dicas vivas (a carga da bateria, a taxa do giroscópio) e a camada desvia
-  // esse texto para `data-hef-dica`; o nome tem de ir junto, ou o leitor de
-  // tela fica com a frase do instante em que a página carregou. Só mexe no que
-  // é nosso: um `aria-label` que a aba escreveu manda mais que este.
   function trocar_nome(el, t){
     if(!el || !e_nosso(el)) return;
     if(t){ el.setAttribute('aria-label', t); NOSSOS.set(el, t); }
     else { el.removeAttribute('aria-label'); NOSSOS.delete(el); }
   }
-  // NO DESENHO O NOME É DO DONO DO `<title>`, e há dois casos medidos:
-  //
-  // * **o ícone** — um `<svg class="gl">` de 18 px com UM `<title>` e nada
-  //   dentro: 222 nas treze páginas. Ele ganha `role="img"`, que é o papel que
-  //   ele já tinha de fato;
-  // * **a zona de um desenho** — os 1.708 `<g>`, `<path>`, `<circle>` e
-  //   `<rect>` que dão nome a cada pedaço do DualSense. Aqui o papel NÃO se
-  //   mexe: `role="img"` torna a subárvore apresentacional, e num desenho com
-  //   zonas ele engoliria os 1.708 nomes de dentro para pôr um só por fora.
-  //
-  // E O ÍCONE QUE REPETE O TEXTO DO LADO SAI DA ÁRVORE — 63 dos 222. Quando a
-  // frase vizinha já diz «Cruz», um `aria-label` de «Cruz» no desenho ao lado
-  // faz o leitor ler duas vezes. Decorativo ao lado de quem já nomeia é
-  // `aria-hidden`, e a conta é do DOM: o nome aparece no texto do pai.
   function eco_no_vizinho(svg, t){
     var pai = svg.parentElement;
     if(!pai) return false;
@@ -1725,8 +650,6 @@ DICA_DA_CASA = r"""
         dono.setAttribute('aria-hidden', 'true');
         return;
       }
-      // UM `<title>` SÓ é a assinatura do ícone: o desenho com zonas tem
-      // dezenas, e ele não pode virar `img`.
       if(!dono.getAttribute('role')
          && dono.querySelectorAll('title').length <= 1){
         dono.setAttribute('role', 'img');
@@ -1736,23 +659,6 @@ DICA_DA_CASA = r"""
     if(NOSSOS) NOSSOS.set(dono, t);
   }
 
-  // A COLHEITA — E ELA É O QUE FAZ O POPUP DO SISTEMA NÃO NASCER.
-  //
-  // MEDIDO em 11/09/2026, e derrubou a primeira forma desta camada: tirar o
-  // `title` no `mousemove` é TARDE. O WebKit resolve a dica no MESMO evento, e
-  // remover o atributo depois não desfaz o que ele já resolveu — só o próximo
-  // movimento de ponteiro refaria a conta. Com a mão parada as DUAS ficavam na
-  // tela, uma por cima da outra: a da casa e a do compositor.
-  //
-  // Então o texto sai do `title` ANTES de qualquer ponteiro chegar, para
-  // `data-hef-dica`, que é onde o `escrever()` e o `LER_CAMPOS` deste piloto já
-  // sabem procurá-lo. O `title` deixa de existir no DOM vivo; nas páginas
-  // publicadas ele continua onde sempre esteve, e é de lá que esta camada o
-  // colhe a cada carga.
-  //
-  // O `title` VAZIO É UMA ORDEM, e ela se preserva: no HTML um `title=""` CALA
-  // a dica dos ancestrais, e a `10-perfis` tem quinze. Ele vira
-  // `data-hef-dica=""`, e a busca para nele — como pararia no navegador.
   function colher(raiz){
     var n = 0;
     var lista = raiz.querySelectorAll('[title]');
@@ -1762,19 +668,9 @@ DICA_DA_CASA = r"""
       var d = String(el.getAttribute('title') || '').trim();
       el.setAttribute('data-hef-dica', d);
       el.removeAttribute('title');
-      // O NOME ANTES DO `title` SAIR NÃO MUDA NADA, e depois muda: `tem_nome`
-      // não olha para o `title`, então a ordem aqui é indiferente — o que não
-      // é indiferente é a ordem DOS DOIS LAÇOS. Este roda antes do laço do
-      // SVG, e por isso `texto_que_nomeia` tem de podar o `<title>` de
-      // desenho: nesta linha ele ainda tem texto dentro do botão de ícone.
       vestir_nome(el, d);
       n += 1;
     }
-    // NO SVG A DICA É UM FILHO, NÃO UM ATRIBUTO — `interface/monta.py` já pagou
-    // essa lição: quem escreve `<svg title="…">` não vê dica nenhuma. São 1.756
-    // `<title>` nos desenhos das dez abas, e sem este laço a camada deixaria de
-    // fora a metade da tela que é desenho. O `<title>` do documento fica de
-    // fora pelo namespace: ele é o nome da janela, não uma dica.
     var tt = raiz.querySelectorAll('svg title:not([data-hef-dica])');
     for(var j = 0; j < tt.length; j++){
       var t = tt[j];
@@ -1788,13 +684,8 @@ DICA_DA_CASA = r"""
     return n;
   }
 
-  // O TEXTO DE UM ELEMENTO, em três estados e não dois: uma frase, o SILÊNCIO
-  // declarado (o `title=""`), ou nada a dizer. Sem o do meio a busca subiria
-  // por cima de um `title=""` e mostraria a dica que a página mandou calar.
   function textoDe(el){
     if(!el || !el.getAttribute) return null;
-    // O `data-dica` É A DICA DA BASE COMUM (`base-comum.css`): lido ao vivo, na hora, porque o
-    // piloto o reescreve (a razão do botão cinza). Vazio ou ausente não diz nada e cede ao `title`.
     if(el.hasAttribute('data-dica')){
       var dd = String(el.getAttribute('data-dica') || '').trim();
       if(dd) return dd;
@@ -1804,9 +695,6 @@ DICA_DA_CASA = r"""
       return g ? g : '';
     }
     if(el.hasAttribute('title')){
-      // COLHEITA TARDIA: um bloco que o produto acabou de trocar traz o `title`
-      // de volta. Colher aqui, no caminho, é o que mantém a camada inteira sem
-      // varrer o documento a cada movimento do ponteiro.
       var t = String(el.getAttribute('title') || '').trim();
       el.setAttribute('data-hef-dica', t);
       el.removeAttribute('title');
@@ -1834,8 +722,6 @@ DICA_DA_CASA = r"""
     }
     return null;
   }
-  // SOBE A ÁRVORE como o próprio navegador faz para o `title`: a dica pode
-  // estar no pai do nó que recebeu o evento, e quase sempre está.
   function achar(no){
     var e = (no && no.nodeType === 1) ? no : (no ? no.parentElement : null);
     while(e){
@@ -1843,14 +729,11 @@ DICA_DA_CASA = r"""
       if(s) return {el: e, texto: s.texto, svg: s.no};
       var t = textoDe(e);
       if(t) return {el: e, texto: t, svg: null};
-      if(t === '') return null;   // silêncio declarado: não sobe mais
+      if(t === '') return null;
       e = e.parentElement;
     }
     return null;
   }
-  // A DICA ABERTA É A DESCRIÇÃO DE QUEM A ABRIU, para o leitor de tela: o `id` entra no
-  // `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia (a
-  // mesma conta da `base-comum.js`, que sai cedo quando esta camada está de pé).
   function descrever(el, liga){
     if(!el || !el.getAttribute) return;
     var lista = String(el.getAttribute('aria-describedby') || '').split(/\s+/)
@@ -1879,10 +762,6 @@ DICA_DA_CASA = r"""
     if(E.descrito && E.descrito !== E.alvo.el) descrever(E.descrito, false);
     E.descrito = E.alvo.el;
     descrever(E.descrito, true);
-    // POSICIONA DEPOIS DE MEDIR, e dentro da janela: uma dica que nasce fora da
-    // borda é uma dica que não abriu. A `05-vibracao` já mediu essa regra do
-    // lado do desenho (`tests/unit/test_moldura_a_dica_nao_atravessa_a_janela.py`);
-    // esta é a mesma regra, agora do lado de quem desenha a dica.
     var r = caixa.getBoundingClientRect();
     var x = E.x + 14, y = E.y + 20;
     if(x + r.width + 6 > window.innerWidth){
@@ -1894,13 +773,6 @@ DICA_DA_CASA = r"""
     caixa.style.left = Math.round(x) + 'px';
     caixa.style.top = Math.round(y) + 'px';
   }
-  // O MOVIMENTO, E A DIFERENÇA MEDIDA COM O GTK: lá a contagem de meio segundo
-  // RECOMEÇA a cada evento de movimento, e por isso a mão que treme nunca vê a
-  // dica — medido nesta bancada em 11/09/2026, 0 de 200 amostras em 80 s com o
-  // ponteiro tremendo 1 px a cada 150 ms. Aqui a contagem começa na ENTRADA do
-  // elemento e só se reinicia quando o elemento MUDA: a dica abre com a mão em
-  // cima, e não só com a mão parada. Passar correndo por cima continua não
-  // abrindo nada, porque a troca de alvo zera tudo.
   document.addEventListener('mousemove', function(ev){
     E.x = ev.clientX; E.y = ev.clientY;
     var a = achar(ev.target);
@@ -1913,16 +785,9 @@ DICA_DA_CASA = r"""
     }
     if(!E.aberta && !E.tempo){ E.tempo = setTimeout(mostrar, ATRASO); }
   }, true);
-  // SAIR DA JANELA fecha. `relatedTarget` nulo é o único `mouseout` que diz
-  // isso; escutar `mouseleave` em captura fecharia a dica ao sair de QUALQUER
-  // elemento filho, que é o contrário do que se quer.
   document.addEventListener('mouseout', function(ev){
     if(!ev.relatedTarget) limpar();
   }, true);
-  // O FOCO TAMBÉM ABRE (A-BASE-COMUM-DAS-ABAS-01, 13/10/2026): o «?» que abria no foco saiu, e a
-  // dica que mora no `data-dica` do próprio botão tem de chegar a quem anda pelo teclado ou pelo
-  // controle. Só o foco VISÍVEL e sem atraso; o clique do mouse também foca, e ali a dica é do
-  // ponteiro. A caixa nasce colada embaixo do elemento.
   document.addEventListener('focusin', function(ev){
     var el = ev.target, visivel = false;
     try { visivel = !!(el && el.matches && el.matches(':focus-visible')); } catch(_){ visivel = false; }
@@ -1952,13 +817,6 @@ DICA_DA_CASA = r"""
     aberta: function(){ return E.aberta; },
     texto: function(){ return E.aberta ? E.texto : ''; },
     quantas: function(){ return E.abriu; },
-    // A VARREDURA, chamada pelo tique. Duas coisas, e as duas são de tempo:
-    // um alvo cujo nó saiu do documento (um bloco trocado inteiro debaixo do
-    // ponteiro) não tem mais dica a mostrar; e um bloco recém-trocado traz
-    // `title` de volta, que é o popup do compositor voltando com ele.
-    //
-    // O CUSTO É UMA CONSULTA, e não uma varredura: `querySelector` para na
-    // primeira ocorrência, e com a colheita feita não há ocorrência nenhuma.
     varrer: function(){
       if(E.alvo && !document.contains(E.alvo.el)){
         esconder(); E.alvo = null; E.texto = '';
@@ -1968,9 +826,6 @@ DICA_DA_CASA = r"""
         window.__hefDica.colhidas += colher(document);
       }
     },
-    // O PRODUTO TROCANDO O TEXTO DA DICA QUE ESTÁ ABERTA. Sem isto, a dica de
-    // um valor vivo (a taxa do giroscópio, a carga da bateria) congelaria no
-    // texto do instante em que abriu.
     trocar: function(el, t){
       trocar_nome(el, String(t || ''));
       if(E.alvo && E.alvo.el === el){
@@ -2175,8 +1030,6 @@ CLIQUE_COM_ALVO = r"""
   }
   const el = document.querySelector(sel);
   if(!el) return 'NAO ACHEI NA PAGINA';
-  // A MESMA REGRA DO OUVINTE — ver `SELETOR_DO_DONO`. Uma régua que resolvesse
-  // o dono de outro jeito mediria um clique que o produto não faz.
   const dono = el.closest(
     '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]');
   if(dono){
@@ -2185,8 +1038,6 @@ CLIQUE_COM_ALVO = r"""
     el.click();
     return 'no bloco de ' + q;
   }
-  // FORA DE QUALQUER CONTROLE: o botão não diz em quem agir. A régua empresta
-  // o primeiro conectado só para conseguir medir, e o relato marca.
   window.__hef.alvoPadrao = prefs[0] || '';
   el.click();
   return 'ALVO FORCADO ' + (prefs[0] || '(mesa vazia)');
@@ -2202,8 +1053,6 @@ NAV_INSTALAR = r"""
     '[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v],' +
     '.r-aplicar,.r-salvar,.r-importar,.r-exportar,a[href],button';
   function aberta(){
-    // Só conta a janela que a pessoa VÊ: a tela por âncora (`.tela-nova`) mora no DOM fechada
-    // (`display:none`), e uma janela escondida não pode prender a seleção de uma página inteira.
     for(const d of document.querySelectorAll('[role="dialog"],.tela-nova')){
       if(d.getAttribute('aria-hidden') !== 'true' && !d.hasAttribute('inert') && presente(d)) return d;
     }
@@ -2219,7 +1068,6 @@ NAV_INSTALAR = r"""
     return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden';
   }
   function dono(el){
-    // O desenho do controle também tem `data-controle` (o modelo): sobe até o bloco pN.
     let b = el.closest('[data-controle]');
     while(b && !/^p[1-4]$/.test(b.dataset.controle || '')){
       b = b.parentElement ? b.parentElement.closest('[data-controle]') : null;
@@ -2229,7 +1077,6 @@ NAV_INSTALAR = r"""
   function nome(el){
     const d = el.dataset;
     const r = Array.from(el.classList).find(function(k){ return k.indexOf('r-') === 0; }) || '';
-    // O link e o botão sem gesto próprio (a barra das abas, o «Voltar») se chamam pelo destino ou pelo texto.
     const sem = el.getAttribute('href') || el.id || (el.textContent || '').trim().slice(0, 24);
     return [dono(el), d.gesto || d.hefGesto || d.papel || d.modo || d.forca || d.player ||
             d.sensor || d.rota || d.mudo || d.micModo || r || sem, d.campo || '', d.v || ''].join('|');
@@ -2278,11 +1125,6 @@ NAV_INSTALAR = r"""
             if(window.__hef && op.pref) window.__hef.alvoPadrao = op.pref;
             el.click();
           } else if(op.op === 'escolha'){
-            // A LISTA DÁ A VOLTA (pedido de 19/10/2026): do último efeito o passo
-            // seguinte volta ao primeiro, e do primeiro o anterior vai ao último.
-            // O passo PULA a opção que ninguém escolhe: o «—» desabilitado e
-            // escondido que marca o lugar vazio é a primeira das listas da 03, e
-            // cair nele fazia a página devolver a escolha velha (a lista parava).
             const n = el.options.length;
             const escolhivel = function(o){
               return !o.disabled && !o.hidden &&
@@ -2309,8 +1151,6 @@ NAV_INSTALAR = r"""
       return ops.length;
     },
     molduras: function(molduras){
-      // A cor oposta no círculo das cores (o complemento de cada canal); sem
-      // cor legível, o branco.
       const oposta = function(cor){
         const k = document.createElement('i');
         k.style.color = cor || ''; document.body.appendChild(k);
@@ -2334,9 +1174,6 @@ NAV_INSTALAR = r"""
           'left:' + (r.left - folga) + 'px;top:' + (r.top - folga) + 'px;' +
           'width:' + (r.width + 2 * folga) + 'px;height:' + (r.height + 2 * folga) + 'px;' +
           'border:' + (m.dentro ? 3 : 2) + 'px solid ' + (m.cor || 'var(--acento, #6aa0ff)') +
-          // DENTRO DA LISTA, UM ANEL DE FORA na cor oposta à do plástico (pedido de
-          // 19/10/2026): o controle que escolhe se distingue do que só anda, e o
-          // oposto vale nas quatro cores (o branco sumiria no White).
           (m.dentro ? ';box-shadow:0 0 0 3px ' + oposta(m.cor) : '');
         const p = document.createElement('span');
         p.textContent = (m.pref || '').toUpperCase();
@@ -2361,25 +1198,14 @@ LER_CAMPOS = r"""
   const fora = [];
   for(const el of document.querySelectorAll('[data-campo],[data-papel],[data-hef]')){
     const chave = el.dataset.campo || el.dataset.papel || el.dataset.hef || '';
-    // O DONO É O ASSENTO — ver `SELETOR_DO_DONO`. Sem esta lista, os quatro
-    // campos que moram dentro do desenho compartilhado (`treme-e` e `treme-d`,
-    // nas colunas do p1 e do p2 da `05-vibracao`) voltavam com o nome do MODELO
-    // no lugar do assento, e a régua do mockup não os casava com a coluna que
-    // os pinta.
     const bloco = el.closest(
       '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]');
     const dono = bloco ? (bloco.dataset.controle || bloco.dataset.uniq || '') : '';
     const alvo = el.dataset.hefAlvo || 'texto';
     let v;
     if(alvo === 'largura'){ v = el.style.width; }
-    // O gêmeo vertical, na MESMA língua: `style.height` volta com a unidade
-    // que o CSSOM acrescenta (`64%`), e `_declarado_neste_elemento` põe o `%`
-    // do lado do pacote pelo mesmo ramo que já serve o `largura`.
     else if(alvo === 'altura'){ v = el.style.height; }
     else if(alvo === 'valor'){ v = ('value' in el) ? String(el.value ?? '') : ''; }
-    // O ALVO `posicao`, na língua do pacote: `x,y` sem o `%`, ou vazio quando o
-    // pontinho está no repouso. `regua_do_mockup._campo` lê o `style=` do
-    // arquivo pelo mesmo par de variáveis.
     else if(alvo === 'posicao'){
       const px = el.style.getPropertyValue('--hef-x').trim().replace(/%$/, '');
       const py = el.style.getPropertyValue('--hef-y').trim().replace(/%$/, '');
@@ -2387,36 +1213,14 @@ LER_CAMPOS = r"""
     }
     else if(alvo === 'cor'){ v = el.style.color; }
     else if(alvo === 'atributo'){
-      // O ATRIBUTO, NA MESMA LÍNGUA DOS DOIS LADOS: o texto que ele guarda, ou
-      // `''` quando não há atributo nenhum. `regua_do_mockup._campo` lê o mesmo
-      // atributo do arquivo com o mesmo vazio por omissão — sem isso um SVG cujo
-      // `data-colorway` o produto APAGOU (o aparelho não disse a cor) seria lido
-      // como `null` de um lado e `''` do outro, e a régua acusaria a pintura
-      // certa.
       const qual = (el.dataset.hefAtributo || '').trim().toLowerCase();
       v = el.getAttribute(qual) || '';
-      // E O `title` PODE ESTAR EMPRESTADO — TOOLTIP-C1, 11/09/2026. Enquanto o
-      // ponteiro está sobre o elemento, a camada da dica guarda o texto em
-      // `data-hef-dica` para o popup do sistema não abrir junto. Sem esta
-      // linha, a régua do mockup leria `''` de um endereço que o produto
-      // acabou de pintar e acusaria a pintura CERTA — que é exatamente a
-      // família de defeito que esta casa chama de instrumento falso.
       if(!v && qual === 'title') v = el.getAttribute('data-hef-dica') || '';
     }
     else if(alvo === 'marcado'){
-      // NA MESMA LÍNGUA DO `escrever`: `sim` quando está marcado, vazio quando
-      // não. Devolver `true`/`false` faria a régua do mockup comparar a palavra
-      // do arquivo com um booleano do navegador e acusar toda pintura certa —
-      // é a mesma cura de forma que o alvo `cor` já custou uma medição.
       v = el.checked ? 'sim' : '';
     }
     else if(alvo === 'classe'){
-      // O QUE ESTE ELEMENTO MOSTRA, na MESMA língua em que o `escrever` recebe:
-      // o `data-hef-quando` de quem está aceso, ou `sim` quando o alvo é
-      // booleano. Devolver "quem do grupo está aceso" exigiria o leitor
-      // conhecer o grupo, e o parser de Python do outro lado não conhece — as
-      // duas leituras têm de casar endereço a endereço, e é essa igualdade que
-      // a guarda do DOM virgem cobra a cada aba.
       const c = el.dataset.hefClasse || 'on';
       v = el.classList.contains(c) ? (el.dataset.hefQuando || 'sim') : '';
     }
@@ -2488,10 +1292,6 @@ LER_MUTACOES = r"""
   return JSON.stringify({
     total: h.mutacoesTotal || 0,
     ms: Date.now() - (h.mutacoesDesde || Date.now()),
-    // OS BLOCOS ADIADOS SAEM NA MESMA LEITURA: um bloco que o piloto NÃO
-    // trocou porque havia um botão em voo dentro dele é um fato do mesmo
-    // fenômeno, e sem ele a tabela diria só o que aconteceu, nunca o que foi
-    // evitado.
     blocos_adiados: h.blocosAdiados || 0,
     linhas: linhas
   });
@@ -2540,7 +1340,6 @@ OBSERVAR_TAMANHO = r"""
     el.__hefNome = sel;
     obs.observe(el);
   }
-  // a vista (o que `100dvh` lê): o `resize` da janela do WebKit
   ficha('(vista)');
   let primeiraVista = true;
   const aoVista = function(){

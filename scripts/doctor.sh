@@ -6235,7 +6235,7 @@ check_o_basico() {
     [[ -n "${py}" ]] || { warn "o básico não foi medido: sem python"; return; }
     for sub in retrato sessao eixos; do  # (noqa-acento)
         argv=("${sub}")
-        [[ "${sub}" == "sessao" ]] && argv+=(--segundos "${_BASICO_SEGUNDOS_DA_SESSAO}")  # (noqa-acento)
+        [[ "${sub}" == "sessao" ]] && argv+=(--segundos "${_BASICO_SEGUNDOS_DA_SESSAO}")
         saida="$(timeout 300 "${py}" "${protocolo}" "${argv[@]}" 2>&1)"
         rc=$?
         resumo="$(grep -E "^${sub}: rc=" <<<"${saida}" | tail -n 1)"

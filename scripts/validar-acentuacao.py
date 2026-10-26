@@ -452,6 +452,10 @@ def _esta_em_identificador_snake(line: str, start: int, end: int) -> bool:
         return True
     if antes in {'"', "'"} and start >= 2 and line[start - 2] == "=":
         return True
+    if antes in {'"', "'"} and depois == antes:
+        return True
+    if depois == ":" and line[end + 1 : end + 2] == " " and line[:start].rstrip()[-1:] in {"", "{", ","}:
+        return True
     prefix = line[:start].rstrip()
     for kw in ("def ", "class ", "alias ", "function ", "local "):
         if prefix.endswith(kw.strip()):
@@ -727,7 +731,21 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
                 + original[inicio:fim]
                 + mascarado[i][fim:]
             )
+        if tok.type == tokenize.STRING:
+            _apaga_as_aspas_da_string(mascarado, tok.string, tok.start, tok.end)
     return mascarado
+
+
+def _apaga_as_aspas_da_string(
+    mascarado: list[str], texto: str, inicio: tuple[int, int], fim: tuple[int, int]
+) -> None:
+    """As aspas que abrem e fecham a string saem da máscara: as que sobram são de dentro dela."""
+    prefixo = len(texto) - len(texto.lstrip("rbuRBUfF"))
+    aspas = 3 if texto[prefixo:prefixo + 3] in ('"""', "'''") else 1
+    (lin_ini, col_ini), (lin_fim, col_fim) = inicio, fim
+    for i, de, ate in ((lin_ini - 1, col_ini, col_ini + prefixo + aspas), (lin_fim - 1, col_fim - aspas, col_fim)):
+        if 0 <= i < len(mascarado):
+            mascarado[i] = mascarado[i][:de] + " " * (ate - de) + mascarado[i][ate:]
 
 
 def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:

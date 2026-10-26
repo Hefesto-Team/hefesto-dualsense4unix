@@ -23,7 +23,7 @@ RAIZ_PADRAO = Path(__file__).resolve().parents[1]
 
 DONO = "src/hefesto_dualsense4unix/core/numeros_da_sony.py"
 
-PISO = 35
+PISO = 33
 
 LITERAL = re.compile(r"0x054[cC]|0x0[cC][eE]6|0x0[dD][fF]2")
 

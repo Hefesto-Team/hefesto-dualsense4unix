@@ -323,7 +323,7 @@ def cores_do_csv():
 CSS_BASE = """
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
-    --fundo-da-pagina:#11121a;  /* o fundo em volta da caixa, o do `topo.html` */
+    --fundo-da-pagina:#11121a;
     --border-sutil:#343746; --border-forte:#44475a;
     --branco:#ffffff; --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
@@ -370,17 +370,12 @@ CSS_TELA = """
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
   .voltar2:hover{border-color:var(--purple);color:var(--fg)}
   .mc-topo > .mc-rot{margin-left:auto}
-  /* O nome do controle corta com reticências, com o nome inteiro na dica (`base-comum.js`), quando a barra dos
-     chips não cabe. */
   .mc-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
   .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
     background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center;
     overflow:hidden;text-overflow:ellipsis}
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
   .chip .pt{color:var(--fg);margin:0 2px}
-  /* Abaixo de 1000 px o título fica em duas linhas, de largura fixa, e os chips tomam o resto da barra: cada
-     coluna segue o texto do seu chip (`auto`) e cresce com a folga. Sem a folga, o texto cabia no chip por
-     centésimos de pixel, e a reticência cortava o nome de exemplo à toa; com ela, só o nome comprido corta. */
   @media (max-width:1000px){.mc-chips{flex:1 1 auto;gap:5px;grid-auto-columns:auto}.chip{padding:0 7px}
     .mc-topo h1{flex:none;width:6em}}
   .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
@@ -401,9 +396,6 @@ CSS_TELA = """
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
-  /* Abaixo de 1000 px as duas colunas laterais (292) deixariam ao centro 162 px na vista de 860: o Toque, o Meio
-     e o PS cruzavam a coluna da direita. A 252 px a ação mais longa do exemplo («Movimento do cursor») ainda cabe
-     na linha do lado, e o centro fica com 260 px, com as linhas dele uma embaixo da outra (regra mais abaixo). */
   @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:252px minmax(0,1fr) 252px;gap:12px}}
   .mc-lado{display:flex;flex-direction:column;gap:7px;justify-content:space-between}
   .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
@@ -426,8 +418,6 @@ CSS_TELA = """
   .mc-baixo{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
   .mc-baixo .b2{grid-template-columns:24px 58px minmax(0,1fr);gap:8px}
   .mc-baixo .b2:last-child{grid-column:1 / -1;justify-self:center;width:calc(50% - 6px)}
-  /* Abaixo de 1000 px a linha aperta o nome (60 px cabem «R3 direção») e o centro empilha as cinco linhas: em
-     duas colunas de 124 px a ação não cabia. */
   @media (max-width:1000px){.b2,.mc-baixo .b2{grid-template-columns:24px 60px minmax(0,1fr);gap:6px;padding:0 8px}
     .mc-baixo{grid-template-columns:minmax(0,1fr)}
     .mc-baixo .b2:last-child{grid-column:auto;justify-self:stretch;width:auto}}
@@ -523,12 +513,9 @@ JS = r"""
     mostra(atual.startsWith('sequencia:') && troca ? 'sequencia' : atual.startsWith('troca:') && troca ? 'controle' : em('mouse') ? 'mouse' : atual && !em('controle') ? 'teclado' : troca ? 'controle' : 'mouse');
     pop.hidden = false;
   };
-  /* A linha escolhida só fica acesa enquanto o seletor dela está aberto: fechar manda `mapa-botao` sem
-     botão, e o pacote apaga o `on`. O `setTimeout` deixa passar antes o clique da opção que fechou. */
   const solta = () => setTimeout(() => $('#mapa-solta').click(), 0);
   const fecha = () => { escuta(false); pop.hidden = true; solta(); };
 
-  /* a captura: a tecla, o botão do mouse ou o botão do controle que a pessoa aperta */
   const MODIFICADOR = {ControlLeft: 'LEFTCTRL', ControlRight: 'RIGHTCTRL', ShiftLeft: 'LEFTSHIFT', ShiftRight: 'RIGHTSHIFT',
     AltLeft: 'LEFTALT', AltRight: 'RIGHTALT', MetaLeft: 'LEFTMETA', MetaRight: 'RIGHTMETA'};
   const NOMEADA = {ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT', Space: 'SPACE', Enter: 'ENTER',
@@ -575,7 +562,6 @@ JS = r"""
     if (BOTAO_DO_MOUSE[e.button]) { e.preventDefault(); e.stopPropagation(); manda('tecla', BOTAO_DO_MOUSE[e.button]); }
   }, true);
   document.addEventListener('contextmenu', e => { if (ouvindo) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
-  /* o botão do controle: a linha que ganha `pisca` enquanto a captura escuta vira a troca */
   const olho = new MutationObserver(lista => {
     if (!ouvindo) return;
     for (const m of lista) {
@@ -595,7 +581,6 @@ JS = r"""
   $('.seg2', pop).addEventListener('click', e => { const t = e.target.closest('button'); if (t) mostra(t.dataset.aba); });
   $('.sel2-x', pop).addEventListener('click', fecha);
   gravar.addEventListener('click', () => escuta(!ouvindo));
-  /* a gravação da sequência é do controle: o botão só vira «Parar» até a página repintar */
   const ROTULO_SEQ = grava_seq.querySelector('span:last-child').textContent;
   grava_seq.addEventListener('click', () => {
     const on = grava_seq.dataset.gravando !== 'sim';
@@ -607,7 +592,6 @@ JS = r"""
     if (o && o !== gravar && !o.closest('.seq-grade')) fecha();
   });
 
-  /* o controle escolhido pinta o casco, os cinco pontos do jogador e a barra de luz do desenho */
   const acende = c => {
     if (!c) return;
     ds.dataset.colorway = c.dataset.colorway || '';
@@ -627,14 +611,8 @@ JS = r"""
   const bloqueia = () => { nome.readOnly = $('.mc-perfil').dataset.fixo === 'sim'; };
   new MutationObserver(bloqueia).observe($('.mc-perfil'), {attributes: true, attributeFilter: ['data-fixo']});
   bloqueia();
-  /* A ÂNCORA DO ENDEREÇO escolhe o perfil de abertura (O-MAPA-DO-CONTROLE-ABRE-NO-PERFIL-QUE-A-ANCORA-PEDE-E-LE-A-ESCOLHA-DO-POINT-AND-CLICK-01).
-     `#point-and-click` e `#trocar` vêm da aba Navegação; o produto pinta, no `data-chave` de dois marcadores
-     que não aparecem, a chave que cada uma pede. Sem âncora, ou com outra, nada muda: abre em Navegar. */
   const MARCADOR = {'#point-and-click': 'ancora-pac', '#trocar': 'ancora-trocar'};
   const lista = $('#perfil');
-  /* A âncora se segue UMA vez por chegada (a carga ou o `hashchange`), quando a chave pintada já tem
-     lugar no seletor. Depois o seletor é de quem usa: o perfil ativo que troca no meio da edição
-     não muda a escolha feita nem larga o que não se salvou. */
   let seguida = null;
   const seguirAncora = () => {
     if (seguida === location.hash) return;
@@ -647,8 +625,6 @@ JS = r"""
     lista.value = chave;
     lista.dispatchEvent(new Event('change', {bubbles: true}));
   };
-  /* O TÍTULO DIZ QUAL DAS DUAS TELAS É: a Navegação abre o mesmo mapa por «Trocar os botões» e por
-     «Point and click», e o `<h1>`, o `aria-label` e o `<title>` seguem a âncora. */
   const TITULO = {'#trocar': 'Trocar os botões', '#point-and-click': 'Point and click'};
   const titula = () => {
     const t = TITULO[location.hash] || 'Mapa do controle';

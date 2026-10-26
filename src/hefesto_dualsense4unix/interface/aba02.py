@@ -27,146 +27,18 @@ from pacotes.a02_controles import (CAMPOS_DA_POSICAO, MAX_DEDOS,
                                    REGRA_DAS_POSICOES,
                                    pos_do_analogico as pos)
 
-CSS = CSS_GLIFO + CSS_LUZINHAS + """
-  /* ---------- Controles ----------
-     O DESENHO É O DA ABA STATUS DE HOJE, que o usuário disse gostar muito. Comparado
-     lado a lado em 27/08, o que quebrava a harmonia da minha primeira versão:
-       1) TRÊS CAIXAS grandes envolvendo tudo — o original só põe moldura em
-          Touchpad, Barra de luz, Giroscópio, Microfone e Alto-falante; o resto
-          flutua, e é isso que dá ar à tela;
-       2) DENSIDADE — 394 px contra 637 px meus, para o mesmo conteúdo;
-       3) COR COM SIGNIFICADO — ✕ e L2/R2 na cor do plástico, o resto neutro.
-     O que muda do original é só o que o usuário pediu: sai o "Ouvir no controle",
-     entra o Calibrar da mesa no topo e os dois interruptores de sensor na linha
-     de CADA controle (28/08), e a faixa da antiga aba "No jogo" desce para
-     dentro do card. */
-
-  /* A COR DO PLÁSTICO É UMA VARIÁVEL, NÃO UMA CLASSE. Ela era `.c-red` e
-     `.c-blue` — uma classe por modelo, com o hexadecimal digitado no CSS. Com os
-     QUATRO da mesa isso vira quatro classes; com os 28 do
-     `docs/data/cores-do-dualsense.csv`, vinte e oito. E o hex digitado era o
-     defeito medido: o Cosmic Red do mockup era `#b11f54` e a amostragem devolveu
-     `#A51C48`. Agora cada card nasce com `--plastico`, lido por
-     `monta.cor_da_zona()` do `<style>` que o gerador de cores escreveu dentro do
-     desenho — a MESMA folha que pinta o SVG, lida de volta. */
-  /* O CARD CRESCE PARA FECHAR O VÃO, E NÃO ENCOLHE: `flex:1 0 auto`. O `0` é a
-     parte que morde — com o `flex-shrink` de fábrica o card afundaria abaixo dos
-     seus 301px e o conteúdo vazaria por baixo da borda, calado. */
-  /* A CLASSE `card` DEIXOU DE PINTAR, e ficá-la aqui não é sobra: ela é a
-     âncora da régua (`.quadro-corpo > .card`), que confere POR DENTRO que nada
-     vaza da caixa — foi ela que pegou o círculo do analógico passando 24px para
-     fora da moldura. Quem pinta agora é `.ctl`, logo abaixo, porque o card
-     aberto e a tira fechada viraram O MESMO ELEMENTO. */
-
-  /* ---------- O ACORDEÃO, E ELE É CSS PURO ----------
-     Decisão, 28/08/2026: "clicar num abre e fecha os outros", "CSS puro,
-     sem JavaScript", "o da fita já vem aberto, e clicar num card muda a fita",
-     "o chip Todos abre os quatro", "a linha fechada mantém o resumo de hoje".
-
-     COMO, SEM UMA LINHA DE JS: um rádio por controle, todos com o mesmo `name`.
-     O navegador já garante que ligar um desliga os outros — que é exatamente a
-     regra do acordeão, e não precisa de código. A linha de identidade é um
-     `<label for>` do rádio do seu controle, e os chips da fita são `<label for>`
-     DOS MESMOS rádios. Por isso clicar na fita e clicar na linha são o MESMO
-     gesto: não há dois estados para manter de acordo, há um só, e ele mora no
-     rádio. Quem escolhe qual abre continua sendo a fita — ela só ganhou um
-     segundo lugar de onde ser clicada.
-
-     O CARD E A TIRA VIRARAM UM ELEMENTO SÓ. Antes eram duas caixas escritas por
-     duas funções (`card()` e `tira()`), e o que as impedia de discordar era a
-     linha de identidade compartilhada. Com o acordeão isso não bastaria: a
-     mesma caixa tem de VIRAR a outra ao clique, e CSS não troca elemento — troca
-     estilo. Então `.ctl` é a caixa e o estado é `:has(> input:checked)`.
-     A conta do recuo é a prova de que a troca não move o texto um pixel:
-     fechado, ele começa em 2 (borda) + 26 (padding) = 28; aberto, em 2 (borda)
-     + 14 (margem da faixa) + 1 (borda dela) + 11 (padding dela) = 28. Os mesmos
-     28 das duas formas antigas, e a mesma largura útil de 1096px nas duas.
-
-     O CORPO FECHADO NÃO PODE VIRAR `display:none`, e o motivo é medido nesta
-     régua: ela lê a altura de todo `button` e reprova família com alturas
-     divergentes. Com `display:none`, os dois botões de rota de cada card
-     fechado medem 0, e ela acusa `altura divergente em button.-: 0 / 36` — um
-     defeito que só existiria porque o elemento sumiu. `height:0;overflow:hidden`
-     mantém o corpo DESENHADO no tamanho natural e só o recorta: a régua segue
-     medindo os QUATRO cards por dentro (as colunas somando a largura da caixa,
-     as colunas acabando no mesmo y), e não só o que está à mostra. A régua ficou
-     mais severa do que era, não menos.
-
-     "TODOS" ABRE OS QUATRO, E AÍ A CAIXA ROLA — o número está na legenda. É o
-     único estado desta aba que rola, e ele é um gesto explícito dela; o estado
-     em que a aba abre (um card e três tiras) continua fechando sem sobra e sem
-     rolagem, que é o que curou a aba que mostrava um controle e meio.
-
-     A CLASSE NÃO PODE SE CHAMAR `tira`, e o estrago já esteve de pé e MEDIDO:
-     `.tira` é a TIRA DE ABAS do esqueleto (`topo.html:109`). Com a regra deste
-     arquivo chamada assim, `height:34px` e `text-transform:uppercase` caíam na
-     fila de abas lá em cima: o cabeçalho encolheu 8px e o miolo desta aba mediu
-     **550px contra os 542 de todas as outras nove**. É a mesma cicatriz que a
-     Conexões pagou com `.peca` e com `.mesa` — e a régua de alinhamento passou
-     VERDE nas duas vezes. Nome de classe se confere no `topo.html` ANTES de
-     escrever. */
-  .radio-mesa{position:absolute;width:0;height:0;opacity:0;margin:0}
+CSS = CSS_GLIFO + CSS_LUZINHAS + """  .radio-mesa{position:absolute;width:0;height:0;opacity:0;margin:0}
   .quadro-corpo{overflow-y:auto;gap:9px}
-  /* O RECUO DE 26px NÃO É ARBITRÁRIO: é o 14px da margem lateral da faixa
-     aberta mais os 11px do padding dela — mais 1, porque a borda da faixa aberta
-     tem 1px e a da caixa tem 2. Com ele o nome do controle nasce no MESMO x nas
-     quatro linhas (432), abertas ou fechadas, e as quatro barras de bateria
-     terminam no mesmo x (1488). Com os 25px da primeira tentativa dava 431
-     contra 432: um pixel, e ela repara em dois. */
   .ctl{display:flex;flex-direction:column;flex:0 0 auto;height:var(--h-acao);
        border:2px solid var(--plastico);border-radius:9px;background:var(--app-bg);
        position:relative}
 
-  /* ---------- A BORDA DO CARTÃO É O PLÁSTICO, E SÓ ELE ----------
-     Ela, 03/10/2026, olhando a foto dos quatro controles Bluetooth: *"as borda
-     tá nas cores do lightbar e não do plastico ainda né?"* — e a lista de
-     sprints pediu a borda de cada cartão, aberto e fechado, com a cor do
-     plástico. Medido no DOM: o `borderTopColor` do `.ctl` JÁ era o plástico
-     (2px); o que parecia a borda verde era o anel de 1px da barra de luz, por
-     dentro, mais vivo que o casco e por isso lido como a borda.
-     Revoga o «casco fora, lightbar dentro» de 04/09 (D-06 / S-11). A barra de
-     luz fica onde ela tem nome: o quadro «Barra de luz» do cartão aberto
-     (`luz-cor`), que não deixa de ser pintado. */
   .ctl > .faixa{flex:1;margin:0;padding:0 26px;border:0;border-radius:0;
                 background:transparent;flex-wrap:nowrap;white-space:nowrap;
                 cursor:pointer;-webkit-user-select:none;user-select:none}
-  /* A LINHA FECHADA DIZ QUE SE CLICA NELA, e diz do jeito que esta casa já diz:
-     é o mesmo `rgba(255,255,255,.03)` do hover da fila de abas (`topo.html`).
-     Uma segunda gramática de "clicável" na mesma janela é uma a mais. */
   .ctl:hover{background:rgba(255,255,255,.03)}
 
-  /* ---------- O LUGAR VAZIO ----------
-     Decisão, 31/08/2026: *"Deixa os outros espaços dos 4 controles a mostra
-     ainda mas cinza igual vc fez na aba jogar."* — e, no mesmo turno,
-     *"tiramos o modo p3. p4 (seções expandidas não aparecem)"*.
-
-     A GRAMÁTICA É A MESMA DA JOGAR, de propósito: cor explícita e nada de
-     `opacity` (a lição medida da `.fita.inerte`), borda `--border-sutil` no
-     lugar do plástico, e o texto em `--linha`. Duas gramáticas de "vazio" na
-     mesma janela seria uma a mais — a mesma razão que o `.ctl:hover` acima dá.
-
-     A ALTURA É 24, E ELA É O QUE PAGA OS BOTÕES NOVOS. Um lugar vazio não tem
-     giroscópio para ligar nem bateria para medir, então não precisa dos 34 de
-     `--h-acao`. Medido: com os dois lugares em 34 o `.quadro-corpo` pedia 509
-     e recebia 478 — o quadro rolava e os dois botões saíam da tela pela metade.
-     Não se clica: sem `<input>` no HTML, não há o que expandir. */
-  /* A BORDA SE DECLARA INTEIRA AQUI, e não só a cor — e isto é uma armadilha de
-     CSS que custou duas voltas. `.ctl` diz `border:2px solid var(--plastico)`, e
-     o lugar vazio NÃO tem `--plastico` (não há controle, não há cor de
-     plástico). Uma `var()` sem valor **invalida a declaração inteira**, em
-     silêncio: a borda não fica cinza — ela deixa de existir. Medido no DOM,
-     depois de a foto mostrar dois lugares soltos, sem caixa nenhuma:
-     `border-width: 0px, border-style: none`, com o `border-color` escrito
-     ali, intacto e inútil.
-     Trocar só a COR de uma regra que usa `var()` indefinido não conserta nada.
-
-     E A COR NÃO É A `--border-sutil` DA JOGAR: lá o cartão vazio fica sobre
-     `--app-bg` (#21222c) e aquele #343746 aparece; aqui ele fica sobre `--panel`
-     (#282a36) e sumiria de novo. Copiar a gramática é copiar o CONTRASTE, não o
-     token. */
   .ctl.off{height:24px;border:1px solid var(--border-forte);background:transparent}
-  /* A letra do lugar vazio é `--fg` desde 16/10/2026: o cinza saiu da fonte, e a linha se
-     distingue pela borda, pela altura de 24 px e pelos travessões. */
   .ctl.off > .faixa{cursor:default;color:var(--fg)}
   .ctl.off:hover{background:transparent}
   .ctl.off .card-nome,
@@ -174,39 +46,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .ctl.off .leia,
   .ctl.off .bat{color:var(--fg)}
 
-  /* ---------- UM LUGAR SEM CONTROLE NÃO TEM BATERIA, NEM LUZ, NEM SENSOR ----
-     03/09/2026, medido clicando no produto instalado com UM controle no cabo.
-
-     O QUE A TELA MOSTRAVA: a linha do P2 — com o cabeçalho dizendo `1 controle`
-     e TODOS os campos de texto no travessão — trazia uma barra de bateria
-     PINTADA a 89,9 px de 140,5 (`style="width:64%"`, o literal deste gerador) e
-     os dois chips de sensor em `rgb(80, 250, 123)`, o mesmo verde do controle
-     que está mesmo na mesa. Quem olha lê "o P2 tem 64% e o giroscópio ligado".
-
-     POR QUE O TRAVESSÃO NÃO ALCANÇOU ESTES: o molde do lugar vazio
-     (`pacotes.apagar_os_lugares_sem_dono`) escreve `—` em TODA chave, e o
-     `escrever()` do piloto leva o travessão a `style.width = '—%'` — CSS
-     inválido, que o CSSOM DESCARTA CALADO. O número virou travessão; o pixel
-     ficou com o desenho. Medido: escrever `'—%'` na barra deixa `style.width`
-     em `64%`, byte por byte. Os chips não têm `data-campo` nenhum — não há
-     endereço por onde o produto os alcance.
-
-     A CURA AQUI É DA FOLHA, e é a que sobrevive ao pixel do mockup: uma regra
-     de estilo vence o `style=` inline com `!important`, e não depende de o
-     produto lembrar de apagar. Ela pende do `data-conectado`, que é o que o
-     piloto MANTÉM a cada tique (`hefesto_vivo.py`, laço dos `vazios`) — o mesmo
-     seletor que a aba Gatilhos já usa, e não um terceiro estado inventado.
-
-     E O CINZA NÃO É NOVO: `.sensores-peca .sw.off` já é o desligado que ESTE
-     desenho tem. O lugar vazio passa a usá-lo, em vez de ganhar cor própria. */
   .ctl[data-conectado="nao"] .bat .cheio,
   .ctl[data-conectado="nao"] .vol .cheio{width:0 !important}
-  /* E A ONDA SONORA ENTROU NESTA MESMA REGRA — 05/09/2026. Pelo motivo exato
-     que o parágrafo acima descreve: `altura` é o gêmeo vertical de `largura` e
-     está na mesma lista `ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE`, então o molde do
-     lugar vazio NÃO escreve nas catorze barrinhas — o `style="height:95%"` do
-     desenho ficaria no atributo. Um assento sem controle mostrando a onda cheia
-     é a mesma mentira que os 64% de bateria que esta regra nasceu para matar. */
   .ctl[data-conectado="nao"] .onda i{
     height:16% !important;background:var(--border-forte);opacity:.35}
   .ctl[data-conectado="nao"] .vol .cheio::after{display:none}
@@ -216,186 +57,35 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .ctl[data-conectado="nao"] .sensores-peca .sw .p{
     background:var(--border-forte);box-shadow:none}
 
-  /* ---------- OS DOIS BOTÕES DO FIM ----------
-     Ela, 31/08: *"Temos que ter dois botões no final."* Eles são `<a>`, e não
-     `<button>`, porque abrem PÁGINA — o `.btn` desta casa já é usado nas duas
-     formas, e um link que se veste de botão continua sendo um link para quem
-     usa teclado e leitor de tela. */
-  /* OS DOIS BOTÕES DO CANTO SUPERIOR DIREITO. Eles são `<a>` e não `<button>`
-     porque abrem PÁGINA — um link que se veste de botão continua sendo link
-     para quem usa teclado e leitor de tela. A `.sensores` (logo abaixo) é quem
-     os empurra para a direita; aqui só a altura, que é a do `.btn` da casa.
-     ELES JÁ ESTIVERAM NO FIM DO QUADRO, entre 31/08 e o turno seguinte, e o usuário
-     mandou voltarem: *"A posição deles volta pro canto superior direito."* */
   .sensores .btn{display:inline-flex;align-items:center;text-decoration:none;
                  height:var(--h-acao);padding:0 13px;font-size:12.5px}
   .corpo-cx{flex:0 0 0;height:0;overflow:hidden;visibility:hidden}
-  /* "TODOS" É O ÚNICO ESTADO QUE ROLA, E A BARRA TEM DE APARECER — senão ele
-     é o defeito de 27/08 de volta com outra roupa. Medido agora, sem esta
-     regra: em "Todos" a caixa esconde 794px, o P3 e o P4 ficam com ZERO pixel à
-     mostra e a barra é SOBREPOSTA — ela some quando ninguém está rolando, e
-     nada na tela diz que os dois existem. Com uma regra de `::-webkit-scrollbar`
-     o Chrome desenha a barra CLÁSSICA, que ocupa espaço e fica: ela nasce só
-     quando há o que rolar, então os estados de um card aberto não pagam nada
-     por ela — e é por isso que ela vale mais que `scrollbar-gutter:stable`, que
-     reservaria 15px em toda tela para um estado que quase nunca acontece. */
   .quadro-corpo::-webkit-scrollbar{width:10px}
   .quadro-corpo::-webkit-scrollbar-track{background:transparent}
   .quadro-corpo::-webkit-scrollbar-thumb{background:var(--border-forte);border-radius:5px}
   .quadro-corpo::-webkit-scrollbar-thumb:hover{background:var(--comment)}
 
-  /* O NOME DO CONTROLE mora dentro da faixa de estado rápido — pedido em
-     27/08. Antes era uma linha própria acima, e a faixa nascia meio vazia.
-     A ORDEM É A DO USUÁRIO: player • plástico • transporte, a forma `curta` — a mesma
-     do chip da fita. Ela nasceu em 26/08 com a marca na frente e ela a tirou em
-     27/08 ("tira o Sony das outras abas também"). O comentário que estava aqui
-     dizia que "a forma COMPLETA cabe": ela cabia por 1px, e não cabe mais — o
-     porquê, com o número, está em `identidade()`.
-     O TEXTO SAI DE `monta.rotulo(c, "curta")` — ver `identidade()`. Aqui morava
-     `.card-nome .quem{color:var(--fg);font-weight:400}`, que esmaecia a
-     segunda metade do rótulo: ela existia porque o nome vinha PARTIDO em dois
-     `<span>` montados à mão. Com o rótulo vindo inteiro de uma fonte só não há
-     metade para esmaecer, e a regra virou letra morta — sai junto.
-     A CAIXA, se um dia ela a quiser, é `text-transform` NESTA regra, nunca
-     maiúscula no HTML: em maiúscula ninguém copia o nome do plástico daqui. */
   .card-nome{font-size:12.5px;font-weight:600;color:var(--fg)}
-  /* A BARRA DA BATERIA TEM UMA LARGURA SÓ, NAS QUATRO LINHAS — e isso não é
-     capricho de alinhamento, é leitura. Ela ESTICAVA para ocupar o vão que
-     sobrasse (`flex:1;max-width:420px`), e com o card aberto e três tiras o vão
-     é diferente em cada linha: os trilhos mediram 312, 60, 35 e 139px. O
-     preenchimento é uma porcentagem do trilho, então o 31% do P3 num trilho de
-     35px desenhava uma barra MENOR que o 64% do P2 num de 60 — quatro réguas de
-     tamanhos diferentes empilhadas, que o olho compara e lê errado. Fixa, as
-     quatro comparam. */
-  /* O `margin-left:auto` SAIU DAQUI e passou ao `.sensores-peca`, que agora é o
-     vizinho da esquerda: dois autos na mesma linha partem a sobra ao meio, e o
-     grupo de botões pararia num x diferente em cada linha. Quem empurra o fim
-     da linha para a direita é ele; a bateria vem colada, no passo de 9px. */
   .bat{flex:0 0 var(--larg-bateria);display:flex;align-items:center;gap:9px;
        font-size:11.5px;color:var(--fg)}
   .bat .trilho{flex:1;height:6px;border-radius:3px;background:var(--border-forte);position:relative}
   .bat .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
   .bat .n{font-family:'JetBrains Mono',monospace;color:var(--fg);flex:0 0 42px;text-align:right}
-  /* O ÍCONE DO ESTADO DE CARGA — BATERIA-ICONE-01, 06/09/2026. Ver
-     `selo_da_carga` para as duas metades da decisão de produto.
-
-     O VÃO É FIXO E EXISTE SEMPRE (`flex:0 0 13px`), com ou sem ícone: o `.bat`
-     tem base fixa (`var(--larg-bateria)`) e o trilho é o `flex:1` que absorve o
-     resto, então um ícone que só às vezes ocupasse deixaria as barras de
-     bateria com larguras DIFERENTES entre as linhas — que é exatamente o
-     defeito que o usuário mandou curar em 27/08, quando 31% desenhava mais que 64%.
-     Assim as quatro continuam comparáveis, com ou sem carga a anunciar.
-
-     AS TRÊS FORMAS FICAM NO HTML E DUAS SE ESCONDEM. Sem `data-carga` — que é
-     o que o piloto escreve quando não há estado — nenhuma regra casa e o vão
-     fica vazio: o silêncio é a resposta certa para `descarregando`, onde o
-     número ao lado já diz tudo. */
   .bat .carga{flex:0 0 13px;height:13px;display:flex;align-items:center;
               justify-content:center}
   .bat .carga-i{display:flex;align-items:center;justify-content:center;
                 width:13px;height:13px}
   .bat .carga-i svg{display:none}
   .ctl[data-conectado="nao"] .bat .carga-i svg{display:none !important}
-  /* A LINHA DE IDENTIDADE É UMA SÓ, E AGORA É UM ELEMENTO SÓ. `.faixa` é a
-     linha do card aberto E a tira do fechado: o que muda entre as duas é a
-     CAIXA, nunca o conteúdo. Card e tira não podem discordar sobre quem é o
-     controle — e agora não têm como, porque são o mesmo `<label>`. */
   .faixa{display:flex;align-items:center;gap:9px;
          font-size:11.5px;color:var(--fg);
          }
   .faixa b{color:var(--texto-suave)}
-  /* todo item da faixa tem a MESMA altura de linha. O ícone "?" do aviso de
-     máscara tinha 17px e esticava só aquele span para 19px, subindo o texto
-     2,5px. NÃO usar inline-flex aqui: ele transforma cada palavra em item e come
-     o espaço entre elas — vira "vê comoDualSense". */
   .faixa > span{line-height:14px}
-  /* O AVISO DE MÁSCARA SAIU DA TELA — decisão, 28/08: nenhum aviso, em
-     máscara nenhuma. O texto que estava aqui dizia que sob Xbox 360 "o
-     giroscópio, o acelerômetro e o touchpad não chegam ao jogo", e ele partia de
-     uma leitura errada do que a máscara faz: ela limita o que o JOGO recebe, não
-     o que o CONTROLE faz — o Hefesto continua acendendo a barra de luz, lendo o
-     giro e capturando o microfone deste DualSense em qualquer máscara. O que
-     sobra é o `cursor:help`: há texto a ler, e ele é explicação, não alarme.
-     E A CLASSE MUDOU DE NOME COM ELE. Ela se chamava `.diverge` porque marcava
-     a máscara que divergia do perfil; sem o aviso, o nome passou a apontar para
-     um conceito que não existe mais nesta tela — e nome de classe que descreve
-     o que morreu manda a próxima pessoa procurar uma pintura que não há. Agora
-     é `.leia`, que é o que ela faz: diz que aquele item tem texto embaixo. */
   .faixa .leia{cursor:help}
-  .faixa .div{color:var(--fg)}   /* cor de texto, não de borda (topo.html: `.seta`) */
-  /* ---------- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (19/10/2026) ----------
-     CONTROLES-VERDADE-01, 06/09/2026. O dono da frase é
-     `controller_card.texto_motion`, e nada dela é digitado aqui.
-
-     O QUE ELA SUBSTITUIU FOI UM NÚMERO DE CATÁLOGO, e em 11/09/2026 ele saiu
-     da tela de vez (A3-032 e A3-033, aprovadas pelo usuário): a dica do interruptor
-     de Giroscópio, três elementos ao lado, afirmava a taxa do cabo — o mesmo
-     número para todo controle e todo momento, com o controle do usuário parado ou
-     fluindo. O `paridade-gtk-html.csv:55` já nomeava isso.
-
-     E NÃO É A LINHA DA VERDADE. Ela foi a primeira escolha desta sprint e a
-     medição a derrubou: a linha de `controller_card.py:892` SAIU DA TELA DA
-     GTK em 17/08/2026, a pedido (*"remover guia dos status em tempo real"*,
-     SEM-BARRA-DA-VERDADE-01), e continua criada e alimentada fora da tela —
-     `controller_card.py:1688` diz isso com todas as letras, e o
-     `paridade-gtk-html.csv:56` avisa que reconstruí-la aqui seria reintroduzir
-     o que o usuário mandou tirar. **Quem OCUPA este lugar na GTK dela é justamente o
-     `_motion_label`** (`controller_card.py:1615`), que é esta frase.
-
-     O NOME DAQUELA FUNÇÃO NÃO SE SOLETRA NESTE ARQUIVO, e não é preciosismo: o
-     portão da paridade vigia a AUSÊNCIA do símbolo do lado HTML, e ele não
-     distingue prosa de uso — este comentário, escrito para AVISAR que a linha
-     não deve voltar, foi lido como a linha VOLTANDO na primeira corrida. É a
-     mesma armadilha que o `mesa_viva._via_do_transporte` já registrou, e a
-     forma desta casa é citar o ENDEREÇO.
-
-     ELA MORA NO VÃO DO CABEÇALHO — o mesmo lugar que ela ocupa na GTK, ao lado
-     da bateria —, e o vão foi MEDIDO antes de escolhido: com
-     a janela do produto (1212px) sobravam **410px** entre o nome da máscara e o
-     par de sensores — o maior vazio do card, e o `margin-left:auto` do
-     `.sensores-peca` era quem o segurava. Uma linha nova no CORPO custaria
-     altura, e a conta não tem folga para isso: `PARA_O_CARD` (328) menos
-     `ALTURA_DO_CARD` (304) são **24px**, e o assert lá embaixo é um portão.
-     Aqui ela custa ZERO altura.
-
-     `flex:1 1 0` + `min-width:0` são o par que faz o texto ENCOLHER num flex —
-     sem o `min-width` o item se recusa a ficar menor que o conteúdo e empurra a
-     bateria para fora. O `nowrap` é obrigatório: o `.faixa` do card aberto tem
-     `flex-wrap:wrap` e altura FIXA (`flex:0 0 var(--h-acao)`), então uma
-     segunda linha não faria o cabeçalho crescer — faria o texto vazar.
-
-     SEM FRASE, ESCONDE — e é o contrato, não economia de pixel. O alvo
-     `atributo` do piloto REMOVE o `aria-label` quando o valor é vazio
-     (`hefesto_vivo.escrever`, ramo `atributo`), e o `.no-jogo{display:none}`
-     abaixo faz o vão voltar a ser vão.
-
-     O INTERRUPTOR ERA O `title` ATÉ 11/09/2026, e ele NÃO SERVIA MAIS: a
-     `DICA_DA_CASA` colhe todo `title` do DOM vivo para `data-hef-dica` e apaga
-     o atributo, então `[title]` não casava na janela dela — a linha nascia
-     invisível com a página publicada intacta. O `aria-label` não vira dica,
-     ninguém o colhe, e ele é a MESMA frase que o leitor de tela anuncia.
-
-     E ELA SÓ APARECE NO CARD ABERTO. A linha FECHADA é a mais apertada da mesa
-     — `VAO_ANTES_P3` são 103,2px com as duas leituras —, e um texto elástico
-     ali comeria a largura da bateria, que é uma só para as quatro linhas. */
+  .faixa .div{color:var(--fg)}
   .faixa .no-jogo{display:none}
-  /* O DE DENTRO NÃO RECORTA MAIS — 11/09/2026, e é o que a A3-050 obrigou.
-     O corte e as reticências subiram para o de FORA, porque a afordância que
-     esta casa exige de um texto cortado (`test_a_janela_estreita_nao_engole_o
-     _desenho`) tem de estar no elemento que corta ou no que é cortado — e
-     quem carrega a frase inteira agora é o `aria-label` do de fora. Com o
-     recorte aqui dentro, o de dentro cortava A SI MESMO e não tinha onde
-     guardar o que sumia: medido em janela de 940px, 95px de frase engolidos.
-     `inline` é obrigatório: `text-overflow` só desenha as reticências sobre
-     conteúdo EM LINHA do bloco que transborda. */
   .faixa .no-jogo > .no-jogo-t{display:inline}
-  /* os gatilhos: número EM CIMA da barra, como no original.
-     O `margin-top:auto` SAIU, e ele era a causa do maior buraco da tela.
-     Enquanto L2/R2 moravam dentro da moldura do giroscópio, aquele `auto`
-     empurrava as duas linhas para o pé e empoçava a sobra INTEIRA da coluna
-     num vão só: medido em 29/08 na bancada, **181 px** de vazio entre o
-     eixo Z e o L2 — e o vão variava com a mesa (138 com três controles, 95
-     com quatro), porque não era desenho, era resto. */
   .gat{display:flex;flex-direction:column;justify-content:space-around;flex:1}
   .gat-linha{display:grid;grid-template-columns:20px 1fr;align-items:center;gap:8px;
              font-size:11px;color:var(--fg);margin-bottom:9px}
@@ -403,241 +93,50 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .gat-linha .trilho{position:relative;height:8px;border-radius:4px;background:var(--panel);
                      border:1px solid var(--border-forte)}
   .gat-linha .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--pink)}
-  /* `white-space:nowrap` NO NÚMERO, e ele não é enfeite. O `.n` é absoluto com
-     `left:50%` e sem `right`, então a largura que o navegador lhe dá é METADE do
-     trilho: num trilho de 92px ele tem 46 para "200 / 255", que mede 57 — e
-     quebrava em duas linhas, uma delas por cima da barra. Aparecia só quando a
-     coluna encolhia, que é o estado que ninguém fotografa. */
   .gat-linha .n{position:absolute;top:-14px;left:50%;transform:translateX(-50%);
                 white-space:nowrap;
                 font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave)}
-  /* SEM as três caixas: o miolo é uma grade de blocos soltos */
-  /* AS CINCO COLUNAS SÃO PROPORÇÕES, E NÃO PIXELS — 31/08/2026.
-     Os números são os mesmos: na janela do produto (1180px) o `card-corpo` tem
-     1036px para repartir, e 168+226+212+308+122 = 1036. Cada coluna nasce com a
-     largura exata que tinha. O que muda é o que acontece quando a janela é MENOR
-     que 1180 (o `.janela` é `max-width:100%`): com quatro colunas em pixel fixo,
-     TODO o encolhimento caía na única coluna flexível — a do som. Medido em
-     31/08 num navegador de 1000px: ela ia a 78px e os três botões do Modo do
-     Mic, mais o "Só no controle", pintavam 200px POR CIMA dos Sensores e dos
-     Gatilhos. É a tela que ela fotografou. Em proporção, as cinco encolhem
-     juntas e nenhuma colapsa — que é como as outras nove abas se comportam.
-     `minmax(0,…)` continua obrigatório: `Nfr` sozinho tem mínimo automático
-     `auto` (= min-content), e é ele que faz a coluna se recusar a encolher.
-
-     A COLUNA DO SOM GANHOU 46px E A DOS SENSORES OS PERDEU (244 -> 290,
-     186 -> 140), e a conta é medida, não gosto: a linha do rótulo do Microfone
-     pede 278px ("Microfone" 55 + o selo 45 + o "?" 17 + os três botões de modo
-     150, mais o padding da moldura) e recebia 244 — os 34px de diferença eram o
-     "Nativo" e metade do "Desativado" pintados FORA da moldura, atravessando o
-     bloco vizinho. Do outro lado sobrava: com os dois sensores numa moldura só,
-     a quinta coluna pede 99px de conteúdo natural.
-     E 140 É PISO, NÃO ESCOLHA: abaixo disso a barrinha de cada eixo cai de 51px
-     para menos de 40 e deixa de dizer magnitude — que é a única coisa que ela
-     diz. Foi por isso que a primeira tentativa (122) foi desfeita: a régua deu
-     verde e a FOTO mostrou seis barras de 23px. Medir sem olhar não fecha. */
   .card-corpo{display:grid;gap:11px;
               grid-template-columns:minmax(0,168fr) minmax(0,226fr) minmax(0,212fr)
                                     minmax(0,290fr) minmax(0,140fr);
               padding:12px 14px 0;align-items:stretch}
-  /* as cinco colunas terminam na mesma linha. A do som manda a altura; nas outras
-     o CONTEÚDO cresce para acompanhar — o touchpad estica, os analógicos ficam
-     maiores e a grade de botões espalha as fileiras. */
   .card-corpo > div{display:flex;flex-direction:column}
   .card-corpo > div > .moldura{flex:1;display:flex;flex-direction:column}
   .card-corpo > div > .moldura:first-child{flex:1;display:flex;flex-direction:column}
-  /* NA COLUNA 1 QUEM CRESCE É O TOUCHPAD, E SÓ ELE. Com as duas molduras em
-     `flex:1 1 0%` a sobra da coluna era partida ao meio, e como o touchpad tem
-     piso (a proporção do sensor) a metade dele sobrava DENTRO da moldura da
-     barra de luz: 42px de vazio cercados por uma borda, que é a cara de bloco
-     quebrado. Medido antes: touch 118 / luz 109 com 42px de ar. Depois: o ar
-     inteiro vira superfície de toque, e a moldura de baixo fica do tamanho do
-     que tem dentro.
-     ESTICAR O TOUCHPAD NÃO MENTE A POSIÇÃO DO DEDO, e isso é do produto, não
-     meu: `sensor_widgets.TouchpadView` normaliza por FRAÇÃO
-     (`px = 2 + fx * (largura - 4)`) e o comentário dele diz com todas as
-     letras — "alargar não mente a posição do dedo… o que muda é a proporção do
-     retângulo". */
   .card-corpo > div:first-child > .moldura.touchp{flex:0 0 auto}
   .card-corpo > div:first-child > .moldura.luz{flex:1 1 0%;min-height:55px}
   .card-corpo > div:first-child > .moldura.led{flex:1 1 0%;min-height:41px}
   .moldura.luz .barra-luz{flex:1;min-height:20px}
-  /* as cinco lâmpadas ficam CENTRADAS no que sobrar do campo. Elas medem 6px de
-     altura: encostá-las no topo deixaria o resto do campo como um vazio com
-     borda, que é a cara de bloco quebrado que esta casa já nomeou em 27/08. */
   .lampadas{flex:1;display:flex;align-items:center;justify-content:center}
-  /* A COLUNA DOS SENSORES SÃO DOIS CAMPOS, E ERA UM. Ela guardava o L2/R2
-     dentro da moldura do giroscópio, e a sobra da coluna virava um buraco só
-     (181 px na bancada). Agora Giroscópio e Gatilhos são duas molduras
-     irmãs, cada uma com rótulo, separadas pelos mesmos 9 px do par
-     Touchpad/Barra de luz e do par Microfone/Alto-falante; a sobra entra POR
-     DENTRO das duas, abrindo as linhas em vez de empoçar no meio.
-     Medido em 29/08 com a bancada: maior vão da coluna 181 px -> 5 px.
-     O ACELERÔMETRO NÃO É O TERCEIRO CAMPO, e não por desenho: o daemon do usuário
-     não publica `accel` (`inputs` = buttons, gyro, l2_raw, lx, ly, r2_raw, rx,
-     ry, speaker, touchpad, medido no `state_full` de agora). Desenhar o campo
-     antes da leitura existir seria trocar um buraco por outro. */
   .card-corpo > div:last-child > .moldura{display:flex;flex-direction:column}
-  /* TRÊS BLOCOS NA COLUNA, e não dois: o acelerômetro entrou em 30/08.
-     Os pisos caem de 94/87 para 78/72/72 porque a altura do card não mudou —
-     ela é a mesma nas dez abas (`--alt-janela`). Três eixos a 18px mais o
-     rótulo cabem em 72; abaixo disso a barra some antes do número. */
-  /* DOIS SENSORES NUMA MOLDURA. Os pisos saem da conta, não do gosto: o rótulo
-     mede 17, cada sub-rótulo 13 e cada eixo 14 — 17 + 2*(13 + 3*14) = 127. Com os
-     Gatilhos (72) e o vão de 9, a coluna pede 208 dos 232 que ela pode gastar. */
-  /* O BLOCO DOS SENSORES PEDE A ALTURA QUE ELE TEM, e os Gatilhos absorvem a
-     sobra. Com `flex:1 1 0%` nos dois o flex reparte a coluna em partes IGUAIS
-     (111 e 111) — e os sensores precisam de 143. O resultado era o bloco
-     cortado no meio do acelerômetro: o usuário viu e disse *"tá muito quebrado"*.
-     `flex:0 0 auto` aqui, `flex:1 1 auto` nos Gatilhos: cada um pede o que
-     precisa e quem estica é o que tem folga. */
-  /* A CLASSE SE CHAMA `leituras`, E NÃO `sensores` — 31/08/2026, e é a cicatriz
-     da linha 125 deste arquivo repetida dentro dele.
-     `.sensores` JÁ EXISTIA aqui embaixo (o grupo do "Calibrar sensores da mesa",
-     no cabeçalho do quadro) e traz `margin-left:auto`. Quando a moldura nova
-     nasceu com esse nome, em 30/08, herdou a margem — e `margin-left:auto` num
-     container `flex-direction:column` é margem no EIXO CRUZADO: ela DESLIGA o
-     stretch. Medido no Chrome: a moldura parou de acompanhar a coluna (99px de
-     largura em vez de 186) e foi empurrada 87px para a direita, desalinhada da
-     dos Gatilhos, logo abaixo dela. Foi o que o usuário viu e chamou de quebrado.
-     Nome de classe se confere no arquivo INTEIRO antes de escrever, não só no
-     `topo.html`. */
   .card-corpo > div:last-child > .moldura.leituras{flex:0 0 auto}
-  /* O EIXO ENCOLHE DE 18 PARA 16 SÓ AQUI, e é conta: a moldura tem 151px
-     (os 232 da coluna menos os 72 dos Gatilhos e o vão de 9), e seis eixos a 18
-     mais dois sub-rótulos e o rótulo pedem 158. Dois pixels por eixo fecham a
-     conta sem tirar sensor nenhum — que é o que o usuário pediu ao autorizar o ajuste:
-     *"desde que não percamos as features"*. A barra continua com 6px. */
-  /* O EIXO APERTA A COLUNA DO NÚMERO SÓ AQUI: 46px em vez de 52, e o vão de 6 em
-     vez de 8. O valor mais largo desta moldura tem sete caracteres monoespaçados
-     ("−412.0" com o sinal), que medem 44px — os 52 eram folga. Os 10px que saem
-     vão inteiros para a barrinha, que é o que se lê de longe. */
   .card-corpo > div:last-child > .moldura.leituras > .eixo{height:14px;flex:0 0 auto;
                                                            grid-template-columns:11px 46px 1fr;gap:6px}
-  /* O `gap` DA MOLDURA VAI A ZERO AQUI, e é ELE que estourava o card.
-     `.moldura` traz `gap:8px`, pensada para 3 ou 4 filhos. Esta tem DEZ (rótulo,
-     dois sub-rótulos e seis eixos): nove vãos de 8 são **72px**, mais da metade
-     do bloco — mais que os seis eixos somados. Com o gap em zero e o respiro
-     posto só ONDE ELE SIGNIFICA (antes de cada sub-rótulo, que é onde um sensor
-     acaba e o outro começa), o bloco cai de 228 para dentro dos 151 que a coluna
-     tem. Medido no navegador, não estimado. */
   .card-corpo > div:last-child > .moldura.leituras{gap:0;padding:5px 9px}
   .card-corpo > div:last-child > .moldura.gatilhos{flex:1 1 auto;min-height:72px}
-  /* o sub-rótulo de cada sensor: diz de qual dos dois são os três eixos abaixo,
-     e a unidade — que é o que os separa (graus/s contra g). */
   .sub-sensor{font-size:10px;color:var(--rot-campo);font-weight:600;margin-top:3px;line-height:12px}
   .sub-sensor:first-of-type{margin-top:2px}
   .sub-sensor .mudo{font-weight:400}
-  /* O PISO DO TOUCHPAD É A PROPORÇÃO DO SENSOR DE VERDADE. Ele era 118px de
-     altura para 148 de largura — 1,25:1 — e o touchpad do DualSense é
-     **1920x1080**, medido no `state_full` dela agora: 16:9, ou 83px para os
-     mesmos 148. O desenho esticava a superfície 41% na vertical, e com ela a
-     posição do dedo: um toque na metade da altura caía num lugar que não
-     corresponde a lugar nenhum do aparelho. O produto desenha 16:9
-     (`sensor_widgets._TOUCHPAD_PX = (76, 42)`).
-     A PROPORÇÃO DEIXOU DE SER PISO E VIROU A REGRA. Ela era `min-height:83px`
-     com `flex:1`, e o piso ficou: o touchpad virou a esponja da coluna e
-     esticou de novo — medido em 29/08 na bancada, 148x203, que são **2,44
-     vezes** o que o sensor é (83px para 148 de largura). A correção de 27/08
-     tinha derrubado 41% de esticada e o `flex:1` devolveu 145%. Agora a
-     superfície tem `aspect-ratio:16/9` e não estica em mesa nenhuma; quem
-     absorve a sobra da coluna são a barra de luz e o LED do jogador, que são
-     COR e LÂMPADA e não têm proporção a respeitar. */
   .moldura.touchp .touch{flex:0 0 auto;height:auto;aspect-ratio:16/9}
   .moldura > .sticks{display:grid;grid-template-columns:1fr 1fr;height:100%}
-  /* rótulo no topo · círculo no centro · X/Y na base, que é onde as outras
-     molduras terminam. O círculo NÃO cresce com a coluna — com aspect-ratio e
-     flex:1 ele passava da largura e os dois se sobrepunham. */
   .moldura > .sticks > div{display:flex;flex-direction:column;justify-content:space-between}
   .moldura > .sticks .stick{flex:0 0 auto;align-self:center}
   .moldura > .sticks .xy{margin-top:0}
   .moldura > .glifos{height:100%;align-content:space-between}
-  /* moldura SÓ onde o original põe.
-     O RESPIRO DE CIMA E DE BAIXO FOI DE 7 PARA 3 — 20/09/2026. É a economia que
-     pesa mais em todo o cartão, porque ela se repete em CADA moldura de CADA
-     coluna: 8px por moldura, e a coluna do som tem duas. O respiro LATERAL fica
-     nos 9 — ele é o que separa o texto da borda, e cortá-lo encostaria os
-     rótulos no traço. */
   .moldura{border:1px solid var(--border-forte);border-radius:6px;background:var(--app-bg);padding:3px 9px}
-  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
-     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
-     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
-     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
-     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
-     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
-     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
   .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);margin-bottom:5px}
   .rot-linha{display:flex;align-items:center}
-  /* O HEXADECIMAL FICA — decisão, 28/08: "fica nas duas", Controles e
-     Iluminação. Ele já esteve aqui, saiu em 27/08 por escolha minha ("cru é para
-     quem programa") e volta por escolha do usuário. O que ficou da minha razão é o
-     `title`: o número é a cor DO JOGADOR, escolhida pelo produto, e não a do
-     plástico. O nome da cor ("azul") continua fora, e por um motivo que não é
-     gosto: ele não existe em código nenhum do produto — só num comentário —, e
-     digitá-lo aqui criaria uma segunda verdade sobre a paleta. */
   .de-quem{margin-left:auto;font-size:10.5px;color:var(--fg)}
-  /* O LED DO JOGADOR É CAMPO, NÃO LINHA. Ele nasceu em 28/08 como uma linha
-     apertada DENTRO da moldura da Barra de luz — rótulo à esquerda, lâmpadas à
-     direita — e ali ele era 13px espremidos num campo de 75. Em 29/08 virou a
-     TERCEIRA moldura da coluna, com rótulo próprio: é o que come a sobra que o
-     touchpad esticado escondia, e é o que faz a coluna fechar sem vão. */
   .rot .mudo{color:var(--fg);font-weight:400}
   .sob{font-size:10.5px;color:var(--fg);margin-top:4px}
   .touch{border-radius:4px;background:var(--panel);position:relative}
-  /* O PONTO É POSICIONADO PELO CENTRO — ver o `translate` do `.stick .p` logo
-     abaixo, que nasceu do mesmo defeito. Sem ele, `left`/`top` põem o CANTO do
-     ponto de 8px na conta e o dedo lê 4px à direita e abaixo de onde está: em
-     148px de superfície são 2,7% do curso, e no fim do curso (100%) o ponto
-     saía inteiro para fora do pad. O produto centra: `ctx.arc(px, py, 3.5)`
-     em `interface/sensores.TouchpadView._on_draw`. */
-  /* O PONTO NASCE APAGADO E A CLASSE `on` O ACENDE — decisão de
-     02/09/2026: *"o pontinho do touchpad só aparece quando há toque — hoje ele
-     aparece com `touching` falso, contra o que a própria dica promete"*. Ele
-     era pintado pelo `style` do gerador (`opacity:0` só no card que o desenho
-     queria vazio), e por isso ficava aceso na tela do usuário com o dedo fora do pad
-     — fotografado em 02/09 às 19h, `touch-estado` dizendo "Sem toque" com o
-     ponto ciano no lugar. A CLASSE é o único alvo do piloto que serve: os sete
-     são texto·largura·fundo·valor·html·classe·cor, e `classe` é o único
-     idempotente que liga e desliga (`hefesto_vivo.py:321-337`). */
   .touch .ponto{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan);
                 box-shadow:0 0 8px var(--cyan);transform:translate(-50%,-50%);opacity:0}
   .touch .ponto.on{opacity:1}
-  /* A COR DA BARRA DE LUZ É `currentColor`, e isso é o que a torna PINTÁVEL.
-     Ela era `style="background:#7EB8D4"` do gerador — desenho cravado ao lado
-     de um campo que já dizia a cor viva, e os dois se contradiziam na mesma
-     moldura. O alvo `fundo` do piloto não serve, e isto está MEDIDO no
-     WebKitGTK — o motor da janela dela —, numa `Gtk.OffscreenWindow` sobre
-     esta página, em 02/09/2026. Os dois ramos, TRÊS escritas do mesmo
-     `#0000FF`, o valor que o P1 dela publica:
-
-         cor    [1, 0, 0]   e `el.style.color` volta `rgb(0, 0, 255)`
-         fundo  [1, 1, 1]   e `el.style.background` volta `rgb(0, 0, 255)`
-
-     O ramo `fundo` compara `el.style.background` com o que VAI escrever, e o
-     CSSOM normaliza na atribuição: a comparação nunca casa e o contador de
-     pintura soma +1 por tique, para sempre. O ramo `cor` escreve e DEPOIS
-     compara, e é idempotente por construção. Daí o desvio: o produto escreve
-     `color` e o `background` o segue — `getComputedStyle(..).backgroundColor`
-     deu `rgb(0, 0, 255)` depois da escrita e `rgb(40, 42, 54)` (o `--panel`)
-     depois do vazio, na mesma medição.
-
-     FATO QUE ISTO DERRUBA: `pacotes/__init__.py:203-210` explica o `fundo`
-     dizendo que o problema é o TRAVESSÃO (`background: "—"` é inválido). É
-     verdade, e é MENOR que o defeito: uma cor perfeitamente VÁLIDA infla o
-     contador do mesmo jeito.
-     SEM COR DE LINHA o retângulo fica `--panel`, que é o "nada" que o usuário
-     decidiu para todo campo sem informação. */
   .barra-luz{height:20px;border-radius:4px;background:currentColor;color:var(--panel)}
-  /* os analógicos: grandes e SEM moldura, com a cruz de eixos dentro */
   .sticks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  /* o título do analógico é o único sem moldura, e por isso nascia 8px ACIMA dos
-     outros três. O padding da moldura entra aqui como margem, e os quatro alinham. */
   .stick-rot{font-size:10.5px;font-weight:600;color:var(--rot-campo);text-align:center;line-height:1.3;
              padding-top:8px;margin-bottom:5px}
-  /* O CÍRCULO, A CRUZ E O RÓTULO L3/R3 VÊM DE `--plastico`.
-     Eram `var(--cosmic-red)` e dois `rgba(177,31,84,…)` digitados — e 177,31,84 é
-     exatamente o `#b11f54` que a amostragem do aparelho derrubou. `color-mix`
-     tira a translucidez da mesma variável, em vez de uma segunda cópia do hex. */
   .stick{width:100px;height:100px;border-radius:50%;border:2px solid var(--plastico);
          position:relative;margin:0 auto;display:flex;align-items:center;justify-content:center}
   .stick::before,.stick::after{content:'';position:absolute;
@@ -645,24 +144,9 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .stick::before{left:50%;top:6px;bottom:6px;width:1px}
   .stick::after{top:50%;left:6px;right:6px;height:1px}
   .stick .rotl{font-family:'JetBrains Mono',monospace;font-size:26px;
-               /* 42% dava 1,16:1 contra o fundo — a letra sumia. 72% a põe
-                  visível sem virar rótulo: ela é marca-d'água DENTRO do
-                  círculo, e quem nomeia o analógico é o texto acima dele. */
                color:color-mix(in srgb, var(--plastico) 72%, transparent)}
-  /* A BOLINHA É POSICIONADA PELO CENTRO, e o `translate` é o que diz isso.
-     DEFEITO MEDIDO EM 29/08: sem ele, `left`/`top` põem o CANTO da bolinha de
-     9px na conta, e o repouso (128) nascia 4,69px abaixo e à direita da cruz —
-     4,9% do curso de 96px, o mesmo que um analógico com +12,5 unidades presas
-     em cada eixo, permanente. O curso ficava assimétrico: 2px de folga de um
-     lado, 7px vazando para fora do círculo do outro. Depois da cura o desvio em
-     repouso é 0,19px, que é a distância de 128 ao centro exato da faixa (127,5).
-     Não é invenção: `.gat-linha .n` já usa `translateX(-50%)` pelo mesmo motivo,
-     e o widget do produto desenha o ponto centrado. */
   .stick .p{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--pink);z-index:2;
             transform:translate(-50%,-50%)}
-  /* O ANEL É O QUE O JOGO RECEBE (29/09/2026, O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01):
-     com a Inclinação ou a Mira num analógico, o jogo segura outra coisa que a mão. Embaixo
-     do ponto da mão, no verde do chip que liga a rota; apagado sem a classe `on`. */
   .stick .pj{position:absolute;width:13px;height:13px;box-sizing:border-box;border-radius:50%;
              border:2px solid var(--green);background:transparent;box-shadow:0 0 6px var(--green);
              z-index:1;transform:translate(-50%,-50%);opacity:0}
@@ -672,108 +156,16 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .eixo{display:grid;grid-template-columns:11px 52px 1fr;align-items:center;gap:8px;
         font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--texto-suave);height:18px}
   .eixo .g{height:6px;border-radius:3px;background:var(--panel);position:relative}
-  /* A BARRA BIPOLAR SÃO DUAS METADES, e a razão é o que o produto ALCANÇA.
-     Ela era UM `<span class="v" style="left:L%;width:W%;background:C">`, e os
-     três valores mudam com a leitura: o `escrever` do piloto sabe escrever
-     `width` (alvo `largura`) e `color` (alvo `cor`), e NÃO tem alvo de
-     POSIÇÃO. Com um elemento só, dar-lhe endereço pintaria a largura sobre um
-     `left` congelado — a barra de um eixo NEGATIVO cresceria para o lado
-     errado, que é pior que a barra parada.
-
-     A GEOMETRIA É A MESMA, e isso é conta, não gosto: `mesa_viva._barra_bipolar`
-     devolve `esquerda = 50 - largura` para todo valor negativo, ou seja a barra
-     negativa SEMPRE termina no centro. Uma metade ancorada em `right:50%` e
-     outra em `left:50%` desenham exatamente os mesmos pixels, e só uma delas
-     tem largura por vez.
-
-     A COR SOBE PARA O TRILHO (`.g`) e desce por `currentColor`: assim o cinza
-     do repouso, o verde e o vermelho continuam sendo a resposta de
-     `_barra_bipolar` — um valor só, num elemento só, em vez de repetido nas
-     duas metades. */
   .eixo .v{position:absolute;top:0;bottom:0;border-radius:3px;background:currentColor}
   .eixo .v.neg{right:50%}
   .eixo .v.pos{left:50%}
-  /* AS ONDAS SONORAS — o medidor de nível que a minha primeira versão comeu */
-  /* A ONDA PERDEU 4px E A LINHA DE VOLUME PERDEU 5 — 20/09/2026, e os dois
-     números são A CONTA DO GANHO, não economia solta. A linha própria que o usuário
-     aprovou custa 22px, e o card fechava com 0,37px de folga contra o teto de
-     `PARA_O_CARD` (327,63 de 328). *O preço não é argumento contra o desenho
-     que o usuário aprovou* — é a conta a pagar, e ela se paga aqui:
-
-       349,63  com o ganho na linha própria e nada devolvido  → NÃO CABE
-       334,63  as três `.vol` do card de 22px para 17 (-15)
-       326,63  as duas `.onda` de 22px para 18 (-8)           → CABE, 1,37 de folga
-
-     Medido pelo `check_a_altura_do_cartao.py` nas três larguras, a cada passo.
-     O knob do trilho tem 12px e continua cabendo nos 17; a onda com 18px
-     continua mostrando os quinze degraus. **A folga ficou MAIOR do que era.** */
   .onda{height:18px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
-  /* A ONDA DO MICROFONE CRESCE PARA O VÃO — 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, C1).
-     A moldura do microfone estica com a coluna do som, e a sobra ficava vazia embaixo do volume
-     (foto dela: «aumenta o espaço pras ondas»). A moldura reparte a altura na vertical: o rótulo
-     em cima, a onda ocupa o que sobra e o volume fecha embaixo. O cartão NÃO cresce: a onda só
-     come o vão que já existia, e `check_a_altura_do_cartao.py` cobra os dois números
-     (o teto de `PARA_O_CARD` e nenhum vão vazio abaixo do volume, `VAO_DO_MIC_MAXIMO`). */
   .moldura[data-bloco="microfone"] .onda{flex:1 1 18px;height:auto;min-height:18px;margin-bottom:0}
-  /* O CINZA DO MUDO TEM ENDEREÇO — 29/09/2026, A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01.
-     O gerador cravava `mudo` na `.onda` do p2 e do p4 a partir da cena, e o
-     produto não tinha como desfazê-lo: a barra do P2 mexia CINZA com o
-     microfone aberto. O invólucro `.onda-do-mudo` é o endereço, e não custa
-     pixel (`display:contents`); a classe `calada` acende quando o dono do selo
-     diz que alguma face do microfone está calada. O `:not(.sem-leitura)` é o
-     que deixa o «não sei» mandar: sem ele, as três classes desta regra
-     venceriam as duas do `.onda.sem-leitura i` pela especificidade, e a onda
-     sem leitura sairia com a opacidade do mudo. */
   .onda-do-mudo{display:contents}
   .onda-do-mudo.calada>.onda:not(.sem-leitura) i{background:var(--border-forte);opacity:.5}
-  /* SEM LEITURA — e esta regra é a que impede a tela de mentir.
-     05/09/2026, com as ondas ligadas ao PipeWire.
-
-     "Não sei" tem de ser VISÍVEL e tem de ser DIFERENTE de "medi e há
-     silêncio". O silêncio medido é a linha baixa e ciana que o desenho já
-     define (o piso de 16%); a ausência de leitura é uma linha baixa e CINZA.
-     Um controle no rádio não publica canal de áudio nenhum: sem esta regra ele
-     mostraria a onda cheia do desenho, afirmando um som que ninguém mediu.
-
-     O `!important` NÃO É ÊNFASE, é o único jeito: as catorze alturas moram num
-     `style=` inline, e sem ele a folha perde para o atributo. É a mesma cura
-     que o `data-conectado="nao"` desta aba já usa na barra de bateria, pela
-     mesma razão — e ela nasceu de a tela ter mostrado 64% de bateria num lugar
-     onde não havia controle. */
   .onda.sem-leitura i{height:16% !important;background:var(--border-forte);opacity:.35}
-  /* O SELO DO MICROFONE NASCE APAGADO E **ACENDE** — 03/09/2026, e a inversão
-     é o que torna a cor honesta nos TRÊS estados.
-
-     DECISÃO DE PRODUTO: *"Cor + ícone. Redundante de propósito — quem lê rápido pega
-     pela cor, quem não distingue cor pega pelo risco."*
-
-     POR QUE INVERTER, e não só acrescentar o risco: o alvo `classe` do piloto
-     casa UM valor (`data-hef-quando`). Com a classe `off` acesa em `MUDO`, o
-     TERCEIRO estado — o travessão de `mesa_viva.selo_do_mic(_, sabemos=False)`
-     — cairia no ramo de baixo e ficaria VERDE. Um microfone que ninguém leu
-     anunciando que está capturando é o defeito que aquela função existe para
-     matar. Com a classe `on` acesa em `ATIVO`, verde quer dizer uma coisa só, e
-     tudo o que não é ATIVO fica apagado.
-
-     E O PADRÃO PASSA A SER O HONESTO: uma página que o produto nunca pinte
-     mostra o selo apagado, não um verde de mentira.
-
-     O contraste do apagado continua o medido (3,47:1 sobre o próprio fundo ->
-     9,3:1): a regra é a mesma, só trocou de lado. */
-  /* A GEOMETRIA DO CHIP MORA AQUI, UMA VEZ SÓ, PARA OS TRÊS — 17/09/2026.
-     Ela era DUAS cópias digitadas à mão (este selo e o `.rot .selo-som`, lá
-     embaixo), com as mesmas seis declarações repetidas; o pedido de hoje
-     — o sufixo do canal com a cara do chip do microfone, e a citação está no
-     bloco "OS SELOS DO SOM" — pedia a TERCEIRA. Três cópias divergem no
-     primeiro dia em que alguém ajustar uma, e esta casa já pagou onze vezes por
-     régua e por regra que DIGITAM o que deviam LER. Então a cara de chip é UMA
-     declaração com os três seletores, e o que sobra por regra é só o que os
-     SEPARA: a cor de cada estado, o alinhamento e a margem.
-     `tests/unit/test_o_chip_do_alto_falante_tem_a_cara_do_chip_do_microfone.py`
-     lê os três nomes de classe da MARCAÇÃO e cobra que a declaração que os
-     veste seja a mesma. */
   .selo-ativo,.rot .selo-som{font-size:9.5px;
               font-family:'JetBrains Mono',monospace;padding:1px 6px;
               border-radius:3px;font-weight:600;line-height:1.5}
@@ -781,28 +173,14 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
               display:inline-flex;align-items:center;gap:3px;
               vertical-align:middle}
   .selo-ativo.on{background:var(--green);color:var(--app-bg)}
-  /* O SELO DENTRO DE UM RÓTULO — 19/09/2026, e o ajuste é de ALINHAMENTO, não
-     de cara. O selo do microfone mora num `.rot-linha` flex, onde o
-     `vertical-align:middle` resolve; o do alto-falante mora no `.rot`, que é
-     caixa INLINE — ali o `middle` empurra a linha para baixo e a caixa do card
-     cresce. O `1px` é o mesmo que o alarme (`.rot .selo-som`) já usa neste
-     mesmo rótulo desde 16/08, e por isso o custo de altura continua ZERO.
-
-     E ELE SOME SOZINHO quando não há o que dizer — o caso do rádio sem placa
-     de som. São os mesmos três jeitos do chip que ele substituiu: o marcador
-     `.nada` que o pacote manda em todo tique, o valor vazio e o `:empty`. */
   .rot .selo-ativo.no-rotulo{vertical-align:1px;margin-left:5px}
   .rot .selo-ativo.no-rotulo:has(.nada){display:none}
   .rot .selo-ativo.no-rotulo:has(.selo-palavra:empty){display:none}
-  /* O ÍCONE E O RISCO — a segunda metade da escolha do usuário, para quem não
-     distingue cor. O risco é um `::after` do PRÓPRIO glifo, e não do selo: ele
-     tem de cruzar o microfone, não a palavra. */
   .mic-glifo{position:relative;display:inline-flex;flex:0 0 auto;width:9px;height:9px}
   .mic-glifo svg{display:block}
   .mic-glifo.cortado::after{content:'';position:absolute;left:-1.5px;top:50%;
     width:12px;height:1.5px;background:currentColor;border-radius:1px;
     transform:translateY(-50%) rotate(-45deg)}
-  /* 17px, e não os 22 de até 20/09: ver a conta no bloco `.onda` acima. */
   .vol{display:flex;align-items:center;gap:8px;height:17px}
   .vol .trilho{flex:1;height:5px;border-radius:3px;background:var(--panel);position:relative}
   .vol .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
@@ -811,22 +189,6 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .vol .n{flex:0 0 30px;text-align:right;font-family:'JetBrains Mono',monospace;
           font-size:10.5px;color:var(--fg)}
   .rot-vol{flex:0 0 46px;font-size:11px;color:var(--muted);white-space:nowrap}
-  /* O 🎙 E O ♪ SÃO `<button>`, E NÃO ERAM (29/08/2026). Eram `<span>` com
-     `cursor:pointer` e nada atrás: nem `data-*` para a ponte achar, nem ouvinte
-     para o clique cair em algum lugar. Medido — dois cliques sintéticos neles
-     produziram ZERO gestos, enquanto os botões de rota, ao lado, ecoavam. O
-     `cursor:pointer` prometia o que a página não tinha, e a régua do
-     `--prova-gesto` dava verde porque nunca os tocava.
-     `font-family:inherit` é o preço de virar botão: sem ele o navegador põe a
-     fonte dele e o glifo encolhe. */
-  /* 16px E NÃO 22 — 20/09/2026. Ele é o botão mais alto da linha de volume, e
-     por isso é ELE que dita a altura dela: o trilho tem 4px e o número, 13. Os
-     6px que saem daqui saem do cartão duas vezes, uma por moldura de som.
-     O `line-height` desce junto (14 = 16 menos as duas bordas de 1px), senão o
-     glifo desencosta do meio e o ♪ nasce colado na borda de baixo. */
-  /* O BOTÃO «PADRÃO» DO VOLUME — 04/10/2026. Mesma altura do ♪ (16px), para a linha não crescer. Ligado
-     (`.on`), a barra do MESMO cartão fica inteira verde e travada: o `<input>` some da tela
-     (`display:none` tira o arrasto E o teclado: `visibility:hidden` ainda deixava o foco entrar) e a palavra ocupa o lugar do número. */
   .padrao-i{height:16px;flex:0 0 auto;border-radius:5px;cursor:pointer;padding:0 6px;
             border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);
             font-size:10px;line-height:14px;font-family:inherit}
@@ -839,159 +201,18 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .mudo-i{width:16px;height:16px;flex:0 0 16px;border-radius:5px;cursor:pointer;
           border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);
           font-size:10px;line-height:14px;text-align:center;padding:0;font-family:inherit}
-  /* AS DUAS CORES DO ♪ NÃO MORAM AQUI, e a razão é que elas PERGUNTAM A PALAVRA
-     ao dono: os seletores casam o que `mesa_viva.selo_do_mic` devolve, e um
-     seletor com a palavra digitada à mão para de casar CALADO no dia em que o
-     dono mudar de palavra. Elas estão no bloco de CSS interpolado do fim deste
-     arquivo, que é onde `SELO_ATIVO`/`SELO_MUDO` já existem.
-
-     E O ENDEREÇO DESTE COMENTÁRIO É PROSA DE PROPÓSITO — 06/09/2026: citar
-     aqui, letra por letra, a abertura daquele bloco fecharia ESTA string, e a
-     casa já pagou por isso uma vez (o aviso de 05/09 sobre o `BOOTSTRAP`, que
-     virou o defeito que descrevia, na mesma noite).
-
-     `.mudo-i.on` SAIU DAQUI — 06/09/2026, com os dois últimos escritores. Ela
-     pintava `--red` no ♪ mudo (a cor da FALHA nesta casa, sobre um alto-falante
-     calado por escolha do usuário) e no 🎙 do segundo card, onde a classe era do
-     GERADOR e não do aparelho — a cor congelada que a decisão 02-Q9 mandou
-     tirar. Com `alto_on` e `mic_on` fora, ela perdeu o último escritor, e é a
-     regra que este arquivo já aplicou quando o `.solta` saiu: *"CSS de elemento
-     que ninguém mais escreve é promessa esperando alguém tropeçar nela"*. */
-  /* SEM POSSE, SEM GESTO. `speaker.set {muted}` é RECUSADO pelo daemon enquanto
-     o volume do controle for desconhecido (`ipc_handlers.py`). Um botão que a
-     tela oferece e o produto recusa é a mentira que esta aba existe para não
-     contar: ele apaga e para de responder ao clique. */
-  /* O `[disabled]` FICA PARA QUEM AINDA O USA e não vale mais para o ♪ — ver a
-     regra abaixo. Ele continua declarado porque o seletor é genérico e o
-     desenho pode precisar dele noutro botão de ícone. */
   .mudo-i[disabled]{opacity:.4;cursor:not-allowed}
-  /* ---------- O BOTÃO AVISA ANTES DO CLIQUE (D-03, decisão [04]) ----------
-     O `[disabled]` acima MATA O CLIQUE, e o PO decidiu o contrário para esta
-     família — *"apagado e ainda assim responde"* —: sem clique não há caminho
-     de quem navega pelo teclado ou pelo controle até a razão, e a razão é a
-     entrega inteira da D-03.
-
-     A CARA É A DA FOLHA DAS DEZ (`monta.CSS_FOLHA`, `.btn.apagado`), letra por
-     letra. **E ESTA É UMA SEGUNDA CÓPIA, declarada:** a peça da ONDA0-F casa
-     `.btn` e `.seg button`, e o 🎙/♪ é `.mudo-i` — um botão de ÍCONE, com
-     largura fixa de 22px, que não pode virar `.btn` sem trocar o desenho que
-     o usuário aprovou. **RELATADO à frente da FOLHA:** o dia em que `.mudo-i` entrar
-     na lista de seletores de lá, estas três linhas somem daqui. É a mesma
-     dívida que a `05-vibracao` e a `06-navegacao` já têm com o `:empty`.
-
-     QUEM CARREGA O ENDEREÇO É A LINHA, e não o botão — a razão está em
-     `linha_de_volume`: o ♪ já gasta o seu único par alvo/campo para dizer em
-     QUAL dos dois estados o alto-falante está (02-Q9), e um elemento aceita um
-     alvo só. */
   .vol[data-porque] .mudo-i{border-color:var(--border-sutil);
                             color:var(--fg);cursor:not-allowed}
   .vol[data-porque] .mudo-i:hover{border-color:var(--border-sutil);
                                   color:var(--fg)}
-  /* O `?` SEGUE O MESMO ATRIBUTO QUE O CINZA, e esta linha saiu da FOTO —
-     04/09/2026, com o controle do usuário no cabo.
-     A folha das dez esconde o `?` de três jeitos, e NENHUM alcançava este: ela
-     prende o primeiro a `.btn`, e os outros dois olham o CONTEÚDO da dica
-     (`:has(.dica:empty)` e `:has(.nada)`). Só que o campo aqui alimenta DUAS
-     coisas — a dica e o atributo que apaga o botão —, e as duas querem valores
-     opostos para "não há o que dizer": o atributo quer VAZIO (o piloto o
-     remove) e a dica queria o marcador. Com o vazio, `escrever()` escreve o
-     travessão no `innerHTML` (`hefesto_vivo.py:101`, para TODOS os alvos), a
-     dica deixa de ser vazia e o `?` apareceu na tela — **com um `—` dentro**,
-     ao lado dos dois botões que estavam clicáveis. Ruído com cara de dado, que
-     é exatamente o que o `?` da D-03 existe para não ser.
-     A cura é fazer o `?` seguir o MESMO atributo do cinza: um campo, um
-     atributo, e não há caminho em que o `?` apareça sem o botão estar apagado. */
   .vol:not([data-porque]) .ajuda.porque{display:none}
 
-  /* ---------- OS SELOS DO SOM (linhas 89 e 90 da paridade) ----------
-     OS DOIS MORAM NO RÓTULO DA MOLDURA, e a razão é a MESMA medida na GTK: o
-     rótulo é o único lugar deste bloco que custa ZERO altura. Um rótulo NOVO
-     custava 19px, e 19px estouram o orçamento do card (`ALTURA_DO_CARD`) —
-     medido lá em 16/08/2026, na `SOM-ACORDADO-01`, e a conta não mudou de lado.
-
-     O SUFIXO É LEITURA DE RELANCE e vale para os dois estados; o SELO é o
-     ALARME, e por isso existe só no estado ruim. Um selo dizendo "acordado" em
-     toda sessão normal gastaria pixel para não informar nada.
-
-     O SUFIXO VIROU CHIP EM 17/09/2026, POR ORDEM DE PRODUTO, e a decisão de cima
-     continua de pé: quem existe só no estado ruim é o ALARME, e ele continua
-     assim. O que mudou é a CARA do sufixo — *"deixar esse acordado com o mesmo
-     estilo do botão que tá MUDO acima"*. Ele era três declarações (peso 400,
-     cinza, uma margem) ao lado de um chip, no mesmo rótulo, e lia como sobra de
-     texto. Agora veste a mesma pílula do selo do microfone, pela declaração
-     agrupada lá de cima.
-
-     A CAIXA NÃO SOBE, E ISSO FOI MEDIDO CONTRA UMA ORDEM DE PRODUTO DE SEIS DIAS
-     ANTES. A primeira tentativa desta leva pôs `text-transform` no chip do
-     canal, para o par ficar idêntico ao chip do microfone — que diz a palavra
-     dele em caixa alta. O portão `maiuscula-decorativa` reprovou, e ele carrega
-     a palavra de 11/09/2026, que cita ESTA palavra pelo nome: *"Leia o
-     cabo e acordado (ambos minusculo sem iniciar de forma capitular). Esse
-     tipo de coisa nao pode se repetir na interface."* <!-- noqa-acento: citação literal -->
-
-     AS DUAS ORDENS NÃO SE CONTRADIZEM, e é o que resolve o caso: o que o usuário
-     pediu hoje foi o ESTILO — a pílula —, e a caixa do chip do microfone não é
-     estilo, é o TEXTO que `mesa_viva.selo_do_mic` devolve. A palavra do canal
-     vem minúscula do daemon e continua minúscula na tela, que é o que o usuário
-     mandou. Subir a caixa aqui seria a mesma palavra com duas grafias no
-     produto — o defeito que aquele portão existe para matar.
-
-     O CUSTO DE ALTURA É ZERO, e não por analogia com o chip do microfone — que
-     mora num `.rot-linha` flex, onde a conta é outra. É por analogia com o
-     VIZINHO: o alarme já tem esta geometria, neste mesmo rótulo, desde 16/08, e
-     é `vertical-align` INLINE. Em caixa inline o `padding` não entra na altura
-     da linha, e por isso o chip do canal também toma `vertical-align:1px` em
-     vez do `inline-flex` do selo do microfone.
-
-     A COR DO SELO É A `--orange`, e não a `--red`: as duas palavras que ele
-     pode dizer descrevem estados do SISTEMA que explicam um silêncio, não
-     falhas do produto. `--red` nesta casa é a cor da falha, e ela já saiu do ♪
-     em 06/09 justamente por dizer "quebrou" sobre uma escolha do usuário.
-
-     E AS PALAVRAS NÃO SE ESCREVEM AQUI, nem para explicar: a folha vai INTEIRA
-     para dentro da página, e um comentário que as citasse punha o alarme no
-     desenho parado — a régua que cobra "o selo nasce apagado" leria o próprio
-     comentário e daria vermelho sobre nada. É a cicatriz de 05/09, quando um
-     aviso citou o padrão que descrevia e virou o defeito, na mesma noite.
-
-     OS TRÊS JEITOS DE SUMIR são os mesmos do `?` da folha das dez: o marcador
-     `.nada` que o pacote manda em TODO tique, a dica vazia, e o `:empty`. O
-     marcador é preciso porque `escrever()` troca valor vazio por travessão —
-     sem ele, "não há canal a descrever" vira um `—` solto no rótulo. */
   .rot .selo-som{background:var(--orange);color:var(--app-bg);
     vertical-align:1px;margin-left:3px}
   .rot .selo-som:has(.nada){display:none}
   .rot .selo-som:empty{display:none}
 
-  /* ---------- A GUARDA SEM ENDEREÇO (linha 57 da paridade) ----------
-     SEM MAC, TODO COMANDO DE SOM DESTE CARD CAI NO CONTROLE PRIMÁRIO — outro
-     controle, com o título deste na frente. Foi o estrago medido em 04/08/2026,
-     e a GTK impede ANTES do clique enquanto esta tela só recusava DEPOIS.
-
-     O CINZA VEM DE UM ENDEREÇO PRÓPRIO, `data-apagado`, e não mais do `title`
-     — 13/09/2026, RESTOS-DA-ONDA-DOIS-01. A folha casava `[title]`, e a camada
-     da dica da casa (TOOLTIP-C1) leva todo `title` do DOM vivo para
-     `data-hef-dica`: no WebKit a guarda do alto-falante nunca acendeu, e a
-     frase ia para a dica sem cinza nenhum. A razão de o bloco apagar continua
-     no `?` da linha de volume (`mic-porque`, `alto-porque`).
-
-     **O SELETOR É PRESO AO `data-bloco`, e isso não é zelo:** a moldura do LED
-     do jogador tem um `title` FIXO no desenho, e um `.moldura[title]` solto
-     apagaria aquele bloco em todo card, para sempre.
-
-     A LEITURA FICA LIGADA: `opacity` só nas linhas que MANDAM (o volume, o
-     mudo, a rota, o modo do mic). A onda, os rótulos e o selo do microfone
-     contam o que o daemon publicou sobre ESTE controle e continuam verdadeiros
-     sem endereço nenhum. E é `opacity`, não `display`: apagar tiraria a altura
-     e o card mudaria de tamanho conforme a mesa.
-
-     AS DUAS MOLDURAS TÊM O SEU: `mic-apagado` (MIC-SEM-FONTE-01) e
-     `alto-apagado` (RESTOS-DA-ONDA-DOIS-01) escrevem `data-apagado`. O valor
-     `sem-alvo` é esta guarda nas duas; o `sem-fonte`, só do microfone, apaga o
-     DESLIZANTE, e é o que o cartão sabe antes do arrasto quando o daemon diz
-     que o controle não tem fonte de captura. O botão do microfone e os modos
-     ficam acesos nesse estado: é o botão que pede o canal, e apagá-lo
-     trancaria a única saída. Nenhuma frase acompanha o cinza. */
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .vol,
   .moldura[data-bloco="microfone"][data-apagado="sem-alvo"] .rota,
   .moldura[data-bloco="microfone"][data-apagado="sem-fonte"] .vol .trilho,
@@ -1005,36 +226,6 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .puxa-vol,
   .moldura[data-bloco="alto-falante"][data-apagado="sem-alvo"] .rota button{cursor:not-allowed}
 
-  /* ---------- A MARCA DA EMULAÇÃO DEGRADADA SAIU — 13/09/2026 ----------
-     Era a decisão [07] de 04/09/2026, *"uma marca na palavra e o motivo no
-     hover"*: `.degradou` nascia `display:none` e `.degradou[title]` a
-     mostrava quando o piloto escrevia o motivo no `title`.
-
-     NO WEBKIT ELA NUNCA ACENDEU, medido na validação da RESTOS-DA-ONDA-DOIS-01:
-     a camada de dicas do piloto leva todo `title` para `data-hef-dica` e o
-     remove do elemento, e o seletor não casava. É a forma que a guarda do
-     alto-falante já curou nesta aba com `data-apagado`. E acesa ela seria
-     aviso numa dica, que a terceira lista dela tira da tela — então a marca
-     saiu inteira, sem troca de seletor.
-
-     PINTURA NÃO SE DECIDE POR `[title]` NESTA CASA. A régua é
-     `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`,
-     que lê as folhas das dez páginas. */
-  /* O POLEGAR DOS DOIS DESLIZANTES — D-08 dela, 04/09/2026. Ele é INVISÍVEL de
-     propósito: o knob que se vê é o `.vol .cheio::after` que o usuário aprovou, e um
-     polegar nativo por cima desenharia o segundo. O que este `<input>` traz é o
-     ARRASTO e o teclado.
-
-     A GEOMETRIA NÃO É CHUTE, e é a mesma conta que a aba Iluminação resolveu em
-     03/09: o knob do desenho tem o centro em `larg × pct − 1px` (uma caixa de
-     12px com `right:-5px` dentro de uma `.cheio` de largura `pct`), e o polegar
-     nativo em `L + 6px + pct × (W − 12px)`. Igualando para TODO `pct`:
-     `W = 100% + 12px` e `L = −7px`. Com `left:0;width:100%` o arrasto erraria
-     7px nas duas pontas, e o desenho dela mudaria de lugar em 0% e em 100%.
-
-     `appearance:none` NOS DOIS LADOS: sem ele o WebKit ignora
-     `::-webkit-slider-thumb` e devolve o polegar do sistema — que é opaco, tem
-     outro tamanho, e apareceria por cima do desenho. */
   .puxa-vol{position:absolute;left:-7px;top:50%;transform:translateY(-50%);
     width:calc(100% + 12px);height:12px;margin:0;padding:0;
     -webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
@@ -1042,211 +233,34 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .puxa-vol::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     width:12px;height:12px;border-radius:50%;background:transparent;border:0;
     cursor:pointer}
-  /* O FOCO SE VÊ, e aqui ele é a ÚNICA marca do polegar: como o polegar é
-     transparente, quem anda pelas setas do teclado não teria nada a olhar. */
   .puxa-vol:focus-visible{outline:2px solid var(--purple);outline-offset:4px}
-  /* O `.solta` — o botão "Liberar" do microfone — SAIU em 31/08/2026, por
-     decisão de produto, e a regra de estilo saiu junto: CSS de elemento que ninguém
-     mais escreve é promessa esperando alguém tropeçar nela. A história inteira
-     (o fato errado que custou o botão, e o preço de não ter volta nesta tela)
-     está na lápide de `tests/unit/test_regua_de_tela_a_aba_controles.py`. */
-  /* O MODO DO MIC é o `.rota` em miniatura: mesma gramática (fileira de
-     escolha exclusiva, um aceso), altura de RÓTULO em vez de altura de
-     escolha, porque ele divide a linha com o nome do bloco. */
-  /* O VÃO E O RECUO SÃO OS MENORES QUE AINDA SEPARAM — 2px entre os três botões
-     e 5px de cada lado do texto. Com os 3 e 7 que eles tinham, a fileira media  (noqa-acento: verbo medir, imperfeito)
-     164px e a linha do rótulo pedia 292 numa moldura de 242: os 50px de
-     diferença eram o "Nativo" e metade do "Desativado" pintados fora da caixa,
-     por cima do bloco dos sensores. Aqui a fileira mede 150 e cabe com folga. */
-  /* O `.mic-modo` HERDAVA A `.rota` INTEIRA — 31/08/2026, quando o usuário mandou os
-     dois descerem *"igual o Sons do Jogo e Todo o som do PC"*. **DEIXOU DE
-     HERDAR EM 20/09/2026**, e o fato que mudou está medido: os nomes que o usuário
-     escreveu para a saída de som empilharam aquela fileira, e esta continua
-     deitada. As duas regras que isso custou moram no bloco `.rota` abaixo,
-     declaradas ali com a razão — não aqui, para não haver dois lugares
-     dizendo a altura do mesmo botão.
-     O seletor continua no HTML (`class="rota mic-modo"`) para dizer QUAL
-     fileira é esta. As 5 linhas de pastilha de 17px que moravam aqui saíram em
-     31/08 e não voltaram. */
-  /* O `data-campo` DO CONTAINER SAIU DAQUI EM 01/09/2026, e ele APAGAVA os dois
-     botões. (O nome dele não se escreve por extenso nesta linha: a régua do
-     casamento acha `data-campo` por expressão regular e NÃO tira comentário,
-     então um endereço citado aqui entraria na conta como se a página o tivesse.)
-     Esta linha dizia que "a ponte viva endereça por ele" — endereçava
-     mesmo, e o preço está medido: o `escrever` do piloto faz
-     `el.textContent = t`, e o `t` de um valor vazio é `—`. Como o
-     `data-campo` estava no `<span>` que ENVOLVE Virtual e Nativo, o primeiro
-     tique da pintura trocava os dois botões por um travessão.
-     Medido no Chrome headless sobre a página publicada: `[data-mic-modo]`
-     antes 4, depois 0, nos dois valores que o pacote emitia (`''` e
-     `'sem posse'`). Endereço de pintura só pode morar em FOLHA — um container
-     endereçado é um container que some. */
-  /* ERAM 30px NAS DUAS FILEIRAS, E NÃO OS 36 DE `--h-escolha` — 31/08/2026, e o
-     número era o preço do pedido. Até ali a coluna do som tinha UMA
-     fileira de escolha (a saída do alto-falante); com os modos do microfone
-     descendo *"igual o Sons do Jogo"* ela passou a ter DUAS, e a coluna foi de
-     236 para 269px. O card foi junto, de 308 para 341, contra os 328 que a
-     caixa reserva: 13px a mais, e o P4 saindo da tela.
-     **OS 30 CAÍRAM EM 20/09/2026** — 17 na fileira da saída de som (três
-     empilhados) e 19 nesta —, e o que trocou foi o fato: os rótulos que o usuário
-     escreveu não cabem deitados. As duas fileiras deixaram de ser IGUAIS entre
-     si porque deixaram de ter a mesma forma; o que continua igual é a
-     gramática (escolha exclusiva, um aceso). */
-  /* A FILEIRA QUEBRA EM VEZ DE CORTAR — decisão, 12/09/2026, opção (b) de
-     três. O que ela comprou está medido: com `flex:1` e `white-space:nowrap` os
-     botões NÃO encolhem abaixo do próprio rótulo, então a fileira transborda a
-     coluna e a coluna a corta. Medido em janela de 1120px: o «Só no controle»
-     sai pela borda direita, com o rótulo pela metade.
-
-     POR QUE NÃO ENCOLHER O TEXTO: a saída fácil seria tirar o `nowrap` e deixar
-     o `ellipsis` comer o rótulo. Isso troca um botão cortado por um botão
-     ilegível — e há régua desta casa que reprova texto engolido sem afordância
-     (`test_a_janela_estreita_nao_engole_o_desenho`, artigo 2). Rótulo de botão
-     não tem onde guardar a metade que sumiu.
-
-     O PREÇO É ALTURA, E SÓ ONDE APERTA: abaixo de ~1140px a terceira desce para
-     uma segunda linha e o card cresce 35px (30 do botão + 5 do vão). Na largura
-     do desenho — e na janela dela, que é 1918 — nada quebra e nada muda: a
-     conta de `ALTURA_DO_CARD` continua valendo porque ela é medida ali. */
-  /* A FILEIRA DA SAÍDA DE SOM EMPILHA — 20/09/2026, e o preço foi medido e pago.
-     Os nomes que o usuário escreveu (*"Efeitos do Jogo, Efeitos do Jogo e Áudio da TV
-     no Controle, Tudo na TV e Nada no Controle"*) não cabem lado a lado: a
-     fileira vive na coluna do Microfone, que mede 278px na janela do produto, e
-     o do meio sozinho pede mais que isso. Lado a lado eles quebrariam em duas
-     linhas de tamanhos diferentes, que é o transbordo que a decisão de 12/09
-     comprou para não cortar rótulo.
-
-     TRÊS LINHAS CUSTAM `3*altura + 2*gap`, e é daí que saem os 70px de um
-     empilhamento ingênuo (3x30 + 2x5 = 100, contra os 30 de uma linha só). É
-     daí que eles voltam: com 17px e vão de 2, a fileira mede 55 — 25 a mais, e
-     não 70. O resto do orçamento veio das outras quatro alturas desta folha
-     (`.mic-modo`, `.mudo-i`, `.sensores-peca .sw` e o respiro da `.moldura`),
-     cada uma com a razão no seu bloco. O cartão ENCOLHEU: a régua
-     `scripts/check_a_altura_do_cartao.py` mede o renderizado contra
-     `aba02.PARA_O_CARD` e reprova quem o fizer crescer.
-
-     O `flex-wrap` SAIU com a coluna: numa direção de coluna ele quebraria em
-     COLUNAS, que é o oposto do que a decisão de 12/09 pediu. O que protege o
-     rótulo agora é a própria linha inteira — cada botão tem a largura da
-     coluna. */
   .rota{display:flex;flex-direction:column;gap:2px;margin-top:5px}
   .rota button{flex:0 0 auto;height:17px;border-radius:5px;font-size:10.5px;white-space:nowrap;font-family:inherit;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);cursor:pointer}
   .rota button.on,.rota .aceso-do-mic.on>button{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
-  /* A FILEIRA DA SAÍDA DE SOM TEM TRÊS, UMA POR LINHA — todo, 15/10/2026. O «junto» saiu da tela
-     e os nomes do alvo cabem numa linha só; o cartão perde o que o par de baixo custava. */
   .rota.trio{gap:3px}
   .rota.trio button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
-  /* A MARCA DO «SONS DO JOGO» COM A FONTE `mix` (o Terror duplica o som do PC no controle, 23/10/2026):
-     uma sigla pintada no botão aceso, sem nó de texto e sem dica própria (um alvo que abre dica tem de
-     ter 24px). O invólucro some do leiaute, como o do modo do microfone. */
   .rota .fonte-mix{display:contents}
   .rota .fonte-mix.junto button.on::after{content:"+ PC";margin-left:6px;padding:0 4px;
     border:1px solid var(--purple);border-radius:4px;font-size:9px;line-height:12px;font-weight:600;
     display:inline-block;vertical-align:1px}
-  /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
-     Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
-     própria de estilo, e o bloco de comentário mais acima registra por quê. A
-     fileira da saída de som empilhou; esta não pode empilhar junto, porque são
-     DOIS rótulos curtos que cabem deitados e uma segunda coluna de três linhas
-     na mesma moldura estouraria o orçamento do cartão.
-     São 19px e não os 17 da vizinha porque este par divide a linha com o nome
-     do bloco, e abaixo de 19 o texto do «Virtual» encosta na borda. */
   .rota.mic-modo{flex-direction:row;flex-wrap:wrap;gap:5px}
   .rota.mic-modo button{flex:1;height:19px}
   .rota.mic-modo .aceso-do-mic{display:contents}
-  /* O «NATIVO» FORA DE ALCANCE — 20/09/2026, decisão de produto, verbatim: *"Fica os
-     dois botões. Mas no rádio o botão fica cinza sem ser ativado"*.
-
-     POR QUE SUMIR SERIA PIOR, e é a razão que ela comprou: um botão que SOME
-     não ensina nada; um botão cinza diz *"isto existe, e aqui não dá"* — e
-     quem plugar o cabo vê a MESMA tela ganhar a opção, sem ter de descobrir
-     que ela existia. A tela é a mesma nos dois transportes; o que muda é o que
-     está ao alcance.
-
-     A CARA É A DA PEÇA DAS DEZ (`monta.botao_cinza` → `.seg button.apagado`),
-     letra por letra, e é de propósito: um segundo cinza nesta casa seria um
-     segundo vocabulário para o mesmo fato.
-
-     E O ENDEREÇO MORA NO CONTAINER, que é o oposto do que o bloco `.mic-modo`
-     mais acima proíbe — a exceção é real e é de alvo, não de descuido. O que
-     apagava os dois botões em 01/09 era o alvo `texto`, que faz
-     `el.textContent = t`; este é `classe`, que só liga e desliga um nome
-     (`hefesto_vivo.escrever`, ramo `classe`, que retorna antes de tocar em
-     conteúdo). O botão não podia carregá-lo porque `data-hef-alvo` é UM por
-     elemento e o dele era o `on` do par. Desde 24/09/2026
-     (A-MIRA-NA-NAVEGACAO-01) o `on` mora no invólucro `aceso-do-mic`, sem
-     caixa, e o botão leva o MESMO campo com o `aria-disabled`: o leitor de
-     tela ouve o cinza que a folha pinta.
-     UM CAMPO SÓ alimenta o cinza e a razão do `?`, como na peça das dez: com
-     dois, seria possível pintar cinza sem razão, ou razão sem cinza. */
   .mic-modo.sem-nativo button[data-mic-modo="nativo"],
   .mic-modo.sem-nativo button[data-mic-modo="nativo"]:hover{
     border-color:var(--border-sutil);background:var(--panel);
     color:var(--fg);font-weight:400;cursor:not-allowed}
-  /* os 16 glifos: grandes, SOLTOS (sem caixa) e coloridos por identidade.
-     UMA REGRA PARA OS QUATRO: `plast` é a cor do plástico (a variável do card) e
-     `on` é a cor de "acendeu agora". Antes havia um par de regras por modelo
-     (`.card.c-blue .gb.on`), e nele o azul pintava o aceso da MESMA cor do
-     plástico — as duas informações ficavam indistinguíveis no card azul. */
   .glifos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:stretch}
   .gb{width:100%;height:100%;min-height:46px;display:flex;align-items:center;
       justify-content:center;color:var(--texto-suave);min-width:0}
-  /* O GLIFO ENCOLHE COM A COLUNA — 19/09/2026, pedido: *"queria que os
-     svgs da aba controles ficassem menores a medida que a largura da página
-     horizontal diminua pra comportar ali"*. <!-- noqa-acento: citação literal -->
-
-     O `glifo()` emite `width="38" height="38"` no `<svg>`, e a grade é
-     `repeat(4,1fr)`: as colunas encolhem, o desenho não. Na foto dela, com a
-     janela estreitada, o triângulo e o R2 saíam CORTADOS pela borda direita do
-     quadro — quatro glifos de 38px mais os vãos não cabiam em menos de 190px.
-
-     CSS VENCE ATRIBUTO DE APRESENTAÇÃO no SVG, então não é preciso tocar o
-     emissor (que é `pecas-do-dualsense.csv` + `glifo()`, com portão próprio).
-     O `max-width` guarda o tamanho aprovado: a peça nunca fica MAIOR que os 38
-     do desenho, só menor quando o espaço obriga. */
   .gb svg{width:100%;height:auto;max-width:38px;max-height:38px}
   .gb.plast{color:var(--plastico)}
   .gb.on{color:var(--pink);filter:drop-shadow(0 0 6px rgba(255,121,198,.55))}
-  /* O QUE FICA NO TOPO DO QUADRO É O GESTO DE MESA, E SÓ ELE.
-     Decisão, 28/08 (`D-CALIBRAR-SENSORES-CALIBRA-A-MESA-INTEIRA`): *"se
-     conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os 4
-     controles ao mesmo tempo"*. Os dois interruptores desceram para a linha de
-     cada controle — são estado POR PEÇA —, e aqui em cima sobrou o Calibrar,
-     que é o único que vale para todos de uma vez.
-     A GRADE DE LARGURA IGUAL DESCEU JUNTO: com um botão só, `grid-auto-columns`
-     não iguala nada. Ela agora está no `.sensores-peca`, que é onde há dois. */
   .sensores{display:flex;gap:8px;margin-left:auto}
-  /* OS DOIS INTERRUPTORES, DENTRO DA LINHA DE CADA CONTROLE.
-     A ALTURA NÃO PODE SER `--h-acao`, e o número diz por quê: a linha fechada
-     tem 34px por fora e 30px por dentro (as duas bordas de 2px do `.ctl`), e um
-     botão de 34 não cabe em 30. Crescer a linha também não é saída — a conta do
-     `PARA_O_CARD` lá embaixo já fecha sem sobra, e 3 linhas 6px mais altas
-     roubariam 18px do card aberto, que tem 7. Os 26px daqui não inventam uma
-     quinta altura na janela: são a mesma pastilha da FITA lá em cima (o chip
-     mede 28 a 30px) e do `perfil-ativo` (29px) — a gramática de "pastilha" desta
-     casa, que é o que estes dois são, e não botão de decidir.
-     A LARGURA IGUAL É A GRADE, não o comprimento do rótulo: `grid-auto-flow:
-     column` com `grid-auto-columns:1fr` dá às duas colunas o tamanho da maior.
-     Como o par é o MESMO nas quatro linhas, o grupo tem a mesma largura nas
-     quatro — e é isso que faz os oito botões nascerem no mesmo x, abertos ou
-     fechados. O `margin-left:auto` é dele agora, e saiu do `.bat`: com os dois
-     pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em
-     quatro lugares diferentes. */
-  /* 06/10/2026 (leva 1.7, item 12): «Analógico virtual» é mais longo que «Mira Virtual». O vão e
-     o enchimento encolheram para a frase do giroscópio no cartão aberto continuar inteira no
-     tamanho do desenho (`test_no_tamanho_do_desenho_nada_e_cortado`).
-     08/10/2026 (O-ANALOGICO-VIRTUAL-E-UM-SO): com o nome de quem joga no título (07/10), as três
-     colunas da largura da maior cortavam a frase. Cada pastilha tem a largura do rótulo dela: o
-     rótulo é o mesmo nas quatro linhas, e os botões continuam nascendo no mesmo x. */
   .sensores-peca{display:grid;grid-auto-flow:column;grid-auto-columns:auto;
                  gap:6px;margin-left:auto}
   .sensores-peca .sw{
-    /* 17px E NÃO 26 — 20/09/2026. A pastilha continua cabendo nos 30px de
-       dentro da linha fechada, e o que ela devolve é altura na coluna dos
-       sensores, que é uma das que disputam a altura do cartão. O parágrafo
-       acima diz por que 34 não cabe; 17 cabe com folga, e é a régua
-       `check_a_altura_do_cartao.py` que agora guarda o orçamento inteiro. */
     height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;cursor:pointer;
 
     border:1px solid var(--green);background:rgba(80,250,123,.09);color:var(--green);
@@ -1256,29 +270,13 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
                         box-shadow:0 0 6px var(--green)}
   .sensores-peca .sw.off{border-color:var(--border-forte);background:var(--app-bg);color:var(--fg)}
   .sensores-peca .sw.off .p{background:var(--border-forte);box-shadow:none}
-  /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
-     A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
-     grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
-     não muda um pixel. O `title` dele é o que muda com a Mira acesa. */
   .sensores-peca .dica-do-giro{display:contents}
-  /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão, 24/09/2026:
-     *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
-     (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
-     recusa — e ela vence o aceso e o apagado do chip, porque no Nativo nenhum
-     dos dois vale. Cor explícita, nada de `opacity`. */
   .sensores-peca.sem-mira .sw[data-gesto="mira"],
   .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--fg);
     cursor:not-allowed}
   .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
     background:var(--border-sutil);box-shadow:none}
-  /* A INCLINAÇÃO EMBAIXO DE CADA ANALÓGICO — 28/09/2026, NO-MODO-XBOX-TUDO-
-     FUNCIONA-01. A pastilha é a dos chips do cabeçalho (17px, a mesma borda e
-     o mesmo ponto), escrita à parte para as regras aprovadas não mudarem de
-     texto. O aceso é o `on` do invólucro (o analógico que recebe a
-     inclinação), e o cinza do Nativo é o `sem-mira` do botão, como o da Mira.
-     O `stick-topo` junta o nome e o chip no topo da coluna, e o
-     `space-between` da coluna continua com três filhos. */
   .stick-topo{display:flex;flex-direction:column}
   .chip-virtual{display:flex;justify-content:center;margin-top:4px}
   .chip-virtual>.sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
@@ -1292,20 +290,11 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--fg);
     cursor:not-allowed}
   .chip-virtual>.sw.sem-mira .p{background:var(--border-sutil);box-shadow:none}
-  /* A PAUSA DO CONTROLE PARADO — 29/09/2026, D-2909-O-CONTROLE-PARADO-NAO-INCLINA.
-     O controle que ninguém segura não inclina, e nada abre na tela: o chip aceso
-     daquele controle fica meio apagado enquanto dura a pausa, e o ponto perde o
-     brilho. O invólucro não ocupa caixa (`display:contents`). */
   .pausa-da-inclinacao{display:contents}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw{opacity:.5}
   .pausa-da-inclinacao.parada .chip-virtual.on>.sw .p{box-shadow:none}
-  /* «MIRA VIRTUAL» EM UMA LINHA — todo, 15/10/2026: o botão diz só isso, com a mesma largura e a
-     mesma altura, ligado ou não; o lado vai na dica. */
   .chip-virtual>.sw{white-space:nowrap;height:26px;min-height:26px;line-height:1;font-size:12px;
     padding:0 8px;gap:6px;width:100%;max-width:none;box-sizing:border-box}
-  /* O INTERRUPTOR DO TOUCHPAD E AS TERÇAS — todo, 15/10/2026. O rótulo diz o estado de agora
-     (Ligado/Desligado, trocados pelo `.off`); a terça acesa é onde o dedo está, sem texto. Desligado,
-     a superfície fica a 35%: o toque não chega ao jogo. */
   .moldura.touchp .todo-sw-toque{margin-left:auto;height:17px;border-radius:6px;font-size:10.5px;
     font-family:inherit;cursor:pointer;border:1px solid var(--green);background:rgba(80,250,123,.09);
     color:var(--green);display:inline-flex;align-items:center;justify-content:center;gap:5px;
@@ -1328,11 +317,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .touch .todo-terca:nth-child(3){left:66.666%}
   .touch .todo-terca.on{background:var(--sel-bg);box-shadow:inset 0 0 0 1px var(--purple)}
   .moldura.touchp:has(.todo-sw-toque.off) .touch > *{opacity:.35}
-  /* A RAZÃO DOS VOLUMES É A DICA DO INVÓLUCRO, sem caixa. */
   .porque-dica{display:contents}
   .touch .ponto{z-index:2}
-  /* O RESPIRO E O CABEÇALHO DO TODO (15/10/2026): as molduras ganham padding de verdade, a da luz
-     respeita o de baixo, e os dois botões do canto têm a mesma altura e a mesma letra. */
   .moldura{padding:5px 10px 7px}
   .card-corpo > div:last-child > .moldura.leituras{padding:5px 10px 7px}
   .moldura.luz .barra-luz{margin-bottom:2px}
@@ -1539,96 +525,11 @@ def identidade(c, *, bat, carga=None, meio=""):
     }
     return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{n_com_endereco}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}<span class="so-vaga">Player {n_com_endereco} <span class="pt">•</span> {SEM_NINGUEM_AQUI}</span></span>
           <span class="div">·</span>
-          <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão,
-               31/08/2026, em duas frases: *"remover o vê como de todos os
-               controles"* e, na correção logo em seguida, *"era o texto Vê como
-               mas o nome da máscara fica"*.
-
-               A PRIMEIRA VOLTA TIROU O SPAN INTEIRO e levou a máscara junto —
-               era ler o pedido pela metade. O que sobra aqui é o dado: o nome
-               que o jogo vê, com o `data-campo="mascara"` intacto, que é o
-               endereço por onde a ponte viva o pinta. Tirar o endereço junto
-               teria quebrado a pintura sem uma linha de aviso.
-
-               O `title` FICA no lugar do texto: quem quiser saber de onde vem a
-               máscara passa o mouse. É a mesma economia que o usuário mandou fazer nos
-               tooltips do resto da janela — o rótulo sai, a explicação continua
-               alcançável. -->
-          <!-- A MARCA DA EMULAÇÃO DEGRADADA SAIU DAQUI — 13/09/2026,
-               A-MARCA-DA-DEGRADACAO-01. Era um `sup` com asterisco colado ao
-               nome da máscara, endereçado `mascara-degradou` com alvo
-               `atributo` sobre o `title`, que a folha só mostrava por
-               `.degradou[title]` — a decisão [07] de 04/09/2026, *"uma marca
-               na palavra e o motivo no hover"*.
-
-               ELA NUNCA ACENDEU: a camada de dicas do piloto tira o `title`
-               do elemento, e o seletor não casava no WebKit. E acesa seria
-               aviso numa dica, que a terceira lista dela tira da tela.
-
-               O FATO NÃO SE PERDEU. O daemon continua publicando
-               `vpad_backend` e `vpad_motivo` no estado, e diz a queda para
-               `uinput` no diário (`vpad_degradado`). Desde a MODO-DE-CONEXAO-01
-               o canal comum é caminho escolhido, não queda.
-
-               O `title` DO `.leia` FICA: ele diz de onde vem a máscara, que é
-               o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b></span>{meio}
-          <!-- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (o «fluindo» saiu em 19/10/2026).
-               CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
-               giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
-               o que a tela mostrava era um número de CATÁLOGO, na dica do
-               interruptor, igual para todo controle e todo momento.
-
-               A frase é de `controller_card.texto_motion`, inclusive as duas
-               exceções (Modo nativo e máscara Xbox) — omiti-las seria a tela
-               parecer quebrada justamente quando ela está certa: em Nativo não
-               há gamepad virtual a que perguntar, e a máscara Xbox não TEM
-               giroscópio.
-
-               O `title` SAIU — 11/09/2026, A3-050, aprovada pelo usuário: ele era
-               uma CÓPIA EXATA do texto ao lado, e passar o mouse mostrava o
-               que ela acabou de ler. O que ele fazia além da dica — dizer se
-               há frase, e portanto se o vão aparece — passou para o
-               `aria-label`, que NÃO vira dica e ainda é a afordância que esta
-               casa exige de um texto que o `ellipsis` pode cortar.
-
-               E ISSO CUROU UM DEFEITO DO MESMO DIA: desde o TOOLTIP-C1 a
-               `DICA_DA_CASA` COLHE todo `title` do DOM vivo para
-               `data-hef-dica` e apaga o atributo — então o `[title]` da folha
-               deixava de casar no produto e esta linha nascia invisível na
-               janela dela, com a página publicada intacta.
-
-               DOIS ELEMENTOS, UM ENDEREÇO SÓ, e é a gramática que o selo do
-               microfone desta mesma faixa já usa: o `achar()` do piloto visita
-               os dois com o MESMO valor e cada um decide pelo próprio alvo — o
-               de fora veste o `aria-label` (a frase inteira), o de
-               dentro recebe o texto, que o `ellipsis` corta se o vão apertar. Dois `data-campo` diferentes para o mesmo fato
-               é o que a casa persegue: eles poderiam DIVERGIR na tela.
-
-               E O DE FORA É QUEM ESCONDE. Sem frase, o alvo `atributo` remove o
-               `aria-label` e a folha apaga o elemento inteiro —
-               ver o bloco `O GIROSCÓPIO NO JOGO` no CSS. O silêncio é a
-               resposta certa e o dono é quem a dá: sem espelho vivo, acusar
-               "sem giroscópio" em todo card seria ruído crônico. Um vão elástico vazio no
-               meio do cabeçalho empurraria a bateria sem dizer por quê.
-
-               O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
-               olha na página parada. O produto o troca no primeiro tique. -->
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label"{_ARIA_DO_GIRO}><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
 {sensores_da_peca(c)}
-          <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
-               PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
-               desde que nasceu, e não havia um `data-campo` onde ele caísse —
-               a régua do casamento a listava entre os órfãos. O número e a
-               barra ficavam nos 100% / 64% que este gerador desenhou, com o
-               controle do usuário em qualquer carga.
-               SÃO DOIS ENDEREÇOS PORQUE SÃO DUAS COISAS: o `.n` recebe TEXTO
-               ("95%", ou "—" quando o daemon não sabe) e o `.cheio` recebe
-               LARGURA, pelo `data-hef-alvo="largura"` que o `escrever` do
-               piloto lê (`hefesto_vivo.py:53`). Um endereço só escreveria o
-               número DENTRO da barra. -->
           <span class="bat">Bateria
             <span class="trilho"><span class="cheio" data-campo="bateria-barra"
               data-hef-alvo="largura" style="width:{bat}%"></span></span>
@@ -1892,20 +793,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
 {identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo))}
       </label>'''
     corpo_do_card = f'''    <div class="{classe}"{casca} data-controle="{c.get("uniq") or c["pref"]}"{marca}>
-      <!-- O ACORDEÃO GANHOU O DÉCIMO ALVO — T-07, 04/09/2026. A ONDA0-P
-           construiu o `marcado` no piloto (o único que escreve `el.checked`) e
-           pediu o ENDEREÇO a esta aba.
-
-           ELE NASCE DE LEITURA, E ISSO É UMA DECISÃO MEDIDA. O `LER_CAMPOS` do
-           piloto devolve `sim`/`""` por este alvo, e é com ele que a régua do
-           mockup passa a saber QUAL card está aberto — hoje ela não sabe. O
-           pacote **não emite** este campo, e não é esquecimento: os quatro
-           rádios são um GRUPO, então pintar `sim` num deles a cada tique
-           reabriria, dez vezes por segundo, o card que ela acabou de fechar; e
-           pintar `""` nos quatro fecharia a mesa inteira, porque um grupo de
-           rádio sem nenhum marcado não tem card aberto. Um endereço de leitura
-           é o que este elemento pode ter sem disputar o clique do usuário.
-           A razão está repetida no pacote, no lugar onde alguém tentaria emitir. -->
       <input class="radio-mesa" type="radio" name="mesa" id="{rid}" data-campo="card-aberto" data-hef-alvo="marcado"{" checked" if c["alvo"] else ""}>
 {fx}
       <div class="corpo-cx">
@@ -1920,25 +807,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span data-campo="{CAMPOS_DA_POSICAO["touch"]}" data-hef-alvo="posicao"{onde_esta(touch[0], touch[1])}><span class="ponto ponto-1{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
               <span data-campo="{CAMPOS_DA_POSICAO["touch2"]}" data-hef-alvo="posicao"{onde_esta(touch2[0], touch2[1])}><span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
           </div>
-          <!-- O TRAVESSÃO VIROU PALAVRA — decisão, 04/09/2026 [02]:
-               *"palavra curta no lugar do travessão, frase inteira no hover"*,
-               com as quatro palavras de produto: Jogo · Steam · Não sei · Apagada.
-
-               O `title` SUBIU DO CAMPO PARA A LINHA, e é o mecanismo que obriga:
-               um elemento aceita UM alvo, e o `.de-quem` já usa o padrão (o
-               texto) para mostrar a palavra. A frase inteira vai no `title` da
-               linha, pelo alvo `atributo` — e a área de hover cresce do valor
-               para a linha, que é sobre o que a frase fala.
-
-               A FRASE NÃO CABE NO CAMPO, e está medido: a linha mede 148px e
-               "Lightbar: apagada" ocupa 86,7px QUEBRANDO em duas alturas. Palavra
-               cabe; frase, não. Foi essa medição que deixou os quatro estados
-               num travessão só até hoje.
-
-               E O TEXTO SAIU DAQUI PARA O PACOTE (`a02_controles.DICA_DA_LUZ`),
-               pela lei do cabeçalho deste arquivo: o texto de tela desta aba mora
-               no pacote. Com o `title` PINTADO, um literal aqui seria a segunda
-               cópia — e a viva e a do desenho divergiriam na primeira edição. -->
           <div class="moldura luz" style="margin-top:9px">
             <div class="rot rot-linha" data-campo="luz-porque" data-hef-alvo="atributo" data-hef-atributo="title" title="{DE_QUEM_E_A_LUZ}">Barra de luz
               <span class="de-quem" data-campo="luz-hex">{luz.upper()}</span></div>
@@ -1947,27 +815,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           </div>
           <div class="moldura led" style="margin-top:9px" title="{DICA_LED_JOGADOR}">
             <div class="rot rot-linha">LED do jogador</div>
-            <!-- AS CINCO LÂMPADAS GANHARAM ENDEREÇO — 14/09/2026, queixa de uso:
-                 *"a interface tá dessincronizada com os controles reais (o
-                 player do controle, o led indicativo do player)"*.
-
-                 ELAS ERAM DESENHO CRAVADO. O gerador as escrevia uma vez, com o
-                 `jogador` da CENA do mockup, e nenhum tique as visitava: o
-                 `data-campo` não existia, então o `achar()` do piloto passava ao
-                 largo. Um controle que trocasse de assento — e o assento é da
-                 ORDEM DE CHEGADA, por decisão de produto — mostrava o padrão de outro
-                 jogador até a janela ser fechada.
-
-                 O ALVO É `html` E NÃO `classe`, e a razão é o que muda entre um
-                 jogador e outro: não é UMA lâmpada acender, é o DESENHO inteiro
-                 das cinco mudar (`1 | vão | 3 | vão | 1`, com o P1 no meio). Um
-                 alvo `classe` por lâmpada seriam cinco endereços para um valor
-                 só, e as cinco poderiam divergir entre si.
-
-                 QUEM MONTA O HTML É O MESMO `monta.luzinhas` que o gerador usa
-                 — o pacote o chama com o jogador VIVO. Duas receitas para o
-                 mesmo desenho é a segunda verdade que esta casa mata; aqui não
-                 há segunda. -->
             <div class="lampadas" data-campo="lampadas"
               data-hef-alvo="html">{luzinhas(c["jogador"])}</div>
           </div>
@@ -2009,90 +856,22 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
         <div>
           <div class="moldura" data-bloco="microfone"
                data-campo="mic-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <!-- O "LIBERAR" SAIU (30/08/2026): o botão físico do controle nunca
-                 deixa de comandar a interface, então não há posse a devolver, e um
-                 botão que desfaz algo que não acontece ensina errado. O
-                 `mic.set {{muted: null}}` segue no daemon (`ipc_handlers.py`) e
-                 devolve a posse ao `hid-playstation`. -->
             <div class="rot rot-linha" data-dica="O som deste microfone chega ao PC">Microfone
               <span class="porque-dica" data-dica="Luz acesa: microfone ligado, não que alguém esteja ouvindo">{selo_do_mic}</span>
-              <!-- O MODO DO MICROFONE — pedido, 30/08: *"tá faltando o Modo do
-                   Mic: Virtual, Desativado e Nativo"*.
-
-                   ELE MORA NA LINHA DO RÓTULO, e isso é orçamento, não estética.
-                   Como fileira própria embaixo ele custava 42px (36 da altura de
-                   escolha + 6 de margem), e o card ia de 304 para 350 — contra os
-                   308 que `PARA_O_CARD` reserva. O quadro passava a rolar por
-                   dentro e o P4 saía da tela; medido antes de escolher este lugar.
-                   Aqui ele ocupa o vão que o "Liberar" deixou: custo ZERO de
-                   altura, e ainda fica ao lado do selo que diz se o mic está
-                   ATIVO — que é a informação com que ele conversa. -->
-              <!-- AS CHAVES SÃO SIMPLES, E A DUPLA ERA UM BOTÃO MORTO.
-                   Este bloco é `return f` com aspas triplas (linha 834), e chave
-                   dupla ESCAPA para chave simples literal: a expressão nunca era
-                   avaliada e os 12 botões (4 controles x 3 modos) nasciam todos com
-                   a mesma classe crua, nenhum aceso (`classList.contains("on")`
-                   falso nos doze). Conferir que os botões EXISTEM não prova que um
-                   deles ACENDE. Este comentário não traz chaves: dentro da
-                   f-string elas quebram o gerador. -->
             </div>
             {onda(mic_v, mic_mudo, "mic")}
             {linha_de_volume("mic-porque")}
-              <!-- O VOLUME DO MICROFONE GANHA ENDEREÇO, 12/09/2026: é a
-                   METADE QUE FALTOU da decisão de 02/09 (item 16), que
-                   endereçou o alto-falante desta mesma coluna e deixou este
-                   deslizante no número do DESENHO. Dono do valor e razão dos
-                   dois alvos num endereço só: `a02_controles.volume_do_microfone`. -->
               <span class="rot-vol">{ROTULO_LINHA_VOLUME}</span>
               <span class="trilho"><span class="cheio" data-campo="mic-barra"
                 data-hef-alvo="largura" style="width:{mic_vol}%"></span><input class="puxa-vol" type="range" min="0" max="100" step="1" value="{mic_vol}" data-gesto="volume" data-volume="microfone" data-campo="mic-barra" data-hef-alvo="valor" aria-label="{ROTULO_VOL_MIC}" data-dica="{DICA_VOL_MIC}"></span>
               <span class="n" data-campo="mic-num">{mic_vol}</span>
               <button class="mudo-i" data-gesto="mic-retorno" data-campo="mic-retorno" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DA_LUZ_DO_MIC}" data-dica="{DICA_MIC_TESTAR}" aria-pressed="false">🎙</button>
             </div></div>
-            <!-- O PAR «VIRTUAL | NATIVO» SAIU — decisão, 02/10/2026
-                 (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): todo controle tem o
-                 microfone dele, no cabo e no BT, e a entrada da máquina é o
-                 padrão quando ela não escolheu outra. Não há mais o que
-                 escolher aqui; o 🎙 continua o ato de ligar e calar. -->
-            <!-- QUEM ESTÁ TE OUVINDO — 19/09/2026, decisão de produto na
-                 `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`, e o usuário escolheu as DUAS
-                 metades: a luz do controle passa a espelhar o BOTÃO, e a aba
-                 passa a dizer QUEM ouve, por escrito.
-
-                 O DEFEITO QUE ISTO CURA É DE LEITURA, e custou o microfone
-                 do usuário: com o mic LIGADO e nenhum app gravando, a luz apagada
-                 lhe disse "desligado", e o primeiro clique DESLIGOU o que já
-                 estava no ar. Com a luz acesa nos dois casos, alguém tem de
-                 dizer a diferença — é esta linha.
-
-                 É UMA `monta.ressalva` E NÃO UMA LINHA FIXA: ela some
-                 sozinha quando não há o que dizer (`:has(.nada)`), e a coluna
-                 do som é uma das DUAS que mandam na altura do card.
-
-                 MEDIDO no Chrome headless sobre esta página, na janela do
-                 produto (1180px), em 19/09/2026 — e a pergunta era uma só,
-                 *"o quadro passa a rolar por dentro?"*:
-
-                     card aberto   329,6 -> 351,9 px com a linha escrita
-                     .quadro-corpo sem rolagem NOS DOIS (scroll == client)
-                     a linha       17,3 px, UMA linha, na coluna de 281 px
-
-                 A frase mais longa que o dono emite ainda cabe numa linha, e
-                 é ele quem garante isso: acima de
-                 `mesa_viva.LIMITE_DA_LINHA_DE_QUEM_OUVE` ela troca os nomes
-                 pela contagem. Duas linhas aqui fazem o quadro rolar e o P4
-                 sair da tela, que já aconteceu nesta aba em 30/08. -->
             {monta_ressalva("mic-ressalva")}
 
           </div>
           <div class="moldura" style="margin-top:9px" data-bloco="alto-falante"
                data-campo="alto-apagado" data-hef-alvo="atributo" data-hef-atributo="data-apagado">
-            <!-- O RÓTULO DO ALTO-FALANTE VIROU LINHA, COMO O DO MICROFONE —
-                 24/09/2026, O-TERCEIRO-NOME-DELA-01. Ele era caixa INLINE, e
-                 o ponto de interrogação, com o vertical-align de menos 3 px,
-                 esticava a linha: 21,6 px contra os 17 do irmão de cima,
-                 medido no Chrome a 1180. Em linha flexível os dois têm a
-                 mesma altura, e os 4,6 px que sobram pagam o quarto botão. -->
             <div class="rot rot-linha">Alto-falante
               {sufixo_do_canal(c)}
               <span class="selo-som" data-campo="alto-selo" data-hef-alvo="html">{NADA_A_DIZER}</span>
@@ -2105,26 +884,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="n" data-campo="alto-num">{alto_v[0]}</span>
               <button class="mudo-i" data-gesto="mudo" data-mudo="alto-falante" data-campo="alto-mudo" data-hef-alvo="atributo" data-hef-atributo="{ATRIBUTO_DO_SOM}" {ATRIBUTO_DO_SOM}="{alto_som}" data-dica="{DICA_ALTO_MUDO}">♪</button>
             </div></div>
-            <!-- TRÊS BOTÕES, UMA PERGUNTA — 10/09/2026 (a A3). A fileira
-                 responde *"o que este controle ouve?"*, e o terceiro estado é
-                 a `fonte` que o produto já obedecia sem ninguém poder
-                 escolher. O do meio é o único que NÃO tira o som da televisão,
-                 e é o que faz sentido numa mesa de quatro: cada um ouve junto,
-                 no seu próprio plástico.
-                 A GRAMÁTICA É A MESMA DOS OUTROS DOIS — mesmo `data-campo`,
-                 cada botão com o seu `data-hef-quando` —, e é por isso que o
-                 terceiro não custa uma linha de folha nem uma altura a mais:
-                 um par novo abaixo seria a segunda gramática que o gerador já
-                 recusou uma vez. -->
-            <!-- O QUARTO BOTÃO VOLTA, E OS DOIS ÚLTIMOS FICAM LADO A LADO —
-                 24/09/2026, decisão de 23/09: voltar o quarto, encaixado
-                 pelo desenho, sem quebrar a altura do cartão. Os dois de baixo
-                 são o espelho um do outro, e é por isso que dividem a linha:
-                 «Tudo no PC e nada no controle» à esquerda, «Tudo no Controle e
-                 Nada no PC» à direita. Na janela do produto (1180) cada um
-                 quebra em duas linhas; da janela de 1440 para cima cabem numa
-                 só. A gramática não muda: mesmo gesto, mesmo endereço, cada
-                 botão com o seu valor. -->
             <div class="rota trio">
               <span class="fonte-mix{' junto' if junto and not rota_nada else ''}" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="{DICA_SO_OS_EFEITOS}">{ROTULO_SO_OS_EFEITOS}</button></span>
               <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="{DICA_TUDO_NO_CONTROLE}">{ROTULO_TUDO_NO_CONTROLE}</button>
@@ -2134,23 +893,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
         </div>
 
         <div>
-          <!-- UM BLOCO, DOIS SENSORES — 30/08/2026.
-
-               O acelerômetro entrou por decisão de produto (*"não era pra ele sair, era
-               pra ele FUNCIONAR"*), e como MOLDURA PRÓPRIA ele não cabia: medido,
-               a coluna dos sensores passava de 190 para 278px de conteúdo natural,
-               contra os **232** que as cinco colunas compartilham (a conta está no
-               `ALTURA_DO_CARD`, e o card tem 4px de folga). O quadro rolava por
-               dentro e o P4 saía da tela.
-
-               Dois sensores numa moldura só custam UM rótulo e UMA borda em vez de
-               dois — e é honesto: eles são o MESMO nó evdev (`Motion Sensors`),
-               separados só pelo código do eixo. ABS_RX/RY/RZ é o giro, ABS_X/Y/Z é
-               o acelerômetro; as escalas é que são independentes (1024 contra
-               8192), e por isso cada grupo diz a sua unidade.
-
-               Os números do acelerômetro do P1 são MEDIDOS, no daemon vivo:
-               {{'x': 0.105, 'y': 0.976, 'z': 0.170}} — |v| = 0,996 g, a gravidade. -->
           <div class="moldura leituras" data-bloco="giroscopio">
             <div class="rot" data-dica="Leitura viva, em graus por segundo">Giroscópio</div>
 {giro_html}
@@ -2420,9 +1162,6 @@ def _css_da_familia_dos_botoes() -> str:
             regras.append(f'  {alvo} svg{{display:none}}\n'
                           f'  {alvo}::before{{content:"{letra}"}}\n')
     return (
-        "  /* A FAMÍLIA DOS BOTÕES DE FACE — o que o usuário declarou do controle\n"
-        "     (`controles.botoes`, ou o modo da chave física) troca só o RÓTULO dos\n"
-        "     quatro da face, pela posição. Sem `data-botoes` nada muda. */\n"
         '  .glifos[data-botoes] .gb[data-glifo]::before{font-weight:700;font-size:22px;\n'
         "    line-height:1}\n" + "".join(regras)
     )
@@ -2432,41 +1171,7 @@ CSS += _css_da_familia_dos_botoes()
 
 CSS += f"""
 {CSS_DA_CARGA}  .faixa{{--larg-bateria:{LARG_BATERIA}px}}
-  /* A POSIÇÃO DOS PONTINHOS — uma regra só, e ela lê as duas variáveis que o
-     produto escreve no próprio pontinho (alvo `posicao`), com o repouso como
-     reserva. Era uma folha endereçada trocada inteira a cada tique, e cada
-     troca repintava a janela toda (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01). */
   {REGRA_DAS_POSICOES}
-  /* O CARD ABERTO NÃO ESTICA — 14/09/2026, queixa de uso com a foto na mão:
-     *"o tamanho do card completo verticalmente"* está *"o triplo"*.
-
-     ERA `flex:1 0 auto`, e as três linhas abaixo propagavam a esticada para
-     dentro (`.corpo-cx` e `.card-corpo` com `flex:1`). O efeito, MEDIDO na
-     página publicada a 1920x1080, com dois controles ligados e dois lugares
-     vazios: o card ficava com **498px** para um conteúdo que pede **343** — o
-     `.card-corpo` esticado a 438 sobre um mínimo de 271. Os 155px de sobra não
-     iam para lugar nenhum: eles viravam vão dentro das cinco colunas, que é o
-     ar que o usuário viu na caixa do Microfone e na do Alto-falante.
-
-     E A SOBRA NÃO TINHA DONO: nenhuma das cinco colunas manda na altura —
-     medido escondendo uma a uma, o `.card-corpo` fica em 438 com qualquer uma
-     fora. Quem mandava era o `.quadro-corpo`, de cima para baixo, porque o card
-     era o único filho elástico de um quadro que ocupa a janela.
-
-     O PRECEDENTE É DO USUÁRIO, e é do mesmo defeito um andar acima (`topo.html`,
-     27/08): *"nessa aba encurtar verticalmente o bloco cinza então"* — o último
-     quadro esticava até o rodapé e virava um retângulo vazio. A cura foi a
-     mesma: o elemento fica do tamanho do que tem dentro.
-
-     O QUADRO ENCOLHE JUNTO (`flex:0 1 auto`, logo abaixo), senão a sobra só
-     mudaria de lugar: o card fecharia em 343 e o vão cinza apareceria embaixo
-     dele, dentro do quadro. Medido depois da cura: card **343**, quadro **523**
-     (era 678).
-
-     E O "TODOS" CONTINUA ROLANDO, que é o único estado desta aba que rola: com
-     os quatro cards abertos o conteúdo passa do espaço, o `flex-shrink:1` deixa
-     o quadro voltar ao teto e o `overflow-y:auto` do `.quadro-corpo` faz o
-     resto. Medido: `scrollHeight > clientHeight` no "Todos", como antes. */
   {_aberto()}{{height:auto;flex:0 0 auto;padding-bottom:12px;
     background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--panel)}}
   {_aberto(" > .faixa")}{{flex:0 0 var(--h-acao);margin:10px 14px 0;padding:0 11px;
@@ -2475,34 +1180,14 @@ CSS += f"""
   {_aberto(" > .corpo-cx")}{{flex:0 0 auto;height:auto;overflow:visible;visibility:visible;
     display:flex;flex-direction:column}}
   {_aberto(" > .corpo-cx > .card-corpo")}{{flex:0 0 auto}}
-  /* O QUADRO DESTA ABA FICA DO TAMANHO DO QUE TEM DENTRO — a outra metade da
-     cura acima. `flex:0 1 auto` mantém o `flex-shrink` que o "Todos" precisa e
-     tira só o `flex-grow` que criava o vão. A regra de `topo.html` continua
-     valendo para as outras nove abas; esta a estreita para a 02. */
   .miolo > .quadro.estica{{flex:0 1 auto}}
   {_aberto(" .so-fechado")}{{display:none}}
-  /* QUEM JOGA, só no cartão aberto: o nome dele, ou o «Pn» sem nome. A tira fechada tem o «Pn •»
-     dela (`.so-fechado`), e o assento vazio nunca abre, então o par volta a sumir nele. */
   .so-aberto{{display:none}}
   {_aberto(" .so-aberto")}{{display:inline}}
-  /* O PREÇO DO NOME: a faixa aberta quebra em duas linhas (e a bateria cai) quando a soma dos itens
-     passa da largura, porque o `flex-wrap:wrap` conta o tamanho CHEIO de cada um. Um nome de 24
-     letras com o plástico mais longo da tabela (31) passava. O `.card-nome` aberto tem teto, corta
-     com reticência e já leva o `title` com a linha inteira (`card-vpad`); a frase do giroscópio
-     (`flex:1 1 0`) é quem cede primeiro, antes de o nome perder uma letra. */
   {_aberto(" .card-nome")}{{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-  /* A LINHA DO GIROSCÓPIO ACENDE COM O CARD, e some sem `title` — ver o bloco
-     `O GIROSCÓPIO NO JOGO` lá em cima. As duas regras são irmãs de propósito:
-     quem apagar uma sem a outra deixa ou um vão elástico vazio no cabeçalho, ou
-     a frase presa na linha fechada, que não tem largura para ela. */
   {_aberto(" .faixa .no-jogo[aria-label]")}{{display:block;flex:1 1 0;min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
     color:var(--fg);font-weight:400}}
-  /* O LUGAR VAZIO NÃO ABRE, POR REGRA — ver o bloco de `_fechado_de_vez`. As
-     quatro regras desfazem, uma a uma, o que as quatro do `_aberto` fariam: a
-     altura do cartão, a moldura da faixa, o corpo que apareceria e o número do
-     jogador que sumiria da tira. Faltar UMA delas deixa o assento vazio meio
-     aberto, que é pior que aberto — quem olha lê a moldura antes do campo. */
   {_fechado_de_vez()}{{height:{ALTURA_VAZIA}px;flex:0 0 auto;padding-bottom:0;
     background:transparent}}
   {_fechado_de_vez(" > .faixa")}{{flex:1;margin:0;padding:0 26px;
@@ -2512,103 +1197,17 @@ CSS += f"""
     visibility:hidden;display:block}}
   {_fechado_de_vez(" .so-fechado")}{{display:inline}}
   {_fechado_de_vez(" .so-aberto")}{{display:none}}
-  /* A VAGA DIZ «Player N • Desconectado» E MAIS NADA (r4-02-18, aprovada em 20/10/2026). A face mora
-     DENTRO do `.card-nome`, nos quatro lugares com a mesma estrutura, e só o `.off` a mostra: o
-     controle que chega reabre o lugar (passo `1c` do piloto) sem recarregar a página, e os campos
-     de plástico, máscara, microfone, sensores e bateria seguem onde a pintura os acha. */
   .so-vaga{{display:none}}
   .ctl.off > .faixa > :not(.card-nome){{display:none !important}}
   .ctl.off .card-nome > :not(.so-vaga){{display:none !important}}
   .ctl.off .card-nome > .so-vaga{{display:inline !important}}
   {CHIP_ACESO}{{background:var(--sel-bg);color:var(--fg);font-weight:600}}
   .fita label.chip{{cursor:pointer}}
-  /* A LÁPIDE DA LEGENDA. Um item que fala do que SAIU não pode ter a mesma cara
-     de um item que fala do que está na tela: era assim que o "Liberar" seguia
-     lido como novidade dois dias depois de ser removido. O recuo e a cor mais
-     apagada dizem "isto é registro", e a régua do gerador usa esta mesma classe
-     como a única licença para nomear um termo que o desenho não escreve. */
   .nota li.foi{{color:var(--fg);border-left:2px solid var(--border-forte);
     padding-left:9px;list-style:none;margin-left:-16px}}
-  /* ---------- O ♪ EM DUAS CORES — decisão de produto, 02-Q9 ----------
-     Ela marcou *"O botão de som acende"* e digitou por cima *"Com cor
-     diferente"*; na segunda volta fechou o que isso quer dizer:
-     **borda VERDE se ligado, ÂMBAR se desligado**.
-
-     SÃO DOIS ESTADOS PINTADOS, e o que havia era um e meio: MUDO pintava
-     `--red` e ATIVO ficava com a mesma cara de "não sei". O `--red` é a cor da
-     FALHA nesta casa, e um alto-falante calado por escolha do usuário não é falha; o
-     âmbar é a palavra que esta janela já usa para o meio-termo — a mesma
-     `--orange` do `.selo-som`, com a razão escrita no bloco dele.
-
-     O TERCEIRO ESTADO NÃO SE DESENHA: sem `data-som` o botão fica com o
-     `.mudo-i` de base, que é o cinza de "ninguém leu o alto-falante deste
-     controle". O piloto REMOVE o atributo no `—` (o ramo `vazio || t === '—'`
-     do alvo `atributo`), então o neutro é o que sobra sozinho.
-
-     NENHUMA COR NOVA: `--green` e `--orange` já estão na folha desta página, e
-     a palavra dos seletores vem de `mesa_viva.selo_do_mic` pelo
-     `SELO_ATIVO`/`SELO_MUDO` — nunca digitada aqui. O `rgba` do fundo é o
-     mesmo `--orange` a 10 %, e é a forma que esta página já usa duas vezes
-     (a tarja de recusa a 7 %, o `.gb.on` com o `--pink` a 55 %): `var()` não
-     entra em `rgba()`, e um segundo token só para o fundo seria uma cor a mais
-     na folha para dizer a mesma coisa.
-
-     O CINZA DA RAZÃO CONTINUA VENCENDO, e por ESPECIFICIDADE e não por ordem:
-     `.vol[data-porque] .mudo-i` é (0,3,0) contra os (0,2,0) destas duas. Um
-     botão que o produto vai recusar não pode aparecer verde — conferido na
-     foto, não na conta. */
   .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_ATIVO}"]{{border-color:var(--green);color:var(--green)}}
   .mudo-i[{ATRIBUTO_DO_SOM}="{SELO_MUDO}"]{{border-color:var(--orange);color:var(--orange);
     background:rgba(255,184,108,.1)}}
-  /* ---------- O 🎙 EM TRÊS ESTADOS — pedido, 10/09/2026 ----------
-     *"ele aceso (vai indicar que agora tá gravando audio), ele captando audio
-     vai ficar no estado de piscando (guia visual pro leigo que pegar o
-     controle de primeira)"*.
-
-     A INVERSÃO É O PEDIDO: o botão falava a língua de quem programa (`mudo-i`,
-     "calar") e passa a falar a de quem pega o controle pela primeira vez —
-     **aceso = estou sendo ouvido**.
-
-     `.mudo-i.on` JÁ ESTEVE AQUI E CAIU EM 06/09, com razão: pintava `--red` (a
-     cor da FALHA) e, no segundo card, a classe vinha do GERADOR e não do
-     aparelho. Estas duas regras são o oposto nos dois pontos — a palavra vem
-     de `mesa_viva.estado_do_botao_do_mic`, o valor vem do daemon a cada tique,
-     e a cor é `--green`, a mesma que o ♪ usa para "ligado". **Se o escritor
-     vivo sumir, estas regras saem junto** — é a regra que o `.solta` deixou:
-     *"CSS de elemento que ninguém mais escreve é promessa esperando alguém
-     tropeçar nela"*.
-
-     ELE NÃO PISCA MAIS — decisão, 12/09/2026, escolhendo a opção (c) de
-     três: **verde FIXO enquanto está captando.** A razão é de desenho e ela a
-     comprou inteira: *a barra de nível está a dois centímetros mostrando o
-     mesmo fato*, e duas animações para um fato só competem entre si — a que
-     carrega informação é a barra, que se move com a voz. O botão diz o ESTADO,
-     e estado não pulsa.
-
-     O QUE ISTO NÃO CUSTOU: nada. Os três estados continuam distintos sem
-     movimento — mudo é neutro, no ar é borda e letra verdes, captando é isso
-     MAIS o fundo esverdeado. A distinção nunca morou na animação.
-
-     E O VALOR NÃO É NOVO: `.14` é exatamente o que o ramo
-     `prefers-reduced-motion` já pintava para quem pede menos movimento. A
-     escolha do usuário promoveu esse ramo a único, em vez de inventar um terceiro
-     tom — quem já via a tela assim continua vendo a mesma coisa.
-
-     **A DECLARAÇÃO DO QUADRO E O RAMO DE MENOS MOVIMENTO SAÍRAM JUNTO**, e é a
-     regra que o `.solta` deixou: *"CSS de elemento que ninguém mais escreve é
-     promessa esperando alguém tropeçar nela"*. Uma animação sem quem a acione
-     é a mesma promessa, com outro nome.
-
-     E ESTE PARÁGRAFO NÃO SOLETRA O QUE SAIU, de propósito: a régua irmã varre
-     este mesmo bloco procurando a palavra do movimento, e um comentário que a
-     escrevesse viraria a primeira ocorrência do que ele veio dizer que não
-     existe mais. Esta casa já pagou por isso quatro vezes em uma semana. */
-  /* O RETORNO É O ÚNICO VALOR QUE SOBROU — 21/09/2026. As duas regras dos
-     estados da LUZ DO PLÁSTICO saíram com o campo que as escrevia: o 🎙 passou
-     a vestir o que ele CAUSA, e o valor que ninguém escreve mais não pode
-     ficar no seletor. É a regra que o `.solta` deixou — *"CSS de elemento que
-     ninguém mais escreve é promessa esperando alguém tropeçar nela"* —, e o
-     parágrafo acima já a aplicava a si mesmo. */
   .mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="{MIC_RETORNO}"]{{
     border-color:var(--green);color:var(--green)}}
 """
@@ -2618,12 +1217,6 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         {trava_do_nativo("nestes ajustes")}
-        <!-- O CALIBRAR FICA NO CANTO SUPERIOR DIREITO, sozinho desde 29/09/2026.
-             Em 31/08 eram dois botões aqui (*"A posição deles volta pro canto
-             superior direito."*); o «Mapa do controle» ganhou a casa na aba
-             Conexões em 25/09 e saiu desta em 29/09, por ordem de produto: *"mapa do
-             controle deveria ter saído da guia de Controles e ter ficado só na
-             guia conexões."* A classe `.sensores` continua a alinhá-lo à direita. -->
         <span class="sensores">
           <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">{ROTULO_DO_CALIBRAR}</a>
           {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
@@ -2657,7 +1250,7 @@ LEGENDA = f'''<div class="nota">
   </ul>
   <h2>O que mudou em 03/10</h2>
   <ul>
-    <li><b>Os botões «Virtual» e «Nativo» do Microfone saíram</b>, como você decidiu: <i>"deixariamos de ter a opção nativo ou virtual como escolha na interface"</i>. <!-- noqa-acento: citação literal --> Todo controle tem o microfone e o alto-falante dele, no cabo e no BT, e o microfone do computador (uma webcam, por exemplo) continua o padrão quando você não escolheu outro. O 🎙 continua ligando e calando.</li>
+    <li><b>Os botões «Virtual» e «Nativo» do Microfone saíram</b>, como você decidiu: <i>"deixariamos de ter a opção nativo ou virtual como escolha na interface"</i>. Todo controle tem o microfone e o alto-falante dele, no cabo e no BT, e o microfone do computador (uma webcam, por exemplo) continua o padrão quando você não escolheu outro. O 🎙 continua ligando e calando.</li>
   </ul>
   <h2>O que mudou em 24/09</h2>
   <ul>

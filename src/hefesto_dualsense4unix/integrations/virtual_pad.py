@@ -363,7 +363,7 @@ def make_virtual_pad(
     do jogo, como sempre foi — o contrato histórico, intacto.
 
     A RESOLUÇÃO É AQUI, E ANTES DO BACKEND — a armadilha que
-    `external_mask.py:68-77` descreveu para quem escrevesse este degrau: o gate
+    `external_mask.py:67-76` descreveu para quem escrevesse este degrau: o gate
     do `_try_uhid` (*"não é dualsense, logo não é meu"*) decide pela máscara que
     RECEBE. Se ele continuasse recebendo a do JOGO, um jogador que escolheu
     `dualsense` numa sessão `xbox` teria o uhid vetado e cairia no uinput com

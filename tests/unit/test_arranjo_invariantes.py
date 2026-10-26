@@ -438,6 +438,8 @@ _LINK_RELATIVO_DO_MOCKUP = re.compile(r'href="(?!https?:|//|#|mailto:)([^"#?]+\.
 
 def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
     """O número da tela é o número medido — em TODA cópia que exista no disco."""
+    assert "dualsense_bt_audio.py" in (radio.__doc__ or ""), (
+        "a docstring do radio_da_mesa tem de citar onde o A/B foi medido")
     raiz = _FONTE_DO_MOTOR.parents[3]
     medidas = 0
     for caminho in _CAMINHOS_DO_MOCKUP_DO_ARRANJO:
@@ -450,8 +452,6 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
             "var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;" in texto
         ), f"{caminho}: as constantes do motor não são as medidas"
         assert ">277<" not in texto, f"{caminho}: o número arredondado voltou"
-        assert "dualsense_bt_audio.py" in texto, (
-            f"{caminho}: a legenda tem de citar onde o A/B foi medido")
     assert medidas >= len(_CASAS_VERSIONADAS), (
         f"só {medidas} cópia(s) do mockup foram medidas; as duas casas "
         f"versionadas {_CASAS_VERSIONADAS} viajam com o git e têm de estar aqui")

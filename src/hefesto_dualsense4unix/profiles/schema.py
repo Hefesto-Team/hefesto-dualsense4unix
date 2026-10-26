@@ -548,7 +548,7 @@ class ProfileAtivacaoConfig(BaseModel):
         motivo = recusar(self.alternar, self.repetir, self.longo, self.duplo, self.travar,
                          self.sequencia)
         if motivo:
-            raise ValueError(f"ativacao: {motivo}")  # (noqa-acento)
+            raise ValueError(f"ativacao: {motivo}")
         return self
 
 

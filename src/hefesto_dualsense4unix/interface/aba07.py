@@ -3,7 +3,7 @@ import csv
 import re
 
 import onde
-from monta import CONECTADOS, CSS_POPUP, cor_da_zona, monta
+from monta import CONECTADOS, CSS_POPUP, FIM_DA_ABA, cor_da_zona, monta
 
 import desenho_da_experimental as exp
 
@@ -110,7 +110,7 @@ MIOLO = exp.miolo()
 
 _TIRA = '<a class="aba ativa" href="07-lancadores.html">Experimental</a>'
 _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico(?: on)?"[^\n]*\n', re.M)
-_MARCA = "<!-- ===== fim da aba ===== -->"
+_MARCA = FIM_DA_ABA
 
 
 def _sem_os_tres(fila: str) -> bool:

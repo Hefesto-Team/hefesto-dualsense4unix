@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
 from monta import acesos_da_fita as _acesos_da_fita
-from monta import TOPO
+from monta import FIM_DA_ABA, TOPO
 from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,
                    cor_da_zona, monta, player_slot_color,
                    ressalva as monta_ressalva, svg)
@@ -235,72 +235,14 @@ def _dicas_da_cena():
 rotulo = _pacote08.rotulo_do_controle
 
 
-CSS = CSS_GLIFO + CSS_POPUP + """
-  /* 6.1 · O RESPIRO DO RÓTULO QUE EXPANDE — 31/08/2026, pedido com duas
-     fotos desta aba: *"o nome dos campos que expandem não tem respiro"*.
-
-     MEDIDO no Chrome antes de mexer, e a medida acha a causa exata: o
-     `.quadro-topo` do esqueleto é `padding:11px 14px 0` — **zero embaixo**. Num
-     quadro comum isso não aparece, porque o conteúdo vem logo abaixo e traz o
-     próprio respiro. Num acordeão FECHADO não vem nada: sobrava **1px** entre o
-     texto e a borda de baixo da faixa, contra 12px em cima. O rótulo não estava
-     centrado na faixa — estava encostado nela.
-
-     A CURA DEFINITIVA É UMA VARIÁVEL NO `topo.html`, como a lista dela manda —
-     e o `topo.html` está CONGELADO por decisão de produto de hoje, enquanto duas
-     sessões trabalham na mesma árvore. Esta regra é local à Conexões, que é a
-     única aba com acordeão de verdade (medido: `input.abre` = 3 aqui, 0 nas
-     outras doze páginas). Quando o esqueleto descongelar, ela sobe para lá e
-     esta some. */
-  .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
-  /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026, pedido: *«tem uma linha
-     abaixo do gestão de controles que não tá sendo usada. Deveriamos subir os
-     blocos de seção pra ocupar ali de cima tambem»* (noqa-acento: citação literal).
-     O respiro de baixo do rótulo (11px) é do acordeão FECHADO; aberto, o
-     corpo vem logo embaixo e os dois respiros somavam 21px de faixa vazia. */
+CSS = CSS_GLIFO + CSS_POPUP + """  .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
   .quadro:has(> input.abre:checked) .quadro-topo{padding-bottom:5px}
   .quadro:has(> input.abre:checked) > .quadro-corpo{padding-top:4px}
 
-  /* O NOME DO ADAPTADOR É EDITÁVEL NO LUGAR — o botão `Renomear` saiu.
-     `contenteditable` é o que o mockup faz sem JavaScript; o DUPLO clique que o usuário
-     pediu é gesto do produto. O tracejado é o que diz que ali se escreve — sem
-     ele o campo mente por omissão, parecendo texto morto. */
   .renomeia{border-bottom:1px dashed var(--linha);cursor:text}
   .renomeia:hover{border-bottom-color:var(--cyan)}
   .renomeia:focus{outline:none;border-bottom-style:solid;border-bottom-color:var(--cyan)}
 
-  /* O LUGAR SEM CONTROLE na Gestão. A cor é a do `.vazio` da Gatilhos, que é a
-     página que o usuário mandou copiar; o contraste está medido na prova de tela. A
-     borda do plástico não vem — ela identifica a peça que está ali, e não há
-     peça a identificar.
-
-     A CLASSE ERA `fora` E PASSOU A SER `off` — 07/09/2026, e a troca é o que
-     faz o lugar vazio VOLTAR quando o controle chega. `off` é a marca que o
-     piloto conhece: ele a escreve no passo `1b` (lugar sem dono) e a TIRA no
-     passo `1c` (lugar que ganhou dono). `fora` era palavra só desta aba, e
-     nenhum passo do piloto a tirava — então um P3 que chegasse encontrava o
-     cartão cinza, sem cursor e sem resumo, para sempre. Medido com os quatro
-     DualSense do usuário na mesa em 07/09: o daemon publicava quatro, a carga
-     chegava com os quatro em `ocupados`, e a tela mostrava dois.
-
-     AS TRÊS REGRAS ABAIXO SÃO O QUE O USUÁRIO DECIDIU EM 31/08 — *"o espaço fica,
-     mas o nome do canto muda"* — dito agora em CSS em vez de em estrutura. O
-     cartão vazio carrega os MESMOS endereços do cheio (ver
-     `linha_do_controle`), e o que ela vê continua sendo só o nome:
-
-       · o RESUMO some. Máscara, microfone e bateria são leituras do aparelho,
-         e não há aparelho; três travessões em fila diriam que a leitura
-         FALHOU, e a ausência diz que o controle não está — que é a frase que
-         estava escrita no ramo vazio antes de ele morrer.
-       · as SETAS somem, porque não há corpo a abrir.
-       · o `<label>` que envolve o nome perde o clique. Ele TEM de existir no
-         HTML: o piloto escreve valores, não marcação, e um cartão que nasce
-         sem gatilho não tem como ganhar um quando o controle chega. O
-         comentário antigo dizia *"um lugar sem gatilho não tem como abrir"* e
-         estava certo enquanto o cartão nunca seria preenchido; a partir do
-         momento em que ele se enche, a garantia de estrutura vira o defeito.
-         `pointer-events:none` é a mesma promessa, e ela se desfaz sozinha no
-         tique em que o piloto tira o `off`. */
   .gc-item.off .gc-nome{color:var(--fg)}
   .gc-item.off{cursor:default;border-style:dashed}
   .gc-item.off .gc-cabeca{border-bottom:0}
@@ -314,38 +256,13 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-item.off .gc-abre,
   .gc-item.off .gc-num{pointer-events:none;color:var(--fg)}
 
-  /* ================= Conexões =================
-     Três assuntos, três quadros, agrupados por PERGUNTA:
-       1. "está tudo certo?"   — DUAS colunas: o que eu vi · o que fazer. A
-          terceira ("o que só você sabe") saiu em 28/08: as duas perguntas de
-          rádio passaram a morar no "Mapear Entradas", que é a janela onde
-          ela já declara a sala.
-       2. "Gestão de controles"   — os controles ligados, em acordeão: o da fita
-          aberto, os outros na linha fechada com o resumo.
-       3. "Rádio e adaptadores"— o inventário físico da mesa, e o Desempenho
-          embaixo, separado, porque os turnos são POR ADAPTADOR.
-     ------------------------------------------------------------------ */
-  /* o "?" ao lado de um rótulo só vira bolinha se a linha for flex — solto num
-     bloco ele herda `inline` e a largura/altura de 17px não valem nada */
   .linha-rot{display:flex;align-items:center;gap:8px;height:19px;margin-bottom:4px}
-  /* DUAS colunas com a mesma gramática da Navegação e da Gatilhos — o nome é o
-     mesmo de propósito: é a régua que confere a soma das colunas. */
   .duas-colunas{display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:stretch}
-  /* 17 e não 16: a barra de 1 px é `border-left` da coluna da direita e sai da
-     LARGURA dela. Com 16 dos dois lados os dois botões do inventário mediam
-     547,5 e 546,5 — a diferença que ela repara. O pixel volta aqui. */
   .duas-colunas > .lado-e{padding-right:17px}
   .lado-e,.lado-d{display:flex;flex-direction:column;min-width:0}
   .lado-d{padding-left:16px;border-left:1px solid var(--border-sutil)}
   .pilha{display:flex;flex-direction:column;gap:8px}
 
-  /* ---- as dicas: cartões de poucas palavras, com UM botão ----
-     AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que o usuário aprovou. Cor nunca
-     sozinha: o nível tem borda E uma palavra para o leitor de tela (o nome da região), o desenho de
-     cada tipo vai no ícone, e a ordem de leitura é título, de→para, botão. A fileira usa a grade
-     dos cartões de baixo (vão de 10px). O ⓘ abre o porquê numa frase, e o «Ignorar» mora lá.
-     05/10/2026, o desenho aprovado: até quatro, todos da MESMA altura, e o porquê abre POR CIMA
-     (não estica os vizinhos); o gesto, curto, à direita. */
   .dicas{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
   .dicas-fileira{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
   @media (max-width:1180px){.dicas-fileira{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -361,9 +278,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .cartao-dica .cd-ic svg.i{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .cartao-dica h4{flex:1;min-width:0;margin:0;font-size:12.5px;font-weight:600;color:var(--fg);
            line-height:1.3}
-  /* a palavra do nível mora no nome da região (`aria-label`), não num texto escondido: texto
-     recortado de propósito é, para a régua da janela estreita, texto que a janela engoliu.
-     O × ignora o conselho (o mesmo gesto do antigo «Ignorar»); o porquê vive no hover do título. */
   .cartao-dica .cd-x{flex:0 0 24px;width:24px;height:24px;margin:-4px 0 -4px 0;padding:0;
               border:0;border-radius:5px;background:none;color:var(--fg);font-size:16px;
               line-height:1;display:inline-flex;align-items:center;justify-content:center;
@@ -379,49 +293,11 @@ CSS = CSS_GLIFO + CSS_POPUP + """
               box-sizing:border-box;min-height:28px;padding:0 12px;text-align:center;
               text-decoration:none;border-color:var(--green);color:var(--green)}
   .cartao-dica .cd-botao:hover{background:rgba(80,250,123,.09)}
-  /* a dica que o usuário mandou calar fica no fim, apagada: o achado esmaece, o caminho de volta não */
   .cartao-dica.calada .cd-cab,.cartao-dica.calada .cd-pic,.cartao-dica.calada .cd-detalhe{opacity:.45}
   .nada-a-mudar{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:var(--green)}
   .nada-a-mudar i{width:9px;height:9px;border-radius:50%;background:currentColor}
 
-  /* OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01 (06/09/2026, linha 305 do
-     CSV da paridade) e a escolha do usuário no mesmo dia: **no mesmo frame dos
-     assentos**, como a janela GTK fazia. A EXTERNOS-01 os pôs numa ressalva
-     debaixo do acordeão e PERGUNTOU; aqui eles são LINHAS do próprio `.gc`.
-
-     A VAGA É `display:contents` pela mesma razão da aba 01: o piloto precisa de
-     UM elemento de pé para reescrever (`data-hef-alvo="html"`), e uma caixa
-     de verdade dentro de um `flex-direction:column` viraria UM item — todas as
-     linhas empilhadas dentro de uma célula, com a moldura do `.gc` cortando o
-     desenho ao meio. O marcador de vazio sai por `display:none`, e não pelo
-     `:empty` da `.ressalva`, porque sob `display:contents` um `<i>` vazio ainda
-     seria um item de flex e abriria uma linha de altura zero.
-
-     A LINHA NÃO É UM `.gc-item`, e continua não sendo: cada `.gc-item` tem
-     `data-controle="pN"`, um rádio de alvo de saída e um corpo que abre. Um
-     externo não tem assento, não é alvo de saída de nada e não tem o que abrir
-     — pô-lo ali daria à tela um sexto rádio apontando para um aparelho em que o
-     daemon não escreve. O que se copia é a CAIXA (o fio de 1px que separa as
-     linhas, os 12px de recuo, a coluna do nome), e nunca a classe.
-
-     A ARESTA ESQUERDA É TRACEJADA, e é o segundo sinal depois da marca: os
-     `.gc-item` levam ali 3px sólidos, que é onde a `.gc-cor` pinta a cor LIDA
-     do plástico. Um externo não tem cor lida — a folha das 28 é dos DualSense —
-     e o tracejado é o vocabulário desta casa para *"isto não é um ajuste seu"*
-     (`.renomeia`, `.degrau.sem-dono` da aba 01). Nada de `opacity`.
-
-     QUEM O DISTINGUE É A MARCA, como na janela GTK: o assento diz o nome do
-     controle, o externo diz *"Controle 4 — Nintendo"*, com a palavra vinda de
-     `external_controllers.brand_of`.
-
-     O AVISO DO `hid-nintendo` VAI EM LARANJA, que é a cor que esta casa reserva
-     para o que pede atenção — e ele não acusa o Hefesto: a morte é do driver
-     do kernel, e a saída estável é o cabo. */
   .gc .ext-vaga{display:contents}
-  /* NA GRADE DOS CARTÕES o externo ocupa DUAS das quatro colunas, embaixo: dois por fileira, como
-     os assentos, e a altura da seção não cresce uma linha inteira por externo (A-LINHA-DO-EXTERNO-
-     VOLTA-AOS-30-PX-01). O que traz o aviso do Nintendo pelo BT é a frase mais longa e atravessa
-     as quatro (`data-larga`, posto pelo gerador). */
   .gc .ext-linha{grid-column:span 2;border:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte);border-radius:7px}
   .gc .ext-vaga > .nada{display:none}
@@ -432,31 +308,18 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                  border-top:1px solid var(--border-sutil);
                  border-left:3px dashed var(--border-forte)}
   .gc .ext-nome{color:var(--fg);font-weight:600;white-space:nowrap;flex:0 0 auto}
-  /* O quadrado do modelo tomou 42 px da linha: a 1272 px, com dois por fileira, a coluna das três
-     listas vazava 28 px. O «via» é o que cede (reticências, e a frase inteira na dica). */
   .gc .ext-via{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;
                white-space:nowrap}
   .gc .ext-aviso{color:var(--orange);font-size:11.5px;text-align:right}
   .gc .ext-botoes{font-size:11px;letter-spacing:.06em;white-space:nowrap}
-  /* O QUADRADO DO MODELO (A-08-MOSTRA-O-DESENHO-DO-CONTROLE-01): o desenho do sprite
-     `ext-sprite`, na cor do texto mudo, sem número de modelo na linha (ele vai na dica). O traço
-     do desenho não escala com o quadrado (`non-scaling-stroke`): a 34 px, o traço de 2,6 unidades
-     de uma arte de 100 viraria um fio de 0,9 px. */
   .gc .ext-desenho{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
                    width:34px;height:22px;color:var(--fg)}
   .gc .ext-desenho svg{width:34px;height:22px;display:block}
   .ext-sprite symbol *{vector-effect:non-scaling-stroke;stroke-width:1.3px}
-  /* as três listas do externo têm largura FIXA e moram no fim da linha: de um externo
-     para o outro elas caem na mesma coluna, com ou sem o aviso do Nintendo pelo BT. 26 px de
-     altura + a borda de 1 px da linha = 28, e 64 px abrigam o texto mais largo de «Chave» e de
-     «Botões» (40 px) com o recuo de 8 px de cada lado. */
   .gc .ext-declara{display:flex;align-items:center;gap:6px;flex:none}
   .gc .ext-declara select.pronto{height:26px;line-height:1.2;padding-top:0;padding-bottom:0;
                                  width:64px}
   .gc .ext-declara select.pronto[data-gesto="externo-cor"]{width:132px}
-  /* O APARELHO DE UMA EXTENSÃO (22/10/2026, o arranjo C da janela da extensão): a linha do
-     externo, com a borda cheia na cor do acessório, o ícone do transporte, a pílula do estado, a
-     pilha e o «via» o nome da extensão. As peças são as da coluna «Agora» da janela dela. */
   .gc .ext-acessorio{border-left:3px solid var(--c-acessorio)}
   .gc .ext-acessorio .ic{flex:none}
   .gc .ext-acessorio .c-verde{color:var(--green)}
@@ -480,9 +343,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc .ext-acessorio .bat i{display:block;height:100%;background:var(--green);border-radius:1px}
   .gc .ext-acessorio .ext-via{text-align:right;color:var(--texto-suave)}
 
-  /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
-     A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
-     145×4 na Vibração, 173×6 na Perfis. Aqui eram 134/159, 157/71 e 170/192. */
   .miolo .acoes{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;width:100%}
   .miolo .acoes .btn{width:100%;display:flex;align-items:center;justify-content:center;
                      padding:0 10px}
@@ -491,56 +351,22 @@ CSS = CSS_GLIFO + CSS_POPUP + """
     border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-suave);
     cursor:pointer}
   select.pronto:hover{border-color:var(--comment)}
-  /* o dropdown que ainda espera resposta chama o olho pela borda, não por faixa */
   select.pronto.pergunta{border-color:var(--cyan);color:var(--cyan)}
 
-  /* ================= os cartões da gestão de controles =================
-     A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026 — o desenho de quem
-     coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up:
-     *«tá quebradíssima a 8»*. A linha que abria e fechava virou UM CARTÃO POR
-     LUGAR, os quatro lado a lado — a mesa desta aba é de quatro —, e nada mais
-     abre nem fecha: o que era o corpo escondido fica à vista. O rádio `gc-*`
-     continua sendo o ALVO de saída (a fita e o cartão marcado), e só isso.
-     A gramática é a da aba Sistema que o usuário aprovou: rótulo à esquerda, valor
-     à direita, fio de 1px entre as linhas, 25,5px por linha.
-
-     CSS PURO, ZERO JAVASCRIPT, como o acordeão era. E A CLASSE NÃO SE CHAMA
-     `peca` NEM `tira` NEM `mesa`: as três já têm dono (o SVG, a fila de abas
-     do esqueleto e o `topo.html`). */
   .gc-r{display:none}
   .gc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-  /* NA JANELA ESTREITA os cartões vão dois a dois: em quatro colunas de 200px o
-     nome do controle e o modo eram cortados (a régua da janela estreita, em
-     940 px, mediu quatro peças engolidas). */
   @media (max-width:1180px){.gc{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .gc-item{position:relative;display:flex;flex-direction:column;min-width:0;
            padding:3px 12px 8px;border:1px solid var(--border-forte);
            border-radius:9px;background:var(--app-bg);overflow:hidden}
-  /* A COR LIDA DO PLÁSTICO é a faixa de 3px no alto do cartão. Ela é a TINTA
-     DE UM ELEMENTO, e não uma variável de CSS: o `escrever()` do piloto não
-     tem alvo de variável, e o alvo é `cor` e não `fundo` porque o CSSOM
-     normaliza o hex na atribuição e o `fundo` acusaria mudança em todo tique
-     (medido em 03/09/2026). Sem cor lida o pacote manda vazio, o elemento
-     volta a `color:transparent` e a faixa some — campo sem informação não
-     mostra nada. */
   .gc-cor{position:absolute;left:0;right:0;top:0;height:3px;display:block;
           color:transparent;background:currentColor}
-  /* UMA LINHA SÓ — 26/09/2026, pedido com a janela maximizada: *«colocar
-     numero do player e nome do player na mesma linha do nome do modelo e modo
-     de conexão»*. O desenho à esquerda, e ao lado o «P N», o nome de quem joga e
-     o modelo com o transporte; a linha de 38 px que o número tinha sozinho saiu.
-     (noqa-acento: citação literal) No cartão estreito (271 px no tamanho
-     do desenho) o modelo DESCE para uma segunda linha dentro dos mesmos 62 px,
-     em vez de virar reticências: o `flex-wrap` só quebra quando o dono não teria
-     os 70 px dele. */
   .gc-cabeca{display:flex;align-items:center;gap:10px;height:62px;
              border-bottom:1px solid var(--border-sutil)}
   .gc-quem{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;
            column-gap:6px;row-gap:1px}
   .gc-num{flex:0 0 auto;font-size:13.5px;font-weight:700;color:var(--purple);
           cursor:pointer}
-  /* O DONO: em repouso ele é texto; só se veste de campo com o mouse ou o
-     foco. Vazio, o `placeholder` diz para que serve. */
   .gc-dono{flex:1 1 70px;min-width:70px;height:26px;padding:0 7px;
            border:1px solid transparent;border-radius:6px;background:transparent;
            color:var(--fg);font:inherit;font-size:12.5px;font-weight:600;
@@ -548,21 +374,12 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-dono::placeholder{color:var(--fg);font-weight:400}
   .gc-dono:hover{border-color:var(--border-sutil)}
   .gc-dono:focus{border-color:var(--purple);outline:none}
-  /* O APARELHO: o desenho e o nome, e é ele o alvo do clique que aponta a fita
-     para este controle. O `<label>` ENVOLVE o texto, não o cobre, para a dica
-     de dentro continuar sendo a que aparece. */
   .gc-abre{flex:0 0 auto;display:flex;align-items:center;height:62px;
            cursor:pointer;border-radius:7px}
   .gc-cabeca:hover .gc-nome{color:var(--fg)}
-  /* A PROPORÇÃO É A DO `viewBox` (116,684 × 80,472); só a largura é escolhida:
-     76px dão 52 de altura, e o cartão cabe com o quadro do rádio à vista. */
   .gc-abre .ds-mini{flex:0 0 76px;width:76px;height:auto}
   .gc-nome{flex:0 1 auto;min-width:0;max-width:100%;font-size:12.5px;font-weight:600;color:var(--texto-suave);
            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* OS SELOS, UM POR LINHA. O selo é do produto
-     (`a08_conexoes.selo_do_estado`: o rótulo, o valor em `<b>` e o ✓ em
-     `<i class="certo">`), e a linha só o arruma: o rótulo à esquerda e o que
-     vier depois dele empurrado para a direita. */
   .gc-resumo{display:flex;flex-direction:column;border-top:1px solid var(--border-sutil)}
   .gc-est{display:block;border-bottom:1px solid var(--border-sutil)}
   .gc-est .est{display:flex;align-items:center;gap:6px;height:25.5px;min-width:0;
@@ -572,21 +389,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--texto-suave)}
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
-  /* O BOTÃO «A LUZ NÃO ACENDE» SAIU EM 19/10/2026, a pedido, com a espera pelo PS e o
-     gesto: o cartão termina no resumo. */
-  /* REGRA DE PRODUTO: *"sempre visível mas só
-     acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
-     instável. */
   .btn.apagado{border-color:var(--border-forte);color:var(--fg);
                opacity:.55;cursor:help}
   .btn.apagado:hover{border-color:var(--border-forte);color:var(--fg)}
-  /* o SVG real ganha a barra de luz acesa, PREENCHIDA (um contorno de 1,2 numa
-     forma de 2px pinta menos de um pixel). As lâmpadas de jogador saem do
-     desenho pequeno por `svg(..., lampadas=False)`, decisão de 28/08. */
   .gc-item [id$="-lightbar"] .peca{fill:var(--luz,var(--border-forte))}
-  /* AS FERRAMENTAS DO CHECK-UP — cinco botões de largura IGUAL, a régua dela
-     para todo grupo (273×4 na Jogar, 173×6 na Perfis). O mapa das entradas
-     ganhou nome: um ícone solto era o único botão da faixa sem palavra. */
   .ferramentas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
                margin:10px 0 0}
   .ferramentas .btn{width:100%;height:28px;display:flex;align-items:center;justify-content:center;
@@ -594,10 +400,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .ferramentas .i.ds{width:21px}
   .ferramentas .i{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:currentColor;
                   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  /* O FLUXO DO MAPEAR — a moldura da `.tela-nova` com duas colunas: à
-     esquerda a entrada da vez (o que foi medido, e o nome e o lugar que ela dá),
-     à direita as que já têm nome. A frase do alto diz em que passo o fluxo
-     está, e o ponto pulsa enquanto o Hefesto espera o cabo chegar. */
   .mp-cx{width:760px}
   .mp{display:flex;flex-direction:column;gap:14px}
   .mp-diz{margin:0;display:flex;align-items:center;gap:9px;color:var(--fg);
@@ -610,10 +412,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mp-duas{display:grid;grid-template-columns:minmax(0,1.5fr) 1px minmax(0,1fr);gap:0 18px}
   .mp-duas::before{content:"";grid-column:2;grid-row:1;background:var(--border-sutil)}
   .mp-esq{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0}
-  /* A LISTA ROLA, E A ALTURA É A DA ESQUERDA (29/09/2026,
-     O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): com `height:0` a coluna da direita
-     não conta na altura da linha da grade, e o `min-height:100%` a estica até a
-     esquerda; as 15 entradas dela rolam por dentro em vez de empurrar o diálogo. */
   .mp-dir{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0;
           height:0;min-height:100%}
   .mp-rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
@@ -646,7 +444,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mp-cx .tn-rod .btn.principal:hover{background:rgba(80,250,123,.09)}
   .acao{font-size:10.5px;color:var(--cyan);border-bottom:1px dotted var(--cyan);cursor:pointer}
 
-  /* ---- o inventário da mesa: DUAS tabelas, ambas com cabeçalho roxo ---- */
   .tab{width:100%;border-collapse:collapse;font-size:11.5px}
   .tab th{color:var(--rot-campo);font-weight:600;text-align:left;font-weight:600;font-size:10px;
           padding:0 8px 6px 0;
@@ -654,82 +451,24 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .tab td{padding:6px 8px 6px 0;color:var(--texto-suave);border-bottom:1px solid var(--border-sutil)}
   .tab tr:last-child td{border-bottom:none}
   .tab .mudo{color:var(--fg)}
-  /* CICATRIZ, medida em três tentativas: a `<table>` NÃO estica pela altura da
-     caixa. Quem estica a linha de uma tabela é a `height` da CÉLULA, e não um
-     `flex` na tabela.
-     OS RÁDIOS VIZINHOS: UMA FILEIRA, e não mais uma tabela de duas linhas. A
-     tabela custava 108px na coluna que MANDA na altura do quadro; a fileira
-     custa 53. `grid-auto-flow:column` e não `repeat(4,…)`: o número de vizinhos
-     vem da lista, e uma coluna digitada aqui mentiria no dia em que ela
-     crescer — é a mesma forma que `.miolo .acoes` usa para os botões. */
   .vizinhos{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:11px}
   .vizinhos select.pronto{width:100%}
   .viz{display:flex;flex-direction:column;gap:4px;min-width:0}
   .viz .qual{font-size:10.5px;color:var(--fg);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
-  /* A COLUNA "ONDE" — 04/09/2026, e ela é a que faltava para a linha do
-     Check-up ter endereço na mesa. O exame diz "dois rádios da bancada estão em
-     entradas vizinhas" e não diz QUAL; a janela estável põe o aviso ao lado do
-     rádio culpado, e é isto.
-
-     ELA NÃO CUSTA LINHA NOVA: o bloco `.viz` é uma coluna de 53px com o nome em
-     cima e o `<select>` embaixo, e o "onde" entra como terceira linha de 10,5px
-     — a mesma altura do nome. Quando não há aviso ele diz só o painel ("Direita",
-     "Entrada 7" quando ela desenhou a mesa), e quando há, o aviso vem colado.
-
-     O AMARELO SÓ ACENDE COM AVISO, e quem decide é o produto: o interruptor é
-     um `<i>` invisível irmão, com o alvo `classe` BOOLEANO — o valor que ele
-     recebe é a DICA de `_avisos_de_vizinhanca`, e o `ligado()` do piloto só
-     pergunta se ela existe. Rádio que ninguém acusou recebe `""`, a classe
-     apaga e a linha fica na cor de sempre. Nada aqui adivinha vizinhança.
-
-     POR QUE UM IRMÃO E NÃO A PRÓPRIA LINHA: o vocabulário é UM `data-campo` por
-     nó, e a linha já tem o dela (o texto). É o mesmo desenho dos `<i class="est">`
-     das cinco linhas do exame, e do `~` que leva a cor do irmão até elas. */
   .viz .vaviso{display:none}
   .viz .onde{font-size:10.5px;color:var(--fg);white-space:nowrap;overflow:hidden;
              text-overflow:ellipsis}
   .viz .vaviso.on ~ .onde{color:var(--orange)}
-  /* a sobra de altura das duas colunas do inventário cai ANTES da última fileira,
-     nunca entre irmãos — `space-between` só empurra o buraco para o meio */
   .lado-e > .empurra,.lado-d > .empurra{margin-top:auto}
 
-  /* ================= o orçamento do rádio — SAIU EM 23/09/2026 =================
-     `.capa`, `.pista`, `.bloco`, `.eixo` e `.leg` eram a régua de turnos por
-     adaptador. A seção virou o desenho aprovado (TRANSPLANTE-DA-SECAO-01), a
-     régua saiu, e as regras saem junto: CSS de elemento que não existe mais é
-     a segunda versão viva de uma decisão (a mesma conta de 28/08, acima).
-     ------------------------------------------------------------------ */
-
-  /* OS DOIS BOTÕES DA MESA VIRARAM `<a href="#…">`, e um `<a>` chega sublinhado.
-     Medido em 29/08: altura e largura ficaram iguais (34×539, os mesmos do
-     `<button>`), e só o sublinhado mudou — o tipo de defeito que régua de caixa
-     não vê, porque não move um pixel. O `CSS_POPUP` já carrega o mesmo remédio
-     para o rodapé das pop-ups; aqui ele vale para o miolo. No dia em que uma
-     segunda aba trocar botão por link, a regra sobe para o `topo.html` — que é
-     a mesma conta que mudou o bloco das pop-ups de lugar hoje. */
   a.btn{text-decoration:none}
 
-  /* ================= AS DUAS POP-UPS DA MESA =================
-     A anatomia (`.tela-nova` -> `.tn-cx` -> `.tn-topo`/`.tn-corpo`/`.tn-rod`) NÃO
-     está aqui: ela mudou-se para `monta.CSS_POPUP` em 29/08, quando esta aba
-     virou o segundo consumidor dela. Aqui fica só o que é DESTAS duas telas.
-     ---------------------------------------------------------------- */
-  /* a rolagem é da `.moldura` (regra do `CSS_POPUP`); o respiro é para a barra
-     não pintar por cima da última coluna de quadrados. */
   .tn-cx .moldura{padding-right:6px}
   .mm-rot{font-size:10px;font-weight:600;color:var(--purple);
           }
   .mm-rot-linha{display:flex;align-items:center;gap:8px;height:19px}
 
-  /* ---- a lista de aparelhos.
-     NO PRODUTO ELA É A COLUNA DA ESQUERDA e as faces ficam à direita
-     (`mapa_da_mesa._Janela.__init__`). Aqui ela é a fileira de CIMA, e a razão é
-     aritmética: o quadrado do produto tem 84px de largura e a fileira tem SETE
-     colunas fixas — 7×84 + 6 de vão pedem 618px, e a `.tn-cx` oferece 624 por
-     dentro. Lado a lado com uma coluna de lista, o quadrado cairia para ~56px e
-     as três linhas de texto dele parariam de caber. Empilhado, o 84 do produto
-     é exatamente o que sobra. */
   .mm-lista{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:12px}
   .mm-ap{height:26px;padding:0 9px;border-radius:6px;background:var(--elevated);
          border:1px solid var(--border-forte);color:var(--texto-suave);
@@ -737,32 +476,18 @@ CSS = CSS_GLIFO + CSS_POPUP + """
          align-items:center;gap:4px}
   .mm-ap code{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--fg)}
   .mm-ap:hover{border-color:var(--comment);color:var(--fg)}
-  /* o escolhido é um ToggleButton ATIVO — clicar nele de novo desescolhe. */
   .mm-ap.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .mm-ap.on code{color:var(--purple)}
 
-  /* ---- as faces */
   .mm-face{margin-bottom:12px}
   .mm-face-cab{display:flex;align-items:center;gap:9px;margin-bottom:6px}
   .mm-face-nome{font-size:11.5px;font-weight:600;color:var(--texto-suave)}
-  /* o nome é um `Gtk.Label`, NÃO um campo: depois de criada, a face não tem
-     como ser renomeada nem apagada pela interface (`mapa_da_mesa._Janela._desenhar_faces`). */
   .tn-cx .mm-face-cab .btn{height:23px;font-size:10px;padding:0 8px}
-  /* SETE COLUNAS, para toda face, e o produto escreve a razão: "sete é a fileira
-     do hub dela, que é a maior face desta casa" (`_COLUNAS = 7`). O `minmax` deixa
-     o quadrado encolher em vez de rolar de lado quando a barra vertical aparece. */
-  /* COLUNAS DE VERDADE — 31/08/2026: *"ajusta os alinhamentos e distribuições de
-     tudo"*. A grade já era `repeat(7, …)`, mas a filha empilhada dentro da célula
-     furava a coluna: medido, 8 x diferentes numa grade de 7, e dois quadrados de
-     larguras diferentes (82 e 73). Com a filha fora, toda entrada é uma célula de
-     uma coluna, e as duas faces alinham na mesma régua de x. */
   .mm-grade{display:grid;grid-template-columns:repeat(7,minmax(0,84px));
             gap:5px;align-items:start;justify-content:start}
-  /* o hub carrega uma legenda embaixo, então a célula dele é mais larga */
   .mm-grade-hubs{grid-template-columns:repeat(3,minmax(0,148px))}
   .mm-hub-nome{font-size:11px;font-weight:600;color:var(--texto-suave);padding-left:2px;
                overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* a pergunta curta do «Acrescentar hub» — uma linha, com a altura dos botões da face */
   .hub-pergunta{display:flex;align-items:center;gap:8px;margin:0 0 8px;padding:5px 7px;
                 border:1px dashed var(--border-forte);border-radius:7px}
   .hub-rot{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--texto-suave)}
@@ -773,9 +498,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mm-ligado{font-size:10px;color:var(--fg);line-height:1.4;padding-left:2px}
   .mm-ligado b{color:var(--texto-suave);font-weight:600}
   .mm-cel{display:flex;flex-direction:column;gap:4px}
-  /* 84×56 é `botao.set_size_request(84, 56)`, que em GTK é MÍNIMO e não teto —
-     por isso `min-height` aqui, e não `height`: "Aparelho de entrada" quebra em
-     duas linhas nos dois. */
   .mm-sq{min-height:56px;width:100%;padding:4px 3px;border-radius:6px;
          background:var(--app-bg);border:1px solid var(--border-forte);
          color:var(--texto-suave);font:inherit;cursor:pointer;
@@ -786,9 +508,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mm-c.mm-vazia{color:var(--fg);font-style:italic}
   .mm-ext{font-size:8.5px;color:var(--fg)}
   .mm-v{font-size:9px;font-weight:600}
-  /* AS CINCO CORES SÃO OS CINCO ESTADOS QUE **ESTA** JANELA PRODUZ. Os três do
-     modo ideal (`chega`, `sai`, `fica`) não entram: eles vêm do plano, e esta
-     janela não calcula plano nenhum. */
   .mm-sq[data-v="cheia"]{opacity:.72}
   .mm-sq[data-v="cheia"] .mm-v{color:var(--fg)}
   .mm-sq[data-v="serve"]{border-color:var(--comment)}
@@ -797,86 +516,21 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mm-sq[data-v="evite"] .mm-v{color:var(--orange)}
   .mm-sq[data-v="melhor"]{border-color:var(--green);background:rgba(80,250,123,.07)}
   .mm-sq[data-v="melhor"] .mm-v{color:var(--green)}
-  /* a filha por extensão é recuada e tracejada: ela não está na fileira do metal,
-     está na ponta de um cabo que só VOCÊ sabe que existe. */
   .mm-sq.mm-filha,.mm-cel .mm-sq + .mm-sq{border-style:dashed;margin-left:9px;width:calc(100% - 9px)}
 
-  /* ---- as duas perguntas da sala, que se mudaram da aba para cá em 28/08.
-     NENHUMA `.dica` MORA AQUI DENTRO, e isso é uma correção medida em 29/08.
-     A primeira versão pôs um `?` no rótulo da lista, um no rótulo deste bloco e
-     um em cada pergunta — quatro no total, os quatro dentro da `.moldura`. A
-     régua reprovou: o envelope mediu 860,2×762,5px contra a janela de 757, e
-     duas das dicas fechavam em y=810. Os dois modos de errar de uma vez: a
-     `.moldura` rola, e um ancestral que rola RECORTA todo descendente absoluto;
-     e um `?` a 670px de altura abre uma caixa de 141px que sai da janela pela
-     base. É a mesma cicatriz que o `CSS_POPUP` já carrega escrita — "não há uma
-     só dica dentro dela". A cura: um `?` por pop-up, no `.tn-topo`, e o resto
-     em `title`, que é hover nativo e não tem caixa a recortar. */
   .mm-sala{margin:14px 0 12px}
-  /* EMPILHADA, e não lado a lado: a pergunta mais longa tem 46 caracteres e a
-     fileira das três opções mede 350px — numa caixa de 624px por dentro, lado a
-     lado o enunciado caía para quatro linhas de nove caracteres. */
-  /* PERGUNTA E BOTÕES NA MESMA LINHA — medido em 29/08. Empilhados, os dois
-     blocos custavam 133px e a confissão nascia FORA da vista (a moldura mostra
-     478 de 658). O enunciado mais longo mede ~250px e a fileira das três opções
-     350px: 600 numa caixa de 624 por dentro. As perguntas continuam uma ABAIXO
-     da outra — o que ficou lado a lado é o enunciado e a sua resposta, que é o
-     par que se lê junto. */
   .mm-perg{display:flex;align-items:center;gap:10px;margin-top:9px}
   .mm-perg > .mm-q{flex:1;min-width:0}
   .mm-q{font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:7px}
-  /* o `.seg` do esqueleto dá `flex:1;min-width:150px` a cada opção, para uma
-     fileira que ocupa a coluna inteira. Aqui são TRÊS opções de uma a três
-     palavras numa caixa de 624px: esticadas, cada botão media 200px de fundo  (noqa-acento: verbo medir, imperfeito)
-     para 20 de texto. Elas passam a caber no que dizem. */
   .tn-cx .mm-sala .seg button{flex:0 0 auto;min-width:92px;height:28px;
                               font-size:11px;padding:0 14px}
 
-  /* ---- a confissão. Ela NUNCA é vazia depois da primeira face.
-     ELA SAIU DO CORPO E VIROU DICA — decisão, 29/08/2026, e é a
-     `D-TUDO-QUE-EXPLICA-VIRA-DICA` aplicada a esta pop-up. O que a comprou:
-     a moldura escondia 140px, e o PRIMEIRO deles era a confissão inteira
-     (o bloco de lista media 106px). Uma tela que parece completa e não está  (noqa-acento: verbo medir, imperfeito)
-     é a classe de defeito que esta casa mais paga.
-
-     O QUE FICA NO CORPO, E POR QUE FICA: uma linha só, sempre à vista, com a
-     CONTA. Sumir calada é que era o defeito — a confissão é o que ensina o que
-     o Hefesto não sabe. A linha nasce FORA da `.moldura` de propósito: dentro
-     dela voltaria a rolar para baixo da dobra, que é justamente o que se está
-     consertando.
-
-     E O SINAL **NÃO É UM `?`** — nem podia ser, por duas contas medidas:
-       · a regra desta pop-up é "um `?` por pop-up, no `.tn-topo`" (ver o
-         comentário do `.mm-sala`: um `?` a 670px abre caixa de 141px que sai
-         da janela pela base, e esta linha vive a ~600px);
-       · e um `?` mudo não diz NADA antes do hover. A linha diz a conta —
-         "três coisas" — de graça, para quem nunca passar o mouse. O rastro
-         sobrevive sem interação nenhuma, que é o que a decisão exige.
-     O resto é `title`: hover nativo, sem caixa nossa a recortar nem a
-     transbordar. O `cursor:help` e o sublinhado pontilhado são o que anuncia
-     que há mais ali. */
   .mm-conf-linha{margin:11px 0 0;font-size:11.5px;line-height:1.55;
                  color:var(--fg)}
   .mm-conf-linha b{font-weight:600;color:var(--texto-suave)}
   .mm-conf-linha span{cursor:help;border-bottom:1px dotted var(--border-forte)}
-  /* A LINHA SOME QUANDO NÃO HÁ O QUE CONFESSAR — 03/09/2026, e a regra é a da
-     janela do desenho: lá `confissao_do_desenho` devolve vazio e nada é
-     desenhado. Quem acende esta classe é o produto, pelo `confissao-nada`; no
-     arquivo aberto no navegador ela nunca está ligada, porque a cena tem
-     lacuna. Sem esta regra, uma mesa sem lacuna leria "…: nada." — texto que
-     ocupa a linha para não dizer nada. */
   .mm-conf-linha.sumido{display:none}
 
-  /* ---- os gestos de baixo. `.apagado` deixou de ser só da gestão de controles:
-     os dois botões de ação desta pop-up nascem apagados pela mesma regra de produto —
-     botão que SOME ensina que a tela é instável. */
-  /* OS DOIS GESTOS TÊM O MESMO TAMANHO — 31/08/2026, parte do *"ajusta os
-     alinhamentos e distribuições de tudo"*. Eles medem o texto: `Tirar daqui`
-     dava 92px e `Tem uma extensão aqui` 170, lado a lado, e dois botões do mesmo
-     peso com tamanhos tão diferentes leem como hierarquia que não existe — os
-     dois agem sobre a MESMA entrada que você acabou de clicar.
-     O grupo de criar face continua empurrado à direita: ele não age sobre a
-     entrada selecionada, e a distância é o que diz isso. */
   .mm-acoes{display:flex;align-items:center;gap:8px}
   .mm-acoes > .btn{flex:0 0 auto;min-width:172px;justify-content:center}
   .mm-nova{display:flex;align-items:center;gap:8px;margin-left:auto}
@@ -887,35 +541,16 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .tn-rod.mm-rod{justify-content:flex-end}
   .tn-rod.mm-rod .btn{flex:0 0 auto;padding:0 22px}
 
-  /* ================= a cerimônia de um toque por aparelho ================= */
   .ce-cartao{display:flex;flex-direction:column;gap:6px;padding:14px 15px;
              border-radius:8px;background:var(--app-bg);
              border:1px solid var(--border-sutil)}
   .ce-perg{font-size:15px;font-weight:600;color:var(--fg);line-height:1.35}
-  /* TEXTO, nunca barra: os DOIS números, sempre (R26). E não há barra de
-     progresso porque o total da fase em pé ENCOLHE — ela andaria para trás. */
   .ce-cont{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--purple)}
   .ce-quem{font-size:11.5px;color:var(--texto-suave);line-height:1.55}
   .ce-quem code{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--fg)}
-  /* OS LUGARES CABEM NUMA LINHA SÓ — 31/08/2026, e o usuário mandou com a foto na mão:
-     *"botões em duas linhas. deveria ser uma."*
-
-     A causa era `flex-wrap:wrap` com botões do tamanho do próprio texto: some a
-     largura dos quatro (`Frente do gabinete` é 40% maior que `Em cima da mesa`)
-     e, no dia em que a soma passa da caixa, o último cai sozinho para a segunda
-     linha. Depende da FONTE que carregou — por isso a foto dela mostrava duas
-     linhas e o Chrome headless mostrava uma: com fallback mais estreito, cabia.
-     Régua nenhuma pegaria isso; só o olho de quem confere, na máquina do usuário.
-
-     `grid-auto-flow:column` com `grid-auto-columns:1fr` é a gramática que a casa
-     já usa em `.miolo .acoes`: os botões dividem a largura em partes iguais,
-     nunca quebram, e o alvo de clique é o mesmo para as quatro escolhas — que é
-     o que quatro escolhas do mesmo peso pedem. */
   .ce-botoes{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-top:12px}
   .tn-cx .ce-botoes .btn{width:100%;text-decoration:none;justify-content:center;
                          padding:0 6px;min-width:0}
-  /* o foco É o anúncio (R13): não há live region alcançável pelo PyGObject, então
-     mover o foco é a única forma que a janela tem de dizer "o passo mudou". */
   .btn.foco{outline:2px solid var(--purple);outline-offset:2px}
 """
 
@@ -927,14 +562,9 @@ CSS += (f"\n  .gc-cabeca,\n"
 ESTADOS = ["todos"] + [c["pref"] for c in MESA]
 
 _regras = [
-    "  /* o destaque estático da fita perde para o do acordeão: `.fita .chip.on`",
-    "     tem especificidade maior que o `.chip.on` do esqueleto, e é ele que",
-    "     apaga o chip que nasceu marcado no HTML. */",
     "  .fita .chip.on{background:var(--app-bg);color:var(--fg);font-weight:400;"
     "border-color:var(--border-forte)}",
     "  .fita .chip.plastico.on{border-color:var(--plastico,var(--border-forte))}",
-    "  /* O CARTÃO QUE A FITA APONTA ganha a borda roxa da escolha, a mesma do",
-    "     chip. Em «Todos» nenhum cartão se destaca: todos são o alvo. */",
 ]
 for estado in ESTADOS:
     marcado = f"body:has(#gc-{estado}:checked)"
@@ -1417,24 +1047,9 @@ TELA_MAPEAR = f'''
     <div class="tn-corpo">
       <div class="moldura">
         <div class="mm-rot-linha"><span class="mm-rot" title="Tudo o que está ligado ao computador. O que já tem lugar continua na lista: clique nele para mudar de entrada.">{MAPA["ROTULO_APARELHOS"]}</span></div>
-        <!-- O ENDEREÇO CHEGOU EM 03/09/2026 (`IDENTIDADE-VEM-DE-CIMA-01`). O
-             pacote já trocava esta lista inteira desde 01/09, mas por SELETOR
-             CSS, pela chave `blocos` — e um bloco sem `data-campo` é invisível
-             para as duas réguas desta casa: os `title` do desenho ("o P1 Cosmic
-             Red, no cabo") passavam por congelados sem que nada visse que o
-             produto já os reescrevia. Com o endereço, a troca é a MESMA e as
-             réguas a enxergam. -->
         <div class="mm-lista" data-campo="aparelhos" data-hef-alvo="html">
 {chr(10).join("          " + ap_botao(*a) for a in CENSO)}
         </div>
-        <!-- O RECIPIENTE DO MAPA — 01/09/2026. Ele existe para o piloto poder
-             TROCAR o miolo inteiro: as faces e as entradas são as que
-             o usuário declarou, e o número delas muda. Um bloco cujo número de filhos
-             muda com o dado não tem como ser pintado campo a campo — é a mesma
-             razão da fita, que se troca inteira desde que a mesa passou a ter
-             dois lugares vazios.
-             SEM CSS PRÓPRIO de propósito: é um `<div>` de bloco, e as
-             `.mm-face` dentro dele empilham como empilhavam. -->
         <div class="mm-faces">
 {MAPA_DESENHADO}
         </div>
@@ -1608,8 +1223,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha .features .ar-selo{flex:none}
   .radio .aparelhos .faixa-do-aparelho:not(:has(.hz)){width:auto !important}
   .radio .aparelhos .faixa-do-aparelho:not(:has(.hz)) .vaga{flex:0 0 auto !important;padding:0 14px}
-  /* O som, a vibração e a luz de cada linha só MOSTRAM (`<span data-ligada>`): nenhum ato do produto
-     os atende, e o desenho aprovado os pintava por `aria-pressed` de botão. A dica é o que eles dizem. */
   .radio span.vaga,.radio span.selo-zero{cursor:help}
   .radio span.vaga[data-ligada],.radio span.selo-zero[data-ligada]{border-style:solid}
   .radio span.vaga[data-ligada]{background:var(--panel)}
@@ -1619,8 +1232,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio span.vaga.vaga:not([data-ligada]):not(.fixa):hover{border-color:var(--linha);
                                                           color:var(--fg)}
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
-  /* O NOME E O «ONDE FICA?» CABEM NA LINHA (19/10/2026, a foto da aba Conexões): o `min-height`
-     de 26 px dos dois vencia a altura compacta e eles encostavam na moldura do adaptador. */
   .radio .lugar-topo{min-height:28px}
   .radio .lugar-nome,.radio .abre-lugar{height:22px;min-height:0;padding-top:0;padding-bottom:0}
   .radio .lugar-topo .ensina{min-height:0;height:20px;padding-top:0;padding-bottom:0}
@@ -1635,8 +1246,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha .quem-resto{font-size:12.5px;color:var(--texto-suave);flex:none}
   .radio .lugar-topo[draggable="true"]{cursor:grab}
   .radio .lugar.arrastando{opacity:.45}
-  /* O «⋮» com o «Esquecer» e o X que só tira o aviso (ESQUECER-E-LIMPAR-AS-CONEXOES-01):
-     o mesmo lugar e o mesmo tamanho que o X de antes, e nenhum botão a mais por linha. */
   .radio .linha .xis,.radio .linha .menu-da-linha{width:22px;height:22px;padding:0;
                           display:inline-flex;align-items:center;
                           justify-content:center;border-radius:50%;border:1px solid transparent;
@@ -1655,24 +1264,13 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                             align-items:center}
   .radio .linha.nao-conectou,.radio .linha.desligado{cursor:default}
   .radio .linha.desligado .ds{opacity:.55}
-  /* o controle no cabo não está apagado: a silhueta fica na cor do plástico, como a do rádio */
   .radio .linha.desligado.no-cabo .ds{opacity:1}
   .radio .lugar.nao-conectou{border-color:var(--orange)}
-  /* O RÓTULO DA PISTA QUE É BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
-     dela: *«nessa região o svg continua em branco não dá pra entender»*.
-     Medido no WebKitGTK da janela: o `<button>` pintava `rgb(192,192,192)` por
-     baixo do ícone cinza, e o desenho sumia. O fundo é o da faixa, o traço é
-     o do texto, e todo rótulo diz uma palavra ao lado do ícone.
-     (noqa-acento: citação literal) */
   .radio button.rotulo{background:transparent;color:var(--texto-suave);line-height:1.3;
                        border:1px solid transparent;border-radius:6px;cursor:pointer;
                        font:inherit;text-align:left}
   .radio button.rotulo:hover{border-color:var(--purple);color:var(--fg)}
   .radio button.rotulo:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
-  /* UMA FAIXA POR APARELHO (AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01, o desenho 1):
-     os mesmos 79 canais em toda linha. Pintado é o canal bom, na cor do aparelho; o buraco é
-     o canal perdido, e nele a marca (embaixo) é a cor de quem briga ali, dos dois lados.
-     A cor é a IDENTIDADE; a palavra do selo é o que diz se está bom (cor nunca sozinha). */
   .radio .espectro{--vazio:#1b1c24}
   .radio .ar{display:flex;flex-direction:column;gap:7px}
   .radio .ar-grupo{display:flex;align-items:center;gap:8px;font-size:12px;
@@ -1682,8 +1280,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-grupo:first-child{margin-top:0;padding-top:0;border-top:0}
   .radio .ar-grupo b{font-weight:600;color:var(--cor-do-grupo,var(--fg))}
   .radio .ar-grupo .glifo-do-grupo{color:var(--cor-do-grupo,var(--texto-suave));font-size:14px}
-  /* 05/10/2026, o desenho aprovado: ícone · faixa · ponto. O nome e o estado moram no tooltip;
-     mais de três aparelhos numa entrada vão em duas colunas, metade de cada lado. */
   .radio .ar-linha{display:grid;align-items:center;column-gap:12px;
                    grid-template-columns:30px minmax(0,1fr) 12px}
   .radio .ar-do{display:flex;flex-direction:column;gap:7px}
@@ -1696,7 +1292,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .pistas[data-foco] .ar-linha.acesa{opacity:1}
   .radio .ar-rot{display:flex;align-items:center;justify-content:center;width:30px;height:22px}
   .radio .ar-rot svg{flex:none;color:var(--cor);width:20px;height:20px}
-  /* o desenho do controle é largo: na mesma altura visual dos outros, ele pede mais largura */
   .radio .ar-rot svg.ds{width:28px;height:19px}
   .radio .ar-rot button.rotulo{display:flex;align-items:center;justify-content:center;
                                padding:0;width:30px;height:22px}
@@ -1707,16 +1302,11 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-faixa i.b{background:var(--cor)}
   .radio .ar-faixa u{position:absolute;left:0;right:0;bottom:0;height:4px;
                      background:var(--m);text-decoration:none}
-  /* O enlace de baixa energia (a opção 1 do usuário, 09/10/2026): os 40 canais LE, duas
-     células cada, com a textura de «não medido» na cor do aparelho; o canal de anúncio leva a
-     barra de cima. Nada pintado como bom ou perdido: o mapa do adaptador não é o dele. */
   .radio .ar-faixa i.n{background:repeating-linear-gradient(135deg,var(--cor) 0 1px,
                        var(--vazio) 1px 4px)}
   .radio .ar-faixa i.n.a{box-shadow:inset 0 3px 0 var(--cor)}
-  /* a faixa sem leitura é o trilho vazio, igual ao dos outros; só o passo do «Descobrir» fala */
   .radio .ar-faixa.sem{display:flex;align-items:center;font-size:11px;color:var(--fg);
                        background:repeating-linear-gradient(90deg,var(--vazio) 0 9px,transparent 9px 11px)}
-  /* 06/10/2026, item 1: a faixa por descobrir é o botão, à vista; o Wi-Fi em 5 GHz diz onde está */
   .radio button.ar-faixa.descobrir{justify-content:center;height:18px;padding:0;cursor:pointer;
                        background:transparent;
                        font:inherit;font-size:11.5px;color:var(--texto-suave);
@@ -1727,22 +1317,17 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--fg);
                        background:linear-gradient(var(--vazio),var(--vazio)) center/100% 2px no-repeat}
   .radio .ar-faixa.fora span{background:var(--panel);padding:0 8px 0 0}
-  /* 06/10/2026, pergunta 1 (A): quando a seção não cabe, a linha de quem está fora da faixa
-     (o Wi-Fi em 5 GHz) sobe para o título do grupo como selo, e a tela não rola por ela */
   .radio .ar-no-titulo{display:none;align-items:center;gap:6px;margin-left:10px;font-size:11px;
                        color:var(--fg)}
   .radio .pistas[data-fora-no-titulo] .ar-no-titulo{display:inline-flex}
   .radio .pistas[data-fora-no-titulo] .ar-linha[data-fora-da-faixa]{display:none}
   .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
-  /* o estado é um ponto: verde = bom, vermelho = problema, vazado = sem leitura */
   .radio .ar-selo{display:inline-block;box-sizing:border-box;width:10px;height:10px;padding:0;
                   border-radius:50%;border:0;background:var(--orange);box-shadow:0 0 0 3px rgba(255,184,108,.2)}
   .radio .ar-selo.sofrendo{background:var(--red);box-shadow:0 0 0 3px rgba(255,85,85,.2)}
   .radio .ar-selo.boa{background:var(--green);box-shadow:none}
   .radio .ar-selo.sem{background:transparent;box-shadow:none;border:2px solid var(--comment)}
-  /* o sinal medido de quem não se julga pelo controle: o ponto cheio, na cor do aparelho */
   .radio .ar-selo.sinal{background:var(--cor,var(--texto-suave));box-shadow:none}
-  /* o controle conhecido que pede para parear: o ponto verde que pulsa (05/10/2026) */
   .cd-pulso,.radio .ar-pulso{display:inline-block;width:10px;height:10px;border-radius:50%;
              background:var(--green);box-shadow:0 0 0 0 rgba(80,250,123,.55);
              animation:pulso-pede 1.4s infinite}
@@ -1758,14 +1343,9 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-legenda button[aria-pressed="true"]{border-color:var(--fg);color:var(--fg)}
   .radio .ar-legenda button:focus-visible{outline:2px solid var(--purple);outline-offset:1px}
 
-  /* O «Procurar» é do painel do «Conectar» e de mais nenhum: o do «⋮» tem o nome, uma
-     frase e o botão. */
   .radio .painel:not([data-tipo="conectar"]) .cadeado{display:none}
   .radio .painel .explica{margin:0 0 10px;font-size:12.5px;color:var(--texto-suave);
                           line-height:1.4}
-  /* A gaveta do «⋮» (cura 4 da O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01): o
-     tamanho do que mostra, ao lado da linha, com o estado do aparelho embaixo do nome e os
-     botões do mesmo grupo com a mesma largura; o que apaga é vermelho com letra branca. */
   .radio .painel[data-tipo="menu"]{bottom:auto;width:auto;min-width:250px;max-width:340px;
     border:1px solid var(--border-forte);border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.5);
     padding:11px 12px 12px;gap:8px;overflow:visible}
@@ -1787,22 +1367,12 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .cor-yellow{--cor-do-grupo:var(--yellow)}
   .radio .cor-orange{--cor-do-grupo:var(--orange)}
   .radio .cor-comment{--cor-do-grupo:var(--comment)}
-  /* A VARREDURA E A BUSCA MORAM SEMPRE NO CABEÇALHO DA CAIXA, e as listas
-     `radio-varrendo` e `radio-conectando` as acendem — sem refazer a sala
-     (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2). A borda da busca é a da
-     espera do desenho aprovado (`.lugar.esperando`). */
   .radio .marca.varrendo:not(.aceso){display:none}
   .radio .lugar:not(.buscando) .espera.busca{display:none}
   .radio .lugar.buscando{border-color:rgba(80,250,123,.6)}
-  /* O chip que a central não aceita agora: apagado, com a dica, e sem tremer. */
   .radio .op[aria-disabled="true"]{cursor:not-allowed;opacity:.5}
-  /* O arrasto com um movimento esperando treme a linha, como o botão (R8). */
   .radio .linha.recusa{animation:rd-recusa 420ms var(--ease) 1}
   @media (prefers-reduced-motion: reduce){.radio .linha.recusa{animation:none}}
-  /* O «PROCURAR» (O-CONECTAR-E-UM-INTERRUPTOR-01): a pílula do «Modo
-     Freestyle» da aba Jogar, com os valores DO USUÁRIO (`aba01.py`, a folha
-     `.cadeado`), copiados e presos pela régua do interruptor — sem importar
-     de outra aba. No painel, ela fica à direita do título. */
   .radio .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:7px;
            margin-left:auto;height:26px;flex:0 0 auto;white-space:nowrap;
            border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
@@ -1814,20 +1384,10 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .radio .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
-  /* O DESENHO DO TODO (13/10/2026, mudanças 9 e 10): a Rádio aberta cabe sem rolagem (as
-     faixas e os vãos encolhem 2 px, o desenho é o mesmo), e as barras dos adaptadores começam
-     e acabam na mesma reta, qualquer que seja o nome ou a conta do adaptador. */
   .radio .ar,.radio .ar-do{gap:5px}
   .radio .ar-duas{row-gap:5px}
   .radio .ar-grupo{margin-top:3px}
   .radio .ar-rot,.radio .ar-rot button.rotulo{height:20px}
-  /* A LINHA DO ADAPTADOR CABE NA COLUNA DO «ONDE» (24/10/2026): a coluna tinha 116 px fixos, e a
-     espera «Segure PS + Create» e o «Onde fica?» passavam dela para baixo do sino. A grade passa a
-     ser UMA, a da sala, e cada caixa e a linha de cima dela a herdam (`subgrid`): a coluna do
-     «onde» cresce até o que ela leva, sem quebrar a linha, e a barra de todo adaptador continua
-     começando e acabando na mesma reta, porque a coluna que cresce cresce para todos. A primeira
-     coluna leva a margem de 10 px da caixa e a seta de 24 px: na `subgrid` a margem da caixa entra
-     na coluna da ponta, e a de tamanho fixo não cresce por ela. */
   .radio .sala{gap:5px;display:grid;column-gap:8px;
                grid-template-columns:calc(10px + 24px) auto minmax(116px,max-content) 26px
                                      minmax(110px,1fr) auto}
@@ -1844,8 +1404,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                                     grid-template-columns:auto auto 48px;column-gap:8px;
                                     justify-content:end}
   .radio .lugar-topo > .lugar-conta > .sobra{justify-self:start}
-  /* O APARELHO SEM TIPO (desenho do todo, 13/10/2026): o «?» tracejado no lugar do ícone e a grade
-     «O que é este aparelho?» com nove ícones grandes. */
   .radio .linha .tipo-qual{width:20px;height:20px;border-radius:50%;border:1px dashed var(--orange);
     color:var(--orange);display:inline-flex;align-items:center;justify-content:center;
     font-size:12px;font-weight:600;text-decoration:none;flex:none}
@@ -1859,8 +1417,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
     stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .tipo-op .i.ds{width:58px;height:40px;color:var(--cyan)}
   .tipo-op:hover{border-color:var(--purple);color:var(--fg)}
-  /* O ACIONADOR (desenho r3-08-14, com o ajuste da rodada 3 de 14/10): «Usar como botões de…»
-     a 150 x 24 na coluna da ação, e a janela das teclas ao lado do desenho real do controle. */
   .radio .linha .btn.usar-como{text-decoration:none;white-space:nowrap}
   .radio .linha[data-r3="14"] .features{display:grid;grid-template-columns:204px 150px;
     align-items:center;column-gap:0}
@@ -2182,9 +1738,6 @@ SCRIPT_DAS_FAIXAS = r"""
     'use strict';
     if(window.__hefFaixas) return;
     window.__hefFaixas = true;
-    // O que a pessoa aponta (a linha sob o mouse ou com o foco) e o tipo que o usuário escolheu na
-    // legenda. A linha vale mais que o tipo, e a faixa se repinta por dentro a cada tique:
-    // por isso o estado mora aqui, e o observador o reaplica depois de cada repintura.
     var linhaAcesa = null, tipoAceso = null;
     function pistas(){ return document.querySelector('.radio .pistas'); }
     function aplicar(){
@@ -2253,9 +1806,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     function balancar(b){ b.classList.remove('recusa'); void b.offsetWidth; b.classList.add('recusa');
       setTimeout(function(){ b.classList.remove('recusa'); }, 500); }
 
-    // ---- o acordeão: abrir um adaptador fecha os outros (o Python lembra) ----
-    // Com UMA caixa só ela fica aberta (decisão, 25/09): o pacote nem
-    // pinta a seta, e esta guarda cobre a página de antes do próximo tique.
     document.addEventListener('click', function(ev){
       var b = perto(ev, '.radio .abre-lugar');
       if(!b) return;
@@ -2268,14 +1818,11 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(abrindo){ card.classList.add('aberto'); b.setAttribute('aria-expanded', 'true'); }
       focar();
     });
-    // ---- a caixa aberta põe a faixa em foco nela: só os aparelhos do usuário, sem o título ----
-    // (desenho aprovado de 05/10/2026). Com uma caixa só, ela vive aberta e nada se esconde.
     function focar(){
       var p = um('.radio .pistas'); if(!p) return;
       var aberta = todos('.radio .sala .lugar').length > 1 ? um('.radio .sala .lugar.aberto') : null;
       var id = aberta ? aberta.getAttribute('data-id') : '';
       todos('.ar > .ar-grupo, .ar > .ar-do', p).forEach(function(e){
-        // o grupo da caixa aberta só fica quando pulsa: o controle que pede para parear ali
         var dele = (e.classList.contains('ar-do') && e.getAttribute('data-do') === id)
           || (e.getAttribute('data-grupo') === id && !!e.querySelector('.ar-pulso'));
         e.classList.toggle('fora-do-foco', !!id && !dele);
@@ -2289,7 +1836,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       }
       focar();
     })();
-    // ---- a largura do nome segue o texto ----
     document.addEventListener('input', function(ev){
       var n = perto(ev, '.radio .lugar-nome');
       if(n) n.style.width = Math.max((n.value || n.placeholder).length + 2, 10) + 'ch';
@@ -2297,14 +1843,11 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(c) c.style.width = Math.max((c.value || c.placeholder).length + 2, 6) + 'ch';
     });
 
-    // ---- a PERGUNTA, antes de todo mover (R7) ----
     var antesDaPergunta = null;
     function moldeDe(alvo, destino){
       return um('.radio template.pergunta-molde:not([data-pedido]):not([data-esquecer])[data-alvo="'
                 + aspas(alvo) + '"][data-destino="' + aspas(destino) + '"]');
     }
-    // A PERGUNTA DO X (26/09/2026): o endereço é a linha E o adaptador — o mesmo
-    // controle desligado mora em cada adaptador em que tem chave.
     function moldeDoX(alvo, lugar){
       return um('.radio template.pergunta-molde[data-esquecer][data-alvo="' + aspas(alvo)
                 + '"][data-destino="' + aspas(lugar) + '"]');
@@ -2319,7 +1862,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var outro = document.getElementById('rd-pergunta-outro');
       sim.textContent = m.dataset.sim || ''; sim.hidden = !m.dataset.sim;
       sim.dataset.alvo = m.dataset.alvo || ''; sim.dataset.destino = m.dataset.destino || '';
-      // O «SIM» É O GESTO DO MOLDE: «Mover» por padrão, «Esquecer» no X.
       sim.dataset.gesto = m.dataset.gesto || 'confirmar-mudanca';
       outro.textContent = m.dataset.outro || ''; outro.hidden = !m.dataset.outro;
       outro.dataset.alvo = m.dataset.alvo || '';
@@ -2345,11 +1887,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(perto(ev, '#rd-pergunta .btn') || perto(ev, '#rd-veu-pergunta')) fecharAPergunta();
     });
 
-    // ---- o PAINEL lateral: o que a página abre, o Python já pintou ----
-    // O PAINEL SEGUE O MOLDE ENQUANTO ESTÁ ABERTO (25/09/2026, a lista dela,
-    // passo b6: *«não apareceu na lista»*). Ele era uma CÓPIA tirada no clique:
-    // o tique repintava o molde com o aparelho que a busca achou, e o
-    // «Procurando» aberto continuava mostrando a lista do instante do clique.
     var quemAbriu = null, painelAberto = null;
     function moldeDoPainel(tipo, alvo){
       return um('.radio template.painel-molde[data-painel="' + tipo + '"][data-alvo="'
@@ -2382,15 +1919,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(primeiro) primeiro.focus();
       return true;
     }
-    // O PAINEL ABERTO SE REMENDA, NÃO SE REFAZ (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01,
-    // cura 1). Ele se esvaziava e se enchia de novo a cada molde novo — e o
-    // molde do «Conectar» muda a cada leitura do BlueZ (3 s), porque o sinal
-    // de quem está perto mora nele: todo botão do painel era destruído e
-    // recriado, o que estava debaixo do ponteiro dela também. Agora os nós
-    // casam pela chave (a tag e o `data-alvo`): a linha que fica é o MESMO nó,
-    // e só o que mudou nela muda (o número do sinal, o `aria-pressed` e a dica
-    // do chip); a que chegou entra no lugar dela, e a que saiu sai. O título e
-    // o pulso são do molde também, e mudam no lugar.
     function chaveDoNo(n){
       if(n.nodeType !== 1) return '#' + n.nodeType;
       var alvo = n.getAttribute('data-alvo');
@@ -2446,15 +1974,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(quemAbriu && document.contains(quemAbriu)) quemAbriu.focus();
       quemAbriu = null;
     }
-    // A SEÇÃO CABE O PAINEL (06/10/2026, item 2). O painel é absoluto e seguia a altura da seção:
-    // com as entradas fechadas ela tinha 169 px e o «Conectar» pedia 488, que rolavam por dentro,
-    // com o miolo vazio embaixo. Aberto, ele estica a seção até caber, no máximo até o fim do
-    // miolo (a página nunca rola); fechado, a seção volta à altura dela. A conta é refeita quando
-    // a lista do painel ou a seção mudam de tamanho (a procura acha aparelhos a cada leitura).
-    // A GAVETA DO «⋮» MORA AO LADO DA LINHA (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01,
-    // cura 4). Ela era o painel da seção inteira, com o nome e um botão num retângulo vazio que
-    // cobria a coluna dos «⋮» das outras linhas. Agora tem o tamanho do que mostra e abre à
-    // esquerda do «⋮» que a abriu, na altura da linha: a coluna dos «⋮» fica livre.
     function aGavetaNaLinha(p){
       p.style.top = ''; p.style.right = '';
       if(p.getAttribute('data-tipo') !== 'menu' || !p.offsetParent) return;
@@ -2469,9 +1988,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       p.style.top = topo + 'px';
       p.style.right = Math.round(base.right - r.left + 6) + 'px';
     }
-    // O PAINEL NÃO COBRE A COLUNA DOS «⋮» (a mesma cura 3): o «Conectar» aberto ocupava a borda
-    // direita da seção, por cima do «⋮» de toda linha, e o clique nele caía no painel. Aberto, o
-    // painel para à esquerda da coluna, e o «⋮» de qualquer linha continua ao alcance.
     function oPainelDeixaOsMenus(p){
       if(!p) return;
       p.removeAttribute('data-solto');
@@ -2506,9 +2022,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var alvo = Math.floor(Math.min(precisa, teto));
       if(alvo > s.offsetHeight) s.style.minHeight = alvo + 'px';
     }
-    // O QUE ESTÁ FORA DA FAIXA CABE (06/10/2026, pergunta 1, opção A). A linha do Wi-Fi em 5 GHz
-    // custa 29 px; quando com ela a seção não cabe no miolo, ela vira o selo do título «Outros
-    // dispositivos sem fio». A conta tira o selo, mede e o devolve no mesmo quadro (sem piscar).
     function oQueEstaForaDaFaixaCabe(){
       var pistas = um('.radio .pistas'), miolo = pistas && pistas.closest('.miolo');
       if(!miolo) return;
@@ -2524,8 +2037,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     document.addEventListener('change', function(ev){
       if(ev.target && ev.target.name === 'cx8-secao') oQueEstaForaDaFaixaCabe();
     });
-    // o tique repinta as linhas por dentro da faixa: a linha de fora pode chegar ou sair (a rede
-    // trocou de banda), e a conta se refaz
     var pistasDoAr = um('.radio .pistas');
     if(pistasDoAr && window.MutationObserver){
       new MutationObserver(oQueEstaForaDaFaixaCabe).observe(pistasDoAr, {childList: true});
@@ -2544,11 +2055,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     document.addEventListener('keydown', function(ev){
       if(ev.key === 'Escape'){ fecharAPergunta(); fecharPainel(); }
     });
-    // O «CONECTAR» NÃO PRENDE A SEÇÃO (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01,
-    // cura 3). Um véu cobria a seção com o painel aberto, e todo clique nela só fechava o painel:
-    // outra linha, outro adaptador, nada respondia. Sem o véu, as linhas respondem como sempre (o
-    // «⋮» de outra linha troca a gaveta), e com a busca acesa o clique na caixa de outro adaptador
-    // é a escolha do chip: o alvo muda para ela. O clique em nada fecha o painel, como o véu.
     function aCaixaEscolhe(ev){
       var caixa = perto(ev, '.radio .sala .lugar');
       if(!caixa || perto(ev, '.linha, button, input, a, [data-gesto], .balao')) return false;
@@ -2570,22 +2076,14 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(foraDoPainel && !perto(ev, '.radio button, .radio input, .radio a, .radio [data-gesto]')){
         fecharPainel(); return;
       }
-      // escolher dentro do painel: quem vem / para onde → a pergunta
       var ir = perto(ev, '#rd-painel [data-aparelho][data-destino]');
       if(ir){ fecharPainel(); perguntar(moldeDe(ir.dataset.aparelho, ir.dataset.destino)); return; }
-      // O CHIP ACESO É O DO RÁDIO (A-CAIXA-FICA-ONDE-ELA-ABRIU-01): com o
-      // piloto, o chip pede ao Python — e, com a busca de pé, à central — e o
-      // painel segue o molde quando a resposta chega. Aceso no clique, o chip
-      // recusado ficava aceso sobre a busca que continuava noutro adaptador.
       var chip = perto(ev, '#rd-painel .op');
       if(chip){
-        // O chip apagado diz que agora não pela dica, e não treme nem acende.
         if(chip.getAttribute('aria-disabled') === 'true' || comPiloto()) return;
         todos('.op', chip.parentNode).forEach(function(o){ o.setAttribute('aria-pressed', 'false'); });
         chip.setAttribute('aria-pressed', 'true'); return;
       }
-      // O «ESQUECER» DO MENU DA LINHA abre a pergunta de sempre — o par
-      // (linha, adaptador), como o X abria até a ESQUECER-E-LIMPAR-AS-CONEXOES-01.
       var esquecer = perto(ev, '#rd-painel .escolha [data-gesto="esquecer-aparelho"]');
       if(esquecer){
         var mx = moldeDoX(esquecer.dataset.alvo, esquecer.dataset.lugar);
@@ -2603,28 +2101,18 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         return;
       }
       if((b = perto(ev, '.radio .rotulo.vizinho'))){ abrirPainel('o-que-e', b.dataset.alvo); return; }
-      // O «⋮» DA LINHA (ESQUECER-E-LIMPAR-AS-CONEXOES-01): o menu dela, com o
-      // «Esquecer». O molde existe sempre e o menu abre com o que se sabe; só o
-      // «Esquecer» de verdade espera o rádio desocupar, e diz por quê.
       if((b = perto(ev, '.radio .linha .menu-da-linha'))){
         abrirPainel('menu', b.dataset.alvo + '|' + b.dataset.lugar);
         return;
       }
-      // O X do «Não Conectou» tira o aviso, e não esquece nada: com o piloto,
-      // quem tira é a central (a linha some no tique); no desenho, a página.
       if((b = perto(ev, '.radio .linha .xis'))){
         if(!comPiloto()){ var aviso = b.closest('.linha'); if(aviso) aviso.remove(); }
         return;
       }
-      // «Tentar de Novo» é o «Conectar» daquele adaptador: o mesmo painel abre.
-      // Quem não é controle tenta o mesmo mover, e não tem painel (`data-abre`).
       if((b = perto(ev, '.radio .linha .tentar'))){
         if(b.dataset.abre) abrirPainel(b.dataset.abre, '');
         return;
       }
-      // O «+ CONECTAR» SÓ ABRE O PAINEL (O-CONECTAR-E-UM-INTERRUPTOR-01): quem
-      // liga a busca é o «Procurar», e ligá-lo abre o painel também; fechar o
-      // painel não o desliga. A cópia de dentro do painel não reabre nada.
       if((b = perto(ev, '#rd-b-conectar'))){ abrirPainel('conectar', ''); return; }
       if((b = perto(ev, '.radio .cadeado[data-gesto="radio-procurar"]'))){
         if(!b.classList.contains('ligada') && !b.closest('#rd-painel')) abrirPainel('conectar', '');
@@ -2636,7 +2124,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
           balancar(b);
         return;
       }
-      // a lâmpada: o balão da sugestão, dentro do cartão
       if((b = perto(ev, '.radio .lampada'))){
         var card = b.closest('.lugar'), velho = um('.balao', card);
         if(velho){ velho.remove(); return; }
@@ -2652,11 +2139,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         bal.remove(); return;
       }
     });
-    // AS DICAS (AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01): o botão de mover abre a MESMA pergunta de
-    // todo mover (o molde é o do balão da lâmpada). O porquê vive no hover do título.
-    // A GRADE «O QUE É ESTE APARELHO?» (O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01):
-    // a janela é uma só, o «?» da linha entrega o endereço dele aos ícones, e o ícone escolhido
-    // grava o tipo para quem a abriu e fecha a janela.
     document.addEventListener('click', function(ev){
       var q = perto(ev, '.radio .linha .tipo-qual');
       if(q) todos('#tipo-do-aparelho .tipo-op').forEach(function(b){ b.dataset.alvo = q.dataset.alvo || ''; });
@@ -2666,7 +2148,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var mover = perto(ev, '.dicas .cd-botao[data-destino]');
       if(mover) perguntar(moldeDe(mover.dataset.alvo, mover.dataset.destino));
     });
-    // o teclado: Enter numa linha abre «Para onde vai» — arrastar não é o único caminho
     document.addEventListener('keydown', function(ev){
       if(ev.key !== 'Enter' && ev.key !== ' ') return;
       var l = ev.target && ev.target.matches && ev.target.matches('.radio .linha[tabindex]') ? ev.target : null;
@@ -2676,14 +2157,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       abrirPainel('para-onde', l.dataset.id);
     });
 
-    // ---- ARRASTAR AS CAIXAS: a ordem é de produto, e fica gravada ----
-    // Decisão, 25/09/2026: ela segura a linha de cima de um adaptador e
-    // arrasta para mudar a ordem (a frase de produto está no `adaptador_reordenar` do
-    // pacote). A caixa anda na página enquanto ela arrasta; ao soltar, a ordem
-    // nova (os `data-id`, de cima para baixo) vai ao Python pelo
-    // `#rd-reordenar` — o botão escondido que o ouvinte do piloto escuta, como
-    // o `#rd-comecar` da cerimônia. O tipo do arrasto é PRÓPRIO: a linha de um
-    // aparelho, que também se arrasta, não se confunde com a caixa.
     var caixa = null, idDaCaixa = '', ordemAntes = '';
     function ordemDasCaixas(){
       return todos('.radio .sala .lugar').map(function(l){ return l.dataset.id; }).join(' ');
@@ -2724,11 +2197,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(b && agora && agora !== antes){ b.value = agora; b.click(); }
     });
 
-    // ---- ARRASTAR: o destino é o adaptador inteiro, aberto ou fechado ----
-    // COM UM MOVIMENTO ESPERANDO, O ARRASTO TREME (R8): a linha se arrasta
-    // sempre no HTML, e quem diz «agora não» é o `radio-ocupado`, o mesmo
-    // campo do «Equilibrar» — o `draggable` que seguia o «ocupado» refazia a
-    // sala inteira a cada busca (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2).
     function ocupado(){
       var e = um('.radio [data-campo="radio-ocupado"]');
       return !!(e && e.classList.contains('apagado'));
@@ -2769,7 +2237,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(quem) perguntar(moldeDe(quem, c.dataset.id));
     });
 
-    // ---- o pedido do governador vira a janela, uma vez por pedido (R3) ----
     var pedidosVistos = {};
     function olharOsPedidos(){
       todos('.radio template.pergunta-molde[data-pedido]').forEach(function(m){
@@ -2780,7 +2247,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         perguntar(m);
       });
     }
-    // ---- a chegada pisca o destino (R8: a confirmação é a piscada) ----
     var chegados = {};
     function olharAsChegadas(){
       todos('.radio .lugar[data-chegou]').forEach(function(c){
@@ -2788,9 +2254,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
           var k = c.dataset.id + '|' + q;
           if(chegados[k]) return;
           chegados[k] = true;
-          // quem chegou encerra a procura: o «Procurando» fecha, e a caixa
-          // que recebeu pisca à vista (o controle que volta pelo pareamento
-          // antigo chega por aqui também — a lista dela, passo b6)
           if(painelAberto && painelAberto.tipo === 'conectar') fecharPainel();
           c.classList.add('recebeu');
           setTimeout(function(){ c.classList.remove('recebeu'); }, 900);
@@ -2798,13 +2261,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       });
     }
 
-    // ---- «Examinar Entradas»: o resultado é o Check-up, e ele se abre ----
-    // A lista dela, passo b8: *«não pareceu acontecer nada»*. O exame corria,
-    // o botão piscava verde e o carimbo do Check-up mudava — mas o Check-up é
-    // outra seção do acordeão, FECHADA enquanto ela está no rádio. Quando o
-    // exame aplica (a piscada verde do piloto), a seção dele se abre. O olho
-    // nasce no CLIQUE, sobre o botão clicado: guardado no carregar da página,
-    // ele vigiava um nó que o piloto já trocara (medido na bancada de tela).
     document.addEventListener('click', function(ev){
       var b = perto(ev, '.radio [data-gesto="examinar-portas"]');
       if(!b || !window.MutationObserver) return;
@@ -2819,13 +2275,10 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       setTimeout(function(){ olho.disconnect(); }, 30000);
     }, true);
 
-    // ---- a cerimônia: a âncora abre, o laço do Python diz a tela ----
     var alvoDaCerimonia = '', ultimaTela = '';
     document.addEventListener('click', function(ev){
       var a = perto(ev, '.radio a.ensina');
       if(a) alvoDaCerimonia = a.dataset.alvo || '';
-      // SEM PILOTO (o desenho aberto no navegador) a resposta leva ao fim, como
-      // no desenho aprovado; COM ele, quem diz a próxima tela é o laço.
       if(!comPiloto() && perto(ev, '[data-gesto="entrada-face"],[data-gesto="entrada-pular"]'))
         location.hash = 'mapear-entrada-a-entrada-fim';
     }, true);
@@ -2847,7 +2300,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       else if(antes && /^#mapear-entrada-a-entrada/.test(location.hash)) location.hash = '';
     }
 
-    // ---- UM observador para as três leituras: o tique troca, a página olha ----
     function olhar(){ olharOsPedidos(); olharAsChegadas(); seguirATela(); seguirOPainel(); }
     var raiz = document.getElementById('rd-secao');
     if(raiz && window.MutationObserver){
@@ -2906,8 +2358,6 @@ TELA_MAPEAR_PORTAS = f'''
   </div>
 </div>
 <script>
-  // A ÂNCORA ABRE, E O FLUXO COMEÇA E PARA COM ELA: o dono do mapa só olha as
-  // portas enquanto a tela está aberta.
   (function(){{
     var aberto = false;
     function seguir(){{
@@ -3010,158 +2460,28 @@ TELA_EM_PE = cerimonia(
 
 CSS += CSS_DA_SECAO_DO_RADIO
 
-MIOLO = f'''
-    <!-- ======== A TABELA DAS CORES DO USUÁRIO, uma vez para a página inteira ========
-         Os 28 modelos e as 10 zonas de `docs/data/cores-do-dualsense.csv`, com a
-         hachura e os dois gradientes que oito deles usam — o
-         `<defs id="cores-do-dualsense">` inteiro, lido do `ds_limpo.svg` por
-         `_a_tabela_dos_28`. Ele morava DENTRO de cada desenho e vinha PODADO
-         (só o modelo que o mockup escolheu), e uma tabela podada não tem como
-         virar outro modelo: o alvo de atributo escreveria `white` e a casca
-         continuaria caindo no cinza cru do desenho.
-         O `<svg>` mede ZERO e não desenha nada — ele existe porque `<pattern>` e
-         `<linearGradient>` só valem dentro de um fragmento SVG. Não muda um
-         pixel do que o usuário aprovou. ======== -->
-{TABELA_DAS_CORES}
+MIOLO = f'''{TABELA_DAS_CORES}
 
-    <!-- ======== 1. CHECK-UP — juízo à esquerda, conserto à direita ========
-         SUBIU PARA PRIMEIRO E MUDOU DE NOME — 30/08/2026, pedido:
-         *"a parte 'Está tudo certo' aparece como primeiro bloco na página e
-         mudamos o nome pra Check-up"*. Faz sentido de leitura: quem abre a
-         Conexões quer primeiro saber se há algo errado, e só depois a lista
-         de quem está na mesa. E "Check-up" é substantivo — nomeia a seção;
-         "Está tudo certo?" era pergunta, e título que pergunta faz a pessoa
-         procurar a resposta em vez de ler o que está embaixo. ======== -->
     <div class="quadro">
-      <!-- SÓ O CHECK-UP NASCE ABERTO — 30/08/2026, pedido: *"inicia as
-           demais abas de gestão e rádio minimizadas"*. Faz sentido de uso: quem
-           abre a Conexões quer primeiro saber se há algo errado; a lista da mesa
-           e o inventário de rádios são consulta, não alerta. E resolve, de
-           quebra, os 208px que o quadro de baixo perdia por não caber. -->
-      <!-- ABRIR UMA MINIMIZA AS OUTRAS — 31/08/2026, pedido: *"abrir uma
-           expansão minimiza a outra"*.
-
-           `type="radio"` COM O MESMO `name`, e não JavaScript: é a gramática que
-           esta casa já usa no interruptor da aba Jogar e nos três estados da
-           página de calibração. O navegador é quem garante a exclusão — não há
-           estado a sincronizar, e o mockup continua sem uma linha de script.
-
-           O QUE ISSO TROCA, e é troca boa: com rádio não se fecha a última
-           clicando nela de novo, então há SEMPRE uma seção aberta. Medido antes:
-           com as três fechadas sobravam **428px** de vão até o rodapé, e com as
-           três abertas a página passava **248px** do miolo e rolava. Os dois
-           extremos deixam de existir.
-
-           O CSS do esqueleto não precisou mudar: ele lê `input.abre:checked`,
-           que vale igual para caixa e para rádio. -->
       <input class="abre" type="radio" name="cx8-secao" id="cx8-2" checked>
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-2" data-dica="Dicas em cima, um cartão por controle embaixo">Gestão de controles</label>
       </div>
       <div class="quadro-corpo">
-        <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido com a janela
-             maximizada: *«precisamos ganhar espaço vertical. vamos remover a
-             linha 3 mudanças recomendadas»*. Revoga a D-16 de 04/09 («Uma
-             linha de veredito no topo»): a Sugestão de Conexão ao lado já
-             numera cada mudança, e a contagem repetia a caixa. -->
-        <!-- AS DICAS SÃO CARTÕES COM UM GESTO — 04/10/2026, AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01
-             (o desenho 4 que o usuário aprovou). O exame de cinco frases e a «Sugestão de Conexão»
-             saíram: no lugar dos dois, uma fileira de cartões com três a cinco palavras, o de→para
-             e UM botão cada; os três que mais pesam aparecem, o resto fica em «mais N», e o que
-             está certo vira uma linha no fim. É UM endereço com alvo `html`: o produto repinta a
-             fileira inteira, e o desenho mostra os mesmos cartões, montados pelas mesmas funções
-             (`a08_conexoes._html_das_dicas`). -->
         <div class="dicas-da-conexao" data-campo="{CAMPO_DAS_DICAS}" data-hef-alvo="html">{DICAS_DA_CENA}</div>
 
-        <!-- OS QUATRO BOTÕES SAÍRAM — 31/08/2026, e cada um por um motivo dela.
-
-             *"não faz sentido termos o examinar e o reexaminar"*: os dois faziam
-             a MESMA coisa — refazer o exame. `Já movi — reexaminar` só prometia
-             comparar o antes com o depois, e essa comparação não estava desenhada
-             em lugar nenhum. Sobrou um, e ele desceu para a seção que fala das
-             entradas, como o usuário mandou.
-
-             `Ignorar` mora no ⓘ de cada cartão de dica (04/10/2026), e a ordem calada
-             fica no fim, apagada, com o botão «Voltar a mostrar». E `{VER_IGNORADAS}`
-             saiu com o glifo de cada linha (31/08), que era onde o gesto tinha sujeito. -->
-        <!-- AS FERRAMENTAS MORAM NO CHECK-UP — 25/09/2026, pedido
-             (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01). O «Mapear Entradas» é UM botão
-             só: a âncora abre o fluxo guiado porta a porta (`#mapear-portas`),
-             que chama o dono do mapa (`entrada_a_entrada.o_mapa()`). A âncora
-             não é gesto (a §P4): quem começa o fluxo é o `#mp-comecar`. -->
-        <!-- QUATRO FERRAMENTAS, TODAS COM ÍCONE — 26/09/2026, pedido: *«não
-             existe diferença entre o examinar entradas e atualizar»* e *«falta os
-             svg ou glifos»*. O «Atualizar» entrou no «Examinar Entradas» (um clique
-             refaz o exame e relê os controles), e as quatro colunas são as dos
-             cartões embaixo: cada botão fica em cima de um cartão. -->
-        <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
-             `CONEXOES-LIGAR-TUDO-01`. Os {len(MESA) + 1} rádios são o alvo de
-             saída do daemon (`output_target_index`), e até hoje o `checked`
-             ficava onde o desenho o pôs: ela clicava "só este" no P2, o daemon
-             obedecia, e no tique seguinte a tela continuava apontando o P1.
-
-             UM ENDEREÇO, AS DUAS METADES DA QUEIXA. O destaque da FITA do topo
-             não vem do `.on` que o piloto escreve — vem das regras
-             `body:has(#gc-pN:checked) .fita .chip[data-pref="pN"]` geradas
-             logo acima, pelo número do jogador —, então marcar o rádio certo
-             move o acordeão e a fita juntos.
-
-             O ALVO É `marcado`, o décimo do pintor (decisão em 04/09,
-             `PINTOR-MARCADO-01`): dos nove anteriores, `valor` escreve
-             `el.value`, que num `<input type=radio>` é a string `"on"` e não o
-             estado. A LISTA vem na ordem do DOM — `todos` primeiro, depois um
-             por lugar —, que é como o piloto distribui uma lista pelos
-             elementos de mesmo `data-campo`. -->
         <input type="radio" name="gc" id="gc-todos" class="gc-r"
                data-campo="alvo-aberto" data-hef-alvo="marcado">
 {chr(10).join(f"""        <input type="radio" name="gc" id="gc-{c["pref"]}" class="gc-r"
                data-campo="alvo-aberto" data-hef-alvo="marcado"{" checked" if c["alvo"] else ""}>"""
               for c in MESA)}
-        <!-- OS DOIS AVISOS QUE A CASA SABIA E ESTA TELA NÃO DIZIA —
-             06/09/2026. Os dois têm dono no produto e zero leitor no HTML até
-             hoje:
-
-               · `status_actions.texto_de_controle_nao_adotado` — *"está ligado
-                 e não chegou até aqui"*, com o que o produto tenta sozinho, em
-                 quanto tempo, e a saída manual. O defeito que ele cura (dois
-                 DualSense ligados e a janela mostrando um, sem uma pista do
-                 porquê) voltava inteiro no HTML;
-               · `home_actions.texto_native_bt_fragil` — o modo nativo com o
-                 controle no rádio, COM OS NÚMEROS de quem está frágil.
-
-             ELES SÃO LINHA DE RESSALVA (a D-02 dela) e por isso entram os dois
-             sem custar altura: em repouso `.ressalva:has(.nada)` mede ZERO —
-             que é o estado desta bancada e o desta máquina hoje. -->
         {monta_ressalva("sem-driver")}
         {monta_ressalva("radio-fragil")}
         <div class="gc">
 {chr(10).join(linha_do_controle(c) for c in MESA)}
-          <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a
-               linha 305 do `docs/data/paridade-gtk-html.csv`: *"uma aba chamada
-               Conexões que não lista metade dos controles conectados"*.
-
-               DENTRO DO `.gc`, POR ESCOLHA DO USUÁRIO — 06/09/2026, olhando as duas
-               maquetes: *no mesmo frame dos assentos*, como a janela GTK fazia.
-               A EXTERNOS-01 entregou a ressalva embaixo do acordeão e
-               perguntou; esta é a resposta.
-
-               A LINHA NÃO VIRA UM `.gc-item` POR ISSO, e a razão da EXTERNOS-01
-               continua de pé: cada `.gc-item` tem `data-controle="pN"`, um
-               rádio de alvo de saída do daemon e um corpo que abre. Um externo
-               não tem assento, não é alvo de saída de nada e não tem o que
-               abrir. Estar na mesma moldura é DESENHO; ser um assento é uma
-               afirmação sobre o aparelho, e a tela não a faz.
-
-               ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
-               mapa do gabinete: quantos existem é o que a máquina responde. -->
           <div class="ext-vaga" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
-          <!-- 22/10/2026, o arranjo C da janela da extensão: as conexões e os aparelhos que cada
-               extensão ligada publica (`acessorios.estado`), «via» o nome dela, na mesma moldura dos
-               externos e pela mesma razão: o Hefesto os VÊ, não os adota. Nasce vazia: quantos
-               existem é o que as extensões respondem. -->
           <div class="ext-vaga" data-campo="extensoes-lista" data-hef-alvo="html"><i class="nada"></i></div>
         </div>
-        <!-- 05/10/2026, o desenho aprovado: as quatro ferramentas descem para baixo dos cartões. -->
         <div class="ferramentas">
           <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez; o nome e o lugar são opcionais">
             <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
@@ -3175,18 +2495,6 @@ MIOLO = f'''
       </div>
     </div>
 
-    <!-- ======== 3. RÁDIO E ADAPTADORES — o `mapa-do-radio.html` aprovado ========
-         TRANSPLANTE-DA-SECAO-01, 23/09/2026. A seção inteira é o desenho que
-         o usuário aprovou; a folha, o sprite e a cena de exemplo são LIDOS dele
-         (`_css_do_radio`, `_sprite_do_radio`, `_cena_do_desenho`). Quem pinta
-         é o pacote (`a08_conexoes.campos_da_secao`); o roteiro só abre o que
-         o Python já pintou.
-
-         AS DUAS ÂNCORAS NÃO SÃO GESTOS, e é a regra da §P4: `#mapear-entradas`
-         e `#mapear-entrada-a-entrada` abrem as `div.tela-nova` por `:target`.
-         Quem começa o laço da cerimônia é o `#rd-comecar`, que o roteiro clica
-         quando a âncora abre — um gesto de nome próprio, e não um segundo nome
-         para a âncora. ======== -->
     <div class="quadro radio" id="rd-secao">
       <input class="abre" type="radio" name="cx8-secao" id="cx8-3">
       <div class="quadro-topo cab">
@@ -3213,9 +2521,6 @@ MIOLO = f'''
         <button hidden id="rd-escolher" data-gesto="escolher-adaptador" data-alvo=""></button>
         <div class="moldes" data-campo="radio-moldes" data-hef-alvo="html">{CAMPOS_DO_RADIO["radio-moldes"]}</div>
 
-        <!-- OS BOTÕES DAS ENTRADAS SUBIRAM PARA O CHECK-UP — 25/09/2026. Ficam
-             aqui só as duas peças escondidas da cerimônia antiga, que o roteiro
-             desta seção ainda lê (`#rd-comecar` e `entrada-tela`). -->
         <div class="entradas" hidden>
           <button hidden id="rd-comecar" data-gesto="entrada-comecar" data-alvo=""></button>
           <i hidden data-campo="entrada-tela" data-hef-alvo="atributo" data-hef-atributo="data-tela"></i>
@@ -3263,7 +2568,7 @@ if __name__ == "__main__":
 
     p = onde.pagina("08-conexoes.html")
     x = p.read_text()
-    MARCA = "<!-- ===== fim da aba ===== -->"
+    MARCA = FIM_DA_ABA
     if MARCA not in x:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
     TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR,

@@ -280,17 +280,9 @@ BOOTSTRAP = r"""
 window.HEF = (function(){
   const qa = (s,r)=>Array.from((r||document).querySelectorAll(s));
   const q  = (s,r)=>(r||document).querySelector(s);
-  // Escreve TEXTO. Só em folha sem filho — a régua que mediu 43 ms contra
-  // 0,66 estava escrevendo textContent num container, e isso APAGA os filhos.
-  // AS TRÊS ESCRITAS DEVOLVEM QUANTOS VALORES ESCREVERAM — 0 quando o endereço
-  // não existe. É o que faz a conta do fim ser uma RÉGUA e não um enfeite: com
-  // `n++` cego, apagar um endereço não mudava o número e a régua aprovava uma
-  // pintura que não pintava nada.
   function txt(el,v){ if(!el) return 0; if(el.textContent !== v) el.textContent = v; return 1; }
   function est(el,o){ if(!el) return 0; for(const k in o){ if(el.style[k]!==o[k]) el.style[k]=o[k]; } return 1; }
   function cls(el,c,on){ if(!el) return 0; el.classList.toggle(c, !!on); return 1; }
-  // TRAVAR É ESCRITA, e por isso conta na régua. Um botão que a tela oferece e
-  // o produto recusa é mentira: o `disabled` é o "não dá" dito no lugar certo.
   function trava(el,off){ if(!el) return 0; if(el.disabled!==!!off) el.disabled=!!off; return 1; }
   function onda(el, vals){
     if(!el) return 0; const barras = el.children; let k=0;
@@ -305,9 +297,6 @@ window.HEF = (function(){
     const c = card(uniq); if(!c) return 0; let n=0;
     n += txt(q('[data-campo="mascara"]', c), d.mascara);
     n += est(q('.bat .cheio', c), {width:d.bat.w}) + txt(q('.bat .n', c), d.bat.n);
-    // OS DOIS DEDOS, PELOS ENDEREÇOS DA PÁGINA (`pos-touch`, `touch-ponto` e os do segundo): a
-    // posição vai nas variáveis `--hef-x`/`--hef-y` do invólucro e o ponto acende pela classe `on`,
-    // como o produto pinta. O ponto sem dedo apaga e a posição não é escrita.
     d.touch.forEach((t,i)=>{
       const sufixo = i ? '-2' : '';
       const pos = q('[data-campo="pos-touch'+sufixo+'"]', c);
@@ -337,11 +326,6 @@ window.HEF = (function(){
       n += txt(el.children[1], d.eixos[e].n) + est(q('.v', el), d.eixos[e].v);
     }
     n += est(q('.barra-luz', c), {background:d.luz.bg});
-    // POR ENDEREÇO, NÃO POR CLASSE. O `.de-quem` deixou de ser único no card
-    // quando o touchpad ganhou o dele, e um `querySelector` por classe pegava o
-    // PRIMEIRO — o hexadecimal da barra de luz foi parar no título do Touchpad,
-    // que é a cara do defeito que os `data-campo` existem para não deixar
-    // acontecer. Foi visto na foto, não deduzido.
     const dq = q('[data-campo="luz-hex"]', c);
     n += txt(dq, d.luz.hex); if(dq) dq.title = d.luz.title || '';
     for(const s of qa('[data-campo="mic-selo"]', c)){ n += txt(s, d.mic.selo); n += cls(s,'off', d.mic.off); }
@@ -349,15 +333,6 @@ window.HEF = (function(){
     if(bm){
       n += onda(q('.onda', bm), d.mic.onda);
       n += est(q('.vol .cheio', bm), {width:d.mic.vol_w}) + txt(q('.vol .n', bm), d.mic.vol_n);
-      // O ECO DO MUDO SAIU COM O ATO — 20/09/2026. Esta linha acendia o 🎙
-      // quando o microfone estava MUDO, e o 🎙 não cala mais. O botão tem dono
-      // novo (`data-mic-luz`, alvo `atributo`) e quem o pinta é o `achar()`
-      // genérico. Deixar as duas escritas vivas faria o eco do tique apagar a
-      // luz no meio dela — dois donos para o mesmo elemento, que é o defeito
-      // que os `data-campo` existem para não deixar acontecer.
-      // O CAMPO QUE VESTE O 🎙 MUDOU EM 21/09/2026: é o `mic-retorno` (o que o
-      // botão CAUSA), não o `mic-botao-estado` (a luz do plástico, que tem dono
-      // no daemon e aparece no selo ao lado). A disciplina é a mesma.
       n += trava(q('[data-mudo="mic-liberar"]', bm), !d.mic.posse);
     }
     const ba = q('[data-bloco="alto-falante"]', c);
@@ -365,9 +340,6 @@ window.HEF = (function(){
       n += txt(q('[data-campo="alto-estado"]', ba), d.alto.estado);
       n += onda(q('.onda', ba), d.alto.onda);
       n += est(q('.vol .cheio', ba), {width:d.alto.vol_w}) + txt(q('.vol .n', ba), d.alto.vol_n);
-      // O ♪ NÃO TINHA UMA LINHA AQUI. O daemon publica `speaker.muted` desde
-      // sempre e a tela não o lia: o ícone não tinha como acender nem com o
-      // alto-falante mudo. O eco do clique entra por cima, como o da rota.
       n += cls(q('[data-mudo="alto-falante"]', ba), 'on', d.alto.mudo);
       n += trava(q('[data-mudo="alto-falante"]', ba), !d.alto.pode);
       for(const b of qa('.rota button[data-rota]', ba)) n += cls(b,'on', b.dataset.rota===d.alto.rota);
@@ -386,15 +358,8 @@ window.HEF = (function(){
       txt(q('.bolinha', conta), p.bolinha); n+=3;
     }
     txt(q('.pa-nome'), p.perfil); n++;
-    // O rodapé diz o MESMO perfil ("Salvar perfil grava no …") e é literal no
-    // esqueleto (`_ferramentas/fim.html`, que não é o gerador desta aba). Sem
-    // isto a tela mostrava dois perfis diferentes ao mesmo tempo — o vivo em
-    // cima e "Mortal Kombat" embaixo.
     const rec = qa('.recibo b'); if(rec.length) { txt(rec[rec.length-1], p.perfil); n++; }
     for(const u in p.cards) n += pintaCard(u, p.cards[u]);
-    // QUANTOS VALORES A PINTURA ESCREVEU, de volta ao Python. Sem isto uma
-    // pintura que não acha NADA (um endereço que sumiu do gerador) passaria
-    // calada — que é como a fita viva morreu em 27/08.
     if(n !== window.__hefN){ window.__hefN = n;
       manda({gesto:'pintou', valores:n, ms: Math.round((performance.now()-t0)*100)/100}); }
     return n;
@@ -402,8 +367,6 @@ window.HEF = (function(){
 
   function remonta(m){
     const corpo = q('.quadro-corpo'); if(!corpo) return 'sem-corpo';
-    // O rádio do "Todos" mora no corpo e não é card: ele é preservado, senão o
-    // chip "Todos" para de abrir a mesa inteira.
     const todos = q('#c-todos');
     corpo.innerHTML = '';
     if(todos) corpo.appendChild(todos);
@@ -438,13 +401,6 @@ window.HEF = (function(){
                controle:b.closest('.ctl').dataset.controle});
       });
     }
-    // OS TRÊS BOTÕES DE SOM — o 🎙, o ♪ e o Liberar. Eles NÃO estavam aqui, e
-    // era esse o defeito: o CSS lhes dava `cursor:pointer`, a pintura tocava um
-    // deles, e nenhum tinha ouvinte. Medido com cliques sintéticos: dois
-    // cliques nos ícones produziram ZERO gestos, enquanto os de rota, ao lado,
-    // ecoavam. `disabled` não precisa de guarda — o navegador não dispara
-    // `click` num botão desabilitado —, mas a guarda fica porque o `disabled`
-    // pode sair da tela por pintura e o significado não muda.
     for(const b of qa('[data-mudo]')){
       if(b.dataset.ligado) continue; b.dataset.ligado='1';
       b.addEventListener('click', ev=>{
@@ -479,7 +435,6 @@ window.HEF = (function(){
       const c = card(o.controle); if(!c) return;
       const b = q('[data-mudo="'+o.bloco+'"]', c);
       if(b && o.estado!==undefined) b.classList.toggle('on', o.estado==='on');
-      // O "Liberar" acompanha o 🎙: assumir o mudo é o que CRIA o que devolver.
       const lib = q('[data-mudo="mic-liberar"]', c);
       if(lib && o.posse!==undefined) lib.disabled = !o.posse;
     }
@@ -495,9 +450,6 @@ window.HEF = (function(){
     d.style.cssText = 'padding:26px;color:var(--fg);font-size:13px;line-height:1.7;max-width:720px';
     d.textContent = m.texto;
     corpo.appendChild(d);
-    // A FITA TAMBÉM ESVAZIA. Deixá-la com os chips de quem já saiu é a mentira
-    // confortável desta tela: a mesa está vazia e a fita continuaria oferecendo
-    // "P1 · Cosmic Red · USB" para escolher.
     const fita = q('.fita');
     if(fita && m.fita) fita.outerHTML = m.fita;
   }
@@ -514,49 +466,21 @@ window.HEFSW = (function(){
   const qa = s => Array.from(document.querySelectorAll(s));
   function manda(o){ window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(o)); }
 
-  // AS ESCRITAS DEVOLVEM QUANTAS ESCREVERAM — 0 quando o endereço não existe.
-  // Com `n++` cego, arrancar os `data-modo` não mudaria o número e a régua
-  // aprovaria uma pintura que não pinta nada.
   function cls(el,c,on){ if(!el) return 0; el.classList.toggle(c, !!on); return 1; }
   function trava(el,off){ if(!el) return 0; if(el.disabled!==!!off) el.disabled=!!off; return 1; }
   function dica(el,v){ if(!el) return 0; if(el.title!==v) el.title=v; return 1; }
 
-  // A POSIÇÃO DO INTERRUPTOR — E ELA SEGUE O DAEMON, NÃO O CLIQUE (31/08/2026).
-  //
-  // O QUE QUEBROU: o mockup deixou de usar `<button>` na fileira de modos e
-  // passou a usar `<label>` sobre um `radio` escondido, que é como as dez abas
-  // abrem seção sem uma linha de JavaScript. O `ev.preventDefault()` do ouvinte
-  // abaixo era inofensivo num `<button>`; num `<label>` ele IMPEDE o rádio de
-  // mudar, e a seção não abriria nem fecharia.
-  //
-  // A CURA NÃO É TIRAR O `preventDefault`. Se o clique movesse o rádio sozinho,
-  // a tela abriria a seção do modo nativo enquanto o daemon continuasse em
-  // `gamepad` — o F7 desta casa, estado velho como padrão, na pergunta em que
-  // ele mais dói. A seção segue o DAEMON: quem move o rádio é a pintura.
-  //
-  // O ID DO RÁDIO NÃO É DIGITADO AQUI: ele sai do `for` do próprio rótulo
-  // (`htmlFor`), que é o que o gerador escreve. Escrevê-lo seria digitar o que
-  // se pode LER — a forma exata dos onze instrumentos falsos de 26/08 — e a
-  // régua da suíte confere justamente isso, então nem em comentário ele entra.
-  // E a REGRA de quais modos são "Ligado" não mora aqui: ela chega pronta em
-  // `p.hefesto_ligado`, de `painel.hefesto_ligado`.
   function radioDoLado(qual){
     const rot = document.querySelector('.hef-pos.' + qual);
     return rot ? document.getElementById(rot.htmlFor) : null;
   }
   function lado(p){
-    // `null` = o daemon não respondeu. Empurrar o rádio para "desligado" aí
-    // seria a tela responder "Desligado" sem ter perguntado a ninguém.
     if(p.hefesto_ligado !== true && p.hefesto_ligado !== false) return 0;
     const rd = radioDoLado(p.hefesto_ligado ? 'ligado' : 'desligado');
     if(!rd || rd.checked) return 0;
     rd.checked = true;
     return 1;
   }
-  // O QUE A TELA FICOU MOSTRANDO — lido do DOM DEPOIS de escrever, e não o que
-  // se PEDIU. Relatar a intenção é como uma régua dá verde sobre uma pintura
-  // que não pintou: aqui a mordida (arrancar o `lado`) tem de aparecer como o
-  // rádio parado no lado errado, e só a leitura de volta mostra isso.
   function ladoNaTela(){
     const l = radioDoLado('ligado'), d = radioDoLado('desligado');
     if(l && l.checked) return 'Ligado';
@@ -574,11 +498,6 @@ window.HEFSW = (function(){
       n += dica(b, motivo || (p.dicas[chave] || ''));
     }
     n += lado(p);
-    // A CHAVE DO RELATO CARREGA O MODO, e não só a contagem: com `n` sozinho o
-    // Python só ouviria a PRIMEIRA pintura, e uma troca de modo passaria calada.
-    // O LADO ENTRA NA CHAVE pelo mesmo motivo: o rádio só é escrito quando MUDA,
-    // então `n` volta ao valor de antes no tique seguinte, e sem o lado a virada
-    // do interruptor passaria calada — que é como a fita viva morreu em 27/08.
     const marca = n + ':' + (p.modo || '') + ':' + Object.keys(p.travados).length
                 + ':' + p.hefesto_ligado;
     if(marca !== window.__hefSW){ window.__hefSW = marca;
@@ -593,8 +512,6 @@ window.HEFSW = (function(){
       if(b.dataset.ligado) continue; b.dataset.ligado='1'; quantos++;
       b.addEventListener('click', ev=>{
         ev.preventDefault(); ev.stopPropagation();
-        // `disabled` já impede o evento no navegador; a guarda fica porque o
-        // `disabled` pode sair da tela por pintura e o significado não muda.
         if(b.disabled) return;
         manda({gesto:'modo', modo:b.dataset.modo});
       });
@@ -730,7 +647,7 @@ class Janela:
 
         self.ponte.perguntar(
             "document.querySelector('[data-modo]')"
-            " ? (window.HEFSW ? 'ja' : 'sim') : 'nao'",  # (noqa-acento)
+            " ? (window.HEFSW ? 'ja' : 'sim') : 'nao'",
             respondeu,
         )
         return False

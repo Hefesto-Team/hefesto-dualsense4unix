@@ -95,18 +95,9 @@ GLIFO_DA_INTENSIDADE = glifo_do_controle()
 
 FORCA_DA_CENA = {"p1": {"l2": 96, "r2": 200}, "p2": {"l2": 0, "r2": 0}}
 
-CSS = CSS_GLIFO + """
-  /* ---------- Gatilhos · a grade do todo ----------
-     Uma coluna de glifos (L2, R2), uma de rótulos e UMA COLUNA POR CONTROLE da `MESA`.
-     Cada célula leva o `data-controle` do seu lugar: o piloto pinta todas as que casam, e o
-     clique chega ao pacote com o controle certo. `minmax(0,1fr)` e não `1fr`: o mínimo
-     `auto` empurraria a coluna com o conteúdo mais largo. */
-  .g2-grade{display:grid;grid-template-columns:44px 132px repeat(N_COLS,minmax(0,1fr));
+CSS = CSS_GLIFO + """  .g2-grade{display:grid;grid-template-columns:44px 132px repeat(N_COLS,minmax(0,1fr));
     column-gap:14px;row-gap:16px;align-items:center;padding:8px 4px 6px}
   .g2-cab{display:flex;justify-content:center;min-height:36px}
-  /* A FORÇA DO APERTO (16/10/2026): uma escada de degraus crescentes por gatilho, acima de
-     «Controle». O pacote escreve o nível (0 a 8) em `data-nivel`; a folha acende os degraus
-     até ele. O lugar sem controle apaga a escada pela marca do lugar, seja qual for o nível. */
   .g2-forca{display:flex;justify-content:center;align-items:flex-end;gap:22px;height:58px;
     box-sizing:border-box;padding:4px 0 2px;border-radius:7px;border:1px solid var(--border-forte)}
   .g2-forca .escada{display:flex;flex-direction:column;align-items:center;gap:3px}
@@ -115,17 +106,14 @@ CSS = CSS_GLIFO + """
   .g2-forca .escada b{font:600 11px/13px 'Space Grotesk',system-ui,sans-serif;color:var(--fg)}
   .g2-forca[data-conectado="nao"]{border:1px dashed var(--border-sutil)}
   .g2-forca[data-conectado="nao"] .degraus i{background:var(--border-sutil)}
-  /* o chip do controle tem a largura, a altura e a fonte dos campos de baixo */
   .g2-cab > .cabeca,.g2-cab > .cabeca > span{display:flex;width:100%}
   .g2-cab .chip{width:100%;height:36px;box-sizing:border-box;display:flex;align-items:center;
     justify-content:center;border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;
     padding:0 11px;white-space:nowrap}
   .g2-cab .chip .pt{margin:0 6px}
-  /* o lugar vazio mostra «Px · Desconectado», apagado, como no desenho do todo */
   .g2-cab[data-conectado="nao"] .chip{color:var(--fg);border:1px solid var(--border-sutil)}
   .g2-gl{grid-row:span 1;display:flex;align-items:center;justify-content:center;color:var(--fg);
     align-self:stretch;border-right:1px solid var(--border-sutil)}
-  /* o DualSense fica entre a «Força do aperto» e o «Controle» (19/10/2026): ocupa as duas linhas */
   .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:span 2;border-right:0}
   .g2-grade .g2-gl.g2-r2{margin-top:6px}
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);gap:7px}
@@ -142,7 +130,6 @@ CSS = CSS_GLIFO + """
   .g2-imersao{border-color:rgba(255,121,198,.55);color:var(--fg)}
   .g2-imersao:hover,.g2-partir:hover{border-color:var(--comment)}
   .g2-sep{grid-column:1 / -1;height:1px;background:var(--border-sutil);margin:2px 0}
-  /* a célula à esquerda dos chips: «Controle» e, abaixo, o estilo de jogo do perfil (só leitura) */
   .g2-grade > .g2-canto{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;
     justify-content:center;gap:3px;height:auto;min-width:0;align-self:stretch}
   .g2-canto .g2-canto-rot{line-height:16px}
@@ -151,11 +138,7 @@ CSS = CSS_GLIFO + """
   .g2-canto .g2-estilo > span{white-space:nowrap}
   .g2-canto .g2-estilo-nome{color:var(--purple);font-weight:600;margin-left:auto}
   .g2-canto .g2-estilo-nome::after{content:attr(data-estilo)}
-  /* sem estilo no perfil o pacote apaga o atributo (o piloto não escreve vazio num texto) */
   .g2-canto .g2-estilo:not(:has(.g2-estilo-nome[data-estilo])){display:none}
-  /* A INTENSIDADE DO GATILHO (18/10/2026): a linha da «Força da vibração» da aba 05, com as mesmas
-     quatro colunas (ícone · trilho · número · `%`), a mesma altura (36) e o mesmo trilho de 5 px com o
-     polegar de 12. O lugar sem controle mostra só o travessão, centrado, como na 05. */
   .g2-gl.g2-int-gl{grid-row:auto;border-right:0}
   .g2-int{display:grid;grid-template-columns:36px minmax(0,1fr) 44px 8px;align-items:center;gap:8px;
     height:36px;min-width:0}
@@ -176,10 +159,7 @@ CSS = CSS_GLIFO + """
   .g2-int[data-conectado="nao"] > *{display:none}
   .g2-int[data-conectado="nao"]::after{content:"—";color:var(--linha);display:flex;
     align-items:center;justify-content:center;grid-column:1/-1;width:100%;height:100%}
-  /* A linha nova da intensidade custa 52 px; sem rolagem a 940x809 (a janela mínima), o respiro da grade
-     e o da área de criar apertam a partir de 830 px de altura (eram 780: a 809 a página já rolava 31 px). */
   @media (max-height:830px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
-  /* criar efeitos novos */
   .g2-criar{margin-top:6px;flex:0 0 auto}
   .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap;min-width:0}
   .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
@@ -216,16 +196,12 @@ CSS = CSS_GLIFO + """
     cursor:pointer;flex:0 0 auto}
   .g2-sentir:hover{background:rgba(255,121,198,.2)}
   .quadro-topo .modo-auto{margin-left:auto}
-  /* OS EFEITOS POR FAMÍLIA (20/10/2026): a lista do «Efeito do gatilho» abre em grupos por família,
-     e a família é a etiqueta à esquerda da caixa; a frase de cada efeito mora SÓ na dica. O gatilho
-     só tem o efeito (22/10/2026): o acionamento vem dentro de cada um. */
   .g2-env{position:relative}
   .g2-fam{position:absolute;left:11px;top:0;height:36px;display:flex;align-items:center;
     font:600 11px/1 'Space Grotesk',system-ui,sans-serif;color:var(--purple);pointer-events:none}
   .g2-fam:not([data-fam]){display:none}
   .g2-fam::before{content:attr(data-fam)}
   .g2-fam::after{content:"";width:1px;height:14px;background:var(--border-sutil);margin-left:7px}
-  /* depois das regras da área de criar, para ganhar delas */
   @media (max-height:830px){.criar .criar-linha{padding:8px 16px;row-gap:6px}.g2-barras{padding-bottom:8px}}
 """
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")

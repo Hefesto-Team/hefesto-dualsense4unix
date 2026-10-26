@@ -94,12 +94,11 @@ def test_em_nenhuma_largura_em_volta_do_corte_a_guarda_rola_de_lado(largura: int
 def test_a_mordida_sem_a_regra_de_largura_a_1212_reprova(tmp_path: pathlib.Path) -> None:
     """Tira a regra da folha da página e a mesma medição reprova: a régua morde."""
     texto = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
-    marca = "/* o ID da peça cede a partir daqui"
-    assert marca in texto, "a regra do corte sumiu da aba 10: a guarda volta a rolar de lado"
+    marca = "@media (max-width:1259px){"
+    assert texto.count(marca) == 1, (
+        "a regra do corte sumiu da aba 10: a guarda volta a rolar de lado")
     ini = texto.index(marca)
-    fim = texto.index("*/", ini) + 2
-    abre = texto.index("@media", fim)
-    n, i = 0, texto.index("{", abre)
+    n, i = 0, texto.index("{", ini)
     for j in range(i, len(texto)):
         n += texto[j] == "{"
         n -= texto[j] == "}"

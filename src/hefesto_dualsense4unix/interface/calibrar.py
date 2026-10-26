@@ -185,7 +185,7 @@ def contagem(quantos: int) -> str:
 CSS = """
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
-    --fundo-da-pagina:#11121a;  /* o fundo em volta da caixa, o do `topo.html` */
+    --fundo-da-pagina:#11121a;
     --border-sutil:#343746; --border-forte:#44475a; --linha:#53576f;
     --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
@@ -195,13 +195,9 @@ CSS = """
     --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  /* O RECUO DO `body` E O TAMANHO DA `.cx` NÃO MORAM AQUI — 23/09/2026: vêm
-     da `moldura()`, lidos do `topo.html`. A razão está acima de `calibrar.moldura`. */
   body{background:var(--fundo-da-pagina);color:var(--fg);font-family:var(--f);
        display:flex;flex-direction:column;align-items:center;gap:16px}
   .mono{font-family:var(--m)}
-  /* COLUNA COMO A `.janela`: o cabeçalho fica, o `.corpo` rola por dentro
-     quando a vista encolhe, e a caixa nunca passa da tela. */
   .cx{background:var(--app-bg);border-radius:11px;
       border:1px solid var(--border-sutil);overflow:hidden;
       display:flex;flex-direction:column}
@@ -209,8 +205,6 @@ CSS = """
         position:relative;padding-left:132px;flex:0 0 auto}
   h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:9px}
   h1 .p{color:var(--pink)}
-  /* O PERFIL ATIVO, no canto do topo: cópia do `.perfil-ativo` do `topo.html` (a Calibrar é página
-     avulsa e não tem a fita). Os ajustes da Mira caem no perfil que vale, e este chip diz qual. */
   .perfil-ativo{position:absolute;right:20px;top:17px;display:flex;align-items:center;gap:7px;
                 padding:5px 11px;border-radius:7px;border:1px solid var(--linha);
                 background:var(--panel)}
@@ -226,14 +220,8 @@ CSS = """
   .corpo{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px;
          flex:1;min-height:0;overflow-y:auto}
 
-  /* ---------- OS TRÊS ESTADOS ----------
-     Os rádios vêm ANTES de tudo o que reage a eles: o `~` do CSS só enxerga
-     irmão POSTERIOR. É a mesma armadilha que o interruptor da aba Jogar
-     documenta, e a mesma cura. */
   .et{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
 
-  /* OS TRÊS PASSOS VIRARAM UMA FITA — 06/10/2026. Uma linha de 32px no lugar
-     de três cartões de 87px com duas frases cada; a frase mora no `title`. */
   .passos{display:flex;gap:9px}
   .passo{flex:1;display:flex;gap:9px;align-items:center;height:32px;
          padding:0 12px;border-radius:8px;border:1px solid var(--border-sutil);
@@ -242,9 +230,6 @@ CSS = """
             align-items:center;justify-content:center;font-family:var(--m);
             font-size:11px;border:1px solid var(--border-forte);color:var(--fg)}
   .passo b{font-size:12.5px;font-weight:600}
-  /* O PASSO EM QUE ELA ESTÁ. Cor explícita, nada de `opacity` — a lição medida
-     da `.fita.inerte`: a opacidade tira contraste E peso do traço ao mesmo
-     tempo, e o que sobra deixa de comunicar o que foi desenhado. */
   #e-parado:checked  ~ .passos .passo:nth-child(1),
   #e-medindo:checked ~ .passos .passo:nth-child(2),
   #e-pronto:checked  ~ .passos .passo:nth-child(3){
@@ -254,24 +239,12 @@ CSS = """
   #e-pronto:checked  ~ .passos .passo:nth-child(3) .n{
     border-color:var(--purple);color:var(--fg)}
 
-  /* `.controles` E NÃO `.mesa` — 11/09/2026. A palavra é banida em texto de
-     tela (decisão, 06/09) e o nome da classe não chega a lê-la, mas este
-     bloco passou a ser o alvo que o produto TROCA a cada mudança de bancada, e
-     o seletor vive escrito no pacote: `[data-bloco="controles"]`. Um endereço
-     novo nasce na língua de hoje. */
-  /* UM CARTÃO POR JOGADOR — 06/10/2026. Os dois blocos que o tique remonta
-     (`controles` e `miras`) somem da grade (`display:contents`) e os filhos
-     deles caem numa grade de quatro colunas: na primeira linha o controle, na
-     segunda a mira DELE, colada embaixo e com a mesma borda do plástico. Os
-     lugares vazios ocupam as duas linhas. O endereço dos dois blocos não muda,
-     e o pacote continua trocando cada um pelo gerador. */
   .grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:11px;
          grid-template-rows:auto minmax(0,1fr);flex:1 0 auto}
   .controles,.mira-cx{display:contents}
   .lugar{grid-row:span 2;border:1px dashed var(--border-forte);border-radius:9px;
          display:flex;align-items:center;justify-content:center;
          font-family:var(--m);font-size:22px;color:var(--border-forte)}
-  /* SEM CONTROLE NENHUM não é cartão vazio: é uma frase. Ver `SEM_CONTROLE`. */
   .vazio{grid-column:1 / -1;padding:22px 14px;text-align:center;border-radius:9px;
          border:1px dashed var(--border-forte);background:var(--panel);
          color:var(--fg);font-size:13px;line-height:19px}
@@ -282,30 +255,15 @@ CSS = """
   .ctr-topo{display:flex;align-items:center;gap:9px;min-width:0}
   .ctr .nome{font-size:12.5px;color:var(--fg);line-height:15px;white-space:nowrap;
              overflow:hidden;text-overflow:ellipsis;flex:1 1 auto;min-width:0}
-  /* O SELO MORA NA LINHA DO NÚMERO (08/10/2026): ao lado do modelo e do transporte, o
-     «Medindo…» e o «Calibrado» comiam o «USB» e o «BT» do cartão; na primeira linha, ao
-     lado do «P<n>», a segunda fica com a largura inteira do cartão. */
   .ctr .nome .l1{display:flex;align-items:center;gap:6px;min-width:0;margin-bottom:2px}
   .ctr .nome .l1 b{flex:0 1 auto;min-width:0}
   .ctr .nome b{color:var(--fg);font-weight:600;display:inline-flex;max-width:100%;
                vertical-align:top}
-  /* O nome encolhe com reticência e o «• P<n>» não: com o número no fim de um texto só, o
-     corte do `.nome` comia o número já com «Vitória Maria» (`monta.quem_joga_com_o_numero`). */
   .ctr .nome .quem-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ctr .nome .quem-num{white-space:pre}
-  /* `height:auto` NÃO É DETALHE: o SVG nasce com `width="1160" height="800"`
-     nos atributos (é o tamanho que o rasterizador do ícone usa), e sem esta
-     linha o `width:74px` do CSS encolhe SÓ a largura — a altura fica em 800 e
-     estica o cartão inteiro. Medido: cada cartão saía com ~900px de vazio.
-     As dez abas não sofrem disto porque o `topo.html` traz a regra no esqueleto
-     comum; esta página tem folha própria, e por isso precisa dizê-la. */
   .ds-svg{width:60px;height:auto;flex:0 0 60px}
   .selo{margin-left:auto;flex:0 0 auto;font-size:11px;line-height:13px;padding:2px 8px;border-radius:6px;
         border:1px solid var(--border-forte);color:var(--fg);white-space:nowrap}
-  /* O SELO É DE CADA CONTROLE (08/10/2026): o tique escreve o `data-zero` dele, e o
-     cartão que mexeu diz «Mexeu» sozinho. Sem o atributo (o desenho), os rádios mandam.
-     O «Mexeu» é o branco da casa, nunca vermelho: o vermelho não nasce fora do Hz e dos
-     canais (`D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE`). */
   #e-medindo:checked ~ .grade .selo:not([data-zero]),
   .selo[data-zero="medindo"]{border-color:var(--orange);color:var(--orange)}
   #e-pronto:checked  ~ .grade .selo:not([data-zero]),
@@ -326,25 +284,10 @@ CSS = """
   .leitura{border-top:1px solid var(--border-sutil);padding-top:9px;
            display:flex;flex-direction:column;gap:8px}
   .lin{display:flex;align-items:center;gap:7px;font-family:var(--m);font-size:11px}
-  /* A COLUNA DOS NOMES CABE O MAIS LONGO (todo, rodada 3): «Acelerômetro» mede 79 px, e com 74 a
-     linha dele empurrava o número e a barra 5 px para a direita; com 82 as seis barras começam juntas. */
   .lin > .r{flex:0 0 82px;color:var(--fg)}
   .lin > .v{flex:0 0 52px;text-align:right;color:var(--texto-suave)}
   .lin > .g{flex:1;height:4px;border-radius:2px;background:var(--border-sutil);
             position:relative;overflow:hidden;color:var(--border-forte)}
-  /* NO REPOUSO A BARRA É UM RISCO NO MEIO, e é isso que a tela precisa mostrar:
-     o eixo parado marca o CENTRO. O risco deixou de ser um `<i>` e virou
-     `::after` em 11/09/2026, e a troca é o que abriu lugar para a LEITURA: o
-     `<i>` era o único filho do trilho, e pintá-lo com o valor vivo apagaria o
-     centro. Pseudoelemento não disputa espaço com ninguém e o CSS continua
-     sendo o dono dele.
-
-     A BARRA BIPOLAR SÃO DUAS METADES, e a gramática é a da aba Controles
-     (`aba02.py`, o bloco `.eixo .v`), pela mesma razão medida lá: o produto
-     sabe escrever `width` (alvo `largura`) e `color` (alvo `cor`), e NÃO tem
-     alvo de POSIÇÃO. Com um elemento só, a barra de um eixo negativo cresceria
-     para o lado errado. A cor sobe para o trilho e desce por `currentColor` —
-     um valor só, num elemento só. */
   .lin > .g::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;
                    background:var(--comment);transform:translateX(-1px);z-index:1}
   .lin > .g > i{position:absolute;top:0;bottom:0;border-radius:2px;
@@ -358,19 +301,10 @@ CSS = """
   #e-medindo:checked ~ .rodape .barra > i{width:58%}
   #e-pronto:checked  ~ .rodape .barra > i{width:100%;background:var(--green)}
 
-  /* O RODAPÉ DESCE PARA O FIM DA CAIXA, como o das abas: a altura que sobra
-     vira vão ENTRE os cartões e os botões, nunca abaixo do aviso. */
   .rodape{display:flex;align-items:center;gap:13px;margin-top:auto}
   .rodape .acoes{display:flex;gap:9px}
   .rodape .barra{flex:1}
-  /* A CONTA DE QUEM ESTÁ AQUI, e ela fica ao lado do botão de propósito: é a
-     última coisa que a tela diz antes de ela apertar «Começar». Ver
-     `contagem()` — com zero controles esta linha fica VAZIA, e quem fala é o
-     lugar dos cartões. */
   .quantos{font-size:12px;color:var(--fg);white-space:nowrap}
-  /* OS DOIS BOTÕES DO PÉ SÃO UM GRUPO — 06/10/2026: a mesma largura e a mesma
-     altura, lado a lado, e o «Começar» é o verde cheio do «Aplicar» das abas
-     (`topo.html`, `.r-aplicar`). */
   .btn{height:34px;width:150px;padding:0 15px;border-radius:8px;font-size:13px;cursor:pointer;
        border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);
        display:inline-flex;align-items:center;justify-content:center;text-decoration:none;
@@ -388,19 +322,12 @@ CSS = """
   #e-pronto:checked  ~ .rodape .btn.fazer .t3{display:inline}
   #e-medindo:checked ~ .rodape .btn.fazer{border-color:var(--orange);background:var(--orange)}
 
-  /* A MIRA VIRTUAL — 24/09/2026. As colunas repetem o `gap` e o `flex:1` dos
-     cartões, e por isso cada uma cai embaixo do cartão do mesmo controle. */
   .mira{min-width:0;display:flex;flex-direction:column;gap:13px;
         padding:9px 12px 12px;border-radius:0 0 9px 9px;
         border:2px solid var(--plastico,var(--border-forte));border-top:0;
         background:var(--panel);position:relative}
-  /* O FIO ENTRE AS DUAS METADES DO CARTÃO: o controle em cima, a mira dele
-     embaixo, separados como a `.leitura` se separa do topo. */
   .mira::before{content:"";position:absolute;left:12px;right:12px;top:0;
                 border-top:1px solid var(--border-sutil)}
-  /* O RÓTULO E O NÚMERO EM CIMA, O TRILHO EMBAIXO, na largura inteira da
-     coluna. Lado a lado, com quatro controles numa janela de 1180px, sobravam
-     ~23px de trilho por coluna; empilhado, o trilho é a coluna. */
   .desl{display:grid;grid-template-columns:1fr auto;align-items:center;
         column-gap:8px;row-gap:3px;font-size:12px}
   .desl .r{color:var(--texto-suave);white-space:nowrap;overflow:hidden;
@@ -410,24 +337,12 @@ CSS = """
   .desl .un{color:var(--fg)}
   .desl .trilho{grid-row:2;grid-column:1 / -1;width:100%;margin:0;
                 accent-color:var(--purple)}
-  /* «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-
-     NA-TELA-02. A MESMA GRAMÁTICA DOS DESLIZANTES: o rótulo em cima, o
-     controle embaixo, na largura inteira da coluna — com quatro controles a
-     coluna tem menos de 300px, e lado a lado a lista não caberia. */
   .desl .lista,.desl .inverter{grid-row:2;grid-column:1 / -1}
   .desl .lista{width:100%;height:24px;padding:0 8px;border-radius:6px;
                border:1px solid var(--border-forte);background:var(--app-bg);
                color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer}
   .desl .lista:hover{border-color:var(--comment)}
   .desl .lista option{background:var(--panel);color:var(--fg)}
-  /* OS DOIS «INVERTER» TÊM A CARA DOS CHIPS DE SENSOR da aba Controles
-     (`aba02.py`, `.sensores-peca .sw`): o mesmo verde aceso, o mesmo apagado,
-     a mesma pastilha de 17px. É cópia declarada — esta página tem folha
-     própria, como a paleta do topo —, e um interruptor com outra cara na
-     mesma janela seria um segundo vocabulário para o mesmo ato. */
-  /* Os dois «Inverter» são um grupo: a mesma largura, UM EMBAIXO DO OUTRO em toda largura
-     de janela, cada um na largura inteira do cartão (08/10/2026, opção b dela). Lado a lado
-     o segundo botão passava 32 px da borda do cartão a 940 px. */
   .inverter{display:grid;grid-template-columns:1fr;gap:6px}
   .inverter .sw{justify-content:center}
   .inverter .sw{height:24px;border-radius:6px;font-size:10.5px;font-family:inherit;
@@ -439,8 +354,6 @@ CSS = """
   .inverter .sw.off{border-color:var(--border-forte);background:var(--app-bg);
     color:var(--fg)}
   .inverter .sw.off .p{background:var(--border-forte);box-shadow:none}
-  /* TODO ALVO CLICÁVEL TEM 24 PX NO MÍNIMO (todo, 15/10/2026): o liga e os dois lados da mira
-     eram de 20 px, e os dois «Inverter», de 17. */
   [data-gesto]{min-height:24px}
 """
 
@@ -629,9 +542,6 @@ def documento(quem):
 
 <div class="cx">
   <div class="topo">
-    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO, com a Controles como reserva de quem
-         abre o arquivo com duplo clique. O dono é o `caixa_da_janela.voltar`,
-         o mesmo do mapa do controle. -->
     {caixa_da_janela.voltar("02-controles.html")}
     <h1><span class="p" data-dica="{AJUDA_DA_PAGINA}">{TITULO}</span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
@@ -639,8 +549,6 @@ def documento(quem):
 
   <div class="corpo">
 
-    <!-- OS TRÊS ESTADOS, CLICÁVEIS. Os rádios vêm antes de tudo o que reage a
-         eles — o `~` só enxerga irmão posterior. -->
     <input class="et" type="radio" name="etapa" id="e-parado" data-campo="passo-parado" data-hef-alvo="marcado" checked>
     <input class="et" type="radio" name="etapa" id="e-medindo" data-campo="passo-medindo" data-hef-alvo="marcado">
     <input class="et" type="radio" name="etapa" id="e-pronto" data-campo="passo-pronto" data-hef-alvo="marcado">
@@ -649,28 +557,16 @@ def documento(quem):
 {_passos()}
     </div>
 
-    <!-- OS CONTROLES DE QUEM ABRE, e o bloco inteiro tem endereço: o tique o
-         remonta a cada mudança de bancada, pelo MESMO gerador que escreveu
-         isto aqui. Ver `pacotes/a11_calibrar_sensores.py`. -->
     <div class="grade">
     <div class="controles" data-bloco="controles">
 {controles(quem)}
     </div>
 
-    <!-- A MIRA VIRTUAL, uma coluna por controle embaixo do cartão dele — ver o
-         bloco `A MIRA VIRTUAL` no topo deste arquivo. O bloco é outro de
-         propósito: o dos cartões o produto remonta a cada tique. -->
     <div class="mira-cx" data-bloco="miras">{miras(quem)}</div>
     </div>
 
     <div class="rodape">
       <div class="barra"><i></i></div>
-      <!-- O ALVO É `html` E NÃO O TEXTO, e a razão é medida NESTA tela: com
-           zero controles a `contagem()` devolve vazio, e o alvo padrão escreve
-           o TRAVESSÃO no lugar de um valor vazio — um `—` solto ao lado do
-           botão, anunciando a ausência de uma frase que a página tirou de
-           propósito. É o mesmo defeito que a aba Lançadores mediu em 11/09, e
-           a casa já decidiu a cura: o alvo `html` trata vazio como vazio. -->
       <span class="quantos" data-campo="quantos" data-hef-alvo="html">{contagem(len(quem))}</span>
       <span class="acoes">
         <button class="btn fazer" data-gesto="calibrar-comecar"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>

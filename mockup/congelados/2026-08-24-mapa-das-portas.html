@@ -6,8 +6,6 @@
 <title>Onde eu ponho isto?</title>
 <style>
   :root {
-    /* Paleta Drácula — os tokens de scripts/paleta_da_casa.py, byte a byte.
-       O mockup tem de parecer parte do Hefesto, não um site sobre ele. */
     --color-paper:      #282a36;
     --color-paper-2:    #21222c;
     --color-paper-3:    #343746;
@@ -21,7 +19,6 @@
     --color-alerta:     #ff5555;
     --color-frio:       #8be9fd;
 
-    /* Pilha do sistema, como manda a casa: nada de fonte web, abre sem rede. */
     --font-corpo: ui-sans-serif, system-ui, "Cantarell", "Fira Sans", "Segoe UI", Roboto, sans-serif;
     --font-dado:  ui-monospace, "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", monospace;
 
@@ -47,14 +44,12 @@
   }
   .pagina { max-width: 1180px; margin: 0 auto; padding: var(--space-md) var(--space-sm) var(--space-lg); }
 
-  /* ─── cabeçalho ─────────────────────────────────────────── */
   .topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs) var(--space-sm);
           padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-rule); }
   .topo h1 { margin: 0; font-size: var(--text-xl); font-weight: 600; letter-spacing: -.01em; }
   .topo h1 em { color: var(--color-accent); font-style: normal; }
   .topo .nota { color: var(--color-ink-faint); font-size: var(--text-sm); margin-left: auto; }
 
-  /* ─── os três modos ─────────────────────────────────────── */
   .modos { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-top: var(--space-md); }
   .modo {
     font: inherit; font-size: var(--text-sm); font-weight: 600;
@@ -69,7 +64,6 @@
   .modo.destaque[aria-pressed="false"] { border-color: color-mix(in srgb, var(--color-ok) 55%, transparent); color: var(--color-ok); }
   .modo.destaque[aria-pressed="true"] { border-color: var(--color-ok); background: color-mix(in srgb, var(--color-ok) 20%, var(--color-paper-3)); color: var(--color-ink); }
 
-  /* ─── o painel que muda com o modo ──────────────────────── */
   .painel { margin-top: var(--space-2xs); border: 1px solid var(--color-rule);
             border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-sm); }
   .painel > p.chamada { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; }
@@ -93,7 +87,6 @@
   .conta-caixa b { display: block; color: var(--color-ink); margin-bottom: .2rem; }
   .conta-caixa div { font-family: var(--font-dado); color: var(--color-ink-quiet); font-variant-numeric: tabular-nums; }
 
-  /* ─── a receita: os movimentos ──────────────────────────── */
   .receita { list-style: none; margin: 0; padding: 0; counter-reset: passo;
              display: flex; flex-direction: column; gap: var(--space-2xs); }
   .receita > li { counter-increment: passo; display: grid; grid-template-columns: 1.7rem minmax(0,1fr); gap: var(--space-2xs);
@@ -122,7 +115,6 @@
   .selo.espec    { color: var(--color-frio);   border-color: color-mix(in srgb, var(--color-frio) 45%, transparent); }
   .selo.derivado { color: var(--color-lacuna); border-color: color-mix(in srgb, var(--color-lacuna) 45%, transparent); }
 
-  /* ─── o palco ───────────────────────────────────────────── */
   .palco { display: grid; grid-template-columns: minmax(0,1fr) 268px; gap: var(--space-md); align-items: start; margin-top: var(--space-md); }
   @media (max-width: 900px) { .palco { grid-template-columns: 1fr; } }
   .faces { display: flex; flex-direction: column; gap: var(--space-md); }
@@ -137,7 +129,6 @@
   .chapa.fileira { display: grid; grid-template-columns: repeat(3, max-content); gap: .55rem var(--space-md); }
   @media (max-width: 640px) { .chapa.fileira, .chapa.grade-tras { grid-template-columns: max-content; } }
 
-  /* ─── um soquete ────────────────────────────────────────── */
   .soquete { display: flex; align-items: flex-start; gap: .45rem; }
   .num { flex: none; min-width: 1.5rem; height: 1.5rem; padding: 0 .3rem; border-radius: 99px;
          display: inline-grid; place-items: center; font-family: var(--font-dado); font-size: .6875rem;
@@ -188,7 +179,6 @@
   .filho { margin-left: 2rem; padding-left: var(--space-sm); border-left: 2px dashed var(--color-rule); margin-top: .3rem; }
   .filho .cabo { font-size: var(--text-xs); color: var(--color-ink-faint); margin-bottom: .2rem; }
 
-  /* ─── bandeja ───────────────────────────────────────────── */
   .bandeja { border: 1px solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-xs); }
   .bandeja h3 { margin: 0 0 var(--space-3xs); font-size: var(--text-sm); font-weight: 600; }
   .bandeja p.ajuda { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-ink-faint); }
@@ -214,7 +204,6 @@
   .amostra.r-ev { background: transparent; border: 2px solid var(--color-lacuna); }
   .amostra.r-ru { background: transparent; border: 2px solid var(--color-alerta); }
 
-  /* ─── desempenho ────────────────────────────────────────── */
   .secao { margin-top: var(--space-lg); }
   .secao > h2 { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; color: var(--color-accent); }
   .secao > .sub { margin: 0 0 var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-faint); max-width: 70ch; }
@@ -323,7 +312,6 @@
 (function () {
   "use strict";
 
-  /* ══ 1. O QUE O BARRAMENTO ENTREGOU — medido em 24/08/2026 ═══════════ */
   var APARELHOS = [
     { id: "bt-a",    tipo: "Bluetooth", nome: "TP-Link UB500",    sementeDoCaminho: "3-1.2",   cor: "#bd93f9", classe: "bt",      usb: 2, mA: 500 },
     { id: "bt-b",    tipo: "Bluetooth", nome: "TP-Link UB500",    sementeDoCaminho: "3-1.1.4", cor: "#bd93f9", classe: "bt",      usb: 2, mA: 500 },
@@ -335,7 +323,6 @@
     { id: "hub",     tipo: "Hub",       nome: "TP-Link UH700",    sementeDoCaminho: "3-1",     cor: "#6272a4", classe: "hub",     usb: 3, mA: 100 }
   ];
 
-  /* ══ 2. AS FACES — declaradas por ela, na foto numerada ══════════════ */
   var FACES = [
     { nome: "Frente do gabinete", forma: "coluna", perto: true, regiao: "pc",
       portas: [ { n: "1", usb: 2, onde: "pc", par: "2" }, { n: "2", usb: 2, onde: "pc", par: "1" } ] },
@@ -352,22 +339,11 @@
                            cabo: "extensor de 1 m, declarado por você" } } ] }
   ];
 
-  /* ══ 2.1 O MAPA DECLARADO: entrada -> caminho de barramento ══════════
-     Esta é a virada de modelo que faz a re-identificação existir. O mapa NÃO
-     guarda "entrada 9 tem um Bluetooth" — guarda "entrada 9 é o caminho
-     3-1.2". Qual aparelho está lá é DERIVADO da leitura de agora, pelo
-     caminho. Assim, quando ela troca um aparelho de lugar, o caminho dele
-     muda, o mapa continua valendo, e o produto reconhece sozinho quem foi
-     para onde — sem ela declarar nada de novo.                             */
   var MAPA = {
     "1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4",
     "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4"
   };
 
-  /* ══ 2.2 AS DUAS LEITURAS, medidas na MeowSystem em 24/08/2026 ═══════
-     A de 20h15 e a de 22h50, depois de ela fazer os movimentos. São dado
-     real: é a mesma comparação que o produto faria com duas leituras de
-     sysfs separadas por um "Reexaminar".                                   */
   var LEITURAS = {
     antes: { rotulo: "20h15 — antes de você mexer",
       caminho: { "mouse": "1-3", "hub": "3-1", "bt-c": "3-3", "webcam": "3-4",
@@ -377,18 +353,11 @@
                  "bt-c": "3-1.1.1", "bt-b": "3-1.1.4", "bt-a": "3-1.2", "wifi": "4-2" } }
   };
 
-  /* O MAPA MOSTRA SEMPRE A MESA DE AGORA.
-     A primeira versão abria na leitura antiga para dar o "antes e depois", e
-     ela abriu a página horas depois de mexer nos cabos e viu o Wi-Fi no hub,
-     de onde ela mesma o tinha tirado. Estado velho como padrão é o defeito
-     F7 desta casa: a tela afirma com confiança uma coisa que não é mais
-     verdade. O "antes" é o termo de COMPARAÇÃO do reexame, nunca o estado. */
   var leituraAtual = "agora";
   var leituraAnterior = "antes";
   var MAPA_ORIGINAL = null;
   function leitura() { return LEITURAS[leituraAtual].caminho; }
 
-  /* entrada -> id do aparelho, DERIVADO: junta o mapa com a leitura */
   function alocacaoDerivada() {
     var out = {}, cam = leitura();
     Object.keys(MAPA).forEach(function (porta) {
@@ -397,16 +366,6 @@
     return out;
   }
 
-  /* ══ 2.3 A REGIÃO, DEDUZIDA DO BARRAMENTO ════════════════════════════
-     O produto não sabe em qual ENTRADA um aparelho novo está — mas sabe se
-     ele pende do hub ou está direto no gabinete, porque o caminho de
-     barramento conta a topologia. Isso reduz o palpite de dezesseis entradas
-     para sete ou oito, e é DEDUÇÃO, não chute: `3-1.1.1` pende de `3-1`, que
-     é o hub. Esconder o aparelho por não saber a entrada exata é jogar fora
-     a metade da informação que existe.
-
-     O lado USB 3.0 do mesmo hub físico aparece noutro barramento (`4-1.x`
-     contra `3-1.x`) porque hub 3.0 é dual-bus — mesmo metal, dois números.  */
   function regiaoDoCaminho(c) {
     var h = leitura()["hub"];
     if (!h || !c) return null;
@@ -416,7 +375,6 @@
     return "pc";
   }
 
-  /* aparelhos que a leitura vê e o mapa não sabe onde estão */
   function semEntrada() {
     var cam = leitura(), conhecidos = {};
     Object.keys(MAPA).forEach(function (p) { conhecidos[MAPA[p]] = p; });
@@ -428,7 +386,6 @@
       return { ap: a, caminho: c, regiao: regiaoDoCaminho(c) };
     });
   }
-  /* as entradas candidatas de uma região, ainda livres */
   function candidatas(regiao) {
     var usadas = {};
     Object.keys(MAPA).forEach(function (n) { usadas[n] = true; });
@@ -468,48 +425,28 @@
 
   MAPA_ORIGINAL = Object.assign({}, MAPA);
   var alocacao = alocacaoDerivada();
-  var modo = "mesa";       /* mesa | ideal | mao */
+  var modo = "mesa";
   var naMao = null;
   var segurando = null;
 
   function acha(id) { for (var i = 0; i < APARELHOS.length; i++) if (APARELHOS[i].id === id) return APARELHOS[i]; return null; }
   function portaDeEm(mapa, id) { for (var k in mapa) if (mapa[k] === id) return k; return null; }
-  /* SEMPRE derivado da leitura viva. A versão que lia um `alocacao` cacheado
-     dava resposta VELHA depois de um reexame — o dongle que ela moveu ainda
-     era relatado na entrada antiga. Cache de estado derivado é a fonte do
-     defeito, não a otimização. */
   function portaDe(id) { return portaDeEm(alocacaoDerivada(), id); }
   function todasPortas() { var r = []; FACES.forEach(function (f) { f.portas.forEach(function (p) { r.push(p); if (p.filho) r.push(p.filho); }); }); return r; }
   function porNum(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) if (t[i].n === String(n)) return t[i]; return null; }
-  /* DONO ÚNICO de "qual o caminho deste aparelho AGORA".
-     A bandeja lia `a.caminho` — o campo gravado na constante — enquanto a
-     faixa lia a leitura viva. Duas verdades na mesma tela sobre a mesma
-     coisa: depois de um reexame a bandeja publicava o caminho de ANTES.
-     O campo da constante vira só semente da primeira leitura.              */
   function caminhoDe(id) { return leitura()[id] || null; }
 
   function classeDe(id) { var a = acha(id); return a ? a.classe : null; }
   function ehRadio(c) { return c === "bt" || c === "wifi" || c === "teclado" || c === "mouse"; }
 
-  /* Um dongle na entrada-filha ocupa também a entrada-mãe (o extensor está nela). */
   function maeDe(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) if (t[i].filho && t[i].filho.n === String(n)) return t[i]; return null; }
   function ocupada(mapa, p) {
     if (mapa[p.n]) return true;
-    if (p.filho && mapa[p.filho.n]) return true;          /* a mãe some quando o filho é usado */
-    var m = maeDe(p.n); if (m && mapa[m.n]) return true;  /* o filho some quando a mãe é usada */
+    if (p.filho && mapa[p.filho.n]) return true;
+    var m = maeDe(p.n); if (m && mapa[m.n]) return true;
     return false;
   }
 
-  /* ══ 3. O CÁLCULO — o melhor arranjo, e por quê ══════════════════════
-     Cada porta ganha uma NOTA para cada aparelho, e o aparelho vai para a
-     porta de maior nota. Duas regras salvam a credibilidade do conselho:
-
-       · ficar parado vale um ponto de bônus — entre portas equivalentes,
-         a que já está ocupada vence, e o produto não manda mexer à toa;
-       · só vira MOVIMENTO se a porta nova tiver nota MAIOR que a de hoje.
-
-     Não é otimizador global: é nota explicável, porque conselho que a
-     pessoa não entende ela não segue.                                    */
   var REGRAS = {
     teclado: [
       { n: 100, quando: function (p) { return p.onde === "pc"; }, peso: "essencial", selo: "espec",
@@ -561,7 +498,6 @@
     ]
   };
 
-  /* separação entre dongles: quanto mais longe do irmão mais próximo, melhor */
   function bonusSeparacao(p, jaPostos) {
     if (!jaPostos.length || p.pos === undefined) return { n: 0 };
     var d = Math.min.apply(null, jaPostos.map(function (q) { return Math.abs((q.pos || 0) - p.pos); }));
@@ -581,7 +517,6 @@
       if (r.n > 0) razoes.push({ selo: r.selo, txt: r.txt });
       if (r.peso === "essencial" && r.n > 0) peso = "essencial";
     });
-    /* penalidades que não casaram viram exigências satisfeitas: também explicam */
     (REGRAS[ap.classe] || []).forEach(function (r) {
       if (r.n >= 0 || r.quando(porta, ctx)) return;
       razoes.push({ selo: r.selo, txt: r.txt });
@@ -598,10 +533,9 @@
     op = op || {};
     var bonusParado = op.bonusParado === undefined ? 1 : op.bonusParado;
     var proibida = op.proibir || function () { return false; };
-    alocacao = alocacaoDerivada();   /* nunca planejar sobre leitura velha */
+    alocacao = alocacaoDerivada();
     var plano = {}, motivo = {};
     var portas = todasPortas().filter(function (p) { return !proibida(p); });
-    /* ordem de decisão: quem tem exigência dura escolhe antes */
     var ordem = ["hub", "teclado", "wifi", "bt", "mouse", "webcam"];
     var jaPostos = [];
 
@@ -613,15 +547,11 @@
         var melhor = null, melhorNota = null;
         cands.forEach(function (p) {
           var nota = notaDe(ap, p, plano, jaPostos);
-          /* bônus de ficar parado: só desempata, nunca troca uma escolha melhor */
           var efetiva = nota.n + (p.n === atual ? bonusParado : 0);
           if (melhor === null || efetiva > melhorNota.efetiva) { melhor = p; melhorNota = { nota: nota, efetiva: efetiva }; }
         });
         if (!melhor) return;
         plano[melhor.n] = ap.id;
-        /* Se a porta de hoje foi tomada por outro aparelho no plano, o
-           movimento é FORCADO — nao ha "ficar onde esta" para comparar, e
-           esconde-lo faria o mapa e a receita discordarem na tela. */
         var tomada = atual && plano[atual] && plano[atual] !== ap.id;
         var notaAtual = (atual && !tomada) ? notaDe(ap, porNum(atual), plano, jaPostos).n : -Infinity;
         var razoes = melhorNota.nota.razoes.slice();
@@ -638,11 +568,6 @@
       });
     });
 
-    /* Passe final: aparelhos INTERCAMBIÁVEIS (mesma classe e mesmo modelo)
-       não têm por que trocar de lugar entre si. Se um deles já está numa
-       das portas de destino, ele fica nela — o conjunto de portas é o mesmo,
-       e cada troca evitada é um movimento a menos que ela precisa fazer.
-       Sem isto o plano mandava mover dois UB500 idênticos entre a 9 e a 15a. */
     var porModelo = {};
     APARELHOS.forEach(function (a) {
       var k = a.classe + "|" + a.nome;
@@ -662,7 +587,6 @@
       pendentes.forEach(function (a) { novo[a.id] = sobram.shift(); });
       destinos.forEach(function (d) { delete plano[d]; });
       grupo.forEach(function (a) { if (novo[a.id]) plano[novo[a.id]] = a.id; });
-      /* o motivo acompanha a porta, não o aparelho: recalcula para quem mudou */
       grupo.forEach(function (a) {
         var p = novo[a.id]; if (!p) return;
         var atual = portaDe(a.id);
@@ -681,37 +605,20 @@
     return { plano: plano, motivo: motivo };
   }
 
-  /* A ÚNICA regra de "isto vira ordem de serviço", e ela tem UM DONO. Ela
-     morava dentro de receita(), e o mapa — que sai de planejar() — não a
-     consultava: nas variantes que PROÍBEM a entrada de hoje o desenho mostrava
-     o aparelho no lugar novo e a receita não mandava mexer, e quem olhava a
-     tela via o aparelho noutro lugar SEM instrução nenhuma. Agora as duas
-     beiras perguntam a mesma coisa aqui. D-MAPA-SEM-RECEITA, 25/08/2026.      */
   function receitaManda(de, para, m) {
     if (!para || de === para) return false;
-    /* quem ainda não tem lugar no mapa entra sempre: não há "ficar onde está"
-       para comparar. Quem já tem lugar só entra se o movimento MELHORA. */
     return !de || (!!m && m.ganho > 0);
   }
 
-  /* A frase que a receita diz quando a variante tirou do tabuleiro a entrada em
-     que o aparelho está hoje — o único caso em que ele sai de um lugar bom sem
-     ganho nenhum, e sem esta linha a ordem de serviço não teria porquê. */
   var PORQUE_A_VARIANTE_TIROU = "esta opção não usa a entrada {de}, onde ele está hoje";
 
-  /* D-MAPA-SEM-RECEITA: se não há ordem, o mapa não move nada. Roda DEPOIS do
-     passe dos intercambiáveis, que ainda troca destinos entre irmãos.
-     Duas entradas de hoje NÃO aceitam o aparelho de volta, e nas duas o
-     movimento vira ORDEM em vez de sumir do mapa: a que a variante proibiu
-     (devolvê-lo desenharia um dongle no extensor numa opção chamada "sem o
-     extensor") e a que outro aparelho tomou.                               */
   function oMapaSoMoveOQueAReceitaManda(plano, motivo, jaPostos, proibida) {
     APARELHOS.forEach(function (a) {
       var de = portaDe(a.id), para = portaDeEm(plano, a.id);
       if (!de || !para || de === para) return;
       if (receitaManda(de, para, motivo[a.id])) return;
       var pd = porNum(de);
-      if (!pd) return;                 /* entrada declarada que não existe em face nenhuma */
+      if (!pd) return;
 
       delete plano[para];
       var tirada = !!proibida(pd);
@@ -734,10 +641,6 @@
     });
   }
 
-  /* ══ 4. A RECEITA: a diferença entre o que está e o que devia ════════
-     Só entra aqui o que MELHORA. Aparelho que já está numa porta tão boa
-     quanto a melhor candidata fica onde está, e não vira movimento — e o mapa
-     pergunta à MESMA função, para os dois nunca discordarem na tela.       */
   function receita(op) {
     var r = planejar(op), movs = [];
     APARELHOS.forEach(function (a) {
@@ -768,7 +671,6 @@
         linhas: linhas
       });
     });
-    /* os essenciais primeiro, e dentro deles o de maior ganho */
     movs.sort(function (x, y) {
       if (x.essencial !== y.essencial) return x.essencial ? -1 : 1;
       if (x.ganho === y.ganho) return 0;
@@ -792,7 +694,6 @@
     return { g: "o", n: a.tipo.toLowerCase() };
   }
 
-  /* ══ 5. O julgamento por porta, no modo "estou segurando" ════════════ */
   function superspeedNoHub() {
     var p = portaDe("wifi"); var pp = p && porNum(p);
     return !!(pp && pp.onde === "hub");
@@ -844,11 +745,6 @@
     return null;
   }
 
-  /* ══ 4.1 AS VARIANTES ════════════════════════════════════════════════
-     Um arranjo só não serve: o melhor no papel pode ser impossível na mesa
-     — o cabo não alcança, o hub está longe, a entrada de trás é inacessível.
-     Cada variante é a MESMA regra com uma restrição declarada, e a tela diz
-     o que se perde em cada uma.                                            */
   var VARIANTES = [
     { id: "melhor", rotulo: "O melhor no papel", op: {},
       desc: "Sem restrição: o arranjo que a regra escolhe quando tudo é possível." },
@@ -864,8 +760,6 @@
     for (var i = 0; i < VARIANTES.length; i++) if (VARIANTES[i].id === variante) return VARIANTES[i].op;
     return {};
   }
-  /* O QUE SE PERDE, em palavra. "437 pontos pior" não diz nada a ninguém;
-     a pessoa precisa saber O QUÊ fica pior, para decidir se aceita.        */
   function consequencias(op) {
     var pl = planejar(op).plano, out = [];
     var bts = APARELHOS.filter(function (a) { return a.classe === "bt"; })
@@ -887,7 +781,6 @@
     return out;
   }
 
-  /* a nota total de um plano: só para ordenar as variantes entre si */
   function qualidade(op) {
     var r = planejar(op), t = 0, ja = [];
     APARELHOS.forEach(function (a) {
@@ -899,12 +792,6 @@
     return t;
   }
 
-  /* ══ 4.2 A RE-IDENTIFICAÇÃO ══════════════════════════════════════════
-     Ela mexeu nos cabos. O caminho de barramento de quem mudou é outro; o
-     serial não. Comparando as duas leituras, o produto diz o que saiu de
-     onde — e, quando a entrada nova está declarada no mapa, ele diz para
-     onde, sem ela escrever nada.                                          */
-  /* a linha de "de onde eu sei" de cada aparelho que mudou de lugar */
   function linhaDoAchado(m, reconhecido) {
     var abre = '<li><span class="selo derivado">derivado</span><span>';
     if (reconhecido) {
@@ -937,35 +824,10 @@
     return mudou;
   }
 
-  /* ══ 4.3 OS CONTROLES: onde cada um deve ficar para render 100% ══════
-     O bond do Bluetooth fica PRESO ao adaptador em que nasceu — o BlueZ não
-     reequilibra sozinho, e plugar outro dongle não move ninguém. Então quem
-     está em qual adaptador é escolha, e é escolha que decide se a mesa cheia
-     funciona. O produto sabe onde cada controle está: o `HID_PHYS` do uevent
-     do nó hidraw publica o MAC do adaptador, e abre como uid 1000, sem sudo.
-
-     A CONTA, medida (`integrations/dualsense_bt_audio.py:76-78`, A/B de 25/07/2026):
-       sem microfone .. 260,4 relatórios por segundo
-       com microfone .. 276,7  (o áudio NÃO abre canal novo: divide a fila)
-     Gatilho, vibração, barra de luz, giroscópio e touch andam no MESMO canal
-     HID — eles não somam pacote. **Só o microfone muda a conta.**            */
-  /* O NÚMERO TEM UM DONO SÓ, e aí é `integrations/radio_da_mesa.py`, que tem
-     portão contra `docs/data/mapa-controles.csv`. Estas três linhas guardavam
-     260 / 277 / 1600 — a MESMA medição, arredondada. Agora são os números
-     exatos, iguais aos do Python byte a byte: 170,5 de entrada + 106,2 de áudio
-     = 276,7 com microfone. D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, 25/08/2026. */
   var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;
 
-  /* fatia de segundo com vírgula, do jeito daqui: 830.0999999999999 não é número
-     que se mostre a ninguém. SÓ para a tela — a conta nunca arredonda. */
   function fatias(v) { return (Math.round(v * 10) / 10).toString().replace(".", ","); }
 
-  /* AS TRÊS FAIXAS, e elas são a régua que a casa já escreveu
-     (DESEMPENHO-A-CONTA-DE-SLOTS-01:147). A primeira versão desta tela conhecia
-     só DOIS estados — "folgada" para tudo abaixo de 1600 e "não cabe" acima — e
-     por isso dizia "Cabe, com folga" na configuração exata do público deste
-     produto: quatro controles num adaptador só, 1106,8 de 1600, que é 69,2%. A
-     régua da casa chama isso de APERTADA. Falso verde no caso que mais importa. */
   function faixa(usado) {
     var f = usado / SLOTS;
     if (f <= 0.60) return { nome: "Folgada",  classe: "folgada" };
@@ -973,23 +835,6 @@
     return { nome: "Cheia", classe: "cheia" };
   }
 
-  /* ══ O PERFIL DE DESEMPENHO ══════════════════════════════════════════
-     Substitui os CINCO degraus do "Orçamento" de hoje, dos quais QUATRO não
-     fazem nada — medido em `core/rumble.py`: `_ORCAMENTO_COM_TETO` só casa
-     com "economia"; `balanceado`, `max`, `auto` e o não-declarado devolvem
-     `None`. E o teto alcança a vibração e mais nada, coisa que a própria
-     tela já confessa.
-
-     UMA decisão no lugar de muitas — mas o MICROFONE fica FORA do perfil,
-     de propósito. Ele é o único do grupo que capta a sala, e o mapa de
-     canais registra que ele nasce desligado por **privacidade e banda**, não
-     só banda. Perfil que liga microfone sozinho transforma uma escolha de
-     desempenho numa escolha de privacidade feita pelas costas.
-
-     O que cada perfil governa é o que custa BATERIA. E aqui está o buraco
-     honesto: **nenhum dos 178 ensaios desta casa mediu consumo por feature.**
-     Os números de bateria abaixo estão marcados como NÃO MEDIDO até alguém
-     pôr um controle carregado na mesa e cronometrar.                        */
   var PERFIS = [
     { id: "tudo", rotulo: "Tudo ligado",
       resumo: "Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.",
@@ -1008,10 +853,6 @@
     for (var i = 0; i < PERFIS.length; i++) if (PERFIS[i].id === perfil) return PERFIS[i];
     return PERFIS[0];
   }
-  /* migração dos valores que já estão no disco dela, sem perder nada:
-     "economia" tinha teto e vira Bateria longa; os quatro que devolviam
-     None se comportavam igual e viram Tudo ligado — quatro nomes para um
-     comportamento só é o defeito, não a variedade.                          */
   var MIGRACAO = { economia: "bateria", balanceado: "tudo", max: "tudo",
                    auto: "tudo", "": "tudo", custom: "escolho" };
 
@@ -1032,13 +873,6 @@
       });
   }
 
-  /* O ARRANJO DOS CONTROLES.
-     Regra que salva a credibilidade do conselho, a mesma do mapa: **ninguém
-     troca de adaptador à toa.** Trocar custa caro de verdade aqui — desfazer
-     o pareamento, apagar o cache SDP e parear de novo, com o controle na mão.
-     Então parte-se de onde cada um JÁ está, e só se move alguém quando isso
-     BAIXA a carga do adaptador mais cheio. Sem isso, o plano mandava trocar
-     três controles entre dongles idênticos, sem ganho nenhum.               */
   function planoDosControles() {
     var ads = adaptadores();
     if (!ads.length) return { ads: [], carga: {}, destino: {}, cabe: false, sobra: 0 };
@@ -1046,19 +880,16 @@
     var carga = {}, destino = {};
     ads.forEach(function (a) { carga[a.id] = 0; });
 
-    /* 1. cada um fica onde está — se o adaptador dele ainda existe */
     var orfaos = [];
     vivos.forEach(function (c) {
       if (carga[c.onde] !== undefined) { destino[c.nome] = c.onde; carga[c.onde] += custo(c); }
       else orfaos.push(c);
     });
-    /* 2. quem perdeu o adaptador vai para o menos carregado */
     orfaos.forEach(function (c) {
       var m = ads[0];
       ads.forEach(function (a) { if (carga[a.id] < carga[m.id]) m = a; });
       destino[c.nome] = m.id; carga[m.id] += custo(c);
     });
-    /* 3. rebalanceia SÓ enquanto isso baixar o pico */
     for (var volta = 0; volta < vivos.length * 2; volta++) {
       var cheio = ads[0], vazio = ads[0];
       ads.forEach(function (a) {
@@ -1071,14 +902,11 @@
       var c = cand[cand.length - 1];
       var picoAntes = carga[cheio.id];
       var picoDepois = Math.max(carga[cheio.id] - custo(c), carga[vazio.id] + custo(c));
-      if (picoDepois >= picoAntes) break;          /* não melhora: para */
+      if (picoDepois >= picoAntes) break;
       carga[cheio.id] -= custo(c); carga[vazio.id] += custo(c); destino[c.nome] = vazio.id;
     }
 
     var pico = Math.max.apply(null, ads.map(function (a) { return carga[a.id]; }));
-    /* quantos MAIS cabem: simula acrescentar até um adaptador estourar.
-       Dividir a folga total daria número maior e falso — controle não se
-       parte entre dois adaptadores. */
     var teste = {}, sobra = 0;
     ads.forEach(function (a) { teste[a.id] = carga[a.id]; });
     while (sobra < 32) {
@@ -1090,7 +918,6 @@
     return { ads: ads, carga: carga, destino: destino, cabe: pico <= SLOTS, sobra: sobra };
   }
 
-  /* ══ 6. DESENHO ══════════════════════════════════════════════════════ */
   function soqueteHTML(porta, ctx) {
     var h = "", ap = null, estado = "", vered = "", porque = "", problema = "";
 
@@ -1141,16 +968,13 @@
     var r = planejar(op);
     var ctx = { modo: modo, plano: r.plano };
 
-    /* os modos */
     document.getElementById("modos").innerHTML =
         '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Como está a minha mesa</button>'
       + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Me mostre os arranjos</button>'
       + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Estou com algo na mão</button>'
       + '<button class="modo" id="reexaminar" aria-pressed="false" style="margin-left:auto">Reexaminar a mesa</button>';
 
-    /* o painel */
     var painel = document.getElementById("painel"), html = "";
-    /* html é concatenado: o modo ideal empilha abas de variante + receita */
     if (modo === "ideal") {
       var qMelhor = qualidade({});
       html += '<p class="chamada">Quatro arranjos possíveis. O melhor no papel pode não caber na sua mesa — escolha o que cabe.</p>'
@@ -1264,17 +1088,12 @@
     }
     painel.innerHTML = html;
 
-    /* as faces */
     document.getElementById("faces").innerHTML = FACES.map(function (f) {
       var mapa = modo === "ideal" ? r.plano : alocacao;
       var total = f.portas.length + f.portas.filter(function (p) { return p.filho; }).length;
       var cheias = f.portas.reduce(function (s, p) { return s + (mapa[p.n] ? 1 : 0) + (p.filho && mapa[p.filho.n] ? 1 : 0); }, 0);
-      /* os aparelhos que ESTA região tem e cuja entrada ainda não foi
-         declarada: eles aparecem, porque o produto os vê. Esconder seria
-         mentir sobre a mesa dela. */
       var reg = f.regiao;
       var pend = (modo === "ideal") ? [] : semEntrada().filter(function (x) { return x.regiao === reg; });
-      /* a região "pc" tem duas faces: a faixa vai numa só, para não duplicar */
       if (reg === "pc" && !f.donaDaFaixaPc) pend = [];
       var faixa = "";
       if (pend.length) {
@@ -1298,7 +1117,6 @@
         + faixa + "</div>";
     }).join("");
 
-    /* a bandeja */
     document.getElementById("bandeja").innerHTML = APARELHOS.map(function (a) {
       var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
       return '<button class="chip" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
@@ -1312,7 +1130,6 @@
       ? "Na mão: " + acha(segurando).tipo + ". Clique a entrada em que ele vai."
       : (soltos ? soltos + " ainda sem lugar no mapa." : "O número é a entrada em que cada um está.");
 
-    /* legenda */
     document.getElementById("legenda").innerHTML = modo === "ideal"
       ? '<span><i class="amostra r-ok"></i> vem para cá</span><span><i class="amostra r-ru"></i> sai daqui</span>'
         + '<span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
@@ -1322,7 +1139,6 @@
       : '<span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
         + '<span><i class="amostra r-ru"></i> está num lugar ruim</span>';
 
-    /* ── os controles: onde cada um deve ficar ────────────────────── */
     var alvo = document.getElementById("adaptadores");
     var pc = planoDosControles();
     var pa = perfilAtual();
@@ -1381,7 +1197,6 @@
       + "Quatro no rádio ao mesmo tempo <b>nunca foi medido nesta casa</b> — o maior ensaio já feito foi de dois."
       + "</div>";
 
-    /* o que ela precisa MOVER de adaptador, e como */
     var mudancas = CONTROLES.slice(0, quantos).filter(function (c) { return pc.destino[c.nome] !== c.onde; });
     if (mudancas.length) {
       h2 += '<div class="veredito-mesa aviso"><b>' + mudancas.length + " controle" + (mudancas.length > 1 ? "s estão" : " está")
@@ -1398,7 +1213,6 @@
     alvo.innerHTML = h2;
   }
 
-  /* ══ 7. INTERAÇÃO ════════════════════════════════════════════════════ */
   document.addEventListener("click", function (ev) {
     var m = ev.target.closest(".modo[data-modo]");
     if (m) { modo = m.getAttribute("data-modo"); if (modo !== "mao") { naMao = null; segurando = null; } pintar(); return; }
@@ -1415,7 +1229,6 @@
     if (vb) { variante = vb.getAttribute("data-var"); pintar(); return; }
 
     if (ev.target.id === "reexaminar") {
-      /* relata a diferença; NÃO troca o que o mapa mostra */
       modo = "reexame"; segurando = null; naMao = null; pintar(); return;
     }
     if (ev.target.id === "voltar-leitura") { modo = "mesa"; pintar(); return; }
@@ -1423,13 +1236,6 @@
       var t = leituraAtual; leituraAtual = leituraAnterior; leituraAnterior = t;
       modo = "mesa"; pintar(); return;
     }
-    /* O "aplicar" saiu, e o motivo fica escrito: ele gravava
-       `novo[n] = cam[pl[n]]` — o caminho de HOJE do aparelho que o plano QUERIA
-       naquela entrada, não o caminho do soquete. Os dois só coincidem quando não
-       há nada a mover; em todo caso interessante ele escrevia uma ligação falsa,
-       e mapa que mente é pior que mapa vazio. O lugar de aprender a ligação é o
-       reexame, que LÊ o sistema de novo e pergunta. Ver a §7.3 da
-       MOTOR-DO-ARRANJO-01. */
     if (ev.target.id === "voltar") { MAPA = Object.assign({}, MAPA_ORIGINAL); pintar(); return; }
 
     var esc = ev.target.closest(".escolha[data-mao]");
@@ -1451,7 +1257,6 @@
       var n = plug.getAttribute("data-porta"), p = porNum(n);
       if (segurando) {
         if (ocupada(alocacao, p)) return;
-        /* ENSINAR O MAPA: esta entrada é o caminho deste aparelho, para sempre */
         var c = leitura()[segurando];
         if (c) {
           Object.keys(MAPA).forEach(function (k) { if (MAPA[k] === c) delete MAPA[k]; });
@@ -1460,7 +1265,7 @@
         segurando = null; naMao = null; modo = "mesa";
       } else if (alocacao[n]) {
         var quem = acha(alocacao[n]);
-        delete MAPA[n];                 /* desdeclara: ela vai dizer onde é */
+        delete MAPA[n];
         segurando = quem.id; modo = "mao";
         naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", mouse: "mouse", webcam: "webcam" })[quem.classe] || null;
       }

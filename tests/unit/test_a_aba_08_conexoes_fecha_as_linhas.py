@@ -188,15 +188,18 @@ def test_o_exame_nao_manda_procurar_um_botao_que_nao_existe() -> None:
     """*"Ver as ordens ignoradas"* saiu da tela em 31/08 e a frase ficou."""
     from hefesto_dualsense4unix.interface import aba08, onde
 
+    def citam(html: str) -> list[str]:
+        dicas = re.findall(r'title="([^"]*)"', html)
+        dicas += re.findall(r'data-campo="achado-explica"[^>]*>(.*?)</span>', html)
+        assert dicas, "a régua não achou dica nenhuma — seletor cego é ERRO, não silêncio"
+        return [d for d in dicas if aba08.VER_IGNORADAS in d]
+
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
-    dicas = re.findall(r'title="([^"]*)"', html)
-    dicas += re.findall(r'data-campo="achado-explica"[^>]*>(.*?)</span>', html)
-    assert dicas, "a régua não achou dica nenhuma — seletor cego é ERRO, não silêncio"
-    citam = [d for d in dicas if aba08.VER_IGNORADAS in d]
-    assert not citam, f"{len(citam)} dica(s) ainda mandam procurar um botão que não existe"
-    assert aba08.VER_IGNORADAS in html, (
-        "a retrospectiva perdeu o nome do botão — a régua deixa de separar as "
-        "duas metades e passaria por acidente")
+    assert not citam(html), (
+        f"{len(citam(html))} dica(s) ainda mandam procurar um botão que não existe")
+    mordida = html.replace('title="', f'title="{aba08.VER_IGNORADAS} ', 1)
+    assert citam(mordida), (
+        "a dica que cita o botão passou pela régua: ela não lê o que a tela mostra")
 
 
 def test_a_frase_nova_diz_o_que_o_produto_faz() -> None:

@@ -6104,7 +6104,7 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
 
     `c` é a entrada do `state_full` (o `ctx.conectados`), `eu` a da mesa (número e máscara por
     aparelho), `st` o estado inteiro. Vale para todo transporte e todo modo: nenhum ramo pergunta
-    qual é o controle nem quantos há.
+    qual é o controle nem quantos há. Do microfone, só o selo (D-O-ESCOPO-DO-MIC-SAIU-DA-08).
     """
     uniq = str(c.get("uniq") or "")
     via = str(c.get("transport") or "").lower()

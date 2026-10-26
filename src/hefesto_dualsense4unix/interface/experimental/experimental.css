@@ -302,8 +302,6 @@
 .ja-ctrl > select,.ja-ctrl > .campo-linha { flex:1 1 auto;min-width:0;width:100%;max-width:none }
 .ja-ctrl > .ja-tons { flex:1 1 auto;display:grid;grid-template-columns:repeat(12,22px);justify-content:space-between }
 .ja-tela.l-larga > .moldura:last-child .ja-linha:not(.empilha) { grid-template-columns:136px minmax(0,1fr) }
-/* A caixa da dica não mora aqui: a do desenho é a `#hef-dica.da-base` da base comum, e a do produto é da
-   camada da janela, que nunca veste `visivel` (sem o `.da-base`, esta folha a deixava invisível). */
 .ext { padding:11px 0;min-height:60px }
 .ext-quem { cursor:default;gap:5px }
 .ext-sub { gap:8px;min-width:0 }
@@ -371,7 +369,6 @@
 .jg-l { flex-wrap:wrap;align-content:center;row-gap:0;padding:3px 0 }
 .jg-n { flex:0 1 auto }
 
-/* A vista estreita (940 px): a janela dos acessórios, a fila dos lançadores e a régua da luz cabem sem nada cruzar */
 .bp-cx .ky-linha { gap:8px }
 .bp-cx .ky-ctrl { flex-wrap:wrap;row-gap:4px;min-width:0 }
 .ja-escala-rot { gap:8px }
@@ -421,31 +418,21 @@
 .ext-num { width:84px;height:24px;border-radius:6px;padding:0 8px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:11px }
 .ext-cor-in { width:44px;height:26px;padding:2px;border-radius:6px;border:1px solid var(--border-forte);
   background:var(--panel);cursor:pointer }
-/* A janela genérica de uma extensão no desenho de 19/10: um cartão por grupo, numa coluna só. */
 #mod-janela .ky-grade { grid-template-columns:minmax(0,1fr) }
 #mod-janela .ky-linha { grid-template-columns:200px minmax(0,1fr) }
 #mod-janela .ky-ctrl { justify-content:flex-end }
 #mod-janela .ky-ctrl .ext-sel { width:220px }
 #mod-janela .ac-card .jg-lista { max-height:150px }
-/* Com três grupos ou mais, os cartões vão em duas colunas (o arranjo da janela dos acessórios): numa
-   coluna só, um manifesto de quatro grupos passava por baixo do Cancelar e do Guardar e saía da janela. O
-   corpo nunca vaza: o que ainda não couber rola dentro dele. */
 #mod-janela .ky-grade:has(> .ac-card:nth-child(3)) { grid-template-columns:repeat(2,minmax(0,1fr)) }
 #mod-janela .ky-grade:has(> .ac-card:nth-child(3)) .ky-linha { grid-template-columns:minmax(0,1fr) auto }
 #mod-janela .ky-grade:has(> .ac-card:nth-child(3)) .ky-ctrl .ext-sel { width:170px }
 #mod-janela > .tn-corpo { overflow-y:auto;scrollbar-width:thin }
 #mod-janela > .tn-corpo:has(> .ky-grade > .ac-card:nth-child(3)) { padding-bottom:8px }
-/* A coluna «Agora» e o «Parar tudo» da janela genérica: a extensão que os declara ganha a largura da
-   janela dos acessórios; os degraus só mostram o nível, não são botão. */
 #mod-janela:has(.ja-corpo) { width:1130px }
 #mod-janela .tn-tit + .ja-parar { margin-left:auto }
 #mod-janela .ja-opcoes { min-width:0;min-height:0;overflow:auto }
 #mod-janela .ja-degraus i, #mod-janela .ja-degraus i:hover { cursor:default;border-color:var(--border-forte) }
 #mod-janela .ja-degraus i.on { border-color:#ff8fd0 }
-/* O menu do ⋮ (desenho de 19/10): flutua à esquerda do ⋮, por cima da linha, e não empurra as linhas de
-   baixo. No desenho ele aparece com o foco na linha; no produto, o clique no ⋮ o abre (`aberto`) e ele
-   fica até o segundo clique. Com as permissões, ele quebra em duas linhas de largura fixa e desce
-   para baixo da linha, para a chave do «sim» ficar ao alcance do clique. */
 .ext, #lanc-janela .tn-topo { position:relative }
 .ext-pop { display:none }
 .ext:focus-within .ext-pop, .tn-topo:focus-within .ext-pop, .ext-pop.aberto { display:flex;position:absolute;
@@ -457,12 +444,6 @@
 #lanc-janela .tn-topo .ext-mais { margin-left:auto }
 #lanc-janela .tn-topo .ext-mais + .ext-pop { right:90px;top:6px;transform:none }
 #lanc-janela .tn-topo .ext-pop + .tn-x, #lanc-janela .tn-topo .ext-mais + .tn-x { margin-left:4px }
-/* AS EXTENSÕES EM DUAS COLUNAS, COM TETO — 21/10/2026, OS-LANCADORES-NAO-SAEM-DA-TELA-COM-AS-EXTENSOES-01,
-   a opção A escolhida (D-2110-AS-EXTENSOES-EM-DUAS-COLUNAS-COM-ROLAGEM-POR-DENTRO). Uma fileira por extensão
-   empurrava o «Lançadores» para fora da tela a partir da sétima. Agora cada extensão é um cartão de meia
-   largura (os da mesma fileira com a mesma altura), a frase numa linha cortada, inteira na dica; cinco
-   fileiras (dez extensões) cabem inteiras, e da décima primeira em diante a lista rola só por dentro,
-   com a barra fina da casa. A coluna do «Para» saiu da linha. */
 .ext-lista { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;align-items:stretch;
   max-height:289px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--app-bg) }
 .ext-lista::-webkit-scrollbar { width:9px }
@@ -477,43 +458,14 @@
 .ext-lista .ext-faz { display:block }
 .ext-lista .ext-vazia { grid-column:1/-1 }
 .ext-instalar-pe { padding-top:6px;margin-top:6px }
-/* O ⋮ com as permissões desce para baixo da linha; dentro da lista que rola, flutuando, ele seria cortado
-   (medido em 21/10/2026: com uma extensão, a lista de 52 px escondia o menu inteiro).
-   NOTA DE 24/10/2026 (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01): a cura de 21/10 o punha no fluxo do cartão
-   (`position:static`, a largura do cartão), e o cartão crescia de 52 para 159 px, o vizinho da fileira
-   crescia junto (`align-items:stretch`) e a lista passava do teto e rolava; na foto dela, um painel com as
-   três ações embaixo do cartão. Agora ele flutua fora da lista (`fixed`): o `comportamento.js` o põe junto
-   do ⋮, para baixo da linha ou, sem espaço, para cima. Nenhum cartão cresce e nada é cortado. */
 .ext-lista .ext-pop.aberto:has(.ext-perm) { position:fixed;right:auto;transform:none }
-/* A chave armada da extensão que pede o «sim»: o pedido mora na dica, e o próximo clique liga. */
 .nj-tog.pede { border-color:var(--yellow);background:rgba(241,250,140,.1);color:var(--yellow) }
 .nj-tog.pede .pino { background:var(--yellow) }
-/* A FILA DOS LANÇADORES ROLA POR DENTRO — 21/10/2026, A-EXPERIMENTAL-MAXIMIZADA-NAO-QUEBRA-COM-AS-EXTENSOES-DE-VERDADE-01.
-   Medido no WebKit do piloto, com sete extensões de verdade e os atalhos de lançador de uma máquina de verdade: a fila tinha onze
-   linhas (seis fileiras), a grade com o piso de cada fileira passava do quadro, e o miolo rolava 13 px na
-   janela maximizada (662 > 649) e 20 px no piso (638 > 618), com «Adicionar um lançador» atrás da barra do
-   Aplicar. O quadro é `estica` (`topo.html`: quem encolhe é a lista lá dentro, que rola); a fila agora rola
-   por dentro, com a mesma barra fina da lista das extensões. Na janela de até 860 px de altura, o piso
-   da fileira desce de 38 para 32 px (o botão tem 26) e o vão de 8 para 4 (a regra `max-height:860px`
-   acima): as seis fileiras dela cabem inteiras na maximizada (212 px para 222); no piso da janela, e com
-   mais lançadores, a fila rola. */
 .lanc-fila { overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--app-bg) }
 .lanc-fila::-webkit-scrollbar { width:9px }
 .lanc-fila::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
 .lanc-fila::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
-/* O CARTÃO TEM A ALTURA DO QUE MOSTRA — 22/10/2026, OS-CARTOES-DOS-LANCADORES-NAO-ESTICAM-01. Com o `1fr`
-   a fileira repartia a sobra do quadro: a 1600x855, cada cartão tinha 134 px com duas extensões, 115 com
-   quatro e 76 com oito, para uma linha só. A fileira tem altura própria (42 px; 32 até 860 px de altura,
-   a que faz as seis fileiras caberem na maximizada), e o quadro fica do tamanho da fila: a sobra vai para
-   o fundo da janela, fora dele, como em toda aba (27/08). Ele continua `estica` para ENCOLHER quando as
-   extensões tomam o miolo, e a fila rola por dentro. Na fileira de 32 px, o nome de duas linhas (o
-   lançador e os jogos) media 32 para os 30 de dentro do cartão e vazava pela borda: até 860 px de
-   altura ele perde o vão e aperta a entrelinha (a regra `max-height:860px` da fila). */
 .miolo > .quadro.estica:has(> .quadro-corpo > .lanc-fila) { flex-grow:0 }
-/* O ARRANJO C — 22/10/2026 (o arranjo «Agora e ajustes» escolhido
-   na foto dos três). A extensão que declara `agora` ganha a coluna à esquerda (as conexões, uma linha
-   fina, os aparelhos) e os grupos do manifesto em abas à direita; o «Parar tudo» fica no topo. As abas são
-   rádios: o navegador troca a tela sem gesto, e a janela redesenhada nasce na aba da última opção mudada. */
 #mod-janela .ja-topo .tn-tit + .tn-x { margin-left:auto }
 #mod-janela .ja-corpo { grid-template-columns:252px minmax(0,1fr) }
 #mod-janela .ja-agora { gap:6px }
@@ -551,8 +503,6 @@
 #mod-janela .vivo svg { width:200%;height:18px;animation:mj-correr 1.4s linear infinite }
 #mod-janela .vivo path { fill:none;stroke:var(--pink);stroke-width:2 }
 @keyframes mj-correr { to { transform:translateX(-50%) } }
-/* As telas das abas na mesma célula da grade, escondidas sem sair do arranjo: a janela fica com a
-   altura da maior e as abas não pulam sob o clique. */
 #mod-janela .ac-card.mj-abas { display:grid;grid-template-columns:repeat(var(--n),minmax(0,max-content)) minmax(0,1fr);
   align-content:start;column-gap:2px;padding-top:4px }
 #mod-janela .mj-abas > input { display:none }
@@ -577,12 +527,6 @@
   #mod-janela .ja-corpo { grid-template-columns:232px minmax(0,1fr) }
   #mod-janela .tql .ext-sel { flex-basis:104px }
 }
-/* AS TRÊS PEÇAS QUE AGEM — 24/10/2026, A-JANELA-DA-EXTENSAO-GANHA-ACAO-APARELHOS-E-CONTROLE-LIVRE-01 (o
-   arranjo C do desenho da janela nova). As ações em fileira no topo da aba delas (a primeira é a forte), os
-   aparelhos geridos em cartões de dois por fileira (a chave liga, os botões agem; o desligado fica apagado), e
-   o controle livre numa faixa fixa embaixo das duas colunas, à vista em toda aba: o rastro dos últimos dez
-   segundos, a barra que se arrasta (um `range` com a bola que diz o número), o «Gravar», quem recebe e as
-   formas gravadas. O que espera a extensão pulsa («Em curso»). */
 #mod-janela .ja-corpo.sem-agora { grid-template-columns:minmax(0,1fr) }
 #mod-janela .ja-corpo.com-faixa { grid-template-rows:minmax(0,1fr) auto;row-gap:12px }
 #mod-janela .ja-corpo > .mj-faixa { grid-column:1 / -1 }
@@ -640,9 +584,6 @@
   height:40px;box-sizing:border-box;border-radius:50%;background:var(--fg);border:4px solid var(--pink);
   transform:translate(-50%,-50%);font:700 10px 'JetBrains Mono',ui-monospace,monospace;color:#1e1f29;display:flex;
   align-items:center;justify-content:center;pointer-events:none }
-/* A barra com a extensão fora da porta (25/10/2026, A-JANELA-DA-EXTENSAO-COM-MODOS-NAO-DIZ-QUE-NAO-
-   TEM-OPCOES-01): apagada, sem o rosa, antes do gesto, e o rastro dela também; arrasta e grava
-   formas (o rastro da gravação segue vermelho), e a dica diz que não chega à extensão. */
 #mod-janela .mj-trilho.fora input { background:linear-gradient(90deg,var(--border-forte),var(--texto-suave))
   no-repeat 4px 50% / calc(16px + (100% - 40px) * var(--v) / 100) 26px, var(--panel) }
 #mod-janela .mj-trilho.fora output { border-color:var(--texto-suave) }
@@ -663,8 +604,6 @@
 #mod-janela .mj-x { width:18px;height:18px;border-radius:50%;border:0;background:none;color:var(--texto-suave);cursor:pointer;
   font-size:13px;line-height:1;padding:0 }
 #mod-janela .mj-x:hover { color:var(--red) }
-/* Os modos do controle livre (24/10/2026, O-LIVRE-GANHA-OS-MODOS-SOLTAR-SEGURAR-REPETIR-01): o
-   segmentado do arranjo C, «Soltar», «Segurar» e «Repetir», antes do «Gravar». */
 #mod-janela .seg.mj-modos { display:inline-flex;gap:0;flex:none;flex-wrap:nowrap;border:1px solid var(--border-forte);
   border-radius:6px;overflow:hidden }
 #mod-janela .seg.mj-modos button { flex:none;min-width:0;height:28px;padding:0 10px;font-size:11.5px;font-weight:400;
@@ -674,12 +613,7 @@
 #mod-janela .seg.mj-modos button:hover:not(.on) { color:var(--fg);border-color:var(--border-forte) }
 #mod-janela .seg.mj-modos button.on { background:var(--sel-bg);color:var(--fg);font-weight:400;
   border-color:var(--border-forte);box-shadow:inset 0 -2px 0 var(--purple) }
-/* Os controles de cada aparelho (24/10/2026, O-APARELHO-DA-EXTENSAO-DIZ-OS-CONTROLES-DELE-NA-JANELA-01):
-   a aba «Luz» do arranjo C, um cartão por aparelho com a chave no topo e uma linha por controle. */
 #mod-janela .mj-ccs { align-items:start }
-/* O rótulo cabe em 40px quando é curto e cresce até 120px quando é longo (o contrato aceita 30
-   letras), quebrando a linha sem invadir o controle; as opções que não cabem descem para outra
-   fileira do mesmo grupo, e nenhuma some atrás da borda. */
 #mod-janela .mj-cc-linha { display:grid;grid-template-columns:minmax(40px,max-content) minmax(0,1fr);
   align-items:center;gap:10px;padding-bottom:6px;min-width:0 }
 #mod-janela .mj-cc-rot { font-size:11.5px;color:var(--texto-suave);max-width:120px;overflow-wrap:anywhere }

@@ -22,6 +22,8 @@ DS   = (_F / "ds_limpo.svg").read_text()
 BASE_CSS = (_F / "base-comum.css").read_text(encoding="utf-8")
 BASE_JS = (_F / "base-comum.js").read_text(encoding="utf-8")
 
+FIM_DA_ABA = '<script id="base-comum">'
+
 
 def com_a_base(doc: str) -> str:
     """O documento com a base comum posta UMA vez; levanta se ela já estiver lá ou faltar âncora."""
@@ -30,7 +32,7 @@ def com_a_base(doc: str) -> str:
     if doc.count("</head>") != 1 or doc.count("</body>") != 1:
         raise SystemExit("ERRO: a página não tem um `</head>` e um `</body>` para a base comum")
     doc = doc.replace("</head>", f'<style id="base-comum">\n{BASE_CSS}</style>\n</head>', 1)
-    return doc.replace("</body>", f'<script id="base-comum">\n{BASE_JS}</script>\n</body>', 1)
+    return doc.replace("</body>", f"{FIM_DA_ABA}\n{BASE_JS}</script>\n</body>", 1)
 
 LOGO = (R / "assets/hefesto-logo.svg").read_text()
 
@@ -581,21 +583,12 @@ def glifo(nome: str, ativo: bool = False, tam: int = 24) -> str:
     i = x.index(">", x.index("<svg "))
     return f'{x[:i + 1]}<title>{html.escape(titulo)}</title>{x[i + 1:]}'
 
-CSS_GLIFO = """
-  /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
-     `currentColor` faz cada um herdar a cor da linha em que está. */
-  .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
+CSS_GLIFO = """  .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
   .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
 """
 
-CSS_LUZINHAS = """
-  /* AS DUAS CORES VIAJAM COM AS LÂMPADAS, e antes não viajavam: elas eram
-     declaradas em `.luzes,.troca`, dentro do CSS da Iluminação. A Controles
-     escreveu a mesma classe em 29/08 e as cinco lâmpadas saíram SEM COR — o
-     `var()` sem declaração não pinta e não avisa. Um bloco reusável que depende
-     de um seletor da aba que o pariu não é reusável; agora ele se basta. */
-  .luzinhas{--led-apagado:#4a4f5c; --led-aceso:#e8ecf5;
+CSS_LUZINHAS = """  .luzinhas{--led-apagado:#4a4f5c; --led-aceso:#e8ecf5;
             display:flex;gap:3px;align-items:center}
   .luzinhas i{width:6px;height:6px;border-radius:2px;background:var(--led-apagado);display:block}
   .luzinhas i.on{background:var(--led-aceso);box-shadow:0 0 6px rgba(255,255,255,.85)}
@@ -614,30 +607,9 @@ def luzinhas(jogador: int, extra: str = "") -> str:
     return f'<span class="luzinhas{extra}">' + "".join(saida) + "</span>"
 
 
-CSS_POPUP = """
-  /* ---- AS TELAS NOVAS (:target, sem script) ---- */
-  .tela-nova{display:none;position:fixed;inset:0;z-index:60;
+CSS_POPUP = """  .tela-nova{display:none;position:fixed;inset:0;z-index:60;
              background:rgba(9,10,15,.72);align-items:center;justify-content:center}
   .tela-nova:target{display:flex}
-  /* ---------------------------------------------------------------------
-     A CAIXA TEM TETO, E O TETO É A JANELA DO PRODUTO (28/08/2026).
-     A `.tn-cx` não tinha `max-height` nem `overflow`: se o conteúdo crescesse,
-     ele saía da tela SEM barra de rolagem e SEM aviso — o defeito não aparecia
-     porque régua nenhuma desta casa mede pop-up (a `.tela-nova` é
-     `position:fixed`, fora do `.miolo` que as réguas varrem).
-     717px = os 757px da janela do Hefesto menos 20px de respiro em cima e
-     embaixo; o `min()` com `100vh` cobre quem abrir numa janela menor que isso.
-
-     QUEM ROLA É A MOLDURA DA TABELA, e não o corpo — e isso é uma CORREÇÃO, não
-     uma escolha de gosto. A primeira versão pôs `overflow-y:auto` no `.tn-corpo`
-     inteiro, e o `overflow` recorta TODO descendente posicionado, role ou não:
-     a dica de "Velocidade de cursor" do Point-and-click, que tem 330×123px e
-     abre para fora da caixa, apareceu CORTADA em dois lados. Medido em 28/08.
-     A moldura é a única parte que cresce com o número de linhas, e não há uma
-     só dica dentro dela — a do título mora no `.tn-topo` e as do Point-and-click
-     no `.tn-vel`, ambos fora. Assim título, frase, velocidades e o rodapé com o
-     "Guardar" ficam sempre à vista, e nenhuma dica é recortada.
-     --------------------------------------------------------------------- */
   .tn-cx{width:660px;max-width:94vw;background:var(--panel);border-radius:11px;
          border:1px solid var(--border-forte);box-shadow:0 26px 70px rgba(0,0,0,.62);
          display:flex;flex-direction:column;max-height:min(717px,calc(100vh - 40px))}
@@ -647,34 +619,8 @@ CSS_POPUP = """
         border:1px solid var(--border-forte);color:var(--fg);font-size:14px;
         display:flex;align-items:center;justify-content:center}
   .tn-x:hover{border-color:var(--red);color:var(--red)}
-  /* `min-height:0` nos dois níveis não é enfeite: sem ele um item de flex-column
-     não encolhe abaixo do `min-content`, e a rolagem interna nunca chega a
-     existir — o teto passaria a cortar em silêncio, que é o defeito de origem. */
   .tn-corpo{padding:11px 18px 16px;display:flex;flex-direction:column;min-height:0}
-  /* `scrollbar-gutter:stable` NÃO é enfeite, e a razão foi medida em 29/08/2026:
-     a moldura da `#mapear-entradas` escondia 180px — a confissão INTEIRA e a
-     segunda pergunta da sala — e `offsetWidth - clientWidth` dava ZERO, porque
-     no Linux a barra do Chrome é overlay e não ocupa largura. Havia rolagem e
-     nada na tela dizia isso: quem abrisse a pop-up leria uma tela completa que
-     não estava completa. O `.miolo` do esqueleto já resolve assim
-     (`topo.html:134`); a moldura da pop-up não tinha herdado a lição. */
   .tn-corpo > .moldura{overflow-y:auto;min-height:0;scrollbar-gutter:stable}
-  /* A BARRA, E O QUE O INSTRUMENTO NÃO CONSEGUE PROVAR (29/08/2026).
-     O `scrollbar-gutter:stable` reserva os 9px — isso está MEDIDO
-     (`offsetWidth - clientWidth == 9`). O `scrollbar-color` e as regras
-     `::-webkit-scrollbar` abaixo pedem que ela seja pintada.
-
-     **O QUE NÃO CONSEGUI PROVAR:** o Chrome headless do `olhar.py` NÃO pinta a
-     barra na foto — amostrei a coluna dela pixel a pixel e só há cor de fundo,
-     inclusive com `--disable-features=OverlayScrollbar`. Três tentativas.
-     Logo: a rolagem existe e funciona, mas **nenhuma foto desta casa prova que
-     a pessoa vê que há mais abaixo**. Quem for validar isto valida em navegador
-     de verdade, ou no produto — onde quem desenha é o GTK, cuja barra é sólida.
-
-     POR QUE ISSO IMPORTA: a `#mapear-entradas` esconde 140px, e entre eles está
-     a confissão inteira ("o que eu não consegui conferir neste desenho"). Uma
-     tela que parece completa e não está é a classe de defeito que esta casa
-     mais paga. O número está na mesa; encolher o conteúdo é decisão de produto. */
   .tn-corpo > .moldura{scrollbar-width:thin;
                        scrollbar-color:var(--border-forte) var(--panel-2, #21222c)}
   .moldura::-webkit-scrollbar{width:9px}
@@ -683,122 +629,32 @@ CSS_POPUP = """
   .tn-frase{font-size:11.5px;color:var(--fg);line-height:1.55;margin-bottom:11px}
   .tn-rod{display:flex;gap:var(--gap);padding:0 18px 16px;flex:none}
   .tn-rod .btn{flex:1;text-decoration:none}
-  /* a confirmação do rodapé segue os botões, e não a borda da caixa: o
-     `left:0/right:0` do `.confirma` mira a caixa de padding do `.tn-rod`, que
-     começa 18px antes do primeiro botão. */
   .tn-rod .confirma{left:18px;right:18px}
   .tn-cx .tab td{height:23px}
   .tn-cx .campo-linha{height:22px}
-  /* dentro de uma pop-up a dica abre para a ESQUERDA: a caixa tem 660px e
-     22+330 a partir do rótulo passava da borda direita dela. Medido na
-     Point-and-click, e vale para toda `.tn-cx` pela mesma aritmética. */
   .tn-cx .dica{left:auto;right:22px}
 """
 
-CSS_FOLHA = """
-  /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
-
-  /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA, 05/09/2026: *"temos que entender se só tem um controle
-     conectado só aparece config daquele. aba cinco tá errada."*
-
-     E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
-     a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
-     e a 08 servia 3 — todos clicáveis, todos para aparelhos que não estão aqui.
-     A 05 mostrava até um interruptor de motor ACESO em laranja.
-
-     POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (decisão de 31/08 — *"deixa os outros espaços a mostra ainda mas
-     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
-     entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
-
-     O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os
-     `vazios` e o piloto marca cada lugar com `data-conectado="nao"` mais a
-     classe `off`. O travessão dos CAMPOS já chegava (`dict.fromkeys(chaves,
-     TRAVESSAO)`). O que não chegava era o sumiço dos WIDGETS — um botão não é
-     campo de texto, e nenhum `—` o apaga.
-
-     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: uma peça que cada
-     aba precisa lembrar de pedir é uma peça que alguma aba esquece. Foram
-     QUATRO abas com o mesmo defeito e o mesmo remédio.
-
-     `:not(.vazia)` NÃO É DETALHE: o piloto marca `data-conectado="nao"` também
-     nas que já NASCEM vazias, e essas trazem o `<span class="nada">` por
-     dentro. Sem a exclusão, esta regra esconderia o travessão delas e a coluna
-     ficaria em branco — a régua trocada por outra pior.
-
-     O CINZA É POR ESCONDER E NÃO POR `disabled`, ao contrário da S-03 logo
-     abaixo, e a diferença tem razão: ali o botão EXISTE e recusa dizendo o
-     porquê; aqui não há aparelho sobre o qual dizer coisa alguma. Um botão
-     cinza num lugar vazio ainda promete que ali cabe uma escolha. */
-  [data-controle][data-conectado="nao"]:not(.vazia) button,
+CSS_FOLHA = """  [data-controle][data-conectado="nao"]:not(.vazia) button,
   [data-controle][data-conectado="nao"]:not(.vazia) input,
   [data-controle][data-conectado="nao"]:not(.vazia) select,
   [data-controle][data-conectado="nao"]:not(.vazia) textarea,
   [data-controle][data-conectado="nao"]:not(.vazia) [contenteditable]{
     display:none !important}
-  /* E O QUE SOBRA FICA APAGADO — o rótulo e os números que o travessão do
-     pacote já escreveu. Sem isto o nome do plástico continuaria colorido em
-     cima de uma coluna sem aparelho. */
   [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
 
-  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é de produto: *"os svgs não
-     deveriam aparecer prós demais controles desconectados"*.
-
-     A VERSÃO ANTERIOR DESTA REGRA PINTAVA o SVG de `var(--linha)` em vez de o
-     tirar. Era menos do que o usuário pediu e pior do que parecia: um controle
-     cinza-chumbo continua sendo um CONTROLE desenhado, e a coluna vazia
-     passava a mostrar um aparelho apagado ao lado de três travessões — a tela
-     desenhando o que não está aqui. Sumir é a resposta honesta, e é a mesma
-     que a S-04 já dava aos botões um parágrafo acima.
-
-     A ALTURA DA FAIXA NÃO CAI JUNTO, e é por isso que a regra é `visibility` e
-     não `display`: as colunas dividem a mesma linha de grade, e um `display:
-     none` faria a faixa do desenho encolher para a altura do travessão — as
-     quatro colunas desalinhariam e a do controle conectado mudaria de tamanho
-     conforme a mesa. `visibility:hidden` tira a tinta e guarda o lugar. */
   [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg{
     visibility:hidden !important}
 
-  /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
-     A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
-     mecanismo: ali o botão está `disabled` de verdade e não recebe clique;
-     aqui a classe é só tinta, e o botão continua respondendo — que é o que o
-     PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
-     tem rato na mão. */
   .btn.apagado,.seg button.apagado{
     border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
     border-color:var(--border-sutil);color:var(--fg)}
 
-  /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
-     No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
-     cobrando a altura da fonte, que é o preço que a regra de 30/08
-     (*"texto na interface é zero"*) não aceita pagar.
-
-     A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
-     já tinham cada uma na sua folha, promovido a peça das dez — com o
-     `:has(.nada)` junto, porque as duas metades são a mesma peça: `:empty`
-     cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
-     piloto pinta a cada tique com "não há o que dizer". Faltando uma das
-     duas, a linha volta a aparecer num dos dois caminhos, calada. */
   .ressalva{font-size:11.5px;line-height:1.5;color:var(--fg);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
-  /* ---- S-05 · O CHIP DA FITA VIRA CONTROLE, E O CURSOR DIZ ----
-     O chip passou de `<span>` a `<label>` em 05/09/2026 (`monta.fita`), e um
-     `<label>` sem cursor continua parecendo texto. A regra é `:not(.inerte)`
-     porque nas SETE abas em que a fita é leitura ele NÃO clica — e um dedinho
-     sobre um chip morto é a mesma promessa vazia por outro meio.
-
-     NENHUM PIXEL MUDA. `cursor` não aparece em foto, e o portão do desenho
-     aprovado compara o que se VÊ; a regra existe para o rato do usuário.
-
-     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: a fita mora no
-     esqueleto das dez. A `02-controles` já tinha a sua própria linha desde que
-     virou bancada clicável — a dela vira redundante, e redundante é melhor que
-     divergente. */
   .fita:not(.inerte) label.chip{cursor:pointer}
 """
 

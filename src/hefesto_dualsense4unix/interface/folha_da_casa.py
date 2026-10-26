@@ -108,10 +108,7 @@ _A = ALVO_MINIMO_PX
 _L = LETRA_MINIMA_PX
 
 PISO_POR_PAGINA: dict[str, str] = {
-    "02-controles": f"""
-/* o piso: alvo de {_A} px e letra de {_L} px; só os tamanhos sobem e o respiro aperta onde precisa */
-body.por-controle .pt{{font-size:{_L}px !important}}
-/* o ponto da fita sobe a 12 px sem crescer a linha: o chip mede 30 nas dez abas */
+    "02-controles": f"""body.por-controle .pt{{font-size:{_L}px !important}}
 body.por-controle .fita .pt{{line-height:1 !important}}
 body.por-controle .faixa,body.por-controle .faixa .div,body.por-controle .faixa .leia,body.por-controle .bat,body.por-controle .bat .n{{font-size:{_L}px !important}}
 body.por-controle .faixa>span{{line-height:16px !important}}
@@ -131,22 +128,17 @@ body.por-controle .card-corpo{{padding-top:8px !important}}
 body.por-controle .ctl:has(> input:checked),body.por-controle:has(#c-todos:checked) .ctl{{padding-bottom:8px !important}}
 body.por-controle .gb svg text{{font-size:10.2px}}
 body.por-controle .gat-linha .n{{top:-15px !important;line-height:14px !important}}
-/* a vaga: «Player 3 • Desconectado», sem cor, máscara, microfone, sensores nem bateria */
 body.por-controle .ctl.off,body.por-controle .ctl.off:has(> input:checked),body.por-controle:has(#c-todos:checked) .ctl.off{{height:26px !important;padding-bottom:0 !important}}
 body.por-controle .ctl.off > .faixa{{height:{_A}px !important;display:flex !important;align-items:center !important;font-size:{_L}px !important}}
-/* a dica também é alvo: o rótulo que só abre dica chega a {_A} px, pago pela margem de baixo dele */
 body.por-controle .rot[data-dica]{{min-height:{_A}px !important;display:flex !important;align-items:center !important;margin-bottom:0 !important}}
 """,
-    "09-sistema": f"""
-/* o piso: Copiar, Salvar e o que abre dica em {_A} px, nenhuma letra abaixo de {_L} px; o respiro entre os grupos aperta */
-body .selo,body .selo .sg{{font-size:{_L}px !important}}
+    "09-sistema": f"""body .selo,body .selo .sg{{font-size:{_L}px !important}}
 body .saude .selo{{flex:0 0 84px !important}}
 body .pt{{font-size:{_L}px !important}}
 body .fita .pt{{line-height:1 !important}}
 body .sec-rot .btn.copiar{{height:{_A}px !important;font-size:{_L}px !important}}
 body .sec-rot.sr-log{{height:35px !important}}
 body .log{{font-size:{_L}px !important}}
-/* a dica também é alvo: as linhas do Status e os títulos que só abrem dica chegam a {_A} px; paga a margem embaixo do título e entre os grupos */
 body .saude .txt{{min-height:{_A}px !important}}
 body .sec-rot{{height:{_A}px !important;margin-bottom:2px !important}}
 body .sec-rot>span{{min-height:{_A}px !important}}

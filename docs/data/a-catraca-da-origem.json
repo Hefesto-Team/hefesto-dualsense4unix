@@ -243,14 +243,14 @@
       "data": "2026-10-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1219641,
+      "piso": 1170932,
       "por_item": {
-        "docs": 121653,
-        "scripts": 121437,
-        "src": 325048,
-        "tests": 651503
+        "docs": 121676,
+        "scripts": 109443,
+        "src": 294024,
+        "tests": 645789
       },
-      "razao": "tamanho: +2167 linhas (1217474 -> 1219641), pagas por Origem: D-1310-A-ENERGIA-USB-DE-DESKTOP-SO-SEM-BATERIA, D-2309-ESCONDER-OS-QUATRO-NOS, D-2510-O-PACOTE-DECLARA-OS-TIPOS; registrado no fecho, topo da2c4bedcf09",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",

@@ -290,7 +290,7 @@ def textos_do_estado(
     edição — esta casa já pagou por isso.
 
     **``None`` DE CADA UMA É "NÃO APARECE", nunca travessão.** O pintor troca
-    vazio por ``—`` (``hefesto_vivo.py:61``), e um travessão numa linha de
+    vazio por ``—`` (``hefesto_vivo.py:55``), e um travessão numa linha de
     alerta afirmaria "não sei" onde a resposta é "não há o que avisar". Por isso
     esta função devolve uma LISTA do que existe, e não um dicionário de campos
     fixos: a linha que não se aplica não é apagada — ela **não é montada**.

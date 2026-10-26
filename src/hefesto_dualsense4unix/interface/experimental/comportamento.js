@@ -19,11 +19,6 @@
     var c = e.target.closest('.ja-chips .chip, .ac-chips .chip');
     if (c){ c.classList.toggle('on'); }
   });
-  // O ⋮ ABERTO FICA À VISTA DENTRO DA LISTA QUE ROLA — 21/10/2026. O produto troca a lista inteira a
-  // cada clique, e a lista rola só o que falta para o cartão do menu aparecer.
-  // 24/10/2026 (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01): o menu com as permissões flutua fora da lista
-  // (`position:fixed`, sem esticar o cartão nem o vizinho); aqui ele ganha o lugar junto do ⋮: a borda
-  // direita na do ⋮, logo abaixo do cartão ou, sem espaço na janela, logo acima.
   function oMenuAVista(lista){
     var m = lista.querySelector('.ext-pop.aberto');
     if (!m) return;
@@ -54,10 +49,6 @@
   }
   document.addEventListener('scroll', osMenusNoLugar, true);
   addEventListener('resize', osMenusNoLugar);
-  // OS MODOS DO CONTROLE LIVRE — 24/10/2026, O-LIVRE-GANHA-OS-MODOS-SOLTAR-SEGURAR-REPETIR-01. Ao soltar
-  // a barra, «Soltar» a devolve a 0, «Segurar» a deixa onde o dedo saiu e «Repetir» toca em laço o
-  // trecho arrastado desde o último soltar; escolher um modo vale na hora, como um soltar. O que a
-  // barra guarda mora aqui pelo `data-v`, e não no nó: a janela se repinta e a barra nasce de novo.
   var livres = {};
   function oLivre(v){ return livres[v] || (livres[v] = {trecho: [], ultimo: [], laco: null}); }
   function aBarra(v){

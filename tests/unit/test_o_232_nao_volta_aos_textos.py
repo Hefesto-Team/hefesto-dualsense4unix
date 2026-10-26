@@ -51,14 +51,7 @@ ISENCOES_DE_ARQUIVO: dict[str, str] = {
         "cópia do desenho que ela aprovou em 23/09, intocável"),
 }
 
-ISENCOES_DE_LINHA: dict[str, tuple[str, str]] = {
-    "mockup/mapa-do-radio.html": (
-        "no lugar do «232%»",
-        "comentário que NEGA o número: «PONTES N DE 2» no lugar do «232%» é a história da troca"),
-    "src/hefesto_dualsense4unix/interface/paginas/mapa-do-radio.html": (
-        "no lugar do «232%»",
-        "a página publicada igual ao desenho, com o mesmo comentário que nega o número"),
-}
+ISENCOES_DE_LINHA: dict[str, tuple[str, str]] = {}
 
 ESTE_ARQUIVO = "tests/unit/test_o_232_nao_volta_aos_textos.py"
 
@@ -127,8 +120,8 @@ def test_a_regua_morde_o_numero_plantado_e_respeita_as_isencoes(tmp_path: Path) 
     mockup.write_text(
         "/* «PONTES N DE 2» no lugar do «232%». */\nconst x = '232 %';\n", encoding="utf-8")
     achados = varrer(tmp_path)
-    assert len(achados) == 1 and achados[0].startswith("mockup/mapa-do-radio.html:2:"), (
-        "só a linha que nega é isenta; outra linha do mesmo arquivo reprova")
+    assert [a.split(":")[1] for a in achados] == ["1", "2"], (
+        "o comentário que negava o número saiu com o código sem comentário: nenhuma linha é isenta")
 
 
 def test_a_regua_nao_le_o_numero_dentro_de_outro_numero(tmp_path: Path) -> None:
@@ -192,7 +185,6 @@ def test_a_caixa_e_o_fone_do_mockup_caem_no_intervalo_do_csv() -> None:
 def test_a_conta_da_caixa_no_mockup_e_a_do_pacote_de_cinco_fatias() -> None:
     texto = MOCKUP.read_text(encoding="utf-8")
     assert "2-DH5 (3 fatias)" not in texto, "o 2-DH5 ocupa cinco fatias, não três"
-    assert "2-DH5 (5 fatias) mais a resposta = 6" in texto
     divisor = re.search(r"const FATIAS_DO_PACOTE_A2DP = (\d+);", texto)
     assert divisor and int(divisor.group(1)) == 5 + 1, (
         "a linha da caixa divide as fatias pelo pacote de 5 mais a resposta")

@@ -104,20 +104,3 @@ def test_as_pecas_mortas_e_o_orfao_fantasma_nao_existem_mais(a07, desenho):
     pagina = _texto_da_pagina()
     assert 'data-campo="criar-perfil"' not in pagina
 
-
-def test_os_dois_comentarios_trazem_a_frase_completa():
-    entrada = (RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions"
-               / "input_actions.py").read_text(encoding="utf-8")
-    achou = re.search(r"# O ALTERNADOR é o preset do L3.*?\n(?:\s*#.*\n)*", entrada)
-    assert achou, "o comentário do ALTERNADOR sumiu"
-    texto = " ".join(linha.strip("# ").strip() for linha in achou.group(0).splitlines())
-    assert not texto.rstrip().endswith("Sem esta"), f"o comentário segue truncado: {texto!r}"
-    assert "`__TOGGLE_OSK__` cru" in texto, f"a frase do comentário não fecha: {texto!r}"
-
-    aba06 = (INTERFACE / "aba06.py").read_text(encoding="utf-8")
-    achou = re.search(r"# A lista é a da LINHA.*?\n(?:\s*#.*\n)*", aba06)
-    assert achou, "o comentário da lista por linha sumiu"
-    regra = achou.group(0)
-    for parte in ("LINHAS_DA_ACAO_DE_EIXO", "Movimento do cursor", "Rolagem",
-                  "Teclas WASD", "Setas", "a linha de botão não oferece nenhuma"):
-        assert parte in regra, f"o comentário de `por_grupo` não diz {parte!r}: {regra!r}"

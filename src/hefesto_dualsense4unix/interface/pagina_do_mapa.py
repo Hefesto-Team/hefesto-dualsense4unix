@@ -222,15 +222,7 @@ def _bloco_do_censo(nome: str) -> str:
 
 
 ABRE_A_PORTA = """\
-  /* ══ A PORTA PARA O CENSO DE QUEM ABRE — 11/09/2026 ══════════════════
-     Até aqui esta página só sabia desenhar UM gabinete: o que estava digitado
-     no JavaScript dela. `hefestoArranjo` é por onde o produto entrega a
-     leitura da máquina de quem abriu, e a página se repinta inteira com ela.
-     Ver `interface/pagina_do_mapa.py` e `interface/arranjo_desta_maquina.py`. */
   function controlesSobre(aparelhos, base) {
-    /* A fileira de controles é SIMULADOR — os botões 1..4 ao lado dela são a
-       pergunta "e se fossem quatro?". O censo vivo não a traz; ela se espalha
-       pelos adaptadores que a máquina de quem abre tiver. */
     var bts = aparelhos.filter(function (a) { return a.classe === "bt"; });
     return base.map(function (c, i) {
       return { nome: c.nome, mic: c.mic, onde: bts.length ? bts[i % bts.length].id : null };
@@ -242,51 +234,25 @@ ABRE_A_PORTA = """\
     APARELHOS = f.aparelhos;
     FACES = f.faces;
     MAPA = f.mapa;
-    /* O "Voltar" do reexame restaura ESTE mapa. Deixá-lo com o do exemplo
-       devolveria a pessoa a um gabinete que não é o dela, com um clique. */
     MAPA_ORIGINAL = Object.assign({}, MAPA);
     LEITURAS = f.leituras;
     leituraAtual = "agora";
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
     quantos = CONTROLES.length;
-    /* O QUE O USUÁRIO DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
-       Toda entrada do mapa dela vem, com {} quando ela não disse nada, e as
-       chaves são as que o editor GRAVA no disco. A que o desenho monta do que
-       o usuário declarou (as do hub, a ponta do extensor) não vem: ali, e no
-       exemplo, o editor fica só na tela. */
     DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
     GRAVA = Object.keys(DECLARADO);
-    /* O NOME DE CADA ENTRADA, composto pelo dono (O-MAPA-QUE-ELA-CORRIGE-01):
-       `entrada_a_entrada.rotulos_das_entradas`. */
     ROTULOS = f.rotulos || {};
-    /* AS ENTRADAS EM QUE O COMPUTADOR LÊ UM HUB (D-2609-O-HUB-PENDE-DA-
-       ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
     HUB_LIDO = f.hubLido || {};
-    /* DE ONDE VEIO A VELOCIDADE de cada entrada: a mesma precedência que
-       pintou o plugue (aparelho, depois o que o usuário disse, depois a placa). */
     USB_DE = f.usbDe || {};
-    /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
-       O-MAPA-QUE-ELA-CORRIGE-01: o usuário clicou numa entrada, e a entrada
-       continua aberta com o que o disco diz agora. */
     if (!manterOEditor) editando = null;
   }
 
   function dizerDeQuando() {
-    /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
-       mesmo sem JavaScript nenhum. FATO SUBSTITUÍDO em 26/09/2026: aqui ele
-       passava a dizer de quando era a leitura desta máquina, e o usuário pediu que
-       isso saísse («essa info some»). A linha existe só para o exemplo se
-       dizer exemplo; com a leitura de quem abre, ela sai da página. */
     var el = document.getElementById("de-quando");
     if (el && fonte.quando !== EXEMPLO.quando) el.remove();
   }
 
-  /* O «EXAMINAR» NO PRODUTO — 26/09/2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
-     Com a leitura desta máquina na tela, quem relê é o produto: o botão leva
-     o gesto `reexaminar`, a leitura nova sai fora do fio da janela e volta por
-     `hefestoArranjo(dado, true)`, com a que a página tinha como «antes». No
-     exemplo não há o que reler, e o reexame é o das duas leituras dele. */
   function doProduto() { return fonte !== EXEMPLO; }
   function examinaNoProduto() { return doProduto() ? ' data-gesto="reexaminar"' : ""; }
   function marcarOExaminar() {
@@ -295,30 +261,18 @@ ABRE_A_PORTA = """\
   }
 
   window.hefestoArranjo = function (dado, como) {
-    /* COMO ELE CHEGA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01: `false` é a
-       abertura, `true` é o «Examinar», e "gravou" é a volta
-       de uma gravação do editor (`arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR`):
-       a página repinta pelo disco sem mudar de modo nem fechar o editor. */
     var comoReexame = como === true;
     var gravou = como === "gravou";
     var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
     if (falta.length) {
-      /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
-         entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
-    /* O REEXAME RELÊ O QUE O USUÁRIO ENSINOU, porque o ensinar grava no disco
-       (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-ENSINAR-GRAVA-O-NO). Até aqui o
-       mapa da tela era guardado por cima da releitura: o que ela ensinava
-       só vivia na memória, e a releitura o desfazia. */
-    /* a leitura anterior da tela fica: gravar não é reexaminar */
     var antesDaTela = gravou && LEITURAS ? LEITURAS.antes : null;
     aplicarArranjo(dado, gravou);
     if (antesDaTela) LEITURAS = { agora: dado.leituras.agora, antes: antesDaTela };
     if (comoReexame) {
       modo = "reexame"; segurando = null; naMao = null;
     }
-    /* o aparelho que estava na mão foi ensinado: ele sai da mão */
     if (gravou && segurando) { segurando = null; naMao = null; modo = "mesa"; }
     dizerDeQuando();
     marcarOExaminar();
@@ -330,10 +284,7 @@ ABRE_A_PORTA = """\
 
 
 CAIXA_DA_JANELA = (
-    "  /* A CAIXA DA JANELA — 24/09/2026, decisão de produto: «vira caixa da janela,\n"
-    "     rolando por dentro». O recuo e o tamanho são os das abas (as três\n"
-    "     linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */\n"
-    "  :root { --fundo-da-pagina: #11121a; }  /* o fundo em volta, o do `topo.html` */\n"
+    "  :root { --fundo-da-pagina: #11121a; }\n"
     "  body {\n"
     "    margin: 0; background: var(--fundo-da-pagina); color: var(--color-ink);\n"
     "    font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.55;\n"
@@ -413,11 +364,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=(
             "  .topo .nota { color: var(--color-ink-faint); font-size: var(--text-sm); "
-            "margin-left: auto; }\n"
-            "  /* A DATA NÃO PODE SER `.nota` — 11/09/2026. A folha do produto apaga toda\n"
-            "     `.nota` (bilhete de projeto), e aqui isso deixava a página afirmando\n"
-            "     «o arranjo de agora» sobre uma leitura congelada. A data é DADO da\n"
-            "     página, então tem classe própria, que a folha do produto não esconde. */\n"
+            "margin-left: auto; }"
+            "\n"
             "  .topo .quando { color: var(--color-ink-faint); font-size: var(--text-sm); "
             "margin-left: auto;\n"
             "                  font-family: var(--font-dado); }\n"
@@ -436,13 +384,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    <p class="nota">mockup · 24/08/2026 · medido na MeowSystem</p>\n'
         ),
         depois=(
-            '  <header class="topo" style="position:relative;padding-left:132px">\n'
-            "    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: \"ok temos um botão pra"
-            " vir\n"
-            "         pra cá. Mas e o botão pra voltar?\". Não havia nenhum href de saída nesta\n"
-            "         página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA\n"
-            "         aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da\n"
-            "         origem congelada, que tem três arquivos e nenhuma aba. -->\n"
+            '  <header class="topo" style="position:relative;padding-left:132px"'
+            ">\n"
             '    <a href="08-conexoes.html" title="Volta para a aba Conexões, que é de onde '
             'este mapa se abre."\n'
             '       style="position:absolute;left:0;top:2px;display:inline-flex;'
@@ -490,8 +433,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         porque=(
             "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela: o caminho de um "
             "arquivo do nosso código não é recado de tela. Onde o A/B foi medido "
-            "continua escrito no comentário do motor, que é onde quem for conferir "
-            "procura."
+            "continua escrito na docstring do `radio_da_mesa`, que é onde quem for "
+            "conferir procura."
         ),
     ),
     Edicao(
@@ -528,7 +471,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + \'<button class="modo destaque" data-modo="ideal" aria-pressed="\' + '
             '(modo === "ideal") + \'">Me mostre os arranjos</button>\'\n'
             '      + \'<button class="modo" data-modo="mao" aria-pressed="\' + '
-            '(modo === "mao") + \'">Estou com algo na mão</button>\'\n'  # (noqa-acento)
+            '(modo === "mao") + \'">Estou com algo na mão</button>\'\n'
             '      + \'<button class="modo" id="reexaminar" aria-pressed="false" '
             'style="margin-left:auto">Reexaminar a mesa</button>\';'
         ),
@@ -538,7 +481,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + \'<button class="modo destaque" data-modo="ideal" aria-pressed="\' + '
             '(modo === "ideal") + \'">O que mudar</button>\'\n'
             '      + \'<button class="modo" data-modo="mao" aria-pressed="\' + '
-            '(modo === "mao") + \'">Tenho algo na mão</button>\'\n'  # (noqa-acento)
+            '(modo === "mao") + \'">Tenho algo na mão</button>\'\n'
             '      + \'<button class="modo" id="reexaminar" aria-pressed="false" '
             'style="margin-left:auto">Examinar de novo</button>\';'
         ),
@@ -698,21 +641,11 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     Edicao(
         antes=(
-            "  /* ══ 1. O QUE O BARRAMENTO ENTREGOU — medido em 24/08/2026 ═══════════ */\n"
-            + _bloco_do_censo("APARELHOS")
+            _bloco_do_censo("APARELHOS")
         ),
         depois=(
-            "  /* ══ 1. O ARRANJO QUE ESTA PÁGINA DESENHA ════════════════════════════\n"
-            "     O exemplo abaixo é a leitura de 24/08/2026 de um gabinete só, e é o\n"
-            "     que se vê enquanto ninguém entregar outra. O produto entrega a desta\n"
-            "     máquina por `window.hefestoArranjo`, lá embaixo, e o cabeçalho diz\n"
-            "     qual das duas está na tela. Quem escreve este bloco é\n"
-            "     `interface/pagina_do_mapa.CENSO_DE_EXEMPLO`.                        */\n"
             "  var EXEMPLO = " + _exemplo_em_js() + ";\n"
             "\n"
-            "  /* `fonte` é o arranjo em cena: nasce no exemplo acima e é trocado\n"
-            "     inteiro por `window.hefestoArranjo(dado)`. `CAMPOS_DO_ARRANJO` é o\n"
-            "     que uma entrega tem de trazer para ser aceita. */\n"
             "  var CAMPOS_DO_ARRANJO = "
             + json.dumps(list(CAMPOS_DO_ARRANJO), ensure_ascii=False) + ";\n"
             "  var fonte = EXEMPLO;\n"
@@ -727,13 +660,9 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     Edicao(
         antes=(
-            "  /* ══ 2. AS FACES — declaradas por ela, na foto numerada ══════════════ */\n"
-            + _bloco_do_censo("FACES")
+            _bloco_do_censo("FACES")
         ),
         depois=(
-            "  /* ══ 2. AS FACES — quantas entradas cada face do gabinete tem ════════\n"
-            "     Isto não se mede: nenhuma leitura de `/sys` sabe em que face do metal\n"
-            "     o buraco fica. Quem declara é quem olha o gabinete. Ver o rodapé.   */\n"
             "  var FACES = fonte.faces;\n"
         ),
         porque=(
@@ -748,18 +677,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     Edicao(
         antes=(
-            "  /* ══ 2.2 AS DUAS LEITURAS, medidas na MeowSystem em 24/08/2026 ═══════\n"
-            "     A de 20h15 e a de 22h50, depois de ela fazer os movimentos. São dado\n"
-            "     real: é a mesma comparação que o produto faria com duas leituras de\n"
-            "     sysfs separadas por um \"Reexaminar\".                                   */\n"
+            ""
             + _bloco_do_censo("LEITURAS")
         ),
         depois=(
-            "  /* ══ 2.2 AS DUAS LEITURAS ════════════════════════════════════════════\n"
-            "     Duas leituras de `/sys` separadas por um \"Reexaminar\": é assim que o\n"
-            "     produto sabe quem mudou de lugar. No exemplo são as de 20h15 e 22h50\n"
-            "     de 24/08/2026; com o censo vivo são as que a máquina de quem abriu\n"
-            "     entregou.                                                           */\n"
             "  var LEITURAS = fonte.leituras;\n"
         ),
         porque=(
@@ -923,31 +844,25 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '</head>'
         ),
         depois=(
-            '<style>\n'
-            '  /* O MAPA DAS CONEXÕES — 26/09/2026, os pedidos olhando a'
-            ' página. */\n'
-            '  /* «a cor de fonte de qualquer cinza que tem na página muda pr'
-            'a branco» */\n'
+            '<style>'
+            '\n'
             '  :root { --color-ink-quiet: #f8f8f2; --color-ink-faint: #f8f8f2'
             '; }\n'
             '  .pagina { --texto-suave: #f8f8f2; --texto-mudo: #f8f8f2; }\n'
-            '  /* as bordas que usavam o cinza continuam cinza: só a LETRA fi'
-            'cou branca */\n'
-            '  .plug[data-v="serve"], .plug[data-v="fica"] { box-shadow: 0 0 '
+            '  '
+            '.plug[data-v="serve"], .plug[data-v="fica"] { box-shadow: 0 0 '
             '0 2px #6272a4; }\n'
             '  .chip:hover { border-color: #6272a4; }\n'
-            '  /* o cartão que já tem entrada não se apaga mais: o número diz'
-            ' que ele tem lugar */\n'
-            '  .chip[data-alocado="1"] { opacity: 1; }\n'
-            '  /* «Examinar» mora no cabeçalho, onde estava a data da leitura'
-            ' */\n'
+            '  '
+            '.chip[data-alocado="1"] { opacity: 1; }'
+            '\n'
             '  .topo .examinar { margin-left: auto; align-self: center; displ'
             'ay: inline-flex;\n'
             '                    align-items: center; gap: .4rem; }\n'
             '  .topo .examinar span { pointer-events: none; }\n'
             '  .painel .fina { margin: .35rem 0 0; font-size: var(--text-sm);'
-            ' }\n'
-            '  /* o editor da entrada: o que tem nela e a velocidade dela */\n'
+            ' }'
+            '\n'
             '  .palco { position: relative; }\n'
             '  .rotulo .decl { display: inline-block; margin: .15rem 0 0 .4re'
             'm; padding: 0 .4rem;\n'
@@ -981,14 +896,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '1fr)); }\n'
             '  .edita .seg .escolha { justify-content: center; text-align: ce'
             'nter; }\n'
-            '  /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» '
-            'entra na linha\n'
-            '     do título, os três modos têm a mesma largura, as colunas de'
-            ' entradas têm a\n'
-            '     mesma largura em todas as chapas, e a bandeja começa na alt'
-            'ura da primeira\n'
-            '     chapa e acompanha a rolagem. */\n'
-            '  .topo { padding-left: 0 !important; align-items: center; }\n'
+            '  '
+            '.topo { padding-left: 0 !important; align-items: center; }\n'
             '  .topo > a[href="08-conexoes.html"] { position: static !importa'
             'nt; }\n'
             '  .modos { display: grid; grid-template-columns: repeat(3, 8.5re'
@@ -1113,7 +1022,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + \'<button class="modo destaque" data-modo="ideal" aria-pr'
             'essed="\' + (modo === "ideal") + \'">O que mudar</button>\'\n'
             '      + \'<button class="modo" data-modo="mao" aria-pressed="\' + '
-            '(modo === "mao") + \'">Tenho algo na mão</button>\'\n'  # (noqa-acento)
+            '(modo === "mao") + \'">Tenho algo na mão</button>\'\n'
             '      + \'<button class="modo" id="reexaminar" aria-pressed="fals'
             'e" style="margin-left:auto">Examinar de novo</button>\';\n'
         ),
@@ -1123,7 +1032,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + \'<button class="modo destaque" data-modo="ideal" aria-pr'
             'essed="\' + (modo === "ideal") + \'">Sugestões</button>\'\n'
             '      + \'<button class="modo" data-modo="mao" aria-pressed="\' + '
-            '(modo === "mao") + \'">Adicionar</button>\';\n'  # (noqa-acento)
+            '(modo === "mao") + \'">Adicionar</button>\';\n'
         ),
         porque=(
             '26/09/2026, pedido dela: *«muda os nomes dos botões pra algo fác'
@@ -1210,8 +1119,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     Edicao(
         antes=(
-            '    /* ── os controles: onde cada um deve ficar ────────────────'
-            '────── */\n'
             '    var alvo = document.getElementById("adaptadores");\n'
             '    var pc = planoDosControles();\n'
             '    var pa = perfilAtual();\n'
@@ -1301,8 +1208,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             " vale por controle. Com quatro no rádio, o número é estimado.'\n"
             '      + "</div>";\n'
             '\n'
-            '    /* o que ela precisa MOVER de adaptador, e como */\n'
-            '    var mudancas = CONTROLES.slice(0, quantos).filter(function ('
+            '    '
+            'var mudancas = CONTROLES.slice(0, quantos).filter(function ('
             'c) { return pc.destino[c.nome] !== c.onde; });\n'
             '    if (mudancas.length) {\n'
             '      h2 += \'<div class="veredito-mesa aviso"><b>\' + mudancas.le'
@@ -1342,11 +1249,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'document.addEventListener("click", function (ev) {\n'
         ),
         depois=(
-            'document.addEventListener("click", function (ev) {\n'
-            '    /* O EDITOR DA ENTRADA — 26/09/2026. Os gestos dele vêm ante'
-            's de todos:\n'
-            '       um botão dentro do editor não pode cair no clique do plug'
-            'ue embaixo. */\n'
+            'document.addEventListener("click", function (ev) {'
+            '\n'
             '    if (ev.target.closest(".modo[data-modo]")) editando = null;\n'
             '    if (ev.target.id === "edita-fecha") { editando = null; pinta'
             'r(); return; }\n'
@@ -1358,14 +1262,11 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '("data-usb"), 10)); pintar(); return; }\n'
             '    var tb = ev.target.closest("#edita [data-tirar]");\n'
             '    if (tb) {\n'
-            '      /* «Mudar de Entrada» é o que o clique no plugue ocupado f'
-            'azia antes:\n'
-            '         a entrada deixa de ser dele, e ele fica na mão até ela '
-            'dizer onde está. */\n'
-            '      var nt = tb.getAttribute("data-tirar"), quemT = acha(aloca'
+            '      '
+            'var nt = tb.getAttribute("data-tirar"), quemT = acha(aloca'
             'cao[nt]);\n'
             '      delete MAPA[nt]; editando = null;\n'
-            '      segurando = quemT.id; modo = "mao";\n'  # (noqa-acento)
+            '      segurando = quemT.id; modo = "mao";\n'
             '      naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", mou'
             'se: "mouse", webcam: "webcam" })[quemT.classe] || null;\n'
             '      pintar(); return;\n'
@@ -1383,17 +1284,16 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         antes=(
             '      } else if (alocacao[n]) {\n'  # (noqa-acento)
             '        var quem = acha(alocacao[n]);\n'  # (noqa-acento)
-            '        delete MAPA[n];                 /* desdeclara: ela vai d'
-            'izer onde é */\n'
-            '        segurando = quem.id; modo = "mao";\n'  # (noqa-acento)
+            '        delete MAPA[n];'
+            '\n'
+            '        segurando = quem.id; modo = "mao";\n'
             '        naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", m'
             'ouse: "mouse", webcam: "webcam" })[quem.classe] || null;\n'
             '      }\n'
         ),
         depois=(
-            '      } else {\n'
-            '        /* o plugue abre o editor dela: o que tem nesta entrada,'
-            ' e a velocidade */\n'
+            '      } else {'
+            '\n'
             '        editando = n;\n'
             '      }\n'
         ),
@@ -1407,17 +1307,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  function pintar() {'
         ),
         depois=(
-            '  /* ══ O EDITOR DA ENTRADA — 26/09/2026 ═══════════════════════'
-            '═══════════\n'
-            '     Pedido: «ao clicar em um desses usb mapeados eu pudess'
-            'e setar que tem\n'
-            '     tal coisa lá. no caso o hub ou afins». E a velocidade é a o'
-            'utra metade: o\n'
-            '     kernel só sabe se a entrada é USB 3.0 pelo par que a placa-'
-            'mãe declara, e\n'
-            '     ela pode corrigir o que o firmware diz. `DECLARADO` é o que'
-            ' o usuário disse nesta\n'
-            '     página; gravar no `maquina.json` é do produto. */\n'
             '  var DECLARADO = {};\n'
             '  var editando = null;\n'
             '\n'
@@ -1495,18 +1384,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'ar(); }\n'
             '  });\n'
             '\n'
-            '  /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════════════'
-            '════════════\n'
-            '     Pedido: «Todas as palavras Iniciam com a letra maiúscu'
-            'la». Os\n'
-            '     conectivos ficam minúsculos no meio da frase, que é como el'
-            'a mesma escreve\n'
-            '     («Gestão de Controles», «Perfil de Desempenho»). Caminho d'
-            'e barramento,\n'
-            '     número e código não mudam. Roda no fim de cada pintura, sob'
-            're a página\n'
-            '     inteira, e é idempotente. */\n'
-            '  var MINUSCULAS = ["a", "o", "as", "os", "e", "de", "da", "das"'
+            '  '
+            'var MINUSCULAS = ["a", "o", "as", "os", "e", "de", "da", "das"'
             ', "do", "dos", "em", "no", "na",\n'
             '    "nos", "nas", "num", "numa", "um", "uma", "para", "pra", "po'
             'r", "com", "ao", "à", "se", "ou"];\n'
@@ -1523,16 +1402,14 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      var novo = no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳]+/g, fu'
             'nction (w, pos) {\n'
             '        if (!/^[A-Za-zÀ-ÿ]/.test(w)) return w;\n'
-            '        /* começo de frase conta como primeira palavra: «Possíve'
-            'is. O Melhor» */\n'
-            '        var antes = no.nodeValue.slice(0, pos).trim();\n'
+            '        '
+            'var antes = no.nodeValue.slice(0, pos).trim();\n'
             '        var primeira = (abre && antes === "") || /[.!?]$/.test(a'
             'ntes);\n'
             '        if (!primeira && MINUSCULAS.indexOf(w.toLowerCase()) !=='
             ' -1) return w.toLowerCase();\n'
-            '        /* cada pedaço de um nome com hífen: «Wi-Fi», «Entrada-F'
-            'ilha» */\n'
-            '        return w.split("-").map(function (s) { return s.charAt(0'
+            '        '
+            'return w.split("-").map(function (s) { return s.charAt(0'
             ').toUpperCase() + s.slice(1); }).join("-");\n'
             '      });\n'
             '      if (novo !== no.nodeValue) no.nodeValue = novo;\n'
@@ -1540,9 +1417,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  }\n'
             '\n'
             '  function pintar() {\n'
-            '    /* o hub nasce com o cinza da paleta (#6272a4), e o cinza da'
-            ' letra saiu */\n'
-            '    APARELHOS.forEach(function (a) { if (a.cor === "#6272a4") a.'
+            '    '
+            'APARELHOS.forEach(function (a) { if (a.cor === "#6272a4") a.'
             'cor = "#f8f8f2"; });'
         ),
         porque=(
@@ -1574,15 +1450,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=(
             '  var DECLARADO = {};\n'
-            '  var editando = null;\n'
-            '  /* O EDITOR GRAVA — 26/09/2026. `GRAVA` são as entradas do mapa de'
-            ' quem abre,\n'
-            '     entregues pelo produto em `hefestoArranjo`; só nelas o botão l'
-            'eva o gesto\n'
-            '     ao disco. No exemplo e nas entradas que o desenho monta do que'
-            ' ela\n'
-            '     declarou (as do hub, a ponta do extensor), o editor fica só na'
-            ' tela. */\n'
+            '  var editando = null;'
+            '\n'
             '  var GRAVA = [];\n'
             '  function gravaNaEntrada(n, gesto) {\n'
             '    if (GRAVA.indexOf(String(n)) === -1) return "";\n'
@@ -1631,22 +1500,21 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         antes='  .topo .examinar span { pointer-events: none; }\n',
         depois=(
             '  .topo .examinar span { pointer-events: none; }\n'
-            '  /* a linha do exemplo já empurra o «Examinar» para a direita */\n'
-            '  .topo .quando + .examinar { margin-left: 0; }\n'
+            '  '
+            '.topo .quando + .examinar { margin-left: 0; }\n'
         ),
         porque='26/09/2026 — a linha do exemplo e o «Examinar» ficam juntos, à direita.',
     ),
     Edicao(
         antes=(
-            '    if (ev.target.id === "reexaminar") {\n'
-            '      /* relata a diferença; NÃO troca o que o mapa mostra */\n'
+            '    if (ev.target.id === "reexaminar") {'
+            '\n'
             '      modo = "reexame"; segurando = null; naMao = null; pintar(); return;\n'
             '    }\n'
         ),
         depois=(
-            '    if (ev.target.id === "reexaminar") {\n'
-            '      /* relata a diferença; NÃO troca o que o mapa mostra. No produto quem\n'
-            '         abre o reexame é a leitura nova, que chega pelo `hefestoArranjo`. */\n'
+            '    if (ev.target.id === "reexaminar") {'
+            '\n'
             '      if (doProduto()) return;\n'
             '      modo = "reexame"; segurando = null; naMao = null; pintar(); return;\n'
             '    }\n'
@@ -1705,11 +1573,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  }\n'
         ),
         depois=(
-            '  function regiaoDoCaminho(c) {\n'
-            '    /* O HUB É QUEM TEM A CLASSE DE HUB — 26/09/2026. Aqui se perguntava\n'
-            '       pelo aparelho de id "hub", que só o exemplo tem: no produto a\n'
-            '       resposta era sempre «não sei», e o reexame dizia «está direto no\n'
-            '       gabinete» de quem estava no hub. */\n'
+            '  function regiaoDoCaminho(c) {'
+            '\n'
             '    var cam = leitura();\n'
             '    var hubs = APARELHOS.filter(function (a) { '
             'return a.classe === "hub" && cam[a.id]; })\n'
@@ -1731,11 +1596,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     Edicao(
         antes='  function planejar(op) {\n',
         depois=(
-            '  /* O HUB DESENHADO — 26/09/2026. A face que o desenho monta de um hub\n'
-            '     declarado (`daEntrada`) tem entradas que ninguém leu: o número e a\n'
-            '     quantidade são do desenho. A Sugestão nunca manda um aparelho para\n'
-            '     dentro delas. Medido: com o dongle direto na 5 e o hub declarado\n'
-            '     na 5, ela mandava o dongle «da Entrada 5 para a 5.1». */\n'
             '  function doHubDesenhado(p) {\n'
             '    return FACES.some(function (f) {\n'
             '      return !!f.daEntrada && f.portas.some(function (x) { '
@@ -1765,8 +1625,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  .edita .seg .escolha { justify-content: center; text-align: center; }\n'
         ),
         depois=(
-            '  .edita .seg .escolha { justify-content: center; text-align: center; }\n'
-            '  /* a escolha que não cabe: cinza, com a razão na dica, e responde (D-03) */\n'
+            '  .edita .seg .escolha { justify-content: center; text-align: center; }'
+            '\n'
             '  .edita .seg .escolha.apagado { opacity: .45; cursor: not-allowed; }\n'
             '  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }\n'
         ),
@@ -1779,8 +1639,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '(liga === o[0]) + \'">\' + o[1] + "</button>";\n'
         ),
         depois=(
-            '          /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB: cinza,\n'
-            '             com a razão na dica (a D-03 dela), e o clique não declara. */\n'
             '          if (o[0] === "hub" && quem && quem.classe !== "hub") {\n'
             '            return \'<button class="escolha apagado" data-liga="hub" '
             'aria-disabled="true" aria-pressed="\' + (liga === "hub")\n'
@@ -1802,8 +1660,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'pintar(); return; }\n'
         ),
         depois=(
-            '    if (lg) {\n'
-            '      /* o apagado responde e não declara: a razão está na dica */\n'
+            '    if (lg) {'
+            '\n'
             '      if (lg.getAttribute("aria-disabled") !== "true") '
             'declarar(editando, "liga", lg.getAttribute("data-liga"));\n'
             '      pintar(); return;\n'
@@ -1817,10 +1675,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    if (GRAVA.indexOf(String(n)) === -1) return "";\n'
         ),
         depois=(
-            '  /* A PONTA DO EXTENSOR GRAVA — 26/09/2026. A ponta de um extensor\n'
-            '     declarado numa entrada que grava é a entrada-filha dele no disco\n'
-            '     (`entrada_a_entrada.ponta_do_extensor`): o número puro mais «a». As\n'
-            '     do hub desenhado (`5.1`…) não cabem no disco, e não gravam. */\n'
             '  function podeGravar(n) {\n'
             '    n = String(n);\n'
             '    if (GRAVA.indexOf(n) !== -1) return true;\n'
@@ -1849,11 +1703,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=(
             '    var quem = alocacao[editando] ? '  # (noqa-acento)
-            'acha(alocacao[editando]) : null;\n'  # (noqa-acento)
-            '    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. No produto, o que\n'
-            '       ela declarasse numa entrada que não grava (as do hub desenhado)\n'
-            '       sumiria ao reler, sem aviso: ali o editor só mostra quem está\n'
-            '       nela, e sem ninguém ele não abre. No exemplo, tudo é só tela. */\n'
+            'acha(alocacao[editando]) : null;'  # (noqa-acento)
+            '\n'
             '    var soNaTela = doProduto() && !podeGravar(editando);\n'
             '    if (soNaTela && !quem) { ed.hidden = true; ed.innerHTML = ""; return; }\n'
             '    ed.innerHTML = \'<div class="edita-cab"><b>Entrada \' + editando + '
@@ -1873,8 +1724,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; return; }\n'
         ),
         depois=(
-            '    /* o editor escondido não guarda os botões da entrada de antes: um\n'
-            '       clique neles levaria ao disco o gesto de outra entrada */\n'
             '    if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; '
             'ed.innerHTML = ""; return; }\n'
         ),
@@ -1914,13 +1763,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "    if (lg) {\n"
         ),
         depois=(
-            "    var lg = ev.target.closest(\"#edita [data-liga]\");\n"
-            "    /* A TELA ESPERA O DISCO — 26/09/2026, D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO.\n"
-            "       O botão que leva o gesto ao disco não pinta nada aqui: ele fica\n"
-            "       «em voo» (o carimbo do piloto), o produto grava e devolve o\n"
-            "       arranjo relido, e a página repinta pelo que o disco diz. Uma\n"
-            "       recusa não repinta, e a piscada acha o botão clicado. No\n"
-            "       exemplo, sem produto, a pintura continua local. */\n"
+            "    var lg = ev.target.closest(\"#edita [data-liga]\");"
+            "\n"
             "    if (lg && lg.hasAttribute(\"data-gesto\")) return;\n"
             "    if (lg) {\n"
         ),
@@ -1943,9 +1787,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             " : \"O número é a entrada em que cada um está.\");\n"
         ),
         depois=(
-            "    /* A DICA DIZ QUE A ENTRADA ABRE UM EDITOR — 26/09/2026: nada na tela\n"
-            "       dizia, e ela nunca o achou. Quantos estão sem lugar já está no\n"
-            "       painel («fora do mapa»). */\n"
             "    document.getElementById(\"ajuda-bandeja\").textContent = segurando\n"
             "      ? \"Na mão: \" + acha(segurando).tipo + \". Clique a entrada em que ele vai.\"\n"
             "      : \"Clique numa entrada para dar nome, corrigir ou trocar.\";\n"
@@ -1961,25 +1802,21 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         depois=(
             "  var DECLARADO = {};\n"
             "  var editando = null;\n"
-            "  /* O NOME DA ENTRADA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D1). Pedido\n"
-            "     dela: «me referi as portas renomear». O nome é da POSIÇÃO, e quem o\n"
-            "     compõe é o Python (`utils/rotulo_da_entrada`): o produto entrega os\n"
-            "     `rotulos` no arranjo. A palavra de reserva é a do dono, que o gerador\n"
-            "     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */\n"
-            "  var PALAVRA_DA_ENTRADA = "
+            "  "
+            "var PALAVRA_DA_ENTRADA = "
             + json.dumps(PALAVRA_DA_ENTRADA, ensure_ascii=False) + ";\n"
             "  var PALAVRA_NA_FRASE = "
             + json.dumps(PALAVRA_NA_FRASE, ensure_ascii=False) + ";\n"
-            "  var MAXIMO_DO_NOME = " + str(MAXIMO_DO_NOME_DA_ENTRADA) + ";\n"
-            "  /* o nome da face de um hub declarado, no disco: o do dono */\n"
+            "  var MAXIMO_DO_NOME = " + str(MAXIMO_DO_NOME_DA_ENTRADA) + ";"
+            "\n"
             "  var FACE_DO_HUB = "
             + json.dumps(FACE_DO_HUB_DECLARADO, ensure_ascii=False) + ";\n"
             "  var ROTULOS = {};\n"
             "  var HUB_LIDO = {};\n"
             "  var USB_DE = {};\n"
             "  var FRASES_DA_ORIGEM = "
-            + json.dumps(FRASES_DA_ORIGEM_DA_VELOCIDADE, ensure_ascii=False) + ";\n"
-            "  /* a origem só se diz no produto: no exemplo ninguém mediu nada */\n"
+            + json.dumps(FRASES_DA_ORIGEM_DA_VELOCIDADE, ensure_ascii=False) + ";"
+            "\n"
             "  function origemDaVelocidade(n) {\n"
             "    if (!doProduto() || !podeGravar(n)) return \"\";\n"
             "    var frase = FRASES_DA_ORIGEM[USB_DE[String(n)] || \"\"];\n"
@@ -1990,8 +1827,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "    if (r) return r.rotulo;\n"
             "    return nomeDe(n) || PALAVRA_DA_ENTRADA + \" \" + n;\n"
             "  }\n"
-            "  function nomeDe(n) { return (DECLARADO[n] || {}).nome || \"\"; }\n"
-            "  /* o sintagma sem artigo, para o meio da frase: «Entrada 3», «entrada Meio» */\n"
+            "  function nomeDe(n) { return (DECLARADO[n] || {}).nome || \"\"; }"
+            "\n"
             "  function naFraseDe(n) {\n"
             "    var r = ROTULOS[String(n)];\n"
             "    if (r) return r.naFrase;\n"
@@ -2049,10 +1886,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         depois=(
             "  document.addEventListener(\"keydown\", function (ev) {\n"
             "    if (ev.key === \"Escape\" && editando) { editando = null; pintar(); }\n"
-            "  });\n"
-            "  /* O NOME, NO EXEMPLO — 26/09/2026. No produto o campo leva o gesto\n"
-            "     `entrada-nome`, e a página espera o disco; aqui, sem produto, o nome\n"
-            "     fica só na tela. */\n"
+            "  });"
+            "\n"
             "  document.addEventListener(\"change\", function (ev) {\n"
             "    var campo = ev.target.closest && ev.target.closest(\"#edita [data-nome]\");\n"
             "    if (!campo || campo.hasAttribute(\"data-gesto\")) return;\n"
@@ -2069,9 +1904,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     Edicao(
         antes="  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }\n",
         depois=(
-            "  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }\n"
-            "  /* o nome da entrada: o campo tem fundo, cor e borda próprios — no\n"
-            "     WebKitGTK o campo sem eles nasce com as cores do sistema */\n"
+            "  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }"
+            "\n"
             "  .edita .campo-nome { font: inherit; font-size: var(--text-sm); width: 100%;\n"
             "                         box-sizing: border-box; padding: .35rem .5rem;\n"
             "                         background: var(--color-paper); color: var(--color-ink);\n"
@@ -2278,11 +2112,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ' ap.tipo'
         ),
         depois=(
-            '    /* O NOME QUE O USUÁRIO DEU, na primeira linha do rótulo — cor'
-            'tado com\n'
-            '       reticências, e inteiro na dica. O selo `.num` continu'
-            'a o número:\n'
-            '       é o do metal. */\n'
             '    var batismo = nomeDe(porta.n);\n'
             '    if (batismo) h += \'<span class="nomeada" title="\' + emAt'
             'ributo(batismo) + \'">\'\n'
@@ -2300,9 +2129,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         antes='  .rotulo .vazio { color: var(--color-ink-faint); font-style: italic; }\n',
         depois=(
             '  .rotulo .vazio { color: var(--color-ink-faint); font-style'
-            ': italic; }\n'
-            '  /* o nome que o usuário deu à entrada: uma linha só, com reticên'
-            'cias */\n'
+            ': italic; }'
+            '\n'
             '  .rotulo .nomeada { display: block; font-weight: 700; white'
             '-space: nowrap;\n'
             '                     overflow: hidden; text-overflow: ellips'
@@ -2339,15 +2167,12 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     Edicao(
         antes=(
             '    var tb = ev.target.closest("#edita [data-tirar]");\n'
-            '    if (tb) {\n'
-            '      /* «Mudar de Entrada» é o que o clique no plugue ocupado faz'
-            'ia antes:\n'
-            '         a entrada deixa de ser dele, e ele fica na mão até ela di'
-            'zer onde está. */\n'
+            '    if (tb) {'
+            '\n'
             '      var nt = tb.getAttribute("data-tirar"), quemT = acha(alocaca'
             'o[nt]);\n'
             '      delete MAPA[nt]; editando = null;\n'
-            '      segurando = quemT.id; modo = "mao";\n'  # (noqa-acento)
+            '      segurando = quemT.id; modo = "mao";\n'
             '      naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", mouse'
             ': "mouse", webcam: "webcam" })[quemT.classe] || null;\n'
             '      pintar(); return;\n'
@@ -2364,15 +2189,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  function linhaDoNome(n) {\n'
         ),
         depois=(
-            '  /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609'
-            '-TROCAR-MOVE-\n'
-            '     O-BURACO). Pedido: «trocar elas de lugar no mapeamento».'
-            ' Só nas\n'
-            '     entradas que gravam, sem as pontas; cada opção diz o nome, a '
-            'face e o que\n'
-            '     está nela. O produto troca o buraco das duas, e a página repi'
-            'nta pelo\n'
-            '     disco. */\n'
             '  function faceDe(m) {\n'
             '    var f = FACES.filter(function (x) {\n'
             '      return x.portas.some(function (q) { return q.n === m || (q.f'
@@ -2411,16 +2227,11 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         antes=(
             '    var chip = ev.target.closest(".chip[data-ap]");\n'
             '    if (chip) {\n'
-            '      modo = "mao";\n'  # (noqa-acento)
+            '      modo = "mao";\n'
         ),
         depois=(
-            '    var chip = ev.target.closest(".chip[data-ap]");\n'
-            '    /* NO PRODUTO, O APARELHO QUE JÁ ESTÁ NUMA ENTRADA abre o edit'
-            'or dela: quem\n'
-            '       corrige ali é o «Trocar com…» (um ato por porta). O que não'
-            ' está em\n'
-            '       entrada nenhuma continua indo para a mão, para ser ensinado'
-            '. */\n'
+            '    var chip = ev.target.closest(".chip[data-ap]");'
+            '\n'
             '    if (chip && doProduto() && portaDe(chip.getAttribute("data-ap"'
             '))) {\n'
             '      editando = portaDe(chip.getAttribute("data-ap")); modo = "me'
@@ -2428,7 +2239,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      segurando = null; naMao = null; pintar(); return;\n'
             '    }\n'
             '    if (chip) {\n'
-            '      modo = "mao";\n'  # (noqa-acento)
+            '      modo = "mao";\n'
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — o chip do aparel'
@@ -2442,10 +2253,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=(
             '  .edita .campo-nome:focus { outline: none; border-color: var(--co'
-            'lor-accent); }\n'
-            '  /* a lista da troca: fundo, cor e borda próprios (no WebKitGTK o'
-            ' que não\n'
-            '     os tem nasce cinza) */\n'
+            'lor-accent); }'
+            '\n'
             '  .edita .troca { font: inherit; font-size: var(--text-sm); width:'
             ' 100%;\n'
             '                  box-sizing: border-box; padding: .3rem .4rem;\n'
@@ -2468,11 +2277,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=(
             '  .edita .troca option { background: var(--color-paper); color: va'
-            'r(--color-ink); }\n'
-            '  /* O NOME COMPRIDO NO CABEÇALHO — 26/09/2026: a face desce inteira'
-            ' para a\n'
-            '     linha de baixo quando não cabe ao lado do nome, e o «Fechar» fica no'
-            ' canto. */\n'
+            'r(--color-ink); }'
+            '\n'
             '  .edita-cab { flex-wrap: wrap; position: relative; padding-right: '
             '2.2rem; row-gap: .1rem; }\n'
             '  .edita-cab span { white-space: nowrap; }\n'
@@ -2499,11 +2305,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '></div>"\n'
         ),
         depois=(
-            '      /* A FACE DIZ DE QUAL ENTRADA PENDE (D-2609-O-HUB-PENDE-DA-E'
-            'NTRADA): o\n'
-            '         título é do dono («Hub na Entrada 3»), e a divergência é '
-            'uma linha\n'
-            '         a mais, sem culpa. */\n'
             '      return \'<div><div class="face-cab"><h3>\' + (f.titulo || f.no'
             'me) + \'</h3><span class="quantas">\' + cheias + " de " + total + " '
             'ocupadas</span></div>"\n'
@@ -2538,11 +2339,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ': "fileira", regiao: "hub", daEntrada: String(n),\n'
         ),
         depois=(
-            '    /* A DEDUPLICAÇÃO É PELA LIGAÇÃO (D-2609-O-HUB-PENDE-DA-ENTRAD'
-            'A): só a face\n'
-            '       de quatro buracos que ESTA tela desenhou sai; a face ligada'
-            ' à entrada\n'
-            '       fica, e o hub dela não ganha uma segunda. */\n'
             '    FACES = FACES.filter(function (f) { return !(f.fantasma && f.d'
             'aEntrada === String(n)); });\n'
             '    delete p.filho;\n'
@@ -2564,9 +2360,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    var liga = (DECLARADO[editando] || {}).liga || "direto";\n'
         ),
         depois=(
-            '    /* O COMPUTADOR LÊ UM HUB NESTA ENTRADA: «Hub» nasce apertado,'
-            ' e «Direto»\n'
-            '       fica apagado com a razão na dica (o espelho da D-03). */\n'
             '    var lido = !!HUB_LIDO[editando];\n'
             '    var liga = (DECLARADO[editando] || {}).liga || (lido ? "hub" :'
             ' "direto");\n'
@@ -2619,8 +2412,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=(
             '  .face-cab .quantas { font-size: var(--text-xs); color: var(--col'
-            'or-ink-faint); font-family: var(--font-dado); }\n'
-            '  /* a divergência do hub: uma linha a mais, sem culpa */\n'
+            'or-ink-faint); font-family: var(--font-dado); }'
+            '\n'
             '  .diverge { margin: 0 0 var(--space-2xs); font-size: var(--te'
             'xt-xs); color: var(--color-lacuna); }\n'
             '  .edita .lido { font-size: var(--text-xs); color: var(--color-ink'
@@ -2678,17 +2471,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    if (!podeGravar(n)) return "";\n'
             '    return \' data-gesto="\' + gesto + \'" data-entrada="\' + n + \'"\';'
             '\n'
-            '  }\n'
-            '  /* O PLUGUE QUE APRENDE — 26/09/2026, D-2609-ENSINAR-GRAVA-O-NO.'
-            ' Com um\n'
-            '     aparelho fora do mapa na mão, a entrada livre do mapa dela le'
-            'va o\n'
-            '     gesto `entrada-ensinar` e o caminho em que a página lê o apar'
-            'elho\n'
-            '     agora; o produto grava o nó dele na entrada. Só as do disco\n'
-            '     (`GRAVA`): a ponta e o hub desenhado não têm nó a gravar. E só\n'
-            '     as que acendem: a ocupada e a de «outra região» (o aparelho\n'
-            '     direto no PC não está num buraco do hub) ficam sem o gesto. */\n'
+            '  }'
+            '\n'
             '  function ensinaNaEntrada(porta) {\n'
             '    if (!segurando || !doProduto() || GRAVA.indexOf(String(porta.n'
             ')) === -1) return "";\n'
@@ -2725,14 +2509,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        if (ocupada(alocacao, p)) return;\n'  # (noqa-acento)
         ),
         depois=(
-            '      if (segurando) {\n'
-            '        /* NO PRODUTO A PÁGINA ESPERA O DISCO (D-2609-ENSINAR-GRAV'
-            'A-O-NO): o\n'
-            '           plugue candidato levou o gesto, e o arranjo relido tira'
-            ' o\n'
-            '           aparelho da mão. A entrada que não grava não aprende: o'
-            ' que\n'
-            '           ficava só na memória a releitura desfazia. */\n'
+            '      if (segurando) {'
+            '\n'
             '        if (doProduto()) return;\n'
             '        if (ocupada(alocacao, p)) return;\n'  # (noqa-acento)
         ),
@@ -2803,14 +2581,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '</style>\n'
         ),
         depois=(
-            '  /* AS ENTRADAS SE ARRUMAM SOZINHAS — 01/10/2026 (pedido d): quantas co'
-            'lunas de\n'
-            '     17rem couberem, nas três formas; a Frente vira uma linha, e o hub, '
-            'duas. */\n'
             '  .chapa.coluna, .chapa.grade-tras, .chapa.fileira {\n'
             '    display: grid; grid-template-columns: repeat(auto-fill, 17rem); gap:'
-            ' .55rem var(--space-md); }\n'
-            '  /* A LEGENDA SOBE para a linha dos modos, à direita (pedido e) */\n'
+            ' .55rem var(--space-md); }'
+            '\n'
             '  .pagina > .corpo { display: grid; grid-template-columns: auto minmax(0'
             ', 1fr);\n'
             '                     column-gap: var(--space-md); align-content: start; '
@@ -2821,12 +2595,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'f: end;\n'
             '                                align-self: center; margin-top: 0; }\n'
             '  .palco > .bandeja { margin-top: 29px; position: sticky; top: .5rem; }\n'
-            '  /* «ATUALMENTE CONECTADO» ROLA POR DENTRO e acaba no fim da última fac'
-            'e (pedido a).\n'
-            '     Só com o palco em duas colunas: numa coluna só a bandeja tem linha '
-            'própria,\n'
-            '     e a altura da linha seria zero. */\n'
-            '  @media (min-width: 901px) {\n'
+            '  '
+            '@media (min-width: 901px) {\n'
             '    .palco > .bandeja { position: static; align-self: stretch; height: 0'
             ';\n'
             '                        min-height: calc(100% - 29px); box-sizing: borde'
@@ -2838,17 +2608,13 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  @media (max-width: 900px) {\n'
             '    .palco > .bandeja .lista { max-height: 22rem; overflow-y: auto; }\n'
             '  }\n'
-            '  /* O ADICIONAR NUMA LINHA: a pergunta e as escolhas lado a lado (pedid'
-            'o g) */\n'
-            '  .painel > #chamada-mao { display: inline-block; margin: 0 var(--space-'
+            '  '
+            '.painel > #chamada-mao { display: inline-block; margin: 0 var(--space-'
             'sm) 0 0;\n'
             '                           vertical-align: middle; }\n'
             '  .painel > #chamada-mao + .escolhas { display: inline-flex; vertical-al'
-            'ign: middle; }\n'
-            '  /* O «?» DA CASA: a razão de cada movimento das Sugestões mora nele (p'
-            'edido f).\n'
-            '     O `p.ajuda` da bandeja é outra peça: a regra mora só dentro da rece'
-            'ita. */\n'
+            'ign: middle; }'
+            '\n'
             '  .receita .ajuda { display: inline-grid; place-items: center; width: 17'
             'px; height: 17px;\n'
             '                    margin-left: .45rem; border-radius: 50%; border: 1px'
@@ -3038,12 +2804,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "adivinha vira mapa que mente.</p>';\n"
         ),
         depois=(
-            '      /* O SUGESTÕES FALA MENOS — 01/10/2026 (pedido f): os botões dizem'
-            ' só o\n'
-            '         arranjo, cada movimento é uma linha com as razões no «?», e da '
-            'conta do\n'
-            '         fim fica a linha do ganho não medido (D-LINHA-DO-GANHO-NAO-MEDI'
-            'DO). */\n'
             '      html += \'<div class="escolhas" style="margin-bottom:.9rem">\'\n'
             '        + VARIANTES.map(function (v) {\n'
             '            return \'<button class="escolha" data-var="\' + v.id + \'" aria'
@@ -3123,9 +2883,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'á está certa"; }\n'
         ),
         depois=(
-            '        /* SÓ O VEREDITO — 01/10/2026 (pedido f): de onde e para onde já'
-            ' estão\n'
-            '           na lista de cima. */\n'
             '        estado = "chega"; vered = "vem para cá";\n'
             '      } else if (!idPlano && idAgora) {\n'
             '        ap = acha(idAgora); estado = "sai"; vered = "sai daqui";\n'
@@ -3143,9 +2900,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=(
             '  .edita-cab .fecha { position: absolute; top: 0; right: 0'
-            '; }\n'
-            '  /* O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORR'
-            'IGE-ONDE-SE-CLICA-01 */\n'
+            '; }'
+            '\n'
             '  .rotulo .ap-btn { display: inline-block; max-width: 100%'
             '; margin: 0; padding: .12rem .45rem;\n'
             '                    font: inherit; font-weight: 600; text-'
@@ -3183,9 +2939,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '-font-dado); font-size: .6875rem;\n'
             '                border: 1px solid var(--color-rule); borde'
             'r-radius: var(--radius-sm); }\n'
-            '  .edita .etq.medida { border-style: dashed; }\n'
-            '  /* A FAIXA DELE (desenho 2): pintado é o canal bom; vazio, com a'
-            ' marca de quem o tomou */\n'
+            '  .edita .etq.medida { border-style: dashed; }'
+            '\n'
             '  .edita .faixa-dele { display: grid; grid-template-columns: repea'
             't(79, 1fr); gap: 1px;\n'
             '                       height: .75rem; }\n'
@@ -3364,10 +3119,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    var ub = ev.target.closest("#edita [data-usb]");'
         ),
         depois=(
-            '    /* O PAINEL DO APARELHO — 04/10/2026. O que leva `data'
-            '-gesto` o produto grava e a página\n'
-            '       espera o disco; o que não leva (o exemplo) muda só '
-            'na tela. */\n'
             '    var abre = ev.target.closest("[data-ap-abre]");\n'
             '    if (abre) {\n'
             '      achado = null; editandoDe = "mapa";\n'
@@ -3438,24 +3189,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    if (!ed) return;\n'
         ),
         depois=_com_os_dados(
-            '  /* ══ O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-C'
-            'ORRIGE-ONDE-SE-CLICA-01 ═══════\n'
-            '     Pedido: «clicar num dispositivo não oferece modi'
-            'ficá-lo ou identificá-lo, nem no\n'
-            '     mapa nem em Atualmente Conectado». Clicar em QUALQUER'
-            ' aparelho (o botão com o nome dele\n'
-            '     no mapa, ou o cartão da lista) abre este painel, flut'
-            'uando ao lado dele. Em cima, o que\n'
-            '     ela corrige: o nome, o tipo (o tipo decide a cor em t'
-            'odo o app) e a chave «Extensor».\n'
-            '     No meio, o que a máquina vê, em etiquetas sem botão. '
-            'Embaixo, uma linha só: o que fazer.\n'
-            '     QUEM VENCE: a máquina no que mede (o chip, a velocida'
-            'de, os hubs: etiquetas sem botão), a\n'
-            '     pessoa no resto (o nome, o tipo, o extensor). O tipo '
-            'que ela diz decide a cor e o nome em\n'
-            '     todo o app; no motor ele só pesa quando a máquina não'
-            ' leu a classe do aparelho. */\n'
             '  var TIPOS_DO_APARELHO = __TIPOS_DO_APARELHO__;\n'
             '  var COR_DO_TIPO = __COR_DO_TIPO__;\n'
             '  var LUGARES_DA_ENTRADA = __LUGARES_DA_ENTRADA__;\n'
@@ -3475,19 +3208,14 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '][1];\n'
             '    return t;\n'
             '  }\n'
-            '  /* o nome que o usuário deu vence; depois o tipo que o usuário disse'
-            '; depois o que a máquina leu */\n'
-            '  function rotuloDoAparelho(a) {\n'
+            '  '
+            'function rotuloDoAparelho(a) {\n'
             '    return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoT'
             'ipo(a.tipoDeclarado) : a.tipo);\n'
             '  }\n'
             '  function editavelNoProduto(quem) { return !doProduto() |'
             '| !!quem.modelo; }\n'
             '\n'
-            '  /* A CHAVE «EXTENSOR» — é da porta, separada do que está'
-            ' ligado nela (hub, aparelho): ligada,\n'
-            '     o aparelho continua dito na entrada e o motor lê a en'
-            'trada como esticada. */\n'
             '  function chaveDoExtensor(n) {\n'
             '    var soNaTela = doProduto() && !podeGravar(n);\n'
             '    if (soNaTela) return "";\n'
@@ -3505,10 +3233,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'pan><div class="onde">\'\n'
             "      + '<span>Tem um cabo de extensão nesta entrada?</spa"
             'n>\' + c + "</div></div>" : "";\n'
-            '  }\n'
-            '  /* O «LUGAR» — a face do gabinete (o campo do Mapear, no'
-            ' mesmo dono). Só no produto, onde a\n'
-            '     entrada grava: no exemplo ninguém guarda nada. */\n'
+            '  }'
+            '\n'
             '  function linhaDoLugar(n) {\n'
             '    if (!doProduto() || !podeGravar(n) || !/^[0-9]{1,3}$/.'
             'test(String(n))) return "";\n'
@@ -3538,9 +3264,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    return !!(pp && semLugar(pp));\n'
             '  }\n'
             '\n'
-            '  /* «O QUE FAZER»: uma linha, no máximo um botão. Fala o '
-            'que o motor já diz (o plano). */\n'
-            '  function oQueFazer(n, quem) {\n'
+            '  '
+            'function oQueFazer(n, quem) {\n'
             '    if (!quem.classe && !quem.tipoDeclarado) {\n'
             '      return \'<div class="faz"><span>Sem saber o que é, eu'
             " não sugiro lugar. Diga o tipo acima.</span></div>';\n"
@@ -3565,9 +3290,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    }\n'
             '    return \'<div class="faz bem"><span>✓ Está numa boa ent'
             "rada.</span></div>';\n"
-            '  }\n'
-            '  /* no exemplo ninguém mediu nada: as etiquetas saem do q'
-            'ue o desenho já diz */\n'
+            '  }'
+            '\n'
             '  function etiquetasDoExemplo(quem, p) {\n'
             '    var e = [];\n'
             '    if (quem.tipo) e.push(quem.tipo);\n'
@@ -3625,9 +3349,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        + et.map(function (e) { return \'<span class="etq">'
             '\' + emAtributo(e) + "</span>"; }).join("") + "</div></div>'
             '";\n'
-            '    }\n'
-            '    /* A FAIXA DELE: a mesma conta da aba Conexões; sem leitura nã'
-            'o há linha */\n'
+            '    }'
+            '\n'
             '    var fx = quem.faixa;\n'
             '    if (fx && fx.celulas && fx.celulas.length) {\n'
             '      h += \'<div class="edita-linha"><span>A faixa dele</span><div'
@@ -3724,12 +3447,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    else mostrarEditorDaEntrada();\n'
             '  }\n'
             '\n'
-            '  /* TROCAR DE LUGAR É ARRASTAR para a outra entrada, com '
-            '«Mover para…» no painel para quem usa\n'
-            '     teclado ou leitor de tela. No produto o gesto é o `en'
-            'trada-trocar` (o mesmo do «Mover\n'
-            '     para…»); no exemplo a troca é só na tela. */\n'
-            '  function podeMover(de, para) {\n'
+            '  '
+            'function podeMover(de, para) {\n'
             '    if (de === para) return false;\n'
             '    if (doProduto()) return GRAVA.indexOf(String(de)) !== '
             '-1 && GRAVA.indexOf(String(para)) !== -1\n'
@@ -3797,11 +3516,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    moverPara(de, s.getAttribute("data-soquete"));\n'
             '  });\n'
             '\n'
-            '  /* O AVISO DE «MUDOU DE LUGAR» é uma linha com ✓ que som'
-            'e sozinha em 10 s: «Ver» abre o\n'
-            '     detalhe (e o segura até ela fechar) e o ✕ fecha na ho'
-            'ra. */\n'
-            '  function oAvisoDeUmaLinha(mudou, detalhe) {\n'
+            '  '
+            'function oAvisoDeUmaLinha(mudou, detalhe) {\n'
             '    var frase, sab = mudou.filter(function (m) { return m.'
             'entradaAgora; }).length;\n'
             '    if (!mudou.length) frase = "Nada mudou de lugar.";\n'
@@ -3848,9 +3564,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      avisoAberto = false; avisoLeituras = null;\n'
             '      return;\n'
             '    }\n'
-            '    /* uma leitura nova (outro `Examinar`) recomeça os 10 '
-            's */\n'
-            '    if (avisoLeituras !== LEITURAS) {\n'
+            '    '
+            'if (avisoLeituras !== LEITURAS) {\n'
             '      recomecarOAviso(); avisoLeituras = LEITURAS; acharOI'
             'dentificado();\n'
             '    }\n'
@@ -3982,11 +3697,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    var portas = todasPortas()'
         ),
         depois=(
-            '    var plano = {}, motivo = {};\n'
-            '    /* A FILEIRA «SEM LUGAR» NÃO ENTRA NO PLANO — 04/10/20'
-            '26: sem o lugar (a face) o motor não\n'
-            '       tem o que julgar, então quem está nela fica onde es'
-            'tá e ninguém é mandado para lá. */\n'
+            '    var plano = {}, motivo = {};'
+            '\n'
             '    APARELHOS.forEach(function (a) { if (aparelhoSemLugar('
             'a.id)) plano[portaDe(a.id)] = a.id; });\n'
             '    var portas = todasPortas()'
@@ -4090,14 +3802,14 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        + \'<button class="btn" id="ver-antes">Ver como o a'
             'rranjo estava \' + (leituraAtual === "agora" ? "antes" : "a'
             'gora") + "</button></div>";\n'
-            '    } else if (modo === "mao") {'  # (noqa-acento)
+            '    } else if (modo === "mao") {'
         ),
         depois=(
             '        + \'<button class="btn" id="ver-antes">Ver como o a'
             'rranjo estava \' + (leituraAtual === "agora" ? "antes" : "a'
             'gora") + "</button></div>";\n'
             '      html = oAvisoDeUmaLinha(mudou, html);\n'
-            '    } else if (modo === "mao") {'  # (noqa-acento)
+            '    } else if (modo === "mao") {'
         ),
         porque=(
             '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o avi'
@@ -4157,20 +3869,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         depois=(
             '    var ordem = ["hub", "teclado", "wifi", "bt", "mouse"'
             ', "webcam"];\n'
-            '    var jaPostos = [];\n'
-            '    /* O APARELHO QUE O PLANO NÃO SABE ARRUMAR FICA ONDE'
-            ' ESTÁ — 04/10/2026,\n'
-            '       AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01. Um aparelho'
-            ' de classe fora da\n'
-            '       ordem de decisão (um pendrive, uma placa que ning'
-            'uém classificou) nunca\n'
-            '       entra no plano; sem esta reserva a entrada dele v'
-            'alia como livre, outro\n'
-            '       aparelho a recebia e o mapa dizia «sai daqui» sem'
-            ' destino. A entrada\n'
-            '       fica com ele, com o motivo «fica». É a gêmea de\n'
-            '       `arranjo_da_mesa._o_que_o_plano_nao_sabe_arrumar_'
-            'fica`. */\n'
+            '    var jaPostos = [];'
+            '\n'
             '    APARELHOS.forEach(function (a) {\n'
             '      if (ordem.indexOf(a.classe) !== -1) return;\n'
             '      var hoje = portaDe(a.id);\n'
@@ -4201,13 +3901,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     Edicao(
         antes="    if (quem && plug && porNum(editando)) mostrarOPainelDoAparelho(ed, quem);\n",
         depois=(
-            "    /* O HUB NÃO É UM APARELHO QUE SE BATIZA: ele é o que a entrada tem (a face"
-            " «Hub na\n"
-            "       Entrada N» desce dele), e a entrada dele abre o editor da entrada, com o"
-            " «Hub»\n"
-            "       que o computador lê e a velocidade. O painel do aparelho ofereceria"
-            " «Teclado,\n"
-            "       Mouse…» para um hub. */\n"
             "    if (quem && quem.classe !== \"hub\" && plug && porNum(editando))"
             " mostrarOPainelDoAparelho(ed, quem);\n"
         ),
@@ -4219,17 +3912,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     Edicao(
         antes=(
-            '  /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════'
-            '════════════════════\n'
-            '     Pedido: «Todas as palavras Iniciam com a letra'
-            ' maiúscula». Os\n'
-            '     conectivos ficam minúsculos no meio da frase, que é'
-            ' como ela mesma escreve\n'
-            '     («Gestão de Controles», «Perfil de Desempenho»). Ca'
-            'minho de barramento,\n'
-            '     número e código não mudam. Roda no fim de cada pint'
-            'ura, sobre a página\n'
-            '     inteira, e é idempotente. */\n'
             '  var MINUSCULAS = ["a", "o", "as", "os", "e", "de", "da'
             '", "das", "do", "dos", "em", "no", "na",\n'
             '    "nos", "nas", "num", "numa", "um", "uma", "para", "p'
@@ -4249,16 +3931,14 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      var novo = no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳'
             '…]+/g, function (w, pos) {\n'
             '        if (!/^[A-Za-zÀ-ÿ]/.test(w)) return w;\n'
-            '        /* começo de frase conta como primeira palavra: '
-            '«Possíveis. O Melhor» */\n'
-            '        var antes = no.nodeValue.slice(0, pos).trim();\n'
+            '        '
+            'var antes = no.nodeValue.slice(0, pos).trim();\n'
             '        var primeira = (abre && antes === "") || /[.!?]$'
             '/.test(antes);\n'
             '        if (!primeira && MINUSCULAS.indexOf(w.toLowerCas'
             'e()) !== -1) return w.toLowerCase();\n'
-            '        /* cada pedaço de um nome com hífen: «Wi-Fi», «E'
-            'ntrada-Filha» */\n'
-            '        return w.split("-").map(function (s) { return s.'
+            '        '
+            'return w.split("-").map(function (s) { return s.'
             'charAt(0).toUpperCase() + s.slice(1); }).join("-");\n'
             '      });\n'
             '      if (novo !== no.nodeValue) no.nodeValue = novo;\n'
@@ -4430,7 +4110,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ">'\n"
             '        + \'<span><i class="amostra v3"></i> USB 3.0</spa'
             'n><span><i class="amostra v2"></i> USB 2.0</span>\'\n'
-            '      : modo === "mao"\n'  # (noqa-acento)
+            '      : modo === "mao"\n'
             '      ? \'<span><i class="amostra r-ok"></i> melhor lugar'
             '</span><span><i class="amostra r-ev"></i> vale evitar</s'
             "pan>'\n"
@@ -4448,7 +4128,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "'\n"
             '        + \'<span><i class="amostra v3"></i> USB 3.0</spa'
             'n><span><i class="amostra v2"></i> USB 2.0</span>\'\n'
-            '      : modo === "mao"\n'  # (noqa-acento)
+            '      : modo === "mao"\n'
             '      ? \'<span><i class="amostra r-ok"></i> Melhor lugar'
             '</span><span><i class="amostra r-ev"></i> Vale evitar</s'
             "pan>'\n"
@@ -5168,9 +4848,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        + et.map(function (e) { return \'<span class="etq'
             '">\' + emAtributo(e) + "</span>"; }).join("") + "</div></'
             'div>";\n'
-            '    }\n'
-            '    /* A FAIXA DELE: a mesma conta da aba Conexões; sem '
-            'leitura não há linha */\n'
+            '    }'
+            '\n'
             '    var fx = quem.faixa;\n'
             '    if (fx && fx.celulas && fx.celulas.length) {\n'
             '      h += \'<div class="edita-linha"><span>A faixa dele<'
@@ -5270,29 +4949,13 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'o ? aparelhoDaEntrada(editando) : null;\n'
             "    var plug = editando && document.querySelector('.plug"
             '[data-porta="\' + editando + \'"]\');\n'
-            '    /* O HUB NÃO É UM APARELHO QUE SE BATIZA: ele é o qu'
-            'e a entrada tem (a face «Hub na\n'
-            '       Entrada N» desce dele), e a entrada dele abre o e'
-            'ditor da entrada, com o «Hub»\n'
-            '       que o computador lê e a velocidade. O painel do a'
-            'parelho ofereceria «Teclado,\n'
-            '       Mouse…» para um hub. */\n'
-            '    if (quem && quem.classe !== "hub" && plug && porNum('
+            '    '
+            'if (quem && quem.classe !== "hub" && plug && porNum('
             'editando)) mostrarOPainelDoAparelho(ed, quem);\n'
             '    else mostrarEditorDaEntrada();\n'
             '  }\n'
         ),
         depois=(
-            '  /* ══ O PAINEL ÚNICO — 05/10/2026, o desenho aprovado '
-            '══════════════════════════════\n'
-            '     Clicar na entrada, no aparelho, na lista «Conectado'
-            ' agora» ou num aparelho sem entrada\n'
-            '     abre o MESMO painel, perto do que foi clicado: o ap'
-            'arelho de um lado, a entrada do outro.\n'
-            '     O que leva `data-gesto` o produto grava e a página '
-            'espera o disco; no exemplo, muda só\n'
-            '     na tela. Fecha no botão de fechar, no Esc ou com um'
-            ' clique fora. */\n'
             '  var editandoAp = null;\n'
             '  function faceDaPorta(p) {\n'
             '    return FACES.filter(function (f) {\n'
@@ -5340,9 +5003,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + \' value="\' + emAtributo(quem.nomeDeclarado || ""'
             ') + \'"\'\n'
             '      + \' placeholder="\' + emAtributo(rotuloDoAparelho(q'
-            'uem)) + \'" aria-label="Nome do aparelho"></label>\';\n'
-            '    /* o tipo que a máquina mede (o rádio Bluetooth, o h'
-            'ub) não se troca aqui */\n'
+            'uem)) + \'" aria-label="Nome do aparelho"></label>\';'
+            '\n'
             '    var tipoAgora = quem.tipoDeclarado || TIPO_DA_CLASSE'
             '[quem.classe] || "";\n'
             '    var daMaquina = !tipoAgora && !!quem.classe;\n'
@@ -5384,11 +5046,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'em && quem.classe === "hub") ? "hub" : "direto");\n'
             '    h += \'<div class="campo"><span>Tipo</span><div class'
             '="seg">\' + [["direto", "Direta"], ["hub", "Hub"]].map(fu'
-            'nction (o) {\n'
-            '        /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE'
-            ' NÃO É HUB, e o «Direta» não cabe onde o\n'
-            '           computador lê um hub: cinza, com a razão na d'
-            'ica (a D-03 dela), e o clique não declara. */\n'
+            'nction (o) {'
+            '\n'
             '        var razao = o[0] === "direto" && lido ? "O compu'
             'tador lê um hub nesta entrada"\n'
             '          : o[0] === "hub" && quem && quem.classe !== "h'
@@ -5516,16 +5175,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    var p = editando && porNum(editando);\n'
             "    var plug = p && document.querySelector('.plug[data-p"
             'orta="\' + editando + \'"]\');\n'
-            '    /* o editor escondido não guarda os botões da entrad'
-            'a de antes: um\n'
-            '       clique neles levaria ao disco o gesto de outra en'
-            'trada */\n'
-            '    if (!p || !plug || modo === "ideal" || segurando) { '
-            'ed.hidden = true; ed.innerHTML = ""; return; }\n'
-            '    /* O COMPUTADOR LÊ UM HUB NESTA ENTRADA: «Hub» nasce'
-            ' apertado, e «Direto»\n'
-            '       fica apagado com a razão na dica (o espelho da D-'
-            '03). */\n'
+            '    '
+            'if (!p || !plug || modo === "ideal" || segurando) { '
+            'ed.hidden = true; ed.innerHTML = ""; return; }'
+            '\n'
             '    var lido = !!HUB_LIDO[editando];\n'
             '    var liga = (DECLARADO[editando] || {}).liga || (lido'
             ' ? "hub" : "direto");\n'
@@ -5534,15 +5187,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ' || x.filho === p; });\n'
             '    })[0];\n'
             '    var quem = alocacao[editando] ? acha(alocacao[editan'  # (noqa-acento)
-            'do]) : null;\n'
-            '    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. '
-            'No produto, o que\n'
-            '       ela declarasse numa entrada que não grava (as do '
-            'hub desenhado)\n'
-            '       sumiria ao reler, sem aviso: ali o editor só most'
-            'ra quem está\n'
-            '       nela, e sem ninguém ele não abre. No exemplo, tud'
-            'o é só tela. */\n'
+            'do]) : null;'
+            '\n'
             '    var soNaTela = doProduto() && !podeGravar(editando);'
             '\n'
             '    if (soNaTela && !quem) { ed.hidden = true; ed.innerH'
@@ -5556,11 +5202,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + (soNaTela ? "" : \'<div class="edita-linha"><span'
             '>O que tem aqui</span><div class="seg dois">\'\n'
             '      + [["direto", "Direto"], ["hub", "Hub"]].map(funct'
-            'ion (o) {\n'
-            '          /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO Q'
-            'UE NÃO É HUB: cinza,\n'
-            '             com a razão na dica (a D-03 dela), e o cliq'
-            'ue não declara. */\n'
+            'ion (o) {'
+            '\n'
             '          if (o[0] === "direto" && lido) {\n'
             '            return \'<button class="escolha apagado" data'
             '-liga="direto" aria-disabled="true" aria-pressed="false"'
@@ -5618,8 +5261,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     Edicao(
         antes=(
-            '  /* «O QUE FAZER»: uma linha, no máximo um botão. Fala '
-            'o que o motor já diz (o plano). */\n'
             '  function oQueFazer(n, quem) {\n'
             '    if (!quem.classe && !quem.tipoDeclarado) {\n'
             '      return \'<div class="faz"><span>Sem saber o que é, '
@@ -5659,8 +5300,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     ),
     Edicao(
         antes=(
-            '  /* no exemplo ninguém mediu nada: as etiquetas saem do'
-            ' que o desenho já diz */\n'
             '  function etiquetasDoExemplo(quem, p) {\n'
             '    var e = [];\n'
             '    if (quem.tipo) e.push(quem.tipo);\n'
@@ -5835,7 +5474,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      segurando = null; naMao = null; pintar(); return;\n'
             '    }\n'
             '    if (chip) {\n'
-            '      modo = "mao";\n'  # (noqa-acento)
+            '      modo = "mao";\n'
             '      var ap = acha(chip.getAttribute("data-ap"));\n'
             '      var atual = portaDe(ap.id); if (atual) delete aloc'
             'acao[atual];\n'  # (noqa-acento)
@@ -5854,10 +5493,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      segurando = null; naMao = null; pintar(); return;\n'
             '    }\n'
             '    if (chip) {\n'
-            '      /* o aparelho sem entrada: o painel abre perto del'
-            'e e diz o passo; o clique na entrada certa\n'
-            '         marca o lugar dele (as candidatas acendem) */\n'
-            '      var ap = acha(chip.getAttribute("data-ap"));\n'
+            '      '
+            'var ap = acha(chip.getAttribute("data-ap"));\n'
             '      achado = null; editando = null; editandoAp = ap.id'
             '; segurando = ap.id; naMao = null; modo = "mesa";\n'
             '      pintar(); return;\n'
@@ -5895,8 +5532,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'rid-row: auto; justify-self: start; }\n'
             '  }\n'
             '\n'
-            '  /* ══ 05/10/2026, conjunto «Conexões 3»: o desenho apr'
-            'ovado do Mapa ══ */\n'
             '  .pagina > .topo { padding-top: 6px; padding-bottom: 6p'
             'x; margin-bottom: 6px; }\n'
             '  .painel { padding: 8px 14px; }\n'
@@ -5926,9 +5561,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  .bandeja .chip .num { height: 1.2rem; min-width: 1.2re'
             'm; margin-top: 0; }\n'
             '  @media (min-width: 901px) { .palco > .bandeja { height'
-            ': auto; min-height: 0; align-self: start; } }\n'
-            '  /* o painel único: o aparelho e a entrada, lado a lado'
-            ' */\n'
+            ': auto; min-height: 0; align-self: start; } }'
+            '\n'
             '  #edita.painel-unico { position: fixed; z-index: 80; wi'
             'dth: 540px; max-width: calc(100vw - 24px); padding: 0; g'
             'ap: 0;\n'
@@ -6025,15 +5659,6 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             ' trocas em cartões e a página sem rolar'
         ),
     ),
-    Edicao(
-        antes="     o pareamento, apagar o cache SDP e parear de novo, com o controle na mão.\n",
-        depois="     o pareamento e parear de novo, com o controle na mão.\n",
-        porque=(
-            "08/10/2026, O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01 — o comentário do arranjo dizia que"
-            " trocar de adaptador pede apagar o cache SDP; o RemoveDevice do BlueZ já tira o"
-            " [ServiceRecords] do cache (device.c do BlueZ 5.86), então não há cache a apagar"
-        ),
-    ),
     *EDICOES_DA_CADEIA_E_DO_REGISTRO,
     *EDICOES_DOS_MAPAS_DO_TODO,
     *EDICOES_DO_CHIP_A_940,
@@ -6054,8 +5679,6 @@ CSS_DA_CADEIA_E_DO_REGISTRO = """\
   .bandeja .chip.recuado { margin-left: 1rem; width: calc(100% - 1rem); }
   .palco > .bandeja .lista { gap: 3px; }
   .bandeja .chip { padding-top: 2px; padding-bottom: 2px; }
-  /* O tipo e o nome numa linha só; o enlace, na de baixo. Em duas linhas, a cadeia de nove
-     aparelhos passava das faces e o corpo do Sugestões rolava 47 px (16/10/2026). */
   .bandeja .chip .txt { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .45rem; }
   .bandeja .chip .txt span.enlace { flex-basis: 100%; }
   .por-confirmar { padding-top: 4px; padding-bottom: 4px; margin-top: 4px; }
@@ -6085,7 +5708,6 @@ CSS_DA_CADEIA_E_DO_REGISTRO = """\
   }
 </style>
 <style data-todo-css="sem-rolagem">
-  /* O corpo rolava 5 px em 1212x809 (já rolava 8 no publicado): o pé de 40 px vira 32. */
   .pagina > .corpo { padding-bottom: 32px }
 </style>
 </head>"""  # noqa: E501
@@ -6102,13 +5724,7 @@ HTML_DO_REGISTRO = """\
   </section>
 """  # noqa: E501
 
-JS_DA_CADEIA_E_DO_REGISTRO = r"""
-  /* ══ A CADEIA E O REGISTRO — 15/10/2026 (O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01) ══
-     A lista da direita é a cadeia: o hub de plástico é UM chip («Hub USB 3 · 7 entradas») com os
-     aparelhos recuados abaixo dele, o enlace abaixo vai dito como fato e quem não apareceu neste
-     início fica esmaecido no fim. No produto quem diz tudo isso é `arranjo_desta_maquina`
-     (`hubFisico`, `parteDe`, `dentroDe`, `enlace`, `sumiram`, `registro`); no exemplo é a cena abaixo. */
-  var DICA_DO_ENLACE = __DICA_DO_ENLACE__;
+JS_DA_CADEIA_E_DO_REGISTRO = r"""  var DICA_DO_ENLACE = __DICA_DO_ENLACE__;
   var DA_CENA = {
     hubFisico: { "hub": "Hub USB 3 · 7 entradas" },
     enlace: { "hub": "480 Mb/s · Sabe 5 Gb/s" },
@@ -6155,11 +5771,8 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
     function chipDe(a, nivel) {
       var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
       var hub = c.hub[a.id], enl = c.enlace[a.id];
-      /* A dica fala do que a pessoa faz, não do sistema por baixo. */
       var dica = p ? "Na " + naFraseDe(p) + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
-      /* O que o chip corta com reticências vai inteiro na dica: o nome que a pessoa deu (ou o do hub de
-         plástico) e o do aparelho. Com uma fonte de sistema mais larga o título do hub também corta. */
       var inteiro = [a.nomeDeclarado || hub || "", a.nome && a.nome !== titulo ? a.nome : ""].filter(Boolean).join(" · ");
       if (inteiro) dica = inteiro + ". " + dica;
       var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
@@ -6194,7 +5807,6 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
     html += APARELHOS.filter(function (a) { return !visto[a.id] && !c.parte[a.id]; })
       .map(function (a) { return ramo(a, 0); }).join("");
     html += c.sumiram.map(function (a) {
-      /* A frase que a reticência corta vai inteira na dica, como no chip da cadeia. */
       var frase = (a.nome ? a.nome + " · " : "") + "Não apareceu neste início";
       return '<div class="chip sumiu" data-dica="'
         + emAtributo(frase + ". Já esteve neste computador e não apareceu agora") + '">'
@@ -6219,7 +5831,6 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
     }).join("");
   }
 
-  /* O «COPIAR» do registro leva o texto como está na tela, uma linha por evento. */
   function textoDoRegistro() {
     var reg = daCadeia().registro || {};
     return [reg.ouvindo || ""].concat((reg.linhas || []).map(function (l) {
@@ -6238,7 +5849,7 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
       var caixa = document.createElement("textarea");
       caixa.value = texto; caixa.setAttribute("readonly", ""); caixa.style.position = "fixed"; caixa.style.opacity = "0";
       document.body.appendChild(caixa); caixa.select();
-      try { if (document.execCommand("copy")) feito(); } catch (erro) { /* sem área de transferência: o texto fica na tela */ }
+      try { if (document.execCommand("copy")) feito(); } catch (erro) { }
       document.body.removeChild(caixa);
     }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(feito, pelaCaixa);
@@ -6249,9 +5860,8 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
 
 JS_DOS_MODOS = r"""        '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
       + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
-      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
+      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>'
       + '<button class="modo" data-modo="registro" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
-    /* O REGISTRO É A QUARTA ABA: ela troca o palco, o painel e a legenda pelo registro. */
     var noRegistro = modo === "registro";
     document.getElementById("registro").hidden = !noRegistro;
     document.querySelector(".palco").hidden = noRegistro;
@@ -6259,12 +5869,10 @@ JS_DOS_MODOS = r"""        '<button class="modo" data-modo="mesa" data-dica="Ond
     document.getElementById("legenda").hidden = noRegistro;
 """  # noqa: E501
 
-JS_DA_BANDEJA = r"""    /* a bandeja é a cadeia */
-    pintarACadeia(r);
+JS_DA_BANDEJA = r"""    pintarACadeia(r);
 """
 
 JS_DO_ATALHO = r"""<script data-aba="registro">
-/* #registro abre a página já na aba «Registro». */
 if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded', function () { document.querySelector('.modo[data-modo="registro"]').click(); }); }
 </script>
 </body>"""  # noqa: E501
@@ -6306,14 +5914,13 @@ EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
             """      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + """
             """(modo === "ideal") + '">Sugestões</button>'\n"""
             """      + '<button class="modo" data-modo="mao" aria-pressed="' + """
-            """(modo === "mao") + '">Adicionar</button>';\n"""  # (noqa-acento)
+            """(modo === "mao") + '">Adicionar</button>';\n"""
         ),
         depois=JS_DOS_MODOS,
         porque="15/10/2026, mesma sprint — «Registro» é o quarto modo, e ele esconde o palco",
     ),
     Edicao(
         antes=(
-            '    /* a bandeja */\n'
             '    document.getElementById("bandeja").innerHTML = APARELHOS.map(function (a) {\n'
             '      var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);\n'
             '''      return '<button class="chip" data-ap="' + a.id + '"' + '''
@@ -6334,11 +5941,6 @@ EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
         ),
     ),
     Edicao(
-        antes="na lista «Conectado agora» ou num aparelho sem entrada",
-        depois="na lista «A cadeia» ou num aparelho sem entrada",
-        porque="15/10/2026, mesma sprint — o comentário segue o nome novo da lista",
-    ),
-    Edicao(
         antes="</body>",
         depois=JS_DO_ATALHO,
         porque="15/10/2026, mesma sprint — #registro abre a página na quarta aba (a foto da aba)",
@@ -6357,7 +5959,7 @@ EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
             ' color-mix(in srgb, var(--color-ok) 20%, var(--color-paper-3));'
             ' color: var(--color-ink); }\n'
         ),
-        depois="  /* «Sugestões» é um modo como os outros: sem o verde de aviso. */\n",
+        depois="",
         porque=(
             "15/10/2026, A-ABA-MAPAS-DO-RADIO-E-DAS-PORTAS-DO-TODO-01 — o desenho do todo tira o"
             " verde do modo Sugestões: a cor é do que avisa, e ele é uma aba como as outras"
@@ -6369,8 +5971,9 @@ EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
         porque="15/10/2026, mesma sprint — o número grande das trocas deixa de ser verde",
     ),
     Edicao(
-        antes="font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }\n",
-        depois="font-weight: 600; } /* só a primeira letra é maiúscula */\n",
+        antes=(".face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; "
+               "text-transform: uppercase; letter-spacing: .07em; }\n"),
+        depois=".face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; }\n",
         porque="15/10/2026, mesma sprint — o nome da face sai da caixa alta",
     ),
     Edicao(
@@ -6422,19 +6025,12 @@ EDICOES_DO_CHIP_A_940: tuple[Edicao, ...] = (
     Edicao(
         antes="  .bandeja .chip .txt span.enlace { flex-basis: 100%; }\n",
         depois=(
-            "  .bandeja .chip .txt span.enlace { flex-basis: 100%; }\n"
-            "  /* O tipo e o nome cortam com reticências em vez de quebrar: o nome inteiro está"
-            " na\n"
-            "     dica do chip. A 940 px (a largura mínima da aba) o chip do extensor quebrava"
-            " em\n"
-            "     duas linhas. */\n"
+            "  .bandeja .chip .txt span.enlace { flex-basis: 100%; }"
+            "\n"
             "  .bandeja .chip .txt > b { flex: 0 1 auto; min-width: 0; max-width: 100%;"
             " overflow: hidden;\n"
-            "                            text-overflow: ellipsis; white-space: nowrap; }\n"
-            "  /* Com o nome do aparelho ao lado, o título deixa lugar para ele na mesma linha: sem"
-            " isto\n"
-            "     o nome que a pessoa deu, longo, toma a linha e empurra o do aparelho para baixo."
-            " */\n"
+            "                            text-overflow: ellipsis; white-space: nowrap; }"
+            "\n"
             "  .bandeja .chip .txt > b:has(+ span:not(.enlace)) {"
             " max-width: calc(100% - 2.95rem); }\n"
             "  .bandeja .chip .txt > span:not(.enlace) { flex: 1 1 0; min-width: 2.5rem;"
@@ -6450,21 +6046,6 @@ EDICOES_DO_CHIP_A_940: tuple[Edicao, ...] = (
 )
 
 EDICOES_DA_CONTA_DO_RADIO: tuple[Edicao, ...] = (
-    Edicao(
-        antes=(
-            "     Gatilho, vibração, barra de luz, giroscópio e touch andam no MESMO canal\n"
-            "     HID — eles não somam pacote. **Só o microfone muda a conta.**            */"
-        ),
-        depois=(
-            "     Gatilho, rumble clássico, barra de luz, giroscópio e touch andam no MESMO\n"
-            "     relatório HID e não somam pacote. O microfone soma, e a háptica pelo rádio\n"
-            "     (0x32) e o alto-falante (0x35) também: vão em relatórios próprios.        */"
-        ),
-        porque=(
-            "17/10/2026 — fato errado num comentário do JavaScript: só o rumble clássico "
-            "viaja dentro do 0x31; a háptica e o som pelo rádio têm relatório próprio."
-        ),
-    ),
 )
 
 EDICOES_DO_CODEQL: tuple[Edicao, ...] = (
@@ -6478,10 +6059,8 @@ EDICOES_DO_CODEQL: tuple[Edicao, ...] = (
             '    return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;")'
             '.replace(/\'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");\n'
             "  }\n"
-            "  /* O TEXTO de um pedaço de HTML, lido pelo parser do navegador: nenhuma regex "
-            "adivinha onde a\n"
-            "     tag fecha, e nada executa (o DOMParser não roda script nem carrega imagem). */\n"
-            "  function soTexto(t) {\n"
+            "  "
+            "function soTexto(t) {\n"
             '    return new DOMParser().parseFromString(String(t), "text/html").body.textContent;\n'
             "  }\n"
         ),
@@ -6500,10 +6079,8 @@ EDICOES_DO_CODEQL: tuple[Edicao, ...] = (
         depois=(
             "  function porNum(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) "
             "if (t[i].n === String(n)) return t[i]; return null; }\n"
-            "  /* O número de entrada que o MODELO conhece, ou null: o que vem de um atributo "
-            "do DOM só\n"
-            "     entra no estado por aqui, e o que não é entrada vira nada. */\n"
-            "  function entradaConhecida(n) { var p = porNum(n); return p ? p.n : null; }\n"
+            "  "
+            "function entradaConhecida(n) { var p = porNum(n); return p ? p.n : null; }\n"
         ),
         porque=(
             "23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01 (js/xss-through-dom): o número da "
@@ -6623,10 +6200,6 @@ FRASES_SEM_LEITURA: dict[str, str] = {
 NADA_A_SUGERIR = "Nada a sugerir"
 
 JS_SEM_LEITURA = """\
-  /* ══ SEM LEITURA DESTE COMPUTADOR — 25/10/2026 ═══════════════════════
-     O-MAPA-SEM-LEITURA-DA-MAQUINA-NAO-DESENHA-O-EXEMPLO-01: sem o que desenhar, o
-     produto diz o porquê por aqui, e a página troca o exemplo pelo vazio. O cabeçalho
-     diz o porquê, o Examinar sai e nenhuma aba sugere. */
   var FRASES_SEM_LEITURA = __FRASES_SEM_LEITURA__;
   var NADA_A_SUGERIR = __NADA_A_SUGERIR__;
   var semLeitura = false;
@@ -6647,7 +6220,6 @@ JS_SEM_LEITURA = """\
     return "ok";
   };
 
-  /* A leitura que chega depois tira a página do vazio; a recusa a deixa onde estava. */
   var arranjoDaPorta = window.hefestoArranjo;
   window.hefestoArranjo = function (dado, como) {
     var estava = semLeitura;
@@ -6658,15 +6230,13 @@ JS_SEM_LEITURA = """\
 """.replace("__FRASES_SEM_LEITURA__", json.dumps(FRASES_SEM_LEITURA, ensure_ascii=False)).replace(
     "__NADA_A_SUGERIR__", json.dumps(NADA_A_SUGERIR, ensure_ascii=False))
 
-JS_DO_VAZIO_NA_PINTURA = r"""    /* SEM LEITURA, NADA SE DESENHA: o cabeçalho já disse o
-       porquê, e o registro vazio não tem o que copiar. */
-    document.getElementById("registro-copiar").hidden = semLeitura;
+JS_DO_VAZIO_NA_PINTURA = r"""    document.getElementById("registro-copiar").hidden = semLeitura;
     if (semLeitura) {
       document.querySelector(".palco").hidden = true;
       document.getElementById("legenda").hidden = true;
       document.getElementById("faces").innerHTML = "";
       document.getElementById("bandeja").innerHTML = "";
-      var sugere = modo === "ideal" || modo === "mao";  /* (noqa-acento: JS) */
+      var sugere = modo === "ideal" || modo === "mao";
       var oPainel = document.getElementById("painel");
       oPainel.hidden = !sugere;
       oPainel.innerHTML = sugere

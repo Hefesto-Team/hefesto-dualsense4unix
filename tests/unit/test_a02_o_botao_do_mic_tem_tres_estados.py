@@ -96,7 +96,7 @@ class TestOGeradorPinta:
     def test_as_duas_regras_sao_verdes_e_nao_vermelhas(self) -> None:
         """MORDIDA: troque `--green` por `--red`."""
         fonte = self._fonte()
-        trecho = fonte[fonte.index("O 🎙 EM TRÊS ESTADOS"):]
+        trecho = fonte[fonte.index(".mudo-i[{ATRIBUTO_DA_LUZ_DO_MIC}="):]
         trecho = trecho[: trecho.index('"""')]
         assert "var(--green)" in trecho
         assert "var(--red)" not in trecho

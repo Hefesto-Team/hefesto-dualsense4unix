@@ -73,8 +73,8 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "`install.sh:3173` (`--ensure`, em `_pp_saida`) e `uninstall.sh:1530` (`PROTON_PIN_PY`) o "
-        "rodam; "
+        "`install.sh:3173` (`PROTON_PIN_PY`, com `--ensure`) e "
+        "`uninstall.sh:1530` (`PROTON_PIN_PY`) o rodam; "
         "`scripts/doctor.sh:3848` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
@@ -945,7 +945,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "interface/monta.py::larg_rotulos": (
         "Auxiliar do gerador do mockup (`larg_rotulos` em "
-        "`src/hefesto_dualsense4unix/interface/monta.py:276`), "
+        "`src/hefesto_dualsense4unix/interface/monta.py:278`), "
         "chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
@@ -954,8 +954,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
-        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:860` (`montaveis`) e "
-        "`src/hefesto_dualsense4unix/interface/aba01.py:1883` (`mascaras_montaveis`) —, "
+        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:258` (`montaveis`) e "
+        "`src/hefesto_dualsense4unix/interface/aba01.py:1081` (`mascaras_montaveis`) —, "
         "que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "
         "E ISSO ESTÁ CERTO, e a razão é do dado: a lista de máscaras montáveis "
@@ -1289,7 +1289,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "app/actions/mode_transition.py::apply_mode": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
         "piloto da aba Controles, não promessa ao produto: só "
-        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:814` (`apply_mode`) a chama "
+        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:731` (`apply_mode`) a chama "
         "(bancada, fora do "
         "fecho do "
         "`hefesto_vivo`). A janela viva monta a MESMA sequência pelo dono "
@@ -1312,11 +1312,11 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "app/mic_monitor.py::MicMonitor": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento do "
         "piloto da aba Controles, não promessa ao produto: só "
-        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:897` (`MicMonitor`) o instancia "
+        "`src/hefesto_dualsense4unix/interface/controles_vivos.py:814` (`MicMonitor`) o instancia "
         "(bancada). A "
         "janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "
-        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:4666`) e o daemon "
+        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3465`) e o daemon "
         "publica o estado "
         "do "
         "mudo; as funções soltas do módulo (`sinks_dualsense`, `muted_de_saida`) "
@@ -1420,7 +1420,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "desenho, não do produto: o `interface/aba03.py` (o gerador do mockup dos Gatilhos, "
         "o import de `src/hefesto_dualsense4unix/interface/aba03.py:36` (`sem_comentarios_de_css`) "
         "e a chamada de "
-        "`src/hefesto_dualsense4unix/interface/aba03.py:643` (`sem_comentarios_de_css`)) tira com "
+        "`src/hefesto_dualsense4unix/interface/aba03.py:619` (`sem_comentarios_de_css`)) tira com "
         "ela os `/* … */` do CSS para "
         "conferir "
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "

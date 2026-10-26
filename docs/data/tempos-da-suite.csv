@@ -1089,8 +1089,6 @@ tests/unit/test_o_co_op_local_saiu.py,2110,medido
 tests/unit/test_o_codigo_de_src_tem_quem_o_chame.py,3173,medido
 tests/unit/test_o_codigo_nao_tem_narrador.py,6587,medido
 tests/unit/test_o_comecar_guarda_o_zero_de_cada_controle.py,1490,medido
-tests/unit/test_o_comentario_com_dois_pontos_so_vale_em_cima_de_atribuicao.py,21529,medido
-tests/unit/test_o_comentario_nao_termina_no_meio.py,4475,medido
 tests/unit/test_o_conectar_abre_inteiro_toda_vez.py,2940,medido
 tests/unit/test_o_conectar_e_um_interruptor.py,5780,medido
 tests/unit/test_o_conectar_pareia_no_adaptador_escolhido.py,1160,medido

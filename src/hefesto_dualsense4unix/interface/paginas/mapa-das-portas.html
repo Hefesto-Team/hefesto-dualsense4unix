@@ -6,8 +6,6 @@
 <title>Hefesto — o mapa das entradas</title>
 <style>
   :root {
-    /* Paleta Drácula — os tokens de scripts/paleta_da_casa.py, byte a byte.
-       O mockup tem de parecer parte do Hefesto, não um site sobre ele. */
     --color-paper:      #282a36;
     --color-paper-2:    #21222c;
     --color-paper-3:    #343746;
@@ -21,7 +19,6 @@
     --color-alerta:     #ff5555;
     --color-frio:       #8be9fd;
 
-    /* Pilha do sistema, como manda a casa: nada de fonte web, abre sem rede. */
     --font-corpo: ui-sans-serif, system-ui, "Cantarell", "Fira Sans", "Segoe UI", Roboto, sans-serif;
     --font-dado:  ui-monospace, "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", monospace;
 
@@ -40,10 +37,7 @@
   }
 
   * { box-sizing: border-box; }
-  /* A CAIXA DA JANELA — 24/09/2026, decisão de produto: «vira caixa da janela,
-     rolando por dentro». O recuo e o tamanho são os das abas (as três
-     linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */
-  :root { --fundo-da-pagina: #11121a; }  /* o fundo em volta, o do `topo.html` */
+  :root { --fundo-da-pagina: #11121a; }
   body {
     margin: 0; background: var(--fundo-da-pagina); color: var(--color-ink);
     font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.55;
@@ -61,20 +55,14 @@
   body{padding:var(--recuo-do-corpo)}
   .pagina{width:min(100%,1600px);height:var(--alt-janela);max-width:100%;max-height:calc(100dvh - var(--recuo-do-corpo) * 2)}
 
-  /* ─── cabeçalho ─────────────────────────────────────────── */
   .topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2xs) var(--space-sm);
           padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-rule); }
   .topo h1 { margin: 0; font-size: var(--text-xl); font-weight: 600; letter-spacing: -.01em; }
   .topo h1 em { color: var(--color-accent); font-style: normal; }
   .topo .nota { color: var(--color-ink-faint); font-size: var(--text-sm); margin-left: auto; }
-  /* A DATA NÃO PODE SER `.nota` — 11/09/2026. A folha do produto apaga toda
-     `.nota` (bilhete de projeto), e aqui isso deixava a página afirmando
-     «o arranjo de agora» sobre uma leitura congelada. A data é DADO da
-     página, então tem classe própria, que a folha do produto não esconde. */
   .topo .quando { color: var(--color-ink-faint); font-size: var(--text-sm); margin-left: auto;
                   font-family: var(--font-dado); }
 
-  /* ─── os três modos ─────────────────────────────────────── */
   .modos { display: flex; flex-wrap: wrap; gap: var(--space-2xs); margin-top: var(--space-md); }
   .modo {
     font: inherit; font-size: var(--text-sm); font-weight: 600;
@@ -86,9 +74,7 @@
   .modo:hover { background: var(--color-rule); }
   .modo:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
   .modo[aria-pressed="true"] { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 22%, var(--color-paper-3)); }
-  /* «Sugestões» é um modo como os outros: sem o verde de aviso. */
 
-  /* ─── o painel que muda com o modo ──────────────────────── */
   .painel { margin-top: var(--space-2xs); border: 1px solid var(--color-rule);
             border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-sm); }
   .painel > p.chamada { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; }
@@ -112,7 +98,6 @@
   .conta-caixa b { display: block; color: var(--color-ink); margin-bottom: .2rem; }
   .conta-caixa div { font-family: var(--font-dado); color: var(--color-ink-quiet); font-variant-numeric: tabular-nums; }
 
-  /* ─── a receita: os movimentos ──────────────────────────── */
   .receita { list-style: none; margin: 0; padding: 0; counter-reset: passo;
              display: flex; flex-direction: column; gap: var(--space-2xs); }
   .receita > li { counter-increment: passo; display: grid; grid-template-columns: 1.7rem minmax(0,1fr); gap: var(--space-2xs);
@@ -141,14 +126,12 @@
   .selo.espec    { color: var(--color-frio);   border-color: color-mix(in srgb, var(--color-frio) 45%, transparent); }
   .selo.derivado { color: var(--color-lacuna); border-color: color-mix(in srgb, var(--color-lacuna) 45%, transparent); }
 
-  /* ─── o palco ───────────────────────────────────────────── */
   .palco { display: grid; grid-template-columns: minmax(0,1fr) 268px; gap: var(--space-md); align-items: start; margin-top: var(--space-md); }
   @media (max-width: 900px) { .palco { grid-template-columns: 1fr; } }
   .faces { display: flex; flex-direction: column; gap: var(--space-md); }
   .face-cab { display: flex; align-items: baseline; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
-  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; } /* só a primeira letra é maiúscula */
+  .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; }
   .face-cab .quantas { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
-  /* a divergência do hub: uma linha a mais, sem culpa */
   .diverge { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-lacuna); }
   .edita .lido { font-size: var(--text-xs); color: var(--color-ink-quiet); }
   .edita .origem { font-size: var(--text-xs); color: var(--color-ink-quiet); }
@@ -160,7 +143,6 @@
   .chapa.fileira { display: grid; grid-template-columns: repeat(3, max-content); gap: .55rem var(--space-md); }
   @media (max-width: 640px) { .chapa.fileira, .chapa.grade-tras { grid-template-columns: max-content; } }
 
-  /* ─── um soquete ────────────────────────────────────────── */
   .soquete { display: flex; align-items: flex-start; gap: .45rem; }
   .num { flex: none; min-width: 1.5rem; height: 1.5rem; padding: 0 .3rem; border-radius: 99px;
          display: inline-grid; place-items: center; font-family: var(--font-dado); font-size: .6875rem;
@@ -188,7 +170,6 @@
   .rotulo .nome { display: block; font-weight: 600; }
   .rotulo .caminho { display: block; font-family: var(--font-dado); color: var(--color-ink-faint); font-size: .6875rem; }
   .rotulo .vazio { color: var(--color-ink-faint); font-style: italic; }
-  /* o nome que o usuário deu à entrada: uma linha só, com reticências */
   .rotulo .nomeada { display: block; font-weight: 700; white-space: nowrap;
                      overflow: hidden; text-overflow: ellipsis; }
   .rotulo .veredito { display: block; font-weight: 600; }
@@ -214,7 +195,6 @@
   .filho { margin-left: 2rem; padding-left: var(--space-sm); border-left: 2px dashed var(--color-rule); margin-top: .3rem; }
   .filho .cabo { font-size: var(--text-xs); color: var(--color-ink-faint); margin-bottom: .2rem; }
 
-  /* ─── bandeja ───────────────────────────────────────────── */
   .bandeja { border: 1px solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-xs); }
   .bandeja h3 { margin: 0 0 var(--space-3xs); font-size: var(--text-sm); font-weight: 600; }
   .bandeja p.ajuda { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-ink-faint); }
@@ -240,7 +220,6 @@
   .amostra.r-ev { background: transparent; border: 2px solid var(--color-lacuna); }
   .amostra.r-ru { background: transparent; border: 2px solid var(--color-alerta); }
 
-  /* ─── desempenho ────────────────────────────────────────── */
   .secao { margin-top: var(--space-lg); }
   .secao > h2 { margin: 0 0 var(--space-2xs); font-size: var(--text-base); font-weight: 600; color: var(--color-accent); }
   .secao > .sub { margin: 0 0 var(--space-sm); font-size: var(--text-sm); color: var(--color-ink-faint); max-width: 70ch; }
@@ -293,23 +272,16 @@
   .rolar { overflow-x: auto; }
 </style>
 <style>
-  /* O MAPA DAS CONEXÕES — 26/09/2026, os pedidos olhando a página. */
-  /* «a cor de fonte de qualquer cinza que tem na página muda pra branco» */
   :root { --color-ink-quiet: #f8f8f2; --color-ink-faint: #f8f8f2; }
   .pagina { --texto-suave: #f8f8f2; --texto-mudo: #f8f8f2; }
-  /* as bordas que usavam o cinza continuam cinza: só a LETRA ficou branca */
   .plug[data-v="serve"], .plug[data-v="fica"] { box-shadow: 0 0 0 2px #6272a4; }
   .chip:hover { border-color: #6272a4; }
-  /* o cartão que já tem entrada não se apaga mais: o número diz que ele tem lugar */
   .chip[data-alocado="1"] { opacity: 1; }
-  /* «Examinar» mora no cabeçalho, onde estava a data da leitura */
   .topo .examinar { margin-left: auto; align-self: center; display: inline-flex;
                     align-items: center; gap: .4rem; }
   .topo .examinar span { pointer-events: none; }
-  /* a linha do exemplo já empurra o «Examinar» para a direita */
   .topo .quando + .examinar { margin-left: 0; }
   .painel span.fina { margin-left: .8rem; font-weight: 400; font-size: var(--text-sm); }
-  /* o editor da entrada: o que tem nela e a velocidade dela */
   .palco { position: relative; }
   .rotulo .decl { display: inline-block; margin: .15rem 0 0 .4rem; padding: 0 .4rem;
                   border: 1px solid var(--color-accent); border-radius: var(--radius-sm);
@@ -329,29 +301,21 @@
   .edita .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem; }
   .edita .seg.dois { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edita .seg .escolha { justify-content: center; text-align: center; }
-  /* a escolha que não cabe: cinza, com a razão na dica, e responde (D-03) */
   .edita .seg .escolha.apagado { opacity: .45; cursor: not-allowed; }
   .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }
-  /* o nome da entrada: o campo tem fundo, cor e borda próprios — no
-     WebKitGTK o campo sem eles nasce com as cores do sistema */
   .edita .campo-nome { font: inherit; font-size: var(--text-sm); width: 100%;
                          box-sizing: border-box; padding: .35rem .5rem;
                          background: var(--color-paper); color: var(--color-ink);
                          border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
   .edita .campo-nome:focus { outline: none; border-color: var(--color-accent); }
-  /* a lista da troca: fundo, cor e borda próprios (no WebKitGTK o que não
-     os tem nasce cinza) */
   .edita .troca { font: inherit; font-size: var(--text-sm); width: 100%;
                   box-sizing: border-box; padding: .3rem .4rem;
                   background: var(--color-paper); color: var(--color-ink);
                   border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
   .edita .troca option { background: var(--color-paper); color: var(--color-ink); }
-  /* O NOME COMPRIDO NO CABEÇALHO — 26/09/2026: a face desce inteira para a
-     linha de baixo quando não cabe ao lado do nome, e o «Fechar» fica no canto. */
   .edita-cab { flex-wrap: wrap; position: relative; padding-right: 2.2rem; row-gap: .1rem; }
   .edita-cab span { white-space: nowrap; }
   .edita-cab .fecha { position: absolute; top: 0; right: 0; }
-  /* O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 */
   .rotulo .ap-btn { display: inline-block; max-width: 100%; margin: 0; padding: .06rem .45rem;
                     font: inherit; font-weight: 600; text-align: left; cursor: pointer;
                     background: var(--color-paper-3); border: 1px solid var(--color-rule);
@@ -374,7 +338,6 @@
   .edita .etq { padding: .12rem .45rem; font-family: var(--font-dado); font-size: .6875rem;
                 border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
   .edita .etq.medida { border-style: dashed; }
-  /* A FAIXA DELE (desenho 2): pintado é o canal bom; vazio, com a marca de quem o tomou */
   .edita .faixa-dele { display: grid; grid-template-columns: repeat(79, 1fr); gap: 1px;
                        height: .75rem; }
   .edita .faixa-dele i { display: block; border-radius: 1px; background: transparent;
@@ -417,19 +380,12 @@
   .aviso-uma-linha .aviso-fecha { margin-left: auto; min-width: 0; width: 1.8rem; height: 1.8rem; padding: 0; }
   .aviso-detalhe { margin-top: .6rem; }
   .leitura-da-maquina { margin: .5rem 0 0; font-size: var(--text-xs); line-height: 1.5; }
-  /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» entra na linha
-     do título, os três modos têm a mesma largura, as colunas de entradas têm a
-     mesma largura em todas as chapas, e a bandeja começa na altura da primeira
-     chapa e acompanha a rolagem. */
   .topo { padding-left: 0 !important; align-items: center; }
   .topo > a[href="08-conexoes.html"] { position: static !important; }
   .modos { display: grid; grid-template-columns: repeat(3, 8.5rem); }
   .modos .modo { justify-content: center; text-align: center; }
-  /* AS ENTRADAS SE ARRUMAM SOZINHAS — 01/10/2026 (pedido d): quantas colunas de
-     17rem couberem, nas três formas; a Frente vira uma linha, e o hub, duas. */
   .chapa.coluna, .chapa.grade-tras, .chapa.fileira {
     display: grid; grid-template-columns: repeat(auto-fill, 17rem); gap: .55rem var(--space-md); }
-  /* A LEGENDA SOBE para a linha dos modos, à direita (pedido e) */
   .pagina > .corpo { display: grid; grid-template-columns: auto minmax(0, 1fr);
                      column-gap: var(--space-md); align-content: start; }
   .pagina > .corpo > * { grid-column: 1 / -1; }
@@ -437,9 +393,6 @@
   .pagina > .corpo > .legenda { grid-column: 2; grid-row: 1; justify-self: end;
                                 align-self: center; margin-top: 0; }
   .palco > .bandeja { margin-top: 29px; position: sticky; top: .5rem; }
-  /* «ATUALMENTE CONECTADO» ROLA POR DENTRO e acaba no fim da última face (pedido a).
-     Só com o palco em duas colunas: numa coluna só a bandeja tem linha própria,
-     e a altura da linha seria zero. */
   @media (min-width: 901px) {
     .palco > .bandeja { position: static; align-self: stretch; height: 0;
                         min-height: calc(100% - 29px); box-sizing: border-box;
@@ -449,12 +402,9 @@
   @media (max-width: 900px) {
     .palco > .bandeja .lista { max-height: 22rem; overflow-y: auto; }
   }
-  /* O ADICIONAR NUMA LINHA: a pergunta e as escolhas lado a lado (pedido g) */
   .painel > #chamada-mao { display: inline-block; margin: 0 var(--space-sm) 0 0;
                            vertical-align: middle; }
   .painel > #chamada-mao + .escolhas { display: inline-flex; vertical-align: middle; }
-  /* O «?» DA CASA: a razão de cada movimento das Sugestões mora nele (pedido f).
-     O `p.ajuda` da bandeja é outra peça: a regra mora só dentro da receita. */
   .receita .ajuda { display: inline-grid; place-items: center; width: 17px; height: 17px;
                     margin-left: .45rem; border-radius: 50%; border: 1px solid var(--color-rule);
                     color: var(--color-ink-quiet); font-size: 11px; font-weight: 400;
@@ -479,7 +429,6 @@
     .pagina > .corpo > .legenda { grid-column: 1 / -1; grid-row: auto; justify-self: start; }
   }
 
-  /* ══ 05/10/2026, conjunto «Conexões 3»: o desenho aprovado do Mapa ══ */
   .pagina > .topo { padding-top: 6px; padding-bottom: 6px; margin-bottom: 6px; }
   .painel { padding: 8px 14px; }
   .palco { margin-top: 8px; }
@@ -498,7 +447,6 @@
   .bandeja .chip { padding-top: 4px; padding-bottom: 4px; }
   .bandeja .chip .num { height: 1.2rem; min-width: 1.2rem; margin-top: 0; }
   @media (min-width: 901px) { .palco > .bandeja { height: auto; min-height: 0; align-self: start; } }
-  /* o painel único: o aparelho e a entrada, lado a lado */
   #edita.painel-unico { position: fixed; z-index: 80; width: 540px; max-width: calc(100vw - 24px); padding: 0; gap: 0;
                         background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: 14px;
                         box-shadow: 0 18px 48px rgba(0,0,0,.6); }
@@ -545,17 +493,10 @@
   .bandeja .chip.recuado { margin-left: 1rem; width: calc(100% - 1rem); }
   .palco > .bandeja .lista { gap: 3px; }
   .bandeja .chip { padding-top: 2px; padding-bottom: 2px; }
-  /* O tipo e o nome numa linha só; o enlace, na de baixo. Em duas linhas, a cadeia de nove
-     aparelhos passava das faces e o corpo do Sugestões rolava 47 px (16/10/2026). */
   .bandeja .chip .txt { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .45rem; }
   .bandeja .chip .txt span.enlace { flex-basis: 100%; }
-  /* O tipo e o nome cortam com reticências em vez de quebrar: o nome inteiro está na
-     dica do chip. A 940 px (a largura mínima da aba) o chip do extensor quebrava em
-     duas linhas. */
   .bandeja .chip .txt > b { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden;
                             text-overflow: ellipsis; white-space: nowrap; }
-  /* Com o nome do aparelho ao lado, o título deixa lugar para ele na mesma linha: sem isto
-     o nome que a pessoa deu, longo, toma a linha e empurra o do aparelho para baixo. */
   .bandeja .chip .txt > b:has(+ span:not(.enlace)) { max-width: calc(100% - 2.95rem); }
   .bandeja .chip .txt > span:not(.enlace) { flex: 1 1 0; min-width: 2.5rem; overflow: hidden;
                             text-overflow: ellipsis; white-space: nowrap; }
@@ -588,17 +529,9 @@
   }
 </style>
 <style data-todo-css="sem-rolagem">
-  /* O corpo rolava 5 px em 1212x809 (já rolava 8 no publicado): o pé de 40 px vira 32. */
   .pagina > .corpo { padding-bottom: 32px }
 </style>
 <style id="base-comum">
-/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
-   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
-   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
-
-/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
-      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell.
-      A caixa `.da-base` é só a do desenho: na janela do produto a dona do `#hef-dica` é a camada do piloto. */
 [data-dica]{cursor:help}
 button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
 #hef-dica.da-base{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
@@ -606,12 +539,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.da-base.visivel{opacity:1;transform:none}
-/* O foco num título, rótulo ou frase com dica (o `tabindex` vem da base) aparece com o mesmo contorno do Modo automático. */
 [data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 
-/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
-      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
-      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
 .modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
   border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
   font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
@@ -623,7 +552,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 .governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
 
-/* 3. O menu do botão direito, no visual das abas. */
 .menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
   background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
@@ -637,11 +565,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 <div class="pagina">
 
   <header class="topo" style="position:relative;padding-left:132px">
-    <!-- O BOTÃO DE VOLTAR — 30/08/2026, pergunta de produto: "ok temos um botão pra vir
-         pra cá. Mas e o botão pra voltar?". Não havia nenhum href de saída nesta
-         página. O destino não é chute: `grep -l mapa-das-portas.html` devolve UMA
-         aba, a Conexões — e ela existe ao lado desta cópia, não ao lado da
-         origem congelada, que tem três arquivos e nenhuma aba. -->
     <a href="08-conexoes.html" data-dica="Volta para a aba Conexões"
        style="position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
               padding:5px 11px;border-radius:7px;text-decoration:none;
@@ -683,12 +606,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 (function () {
   "use strict";
 
-  /* ══ 1. O ARRANJO QUE ESTA PÁGINA DESENHA ════════════════════════════
-     O exemplo abaixo é a leitura de 24/08/2026 de um gabinete só, e é o
-     que se vê enquanto ninguém entregar outra. O produto entrega a desta
-     máquina por `window.hefestoArranjo`, lá embaixo, e o cabeçalho diz
-     qual das duas está na tela. Quem escreve este bloco é
-     `interface/pagina_do_mapa.CENSO_DE_EXEMPLO`.                        */
   var EXEMPLO = {
     "quando": "leitura de exemplo · 24/08/2026",
     "aparelhos": [
@@ -716,46 +633,21 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     ]
   };
 
-  /* `fonte` é o arranjo em cena: nasce no exemplo acima e é trocado
-     inteiro por `window.hefestoArranjo(dado)`. `CAMPOS_DO_ARRANJO` é o
-     que uma entrega tem de trazer para ser aceita. */
   var CAMPOS_DO_ARRANJO = ["quando", "aparelhos", "faces", "mapa", "leituras"];
   var fonte = EXEMPLO;
   var APARELHOS = fonte.aparelhos;
 
-  /* ══ 2. AS FACES — quantas entradas cada face do gabinete tem ════════
-     Isto não se mede: nenhuma leitura de `/sys` sabe em que face do metal
-     o buraco fica. Quem declara é quem olha o gabinete. Ver o rodapé.   */
   var FACES = fonte.faces;
 
-  /* ══ 2.1 O MAPA DECLARADO: entrada -> caminho de barramento ══════════
-     Esta é a virada de modelo que faz a re-identificação existir. O mapa NÃO
-     guarda "entrada 9 tem um Bluetooth" — guarda "entrada 9 é o caminho
-     3-1.2". Qual aparelho está lá é DERIVADO da leitura de agora, pelo
-     caminho. Assim, quando ela troca um aparelho de lugar, o caminho dele
-     muda, o mapa continua valendo, e o produto reconhece sozinho quem foi
-     para onde — sem ela declarar nada de novo.                             */
   var MAPA = fonte.mapa;
 
-  /* ══ 2.2 AS DUAS LEITURAS ════════════════════════════════════════════
-     Duas leituras de `/sys` separadas por um "Reexaminar": é assim que o
-     produto sabe quem mudou de lugar. No exemplo são as de 20h15 e 22h50
-     de 24/08/2026; com o censo vivo são as que a máquina de quem abriu
-     entregou.                                                           */
   var LEITURAS = fonte.leituras;
 
-  /* O MAPA MOSTRA SEMPRE A MESA DE AGORA.
-     A primeira versão abria na leitura antiga para dar o "antes e depois", e
-     ela abriu a página horas depois de mexer nos cabos e viu o Wi-Fi no hub,
-     de onde ela mesma o tinha tirado. Estado velho como padrão é o defeito
-     F7 desta casa: a tela afirma com confiança uma coisa que não é mais
-     verdade. O "antes" é o termo de COMPARAÇÃO do reexame, nunca o estado. */
   var leituraAtual = "agora";
   var leituraAnterior = "antes";
   var MAPA_ORIGINAL = null;
   function leitura() { return LEITURAS[leituraAtual].caminho; }
 
-  /* entrada -> id do aparelho, DERIVADO: junta o mapa com a leitura */
   function alocacaoDerivada() {
     var out = {}, cam = leitura();
     Object.keys(MAPA).forEach(function (porta) {
@@ -764,21 +656,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return out;
   }
 
-  /* ══ 2.3 A REGIÃO, DEDUZIDA DO BARRAMENTO ════════════════════════════
-     O produto não sabe em qual ENTRADA um aparelho novo está — mas sabe se
-     ele pende do hub ou está direto no gabinete, porque o caminho de
-     barramento conta a topologia. Isso reduz o palpite de dezesseis entradas
-     para sete ou oito, e é DEDUÇÃO, não chute: `3-1.1.1` pende de `3-1`, que
-     é o hub. Esconder o aparelho por não saber a entrada exata é jogar fora
-     a metade da informação que existe.
-
-     O lado USB 3.0 do mesmo hub físico aparece noutro barramento (`4-1.x`
-     contra `3-1.x`) porque hub 3.0 é dual-bus — mesmo metal, dois números.  */
   function regiaoDoCaminho(c) {
-    /* O HUB É QUEM TEM A CLASSE DE HUB — 26/09/2026. Aqui se perguntava
-       pelo aparelho de id "hub", que só o exemplo tem: no produto a
-       resposta era sempre «não sei», e o reexame dizia «está direto no
-       gabinete» de quem estava no hub. */
     var cam = leitura();
     var hubs = APARELHOS.filter(function (a) { return a.classe === "hub" && cam[a.id]; })
       .map(function (a) { return cam[a.id]; });
@@ -790,7 +668,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     }) ? "hub" : "pc";
   }
 
-  /* aparelhos que a leitura vê e o mapa não sabe onde estão */
   function semEntrada() {
     var cam = leitura(), conhecidos = {};
     Object.keys(MAPA).forEach(function (p) { conhecidos[MAPA[p]] = p; });
@@ -802,7 +679,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       return { ap: a, caminho: c, regiao: regiaoDoCaminho(c) };
     });
   }
-  /* as entradas candidatas de uma região, ainda livres */
   function candidatas(regiao) {
     var usadas = {};
     Object.keys(MAPA).forEach(function (n) { usadas[n] = true; });
@@ -842,51 +718,29 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   MAPA_ORIGINAL = Object.assign({}, MAPA);
   var alocacao = alocacaoDerivada();
-  var modo = "mesa";       /* mesa | ideal | mao */
+  var modo = "mesa";
   var naMao = null;
   var segurando = null;
 
   function acha(id) { for (var i = 0; i < APARELHOS.length; i++) if (APARELHOS[i].id === id) return APARELHOS[i]; return null; }
   function portaDeEm(mapa, id) { for (var k in mapa) if (mapa[k] === id) return k; return null; }
-  /* SEMPRE derivado da leitura viva. A versão que lia um `alocacao` cacheado
-     dava resposta VELHA depois de um reexame — o dongle que ela moveu ainda
-     era relatado na entrada antiga. Cache de estado derivado é a fonte do
-     defeito, não a otimização. */
   function portaDe(id) { return portaDeEm(alocacaoDerivada(), id); }
   function todasPortas() { var r = []; FACES.forEach(function (f) { f.portas.forEach(function (p) { r.push(p); if (p.filho) r.push(p.filho); }); }); return r; }
   function porNum(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) if (t[i].n === String(n)) return t[i]; return null; }
-  /* O número de entrada que o MODELO conhece, ou null: o que vem de um atributo do DOM só
-     entra no estado por aqui, e o que não é entrada vira nada. */
   function entradaConhecida(n) { var p = porNum(n); return p ? p.n : null; }
-  /* DONO ÚNICO de "qual o caminho deste aparelho AGORA".
-     A bandeja lia `a.caminho` — o campo gravado na constante — enquanto a
-     faixa lia a leitura viva. Duas verdades na mesma tela sobre a mesma
-     coisa: depois de um reexame a bandeja publicava o caminho de ANTES.
-     O campo da constante vira só semente da primeira leitura.              */
   function caminhoDe(id) { return leitura()[id] || null; }
 
   function classeDe(id) { var a = acha(id); return a ? a.classe : null; }
   function ehRadio(c) { return c === "bt" || c === "wifi" || c === "teclado" || c === "mouse"; }
 
-  /* Um dongle na entrada-filha ocupa também a entrada-mãe (o extensor está nela). */
   function maeDe(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) if (t[i].filho && t[i].filho.n === String(n)) return t[i]; return null; }
   function ocupada(mapa, p) {
     if (mapa[p.n]) return true;
-    if (p.filho && mapa[p.filho.n]) return true;          /* a mãe some quando o filho é usado */
-    var m = maeDe(p.n); if (m && mapa[m.n]) return true;  /* o filho some quando a mãe é usada */
+    if (p.filho && mapa[p.filho.n]) return true;
+    var m = maeDe(p.n); if (m && mapa[m.n]) return true;
     return false;
   }
 
-  /* ══ 3. O CÁLCULO — o melhor arranjo, e por quê ══════════════════════
-     Cada porta ganha uma NOTA para cada aparelho, e o aparelho vai para a
-     porta de maior nota. Duas regras salvam a credibilidade do conselho:
-
-       · ficar parado vale um ponto de bônus — entre portas equivalentes,
-         a que já está ocupada vence, e o produto não manda mexer à toa;
-       · só vira MOVIMENTO se a porta nova tiver nota MAIOR que a de hoje.
-
-     Não é otimizador global: é nota explicável, porque conselho que a
-     pessoa não entende ela não segue.                                    */
   var REGRAS = {
     teclado: [
       { n: 100, quando: function (p) { return p.onde === "pc"; }, peso: "essencial", selo: "espec",
@@ -938,7 +792,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     ]
   };
 
-  /* separação entre dongles: quanto mais longe do irmão mais próximo, melhor */
   function bonusSeparacao(p, jaPostos) {
     if (!jaPostos.length || p.pos === undefined) return { n: 0 };
     var d = Math.min.apply(null, jaPostos.map(function (q) { return Math.abs((q.pos || 0) - p.pos); }));
@@ -958,7 +811,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       if (r.n > 0) razoes.push({ selo: r.selo, txt: r.txt });
       if (r.peso === "essencial" && r.n > 0) peso = "essencial";
     });
-    /* penalidades que não casaram viram exigências satisfeitas: também explicam */
     (REGRAS[ap.classe] || []).forEach(function (r) {
       if (r.n >= 0 || r.quando(porta, ctx)) return;
       razoes.push({ selo: r.selo, txt: r.txt });
@@ -971,11 +823,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return { n: n, razoes: razoes, peso: peso };
   }
 
-  /* O HUB DESENHADO — 26/09/2026. A face que o desenho monta de um hub
-     declarado (`daEntrada`) tem entradas que ninguém leu: o número e a
-     quantidade são do desenho. A Sugestão nunca manda um aparelho para
-     dentro delas. Medido: com o dongle direto na 5 e o hub declarado
-     na 5, ela mandava o dongle «da Entrada 5 para a 5.1». */
   function doHubDesenhado(p) {
     return FACES.some(function (f) {
       return !!f.daEntrada && f.portas.some(function (x) { return x === p || x.filho === p; });
@@ -986,22 +833,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     op = op || {};
     var bonusParado = op.bonusParado === undefined ? 1 : op.bonusParado;
     var proibida = op.proibir || function () { return false; };
-    alocacao = alocacaoDerivada();   /* nunca planejar sobre leitura velha */
+    alocacao = alocacaoDerivada();
     var plano = {}, motivo = {};
-    /* A FILEIRA «SEM LUGAR» NÃO ENTRA NO PLANO — 04/10/2026: sem o lugar (a face) o motor não
-       tem o que julgar, então quem está nela fica onde está e ninguém é mandado para lá. */
     APARELHOS.forEach(function (a) { if (aparelhoSemLugar(a.id)) plano[portaDe(a.id)] = a.id; });
     var portas = todasPortas().filter(function (p) { return !proibida(p) && !doHubDesenhado(p) && !semLugar(p); });
-    /* ordem de decisão: quem tem exigência dura escolhe antes */
     var ordem = ["hub", "teclado", "wifi", "bt", "mouse", "webcam"];
     var jaPostos = [];
-    /* O APARELHO QUE O PLANO NÃO SABE ARRUMAR FICA ONDE ESTÁ — 04/10/2026,
-       AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01. Um aparelho de classe fora da
-       ordem de decisão (um pendrive, uma placa que ninguém classificou) nunca
-       entra no plano; sem esta reserva a entrada dele valia como livre, outro
-       aparelho a recebia e o mapa dizia «sai daqui» sem destino. A entrada
-       fica com ele, com o motivo «fica». É a gêmea de
-       `arranjo_da_mesa._o_que_o_plano_nao_sabe_arrumar_fica`. */
     APARELHOS.forEach(function (a) {
       if (ordem.indexOf(a.classe) !== -1) return;
       var hoje = portaDe(a.id);
@@ -1018,15 +855,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         var melhor = null, melhorNota = null;
         cands.forEach(function (p) {
           var nota = notaDe(ap, p, plano, jaPostos);
-          /* bônus de ficar parado: só desempata, nunca troca uma escolha melhor */
           var efetiva = nota.n + (p.n === atual ? bonusParado : 0);
           if (melhor === null || efetiva > melhorNota.efetiva) { melhor = p; melhorNota = { nota: nota, efetiva: efetiva }; }
         });
         if (!melhor) return;
         plano[melhor.n] = ap.id;
-        /* Se a porta de hoje foi tomada por outro aparelho no plano, o
-           movimento é FORCADO — nao ha "ficar onde esta" para comparar, e
-           esconde-lo faria o mapa e a receita discordarem na tela. */
         var tomada = atual && plano[atual] && plano[atual] !== ap.id;
         var notaAtual = (atual && !tomada) ? notaDe(ap, porNum(atual), plano, jaPostos).n : -Infinity;
         var razoes = melhorNota.nota.razoes.slice();
@@ -1043,11 +876,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       });
     });
 
-    /* Passe final: aparelhos INTERCAMBIÁVEIS (mesma classe e mesmo modelo)
-       não têm por que trocar de lugar entre si. Se um deles já está numa
-       das portas de destino, ele fica nela — o conjunto de portas é o mesmo,
-       e cada troca evitada é um movimento a menos que ela precisa fazer.
-       Sem isto o plano mandava mover dois UB500 idênticos entre a 9 e a 15a. */
     var porModelo = {};
     APARELHOS.forEach(function (a) {
       var k = a.classe + "|" + a.nome;
@@ -1067,7 +895,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       pendentes.forEach(function (a) { novo[a.id] = sobram.shift(); });
       destinos.forEach(function (d) { delete plano[d]; });
       grupo.forEach(function (a) { if (novo[a.id]) plano[novo[a.id]] = a.id; });
-      /* o motivo acompanha a porta, não o aparelho: recalcula para quem mudou */
       grupo.forEach(function (a) {
         var p = novo[a.id]; if (!p) return;
         var atual = portaDe(a.id);
@@ -1086,37 +913,20 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return { plano: plano, motivo: motivo };
   }
 
-  /* A ÚNICA regra de "isto vira ordem de serviço", e ela tem UM DONO. Ela
-     morava dentro de receita(), e o mapa — que sai de planejar() — não a
-     consultava: nas variantes que PROÍBEM a entrada de hoje o desenho mostrava
-     o aparelho no lugar novo e a receita não mandava mexer, e quem olhava a
-     tela via o aparelho noutro lugar SEM instrução nenhuma. Agora as duas
-     beiras perguntam a mesma coisa aqui. D-MAPA-SEM-RECEITA, 25/08/2026.      */
   function receitaManda(de, para, m) {
     if (!para || de === para) return false;
-    /* quem ainda não tem lugar no mapa entra sempre: não há "ficar onde está"
-       para comparar. Quem já tem lugar só entra se o movimento MELHORA. */
     return !de || (!!m && m.ganho > 0);
   }
 
-  /* A frase que a receita diz quando a variante tirou do tabuleiro a entrada em
-     que o aparelho está hoje — o único caso em que ele sai de um lugar bom sem
-     ganho nenhum, e sem esta linha a ordem de serviço não teria porquê. */
   var PORQUE_A_VARIANTE_TIROU = "esta opção não usa a {de}, onde ele está hoje";
 
-  /* D-MAPA-SEM-RECEITA: se não há ordem, o mapa não move nada. Roda DEPOIS do
-     passe dos intercambiáveis, que ainda troca destinos entre irmãos.
-     Duas entradas de hoje NÃO aceitam o aparelho de volta, e nas duas o
-     movimento vira ORDEM em vez de sumir do mapa: a que a variante proibiu
-     (devolvê-lo desenharia um dongle no extensor numa opção chamada "sem o
-     extensor") e a que outro aparelho tomou.                               */
   function oMapaSoMoveOQueAReceitaManda(plano, motivo, jaPostos, proibida) {
     APARELHOS.forEach(function (a) {
       var de = portaDe(a.id), para = portaDeEm(plano, a.id);
       if (!de || !para || de === para) return;
       if (receitaManda(de, para, motivo[a.id])) return;
       var pd = porNum(de);
-      if (!pd) return;                 /* entrada declarada que não existe em face nenhuma */
+      if (!pd) return;
 
       delete plano[para];
       var tirada = !!proibida(pd);
@@ -1139,10 +949,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     });
   }
 
-  /* ══ 4. A RECEITA: a diferença entre o que está e o que devia ════════
-     Só entra aqui o que MELHORA. Aparelho que já está numa porta tão boa
-     quanto a melhor candidata fica onde está, e não vira movimento — e o mapa
-     pergunta à MESMA função, para os dois nunca discordarem na tela.       */
   function receita(op) {
     var r = planejar(op), movs = [];
     APARELHOS.forEach(function (a) {
@@ -1171,7 +977,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         linhas: linhas
       });
     });
-    /* os essenciais primeiro, e dentro deles o de maior ganho */
     movs.sort(function (x, y) {
       if (x.essencial !== y.essencial) return x.essencial ? -1 : 1;
       if (x.ganho === y.ganho) return 0;
@@ -1195,7 +1000,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return { g: "o", n: a.tipo.toLowerCase() };
   }
 
-  /* ══ 5. O julgamento por porta, no modo "estou segurando" ════════════ */
   function superspeedNoHub() {
     var p = portaDe("wifi"); var pp = p && porNum(p);
     return !!(pp && pp.onde === "hub");
@@ -1248,11 +1052,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return null;
   }
 
-  /* ══ 4.1 AS VARIANTES ════════════════════════════════════════════════
-     Um arranjo só não serve: o melhor no papel pode ser impossível na mesa
-     — o cabo não alcança, o hub está longe, a entrada de trás é inacessível.
-     Cada variante é a MESMA regra com uma restrição declarada, e a tela diz
-     o que se perde em cada uma.                                            */
   var VARIANTES = [
     { id: "melhor", rotulo: "Ideal", op: {},
       desc: "Sem restrição: o arranjo que a regra escolhe quando tudo é possível." },
@@ -1268,8 +1067,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     for (var i = 0; i < VARIANTES.length; i++) if (VARIANTES[i].id === variante) return VARIANTES[i].op;
     return {};
   }
-  /* O QUE SE PERDE, em palavra. "437 pontos pior" não diz nada a ninguém;
-     a pessoa precisa saber O QUÊ fica pior, para decidir se aceita.        */
   function consequencias(op) {
     var pl = planejar(op).plano, out = [];
     var bts = APARELHOS.filter(function (a) { return a.classe === "bt"; })
@@ -1291,7 +1088,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return out;
   }
 
-  /* a nota total de um plano: só para ordenar as variantes entre si */
   function qualidade(op) {
     var r = planejar(op), t = 0, ja = [];
     APARELHOS.forEach(function (a) {
@@ -1303,12 +1099,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return t;
   }
 
-  /* ══ 4.2 A RE-IDENTIFICAÇÃO ══════════════════════════════════════════
-     Ela mexeu nos cabos. O caminho de barramento de quem mudou é outro; o
-     serial não. Comparando as duas leituras, o produto diz o que saiu de
-     onde — e, quando a entrada nova está declarada no mapa, ele diz para
-     onde, sem ela escrever nada.                                          */
-  /* a linha de "de onde eu sei" de cada aparelho que mudou de lugar */
   function linhaDoAchado(m, reconhecido) {
     var abre = '<li><span class="selo derivado">derivado</span><span>';
     if (reconhecido) {
@@ -1338,36 +1128,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return mudou;
   }
 
-  /* ══ 4.3 OS CONTROLES: onde cada um deve ficar para render 100% ══════
-     O bond do Bluetooth fica PRESO ao adaptador em que nasceu — o BlueZ não
-     reequilibra sozinho, e plugar outro dongle não move ninguém. Então quem
-     está em qual adaptador é escolha, e é escolha que decide se a mesa cheia
-     funciona. O produto sabe onde cada controle está: o `HID_PHYS` do uevent
-     do nó hidraw publica o MAC do adaptador, e abre como uid 1000, sem sudo.
-
-     A CONTA, medida (`integrations/dualsense_bt_audio.py:76-78`, A/B de 25/07/2026):
-       sem microfone .. 260,4 relatórios por segundo
-       com microfone .. 276,7  (o áudio NÃO abre canal novo: divide a fila)
-     Gatilho, rumble clássico, barra de luz, giroscópio e touch andam no MESMO
-     relatório HID e não somam pacote. O microfone soma, e a háptica pelo rádio
-     (0x32) e o alto-falante (0x35) também: vão em relatórios próprios.        */
-  /* O NÚMERO TEM UM DONO SÓ, e aí é `integrations/radio_da_mesa.py`, que tem
-     portão contra `docs/data/mapa-controles.csv`. Estas três linhas guardavam
-     260 / 277 / 1600 — a MESMA medição, arredondada. Agora são os números
-     exatos, iguais aos do Python byte a byte: 170,5 de entrada + 106,2 de áudio
-     = 276,7 com microfone. D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO, 25/08/2026. */
   var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;
 
-  /* fatia de segundo com vírgula, do jeito daqui: 830.0999999999999 não é número
-     que se mostre a ninguém. SÓ para a tela — a conta nunca arredonda. */
   function fatias(v) { return (Math.round(v * 10) / 10).toString().replace(".", ","); }
 
-  /* AS TRÊS FAIXAS, e elas são a régua que a casa já escreveu
-     (DESEMPENHO-A-CONTA-DE-SLOTS-01:147). A primeira versão desta tela conhecia
-     só DOIS estados — "folgada" para tudo abaixo de 1600 e "não cabe" acima — e
-     por isso dizia "Cabe, com folga" na configuração exata do público deste
-     produto: quatro controles num adaptador só, 1106,8 de 1600, que é 69,2%. A
-     régua da casa chama isso de APERTADA. Falso verde no caso que mais importa. */
   function faixa(usado) {
     var f = usado / SLOTS;
     if (f <= 0.60) return { nome: "Folgada",  classe: "folgada" };
@@ -1375,23 +1139,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return { nome: "Cheia", classe: "cheia" };
   }
 
-  /* ══ O PERFIL DE DESEMPENHO ══════════════════════════════════════════
-     Substitui os CINCO degraus do "Orçamento" de hoje, dos quais QUATRO não
-     fazem nada — medido em `core/rumble.py`: `_ORCAMENTO_COM_TETO` só casa
-     com "economia"; `balanceado`, `max`, `auto` e o não-declarado devolvem
-     `None`. E o teto alcança a vibração e mais nada, coisa que a própria
-     tela já confessa.
-
-     UMA decisão no lugar de muitas — mas o MICROFONE fica FORA do perfil,
-     de propósito. Ele é o único do grupo que capta a sala, e o mapa de
-     canais registra que ele nasce desligado por **privacidade e banda**, não
-     só banda. Perfil que liga microfone sozinho transforma uma escolha de
-     desempenho numa escolha de privacidade feita pelas costas.
-
-     O que cada perfil governa é o que custa BATERIA. E aqui está o buraco
-     honesto: **nenhum dos 178 ensaios desta casa mediu consumo por feature.**
-     Os números de bateria abaixo estão marcados como NÃO MEDIDO até alguém
-     pôr um controle carregado na mesa e cronometrar.                        */
   var PERFIS = [
     { id: "tudo", rotulo: "Tudo ligado",
       resumo: "Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.",
@@ -1410,10 +1157,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     for (var i = 0; i < PERFIS.length; i++) if (PERFIS[i].id === perfil) return PERFIS[i];
     return PERFIS[0];
   }
-  /* migração dos valores que já estão no disco dela, sem perder nada:
-     "economia" tinha teto e vira Bateria longa; os quatro que devolviam
-     None se comportavam igual e viram Tudo ligado — quatro nomes para um
-     comportamento só é o defeito, não a variedade.                          */
   var MIGRACAO = { economia: "bateria", balanceado: "tudo", max: "tudo",
                    auto: "tudo", "": "tudo", custom: "escolho" };
 
@@ -1429,13 +1172,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       });
   }
 
-  /* O ARRANJO DOS CONTROLES.
-     Regra que salva a credibilidade do conselho, a mesma do mapa: **ninguém
-     troca de adaptador à toa.** Trocar custa caro de verdade aqui — desfazer
-     o pareamento e parear de novo, com o controle na mão.
-     Então parte-se de onde cada um JÁ está, e só se move alguém quando isso
-     BAIXA a carga do adaptador mais cheio. Sem isso, o plano mandava trocar
-     três controles entre dongles idênticos, sem ganho nenhum.               */
   function planoDosControles() {
     var ads = adaptadores();
     if (!ads.length) return { ads: [], carga: {}, destino: {}, cabe: false, sobra: 0 };
@@ -1443,19 +1179,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     var carga = {}, destino = {};
     ads.forEach(function (a) { carga[a.id] = 0; });
 
-    /* 1. cada um fica onde está — se o adaptador dele ainda existe */
     var orfaos = [];
     vivos.forEach(function (c) {
       if (carga[c.onde] !== undefined) { destino[c.nome] = c.onde; carga[c.onde] += custo(c); }
       else orfaos.push(c);
     });
-    /* 2. quem perdeu o adaptador vai para o menos carregado */
     orfaos.forEach(function (c) {
       var m = ads[0];
       ads.forEach(function (a) { if (carga[a.id] < carga[m.id]) m = a; });
       destino[c.nome] = m.id; carga[m.id] += custo(c);
     });
-    /* 3. rebalanceia SÓ enquanto isso baixar o pico */
     for (var volta = 0; volta < vivos.length * 2; volta++) {
       var cheio = ads[0], vazio = ads[0];
       ads.forEach(function (a) {
@@ -1468,14 +1201,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       var c = cand[cand.length - 1];
       var picoAntes = carga[cheio.id];
       var picoDepois = Math.max(carga[cheio.id] - custo(c), carga[vazio.id] + custo(c));
-      if (picoDepois >= picoAntes) break;          /* não melhora: para */
+      if (picoDepois >= picoAntes) break;
       carga[cheio.id] -= custo(c); carga[vazio.id] += custo(c); destino[c.nome] = vazio.id;
     }
 
     var pico = Math.max.apply(null, ads.map(function (a) { return carga[a.id]; }));
-    /* quantos MAIS cabem: simula acrescentar até um adaptador estourar.
-       Dividir a folga total daria número maior e falso — controle não se
-       parte entre dois adaptadores. */
     var teste = {}, sobra = 0;
     ads.forEach(function (a) { teste[a.id] = carga[a.id]; });
     while (sobra < 32) {
@@ -1487,7 +1217,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return { ads: ads, carga: carga, destino: destino, cabe: pico <= SLOTS, sobra: sobra };
   }
 
-  /* ══ 6. DESENHO ══════════════════════════════════════════════════════ */
   function soqueteHTML(porta, ctx) {
     var h = "", ap = null, estado = "", vered = "", porque = "", problema = "";
 
@@ -1495,8 +1224,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       var idPlano = ctx.plano[porta.n], idAgora = alocacao[porta.n];
       ap = idPlano ? acha(idPlano) : null;
       if (idPlano && idPlano !== idAgora) {
-        /* SÓ O VEREDITO — 01/10/2026 (pedido f): de onde e para onde já estão
-           na lista de cima. */
         estado = "chega";
       } else if (!idPlano && idAgora) {
         ap = acha(idAgora); estado = "sai";
@@ -1519,9 +1246,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       + ensinaNaEntrada(porta)
       + (achado && alocacao[porta.n] === achado ? ' data-achado="1"' : "")
       + ' aria-label="' + titulo + '" title="' + titulo + '"></button><span class="rotulo">';
-    /* O NOME QUE O USUÁRIO DEU, na primeira linha do rótulo — cortado com
-       reticências, e inteiro na dica. O selo `.num` continua o número:
-       é o do metal. */
     var batismo = nomeDe(porta.n);
     if (batismo) h += '<span class="nomeada" title="' + emAtributo(batismo) + '">'
       + emAtributo(batismo) + '</span>';
@@ -1543,29 +1267,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return h;
   }
 
-  /* ══ O EDITOR DA ENTRADA — 26/09/2026 ══════════════════════════════════
-     Pedido: «ao clicar em um desses usb mapeados eu pudesse setar que tem
-     tal coisa lá. no caso o hub ou afins». E a velocidade é a outra metade: o
-     kernel só sabe se a entrada é USB 3.0 pelo par que a placa-mãe declara, e
-     ela pode corrigir o que o firmware diz. `DECLARADO` é o que o usuário disse nesta
-     página; gravar no `maquina.json` é do produto. */
   var DECLARADO = {};
   var editando = null;
-  /* O NOME DA ENTRADA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D1). Pedido
-     dela: «me referi as portas renomear». O nome é da POSIÇÃO, e quem o
-     compõe é o Python (`utils/rotulo_da_entrada`): o produto entrega os
-     `rotulos` no arranjo. A palavra de reserva é a do dono, que o gerador
-     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */
   var PALAVRA_DA_ENTRADA = "Entrada";
   var PALAVRA_NA_FRASE = "entrada";
   var MAXIMO_DO_NOME = 24;
-  /* o nome da face de um hub declarado, no disco: o do dono */
   var FACE_DO_HUB = "Hub na Entrada {numero}";
   var ROTULOS = {};
   var HUB_LIDO = {};
   var USB_DE = {};
   var FRASES_DA_ORIGEM = {"placa": "É o que a placa-mãe diz.", "declarada": "É o que você disse.", "aparelho": "Um aparelho está nela a 5 Gbps.", "": "A placa-mãe não diz. Diga você."};
-  /* a origem só se diz no produto: no exemplo ninguém mediu nada */
   function origemDaVelocidade(n) {
     if (!doProduto() || !podeGravar(n)) return "";
     var frase = FRASES_DA_ORIGEM[USB_DE[String(n)] || ""];
@@ -1577,7 +1288,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return nomeDe(n) || PALAVRA_DA_ENTRADA + " " + n;
   }
   function nomeDe(n) { return (DECLARADO[n] || {}).nome || ""; }
-  /* o sintagma sem artigo, para o meio da frase: «Entrada 3», «entrada Meio» */
   function naFraseDe(n) {
     var r = ROTULOS[String(n)];
     if (r) return r.naFrase;
@@ -1587,16 +1297,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   function emAtributo(t) {
     return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
-  /* O TEXTO de um pedaço de HTML, lido pelo parser do navegador: nenhuma regex adivinha onde a
-     tag fecha, e nada executa (o DOMParser não roda script nem carrega imagem). */
   function soTexto(t) {
     return new DOMParser().parseFromString(String(t), "text/html").body.textContent;
   }
-  /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-
-     O-BURACO). Pedido: «trocar elas de lugar no mapeamento». Só nas
-     entradas que gravam, sem as pontas; cada opção diz o nome, a face e o que
-     está nela. O produto troca o buraco das duas, e a página repinta pelo
-     disco. */
   function faceDe(m) {
     var f = FACES.filter(function (x) {
       return x.portas.some(function (q) { return q.n === m || (q.filho && q.filho.n === m); });
@@ -1623,15 +1326,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       + ' maxlength="' + MAXIMO_DO_NOME + '" value="' + emAtributo(nomeDe(n)) + '"'
       + ' placeholder="' + emAtributo(PALAVRA_DA_ENTRADA + " " + n) + '" aria-label="Nome"></div>';
   }
-  /* O EDITOR GRAVA — 26/09/2026. `GRAVA` são as entradas do mapa de quem abre,
-     entregues pelo produto em `hefestoArranjo`; só nelas o botão leva o gesto
-     ao disco. No exemplo e nas entradas que o desenho monta do que ela
-     declarou (as do hub, a ponta do extensor), o editor fica só na tela. */
   var GRAVA = [];
-  /* A PONTA DO EXTENSOR GRAVA — 26/09/2026. A ponta de um extensor
-     declarado numa entrada que grava é a entrada-filha dele no disco
-     (`entrada_a_entrada.ponta_do_extensor`): o número puro mais «a». As
-     do hub desenhado (`5.1`…) não cabem no disco, e não gravam. */
   function podeGravar(n) {
     n = String(n);
     if (GRAVA.indexOf(n) !== -1) return true;
@@ -1643,13 +1338,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (!podeGravar(n)) return "";
     return ' data-gesto="' + gesto + '" data-entrada="' + n + '"';
   }
-  /* O PLUGUE QUE APRENDE — 26/09/2026, D-2609-ENSINAR-GRAVA-O-NO. Com um
-     aparelho fora do mapa na mão, a entrada livre do mapa dela leva o
-     gesto `entrada-ensinar` e o caminho em que a página lê o aparelho
-     agora; o produto grava o nó dele na entrada. Só as do disco
-     (`GRAVA`): a ponta e o hub desenhado não têm nó a gravar. E só
-     as que acendem: a ocupada e a de «outra região» (o aparelho
-     direto no PC não está num buraco do hub) ficam sem o gesto. */
   function ensinaNaEntrada(porta) {
     if (!segurando || !doProduto() || GRAVA.indexOf(String(porta.n)) === -1) return "";
     var c = leitura()[segurando], j = julgar(porta);
@@ -1665,9 +1353,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     d[campo] = valor;
     if (campo === "usb") p.usb = valor;
     if (campo !== "liga") return;
-    /* A DEDUPLICAÇÃO É PELA LIGAÇÃO (D-2609-O-HUB-PENDE-DA-ENTRADA): só a face
-       de quatro buracos que ESTA tela desenhou sai; a face ligada à entrada
-       fica, e o hub dela não ganha uma segunda. */
     FACES = FACES.filter(function (f) { return !(f.fantasma && f.daEntrada === String(n)); });
     delete p.filho;
     var ligada = FACES.some(function (f) { return f.daEntrada === String(n); });
@@ -1680,15 +1365,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     }
   }
 
-  /* ══ O PAINEL DO APARELHO — 04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 ═══════
-     Pedido: «clicar num dispositivo não oferece modificá-lo ou identificá-lo, nem no
-     mapa nem em Atualmente Conectado». Clicar em QUALQUER aparelho (o botão com o nome dele
-     no mapa, ou o cartão da lista) abre este painel, flutuando ao lado dele. Em cima, o que
-     ela corrige: o nome, o tipo (o tipo decide a cor em todo o app) e a chave «Extensor».
-     No meio, o que a máquina vê, em etiquetas sem botão. Embaixo, uma linha só: o que fazer.
-     QUEM VENCE: a máquina no que mede (o chip, a velocidade, os hubs: etiquetas sem botão), a
-     pessoa no resto (o nome, o tipo, o extensor). O tipo que ela diz decide a cor e o nome em
-     todo o app; no motor ele só pesa quando a máquina não leu a classe do aparelho. */
   var TIPOS_DO_APARELHO = [["teclado", "Teclado"], ["mouse", "Mouse"], ["wifi", "Wi-Fi"], ["webcam", "Webcam"], ["caixa_de_som", "Caixa de som"], ["outro", "Outro"]];
   var COR_DO_TIPO = {"teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#d4d7e0", "webcam": "#8be9fd", "caixa_de_som": "#bd93f9", "outro": "#9a9eb8"};
   var LUGARES_DA_ENTRADA = ["Frente do gabinete", "Atrás do gabinete", "Topo do gabinete", "Lateral do gabinete", "Num hub ou extensão", "No monitor", "Outro lugar"];
@@ -1702,14 +1378,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     for (var i = 0; i < TIPOS_DO_APARELHO.length; i++) if (TIPOS_DO_APARELHO[i][0] === t) return TIPOS_DO_APARELHO[i][1];
     return t;
   }
-  /* o nome que o usuário deu vence; depois o tipo que o usuário disse; depois o que a máquina leu */
   function rotuloDoAparelho(a) {
     return a.nomeDeclarado || (a.tipoDeclarado ? rotuloDoTipo(a.tipoDeclarado) : a.tipo);
   }
   function editavelNoProduto(quem) { return !doProduto() || !!quem.modelo; }
 
-  /* A CHAVE «EXTENSOR» — é da porta, separada do que está ligado nela (hub, aparelho): ligada,
-     o aparelho continua dito na entrada e o motor lê a entrada como esticada. */
   function chaveDoExtensor(n) {
     var soNaTela = doProduto() && !podeGravar(n);
     if (soNaTela) return "";
@@ -1723,8 +1396,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return c ? '<div class="edita-linha"><span>Extensor</span><div class="onde">'
       + '<span>Tem um cabo de extensão nesta entrada?</span>' + c + "</div></div>" : "";
   }
-  /* O «LUGAR» — a face do gabinete (o campo do Mapear, no mesmo dono). Só no produto, onde a
-     entrada grava: no exemplo ninguém guarda nada. */
   function linhaDoLugar(n) {
     if (!doProduto() || !podeGravar(n) || !/^[0-9]{1,3}$/.test(String(n))) return "";
     var atual = faceDe(n), nomes = LUGARES_DA_ENTRADA.slice();
@@ -1748,11 +1419,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   function identificavel(quem) { return !/^054c:/.test(quem.modelo || ""); }
 
-  /* ══ O PAINEL ÚNICO — 05/10/2026, o desenho aprovado ══════════════════════════════
-     Clicar na entrada, no aparelho, na lista «A cadeia» ou num aparelho sem entrada
-     abre o MESMO painel, perto do que foi clicado: o aparelho de um lado, a entrada do outro.
-     O que leva `data-gesto` o produto grava e a página espera o disco; no exemplo, muda só
-     na tela. Fecha no botão de fechar, no Esc ou com um clique fora. */
   var editandoAp = null;
   function faceDaPorta(p) {
     return FACES.filter(function (f) {
@@ -1784,7 +1450,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       + (edita ? "" : " disabled") + ' maxlength="' + MAXIMO_DO_NOME + '"'
       + ' value="' + emAtributo(quem.nomeDeclarado || "") + '"'
       + ' placeholder="' + emAtributo(rotuloDoAparelho(quem)) + '" aria-label="Nome do aparelho"></label>';
-    /* o tipo que a máquina mede (o rádio Bluetooth, o hub) não se troca aqui */
     var tipoAgora = quem.tipoDeclarado || TIPO_DA_CLASSE[quem.classe] || "";
     var daMaquina = !tipoAgora && !!quem.classe;
     var cor = tipoAgora ? (COR_DO_TIPO[tipoAgora] || quem.cor) : quem.cor;
@@ -1808,8 +1473,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     var lido = !!HUB_LIDO[n];
     var liga = (DECLARADO[n] || {}).liga || (lido || (quem && quem.classe === "hub") ? "hub" : "direto");
     h += '<div class="campo"><span>Tipo</span><div class="seg">' + [["direto", "Direta"], ["hub", "Hub"]].map(function (o) {
-        /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB, e o «Direta» não cabe onde o
-           computador lê um hub: cinza, com a razão na dica (a D-03 dela), e o clique não declara. */
         var razao = o[0] === "direto" && lido ? "O computador lê um hub nesta entrada"
           : o[0] === "hub" && quem && quem.classe !== "hub" && !lido ? quem.tipo + " está direto nesta entrada" : "";
         var trava = soNaTela || razao;
@@ -1879,9 +1542,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     posicionar(ed, chip || plug);
   }
 
-  /* TROCAR DE LUGAR É ARRASTAR para a outra entrada, com «Mover para…» no painel para quem usa
-     teclado ou leitor de tela. No produto o gesto é o `entrada-trocar` (o mesmo do «Mover
-     para…»); no exemplo a troca é só na tela. */
   function podeMover(de, para) {
     if (de === para) return false;
     if (doProduto()) return GRAVA.indexOf(String(de)) !== -1 && GRAVA.indexOf(String(para)) !== -1
@@ -1940,8 +1600,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     moverPara(de, s.getAttribute("data-soquete"));
   });
 
-  /* O AVISO DE «MUDOU DE LUGAR» é uma linha com ✓ que some sozinha em 10 s: «Ver» abre o
-     detalhe (e o segura até ela fechar) e o ✕ fecha na hora. */
   function oAvisoDeUmaLinha(mudou, detalhe) {
     var frase, sab = mudou.filter(function (m) { return m.entradaAgora; }).length;
     if (!mudou.length) frase = "Nada mudou de lugar.";
@@ -1974,7 +1632,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       avisoAberto = false; avisoLeituras = null;
       return;
     }
-    /* uma leitura nova (outro `Examinar`) recomeça os 10 s */
     if (avisoLeituras !== LEITURAS) {
       recomecarOAviso(); avisoLeituras = LEITURAS; acharOIdentificado();
     }
@@ -1992,9 +1649,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   document.addEventListener("keydown", function (ev) {
     if (ev.key === "Escape" && (editando || editandoAp)) { editando = null; editandoAp = null; segurando = null; pintar(); }
   });
-  /* O NOME, NO EXEMPLO — 26/09/2026. No produto o campo leva o gesto
-     `entrada-nome`, e a página espera o disco; aqui, sem produto, o nome
-     fica só na tela. */
   document.addEventListener("change", function (ev) {
     var sel = ev.target.closest && ev.target.closest("#edita select.tipo-do-aparelho");
     if (sel && !sel.hasAttribute("data-gesto")) {
@@ -2008,12 +1662,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     pintar();
   });
 
-
-  /* ══ A CADEIA E O REGISTRO — 15/10/2026 (O-MAPA-DAS-CONEXOES-MOSTRA-A-CADEIA-USB-E-O-REGISTRO-DELA-01) ══
-     A lista da direita é a cadeia: o hub de plástico é UM chip («Hub USB 3 · 7 entradas») com os
-     aparelhos recuados abaixo dele, o enlace abaixo vai dito como fato e quem não apareceu neste
-     início fica esmaecido no fim. No produto quem diz tudo isso é `arranjo_desta_maquina`
-     (`hubFisico`, `parteDe`, `dentroDe`, `enlace`, `sumiram`, `registro`); no exemplo é a cena abaixo. */
   var DICA_DO_ENLACE = "Pode ser a entrada, o hub, o cabo, o extensor ou o próprio aparelho.";
   var DA_CENA = {
     hubFisico: { "hub": "Hub USB 3 · 7 entradas" },
@@ -2061,11 +1709,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     function chipDe(a, nivel) {
       var p = modo === "ideal" ? portaDeEm(r.plano, a.id) : portaDe(a.id);
       var hub = c.hub[a.id], enl = c.enlace[a.id];
-      /* A dica fala do que a pessoa faz, não do sistema por baixo. */
       var dica = p ? "Na " + naFraseDe(p) + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
-      /* O que o chip corta com reticências vai inteiro na dica: o nome que a pessoa deu (ou o do hub de
-         plástico) e o do aparelho. Com uma fonte de sistema mais larga o título do hub também corta. */
       var inteiro = [a.nomeDeclarado || hub || "", a.nome && a.nome !== titulo ? a.nome : ""].filter(Boolean).join(" · ");
       if (inteiro) dica = inteiro + ". " + dica;
       var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
@@ -2100,7 +1745,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     html += APARELHOS.filter(function (a) { return !visto[a.id] && !c.parte[a.id]; })
       .map(function (a) { return ramo(a, 0); }).join("");
     html += c.sumiram.map(function (a) {
-      /* A frase que a reticência corta vai inteira na dica, como no chip da cadeia. */
       var frase = (a.nome ? a.nome + " · " : "") + "Não apareceu neste início";
       return '<div class="chip sumiu" data-dica="'
         + emAtributo(frase + ". Já esteve neste computador e não apareceu agora") + '">'
@@ -2125,7 +1769,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     }).join("");
   }
 
-  /* O «COPIAR» do registro leva o texto como está na tela, uma linha por evento. */
   function textoDoRegistro() {
     var reg = daCadeia().registro || {};
     return [reg.ouvindo || ""].concat((reg.linhas || []).map(function (l) {
@@ -2144,7 +1787,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       var caixa = document.createElement("textarea");
       caixa.value = texto; caixa.setAttribute("readonly", ""); caixa.style.position = "fixed"; caixa.style.opacity = "0";
       document.body.appendChild(caixa); caixa.select();
-      try { if (document.execCommand("copy")) feito(); } catch (erro) { /* sem área de transferência: o texto fica na tela */ }
+      try { if (document.execCommand("copy")) feito(); } catch (erro) { }
       document.body.removeChild(caixa);
     }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(feito, pelaCaixa);
@@ -2152,34 +1795,29 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   });
 
   function pintar() {
-    /* o hub nasce com o cinza da paleta (#6272a4), e o cinza da letra saiu */
     APARELHOS.forEach(function (a) { if (a.cor === "#6272a4") a.cor = "#f8f8f2"; });
     alocacao = alocacaoDerivada();
     var op = opDaVariante();
     var r = planejar(op);
     var ctx = { modo: modo, plano: r.plano };
 
-    /* os modos */
     document.getElementById("modos").innerHTML =
         '<button class="modo" data-modo="mesa" data-dica="Onde cada aparelho está agora" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
       + '<button class="modo destaque" data-modo="ideal" data-dica="Onde cada aparelho funciona melhor" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
-      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>' /* noqa-acento: data-modo */
+      + '<button class="modo" data-modo="mao" data-dica="A melhor entrada para um aparelho novo" aria-pressed="' + (modo === "mao") + '">Adicionar</button>'
       + '<button class="modo" data-modo="registro" data-dica="O que entrou e saiu das entradas" aria-pressed="' + (modo === "registro") + '">Registro</button>';
-    /* O REGISTRO É A QUARTA ABA: ela troca o palco, o painel e a legenda pelo registro. */
     var noRegistro = modo === "registro";
     document.getElementById("registro").hidden = !noRegistro;
     document.querySelector(".palco").hidden = noRegistro;
     document.getElementById("painel").hidden = noRegistro;
     document.getElementById("legenda").hidden = noRegistro;
-    /* SEM LEITURA, NADA SE DESENHA: o cabeçalho já disse o
-       porquê, e o registro vazio não tem o que copiar. */
     document.getElementById("registro-copiar").hidden = semLeitura;
     if (semLeitura) {
       document.querySelector(".palco").hidden = true;
       document.getElementById("legenda").hidden = true;
       document.getElementById("faces").innerHTML = "";
       document.getElementById("bandeja").innerHTML = "";
-      var sugere = modo === "ideal" || modo === "mao";  /* (noqa-acento: JS) */
+      var sugere = modo === "ideal" || modo === "mao";
       var oPainel = document.getElementById("painel");
       oPainel.hidden = !sugere;
       oPainel.innerHTML = sugere
@@ -2188,14 +1826,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       return;
     }
 
-    /* o painel */
     var painel = document.getElementById("painel"), html = "";
-    /* html é concatenado: o modo ideal empilha abas de variante + receita */
     if (modo === "ideal") {
       var qMelhor = qualidade({});
-      /* O SUGESTÕES FALA MENOS — 01/10/2026 (pedido f): os botões dizem só o
-         arranjo, cada movimento é uma linha com as razões no «?», e da conta do
-         fim fica a linha do ganho não medido (D-LINHA-DO-GANHO-NAO-MEDIDO). */
       html += '<div class="escolhas" style="margin-bottom:.4rem">'
         + VARIANTES.map(function (v) {
             return '<button class="escolha" data-var="' + v.id + '" aria-pressed="' + (variante === v.id) + '">'
@@ -2285,17 +1918,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     painel.innerHTML = html;
     cuidarDoAviso();
 
-    /* as faces */
     document.getElementById("faces").innerHTML = FACES.map(function (f) {
       var mapa = modo === "ideal" ? r.plano : alocacao;
       var total = f.portas.length + f.portas.filter(function (p) { return p.filho; }).length;
       var cheias = f.portas.reduce(function (s, p) { return s + (mapa[p.n] ? 1 : 0) + (p.filho && mapa[p.filho.n] ? 1 : 0); }, 0);
-      /* os aparelhos que ESTA região tem e cuja entrada ainda não foi
-         declarada: eles aparecem, porque o produto os vê. Esconder seria
-         mentir sobre a mesa dela. */
       var reg = f.regiao;
       var pend = (modo === "ideal") ? [] : semEntrada().filter(function (x) { return x.regiao === reg; });
-      /* a região "pc" tem duas faces: a faixa vai numa só, para não duplicar */
       if (reg === "pc" && !f.donaDaFaixaPc) pend = [];
       var faixa = "";
       if (pend.length) {
@@ -2311,9 +1939,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           + "</div>"
           + "</div>";
       }
-      /* A FACE DIZ DE QUAL ENTRADA PENDE (D-2609-O-HUB-PENDE-DA-ENTRADA): o
-         título é do dono («Hub na Entrada 3»), e a divergência é uma linha
-         a mais, sem culpa. */
       return '<div><div class="face-cab"><h3>' + emAtributo(f.titulo || f.nome) + '</h3><span class="quantas">' + cheias + " de " + total + " ocupadas</span></div>"
         + (f.diverge ? '<p class="diverge">' + f.diverge + "</p>" : "")
         + '<div class="rolar"><div class="chapa ' + f.forma + '">' + f.portas.map(function (p) { return soqueteHTML(p, ctx); }).join("") + "</div></div>"
@@ -2322,14 +1947,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         + faixa + "</div>";
     }).join("");
 
-    /* a bandeja é a cadeia */
     pintarACadeia(r);
-    /* A DICA DIZ QUE A ENTRADA ABRE UM EDITOR — 26/09/2026: nada na tela
-       dizia, e ela nunca o achou. Quantos estão sem lugar já está no
-       painel («fora do mapa»). */
     document.getElementById("ajuda-bandeja").textContent = "";
 
-    /* legenda */
     document.getElementById("legenda").innerHTML = modo === "ideal"
       ? '<span><i class="amostra r-ok"></i> Entra aqui</span><span><i class="amostra r-ru"></i> Sai daqui</span>'
         + '<span><i class="amostra v3"></i> USB 3.0</span><span><i class="amostra v2"></i> USB 2.0</span>'
@@ -2342,27 +1962,15 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     mostrarEditor();
   }
 
-  /* ══ 7. INTERAÇÃO ════════════════════════════════════════════════════ */
   document.addEventListener("click", function (ev) {
-    /* O EDITOR DA ENTRADA — 26/09/2026. Os gestos dele vêm antes de todos:
-       um botão dentro do editor não pode cair no clique do plugue embaixo. */
     if (ev.target.closest(".modo[data-modo]")) { editando = null; editandoAp = null; segurando = null; }
     if (ev.target.id === "edita-fecha") { editando = null; editandoAp = null; segurando = null; pintar(); return; }
     var lg = ev.target.closest("#edita [data-liga]");
-    /* A TELA ESPERA O DISCO — 26/09/2026, D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO.
-       O botão que leva o gesto ao disco não pinta nada aqui: ele fica
-       «em voo» (o carimbo do piloto), o produto grava e devolve o
-       arranjo relido, e a página repinta pelo que o disco diz. Uma
-       recusa não repinta, e a piscada acha o botão clicado. No
-       exemplo, sem produto, a pintura continua local. */
     if (lg && lg.hasAttribute("data-gesto")) return;
     if (lg) {
-      /* o apagado responde e não declara: a razão está na dica */
       if (lg.getAttribute("aria-disabled") !== "true") declarar(editando, "liga", lg.getAttribute("data-liga"));
       pintar(); return;
     }
-    /* O PAINEL DO APARELHO — 04/10/2026. O que leva `data-gesto` o produto grava e a página
-       espera o disco; o que não leva (o exemplo) muda só na tela. */
     var abre = ev.target.closest("[data-ap-abre]");
     if (abre) {
       achado = null; editandoDe = "mapa"; editandoAp = null; segurando = null;
@@ -2426,8 +2034,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (vb) { variante = vb.getAttribute("data-var"); pintar(); return; }
 
     if (ev.target.id === "reexaminar" || ev.target.classList.contains("ja-movi")) {
-      /* relata a diferença; NÃO troca o que o mapa mostra. No produto quem
-         abre o reexame é a leitura nova, que chega pelo `hefestoArranjo`. */
       if (doProduto()) return;
       recomecarOAviso(); modo = "reexame"; segurando = null; naMao = null; pintar(); return;
     }
@@ -2436,30 +2042,18 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       var t = leituraAtual; leituraAtual = leituraAnterior; leituraAnterior = t;
       modo = "mesa"; pintar(); return;
     }
-    /* O "aplicar" saiu, e o motivo fica escrito: ele gravava
-       `novo[n] = cam[pl[n]]` — o caminho de HOJE do aparelho que o plano QUERIA
-       naquela entrada, não o caminho do soquete. Os dois só coincidem quando não
-       há nada a mover; em todo caso interessante ele escrevia uma ligação falsa,
-       e mapa que mente é pior que mapa vazio. O lugar de aprender a ligação é o
-       reexame, que LÊ o sistema de novo e pergunta. Ver a §7.3 da
-       MOTOR-DO-ARRANJO-01. */
     if (ev.target.id === "voltar") { MAPA = Object.assign({}, MAPA_ORIGINAL); pintar(); return; }
 
     var esc = ev.target.closest(".escolha[data-mao]");
     if (esc) { var x = esc.getAttribute("data-mao"); naMao = (naMao === x ? null : x); segurando = null; pintar(); return; }
 
     var chip = ev.target.closest(".chip[data-ap]");
-    /* NO PRODUTO, O APARELHO QUE JÁ ESTÁ NUMA ENTRADA abre o editor dela: quem
-       corrige ali é o «Trocar com…» (um ato por porta). O que não está em
-       entrada nenhuma continua indo para a mão, para ser ensinado. */
     if (chip && portaDe(chip.getAttribute("data-ap"))) {
       achado = null; editandoDe = "lista"; editandoAp = null;
       editando = portaDe(chip.getAttribute("data-ap")); modo = "mesa";
       segurando = null; naMao = null; pintar(); return;
     }
     if (chip) {
-      /* o aparelho sem entrada: o painel abre perto dele e diz o passo; o clique na entrada certa
-         marca o lugar dele (as candidatas acendem) */
       var ap = acha(chip.getAttribute("data-ap"));
       achado = null; editando = null; editandoAp = ap.id; segurando = ap.id; naMao = null; modo = "mesa";
       pintar(); return;
@@ -2470,13 +2064,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       if (modo === "ideal") return;
       var p = porNum(plug.getAttribute("data-porta")), n = p ? p.n : "";
       if (segurando) {
-        /* NO PRODUTO A PÁGINA ESPERA O DISCO (D-2609-ENSINAR-GRAVA-O-NO): o
-           plugue candidato levou o gesto, e o arranjo relido tira o
-           aparelho da mão. A entrada que não grava não aprende: o que
-           ficava só na memória a releitura desfazia. */
         if (doProduto()) return;
         if (ocupada(alocacao, p)) return;
-        /* ENSINAR O MAPA: esta entrada é o caminho deste aparelho, para sempre */
         var c = leitura()[segurando];
         if (c) {
           Object.keys(MAPA).forEach(function (k) { if (MAPA[k] === c) delete MAPA[k]; });
@@ -2484,22 +2073,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         }
         segurando = null; naMao = null; editandoAp = null; modo = "mesa"; editando = n;
       } else {
-        /* o plugue abre o editor dela: o que tem nesta entrada, e a velocidade */
         editando = n;
       }
       pintar(); return;
     }
   });
 
-  /* ══ A PORTA PARA O CENSO DE QUEM ABRE — 11/09/2026 ══════════════════
-     Até aqui esta página só sabia desenhar UM gabinete: o que estava digitado
-     no JavaScript dela. `hefestoArranjo` é por onde o produto entrega a
-     leitura da máquina de quem abriu, e a página se repinta inteira com ela.
-     Ver `interface/pagina_do_mapa.py` e `interface/arranjo_desta_maquina.py`. */
   function controlesSobre(aparelhos, base) {
-    /* A fileira de controles é SIMULADOR — os botões 1..4 ao lado dela são a
-       pergunta "e se fossem quatro?". O censo vivo não a traz; ela se espalha
-       pelos adaptadores que a máquina de quem abre tiver. */
     var bts = aparelhos.filter(function (a) { return a.classe === "bt"; });
     return base.map(function (c, i) {
       return { nome: c.nome, mic: c.mic, onde: bts.length ? bts[i % bts.length].id : null };
@@ -2511,51 +2091,25 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     APARELHOS = f.aparelhos;
     FACES = f.faces;
     MAPA = f.mapa;
-    /* O "Voltar" do reexame restaura ESTE mapa. Deixá-lo com o do exemplo
-       devolveria a pessoa a um gabinete que não é o dela, com um clique. */
     MAPA_ORIGINAL = Object.assign({}, MAPA);
     LEITURAS = f.leituras;
     leituraAtual = "agora";
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
     quantos = CONTROLES.length;
-    /* O QUE O USUÁRIO DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
-       Toda entrada do mapa dela vem, com {} quando ela não disse nada, e as
-       chaves são as que o editor GRAVA no disco. A que o desenho monta do que
-       o usuário declarou (as do hub, a ponta do extensor) não vem: ali, e no
-       exemplo, o editor fica só na tela. */
     DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
     GRAVA = Object.keys(DECLARADO);
-    /* O NOME DE CADA ENTRADA, composto pelo dono (O-MAPA-QUE-ELA-CORRIGE-01):
-       `entrada_a_entrada.rotulos_das_entradas`. */
     ROTULOS = f.rotulos || {};
-    /* AS ENTRADAS EM QUE O COMPUTADOR LÊ UM HUB (D-2609-O-HUB-PENDE-DA-
-       ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
     HUB_LIDO = f.hubLido || {};
-    /* DE ONDE VEIO A VELOCIDADE de cada entrada: a mesma precedência que
-       pintou o plugue (aparelho, depois o que o usuário disse, depois a placa). */
     USB_DE = f.usbDe || {};
-    /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
-       O-MAPA-QUE-ELA-CORRIGE-01: o usuário clicou numa entrada, e a entrada
-       continua aberta com o que o disco diz agora. */
     if (!manterOEditor) editando = null;
   }
 
   function dizerDeQuando() {
-    /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
-       mesmo sem JavaScript nenhum. FATO SUBSTITUÍDO em 26/09/2026: aqui ele
-       passava a dizer de quando era a leitura desta máquina, e o usuário pediu que
-       isso saísse («essa info some»). A linha existe só para o exemplo se
-       dizer exemplo; com a leitura de quem abre, ela sai da página. */
     var el = document.getElementById("de-quando");
     if (el && fonte.quando !== EXEMPLO.quando) el.remove();
   }
 
-  /* O «EXAMINAR» NO PRODUTO — 26/09/2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
-     Com a leitura desta máquina na tela, quem relê é o produto: o botão leva
-     o gesto `reexaminar`, a leitura nova sai fora do fio da janela e volta por
-     `hefestoArranjo(dado, true)`, com a que a página tinha como «antes». No
-     exemplo não há o que reler, e o reexame é o das duas leituras dele. */
   function doProduto() { return fonte !== EXEMPLO; }
   function examinaNoProduto() { return doProduto() ? ' data-gesto="reexaminar"' : ""; }
   function marcarOExaminar() {
@@ -2564,30 +2118,18 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   }
 
   window.hefestoArranjo = function (dado, como) {
-    /* COMO ELE CHEGA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01: `false` é a
-       abertura, `true` é o «Examinar», e "gravou" é a volta
-       de uma gravação do editor (`arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR`):
-       a página repinta pelo disco sem mudar de modo nem fechar o editor. */
     var comoReexame = como === true;
     var gravou = como === "gravou";
     var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
     if (falta.length) {
-      /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
-         entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
-    /* O REEXAME RELÊ O QUE O USUÁRIO ENSINOU, porque o ensinar grava no disco
-       (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-ENSINAR-GRAVA-O-NO). Até aqui o
-       mapa da tela era guardado por cima da releitura: o que ela ensinava
-       só vivia na memória, e a releitura o desfazia. */
-    /* a leitura anterior da tela fica: gravar não é reexaminar */
     var antesDaTela = gravou && LEITURAS ? LEITURAS.antes : null;
     aplicarArranjo(dado, gravou);
     if (antesDaTela) LEITURAS = { agora: dado.leituras.agora, antes: antesDaTela };
     if (comoReexame) {
       modo = "reexame"; segurando = null; naMao = null;
     }
-    /* o aparelho que estava na mão foi ensinado: ele sai da mão */
     if (gravou && segurando) { segurando = null; naMao = null; modo = "mesa"; }
     dizerDeQuando();
     marcarOExaminar();
@@ -2595,10 +2137,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return "ok";
   };
 
-  /* ══ SEM LEITURA DESTE COMPUTADOR — 25/10/2026 ═══════════════════════
-     O-MAPA-SEM-LEITURA-DA-MAQUINA-NAO-DESENHA-O-EXEMPLO-01: sem o que desenhar, o
-     produto diz o porquê por aqui, e a página troca o exemplo pelo vazio. O cabeçalho
-     diz o porquê, o Examinar sai e nenhuma aba sugere. */
   var FRASES_SEM_LEITURA = {"sem-mapa": "Entradas ainda não mapeadas", "sem-leitura": "Não deu para ler as entradas deste computador"};
   var NADA_A_SUGERIR = "Nada a sugerir";
   var semLeitura = false;
@@ -2619,7 +2157,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return "ok";
   };
 
-  /* A leitura que chega depois tira a página do vazio; a recusa a deixa onde estava. */
   var arranjoDaPorta = window.hefestoArranjo;
   window.hefestoArranjo = function (dado, como) {
     var estava = semLeitura;
@@ -2631,18 +2168,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 })();
 </script>
 <script data-aba="registro">
-/* #registro abre a página já na aba «Registro». */
 if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded', function () { document.querySelector('.modo[data-modo="registro"]').click(); }); }
 </script>
 <script id="base-comum">
-/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
 (() => {
-  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
-     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
-     camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
-  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
-     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
   const descrever = (el, liga) => {
     const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
     if (liga) lista.push('hef-dica');
@@ -2661,11 +2191,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
     dica.classList.add('visivel');
   };
   const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
-  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
-     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
-     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
-     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
-     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
   document.addEventListener('mousemove', e => {
     let el = e.target && e.target.nodeType === 1 ? e.target : null;
     for (let n = 0; el && n < 4; el = el.parentElement, n++) {
@@ -2688,9 +2213,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
       if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
       if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
     });
-  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
-     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
-     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
   const sincronizar = b => {
     const on = b.getAttribute('aria-pressed') === 'true';
     const pedido = on ? 'personalizado' : 'automatico';
@@ -2707,10 +2229,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
     const b = e.target.closest && e.target.closest('.modo-auto');
     if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
   });
-  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar,
-     Reconectar controles (o mesmo «Reconectar» da aba Jogar, desde 19/10/2026), Fechar.
-     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
-     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
   const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
   document.addEventListener('contextmenu', e => {
     e.preventDefault(); fechar();
@@ -2737,18 +2255,12 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
     if (!b) { fechar(); return; }
     if (b.disabled) return;
     if (b.dataset.menu === 'copiar') document.execCommand('copy');
-    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
     if (b.dataset.menu === 'desligar') {
       if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
     }
     setTimeout(fechar, 0);
   });
 })();
-/* O alcance pelo teclado e pelo controle (A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01).
-   Dois contratos, para toda página e para as telas que vierem depois:
-   1. o que o mouse aciona (`data-gesto`, `data-hef-gesto`) tem parada no Tab e responde a Enter e Espaço;
-   2. a tela que abre por cima (`.tela-nova`, por `:target`) é um diálogo: o foco entra nela, o Tab fica
-      nela, Esc a fecha e o foco volta a quem a abriu. */
 (() => {
   const NATIVO = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[contenteditable=""],[contenteditable="true"]';
   const GESTO = '[data-gesto],[data-hef-gesto]';
@@ -2756,10 +2268,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
   const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
     || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
-  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
-     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
-     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
-     própria: o foco dele já abre a dica do que o contém. */
   const PEDE_PARADA = GESTO + ',[data-dica]';
   const marcar = raiz => {
     const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
@@ -2773,7 +2281,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
       else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
     }
   }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
-  /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
   document.addEventListener('keydown', e => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -2782,7 +2289,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
     e.preventDefault();
     el.click();
   });
-  /* A tela por cima. A caixa dela é o diálogo; o nome vem do título quando a página não deu um. */
   const caixaDe = tela => tela.querySelector('.tn-cx') || tela.firstElementChild;
   const prepararTelas = () => document.querySelectorAll('.tela-nova').forEach(tela => {
     const caixa = caixaDe(tela);
@@ -2799,7 +2305,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
   const aberta = () => document.querySelector('.tela-nova:target');
   let quemAbriu = null, ultimo = null, estavaAberta = false;
   document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
-  /* O X do controle clica sem dar foco: o link do clique é quem abriu, e o O devolve o foco a ele. */
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a[href^="#"]');
     if (a && !a.closest('.tela-nova')) ultimo = a;
@@ -2817,7 +2322,6 @@ if (location.hash === '#registro') { document.addEventListener('DOMContentLoaded
     }
     estavaAberta = !!tela;
   };
-  /* A âncora do endereço só vira `:target` com a página já lida: o foco entra na volta também. */
   addEventListener('hashchange', aoMudar);
   addEventListener('DOMContentLoaded', aoMudar);
   addEventListener('load', aoMudar);

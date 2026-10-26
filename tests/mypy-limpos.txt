@@ -1,7 +1,5 @@
 tests/unit/janela_aberta_comum.py
 tests/unit/test_daemon_reconnect_loop.py
-tests/unit/test_o_comentario_com_dois_pontos_so_vale_em_cima_de_atribuicao.py
-tests/unit/test_o_comentario_nao_termina_no_meio.py
 tests/unit/test_o_ramo_inteiro_do_governador_cala_a_vaga_longe.py
 tests/unit/test_os_gestos_lidos_do_fonte_sao_os_do_registro.py
 tests/unit/test_a_seta_segurada_se_solta_quando_o_perfil_troca.py

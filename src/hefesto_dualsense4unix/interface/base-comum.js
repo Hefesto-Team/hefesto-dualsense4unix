@@ -1,11 +1,5 @@
-/* Base comum das abas: a dica no hover e o menu do botão direito. Uma vez por página, igual em todas. */
 (() => {
-  /* A dica: só nasce aqui quando NÃO há a camada da janela (`__hefDica`, do piloto), que é a dona
-     do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
-     camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
-  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
-     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
   const descrever = (el, liga) => {
     const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
     if (liga) lista.push('hef-dica');
@@ -24,11 +18,6 @@
     dica.classList.add('visivel');
   };
   const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
-  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
-     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
-     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
-     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
-     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
   document.addEventListener('mousemove', e => {
     let el = e.target && e.target.nodeType === 1 ? e.target : null;
     for (let n = 0; el && n < 4; el = el.parentElement, n++) {
@@ -51,9 +40,6 @@
       if (f === 'in' && el && el.dataset.dica && el !== alvo) mostrar(el);
       if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
     });
-  /* O Modo automático: a área que o botão governa esmaece enquanto ele está ligado, e o `data-modo`
-     leva o que o PRÓXIMO clique pede. Tudo parte do `aria-pressed`, que o piloto também pinta;
-     o clique só vira o `aria-pressed` na hora (depois de o piloto ter lido o `data-modo`). */
   const sincronizar = b => {
     const on = b.getAttribute('aria-pressed') === 'true';
     const pedido = on ? 'personalizado' : 'automatico';
@@ -70,10 +56,6 @@
     const b = e.target.closest && e.target.closest('.modo-auto');
     if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
   });
-  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar,
-     Reconectar controles (o mesmo «Reconectar» da aba Jogar, desde 19/10/2026), Fechar.
-     Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
-     parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
   const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
   document.addEventListener('contextmenu', e => {
     e.preventDefault(); fechar();
@@ -100,18 +82,12 @@
     if (!b) { fechar(); return; }
     if (b.disabled) return;
     if (b.dataset.menu === 'copiar') document.execCommand('copy');
-    /* Desligar pede dois cliques, como o «Parar» da aba Sistema: o primeiro troca a palavra, o segundo age. */
     if (b.dataset.menu === 'desligar') {
       if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
     }
     setTimeout(fechar, 0);
   });
 })();
-/* O alcance pelo teclado e pelo controle (A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01).
-   Dois contratos, para toda página e para as telas que vierem depois:
-   1. o que o mouse aciona (`data-gesto`, `data-hef-gesto`) tem parada no Tab e responde a Enter e Espaço;
-   2. a tela que abre por cima (`.tela-nova`, por `:target`) é um diálogo: o foco entra nela, o Tab fica
-      nela, Esc a fecha e o foco volta a quem a abriu. */
 (() => {
   const NATIVO = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[contenteditable=""],[contenteditable="true"]';
   const GESTO = '[data-gesto],[data-hef-gesto]';
@@ -119,10 +95,6 @@
   const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
     || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
-  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
-     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
-     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
-     própria: o foco dele já abre a dica do que o contém. */
   const PEDE_PARADA = GESTO + ',[data-dica]';
   const marcar = raiz => {
     const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
@@ -136,7 +108,6 @@
       else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
     }
   }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
-  /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
   document.addEventListener('keydown', e => {
     if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -145,7 +116,6 @@
     e.preventDefault();
     el.click();
   });
-  /* A tela por cima. A caixa dela é o diálogo; o nome vem do título quando a página não deu um. */
   const caixaDe = tela => tela.querySelector('.tn-cx') || tela.firstElementChild;
   const prepararTelas = () => document.querySelectorAll('.tela-nova').forEach(tela => {
     const caixa = caixaDe(tela);
@@ -162,7 +132,6 @@
   const aberta = () => document.querySelector('.tela-nova:target');
   let quemAbriu = null, ultimo = null, estavaAberta = false;
   document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
-  /* O X do controle clica sem dar foco: o link do clique é quem abriu, e o O devolve o foco a ele. */
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a[href^="#"]');
     if (a && !a.closest('.tela-nova')) ultimo = a;
@@ -180,7 +149,6 @@
     }
     estavaAberta = !!tela;
   };
-  /* A âncora do endereço só vira `:target` com a página já lida: o foco entra na volta também. */
   addEventListener('hashchange', aoMudar);
   addEventListener('DOMContentLoaded', aoMudar);
   addEventListener('load', aoMudar);

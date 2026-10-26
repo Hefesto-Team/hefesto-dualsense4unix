@@ -5998,7 +5998,7 @@ class IpcHandlersMixin:
         acao = str(params.get("acao") or "estado")  # (noqa-acento)
         if acao not in ("iniciar", "parar", "estado"):
             raise ValueError(
-                "sequencia.gravar: 'acao' é iniciar, parar ou estado")  # (noqa-acento)
+                "sequencia.gravar: 'acao' é iniciar, parar ou estado")
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("sequencia.gravar: 'uniq' precisa ser string ou omitido")
