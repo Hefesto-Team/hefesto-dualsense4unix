@@ -104,3 +104,35 @@ def test_a_cor_no_campo_do_dono_nao_vira_nome_gravado(
     ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"], estados={})
     a08_conexoes.dono_renomear(ctx, {"uniq": UNIQS[0], "valor": digitado}, None)
     assert chamadas == [(UNIQS[0].upper(), gravado)]
+
+
+@pytest.mark.parametrize("transportes", TRANSPORTES, ids="-".join)
+def test_o_controle_sem_linha_na_mesa_nao_ganha_o_modelo(
+        transportes: tuple[str, ...], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(nome_do_jogador, "nomes_dos_donos", lambda: {})
+    estado = _estado(transportes)
+    mesa = [m for m in mesa_viva.mesa_do_estado(estado, {}, declaracao=object())
+            if m.get("uniq") != UNIQS[3]]
+    ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"], estados={})
+    colunas = a08_conexoes.pacote(ctx)["colunas"]
+    assert colunas[UNIQS[3]]["nome"] == ""
+    assert colunas[UNIQS[3]]["dono"] == "", "sem a linha da mesa não há cor nem modelo a dizer"
+    assert colunas[UNIQS[0]]["dono"] == MODELO_GENERICO
+
+
+def test_sem_linha_na_mesa_o_modelo_digitado_e_nome(monkeypatch: pytest.MonkeyPatch) -> None:
+    chamadas: list[tuple[str, str]] = []
+
+    class _Escrita:
+        feita = True
+
+    def _alias(endereco: str, nome: str) -> _Escrita:
+        chamadas.append((endereco, nome))
+        return _Escrita()
+
+    monkeypatch.setattr(a08_conexoes, "_alias_do_aparelho", _alias)
+    monkeypatch.setattr(nome_do_jogador, "nomes_dos_donos", lambda: {})
+    estado = _estado(("bt", "usb", "bt", "usb"))
+    ctx = Contexto(state=estado, mesa=[], conectados=estado["controllers"], estados={})
+    a08_conexoes.dono_renomear(ctx, {"uniq": UNIQS[0], "valor": MODELO_GENERICO}, None)
+    assert chamadas == [(UNIQS[0].upper(), MODELO_GENERICO)]

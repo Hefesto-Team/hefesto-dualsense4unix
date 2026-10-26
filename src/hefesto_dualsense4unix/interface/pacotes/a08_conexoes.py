@@ -1672,7 +1672,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         if modo_da_mesa is None:
             modo_da_mesa = modo_da_fileira(st)
         colunas[uniq].update(estado_do_controle(c, eu, st, declaracao, modo_da_mesa))
-        colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"), eu.get("nome") or "")
+        colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"), eu.get("nome"))
     medida.somar("gestão", comeco_da_gestao)
     confissao = _confissao_do_mapa()
     with medida.parte("rádio"):
@@ -6159,7 +6159,7 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     novo = nome_do_jogador.nome_dado(str(o.get("valor") or ""))
     mesa = getattr(ctx, "mesa", None) or ()
     eu: dict[str, Any] = next((m for m in mesa if str(m.get("uniq") or "") == uniq), {})
-    if _SO_O_NUMERO.fullmatch(novo) or novo == nome_sem_dono(str(eu.get("nome") or "")):
+    if _SO_O_NUMERO.fullmatch(novo) or novo == nome_sem_dono(eu.get("nome")):
         novo = ""
     if novo == nome_do_jogador.nomes_dos_donos().get(nome_do_jogador.mac(uniq), ""):
         return
