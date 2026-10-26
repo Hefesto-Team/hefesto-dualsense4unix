@@ -265,9 +265,12 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                                      "tela até o «Guardar»",
     "esquecer-a-forma-do-livre": "tira uma forma gravada do rascunho da janela — é da tela até "
                                  "o «Guardar»",
-    "cancelar-modificacao": "o Cancelar e o X da janela da extensão jogam fora o rascunho e "
-                            "devolvem à extensão o modo guardado do controle livre — é da tela e "
-                            "do serviço da extensão, não de um controle",
+    "cancelar-modificacao": "o Cancelar e o X da janela da extensão (com rascunho, o primeiro "
+                            "arma o «Descartar») jogam fora o rascunho e devolvem à extensão o "
+                            "modo guardado do controle livre — é da tela e do serviço da "
+                            "extensão, não de um controle",
+    "aba-da-modificacao": "a aba trocada na janela da extensão fica a aberta ao redesenhar e "
+                          "desarma o «Esquecer» — é da tela, não de um controle",
     "modo-do-livre-da-modificacao": "Soltar, Segurar ou Repetir do controle livre, no rascunho "
                                     "da janela até o «Guardar» — é da tela e do serviço da "
                                     "extensão, não de um controle",

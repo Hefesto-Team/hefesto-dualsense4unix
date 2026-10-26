@@ -22,3 +22,9 @@ seção daqui**: a aba deixou de estar em trabalho.
 ---
 
 <!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+
+## 07-lancadores.html
+- **26/10/2026** — a janela Configurar da extensão, pela auditoria: a chave do grupo vira a bolinha da aba, a Toques
+  em colunas sem rolagem, a dica, a unidade e o zero da opção, o segundo clique do «Esquecer», o estado do aparelho
+  igual nos quatro lugares e o rascunho que acende o Guardar e arma o «Descartar». Até publicar, o produto mostra a
+  janela de antes; o `--publicar` sai na costura.
