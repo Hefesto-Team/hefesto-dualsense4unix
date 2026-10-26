@@ -17,6 +17,7 @@ from hefesto_dualsense4unix.profiles import estilos_de_jogo as estilos
 from hefesto_dualsense4unix.profiles.manager import ProfileManager, _controllers_to_specs
 from hefesto_dualsense4unix.profiles.schema import (
     MODO_AUTOMATICO,
+    MODO_PERSONALIZADO,
     MatchCriteria,
     Profile,
     perfil_no_modo,
@@ -159,3 +160,58 @@ def test_sem_estilo_que_pinta_a_luz_automatica_segue_o_plastico(
         for uniq, n in numeros.items():
             assert _acesa(provider, vista, uniq) == cor_automatica(
                 n, registro.tom_do_plastico(uniq)), f"{chave} P{n}"
+
+
+NA_TELA = tuple(f"aa:bb:cc:00:00:e{n}" for n in (1, 2, 3, 4))
+
+
+def _tique_com_o_perfil(prof: Profile) -> Any:
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+
+    save_profile(prof)
+    vista = perfil_no_modo(prof)
+    conectados = [
+        {"uniq": u, "player": n, "connected": True, "index": n - 1, "is_primary": n == 1,
+         "transport": "usb" if n % 2 else "bt", "battery_pct": 90, "inputs": {}}
+        for n, u in enumerate(NA_TELA, start=1)]
+    mesa = [{"pref": f"p{n}", "jogador": n, "uniq": u, "nome": "Régua",
+             "via": "USB" if n % 2 else "BT", "cor": "starlight-blue",
+             "plastico": "#123456", "conectado": True}
+            for n, u in enumerate(NA_TELA, start=1)]
+    state = {"active_profile": prof.name, "rumble_policy": vista.rumble.policy or "",
+             "rumble_mult_applied": 0.7, "controllers": conectados}
+    return pacotes.Contexto(state=state, mesa=mesa, conectados=conectados, estados={})
+
+
+def test_o_gatilho_e_a_vibracao_de_cada_estilo_se_mostram_na_03_e_na_05_de_p1_a_p4() -> None:
+    from hefesto_dualsense4unix.app.telas import vibracao as tela_da_vibracao
+
+    escada = tela_da_vibracao._escada()
+    falhas = []
+    for estilo in estilos.DE_FABRICA:
+        if estilo.chave == "nativo":
+            continue
+        assert estilo.l2 is not None and estilo.r2 is not None, estilo.chave
+        prof, _ = a10._com_o_estilo(_do_jogo(), estilo, [{"uniq": NA_TELA[0], "jogador": 1}])
+        ctx = _tique_com_o_perfil(prof)
+        g = pacotes.pacote_da_pagina("03-gatilhos.html", ctx) or {}
+        if g.get("estilo-do-perfil") != estilo.rotulo:
+            falhas.append(f"{estilo.rotulo} · 03 na tela: o estilo diz "
+                          f"{g.get('estilo-do-perfil')!r}")
+        automatico = (estilo.l2.modo, estilo.r2.modo) == ("Off", "Off")
+        if g.get("modo-dos-gatilhos") != (MODO_AUTOMATICO if automatico else MODO_PERSONALIZADO):
+            falhas.append(f"{estilo.rotulo} · 03 na tela: modo {g.get('modo-dos-gatilhos')!r}")
+        v = pacotes.pacote_da_pagina("05-vibracao.html", ctx) or {}
+        quer = str(round(escada[estilo.vibracao] * 100))
+        for n, uniq in enumerate(NA_TELA, start=1):
+            col = (g.get("colunas") or {}).get(uniq) or {}
+            for sig, lado in (("e", estilo.l2), ("d", estilo.r2)):
+                mudo = col.get(f"modo-{sig}") == "Desligado"
+                if not automatico and mudo != (lado.modo == "Off"):
+                    falhas.append(f"{estilo.rotulo} · 03 na tela · P{n}: o lado {sig} mostra "
+                                  f"{col.get(f'modo-{sig}')!r}, o estilo pede {lado.modo}")
+            dela = (v.get("colunas") or {}).get(uniq) or {}
+            if dela.get("mult") != quer:
+                falhas.append(f"{estilo.rotulo} · 05 na tela · P{n}: força {dela.get('mult')!r}, "
+                              f"o degrau {estilo.vibracao} é {quer}")
+    assert not falhas, "\n".join(falhas)
