@@ -202,7 +202,6 @@ window.HEF = (function(){
     const tr = q('[data-hef-uniq="'+CSS.escape(linha.uniq)+'"]'); if(!tr) return 0;
     let n = 0;
     n += txt(q('[data-hef="guarda.nome"]', tr), linha.nome);
-    n += txt(q('[data-hef="guarda.id"]', tr), linha.id);
     n += prop(tr, '--plastico', linha.plastico);
     n += dica(tr, linha.dica);
     for(const g of qa('[data-hef="guarda.secao"]', tr))

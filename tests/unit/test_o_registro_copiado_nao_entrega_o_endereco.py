@@ -564,8 +564,6 @@ _OS_QUE_CHAMAM_O_DONO = {
         "src/hefesto_dualsense4unix/integrations/ar_do_adaptador.py", "_mascarar"),
     "a09_sistema.mascarar_o_diario": (
         "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py", "mascarar_o_diario"),
-    "perfis_web._id_visivel": (
-        "src/hefesto_dualsense4unix/app/actions/perfis_web.py", "_id_visivel"),
     "backend._endereco_mascarado": (
         "src/hefesto_dualsense4unix/core/backend_pydualsense.py", "_endereco_mascarado"),
     "connection._endereco_mascarado": (
@@ -659,7 +657,6 @@ _A_GRAFIA_DE_CADA_UM: dict[str, Callable[[str], str]] = {
     "sinal_da_barra.mascarar": lambda grafia: dono.mascarar(grafia),
     "o_cabo_em_espera.mascarar": lambda _grafia: "".join(MASCARADO),
     "ar_do_adaptador._mascarar": lambda grafia: dono.mascarar(grafia),
-    "perfis_web._id_visivel": lambda _grafia: ":".join(MASCARADO).upper(),
     "backend._endereco_mascarado": lambda grafia: dono.mascarar(grafia),
     "connection._endereco_mascarado": lambda grafia: (
         dono.mascarar_endereco(grafia) or dono.mascarar(grafia)
