@@ -3,14 +3,6 @@ set -e
 
 case "$1" in
     configure)
-        # A REGRA DO NÓ TROCOU DE NOME em 25/09/2026 (70-ps5-controller ->
-        # 73-hefesto-ps5-controller; O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-
-        # MAQUINA-01). A cópia em /etc é do install-host-udev.sh, fora do
-        # manifesto do dpkg, e ela só sombreia a do pacote com o MESMO nome:
-        # a 70 fechada que ficou em /etc deixava a 73 ABERTA deste pacote
-        # falar por último, e o nó do DualSense voltava a nascer aberto até
-        # alguém rodar o helper de novo. O mv leva a escolha de quem instalou
-        # (a fechada ou a aberta) para o nome de hoje.
         if [ -e /etc/udev/rules.d/70-ps5-controller.rules ]; then
             if [ -e /etc/udev/rules.d/73-hefesto-ps5-controller.rules ]; then
                 rm -f /etc/udev/rules.d/70-ps5-controller.rules
@@ -20,12 +12,6 @@ case "$1" in
             fi
         fi
 
-        # BROKER-01 (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): o broker root vem
-        # no pacote (/usr/lib/systemd/system, sem uid nem grupo por máquina: ele
-        # atende quem está na frente do seat, perguntando ao logind), e a regra
-        # do nó vai FECHADA. As duas metades da cura saem juntas.
-        # A unit que o helper renderizava antes, com o uid GRAVADO, ficou em
-        # /etc e vence a do pacote: sai, porque o broker novo não precisa dela.
         for _u in service socket; do
             if grep -qs '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
                     "/etc/systemd/system/hefesto-hidraw-broker.${_u}"; then
@@ -35,31 +21,25 @@ case "$1" in
         if command -v systemctl >/dev/null 2>&1; then
             systemctl enable hefesto-hidraw-broker.socket \
                 hefesto-hidraw-broker.service >/dev/null 2>&1 || true
-            # Sem systemd rodando (chroot, contêiner) o enable acima basta: o
-            # broker sobe no próximo boot.
             if [ -d /run/systemd/system ]; then
                 systemctl daemon-reload || true
                 systemctl start hefesto-hidraw-broker.socket || true
             fi
         fi
 
-        # Reload das regras udev para DualSense
         if command -v udevadm >/dev/null 2>&1; then
             udevadm control --reload-rules
             udevadm trigger --action=change --subsystem-match=usb
         fi
 
-        # Atualiza cache de icones GTK
         if command -v gtk-update-icon-cache >/dev/null 2>&1; then
             gtk-update-icon-cache -q -f /usr/share/icons/hicolor || true
         fi
 
-        # Atualiza base de dados de .desktop
         if command -v update-desktop-database >/dev/null 2>&1; then
             update-desktop-database -q /usr/share/applications || true
         fi
 
-        # NÃO habilita o servico systemd automaticamente — opt-in.
         echo ""
         echo "Hefesto - DualSense4Unix instalado com sucesso."
         echo ""

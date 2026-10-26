@@ -1,33 +1,9 @@
 #!/usr/bin/env bash
-# install-host-udev.sh — Instala regras udev + modules-load (uinput, uhid) do
-# Hefesto - DualSense4Unix no sistema hospedeiro.
-#
-# Pode ser executado de 3 formas (todas idempotentes):
-#
-#   1. Dentro do Flatpak (caminho oficial pós-install):
-#        flatpak run --command=install-host-udev.sh io.github.hefesto_team.hefesto_dualsense4unix
-#      Resolve as regras em /app/share/hefesto-dualsense4unix/udev-rules/.
-#
-#   2. Direto do repositório clonado (instalação via fonte):
-#        sudo bash scripts/install-host-udev.sh
-#      Resolve as regras em ../assets/ relativo ao script.
-#
-#   3. Direto de um .deb instalado:
-#        sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
-#      Resolve as regras em /usr/share/hefesto-dualsense4unix/udev-rules/.
-#
-# As regras concedem acesso ao DualSense via hidraw sem necessidade de root
-# a cada execução, ativam emulação Xbox360 via uinput, evitam autosuspend
-# USB que derruba a conexão e disparam hotplug-GUI (USB + BT).
-#
-# Requer pkexec (polkit) ou execução com sudo. Script suporta ambos.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Resolve origem das regras conforme contexto de execução.
-# v3.3.1+: cobre Flatpak (/app/share), .deb (/usr/share) e source (../assets).
 RULES_SRC=""
 MODLOAD_SRC=""
 for candidate in \
@@ -35,9 +11,6 @@ for candidate in \
     "/usr/share/hefesto-dualsense4unix/udev-rules" \
     "${SCRIPT_DIR}/../assets" \
 ; do
-    # A regra do nó do DualSense é a que prova que a pasta é do Hefesto. Ela
-    # se chama `73-hefesto-ps5-controller.rules` desde 25/09/2026; era a 70.
-    # O bundle e este script viajam juntos, então o nome é o de agora.
     if [[ -f "${candidate}/73-hefesto-ps5-controller.rules" ]]; then
         RULES_SRC="${candidate}"
         break
@@ -55,10 +28,6 @@ for candidate in \
     fi
 done
 
-# SPRINT-GAME-RUMBLE-01: cura de RAIZ do storm -71 (quirk do snd_usb_audio).
-# Quem instala por .deb/Flatpak também precisa dela — o install.sh nativo a
-# aplica no step 3c, e este helper é o caminho equivalente para os pacotes.
-# PRESERVA mic+fone (não é a regra 75, que é áudio-off e segue opt-in).
 SNDQUIRK_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe" \
@@ -74,9 +43,6 @@ for candidate in \
 done
 SNDQUIRK_DEST="/etc/modprobe.d"
 
-# PLAT-04 item 1: btusb sem autosuspend (o btusb LIGA o autosuspend do
-# adaptador BT no probe; o conf corta na raiz, inclusive p/ adaptadores
-# composite classe ef que escapam da regra 81 por classe e0).
 BTUSB_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe.d" \
@@ -89,10 +55,6 @@ for candidate in \
     fi
 done
 
-# Onda T (2026-07-20): opções do hid-nintendo patchado (o bt_probe_retries —
-# cura da morte por probe BT). O parâmetro só existe no módulo DKMS do hefesto;
-# com o in-tree o kernel loga "unknown parameter ignored" e sobe normal
-# (fail-safe do desenho da Onda T) — instalar a conf é sempre seguro.
 HIDNINTENDO_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe.d" \
@@ -105,10 +67,6 @@ for candidate in \
     fi
 done
 
-# Contenção BT (2026-07-25): idem para a conf do hid-playstation patchado
-# (o feature_retries — cura do 2º DualSense que perde o canal de controle
-# quando vários pareiam juntos). Mesmo fail-safe: sem o módulo DKMS o in-tree
-# só ignora o parâmetro, então instalar a conf é sempre seguro.
 HIDPLAYSTATION_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/modprobe.d" \
@@ -121,13 +79,6 @@ for candidate in \
     fi
 done
 
-# BROKER-01 (Onda S — fd-injection): broker root que esconde o hidraw FÍSICO
-# do DualSense do JOGO e serve fd O_RDWR ao daemon via SCM_RIGHTS (cmd
-# `open`) para o giroscópio nunca morrer, mesmo com o nó escondido. Resolve o
-# binário standalone (stdlib pura, roda no python3 do sistema) e as units-
-# template nos mesmos 3 contextos acima. PRIMEIRO serviço de SISTEMA
-# (systemd system, socket-activated) do projeto. Desenho completo:
-# o estudo «desenho-onda-s-broker-fd-injection» de 20/07/2026 §7.4.
 BROKER_BIN_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/broker" \
@@ -152,10 +103,6 @@ for candidate in \
     fi
 done
 
-# uid/grupo da SESSÃO (lição 6: NUNCA root) — capturado AQUI, antes de
-# qualquer elevação (pkexec/sudo troca o ambiente da linha abaixo pra
-# frente). Nos 3 contextos de uso deste script, `id -u`/`SUDO_UID` neste
-# ponto ainda refletem quem CHAMOU o script, nunca o alvo da elevação.
 BROKER_SESSION_UID="${SUDO_UID:-$(id -u)}"
 BROKER_SESSION_GROUP=""
 if [[ "${BROKER_SESSION_UID}" != "0" ]]; then
@@ -167,35 +114,6 @@ if [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" \
     BROKER_INSTALL_OK=1
 fi
 
-# ALVOS DO `RUN+=` DAS REGRAS 82 E 83 (22/08/2026).
-#
-# As duas são REGRAS-COLA: não fazem nada sozinhas, só chamam um alvo. Este
-# script instalava as duas e nenhum dos alvos — medido em 07/08 (estudo da
-# cobertura do install, item 9): o portão de paridade dava `[OK]` para a regra
-# enquanto o `bt_nosniff_now.sh` não existia em empacotamento nenhum, e a 83
-# mandava iniciar uma unit inexistente a CADA conexão Bluetooth. Quem instalou
-# por pacote nunca teve o salva-vidas de bonds.
-#
-# ESCOPO: só o que as regras invocam, mais o que a unit precisa para subir — a
-# camada ONDA-R2 inteira (timers, watchdog, drop-in do bluetooth.service,
-# restauro automático) é do `install_bt_resilience_host` do `install.sh`, que
-# desde 22/08 roda nos dois lados da bifurcação de formato.
-#
-# O VIGIA DO WI-FI USB NÃO VAI POR AQUI, e é decisão (INSTALL-E-UNINSTALL-DO-
-# RADIO-01, 23/09/2026, o P-15): nem o timer `hefesto-wifi-usb-vigia`, nem o
-# dispatcher `90-hefesto-wifi-usb` do NetworkManager, nem o drop-in
-# `10-hefesto-maquina.conf` do watchdog. O desenho é o dos timers acima: um
-# serviço de root que liga sozinho a cada minuto e reinicia porta USB é
-# escolha de quem roda o `install.sh`, não efeito colateral de um pacote. E o
-# drop-in precisa da CASA de uma pessoa (ele mostra ao watchdog o
-# `maquina.json` dela), que um helper de pacote rodado por root não tem — nem
-# o watchdog, que ele serve, vem por aqui. O pacote leva o `wifi_usb.sh` em
-# /usr/share (o `--status` serve a qualquer um), e o `doctor.sh` diz a quem
-# tem Wi-Fi USB como ligar o vigia.
-#
-# Quando o formato não traz as fontes, o `TEST==` das regras as deixa INERTES em
-# vez de falhando, e o aviso mais abaixo diz isso com todas as letras — nenhum
-# dos dois estados é silencioso.
 BTRES_SCRIPTS_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/scripts" \
@@ -225,28 +143,6 @@ if [[ -n "${BTRES_SCRIPTS_SRC}" && -n "${BTRES_UNIT_SRC}" ]]; then
     BTRES_INSTALL_OK=1
 fi
 
-# O-NO-NASCE-FECHADO-01 (auditoria de 20/09/2026, bloqueante 3): AS DUAS
-# METADES DA CURA VIAJAM JUNTAS, OU NENHUMA VIAJA.
-#
-# A `73-hefesto-ps5-controller.rules` versionada faz o hidraw do DualSense físico
-# nascer `0600 root` (`TAG-="uaccess"`) contando que o broker o abra sob
-# pedido. Se este helper NÃO conseguir instalar o broker — `BROKER_INSTALL_OK`
-# é 0 quando o uid resolve root, quando o grupo da sessão não resolve, ou
-# quando o formato não traz o binário/as units —, gravar a regra fechada
-# entregaria um DualSense INUTILIZÁVEL: nó fechado, ninguém para abri-lo, e o
-# conserto exigindo `sudo`. O produto é para qualquer usuário (ordem de produto,
-# 11/09/2026).
-#
-# Então: broker entra ⇒ regra FECHADA; broker não entra ⇒ regra ABERTA, pela
-# variante que `scripts/regra_do_no_aberta.sh` gera (dono único da
-# transformação, com as duas guardas dentro).
-#
-# Quando nem o helper da transformação existe no formato, a regra do nó é
-# PULADA em vez de instalada fechada — o fail-safe aponta para o lado de a
-# pessoa conseguir usar o controle. Os pacotes já gravam a mesma regra ABERTA,
-# com o MESMO nome, em `/usr/lib/udev/rules.d/`, e não escrever nada em `/etc`
-# deixa aquela valendo. O nome igual é o que faz a de `/etc` sombrear a de
-# `/usr/lib` quando o broker entra.
 REGRA_ABERTA_SH=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/scripts" \
@@ -268,58 +164,25 @@ fi
 RULES_DEST="/etc/udev/rules.d"
 MODLOAD_DEST="/etc/modules-load.d"
 
-# Regras canônicas: hidraw/uinput/autosuspend.
-# Sincronizado com scripts/install_udev.sh.
-# 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23 — abriam o controle a
-# cada ACTION=="add" e amplificavam a re-enumeração do storm -71. Causa-raiz
-# real: porta USB ruim (full-speed/-71 na 3-1). Ver o registro «discoveries».
 RULES=(
-    # 73-hefesto: o nó do DualSense físico nasce fechado. O nome ordena depois
-    # de todo 70-*, 71-* e 72-* de terceiro e antes da 73-seat-late.rules (ver
-    # o cabeçalho do asset). Era a 70 até 25/09/2026.
     "73-hefesto-ps5-controller.rules"
-    # 71-uhid: /dev/uhid — o gamepad virtual vira um DualSense de verdade, o que faz
-    # a vibração funcionar também com a máscara DualSense. SPRINT-UHID-VPAD-01.
-    # O número TEM de ser < 73 (a 73-seat-late.rules é quem vira a TAG uaccess em ACL).
     "71-uhid.rules"
     "71-uinput.rules"
     "72-ps5-controller-autosuspend.rules"
-    # 72 (uaccess de entrada): touchpad + sensores de movimento com ACL da
-    # sessão. A 70-uaccess.rules do sistema só cobre ID_INPUT_JOYSTICK, e esses
-    # dois nós são touchpad/acelerômetro — sem esta regra ficam root:input e só
-    # funcionam para quem está no grupo `input` por fora do produto.
-    # OQ-6. O número TEM de ser < 73 (73-seat-late.rules).
     "72-hefesto-touchpad-motion-uaccess.rules"
-    # 76: tira do libinput SÓ o touchpad do vpad (TOUCHPAD-DO-SISTEMA-01,
-    # 09/08/2026). O touchpad FÍSICO é ponteiro do sistema em todos os modos;
-    # quem evita a briga com a emulação do hefesto é o gate de runtime do
-    # `TouchpadReader`, não mais um curinga que apagava o físico sempre.
     "76-dualsense-touchpad-libinput-ignore.rules"
     "77-dualsense-leds.rules"
     "78-dualsense-motion-not-joystick.rules"
-    # 79: LEDs de player dos Nintendo/8BitDo graváveis p/ o daemon numerar o
-    # co-op misto (continua a contagem dos DualSense; só LED, nunca input). 8BIT-02.
     "79-external-controller-leds.rules"
-    # 80: jsN legados dos Motion Sensors (físico E vpad) em MODE 0000 — a API js
-    # legada para de enumerar "joysticks" fantasmas. KERNEL-07.
     "80-motion-joydev-hide.rules"
-    # 81 (devices): controles e adaptadores BT nunca dormem (power/control=on +
-    # autosuspend_delay_ms=-1). PLAT-03 item 1.
     "81-hefesto-usb-power.rules"
-    # 81 (hosts): controladores USB PCI (classe 0x0c03*) em power/control=on —
-    # a economia no HOST derruba o barramento inteiro. PLAT-03 item 3.
     "81-hefesto-usb-host-power.rules"
     "82-nintendo-pro-nosniff.rules"
     "83-hefesto-bond-snapshot.rules"
-    # 84: separa o Pro genuíno do 8BitDo clone, que colidem em VID:PID E no
-    # serial — o discriminador é o bcdDevice (0210 x 0200). NINTENDO-VARIANT-01.
     "84-nintendo-pro-variant.rules"
-    # 85: quando um DualSense físico sai, refaz a probe do gêmeo que esperava
-    # sem driver (o cabo que ganhou o lugar do rádio). O-CABO-ASSUME-DO-RADIO-01.
     "85-hefesto-o-cabo-assume.rules"
 )
 
-# Verificar se TODAS as rules existem na origem.
 echo "Hefesto - DualSense4Unix — instalação de regras udev"
 echo ""
 echo "Origem das regras:    ${RULES_SRC}"
@@ -337,21 +200,13 @@ for regra in "${RULES[@]}"; do
     fi
 done
 
-# O-NO-NASCE-FECHADO-01: de onde sai a regra do nó que vai para /etc (ver o
-# bloco do `REGRA_ABERTA_SH`, lá em cima). Por default é o asset FECHADO — a
-# decisão de produto. Sem broker, é a variante ABERTA; sem o helper da
-# transformação, ela não vai para /etc nenhuma (a do pacote, aberta, continua
-# valendo).
 REGRA_DO_NO="73-hefesto-ps5-controller.rules"
-#: O nome de antes (até 25/09/2026). Sai de /etc em toda instalação.
 REGRA_DO_NO_VELHA="70-ps5-controller.rules"
 REGRA_DO_NO_SRC="${RULES_SRC}/${REGRA_DO_NO}"
 REGRA_DO_NO_TMPDIR=""
 if [[ "${BROKER_INSTALL_OK}" -ne 1 ]]; then
     if [[ -n "${REGRA_ABERTA_SH}" ]]; then
         REGRA_DO_NO_TMPDIR="$(mktemp -d)"
-        # O `rm -rf` fica no EXIT: o arquivo tem de sobreviver até o comando
-        # ELEVADO copiá-lo, e esse comando roda no fim do script.
         trap 'rm -rf "${REGRA_DO_NO_TMPDIR}"' EXIT
         if bash "${REGRA_ABERTA_SH}" "${RULES_SRC}/${REGRA_DO_NO}" \
                 "${REGRA_DO_NO_TMPDIR}/${REGRA_DO_NO}"; then
@@ -369,7 +224,6 @@ if [[ "${BROKER_INSTALL_OK}" -ne 1 ]]; then
         echo "       Fechá-la sem quem a abra deixaria o DualSense inutilizável." >&2
     fi
 fi
-# A lista que o resto do script percorre perde a regra do nó quando ela não vai.
 if [[ -z "${REGRA_DO_NO_SRC}" ]]; then
     _restantes=()
     for regra in "${RULES[@]}"; do
@@ -420,16 +274,6 @@ if [[ "${BTRES_INSTALL_OK}" -eq 0 ]]; then
     echo ""
 fi
 
-# O QUE A CONF DO MODPROBE.D MANDA (OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01,
-# 25/09/2026). A conf é a DONA do valor que se escreve a quente: aqui ele
-# estava digitado, e o `feature_retries` ia 2 para o módulo carregado desde
-# 09/08, quando a conf já mandava 1. É a mesma forma do `opcao_do_modprobe` de
-# `scripts/lib/camada_de_maquina.sh` (esta lib não viaja nos pacotes), e
-# `tests/unit/test_as_opcoes_dos_modulos_tem_um_dono.py` passa as duas pelas
-# mesmas confs. O valor entra num comando de root entre aspas simples, então
-# só passa o que tem forma de valor de parâmetro — o resto é recusado.
-#   $1 = a conf · $2 = o parâmetro · imprime o valor da última `options` que o
-#   declara; sem ele (ou com forma estranha), nada, e devolve 1.
 _opcao_do_modprobe() {
     awk -v p="$2" '
         $1 == "options" {
@@ -442,14 +286,8 @@ _opcao_do_modprobe() {
     ' "$1" 2>/dev/null
 }
 
-# Comando núcleo executado com privilégios elevados (pkexec ou sudo).
-# Define como string para reuso em ambos os caminhos sem duplicar lógica.
 _build_install_cmd() {
     local cmd="" _v
-    # VPAD-09: grupo dedicado dono dos nós 71-* (racional na 71-uhid.rules) —
-    # criado ANTES de copiar as regras, senão o GROUP= cai no fallback
-    # uaccess-only (udev ignora grupo inexistente). A usuária entra no grupo
-    # a partir do PRÓXIMO login; até lá o uaccess cobre a sessão atual.
     cmd+="groupadd -f -r hefesto; "
     if [[ "${BROKER_SESSION_UID}" != "0" ]]; then
         local _vpad_user
@@ -459,48 +297,31 @@ _build_install_cmd() {
         fi
     fi
     for regra in "${RULES[@]}"; do
-        # A regra do nó tem origem PRÓPRIA (`REGRA_DO_NO_SRC`): fechada com
-        # broker, aberta sem ele. As outras treze vêm sempre do `RULES_SRC`.
         local _origem="${RULES_SRC}/${regra}"
         if [[ "${regra}" == "${REGRA_DO_NO}" ]]; then
             _origem="${REGRA_DO_NO_SRC}"
         fi
         cmd+="install -Dm644 '${_origem}' '${RULES_DEST}/${regra}'; "
     done
-    # A regra do nó com o nome de antes sai SEMPRE — inclusive quando a nova
-    # não vai (sem broker e sem o helper): a velha em /etc podia ser a FECHADA,
-    # e o fail-safe deste script é deixar valendo a aberta do pacote.
     cmd+="rm -f '${RULES_DEST}/${REGRA_DO_NO_VELHA}'; "
     if [[ -n "${MODLOAD_SRC}" ]]; then
         cmd+="install -Dm644 '${MODLOAD_SRC}/hefesto-dualsense4unix.conf' "
         cmd+="'${MODLOAD_DEST}/hefesto-dualsense4unix.conf'; "
-        # Carrega uinput agora para não esperar reboot.
         cmd+="modprobe uinput 2>/dev/null || true; "
-        # uhid: o gamepad virtual vira um DualSense de verdade (vibração também na
-        # máscara DualSense). Sem o módulo o daemon cai no uinput sozinho — por isso
-        # é best-effort, como o uinput. SPRINT-UHID-VPAD-01.
         cmd+="modprobe uhid 2>/dev/null || true; "
     fi
-    # Cura de raiz do storm (paridade com o step 3c do install.sh nativo).
-    # Também escreve o quirk_flags a quente — vale no próximo replug do controle,
-    # sem reboot. Best-effort: se o sysfs não existir, segue.
     if [[ -n "${SNDQUIRK_SRC}" ]]; then
         cmd+="install -Dm644 '${SNDQUIRK_SRC}/hefesto-dualsense-storm.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-dualsense-storm.conf'; "
         cmd+="printf '%s' '054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m,054c:0df2:ignore_ctl_error|ctl_msg_delay_1m' "
         cmd+="> /sys/module/snd_usb_audio/parameters/quirk_flags 2>/dev/null || true; "
     fi
-    # btusb sem autosuspend (PLAT-04): conf persistente + runtime p/ probes
-    # futuros (best-effort; o adaptador já plugado é coberto pela regra 81).
     if [[ -n "${BTUSB_SRC}" ]]; then
         cmd+="install -Dm644 '${BTUSB_SRC}/hefesto-btusb-no-autosuspend.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-btusb-no-autosuspend.conf'; "
         _v="$(_opcao_do_modprobe "${BTUSB_SRC}/hefesto-btusb-no-autosuspend.conf" enable_autosuspend)" \
             && cmd+="printf '${_v}' > /sys/module/btusb/parameters/enable_autosuspend 2>/dev/null || true; "
     fi
-    # Onda T: conf persistente do hid-nintendo patchado + parâmetro a quente
-    # (só existe se o módulo DKMS estiver carregado — best-effort; vale já no
-    # próximo probe BT, sem reload de módulo nem replug dos controles em uso).
     if [[ -n "${HIDNINTENDO_SRC}" ]]; then
         cmd+="install -Dm644 '${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-hid-nintendo.conf'; "
@@ -508,27 +329,6 @@ _build_install_cmd() {
             && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || true; "
         _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" skip_tx_on_rate_exceeded)" \
             && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
-        # PARIDADE-QUENTE-01 (07/08/2026) — a simetria da AUTO-01.7 tinha sido
-        # paga em UM sentido só. O achado de 25/07
-        # (a sprint `AUTO-01`)
-        # dizia que ERA ESTE script que escrevia os params a quente e o
-        # install.sh não; a cura veio, o install.sh alcançou — e os TRÊS params
-        # do patch 0003 (clone USB 057E:2009) nasceram depois, só no
-        # `install_dkms_hid_nintendo_host`. Aqui nunca chegaram. GRAU: MEDIDO (comparação dos
-        # dois conjuntos de `/sys/module/hid_nintendo/parameters/*` escritos).
-        #
-        # O que quebra sem estas três linhas, no caminho de PACOTE: o uninstall.sh
-        # os devolve a 0 de propósito («params vivos do hid_nintendo»); a reinstalação
-        # por pacote recoloca a conf do modprobe.d (que os traz), mas a conf só
-        # é lida quando o MÓDULO CARREGA — e recarregar é proibido aqui
-        # (derrubaria Pro/8BitDo em uso). Resultado: o 8BitDo Pro clone no cabo
-        # volta a morrer na probe ("Failed to get joycon info; ret=-110" — sem
-        # driver, sem hidraw, sem LEDs) até o próximo BOOT. Os três são lidos NA
-        # PROBE, então escrever agora faz a cura valer no próximo PLUG.
-        #
-        # Portão implícito: o módulo patchado ANTIGO não tem estes params, e o
-        # redirect falha calado — que é o desejado (mesma decisão do bloco
-        # hid-playstation abaixo, e do `install_dkms_hid_nintendo_host`).
         _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" usb_cmd_pad_to_report)" \
             && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report 2>/dev/null || true; "
         _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" usb_send_conn_status)" \
@@ -536,12 +336,6 @@ _build_install_cmd() {
         _v="$(_opcao_do_modprobe "${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf" usb_probe_degrade)" \
             && cmd+="printf '${_v}' > /sys/module/hid_nintendo/parameters/usb_probe_degrade 2>/dev/null || true; "
     fi
-    # Contenção BT: conf persistente do hid-playstation patchado + parâmetros a
-    # quente. Todos são lidos A CADA probe, então escrever aqui já vale na
-    # próxima CONEXÃO do controle — sem reload (proibido: derrubaria os
-    # DualSense por BT) e sem replug dos que já estão em uso. Os dois ds4_* são
-    # a cura do clone no cabo (pairing info de 9 bytes); ausentes no módulo
-    # antigo, e aí o redirect falha calado, que é o desejado.
     if [[ -n "${HIDPLAYSTATION_SRC}" ]]; then
         cmd+="install -Dm644 '${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-hid-playstation.conf'; "
@@ -552,33 +346,10 @@ _build_install_cmd() {
         _v="$(_opcao_do_modprobe "${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf" ds4_synthetic_mac)" \
             && cmd+="printf '${_v}' > /sys/module/hid_playstation/parameters/ds4_synthetic_mac 2>/dev/null || true; "
     fi
-    # RADIO-AFOGADO-02 — o uhid com contrapressão (INSTALL-E-UNINSTALL-DO-
-    # RADIO-01, 23/09/2026). O `uninstall.sh` devolve o `backpressure` a 0 a
-    # quente, e este helper nunca o rearmava: é o par que a régua da paridade
-    # quente cobra.
-    #
-    # O QUE ESTE CAMINHO FAZ, E O QUE ELE NÃO FAZ, com a razão: o módulo e a
-    # conf são OPT-IN (`./install.sh --uhid-contrapressao`), e os pacotes não
-    # os levam (`X-HefestoNaoEmpacotado` na própria conf) — ligar muda o
-    # `write(2)` de todo HID por Bluetooth da máquina, e ninguém leva isso sem
-    # pedir. Então aqui não se instala nada novo: o pedido é a conf em
-    # /etc/modprobe.d, gravada pelo install, e só com ela no disco o parâmetro
-    # é rearmado — o pedido que já está na máquina volta a valer agora, sem
-    # recarregar o uhid (que derrubaria todo HID por Bluetooth). Sem a conf, o
-    # de fábrica segue, e o redirect falha calado num uhid sem o parâmetro.
     if [[ -f /etc/modprobe.d/hefesto-uhid.conf ]]; then
         _v="$(_opcao_do_modprobe /etc/modprobe.d/hefesto-uhid.conf backpressure)" \
             && cmd+="printf '${_v}' > /sys/module/uhid/parameters/backpressure 2>/dev/null || true; "
     fi
-    # BROKER-01 (Onda S — fd-injection): binário + units-template renderizadas
-    # (__SESSION_UID__/__SESSION_GROUP__) + enable --now do .socket (só ele —
-    # o .service sobe na 1ª conexão do daemon, ativação por socket). Guarda
-    # pós-render (lição 6): placeholder __SESSION_* sobrando ABORTA só o
-    # broker (nunca as regras udev já instaladas acima).
-    # S-1 (auditoria 21/07): o render acontece num mktemp -d PRIVADO criado
-    # DENTRO do comando elevado (0700 de root) — caminho fixo em /tmp era
-    # pré-criável por outro usuário local: com fs.protected_regular o sed de
-    # root falhava em silêncio e o root instalava a unit DO ATACANTE.
     if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
         cmd+="install -Dm755 '${BROKER_BIN_SRC}/hidraw_broker.py' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker; "
@@ -606,24 +377,11 @@ _build_install_cmd() {
         cmd+="rm -rf \"\${_hbr}\"; "
         cmd+="fi; "
     fi
-    # Alvos do RUN+= das regras 82 e 83, no MESMO comando elevado que grava as
-    # regras: alvo entra quando a regra entra. O diretório de snapshots não é
-    # detalhe — é o `ReadWritePaths` da unit, e sem ele o systemd recusa subir o
-    # serviço, trocando o snapshot por um erro a cada conexão.
     if [[ "${BTRES_INSTALL_OK}" -eq 1 ]]; then
         cmd+="install -Dm755 '${BTRES_SCRIPTS_SRC}/bt_nosniff_now.sh' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh; "
         cmd+="install -Dm755 '${BTRES_SCRIPTS_SRC}/bt_bonds_snapshot.sh' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh; "
-        # MESMO DEFEITO, OS ÚLTIMOS DOIS (22/08/2026). O `bt_active_mode.sh` é o
-        # `ExecStartPost` do drop-in do bluetooth.service, e o
-        # `bt_ponte_privilegiada.sh` é o helper que a janela chama sem pedir
-        # senha. Os dois eram instalados só pelo `install.sh` do checkout — quem
-        # instalou por pacote tinha o drop-in apontando para arquivo que nunca
-        # existiu, e a cura BT-NINTENDO-ACTIVE-01 (a que impede o Pro de cair
-        # sob carga) nunca rodava. É a terceira vez que esta família aparece
-        # hoje; as duas primeiras foram as regras udev 82/83 e os alvos delas.
-        # `-f` na fonte: formato que não os traz apenas não os instala.
         cmd+="[ -f '${BTRES_SCRIPTS_SRC}/bt_active_mode.sh' ] && install -Dm755 "
         cmd+="'${BTRES_SCRIPTS_SRC}/bt_active_mode.sh' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh; "
@@ -635,27 +393,12 @@ _build_install_cmd() {
         cmd+="install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds; "
         cmd+="systemctl daemon-reload 2>/dev/null || true; "
     fi
-    # Recarrega udev e re-dispara eventos para dispositivos PS5 já presentes,
-    # cobrindo BT (subsystem=hidraw) + USB (subsystem=usb).
     cmd+="udevadm control --reload-rules; "
-    # GATILHO-DA-COR-INSTALA-01 (12/08/2026): era
-    # `--subsystem-match=hidraw --attr-match=idVendor=054c`, que casa ZERO
-    # dispositivos — o `--attr-match` só olha os sysattrs do PRÓPRIO nó, e um
-    # `hidraw` não tem `idVendor` (ele mora no pai USB, e no Bluetooth não há
-    # pai USB nenhum). Aqui o `udevadm trigger` global da última linha
-    # compensava por acaso; no `scripts/install_udev.sh` não havia global, e o
-    # controle já conectado no rádio ficava sem a regra do nó até reconectar.
-    # A justificativa completa, com a medição, está no install_udev.sh.
     cmd+="udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true; "
-    # input: reavalia 76 (touchpad-ignore), 78 (ID_INPUT_*) e 80 (js de Motion
-    # Sensors em MODE 0000) sem exigir replug do controle.
     cmd+="udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true; "
-    # misc: /dev/uinput e /dev/uhid. Sem este trigger as regras 71-* só valeriam no
-    # próximo boot (o nó já existia quando elas chegaram) — e sem elas não há vpad.
     cmd+="udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true; "
-    # pci: aplica a 81-host (power/control=on nos xHCI) sem reboot. PLAT-03.
     cmd+="udevadm trigger --action=change --subsystem-match=pci 2>/dev/null || true; "
     cmd+="udevadm trigger 2>/dev/null || true; "
     cmd+="echo 'Regras instaladas com sucesso.'"
@@ -664,22 +407,13 @@ _build_install_cmd() {
 
 INSTALL_CMD="$(_build_install_cmd)"
 
-# Decidir como elevar privilégios.
 if [[ "$(id -u)" -eq 0 ]]; then
-    # Já rodando como root (ex: sudo bash install-host-udev.sh)
     bash -c "${INSTALL_CMD}"
 elif command -v pkexec &>/dev/null; then
-    # Dentro do Flatpak ou sistema com polkit — pkexec é o caminho canônico
     echo "Esta operação requer senha de administrador (polkit)."
     echo ""
     pkexec bash -c "${INSTALL_CMD}"
 elif command -v sudo &>/dev/null; then
-    # Fallback para sudo (fora do Flatpak em sistemas sem polkit)
-    # INSTALL-UDEV-SUDO-CHECK-01 (v3.3.0): se o sudo cache expirou (ou
-    # nunca rodou nessa sessão), o `sudo bash -c` mostra prompt em stdin.
-    # Em sessão automatizada (CI sem TTY ou helper headless), trava.
-    # Pre-check `sudo -n true` detecta isso e avisa antes — usuário sabe
-    # que vai precisar digitar senha em ambiente real.
     if ! sudo -n true 2>/dev/null; then
         echo "AVISO: sudo requer senha para instalar regras udev em ${RULES_DEST}." >&2
         echo "       Se você está rodando sem TTY (CI, headless), cancele com Ctrl+C" >&2
@@ -699,8 +433,6 @@ else
         fi
     done
     echo "  sudo rm -f ${RULES_DEST}/${REGRA_DO_NO_VELHA}" >&2
-    # A receita à mão também tem de trazer os alvos, senão ela reproduz o
-    # defeito que este script acabou de curar: regra no disco, cura nenhuma.
     if [[ "${BTRES_INSTALL_OK}" -eq 1 ]]; then
         echo "  sudo install -Dm755 ${BTRES_SCRIPTS_SRC}/bt_nosniff_now.sh \\" >&2
         echo "       /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh" >&2
@@ -720,17 +452,6 @@ else
     exit 1
 fi
 
-# -----------------------------------------------------------------------------
-# Onda T — cura de RAIZ do probe BT: módulo DKMS hid-nintendo patchado.
-# A conf modprobe.d instalada acima é INERTE sem o módulo (o in-tree só loga
-# "unknown parameter ignored"). Este bloco é o caminho OFICIAL dos formatos
-# empacotados (.deb/rpm/arch instruem rodar este script no pós-instalação):
-# sem ele, usuário de pacote nunca ganharia o módulo — a cura ficava
-# reservada a quem roda ./install.sh de um checkout git.
-# Fail-safe TOTAL (contrato do dkms_lib.sh): dkms/headers ausentes ou build
-# falho = aviso honesto + segue; as regras udev já instaladas acima nunca são
-# afetadas; NUNCA recarrega módulo (controles em uso não podem cair).
-# -----------------------------------------------------------------------------
 DKMS_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/dkms/hid-nintendo" \
@@ -754,12 +475,8 @@ for candidate in \
     fi
 done
 if [[ -n "${DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
-    # A versão vem do dkms.conf (fonte da verdade) — nunca hardcoded aqui.
     DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${DKMS_SRC}/dkms.conf")"
     if [[ -n "${DKMS_VER}" ]]; then
-        # Rodando já como root (sudo bash …, o caminho documentado nos
-        # pacotes) o dkms_lib.sh ainda prefixa sudo — shim inócuo quando o
-        # binário sudo não existe no sistema.
         if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
             sudo() { "$@"; }
         fi
@@ -781,15 +498,6 @@ else
     echo "       hefesto-hid-nintendo.conf fica inerte sem o módulo patchado (in-tree segue)."
 fi
 
-# -----------------------------------------------------------------------------
-# Onda W — cura de RAIZ do fantasma USB do dongle WiFi: módulo DKMS rtw88_usb
-# patchado (device-gone + usb_queue_reset_device, gate hang_reset). Mesmo
-# caminho OFICIAL dos formatos empacotados da Onda T acima: sem este bloco,
-# usuário de pacote nunca ganharia o módulo. Fail-safe TOTAL (contrato do
-# dkms_lib.sh): dkms/headers ausentes ou build falho = aviso honesto + segue
-# (in-tree continua); NUNCA recarrega módulo — o WiFi em uso não pode cair,
-# a troca vale no próximo boot (replug NÃO troca módulo carregado).
-# -----------------------------------------------------------------------------
 RTW88_DKMS_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/dkms/rtw88-usb" \
@@ -802,10 +510,8 @@ for candidate in \
     fi
 done
 if [[ -n "${RTW88_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
-    # A versão vem do dkms.conf (fonte da verdade) — nunca hardcoded aqui.
     RTW88_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${RTW88_DKMS_SRC}/dkms.conf")"
     if [[ -n "${RTW88_DKMS_VER}" ]]; then
-        # Mesmo shim do bloco acima: rodando já como root sem o binário sudo.
         if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
             sudo() { "$@"; }
         fi
@@ -815,19 +521,6 @@ if [[ -n "${RTW88_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
         source "${DKMS_LIB_SH}"
         dkms_install_patched_module hefesto-rtw88-usb "${RTW88_DKMS_VER}" \
             "${RTW88_DKMS_SRC}" rtw88_usb
-        # PARIDADE-QUENTE-01 (07/08/2026), segunda metade. O `hang_reset` é o
-        # ÚNICO param desta casa sem conf de modprobe.d: `assets/modprobe.d/` traz
-        # btusb, hid-nintendo, hid-playstation e uhid, e nenhum rtw88: o valor só vem
-        # do default compilado (Y) ou de uma escrita a quente. O uninstall.sh o
-        # devolve a 0 de propósito («hang_reset do rtw88_usb devolvido a 0»); o
-        # install.sh o rearma (`install_dkms_rtw88_usb_host`, na lib); este script —
-        # o caminho de PACOTE, que instala o MESMO módulo logo acima — nunca o
-        # rearmava. GRAU: MEDIDO (comparação dos dois conjuntos escritos a quente).
-        # Consequência: depois de uninstall + reinstalação por pacote, o reset
-        # de porta do fantasma do dongle fica DESLIGADO até o próximo boot, com
-        # o módulo patchado instalado e a detecção rodando sem a cura.
-        # Best-effort, mesma forma do install.sh: o portão é de EXISTÊNCIA
-        # (`-e`) porque `hang_reset` só existe no módulo PATCHADO carregado.
         if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
             printf 'Y' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
             echo "  hang_reset rearmado a quente (vale já; sem reload, sem reboot)"
@@ -844,16 +537,6 @@ else
     echo "       patchado o fantasma USB do dongle WiFi segue possível (in-tree continua)."
 fi
 
-# -----------------------------------------------------------------------------
-# Contenção BT (2026-07-25) — cura de RAIZ da perda de um DualSense inteiro
-# quando vários controles pareiam quase juntos no mesmo adaptador (o cenário
-# NORMAL do alvo: 4 por Bluetooth, um por jogador). O GET_REPORT do 2º expira
-# no BlueZ (REPORT_REQ_TIMEOUT = 3 s), o uhid achata o ETIMEDOUT em -EIO e a
-# probe morre. Mesmo caminho OFICIAL dos formatos empacotados dos blocos acima:
-# sem este bloco, usuário de pacote nunca ganharia o módulo. Fail-safe TOTAL
-# (contrato do dkms_lib.sh); NUNCA recarrega o módulo — recarregar o
-# hid_playstation derrubaria TODOS os DualSense, inclusive os por BT.
-# -----------------------------------------------------------------------------
 HIDPS_DKMS_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/dkms/hid-playstation" \
@@ -866,10 +549,8 @@ for candidate in \
     fi
 done
 if [[ -n "${HIDPS_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
-    # A versão vem do dkms.conf (fonte da verdade) — nunca hardcoded aqui.
     HIDPS_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${HIDPS_DKMS_SRC}/dkms.conf")"
     if [[ -n "${HIDPS_DKMS_VER}" ]]; then
-        # Mesmo shim dos blocos acima: rodando já como root sem o binário sudo.
         if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
             sudo() { "$@"; }
         fi
@@ -891,14 +572,6 @@ else
     echo "       módulo patchado, o 2º DualSense segue podendo se perder na probe."
 fi
 
-# -----------------------------------------------------------------------------
-# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o usb_f_hid patchado, a função HID dos
-# pads USB virtuais. O de fábrica responde o GET_REPORT sempre com 64 bytes e
-# sem o pacote vazio, e o jogo no Proton espera 5 s por pedido de feature. Mesma
-# rota dos blocos acima. A troca a quente aqui é só a SEM pad nenhum (refcnt 0):
-# este roteiro roda como root e não alcança o daemon de usuário que solta os
-# pads; com pads no ar, o curado vale no próximo boot.
-# -----------------------------------------------------------------------------
 FHID_DKMS_SRC=""
 for candidate in \
     "/app/share/hefesto-dualsense4unix/dkms/usb-f-hid" \
@@ -939,11 +612,6 @@ else
     echo "       patchado, o jogo no Proton espera 5 s por pedido de feature dos pads USB virtuais."
 fi
 
-# INITRAMFS-01 (2026-07-25): os blocos DKMS acima gravam em updates/dkms, mas o
-# initramfs leva uma CÓPIA do .ko e não é regenerado pelo dkms — sem isto o boot
-# seguinte carrega o módulo da geração ANTERIOR (e, como os params novos não
-# existem nele, o kernel descarta a conf de options inteira). Roda UMA vez para
-# todos os módulos marcados acima; no-op se nenhum ficou staged.
 if [[ -n "${DKMS_LIB_SH}" ]]; then
     # shellcheck source=dkms_lib.sh
     source "${DKMS_LIB_SH}"

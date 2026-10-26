@@ -397,9 +397,8 @@ def test_a_unit_do_broker_deixa_gravar_a_marca() -> None:
 
 def _bloco_da_presenca() -> str:
     texto = _texto("install.sh")
-    inicio = texto.index("# 7a'. A PRESENÇA")
-    corpo = texto.index("\n", texto.index("# ----", inicio)) + 1
-    fim = texto.index("\n# ----", corpo)
+    corpo = texto.index("PRESENCA_UNIT_SRC=")
+    fim = texto.index('\nif [[ "${SKIP_KERNEL_WATCH}" -eq 1 ]]; then', corpo)
     return texto[corpo:fim]
 
 

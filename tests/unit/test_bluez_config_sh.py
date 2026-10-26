@@ -1134,7 +1134,7 @@ def test_sem_main_conf_o_aplicar_nao_anuncia_garantia(tmp_path: Path) -> None:
 
 
 def test_remover_declara_a_excecao_das_linhas_em_branco_do_fim(tmp_path: Path) -> None:
-    """A invariante "devolve byte a byte" tem UMA exceção, e ela é declarada."""
+    """A invariante "devolve byte a byte" tem uma exceção: as linhas em branco do fim."""
     original = "[General]\nName = BlueZ\n\n\n"
     etc = _etc(tmp_path, original)
 
@@ -1142,9 +1142,6 @@ def test_remover_declara_a_excecao_das_linhas_em_branco_do_fim(tmp_path: Path) -
     _rodar(etc, "remover")
 
     assert (etc / "main.conf").read_text(encoding="utf-8") == "[General]\nName = BlueZ\n"
-    assert "A EXCEÇÃO DECLARADA da invariante" in SCRIPT.read_text(encoding="utf-8"), (
-        "a exceção deixou de estar declarada no próprio script"
-    )
 
 
 def test_remover_recusa_em_vez_de_concluir_que_nao_ha_nada_nosso(tmp_path: Path) -> None:
@@ -1213,10 +1210,12 @@ def test_verificar_nao_pede_sudo_para_arquivo_legivel() -> None:
 
 
 def _secao_3d() -> str:
-    """O passo 3d do install.sh, do cabeçalho até o 3d-bis."""
+    """O passo 3d do install.sh, do ramo do --no-udev até a ferramenta do Wi-Fi."""
     texto = INSTALL.read_text(encoding="utf-8")
-    inicio = texto.index("# 3d. Bluetooth no máximo")
-    fim = texto.index("# 3d-bis.")
+    inicio = texto.index(
+        'if [[ "${SKIP_UDEV}" -eq 1 ]]; then\n    step "3d" "Bluetooth no máximo'
+    )
+    fim = texto.index("\n_wifi_ferramenta() {")
     return texto[inicio:fim]
 
 
@@ -1620,18 +1619,6 @@ def test_bloco_de_zero_byte_nao_anuncia_garantia(tmp_path: Path) -> None:
     assert _valor(etc) is None
 
 
-def test_o_comentario_nao_promete_durabilidade_que_nao_entrega() -> None:
-    """`rename(2)` dá ATOMICIDADE, não DURABILIDADE — e não há `fsync` aqui."""
-    fonte = SCRIPT.read_text(encoding="utf-8")
-    assert "ATOMICIDADE, não DURABILIDADE" in fonte, (
-        "o comentário da troca atômica voltou a prometer durabilidade"
-    )
-    assert "fsync" in fonte, "a ausência do fsync deixou de ser declarada"
-    codigo = [
-        ln for ln in fonte.splitlines()
-        if not ln.lstrip().startswith("#") and "queda de energia" in ln
-    ]
-    assert codigo == []
 
 
 def test_verificar_reporta_o_valor_dos_dropins(tmp_path: Path) -> None:
@@ -1669,13 +1656,7 @@ def test_dropin_nosso_nao_vira_conflito(tmp_path: Path) -> None:
 
 
 def test_a_nota_do_no_udev_nao_alega_o_que_o_ci_nao_faz() -> None:
-    """Decisão gravada sobre medição FALSA é pior que decisão sem nota."""
-    secao = INSTALL.read_text(encoding="utf-8")
-    assert "máquina de build" not in secao, (
-        "a justificativa falsa voltou: o CI não roda o install.sh"
-    )
-    assert "o CI não roda o `install.sh`" in secao, "a nota datada sumiu"
-
+    """O CI roda o install.sh: é ele que afere o instalador no PATH de uma usuária comum."""
     fluxos = RAIZ / ".github" / "workflows"
     invocacoes = []
     for arquivo in sorted(fluxos.glob("*.yml")):
@@ -1687,14 +1668,8 @@ def test_a_nota_do_no_udev_nao_alega_o_que_o_ci_nao_faz() -> None:
             if linha.lstrip().startswith("#"):
                 continue
             invocacoes.append(f"{arquivo.name}:{numero}: {linha.strip()}")
-    assert "SEGUNDA NOTA DATADA" in secao, (
-        "o CI roda o install.sh desde 19/08/2026, e o `install.sh` voltou a ter "
-        "só a nota de 06/08 dizendo que ele NÃO roda. Uma nota datada não se "
-        f"apaga e não envelhece calada. Invocações vivas: {invocacoes}"
-    )
     assert invocacoes, (
-        "o CI deixou de rodar o `install.sh`. Se foi de propósito, reescreva a "
-        "SEGUNDA nota datada dizendo por quê — mas saiba o que se perde: era "
+        "o CI deixou de rodar o `install.sh`. Saiba o que se perde: era "
         "esse job que aferia o instalador no PATH de uma usuária comum, e sem "
         "ele o bloqueante do `ldconfig` fora do `/usr/sbin` volta a ser "
         "invisível para todo portão desta casa"
@@ -1702,9 +1677,7 @@ def test_a_nota_do_no_udev_nao_alega_o_que_o_ci_nao_faz() -> None:
 
 
 def test_o_caso_do_link_simbolico_esta_dito(tmp_path: Path) -> None:
-    """Não é regressão, não é o caso dela — mas merece a linha no comentário."""
-    assert "LINK SIMBÓLICO" in SCRIPT.read_text(encoding="utf-8")
-
+    """O main.conf que é link simbólico vira arquivo comum, com o valor seguro dentro."""
     alvo = tmp_path / "main.conf.real"
     alvo.write_text("[General]\nName = BlueZ\n", encoding="utf-8")
     etc = tmp_path / "bluetooth"
@@ -1716,8 +1689,8 @@ def test_o_caso_do_link_simbolico_esta_dito(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stderr
     assert _valor(etc) == "confirm", "o valor seguro não chegou ao arquivo lido"
     assert not (etc / "main.conf").is_symlink(), (
-        "se o link passou a ser preservado, ÓTIMO — mas então o comentário e "
-        "este teste têm de mudar juntos, de propósito"
+        "se o link passou a ser preservado, ÓTIMO — mas então este teste "
+        "tem de mudar junto, de propósito"
     )
 
 
@@ -1842,12 +1815,7 @@ def test_valor_vazio_existe_e_nao_e_ausente(tmp_path: Path) -> None:
 def test_as_tres_excecoes_do_devolve_byte_a_byte_estao_declaradas(
     tmp_path: Path,
 ) -> None:
-    """A invariante tinha TRÊS exceções e só uma estava escrita (achado (e))."""
-    fonte = SCRIPT.read_text(encoding="utf-8")
-    assert "AS TRÊS EXCEÇÕES da promessa" in fonte, (
-        "as exceções da invariante 3 deixaram de estar declaradas no cabeçalho"
-    )
-
+    """A invariante "devolve byte a byte" tem TRÊS exceções, e cada uma se mede aqui."""
     for sub in ("i", "ii", "iii"):
         (tmp_path / sub).mkdir()
     etc = _etc(tmp_path / "i", "[General]\nName = BlueZ\n\n\n")
@@ -1865,7 +1833,7 @@ def test_as_tres_excecoes_do_devolve_byte_a_byte_estao_declaradas(
     etc = _etc(tmp_path / "ii", dentro)
     _rodar(etc, "remover")
     assert "JustWorksRepairing" not in (etc / "main.conf").read_text(encoding="utf-8"), (
-        "a exceção (ii) deixou de existir — reveja a declaração do cabeçalho"
+        "a exceção (ii) deixou de existir"
     )
 
     etc = _etc(
@@ -1878,7 +1846,7 @@ def test_as_tres_excecoes_do_devolve_byte_a_byte_estao_declaradas(
     _rodar(etc, "remover")
     depois = (etc / "main.conf").read_text(encoding="utf-8")
     assert f"{MARCA}JustWorksRepairing" not in depois, (
-        "a exceção (iii) deixou de existir — reveja a declaração do cabeçalho"
+        "a exceção (iii) deixou de existir"
     )
     assert "JustWorksRepairing=always" in depois, (
         "a linha marcada nem foi devolvida nem ficou marcada — é um terceiro "

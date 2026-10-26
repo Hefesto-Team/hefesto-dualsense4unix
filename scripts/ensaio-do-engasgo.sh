@@ -1,28 +1,20 @@
 #!/usr/bin/env bash
-# ensaio-do-engasgo.sh — os ensaios do engasgo, jogados por quem joga
-# (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01, §4).
-#
-# Cada ensaio é a MESMA fase do jogo, jogada por você, com o jogo reaberto entre
-# as voltas. Uso, nesta ordem:
-#
-#   ensaio-do-engasgo.sh preparar <appid>     com a Steam FECHADA: põe o MangoHud
-#                                             por quadro, sem desenhar na tela, nas
-#                                             Opções de Inicialização do jogo
-#   ensaio-do-engasgo.sh volta <nome> <min>   abra o jogo, chegue à fase e rode
-#                                             isto; ao fim, feche o jogo
-#   ensaio-do-engasgo.sh resumo               uma linha por minuto de cada volta
-#   ensaio-do-engasgo.sh devolver             com a Steam FECHADA: devolve a opção
-#                                             de antes e confere
-#
-# Por minuto: os quadros e os picos (acima de 33 e de 50 ms, do MangoHud), o
-# `allocstall` e o `compact_stall` (/proc/vmstat), os blocos livres de ordem 7 a
-# 10 (/proc/buddyinfo) e, no diário do kernel, o `NVRM` e o `Output queue is
-# full`. Só lê a máquina. O que escreve: a pasta do ensaio
-# (`$XDG_STATE_HOME/hefesto-dualsense4unix/ensaio-do-engasgo/`) e, no preparar e
-# no devolver, a opção do jogo — pelo dono, `integrations/opcoes_por_jogo.py`,
-# que só escreve com a Steam fechada. O MangoHud entra pela Steam, e não pelo
-# ambiente de quem roda isto: é o que chega ao jogo.
 set -u
+_ajuda() {
+  cat <<'AJUDA'
+ensaio-do-engasgo.sh — os ensaios do engasgo, jogados por quem joga
+(O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01, §4).
+
+  ensaio-do-engasgo.sh preparar <appid>     com a Steam FECHADA: põe o MangoHud
+                                            por quadro, sem desenhar na tela, nas
+                                            Opções de Inicialização do jogo
+  ensaio-do-engasgo.sh volta <nome> <min>   abra o jogo, chegue à fase e rode
+                                            isto; ao fim, feche o jogo
+  ensaio-do-engasgo.sh resumo               uma linha por minuto de cada volta
+  ensaio-do-engasgo.sh devolver             com a Steam FECHADA: devolve a opção
+                                            de antes e confere
+AJUDA
+}
 
 RAIZ=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 DONO=${HEFESTO_OPCOES_POR_JOGO:-$RAIZ/src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py}
@@ -34,8 +26,6 @@ QUADROS=$PASTA/mangohud
 diz() { printf '%s %s\n' "$(date +%T)" "$*"; }
 morre() { diz "RECUSO: $*" >&2; exit 2; }
 
-# A parte que lê e soma, numa peça só: `amostrar`, `recolher`, `resumo`,
-# `guardar` e `ler`. Só a biblioteca padrão.
 py() {
     "$PY" - "$@" <<'PY'
 import csv, json, re, sys, time
@@ -66,18 +56,14 @@ def inicio(volta: Path) -> float:
 
 
 def minuto(ts: float) -> str:
-    # A data vai na chave para a volta que passa da meia-noite sair em ordem;
-    # a linha impressa mostra só a hora.
     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
 
 
 def cabe(n: float, sim: bool) -> str:
-    # O minuto que o instrumento não cobriu é «-», nunca zero: um zero ali se
-    # leria como «nenhum pico» sobre o que não foi medido.
     return str(int(n)) if sim else "-"
 
 
-if ato == "amostrar":  # amostrar <saida.jsonl> <minutos>
+if ato == "amostrar":
     saida, fim = Path(args[0]), time.time() + float(args[1]) * 60
     with saida.open("a") as f:
         while True:
@@ -87,9 +73,7 @@ if ato == "amostrar":  # amostrar <saida.jsonl> <minutos>
                 break
             time.sleep(min(10.0, max(0.0, fim - time.time())))
 
-elif ato == "recolher":  # recolher <mangohud> <voltas>
-    # O MangoHud pode fechar o arquivo só quando o jogo sai: o CSV vai para a
-    # volta que COMEÇOU por último antes da última escrita dele.
+elif ato == "recolher":
     voltas = sorted((inicio(v), v) for v in Path(args[1]).glob("*") if (v / "inicio").exists())
     for c in sorted(Path(args[0]).glob("*.csv")):
         if c.name.endswith("_summary.csv"):
@@ -98,7 +82,7 @@ elif ato == "recolher":  # recolher <mangohud> <voltas>
         if antes:
             c.rename(antes[-1] / c.name)
 
-elif ato == "resumo":  # resumo <voltas>
+elif ato == "resumo":
     for volta in sorted(p for p in Path(args[0]).iterdir() if (p / "inicio").exists()):
         memoria = volta / "memoria.jsonl"
         amostras = [json.loads(x) for x in memoria.read_text().splitlines()
@@ -106,10 +90,6 @@ elif ato == "resumo":  # resumo <voltas>
         comeco = inicio(volta)
         fim = amostras[-1]["ts"] if amostras else float("inf")
         linhas: dict = defaultdict(lambda: defaultdict(float))
-        # O QUE CADA INSTRUMENTO COBRIU, por minuto. Sem o CSV do MangoHud (ele
-        # não está instalado, ou a opção não chegou ao jogo) os quadros não
-        # foram medidos; o minuto sem par de amostras não tem `allocstall`; e
-        # sem acesso ao diário do kernel o NVRM não foi lido.
         com_quadros: set = set()
         com_memoria: set = set()
         for c in sorted(volta.glob("*.csv")):
@@ -124,7 +104,7 @@ elif ato == "resumo":  # resumo <voltas>
                 continue
             col = {n: k for k, n in enumerate(rows[cab])}
             vistos: list = []
-            for r in rows[cab + 2:]:  # a primeira linha de dados é a partida
+            for r in rows[cab + 2:]:
                 try:
                     ms, ns = float(r[col["frametime"]]), float(r[col["elapsed"]])
                 except (KeyError, ValueError, IndexError):
@@ -137,8 +117,6 @@ elif ato == "resumo":  # resumo <voltas>
                 m["quadros"] += 1
                 m[">33ms"] += ms > 33
                 m[">50ms"] += ms > 50
-            # Entre o primeiro e o último quadro deste arquivo o MangoHud estava
-            # gravando: ali, um minuto sem quadro é o jogo parado, e o zero vale.
             if vistos:
                 passo = min(vistos)
                 while passo <= max(vistos):
@@ -151,12 +129,12 @@ elif ato == "resumo":  # resumo <voltas>
             for chave in ("allocstall", "compact_stall"):
                 m[chave] += sum(v - a["vmstat"].get(k, 0) for k, v in b["vmstat"].items()
                                 if k.startswith(chave))
-        for amostra_ in amostras:  # a ordem é retrato, não diferença: cada amostra vale
+        for amostra_ in amostras:
             m = linhas[minuto(amostra_["ts"])]
             m["ordem"] = min(m.get("ordem", amostra_["ordem_7_a_10"]),
                              amostra_["ordem_7_a_10"])
         for chave_ in com_quadros:
-            linhas[chave_]  # o minuto parado aparece, com o zero que ele mediu
+            linhas[chave_]
         kernel = volta / "kernel.txt"
         sem_kernel = (volta / "kernel-sem-acesso").exists()
         for linha in kernel.read_text().splitlines() if kernel.exists() else []:
@@ -174,7 +152,7 @@ elif ato == "resumo":  # resumo <voltas>
         for hora in sorted(linhas):
             m = linhas[hora]
             q, mem = hora in com_quadros, hora in com_memoria
-            ordem = int(m["ordem"]) if "ordem" in m else "-"  # minuto sem amostra
+            ordem = int(m["ordem"]) if "ordem" in m else "-"
             print(f"{hora[-5:]} quadros={cabe(m['quadros'], q)} "
                   f">33ms={cabe(m['>33ms'], q)} >50ms={cabe(m['>50ms'], q)} "
                   f"allocstall={cabe(m['allocstall'], mem)} "
@@ -182,23 +160,23 @@ elif ato == "resumo":  # resumo <voltas>
                   f"NVRM={cabe(m['NVRM'], not sem_kernel)} "
                   f"fila_cheia={cabe(m['fila'], not sem_kernel)}")
 
-elif ato == "guardar":  # guardar <arquivo> <appid> <opção>
+elif ato == "guardar":
     Path(args[0]).write_text(json.dumps({"appid": args[1], "opção": args[2]}))
 
-elif ato == "ler":  # ler <arquivo> <chave>
+elif ato == "ler":
     print(json.loads(Path(args[0]).read_text())[args[1]])
 
-elif ato == "opção":  # opção <appid> <a tabela do dono, em JSON>
+elif ato == "opção":
     print(json.loads(args[1]).get(args[0], ""))
 PY
 }
 
-opcao_de() {  # a opção do jogo na tabela do dono, ou nada
+opcao_de() {
     tabela=$("$PY" "$DONO" --json) || return 1
     py opção "$1" "$tabela"
 }
 
-aplicar() {  # a tabela ao vdf, pelo dono; 3 é a Steam aberta
+aplicar() {
     "$PY" "$DONO" --aplicar
     rc=$?
     [ "$rc" = 3 ] && diz "a Steam está aberta: feche-a e rode de novo" >&2
@@ -281,5 +259,5 @@ case "${1:-}" in
     volta) shift; volta "$@" ;;
     resumo) resumo ;;
     devolver) devolver ;;
-    *) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+    *) _ajuda; exit 2 ;;
 esac

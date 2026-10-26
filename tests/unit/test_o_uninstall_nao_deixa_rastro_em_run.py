@@ -71,16 +71,17 @@ def test_toda_raiz_de_run_que_o_produto_escreve_sai_no_uninstall() -> None:
 
 
 LINHAS_DA_SENHA = _recorte(
-    "# O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01)",
+    "[[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]] && _NEEDS_SUDO=1",
     "compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*'",
 )
 BLOCO_DOS_CARIMBOS = _recorte(
-    "    # OS CARIMBOS DE ROOT EM /run das peças que este bloco tira",
-    "    # A TRAVA COMUM DO RÁDIO",
+    "    sudo rm -rf /run/hefesto-dualsense4unix/placa",
+    "    if [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf"
+    " || -d /run/hefesto-dualsense4unix ]]; then",
 )
 BLOCO_DO_ENSAIO = _recorte(
     'if [[ "${DRY_RUN}" -eq 1 ]]; then\n    exec 3>&1',
-    "# Prime a credencial só se algum passo com root vai rodar",
+    "_NEEDS_SUDO=0\n",
 )
 
 SUDO_QUE_RECUSA_O_REAL = (

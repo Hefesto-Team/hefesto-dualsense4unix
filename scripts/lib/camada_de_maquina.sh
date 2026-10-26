@@ -1,59 +1,9 @@
 #!/usr/bin/env bash
-# camada_de_maquina.sh — as DOZE curas de HOST, em casa própria.
-#
-# POR QUE ESTE ARQUIVO NASCEU (31/08/2026)
-# ========================================
-# Ela desinstalou o Hefesto estável e decidiu ficar só com o de
-# desenvolvimento: *"eu desinstalei a versão antiga e vamos deixar só a dev"*.
-# No mesmo instante o app de dev parou de funcionar — e o motivo estava escrito
-# no cabeçalho do `install-dev.sh` desde que ele nasceu, em 29/08:
-#
-#     "O app de dev DEPENDE do Hefesto estável para essa camada."
-#
-# A premissa caiu. Sem o estável, ninguém instalava as regras udev, o grupo
-# `hefesto`, o broker, a resiliência do bluetoothd nem a ponte privilegiada — e
-# o sintoma foi o de sempre nesta casa, a AUSÊNCIA de dado: `/dev/uhid` nascia
-# `crw------- root root`, o daemon caía para uinput em silêncio
-# (`vpad_degradado motivo=uhid_indisponivel`), o teclado virtual não abria
-# (`uinput_keyboard_create_failed [Errno 13]`) e nada disso era erro — era
-# aviso, no meio do log.
-#
-# ESTA CAMADA É DA MÁQUINA, NÃO DO APP. É a razão de o `install-dev.sh` não a
-# ter: dois instaladores escrevendo por cima de
-# `/etc/udev/rules.d/73-hefesto-ps5-controller.rules` fariam o app de uma pessoa rodar
-# sob a regra da outra sem uma linha dizendo isso. O que mudou não é essa
-# razão — é que agora existe UM app só, e ele precisa da camada.
-#
-# QUEM SOURCEIA ESTE ARQUIVO
-# --------------------------
-#   install.sh       — o instalador do app estável, dono histórico destas
-#                      funções (elas moravam nele, linhas 873-893 e 989-1677);
-#   install-dev.sh   — `--camada-de-maquina`, a porta que 31/08 abriu.
-#
-# É biblioteca de DEFINIÇÕES: sourceá-la não instala nada. Quem chama, decide.
-# O `install-dev.sh` NUNCA executa o `install.sh` — sourcear esta lib é o que
-# torna isso possível, e a regra "nunca rode install.sh na árvore de dev"
-# continua de pé, literal.
-#
-# O QUE NÃO MUDA AO LER DAQUI
-# ---------------------------
-# As funções são as MESMAS, byte por byte. O portão
-# `tests/unit/test_install_serve_os_dois_lados_da_cerca.py` continua exigindo
-# que cada `*_host` alcance os dois lados da cerca do `install.sh` — ele passou
-# a ler os corpos DAQUI e as regiões DE LÁ.
-#
 # shellcheck shell=bash
 
-# --- o que a lib espera de quem a sourceia --------------------------------
-# `warn` é a única função de fora que estas dez usam (medido: 43 chamadas).
-# Definida aqui só se quem sourceia não tiver a sua — o `install.sh` tem
-# (linha 325); um roteiro avulso que sourceie esta lib pode não ter.
 declare -F warn >/dev/null 2>&1 || warn() { printf '      aviso: %s\n' "$*"; }
 declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 
-# Os gates. O `install.sh` já os define no parser de argumentos (linhas
-# 200-245) e o `:=` abaixo não os toca; quem sourceia sem eles herda os
-# defaults.
 : "${ROOT_DIR:?camada_de_maquina.sh: defina ROOT_DIR (a raiz da árvore) antes do source}"
 : "${SKIP_UDEV:=0}"
 : "${NO_OSK:=0}"
@@ -64,16 +14,6 @@ declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 : "${DESEMPENHO_PROVADOS:=}"
 : "${AUTO_YES:=0}"
 
-# ---------------------------------------------------------------------------
-# O REINÍCIO PENDENTE — O-PRODUTO-EM-QUALQUER-MAQUINA-01, B5 (28/09/2026)
-# ---------------------------------------------------------------------------
-# «vale no próximo boot» estava escrito em 26 lugares, espalhados entre os
-# passos, e o fecho dizia só «instalado · Abrir · Desinstalar». Numa máquina
-# nova a primeira sessão depois do install roda o driver de fábrica do
-# DualSense, e com ele o microfone pelo rádio fica desligado — sem que a
-# pessoa saiba que um reinício resolve. Cada passo que deixa algo para o boot
-# ANOTA aqui, e o fecho diz «reinicie» só quando há o que esperar
-# (`dizer_o_reinicio_pendente`). Nada aqui reinicia nada.
 declare -p _REINICIO_PENDENTE >/dev/null 2>&1 || _REINICIO_PENDENTE=()
 
 anotar_reinicio_pendente() {
@@ -85,14 +25,6 @@ anotar_reinicio_pendente() {
     return 0
 }
 
-# O módulo CARREGADO não é o instalado em updates/dkms: o `srcversion` de
-# `/sys/module/<m>` difere do arquivo que o próximo carregamento usa. É a MESMA
-# pergunta do `_modulo_pede_reinicio` do doctor, e uma régua cobra as duas.
-# Módulo descarregado não pede reinício: o próximo plug já carrega o novo. E
-# sem os DOIS `srcversion` (um kernel sem `CONFIG_MODULE_SRCVERSION_ALL`, um
-# módulo embutido) não há o que comparar: não sei não é «reinicie» — a mesma
-# resposta do doctor (conferência de 28/09/2026: aqui um lado vazio contava
-# como diferença, e o install e o doctor divergiam).
 modulo_pede_reinicio() {
     local nome="$1" raiz="${HEFESTO_SYS_MODULE:-/sys/module}" carregado arquivo novo
     carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
@@ -103,7 +35,6 @@ modulo_pede_reinicio() {
     [[ -n "${novo}" && "${novo}" != "${carregado}" ]]
 }
 
-# O grupo `hefesto` vale no próximo login: a sessão de agora não o tem.
 grupo_pede_novo_login() {
     local membros
     membros="$(getent group hefesto 2>/dev/null | cut -d: -f4 || true)"
@@ -111,8 +42,6 @@ grupo_pede_novo_login() {
     [[ " $(id -nG 2>/dev/null) " != *" hefesto "* ]]
 }
 
-#: A frase do cmdline, uma só: o passo 3e e o fecho a anotam, e a lista não a
-#: repete.
 _PENDENTE_DO_CMDLINE="a linha de comando do kernel (usbcore: o microfone do DualSense no cabo e o autosuspend)"
 
 dizer_o_reinicio_pendente() {
@@ -127,22 +56,6 @@ dizer_o_reinicio_pendente() {
     return 0
 }
 
-# O QUE A CONF DO MODPROBE.D MANDA (OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01,
-# 25/09/2026). As confs de `assets/modprobe.d/` são as DONAS das opções dos
-# módulos: a fala de cada passo, o rótulo do ensaio e o parâmetro escrito a
-# quente PERGUNTAM a elas, e não digitam o número. Quem digitava errou calado
-# por mais de um mês: desde 09/08 a conf do hid-playstation manda
-# `feature_retries=1` (a NOTA DATADA dela diz por quê), e o install seguia
-# anunciando 2 e ESCREVENDO 2 no módulo carregado — até o boot seguinte, o
-# controle que perde a probe pagava a contenção do rádio uma vez a mais. O
-# `install-host-udev.sh` (o caminho por pacote, que não leva esta lib) tem a
-# mesma forma, e `tests/unit/test_as_opcoes_dos_modulos_tem_um_dono.py` passa
-# as duas pelas mesmas confs.
-#   $1 = a conf · $2 = o parâmetro · imprime o valor da ÚLTIMA linha `options`
-#   que o declara (a do modprobe também vale por último). Sem ela, ou com uma
-#   forma que não é de valor de parâmetro, não imprime nada e devolve 1 — e
-#   quem escreve a quente NÃO escreve, em vez de mandar o vazio ao /sys e
-#   anunciar que aplicou.
 opcao_do_modprobe() {
     awk -v p="$2" '
         $1 == "options" {
@@ -155,22 +68,8 @@ opcao_do_modprobe() {
     ' "$1" 2>/dev/null
 }
 
-# Render das units do broker root hide-hidraw (BROKER-01/Onda S): a única coisa
-# por máquina que sobrou é o `__NO_NASCE_FECHADO__` — nem uid nem grupo: o
-# broker atende a conta que está na frente do seat (O-BROKER-SERVE-QUEM-ESTA-
-# NA-FRENTE-01). GARANTE que nenhum placeholder sobra (guarda pós-render —
-# lição 6 da auditoria: nunca instalar unit com __SESSION_* ou
-# __NO_NASCE_FECHADO__ literal). Escreve os 2 arquivos renderizados em
-# "${out_dir}" e devolve 0; devolve 1 se o placeholder sobrar (ex.: asset
-# editado errado). Função isolada de propósito — testável sem sudo/systemctl
-# (tests/unit/test_install_broker_step.py).
 _render_broker_units() {
     local service_src="$1" socket_src="$2" out_dir="$3"
-    # O-NO-NASCE-FECHADO-01: o 4º argumento é 1 quando a regra udev instalada
-    # FECHA o nó do físico. Default 1 — é DEFAULT POR ORDEM DE PRODUTO ("isso deveria
-    # estar no install por default"), e um default 0 aqui faria a metade de
-    # cima da cura (a udev) ficar sem a metade de baixo (o broker): nó fechado
-    # que ninguém abre.
     local fechado="${4:-1}"
     sed -e "s/__NO_NASCE_FECHADO__/${fechado}/" \
         "${service_src}" \
@@ -184,13 +83,7 @@ _render_broker_units() {
     return 0
 }
 
-# udev no host — compartilhado por todos os formatos (o pacote .deb já cobre
-# via postinst; flatpak/appimage/native precisam desta chamada explícita).
 install_udev_host() {
-    # O-NO-NASCE-FECHADO-01: o opt-out viaja para o instalador das regras. Sem
-    # este repasse a flag mudaria só o broker, e as duas metades da cura
-    # ficariam em desacordo — nó aberto com broker achando que fecha, ou o
-    # contrário. A ausência da flag é o DEFAULT DO USUÁRIO: o nó nasce fechado.
     local _udev_args=()
     if [[ "${ABRIR_O_NO:-0}" -eq 1 ]]; then
         _udev_args+=(--no-fechar-o-no)
@@ -208,23 +101,9 @@ install_udev_host() {
     fi
 }
 
-# TECLADO-QUE-NAO-DIGITA-01: o teclado na tela é DEFAULT em TODO formato, pela
-# mesma razão do broker logo abaixo — e pelo mesmo furo. O `exit 0` do bloco de
-# formatos (poucas linhas adiante) deixa doze passos de cura para trás, e um
-# passo escrito só no fluxo native cairia do lado errado da cerca: flatpak,
-# appimage e deb sairiam sem o único caminho do produto para ESCREVER TEXTO,
-# em silêncio. Por isso a função nasce AQUI, acima da bifurcação, e é chamada
-# dos DOIS lados — é o mesmo molde do `install_broker_host`.
-#
-# Best-effort integral: o `scripts/install_osk.sh` sai 0 mesmo quando não
-# consegue instalar (sem sudo, sem rede, distro sem o pacote) e grava o que
-# aconteceu na sentinela; o `if` aqui é só o cinto contra o `set -e`.
 install_osk_host() {
     if [[ "${NO_OSK}" -eq 1 ]]; then
         printf '      teclado na tela pulado (--no-osk) — o L3 do controle só avisa que não tem o que abrir\n'
-        # A escolha do usuário também vira sentinela: sem isto, "ela não quis" e "o
-        # install não instalou" ficariam com a MESMA cara para o doctor — a
-        # armadilha do commit 108b711, palavra por palavra.
         mkdir -p "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
         {
             printf '# gravado por install.sh (--no-osk) — NÃO editar à mão.\n'
@@ -245,13 +124,6 @@ install_osk_host() {
     fi
 }
 
-# HAPTICA-NATIVA-01 (18/09/2026): o perfil UCM do DualSense no cabo. Sem ele o
-# PipeWire abre a placa do controle sem dispositivo nomeado, e o GE-Proton não
-# acha o sink `…HiFi__Speaker__sink` por onde a vibração dos jogos da Sony
-# viaja. É trabalho de HOST e ortogonal ao formato do app: o verbo vai para
-# /usr/share/alsa/ucm2/USB-Audio/Hefesto/ e um gancho por controlador USB para
-# /usr/share/alsa/ucm2/conf.d/USB-Audio/, sem tocar arquivo do alsa-ucm-conf.
-# Opt-out: --no-ucm; e o --no-udev, como toda escrita no sistema.
 install_ucm_dualsense_host() {
     _pula_por_so_leitura ucm && return 0
     if [[ "${NO_UCM}" -eq 1 ]]; then
@@ -267,13 +139,6 @@ install_ucm_dualsense_host() {
     fi
 }
 
-# BROKER-01 (Onda S — achado #7): o broker root hide-hidraw é DEFAULT em TODO
-# formato de instalação, não só no native. flatpak/appimage/deb davam `exit 0`
-# ANTES do passo 3h e ficavam sem a cura de raiz do controle duplicado, em
-# silêncio. Função compartilhada: o passo 3h (native) e o bloco dos formatos
-# de pacote chamam o MESMO caminho (render por-máquina + enable do .socket).
-# Best-effort integral: qualquer falha vira warn e o install segue (broker
-# ausente degrada para o comportamento de hoje — duplicado, nunca zero).
 install_broker_host() {
     if [[ "${SKIP_UDEV}" -eq 1 ]]; then
         printf '      broker pulado (--no-udev) — re-execute ./install.sh sem a flag para ativá-lo\n'
@@ -287,8 +152,6 @@ install_broker_host() {
         warn "sudo recusado — broker hide-hidraw pulado (re-execute ./install.sh)"
         return 0
     fi
-    # Sem uid nem grupo por máquina: o broker atende a conta que está na frente
-    # do seat. Quem roda o install como root puro (sem sessão) instala igual.
     _broker_bin_src="${ROOT_DIR}/src/hefesto_dualsense4unix/broker/hidraw_broker.py"
     _broker_bin_dst="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
     _broker_tmp="$(mktemp -d)"
@@ -311,9 +174,6 @@ install_broker_host() {
         sudo systemctl daemon-reload >/dev/null 2>&1 || true
         if sudo systemctl enable --now hefesto-hidraw-broker.socket >/dev/null 2>&1; then
             printf '      hefesto-hidraw-broker.socket habilitado (atende quem está na frente do computador — só o .socket; o .service sobe na 1ª conexão)\n'
-            # Registro de posse p/ uninstall (mesma disciplina do
-            # cmdline-owners PLAT-03): caminhos + sha256, p/ o
-            # uninstall remover SÓ o que fomos NÓS que instalamos.
             _broker_owner_file="${HOME}/.local/state/hefesto-dualsense4unix/broker-owner.conf"
             mkdir -p "$(dirname "${_broker_owner_file}")"
             {
@@ -323,27 +183,11 @@ install_broker_host() {
                     printf '%s=%s\n' "${_bp}" "$(sha256sum "${_bp}" 2>/dev/null | awk '{print $1}')"
                 done
             } > "${_broker_owner_file}"
-            # O .SERVICE NO BOOT — HIDE-SO-O-HIDRAW-02, 24/09/2026. Só com o
-            # .socket, o DualSense no cabo durante o boot nasce ABERTO: o
-            # coldplug roda antes do sockets.target, o TEST da regra 72 falha,
-            # e o nó fica assim até a primeira conexão do daemon — tempo de a
-            # Steam do login pegar o evdev do físico. A unit já diz
-            # WantedBy=multi-user.target; o uninstall desliga os dois.
             if sudo systemctl enable hefesto-hidraw-broker.service >/dev/null 2>&1; then
                 printf '      hefesto-hidraw-broker.service habilitado no boot\n'
             else
                 warn "enable do hefesto-hidraw-broker.service falhou — o físico no cabo nasce aberto no boot até o daemon conectar"
             fi
-            # O REINÍCIO QUE NÃO ABRE — HIDE-SO-O-HIDRAW-02, 24/09/2026. O
-            # binário novo em disco não vale enquanto o processo velho estiver
-            # na memória: medido em 24/09, o serviço rodava desde 22/09 e dois
-            # installs seguidos não o trocaram. Um restart puro roda o
-            # ExecStopPost (--restore-all-and-exit), que ABRE os nós, e a Steam
-            # aberta pega o físico nessa janela. O marcador diz ao binário
-            # NOVO (que é quem roda o ExecStopPost) para não abrir; o SIGKILL
-            # vem antes porque o processo velho pode não conhecer o marcador.
-            # Tem de rodar AQUI, antes do restart do daemon (7a): um daemon que
-            # renasce com o broker velho recebe reject_bad_path e fica cego.
             if sudo systemctl is-active --quiet hefesto-hidraw-broker.service; then
                 _marca=/run/hefesto-hidraw-broker/reinicio-sem-abrir
                 if sudo install -Dm0644 -o root -g root /dev/null "${_marca}" 2>/dev/null \
@@ -363,35 +207,6 @@ install_broker_host() {
     rm -rf "${_broker_tmp}"
 }
 
-# A TRAVA COMUM DO RÁDIO (O-DIARIO-DO-RADIO-01, instalada pela
-# INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026).
-#
-# O watchdog (root), o `bt_active_mode.sh` (root, no start do bluetoothd) e o
-# daemon (a sessão) mexem no mesmo rádio, e cada um pega um `flock` antes. A
-# trava só é COMUM se os dois lados abrirem o MESMO arquivo — e quem o cria é
-# este passo, por um `tmpfiles.d` que o refaz a cada boot. Sem ele, o watchdog
-# segue sem trava (e diz no log) e o daemon trava num arquivo da sessão que o
-# root não enxerga. O texto, com o porquê do modo e do grupo, é o de
-# `assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf`.
-#
-# ANTES DA RESILIÊNCIA, e a ordem não é estética: o `install_bt_resilience_host`
-# roda o `bt_active_mode.sh` como root na hora, e ele ABRE a trava. Com o
-# diretório de pé e o arquivo ausente, o root o criaria 0644 root:root, e o
-# daemon ficaria com um descritor só de leitura. O `systemd-tmpfiles --create`
-# acerta modo e dono de um arquivo que já exista, então uma trava criada torta
-# por uma versão anterior também sai daqui certa.
-#
-# O GRUPO `hefesto` TEM DE EXISTIR, e quem o cria são as regras udev
-# (`scripts/install_udev.sh`, VPAD-09). Sem ele o `tmpfiles` recusaria a linha;
-# o passo diz isso e não grava nada.
-#
-# NÃO VAI PELO CAMINHO DO PACOTE (`install-host-udev.sh`), decisão de quem
-# coordena (P-2.9), com a razão: lá não há motor root que dispute o rádio — o
-# watchdog, o drop-in do bluetoothd e a regra do sudoers da ponte são deste
-# instalador, o mesmo desenho dos timers da resiliência. Sem motor root, a
-# trava da sessão já põe em fila todos os escritores que existem naquela
-# máquina (vigia e central moram no daemon), e o daemon diz no log que caiu
-# nela. O grupo não é o obstáculo: o pacote também cria o `hefesto`.
 install_trava_do_radio_host() {
     local _trava_fonte="${ROOT_DIR}/assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf"
     local _trava_conf=/etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf
@@ -416,8 +231,6 @@ install_trava_do_radio_host() {
         warn "o grupo 'hefesto' não existe (quem o cria são as regras udev: sudo bash scripts/install_udev.sh) — a trava comum do rádio NÃO foi criada"
         return 0
     fi
-    # Os dois destinos LITERAIS, e não pela variável: a paridade
-    # (`check_packaging_parity.sh`) cobra o caminho na linha que instala.
     if ! sudo install -Dm644 -o root -g root "${_trava_fonte}" \
             /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf 2>/dev/null; then
         warn "não consegui gravar ${_trava_conf} — a trava comum do rádio NÃO foi criada"
@@ -428,11 +241,6 @@ install_trava_do_radio_host() {
         return 0
     fi
     printf '      trava comum do rádio de pé: /run/hefesto-dualsense4unix/radio.lock (0660, grupo hefesto) — o watchdog e o daemon disputam o mesmo arquivo\n'
-    # Quem acabou de entrar no grupo (as regras udev acima o fazem) só o tem
-    # nos processos da PRÓXIMA sessão. Dizer isso aqui é o que separa "o daemon
-    # não escreve o nome na trava" de defeito.
-    # Lidos para variável, e nunca `id | grep -q`: sob `pipefail` o `grep -q`
-    # que acha e fecha o cano devolve 141 ao pipe inteiro (CORRIDA-DO-PIPEFAIL-01).
     _trava_quem="${SUDO_USER:-$(id -un)}"
     local _trava_no_disco _trava_agora
     _trava_no_disco=" $(id -nG "${_trava_quem}" 2>/dev/null || true) "
@@ -443,23 +251,6 @@ install_trava_do_radio_host() {
     return 0
 }
 
-# O NOME DO LUGAR CHEGA AO WATCHDOG (pedido da onda 3a à O-QUE-E-DO-HEFESTO-
-# SAI-DO-ZSH-01, 23/09/2026). O `bt_active_mode.sh` dá ao adaptador o nome da
-# porta em que ele está, lido do `maquina.json` de quem instalou — e o watchdog
-# (que o chama de 2 em 2 min) rodava com `ProtectHome=yes`: a casa inteira
-# invisível, o nome nunca chegava. Decisão de produto: a unit passa a
-# `ProtectHome=tmpfs` (a casa vira um tmpfs vazio e só leitura) e ESTE drop-in
-# monta por cima UM arquivo, só leitura. É o mais contido: o watchdog enxerga o
-# `maquina.json`, e nada mais da casa.
-#
-# O `-` do BindReadOnlyPaths é o que deixa o drop-in valer antes de o arquivo
-# existir: sem ele, a unit não subiria até alguém dar o primeiro nome a um lugar.
-# Casa com caractere que o systemd lê como separador (espaço, aspas) não vai:
-# sem o drop-in o watchdog só não vê o nome, e nada quebra — o bluetoothd, no
-# start, vê (o `+` do ExecStartPost no drop-in dele).
-#
-# Devolve 1 sem escrever nada utilizável se a casa não servir. Isolada de
-# propósito, como a `_render_broker_units`: testável sem sudo nem systemctl.
 _render_dropin_do_watchdog() {
     local casa="$1" saida="$2"
     [[ "${casa}" =~ ^/[A-Za-z0-9._@+/-]+$ && "${casa}" != "/" ]] || return 1
@@ -473,15 +264,6 @@ BindReadOnlyPaths=-${casa}/.config/hefesto-dualsense4unix/maquina.json
 DROPIN
 }
 
-# O NOME DO LUGAR PRECISA DE TRÊS FERRAMENTAS NO PATH DO ROOT (INSTALL-E-
-# UNINSTALL-DO-RADIO-01, o P-14). O `bt_active_mode.sh` roda como root pelo
-# systemd (o `ExecStartPost` do bluetoothd e o watchdog) e acha a casa pelo
-# `getent`, lê o `maquina.json` pelo `python3` e o lugar do adaptador pelo
-# `udevadm`. Sem qualquer uma o alias fica como está, CALADO — ausência não
-# apaga nome de ninguém, mas também não avisa. Este passo avisa na hora.
-# O PATH é o que o systemd dá às units de sistema (`systemd-path
-# search-binaries-default`); sem ele, o de sempre. Imprime as que faltam, uma
-# por linha; nada quando estão todas. `$1` troca o PATH (a régua o usa).
 _ferramentas_que_faltam_ao_nome_do_lugar() {
     local caminho="${1:-}" f d achou pastas=()
     if [[ -z "${caminho}" ]]; then
@@ -498,49 +280,6 @@ _ferramentas_que_faltam_ao_nome_do_lugar() {
     done
 }
 
-# ---------------------------------------------------------------------------
-# ONDA-R2: resiliência do bluetoothd — DEFAULT EM TODO FORMATO
-# (camada 2 da sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md)
-# ---------------------------------------------------------------------------
-# O crash de heap do bluetoothd destrói bonds e deixa o daemon renascido
-# "doente" (recusa devices pareados em loop — medido 21/07). Quatro entregas:
-#   1. scripts de sistema em /usr/local/lib/hefesto-dualsense4unix/ (mesma
-#      casa do broker root): snapshot/restore de bonds, watchdog de saúde e
-#      captura forense (esta última NUNCA ligada por default);
-#   2. drop-in do bluetooth.service: Restart=on-failure reafirmado (o template
-#      upstream traz comentado — bump futuro do pacote pode regredir) +
-#      WatchdogSec=0 (BLUETOOTHD-MORTO-POR-NOS-01: era 30 e o systemd MATOU o
-#      bluetoothd dela com SIGABRT em 08/08, levando os quatro pareamentos)
-#      + snapshot de bonds a cada parada;
-#   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
-#      estado vazio, e a poda nunca joga fora o MELHOR snapshot) + a VOLTA
-#      automática (bt_bonds_autorestore.sh no ExecStopPost do drop-in), que é a
-#      decisão de 08/08: "restauro de bonds tem de ser automático; manual
-#      com sudo não é produto". A volta só corre quando o daemon MORREU
-#      (SERVICE_RESULT != success), é ADITIVA (nunca escreve por cima de uma
-#      [LinkKey] viva — é assim que a chave rotacionada deixa de ser risco) e
-#      tem quarentena por boot. O bt_bonds_restore.sh continua existindo para o
-#      restauro completo decidido à mão;
-#   4. timer do watchdog (2min): estado doente → restart rate-limitado (só com
-#      0 devices conectados); bond Paired-sem-Bonded (temporário, evapora no
-#      disconnect — medido 22/07) → promoção via Pair() explícito 1x/boot.
-#
-# A FUNÇÃO NASCE AQUI, ACIMA DA BIFURCAÇÃO, PORQUE ISTO É MUDANÇA DE SISTEMA
-# (22/08/2026). Até hoje o passo 3e-bis morava ~600 linhas abaixo do `exit 0`
-# do ramo dos formatos: quem instalava por `--flatpak`, `--appimage` ou `--deb`
-# saía sem a camada, sem uma linha dizendo isso, e ainda LEVAVA as regras udev
-# 82 e 83 — que só existem para chamar dois alvos desta camada. Resultado
-# medido no estudo de 07/08 (cobertura do install, item 9): a regra 83 apontava
-# para uma unit inexistente e falhava a cada conexão Bluetooth, e o salva-vidas
-# de bonds nunca gravou nada para essas pessoas. Mesmo defeito, com o mesmo
-# molde de conserto, do achado #7 da Onda S (`install_broker_host`), do
-# TECLADO-QUE-NAO-DIGITA-01 (`install_osk_host`) e do MIC-EM-TODO-FORMATO-01.
-# Portão: `tests/unit/test_install_serve_os_dois_lados_da_cerca.py` (que enxerga
-# toda função `*_host`) e `tests/unit/test_regra_udev_nao_fica_orfa_do_alvo_do_run.py`.
-#
-# ORDEM no fluxo nativo: o chamador de lá fica ANTES do 3f, porque o postinst do
-# backport do BlueZ reinicia o bluetoothd — o drop-in precisa existir para armar
-# nesse restart.
 install_bt_resilience_host() {
     if [[ "${SKIP_UDEV}" -eq 1 ]]; then
         printf '      resiliência do bluetoothd pulada (--no-udev) — sem os alvos, as regras 82 e 83 ficam INERTES pelo TEST== delas\n'
@@ -559,10 +298,6 @@ install_bt_resilience_host() {
         sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
             "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
     done
-    # BT-NINTENDO-ACTIVE-01: aplica JÁ (nome "Nintendo*" + link policy sem
-    # SNIFF) — cura de raiz da queda do Pro/8BitDo sob carga (pesquisa
-    # 2026-07-22). Idempotente; o drop-in reaplica a cada start do
-    # bluetoothd e o watchdog reafirma a cada 2 min.
     sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh 2>/dev/null || true
     local _btres_falta
     _btres_falta="$(_ferramentas_que_faltam_ao_nome_do_lugar | tr '\n' ' ')"
@@ -576,8 +311,6 @@ install_bt_resilience_host() {
         sudo install -Dm644 "${ROOT_DIR}/assets/systemd/${_btres_u}" \
             "/etc/systemd/system/${_btres_u}" 2>/dev/null || _btres_ok=0
     done
-    # O `maquina.json` visível ao watchdog — ver `_render_dropin_do_watchdog`.
-    # Antes do daemon-reload abaixo, para o próximo tique já montar o arquivo.
     local _btres_dropin
     _btres_dropin="$(mktemp)"
     if _render_dropin_do_watchdog "${HOME}" "${_btres_dropin}"; then
@@ -609,10 +342,6 @@ install_bt_resilience_host() {
     fi
 }
 
-# O grupo `hefesto` existe e a conta que instala está nele. A regra do sudoers
-# da ponte é do GRUPO (a por conta valia só para quem instalou, e a segunda
-# conta da máquina ficava sem a ponte); o `install_udev.sh` cria o mesmo grupo,
-# e `groupadd -f` não reclama de um que já existe. Devolve 1 se não pôde.
 _garantir_a_conta_no_grupo_hefesto() {
     local conta="$1"
     getent group hefesto >/dev/null 2>&1 \
@@ -622,39 +351,6 @@ _garantir_a_conta_no_grupo_hefesto() {
     fi
     return 0
 }
-
-# PONTE-PRIVILEGIADA-01 (22/08/2026) — a infraestrutura que faz o botão de mover
-# um controle de dongle existir SEM a janela pedir senha.
-#
-# Decisão de produto, do mesmo dia: "a ideia é que usemos o sudo só na hora do install
-# e isso vai valer sempre no nosso app. não tem como não usar se tratando de bt.
-# zero problemas."
-#
-# O gesto de migrar um controle (docs/usage/bluetooth-varios-adaptadores.md
-# §3.3) é Adapter1.RemoveDevice e parear de novo; o RemoveDevice já tira o
-# ServiceRecords do cache (device.c:5440 do BlueZ 5.86), então não há arquivo
-# de root para apagar à mão. O que exige root é só a ponte privilegiada, para
-# o bond em disco com o dongle fora da mesa.
-#
-# O RACIONAL DA ESCOLHA (sudoers.d contra polkit contra unit contra daemon) está
-# no cabeçalho de `scripts/bt_ponte_privilegiada.sh`, junto com as três
-# contenções que pagam o preço de um NOPASSWD. Aqui ficam só as decisões DESTE
-# arquivo, que são três:
-#
-#   1. NADA É GRAVADO EM /etc/sudoers.d SEM PASSAR PELO `visudo -c`. Um sudoers
-#      inválido derruba o sudo da máquina inteira — inclusive o sudo que seria
-#      preciso para consertá-lo. Sem `visudo` na máquina, a regra NÃO vai;
-#   2. O TEXTO DA REGRA NÃO MORA AQUI. Ele sai de `bt_ponte_privilegiada.sh
-#      regra-sudo <usuária>`, que é o dono único da lista de verbos. Duplicar a
-#      lista aqui garantiria que um dia ela ficaria mais larga que o script;
-#   3. A CONFERÊNCIA É `sudo -l`, NÃO A EXISTÊNCIA DO ARQUIVO. "A casa sabe e o
-#      produto não faz" é o defeito mais caro daqui: arquivo gravado não é
-#      permissão concedida (ordem de leitura do sudoers.d, `#includedir`
-#      ausente, nome com ponto). Perguntamos ao próprio sudo.
-#
-# ACIMA DA BIFURCAÇÃO e chamada dos DOIS lados, como a resiliência acima: isto é
-# mudança de SISTEMA, ortogonal ao formato do aplicativo. Portão:
-# `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
 
 install_bt_ponte_privilegiada_host() {
     local _ponte_fonte="${ROOT_DIR}/scripts/bt_ponte_privilegiada.sh"
@@ -669,10 +365,6 @@ install_bt_ponte_privilegiada_host() {
         warn "sudo recusado — ponte privilegiada do Bluetooth pulada (re-execute ./install.sh)"
         return 0
     fi
-    # A regra é NOMINAL: precisa saber para QUEM abrir. Rodar o install com sudo
-    # é proibido nesta casa (o HOME vira /root e o venv nasce errado), mas se
-    # alguém rodar assim mesmo, `SUDO_USER` diz quem é de verdade. Sem nenhum
-    # dos dois, gravar `root ALL=NOPASSWD` seria uma regra inútil e barulhenta.
     _ponte_usuaria="${SUDO_USER:-$(id -un)}"
     if [[ "${_ponte_usuaria}" == "root" ]]; then
         warn "install rodando como root sem SUDO_USER — não sei para quem abrir a ponte; regra do sudoers NÃO gravada (rode ./install.sh como você, sem sudo)"
@@ -695,9 +387,6 @@ install_bt_ponte_privilegiada_host() {
         rm -f "${_ponte_tmp}"
         return 0
     fi
-    # O grupo E a conta: a linha do grupo serve a segunda conta da máquina, e a
-    # da conta vale já, sem esperar o novo login que o `usermod -aG` pede (o sudo
-    # lê os grupos do processo, não o /etc/group).
     if ! bash "${_ponte_alvo}" regra-sudo "%hefesto" "${_ponte_usuaria}" >"${_ponte_tmp}" 2>/dev/null; then
         warn "a ponte recusou gerar a regra para o grupo hefesto — nada gravado em ${_ponte_regra}"
         rm -f "${_ponte_tmp}"
@@ -708,8 +397,6 @@ install_bt_ponte_privilegiada_host() {
         rm -f "${_ponte_tmp}"
         return 0
     fi
-    # 0440 root:root é o modo que o sudo EXIGE de um arquivo em sudoers.d — com
-    # qualquer outro ele ignora o arquivo em silêncio.
     if ! sudo install -Dm440 -o root -g root "${_ponte_tmp}" "${_ponte_regra}" 2>/dev/null; then
         warn "não consegui gravar ${_ponte_regra} — a janela vai precisar de senha para mover controle entre dongles"
         rm -f "${_ponte_tmp}"
@@ -727,21 +414,6 @@ install_bt_ponte_privilegiada_host() {
     fi
 }
 
-# O-JOGO-LEVE-ACORDA-A-PLACA-01 (01/10/2026) — a placa de vídeo acordada
-# enquanto um jogo vive, sem a janela nem o lançador pedirem senha.
-#
-# Medido no Pro Jank Footy: com a carga leve, a NVIDIA desce sozinha a 210 MHz e
-# o quadro que aperta passa do vsync; com o piso de clock travado, 116 quadros
-# acima de 20 ms viraram 24. Travar o piso é trabalho de root nas três marcas
-# (`nvidia-smi -lgc`, o `power_dpm_force_performance_level` da AMD, o mínimo do
-# i915/xe), e o lançador o pede a cada jogo.
-#
-# A MESMA DISCIPLINA DA PONTE, acima: o texto da regra sai do próprio script
-# (`regra-sudo`), nada vai a /etc/sudoers.d sem o `visudo -c`, e a conferência
-# é o `sudo -l`, não a existência do arquivo. A regra nomeia três verbos, sem
-# curinga; o PID do jogo entra pelo stdin.
-#
-# ACIMA DA BIFURCAÇÃO e chamada dos DOIS lados: é mudança de SISTEMA.
 install_placa_acordada_host() {
     local _placa_fonte="${ROOT_DIR}/scripts/hefesto_placa_acordada.sh"
     local _placa_alvo=/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh
@@ -798,59 +470,6 @@ install_placa_acordada_host() {
     fi
 }
 
-# MOTOR-7 (25/08/2026) — o install lê o firmware, e a aba abre com o gabinete
-# JÁ DESENHADO.
-#
-# Pedido, deste dia: *"manda isso tudo pro nosso install viu. não podemos
-# deixar isso passar. a ideia é que o install faça o trampo sujo todo pro user
-# sempre ter facilidade"*. É a regra da casa (toda cura entra no install, sem
-# flag) aplicada ao censo do gabinete.
-#
-# O QUE SÓ O INSTALL CONSEGUE. A tabela SMBIOS **tipo 8** — *Port Connector
-# Information*, o inventário de conectores que o fabricante escreveu — mora em
-# `/sys/firmware/dmi/tables/DMI` e em `/sys/firmware/dmi/entries/8-*/raw`, os
-# dois `400 root`. O install passa por root UMA vez; a janela nunca pede senha.
-# Sem este passo, os três números da §7.1 da sprint teriam de ser digitados por
-# ela — e digitados de novo a cada máquina.
-#
-# ESTA FUNÇÃO NUNCA DESISTE, e é o que a separa das *_host acima. A
-# `install_bt_ponte_privilegiada_host` sem sudo não tem o que fazer e volta;
-# esta tem METADE do trabalho que não precisa de root nenhum:
-#
-#   - os soquetes e os buracos do barramento (`/sys/bus/usb/devices`) — 22 e 15
-#     nesta bancada, medidos em 25/08/2026 às 21h18;
-#   - a identificação da placa (`/sys/class/dmi/id/`, legível por todo mundo);
-#   - e a CONTAGEM da tabela 8, que sai do `ls` do diretório mesmo com o `raw`
-#     ilegível. É ela que separa *"a sua placa não tem tabela de conectores"* de
-#     *"tem 18 entradas e eu não tive root para lê-las"* — duas frases que mandam
-#     a pessoa fazer coisas diferentes.
-#
-# Sem root o `gabinete.json` sai com `tabela_8_respondeu: false` e a aba abre
-# perguntando; com root ele sai com os conectores. Nos dois casos ele EXISTE, e a
-# aba não precisa saber qual foi o caso: ela lê o selo de cada campo.
-#
-# A BIOS DESTA PLACA MENTE, e é por isso que este passo não elege ninguém.
-# MEDIDO em 25/08/2026 na Gigabyte B450M S2H: a tabela declara **5** conectores
-# USB onde a traseira entrega **8**, e inventa um `USB-C` que esta placa não tem
-# — gabarito genérico do fabricante, copiado sem ajustar. O kernel, do outro
-# lado, conta **22** soquetes, porque conta cabeçote interno e a duplicação
-# 2.0/3.0 do mesmo furo. As três contagens divergem e NENHUMA é autoritativa: o
-# módulo grava as três, marca `divergem`, e a aba PERGUNTA. Divergência
-# declarada é informação; divergência escondida é o defeito de forma F6.
-#
-# E ELE NÃO GRAVA POR CIMA DA RESPOSTA DE PRODUTO. Este arquivo tem dois escritores —
-# o install, que traz o firmware, e a aba, onde ela diz quantos buracos a
-# traseira tem. Reinstalar apagando isso perderia o trabalho dela em silêncio;
-# `preservar_o_que_ela_disse` carrega a declaração adiante, e só a descarta
-# quando a PLACA mudou (aí as faces descreveriam outro metal).
-#
-# Quem DECIDE é o módulo puro `integrations/censo_do_gabinete.py` (100% stdlib,
-# testável sem root e sem placa nenhuma); aqui só conseguimos o texto e
-# escolhemos o destino — a mesma política do `kernel_cmdline.py` no passo 3e.
-#
-# ACIMA DA BIFURCAÇÃO e chamada dos DOIS lados: ler firmware é trabalho de HOST,
-# ortogonal ao formato do aplicativo. Portão:
-# `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
 install_censo_do_gabinete_host() {
     local _gab_alvo="${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
     local _gab_tmp _gab_saida
@@ -862,19 +481,11 @@ install_censo_do_gabinete_host() {
         warn "não consegui criar arquivo temporário — censo do gabinete pulado"
         return 0
     }
-    # As três razões de o texto sair vazio são a MESMA resposta para o módulo —
-    # "não respondeu" — e NENHUMA delas interrompe o passo: o que o kernel dá de
-    # graça continua valendo, e é a maior parte do arquivo.
     if ! command -v dmidecode >/dev/null 2>&1; then
         warn "dmidecode ausente — o censo sai só com o barramento; a BIOS não foi consultada"
     elif ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
         warn "sem root agora — a tabela de conectores da BIOS não foi lida; o censo sai com o barramento e a aba pergunta o resto (re-execute ./install.sh)"
     else
-        # SC2024 avisa que o `sudo` não alcança o redirecionamento — e aqui isso
-        # é o desejado, não um descuido: o `mktemp` acima é da USUÁRIA, e quem
-        # precisa de privilégio é só o `dmidecode`. Escrever com `sudo tee`
-        # deixaria no disco um arquivo de root que este passo teria de apagar
-        # com sudo depois.
         # shellcheck disable=SC2024
         sudo -n dmidecode -t 8 >"${_gab_tmp}" 2>/dev/null || : >"${_gab_tmp}"
     fi
@@ -911,12 +522,6 @@ PYEOF
     fi
 }
 
-# DISTRO SOMENTE LEITURA (Bazzite, Silverblue, Kinoite, SteamOS): o /usr é da
-# imagem do sistema. Módulo DKMS, initramfs e arquivo em /usr/share não têm onde
-# gravar (ou somem no próximo update da imagem), e tentar só enche a tela de erro
-# que ninguém cura. A pergunta é a de `_familia_pacotes` (install.sh), que tem o
-# dono da marca; aqui só se lê. Cada item diz o EFEITO de ficar de fora, para
-# quem instala saber o que perde.
 _distro_so_leitura() {
     declare -F _familia_pacotes >/dev/null 2>&1 || return 1
     [[ "$(_familia_pacotes)" == "imutavel" ]]
@@ -934,21 +539,11 @@ _efeito_so_leitura() {
     esac
 }
 
-# A linha do install real (a do ensaio é o `_nao_faria` do install.sh).
 _pula_por_so_leitura() {
     _distro_so_leitura || return 1
     printf '      pulado (distro somente leitura) — %s\n' "$(_efeito_so_leitura "$1")"
 }
 
-# Onda T (desenho: o estudo «desenho-onda-t-patch-dkms» de 20/07/2026):
-# módulo hid-nintendo patchado (probe BT resiliente + module params) via DKMS
-# genérico (scripts/dkms_lib.sh — reusado pela Onda W/rtw88). DEFAULT ON (regra
-# da casa: install SEM FLAGS aplica), opt-out --no-dkms. Compartilhada entre o
-# passo 3i (native) e o bloco dos formatos de pacote (mesmo padrão do broker
-# acima) — DKMS é uma mudança de SISTEMA/kernel, ortogonal ao formato do app.
-# Contrato fail-safe fica TODO dentro de dkms_lib.sh (ver seu cabeçalho): esta
-# função só decide SE chama (flag/sudo) e a mensagem de ativação, nunca
-# recarrega/descarrega o módulo.
 install_dkms_hid_nintendo_host() {
     _pula_por_so_leitura nintendo && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
@@ -965,8 +560,7 @@ install_dkms_hid_nintendo_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once  # PKG-1: avisa (não aborta) se SB pode barrar o .ko
-    # PKG-3: versão do dkms.conf (fonte da verdade), não literal hardcoded.
+    dkms_warn_secureboot_once
     local _hidn_src="${ROOT_DIR}/assets/dkms/hid-nintendo"
     dkms_install_patched_module hefesto-hid-nintendo \
         "$(dkms_pkg_version "${_hidn_src}")" "${_hidn_src}" hid-nintendo
@@ -979,44 +573,16 @@ install_dkms_hid_nintendo_host() {
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-hid-nintendo.conf"
     fi
-    # dkms_install_patched_module é fail-safe POR DESENHO: retorna 0 em TODOS
-    # os ramos (sucesso E falha). O único juiz de "staged de verdade" é o
-    # modinfo resolver p/ updates/dkms — sem esta checagem, o install
-    # anunciava ativação futura mesmo com dkms ausente/build falho (mensagem
-    # FALSA: nada foi staged e o próximo plug carrega o in-tree vanilla).
     if ! dkms_module_from_updates hid-nintendo; then
         warn "patch DKMS do hid-nintendo NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); a conf do modprobe.d é inerte com o in-tree ('unknown parameter ignored')"
         return 0
     fi
-    # B5: o carregado não é o instalado? O fecho diz «reinicie».
     if modulo_pede_reinicio hid-nintendo; then
         anotar_reinicio_pendente "o driver dos controles Nintendo (hid-nintendo)"
     fi
-    # ATIVAÇÃO FAIL-SAFE (mesmo princípio do btusb/broker acima): NUNCA
-    # recarregamos um módulo em uso — a mantenedora joga com Pro Controller e
-    # 8BitDo conectados AGORA, e substituir o módulo carregado os derrubaria.
-    # Nota de precisão (diferente do btusb): substituição de módulo NÃO pega
-    # em replug — se o in-tree está CARREGADO, o replug o re-liga a ele
-    # mesmo; só o próximo BOOT troca. Mensagem honesta nos dois ramos.
     if [[ -d /sys/module/hid_nintendo/parameters ]]; then
         printf '      módulo patchado JÁ carregado (params visíveis em /sys/module/hid_nintendo/parameters)\n'
-        # AUTO-01.7: com o patchado carregado, escreve os params A QUENTE —
-        # paridade com o caminho de instalação por PACOTE
-        # (scripts/install-host-udev.sh), que já fazia isto e o install.sh não.
-        # Os dois são lidos A CADA PROBE, então a cura vale no próximo PLUG do
-        # controle, sem esperar reboot; e é a única janela possível, porque
-        # recarregar o módulo é proibido (derrubaria Pro/8BitDo em uso).
-        # Best-effort: param read-only ou sudo expirado não interrompe nada.
-        # O portão é de EXISTÊNCIA (`-e`) e nunca `-w`: os arquivos em
-        # /sys/module são root:root 0644 e o install roda SEM sudo (com sudo o
-        # HOME vira /root e o venv nasce errado), então `-w` é sempre falso e o
-        # passo vira silêncio — quem escreve abaixo é o `sudo tee`, não quem
-        # testa o portão.
         if [[ -e /sys/module/hid_nintendo/parameters/bt_probe_retries ]]; then
-            # A ESCRITA É CONFERIDA, e não declarada — 01/09/2026. O portão
-            # acima é de EXISTÊNCIA (`-e`), por decisão declarada, logo ele NÃO
-            # pode saber se a escrita passou: com o ticket do sudo expirado ou
-            # param read-only, o `|| true` engolia e a frase mentia.
             if _v="$(opcao_do_modprobe "${_hidn_conf}" bt_probe_retries)" \
                && _v2="$(opcao_do_modprobe "${_hidn_conf}" skip_tx_on_rate_exceeded)" \
                && printf '%s' "${_v}" | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 \
@@ -1026,12 +592,6 @@ install_dkms_hid_nintendo_host() {
                 warn "não consegui escrever os params do hid-nintendo a quente — valem no próximo boot"
             fi
         fi
-        # Os três do patch 0003 (handshake USB do clone 057E:2009) são lidos NA
-        # PROBE, então valem do próximo plug em diante. O uninstall os devolve a
-        # 0, logo o rearme aqui é obrigatório: sem ele o ciclo uninstall+install
-        # deixa o 8BitDo no cabo sem cura até o boot seguinte. Portão próprio
-        # porque o módulo patchado ANTIGO não tem estes params. A simetria com o
-        # uninstall é cobrada por teste.
         if [[ -e /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report ]]; then
             _v="$(opcao_do_modprobe "${_hidn_conf}" usb_cmd_pad_to_report)" \
                 && printf '%s' "${_v}" | sudo tee /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report >/dev/null 2>&1 || true
@@ -1050,18 +610,6 @@ install_dkms_hid_nintendo_host() {
     return 0
 }
 
-# RADIO-AFOGADO-02 (22/09/2026): módulo `uhid` patchado, pela MESMA lib
-# genérica scripts/dkms_lib.sh (4ª instância — zero ajuste na lib).
-#
-# **ELE É O ÚNICO DKMS DESTA CASA QUE NÃO É DEFAULT**, e isso é decisão escrita,
-# não esquecimento: ligar a contrapressão muda a semântica do `write(2)` para
-# TODO userspace que escreve report de saída num HID por Bluetooth — o Steam
-# Input inclusive —, e quem trata falha de escrita como «o aparelho sumiu»
-# largaria o controle no primeiro engasgo do rádio. O produto está CORRETO sem
-# ele; a cura de primeira ordem é a ponte de som só existir enquanto há som
-# (RADIO-AFOGADO-01). Razão completa em assets/dkms/uhid/README.md.
-#
-# O `--no-dkms` também o pula: quem recusa DKMS recusa todos.
 install_dkms_uhid_host() {
     _pula_por_so_leitura uhid && return 0
     if [[ "${COM_UHID_CONTRAPRESSAO:-0}" -ne 1 ]]; then
@@ -1090,7 +638,6 @@ install_dkms_uhid_host() {
         warn "uhid patchado NÃO ficou staged (veja avisos acima) — o de fábrica continua (fail-safe), e a conf do modprobe.d seria inerte nele"
         return 0
     fi
-    # B5: o carregado não é o instalado? O fecho diz «reinicie».
     if modulo_pede_reinicio uhid; then
         anotar_reinicio_pendente "o uhid com contrapressão"
     fi
@@ -1100,20 +647,6 @@ install_dkms_uhid_host() {
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-uhid.conf"
     fi
-    # **NUNCA RECARREGAMOS O uhid**, e aqui a regra é mais dura que a do
-    # hid-playstation: o `uhid` é o dono de TODO HID por Bluetooth da máquina —
-    # um `rmmod` derruba os controles, o teclado e o mouse sem fio de uma vez.
-    # O patchado vale no próximo boot. Enquanto isso, o parâmetro do módulo
-    # CARREGADO diz qual está de pé.
-    #
-    # O REARME A QUENTE (INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026). O
-    # `uninstall.sh` devolve o `backpressure` a 0 a quente, de propósito; e
-    # aqui o install só IMPRIMIA como ligá-lo à mão. O ciclo uninstall+install
-    # com a flag deixava a contrapressão desligada até o boot seguinte, com o
-    # módulo patchado carregado e a conf dizendo 1 — o defeito do `9c944a8`,
-    # que a régua não via porque lia o caminho no próprio texto da dica. Quem
-    # chega aqui PEDIU a contrapressão (`--uhid-contrapressao`), e o parâmetro
-    # é 0644 exatamente para ligar sem recarregar.
     if [[ -e /sys/module/uhid/parameters/backpressure ]]; then
         local _v
         if _v="$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-uhid.conf" backpressure)" \
@@ -1128,14 +661,6 @@ install_dkms_uhid_host() {
     return 0
 }
 
-# Contenção BT (25/07): módulo hid-playstation patchado (retry opcional nos
-# feature reports da probe) via a MESMA lib genérica scripts/dkms_lib.sh (3ª
-# instância — hid-nintendo é a 1ª, rtw88_usb a 2ª; ZERO ajuste na lib).
-# DEFAULT ON (regra da casa: install SEM FLAGS aplica), mesmo gate NO_DKMS.
-# Motivo: com dois DualSense pareando com ~1 s de diferença, o 2º perde o
-# canal de controle L2CAP, o GET_REPORT expira no BlueZ (REPORT_REQ_TIMEOUT,
-# 3 s), o uhid entrega -EIO ao driver e o controle inteiro é perdido. Detalhe
-# completo em assets/dkms/hid-playstation/README.md.
 install_dkms_hid_playstation_host() {
     _pula_por_so_leitura playstation && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
@@ -1152,7 +677,7 @@ install_dkms_hid_playstation_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once  # PKG-1: avisa (não aborta) se SB pode barrar o .ko
+    dkms_warn_secureboot_once
     local _hidp_src="${ROOT_DIR}/assets/dkms/hid-playstation"
     dkms_install_patched_module hefesto-hid-playstation \
         "$(dkms_pkg_version "${_hidp_src}")" "${_hidp_src}" hid-playstation
@@ -1164,33 +689,15 @@ install_dkms_hid_playstation_host() {
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-hid-playstation.conf"
     fi
-    # Mesmo achado #5 do hid-nintendo: dkms_install_patched_module é fail-safe
-    # POR DESENHO (retorna 0 em TODOS os ramos) — o único juiz de "staged de
-    # verdade" é o modinfo resolver p/ updates/dkms.
     if ! dkms_module_from_updates hid-playstation; then
         warn "patch DKMS do hid-playstation NÃO ficou staged (veja avisos acima) — o driver de fábrica continua (fail-safe): o microfone do DualSense pelo rádio fica desligado, porque o de fábrica leria o áudio como botão e mexeria o cursor, e o 2º DualSense segue podendo se perder na probe; a conf do modprobe.d é inerte com ele ('unknown parameter ignored')"
         return 0
     fi
-    # B5: o carregado não é o instalado? O fecho diz «reinicie».
     if modulo_pede_reinicio hid-playstation; then
         anotar_reinicio_pendente "o driver do DualSense (hid-playstation)"
     fi
-    # ATIVAÇÃO FAIL-SAFE — aqui a regra é MAIS dura que a do hid-nintendo:
-    # recarregar o hid_playstation derruba TODOS os DualSense, e os por
-    # Bluetooth perdem o link. NUNCA recarregamos. O marcador de "patchado
-    # carregado" é o parâmetro NOVO feature_retries (o in-tree tem zero
-    # params, então o diretório parameters/ sequer existe nele).
     if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
         printf '      módulo patchado JÁ carregado (feature_retries visível em /sys/module/hid_playstation/parameters)\n'
-        # AUTO-01.7: param A QUENTE — paridade com o caminho por PACOTE
-        # (scripts/install-host-udev.sh). `feature_retries` é lido A CADA
-        # PROBE, e o probe roda a cada CONEXÃO do controle: escrever aqui faz a
-        # cura do "segundo DualSense que some" valer no próximo pareamento, sem
-        # reboot e sem reload (proibido: derrubaria os DualSense por BT).
-        # Portão de EXISTÊNCIA, nunca `-w`: /sys/module é root:root 0644 e o
-        # install roda SEM sudo, então `-w` é sempre falso e a escrita por
-        # `sudo tee` logo abaixo nunca aconteceria (mesma restrição do
-        # hid-nintendo acima).
         if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
             if _v="$(opcao_do_modprobe "${_hidp_conf}" feature_retries)" \
                && printf '%s' "${_v}" | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1; then
@@ -1199,12 +706,6 @@ install_dkms_hid_playstation_host() {
                 warn "não consegui escrever feature_retries a quente — vale no próximo boot"
             fi
         fi
-        # Mesma lógica para a cura do CLONE no cabo (pairing info de 9 bytes
-        # em vez de 16): lidos a cada probe, valem no próximo plug. Ausentes
-        # no módulo patchado antigo (só tinha feature_retries) — por isso cada
-        # um é decidido pela sua própria EXISTÊNCIA, sem avisar à toa. Caminhos
-        # LITERAIS de propósito: a paridade com o install-host-udev.sh é
-        # verificada por grep (AUTO-01.7).
         if [[ -e /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
             if _v="$(opcao_do_modprobe "${_hidp_conf}" ds4_short_pairing_info)" \
                && printf '%s' "${_v}" | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1; then
@@ -1230,16 +731,6 @@ install_dkms_hid_playstation_host() {
     return 0
 }
 
-# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o `usb_f_hid` patchado, a função HID
-# dos pads USB virtuais. O de fábrica responde o GET_REPORT sempre com 64 bytes
-# e sem o pacote vazio, e o `HIDIOCGFEATURE(128)` do Wine e do SDL espera 5 s
-# por feature: com 4 pads o `winebus` estoura o prazo do `services.exe` e o jogo
-# no Proton sobe sem controle. DEFAULT ON, mesmo portão `--no-dkms`. A razão
-# completa está em assets/dkms/usb-f-hid/README.md.
-#
-# A TROCA A QUENTE mora aqui, e não no `dkms_lib.sh`, cujo contrato proíbe
-# `modprobe` e `rmmod`. Ela é possível neste módulo, e não nos vizinhos, porque
-# quem o usa é só o gadget dos pads: o daemon solta os pads e nada mais cai.
 install_dkms_usb_f_hid_host() {
     _pula_por_so_leitura usb_f_hid && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
@@ -1268,8 +759,6 @@ install_dkms_usb_f_hid_host() {
     return 0
 }
 
-# A marca do curado: `get_report_sized`, só de leitura e sempre Y. O de fábrica
-# não tem parâmetro nenhum.
 _usb_f_hid_tem_a_marca() {
     [[ -e "${HEFESTO_SYS_MODULE:-/sys/module}/usb_f_hid/parameters/get_report_sized" ]]
 }
@@ -1278,12 +767,6 @@ _usb_f_hid_refcnt() {
     cat "${HEFESTO_SYS_MODULE:-/sys/module}/usb_f_hid/refcnt" 2>/dev/null || printf '?'
 }
 
-# IDEMPOTENTE: com a marca no carregado, não toca; descarregado, o próximo
-# carregamento já é o curado. Sem a marca, troca quando só os pads do Hefesto o
-# seguram: para o daemon de usuário, o broker desmonta os `hefesto-pad-*` no EOF
-# da conexão, o refcnt chega a 0 dentro do prazo, troca e sobe o daemon se ele
-# estava no ar. Com gadget alheio, ou com o refcnt preso, não troca: o curado
-# vale no próximo boot, e o fecho diz «reinicie».
 trocar_usb_f_hid_a_quente() {
     local _sys="${HEFESTO_SYS_MODULE:-/sys/module}"
     local _gadgets="${HEFESTO_USB_GADGET_ROOT:-/sys/kernel/config/usb_gadget}"
@@ -1346,13 +829,6 @@ trocar_usb_f_hid_a_quente() {
     return 0
 }
 
-# INITRAMFS-01 (25/07): fecha o furo entre `dkms install` e o BOOT. O initramfs
-# leva uma CÓPIA do .ko e não é regenerado pelo dkms — o boot seguia carregando
-# o módulo da geração anterior. Compartilhada entre o passo 3k (native) e o
-# bloco dos formatos de pacote, igual às duas funções DKMS acima; roda UMA vez
-# porque a lib coalesce (dkms_mark_initramfs_stale × dkms_flush_initramfs).
-# Silenciosa e no-op quando nenhum módulo DKMS ficou staged (--no-dkms, dkms
-# ausente, build falho): quem marca é só o ramo de sucesso da lib.
 flush_initramfs_host() {
     _pula_por_so_leitura initramfs && return 0
     if [[ "${NO_DKMS}" -eq 1 ]]; then
@@ -1369,40 +845,8 @@ flush_initramfs_host() {
     return 0
 }
 
-# Onda W (desenho: o estudo «desenho-onda-w-patch-dkms» de 20/07/2026):
-# módulo rtw88_usb patchado (device-gone + queue de port reset — cura do
-# fantasma USB do dongle WiFi) via a MESMA lib genérica scripts/dkms_lib.sh
-# (2ª instância — hid-nintendo é a 1ª; ZERO ajuste na lib). DEFAULT ON (regra
-# da casa: install SEM FLAGS aplica), mesmo gate NO_DKMS do hid-nintendo
-# acima (--no-dkms desliga AMBOS). Compartilhada entre o passo 3j (native) e
-# o bloco dos formatos de pacote (mesmo padrão do broker/hid-nintendo acima)
-# — DKMS é mudança de SISTEMA/kernel, ortogonal ao formato do app. Contrato
-# fail-safe fica TODO dentro de dkms_lib.sh: esta função só decide SE chama
-# (flag/sudo) e a mensagem de ativação, nunca recarrega/descarrega o módulo.
-#
-# Diferente do hid-nintendo (sem conf de /etc/modprobe.d): o gate da parte
-# agressiva do patch (usb_queue_reset_device) É o próprio module param
-# `hang_reset`, com default Y JÁ embutido no .ko (assets/dkms/rtw88-usb/
-# usb.c) — não há arquivo externo a instalar/remover para ativá-lo.
-#
-# SÓ ONDE HÁ O ADAPTADOR (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01): a cura foi
-# medida com um adaptador Realtek USB numa mesa. Sem um aparelho que o
-# `rtw88_usb` atenda, o DKMS é compilação e aviso à toa; a função pula com uma
-# linha que diz o porquê. Quem plugar um depois roda o `./install.sh` de novo.
-#
-# QUEM DIZ QUAL ADAPTADOR O DRIVER ATENDE É O KERNEL, e não uma lista copiada
-# aqui: `modprobe -R <modalias>` (só leitura) resolve o alias da interface USB
-# pelo `modules.alias` do kernel em uso e devolve o módulo que a atende. Os
-# módulos do rtw88 que falam USB são os `rtw88_<chip>u` (rtw88_8822bu, ...).
-# `HEFESTO_USB_SYS` é o gancho de teste da raiz do sysfs.
-#
-# Devolve 0 e imprime `vvvv:pppp` por adaptador (um por linha), 1 sem nenhum,
-# 2 quando não dá para perguntar (sem `modprobe`).
 _rtw88_adaptadores_presentes() {
     local raiz="${HEFESTO_USB_SYS:-/sys}/bus/usb/devices" ifc dev alias mods mp achou=1
-    # `HEFESTO_MODPROBE` é o gancho de teste (um caminho que não existe = sem a
-    # ferramenta). O `modprobe` mora em /usr/sbin, que o PATH de uma pessoa
-    # comum nem sempre tem.
     mp="${HEFESTO_MODPROBE:-$(command -v modprobe 2>/dev/null || true)}"
     if [[ -z "${mp}" && -z "${HEFESTO_MODPROBE:-}" ]]; then
         for dev in /usr/sbin/modprobe /sbin/modprobe; do
@@ -1412,7 +856,6 @@ _rtw88_adaptadores_presentes() {
     [[ -n "${mp}" && -x "${mp}" ]] || return 2
     for ifc in "${raiz}"/*:*; do
         [[ -r "${ifc}/modalias" ]] || continue
-        # O Wi-Fi Realtek fala a classe específica do fabricante (ff).
         [[ "$(cat "${ifc}/bInterfaceClass" 2>/dev/null)" == "ff" ]] || continue
         alias="$(cat "${ifc}/modalias" 2>/dev/null)"
         mods="$("${mp}" -R "${alias}" 2>/dev/null)" || continue
@@ -1449,39 +892,19 @@ install_dkms_rtw88_usb_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_warn_secureboot_once  # PKG-1: avisa (não aborta) se SB pode barrar o .ko
-    # PKG-3: versão do dkms.conf (fonte da verdade), não literal hardcoded.
+    dkms_warn_secureboot_once
     local _rtw_src="${ROOT_DIR}/assets/dkms/rtw88-usb"
     dkms_install_patched_module hefesto-rtw88-usb \
         "$(dkms_pkg_version "${_rtw_src}")" "${_rtw_src}" rtw88_usb
-    # Mesmo achado #5 do hid-nintendo: dkms_install_patched_module é
-    # fail-safe POR DESENHO (retorna 0 em TODOS os ramos) — o único juiz de
-    # "staged de verdade" é o modinfo resolver p/ updates/dkms.
     if ! dkms_module_from_updates rtw88_usb; then
         warn "patch DKMS do rtw88_usb NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); sem device-gone/port-reset, o fantasma USB do dongle (device retido após disconnect perdido) segue possível"
         return 0
     fi
-    # B5: o carregado não é o instalado? O fecho diz «reinicie».
     if modulo_pede_reinicio rtw88_usb; then
         anotar_reinicio_pendente "o driver do Wi-Fi USB (rtw88_usb)"
     fi
-    # ATIVAÇÃO FAIL-SAFE (mesmo princípio do hid-nintendo acima): NUNCA
-    # recarregamos um módulo em uso — a mantenedora depende do WiFi AGORA, e
-    # substituir o módulo carregado o derrubaria. Diferente do hid_nintendo
-    # (0 params no in-tree), o rtw88_usb in-tree JÁ expõe `switch_usb_mode`
-    # — a presença do diretório parameters/ sozinha NÃO distingue patchado
-    # de in-tree. O marcador é o PARÂMETRO NOVO `hang_reset` (só o patch
-    # tem). Nota de precisão (igual ao hid-nintendo): substituição de módulo
-    # NÃO pega em replug do dongle — se o in-tree está CARREGADO, o replug
-    # o re-liga a ele mesmo; só o próximo BOOT troca. "Entra no próximo
-    # plug" só é verdade quando o módulo está DESCARREGADO agora (3º ramo).
     if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
         printf '      módulo patchado JÁ carregado (hang_reset visível em /sys/module/rtw88_usb/parameters)\n'
-        # O uninstall devolve `hang_reset` a 0 de propósito (driver menos
-        # agressivo até o boot), e sem este rearme o ciclo uninstall+install
-        # deixa o reset de porta do fantasma do dongle desligado, com o default
-        # Y do .ko só voltando no próximo boot. O param é lido em tempo de
-        # execução, então escrever aqui vale agora. Simetria cobrada por teste.
         printf 'Y' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
     elif [[ -d /sys/module/rtw88_usb ]]; then
         printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria o WiFi ao vivo);\n'
@@ -1492,33 +915,6 @@ install_dkms_rtw88_usb_host() {
     return 0
 }
 
-# ---------------------------------------------------------------------------
-# O DONGLE WI-FI USB — O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026), DEFAULT
-# ---------------------------------------------------------------------------
-# Morava no self-heal do zsh dela (`aurora-wifi-usb.sh` e o vigia `aurora-`), e
-# veio por ordem de produto: o que faz o Hefesto funcionar mora no Hefesto, com
-# install, uninstall, paridade e doctor. É da família da Onda W (o DKMS acima):
-# o scan de fundo que derrubava o dongle a cada 300 s sai a cada associação, e
-# o vigia reinicia a porta quando o rádio trava MUDO — o caso em que o driver
-# não vê a queda e o `hang_reset` do DKMS não tem o que fazer. O porquê inteiro
-# está no cabeçalho de `scripts/wifi_usb.sh`.
-#
-# Vale para a CLASSE — qualquer Wi-Fi USB — e SÓ entra quando há uma interface
-# Wi-Fi sob o barramento USB agora (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01): sem
-# dongle, o vigia e o gancho do NetworkManager não têm o que vigiar, e a linha
-# de pulo diz que, plugando um, o `./install.sh` roda de novo (o doctor avisa
-# quando há Wi-Fi USB e o vigia não). O modo USB2 NÃO entra (recusado por ela em 23/09: rede de 5 GHz, plano de 1 Gb).
-#
-# Três destinos e UM fonte: o mesmo `wifi_usb.sh` vai para a casa dos scripts
-# de sistema (o CLI e o ExecStart do vigia) e, como CÓPIA REAL de root 755,
-# para o dispatcher do NetworkManager — ele recusa script gravável por grupo ou
-# outros. Sem NetworkManager na máquina, o dispatcher não vai e o vigia faz o
-# reforço sozinho.
-#
-# Opt-out: `--no-wifi-usb` (como todo passo default da camada de máquina) e o
-# `--no-udev`, que pula tudo o que escreve em /etc. Chamada dos DOIS lados da
-# cerca do `install.sh` — `tests/unit/test_install_serve_os_dois_lados_da_cerca.py`.
-# As interfaces Wi-Fi sob o barramento USB agora, uma por linha (vazio = nenhuma).
 _wifi_usb_agora() {
     bash "${ROOT_DIR}/scripts/wifi_usb.sh" --lista 2>/dev/null || true
 }
@@ -1532,10 +928,6 @@ install_wifi_usb_host() {
         printf '      pulado (--no-udev) — o dongle Wi-Fi USB fica com o scan de fundo do NetworkManager e sem vigia\n'
         return 0
     fi
-    # SÓ ONDE HÁ WI-FI USB (O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01): o vigia e o
-    # gancho do NetworkManager tiram o scan de fundo de um Wi-Fi que o defeito
-    # nem atinge. Quem responde «há Wi-Fi USB?» é o próprio `wifi_usb.sh --lista`
-    # (o dono único da pergunta, o mesmo que o doctor lê).
     if [[ -z "$(_wifi_usb_agora)" ]]; then
         printf '      pulado — nenhuma interface Wi-Fi sob o barramento USB nesta máquina (o vigia só faz falta a quem tem dongle); se plugar um, rode ./install.sh de novo\n'
         return 0
@@ -1551,8 +943,6 @@ install_wifi_usb_host() {
     local _wifi_ok=1 _wifi_u
     sudo install -Dm755 "${ROOT_DIR}/scripts/wifi_usb.sh" \
         /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh 2>/dev/null || _wifi_ok=0
-    # `HEFESTO_NM_ETC` é gancho de teste: a régua não pode depender de a
-    # máquina que a roda ter NetworkManager.
     if [[ -d "${HEFESTO_NM_ETC:-/etc/NetworkManager}" ]]; then
         sudo install -Dm755 -o root -g root "${ROOT_DIR}/scripts/wifi_usb.sh" \
             /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb 2>/dev/null || _wifi_ok=0
@@ -1570,51 +960,18 @@ install_wifi_usb_host() {
         warn "enable do hefesto-wifi-usb-vigia.timer falhou — habilite: sudo systemctl enable --now hefesto-wifi-usb-vigia.timer"
         _wifi_ok=0
     fi
-    # Quem tem dongle AGORA ganha o reforço na hora: a associação que já estava
-    # de pé antes de o dispatcher existir ficaria com o scan de fundo até o
-    # primeiro tique do vigia (2 min depois do boot, ou 1 min daqui). Chegar
-    # aqui já quer dizer que há Wi-Fi USB (a pergunta do topo da função).
     { sudo /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh --ensure 2>&1 || true; } \
         | sed 's/^/      /' || true
     [[ "${_wifi_ok}" -eq 1 ]] || warn "vigia do Wi-Fi USB instalado PARCIALMENTE — confira as mensagens acima"
     return 0
 }
 
-# ---------------------------------------------------------------------------
-# O MODO DESEMPENHO — A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (02/10/2026)
-# ---------------------------------------------------------------------------
-# A decisão, 02/10 ~21h: *«na real no nosso install por default deveriamos
-# ter uma flag perguntando pro user se ele gostaria de usar o pc dele no modo
-# performance e aproveitarmos e usarmos a mesma politica que usamos pra criarmos  # noqa-acento: citação literal
-# soluções permanentes no pc da pc.»* O COSMIC e o system76-power são feitos para
-# notebook: a economia de bateria vem ligada de fábrica, e num computador de
-# mesa ela só custa latência.
-#
-# O install PERGUNTA. `--desempenho` e `--sem-desempenho` respondem sem
-# perguntar; sem TTY (o `--yes`, o CI) vale o PADRÃO: sim no desktop, não no
-# notebook (a máquina com bateria, `power_supply/BAT*`), onde o desempenho custa
-# a bateria de quem joga fora da tomada. O padrão é escolha de produto.
-#
-#
-# Cada ajuste é um arquivo permanente, e o mecanismo mora em
-# `scripts/desempenho.sh` (aplicar e remover; o uninstall chama o mesmo dono).
-# Esta função só decide: os portões, a pergunta, a lista dos ajustes provados.
-# SÓ ENTRA O QUE A PROVA MOSTROU: o perfil de energia é decisão de produto; os outros
-# três (NVIDIA, áudio HDA, ASPM) esperam a medida no aparelho, e a variável
-# `DESEMPENHO_PROVADOS` do `install.sh` os liga, um id por vez.
-#
-# O gate `--no-udev` pula, como tudo o que escreve em /etc. Chamada dos DOIS
-# lados da cerca do `install.sh`.
 _DESEMPENHO_QUER=""
 
-# O padrão: notebook = a máquina com bateria ACPI (BAT0, BAT1...). A bateria de
-# um controle (`ps-controller-battery-*`) não é do computador e não conta.
 _desempenho_tem_bateria() {
     compgen -G "${HEFESTO_DESEMPENHO_SYS:-/sys}/class/power_supply/BAT*" >/dev/null 2>&1
 }
 
-# Decide e deixa o resultado em `_DESEMPENHO_QUER` (sim|sem). Não pode ser
-# chamada em `$(...)`: o `ask_yn` escreve em `REPLY` e a pergunta vai à tela.
 _desempenho_decidir() {
     case "${DESEMPENHO_PEDIDO}" in
         sim|sem) _DESEMPENHO_QUER="${DESEMPENHO_PEDIDO}"; return 0 ;;
@@ -1671,37 +1028,7 @@ install_desempenho_host() {
     return 0
 }
 
-# ---------------------------------------------------------------------------
-# ONDA-R: agente de pareamento BT persistente — DEFAULT (bond meio-salvo)
-# ---------------------------------------------------------------------------
-# "No agent available for request type 2" = nenhum agente de pareamento D-Bus
-# registrado no momento em que o BlueZ pede confirmação → autenticação nunca
-# completa → nasce o bond "meio-salvo" (Paired: yes / Bonded: no), que trava o
-# controle até um re-pareamento manual. Cura: bt-agent (pacote bluez-tools do
-# noble) como serviço de SISTEMA persistente com --capability=NoInputNoOutput
-# (aceita automaticamente pareamentos sem PIN/senha — o caso do DualSense/
-# 8BitDo/Nintendo Pro). Ver estudo §4. `--now` aqui é seguro: habilita/inicia
-# SÓ o agente, nunca mexe no bluetoothd.
-#
-# VIROU FUNÇÃO `*_host` EM 31/08/2026, e o motivo é o defeito que o sufixo
-# existe para pegar. Este bloco era código de topo do lado NATIVE — medido: a
-# cerca abre na `install.sh:1192` e o `exit 0` dos formatos está na `:1309`, e
-# ele morava na `:2070`. Logo, quem instalava por `--flatpak`, `--appimage` ou
-# `--deb` saía SEM o agente de pareamento, e sem uma linha dizendo isso — o
-# mesmo achado #7 da Onda S, o mesmo TECLADO-QUE-NAO-DIGITA-01, o mesmo
-# MIC-EM-TODO-FORMATO-01, os três já curados. Ele escapou do portão
-# `tests/unit/test_install_serve_os_dois_lados_da_cerca.py` por um detalhe de
-# FORMA: o portão ancora no sufixo `_host`, e um bloco solto não tem nome.
-#
-# Sem o agente, todo bond novo nasce meio-salvo (`Paired: yes / Bonded: no`) e
-# some — que é o "conectam sozinhos e desligam em sequência" que ela relatou.
 install_bt_agent_host() {
-    # QUEM ANUNCIA O PASSO É O CHAMADOR, e esta função NÃO repete o `step`.
-    # Curado em 01/09/2026: quando o bloco de topo do `install.sh` virou função
-    # (commit `304b5f39`), o `step` veio junto e o do chamador ficou — o
-    # cabeçalho `[3g]` saía DUAS VEZES no caminho normal. E com `--no-udev`
-    # saía UMA e mais nada: o único passo do instalador que anunciava e ficava
-    # calado, enquanto todos os vizinhos dizem `pulado (--no-udev)`.
     if [[ "${SKIP_UDEV}" -ne 0 ]]; then
         printf '      pulado (--no-udev)\n'
         return 0
@@ -1715,14 +1042,6 @@ install_bt_agent_host() {
     else
         if ! command -v bt-agent >/dev/null 2>&1; then
             printf '      bluez-tools ausente (fornece bt-agent) — instalando (sudo)\n'
-            # DEPS-UNIVERSAIS-01: nome canônico. No Fedora a tabela está
-            # VAZIA de propósito (não há `bluez-tools` com esse nome), e o
-            # `run_pkg` diz isso em voz alta em vez de instalar outra coisa.
-            # `run_pkg`/`comando_manual_pkg` são do `install.sh` — a tabela de
-            # pacotes por distro é dele e NÃO viaja para esta lib. Quem sourceia
-            # sem elas (o `install-dev.sh --camada-de-maquina`) não adivinha o
-            # gerenciador da distro: diz o que falta, em voz alta, em vez de
-            # fingir que instalou.
             if declare -F run_pkg >/dev/null 2>&1; then
                 if run_pkg bt-agent; then
                     printf '      bluez-tools instalado\n'
@@ -1740,21 +1059,6 @@ install_bt_agent_host() {
             if sudo install -Dm644 "${ROOT_DIR}/assets/systemd/hefesto-bt-agent.service" \
                     /etc/systemd/system/hefesto-bt-agent.service 2>/dev/null; then
                 sudo systemctl daemon-reload >/dev/null 2>&1 || true
-                # AGENTE-EM-FAILED-NAO-VOLTA-PELO-INSTALL-01 (15/08/2026) — MEDIDO.
-                #
-                # `enable --now` NÃO tira uma unit do estado `failed`: o systemd
-                # recusa iniciar quem bateu o `StartLimitBurst`, e o install
-                # terminava com "habilitado" no texto e o agente morto de fato.
-                #
-                # O preço disso foi medido em 14/08: o agente ficou `failed` das
-                # 16:17 às 00:31 e, sem ele, TODO bond novo nasce meio-salvo
-                # (`Paired: yes / Bonded: no`) e some — que é o "conectam sozinhos
-                # e desligam em sequência" que ela relatou. Reinstalar não
-                # resolveria; só um `reset-failed` explícito resolve.
-                #
-                # O `KillSignal=SIGKILL` da unit (mesma data) impede que ele
-                # ENTRE em `failed`. Esta linha cuida de quem JÁ está — as duas
-                # são necessárias, e nenhuma substitui a outra.
                 sudo systemctl reset-failed hefesto-bt-agent.service >/dev/null 2>&1 || true
                 if sudo systemctl enable --now hefesto-bt-agent.service >/dev/null 2>&1; then
                     printf '      hefesto-bt-agent.service habilitado (agente NoInputNoOutput persistente)\n'

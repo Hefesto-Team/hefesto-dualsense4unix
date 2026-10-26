@@ -85,10 +85,10 @@ def test_a_licao_de_2107_continua_coberta() -> None:
 
 
 def test_o_porque_esta_escrito_no_script() -> None:
-    """Quem for mexer no limiar encontra o custo medido de mexer errado."""
-    texto = _texto()
+    """Quem for mexer no limiar encontra o custo medido no porquê dos módulos."""
+    texto = (RAIZ / "docs" / "research" / "o-porque-dos-modulos.md").read_text(encoding="utf-8")
     assert "VIGIA-QUE-DERRUBA-01" in texto, (
-        "o registro da VIGIA-QUE-DERRUBA-01 saiu do script. Sem ele o "
+        "o registro da VIGIA-QUE-DERRUBA-01 saiu do porquê. Sem ele o "
         "`LIMIAR_APARELHOS` vira um número mágico, e números mágicos são os "
         "primeiros a serem 'simplificados'."
     )

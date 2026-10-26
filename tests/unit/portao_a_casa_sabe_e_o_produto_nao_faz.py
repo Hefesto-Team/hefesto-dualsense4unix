@@ -35,52 +35,52 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "própria régua: a fonte era `install.sh` e o commit 304b5f39 do mesmo "
         "dia (*a camada de máquina ganha casa própria*) mudou a boca de lugar "
         "— as dez curas de HOST saíram do instalador e viraram "
-        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:1437` (`camada_de_maquina`) passa a "
+        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:964` (`camada_de_maquina`) passa a "
         "carregar com `source`. O `install_broker_host` de lá "
-        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:277`) é quem "
+        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:142`) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "`assets/systemd/hefesto-hidraw-broker.service:34` (`ExecStart`). O .deb "
-        "(`hidraw_broker` em `scripts/build_deb.sh:409`) e o flatpak fazem o mesmo por conta "
+        "(`hidraw_broker` em `scripts/build_deb.sh:219`) e o flatpak fazem o mesmo por conta "
         "própria. A boca não morreu; ela mudou de arquivo, que é exatamente o "
         "caso que esta régua manda CONFERIR em vez de apagar",
     ),
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "`install.sh:5283` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "`install.sh:3295` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
         "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:28`); o "
-        "`scripts/doctor.sh:2792` (`check_sentinela_wrapper`, --censo) também o roda",
+        "`scripts/doctor.sh:1656` (`check_sentinela_wrapper`, --censo) também o roda",
     ),
     "integrations/steam_input_ponte.py": (
         "scripts/disable_steam_input.sh",
         "integrations/steam_input_ponte.py",
         "roda como `python3 ${PONTE_PY} --ligar` em "
-        "`scripts/disable_steam_input.sh:361` (`ligar`) e "
-        "`scripts/disable_steam_input.sh:373` (`desligar`), e esse roteiro é "
+        "`scripts/disable_steam_input.sh:189` (`ligar`) e "
+        "`scripts/disable_steam_input.sh:193` (`desligar`), e esse roteiro é "
         "o ExecStart "
         "de `assets/hefesto-steam-input-guard.service:13` (`__SCRIPT__`), que o "
-        "`install.sh:5282` (`__SCRIPT__`) troca pelo caminho dele",
+        "`install.sh:3294` (`__SCRIPT__`) troca pelo caminho dele",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "`install.sh:5333` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
-        "`uninstall.sh:2550` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
-        "`scripts/doctor.sh:3051` (`steam_launch_options`) o publica como cura",
+        "`install.sh:3326` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
+        "`uninstall.sh:1601` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
+        "`scripts/doctor.sh:1853` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "`install.sh:5073` (`_pp_saida`, --ensure) e `uninstall.sh:2450` (`PROTON_PIN_PY`) o "
+        "`install.sh:3173` (`--ensure`, em `_pp_saida`) e `uninstall.sh:1530` (`PROTON_PIN_PY`) o "
         "rodam; "
-        "`scripts/doctor.sh:6001` (`check_proton_pin`, --report) também",
+        "`scripts/doctor.sh:3848` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "`install.sh:5285` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
+        "`install.sh:3297` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
         "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:53`) — o mesmo "
@@ -90,17 +90,17 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/audio_ks_dualsense.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
-        "`install.sh:4133` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
+        "`install.sh:2618` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
-        "`assets/hefesto-launch.sh:691` (`curar_audio_ks`) o roda a cada jogo lançado; "
-        "`uninstall.sh:2593-2594` (`AUDIO_KS_PY`) o "
+        "`assets/hefesto-launch.sh:409` (`curar_audio_ks`) o roda a cada jogo lançado; "
+        "`uninstall.sh:1635-1636` (`AUDIO_KS_PY`) o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "`scripts/doctor.sh:5885` (`check_exame_da_mesa`) o roda — e o "
-        "`install.sh:5599` (`doctor`) roda o doctor",
+        "`scripts/doctor.sh:3789` (`check_exame_da_mesa`) o roda — e o "
+        "`install.sh:3419` (`doctor`) roda o doctor",
     ),
 }
 
@@ -510,8 +510,8 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "13/10/2026, as regras do som no WirePlumber da distro — desvia as pastas de sistema "
         "que decidem a forma do drop-in (`wireplumber_forma` em "
         "`src/hefesto_dualsense4unix/utils/xdg_paths.py:111`; as "
-        "irmãs em shell são `_wp_forma` em `scripts/doctor.sh:1724` e "
-        "`_wp_forma` em `scripts/fix_wireplumber_default_source.sh:102`). O comentário do dono "
+        "irmãs em shell são `_wp_forma` em `scripts/doctor.sh:982` e "
+        "`_wp_forma` em `scripts/fix_wireplumber_default_source.sh:6`). O comentário do dono "
         "escreve a "
         "razão: «existe para o teste e para a bancada: o lar de mentira declara um "
         "/usr/share/wireplumber falso». Nenhuma unit, install ou empacotamento a escreve, e "
@@ -622,7 +622,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "doctor. É "
         "escolha dela por definição. REMEDIDO em 03/10/2026: a mão existe e não "
         "é a env — é a marca do gesto, que `install.sh --keep-dualsense-mic` "
-        "grava (`fix_wireplumber_default_source` em `install.sh:4921`). Ver "
+        "grava (`fix_wireplumber_default_source` em `install.sh:3092`). Ver "
         "`_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
@@ -749,7 +749,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "REMEDIDO em 03/10/2026, e a lacuna de 12/08 já estava curada desde "
         "26/08 (DROPIN-AMBIGUO-01): `install.sh --keep-dualsense-mic` grava a "
         "MARCA DO GESTO (`fix_wireplumber_default_source.sh --marcar-gesto-do-mic`, "
-        "`fix_wireplumber_default_source` em `install.sh:4921`), e as duas perguntas leem o mesmo "
+        "`fix_wireplumber_default_source` em `install.sh:3092`), e as duas perguntas leem o mesmo "
         "dono em cinco "
         "degraus — `system_warnings` pelo "
         "`_dualsense_mic_intended` em `src/hefesto_dualsense4unix/core/system_check.py:110` "
@@ -1346,7 +1346,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/ensaios/o_travamento_fator_a_fator.py:884` (`quem_esta_varrendo`) pergunta quem "
         "varre "
         "com ela, e `QUEDA_MINIMA_MEDIDA` e `QUEDA_MAXIMA_MEDIDA` são os que o "
-        "`scripts/doctor.sh:4621` (`Discovering`) cita (régua: "
+        "`scripts/doctor.sh:2963` (`Discovering`) cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
         "viva lê quem varre do dono do BlueZ, no próprio processo "
         "(src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py:4775 (`varrendo`))."
@@ -1476,8 +1476,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`src/hefesto_dualsense4unix/integrations/apelido_do_dongle.py:375`) "
         "diz só o que ela faz, e a razão mora na "
         "`D-COSTURA-BLUEZ`, abaixo. Desde `a75a514` (22/08, "
-        "21h26) o `scripts/bt_active_mode.sh:354` (`COM_NINTENDO`) itera TODOS os adaptadores "
-        "que hospedam Nintendo (`_hci_com_nintendo` em `scripts/bt_active_mode.sh:281`), e o mesmo "
+        "21h26) o `scripts/bt_active_mode.sh:172` (`COM_NINTENDO`) itera TODOS os adaptadores "
+        "que hospedam Nintendo (`_hci_com_nintendo` em `scripts/bt_active_mode.sh:135`), e o mesmo "
         "commit "
         "registra que resolveu 'a duplicidade … dois escritores do mesmo "
         "alias'. "
@@ -2933,7 +2933,7 @@ class TestOPortaoMorde:
             "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED"
         ), (
             "o detector aceitou o COMENTÁRIO de "
-            "`install.sh:282-283` (`WITH_WIREPLUMBER_FIX`) como escrita"
+            "`install.sh:269-269` (`WITH_WIREPLUMBER_FIX`) como escrita"
         )
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_BT_MIC"), (
             "o detector aceitou o TEXTO DE AJUDA do controller_card como escrita"
@@ -3323,11 +3323,11 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "`uninstall.sh:2128` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
+            "`uninstall.sh:1291` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
             "o extrator engoliu o COMENTÁRIO de "
-            "`uninstall.sh:2107-2110` (`CMDLINE_OWNERS_FILE`) junto com o "
+            "`uninstall.sh:1276-1276` (`CMDLINE_OWNERS_FILE`) junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 

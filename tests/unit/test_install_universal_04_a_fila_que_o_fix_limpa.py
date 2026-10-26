@@ -212,5 +212,5 @@ def test_a_venv_ao_lado_do_script_vem_primeiro() -> None:
 def test_o_apply_fixes_chama_a_limpeza() -> None:
     texto = DOCTOR.read_text(encoding="utf-8")
     inicio = texto.index("\napply_fixes() {")
-    corpo = texto[inicio : texto.index("\n}\n", inicio)]
+    corpo = texto[inicio : texto.index("\n}\n", inicio) + 1]
     assert "\n    fix_fila_sem_fixture\n" in corpo

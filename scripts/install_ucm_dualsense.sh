@@ -1,35 +1,4 @@
 #!/usr/bin/env bash
-# install_ucm_dualsense.sh — o perfil UCM do DualSense no cabo (HAPTICA-NATIVA-01).
-#
-# O caminho de háptica do GE-Proton procura um sink cujo nome tenha
-# `Speaker__sink`, e esse nome só existe quando o PipeWire abre a placa do
-# controle por UCM. O `alsa-ucm-conf` do Ubuntu 24.04 não conhece o DualSense:
-#
-#     UCM is not supported for this USB device (… @ USB054c:0ce6)
-#
-# e editar o `USB-Audio.conf` do pacote é trabalho que o próximo `apt upgrade`
-# apaga.
-#
-# O GANCHO, medido em 18/09/2026 com o pacote intacto (`dpkg -V` limpo): o
-# `ucm.conf` procura `conf.d/USB-Audio/<nome longo da placa>.conf` ANTES do
-# `USB-Audio.conf`. O nome longo sai do kernel cortado em 79 caracteres, e o
-# corte cai dentro do endereço do controlador USB:
-#
-#     DualSense       "Sony … DualSense Wireless Controller at usb-0000:0c:00."
-#     DualSense Edge  "Sony … DualSense Edge Wireless Controller at usb-0000:0"
-#
-# então UM arquivo por controlador USB da máquina vale para toda porta dele.
-# Com o gancho, `alsaucm -c hw:N list _verbs` responde `HiFi`; sem ele, o erro
-# acima.
-#
-# Uso:
-#   scripts/install_ucm_dualsense.sh            grava o verbo e os ganchos (root)
-#   scripts/install_ucm_dualsense.sh --remover  tira tudo o que este roteiro gravou
-#   scripts/install_ucm_dualsense.sh --status   só lê: 0 se todo gancho esperado existe
-#
-# Vale no próximo replug do controle, ou quando o WirePlumber reinicia.
-# Controlador USB ligado depois (uma dock) pede uma nova execução; o doctor
-# acusa o DualSense no cabo sem gancho.
 
 set -euo pipefail
 
@@ -40,7 +9,6 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --remover) ACAO="remover" ;;
         --status)  ACAO="status" ;;
-        # Para os testes: a árvore UCM e o sysfs de mentira.
         --raiz-ucm) RAIZ_UCM="$2"; shift ;;
         --sysfs)    SYSFS="$2"; shift ;;
         *) printf '[ucm] opção desconhecida: %s\n' "$1" >&2; exit 2 ;;
@@ -51,7 +19,6 @@ done
 readonly MARCADOR="hefesto-ucm-dualsense"
 readonly FABRICANTE="Sony Interactive Entertainment"
 readonly MODELOS=("DualSense Wireless Controller" "DualSense Edge Wireless Controller")
-# O `longname` da placa é um char[80] no kernel (sound/core): 79 e o NUL.
 readonly CORTE=79
 readonly VERBO="${RAIZ_UCM}/USB-Audio/Hefesto/DualSense-HiFi.conf"
 readonly GANCHOS="${RAIZ_UCM}/conf.d/USB-Audio"
@@ -79,9 +46,6 @@ as_root() {
     fi
 }
 
-# O nome do controlador USB de cada barramento: o pai do root hub no sysfs
-# (`0000:0c:00.3` num PCI, `vhci_hcd.0` no usbip). É o que o kernel escreve
-# depois de `at usb-` no nome longo da placa.
 controladores() {
     local rh
     for rh in "${SYSFS}"/bus/usb/devices/usb*; do
@@ -90,10 +54,6 @@ controladores() {
     done | sort -u
 }
 
-# Um nome de arquivo por linha. O kernel monta `usb-<controlador>-<porta>`
-# (usb_make_path), e o corte tem de cair antes da porta: se o controlador tiver
-# nome curto, o nome longo continua com a porta e a velocidade, que só existem
-# na hora do plugue — esse controlador fica de fora, e o roteiro diz qual.
 ganchos_esperados() {
     local ctrl modelo base
     while IFS= read -r ctrl; do
@@ -109,10 +69,6 @@ ganchos_esperados() {
     done < <(controladores) | sort -u
 }
 
-# A pergunta é ao `findmnt`, pelo ponto de montagem que CONTÉM a árvore UCM:
-# `-w` não serve, porque sem root o diretório nunca é gravável e é o sudo
-# que escreve. Sem `findmnt` (util-linux), a resposta é "não sei", e o roteiro
-# segue como antes.
 usr_so_leitura() {
     command -v findmnt >/dev/null 2>&1 || return 1
     local opcoes
@@ -137,13 +93,6 @@ do_aplicar() {
         warn "o ucm.conf desta distro não procura conf.d/ — o gancho não seria lido"
         return 0
     fi
-    # O alsa-ucm-conf 1.2.15 traz o `USB-Audio/Sony/DualSense-PS5-HiFi.conf`, que abre o
-    # alto-falante em mono e esconde os canais 3-4 (a háptica). O nosso grava mesmo assim: o
-    # gancho de conf.d/ é lido antes do pacote, e o controle fica com um dono só, o nosso.
-    # DISTRO IMUTÁVEL (Silverblue, Kinoite, Bazzite, SteamOS): o /usr é só de
-    # leitura, o `install -D` falha, e o install mandava rodar de novo um
-    # roteiro que ali nunca vai funcionar. O que vale nessas distros é o UCM
-    # que ela mesma traz — dizer isso e sair limpo é a resposta honesta.
     if usr_so_leitura; then
         info "${RAIZ_UCM} está num sistema de arquivos só de leitura (distro imutável) — nada gravado; efeito: a vibração dos jogos da Sony pelo cabo só chega se o perfil UCM da própria imagem do sistema já conhecer o DualSense"
         return 0
@@ -165,7 +114,6 @@ do_aplicar() {
             gravados=$((gravados + 1))
         fi
     done
-    # O gancho de um controlador que saiu da máquina não serve a ninguém.
     local velho achou
     while IFS= read -r velho; do
         [[ -n "${velho}" ]] || continue

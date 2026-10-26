@@ -1910,3 +1910,27 @@ Sem ``/proc`` legível, sem jogo identificável ou sem vpad mapeável, a respost
 controle que não vibra é uma falta; um controle que vibra sozinho na mão de
 alguém é o defeito que ela reportou.
 ~~~~
+
+## O `-W interactive` do mawk (`scripts/storm_watch.sh`, `_escolher_awk`), 08/08/2026
+
+CADERNO-QUE-NÃO-ESCREVE-01: o caderno estava vazio, com a vigia ativa, contra 723 eventos de storm no
+journal. O `awk` lê de um cano que nunca fecha (`journalctl -f`), e o gargalo é a ENTRADA do mawk, não a
+saída: ele lê com buffer próprio, fora do stdio, então nem `fflush()` nem `stdbuf` o alcançam. Medido:
+`mawk '{print; fflush()}'` e `stdbuf -oL -i0 mawk …` escrevem 0 bytes; `mawk -W interactive` escreve na
+hora. O gawk recusa `-W interactive`, por isso a escolha é medida em `_escolher_awk`, e o `fflush()` fica
+junto para o gawk.
+
+## Os snapshots de bond se movem, não se apagam (`uninstall.sh`), 08/08/2026
+
+CICLO-QUE-PROVA-01: o bloco fazia `rm -rf` por default, e o install recria só o diretório vazio.
+Doze snapshots viraram um. Os snapshots são a única rede entre um crash do `bluetoothd` e quatro controles
+repareados à mão, então seguem a regra da config: preservados por default (movidos para um destino com
+o carimbo da desinstalação, no diretório de modo 700), apagados só com `--purge-config`.
+
+## O limiar conta aparelhos distintos (`scripts/bt_health_watchdog.sh`, `LIMIAR_APARELHOS`), 08/08/2026
+
+VIGIA-QUE-DERRUBA-01: a vigia reiniciou o `bluetooth.service` por nove recusas de um aparelho só (um
+8BitDo insistindo depois de perder o bond). Reiniciar o serviço não cria bond nenhum: só derruba quem
+estava de pé, e levou junto o `hefesto-bt-agent`, que confirmaria o repareamento. A doença de 21/07, que a
+vigia existe para pegar, é o daemon recusando vários aparelhos ao mesmo tempo; dois aparelhos distintos é
+o menor limiar que separa as duas leituras.

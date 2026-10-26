@@ -105,9 +105,9 @@ class TestDefaultOnOptOutCompartilhado:
         assert "pulado (--no-dkms)" in FN
 
     def test_help_documenta_o_default_do_rtw88(self) -> None:
-        match = re.search(r"sed -n '2,(\d+)p'", INSTALL)
-        assert match is not None, "extração do --help não encontrada"
-        cabecalho = "\n".join(INSTALL.splitlines()[: int(match.group(1))])
+        match = re.search(r"_ajuda\(\) \{\n  cat <<'AJUDA'\n(.*?)\nAJUDA\n", INSTALL, re.DOTALL)
+        assert match is not None, "o texto do --help não foi encontrado"
+        cabecalho = match.group(1)
         assert "DKMS rtw88_usb" in cabecalho, "o --help precisa anunciar o default novo"
         assert "hang_reset" in cabecalho, "o gate de campo do reset fica documentado no --help"
 

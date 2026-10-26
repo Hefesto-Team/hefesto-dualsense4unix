@@ -391,8 +391,10 @@ def test_o_limpa_lista_as_chaves_nossas_do_wireplumber(tmp_path: Path) -> None:
 def _o_passo_do_uninstall() -> str:
     """O bloco do `uninstall.sh` que tira as chaves — só ele, nunca o roteiro inteiro."""
     texto = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
-    inicio = texto.index("# OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01")
-    fim = texto.index("# DROPIN-AMBIGUO-01", inicio)
+    inicio = texto.index(
+        'MEMORIA_DOS_CONTROLES_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/utils/memoria_dos_controles.py"'
+    )
+    fim = texto.index('if [[ -f "${MARCA_MIC_PEDIDO}" ]]; then', inicio)
     return texto[inicio:fim]
 
 

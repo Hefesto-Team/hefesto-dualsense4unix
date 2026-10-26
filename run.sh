@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# Runtime-real runner: exercita o daemon via FakeController em modos USB/BT,
-# ou via pydualsense quando há hardware. Atende meta-regra 9.8 (validação
-# runtime-real) para sprints que tocam o daemon.
-#
-# Uso:
-#   ./run.sh                   abre a INTERFACE (as dez abas em HTML)
-#   ./run.sh --gui             idem
-#   ./run.sh --tray            sobe o ícone da bandeja (o menu do produto)
-#   ./run.sh --smoke           boot curto com FakeController USB (2s)
-#   ./run.sh --smoke --bt      boot curto com FakeController BT  (2s)
-#   ./run.sh --daemon          roda daemon em primeiro plano (hardware real)
-#   ./run.sh --fake            igual --daemon mas usa FakeController
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,9 +16,6 @@ TRANSPORT="usb"
 FAKE=0
 FORCE=0
 SMOKE_DURATION="${HEFESTO_DUALSENSE4UNIX_SMOKE_DURATION:-2.0}"
-# O QUE ESTE ARQUIVO NÃO ENTENDE VAI PARA A INTERFACE, e não vira aviso. Sem
-# isto, `./run.sh --oculta` abria uma janela VISÍVEL na tela dela e dizia
-# "argumento desconhecido" — medido em 01/09/2026, com ela usando a máquina.
 EXTRA=()
 
 if [[ $# -eq 0 ]]; then
@@ -51,18 +36,6 @@ for arg in "$@"; do
     esac
 done
 
-# Um terminal empacotado (snap/flatpak) exporta GDK_PIXBUF_MODULE_FILE
-# apontando para o cache de loaders DELE. Todo processo GTK lançado daquele
-# terminal herda o apontamento, e o librsvg de dentro do confinamento pede uma
-# glibc mais nova que a do hospedeiro: o dlopen falha e o GTK ABORTA o processo
-# no primeiro ícone que precisar de SVG — a janela morre ao abrir, com
-# "Unable to load image-loading module ... GLIBC_2.xx not found".
-#
-# `scripts/abrir_interface.py` também faz esta limpeza, com critério mais fino
-# (`app/arranque.sanear_loaders_do_gdk_pixbuf`). Aqui ela cobre
-# o que roda ANTES do Python subir (o smoke abaixo, entre outros), e por isso o
-# critério é o grosso: se todos os módulos do cache moram dentro de /snap e nós
-# não estamos lá dentro, o cache não serve para este processo.
 if [[ -n "${GDK_PIXBUF_MODULE_FILE:-}" && -r "${GDK_PIXBUF_MODULE_FILE}" ]]; then
     if grep -qE '^"/snap/' "${GDK_PIXBUF_MODULE_FILE}" 2>/dev/null \
        && [[ "${SNAP:-}" != /snap/* ]]; then
@@ -70,71 +43,15 @@ if [[ -n "${GDK_PIXBUF_MODULE_FILE:-}" && -r "${GDK_PIXBUF_MODULE_FILE}" ]]; the
     fi
 fi
 
-# O TRAY É O CAMINHO DA BANDEJA — 19/09/2026, decisão dela: *"desabilitamos o
-# applet pela complexidade. o tray faz o mesmo mas melhor."*
-#
-# Ele passa por AQUI, e não pelo console script direto, pela mesma razão que a
-# interface passa: a venv desta árvore e a limpeza do `GDK_PIXBUF_MODULE_FILE`
-# acontecem acima, antes de o Python subir. Um tray lançado de um terminal
-# empacotado morria no primeiro ícone SVG.
-#
-# Sem XWayland: o menu do `AppIndicator3` é desenhado pelo HOSPEDEIRO da
-# bandeja (o `cosmic-applet-status-area`), não por este processo — o defeito do
-# popup que criou o `GDK_BACKEND=x11` nunca alcançou este caminho.
 if [[ "$MODE" == "tray" ]]; then
     exec python3 -m hefesto_dualsense4unix.cli.app tray ${EXTRA[@]+"${EXTRA[@]}"}
 fi
 
 if [[ "$MODE" == "gui" ]]; then
-    # O XWAYLAND DEIXOU DE SER O DEFAULT — 19/09/2026, ordem dela: *"o certo é
-    # tirar dos dois. Faça"*. A hipótese que abriu isto é dela: *"quando eu
-    # criei o app em gtk eu fiz no gnome (…) nunca pensei que o problema disso
-    # tudo poderia ser que não fiz pensando no cosmic"*.
-    #
-    # A RAZÃO DELE MORREU COM A JANELA GTK. Este bloco nasceu porque *"popups
-    # de GtkMenu/GtkComboBox quebram no cosmic-comp Wayland nativo (fundo
-    # claro, mal-posicionados, grab quebrado)"*. A janela GTK saiu do disco em
-    # 06/09 (`D-0609-GTK-LEVA-INTEIRA`), e a interface nova **não tem
-    # `GtkMenu` nem `GtkComboBox`**: as dicas são elementos da PÁGINA
-    # (`interface/topo.html`, a `.dica`) e o `<select>` usa `appearance:none`.
-    # As duas curas nasceram justamente para não depender do popup do
-    # compositor — a de 04/09 está fotografada por ela.
-    #
-    # E ELE COBRAVA UM PREÇO: sob XWayland o GTK3 **não lê o tema do portal**
-    # (`interface/tema_da_sessao.py:93`). O tema dela se perdia por causa desta linha, e isso
-    # está nas quinze queixas de 04/09 — *fugíamos de um popup claro e
-    # perdíamos o tema inteiro*.
-    #
-    # MEDIDO NA MÁQUINA DELA EM 19/09, com a interface REAL em Wayland nativo:
-    #
-    #     backend : GdkWaylandDisplay   ·  página carregou: True  ·  erro: None
-    #     barra   : 3 botões            ·  dicas na página: sim
-    #
-    # O OPT-IN FICA, e agora é ele que se declara: `HEFESTO_DUALSENSE4UNIX_
-    # XWAYLAND=1`, ou o `--force-xwayland` do `install.sh` (que grava
-    # `GDK_BACKEND=x11` no `.desktop`, e a guarda abaixo o respeita). O antigo
-    # `…_NO_XWAYLAND=1` deixa de ter efeito porque virou o comportamento
-    # padrão — quem o tiver exportado continua tendo o que pediu.
     if [[ "${HEFESTO_DUALSENSE4UNIX_XWAYLAND:-}" == "1" ]] \
        && [[ "${GDK_BACKEND:-}" != "x11" ]]; then
         export GDK_BACKEND=x11
     fi
-    # A INTERFACE QUE ABRE É A HTML — 01/09/2026: tudo aponta para o lançador
-    # HTML e para os arquivos da pasta do produto; a versão antiga não segue
-    # disponível, só a nova.
-    #
-    # Aqui havia `python3 -m hefesto_dualsense4unix.app.main`, a janela GTK
-    # velha — e ela era o que o `.desktop` instalado abria, porque o `install.sh`
-    # aponta o `Exec=` para este arquivo. O motor não sumiu: os 74 handlers de
-    # `app/actions/`, o `app/ipc_bridge.py` e as camadas de `app/telas/` são o
-    # que a interface nova chama. O que mudou é o LANÇADOR.
-    #
-    # Passa pelo `scripts/abrir_interface.py` de propósito: é ele que veste
-    # prgname, WM_CLASS e ícone no PROCESSO antes da primeira janela nascer —
-    # sem isso a dock não acha o `.desktop` e o ícone sai genérico.
-    # `${EXTRA[@]+…}` e não `${EXTRA[@]}`: sob `set -u`, um array VAZIO expande
-    # para uma string vazia em bash 4.3 e anteriores, e a interface receberia um
-    # argumento em branco. A forma com `+` não expande nada quando não há nada.
     exec python3 "${HERE}/scripts/abrir_interface.py" ${EXTRA[@]+"${EXTRA[@]}"}
 fi
 
@@ -143,8 +60,6 @@ export HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT="$TRANSPORT"
 if [[ "$MODE" == "smoke" ]]; then
     export HEFESTO_DUALSENSE4UNIX_FAKE=1
     export HEFESTO_DUALSENSE4UNIX_LOG_FORMAT="${HEFESTO_DUALSENSE4UNIX_LOG_FORMAT:-console}"
-    # Isola o socket IPC do smoke para não colidir com o daemon de produção
-    # (systemd). Ver docs/process/sprints/BUG-IPC-01.md e VALIDATOR_BRIEF A-03.
     export HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME="${HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME:-hefesto-dualsense4unix-smoke.sock}"
     SMOKE_LOG="/tmp/hefesto_dualsense4unix_smoke_${TRANSPORT}.log"
     echo "[smoke] iniciando daemon com FakeController transport=$TRANSPORT por ${SMOKE_DURATION}s..." | tee "$SMOKE_LOG"
@@ -176,21 +91,9 @@ fi
 
 if [[ "$FAKE" == "1" ]]; then
     export HEFESTO_DUALSENSE4UNIX_FAKE=1
-    # BUG-RUN-FAKE-HIJACK-PROD-SOCKET-01: o modo --fake usa FakeController (setters
-    # no-op, sem HID/evdev). Sem isolar o socket IPC, ele bindava o socket de
-    # PRODUÇÃO e, via single-instance "última vence", SEQUESTRAVA o daemon real —
-    # GUI/applet/CLI passavam a falar com um daemon fake e "nada aplicava" no
-    # controle (cor/gatilho/LED viravam no-op; o grab nunca acontecia). Isola o
-    # socket como o --smoke já faz. Quem quiser apontar a GUI/CLI para o fake
-    # precisa exportar o mesmo HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME.
     export HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME="${HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME:-hefesto-dualsense4unix-fake.sock}"
 fi
 
-# BUG-MULTI-INSTANCE-RUNSH-GUARD-01: um daemon de PRODUÇÃO aqui (socket default)
-# disputaria o socket IPC com o daemon do systemd — GUI/applet/CLI passariam a
-# falar com o daemon errado e "nada aplicaria" (o pepino do daemon órfão). O
-# --fake é isento: tem socket E pid-lock isolados (ver run_daemon/single_instance_name).
-# Override consciente com --force.
 if [[ "$FAKE" != "1" ]] && [[ "$FORCE" != "1" ]] \
    && systemctl --user is-active --quiet hefesto-dualsense4unix.service 2>/dev/null; then
     echo "erro: o daemon do systemd (hefesto-dualsense4unix.service) já está ATIVO." >&2
@@ -203,5 +106,3 @@ if [[ "$FAKE" != "1" ]] && [[ "$FORCE" != "1" ]] \
 fi
 
 exec hefesto-dualsense4unix daemon start --foreground
-
-# "Faça o pequeno bem que está próximo." — Tolstói

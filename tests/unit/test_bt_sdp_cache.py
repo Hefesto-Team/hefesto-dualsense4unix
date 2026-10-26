@@ -196,7 +196,6 @@ class TestWatchdogCuraOZumbi:
 
     def test_documenta_as_duas_causas_e_nao_manda_reparear(self) -> None:
         text = WATCHDOG.read_text(encoding="utf-8")
-        assert "SDP-CACHE-01" in text
         assert "ServiceRecords" in text
         vigia3 = text.split("vigia_sdp_cache() {", 1)[1].split("\n}\n", 1)[0]
         assert "Connect" in vigia3, "a cura é Connect() iniciado pelo host"

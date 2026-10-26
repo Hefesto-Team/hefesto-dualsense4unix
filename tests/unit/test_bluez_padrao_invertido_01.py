@@ -77,11 +77,3 @@ def test_o_help_diz_qual_dos_dois_e_o_padrao(fonte: str) -> None:
         "alguém desinstala achando que está preservando"
     )
 
-
-def test_a_decisao_anterior_nao_foi_apagada(fonte: str) -> None:
-    """A regra da casa: decisão medida não se reescreve, ganha nota datada."""
-    assert "BLUEZ-PADRAO-INVERTIDO-01" in fonte
-    assert "órfão" in fonte, (
-        "a justificativa ANTIGA tem de continuar escrita — ela é o que explica "
-        "a maquinaria de restauração que continua no arquivo"
-    )

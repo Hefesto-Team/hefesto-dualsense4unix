@@ -328,8 +328,10 @@ class TestOPassoEPadrao:
 
     def test_a_secao_do_passo_nao_tem_bloco_na_coluna_zero(self) -> None:
         """Na seção do 3d-bis, só as funções, o `step` e a chamada vivem na coluna 0."""
-        ini = INSTALL.index("\n# 3d-bis.")
-        fim = INSTALL.index("\n# 3e.", ini)
+        ini = INSTALL.index("\n_wifi_ferramenta() {")
+        fim = INSTALL.index(
+            '\nif [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then', ini
+        )
         soltas = [
             linha
             for linha in INSTALL[ini:fim].splitlines()

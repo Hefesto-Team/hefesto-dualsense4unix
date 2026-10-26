@@ -62,7 +62,8 @@ def test_o_broker_troca_antes_do_daemon_renascer() -> None:
 def test_o_opt_out_abre_a_72_junto_com_a_70() -> None:
     """MORDIDA: instale a 72 do asset nos dois ramos — o opt-out fica pela metade."""
     texto = UDEV.read_text(encoding="utf-8")
-    ramo = texto[texto.index("# A 72 FECHA AS ENTRADAS DO FÍSICO"):]
+    ancora = 'if [[ "$ABRIR_O_NO" -eq 1 ]]; then\n    _regra_72_aberta="$(mktemp)"'
+    ramo = texto[texto.index(ancora):]
     ramo = ramo[:ramo.index("\nfi\n")]
     aberto = ramo[ramo.index('if [[ "$ABRIR_O_NO" -eq 1 ]]; then'):ramo.index("\nelse\n")]
     assert "regra_do_no_aberta.sh" in aberto

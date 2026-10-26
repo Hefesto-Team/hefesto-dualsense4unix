@@ -492,8 +492,8 @@ class TestFiacaoNoDoctor:
 
     def test_read_only_nenhum_check_novo_escreve_em_dev_ou_sys(self) -> None:
         texto = self._texto()
-        inicio = texto.index("# G2 — doctor:")
-        fim = texto.index("# PLAT-01: relatório read-only do Proton pinado")
+        inicio = texto.index('readonly _BZ_PISO="5.79"')
+        fim = texto.index("check_proton_pin() {")
         regiao = texto[inicio:fim] + self._bloco("check_audio_sink_muted() {")
         assert "of=" not in regiao
         assert "> /dev" not in regiao
@@ -502,7 +502,7 @@ class TestFiacaoNoDoctor:
     def test_comandos_de_cura_sao_so_texto_de_conselho_nunca_executados(self) -> None:
         """'bluetoothctl remove', 'wpctl set-mute' e 'systemctl enable --now'"""
         texto = self._texto()
-        inicio = texto.index("# G2 — doctor:")
+        inicio = texto.index('readonly _BZ_PISO="5.79"')
         fim = texto.index("check_bt_paired_sem_bonded() {")
         fim = texto.index("\n}", fim)
         regiao = texto[inicio:fim] + "\n" + self._bloco("check_audio_sink_muted() {")

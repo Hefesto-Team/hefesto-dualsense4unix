@@ -29,9 +29,8 @@ def test_o_helper_do_pacote_nao_poe_o_vigia_e_diz_por_que() -> None:
     ):
         assert alvo not in codigo, (
             f"o install-host-udev.sh passou a instalar {alvo} — a decisão (P-15) é que "
-            "o pacote não o liga; se ela mudou, mude a declaração no helper e esta régua"
+            "o pacote não o liga; se ela mudou, mude esta régua junto"
         )
-    assert "O VIGIA DO WI-FI USB NÃO VAI POR AQUI" in texto
 
 
 def _doctor_do_pacote(tmp_path: Path) -> str:

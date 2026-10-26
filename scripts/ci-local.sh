@@ -1,50 +1,19 @@
 #!/usr/bin/env bash
-# ci-local.sh — o CI do GitHub, rodado em casa pelo PRÓPRIO YAML.
-#
-# O `act` (nektos/act) lê `.github/workflows/*.yml` e roda cada job num container do
-# runner. Aqui NÃO há uma função por job: o que o YAML manda, roda; o que o YAML muda,
-# muda aqui junto, sem ninguém rever nada. O que esta casa decide mora em
-# `scripts/ci-local/jobs.txt`, e a régua `tests/unit/test_o_ci_de_casa_e_o_do_github.py`
-# (e este script, a cada corrida) exige que TODO job dos workflows apareça lá, ou como
-# `ROLA` (roda no `act`) ou como `FORA-DE-CASA|job|motivo` (o motivo é medida).
-#
-# USO:
-#     bash scripts/ci-local.sh --rapido          # o que o fecho de toda leva roda
-#     bash scripts/ci-local.sh --completo        # tudo o que roda em casa (antes de release e da janela)
-#     bash scripts/ci-local.sh --job NOME[,NOME] # só estes, para triar (o `PULA-NO-RAPIDO` não vale)
-#     bash scripts/ci-local.sh --listar          # o que roda, o que fica fora e por quê
-#     bash scripts/ci-local.sh --conferir        # diz o que rodaria e sai 1 se rodaria alguma coisa
-#   para triar, com --job:  --sem-passo 'job|nome do passo' (repetível) tira um passo da cópia do YAML;
-#                           --perna ubuntu-22.04 roda só essa perna da matriz de runners
-#
-# O QUE RODA: a ÁRVORE DO ÍNDICE (`git checkout-index`, só arquivo versionado), exportada
-# para uma pasta de /tmp. É o que o runner do GitHub vê depois do `actions/checkout`: arquivo
-# ignorado e arquivo novo sem `git add` NÃO existem lá, e o verde de casa não pode contar
-# com eles. Árvore com o índice diferente do HEAD aparece no resumo («índice com mudança
-# não commitada»): o verde que vale é o do commit.
-#
-# O log de cada job vai para `$CASA/ci-local/<data>/<job>.log`; o resumo é UMA linha (a
-# última) e o detalhe mora nos logs. NÃO RODADO NÃO É VERDE: job que devia rodar e não
-# rodou (sem o `act`, sem o docker, sem a imagem, ou a REDE caída no meio) sai rc=2 e
-# aparece no resumo, nunca como verde nem como vermelho.
-#
-# O QUE O `act` NÃO É: o runner do GitHub. A imagem é a `catthehacker/ubuntu:act-24.04` mais o
-# que o runner traz e ela não (`scripts/ci-local/Dockerfile`); o `ubuntu-latest` passa a ser o
-# Ubuntu 26 em 19/10/2026, e o 24.04 é o de hoje. O que o `act` não alcança (privilégio de
-# kernel, FUSE, publicar, perguntar ao servidor) é `FORA-DE-CASA`, com a medida.
-#
-# A FERRAMENTA (o Python do `setup-python`) fica numa pasta do próprio container, que morre com
-# ele. O `act` monta por padrão UM volume `act-toolcache` em /opt/hostedtoolcache, compartilhado
-# por todos os jobs e que sobrevive a eles: o `pip install` de um job deixava pacote no Python do
-# job seguinte, e o `referencias-docs` ficou vermelho ou verde conforme o job que rodou antes
-# (o `hidapi.py` deixado por outro job, sem a biblioteca nativa). O runner do GitHub nasce limpo.
-#
-# O servidor de artefato e o de cache do `act` ficam em 127.0.0.1 (o padrão dele é o IP da
-# rede local).
-#
-# rc: 0 tudo verde · 1 algum vermelho (ou, no --conferir, algo a rodar) · 2 não rodou
-# (sem act, sem docker, rede, tabela fora do YAML, argumento ruim).
 set -uo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+ci-local.sh — o CI do GitHub, rodado em casa pelo PRÓPRIO YAML.
+
+USO:
+    bash scripts/ci-local.sh --rapido          # o que o fecho de toda leva roda
+    bash scripts/ci-local.sh --completo        # tudo o que roda em casa (antes de release e da janela)
+    bash scripts/ci-local.sh --job NOME[,NOME] # só estes, para triar (o `PULA-NO-RAPIDO` não vale)
+    bash scripts/ci-local.sh --listar          # o que roda, o que fica fora e por quê
+    bash scripts/ci-local.sh --conferir        # diz o que rodaria e sai 1 se rodaria alguma coisa
+  para triar, com --job:  --sem-passo 'job|nome do passo' (repetível) tira um passo da cópia do YAML;
+                          --perna ubuntu-22.04 roda só essa perna da matriz de runners
+AJUDA
+}
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CASA="${HEFESTO_CASA:-$HOME/.local/state/hefesto-casa}"
@@ -52,20 +21,13 @@ JOBS_TXT="$RAIZ/scripts/ci-local/jobs.txt"
 DOCKERFILE="$RAIZ/scripts/ci-local/Dockerfile"
 BASE="catthehacker/ubuntu:act-24.04"
 BASE_22="catthehacker/ubuntu:act-22.04"
-EM_PARALELO="${CI_LOCAL_JOBS:-2}"        # quantos jobs do act ao mesmo tempo
-PERNAS="${CI_LOCAL_PERNAS:-3}"           # quantas pernas de matriz por job
+EM_PARALELO="${CI_LOCAL_JOBS:-2}"
+PERNAS="${CI_LOCAL_PERNAS:-3}"
 CACHE_ACOES="${CI_LOCAL_CACHE_ACOES:-$HOME/.cache/act}"
 DATA="$(date +%Y-%m-%d_%H%M)"
 SAIDA="${CI_LOCAL_SAIDA:-$CASA/ci-local/$DATA}"
-# O que o log tem quando a REDE caiu: o job reprovou, mas não por defeito dele. Só conta a SAÍDA DE UM
-# PASSO (`[job]   | texto`) no formato de quem fala com a rede (apt, git, curl, pip, node) e as linhas
-# do próprio act ao puxar a imagem. Citação de código ou de teste dentro do log (`| 163 | echo "E: Temporary
-# failure resolving"`) não conta: a primeira versão deste filtro olhava a frase solta, e o texto de um teste
-# que a citava fez dois jobs vermelhos de verdade passarem por «rede caída» (06/10/2026).
 REDE_PASSO='\]\s+\|\s+(W: Failed to fetch .*(Temporary failure resolving|Could not resolve)|Temporary failure resolving .|fatal: unable to access .*Could not resolve host|curl: \([67]\) |.*Failed to establish a new connection: \[Errno -[23]\]|(Error: )?getaddrinfo (EAI_AGAIN|ENOTFOUND))'
 REDE_ACT='^Error: .*(no such host|dial tcp|Temporary failure in name resolution)'
-# O docker que não respondeu a tempo (limpar o container de um job que passou: `context deadline exceeded`,
-# medido em 06/10/2026 com a máquina cheia): também não é defeito do job.
 DOCKER_CAIDO='^(Error: |\[[^]]*\] +(failed to remove container|Error while stop job container)).*(context deadline exceeded|Cannot connect to the Docker daemon)'
 
 modo=""; alvo=""; conferir=0; listar=0; SEM_PASSO=(); SO_PERNA=""
@@ -78,30 +40,19 @@ while [ $# -gt 0 ]; do
     --perna) shift; SO_PERNA="${1:-}" ;;
     --listar) listar=1 ;;
     --conferir) conferir=1 ;;
-    -h|--ajuda) awk 'NR > 1 && /^#/ {sub(/^# ?/, ""); print} /^set -uo/ {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--ajuda) _ajuda; exit 0 ;;
     *) echo "ci-local: argumento desconhecido: $1" >&2; exit 2 ;;
   esac
   shift
 done
 
-# --- a tabela ---------------------------------------------------------------------
-# ROLA|job|rapido|imagem       roda no act; `rapido` entra nos dois modos, `completo` só no completo;
-#                              `imagem` (opcional) = ubuntu-22.04 manda baixar a imagem do runner 22.04
-# PULA-NO-RAPIDO|job|passo     no --rapido o passo de nome exato sai da cópia do YAML
-# SEM-NEEDS|job|dep,dep|motivo  as dependências citadas saem do `needs:` do job, na cópia (o act seguiria o `needs:` e rodaria
-#                              de novo, antes dele, o job de que ele depende); o `needs:` que sobra continua valendo
-# EM-TAG|workflow.yml|motivo   o workflow dispara em tag: o act roda o evento `push` com `ref: refs/tags/v<versão do pyproject>`
-# FORA-DE-CASA|job|motivo      não roda em casa, com o motivo medido
-# A tabela e os workflows são lidos UMA vez por corrida (nem o jobs.txt nem o YAML mudam enquanto o
-# script roda): cada pergunta «o job existe? em que arquivo?» era um awk por workflow, e a
-# conferência da tabela as fazia dezenas de vezes (0,8 s só para listar).
 _LINHAS="$(grep -vE '^\s*(#|$)' "$JOBS_TXT" 2>/dev/null)"
 linhas() { [ -z "$_LINHAS" ] || printf '%s\n' "$_LINHAS"; }
 campo() { linhas | awk -F'|' -v t="$1" -v j="$2" -v n="$3" '$1==t && $2==j {print $n}'; }
 
 [ -n "$_LINHAS" ] || { echo "ci-local: não há tabela de jobs ($JOBS_TXT)" >&2; exit 2; }
 
-_jobs_do_yaml_lidos() { # "arquivo job" de cada job de cada workflow (id exato, sob `jobs:`)
+_jobs_do_yaml_lidos() {
   local f
   for f in "$RAIZ"/.github/workflows/*.yml; do
     [ -f "$f" ] || continue
@@ -121,9 +72,6 @@ jobs_do_yaml() { [ -z "$_JOBS_YAML" ] || printf '%s\n' "$_JOBS_YAML"; }
 
 arquivo_do_job() { [ -z "${ARQUIVO_DO_JOB[$1]:-}" ] || printf '%s\n' "${ARQUIVO_DO_JOB[$1]}"; }
 
-# A tabela e os workflows têm de dizer a mesma coisa: job novo sem decisão, job que sumiu
-# da tabela, passo `PULA-NO-RAPIDO` que o YAML já não tem (o `--rapido` rodaria a suíte
-# inteira sem ninguém notar) e `FORA-DE-CASA` sem motivo são recusados, rc=2.
 conferir_tabela() {
   local erros=0 j dup t p n
   declare -A na_tabela=()
@@ -160,7 +108,7 @@ conferir_tabela() {
   return "$erros"
 }
 
-passo_existe() { # job, nome do passo (exato)
+passo_existe() {
   local f; f="$(arquivo_do_job "$1")"; [ -n "$f" ] || return 1
   awk -v job="$1" -v passo="$2" '
     /^jobs:/ {d=1; next}
@@ -169,7 +117,7 @@ passo_existe() { # job, nome do passo (exato)
     END{exit !ok}' "$RAIZ/.github/workflows/$f"
 }
 
-jobs_do_modo() { # os jobs ROLA do modo
+jobs_do_modo() {
   case "$modo" in
     rapido) linhas | awk -F'|' '$1=="ROLA" && $3=="rapido" {print $2}' ;;
     completo) linhas | awk -F'|' '$1=="ROLA" {print $2}' ;;
@@ -191,7 +139,7 @@ fi
 conferir_tabela || exit 2
 
 mapfile -t JOBS < <(jobs_do_modo)
-if [ "$modo" = job ]; then # nome que a tabela não tem, ou que ela deixa fora de casa, não roda calado
+if [ "$modo" = job ]; then
   for j in "${JOBS[@]}"; do
     [ -n "$(campo ROLA "$j" 2)" ] || { echo "ci-local: o job '$j' não roda em casa (ou não existe): $(campo FORA-DE-CASA "$j" 3)" >&2; exit 2; }
   done
@@ -202,8 +150,6 @@ if [ "$conferir" = 1 ]; then
   exit 0
 fi
 
-# --- o que tem de existir ------------------------------------------------------------
-# O act: o do state da casa (onde o baixamos, com o sha256 da release conferido) ou o do PATH.
 ACT=""
 for c in "$CASA/bin/act" "$(command -v act 2>/dev/null || true)"; do
   [ -n "$c" ] && [ -x "$c" ] && { ACT="$c"; break; }
@@ -248,9 +194,6 @@ mkdir -p "$SAIDA" "$CASA/ci-local/artefatos"
 TMP="$(mktemp -d /tmp/cil.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 
-# --- a árvore: o índice, exportado ------------------------------------------------------
-# O `.git` dela é um ponteiro; o diretório do git tem de existir no MESMO caminho dentro do
-# container (só leitura), ou o `fetch-depth: 0` e os portões da história não acham o repositório.
 ARV="$TMP/arvore"
 mkdir -p "$ARV"
 git -C "$RAIZ" checkout-index -a -f --prefix="$ARV/" 2>/dev/null \
@@ -266,10 +209,7 @@ fi
 OPCOES=()
 [ "${#OPCOES_DOCKER[@]}" -gt 0 ] && OPCOES=(--container-options "${OPCOES_DOCKER[*]}")
 
-# O YAML a rodar: o próprio, ou uma cópia sem o que a tabela manda tirar: os passos
-# `PULA-NO-RAPIDO` (só no --rapido: a suíte inteira tem a casa do usuário em `rodar-a-suite.sh`),
-# os passos de `--sem-passo` e o `needs:` dos jobs `SEM-NEEDS`.
-tirar_passo() { # arquivo job passo
+tirar_passo() {
   awk -v job="$2" -v passo="$3" '
     /^jobs:/ {emjobs=1}
     emjobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {atual=$1; sub(/:$/, "", atual)}
@@ -277,7 +217,7 @@ tirar_passo() { # arquivo job passo
     atual==job && $0 == "      - name: " passo {pula=1}
     !pula {print}' "$1" > "$1.n" && mv "$1.n" "$1"
 }
-tirar_needs() { # arquivo job deps(vírgulas): tira só estas do `needs:` do job (uma linha, `a` ou `[a, b]`)
+tirar_needs() {
   awk -v job="$2" -v tirar="$3" '
     BEGIN {n = split(tirar, t, ","); for (i = 1; i <= n; i++) fora[t[i]] = 1}
     /^jobs:/ {emjobs=1}
@@ -291,13 +231,9 @@ tirar_needs() { # arquivo job deps(vírgulas): tira só estas do `needs:` do job
     }
     {print}' "$1" > "$1.n" && mv "$1.n" "$1"
 }
-# O `act` só troca o `actions/checkout` pela árvore local quando o passo NÃO pede `ref:`. Com `ref:` (o
-# release.yml pede a tag) ele roda o checkout de verdade, e o checkout de verdade busca no servidor um
-# repositório que o act não sabe qual é (medido em 06/10/2026: clonou o próprio `actions/checkout` e
-# fez checkout do `master` dele). A cópia troca a linha por `lfs: false`, que o act deixa passar.
 REF_DO_RELEASE='^( +)ref: \$\{\{ github\.event\.inputs\.tag \|\| github\.ref \}\}[[:space:]]*$'
 tirar_ref() { sed -E "s/$REF_DO_RELEASE/\1lfs: false/" "$1" > "$1.n" && mv "$1.n" "$1"; }
-yaml_de() { # job -> caminho do YAML (o original, ou a cópia filtrada)
+yaml_de() {
   local job="$1" f copia="$TMP/$1.yml" mudou=0 p
   f="$(arquivo_do_job "$job")"; [ -n "$f" ] || return 1
   f="$ARV/.github/workflows/$f"
@@ -309,7 +245,6 @@ yaml_de() { # job -> caminho do YAML (o original, ou a cópia filtrada)
   for p in "${SEM_PASSO[@]:-}"; do
     [ -n "$p" ] && [ "${p%%|*}" = "$job" ] && { tirar_passo "$copia" "$job" "${p#*|}"; mudou=1; }
   done
-  # todos os SEM-NEEDS da tabela valem na cópia (o act segue o `needs:` dos jobs de que este depende)
   while IFS='|' read -r _ o_job deps _; do
     [ -n "$o_job" ] && { tirar_needs "$copia" "$o_job" "$deps"; mudou=1; }
   done < <(linhas | awk -F'|' '$1=="SEM-NEEDS"')
@@ -319,18 +254,12 @@ yaml_de() { # job -> caminho do YAML (o original, ou a cópia filtrada)
 SUJA=""
 if ! git -C "$RAIZ" diff --cached --quiet HEAD -- 2>/dev/null; then SUJA=" (índice com mudança não commitada)"; fi
 
-chamar_act() { # job yml log porta [rótulo do runner da matriz]
+chamar_act() {
   local job="$1" yml="$2" log="$3" porta="$4" rotulo="${5:-}" extras=() cache rc
-  # O cache das actions (`~/.cache/act`) é de CADA chamada: dois `act` clonando e dando reset no mesmo
-  # diretório se pisam («Unable to reset to <sha>: EOF», «lstat …/.prettierrc.js: no such file»; medido
-  # em 06/10/2026). A chamada trabalha numa cópia (2 s) e devolve o que baixou de novo, sem sobrescrever.
   cache="$TMP/acoes-$job${rotulo:+-$rotulo}"
   mkdir -p "$CACHE_ACOES"
   cp -a "$CACHE_ACOES/." "$cache/" 2>/dev/null || mkdir -p "$cache"
   [ -f "$TMP/tag-$job.json" ] && extras+=(-e "$TMP/tag-$job.json")
-  # A matriz de runners (`runs-on: ${{ matrix.os }}`) roda UMA perna por chamada: com as duas imagens no mesmo
-  # `-P`, o act dá a mesma imagem às duas pernas (a ordem do mapa muda de corrida para corrida: medido em
-  # 06/10/2026, o `deb` rodou as duas pernas no noble numa corrida e no jammy na outra).
   if [ -n "$rotulo" ]; then
     extras+=(--matrix "os:$rotulo")
     [ "$rotulo" = ubuntu-22.04 ] && extras+=(-P "ubuntu-22.04=$IMAGEM_22")
@@ -355,15 +284,9 @@ chamar_act() { # job yml log porta [rótulo do runner da matriz]
   return "$rc"
 }
 
-# A rede só explica o vermelho quando TODO passo que reprovou (a linha `Failure - …` do act) teve, na saída dele
-# (entre o `Run` daquele passo e a falha, na mesma perna), a linha da rede. O `pip` que tentou de novo e conseguiu deixa
-# a mesma linha num passo verde, e uma perna da matriz pode cair pela rede enquanto a outra reprova de verdade:
-# nos dois casos o vermelho é do job, e vermelho vale mais que não rodado. Sem passo reprovado nenhum, vale a linha
-# do próprio act (a imagem que não baixou).
-# As marcas do act vão por byte: o portão dos glifos não aceita o caractere no código.
 INICIO_DO_PASSO=$'\xe2\xad\x90 Run '
 FALHA_DO_PASSO=$'\xe2\x9d\x8c  Failure - '
-so_a_rede_reprovou() { # log -> 0 se só a rede explica a reprovação
+so_a_rede_reprovou() {
   local log="$1" redes act_rede=0
   redes="$(grep -nE -e "$REDE_PASSO" "$log" | cut -d: -f1 | tr '\n' ' ')"
   grep -qE "$REDE_ACT" "$log" && act_rede=1
@@ -376,12 +299,11 @@ so_a_rede_reprovou() { # log -> 0 se só a rede explica a reprovação
     END { exit !((f > 0 && f == fr) || (f == 0 && (n > 0 || act))) }' "$log"
 }
 
-rodar_job() { # job índice
+rodar_job() {
   local job="$1" i="$2" yml log rc=0 r ini porta rot arquivo_do_yaml numero rotulos=("")
   log="$SAIDA/$job.log"
   ini=$(date +%s)
   yml="$(yaml_de "$job")" || { echo "ci-local: o job '$job' não está em workflow nenhum" > "$log"; echo 2 > "$SAIDA/$job.rc"; return 2; }
-  # uma porta por job da corrida (são menos de 40): duas chamadas na mesma porta derrubam o act da segunda
   porta=$((20000 + ($$ % 1000) * 40 + i % 40))
   arquivo_do_yaml="$(arquivo_do_job "$job")"
   if [ -n "$(campo EM-TAG "$arquivo_do_yaml" 3)" ]; then
@@ -398,10 +320,8 @@ rodar_job() { # job índice
       chamar_act "$job" "$yml" "$log.$rot" "$porta" "$rot"; r=$?
       { echo "=== a perna $rot (rc=$r)"; cat "$log.$rot"; } >> "$log"; rm -f "$log.$rot"
     fi
-    # vermelho vale mais que não rodado, que vale mais que verde
     if [ "$r" != 0 ]; then case "$rc" in 0 | 2) rc=$r ;; esac; fi
   done
-  # Reprovou porque a rede caiu: não é defeito do job, e não rodar não é verde.
   if [ "$rc" != 0 ] && [ "$rc" != 2 ] && so_a_rede_reprovou "$log"; then
     echo "ci-local: a rede caiu no meio deste job; ele não rodou de verdade (o log tem a linha)" >> "$log"
     echo rede > "$SAIDA/$job.motivo"; rc=2
@@ -414,10 +334,7 @@ rodar_job() { # job índice
   return "$rc"
 }
 
-# As actions (`setup-python`…) o `act` clona em ~/.cache/act. Com todas as cópias já ali,
-# `--action-offline-mode` não baixa de novo (e a corrida sai rápida e sem rede); faltando alguma, cada
-# chamada baixa a dela na própria cópia do cache (ver `chamar_act`) e devolve ao cache de todos.
-acoes_em_falta() { # as actions (fora o checkout, que o act troca pela árvore) dos workflows dos jobs a rodar, sem cópia local
+acoes_em_falta() {
   local j f u ref
   for j in "${JOBS[@]}"; do
     f="$(arquivo_do_job "$j")"; [ -n "$f" ] || continue
@@ -431,11 +348,7 @@ acoes_em_falta() { # as actions (fora o checkout, que o act troca pela árvore) 
 OFFLINE=()
 if [ -z "$(acoes_em_falta)" ]; then OFFLINE=(--action-offline-mode); fi
 
-# O que o `act` roda junto com o job: o `needs:` dele, menos o que a tabela manda tirar (`SEM-NEEDS`), e o
-# `needs:` deles, e assim por diante. Dois `act` ao mesmo tempo com um job em comum brigam pelo mesmo
-# container (`Conflict. The container name "/act-Release-deb-…" is already in use`: medido em 06/10/2026),
-# e o job que é plano de outro já roda dentro dele: o resultado dele é o do job que o cobre.
-needs_do_job() { # job -> os `needs:` dele, um por linha, sem o que o SEM-NEEDS tira
+needs_do_job() {
   local f tira; f="$(arquivo_do_job "$1")"; [ -n "$f" ] || return 0
   tira=",$(campo SEM-NEEDS "$1" 3),"
   awk -v job="$1" '
@@ -444,7 +357,7 @@ needs_do_job() { # job -> os `needs:` dele, um por linha, sem o que o SEM-NEEDS 
     atual==job && /^    needs:/ {v=$0; sub(/^    needs:[[:space:]]*/, "", v); gsub(/[\[\]]/, "", v); n=split(v, d, /[[:space:]]*,[[:space:]]*/); for (i=1;i<=n;i++) if (d[i] != "") print d[i]}
   ' "$RAIZ/.github/workflows/$f" | while read -r d; do case "$tira" in *",$d,"*) ;; *) echo "$d" ;; esac; done
 }
-plano_do_job() { # job -> ele e tudo o que o act roda junto
+plano_do_job() {
   local fila=("$1") visto=" " atual d
   while [ "${#fila[@]}" -gt 0 ]; do
     atual="${fila[0]}"; fila=("${fila[@]:1}")
@@ -474,7 +387,7 @@ for j in "${JOBS[@]}"; do
   i=$((i + 1))
 done
 wait
-for j in "${!COBERTO[@]}"; do # o job que é plano de outro tem o resultado do que o cobre
+for j in "${!COBERTO[@]}"; do
   k="${COBERTO[$j]}"
   cp "$SAIDA/$k.rc" "$SAIDA/$j.rc" 2>/dev/null || echo 2 > "$SAIDA/$j.rc"
   echo "rodou dentro do plano de $k: veja $SAIDA/$k.log" > "$SAIDA/$j.log"
@@ -494,7 +407,6 @@ RES="ci-local --$modo: ${#VERDE[@]} verde(s), ${#VERMELHO[@]} vermelho(s)"
 RES="$RES, ${#NAO_RODOU[@]} não rodado(s)"
 [ "${#NAO_RODOU[@]}" -gt 0 ] && RES="$RES [${NAO_RODOU[*]}]"
 RES="$RES; $FORA fora de casa declarado(s); $(( $(date +%s) - INI ))s; logs em $SAIDA$SUJA"
-# O recibo: a corrida, para o fecho e para quem confere o `--completo` antes da janela.
 mkdir -p "$CASA/ci-local"
 printf '%s|%s|%s\n' "$(date +%Y-%m-%dT%H:%M)" "$(git -C "$RAIZ" rev-parse --short=12 HEAD 2>/dev/null || echo -)" "$RES" \
   > "$CASA/ci-local/ultimo-$modo.txt"

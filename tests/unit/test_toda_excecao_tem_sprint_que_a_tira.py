@@ -299,8 +299,6 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "o piso que só sobe, e não uma folga"),
     "tests/unit/test_a_fala_de_tela_alcanca_a_interface_nova.py::RAIZES_ATE_HOJE": (
         "as raízes de tela de hoje, um conjunto que só cresce"),
-    "tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py::ISENTOS_EM_COMENTARIO": (
-        "a lápide em comentário, que não chega a tela nenhuma"),
     "tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py::ISENTOS_INTEIROS": (
         "o dono da lista de frases banidas: os trechos são o dado"),
     "tests/unit/test_a_porta_que_a_casa_construiu_01.py::EXCECOES": (

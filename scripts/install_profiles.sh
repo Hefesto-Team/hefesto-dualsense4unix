@@ -1,19 +1,4 @@
 #!/usr/bin/env bash
-# install_profiles.sh — copia perfis default para ~/.config/hefesto-dualsense4unix/profiles/
-#
-# Regras:
-#   - Se o diretório de perfis estiver VAZIO (primeira instalação), copia
-#     todos os JSONs de assets/profiles_default/.
-#   - Se já houver perfis (reinstalação), NÃO sobrescreve nenhum existente.
-#   - EXCEÇÃO: freestyle.json é sempre copiado SE AUSENTE (slot do usuário
-#     deve sempre existir), mas nunca sobrescrito se já existe — e nunca
-#     copiado quando um nome antigo (meu_perfil.json, personalizado.json) ainda
-#     ocupa o slot dela.
-#
-# Uso:
-#   ./scripts/install_profiles.sh [ROOT_DIR]
-#
-# ROOT_DIR: raiz do repositório (default: diretório pai deste script).
 
 set -euo pipefail
 
@@ -28,45 +13,20 @@ fi
 
 mkdir -p "${DEST_DIR}"
 
-# INSTALL-PROFILES-COPY-IF-ABSENT-01: copia cada preset default AUSENTE no
-# destino — nunca sobrescreve um perfil existente (preserva edições da usuária).
-# Antes só copiava quando o dir estava 100% VAZIO, então presets NOVOS (ex.:
-# point_and_click da V3.11) nunca chegavam num upgrade — a feature nascia morta.
-#
-# INSTALL-PROFILES-RESPECT-DELETION-01: um marker `.seeded_presets` registra os
-# presets já semeados. Assim, um preset que a usuária DELETA de propósito NÃO é
-# ressuscitado numa reinstalação (a cópia cega copy-if-absent o traria de volta).
-# Regra: só copia se AUSENTE E ainda-não-semeado; presets já presentes na 1ª
-# execução (perfis da v3.10) são registrados sem cópia, então deleções POSTERIORES
-# passam a ser respeitadas.
-#
-# FIX-PACKAGING-SEED-PARITY-01: a MESMA semântica existe em runtime no Python
-# (`profiles/loader.py::seed_default_presets`) para .deb/AppImage, onde este
-# script não roda. O formato do marker (um filename por linha) é contrato
-# compartilhado entre os dois semeadores — mudou aqui, mude lá (e nos testes
-# tests/unit/test_preset_seed_runtime.py).
 readonly MARKER="${DEST_DIR}/.seeded_presets"
 touch "${MARKER}"
 copied=0
 for src in "${SRC_DIR}"/*.json; do
     fname="$(basename "${src}")"
     dest="${DEST_DIR}/${fname}"
-    # Já semeado antes → respeita a decisão da usuária (inclusive deletar).
     if grep -qxF "${fname}" "${MARKER}"; then
         continue
     fi
-    # PERFIL-PADRAO-PERSONALIZADO-01 e O-MODO-FREESTYLE-02: o slot dela já
-    # existe sob um nome antigo. Copiar aqui daria a ela DOIS catch-all
-    # disputando o controle. Registra sem copiar; quem renomeia é
-    # `loader.migrate_default_profile_name`. Espelha a mesma recusa em
-    # `profiles/loader.py:_o_slot_dela_tem_nome_antigo` — o marker é contrato
-    # compartilhado entre os dois semeadores.
     if [[ "${fname}" == "freestyle.json" && ( -f "${DEST_DIR}/meu_perfil.json" || -f "${DEST_DIR}/personalizado.json" ) ]]; then
         printf '%s\n' "${fname}" >> "${MARKER}"
         continue
     fi
     if [[ -f "${dest}" ]]; then
-        # Presente na 1ª execução (v3.10/editado): registra sem copiar.
         printf '%s\n' "${fname}" >> "${MARKER}"
         continue
     fi

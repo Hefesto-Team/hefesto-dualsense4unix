@@ -1,64 +1,25 @@
 #!/usr/bin/env bash
-# bancada.sh — o semáforo do recurso FÍSICO: 1 daemon, 1 broker de hidraw,
-# 1 controle na mesa, 3 adaptadores de rádio. Isolar árvore de git não divide
-# aparelho, e é por isso que o worktree não basta.
-#
-# O GESTO QUE ELE TORNA SEGURO, e são as palavras de produto:
-#   "vamos fazer a medição do BT, enquanto isso manda as demais frentes para a execução das
-#    demais sprints"
-# Quinze das vinte e duas sprints precisam do daemon vivo, onze abrem hidraw e
-# duas colidem de frente com a medição de rádio. Sem semáforo, uma frente para o
-# daemon debaixo da mão do usuário no meio da medição -- e o pior caso não é essa frente
-# falhar: é ele MEDIR, e publicar um número colhido enquanto o aparelho mudava.
-#
-# DUAS PROVAS DE VIDA INDEPENDENTES, e nenhuma exige que alguém lembre de
-# liberar:
-#   1. o PID do detentor está vivo?   -- quem responde é o KERNEL;
-#   2. já passou de `expira_em`?      -- quem responde é o RELÓGIO.
-# Basta uma delas dizer "não" para a bancada estar LIVRE.
-#
-# POR QUE AS DUAS, e não só o PID: um processo pode virar zumbi e o PID
-# continuar existindo. E por que não só o relógio: um teto de quatro horas
-# deixaria a bancada travada quatro horas depois de a sessão do usuário morrer.
-#
-# O TETO NÃO É ZELO -- é a lição do `btmgmt` sem adaptador, que travava o
-# `install.sh` PARA SEMPRE em quem não tem Bluetooth. O que não volta sozinho
-# trava a casa, e só teto de tempo resolveu. A mesma regra vale aqui:
-#
-#   Se a liberação depende de um `finally` do detentor, o desenho está errado.
-#
-# O ESTADO NÃO É VERSIONADO, e é de propósito: ele mora em
-# ${XDG_RUNTIME_DIR}/hefesto-bancada.json, que o kernel limpa no fim da sessão.
-# Estado transitório dentro do git vira commit de carona -- o `painel.html`
-# entrou de carona em 16 de 22 commits de 23/08 exatamente assim.
-#
-# Uso:
-#   scripts/bancada.sh reservar "medição de BT" [--horas 4]
-#   scripts/bancada.sh status      uma linha, e é a que o despachante imprime
-#   scripts/bancada.sh exigir      rc=1 com motivo e hora -> quem chamou NÃO passa
-#   scripts/bancada.sh liberar
-#
-# QUEM CHAMA `exigir`: todo caminho que pare o daemon, escreva no hidraw ou
-# chame `systemctl`. rc=1 significa ESPERAR e DIZER que está esperando -- nunca
-# contornar por outro caminho, que é como se inventa medição falsa.
 set -uo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+bancada.sh — o semáforo do recurso FÍSICO: 1 daemon, 1 broker de hidraw,
+1 controle na mesa, 3 adaptadores de rádio. Isolar árvore de git não divide
+aparelho, e é por isso que o worktree não basta.
 
-# As três variáveis de dublê. Elas existem para que o PORTÃO possa exercitar as
-# duas provas de vida uma de cada vez, sem esperar quatro horas e sem matar
-# processo de verdade. A cicatriz que as obriga está no cabeçalho do portão:
-# as duas primeiras medições do `flock` foram FALSAS porque o dublê não
-# declarava o próprio PID.
+  Se a liberação depende de um `finally` do detentor, o desenho está errado.
+AJUDA
+}
+
 ARQ="${HEFESTO_BANCADA_ARQ:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-bancada.json}"
 AGORA="${HEFESTO_BANCADA_AGORA:-$(date +%s)}"
 
-_json() {  # _json <chave> -- lê uma chave do arquivo, sem depender de jq
+_json() {
   sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\{0,1\}\([^\",}]*\)\"\{0,1\}.*/\1/p" "$ARQ" \
     | head -1
 }
 
 _hhmm() { date -d "@$1" '+%d/%m %H:%M' 2>/dev/null || echo "$1"; }
 
-# Devolve 0 (bancada OCUPADA) ou 1 (LIVRE), e imprime a linha de estado.
 _avaliar() {
   [ -r "$ARQ" ] || { echo "LIVRE — ninguém reservou a bancada."; return 1; }
 
@@ -71,16 +32,11 @@ _avaliar() {
     return 1
   fi
 
-  # PROVA DE VIDA 1 — o kernel. `kill -0` não envia sinal nenhum: só pergunta
-  # se o processo existe. Se o detentor morreu (Wi-Fi caiu, sessão fechou,
-  # `kill -9`), a bancada está livre na PRÓXIMA LEITURA, sem ninguém liberar.
   if ! kill -0 "$pid" 2>/dev/null; then
     echo "LIVRE — quem reservou (PID ${pid}, ${quem}) morreu sem liberar; o kernel respondeu por ele."
     return 1
   fi
 
-  # PROVA DE VIDA 2 — o relógio. Um processo zumbi mantém o PID existindo, e o
-  # teto responde por cima. É a lição do `btmgmt` sem adaptador.
   if [ "$AGORA" -ge "$expira" ]; then
     echo "LIVRE — a reserva de ${quem} venceu em $(_hhmm "$expira") (o teto de tempo respondeu; o PID ${pid} ainda vive)."
     return 1
@@ -107,10 +63,6 @@ _reservar() {
     exit 1
   fi
 
-  # O PID GRAVADO É O DO SHELL QUE CHAMOU, nunca o deste script: `$$` morre no
-  # próximo instante e a prova de vida 1 diria "livre" sempre. `HEFESTO_BANCADA_PID`
-  # existe para o dublê do portão declarar o próprio PID -- que é justamente o
-  # que faltava nas duas medições falsas do `flock`.
   local pid="${HEFESTO_BANCADA_PID:-$PPID}"
   local expira
   expira="$(awk -v a="$AGORA" -v h="$horas" 'BEGIN{printf "%d", a + h*3600}')"
@@ -144,6 +96,6 @@ case "${1:-status}" in
     exit 0 ;;
   liberar)
     if [ -e "$ARQ" ]; then rm -f "$ARQ"; echo "LIBERADA."; else echo "já estava livre."; fi ;;
-  -h|--help) sed -n '2,45p' "$0" | sed 's/^# \?//' ;;
+  -h|--help) _ajuda ;;
   *) echo "ERRO: comando desconhecido '${1}'. Veja $0 --help" >&2; exit 2 ;;
 esac

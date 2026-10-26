@@ -122,7 +122,7 @@ GATES: dict[str, tuple[Path, str]] = {
     ),
     "plataforma.link_parametros@pro::no-sniff-por-dispositivo": (
         ATIVO,
-        "LINK POLICY sem SNIFF — POR DISPOSITIVO",
+        'log "link policy de ${MAC} -> RSWITCH (sem SNIFF; Pro genuíno)"',
     ),
     "plataforma.link_parametros@pro::so-o-genuino": (ATIVO, "_e_pro_genuino()"),
     "plataforma.vigia_zumbi@pro::a-vigia-de-radio": (WATCHDOG, "vigia_sdp_cache()"),

@@ -14,8 +14,8 @@ INSTALL = (RAIZ / "install.sh").read_text(encoding="utf-8")
 
 def _bloco_7b() -> str:
     inicio = INSTALL.index('if [[ "${SKIP_KERNEL_WATCH}" -eq 1 ]]; then')
-    fim = INSTALL.index("# 8. Extension AppIndicator", inicio)
-    return INSTALL[inicio:fim].rsplit("# ---", 1)[0]
+    fim = INSTALL.index('step "8/11" "GNOME: extension AppIndicator (tray icon)"', inicio)
+    return INSTALL[inicio:fim]
 
 
 def _roda(tmp_path: Path, *, ativa: bool) -> tuple[Path, list[str]]:

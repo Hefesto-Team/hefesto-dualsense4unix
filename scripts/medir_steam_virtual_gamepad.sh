@@ -1,26 +1,4 @@
 #!/usr/bin/env bash
-# TRES-CONTROLES-01 / SDL-ATALHO-01 — mede se a cura do espelho está agindo.
-#
-# A DÚVIDA, aberta em 11/08/2026 pela leitura do fonte do SDL: em SDL2 e SDL3
-# (mesmo corpo), `SDL_ShouldIgnoreGamepad` tem um atalho —
-#
-#     if (SDL_IsJoystickSteamVirtualGamepad(...))
-#         return !allow_steam_virtual_gamepad;
-#
-# — que decide o gamepad virtual da Steam (`0x28de/0x11ff`) ANTES de consultar
-# a lista de `SDL_GAMECONTROLLER_IGNORE_DEVICES`. Para aquele par, a lista NUNCA
-# é lida. Se a Steam exportar `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1`
-# — e a string existe no `steamclient.so` desta máquina —, a cura da
-# TRES-CONTROLES-01 não age pelo caminho do SDL, e o espelho Xbox continua
-# visível para o jogo.
-#
-# Isto é LEITURA PURA: só `/proc/<pid>/environ` de processos do próprio usuário.
-# Não escreve nada, não pede sudo, não toca em controle nenhum.
-#
-# Uso: com a Steam aberta (e, de preferência, um jogo em sessão),
-#
-#     bash scripts/medir_steam_virtual_gamepad.sh
-#
 set -uo pipefail
 
 azul()  { printf '\033[1;36m%s\033[0m\n' "$*"; }
@@ -28,21 +6,17 @@ ok()    { printf '  [OK]   %s\n' "$*"; }
 falhou() { printf '  [NAO]  %s\n' "$*"; }
 info()  { printf '         %s\n' "$*"; }
 
-# `steam` casa com processos que apenas MENCIONAM a palavra (o earlyoom, por
-# exemplo, a traz na lista de proteção). Por isso o filtro é pelo executável.
 pids_da_steam() {
     local p
     for p in $(pgrep -u "$(id -u)" -x steam steamwebhelper 2>/dev/null); do
         printf '%s\n' "$p"
     done
-    # o processo do jogo herda o ambiente da Steam e é onde a variável mais
-    # importa — é ele que o SDL do jogo lê.
     for p in $(pgrep -u "$(id -u)" -f 'reaper SteamLaunch|proton|pv-bwrap' 2>/dev/null); do
         printf '%s\n' "$p"
     done
 }
 
-le_env() {  # le_env <pid> <NOME> -> imprime o valor, ou nada
+le_env() {
     tr '\0' '\n' < "/proc/$1/environ" 2>/dev/null | sed -n "s/^$2=//p" | head -1
 }
 
@@ -82,11 +56,6 @@ done
 
 azul ""
 azul "== PERGUNTA 2: a nossa lista de ignorados chegou ao jogo? =="
-# LE UMA VEZ SO. A primeira versão varria os PIDs duas vezes — uma para
-# imprimir, outra para decidir se algo foi achado — e imprimiu "não chegou a
-# processo nenhum" logo abaixo de três linhas mostrando que chegou (medido em
-# 11/08/2026, com o jogo subindo). Processo de jogo em inicialização nasce e
-# morre rapido: a segunda varredura via outra mesa.
 achou_ignore=0
 for p in "${PIDS[@]}"; do
     v="$(le_env "$p" SDL_GAMECONTROLLER_IGNORE_DEVICES)"

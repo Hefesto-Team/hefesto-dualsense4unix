@@ -1,48 +1,26 @@
 #!/usr/bin/env bash
-# p4-vm.sh — o degrau P4 da escada da máquina limpa: o SISTEMA INTEIRO, numa
-# VM KVM sem janela, dirigida pelo QMP. Muda o sistema; depois, um aparelho
-# por vez (o cabo, o rádio).
-#
-# O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026), a Parte A. É o único degrau
-# que alcança o que nenhum outro alcança: o COSMIC do pacote, o DKMS
-# carregando depois do reinício, o Secure Boot, o `uaccess` sem o grupo
-# `input`, o pareamento do zero e a `.venv` com o que o pip entrega — e o
-# aparelho de verdade, passado pelo cabo e pelo rádio. O usuário liberou a VM nesta
-# máquina em 28/09 (*«pode usar o Pc atual como VM»*); o `qemu-system-x86`, o
-# `qemu-utils` e o `ovmf` são o pedido 1 dela, e sem eles este script diz isso
-# e sai.
-#
-# AS TRAVAS, e nenhuma é opcional:
-#   - a VM roda SEM JANELA (`-display none`): cada tela vem por `screendump`
-#     para um PNG que se lê com calma. Nada nasce na tela do usuário, e não existe
-#     flag que abra uma janela;
-#   - o QMP é um socket na pasta da VM, e é por ele que tudo se dirige;
-#   - passar um aparelho TIRA o aparelho do daemon do usuário até a devolução. O
-#     `passar` recusa sem o `--sei-que-tira`, e o `devolver` é o caminho de
-#     volta (depois dele, o controle volta pelo «Mover» da aba Conexões);
-#   - o que sai de dentro da VM com endereço de aparelho passa pelo mascarador
-#     antes de ir para o disco (`HEFESTO_MASCARA_SED`); sem ele, o `guardar`
-#     recusa.
-#
-# Uso:
-#   p4-vm.sh criar  [--disco 60G]               o disco e as variáveis da UEFI
-#   p4-vm.sh ligar  --iso ARQ [--secboot]       sobe a VM (P4c: --secboot)
-#   p4-vm.sh ligar                              sobe do disco
-#   p4-vm.sh foto   ARQ.png                     a tela da VM, sem janela
-#   p4-vm.sh digitar TEXTO                      teclas pelo QMP (ASCII)
-#   p4-vm.sh tecla  NOME [NOME...]              uma combinação (ex.: ret, ctrl alt t)
-#   p4-vm.sh passar HOSTBUS HOSTADDR ID --sei-que-tira
-#   p4-vm.sh devolver ID                        tira o aparelho da VM
-#   p4-vm.sh guardar ORIGEM DESTINO             copia um relato, mascarado
-#   p4-vm.sh desligar                           pede o desligamento à VM
-#   p4-vm.sh estado                             a VM está de pé?
-#
-# A pasta da VM é `HEFESTO_VM_DIR` (padrão: ~/vm-hefesto). A ISO é a do
-# Pop!_OS 24.04 sem NVIDIA, baixada do site oficial e conferida pelo sha256
-# publicado. As medidas de cada volta (P4a cabo, P4b rádio, P4c Secure Boot,
-# P4d a Steam instalada depois) estão em `LEIA.md`, ao lado.
 
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+p4-vm.sh — o degrau P4 da escada da máquina limpa: o SISTEMA INTEIRO, numa
+VM KVM sem janela, dirigida pelo QMP. Muda o sistema; depois, um aparelho
+por vez (o cabo, o rádio).
+
+Uso:
+  p4-vm.sh criar  [--disco 60G]               o disco e as variáveis da UEFI
+  p4-vm.sh ligar  --iso ARQ [--secboot]       sobe a VM (P4c: --secboot)
+  p4-vm.sh ligar                              sobe do disco
+  p4-vm.sh foto   ARQ.png                     a tela da VM, sem janela
+  p4-vm.sh digitar TEXTO                      teclas pelo QMP (ASCII)
+  p4-vm.sh tecla  NOME [NOME...]              uma combinação (ex.: ret, ctrl alt t)
+  p4-vm.sh passar HOSTBUS HOSTADDR ID --sei-que-tira
+  p4-vm.sh devolver ID                        tira o aparelho da VM
+  p4-vm.sh guardar ORIGEM DESTINO             copia um relato, mascarado
+  p4-vm.sh desligar                           pede o desligamento à VM
+  p4-vm.sh estado                             a VM está de pé?
+AJUDA
+}
 
 VM="${HEFESTO_VM_DIR:-${HOME}/vm-hefesto}"
 QMP="${VM}/qmp.sock"
@@ -65,7 +43,6 @@ _precisa() {
 
 _de_pe() { [[ -r "${PID}" ]] && kill -0 "$(cat "${PID}")" 2>/dev/null; }
 
-# Fala com o QMP: negocia as capacidades e manda UM comando em JSON.
 _qmp() {
     _de_pe || { echo "a VM não está de pé" >&2; exit 1; }
     python3 - "${QMP}" "$1" <<'PYEOF'
@@ -178,7 +155,7 @@ PYEOF
         if _de_pe; then echo "de pé (pid $(cat "${PID}"))"; else echo "desligada"; fi
         ;;
     *)
-        sed -n '2,45p' "${BASH_SOURCE[0]}"
+        _ajuda
         [[ -z "${acao}" || "${acao}" == -h || "${acao}" == --help ]] || exit 2
         ;;
 esac

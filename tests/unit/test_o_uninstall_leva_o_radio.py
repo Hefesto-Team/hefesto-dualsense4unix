@@ -31,8 +31,8 @@ def _fake(pasta: Path, nome: str, corpo: str) -> None:
 
 
 BLOCO_DOS_NOMES = _recorte(
-    "# BT-NINTENDO-ACTIVE-01: reverter a link policy",
-    "    # O carimbo da desinstalação, um só:",
+    "    _hcis=()\n",
+    "    _carimbo_do_acervo=\"$(date +%Y%m%d-%H%M%S)\"",
 )
 
 
@@ -213,7 +213,7 @@ def test_sem_maquina_json_o_prefixo_ainda_sai(tmp_path: Path) -> None:
 
 
 BLOCO_DA_SESSAO = _recorte(
-    "# O RÁDIO DA SESSÃO (a leva do rádio, 23/09/2026)",
+    'ESTADO_DO_RADIO="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"',
     'rmdir "${ESTADO_DO_RADIO}" 2>/dev/null || true\n',
 )
 
@@ -301,7 +301,7 @@ def test_a_trava_os_carimbos_e_o_diario_do_root_saem() -> None:
 
 VAR_LIB = "/var/lib/hefesto-dualsense4unix"
 BLOCO_DOS_BONDS = _recorte(
-    "    # O carimbo da desinstalação, um só:",
+    "    _carimbo_do_acervo=\"$(date +%Y%m%d-%H%M%S)\"",
     "    sudo systemctl daemon-reload >/dev/null 2>&1 || true\n",
 )
 

@@ -81,15 +81,6 @@ EXCECOES: dict[str, str] = {
         "fd-injection — pede ao BROKER pelo cmd `open`/SCM_RIGHTS, em "
         "check_hidraw_broker, e declara a porta na tela."
     ),
-    "regra_do_no_aberta.sh": (
-        "escreve por `sed` a variante ABERTA do 73-hefesto-ps5-controller.rules, para "
-        "quem instala a regra sem o broker. A menção a /dev/hidraw está no "
-        "comentário que explica as duas metades da cura. Não abre nó."
-    ),
-    "disable_steam_input.sh": (
-        "edita arquivos .vdf da Steam; as menções a hidraw descrevem o que a "
-        "STEAM faz com o nó, não o que este script faz. Não abre nó."
-    ),
     "banco_de_prova/sonda_plastico.py": (
         "abre o /dev/uhid para CRIAR um DualSense de mentira (UHID_CREATE2), no "
         "runner do CI ou numa VM; não abre o nó de controle nenhum, e nunca roda "
@@ -118,7 +109,6 @@ DECLARAM_A_PORTA: dict[str, str] = {
     "ensaios/taxa_de_entrada.py": "cabecalho_do_instrumento(",
     "record_hid_capture.py": "declaracao_da_porta()",
     "doctor.sh": "porta: broker (SCM_RIGHTS)",
-    "disable_steam_input.sh": "este script NÃO ABRE /dev/hidraw*",
 }
 
 

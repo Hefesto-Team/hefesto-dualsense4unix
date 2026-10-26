@@ -433,7 +433,7 @@ class TestVigiaSoComWifiUsb:
 def _extras_para(with_dev: str) -> str:
     texto = INSTALL.read_text(encoding="utf-8")
     ini = texto.index('_extras="emulation,cosmic"')
-    fim = texto.index("\n# AS VERSÕES QUE A CASA MEDIU", ini)
+    fim = texto.index("\n_travas=()", ini)
     trecho = texto[ini:fim]
     r = subprocess.run(
         [BASH, "-c", f"WITH_DEV={with_dev}\n{trecho}\nprintf '%s' \"$_extras\""],
@@ -463,7 +463,7 @@ class TestExtraDev:
 
     def test_o_help_e_a_doc_dizem_o_padrao_novo(self) -> None:
         texto = INSTALL.read_text(encoding="utf-8")
-        assert "#   --dev " in texto
+        assert re.search(r"(?m)^  --dev ", texto), "o --help não anuncia o --dev"
         doc = (RAIZ / "docs" / "usage" / "instalacao.md").read_text(encoding="utf-8")
         assert "| `--dev` |" in doc
         assert "| `--no-dev` |" not in doc

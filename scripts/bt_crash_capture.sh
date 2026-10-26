@@ -1,35 +1,9 @@
 #!/usr/bin/env bash
-# bt_crash_capture.sh — captura forense do PRÓXIMO crash do bluetoothd.
-# OPT-IN e temporário (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md,
-# camada 3): o install NUNCA liga isto; liga-se à mão numa janela de
-# diagnóstico e desliga-se depois.
-#
-# Por que existe: a assinatura `malloc(): unaligned fastbin chunk detected 2`
-# do bluetoothd é INÉDITA publicamente e nunca foi capturada aqui — o
-# core_pattern do Pop!_OS aponta para o apport, que IGNORA pacote fora da
-# distro (nosso bluez é ~hefesto), então todos os crashes até hoje morreram
-# sem dump. Sem core file não há bisect nem report upstream.
-#
-# O que --on faz (e --off desfaz simetricamente):
-#   1. /etc/sysctl.d/99-hefesto-bt-coredump.conf → core_pattern para o
-#      systemd-coredump. CUSTO: core_pattern é GLOBAL do kernel (não há como
-#      escopar por serviço) — por isso é toggle, nunca default.
-#   2. /etc/systemd/system/bluetooth.service.d/90-hefesto-debug.conf →
-#      LimitCORE=infinity + MALLOC_CHECK_=3 + MALLOC_PERTURB_=165 (aborta
-#      LIMPO no ponto da corrupção em vez de espalhar; ~30% de overhead de
-#      malloc — aceitável no bluetoothd por janela curta, não para sempre).
-#   3. daemon-reload. O drop-in só arma no PRÓXIMO restart do bluetoothd —
-#      este script NÃO reinicia o serviço (decisão do humano: derrubaria os
-#      controles BT conectados).
-#
-# Uso: bt_crash_capture.sh --on | --off | --status
 set -euo pipefail
 
 SYSCTL_FILE=/etc/sysctl.d/99-hefesto-bt-coredump.conf
 DROPIN_DIR=/etc/systemd/system/bluetooth.service.d
 DROPIN_FILE="${DROPIN_DIR}/90-hefesto-debug.conf"
-#: RADIO-ABERTO-01/E8: unit transitória que fecha a janela sozinha. Nome fixo
-#: para ser idempotente — ligar duas vezes não acumula timers.
 AUTO_OFF_UNIT=hefesto-bt-crash-capture-off
 
 if [[ "$(id -u)" -ne 0 ]]; then
@@ -62,11 +36,6 @@ Environment=MALLOC_CHECK_=3
 Environment=MALLOC_PERTURB_=165
 EOF
         systemctl daemon-reload
-        # RADIO-ABERTO-01/E8 (05/08/2026): a janela arma o PRÓPRIO desligamento.
-        # `core_pattern` é global do kernel, e até aqui o `--off` dependia só da
-        # memória de quem ligou — uma janela de diagnóstico esquecida aberta
-        # deixa a máquina gravando core de TODO processo que morrer, e um core
-        # do bluetoothd contém todas as LinkKeys, LTKs e IRKs residentes.
         _HORAS="${HEFESTO_BT_CAPTURE_HORAS:-8}"
         if command -v systemd-run >/dev/null 2>&1; then
             systemctl stop "${AUTO_OFF_UNIT}.timer" >/dev/null 2>&1 || true
@@ -94,7 +63,6 @@ EOF
     --off)
         rm -f "${SYSCTL_FILE}" "${DROPIN_FILE}"
         sysctl --system >/dev/null 2>&1 || true
-        # E8: desarma o timer se o --off veio antes da hora (gesto manual dela).
         systemctl stop "${AUTO_OFF_UNIT}.timer" >/dev/null 2>&1 || true
         systemctl reset-failed "${AUTO_OFF_UNIT}.service" >/dev/null 2>&1 || true
         systemctl daemon-reload

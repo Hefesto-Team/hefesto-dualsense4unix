@@ -1,23 +1,4 @@
 #!/usr/bin/env bash
-# broker_do_pacote.sh — escreve as units do broker root para um PACOTE de distro.
-#
-# Uso: bash scripts/broker_do_pacote.sh DIRETORIO_DAS_UNITS CAMINHO_DO_BINARIO
-#
-# O broker atende a conta que está na frente do computador (pergunta ao logind a
-# cada pedido), então a unit não carrega uid nem grupo e nada nela depende da
-# máquina que instala (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01). Por isso os
-# quatro pacotes (.deb, Arch, Fedora, Nix) levam o broker como unit de sistema
-# e a regra do nó FECHADA, como o install nativo. Sobra uma troca, e é do
-# pacote, não da máquina: onde o binário mora.
-#
-# UM DONO SÓ PARA A TRANSFORMAÇÃO, como o `regra_do_no_aberta.sh` foi: quatro
-# receitas com o `sed` escrito dentro seriam quatro cópias para envelhecer
-# sozinhas. A mesma troca do install nativo mora em `_render_broker_units`
-# (`scripts/lib/camada_de_maquina.sh`); um teste compara as duas saídas.
-#
-# Escreve `hefesto-hidraw-broker.service` e `.socket` em DIRETORIO_DAS_UNITS.
-# Devolve 1, sem deixar unit utilizável, se sobrar placeholder ou se o
-# ExecStart não apontar para o binário pedido.
 set -euo pipefail
 
 DESTINO="${1:-}"
@@ -45,7 +26,6 @@ mkdir -p "${DESTINO}"
 _s="${DESTINO}/hefesto-hidraw-broker.service"
 _k="${DESTINO}/hefesto-hidraw-broker.socket"
 
-# `|` como separador: o caminho tem barras. O binário não tem `|` nem `&`.
 sed -e "s/__NO_NASCE_FECHADO__/1/" \
     -e "s|${BINARIO_DO_INSTALL}|${BINARIO}|g" \
     "${SERVICO_SRC}" > "${_s}"

@@ -200,7 +200,9 @@ def test_o_pino_e_o_construir_levam_o_gameinput() -> None:
 
 def test_o_install_poe_o_gameinput_em_nativa_so_com_o_sha_do_pino() -> None:
     install = (_RAIZ / "install.sh").read_text(encoding="utf-8")
-    bloco = install.split("# 4b-5. A peça GDK", 1)[1].split("# 4c.", 1)[0]
+    inicio = 'readonly PECA_GDK_PINO="${ROOT_DIR}/assets/gdk-runtime/pino.txt"'
+    fim = 'if [[ "${DRY_RUN:-0}" -eq 1 && -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then'
+    bloco = install.split(inicio, 1)[1].split(fim, 1)[0]
     assert (
         'PECA_GAMEINPUT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/nativa/gameinput.dll"'
         in bloco

@@ -472,7 +472,7 @@ class TestOInstallLeCadaCodigo:
         assert posicoes == sorted(posicoes), list(zip(ordem, posicoes, strict=True))
 
     def test_a_steam_fechada_pelo_install_reabre_mesmo_se_ele_morrer(self) -> None:
-        bloco = _bloco('step "11a-bis"', "# 11. Steam Input")
+        bloco = _bloco('step "11a-bis"', 'step "11/11"')
         assert (
             "trap '_cleanup_sudo_keepalive; _reabrir_a_steam_se_o_install_fechou; "
             "_religar_o_vigia_se_o_install_parou' EXIT"

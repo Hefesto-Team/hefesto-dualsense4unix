@@ -1,30 +1,13 @@
 #!/usr/bin/env bash
-# build_flatpak.sh — Constrói e empacota o Hefesto - DualSense4Unix como Flatpak
-#
-# Uso:
-#   ./scripts/build_flatpak.sh [--install] [--bundle]
-#
-# Opções:
-#   --install   Instala o Flatpak no repositório local do usuário após o build
-#   --bundle    Exporta arquivo .flatpak para distribuição offline
-#
-# Pré-requisitos:
-#   - flatpak-builder  (sudo apt install flatpak-builder  OU  flatpak install flathub org.flatpak.Builder)
-#   - python -m build  (pip install build)
-#   - Runtime GNOME//47 adicionado ao Flatpak (casa runtime-version do manifesto):
-#       flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-#       flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
 
 set -euo pipefail
 
-# Raiz do repositório (relativa ao script)
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="${REPO_ROOT}/flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
 APP_ID="io.github.hefesto_team.hefesto_dualsense4unix"
 BUILD_DIR="${REPO_ROOT}/flatpak-build-dir"
 REPO_DIR="${REPO_ROOT}/flatpak-repo"
 
-# Flags de linha de comando
 INSTALAR=false
 BUNDLE=false
 
@@ -40,7 +23,6 @@ for arg in "$@"; do
   esac
 done
 
-# Verificar pré-requisitos
 if ! command -v flatpak-builder &>/dev/null; then
   echo "ERRO: flatpak-builder não encontrado."
   echo "Instale com: sudo apt install flatpak-builder"
@@ -53,7 +35,6 @@ if ! command -v python3 &>/dev/null; then
   exit 1
 fi
 
-# ── Passo 1: Construir o wheel Python ──────────────────────────────────────────
 echo ""
 echo "==> Construindo wheel Python..."
 cd "${REPO_ROOT}"
@@ -74,7 +55,6 @@ fi
 
 echo "  Wheel gerado: ${WHEEL_PATH}"
 
-# ── Passo 2: Construir o Flatpak ───────────────────────────────────────────────
 echo ""
 echo "==> Construindo Flatpak via flatpak-builder..."
 echo "    Manifest: ${MANIFEST}"
@@ -90,7 +70,6 @@ flatpak-builder \
 
 echo "  Build concluído."
 
-# ── Passo 3 (opcional): Instalar no repositório local do usuário ───────────────
 if [[ "$INSTALAR" == "true" ]]; then
   echo ""
   echo "==> Instalando ${APP_ID} no repositório local do usuário..."
@@ -101,7 +80,6 @@ if [[ "$INSTALAR" == "true" ]]; then
   echo "  Instalado. Execute com: flatpak run ${APP_ID}"
 fi
 
-# ── Passo 4 (opcional): Exportar bundle .flatpak ──────────────────────────────
 if [[ "$BUNDLE" == "true" ]]; then
   echo ""
   BUNDLE_OUT="${REPO_ROOT}/${APP_ID}.flatpak"

@@ -1,99 +1,13 @@
 #!/usr/bin/env bash
-# check_packaging_parity.sh — guarda anti-regressão de paridade entre as formas
-# de empacotamento (nativo, .deb, Arch, flatpak, AppImage, applet COSMIC).
-#
-# Falha (exit 1) se:
-#   1) o nome de unit ERRADO do hotplug (hefesto-gui-hotplug.service) reaparecer
-#      em assets/, packaging/ ou flatpak/ — a unit real é
-#      hefesto-dualsense4unix-gui-hotplug.service. (scripts/ é ignorado de
-#      propósito: doctor.sh cita o nome errado para DETECTÁ-lo.)
-#   2) algum .desktop de applet COSMIC tiver Icon= sem o arquivo de ícone
-#      correspondente versionado ao lado (mismatch de sufixo -symbolic).
-#   3) algum .desktop de applet COSMIC não tiver X-HostWaylandDisplay=true
-#      (sem ele o applet roda isolado e não enxerga o sistema no painel COSMIC).
-#   4) alguma regra udev de assets/ não estiver coberta pelos instaladores
-#      (install_udev.sh, install-host-udev.sh, build_deb.sh, PKGBUILD, spec) e
-#      pelo uninstall.sh — regra nova não pode sumir de um instalador sem
-#      ninguém notar; e no build_deb.sh a regra tem de chegar aos DOIS destinos
-#      (diretório vivo E espelho /usr/share/.../udev-rules, que o
-#      install-host-udev.sh prefere e exige completo).
-#   4b) o .desktop do aplicativo pedir um Icon= que nenhum/algum formato não
-#      instala com esse nome (lançador sem ícone).
-#   5) BROKER-01 (Onda S): o broker root hide-hidraw (fd-injection) não estiver
-#      referenciado em TODAS as formas de empacotamento (build_deb.sh,
-#      PKGBUILD, spec, flatpak, install-host-udev.sh) E no uninstall.sh —
-#      purge/remoção não pode deixar a unit ROOT órfã habilitada (achado #21).
-#
-# Rodável local e em CI. CHORE-PACKAGING-PARITY-ALL-FORMS-01.
 
 set -uo pipefail
 
-# CORRIDA-DO-PIPEFAIL-01 (13/08/2026) — cuidado com `produtor | grep -q`:
-#
-# `grep -q` SAI no primeiro casamento. O produtor a montante (awk, printf,
-# find) morre então com SIGPIPE, status 141, e o `pipefail` desta linha faz o
-# PIPE INTEIRO devolver 141 — mesmo tendo o grep achado o que procurava. O
-# `|| missing+=(...)` dispara e o portão acusa um defeito que NÃO existe.
-#
-# É CORRIDA, e por isso enganou por dois dias: quem produz pouco costuma
-# terminar antes de o grep sair, e a máquina do usuário ganhou 200 vezes em 200. O
-# runner do CI, mais lento, perdeu — e o `ci.yml` acusou "doctor.sh define
-# check_teclado_na_tela e NÃO a chama em main()" com a chamada VIVA na linha
-# 4493, deixando no log a assinatura do crime: `printf: write error: Broken
-# pipe`.
-#
-# A cura é não construir o pipe: o produtor entra numa variável e o `grep` lê
-# dela por here-string. As duas travessias de `main()` do doctor foram as
-# primeiras curadas assim; as outras NOVE ocorrências de `| grep -q` deste
-# arquivo foram curadas do mesmo jeito em 13/08/2026, e o arquivo passou a ter
-# ZERO. É essa contagem que
-# tests/unit/test_check_packaging_parity.py::test_nenhum_produtor_entra_num_pipe_com_grep_q
-# fixa: `| grep -q` novo neste arquivo reprova a suíte.
-#
-# A direção do erro depende do que está pendurado no status, e MEDIR isso em
-# 13/08/2026 desmentiu a leitura fácil de que "com `||` sempre dá alarme":
-#   - `|| missing+=(...)` ACUSA um defeito que não existe — o caso do CI acima;
-#   - `|| continue` (linha do `doctor.sh` na seção do BlueZ) PULA o item, e a
-#     checagem seguinte nunca roda: silêncio, não alarme;
-#   - `&& missing+=(...)` CALA sobre um defeito que existe — havia duas assim
-#     (o doctor que cura, e o uninstall que remove o pacote).
-# Duas das três direções erram para o lado de APROVAR.
-#
-# Fica de fora, de propósito, um caso que PARECE o mesmo e não é: o
-# `printf ... | awk '... exit'` que recorta os blocos do `install.sh`. O awk
-# também sai cedo, mas ninguém lê o status daquela substituição, e o texto que
-# ele já escreveu é o texto completo do bloco. Sem veredito pendurado no
-# código de saída, não há defeito a curar.
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 rc=0
 
-# Diretórios de BUILD dentro de packaging/ (target/ do Rust chega a dezenas
-# de GB): fora de todo grep recursivo — senão o check leva minutos e trava a
-# suíte que o executa por subprocess (test_check_packaging_parity.py).
 GREP_EXCLUDES=(--exclude-dir=target --exclude-dir=.flatpak-builder --exclude-dir=build)
 
-#: O QUE UM EMPACOTADOR COPIA DE `scripts/` PARA FORA DO CHECKOUT.
-#:
-#: DONO ÚNICO da pergunta, e é por isso que ele mora aqui em cima, fora de toda
-#: seção: duas seções perguntam a mesma coisa — "irmão sem carona" (o que este
-#: script instalado chama, e foi junto?) e "scripts do produto" (os cinco que a
-#: janela e o doctor executam chegaram a todo formato?). Copiar a função para a
-#: segunda seção era o caminho fácil, e é o defeito que esta casa pagou mais
-#: caro em 25/08/2026: uma função copiada em dois lugares que divergiram.
-#:
-#: DUAS FORMAS DE CITAÇÃO, porque as duas existem na árvore: o nome literal na
-#: linha de cópia (`build_deb.sh:196`) e o laço com variável
-#: (`build_deb.sh:234`), que o grep literal não vê. O laço só conta quando a
-#: MESMA variável aparece numa linha de cópia — senão qualquer `for x in ...`
-#: do arquivo daria carona de graça.
-#:
-#: A DOBRA DAS CONTINUAÇÕES VEM PRIMEIRO, e não é enfeite — MEDIDO em
-#: 25/08/2026: sem ela, a forma `install -Dm755 -t DIR \` com um nome por linha
-#: some INTEIRA, porque só a primeira linha casa com `install -D` e os nomes
-#: estão nas outras. O portão via `dkms_lib.sh install-host-udev.sh` no
-#: PKGBUILD e no `.spec` e NÃO via os sete `bt_*.sh` que os dois levam desde
-#: 22/08 — quinze scripts distribuídos que nenhuma das duas seções auditava.
 _pkg_scripts_copiados_de() {
     local _arq="$1" _codigo _copias _var _lista
     [[ -f "${_arq}" ]] || return 0
@@ -130,9 +44,6 @@ while IFS= read -r desk; do
         continue
     fi
     dir="$(dirname "${desk}")"
-    # CORRIDA-DO-PIPEFAIL-01: era `find ... | grep -q .`. Um diretório de
-    # ícones grande faz o `find` ainda estar escrevendo quando o `grep -q` sai
-    # no primeiro nome — e aí o ícone EXISTE e o portão diz que falta.
     _icone_achado="$(find "${dir}" -path "*apps/${icon}.*" 2>/dev/null || true)"
     if grep -q . <<< "${_icone_achado}"; then
         echo "[ OK ] $(basename "${desk}"): Icon=${icon} tem arquivo versionado"
@@ -142,14 +53,6 @@ while IFS= read -r desk; do
     fi
 done < <(grep -rl "${GREP_EXCLUDES[@]}" 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
 
-# PACKAGING-ICON-NAME-MISMATCH-01: o bloco acima cobre SÓ applet COSMIC — o
-# `grep -q '^X-CosmicApplet=true' || continue` PULAVA justamente o .desktop do
-# aplicativo principal, e era ali que estava o furo: ele pede `Icon=hefesto` e
-# três dos cinco formatos (PKGBUILD, spec, package.nix) instalavam o PNG como
-# hefesto-dualsense4unix.png, deixando o lançador sem ícone. O contrato aqui é
-# outro: o ícone do app NÃO vive versionado ao lado do .desktop (nasce de
-# assets/appimage/), então o gate cobra o NOME do arquivo que cada formato
-# instala em icons/hicolor/*/apps/.
 echo "== Icon dos .desktop de aplicativo (packaging/) × nome instalado =="
 ICON_INSTALLERS=(
     scripts/build_deb.sh
@@ -158,16 +61,7 @@ ICON_INSTALLERS=(
     packaging/nix/package.nix
 )
 while IFS= read -r desk; do
-    # Applet COSMIC tem contrato próprio (ícone versionado ao lado) — já cobrado.
     grep -q '^X-CosmicApplet=true' "${desk}" 2>/dev/null && continue
-    # AS DUAS CASAS (29/08/2026): o app de DESENVOLVIMENTO não entra em
-    # .deb/.rpm/Arch/Nix — ele é instalado só por `install-dev.sh`, na máquina
-    # de quem desenvolve. Cobrar o PNG dele desses quatro formatos seria o gate
-    # exigindo um arquivo que NÃO se deve empacotar. A dispensa mora no próprio
-    # `.desktop` (a chave `X-HefestoNaoEmpacotado`), do mesmo jeito que a do
-    # applet acima: quem criar um `.desktop` novo sem a chave é cobrado, e quem
-    # a puser tem de escrevê-la à mão, de propósito. E o gate DIZ que pulou —
-    # dispensa calada é como uma lápide envelhece sem ninguém ver.
     if grep -q '^X-HefestoNaoEmpacotado=true' "${desk}" 2>/dev/null; then
         echo "[ -- ] ${desk}: fora dos empacotamentos por declaração própria"
         continue
@@ -194,44 +88,8 @@ done < <(find packaging -name '*.desktop' \
     -not -path '*/target/*' -not -path '*/.flatpak-builder/*' \
     -not -path '*/flatpak-repo/*' 2>/dev/null)
 
-# PACKAGING-ICON-NAME-MISMATCH-01, segunda metade — a que o primeiro passe desta
-# leva ESQUECEU e que só apareceu na verificação independente. Alinhar tudo em
-# `hefesto.png` consertou o lançador e QUEBROU a janela e a bandeja, porque há um
-# SEGUNDO consumidor, em código e não em .desktop:
-#   scripts/abrir_interface.py              -> Gtk.Window.set_default_icon_name(...)
-#   src/hefesto_dualsense4unix/app/tray.py  -> TRAY_ICON_NAME, via theme.has_icon()
-# ENDEREÇO CORRIGIDO em 06/09/2026 (`GTK-3`): o primeiro consumidor era
-# `app/main.py`, o entry point da janela GTK, apagado com ela
-# (`D-0609-GTK-LEVA-INTEIRA`). Quem veste o ícone no processo hoje é o
-# `scripts/abrir_interface.py`, que é o que o `.desktop` dela abre pelo
-# `run.sh --gui`.
-# Sem esse nome no tema, a bandeja cai no fallback "input-gaming" (joystick
-# genérico). Não havia ganho líquido: trocava um ícone quebrado por outro, e o que
-# quebrava era justamente o que ela vê rodando. Então os DOIS nomes são contrato,
-# e o gate cobra os dois.
 echo "== Icon pedido pelo CÓDIGO (janela + bandeja) × nome instalado =="
-#
-# ONDE O NOME MORA, e por que esta régua mudou de lugar em 29/08/2026.
-# --------------------------------------------------------------------
-# Ela procurava o literal dentro do lançador e de `app/tray.py`:
-#     set_default_icon_name("hefesto-dualsense4unix")
-#     TRAY_ICON_NAME = "hefesto-dualsense4unix-symbolic"
-# Com AS DUAS CASAS (o app dela e o de desenvolvimento), esses dois pontos
-# passaram a DERIVAR o nome de `utils/identidade.py`, e os literais saíram de
-# lá. A régua não achou mais nada e desligou sozinha, com um `[WARN]` —
-# exatamente o defeito que esta casa já pagou onze vezes: *a régua reprova a
-# melhora em vez do defeito, porque digitava o que devia LER*.
-#
-# Agora ela lê o literal de onde ele passou a viver, e continua sendo texto
-# puro (sem depender do venv, que este script não tem).
 echo "       (o nome vem de utils/identidade.py:HEFESTO — ver o comentário aqui)"
-# TOLERÂNCIA DE CHECKOUT — a convenção deste script, que ESTA seção tinha
-# quebrado (curado em 03/09/2026). Toda irmã aqui se cala quando o arquivo que
-# ela lê não existe (`— nada a checar`); esta reprovava. O efeito medido: os 24
-# testes que montam um repositório MÍNIMO em /tmp para exercitar as OUTRAS
-# seções levavam [FAIL] de ícone e reprovavam sem ter nada a ver com ícone.
-# O defeito que a seção nasceu para pegar continua pego: com `src/` na árvore,
-# nome de ícone sumido ou literal cravado reprova igual.
 if [[ ! -d src/hefesto_dualsense4unix ]]; then
     echo "[ OK ] ícone pedido pelo código: sem src/ neste checkout — nada a checar"
 else
@@ -242,9 +100,6 @@ else
             | sed -n 's/^[[:space:]]*icone="\([^"]*\)".*/\1/p' | head -1)"
         if [[ -n "${icone_do_app}" ]]; then
             code_icons+=("${icone_do_app}")
-            # A BANDEJA pede o mesmo nome com `-symbolic` (app/tray.py:
-            # TRAY_ICON_NAME). O sufixo é contrato — APPLET-MONOCROMÁTICO-01 —,
-            # então a régua só o deriva se o código ainda o construir assim.
             if grep -q 'TRAY_ICON_NAME[[:space:]]*=.*-symbolic' \
                 src/hefesto_dualsense4unix/app/tray.py 2>/dev/null; then
                 code_icons+=("${icone_do_app}-symbolic")
@@ -256,19 +111,6 @@ else
             fi
         fi
     fi
-    # A TELA tem de pedir o ícone pelo nome da identidade, não por um literal.
-    #
-    # 06/09/2026: o alvo mudou de `app/main.py` (apagado com a janela GTK) para
-    # `scripts/abrir_interface.py`, e a régua mudou de forma junto: lá a chamada
-    # era `set_default_icon_name(casa.icone)`, numa linha; aqui o nome passa por
-    # uma variável, porque há um SEGUNDO caminho (`set_default_icon_from_file`,
-    # para quem ainda não rodou o `install.sh`). Cobrar a forma de uma linha
-    # reprovaria a melhora — o defeito que este arquivo já pagou onze vezes.
-    # A régua passa a cobrar o EFEITO: o nome sai da identidade, e não há
-    # literal dentro da chamada.
-    # 08/10/2026: o corpo do lançador foi para o pacote (`interface/abrir.py`),
-    # porque o console script `-gui` também tem de vestir a identidade; o
-    # `scripts/abrir_interface.py` virou um calço sem a chamada.
     LANCADOR_PY=src/hefesto_dualsense4unix/interface/abrir.py
     if [[ ! -f "${LANCADOR_PY}" ]]; then
         echo "[FAIL] ${LANCADOR_PY} sumiu — ninguém veste o ícone no processo"
@@ -291,17 +133,6 @@ else
         echo "       ninguém é avisado — por isso é FAIL, e não mais WARN."
         rc=1
     else
-        # Ordena e deduplica sem depender de associative array (bash 4.0+ basta).
-        #
-        # A EXCEÇÃO DO `-symbolic` — APPLET-MONOCROMÁTICO-01, 07/08/2026.
-        # Nome terminado em `-symbolic` NÃO se satisfaz com PNG, e cobrar
-        # `apps/<nome>.png` dele seria o gate exigindo exatamente o arquivo que não
-        # se deve criar: PNG nunca é recolorido pelo tema (o desvio do libcosmic
-        # manda `Data::Image` por um caminho sem cor), e foi por isso que o ícone
-        # dela era o único cromático da barra. Para esses nomes o contrato é outro
-        # arquivo, não nenhum arquivo: `symbolic/apps/<nome>.svg`.
-        # O caso que este gate nasceu para pegar continua pego — nome pedido pelo
-        # código sem arquivo instalado reprova igual, só muda QUAL arquivo se cobra.
         while IFS= read -r icon; do
             [[ -n "${icon}" ]] || continue
             if [[ "${icon}" == *-symbolic ]]; then
@@ -326,13 +157,6 @@ else
     fi
 fi
 
-# APPLET-MONOCROMÁTICO-01: o simbólico pedido pelo código tem de EXISTIR nesta
-# árvore, e ser o mesmo desenho que o applet COSMIC instala. São dois arquivos
-# com nomes diferentes (a bandeja pede `hefesto-dualsense4unix-symbolic`, o
-# applet pede `com.vitoriamaria.HefestoDualsense4Unix-symbolic`) e um desenho
-# só: se um mudar sem o outro, a barra fica com dois ícones diferentes para o
-# mesmo aplicativo conforme a superfície — que é a família de defeito desta
-# sprint inteira.
 echo "== simbólico da bandeja × simbólico do applet (mesmo desenho) =="
 SIMB_CANONICO="assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
 SIMB_APPLET="packaging/cosmic-applet/data/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
@@ -363,14 +187,6 @@ while IFS= read -r desk; do
     fi
 done < <(grep -rl "${GREP_EXCLUDES[@]}" 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
 
-# FIX-PACKAGING-SEED-PARITY-01: paridade das regras udev entre assets/ e os
-# instaladores. A 78 (motion-not-joystick) nasceu só no caminho nativo — sem
-# esta guarda, a próxima regra some de um instalador sem ninguém notar.
-#
-# Exceções conscientes (dispensadas da cobertura de INSTALAÇÃO; o uninstall.sh
-# continua obrigatório para todas, pois precisa limpar instalações antigas):
-#   73/74: hotplug-GUI descontinuadas (alimentavam o storm -71) — só remoção.
-#   75:    disable-usb-audio é opt-in (install_udev.sh --disable-usb-audio).
 INSTALL_OPTIONAL_RULES=(
     "73-ps5-controller-hotplug.rules"
     "74-ps5-controller-hotplug-bt.rules"
@@ -385,21 +201,9 @@ is_install_optional_rule() {
     return 1
 }
 
-# BUG-DEB-MIRROR-RULES-INCOMPLETO-01: o build_deb.sh manda as regras para DOIS
-# destinos — o diretório VIVO (/usr/lib/udev/rules.d) e o ESPELHO
-# (/usr/share/.../udev-rules), que o install-host-udev.sh PREFERE como origem e
-# exige COMPLETO num pre-flight com exit 1. O gate antigo só perguntava se a
-# string "assets/NN-*.rules" aparecia em ALGUM lugar do build_deb.sh: o glob do
-# diretório vivo satisfazia e o espelho defasado (parava na 81) ficava
-# invisível — a ativação inteira do .deb abortava e o gate passava verde. Agora
-# o build_deb.sh tem UMA lista (UDEV_RULES_GLOBS) e o gate cobra que ela
-# contenha a regra E que os DOIS destinos consumam essa mesma lista.
 DEB_RULES_LIST="$(sed -n '/^UDEV_RULES_GLOBS=(/,/^)/p' scripts/build_deb.sh 2>/dev/null)"
 DEB_RULES_LIST_USES="$(grep -c 'UDEV_RULES_GLOBS\[@\]' scripts/build_deb.sh 2>/dev/null || true)"
 
-# Só cobra se o checkout realmente tem regras udev para espelhar (fixtures
-# mínimas de outros testes não têm assets/NN-*.rules) — mesmo critério de
-# "gateado pelo asset" dos blocos de broker/DKMS abaixo.
 HAS_UDEV_RULES=0
 for _r in assets/[0-9][0-9]-*.rules; do
     [[ -f "${_r}" ]] && HAS_UDEV_RULES=1 && break
@@ -433,7 +237,6 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
     rules_prefix="${rules_name%%-*}"
     missing=()
 
-    # uninstall.sh remove TODA regra pelo nome (inclusive descontinuada/opt-in).
     grep -qF "${rules_name}" uninstall.sh 2>/dev/null \
         || missing+=("uninstall.sh")
 
@@ -442,10 +245,6 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
             || missing+=("scripts/install_udev.sh")
         grep -qF "${rules_name}" scripts/install-host-udev.sh 2>/dev/null \
             || missing+=("scripts/install-host-udev.sh")
-        # build_deb.sh cobre por glob (assets/NN-*.rules) ou por nome literal,
-        # mas SÓ dentro da lista única UDEV_RULES_GLOBS — é ela que alimenta os
-        # DOIS destinos (rules.d vivo + espelho udev-rules). Fora dela, a regra
-        # chegava só ao diretório vivo e o helper abortava (ver bloco acima).
         if [[ -n "${DEB_RULES_LIST}" ]]; then
             if ! grep -qF "assets/${rules_prefix}-*.rules" <<<"${DEB_RULES_LIST}" \
                && ! grep -qF "${rules_name}" <<<"${DEB_RULES_LIST}"; then
@@ -455,18 +254,10 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
            && ! grep -qF "${rules_name}" scripts/build_deb.sh 2>/dev/null; then
             missing+=("scripts/build_deb.sh")
         fi
-        # Onda de restauro 2026-07-29: Arch e Fedora ficavam FORA deste bloco —
-        # e é exatamente por isso que a ausência das 82/83/84 no PKGBUILD e no
-        # spec nunca reprovou. O bloco de modprobe.d logo abaixo já cobria os
-        # dois; aqui é a mesma simetria (e o mesmo pre-flight do
-        # install-host-udev.sh, que os dois formatos documentam no pós-install).
         grep -qF "${rules_name}" packaging/arch/PKGBUILD 2>/dev/null \
             || missing+=("packaging/arch/PKGBUILD")
         grep -qF "${rules_name}" packaging/fedora/hefesto-dualsense4unix.spec 2>/dev/null \
             || missing+=("packaging/fedora/hefesto-dualsense4unix.spec")
-        # FIX-FLATPAK-UDEV-PARITY-01: o manifesto Flatpak precisa bundlar TODA
-        # regra obrigatória — o install-host-udev.sh (que vai no bundle) tem
-        # pre-flight que ABORTA se qualquer uma faltar em /app/share.
         if ! grep -qF "${rules_name}" flatpak/*.yml 2>/dev/null; then
             missing+=("flatpak/*.yml")
         fi
@@ -483,34 +274,6 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
     fi
 done
 
-# OQ-6 (09/08/2026): o bloco acima cobra que cada regra que
-# EXISTE viaje em todo instalador — e passava verde com a regra que NÃO existia.
-# Nenhuma linha desta casa dava acesso aos nós de ENTRADA (`/dev/input/event*`)
-# do touchpad e dos sensores de movimento, e ninguém percebeu porque a usuária
-# desta máquina está no grupo `input` POR FORA do produto (`id` devolve
-# `995(input)`; instalador nenhum daqui toca esse grupo). MEDIDO em 09/08 com
-# `udevadm info -q property` nos nós vivos:
-#
-#   event6  "DualSense Wireless Controller"                 TAGS=:uaccess:seat:
-#   event7  "DualSense Wireless Controller Motion Sensors"  TAGS=:systemd:
-#   event8  "DualSense Wireless Controller Touchpad"        TAGS=(vazio)
-#
-# Numa máquina nova, touchpad e giroscópio não funcionam — e o sintoma é a
-# AUSÊNCIA de dado, que não acusa ninguém. Este portão cobra a EXISTÊNCIA da
-# regra, não a paridade dela (dessa o bloco acima já cuida).
-#
-# TRÊS COISAS SÃO COBRADAS, e a segunda é a que tem dente:
-#   1. existe linha de CÓDIGO (comentário não conta) que case `SUBSYSTEM=="input"`
-#      + `KERNEL=="event*"` e dê `TAG+="uaccess"`;
-#   2. o arquivo que a contém é numerado **< 73**. Quem transforma a TAG em ACL
-#      é a `/usr/lib/udev/rules.d/73-seat-late.rules`; numerada >= 73 a regra
-#      instala, o `udevadm verify` aprova, o portão de paridade fica verde — e
-#      a TAG nunca vira ACL. Já aconteceu duas vezes nesta casa (a `71-uhid`
-#      nasceu 79; a `79-external-controller-leds` tinha uma TAG morta que o
-#      bloco ONDA-R foi remover). Sem esta cobrança, renomear o arquivo para 79
-#      é uma regressão silenciosa e completa;
-#   3. os DOIS nós estão cobertos — o de movimento (giroscópio) e o de touchpad.
-#      Cobrir um só é meia cura, e foi meia cura que o usuário pediu para não ter.
 echo "== acesso da sessão aos nós de ENTRADA (touchpad + sensores de movimento) =="
 if [[ "${HAS_UDEV_RULES}" -eq 0 ]]; then
     echo "[ OK ] sem assets/NN-*.rules neste checkout — nada a checar"
@@ -527,8 +290,6 @@ else
             [[ "${_in_linha}" == *'KERNEL=="event*"'*   ]] || continue
             [[ "${_in_linha}" == *'TAG+="uaccess"'*     ]] || continue
             if [[ "${_in_num}" -ge 73 ]]; then
-                # Um arquivo com três linhas mortas é UM arquivo morto: a
-                # mensagem nomeia o arquivo uma vez, não uma vez por linha.
                 [[ " ${_in_tarde[*]-} " == *" ${_in_nome} "* ]] \
                     || _in_tarde+=("${_in_nome}")
                 continue
@@ -549,8 +310,6 @@ else
         || _in_falhas+=("nenhuma regra dá uaccess ao nó dos SENSORES DE MOVIMENTO (giroscópio): ele é ID_INPUT_ACCELEROMETER, não ID_INPUT_JOYSTICK, então a 70-uaccess.rules do sistema não o cobre")
     [[ -n "${_in_touch}" ]] \
         || _in_falhas+=("nenhuma regra dá uaccess ao nó do TOUCHPAD: ele é ID_INPUT_TOUCHPAD, não ID_INPUT_JOYSTICK, então a 70-uaccess.rules do sistema não o cobre")
-    # Sem o trigger de `input` a regra só vale no próximo replug do controle —
-    # "funciona por default" viraria "funciona depois que você desplugar".
     for _in_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
         [[ -f "${_in_inst}" ]] || continue
         grep -qF 'subsystem-match=input' "${_in_inst}" 2>/dev/null \
@@ -569,30 +328,6 @@ else
     fi
 fi
 
-# GATILHO-DA-COR-INSTALA-01 (12/08/2026): o trigger de `hidraw` dos instaladores
-# tem de poder CASAR alguma coisa.
-#
-# Os dois instaladores traziam
-# `udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c`, que
-# casa ZERO dispositivos em toda máquina: o `--attr-match` só olha os sysattrs
-# do PRÓPRIO nó, e um `hidraw` não tem `idVendor` — ele mora no pai USB, e no
-# Bluetooth não existe pai USB (o BlueZ cria o HID por `uhid`). Medido na
-# máquina da bancada em 12/08: 8 dispositivos sem o filtro, 0 com ele.
-#
-# O que isso custava: numa instalação limpa com o DualSense já conectado no
-# rádio, a regra 70 (MODE 0660 + TAG uaccess) não era reaplicada ao nó que já
-# existia. O daemon subia sem poder ESCREVER no hidraw daquele controle, e a
-# lightbar por Bluetooth — inclusive o gatilho da cor de
-# `core/lightbar_gatilho.py` — nascia morta até alguém reconectar o controle
-# à mão. É a regra da casa de 08/08 ("nada à mão, nada opt-in") furada por uma
-# linha que parecia certa.
-#
-# Este portão é cego a QUAL trigger se usa: ele cobra só que nenhum trigger de
-# hidraw venha casado com um `--attr-match`. A PRESENÇA do trigger é cobrada do
-# lado do pytest (tests/unit/test_install_curas_de_12_08_lightbar_por_bluetooth.py),
-# que roda contra os arquivos REAIS — aqui o repo pode ser o fixture mínimo dos
-# testes deste próprio portão, que não tem controle nenhum a redisparar.
-# Mordida: devolver a linha antiga reprova aqui.
 echo "== trigger de hidraw dos instaladores (tem de casar dispositivo de verdade) =="
 _hidraw_falhas=()
 for _hid_inst in scripts/install_udev.sh scripts/install-host-udev.sh; do
@@ -616,28 +351,10 @@ else
     rc=1
 fi
 
-# M11 (auditoria): a cura de RAIZ do storm (assets/modprobe/*.conf) precisa ser
-# empacotada por TODOS os caminhos, senão o install-host-udev.sh pula a cura em
-# silêncio (SNDQUIRK_SRC=""). O glob de regras acima só pega *.rules — este bloco
-# cobre o .conf. Antes ausente: removê-lo do build_deb/flatpak passava despercebido.
-# Onda PLATAFORMA 2026-07-18: assets/modprobe.d/ (novo, distinto do legado
-# assets/modprobe/) entra no MESMO contrato de paridade — o btusb-no-autosuspend
-# não pode sumir de um instalador sem ninguém notar.
 echo "== paridade da cura de raiz (assets/modprobe{,.d}/*.conf × instaladores) =="
 for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
     [[ -f "${conf_path}" ]] || continue
     conf_name="$(basename "${conf_path}")"
-    # A DISPENSA MORA NO PRÓPRIO ARQUIVO, e tem de dizer POR QUÊ — mesma
-    # doutrina do `X-HefestoNaoEmpacotado` dos `.desktop` lá em cima, e pela
-    # mesma razão: cobrar de todo formato um arquivo que NÃO se deve empacotar
-    # é o gate exigindo o defeito. Nasceu com a RADIO-AFOGADO-02 (22/09/2026):
-    # a contrapressão do `uhid` é OPT-IN porque muda a semântica do `write(2)`
-    # para todo userspace que escreve em HID por Bluetooth, e mandá-la em
-    # .deb/.rpm/Arch/flatpak seria impô-la a quem nunca pediu.
-    #
-    # **MAS O UNINSTALL CONTINUA COBRADO**, e essa é a metade que importa:
-    # conf que alguém pode ter instalado à mão e ninguém sabe desfazer é lápide
-    # que envelhece sozinha.
     if grep -q '^# X-HefestoNaoEmpacotado:' "${conf_path}" 2>/dev/null; then
         _porque="$(sed -n 's/^# X-HefestoNaoEmpacotado: *//p' "${conf_path}" | head -1)"
         if grep -qF "${conf_name}" uninstall.sh 2>/dev/null; then
@@ -657,9 +374,6 @@ for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
         || missing+=("scripts/install-host-udev.sh")
     grep -qF "${conf_name}" packaging/arch/PKGBUILD 2>/dev/null \
         || missing+=("packaging/arch/PKGBUILD")
-    # Onda T (corretor, achado #10): o .spec do Fedora ficava FORA deste gate
-    # — remover um install -Dm644 de conf lá passava verde e o RPM saía sem a
-    # cura. Agora o .spec está sob o mesmo contrato dos demais instaladores.
     grep -qF "${conf_name}" packaging/fedora/hefesto-dualsense4unix.spec 2>/dev/null \
         || missing+=("packaging/fedora/hefesto-dualsense4unix.spec")
     grep -qF "${conf_name}" uninstall.sh 2>/dev/null \
@@ -672,12 +386,6 @@ for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
     fi
 done
 
-# Onda T (corretor, achado #9): a cura de RAIZ do probe BT é o MÓDULO DKMS —
-# a conf modprobe.d acima é inerte sem ele. Todo formato empacotado precisa
-# carregar as fontes (dkms/hid-nintendo) + a lib (dkms_lib.sh), e o
-# install-host-udev.sh (o passo pós-instalação que deb/rpm/arch documentam)
-# precisa RODAR o dkms_install_patched_module. Sem este gate, o furo "só a
-# conf viaja, o módulo nunca chega ao usuário de pacote" passava verde.
 echo "== paridade da cura DKMS (assets/dkms/hid-nintendo × instaladores) =="
 if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
     missing=()
@@ -692,21 +400,6 @@ if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
         || missing+=("flatpak/*.yml")
     grep -qF "dkms_install_patched_module" scripts/install-host-udev.sh 2>/dev/null \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
-    # Corretor final (interação T×W): a REMOÇÃO era gateada só para o irmão
-    # rtw88-usb — apagar o `dkms remove` do hid-nintendo de um hook de pacote
-    # passava verde (falso-verde reproduzido) e o purge deixava o módulo
-    # `hefesto-hid-nintendo` órfão registrado no DKMS para sempre. Mesmo
-    # contrato do bloco rtw88-usb abaixo: remoção desregistra em TODO formato.
-    #
-    # FALSO-VERDE-GATE-DKMS-REMOVE-01 (30/07): este loop nasceu com DOIS greps
-    # INDEPENDENTES ("dkms remove" em algum lugar do arquivo E o nome do módulo
-    # em algum lugar do arquivo) e por isso NÃO gateava nada — cada hook cita
-    # `dkms remove` pelos módulos IRMÃOS e cita `hefesto-hid-nintendo` pela conf
-    # de modprobe.d, então os dois greps casavam com ZERO remoção deste módulo.
-    # Foi reproduzido ao vivo na onda 1 (a mutação que arrancava o `dkms remove`
-    # do hid-playstation passou verde na primeira tentativa por este padrão).
-    # Agora é o padrão COMBINADO — o comando E o módulo na MESMA linha — igual
-    # ao bloco do hid-playstation, que nasceu certo.
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
@@ -723,12 +416,6 @@ if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
     fi
 fi
 
-# Onda W: a cura de raiz do fantasma USB do dongle WiFi é o módulo DKMS
-# rtw88_usb — mesma lição do hid-nintendo (achado #9): as fontes precisam
-# viajar em TODO formato E o install-host-udev.sh precisa RODAR o DKMS.
-# E a lição do broker (#2/#8) vale dobrada aqui: a REMOÇÃO de pacote
-# (prerm/postrm/.install/%preun) precisa DESREGISTRAR o módulo, senão o
-# patchado vence o in-tree para sempre numa máquina que removeu o app.
 echo "== paridade da cura DKMS (assets/dkms/rtw88-usb × instaladores) =="
 if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
     missing=()
@@ -744,11 +431,6 @@ if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
     grep -qF "dkms_install_patched_module hefesto-rtw88-usb" \
         scripts/install-host-udev.sh 2>/dev/null \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
-    # FALSO-VERDE-GATE-DKMS-REMOVE-01 (30/07): mesma cura do bloco do
-    # hid-nintendo acima — dois greps independentes davam falso-verde porque
-    # cada hook já cita `dkms remove` (pelos módulos irmãos) e já cita
-    # `hefesto-rtw88-usb` (pela mensagem pós-instalação cobrada abaixo). Padrão
-    # COMBINADO: o comando E o módulo na MESMA linha.
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
@@ -757,9 +439,6 @@ if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
     done
     grep -qF "hefesto-rtw88-usb" uninstall.sh 2>/dev/null \
         || missing+=("uninstall.sh")
-    # Paridade de MENSAGEM: o texto pós-instalação de TODO formato tem de citar
-    # o rtw88_usb (o postinst do .deb ficava só com o hid-nintendo — assimetria
-    # que nenhum gate pegava porque o postinst fica isolado dos blocos de cópia).
     for msg in packaging/debian/postinst \
                packaging/arch/hefesto-dualsense4unix.install \
                packaging/fedora/hefesto-dualsense4unix.spec; do
@@ -776,40 +455,13 @@ else
     echo "[ OK ] dkms rtw88-usb: assets/dkms/rtw88-usb/dkms.conf ausente — nada a checar"
 fi
 
-# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): o vigia do dongle Wi-Fi USB
-# veio do zsh dela, onde o uninstall NÃO desfazia nenhum dos quatro destinos —
-# o "o uninstall não desfaz" da sprint, medido pelo estudo. Aqui a família é
-# cobrada pelo NOME DE DESTINO (a razão está na seção "artefato de sistema sem
-# dono", logo abaixo): o install põe os quatro, o uninstall tira os quatro e
-# desabilita o timer, e o doctor tem a pergunta E a faz.
-#
-# E o drop-in que mostra o `maquina.json` ao watchdog do Bluetooth (o pedido da
-# onda 3a): um arquivo em /etc que o install escreve com o caminho da casa de
-# quem instalou, e que o uninstall tem de levar junto.
 echo "== vigia do Wi-Fi USB e o drop-in do watchdog (install × uninstall × doctor) =="
 if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
     missing=()
-    #: O lado do INSTALL tem a mesma armadilha, ao contrário: o caminho do
-    #: script aparece também na linha que roda o `--ensure` na hora, e o do timer
-    #: no recado de «habilite à mão». Medido pela conferência em 23/09: com o
-    #: `install` do `wifi_usb.sh` arrancado, esta seção seguia verde, lida do
-    #: `--ensure` — e o `ExecStart` do vigia apontaria para arquivo que nunca
-    #: existiu. Então o arquivo que se INSTALA é cobrado numa linha de
-    #: `install -D`; o nome da unit (que a linha de install recebe por variável)
-    #: e o `enable` são cobrados no código sem recado.
     _wifi_lib="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' scripts/lib/camada_de_maquina.sh 2>/dev/null \
         | grep -v '^[[:space:]]*#' \
         | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' || true)"
     _wifi_lib_inst="$(grep -E '(^|[[:space:]])install[[:space:]]+-D' <<<"${_wifi_lib}" || true)"
-    #: A REMOÇÃO é cobrada na linha que REMOVE, não em qualquer linha: o
-    #: caminho aparece também na guarda do `if`, no `_NEEDS_SUDO` e no recado de
-    #: "rode à mão" — e qualquer um deles bastaria a um grep solto, com o `rm`
-    #: arrancado (medido: a primeira versão desta seção passou assim). As
-    #: continuações de linha são juntadas, e linha de recado não conta.
-    #: O `disable` do timer tem o MESMO recado ao lado («sudo systemctl disable
-    #: --now …» no ramo sem sudo), e por isso se cobra no mesmo texto sem recado
-    #: — medido em 23/09 pela conferência: cobrado em `grep -v '#'` puro, o
-    #: `disable` arrancado passava verde, lido do `log` do outro ramo.
     _wifi_un_acao="$(sed -e :a -e '/\\$/N; s/\\\n[[:space:]]*/ /; ta' uninstall.sh 2>/dev/null \
         | grep -v '^[[:space:]]*#' \
         | grep -vE '^[[:space:]]*(log|echo|printf|warn|info)[[:space:]]' || true)"
@@ -838,10 +490,6 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
         || missing+=("scripts/doctor.sh(sem check_wifi_usb)")
     grep -qE '^[[:space:]]+check_wifi_usb[[:space:]]*$' <<<"${_wifi_doc}" \
         || missing+=("scripts/doctor.sh(o main não chama check_wifi_usb)")
-    # A OUTRA peça A da sprint, a pergunta do rfkill: não tem install nem
-    # uninstall (é leitura), e o par que ela tem é o do doctor — definida E
-    # chamada no main. Uma pergunta definida e nunca feita é o rádio desligado
-    # que ninguém vê, que é exatamente o que ela veio curar.
     grep -qE '^check_bt_rfkill\(\)' <<<"${_wifi_doc}" \
         || missing+=("scripts/doctor.sh(sem check_bt_rfkill)")
     grep -qE '^[[:space:]]+check_bt_rfkill[[:space:]]*$' <<<"${_wifi_doc}" \
@@ -850,25 +498,16 @@ if [[ -f assets/systemd/hefesto-wifi-usb-vigia.service ]]; then
         || missing+=("scripts/lib/camada_de_maquina.sh(não escreve o drop-in do watchdog)")
     grep -qF 'hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf' <<<"${_wifi_un_rm}" \
         || missing+=("uninstall.sh(não remove o drop-in do watchdog)")
-    # O PACOTE NÃO LIGA O VIGIA (INSTALL-E-UNINSTALL-DO-RADIO-01, o P-15,
-    # decisão de produto): o `install-host-udev.sh` não põe o timer, o
-    # dispatcher nem o drop-in do watchdog — o desenho dos timers da
-    # resiliência, e o drop-in precisa da casa de uma pessoa. A razão está no
-    # próprio helper, e o doctor diz a quem instalou por pacote como ligar.
-    # Aqui se cobra que a DECLARAÇÃO e o código digam a mesma coisa: um destino
-    # que entre no helper com a declaração intacta reprova.
     if [[ -f scripts/install-host-udev.sh ]]; then
         _wifi_ihu="$(grep -v '^[[:space:]]*#' scripts/install-host-udev.sh 2>/dev/null || true)"
         for _wifi_dest in hefesto-wifi-usb-vigia 90-hefesto-wifi-usb 10-hefesto-maquina.conf; do
             if grep -qF -- "${_wifi_dest}" <<<"${_wifi_ihu}"; then
-                missing+=("scripts/install-host-udev.sh(põe ${_wifi_dest}, e a declaração diz que o pacote não o liga)")
+                missing+=("scripts/install-host-udev.sh(põe ${_wifi_dest}, e a decisão é que o pacote não o liga)")
             fi
         done
-        grep -qF 'O VIGIA DO WI-FI USB NÃO VAI POR AQUI' scripts/install-host-udev.sh \
-            || missing+=("scripts/install-host-udev.sh(sem a declaração de por que o pacote não liga o vigia)")
     fi
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta (e pergunta pelo rfkill); o drop-in do watchdog entra e sai; o pacote não liga o vigia, e diz por quê"
+        echo "[ OK ] vigia do Wi-Fi USB: o install põe os quatro destinos, o uninstall tira os quatro, o doctor pergunta (e pergunta pelo rfkill); o drop-in do watchdog entra e sai; o pacote não liga o vigia"
     else
         echo "[FAIL] vigia do Wi-Fi USB: FALTANDO em: ${missing[*]}"
         echo "       Peça que o install põe e o uninstall não tira é o defeito que tirou"
@@ -879,17 +518,6 @@ else
     echo "[ OK ] vigia do Wi-Fi USB: assets/systemd/hefesto-wifi-usb-vigia.service ausente — nada a checar"
 fi
 
-# A TRAVA COMUM DO RÁDIO (O-DIARIO-DO-RADIO-01, instalada pela INSTALL-E-
-# UNINSTALL-DO-RADIO-01, 23/09/2026). Mesmo desenho da seção do vigia acima: o
-# destino é cobrado na linha que INSTALA (e o `tmpfiles --create` na que o
-# aplica), a remoção na linha que REMOVE, e o doctor por definição E chamada no
-# main. O caminho do pacote (`install-host-udev.sh`) fica de fora, decisão de
-# decisão de produto (P-2.9): pelo pacote não há motor root disputando o rádio — o
-# watchdog, o drop-in do bluetoothd e o sudoers da ponte são do `install.sh` —,
-# e sem o tmpfiles o daemon cai na trava da sessão, que o diz no log. O grupo
-# não é o obstáculo (a trava usa o `hefesto`, que o pacote também cria); a
-# razão inteira está no `install_trava_do_radio_host`. A paridade cobra que o
-# helper do pacote siga sem a trava, e que a razão continue escrita lá.
 echo "== a trava comum do rádio (install × uninstall × doctor) =="
 if [[ -f assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
     missing=()
@@ -922,18 +550,14 @@ if [[ -f assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
         || missing+=("scripts/doctor.sh(sem check_trava_do_radio)")
     grep -qE '^[[:space:]]+check_trava_do_radio[[:space:]]*$' <<<"${_trava_doc}" \
         || missing+=("scripts/doctor.sh(o main não chama check_trava_do_radio)")
-    # Lido para variável, e nunca `grep | grep -q`: sob `pipefail` o `-q` que
-    # acha e fecha o cano devolve 141 ao pipe, e o achado passaria por ausente.
     if [[ -f scripts/install-host-udev.sh ]]; then
         _trava_ihu="$(grep -v '^[[:space:]]*#' scripts/install-host-udev.sh 2>/dev/null || true)"
         if grep -qF 'hefesto-dualsense4unix-radio.conf' <<<"${_trava_ihu}"; then
-            missing+=("scripts/install-host-udev.sh(põe a trava, e a decisão é que o pacote não a põe — mude a razão no install_trava_do_radio_host junto)")
+            missing+=("scripts/install-host-udev.sh(põe a trava, e a decisão é que o pacote não a põe)")
         fi
-        grep -qF 'NÃO VAI PELO CAMINHO DO PACOTE' scripts/lib/camada_de_maquina.sh 2>/dev/null \
-            || missing+=("scripts/lib/camada_de_maquina.sh(sem a razão de a trava não ir pelo pacote)")
     fi
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] trava comum do rádio: o install a cria e aplica, o uninstall a tira, o doctor pergunta; o pacote não a põe, e diz por quê"
+        echo "[ OK ] trava comum do rádio: o install a cria e aplica, o uninstall a tira, o doctor pergunta; o pacote não a põe"
     else
         echo "[FAIL] trava comum do rádio: FALTANDO em: ${missing[*]}"
         echo "       Trava que o install cria e o uninstall não tira fica em /etc para sempre;"
@@ -944,12 +568,6 @@ else
     echo "[ OK ] trava comum do rádio: assets/tmpfiles.d/hefesto-dualsense4unix-radio.conf ausente — nada a checar"
 fi
 
-# Contenção BT (2026-07-25): o TERCEIRO módulo DKMS (hid-playstation, retry de
-# feature report na probe) ganhou os dois blocos irmãos acima mas NUNCA ganhou o
-# seu — e o furo era o pior dos três: o dkms.conf dele tem AUTOINSTALL="yes",
-# então sobrevivia ao `apt remove`/`pacman -R` REGISTRADO, se reconstruía a cada
-# kernel novo e vencia o in-tree para sempre numa máquina que removeu o app.
-# Só o %preun do Fedora desregistrava. Mesmo contrato dos irmãos.
 echo "== paridade da cura DKMS (assets/dkms/hid-playstation × instaladores) =="
 if [[ -f assets/dkms/hid-playstation/dkms.conf ]]; then
     missing=()
@@ -965,11 +583,6 @@ if [[ -f assets/dkms/hid-playstation/dkms.conf ]]; then
     grep -qF "dkms_install_patched_module hefesto-hid-playstation" \
         scripts/install-host-udev.sh 2>/dev/null \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
-    # Padrão COMBINADO, não dois greps independentes: os hooks já citam
-    # "dkms remove" (pelos dois módulos irmãos) e já citam
-    # "hefesto-hid-playstation" (pela conf de modprobe.d), então dois greps
-    # soltos davam falso-verde com ZERO remoção deste módulo — reproduzido ao
-    # vivo arrancando a cura.
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
@@ -990,10 +603,6 @@ else
     echo "[ OK ] dkms hid-playstation: assets/dkms/hid-playstation/dkms.conf ausente — nada a checar"
 fi
 
-# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o QUARTO módulo DKMS de série, o
-# usb_f_hid dos pads USB virtuais. Mesmo contrato do hid-playstation, e pela
-# mesma razão: AUTOINSTALL="yes" sobrevive ao `apt remove` se nenhum hook o
-# desregistrar. O Nix não tem DKMS nenhum: a lacuna está escrita no README dele.
 echo "== paridade da cura DKMS (assets/dkms/usb-f-hid × instaladores) =="
 if [[ -f assets/dkms/usb-f-hid/dkms.conf ]]; then
     missing=()
@@ -1033,11 +642,6 @@ else
     echo "[ OK ] dkms usb-f-hid: assets/dkms/usb-f-hid/dkms.conf ausente — nada a checar"
 fi
 
-# BROKER-01 (Onda S — fd-injection, achado #21 da auditoria): purge/remoção
-# não pode deixar a unit ROOT do broker órfã habilitada em NENHUMA forma de
-# empacotamento. Gate: só cobra paridade SE o repo realmente tem o broker
-# (asset canônico presente) — um checkout sem a onda S (ex.: fixture mínima
-# de outros testes) fica silencioso, igual ao bloco de modprobe acima.
 echo "== paridade do broker hide-hidraw (hefesto-hidraw-broker) =="
 if [[ -f assets/systemd/hefesto-hidraw-broker.service ]]; then
     missing=()
@@ -1051,20 +655,10 @@ if [[ -f assets/systemd/hefesto-hidraw-broker.service ]]; then
         || missing+=("flatpak/*.yml")
     grep -qF "hefesto-hidraw-broker" scripts/install-host-udev.sh 2>/dev/null \
         || missing+=("scripts/install-host-udev.sh")
-    # Achados Onda S #2/#8: o caminho Debian tem DOIS lados — o build
-    # (build_deb.sh EMPACOTA o broker; o grep acima cobre) e a REMOÇÃO
-    # (prerm/postrm, que o dpkg executa no apt remove/purge). Só o grep do
-    # build dava falso-verde: um purge sem broker nos maintainer scripts
-    # deixava a unit ROOT órfã habilitada. prerm E postrm precisam do
-    # caminho de remoção (disable + restore-all + rm das units).
     grep -qF "hefesto-hidraw-broker" packaging/debian/prerm 2>/dev/null \
         || missing+=("packaging/debian/prerm")
     grep -qF "hefesto-hidraw-broker" packaging/debian/postrm 2>/dev/null \
         || missing+=("packaging/debian/postrm")
-    # uninstall.sh é obrigatório em TODO checkout (o caminho nativo sempre
-    # precisa poder desfazer) — não é gateado pela existência do asset acima
-    # de propósito redundante: se o asset sumiu mas o texto ficou, ok; se o
-    # texto sumiu, falha aqui igual aos demais.
     grep -qF "hefesto-hidraw-broker" uninstall.sh 2>/dev/null \
         || missing+=("uninstall.sh")
     if [[ "${#missing[@]}" -eq 0 ]]; then
@@ -1079,30 +673,6 @@ else
     echo "[ OK ] hefesto-hidraw-broker: assets/systemd/hefesto-hidraw-broker.service ausente — nada a checar"
 fi
 
-# RADIO-ABERTO-01/E1-bis (06/08/2026): assets/bluetooth/ NUNCA esteve sob gate
-# nenhum aqui (`grep -n bluetooth` neste arquivo dava ZERO antes desta seção), e
-# é por isso que passou despercebido que o `.deb`/`.rpm`/`PKGBUILD`/flatpak não
-# levam a configuração do BlueZ.
-#
-# A DÍVIDA FOI PARTIDA EM DUAS (06/08/2026, correção de decisão gravada). O
-# curador anterior escreveu aqui que a lacuna inteira era "dívida registrada,
-# exige postinst próprio, e é entrega à parte". Isso é verdade para APLICAR a
-# config — reescrever `/etc/bluetooth/main.conf`, que é conffile do dpkg, de
-# dentro de um pacote, exige postinst e é mesmo outra entrega. É FALSO para o
-# DETECTOR: `check_bluez_justworks_repairing` é LEITURA PURA e lê exclusivamente
-# pelo dono único em `${ROOT_DIR}/scripts/bluez_config.sh`. Como o `.deb` copiava
-# o `doctor.sh` e não o dono, no layout empacotado a função caía no ramo "o dono
-# único da config do BlueZ não está aqui" e NÃO VIA NADA — MEDIDO contra o /etc
-# real desta máquina, que tem `JustWorksRepairing=always`. Isto está curado
-# (`scripts/build_deb.sh`) e travado abaixo pela REGRA DE PAR: quem empacota o
-# `doctor.sh` empacota o `bluez_config.sh`.
-#
-# O resto desta seção trava o que já era verdade e não pode regredir: existe um
-# dono único da config (scripts/bluez_config.sh), install e uninstall o chamam
-# pelos dois lados, e o dono conhece cada asset de assets/bluetooth/ — inclusive
-# os dois blocos legados, que só existem para o `remover` limpar instalação
-# antiga. Sem isto, um asset podia ficar órfão (ninguém aplica, ninguém remove)
-# exatamente como o `always` ficou órfão no disco do usuário por quatro dias.
 echo "== paridade da config do BlueZ (assets/bluetooth × bluez_config.sh) =="
 if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
     missing=()
@@ -1114,46 +684,17 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
         grep -qF "${_bt_asset}" scripts/bluez_config.sh 2>/dev/null \
             || missing+=("scripts/bluez_config.sh não cita ${_bt_asset}")
     done
-    # Os .block legados não são mais APLICADOS; o contrato é que o removedor
-    # ainda saiba limpá-los pelas sentinelas de instalações anteriores a 21/07.
-    #
-    # ERA VÁCUO ATÉ 06/08/2026: o teste era `grep -qF FastConnectable`, e a
-    # palavra aparece na regex de NEUTRALIZAÇÃO — o portão passava com o
-    # tratamento legado inteiramente arrancado. Uma linha que LIA como proteção
-    # e não protegia. O que se exige agora é a ALTERNÂNCIA das três sentinelas,
-    # que é o mecanismo de verdade e não sobrevive a arrancá-lo.
     for _bt_sent in '>>>' '<<<'; do
         grep -qF "hefesto (bluetooth|FastConnectable|JustWorksRepairing) ${_bt_sent}" \
             scripts/bluez_config.sh 2>/dev/null \
             || missing+=("scripts/bluez_config.sh não reconhece as sentinelas legadas (${_bt_sent})")
     done
-    # A poda de backup NÃO pode voltar a ser automática: apagaria a evidência
-    # medida do colapso 404 -> 3 linhas na primeira execução do install
-    # (decisão de 06/08/2026, registrada na sprint RADIO-ABERTO-01).
-    #
-    # ERA CHECAGEM DE GRAFIA ATÉ 06/08/2026: o teste era `grep -qF
-    # '_podar_backups'`, o NOME LITERAL da função que fora removida. Renomear a
-    # função e devolver a chamada passava batido — MEDIDO por mutação. Hoje o
-    # portão RODA o `aplicar` contra uma raiz falsa em `mktemp -d`, com o
-    # diretório povoado de backups, e confere no disco que nenhum sumiu. Nada
-    # em /etc é tocado (HEFESTO_BT_ETC + HEFESTO_BT_SUDO vazio), e o mecanismo
-    # não tem grafia de que fugir.
-    #
-    # O CONTEÚDO DOS 12 É IDÊNTICO DE PROPÓSITO. Com conteúdos diferentes a
-    # regra "conteúdo ÚNICO nunca sai" protegeria todos, o `_podar` não teria
-    # candidato nenhum e o portão passaria verde mesmo com a poda automática de
-    # volta — foi exatamente o que aconteceu no primeiro desenho deste bloco, e
-    # é a armadilha do teste que não morde. Iguais, os 12 são candidatos
-    # legítimos: só a proteção do MAIS ANTIGO e a retenção seguram dois deles, e
-    # uma poda automática levaria os outros dez.
     _bt_raiz="$(mktemp -d)"
     mkdir -p "${_bt_raiz}/bluetooth"
     printf '[General]\nName = BlueZ\n' > "${_bt_raiz}/bluetooth/main.conf"
     for _bt_i in 1 2 3 4 5 6 7 8 9 10 11 12; do
         printf '[General]\n' \
             > "${_bt_raiz}/bluetooth/main.conf.bak.hefesto-17860000${_bt_i}"
-        # mtimes distintos e crescentes: a ordem "do mais novo para o mais
-        # velho" é o que define quem a retenção pouparia.
         touch -d "@$(( 1786000000 + _bt_i * 60 ))" \
             "${_bt_raiz}/bluetooth/main.conf.bak.hefesto-17860000${_bt_i}" 2>/dev/null || true
     done
@@ -1166,8 +707,6 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
         bash scripts/bluez_config.sh aplicar >/dev/null 2>&1 || true
     _bt_depois="$(find "${_bt_raiz}/bluetooth" -maxdepth 1 -type f \
                        -name 'main.conf.bak.hefesto-*' | wc -l)"
-    # O `aplicar` mudou o arquivo, então nasce UM backup novo. O que não pode é
-    # QUALQUER um dos 12 anteriores ter sumido.
     _bt_sumidos=()
     for _bt_i in 1 2 3 4 5 6 7 8 9 10 11 12; do
         [[ -f "${_bt_raiz}/bluetooth/main.conf.bak.hefesto-17860000${_bt_i}" ]] \
@@ -1179,49 +718,15 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
     rm -rf "${_bt_raiz}"
     grep -qF 'podar)' scripts/bluez_config.sh 2>/dev/null \
         || missing+=("scripts/bluez_config.sh perdeu o subcomando explícito 'podar'")
-    # O doctor é o único que enxerga o disco entre um install e o próximo — e
-    # tem de LER pelo dono único, não reimplementar o parser.
     grep -qF "JustWorksRepairing" scripts/doctor.sh 2>/dev/null \
         || missing+=("scripts/doctor.sh não checa JustWorksRepairing")
-    # `-E` com fronteira de palavra de propósito: `-qF ... verificar` casaria
-    # com `verificar-qualquer-coisa` e o portão voltaria a ser decorativo.
     grep -qE '(bluez_config\.sh|\$\{dono\})" verificar([[:space:]]|$)' \
         scripts/doctor.sh 2>/dev/null \
         || missing+=("scripts/doctor.sh não consome bluez_config.sh verificar")
-    # A CHAMADA, não só a função. MEDIDO em 06/08/2026: apagar a linha
-    # `check_bluez_justworks_repairing` de `main()` deixava a suíte inteira
-    # verde E este portão OK — porque tudo o que ele procurava continuava vivo
-    # DENTRO da função morta. ENTREGA-QUE-NAO-LIGOU-01 literal. O `awk` recorta
-    # o CORPO de `main()` (a definição da função fica de fora por construção) e
-    # exige a chamada lá dentro.
     _corpo_main="$(awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
         scripts/doctor.sh 2>/dev/null || true)"
     grep -qE '^[[:space:]]*check_bluez_justworks_repairing[[:space:]]*$' <<< "${_corpo_main}" \
         || missing+=("scripts/doctor.sh define check_bluez_justworks_repairing e NÃO a chama em main()")
-    # A REGRA DE PAR do empacotamento: quem leva o doctor.sh leva o dono único.
-    # Sem ela o detector empacotado é CEGO (cai no ramo "o dono único da config
-    # do BlueZ não está aqui") e o portão imprimia "com detector no doctor" sem
-    # nunca conferir que o dono viaja junto — o mesmo vácuo que esta leva veio
-    # fechar duas seções acima.
-    #
-    # OS COMENTÁRIOS SÃO DESCARTADOS ANTES DO GREP, e isso não é detalhe: o
-    # primeiro desenho deste bloco procurava a palavra no arquivo inteiro, e o
-    # próprio comentário que EXPLICA a regra a satisfazia — arrancar o
-    # `bluez_config.sh` da linha de cópia do `build_deb.sh` passava verde
-    # (MEDIDO por mutação, 06/08/2026). Era a mesma classe de vácuo que o
-    # `grep -qF FastConnectable` de duas seções acima tinha, e que esta leva
-    # veio fechar. Só linha de CÓDIGO conta.
-    #
-    # E O FLATPAK ESTAVA NA LISTA PELO ARQUIVO ERRADO (achado de 06/08/2026,
-    # MEDIDO): a lista trazia `scripts/build_flatpak.sh`, que é um INVÓLUCRO de
-    # 120 linhas — ele chama o `flatpak-builder` e não lista arquivo nenhum.
-    # Quem declara o conteúdo do pacote é o MANIFESTO
-    # `flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml`, que não estava em lista nenhuma.
-    # Resultado: pôr o `doctor.sh` no manifesto SEM o `bluez_config.sh` passava
-    # VERDE aqui e na bancada — o invólucro não cita `doctor.sh`, então o
-    # `continue` disparava e a regra de PAR nunca era aplicada ao Flatpak.
-    # O manifesto é YAML e comenta com `#`, então o descarte de comentários
-    # acima continua valendo letra por letra.
     _bt_olhados=(); _bt_pulados=()
     for _bt_pkg in scripts/build_deb.sh flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml \
                    scripts/build_appimage.sh scripts/build_appimage_gui.sh \
@@ -1229,11 +734,6 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
                    packaging/arch/PKGBUILD packaging/nix/package.nix; do
         [[ -f "${_bt_pkg}" ]] || continue
         _bt_codigo="$(grep -v '^[[:space:]]*#' "${_bt_pkg}" 2>/dev/null || true)"
-        # CORRIDA-DO-PIPEFAIL-01: here-string, nunca `printf | grep -q`. Este
-        # `|| continue` era o mais traiçoeiro dos nove — sob SIGPIPE ele PULA o
-        # empacotador em silêncio, e a regra de PAR da linha seguinte nunca é
-        # aplicada. Medido em 13/08/2026: com o pipe de volta, um build_deb.sh
-        # que leva o doctor.sh e ESQUECE o bluez_config.sh passa [ OK ].
         if ! grep -qF 'doctor.sh' <<< "${_bt_codigo}"; then
             _bt_pulados+=("$(basename "${_bt_pkg}")")
             continue
@@ -1243,16 +743,6 @@ if [[ -f assets/bluetooth/hefesto-bt.block ]]; then
             || missing+=("${_bt_pkg} empacota doctor.sh e deixa bluez_config.sh para trás (detector CEGO no pacote: cai em 'o dono único da config do BlueZ não está aqui')")
     done
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        # A CONTA APARECE, e não é enfeite (achado do braço C do teste de viés,
-        # 24/08/2026). A regra de PAR só se aplica a quem leva o `doctor.sh`, e
-        # medido nesta árvore isso é UM de sete empacotadores — os outros seis
-        # caem na pré-condição acima. O `[ OK ]` afirmava "dono empacotado com o
-        # doctor" como se valesse para todos, e valia para um.
-        #
-        # A regra NÃO mudou: se o `bluez_config.sh` deve viajar em todo pacote é
-        # decisão de produto, não deste script. O que mudou é o portão parar de
-        # afirmar mais do que mediu — a mesma doutrina que fez o medidor de
-        # rádio dizer "Não sei" em vez de "Folgada".
         echo "[ OK ] config do BlueZ: dono único, chamado nos dois lados, detector CHAMADO em main(), e a poda provada não-automática"
         echo "       PAR doctor+bluez conferido em ${#_bt_olhados[@]} de $(( ${#_bt_olhados[@]} + ${#_bt_pulados[@]} )) empacotadores: ${_bt_olhados[*]:-nenhum}"
         if [[ "${#_bt_pulados[@]}" -gt 0 ]]; then
@@ -1268,39 +758,7 @@ else
     echo "[ OK ] config do BlueZ: assets/bluetooth/hefesto-bt.block ausente — nada a checar"
 fi
 
-# TECLADO-QUE-NAO-DIGITA-01 (10/08/2026): o teclado na tela que o L3 do controle
-# abre não estava em instalador NENHUM. Medido antes desta seção existir:
-#
-#     command -v onboard wvkbd-mobintl        ->  NENHUM DOS DOIS
-#     grep -c onboard install.sh              ->  0
-#     grep -c onboard packaging/debian/control ->  0
-#
-# O produto oferecia "Abrir teclado na tela" no botão L3, e como nenhum dos nove
-# atalhos de fábrica digita uma LETRA (Super, PrintScreen, Alt+Tab,
-# Alt+Shift+Tab, Enter, Delete, Backspace e os dois tokens de OSK), o único
-# caminho para ESCREVER TEXTO com o controle simplesmente não existia na
-# máquina. Esta seção é o que impede isso de voltar por qualquer um dos flancos.
 echo "== teclado na tela do L3 (instalador × empacotamentos × doctor × daemon) =="
-# A ÂNCORA DESTA SEÇÃO É A PROMESSA, NÃO A CURA. O molde das seções acima é
-# gatear pelo asset (`assets/systemd/hefesto-hidraw-broker.service`,
-# `assets/bluetooth/hefesto-bt.block`), e aqui isso seria um erro sutil:
-# gatear por `scripts/install_osk.sh` faria a seção EMUDECER exatamente quando
-# alguém apagasse o instalador — o portão calaria justo no defeito que ele
-# existe para acusar.
-#
-# Então o gate é o que CRIA a promessa: um token de OSK no mapa de fábrica.
-# Enquanto o produto oferecer teclado na tela num botão, ele tem de instalar,
-# declarar e conferir o que isso precisa. Se um dia a promessa sair do mapa, a
-# seção fica quieta por direito — e é isso que também mantém esta seção
-# silenciosa nos checkouts sintéticos dos testes do próprio portão, que trazem
-# só `scripts/` e `assets/`.
-#
-# A ÂNCORA É `_OSK__`, E NÃO `__OPEN_OSK__` — corrigido em 02/09/2026, no dia em
-# que o L3 virou alternador. O mapa passou a ter TRÊS tokens
-# (`__TOGGLE_OSK__`, `__OPEN_OSK__`, `__CLOSE_OSK__`), e uma âncora presa ao
-# nome de UM deles emudeceria a seção inteira no dia em que alguém aposentasse
-# justamente esse — sem que a promessa tivesse saído do produto. É a armadilha
-# que o parágrafo acima descreve, escrita dentro da própria cura.
 _osk_promessa="src/hefesto_dualsense4unix/core/keyboard_mappings.py"
 if [[ ! -f "${_osk_promessa}" ]] || ! grep -q '_OSK__' "${_osk_promessa}" 2>/dev/null; then
     echo "[ OK ] teclado na tela: o mapa de fábrica não promete teclado na tela neste checkout — nada a checar"
@@ -1311,11 +769,6 @@ elif [[ ! -f scripts/install_osk.sh ]]; then
 else
     missing=()
 
-    # 1) O install chama o dono dos DOIS lados da cerca. O `exit 0` do bloco de
-    #    formatos deixa doze passos de cura para trás, e um passo escrito só no
-    #    fluxo native cairia do lado errado — foi exatamente o achado #7 da Onda
-    #    S (o broker) numa camada nova. Comentários fora: um comentário citando
-    #    a função satisfaria um grep ingênuo e o portão viraria decoração.
     _osk_install_codigo="$(grep -v '^[[:space:]]*#' install.sh 2>/dev/null || true)"
     _osk_bloco_formatos="$(printf '%s\n' "${_osk_install_codigo}" | awk '
         /^if \[\[ "\$\{FORMAT\}" != "native" \]\]; then$/ { dentro = 1 }
@@ -1325,29 +778,11 @@ else
         /^if \[\[ "\$\{FORMAT\}" != "native" \]\]; then$/ { dentro = 1 }
         dentro && /^fi$/ { depois = 1; next }
         depois { print }')"
-    # CORRIDA-DO-PIPEFAIL-01: here-string. O `install.sh` é o maior produtor
-    # desta seção — é aqui que a corrida tem mais chance de ser perdida, e o
-    # veredito seria "o install não chama install_osk_host" com a chamada viva.
     grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' <<< "${_osk_bloco_formatos}" \
         || missing+=("install.sh NÃO instala o teclado na tela nos formatos de pacote (flatpak/appimage/deb saem pelo 'exit 0' sem ele)")
     grep -qE '^[[:space:]]*install_osk_host[[:space:]]*$' <<< "${_osk_bloco_native}" \
         || missing+=("install.sh NÃO instala o teclado na tela no fluxo native")
 
-    # 2) Todo empacotamento DECLARA o teclado na tela. O .deb/.rpm/PKGBUILD
-    #    declaram como dependência fraca (o gerenciador instala por padrão e
-    #    ela pode remover sem desinstalar o Hefesto); o Flatpak BUNDLA, porque
-    #    dentro do sandbox um pacote do host é invisível — sem o módulo, o
-    #    `shutil.which` do daemon devolve None para sempre, por construção.
-    #
-    #    CADA UM COM O PADRÃO DO SEU CAMPO, e isto foi MEDIDO por mutação em
-    #    10/08/2026: o primeiro desenho desta parte procurava a palavra "wvkbd"
-    #    no arquivo inteiro, sem comentários. Arrancar `wvkbd | onboard` do
-    #    `Recommends:` do debian/control passava VERDE — porque a palavra
-    #    continuava viva na PROSA da `Description`, que não é comentário e por
-    #    isso sobrevivia ao filtro. É a mesma armadilha do `grep -qF
-    #    FastConnectable` da seção do BlueZ com outra roupa: um texto que
-    #    EXPLICA a regra satisfazendo a regra. Só o campo que o gerenciador de
-    #    pacotes de fato lê conta.
     _osk_declaram=(
         "packaging/debian/control:^(Depends|Recommends|Suggests):.*wvkbd"
         "packaging/fedora/hefesto-dualsense4unix.spec:^(Requires|Recommends|Suggests):[[:space:]]*wvkbd"
@@ -1359,20 +794,11 @@ else
         _osk_decl="${_osk_item%%:*}"
         _osk_padrao="${_osk_item#*:}"
         [[ -f "${_osk_decl}" ]] || continue
-        # CORRIDA-DO-PIPEFAIL-01: o produtor lê um ARQUIVO, e o casamento de
-        # todos estes padrões está no começo dele — o `grep -qE` sai enquanto o
-        # `grep -v` ainda tem o resto do arquivo para escrever. Este é o mais
-        # exposto dos nove, porque o tamanho do produtor não é escolha nossa.
         _osk_decl_codigo="$(grep -v '^[[:space:]]*#' "${_osk_decl}" 2>/dev/null || true)"
         grep -qE "${_osk_padrao}" <<< "${_osk_decl_codigo}" \
             || missing+=("${_osk_decl} não DECLARA o teclado na tela no campo que o gerenciador lê (padrão: ${_osk_padrao})")
     done
 
-    # 3) O doctor CONFERE — e a chamada, não só a função. Definir
-    #    `check_teclado_na_tela` e não chamá-la em `main()` deixaria a suíte
-    #    verde e o portão OK com a conferência morta: é o
-    #    ENTREGA-QUE-NAO-LIGOU-01 literal, o mesmo recorte de `main()` que a
-    #    seção do BlueZ já faz por este motivo.
     grep -qE '^check_teclado_na_tela\(\) \{' scripts/doctor.sh 2>/dev/null \
         || missing+=("scripts/doctor.sh não define check_teclado_na_tela")
     _corpo_main="$(awk '/^main\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
@@ -1380,36 +806,18 @@ else
     grep -qE '^[[:space:]]*check_teclado_na_tela[[:space:]]*$' <<< "${_corpo_main}" \
         || missing+=("scripts/doctor.sh define check_teclado_na_tela e NÃO a chama em main()")
 
-    # 4) O doctor CONFERE E NÃO CURA (regra da casa). Nenhuma das rotas de cura
-    #    pode instalar pacote: `apply_fixes` e `fix_mic_dualsense` rodam sem ela
-    #    pedir, e instalar software de sistema por baixo de um diagnóstico é
-    #    exatamente o tipo de surpresa que esta casa não entrega.
-    #    CORRIDA-DO-PIPEFAIL-01, e aqui ela erra para o lado de APROVAR: o
-    #    veredito está num `&&`, então o 141 do pipe faz o `missing+=` NÃO
-    #    disparar. O doctor curaria o teclado na tela e o portão diria [ OK ].
     _osk_apply_fixes="$(awk '/^apply_fixes\(\) \{$/ { dentro = 1 } dentro { print } dentro && /^\}$/ { exit }' \
         scripts/doctor.sh 2>/dev/null || true)"
     grep -qE 'apt|dnf|pacman|install_osk' <<< "${_osk_apply_fixes}" \
         && missing+=("scripts/doctor.sh CURA o teclado na tela dentro de apply_fixes — o doctor confere e não cura")
 
-    # 5) O uninstall NÃO remove o pacote (é do sistema, e pode servir a outra
-    #    coisa — mesma decisão do libopus0 da ponte de mic), e REMOVE a
-    #    sentinela (essa é nossa). Sem apagar a sentinela, o doctor leria uma
-    #    máquina já desinstalada como "o pacote sumiu depois do install".
     _osk_uninstall_codigo="$(grep -v '^[[:space:]]*#' uninstall.sh 2>/dev/null || true)"
-    # CORRIDA-DO-PIPEFAIL-01 nas duas: here-string. O `uninstall.sh` tem mais
-    # de mil linhas, e a sentinela é citada perto do começo.
     grep -qE '(apt-get|apt|dnf|pacman|rpm)[^|]*(remove|purge|erase|-R)[^|]*(wvkbd|onboard)' \
         <<< "${_osk_uninstall_codigo}" \
         && missing+=("uninstall.sh REMOVE o pacote do teclado na tela — pacote de sistema não é nosso para desinstalar")
     grep -qF 'teclado-na-tela.conf' <<< "${_osk_uninstall_codigo}" \
         || missing+=("uninstall.sh não apaga a sentinela teclado-na-tela.conf (o doctor passaria a acusar remoção de um produto que já saiu)")
 
-    # 6) O CONTRATO DE NOMES entre os três que precisam concordar: quem instala
-    #    (scripts/install_osk.sh), quem confere (scripts/doctor.sh) e quem
-    #    executa (daemon/subsystems/keyboard.py). Se um deles trocar de binário
-    #    ou inverter o par sessão↔programa, os três continuam coerentes CONSIGO
-    #    MESMOS e o produto instala um e procura outro.
     _osk_keyboard="src/hefesto_dualsense4unix/daemon/subsystems/keyboard.py"
     for _osk_dono in scripts/install_osk.sh scripts/doctor.sh "${_osk_keyboard}"; do
         [[ -f "${_osk_dono}" ]] || { missing+=("${_osk_dono} ausente"); continue; }
@@ -1419,12 +827,6 @@ else
             || missing+=("${_osk_dono} não casa X11 com onboard")
     done
 
-    # 7) O MECANISMO, rodado de verdade — a parte de que nenhum comentário pode
-    #    fugir. O dono é executado em dry-run contra uma sentinela em mktemp,
-    #    com a sessão forçada nos dois sentidos: nada é instalado, nada da
-    #    máquina é tocado, e o que se cobra é a DECISÃO gravada no disco. Se
-    #    alguém inverter o par sessão↔pacote, esta parte reprova sozinha,
-    #    mesmo com todo o texto acima intacto.
     _osk_tmp="$(mktemp -d)"
     for _osk_par in "wayland:wvkbd" "x11:onboard"; do
         _osk_sessao="${_osk_par%%:*}"
@@ -1450,68 +852,10 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# A-CASA-SABE-E-O-PRODUTO-NAO-FAZ-01 / ARTEFATO SEM DONO (12/08/2026)
-#
-# MEDIDO antes desta seção existir: das dezessete seções deste portão, só DUAS
-# são genéricas — o laço das regras udev (:266) e o das confs de modprobe
-# (:464). As outras quinze são blocos escritos à mão, um por cura já paga. A
-# consequência é o furo que esta seção fecha: as TREZE unidades systemd de
-# `assets/` e `assets/systemd/` não tinham laço nenhum — só o broker era citado,
-# à mão, em duas linhas (:647 e :684). Uma unit nova entrava na árvore e
-# instalador nenhum era cobrado por ela. Mesmo furo em `assets/wireplumber/`,
-# `assets/NetworkManager/`, `assets/bluetooth/` e `assets/appimage/`.
-#
-# A ÂNCORA É O ARTEFATO, e aqui isso é o certo (ao contrário da seção do teclado
-# na tela, onde a âncora tem de ser a promessa): o arquivo versionado em
-# `assets/` É a promessa — o produto promete pôr isto na máquina do usuário. Se ele
-# sair da árvore, não há promessa, e o silêncio é justo.
-#
-# O QUE CONTA COMO ARTEFATO DE SISTEMA, e a régua para quem acrescentar um tipo
-# novo amanhã: é artefato de sistema o arquivo que o produto INSTALA num lugar
-# do sistema ou da sessão do usuário e que um programa de fora do Hefesto lê —
-# `.rules` (udev), `.service .timer .path .socket` (systemd), `.conf` (modprobe,
-# wireplumber, NetworkManager, BlueZ, DKMS), `.desktop` (lançador) e `.policy`
-# (polkit). NÃO são: `.svg`/`.png` (arte — o portão de ícones acima já os cobra
-# pelo NOME que cada formato instala), `.patch`/`.c`/`.h`/`Makefile`/`BASELINE`
-# (fonte de DKMS, que chega pela cópia do diretório e é cobrada pelos três
-# blocos de DKMS), os `.json` de `assets/profiles_default/` (dado que viaja
-# dentro do pacote, sem lugar no sistema) e os `.sh` (código executável: o dono
-# de um `.sh` é quem o CHAMA — unit, install ou outro script —, pergunta
-# diferente da desta seção, e misturar as duas daria uma resposta fraca às duas).
-#
-# O ALCANCE CONTA TRÊS CAMINHOS, porque MEDIDO: contar só o nome no `install.sh`
-# produziria ruído garantido — `assets/wireplumber/5{1,2,3}-*.conf` quem instala
-# é `scripts/fix_wireplumber_default_source.sh` (chamado em install.sh:1139 e
-# :1143), e as fontes de `assets/dkms/*/` chegam por cópia de DIRETÓRIO.
-#
-# E A REMOÇÃO NÃO É COBRADA AQUI, contra o primeiro desenho desta seção: cobrar
-# `uninstall.sh` pelo NOME do asset dá DOIS falsos, medidos —
-# `bluetooth-dropin-10-hefesto-resilience.conf` é removido pelo nome de DESTINO
-# (`/etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf`,
-# uninstall.sh:920) e o `proton-pin.conf` é desfeito pelo `proton_pin.py
-# --unlock` (uninstall.sh:1944), que não cita arquivo nenhum. O nome no disco
-# dela não é o nome no repositório, e um portão que finge o contrário reprova
-# quem está certo. A remoção continua cobrada por família, onde o nome de
-# destino é conhecido (udev, modprobe, DKMS, broker, BlueZ, teclado na tela).
-# O CHECKOUT TEM DE TER UM INSTALADOR para ser julgado por esta régua. Mesmo
-# critério de "gateado pelo asset" das seções acima (:246, :647, :712), do lado
-# do dono em vez do lado do artefato: os repositórios sintéticos dos testes deste
-# próprio portão trazem só `assets/` e `scripts/`, e cobrar deles a instalação de
-# um asset de mentira seria o portão acusando o instrumento, não o produto.
 echo "== artefato de sistema sem dono (assets/ × os caminhos de instalação) =="
 if [[ ! -f install.sh ]]; then
     echo "[ OK ] artefatos de sistema: sem install.sh neste checkout — nada a checar"
 else
-    #: Os arquivos de produção que podem SER dono. Qualquer UM basta: a pergunta
-    #: desta seção é "alguém instala isto?", não "todo formato instala isto?" —
-    #: essa é a pergunta das seções de paridade, e cada família que a merece já tem
-    #: a sua. Aqui é o piso: artefato que NINGUÉM instala.
-    #: A `scripts/lib/camada_de_maquina.sh` ENTROU em 23/09/2026
-    #: (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01): as curas de HOST moram lá desde
-    #: 31/08, e o `install.sh` só as CHAMA. Sem ela aqui, uma unit instalada
-    #: só pela lib — o vigia do Wi-Fi USB — era dada como órfã, e as da
-    #: resiliência do bluetoothd só passavam porque os empacotamentos as citam.
     _dono_arquivos=()
     for _dono_cand in install.sh scripts/lib/camada_de_maquina.sh \
                       scripts/install_udev.sh scripts/install-host-udev.sh \
@@ -1524,19 +868,6 @@ else
         [[ -f "${_dono_cand}" ]] && _dono_arquivos+=("${_dono_cand}")
     done
 
-    # Só linha de CÓDIGO conta. É a mesma armadilha do bloco do BlueZ (:812) e do
-    # teclado na tela (:892): um comentário — ou a prosa de um `Description:` —
-    # citando o arquivo satisfaria um grep ingênuo, e o portão viraria decoração
-    # exatamente no dia em que a instalação fosse arrancada e o comentário ficasse.
-    #
-    # E A PROSA DO ENSAIO TAMBÉM NÃO CONTA (INSTALL-E-UNINSTALL-DO-RADIO-01,
-    # 23/09/2026 — o P-17 que a conferência da O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01
-    # achou): o `_faria_root "instalar …hefesto-wifi-usb-vigia.service…"` do
-    # `--dry-run` do install é uma FRASE sobre a instalação, não a instalação.
-    # Medido: com a lib `camada_de_maquina.sh` arrancada da lista de donos,
-    # esta seção seguia verde, dando o vigia por instalado pelo texto do
-    # ensaio. As linhas que só FALAM (`_faria*`, `_nao_faria`, `log`, `echo`,
-    # `printf`, `warn`, `info`, `step`) saem, como nas seções de família acima.
     _dono_codigo=""
     if [[ "${#_dono_arquivos[@]}" -gt 0 ]]; then
         _dono_codigo="$(grep -hv '^[[:space:]]*#' "${_dono_arquivos[@]}" 2>/dev/null \
@@ -1544,9 +875,6 @@ else
             || true)"
     fi
 
-    # Caminho 3, montado antes do laço: helper de `scripts/` que algum dono CHAMA.
-    # Uma indireção só — é a que o produto usa (install.sh -> helper -> asset), e
-    # duas já seriam alcance por parentesco distante, que não instala nada.
     _helper_codigo=""
     while IFS= read -r _helper; do
         [[ -f "${_helper}" ]] || continue
@@ -1556,21 +884,6 @@ else
             || true)"$'\n'
     done < <(find scripts -maxdepth 1 -name '*.sh' -type f 2>/dev/null | sort)
 
-    # Caminho 2 — cópia de DIRETÓRIO e GLOB, resolvidos de verdade contra o disco.
-    # Não basta procurar o nome do diretório: `assets/` aparece no install como raiz
-    # (install.sh:193) e `assets/systemd/${_btres_u}` aparece com o nome vindo de uma
-    # variável — os dois casariam um `grep` de prefixo e dariam alcance de graça a
-    # TODO arquivo daquele diretório, que é o vácuo que esta seção não pode ter.
-    # Então: as expansões de variável são apagadas (o token que sobra terminado em
-    # `/` é DESCARTADO, porque o que dizia qual arquivo era a variável), e o que
-    # resta é resolvido como caminho — diretório existente cobre o que está sob ele,
-    # e glob cobre o que ele casa.
-    #
-    # A ASPA É APAGADA, não trocada por espaço, e isto foi MEDIDO: o install escreve
-    # o glob das regras como `"${ROOT_DIR}/assets/"[0-9][0-9]-*.rules` (:1329), com a
-    # aspa NO MEIO do caminho. Trocá-la por espaço partia o token em `assets/` (que o
-    # descarte acima come, e ainda bem) mais um resto sem prefixo — e o laço por glob
-    # não cobria nada, silenciosamente.
     _cobertos=""
     _dono_tokens="$(printf '%s\n%s\n' "${_dono_codigo}" "${_helper_codigo}" \
         | sed -e 's/\${[^}]*}/ /g' -e 's/\$[A-Za-z_][A-Za-z0-9_]*/ /g' -e "s/[\"']//g" \
@@ -1583,25 +896,10 @@ else
             _cobertos+="$(find "${_tok}" -type f 2>/dev/null || true)"$'\n'
             continue
         fi
-        # Glob resolvido pelo shell, em subshell para não vazar o `nullglob`.
-        # O `${_tok}` SEM aspas é o mecanismo, não descuido: é a expansão do
-        # glob que responde "quais arquivos este laço do install cobre?". Com
-        # aspas, `assets/systemd/*.service` viraria um nome literal, casaria
-        # zero, e o caminho 2 do alcance calaria inteiro — o portão passaria a
-        # acusar quem está instalado por laço.
         # shellcheck disable=SC2086
         _cobertos+="$(shopt -s nullglob; printf '%s\n' ${_tok})"$'\n'
     done <<<"${_dono_tokens}"
 
-    #: A DÍVIDA DECLARADA — `arquivo:razão com data`. Molde de
-    #: `INSTALL_OPTIONAL_RULES` acima: declarar é
-    #: honesto, e este portão não castiga honestidade — só não deixa a lápide
-    #: envelhecer calada (a conferência está logo abaixo do laço, e uma entrada que
-    #: já ganhou dono REPROVA até alguém apagá-la).
-    #:
-    #: VAZIA em 12/08/2026, e não por sorte: os 46 artefatos de sistema desta árvore
-    #: têm dono, medidos um a um com a régua dos três caminhos. Esta seção não cobra
-    #: dívida velha — ela impede a próxima.
     _ARTEFATO_SEM_DONO_HOJE=()
 
     _art_orfaos=()
@@ -1611,13 +909,6 @@ else
         [[ -n "${_art}" ]] || continue
         _art_nome="$(basename "${_art}")"
 
-        # Sem contar duas vezes: os dois laços GENÉRICOS que já existem neste
-        # arquivo cobrem estas duas famílias arquivo por arquivo, e com uma régua
-        # mais dura (paridade em TODO instalador, não "alguém instala"). Repeti-las
-        # aqui daria duas linhas de saída para o mesmo arquivo e — pior — dois
-        # veredictos diferentes sobre ele: a `75-*.rules` é opt-in por decisão
-        # registrada (INSTALL_OPTIONAL_RULES, :211) e aqui apareceria como coberta,
-        # o que ensinaria a ler o portão errado.
         case "${_art}" in
             assets/[0-9][0-9]-*.rules|assets/modprobe/*.conf|assets/modprobe.d/*.conf)
                 _art_delegados=$(( _art_delegados + 1 ))
@@ -1626,11 +917,8 @@ else
         esac
 
         _art_contados=$(( _art_contados + 1 ))
-        # 1) pelo nome, no código de algum dono.
         grep -qF -- "${_art_nome}" <<<"${_dono_codigo}" && continue
-        # 2) por diretório copiado inteiro ou por glob resolvido acima.
         grep -qxF -- "${_art}" <<<"${_cobertos}" && continue
-        # 3) por helper de `scripts/` que algum dono chama.
         grep -qF -- "${_art_nome}" <<<"${_helper_codigo}" && continue
         _art_orfaos+=("${_art}")
     done < <(find assets -type f \
@@ -1638,8 +926,6 @@ else
            -o -name '*.socket' -o -name '*.conf' -o -name '*.desktop' -o -name '*.policy' \) \
         2>/dev/null | sort)
 
-    # A lápide não envelhece calada: entrada declarada que já não vale REPROVA, para
-    # que a lista encolha sozinha quando alguém pagar a dívida ou apagar o resto.
     _art_lacunas_mortas=()
     for _art_lac in ${_ARTEFATO_SEM_DONO_HOJE[@]+"${_ARTEFATO_SEM_DONO_HOJE[@]}"}; do
         _art_lac_arq="${_art_lac%%:*}"
@@ -1693,62 +979,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# IRMAO-SEM-CARONA-01 (12/08/2026) — a outra metade da seção acima
-#
-# A seção "artefato de sistema sem dono" recusa explicitamente os `.sh`, e com
-# razão declarada ali mesmo: *"o dono de um `.sh` é quem o CHAMA — unit, install
-# ou outro script —, pergunta diferente da desta seção"*. Esta é aquela outra
-# pergunta, e ela é o inverso da primeira: não "quem instala este arquivo?", mas
-# **"o que este arquivo instalado chama, e isso foi junto?"**.
-#
-# O DEFEITO QUE A FEZ EXISTIR, MEDIDO em 12/08/2026: `scripts/build_deb.sh:216`
-# levava cinco scripts para dentro do pacote — `doctor.sh`, `bluez_config.sh`,
-# `disable_steam_input.sh`, `fix_wireplumber_default_source.sh` e
-# `dsx_recover.sh`, este último RETIRADO do laço em 26/08/2026 por não ter
-# consumidor em lugar nenhum (LEVA-4-E; hoje o laço leva quatro)
-# — e o `doctor.sh` chamava, em `apply_fixes`, um SEXTO que ninguém levou:
-# `sudo bash "${ROOT_DIR}/scripts/install_udev.sh"`. Como o `ROOT_DIR` do doctor
-# é derivado do lugar do próprio arquivo (`scripts/doctor.sh:60`), no layout do
-# .deb aquilo apontava para `/usr/share/hefesto-dualsense4unix/scripts/
-# install_udev.sh`, que não existe — e `hefesto-dualsense4unix doctor --fix`
-# (que ACHA o doctor no .deb, `cli/cmd_doctor.py:20`) respondia "falha ao
-# reaplicar udev" na máquina de quem instalou pelo pacote. O irmão certo para
-# aquele layout já viajava no mesmo pacote: `install-host-udev.sh`, cuja forma 3
-# no cabeçalho é literalmente "Direto de um .deb instalado".
-#
-# A ÂNCORA É A CHAMADA, não o arquivo: só é cobrado o script que algum
-# instalador COPIA para fora do checkout. Script que só roda do repositório
-# clonado tem todos os irmãos ao lado por construção, e cobrá-lo seria inventar
-# defeito — é por isso que `scripts/eliminacao.py` e `scripts/identidade_do_vpad.py`
-# não aparecem aqui: quem os importa (`gerar-mapa.py`, os três ensaios de
-# bancada) é instrumento de bancada, e instrumento de bancada nenhum instalador
-# distribui. No dia em que um deles for distribuído, esta seção cobra o módulo
-# junto — que é exatamente a resposta à pergunta "o `identidade_do_vpad.py` é
-# instalado?": não, e o portão passa a cobrar se a premissa mudar.
-#
-# O QUE CONTA COMO CHAMADA, e por que a régua é estreita de propósito: só
-# posição de COMANDO com nome literal (`bash "${ROOT_DIR}/scripts/X"`) e o
-# caminho absoluto de runtime (`/usr/local/lib/hefesto-dualsense4unix/X`, que só
-# existe porque o install o cria). Linha de recado é descartada pelo PRIMEIRO
-# comando dela (`fail`/`warn`/`info`/`echo`/`printf`/...), e isto foi MEDIDO:
-# sem esse descarte, `doctor.sh:461` — um `info` que ENSINA a rodar o rebind à
-# mão — virava chamada, e o portão acusava seis falsos só no doctor. Recado
-# pode citar script ausente; é o ofício dele.
-#
-# A GUARDA DE EXISTÊNCIA É A SAÍDA DECLARADA, e ela já era o idioma da casa
-# antes desta seção: `doctor.sh:4619` testa `[[ -x "${ROOT_DIR}/scripts/
-# disable_steam_input.sh" ]]` antes de chamar, e `bt_health_watchdog.sh:215`
-# testa `[[ -x "${_ACTIVE}" ]]`. Quem escreve a guarda está dizendo "sei que
-# pode não estar aqui, e tratei" — e o portão acredita. Quem chama sem guarda
-# está prometendo que o arquivo existe naquele layout, e essa promessa é o que
-# se cobra.
-#
-# O LIMITE, dito de frente: chamada por variável (`bash "${_dono}"`) não é
-# vista, porque o nome não está na linha. Não é buraco por descuido — é a mesma
-# escolha da guarda: quem monta o caminho em variável está escolhendo o alvo em
-# tempo de execução, e o portão não adivinha shell. O que ele impede é a
-# regressão silenciosa: o nome literal de um irmão que ficou para trás.
 echo "== irmão sem carona (script distribuído × o irmão que ele chama) =="
 _carona_instaladores=()
 for _carona_cand in install.sh \
@@ -1764,16 +994,9 @@ done
 if [[ "${#_carona_instaladores[@]}" -eq 0 || ! -d scripts ]]; then
     echo "[ OK ] irmão sem carona: sem instalador (ou sem scripts/) neste checkout — nada a checar"
 else
-    #: Os nomes que existem em `scripts/`. Um nome citado que NÃO está aqui não é
-    #: irmão — é comando do sistema ou arquivo de outro projeto, e cobrar por ele
-    #: seria o portão inventando parentesco.
     _carona_existentes="$(find scripts -maxdepth 1 -type f \( -name '*.sh' -o -name '*.py' \) \
         -printf '%f\n' 2>/dev/null | sort)"
 
-    #: O que UM script chama. Ver a régua estreita explicada no cabeçalho: posição
-    #: de comando com nome literal, mais o caminho absoluto de runtime; linha de
-    #: recado fora. Em Python a pergunta é o `import` de módulo irmão — e ali não
-    #: existe guarda: import é incondicional, e é justo que seja cobrado sempre.
     _carona_chamados_de() {
         local _s="scripts/$1" _codigo
         [[ -f "${_s}" ]] || return 0
@@ -1790,10 +1013,6 @@ else
             <<<"${_codigo}" | grep -oE '[A-Za-z0-9_.-]+\.(sh|py)$' || true
     }
 
-    #: A guarda de existência, procurada pelo NOME literal numa linha de teste de
-    #: arquivo. É por isso que `scripts/doctor.sh::_dono_das_regras_udev` escreve
-    #: os dois nomes por extenso, um `[[ -f ]]` cada, em vez de varrer uma lista
-    #: numa variável: o que não está escrito, portão nenhum lê.
     _carona_tem_guarda() {
         grep -qE "\[\[?[^]]*-(x|f|e|r)[[:space:]][^]]*$(sed 's/[.[\*^$]/\\&/g' <<<"$2")" "scripts/$1"
     }
@@ -1834,49 +1053,12 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# SCRIPTS DO PRODUTO × OS FORMATOS (25/08/2026, BG-04)
-#
-# O DEFEITO, do lado de quem usa: quem instalou por Flatpak, AppImage, Arch,
-# Fedora ou Nix apertava "Deixar tudo pronto" ou o botão do microfone e recebia
-# "Script do WirePlumber não encontrado" — e o único conselho que a tela dava
-# era rodar um `./install.sh` que não existe na máquina de quem não clonou o
-# repositório. Medido em 24/08 (SISTEMA-O-VIGIA-VIVO-01, §2.2): UM formato
-# levava os scripts, cinco não.
-#
-# E NENHUM PORTÃO VIA, porque este arquivo declara por escrito que não olha
-# para `scripts/` (:8) — a exceção foi escrita para UM nome de unit do hotplug
-# e virou cegueira para o diretório inteiro. A seção "irmão sem carona" acima
-# responde a pergunta VIZINHA ("o que este script distribuído chama foi
-# junto?") e não esta: um script que NENHUM formato distribui não tem irmão a
-# cobrar, e some das duas contas.
-#
-# A ÂNCORA É O CONSUMIDOR, e é isso que impede a lista de envelhecer: quem
-# manda aqui é o `src/`, não uma lista escrita à mão neste arquivo. O censo
-# abaixo lê do CÓDIGO quem executa script de `scripts/` em runtime — pela
-# chamada nomeada (`_find_repo_file("scripts/X.sh")`, `_run_script(...)`) e
-# pelo caminho absoluto de instalação — e exige que tudo que ele achar esteja
-# na lista. Consumidor novo com script novo reprova até alguém decidir o que
-# fazer com ele.
-#
-# O LIMITE, dito de frente: caminho montado em variável não é visto
-# (`cli/cmd_mic.py:81` é `Path(".../scripts") / _SCRIPT_NAME`). É o mesmo
-# limite que a seção "irmão sem carona" declara, e pela mesma razão — portão
-# não adivinha o valor de uma variável. Aqui ele não abre buraco: o mesmo
-# script aparece por nome literal em `emulation_actions.py:712`. Duas réguas
-# independentes é o que revela.
 echo "== scripts do produto (o que a janela e o doctor EXECUTAM) × os empacotamentos =="
 if [[ ! -d src/hefesto_dualsense4unix || ! -d scripts ]]; then
     echo "[ OK ] scripts do produto: sem src/ (ou sem scripts/) neste checkout — nada a checar"
 else
     _prod_faltas=()
 
-    #: A LISTA. Quatro nomes saem do censo do `src/` logo abaixo; o quinto —
-    #: `bluez_config.sh` — entra pela REGRA DE PAR que a seção "config do
-    #: BlueZ" já cobra: o `doctor.sh` lê a config do BlueZ EXCLUSIVAMENTE por
-    #: ele (`doctor.sh:2545`), e pacote que leva o doctor sem ele fica com o
-    #: detector CEGO. Está aqui para a falha nomear os cinco de uma vez, não
-    #: para inventar regra nova.
     _PRODSCRIPTS=(
         doctor.sh
         bluez_config.sh
@@ -1885,9 +1067,6 @@ else
         install_snd_quirk.sh
     )
 
-    #: O CENSO INDEPENDENTE, lido do `src/` e não desta lista. Duas formas,
-    #: porque as duas existem no código: a chamada nomeada e o caminho absoluto
-    #: de instalação.
     _prod_censo_chamada="$(grep -rhoE '_(find_repo_file|find_doctor_sh|run_script)\([[:space:]]*"scripts/[A-Za-z0-9_.-]+\.sh"' \
         src/hefesto_dualsense4unix 2>/dev/null || true)"
     _prod_censo_abs="$(grep -rhoE '/usr/(local/)?share/hefesto-dualsense4unix/scripts/[A-Za-z0-9_.-]+\.sh' \
@@ -1905,17 +1084,11 @@ else
             || _prod_faltas+=("o código EXECUTA scripts/${_prod_c} e ele não está em _PRODSCRIPTS deste portão — ou ele entra na lista (e em todo formato), ou o consumidor some")
     done <<<"${_prod_censo}"
 
-    #: A régua ao contrário: nome na lista que já não existe no disco vira
-    #: exigência-fantasma, e todo formato passaria a carregar um arquivo morto.
     for _prod_s in "${_PRODSCRIPTS[@]}"; do
         [[ -f "scripts/${_prod_s}" ]] \
             || _prod_faltas+=("scripts/${_prod_s} está em _PRODSCRIPTS e não existe mais no disco — APAGUE-o da lista e dos empacotadores")
     done
 
-    #: `arquivo|o nome do formato na boca de quem usa|o destino que o
-    #: consumidor PROCURA`. O destino é conferido uma vez por formato, e não
-    #: por arquivo, porque a forma `install -t DIR a.sh b.sh` escreve o
-    #: diretório uma vez só.
     _PRODPKGS=(
         "scripts/build_deb.sh|.deb|share/hefesto-dualsense4unix/scripts"
         "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml|Flatpak|/app/share/hefesto-dualsense4unix/scripts"
@@ -1947,10 +1120,6 @@ else
         grep -qF -- "${_prod_dest}" <<<"${_prod_codigo}" \
             || _prod_faltas+=("${_prod_forma} (${_prod_arq}) não cita o destino ${_prod_dest}/ — pôr os arquivos em OUTRO diretório é o mesmo que não levá-los, porque BASES_DE_INSTALACAO não olha para lá")
 
-        #: O `.spec` tem uma exigência A MAIS, e ela é do rpmbuild e não deste
-        #: portão: arquivo instalado e ausente do `%files` ABORTA o build
-        #: inteiro com "Installed (but unpackaged) file(s) found" — a cicatriz
-        #: que as fontes do hid-playstation deixaram escrita ali.
         if [[ "${_prod_arq}" == *.spec ]]; then
             _prod_files="$(sed -n '/^%files/,/^%changelog/p' "${_prod_arq}" 2>/dev/null || true)"
             for _prod_s in "${_PRODSCRIPTS[@]}"; do
@@ -1960,19 +1129,10 @@ else
         fi
     done
 
-    #: A LACUNA DECLARADA — o que esta seção NÃO resolve, escrito para não
-    #: virar paisagem. Mesmo molde de `_ARTEFATO_SEM_DONO_HOJE` e de
-    #: `_SVG_LACUNAS_HOJE`: declarar é honesto, e o portão não castiga
-    #: honestidade — só não deixa a lápide envelhecer calada.
     _PRODSCRIPT_LACUNAS_HOJE=(
         "25/08/2026 — LEVAR NÃO É ACHAR. BASES_DE_INSTALACAO (app/actions/daemon_actions.py) conhece quatro bases: a raiz do checkout, /app/share (Flatpak), /usr/share e /usr/local/share. O Nix instala em \$out/share e as duas receitas de AppImage em \$APPDIR/usr/share, e nenhuma das duas é uma delas — nesses três formatos os arquivos agora VIAJAM e o consumidor ainda não olha para onde caíram. A cura é uma base derivada de sys.prefix, num arquivo que a frente BG-04 não possui."
     )
 
-    #: E a lápide sabe morrer: no dia em que o consumidor derivar uma base de
-    #: `sys.prefix`, esta entrada vira mentira e o portão manda apagá-la. Se o
-    #: bloco mudar de arquivo (a BG-05 fala em `utils/repo_files.py`), o
-    #: `-f` abaixo cala e a lacuna sobrevive um dia a mais — erra para o lado
-    #: de guardar, que é o lado certo para uma dívida.
     _prod_consumidor="src/hefesto_dualsense4unix/app/actions/daemon_actions.py"
     if [[ "${#_PRODSCRIPT_LACUNAS_HOJE[@]}" -gt 0 && -f "${_prod_consumidor}" ]]; then
         _prod_bases="$(sed -n '/^BASES_DE_INSTALACAO/,/^)/p' "${_prod_consumidor}" 2>/dev/null || true)"
@@ -1996,25 +1156,6 @@ else
     fi
 fi
 
-# LOADER-SVG-01 (19/08/2026) — o loader SVG do gdk-pixbuf em TODA forma de
-# empacotamento.
-#
-# POR QUE ESTA SEÇÃO NASCEU: a leva de 19/08 pôs o loader nos empacotamentos e a
-# conferência foi "rode o check_packaging_parity.sh e veja se os três concordam".
-# O portão respondeu VERDE — e estava CEGO: não havia uma linha sobre `librsvg`
-# neste arquivo. Verde por silêncio é a pior resposta que um portão dá, porque
-# quem perguntou vai embora achando que mediu.
-#
-# E O SINTOMA NÃO APONTA PARA A CAUSA, que é o motivo de isto virar portão em vez
-# de nota: sem o loader, `GdkPixbuf.Pixbuf.new_from_file_at_scale` devolve None
-# EM SILÊNCIO — o ícone simbólico some da bandeja, sem uma linha de erro no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
-# app/arranque.py). Ninguém liga a tela vazia ao pacote que faltou.
-#
-# A ÂNCORA É A PROMESSA, não o pacote — mesma disciplina da seção do teclado na
-# tela: enquanto o produto DESENHAR SVG em execução, ele tem de declarar o
-# loader em todo formato. Se um dia o desenho sair do produto, a seção cala por
-# direito (e é isso que a mantém quieta nos checkouts sintéticos dos testes deste
-# próprio portão, que trazem só `assets/` e `scripts/`).
 _SVG_PROMESSA="src/hefesto_dualsense4unix/app/tray.py"
 echo "== loader SVG do gdk-pixbuf (o que desenha) × o que cada formato declara =="
 if [[ ! -f "${_SVG_PROMESSA}" ]] \
@@ -2023,18 +1164,6 @@ if [[ ! -f "${_SVG_PROMESSA}" ]] \
 else
     missing=()
 
-    #: Formato -> padrão que só o CAMPO LIDO PELO GERENCIADOR satisfaz.
-    #:
-    #: A LIÇÃO DA SEÇÃO DO TECLADO NA TELA, aplicada de novo: procurar a palavra
-    #: `librsvg` no arquivo inteiro passaria VERDE com a dependência arrancada,
-    #: porque os quatro arquivos EXPLICAM a armadilha de nome em prosa — e a
-    #: `Description:` do debian/control não é comentário, então nem o filtro de
-    #: `#` a remove. Cada padrão abaixo mira o campo, e só ele.
-    #:
-    #: OS NOMES DIVERGEM DE PROPÓSITO, e a divergência é a armadilha: quem
-    #: desenha é `librsvg2-common` (Debian), `librsvg2` (Fedora) e `librsvg`
-    #: (Arch/Nix). O `librsvg2-bin`/`librsvg2-tools` é o `rsvg-convert`,
-    #: ferramenta de BUILD — o errado em todos eles.
     _svg_declaram=(
         "packaging/fedora/hefesto-dualsense4unix.spec:^(Requires|Recommends):[[:space:]]*librsvg2([[:space:]]|$)"
         "packaging/arch/PKGBUILD:^[[:space:]]*'librsvg'"
@@ -2044,18 +1173,11 @@ else
         _svg_arq="${_svg_item%%:*}"
         _svg_padrao="${_svg_item#*:}"
         [[ -f "${_svg_arq}" ]] || continue
-        # CORRIDA-DO-PIPEFAIL-01: here-string, nunca `produtor | grep -q`.
         _svg_codigo="$(grep -v '^[[:space:]]*#' "${_svg_arq}" 2>/dev/null || true)"
         grep -qE "${_svg_padrao}" <<< "${_svg_codigo}" \
             || missing+=("${_svg_arq} não declara o loader SVG no campo que o gerenciador lê (padrão: ${_svg_padrao})")
     done
 
-    # O .deb tem contrato PRÓPRIO, e o motivo é medido: `Depends:` é um campo de
-    # CONTINUAÇÃO — o nome do pacote mora numa linha que começa com espaço, e um
-    # `^Depends:.*librsvg2-common` nunca casaria. Pior: a palavra também vive na
-    # `Description`, cujas linhas TAMBÉM começam com espaço. Então o campo é
-    # recortado de verdade (cabeçalho + continuações, até a próxima linha que
-    # começa em coluna 0), e é dentro DELE que se procura.
     if [[ -f packaging/debian/control ]]; then
         _svg_campo_deb="$(awk '
             /^(Depends|Recommends|Pre-Depends):/ { dentro = 1; print; next }
@@ -2066,10 +1188,6 @@ else
             || missing+=("packaging/debian/control: librsvg2-common não está em Depends/Recommends (a menção na Description NÃO instala nada)")
     fi
 
-    # O install.sh nativo: o loader tem de estar no CENSO com criticidade
-    # `obrigatoria` — e a checagem tem de ser a do EFEITO (`svg`: o gdk-pixbuf lê
-    # SVG?), nunca o nome de um pacote. É o que faz a mesma régua valer nas três
-    # famílias, e é o que impede a volta do `librsvg2-bin` pelo nome.
     if [[ -f install.sh ]]; then
         _svg_censo="$(grep -v '^[[:space:]]*#' install.sh 2>/dev/null || true)"
         grep -qE '"svg-loader\|obrigatoria\|svg\|' <<< "${_svg_censo}" \
@@ -2080,13 +1198,6 @@ else
         done
     fi
 
-    # O FLATPAK NÃO DECLARA, e está certo: ele roda sobre `org.gnome.Platform`,
-    # que já traz o loader SVG dentro do runtime — é assim que qualquer app GTK
-    # desenha ícone simbólico ali, e o próprio manifesto registra que as deps
-    # deste tipo "já estão dentro do runtime". O que o portão cobra, então, é a
-    # PREMISSA: se um dia o manifesto trocar para um runtime que não a garante
-    # (`org.freedesktop.Platform`, por exemplo), a isenção morre junto e alguém
-    # tem de declarar o módulo à mão.
     if [[ -f flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml ]]; then
         _svg_runtime="$(sed -n 's/^runtime:[[:space:]]*//p' flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml | head -1)"
         if [[ "${_svg_runtime}" != "org.gnome.Platform" ]]; then
@@ -2095,9 +1206,6 @@ else
         fi
     fi
 
-    #: A DÍVIDA DECLARADA — `arquivo:razão com data`. Mesmo molde de
-    #: `_ARTEFATO_SEM_DONO_HOJE` acima: declarar é honesto, e o portão não
-    #: castiga honestidade — só não deixa a lápide envelhecer calada.
     _SVG_LACUNAS_HOJE=(
         "scripts/build_appimage_gui.sh:19/08/2026 — o AppImage GUI BUNDLA os loaders do gdk-pixbuf (ele mesmo aponta GDK_PIXBUF_MODULE_FILE para o loaders.cache de dentro do pacote, :134), então quem decide se o SVG desenha é o que estava na MÁQUINA DE BUILD. E a lista de pré-requisitos do cabeçalho (:14-15) pede python3-gi, gir1.2-gtk-3.0 e o appindicator, e NÃO pede o librsvg2-common: buildar num host sem ele produz um AppImage com a bandeja vazia e nenhum erro no log. A cura é do dono do build (pedir o pacote no cabeçalho e ABORTAR quando o loader não estiver no host antes de bundlar), não deste portão."
     )
@@ -2124,22 +1232,10 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 6) AS UNITS DE USUÁRIO CHEGAM VESTIDAS EM TODO FORMATO.
-#
-# O `ExecStart` do modelo aponta para `%h/.local/bin/` (o que o install.sh nativo
-# cria) e a presença pede `__PYTHON__`. O Fedora e o Nix copiavam `assets/*.service`
-# às cegas, e o Arch deixava a presença de fora (a unit do daemon a chama no
-# `OnFailure`): a unit chegava apontando para um caminho que não existe. Hoje os
-# quatro formatos chamam o renderizador único (`utils/units_de_usuario.py`), e este
-# bloco o RODA para cada forma e reprova unit com marcador ou caminho do nativo
-# sobrando, ou com `OnFailure=`/`Requires=` para unit que o pacote não leva.
-# ---------------------------------------------------------------------------
 _RENDERIZADOR="src/hefesto_dualsense4unix/utils/units_de_usuario.py"
 if [[ -f "${_RENDERIZADOR}" ]] && command -v python3 >/dev/null 2>&1; then
     missing=()
     _un_tmp="$(mktemp -d)"
-    # `forma|binários|python` — o que cada empacotador passa ao renderizador.
     for _un_forma in "deb|/usr/bin|/opt/hefesto-dualsense4unix/venv/bin/python" \
                      "arch|/usr/bin|/usr/bin/python3" \
                      "fedora|/usr/bin|/usr/bin/python3" \
@@ -2152,12 +1248,10 @@ if [[ -f "${_RENDERIZADOR}" ]] && command -v python3 >/dev/null 2>&1; then
         fi
         for _un_arq in "${_un_tmp}/${_un_nome}"/*.service; do
             [[ -f "${_un_arq}" ]] || continue
-            # Sem comentário: os comentários da unit CITAM o marcador.
             _un_corpo="$(grep -v '^[[:space:]]*#' "${_un_arq}")"
             if [[ "${_un_corpo}" =~ __[A-Z][A-Z_]*__ ]] || [[ "${_un_corpo}" == *"%h/.local/"* ]]; then
                 missing+=("${_un_nome}: $(basename "${_un_arq}") sai com marcador ou caminho do install nativo")
             fi
-            # O que a unit chama (OnFailure/Requires/Wants) tem de estar no pacote.
             while IFS= read -r _un_alvo; do
                 [[ -n "${_un_alvo}" ]] || continue
                 [[ -f "${_un_tmp}/${_un_nome}/${_un_alvo}" ]] \
@@ -2167,7 +1261,6 @@ if [[ -f "${_RENDERIZADOR}" ]] && command -v python3 >/dev/null 2>&1; then
     done
     rm -rf "${_un_tmp}"
 
-    # Os quatro empacotadores têm de PASSAR pelo renderizador, e nenhum copia às cegas.
     for _un_pac in scripts/build_deb.sh packaging/arch/PKGBUILD \
                    packaging/fedora/hefesto-dualsense4unix.spec packaging/nix/package.nix; do
         [[ -f "${_un_pac}" ]] || continue

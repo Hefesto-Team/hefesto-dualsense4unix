@@ -1,23 +1,4 @@
 #!/usr/bin/env bash
-# build_appimage_gui.sh — Gera AppImage com GUI GTK3 bundlada via appimagetool +
-# linuxdeploy-plugin-gtk. Alternativa ao build_appimage.sh (CLI-only).
-#
-# FEAT-APPIMAGE-GUI-WITH-GTK-01 (#33) — v3.1.0+. A versão CLI-only do
-# build_appimage.sh continua valida e mais leve (~30 MB). Esta versão GUI
-# bundlada gera AppImage de ~150-200 MB que roda em qualquer distro sem
-# precisar instalar GTK3/PyGObject via apt.
-#
-# Pré-requisitos:
-#   - tools baixadas em build/appimage-gui-tools/ (appimagetool, linuxdeploy,
-#     linuxdeploy-plugin-gtk.sh)
-#   - python3.12 disponível
-#   - python3-gi + gir1.2-gtk-3.0 + gir1.2-ayatanaappindicator3-0.1 instalados
-#     no host (necessários para bundlar as libs e typelibs corretamente)
-#
-# Uso:
-#   bash scripts/build_appimage_gui.sh
-#
-# Saída: dist/appimage/Hefesto-Dualsense4Unix-<version>-gui-x86_64.AppImage
 
 set -euo pipefail
 
@@ -34,7 +15,6 @@ print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])
 EOF
 )
 
-# Valida ferramentas
 for tool in appimagetool linuxdeploy linuxdeploy-plugin-gtk.sh; do
     if [[ ! -x "$TOOLS_DIR/$tool" ]]; then
         echo "erro: $tool ausente em $TOOLS_DIR"
@@ -47,8 +27,6 @@ for tool in appimagetool linuxdeploy linuxdeploy-plugin-gtk.sh; do
     fi
 done
 
-# FEAT-I18N-CATALOGS-01 (v3.4.0): compila .mo antes do pip install -e .
-# para que o package locale/ seja embarcado via candidate path #5.
 if [[ ! -d "$HERE/src/hefesto_dualsense4unix/locale" ]] \
         || [[ -z "$(ls "$HERE/src/hefesto_dualsense4unix/locale" 2>/dev/null)" ]]; then
     echo "[i18n] catalogos .mo ausentes — compilando do po/..."
@@ -87,62 +65,29 @@ cp "$APPDIR/usr/share/applications/hefesto-dualsense4unix.desktop" "$APPDIR/hefe
 echo "[3/6] Criando venv embarcada no AppDir (com system-site-packages para gi)..."
 python3.12 -m venv --system-site-packages "$APPDIR/usr"
 "$APPDIR/usr/bin/python3" -m pip install --quiet --upgrade pip
-# As chaves em "${HERE}" não são estilo: sem elas o shell lê "$HERE[...]" como
-# indice de array (shellcheck SC1087) e o portao de shellcheck reprova. O texto
-# produzido e identico -- o colchete continua sendo literal para o pip.
 "$APPDIR/usr/bin/pip" install --quiet "${HERE}[emulation,cosmic,tray]"
 
-# Copia catalogos .mo para AppDir/usr/share/locale/ — gettext acha via
-# XDG_DATA_DIRS exportado no AppRun (candidate path #3 do utils/i18n.py).
-# Redundante com candidate #5 (package locale) mas barato e explicito.
 if [[ -d "$HERE/locale" ]]; then
     cp -r "$HERE/locale"/. "$APPDIR/usr/share/locale/"
 fi
 
-# Glyphs SVG dos botões: sem leitor em execução desde que o widget GTK saiu
-# (as páginas trazem o desenho inline); espelha o manifest Flatpak até o
-# passo sair dos formatos juntos.
 if [[ -d "$HERE/assets/glyphs" ]]; then
     install -Dm644 -t "$APPDIR/usr/share/hefesto-dualsense4unix/glyphs/" \
         "$HERE/assets/glyphs/"*.svg
 fi
 
-# FIX-APPIMAGE-PRESET-SEED-01: presets default para a semeadura runtime
-# (profiles/loader.py procura em sys.prefix/share/.../assets/profiles_default;
-# sem esta cópia o AppImage nunca semeia coop_local/sackboy_nativo/etc.).
 if [[ -d "$HERE/assets/profiles_default" ]]; then
     install -Dm644 -t \
         "$APPDIR/usr/share/hefesto-dualsense4unix/assets/profiles_default/" \
         "$HERE/assets/profiles_default/"*.json
 fi
 
-# PERFIS-SAO-PERFIS-01 (06/09): os oito gêneros saíram de profiles_default para
-# assets/estilos_de_jogo/ — não são perfil, são Estilo de Jogo (decisão de produto).
-# Eles NÃO são semeados; o loader lê esta pasta só para comparar antes de tirar
-# da lista um gênero já semeado. Sem a cópia, a migração recua por não ter com
-# o que comparar e as oito linhas ficam na aba Perfis.
 if [[ -d "$HERE/assets/estilos_de_jogo" ]]; then
     install -Dm644 -t \
         "$APPDIR/usr/share/hefesto-dualsense4unix/assets/estilos_de_jogo/" \
         "$HERE/assets/estilos_de_jogo/"*.json
 fi
 
-# OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Até aqui só o
-# .deb os levava (build_deb.sh:234): quem instalava por AppImage apertava
-# "Deixar tudo pronto" ou o botão do microfone e recebia "Script do WirePlumber
-# não encontrado", com um único conselho — rodar um ./install.sh que não existe
-# na máquina de quem não clonou o repositório. Quem consome cada um está
-# escrito no manifesto do Flatpak, dono único dessa lista.
-#
-# A METADE QUE ESTÁ AQUI E A METADE QUE FALTA, dito de frente: dentro do bundle
-# este diretório é $APPDIR/usr/share/hefesto-dualsense4unix/scripts, e
-# BASES_DE_INSTALACAO (app/actions/daemon_actions.py) NÃO o conhece — ela
-# conhece a raiz do checkout, /app/share (Flatpak), /usr/share e
-# /usr/local/share, e nenhuma delas é o AppDir. Levar os arquivos é condição
-# NECESSÁRIA e não suficiente: enquanto o consumidor não olhar para
-# `sys.prefix/share/hefesto-dualsense4unix`, o botão continua sem achar. A
-# lacuna está DECLARADA em _PRODSCRIPT_LACUNAS_HOJE, em
-# scripts/check_packaging_parity.sh, e o portão reprova quando ela caducar.
 install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/doctor.sh" \
     "$HERE/scripts/bluez_config.sh" \
@@ -150,11 +95,6 @@ install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/fix_wireplumber_default_source.sh" \
     "$HERE/scripts/install_snd_quirk.sh"
 
-# O PROTOCOLO DO BÁSICO (O-BASICO-MEDIDO-01, 28/09/2026): o comando do básico
-# acha o `scripts/o_basico.py` pelas mesmas bases do doctor, e ele roda os
-# ensaios de `scripts/ensaios/` (e o que eles importam) e as sondas de
-# `scripts/sondas/`. Vale para ele a mesma metade que falta aos cinco acima:
-# levar é condição necessária, e o AppDir ainda não é uma das bases.
 install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/o_basico.py" \
     "$HERE/scripts/identidade_do_vpad.py"

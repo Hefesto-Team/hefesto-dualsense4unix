@@ -1,59 +1,25 @@
 #!/usr/bin/env bash
-# install_snd_quirk.sh — cura de RAIZ do storm -71 do DualSense na camada de ÁUDIO.
-#
-# CONTEXTO: o storm -71 (EPROTO) é disparado pela enumeração das interfaces de
-# ÁUDIO USB do DualSense — o snd-usb-audio sonda o mixer UAC e MARTELA o EP0
-# ("cannot get min/max values for control"), colidindo com o `usbhid` que anexa a
-# interface HID → "can't add hid device: -71" → USB disconnect em loop.
-#
-# ESTE script instala um drop-in de modprobe.d que aplica o parâmetro por-device
-# `quirk_flags` do snd_usb_audio para 054c:0ce6/0df2:
-#   ignore_ctl_error  — tolera o erro do mixer (card sobe com defaults).
-#   ctl_msg_delay_1m  — espaça os control-transfers no EP0 (~1-2 ms).
-# PRESERVA mic + fone do DualSense (NÃO desliga áudio). É a ALTERNATIVA que mantém
-# os dois áudios — oposto da regra 75 (áudio-off total, opt-in agressivo).
-#
-# Diferente do install_usb_quirk.sh (que mexe em CMDLINE do kernel, sensível ao
-# bootloader), aqui é só um arquivo em /etc/modprobe.d — por isso é DEFAULT no
-# install (preserva mic+fone, não é boot-crítico). Ortogonal ao usbcore.quirks=gn.
-#
-# Idempotente (rodar 2x = no-op). Reversível (--remove). O módulo snd_usb_audio
-# carrega tarde (do root real, quando o áudio do controle é detectado) — NÃO está
-# no initramfs, então update-initramfs é desnecessário AQUI.
-#
-# ATENÇÃO — esta dispensa vale SÓ para este arquivo, e a generalização dela
-# custou caro (INITRAMFS-01, 25/07). Para MÓDULO no initramfs a regra é a
-# oposta: o hid-nintendo entra na geração do initramfs (é driver de gamepad/
-# teclado USB) e o `dkms install` NÃO o regenera, então o boot continuava
-# carregando o .ko da geração anterior. Pior: como o módulo velho não tinha os
-# parâmetros do patch novo, o kernel descartava o /etc/modprobe.d/
-# hefesto-hid-nintendo.conf INTEIRO ("unknown parameter"), derrubando junto as
-# curas que já funcionavam. Quem mexe em módulo DKMS deve usar o
-# dkms_mark_initramfs_stale/dkms_flush_initramfs do scripts/dkms_lib.sh.
-# Confira se um módulo está no initramfs com:
-#   lsinitramfs /boot/initrd.img-$(uname -r) | grep NOME-DO-MODULO
-#
-# Uso:
-#   scripts/install_snd_quirk.sh            instala o drop-in (default; requer root)
-#   scripts/install_snd_quirk.sh --remove   remove o drop-in (requer root)
-#   scripts/install_snd_quirk.sh --status   read-only: ativo/agendado (sem sudo)
-#   scripts/install_snd_quirk.sh --check     alias de --status
-#   scripts/install_snd_quirk.sh --runtime  escreve no sysfs (best-effort; vale só
-#                                            na próxima reenumeração/replug). Requer root.
-#
-# SPRINT-GAME-RUMBLE-01 / incidente Sackboy 2026-07-14. Pesquisa e descritores em
-# o registro «plano-raiz-anti-storm» de 14/07/2026.
 
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+install_snd_quirk.sh — cura de RAIZ do storm -71 do DualSense na camada de ÁUDIO.
 
-# Valor do parâmetro (nomes das flags; o kernel resolve o bit em qualquer versão).
+Uso:
+  scripts/install_snd_quirk.sh            instala o drop-in (default; requer root)
+  scripts/install_snd_quirk.sh --remove   remove o drop-in (requer root)
+  scripts/install_snd_quirk.sh --status   read-only: ativo/agendado (sem sudo)
+  scripts/install_snd_quirk.sh --check     alias de --status
+  scripts/install_snd_quirk.sh --runtime  escreve no sysfs (best-effort; vale só
+                                           na próxima reenumeração/replug). Requer root.
+AJUDA
+}
+
 readonly QUIRK_VALUE="054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m,054c:0df2:ignore_ctl_error|ctl_msg_delay_1m"
-# Marcador estável para idempotência.
 readonly MARKER="054c:0ce6:ignore_ctl_error"
 readonly CONF="/etc/modprobe.d/hefesto-dualsense-storm.conf"
 readonly SYSFS="/sys/module/snd_usb_audio/parameters/quirk_flags"
 
-# Fonte do .conf: ao lado deste script (repo) ou no share do pacote instalado.
 _here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ASSET_CONF=""
 for cand in \
@@ -77,9 +43,6 @@ as_root() {
     fi
 }
 
-# ---------------------------------------------------------------------------
-# APLICAR
-# ---------------------------------------------------------------------------
 do_apply() {
     if [[ -f "$CONF" ]] && grep -q "$MARKER" "$CONF" 2>/dev/null; then
         info "no-op: cura já presente em ${CONF}"
@@ -92,9 +55,6 @@ do_apply() {
     info "para valer AGORA sem reboot: ${BASH_SOURCE[0]} --runtime  e replugue o controle."
 }
 
-# ---------------------------------------------------------------------------
-# REMOVER
-# ---------------------------------------------------------------------------
 do_remove() {
     if [[ ! -f "$CONF" ]]; then
         info "no-op: ${CONF} ausente"
@@ -102,24 +62,18 @@ do_remove() {
         info "removendo ${CONF}"
         as_root rm -f "$CONF"
     fi
-    # Best-effort: limpa o sysfs runtime também (vale no próximo replug).
     if [[ -w "$SYSFS" ]] || [[ "${EUID:-$(id -u)}" -eq 0 ]] || command -v sudo >/dev/null 2>&1; then
         printf '' | as_root tee "$SYSFS" >/dev/null 2>&1 || true
     fi
 }
 
-# ---------------------------------------------------------------------------
-# STATUS (read-only, sem sudo)
-# ---------------------------------------------------------------------------
 do_status() {
     info "cura alvo: quirk_flags=${QUIRK_VALUE}"
-    # Ativo na sessão atual (sysfs).
     if [[ -r "$SYSFS" ]] && grep -q "$MARKER" "$SYSFS" 2>/dev/null; then
         info "[ativo nesta sessão]        sim — presente em ${SYSFS} (pega no próximo replug)"
     else
         info "[ativo nesta sessão]        não — ${SYSFS} sem a cura"
     fi
-    # Agendado (drop-in persistente).
     if [[ -r "$CONF" ]] && grep -q "$MARKER" "$CONF" 2>/dev/null; then
         info "[persistente / próximo boot] sim — em ${CONF}"
     else
@@ -128,9 +82,6 @@ do_status() {
     info "lembrete: PRESERVA mic+fone. É ALTERNATIVA à regra 75 (áudio-off) — use uma OU outra."
 }
 
-# ---------------------------------------------------------------------------
-# RUNTIME (best-effort; vale na próxima reenumeração/replug)
-# ---------------------------------------------------------------------------
 do_runtime() {
     [[ -e "$SYSFS" ]] || die "sysfs ausente: ${SYSFS} (snd_usb_audio não carregado?)"
     if [[ -r "$SYSFS" ]] && grep -q "$MARKER" "$SYSFS" 2>/dev/null; then
@@ -146,9 +97,6 @@ do_runtime() {
     fi
 }
 
-# ---------------------------------------------------------------------------
-# Dispatch (mesma guarda de segurança do install_usb_quirk.sh)
-# ---------------------------------------------------------------------------
 main() {
     local mode="" arg want
     for arg in "$@"; do
@@ -171,7 +119,7 @@ main() {
         remove)  do_remove ;;
         status)  do_status ;;
         runtime) do_runtime ;;
-        help)    sed -n '2,40p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
+        help)    _ajuda ;;
     esac
 }
 

@@ -1,42 +1,9 @@
 #!/usr/bin/env bash
-# som_da_sessao.sh — o reinício do som da sessão, num ponto só.
-#
-# O-SOM-REINICIADO-NAO-CEGA-O-PAINEL-DO-COSMIC-01 (15/10/2026). Sourceado pelo
-# `install.sh` (passo 3f-bis, ao instalar o PipeWire da casa) e pelo
-# `uninstall.sh` (ao devolver o PipeWire de antes): os dois reiniciam o som por
-# `reiniciar_o_som_da_sessao`, e só por ela.
-#
-# O QUE SE MEDIU: no COSMIC 1.10, quem lê o PipeWire é o `cosmic-settings-daemon`;
-# o applet de som do painel e o OSD do volume falam com ele, nunca com o
-# PipeWire. Depois do `systemctl --user restart pipewire pipewire-pulse
-# wireplumber` das 04h20, ele seguiu vivo e FORA do `pw-cli ls Client` por dez
-# horas, e o applet dizia «Nenhum dispositivo selecionado» com o som tocando.
-# O `cosmic-session` não o ressuscita. Subi-lo de novo pelo `systemd-run --user`,
-# com o ambiente da sessão, o devolveu ao PipeWire em 4 s.
-#
-# O reinício só do `wireplumber` (os do `uninstall.sh` que tiram um drop-in) não
-# passa por aqui: o `wireplumber.service` tem `BindsTo=pipewire.service`, que
-# propaga a parada do PipeWire para o WirePlumber e nunca o contrário. Medido no
-# diário: nove reinícios só do WirePlumber entre 12 e 14/10, e o servidor do
-# PipeWire com o mesmo processo de 12/10 10h31 até as 04h20 de 15/10.
-#
-# Fora do COSMIC nada muda: sem `cosmic-session` da pessoa, sem um
-# `cosmic-settings-daemon` dela no ar, ou com um daemon que não leva a
-# `libpipewire`, o reinício é só o `systemctl`.
-#
-# O QUE SAI DAQUI, para quem chama dizer na língua dele:
-#   rc 1                     — o `systemctl` não reiniciou o som;
-#   SOM_PAINEL_DO_COSMIC     — "" (fora do COSMIC), "voltou" ou "nao-voltou";
-#   SOM_CURA_DO_PAINEL       — o comando que a pessoa roda quando não voltou.
 
-# shellcheck disable=SC2034  # as duas saídas são lidas por quem sourceia
+# shellcheck disable=SC2034
 SOM_PAINEL_DO_COSMIC=""
 SOM_CURA_DO_PAINEL=""
 
-#: Os PIDs dos `cosmic-settings-daemon` de quem roda. O `pgrep -x` compara com o
-#: `comm`, que o kernel corta em 15 caracteres: `cosmic-settings` casa o daemon
-#: E a janela das Configurações. Quem separa é o argv0 da cmdline. O `pgrep -f`
-#: casaria o próprio shell que tem o nome na linha de comando.
 _som_pids_do_cosmic_settings_daemon() {
     local p argv0
     for p in $(pgrep -u "$(id -u)" -x cosmic-settings 2>/dev/null || true); do
@@ -48,23 +15,16 @@ _som_pids_do_cosmic_settings_daemon() {
     done
 }
 
-#: O `cosmic-settings-daemon` está entre os clientes do PipeWire? Só lê.
-#: Para uma variável, e não `| grep -q`: sob `pipefail` o cano devolve 141 quando ACHA.
 _som_cosmic_settings_daemon_e_cliente() {
     local clientes
     clientes="$(timeout 5 pw-cli ls Client 2>/dev/null)" || return 1
     [[ "${clientes}" == *'application.name = "cosmic-settings-daemon"'* ]]
 }
 
-#: O programa do daemon leva a `libpipewire`? O COSMIC 1.10 a leva (é o que o
-#: torna cliente do PipeWire); um daemon sem ela não fica cego no reinício.
 _som_programa_le_o_pipewire() {
     LC_ALL=C grep -qa 'libpipewire-0\.3\.so' "$1" 2>/dev/null
 }
 
-#: O ambiente da sessão gráfica, lido do `cosmic-panel` vivo (o mesmo que o
-#: `cosmic-session` deu ao daemon), em `-E NOME=valor` para o `systemd-run`.
-#: Sem painel, vale o do próprio daemon que vai sair (`$1`).
 _SOM_AMBIENTE=()
 _som_ambiente_da_sessao() {
     local p var
@@ -87,7 +47,6 @@ _som_ambiente_da_sessao() {
     return 1
 }
 
-#: Religa o `cosmic-settings-daemon` ao PipeWire recém-reiniciado.
 _som_devolve_o_painel_do_cosmic() {
     local pids p argv0 programa i vivos
     SOM_PAINEL_DO_COSMIC=""
@@ -102,9 +61,6 @@ _som_devolve_o_painel_do_cosmic() {
     else
         programa="$(command -v cosmic-settings-daemon 2>/dev/null || printf '/usr/bin/cosmic-settings-daemon')"
     fi
-    # Só fica cego o daemon que fala com o PipeWire: o que não leva a
-    # `libpipewire` (outra versão do COSMIC) não tem o que religar, e matá-lo
-    # seria tirar da pessoa um processo que o reinício nem tocou.
     _som_programa_le_o_pipewire "${programa}" || return 0
     SOM_CURA_DO_PAINEL="systemd-run --user --collect ${programa}"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -114,8 +70,6 @@ _som_devolve_o_painel_do_cosmic() {
         return 0
     fi
     _som_ambiente_da_sessao "${pids%%$'\n'*}" || true
-    # Morto pelo PID, e o PID conferido de novo na hora: se ele saiu e o número
-    # voltou para outro processo, ninguém morre por engano.
     for p in ${pids}; do
         argv0=""
         IFS= read -r -d '' argv0 2>/dev/null < "/proc/${p}/cmdline" || true
@@ -136,7 +90,6 @@ _som_devolve_o_painel_do_cosmic() {
         SOM_CURA_DO_PAINEL="kill $(tr '\n' ' ' <<<"${pids}")&& ${SOM_CURA_DO_PAINEL}"
         return 0
     fi
-    # Se a sessão o ressuscitar sozinha (outra versão do COSMIC), não sobe um segundo.
     sleep 1
     if [[ -z "$(_som_pids_do_cosmic_settings_daemon)" ]]; then
         systemd-run --user --collect --quiet \
@@ -159,8 +112,6 @@ _som_devolve_o_painel_do_cosmic() {
     return 0
 }
 
-#: O reinício do som da sessão (pipewire, pipewire-pulse e wireplumber) e, no
-#: COSMIC, a volta do painel ao som. rc 1 só quando o `systemctl` falha.
 reiniciar_o_som_da_sessao() {
     SOM_PAINEL_DO_COSMIC=""
     SOM_CURA_DO_PAINEL=""

@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# Gera AppImage do Hefesto - DualSense4Unix via python-appimage (opcional).
-#
-# Pré-requisitos:
-#   sudo apt install libfuse2 librsvg2-bin
-#   pip install python-appimage build
-#
-# Uso:
-#   ./scripts/build_appimage.sh              # Python 3.12 por padrão
-#   PYTHON_VERSION=3.11 ./scripts/build_appimage.sh
-#
-# Saída: dist/appimage/Hefesto-Dualsense4Unix-<version>-x86_64.AppImage
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -26,55 +15,28 @@ if ! command -v python-appimage >/dev/null 2>&1; then
     exit 2
 fi
 
-# Verifica que o PNG canonico do icone existe. v3.4.3+ removeu o SVG
-# placeholder (chama laranja); o PNG real 256x256 (martelo + gradiente)
-# em assets/appimage/Hefesto-Dualsense4Unix.png e a única source canonica.
 if [[ ! -f "$APPDIR_SRC/Hefesto-Dualsense4Unix.png" ]]; then
     echo "erro: PNG do icone ausente em $APPDIR_SRC/Hefesto-Dualsense4Unix.png"
     echo "       (o repo distribui o PNG real; verifique o checkout)"
     exit 3
 fi
 
-# Garante que catalogos i18n estao compilados (necessário para o wheel
-# embarcar os .mo via pyproject `[tool.hatch.build.targets.wheel] include`).
-# FEAT-I18N-CATALOGS-01 (v3.4.0). Idempotente — re-compila do .po.
 if [[ ! -d "$HERE/src/hefesto_dualsense4unix/locale" ]] \
         || [[ -z "$(ls "$HERE/src/hefesto_dualsense4unix/locale" 2>/dev/null)" ]]; then
     echo "[i18n] catalogos .mo ausentes — compilando do po/..."
     bash "$HERE/scripts/i18n_compile.sh"
 fi
 
-# Garante que há um wheel atualizado.
 if ! ls "$HERE/dist"/hefesto_dualsense4unix-*.whl >/dev/null 2>&1; then
     echo "[2/4] Nenhum wheel em dist/. Buildando..."
     python -m build --wheel
 fi
 
-# Copia appdir e aponta requirements pro wheel local (offline).
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 cp -r "$APPDIR_SRC/." "$WORK_DIR/"
 chmod +x "$WORK_DIR/entrypoint.sh"
 
-# OS CINCO SCRIPTS QUE O PRODUTO EXECUTA (25/08/2026, BG-04). Até aqui só o
-# .deb os levava (build_deb.sh:234): quem instalava por AppImage rodava
-# `doctor --fix` e recebia "não encontrado — pulado" nas três curas que ele
-# delega a script (cli/cmd_doctor.py:141-145), com um único conselho de tela —
-# rodar um ./install.sh que não existe na máquina de quem não clonou o
-# repositório. Quem consome cada um está escrito no manifesto do Flatpak, dono
-# único dessa lista.
-#
-# ESTE BUNDLE É CLI-ONLY (o cabeçalho do assets/appimage/entrypoint.sh diz por
-# quê), então o consumidor aqui é o `hefesto-dualsense4unix doctor`, não os
-# botões da janela.
-#
-# NÃO VERIFICADO, e é por isso que existe a conferência lá embaixo: o
-# `python-appimage` monta o AppDir a partir desta pasta-receita, e eu NÃO
-# consegui medir se ele copia arquivo que não seja um dos nomes especiais dele
-# (entrypoint.sh, requirements.txt, .desktop, ícone) — a ferramenta não está
-# nesta bancada. Em vez de escrever uma promessa que ninguém conferiu, o build
-# ABRE o AppImage pronto e confere; se os cinco não estiverem lá dentro, ele
-# falha nomeando o arquivo, e quem vier resolve com o meio que funcionar.
 install -Dm755 -t "$WORK_DIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/doctor.sh" \
     "$HERE/scripts/bluez_config.sh" \
@@ -82,11 +44,6 @@ install -Dm755 -t "$WORK_DIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/fix_wireplumber_default_source.sh" \
     "$HERE/scripts/install_snd_quirk.sh"
 
-# O PROTOCOLO DO BÁSICO (O-BASICO-MEDIDO-01, 28/09/2026): o comando do básico
-# acha o `scripts/o_basico.py` pelas mesmas bases do doctor, e ele roda os
-# ensaios de `scripts/ensaios/` (e o que eles importam) e as sondas de
-# `scripts/sondas/`. Vale para ele a mesma metade que falta aos cinco acima:
-# levar é condição necessária, e o AppDir ainda não é uma das bases.
 install -Dm755 -t "$WORK_DIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/o_basico.py" \
     "$HERE/scripts/identidade_do_vpad.py"
@@ -116,8 +73,6 @@ $WHEEL
 EOF
 
 mkdir -p "$OUT_DIR"
-# Le versão do pyproject.toml (Python 3.11+ tem tomllib nativo; fallback tomli)
-# Mesmo padrão de build_deb.sh — zero dependência de `import hefesto_dualsense4unix` funcionar.
 VERSION=$(python3 - <<'EOF'
 import sys
 try:
@@ -133,16 +88,12 @@ OUT_FILE="$OUT_DIR/Hefesto-Dualsense4Unix-${VERSION}-x86_64.AppImage"
 echo "Versão detectada: ${VERSION}"
 
 echo "[3/4] Gerando AppImage com Python ${PYTHON_VERSION}..."
-# --name não pode ter espaços (vira posicionais separados sem aspas).
-# Forma ident sem espaços; display brand "Hefesto - DualSense4Unix" fica
-# no .desktop e na janela GTK.
 python-appimage build app \
     --python-version "$PYTHON_VERSION" \
     --linux-tag "manylinux2014_x86_64" \
     --name "Hefesto-Dualsense4Unix" \
     "$WORK_DIR"
 
-# python-appimage cria no cwd com nome Hefesto-Dualsense4Unix-x86_64.AppImage
 if [[ -f "$HERE/Hefesto-Dualsense4Unix-x86_64.AppImage" ]]; then
     mv "$HERE/Hefesto-Dualsense4Unix-x86_64.AppImage" "$OUT_FILE"
 fi
@@ -150,18 +101,6 @@ fi
 if [[ -f "$OUT_FILE" ]]; then
     chmod +x "$OUT_FILE"
 
-    # A CONFERÊNCIA DOS CINCO SCRIPTS, feita no bundle PRONTO e não na receita.
-    # Ver o bloco "NÃO VERIFICADO" lá em cima: a pergunta é se o
-    # python-appimage carregou o que pusemos em $WORK_DIR/usr/share, e a única
-    # resposta honesta vem de abrir o arquivo que saiu.
-    #
-    # Três desfechos, e os três dizem o que são:
-    #   extraiu e achou os cinco  -> segue
-    #   extraiu e faltou algum    -> ERRO, nomeando o arquivo (a promessa
-    #                                estaria escrita e não cumprida)
-    #   não conseguiu extrair     -> AVISO, sem reprovar: aqui quem falhou foi
-    #                                o instrumento, e instrumento mudo não é
-    #                                prova de defeito.
     _prod_dir="usr/share/hefesto-dualsense4unix/scripts"
     _prod_tmp="$(mktemp -d)"
     if ( cd "$_prod_tmp" && "$OUT_FILE" --appimage-extract "$_prod_dir/*" ) \
@@ -198,5 +137,3 @@ else
     echo "aviso: arquivo final não encontrado; veja logs do python-appimage."
     exit 4
 fi
-
-# "A obra prova o mestre." — Sabedoria popular

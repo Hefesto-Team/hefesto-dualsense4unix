@@ -76,7 +76,7 @@ class TestACura:
 
 def test_a_trava_vem_antes_da_resiliencia_nos_dois_lados_da_cerca() -> None:
     cerca = INSTALL.index('if [[ "${FORMAT}" != "native" ]]; then')
-    fim_da_cerca = INSTALL.index("# 1. Verificar Python", cerca)
+    fim_da_cerca = INSTALL.index('step "1/11" "verificando dependências do sistema"', cerca)
     formatos = INSTALL[cerca:fim_da_cerca]
     nativo = INSTALL[fim_da_cerca:]
     for lado, texto in (("formatos", formatos), ("nativo", nativo)):

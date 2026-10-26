@@ -319,12 +319,6 @@ def test_install_aplica_o_wrapper_sem_flag_e_depois_da_migracao():
     assert "warn " in corpo
 
 
-def test_install_liga_o_broker_antes_mas_o_hide_e_em_tempo_de_jogo():
-    """Armadilha 1 da sprint ("não ligar o broker antes do wrapper"): o passo"""
-    texto = (_raiz() / "install.sh").read_text(encoding="utf-8")
-    corpo = texto[texto.index("# 11b-bis."): texto.index('step "11b-bis"')]
-    assert "3h" in corpo
-    assert "vpad" in corpo
 
 
 def test_uninstall_tira_exatamente_o_que_o_apply_pos(tmp_path: Path, steam_fechada):

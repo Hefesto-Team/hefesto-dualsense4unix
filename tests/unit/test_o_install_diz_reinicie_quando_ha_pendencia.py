@@ -85,7 +85,7 @@ def test_o_install_e_o_doctor_respondem_a_mesma_pergunta(
 
 def _fecho_do_install() -> str:
     """O fim do `install.sh`, do quirk do microfone até a última linha."""
-    return INSTALL[INSTALL.index("# BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01"):]
+    return INSTALL[INSTALL.index('QUIRK_MARKER="054c:0ce6:gn"'):]
 
 
 def _rodar_o_passo_e_o_fecho(tmp_path: Path, carregado: str | None) -> str:

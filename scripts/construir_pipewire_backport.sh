@@ -1,52 +1,25 @@
 #!/usr/bin/env bash
-# construir_pipewire_backport.sh — o PipeWire e o WirePlumber da casa,
-# construídos do zero e conferidos a cada passo
-# (O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01, 15/10/2026).
-#
-# POR QUE EXISTE: até a 1.6.8 (a do Pop!_OS 24.04), o cliente que faz bind num
-# metadata enquanto o WirePlumber sai fica preso para sempre, e a Steam, que
-# roda `wpctl settings`, não fecha (docs/protocol/o-wpctl-pendurado-pelo-metadata.md).
-# O upstream curou na 1.6.9. A casa leva a estável mais nova dos dois, sem
-# esperar a distro: cada entrada está fixada por SHA-256 em
-# assets/pipewire-backport/BASELINE.
-#
-# O QUE FAZ, na ordem:
-#   1. baixa os tarballs das tags do upstream e os do Pop (o debian/ vem dentro
-#      deles) e confere os quatro hashes — nada é usado sem conferir;
-#   2. monta as duas árvores: o fonte do upstream, o debian/ do Pop, os ajustes
-#      de empacotamento, os patches (cada um conferido pelo hash) e a entrada
-#      do changelog;
-#   3. confere que o metadata.c da árvore é o do BASELINE e que o global_unbind
-#      dele chama o remove_pending (a cura);
-#   4. confere as dependências de build — se faltar, LISTA e sai (código 3),
-#      sem sudo nenhum;
-#   5. dpkg-buildpackage -b -us -uc das duas;
-#   6. entrega os .deb + SHA256SUMS + ORIGEM.txt em
-#      ~/.cache/hefesto-dualsense4unix/pipewire-backport/.
-#
-# NÃO INSTALA NADA. Trocar o PipeWire reinicia o som da sessão; a instalação é
-# à mão, com a Steam fechada, pela receita
-# (docs/usage/receita-backport-pipewire.md).
-#
-# Uso:
-#   scripts/construir_pipewire_backport.sh               # constrói os dois
-#   scripts/construir_pipewire_backport.sh --forcar      # reconstrói mesmo já pronto
-#   scripts/construir_pipewire_backport.sh --preparar    # só os passos 1 a 3
-#   scripts/construir_pipewire_backport.sh --prova       # passos 1 a 3, e a prova sem dependência de build:
-#       compila só o servidor da árvore (meson mínimo, sem ALSA nem Bluetooth) com e sem a cura,
-#       e roda assets/pipewire-backport/prova/reproduzir.sh nos dois. Com a cura, 0 pendurados;
-#       sem ela, todos. Precisa de meson, ninja e gcc, e do wireplumber e do wpctl no PATH.
-#   scripts/construir_pipewire_backport.sh --conferir-metadata ARQ
-#       # só a pergunta do passo 3, sobre ARQ
-#   HEFESTO_PIPEWIRE_CACHE=/outro scripts/construir_pipewire_backport.sh
-#   HEFESTO_PIPEWIRE_JOBS=4 scripts/construir_pipewire_backport.sh
-#
-# Idempotente: com os .deb já no cache, o SHA256SUMS batendo e o ORIGEM.txt
-# dizendo as mesmas fontes e os mesmos patches, sai 0 sem baixar nem compilar.
-#
-# Códigos de saída: 0 ok · 2 uso · 3 falta dependência · 4 fonte não confere
-# · 5 patch ou ajuste não aplica · 6 sem a cura · 7 build · 8 a prova falhou.
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+construir_pipewire_backport.sh — o PipeWire e o WirePlumber da casa,
+construídos do zero e conferidos a cada passo
+(O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01, 15/10/2026).
+
+Uso:
+  scripts/construir_pipewire_backport.sh               # constrói os dois
+  scripts/construir_pipewire_backport.sh --forcar      # reconstrói mesmo já pronto
+  scripts/construir_pipewire_backport.sh --preparar    # só os passos 1 a 3
+  scripts/construir_pipewire_backport.sh --prova       # passos 1 a 3, e a prova sem dependência de build:
+      compila só o servidor da árvore (meson mínimo, sem ALSA nem Bluetooth) com e sem a cura,
+      e roda assets/pipewire-backport/prova/reproduzir.sh nos dois. Com a cura, 0 pendurados;
+      sem ela, todos. Precisa de meson, ninja e gcc, e do wireplumber e do wpctl no PATH.
+  scripts/construir_pipewire_backport.sh --conferir-metadata ARQ
+      # só a pergunta do passo 3, sobre ARQ
+  HEFESTO_PIPEWIRE_CACHE=/outro scripts/construir_pipewire_backport.sh
+  HEFESTO_PIPEWIRE_JOBS=4 scripts/construir_pipewire_backport.sh
+AJUDA
+}
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS="${RAIZ}/assets/pipewire-backport"
@@ -65,8 +38,6 @@ RC_CURA=6
 RC_BUILD=7
 RC_PROVA=8
 
-# O ambiente do build é LIMPO: um PYTHONPATH ou uma venv herdados mudam o
-# python do meson, e o build deixa de ser o mesmo em outra casa.
 AMBIENTE_LIMPO=(
     env -i
     "HOME=${HOME}"
@@ -84,7 +55,6 @@ morra() {
     exit "${rc}"
 }
 
-# A chave casa por texto, não por regex: os nomes dos patches têm ponto.
 ler() {
     local chave="$1" valor
     valor="$(awk -v c="${chave}" 'index($0, c "=") == 1 { print substr($0, length(c) + 2); exit }' "${BASELINE}")"
@@ -115,8 +85,6 @@ baixar() {
     mkdir -p "${destino%/*}"
     parcial="${destino}.parcial"
     diga "baixando ${url}"
-    # Com teto de tempo: sem ele o curl fica parado para sempre numa conexão
-    # que aceitou e não manda nada (medido em 23/09 no backport do BlueZ).
     curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 600 \
             --speed-limit 1024 --speed-time 60 -o "${parcial}" "${url}" \
         || morra "${RC_FONTE}" "não consegui baixar ${url}"
@@ -127,8 +95,6 @@ baixar() {
     mv -f "${parcial}" "${destino}"
 }
 
-# A cura do #5445 (o 06de0ed): o global_unbind chama o remove_pending. Lido
-# pelo corpo da função, e não pela linha, para servir a qualquer versão.
 tem_a_cura() {
     awk '
         /^static void global_unbind\(void \*data\)/ { dentro = 1; next }
@@ -146,8 +112,6 @@ conferir_metadata() {
     diga "o global_unbind de ${arquivo##*/} chama o remove_pending (a cura do #5445)"
 }
 
-# Monta <obra>/<nome>-<versão>: o tarball da tag e, por cima, o debian/ do
-# tarball nativo do Pop.
 montar() {
     local prefixo="$1" nome="$2" url_up sha_up url_emp sha_emp tar_up tar_emp tmp
     url_up="$(ler "${prefixo}_FONTE_URL")"
@@ -178,8 +142,6 @@ aplicar() {
     diga "aplicado: ${nome}"
 }
 
-# Prepende a entrada da casa e confere que o changelog montado diz a revisão
-# do BASELINE.
 escrever_changelog() {
     local arvore="$1" entrada="$2" alvo="$3" changelog="$1/debian/changelog" lida
     cat "${entrada}" "${changelog}" > "${changelog}.novo"
@@ -188,17 +150,12 @@ escrever_changelog() {
     [[ "${lida}" == "${alvo}" ]] || morra "${RC_PATCH}" "o changelog montado diz ${lida}, o BASELINE diz ${alvo}"
 }
 
-# Os ajustes que a 1.6.9 pede ao debian/ da 1.6.8 do Pop (medidos em
-# 15/10/2026). Cada um confere que achou o alvo, senão para: um ajuste que não
-# acha o alvo é sinal de que o empacotamento mudou por baixo.
 ajustar_pipewire() {
     local arvore="$1" d="$1/debian"
-    # 1. a 1.6.9 pede libcamera >= 0.6.0 (spa/meson.build), e o noble tem a 0.2.0:
-    #    o plugin sai do build e os dois pacotes dele saem do control.
-    # shellcheck disable=SC2016  # é o texto do debian/rules: o $ é do make
+    # shellcheck disable=SC2016
     grep -q -F -- '-Dlibcamera=$(LIBCAMERA)' "${d}/rules" \
         || morra "${RC_PATCH}" "o debian/rules do Pop não passa -Dlibcamera=\$(LIBCAMERA)"
-    # shellcheck disable=SC2016  # idem
+    # shellcheck disable=SC2016
     sed -i 's/-Dlibcamera=\$(LIBCAMERA)/-Dlibcamera=disabled/' "${d}/rules"
     grep -q -E '^[[:space:]]+libcamera-dev ' "${d}/control" \
         || morra "${RC_PATCH}" "o debian/control do Pop não pede o libcamera-dev"
@@ -213,30 +170,21 @@ ajustar_pipewire() {
 
 ajustar_wireplumber() {
     local arvore="$1" d="$1/debian" p simbolos novos
-    # 1. o Pop é formato nativo: o patch dele está no fonte da 0.5.12, e não no
-    #    da 0.5.18. A série do debian/patches se aplica aqui, à mão.
     if [[ -f "${d}/patches/series" ]]; then
         while read -r p; do
             [[ -n "${p}" && "${p}" != \#* ]] || continue
             aplicar "${arvore}" "${d}/patches/${p}"
         done < "${d}/patches/series"
     fi
-    # 2. o dh_makeshlibs do Pop roda com -c4: os 38 símbolos novos da 0.5.13 à
-    #    0.5.16 entram no arquivo de símbolos.
     simbolos="${d}/libwireplumber-0.5-0.symbols"
     novos="${ASSETS}/debian/libwireplumber-0.5-0.symbols.novos"
     conferir_sha "${novos}" "$(ler WP_SIMBOLOS_NOVOS_SHA256)" "${novos##*/}"
     [[ "$(grep -c '^[^ *]' "${simbolos}")" -eq 1 ]] \
         || morra "${RC_PATCH}" "${simbolos##*/} não tem uma biblioteca só: o acréscimo no fim não vale"
     cat "${novos}" >> "${simbolos}"
-    # 3. a 0.5.18 instala o completar do wpctl no bash (src/tools/meson.build), e
-    #    o dh_missing do compat 13 reprova arquivo instalado sem pacote.
     if grep -q 'bash-completion/completions' "${arvore}/src/tools/meson.build"; then
         printf 'usr/share/bash-completion/completions/wpctl\n' >> "${d}/wireplumber.install"
     fi
-    # 4. o control do Pop pede o meson-1.5, o do pipewire pede o meson-1.7, e os
-    #    dois pacotes do noble conflitam: não há casa que tenha as duas build-deps.
-    #    A 0.5.18 pede meson >= 0.59.0, e o build das duas sai com o 1.7.
     grep -q -E '^[[:space:]]+meson-1\.5,$' "${d}/control" \
         || morra "${RC_PATCH}" "o debian/control do Pop não pede o meson-1.5"
     sed -i -E 's/^([[:space:]]+)meson-1\.5,$/\1meson-1.7,/' "${d}/control"
@@ -246,7 +194,6 @@ preparar() {
     local p sha
     command -v dpkg-parsechangelog >/dev/null || morra "${RC_DEPS}" "falta o dpkg-dev (dpkg-parsechangelog)"
     command -v patch >/dev/null || morra "${RC_DEPS}" "falta o patch"
-    # A obra é refeita do zero: é isso que faz duas corridas darem a mesma árvore.
     [[ "${OBRA}" == */pipewire-obra ]] || morra "${RC_USO}" "obra fora do lugar: ${OBRA}"
     rm -rf "${OBRA}"
     mkdir -p "${OBRA}"
@@ -270,8 +217,6 @@ preparar() {
     diga "árvores prontas: ${PW_ARVORE} ($(ler PW_REVISAO)) e ${WP_ARVORE} ($(ler WP_REVISAO))"
 }
 
-# O servidor da árvore, compilado no mínimo (sem ALSA, Bluetooth, câmera nem
-# documentação), num prefixo dentro da obra. Só precisa de meson, ninja e gcc.
 compilar_o_servidor() {
     local fonte="$1" destino="$2"
     if ! meson setup --prefix="${destino}" -Dauto_features=disabled '-Dsession-managers=[]' \
@@ -293,8 +238,6 @@ provar() {
     done
     diga "compilando o servidor da árvore (log em ${OBRA}/prova-com-cura.log)"
     compilar_o_servidor "${PW_ARVORE}" "${OBRA}/prova-com-cura"
-    # A mordida: a mesma árvore, sem a linha da cura. Se esta não pendura, a
-    # prova não mede nada.
     rm -rf "${sem_cura}.fonte"
     cp -a "${PW_ARVORE}" "${sem_cura}.fonte"
     metadata="${sem_cura}.fonte/src/modules/module-metadata/metadata.c"
@@ -319,11 +262,6 @@ provar() {
     [[ "${rc}" -eq 1 ]] || morra "${RC_PROVA}" "sem a cura, a prova não pendurou: ela não mede nada"
 }
 
-# Numa máquina com o BlueZ da casa (libbluetooth3 ~hefesto), o libbluetooth-dev
-# que o PipeWire pede para construir tem de ser o da casa, da mesma versão: o
-# mk-build-deps puxaria o do archive (5.72), e o apt rebaixaria o libbluetooth3
-# da casa para casar com ele. Por isso a ordem: primeiro o .deb da bluez-obra,
-# depois o mk-build-deps. $1: o que o dpkg-checkbuilddeps disse que falta.
 avisar_do_libbluetooth_dev() {
     local falta="$1" arch ver deb
     [[ "${falta}" == *libbluetooth-dev* ]] || return 0
@@ -404,8 +342,6 @@ entregar() {
         n=$((n + 1))
     done
     [[ "${n}" -gt 0 ]] || morra "${RC_BUILD}" "o build não produziu .deb nenhum"
-    # A cura tem de estar no módulo que vai para o cache: o metadata.c da obra
-    # foi conferido, e o .so que saiu dele tem de existir no pacote.
     tmp="$(mktemp -d)"
     dpkg-deb -x "${SAIDA}/libpipewire-0.3-modules_$(ler PW_REVISAO)_$(dpkg --print-architecture).deb" "${tmp}" \
         || morra "${RC_BUILD}" "não achei o libpipewire-0.3-modules construído"
@@ -431,7 +367,7 @@ main() {
                 exit 0
                 ;;
             -h | --help)
-                sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d'
+                _ajuda
                 exit 0
                 ;;
             *) morra "${RC_USO}" "argumento desconhecido: $1" ;;

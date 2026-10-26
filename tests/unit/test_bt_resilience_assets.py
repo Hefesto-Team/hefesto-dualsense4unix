@@ -167,17 +167,16 @@ class TestInvariantesDosScripts:
         assert "rate-limit" in text
         assert "promoted-" in text
         assert "_btctl_lento 25 pair" in text
-        assert "COMPAT BLUEZ-586-CTL-01" in text
 
     def test_trust_nao_depende_de_conexao(self) -> None:
         """WATCHDOG-TRUST-DEADLOCK-01 (23/07) — o deadlock do trust."""
         text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(
             encoding="utf-8"
         )
-        bloco = text.split("vigia 2b:", 1)[1].split("vigia 2: bond temporário", 1)[0]
-        codigo = "\n".join(
-            linha for linha in bloco.splitlines() if not linha.lstrip().startswith("#")
-        )
+        laco = 'while IFS= read -r OBJ; do\n    [[ -z "${OBJ}" ]] && continue\n'
+        vigia2b = laco + '    [[ "$(_dbus_device_prop "${OBJ}" Bonded)" == "true" ]] || continue'
+        vigia2 = laco + '    [[ "$(_dbus_device_prop "${OBJ}" Connected)" == "true" ]] || continue'
+        codigo = vigia2b + text.split(vigia2b, 1)[1].split(vigia2, 1)[0]
         assert 'Connected' not in codigo, (
             "o trust não pode ficar atrás do gate de conexão — é o deadlock"
         )
@@ -186,8 +185,7 @@ class TestInvariantesDosScripts:
             "scan seria autorizar quem nunca foi pareado)"
         )
         assert "Trusted b true" in codigo
-        vigia2 = text.split("vigia 2: bond temporário", 1)[1]
-        assert '"${OBJ}" Connected)" == "true" ]] || continue' in vigia2
+        assert text.count(vigia2) == 1, "a vigia 2 deixou de exigir o link vivo"
 
     def test_crash_capture_e_opt_in_simetrico(self) -> None:
         text = (REPO_ROOT / "scripts" / "bt_crash_capture.sh").read_text(encoding="utf-8")

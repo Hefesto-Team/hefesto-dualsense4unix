@@ -439,14 +439,6 @@ class TestFiacao:
         assert "bt_bonds_autorestore.sh" in texto_do_instalador()
         assert "bt_bonds_autorestore.sh" in UNINSTALL.read_text(encoding="utf-8")
 
-    def test_o_install_nao_promete_mais_restauro_manual(self) -> None:
-        """A decisão de 08/08 contra a linha de `install.sh` que a contradizia."""
-        texto = texto_do_instalador()
-        assert "restauração é MANUAL" not in texto, (
-            "o install.sh voltou a prometer restauro manual — contradiz a "
-            "decisão dela de 08/08 e o código que está no drop-in"
-        )
-        assert "automático" in texto
 
     def test_o_script_e_executavel_e_tem_sintaxe_valida(self) -> None:
         assert AUTORESTORE.stat().st_mode & 0o111, "bt_bonds_autorestore.sh não é executável"

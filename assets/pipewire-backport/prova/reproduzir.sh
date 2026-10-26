@@ -1,25 +1,4 @@
 #!/usr/bin/env bash
-# reproduzir.sh — o `wpctl` pendurado pelo metadata, num PipeWire privado.
-#
-# A receita de docs/protocol/o-wpctl-pendurado-pelo-metadata.md, em script: um
-# servidor com XDG_RUNTIME_DIR próprio, o WirePlumber só com o metadata
-# sm-settings, e então, a cada rodada, o WirePlumber congelado (SIGSTOP) recebe
-# os binds de N `wpctl settings` e morre (SIGKILL) sem responder ao ping. Com o
-# metadata.c sem a cura (até a 1.6.8), todo `wpctl` daquela janela fica preso.
-#
-# NÃO TOCA O SOM DA SESSÃO: o runtime, a configuração e o estado são de um
-# diretório temporário, o D-Bus aponta para um socket que não existe, e nem o
-# servidor nem o WirePlumber da prova carregam ALSA, Bluetooth ou câmera. Os
-# processos que ele mata são só os que ele mesmo lançou, pelo PID.
-#
-# Uso:
-#   reproduzir.sh PREFIXO_DO_PIPEWIRE [RODADAS] [POR_RODADA]
-#       PREFIXO_DO_PIPEWIRE tem bin/pipewire e lib/<multiarch>/ (um `meson
-#       install` num diretório, ou um .deb desempacotado com `dpkg-deb -x`, cujo
-#       prefixo é <dir>/usr). O WirePlumber e o wpctl vêm do PATH.
-#
-# Imprime `lancados=N pendurados=M`. Sai 0 com M=0, 1 com M>0, 2 no uso e 3 se
-# a prova não subiu.
 set -euo pipefail
 
 prefixo="${1:-}"
@@ -81,8 +60,6 @@ unset PIPEWIRE_REMOTE DISPLAY WAYLAND_DISPLAY
 PW="" WP="" pids=()
 limpar() {
     local p
-    # Só o PID que ainda é um dos três que a prova lançou: um PID que já saiu
-    # pode ter sido reusado por outro processo da sessão.
     for p in "${pids[@]}" "${WP}" "${PW}"; do
         [[ -n "${p}" ]] || continue
         case "$(cat "/proc/${p}/comm" 2>/dev/null)" in
@@ -122,7 +99,6 @@ for _ in $(seq "${rodadas}"); do
     wait "${WP}" 2>/dev/null || true
     subir_o_wireplumber || { tail -n 5 "${base}/wireplumber.log" >&2; exit 3; }
 done
-# Um `wpctl` são responde em milissegundos; o preso fica em poll para sempre.
 sleep 10
 pendurados=0
 for p in "${pids[@]}"; do

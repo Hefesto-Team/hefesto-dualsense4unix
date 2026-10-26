@@ -734,11 +734,11 @@ class TestFiacaoDaFontePadrao:
             "fix_default_source_monitor"
         ), "a eleição da fonte padrão passou para antes da troca de perfil"
 
-    def test_a_medicao_de_29_07_esta_registrada(self) -> None:
-        assert "FONTE-PADRAO-01" in TEXTO_DOCTOR
-        assert "analog-surround-40.monitor" in TEXTO_DOCTOR, (
-            "o sintoma medido saiu do comentário"
-        )
+
+
+PASSO_4D = 'readonly LOCALE_SRC="${ROOT_DIR}/locale"'
+PASSO_4E = 'if [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    if [[ "${NO_FONTS}" -eq 1 ]]; then'
+PASSO_5 = 'step "5/11" "symlink ${BIN_DIR}/hefesto-dualsense4unix"'
 
 
 class TestInstallChamaAsFontes:
@@ -749,9 +749,8 @@ class TestInstallChamaAsFontes:
         """Linhas que de fato EXECUTAM o script — não as que só o citam."""
         return [
             linha.strip()
-            for linha in TEXTO_INSTALL.splitlines()
-            if not linha.lstrip().startswith("#")
-            and "scripts/install_fonts.sh" in linha
+            for linha in TEXTO_INSTALL[TEXTO_INSTALL.index("\nAJUDA\n") :].splitlines()
+            if "scripts/install_fonts.sh" in linha
             and ("bash " in linha or "sh " in linha or "install_fonts.sh\"" in linha)
             and "-r " not in linha
             and "warn " not in linha
@@ -769,10 +768,8 @@ class TestInstallChamaAsFontes:
         """Fonte é acabamento, não requisito: derrubar a instalação inteira por"""
         invocacoes = self._invocacoes()
         assert invocacoes
-        bloco = TEXTO_INSTALL[
-            TEXTO_INSTALL.index("# 4e. Fontes da identidade visual") :
-        ]
-        bloco = bloco[: bloco.index("# 5. Symlink")]
+        bloco = TEXTO_INSTALL[TEXTO_INSTALL.index(PASSO_4E) :]
+        bloco = bloco[: bloco.index(PASSO_5)]
         for linha in invocacoes:
             assert linha in bloco.replace("\n", " ").replace("  ", " ") or linha in bloco, (
                 f"chamada ao install_fonts.sh fora do passo 4e: {linha!r}"
@@ -784,16 +781,16 @@ class TestInstallChamaAsFontes:
     def test_tem_gate_de_flag_para_desligar(self) -> None:
         assert "--no-fonts)" in TEXTO_INSTALL, "falta a flag de opt-out no parser"
         assert "NO_FONTS=0" in TEXTO_INSTALL, "a flag nasce sem valor default"
-        bloco = TEXTO_INSTALL[
-            TEXTO_INSTALL.index("# 4e. Fontes da identidade visual") :
-        ]
-        bloco = bloco[: bloco.index("# 5. Symlink")]
+        bloco = TEXTO_INSTALL[TEXTO_INSTALL.index(PASSO_4E) :]
+        bloco = bloco[: bloco.index(PASSO_5)]
         assert 'NO_FONTS' in bloco, "o gate não é consultado no passo:\n" + bloco
 
     def test_a_flag_esta_documentada_no_cabecalho(self) -> None:
         """Regra desta casa (BUG-INSTALL-HELP-TRUNCADO-01): flag real que não"""
-        cabecalho = TEXTO_INSTALL[: TEXTO_INSTALL.index("\nset -euo pipefail")]
-        assert "--no-fonts" in cabecalho
+        ajuda = TEXTO_INSTALL[
+            TEXTO_INSTALL.index("_ajuda() {") : TEXTO_INSTALL.index("\nAJUDA\n")
+        ]
+        assert "--no-fonts" in ajuda
 
     def test_o_no_fonts_sai_no_help(self) -> None:
         res = subprocess.run(
@@ -815,7 +812,9 @@ class TestInstallChamaAsFontes:
 
     def test_o_passo_fica_junto_do_resto_da_gui(self) -> None:
         """Mesma natureza dos passos 4b/4c/4d: acabamento da GUI, no HOME do usuário,"""
-        assert TEXTO_INSTALL.index("# 4d. Catalogos i18n") < TEXTO_INSTALL.index(
-            "# 4e. Fontes da identidade visual"
-        ) < TEXTO_INSTALL.index("# 5. Symlink")
+        assert (
+            TEXTO_INSTALL.index(PASSO_4D)
+            < TEXTO_INSTALL.index(PASSO_4E)
+            < TEXTO_INSTALL.index(PASSO_5)
+        )
 

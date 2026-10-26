@@ -1,47 +1,13 @@
 #!/usr/bin/env bash
-# Verifica a privacidade de aparelho no repositório Hefesto - DualSense4Unix:
-# endereço de rádio (MAC) em texto e em binário, e número de série de fábrica.
-# Exit 0 se limpo, exit 1 se houver violação.
-#
-# A metade de vocabulário (quem assina, termos que não se publicam) é da régua
-# única `scripts/check_autoria.py`, que lê a lista de fora do repositório.
 
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
-# MAC-BINARIO-EM-LITTLE-ENDIAN-01 (15/08/2026). MEDIDO.
-# ---------------------------------------------------------------------------
-#
-# Em 15/08 a casa passou a versionar captura de rádio BINÁRIA
-# (`docs/data/ensaios-brutos/*.btsnoop`), e o `btmon` grava o endereço do
-# adaptador como seis bytes crus em ordem INVERTIDA: `d8:44:89:xx:xx:xx` vira
-# `xx xx xx 89 44 d8`. Medido: nenhum portão desta casa via isso. Um `.btsnoop`
-# de 238 KB entrou verde carregando o endereço duas vezes.
-#
-# Daqui em diante o portão também lê BYTES, e procura nas DUAS ordens — a
-# big-endian dá zero nas capturas de hoje, e continua sendo procurada de
-# propósito: zero é resultado declarado, não busca esquecida.
-#
-# A varredura é em Python porque `grep` quebra a entrada em LINHAS, e um
-# endereço cujos octetos contenham 0x0a atravessaria a quebra sem ser visto.
-# Fail-CLOSED se não houver python3: a mesma polaridade do guarda de CI —
-# o que não dá para medir REPROVA.
-#
-# O portão AUTORITATIVO desta regra é `tests/unit/test_docs_mac_anonimato.py`
-# (varre texto E bytes, com os testes de mordida). Este bloco é a segunda
-# linha, para quem roda só o script.
 if ! command -v python3 >/dev/null 2>&1; then
     echo "ANONIMATO: python3 ausente — a varredura de MAC em BINÁRIO não pôde"
     echo "rodar. Isto NÃO é 'limpo': é 'não medido'. Reprovando."
     exit 1
 fi
 
-# A lista vai por PIPE, e não por variável: `$(...)` DESCARTA byte nulo (o bash
-# até avisa), e a lista é separada por nulo justamente para aguentar nome de
-# arquivo com espaço. Medido em 15/08: com a lista numa variável, o python
-# recebia um nome só, gigante, e a varredura devolvia verde sem ter aberto
-# arquivo nenhum. O consumidor lê a entrada INTEIRA, então não há a corrida de
-# SIGPIPE que o `pipefail` transformaria em veredito.
 _listar_para_varredura_binaria() {
     if git rev-parse --git-dir >/dev/null 2>&1; then
         git ls-files -z --cached --others --exclude-standard 2>/dev/null
@@ -153,54 +119,6 @@ if [[ -n "$MAC_BIN" ]]; then
     exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# SERIAL-DE-FABRICA-01 (15/08/2026). MEDIDO.
-# ---------------------------------------------------------------------------
-#
-# Terceira vez da mesma família nesta casa: o portão só reprova a forma que ele
-# conhece. Foi assim no BURACO-DO-PORTAO-01 (06/08, o MAC colado) e no
-# MAC-BINARIO-EM-LITTLE-ENDIAN-01 (o bloco logo acima).
-#
-# Hoje um SERIAL DE FÁBRICA real, dos 17 caracteres, entrou na docstring de
-# `mascarar_serial()` em `scripts/ensaios/cor_do_plastico.py` — a função que
-# mascara serial vazou um — e ESTE script passou VERDE. Motivo: tudo acima caça
-# só a forma de um MAC. Antes desta linha,
-# `grep -i serial scripts/check_anonymity.sh` devolvia ZERO.
-#
-# O serial identifica a unidade dela tão bem quanto o MAC: é o número da
-# etiqueta, o da garantia, o que liga o aparelho à compra. A máscara da casa
-# são os 6 primeiros caracteres e o resto em `#` — `A12B34###########`, num
-# prefixo FORJADO: nem exemplo mascarado precisa carregar o prefixo dela — e ela
-# preserva de propósito os caracteres 5 e 6, onde mora o código da COR, que é o
-# que o ensaio E7 mede.
-#
-# A FORMA é a MEDIDA nos dois aparelhos que responderam ao E7, e não a que
-# circulava de boca: o padrão `[A-Z]\d{2}[A-Z]\d{2}[A-Z]\d{10}` está ERRADO
-# porque o segundo serial da bancada tem DÍGITO no caractere 4 (ver
-# docs/data/ensaios-brutos/2026-08-15-E7-cor-do-plastico.csv, coluna
-# `serial_mascarado`), e aquele padrão não casaria com ele.
-#
-# FALSO POSITIVO, MEDIDO na árvore de 15/08 (rastreados + novos): `[A-Z0-9]{17}`
-# solto dá 12 reprovações em 8 arquivos, todas ruído (`INDEPENDENTEMENTE`,
-# `MICROCASSYVOLTAGE`, `REDIMENSIONAMENTO`, ... e os dois seriais forjados
-# legítimos). Exigir DÍGITO nas posições 2, 3, 5 e 6 leva o ruído a ZERO sem
-# perder a forma real — palavra não tem dígito, e os forjados não têm dígito
-# onde o serial verdadeiro tem.
-#
-# TRÊS FORMAS, porque duas já não bastaram: texto (inclusive dentro de
-# binário), hexdump em pares (o serial de 17 caracteres ATRAVESSA a quebra de
-# linha de um dump de 16 bytes) e corrida hexadecimal colada. A coluna de
-# offset do dump (`0000`) e um `0x00001111` ficam de fora sozinhos, pela
-# fronteira de hexadecimal dos pares.
-#
-# O portão AUTORITATIVO desta regra é `tests/unit/test_docs_mac_anonimato.py`
-# (mesmo padrão, com os testes de mordida das três formas, e com um teste que
-# reprova a divergência entre as duas cópias). Este bloco é a segunda linha,
-# para quem roda só o script. O python3 já foi exigido no bloco acima.
-#
-# A mensagem NÃO imprime o serial achado: saída de portão vai para log de CI, e
-# portão que republica o segredo para avisar do vazamento só mudou o vazamento
-# de lugar. Saem os 6 públicos e a máscara, que bastam para achar a linha.
 SERIAL_HITS=$(_listar_para_varredura_binaria | python3 -c '
 import re
 import sys

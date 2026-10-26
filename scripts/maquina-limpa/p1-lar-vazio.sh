@@ -1,33 +1,15 @@
 #!/usr/bin/env bash
-# p1-lar-vazio.sh — o degrau P1 da escada da máquina limpa: o ENSAIO do
-# install.sh num HOME vazio. Muda uma variável só: o HOME.
-#
-# O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026), a Parte A. O roteiro morava
-# num estudo fora do git, e um roteiro que não viaja com a árvore não chega a
-# quem vai reproduzir. O que este degrau alcança: o plano de usuária que uma
-# pessoa nova recebe (a .venv, os links, as units de usuário, o wrapper) e a
-# prova de que o ensaio não escreve nada. O que ele NÃO alcança: os passos de
-# root dizem o estado DESTA máquina (DKMS, BlueZ, udev), e isso é limite do
-# degrau, não defeito — quem mede o sistema inteiro é o P4.
-#
-# AS TRAVAS, e nenhuma é opcional:
-#   - o install roda SEMPRE com --dry-run; não há flag que tire isso;
-#   - o HOME e os cinco XDG_* apontam para um lar novo, e há guarda que SAI se
-#     o HOME não for o lar (o shell desta casa é zsh, e um `env $E` sem aspas
-#     já desviou só o HOME uma vez);
-#   - sem DBUS, WAYLAND e DISPLAY: nada fala com a sessão de quem roda;
-#   - nunca como root (com root o HOME vira /root);
-#   - a árvore é uma CÓPIA (`git archive`), nunca a árvore de trabalho;
-#   - a config de quem roda só é LIDA por sha256, antes e depois, para provar
-#     que ficou intacta.
-#
-# Uso:
-#   bash scripts/maquina-limpa/p1-lar-vazio.sh [--saida DIR] [--ref REF]
-#
-# Espera-se: rc=0 e o «FIM DO ENSAIO»; ZERO arquivos no lar; «config intacta».
-# O código de saída é 0 só com os três.
 
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+p1-lar-vazio.sh — o degrau P1 da escada da máquina limpa: o ENSAIO do
+install.sh num HOME vazio. Muda uma variável só: o HOME.
+
+Uso:
+  bash scripts/maquina-limpa/p1-lar-vazio.sh [--saida DIR] [--ref REF]
+AJUDA
+}
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SAIDA="${TMPDIR:-/tmp}/hefesto-maquina-limpa/p1"
@@ -37,7 +19,7 @@ while (( $# )); do
     case "$1" in
         --saida) SAIDA="$2"; shift 2 ;;
         --ref)   REF="$2"; shift 2 ;;
-        -h|--help) sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        -h|--help) _ajuda; exit 0 ;;
         *) printf 'argumento desconhecido: %s\n' "$1" >&2; exit 2 ;;
     esac
 done
@@ -62,7 +44,6 @@ _sha_da_config() {
 }
 _sha_da_config > "${SAIDA}/config-antes.sha"
 
-# O ensaio num processo próprio: o ambiente desviado não vaza para este shell.
 bash -s -- "${ARVORE}" "${LAR}" > "${SAIDA}/p1.txt" 2>&1 <<'DENTRO' || true
 set -u
 ARVORE="$1"; LAR="$2"

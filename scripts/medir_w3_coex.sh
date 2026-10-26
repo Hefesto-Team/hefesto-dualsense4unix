@@ -1,25 +1,4 @@
 #!/usr/bin/env bash
-# medir_w3_coex.sh — Onda W3: coexistência WiFi×BT medida em 3 braços:
-#   A) WiFi ocioso        B) WiFi em carga (download contínuo)
-#   C) WiFi bloqueado (rfkill block wifi — isola rádio 2.4G vs EMI USB3)
-# Em cada braço (default 120s): delta de contadores do controlador BT
-# (hciconfig -a: RX/TX bytes, acl, errors), captura btmon (.snoop, pós-
-# processada: HCI Hardware Error / Disconnection Complete + reason /
-# pacing de Number of Completed Packets), taxa de reports + lacunas dos
-# controles via evdev (mesma métrica dos estudos de 19/07) e debugfs BT.
-#
-# ESTE SCRIPT SÓ MEDE E RELATA. O rfkill do braço C é restaurado por trap
-# EXIT (fail-safe: nunca deixa o WiFi bloqueado). A recomendação de mover
-# o dongle p/ o xHCI 02:00.0 (4 portas SuperSpeed LIVRES — mudança de
-# topologia interna, não gambiarra) é IMPRESSA como recomendação medível:
-# re-rodar este script após mover e comparar os braços.
-#
-# Uso:   ./medir_w3_coex.sh                          # dry-run (não toca nada)
-#        sudo ./medir_w3_coex.sh --run               # executa (~7 min)
-#        [--dur 120] [--out ARQ] [--evdev /dev/input/eventN]... [--url URL]
-#
-# Gate humano: braço C DERRUBA o WiFi por ${DUR}s — rodar com a mantenedora
-# ciente. Requer root (btmon/debugfs); os controles devem estar ligados.
 
 set -euo pipefail
 
@@ -45,11 +24,6 @@ log() { printf '[w3] %s\n' "$*"; }
 
 HCI=hci0
 log "plano: 3 braços de ${DUR}s (A ocioso / B carga / C rfkill block wifi)"
-# INSTRUMENTO DECLARA A RÉGUA (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026): os
-# contadores RX/TX vêm do ioctl HCIGETDEVINFO, que só o `hciconfig` (depreciado
-# pelo BlueZ) chama — nem `btmgmt` nem `bluetoothctl` do 5.86 os expõem. Onde
-# ele não existe, este braço da medição SE PERDE, e um Δ vazio não pode ser lido
-# como "rádio não sofreu": tem de ser lido como "não medi".
 if command -v hciconfig >/dev/null 2>&1; then
     log "métricas: delta hciconfig -a ${HCI} + btmon snoop + evdev + debugfs"
 else
@@ -70,19 +44,11 @@ if [[ "${RUN}" -ne 1 ]]; then
 fi
 
 [[ "$(id -u)" -eq 0 ]] || { echo "precisa de root (btmon/debugfs)" >&2; exit 1; }
-# A CAPTURA NASCE FECHADA E NÃO FICA (AS-CAPTURAS-DE-RADIO-NASCEM-FECHADAS-01):
-# se um controle reconecta durante um braço, o `btmon` grava a chave de
-# pareamento em claro. Tudo o que o root escreve daqui em diante nasce 0600; as
-# capturas moram num diretório 0700 e saem depois de lidas.
 umask 077
 OUT="${OUT:-/tmp/w3-coex-$(date +%Y%m%d-%H%M%S).txt}"
 
 WIFI_BLOQUEADO=0
 CAPTURAS=""
-# Quem o `restaurar` para quando a medição é interrompida no meio de um braço
-# (um `kill`, o `sudo` repassando um SIGTERM): sem isto, o `btmon` do root
-# seguia gravando num arquivo já apagado — invisível e crescendo — e o laço
-# de download do braço B seguia baixando para sempre.
 BTMON_PID=""
 carga_pid=""
 restaurar() {
@@ -104,14 +70,7 @@ restaurar() {
 trap restaurar EXIT
 CAPTURAS="$(mktemp -d -t w3-coex-capturas.XXXXXX)"
 
-# Taxa de reports/lacunas por evdev: lê eventos crus por DUR segundos e
-# reporta total, taxa média e as 3 maiores lacunas entre eventos (ms).
-# IMPORTANTE: chamada DIRETA (sem $(...)) — precisa rodar no shell atual
-# para que o "&" abaixo registre um job filho DESTE processo; só assim o
-# "wait" no chamador (que usa "$!") espera o processo certo. Se isto
-# fosse invocado via command substitution, o "&" nasceria numa subshell
-# e o PID capturado não seria filho do script (wait falharia silencioso).
-medir_evdev() { # $1=devnode $2=arquivo-saida
+medir_evdev() {
     python3 - "$1" "${DUR}" > "$2" 2>&1 <<'PY' &
 import struct, sys, time
 dev, dur = sys.argv[1], float(sys.argv[2])
@@ -152,10 +111,7 @@ snapshot_hci() {
     hciconfig -a "${HCI}" 2>/dev/null | grep -E 'RX bytes|TX bytes' || true
 }
 
-# Δ dos contadores HCI entre dois snapshots (RX/TX bytes, acl, sco, events,
-# errors). Cada linha vem taggeada RX./TX. porque 'bytes'/'acl'/'errors'
-# repetem entre as duas — sem o prefixo, um sobrescreveria o outro.
-delta_hci() { # $1=antes $2=depois
+delta_hci() {
     printf '%s\n===\n%s\n' "$1" "$2" | awk '
         /^===$/ { fase = 2; next }
         {
@@ -170,7 +126,7 @@ delta_hci() { # $1=antes $2=depois
         }'
 }
 
-medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
+medir_braco() {
     local nome="$1" prep="$2" fin="$3" t0 t1 antes depois
     log "== braço ${nome} =="
     "${prep}"
@@ -193,7 +149,6 @@ medir_braco() { # $1=nome $2=preparo(fn) $3=finaliza(fn)
     sleep "${DUR}"
 
     kill "${BTMON_PID}" 2>/dev/null || true
-    # Lê só depois de o `btmon` fechar o arquivo.
     wait "${BTMON_PID}" 2>/dev/null || true
     BTMON_PID=""
     for p in "${pids[@]:-}"; do [[ -n "${p}" ]] && wait "${p}" 2>/dev/null || true; done
@@ -236,7 +191,6 @@ prep_rfkill() { WIFI_BLOQUEADO=1; rfkill block wifi; }
 fin_rfkill() { rfkill unblock wifi; WIFI_BLOQUEADO=0; sleep 5; }
 
 : > "${OUT}"
-# O relatório não leva captura nenhuma: é de quem chamou o `sudo`, que o lê sem root.
 if [[ -n "${SUDO_UID:-}" ]]; then
     chown "${SUDO_UID}:${SUDO_GID:-${SUDO_UID}}" "${OUT}" || log "aviso: ${OUT} ficou do root"
 fi

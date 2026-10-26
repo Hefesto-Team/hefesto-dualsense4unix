@@ -94,8 +94,6 @@ def test_nao_e_regra_udev_no_header(script_text: str) -> None:
     )
 
 
-def test_single_token_documentado(script_text: str) -> None:
-    assert "só um token" in script_text.lower() or "só UM token".lower() in script_text.lower()
 
 
 def test_modos_de_reversao_e_runtime_existem(script_text: str) -> None:

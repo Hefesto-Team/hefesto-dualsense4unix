@@ -1,72 +1,12 @@
 #!/usr/bin/env bash
-# scripts/hooks/pre-commit — o gancho DESTE repositório.
-#
-# POR QUE ELE MORA AQUI, e não em ~/.config/git/hooks: os ganchos dela são
-# GLOBAIS e valem para todo repositório dela. Coisa deste projeto pendurada lá
-# rodaria em todos os outros. O gancho global já resolve isso: ele encadeia
-# `.git/hooks/pre-commit` do repositório quando existe e é diferente dele
-# (linhas 318-333 do global). Este arquivo é esse encadeado, versionado para
-# viajar, e `scripts/instalar-hooks.sh` o liga.
-#
-# O QUE ELE FAZ, e o que ele DELIBERADAMENTE NÃO FAZ:
-#   CURA — o mapa de canais (`docs/specs.html`) sai em dia no MESMO commit que
-#          mudou o dado dele. Pedido de 25/08/2026: *"todos precisam ser auto
-#          atualizados via hooks"*. Antes dessa data ele só ACUSAVA, e quem
-#          commitasse sem rodar o gerador levava um vermelho em vez de uma
-#          página em dia.
-#   DIZ  — quando a página muda de CONTEÚDO, ele a nomeia com o tamanho da
-#          mudança. Curar em silêncio poria no commit coisa que ninguém viu, e
-#          isso é informação, não conveniência.
-#   FAZ  — confere os dois documentos DERIVADOS do código: o contrato IPC e as
-#          citações `arquivo:linha` de docs/protocol/ (~110 ms os dois juntos).
-#   FAZ  — cobra a FOTO quando o commit mexe no código da tela (~40 ms; não
-#          monta GTK, só lê o índice). É o item 3 do checklist de fim de leva.
-#   FAZ  — roda o `.pre-commit-config.yaml`, o mesmo arquivo do job «pre-commit»
-#          do CI, quando o framework está na máquina (item 6).
-#   NÃO FAZ — rodar a suíte, o mypy ou os portões pesados. Gancho que demora
-#             sete minutos é gancho que a pessoa desliga, e um gancho desligado
-#             protege menos que nenhum. Esses moram no `--completo` e no CI.
-#   NÃO FAZ — travar o commit porque o gerador não achou o dado dele. Quem trava
-#             por falta de dado é gancho que alguém desliga; aqui ele avisa e
-#             deixa passar, e quem cobra depois é o CI.
-#
-# A RÉGUA DE QUANDO REGERAR — e ela é o coração deste arquivo
-# ===========================================================
-# Regerar os 2,3 MB do `docs/specs.html` a cada commit é o caminho mais curto
-# para alguém desligar o gancho. E o custo NÃO é o relógio — MEDIDO em
-# 25/08/2026, gerar custa menos de 1 s. O custo é o REPOSITÓRIO: cada geração
-# troca a linha do carimbo (hora e commit), e uma linha trocada num arquivo
-# desse tamanho é um objeto novo de centenas de KB no `.git`, para uma página
-# cujo conteúdo não mudou.
-#
-# A régua PODERIA ser uma lista de caminhos-fonte. Não é, e a razão é a regra
-# desta casa sobre lista duplicada: as fontes do mapa são o CSV, o caderno de
-# ensaios, os três desenhos, seis scripts E a árvore
-# `src/hefesto_dualsense4unix/app/` (a fila de placeholders sai das falas de
-# tela). Uma lista dessas aqui apodrece calada no dia em que o gerador ganhar
-# uma fonte nova — que é exatamente o defeito do `--check` por MTIME que a
-# MAPA-CONTEUDO-01 já matou uma vez.
-#
-# Então quem dispara é o próprio `--check`, que PERGUNTA PELO CONTEÚDO e não
-# pode apodrecer: ele regera a página em memória e compara com a publicada,
-# ignorando o carimbo. Verde, o gancho não escreve nada e o commit não engorda.
-# Vermelho, o gancho cura. Custo típico medido: 0,34 s, e ZERO byte no commit.
 set -euo pipefail
 RAIZ="$(git rev-parse --show-toplevel)"
 cd "$RAIZ"
 
 falhou=0
 
-# O caminho do mapa tem UM dono (`SPECS_RELATIVO`, em
-# `scripts/check_paridade_transporte.py`), e é dele que este gancho o lê — não
-# de um caminho fixo: a página já mudou de pasta duas vezes, e um gancho com o
-# caminho escrito à mão nasceria quebrado no dia da mudança. Sem o dono (árvore
-# anterior a ele), não há o que curar.
 SPECS="$(python3 -c 'import sys; sys.path.insert(0, "scripts"); from check_paridade_transporte import SPECS_RELATIVO; print(SPECS_RELATIVO)' 2>/dev/null || true)"
 
-# `git add` da página e, se o conteúdo mudou, uma linha dizendo QUANTO.
-# O tamanho vem do `git diff --cached --numstat`, que é o que o commit vai
-# carregar de verdade — não da fala do gerador, que muda de formato.
 inclui_e_diz() {
   local pagina="$1" n=""
   if [ -f "$pagina" ] && git add -- "$pagina" 2>/dev/null; then
@@ -78,14 +18,6 @@ inclui_e_diz() {
   return 0
 }
 
-# Roda o gerador, inclui a página, e conta o que deu errado sem travar o commit.
-#
-# A página é incluída MESMO quando o gerador reprova, e isso é medido: o
-# `gerar-mapa.py` escreve a página e SÓ ENTÃO devolve 1 quando o CSV tem
-# peça órfã (ver o comentário no fim do `main()` de lá). A página escrita está
-# certa para o dado que existe; o que está errado é o dado. Deixá-la de fora
-# deixaria a árvore permanentemente suja, que é como se ensina alguém a ignorar
-# o `git status` inteiro.
 cura() {
   local gerador="$1" pagina="$2" saida
   [ -f "$gerador" ] || return 0
@@ -99,50 +31,16 @@ cura() {
   return 0
 }
 
-# 1. O mapa — o `--check` é o gatilho, e ele pergunta pelo CONTEÚDO.
-#    Antes de 25/08/2026 este bloco BLOQUEAVA com "cure com: gerar-mapa.py", e a
-#    razão escrita era "regenerar sozinho esconderia que o dado mudou". A razão
-#    continua boa; o remédio é que estava errado. Hoje ele cura E diz.
 if [ -n "$SPECS" ] && [ -f scripts/gerar-mapa.py ]; then
   if ! python3 scripts/gerar-mapa.py --check >/dev/null 2>&1; then
     cura scripts/gerar-mapa.py "$SPECS"
   fi
 fi
 
-# 2. A ÚLTIMA PASSADA: a página entra no índice sempre que o disco e o índice
-#    discordarem, mesmo que este gancho não a tenha reescrito.
-#
-#    MEDIDO em 25/08/2026, e não é zelo: `git commit -- caminho` (com pathspec)
-#    monta um índice TEMPORÁRIO, commita por ele, e no fim RESTAURA o índice de
-#    verdade ao estado anterior — por definição, um commit com pathspec não
-#    mexe no índice. Resultado: a página entra no commit certa, e o índice fica
-#    com a versão ANTERIOR dela staged. Sem esta passada, o PRÓXIMO commit
-#    normal levaria a página para TRÁS: o `--check` acharia o disco em dia (e
-#    está), não regeraria nada, e o commit sairia com o que o índice guardou.
-#
-#    `git add` de arquivo já em dia é no-op de `stat`, abaixo da resolução de
-#    10 ms do `time`. É barato o bastante para rodar sempre, e rodar sempre é o
-#    que também cobre o caso trivial de alguém ter rodado o gerador à mão e
-#    esquecido de incluir a página.
 if [ -n "$SPECS" ] && [ -f "$SPECS" ]; then
   git add -- "$SPECS" 2>/dev/null || true
 fi
 
-# 3. Os dois documentos DERIVADOS do código. MEDIDO em 24/08/2026: eles estavam
-#    declarados no `.pre-commit-config.yaml`, mas o `core.hooksPath` global dela
-#    desvia o git para o gancho global, que encadeia ESTE arquivo — e a
-#    ferramenta `pre-commit` não está instalada nesta máquina. Resultado: os dois
-#    só rodavam no CI. O commit e0793df (ONDA0-Z5) mexeu +32/-2 linhas no
-#    `ipc_handlers.py`, deslocando 38 dos 39 endereços do bloco gerado de 3 a 50
-#    linhas de uma vez, e a podridão viajou por SETE merges até a integração.
-#    Custam 0,11 s somados.
-#
-#    Os dois BLOQUEIAM em vez de curar sozinhos — e a diferença para o mapa
-#    acima é de POSSE, não de gosto: o bloco IPC vive dentro de um documento
-#    escrito à mão, então um `git add` automático varreria prosa não preparada
-#    para dentro do commit; e o endereço `arquivo:linha` escrito à mão nenhum
-#    gerador sabe reapontar — quem escreveu é que sabe. O mapa é gerado
-#    INTEIRO, e por isso pode ser curado inteiro.
 if [ -f scripts/gerar-contrato-ipc.py ]; then
   if ! python3 scripts/gerar-contrato-ipc.py --check >/dev/null 2>&1; then
     echo "pre-commit: BLOQUEADO — o bloco gerado de ipc-unix-socket.md não bate" >&2
@@ -160,50 +58,12 @@ if [ -f scripts/validar-citacoes-de-linha.py ]; then
   fi
 fi
 
-# 4. A FOTO da tela. MEDIDO em 24/08/2026: a regra "fotografe se a mudança
-#    tocou a tela" está escrita em três documentos e é de quem integra — e quem
-#    integra integrou NOVE branches de interface sem abrir a tela uma vez,
-#    furando a ORDEM do próprio checklist (commitou no passo 5 antes de
-#    fotografar no passo 3). O portão da suíte pegou o erro, mas só roda na
-#    suíte inteira, de ~8 min, que ele roda DEPOIS de commitar: portão certo,
-#    hora errada. Aqui a mesma pergunta custa ~40 ms, porque não monta GTK
-#    nenhum — só compara o que o índice carrega.
-#
-#    BLOQUEIA em vez de avisar porque avisar é o que a prosa já fazia. Sem
-#    chave própria de propósito: `--no-verify` passa, e aí a suíte cobra.
 if [ -f scripts/check_fotos_da_tela.py ]; then
   if ! python3 scripts/check_fotos_da_tela.py; then
     falhou=1
   fi
 fi
 
-# 5. A RÉGUA da tela. Pedido dela, 29/08/2026: *"temos que ter no nosso hook do
-#    novo dev algo que induza a construção de validações via interface pra ver
-#    se tal problema foi resolvido ou se tal coisa traz regressão"*.
-#
-#    O item 4 pergunta pela FOTO — se alguém OLHOU a tela. Este pergunta pela
-#    RÉGUA — se alguém a MEDE amanhã sozinho. São perguntas diferentes: a foto
-#    de 28/08 mostrava os dois botões novos, bonitos e mortos, e o
-#    `--prova-gesto` dava verde sobre eles porque nunca os clicava.
-#
-#    NÃO BLOQUEIA, e é decisão, não descuido: o verbo dela é INDUZIR. A razão
-#    está escrita no portão de colisão de sprints — *"um portão que reprova as
-#    vinte e três de uma vez é um portão que alguém desliga na segunda-feira, e
-#    a primeira reação seria `--no-verify`"*. A escada até reprovar, e o
-#    gatilho MEDIDO de cada degrau, estão no cabeçalho do script; o degrau de
-#    hoje é a constante `GRAU`, e o número que autoriza subir sai de
-#    `python3 scripts/check_regua_de_tela.py --censo`.
-#
-#    SÓ O CÓDIGO 2 SEGURA O COMMIT, e a distinção é a trava contra o pior
-#    desfecho deste arquivo: um gancho quebrado impede ELA de commitar na
-#    árvore que usa todo dia. `2` é VEREDITO (o grau 3 reprovou); `1` é o que o
-#    Python devolve para traceback, `python3` ausente ou import quebrado —
-#    acidente do INSTRUMENTO, que nunca pode custar um commit dela.
-#
-#    MEDIDO em 29/08/2026, na bancada: com `|| true` sozinho o grau 3 nascia
-#    INERTE — o script reprovava e o gancho passava. Com `|| falhou=1` sozinho,
-#    um traceback do instrumento travaria a árvore dela. Só dois códigos
-#    distintos atendem às duas exigências.
 if [ -f scripts/check_regua_de_tela.py ]; then
   _rc_regua=0
   python3 scripts/check_regua_de_tela.py || _rc_regua=$?
@@ -213,11 +73,6 @@ if [ -f scripts/check_regua_de_tela.py ]; then
   unset _rc_regua
 fi
 
-# 6. A MESMA DEFINIÇÃO DO CI. O job «pre-commit» do GitHub roda o
-#    `.pre-commit-config.yaml` inteiro; aqui roda o mesmo arquivo, pelo mesmo
-#    framework, nos arquivos em stage. Um dono só para as duas casas: um gancho
-#    novo entra no YAML e vale aqui e lá. Medido em 13/10/2026: ~8 s com o
-#    framework 4.7.0. Sem o framework na máquina, avisa e deixa passar; o CI cobra.
 PRE_COMMIT="${HEFESTO_PRE_COMMIT:-$(command -v pre-commit || true)}"
 if [ -z "$PRE_COMMIT" ] && [ -x "$RAIZ/.venv/bin/pre-commit" ]; then
   PRE_COMMIT="$RAIZ/.venv/bin/pre-commit"

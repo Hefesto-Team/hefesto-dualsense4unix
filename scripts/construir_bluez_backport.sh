@@ -1,53 +1,23 @@
 #!/usr/bin/env bash
-# construir_bluez_backport.sh — o backport do BlueZ que o install.sh instala,
-# construído do zero e conferido a cada passo (BLUETOOTHD-NAO-DERRUBA-01).
-#
-# POR QUE EXISTE: até 23/09/2026 o 5.86-0ubuntu0.1~hefesto24.04.3 que roda na
-# máquina do usuário não tinha fonte, patch nem receita em lugar nenhum — o install
-# só consumia .deb prontos de um cache que já não existia. Este script é a
-# receita inteira, e cada entrada dele está fixada por SHA-256 em
-# assets/bluez-backport/BASELINE.
-#
-# O QUE FAZ, na ordem:
-#   1. baixa o upstream (kernel.org) e o empacotamento do resolute
-#      (Launchpad), e confere os dois hashes — nada é usado sem conferir;
-#   2. monta a árvore: tarball + debian/, os três ajustes de empacotamento, os
-#      patches hefesto-NNNN da revisão (os do upstream conferidos pelo commit
-#      e pelo hash da linha UPSTREAM_) e as entradas do changelog;
-#   3. aplica a série (dpkg-source) e confere o hash do device.c resultante;
-#   4. MORDE: roda assets/bluez-backport/prova/eagain.c contra o device.c
-#      vanilla (tem de destruir o aparelho no EAGAIN) e contra o patchado
-#      (tem de ficar);
-#   5. confere as dependências de build — se faltar, LISTA e sai (código 3),
-#      sem sudo nenhum;
-#   6. dpkg-buildpackage -b -us -uc, e depois o `make check` do próprio BlueZ;
-#   7. entrega libbluetooth3, bluez e bluez-cups + SHA256SUMS em
-#      ~/.cache/hefesto-dualsense4unix/bluez-backport/, onde o install procura,
-#      e confere no bluetoothd a marca de cada patch.
-#
-# NÃO INSTALA NADA. O postinst do pacote bluez reinicia o bluetoothd e derruba
-# todo HID por rádio; instalar é do install.sh, com ela avisada.
-#
-# Uso:
-#   scripts/construir_bluez_backport.sh              # constrói a última revisão
-#   scripts/construir_bluez_backport.sh --forcar     # reconstrói mesmo já pronto
-#   scripts/construir_bluez_backport.sh --sem-unit   # pula o make check
-#   scripts/construir_bluez_backport.sh --preparar   # só os passos 1 a 4
-#   scripts/construir_bluez_backport.sh --mordida ARQ  # só o passo 4, sobre ARQ
-#   HEFESTO_BLUEZ_CACHE=/outro scripts/construir_bluez_backport.sh --revisao 3
-#       # reconstrói uma revisão antiga para provar a receita; exige um cache
-#       # que NÃO seja o que o install lê
-#   HEFESTO_BLUEZ_JOBS=4 scripts/construir_bluez_backport.sh
-#       # compila com 4 processos em vez de um por núcleo
-#
-# Idempotente: com os três .deb da versão alvo já no cache, o SHA256SUMS
-# batendo e o ORIGEM.txt dizendo as mesmas fontes e os mesmos patches, sai 0
-# sem baixar nem compilar. A árvore de obra é refeita do zero
-# a cada preparo, então duas corridas dão a mesma árvore.
-#
-# Códigos de saída: 0 ok · 2 uso · 3 falta dependência · 4 fonte não confere
-# · 5 série não aplica · 6 a mordida não morde · 7 build · 8 unit do BlueZ.
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+construir_bluez_backport.sh — o backport do BlueZ que o install.sh instala,
+construído do zero e conferido a cada passo (BLUETOOTHD-NAO-DERRUBA-01).
+
+Uso:
+  scripts/construir_bluez_backport.sh              # constrói a última revisão
+  scripts/construir_bluez_backport.sh --forcar     # reconstrói mesmo já pronto
+  scripts/construir_bluez_backport.sh --sem-unit   # pula o make check
+  scripts/construir_bluez_backport.sh --preparar   # só os passos 1 a 4
+  scripts/construir_bluez_backport.sh --mordida ARQ  # só o passo 4, sobre ARQ
+  HEFESTO_BLUEZ_CACHE=/outro scripts/construir_bluez_backport.sh --revisao 3
+      # reconstrói uma revisão antiga para provar a receita; exige um cache
+      # que NÃO seja o que o install lê
+  HEFESTO_BLUEZ_JOBS=4 scripts/construir_bluez_backport.sh
+      # compila com 4 processos em vez de um por núcleo
+AJUDA
+}
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS="${RAIZ}/assets/bluez-backport"
@@ -56,10 +26,7 @@ CACHE="${HEFESTO_BLUEZ_CACHE:-${HOME}/.cache/hefesto-dualsense4unix}"
 FONTES="${CACHE}/bluez-fontes"
 OBRA="${CACHE}/bluez-obra"
 SAIDA="${CACHE}/bluez-backport"
-# Onde o install.sh (passo 3f) procura os .deb — fixo, sem HEFESTO_BLUEZ_CACHE.
 SAIDA_DO_INSTALL="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
-# Paralelismo do build e do make check. O padrão é um núcleo por processador;
-# numa máquina em uso, com pouca memória livre, peça menos.
 JOBS="${HEFESTO_BLUEZ_JOBS:-$(nproc)}"
 
 RC_USO=2
@@ -70,8 +37,6 @@ RC_MORDIDA=6
 RC_BUILD=7
 RC_UNIT=8
 
-# O ambiente do build é LIMPO: um PYTHONPATH ou uma venv herdados mudam o
-# python que gera as man pages, e o build deixa de ser o mesmo em outra casa.
 AMBIENTE_LIMPO=(
     env -i
     "HOME=${HOME}"
@@ -80,10 +45,7 @@ AMBIENTE_LIMPO=(
     "TERM=dumb"
 )
 
-# O recorte que a mordida compila: a struct input_device (e o enum que ela
-# cita), toda função hidp_send_* e os #define HIDP_SEND_* do patch. Casa pelo
-# NOME, não pela linha, então serve ao vanilla e ao patchado.
-# shellcheck disable=SC2016  # é um programa awk: o $ é do awk, não do shell
+# shellcheck disable=SC2016
 RECORTE_AWK='
 !dentro && /^#define HIDP_SEND_/ { print; next }
 !dentro && /^(enum reconnect_mode_t|struct input_device) \{/ { dentro = 1; fim = "^};"; print; next }
@@ -107,9 +69,6 @@ ler() {
     printf '%s' "${linha#*=}"
 }
 
-# A chave da revisão pedida (`CHAVE_R<n>`) vence a comum: as revisões que
-# nasceram sobre outro upstream (a 4 e as anteriores, sobre a 5.86) guardam ali
-# o que difere delas.
 ler_da_revisao() {
     local chave="$1"
     if grep -q -E "^${chave}_R${REVISAO}=" "${BASELINE}"; then
@@ -119,9 +78,6 @@ ler_da_revisao() {
     fi
 }
 
-# Um patch exportado do upstream tem a linha `UPSTREAM_hefesto-NNNN=<commit>
-# <sha256>`: o arquivo tem de ter esse SHA-256 e abrir com `From <commit>`. Os
-# da casa (sem a linha) seguem fixados pelo hash do device.c depois da série.
 conferir_patch_do_upstream() {
     local arquivo="$1" nome a b _ linha commit sha
     nome="${arquivo##*/}"
@@ -157,11 +113,6 @@ baixar() {
     mkdir -p "${destino%/*}"
     parcial="${destino}.parcial"
     diga "baixando ${url}"
-    # Sem teto de tempo o curl fica PARADO para sempre numa conexão que aceitou
-    # e não manda nada — medido em 23/09 no redirecionamento do Launchpad, com
-    # o mesmo arquivo chegando em 16 s por outro curl. Cada tentativa tem teto,
-    # uma transferência abaixo de 1 KB/s por 60 s é abandonada, e o --retry
-    # tenta de novo.
     curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 300 \
             --speed-limit 1024 --speed-time 60 -o "${parcial}" "${url}" \
         || morra "${RC_FONTE}" "não consegui baixar ${url}"
@@ -172,12 +123,6 @@ baixar() {
     mv -f "${parcial}" "${destino}"
 }
 
-# Os ajustes que o 5.86 e o 5.87 pedem ao empacotamento do 5.85 (os três
-# primeiros medidos no build de 22/07/2026, do quarto ao sétimo em 15/10/2026).
-# Os três primeiros conferem que acharam o que deviam, senão param: um ajuste
-# que não acha o alvo é sinal de que o empacotamento mudou por baixo. Do quarto
-# em diante, cada um pergunta ao fonte se a mudança dele existe ali (a 5.86 das
-# revisões 3 e 4 não tem nenhuma).
 ajustar_empacotamento() {
     local series="${ARVORE}/debian/patches/series"
     local manpages="${ARVORE}/debian/bluez.manpages"
@@ -189,21 +134,16 @@ ajustar_empacotamento() {
     local p0012="0012-src-device-Fix-stored-gatt-cache-DB-Hash-value-not-u.patch"
     local nova
 
-    # 1. o 0013 do resolute não liga no 5.86: a API de volume foi refeita
-    #    (media_transport_get_device_volume não existe mais).
     grep -qxF "${p0013}" "${series}" \
         || morra "${RC_PATCH}" "a series do resolute não lista ${p0013}"
     grep -vxF "${p0013}" "${series}" > "${series}.novo" || true
     mv -f "${series}.novo" "${series}"
 
-    # 2. o 5.86 não gera mais a man page do btmgmt; a cópia de debian/manpages
-    #    continua instalada.
     grep -qxF "${man_btmgmt}" "${manpages}" \
         || morra "${RC_PATCH}" "debian/bluez.manpages não lista ${man_btmgmt}"
     grep -vxF "${man_btmgmt}" "${manpages}" > "${manpages}.novo" || true
     mv -f "${manpages}.novo" "${manpages}"
 
-    # 3. seis man pages novas do 5.86, sem as quais o dh_missing aborta.
     for nova in \
         usr/share/man/man1/bluetoothctl-telephony.1 \
         usr/share/man/man5/org.bluez.Call.5 \
@@ -214,19 +154,12 @@ ajustar_empacotamento() {
         grep -qxF "${nova}" "${manpages}" || printf '%s\n' "${nova}" >> "${manpages}"
     done
 
-    # 4. a partir da 5.87 (c34ed95fa) a unit pede também o CAP_NET_RAW, e a
-    #    linha de contexto do ubuntu_error_restart.patch (o Restart=on-failure
-    #    que reergue o bluetoothd depois de uma queda) deixa de casar com fuzz
-    #    zero. O contexto acompanha o fonte; o que o patch muda não.
     if grep -qxF "${cap_587}" "${ARVORE}/src/bluetooth.service.in"; then
         grep -qxF " ${cap_586}" "${restart}" \
             || morra "${RC_PATCH}" "o ubuntu_error_restart.patch não traz o contexto «${cap_586}»"
         sed -i "s/^ ${cap_586}\$/ ${cap_587}/" "${restart}"
     fi
 
-    # 5. o 0012 do resolute é o 0fd01e98c do upstream, que a 5.87 já traz: ali
-    #    ele sai da series. A pergunta é ao fonte (o patch desfeito aplica
-    #    limpo?), não à versão; na 5.86 ele fica.
     if grep -qxF "${p0012}" "${series}" \
         && (cd "${ARVORE}" && patch -p1 -R -F0 --dry-run -s \
             < "debian/patches/${p0012}") >/dev/null 2>&1; then
@@ -234,9 +167,6 @@ ajustar_empacotamento() {
         mv -f "${series}.novo" "${series}"
     fi
 
-    # 6. a 5.87 tirou o hcidump (a035be775): sem o tools/hcidump.c no fonte, o
-    #    pacote bluez-hcidump sai do debian/control, senão o dh_install para
-    #    por falta do binário. O btmon segue no pacote bluez.
     if [[ ! -e "${ARVORE}/tools/hcidump.c" ]] \
         && grep -qx 'Package: bluez-hcidump' "${ARVORE}/debian/control"; then
         awk 'BEGIN { RS = ""; ORS = "\n\n" } !/^Package: bluez-hcidump\n/' \
@@ -245,15 +175,12 @@ ajustar_empacotamento() {
         rm -f "${ARVORE}/debian/bluez-hcidump.install" "${ARVORE}/debian/bluez-hcidump."*
     fi
 
-    # 7. a 5.87 instala a man page do formato btsnoop (doc/btsnoop.7), que o
-    #    empacotamento do 5.85 não lista: sem a linha, o dh_missing aborta.
     if [[ -e "${ARVORE}/doc/btsnoop.7" ]]; then
         nova="usr/share/man/man7/btsnoop.7"
         grep -qxF "${nova}" "${manpages}" || printf '%s\n' "${nova}" >> "${manpages}"
     fi
 }
 
-# As entradas hefesto do changelog até a revisão pedida, por cima do do resolute.
 escrever_changelog() {
     local rev="$1" changelog="${ARVORE}/debian/changelog" versao_lida
     {
@@ -273,8 +200,6 @@ preparar() {
     local url_up sha_up url_emp sha_emp sha_vanilla sha_serie tar_up tar_emp p
     command -v dpkg-source >/dev/null || morra "${RC_DEPS}" "falta o dpkg-dev (dpkg-source)"
 
-    # Lido em atribuição, e não dentro de argumento: assim um BASELINE sem a
-    # chave para o script aqui, em vez de seguir com o valor vazio.
     url_up="$(ler_da_revisao FONTE_UPSTREAM_URL)"
     sha_up="$(ler_da_revisao FONTE_UPSTREAM_SHA256)"
     url_emp="$(ler EMPACOTAMENTO_URL)"
@@ -286,7 +211,6 @@ preparar() {
     baixar "${url_up}" "${sha_up}" "${tar_up}"
     baixar "${url_emp}" "${sha_emp}" "${tar_emp}"
 
-    # A obra é refeita do zero: é isso que faz duas corridas darem a mesma árvore.
     [[ "${OBRA}" == */bluez-obra ]] || morra "${RC_USO}" "obra fora do lugar: ${OBRA}"
     rm -rf "${OBRA}"
     mkdir -p "${OBRA}"
@@ -310,8 +234,6 @@ preparar() {
         cat "${OBRA}/serie.log" >&2
         morra "${RC_PATCH}" "a série não aplicou (log em ${OBRA}/serie.log)"
     fi
-    # Sem isto o dpkg-buildpackage DESFAZ a série ao terminar, e o make check
-    # recompilaria o bluetoothd sem os patches.
     rm -f "${ARVORE}/.pc/.dpkg-source-unapply"
 
     conferir_sha "${ARVORE}/profiles/input/device.c" "${sha_serie}" "o device.c depois da série"
@@ -342,8 +264,6 @@ destruido_em() {
     printf '%s' "${BASH_REMATCH[1]}"
 }
 
-# A régua do patch, sobre o fonte BAIXADO: o vanilla tem de destruir o
-# aparelho no EAGAIN e o patchado não. Só vale para revisão com o 0002.
 provar_a_mordida() {
     local vanilla patchado n_vanilla n_eagain n_epipe
     case " ${PATCHES} " in
@@ -384,21 +304,12 @@ compilar() {
     fi
 }
 
-# O AES-CCM do kernel pela AF_ALG, que o unit/test-mesh-crypto usa (pela ell).
-# Há máquina que o desliga de propósito: a dela tem
-# /etc/modprobe.d/disable-algif_aead.conf (CVE-2026-31431), e ali o bind
-# devolve ENOENT. Só leitura: nada é carregado nem escrito.
 aead_do_kernel_disponivel() {
     python3 -c 'import socket
 s = socket.socket(socket.AF_ALG, socket.SOCK_SEQPACKET, 0)
 s.bind(("aead", "ccm(aes)"))' >/dev/null 2>&1
 }
 
-# Um FAIL do unit/ que a MÁQUINA explica, e não o código: o teste só é
-# perdoado quando a pré-condição dele é medida ausente AGORA. Medido em
-# 23/09/2026: o unit/test-mesh-crypto liga só o próprio .o e a -lell — nada de
-# profiles/input —, e reprova em «Crypto packet encrypt» com o algif_aead
-# desligado. Qualquer outro FAIL, ou este com o AEAD disponível, reprova.
 falha_explicada_pela_maquina() {
     case "$1" in
         unit/test-mesh-crypto) ! aead_do_kernel_disponivel ;;
@@ -411,9 +322,6 @@ unit_do_bluez() {
     diga "make check, o unit/ do próprio BlueZ (log em ${OBRA}/unit.log)"
     if ! (cd "${ARVORE}" && "${AMBIENTE_LIMPO[@]}" make -j"${JOBS}" check) \
             > "${OBRA}/unit.log" 2>&1; then
-        # Sem o test-suite.log o make check nem chegou a rodar os testes. O
-        # XPASS também reprova o make check (automake), então entra na conta:
-        # sem ele, um XPASS ao lado do mesh-crypto perdoado passava calado.
         if [[ ! -f "${log}" ]] || ! grep -qE '^(FAIL|ERROR|XPASS): ' "${log}"; then
             tail -n 40 "${OBRA}/unit.log" >&2
             morra "${RC_UNIT}" "o make check falhou antes de rodar os testes (log em ${OBRA}/unit.log)"
@@ -439,8 +347,6 @@ debs_alvo() {
     done
 }
 
-# O que entrou no build: as fontes e o hash de cada patch da revisão. É a
-# chave do cache — o mesmo texto que vai para o ORIGEM.txt.
 origem() {
     local p
     printf 'versao=%s\n' "${ALVO}"
@@ -452,9 +358,6 @@ origem() {
     printf 'construido_por=scripts/construir_bluez_backport.sh\n'
 }
 
-# O atalho só vale quando os .deb conferem E foram feitos com o que está na
-# árvore agora. Sem a segunda pergunta, um hefesto-0002 mudado sem subir a
-# revisão respondia «já construído» e o install levava o .deb velho.
 ja_construido() {
     local deb
     [[ -f "${SAIDA}/SHA256SUMS" && -f "${SAIDA}/ORIGEM.txt" ]] || return 1
@@ -473,9 +376,6 @@ entregar() {
         cp -f "${OBRA}/${deb}" "${SAIDA}/${deb}"
     done < <(debs_alvo)
 
-    # A marca de cada patch da casa tem de estar no binário que vai para o
-    # cache. Os do upstream não têm linha MARCA_ (o hash deles foi conferido no
-    # preparo).
     tmp="$(mktemp -d)"
     dpkg-deb -x "${SAIDA}/bluez_${ALVO}_${ARCH}.deb" "${tmp}"
     for p in ${PATCHES}; do
@@ -492,7 +392,6 @@ entregar() {
     done
     rm -rf "${tmp}"
 
-    # SHA256SUMS só dos três de agora, por basename — é como o install lê.
     (cd "${SAIDA}" && debs_alvo | xargs sha256sum > SHA256SUMS.novo)
     mv -f "${SAIDA}/SHA256SUMS.novo" "${SAIDA}/SHA256SUMS"
     origem > "${SAIDA}/ORIGEM.txt"
@@ -520,7 +419,7 @@ main() {
                 shift
                 ;;
             -h | --help)
-                sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d'
+                _ajuda
                 exit 0
                 ;;
             *) morra "${RC_USO}" "argumento desconhecido: $1" ;;
@@ -538,12 +437,7 @@ main() {
     revisao_ultima="$(ler REVISAO_ULTIMA)"
     REVISAO="${REVISAO:-${revisao_ultima}}"
     [[ "${REVISAO}" =~ ^[0-9]+$ ]] || morra "${RC_USO}" "revisão inválida: ${REVISAO}"
-    # Conferido aqui, e não no fim: um HEFESTO_BLUEZ_JOBS=0 (ou com erro de
-    # digitação) só estourava no dpkg-buildpackage, depois de baixar e preparar.
     [[ "${JOBS}" =~ ^[1-9][0-9]*$ ]] || morra "${RC_USO}" "HEFESTO_BLUEZ_JOBS inválido: ${JOBS} (um inteiro a partir de 1)"
-    # A pergunta é pelo LUGAR, não pela variável: HEFESTO_BLUEZ_CACHE escrito
-    # com o próprio caminho do install (ou um link para ele) passava, e o .3
-    # sobrescrevia o SHA256SUMS que o install lê.
     if [[ "${REVISAO}" != "${revisao_ultima}" ]] \
             && [[ "$(realpath -m "${SAIDA}")" == "$(realpath -m "${SAIDA_DO_INSTALL}")" ]]; then
         morra "${RC_USO}" "a revisão ${REVISAO} não é a última (${revisao_ultima}); ela só se reconstrói com HEFESTO_BLUEZ_CACHE apontando para FORA do cache que o install lê (${SAIDA_DO_INSTALL})"

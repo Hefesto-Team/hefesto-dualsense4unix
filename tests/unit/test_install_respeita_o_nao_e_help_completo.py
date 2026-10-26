@@ -24,15 +24,13 @@ def _sem_comentarios(texto: str) -> str:
     return "\n".join(re.sub(r"(^|\s)#.*$", r"\1", linha) for linha in texto.splitlines())
 
 
-def _bloco_passo(marcador: str) -> str:
-    """Texto de um passo do install.sh: do `step "N/11"` ate a linha de regua"""
-    inicio = INSTALL.index(marcador)
-    fim = re.search(r"^# -{10,}", INSTALL[inicio:], re.MULTILINE)
-    assert fim is not None, f"fim do bloco {marcador} não encontrado"
-    return INSTALL[inicio : inicio + fim.start()]
-
-
-BLOCO_7A = _bloco_passo('step "7a/11"')
+BLOCO_7A = INSTALL[
+    INSTALL.index('step "7a/11"') : INSTALL.index(
+        '\nif [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _faria "subir o ícone na bandeja'
+    )
+]
+AJUDA = INSTALL[INSTALL.index("_ajuda() {\n  cat <<'AJUDA'\n") :]
+AJUDA = AJUDA[AJUDA.index("\n", AJUDA.index("<<'AJUDA'")) + 1 : AJUDA.index("\nAJUDA\n")]
 
 
 def _constantes_do_install() -> str:
@@ -157,31 +155,16 @@ class TestPasso7aContratoDeTexto:
         assert codigo.index('"${enable_daemon}"') < primeiro_enable
 
     def test_cabecalho_nao_mente_mais_sobre_o_default(self) -> None:
-        linhas = INSTALL.splitlines()
-        fim = next(
-            (
-                i
-                for i, texto in enumerate(linhas[1:], 1)
-                if texto.strip() and not texto.startswith("#")
-            ),
-            len(linhas),
+        assert "unit do daemon é COPIADA mas NÃO habilitada" not in AJUDA, (
+            "a ajuda afirmava um default falso desde que o passo 7a nasceu"
         )
-        cabecalho = "\n".join(linhas[:fim])
-        assert "unit do daemon é COPIADA mas NÃO habilitada" not in cabecalho, (
-            "o cabecalho afirmava um default falso desde que o passo 7a nasceu"
-        )
-        assert "HABILITADA no boot" in cabecalho
+        assert "HABILITADA no boot" in AJUDA
 
 
 def _roda_help() -> subprocess.CompletedProcess[str]:
-    """Executa o comando de ajuda extraido do próprio install.sh."""
-    inicio = INSTALL.index("-h|--help)")
-    fim = INSTALL.index("exit 0", inicio)
-    corpo = INSTALL[inicio + len("-h|--help)") : fim]
-    corpo = corpo.replace('"${BASH_SOURCE[0]}"', f"'{INSTALL_PATH}'")
-    assert "BASH_SOURCE" not in corpo, "o corpo do --help ficou com BASH_SOURCE solto"
+    """Executa o ``install.sh --help`` de verdade."""
     return subprocess.run(
-        [BASH, "-c", "set -euo pipefail\n" + corpo],
+        [BASH, str(INSTALL_PATH), "--help"],
         capture_output=True,
         text=True,
         check=False,
@@ -190,9 +173,8 @@ def _roda_help() -> subprocess.CompletedProcess[str]:
 
 
 def _flags_do_cabecalho() -> list[str]:
-    """Flags documentadas na coluna de flags do cabecalho (`#   --alguma-coisa`)."""
-    cabecalho = INSTALL[: INSTALL.index("\nset -euo pipefail")]
-    achadas = re.findall(r"(?m)^#\s{2,}(--[a-z0-9-]+)", cabecalho)
+    """Flags documentadas na coluna de flags da ajuda (`  --alguma-coisa`)."""
+    achadas = re.findall(r"(?m)^\s{2,}(--[a-z0-9-]+)", AJUDA)
     return sorted(set(achadas))
 
 
@@ -315,12 +297,7 @@ def test_o_que_o_instalador_imprime_nao_tem_id(nome: str) -> None:
 
 
 def test_o_help_nao_tem_id() -> None:
-    cabecalho = []
-    for linha in INSTALL.splitlines()[1:]:
-        if not linha.startswith("#"):
-            break
-        cabecalho.append(linha)
     achados = [
-        linha for linha in cabecalho if _VOCABULARIO_DE_QUEM_CONSTROI.search(linha)
+        linha for linha in AJUDA.splitlines() if _VOCABULARIO_DE_QUEM_CONSTROI.search(linha)
     ]
     assert not achados, "o --help imprime:\n" + "\n".join(achados)

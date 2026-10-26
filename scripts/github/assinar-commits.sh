@@ -1,29 +1,19 @@
 #!/usr/bin/env bash
-# scripts/github/assinar-commits.sh — configura o git desta conta para assinar commit e tag com a chave
-# SSH (o selo «Verified» do GitHub). O ruleset da história do `dev` e do `main` exige commit assinado
-# (`assinatura: exigida`, em `.github/repositorio.yml`), e quem empurra sem assinar é recusado.
-#
-#   bash scripts/github/assinar-commits.sh                        o mesmo que --conferir
-#   bash scripts/github/assinar-commits.sh --conferir             diz o que falta; sai 1 se a máquina não assina
-#   bash scripts/github/assinar-commits.sh --aplicar              grava a configuração no git GLOBAL de quem roda
-#   bash scripts/github/assinar-commits.sh --aplicar --chave ~/.ssh/id_ed25519.pub
-#   bash scripts/github/assinar-commits.sh --conferir --provar   além da configuração, faz um commit de
-#                                                                 brinquedo (descartável) e confere a assinatura
-#
-# O que fica gravado (`git config --global`): gpg.format ssh, user.signingkey (o arquivo .pub),
-# commit.gpgsign true e tag.gpgsign true. É idempotente: rodar de novo não muda nada. NUNCA gera
-# chave, nunca escreve fora do `git config --global` e nunca roda com sudo (o HOME viraria /root).
-#
-# Sem `--chave`, usa a primeira que existir entre ~/.ssh/id_ed25519.pub, id_ecdsa.pub e id_rsa.pub.
-# A chave pública também precisa estar na conta do GitHub como «Signing key» (Settings > SSH and GPG
-# keys); isso é da conta e não se faz daqui.
-#
-# Chave com senha precisa estar carregada (`ssh-add`) para o commit sair assinado; sem isso o
-# `--provar` reprova em vez de ficar esperando a senha.
-#
-# Saída: 0 a máquina assina (ou ficou assinando); 1 `--conferir` achou o que falta; 2 uso errado ou
-# chave que não existe.
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+scripts/github/assinar-commits.sh — configura o git desta conta para assinar commit e tag com a chave
+SSH (o selo «Verified» do GitHub). O ruleset da história do `dev` e do `main` exige commit assinado
+(`assinatura: exigida`, em `.github/repositorio.yml`), e quem empurra sem assinar é recusado.
+
+  bash scripts/github/assinar-commits.sh                        o mesmo que --conferir
+  bash scripts/github/assinar-commits.sh --conferir             diz o que falta; sai 1 se a máquina não assina
+  bash scripts/github/assinar-commits.sh --aplicar              grava a configuração no git GLOBAL de quem roda
+  bash scripts/github/assinar-commits.sh --aplicar --chave ~/.ssh/id_ed25519.pub
+  bash scripts/github/assinar-commits.sh --conferir --provar   além da configuração, faz um commit de
+                                                                brinquedo (descartável) e confere a assinatura
+AJUDA
+}
 
 MODO=conferir
 CHAVE=""
@@ -36,7 +26,7 @@ while [ $# -gt 0 ]; do
     --chave)
       [ $# -ge 2 ] || { echo "uso: --chave <arquivo .pub>" >&2; exit 2; }
       CHAVE="$2"; shift ;;
-    -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) _ajuda; exit 0 ;;
     *) echo "uso: bash scripts/github/assinar-commits.sh [--conferir|--aplicar] [--provar] [--chave <arquivo .pub>]" >&2; exit 2 ;;
   esac
   shift
@@ -49,7 +39,6 @@ fi
 
 global() { git config --global --get "$1" 2>/dev/null || true; }
 
-# A chave que vale: a pedida, a que já está gravada, ou a primeira padrão que existir.
 escolher_chave() {
   local c
   if [ -n "$CHAVE" ]; then printf '%s\n' "$CHAVE"; return; fi
@@ -61,8 +50,6 @@ escolher_chave() {
   printf '\n'
 }
 
-# Um commit de brinquedo, num repositório descartável e sem os ganchos da máquina, que obedece ao
-# commit.gpgsign de verdade; a assinatura é conferida com a própria chave pública.
 provar() {
   local pub d email rc
   pub="${1/#\~/$HOME}"
@@ -93,7 +80,6 @@ provar_e_sair() {
 }
 
 chave="$(escolher_chave)"
-# `~` gravado como texto no git config também vale para o git, mas o teste de existência é nosso.
 chave_em_disco="${chave/#\~/$HOME}"
 
 falta=()
@@ -123,7 +109,6 @@ if [ "$MODO" = "conferir" ]; then
   exit 1
 fi
 
-# --aplicar
 if [ "${#falta[@]}" -eq 0 ]; then
   echo "a máquina já assina commit e tag (chave: $atual): nada a fazer"
   [ "$PROVAR" -eq 1 ] && provar_e_sair

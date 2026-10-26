@@ -1,49 +1,4 @@
 #!/usr/bin/env bash
-# desempenho.sh — dono ÚNICO dos ajustes do modo desempenho.
-#
-#   desempenho.sh aplicar [id...]   grava os ajustes (install.sh, o passo desempenho)
-#   desempenho.sh remover           desfaz TODOS os arquivos (uninstall.sh)
-#   desempenho.sh ids               imprime os ids que este roteiro conhece
-#
-# O QUE É (decisão, 02/10/2026): o install pergunta se o computador deve ser
-# usado no modo desempenho para jogar, e cada ajuste é um ARQUIVO PERMANENTE na
-# forma que o install já usa para o USB e o Bluetooth (modprobe.d, tmpfiles.d,
-# unit de sistema) — nunca um comando que some no reboot. Quem decide a pergunta
-# e o padrão (sim no desktop, não no notebook com bateria) é a
-# `install_desempenho_host`, em scripts/lib/camada_de_maquina.sh; este roteiro é
-# só o mecanismo.
-#
-# OS AJUSTES
-#   perfil   o perfil de energia em Performance, a cada boot (unit de sistema que
-#            fala com o system76-power ou com o power-profiles-daemon). É
-#            DECISÃO DE PRODUTO: entra sempre que o pedido é sim.
-#   nvidia   NVreg_DynamicPowerManagement=0 (modprobe.d)          — a provar
-#   audio    snd_hda_intel power_save=0 (modprobe.d)              — a provar
-#   aspm     política ASPM do PCIe em performance (tmpfiles.d)    — a provar
-#
-# «A PROVAR» é literal: só entra no install o que a medida no aparelho mostrou.
-# A lista dos provados mora no install.sh (`DESEMPENHO_PROVADOS`, vazia hoje) e
-# chega aqui por HEFESTO_DESEMPENHO_PROVADOS; a prova liga um ajuste acrescentando
-# o id àquela variável. Pedido EXPLÍCITO (`aplicar nvidia`) vale sempre — é como
-# se grava o ajuste para provar na bancada, e `remover` o desfaz.
-#
-# O QUE A MÁQUINA NÃO TEM É PULADO E DITO, nunca erro: sem system76-power nem
-# power-profiles-daemon não há perfil de energia; sem o módulo nvidia carregado a
-# placa é outra (AMD, Intel) ou está sem driver; sem snd_hda_intel o áudio é
-# outro; sem pcie_aspm no kernel não há política a escrever.
-#
-# NADA aqui reinicia nada nem escreve no sysfs: os arquivos valem no próximo
-# boot (o `perfil`, além disso, é pedido ao gerenciador agora, pela unit).
-#
-# Overrides de bancada (em produção ficam todos no padrão):
-#   HEFESTO_DESEMPENHO_RAIZ       prefixo de mentira para /etc (vazio = a máquina;
-#                                 com ele não há sudo nem systemctl)
-#   HEFESTO_DESEMPENHO_SYS        o /sys           (padrão /sys)
-#   HEFESTO_DESEMPENHO_PROC       o /proc          (padrão /proc)
-#   HEFESTO_DESEMPENHO_BIN        pasta onde procurar system76-power e
-#                                 powerprofilesctl (padrão: o PATH)
-#   HEFESTO_DESEMPENHO_ASSETS     assets/desempenho (padrão ../assets/desempenho)
-#   HEFESTO_DESEMPENHO_PROVADOS   os ids provados, separados por espaço
 set -euo pipefail
 
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -71,10 +26,8 @@ fi
 
 _dizer() { printf '      %s\n' "$*"; }
 
-# Roda como root na máquina; direto sob prefixo de mentira.
 _como_root() { "${SUDO[@]}" "$@"; }
 
-# Procura um binário: na pasta de bancada, se houver, senão no PATH.
 _achar() {
     if [[ -n "${HEFESTO_DESEMPENHO_BIN:-}" ]]; then
         [[ -x "${HEFESTO_DESEMPENHO_BIN}/$1" ]] && printf '%s' "${HEFESTO_DESEMPENHO_BIN}/$1"
@@ -83,8 +36,6 @@ _achar() {
     command -v "$1" 2>/dev/null || true
 }
 
-# O gerenciador de energia desta máquina: system76-power, power-profiles-daemon
-# ou nada. O system76-power vem primeiro (no Pop!_OS é ele o dono do perfil).
 _gerenciador() {
     if [[ -n "$(_achar system76-power)" ]]; then
         printf 'system76-power'
@@ -93,17 +44,12 @@ _gerenciador() {
     fi
 }
 
-# O power-profiles-daemon só oferece «performance» quando um driver da máquina
-# o sustenta (platform_profile, ou o pstate da CPU); sem ele a unit pediria um
-# perfil que não existe e falharia a cada boot. Sem resposta do daemon não se
-# sabe, e não se pula: a unit é o lado reversível.
 _ppd_sem_performance() {
     local lista
     lista="$(timeout 5 "$(_achar powerprofilesctl)" list 2>/dev/null)" || return 1
     ! grep -Eq '^[[:space:]*]*performance:' <<<"${lista}"
 }
 
-# Diz se a máquina tem o que o ajuste mexe. Imprime o MOTIVO quando não tem.
 _falta_na_maquina() {
     case "$1" in
         perfil)
@@ -137,11 +83,6 @@ _instalar_asset() {
 _aplicar_perfil() {
     local gerenciador comando unidade tmp
     gerenciador="$(_gerenciador)"
-    # O sucesso da unit é o ESTADO, não o código de saída do pedido: o
-    # system76-power sai 1 quando uma peça do perfil falha (a política de link
-    # de uma porta SATA que não a aceita, medido na bancada em 03/10) mesmo
-    # com o perfil aplicado, e a unit ficaria falhada a cada boot. Pede, e
-    # confere lendo o perfil de volta; o Restart= só volta a pedir se não pegou.
     if [[ "${gerenciador}" == "system76-power" ]]; then
         comando="/bin/sh -c 'system76-power profile performance; system76-power profile | grep -q \"^Power Profile: Performance\"'"
         unidade="com.system76.PowerDaemon.service"
@@ -152,8 +93,6 @@ _aplicar_perfil() {
     tmp="$(mktemp)"
     sed -e "s#__SERVICO_DO_GERENCIADOR__#${unidade}#g" -e "s#__COMANDO__#${comando}#g" \
         "${ASSETS}/hefesto-desempenho.service" >"${tmp}"
-    # A guarda pós-render, como a das units do broker: nunca gravar unit com
-    # marcador literal.
     if grep -q '__[A-Z_]*__' "${tmp}"; then
         rm -f "${tmp}"
         _dizer "aviso: o modelo da unit do perfil ficou com marcador sem trocar — nada gravado"

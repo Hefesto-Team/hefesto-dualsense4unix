@@ -1,110 +1,11 @@
 #!/usr/bin/env bash
-# fix_wireplumber_default_source.sh — impede o DualSense de virar o microfone
-# padrão do sistema (FEAT-WIREPLUMBER-DUALSENSE-NOT-DEFAULT-SOURCE-01).
-#
-# Instala um drop-in do WirePlumber que rebaixa a prioridade da fonte de áudio
-# do DualSense e reseta a fonte padrão JÁ persistida para uma fonte sã (ex.: o
-# microfone da webcam ou o onboard). Cobre o sintoma "o controle fica
-# diminuindo/mexendo no microfone" — que é o WirePlumber elegendo o mic do
-# controle como entrada padrão ao conectar, não o daemon do Hefesto.
-#
-# Uso:
-#   scripts/fix_wireplumber_default_source.sh [--install|--disable-source|--reset-only|--status]
-#     --install         (default) instala o drop-in que REBAIXA + reset + restart.
-#     --disable-source  DESABILITA a source do DualSense (node.disabled; só-HID).
-#                       Remove o mic do controle de vez — vence até escassez de fonte.
-#     --reset-only      só reelege a fonte padrão e reinicia (sem (re)instalar drop-in).
-#     --enable-mic      REMOVE os drop-ins de supressão (52/53), GARANTE o
-#                       promotor (51) e deixa o mic do DualSense utilizável e
-#                       acima de qualquer monitor (o oposto de --install).
-#     --promote-source  PROMOÇÃO EXPLÍCITA (MIC-USB-01): faz o mic do controle ser
-#                       o microfone PADRÃO e persiste a escolha. É o --enable-mic
-#                       mais a cura das camadas 1 e 2 e a eleição de fato.
-#     --unmute-routes   SÓ tira o `"mute":true` persistido das rotas do DualSense
-#                       (camada 1) — sem mexer em drop-in nem em fonte padrão.
-#     --marcar-gesto-do-mic   DROPIN-AMBIGUO-01: só grava a MARCA DO GESTO
-#                       ("o mic do DualSense é escolha do usuário, em <data>"). Não
-#                       toca em drop-in, em fonte padrão nem no WirePlumber.
-#                       É por onde o `install.sh --keep-dualsense-mic` carimba.
-#     --apagar-gesto-do-mic   o contrário: só apaga a marca. É por onde o
-#                       `install.sh` carimba os ramos que decidem o oposto.
-#     --nunca-dorme     SOM-QUE-NAO-DORME-01: instala SÓ o 54, que impede o
-#                       WirePlumber de suspender o SINK (alto-falante) do
-#                       controle. Não fala do microfone, não é opt-in, e o
-#                       `install.sh` o chama em todo formato — inclusive com
-#                       `--keep-dualsense-mic`. Reinicia o WirePlumber apenas se
-#                       o arquivo mudou. Sai 0 sempre que o arquivo está no lugar.
-#     --status          mostra a fonte padrão atual e sai.
-#
-# O 54 (nunca-dorme) entra TAMBÉM em todos os outros modos que escrevem: o sono
-# da saída é ortogonal à política de entrada, e nenhuma escolha de microfone
-# implica querer perder o começo de cada som.
-#
-#   Env: HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1 faz --install/--disable
-#        virarem --enable-mic automaticamente (a usuária QUER o mic do DualSense).
-#
-# Exit code (modos install/disable-source): 0 = microfone ativo != DualSense (OK);
-#   2 = DualSense ainda ativo por ser a ÚNICA fonte disponível (aviso, não falha);
-#   1 = DualSense ativo COM outra fonte available (falha real — drop-in não pegou);
-#   3 = a fonte padrão é um MONITOR — não é o DualSense, e também não é microfone
-#       nenhum (ver INSTALADOR-QUE-APROVOU-O-MONITOR-01, logo abaixo).
-# (FEAT-WIREPLUMBER-DISABLE-SOURCE-MODE-01, BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01, ADR-019.)
-#
-# ─────────────────────────────────────────────────────────────────────────────
-# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — MEDIDO na bancada, num
-# `install.sh` completo, e a contradição estava no mesmo terminal:
-#
-#   passo 10/11 do install:  OK: microfone padrão ativo = alsa_output.pci-…
-#                                .iec958-stereo.monitor (DualSense fora)
-#   doctor.sh, dois minutos depois:
-#                            [FAIL] a fonte de captura padrão é um MONITOR — o
-#                                que qualquer app gravar é o áudio de SAÍDA do
-#                                sistema, não a voz
-#
-# O critério ERRADO era o DAQUI. Esta verificação só perguntava "o ativo é o mic
-# do DualSense?" — e um monitor não é, então ela respondia OK e o install
-# imprimia sucesso. Perguntar só pelo DualSense num passo cujo veredito o
-# instalador usa como "o microfone está bem" é a mesma família do
-# BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01: a pergunta é estreita demais para a
-# afirmação que sai dela. O doctor estava certo.
-#
-# A medição que a sprint SEM-MICROFONE-NENHUM-01 deixou pendente também foi
-# feita, e REFUTA a hipótese do pipewire-pulse (que estava SEM PROVA):
-#
-#   $ pw-metadata -n default
-#   default.configured.audio.source = alsa_input.pci-0000_0c_00.4.analog-stereo
-#   default.audio.source            = alsa_output.pci-0000_0c_00.4.iec958-stereo
-#
-# Quem elege é o WirePlumber: a metadata NÃO está vazia, e o valor eleito é o nó
-# do SINK — o `.monitor` é sufixo que a camada pulse acrescenta ao publicar. Cura
-# pelo lado do WirePlumber CHEGA no `pactl get-default-source`. GRAU: MEDIDO.
-#
-# A mesma medição mostra o segundo defeito daqui: o `configured` é a onboard, que
-# o `reset_default_source` elegeu — e o WirePlumber a recusa (as três portas de
-# captura dela estão `not available`) e reelege o sink. Elegemos um nó que não
-# para de pé, sobrescrevemos a preferência persistida dela com ele, e chamamos
-# isso de sucesso. Por isso a escolha do alvo passou a sair do MESMO filtro de
-# porta usável do `doctor.sh` (RECEITA-ERRADA-01): um critério só, aqui e lá.
-# ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# AS REGRAS DO SOM VALEM NO WIREPLUMBER DA DISTRO (13/10/2026). O WirePlumber 0.5
-# lê SPA-JSON em `wireplumber.conf.d/`; o 0.4 (Ubuntu 24.04, Linux Mint 22,
-# Debian 12) lê Lua em `main.lua.d/` e IGNORA a pasta do 0.5 sem erro. A forma sai
-# da pergunta pela capacidade (a pasta `main.lua.d` na configuração de sistema do
-# WirePlumber instalado), não pela versão. É a MESMA pergunta de
-# `utils/xdg_paths.wireplumber_forma` — duplicação declarada (este script é shell
-# e roda sem o Python do produto), e `tests/unit/test_as_regras_do_som_valem_no_
-# wireplumber_da_distro.py` compara as duas. `HEFESTO_WIREPLUMBER_SISTEMA` (lista
-# separada por `:`) desvia as pastas de sistema, para o teste e para a bancada.
 _wp_forma() {
     local raiz sistema="${HEFESTO_WIREPLUMBER_SISTEMA:-/usr/share/wireplumber:/etc/wireplumber}"
     local IFS=:
-    # A primeira raiz que traz configuração decide (a razão está em
-    # `xdg_paths.wireplumber_forma`): um `main.lua.d` esquecido em /etc não
-    # vence o `wireplumber.conf` do 0.5 em /usr/share.
     for raiz in ${sistema}; do
         [[ -n "${raiz}" ]] || continue
         [[ -d "${raiz}/main.lua.d" ]] && { printf 'lua'; return 0; }
@@ -114,9 +15,6 @@ _wp_forma() {
     printf 'conf'
 }
 readonly WP_FORMA="$(_wp_forma)"
-# Os nomes ficam por extenso nas duas formas (e não montados com `${WP_EXT}`): é o
-# que deixa o portão de artefatos de sistema e quem faz `grep` do nome enxergarem
-# o asset instalado.
 if [[ "${WP_FORMA}" == "lua" ]]; then
     readonly WP_EXT="lua"
     readonly WP_SUBPASTA="main.lua.d"
@@ -133,50 +31,22 @@ else
     readonly DROPIN_ACORDADO_NAME="54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
 fi
 readonly WP_RAIZ_DE_USUARIO="${HOME}/.config/wireplumber"
-WP_ALTEROU=0   # 1 = um drop-in ou o state mudou nesta volta (ver restart_wireplumber_se_alterou)
+WP_ALTEROU=0
 readonly DROPIN_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_NAME}"
 readonly DROPIN_DIR="${WP_RAIZ_DE_USUARIO}/${WP_SUBPASTA}"
 readonly DROPIN_DST="${DROPIN_DIR}/${DROPIN_NAME}"
 readonly DROPIN_DISABLE_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_DISABLE_NAME}"
 readonly DROPIN_DISABLE_DST="${DROPIN_DIR}/${DROPIN_DISABLE_NAME}"
-# FEAT-WIREPLUMBER-DISABLE-SOURCE-MODE-01 (reforço): 53 desabilita a SAÍDA do
-# DualSense, para o '.monitor' do sink não reaparecer como default-source.
 readonly DROPIN_OUTPUT_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_OUTPUT_NAME}"
 readonly DROPIN_OUTPUT_DST="${DROPIN_DIR}/${DROPIN_OUTPUT_NAME}"
-# SOM-QUE-NAO-DORME-01 (16/08/2026): o 54 impede o WirePlumber de SUSPENDER o
-# sink do controle. Ele não é irmão dos três acima — aqueles decidem o
-# MICROFONE, este decide o SONO DO ALTO-FALANTE. Por isso ele entra em TODO
-# modo que escreve, inclusive quando a usuária pediu para não mexerem no mic
-# dela: sono de saída e eleição de entrada são perguntas diferentes.
 readonly DROPIN_ACORDADO_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_ACORDADO_NAME}"
 readonly DROPIN_ACORDADO_DST="${DROPIN_DIR}/${DROPIN_ACORDADO_NAME}"
 readonly STATE_FILE="${HOME}/.local/state/wireplumber/default-nodes"
-# DROPIN-AMBIGUO-01 (04/08/2026, curado em 26/08/2026) — A MARCA DO GESTO.
-#
-# O `doctor.sh:_prefere_mic_do_dualsense` lia a AUSÊNCIA do drop-in 51 como
-# "ela promoveu o mic do controle a dedo". A ausência tem DUAS origens e o
-# disco não as distingue: a promoção explícita e o `uninstall` que desarmou a
-# cura (ou a instalação que nunca houve). Máquina curada e máquina quebrada
-# eram o MESMO estado — e foi desse estado que saiu a queixa de 04/08,
-# *"não funciona nem mic, nem os botões de sons do jogo"*.
-#
-# A cura é marcar o GESTO, nunca o estado: quem LIGA o microfone do DualSense
-# (`--enable-mic`, `--promote-source`, o botão "Ligar" da aba Emulação, e o
-# `install.sh --keep-dualsense-mic`) grava este carimbo, com data. Quem faz o
-# gesto CONTRÁRIO — `--install`, `--disable-source`, o `uninstall.sh` — apaga.
-# Sem carimbo e sem o 51 o veredito passa a ser "NÃO SEI", que é o que o disco
-# de fato diz.
 readonly MARCA_MIC_DIR="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
 readonly MARCA_MIC_DST="${MARCA_MIC_DIR}/mic-do-dualsense-pedido.conf"
-# INSTALADOR-QUE-APROVOU-O-MONITOR-01: o doctor é o dono do critério de "fonte de
-# captura que se sustenta" (`_sources_com_porta_usavel` + `_melhor_source_de_captura`).
-# Reusamos as funções PURAS dele em vez de reescrever o critério aqui.
 readonly DOCTOR_SH="${ROOT_DIR}/scripts/doctor.sh"
 
 MODE="install"
-# MIC-DA-MESA-ELEICAO-01: `--fonte-se-sustenta` aceita o nome colado
-# (`--fonte-se-sustenta=NOME`) ou no argumento seguinte. `AGUARDA_NOME` é o
-# que faz a segunda forma funcionar dentro de um `for arg in "$@"`.
 FONTE_CONSULTADA=""
 AGUARDA_NOME=0
 for arg in "$@"; do
@@ -216,9 +86,6 @@ done
 
 log() { printf '[wp-fix] %s\n' "$*"; }
 
-# Tira a OUTRA forma do drop-in `$1` (o caminho na forma de agora): uma troca de
-# WirePlumber (0.4 para 0.5, ou o contrário) deixa a forma velha no disco, calada,
-# e ela precisa sair junto com a nova. A forma de agora é de quem chama.
 _tira_a_outra_forma() {
     local dst="$1" nome base
     nome="$(basename "${dst}")"
@@ -235,8 +102,6 @@ _tira_a_outra_forma() {
     fi
 }
 
-# Põe o asset `$1` em `$2` só se diferir, e levanta `WP_ALTEROU` quando escreve.
-# 0 = escreveu; 3 = já estava igual (o molde do `install_dropin_acordado`).
 _poe_o_dropin() {
     local src="$1" dst="$2"
     if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
@@ -248,7 +113,6 @@ _poe_o_dropin() {
     return 0
 }
 
-# A hora (época) em que o WirePlumber vivo subiu, ou nada quando não dá para saber.
 _wp_subiu_em() {
     command -v systemctl >/dev/null 2>&1 || return 0
     local t
@@ -260,9 +124,6 @@ _wp_subiu_em() {
     return 0
 }
 
-# Um arquivo que ele lê é mais novo que o WirePlumber vivo? Os nossos drop-ins e o UCM do
-# DualSense (o gancho e o verbo, que o `install_ucm_dualsense.sh` grava antes deste script no
-# install e no `doctor --fix`): gravados depois da subida, o WirePlumber ainda não os leu.
 _wp_nao_leu_o_disco() {
     local subiu f quando raiz="${HEFESTO_RAIZ_UCM:-/usr/share/alsa/ucm2}"
     subiu="$(_wp_subiu_em)"
@@ -280,10 +141,6 @@ _wp_nao_leu_o_disco() {
     return 1
 }
 
-# D-1410-O-APLICAR-SEGURA, parte 3: o WirePlumber só reinicia se algo que ele lê MUDOU
-# (drop-in escrito ou tirado, state reescrito) ou ficou mais novo que ele (o UCM que o install
-# gravou antes). É o único dono da pergunta: reiniciá-lo recria os nós de áudio da sessão, e um
-# `--install` repetido não tem motivo para isso.
 restart_wireplumber_se_alterou() {
     if [[ "${WP_ALTEROU}" -eq 1 ]] || _wp_nao_leu_o_disco; then
         restart_wireplumber
@@ -292,10 +149,6 @@ restart_wireplumber_se_alterou() {
     fi
 }
 
-# FEAT-DUALSENSE-MIC-INTENDED-01: se a usuária declarou que QUER o mic do DualSense
-# (env HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1), suprimir o mic é o oposto do
-# desejado — então qualquer install/disable vira "enable-mic" (remove os drop-ins de
-# supressão e deixa o mic utilizável/elegível como padrão).
 if [[ "${HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED:-}" =~ ^(1|true|yes|TRUE|YES)$ ]]; then
     if [[ "${MODE}" == "install" || "${MODE}" == "disable" ]]; then
         log "DUALSENSE_MIC_INTENDED=1 — mic do DualSense é desejado; não suprimo (modo enable-mic)"
@@ -308,10 +161,6 @@ show_status() {
         log "Default Configured Devices (wpctl):"
         wpctl status 2>/dev/null | sed -n '/Default Configured/,$p' | sed -n '1,6p' || true
     fi
-    # MIC-PADRAO-NO-CABO-01: esta linha é LEITURA. Ela dizia `persistido:` logo
-    # depois do restart, e no cabo mostrava o `hefesto_mic_…` que o rádio tinha
-    # guardado horas antes, como se este passo o tivesse gravado. Ela não julga
-    # se o nó está no ar: logo depois do restart a ausência é só o transitório.
     if [[ -f "${STATE_FILE}" ]]; then
         local guardada
         guardada="$(sed -n 's/^default\.configured\.audio\.source=//p' "${STATE_FILE}" 2>/dev/null | head -n1 || true)"
@@ -319,8 +168,6 @@ show_status() {
     fi
 }
 
-# Lê a seção Sources do `wpctl status` e devolve o ID de uma fonte que NÃO seja
-# o DualSense — preferindo a marcada como default (*), senão a primeira.
 pick_target_source_id() {
     wpctl status 2>/dev/null | awk '
         /Sources:/ {insrc=1; next}
@@ -340,64 +187,6 @@ pick_target_source_id() {
     '
 }
 
-# NOME da melhor fonte de captura que SE SUSTENTA, pelo critério do doctor.
-#
-# INSTALADOR-QUE-APROVOU-O-MONITOR-01. O `pick_target_source_id` acima escolhe a
-# primeira fonte não-DualSense do `wpctl status` e pronto — sem o filtro de porta
-# que a cura do doctor aplica desde a RECEITA-ERRADA-01. Medido na bancada:
-# isso elegia `alsa_input.pci-…analog-stereo`, cujas TRÊS portas de captura estão
-# `not available`; o `pactl`/`wpctl` aceita, o WirePlumber não consegue honrar um
-# nó sem porta usável, reelege sozinho, e o `.monitor` do sink volta. O estrago é
-# duplo: o defeito continua, e a preferência PERSISTIDA dela foi sobrescrita por
-# um nó que não para de pé.
-#
-# Silêncio (saída vazia) COM exit 0 quer dizer "consultei e não há fonte de
-# captura que se sustente" — e nesse caso não se elege nada. Eleger por eleger é
-# o que produzia o falso sucesso. Exit 1 é outra coisa: "não consegui consultar"
-# (sem doctor, sem pactl) — só aí o chamador cai no caminho antigo do `wpctl`.
-#
-# O-ELEITOR-QUE-ELEGIA-O-PROIBIDO-01 (01/09/2026)
-# ------------------------------------------------
-# ESTA FUNÇÃO ELEGIA O DUALSENSE, que é exatamente o que o gesto existe para
-# tirar. O mecanismo está em `doctor.sh:_melhor_source_de_captura`, na linha do
-# `prefere=0`::
-#
-#     escolha = (outro != "") ? outro : ds
-#
-# Com a webcam dela desconectada e a entrada analógica da placa-mãe filtrada
-# pelo `_sources_com_porta_usavel` (as três portas de captura dela estão `not
-# available`), `outro` fica VAZIO — e a função cai de volta no DualSense. O
-# eleitor herdava esse fallback; a régua o proíbe dois passos depois. Medido no
-# log do `install.sh` de 01/09: *"fonte padrão reeleita para
-# …DualSense…iec958-stereo (porta usável, critério do doctor)"* seguido de
-# *"FALHA: o MIC (alsa_input) do DualSense ainda é o ativo"*.
-#
-# E ISSO NÃO CONVERGIA: rodar de novo repetia a eleição e a reprovação, culpando
-# o drop-in ("drop-in não aplicou?"), que estava certo. Um gesto que não
-# converge não é idempotente — é um laço com uma acusação errada no fim.
-#
-# A CURA é tirar o DualSense da lista ANTES de perguntar qual é a melhor: sem
-# ele entre os candidatos, `ds` nunca é preenchido e o fallback não tem para
-# onde cair. O filtro de porta continua sendo o do doctor, que é o ponto — um
-# critério só, para os dois programas.
-#
-# O QUE ESTA FUNÇÃO NÃO FAZ, e é decisão: ela não mexe no
-# `_melhor_source_de_captura`. Aquele `prefere` serve ao doctor, que precisa
-# responder "qual é a melhor fonte de captura" mesmo quando a resposta é o
-# DualSense. A pergunta DESTE gesto é outra: "qual é a melhor que NÃO seja ele".
-#
-# OS MONITORES SAEM AQUI, e não no ranqueador. Medido no mesmo dia, um degrau
-# abaixo do defeito acima: a lista devolvia `…hdmi-stereo.monitor` e
-# `…iec958-stereo.monitor`, porque quem descartava monitor era o
-# `_melhor_source_de_captura` lá na frente. O ELEITOR ficava certo (o
-# ranqueador os comia); a RÉGUA `other_source_available`, que lê a lista crua,
-# passava a contar dois monitores como "outras fontes disponíveis" — e voltava a
-# acusar o drop-in. Uma lista que não significa o próprio nome vira duas
-# verdades assim que ganha o segundo leitor.
-#
-# O CANAL POR CONTROLE (`hefesto_mic_…`) FICA NA LISTA DE PROPÓSITO: é o §D.2 da
-# MIC-PADRAO-NO-CABO-01 — pelo rádio, o eleito do install é o microfone virtual
-# do controle. Quem precisa da pergunta sem ele é `outra_captura_elegivel`.
 fontes_elegiveis() {
     [[ -r "${DOCTOR_SH}" ]] || return 1
     command -v pactl >/dev/null 2>&1 || return 1
@@ -416,30 +205,6 @@ fontes_elegiveis() {
     ' -- "${DOCTOR_SH}" "${longo}" 2>/dev/null || true
 }
 
-# MIC-DA-MESA-ELEICAO-01 — "ESTA FONTE SE SUSTENTA?", e por que a pergunta
-# mora AQUI.
-#
-# A eleição de microfone por botão precisa saber, ANTES de escrever, se o nó que
-# ela vai eleger para de pé. Do lado Python **não existe uma linha** que olhe
-# porta: `integrations/audio_control.py` filtra só `.monitor` e `alsa_output.`.
-# Portar o critério criaria a SEGUNDA régua sobre o mesmo estado — que é
-# literalmente o defeito que esta casa já pagou duas vezes neste arquivo:
-# RECEITA-ERRADA-01 (o doctor) e `other_source_available` (aqui), as duas
-# contando "linha na lista" enquanto o eleitor contava "porta usável".
-#
-# O dono do critério é `doctor.sh:_sources_com_porta_usavel`, e é ele que
-# responde — daqui só sai a resposta.
-#
-# DIFERENÇA DELIBERADA PARA `fontes_elegiveis`: aquela função EXCLUI o DualSense
-# de propósito, porque a pergunta de produto é *"qual é a melhor que NÃO é o
-# controle"* — a régua do caminho de VOLTA. Esta pergunta é outra: *"o nó que eu
-# quero eleger para de pé?"*, e o nó que se quer eleger normalmente **é** o
-# controle. Misturar as duas faria a eleição recusar sempre.
-#
-# CONTRATO DE SAÍDA, o mesmo de `pick_target_source_name`:
-#   exit 1        — não deu para consultar (sem doctor, sem pactl);
-#   exit 0, vazio — consultei, e este nome NÃO se sustenta;
-#   exit 0 + nome — consultei, e ele se sustenta.
 fonte_se_sustenta() {
     local nome="${1:-}"
     [[ -n "${nome}" ]] || return 0
@@ -459,12 +224,6 @@ fonte_se_sustenta() {
 }
 
 pick_target_source_name() {
-    # A subshell carrega o doctor SEM despachar o main dele (mesmo molde do
-    # `source scripts/doctor.sh` dos testes). O `set --` limpa os posicionais
-    # para isso, e por isso vem DEPOIS de os argumentos serem guardados — na
-    # primeira versão vinha antes e apagava o `$1`/`$2` que as linhas seguintes
-    # usam: a função devolvia vazio SEMPRE, e vazio aqui é indistinguível de
-    # "não há fonte elegível".
     local elegiveis
     elegiveis="$(fontes_elegiveis)" || return 1
     [[ -n "${elegiveis}" ]] || return 0
@@ -476,22 +235,6 @@ pick_target_source_name() {
     ' -- "${DOCTOR_SH}" 2>/dev/null || true
 }
 
-# NASCE-NO-BOOT (18/09/2026) — "EXISTE UM MICROFONE QUE NÃO É CONTROLE NENHUM?"
-#
-# É a pergunta do NASCIMENTO do microfone (`hotkey._microfone_que_ja_e_da_maquina`,
-# no daemon): com a mesa sem dono ele elegia o controle fonte padrão da máquina,
-# e numa máquina com headset isso tomava o microfone da pessoa a cada partida
-# do daemon. Ele só pode eleger quando a resposta daqui é VAZIA.
-#
-# NÃO É `pick_target_source_name`, e a diferença é uma linha: aquela lista deixa
-# o canal por controle (`hefesto_mic_…`) entrar, pelo §D.2 da
-# MIC-PADRAO-NO-CABO-01. Para o nascimento o canal de outro controle é CONTROLE:
-# com dois DualSense na mesa, o canal do primeiro não pode passar por headset e
-# impedir a eleição na máquina que só tem os controles. O prefixo é o de
-# `fontes_de_captura.PREFIXO_SOURCE_CANAL_DO_MIC`, e há régua sobre os dois lados.
-#
-# Mesmo contrato de saída de `pick_target_source_name`: exit 1 = não deu para
-# consultar; exit 0 vazio = não há; exit 0 com nome = a melhor que há.
 outra_captura_elegivel() {
     local elegiveis
     elegiveis="$(fontes_elegiveis)" || return 1
@@ -520,26 +263,6 @@ install_dropin() {
     fi
 }
 
-# SOM-QUE-NAO-DORME-01 — o alto-falante do controle nunca dorme.
-#
-# MEDIDO na orelha do usuário em 15/08/2026 23h45 (ensaio
-# `sfx-no-suspenso-come-o-comeco`): com o nó SUSPENSO, o primeiro som depois do
-# silêncio se perde no religar do hardware. Num jogo é o SFX importante sumindo.
-# O drop-in 54 põe `session.suspend-timeout-seconds = 0` no sink do DualSense, e
-# o `suspend-node.lua` do WirePlumber 0.5 devolve sem agendar suspensão nenhuma.
-#
-# SEM FLAG: esta função é chamada em TODO modo que escreve (ver o despacho no
-# fim do arquivo) e pelo `install.sh` diretamente, via `--nunca-dorme`, ANTES de
-# qualquer decisão sobre o microfone — inclusive com `--keep-dualsense-mic`.
-#
-# SÓ ARQUIVOS: nenhum `systemctl`, `wpctl` ou `pactl` vive aqui. É o que permite
-# ao portão exercitar esta função DE VERDADE num HOME de mentira, sem tocar no
-# áudio de quem roda a suíte (mesmo molde de `_arma_dropins_do_mic`).
-#
-# Códigos de saída, e por que três:
-#   0 = instalado ou ATUALIZADO  -> quem chamou precisa reiniciar o WirePlumber
-#   3 = já estava igual          -> nada mudou, e reiniciar seria churn à toa
-#   1 = erro (asset ausente)
 install_dropin_acordado() {
     if [[ ! -f "${DROPIN_ACORDADO_SRC}" ]]; then
         log "ERRO: asset não encontrado: ${DROPIN_ACORDADO_SRC}"
@@ -567,9 +290,6 @@ install_disable_dropin() {
     _poe_o_dropin "${DROPIN_DISABLE_SRC}" "${DROPIN_DISABLE_DST}" || true
     _tira_a_outra_forma "${DROPIN_DISABLE_DST}"
     log "drop-in DISABLE instalado: ${DROPIN_DISABLE_DST}"
-    # Reforço: desabilita também a SAÍDA do DualSense (53) — sem ela, o
-    # '.monitor' do sink surround reaparece como default-source pós-reboot
-    # (o "mic que voltou"). Best-effort.
     if [[ -f "${DROPIN_OUTPUT_SRC}" ]]; then
         _poe_o_dropin "${DROPIN_OUTPUT_SRC}" "${DROPIN_OUTPUT_DST}" || true
         _tira_a_outra_forma "${DROPIN_OUTPUT_DST}"
@@ -583,58 +303,7 @@ install_disable_dropin() {
     fi
 }
 
-# Remove a chave de fonte padrão persistida que aponta para o DualSense, para que
-# o WirePlumber não tente reeleger o mic do controle no próximo boot. Preserva o
-# resto do state. Idempotente.
-#
-# PILHA-TRUNCADA-01 — MEDIDO em 06/08/2026, no código do WirePlumber 0.5.12
-# instalado nesta máquina. O `sed` que estava aqui apagava só a chave-BASE:
-#
-#     sed -i.bak '/^default\.configured\.audio\.source=.*[Dd]ual[Ss]ense/Id'
-#
-# O `=` logo depois de `source` faz o padrão casar `...source=` e NÃO casar
-# `...source.0=` / `...source.1=`. E o histórico de fontes padrão não é um
-# conjunto de chaves independentes: é uma PILHA CONTÍGUA, lida assim em
-# `/usr/share/wireplumber/scripts/default-nodes/state-default-nodes.lua`
-# (`collectStored`, linhas 141-155):
-#
-#     key = key_base                      -- default.configured.audio.source
-#     repeat
-#       local v = state_table [key]
-#       table.insert (stored, v)
-#       key = key_base .. "." .. tostring (index)
-#       index = index + 1
-#     until v == nil                      -- PARA no primeiro buraco
-#
-# Apagada a base, a leitura para na primeira volta e `.0`/`.1` ficam
-# INALCANÇÁVEIS: some o histórico INTEIRO de preferência de microfone do usuário, não
-# só a linha do DualSense.
-#
-# São DOIS defeitos, não um, e o estado real desta máquina exibe os dois — ele
-# tem três níveis (base = onboard, `.0` = mic do DualSense, `.1` = um sink que
-# já foi fonte, assinatura de "um monitor já foi eleito aqui"):
-#
-#   - quando a base NÃO é o DualSense (o caso de hoje), o `grep`/`sed` antigo
-#     não casa nada e a função é um NO-OP: as duas entradas do DualSense que ela
-#     existe para tirar ficam exatamente onde estavam;
-#   - quando a base É o DualSense, ela casa, apaga a base, e leva junto todo o
-#     resto da pilha por truncamento.
-#
-# Falhar em fazer o trabalho e destruir o histórico são os dois lados da mesma
-# linha, e nenhum deles aparecia no log: os dois terminavam com a função
-# devolvendo 0.
-#
-# A correção reescreve a pilha CONTÍGUA sem as entradas do DualSense, em ordem:
-# quem sobra vira base, `.0`, `.1`, ... É o que o comentário sempre prometeu
-# ("preserva o resto do state") e o que o código não fazia.
-#
-# GRAU: MEDIDO no código dos dois lados (o `sed` e o `collectStored`);
-# SUSPEITA COM MECANISMO no efeito em produção, porque esta função edita o
-# arquivo com o WirePlumber VIVO — e o próprio script documenta, em
-# `unmute_dualsense_routes`, que o WirePlumber GRAVA o estado ao sair e
-# sobrescreveria a edição. Ou o `sed` era sobrescrito (no-op silencioso) ou
-# vencia e truncava. Essa ordem NÃO foi mexida aqui: virou item de sprint.
-_pilha_sem_dualsense() {   # PURA: state na stdin, state corrigido na stdout
+_pilha_sem_dualsense() {
     awk '
         BEGIN { base = "default.configured.audio.source" }
         {
@@ -673,7 +342,6 @@ remove_configured_dualsense() {
     fi
 }
 
-# Nome do default-source ATIVO (pactl preferido; fallback ao '*' do wpctl).
 active_default_source() {
     if command -v pactl >/dev/null 2>&1; then
         local p
@@ -686,25 +354,6 @@ active_default_source() {
         insrc && /\*/ { sub(/.*\*[[:space:]]+[0-9]+\.[[:space:]]*/, ""); print; exit }'
 }
 
-# 0 se há alguma fonte de captura ELEGÍVEL que não seja o DualSense.
-#
-# ELEGÍVEL É A MESMA PALAVRA QUE O ELEITOR USA, e é o ponto desta função
-# (01/09/2026). Ela contava QUALQUER linha não-DualSense do `wpctl status` —
-# inclusive a entrada analógica da placa-mãe, cujas três portas de captura estão
-# `not available` e que o `_sources_com_porta_usavel` filtra fora justamente por
-# isso (RECEITA-ERRADA-01). O eleitor olhava "porta usável"; esta régua olhava
-# "aparece na lista". Duas réguas sobre o mesmo estado, e a consequência era um
-# diagnóstico que acusava um inocente:
-#
-#     FALHA: o MIC do DualSense ainda é o ativo, com outra fonte disponível
-#            (drop-in não aplicou?)
-#
-# O drop-in tinha aplicado. Não havia outra fonte — havia uma linha. A resposta
-# certa para esse estado é o AVISO de escassez (exit 2), que já existia logo
-# abaixo e nunca era alcançado.
-#
-# O `wpctl` fica como PLANO B, para a máquina sem `pactl`/doctor: ali a única
-# pergunta que se pode fazer é a antiga, e ela é melhor que nenhuma.
 other_source_available() {
     local elegiveis
     if elegiveis="$(fontes_elegiveis)"; then
@@ -718,66 +367,21 @@ other_source_available() {
         END { exit (found ? 0 : 1) }'
 }
 
-# O que importa é o MIC do DualSense (alsa_input). O '.monitor' do sink (loopback
-# da saída) também casa "DualSense" no nome, mas é inofensivo — não é o microfone
-# nem o sintoma de "controle mexendo no mic". Tratamos monitor como OK.
 is_dualsense_mic() {
     [[ "$1" =~ [Dd]ual[Ss]ense ]] && [[ "$1" != *[Mm]onitor* ]]
 }
 
-# PURA: 0 quando o nome `$1` é um MONITOR (loopback da SAÍDA). No PipeWire todo
-# monitor termina em `.monitor` — o sufixo é do nó, não heurística de nome. É o
-# mesmo critério do `_default_source_classe` do doctor, e é de propósito: os dois
-# programas têm de responder a mesma coisa sobre o mesmo estado.
 is_monitor_source() {
     [[ "$1" == *.monitor ]] || [[ "$1" == *.[Mm]onitor ]]
 }
 
-# Verifica que o microfone ATIVO é um microfone DE VERDADE e não é o MIC do
-# DualSense (settle ~2s).
-# Exit: 0 OK; 2 ÚNICO (DualSense por escassez — aviso); 1 FALHA real;
-#       3 MONITOR (INSTALADOR-QUE-APROVOU-O-MONITOR-01 — nem DualSense, nem voz).
-# PURA: 0 quando `$1` é o nó de ESCASSEZ do PipeWire — o `auto_null`, que ele
-# cria quando não há dispositivo pronto. Não é um microfone, não é um monitor de
-# hardware: é "ainda não sei", e por isso não se julga em cima dele.
 e_o_nada_do_pipewire() {
     [[ "$1" == auto_null* ]]
 }
 
 verify_active_not_dualsense() {
-    # O-VEREDICTO-QUE-DEPENDIA-DO-RELÓGIO-01 (01/09/2026)
-    # ----------------------------------------------------
-    # ESTE LAÇO SÓ ESPERAVA O DUALSENSE SAIR. Qualquer outra resposta o
-    # interrompia na primeira volta — inclusive o `auto_null.monitor`, que é o
-    # nó que o PipeWire cria enquanto NADA está pronto. Como esta função roda
-    # logo depois de `restart_wireplumber`, ela lia o grafo antes de assentar e
-    # dava FALHA de MONITOR sobre um estado que durava dois segundos.
-    #
-    # MEDIDO em 01/09: `--install` dizia "FALHA: a fonte padrão é um MONITOR
-    # (auto_null.monitor)"; cinco segundos depois, `pactl get-default-source`
-    # respondia o DualSense. Mesmo estado de máquina, dois veredictos —
-    # dependendo de quando se olhou. Um julgamento que depende do relógio não é
-    # idempotente, e o usuário nomeou isso.
-    #
-    # A CURA é esperar por uma resposta que SIGNIFIQUE alguma coisa: enquanto
-    # for vazia, `auto_null` ou o mic do DualSense, o grafo ainda pode mudar.
-    # O orçamento subiu de ~2s para ~5s pela mesma razão — foi o tempo medido
-    # para o WirePlumber reeleger depois de um restart.
-    #
-    # E SE O ORÇAMENTO ACABAR COM `auto_null` NA MÃO, isso deixa de ser espera e
-    # vira o diagnóstico: não há fonte de captura nenhuma pronta nesta máquina.
-    #
-    # MIC-PADRAO-NO-CABO-01 (13/09/2026) — O MESMO DEFEITO COM OUTRO NÓ. Desde
-    # 06/09 a casa tem um sink virtual (`hefesto_som_*`), módulo do
-    # pipewire-pulse que sobrevive ao restart. Logo depois do restart ele é o
-    # único candidato, o WirePlumber o elege de passagem e o `.monitor` dele
-    # ocupa o lugar do `auto_null`. Com o P1 no cabo o laço saía na primeira
-    # volta com FALHA de MONITOR, e o passo terminava com o DualSense eleito.
-    # Reproduzido com dublês; a régua é `tests/unit/test_o_microfone_padrao_no_cabo.py`.
-    # Por isso o laço espera o monitor passar também. No fim do orçamento, o
-    # último valor é julgado como antes.
     local i cur=""
-    for i in $(seq 1 20); do              # ~5s (20 x 250ms)
+    for i in $(seq 1 20); do
         cur="$(active_default_source || true)"
         if [[ -n "${cur}" ]] \
            && ! e_o_nada_do_pipewire "${cur}" \
@@ -794,11 +398,6 @@ verify_active_not_dualsense() {
         log "       Conecte um microfone e rode de novo."
         return 3
     fi
-    # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o monitor vem ANTES do resto. Ele não é
-    # o mic do DualSense — e era exatamente por isso que a resposta saía "OK",
-    # enquanto o doctor reprovava o mesmo estado dois minutos depois. Monitor é
-    # defeito PRÓPRIO: o que qualquer aplicativo gravar é o áudio de SAÍDA do
-    # sistema, não a voz do usuário. Não se chama isso de microfone padrão ativo.
     if is_monitor_source "${cur}"; then
         log "FALHA: a fonte padrão é um MONITOR (${cur}) — não é microfone nenhum:"
         log "       o que qualquer aplicativo gravar é o áudio de SAÍDA do sistema,"
@@ -820,8 +419,6 @@ verify_active_not_dualsense() {
 }
 
 reset_default_source() {
-    # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o alvo sai do MESMO filtro da cura do
-    # doctor. Quando ele responde "nenhuma", não elegemos nada — e dizemos por quê.
     local nome=""
     if nome="$(pick_target_source_name)"; then
         if [[ -z "${nome}" ]]; then
@@ -863,24 +460,6 @@ restart_wireplumber() {
     fi
 }
 
-# BUG-MIC-MUDO-PERSISTIDO-01: tirar os drop-ins de supressão NÃO devolve o
-# microfone — ele volta MUDO.
-#
-# São dois estados diferentes, em dois arquivos diferentes, e o script só
-# conhecia um. `default-nodes` guarda QUEM é a fonte padrão (o que os drop-ins
-# e o reset governam); `default-routes` guarda o MUTE e o volume de cada rota
-# do card, e sobrevive a tudo. Medido na máquina da mantenedora:
-#
-#   alsa_card.usb-...DualSense...:input:iec958-stereo-input={"mute":true, ...}
-#   alsa_card.usb-...DualSense...:output:analog-output={"mute":true, ...}
-#
-# Com isso, `--enable-mic` removia os drop-ins, reiniciava o WirePlumber, e ele
-# restaurava fielmente o mute salvo: "o microfone sumiu" sem nada no log. Era o
-# elo que faltava entre "já funcionou antes" e "não funciona mais".
-#
-# A ordem importa: o WirePlumber GRAVA o estado ao sair, então editar com ele
-# vivo seria sobrescrito no shutdown. Paramos, saneamos, e deixamos o
-# `restart_wireplumber` subir lendo o arquivo já corrigido.
 unmute_dualsense_routes() {
     local rotas="${HOME}/.local/state/wireplumber/default-routes"
     [[ -f "$rotas" ]] || { log "sem default-routes — nada a desmutar"; return 0; }
@@ -890,17 +469,10 @@ unmute_dualsense_routes() {
     }
     command -v systemctl >/dev/null 2>&1 && systemctl --user stop wireplumber 2>/dev/null || true
     cp -f "$rotas" "${rotas}.hefesto.bak" 2>/dev/null || true
-    # Só as linhas do DualSense: o mute dos OUTROS devices é escolha da usuária.
     sed -i -E '/[Dd]ual[Ss]ense/ s/"mute":true/"mute":false/g' "$rotas"
     log "mute persistido do DualSense removido (backup em ${rotas}.hefesto.bak)"
 }
 
-# BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
-# (usbcore.quirks=054c:0ce6:gn) é o que segura o "storm -71" COM o mic ligado.
-# Só ATIVO (/proc/cmdline) ou armado em RUNTIME (sysfs) protege a SESSÃO ATUAL —
-# o agendado no bootloader (kernelstub/grub) só vale no PRÓXIMO boot, então não
-# conta aqui. Espelha o check_usb_quirk do doctor.sh, restrito aos dois sinais
-# que valem agora. Retorna 0 se ativo nesta sessão.
 usb_quirk_active_session() {
     local marker="054c:0ce6:gn"
     grep -q "${marker}" /proc/cmdline 2>/dev/null && return 0
@@ -909,45 +481,11 @@ usb_quirk_active_session() {
     return 1
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# LIGAR-QUE-APAGAVA-A-CURA-01 (10/08/2026) — o 51 deixou de ser supressão em
-# 08/08, e esta função continuou tratando-o como se fosse.
-#
-# Até MONITOR-QUE-VENCE-01 (commit 6c428cd) o drop-in 51 REBAIXAVA a entrada do
-# controle para `priority.session = 50`, e apagá-lo aqui era exatamente o que o
-# nome dizia: tirar uma supressão. Naquele commit ele virou o CONTRÁRIO — a
-# entrada passou a 1500, a faixa MEDIDA que fica acima de qualquer monitor
-# (1109 nesta máquina) e abaixo de qualquer captura real (2009). O 51 é o
-# PROMOTOR desde então, e o `rm -f` que ficou aqui desarmava a cura de 08/08 no
-# gesto de LIGAR o microfone: sem o arquivo, a entrada volta ao 50 de fábrica, o
-# monitor vence de novo por vinte e duas vezes, e o que qualquer aplicativo
-# grava é o eco do que sai — não a voz do usuário. A aba Emulação, enquanto isso,
-# escrevia "Ligado" em verde, porque só olhava o 52/53.
-#
-# Quem liga o mic quer o mic: o promotor FICA, e passa a ser GARANTIDO
-# (instalado se faltar). É ele que faz o botão "Ligar" entregar a voz em vez do
-# eco. Supressão de verdade é só o 52/53 (`node.disabled = true`).
-#
-# Por que a promoção EXPLÍCITA continua removendo o 51 (`sem-promotor`, abaixo):
-# `doctor.sh:_prefere_mic_do_dualsense` lê a AUSÊNCIA do 51 como "a usuária
-# promoveu o controle a dedo". Manter o arquivo ali mudaria o significado de um
-# sinal que outro programa consome — está anotado como item aberto na sprint
-# 2026-08-08-MONITOR-QUE-VENCE-01.
-#
-# Portão: `tests/unit/test_ligar_que_apagava_a_cura_01.py`.
-# ─────────────────────────────────────────────────────────────────────────────
-# SÓ ARQUIVOS: nenhum `systemctl`, `wpctl` ou `pactl` vive aqui. É o que permite
-# ao portão exercitar esta função DE VERDADE num HOME de mentira, sem tocar no
-# áudio de quem roda a suíte.
-#   $1 = "sem-promotor" -> promoção explícita: o 51 sai junto.
-#        (vazio)        -> o padrão do `--enable-mic`: o 51 é garantido.
 _arma_dropins_do_mic() {
     local modo="${1:-}"
-    # Os drop-ins que DESABILITAM o mic (52) e a saída (53) do DualSense saem
-    # sempre: são eles que impedem o nó de existir. Idempotente.
     local f removed=0
     for f in "${DROPIN_DISABLE_DST}" "${DROPIN_OUTPUT_DST}"; do
-        _tira_a_outra_forma "$f"   # a forma que uma troca de WirePlumber deixou
+        _tira_a_outra_forma "$f"
         if [[ -f "$f" ]]; then
             rm -f "$f" && { log "removido drop-in de supressão: $f"; removed=1; }
         fi
@@ -971,14 +509,6 @@ _arma_dropins_do_mic() {
     return 0
 }
 
-# DROPIN-AMBIGUO-01 — grava a MARCA DO GESTO. SÓ ARQUIVO: nenhum `systemctl`,
-# `wpctl` ou `pactl` vive aqui, pelo mesmo motivo do `_arma_dropins_do_mic` (o
-# portão exercita a função DE VERDADE num HOME de mentira).
-#
-# Idempotente, e a data do carimbo é a do PRIMEIRO gesto: reescrevê-la a cada
-# `--enable-mic` apagaria a única informação que a marca carrega além da
-# própria existência — QUANDO o usuário pediu. $1 = o gesto, para o arquivo dizer de
-# onde veio.
 _marca_do_gesto_gravar() {
     local gesto="${1:-enable-mic}"
     if [[ -f "${MARCA_MIC_DST}" ]]; then
@@ -1005,8 +535,6 @@ _marca_do_gesto_gravar() {
     return 0
 }
 
-# O gesto CONTRÁRIO apaga a marca. Sem isto a marca viraria estado — e estado
-# que não se apaga é exatamente o defeito que ela cura.
 _marca_do_gesto_apagar() {
     if [[ -f "${MARCA_MIC_DST}" ]]; then
         rm -f "${MARCA_MIC_DST}" && log "marca do gesto removida: ${MARCA_MIC_DST}"
@@ -1015,37 +543,20 @@ _marca_do_gesto_apagar() {
 }
 
 enable_mic_dualsense() {
-    # DROPIN-AMBIGUO-01: ligar o mic é o GESTO, e o gesto deixa marca. Vem
-    # ANTES de tudo de propósito — inclusive do `sem-promotor` do
-    # `--promote-source`, que apaga o 51 logo abaixo: é a partir daí que a
-    # ausência do 51 precisa de alguém dizendo de onde ela veio.
     if [[ "${1:-}" == "sem-promotor" ]]; then
         _marca_do_gesto_gravar "promote-source" || true
     else
         _marca_do_gesto_gravar "enable-mic" || true
     fi
-    # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: ligar o mic SEM o quirk de áudio USB
-    # ativo nesta sessão pode REABRIR o storm -71 (o controle começa a cair no
-    # meio do jogo). Avisamos no stderr e PROSSEGUIMOS — a usuária pode querer o
-    # mic mesmo assim. NÃO tocamos no cmdline (gerido pela toolchain pessoal).
     if ! usb_quirk_active_session; then
         printf '[wp-fix] AVISO: ligar o mic do DualSense SEM o quirk de áudio USB ativo nesta sessão pode REABRIR o storm -71 (o controle cai no meio do jogo).\n' >&2
         printf '[wp-fix]        fix: aplique o quirk com `scripts/install_usb_quirk.sh` (efetivo só no próximo boot/replug).\n' >&2
     fi
-    # Deixa o mic utilizável e elegível como fonte padrão (a persistência do
-    # default fica por conta do estado do WirePlumber + profile pro-audio do
-    # card). LIGAR-QUE-APAGAVA-A-CURA-01: o promotor é garantido aqui.
     _arma_dropins_do_mic "${1:-}"
-    # BUG-MIC-MUDO-PERSISTIDO-01: sem isto o mic volta, mas volta MUDO.
     unmute_dualsense_routes
     restart_wireplumber
 }
 
-# ID da fonte de CAPTURA do DualSense no `wpctl status` (vazio se não houver).
-# Espelho de pick_target_source_id com o critério invertido, e com o mesmo
-# cuidado: o '.monitor' do sink também casa "DualSense" no nome, mas é o
-# loopback da SAÍDA — elegê-lo como microfone é o bug clássico "gravei o som do
-# sistema em vez da minha voz".
 pick_dualsense_source_id() {
     wpctl status 2>/dev/null | awk '
         /Sources:/ {insrc=1; next}
@@ -1063,34 +574,8 @@ pick_dualsense_source_id() {
     '
 }
 
-# MIC-USB-01 (entrega 3) — PROMOÇÃO EXPLÍCITA do mic do controle a padrão.
-#
-# O drop-in 51 REBAIXA a prioridade da fonte (priority.session = 50) para o
-# DualSense não virar microfone padrão sozinho ao conectar. Isso está CERTO e
-# nunca foi o culpado do mute — a queixa "o controle fica mexendo no microfone"
-# é exatamente o que ele resolve. Mas rebaixar por default e não oferecer a
-# subida transformou uma política em uma proibição: com o 51 no lugar, o
-# `set-default-source` da usuária era sobrescrito de volta para o monitor da
-# saída no próximo settle, e não havia caminho nenhum de escolher o DualSense.
-#
-# Promover é um gesto EXPLÍCITO, então ele desfaz explicitamente as três coisas
-# que segurariam o microfone: os drop-ins de supressão (51/52/53), as camadas 1
-# e 2 do mudo (delegadas ao `doctor.sh --fix-mic`, que é o dono dessa cura) e a
-# ausência de eleição. O caminho de volta é o `--install` de sempre.
 promote_source_dualsense() {
-    # Reusa o enable-mic inteiro: remove 52/53, desmuta as rotas, avisa sobre o
-    # quirk de áudio USB e reinicia o WirePlumber.
-    #
-    # LIGAR-QUE-APAGAVA-A-CURA-01: o `sem-promotor` é o que mantém ESTE modo
-    # como ele sempre foi — o 51 sai, e sai ANTES do restart, como antes. Não é
-    # descuido: `doctor.sh:_prefere_mic_do_dualsense` lê a ausência do 51 como a
-    # promoção explícita da usuária, e é ela que impede a cura do doctor de
-    # eleger outra fonte por cima da escolha do usuário. O que mudou foi só o
-    # `--enable-mic`, onde apagar o promotor era desarmar MONITOR-QUE-VENCE-01.
     enable_mic_dualsense "sem-promotor"
-    # Camadas 1 e 2 têm UM dono: o doctor. Promover uma fonte sem porta de
-    # captura seria promover silêncio — o pior resultado possível para este modo,
-    # porque a usuária veria "DualSense é o microfone padrão" e pico 0.
     if [[ -x "${ROOT_DIR}/scripts/doctor.sh" ]]; then
         bash "${ROOT_DIR}/scripts/doctor.sh" --fix-mic --quiet || true
     fi
@@ -1098,8 +583,6 @@ promote_source_dualsense() {
         log "wpctl ausente — não consegui eleger o DualSense como fonte padrão"
         return 1
     fi
-    # Settle: o restart do WirePlumber + a troca de perfil recriam o nó, e o ID
-    # muda junto. Eleger o ID velho falha calado.
     local i alvo=""
     for i in 1 2 3 4 5 6 7 8 9 10; do
         alvo="$(pick_dualsense_source_id || true)"
@@ -1120,27 +603,9 @@ promote_source_dualsense() {
     fi
 }
 
-# `source scripts/fix_wireplumber_default_source.sh` carrega as funções SEM
-# despachar — é o que permite testar `_pilha_sem_dualsense` executando a função
-# de verdade, em vez de reimplementá-la no teste. Mesmo molde do `scripts/doctor.sh`
-# (que faz `if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then main; fi` no fim).
-# A execução direta segue idêntica: MODE já foi resolvido acima.
 [[ "${BASH_SOURCE[0]}" == "${0}" ]] || return 0
 
-# SOM-QUE-NAO-DORME-01 — SEM FLAG, em todo modo que escreve.
-#
-# O sono do alto-falante não é assunto do microfone: seja qual for a política de
-# mic que a usuária escolheu (`--install`, `--disable-source`, `--enable-mic`,
-# `--promote-source`), o som que SAI do controle tem de sair inteiro. Por isso o
-# 54 entra aqui, antes do `case`, e não dentro de um ramo.
-#
-# `--status` é o único de fora: ele é leitura, e leitura não escreve.
 ACORDADO_MUDOU=1
-# MIC-DA-MESA-ELEICAO-01: `fonte-se-sustenta`, `melhor-fonte-elegivel` e
-# `outra-captura-elegivel` são CONSULTA. O gesto do botão do mic passa por
-# `fonte-se-sustenta` e `outra-captura-elegivel` a cada aperto, e não pode
-# escrever drop-in nenhum na máquina do usuário — ver o bloco `outra-captura-elegivel`
-# no `case` abaixo. A `melhor-fonte-elegivel` é a pergunta do install.
 if [[ "${MODE}" != "status" && "${MODE}" != "marcar-gesto" \
    && "${MODE}" != "apagar-gesto" && "${MODE}" != "fonte-se-sustenta" \
    && "${MODE}" != "melhor-fonte-elegivel" \
@@ -1160,67 +625,21 @@ case "${MODE}" in
         show_status
         ;;
     fonte-se-sustenta)
-        # Consulta pura. Sem log, sem prefixo `[wp-fix]`: a saída é para ser
-        # LIDA por outro programa, e um prefixo obrigaria o leitor a parsear.
         rc_consulta=0
         fonte_se_sustenta "${FONTE_CONSULTADA}" || rc_consulta=$?
         exit "${rc_consulta}"
         ;;
     melhor-fonte-elegivel)
-        # A PERGUNTA DO INSTALL (`install.sh`, o veredito do microfone): a
-        # melhor captura com porta usável, e o canal por controle
-        # (`hefesto_mic_…`) ENTRA — é o §D.2 da MIC-PADRAO-NO-CABO-01, pelo
-        # rádio o eleito do install é o microfone virtual do controle. Consulta
-        # pura, como as irmãs.
-        #
-        # FATO SUBSTITUÍDO (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-
-        # CONTROLE-01): este bloco se dizia «O CAMINHO DE VOLTA» do botão do
-        # mic. A volta perguntava isto, e a resposta era o canal do controle
-        # cujo nó nasceu primeiro no PipeWire — calado, ou o próprio que
-        # calava. A volta passou a perguntar `outra-captura-elegivel`, e a
-        # decisão que morava aqui foi junto.
         rc_consulta=0
         pick_target_source_name || rc_consulta=$?
         exit "${rc_consulta}"
         ;;
     outra-captura-elegivel)
-        # Consulta pura, irmã da de cima: nada de drop-in, restart ou `pactl`
-        # que escreva. Ver `outra_captura_elegivel`. Quem pergunta é o daemon:
-        # o nascimento do microfone e O CAMINHO DE VOLTA do botão do mic (e do
-        # nó que morre), sem ninguém mais no ar.
-        #
-        # MIC-DA-MESA-ELEICAO-01 — a DECISÃO ESCRITA NO CÓDIGO: o gesto do botão
-        # do mic **não** toca em drop-in, **não** chama `doctor --fix-mic` e
-        # **não** reinicia o WirePlumber. Ele consulta aqui e escreve com
-        # `pactl set-default-source`, e nada mais.
-        #
-        # POR QUE, e o "por quê" é o `promote_source_dualsense` logo acima:
-        # aquele gesto APAGA o drop-in 51, delega as camadas 1 e 2 ao doctor e
-        # REINICIA o WirePlumber — mudança global, persistente e fora de tela,
-        # que ainda troca o sinal que `doctor.sh:_prefere_mic_do_dualsense` lê
-        # para decidir se pode eleger por cima. Um toque de botão não pode
-        # reescrever a política de microfone da máquina inteira a cada vez, com
-        # ela usando o computador. `--promote-source` continua sendo o gesto
-        # HUMANO explícito de quem quer que a escolha sobreviva à política.
-        #
-        # O PREÇO ACEITO, e ele tem de estar na tela: com o drop-in 51 no lugar
-        # a entrada do controle fica em `priority.session = 1500`, abaixo de
-        # qualquer captura real (2009) — logo **plugar a webcam desfaz a
-        # escolha do usuário**, e o LED tem de apagar quando isso acontecer, porque
-        # ele é pintado da RELEITURA do ativo, nunca do que mandamos.
         rc_consulta=0
         outra_captura_elegivel || rc_consulta=$?
         exit "${rc_consulta}"
         ;;
     nunca-dorme)
-        # Modo isolado: o `install.sh` o chama SEM FLAG, em todos os formatos,
-        # antes de qualquer decisão sobre o microfone. Só reinicia o WirePlumber
-        # se o arquivo REALMENTE mudou — reiniciar o áudio da sessão do usuário à toa,
-        # a cada instalação idempotente, seria custo sem cura.
-        #
-        # O `if` explícito (em vez de `[[ ... ]] && cmd`) é por causa do
-        # `set -e` do topo: uma lista `&&` que curto-circuita devolve 1, e o
-        # shell sairia com status de erro numa instalação que deu certo.
         if [[ "${ACORDADO_MUDOU}" -eq 0 ]]; then
             restart_wireplumber
         else
@@ -1229,9 +648,6 @@ case "${MODE}" in
         exit 0
         ;;
     marcar-gesto)
-        # DROPIN-AMBIGUO-01: SÓ o carimbo. Existe para o `install.sh` poder
-        # dizer "o usuário pediu para não mexerem no mic dela" (`--keep-dualsense-mic`)
-        # sem que isso vire mais uma inferência de estado no doctor.
         _marca_do_gesto_gravar "keep-dualsense-mic"
         exit 0
         ;;
@@ -1244,10 +660,6 @@ case "${MODE}" in
         show_status
         ;;
     unmute-routes)
-        # MIC-USB-01 camada 1, isolada: o doctor --fix chama por aqui para não
-        # duplicar o sed (e o stop/start do WirePlumber que ele exige) do lado
-        # de lá. NÃO toca em drop-in nem em fonte padrão — a política que a
-        # usuária escolheu continua exatamente como estava.
         unmute_dualsense_routes
         restart_wireplumber
         ;;
@@ -1262,30 +674,20 @@ case "${MODE}" in
         show_status
         ;;
     install)
-        # DROPIN-AMBIGUO-01: `--install` é o gesto CONTRÁRIO ao de ligar o mic
-        # — ele repõe a política default (o 51 no lugar, o controle fora da
-        # eleição automática). Deixar a marca de pé aqui manteria dois sinais
-        # dizendo coisas opostas sobre o mesmo disco, que é o defeito que a
-        # marca cura.
         _marca_do_gesto_apagar
         install_dropin
         reset_default_source
         restart_wireplumber_se_alterou
         show_status
-        # BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01: validar o ATIVO, não só o configured.
         sleep 0.5
         rc=0; verify_active_not_dualsense || rc=$?
         exit "${rc}"
         ;;
     disable)
-        # DROPIN-AMBIGUO-01: desligar o mic de vez é o gesto mais explícito de
-        # "não quero o mic do controle" — a marca do gesto oposto sai junto.
         _marca_do_gesto_apagar
         install_disable_dropin
         remove_configured_dualsense
         restart_wireplumber_se_alterou
-        # após o disable o mic some; elege a onboard como default (evita cair no
-        # monitor do sink do DualSense) e confirma que o ativo != mic do DualSense.
         sleep 1
         reset_default_source
         sleep 0.5

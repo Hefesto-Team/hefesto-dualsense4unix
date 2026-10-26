@@ -131,7 +131,6 @@ class TestInstallStep3hContrato:
 
     def test_step_existe_com_label_correto(self) -> None:
         assert 'step "3h"' in INSTALL
-        assert "BROKER-01" in INSTALL
 
     def test_sem_flag_de_opt_out_e_default_sem_udev_skip(self) -> None:
         assert "--no-broker" not in INSTALL
@@ -159,18 +158,15 @@ class TestInstallStep3hContrato:
         assert "broker-owner.conf" in INSTALL
         assert "sha256sum" in INSTALL
 
-    def test_help_sed_range_cobre_o_novo_bullet_do_broker(self) -> None:
-        match = re.search(r"sed -n '2,(\d+)p'", INSTALL)
-        assert match is not None, "extração do --help não encontrada"
-        end_line = int(match.group(1))
-        header = "\n".join(INSTALL.splitlines()[:end_line])
-        assert "(DEFAULT) broker root hide-hidraw" in header
+    def test_a_ajuda_cobre_o_bullet_do_broker(self) -> None:
+        match = re.search(r"_ajuda\(\) \{\n  cat <<'AJUDA'\n(.*?)\nAJUDA\n", INSTALL, re.S)
+        assert match is not None, "o texto do --help não foi encontrado"
+        assert "(DEFAULT) broker root hide-hidraw" in match.group(1)
 
 
 class TestUninstallSimetriaContrato:
     def test_bloco_do_broker_presente(self) -> None:
         assert "hefesto-hidraw-broker" in UNINSTALL
-        assert "BROKER-01" in UNINSTALL
 
     def test_needs_sudo_gate_registrado(self) -> None:
         assert "/etc/systemd/system/hefesto-hidraw-broker.service" in UNINSTALL

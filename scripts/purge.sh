@@ -1,23 +1,4 @@
 #!/usr/bin/env bash
-# purge.sh — descontaminação TOTAL do Hefesto - DualSense4Unix.
-#
-# Remove TODAS as formas de instalação que possam ter sido misturadas no mesmo
-# host (nativo + .deb + Flatpak + AppImage + applet COSMIC), incluindo rastros
-# que versões antigas do uninstall.sh não cobriam (applet em /usr/local, regra
-# udev 74, ghost do hotplug systemd). Idempotente e seguro.
-#
-# Por padrão PRESERVA a config do usuário (perfis/sessão/preferências) e faz um
-# backup dela. Use --with-config para apagar a config também.
-#
-# Flags:
-#   --yes, -y           não pergunta nada (assume sim).
-#   --dry-run           só imprime o que faria, sem executar.
-#   --with-config       apaga também a config do usuário (uninstall --purge-config).
-#   --keep-steam-input  PRESERVA Steam Input PSSupport (default: desliga em todos os
-#                       localconfig.vdf via uninstall.sh + reforço explícito).
-#
-# A senha de sudo é pedida pelo próprio sudo quando necessário (udev, /usr/local,
-# apt). CHORE-PURGE-ALL-INSTALL-FORMS-01.
 
 set -euo pipefail
 
@@ -29,12 +10,6 @@ DRY_RUN=0
 WITH_CONFIG=0
 KEEP_STEAM_INPUT=0
 
-# Mesmo padrão do uninstall.sh (BUG-UNINSTALL-HELP-DESINSTALA-01): este script é
-# o mais destrutivo da casa — ele chama o uninstall.sh com --yes. Não havia
-# `--help`, e argumento desconhecido só avisava e SEGUIA: com `--yes` legítimo
-# mais um dedo torto (`--dry-rum` no lugar de `--dry-run`), o aviso rolava para
-# fora da tela e a descontaminação acontecia sem confirmação nenhuma. Na dúvida
-# sobre o que a pessoa quis dizer, a resposta certa é não fazer nada.
 uso() {
     cat <<'FIM'
 Uso: scripts/purge.sh [opções]
@@ -79,7 +54,6 @@ run() {
     fi
 }
 
-# 1) Backup dos perfis do usuário (curto + longo), independente de --with-config.
 backup_profiles() {
     local stamp dest src found
     stamp="$(date +%s)"
@@ -99,7 +73,6 @@ backup_profiles() {
     fi
 }
 
-# 2) uninstall.sh cobre nativo/.deb/flatpak/appimage/applet/udev/config/steam-input.
 run_uninstall() {
     local cfg_flag="--keep-config"
     [[ "${WITH_CONFIG}" -eq 1 ]] && cfg_flag="--purge-config"
@@ -113,13 +86,10 @@ run_uninstall() {
     run bash "${UNINSTALL}" --udev "${cfg_flag}" "${steam_flag[@]}" --yes
 }
 
-# 3) Reforço: rastros que versões antigas do uninstall.sh não removiam.
 reinforce_leftovers() {
     local applet_bin applet_desktop applet_icon applet_icon_symb ghost
     applet_bin="/usr/local/bin/hefesto-dualsense4unix-applet"
     applet_desktop="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
-    # Caminho antigo (até 07/08/2026) e o de hoje — os dois, porque o purge
-    # existe justamente para instalação velha.
     applet_icon="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
     applet_icon_symb="/usr/share/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
     if [[ -e "${applet_bin}" || -e "${applet_desktop}" || -e "${applet_icon}" || -e "${applet_icon_symb}" ]]; then
@@ -150,7 +120,6 @@ reinforce_leftovers() {
     fi
 }
 
-# 4) .deb: purge (não só remove) p/ limpar conffiles, se instalado.
 purge_deb() {
     if dpkg -l hefesto-dualsense4unix >/dev/null 2>&1; then
         log "purge do pacote .deb (sudo apt-get purge)"
@@ -158,10 +127,6 @@ purge_deb() {
     fi
 }
 
-# 5) Flatpak: garantir remoção (uninstall já tenta; reforço aqui).
-# IDENTIDADE-01 (25/08/2026): os DOIS app-ids. O Flatpak não migra id, então
-# quem instalou antes de 25/08 tem `br.andrefarias.Hefesto` instalado ao lado —
-# e este script existe justamente para não deixar resto.
 purge_flatpak() {
     local _fp_id
     for _fp_id in "io.github.hefesto_team.hefesto_dualsense4unix" "br.andrefarias.Hefesto"; do
@@ -184,8 +149,6 @@ main() {
     reinforce_leftovers
     purge_deb
     purge_flatpak
-    # Reforço Steam Input: se o uninstall pulou (ex: script ausente no momento),
-    # o purge garante o desligamento aqui. Idempotente — exit 0 se já está OFF.
     if [[ "${KEEP_STEAM_INPUT}" -eq 0 ]] && [[ -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
         log "reforço: disable_steam_input.sh --apply"
         run bash "${ROOT_DIR}/scripts/disable_steam_input.sh" --apply || true

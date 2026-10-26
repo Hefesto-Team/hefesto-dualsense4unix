@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# Acompanha os três sinais da háptica ENQUANTO o jogo roda, em vez de medir um
-# instante. Nasceu em 20/09/2026 porque o irmão `medir_a_haptica_no_jogo.sh`
-# mediu no segundo em que o jogo abriu — antes de o sink de 4 canais subir — e
-# reprovou o que ainda não tinha acontecido.
-#
-# E ele olha TODOS os processos do jogo, não o primeiro: sob Proton há o
-# lançador, o reaper e o .exe, e as opções do Proton só estão em alguns.
-#
-# Só lê. Não abre jogo, não abre Steam, não escreve nada.
-#
-#   bash scripts/acompanhar_a_haptica.sh [segundos] [passo]
 set -uo pipefail
 export LC_ALL=C
 
@@ -17,8 +6,6 @@ TOTAL="${1:-600}"
 PASSO="${2:-10}"
 ALVO="${HEFESTO_ALVO:-PRAGMATA}"
 
-# Um candidato só vale se o ambiente dele disser que é um jogo sob Proton.
-# `pgrep -f` sozinho casa o próprio shell — medido em 20/09.
 jogos() {
   local p
   for p in $(pgrep -f "$ALVO" 2>/dev/null); do

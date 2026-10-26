@@ -59,13 +59,13 @@ def test_a_pessoa_e_avisada_de_onde_foi_parar() -> None:
 
 
 def test_o_porque_esta_escrito_no_desinstalador() -> None:
-    """Quem for 'limpar' este bloco encontra o custo medido de apagar."""
-    bloco = _bloco_dos_bonds()
+    """Quem for 'limpar' este bloco encontra o custo medido no porquê dos módulos."""
+    bloco = (RAIZ / "docs" / "research" / "o-porque-dos-modulos.md").read_text(encoding="utf-8")
     assert "CICLO-QUE-PROVA-01" in bloco, (
-        "o registro do CICLO-QUE-PROVA-01 saiu do `uninstall.sh`. Sem ele, o `mv` "
+        "o registro do CICLO-QUE-PROVA-01 saiu do porquê dos módulos. Sem ele, o `mv` "
         "parece complicação e volta a virar `rm -rf`."
     )
     assert "Doze snapshots viraram um" in bloco, (
-        "sumiu o número medido — é ele que faz o comentário valer mais que uma "
+        "sumiu o número medido — é ele que faz o registro valer mais que uma "
         "opinião sobre higiene."
     )

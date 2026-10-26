@@ -117,7 +117,7 @@ def _efetivas(arquivo: Path) -> list[str]:
 
 BLOCO_DA_REGRA_DO_NO = _recorte(
     INSTALL_UDEV,
-    'if [[ "$ABRIR_O_NO" -eq 1 ]]; then\n    # A transformação tem UM DONO',
+    'if [[ "$ABRIR_O_NO" -eq 1 ]]; then\n    _regra_aberta="$(mktemp)"',
     'sudo install -Dm644 "$ASSETS/71-uinput.rules"',
 )
 

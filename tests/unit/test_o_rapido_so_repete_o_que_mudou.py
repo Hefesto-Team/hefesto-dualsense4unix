@@ -256,8 +256,3 @@ def test_o_filtro_por_arquivo_da_o_mesmo_veredito_da_varredura_por_linha(
     assert {"tudo.txt", "espacado.txt"} <= nomes
     assert not nomes & {"limpo.py", "isento.md", "mascarado.txt"}, achados
 
-
-def test_o_comentario_da_paridade_tem_o_tempo_medido_com_a_data() -> None:
-    texto = PORTOES.read_text(encoding="utf-8")
-    assert "custa 0,4 s" not in texto
-    assert re.search(r"1,3 s medidos em 10/10/2026", texto)

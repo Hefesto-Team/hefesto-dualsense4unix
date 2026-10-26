@@ -693,7 +693,8 @@ def test_o_tique_inteiro_roda_com_a_trava() -> None:
     pega = [n for n, linha in enumerate(linhas) if linha == "_pegar_a_trava || exit 0"]
     assert len(pega) == 1, "o tique não pega a trava do rádio no corpo do script"
     gancho = next(n for n, linha in enumerate(linhas) if '"--so-a-trava"' in linha)
-    vigia0 = next(n for n, linha in enumerate(linhas) if linha.startswith("# --- vigia 0"))
+    ativo = "_ACTIVE=/usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
+    vigia0 = next(n for n, linha in enumerate(linhas) if linha == ativo)
     assert gancho < pega[0] < vigia0, "a trava tem de vir antes da primeira vigia"
     for n, linha in enumerate(linhas[: pega[0]]):
         if linha.endswith("() {"):

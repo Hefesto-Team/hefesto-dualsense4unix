@@ -1,45 +1,8 @@
 #!/usr/bin/env bash
-# hefesto-chave — desliga o Hefesto por completo, e o religa igualzinho.
-#
-# Pedido, 29/08/2026: *"temos que garantir que eu possa DESLIGAR o impacto
-# por completo e RELIGAR. (com o botão de desligar funcionando sem zuar o
-# resto)."*
-#
-#   hefesto-chave off       desliga o Hefesto por completo
-#   hefesto-chave on        religa, exatamente como estava
-#   hefesto-chave estado    diz o que está ligado, e desde quando
-#
-# AS DUAS CINTAS, E POR QUE SÃO DUAS (as duas medidas em 29/08/2026)
-# -------------------------------------------------------------------
-# 1. `stop` + `disable` + `mask` nas units `--user`. Fecha o systemd: sobrevive
-#    a reboot (máscara é symlink para /dev/null em disco) e é desfeita por
-#    `unmask` + `enable` + `start`.
-#
-# 2. A CHAVE EM DISCO (`utils/chave.py`), lida pelo daemon no boot. Esta é a
-#    que fecha o furo que a máscara NÃO fecha, e o furo é real: o botão "Ligar
-#    daemon" da GUI, quando o `systemctl start` falha, cai num
-#    `subprocess.Popen` que levanta o daemon sem passar por systemd nenhum
-#    (`app/actions/daemon_actions.py:1723-1737`). Com só a máscara, apertar o
-#    botão dela ligaria o daemon "desligado".
-#
-# O QUE ELE NÃO TOCA, DE PROPÓSITO
-# ---------------------------------
-# Regras udev, o broker hidraw (`hefesto-hidraw-broker.{service,socket}`), o
-# `hefesto-bt-agent`, o `bt-health-watchdog`, `/usr/local/lib/**`, perfis e
-# config. Essa é a camada da MÁQUINA, e mexer nela exigiria `sudo` toda vez —
-# que é exatamente o custo que ela vetou em 22/08/2026. Zero sudo aqui.
-#
-# E NÃO TOCA `hefesto-medicao-elapsed.{service,timer}`: apesar do nome, não é
-# do produto (a própria unit se descreve como "Medicao ELAPSED (descartavel)").
-# Desligar coisa que não se sabe o que é seria o oposto de reversível.
 set -euo pipefail
 
 APLICATIVOS="${HOME}/.local/share/applications"
 
-# As units de USUÁRIO do app. Conferidas na bancada em 29/08 com
-# `systemctl --user list-unit-files`: o vigia da Steam chama-se
-# `hefesto-steam-input-guard.*`, e NÃO `hefesto-dualsense4unix-steam-input-*`
-# — errar o nome faria o `stop` devolver sucesso sem parar coisa nenhuma.
 UNITS=(
     "hefesto-dualsense4unix.service"
     "hefesto-dualsense4unix-storm-watch.service"
@@ -61,10 +24,6 @@ por `on`.
 FIM
 }
 
-# --- os três caminhos, todos derivados do MESMO slug -------------------------
-# O slug é o de `utils/identidade.py`. Ele está escrito aqui porque este script
-# roda sem venv e sem python; `test_o_script_e_o_produto_concordam_no_caminho`
-# é quem cobra que as duas grafias não divirjam.
 SLUG="hefesto-dualsense4unix"
 CONFIG="${XDG_CONFIG_HOME:-${HOME}/.config}/${SLUG}"
 DESKTOP="${APLICATIVOS}/${SLUG}.desktop"
@@ -73,7 +32,6 @@ existe_unit() {
     systemctl --user cat "$1" >/dev/null 2>&1
 }
 
-# --- o retrato ---------------------------------------------------------------
 estado() {
     local chave="${CONFIG}/DESLIGADO-pela-chave.flag"
 
@@ -116,13 +74,11 @@ estado() {
     printf '\n'
 }
 
-# --- desligar ----------------------------------------------------------------
 desligar() {
     local u
 
     printf 'desligando o Hefesto\n\n'
 
-    # 1. parar, desabilitar e MASCARAR o que existir.
     for u in "${UNITS[@]}"; do
         if ! existe_unit "$u"; then
             printf '  %-42s (não instalada, pulei)\n' "$u"
@@ -134,7 +90,6 @@ desligar() {
         printf '  %-42s parada, desabilitada e mascarada\n' "$u"
     done
 
-    # 2. a chave em disco — a cinta que a máscara não dá.
     mkdir -p "$CONFIG"
     {
         printf 'desligado em %s por hefesto-chave\n' "$(date -Is)"
@@ -142,9 +97,6 @@ desligar() {
     } > "${CONFIG}/DESLIGADO-pela-chave.flag"
     printf '  chave posta em %s\n' "${CONFIG}/DESLIGADO-pela-chave.flag"
 
-    # 3. o processo avulso — pelo PID FILE, nunca por `pgrep -f`.
-    #    `pgrep -f hefesto` alcançaria este próprio script, que é precisamente
-    #    o defeito que esta cinta existe para não repetir.
     local runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
     local pid f
     for f in daemon gui; do
@@ -157,8 +109,6 @@ desligar() {
         fi
     done
 
-    # 4. esconder o atalho — a dock não deve oferecer um app desligado.
-    #    EDITAR, nunca apagar: `on` tira a linha e o atalho volta inteiro.
     if [[ -f "$DESKTOP" ]] && ! grep -qx 'Hidden=true' "$DESKTOP"; then
         printf 'Hidden=true\n' >> "$DESKTOP"
         printf '  atalho escondido da dock (%s)\n' "$(basename "$DESKTOP")"
@@ -170,7 +120,6 @@ desligar() {
     printf '    hefesto-chave on\n'
 }
 
-# --- religar -----------------------------------------------------------------
 religar() {
     local u
 
@@ -180,7 +129,6 @@ religar() {
     printf '  chave retirada\n'
 
     if [[ -f "$DESKTOP" ]]; then
-        # `sed -i` só na linha exata que o `off` acrescentou.
         sed -i '/^Hidden=true$/d' "$DESKTOP"
         printf '  atalho de volta à dock\n'
     fi
@@ -193,8 +141,6 @@ religar() {
             printf '  %-42s (não instalada, pulei)\n' "$u"
             continue
         fi
-        # `.service` que é só alvo de `.path`/`.timer` é `static` e NÃO aceita
-        # `enable` — pedir isso devolveria erro e sujaria a saída sem motivo.
         if systemctl --user is-enabled "$u" 2>/dev/null | grep -qx 'static'; then
             printf '  %-42s desmascarada (static, sem enable)\n' "$u"
             continue
@@ -207,7 +153,6 @@ religar() {
     printf '\npronto. Confira com:  hefesto-chave estado\n'
 }
 
-# --- porta de entrada --------------------------------------------------------
 case "${1:-}" in
     estado|status|"") estado ;;
     off|desligar)     desligar ;;

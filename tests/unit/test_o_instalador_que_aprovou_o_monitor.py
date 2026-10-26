@@ -235,7 +235,6 @@ def _texto_do_install() -> str:
 def test_install_confere_a_fonte_padrao_depois_da_cura() -> None:
     """A leitura final existe, e vem DEPOIS do `--fix-mic`."""
     texto = _texto_do_install()
-    assert "INSTALADOR-QUE-APROVOU-O-MONITOR-01" in texto
     pos_fix_mic = texto.find("doctor.sh\" --fix-mic --quiet")
     pos_veredito = texto.find('pactl get-default-source 2>/dev/null || true)"')
     assert pos_fix_mic > 0, "o passo 10 deixou de chamar a cura do microfone"
@@ -255,26 +254,21 @@ def test_install_nao_oferece_comando_impotente_para_o_monitor() -> None:
     texto = _texto_do_install()
     inicio = texto.find("o microfone padrão do sistema é um MONITOR")
     assert inicio > 0
-    bloco = texto[inicio : inicio + 900]
+    bloco = texto[inicio : texto.index("\n            ;;", inicio)]
     assert "--fix-mic" not in bloco, "o veredito voltou a oferecer um comando impotente"
     assert "conecte" in bloco.lower()
 
 
-def test_o_wp_fix_documenta_o_exit_3() -> None:
-    """Exit code novo sem contrato escrito é armadilha para o próximo chamador."""
-    texto = WP_FIX.read_text(encoding="utf-8")
-    cabecalho = texto[: texto.find("set -euo pipefail")]
-    assert "3 = a fonte padrão é um MONITOR" in cabecalho
 
 
 MARCADOR_DO_PASSO_10 = 'step "10/11"'
 
 
 def _bloco_do_passo(marcador: str) -> str:
-    """Do `step "N/11"` até a régua (`# ---…`) que abre o passo seguinte."""
+    """Do `step "N/11"` até o `step "11a"`, que abre o passo seguinte."""
     texto = _texto_do_install()
     inicio = texto.index(marcador)
-    fim = re.search(r"^# -{10,}", texto[inicio:], re.MULTILINE)
+    fim = re.search(r'^step "11a" ', texto[inicio:], re.MULTILINE)
     assert fim is not None, f"fim do bloco {marcador} não encontrado"
     return texto[inicio : inicio + fim.start()]
 

@@ -409,5 +409,3 @@ def test_os_quatro_contratos_estao_no_doctor_e_dizem_o_que_conferir() -> None:
     for ident in IDS:
         contrato = _contrato(ident)
         assert contrato.conferir and contrato.promessa
-    fonte = Path(cf.__file__).read_text(encoding="utf-8")
-    assert "A EXCEÇÃO À REGRA DA CAPACIDADE" in fonte and "`pergunta=versão`" in fonte

@@ -753,8 +753,8 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
 def test_a_mordida_sem_o_passo_dos_lancadores_o_limpa_acusa(tmp_path: Path) -> None:
     """A mordida da sprint, como teste: o MESMO uninstall sem o passo dos"""
     texto = UNINSTALL.read_text(encoding="utf-8")
-    inicio = texto.index("# O AMBIENTE NOS OUTROS LANÇADORES")
-    fim = texto.index("# PLAT-01: destrava o CompatToolMapping")
+    inicio = texto.index("CURA_POR_ESTRADA_PY=")
+    fim = texto.index("PROTON_PIN_PY=", inicio)
     sem_a_cura = texto[:inicio] + "_estradas_desfeitas=1\n\n" + texto[fim:]
     r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
     _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)

@@ -184,12 +184,3 @@ class TestIntegracaoComOWatchdog:
     def test_script_e_executavel(self) -> None:
         assert os.access(SCRIPT, os.X_OK), "o watchdog o invoca direto"
 
-
-class TestDocumentaAMedicao:
-    def test_cabecalho_registra_a_cadeia_causal_e_a_prova(self) -> None:
-        cabecalho = SCRIPT_TEXT.split("set -euo pipefail")[0]
-        assert "REPORT_REQ_TIMEOUT" in cabecalho
-        assert "uhid" in cabecalho
-        assert "reportID 32" in cabecalho
-        assert "bind" in cabecalho, "a prova ao vivo do rebind"
-        assert "TRANSIENTE" in cabecalho or "transiente" in cabecalho

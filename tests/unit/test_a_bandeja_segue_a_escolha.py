@@ -171,7 +171,7 @@ def test_o_retomar_o_ativar_e_o_start_trazem_a_bandeja(
 
 def _bloco_do_autostart() -> str:
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
-    inicio = texto.index("# O AUTOSTART DO TRAY")
+    inicio = texto.index('_AUTOSTART_DIR="${HOME}/.config/autostart"')
     fim = texto.index('mkdir -p "${BIN_DIR}"', inicio)
     return texto[inicio:fim]
 
@@ -206,8 +206,10 @@ def test_o_install_preserva_a_escolha(tmp_path: pathlib.Path, antes: str | None)
 
 def _bloco_da_volta() -> str:
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
-    inicio = texto.index("# A BANDEJA VOLTA DEPOIS DO SERVIÇO")
-    fim = texto.index("# ----", inicio)
+    inicio = texto.index(
+        'if [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _faria "subir o ícone na bandeja'
+    )
+    fim = texto.index("PRESENCA_UNIT_SRC=", inicio)
     return texto[inicio:fim]
 
 

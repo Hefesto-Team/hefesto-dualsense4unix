@@ -1,17 +1,4 @@
 #!/usr/bin/env bash
-# dev-setup.sh — verificação idempotente do ambiente de dev.
-#
-# Uso: ./scripts/dev-setup.sh [--with-tray]
-#
-# Comportamento:
-#   1. Se .venv/ não existe ou .venv/bin/pytest está ausente/quebrado,
-#      invoca scripts/dev_bootstrap.sh para (re)criar o ambiente.
-#   2. Sempre termina rodando `.venv/bin/pytest --collect-only` como smoke
-#      que confirma que hefesto_dualsense4unix é importável e a suite está visível.
-#   3. Reporta "Collected N tests" e sai com código 0 se tudo ok.
-#
-# Operacionaliza lição L-21-4: executor em sessão nova precisa do ambiente
-# vivo antes de rodar qualquer gate. Execução cega é violação.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -50,10 +37,6 @@ if [[ -z "$count" ]]; then
 fi
 echo "[dev-setup] OK: $count."
 
-# INFRA-VENV-PYGOBJECT-01 (A-12): valida disponibilidade do PyGObject no venv.
-# Sem isto: `./run.sh --gui` e `.venv/bin/python -m hefesto_dualsense4unix.app.main` falham
-# por ModuleNotFoundError, e os testes da janela (exigir_gi_real) pulam em vez de rodar.
-# Não bloqueia o fluxo (GUI é opt-in) — apenas instrui com mensagem acionável.
 echo "[dev-setup] validando PyGObject (GUI GTK3)..."
 if "$VENV_DIR/bin/python" -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk" >/dev/null 2>&1; then
     echo "[dev-setup] OK: PyGObject disponível no venv (GUI pronta)."
@@ -71,5 +54,3 @@ else
             Armadilha A-12 — ver VALIDATOR_BRIEF.md.
 HINT
 fi
-
-# "Ama a sabedoria com perseverança, e ela te elevará." — Provérbios 4:8

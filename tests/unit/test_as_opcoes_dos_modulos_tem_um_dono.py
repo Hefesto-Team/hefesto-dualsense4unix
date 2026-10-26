@@ -45,10 +45,11 @@ def _funcao(texto: str, nome: str) -> str:
 
 
 def _executa(texto: str) -> list[str]:
-    """Linhas que podem executar: sem comentário, com a continuação por `\\` colada."""
+    """Linhas que podem executar: fora do texto da ajuda, com a continuação por `\\` colada."""
+    sem_ajuda = re.sub(r"<<'AJUDA'\n.*?\nAJUDA\n", "\n", texto, flags=re.S)
     return [
         linha
-        for linha in texto.replace("\\\n", " ").splitlines()
+        for linha in sem_ajuda.replace("\\\n", " ").splitlines()
         if linha.strip() and not linha.lstrip().startswith("#")
     ]
 

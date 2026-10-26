@@ -751,7 +751,7 @@ PlayStation**.
 
 **O que isto significa para este projeto:** o canal sempre esteve no aparelho —
 faltava o Proton achá-lo, e desde 16/09/2026 o pino do produto é o
-`GE-Proton11-6-x86_64` exatamente por isso (`install.sh:4167-4174`). Num jogo
+`GE-Proton11-6-x86_64` exatamente por isso (`install.sh:2638-2645`). Num jogo
 que fale DualSense nativamente, **o alto-falante não passa pelo Hefesto**: o
 jogo abre o sink do controle sozinho. O nó `hefesto_som_<marca>` e o `mix`/`sfx`
 de `integrations/alto_falante_bt` são para o resto — o jogo que não sabe o que é

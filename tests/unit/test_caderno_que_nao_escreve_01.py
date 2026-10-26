@@ -13,6 +13,7 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "storm_watch.sh"
+PORQUE = RAIZ / "docs" / "research" / "o-porque-dos-modulos.md"
 
 LINHAS = [
     "2026-08-08T00:24:39-03:00 MeowSystem kernel: nintendo 0005:057E:2009.000A: "
@@ -107,9 +108,9 @@ def test_o_fflush_continua_como_rede_do_gawk() -> None:
 
 
 def test_o_porque_esta_escrito_no_script() -> None:
-    """Quem abrir o script encontra o motivo, não só a linha."""
-    texto = SCRIPT.read_text(encoding="utf-8")
-    assert "CADERNO-QUE-NÃO-ESCREVE-01" in texto, "o comentário que explica sumiu"
+    """Quem procurar o motivo do `-W interactive` o encontra no porquê dos módulos."""
+    texto = PORQUE.read_text(encoding="utf-8")
+    assert "CADERNO-QUE-NÃO-ESCREVE-01" in texto, "o porquê que explica sumiu"
     assert "ENTRADA do mawk" in texto, (
         "sumiu a frase que diz que o gargalo é a ENTRADA — é a informação que "
         "impede a próxima pessoa de tentar curar com `fflush()` sozinho."

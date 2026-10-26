@@ -1,16 +1,6 @@
 #!/usr/bin/env bash
-# Mede os TRÊS sinais automáticos da háptica nativa enquanto o jogo roda.
-#
-# O QUARTO SINAL É A MÃO DO USUÁRIO, e nenhum script o substitui: o jogo tem de
-# vibrar. Este instrumento responde "a corrente está fechada?"; só ela responde
-# "chegou?".
-#
-# Não abre jogo, não abre Steam, não escreve nada. Só lê.
-#
-#   bash scripts/medir_a_haptica_no_jogo.sh            # espera o jogo até 180 s
-#   bash scripts/medir_a_haptica_no_jogo.sh 300        # espera mais
 set -uo pipefail
-export LC_ALL=C          # sem isto o `pactl` traduz e o leitor fica cego
+export LC_ALL=C
 
 ESPERA="${1:-180}"
 ALVO_PADRAO="PRAGMATA"
@@ -20,15 +10,6 @@ echo "── à espera de «$ALVO» (até ${ESPERA}s) ────────�
 echo "   abra o jogo PELO ÍCONE, em modo produto. Não abro nada daqui."
 echo
 
-# ACHAR O JOGO, e o `pgrep -f` SOZINHO NÃO SERVE — medido em 20/09/2026,
-# na primeira mordida deste script: ele casou o PRÓPRIO SHELL que o rodava,
-# porque o nome do alvo estava na linha de comando do pai. O truque do
-# colchete (`[P]RAGMATA`) não protege: quem aparece na linha do pai é o texto
-# já montado, sem colchete. É a terceira vez que esta família morde a casa.
-#
-# A CURA É PERGUNTAR AO DONO: um jogo rodando sob Proton carrega
-# `STEAM_COMPAT_DATA_PATH` no ambiente. Nenhum shell meu carrega. O candidato
-# só vale se o ambiente dele disser que é um jogo.
 e_um_jogo() {
   local p="$1"
   [ "$p" = "$$" ] && return 1
@@ -86,7 +67,6 @@ fi
 
 echo
 echo "── 3. o sink do controle abriu em 4 canais ──────────────────────"
-# O formato de cada sink `hefesto_som`, do JSON do servidor (o texto longo traduz rótulos).
 espec=$(pactl --format=json list sinks 2>/dev/null | python3 -c '
 import json, sys
 try:

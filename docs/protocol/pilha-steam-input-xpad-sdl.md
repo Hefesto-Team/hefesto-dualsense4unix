@@ -673,7 +673,7 @@ as variáveis que exporta. Logo, para as **sete** variáveis da
 outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em
-`assets/hefesto-launch.sh:85-91`); **NÃO MEDIDO** para o valor que a Steam põe.
+`assets/hefesto-launch.sh:32-37`); **NÃO MEDIDO** para o valor que a Steam põe.
 
 ### 4.1 O que o `steam_input_apps.txt` muda nessa ordem
 

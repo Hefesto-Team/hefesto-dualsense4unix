@@ -19,7 +19,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 UNINSTALL = RAIZ / "uninstall.sh"
 INSTALL_PROFILES = RAIZ / "scripts" / "install_profiles.sh"
 
-ANCORA_INICIO = "# Configs e dados do user. PRESERVADOS por padrão"
+ANCORA_INICIO = '_cfg_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}"'
 
 CARIMBO = {
     "kind": "gamepad",
@@ -35,7 +35,7 @@ def _bloco_de_config() -> str:
     texto = UNINSTALL.read_text(encoding="utf-8")
     inicio = texto.find(ANCORA_INICIO)
     assert inicio != -1, (
-        "o bloco de config do uninstall.sh mudou de cabeçalho — a âncora "
+        "o bloco de config do uninstall.sh mudou — a âncora "
         f"{ANCORA_INICIO!r} sumiu. Reaponte este teste antes de confiar nele."
     )
     fim = re.search(r"^fi$", texto[inicio:], re.MULTILINE)

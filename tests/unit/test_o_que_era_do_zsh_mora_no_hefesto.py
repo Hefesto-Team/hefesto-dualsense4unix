@@ -415,8 +415,7 @@ def test_o_script_nao_carrega_o_nome_da_maquina_dela() -> None:
     texto = WIFI.read_text(encoding="utf-8")
     for proibido in ("aurora", "AURORA_", "/run/aurora", "wlx"):
         assert proibido not in texto.replace("aurora-wifi-usb.sh`", ""), proibido
-    assert "switch_usb_mode=N" in texto, "a recusa do modo USB2 fica escrita"
-    assert not re.search(r"^\s*[^#].*switch_usb_mode", texto, re.M), (
+    assert "switch_usb_mode" not in texto, (
         "o modo USB2 não entra (recusado por ela)"
     )
 
@@ -573,8 +572,8 @@ def test_o_install_chama_o_vigia_dos_dois_lados_da_cerca() -> None:
 def test_a_saida_no_wifi_usb_esta_no_parser_no_help_e_no_ensaio() -> None:
     texto = INSTALL.read_text(encoding="utf-8")
     assert re.search(r"^\s+--no-wifi-usb\)\s+NO_WIFI_USB=1 ;;", texto, re.M)
-    cabecalho = texto[: texto.index("\nset -euo pipefail")]
-    assert "--no-wifi-usb" in cabecalho, "o --help lê o cabeçalho e tem de anunciar a saída"
+    ajuda = texto[texto.index("_ajuda() {") : texto.index("\nAJUDA\n")]
+    assert "--no-wifi-usb" in ajuda, "o --help tem de anunciar a saída"
     assert '"install_wifi_usb_host:wifi-usb"' in texto, (
         "sem a linha no ensaio, o --dry-run escreveria em /etc"
     )

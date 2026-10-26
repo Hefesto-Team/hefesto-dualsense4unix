@@ -1,134 +1,25 @@
 #!/usr/bin/env bash
-# bt_rebind_orphans.sh — recupera o controle Bluetooth que PERDEU A PROBE e
-# ficou órfão (device HID existente, driver NENHUM). Cura de PRIMEIRA LINHA da
-# contenção de probe: um rebind no driver VANILLA in-tree, sem patch de kernel,
-# sem reboot e sem tocar em quem já está funcionando.
-#
-# ─── O sintoma (medido 25/07) ────────────────────────────────────────────────
-# Dois DualSense conectando no mesmo adaptador com ~1 s de diferença. O 1º
-# concluiu a probe em 74 ms. O 2º pegou o pairing info (reportID 9) e perdeu o
-# firmware info (reportID 32):
-#
-#   playstation 0005:054C:0CE6.000F: Failed to retrieve feature with reportID 32: -5
-#   playstation 0005:054C:0CE6.000F: probe with driver playstation failed with error -5
-#
-# O device fica em /sys/bus/hid/devices SEM symlink `driver`: sem hidraw, sem
-# input, sem LED, sem bateria. O hid-generic NÃO assume, porque um driver
-# específico deu match. É por isso que o sintoma é detectável com precisão
-# cirúrgica — e é exatamente o que este script procura.
-#
-# ─── Por que o rebind CURA (medido 25/07 12:06) ──────────────────────────────
-# O -5 é máscara. A cadeia real: o uhid achata qualquer erro do transporte em
-# -EIO; o kernel ainda esperava (a espera dele é de 5 s) mas o BlueZ desistiu
-# antes, no seu REPORT_REQ_TIMEOUT de 3 s, e registrou
-# "hidp_report_req_timeout() ... GET_REPORT request timed out". Ou seja: o
-# controle estava VIVO — tinha acabado de responder o feature report anterior —
-# e só não ganhou o canal de controle L2CAP dentro de 3 s enquanto o outro pad
-# subia no mesmo rádio. Contenção TRANSIENTE.
-#
-# Passada a janela, o MESMO GET_REPORT passa. Provado ao vivo com o driver
-# vanilla, sem retry nenhum no probe:
-#
-#   echo "0005:054C:0CE6.000F" > /sys/bus/hid/drivers/playstation/bind
-#   -> playstation 0005:054C:0CE6.000F: Registered DualSense controller
-#      hw_version=0x00000710 fw_version=0x0110002a
-#
-# O controle subiu de primeira e o daemon criou o vpad em seguida. Isso PROVA
-# que o device continua plenamente utilizável: a falha é só na JANELA DE PROBE,
-# não no controle nem no link.
-#
-# Importa para o alvo do projeto (4 controles por Bluetooth ao mesmo tempo):
-# com 4 pads subindo no mesmo rádio a contenção deixa de ser exceção, e uma
-# cura automática em userspace vale mais que uma que exige reboot.
-#
-# ─── Escopo deliberadamente ESTREITO ─────────────────────────────────────────
-# Só age em device que satisfaz TODAS estas condições:
-#   1. está em /sys/bus/hid/devices SEM symlink `driver` (o sintoma exato);
-#   2. o barramento é 0005 = BLUETOOTH. É o único onde a contenção medida
-#      acontece (o timeout é do canal de controle L2CAP do BlueZ), e é o que
-#      exclui por construção o vpad do próprio hefesto, que nasce por uhid no
-#      barramento 0003;
-#   3. o vendor é 054C (Sony) — o dono é o driver `playstation`.
-# Qualquer outro device órfão é IGNORADO e apenas contado no resumo: chutar
-# bind em device alheio é como se inventa bug novo.
-#
-# ─── Guarda contra laço (disciplina da casa) ─────────────────────────────────
-# Contador POR DEVICE em /run: depois de MAX_TENTATIVAS falhas seguidas o
-# script PARA de tentar aquele device e loga UMA vez. O histórico do projeto
-# tem laço de 1 Hz que encheu o log por 45 min — aqui não se repete. Como o id
-# do device muda a cada reconexão (0009 -> 000F), reconectar dá orçamento novo
-# de graça, que é o comportamento certo: o humano replugou, tenta de novo.
-#
-# NUNCA carrega/descarrega módulo: recarregar hid_playstation derrubaria TODOS
-# os DualSense, inclusive os por Bluetooth.
-#
-# ─── O órfão do CABO (STORM-USB-01, 24/09/2026) ──────────────────────────────
-# A mesma cura no outro transporte, e é a palavra de 23/09: «nomear e
-# RELIGAR» — o controle que cai por -71 volta sozinho. No cabo, a probe perdida
-# tem outra forma, e está no journal da bancada (16/09, a 3-4.4):
-#
-#   usbhid 3-4.4:1.3: can't add hid device: -71
-#   usbhid 3-4.4:1.3: probe with driver usbhid failed with error -71
-#
-# O aparelho enumerou (o áudio dele segue vivo), mas a INTERFACE HID ficou sem
-# driver: não nasce device HID nenhum, e por isso o laço de cima não a vê. O
-# driver não refaz a probe sozinho; ficou assim 15 s, até a queda seguinte. O
-# religar é o bind da interface no `usbhid`, que refaz a probe — sem reset de
-# porta e sem re-enumerar, e é o que o separa do "authorized-toggle" que a
-# auditoria do storm de 26/06 condenou como realimentação do próprio -71.
-#
-# Escopo, também ESTREITO — TODAS as condições:
-#   1. interface USB (`3-4.4:1.3`) de classe 03 (HID), SEM symlink `driver`;
-#   2. o aparelho do usuário é Sony (idVendor 054c). O vpad do hefesto nasce por uhid
-#      e não tem interface USB nenhuma: fica fora por construção;
-#   3. `authorized` da interface não é 0 — interface desligada é escolha de
-#      alguém, não o -71.
-# O contador é por interface E por `devnum`: tirar e pôr o cabo dá outro
-# `devnum`, e o orçamento recomeça, como no rádio.
-#
-# ─── O religar NA HORA (STORM-USB-02, 24/09/2026) ────────────────────────────
-# O tique do watchdog passa a cada 2 min (medido no journal da bancada: 5.671
-# intervalos, mediana 120 s, o maior 126 s), e o lugar guardado de quem saiu
-# vale 30 s (`identity.prazo_do_lugar_guardado`). Religado no tique, o controle
-# volta depois do prazo em mais de 3 de cada 4 quedas, e os outros já trocaram
-# de número. Por isso o kernel-watch (`storm_watch.sh`) chama este mesmo script
-# NA HORA do aviso do kernel, pelo verbo `religar-orfaos` da ponte privilegiada,
-# com `--evento`:
-#   - as guardas são AS MESMAS (é o mesmo laço, não uma cópia dele);
-#   - o orçamento é OUTRO: `evento-<chave>`, com o mesmo teto. O tique não perde
-#     as três tentativas dele, espaçadas de 2 em 2 min, para as três do aviso,
-#     que cabem em 20 s — uma contenção que dure mais que isso ainda tem o
-#     tique. E o aviso que se esgota fica calado: quem diz a desistência, UMA
-#     vez, continua sendo o tique;
-#   - quem religa limpa os dois contadores.
-#
-# Uso:
-#   bt_rebind_orphans.sh              cura (requer root p/ escrever no sysfs)
-#   bt_rebind_orphans.sh --dry-run    só relata o que faria (não requer root)
-#   bt_rebind_orphans.sh --quiet      só fala quando age ou falha
-#   bt_rebind_orphans.sh --evento     a passada do aviso do kernel (ver acima)
 set -euo pipefail
-# Sob sudo os ganchos de teste morrem (menos o de LOG), como no watchdog e na
-# ponte (STORM-USB-01, conferência de 24/09): o ramo do cabo deu a este script
-# de root um gancho que é DESTINO de escrita (`HEFESTO_USB_DRIVERS_DIR`, onde
-# ele escreve no `usbhid/bind`), e com o `env_reset` desligado o caminho viria
-# do ambiente de quem chamou o `sudo` que o doctor manda rodar.
+_ajuda() {
+  cat <<'AJUDA'
+bt_rebind_orphans.sh — recupera o controle Bluetooth que PERDEU A PROBE e
+ficou órfão (device HID existente, driver NENHUM). Cura de PRIMEIRA LINHA da
+contenção de probe: um rebind no driver VANILLA in-tree, sem patch de kernel,
+sem reboot e sem tocar em quem já está funcionando.
+
+  playstation 0005:054C:0CE6.000F: Failed to retrieve feature with reportID 32: -5
+  playstation 0005:054C:0CE6.000F: probe with driver playstation failed with error -5
+AJUDA
+}
 if [[ -n "${SUDO_UID:-}" || -n "${SUDO_USER:-}" ]]; then
     unset HEFESTO_REBIND_MAX_TENTATIVAS HEFESTO_REBIND_STAMP_DIR HEFESTO_HID_DEVICES_DIR HEFESTO_HID_DRIVERS_DIR HEFESTO_USB_DEVICES_DIR HEFESTO_USB_DRIVERS_DIR
 fi
 
-# Raízes parametrizáveis (defaults == sistema real). Existem como COSTURA DE
-# TESTE: a suíte exercita órfão-no-escopo, órfão-fora-do-escopo e o teto de
-# tentativas sem root e sem hardware, apontando tudo para diretórios temporários.
-# Em produção NUNCA são definidas — os defaults valem.
 MAX_TENTATIVAS="${HEFESTO_REBIND_MAX_TENTATIVAS:-3}"
 STAMP_DIR="${HEFESTO_REBIND_STAMP_DIR:-/run/hefesto-bt-rebind}"
 LOG_TAG=hefesto-bt-rebind
 HID_DEVICES="${HEFESTO_HID_DEVICES_DIR:-/sys/bus/hid/devices}"
 HID_DRIVERS="${HEFESTO_HID_DRIVERS_DIR:-/sys/bus/hid/drivers}"
-# O CABO (STORM-USB-01). A árvore DESVIADA não lê a real: uma régua que desvia só
-# o HID (as de 25/07) não pode, por esquecer esta costura, passar a varrer o
-# `/sys/bus/usb` de quem roda a suíte — vazio aqui é "não olhe".
 if [[ -n "${HEFESTO_USB_DEVICES_DIR:-}" ]]; then
     USB_DEVICES="${HEFESTO_USB_DEVICES_DIR}"
 elif [[ -n "${HEFESTO_HID_DEVICES_DIR:-}" ]]; then
@@ -147,7 +38,7 @@ for arg in "$@"; do
         --quiet)   QUIET=1 ;;
         --evento)  EVENTO=1 ;;
         -h|--help)
-            sed -n '2,60p' "$0" | sed 's/^# \{0,1\}//'
+            _ajuda
             exit 0
             ;;
         *)
@@ -157,8 +48,6 @@ for arg in "$@"; do
     esac
 done
 
-# O contador de cada passada: o do tique é o nome da chave; o do aviso do
-# kernel leva `evento-` na frente (ver «O religar NA HORA», no cabeçalho).
 PREFIXO=""
 DE_NOVO="nova tentativa na próxima passagem do watchdog"
 QUAL=""
@@ -168,10 +57,6 @@ if [[ "${EVENTO}" -eq 1 ]]; then
     QUAL=", na hora do aviso do kernel"
 fi
 
-# DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026): vazio = journal (produção); caminho =
-# arquivo; `none` = nada. Existe porque a suíte roda estes scripts DE VERDADE e
-# sem isto grava, no journal da máquina do usuário, linhas que descrevem eventos que
-# nunca aconteceram. Motivo completo no cabeçalho do bt_bonds_autorestore.sh.
 LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
 _registrar() {
     case "${LOG_DEST}" in
@@ -186,21 +71,17 @@ log() {
     _registrar "$*"
     printf '%s\n' "$*"
 }
-# Só aparece quando NÃO estamos em --quiet (ruído de rotina do watchdog).
 log_info() { [[ "${QUIET}" -eq 1 ]] && return 0; log "$*"; }
 
-# Identidade do device a partir do nome do diretório: BUS:VID:PID.INSTANCIA.
-# Ex.: 0005:054C:0CE6.000F -> bus=0005 vid=054C pid=0CE6
 _bus_de() { printf '%s' "${1%%:*}"; }
 _vid_de() { local r="${1#*:}"; printf '%s' "${r%%:*}"; }
 
-# O device é candidato à cura? (ver "Escopo deliberadamente ESTREITO" acima)
 _e_candidato() {
     local id="$1" bus vid
     bus="$(_bus_de "${id}")"
     vid="$(_vid_de "${id}" | tr 'a-f' 'A-F')"
-    [[ "${bus}" == "0005" ]] || return 1   # só Bluetooth
-    [[ "${vid}" == "054C" ]] || return 1   # só Sony (dono = driver playstation)
+    [[ "${bus}" == "0005" ]] || return 1
+    [[ "${vid}" == "054C" ]] || return 1
     return 0
 }
 
@@ -212,13 +93,11 @@ orfaos=0
 
 shopt -s nullglob
 for dev in "${HID_DEVICES}"/*; do
-    [[ -e "${dev}/driver" ]] && continue   # tem driver: nada a fazer
+    [[ -e "${dev}/driver" ]] && continue
     id="$(basename "${dev}")"
     orfaos=$((orfaos + 1))
 
     if ! _e_candidato "${id}"; then
-        # Órfão que não é nosso escopo: reporta, não toca. Chutar bind em
-        # device alheio é como se inventa bug novo.
         log_info "device HID órfão FORA do escopo, ignorado: ${id} (só curamos Sony 054C no barramento 0005/Bluetooth)"
         ignorados=$((ignorados + 1))
         continue
@@ -235,9 +114,6 @@ for dev in "${HID_DEVICES}"/*; do
         continue
     fi
 
-    # Guarda contra laço: contador por device, zerado naturalmente a cada
-    # reconexão (o id muda). Depois do teto, loga UMA vez e desiste — e quem
-    # diz é o tique: o aviso do kernel que se esgota fica calado.
     stamp="${STAMP_DIR}/${PREFIXO}${id}"
     tentativas=0
     [[ -f "${stamp}" ]] && tentativas="$(cat "${stamp}" 2>/dev/null || printf '0')"
@@ -261,8 +137,6 @@ for dev in "${HID_DEVICES}"/*; do
     mkdir -p "${STAMP_DIR}" 2>/dev/null || true
     printf '%s' "$((tentativas + 1))" > "${stamp}" 2>/dev/null || true
 
-    # O write falha (ENODEV/EBUSY) se o driver não casar ou o device sumir —
-    # guardado, porque o script roda com set -e.
     if printf '%s' "${id}" > "${bind}" 2>/dev/null && [[ -e "${dev}/driver" ]]; then
         log "controle órfão RECUPERADO por rebind${QUAL}: ${id} (perdeu a probe por contenção de canal de controle; o device estava íntegro)"
         rm -f "${STAMP_DIR}/${id}" "${STAMP_DIR}/${id}.desisti" "${STAMP_DIR}/evento-${id}" 2>/dev/null || true
@@ -274,8 +148,7 @@ for dev in "${HID_DEVICES}"/*; do
 done
 shopt -u nullglob
 
-# ─── O órfão do CABO (STORM-USB-01) — ver o cabeçalho ───────────────────────
-_cabo_do_stamp_vive() {  # <cabo-INTERFACE-DEVNUM>: a interface existe com o mesmo devnum?
+_cabo_do_stamp_vive() {
     local resto="${1#cabo-}" intf devnum
     intf="${resto%-*}"
     devnum="${resto##*-}"
@@ -289,7 +162,7 @@ if [[ -n "${USB_DEVICES}" ]]; then
         nome="$(basename "${intf}")"
         [[ "${nome}" =~ ^[0-9]+-[0-9]+(\.[0-9]+)*:[0-9]+\.[0-9]+$ ]] || continue
         [[ "$(cat "${intf}/bInterfaceClass" 2>/dev/null || true)" == "03" ]] || continue
-        [[ -e "${intf}/driver" ]] && continue   # tem driver: nada a fazer
+        [[ -e "${intf}/driver" ]] && continue
         [[ "$(cat "${intf}/authorized" 2>/dev/null || true)" == "0" ]] && continue
         porta="${nome%%:*}"
         orfaos=$((orfaos + 1))
@@ -338,9 +211,6 @@ if [[ -n "${USB_DEVICES}" ]]; then
         mkdir -p "${STAMP_DIR}" 2>/dev/null || true
         printf '%s' "$((tentativas + 1))" > "${stamp}" 2>/dev/null || true
 
-        # O kernel faz a probe DENTRO da escrita: quando o `printf` volta, o
-        # `driver` já existe ou a probe caiu de novo (-71 outra vez, ENODEV se o
-        # aparelho saiu). Guardado, porque o script roda com set -e.
         if printf '%s' "${nome}" > "${bind}" 2>/dev/null && [[ -e "${intf}/driver" ]]; then
             log "controle do cabo RELIGADO em ${porta}${QUAL}: a HID (${nome}) tinha perdido a probe no -71; o aparelho estava inteiro"
             rm -f "${STAMP_DIR}/${chave}" "${STAMP_DIR}/${chave}.desisti" "${STAMP_DIR}/evento-${chave}" 2>/dev/null || true
@@ -353,10 +223,6 @@ if [[ -n "${USB_DEVICES}" ]]; then
     shopt -u nullglob
 fi
 
-# Limpeza dos contadores de devices que não existem mais (reconexão troca o id;
-# sem isto o /run acumularia stamp morto até o reboot). O do cabo vive enquanto
-# a interface existir com o MESMO devnum. O do aviso do kernel (`evento-`) segue
-# a mesma regra do contador do tique da mesma chave.
 if [[ "${DRY_RUN}" -eq 0 && -d "${STAMP_DIR}" ]]; then
     shopt -s nullglob
     for stamp in "${STAMP_DIR}"/*; do

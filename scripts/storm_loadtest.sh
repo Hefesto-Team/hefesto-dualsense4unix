@@ -1,26 +1,8 @@
 #!/usr/bin/env bash
-# storm_loadtest.sh — teste de carga decisivo do storm -71 do DualSense.
-#
-# O storm é gatilhado por CARGA (jogo/Steam), não por ociosidade — então o teste
-# real é: controle plugado + carga + monitorar `error -71`/disconnect no kernel.
-# Este script versiona o "teste pós-reboot §6.5" que era manual.
-#
-# Uso:
-#   scripts/storm_loadtest.sh [SEGUNDOS]   (default 180)
-#
-# Faz:
-#   1. Confirma o DualSense plugado (USB ou já enumerado).
-#   2. Registra a contagem de `-71` baseline (dmesg).
-#   3. Sobe carga sintética (stress-ng --cpu, se disponível) — OU peça para abrir
-#      um jogo na Steam em paralelo (a carga real da GPU/CPU é o gatilho).
-#   4. Monitora o kernel por SEGUNDOS, contando -71/disconnect/queda de velocidade.
-#   5. Veredito: PASSOU (0 novos sinais) ou STORM (controle instável).
-#
-# Não mexe em porta/cabo/BIOS (resolvido). Foca em validar a config de software.
 set -uo pipefail
 
 DURATION="${1:-180}"
-VID="054c"  # Sony
+VID="054c"
 
 log() { printf '\033[1;35m[storm-test]\033[0m %s\n' "$*"; }
 
@@ -46,7 +28,6 @@ BASE="$(count_71)"
 log "DualSense presente. Baseline de sinais -71 neste boot: ${BASE}"
 log "Monitorando por ${DURATION}s. ABRA UM JOGO NA STEAM AGORA (a carga é o gatilho do storm)."
 
-# Carga sintética opcional (complementa o jogo). stress-ng se houver.
 STRESS_PID=""
 if command -v stress-ng >/dev/null 2>&1; then
     NPROC="$(nproc 2>/dev/null || echo 4)"
@@ -57,7 +38,6 @@ else
     log "stress-ng ausente — confie na carga do jogo. (instale com: sudo apt install stress-ng)"
 fi
 
-# Monitor do kernel em tempo real (não-bloqueante): conta sinais novos.
 DEADLINE=$(( $(date +%s) + DURATION ))
 LAST="$BASE"
 STORM=0

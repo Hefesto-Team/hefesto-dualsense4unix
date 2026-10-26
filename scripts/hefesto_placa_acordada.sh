@@ -1,39 +1,4 @@
 #!/usr/bin/env bash
-# hefesto_placa_acordada.sh — a placa de vídeo acordada enquanto um jogo vive.
-#
-# O-JOGO-LEVE-ACORDA-A-PLACA-01 (01/10/2026). Medido no Pro Jank Footy: com
-# carga leve e constante, a NVIDIA desce sozinha de 2.505 para 210 MHz em ~5 s
-# e leva ~0,5 s para subir de novo, e o quadro que aperta passa do vsync. Com o
-# piso de clock travado, 116 quadros acima de 20 ms viraram 24, e 6 trancos
-# acima de 50 ms viraram 0. O `system76-power` em Performance não mexe nisso.
-#
-# O QUE FAZ, por marca (lida no `vendor` de cada `/sys/class/drm/card*`):
-#   - NVIDIA: `nvidia-smi -lgc <piso>,<máximo>`, com o piso em 2/3 do máximo
-#     (2.070 MHz numa RTX 4060, perto dos 2.010 medidos); devolve com `-rgc`;
-#   - AMD: `power_dpm_force_performance_level` em `high`; devolve o de antes;
-#   - Intel (i915 e xe): o mínimo de frequência em 2/3 do RP0; devolve o de antes.
-# Só o piso sobe: o teto fica o da placa.
-#
-# A CONTAGEM É POR JOGO. Cada lançamento pede `acordar` com o PID do jogo e,
-# quando ele sai, `devolver`. A placa só volta quando nenhum PID pedido está
-# vivo, e um PID morto (o jogo que caiu, o restaurador que foi morto junto com
-# o grupo) sai da conta na chamada seguinte. O estado mora em /run, que o boot
-# limpa junto com o clock travado.
-#
-# O ROOT VEM DO SUDO, e a regra é estreita como a da ponte do Bluetooth
-# (`bt_ponte_privilegiada.sh`): caminho absoluto, os três verbos nomeados, e
-# NENHUM curinga. O PID entra pelo STDIN, não por argv: `*` no sudoers casa
-# espaço, e casar argumento livre é como NOPASSWD estreito vira largo.
-#
-# Uso:
-#   acordar               — PID do jogo na primeira linha do stdin
-#   devolver              — idem
-#   estado                — imprime se a placa está acordada e os PIDs vivos
-#   regra-sudo <USUARIA>  — imprime o /etc/sudoers.d (não precisa de root)
-#
-# Fora do root (só as réguas): HEFESTO_PLACA_ESTADO, HEFESTO_PLACA_SYS e
-# HEFESTO_PLACA_NVSMI apontam para um lar de mentira. Como root eles são
-# ignorados: o sudo já os tira do ambiente, e o script não confia nisso.
 set -u
 
 ALVO_INSTALADO=/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh
@@ -58,8 +23,6 @@ _exige_estado() {
     chmod 700 "${ESTADO}" 2>/dev/null || true
 }
 
-#: O PID do jogo, pela primeira linha do stdin. Só dígitos, e só um processo
-#: que existe agora.
 _pid_do_stdin() {
     local linha=""
     IFS= read -r -t 5 linha || true
@@ -85,8 +48,6 @@ _ha_pedido() {
     return 1
 }
 
-#: As placas da máquina: «cartão<TAB>vendor». Só os `card<N>` (os conectores
-#: `card<N>-DP-1` são do mesmo aparelho).
 _placas() {
     local c v
     for c in "${SYS}"/class/drm/card*; do

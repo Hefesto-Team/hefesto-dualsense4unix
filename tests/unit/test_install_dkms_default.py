@@ -55,14 +55,9 @@ FN = (
 
 
 def _roda_help() -> subprocess.CompletedProcess[str]:
-    """Executa o comando de ajuda EXTRAÍDO do install.sh e devolve a saída."""
-    inicio = INSTALL.index("-h|--help)")
-    fim = INSTALL.index("exit 0", inicio)
-    corpo = INSTALL[inicio + len("-h|--help)") : fim]
-    corpo = corpo.replace('"${BASH_SOURCE[0]}"', f"'{INSTALL_PATH}'")
-    assert "BASH_SOURCE" not in corpo, "o corpo do --help ficou com BASH_SOURCE solto"
+    """Executa o ``install.sh --help`` e devolve a saída."""
     return subprocess.run(
-        [BASH, "-c", "set -euo pipefail\n" + corpo],
+        [BASH, str(INSTALL_PATH), "--help"],
         capture_output=True,
         text=True,
         check=False,

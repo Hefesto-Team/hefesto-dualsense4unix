@@ -1,45 +1,14 @@
 #!/usr/bin/env bash
-# mesa-de-medicao.sh — sobe A MESA DE MEDIÇÃO e a abre na tela do usuário.
-#
-# A encomenda é do usuário, 06/09/2026:
-#
-#     "a ideia é termos uma página pra medirmos o que falta no specs. (…) eu
-#     registro lá que tal controle ficou x com o teste y clico em avançar, o
-#     novo teste inicia eu relato o estado dos 4 controles"
-#
-# E a razão de a página existir, que é a que decide tudo: a sessão de quem
-# estava na bancada acabava e levava embora não só o resultado como o MODO DE
-# CHEGAR NELE. A frase de produto, palavra por palavra, está na entrada da
-# A-VALIDACAO-DOS-QUATRO-01, de 06/09/2026, que mora fora deste repositório
-# com o resto dos arquivos de processo.
-#
-# A JANELA É DO USUÁRIO E PARA ELA. Aqui **não** vale `--oculta`: esta é a única
-# janela desta casa que nasce de propósito na tela do usuário, porque é ela que vai
-# olhar os quatro controles e clicar. As réguas automáticas — o Playwright que
-# prova esta página — essas sim rodam headless, e é o `--sem-abrir` que as serve.
-#
-# ELE LIGA O DAEMON SE ELE ESTIVER PARADO — e NUNCA o reinicia. Pedido,
-# 07/09/2026: *"quando rodar o validar ele tem que acionar isso
-# automaticamente"*, depois de atravessar meia bancada com o daemon morto. Sem
-# daemon a página lê o kernel e o kernel devolve a LÂMPADA da sessão passada:
-# ela plugou o controle que o roteiro chama de P1 e a página o pôs no P3.
-#
-# A DIFERENÇA ENTRE `start` E `restart` É A SESSÃO DO USUÁRIO. `start` num serviço já
-# ativo não faz nada; `restart` derruba o daemon vivo, com os controles na mão
-# dela, no meio de uma medição. Por isso aqui só se pergunta `is-active` e só
-# se chama `start` — e se ele já estiver de pé, o script não toca em nada.
-#
-# A RÉGUA NÃO LIGA NADA: com `--sem-abrir` (que é o que o Playwright usa) o
-# daemon não é acionado. Uma suíte que sobe serviço na máquina do usuário é uma
-# suíte que mexe na bancada sem ela pedir.
-#
-# Uso:
-#   scripts/mesa-de-medicao.sh                 liga o daemon se preciso, sobe e abre na tela do usuário
-#   scripts/mesa-de-medicao.sh --sem-abrir     sobe e só imprime o endereço (é o que a régua usa)
-#   scripts/mesa-de-medicao.sh --sem-daemon    não liga o daemon, mesmo parado
-#   scripts/mesa-de-medicao.sh --porta 8765    escolhe a porta (0 = a primeira livre)
-#   scripts/mesa-de-medicao.sh --censo         o retrato dos testes, sem servir nada
 set -uo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+mesa-de-medicao.sh — sobe A MESA DE MEDIÇÃO e a abre na tela do usuário.
+
+    "a ideia é termos uma página pra medirmos o que falta no specs. (…) eu
+    registro lá que tal controle ficou x com o teste y clico em avançar, o
+    novo teste inicia eu relato o estado dos 4 controles"
+AJUDA
+}
 
 RAIZ="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 ABRIR=1
@@ -54,18 +23,12 @@ while [ $# -gt 0 ]; do
     --sem-daemon) LIGAR_DAEMON=0 ;;
     --censo)     CENSO=1 ;;
     --porta)     PORTA="${2:-0}"; shift ;;
-    -h|--help)   sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)   _ajuda; exit 0 ;;
     *) printf 'mesa-de-medicao.sh: não conheço "%s". Use --help.\n' "$1" >&2; exit 2 ;;
   esac
   shift
 done
 
-# ---------------------------------------------------------------------------
-# O INTERPRETADOR SE DECLARA, e a razão é a cicatriz do `portoes.sh`: numa
-# árvore de voo, escolher o python pela POSIÇÃO imprimia a venv de OUTRA cópia
-# do repositório e produzia quatro vermelhos falsos sobre código são. Aqui a
-# regra é de CAPACIDADE: o primeiro python que importa o pacote DESTA árvore.
-# ---------------------------------------------------------------------------
 escolher_python() {
   local candidatos=(
     "${PY:-}"
@@ -107,10 +70,6 @@ if [ "$CENSO" = 1 ]; then
   exec "$PY" "$RAIZ/scripts/mesa_de_medicao.py" --censo
 fi
 
-# ---------------------------------------------------------------------------
-# O DAEMON — `start` se estiver parado, e nada se estiver de pé. Ver o
-# cabeçalho: `restart` derrubaria o daemon vivo com os controles na mão do usuário.
-# ---------------------------------------------------------------------------
 if [ "$LIGAR_DAEMON" = 1 ] && command -v systemctl >/dev/null 2>&1; then
   ESTADO="$(systemctl --user is-active "$UNIT" 2>/dev/null || true)"
   if [ "$ESTADO" = "active" ]; then
@@ -118,27 +77,15 @@ if [ "$LIGAR_DAEMON" = 1 ] && command -v systemctl >/dev/null 2>&1; then
   elif systemctl --user cat "$UNIT" >/dev/null 2>&1; then
     printf 'daemon:  %s — ligando (%s)\n' "${ESTADO:-desconhecido}" "$UNIT"
     if systemctl --user start "$UNIT" 2>/dev/null; then
-      # A unit é `Type=notify`: o `start` só volta com o IPC de pé (o daemon diz
-      # `READY=1` quando o soquete escuta), então a página já pergunta a um daemon
-      # pronto. Sem isso ela cairia no kernel e mostraria a LÂMPADA velha — o
-      # defeito que ligar o daemon cura. `activating` (subindo) cai neste ramo
-      # também: o `start` se junta à subida em curso e volta quando ela termina.
       printf 'daemon:  %s\n' "$(systemctl --user is-active "$UNIT" 2>/dev/null || echo '?')"
     else
       printf 'daemon:  NÃO subiu. A página vai ler o kernel e dizer isso.\n' >&2
     fi
   else
-    # A MENSAGEM NÃO NOMEIA O INSTALADOR de propósito: há régua que proíbe o
-    # nome dele neste arquivo, e a razão é boa — ele reescreve os lançadores
-    # dela e a unit, e um lançador que o CITA é um passo de virar um que o
-    # chama.
     printf 'daemon:  a unit %s não existe nesta máquina — o produto não está instalado\n' "$UNIT" >&2
   fi
 fi
 
-# ---------------------------------------------------------------------------
-# QUEM ESTÁ NA MESA — antes de servir, para quem sobe saber com o que conta.
-# ---------------------------------------------------------------------------
 "$PY" -c "
 import sys; sys.path.insert(0, '$RAIZ/scripts')
 import mesa_de_medicao as m
@@ -149,17 +96,10 @@ for p in ('P1','P2','P3','P4'):
     print(f\"  {p}  {v['nome']:24} {v['transporte'] or '-':8} {v['modelo'] or '-'}\")
 "
 
-# ---------------------------------------------------------------------------
-# O SERVIDOR. Biblioteca padrão, `127.0.0.1`, sem uma dependência nova — a
-# dívida do `playwright`, que não está no `pyproject.toml` e deixa toda árvore
-# de trabalho com dois portões vermelhos, já ensinou o preço de acrescentar uma.
-# ---------------------------------------------------------------------------
 TUBO="$(mktemp -d)/endereco"
 mkfifo "$TUBO"
 "$PY" "$RAIZ/scripts/mesa_de_medicao.py" --servir --porta "$PORTA" > "$TUBO" &
 SERVIDOR=$!
-# O PID é conferido, e é por ele que se mata. `pkill -f` já derrubou o
-# compositor dela — nunca por padrão.
 trap 'kill "$SERVIDOR" 2>/dev/null || true' EXIT INT TERM
 
 read -r ENDERECO < "$TUBO"
@@ -167,8 +107,6 @@ rm -rf "$(dirname "$TUBO")"
 printf 'a mesa está em: %s\n' "$ENDERECO"
 
 if [ "$ABRIR" = 1 ]; then
-  # A tela é DO USUÁRIO. Nada de `--oculta` aqui, e nada de escolher navegador por
-  # conta própria: `xdg-open` respeita o padrão que ela configurou.
   (xdg-open "$ENDERECO" >/dev/null 2>&1 || true) &
   printf 'abri na tela dela. Ctrl-C para fechar o servidor.\n'
 else

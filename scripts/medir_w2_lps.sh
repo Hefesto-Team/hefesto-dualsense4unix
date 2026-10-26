@@ -1,34 +1,10 @@
 #!/usr/bin/env bash
-# medir_w2_lps.sh — Onda W2: medição A/B do LPS raso (power save do firmware)
-# do rtw88 em USB, via NetworkManager wifi.powersave (2=off vs 3=on).
-#
-# POR QUE NÃO modprobe.d/disable_lps_deep: em USB o deep PS NUNCA engaja —
-# rtw_usb_deep_ps é função vazia (usb.c:836-839 do v7.0.11); quem seta
-# RTW_FLAG_LEISURE_PS_DEEP são só pci.c/sdio.c/wow.c. disable_lps_deep=Y
-# neste dongle é NO-OP (estudo 2026-07-20-estudo-premissas-onda-w-rtw88.md
-# §4). O vilão ATIVO é o LPS raso: rtw_watch_dog → rtw_enter_lps quando o
-# mac80211 pede PS — e o NM liga PS por default (wifi.powersave=3 em
-# /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf).
-#
-# ESTE SCRIPT SÓ MEDE E RELATA. Ele NÃO persiste configuração nenhuma. A
-# economia de energia desligada já é o padrão do install.sh (decisão de produto,
-# 23/10/2026, depois de seis quedas do dongle num dia com o powersave=3 da
-# distro: assets/NetworkManager/hefesto-wifi-powersave.conf); a medição A/B
-# fica para quem quiser ver o ganho no próprio aparelho. Ao final, o valor
-# ORIGINAL da conexão é restaurado (trap EXIT), ganhe quem ganhar.
-#
-# Uso:   ./medir_w2_lps.sh            # dry-run: mostra o plano, não toca nada
-#        ./medir_w2_lps.sh --run      # executa (interrompe o WiFi! ~6 min)
-#        [--dur 120] [--out ARQ] [--url URL_DOWNLOAD]
-#
-# Gate humano: rodar só com a mantenedora ciente (o WiFi cai e volta 2x).
 
 set -euo pipefail
 
 DUR=120
 RUN=0
 OUT=""
-# Arquivo grande de mirror rápido; troque à vontade (só leitura, /dev/null).
 URL="https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.3-base-amd64.tar.gz"
 
 while [[ $# -gt 0 ]]; do
@@ -44,7 +20,6 @@ done
 
 log() { printf '[w2] %s\n' "$*"; }
 
-# --- Descoberta (read-only, roda até no dry-run) -------------------------
 WIFI_DEV="$(nmcli -t -f DEVICE,TYPE device status 2>/dev/null |
     awk -F: '$2 == "wifi" {print $1; exit}')"
 [[ -n "${WIFI_DEV}" ]] || { echo "nenhum device wifi no NetworkManager" >&2; exit 1; }
@@ -68,7 +43,6 @@ fi
 
 OUT="${OUT:-/tmp/w2-lps-$(date +%Y%m%d-%H%M%S).txt}"
 
-# --- Restauração garantida (fail-safe): valor original SEMPRE volta ------
 restaurar() {
     log "restaurando 802-11-wireless.powersave=${PS_ORIG} em '${WIFI_CONN}'"
     nmcli connection modify "${WIFI_CONN}" 802-11-wireless.powersave "${PS_ORIG}" || true
@@ -81,16 +55,13 @@ medir_braco() {
     log "== braço ${nome}: powersave=${ps_val} =="
     nmcli connection modify "${WIFI_CONN}" 802-11-wireless.powersave "${ps_val}"
     nmcli connection up "${WIFI_CONN}" >/dev/null
-    sleep 10 # assentar associação/DHCP antes de medir
+    sleep 10
 
     t0="$(date '+%Y-%m-%d %H:%M:%S')"
 
-    # ping: amostras POR-PACOTE a 5Hz (sem -q: o modo quiet descarta as
-    # amostras individuais e mediana/p95 ficam impossíveis de derivar depois).
     ping -i 0.2 -w "${DUR}" "${GW}" > "/tmp/w2-ping-${nome}.txt" 2>&1 &
     local ping_pid=$!
 
-    # throughput: download contínuo (re-dispara se acabar antes de DUR)
     local bytes=0 fim=$((SECONDS + DUR))
     while (( SECONDS < fim )); do
         local b
@@ -105,7 +76,6 @@ medir_braco() {
         echo "### braço ${nome} (powersave=${ps_val}) ${t0} → ${t1}"
         echo "-- ping (ping -i 0.2 -w ${DUR} ${GW}):"
         grep -E 'packet loss' "/tmp/w2-ping-${nome}.txt" || true
-        # mediana/p95 calculados das amostras por-pacote (time=<ms>), ordenadas.
         awk -F'time=' '/time=/{split($2,a," ");print a[1]}' \
             "/tmp/w2-ping-${nome}.txt" | sort -n > "/tmp/w2-rtt-${nome}.txt"
         awk '{v[NR]=$1;n=NR} END{

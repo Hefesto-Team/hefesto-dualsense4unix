@@ -34,20 +34,21 @@ def _recorte(inicio: str, fim: str) -> str:
 
 
 BLOCO_DOS_BONDS = _recorte(
-    "    # O carimbo da desinstalação, um só:",
+    "    _carimbo_do_acervo=\"$(date +%Y%m%d-%H%M%S)\"",
     "    sudo systemctl daemon-reload >/dev/null 2>&1 || true\n",
 )
 LINHA_DA_SENHA = _recorte(
-    "# AS CÓPIAS DE PAREAMENTO DE UNINSTALLS ANTERIORES",
-    "# Onda S: broker root hide-hidraw",
+    "[[ \"${KEEP_CONFIG}\" -eq 0 ]] \\\n"
+    "    && compgen -G '/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*'",
+    "[[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1",
 )
 AVISO_SEM_ROOT = _recorte(
-    "# SEM ROOT, AS CÓPIAS DE ANTES FICAM",
-    "# Agente de pareamento persistente",
+    "if [[ \"${KEEP_CONFIG}\" -eq 0 ]] && ! sudo -n true 2>/dev/null \\\n",
+    "if [[ -e /etc/systemd/system/hefesto-bt-agent.service ]]; then",
 )
 BLOCO_DO_ENSAIO = _recorte(
     'if [[ "${DRY_RUN}" -eq 1 ]]; then\n    exec 3>&1',
-    "# Prime a credencial só se algum passo com root vai rodar",
+    "_NEEDS_SUDO=0\n",
 )
 
 SUDO_QUE_RECUSA_O_REAL = (

@@ -1,49 +1,16 @@
 #!/usr/bin/env bash
-# p3-conteiner.sh — o degrau P3 da escada da máquina limpa: o install como
-# USUÁRIA COMUM em outra distro, num contêiner. Muda a distro e o pip.
-#
-# O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026), a Parte A. É o mesmo
-# instrumento do job `install-multi-distro` do CI
-# (`scripts/ci/instalar_como_usuaria.sh`), com as mesmas imagens (o Pop sem a
-# parte gráfica, o fedora:42, o archlinux e o debian:12), o mesmo
-# `--fontes pop` e o mesmo `--so-dkms`, e com duas medidas a mais: as versões
-# que o pip entregou (L4) e o que o uninstall deixa (M4 do relatório 09). Não
-# nasce instrumento novo: o que roda lá dentro é o do CI.
-#
-# O que este degrau alcança: pacotes e pip reais de outra distro, o install
-# sem privilégio, o doctor sem aparelho, a compilação do módulo contra outro
-# kernel e o diff do uninstall. O que NÃO alcança: udev, systemd, Bluetooth,
-# hidraw, uhid, uinput, som com aparelho e compositor — isso é o P4.
-#
-# AS TRAVAS, e nenhuma é opcional:
-#   - a árvore NUNCA é montada: o roteiro do CI faz `chown -R` da raiz. Ela
-#     entra por `git archive` num tarball montado só de leitura, e é extraída
-#     dentro;
-#   - sem `--privileged` e sem `--device`: o `/sys` do contêiner fica só de
-#     leitura, e nenhum nó do host entra;
-#   - o Proton não se baixa (`--no-proton-pin`, 492 MB por imagem).
-#
-# Uso:
-#   bash scripts/maquina-limpa/p3-conteiner.sh [--imagem IMG]... [--saida DIR]
-#        [--dkms] [--bluez] [--ref REF]
-#
-#   --imagem   repetível; sem ela, as quatro: ubuntu:24.04 (com o repositório
-#              do Pop por cima, pelo `--fontes pop` do CI), fedora:42,
-#              archlinux:latest e debian:12
-#   --dkms     depois do install, o `--so-dkms` do CI: o `dkms build -k` de
-#              cada módulo contra os headers da distro (L6), e o `make` direto
-#              do hid-playstation, que diz se o fonte compila ali mesmo fora
-#              do pino
-#   --bluez    só no ubuntu:24.04: roda a receita do backport do BlueZ como a
-#              usuária (L2)
-#
-# Espera-se, por imagem: `rc_install=0`, os avisos que uma pessoa nova lê, as
-# versões do `constraints.txt` no `pip list`, a lista de [FAIL]/[WARN] de uma
-# máquina sem controle, e a sobra do uninstall. Cada imagem vira um arquivo
-# `p3-<imagem>.txt` na saída, e cada resultado uma linha do
-# `docs/data/ensaios.csv`, escrita por quem mediu.
 
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+p3-conteiner.sh — o degrau P3 da escada da máquina limpa: o install como
+USUÁRIA COMUM em outra distro, num contêiner. Muda a distro e o pip.
+
+Uso:
+  bash scripts/maquina-limpa/p3-conteiner.sh [--imagem IMG]... [--saida DIR]
+       [--dkms] [--bluez] [--ref REF]
+AJUDA
+}
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SAIDA="${TMPDIR:-/tmp}/hefesto-maquina-limpa/p3"
@@ -59,7 +26,7 @@ while (( $# )); do
         --ref)    REF="$2"; shift 2 ;;
         --dkms)   COM_DKMS=1; shift ;;
         --bluez)  COM_BLUEZ=1; shift ;;
-        -h|--help) sed -n '2,45p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        -h|--help) _ajuda; exit 0 ;;
         *) printf 'argumento desconhecido: %s\n' "$1" >&2; exit 2 ;;
     esac
 done
@@ -125,8 +92,6 @@ rc_geral=0
 for img in "${IMAGENS[@]}"; do
     nome="${img%%:*}"
     montagens=(-v "${TARBALL}:/arvore.tgz:ro" -v "${DENTRO}:/p3.sh:ro")
-    # O Pop sem a parte gráfica: o repositório do Pop por cima do ubuntu:24.04,
-    # pelo mesmo `--fontes pop` do CI (nada desta máquina entra no contêiner).
     fontes=""
     if [[ "${img}" == ubuntu:24.04 ]]; then
         fontes="pop"

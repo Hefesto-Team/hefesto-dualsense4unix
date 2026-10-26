@@ -145,7 +145,7 @@ def _funcao(texto: str, nome: str) -> str:
 
 
 BLOCO_DO_INSTALL = INSTALL_UDEV[
-    INSTALL_UDEV.index('if [[ "$ABRIR_O_NO" -eq 1 ]]; then\n    # A transformação tem UM DONO') :
+    INSTALL_UDEV.index('if [[ "$ABRIR_O_NO" -eq 1 ]]; then\n    _regra_aberta="$(mktemp)"') :
     INSTALL_UDEV.index('sudo install -Dm644 "$ASSETS/71-uinput.rules"')
 ]
 

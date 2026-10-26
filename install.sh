@@ -1,246 +1,250 @@
 #!/usr/bin/env bash
-# install.sh — instala Hefesto - DualSense4Unix no ambiente do usuário.
-#
-# Formatos (--format=FMT, ou prompt interativo; default: native):
-#   native     venv editável + atalho (instalação de desenvolvimento, atual).
-#   flatpak    build local + flatpak install --user (sandbox GNOME//47).
-#   appimage   build do .AppImage GUI + atalho em ~/.local/bin.
-#   deb        build do .deb + sudo apt install (venv bundlado).
-# Atalhos equivalentes: --flatpak, --appimage, --deb, --native.
-#
-# Flags:
-#   --dry-run, -n         ENSAIO. Imprime CADA mudança que este script faria —
-#                         arquivo por arquivo, unit por unit, pacote por pacote —
-#                         e NÃO ESCREVE NADA: nenhum arquivo copiado, nenhum
-#                         pacote instalado, nenhum serviço reiniciado, nenhum
-#                         módulo DKMS compilado, nenhum `localconfig.vdf` da
-#                         Steam tocado. Nem sequer pergunta a senha do sudo.
-#                         Existe porque este arquivo mexe em udev, DKMS,
-#                         systemd, no cmdline do kernel e nos arquivos da Steam
-#                         de quem instala, e ninguém tinha como VER antes.
-#                         O ensaio respeita todas as outras flags: o plano que
-#                         ele imprime é o plano DAQUELA linha de comando, nesta
-#                         máquina, agora.
-#                         SEM CREDENCIAL SUDO EM CACHE os passos de root
-#                         aparecem como "PULARIA (sudo)", porque é isso que
-#                         aconteceria de verdade. Para ver o plano inteiro:
-#                             sudo -v && ./install.sh --dry-run
-#   --format=FMT          escolhe o formato (native|flatpak|appimage|deb).
-#   --no-udev             pula udev rules (sudo) — útil em CI sem hardware.
-#                         POR DEFAULT, as regras canônicas + modules-load (uinput, uhid)
-#                         são aplicadas automaticamente (re-cópia é idempotente).
-#                         Se Flatpak Hefesto está instalado, também propaga.
-#   --with-usb-quirk      OPT-IN (default OFF): aplica o quirk de boot
-#                         usbcore.quirks=054c:0ce6:gn — a alavanca do
-#                         storm -71 que PRESERVA o áudio do DualSense (ALTERNATIVA
-#                         à regra 75 de áudio-off; use uma OU outra). É cmdline do
-#                         kernel (NÃO é regra udev); ciente do bootloader
-#                         (kernelstub/grub), idempotente e reversível. O install
-#                         DEFAULT NÃO aplica (mudança de cmdline é sensível).
-#                         ATENÇÃO: o passo 3e (cmdline gerenciado, DEFAULT) já
-#                         grava esses MESMOS tokens de quirk — esta flag só
-#                         adianta o passo 3b e é redundante com o default.
-#   --no-snd-quirk        OPT-OUT do quirk do snd_usb_audio (DEFAULT ON, passo
-#                         3c): grava /etc/modprobe.d/hefesto-dualsense-storm.conf
-#                         com quirk_flags do DualSense (ignore_ctl_error e
-#                         ctl_msg_delay_1m) — a cura de raiz do storm -71 na
-#                         camada de ÁUDIO, que PRESERVA mic e fone (ao contrário
-#                         da regra 75). Use em CI/sem hardware; --no-udev também
-#                         pula este passo.
-#   --no-ucm              OPT-OUT do perfil UCM do DualSense (DEFAULT ON, passo
-#                         3c-bis): grava o verbo HiFi e um gancho por controlador
-#                         USB em /usr/share/alsa/ucm2, sem tocar o alsa-ucm-conf.
-#                         Sem ele o GE-Proton não acha a vibração dos jogos da
-#                         Sony pelo cabo. --no-udev também pula este passo.
-#   --no-fechar-o-no      OPT-OUT do nó que nasce FECHADO (DEFAULT ON). Por
-#                         default o hidraw do DualSense
-#                         físico nasce 0600 root (TAG-="uaccess") e o broker o
-#                         abre sob pedido — é o que impede a Steam de pegá-lo no
-#                         instante da conexão e deixar a barra de luz apagada.
-#                         Com esta flag o nó volta a nascer aberto para a sessão,
-#                         e o broker é renderizado sabendo disso (as duas metades
-#                         da cura têm de concordar). Use só se precisar do nó
-#                         aberto para ferramenta de terceiro.
-#   --no-kernel-watch     OPT-OUT do kernel-watch (DEFAULT ON): serviço de
-#                         usuário que vigia o ecossistema USB/BT/xHCI no journal
-#                         (storm -71, rate-limit do 8BitDo BT, erros de hci/xHCI
-#                         e contadores de erro do rádio) num log dedicado
-#                         (~/.local/state/hefesto-dualsense4unix/kernel.log;
-#                         compat: storm.log). Sem sudo, replicável, simétrico.
-#   --with-storm-watch    [DEPRECATED] no-op — o kernel-watch (sucessor) já é
-#                         DEFAULT; mantida por compatibilidade.
-#   --no-proton-pin       OPT-OUT do Proton pinado (DEFAULT ON): o install
-#                         garante a versão de Proton VALIDADA (assets/
-#                         proton-pin.conf, SHA256 obrigatório, cache offline em
-#                         ~/.cache/hefesto-dualsense4unix/proton) e TRAVA o
-#                         default global + os jogos instalados nela
-#                         (CompatToolMapping; exige Steam fechada, com backup).
-#                         Sem o pin, um upgrade de Proton pode reintroduzir o
-#                         controle duplicado (semântica winebus mudou no 10).
-#   (DEFAULT) plataforma: regras udev 81 (controles/adaptadores BT e hosts USB
-#                         sem economia de energia), modprobe.d do btusb
-#                         (enable_autosuspend=0), FastConnectable do BlueZ
-#                         (SEM restart do bluetoothd) e cmdline gerenciado
-#                         (usbcore.autosuspend/usbcore.quirks com MERGE e
-#                         registro de dono). --no-udev pula os que tocam /etc.
-#   (DEFAULT) broker root hide-hidraw (fd-injection): passo
-#                         3h — esconde o hidraw FÍSICO do DualSense do JOGO
-#                         (cura de raiz do controle duplicado) via broker de
-#                         SISTEMA socket-activated; serve fd O_RDWR ao daemon
-#                         via SCM_RIGHTS (cmd `open`) para o giroscópio nunca
-#                         morrer, mesmo com o nó escondido. PRIMEIRO serviço de
-#                         SISTEMA (systemd system, não --user) do projeto. Sem
-#                         flag de opt-out ainda (broker ausente/recusado
-#                         degrada para o comportamento de hoje — duplicado,
-#                         nunca zero controles). Vale para TODO formato
-#                         (native/flatpak/appimage/deb).
-#                         --no-udev pula (mesmo gate dos passos de plataforma).
-#   (DEFAULT) DKMS hid-nintendo corrigido (cura de raiz do probe BT
-#                         que mata o Pro Controller/8BitDo em silêncio, sem
-#                         re-probar): módulo out-of-tree via DKMS
-#                         (assets/dkms/hid-nintendo/) que substitui o in-tree
-#                         (vence por precedência updates/dkms; NUNCA remove o
-#                         in-tree). Defaults do patch == comportamento vanilla;
-#                         a cura (retry de probe em BT) entra pela conf
-#                         /etc/modprobe.d/hefesto-hid-nintendo.conf
-#                         (bt_probe_retries=3). Fail-safe total: dkms/headers
-#                         ausentes ou build falho = aviso honesto, o in-tree
-#                         segue valendo, o install NUNCA aborta. Ativação
-#                         NUNCA recarrega um módulo já carregado (derrubaria
-#                         controles em uso) — vale no próximo boot/replug se
-#                         o módulo estiver descarregado. Vale para TODO
-#                         formato. Opt-out: --no-dkms (CI/sem hardware/kernel
-#                         sem headers, como --no-udev; desliga AMBOS os
-#                         módulos DKMS — hid-nintendo e rtw88_usb, abaixo).
-#   (DEFAULT) DKMS rtw88_usb corrigido (cura de raiz do fantasma USB
-#                         do dongle WiFi/RTL8822BU: quando um port-status-change
-#                         se perde no xHCI, o driver in-tree nunca detecta que o
-#                         device sumiu e segue tentando I/O contra hardware
-#                         ausente — só unbind manual ou reboot recicla o device,
-#                         medido 13h de fantasma em 20/07): módulo out-of-tree
-#                         via DKMS (assets/dkms/rtw88-usb/) que substitui o
-#                         in-tree (vence por precedência updates/dkms; NUNCA
-#                         remove o in-tree). Detecta -ENODEV/-ESHUTDOWN
-#                         (device sumiu de verdade) ou 5 -EPROTO consecutivos
-#                         sem NENHUM sucesso no meio (zera a cada sucesso) e
-#                         enfileira usb_queue_reset_device — gate: module
-#                         param hang_reset (default Y; N desliga só o reset,
-#                         a detecção/silenciamento continua). Fail-safe
-#                         total: dkms/headers ausentes, kernel fora do pino
-#                         BUILD_EXCLUSIVE_KERNEL (ABI privada do rtw88) ou
-#                         build falho = aviso honesto, o in-tree segue
-#                         valendo, o install NUNCA aborta. Ativação NUNCA
-#                         recarrega um módulo já carregado (derrubaria o
-#                         WiFi ao vivo) — vale no próximo boot/replug do
-#                         dongle. Vale para TODO formato. Opt-out: --no-dkms
-#                         (mesma flag do hid-nintendo, acima).
-#   (DEFAULT) vigia do dongle Wi-Fi USB: o scan de fundo do
-#                         wpa_supplicant sai a cada associação (derrubava o
-#                         dongle de 300 em 300 s) e um vigia de minuto em
-#                         minuto reinicia a porta USB quando o rádio trava
-#                         MUDO (associado e o roteador sem ping nem ARP por
-#                         3 min; freios: um reinício a cada 10 min, e para
-#                         depois de 3 sem cura). Vale para qualquer Wi-Fi USB;
-#                         sem dongle, fica armado e não faz nada. Vai em
-#                         /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh, no
-#                         dispatcher do NetworkManager (90-hefesto-wifi-usb) e
-#                         no hefesto-wifi-usb-vigia.timer. Vale para TODO
-#                         formato. --no-udev também pula.
-#   --no-wifi-usb         OPT-OUT do vigia do Wi-Fi USB (acima).
-#   --desempenho          responde SIM, sem perguntar, ao modo desempenho: o
-#                         perfil de energia fica em Performance a cada boot (unit
-#                         hefesto-desempenho.service, para o system76-power ou o
-#                         power-profiles-daemon). Cada ajuste é um arquivo
-#                         permanente; o uninstall desfaz e o doctor diz o estado
-#                         de cada um. O que a máquina não tem é pulado e dito.
-#                         Sem a flag o install PERGUNTA; sem TTY (--yes) vale o
-#                         padrão: sim no desktop, não no notebook (com bateria).
-#                         --no-udev também pula.
-#   --sem-desempenho      responde NÃO ao modo desempenho, sem perguntar. Não
-#                         escreve nada.
-#   --wifi-powersave-off  aceita, sem efeito a mais: desligar a economia de energia
-#                         do Wi-Fi (conf.d do NetworkManager, wifi.powersave=2, e
-#                         `iw dev <if> set power_save off` na hora) é o padrão em
-#                         toda máquina com Wi-Fi (passo 3d-bis). NUNCA reconecta a
-#                         rede para aplicar. --no-udev pula. uninstall.sh remove.
-#   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
-#                         AppIndicator extension, etc) e assume --format=native.
-#   --no-systemd          pula a unit do daemon por INTEIRO (passo 6 E passo 7a):
-#                         nada é copiado, nada é habilitado, nada sobe.
-#   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
-#   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
-#   --enable-hotplug-gui  abre a janela no início da sessão gráfica (pula prompt).
-#   --enable-cosmic-applet  compila+instala o applet COSMIC nativo (Rust).
-#                         APOSENTADO: o ícone da bandeja faz
-#                         o mesmo, aparece sozinho e tem menu mais rico. Sem
-#                         esta flag o applet NÃO é instalado em máquina alguma.
-#                         (a 1a build do libcosmic e longa, >10 min; requer
-#                         cargo+just — se ausentes, o install NÃO falha.)
-#   --no-cosmic-applet    aceita e não faz nada: o default já é não instalar.
-#                         Fica para não quebrar quem a tenha num script.
-#   --dev                 cria o venv COM o extra [dev] (ruff/mypy/pytest), para
-#                         quem vai mexer no código. Por DEFAULT o venv vem só
-#                         com o que o produto usa: a primeira instalação de
-#                         quem só usa não baixa ferramenta de desenvolvimento.
-#   --no-dev              aceita e não faz nada: o default já é sem [dev]. Fica
-#                         para não quebrar quem a tenha num script.
-#   --no-fonts            pula as fontes da identidade visual (Space Grotesk +
-#                         JetBrains Mono, que a interface pede). Por DEFAULT
-#                         elas são instaladas em best-effort pelo
-#                         scripts/install_fonts.sh — pacote da distro primeiro,
-#                         download PINADO + SHA-256 só se não houver pacote.
-#                         Nada quebra sem elas (o CSS tem fallback); o que muda é
-#                         a interface ser a do design e as medidas de texto
-#                         baterem com as do mockup.
-#   (DEFAULT) teclado na tela — o que o L3 do controle abre. Instalado em TODO
-#                         formato pelo scripts/install_osk.sh, que escolhe pela
-#                         SESSÃO: em Wayland o `wvkbd` (binário wvkbd-mobintl,
-#                         cliente Wayland puro, digita pelo
-#                         zwp_virtual_keyboard_manager_v1 que o cosmic-comp
-#                         expõe — medido); em X11 o `onboard` (GTK3, digita por
-#                         XTEST, que em Wayland só alcança janelas XWayland).
-#                         Importa porque nenhum dos nove atalhos de fábrica
-#                         digita uma LETRA: sem isto, "o teclado emulado não
-#                         digita" é literalmente verdade. Best-effort (o install
-#                         nunca aborta por causa dele) e o passo GRAVA o que fez
-#                         em ~/.local/state/hefesto-dualsense4unix/
-#                         teclado-na-tela.conf, para o doctor distinguir "ela não
-#                         quis" de "o install não instalou". Opt-out: --no-osk.
-#   --no-osk              pula o teclado na tela. O L3 do controle passa a só
-#                         avisar na tela que não tem o que abrir.
-#   (DEFAULT) cura gentil do WirePlumber: REBAIXA o DualSense para não virar o
-#                         microfone padrão (drop-in 51, user-space) — simétrica com o
-#                         uninstall que a remove. Opt-out: --keep-dualsense-mic.
-#   --keep-dualsense-mic  NÃO rebaixa o DualSense (deixa-o elegível como mic padrão).
-#   --with-wireplumber-fix  redundante (já é o default); mantida para compat.
-#   --with-wireplumber-disable-mic  DESABILITA de vez a source (mic) do DualSense
-#   --no-doctor           pula a CONFERÊNCIA final. Por padrão o install roda o
-#                         doctor no fim e mostra o veredito: uma instalação que
-#                         termina com cura desarmada tem de DIZER isso.
-#                         (node.disabled; controle vira só-HID). Vence até escassez
-#                         de fonte. Mutuamente exclusiva com --with-wireplumber-fix.
-#   --keep-steam-input    preserva Steam Input PSSupport (default: desliga).
-#                         Sem esta flag, o install zera SteamController_PSSupport
-#                         e UseSteamControllerConfig em TODOS os localconfig.vdf
-#                         (todos os Steam users em qualquer formato: deb/flatpak/
-#                         snap), evitando que a Steam intercepte o DualSense e
-#                         entre em conflito com o daemon. Reverte com:
-#                         scripts/disable_steam_input.sh --restore.
-#   --force-xwayland      grava GDK_BACKEND=x11 no .desktop. Escape
-#                         declarado (sessão sem Wayland, compositor que não
-#                         desenhe bem o WebKit); o default é Wayland nativo.
-#
-# Default (sem flag nenhuma): a unit do daemon é COPIADA, HABILITADA no boot e
-# SOBE na hora. Quem manda é a sua resposta ao passo 6 ("habilitar auto-start do
-# daemon no boot?", default sim): responder "não" copia a unit e NÃO habilita
-# nem sobe o daemon; --no-systemd pula os dois passos (6 e 7a) por inteiro.
-# Hotplug-GUI continua opt-in (prompt com default NÃO).
-# udev rules SÃO aplicadas (incondicional desde v3.3.1 — sem elas o controle
-# não funciona em nenhum formato).
-#
-# Reexecutável (idempotente).
 
 set -euo pipefail
+_ajuda() {
+  cat <<'AJUDA'
+install.sh — instala Hefesto - DualSense4Unix no ambiente do usuário.
+
+Formatos (--format=FMT, ou prompt interativo; default: native):
+  native     venv editável + atalho (instalação de desenvolvimento, atual).
+  flatpak    build local + flatpak install --user (sandbox GNOME//47).
+  appimage   build do .AppImage GUI + atalho em ~/.local/bin.
+  deb        build do .deb + sudo apt install (venv bundlado).
+Atalhos equivalentes: --flatpak, --appimage, --deb, --native.
+
+Flags:
+  --dry-run, -n         ENSAIO. Imprime CADA mudança que este script faria —
+                        arquivo por arquivo, unit por unit, pacote por pacote —
+                        e NÃO ESCREVE NADA: nenhum arquivo copiado, nenhum
+                        pacote instalado, nenhum serviço reiniciado, nenhum
+                        módulo DKMS compilado, nenhum `localconfig.vdf` da
+                        Steam tocado. Nem sequer pergunta a senha do sudo.
+                        Existe porque este arquivo mexe em udev, DKMS,
+                        systemd, no cmdline do kernel e nos arquivos da Steam
+                        de quem instala, e ninguém tinha como VER antes.
+                        O ensaio respeita todas as outras flags: o plano que
+                        ele imprime é o plano DAQUELA linha de comando, nesta
+                        máquina, agora.
+                        SEM CREDENCIAL SUDO EM CACHE os passos de root
+                        aparecem como "PULARIA (sudo)", porque é isso que
+                        aconteceria de verdade. Para ver o plano inteiro:
+                            sudo -v && ./install.sh --dry-run
+  --format=FMT          escolhe o formato (native|flatpak|appimage|deb).
+  --no-udev             pula udev rules (sudo) — útil em CI sem hardware.
+                        POR DEFAULT, as regras canônicas + modules-load (uinput, uhid)
+                        são aplicadas automaticamente (re-cópia é idempotente).
+                        Se Flatpak Hefesto está instalado, também propaga.
+  --with-usb-quirk      OPT-IN (default OFF): aplica o quirk de boot
+                        usbcore.quirks=054c:0ce6:gn — a alavanca do
+                        storm -71 que PRESERVA o áudio do DualSense (ALTERNATIVA
+                        à regra 75 de áudio-off; use uma OU outra). É cmdline do
+                        kernel (NÃO é regra udev); ciente do bootloader
+                        (kernelstub/grub), idempotente e reversível. O install
+                        DEFAULT NÃO aplica (mudança de cmdline é sensível).
+                        ATENÇÃO: o passo 3e (cmdline gerenciado, DEFAULT) já
+                        grava esses MESMOS tokens de quirk — esta flag só
+                        adianta o passo 3b e é redundante com o default.
+  --no-snd-quirk        OPT-OUT do quirk do snd_usb_audio (DEFAULT ON, passo
+                        3c): grava /etc/modprobe.d/hefesto-dualsense-storm.conf
+                        com quirk_flags do DualSense (ignore_ctl_error e
+                        ctl_msg_delay_1m) — a cura de raiz do storm -71 na
+                        camada de ÁUDIO, que PRESERVA mic e fone (ao contrário
+                        da regra 75). Use em CI/sem hardware; --no-udev também
+                        pula este passo.
+  --no-ucm              OPT-OUT do perfil UCM do DualSense (DEFAULT ON, passo
+                        3c-bis): grava o verbo HiFi e um gancho por controlador
+                        USB em /usr/share/alsa/ucm2, sem tocar o alsa-ucm-conf.
+                        Sem ele o GE-Proton não acha a vibração dos jogos da
+                        Sony pelo cabo. --no-udev também pula este passo.
+  --no-fechar-o-no      OPT-OUT do nó que nasce FECHADO (DEFAULT ON). Por
+                        default o hidraw do DualSense
+                        físico nasce 0600 root (TAG-="uaccess") e o broker o
+                        abre sob pedido — é o que impede a Steam de pegá-lo no
+                        instante da conexão e deixar a barra de luz apagada.
+                        Com esta flag o nó volta a nascer aberto para a sessão,
+                        e o broker é renderizado sabendo disso (as duas metades
+                        da cura têm de concordar). Use só se precisar do nó
+                        aberto para ferramenta de terceiro.
+  --no-kernel-watch     OPT-OUT do kernel-watch (DEFAULT ON): serviço de
+                        usuário que vigia o ecossistema USB/BT/xHCI no journal
+                        (storm -71, rate-limit do 8BitDo BT, erros de hci/xHCI
+                        e contadores de erro do rádio) num log dedicado
+                        (~/.local/state/hefesto-dualsense4unix/kernel.log;
+                        compat: storm.log). Sem sudo, replicável, simétrico.
+  --with-storm-watch    [DEPRECATED] no-op — o kernel-watch (sucessor) já é
+                        DEFAULT; mantida por compatibilidade.
+  --no-proton-pin       OPT-OUT do Proton pinado (DEFAULT ON): o install
+                        garante a versão de Proton VALIDADA (assets/
+                        proton-pin.conf, SHA256 obrigatório, cache offline em
+                        ~/.cache/hefesto-dualsense4unix/proton) e TRAVA o
+                        default global + os jogos instalados nela
+                        (CompatToolMapping; exige Steam fechada, com backup).
+                        Sem o pin, um upgrade de Proton pode reintroduzir o
+                        controle duplicado (semântica winebus mudou no 10).
+  (DEFAULT) plataforma: regras udev 81 (controles/adaptadores BT e hosts USB
+                        sem economia de energia), modprobe.d do btusb
+                        (enable_autosuspend=0), FastConnectable do BlueZ
+                        (SEM restart do bluetoothd) e cmdline gerenciado
+                        (usbcore.autosuspend/usbcore.quirks com MERGE e
+                        registro de dono). --no-udev pula os que tocam /etc.
+  (DEFAULT) broker root hide-hidraw (fd-injection): passo
+                        3h — esconde o hidraw FÍSICO do DualSense do JOGO
+                        (cura de raiz do controle duplicado) via broker de
+                        SISTEMA socket-activated; serve fd O_RDWR ao daemon
+                        via SCM_RIGHTS (cmd `open`) para o giroscópio nunca
+                        morrer, mesmo com o nó escondido. PRIMEIRO serviço de
+                        SISTEMA (systemd system, não --user) do projeto. Sem
+                        flag de opt-out ainda (broker ausente/recusado
+                        degrada para o comportamento de hoje — duplicado,
+                        nunca zero controles). Vale para TODO formato
+                        (native/flatpak/appimage/deb).
+                        --no-udev pula (mesmo gate dos passos de plataforma).
+  (DEFAULT) DKMS hid-nintendo corrigido (cura de raiz do probe BT
+                        que mata o Pro Controller/8BitDo em silêncio, sem
+                        re-probar): módulo out-of-tree via DKMS
+                        (assets/dkms/hid-nintendo/) que substitui o in-tree
+                        (vence por precedência updates/dkms; NUNCA remove o
+                        in-tree). Defaults do patch == comportamento vanilla;
+                        a cura (retry de probe em BT) entra pela conf
+                        /etc/modprobe.d/hefesto-hid-nintendo.conf
+                        (bt_probe_retries=3). Fail-safe total: dkms/headers
+                        ausentes ou build falho = aviso honesto, o in-tree
+                        segue valendo, o install NUNCA aborta. Ativação
+                        NUNCA recarrega um módulo já carregado (derrubaria
+                        controles em uso) — vale no próximo boot/replug se
+                        o módulo estiver descarregado. Vale para TODO
+                        formato. Opt-out: --no-dkms (CI/sem hardware/kernel
+                        sem headers, como --no-udev; desliga AMBOS os
+                        módulos DKMS — hid-nintendo e rtw88_usb, abaixo).
+  (DEFAULT) DKMS rtw88_usb corrigido (cura de raiz do fantasma USB
+                        do dongle WiFi/RTL8822BU: quando um port-status-change
+                        se perde no xHCI, o driver in-tree nunca detecta que o
+                        device sumiu e segue tentando I/O contra hardware
+                        ausente — só unbind manual ou reboot recicla o device,
+                        medido 13h de fantasma em 20/07): módulo out-of-tree
+                        via DKMS (assets/dkms/rtw88-usb/) que substitui o
+                        in-tree (vence por precedência updates/dkms; NUNCA
+                        remove o in-tree). Detecta -ENODEV/-ESHUTDOWN
+                        (device sumiu de verdade) ou 5 -EPROTO consecutivos
+                        sem NENHUM sucesso no meio (zera a cada sucesso) e
+                        enfileira usb_queue_reset_device — gate: module
+                        param hang_reset (default Y; N desliga só o reset,
+                        a detecção/silenciamento continua). Fail-safe
+                        total: dkms/headers ausentes, kernel fora do pino
+                        BUILD_EXCLUSIVE_KERNEL (ABI privada do rtw88) ou
+                        build falho = aviso honesto, o in-tree segue
+                        valendo, o install NUNCA aborta. Ativação NUNCA
+                        recarrega um módulo já carregado (derrubaria o
+                        WiFi ao vivo) — vale no próximo boot/replug do
+                        dongle. Vale para TODO formato. Opt-out: --no-dkms
+                        (mesma flag do hid-nintendo, acima).
+  (DEFAULT) vigia do dongle Wi-Fi USB: o scan de fundo do
+                        wpa_supplicant sai a cada associação (derrubava o
+                        dongle de 300 em 300 s) e um vigia de minuto em
+                        minuto reinicia a porta USB quando o rádio trava
+                        MUDO (associado e o roteador sem ping nem ARP por
+                        3 min; freios: um reinício a cada 10 min, e para
+                        depois de 3 sem cura). Vale para qualquer Wi-Fi USB;
+                        sem dongle, fica armado e não faz nada. Vai em
+                        /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh, no
+                        dispatcher do NetworkManager (90-hefesto-wifi-usb) e
+                        no hefesto-wifi-usb-vigia.timer. Vale para TODO
+                        formato. --no-udev também pula.
+  --no-wifi-usb         OPT-OUT do vigia do Wi-Fi USB (acima).
+  --desempenho          responde SIM, sem perguntar, ao modo desempenho: o
+                        perfil de energia fica em Performance a cada boot (unit
+                        hefesto-desempenho.service, para o system76-power ou o
+                        power-profiles-daemon). Cada ajuste é um arquivo
+                        permanente; o uninstall desfaz e o doctor diz o estado
+                        de cada um. O que a máquina não tem é pulado e dito.
+                        Sem a flag o install PERGUNTA; sem TTY (--yes) vale o
+                        padrão: sim no desktop, não no notebook (com bateria).
+                        --no-udev também pula.
+  --sem-desempenho      responde NÃO ao modo desempenho, sem perguntar. Não
+                        escreve nada.
+  --wifi-powersave-off  aceita, sem efeito a mais: desligar a economia de energia
+                        do Wi-Fi (conf.d do NetworkManager, wifi.powersave=2, e
+                        `iw dev <if> set power_save off` na hora) é o padrão em
+                        toda máquina com Wi-Fi (passo 3d-bis). NUNCA reconecta a
+                        rede para aplicar. --no-udev pula. uninstall.sh remove.
+  --yes, -y             responde sim a todos os prompts (autostart, hotplug,
+                        AppIndicator extension, etc) e assume --format=native.
+  --no-systemd          pula a unit do daemon por INTEIRO (passo 6 E passo 7a):
+                        nada é copiado, nada é habilitado, nada sobe.
+  --no-hotplug-gui      pula a cópia da unit hotplug-gui.
+  --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
+  --enable-hotplug-gui  abre a janela no início da sessão gráfica (pula prompt).
+  --enable-cosmic-applet  compila+instala o applet COSMIC nativo (Rust).
+                        APOSENTADO: o ícone da bandeja faz
+                        o mesmo, aparece sozinho e tem menu mais rico. Sem
+                        esta flag o applet NÃO é instalado em máquina alguma.
+                        (a 1a build do libcosmic e longa, >10 min; requer
+                        cargo+just — se ausentes, o install NÃO falha.)
+  --no-cosmic-applet    aceita e não faz nada: o default já é não instalar.
+                        Fica para não quebrar quem a tenha num script.
+  --dev                 cria o venv COM o extra [dev] (ruff/mypy/pytest), para
+                        quem vai mexer no código. Por DEFAULT o venv vem só
+                        com o que o produto usa: a primeira instalação de
+                        quem só usa não baixa ferramenta de desenvolvimento.
+  --no-dev              aceita e não faz nada: o default já é sem [dev]. Fica
+                        para não quebrar quem a tenha num script.
+  --no-fonts            pula as fontes da identidade visual (Space Grotesk +
+                        JetBrains Mono, que a interface pede). Por DEFAULT
+                        elas são instaladas em best-effort pelo
+                        scripts/install_fonts.sh — pacote da distro primeiro,
+                        download PINADO + SHA-256 só se não houver pacote.
+                        Nada quebra sem elas (o CSS tem fallback); o que muda é
+                        a interface ser a do design e as medidas de texto
+                        baterem com as do mockup.
+  (DEFAULT) teclado na tela — o que o L3 do controle abre. Instalado em TODO
+                        formato pelo scripts/install_osk.sh, que escolhe pela
+                        SESSÃO: em Wayland o `wvkbd` (binário wvkbd-mobintl,
+                        cliente Wayland puro, digita pelo
+                        zwp_virtual_keyboard_manager_v1 que o cosmic-comp
+                        expõe — medido); em X11 o `onboard` (GTK3, digita por
+                        XTEST, que em Wayland só alcança janelas XWayland).
+                        Importa porque nenhum dos nove atalhos de fábrica
+                        digita uma LETRA: sem isto, "o teclado emulado não
+                        digita" é literalmente verdade. Best-effort (o install
+                        nunca aborta por causa dele) e o passo GRAVA o que fez
+                        em ~/.local/state/hefesto-dualsense4unix/
+                        teclado-na-tela.conf, para o doctor distinguir "ela não
+                        quis" de "o install não instalou". Opt-out: --no-osk.
+  --no-osk              pula o teclado na tela. O L3 do controle passa a só
+                        avisar na tela que não tem o que abrir.
+  (DEFAULT) cura gentil do WirePlumber: REBAIXA o DualSense para não virar o
+                        microfone padrão (drop-in 51, user-space) — simétrica com o
+                        uninstall que a remove. Opt-out: --keep-dualsense-mic.
+  --keep-dualsense-mic  NÃO rebaixa o DualSense (deixa-o elegível como mic padrão).
+  --with-wireplumber-fix  redundante (já é o default); mantida para compat.
+  --with-wireplumber-disable-mic  DESABILITA de vez a source (mic) do DualSense
+  --no-doctor           pula a CONFERÊNCIA final. Por padrão o install roda o
+                        doctor no fim e mostra o veredito: uma instalação que
+                        termina com cura desarmada tem de DIZER isso.
+                        (node.disabled; controle vira só-HID). Vence até escassez
+                        de fonte. Mutuamente exclusiva com --with-wireplumber-fix.
+  --keep-steam-input    preserva Steam Input PSSupport (default: desliga).
+                        Sem esta flag, o install zera SteamController_PSSupport
+                        e UseSteamControllerConfig em TODOS os localconfig.vdf
+                        (todos os Steam users em qualquer formato: deb/flatpak/
+                        snap), evitando que a Steam intercepte o DualSense e
+                        entre em conflito com o daemon. Reverte com:
+                        scripts/disable_steam_input.sh --restore.
+  --force-xwayland      grava GDK_BACKEND=x11 no .desktop. Escape
+                        declarado (sessão sem Wayland, compositor que não
+                        desenhe bem o WebKit); o default é Wayland nativo.
+
+Default (sem flag nenhuma): a unit do daemon é COPIADA, HABILITADA no boot e
+SOBE na hora. Quem manda é a sua resposta ao passo 6 ("habilitar auto-start do
+daemon no boot?", default sim): responder "não" copia a unit e NÃO habilita
+nem sobe o daemon; --no-systemd pula os dois passos (6 e 7a) por inteiro.
+Hotplug-GUI continua opt-in (prompt com default NÃO).
+udev rules SÃO aplicadas (incondicional desde v3.3.1 — sem elas o controle
+não funciona em nenhum formato).
+
+Reexecutável (idempotente).
+AJUDA
+}
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_DIR="${ROOT_DIR}/.venv"
@@ -260,73 +264,25 @@ ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
 DISABLE_COSMIC_APPLET=0
 WITH_DEV=0
-# FONTE-PADRAO-01, item 3: DEFAULT ON. Medido em 29/07/2026 — `grep -c fonts
-# install.sh` dava 0: o scripts/install_fonts.sh existia e NINGUÉM o chamava.
-# Nesta máquina as duas famílias já estão instaladas, então o defeito é invisível
-# aqui e morde só em instalação nova: a interface cai no fallback do CSS sem
-# nada indicar, e as MEDIDAS de texto mudam com a fonte — foi a falta dessas
-# métricas que fez a CI pedir 431px de altura onde aqui cabia em 357.
 NO_FONTS=0
-# TECLADO-QUE-NAO-DIGITA-01 (10/08/2026). DEFAULT ON, pela regra dela de
-# 08/08: "toda cura entra no install, sem flag — nada à mão, nada opt-in".
-# Medido antes desta linha existir: `grep -c onboard install.sh` dava 0, e o
-# `command -v onboard wvkbd-mobintl` na máquina dela não achava nenhum dos
-# dois. O produto oferecia "Abrir teclado na tela" no L3 e não instalava o que
-# ele precisa. O opt-out existe pelo mesmo motivo que o --no-fonts: CI e
-# máquina enxuta não querem pacote gráfico novo.
 NO_OSK=0
-# BUG-UNINSTALL-WP-ASYMMETRY: DEFAULT ON. O uninstall remove o drop-in 51 por
-# padrão, então o install tem de recolocá-lo por padrão (simetria) — senão o
-# ciclo uninstall→install deixa o DualSense virar o microfone padrão. É a cura
-# GENTIL (só rebaixa a prioridade, user-space, sem sudo, idempotente). Opt-out:
-# --keep-dualsense-mic (ou export HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1).
 WITH_WIREPLUMBER_FIX=1
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
 NO_DKMS=0
-# RADIO-AFOGADO-02 (22/09/2026): o `uhid` patchado, que pode DIZER a quem
-# escreve que a fila de saída encheu em vez de descartar calado. **OPT-IN, e
-# a razão está escrita no `assets/dkms/uhid/README.md`:** ligar muda a
-# semântica do `write(2)` para TODO userspace que escreve report de saída num
-# HID por Bluetooth, o Steam Input inclusive. O produto está CORRETO sem ele —
-# a cura de primeira ordem é a ponte de som só existir enquanto há som. Este
-# módulo é o que sobra para quando quatro pontes forem legítimas.
 COM_UHID_CONTRAPRESSAO=0
 SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
 NO_UCM=0
-# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): o nó hidraw do DualSense
-# físico NASCE FECHADO (0600 root) e o Hefesto o abre sob pedido. É DEFAULT,
-# sem flag e sem pergunta — palavra dela: *"o Hefesto tem que ter prioridade em
-# tudo e isso deveria estar no install por default"*. O `--no-fechar-o-no` é o
-# opt-OUT para quem precise do nó aberto para a sessão (diagnóstico com
-# ferramenta de terceiro, máquina sem o broker de pé): instala a regra udev
-# aberta E renderiza o broker sabendo disso, porque as duas metades têm de
-# concordar. Nasce 0 = a cura vale.
 ABRIR_O_NO=0
 KEEP_STEAM_INPUT=0
-# CONFERENCIA-FINAL-01: o doctor roda no fim, por padrão. `--no-doctor` pula.
 RUN_DOCTOR=1
 FORCE_XWAYLAND=0
-# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): o vigia do dongle Wi-Fi USB é
-# DEFAULT, e todo passo default da camada de máquina tem saída — o produto é
-# para qualquer usuário (resposta de produto 3).
 NO_WIFI_USB=0
-# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (02/10/2026): o modo desempenho. Vazio =
-# o install pergunta (ou, sem TTY, vale o padrão da máquina); sim|sem = a flag.
 DESEMPENHO_PEDIDO=""
-# Os ajustes de desempenho cuja PROVA no aparelho já foi feita, por id separado
-# por espaço (nvidia audio aspm). VAZIA para os três: o doctor os diz «não
-# aplicado: a provar», e a prova liga um acrescentando o id aqui. O perfil de
-# energia é decisão dela e entra sempre que o pedido é sim.
 DESEMPENHO_PROVADOS=""
 AUTO_YES=0
-# ENSAIO-DO-INSTALL-01 (03/09/2026). Pedido dela ao rever o instalador antes de
-# rodá-lo: *"antes revisa o install. não roda agora."* São 3.4 mil linhas que
-# mexem em udev, DKMS, systemd, no cmdline do kernel e nos arquivos da Steam
-# DELA, e até hoje não havia forma de ver o que fariam sem deixá-las fazer.
-# `--dry-run` é essa forma: imprime o plano e não escreve nada.
 DRY_RUN=0
 FORMAT=""
 
@@ -343,7 +299,7 @@ for arg in "$@"; do
         --no-dev)             WITH_DEV=0 ;;
         --no-fonts)           NO_FONTS=1 ;;
         --no-osk)             NO_OSK=1 ;;
-        --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;  # já é default; mantida p/ compat
+        --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
         --keep-dualsense-mic) WITH_WIREPLUMBER_FIX=0 ;;
         --no-doctor) RUN_DOCTOR=0 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
@@ -354,10 +310,10 @@ for arg in "$@"; do
         --no-ucm)             NO_UCM=1 ;;
         --no-fechar-o-no)     ABRIR_O_NO=1 ;;
         --no-kernel-watch)    SKIP_KERNEL_WATCH=1 ;;
-        --with-storm-watch)   : ;;  # deprecated: o kernel-watch já é DEFAULT
+        --with-storm-watch)   : ;;
         --no-proton-pin)      NO_PROTON_PIN=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
-        --wifi-powersave-off) : ;;  # o padrão desde 23/10/2026: aceita sem efeito, para quem já a chama
+        --wifi-powersave-off) : ;;
         --no-wifi-usb)        NO_WIFI_USB=1 ;;
         --desempenho)         DESEMPENHO_PEDIDO="sim" ;;
         --sem-desempenho)     DESEMPENHO_PEDIDO="sem" ;;
@@ -370,22 +326,9 @@ for arg in "$@"; do
         --yes|-y)             AUTO_YES=1 ;;
         --dry-run|-n)         DRY_RUN=1 ;;
         -h|--help)
-            # BUG-INSTALL-HELP-TRUNCADO-01 (29/07): era `sed -n '2,128p'` — uma
-            # faixa FIXA que envelheceu junto com o cabeçalho. Quando o bloco de
-            # comentário passou de 128 linhas, o --help calou flags REAIS: a
-            # --force-xwayland (a que a operadora precisa em COSMIC) simplesmente
-            # não aparecia, e quem lesse o --help concluía que ela não existia.
-            # Agora o fim NÃO é número: o awk imprime da linha 2 até a última
-            # linha do bloco de comentário (a primeira linha que não começa com
-            # '#' encerra), então o --help cresce sozinho com o cabeçalho.
-            awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' \
-                "${BASH_SOURCE[0]}"
+            _ajuda
             exit 0
             ;;
-        # BUG-INSTALL-ARG-DESCONHECIDO-SILENCIOSO-01: um aviso solto rolava para
-        # fora da tela e o install seguia com os DEFAULTS — quem errou o nome de
-        # uma flag (ou usou uma que já foi renomeada) achava que tinha pedido
-        # algo e recebia outra coisa, sem jeito de perceber. Aborta.
         *)
             printf 'argumento desconhecido: %s\n' "$arg" >&2
             printf 'nada foi instalado. Use --help para ver as opções.\n' >&2
@@ -399,9 +342,6 @@ case "${FORMAT}" in
     *) printf 'ERRO: formato inválido: %s (use native|flatpak|appimage|deb)\n' "${FORMAT}" >&2; exit 2 ;;
 esac
 
-# Detecta o compositor pela sessão (case-insensitive): o COSMIC tem backend
-# nativo de janela (zcosmic_toplevel_info_v1); o bloco wlroots (Sway, Hyprland,
-# niri, river) é o único que responde ao protocolo do `wlrctl`.
 DESKTOP_IS_COSMIC=0
 if [[ "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" == *[Cc][Oo][Ss][Mm][Ii][Cc]* ]]; then
     DESKTOP_IS_COSMIC=1
@@ -412,52 +352,27 @@ case "${XDG_CURRENT_DESKTOP:-}:${XDG_SESSION_DESKTOP:-}" in
         DESKTOP_IS_WLROOTS=1 ;;
 esac
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 step()  { printf '\n[%s] %s\n' "$1" "$2"; }
 ok()    { printf '      ok\n'; }
 warn()  { printf '      aviso: %s\n' "$*"; }
 die()   { printf '\nERRO: %s\n' "$*" >&2; exit 1; }
 
-# ---------------------------------------------------------------------------
-# ENSAIO-DO-INSTALL-01 — as três palavras do `--dry-run`
-# ---------------------------------------------------------------------------
-# A CONDIÇÃO É SEMPRE ESCRITA À MÃO nos passos, como
-# `[[ "${DRY_RUN:-0}" -eq 1 ]]`, e nunca como uma função `_ensaio`. A razão é
-# medida, não estética: dezenas de testes desta casa EXTRAEM um bloco deste
-# arquivo (do `step "N/11"` até a régua seguinte) e o EXECUTAM num bash com
-# preâmbulo mínimo — só `step`, `warn` e duas ou três variáveis. Um `_ensaio`
-# no meio do bloco viraria "command not found" ali dentro; o `${DRY_RUN:-0}`
-# resolve para 0 num shell que nunca ouviu falar da flag, o `else` roda o
-# código de sempre, e a régua continua medindo o que sempre mediu.
-#
-# Pela mesma razão as três funções abaixo SÓ são chamadas dentro do ramo do
-# ensaio: num bloco extraído elas nunca são alcançadas.
 _ENSAIO_MUDANCAS=0
 _ENSAIO_ROOT=0
 
-# Uma mudança que o install faria no HOME/na sessão de quem instala.
 _faria() {
     _ENSAIO_MUDANCAS=$((_ENSAIO_MUDANCAS + 1))
     printf '      FARIA        %s\n' "$*"
 }
 
-# Uma mudança que exige root — a que mais importa ver antes.
 _faria_root() {
     _ENSAIO_MUDANCAS=$((_ENSAIO_MUDANCAS + 1))
     _ENSAIO_ROOT=$((_ENSAIO_ROOT + 1))
     printf '      FARIA (root) %s\n' "$*"
 }
 
-# O que o ensaio NÃO faria, e por quê — um passo pulado é informação tanto
-# quanto um passo aplicado (foi a lição do 3d sem `else`, em 06/08/2026).
 _nao_faria() { printf '      não faria:   %s\n' "$*"; }
 
-# O fecho do ensaio. Repete a promessa no FIM, e não só no começo: quem rola
-# quarenta passos de tela não se lembra do cabeçalho, e a pergunta que fica é
-# "isto já mexeu na minha máquina?".
 _ensaio_resumo() {
     printf '\n'
     printf '═════════════════════════════════════════════════════════════════\n'
@@ -471,12 +386,7 @@ _ensaio_resumo() {
 }
 
 ask_yn() {
-    # ask_yn "pergunta" auto_yes_var [default=y] → seta $REPLY como "y" ou "n"
     local prompt="$1" auto="$2" default="${3:-y}"
-    # No ensaio nada é perguntado: uma pergunta é um passo que ESPERA, e quem
-    # roda `--dry-run` quer o plano, não uma conversa. Assumimos o mesmo default
-    # que o `--yes` assumiria e DIZEMOS o que assumimos — senão o plano seria o
-    # de uma resposta que ela não deu, sem nada na tela indicando isso.
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         REPLY="$default"
         printf '      perguntaria: "%s" — no ensaio assumo "%s"\n' "${prompt}" "${default}"
@@ -485,12 +395,6 @@ ask_yn() {
     if [[ "$auto" -eq 1 ]]; then
         REPLY="$default"; return
     fi
-    # INSTALL-HEADLESS-01 (auditoria 21/07): sem TTY (stdin não é terminal —
-    # CI, pipe, execução headless), NÃO travar o `set -euo pipefail` no EOF do
-    # `read`. Antes, `./install.sh` sem -y e sem TTY MORRIA no 1o prompt (passo
-    # 4, atalho/launcher) com rc=1 e pulava os passos seguintes. Sem TTY usamos
-    # o mesmo default seguro que o -y usaria (o valor recomendado); o `|| REPLY`
-    # é cinto extra caso o `read` retorne não-zero por outro motivo.
     if [[ ! -t 0 ]]; then
         REPLY="$default"; return
     fi
@@ -501,66 +405,8 @@ ask_yn() {
     REPLY="${REPLY:-$default}"
 }
 
-# ---------------------------------------------------------------------------
-# DEPS-UNIVERSAIS-01 (19/08/2026) — o install deixa de ser só-apt.
-#
-# O pedido dela, literal: *"corrige nosso install pra instalar isso tudo aí"* e,
-# a frase que manda no desenho, *"qualquer install. inclusive o do andre ou de
-# qualquer outro user"*. Ou seja: a cura não é para a bancada dela.
-#
-# O que havia antes: `run_apt` era a ÚNICA porta, e o `_reconhecimento()` dizia
-# por escrito que fora da família Debian o instalador nativo não garante nada.
-# Numa máquina limpa de Fedora ou de Arch o install terminava "ok" com a
-# libhidapi ausente — o verde mentiroso que `install.sh` já nomeia no bloco DKMS.
-#
-# O desenho, em três peças, e o molde é da própria casa
-# (`scripts/install_osk.sh:206-220`, que já despacha por família):
-#
-#   _familia_pacotes()  descobre a família (apt/dnf/pacman/imutavel/nenhum);
-#   _pkg_nome()         UMA tabela: nome canônico -> nome em cada família;
-#   run_pkg()           instala nomes canônicos na família corrente.
-#
-# `run_apt` CONTINUA existindo, e virou o braço apt do `run_pkg` — não uma
-# fachada morta. Razão: é ele que guarda a disciplina de saída quieta (só fala
-# se falhar), ele é citado por teste e por documento desta casa, e duplicar
-# essa disciplina no `run_pkg` seria dois lugares para consertar quando ela
-# mudar. Quem chama `run_apt` direto passa nome de pacote APT — hoje ninguém,
-# só o `run_pkg`.
-#
-# De onde vêm os nomes: dos empacotamentos que esta casa já publica
-# (`packaging/debian/control`, `packaging/fedora/*.spec`, `packaging/arch/PKGBUILD`)
-# e da matriz do job `smoke-multi-distro` do CI (`.github/workflows/ci.yml`),
-# que já declara os nomes de runtime de Fedora 40, Arch e Debian 12. Não são
-# palpite: cada nome tem empacotamento ou contêiner de CI por trás.
-#
-# NOTA DATADA — 19/08/2026: o **openSUSE SAIU**, e a coluna `zypper` com ele.
-# A leva da manhã tinha acrescentado a família com nomes de pacote INFERIDOS em
-# 100% das linhas — o repositório não tem uma linha sequer sobre zypper — e sem
-# nenhum smoke que os conferisse. Prometer openSUSE assim é afirmação forte sem
-# teste que a sustente, e esta casa tem portão contra isso. É decisão dela,
-# tomada no mesmo dia, e fica registrada em vez de sair calada.
-#
-# Quem está no openSUSE cai no caminho de "família sem tratamento", que já
-# existe e já é honesto: o install DIZ o que falta, com o nome no Debian/Ubuntu
-# como referência, e SEGUE sem instalar nada — não aborta.
-#
-# O QUE O TRAZ DE VOLTA: um contêiner openSUSE na matriz `smoke-multi-distro`
-# do CI (`.github/workflows/ci.yml`), conferindo os nomes de pacote de verdade
-# numa máquina limpa. Com esse smoke verde, a coluna volta — medida, e não
-# inferida.
 _OS_RELEASE="${HEFESTO_OS_RELEASE:-/etc/os-release}"
 
-# Família do gerenciador de pacotes. `/etc/os-release` primeiro (é a fonte
-# padrão e sobrevive a máquinas com dois gerenciadores instalados); o PATH só
-# decide quando o os-release não conclui. `HEFESTO_FAMILIA_PACOTES` é o gancho
-# de teste, no mesmo espírito do `HEFESTO_OSK_GERENCIADOR`.
-#
-# `imutavel` vem ANTES do `ID_LIKE`: Bazzite (`ID_LIKE=fedora`) e SteamOS
-# (`ID_LIKE=arch`) parecem dnf e pacman pelo os-release, e ali `dnf install` não
-# tem onde gravar e o `pacman` que grava some no próximo update da imagem. A
-# marca é a do sistema: `/run/ostree-booted` (rpm-ostree e bootc: Silverblue,
-# Kinoite, Bazzite) ou o `steamos-readonly status` ligado. O caminho da marca
-# tem o gancho `HEFESTO_OSTREE_MARCA`, para o teste não depender desta máquina.
 _familia_pacotes() {
     if [[ -n "${HEFESTO_FAMILIA_PACOTES:-}" ]]; then
         printf '%s\n' "${HEFESTO_FAMILIA_PACOTES}"
@@ -580,7 +426,7 @@ _familia_pacotes() {
         _id="$(sed -n 's/^ID=//p' "${_OS_RELEASE}" | tr -d '"' | head -1)"
         _id_like="$(sed -n 's/^ID_LIKE=//p' "${_OS_RELEASE}" | tr -d '"' | head -1)"
     fi
-    # shellcheck disable=SC2086  # a quebra em palavras do ID_LIKE é o objetivo
+    # shellcheck disable=SC2086
     for _token in ${_id} ${_id_like}; do
         case "${_token}" in
             debian|ubuntu|linuxmint|pop|raspbian|devuan)  printf 'apt\n';    return 0 ;;
@@ -594,43 +440,24 @@ _familia_pacotes() {
     printf 'nenhum\n'
 }
 
-# A TABELA. Nome canônico -> nome real em cada família. Vazio quer dizer "esta
-# família não tem esse pacote com nome que eu saiba" — e aí o `run_pkg` diz
-# isso em voz alta em vez de instalar a coisa errada.
 _pkg_nome() {
     local _canon="$1" _familia="${2:-}"
     [[ -z "${_familia}" ]] && _familia="$(_familia_pacotes)"
     local _apt="" _dnf="" _pacman=""
     case "${_canon}" in
-        # --- OBRIGATÓRIAS -------------------------------------------------
-        # A biblioteca que o backend do controle abre por dlopen. A wheel
-        # `hidapi` do pip é wrapper CFFI e NÃO traz o .so: sem o pacote do
-        # sistema, `import hidapi` levanta OSError e nenhum aparelho sobe.
         hidapi)
             _apt="libhidapi-hidraw0"; _dnf="hidapi"
             _pacman="hidapi" ;;
-        # O loader SVG do gdk-pixbuf. ARMADILHA DE NOME: `librsvg2-bin` é o
-        # `rsvg-convert`, ferramenta de BUILD; quem desenha na tela é o
-        # `librsvg2-common`. Sem ele o ícone da bandeja some
-        # (BUG-TRAY-ICONE-INVISIVEL-01, app/tray.py); os glifos da interface são
-        # desenhados pelo WebKit e não passam por ele.
         svg-loader)
             _apt="librsvg2-common";   _dnf="librsvg2"
             _pacman="librsvg" ;;
-        # O módulo venv. Só o Debian o separa do interpretador; nas outras
-        # famílias ele vem no pacote do próprio Python (listado para que a
-        # mensagem de erro nunca fique sem nome de pacote).
         python-venv)
             _apt="python3-venv";      _dnf="python3-libs"
             _pacman="python" ;;
-        # Compilar o que não tem wheel: python-uinput e evdev sempre saem do
-        # sdist (BUG-CI-SMOKE-EVDEV-NO-GCC-01). Precisa de compilador,
-        # `Python.h` e `linux/input.h`.
         toolchain-c)
             _apt="build-essential python3-dev linux-libc-dev"
             _dnf="gcc python3-devel kernel-headers"
             _pacman="gcc linux-api-headers" ;;
-        # --- GUI ----------------------------------------------------------
         python-gi)
             _apt="python3-gi";        _dnf="python3-gobject"
             _pacman="python-gobject" ;;
@@ -644,16 +471,6 @@ _pkg_nome() {
             _apt="gir1.2-ayatanaappindicator3-0.1"
             _dnf="libayatana-appindicator-gtk3"
             _pacman="libayatana-appindicator" ;;
-        # O motor web da ROTA-WEBKIT: o mockup HTML dentro de um `Gtk.Window`
-        # do produto. A série **4.1 é a de GTK 3** — a 6.0 é GTK 4 e não entra
-        # no processo, que é GTK 3.0. Nomes MEDIDOS um a um em 29/08/2026, e
-        # nenhum inferido: `gir1.2-webkit2-4.1` 2.52.3 nesta bancada; no Fedora
-        # 43 o `webkit2gtk4.1` 2.52.5 TRAZ o typelib (o Fedora não separa o
-        # gir, como já acontece com o `gtk3`); no Arch o `webkit2gtk-4.1`
-        # 2.52.6 idem — os dois conferidos na LISTA DE ARQUIVOS do pacote. E
-        # existem nas imagens do CI: o Debian 12 (o gate duro do
-        # `install-multi-distro`) tem o `gir1.2-webkit2-4.1`, e o Fedora 40, o
-        # `webkit2gtk4.1-2.44.0-2.fc40`.
         webkit2gtk)
             _apt="gir1.2-webkit2-4.1"; _dnf="webkit2gtk4.1"
             _pacman="webkit2gtk-4.1" ;;
@@ -668,28 +485,18 @@ _pkg_nome() {
         imagemagick)
             _apt="imagemagick";       _dnf="ImageMagick"
             _pacman="imagemagick" ;;
-        # --- ÁUDIO / RÁDIO / DIAGNÓSTICO ----------------------------------
         opus)
             _apt="libopus0";          _dnf="opus"
             _pacman="opus" ;;
         pactl)
             _apt="pulseaudio-utils";  _dnf="pulseaudio-utils"
             _pacman="libpulse" ;;
-        # A árvore UCM do sistema (`/usr/share/alsa/ucm2/ucm.conf`), onde mora o
-        # gancho do DualSense (HAPTICA-NATIVA-01). O Fedora a empacota como
-        # subpacote do `alsa-lib`, com outro nome. Nomes dos repositórios de
-        # cada família; o contêiner do `smoke-multi-distro` é quem os mede.
         alsa-ucm)
             _apt="alsa-ucm-conf";     _dnf="alsa-ucm"
             _pacman="alsa-ucm-conf" ;;
         bluez)
             _apt="bluez";             _dnf="bluez"
             _pacman="bluez bluez-utils" ;;
-        # `bt-agent` (ONDA-R, cura do bond meio-salvo). O Fedora não empacota
-        # `bluez-tools` com esse nome — deixado VAZIO de propósito: é melhor
-        # dizer "não tenho nome para isso aqui" do que instalar outra coisa.
-        # Escopo dela: se a cura vale só para Debian/Arch, é promessa do
-        # produto que muda de valor conforme a distro.
         bt-agent)
             _apt="bluez-tools";       _dnf=""
             _pacman="bluez-tools" ;;
@@ -705,7 +512,6 @@ _pkg_nome() {
         curl)
             _apt="curl";              _dnf="curl"
             _pacman="curl" ;;
-        # --- DKMS ---------------------------------------------------------
         dkms)
             _apt="dkms";              _dnf="dkms"
             _pacman="dkms" ;;
@@ -724,9 +530,6 @@ _pkg_nome() {
     esac
 }
 
-# Roda o instalador quieto; só mostra saída se falhar. A disciplina é a mesma
-# de sempre — barulho de gerenciador de pacotes num install que ela roda dez
-# vezes por dia é defeito.
 _run_pkg_quieto() {
     local _tmp
     _tmp="$(mktemp)"
@@ -738,24 +541,6 @@ _run_pkg_quieto() {
     rm -f "$_tmp"
 }
 
-# O INSTALL NÃO TROPEÇA NO PACOTE QUEBRADO DO SISTEMA (17/10/2026).
-# Medido na bancada: com um kernel novo baixado e sem configurar (`iF`/`iU`), TODO
-# `apt-get install` tenta configurá-lo de novo, o DKMS de um módulo que não é
-# nosso falha de novo e o apt sai com 100. O install pagava minutos de
-# compilação por nada, dizia «não consegui» de um pacote que nada tinha de
-# errado e mexia no kernel que ninguém pediu. A pergunta é feita ANTES, ao
-# banco do dpkg, sem root; com pacote a meio o install não chama o apt.
-#
-# `${db:Status-Abbrev}` tem três letras: o desejado, o estado e o erro. Quebrado é
-# o estado `H` (half-installed), `U` (unpacked) ou `F` (half-configured), ou o
-# erro `R` (reinstalação exigida). `hi` (retido), `rc` e `un` não são.
-# Imprime os nomes numa linha só; nada impresso é «sem pacote a meio».
-#
-# O `run_pkg` com pacote a meio devolve este código e não o 1 genérico de «não
-# consegui» (rede, nome que não existe): o aviso do sistema já saiu, e quem lê o
-# código não acrescenta uma causa que não é a certa. 75 é o `EX_TEMPFAIL` do
-# sysexits: «tente de novo depois de consertar». `_PACOTES_A_MEIO_LISTA` guarda
-# os nomes para a mensagem de quem dá causa.
 readonly _RC_PACOTE_A_MEIO=75
 _PACOTES_A_MEIO_LISTA=""
 _pacotes_a_meio() {
@@ -765,11 +550,6 @@ _pacotes_a_meio() {
                END { if (n) printf "\n" }' || true
 }
 
-# Com pacote a meio no sistema, diz o que é e devolve 0: o recado longo sai uma
-# vez por install; as outras vezes, uma linha. Sem pacote a meio, devolve 1
-# calado. `$1`: o que não se instalou; `$2`: a lista, quando quem chama já a tem.
-# Serve ao `run_pkg` e a quem chama o apt direto (o .deb, o BlueZ e o PipeWire da
-# casa): todo `apt-get install` do install passa por aqui antes.
 _avisa_pacote_a_meio() {
     local _meio="${2-}"
     [[ -n "${_meio}" ]] || _meio="$(_pacotes_a_meio)"
@@ -784,12 +564,6 @@ _avisa_pacote_a_meio() {
     return 0
 }
 
-# Os PIDs que travam o arquivo (flock ou fcntl), lidos do `/proc/locks`, que
-# qualquer pessoa lê. É a resposta que vale sem root: o `fuser` de quem não é
-# root não enxerga processo de root (o `unattended-upgrades`, o rpm), e o apt e
-# o rpm travam por fcntl, que o `flock` não vê. Medido em 17/10: o `fuser` sai 1
-# sobre o `/run/crond.pid` que o cron (root) trava, e o `/proc/locks` o mostra.
-# A linha com `->` é de quem ESPERA a trava, não de quem a segura.
 _pids_da_trava() {
     local _st _dev _ino _chave
     [[ -r /proc/locks ]] || return 0
@@ -802,8 +576,6 @@ _pids_da_trava() {
         /proc/locks 2>/dev/null | sort -u || true
 }
 
-# Quem segura uma trava: «nome (pid N), …», pelo `/proc/locks` e, quando houver,
-# pelo `fuser`. Vazio não prova trava livre.
 _quem_segura_a_trava() {
     local _pid _nome _quem=""
     for _pid in $( { _pids_da_trava "$1"; fuser "$1" 2>/dev/null; } | tr -s ' ' '\n' | sort -un || true); do
@@ -815,11 +587,6 @@ _quem_segura_a_trava() {
     return 0
 }
 
-# A trava está ocupada agora? `existe`: o arquivo só existe enquanto alguém
-# trabalha (o `db.lck` do pacman). `flock`: o arquivo é permanente e o que vale
-# é o bloqueio (o `.rpm.lock` do dnf, que o rpm trava por fcntl): pergunta-se ao
-# `/proc/locks` e depois ao `fuser` e ao `flock`; sem nenhum deles não há como
-# saber e a resposta é «livre» (o próprio dnf espera o rpm).
 _trava_ocupada() {
     local _arq="$1" _modo="$2"
     [[ -e "${_arq}" ]] || return 1
@@ -834,7 +601,6 @@ _trava_ocupada() {
     return 1
 }
 
-# Espera a trava do gerente de pacotes sumir, com teto. rc 1 passado o teto.
 _esperar_trava() {
     local _teto="${HEFESTO_TRAVA_TETO:-120}" _seg=0 _quem
     _trava_ocupada "$@" || return 0
@@ -851,9 +617,6 @@ _esperar_trava() {
 }
 
 run_apt() {
-    # O braço apt do run_pkg. Recebe nome de pacote APT, não canônico. O dpkg
-    # ocupado (um `unattended-upgrades` rodando) se espera: sem o `Lock::Timeout`
-    # o apt sai na hora com «Could not get lock».
     local _quem
     if ! _run_pkg_quieto sudo apt-get install -y -qq \
             -o "DPkg::Lock::Timeout=${HEFESTO_TRAVA_TETO:-120}" "$@"; then
@@ -863,15 +626,10 @@ run_apt() {
     fi
 }
 
-# Instala uma lista de nomes CANÔNICOS na família desta máquina.
 run_pkg() {
     local _familia _canon _nome _parte
     local _nomes=()
     _familia="$(_familia_pacotes)"
-    # Distro somente leitura: não há gerente de pacotes a chamar. O ensaio diz
-    # que não instalaria e segue (o plano descreve o caminho em que a imagem já
-    # traz o que falta); a instalação de verdade avisa e devolve 1, e quem
-    # chamou cai no ramo de «não consegui», que já imprime o comando manual.
     if [[ "${_familia}" == "imutavel" ]]; then
         if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
             _nao_faria "instalar pacote(s) $*: a distro é somente leitura e não há gerente de pacotes a chamar"
@@ -886,15 +644,10 @@ run_pkg() {
             warn "não tenho nome de pacote para '${_canon}' em ${_familia} — instale o equivalente pela sua distro"
             return 1
         fi
-        # shellcheck disable=SC2086  # um canônico pode valer vários pacotes
+        # shellcheck disable=SC2086
         for _parte in ${_nome}; do _nomes+=("${_parte}"); done
     done
     (( ${#_nomes[@]} )) || return 1
-    # Pacote a meio no sistema: o apt tentaria reconfigurá-lo e falharia de
-    # novo. O install não chama o apt, diz o que é do sistema e devolve
-    # `_RC_PACOTE_A_MEIO`, um «não consegui» que cada chamador já trata como 1 e
-    # que quem dá causa distingue. O ensaio devolve 0 como no ramo imutável, mas
-    # não finge que instalaria.
     if [[ "${_familia}" == "apt" ]]; then
         local _meio
         _meio="$(_pacotes_a_meio)"
@@ -909,10 +662,6 @@ run_pkg() {
             return "${_RC_PACOTE_A_MEIO}"
         fi
     fi
-    # O ensaio devolve 0 de propósito: o plano tem de mostrar o caminho em que a
-    # instalação DÁ CERTO, senão cada `run_pkg` falso arrastaria o resto do
-    # roteiro para o ramo de erro e o plano descreveria uma instalação que
-    # ninguém vai ter.
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _faria_root "instalar pacote(s) com ${_familia}: ${_nomes[*]}"
         return 0
@@ -933,8 +682,6 @@ run_pkg() {
     esac
 }
 
-# O comando exato que a pessoa roda se nós não conseguirmos — impresso, nunca
-# escondido (mesma regra do `install_osk.sh:comando_manual`).
 comando_manual_pkg() {
     local _familia _canon _nome _lista=""
     _familia="$(_familia_pacotes)"
@@ -953,139 +700,29 @@ comando_manual_pkg() {
     esac
 }
 
-# O CENSO, em código. Cada linha é
-#     canônico|criticidade|checagem|o que quebra sem ele
-#
-# CRITICIDADE, e a diferença é a mesma que já existe no arquivo entre o bloco do
-# GTK (fatal) e o BT-MIC-01 (best-effort):
-#   obrigatoria -> `die`. Sem ela o produto não faz o que promete: ou nenhum
-#                  aparelho sobe, ou a interface não consegue desenhar.
-#   importante  -> `warn` e segue. Morre UMA função; o resto vive.
-#
-# O que NÃO entra aqui, de propósito: tudo que é só-de-CI. `libhidapi-dev`,
-# `libudev-dev` e `libxi-dev` são CABEÇALHOS (quem instala precisa da
-# biblioteca, não do -dev); `librsvg2-bin` é o `rsvg-convert`, que só o
-# `scripts/gerar_icones.sh` usa; `gettext` não é preciso porque os `.mo` já vêm
-# COMPILADOS na árvore e o install só os copia; `appstream`, `libfuse2` e
-# `dpkg` são do build. Instalar isso na máquina de quem joga seria cobrar um
-# preço por nada.
 _DEPS_DE_SISTEMA=(
     "hidapi|obrigatoria|lib:libhidapi-hidraw.so.0,libhidapi-libusb.so.0|o backend do controle não abre NENHUM aparelho (o pydualsense faz dlopen da libhidapi; a wheel do pip não traz o .so)"
     "svg-loader|obrigatoria|svg|o ícone da bandeja some"
     "toolchain-c|importante|toolchain|as extensões sem wheel (python-uinput, evdev) não compilam e o passo 2 pode abortar"
     "appindicator|importante|appindicator|a bandeja não nasce: a janela abre, o ícone ao lado do relógio não"
-    # O WebKit É A INTERFACE. O `interface/janela.py` faz `require_version("WebKit2",
-    # "4.1")` sem alternativa (a janela GTK saiu em 06/09, `D-0609-GTK-LEVA-INTEIRA`),
-    # então sem o binding a janela morre com `Namespace WebKit2 not available`
-    # enquanto o daemon sobe: por isso é `obrigatoria`. Peso medido em 29/08/2026:
-    # 25,2 MB baixados e ~93 MB em disco no apt, 140 MB no Arch.
     "webkit2gtk|obrigatoria|webkit|a interface não abre: o serviço sobe, mas a janela morre com «Namespace WebKit2 not available»"
     "desktop-utils|importante|cmd:desktop-file-validate,update-desktop-database,gtk-update-icon-cache|o atalho e o ícone podem não aparecer no menu do sistema"
     "imagemagick|importante|cmd:convert|o ícone fica só no 256x256, sem as resoluções menores"
-    # LUZ-DO-MIC-01 (03/09/2026). A luz do botão de mudo deixou de espelhar o
-    # mudo e passou a dizer QUEM TE ESCUTA: apagada é ninguém, acesa é um app
-    # com o microfone DESTE controle aberto, piscando é som entrando agora. A
-    # resposta tem duas metades, e cada uma sai de um binário:
-    #     `pactl list source-outputs`  -> quem está gravando a fonte do controle
-    #     `parec` com `resample.peaks` -> se está entrando som, com o pico já
-    #                                     calculado PELO SERVIDOR (100 bytes/s
-    #                                     por canal; 0,121% de um núcleo, e
-    #                                     ~0,59% com os quatro controles da mesa)
-    #
-    # OS DOIS SAEM DO MESMO PACOTE, e é isso que faz esta linha não custar nome
-    # novo: MEDIDO em 03/09/2026 nesta bancada, `/usr/bin/parec` é um link para
-    # `/usr/bin/pacat` e o `dpkg -S` dos dois devolve `pulseaudio-utils` — o
-    # mesmo pacote do `pactl`, que a tabela `_pkg_nome` já traduz nas três
-    # famílias (apt/dnf `pulseaudio-utils`, pacman `libpulse`). Também não há
-    # dependência PYTHON nova: o leitor do pico é `struct.unpack` da stdlib, e
-    # o numpy foi recusado de propósito — ele não está no `pyproject.toml`, e
-    # importá-lo repetiria a dívida do `playwright`, que faz toda árvore nova
-    # nascer com portão vermelho.
-    #
-    # POR QUE A CHECAGEM PEDE OS DOIS NOMES, e não só o `pactl`: a luz precisa
-    # dos dois binários, e se algum dia uma família separá-los é ESTA linha que
-    # grita. É a mesma disciplina da linha do `bluez` logo abaixo, que ficou
-    # anos cega ao `btmgmt` por pedir só o `bluetoothctl`.
-    #
-    # POR QUE `importante` e não `obrigatoria`: sem estes binários o Hefesto
-    # inteiro continua de pé — gatilhos, perfis, vibração, emulação, rádio. O
-    # que morre é UMA função, e ela morre calada: a luz simplesmente fica
-    # apagada, que é um estado válido do contrato. Morrer o install por causa
-    # disso cobraria o preço errado.
     "pactl|importante|cmd:pactl,parec|a luz do microfone do controle fica apagada para sempre: sem o pactl ninguém sabe QUEM está ouvindo, sem o parec ninguém sabe se está entrando som — e o microfone por Bluetooth também não sobe"
-    # HAPTICA-NATIVA-01 (INSTALL-UNIVERSAL, 18/09/2026). O passo 3c-bis grava o
-    # gancho UCM do DualSense em `conf.d/USB-Audio/`, e quem o LÊ é o
-    # `ucm.conf` do pacote. No apt ele chega como `Recommends` do
-    # `libasound2-data`: numa instalação sem recomendações ele falta, o
-    # roteiro só avisa, e a vibração pelo cabo sumia calada. A checagem é o
-    # próprio arquivo — é ele, e não o nome do pacote, que o ALSA procura.
-    # Este censo só roda no fluxo nativo; os pacotes (`debian/control`, o
-    # `.spec` e o `PKGBUILD`) declaram o mesmo nome como dependência fraca, e
-    # a régua deles lê o nome daqui, do `_pkg_nome`. O GANCHO, porém, só este
-    # instalador grava (em todo formato): o pacote sozinho não o leva.
     "alsa-ucm|importante|arquivo:/usr/share/alsa/ucm2/ucm.conf|a vibração dos jogos da Sony pelo DualSense no cabo não chega: sem o UCM do sistema a placa do controle não abre pelo perfil HiFi"
-    # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026): a régua pedia SÓ o
-    # `bluetoothctl`, e desde a migração o produto também chama o `btmgmt`
-    # (`bt_active_mode.sh`, `doctor.sh`, `uninstall.sh`). Os dois entram, e a
-    # tabela de pacotes NÃO muda — MEDIDO em contêiner limpo no mesmo dia,
-    # família por família, e é o único jeito honesto de afirmar isto:
-    #     debian:12   -> `dpkg -S /usr/bin/btmgmt` = bluez (o mesmo do bluetoothctl)
-    #     fedora:40   -> `dnf repoquery --whatprovides /usr/bin/btmgmt` = bluez
-    #     archlinux   -> `pacman -F usr/bin/btmgmt` = extra/bluez-utils
-    # No Arch a dupla vive em `bluez-utils`, que a linha `bluez)` de `_pkg_nome`
-    # já instala junto com o `bluez`. Se um dia alguma família separar os dois,
-    # é ESTA linha que grita — antes era ela que ficava cega.
     "bluez|importante|cmd:bluetoothctl,btmgmt|parear pelo rádio, conferir o bond e o diagnóstico de Bluetooth param de funcionar"
     "usbutils|importante|cmd:lsusb|o diagnóstico perde a leitura do barramento USB"
     "fontconfig|importante|cmd:fc-cache|a interface troca de fonte em silêncio (Space Grotesk e JetBrains Mono não entram)"
     "curl|importante|cmd:curl|as fontes da identidade visual não são baixadas"
 )
 
-# Cheque ANTES de instalar. A instalação dela roda muitas vezes; chamar o
-# gerenciador de pacotes à toa é barulho, e barulho é defeito. Cada checagem
-# pergunta pelo EFEITO (a biblioteca abre? o gdk-pixbuf lê SVG?), nunca pelo
-# nome do pacote — é o que faz a mesma régua valer nas quatro famílias.
-# O Python que enxerga o `gi` (svg, appindicator, webkit abaixo e o GTK3 do passo 2)
-# é o do venv; no ensaio (--dry-run) o venv ainda não existe (num clone sem `.venv`,
-# nunca existiu), e perguntar a um `${VENV_DIR}/bin/python` ausente respondia
-# «não tem» para o que a máquina tem. O venv nasce com --system-site-packages do
-# `_VENV_PYTHON`, então ele vê exatamente o que o `_VENV_PYTHON` vê.
 _dep_presente() {
     local _checagem="$1" _bin _inc _saida _py_gi="${VENV_DIR}/bin/python"
     [[ -x "${_py_gi}" ]] || _py_gi="${_VENV_PYTHON:-python3}"
     case "${_checagem}" in
         lib:*)
-            # A pergunta é "a biblioteca ABRE?", não "o `ldconfig` a lista?" —
-            # e é a mesma disciplina do `svg` e do `appindicator` logo abaixo.
-            # `ctypes.CDLL` é LITERALMENTE o que o produto faz: o `hidapi` do
-            # pip abre por `ffi.dlopen` (`hidapi.py:149`) e o
-            # `integrations/dualsense_bt_audio.py:424-445` abre a libopus por
-            # `ctypes.CDLL`. Se abrir aqui, abre lá.
-            #
-            # POR QUE NÃO O `ldconfig`, e isto é um BLOQUEANTE medido em
-            # 19/08/2026: ele mora em `/usr/sbin`, que NÃO está no PATH de
-            # usuário comum no Debian 12 — só no do root. A régua sairia vazia
-            # para toda pessoa que instala sem ser root, e TODA biblioteca
-            # presente seria lida como ausente. O CI é cego para isso porque os
-            # contêineres da matriz rodam como root, e o root tem sbin no PATH
-            # em qualquer distro.
-            #
-            # E há um segundo buraco, medido no mesmo dia e que o `ldconfig`
-            # tinha: com o `set -o pipefail` deste arquivo (linha 188), um
-            # `ldconfig -p | grep -q` devolvia 141 — o `grep -q` sai no
-            # primeiro acerto, o `ldconfig` morre de SIGPIPE, e o pipeline
-            # inteiro reprova. Os dois buracos somem perguntando pelo efeito.
-            #
-            # O `ldconfig` fica como PLANO B, com caminho absoluto, para o caso
-            # de o venv ainda não existir quando alguém chamar isto de outro
-            # ponto do arquivo.
-            # LISTA separada por vírgula, e ela não é conveniência: o wrapper
-            # `hidapi.py` do pip percorre `libhidapi-hidraw.so[.0]`,
-            # `libhidapi-libusb.so[.0]` e outros até um abrir (hidapi.py:136-144).
-            # A régua tem de aceitar as mesmas alternativas, senão reprova numa
-            # máquina em que o produto funcionaria.
             local _sos="${_checagem#lib:}" _so
-            # shellcheck disable=SC2086  # a lista separada por vírgula é o objetivo
+            # shellcheck disable=SC2086
             for _so in ${_sos//,/ }; do
                 if [[ -x "${VENV_DIR}/bin/python" ]]; then
                     "${VENV_DIR}/bin/python" -c \
@@ -1108,56 +745,23 @@ _dep_presente() {
             ;;
         cmd:*)
             local _bins="${_checagem#cmd:}"
-            # shellcheck disable=SC2086  # a lista separada por vírgula é o objetivo
+            # shellcheck disable=SC2086
             for _bin in ${_bins//,/ }; do
                 command -v "${_bin}" >/dev/null 2>&1 || return 1
             done
             return 0
             ;;
         arquivo:*)
-            # O EFEITO é o arquivo existir onde a biblioteca o procura. Tem de
-            # estar aqui, e não cair no `*)` de baixo: aquele responde
-            # "presente" para toda checagem que não conhece.
             [[ -f "${_checagem#arquivo:}" ]]
             ;;
         svg)
-            # A pergunta certa não é "o pacote está instalado?", e sim "o
-            # gdk-pixbuf sabe ler SVG?" — que é o que a interface faz.
             "${_py_gi}" -c "import gi;gi.require_version('GdkPixbuf','2.0');from gi.repository import GdkPixbuf;import sys;sys.exit(0 if any(f.get_name()=='svg' for f in GdkPixbuf.Pixbuf.get_formats()) else 1)" >/dev/null 2>&1
             ;;
         appindicator)
-            # A bandeja tenta Ayatana e cai no AppIndicator3 (app/tray.py) —
-            # a checagem aceita os dois, como o produto.
             "${_py_gi}" -c "import gi;gi.require_version('AyatanaAppIndicator3','0.1')" >/dev/null 2>&1 ||
             "${_py_gi}" -c "import gi;gi.require_version('AppIndicator3','0.1')" >/dev/null 2>&1
             ;;
         webkit)
-            # TOCA UM SÍMBOLO, e é por isso que a linha termina numa chamada.
-            #
-            # CORREÇÃO DE FATO, 29/08/2026: esta checagem dizia que o `import`
-            # bastava, porque "o typelib sem a biblioteca passaria pela versão".
-            # MEDIDO, remendando um typelib real com um SONAME inexistente:
-            #
-            #   require_version('WebKit2','4.1')   -> PASSA
-            #   from gi.repository import WebKit2  -> PASSA TAMBÉM (só um WARNING
-            #                                         no stderr, que o 2>&1 come)
-            #   WebKit2.get_major_version()        -> GError: Could not locate
-            #                                         webkit_get_major_version
-            #
-            # O import NÃO compra nada sobre o `require_version` para o caso que
-            # a justificativa dizia pegar. Quem responde "o motor CARREGA?" é
-            # tocar um símbolo. Custo medido: 21 ms (versão) / 67 (+import) /
-            # 78 (+chamada) — 11 ms compram a garantia.
-            #
-            # RISCO REAL, honesto: o `gir1.2-webkit2-4.1` tem
-            # `Depends: libwebkit2gtk-4.1-0 (= mesma versão)`, e Fedora e Arch
-            # entregam os dois no mesmo pacote — gerenciador de pacotes não
-            # produz esse estado. O fato errado estava na JUSTIFICATIVA, não na
-            # máquina de ninguém. Mas régua que promete o que não faz é o padrão
-            # que esta casa já nomeou: *a régua confunde a PALAVRA com o ATO*.
-            #
-            # A série é 4.1 porque é a de GTK 3. A 6.0 é GTK 4 e não entra no
-            # processo do produto.
             "${_py_gi}" -c "import gi;gi.require_version('WebKit2','4.1');from gi.repository import WebKit2;WebKit2.get_major_version()" >/dev/null 2>&1
             ;;
         toolchain)
@@ -1173,7 +777,6 @@ _dep_presente() {
     esac
 }
 
-# O passo que fecha a lacuna: garante o censo inteiro, em qualquer família.
 _garantir_deps_de_sistema() {
     local _familia _linha _canon _crit _checagem _razao
     local _obrig=() _import=() _ainda=()
@@ -1191,10 +794,6 @@ _garantir_deps_de_sistema() {
     done
     (( ${#_obrig[@]} + ${#_import[@]} )) || return 0
 
-    # Família sem tratamento (NixOS, Gentoo, container enxuto): não minta e não
-    # aborte. Quem está lá tem de sair sabendo o que instalar à mão — inclusive
-    # o que é OBRIGATÓRIO, que aqui vira aviso porque o instalador não tem como
-    # cumprir a promessa nem como julgar o sistema de pacotes da pessoa.
     if [[ "${_familia}" == "nenhum" || "${_familia}" == "imutavel" ]]; then
         if [[ "${_familia}" == "imutavel" ]]; then
             warn "distro somente leitura — não instalei nada: o que falta tem de vir da imagem do sistema"
@@ -1215,14 +814,6 @@ _garantir_deps_de_sistema() {
         if [[ "${REPLY,,}" =~ ^y ]]; then
             run_pkg ${_obrig[@]+"${_obrig[@]}"} || true
         fi
-        # Reconfere pelo EFEITO: morre só quem continuou faltando. Um nome de
-        # pacote errado nesta tabela não pode passar por instalado.
-        #
-        # NO ENSAIO A RECONFERÊNCIA NÃO VALE, e deixá-la valer seria o pior
-        # tipo de instrumento falso: nada foi instalado (é o ponto do ensaio),
-        # então TODA obrigatória ausente continuaria ausente e o `die` abaixo
-        # mataria o plano no meio — dizendo "faltam dependências obrigatórias"
-        # sobre um instalador que teria acabado de instalá-las.
         if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
             printf '      (ensaio: depois de instaladas, as obrigatórias seriam RECONFERIDAS pelo\n'
             printf '       efeito — a biblioteca abre? o gdk-pixbuf lê SVG? — e o install morreria\n'
@@ -1255,13 +846,6 @@ _garantir_deps_de_sistema() {
 
 require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
 
-# Registro de dono dos params de cmdline (PLAT-03): estado local que diz quem
-# garante cada parâmetro — "hefesto" (nosso; o uninstall reverte), "terceiro"
-# (outra ferramenta/manual; o uninstall NUNCA toca) ou "compartilhado" (token
-# usbcore.quirks fundido; o uninstall remove SÓ os IDs nossos). Regra da
-# preservação: "hefesto"/"compartilhado" de um install PASSADO vence o
-# "terceiro" do plano novo (o plano novo vê o token presente e não sabe que
-# fomos nós que o pusemos).
 readonly CMDLINE_OWNERS_FILE="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
 _register_cmdline_owner() {
     local key="$1" value="$2" prev=""
@@ -1286,35 +870,17 @@ _register_cmdline_owner() {
 }
 
 
-# ---------------------------------------------------------------------------
-# Credencial sudo: adquirir UMA vez no início (BUG-INSTALL-SUDO-NONINTERACTIVE-01)
-# ---------------------------------------------------------------------------
-# Vários sub-passos usam sudo internamente (install_udev.sh, install_snd_quirk.sh
-# → as_root install, o `just install` do applet → sudo install). Sem cachear a
-# credencial no começo, cada um tenta pedir a senha por conta própria e, sem TTY
-# (install rodado não-interativo), FALHA — e o passo seguia como se tivesse dado
-# certo: o step 3c não gravava /etc/modprobe.d/hefesto-dualsense-storm.conf e o
-# applet não era instalado, ambos em silêncio. Aqui primamos a credencial (uma
-# senha) e a mantemos viva durante todo o install (a build do applet passa de
-# 10 min e estouraria o timestamp_timeout default do sudo, ~15 min).
 SUDO_KEEPALIVE_PID=""
 
 _start_sudo_keepalive() {
     [[ -n "${SUDO_KEEPALIVE_PID}" ]] && return 0
-    # Renova a cada 50s enquanto o install ($$) estiver vivo; para se a
-    # credencial não puder mais ser renovada (evita loop preso).
     ( while kill -0 "$$" 2>/dev/null; do sudo -n true 2>/dev/null || exit 0; sleep 50; done ) &
     SUDO_KEEPALIVE_PID=$!
 }
 
 acquire_sudo() {
-    [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0          # já é root
-    command -v sudo >/dev/null 2>&1 || return 0          # sem sudo — cada passo avisa
-    # O ENSAIO NUNCA PEDE SENHA. Um modo que promete "não escrevo nada" e abre
-    # um prompt de senha já quebrou a promessa antes da primeira linha do plano.
-    # O preço é que os passos de root vão dizer "sudo recusado" — e é a verdade
-    # do que aconteceria agora, com esta sessão. Dizemos como ver o plano
-    # inteiro, em vez de fingir que ele existe.
+    [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0
+    command -v sudo >/dev/null 2>&1 || return 0
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         if sudo -n true 2>/dev/null; then
             printf '\n>>> ENSAIO: há credencial sudo em cache — o plano abaixo é o COMPLETO.\n'
@@ -1327,15 +893,11 @@ acquire_sudo() {
         fi
         return 0
     fi
-    if sudo -n true 2>/dev/null; then                    # credencial já em cache
+    if sudo -n true 2>/dev/null; then
         _start_sudo_keepalive
         return 0
     fi
-    [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0          # nenhum passo com root pedido
-    # INSTALL-HEADLESS-01 (auditoria 21/07): com SUDO_ASKPASS setado (execução
-    # não-interativa — CI/headless), valida a credencial pelo helper (-A), SEM
-    # exigir TTY. Assim `./install.sh` sem flags roda os passos root num
-    # ambiente sem terminal, bastando exportar SUDO_ASKPASS=<helper>.
+    [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0
     if [[ -n "${SUDO_ASKPASS:-}" ]] && sudo -A -v 2>/dev/null; then
         _start_sudo_keepalive
         return 0
@@ -1355,13 +917,6 @@ _cleanup_sudo_keepalive() {
 }
 trap _cleanup_sudo_keepalive EXIT
 
-# ---------------------------------------------------------------------------
-# 0. Seleção de formato de instalação
-# ---------------------------------------------------------------------------
-# native (default) faz a instalação de desenvolvimento (venv editável + atalho
-# para run.sh). flatpak/appimage/deb reusam os build scripts e instalam o
-# pacote real. udev é sempre aplicado no host (o controle não funciona sem as
-# regras, em qualquer formato).
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     printf '\n'
     printf '═════════════════════════════════════════════════════════════════\n'
@@ -1375,8 +930,6 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
 fi
 
 if [[ -z "${FORMAT}" ]]; then
-    # O ensaio não pode PARAR num `read`: quem pede o plano quer o plano.
-    # Assumimos o mesmo default do menu (native) e dizemos que assumimos.
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         FORMAT="native"
         printf '\n      perguntaria o formato (1-4) — no ensaio assumo "native" (o default do menu)\n'
@@ -1400,13 +953,6 @@ if [[ -z "${FORMAT}" ]]; then
 fi
 printf '\n>>> Formato escolhido: %s\n' "${FORMAT}"
 
-# Prime a credencial sudo uma vez (ver acquire_sudo). Só pede a senha se algum
-# passo com root está de fato habilitado: udev (default), format deb (apt), o
-# applet forçado (--enable-cosmic-applet) ou o DKMS (default, Onda T — --no-udev
-# NÃO o desliga de propósito, é gate independente: --no-dkms). Em COSMIC o
-# applet é default-on e também usa sudo, mas aí o udev já cobre o prime;
-# --no-udev (CI sem hardware) dispensa o prompt salvo se deb/applet/dkms
-# explícito.
 _NEEDS_SUDO=1
 if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" \
         && "${ENABLE_COSMIC_APPLET}" -eq 0 && "${NO_DKMS}" -eq 1 ]]; then
@@ -1414,54 +960,12 @@ if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" \
 fi
 acquire_sudo
 
-# ---------------------------------------------------------------------------
-# As DEZ curas de HOST moram em `scripts/lib/camada_de_maquina.sh` (31/08/2026)
-# ---------------------------------------------------------------------------
-# Elas moravam AQUI — `_render_broker_units` nas linhas 873-893 e as dez
-# `*_host` nas 989-1677. Saíram por um motivo com data: ela desinstalou o
-# Hefesto estável e ficou só com o de desenvolvimento, e o `install-dev.sh`
-# dependia deste arquivo para a camada de máquina — dependência escrita no
-# cabeçalho dele desde 29/08. Sem o estável, ninguém instalava udev, grupo
-# `hefesto`, broker, resiliência do bluetoothd nem a ponte privilegiada.
-#
-# A cura NÃO foi duplicar: foi dar às dez uma casa que os DOIS instaladores
-# possam sourcear. O `install-dev.sh` NUNCA executa este arquivo — sourcear a
-# lib é o que torna isso possível, e a regra de nunca rodar o install.sh numa
-# árvore de desenvolvimento continua de pé, literal.
-#
-# Nada mudou de comportamento: as funções são as mesmas, byte por byte, e
-# continuam sendo CHAMADAS daqui, dos dois lados da cerca. O portão
-# `tests/unit/test_install_serve_os_dois_lados_da_cerca.py` passou a ler os
-# corpos da lib e as regiões daqui, e continua cobrando o que sempre cobrou.
 # shellcheck source=scripts/lib/camada_de_maquina.sh
 source "${ROOT_DIR}/scripts/lib/camada_de_maquina.sh"
-# O reinício do som da sessão, com a volta do painel do COSMIC, é um só para o
-# install e o uninstall (O-SOM-REINICIADO-NAO-CEGA-O-PAINEL-DO-COSMIC-01).
 # shellcheck source=scripts/lib/som_da_sessao.sh
 source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
 
-# ---------------------------------------------------------------------------
-# O ENSAIO DAS CURAS DE HOST — o que cada `*_host` escreveria
-# ---------------------------------------------------------------------------
-# As doze curas moram na lib acima, e o ensaio NÃO PODE CHAMÁ-LAS: elas
-# escrevem em `/etc`, compilam módulo de kernel e sobem serviço de sistema.
-# Então elas são DESCRITAS aqui, e a descrição é uma cópia de conhecimento —
-# exatamente o tipo de coisa que envelhece calada.
-#
-# O QUE IMPEDE A DIVERGÊNCIA: `tests/unit/test_o_ensaio_do_install_nao_escreve.py`
-# lê cada caminho absoluto citado abaixo e exige que ele apareça no corpo da
-# função correspondente em `scripts/lib/camada_de_maquina.sh`. Alguém que mude o
-# alvo lá e esqueça daqui reprova, com o caminho na mensagem — é a mordida.
-#
-# OS PORTÕES VÊM ANTES DA DESCRIÇÃO (INSTALL-E-UNINSTALL-DO-RADIO-01,
-# 23/09/2026). Até aqui o ensaio descrevia cada cura como se ela fosse rodar,
-# com qualquer flag: `--dry-run --no-wifi-usb` prometia instalar o vigia do
-# Wi-Fi USB, e `--dry-run --no-udev` prometia o /etc inteiro. Era o plano de
-# OUTRA linha de comando. Cada ramo repete os portões da função que ele
-# descreve, e a régua `tests/unit/test_o_ensaio_respeita_os_portoes.py`
-# confere, função por função, que as flags lidas lá são as lidas aqui.
 _ensaio_camada() {
-    # Distro somente leitura: o plano não promete o que a imagem não aceita.
     if _distro_so_leitura; then
         case "$1" in
             dkms-nintendo)    _nao_faria "módulo DKMS hefesto-hid-nintendo (distro somente leitura): $(_efeito_so_leitura nintendo)"; return 0 ;;
@@ -1652,31 +1156,6 @@ _ensaio_camada() {
     esac
 }
 
-# NO ENSAIO, AS DOZE CURAS VIRAM DESCRIÇÃO — e a troca é feita AQUI, num lugar
-# só, trocando o corpo das funções que a lib acabou de definir.
-#
-# POR QUE TROCAR O NOME, e não pôr um `if` em cada chamada: elas são VINTE, e
-# estão espalhadas pelos dois lados da cerca dos formatos. Bastaria alguém
-# acrescentar uma chamada nova sem o `if` para o ensaio ESCREVER no /etc de
-# quem só queria ver o plano — um modo que promete não tocar em nada e toca é o
-# instrumento falso mais caro que esta casa poderia produzir. Trocando o corpo,
-# nenhuma chamada escapa, nem a que ainda não existe.
-#
-# POR QUE PELO `eval`, E NÃO ESCREVENDO `nome_host() { … }` À MÃO: medido em
-# 03/09/2026, e é um defeito que este arquivo produziu e uma régua pegou. Seis
-# testes desta casa acham o CORPO de uma cura procurando o texto
-# `install_..._host() {` no `install.sh` — é assim que
-# `test_a_ponte_privilegiada_entra_e_sai_do_install` confere que a regra do
-# sudoers passa pelo `visudo` antes de ser gravada. Um segundo `nome_host() {`
-# escrito aqui vira o corpo que essas réguas leem, e elas passam a medir a
-# descrição do ensaio em vez da cura: as seis reprovaram de uma vez, dizendo
-# que o install tinha parado de conferir o sudoers. Não tinha. A régua estava
-# certa e o texto é que ficou ambíguo.
-#
-# Com a tabela abaixo, o `install.sh` não contém nenhuma linha que se pareça
-# com a definição de uma cura, e o efeito em tempo de execução é idêntico.
-# Quem guarda a tabela é `tests/unit/test_o_ensaio_do_install_nao_escreve.py`:
-# ela tem de cobrir TODA função `*_host` da lib, inclusive a de amanhã.
 _ENSAIO_CURAS_DE_HOST=(
     "install_udev_host:udev"
     "install_osk_host:osk"
@@ -1704,10 +1183,6 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     unset _ensaio_par
 fi
 
-# Os OUTROS roteiros de `scripts/` que o install executa, descritos uma vez só —
-# os dois lados da cerca chamam os mesmos, e uma descrição por lado divergiria.
-# Mesma guarda do `_ensaio_camada`: o teste confere cada caminho absoluto daqui
-# contra o roteiro que o escreve.
 _ensaio_snd_quirk() {
     _faria_root "gravar /etc/modprobe.d/hefesto-dualsense-storm.conf (quirk_flags do snd_usb_audio — cura do storm -71 preservando mic e fone)"
     _faria_root "ativar o quirk a quente em /sys/module/snd_usb_audio/parameters/quirk_flags (sem reboot; sem isto, vale no próximo boot)"
@@ -1810,38 +1285,9 @@ format_deb() {
     printf '\n      Instalado via apt (udev + .desktop via postinst).\n      Abrir: hefesto-dualsense4unix-gui\n'
 }
 
-# ANTES DO DESVIO DE FORMATO (11/08/2026) — e a posição importa.
-#
-# Estes dois blocos nasceram DEPOIS da linha do `exit 0`, e a revisão de 11/08
-# pegou o furo: os três módulos DKMS são construídos no ramo de pacote (os
-# `step "dkms*"` logo abaixo), ANTES daquele `exit`. Garantir as dependências
-# só no fluxo nativo deixava o "verde mentiroso" de pé em `--deb`, `--flatpak`
-# e `--appimage` — exatamente o que o bloco existe para curar. Mover para cá é
-# a cura; deixar embaixo era comentário prometendo o que a posição não
-# entregava.
-
-# VOO DE RECONHECIMENTO (11/08/2026) — o que esta máquina é, ANTES de mexer
-# nela.
-#
-# Nasceu de uma frase dela sobre levar o produto para outro PC: "o ideal é que o
-# nosso install contivesse isso também". Antes, as três respostas que decidem se
-# a instalação vai funcionar só apareciam DEPOIS: o aviso de Secure Boot mora em
-# `scripts/dkms_lib.sh:110` e só dispara no passo 3i, quando a senha já foi
-# digitada e quarenta passos já rodaram; o veredito de BlueZ só sai na
-# conferência final; e a família da distro só se descobre quando o `run_apt`
-# falha.
-#
-# Nenhum destes três ABORTA. Eles informam no momento em que a informação ainda
-# muda a decisão de quem instala — que é a diferença entre um aviso e um
-# lamento.
 _reconhecimento() {
     local achou_algo=0
 
-    # 1. Família da distro. DEPS-UNIVERSAIS-01 (19/08/2026) substituiu o texto
-    # que estava aqui: ele dizia "o caminho nativo instala dependências só por
-    # apt", e isso caducou — o `run_pkg` despacha para apt, dnf e pacman. Fato
-    # errado se SUBSTITUI. O que sobra de aviso é honesto: fora do apt, os
-    # nomes de pacote não têm hardware desta casa por trás.
     local _fam
     _fam="$(_familia_pacotes)"
     if [[ "${_fam}" == "nenhum" ]]; then
@@ -1863,22 +1309,9 @@ _reconhecimento() {
         achou_algo=1
     fi
 
-    # 2. BlueZ. A faixa validada é a mesma que o doctor cobra no fim.
     local _bz
-    # `|| true` NÃO é decoração, e a falta dele foi MEDIDA em 19/08/2026 num
-    # contêiner debian:12 limpo: sem `bluetoothctl` no PATH o `command not
-    # found` devolve 127, o `set -o pipefail` da linha 188 propaga, o `set -e`
-    # derruba o script — e o `2>/dev/null` engole até a mensagem. O instalador
-    # morria calado, com código 127, ANTES do passo 1 de 11.
-    #
-    # E isso contradizia o desenho do próprio arquivo: o censo de dependências
-    # lista `bluez` como IMPORTANTE, não obrigatória — ou seja, o instalador
-    # deve seguir sem ele e só avisar. Quem descobriu foi o job novo que EXECUTA
-    # o install.sh em contêiner; nenhuma máquina de quem desenvolve pega isto,
-    # porque todas têm bluetoothctl.
     _bz="$(bluetoothctl --version 2>/dev/null | awk '{print $NF}' || true)"
     if [[ -n "${_bz}" ]]; then
-        # Compara só major.minor; o formato do bluetoothctl é "bluetoothctl: 5.86".
         if [[ "$(printf '%s\n5.79\n' "${_bz}" | sort -V | head -1)" != "5.79" ]]; then
             warn "bluez ${_bz} — abaixo de 5.79, a faixa que o Hefesto validou"
             printf '      Abaixo de 5.79 há crashes crônicos de input/HIDP (medidos: 6 em 5 dias).\n'
@@ -1888,11 +1321,6 @@ _reconhecimento() {
         fi
     fi
 
-    # 3. Secure Boot. É o único dos três que deixaria a máquina PIOR que antes:
-    # o kernel recusa o .ko e NÃO volta ao módulo in-tree sozinho. Lido pela
-    # efivars, sem depender do `mokutil` (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B4,
-    # 28/09/2026): antes o aviso só falava se o `mokutil` existisse. E sem a
-    # chave os módulos NÃO se instalam (`dkms_install_patched_module`).
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
     if [[ "${NO_DKMS}" -eq 0 ]] && [[ "${_fam}" != "imutavel" ]] \
@@ -1905,40 +1333,13 @@ _reconhecimento() {
         achou_algo=1
     fi
 
-    # `info` NUNCA foi função deste script — só existem step/ok/warn/die (l. 323-326).
-    # O shell caía no /usr/bin/info do sistema (o leitor de documentação GNU), que
-    # sai com erro, e o `set -e` derrubava a instalação no passo 1. E a linha só
-    # executa quando NADA atrapalha — ou seja, quebrava exatamente na máquina limpa,
-    # que é a primeira coisa que um PC novo faz. Medido no ciclo uninstall→install
-    # de 12/08/2026: zero regras udev, daemon inativo, produto ausente.
     [[ "${achou_algo}" -eq 0 ]] && printf '      distro, bluez e Secure Boot: nada que atrapalha\n'
     return 0
 }
 _reconhecimento
 ok
 
-# --- DKMS-CAUSA-RAIZ-01: o que os três módulos precisam para COMPILAR --------
-# Medido em 11/08/2026, na auditoria de "o que só existe nesta máquina": o
-# `install.sh` instala TRÊS módulos DKMS por padrão, sem flag, e nunca garantia
-# `dkms` nem os headers do kernel. Quando faltam, `scripts/dkms_lib.sh:269` e
-# `:273` pulam o módulo com um aviso que some entre 46 passos — e, pior, o
-# `doctor` chama módulo ausente de `info`, que não conta como falha.
-#
-# O resultado numa máquina nova era o pior possível: os três forks não entram,
-# a conferência final sai VERDE, e o aparelho se comporta diferente sem que
-# nada na tela explique por quê. Esta é a causa raiz daquele verde mentiroso.
-#
-# Best-effort com a mesma disciplina do bloco de áudio abaixo: se ela recusar,
-# ou se a distro não tiver os headers deste kernel exato (kernel de fora do
-# apt), o instalador AVISA e SEGUE. Abortar seria pior — o driver in-tree
-# continua funcionando, só sem as curas.
-# DEPS-UNIVERSAIS-01: o guarda era `command -v apt-get`, então fora do Debian o
-# instalador nem PERGUNTAVA sobre os módulos — as três curas de raiz sumiam em
-# silêncio, que é o verde mentiroso descrito acima. Agora vale em toda família
-# reconhecida, com os nomes da tabela.
 if [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" == "imutavel" ]]; then
-    # Sem gerente de pacotes e sem DKMS: uma linha por item, com o efeito, e o
-    # install segue com a casa do usuário e o /etc (udev e units).
     printf '\n      Distro somente leitura: não há gerente de pacotes nem DKMS a chamar. O que fica de fora:\n'
     printf '        módulos DKMS: %s\n' "$(_efeito_so_leitura playstation)"
     printf '        perfil UCM:   %s\n' "$(_efeito_so_leitura ucm)"
@@ -1980,21 +1381,11 @@ if [[ "${FORMAT}" != "native" ]]; then
         appimage) format_appimage ;;
         deb)      format_deb ;;
     esac
-    # SPRINT-GAME-RUMBLE-01 (H4): a cura de RAIZ do storm é DEFAULT também nos
-    # formatos de pacote. O fluxo nativo a aplica no step 3c (abaixo), mas os
-    # formatos dão `exit 0` antes dele. O .deb já entrega o .conf em
-    # /usr/lib/modprobe.d (pega no próximo boot); aqui ativamos A QUENTE (sem
-    # reboot) e cobrimos flatpak/appimage, que não escrevem em /etc. Preserva
-    # mic+fone. --no-snd-quirk pula.
     if [[ "${SKIP_SND_QUIRK}" -eq 0 ]]; then
         step "cura" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
         if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _ensaio_snd_quirk
         elif bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
-            # A ATIVAÇÃO A QUENTE É CONFERIDA, e não declarada: ela estava num
-            # `|| true` e a linha seguinte anunciava "instalada E ATIVADA" sem
-            # ter olhado. Instalar é gravar o `.conf` (vale no próximo boot);
-            # ativar é o `--runtime`, e os dois podem divergir.
             if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh" --runtime >/dev/null 2>&1; then
                 printf '      cura instalada e ativada (replug do controle p/ valer já)\n'
             else
@@ -2004,126 +1395,40 @@ if [[ "${FORMAT}" != "native" ]]; then
             warn "install_snd_quirk.sh falhou — rode: sudo bash scripts/install_snd_quirk.sh"
         fi
     fi
-    # HAPTICA-NATIVA-01: a vibração dos jogos da Sony pelo cabo depende do
-    # perfil UCM da placa do controle, e a placa é do HOST — mesma função do
-    # passo 3c-bis do fluxo native. Opt-out: --no-ucm.
     step "ucm" "perfil UCM do DualSense: a vibração dos jogos da Sony pelo cabo (DEFAULT em todo formato)"
     install_ucm_dualsense_host
-    # BROKER-01 (Onda S — achado #7): o broker hide-hidraw é DEFAULT em TODO
-    # formato (regra da casa: install SEM FLAGS). Antes, flatpak/appimage/deb
-    # saíam daqui sem o broker e sem nenhum aviso — o P2 duplicado voltava em
-    # qualquer jogo sem wrapper. Mesmo passo 3h do fluxo native.
     step "broker" "o controle físico escondido dos jogos, entregue ao Hefesto (DEFAULT em todo formato)"
     install_broker_host
-    # ONDA-R2 (22/08/2026): mesmo achado do broker, na camada do Bluetooth. Os
-    # formatos de pacote levavam as regras udev 82 e 83 — que existem SÓ para
-    # chamar dois alvos desta camada — e saíam pelo `exit 0` sem a camada. A
-    # regra 83 apontava para uma unit inexistente e o salva-vidas de bonds nunca
-    # gravou nada para quem instalou por aqui (medido em 07/08, estudo da
-    # cobertura do install, item 9). Mesma função do passo 3e-bis do nativo.
-    # O-DIARIO-DO-RADIO-01: a trava que o watchdog root e o daemon disputam.
-    # ANTES da resiliência, que roda o `bt_active_mode.sh` na hora e abre a
-    # trava — o porquê está em `install_trava_do_radio_host`.
     step "trava" "a trava comum do rádio (DEFAULT em todo formato)"
     install_trava_do_radio_host
     step "bt-res" "Bluetooth mais resistente a quedas (DEFAULT em todo formato)"
     install_bt_resilience_host
-    # ONDA-R (31/08/2026): o agente de pareamento persistente era código de topo
-    # do lado NATIVE e ficava de fora daqui — flatpak/appimage/deb saíam sem
-    # ele, e todo bond novo nascia meio-salvo (`Paired: yes / Bonded: no`) e
-    # sumia. Escapou anos ao portão das curas de host por não ter nome: o
-    # portão ancora no sufixo `_host`, e um bloco solto não tem. Virou função,
-    # e o portão acusou a falta no mesmo minuto.
     step "bt-agent" "agente de pareamento Bluetooth sempre de pé (DEFAULT em todo formato)"
     install_bt_agent_host
-    # PONTE-PRIVILEGIADA-01: mesma razão da linha acima, uma camada adiante —
-    # é mudança de SISTEMA (helper em /usr/local/lib + regra em /etc/sudoers.d),
-    # ortogonal ao formato do aplicativo. Sem esta chamada, quem instala por
-    # flatpak/appimage/deb sairia com a aba de rádio pedindo senha a cada gesto.
     step "bt-ponte" "mover controle entre adaptadores Bluetooth sem pedir senha (DEFAULT em todo formato)"
     install_bt_ponte_privilegiada_host
-    # O-JOGO-LEVE-ACORDA-A-PLACA-01: mesma camada de sistema da ponte (helper em
-    # /usr/local/lib + regra em /etc/sudoers.d), ortogonal ao formato.
     step "placa" "a placa de vídeo acordada enquanto um jogo vive (DEFAULT em todo formato)"
     install_placa_acordada_host
-    # MOTOR-7: mesma razão das duas linhas acima. Ler a tabela SMBIOS é trabalho
-    # de HOST — quem tem a tabela é a placa, não o formato do aplicativo. Sem
-    # esta chamada, quem instala por flatpak/appimage/deb sairia pelo `exit 0`
-    # abaixo com a aba Conexões pedindo os três números à mão, e sem nem saber
-    # que a BIOS tinha uma resposta a dar.
     step "gabinete" "as entradas USB do gabinete, lidas do firmware (DEFAULT em todo formato)"
     install_censo_do_gabinete_host
-    # Onda T (achado equivalente ao #7 do broker): DKMS é mudança de
-    # SISTEMA/kernel, ortogonal ao formato do app — mesma função do passo 3i
-    # do fluxo native. Opt-out: --no-dkms.
     step "dkms" "módulo hid-nintendo corrigido (DKMS; DEFAULT em todo formato)"
     install_dkms_hid_nintendo_host
-    # Onda W (mesmo achado equivalente ao #7 do broker): rtw88_usb patchado é
-    # a 2ª instância da mesma mudança de SISTEMA/kernel — mesma função do
-    # passo 3j do fluxo native. Opt-out compartilhado: --no-dkms.
     step "dkms-w" "módulo rtw88_usb corrigido (DKMS; DEFAULT em todo formato)"
     install_dkms_rtw88_usb_host
-    # O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01: a outra metade do dongle Wi-Fi USB — o
-    # scan de fundo e o travamento mudo, que moravam no zsh dela. Mudança de
-    # SISTEMA, ortogonal ao formato: mesma função do passo 3j2 do nativo.
     step "wifi-usb" "vigia do dongle Wi-Fi USB (DEFAULT em todo formato; opt-out --no-wifi-usb)"
     install_wifi_usb_host
-    # A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01: o modo desempenho é mudança de
-    # SISTEMA (perfil de energia), ortogonal ao formato do aplicativo. Mesma
-    # função do passo 3j3 do fluxo native.
     step "desempenho" "modo desempenho: o perfil de energia em Performance (pergunta; --desempenho / --sem-desempenho)"
     install_desempenho_host
-    # 3ª instância da mesma mudança de SISTEMA/kernel — mesma função do passo
-    # 3k do fluxo native. Opt-out compartilhado: --no-dkms.
     step "dkms-p" "módulo hid-playstation corrigido (DKMS; DEFAULT em todo formato)"
     install_dkms_hid_playstation_host
-    # RADIO-AFOGADO-02: o uhid com contrapressão é mudança de KERNEL, ortogonal
-    # ao formato do aplicativo, e o opt-in dela (`--uhid-contrapressao`) vale
-    # em qualquer formato. Mesma função do passo 3k2 do nativo; ANTES do flush
-    # do initramfs, que é um só para todos os módulos.
     step "dkms-u" "uhid com contrapressão (OPT-IN: --uhid-contrapressao)"
     install_dkms_uhid_host
-    # O-F-HID-FECHA-A-RESPOSTA: o usb_f_hid dos pads USB virtuais é mudança de
-    # KERNEL, ortogonal ao formato. Mesma função do passo 3k3 do nativo; ANTES
-    # do flush do initramfs.
     step "dkms-f" "usb_f_hid corrigido (DKMS: a resposta do GET_REPORT dos pads USB virtuais)"
     install_dkms_usb_f_hid_host
-    # INITRAMFS-01: um flush só, DEPOIS de todos os DKMS (regenerar por módulo
-    # custaria dezenas de segundos e ~140 MB de escrita cada). No-op se nenhum
-    # módulo ficou staged.
     step "dkms-i" "regenerar o initramfs se algum módulo DKMS mudou"
     flush_initramfs_host
-    # TECLADO-QUE-NAO-DIGITA-01: mesmo achado do broker (#7 da Onda S) numa
-    # camada nova — o teclado na tela é pacote do SISTEMA, ortogonal ao formato
-    # do app. Sem esta chamada, `--flatpak`/`--appimage`/`--deb` sairiam pelo
-    # `exit 0` logo abaixo sem o único caminho do produto para digitar texto.
     step "osk" "teclado na tela do L3 (DEFAULT em todo formato)"
     install_osk_host
-    # MIC-EM-TODO-FORMATO-01 (10/08/2026): a voz dela também é ortogonal ao
-    # formato do app, e ficava para trás por acidente de posição.
-    #
-    # Os drop-ins do WirePlumber vivem em `~/.config/wireplumber/` — o HOME dela,
-    # não o prefixo do pacote. **Nenhum formato os empacota** (conferido: zero
-    # ocorrências de "wireplumber" em packaging/ e flatpak/), então o único jeito
-    # de eles chegarem é este script chamar o dono deles. Instalando por
-    # `--flatpak`/`--appimage`/`--deb`, o microfone do controle ficava sem o
-    # promotor: a entrada nasce com `priority.session = 50`, o monitor da saída
-    # ganha a eleição, e o que qualquer aplicativo grava é o eco do que sai — não
-    # a voz dela. Medido em 08/08 e curado no MONITOR-QUE-VENCE-01, mas só no
-    # caminho nativo.
-    #
-    # Respeita as MESMAS flags do passo 10 do nativo: quem pediu
-    # `--keep-dualsense-mic` continua sem ninguém mexendo no áudio, e
-    # `--with-wireplumber-disable-mic` continua vencendo. O que muda é só a
-    # posição no arquivo — a decisão é a dela, em qualquer formato.
-    # SOM-QUE-NAO-DORME-01 (16/08/2026) — SEM FLAG, e ANTES de qualquer decisão
-    # sobre o microfone, porque não é uma decisão sobre o microfone.
-    #
-    # Medido na orelha dela em 15/08 23h45: com o nó do PipeWire SUSPENSO, o
-    # primeiro som depois do silêncio se perde no religar do hardware — num jogo,
-    # é o SFX importante sumindo. Nenhuma das flags de mic
-    # (`--keep-dualsense-mic`, `--with-wireplumber-disable-mic`) diz nada sobre o
-    # sono do ALTO-FALANTE, então nenhuma delas pode decidir isto.
     step "som" "áudio: o alto-falante do controle nunca dorme"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _ensaio_wireplumber nunca-dorme
@@ -2141,11 +1446,6 @@ if [[ "${FORMAT}" != "native" ]]; then
         fi
     elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
         step "mic" "áudio: a voz do controle acima do eco da saída"
-        # O `-ne 1` e não o `||`: rc 2 (o DualSense é a única fonte) e rc 3 (a
-        # fonte padrão ainda não é um microfone) NÃO são falha do gesto — são o
-        # estado da máquina, e o script já os explica na tela. Tratá-los como
-        # falha mandaria ela rodar de novo um comando que faria exatamente o
-        # mesmo, que é o laço que 01/09 curou.
         if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _ensaio_wireplumber install
         elif bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; \
@@ -2164,29 +1464,17 @@ if [[ "${FORMAT}" != "native" ]]; then
     printf ' valem no formato "native" (padrão).\n'
     printf ' Desinstalar: ./uninstall.sh\n'
     printf '─────────────────────────────────────────\n'
-    # B5: os módulos de kernel são os mesmos em todo formato, e o reinício
-    # que eles pedem também.
     dizer_o_reinicio_pendente
     printf '\n'
     exit 0
 fi
 
-# ---------------------------------------------------------------------------
-# 1. Verificar Python
-# ---------------------------------------------------------------------------
 step "1/11" "verificando dependências do sistema"
 require python3
 
 ok
 
-# Limpeza de caches Python e build dirs.
-# Resíduos de instalação anterior (especialmente após module-rename ou
-# upgrade major) podem causar imports stale ou metadata divergente.
-# Always clean caches; venv é tratado dentro do passo 2/7 conforme o
-# Python que criou.
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    # O ensaio nomeia os diretórios que EXISTEM: "apagaria dist/" só interessa
-    # a quem tem um `dist/` com um pacote recém-construído dentro.
     _ensaio_caches=()
     for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-builder dist build; do
         [[ -d "${ROOT_DIR}/${cache}" ]] && _ensaio_caches+=("${cache}")
@@ -2212,20 +1500,13 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
     -delete 2>/dev/null || true
 fi
 
-# ---------------------------------------------------------------------------
-# 2. venv + GTK3 + pacote Python
-# ---------------------------------------------------------------------------
 step "2/11" "preparando ambiente Python"
 
-# Preferir /usr/bin/python3 (Python do apt) para que --system-site-packages
-# inclua gi/PyGObject. pyenv, se ativo, aponta python3 para uma versão
-# isolada cujos site-packages não contêm pacotes apt.
 _VENV_PYTHON="python3"
 if [[ -x /usr/bin/python3 ]]; then
     _VENV_PYTHON="/usr/bin/python3"
 fi
 
-# Se venv existe mas foi criado com Python não-sistema (pyenv), recriar.
 if [[ -d "${VENV_DIR}" ]]; then
     _venv_home=$(grep "^home = " "${VENV_DIR}/pyvenv.cfg" 2>/dev/null | awk '{print $3}')
     if [[ -n "${_venv_home}" ]] && [[ "${_venv_home}" != "/usr/bin" ]] && [[ -x /usr/bin/python3 ]]; then
@@ -2238,12 +1519,6 @@ if [[ -d "${VENV_DIR}" ]]; then
     fi
 fi
 
-# DURABILIDADE-DIST-UPGRADE-01: um full dist upgrade pode bumpar o Python do
-# sistema (ex.: 3.11 -> 3.12), quebrando o venv — o symlink bin/python passa a
-# apontar para um interpretador removido e os site-packages ficam da versão
-# antiga. O check de "home" acima só pega o caso pyenv. Aqui detectamos
-# bin/python inexecutável OU divergência de minor version e recriamos. Idempotente:
-# quando a versão bate, é no-op.
 if [[ -d "${VENV_DIR}" ]]; then
     _sys_ver=$("${_VENV_PYTHON}" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
     _venv_ver=$("${VENV_DIR}/bin/python" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
@@ -2269,11 +1544,6 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]] && [[ ! -d "${VENV_DIR}" ]]; then
     _faria "criar o venv em ${VENV_DIR} com ${_VENV_PYTHON} (--system-site-packages, para enxergar o PyGObject do sistema)"
 elif [[ ! -d "${VENV_DIR}" ]]; then
     printf '      criando venv...\n'
-    # DEPS-UNIVERSAIS-01: o `2>/dev/null` sem checagem de retorno escondia o
-    # caso mais banal de máquina Debian limpa — `python3-venv` não instalado.
-    # O venv não nascia, o silêncio passava, e a linha seguinte rodava contra
-    # um venv inexistente. Agora: tenta, instala o módulo, tenta de novo, e só
-    # então morre — com o comando exato na tela.
     if ! "${_VENV_PYTHON}" -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null; then
         printf '      módulo venv ausente — instalando pelo %s\n' "$(_familia_pacotes)"
         run_pkg python-venv || true
@@ -2284,18 +1554,12 @@ elif [[ ! -d "${VENV_DIR}" ]]; then
     fi
 fi
 
-# O Python do venv, ou, no ensaio sem venv, o que o criaria (a razão está acima de
-# `_dep_presente`): senão o ensaio dizia «Bindings GTK3 não encontrados» numa
-# máquina que os tem.
 _PY_DO_GTK="${VENV_DIR}/bin/python"
 [[ -x "${_PY_DO_GTK}" ]] || _PY_DO_GTK="${_VENV_PYTHON}"
 if ! "${_PY_DO_GTK}" -c \
         "import gi; gi.require_version('Gtk','3.0')" >/dev/null 2>&1; then
 
     printf '\n      Bindings GTK3 não encontrados — obrigatórios para a GUI.\n'
-    # DEPS-UNIVERSAIS-01: os nomes saem da tabela, na família desta máquina —
-    # antes esta lista era a grafia do apt e, fora do Debian, o `run_apt`
-    # falhava e o install MORRIA sem ter como acertar.
     printf '      Rodaria: %s\n\n' \
         "$(comando_manual_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev)"
 
@@ -2305,8 +1569,6 @@ if ! "${_PY_DO_GTK}" -c \
         _rc_pkg=0
         run_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev || _rc_pkg=$?
         if (( _rc_pkg == _RC_PACOTE_A_MEIO )); then
-            # O aviso do sistema já saiu, talvez bem antes (ele sai uma vez só):
-            # o comando de consertar vem de novo logo acima da linha do erro.
             printf '      para consertar o sistema:   sudo apt-get install -f   (ou: sudo dpkg --configure -a)\n'
             die "o GTK3 não foi instalado porque o sistema tem pacote a meio de uma atualização (${_PACOTES_A_MEIO_LISTA}) — conserte o sistema pelo comando acima e reexecute ./install.sh"
         elif (( _rc_pkg )); then
@@ -2318,47 +1580,8 @@ if ! "${_PY_DO_GTK}" -c \
     fi
 fi
 
-# --- DEPS-UNIVERSAIS-01: o resto do censo, em qualquer família ---------------
-# Aqui e não antes: as checagens do loader SVG e da bandeja perguntam ao
-# `gi` do venv, que só existe depois do bloco acima.
 _garantir_deps_de_sistema
 
-# --- BT-MIC-01: o ÁUDIO do DualSense por Bluetooth, nas DUAS direções --------
-# Em Bluetooth o DualSense NÃO fala A2DP/HFP: o áudio vai e vem como Opus
-# dentro dos reports HID, e o Hefesto o codifica e o decodifica por ctypes
-# sobre a libopus DO SISTEMA — de propósito, para não precisar de binding pip
-# (regra do projeto: nada de pip ad-hoc; tudo replicável por script).
-#
-# A libopus SERVE ÀS DUAS PONTAS DESDE 10/09/2026, e antes desta data este
-# bloco só conhecia a de ENTRADA:
-#   * ENTRA  — o microfone. `mic bt` DECODIFICA (`integrations/dualsense_bt_audio.py`);
-#   * SAI    — o alto-falante. O som CODIFICADO chega ao plástico pelo report
-#              `0x35`, um quadro Opus de 10 ms (48 kHz estéreo, CBR 160 kbps)
-#              a cada 10,667 ms. Medido na bancada dela em 10/09/2026, com a
-#              orelha dela e 70 s sem um corte; o codificador é o
-#              `integrations/alto_falante_bt.CodificadorOpus`, e ele abre a
-#              MESMA `libopus.so.0` por um handle próprio (`:276`).
-#
-# **Sem a libopus o som por rádio não sai** — e o sintoma é silêncio, que se lê
-# como «o controle não suporta». Era exatamente o que esta casa acreditava até
-# 10/09. Ver `docs/protocol/dualsense-referencia-canonica.md`, seção *"O som que
-# saiu pelo rádio"*.
-# `pactl` (pulseaudio-utils) é quem publica o microfone no PipeWire.
-# Best-effort: sem isso o hefesto inteiro funciona, só o `mic bt` não sobe —
-# e ele já diz exatamente o que falta (`mic bt-status`).
-# DEPS-UNIVERSAIS-01: nomes canônicos, para o mic por BT nascer também em
-# Fedora e em Arch — antes este bloco só sabia falar apt.
-# A checagem da libopus passou a ser a mesma régua do censo (`_dep_presente`)
-# por um defeito MEDIDO em 19/08/2026: o `ldconfig -p | grep -q` que morava
-# aqui devolvia 141 sob `pipefail` (SIGPIPE do ldconfig quando o grep sai no
-# primeiro acerto), então este bloco chamava o gerenciador de pacotes para
-# instalar a libopus JÁ INSTALADA a cada execução do install. Barulho é defeito.
-#
-# O `pactl` DAQUI NÃO É DUPLICATA — 03/09/2026. Desde a LUZ-DO-MIC-01 ele
-# também vive no censo `_DEPS_DE_SISTEMA`, que roda logo acima. Quem aceitou lá
-# chega aqui com o binário presente e este bloco fica calado; quem recusou lá
-# ganha uma segunda chance, agora com o motivo do rádio na tela. As duas linhas
-# pedem o MESMO canônico, então nenhuma instala coisa diferente da outra.
 _btmic_faltando=()
 _dep_presente "lib:libopus.so.0" || _btmic_faltando+=(opus)
 _dep_presente "cmd:pactl" || _btmic_faltando+=(pactl)
@@ -2385,22 +1608,8 @@ if [[ "${DRY_RUN:-0}" -eq 0 ]]; then
     --quiet --disable-pip-version-check --upgrade pip packaging 2>/dev/null
 fi
 
-# Extras instalados sempre: emulation (uinput) + cosmic (jeepney, o D-Bus das
-# notificações do desktop). `jeepney` é puro Python, sem deps nativas.
-# O extra [dev] (ruff/mypy/pytest) só entra com `--dev` (O-QUE-E-DA-BANCADA-
-# FICA-NA-BANCADA-01): era o padrão desde o BUG-INSTALL-VENV-NO-DEV-01, para o
-# gate pré-release local não perder as ferramentas quando o install recriava o
-# venv, mas a primeira instalação de quem só usa o produto não precisa delas.
-# Quem desenvolve passa `--dev` (o fecho de leva que reinstala a mesa também).
-# Se a instalação COM dev falhar (ex.: offline), cai para só o essencial e
-# avisa, em vez de abortar o install inteiro.
 _extras="emulation,cosmic"
 if [[ "${WITH_DEV}" -eq 1 ]]; then _extras="${_extras},dev"; fi
-# AS VERSÕES QUE A CASA MEDIU (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B3,
-# 28/09/2026): o `constraints.txt` trava o `evdev`, o `hidapi-usb`, o `pydantic`
-# e o `pydualsense` nas versões que rodaram com os controles na mesa. Sem ele o
-# pip de uma máquina nova entregava o `evdev` 2.0.0, que nenhum aparelho desta
-# casa rodou. As duas linhas de `pip install -e` abaixo usam o mesmo arquivo.
 _travas=()
 [[ -r "${ROOT_DIR}/constraints.txt" ]] && _travas=(-c "${ROOT_DIR}/constraints.txt")
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -2419,13 +1628,6 @@ elif ! "${VENV_DIR}/bin/pip" install \
 fi
 ok
 
-# ---------------------------------------------------------------------------
-# 3. udev rules — SEMPRE aplicado por default (requer sudo)
-# ---------------------------------------------------------------------------
-# v3.3.1: udev agora é incondicional (era opt-in via prompt). Motivação: sem
-# essas regras o controle não funciona, e o prompt levava usuários a "pular"
-# sem entender que depois nada ia funcionar. Re-cópia é idempotente e o
-# reload/trigger é barato (<100 ms). Para CI sem sudo, use `--no-udev`.
 step "3/11" "udev rules (hidraw + uinput + autosuspend)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
@@ -2434,12 +1636,6 @@ if [[ "${SKIP_UDEV}" -eq 1 ]]; then
 elif ! command -v sudo >/dev/null 2>&1; then
     warn "sudo ausente — pulando (rode scripts/install_udev.sh manualmente como root)"
 else
-    # FIX-PACKAGING-SEED-PARITY-01: lista derivada de assets/*.rules em vez de
-    # texto estático — o antigo citava "4 regras" quando o conjunto canônico já
-    # tinha 6 (faltavam a 77-leds e a 78-motion-not-joystick). Regra nova em
-    # assets/ aparece aqui automaticamente (descrição é best-effort por prefixo).
-    # Fora do conjunto canônico: só a 75 (opt-in). 73/74 descontinuadas SAÍRAM
-    # do repo em 2026-07-18 (o install_udev.sh ainda as remove de máquinas antigas).
     canonical_rules=()
     for rules_path in "${ROOT_DIR}/assets/"[0-9][0-9]-*.rules; do
         [[ -f "${rules_path}" ]] || continue
@@ -2472,12 +1668,6 @@ else
         esac
         printf '        %-45s %s\n' "${rules_base}" "${rules_desc}"
     done
-    # BUG-INSTALL-SUGERE-FLAG-INEXISTENTE-01 (29/07): a mensagem dizia
-    # "opt-in via --disable-usb-audio" como se fosse flag DESTE script. Não é:
-    # o parser aqui não a conhece e ABORTA com código 2 ("argumento
-    # desconhecido"), então quem seguisse a sugestão não instalava nada. A flag
-    # é do scripts/install_udev.sh — a mensagem passa a dizer o comando que
-    # funciona de verdade.
     printf '      (75 áudio-off é opt-in: sudo bash scripts/install_udev.sh --disable-usb-audio)\n'
 
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -2489,10 +1679,6 @@ else
         warn "install_udev.sh falhou — rode manualmente: sudo bash scripts/install_udev.sh"
     fi
 
-    # v3.3.1: se Flatpak Hefesto está instalado, propagar as regras pelo
-    # caminho oficial do bundle também (defensive — install_udev.sh já cobriu
-    # o host, mas o usuário pode esperar simetria explícita "tudo pro
-    # Flatpak". A chamada é no-op se as regras já estão lá).
     if command -v flatpak >/dev/null 2>&1 \
        && flatpak info io.github.hefesto_team.hefesto_dualsense4unix >/dev/null 2>&1; then
         printf '      Flatpak Hefesto detectado — sincronizando regras via bundle\n'
@@ -2506,16 +1692,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 3b. Quirk de boot do áudio USB (OPT-IN — default OFF; cmdline, NÃO udev)
-# ---------------------------------------------------------------------------
-# A alavanca do storm -71 que PRESERVA o áudio do DualSense
-# (usbcore.quirks=054c:0ce6:gn). É um PARÂMETRO DE CMDLINE do
-# kernel — uma regra udev não consegue alterar o próprio enumeramento do device,
-# por isso entra como passo de install ciente do bootloader (kernelstub/grub).
-# Mudança de cmdline é sensível: só aplica com --with-usb-quirk. ALTERNATIVA à
-# regra 75 (áudio-off via install_udev.sh --disable-usb-audio) — use uma OU outra.
-# Idempotente (o script não duplica token). FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 if [[ "${WITH_USB_QUIRK}" -eq 1 ]]; then
     step "3b" "quirk de boot usbcore.quirks (preserva o áudio do DualSense)"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -2527,16 +1703,6 @@ if [[ "${WITH_USB_QUIRK}" -eq 1 ]]; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 3c. Cura de RAIZ do storm na camada de ÁUDIO (DEFAULT ON — modprobe.d)
-# ---------------------------------------------------------------------------
-# quirk_flags do snd_usb_audio (ignore_ctl_error|ctl_msg_delay_1m) para o
-# DualSense: torna o probe do mixer UAC tolerante e ESPAÇA os control-transfers
-# no EP0 — a rajada que gera o storm -71 na re-enumeração sob carga. PRESERVA
-# mic+fone (NÃO desliga áudio), então é DEFAULT — ao contrário do 3b (cmdline,
-# sensível) e da regra 75 (áudio-off total). Escreve só em /etc/modprobe.d (não
-# boot-crítico). --no-snd-quirk pula (CI/sem hardware, como --no-udev). Validado
-# ao vivo (storm zero em gameplay). SPRINT-GAME-RUMBLE-01.
 if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
     step "3c" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
     SND_QUIRK_CONF="/etc/modprobe.d/hefesto-dualsense-storm.conf"
@@ -2547,13 +1713,8 @@ if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
     else
         warn "install_snd_quirk.sh retornou erro — rode: sudo bash scripts/install_snd_quirk.sh"
     fi
-    # Post-check: confirma que a cura PERSISTENTE realmente foi gravada. Sem sudo
-    # cacheado (install não-interativo), o `as_root install` interno falhava e o
-    # passo seguia como se tivesse aplicado — deixando só o runtime, que some no
-    # reboot. Agora avisamos explicitamente se o .conf não existe.
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        : # o ensaio não gravou nada; conferir a existência do .conf aqui só
-          # produziria um "cura NÃO persistiu" sobre uma cura que ninguém tentou
+        :
     elif [[ -f "${SND_QUIRK_CONF}" ]]; then
         printf '      cura persistente OK em %s + ativada (replug do controle p/ valer já)\n' "${SND_QUIRK_CONF}"
     else
@@ -2562,85 +1723,9 @@ if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 3c-bis. Perfil UCM do DualSense (HAPTICA-NATIVA-01) — DEFAULT, opt-out --no-ucm
-# ---------------------------------------------------------------------------
-# O GE-Proton manda a vibração dos jogos da Sony pelos canais 3 e 4 do sink
-# `…HiFi__Speaker__sink`, e esse nome só existe com a placa do controle aberta
-# por UCM. O `alsa-ucm-conf` do Ubuntu 24.04 não conhece o DualSense; o gancho
-# em conf.d/ é lido antes dele e deixa o pacote intacto. Vale no próximo
-# replug do controle.
 step "3c-bis" "perfil UCM do DualSense (a vibração dos jogos da Sony pelo cabo)"
 install_ucm_dualsense_host
 
-# ---------------------------------------------------------------------------
-# 3d. Bluetooth no máximo (PLAT-04) — DEFAULT, sem flag
-# ---------------------------------------------------------------------------
-# As regras 81 (devices + hosts USB sem economia) entram junto com as udev do
-# passo 3 (install_udev.sh é o dono). Aqui entram as camadas restantes:
-#   - modprobe.d do btusb (enable_autosuspend=0): o btusb LIGA o autosuspend
-#     do adaptador BT no probe (default Y do módulo — o furo provado no estudo
-#     2026-07-18). O conf corta na raiz, inclusive p/ adaptadores composite
-#     (classe ef) que escapam da regra 81. Vale no próximo probe; o runtime
-#     imediato já é coberto pela regra 81 (power/control=on).
-#   - FastConnectable do BlueZ: page scan agressivo → o botão PS reconecta
-#     mais rápido. Drop-in em /etc/bluetooth/main.conf.d/ SE o BlueZ suportar
-#     o diretório; senão bloco marcado idempotente APENSADO ao main.conf
-#     (conffile do dpkg → backup antes). ARMADILHA respeitada: NUNCA
-#     reiniciamos o bluetoothd (derrubaria os controles BT conectados —
-#     provado ao vivo 2026-07-17); vale no próximo boot/restart natural.
-#
-# O PULO TEM DE FALAR (achado de 06/08/2026): este passo era gateado por
-# `SKIP_UDEV -eq 0` SEM `else`. Com `--no-udev`, o `step "3d"` nem imprimia: a
-# cura do BlueZ inteira sumia da saída, e numa máquina com
-# `JustWorksRepairing=always` no disco o valor perigoso SOBREVIVIA ao install
-# sem uma palavra — enquanto o detector novo do doctor manda "rode ./install.sh"
-# sem ressalva. O vizinho 3d-bis já fazia certo.
-#
-# NOTA DATADA — A JUSTIFICATIVA ANTERIOR ERA FALSA (06/08/2026). Até hoje este
-# comentário sustentava o gate dizendo que "é o que o CI sem hardware usa:
-# separar o gate faria o CI reescrever /etc/bluetooth/main.conf da máquina de
-# build". MEDIDO que a premissa não existe: **o CI não roda o `install.sh`**.
-#
-# SEGUNDA NOTA DATADA — O FATO DE 06/08 CADUCOU EM 19/08/2026, e a decisão NÃO.
-# Desde 19/08 o CI roda, sim, o `install.sh`: o job `install-multi-distro` do
-# `ci.yml` o executa DE VERDADE dentro dos contêineres de Fedora 40, Arch e
-# Debian 12, como USUÁRIA COMUM (o PATH de login dela, nunca o do root).
-#
-# O que NÃO mudou é o que sustenta este gate: ele se sustenta no CONTRATO
-# documentado — `--no-udev` pula os passos que tocam `/etc`, e este escreve em
-# `/etc/bluetooth/main.conf`. A justificativa antiga — a que falava em reescrever
-# o `main.conf` da máquina onde o CI constrói — continua falsa e continua
-# proibida por portão; a premissa de 06/08 é que envelheceu, e envelheceu porque
-# o produto melhorou.
-#
-# E o job novo pagou por si no primeiro uso: achou DOIS bloqueantes vivos que
-# nenhuma máquina de quem desenvolve pegava — o `bluetoothctl --version` sem
-# guarda, que matava o instalador com 127 antes do passo 1 de 11 em qualquer
-# máquina sem BlueZ; e um soname que o `dlopen` nunca abre. Os dois estão
-# curados neste arquivo, com teste que morde.
-#
-# E A INSTRUÇÃO DE REPRODUÇÃO DESTA NOTA ESTAVA ERRADA (correção do mesmo dia,
-# achado por verificação independente): ela mandava rodar
-# `grep -rn 'install\.sh' .github/workflows/` e dizia que acha UMA linha. Acha
-# DUAS, e a segunda é armadilha de leitura — `ci.yml:120` casa porque a palavra
-# `install.sh` está DENTRO de `uninstall.sh`, num comentário. A conclusão não
-# muda: a única linha que fala do arquivo é `ci.yml:136`,
-# `shellcheck -S error scripts/*.sh install.sh uninstall.sh`, e nenhuma das duas
-# INVOCA o instalador. Mas mandar o próximo leitor conferir um número que não
-# bate é o começo de ele desconfiar do resto — e o resto está certo.
-#
-# Decisão gravada sobre medição que não existe é a semente da próxima "hipótese
-# que não explica o que já funcionava", então a nota fica.
-#
-# A DECISÃO SE MANTÉM, pelo motivo VERDADEIRO: `--no-udev` está documentado no
-# cabeçalho deste arquivo (linha "…--no-udev pula os que tocam /etc") como o
-# opt-out dos passos que escrevem em /etc, e este passo escreve em
-# /etc/bluetooth/main.conf — que é conffile do dpkg. Tirar o passo do gate faria
-# a flag deixar de cumprir o próprio contrato, na máquina de quem a usa por
-# escolha e não em CI nenhum. O que MUDOU em 06/08 é que o pulo é anunciado, com
-# o comando exato do que ficou por fazer, e o estado ATUAL do disco é lido e
-# dito — leitura pura, pelo dono único, sem sudo.
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     step "3d" "Bluetooth no máximo — PULADO (--no-udev)"
     warn "btusb sem autosuspend e config do BlueZ NÃO aplicados (o passo toca /etc)"
@@ -2664,7 +1749,6 @@ elif command -v sudo >/dev/null 2>&1; then
     elif ! sudo -n true 2>/dev/null; then
         warn "sudo recusado — passos de BT no máximo pulados (re-execute ./install.sh)"
     else
-        # btusb: conf persistente + runtime p/ probes futuros (best-effort).
         if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-btusb-no-autosuspend.conf" \
                 /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf 2>/dev/null; then
             printf '      modprobe.d do btusb instalado (adaptador BT nunca dorme; vale no próximo probe)\n'
@@ -2674,34 +1758,6 @@ elif command -v sudo >/dev/null 2>&1; then
         if [[ -e /sys/module/btusb/parameters/enable_autosuspend ]]; then
             _v="$(opcao_do_modprobe "${ROOT_DIR}/assets/modprobe.d/hefesto-btusb-no-autosuspend.conf" enable_autosuspend)" && printf '%s' "${_v}" | sudo tee /sys/module/btusb/parameters/enable_autosuspend >/dev/null 2>&1 || true
         fi
-        # Config do BlueZ (FastConnectable + JustWorksRepairing): o dono é o
-        # scripts/bluez_config.sh, e a lógica saiu DAQUI de propósito.
-        #
-        # RADIO-ABERTO-01/E1-bis (06/08/2026) — POR QUE A MUDANÇA:
-        # o mecanismo morava inline neste arquivo, e por isso nenhum teste da
-        # suíte conseguia EXERCITÁ-LO (todos liam install.sh/uninstall.sh como
-        # texto). Foi assim que passou despercebido o defeito MEDIDO na máquina
-        # dela em 06/08: `/etc/bluetooth/main.conf:25` com
-        # `JustWorksRepairing=always`, DENTRO do bloco `# >>> hefesto bluetooth
-        # >>>` — escrito por uma versão anterior deste próprio projeto. Os
-        # assets passaram a `confirm` em 05/08 e o valor perigoso continuou no
-        # disco porque só uma execução do install reescreve o arquivo, e não
-        # houve nenhuma entre as duas datas. Com o mecanismo num script
-        # próprio, a bancada de raiz falsa (tests/unit/test_bluez_config_sh.py)
-        # prova que valor inseguro preexistente vira `confirm`.
-        #
-        # O que o `aplicar` garante, e este passo não repete para não divergir:
-        # idempotência (rodar N vezes não acumula seção nem backup), backup do
-        # conffile só quando há mudança real, escrita ATÔMICA (temporário no
-        # mesmo diretório + rename, para que uma queda no meio não deixe o
-        # conffile dela truncado), neutralização reversível de chave de
-        # terceiro, RELATÓRIO (nunca poda automática) dos backups e — a
-        # assimetria fechada — o
-        # main.conf normalizado SEMPRE, com os drop-ins de main.conf.d POR CIMA
-        # quando o diretório existe (antes, o diretório presente fazia o
-        # install anunciar `confirm` sem nunca abrir o main.conf, onde o
-        # `always` seguia vivo).
-        # ARMADILHA respeitada: NUNCA reiniciamos o bluetoothd aqui.
         if ! HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
              bash "${ROOT_DIR}/scripts/bluez_config.sh" aplicar; then
             warn "config do BlueZ (FastConnectable + JustWorksRepairing) não ficou garantida"
@@ -2713,34 +1769,6 @@ else
     warn "  falta fazer, como root: bash ${ROOT_DIR}/scripts/bluez_config.sh aplicar"
 fi
 
-# ---------------------------------------------------------------------------
-# 3d-bis. Economia de energia do Wi-Fi desligada — DEFAULT, vale na hora
-# ---------------------------------------------------------------------------
-# Decisão dela, 23/10/2026: o Hefesto desliga a economia de energia do Wi-Fi em
-# toda máquina com Wi-Fi. Medido no mesmo dia: o NetworkManager da distro liga
-# `wifi.powersave = 3` e o dongle rtw88 USB caiu seis vezes com a assinatura do
-# firmware (`failed to get tx report`, `failed to leave ips state`). O passo faz
-# DUAS coisas, ambas idempotentes:
-#   1. grava o conf.d do NetworkManager (`wifi.powersave=2`). O NetworkManager
-#      só lê o conf.d no início (ou num reload, que o passo não faz): até o
-#      próximo boot, uma reconexão volta com o `powersave = 3` que ele já leu.
-#      Por isso o passo ANOTA o reinício pendente quando grava o conf (medido
-#      em 23/10/2026: o `Power Management:off` depois da reconexão das 15h15
-#      veio de um `reload` do NetworkManager às 15h14, no diário dele);
-#   2. desliga a economia AGORA em cada interface que a tem ligada, por
-#      `iw dev <if> set power_save off` (ou `iwconfig <if> power off`, sem o
-#      `iw`) — o que NÃO desassocia.
-# NUNCA reconectar para aplicar: o `nmcli connection up` do mesmo dia levou o
-# dongle a perder o aperto de mão em série (`WRONG_KEY` sem a senha errada) e a
-# máquina teve de ser reiniciada. Por isso o passo não chama `nmcli`, `rfkill`
-# nem recarrega o NetworkManager. Remoção: uninstall.sh (simétrico). O doctor
-# reporta o estado.
-
-# A ferramenta que lê e desliga a economia, por caminho absoluto: o `iw`
-# (nl80211) ou, sem ele, o `iwconfig` (wext). As duas moram em `/usr/sbin`, que
-# NÃO está no PATH de usuário comum no Debian 12 (o buraco do `ldconfig`,
-# medido em 19/08/2026): sem procurar ali, a máquina com Wi-Fi seria lida como
-# «nenhuma interface ligada». Sem nenhuma das duas, rc 1: o estado não se lê.
 _wifi_ferramenta() {
     local nome dir
     for nome in iw iwconfig; do
@@ -2758,7 +1786,6 @@ _wifi_ferramenta() {
     return 1
 }
 
-# As interfaces Wi-Fi desta máquina, uma por linha, pela ferramenta $1. Só lê.
 _wifi_interfaces() {
     case "${1##*/}" in
         iw)       "$1" dev 2>/dev/null | awk '$1 == "Interface" { print $2 }' ;;
@@ -2766,7 +1793,6 @@ _wifi_interfaces() {
     esac
 }
 
-# rc 0 quando a interface $2 está com a economia de energia LIGADA. Só lê.
 _wifi_economia_ligada() {
     case "${1##*/}" in
         iw)       "$1" dev "$2" get power_save 2>/dev/null | grep -qi 'power save: *on' ;;
@@ -2775,7 +1801,6 @@ _wifi_economia_ligada() {
     esac
 }
 
-# O comando que desliga a economia da interface $2, sem desassociar.
 _wifi_comando_desliga() {
     case "${1##*/}" in
         iw) printf '%s dev %s set power_save off\n' "$1" "$2" ;;
@@ -2783,7 +1808,6 @@ _wifi_comando_desliga() {
     esac
 }
 
-# Desliga a economia da interface $2 (precisa de root).
 _wifi_desliga_economia() {
     case "${1##*/}" in
         iw) sudo "$1" dev "$2" set power_save off ;;
@@ -2868,27 +1892,8 @@ aplicar_wifi_powersave_off() {
 step "3d-bis" "economia de energia do WiFi OFF (conf.d do NetworkManager + na hora)"
 aplicar_wifi_powersave_off
 
-# ---------------------------------------------------------------------------
-# 3e. Cmdline do kernel gerenciado (PLAT-03 item 2) — DEFAULT, registro de dono
-# ---------------------------------------------------------------------------
-# Garante usbcore.autosuspend=-1 + usbcore.quirks=054c:0ce6:gn no
-# cmdline do PRÓXIMO boot, com as regras provadas no estudo 2026-07-18:
-#   - o kernel respeita SÓ UM token usbcore.quirks= → o passo faz MERGE no
-#     token existente (delete + add do fundido), NUNCA adiciona um segundo;
-#   - já presente (outra ferramenta/manual) = registra "terceiro" e NÃO toca — na
-#     máquina de referência o passo é no-op com atribuição registrada;
-#   - ausente = aplica e registra "hefesto" — o uninstall reverte SÓ o nosso;
-#   - NUNCA reintroduz 054c:0ce6:k / processor.max_cstate / threadirqs
-#     (removidos de propósito na máquina de referência — guarda no módulo).
-# Quem DECIDE é o módulo puro integrations/kernel_cmdline.py (100% stdlib,
-# testável), e ele também lê e escreve o carregador de boot: o kernelstub, o
-# grub ou o /etc/kernel/cmdline do systemd-boot. Aqui só traduzimos o plano.
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
     step "3e" "cmdline do kernel (usbcore.autosuspend + usbcore.quirks com merge)"
-    # O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01: o `usbcore.autosuspend=-1` vale para
-    # TODO aparelho USB, e a razão medida é de desktop. Com bateria ACPI o plano
-    # não o traz (o `usbcore.quirks` do DualSense fica). `if`, e não `&&`: sob
-    # `set -e` a lista falsa mataria o install aqui.
     _cmdline_bateria=0
     if _desempenho_tem_bateria; then _cmdline_bateria=1; fi
     _cmdline_plan="$(python3 - "${ROOT_DIR}" "${_cmdline_bateria}" <<'PYEOF'
@@ -2901,8 +1906,6 @@ com_bateria = sys.argv[2] == "1"
 sys.path.insert(0, os.path.join(root, "src"))
 from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
 
-# Quem lê o carregador de boot é o módulo, o mesmo que escreve
-# (O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01).
 lugares = kc.Lugares(
     kernelstub=Path("/etc/kernelstub/configuration"),
     grub=Path("/etc/default/grub"),
@@ -2913,7 +1916,6 @@ carregador = kc.ler_o_carregador(lugares)
 tokens = list(carregador.tokens)
 backend = carregador.backend
 if backend == kc.BACKEND_NENHUM:
-    # Sem carregador conhecido, o plano parte do boot de agora para dizer o token exato.
     try:
         with open("/proc/cmdline", encoding="utf-8") as fh:
             tokens = kc.parse_cmdline(fh.read())
@@ -2928,8 +1930,6 @@ if violations:
     raise SystemExit(0)
 print("backend=" + backend)
 for a in actions:
-    # Campo vazio no meio some no `read` do shell (o TAB é espaço branco do
-    # IFS): o dono de uma ação pulada vai como «-».
     print("\t".join(["plan", a.param, a.op, a.token, a.owner or "-", " ".join(a.remove_tokens)]))
 PYEOF
 )" || _cmdline_plan=""
@@ -2952,12 +1952,6 @@ PYEOF
                     ;;
                 none)
                     _register_cmdline_owner "cmdline.${_param}" "${_owner}"
-                    # O `sed` LÊ o arquivo que a linha de cima acabou de
-                    # escrever. No ensaio ninguém o escreveu (é o ponto do
-                    # ensaio), e ler um arquivo inexistente cuspia um erro do
-                    # `sed` no meio do plano e imprimia "dono registrado: "
-                    # vazio — dois defeitos de tela criados pelo próprio modo
-                    # que existe para não criar nada.
                     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
                         printf '      %s: já garantido nesta máquina (dono que eu registraria: %s) — não toco no cmdline\n' \
                             "${_param}" "${_owner}"
@@ -2976,11 +1970,6 @@ PYEOF
                         continue
                     fi
                     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-                        # O PLANO DO CMDLINE JÁ FOI CALCULADO ACIMA, e sem
-                        # escrever nada: quem decide é o módulo puro
-                        # `integrations/kernel_cmdline.py`, lendo o bootloader.
-                        # `if`, e não `[[ ]] && cmd`: com `_removes` vazio a
-                        # lista devolveria 1 e o `set -e` mataria o ensaio aqui.
                         if [[ -n "${_removes}" ]]; then
                             _faria_root "tirar do cmdline do kernel, antes de fundir (o kernel respeita SÓ UM usbcore.quirks=): ${_removes}"
                         fi
@@ -2995,7 +1984,6 @@ PYEOF
                     ;;
             esac
         done <<<"${_cmdline_plan}"
-        # Uma escrita só, pelo dono do carregador de boot (o grub regenera uma vez).
         _cmdline_dono="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/kernel_cmdline.py"
         if [[ "${#_cmdline_pendentes[@]}" -gt 0 ]]; then
             if ! sudo -n true 2>/dev/null; then
@@ -3015,119 +2003,27 @@ PYEOF
             fi
         fi
         [[ "${_cmdline_changed}" -eq 0 ]] && printf '      nada a mudar no cmdline (estado já garantido; donos em %s)\n' "${CMDLINE_OWNERS_FILE}"
-        # B5 (O-PRODUTO-EM-QUALQUER-MAQUINA-01): o cmdline novo só vale no
-        # boot, e o fecho diz «reinicie». `if`, e não `[[ ]] &&`: sob `set -e`
-        # a lista falsa mataria o install aqui.
         if [[ "${_cmdline_changed}" -eq 1 ]]; then
             anotar_reinicio_pendente "${_PENDENTE_DO_CMDLINE}"
         fi
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 3e-trava. A trava comum do rádio (O-DIARIO-DO-RADIO-01) — DEFAULT
-# ---------------------------------------------------------------------------
-# O corpo mora em `install_trava_do_radio_host`, e o outro lado da cerca a
-# chama também. A POSIÇÃO: antes do 3e-bis, que roda o `bt_active_mode.sh`
-# como root na hora — e ele abre a trava.
 step "3e-trava" "a trava comum do rádio (o watchdog root e o daemon no mesmo arquivo)"
 install_trava_do_radio_host
 
-# ---------------------------------------------------------------------------
-# 3e-bis. ONDA-R2: resiliência do bluetoothd — DEFAULT em TODO formato
-# ---------------------------------------------------------------------------
-# O corpo mora em `install_bt_resilience_host`, acima da bifurcação de formato,
-# e o outro lado da cerca a chama também — o racional inteiro está lá.
-# A POSIÇÃO AQUI É QUE IMPORTA: antes do 3f, porque o postinst do backport do
-# BlueZ reinicia o bluetoothd, e o drop-in precisa existir para armar nesse
-# restart.
 step "3e-bis" "Bluetooth mais resistente a quedas (vigia do bluetoothd + cópia dos pareamentos)"
 install_bt_resilience_host
 
-# ---------------------------------------------------------------------------
-# 3e-ter. PONTE-PRIVILEGIADA-01: a ponte de root do Bluetooth
-# ---------------------------------------------------------------------------
-# O corpo mora em `install_bt_ponte_privilegiada_host`, acima da bifurcação de
-# formato, e o outro lado da cerca a chama também — o racional inteiro está lá.
-# A posição aqui é indiferente (não depende do bluetoothd nem do backport);
-# fica colada na resiliência porque é a mesma camada de Bluetooth.
 step "3e-ter" "mover controle entre adaptadores Bluetooth sem pedir senha"
 install_bt_ponte_privilegiada_host
 
-# ---------------------------------------------------------------------------
-# 3e-ter-bis. O-JOGO-LEVE-ACORDA-A-PLACA-01: a placa acordada no jogo
-# ---------------------------------------------------------------------------
-# O corpo mora em `install_placa_acordada_host`, acima da bifurcação de formato,
-# e o outro lado da cerca a chama também. Fica colada na ponte porque é a mesma
-# forma de root (helper + sudoers conferido).
 step "3e-ter-bis" "a placa de vídeo acordada enquanto um jogo vive"
 install_placa_acordada_host
 
-# ---------------------------------------------------------------------------
-# 3e-quater. MOTOR-7: o censo do gabinete, lido do firmware
-# ---------------------------------------------------------------------------
-# O corpo mora em `install_censo_do_gabinete_host`, acima da bifurcação de
-# formato, e o outro lado da cerca a chama também — o racional inteiro está lá.
-# A POSIÇÃO AQUI é a única que importa: DEPOIS do 3e-ter, porque é ali que o
-# `sudo -n` desta execução já foi exercitado, e ANTES de qualquer passo que
-# demore — o censo custa um `dmidecode` e uma varredura de `/sys` de 6,87 ms, e
-# não faz sentido a pessoa esperar um DKMS para o gabinete dela aparecer.
 step "3e-quater" "as entradas USB do gabinete (tabela SMBIOS 8 + barramento)"
 install_censo_do_gabinete_host
 
-# ---------------------------------------------------------------------------
-# 3f. ONDA-R: BlueZ resiliente (backport local — alvo 5.86) — DEFAULT
-# ---------------------------------------------------------------------------
-# Estudo docs/history/2026-07-19-o-estudo-do-bluetoothd-5.72-e-o-plano-do-backport.md: o
-# bluez 5.72-0ubuntu5.5 do noble crashou 6x em 5 dias (heap corruption/SEGV em
-# hidp_add_connection/control_connect_cb — sempre em sessão com controles BT
-# ativos); o 6º crash CHEGOU A COMER um bond recém-pareado. Nenhum SRU do
-# noble toca esse subsistema. O rebuild do source package do resolute (26.04
-# LTS, 5.85) traz ~10 fixes de crash de input/uhid ausentes no 5.72 (família
-# upstream #815 + fixes de HIDP core).
-#
-# Este passo só CONSOME um build feito à parte, pelo
-# `scripts/construir_bluez_backport.sh` (a receita inteira, fixada por hash no
-# `assets/bluez-backport/BASELINE`): três .debs versionados em
-# ~/.cache/hefesto-dualsense4unix/bluez-backport/ com SHA256SUMS. Sem o cache,
-# avisamos como gerar e seguimos SEM falhar o install (o backport é conveniência
-# de resiliência, não requisito de funcionamento — o controle já funciona no
-# 5.72). O install NÃO constrói: são uns 3 minutos e 824 MB de obra, com as
-# dependências de build — decisão de produto, 23/09/2026.
-#
-# EFEITO COLATERAL MEDIDO (documentado, não escondido):
-#   (a) o postinst do PRÓPRIO pacote bluez reinicia o bluetoothd ao trocar de
-#       versão — a ÚNICA exceção à regra de nunca reiniciar o serviço, porque
-#       é o próprio dpkg quem faz, não este script (idempotente: com a versão
-#       já nossa, é no-op e o postinst nem roda de novo);
-#   (b) a migração DESCARTA os bonds antigos no 1º start pós-troca (medido ao
-#       vivo) — reparear uma vez resolve; bonds NOVOS (pareados já em 5.85)
-#       persistem em restarts seguintes (também medido);
-#   (c) ≥5.73 muda o input BT para a via uhid (bluetoothd passa a ser dono do
-#       /dev/uhid do controle) — contingência documentada se aparecer
-#       regressão: UserspaceHID=false em /etc/bluetooth/input.conf.
-# O VEREDITO DO 3f É DO BINÁRIO, e não da versão (INSTALL-E-UNINSTALL-DO-RADIO-01,
-# 23/09/2026 — decisão de produto sobre o relato da BLUETOOTHD-NAO-DERRUBA-01).
-#
-# O portão de antes perguntava `bluetoothd --version`, que imprime «5.86» para o
-# .3 e para o .4, e pulava por «já ≥ 5.79». O .4 traz o hefesto-0002 (o EAGAIN
-# do socket L2CAP deixa de derrubar a sessão HID) e nunca chegaria sobre o .3. E
-# comparar a versão do dpkg também não basta: um 5.86-0ubuntu0.1 OFICIAL passa
-# de qualquer ~hefesto na ordem do dpkg e não traz patch nenhum. Então a pergunta
-# vai ao BINÁRIO que o systemd executa: ele carrega a marca de cada patch
-# (`MARCA_hefesto-NNNN` do `assets/bluez-backport/BASELINE`, o dono do fato)?
-#
-# Imprime `<veredito>\t<detalhe>`, uma linha:
-#   curado        — o binário traz todas as marcas, e os três pacotes estão no alvo;
-#   atras         — o binário traz, mas bluez-cups/libbluetooth3 estão abaixo do alvo;
-#   fora-do-dpkg  — faltam marcas num binário que NÃO é do dpkg (tarball em /opt):
-#                   trocar o pacote não troca o que o systemd executa;
-#   precisa       — faltam marcas num binário do dpkg: o backport resolve;
-#   sem-binario   — não há bluetoothd a perguntar;
-#   sem-marcas    — o BASELINE não deu marca nenhuma (ausente, ou sem as
-#                   linhas `MARCA_`): «não sei», e «não sei» não é «curado».
-# Função pura sobre o que recebe — a régua `tests/unit/test_o_portao_do_bluez_pergunta_ao_binario.py`
-# a roda com binários e `dpkg` de mentira.
 _bz_veredito() {
     local vivo="$1" baseline="$2" alvo="$3"
     local nome marca pkg ver do_dpkg=0 perguntadas=0
@@ -3141,10 +2037,6 @@ _bz_veredito() {
         perguntadas=$((perguntadas + 1))
         grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null || faltam+=("${nome}")
     done < <(sed -n 's/^MARCA_\([^=]*\)=\(.*\)$/\1\t\2/p' "${baseline}" 2>/dev/null)
-    # SEM MARCA NENHUMA NÃO HÁ PERGUNTA (conferência da INSTALL-E-UNINSTALL-
-    # DO-RADIO-01): o laço vazio deixava `faltam` vazio, e um 5.86 oficial —
-    # que passa de qualquer ~hefesto no dpkg — saía «curado» sem ter sido
-    # perguntado. É o «não sei» respondido como zero.
     if [[ "${perguntadas}" -eq 0 ]]; then
         printf 'sem-marcas\t%s\n' "${baseline}"
         return 0
@@ -3174,11 +2066,6 @@ _bz_veredito() {
     fi
 }
 
-# A maior versão que o ARCHIVE serve de um pacote, sem as nossas (~hefesto).
-# É o que o VERSOES-ANTERIORES.txt registra quando a versão de agora já é um
-# backport desta casa: gravar o .3 sobre o qual o .4 entra daria ao
-# `--restore-bluez` uma versão que repositório nenhum serve, e o `apt-get`
-# dele cairia. Vazio quando o archive não responde — e aí não se grava nada.
 _bz_maior_do_archive() {
     local pkg="$1" linhas v maior=""
     linhas="$(apt-cache madison "${pkg}" 2>/dev/null || true)"
@@ -3194,23 +2081,9 @@ _bz_maior_do_archive() {
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
     step "3f" "BlueZ corrigido (5.87 com as correções de segurança: sem os travamentos, o laço de reconexão e a queda por buffer cheio)"
-    # Alvo do backport (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md):
-    # 5.86 traz o retry-limit + backoff em loops de reconexão (upstream
-    # 17a227b7). A .5 (15/10/2026) sobe para o 5.87 com o 5bc6aa79 (o UAF em
-    # dev_disconnected que barrava o 5.87) e os consertos de segurança do
-    # master (O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01). A revisão é a ÚLTIMA do BASELINE (REVISAO_ULTIMA),
-    # que é o que o `scripts/construir_bluez_backport.sh` constrói — a régua
-    # `test_bt_resilience_assets.py` confere as duas contra o BASELINE.
-    #   .2 (22/07) hefesto-0001: mantém o bond no Virtual Cable Unplug;
-    #   .4 (23/09) hefesto-0002: o EAGAIN do socket L2CAP deixa de derrubar a
-    #      sessão HID dos controles (BLUETOOTHD-NAO-DERRUBA-01);
-    #   .5 (15/10) o 5.87 com os CVE de a2dp, avrcp, sdp-xml e eir, cobrindo a
-    #      distro até o 5.72-0ubuntu5.8.
     _BZ_TARGET="5.87-0ubuntu0.1~hefesto24.04.5"
     _bz_baseline="${ROOT_DIR}/assets/bluez-backport/BASELINE"
     _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
-    # O binário que o systemd EXECUTA (o drop-in da unit pode tê-lo reapontado
-    # para um tarball em /opt); sem unit legível, o do pacote.
     _bz_vivo="$(
         systemctl show bluetooth.service -p ExecStart --value 2>/dev/null \
             | grep -oE 'path=[^ ]+' | head -1 | cut -d= -f2
@@ -3243,11 +2116,6 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             fi
             _bz_sums="${_bz_dir}/SHA256SUMS"
             _bz_arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
-            # OS NOMES EXATOS da versão alvo, e cada um TEM de estar no
-            # SHA256SUMS com o hash batendo. O `ls -t … | head -1` de antes
-            # escolhia o .deb mais novo do diretório, e um .deb fora do
-            # SHA256SUMS (velho, ou de uma construção pela metade) podia ser o
-            # instalado — o laço conferia só as linhas que o SHA256SUMS tinha.
             _bz_debs=()
             _bz_ok=1
             for _bz_pkg in libbluetooth3 bluez bluez-cups; do
@@ -3261,9 +2129,6 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                 _bz_debs+=("${_bz_dir}/${_bz_bn}")
             done
             if [[ "${_bz_ok}" -eq 0 ]]; then
-                # NÃO falha o install: só orienta a construção, pelo topo da
-                # receita (o script baixa, confere cada hash, aplica a série,
-                # prova a mordida do hefesto-0002 e entrega os três .deb aqui).
                 warn "o backport ${_BZ_TARGET} não está inteiro (e conferido pelo SHA256SUMS) em ${_bz_dir} — o bluetoothd de agora segue"
                 printf '      como gerar: scripts/construir_bluez_backport.sh (uns 3 minutos; não instala nada — depois rode ./install.sh de novo)\n'
             elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -3274,9 +2139,6 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             elif _avisa_pacote_a_meio "o backport do BlueZ ${_BZ_TARGET}"; then
                 printf '      depois, rode ./install.sh de novo (os .debs ficam em %s)\n' "${_bz_dir}"
             else
-                # (c) AVISO ALTO pré-aplicação — sob --yes prossegue; interativo
-                # tem Enter=sim (mesma filosofia de default-apply do install),
-                # mas o texto dá ao usuário a chance de recusar vendo o custo.
                 printf '\n      >>> AVISO: aplicar o backport do bluez REINICIA o bluetoothd\n'
                 printf '          (os controles BT caem até reconectar; se algum não voltar,\n'
                 printf '          aperte o PS dele). Na migração 5.72 -> 5.8x os bonds antigos\n'
@@ -3285,17 +2147,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                 printf '          serviço: quem reinicia é o postinst do PRÓPRIO pacote bluez.\n\n'
                 ask_yn "aplicar o backport agora?" "${AUTO_YES}" "y"
                 if [[ "${REPLY,,}" =~ ^y ]]; then
-                    # (b) grava a versão anterior ANTES de trocar, SE ainda não
-                    # registrada (idempotente — não sobrescreve um registro que
-                    # já exista de uma execução anterior do install).
                     if [[ ! -f "${_bz_dir}/VERSOES-ANTERIORES.txt" ]]; then
-                        # QUANDO A VERSÃO DE AGORA JÁ É NOSSA (~hefesto), o
-                        # registro leva a maior versão que o ARCHIVE serve: o .3
-                        # sobre o qual o .4 entra não existe em repositório
-                        # nenhum, e o restauro do uninstall cairia no apt-get.
-                        # Sem resposta do archive, o pacote fica de fora do
-                        # registro — melhor um restauro parcial dito que um
-                        # restauro que falha.
                         _bz_reg="$(
                             for _bz_pkg in bluez bluez-cups "libbluetooth3:${_bz_arch}"; do
                                 _bz_v="$(dpkg-query -W -f='${Version}' "${_bz_pkg}" 2>/dev/null || true)"
@@ -3306,10 +2158,6 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                                 [[ -n "${_bz_v}" ]] && printf '%s\t%s\n' "${_bz_pkg}" "${_bz_v}"
                             done
                         )" || _bz_reg=""
-                        # O `>` de antes CRIAVA O ARQUIVO MESMO QUANDO O
-                        # `dpkg-query` FALHAVA, e o guarda `! -f` acima faria um
-                        # arquivo VAZIO nunca ser reescrito. Só se grava o que
-                        # tem conteúdo; a falha sai em voz alta.
                         if [[ -n "${_bz_reg}" ]]; then
                             printf '%s\n' "${_bz_reg}" > "${_bz_dir}/VERSOES-ANTERIORES.txt"
                             printf '      versões anteriores gravadas em %s\n' "${_bz_dir}/VERSOES-ANTERIORES.txt"
@@ -3317,12 +2165,6 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                             warn "não consegui registrar as versões anteriores do BlueZ — o restore do uninstall não vai cobrir bluez/libbluetooth3"
                         fi
                     fi
-                    # DEBIAN_FRONTEND=noninteractive + --force-confdef/--force-confold:
-                    # /etc/bluetooth/main.conf é conffile do dpkg e a esta altura JÁ
-                    # ESTÁ modificado por nós (bloco FastConnectable/JustWorks apensado
-                    # no passo 3d) — sem forçar, um dpkg interativo perguntaria o que
-                    # fazer com o conffile local; sob --yes (ou sem tty) isso pode travar
-                    # esperando resposta. Forçamos manter a versão atual (a nossa).
                     if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
                             -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
                             "${_bz_debs[@]}" >/dev/null 2>&1; then
@@ -3338,44 +2180,11 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
     esac
 fi
 
-# ---------------------------------------------------------------------------
-# 3f-bis. O PipeWire da casa (1.6.9 + WirePlumber 0.5.18) — DEFAULT
-# ---------------------------------------------------------------------------
-# O-PIPEWIRE-DA-CASA-LEVA-A-CURA-DO-METADATA-01 (15/10/2026). Até a 1.6.8, a do
-# Pop!_OS 24.04, o cliente que faz bind num metadata enquanto o WirePlumber sai
-# fica preso para sempre: a Steam roda `wpctl settings`, o `wpctl` não sai e a
-# Steam não fecha (docs/protocol/o-wpctl-pendurado-pelo-metadata.md). O
-# upstream curou na 1.6.9; a casa leva a estável mais nova, com o debian/ do
-# Pop, fixada por hash em assets/pipewire-backport/BASELINE.
-#
-# O molde é o do 3f, com uma diferença decidida em 15/10/2026: este passo
-# CONSTRÓI, pelo scripts/construir_pipewire_backport.sh (uns 5 minutos na
-# primeira vez, sem sudo; com a entrega já no cache e conferida, sai na hora).
-# Sem as dependências de build, o construtor lista o que falta e o passo segue
-# sem falhar o install — a instalação delas é da pessoa, pela receita
-# (docs/usage/receita-backport-pipewire.md), porque o mk-build-deps puxa ~80
-# pacotes e, numa máquina com o BlueZ da casa, rebaixaria o libbluetooth3.
-#
-# O que entra é só o que a máquina JÁ TEM (`ii` no dpkg) e está abaixo da casa:
-# a entrega traz 27 pacotes (docs, testes, -dev), e instalar um que a pessoa
-# nunca pediu é mudança que ela não pediu. E nada SAI da máquina sem estar na
-# lista sabida: o apt simula antes, e um `Remv` fora do libcamera (que a 1.6.9
-# da casa não constrói) faz o passo recusar.
-#
-# RECUSA COM A STEAM ABERTA. Trocar o PipeWire reinicia o som da sessão, e um
-# reinício do WirePlumber com a Steam aberta, sobre a 1.6.8, é exatamente o que
-# a deixa sem fechar. Os pacotes ficam construídos; fechada a Steam pelo menu,
-# o `./install.sh` de novo instala sem reconstruir.
-
-# A versão `ii` de um pacote, ou nada.
 _pw_versao_ii() {
     dpkg-query -W -f='${db:Status-Abbrev}|${Version}\n' "$1" 2>/dev/null \
         | awk -F'|' '$1 ~ /^ii/ { print $2; exit }' || true
 }
 
-# `curado`, `precisa` ou `sem-pipewire`. $1 e $2: as revisões da casa
-# (PW_REVISAO e WP_REVISAO do BASELINE). A versão mais nova vence, de quem for:
-# um PipeWire da distro igual ou acima da casa é `curado`.
 _pw_veredito() {
     local alvo_pw="$1" alvo_wp="$2" pw wp
     pw="$(_pw_versao_ii libpipewire-0.3-modules)"
@@ -3392,11 +2201,6 @@ _pw_veredito() {
     fi
 }
 
-# Os .deb da entrega que ESTA máquina vai receber, um caminho por linha.
-# $1: o diretório da entrega; $2 e $3: as revisões da casa. Cada linha do
-# SHA256SUMS tem de ser de uma das duas revisões e bater o hash — senão nada é
-# usado (rc 1). Entra só o pacote que está `ii` e numa versão abaixo da do .deb:
-# nunca um pacote novo, nunca um rebaixamento.
 _pw_debs_da_maquina() {
     local dir="$1" alvo_pw="$2" alvo_wp="$3" sha nome resto ver pkg atual
     local entram=()
@@ -3419,11 +2223,6 @@ _pw_debs_da_maquina() {
     [[ "${#entram[@]}" -eq 0 ]] || printf '%s\n' "${entram[@]}"
 }
 
-# O caminho de volta: `pacote=versão` de cada pacote que vai trocar, como a
-# máquina o tem agora. Só o que está `ii` e tem versão — o `apt install
-# $(cat …)` da volta quebra numa linha `pacote=` vazia. Uma versão nossa
-# (~hefesto) vira a maior que o archive serve, como no 3f; sem resposta do
-# archive, o pacote fica de fora.
 _pw_versoes_anteriores() {
     local deb pkg estado nome ver
     for deb in "$@"; do
@@ -3440,9 +2239,6 @@ _pw_versoes_anteriores() {
     done
 }
 
-# O que o apt tiraria da máquina para pôr os .deb, um pacote por linha, fora
-# os dois do libcamera, que a 1.6.9 da casa não constrói (o noble tem o
-# libcamera 0.2.0, e ela pede o 0.6.0). rc 1 quando o apt recusa a troca.
 _pw_o_que_sairia() {
     local sim arch p
     arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
@@ -3455,7 +2251,6 @@ _pw_o_que_sairia() {
     done < <(awk '$1 == "Remv" { print $2 }' <<<"${sim}")
 }
 
-# A Steam de quem instala está aberta?
 _pw_steam_aberta() {
     pgrep -u "$(id -u)" -x steam >/dev/null 2>&1 \
         || pgrep -u "$(id -u)" -x steamwebhelper >/dev/null 2>&1
@@ -3547,8 +2342,6 @@ install_pipewire_da_casa() {
         printf '      pulado a pedido — o PipeWire de agora segue\n'
         return 0
     fi
-    # O registro é gravado ANTES de trocar e uma vez só: o de uma execução
-    # anterior é o que guarda as versões da distro.
     if [[ ! -f "${dir}/VERSOES-ANTERIORES.txt" ]]; then
         registro="$(_pw_versoes_anteriores "${debs[@]}")" || registro=""
         if [[ -n "${registro}" ]]; then
@@ -3558,8 +2351,6 @@ install_pipewire_da_casa() {
             warn "não consegui registrar as versões anteriores do PipeWire — a volta pela receita não vai cobrir estes pacotes"
         fi
     fi
-    # Sem o arquivo, o Pop (fixado por ele em 1001) rebaixaria a casa no
-    # próximo `apt upgrade`; com ele, o apt fica com a versão mais nova.
     if ! sudo install -m 0644 "${pref}" /etc/apt/preferences.d/hefesto-pipewire 2>/dev/null; then
         warn "não consegui gravar /etc/apt/preferences.d/hefesto-pipewire — no Pop!_OS, o próximo apt upgrade voltaria o PipeWire para o da distro"
     fi
@@ -3590,186 +2381,40 @@ fi
 step "3g" "agente de pareamento Bluetooth sempre de pé (evita o pareamento pela metade)"
 install_bt_agent_host
 
-# ---------------------------------------------------------------------------
-# 3h. Broker root hide-hidraw (BROKER-01/Onda S — fd-injection) — DEFAULT
-# ---------------------------------------------------------------------------
-# Esconde o hidraw FÍSICO do DualSense do JOGO (cura de RAIZ do controle
-# duplicado): broker de SISTEMA (PRIMEIRO da história do projeto — os demais
-# são --user), socket-activated, que recebe hide/restore do daemon E devolve
-# um fd O_RDWR via SCM_RIGHTS (cmd `open`) para o motion reader nunca precisar
-# reabrir por caminho — o giroscópio sobrevive mesmo com o nó escondido.
-# Desenho completo: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md
-# §7.1. Sem flag de opt-out: broker ausente/recusado degrada para o
-# comportamento de hoje (duplicado, nunca zero controles — invariante sagrado).
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
     step "3h" "o controle físico escondido dos jogos, entregue ao Hefesto (sem jogador duplicado)"
-    # Achado Onda S #7: o corpo virou a função compartilhada
-    # `install_broker_host` — o MESMO caminho roda nos formatos
-    # flatpak/appimage/deb (que saem com `exit 0` antes deste passo).
     install_broker_host
 fi
 
-# ---------------------------------------------------------------------------
-# 3i. DKMS hid-nintendo patchado (Onda T) — DEFAULT, opt-out --no-dkms
-# ---------------------------------------------------------------------------
-# Cura de RAIZ da morte silenciosa do Pro Controller/8BitDo em Bluetooth: o
-# driver in-tree falha o PROBE (joycon_read_info -110) e NUNCA re-proba — o
-# device some do sistema até replug/power-cycle (medido 3x nesta máquina).
-# Módulo out-of-tree via DKMS (probe BT com retry opcional + module params;
-# defaults == vanilla) via a lib genérica scripts/dkms_lib.sh (reusada pela
-# Onda W/rtw88). Desenho completo:
-# docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md.
-# Contrato fail-safe: dkms/headers ausentes ou build falho = aviso honesto,
-# o in-tree segue valendo, o install NUNCA aborta por causa disto.
 step "3i" "módulo hid-nintendo corrigido (DKMS: conexão Bluetooth mais resistente)"
 install_dkms_hid_nintendo_host
 
-# ---------------------------------------------------------------------------
-# 3j. DKMS rtw88_usb patchado (Onda W) — DEFAULT, opt-out --no-dkms (compartilhado)
-# ---------------------------------------------------------------------------
-# Cura de RAIZ do fantasma USB do dongle WiFi (TP-Link Archer T3U/RTL8822BU):
-# quando um port-status-change se perde no xHCI, o driver in-tree nunca detecta
-# que o device sumiu e segue fazendo I/O contra hardware ausente — só um
-# `unbind` manual ou reboot recicla o device (medido 20/07: 13h de fantasma).
-# Módulo out-of-tree via DKMS (device-gone + queue de port reset, modelo
-# rtw89 v7.0.11: RTW89_FLAG_UNPLUGGED + continual_io_error>4; reset imediato
-# só em -ENODEV/-ESHUTDOWN, -EPROTO exige 5 falhas CONSECUTIVAS sem sucesso
-# no meio) via a MESMA lib genérica scripts/dkms_lib.sh (Onda T é a 1ª
-# instância; ZERO ajuste na lib). Desenho completo:
-# docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md.
-# Contrato fail-safe: dkms/headers ausentes, kernel fora do pino
-# BUILD_EXCLUSIVE_KERNEL (ABI privada do rtw88) ou build falho = aviso
-# honesto, o in-tree segue valendo, o install NUNCA aborta por causa disto.
 step "3j" "módulo rtw88_usb corrigido (DKMS: o adaptador Wi-Fi USB sem aparelho fantasma)"
 install_dkms_rtw88_usb_host
 
-# ---------------------------------------------------------------------------
-# 3j2. O vigia do dongle Wi-Fi USB — DEFAULT, opt-out --no-wifi-usb
-# ---------------------------------------------------------------------------
-# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): morava no self-heal do zsh
-# dela. O DKMS acima cura a queda que o driver VÊ; este cuida das duas que ele
-# não vê: o scan de fundo que derruba o dongle e o rádio que trava mudo. O
-# corpo e o porquê moram em `install_wifi_usb_host` (camada de máquina) e no
-# cabeçalho de `scripts/wifi_usb.sh`.
 step "3j2" "vigia do dongle Wi-Fi USB (scan de fundo + travamento mudo)"
 install_wifi_usb_host
 
-# ---------------------------------------------------------------------------
-# 3j3. O modo desempenho — PERGUNTA, com padrão pela máquina
-# ---------------------------------------------------------------------------
-# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01 (decisão dela, 02/10/2026). O corpo e o
-# porquê moram em `install_desempenho_host` (camada de máquina) e no cabeçalho
-# de `scripts/desempenho.sh`.
 step "3j3" "modo desempenho (o perfil de energia em Performance, se a pessoa quiser)"
 install_desempenho_host
 
-# ---------------------------------------------------------------------------
-# 3k. DKMS hid-playstation patchado (contenção BT) — DEFAULT, opt-out --no-dkms
-# ---------------------------------------------------------------------------
-# Cura de RAIZ da perda de um DualSense inteiro quando vários controles pareiam
-# quase juntos no mesmo adaptador — o cenário NORMAL do alvo do projeto (4 por
-# Bluetooth, um por jogador). Medido em 25/07: o 2º DualSense perdeu o canal de
-# controle L2CAP, o GET_REPORT expirou no BlueZ (REPORT_REQ_TIMEOUT = 3 s), o
-# uhid achatou o ETIMEDOUT em -EIO e a probe morreu — device sem hidraw, sem
-# input, sem LED. Diagnóstico completo (as 3 medidas encadeadas) em
-# assets/dkms/hid-playstation/README.md.
-# Contrato fail-safe idêntico ao 3i/3j: nada aqui aborta o install.
-# TERCEIRA CURA NO MESMO MÓDULO — 10/09/2026 (patch/0003, MIC-NAO-E-BOTAO-01).
-# O driver parseava os quadros de ÁUDIO do microfone como estado de gamepad:
-# eles chegam com o MESMO report id 0x31, o MESMO tamanho de 78 B e CRC válido,
-# e só o bit 1 do byte 1 os separa. Consequência dupla, medida na bancada com
-# os dois sintomas ao vivo: o driver DESLIGA o microfone sozinho depois de
-# ~1,1 s (borda falsa do botão de mudo sobre payload Opus) e injeta eixos e
-# botões que ninguém apertou — o cursor e o teclado da pessoa se mexem sozinhos.
-#
-# NADA MUDA NA MECÂNICA DESTE PASSO, e isso é de propósito: o `dkms_lib.sh`
-# rebuilda quando o SOURCE muda (`diff -rq -x patch`), então a cura entra pelo
-# caminho normal. **O PACKAGE_VERSION continua 1.0.0** — bumpar deixaria a
-# versão antiga registrada e instalada em updates/dkms, dois `.ko` candidatos
-# para o mesmo módulo; a razão está escrita no próprio `dkms.conf`.
 step "3k" "módulo hid-playstation corrigido (DKMS: o microfone pelo Bluetooth e vários controles no mesmo adaptador)"
 install_dkms_hid_playstation_host
 
-# ---------------------------------------------------------------------------
-# 3k2. DKMS uhid com contrapressão — OPT-IN, --uhid-contrapressao
-# ---------------------------------------------------------------------------
-# RADIO-AFOGADO-02, 22/09/2026. O `uhid.ko` de fábrica descarta o report em
-# silêncio quando a fila de saída (31 lugares) enche: `uhid_queue()` é `void`,
-# faz `kfree(ev)` com um `hid_warn`, e `uhid_hid_output_raw()` devolve `count`
-# assim mesmo. Medido na mesa dela: 3807 descartes num minuto, e ZERO escritas
-# recusadas no diário do produto. Sem sinal, quem escreve não tem como ceder.
-#
-# **ELE NÃO É DEFAULT, e é o único DKMS desta casa que não é.** Ligar muda a
-# semântica do `write(2)` para TODO userspace que escreve report de saída num
-# HID por Bluetooth — o Steam Input inclusive —, e quem trata falha de escrita
-# como «o aparelho sumiu» largaria o controle no primeiro engasgo do rádio.
-# O produto está correto sem ele. Razão completa em assets/dkms/uhid/README.md.
 step "3k2" "uhid com contrapressão (OPT-IN: --uhid-contrapressao)"
 install_dkms_uhid_host
 
-# ---------------------------------------------------------------------------
-# 3k3. DKMS usb_f_hid — DEFAULT, sem flag (opt-out --no-dkms)
-# ---------------------------------------------------------------------------
-# O-F-HID-FECHA-A-RESPOSTA, 14/10/2026. O `usb_f_hid` de fábrica responde o
-# GET_REPORT sempre com 64 bytes e sem o pacote vazio; o `HIDIOCGFEATURE(128)`
-# do Wine e do SDL espera 5 s por feature, e com 4 pads o `winebus` estoura o
-# prazo do `services.exe`: o jogo no Proton sobe sem controle. Diferente dos
-# vizinhos, este TROCA A QUENTE quando o carregado não tem a marca, porque só
-# os pads do Hefesto o usam. Razão completa em assets/dkms/usb-f-hid/README.md.
 step "3k3" "usb_f_hid corrigido (DKMS: a resposta do GET_REPORT dos pads USB virtuais)"
 install_dkms_usb_f_hid_host
 
-# ---------------------------------------------------------------------------
-# 3l. Regenerar o initramfs (INITRAMFS-01) — DEFAULT, sem flag
-# ---------------------------------------------------------------------------
-# `dkms install` grava em updates/dkms e roda depmod, mas NÃO regenera o
-# initramfs — e o initramfs carrega uma CÓPIA do hid-nintendo (é driver de
-# gamepad/teclado USB, entra na geração "most" do Ubuntu/Pop). Medido em
-# 25/07: initramfs de 23/07 contra DKMS de 25/07, boot subindo o módulo VELHO,
-# e como os params do patch novo não existiam nele o kernel descartava o
-# /etc/modprobe.d/hefesto-hid-nintendo.conf INTEIRO ("unknown parameter"),
-# levando junto curas que já funcionavam. Roda UMA vez para todos os módulos.
 step "3l" "regenerar o initramfs se algum módulo DKMS mudou"
 flush_initramfs_host
 
-# ---------------------------------------------------------------------------
-# 4. Ícone + .desktop + launcher
-# ---------------------------------------------------------------------------
 step "4/11" "atalho de aplicativo e launcher"
 
-# FEAT-ICON-MULTI-RES-01 (v3.4.2, refinado em v3.4.3): gera o icone em
-# todas resolucoes do hicolor + pixmap legacy. Antes so existia 256x256
-# PNG, fazendo o COSMIC App Library / GNOME Activities renderizar
-# fallback generico em sizes nao-256 (chip 32x32 do menu apps, 128x128
-# do grid).
-#
-# BUG-ICON-FROM-PLACEHOLDER-SVG-01 (v3.4.3): v3.4.2 usava um SVG que era
-# PLACEHOLDER (chama laranja + texto "HEFESTO"), e a app library mostrava
-# chama em vez do martelo. A cura da epoca foi eleger o PNG como fonte.
-#
-# NOTA DE VERIFICACAO — 01/08/2026. Este comentario CADUCOU, e por dois
-# motivos medidos:
-#
-#   1. o SVG deixou de ser placeholder. `assets/hefesto-logo.svg` TEM o
-#      martelo, a bigorna e a chama, e o `rsvg-convert` gera dele um PNG
-#      indistinguivel do que estava versionado. A troca aconteceu em algum
-#      momento e ninguem atualizou este texto — que passou a mentir com
-#      autoridade;
-#   2. o ICON_SRC apontava para `assets/appimage/Hefesto-Dualsense4Unix.png`,
-#      que NAO EXISTIA nesta arvore. O `cp -f` falhava em silencio e o icone
-#      que aparecia no sistema vinha, por acidente, do PNG do applet COSMIC.
-#      Havia dois caminhos, e o documentado era o quebrado.
-#
-# Agora ha UMA fonte: `assets/hefesto-logo.svg`. Os PNGs derivados sao
-# gerados por `scripts/gerar_icones.sh` e travados por
-# `tests/unit/test_icones_refletem_o_svg.py` — mexer no desenho sem regerar
-# reprova. O install continua consumindo o PNG (o Lanczos do ImageMagick da
-# downsample melhor que o rsvg em tamanhos pequenos), mas o PNG deixou de
-# ser fonte: virou derivado.
 ICON_HICOLOR_BASE="${HOME}/.local/share/icons/hicolor"
 ICON_SIZES="16 22 24 32 48 64 96 128 192 256 512"
 
-# Sempre garante o 256x256 PNG (path legacy)
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "copiar o ícone para ${ICON_TARGET}"
     if command -v convert >/dev/null 2>&1; then
@@ -3780,11 +2425,6 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     fi
 else
 mkdir -p "${ICON_TARGET_DIR}"
-# O `cp` ERA NU, e o próprio comentário acima conta que este caminho já esteve
-# quebrado uma vez (o `ICON_SRC` apontava para um PNG que não existia na
-# árvore). Com o arquivo ausente o `cp` sai 1 e o `set -e` mata a instalação no
-# passo 4 — depois do udev, do DKMS e do broker, e ANTES do daemon, da Steam e
-# da conferência. Ícone é acabamento: ele avisa e o resto continua.
 cp -f "${ICON_SRC}" "${ICON_TARGET}" \
     || warn "ícone não copiado (${ICON_SRC} ausente?) — o menu pode mostrar um ícone genérico"
 mkdir -p "$(dirname "${DESKTOP_TARGET}")"
@@ -3797,18 +2437,8 @@ if command -v convert >/dev/null 2>&1; then
         convert "${ICON_SRC}" -filter Lanczos -resize "${size}x${size}" \
             "${target_dir}/${APP_ID}.png" 2>/dev/null || true
     done
-    # Pixmap legacy fallback (DEs antigos)
     mkdir -p "${HOME}/.local/share/pixmaps"
     cp -f "${ICON_SRC}" "${HOME}/.local/share/pixmaps/${APP_ID}.png"
-    # Remove SVG placeholder de instalações anteriores (v3.4.2 colocava lah).
-    #
-    # ATENÇÃO, 07/08/2026 (APPLET-MONOCROMÁTICO-01): esta linha apaga
-    # `scalable/apps/${APP_ID}.svg` — o nome SEM sufixo, e SÓ ele. Ela NÃO
-    # alcança o simbólico instalado logo abaixo, que se chama
-    # `${APP_ID}-symbolic.svg` e vive em `symbolic/apps/`. O alvo está cravado
-    # de propósito: um `rm -f .../scalable/apps/${APP_ID}*.svg` apagaria o
-    # simbólico a cada instalação, e o sintoma seria um joystick genérico na
-    # barra dela, sem ninguém entender por quê.
     rm -f "${ICON_HICOLOR_BASE}/scalable/apps/${APP_ID}.svg"
 else
     printf '      aviso: ImageMagick (convert) ausente — so 256x256 PNG\n'
@@ -3816,27 +2446,6 @@ else
 fi
 fi
 
-# ICONE SIMBOLICO DA BANDEJA — APPLET-MONOCROMATICO-01 (07/08/2026)
-# ------------------------------------------------------------------
-# Pedido dela, olhando a própria barra: "o applet do hefesto deve ficar em preto
-# e branco (...) no cosmic todos os applet são assim". Estava certa: dez dos
-# treze applets do System76 declaram `-symbolic`, e o Hefesto era o único de
-# glifo fixo que não declarava.
-#
-# Este arquivo NÃO é derivado dos PNGs acima, e não passa pelo ImageMagick: é
-# desenho próprio na grade 16x16 (a logo cheia a 20 px vira borrão). Por isso
-# fica FORA do `if command -v convert` — sem ImageMagick o resto degrada, este
-# não precisa degradar junto.
-#
-# O destino é `symbolic/apps/`, e isso foi MEDIDO em 07/08 na máquina dela: o
-# `index.theme` do `hicolor` do HOME dela NÃO lista `symbolic/apps`, e mesmo
-# assim a busca de ícones acha o arquivo lá (GTK) — e o painel desenhou um item
-# de bandeja de prova servido desse diretório. É onde o `hicolor` do sistema
-# declara o bloco `[symbolic/apps]` e onde o vizinho que já funciona (Flatpak do
-# Spotify) põe o dele.
-#
-# Sem este arquivo, `tray.py` cai para o nome antigo (logo colorida) e, se nem
-# ele existir, para o joystick genérico `input-gaming`.
 ICON_SIMBOLICO_SRC="${ROOT_DIR}/assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
 ICON_SIMBOLICO_DIR="${ICON_HICOLOR_BASE}/symbolic/apps"
 if [[ "${DRY_RUN:-0}" -eq 1 && -r "${ICON_SIMBOLICO_SRC}" ]]; then
@@ -3850,21 +2459,7 @@ else
         "assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
 fi
 
-# A JANELA EM FOCO NO WAYLAND, por compositor (10/10/2026,
-# A-CASCATA-DO-WAYLAND-SO-PERGUNTA-A-QUEM-RESPONDE-01):
-#
-#   COSMIC: o backend nativo (window_backends/cosmic_toplevel.py) lê a janela
-#   por zcosmic_toplevel_info_v1, sem binário de terceiro. O cosmic-comp não
-#   publica zwlr_foreign_toplevel_manager_v1, e o `wlrctl` nele sempre falha:
-#   ele não se oferece aqui.
-#
-#   wlroots (Sway, Hyprland, niri, river): o `wlrctl` fala o protocolo
-#   wlr-foreign-toplevel-management, e é oferecido no bloco seguinte.
-#
-# A cascata em window_detect.py é cosmic → wlrctl → None, e o XWayland roda
-# em paralelo pelo XlibBackend.
 if [[ "${DESKTOP_IS_WLROOTS}" -eq 1 ]]; then
-    # DEPS-UNIVERSAIS-01: pelo gerenciador desta máquina, e não só por apt.
     if ! command -v wlrctl >/dev/null 2>&1; then
         printf '\n      Compositor wlroots detectado (XDG_CURRENT_DESKTOP=%s).\n' \
             "${XDG_CURRENT_DESKTOP:-$XDG_SESSION_DESKTOP}"
@@ -3878,8 +2473,6 @@ if [[ "${DESKTOP_IS_WLROOTS}" -eq 1 ]]; then
                 if (( _rc_pkg == 0 )); then
                     printf '      wlrctl instalado (%s)\n' "$(command -v wlrctl)"
                 elif (( _rc_pkg == _RC_PACOTE_A_MEIO )); then
-                    # O aviso do sistema e o comando de depois já saíram; o wlrctl
-                    # fica para depois, sem causa que não seja essa.
                     :
                 else
                     warn "wlrctl não esta nos repos deste sistema (Ubuntu <24.04?)"
@@ -3904,57 +2497,11 @@ if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
     printf '      A troca de perfil pela janela em foco usa o protocolo do\n'
     printf '      próprio COSMIC (zcosmic_toplevel_info_v1): nada a instalar.\n'
 
-    # O XWayland **DEIXOU DE SER O DEFAULT EM 19/09/2026**, por
-    # ordem dela, e a razão de ele ter existido morreu antes disso.
-    #
-    # ELE NASCEU PARA A JANELA GTK: `run.sh:80-86` forçava `GDK_BACKEND=x11`
-    # porque *"os popups de GtkMenu quebram no Wayland nativo"*. A janela GTK
-    # saiu do disco em 06/09 (`D-0609-GTK-LEVA-INTEIRA`), e a interface nova
-    # **não tem `GtkMenu`**: as dicas são elementos da PÁGINA
-    # (`interface/topo.html`, a `.dica`) e o `<select>` usa `appearance:none` —
-    # as duas curas nasceram justamente para não depender do popup do
-    # compositor.
-    #
-    # E O XWAYLAND COBRA: sob ele o GTK3 **não lê o tema do portal**
-    # (`interface/tema_da_sessao.py:93`), e foi assim que o tema dela se perdeu — o defeito
-    # ficou registrado nas quinze queixas de 04/09.
-    #
-    # MEDIDO EM WAYLAND NATIVO NA MÁQUINA DELA, 19/09, com a interface real:
-    #
-    #     backend : GdkWaylandDisplay   ·  página carregou: True  ·  erro: None
-    #     barra   : 3 botões            ·  dicas na página: sim
-    #
-    # A FLAG `--force-xwayland` FICA como escape declarado: quem precisar dela
-    # (uma sessão sem Wayland, um compositor que não desenhe bem o WebKit)
-    # continua tendo o caminho, e agora por escolha, não por default.
     if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
         printf '\n      XWayland pedido por --force-xwayland (o default é Wayland nativo).\n'
     fi
 fi
 
-# O QUE O ATALHO ABRE É A INTERFACE HTML — 01/09/2026, ordem dela: *"tudo tem
-# que apontar pro nosso lancher html e tudo tem que apontar pros arquivos na
-# nossa pasta"*. O atalho chama o `run.sh --gui`, que ativa a venv desta
-# árvore, cuida do XWayland e do pixbuf, e chama `scripts/abrir_interface.py` —
-# quem veste prgname, WM_CLASS e ícone no processo antes da primeira janela
-# nascer.
-#
-# A TELA VIAJA COM O ATALHO. `HEFESTO_NA_TELA=1` é o escape da guarda
-# TELA-DELA-02 (`utils/tela_de_mentira.py`), e quem o declara é o que a pessoa
-# clica: o `Exec=` abaixo e o lançador de `~/.local/bin`. O `run.sh` NÃO o
-# declara, de propósito: todo instrumento que chama `run.sh --gui` continua
-# desviado para uma tela de mentira. Há régua:
-# `tests/unit/test_o_lancador_nasce_na_tela.py`.
-#
-# Aqui havia `Exec=${ROOT_DIR}/run.sh` quando o `run.sh` abria a janela GTK
-# velha. O motor GTK não sumiu (os 74 handlers de `app/actions/` são o que a
-# interface nova chama); o que mudou foi o LANÇADOR.
-# O `.desktop` E O LANÇADOR DO TRAY PRECISAM DIZER A MESMA COISA — 19/09/2026.
-# Até aqui o `.desktop` do menu dela abria com `GDK_BACKEND=x11` e o
-# `~/.local/bin/hefesto-dualsense4unix-gui` (que o «Abrir programa» do tray usa)
-# NÃO: dois caminhos para a MESMA janela, com backends diferentes. Um deles
-# perdia o tema do portal e o outro não, e ninguém tinha como saber qual janela
-# estava vendo. Com o XWayland fora do default, os dois passam a ser iguais.
 if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
     _EXEC_LINE="env GDK_BACKEND=x11 HEFESTO_NA_TELA=1 ${ROOT_DIR}/run.sh --gui"
     printf '      .desktop com GDK_BACKEND=x11 (--force-xwayland)\n'
@@ -3962,11 +2509,6 @@ else
     _EXEC_LINE="env HEFESTO_NA_TELA=1 ${ROOT_DIR}/run.sh --gui"
 fi
 
-# O CABEÇALHO É O DO REPOSITÓRIO, e não um texto digitado aqui. O arquivo
-# versionado (`packaging/${APP_ID}.desktop`) traz `@RAIZ@` no `Exec=`; a
-# substituição abaixo é a única coisa de máquina que entra. Antes deste bloco
-# havia um `.desktop` inteiro escrito à mão neste script, e ele já divergiu do
-# versionado — foi assim que o `GenericName` existiu num e não no outro.
 _DESKTOP_FONTE="${ROOT_DIR}/packaging/${APP_ID}.desktop"
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "escrever o atalho ${DESKTOP_TARGET} com Exec=${_EXEC_LINE}"
@@ -4001,24 +2543,9 @@ command -v gtk-update-icon-cache >/dev/null 2>&1 \
 command -v update-desktop-database >/dev/null 2>&1 \
     && update-desktop-database -q "$(dirname "${DESKTOP_TARGET}")" 2>/dev/null || true
 
-# ---------------------------------------------------------------------------
-# O AUTOSTART DO TRAY — 19/09/2026
-# ---------------------------------------------------------------------------
-# Decisão dela: *"desabilitamos o applet pela complexidade. o tray faz o mesmo
-# mas melhor."* O applet COSMIC era um plugin do `cosmic-panel` e subia com a
-# sessão; o tray é um processo comum e NÃO tem esse carona. Sem este arquivo,
-# tirar o applet deixaria a barra dela vazia — o oposto do pedido.
-#
-# Por que `~/.config/autostart/` e não uma unit de usuário: a unit sobe antes
-# do painel gráfico existir, e um tray que corre antes do hospedeiro da bandeja
-# não acha ninguém e o ícone some. O `.desktop` de autostart é lido pela SESSÃO
-# gráfica, já com o painel de pé, e ainda respeita o `Delay` declarado.
 _AUTOSTART_DIR="${HOME}/.config/autostart"
 _AUTOSTART_TARGET="${_AUTOSTART_DIR}/${APP_ID}-tray.desktop"
 _AUTOSTART_FONTE="${ROOT_DIR}/packaging/${APP_ID}-tray.desktop"
-# A ESCOLHA DELA SOBREVIVE AO INSTALL (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S3): o «Ícone na
-# bandeja» da aba Sistema grava `X-GNOME-Autostart-enabled=false`, e reescrever o arquivo com o
-# `true` de fábrica religaria o que ela desligou.
 _AUTOSTART_LIGADO=true
 if grep -qx 'X-GNOME-Autostart-enabled=false' "${_AUTOSTART_TARGET}" 2>/dev/null; then
     _AUTOSTART_LIGADO=false
@@ -4051,9 +2578,6 @@ chmod +x "${LAUNCHER}"
 fi
 ok
 
-# ---------------------------------------------------------------------------
-# 4b. Glyphs SVG dos botoes do DualSense
-# ---------------------------------------------------------------------------
 readonly GLYPHS_SRC="${ROOT_DIR}/assets/glyphs"
 readonly GLYPHS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/glyphs"
 
@@ -4061,51 +2585,21 @@ if [[ "${DRY_RUN:-0}" -eq 1 && -d "${GLYPHS_SRC}" ]]; then
     _faria "copiar os glifos dos botões (assets/glyphs/*.svg) para ${GLYPHS_TARGET}/"
 elif [[ -d "${GLYPHS_SRC}" ]]; then
     mkdir -p "${GLYPHS_TARGET}"
-    # O `|| true` não é descuido: um `assets/glyphs/` sem nenhum `.svg` faz o
-    # glob não casar, o `cp` sair 1 e o `set -e` matar a instalação AQUI —
-    # depois do udev, do DKMS e do broker, e antes do daemon. Glifo é
-    # acabamento; derrubar o install por causa dele trocaria um problema
-    # cosmético por um real (a mesma disciplina do bloco das fontes, no 4e).
     cp -f "${GLYPHS_SRC}"/*.svg "${GLYPHS_TARGET}/" 2>/dev/null || \
         warn "nenhum glifo copiado de ${GLYPHS_SRC} — a interface cai no desenho embutido"
 fi
 
-# ---------------------------------------------------------------------------
-# 4b-2. Wrapper de launch da Steam (DEDUP-04) — DEFAULT, sem flag, sem sudo
-# ---------------------------------------------------------------------------
-# `hefesto-launch %command%` é a Opção de Inicialização CONSTANTE: o wrapper
-# decide as envs na hora do launch consultando o daemon via IPC (daemon morto/
-# degradado => nenhuma env => o jogo abre com o físico visível — pior caso é
-# controle duplicado, nunca zero). Passo de USUÁRIO de propósito: instalável
-# sem sudo e simétrico no uninstall (que limpa o vdf ANTES de apagar isto).
 readonly LAUNCH_WRAPPER_SRC="${ROOT_DIR}/assets/hefesto-launch.sh"
 readonly LAUNCH_WRAPPER_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${LAUNCH_WRAPPER_SRC}" ]]; then
     _faria "instalar o wrapper de launch da Steam em ${LAUNCH_WRAPPER_TARGET}"
 elif [[ -f "${LAUNCH_WRAPPER_SRC}" ]]; then
     install -Dm755 "${LAUNCH_WRAPPER_SRC}" "${LAUNCH_WRAPPER_TARGET}"
-    # Diretório da materialização (o daemon regrava a cada transição; criar
-    # aqui garante que o wrapper nunca falha por diretório ausente).
     mkdir -p "${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
 else
     warn "assets/hefesto-launch.sh ausente — wrapper de launch da Steam não instalado"
 fi
 
-# ---------------------------------------------------------------------------
-# 4b-3. Curador de camadas Vulkan (ENGASGO-VULKAN-01) — DEFAULT, sem flag
-# ---------------------------------------------------------------------------
-# Ele NÃO cura engasgo: a hipótese caiu no A/B de 23/08, e o `vulkan-1` do
-# Wine nem lê a camada (26/09). No lançamento de cada jogo ele tira a camada
-# que não é preservada, de novo se o Wine a regravou; só a devolvida fica.
-# Regra da casa (08/08/2026): toda cura entra no install, sem flag. O
-# `hefesto-launch` acima chama este arquivo em TODO jogo lançado (portão barato
-# em `sh`, 2 ms; o interpretador só sobe quando há camada ligada de verdade) e
-# não pode depender do checkout existir — por isso o módulo é MATERIALIZADO ao
-# lado do wrapper, no mesmo diretório e com o mesmo tratamento.
-#
-# A fonte da verdade continua UMA: `integrations/camadas_vulkan.py`, que é 100%
-# stdlib de propósito (padrão do `proton_pin`/`steam_launch_options`) e roda com
-# o python3 do SISTEMA, sem o pacote no `sys.path`. Reinstalar atualiza a cópia.
 readonly CAMADAS_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
 readonly CAMADAS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas"
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${CAMADAS_SRC}" ]]; then
@@ -4116,15 +2610,6 @@ else
     warn "camadas_vulkan.py ausente — as sobreposições Vulkan não vão sair no lançamento dos jogos"
 fi
 
-# ---------------------------------------------------------------------------
-# 4b-4. Device de áudio KS do DualSense (HAPTICA-NATIVA-01) — DEFAULT, sem flag
-# ---------------------------------------------------------------------------
-# O PRAGMATA (RE Engine) acha o alvo da vibração perguntando ao `setupapi` por
-# um device KSCATEGORY_AUDIO com o ContainerId do alto-falante do controle, e o
-# GE-Proton não o cria para o DualSense. O `hefesto-launch` chama este curador
-# em todo jogo com DualSense no cabo, antes do `wineserver` subir. Mesmo
-# tratamento do curador de camadas acima: stdlib, materializado ao lado do
-# wrapper, a fonte da verdade continua UMA.
 readonly AUDIO_KS_SRC="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py"
 readonly AUDIO_KS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-audio-ks"
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${AUDIO_KS_SRC}" ]]; then
@@ -4135,25 +2620,11 @@ else
     warn "audio_ks_dualsense.py ausente — a háptica nativa do DualSense não chega aos jogos RE Engine"
 fi
 
-# ---------------------------------------------------------------------------
-# 4b-5. A peça GDK (A-PECA-GDK-DO-HEFESTO-CUMPRE-O-CONTRATO-DO-XASYNC-01)
-# ---------------------------------------------------------------------------
-# O xgameruntime.dll que o Wine carrega como builtin em todo jogo GDK, pela
-# receita `xgameruntime=b` + `WINEDLLPATH=@hefesto-wine`. Mora SÓ nesta pasta:
-# nunca vai ao prefixo nem à pasta do jogo, e a DLL que o usuário pôs ao lado
-# do exe não se toca. Só entra a DLL cujo sha256 é o do pino: baixada do release
-# da versão ou, se o download falha, compilada aqui (construir.sh) quando o
-# x86_64-w64-mingw32-gcc-posix está no PATH. Sem nenhuma das duas, o jogo GDK
-# abre como sempre abriu, e o prontuário diz que a peça falta.
-# O GameInput do Hefesto (O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-01) vai pelo mesmo
-# caminho, em `nativa/`: a peça GDK o carrega pelo caminho inteiro (`gameinput=n,b`).
-# Sem ele, o jogo GDK abre como abria, só sem vibrar pelo GameInput.
 readonly PECA_GDK_PINO="${ROOT_DIR}/assets/gdk-runtime/pino.txt"
 readonly PECA_GDK_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/x86_64-windows/xgameruntime.dll"
 readonly PECA_GAMEINPUT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/nativa/gameinput.dll"
 _peca_gdk_pino() { sed -n "s/^$1=//p" "${PECA_GDK_PINO}" | head -n 1; }
 _peca_gdk_sha() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
-# _peca_gdk_instalar <nome> <chave do sha256> <chave da url> <arquivo> <destino>
 _peca_gdk_instalar() {
     local nome="$1" chave_sha="$2" chave_url="$3" arquivo="$4" alvo="$5"
     local _peca_sha_pino _peca_versao _peca_url _peca_tmp _peca_ok
@@ -4197,34 +2668,13 @@ else
     warn "assets/gdk-runtime/pino.txt ausente — a peça GDK não foi instalada"
 fi
 
-# ---------------------------------------------------------------------------
-# 4c. Perfis default (primeira instalação copia; reinstalação preserva)
-# ---------------------------------------------------------------------------
 if [[ "${DRY_RUN:-0}" -eq 1 && -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
     _faria "instalar os perfis de fábrica em ${HOME}/.config/hefesto-dualsense4unix/profiles/ (scripts/install_profiles.sh — os SEUS perfis são preservados)"
 elif [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
-    # A CHAMADA ERA NUA, e este passo é o 4c de quarenta e poucos. O
-    # `install_profiles.sh` tem `set -euo pipefail` e um `exit 1` explícito
-    # quando `assets/profiles_default/` não existe — então uma árvore
-    # incompleta matava o instalador AQUI, levando junto o daemon (6 e 7a), o
-    # kernel-watch (7b), o applet (9), o áudio (10), TODOS os passos da Steam
-    # (11 a 11c) e a conferência final. É o mesmo estrago do
-    # BUG-INSTALL-READONLY-USER-UNIT-DIR-01, por outra porta.
-    #
-    # Perfil de fábrica é acabamento: sem ele o produto abre e a pessoa cria os
-    # próprios. Derrubar a instalação por causa disso troca um problema pequeno
-    # por um grande — a disciplina que os vizinhos 4e (fontes) e 4f (teclado)
-    # já seguem.
     bash "${ROOT_DIR}/scripts/install_profiles.sh" "${ROOT_DIR}" \
         || warn "perfis de fábrica não instalados — rode: bash scripts/install_profiles.sh"
 fi
 
-# ---------------------------------------------------------------------------
-# 4d. Catalogos i18n (.mo) — copia locale/ para ~/.local/share/locale/
-# ---------------------------------------------------------------------------
-# FEAT-I18N-CATALOGS-01 (v3.4.0). Idempotente — re-copia sobrescreve. Se
-# locale/ não existe (usuário clonou e não rodou scripts/i18n_compile.sh),
-# pulamos silenciosamente e o gettext faz fallback para PT-BR hardcoded.
 readonly LOCALE_SRC="${ROOT_DIR}/locale"
 readonly LOCALE_TARGET="${HOME}/.local/share/locale"
 if [[ "${DRY_RUN:-0}" -eq 1 && -d "${LOCALE_SRC}" ]]; then
@@ -4241,24 +2691,6 @@ elif [[ -d "${LOCALE_SRC}" ]]; then
     done
 fi
 
-# ---------------------------------------------------------------------------
-# 4e. Fontes da identidade visual (Space Grotesk + JetBrains Mono)
-# ---------------------------------------------------------------------------
-# FONTE-PADRAO-01, item 3. O `scripts/install_fonts.sh` existia, com download
-# pinado e SHA-256, e NINGUÉM o chamava: `grep -c fonts install.sh` dava 0. O
-# A interface pede "Space Grotesk" na interface e "JetBrains Mono" nos
-# valores/logs, e numa máquina limpa nenhuma das duas existe — o fontconfig
-# substitui EM SILÊNCIO e a interface nunca é a do design.
-#
-# Fica junto do passo 4 (atalho, glyphs, i18n) porque é a mesma natureza:
-# acabamento da GUI, no HOME da usuária, sem sudo obrigatório.
-#
-# BEST-EFFORT, no molde dos outros passos opcionais: o `if` impede o `set -e` de
-# abortar e o próprio script sai 0 mesmo quando não consegue instalar. Fonte é
-# acabamento, não requisito — fazer a instalação inteira falhar por causa disso
-# trocaria um problema cosmético por um problema real. `--yes` só quando ela já
-# disse sim a tudo; nunca forçamos `--no-download` aqui (o download é pinado num
-# commit e conferido por SHA-256, e é o único caminho em distro sem o pacote).
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     if [[ "${NO_FONTS}" -eq 1 ]]; then
         _nao_faria "instalar as fontes da identidade visual (--no-fonts) — a interface usa o fallback do CSS"
@@ -4270,9 +2702,6 @@ elif [[ "${NO_FONTS}" -eq 1 ]]; then
 elif [[ ! -r "${ROOT_DIR}/scripts/install_fonts.sh" ]]; then
     warn "scripts/install_fonts.sh ausente — fontes da identidade visual puladas"
 else
-    # `--yes` só quando ela já disse sim a tudo. Sem array vazio de propósito:
-    # `"${arr[@]}"` vazio sob `set -u` quebra em bash < 4.4, e este script roda
-    # em máquina de quem instala, não só na desta casa.
     if [[ "${AUTO_YES}" -eq 1 ]]; then
         bash "${ROOT_DIR}/scripts/install_fonts.sh" --yes \
             || printf '      fontes: incompletas — rode: bash scripts/install_fonts.sh\n'
@@ -4282,30 +2711,9 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 4f. Teclado na tela — o que o L3 do controle abre (TECLADO-QUE-NAO-DIGITA-01)
-# ---------------------------------------------------------------------------
-# O mapa de fábrica dá ao L3 um token de OSK desde sempre (`__TOGGLE_OSK__`
-# desde 02/09/2026, quando o L3 virou alternador; antes `__OPEN_OSK__`), e o
-# daemon o cumpre abrindo um teclado na tela DO SISTEMA. Só que ninguém
-# instalava esse teclado: medido em 09/08/2026 na máquina dela, `command -v onboard
-# wvkbd-mobintl` não achava nenhum dos dois e `grep -c onboard install.sh` dava
-# ZERO. Como nenhum dos nove atalhos de fábrica digita uma LETRA (Super,
-# PrintScreen, Alt+Tab, Alt+Shift+Tab, Enter, Delete, Backspace e os dois
-# tokens de OSK), sem o teclado na tela a frase "o teclado emulado não digita"
-# era literalmente verdade.
-#
-# Fica ao lado das fontes porque é a mesma natureza: acabamento que o produto
-# PROMETE, que vem de pacote da distribuição, best-effort, sem derrubar o
-# install. A escolha do pacote (wvkbd em Wayland, onboard em X11) e o porquê
-# MEDIDO moram num dono só — scripts/install_osk.sh —, para o instalador, o
-# doctor e o daemon nunca divergirem sobre qual binário é o certo.
 step "4f" "teclado na tela do L3 (wvkbd em Wayland, onboard em X11)"
 install_osk_host
 
-# ---------------------------------------------------------------------------
-# 5. Symlink ~/.local/bin/hefesto-dualsense4unix
-# ---------------------------------------------------------------------------
 step "5/11" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "criar o link ${BIN_DIR}/hefesto-dualsense4unix -> ${VENV_DIR}/bin/hefesto-dualsense4unix"
@@ -4313,52 +2721,26 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "copiar a chave de desligar tudo para ${BIN_DIR}/hefesto-chave"
 else
 ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
-# PATH-06: o wrapper de launch também entra no PATH — `which hefesto-launch`
-# passa a funcionar e a Launch Option pode ser digitada à mão como
-# `hefesto-launch %command%`. A string canônica do botão (WRAPPER_LAUNCH,
-# formato `sh -c` com caminho absoluto) continua a mesma: funciona SEM PATH.
 if [[ -x "${LAUNCH_WRAPPER_TARGET}" ]]; then
     ln -sf "${LAUNCH_WRAPPER_TARGET}" "${BIN_DIR}/hefesto-launch"
 fi
 
-# A CHAVE — `hefesto-chave off|on|estado`, o desligamento completo e reversível.
-# Pedido dela, 29/08/2026: *"temos que garantir que eu possa DESLIGAR o impacto
-# por completo e RELIGAR"*. Ela para, desabilita e MASCARA as units do app, põe
-# a chave em disco que o daemon lê no boot (`utils/chave.py` — o furo que a
-# máscara não tapa é o botão "Ligar daemon" da GUI, que cai num `Popen`) e
-# esconde o atalho da dock. Nada de sudo, nada apagado: `on` desfaz tudo.
-#
-# É CÓPIA, e não symlink: quem desliga o produto tem de conseguir desligá-lo
-# mesmo que a árvore de desenvolvimento saia do disco.
 if [[ -f "${ROOT_DIR}/scripts/hefesto-chave.sh" ]]; then
     install -m 755 "${ROOT_DIR}/scripts/hefesto-chave.sh" "${BIN_DIR}/hefesto-chave"
 fi
 fi
 ok
 
-# ---------------------------------------------------------------------------
-# 6. Daemon systemd --user (copia sempre; auto-start segue a resposta dela)
-# ---------------------------------------------------------------------------
 step "6/11" "daemon systemd --user"
 
-# BUG-INSTALL-ATROPELA-O-NAO-DO-AUTOSTART-01 (29/07): esta variável nasce AQUI,
-# fora do `if`, porque o passo 7a mais abaixo TAMBÉM a lê — ele escreve o mesmo
-# ~/.config/systemd/user/hefesto-dualsense4unix.service e antes fazia enable +
-# restart sem olhar nem a flag nem a resposta. Sob `set -u` uma variável só
-# definida dentro do ramo `else` mataria o install quando --no-systemd fosse
-# usado, então o default explícito (0) fica antes de qualquer ramo.
 enable_daemon=0
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
 else
-    # Decide se habilita auto-start ANTES de chamar o CLI.
     if [[ "${ENABLE_AUTOSTART}" -eq 1 ]]; then
         enable_daemon=1
     else
-        # Default 'y': o daemon precisa estar rodando pro controle funcionar;
-        # autostart no boot é o esperado de "instala tudo" (sem passo manual
-        # após reboot/formatar). Quem não quiser: responder 'n' (ou não usar -y).
         ask_yn "habilitar auto-start do daemon no boot?" "${AUTO_YES}" "y"
         [[ "${REPLY,,}" =~ ^y ]] && enable_daemon=1
     fi
@@ -4384,9 +2766,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 7. Hotplug-gui unit (opt-in, default NÃO)
-# ---------------------------------------------------------------------------
 step "7/11" "hotplug USB → abre a GUI automaticamente"
 
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
@@ -4404,14 +2783,6 @@ else
         printf '      desativado (abrir GUI manualmente pelo menu de aplicativos)\n'
     else
         readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-gui-hotplug.service"
-        # BUG-INSTALL-READONLY-USER-UNIT-DIR-01 (25/07): este nome NÃO pode ser
-        # `readonly`. O passo 11 (guard do Steam Input) reatribui a MESMA variável
-        # mais abaixo, e sob `set -euo pipefail` uma atribuição a variável somente
-        # leitura devolve rc=1 e MATA o install. Efeito medido: com o hotplug-gui
-        # habilitado (--enable-hotplug-gui ou "sim" no prompt), o install abortava
-        # em silêncio no passo 11 — sem o guard do Steam Input, sem a migração das
-        # Launch Options (11b), sem o pino do Proton (11c) e sem sequer imprimir o
-        # banner final. Nome genérico e compartilhado entre passos: assignment comum.
         USER_UNIT_DIR="${HOME}/.config/systemd/user"
         readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-dualsense4unix-gui-hotplug.service"
 
@@ -4436,36 +2807,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 7a-bis. A UNIT DO DAEMON PRINCIPAL.
-#     BUG-INSTALL-NAO-INSTALA-A-UNIT-DO-DAEMON-01 (25/07): assimetria de
-#     primeira grandeza. O `uninstall.sh` para, desabilita e REMOVE
-#     ~/.config/systemd/user/hefesto-dualsense4unix.service (o bloco «parando daemon» do uninstall.sh),
-#     e o install NUNCA a instalava — `grep -c assets/hefesto-dualsense4unix.service
-#     install.sh` dava ZERO. A unit só existia nas máquinas onde tinha
-#     sobrevivido de uma instalação antiga; quem fizesse o ciclo completo
-#     (uninstall -> install) ficava SEM daemon, e portanto sem vpad, sem
-#     gatilhos, sem lightbar — com o install anunciando sucesso.
-#     Aqui a simetria é fechada: copia, habilita e SOBE (`--now`), como já se
-#     fazia para o kernel-watch e para o guard do Steam Input. Sem `--now` o
-#     daemon só nasceria no próximo login, e a instalação "bem-sucedida" não
-#     entregaria nada até lá.
-#
-#     BUG-INSTALL-ATROPELA-O-NAO-DO-AUTOSTART-01 (29/07): fechar a assimetria
-#     abriu o bug OPOSTO. Este passo escreve o MESMO arquivo do passo 6
-#     (~/.config/systemd/user/hefesto-dualsense4unix.service) e fazia `enable` +
-#     `restart` sem gate nenhum: nem --no-systemd, nem a resposta ao prompt do
-#     passo 6. Resultado medido: quem passava --no-systemd via o passo 6 dizer
-#     "pulado" e o 7a instalar e habilitar a unit três linhas depois; quem
-#     respondia "não" a "habilitar auto-start do daemon no boot?" via o passo 6
-#     dizer "auto-start desativado" e o 7a habilitar mesmo assim. O "não" dela
-#     era atropelado. Agora o passo 7a obedece aos dois:
-#       - --no-systemd  -> não copia, não habilita, não sobe (igual ao passo 6);
-#       - resposta "não" -> copia a unit (simetria com o uninstall preservada) e
-#         NÃO habilita nem sobe; um daemon que JÁ estivesse no ar só é
-#         reiniciado para não ficar rodando o binário antigo — nunca iniciado.
-#     O default SEM FLAGS continua o de sempre: copia, habilita e sobe.
-# ---------------------------------------------------------------------------
 step "7a/11" "daemon: unit do systemd (usuário)"
 DAEMON_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix.service"
 DAEMON_USER_UNIT_DIR="${HOME}/.config/systemd/user"
@@ -4478,9 +2819,6 @@ elif [[ ! -f "${DAEMON_UNIT_SRC}" ]]; then
 elif ! command -v systemctl >/dev/null 2>&1; then
     warn "systemctl ausente — daemon não habilitado (inicie com: hefesto-dualsense4unix daemon start)"
 elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    # ESTE É O PASSO QUE MEXE NO PRODUTO QUE ELA ESTÁ USANDO AGORA, e por isso
-    # o ensaio o descreve com todas as letras: um `restart` derruba o daemon
-    # vivo e, com ele, os controles conectados, por alguns segundos.
     if [[ -L "${DAEMON_UNIT_TARGET}" ]] \
        && [[ "$(readlink -f "${DAEMON_UNIT_TARGET}" 2>/dev/null)" == "/dev/null" ]]; then
         _faria "tirar a MÁSCARA da unit do daemon (ela está mascarada por 'hefesto-chave off') antes de gravá-la — sem isto o cp escreveria dentro de /dev/null e a unit sumiria no próximo 'hefesto-chave on'"
@@ -4499,20 +2837,6 @@ elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
 else
     mkdir -p "${DAEMON_USER_UNIT_DIR}"
 
-    # A MÁSCARA DA CHAVE VEM ANTES DO `cp`, E ISSO É A CURA DE UM ESTRAGO REAL
-    # (01/09/2026). `hefesto-chave off` MASCARA as units, e uma máscara é um
-    # symlink `~/.config/systemd/user/<unit>` -> `/dev/null`. O `cp -f` SEGUE o
-    # symlink: a unit vai inteira para dentro do `/dev/null`, e o `cp` devolve
-    # `rc=0` — o `set -e` não pega. No `hefesto-chave on` seguinte o `unmask`
-    # apaga o symlink e não há arquivo por baixo: a unit do daemon DESAPARECE.
-    #
-    # MEDIDO: `ln -s /dev/null u; cp -f fonte u` -> `cp rc=0`, `u` ainda é
-    # symlink, conteúdo vazio.
-    #
-    # `unmask` antes do `cp` desfaz o symlink e o `cp` escreve arquivo de
-    # verdade. A chave EM DISCO continua valendo (é ela que faz o daemon
-    # recusar subir) e é lida logo abaixo — desmascarar não religa nada
-    # sozinho, e é de propósito: a decisão dela continua de pé.
     if command -v systemctl >/dev/null 2>&1 \
        && [[ -L "${DAEMON_UNIT_TARGET}" ]] \
        && [[ "$(readlink -f "${DAEMON_UNIT_TARGET}" 2>/dev/null)" == "/dev/null" ]]; then
@@ -4524,10 +2848,6 @@ else
     cp -f "${DAEMON_UNIT_SRC}" "${DAEMON_UNIT_TARGET}"
     systemctl --user daemon-reload >/dev/null 2>&1 || true
 
-    # A CHAVE EM DISCO: se ela desligou o Hefesto de propósito, o daemon vai
-    # RECUSAR subir (`utils/chave.py`, lido no boot do daemon) — e anunciar
-    # "daemon habilitado e no ar" em cima disso seria mentira. Não se apaga a
-    # chave aqui: a decisão é dela, e o comando que a desfaz está na tela.
     _CHAVE_POSTA="${XDG_CONFIG_HOME:-${HOME}/.config}/${APP_ID}/DESLIGADO-pela-chave.flag"
     if [[ -f "${_CHAVE_POSTA}" ]]; then
         warn "o Hefesto está DESLIGADO pela chave — o daemon vai recusar subir"
@@ -4536,9 +2856,6 @@ else
         enable_daemon=0
     fi
     if [[ "${enable_daemon}" -eq 1 ]]; then
-        # `restart` e não `start`: numa reinstalação por cima, o daemon em memória
-        # é o binário ANTIGO — sem isso a pessoa roda o install, vê "sucesso" e
-        # segue usando o código anterior até relogar.
         if systemctl --user enable "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
            && systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1; then
             printf '      daemon habilitado e no ar\n'
@@ -4546,10 +2863,6 @@ else
             warn "enable/restart do daemon falhou — suba com: systemctl --user enable --now hefesto-dualsense4unix.service"
         fi
     else
-        # Ela respondeu "não" ao passo 6: nada de enable, nada de start. Só o
-        # daemon que JÁ estava no ar é reiniciado (senão a reinstalação deixaria
-        # o binário antigo rodando) — e isso não inicia nada que estivesse
-        # parado nem habilita o auto-start.
         if systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"; then
             systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
                 || warn "restart do daemon já em execução falhou"
@@ -4560,11 +2873,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# A BANDEJA VOLTA DEPOIS DO SERVIÇO (17/10/2026): o restart acima derruba a bandeja viva, e só a
-# janela, o Retomar/Ativar e a pílula a subiam de volta. O dono decide, como nos outros caminhos:
-# `garantir_a_bandeja` sobe só com a escolha «Ícone na bandeja» ligada e nenhuma de pé. Sem
-# sessão gráfica (install por ssh) não há onde o ícone morar, e o login a sobe pelo autostart.
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "subir o ícone na bandeja, se a escolha está ligada e nenhum está de pé"
 elif [[ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
@@ -4579,16 +2887,6 @@ sys.exit(0 if garantir_a_bandeja() else 1)' >/dev/null 2>&1; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 7a'. A PRESENÇA (O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01): o
-#     broker entrega o controle físico ao sistema 30 s depois que o último
-#     cliente sai, e o Hefesto que nunca sobe (o daemon desabilitado, ou em
-#     failed antes de falar com o broker) não deixa cliente nenhum. Esta unit
-#     manda um ping ao broker no login e quando o daemon falha (o OnFailure
-#     dele), e só roda se o daemon não está habilitado ou falhou. Habilitada em
-#     toda instalação: com o Hefesto de pé ela não faz nada. O `__PYTHON__` é o
-#     Python da venv. Simétrica no uninstall e no purge.
-# ---------------------------------------------------------------------------
 PRESENCA_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-presenca.service"
 PRESENCA_UNIT_NAME="hefesto-dualsense4unix-presenca.service"
 PRESENCA_UNIT_TARGET="${DAEMON_USER_UNIT_DIR}/${PRESENCA_UNIT_NAME}"
@@ -4609,15 +2907,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 7b. kernel-watch (DEFAULT — opt-out --no-kernel-watch): vigia do ecossistema
-#     USB/BT/xHCI num log dedicado. Evolução do storm-watch (PLAT-06 item 4):
-#     além do storm -71, vigia o rate-limit do hid-nintendo (a morte do 8BitDo
-#     em BT), erros de hci/xHCI e o delta dos contadores de erro do rádio BT.
-#     Script/unit mantêm os NOMES antigos (compat); o log novo é
-#     ~/.local/state/hefesto-dualsense4unix/kernel.log (storm.log vira symlink
-#     se não existir como arquivo). Sem sudo; simétrico no uninstall.
-# ---------------------------------------------------------------------------
 if [[ "${SKIP_KERNEL_WATCH}" -eq 1 ]]; then
     step "7b/11" "kernel-watch pulado (--no-kernel-watch)"
 else
@@ -4629,18 +2918,6 @@ else
     readonly STORM_USER_UNIT_DIR="${HOME}/.config/systemd/user"
     readonly STORM_UNIT_TARGET="${STORM_USER_UNIT_DIR}/hefesto-dualsense4unix-storm-watch.service"
 
-    # A MARCA DO BOOT (O-DIARIO-DO-RADIO-01, instalada em 23/09/2026). A
-    # primeira volta de cada boot relê o boot inteiro, e ela se reconhece pela
-    # marca `kernel-watch.boot` (`desde_do_journal`, no storm_watch.sh). Numa
-    # ATUALIZAÇÃO com a vigia já rodando neste boot, a volta que o restart
-    # abaixo abre seria "a primeira" para a vigia NOVA — que não tinha marca —
-    # e escreveria de novo no kernel.log tudo o que a velha já escreveu. Por
-    # isso a marca recebe o boot de agora ANTES do restart; o preço é não reler
-    # o arranque deste boot, que a vigia velha também não relia.
-    #
-    # E O RESTART É PRECISO: `enable --now` não troca o processo de uma unit
-    # que já está de pé, e a vigia velha seguiria rodando o script antigo até
-    # o próximo login — sem as tags novas do rádio.
     readonly STORM_MARCA="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/kernel-watch.boot"
     _storm_ativa=0
     if command -v systemctl >/dev/null 2>&1 \
@@ -4685,9 +2962,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 8. Extension AppIndicator no GNOME (necessária para o ícone de bandeja)
-# ---------------------------------------------------------------------------
 step "8/11" "GNOME: extension AppIndicator (tray icon)"
 
 _desktop="${XDG_CURRENT_DESKTOP:-}"
@@ -4699,18 +2973,8 @@ elif ! command -v gnome-extensions >/dev/null 2>&1; then
     warn "gnome-extensions CLI ausente — habilite manualmente a extension AppIndicator depois"
 else
     _ext_id="ubuntu-appindicators@ubuntu.com"
-    # LIDO PARA VARIÁVEL, e não por cano: sob o `set -o pipefail` deste arquivo
-    # (linha 188), `cmd | grep -q` devolve 141 quando ACHA — o `grep -q` sai no
-    # primeiro acerto e quem escreve morre de SIGPIPE. Numa guarda `if !` isso
-    # se inverte e vira sempre verdadeira. É o mesmo defeito do `ldconfig -p`
-    # de 19/08 (linha 686) e das guardas do DKMS de 01/09; `tests/unit/
-    # test_o_pipefail_nao_transforma_acerto_em_falha.py` guarda a forma.
     _ext_habilitadas=$'\n'"$(gnome-extensions list --enabled 2>/dev/null || true)"$'\n'
     _ext_todas=$'\n'"$(gnome-extensions list 2>/dev/null || true)"$'\n'
-    # As quebras em volta fazem o casamento ser de LINHA INTEIRA, que é o que o
-    # `grep -qx` fazia: sem elas, `foo@bar.com` casaria dentro de
-    # `outro-foo@bar.com.br` e o instalador diria "já habilitada" sobre a
-    # extension errada.
     if [[ "${_ext_habilitadas}" == *$'\n'"${_ext_id}"$'\n'* ]]; then
         printf '      já habilitada\n'
     elif [[ "${_ext_todas}" != *$'\n'"${_ext_id}"$'\n'* ]]; then
@@ -4733,43 +2997,6 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 9. Applet COSMIC nativo (Rust + libcosmic) — APOSENTADO, opt-in explícito
-# ---------------------------------------------------------------------------
-# APOSENTADO EM 19/09/2026, POR ORDEM DELA: *"desabilitamos o applet pela
-# complexidade. o tray faz o mesmo mas melhor."*
-#
-# E ela o disse sobre o PRÓPRIO trabalho: o applet foi ideia dela, escrito por
-# ela no início do projeto; o tray nasceu depois, nesta casa, como reescrita
-# por cima. A avaliação de que o segundo ficou melhor é dela — e vem com o
-# preço de admiti-lo, com todas as letras, na mensagem em que mandou aposentar
-# o primeiro. Fica registrado porque é decisão medida, não preferência.
-#
-# O QUE O APPLET COBRAVA, medido: um binário Rust de 23 MB, uma build de
-# libcosmic que passa de 10 minutos, `cargo`+`just` e sete `-dev` de sistema, e
-# um `sudo` para copiar em `/usr/local`. E ele ainda não aparecia sozinho: o
-# `cosmic-panel` só carrega o plugin se ele estiver na lista de Miniaplicativos,
-# uma configuração que este script NUNCA escreveu. Instalava-se um binário de
-# 23 MB para uma barra que continuava vazia.
-#
-# O QUE ENTRA NO LUGAR: o tray SNI (`app/tray.py`, subido por
-# `cli/cmd_tray.py`), com autostart escrito no passo 4. Ele aparece sem
-# configuração nenhuma, funciona fora do COSMIC, e o menu dele é mais rico —
-# «Abrir programa», a lista de perfis e o estado, todos falando com o daemon.
-#
-# E A PREMISSA QUE O ADIAVA CAIU JUNTO: este projeto dizia que em Pop!_OS
-# COSMIC *"o `org.kde.StatusNotifierWatcher` que o libayatana usa não existe"*.
-# Medido em 19/09, ele existe, servido pelo `cosmic-applet-status-area`
-# (PID vivo na sessão dela, junto com o `com.system76.Cosmic…Watcher`).
-#
-# O CÓDIGO FICA, e a flag também: `--enable-cosmic-applet` continua compilando
-# e instalando para quem quiser. O que mudou é o DEFAULT — de "instala em
-# COSMIC, ou se já estiver instalado" para "só quando pedido".
-#
-# BUG-INSTALL-APPLET-OPT-IN-SKIPPED-01 (o bug que fez o applet virar
-# default-on) FICA REGISTRADO e caduco: ele descrevia a perda do applet num
-# ciclo uninstall+install, e hoje não há o que perder. A `--no-cosmic-applet`
-# vira apelido de nada e segue aceita, para não quebrar quem a tenha no script.
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
 step "9/11" "applet COSMIC (APOSENTADO — o tray o substitui; --enable-cosmic-applet força)"
 install_cosmic_applet() {
@@ -4792,10 +3019,6 @@ install_cosmic_applet() {
         return 0
     fi
     printf '      compilando + instalando (1a build do libcosmic e LONGA, >10 min)\n'
-    # INSTALL-APPLET-HEADLESS-01: o `just install` usa {{sudo}} p/ copiar os
-    # arquivos como root. Interativo, "sudo" puro prompta no TTY; HEADLESS (sem
-    # TTY, SUDO_ASKPASS setado) o "sudo" puro FALHA — passamos "sudo -A" p/ o
-    # just usar o askpass (o `sudo -n` não herda o ticket sem TTY nesta máquina).
     local _applet_sudo=()
     [[ -n "${SUDO_ASKPASS:-}" ]] && _applet_sudo=(--set sudo "sudo -A")
     if just "${_applet_sudo[@]}" -f "${applet_dir}/justfile" -d "${applet_dir}" install; then
@@ -4806,10 +3029,6 @@ install_cosmic_applet() {
 }
 _applet_installed=0
 [[ -e "${APPLET_BIN}" ]] && _applet_installed=1
-# A CONDIÇÃO PERDEU DOIS BRAÇOS EM 19/09/2026, e é isso que aposenta o applet:
-# `DESKTOP_IS_COSMIC` (instalava na máquina dela toda vez) e `_applet_installed`
-# (uma vez instalado, reinstalava para sempre — inclusive depois de ela mandar
-# parar). Sobra a flag, que é o único jeito de pedir.
 if [[ "${ENABLE_COSMIC_APPLET}" -eq 1 ]]; then
     install_cosmic_applet
 elif [[ "${DISABLE_COSMIC_APPLET}" -eq 1 ]]; then
@@ -4817,45 +3036,17 @@ elif [[ "${DISABLE_COSMIC_APPLET}" -eq 1 ]]; then
 else
     printf '      aposentado — o tray faz o mesmo (force: ./install.sh --enable-cosmic-applet)\n'
 fi
-# UM APPLET JÁ INSTALADO NÃO É APAGADO AQUI, e a razão é a mesma de sempre: o
-# install não desfaz o que não instalou nesta corrida. Mas ele DIZ, porque o
-# binário parado não se anuncia — e dois ícones na barra seriam lidos como
-# defeito novo.
 if [[ "${_applet_installed}" -eq 1 && "${ENABLE_COSMIC_APPLET}" -eq 0 ]]; then
     printf '      há um applet instalado de antes (%s)\n' "${APPLET_BIN}"
     printf '      para removê-lo SEM tocar em mais nada: ./uninstall.sh --so-o-applet\n'
 fi
 
-# ---------------------------------------------------------------------------
-# 10. WirePlumber: DualSense fora da fonte de áudio padrão — DEFAULT (opt-out: --keep-dualsense-mic)
-# ---------------------------------------------------------------------------
-# SOM-QUE-NAO-DORME-01 (16/08/2026) — SEM FLAG, e num passo PRÓPRIO, antes do
-# 10/11 (que decide o microfone).
-#
-# A decisão dela, textual: *"garantir que sempre fique acordado"*. O defeito foi
-# medido na orelha dela em 15/08 23h45 (ensaio `sfx-no-suspenso-come-o-comeco`):
-# o WirePlumber suspende o sink do controle depois de 5 s ociosos, e o religar do
-# hardware COME O COMEÇO DO SOM.
-#
-# Por que passo próprio, e não uma linha dentro do 10/11: os três ramos de lá
-# decidem o MICROFONE. Quem pediu `--keep-dualsense-mic` pediu para não
-# rebaixarem a entrada dele — não pediu para perder o começo de cada efeito
-# sonoro. São perguntas diferentes, e amarrar uma na outra deixaria a cura
-# opt-in por acidente de posição (foi o que MIC-EM-TODO-FORMATO-01 pagou em
-# 10/08). Separado também mantém o bloco do 10/11 do tamanho que o portão
-# `test_o_instalador_que_aprovou_o_monitor` lê.
 step "som" "áudio: o alto-falante do controle nunca dorme"
-# O `if bash …` de baixo fica INTEIRO, e o ensaio entra por fora, e não por um
-# `elif`. A razão é medida: `test_o_alto_falante_nunca_dorme_01` procura a
-# chamada com `^\s*(?:if\s+)?bash …` e um `elif` a esconde — o portão passou a
-# dizer que o caminho NATIVO tinha perdido a cura do alto-falante. Não tinha; a
-# forma da linha é que mudou. Régua que lê texto não tem como desempatar, e
-# quem tem de ceder é quem chegou depois.
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _ensaio_wireplumber nunca-dorme
 else
 if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --nunca-dorme; then
-    : # a mensagem do próprio script já diz se instalou ou se já valia
+    :
 else
     warn "nunca-dorme falhou — rode: bash scripts/fix_wireplumber_default_source.sh --nunca-dorme"
 fi
@@ -4873,9 +3064,6 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     fi
 elif [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]] && warn "--with-wireplumber-disable-mic vence --with-wireplumber-fix"
-    # exit 2 (DualSense é a única fonte) não é falha de instalação — só aviso.
-    # exit 3 (a fonte padrão é um MONITOR) não fala do DualSense: quem dá esse
-    # veredito é a conferência do fim deste passo, depois da cura do microfone.
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
         printf '      mic do DualSense DESABILITADO (node.disabled; controle só-HID)\n'
     else
@@ -4883,15 +3071,6 @@ elif [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
     fi
 elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
-        # INSTALADOR-QUE-APROVOU-O-MONITOR-01: o drop-in ter entrado NÃO é o
-        # microfone estar certo, e dizer "fonte padrão reeleita" quando ela não
-        # foi era a metade da contradição que ela leu na tela.
-        #
-        # OS TRÊS DESFECHOS BONS SÃO DIFERENTES ENTRE SI, e desde 01/09/2026 a
-        # tela diz qual foi. O `2` nasceu naquele dia: com a webcam dela
-        # desconectada, o DualSense é a ÚNICA fonte de captura com porta usável,
-        # e não há o que eleger no lugar dele. Cair no `else` diria "fonte
-        # padrão reeleita" sobre uma eleição que não houve.
         case "${rc:-0}" in
             2)
                 printf '      drop-in do WirePlumber instalado; o DualSense é a ÚNICA fonte de\n'
@@ -4899,7 +3078,6 @@ elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
                 printf '      ./install.sh --with-wireplumber-disable-mic para tirá-lo de vez\n'
                 ;;
             3)
-                # MIC-PADRAO-NO-CABO-01: sem veredito aqui — a cura do doctor e a conferência do fim ainda vão rodar.
                 printf '      drop-in do WirePlumber instalado (o veredito do microfone sai no fim deste passo)\n'
                 ;;
             *)
@@ -4911,13 +3089,6 @@ elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     fi
 else
     printf '      pulado (--keep-dualsense-mic): o DualSense pode virar o microfone padrão\n'
-    # DROPIN-AMBIGUO-01 (26/08/2026) — o carimbo do GESTO, e a razão de ele
-    # existir: até hoje este ramo terminava exatamente igual a uma máquina que
-    # nunca instalou nada (sem o drop-in 51 no disco), e o
-    # `doctor.sh:_prefere_mic_do_dualsense` lia essa ausência como "ela
-    # promoveu o mic a dedo". Um estado, dois significados — e o [OK] caía em
-    # cima do defeito. `--keep-dualsense-mic` É o pedido explícito, então ele
-    # deixa de ser inferido e passa a ser escrito.
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --marcar-gesto-do-mic; then
         printf '      marca do gesto gravada: o doctor sabe que a ausência do drop-in 51 aqui foi pedido seu\n'
     else
@@ -4925,25 +3096,6 @@ else
     fi
 fi
 
-# MIC-USB-01, entrega 7 — a cura das camadas 1 e 2 do microfone mudo, que
-# existia em `scripts/doctor.sh --fix-mic` e que NINGUÉM chamava: uma instalação
-# limpa entregava o microfone mudo com a cura pronta no repositório.
-#
-# FATO SUBSTITUÍDO (MIC-PADRAO-NO-CABO-01): o `input:iec958-stereo` do DualSense não é "S/PDIF sem sinal". O pico 0
-# de 25/07 foi com o mudo do firmware ativo; em 26/07 gravou pico 4606, e o analógico (`available: no`) nascia sem porta.
-#
-# As duas ações deste passo são complementares e não conflitam: o drop-in acima
-# decide QUEM é o microfone padrão do sistema; a cura abaixo garante que o
-# microfone FUNCIONA quando escolhido (perfil da placa numa entrada com porta de
-# captura e nenhum mute persistido por rota de captura).
-#
-# Não roda com `--with-wireplumber-disable-mic`: ali a source foi desabilitada
-# DE PROPÓSITO, e ressuscitá-la desfaria a escolha da usuária no mesmo passo.
-#
-# Best-effort, como o resto do instalador: o `if` impede o `set -e` de abortar,
-# e `--quiet` mantém a cura silenciosa quando não há DualSense presente na hora
-# da instalação (sem controle o doctor só emite linhas informativas). FAIL e
-# WARN continuam saindo — o silêncio é do sucesso, não do problema.
 if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -ne 1 ]]; then
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _faria "curar o microfone pelo doctor (--fix-mic): pôr o perfil da placa numa entrada com porta de captura e tirar o mudo persistido por rota de captura"
@@ -4952,29 +3104,10 @@ if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -ne 1 ]]; then
     elif bash "${ROOT_DIR}/scripts/doctor.sh" --fix-mic --quiet; then
         printf '      microfone: camadas 1 e 2 conferidas (doctor.sh --fix-mic)\n'
     else
-        # RECEITA-ERRADA-01: o `--fix-mic` acabou de rodar, e rodá-lo de novo faz
-        # o mesmo. As linhas [FAIL]/[WARN] logo acima dizem o que falta.
         printf '      microfone: a cura do doctor não fechou tudo — o que falta está nas linhas acima\n'
     fi
 fi
 
-# INSTALADOR-QUE-APROVOU-O-MONITOR-01 (09/08/2026) — a CONFERÊNCIA FINAL do
-# microfone, e o motivo de ela existir.
-#
-# MEDIDO na máquina dela, no mesmo terminal, com dois minutos de diferença:
-#
-#   passo 10/11:  OK: microfone padrão ativo = alsa_output…iec958-stereo.monitor
-#   doctor.sh:    [FAIL] a fonte de captura padrão é um MONITOR — o que qualquer
-#                 app gravar é o áudio de SAÍDA do sistema, não a voz
-#
-# O install declarava sucesso sobre um estado que o próprio produto reprova. A
-# verificação do `--install` do wp-fix já parou de aprovar monitor (exit 3), mas
-# ela roda ANTES da cura (`--fix-mic`), então o veredito dela é sempre parcial:
-# quem tem a última palavra é esta leitura, DEPOIS de tudo o que o passo tenta.
-#
-# Não oferece comando: RECEITA-ERRADA-01 mostrou o preço de mandar rodar algo que
-# não pode funcionar. Quando não há microfone nenhum na máquina, o que resolve é
-# hardware — e é isso que a linha diz.
 if command -v pactl >/dev/null 2>&1; then
     _fonte_agora="$(pactl get-default-source 2>/dev/null || true)"
     case "${_fonte_agora}" in
@@ -4983,7 +3116,6 @@ if command -v pactl >/dev/null 2>&1; then
             printf '      isto NÃO é microfone: o que Discord, chat de jogo ou gravador\n'
             printf '      captarem é o áudio que SAI do PC, não a voz de quem fala — e o\n'
             printf '      medidor de nível mostra sinal, então parece estar funcionando.\n'
-            # MIC-PADRAO-NO-CABO-01 (validação): com uma entrada de porta usável NO AR, «conecte o DualSense» é receita que não resolve.
             _no_ar="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --melhor-fonte-elegivel 2>/dev/null || true)"
             [[ -n "${_no_ar}" ]] || _no_ar="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --fonte-se-sustenta "$(pactl list sources short 2>/dev/null | awk 'tolower($2) ~ /^alsa_input\..*dualsense/ { print $2; exit }')" 2>/dev/null || true)"
             if [[ -n "${_no_ar}" ]]; then
@@ -4999,7 +3131,6 @@ if command -v pactl >/dev/null 2>&1; then
             printf '      microfone: nenhuma fonte padrão eleita (PipeWire parado?)\n'
             ;;
         *)
-            # MIC-PADRAO-NO-CABO-01: «entrada de verdade» só com porta usável, e o DualSense só como a ÚNICA (consultas que não escrevem).
             _porta_usavel="$(bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --fonte-se-sustenta "${_fonte_agora}" 2>/dev/null || true)"
             if [[ -z "${_porta_usavel}" ]]; then
                 warn "o microfone padrão do sistema (${_fonte_agora}) não tem porta de captura usável — vai gravar silêncio"
@@ -5024,28 +3155,6 @@ if command -v pactl >/dev/null 2>&1; then
     unset _fonte_agora _no_ar _porta_usavel _outra_entrada
 fi
 
-# ---------------------------------------------------------------------------
-# 11a. Proton PINADO, a primeira metade: BAIXAR e CONFERIR (a Steam segue aberta)
-# ---------------------------------------------------------------------------
-# INSTALL-UNIVERSAL, 18/09/2026. O `--ensure` morava no 11c, DEPOIS dos passos
-# que fecham e reabrem a Steam — e a trava que vinha logo atrás dele achava a
-# Steam viva e ADIAVA, justamente na máquina em que ela estava aberta. Ele sai
-# para cá porque o download leva minutos e não pode segurar a Steam fechada; a
-# trava fica no 11c, dentro da janela de Steam fechada do 11a-bis.
-#
-# E ELE PASSOU A PERGUNTAR SE HÁ STEAM NATIVA. Sem ela, o `--ensure` baixava
-# 563 MB, extraía, e deixava `~/.steam/steam` como diretório REAL — que o
-# lançador Debian da Steam lê como o layout histórico e adota como casa. Daí em
-# diante o pino, o Steam Input, o wrapper e o vigia miravam uma raiz que a
-# Steam não usa, e reinstalar não curava. Agora é o rc 4: com a Steam na
-# Flatpak/Snap nada é baixado; sem Steam nenhuma, o tarball conferido fica SÓ
-# no cache, e o vigia da Steam (`--manter`) extrai e trava quando ela existir.
-#
-# Um significado por código (`proton_pin.RC_*`): 1 checksum, 2 sem rede e sem
-# cache, 4 adiado com o tarball no cache, 5 extração falhou (disco), 6 conf
-# ilegível, 7 Steam na Flatpak/Snap (nada baixado). Até aqui o 1 cobria também
-# o traceback de um disco cheio, e a tela dizia "checksum"; e o 4 cobria também
-# a caixa, com a promessa do vigia extraindo de um cache que ninguém encheu.
 step "11a" "Proton pinado: baixar e conferir a versão validada (antes de fechar a Steam)"
 PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
 _pp_pronto=0
@@ -5060,26 +3169,12 @@ elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "  (sem Steam nativa nesta máquina, só baixa e confere para o cache: nada é extraído e a pasta da Steam não é criada)"
     _nao_faria "sobrescrever um Proton pinado que VOCÊ já tenha instalado por fora (ProtonUp ou à mão): ele é mantido"
 else
-    # CONSELHO-QUE-NAO-CURA-01 (02/09/2026): a saída do `--ensure` é CAPTURADA
-    # (e reimpressa inteira) porque um dos desfechos de sucesso precisa ser dito
-    # em voz alta. Quando o Proton pinado já está lá SEM o nosso manifesto —
-    # instalado por ProtonUp ou à mão —, o `ensure_pinned_proton` devolve
-    # `already` e MANTÉM o diretório de propósito: é dado da dona da máquina.
-    # A consequência é que o doctor passa a dizer, para sempre, que o manifesto
-    # não confere; e o conselho que ele dava era "rode ./install.sh", que é
-    # exatamente o que acabou de rodar sem mudar nada. Medido na máquina dela
-    # em 02/09: install com rc=0 e o mesmo aviso de volta.
     _pp_rc=0
     _pp_saida="$(python3 "${PROTON_PIN_PY}" --ensure 2>&1)" || _pp_rc=$?
-    # `[[ ]] && printf` seria uma lista que devolve 1 com a saída vazia, e o
-    # `set -e` desta casa mataria o instalador aqui. Vai de `if`, de propósito.
     if [[ -n "${_pp_saida}" ]]; then printf '%s\n' "${_pp_saida}"; fi
     case "${_pp_rc}" in
         0)
             _pp_pronto=1
-            # O marcador vem do detalhe do `EnsureResult`; se ele mudar de texto,
-            # `tests/unit/test_conselho_que_nao_cura_01_o_proton_e_a_sobra_inerte.py`
-            # reprova — a frase é contrato entre os dois arquivos, não coincidência.
             if [[ "${_pp_saida}" == *"instalação pré-existente sem manifesto"* ]]; then
                 printf '      o Proton pinado JÁ estava aí, instalado por FORA (ProtonUp ou à mão), e foi MANTIDO — não sobrescrevo o que você instalou.\n'
                 printf '      Por isso não dá para conferir o SHA256 do release, e o doctor vai apontar isso toda vez. Rodar este instalador de novo NÃO muda.\n'
@@ -5109,30 +3204,6 @@ else
     unset _pp_rc _pp_saida
 fi
 
-# ---------------------------------------------------------------------------
-# 11a-bis. A Steam fecha UMA vez para os passos que editam os arquivos dela
-# ---------------------------------------------------------------------------
-# INSTALL-UNIVERSAL, 18/09/2026 (d172d9fb8, item c da conferência). Cada passo que
-# edita arquivo da Steam fechava e REABRIA a Steam por conta própria — o 11, o
-# 11b e o 11b-bis. O 11b-ter (sentinela) e o 11c (trava do Proton) vinham
-# depois, achavam a Steam de pé outra vez e ADIAVAM (rc 3). Na máquina em que
-# a Steam estava aberta no começo do install, a sentinela e a trava `--todos`
-# nunca aconteciam, e nada tentava de novo. Numa reinstalação havia ainda a
-# corrida da Steam subindo enquanto o lock passava pelo portão.
-#
-# O VIGIA DA STEAM ESTACIONA ANTES, e volta no 11d (18/09/2026). Ele dispara
-# quando a Steam sai (o `.path`) e ao ser ligado (o `.timer`, que "dispara na
-# hora"), e escreve os MESMOS arquivos que o 11, o 11b, o 11b-bis, o 11b-ter e
-# o 11c escrevem — o `localconfig.vdf` pelo mesmo `.hefesto-tmp`, sem trava.
-# Com os dois rodando juntos, um perdia a edição do outro. Por isso ele para
-# aqui, o passo 11 o habilita sem `--now`, e ele volta no fim — ou no `trap`,
-# se o install morrer no meio.
-#
-# Agora ela fecha aqui, uma vez, e reabre no 11d, uma vez — só se estava
-# aberta. Os `--stop-steam` do 11b e do 11b-bis continuam na linha: com a
-# Steam já fechada eles não fecham nem reabrem nada, e se esta janela não
-# conseguiu fechá-la eles tentam do jeito de antes. Com um JOGO aberto nada é
-# fechado (o jogo morreria junto), e cada passo adia com o comando na mão.
 step "11a-bis" "Steam: fechar uma vez só, para os passos que editam os arquivos dela"
 LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
 _steam_fechada_pelo_install=0
@@ -5150,7 +3221,6 @@ _religar_o_vigia_se_o_install_parou() {
 if [[ "${DRY_RUN:-0}" -ne 1 ]]; then
     systemctl --user stop hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true
     _vigia_parado_pelo_install=1
-    # Morrer entre aqui e o 11d não pode deixar a pessoa sem Steam nem sem vigia.
     trap '_cleanup_sudo_keepalive; _reabrir_a_steam_se_o_install_fechou; _religar_o_vigia_se_o_install_parou' EXIT
 fi
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -5178,24 +3248,10 @@ else
     warn "steam_launch_options.py ausente ou sem python3 — cada passo da Steam cuida da própria janela"
 fi
 
-# ---------------------------------------------------------------------------
-# 11. Steam Input: desligar PSSupport (default ON, opt-out --keep-steam-input)
-# ---------------------------------------------------------------------------
-# FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01. Sem isso, a Steam com PSSupport=2 +
-# UseSteamControllerConfig=2 (default da própria Steam após o wizard
-# Deck_Configurator*_SteamInputOptIn) pega o /dev/hidraw* do DualSense
-# exclusivamente e re-injeta como Steam Virtual Gamepad com bindings do
-# desktop_ps4.vdf — conflitando com o daemon do Hefesto e produzindo os 3
-# sintomas clássicos (touchpad → cursor, mic muting spam, botões em
-# background). O script itera por TODOS os localconfig.vdf de todos os
-# Steam users em todos os formatos (.deb / Flatpak / Snap), backup ao lado.
 step "11/11" "Steam: desligar PSSupport do PlayStation Controller"
 if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
     printf '      pulado (--keep-steam-input) — Steam Input pode conflitar com o daemon\n'
 elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    # A CONTA STEAM É DELA, e este é o passo que escreve dentro dela — por isso
-    # o ensaio diz onde fica o backup e como se volta atrás, sem que ninguém
-    # tenha de procurar.
     _faria "editar TODOS os localconfig.vdf de todos os usuários Steam (deb, Flatpak e Snap): zerar SteamController_PSSupport e UseSteamControllerConfig"
     _faria "guardar um backup .bak.steam-input-<carimbo> AO LADO de cada vdf tocado, ANTES de escrever (e só quando há mudança de verdade)"
     _faria "  (para desfazer: bash scripts/disable_steam_input.sh --restore)"
@@ -5211,73 +3267,29 @@ else
     fi
 fi
 
-# O VIGIA SAIU DO OPT-OUT DO PSSUPPORT — 18/09/2026. Ele morava dentro do `else`
-# acima, e o `--keep-steam-input` (que é opt-out SÓ do PSSupport) levava junto
-# os outros dois passos dele: o atalho de inicialização e o Proton pinado. Na
-# máquina que instalou antes de existir Steam, o pino ficava no cache para
-# sempre, porque só o `--manter` do vigia o extrai sem o install. Agora ele é
-# instalado sempre; cada opt-out tira só a SUA linha da unidade.
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "instalar o vigia do vdf em ${HOME}/.config/systemd/user/hefesto-steam-input-guard.{path,timer,service} e habilitá-lo (repõe o que a Steam reescrever ao sair)"
     if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
         _faria "  (com --keep-steam-input, sem a linha que desliga o Steam Input: ele repõe só o atalho de inicialização e o Proton pinado)"
     fi
 else
-    # Guard: path unit + timer que desfazem o que a Steam reescreve no vdf
-    # (update/saída). FEAT-STEAM-INPUT-SELF-HEAL-01 (Steam Input OFF) e
-    # CARONA-NO-GUARD-01 (o wrapper hefesto-launch, na carona do mesmo gatilho:
-    # o instante em que a Steam grava o vdf é o instante em que ela acabou de
-    # sair, que é o ÚNICO em que a reposição sobrevive). Os dois passos adiam
-    # sozinhos se a Steam estiver viva. Units --user, sem sudo.
     USER_UNIT_DIR="${HOME}/.config/systemd/user"
     mkdir -p "${USER_UNIT_DIR}"
-    # ASSET AUSENTE NÃO PODE MATAR O INSTALL AQUI, e não podia desde sempre —
-    # este passo é o 11 de 11, e um `set -e` disparado nele levaria junto a
-    # migração das Launch Options (11b), o wrapper em todos os jogos (11b-bis),
-    # a sentinela (11b-ter), o pino do Proton (11c) e a conferência final. É o
-    # MESMO estrago que o BUG-INSTALL-READONLY-USER-UNIT-DIR-01 causou em 25/07,
-    # por outra porta: lá era a variável `readonly`, aqui é o `install -Dm644`
-    # sem guarda.
-    #
-    # E O `sed >` ERA PIOR QUE OS DOIS `install`: o redirecionamento CRIA o
-    # arquivo de destino ANTES de o `sed` rodar. Com o asset ausente, a unit
-    # ficava no disco VAZIA — e uma unit vazia é aceita pelo systemd e não faz
-    # nada, que é o vigia do Steam Input existindo e não vigiando. Agora o
-    # arquivo final só nasce se o `sed` tiver dado certo.
-    #
-    # OS DOIS NOMES FICAM ESCRITOS POR EXTENSO, e não num laço com
-    # `${_guard_u}`: `test_a_doc_nomeia_as_unidades_que_o_install_instala` lê as
-    # unidades `--user` que este arquivo escreve procurando
-    # `${USER_UNIT_DIR}/<nome>` — um laço esconde os dois nomes dela, e a régua
-    # passa a dizer que a documentação não precisa mais citá-los. Medido em
-    # 03/09/2026: com o laço, o portão reprovou dizendo "esperava o par .path +
-    # .timer do vigia no install.sh, achei []".
     _guard_ok=1
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.path" \
         "${USER_UNIT_DIR}/hefesto-steam-input-guard.path" 2>/dev/null || _guard_ok=0
     install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" \
         "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer" 2>/dev/null || _guard_ok=0
     SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
-    # O QUARTO PASSO DO VIGIA (21/09/2026, OPCOES-POR-JOGO-01): a tabela de
-    # opções de inicialização por jogo, composta com o atalho. Ver o asset.
     OPCOES_POR_JOGO_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py"
-    # O TERCEIRO PASSO DO VIGIA é o `--manter` do Proton pinado (18/09/2026):
-    # repõe o pino do cache e trava todo jogo quando a Steam sai. Com
-    # `--no-proton-pin` a linha dele SAI da unidade — a pessoa disse não, e o
-    # vigia não pode desdizer a cada meia hora.
     _guard_linhas_que_saem=()
     if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
         _guard_linhas_que_saem=(-e '/^ExecStart=.*__PROTON_PIN__/d')
     fi
-    # O mesmo para o `--keep-steam-input`: sai só a linha que desliga o Steam
-    # Input. E sai também quando o script dela falta, porque a linha não tem o
-    # `-` na frente: falhando, ela derrubaria os passos que vêm depois.
     if [[ "${KEEP_STEAM_INPUT}" -eq 1 || ! -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
         _guard_linhas_que_saem+=(-e '/^ExecStart=.*__SCRIPT__/d')
     fi
     _guard_tmp="$(mktemp)"
-    # A forma `${a[@]+…}` e não `"${a[@]}"`: com `set -u`, o bash anterior ao
-    # 4.4 trata o vetor VAZIO como variável não definida e mataria o install.
     if sed ${_guard_linhas_que_saem[@]+"${_guard_linhas_que_saem[@]}"} \
         -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
         -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
@@ -5295,8 +3307,6 @@ else
         warn "vigia do Steam Input NÃO instalado (asset ausente em assets/) — o que a Steam reescrever ao sair não será reposto sozinho"
     fi
     unset _guard_ok _guard_tmp _guard_linhas_que_saem
-    # `enable` SEM `--now`: ligado agora, o `.timer` dispararia na hora, no meio
-    # dos passos que editam os mesmos arquivos. Ele liga no fim (11d).
     if systemctl --user daemon-reload 2>/dev/null \
        && systemctl --user enable hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
         printf '      guard do Steam Input + wrapper habilitado (path + timer 30min; liga no fim do install)\n'
@@ -5305,26 +3315,9 @@ else
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# 11b. Launch Options: migrar o veneno estático para o wrapper — DEFAULT, sem flag
-# ---------------------------------------------------------------------------
-# DEDUP-05 (P0, "inseparável do DEDUP-04"): migra as Launch Options VENENOSAS
-# de ondas anteriores (IGNORE_DEVICES estático persistido por jogo — esconde o
-# único controle quando o vpad degrada => jogo com ZERO controles) para a
-# chamada do wrapper hefesto-launch. Só toca linhas com a assinatura nossa;
-# opções do usuário são preservadas. --stop-steam: fecha a Steam se preciso
-# (ela regrava o vdf ao sair) e reabre depois; com um JOGO aberto o módulo
-# RECUSA (rc=3) em vez de matá-lo. Módulo 100% stdlib — python3 do sistema.
-#
-# Passo PRÓPRIO, fora do bloco do Steam Input, de propósito (achado MED da
-# revisão adversarial): --keep-steam-input é opt-out SÓ do PSSupport e não
-# pode pular o desenvenenamento; e a migração tampouco depende de o
-# disable_steam_input.sh existir/ser executável.
 step "11b" "Steam: migrar Launch Options antigas para o wrapper hefesto-launch"
 LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
 if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
-    # A Steam já fechou no 11a-bis, se estava aberta; o `--stop-steam` fica
-    # como segunda tentativa para quando aquela janela não conseguiu.
     printf '      (com um jogo aberto, a migração é adiada e nada é fechado.)\n'
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _faria "trocar as Opções de Inicialização antigas que escondiam o controle com um IGNORE_DEVICES fixo (e deixavam o jogo sem controle nenhum quando o virtual caía) pela chamada do wrapper, jogo por jogo — o que VOCÊ escreveu na linha é preservado"
@@ -5339,37 +3332,6 @@ else
     warn "steam_launch_options.py ausente ou sem python3 — migração pulada; rode depois: python3 ${LAUNCH_MIGRATE_PY} --migrate"
 fi
 
-# ---------------------------------------------------------------------------
-# 11b-bis. Launch Options: APLICAR o wrapper a TODOS os jogos — DEFAULT, sem flag
-# ---------------------------------------------------------------------------
-# JOGO-COMPLETO-01 entrega E4, pedido literal dela: "isso deveria estar no
-# install sem flag". O passo 11b só MIGRA veneno legado — numa instalação
-# limpa não existe veneno, então ele não põe nada e NENHUM jogo fica com o
-# wrapper. Medido em 02/08 nesta máquina: `--status` dizia "veneno estático: 0
-# / chamadas do wrapper: 0" e o doctor avisava "NENHUM jogo com o wrapper".
-# Sem a chamada do wrapper, as envs que o projeto materializa
-# (SDL_GAMECONTROLLER_IGNORE_DEVICES, PROTON_DISABLE_HIDRAW) nunca são
-# exportadas e todo jogo enxerga DOIS DualSense — o defeito do controle
-# duplicado voltando pela porta dos fundos.
-#
-# Idempotente por construção (requisito dela): jogo que já chama o wrapper é
-# PULADO, nada é duplicado, e um vdf sem nada a fazer não é sequer reescrito —
-# rodar o install N vezes é igual a rodar uma. Steam Flatpak/Snap é pulada
-# inteira (o wrapper do host é invisível dentro da sandbox, DEDUP-04).
-#
-# ORDEM — armadilha 1 da sprint, "não ligar o broker antes do wrapper": o
-# broker hide-hidraw é instalado lá atrás, no passo 3h, e este passo vem só
-# aqui. É seguro, e o motivo é que o 3h NÃO esconde nada: ele instala o
-# binário e habilita o .socket; o .service só sobe na primeira conexão do
-# daemon e o hide do hidraw FÍSICO acontece em tempo de JOGO, com vpad vivo
-# confirmado (`coop._broker_hide_player`). Entre o 3h e este passo nenhum nó é
-# escondido — e este passo RECUSA rodar com um jogo aberto (rc=3, nada é
-# tocado), de modo que o primeiro jogo a subir depois do install já encontra o
-# wrapper posto. A rede de segurança nunca fica no ar sozinha.
-#
-# Falha aqui é best-effort, como nos vizinhos: o wrapper degrada por desenho
-# (`[ -x "$W" ] && exec "$W" "$@"; exec env "$@"`), logo o pior caso continua
-# sendo o controle duplicado de hoje — nunca um jogo que não abre.
 step "11b-bis" "Steam: aplicar o wrapper hefesto-launch a todos os jogos"
 if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     printf '      sem isto, as opções de inicialização ficam vazias e o jogo\n'
@@ -5387,58 +3349,6 @@ else
     warn "steam_launch_options.py ausente ou sem python3 — wrapper NÃO aplicado; rode depois: python3 ${LAUNCH_MIGRATE_PY} --apply"
 fi
 
-# ---------------------------------------------------------------------------
-# 11b-ter. Sentinela do wrapper: REPOR quem perdeu, e anotar quem tem
-# ---------------------------------------------------------------------------
-# SENTINELA-WRAPPER-01 (16/08/2026), sem flag como todo o resto. O passo acima
-# põe o wrapper em todo mundo; este REPÕE onde a Steam o comeu depois e ANOTA
-# quem ficou com ele (~/.local/state/hefesto-dualsense4unix/wrapper-visto.json).
-#
-# Sem essa anotação, o produto não tem como distinguir "este jogo PERDEU o
-# wrapper" de "este jogo é novo na biblioteca" — e a diferença é a frase que
-# ela precisava ouvir em 15/08, quando o Pragmata teve a chamada do wrapper
-# SUBSTITUÍDA por `VKD3D_CONFIG=no_upload_hvv %command%` (a Steam guarda UMA
-# linha por jogo e a sobrescreve sem avisar). O daemon estava saudável, o
-# perfil aceso, a luz certa — e o jogo, no Bluetooth, sem controle nenhum.
-#
-# POR QUE REPARAR AQUI, e não só anotar (16/08, 05h)
-# --------------------------------------------------
-# Este passo rodava `--relatorio`, que só OLHA. Anotar um defeito e deixá-lo em
-# pé é o defeito mais caro desta casa ("a casa sabe e o produto não faz"), e o
-# install é o momento em que a cura é mais barata: a Steam está fechada (a
-# janela do 11a-bis, desde 18/09/2026) e a pessoa está na frente da tela,
-# esperando. O vizinho abaixo já faz assim há semanas — o 11a e o 11c não
-# "relatam" o Proton fora do pin, eles rodam `--ensure` e `--lock`.
-#
-# O reparo PRESERVA o que já estava na linha (é o `migrate_value`, que
-# PREPENDE): o Pragmata volta com o wrapper E com o `VKD3D_CONFIG` que cura o
-# crash de 14/08. Trocar um defeito por outro não é conserto.
-#
-# Ele NUNCA fecha a Steam por conta própria: adia (rc=3) com um jogo aberto ou
-# com a Steam viva, porque a Steam regrava o vdf ao sair e engoliria a edição.
-# Adiar não é falha do install — é a resposta certa, e por isso sai como aviso
-# com o comando na mão, nunca como erro.
-#
-# Idempotente por construção (`WRAPPER_PREFIX in value` pula quem já tem), e o
-# que ela marcou em `jogos_sem_wrapper.txt` fica de fora: o produto não briga
-# com a dona da máquina.
-#
-# CICLO uninstall -> install: o `--strip` do uninstall tira o wrapper de todo
-# mundo, e por isso o uninstall também apaga o `wrapper-visto.json` — sem isso,
-# a instalação seguinte chamaria de REGRESSÃO ("este jogo perdeu o wrapper!")
-# exatamente a remoção que ela pediu. Sem a memória, toda ausência volta como
-# `novo`, o reparo repõe tudo do mesmo jeito, e a memória renasce aqui.
-#
-# O QUE ESTE PASSO NÃO ALCANÇA (medido em 16/08 05h07, e não é hipótese)
-# ----------------------------------------------------------------------
-# O censo lê os TRÊS blocos `apps` do localconfig.vdf como se fossem um só, e a
-# última leitura vence. Só `UserLocalConfigStore/Software/Valve/Steam/apps` é a
-# árvore que a Steam usa; as outras duas foram escritas por nós em 21/07 e são
-# invisíveis para ela. Com o Pragmata quebrado NA árvore viva e o wrapper
-# intacto NA secundária, o censo responde "nada a fazer" e este reparo passa
-# batido. O doctor no fim do install nomeia o jogo assim mesmo — a régua
-# independente está em `check_arvore_canonica_do_wrapper`, e a cura da fusão é
-# do dono de `steam_launch_options.py`.
 step "11b-ter" "Steam: repor o wrapper onde a Steam o apagou (sentinela)"
 LAUNCH_SENTINELA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py"
 if [[ "${DRY_RUN:-0}" -eq 1 ]] && [[ -f "${LAUNCH_SENTINELA_PY}" ]]; then
@@ -5464,41 +3374,7 @@ else
     warn "sentinela_do_wrapper.py ausente ou sem python3 — sem memória de quem tem o wrapper; regressão futura apareceria como 'jogo novo'"
 fi
 
-# ---------------------------------------------------------------------------
-# 11c. Proton PINADO (PLAT-01) — DEFAULT, opt-out --no-proton-pin
-# ---------------------------------------------------------------------------
-# A semântica do winebus MUDOU entre Proton 9→10 (PROTON_ENABLE_HIDRAW morreu
-# — provado no estudo 2026-07-18); sem pin, um upgrade automático de Proton
-# pode reintroduzir o controle duplicado da noite pro dia. O módulo
-# integrations/proton_pin.py (100% stdlib, python3 do sistema) garante a
-# versão validada do assets/proton-pin.conf em compatibilitytools.d (cache
-# offline-first em ~/.cache/hefesto-dualsense4unix/proton; SHA256 OBRIGATÓRIO
-# — checksum errado = NADA é extraído) e TRAVA o default global + os jogos
-# instalados nela (CompatToolMapping no config.vdf, com backup
-# config.vdf.bak.hefesto-proton-<ts>; com a Steam/jogo abertos a trava é
-# ADIADA com instrução — mesmo gate dos outros passos que editam vdf).
-# Upgrade é sempre DELIBERADO: editar o proton-pin.conf + rodar o install.
-#
-# 16/09/2026 — O PINO PASSOU A ENTREGAR UMA FEATURE, e não só a evitar uma
-# regressão. A versão pinada virou `GE-Proton11-6-x86_64`, que é onde o som do
-# ALTO-FALANTE do controle e as haptics de voice-coil chegam DENTRO do jogo: o
-# GE-Proton 11-4 "finalized … haptics, controller-speaker audio, and hotplug
-# handling" e o 11-6 "reworked … audio/haptic routing, endpoint identity,
-# profile switching and hotplug lifecycle". Por USB o DualSense é uma placa de
-# som de quatro canais (dois de alto-falante, dois dos atuadores) — o canal
-# sempre esteve lá; faltava o Proton achá-lo. A razão antiga (o winebus, logo
-# acima) continua valendo e é por ela que se PINA.
-#
-# CORREÇÃO DE FATO, 17/09/2026: estas linhas diziam que o 11-4 "fechou o
-# casamento do ContainerId do HID com o dispositivo de áudio" e que o 11-6
-# "refez esse caminho pelo dsound". Nenhuma nota de release do 11-4 ao 11-7 diz
-# isso, e o dsound.dll do GE-Proton10-34 (o pino velho) tem os mesmos símbolos
-# do 11-6 — eles não distinguem versão. Acima ficam as palavras do autor. Ver
-# docs/protocol/proton-o-pino-desta-casa-e-a-subida-para-o-11-7.md, §7.1.
 step "11c" "Proton pinado: trava dos jogos na versão validada"
-# A versão foi baixada e conferida no 11a; aqui só a TRAVA, dentro da janela
-# de Steam fechada do 11a-bis — que é o que faz ela acontecer também na
-# máquina em que a Steam estava aberta no começo do install.
 if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
     printf '      pulado (--no-proton-pin)\n'
 elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -5509,26 +3385,6 @@ elif [[ "${_pp_pronto}" -ne 1 ]]; then
     printf '      trava adiada — o Proton pinado não ficou pronto no passo 11a (ver acima)\n'
 else
     _pl_rc=0
-    # `--todos` É ORDEM DELA, 17/09/2026. Vendo o DON'T SCREAM ficar no
-    # `proton_11` enquanto os outros 24 subiam para o GE-Proton 11-7, ela
-    # perguntou *"mas não era pra todos ficarem sobre o novo proton?"* e
-    # decidiu: *"ele e todo o resto de agora em diante."*
-    #
-    # Sem a flag, a guarda `preservado` pula toda entrada de jogo que
-    # aponte para outra ferramenta — e ela pula por FORMA, não por saber
-    # que houve escolha. Era conservadora de propósito (nasceu do dano de
-    # 14/08, quando a trava apagou três escolhas dela), e a função continua
-    # tendo a guarda como PADRÃO: quem chamar sem pedir não atropela
-    # ninguém. É o produto que passou a pedir.
-    #
-    # O "todo jogo" tem CLASSE desde 18/09/2026: é todo jogo que roda por
-    # Proton. Título com versão Linux nativa não ganha entrada nova, e a
-    # entrada que aponta para uma ferramenta que não é Proton fica — ver
-    # `proton_pin.e_da_familia_proton` e `jogos_sem_entrada_nova`.
-    #
-    # Daqui em diante, exceção tem de ser NOMEADA e DATADA por ela
-    # (`proton_pin.py --fora-do-pino APPID`), e a volta continua sendo
-    # `proton_pin.py --unlock`, que reverte só o que este lock registrou.
     python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?
     if [[ "${_pl_rc}" -eq 0 ]]; then
         printf '      jogos travados na versão pinada (backup do config.vdf ao lado; reverter: uninstall)\n'
@@ -5542,55 +3398,19 @@ else
     unset _pl_rc
 fi
 
-# ---------------------------------------------------------------------------
-# 11d. A Steam reabre UMA vez — só se o 11a-bis a fechou
-# ---------------------------------------------------------------------------
 if [[ "${_steam_fechada_pelo_install}" -eq 1 ]]; then
     step "11d" "Steam: reabrir (ela estava aberta quando o install começou)"
     _reabrir_a_steam_se_o_install_fechou
 fi
-# E o vigia, que o 11a-bis estacionou, volta a vigiar — com ou sem Steam.
 _religar_o_vigia_se_o_install_parou
 trap _cleanup_sudo_keepalive EXIT
 
-# ---------------------------------------------------------------------------
-# Conferência final: o doctor
-# ---------------------------------------------------------------------------
-# CONFERENCIA-FINAL-01, 04/08/2026 — pedido dela, e nascido de um defeito real:
-#
-#   *"nosso install não deveria rodar o doctor por default sem flag? pra
-#   garantir tudo tudo real mesmo?"*
-#
-# Na noite de 03→04/08 a máquina dela estava SEM o drop-in
-# `51-hefesto-dualsense-no-default-source.conf`. Sem ele o WirePlumber promoveu
-# o DualSense a microfone padrão do sistema, o mic ficou mudo por estado
-# persistido por rota, e o alto-falante do controle ficou MUTED — os três
-# sintomas que ela reportou como "não funciona nem mic, nem os botões de som".
-#
-# O install TINHA o passo que arma o drop-in (passo 10) e o uninstall TEM a
-# linha que o remove. O que não havia era alguém CONFERINDO no fim: uma
-# instalação podia terminar imprimindo "instalado" com cura desarmada, e o
-# único jeito de descobrir era ela sentir o defeito jogando.
-#
-# Por que CONFERIR e não `--fix`: os passos acima já são as curas, e cada um
-# reporta o que fez. Este passo existe para dizer a VERDADE sobre o resultado
-# — se ele precisasse curar, o defeito seria do passo, e escondê-lo com um
-# `--fix` no fim tiraria justamente o sinal que aponta para o passo furado.
-#
-# Por que não derruba a instalação: sem controle plugado o doctor emite muitos
-# avisos legítimos (nada a medir), e um `exit 1` aqui transformaria "instalei
-# sem o controle na mão" em "a instalação falhou". FALHA aparece na tela, em
-# destaque, com o comando para investigar — e a decisão é dela.
 if [[ "${RUN_DOCTOR}" -eq 1 ]]; then
     printf '\n'
     printf '─────────────────────────────────────────\n'
     printf ' Conferência final (doctor)\n'
     printf '─────────────────────────────────────────\n'
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        # O doctor é conferência, não cura — mas o ensaio não executa NENHUM
-        # roteiro de fora, e a promessa vale mais inteira do que quase inteira.
-        # Quem quiser o retrato de hoje tem o comando na linha de baixo, e ele
-        # é o mesmo em qualquer momento.
         printf '      no ensaio o doctor não roda. Para o retrato da máquina agora:\n'
         printf '        bash scripts/doctor.sh\n'
     elif [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
@@ -5610,9 +3430,6 @@ if [[ "${RUN_DOCTOR}" -eq 1 ]]; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# Pronto
-# ---------------------------------------------------------------------------
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _ensaio_resumo
     exit 0
@@ -5625,11 +3442,6 @@ printf ' Abrir:       hefesto-dualsense4unix-gui\n'
 printf ' Desinstalar: ./uninstall.sh\n'
 printf '─────────────────────────────────────────\n'
 
-# IDENTIDADE-01 (25/08/2026): o app-id mudou, e o Flatpak NÃO MIGRA ID. Para
-# ele o id novo é outro aplicativo: não atualiza o antigo, instala do lado — e
-# quem já usava fica com DOIS Hefestos no menu, o velho parado e o novo vivo.
-# Não desinstalamos por conta própria: mexer no que a pessoa instalou, sem
-# pedir, é o tipo de surpresa que esta casa não faz. Avisamos e damos o comando.
 APP_ID_FLATPAK_ANTIGO="br.andrefarias.Hefesto"
 if command -v flatpak >/dev/null 2>&1 \
    && flatpak info "${APP_ID_FLATPAK_ANTIGO}" >/dev/null 2>&1; then
@@ -5645,18 +3457,6 @@ if command -v flatpak >/dev/null 2>&1 \
     printf '─────────────────────────────────────────\n'
 fi
 
-# BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
-# (usbcore.quirks=054c:0ce6:gn) é o que segura o storm -71 COM o microfone do
-# DualSense ligado no cabo. Mesma detecção do doctor.sh (ativo/agendado/runtime).
-#
-# FATO ERRADO, SUBSTITUÍDO EM 28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B5,
-# a C18 da contraprova): aqui estava escrito que o install não mexia no cmdline,
-# por ser da configuração pessoal da máquina dela. O passo 3e ESCREVE o cmdline
-# (kernelstub), e o produto não depende da bancada de ninguém. O que o fecho faz
-# agora: ativo, nada a dizer; AGENDADO (no bootloader e ainda não no kernel que
-# roda), é mais um item do «reinicie» abaixo; ausente em todo lugar (o 3e não
-# o escreveu: sem kernelstub, com o grub, ou com o passo pulado), o comando à
-# mão continua sendo dito.
 QUIRK_MARKER="054c:0ce6:gn"
 quirk_ativo=0
 quirk_agendado=0
@@ -5675,8 +3475,5 @@ elif [[ "${quirk_ativo}" -eq 0 ]]; then
     printf '     bash scripts/install_usb_quirk.sh\n'
     printf '─────────────────────────────────────────\n'
 fi
-# B5: o fecho diz «reinicie» só quando algum passo deixou algo para o boot.
 dizer_o_reinicio_pendente
 printf '\n'
-
-# "O que fazes com paz de espírito, isso sim dura." — Marco Aurélio

@@ -17,7 +17,7 @@ BASH = shutil.which("bash") or "/bin/bash"
 
 VELHAS = ("hciconfig", "hcitool", "sdptool")
 
-ANCORA_INICIO = "# BT-NINTENDO-ACTIVE-01: reverter a link policy"
+ANCORA_INICIO = "    _hcis=()\n"
 ANCORA_FIM = "    if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then"
 
 
@@ -53,7 +53,7 @@ def _fake(dirbin: Path, nome: str, corpo: str) -> Path:
 
 
 def _bloco_do_uninstall() -> str:
-    """Recorta o bloco REAL da reversão, do comentário até o `fi` que o fecha."""
+    """Recorta o bloco REAL da reversão, da lista dos adaptadores até o `fi` que o fecha."""
     texto = UNINSTALL.read_text(encoding="utf-8")
     inicio = texto.find(ANCORA_INICIO)
     assert inicio != -1, (

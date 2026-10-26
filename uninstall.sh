@@ -1,251 +1,47 @@
 #!/usr/bin/env bash
-# uninstall.sh - WIPE do Hefesto - DualSense4Unix.
-# Remove artefatos do install nativo, o applet COSMIC, .deb (apt remove),
-# Flatpak, AppImage em ~/Aplicativos, .venv, caches Python, runtime e dados.
-#
-# Config do usuário (perfis, sessão, preferências) é PRESERVADA por padrão e,
-# quando apagada, é antes copiada para um backup. Cobre tanto o caminho atual
-# (~/.config/hefesto-dualsense4unix) quanto o legado curto (~/.config/hefesto).
-#
-# Flags:
-#   --keep-udev          PRESERVA udev rules + modules-load (default: remove, sudo).
-#                        A regra do nó do DualSense fica, na variante ABERTA: o
-#                        broker sai, e fechada ela deixaria o controle sem dono.
-#   --udev               [DEPRECATED] no-op — remoção é default desde v3.8.3.
-#   --remove-usb-quirk   EXPLÍCITO (default NÃO remove): tira o quirk de boot
-#                        usbcore.quirks=054c:0ce6:gn do cmdline
-#                        (kernelstub/grub) via scripts/install_usb_quirk.sh --remove.
-#                        Por default NÃO remove: cmdline é sensível e pode ser
-#                        mantido por outra ferramenta do usuário.
-#   --so-o-applet        remove SÓ o applet COSMIC aposentado (binário, .desktop
-#                        e ícones) e SAI. Não toca em daemon, udev, Steam,
-#                        config nem perfis. O applet saiu do instalador (o
-#                        ícone da bandeja faz o mesmo), e esta flag existe para
-#                        o resto não custar um wipe inteiro.
-#   --purge-config       APAGA a config do usuário (com backup antes) e as cópias de
-#                        pareamento do Bluetooth, inclusive as de uninstalls anteriores.
-#                        Default: preserva.
-#   --keep-config        preserva a config (default; mantido por retrocompatibilidade).
-#   --keep-steam-input   PRESERVA Steam Input PSSupport (default: desliga em TODOS os
-#                        localconfig.vdf de todos os Steam users em todos os formatos).
-#                        Simétrico ao install.sh — se sai sem desligar, o sintoma
-#                        "controle vira mouse / botões em background" volta na hora.
-#                        Reverter desligamento: scripts/disable_steam_input.sh --restore.
-#   --restore-bluez      DEVOLVE as versões originais do noble via
-#                        VERSOES-ANTERIORES.txt do cache. **Destrutivo**: reinicia
-#                        o bluetoothd (a ÚNICA exceção à regra "uninstall nunca
-#                        reinicia o bluetoothd") e descarta os bonds pareados
-#                        outra vez. Pede confirmação interativa (--yes pula).
-#   --keep-bluez         [no-op] o backport é PRESERVADO por padrão desde
-#                        02/08/2026 (BLUEZ-PADRAO-INVERTIDO-01) — desinstalar o
-#                        Hefesto não pode piorar o Bluetooth da máquina.
-#   --restore-pipewire   DEVOLVE o PipeWire e o WirePlumber às versões de antes do
-#                        install (VERSOES-ANTERIORES.txt do cache), sem perguntar.
-#                        Sem a flag, pergunta; com --yes ou sem TTY, preserva. Recusa
-#                        com a Steam aberta. A trava do apt do Hefesto sai sempre.
-#   --yes,-y             responde 'sim' para prompts.
-#   --dry-run,-n         ENSAIO: imprime o que removeria e não remove nada (ver
-#                        «O ENSAIO», logo depois das flags).
-#
-# Onda PLATAFORMA (2026-07-18) — removidos por DEFAULT, simétricos ao install:
-#   - regras udev 81 (USB power devices + hosts) + modprobe.d do btusb — rm +
-#     reload; o power/control atual NÃO é revertido a quente (inócuo até reboot).
-#   - FastConnectable do BlueZ: drop-in main.conf.d OU bloco marcado do
-#     main.conf (entre as sentinelas hefesto), com backup; SEM restart do
-#     bluetoothd (vale no próximo boot/restart natural).
-#   - Proton pinado: destrava SÓ o CompatToolMapping que NÓS escrevemos
-#     (proton_pin.py --unlock); o Proton EXTRAÍDO fica (dado do usuário).
-#   - cmdline: reverte SÓ os params registrados como "hefesto" no estado local
-#     (cmdline-owners.conf); token usbcore.quirks "compartilhado" perde só os
-#     IDs nossos (merge inverso). Params de terceiro NUNCA são tocados.
-#
-# BUG-UNINSTALL-UDEV-DEFAULT-01 (fix): install.sh aplica as 5 udev rules + modules-
-# load por default (--no-udev é o opt-out). Symmetric, o uninstall.sh deve REMOVER
-# por default. Versões anteriores exigiam --udev explícito, deixando 6 arquivos no
-# /etc/ que continuavam disparando hotplug-units inexistentes ao plugar o controle.
-#
-# FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01: install.sh, por default, desliga Steam
-# Input PSSupport+UseSteamControllerConfig em todos os localconfig.vdf para evitar
-# conflito Steam-vs-daemon. O uninstall, simétrico, repete o desligar — porque sem
-# o daemon do Hefesto domesticando o DualSense, Steam Input PSSupport=2 reproduz
-# imediatamente os 3 sintomas (touchpad → cursor, mic spam, botões em background)
-# que motivam o usuário a desinstalar.
-#
-# Onda S (2026-07-20, broker root hide-hidraw fd-injection — BROKER-01, ver
-# docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md):
-#   - hefesto-hidraw-broker.{service,socket} (PRIMEIRO serviço de SISTEMA
-#     socket-activated do projeto): desabilitado + parado por DEFAULT — o
-#     stop dispara ExecStopPost --restore-all-and-exit, então NENHUM hidraw
-#     físico fica 0600 órfão. Um belt explícito roda o mesmo restore-all-
-#     and-exit ANTES de remover o binário (o binário precisa existir ainda
-#     para rodar). Remove só os caminhos que o install.sh REGISTROU em
-#     broker-owner.conf e que carregam o header do hefesto — nunca toca
-#     unit de terceiros.
-#
-# Onda R (2026-07-19, bluetoothd 5.72 crasha crônico — ver estudo
-# docs/history/2026-07-19-o-estudo-do-bluetoothd-5.72-e-o-plano-do-backport.md):
-#   --restore-bluez      DEVOLVE as versões originais do noble (VERSOES-ANTERIORES.txt
-#                        do cache). Nasceu como o padrão, com --keep-bluez para
-#                        preservar; desde 02/08 o padrão PRESERVA e o --keep-bluez é
-#                        no-op (BLUEZ-PADRAO-INVERTIDO-01). BRUTAL: reinicia o
-#                        bluetoothd (a ÚNICA exceção à regra) e descarta os bonds
-#                        outra vez; pede confirmação interativa (--yes pula).
-#   - bloco JustWorksRepairing do main.conf: removido por default, mesmo
-#     mecanismo (sentinelas/drop-in) do FastConnectable — sem restart do bluetoothd.
-#   - hefesto-bt-agent.service (agente de pareamento persistente): desabilitado
-#     e removido por default; o pacote bluez-tools (dependência) NÃO é removido
-#     (pode ser útil ao usuário fora do Hefesto — mesma lógica de preservar deps
-#     compartilhadas do sistema).
-#
-# Onda T (2026-07-20, DKMS hid-nintendo patchado — probe BT resiliente, ver
-# docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md):
-#   - módulo out-of-tree hid-nintendo (hefesto-hid-nintendo/1.0.0): removido
-#     por DEFAULT via `dkms remove --all` (scripts/dkms_lib.sh) + a conf
-#     /etc/modprobe.d/hefesto-hid-nintendo.conf. Sem flag nova (simétrico ao
-#     install SEM FLAGS). O in-tree volta sozinho no próximo BOOT (replug
-#     NÃO troca módulo carregado) — NUNCA descarregamos um módulo em uso
-#     (mesma regra do broker/btusb); os params vivos voltam a 0 a quente.
-#
-# Onda W (2026-07-20, DKMS rtw88_usb patchado — fantasma USB do dongle WiFi,
-# ver docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md):
-#   - módulo out-of-tree rtw88_usb (hefesto-rtw88-usb/1.0.0): removido por
-#     DEFAULT via `dkms remove --all` (mesma scripts/dkms_lib.sh, 2ª
-#     instância). Sem flag nova (simétrico ao install SEM FLAGS). O in-tree
-#     volta sozinho no próximo BOOT (replug do dongle NÃO troca módulo
-#     carregado) — NUNCA descarregamos um módulo em uso (o WiFi cairia).
-#     Diferente do hid-nintendo, não há conf em /etc/modprobe.d/ (o gate da
-#     parte agressiva é o module param `hang_reset`, default Y já embutido
-#     no .ko) — se o patchado estiver CARREGADO, devolvemos hang_reset a 0
-#     a quente (desliga só o reset; a detecção/silenciamento continua até o
-#     módulo sair de fato no próximo boot). Também remove, se presente, o
-#     conf.d de powersave do NetworkManager (W2, instalado por padrão pelo
-#     install.sh) — sem flag nova, simetria "se instalado, some".
-#
-# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026) — removidos por DEFAULT:
-#   - o vigia do dongle Wi-Fi USB: hefesto-wifi-usb-vigia.{service,timer}, o
-#     dispatcher 90-hefesto-wifi-usb do NetworkManager e o wifi_usb.sh. O scan
-#     de fundo não é religado (a próxima associação nasce com o default do
-#     NetworkManager);
-#   - o drop-in 10-hefesto-maquina.conf do watchdog do Bluetooth (o que lhe
-#     mostra o maquina.json de quem instalou).
 
 set -euo pipefail
 
 readonly APP_ID="hefesto-dualsense4unix"
 readonly DESKTOP_TARGET="${HOME}/.local/share/applications/${APP_ID}.desktop"
-# O AUTOSTART DO TRAY (19/09/2026). Sem esta linha o ícone da bandeja voltaria
-# a subir em toda sessão depois de o produto ter sido desinstalado — e o
-# `Exec=` apontaria para uma árvore que pode nem existir mais.
 readonly AUTOSTART_TARGET="${HOME}/.config/autostart/${APP_ID}-tray.desktop"
 readonly ICON_TARGET="${HOME}/.local/share/icons/hicolor/256x256/apps/${APP_ID}.png"
 readonly LAUNCHER="${HOME}/.local/bin/hefesto-dualsense4unix-gui"
 readonly BIN_SYMLINK="${HOME}/.local/bin/hefesto-dualsense4unix"
-# A CHAVE — `install.sh` a copia para o PATH dela (passo 5). Sem esta linha ela
-# sobrevivia ao uninstall e continuava oferecendo `off`/`on` sobre units que
-# não existem mais: um comando que promete desligar o produto e não tem produto
-# para desligar.
 readonly CHAVE_BIN="${HOME}/.local/bin/hefesto-chave"
 readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-gui-hotplug.service"
 
-# Artefatos do applet COSMIC (instalados por packaging/cosmic-applet via sudo).
-# O uninstall nativo não os conhecia → sobreviviam ao wipe (rastro deixado).
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
 readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
-# Caminho ANTIGO do simbólico (até 07/08/2026) — continua na lista porque
-# instalação velha ainda tem o arquivo lá, e desinstalar não pode deixar rastro.
 readonly APPLET_ICON="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
-# Caminho de hoje (APPLET-MONOCROMÁTICO-01): `symbolic/apps/`, onde o hicolor
-# do sistema declara o bloco e onde o vizinho Flatpak põe o dele.
 readonly APPLET_ICON_SYMB="/usr/share/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
 readonly APPLET_ICON_PNG="/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png"
-# Drop-in do WirePlumber (fix de microfone) — só o nosso arquivo, nunca o dir.
 readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf"
-# Variante --disable-source (node.disabled). Removida incondicionalmente (não tem
-# caso de "workaround standalone" — é gerada só pelo nosso --disable-source).
 readonly WIREPLUMBER_DROPIN_DISABLE="${HOME}/.config/wireplumber/wireplumber.conf.d/52-hefesto-dualsense-disable-source.conf"
-# Variante --disable-output (53): gerada junto do 52 pelo --disable-source.
-# Removida incondicionalmente (simetria — o uninstall esquecia dela).
 readonly WIREPLUMBER_DROPIN_OUTPUT="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
-# SOM-QUE-NAO-DORME-01 (54): impede o WirePlumber de suspender o SINK do
-# controle. Artefato nosso, instalado SEM FLAG em todo formato — logo sai
-# incondicionalmente, como o 52 e o 53. Sem esta linha a máquina dela ficaria
-# com uma regra de áudio do Hefesto depois de desinstalar o Hefesto.
 readonly WIREPLUMBER_DROPIN_ACORDADO="${HOME}/.config/wireplumber/wireplumber.conf.d/54-hefesto-dualsense-alto-falante-nunca-dorme.conf"
-# DROPIN-AMBIGUO-01 (26/08/2026): a MARCA DO GESTO do microfone. Artefato
-# nosso, escrito pelo gesto de LIGAR o mic do controle — sai com o resto, e por
-# um motivo de contrato, não só de simetria: a marca diz "a ausência do drop-in
-# 51 aqui foi pedido dela". Depois do uninstall o 51 também sai, e a ausência
-# volta a ter DUAS origens; deixar a marca de pé faria a próxima instalação
-# herdar uma promoção que ninguém pediu nesta vida.
 readonly MARCA_MIC_PEDIDO="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/mic-do-dualsense-pedido.conf"
-# environment.d do modo-jogo (PS_LONG_PRESS_MS=0). Hoje redundante (o default do
-# código é 0), mas é artefato do hefesto — remove na desinstalação por simetria.
 readonly ENVIRONMENTD_GAMEMODE="${HOME}/.config/environment.d/91-hefesto-dualsense-gamemode.conf"
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 
-# AS DUAS PASTAS DE ESTADO (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026). O
-# produto grava o estado pela regra do XDG (o `platformdirs`, o `storm_watch.sh`,
-# o `proton_pin`, o `camadas_vulkan`): quem move o XDG_STATE_HOME o tem lá. E o
-# install.sh grava alguns arquivos no lar, sem o XDG (o gabinete.json, o
-# teclado-na-tela.conf, o broker-owner.conf). O uninstall olha as DUAS — a do
-# XDG primeiro, a do lar quando for outra. Sem XDG_STATE_HOME, é uma só.
 readonly ESTADO_DO_XDG="${XDG_STATE_HOME:-${HOME}/.local/state}/${APP_ID}"
 ESTADOS_DO_HEFESTO=("${ESTADO_DO_XDG}")
 if [[ "${HOME}/.local/state/${APP_ID}" != "${ESTADO_DO_XDG}" ]]; then
     ESTADOS_DO_HEFESTO+=("${HOME}/.local/state/${APP_ID}")
 fi
 
-# Default: remove udev rules + modules-load (espelha install.sh, que aplica por default).
-# Ver BUG-UNINSTALL-UDEV-DEFAULT-01 no cabeçalho.
 REMOVE_UDEV=1
-REMOVE_USB_QUIRK=0       # cmdline é sensível: só remove com --remove-usb-quirk explícito
-KEEP_CONFIG=1            # preserva config por padrão (perfis do user) — apagar exige --purge-config
-# A FLAG DO APPLET APOSENTADO — 19/09/2026, pedido dela depois de o passo 9
-# do install passar a apenas ANUNCIAR o binário parado: *"Cria a flag"*.
-#
-# Sem ela, tirar 23 MB de applet exigia o uninstall INTEIRO — que para o
-# daemon, apaga as regras udev, desliga o Steam Input e derruba o DKMS, para
-# remover um arquivo que nem é mais instalado. Pagar o preço do wipe por um
-# resto é o que faz a pessoa deixar o resto lá.
+REMOVE_USB_QUIRK=0
+KEEP_CONFIG=1
 SO_O_APPLET=0
-KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01)
-# BLUEZ-PADRAO-INVERTIDO-01 (02/08/2026) — decisão DELA, e ela tem razão:
-# *"o uninstall deveria desfazer o negócio e deixar o bluez certo, não? e caso
-# usássemos flag é que deveria voltar o bluez pro original do pop os"*.
-#
-# O padrão era RESTAURAR o bluez do noble, com esta justificativa escrita:
-# *"ficar com um bluez de terceiro órfão, sem o doctor/pin/gerenciamento que o
-# justificava, é pior do que voltar ao 5.72 do noble"*. **A justificativa não
-# é falsa — ela é secundária diante de três coisas:**
-#
-# 1. **o downgrade é destrutivo, e o próprio código admite**: "REMOÇÃO BRUTAL
-#    de propósito, pois reinicia o bluetoothd — a ÚNICA exceção documentada à
-#    regra 'uninstall nunca reinicia o bluetoothd' — e descarta os bonds
-#    pareados outra vez". A regra desta casa é que o PADRÃO seja o menos
-#    destrutivo, e o gesto destrutivo seja o explícito;
-# 2. **o 5.72 tem defeito MEDIDO nesta máquina**: `bluetoothd` crashando
-#    cronicamente e comendo bonds (estudo de 19/07). Desinstalar um aplicativo
-#    não pode PIORAR o Bluetooth de quem o desinstalou;
-# 3. **precedente na mesma casa, no mesmo arquivo**: o `--remove-usb-quirk`
-#    não remove por padrão porque *"cmdline é sensível e pode ser mantido por
-#    toolchain externa"*. O BlueZ é mais sensível que o cmdline.
-#
-# E o backport não é software obscuro de terceiro: é o BlueZ upstream 5.86,
-# recompilado para o noble. A simetria que se perde é de PACOTE; a que se
-# ganha é de EFEITO — o sistema dela sai do uninstall funcionando como entrou.
-KEEP_BLUEZ=1             # preserva o backport por default; --restore-bluez desfaz
-RESTORE_PIPEWIRE=0       # O-UNINSTALL-DEVOLVE-O-PIPEWIRE-DE-ANTES-01: 1 devolve sem perguntar
+KEEP_STEAM_INPUT=0
+KEEP_BLUEZ=1
+RESTORE_PIPEWIRE=0
 AUTO_YES=0
 DRY_RUN=0
 
-# BUG-UNINSTALL-HELP-DESINSTALA-01: não havia `--help`, e argumento desconhecido
-# só imprimia um aviso e SEGUIA desinstalando. Ou seja: `./uninstall.sh --help`
-# — o reflexo de qualquer pessoa diante de um script novo — apagava a instalação
-# inteira. Agora `--help` mostra o uso e SAI 0, e argumento desconhecido ABORTA
-# com 2 sem tocar em nada. Um desinstalador é destrutivo por natureza: na dúvida
-# sobre o que a pessoa quis dizer, a resposta certa é não fazer nada.
 uso() {
     cat <<'FIM'
 Uso: ./uninstall.sh [opções]
@@ -284,15 +80,12 @@ FIM
 for arg in "$@"; do
     case "$arg" in
         --keep-udev)         REMOVE_UDEV=0 ;;
-        --udev)              REMOVE_UDEV=1 ;;  # deprecated: já é default; mantido p/ compat
+        --udev)              REMOVE_UDEV=1 ;;
         --remove-usb-quirk)  REMOVE_USB_QUIRK=1 ;;
         --so-o-applet)       SO_O_APPLET=1 ;;
         --purge-config)      KEEP_CONFIG=0 ;;
         --keep-config)       KEEP_CONFIG=1 ;;
         --keep-steam-input)  KEEP_STEAM_INPUT=1 ;;
-        # `--keep-bluez` vira NO-OP: ela é o padrão desde a
-        # BLUEZ-PADRAO-INVERTIDO-01. Fica aceita para não quebrar quem já a
-        # escreveu num script ou num roteiro.
         --keep-bluez)        KEEP_BLUEZ=1 ;;
         --restore-bluez)     KEEP_BLUEZ=0 ;;
         --restore-pipewire)  RESTORE_PIPEWIRE=1 ;;
@@ -309,21 +102,9 @@ done
 
 log() { printf '[uninstall] %s\n' "$*"; }
 
-# O reinício do som da sessão, com a volta do painel do COSMIC, é um só para o
-# install e o uninstall (O-SOM-REINICIADO-NAO-CEGA-O-PAINEL-DO-COSMIC-01).
 # shellcheck source=scripts/lib/som_da_sessao.sh
 source "${ROOT_DIR}/scripts/lib/som_da_sessao.sh"
 
-# ---------------------------------------------------------------------------
-# Credencial sudo: adquirir UMA vez no início (BUG-UNINSTALL-SUDO-NONINTERACTIVE-01)
-# ---------------------------------------------------------------------------
-# Simétrico ao acquire_sudo do install.sh. Vários passos usam sudo (remoção das
-# udev rules + a cura do storm em /etc/modprobe.d, o applet COSMIC em /usr/local,
-# o `apt remove`). Sem cachear a credencial no começo, cada um pedia a senha por
-# conta própria e, sem TTY, FALHAVA — deixando a cura .conf e
-# o binário do applet para trás (o `sudo rm ... || true` do applet mascarava a
-# falha; o bloco udev abortava com "sudo recusado/sem TTY"). Aqui primamos uma vez
-# e mantemos a credencial viva durante todo o uninstall.
 SUDO_KEEPALIVE_PID=""
 _start_sudo_keepalive() {
     [[ -n "${SUDO_KEEPALIVE_PID}" ]] && return 0
@@ -331,16 +112,13 @@ _start_sudo_keepalive() {
     SUDO_KEEPALIVE_PID=$!
 }
 acquire_sudo() {
-    [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0          # já é root
-    command -v sudo >/dev/null 2>&1 || return 0          # sem sudo — cada passo avisa
-    if sudo -n true 2>/dev/null; then                    # credencial já em cache
+    [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0
+    command -v sudo >/dev/null 2>&1 || return 0
+    if sudo -n true 2>/dev/null; then
         _start_sudo_keepalive
         return 0
     fi
-    [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0          # nenhum passo com root pedido
-    # INSTALL-HEADLESS-01 (auditoria 21/07): simétrico ao install — com
-    # SUDO_ASKPASS setado, valida pelo helper (-A) sem exigir TTY, para o
-    # uninstall headless remover de fato os passos root (broker, DKMS, udev).
+    [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0
     if [[ -n "${SUDO_ASKPASS:-}" ]] && sudo -A -v 2>/dev/null; then
         _start_sudo_keepalive
         return 0
@@ -359,29 +137,6 @@ _cleanup_sudo_keepalive() {
 }
 trap _cleanup_sudo_keepalive EXIT
 
-# ---------------------------------------------------------------------------
-# O ENSAIO — `--dry-run` (INSTALL-E-UNINSTALL-DO-RADIO-01, 23/09/2026)
-# ---------------------------------------------------------------------------
-# O install tem o seu desde 03/09 (ENSAIO-DO-INSTALL-01); o uninstall não
-# tinha, e `--dry-run` abortava como argumento desconhecido. Quem quisesse ver
-# o que ele tira da máquina tinha de lê-lo inteiro — ou rodá-lo, e rodá-lo
-# para o daemon dela, mata os processos do Hefesto por `pkill` e tira o
-# /etc inteiro.
-#
-# A FORMA: o roteiro de verdade corre inteiro, e cada comando que MUDA a
-# máquina vira uma função que só diz o que faria. As PERGUNTAS continuam de
-# verdade — `[[ -e ]]`, `dkms status`, `systemctl is-active`, `busctl
-# get-property`, `flatpak list`, os `python3 -` e `python3 -I -c` que só leem
-# — e é por isso que o plano é o DESTA máquina. O `sudo` responde «sim» às
-# perguntas de credencial (o plano segue o caminho COM root, que é o que se
-# quer ver) e nunca executa nada. As falas vão para o descritor 3 (a saída
-# de quando o ensaio começou), para nunca caírem dentro de um `$(...)`.
-#
-# O ALCANCE É UMA LISTA, e uma lista esquece. Por isso a régua
-# `tests/unit/test_o_ensaio_do_uninstall_nao_escreve.py` roda o ensaio num lar
-# de mentira com TODO binário que muda máquina dublado no PATH: um comando
-# novo, esquecido aqui, chega ao dublê e reprova — e a casa de mentira tem de
-# sair byte a byte igual.
 if [[ "${DRY_RUN}" -eq 1 ]]; then
     exec 3>&1
     AUTO_YES=1
@@ -389,9 +144,6 @@ if [[ "${DRY_RUN}" -eq 1 ]]; then
     _faria() { printf '[uninstall · ensaio] FARIA: %s%s\n' "${_ENS_ROOT:-}" "$*" >&3; }
     log "ENSAIO: nada é removido, nada é parado, nenhuma senha é pedida — cada linha FARIA é o que o uninstall de verdade faria nesta máquina"
     _start_sudo_keepalive() { :; }
-    # O `sudo` do ensaio: credencial é «sim»; o que só LÊ (`dkms status`, o
-    # `diff -rq` da biblioteca do DKMS) roda sem root; os verbos que têm dublê
-    # próprio passam por ele, marcados «(root)»; o resto só é dito.
     sudo() {
         case "$*" in
             "-n true"|"-v"|"-A -v"|"-n -v") return 0 ;;
@@ -444,83 +196,43 @@ if [[ "${DRY_RUN}" -eq 1 ]]; then
     }
 fi
 
-# Prime a credencial só se algum passo com root vai rodar: remoção de udev
-# (default), applet COSMIC instalado, pacote .deb ou os artefatos de plataforma
-# (FastConnectable do BlueZ / cmdline registrado).
 _NEEDS_SUDO=0
 [[ "${REMOVE_UDEV}" -eq 1 ]] && _NEEDS_SUDO=1
-# BUG-UNINSTALL-STORM-CONF-ORPHAN-KEEP-UDEV-01: storm.conf sai SEMPRE (mesmo
-# com --keep-udev) — precisa entrar na priming independente do REMOVE_UDEV.
 [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]] && _NEEDS_SUDO=1
-# HAPTICA-NATIVA-01: o verbo UCM do DualSense mora em /usr/share, de root.
 [[ -e /usr/share/alsa/ucm2/USB-Audio/Hefesto/DualSense-HiFi.conf ]] && _NEEDS_SUDO=1
-# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01: o modo desempenho (unit de sistema,
-# modprobe.d e tmpfiles.d) — todos de root.
 [[ -e /etc/systemd/system/hefesto-desempenho.service \
    || -e /etc/modprobe.d/hefesto-desempenho-nvidia.conf \
    || -e /etc/modprobe.d/hefesto-desempenho-audio.conf \
    || -e /etc/tmpfiles.d/hefesto-desempenho-aspm.conf ]] && _NEEDS_SUDO=1
 [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] && _NEEDS_SUDO=1
-# BUG-UNINSTALL-PRIMING-CEGO-AO-BLOCO-UNIFICADO-01 (RADIO-ABERTO-01/E1-bis,
-# 06/08/2026): esta lista primava a credencial pelos sentinelas LEGADOS e pelos
-# drop-ins, e NUNCA pelo `# >>> hefesto bluetooth >>>` — que é o único artefato
-# de BlueZ de toda máquina instalada desde 21/07, inclusive a dela. Resultado
-# MEDIDO por leitura: `uninstall.sh --keep-udev` numa máquina assim não pedia
-# sudo, caía no ramo "sudo indisponível" e o bloco com `JustWorksRepairing`
-# FICAVA PARA TRÁS. Um alternador cobre as três sentinelas de uma vez, e a
-# marca de neutralização entra junto (linha de terceiro a devolver também é
-# escrita em /etc).
 grep -qsE '^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>' \
     /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 grep -qsF '#hefesto-desativou# ' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf" ]] && _NEEDS_SUDO=1
 [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_SYMB}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
 dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
-# Onda R: bloco JustWorksRepairing (main.conf/drop-in), agente de pareamento
-# (unit de sistema) e restauração do bluez (apt) — todos pedem root.
 [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] && _NEEDS_SUDO=1
 grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-bt-agent.service ]] && _NEEDS_SUDO=1
-# PONTE-PRIVILEGIADA-01 (22/08/2026): a regra do sudoers e o helper de root que
-# a janela usa para mover controle entre dongles. Resíduo de sudoers é o pior
-# tipo de resíduo — é privilégio concedido a um caminho que talvez já nem exista.
 [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh ]] && _NEEDS_SUDO=1
-# O-JOGO-LEVE-ACORDA-A-PLACA-01 (01/10/2026): a mesma forma, para a placa de vídeo.
 [[ -e /etc/sudoers.d/49-hefesto-placa ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
-# O-UNINSTALL-DEVOLVE-O-PIPEWIRE-DE-ANTES-01: a trava do apt do PipeWire é de root.
 [[ -e /etc/apt/preferences.d/hefesto-pipewire ]] && _NEEDS_SUDO=1
-# E a devolução, que é de root mesmo sem a trava (um uninstall anterior a tirou e
-# guardou o registro): com a flag, ou com a pergunta que ela pode responder «s».
 [[ -f "${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt" ]] \
     && [[ "${RESTORE_PIPEWIRE}" -eq 1 || ( "${AUTO_YES}" -eq 0 && -t 0 ) ]] && _NEEDS_SUDO=1
-# O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01): a
-# trava comum do rádio (tmpfiles.d + /run), os carimbos da ponte, do religar
-# (STORM-USB-02) e do watchdog, e o diário do root — todos de root.
 [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]] && _NEEDS_SUDO=1
 [[ -e /run/hefesto-dualsense4unix || -e /run/hefesto-bt-ponte || -e /run/hefesto-bt-rebind || -e /run/hefesto-bt-watchdog ]] && _NEEDS_SUDO=1
 compgen -G '/var/lib/hefesto-dualsense4unix/radio-diario.jsonl*' >/dev/null 2>&1 && _NEEDS_SUDO=1
-# AS CÓPIAS DE PAREAMENTO DE UNINSTALLS ANTERIORES (O-PURGE-LEVA-AS-COPIAS-DE-
-# PAREAMENTO-01): com --purge-config elas saem, e a pasta é de root. Sem esta
-# linha, quem seguiu o «para apagar de vez» num segundo uninstall com
-# --keep-udev não tinha a senha pedida, e as cópias ficavam caladas.
 [[ "${KEEP_CONFIG}" -eq 0 ]] \
     && compgen -G '/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*' >/dev/null 2>&1 \
     && _NEEDS_SUDO=1
-# Onda S: broker root hide-hidraw (BROKER-01) — unit de sistema, precisa root.
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]] && _NEEDS_SUDO=1
-# Com --keep-udev a regra do nó que fica vira a aberta (o broker sai): é root.
 [[ "${REMOVE_UDEV}" -eq 0 && -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules ]] && _NEEDS_SUDO=1
 [[ "${REMOVE_UDEV}" -eq 0 && -f /etc/udev/rules.d/70-ps5-controller.rules ]] && _NEEDS_SUDO=1
-# Onda T: DKMS hid-nintendo patchado (probe BT resiliente) — dkms remove +
-# /etc/modprobe.d, ambos root. `dkms status` sem sudo já lista o registro
-# (leitura de /var/lib/dkms), então a checagem de presença aqui não precisa
-# de credencial — só a REMOÇÃO precisa.
 [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]] && _NEEDS_SUDO=1
-# Contenção BT: DKMS hid-playstation patchado — mesma justificativa da Onda T.
 [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]] && _NEEDS_SUDO=1
 [[ -e /etc/modprobe.d/hefesto-uhid.conf ]] && _NEEDS_SUDO=1
 command -v dkms >/dev/null 2>&1 \
@@ -532,21 +244,14 @@ command -v dkms >/dev/null 2>&1 \
 command -v dkms >/dev/null 2>&1 \
     && [[ -n "$(dkms status hefesto-hid-nintendo 2>/dev/null)" ]] \
     && _NEEDS_SUDO=1
-# Onda W: DKMS rtw88_usb patchado (fantasma USB) — dkms remove é root; sem
-# conf em /etc/modprobe.d (mesma observação da Onda T: `dkms status` sem
-# sudo já lista o registro, então só a REMOÇÃO precisa de credencial). O
-# conf.d de powersave do NM (W2) também precisa root para remover.
 command -v dkms >/dev/null 2>&1 \
     && [[ -n "$(dkms status hefesto-rtw88-usb 2>/dev/null)" ]] \
     && _NEEDS_SUDO=1
 [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]] && _NEEDS_SUDO=1
-# O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01: o vigia do dongle Wi-Fi USB — script de
-# sistema, dispatcher do NetworkManager e as duas units, todos de root.
 [[ -e /etc/systemd/system/hefesto-wifi-usb-vigia.timer ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-wifi-usb-vigia.service ]] && _NEEDS_SUDO=1
 [[ -e /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh ]] && _NEEDS_SUDO=1
-# E o drop-in que dá ao watchdog do Bluetooth o `maquina.json` de quem instalou.
 [[ -e /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf ]] && _NEEDS_SUDO=1
 remover_o_applet() {
     if [[ ! -e "${APPLET_BIN}" && ! -e "${APPLET_DESKTOP}" && ! -e "${APPLET_ICON}" \
@@ -558,15 +263,6 @@ remover_o_applet() {
     sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_SYMB}" "${APPLET_ICON_PNG}" 2>/dev/null || true
     sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
     sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
-    # O `cosmic-panel` só relê a lista de applets ao reiniciar — sem isso o
-    # applet fica fantasma na lista de Miniaplicativos mesmo depois de os
-    # arquivos saírem.
-    #
-    # MAS SÓ SE ELE ESTIVER NA LISTA — 19/09/2026. Derrubar o painel de quem
-    # está usando a máquina é caro, e aqui era feito CEGO: bastava o binário
-    # existir. Na máquina dela o applet nunca esteve na lista (o `install.sh`
-    # nunca escreveu essa configuração), então não há fantasma a limpar e o
-    # painel não tem por que piscar.
     local esta_na_lista=0
     local lista
     for lista in "${HOME}"/.config/cosmic/com.system76.CosmicPanel.*/v1/plugins_*; do
@@ -579,9 +275,6 @@ remover_o_applet() {
     fi
 }
 
-# --so-o-applet: REMOVE O RESTO E SAI. Tem de vir aqui — antes de o daemon
-# parar, antes de os processos morrerem, antes de qualquer arquivo dela sair do
-# disco. Um early-exit que acontecesse mais abaixo teria feito metade do wipe.
 if [[ "${SO_O_APPLET}" -eq 1 ]]; then
     log "--so-o-applet: removendo apenas o applet COSMIC aposentado"
     remover_o_applet
@@ -595,21 +288,10 @@ log "parando daemon hefesto-dualsense4unix (se ativo)"
 timeout 5 systemctl --user stop hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 systemctl --user disable hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 rm -f "${HOME}/.config/systemd/user/hefesto-dualsense4unix.service"
-# A presença (O-CONTROLE-VOLTA-AO-LINUX-QUANDO-O-HEFESTO-NAO-SOBE-01) sai com o daemon.
 systemctl --user disable --now hefesto-dualsense4unix-presenca.service >/dev/null 2>&1 || true
 rm -f "${HOME}/.config/systemd/user/hefesto-dualsense4unix-presenca.service"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
-# Mata GUIs e daemons órfãos — qualquer processo do hefesto, mesmo se rodando
-# fora do systemd (CLI manual, hotplug-gui spawn, foreground dev).
-#
-# BUG-UNINSTALL-PKILL-SELF-01 (fix): patterns precisam ser **específicos**
-# pra não casar o próprio uninstall.sh. Quando o script roda a partir de
-# `/home/.../hefesto-dualsense4unix/uninstall.sh`, o cmdline do bash que o
-# executa contém "hefesto-dualsense4unix" e `pkill -f 'hefesto-dualsense4unix'`
-# se mata (exit 144). Os patterns abaixo casam só processos legítimos:
-# `daemon ` (espaço final) cobre `daemon start/run`, `-gui` cobre o launcher,
-# `_dualsense4unix` (underscore) cobre processos Python que importam o módulo.
 log "matando processos hefesto*"
 for pat in 'hefesto-dualsense4unix daemon ' 'hefesto-dualsense4unix-gui' 'hefesto_dualsense4unix' 'io\.github\.hefesto_team\.hefesto_dualsense4unix' 'br\.andrefarias\.Hefesto'; do
     pkill -TERM -f "$pat" 2>/dev/null || true
@@ -619,15 +301,6 @@ for pat in 'hefesto-dualsense4unix daemon ' 'hefesto-dualsense4unix-gui' 'hefest
     pkill -KILL -f "$pat" 2>/dev/null || true
 done
 
-# AS MODIFICAÇÕES (AS-MODIFICACOES-MARCAM-O-GESTO-ESPERAM-PARAR-E-SAEM-NO-UNINSTALL-01).
-# O serviço para as modificações ao parar, e o `PR_SET_PDEATHSIG` mata o filho que
-# ficou sem pai; mas um serviço morto à força deixa o `mods-estado.json` com um PID
-# que ninguém conferiu. Aqui o PID só recebe o sinal se estiver vivo (zumbi não
-# conta) E o ambiente dele disser `HEFESTO_MOD_ID=<id>` com o id da mesma linha:
-# nunca por nome, e nunca o PID que o sistema reaproveitou para outro processo.
-# A pergunta que cada pessoa já responde para a configuração decide o resto:
-# o código (`<dados>/mods/`), os dados (`<estado>/mods/`) e o registro
-# (`mods.json`) ficam por padrão, e saem juntos com `--purge-config`.
 _PY_DAS_MODIFICACOES='
 import json, os, sys
 try:
@@ -684,7 +357,6 @@ parar_as_modificacoes() {
 }
 parar_as_modificacoes
 
-# Unit user de hotplug-gui (se existir)
 if [[ -f "${HOTPLUG_UNIT_TARGET}" ]]; then
     log "desabilitando hefesto-dualsense4unix-gui-hotplug.service"
     systemctl --user disable hefesto-dualsense4unix-gui-hotplug.service >/dev/null 2>&1 || true
@@ -695,11 +367,6 @@ else
     log "ausente: ${HOTPLUG_UNIT_TARGET}"
 fi
 
-# kernel-watch (--user; nomes storm-watch preservados por compat) — DEFAULT no
-# install desde a onda PLATAFORMA. Simétrico: unit + script saem; os LOGS ficam
-# (kernel.log/storm.log são dado de diagnóstico do usuário). O symlink de
-# compat storm.log→kernel.log é artefato NOSSO e sai; um storm.log ARQUIVO
-# real (histórico antigo) fica.
 readonly STORM_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-storm-watch.service"
 readonly STORM_SCRIPT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/scripts/storm_watch.sh"
 if [[ -f "${STORM_UNIT_TARGET}" ]]; then
@@ -712,14 +379,7 @@ else
     log "ausente: ${STORM_UNIT_TARGET}"
 fi
 rm -f "${STORM_SCRIPT_TARGET}"
-# BUG-UNINSTALL-SCRIPTS-DIR-ORPHAN-01 (25/07): o storm_watch.sh saía mas o
-# diretório ~/.local/share/hefesto-dualsense4unix/scripts/ (criado pelo passo 7b
-# do install) ficava vazio — e, por ficar, segurava o diretório-pai, anulando o
-# BUG-UNINSTALL-SHARE-DIR-ORPHAN-01 mais abaixo, que só remove o pai se ele
-# estiver VAZIO. Resultado medido: ~/.local/share/hefesto-dualsense4unix/
-# sobrevivia ao wipe. `rmdir` sem -p e best-effort: se alguém pôs algo lá, fica.
 rmdir "${HOME}/.local/share/hefesto-dualsense4unix/scripts" 2>/dev/null || true
-# O symlink nasce do `storm_watch.sh`, que grava pelo XDG_STATE_HOME: as duas pastas.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -L "${_estado}/storm.log" ]]; then
         log "removendo symlink de compat storm.log→kernel.log (o kernel.log fica — é seu histórico)"
@@ -727,7 +387,6 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     fi
 done
 
-# Guard do Steam Input (path + timer, --user) — FEAT-STEAM-INPUT-SELF-HEAL-01
 log "removendo guard do Steam Input (path/timer/service --user)"
 systemctl --user disable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true
 rm -f "${HOME}/.config/systemd/user/hefesto-steam-input-guard.path" \
@@ -735,17 +394,11 @@ rm -f "${HOME}/.config/systemd/user/hefesto-steam-input-guard.path" \
       "${HOME}/.config/systemd/user/hefesto-steam-input-guard.service"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
-# Launcher standalone "DualSense Fix (dsx)" — REMOVIDO do projeto (teoria de HW
-# refutada; a cura de raiz do storm está integrada). Limpa resíduos: o
-# --install-launcher gravava no ~/.local, e o .deb em /usr/share.
 rm -f "${HOME}/.local/share/applications/dsx-dualsense.desktop" 2>/dev/null || true
 if [[ -e /usr/share/applications/dsx-dualsense.desktop ]]; then
     sudo rm -f /usr/share/applications/dsx-dualsense.desktop 2>/dev/null || true
 fi
 
-# O `-L` junto do `-e` (O-UNINSTALL-NAO-DEIXA-RASTRO-01): o BIN_SYMLINK aponta
-# para a `.venv`, e um uninstall que roda de novo — ou depois de a `.venv` sair —
-# acha o link PENDURADO, que o `-e` não vê. Ele ficava no PATH para sempre.
 for path in "${DESKTOP_TARGET}" "${AUTOSTART_TARGET}" "${ICON_TARGET}" \
             "${LAUNCHER}" "${BIN_SYMLINK}" "${CHAVE_BIN}"; do
     if [[ -e "${path}" || -L "${path}" ]]; then
@@ -756,18 +409,11 @@ for path in "${DESKTOP_TARGET}" "${AUTOSTART_TARGET}" "${ICON_TARGET}" \
     fi
 done
 
-# FEAT-ICON-MULTI-RES-01 (fix): install.sh gera PNGs em 11 resolucoes
-# (16/22/24/32/48/64/96/128/192/256/512) + SVG escalavel + pixmap
-# legacy. Limpa todos. Nunca remove dirs `<size>x<size>/apps/` (outros
-# apps usam).
 log "removendo icones multi-res hicolor + SVG + pixmap"
 for size in 16 22 24 32 48 64 96 128 192 256 512; do
     rm -f "${HOME}/.local/share/icons/hicolor/${size}x${size}/apps/${APP_ID}.png"
 done
 rm -f "${HOME}/.local/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
-# APPLET-MONOCROMÁTICO-01 (07/08/2026): o simbólico da bandeja. Sem esta linha,
-# desinstalar deixa lixo de ícone — e lixo de ícone é o tipo que reaparece numa
-# instalação futura e produz "não mudou nada" sem explicação.
 rm -f "${HOME}/.local/share/icons/hicolor/symbolic/apps/${APP_ID}-symbolic.svg"
 rm -f "${HOME}/.local/share/pixmaps/${APP_ID}.png"
 
@@ -779,11 +425,6 @@ if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q "${HOME}/.local/share/applications" 2>/dev/null || true
 fi
 
-# Fontes da identidade visual (Space Grotesk + JetBrains Mono) — simétrico ao
-# passo 4e do install.sh, que chama o mesmo script sem flag. O `--remove` apaga
-# SÓ o diretório que este projeto criou (~/.local/share/fonts/hefesto-dualsense4unix):
-# família que veio de pacote da distribuição sai pelo gerenciador de pacotes,
-# nunca daqui — outra coisa pode depender dela.
 if [[ -r "${ROOT_DIR}/scripts/install_fonts.sh" ]]; then
     log "removendo as fontes que o install instalou (best-effort)"
     bash "${ROOT_DIR}/scripts/install_fonts.sh" --remove || true
@@ -792,14 +433,6 @@ fi
 
 remover_o_applet
 
-# Drop-in do WirePlumber (fix de microfone). Remove só o nosso arquivo, nunca
-# o diretório wireplumber.conf.d/ (outros apps/usuário podem ter configs lá).
-#
-# BUG-UNINSTALL-WIREPLUMBER-WORKAROUND-PRESERVE-01 (fix): se o header do drop-in
-# contiver o marker "Recriado manualmente" (ou "Recriado manualmente apos"), o
-# usuário decidiu mantê-lo como workaround standalone (sem o daemon do hefesto).
-# Nesse caso, preservamos — caso contrário, removemos como antes. O reinstall
-# sobrescreve com a versão canônica do hefesto via --with-wireplumber-fix.
 if [[ -f "${WIREPLUMBER_DROPIN}" ]]; then
     if head -5 "${WIREPLUMBER_DROPIN}" 2>/dev/null | grep -qiE 'recriado manualmente|workaround|standalone'; then
         log "preservando drop-in WirePlumber (marker 'recriado manualmente' no header)"
@@ -811,35 +444,24 @@ if [[ -f "${WIREPLUMBER_DROPIN}" ]]; then
         systemctl --user restart wireplumber >/dev/null 2>&1 || true
     fi
 fi
-# Variante --disable-source (52): remove incondicional + restart (simetria com
-# o --with-wireplumber-disable-mic do install.sh).
 if [[ -f "${WIREPLUMBER_DROPIN_DISABLE}" ]]; then
     log "removendo drop-in WirePlumber (disable-source): ${WIREPLUMBER_DROPIN_DISABLE}"
     rm -f "${WIREPLUMBER_DROPIN_DISABLE}"
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
 fi
 
-# Variante --disable-output (53): simetria com o --with-wireplumber-disable-mic.
 if [[ -f "${WIREPLUMBER_DROPIN_OUTPUT}" ]]; then
     log "removendo drop-in WirePlumber (disable-output): ${WIREPLUMBER_DROPIN_OUTPUT}"
     rm -f "${WIREPLUMBER_DROPIN_OUTPUT}"
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
 fi
 
-# SOM-QUE-NAO-DORME-01 (54): o sono do alto-falante volta a ser o do sistema
-# (5 s de ociosidade). Vai embora com o resto — o produto não deixa regra de
-# áudio para trás.
 if [[ -f "${WIREPLUMBER_DROPIN_ACORDADO}" ]]; then
     log "removendo drop-in WirePlumber (nunca-dorme): ${WIREPLUMBER_DROPIN_ACORDADO}"
     rm -f "${WIREPLUMBER_DROPIN_ACORDADO}"
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
 fi
 
-# OS MESMOS QUATRO NO XDG_CONFIG_HOME (O-UNINSTALL-NAO-DEIXA-RASTRO-01). Os de
-# cima são os do lar, onde o install e o `fix_wireplumber_default_source.sh`
-# gravam; o produto grava pelo `utils/xdg_paths.wireplumber_config_dir`, que
-# honra o XDG_CONFIG_HOME — e o WirePlumber também lê de lá. Mesma regra: o 51
-# marcado como «recriado manualmente» fica.
 _wp_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}/wireplumber/wireplumber.conf.d"
 if [[ "${_wp_do_xdg}" != "${HOME}/.config/wireplumber/wireplumber.conf.d" ]]; then
     for _wp in 51-hefesto-dualsense-no-default-source.conf \
@@ -847,8 +469,6 @@ if [[ "${_wp_do_xdg}" != "${HOME}/.config/wireplumber/wireplumber.conf.d" ]]; th
                53-hefesto-dualsense-disable-output.conf \
                54-hefesto-dualsense-alto-falante-nunca-dorme.conf; do
         [[ -f "${_wp_do_xdg}/${_wp}" ]] || continue
-        # Para uma variável, e não `| grep -q`: sob `pipefail` o cano devolve
-        # 141 quando ACHA (test_o_pipefail_nao_transforma_acerto_em_falha).
         _cabecalho="$(head -5 "${_wp_do_xdg}/${_wp}" 2>/dev/null || true)"
         if [[ "${_wp}" == 51-* ]] \
                 && grep -qiE 'recriado manualmente|workaround|standalone' <<<"${_cabecalho}"; then
@@ -861,11 +481,6 @@ if [[ "${_wp_do_xdg}" != "${HOME}/.config/wireplumber/wireplumber.conf.d" ]]; th
     done
 fi
 
-# AS REGRAS DO SOM VALEM NO WIREPLUMBER DA DISTRO (13/10/2026): no WirePlumber 0.4
-# (Ubuntu 24.04, Mint 22, Debian 12) os mesmos quatro drop-ins moram em
-# `main.lua.d/`, em Lua. Saem do lar e do XDG_CONFIG_HOME, com a mesma exceção do
-# 51 marcado como «recriado manualmente». Uma troca de WirePlumber entre o
-# install e o uninstall deixa a outra forma no disco; as duas saem.
 for _wp_raiz in "${HOME}/.config" "${XDG_CONFIG_HOME:-${HOME}/.config}"; do
     for _wp in 51-hefesto-dualsense-no-default-source.lua \
                52-hefesto-dualsense-disable-source.lua \
@@ -884,12 +499,6 @@ for _wp_raiz in "${HOME}/.config" "${XDG_CONFIG_HOME:-${HOME}/.config}"; do
     done
 done
 
-# OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01: o WirePlumber lembra pelo NOME a
-# escolha de fonte e de saída (`default-nodes`) e o volume de cada fluxo
-# (`stream-properties`), e nunca esquece uma chave. Saem só as linhas com nome
-# do Hefesto (o dono é `memoria_dos_controles.linha_nossa_do_wireplumber`, o
-# mesmo que o «limpa?» lê); as dela ficam byte a byte. Com o WirePlumber
-# PARADO, porque ele grava o estado ao sair e regravaria as nossas.
 MEMORIA_DOS_CONTROLES_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/utils/memoria_dos_controles.py"
 _wp_estado="${XDG_STATE_HOME:-${HOME}/.local/state}/wireplumber"
 if [[ -d "${_wp_estado}" && -f "${MEMORIA_DOS_CONTROLES_PY}" ]] \
@@ -909,36 +518,21 @@ print(sum(len(v) for v in dono["chaves_nossas_do_wireplumber"](Path(sys.argv[2])
     fi
 fi
 
-# DROPIN-AMBIGUO-01: a marca do gesto do microfone sai junto do 51 (acima).
 if [[ -f "${MARCA_MIC_PEDIDO}" ]]; then
     log "removendo a marca do gesto do microfone: ${MARCA_MIC_PEDIDO}"
     rm -f "${MARCA_MIC_PEDIDO}"
 fi
 
-# environment.d do modo-jogo (91): artefato do hefesto — remove por simetria.
 if [[ -f "${ENVIRONMENTD_GAMEMODE}" ]]; then
     log "removendo environment.d do modo-jogo: ${ENVIRONMENTD_GAMEMODE}"
     rm -f "${ENVIRONMENTD_GAMEMODE}"
 fi
 
-# A REGRA DO NÓ QUE FICA COM O `--keep-udev` VIRA A ABERTA (O-FISICO-NASCE-
-# ESCONDIDO-EM-QUALQUER-MAQUINA-01, conferência de segurança de 25/09/2026).
-# O broker sai mais abaixo, com ou sem `--keep-udev`; a regra do nó FECHADA
-# que ficasse em /etc deixaria o hidraw do DualSense físico `0600 root` para
-# sempre, sem ninguém que o abra: a Steam e o jogo perderiam o controle depois
-# de o Hefesto sair. Até 25/09 a `71-sony-controllers.rules` do Pop!_OS
-# escondia isso (corria depois da 70 e reabria o nó); com a 73-hefesto
-# falando por último, vale em toda máquina. As duas metades da cura saem
-# juntas: a regra preservada vira a variante ABERTA, pelo dono único da
-# transformação — o mesmo fail-safe do install-host-udev.sh sem broker. Se a
-# transformação recusar, a regra do nó sai (aberto é o lado seguro).
 _abrir_a_regra_do_no_que_fica() {
     local regra aberta efetivas
     for regra in /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
                  /etc/udev/rules.d/70-ps5-controller.rules; do
         [[ -f "${regra}" ]] || continue
-        # Para uma variável, e não `| grep -q`: sob `pipefail` o cano devolve
-        # 141 quando ACHA (test_o_pipefail_nao_transforma_acerto_em_falha).
         efetivas="$(grep -v '^[[:space:]]*#' "${regra}" 2>/dev/null || true)"
         [[ "${efetivas}" == *'TAG-="uaccess"'* ]] || continue
         if [[ "${DRY_RUN}" -eq 1 ]]; then
@@ -963,33 +557,12 @@ _abrir_a_regra_do_no_que_fica() {
 }
 
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
-    # Conjunto canônico sincronizado com scripts/install_udev.sh + install-host-udev.sh.
-    # As rules + modules-load uinput são SEMPRE instaladas em conjunto e devem
-    # ser SEMPRE removidas em conjunto — não há combinação parcial suportada.
-    # (75 é opt-in mas removida sempre; 76/77 entram por default desde v3.9.x.)
-    #
-    # BUG-UNINSTALL-SUDO-SILENT-FAIL-01 (fix): a versão anterior tinha
-    # `sudo rm ... 2>/dev/null || true`, que mascarava falha de TTY para senha
-    # (script chamado de subshell sem terminal) — log dizia "removendo" mas
-    # nada saía. O acquire_sudo no topo já cacheia a credencial upfront; aqui só
-    # testamos se dá pra sudo AGORA sem prompt via `sudo -n true` — NÃO `sudo -v`,
-    # que sob `NOPASSWD:ALL` falha exigindo terminal mesmo com o sudo utilizável.
-    # Falha visível se sudo não estiver disponível, com idempotência em rm -f.
     log "removendo udev rules + modules-load uinput (sudo)"
     if ! sudo -n true 2>/dev/null; then
-        # NUNCA sugerir rodar este script inteiro sob sudo: o HOME viraria
-        # /root, e os alvos da usuária são montados a partir de ${HOME} (units
-        # --user, atalho, wrapper, símbolo no PATH, drop-ins do WirePlumber). O
-        # /etc sairia limpo, o HOME real ficaria intacto e a tela diria que
-        # desinstalou.
         log "ERRO: sudo recusado/sem TTY — udev rules NÃO foram removidas."
         log "      reexecute ./uninstall.sh ${*:-} nesta sessão, de forma interativa"
         log "      (a senha é pedida uma vez), ou exporte SUDO_ASKPASS antes de rodar."
     else
-        # 73/74 saíram do repo (2026-07-18) mas o rm fica: limpa instalações antigas.
-        # A regra do nó do DualSense tem DOIS nomes: a 73-hefesto de hoje e a 70
-        # de até 25/09/2026. As duas saem — a velha pode ter ficado de um install
-        # de antes da troca.
         sudo rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
                    /etc/udev/rules.d/70-ps5-controller.rules \
                    /etc/udev/rules.d/71-uinput.rules \
@@ -1012,33 +585,15 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/85-hefesto-o-cabo-assume.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
-        # hefesto-dualsense-storm.conf NÃO entra nesta lista de propósito — ver
-        # BUG-UNINSTALL-STORM-CONF-ORPHAN-KEEP-UDEV-01 logo abaixo (removido
-        # SEMPRE, independente de --keep-udev).
         sudo udevadm control --reload-rules
-        # Re-trigger eventos para que devices PS5 já plugados percam os
-        # atributos injetados pelas rules removidas (autosuspend forçado,
-        # SYSTEMD_USER_WANTS de unit inexistente). Sem isso, comportamento
-        # residual persiste até desplugar/replugar ou reboot.
         sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
         sudo udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
-        # input: devolve os js de Motion Sensors (regra 80) e as flags ID_INPUT_*
-        # (regra 78) ao default do kernel sem exigir replug.
         sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
-        # Regras 81 (PLAT-03): SÓ rm + reload, de propósito — o power/control
-        # "on" atual dos devices/hosts NÃO é revertido a quente (é inócuo; o
-        # kernel volta ao default no próximo boot/replug sem as regras).
-        # VPAD-09: grupo dedicado dono dos nós 71-* — simetria com o install
-        # (que faz groupadd + usermod -aG). Best-effort: o groupdel falha
-        # inofensivamente se o grupo for primário de alguém ou não existir.
         log "removendo grupo 'hefesto' (dono de /dev/uhid e /dev/uinput)"
         sudo gpasswd -d "$(id -un)" hefesto >/dev/null 2>&1 || true
         sudo groupdel hefesto 2>/dev/null || true
     fi
 else
-    # A lista abaixo é escrita por extenso, sem chaves de expansão do shell, para
-    # que cada regra apareça com o nome exato — a versão com {70,72,...} escondia
-    # as 82/83/84, que nunca foram citadas aqui.
     if sudo -n true 2>/dev/null; then
         _abrir_a_regra_do_no_que_fica
     elif [[ -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
@@ -1053,21 +608,10 @@ else
     log "  sudo rm /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh /etc/systemd/system/hefesto-bt-bonds-snapshot.service"
 fi
 
-# ---------------------------------------------------------------------------
-# BUG-UNINSTALL-STORM-CONF-ORPHAN-KEEP-UDEV-01 (fix): hefesto-dualsense-storm.conf
-# (cura de raiz do storm -71, SPRINT-GAME-RUMBLE-01) morava dentro do bloco
-# REMOVE_UDEV acima — com --keep-udev ele sobrevivia órfão (nem o texto do
-# "para remover depois" o citava). storm.conf não é uma regra udev: é uma cura
-# de /etc/modprobe.d com ciclo de vida PRÓPRIO (instalada no passo 3c do
-# install, condicionado só a --no-snd-quirk). Removida SEMPRE por default aqui
-# (simetria — feedback_uninstall_simetrico_default), independente de
-# --keep-udev; --keep-udev preserva só as regras udev de fato.
-# ---------------------------------------------------------------------------
 if sudo -n true 2>/dev/null; then
     if [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]]; then
         log "removendo cura de raiz do storm (modprobe.d, independente de --keep-udev)"
         sudo rm -f /etc/modprobe.d/hefesto-dualsense-storm.conf
-        # Limpa também o quirk_flags runtime (vale no próximo replug do controle).
         [[ -e /sys/module/snd_usb_audio/parameters/quirk_flags ]] && \
             printf '' | sudo tee /sys/module/snd_usb_audio/parameters/quirk_flags >/dev/null 2>&1 || true
     fi
@@ -1076,12 +620,6 @@ elif [[ -e /etc/modprobe.d/hefesto-dualsense-storm.conf ]]; then
     log "  sudo rm /etc/modprobe.d/hefesto-dualsense-storm.conf"
 fi
 
-# ---------------------------------------------------------------------------
-# HAPTICA-NATIVA-01: o perfil UCM do DualSense — simétrico ao passo 3c-bis do
-# install, e pelo MESMO dono: scripts/install_ucm_dualsense.sh --remover tira o
-# verbo e só os ganchos que levam a marca dele. O alsa-ucm-conf nunca foi
-# tocado, então não há nada a restaurar.
-# ---------------------------------------------------------------------------
 UCM_VERBO=/usr/share/alsa/ucm2/USB-Audio/Hefesto/DualSense-HiFi.conf
 if [[ -e "${UCM_VERBO}" ]]; then
     if sudo -n true 2>/dev/null; then
@@ -1094,14 +632,6 @@ if [[ -e "${UCM_VERBO}" ]]; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# A-ENERGIA-DE-NOTEBOOK-NUM-DESKTOP-01: o modo desempenho — simétrico ao passo
-# 3j3 do install, e pelo MESMO dono: scripts/desempenho.sh remover. Tira a unit
-# do perfil de energia (hefesto-desempenho.service) e os arquivos de
-# modprobe.d/tmpfiles.d dos ajustes provados. O perfil de energia de AGORA fica
-# como está (o script diz como mudá-lo); os valores de fábrica dos módulos
-# voltam no próximo boot.
-# ---------------------------------------------------------------------------
 if [[ -e /etc/systemd/system/hefesto-desempenho.service \
       || -e /etc/modprobe.d/hefesto-desempenho-nvidia.conf \
       || -e /etc/modprobe.d/hefesto-desempenho-audio.conf \
@@ -1116,30 +646,6 @@ if [[ -e /etc/systemd/system/hefesto-desempenho.service \
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# Config do BlueZ (FastConnectable + JustWorksRepairing) — simétrico ao passo
-# 3d do install, e pelo MESMO dono: scripts/bluez_config.sh remover.
-#
-# RADIO-ABERTO-01/E1-bis (06/08/2026) — o que este bloco substituiu, e por quê:
-# havia TRÊS removedores independentes aqui (bloco legado FastConnectable,
-# bloco legado JustWorksRepairing e bloco unificado), cada um com o próprio
-# `cp` de backup e o próprio `sed -i` de faixa. Três defeitos disso:
-#
-#   1. numa máquina com os dois legados MAIS o unificado, uma única execução
-#      deixava TRÊS `main.conf.bak.hefesto-uninstall-<ts>` em /etc/bluetooth —
-#      e nenhum dos três scripts jamais podou backup (37 acumulados, 272 KB,
-#      MEDIDO em 06/08/2026);
-#   2. o `sed '/A/,/B/d'` com a sentinela de fechamento ancorada em `$` nunca
-#      fecha a faixa se alguém deixou um espaço no fim da linha — e faixa sem
-#      fim APAGA ATÉ O FIM DO ARQUIVO. O `remover` de hoje RECUSA nesse caso;
-#   3. o install APAGAVA chave de terceiro (`JustWorksRepairing = never`, por
-#      exemplo) e o uninstall nunca a devolvia: instalar+desinstalar era uma
-#      operação destrutiva líquida. Agora o install NEUTRALIZA com a marca
-#      `#hefesto-desativou# ` e é este `remover` que devolve a linha original.
-#
-# NUNCA reinicia o bluetoothd (derrubaria os controles BT conectados); a
-# remoção vale no próximo boot/restart natural do serviço.
-# ---------------------------------------------------------------------------
 if sudo -n true 2>/dev/null; then
     log "removendo config do BlueZ do hefesto (bloco do main.conf + drop-ins)"
     HEFESTO_BT_ASSETS="${ROOT_DIR}/assets/bluetooth" \
@@ -1153,26 +659,6 @@ elif [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] \
     log "  (rode: sudo bash ${ROOT_DIR}/scripts/bluez_config.sh remover)"
 fi
 
-# ONDA-R2: resiliência do bluetoothd (camada 2 — simétrico ao passo 3e-bis do
-# install). Remove timers/units, drop-ins (inclusive o de debug forense, se a
-# janela de captura ficou ligada), scripts e o diretório de snapshots de bonds.
-# ATENÇÃO deliberada: os snapshots contêm LinkKeys (credenciais) — remoção
-# default com aviso; quem quiser preservar copia antes.
-#
-# BUG-UNINSTALL-KEEP-UDEV-ALVO-ORFAO-01: as regras 82 e 83 são regras-cola —
-# existem só para chamar um alvo por RUN+= (bt_nosniff_now.sh e a unit de
-# snapshot). Este bloco apagava os dois alvos INCONDICIONALMENTE, inclusive com
-# --keep-udev, e as duas curas (o Pro sem sniff, o snapshot de bonds na borda)
-# morriam em silêncio com as regras ainda no disco. Alvo de regra preservada
-# segue a regra: sai quando ela sai, fica quando ela fica. O resto desta camada
-# (timers, drop-ins, watchdog, snapshots) tem ciclo de vida próprio e continua
-# saindo sempre.
-#
-# NOTA DATADA 22/08/2026: o ruído no journal que este bug também causava — o
-# RUN+= falhando a cada device HID por Bluetooth — deixou de existir quando as
-# duas regras ganharam o `TEST==` do próprio alvo. A regra órfã agora fica
-# INERTE. O que NÃO mudou é a razão deste gate: sem o alvo a cura não existe, e
-# uma regra inerte é tão inútil quanto uma regra que falha.
 if sudo -n true 2>/dev/null; then
     if [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
           || -e /etc/systemd/system/hefesto-bt-health-watchdog.timer ]]; then
@@ -1183,8 +669,6 @@ if sudo -n true 2>/dev/null; then
     sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         /etc/systemd/system/hefesto-bt-health-watchdog.service \
         /etc/systemd/system/hefesto-bt-health-watchdog.timer 2>/dev/null || true
-    # O drop-in que mostra o `maquina.json` ao watchdog (O-QUE-E-DO-HEFESTO-
-    # SAI-DO-ZSH-01): sai com a unit que ele emenda, e o diretório `.d` junto.
     sudo rm -f /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf 2>/dev/null || true
     sudo rmdir /etc/systemd/system/hefesto-bt-health-watchdog.service.d 2>/dev/null || true
     if [[ -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
@@ -1205,25 +689,11 @@ if sudo -n true 2>/dev/null; then
         /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh 2>/dev/null || true
-    # PONTE-PRIVILEGIADA-01 — saída simétrica ao passo 3e-ter do install.
-    #
-    # A REGRA SAI ANTES DO HELPER, e a ordem não é estética: entre um `rm` e o
-    # outro existe um instante em que um dos dois já não está. Regra apontando
-    # para caminho vazio é inofensiva (o sudo simplesmente não casa nada);
-    # helper de root ainda no disco COM a regra viva é privilégio pendurado.
-    # A ordem barata é a que erra para o lado seguro.
-    #
-    # Nenhum gate de `--keep-udev` aqui: esta camada não tem regra udev que a
-    # chame — o consumidor é a janela, e ela some com o aplicativo.
     if [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
         log "removendo a regra da ponte privilegiada do Bluetooth (/etc/sudoers.d/49-hefesto-bt-ponte)"
         sudo rm -f /etc/sudoers.d/49-hefesto-bt-ponte 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh 2>/dev/null || true
-    # A PLACA ACORDADA (O-JOGO-LEVE-ACORDA-A-PLACA-01): devolve o clock antes de
-    # tirar o script, porque sem ele ninguém mais devolve até o próximo boot. Um
-    # jogo vivo segura a placa, e o boot a solta. Depois, a regra e o helper,
-    # nessa ordem, pela mesma razão da ponte.
     if [[ -x /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]]; then
         printf '0\n' | sudo bash /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh devolver \
             >/dev/null 2>&1 || true
@@ -1234,22 +704,14 @@ if sudo -n true 2>/dev/null; then
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh 2>/dev/null || true
     sudo rm -rf /run/hefesto-dualsense4unix/placa 2>/dev/null || true
-    # OS CARIMBOS DE ROOT EM /run das peças que este bloco tira: os `reset-<porta>`
-    # da ponte (O-DIARIO-DO-RADIO-01), os do religar e os `evento-*` (STORM-USB-02),
-    # os `promoted-*` e o do reinício do watchdog. tmpfs: sair aqui é não deixar rastro.
     sudo rm -rf /run/hefesto-bt-ponte /run/hefesto-bt-rebind /run/hefesto-bt-watchdog \
         /run/hefesto-bt-watchdog.restart-stamp 2>/dev/null || true
-    # A TRAVA COMUM DO RÁDIO — simétrica ao `install_trava_do_radio_host`. Sai
-    # DEPOIS dos timers (desabilitados acima): o watchdog é quem a disputa com
-    # o daemon, e o daemon já foi parado no começo deste script. O `rmdir` é
-    # puro: se alguém pôs outra coisa na pasta, ela fica.
     if [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf || -d /run/hefesto-dualsense4unix ]]; then
         log "removendo a trava comum do rádio (tmpfiles.d + /run/hefesto-dualsense4unix)"
         sudo rm -f /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf \
             /run/hefesto-dualsense4unix/radio.lock 2>/dev/null || true
         sudo rmdir /run/hefesto-dualsense4unix 2>/dev/null || true
     fi
-    # Os alvos das regras-cola 82 e 83, no mesmo gate das regras.
     if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.service \
             /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
@@ -1259,48 +721,6 @@ if sudo -n true 2>/dev/null; then
         log "  bt_bonds_snapshot.sh e hefesto-bt-bonds-snapshot.service — sem eles as"
         log "  regras que ficaram virariam enfeite (o TEST== delas não acharia o alvo)."
     fi
-    # BT-NINTENDO-ACTIVE-01: reverter a link policy (volta o SNIFF default) e o
-    # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
-    #
-    # MIGRACAO-BLUEZ-DEPRECIADOS-01 (19/08/2026) — o uninstall FICOU PARA TRÁS.
-    # A migração levou `bt_active_mode.sh`, `doctor.sh`, `bt_nosniff_now.sh`,
-    # `bt_health_watchdog.sh`, `storm_watch.sh` e `medir_w3_coex.sh` do
-    # `hciconfig`/`hcitool`/`sdptool` para o sysfs/D-Bus/`btmgmt`, e este
-    # arquivo não entrou na lista. O efeito era o pior tipo de defeito daqui:
-    # numa distro que moveu as depreciadas para `bluez-deprecated` (Fedora e
-    # Arch, que é EXATAMENTE o público da migração), o `hciconfig` não existe,
-    # `_hci` saía VAZIO e o bloco inteiro era pulado em silêncio — inclusive a
-    # reversão do Alias, que é a metade que NÃO precisa de ferramenta
-    # depreciada nenhuma (sai por D-Bus). O adaptador dela ficava chamado
-    # "Nintendo ..." para sempre depois de desinstalar o Hefesto.
-    #
-    # A escada é a MESMA de `bt_active_mode.sh::_adaptador`, na mesma ordem, de
-    # propósito: sysfs (kernel puro, sem pacote e sem privilégio; o filtro
-    # `^hci[0-9]+$` descarta as entradas de conexão, que ali nascem como
-    # "hci0:256"), D-Bus do BlueZ, `btmgmt`, e o `hciconfig` como plano B — quem
-    # AINDA o tem não pode perder leitura.
-    #
-    # `HEFESTO_SYSFS_BLUETOOTH` é o gancho de teste do primeiro degrau, no mesmo
-    # espírito do `HEFESTO_OS_RELEASE` e do `HEFESTO_FAMILIA_PACOTES` do
-    # install.sh: sem ele, a máquina de quem roda a suíte TEM `/sys/class/
-    # bluetooth/hci0`, o primeiro degrau sempre vence, e os três de baixo — que
-    # são justamente a migração — nunca seriam exercitados. Portão que só
-    # consegue medir o caminho que já funcionava é decoração.
-    #
-    # TODOS OS ADAPTADORES, e o NOME volta ao padrão (INSTALL-E-UNINSTALL-DO-
-    # RADIO-01, 23/09/2026 — decisão de produto, P-11). Até aqui o bloco
-    # olhava o PRIMEIRO adaptador e só tirava o prefixo «Nintendo ». Com a
-    # ENTRADA-A-ENTRADA-02 o Alias passou a levar o NOME DO LUGAR (o
-    # `maquina.json`, projetado pelo `bt_active_mode.sh` e pelo renomear da
-    # aba), em qualquer adaptador da mesa — e desinstalar deixava o rádio dela
-    # chamado «Sofá» para sempre. O produto não deixa rastro. As três formas:
-    #   - o Alias é um nome de lugar do Hefesto (com ou sem o prefixo) → volta
-    #     ao padrão do BlueZ (Alias vazio, que o BlueZ lê como o nome do
-    #     sistema);
-    #   - «Nintendo » + o nome do sistema, com ou sem o « #N» do BlueZ → idem;
-    #   - o Alias é «Nintendo » + um nome que NÃO é do Hefesto → tira só o
-    #     prefixo: o nome embaixo dele é de quem o escreveu, e não é nosso.
-    # Um Alias sem o prefixo e que não é lugar do Hefesto não é tocado.
     _hcis=()
     for _hci_p in "${HEFESTO_SYSFS_BLUETOOTH:-/sys/class/bluetooth}"/hci*; do
         [[ -e "${_hci_p}" ]] || continue
@@ -1317,18 +737,6 @@ if sudo -n true 2>/dev/null; then
     if [[ "${#_hcis[@]}" -eq 0 ]] && command -v hciconfig >/dev/null 2>&1; then
         mapfile -t _hcis < <(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1}' || true)
     fi
-    # Os nomes que o Hefesto projeta ou projetou no Alias, lidos do
-    # `maquina.json` desta casa pelo `python3` isolado. São QUATRO lugares, e
-    # ler só um deixava o nome dela no rádio (A-ENTRADA-TEM-UM-REGISTRO-SO-01,
-    # 28/09/2026 — até ali só se lia o `lugares`):
-    #   - `adaptadores[<endereço>].nome` — o que o `bt_active_mode.sh` projeta
-    #     desde 26/09 (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO);
-    #   - `mapa.portas[N].nome` — o nome da entrada, que na D3 o adaptador
-    #     plugado nela herdava, e que a migração trouxe do `lugares`;
-    #   - `lugares[<lugar>].nome` — o arquivo que ainda não migrou;
-    #   - o `lugares` da cópia de antes da migração
-    #     (`maquina.json.com-os-lugares`): os nomes que o adaptador herdava da
-    #     porta e que a migração tirou do arquivo (o «Centro» da D3).
     _nomes_do_hefesto=()
     _maquina_json="${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix/maquina.json"
     if [[ -f "${_maquina_json}" ]] && command -v python3 >/dev/null 2>&1; then
@@ -1354,17 +762,7 @@ for dele in registros:
         print(nome.strip())
 ' "${_maquina_json}" 2>/dev/null || true)
     fi
-    # O NOME DO ADAPTADOR LIDO COMO ELE É (conferência da INSTALL-E-UNINSTALL-
-    # DO-RADIO-01, 23/09/2026). O `busctl get-property` sem `--json` escapa em C
-    # todo byte fora do ASCII: «Nintendo Sofá» sai «Nintendo Sof\303\241» —
-    # medido num barramento privado com o systemd 255 dela. Comparado com o nome
-    # do `maquina.json`, um lugar com acento nunca casava e ficava no rádio; e o
-    # ramo do prefixo GRAVAVA de volta o texto escapado, trocando o nome por
-    # «Sof\303\241». O `--json=short` (depois do verbo, que é o que o ensaio
-    # reconhece como leitura) entrega o texto em UTF-8. Sem ele (systemd
-    # antigo), vale a forma de antes só quando ela não tem barra; o que ainda
-    # vier com barra (aspas, controle) é «não sei», e «não sei» não se escreve.
-    _texto_do_adaptador() {  # $1 = hciN · $2 = Alias | Name
+    _texto_do_adaptador() {
         local bruto
         bruto="$(busctl get-property org.bluez "/org/bluez/$1" org.bluez.Adapter1 "$2" --json=short 2>/dev/null || true)"
         bruto="$(sed -nE 's/^.*"data":"(.*)"\}$/\1/p' <<<"${bruto}")"
@@ -1375,20 +773,6 @@ for dele in registros:
         printf '%s\n' "${bruto}"
     }
     for _hci in ${_hcis[@]+"${_hcis[@]}"}; do
-        # ATENÇÃO: `hciconfig lp` exige a lista separada por VÍRGULA. Com
-        # espaços ele lê só o primeiro token e a reversão vira NO-OP
-        # silencioso — medido ao vivo 23/07: "lp rswitch hold sniff park"
-        # deixou a policy em RSWITCH, e só "rswitch,hold,sniff,park"
-        # devolveu RSWITCH HOLD SNIFF PARK. O uninstall estava deixando o
-        # adaptador sem SNIFF para sempre.
-        #
-        # A LINK POLICY NÃO TEM SUCESSOR VIVO: ela sai do ioctl HCIGETDEVINFO,
-        # e nem `btmgmt` nem `bluetoothctl` do 5.86 a expõem (conferido nos
-        # `--help` em 19/08/2026 — é a mesma conclusão de `storm_watch.sh` e do
-        # `doctor.sh`). Onde o `hciconfig` falta, esta metade SE PERDE, e o
-        # certo é DIZER isso em vez de calar: sem SNIFF de volta, o rádio dela
-        # segue no modo ativo que a cura do Pro pediu. A outra metade (o Alias)
-        # continua revertida logo abaixo, que é o ganho desta migração.
         if command -v hciconfig >/dev/null 2>&1; then
             sudo hciconfig "${_hci}" lp rswitch,hold,sniff,park 2>/dev/null || true
         else
@@ -1418,27 +802,8 @@ for dele in registros:
             log "nome do adaptador revertido para '${_base}' (tirado o prefixo Nintendo)"
         fi
     done
-    # O carimbo da desinstalação, um só: o acervo de bonds e o diário do rádio
-    # do root vão para a MESMA pasta (o porquê está no bloco do diário, abaixo).
     _carimbo_do_acervo="$(date +%Y%m%d-%H%M%S)"
     if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then
-        # CICLO-QUE-PROVA-01 (08/08/2026) — MEDIDO no ciclo real, na máquina dela:
-        # este bloco fazia `rm -rf` por default, sem flag e sem confirmação, e o
-        # install recria só o diretório VAZIO. Doze snapshots viraram um.
-        #
-        # Por que isso é grave e não é higiene: os snapshots são a ÚNICA rede
-        # entre um crash do `bluetoothd` e ela repareando quatro controles à mão.
-        # Na mesma noite o crash das 00:27:35 mostrou para que servem — o
-        # salva-vidas gravou os quatro bonds dois segundos depois, sozinho — e um
-        # ciclo de manutenção normal os apagaria.
-        #
-        # A doutrina da casa para dado dela já estava escrita, e é a mesma que
-        # vale para a config: PRESERVA por default, apaga só com `--purge-config`
-        # explícito. Os bonds passam a seguir a mesma regra.
-        #
-        # E preservar NÃO é deixar credencial espalhada: o destino carrega o
-        # carimbo de que é sobra de desinstalação, e o modo 700 do diretório-pai
-        # continua valendo. Quem quiser o wipe de verdade tem a flag.
         if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
             _bonds_destino="/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-${_carimbo_do_acervo}"
             log "preservando snapshots de bonds (contêm LinkKeys) em ${_bonds_destino}"
@@ -1452,13 +817,6 @@ for dele in registros:
             sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
         fi
     fi
-    # O DIÁRIO DO RÁDIO DO ROOT (`radio-diario.jsonl` e o `.1` da rotação,
-    # escritos pela ponte e pelo watchdog) vai JUNTO do acervo de bonds
-    # guardado, na mesma pasta carimbada — decisão de produto
-    # (INSTALL-E-UNINSTALL-DO-RADIO-01, P-2.2): é o histórico que explica a mesa
-    # que os bonds descrevem, e não se apaga por padrão. Fora do caminho de
-    # antes, a próxima instalação não o relê no arranque como se fosse desta
-    # vida. Com --purge-config, que apaga os bonds a pedido, ele sai junto.
     _diarios_root=()
     for _diario_root in /var/lib/hefesto-dualsense4unix/radio-diario.jsonl \
                         /var/lib/hefesto-dualsense4unix/radio-diario.jsonl.1; do
@@ -1475,14 +833,6 @@ for dele in registros:
             sudo rm -f "${_diarios_root[@]}" 2>/dev/null || true
         fi
     fi
-    # AS CÓPIAS DE UNINSTALLS ANTERIORES (O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01,
-    # decisão dela de 24/09, D-2409-AS-COPIAS-DE-PAREAMENTO-SAEM-NO-PURGE). Todo
-    # uninstall sem --purge-config deixa uma pasta carimbada com as LinkKeys e
-    # diz «para apagar de vez: rode o uninstall com --purge-config» — e o
-    # --purge-config só levava o acervo DESTA vida. As cópias de antes ficavam
-    # para sempre, e o `rmdir` do pai, logo abaixo, falhava calado por causa
-    # delas. Sem --purge-config nada muda. Só sai o prefixo que este script
-    # escreve: o resto da pasta não é dele.
     if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
         for _copia_antiga in /var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*; do
             [[ -e "${_copia_antiga}" || -L "${_copia_antiga}" ]] || continue
@@ -1491,14 +841,6 @@ for dele in registros:
                 || log "  ela FICOU — apague à mão: sudo rm -rf ${_copia_antiga}"
         done
     fi
-    # O diretório-pai só sai junto com a unit de snapshot: ela declara
-    # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
-    # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
-    # unit (--keep-udev, alvo da regra 83), o pai fica — sem as credenciais
-    # do Hefesto com --purge-config; por padrão, com a cópia guardada dentro. E
-    # ele sai DEPOIS do diário do root (conferência da
-    # INSTALL-E-UNINSTALL-DO-RADIO-01): antes, o `rmdir` rodava com o diário
-    # ainda dentro, e o --purge-config deixava a pasta vazia em /var/lib.
     if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
     fi
@@ -1522,20 +864,12 @@ elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         log "  sudo rm /etc/sudoers.d/49-hefesto-placa /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
     fi
 fi
-# SEM ROOT, AS CÓPIAS DE ANTES FICAM (O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01):
-# o --purge-config pediu que saíssem, e a pasta é de root. O mínimo é dizer
-# que ficaram, e como tirá-las.
 if [[ "${KEEP_CONFIG}" -eq 0 ]] && ! sudo -n true 2>/dev/null \
     && compgen -G '/var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*' >/dev/null 2>&1; then
     log "sudo indisponível — as cópias de pareamento de uninstalls anteriores FICARAM (têm LinkKeys):"
     log "  sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds.pre-uninstall-*"
 fi
 
-# Agente de pareamento persistente (bt-agent --capability=NoInputNoOutput via
-# systemd system unit) — cura o bond "Paired sem Bonded" ("No agent available
-# for request type 2"). O pacote bluez-tools (dependência do bt-agent) NÃO é
-# removido: é um pacote de sistema que o usuário pode querer por conta própria
-# (mesma lógica de preservar libs/deps compartilhadas — ver notas de pip acima).
 if [[ -e /etc/systemd/system/hefesto-bt-agent.service ]]; then
     if sudo -n true 2>/dev/null; then
         log "desabilitando e removendo hefesto-bt-agent.service (sudo)"
@@ -1548,13 +882,6 @@ if [[ -e /etc/systemd/system/hefesto-bt-agent.service ]]; then
     fi
 fi
 
-# Broker root hide-hidraw (BROKER-01/Onda S — fd-injection). Simétrico ao
-# install.sh (passo 3h): disable+stop dispara o ExecStopPost
-# --restore-all-and-exit da própria unit (nenhum hidraw físico fica 0600
-# órfão); um belt explícito roda o MESMO restore ANTES de remover o binário.
-# Remove SÓ os caminhos que o install REGISTROU em broker-owner.conf e que
-# carregam o header do hefesto — nunca unit de terceiros. Desenho:
-# docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.2.
 BROKER_BIN="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
 BROKER_SERVICE="/etc/systemd/system/hefesto-hidraw-broker.service"
 BROKER_SOCKET="/etc/systemd/system/hefesto-hidraw-broker.socket"
@@ -1580,15 +907,13 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
                 fi
             done < "${BROKER_OWNER_FILE}"
         else
-            # Sem registro (instalação de uma onda anterior, ou perdido):
-            # remove só os 3 caminhos CANÔNICOS fixos, nunca glob.
             log "sem registro de posse (${BROKER_OWNER_FILE} ausente) — removendo caminhos canônicos"
             [[ -e "${BROKER_SERVICE}" ]] && sudo rm -f "${BROKER_SERVICE}"
             [[ -e "${BROKER_SOCKET}" ]] && sudo rm -f "${BROKER_SOCKET}"
             [[ -e "${BROKER_BIN}" ]] && sudo rm -f "${BROKER_BIN}"
         fi
         sudo rm -f "${BROKER_OWNER_FILE}"
-        sudo rm -rf /run/hefesto-hidraw-broker 2>/dev/null || true  # a pasta do socket e o marcador
+        sudo rm -rf /run/hefesto-hidraw-broker 2>/dev/null || true
         sudo systemctl daemon-reload >/dev/null 2>&1 || true
     else
         log "sudo indisponível — broker hide-hidraw NÃO removido"
@@ -1598,14 +923,6 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
     fi
 fi
 
-# O VIGIA DO DONGLE WI-FI USB (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026) —
-# simétrico ao `install_wifi_usb_host`. Morava no zsh dela, cujo uninstall NÃO
-# desfazia nenhum dos quatro destinos; aqui eles saem todos, e ANTES do `rmdir`
-# da casa dos scripts de sistema logo abaixo.
-#
-# O scan de fundo NÃO é religado, e não há o que religar: a próxima associação
-# nasce com o default do NetworkManager. A associação de agora fica como está
-# até cair — mexer nela derrubaria a rede de quem está desinstalando.
 if [[ -e /etc/systemd/system/hefesto-wifi-usb-vigia.timer \
       || -e /etc/systemd/system/hefesto-wifi-usb-vigia.service \
       || -e /etc/NetworkManager/dispatcher.d/90-hefesto-wifi-usb \
@@ -1627,21 +944,10 @@ if [[ -e /etc/systemd/system/hefesto-wifi-usb-vigia.timer \
     fi
 fi
 
-# BUG-UNINSTALL-USR-LOCAL-LIB-DIR-ORPHAN-01 (25/07): /usr/local/lib/
-# hefesto-dualsense4unix/ é criado pelo install (passo 3e-bis, os 7 bt_*.sh, e
-# passo 3h, o binário do broker). Os ARQUIVOS saíam um a um, mas o diretório
-# ficava vazio em /usr/local — rastro do hefesto num sistema "desinstalado".
-# Fora dos dois `if` de sudo acima de propósito: o diretório sobra tendo saído
-# só os bt_*.sh, só o broker, ou os dois. `rmdir` puro (nunca -r/-f): se
-# houver qualquer arquivo dentro que não seja nosso, ele falha e o dir fica.
 if [[ -d /usr/local/lib/hefesto-dualsense4unix ]] && sudo -n true 2>/dev/null; then
     sudo rmdir /usr/local/lib/hefesto-dualsense4unix 2>/dev/null || true
 fi
 
-# PKG-2 (auditoria 21/07): se o binário `dkms` sumiu do sistema mas ficou
-# módulo/src órfão do hefesto, os blocos abaixo (gateados por `command -v
-# dkms`) passariam MUDOS — e o .ko em updates/dkms continua vencendo o
-# in-tree para sempre (na Onda W, com hang_reset=Y). Avisa explícito.
 if ! command -v dkms >/dev/null 2>&1; then
     _orfaos=""
     for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb hefesto-hid-playstation hefesto-usb-f-hid; do
@@ -1658,28 +964,12 @@ if ! command -v dkms >/dev/null 2>&1; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# Onda T (2026-07-20, DKMS hid-nintendo patchado — probe BT resiliente, ver
-# docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md): removido por
-# DEFAULT, sem flag nova (install é SEM FLAGS; uninstall é simétrico).
-# `dkms remove --all` desregistra o pkg/versão de TODOS os kernels e apaga
-# /usr/src/<pkg>-<ver>; a options do modprobe.d sai junto. O in-tree volta
-# SOZINHO no próximo BOOT (dkms remove já roda depmod; replug NÃO troca
-# módulo carregado) — até lá, se o patchado estiver CARREGADO, ele continua
-# rodando. Para ele ficar de fato inócuo (== vanilla) devolvemos também os
-# params vivos a 0 via /sys (0644, sem reload — a conf que os ligou já saiu).
-# ---------------------------------------------------------------------------
 if command -v dkms >/dev/null 2>&1 \
         && [[ -n "$(dkms status hefesto-hid-nintendo 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo o módulo hid-nintendo corrigido (DKMS): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
-        # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
-        # 3º arg (INITRAMFS-01): nome do módulo construído — marca o initramfs
-        # para regeneração, senão a CÓPIA do .ko removido continua nele e o
-        # boot seguinte ainda sobe o hid-nintendo do hefesto (desinstalado no
-        # disco, vivo no boot). O flush roda uma vez, mais abaixo.
         dkms_remove_patched_module hefesto-hid-nintendo \
             "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/hid-nintendo")" \
             hid-nintendo
@@ -1692,14 +982,9 @@ if [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo opções do hid-nintendo patchado (/etc/modprobe.d/hefesto-hid-nintendo.conf)"
         sudo rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
-        # Módulo patchado ainda CARREGADO? Devolve o comportamento vanilla a
-        # quente (params 0644; NUNCA reload — derrubaria Pro/8BitDo em uso).
         if [[ -d /sys/module/hid_nintendo/parameters ]]; then
             printf '0' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 || true
             printf '0' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1 || true
-            # Clone USB 057E:2009 (patch 0003): estes três são lidos NA PROBE,
-            # então zerar aqui só vale do próximo plug em diante — que é
-            # exatamente o comportamento vanilla que o uninstall promete.
             printf '0' | sudo tee /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report >/dev/null 2>&1 || true
             printf '0' | sudo tee /sys/module/hid_nintendo/parameters/usb_send_conn_status >/dev/null 2>&1 || true
             printf '0' | sudo tee /sys/module/hid_nintendo/parameters/usb_probe_degrade >/dev/null 2>&1 || true
@@ -1711,30 +996,12 @@ if [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]]; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# Onda W (2026-07-20, DKMS rtw88_usb patchado — fantasma USB do dongle WiFi,
-# ver docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md): removido
-# por DEFAULT, sem flag nova (install é SEM FLAGS; uninstall é simétrico).
-# `dkms remove --all` desregistra o pkg/versão de TODOS os kernels e apaga
-# /usr/src/<pkg>-<ver>. O in-tree volta SOZINHO no próximo BOOT (dkms remove
-# já roda depmod; replug do dongle NÃO troca módulo carregado) — até lá, se
-# o patchado estiver CARREGADO, ele continua rodando. Diferente da Onda T,
-# não há conf em /etc/modprobe.d/ para apagar (hang_reset é module param com
-# default Y embutido no .ko, não uma opção externa) — para o módulo ficar
-# menos agressivo até o boot, devolvemos SÓ o hang_reset a 0 via /sys (0644,
-# sem reload): desliga o usb_queue_reset_device; a detecção/silenciamento de
-# device-gone continua (== comportamento rtw89 vanilla, documentado como
-# troca consciente no README do patch).
-# ---------------------------------------------------------------------------
 if command -v dkms >/dev/null 2>&1 \
         && [[ -n "$(dkms status hefesto-rtw88-usb 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo o módulo rtw88_usb corrigido (DKMS): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
-        # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
-        # 3º arg (INITRAMFS-01): idem Onda T — sem ele a cópia do .ko removido
-        # sobreviveria dentro do initramfs.
         dkms_remove_patched_module hefesto-rtw88-usb \
             "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/rtw88-usb")" \
             rtw88_usb
@@ -1748,26 +1015,12 @@ if command -v dkms >/dev/null 2>&1 \
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# Contenção BT (2026-07-25, DKMS hid-playstation patchado — retry de feature
-# report na probe, ver assets/dkms/hid-playstation/README.md): removido por
-# DEFAULT, sem flag nova (install é SEM FLAGS; uninstall é simétrico).
-# `dkms remove --all` desregistra o pkg/versão de TODOS os kernels e apaga
-# /usr/src/<pkg>-<ver>; a options do modprobe.d sai junto. O in-tree volta
-# SOZINHO no próximo BOOT.
-#  NUNCA recarregamos o hid_playstation aqui: derrubaria TODOS os DualSense,
-# e os por Bluetooth perderiam o link. Até o boot, se o patchado estiver
-# carregado ele continua rodando — devolvemos só o feature_retries a 0 via
-# /sys (0644), que é lido a cada probe, então a próxima conexão já é vanilla.
-# ---------------------------------------------------------------------------
 if command -v dkms >/dev/null 2>&1 \
         && [[ -n "$(dkms status hefesto-hid-playstation 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo patch DKMS do hid-playstation (contenção BT): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
-        # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
-        # 3º arg (INITRAMFS-01): idem Onda T/W.
         dkms_remove_patched_module hefesto-hid-playstation \
             "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/hid-playstation")" \
             hid-playstation
@@ -1784,8 +1037,6 @@ if [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]]; then
             printf '0' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1 || true
             log "feature_retries do hid_playstation devolvido a 0 (vanilla já na próxima conexão; NUNCA recarregamos o módulo)"
         fi
-        # Simetria com o install: os dois gates do clone no cabo voltam a N
-        # (caminhos literais, como no install.sh).
         if [[ -e /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
             printf 'N' | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1 || true
             log "ds4_short_pairing_info devolvido a N (vanilla na próxima conexão)"
@@ -1800,10 +1051,6 @@ if [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]]; then
     fi
 fi
 
-# O-F-HID-FECHA-A-RESPOSTA (14/10/2026): o usb_f_hid dos pads USB virtuais sai
-# pelo mesmo caminho do hid-playstation. O módulo carregado não se troca aqui: o
-# de fábrica volta no próximo carregamento (o próximo boot, ou o broker depois
-# de um `modprobe -r usb_f_hid` sem pad no ar).
 if command -v dkms >/dev/null 2>&1 \
         && [[ -n "$(dkms status hefesto-usb-f-hid 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
@@ -1819,13 +1066,6 @@ if command -v dkms >/dev/null 2>&1 \
     fi
 fi
 
-# RADIO-AFOGADO-02 (22/09/2026): o uhid com contrapressão. Ele só está aqui se
-# alguém pediu (`./install.sh --uhid-contrapressao`), e sai pelo mesmo caminho
-# dos vizinhos. **O MÓDULO NUNCA É RECARREGADO**, e aqui a regra é a mais dura
-# da casa: o `uhid` é o dono de TODO HID por Bluetooth: um `rmmod` derruba os
-# controles, o teclado e o mouse sem fio de uma vez. O parâmetro volta a 0 A
-# QUENTE (é 0644 de propósito), o que já devolve o comportamento de fábrica na
-# hora; o módulo de fábrica volta no próximo boot.
 if grep -q '^hefesto-uhid' <<<"$(dkms status 2>/dev/null)"; then
     if sudo -n true 2>/dev/null; then
         log "removendo o patch DKMS do uhid (hefesto-uhid)"
@@ -1849,25 +1089,11 @@ if [[ -e /etc/modprobe.d/hefesto-uhid.conf ]]; then
     fi
 fi
 
-# ---------------------------------------------------------------------------
-# INITRAMFS-01 (25/07) — simetria do passo 3l do install
-# ---------------------------------------------------------------------------
-# `dkms remove --all` limpa /lib/modules e roda depmod, mas o initramfs guarda
-# uma CÓPIA do .ko: sem regenerar, o boot seguinte AINDA carrega o
-# hid-nintendo/rtw88_usb do hefesto — desinstalado no disco e vivo no boot,
-# que é exatamente o tipo de assimetria que este uninstall existe para evitar.
-# Roda UMA vez para todos os módulos removidos acima (a lib coalesce) e é
-# no-op se nada foi removido. Fail-safe: falha vira aviso, nunca aborta.
 if command -v dkms >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
     dkms_flush_initramfs
 fi
-# Conf.d de powersave do WiFi (W2 — instalado por padrão pelo install.sh):
-# removido SE presente, sem flag nova (simetria "se instalado, some" — mesmo
-# padrão do storm.conf). Só rm de um arquivo .conf: NUNCA chamamos
-# nmcli/rfkill aqui, e a economia de cada interface volta ao default da
-# distro no próximo boot (o NetworkManager só lê o conf.d no início).
 if [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo conf de powersave do WiFi (/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf)"
@@ -1878,23 +1104,6 @@ if [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]]; then
     fi
 fi
 
-# Restauração do bluez (backport → versões originais do noble).
-#
-# BLUEZ-PADRAO-INVERTIDO-01 (02/08/2026): isto só acontece com
-# `--restore-bluez`. O REGISTRO da decisão anterior fica, porque ela era
-# defensável e é o que explica o código: *"o uninstall É simétrico: devolve o
-# pacote ao estado pré-Hefesto — ficar com um bluez de terceiro órfão, sem o
-# doctor/pin/gerenciamento que o justificava, é pior do que voltar ao 5.72 do
-# noble"*.
-#
-# O que a fez cair: o gesto é REMOÇÃO BRUTAL de propósito — reinicia o
-# bluetoothd (a ÚNICA exceção documentada à regra "uninstall nunca reinicia o
-# bluetoothd") e descarta os bonds pareados outra vez. Um gesto assim não pode
-# ser o que acontece por OMISSÃO, ainda mais quando a versão para a qual se
-# volta tem defeito medido nesta máquina (bluetoothd crashando e comendo
-# bonds, estudo de 19/07).
-#
-# Continua pedindo confirmação interativa antes de aplicar (--yes pula).
 BLUEZ_BACKPORT_CACHE="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
 BLUEZ_VERSOES_FILE="${BLUEZ_BACKPORT_CACHE}/VERSOES-ANTERIORES.txt"
 if [[ "${KEEP_BLUEZ}" -eq 1 ]]; then
@@ -1905,8 +1114,6 @@ elif ! sudo -n true 2>/dev/null; then
     log "sudo indisponível — bluez backport NÃO restaurado"
     log "  reverta manualmente com as versões de ${BLUEZ_VERSOES_FILE}"
 else
-    # Monta pkg=versão só para os pacotes do registro que estão REALMENTE
-    # instalados agora (dpkg -l) — evita o apt tentar reinstalar algo ausente.
     _bluez_pkgs=()
     while IFS=$'\t' read -r _pkg _ver; do
         [[ -n "${_pkg}" && -n "${_ver}" ]] || continue
@@ -1929,14 +1136,6 @@ else
         fi
         if [[ "${_bluez_confirm}" -eq 1 ]]; then
             log "restaurando bluez: ${_bluez_pkgs[*]}"
-            # Se o apt reclamar de versão indisponível, o archive do noble-updates
-            # pode ter revisado o pacote desde a captura do registro — restaure
-            # manualmente com a versão disponível mais próxima ou mantenha o
-            # backport (--keep-bluez).
-            # DEBIAN_FRONTEND=noninteractive + --force-confdef/--force-confold: o
-            # main.conf continua sendo o conffile MODIFICADO pelo hefesto (bloco
-            # FastConnectable/JustWorks) neste ponto — sem forçar, o dpkg pode
-            # parar esperando resposta interativa sobre o que fazer com o conffile.
             if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
                     -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
                     "${_bluez_pkgs[@]}"; then
@@ -1952,20 +1151,6 @@ else
     fi
 fi
 
-# O PipeWire de antes (O-UNINSTALL-DEVOLVE-O-PIPEWIRE-DE-ANTES-01, 15/10/2026;
-# D-1510-O-UNINSTALL-PERGUNTA-E-DEVOLVE-O-PIPEWIRE, «Pergunta e devolve»).
-# O passo 3f-bis do install troca o PipeWire e o WirePlumber pelos da casa, grava
-# `pacote=versão` de cada um que trocou em pipewire-backport/VERSOES-ANTERIORES.txt
-# e fixa a prioridade do apt em PIPEWIRE_PREF. Aqui o caminho de volta:
-#   - devolver: com --restore-pipewire, ou respondendo «s» à pergunta; --yes e
-#     execução sem TTY PRESERVAM (trocar o PipeWire reinicia o som, e um gesto
-#     assim não acontece por omissão), e a fala diz a flag que devolve;
-#   - com a Steam aberta, recusa, como o install: reiniciar o WirePlumber com ela
-#     aberta é o que a deixa sem fechar;
-#   - a trava do apt é do Hefesto e sai SEMPRE, devolvendo ou preservando;
-#   - sem arquivo de volta e sem trava, o install nunca trocou nada: não faz nada.
-# O ensaio herda tudo: `sudo`, `apt-get`, `rm` e `systemctl` já só dizem o que
-# fariam, e a simulação do apt (que o ensaio dublaria como se mudasse algo) fica de fora.
 PIPEWIRE_PREF=/etc/apt/preferences.d/hefesto-pipewire
 devolver_o_pipewire() {
     local registro="${HOME}/.cache/hefesto-dualsense4unix/pipewire-backport/VERSOES-ANTERIORES.txt"
@@ -2066,13 +1251,6 @@ devolver_o_pipewire() {
 }
 devolver_o_pipewire
 
-# A OBRA DO BACKPORT DO BLUEZ (BLUETOOTHD-NAO-DERRUBA-01, 23/09/2026). O
-# `scripts/construir_bluez_backport.sh` deixa no cache a árvore de compilação
-# (`bluez-obra`, ~824 MB com os logs) e as fontes baixadas (`bluez-fontes`).
-# São subprodutos regeneráveis — o script os refaz do zero a cada preparo — e
-# saem SEMPRE, DEPOIS do restauro acima: o `bluez-backport/`, com os .deb e o
-# VERSOES-ANTERIORES.txt que o `--restore-bluez` lê, não é tocado aqui (sai só
-# com --purge-config, junto com o resto do cache).
 for _bz_sobra in "${HOME}/.cache/hefesto-dualsense4unix/bluez-obra" \
                  "${HOME}/.cache/hefesto-dualsense4unix/bluez-fontes"; do
     if [[ -d "${_bz_sobra}" ]]; then
@@ -2082,11 +1260,6 @@ for _bz_sobra in "${HOME}/.cache/hefesto-dualsense4unix/bluez-obra" \
     fi
 done
 
-# Quirk de boot do áudio USB (usbcore.quirks). NÃO removido por default: é
-# cmdline do kernel (sensível) e pode ser mantido por toolchain externa do
-# usuário (outra ferramenta que cuide dos kernel params). Só sai com a flag
-# explícita --remove-usb-quirk. install_usb_quirk.sh --remove é idempotente
-# (no-op se o token já estiver ausente).
 if [[ "${REMOVE_USB_QUIRK}" -eq 1 ]]; then
     if [[ -x "${ROOT_DIR}/scripts/install_usb_quirk.sh" ]]; then
         log "removendo quirk de boot usbcore.quirks (--remove-usb-quirk)"
@@ -2100,17 +1273,9 @@ else
     log "  bash scripts/install_usb_quirk.sh --remove   (ou ./uninstall.sh --remove-usb-quirk)"
 fi
 
-# ---------------------------------------------------------------------------
-# Cmdline gerenciado (PLAT-03) — reverte SÓ o que o install registrou como
-# NOSSO no estado local (cmdline-owners.conf). "terceiro" (outra ferramenta/manual)
-# NUNCA é tocado; "compartilhado" (token usbcore.quirks fundido) perde SÓ os
-# IDs do hefesto (strip_quirks_token do módulo puro) e o restante é re-adicionado.
-# Sem registro = install nunca escreveu cmdline = nada a reverter.
-# ---------------------------------------------------------------------------
 CMDLINE_OWNERS_FILE="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
 if [[ -f "${CMDLINE_OWNERS_FILE}" ]]; then
     _cmdline_reverted=0
-    # O carregador em que o install escreveu (sem a linha, o install antigo: só o kernelstub).
     _cmdline_backend="$(sed -n 's/^cmdline\.backend=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
     _cmdline_backend="${_cmdline_backend:-kernelstub}"
     _cmdline_dono="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/kernel_cmdline.py"
@@ -2123,8 +1288,6 @@ if [[ -f "${CMDLINE_OWNERS_FILE}" ]]; then
         log "cmdline: sudo indisponível — params NÃO revertidos (registro preservado;"
         log "  re-execute o uninstall com sudo para reverter)"
     else
-        # Quem lê e quem escreve o carregador é o dono único, o mesmo do install
-        # (O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01).
         _cmdline_plan="$(python3 - "${ROOT_DIR}" "${_cmdline_backend}" "${_own_autosusp}" "${_own_quirks}" <<'PYEOF'
 import os
 import sys
@@ -2189,7 +1352,6 @@ if [[ -d "${ROOT_DIR}/.venv" ]]; then
     rm -rf "${ROOT_DIR}/.venv"
 fi
 
-# Caches Python e build (deixar resíduos quebra reinstall com module-rename).
 for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-builder dist build; do
     if [[ -d "${ROOT_DIR}/${cache}" ]]; then
         log "removendo ${cache}"
@@ -2197,7 +1359,6 @@ for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-bu
     fi
 done
 
-# Bytecode espalhado: __pycache__/ em src/ tests/ scripts/
 find "${ROOT_DIR}" -type d -name "__pycache__" \
     -not -path "*/\.git/*" \
     -exec rm -rf {} + 2>/dev/null || true
@@ -2205,39 +1366,22 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
     -not -path "*/\.git/*" \
     -delete 2>/dev/null || true
 
-# Glyphs SVG copiados pelo install.sh (step 4b) — sao artefatos do pacote, não
-# dados do usuário, entao removemos sempre (independente de --purge-config).
-# BUG-UNINSTALL-GLYPHS-ORPHAN-01: ficavam em ~/.local/share/hefesto-dualsense4unix/
-# glyphs/ apos uninstall, criando rastro.
 if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix/glyphs" ]]; then
     log "removendo glyphs do user"
     rm -rf "${HOME}/.local/share/hefesto-dualsense4unix/glyphs"
 fi
 
-# BUG-UNINSTALL-SHARE-DIR-ORPHAN-01 (fix): após remover glyphs/ (e quaisquer
-# outros subdirs no futuro), o diretório-pai fica vazio mas presente, marcando
-# ~/.local/share/hefesto-dualsense4unix/ como rastro órfão. Removemos só se
-# estiver vazio — preserva dados se algo foi colocado lá fora do install.sh.
 if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
    && [[ -z "$(ls -A "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null)" ]]; then
     log "removendo diretório-pai vazio ~/.local/share/hefesto-dualsense4unix"
     rmdir "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null || true
 fi
 
-# .deb instalado via apt: sudo apt remove (idempotente — silencioso se ausente).
 if dpkg -l hefesto-dualsense4unix >/dev/null 2>&1; then
     log "removendo pacote .deb hefesto-dualsense4unix (sudo)"
     sudo apt-get remove -y hefesto-dualsense4unix >/dev/null 2>&1 || true
 fi
 
-# Flatpak: desinstalar app + cleanup runtime (mas não remove runtime GNOME
-# se outras apps usam — flatpak gerencia rc).
-#
-# IDENTIDADE-01 (25/08/2026): são DOIS app-ids, e não um. O Flatpak não migra
-# id — para ele o id novo é outro aplicativo —, então quem instalou antes de
-# 25/08 tem `br.andrefarias.Hefesto` na máquina. Um uninstall que só
-# conhecesse o id de hoje deixaria o aplicativo antigo instalado, com atalho
-# no menu e ícone na grade: o "lixo" que esta lista existe para não deixar.
 HEFESTO_FLATPAK_APP_IDS=(
     "io.github.hefesto_team.hefesto_dualsense4unix"
     "br.andrefarias.Hefesto"
@@ -2249,22 +1393,11 @@ for _fp_id in "${HEFESTO_FLATPAK_APP_IDS[@]}"; do
     fi
 done
 
-# A CASA DO SANDBOX. Quem instalou por Flatpak tem os perfis em
-# `~/.var/app/<app-id>/config/hefesto-dualsense4unix/` — não em `~/.config`.
-# Até 25/08/2026 esta parte apagava a casa INTEIRA, sempre, contradizendo a
-# linha logo abaixo que promete "configs preservadas por padrão"; e a
-# IDENTIDADE-01 tornou o defeito caro, porque é exatamente essa pasta que a
-# migração de app-id (`utils/migrate_legacy_paths.py`) lê para os perfis dela
-# atravessarem a troca de id. Agora só o `cache/` (volátil) sai por padrão; a
-# casa inteira só com `--purge-config`, e aí com backup, como o bloco de
-# configs faz.
 for _fp_id in "${HEFESTO_FLATPAK_APP_IDS[@]}"; do
     _fp_home="${HOME}/.var/app/${_fp_id}"
     [[ -d "${_fp_home}" ]] || continue
     rm -rf "${_fp_home}/cache" 2>/dev/null || true
     if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
-        # O backup mora onde o produto procura a configuração (o XDG), que é
-        # onde o «limpa?» o reconhece como de propósito.
         _fp_backup="${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)-flatpak-${_fp_id}"
         mkdir -p "${_fp_backup}"
         cp -a "${_fp_home}/." "${_fp_backup}/" 2>/dev/null || true
@@ -2276,7 +1409,6 @@ for _fp_id in "${HEFESTO_FLATPAK_APP_IDS[@]}"; do
     fi
 done
 
-# AppImage em locais convencionais
 for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Downloads" "${HOME}/.local/bin"; do
     [[ -d "$appimg_dir" ]] || continue
     for f in "$appimg_dir"/Hefesto-Dualsense4Unix*.AppImage "$appimg_dir"/hefesto-dualsense4unix*.AppImage; do
@@ -2287,10 +1419,6 @@ for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Download
     done
 done
 
-# BUG-UNINSTALL-LOCALE-NOT-REMOVED-01 (fix): catalogos .mo do install.sh
-# step 4d (FEAT-I18N-CATALOGS-01) ficavam orfaos em ~/.local/share/locale/
-# <lang>/LC_MESSAGES/. Removemos so o nosso domain (`hefesto-dualsense4unix.mo`),
-# nunca o LC_MESSAGES/ ou <lang>/ inteiro — outros apps podem usar.
 log "removendo catalogos i18n .mo do user"
 for lang_dir in "${HOME}/.local/share/locale"/*/; do
     [[ -d "$lang_dir" ]] || continue
@@ -2301,22 +1429,15 @@ for lang_dir in "${HOME}/.local/share/locale"/*/; do
     fi
 done
 
-# Runtime dir do socket IPC e pid files (sempre limpa, é volátil)
 runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix"
 if [[ -d "$runtime_dir" ]]; then
     log "removendo ${runtime_dir}"
     rm -rf "$runtime_dir"
 fi
 
-# Pip user packages (deps modernas que install.sh ou usuário possa ter colocado)
-# Não removidas por default — podem ser usadas por outros apps. Deixar como
-# nota informativa.
 log "(nota) deps Python via pip --user em ~/.local/lib/python*/site-packages preservadas"
 log "       — remova manualmente se quiser wipe absoluto do user-site"
 
-# BUG-UNINSTALL-OUT-OF-SCOPE-CLARITY-01: documentar o que o uninstall
-# explicitamente NÃO toca, pra evitar atribuição equivocada de problemas
-# de outras toolchains ao hefesto.
 log ""
 log "fora do escopo (não removido — não é do hefesto):"
 log "  /etc/udev/rules.d/99-usb-*.rules         — de outra ferramenta de energia do usuário"
@@ -2329,12 +1450,6 @@ log "  ~/.local/lib/python*/site-packages/         — pip --user pode ser compa
 log "  wvkbd / onboard (teclado na tela do L3)      — pacote do sistema, pode servir a outra coisa"
 log "    (mesma decisão do libopus0 da ponte de mic: o install instala, o uninstall não desinstala)"
 
-# FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01: desliga Steam Input PSSupport em
-# todos os localconfig.vdf por default. Simétrico com install.sh — sem isso,
-# o usuário desinstala o Hefesto e os sintomas que o levaram a desinstalar
-# (touchpad como mouse, mic spam, botões em background) voltam IMEDIATAMENTE
-# porque a Steam preenche o vácuo do controle. Reverter:
-# scripts/disable_steam_input.sh --restore (mantém os backups .bak.steam-input-<ts>).
 DISABLE_STEAM_INPUT_SCRIPT="${ROOT_DIR}/scripts/disable_steam_input.sh"
 if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
     log "Steam Input PSSupport preservado (--keep-steam-input)"
@@ -2350,39 +1465,10 @@ else
     fi
 fi
 
-# A LISTA DE EXCLUSÃO de cada casa da configuração
-# (`integrations/lista_de_exclusao.RELPATH`), e onde cada uma fica quando o
-# desfazer dos lançadores é adiado (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01).
 LISTAS_DE_EXCLUSAO=()
 LISTAS_GUARDADAS_DE=()
 LISTAS_GUARDADAS_PARA=()
 
-# O AMBIENTE NOS OUTROS LANÇADORES (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026).
-# O daemon escreve o ambiente da ponte no `config.json` do Heroic e no override
-# do Flatpak de cada lançador (a carona de `integrations/cura_por_estrada`), e
-# este script não os visitava. Era o pior rastro da casa: o
-# SDL_GAMECONTROLLER_IGNORE_DEVICES esconde o DualSense físico, e o Hefesto que
-# o servia acabou de sair — os jogos do Heroic, do Lutris e dos emuladores
-# abririam SEM controle. Quem escreveu é quem sabe o que escreveu: o registro
-# ao lado do `default.env` diz, arquivo por arquivo, o que é nosso, e o
-# `--desfazer` tira só isso (o MANGOHUD dela fica; o valor que ela tinha antes
-# volta; o arquivo que nasceu com o Hefesto sai). E passa pelas CÓPIAS POR JOGO
-# que o próprio Heroic tira da lista global (`GamesConfig/<jogo>.json`, na
-# primeira vez que ela muda uma opção daquele jogo): sem isso, o jogo com opção
-# própria ficava com o IGNORE. Roda ANTES de o launch_env sair, porque o
-# registro mora nele; com um arquivo que não abriu, ou sem python3, o registro
-# FICA para o desfazer de depois.
-#
-# E DEVOLVE ANTES O JOGO EXCLUÍDO (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01,
-# 02/10/2026). A lista de exclusão também escreve nos lançadores (a lista
-# própria do jogo do Heroic, o `.yml` do jogo do Lutris Flatpak), e a anotação
-# de como voltar mora na configuração. O --purge-config rodava ANTES deste
-# bloco e apagava a lista antes de alguém poder lê-la; medido num lar de
-# mentira, o jogo do Heroic que seguia a global saía do uninstall com uma lista
-# própria. Agora a configuração sai DEPOIS (o bloco dela vem depois do Proton
-# pinado), e este bloco passa a lista de cada casa. Com o desfazer adiado, a
-# lista FICA para o desfazer de depois: na configuração, se ela fica; ao lado
-# do registro das estradas, no launch_env, se o --purge-config a apaga.
 CURA_POR_ESTRADA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
 _estradas_desfeitas=0
 for _cfg in "${XDG_CONFIG_HOME:-${HOME}/.config}" "${HOME}/.config"; do
@@ -2437,12 +1523,6 @@ else
     log "  (o registro fica em launch_env/estradas.json, e a lista de exclusão com ele; rode depois: python3 <repositório>/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py --desfazer$(_args_das_listas_de_depois))"
 fi
 
-# PLAT-01: destrava o CompatToolMapping do Proton pinado — SÓ o que NÓS
-# escrevemos (registro em ~/.local/state/.../proton-pin-lock.json). Roda ANTES
-# do strip das Launch Options DE PROPÓSITO: o strip (--stop-steam) REABRE a
-# Steam ao final, e o unlock exige Steam fechada. O Proton EXTRAÍDO em
-# compatibilitytools.d FICA — é dado do usuário (apague a pasta GE-Proton*
-# manualmente se não quiser mais).
 PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
 if [[ -f "${PROTON_PIN_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     log "destravando o Proton pinado (só o mapping que o hefesto escreveu)"
@@ -2458,27 +1538,9 @@ else
     log "proton_pin.py ausente ou sem python3 — pulei o destravamento do Proton pinado"
 fi
 
-# Configs e dados do user. PRESERVADOS por padrão; --purge-config apaga (com
-# backup antes). Cobre o caminho atual (longo) E o legado curto (~/.config/
-# hefesto), onde versões pré-rename gravavam perfis/sessão/preferências.
-#
-# E COBRE O XDG (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026): o produto lê e
-# grava a configuração, os dados e o cache pelo `platformdirs`, que honra o
-# XDG_CONFIG_HOME, o XDG_DATA_HOME e o XDG_CACHE_HOME; o install grava parte no
-# lar. As duas casas entram (a repetida some na segunda volta, porque a pasta
-# já saiu), e o backup mora onde o produto procura a configuração — é lá que o
-# «limpa?» o reconhece como de propósito.
-#
-# E VEM DEPOIS DO DESFAZER DOS LANÇADORES (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01,
-# 02/10/2026): a lista de exclusão mora aqui, e é ela que diz como devolver o
-# jogo excluído. Com o desfazer adiado, ela vai antes para o launch_env, ao
-# lado do registro das estradas; o backup segue igual.
 _cfg_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}"
 _dados_do_xdg="${XDG_DATA_HOME:-${HOME}/.local/share}"
 _cache_do_xdg="${XDG_CACHE_HOME:-${HOME}/.cache}"
-# As modificações instaladas moram nos TRÊS lugares abaixo e seguem a pergunta da
-# configuração: ficam, ou saem juntas (o código e o registro dentro das pastas que o
-# bloco abaixo leva ao backup, os dados no varrer do estado, mais adiante).
 _mods_codigo="${_dados_do_xdg}/hefesto-dualsense4unix/mods"
 _mods_dados="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix/mods"
 _mods_registro="${_cfg_do_xdg}/hefesto-dualsense4unix/mods.json"
@@ -2531,19 +1593,8 @@ if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
 else
     log "configs preservadas (default): ~/.config/hefesto + ~/.config/hefesto-dualsense4unix"
     log "  (use --purge-config para apagar, com backup automático)"
-    # paused.flag (FEAT-DAEMON-PAUSE-RESUME-01) fica em ~/.config/hefesto-dualsense4unix/
-    # e e propositalmente preservado junto com a config, para o usuário retomar
-    # do mesmo estado se reinstalar. Use --purge-config para apagá-lo também.
 fi
 
-# DEDUP-04/DEDUP-05 (INCONDICIONAL, sem flag — o índice da onda manda): remove
-# das LaunchOptions o NOSSO trecho, novo E legado. Ordem OBRIGATÓRIA: o vdf é
-# desenvenenado ANTES de apagar o wrapper (regra histórica da simetria — a
-# assimetria já quebrou o mic; aqui, com o hefesto desinstalado, o veneno
-# `IGNORE_DEVICES` persistido esconderia o físico => jogo com ZERO controles,
-# e a revisão REFUTOU qualquer gate neste caminho). `__GL_SHADER_*` e opções
-# do usuário são preservadas byte a byte. --stop-steam: a Steam regrava o vdf
-# ao sair, então o strip fecha (e reabre) a Steam se preciso.
 LAUNCH_STRIP_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
 if [[ -f "${LAUNCH_STRIP_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     log "removendo Launch Options do Hefesto (wrapper + veneno legado) dos localconfig.vdf"
@@ -2558,11 +1609,6 @@ else
     log "  (a string do wrapper degrada sozinha: o jogo continua abrindo sem ele)"
 fi
 
-# ENGASGO-VULKAN-01: devolver ANTES de apagar o curador (mesma ordem e mesmo
-# motivo do strip acima). O que desligamos dentro do prefixo Wine de cada jogo
-# é mudança NOSSA no dado dela — deixá-la para trás com o produto removido é
-# resíduo, e ela não teria mais botão nenhum para desfazer. O estado local diz
-# exatamente o que é nosso, então quem religou por fora fica intocado.
 CAMADAS_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/camadas_vulkan.py"
 if [[ -f "${CAMADAS_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     log "devolvendo as sobreposições que o Hefesto tinha desligado nos jogos"
@@ -2576,7 +1622,6 @@ if [[ -e "${CAMADAS_TARGET}" ]]; then
     log "removendo curador de camadas ${CAMADAS_TARGET}"
     rm -f "${CAMADAS_TARGET}"
 fi
-# O `camadas_vulkan` grava pelo XDG_STATE_HOME: as duas pastas de estado.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -f "${_estado}/camadas-vulkan.json" ]]; then
         log "removendo o registro das sobreposições (${_estado}/camadas-vulkan.json)"
@@ -2584,9 +1629,6 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     fi
 done
 
-# HAPTICA-NATIVA-01: o device de áudio KS que gravamos no prefixo de cada jogo
-# sai ANTES do curador, pelo mesmo motivo das camadas — é dado nosso dentro do
-# registro dela. Só os blocos com o nosso marcador (HEFESTOKS) saem.
 AUDIO_KS_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py"
 if [[ -f "${AUDIO_KS_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     log "tirando o device de áudio KS do DualSense dos prefixos dos jogos"
@@ -2601,32 +1643,21 @@ if [[ -e "${AUDIO_KS_TARGET}" ]]; then
     rm -f "${AUDIO_KS_TARGET}"
 fi
 
-# Só DEPOIS do vdf limpo o wrapper pode sair (simetria com o passo 4b-2 do
-# install.sh). O launch_env/ é materialização volátil do daemon — sai junto.
 readonly LAUNCH_WRAPPER="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 if [[ -e "${LAUNCH_WRAPPER}" ]]; then
     log "removendo wrapper de launch ${LAUNCH_WRAPPER}"
     rm -f "${LAUNCH_WRAPPER}"
 fi
-# PATH-06: o symlink do wrapper no PATH sai junto (simétrico ao passo 5 do install).
 if [[ -L "${HOME}/.local/bin/hefesto-launch" || -e "${HOME}/.local/bin/hefesto-launch" ]]; then
     log "removendo symlink ${HOME}/.local/bin/hefesto-launch"
     rm -f "${HOME}/.local/bin/hefesto-launch"
 fi
 rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
-# A peça GDK (simetria com o passo 4b-5 do install.sh): sai só a pasta do Hefesto.
-# A DLL que o usuário pôs ao lado do exe de um jogo não é nossa e fica.
 readonly PECA_GDK_PASTA="${HOME}/.local/share/hefesto-dualsense4unix/wine"
 if [[ -d "${PECA_GDK_PASTA}" ]]; then
     log "removendo a peça GDK ${PECA_GDK_PASTA}"
     rm -rf "${PECA_GDK_PASTA}"
 fi
-# Nas duas pastas de estado: o daemon materializa pelo XDG_STATE_HOME, e o
-# install cria a do lar. O REGISTRO DAS ESTRADAS (`estradas.json`) mora aqui e
-# FICA quando o desfazer dos lançadores foi adiado (lá em cima): sem ele, o
-# desfazer de depois não saberia o que é nosso no Heroic e no Flatpak.
-# A LISTA DE EXCLUSÃO de um desfazer adiado com --purge-config também mora
-# aqui (`lista_de_exclusao-<n>.json`, O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01).
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     [[ -d "${_estado}/launch_env" ]] || continue
     _fica_para_depois=0
@@ -2647,86 +1678,41 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
         done
     fi
 done
-# SENTINELA-WRAPPER-01: a memória de "quais jogos estão com o wrapper" é
-# estado NOSSO e sai junto — o `--strip` acima já tirou o wrapper do vdf, então
-# manter o registro faria a próxima instalação chamar de REGRESSÃO ("este jogo
-# perdeu o wrapper!") exatamente a remoção que o uninstall acabou de fazer.
-# O `jogos_sem_wrapper.txt` NÃO sai: é escolha DELA sobre a biblioteca dela, e
-# vale de novo no dia em que ela reinstalar.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -f "${_estado}/wrapper-visto.json" ]]; then
         log "removendo o registro do wrapper (${_estado}/wrapper-visto.json)"
         rm -f "${_estado}/wrapper-visto.json"
     fi
 done
-# A-OPCAO-QUE-A-STEAM-DESFAZ-APARECE-NO-DOCTOR-01: o registro do que o `aplicar` das opções por
-# jogo escreveu e releu também é estado NOSSO. Sobrando, a próxima instalação leria como «a
-# Steam desfez» uma opção que o uninstall deixou para trás. A tabela dela
-# (`opcoes_por_jogo.txt`) é escolha DELA e fica.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -f "${_estado}/opcoes-escritas.json" ]]; then
         log "removendo o registro das opções por jogo (${_estado}/opcoes-escritas.json)"
         rm -f "${_estado}/opcoes-escritas.json"
     fi
 done
-# TECLADO-QUE-NAO-DIGITA-01: o PACOTE do teclado na tela (wvkbd / onboard) NÃO
-# sai daqui. É pacote de SISTEMA, instalado pelo gerenciador da distribuição, e
-# pode estar servindo a qualquer outra coisa da máquina dela — remover seria o
-# Hefesto decidindo sobre software que não é dele. É a mesma decisão já tomada
-# para o `libopus0` da ponte de microfone por Bluetooth: o install instala, o
-# uninstall não desinstala.
-#
-# O que SAI é a SENTINELA, que é estado nosso. E isso não é detalhe: enquanto
-# ela existir dizendo "instalado", o doctor leria uma máquina já desinstalada
-# como "o pacote sumiu depois do install" — daria diagnóstico de um produto que
-# não está mais aqui.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -f "${_estado}/teclado-na-tela.conf" ]]; then
         log "removendo a sentinela do teclado na tela (o PACOTE wvkbd/onboard fica — é do sistema)"
         rm -f "${_estado}/teclado-na-tela.conf"
     fi
 done
-# MOTOR-7: o censo do gabinete. É estado NOSSO — o instalador o grava lendo a
-# tabela 8 do SMBIOS (`scripts/lib/camada_de_maquina.sh`), e a aba Conexões o
-# lê para saber quantos conectores a máquina tem. Sem esta linha ele
-# sobrevivia ao uninstall e ainda fazia o `rmdir` abaixo falhar calado,
-# deixando o diretório de estado inteiro de pé.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -f "${_estado}/gabinete.json" ]]; then
         log "removendo o censo do gabinete (${_estado}/gabinete.json)"
         rm -f "${_estado}/gabinete.json"
     fi
 done
-# O RÁDIO DA SESSÃO (a leva do rádio, 23/09/2026) — o que o produto escreve no
-# estado dela, e o destino de cada coisa:
 ESTADO_DO_RADIO="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
-# - `lugares-dos-adaptadores.json` (BLUEZ-UM-DONO-01): estado, não histórico —
-#   em qual porta cada adaptador estava na última conferência. Sai SEMPRE, como
-#   o gabinete.json acima: deixá-lo faria a próxima instalação conferir lugar
-#   contra a mesa de outra vida.
 if [[ -f "${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json" ]]; then
     log "removendo o registro dos lugares dos adaptadores (${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json)"
     rm -f "${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json"
 fi
-# - `conexao-zumbi.json` (a vigia de conexões, `daemon/subsystems/conexoes.py`):
-#   estado, não histórico — a última volta da vigia, com o endereço de cada
-#   link. Sai SEMPRE, como o dos lugares (O-UNINSTALL-NAO-DEIXA-RASTRO-01): até
-#   25/09 ninguém o nomeava, e ele segurava a pasta de estado de pé. Nas duas
-#   pastas de estado: o daemon o grava pelo XDG da unit do usuário, que pode
-#   não ser o deste terminal.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     if [[ -f "${_estado}/conexao-zumbi.json" ]]; then
         log "removendo a última volta da vigia de conexões (${_estado}/conexao-zumbi.json)"
         rm -f "${_estado}/conexao-zumbi.json"
     fi
 done
-# - o DIÁRIO do rádio da sessão (`radio-diario.jsonl` e o `.1`): histórico, com
-#   a mesma regra do diário do root lá em cima — guardado com o carimbo da
-#   desinstalação no nome (a próxima instalação não o relê no arranque), e
-#   apagado só com --purge-config. O --purge-config apaga também os que um
-#   uninstall ANTERIOR guardou: é o que a fala «apagar de vez» promete, e sem
-#   isto o `.pre-uninstall-*` ficava para sempre (conferência da INSTALL-E-
-#   UNINSTALL-DO-RADIO-01). Um carimbo só para o par, como no diário do root.
 _carimbo_do_diario="$(date +%Y%m%d-%H%M%S)"
 _diarios_da_sessao=("${ESTADO_DO_RADIO}/radio-diario.jsonl" "${ESTADO_DO_RADIO}/radio-diario.jsonl.1")
 if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
@@ -2745,12 +1731,6 @@ for _diario_sessao in "${_diarios_da_sessao[@]}"; do
         rm -f "${_diario_sessao}"
     fi
 done
-# - o kernel.log e a MARCA do boot (`kernel-watch.boot`, O-DIARIO-DO-RADIO-01)
-#   andam JUNTOS: a marca diz à vigia que este boot já foi relido para dentro
-#   do log. Apagar só a marca faria uma reinstalação no mesmo boot reler tudo e
-#   DUPLICAR o log; apagar só o log deixaria a vigia nova sem o arranque. Por
-#   padrão os dois ficam (o log é o histórico dela); com --purge-config, os
-#   dois saem.
 if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
     for _kw in "${ESTADO_DO_RADIO}/kernel.log" "${ESTADO_DO_RADIO}/kernel-watch.boot"; do
         if [[ -f "${_kw}" ]]; then
@@ -2761,18 +1741,6 @@ if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
 fi
 rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
 rmdir "${ESTADO_DO_RADIO}" 2>/dev/null || true
-# O ESTADO SAI INTEIRO (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026). Os dois
-# `rmdir` acima são puros e falhavam CALADOS: um arquivo que ninguém nomeava
-# segurava a pasta de estado de pé (o `conexao-zumbi.json` fez isso até 25/09).
-# Nas duas pastas de estado, agora:
-#   - com --purge-config, o que sobrou sai — MENOS o registro de um desfazer
-#     que ficou para depois (o do Proton pinado com a Steam aberta, o da linha
-#     do kernel sem root, o do broker sem root, o das estradas com um lançador
-#     que não abriu): sem ele, o desfazer de depois não saberia o que é nosso.
-#     O que ninguém nomeia vai para o backup da configuração, como ela: apagar
-#     sem rede o que não se conhece não é o lado seguro;
-#   - sem --purge-config fica o histórico (o kernel.log, a marca do boot, os
-#     diários guardados), e o uninstall DIZ o que ficou, em vez de calar.
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     [[ -d "${_estado}" ]] || continue
     if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
@@ -2783,8 +1751,6 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
                     log "fica ${_sobra}: o desfazer dele foi adiado (a linha dele, acima, diz como terminar)"
                     ;;
                 mods)
-                    # Os dados das extensões: o `--purge-config` os leva, como o código e o
-                    # registro, e o backup guarda (o nome do caminho, como o resto do estado).
                     _rel_do_estado="${_estado#"${HOME}"/}"
                     _backup_do_estado="${backup_dir:-${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)}/${_rel_do_estado//\//_}"
                     mkdir -p "${_backup_do_estado}"
@@ -2795,8 +1761,6 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
                     fi
                     ;;
                 *)
-                    # Uma subpasta por pasta de estado, com o nome do caminho —
-                    # a mesma forma do backup da configuração, logo acima.
                     _rel_do_estado="${_estado#"${HOME}"/}"
                     _backup_do_estado="${backup_dir:-${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)}/${_rel_do_estado//\//_}"
                     mkdir -p "${_backup_do_estado}"
@@ -2817,8 +1781,6 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
         fi
     fi
 done
-# O passo anterior de limpeza do share-dir roda antes do wrapper sair — repete
-# a checagem de diretório-pai vazio para não deixar rastro.
 if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
    && [[ -z "$(ls -A "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null)" ]]; then
     rmdir "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null || true

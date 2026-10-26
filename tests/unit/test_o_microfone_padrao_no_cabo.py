@@ -538,10 +538,10 @@ def _rodar(bancada: Bancada, corpo: str) -> subprocess.CompletedProcess[str]:
 
 
 def bloco_do_passo_10() -> str:
-    """Do `step "10/11"` até a régua (`# ---…`) que abre o passo seguinte."""
+    """Do `step "10/11"` até o `step "11a"`, que abre o passo seguinte."""
     texto = INSTALL.read_text(encoding="utf-8")
     inicio = texto.index('step "10/11"')
-    fim = re.search(r"^# -{10,}", texto[inicio:], re.MULTILINE)
+    fim = re.search(r'^step "11a" ', texto[inicio:], re.MULTILINE)
     assert fim is not None, "fim do bloco do passo 10 não encontrado"
     return texto[inicio : inicio + fim.start()]
 

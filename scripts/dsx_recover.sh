@@ -1,30 +1,15 @@
 #!/usr/bin/env bash
-# dsx_recover.sh — auto-recuperação do storm -71 do DualSense (FEAT-DSX-RECOVER-01).
-#
-# Vigia o journal do kernel em tempo real. Ao detectar um storm (>= THRESHOLD
-# sinais de -71 / USB disconnect em WINDOW_SECS), recupera SEM mexer em porta
-# física: re-pin de power (devices 054c + xHCI) -> udevadm trigger -> re-bind
-# suave via authorized toggle -> restart do daemon hefesto do usuário gráfico.
-#
-# Roda como SERVIÇO DE SISTEMA (root) — precisa escrever em /sys/.../power/control
-# e .../authorized. Throttle evita loop de recovery. Best-effort: num controlador
-# que glitcha, o re-bind pode não recuperar em 100% dos casos, mas transforma
-# "controle morto até eu agir" em "auto-cura em segundos".
-#
-# Por que não no timer do Aurora: o timer roda a cada 2min/1h; o storm precisa de
-# reação em segundos. Watcher orientado a evento é o mecanismo certo.
 set -uo pipefail
 
 readonly APP_ID="hefesto-dualsense4unix"
-readonly THROTTLE_SECS=20    # intervalo mínimo entre recoveries
-readonly WINDOW_SECS=10      # janela de contagem de sinais
-readonly THRESHOLD=4         # >= 4 sinais em WINDOW_SECS = storm
-readonly BACKOFF_THRESHOLD=5   # recoveries seguidas sem parar = storm persistente
-readonly LONG_BACKOFF_SECS=300 # back-off longo quando o re-bind não resolve (porta USB ruim)
+readonly THROTTLE_SECS=20
+readonly WINDOW_SECS=10
+readonly THRESHOLD=4
+readonly BACKOFF_THRESHOLD=5
+readonly LONG_BACKOFF_SECS=300
 
 log() { printf '%(%Y-%m-%dT%H:%M:%S)T dsx-recover: %s\n' -1 "$*"; }
 
-# Descobre o usuário da sessão gráfica (uid >= 1000 com bus de sessão ativo).
 graphical_user() {
     local d uid
     for d in /run/user/*; do
@@ -53,7 +38,6 @@ repin_and_trigger() {
     udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true
 }
 
-# Re-enumera o DualSense por software (sem mexer em porta) via authorized toggle.
 rebind_dualsense() {
     local d dev=""
     for d in /sys/bus/usb/devices/*; do
@@ -76,7 +60,6 @@ restart_daemon() {
     [[ -n "${uid}" ]] || { log "sem sessão gráfica ativa — pulo restart do daemon"; return; }
     user="$(id -nu "${uid}" 2>/dev/null || true)"
     [[ -n "${user}" ]] || return
-    # Só reinicia se o serviço --user existir.
     if runuser -u "${user}" -- env XDG_RUNTIME_DIR="/run/user/${uid}" \
          DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${uid}/bus" \
          systemctl --user cat "${APP_ID}.service" >/dev/null 2>&1; then
@@ -94,16 +77,12 @@ consecutive_recovers=0
 recover() {
     local now; now="$(date +%s)"
     if (( now - last_recover < THROTTLE_SECS )); then
-        # Loga "throttled" no máximo 1x por janela de throttle — evita spam de journal
-        # quando o storm é contínuo (ex.: controle numa porta USB fisicamente ruim).
         if (( now - last_throttle_log >= THROTTLE_SECS )); then
             log "recovery throttled (storm contínuo; último recovery há $(( now - last_recover ))s)"
             last_throttle_log="$now"
         fi
         return
     fi
-    # Storm PERSISTENTE: se já houve várias recoveries seguidas e o storm não parou,
-    # o re-bind não resolve (porta ruim / device falhando) — back-off longo + dica.
     if (( consecutive_recovers >= BACKOFF_THRESHOLD )); then
         if (( now - last_recover < LONG_BACKOFF_SECS )); then
             return
@@ -131,7 +110,6 @@ while IFS= read -r line; do
             now="$(date +%s)"
             if (( now - window_start > WINDOW_SECS )); then
                 window_start="$now"; count=0
-                # storm esfriou por bastante tempo? zera o back-off (novo storm = recovery normal).
                 if (( now - last_recover > LONG_BACKOFF_SECS )); then
                     consecutive_recovers=0
                 fi

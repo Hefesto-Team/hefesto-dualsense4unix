@@ -407,7 +407,7 @@ def test_main_status_relata_sem_tocar(tmp_path, monkeypatch, capsys):
 
 @pytest.mark.parametrize(
     "arquivo",
-    ["install.sh", "uninstall.sh", "scripts/doctor.sh", "assets/hefesto-launch.sh"],
+    ["install.sh", "uninstall.sh", "scripts/doctor.sh"],
 )
 def test_caminho_do_wrapper_e_o_mesmo_em_todo_lugar(arquivo: str):
     """O caminho estável do wrapper é contrato entre módulo Python, install,"""

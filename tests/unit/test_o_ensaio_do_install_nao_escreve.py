@@ -362,11 +362,10 @@ class TestOEnsaioNaoEscreve:
 
 def _bloco_do_passo_1() -> str:
     """O laço de limpeza de caches do passo 1, extraído do arquivo."""
-    abertura = 'if [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    # O ensaio nomeia os diretórios'
+    abertura = 'if [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _ensaio_caches=()'
     inicio = INSTALL.index(abertura)
-    fim = INSTALL.index("# 2. venv + GTK3 + pacote Python", inicio)
-    corpo = INSTALL[inicio:fim]
-    return corpo[: corpo.rindex("# ---")]
+    fim = INSTALL.index('step "2/11" "preparando ambiente Python"', inicio)
+    return INSTALL[inicio:fim]
 
 
 class TestNenhumaCuraDeHostEscapa:
@@ -432,6 +431,7 @@ DONOS_DOS_CAMINHOS = {
         "scripts/install_osk.sh",
         "scripts/dkms_lib.sh",
         "scripts/desempenho.sh",
+        "scripts/install_ucm_dualsense.sh",
     ),
 }
 
