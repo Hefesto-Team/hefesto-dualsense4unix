@@ -1222,6 +1222,7 @@ class _Mexida:
     nota_do_css: str = ""
     aba: str = ""
     armada: tuple[str, ...] = ()
+    descartar: tuple[str, ...] = ()
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
 
     def limpar(self) -> None:
@@ -1233,7 +1234,7 @@ class _Mexida:
         self.agora = ()
         self.rascunho = {}
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
-        self.armada = ()
+        self.armada = self.descartar = ()
         self.pintura.esquecer()
 
 
@@ -1536,8 +1537,8 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     manifesto = item.manifesto
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
-    valores = {**opcoes.ler(manifesto, _lugares()),
-               **(_MEXIDA.rascunho if _MEXIDA.mod == mod_id else {})}
+    guardados = opcoes.ler(manifesto, _lugares())
+    valores = {**guardados, **(_MEXIDA.rascunho if _MEXIDA.mod == mod_id else {})}
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
     aparecem = opcoes.aparecem(manifesto, valores)
@@ -1560,7 +1561,22 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
         estado=estado, parar_tudo=manifesto.parar_tudo,
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
-        porque=item.porque, **_pecas_da_janela(manifesto, mod_id))
+        porque=item.porque, rascunho=_o_rascunho_da_janela(mod_id, guardados),
+        **_pecas_da_janela(manifesto, mod_id))
+
+
+def _o_rascunho_da_janela(mod_id: str, guardados: dict[str, Any]) -> exp.Rascunho:
+    """Pendente quando um valor do rascunho difere do guardado; o Descartar armado vale só para
+    o rascunho de quando foi armado (mudar uma opção depois o desarma)."""
+    rascunho = _MEXIDA.rascunho if _MEXIDA.mod == mod_id else {}
+    pendente = any(k not in guardados or guardados[k] != v for k, v in rascunho.items())
+    return exp.Rascunho(pendente, pendente and _MEXIDA.descartar == _o_armar_do_descartar(mod_id))
+
+
+def _o_armar_do_descartar(mod_id: str) -> tuple[str, ...]:
+    import json
+
+    return (mod_id, json.dumps(_MEXIDA.rascunho, sort_keys=True, default=str))
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1628,7 +1644,7 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     recusa = _desfazer_o_modo(anterior, p) if anterior else None
     _MEXIDA.rascunho = (_o_modo_que_vale(mod_id) if recusa is not None and anterior == mod_id
                         else {})
-    _MEXIDA.mod, _MEXIDA.aba = mod_id, ""
+    _MEXIDA.mod, _MEXIDA.aba, _MEXIDA.descartar = mod_id, "", ()
     _MEXIDA.pintura.esquecer()
     _AGORA.abrir(mod_id, p)
     _AGORA.ler(mod_id, p)
@@ -2687,11 +2703,19 @@ def aba_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 
 @gesto("07-lancadores.html", exp.GESTO_DO_CANCELAR)
 def cancelar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O Cancelar e o X da janela da extensão (o Esc clica o X): o modo do ``livre`` que já valeu
-    volta ao guardado na extensão e o rascunho sai. Recusado o desfazer, nada muda (o rascunho diz
-    o modo que ainda vale) e a recusa aparece; o reabrir tenta de novo."""
+    """O Cancelar e o X da janela da extensão (o Esc clica o X). Com rascunho por gravar, o primeiro
+    gesto só arma o «Descartar» e a janela fica; o segundo (ou o primeiro, sem rascunho) devolve ao
+    guardado o modo do ``livre`` que já valeu e o rascunho sai. Recusado o desfazer, nada muda (o
+    rascunho diz o modo que ainda vale) e a recusa aparece; o reabrir tenta de novo."""
     _MEXIDA.armada = ()
     mod_id = _id_do_clique(o, exp.GESTO_DO_CANCELAR)
+    if _MEXIDA.mod == mod_id and _MEXIDA.descartar != _o_armar_do_descartar(mod_id):
+        item = _a_instalada(mod_id)
+        if item.manifesto and _o_rascunho_da_janela(mod_id, _guardados_de(item)).pendente:
+            _MEXIDA.descartar = _o_armar_do_descartar(mod_id)
+            _montar_a_janela_da_extensao(mod_id, item)
+            return {**_a_pintura_agora(ctx), "armou": True}
+    _MEXIDA.descartar = ()
     recusa = _desfazer_o_modo(mod_id, p)
     if recusa is not None:
         raise RuntimeError(recusa)
@@ -2699,6 +2723,12 @@ def cancelar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
         _MEXIDA.rascunho = {}
         _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
+
+
+def _guardados_de(item: _Instalada) -> dict[str, Any]:
+    from hefesto_dualsense4unix.mods import opcoes
+
+    return opcoes.ler(item.manifesto, _lugares())
 
 
 def _do_trilho(o: dict[str, Any], gesto_: str) -> tuple[str, str, float]:

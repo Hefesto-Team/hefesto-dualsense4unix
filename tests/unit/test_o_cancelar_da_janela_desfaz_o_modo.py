@@ -81,7 +81,14 @@ def _acesos(modo: str) -> dict[str, bool]:
 
 
 def _cancelar(a07: Any, ctx: Any, ponte: _Ponte) -> dict[str, Any]:  # noqa: F811
-    return dict(a07.cancelar_modificacao(ctx, {"v": "toque"}, ponte))
+    """Com rascunho, o primeiro gesto só arma o «Descartar» (O-RASCUNHO-DA-JANELA-…-01), e o
+    segundo é o Cancelar que desfaz."""
+    antes = len(ponte.chamadas)
+    carga = dict(a07.cancelar_modificacao(ctx, {"v": "toque"}, ponte))
+    if carga.get("armou"):
+        assert len(ponte.chamadas) == antes, "o primeiro gesto já mandou o desfazer"
+        carga = dict(a07.cancelar_modificacao(ctx, {"v": "toque"}, ponte))
+    return carga
 
 
 @pytest.mark.parametrize("modo", ["segurar", "repetir"])

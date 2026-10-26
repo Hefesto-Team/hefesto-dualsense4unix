@@ -495,7 +495,7 @@
 .ja-marca { font-size:10px;padding:1px 7px;border-radius:4px;border:1px solid rgba(255,121,198,.45);color:var(--pink);font-weight:600 }
 .ja-parar { height:32px;padding:0 15px;border-radius:7px;border:1px solid var(--red);background:var(--red);color:#1e1f29; font:700 12.5px 'Space Grotesk',system-ui,sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer; box-shadow:0 0 0 3px rgba(255,85,85,.14);white-space:nowrap }
 .ja-parar:hover { background:#ff6e6e }
-.tn-topo .ja-parar + .tn-x { margin-left:4px }
+.tn-topo .ja-parar + .tn-x, .tn-topo .ja-parar + .mj-fecho > .tn-x { margin-left:4px }
 .ja-corpo { display:grid;grid-template-columns:316px minmax(0,1fr);gap:14px;padding:12px 18px 14px;flex:1;min-height:0 }
 .ja-agora { border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:9px 12px 10px; display:flex;flex-direction:column;gap:9px;min-height:0;min-width:0 }
 .ja-ag-topo { display:flex;align-items:center;gap:8px }
@@ -842,7 +842,12 @@
 .lanc-fila::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
 .lanc-fila::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
 .miolo > .quadro.estica:has(> .quadro-corpo > .lanc-fila) { flex-grow:0 }
-#mod-janela .ja-topo .tn-tit + .tn-x { margin-left:auto }
+#mod-janela .ja-topo .tn-tit + .tn-x, #mod-janela .ja-topo .tn-tit + .mj-fecho > .tn-x { margin-left:auto }
+#mod-janela .mj-fecho { display:contents }
+#mod-janela .tn-x:not([href]), #mod-janela .tn-rod .btn:not([href]) { cursor:pointer }
+#mod-janela .tn-rod .btn.roxo.apagado { opacity:.45 }
+#mod-janela .tn-rod .btn.roxo.aceso { border-color:var(--purple);background:rgba(189,147,249,.16);color:var(--fg) }
+#mod-janela .tn-rod .btn.vermelho { border-color:var(--red) }
 #mod-janela .ja-corpo { grid-template-columns:252px minmax(0,1fr) }
 #mod-janela .ja-agora { gap:6px }
 #mod-janela .ja-cxs, #mod-janela .ja-aps { display:flex;flex-direction:column;gap:2px }
@@ -1395,7 +1400,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <div class="tn-cx" id="mod-janela" role="dialog" aria-modal="true" aria-label="Configurar a extensão">
     <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · Minha extensão</span><button class="ja-parar" data-gesto="parar-tudo-da-modificacao" data-v="exemplo" data-dica="Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."><svg viewBox="0 0 16 16" width="13" height="13"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>Parar tudo</button>
-      <a class="tn-x" href="#" data-dica="Fechar" data-gesto="cancelar-modificacao" data-v="exemplo">×</a>
+      <span class="mj-fecho" id="mod-fecho"><a class="tn-x" href="#" data-dica="Fechar" data-gesto="cancelar-modificacao" data-v="exemplo">×</a></span>
     </div>
     <div class="ja-corpo com-faixa">
       <div class="ja-agora" id="mod-agora"><div class="ja-ag-topo"><span class="pc-sub">Agora</span><span class="ja-srv">Ligada</span></div><div class="ja-cxs" data-agora="conexoes"><div class="cx-linha"><svg class="ic c-verde" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="11" height="8" rx="1.5"/><rect x="15" y="9.5" width="5" height="5" rx=".6"/><line x1="17" y1="11" x2="17" y2="13"/><line x1="7" y1="12" x2="12" y2="12"/></svg><span class="cx-rot">Adaptador</span><span class="est est-verde"><i></i>Ligado</span></div><div class="cx-linha"><svg class="ic c-mudo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7,7 17,16 12,20 12,4 17,8 7,17"/></svg><span class="cx-rot">Bluetooth</span><span class="est est-mudo"><i></i>Desligado</span></div><div class="cx-linha" data-dica="Esperando o app na rede"><svg class="ic c-amarelo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5a13 13 0 0 1 18 0"/><path d="M6 13a8.5 8.5 0 0 1 12 0"/><path d="M9 16.5a4 4 0 0 1 6 0"/><circle cx="12" cy="19.5" r=".8"/></svg><span class="cx-rot">Telefone</span><span class="est est-amarelo"><i></i>Procurando</span></div></div><div class="ja-sep"></div><div class="ja-aps" data-agora="aparelhos"><div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Aparelho 1</span><span class="bat" data-dica="Bateria 80%"><i style="width:80%"></i></span><span class="vivo" data-dica="Força agora: 70%"><svg viewBox="0 0 120 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 Q7.5 3.4 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span></div><div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Aparelho 2</span><span class="bat" data-dica="Bateria 45%"><i style="width:45%"></i></span><span class="vivo" data-dica="Força agora: 30%"><svg viewBox="0 0 120 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 Q7.5 6.6 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span></div><div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Aparelho 3</span><span class="bat" data-dica="Bateria 62%"><i style="width:62%"></i></span><span class="vivo" data-dica="Força agora: 50%"><svg viewBox="0 0 120 18" preserveAspectRatio="none" aria-hidden="true"><path d="M0 9 Q7.5 5.0 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span></div><div class="ap fora"><svg class="ic c-mudo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Aparelho 4</span><span class="bat" data-dica="Bateria 18%"><i style="width:18%"></i></span><span class="est est-mudo"><i></i>Desligado</span></div></div></div>
@@ -1411,9 +1416,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       </div>
     </div>
     </div>
-    <div class="tn-rod">
+    <div class="tn-rod" id="mod-rodape">
       <a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="exemplo">Cancelar</a>
-      <a class="btn roxo" href="#" data-gesto="guardar-modificacao" data-v="exemplo">Guardar</a>
+      <a class="btn roxo apagado" href="#" data-gesto="guardar-modificacao" data-v="exemplo" data-dica="Nada mudou desde o último Guardar.">Guardar</a>
     </div>
   </div>
 </div>

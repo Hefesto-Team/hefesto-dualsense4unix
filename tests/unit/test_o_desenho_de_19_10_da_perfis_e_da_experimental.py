@@ -240,7 +240,7 @@ def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guarda
     assert janela.count('<div class="ky-linha" id="mod-op-') == 7
     assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="exemplo">'
             'Cancelar</a>') in janela
-    assert '<a class="btn roxo" href="#" data-gesto="guardar-modificacao"' in janela
+    assert re.search(r'<a class="btn roxo[^"]*" href="#" data-gesto="guardar-modificacao"', janela)
     assert ">Fechar</a>" not in janela.split('class="tn-rod"')[1]
 
 
@@ -252,7 +252,7 @@ def test_a_janela_da_extensao_com_agora_no_desenho_e_o_arranjo_c() -> None:
     assert janela.count(" checked>") >= 1 and 'id="mj-aba-0" checked' in janela
     assert 'id="mod-agora"' in janela and "Para</span>Todos" not in janela
     assert 'class="ja-parar" data-gesto="parar-tudo-da-modificacao"' in janela
-    assert '<a class="btn roxo" href="#" data-gesto="guardar-modificacao"' in janela
+    assert re.search(r'<a class="btn roxo[^"]*" href="#" data-gesto="guardar-modificacao"', janela)
 
 
 @sem_chrome

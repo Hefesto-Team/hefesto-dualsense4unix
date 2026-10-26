@@ -880,7 +880,7 @@ def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, 
     rodape = janela.split('class="tn-rod"')[1]
     assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="toque">'
             'Cancelar</a>') in rodape
-    assert 'data-gesto="guardar-modificacao" data-v="toque">Guardar</a>' in rodape
+    assert re.search(r'data-gesto="guardar-modificacao" data-v="toque"[^>]*>Guardar</a>', rodape)
 
 
 def test_um_grupo_so_desenha_um_cartao(lar, ctx, tmp_path) -> None:

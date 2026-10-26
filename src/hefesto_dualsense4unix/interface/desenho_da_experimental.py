@@ -882,9 +882,21 @@ def parar_tudo_html(mod: str) -> str:
             "Parar tudo</button>")
 
 
+class Rascunho(NamedTuple):
+    """O rodapé da janela da extensão: ``pendente`` quando o rascunho difere do guardado, e
+    ``descartar`` quando o primeiro X ou Cancelar já pediu, e o segundo joga o rascunho fora."""
+
+    pendente: bool = False
+    descartar: bool = False
+
+
+SEM_RASCUNHO = Rascunho()
+
+
 def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
                estado: Mapping[str, Any] | None, parar: str, processo: str = "",
-               porque: str = "", faixa: str = "", gestao: Gestao | None = None) -> str:
+               porque: str = "", faixa: str = "", gestao: Gestao | None = None,
+               rascunho: Rascunho = SEM_RASCUNHO) -> str:
     """A janela do arranjo C: «Parar tudo» no topo, a coluna «Agora» e os ajustes, e o rodapé.
 
     ``faixa`` é a do controle livre, fixa embaixo das duas colunas; sem ``agora``, os ajustes
@@ -895,20 +907,52 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
     opcoes = f'<div class="ja-opcoes">{ajustes}</div>' if ajustes else ""
     classe = ("ja-corpo" + ("" if agora else " sem-agora")
               + (" com-faixa" if faixa and (agora or ajustes) else ""))
-    fecha = _o_fecho(mod)
     return f'''    <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
-      <a class="tn-x" href="#" data-dica="Fechar"{fecha}>\u00d7</a>
+      {_o_x(mod, rascunho)}
     </div>
     <div class="{classe}">
       {coluna}
       {opcoes}
       {faixa}
     </div>
-    <div class="tn-rod">
-      <a class="btn" href="#"{fecha}>Cancelar</a>
-      <a class="btn roxo" href="#" data-gesto="{GESTO_DO_GUARDAR}" data-v="{_a(mod)}">Guardar</a>
-    </div>'''
+    {_o_rodape(mod, rascunho)}'''
+
+
+DESCARTAR = "Descartar"
+DICA_DO_DESCARTAR = "As mudanças sem Guardar se perdem."
+DICA_DO_GUARDAR_SEM_MUDANCA = "Nada mudou desde o último Guardar."
+
+
+def _fecha_na_hora(mod: str, rascunho: Rascunho) -> bool:
+    return not mod or not rascunho.pendente or rascunho.descartar
+
+
+def _href_do_fecho(mod: str, rascunho: Rascunho) -> str:
+    return ' href="#"' if _fecha_na_hora(mod, rascunho) else ' role="button" tabindex="0"'
+
+
+def _o_x(mod: str, rascunho: Rascunho) -> str:
+    """O X do topo, num pedaço próprio: com rascunho, o primeiro gesto (o Esc clica o X) não fecha."""
+    dica = DICA_DO_DESCARTAR if rascunho.descartar else "Fechar"
+    x = (f'<a class="tn-x"{_href_do_fecho(mod, rascunho)} data-dica="{dica}"'
+         f'{_o_fecho(mod)}>\u00d7</a>')
+    return f'<span class="mj-fecho" id="mod-fecho">{x}</span>' if mod else x
+
+
+def _o_rodape(mod: str, rascunho: Rascunho) -> str:
+    """Cancelar e Guardar: o Guardar acende com o rascunho, e o Cancelar armado diz «Descartar»."""
+    if rascunho.descartar:
+        cancelar = (f'<a class="btn vermelho"{_href_do_fecho(mod, rascunho)} '
+                    f'data-dica="{DICA_DO_DESCARTAR}"{_o_fecho(mod)}>{DESCARTAR}</a>')
+    else:
+        cancelar = f'<a class="btn"{_href_do_fecho(mod, rascunho)}{_o_fecho(mod)}>Cancelar</a>'
+    aceso = " aceso" if rascunho.pendente else (" apagado" if mod else "")
+    dica = "" if rascunho.pendente or not mod else f' data-dica="{DICA_DO_GUARDAR_SEM_MUDANCA}"'
+    guardar = (f'<a class="btn roxo{aceso}" href="#" data-gesto="{GESTO_DO_GUARDAR}" '
+               f'data-v="{_a(mod)}"{dica}>Guardar</a>')
+    pedaco = ' id="mod-rodape"' if mod else ""
+    return f'<div class="tn-rod"{pedaco}>\n      {cancelar}\n      {guardar}\n    </div>'
 
 
 GESTO_DO_GUARDAR = "guardar-modificacao"
@@ -1059,7 +1103,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            livre: LivreAoVivo | None = None, controles: str = "",
-                           armada: Sequence[str] = ()) -> str:
+                           armada: Sequence[str] = (),
+                           rascunho: Rascunho = SEM_RASCUNHO) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
     Cada opção vira uma linha do cartão do grupo dela; o Guardar grava o rascunho. ``agora`` são os
@@ -1067,7 +1112,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     botão no topo, os dois só com ``mod``. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é
     o arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` são os
     pares (ação, alvo) que esperam a extensão, ``armada`` o que espera o segundo clique, ``livre``
-    vai à faixa de baixo e ``controles`` é a aba dos controles de cada aparelho.
+    vai à faixa de baixo e ``controles`` é a aba dos controles de cada aparelho; ``rascunho`` acende
+    o Guardar e arma o Descartar.
     """
     parar = parar_tudo_html(mod) if parar_tudo and mod else ""
     agora = agora if mod else ()
@@ -1088,21 +1134,18 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
-                          processo=processo, porque=porque, faixa=faixa, gestao=gestao)
+                          processo=processo, porque=porque, faixa=faixa, gestao=gestao,
+                          rascunho=rascunho)
     corpo = _cartoes_das_opcoes(opcoes) if opcoes else vazio
-    fecha = _o_fecho(mod)
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}
-      <a class="tn-x" href="#" data-dica="Fechar"{fecha}>\u00d7</a>
+      {_o_x(mod, rascunho)}
     </div>
     <div class="tn-corpo">
       {corpo}
     </div>
-    <div class="tn-rod">
-      <a class="btn" href="#"{fecha}>Cancelar</a>
-      <a class="btn roxo" href="#" data-gesto="{GESTO_DO_GUARDAR}" data-v="{_a(mod)}">Guardar</a>
-    </div>'''
+    {_o_rodape(mod, rascunho)}'''
 
 
 class JogoDaLista(NamedTuple):
