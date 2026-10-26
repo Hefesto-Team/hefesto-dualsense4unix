@@ -26,7 +26,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.controller import ControllerState, Transport
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.core.evdev_reader import AccelSnapshot, GyroSnapshot
 from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
@@ -56,7 +56,7 @@ UNIQS = ("aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014")
 P1, P2, P3, P4 = UNIQS
 
 #: As mesas da casa: sempre mista (p1-usb, p2-bt, p3-usb, p4-bt), e os quatro de cada jeito.
-MESAS = {
+MESAS: dict[str, tuple[Transport, ...]] = {
     "mista": ("usb", "bt", "usb", "bt"),
     "todos-no-cabo": ("usb", "usb", "usb", "usb"),
     "todos-no-bt": ("bt", "bt", "bt", "bt"),
@@ -106,7 +106,7 @@ class _Backend:
 class _Mesa:
     """A mesa de ``vias``: o P1 é o posto; o hub é o de verdade, com um leitor por controle."""
 
-    def __init__(self, porta: Porta, vias: tuple[str, ...]) -> None:
+    def __init__(self, porta: Porta, vias: tuple[Transport, ...]) -> None:
         self.uniqs = UNIQS[: len(vias)]
         self.vias = dict(zip(self.uniqs, vias, strict=True))
         self.hub = SensorHub(auto_manutencao=False)

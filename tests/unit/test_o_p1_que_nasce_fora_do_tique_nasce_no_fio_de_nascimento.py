@@ -27,6 +27,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core import physical_report_reader as prr
+from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_COMUM, ROUPA_PADRAO
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon
@@ -81,10 +82,11 @@ class _Pad:
         self.parado = True
 
 
-class _Leitor:
-    grab_state = "held"
+class _Leitor(EvdevReader):
+    def __init__(self) -> None:
+        self._grab_state = "held"
 
-    def set_grab(self, _g: bool) -> bool:
+    def set_grab(self, grab: bool) -> bool:
         return True
 
     def stop(self) -> None:
@@ -95,7 +97,7 @@ class _Leitor:
                                buttons_pressed=frozenset(), apertos=None)
 
 
-class _Ipc(IpcHandlersMixin):  # type: ignore[misc]
+class _Ipc(IpcHandlersMixin):
     def __init__(self, daemon: Any) -> None:
         self.daemon = daemon
 

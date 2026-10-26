@@ -22,6 +22,7 @@ e o flag da fila fica na vaga longe, e a régua reprova.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import pytest
@@ -47,15 +48,15 @@ POR_JANELA = 23
 FOLGA_DO_B = 4 * POR_JANELA
 
 
-class _Sinal:
+class _Sinal(rm.LeitorDoSinal):
     """O leitor do sinal na mão da régua: o que ela põe em `dbm` é o que o governador lê."""
 
     def __init__(self) -> None:
         self.dbm: dict[str, int] = {}
         self._n = 0
 
-    def talvez_ler(self, _amostra: object) -> None:
-        return None
+    def talvez_ler(self, _amostra: Mapping[str, Any]) -> bool:
+        return False
 
     def leitura(self) -> tuple[int, dict[str, int | None]]:
         self._n += 1

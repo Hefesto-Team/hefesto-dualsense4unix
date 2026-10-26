@@ -121,8 +121,9 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as el
     from hefesto_dualsense4unix.integrations import ondas_de_som
     from hefesto_dualsense4unix.interface import hefesto_vivo as hv
+    from hefesto_dualsense4unix.interface import mesa_viva
 
-    monkeypatch.setattr(hv.mesa_viva, "estado_do_daemon", _Estado(4))
+    monkeypatch.setattr(mesa_viva, "estado_do_daemon", _Estado(4))
     monkeypatch.setattr(hv, "ponte", _PonteDeMentira())
     monkeypatch.setattr(audio_saida, "rodar_leitura", lambda _argv: "")
     monkeypatch.setattr(el, "_rodar", lambda _argv: (1, ""))
@@ -147,7 +148,7 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
                 gtk.main_quit()
             return volta
 
-        piloto._tique = tique
+        monkeypatch.setattr(piloto, "_tique", tique)
 
         def proxima() -> bool:
             fora.i += 1

@@ -89,8 +89,8 @@ def test_o_sackboy_veste_o_edge(tmp_path: Path) -> None:
     raiz = _o_sackboy(tmp_path)
 
     assert rj.roupa_do_jogo(raiz) == ("0df2", "o executável conhece o modelo 0DF2 do Edge")
-    for extras in ({"no_steam_input": True}, {"modo_xbox": True}):
-        assert rj.roupa_do_jogo(raiz, **extras)[0] == "0df2", extras
+    assert rj.roupa_do_jogo(raiz, no_steam_input=True)[0] == "0df2"
+    assert rj.roupa_do_jogo(raiz, modo_xbox=True)[0] == "0df2"
 
 
 # --- 2. O VID:PID, o nome e o descritor ------------------------------------------

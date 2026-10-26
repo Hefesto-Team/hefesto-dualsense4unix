@@ -64,6 +64,9 @@ class DaemonProtocol(Protocol):
     _sentinela_de_escritor_cru: Any
     _cartorio_do_nascimento: Any
     _vigia_do_sequestro: Any
+    _launch_armed_for: tuple[int, int] | None
+    _pad_travado_pelo_lancamento: tuple[int, float] | None
+    roupa_do_pad: int | None
 
     _osk_controller: Any
     _touchpad_reader: Any

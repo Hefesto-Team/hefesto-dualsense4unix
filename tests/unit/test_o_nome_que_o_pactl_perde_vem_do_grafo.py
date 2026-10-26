@@ -9,7 +9,7 @@ chegam «(null)». O grafo de mentira (`pw-dump`) tem o UTF-8 inteiro e o serial
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 import pytest
@@ -248,7 +248,7 @@ def _retrato(sinks: str, *, info: str, pw_dump: str = "",
         ("pw-dump",): pw_dump,
     }
 
-    def ler(argv: list[str]) -> str:
+    def ler(argv: Sequence[str]) -> str:
         if lidas is not None:
             lidas.append(tuple(argv))
         return respostas.get(tuple(argv), "")

@@ -188,7 +188,7 @@ MOTIVO_DA_AUTORIDADE = "o_jogo_devolveu_a_autoridade"
 MOTIVO_DO_LANCAMENTO_QUE_CAIU = "o_lancamento_acabou_sem_o_jogo"
 
 
-def _soltar_o_pad_do_lancamento(daemon: Any, motivo: str) -> None:
+def _soltar_o_pad_do_lancamento(daemon: Daemon, motivo: str) -> None:
     """A trava do lançamento acaba aqui, e o diário diz por quê (`motivo`).
 
     O dono das duas solturas do sinal: a borda `game -> daemon`
@@ -736,7 +736,6 @@ class Daemon:
     _rumble_policy_from_profile: bool = False
     _rumble_policy_before_profile: tuple[RumblePolicy, float] | None = None
     _emu_lock: Any = field(default_factory=threading.RLock)
-    # o P1 que nasceu pelo fio e cujo desfecho espera o tique (`fechar_o_p1_que_nasceu`)
     _p1_que_nasceu: list[Any] = field(default_factory=list)
     _audio: Any = None
     _plugins_subsystem: Any = None
@@ -776,10 +775,11 @@ class Daemon:
     # A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01: o dono da
     # Interna (ligada, tipo, o foco com prazo e os toques); nasce no boot.
     _navegacao_interna: Any = None
-    # A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01: o dono do
-    # Modo Big Picture na Steam (ligado, o foco da Steam e as teclas); nasce no boot.
     _big_picture: Any = None
     _vigia_do_sequestro: Any = None
+    _launch_armed_for: tuple[int, int] | None = None
+    _pad_travado_pelo_lancamento: tuple[int, float] | None = None
+    roupa_do_pad: int | None = None
 
 
     async def run(self) -> None:

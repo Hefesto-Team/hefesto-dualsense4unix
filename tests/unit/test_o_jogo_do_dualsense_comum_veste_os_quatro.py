@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.core.controller import Transport
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_COMUM
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
@@ -62,8 +63,13 @@ def _coop_de_mentira(monkeypatch: pytest.MonkeyPatch, slots: dict[str, int]) -> 
     return mgr
 
 
+def _roupa(vpad: vp.VirtualPad) -> int:
+    assert isinstance(vpad, _PadUhidDeMentira), vpad
+    return vpad.product
+
+
 def _roupas(mgr: CoopManager) -> dict[str, int]:
-    return {m: j.vpad.product for m, j in mgr._players.items() if j.vpad is not None}
+    return {m: _roupa(j.vpad) for m, j in mgr._players.items() if j.vpad is not None}
 
 
 def test_o_controle_que_chega_sai_e_muda_de_numero_veste_o_comum(
@@ -98,7 +104,7 @@ def test_o_controle_que_chega_sai_e_muda_de_numero_veste_o_comum(
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("quem", range(4), ids=[f"controle-{n + 1}" for n in range(4)])
 def test_o_p1_que_nasce_no_meio_do_jogo_veste_o_comum(
-    monkeypatch: pytest.MonkeyPatch, transporte: str, quem: int,
+    monkeypatch: pytest.MonkeyPatch, transporte: Transport, quem: int,
 ) -> None:
     """O P1 é qualquer um dos quatro, no cabo ou no rádio, e nasce com o jogo já no `0ce6`."""
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)

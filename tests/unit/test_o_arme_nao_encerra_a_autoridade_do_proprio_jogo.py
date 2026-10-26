@@ -22,6 +22,7 @@ from typing import Any
 import pytest
 import structlog.testing
 
+from hefesto_dualsense4unix.core.controller import Transport
 from hefesto_dualsense4unix.daemon import launch_env as le
 from hefesto_dualsense4unix.daemon import lifecycle as lc
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
@@ -91,7 +92,7 @@ def test_o_arme_do_jogo_que_o_tique_ja_viu_mantem_a_autoridade(
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_arme_do_proprio_jogo_veste_a_roupa_com_a_autoridade_dele(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: Transport,
 ) -> None:
     """D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO: o pad de `0df2` veste `0ce6`.
 
@@ -123,7 +124,7 @@ def test_o_arme_do_proprio_jogo_veste_a_roupa_com_a_autoridade_dele(
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_caminho_do_perfil_do_proprio_jogo_nao_e_adiado(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: Transport,
 ) -> None:
     """O perfil de A pede o caminho Xbox e o tique já viu A: a máscara sai no arme dele.
 
@@ -154,7 +155,7 @@ def test_o_caminho_do_perfil_do_proprio_jogo_nao_e_adiado(
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("secundarios", [1, 2, 3], ids=["2j", "3j", "4j"])
 def test_o_arme_do_proprio_jogo_veste_a_roupa_nos_quatro_controles(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str, secundarios: int,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: Transport, secundarios: int,
 ) -> None:
     """O arme de A com P1 a P4 de pé: os quatro vestem a roupa de A, no cabo e no rádio.
 
@@ -315,7 +316,7 @@ def test_o_tique_do_daemon_passa_o_appid_da_evidencia_a_casca(
     async def _varredura(_funcao: Any) -> dict[str, Any]:
         return leitura
 
-    mesa.d._run_blocking = _varredura
+    monkeypatch.setattr(mesa.d, "_run_blocking", _varredura)
     asyncio.run(mesa.d._sync_game_signal())
 
     assert mesa.d.display_authority == "game"

@@ -23,6 +23,7 @@ from typing import Any, ClassVar
 import pytest
 import structlog.testing
 
+from hefesto_dualsense4unix.core.controller import Transport
 from hefesto_dualsense4unix.core.numeros_da_sony import (
     ROUPA_COMUM,
     ROUPA_PADRAO,
@@ -44,6 +45,7 @@ from hefesto_dualsense4unix.daemon.subsystems.game_signal import (
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.profiles.schema import (
+    MascaraDeGamepad,
     MatchCriteria,
     Profile,
     ProfileModeConfig,
@@ -184,18 +186,20 @@ def _na_mesa(monkeypatch: pytest.MonkeyPatch, secundarios: int) -> None:
 class _Mesa:
     """O `Daemon` real com o sinal real, o relógio dado e a varredura injetada."""
 
-    def __init__(self, monkeypatch: pytest.MonkeyPatch, transporte: str, secundarios: int) -> None:
+    def __init__(
+        self, monkeypatch: pytest.MonkeyPatch, transporte: Transport, secundarios: int
+    ) -> None:
         self.relogio = _Relogio()
         d = Daemon(
             controller=FakeController(transport=transporte),
             config=DaemonConfig(ipc_enabled=False, udp_enabled=False),
         )
-        d.controller.primary_uniq = MAC_P1
+        monkeypatch.setattr(d.controller, "primary_uniq", MAC_P1, raising=False)
         d._game_signal = GameSignal(time_fn=self.relogio)
         self.d = d
         self.varredura: dict[str, Any] = {}
         self.sessao_aberta = True
-        d._gather_game_signal_inputs = self._ler
+        monkeypatch.setattr(d, "_gather_game_signal_inputs", self._ler)
         self.mesa: Any = None
         gp.start_gamepad_emulation_desfecho(
             d, "dualsense", origin="profile", caminho=vp.CAMINHO_DUALSENSE
@@ -268,7 +272,9 @@ def _processo(pasta: Path, pid: int, appid: int, *, install: bool = False) -> No
     (pasta / "proc" / str(pid) / "cmdline").write_bytes("\0".join(argv).encode() + b"\0")
 
 
-def _perfil(appid: int, flavor: str = "dualsense", caminho: Any = None) -> Profile:
+def _perfil(
+    appid: int, flavor: MascaraDeGamepad = "dualsense", caminho: Any = None
+) -> Profile:
     return Profile(
         name=f"jogo_{appid}",
         match=MatchCriteria(window_class=[f"steam_app_{appid}"]),
@@ -296,7 +302,7 @@ def _linhas(diario: Any, evento: str) -> list[dict[str, Any]]:
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 @pytest.mark.parametrize("secundarios", [0, 1, 2, 3], ids=["1j", "2j", "3j", "4j"])
 def test_o_lancamento_de_outro_appid_encerra_a_autoridade_do_jogo_que_acabou(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str, secundarios: int,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: Transport, secundarios: int,
 ) -> None:
     """A prova de D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA: o A (`0ce6`) fechou há 10 s e o B
     (Edge) arma: os pads vestem o Edge, no cabo e no rádio.
@@ -530,15 +536,12 @@ def test_sem_jogo_a_histerese_de_30s_encerra_como_sempre() -> None:
         "marker": None, "marker_pid_alive": False, "exit_marker": None, "now": 0.0,
         "window_healthy": True, "session_open": True,
     }
-    sinal.evaluate(classify(**base, appid_de_jogo_vivo=JOGO_A), session_open=True)
-    assert sinal.authority == "game"
+    assert sinal.evaluate(classify(**base, appid_de_jogo_vivo=JOGO_A), session_open=True) == "game"
     sinal.evaluate(classify(**base, appid_de_jogo_vivo=None), session_open=True)
     relogio.agora += HYSTERESIS_SEC - 1
-    sinal.evaluate(classify(**base, appid_de_jogo_vivo=None), session_open=True)
-    assert sinal.authority == "game"
+    assert sinal.evaluate(classify(**base, appid_de_jogo_vivo=None), session_open=True) == "game"
     relogio.agora += 1
-    sinal.evaluate(classify(**base, appid_de_jogo_vivo=None), session_open=True)
-    assert sinal.authority == "daemon"
+    assert sinal.evaluate(classify(**base, appid_de_jogo_vivo=None), session_open=True) == "daemon"
 
 
 def test_encerrar_sem_jogo_na_autoridade_nao_faz_nada() -> None:
@@ -568,7 +571,7 @@ def test_a_varredura_que_falha_deixa_a_autoridade_como_esta(
     def _quebra() -> dict[str, Any]:
         raise OSError("/proc ilegível")
 
-    mesa.d._gather_game_signal_inputs = _quebra
+    monkeypatch.setattr(mesa.d, "_gather_game_signal_inputs", _quebra)
     with structlog.testing.capture_logs() as diario:
         _arme(mesa, tmp_path)
 
@@ -592,8 +595,10 @@ def test_o_tique_que_cruza_o_encerramento_reenvia_as_saidas_retidas(
     _roupa_do_jogo_novo(monkeypatch, EDGE)
     mesa = _Mesa(monkeypatch, "usb", 0)
     eventos: list[str] = []
-    mesa.d.controller.defend_display = lambda: eventos.append("defend")
-    mesa.d.controller.replay_retained_game_outputs = lambda: eventos.append("replay")
+    monkeypatch.setattr(mesa.d.controller, "defend_display", lambda: eventos.append("defend"),
+                        raising=False)
+    monkeypatch.setattr(mesa.d.controller, "replay_retained_game_outputs",
+                        lambda: eventos.append("replay"), raising=False)
     mesa.abrir_o_jogo(JOGO_A, EPOCH_A, COMUM)
     mesa.fechar_o_jogo(10.0)
     mesa.lancar(tmp_path, JOGO_B, EPOCH_B)
@@ -606,7 +611,7 @@ def test_o_tique_que_cruza_o_encerramento_reenvia_as_saidas_retidas(
         }
         return mesa._ler()
 
-    mesa.d._run_blocking = _no_meio_da_varredura
+    monkeypatch.setattr(mesa.d, "_run_blocking", _no_meio_da_varredura)
     asyncio.run(mesa.d._sync_game_signal())
 
     assert eventos == ["defend", "replay"], eventos
@@ -629,7 +634,7 @@ def test_o_mesmo_lancamento_arma_uma_vez_so(
         chamadas.append(1)
         return leitura()
 
-    mesa.d._gather_game_signal_inputs = _conta
+    monkeypatch.setattr(mesa.d, "_gather_game_signal_inputs", _conta)
     for _ in range(5):
         _arme(mesa, tmp_path)
 
@@ -649,7 +654,7 @@ def test_o_arme_so_pergunta_a_varredura_com_o_jogo_na_autoridade(
         chamadas.append(1)
         return mesa._ler()
 
-    mesa.d._gather_game_signal_inputs = ler_e_contar
+    monkeypatch.setattr(mesa.d, "_gather_game_signal_inputs", ler_e_contar)
 
     _arme(mesa, tmp_path)
 

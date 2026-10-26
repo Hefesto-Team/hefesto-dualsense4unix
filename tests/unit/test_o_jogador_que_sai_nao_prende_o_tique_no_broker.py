@@ -21,8 +21,11 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
 from hefesto_dualsense4unix.integrations import hidraw_broker_client as hbc
+from hefesto_dualsense4unix.testing.fake_controller import FakeController
 from tests.unit.test_o_gadget_que_desce_no_tique_fala_com_o_broker_fora_dele import (
     PRESO_S,
     ClienteLento,
@@ -48,7 +51,7 @@ IDS = ["p2-bt-sai", "quatro-p4-sai", "quatro-p2-sai", "um-so", "todos-bt", "todo
 CAMINHOS = ("saida", "troca_de_roupa", "coop_desliga")  # (noqa-acento): chave de máquina
 
 
-class _Controle:
+class _Controle(FakeController):
     """O backend do P1: o zero do motor de quem sai e o nó dele, sem aparelho."""
 
     def force_rumble_stop(self, uniq: str | None = None) -> None: ...
@@ -57,18 +60,36 @@ class _Controle:
         return None
 
 
-class _Daemon:
-    def __init__(self) -> None:
-        self._gamepad_device = None
-        self._coop_manager = None
-        self._hidraw_broker_client = SimpleNamespace(
-            hide=lambda _n: True, restore=lambda _n: True, restore_all=lambda: True,
-        )
-        self.controller = _Controle()
-        self.config = SimpleNamespace(gamepad_emulation_enabled=True)
-
+class _Daemon(Daemon):
     def is_native_mode(self) -> bool:
         return False
+
+
+def _o_daemon() -> _Daemon:
+    d = _Daemon(controller=_Controle(), config=DaemonConfig(
+        ipc_enabled=False, udp_enabled=False, gamepad_emulation_enabled=True, coop_enabled=False))
+    d._hidraw_broker_client = SimpleNamespace(
+        hide=lambda _n: True, restore=lambda _n: True, restore_all=lambda: True,
+    )
+    return d
+
+
+class _Leitor(EvdevReader):
+    """O leitor do jogador: agarrado, sem nó e sem fio."""
+
+    def __init__(self) -> None:
+        self._grab_state = "held"
+
+    def set_grab(self, grab: bool) -> bool:
+        return True
+
+    def stop(self) -> None:
+        return None
+
+
+class _Coop(CoopManager):
+    def _materialize_launch_env(self) -> None:
+        return None
 
 
 def _a_mesa_de_pe(m: Mesa, jogadores: tuple[int, ...]) -> tuple[list[Any], CoopManager]:
@@ -85,15 +106,13 @@ def _a_mesa_de_pe(m: Mesa, jogadores: tuple[int, ...]) -> tuple[list[Any], CoopM
 
 def _o_coop_de(pads: list[Any]) -> CoopManager:
     """O co-op com um jogador por pad do P2 ao P4 (o P1 é o primário)."""
-    coop = CoopManager(_Daemon())
-    coop._materialize_launch_env = lambda: None
+    coop = _Coop(_o_daemon())
     for pad in pads:
         if pad.player == 1:
             continue
         coop._players[pad.identity] = _SecondaryPlayer(
             identity=pad.identity, evdev_path=f"/dev/input/event9{pad.player}",
-            reader=SimpleNamespace(
-                set_grab=lambda _g: True, stop=lambda: None, grab_state="held"),
+            reader=_Leitor(),
             player_index=pad.player, vpad=pad,
         )
     return coop

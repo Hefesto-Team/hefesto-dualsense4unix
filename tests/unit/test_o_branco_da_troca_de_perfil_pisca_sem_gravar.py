@@ -16,6 +16,7 @@ cor global ao padrão, ou nada quando a global é preta).
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any, ClassVar
 
@@ -25,6 +26,7 @@ from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core.controller import OutputSpec
 from hefesto_dualsense4unix.core.lightbar_gatilho import COMMON_LIGHTBAR_B, COMMON_LIGHTBAR_R
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems.hotkey import build_profile_cycle_callback
 
 BRANCO = (255, 255, 255)
@@ -95,13 +97,13 @@ def _cor_do_report(report: list[int]) -> tuple[int, ...]:
 
 
 class _Mesa:
-    def __init__(self) -> None:
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self.ctl = bp.PyDualSenseController()
         self.handles = [_handle("usb"), _handle("usb"), _handle("bt"), _handle("bt")]
         self.nos = [_NoDeLed(), _NoDeLed()]
         self.ctl._handles = dict(zip(MACS, self.handles, strict=True))
         self.ctl._sysfs = {MACS[0]: self.nos[0], MACS[1]: self.nos[1]}
-        self.ctl._detect_transport = lambda h: h.transporte
+        monkeypatch.setattr(self.ctl, "_detect_transport", lambda h: h.transporte)
 
     def pinturas(self, i: int) -> list[tuple[int, ...]]:
         """Toda cor que o controle `i` (0 a 3) recebeu, na ordem."""
@@ -116,16 +118,6 @@ class _Mesa:
     def desejado(self) -> tuple[Any, Any]:
         return (copy.deepcopy(self.ctl._desired_default),
                 copy.deepcopy(self.ctl._desired_by_uniq))
-
-
-class _Store:
-    def __init__(self) -> None:
-        self.active_profile = "a"
-        self._manual_profile_lock_until = 0.0
-        self.native_mode_active = False
-
-    def mark_manual_profile_lock(self, t: float) -> None:
-        self._manual_profile_lock_until = t
 
 
 class _Fabrica:
@@ -151,18 +143,19 @@ class _Fabrica:
         if origin == "manual":
             self.controller.clear_user_output_overrides()
         self.controller.apply_output_defaults(OutputSpec(led=self.cor_global[name]))
-        self.store.active_profile = name
+        self.store.set_active_profile(name)
         return SimpleNamespace(name=name)
 
 
-class _Daemon:
-    def __init__(self, mesa: _Mesa) -> None:
-        self.controller = mesa.ctl
-        self.store = _Store()
-        self._keyboard_device = None
-
-    async def _run_blocking(self, fn: Any, *args: Any) -> Any:
+class _Daemon(Daemon):
+    async def _run_blocking(self, fn: Callable[..., Any], *args: Any) -> Any:
         return fn(*args)
+
+
+def _daemon(mesa: _Mesa) -> _Daemon:
+    d = _Daemon(controller=mesa.ctl, config=DaemonConfig(ipc_enabled=False, udp_enabled=False))
+    d.store.set_active_profile("a")
+    return d
 
 
 @pytest.fixture
@@ -173,7 +166,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_active_marker", lambda _n: None)
     monkeypatch.setattr("asyncio.sleep", _sem_espera)
-    m = _Mesa()
+    m = _Mesa(monkeypatch)
     m.ctl._desired_default.led = COR_ANTES
     m.ctl._desired_by_uniq[UNIQS[2]] = bp._DesiredOutput(led=COR_DO_P3)
     return m
@@ -188,7 +181,7 @@ async def test_com_o_seletor_no_p2_pisca_nos_quatro_e_nao_grava(mesa: _Mesa) -> 
     mesa.ctl.set_output_target(1)
     antes = mesa.desejado()
 
-    await build_profile_cycle_callback(_Daemon(mesa), +1)()
+    await build_profile_cycle_callback(_daemon(mesa), +1)()
 
     for i in range(4):
         assert BRANCO in mesa.pinturas(i), f"P{i + 1} não piscou"
@@ -201,7 +194,7 @@ async def test_com_o_seletor_no_p2_pisca_nos_quatro_e_nao_grava(mesa: _Mesa) -> 
 async def test_com_todos_e_destino_preto_cada_um_volta_a_cor_do_perfil(mesa: _Mesa) -> None:
     mesa.ctl.set_output_target(None)
 
-    await build_profile_cycle_callback(_Daemon(mesa), +1)()
+    await build_profile_cycle_callback(_daemon(mesa), +1)()
 
     for i in range(4):
         assert mesa.resolvida(i) != BRANCO, f"P{i + 1}: o pisca gravou no padrão"
@@ -215,7 +208,7 @@ async def test_a_ativacao_que_levanta_devolve_a_cor_de_antes(mesa: _Mesa) -> Non
     cores_antes = [mesa.resolvida(i) for i in range(4)]
 
     with pytest.raises(RuntimeError):
-        await build_profile_cycle_callback(_Daemon(mesa), +1)()
+        await build_profile_cycle_callback(_daemon(mesa), +1)()
 
     for i in range(4):
         assert BRANCO in mesa.pinturas(i), f"P{i + 1} não piscou"

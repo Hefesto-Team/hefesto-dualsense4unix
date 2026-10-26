@@ -706,7 +706,7 @@ def tique_da_escada(
     return resultado.fim
 
 
-def _soltar_a_trava_do_lancamento(daemon: Any) -> None:
+def _soltar_a_trava_do_lancamento(daemon: DaemonProtocol) -> None:
     """Um lançamento novo pode vestir o pad. A trava do anterior acaba aqui."""
     daemon._pad_travado_pelo_lancamento = None
 
@@ -792,7 +792,7 @@ def _encerrar_a_autoridade_do_jogo_que_acabou(
         return False
 
 
-def _travar_o_pad_que_o_jogo_vai_abrir(daemon: Any, appid: int, epoch: float) -> None:
+def _travar_o_pad_que_o_jogo_vai_abrir(daemon: DaemonProtocol, appid: int, epoch: float) -> None:
     """O pad de pé ao `exec` é o que o jogo abre. Nada automático o recria."""
     daemon._pad_travado_pelo_lancamento = (int(appid), epoch)
     logger.info("pad_travado_pelo_lancamento", appid=appid, epoch=epoch)
@@ -916,7 +916,7 @@ def arm_launch_profile(
     if getattr(daemon, "_launch_armed_for", None) == (appid, epoch):
         return None
     armado_antes = getattr(daemon, "_launch_armed_for", None)
-    daemon._launch_armed_for = (appid, epoch)  # type: ignore[attr-defined]
+    daemon._launch_armed_for = (appid, epoch)
     _encerrar_a_autoridade_do_jogo_que_acabou(daemon, appid, armado_antes)
     _soltar_a_trava_do_lancamento(daemon)
 
