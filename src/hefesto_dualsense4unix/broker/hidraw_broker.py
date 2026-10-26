@@ -1132,7 +1132,9 @@ class FsAclOps:
         """``(pid, fd, nó, stat do nó)`` de cada descritor aberto num dos ``alvos``.
 
         O processo ou o descritor que some no meio da varredura não conta; o ``/proc`` que
-        não se lê (a unit sem a capacidade) levanta, e quem chama o diz no diário.
+        não se lê levanta, e quem chama o diz no diário. Sem o ``CAP_SYS_PTRACE``, o
+        ``ProtectProc=invisible`` da unit esconde os processos da sessão, e a varredura volta
+        vazia: é a unit que garante a capacidade.
         """
         pids = sorted(int(n) for n in os.listdir(self._proc_root) if n.isdigit())
         achados: list[tuple[int, int, str, os.stat_result]] = []
@@ -1163,12 +1165,12 @@ class FsAclOps:
         fcntl.ioctl(fd, EVIOCREVOKE, 0)
 
     @staticmethod
-    def _mesma_descricao(pid_a: int, fd_a: int, pid_b: int, fd_b: int) -> bool:
-        """Os dois descritores são a MESMA descrição (``kcmp``)? Sem resposta, «sim»."""
+    def _mesma_descricao(pid_a: int, fd_a: int, pid_b: int, fd_b: int) -> bool | None:
+        """Os dois descritores são a MESMA descrição (``kcmp``)? ``None`` = sem resposta."""
         try:
             return _syscall(_SYS_KCMP, pid_a, pid_b, _KCMP_FILE, fd_a, fd_b) == 0
         except OSError:
-            return True
+            return None
 
     def _revogar_um(self, pid: int, fd: int, node: str, alvo: os.stat_result) -> str | None:
         """Tira o nó do descritor de fora; ``None`` = já revogado ou já é outro arquivo."""
@@ -1198,7 +1200,9 @@ class FsAclOps:
         Fica quem tem o nó por direito: o broker, o root (o ``logind`` que cede o nó ao
         compositor), o cliente do broker (``poupado``) e quem divide a descrição com um
         deles. O resto perde o ``eventN``; o ``jsN`` e o hidraw não têm revoke e voltam
-        com o desfecho ``sem_revoke``.
+        com o desfecho ``sem_revoke``. Sem resposta do ``kcmp`` contra um dono do mesmo nó,
+        o descritor fica, porque revogá-lo podia tirar o nó do daemon, e volta com o
+        desfecho ``sem_kcmp``.
         """
         alvos = self._fechados(nos)
         if not alvos:
@@ -1217,9 +1221,10 @@ class FsAclOps:
             proc = processos.get(pid)
             if proc is None or de_direito(pid):
                 continue
-            if any(n == node and self._mesma_descricao(pid, fd, p, f) for p, f, n in donos):
+            respostas = [self._mesma_descricao(pid, fd, p, f) for p, f, n in donos if n == node]
+            if True in respostas:
                 continue
-            desfecho = self._revogar_um(pid, fd, node, alvo)
+            desfecho = "sem_kcmp" if None in respostas else self._revogar_um(pid, fd, node, alvo)
             if desfecho is not None:
                 saida.append((node, pid, proc.comm, desfecho))
         return saida

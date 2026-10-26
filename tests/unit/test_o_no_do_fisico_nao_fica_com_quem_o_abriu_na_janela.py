@@ -108,6 +108,7 @@ class _Ops(hb.FsAclOps):
             sys_bus_hid_drivers=str(mundo.raiz / "drivers"), proc_root=str(mundo.proc))
         self.mundo = mundo
         self.mesmas = mesmas
+        self.kcmp_mudo = False
         self.tomados: list[tuple[int, int]] = []
         self.revogados: list[tuple[int, int]] = []
 
@@ -123,7 +124,9 @@ class _Ops(hb.FsAclOps):
 
     def _mesma_descricao(  # type: ignore[override]
         self, pid_a: int, fd_a: int, pid_b: int, fd_b: int
-    ) -> bool:
+    ) -> bool | None:
+        if self.kcmp_mudo:
+            return None
         return frozenset({(pid_a, fd_a), (pid_b, fd_b)}) in self.mesmas
 
     def open_entrada(self, node: str, base: str) -> int:
@@ -230,6 +233,29 @@ def test_o_cliente_e_quem_divide_a_descricao_com_ele_ou_com_o_root_ficam(
     cena.estado.lembrar_o_cliente(1, DAEMON)
     cena.estado._aplicar_entradas(cena.nos[0])
     assert cena.ops.revogados == [(TECLADO, 35)]
+
+
+def test_sem_resposta_do_kcmp_quem_divide_o_no_com_o_daemon_fica_e_vai_ao_diario(
+    tmp_path: Path,
+) -> None:
+    cena = _Cena(tmp_path)
+    m = cena.mundo
+    m.fechar()
+    cena.ops.kcmp_mudo = True
+    m.processo(DAEMON, "hefesto-dualsen")
+    m.processo(TECLADO, "cosmic-osk")
+    m.segura(DAEMON, 10, m.ev(1))
+    m.segura(TECLADO, 35, m.ev(1))
+    cena.estado.lembrar_o_cliente(1, DAEMON)
+    cena.estado._aplicar_entradas(cena.nos[0])
+    assert cena.ops.tomados == []
+    assert cena.linhas("no_do_fisico_segurado") == [
+        {"node": m.ev(1), "pid": TECLADO, "comm": "cosmic-osk", "motivo": "sem_kcmp"}]
+
+
+def test_o_kcmp_que_nao_responde_e_nao_sei(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(hb, "_SYS_KCMP", None)
+    assert hb.FsAclOps._mesma_descricao(1, 3, 2, 4) is None
 
 
 def test_a_volta_nao_repete_o_revoke_nem_a_linha_do_diario(tmp_path: Path) -> None:
