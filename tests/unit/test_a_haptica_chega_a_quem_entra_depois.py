@@ -22,7 +22,6 @@ from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
     MAPA,
     VOLUME_ABERTO,
-    VOLUME_FECHADO,
     HapticaDoCabo,
     chave_do_aparelho,
     no_de_captura,
@@ -312,7 +311,6 @@ class _Mesa:
     sysfs: Path
     assentos: dict[str, int] = field(default_factory=dict)
     placas: dict[str, str] = field(default_factory=dict)
-    jogando: set[str] = field(default_factory=set)
     lidos: list[tuple[str, str]] = field(default_factory=list)
 
     def volta(self, *controles: _Controle) -> None:
@@ -347,12 +345,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
 
     monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
-    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, c: set())
     monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: False)
-    monkeypatch.setattr(
-        mod.AltoFalanteSubsystem, "_quem_mexeu_na_partida",
-        lambda self, c: {u.lower() for u in m.jogando},
-    )
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem, "numero_do_assento", lambda self, u: m.assentos.get(u)
     )
@@ -464,22 +457,17 @@ def test_o_cabo_com_endpoint_ancorado_nao_tem_bloco_proprio(mesa: _Mesa) -> None
     assert len(instancias) == 1
 
 
-def test_so_quem_mexeu_vibra_no_cabo_e_o_alto_falante_passa_nos_dois(mesa: _Mesa) -> None:
-    """Dois no cabo, o mesmo sinal nos dois endpoints, e só o P2 mexeu."""
+def test_cada_um_no_cabo_recebe_o_sinal_do_seu_endpoint_sem_esperar_o_toque(mesa: _Mesa) -> None:
+    """Dois no cabo, o mesmo sinal nos dois endpoints, e ninguém tocou em nada: os dois recebem."""
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
     mesa.servidor.jogo_em.update({eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)})
-    mesa.jogando.add(_P2)
     mesa.volta(p1, p2)
-    um = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P1)]
-    dois = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(_P2)]
-    assert um == [VOLUME_ABERTO, VOLUME_ABERTO, VOLUME_FECHADO, VOLUME_FECHADO], (
-        f"o P1 parado vibrou: {um}"
-    )
     aberto = f"{HAPTICA_PCT_PADRAO / 100:.4f}"
-    assert dois == [VOLUME_ABERTO, VOLUME_ABERTO, aberto, aberto], (
-        f"o P2 na mão não vibrou: {dois}"
-    )
+    esperado = [VOLUME_ABERTO, VOLUME_ABERTO, aberto, aberto]
+    for u in (_P1, _P2):
+        volumes = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(u)]
+        assert volumes == esperado, f"o {u} não recebeu o sinal do jogo: {volumes}"
     for _chave_do_laco, captura, destino, canais, mapa in mesa.lacos.ligacoes:
         assert (canais, mapa) == (4, MAPA), "o laço não leva os quatro canais um a um"
         assert captura.isdigit() and destino.isdigit(), "o laço pelo nome cai na fonte padrão"
@@ -504,7 +492,6 @@ def test_a_volta_parada_nao_escreve_no_servidor(
     p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
     p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
     mesa.servidor.jogo_em.update({eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)})
-    mesa.jogando.add(_P2)
     servidor = mesa.servidor
     feitas: list[list[str]] = []
     original = servidor.__class__.__call__
@@ -760,7 +747,6 @@ def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_de_ela_descer(
     um = _Controle(_P1, "bt", "/dev/hidraw1")
     nome_do_1 = eh.nome_do_endpoint(_P1)
     mesa.servidor.jogo_em.add(nome_do_1)
-    mesa.jogando.add(_P1)
     mesa.volta(um)
     ancora_de_antes = _ancora_do_aparelho(mesa.servidor, _P1)
     servidor = mesa.servidor
@@ -1030,7 +1016,6 @@ def test_com_o_gadget_estacionado_o_endpoint_do_radio_fica_e_a_ponte_renasce(
     """
     porta.dar_porta(_P4, 4)
     mesa.assentos[_P4] = 4
-    mesa.jogando.add(_P4)
     no_do_p4 = eh.nome_do_endpoint(_P4)
     mesa.servidor.jogo_em.add(no_do_p4)
     p4 = _Controle(_P4, "bt", "/dev/hidraw4")

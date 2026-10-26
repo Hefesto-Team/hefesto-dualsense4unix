@@ -1756,3 +1756,58 @@ Quem mexe primeiro fica com a navegação até ficar parado por `PRAZO_DO_DONO_S
 fazem nesse tempo se perde (não volta depois). O Start fica de fora: ele guarda o perfil de todos, de qualquer
 controle (a escolha de 22/10). A trava (`ligada` falsa, escrita pelo botão da moldura de toda aba pelo
 `navegacao.interna.set`) cala todos no daemon: nenhum toque se conta, nenhum botão sai do jogo e a janela não navega.
+
+## haptica_do_cabo
+
+`src/hefesto_dualsense4unix/integrations/haptica_do_cabo.py (docstring do módulo)`. O laço do cabo, do endpoint do aparelho à placa, sem portão de quem mexe (26/10/2026).
+
+~~~~text
+A háptica do cabo passa pelo endpoint do aparelho — A-HAPTICA-E-POR-APARELHO-01.
+
+**O QUE MUDOU, 28/09/2026.** Pelo cabo o jogo tocava direto na placa de som do
+controle, e o registro que o jogo lê (o device KS do prefixo) levava o
+``BUSNUM-DEVNUM`` DAQUELE aparelho naquele instante: o cabo que chegava com o
+jogo aberto não tinha bloco, e o que caía por ``-71`` e voltava com outro
+``DEVNUM`` ficava com um bloco que não casava mais. E a escolha (b) dela
+(``D-2709-A-VIBRACAO-VAI-A-QUEM-TEM-O-CONTROLE``: vibra quem está com o
+controle na mão, no cabo e no rádio) não tinha onde se aplicar no cabo.
+**Caducou em 26/10/2026**: o jogo manda e o controle obedece.
+
+O jogo casa o endpoint do APARELHO (``endpoint_de_haptica``, um por DualSense
+desde 02/10/2026; de 28/09 a 02/10 era um por lugar), e este módulo o leva à
+placa do controle: UM laço por controle no cabo, do monitor do endpoint à
+placa, nos quatro canais, pelo dono dos laços
+(``integrations/laco_de_audio.Lacos``, ``LATENCIA_MS``). A chave do laço é a
+marca do aparelho: renumerar a mesa não troca laço nenhum, e quando o cabo
+volta com outro ``DEVNUM`` o laço aponta para a placa nova e o bloco do
+aparelho não muda.
+
+O QUE O JOGO TOCA NO ENDPOINT DE UM CONTROLE CHEGA A ELE (A-HAPTICA-E-DO-JOGO-
+SEM-PORTAO-DE-QUEM-MEXE-01, 26/10/2026): os quatro canais passam, os traseiros
+(os motores) pelo ganho do controle. Não há portão de quem mexeu: o jogo
+individualizado toca em cada endpoint o que é de cada um, e o jogo de um
+jogador que toca em todos chega a todos. O ganho é o volume do fluxo do laço
+na placa (``1.0000 1.0000 G G``), e não dois laços: um laço de dois canais
+``[ FL FR ]`` lendo um monitor de quatro faria o PipeWire misturar os
+traseiros na frente, e o motor tocaria no alto-falante.
+
+O ALVO É O ``object.serial``, E NÃO O NOME (:func:`alvo_do_no`): pedido pelo
+nome do monitor, o PipeWire liga o fluxo de captura à FONTE PADRÃO sem erro
+nenhum — a fonte padrão desta máquina é o microfone do controle, e foi assim
+que a ponte do rádio mandou a voz do usuário ao alto-falante (SOM-ECO-02, medido em
+16/09/2026, ``alto_falante_bt.argv_do_gravador``). Pela mesma razão, quem
+derruba o endpoint de um aparelho solta o laço dele ANTES (:meth:`soltar`): um
+laço cujo alvo some pode ser religado à fonte padrão.
+
+E PEDIR SEM CONFERIR É A FORMA DO DEFEITO (a outra metade da SOM-ECO-02): na
+volta seguinte à que ligou o laço, o lado de captura dele é conferido no grafo
+(``alto_falante_bt.conferir_o_alvo_do_gravador``). Ligado a outro nó que não o
+endpoint do aparelho, o laço cai e aquela rota não se religa — a voz do usuário nunca
+vai à placa do controle. Sem conseguir olhar, o laço fica e a volta seguinte
+olha de novo: derrubar por não ter olhado trocaria um defeito raro por um mudo
+garantido.
+
+**O que não se mediu aqui:** o atraso do laço no controle na mão (o critério
+de pronto pede dentro dos 50 ms do dono dos laços) e a vibração com o jogo
+aberto. As duas são a prova no aparelho, e são do usuário.
+~~~~

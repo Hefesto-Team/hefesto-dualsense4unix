@@ -1930,7 +1930,6 @@ class CoopManager:
         com_filtro = alguma_filtro(store)
         com_curva = alguma_curva(store)
         arranjo_de_movimento = roteador_ativo(store)
-        marcas = marcas_da_partida(self._daemon)
         for player in list(self._players.values()):
             if player.vpad is None or self._espera(player):
                 continue
@@ -1966,10 +1965,6 @@ class CoopManager:
                 botoes, soltos = levar_o_big_picture(
                     self._daemon, player.identity, botoes, soltos
                 )
-                if marcas is not None:
-                    marcas.anotar(
-                        player.identity, botoes=botoes, lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2
-                    )
                 if arranjo_de_movimento is not None:
                     botoes, l2 = aplicar_o_toque(
                         self._daemon,
@@ -2844,9 +2839,6 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
 from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (  # noqa: E402
     roubar_o_que_navega,
 )
-from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import (  # noqa: E402
-    marcas_da_partida,
-)
 
 
 def _numeros_sem_vpad(
@@ -2862,7 +2854,7 @@ def _numeros_sem_vpad(
     - **Conexão Nativa (Sony)**: o jogo abre o controle FÍSICO e fala direto com
       ele. Não há intermediário, mas há controle na mão de alguém, e o número
       dele **já está calculado** — o ``identity_registry`` é chaveado pelo MAC e
-      não consulta modo nenhum (``daemon/lifecycle.py:4281-4282`` roda o
+      não consulta modo nenhum (``daemon/lifecycle.py:4300-4301`` roda o
       ``_sync_identity_registry`` antes do gate de conexão, a cada 2 s). Era
       dado pronto que a tela não publicava.
 

@@ -127,7 +127,6 @@ EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
     # A borda de cada peça do som e da háptica que vai e volta: a rajada de um controle.
     "haptica_fina_saiu": ("controle",),
     "haptica_fina_de_pe": ("controle",),
-    "haptica_portao_fechado": ("uniq",),
     "som_radio_sem_ponte": ("uniq",),
     "som_radio_ponte_saiu": ("uniq",),
     "som_ponte_ganha_a_haptica": (),

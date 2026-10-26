@@ -203,15 +203,8 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
     )
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
-    monkeypatch.setattr(
-        mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()
-    )
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_donos_dos_fluxos", lambda self: frozenset())
     monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: False)
-    monkeypatch.setattr(
-        mod.AltoFalanteSubsystem, "_quem_mexeu_na_partida",
-        lambda self, controles: {
-            str(getattr(c, "uniq", "")).lower() for c in controles},
-    )
 
     class _Ger:
         def reconciliar(self, *_a: Any, **_k: Any) -> None:

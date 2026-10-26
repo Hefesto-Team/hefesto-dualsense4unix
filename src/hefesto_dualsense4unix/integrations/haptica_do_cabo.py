@@ -1,53 +1,16 @@
 """A háptica do cabo passa pelo endpoint do aparelho — A-HAPTICA-E-POR-APARELHO-01.
 
-**O QUE MUDOU, 28/09/2026.** Pelo cabo o jogo tocava direto na placa de som do
-controle, e o registro que o jogo lê (o device KS do prefixo) levava o
-``BUSNUM-DEVNUM`` DAQUELE aparelho naquele instante: o cabo que chegava com o
-jogo aberto não tinha bloco, e o que caía por ``-71`` e voltava com outro
-``DEVNUM`` ficava com um bloco que não casava mais. E a escolha (b) dela
-(``D-2709-A-VIBRACAO-VAI-A-QUEM-TEM-O-CONTROLE``: vibra quem está com o
-controle na mão, no cabo e no rádio) não tinha onde se aplicar no cabo.
-
-O jogo casa o endpoint do APARELHO (``endpoint_de_haptica``, um por DualSense
-desde 02/10/2026; de 28/09 a 02/10 era um por lugar), e este módulo o leva à
-placa do controle: UM laço por controle no cabo, do monitor do endpoint à
-placa, nos quatro canais, pelo dono dos laços
-(``integrations/laco_de_audio.Lacos``, ``LATENCIA_MS``). A chave do laço é a
-marca do aparelho: renumerar a mesa não troca laço nenhum, e quando o cabo
-volta com outro ``DEVNUM`` o laço aponta para a placa nova e o bloco do
-aparelho não muda.
-
-A (b) NO CABO É O PORTÃO DO RÁDIO: os canais traseiros (os motores) passam só
-para quem joga; os da frente (o alto-falante) passam sempre. O portão é o
-volume do fluxo do laço na placa (``1.0000 1.0000 0.0000 0.0000`` para quem não
-joga), e não dois laços: um laço de dois canais ``[ FL FR ]`` lendo um monitor de
-quatro faria o PipeWire misturar os traseiros na frente, e o motor tocaria no
-alto-falante.
-
-O ALVO É O ``object.serial``, E NÃO O NOME (:func:`alvo_do_no`): pedido pelo
-nome do monitor, o PipeWire liga o fluxo de captura à FONTE PADRÃO sem erro
-nenhum — a fonte padrão desta máquina é o microfone do controle, e foi assim
-que a ponte do rádio mandou a voz do usuário ao alto-falante (SOM-ECO-02, medido em
-16/09/2026, ``alto_falante_bt.argv_do_gravador``). Pela mesma razão, quem
-derruba o endpoint de um aparelho solta o laço dele ANTES (:meth:`soltar`): um
-laço cujo alvo some pode ser religado à fonte padrão.
-
-E PEDIR SEM CONFERIR É A FORMA DO DEFEITO (a outra metade da SOM-ECO-02): na
-volta seguinte à que ligou o laço, o lado de captura dele é conferido no grafo
-(``alto_falante_bt.conferir_o_alvo_do_gravador``). Ligado a outro nó que não o
-endpoint do aparelho, o laço cai e aquela rota não se religa — a voz do usuário nunca
-vai à placa do controle. Sem conseguir olhar, o laço fica e a volta seguinte
-olha de novo: derrubar por não ter olhado trocaria um defeito raro por um mudo
-garantido.
-
-**O que não se mediu aqui:** o atraso do laço no controle na mão (o critério
-de pronto pede dentro dos 50 ms do dono dos laços) e a vibração com o jogo
-aberto. As duas são a prova no aparelho, e são do usuário.
+O jogo toca no endpoint do APARELHO (um por DualSense), e este módulo o leva à placa do
+controle: UM laço por controle no cabo, do monitor do endpoint à placa, nos quatro canais
+(``integrations/laco_de_audio.Lacos``). Não há portão de quem mexeu: os traseiros (os motores)
+levam o ganho do controle, ``1.0000 1.0000 G G``, e a frente passa cheia. O alvo do laço é o
+``object.serial`` (:func:`alvo_do_no`), nunca o nome; a história está em
+``docs/research/o-porque-dos-modulos.md``, seção ``haptica_do_cabo``.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -67,18 +30,15 @@ MAPA = "[ FL FR RL RR ]"
 #: Os quatro canais do fluxo do laço vão em FATOR LINEAR, e nunca em ``%``: os
 #: motores levam o ganho em fator, e o ``pactl`` recusa o comando que mistura as
 #: duas unidades (``Inconsistent volume specification.``, antes de falar com o
-#: servidor). Com a frente em ``100%`` o portão só fechava: do ``d61af1907``
+#: servidor). Com a frente em ``100%`` o volume só fechava: do ``d61af1907``
 #: (14/10, 12h51) à rodada 1 da bancada, nenhum motor do laço abriu no cabo.
 VOLUME_ABERTO = "1.0000"
-VOLUME_FECHADO = "0.0000"
 
 _LACOS = Lacos(FAMILIA_DO_LACO_DO_CABO)
 
 
-def volume_dos_motores(aberto: bool, ganho: float) -> str:
-    """O volume dos traseiros do fluxo do laço: fechado é zero, aberto é o ganho linear."""
-    if not aberto:
-        return VOLUME_FECHADO
+def volume_dos_motores(ganho: float) -> str:
+    """O volume dos traseiros do fluxo do laço: o ganho linear do controle."""
     return f"{max(float(ganho), 0.0):.4f}"
 
 
@@ -119,8 +79,8 @@ class HapticaDoCabo:
     """Os laços do cabo, um por DualSense no cabo, pela marca do aparelho.
 
     O estado do laço é do PROCESSO (o dono dos laços pergunta ao ``poll()``); o
-    que se guarda aqui é só o que cada laço foi pedido para ligar e o portão
-    que já se aplicou — para não reescrever o volume a cada volta.
+    que se guarda aqui é só o que cada laço foi pedido para ligar e o volume
+    que já se aplicou — para não reescrevê-lo a cada volta.
     """
 
     def __init__(
@@ -136,7 +96,6 @@ class HapticaDoCabo:
         self._pactl = pactl
         self._conferir_alvo = conferir
         self._rotas: dict[str, RotaDoCabo] = {}
-        self._portao: dict[str, bool] = {}
         self._motores: dict[str, str] = {}
         self._conferidos: set[str] = set()
         self._recusadas: dict[str, RotaDoCabo] = {}
@@ -146,22 +105,20 @@ class HapticaDoCabo:
         """As marcas com laço pedido, e a rota de cada uma. Leitura."""
         return dict(self._rotas)
 
-    def portao(self, marca: str) -> bool | None:
-        """O portão aplicado ao laço do aparelho: aberto, fechado ou ``None`` (não aplicado)."""
-        return self._portao.get(marca)
+    def volume_aplicado(self, marca: str) -> bool:
+        """O volume dos motores já foi aplicado ao laço do aparelho?"""
+        return marca in self._motores
 
     def casar(
         self,
         rotas: Mapping[str, RotaDoCabo],
-        abertos: Iterable[str],
         ganhos: Mapping[str, float] | None = None,
     ) -> None:
-        """Os laços ficam os de ``rotas``, e os motores abertos os de ``abertos``.
+        """Os laços ficam os de ``rotas``, e os motores de cada um vão no ganho da marca.
 
         ``ganhos`` é o fator linear da háptica de cada marca (o ``GANHO`` do dono
-        dela); sem ele, os motores abertos vão a 1,0.
+        dela); sem ele, os motores vão a 1,0.
         """
-        querem_abrir = set(abertos)
         ganho_de = dict(ganhos or {})
         for marca in [n for n in self._rotas if n not in rotas]:
             self.soltar(marca)
@@ -182,12 +139,10 @@ class HapticaDoCabo:
                     continue
                 self._rotas[marca] = rota
                 logger.info("haptica_do_cabo_laco_de_pe", controle=marca)
-            aberto = marca in querem_abrir
-            motores = volume_dos_motores(aberto, ganho_de.get(marca, 1.0))
-            if (
-                self._portao.get(marca) is not aberto or self._motores.get(marca) != motores
-            ) and self._aplicar_o_portao(marca, aberto, motores, dono=rota.dono):
-                self._portao[marca] = aberto
+            motores = volume_dos_motores(ganho_de.get(marca, 1.0))
+            if self._motores.get(marca) != motores and self._aplicar_o_volume(
+                marca, motores, dono=rota.dono
+            ):
                 self._motores[marca] = motores
 
     def _conferir(self, marca: str, rota: RotaDoCabo) -> bool:
@@ -215,10 +170,8 @@ class HapticaDoCabo:
         self._recusadas[marca] = rota
         return False
 
-    def _aplicar_o_portao(
-        self, marca: str, aberto: bool, motores: str, *, dono: str = ""
-    ) -> bool:
-        """O volume do fluxo do laço na placa: a frente cheia, os motores pelo portão e pelo ganho.
+    def _aplicar_o_volume(self, marca: str, motores: str, *, dono: str = "") -> bool:
+        """O volume do fluxo do laço na placa: a frente cheia, os motores pelo ganho.
 
         É o único lugar do cabo onde mora o ganho da háptica (OS-QUATRO-EM-HARMONIA-01,
         item 1): o volume por canal de um FLUXO é do conversor dele, e não do nó ALSA.
@@ -247,16 +200,15 @@ class HapticaDoCabo:
             "haptica_do_cabo_portao",
             controle=marca,
             uniq=dono,
-            motores_abertos=aberto,
             motores=motores,
         )
         return True
 
     def _dizer_a_falha(self, marca: str, dono: str, motivo: str, motores: str) -> bool:
-        """O portão que não se aplicou deixa rastro em ``info``, uma linha por mudança.
+        """O volume que não se aplicou deixa rastro em ``info``, uma linha por mudança.
 
-        A volta tenta de novo a cada passada; sem esta linha, o portão preso
-        fechado (o de 14/10) não aparecia no diário.
+        A volta tenta de novo a cada passada; sem esta linha, o volume preso
+        em zero (o de 14/10) não aparecia no diário.
         """
         if self._falhas.get(marca) != (motivo, motores):
             self._falhas[marca] = (motivo, motores)
@@ -275,7 +227,6 @@ class HapticaDoCabo:
         self._falhas.pop(marca, None)
         if self._rotas.pop(marca, None) is not None:
             logger.info("haptica_do_cabo_laco_solto", controle=marca)
-        self._portao.pop(marca, None)
         self._motores.pop(marca, None)
         self._conferidos.discard(marca)
 
@@ -289,7 +240,6 @@ __all__ = [
     "CANAIS",
     "MAPA",
     "VOLUME_ABERTO",
-    "VOLUME_FECHADO",
     "HapticaDoCabo",
     "RotaDoCabo",
     "alvo_do_no",

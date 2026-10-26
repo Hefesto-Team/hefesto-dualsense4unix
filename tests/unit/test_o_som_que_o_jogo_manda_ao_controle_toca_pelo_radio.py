@@ -275,8 +275,6 @@ class TestADecisaoDaPonteContaAFrenteComoSom:
         sala.fonte(endpoint).quadro = FRENTE[:8]
         sala.servidor.tocar(endpoint, FORJA)
         sala.volta()
-        sala.mexer(P1)
-        sala.volta()
         sala.esperar(af.no_da_frente(endpoint), True)
         sala.volta()
         assert sala.leva(P1) is False, "a vibração em 0 não devia levar a háptica"
@@ -291,8 +289,6 @@ class TestADecisaoDaPonteContaAFrenteComoSom:
         sala.fonte(endpoint).quadro = MOTORES[:8]
         sala.servidor.tocar(endpoint, FORJA)
         sala.volta()
-        sala.mexer(P1)
-        sala.volta()
         sala.esperar(endpoint, True)
         sala.volta()
         assert P1 not in sala.sub._pontes, "motor com a vibração em 0 subiu ponte"
@@ -303,7 +299,5 @@ class TestADecisaoDaPonteContaAFrenteComoSom:
         endpoint = no_do(P1)
         sala.fonte(endpoint).quadro = AMBOS[:8]
         sala.abrir_a_sala(P1)
-        sala.volta()
-        sala.mexer(P1)
         sala.volta()
         sala.esperar_o_fio(P1, som=True, haptica=True)

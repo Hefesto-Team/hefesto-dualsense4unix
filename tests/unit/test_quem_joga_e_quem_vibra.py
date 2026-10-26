@@ -180,8 +180,8 @@ class TestADobraDoVpad:
         ) == set()
 
 
-class TestOGateEstaLigado:
-    """*A cura escrita e nunca ligada* é o defeito mais caro desta casa."""
+class TestONaoHaPortaoDeQuemMexe:
+    """O subsystem não consulta mais quem joga: o jogo manda, o controle obedece."""
 
     def _corpo(self) -> str:
         fonte = pathlib.Path(
@@ -190,32 +190,22 @@ class TestOGateEstaLigado:
         corpo = fonte[fonte.index("def _casar_as_pontes") :]
         return corpo[: corpo.index("\n    def ", 1)]
 
-    def test_o_subsystem_consulta_quem_joga_antes_de_decidir_a_haptica(self) -> None:
-        """MORDIDA: tire a chamada a `_quem_mexeu_na_partida` (o voto e a"""
+    def test_a_volta_nao_consulta_quem_joga(self) -> None:
+        """MORDIDA: devolva a consulta de quem mexeu à condição da háptica."""
         corpo = self._corpo()
-        antes = corpo[: corpo.index("leva = bool(")]
-        assert "jogando = self._quem_mexeu_na_partida(controles)" in antes, (
-            "o voto de quem joga não é consultado dentro de `_casar_as_pontes`"
-        )
+        assert "este_joga" not in corpo, "o portão de quem mexe voltou à volta do rádio"
+        assert "_quem_mexeu_na_partida" not in corpo
         assert "self._quem_o_jogo_le(controles)" not in corpo, (
             "a varredura de /proc voltou a rodar a cada volta"
         )
 
-    def test_a_haptica_no_fio_exige_os_dois_sinais(self) -> None:
-        """O canal aberto E aquele controle jogando (mexeu desde que o jogo abriu).
-
-        Desde 03/10/2026 (O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01) não há modo: o
-        portão decide se o bloco da háptica vai no relatório combinado.
-        """
+    def test_a_haptica_no_fio_exige_so_o_canal_aberto_e_o_ganho(self) -> None:
+        """Desde 03/10/2026 não há modo; desde 26/10/2026 não há portão de toque."""
         corpo = self._corpo()
         i = corpo.index("leva = bool(")
-        condicao = corpo[i : corpo.index("\n            )", i)]
-        assert "este_joga" in condicao, "o gate saiu da condição da háptica"
+        condicao = corpo[i : corpo.index("\n", i)]
         assert "endpoint_aberto" in condicao, "o canal saiu da condição da háptica"
-        assert (
-            "endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)"
-            in corpo
-        )
+        assert "este_joga" not in condicao
         assert "som_toca" not in condicao, "o alto-falante voltou a decidir a háptica"
 
 

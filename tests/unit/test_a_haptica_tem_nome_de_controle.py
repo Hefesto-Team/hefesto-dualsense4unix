@@ -481,7 +481,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, assentos: _Assentos) -> _Mesa:
     )
     monkeypatch.setattr(som, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
-    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, c: set())
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_donos_dos_fluxos", lambda self: frozenset())
     monkeypatch.setattr(som, "sink_do_controle", lambda *_a, **_k: "")
 
     class _Ger:
@@ -564,6 +564,7 @@ def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos: _Assent
     mesa.volta()
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 4{_SONY}"
     mesa.servidor.jogo_em.clear()
+    mesa.volta()  # a ponte que o fluxo levantou desce nesta volta; o rótulo vem na seguinte
     mesa.volta()
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 2{_SONY}"
 

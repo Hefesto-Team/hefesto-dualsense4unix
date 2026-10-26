@@ -77,7 +77,7 @@ class _CaboDeMentira:
         self.escritas.append(list(argv))
         return ""
 
-    def volta(self, dono: GanhoDaHaptica, uniqs: list[str], *, abertos: bool = True) -> None:
+    def volta(self, dono: GanhoDaHaptica, uniqs: list[str]) -> None:
         from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 
         rotas = {
@@ -88,7 +88,7 @@ class _CaboDeMentira:
             ganhos = mod.AltoFalanteSubsystem._ganhos_das_rotas(rotas)
         finally:
             mod.GANHO = original
-        self.cabo.casar(rotas, set(rotas) if abertos else set(), ganhos)
+        self.cabo.casar(rotas, ganhos)
 
     def motores(self, uniq: str) -> list[float]:
         """Os traseiros que o fluxo do laço DESTE controle recebeu por último."""
@@ -196,11 +196,6 @@ class TestNoCaboOGanhoMoraNoFluxoDoLaco:
     def test_desligada_cala_os_motores_do_laco(self) -> None:
         mesa = _CaboDeMentira()
         mesa.volta(_dono(branco=0), [BRANCO])
-        assert mesa.motores(BRANCO) == [0.0, 0.0]
-
-    def test_o_portao_fechado_vence_o_ganho(self) -> None:
-        mesa = _CaboDeMentira()
-        mesa.volta(_dono(branco=150), [BRANCO], abertos=False)
         assert mesa.motores(BRANCO) == [0.0, 0.0]
 
     def test_mudar_o_deslizante_reescreve_e_repetir_nao(self) -> None:
@@ -626,7 +621,6 @@ def test_pelo_radio_a_haptica_desligada_deixa_o_radio_com_o_alto_falante(
     sala.volta()
     for uniq in (P3, P4):
         sala.esperar(no_do(uniq), True)
-    sala.mexer(P3, P4)
     sala.volta()
     assert sala.leva(P3) is True
     assert sala.leva(P4) is False, (
@@ -651,7 +645,6 @@ def test_no_radio_a_luz_e_a_ponte_em_haptica_com_sinal(
     sala.abrir_a_sala(P2)
     sala.volta()
     sala.esperar(endpoint, True)
-    sala.mexer(P2)
     sala.volta()
     assert sala.leva(P2) is True
     sala.esperar(endpoint, True)
@@ -723,7 +716,7 @@ def test_a_volta_do_cabo_casa_o_ouvido_da_placa(monkeypatch: pytest.MonkeyPatch)
         SimpleNamespace(uniq=BRANCO, transporte="usb", caminho="/dev/hidraw40"),
         SimpleNamespace(uniq=PRETO, transporte="usb", caminho="/dev/hidraw41"),
     ]
-    sub._casar_o_cabo(controles, set(), [PLACA_BRANCO, PLACA_PRETO])
+    sub._casar_o_cabo(controles, [PLACA_BRANCO, PLACA_PRETO])
     assert sorted(subidos) == sorted([(BRANCO, PLACA_BRANCO), (PRETO, PLACA_PRETO)])
 
 

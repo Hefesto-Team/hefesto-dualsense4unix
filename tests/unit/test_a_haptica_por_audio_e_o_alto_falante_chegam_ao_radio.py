@@ -156,14 +156,6 @@ class Mesa:
             self.servidor.tocar(af.nome_do_sink(uniq), FORJA)
             self.servidor.tocar(no_do(uniq), FORJA)
 
-    def mexer(self, *quem: str) -> None:
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
-
-        marcas = quem_mexe_de(self.daemon)
-        assert marcas is not None and marcas.jogo_aberto, "a partida não abriu"
-        for uniq in quem:
-            marcas.marcar(uniq)
-
     def volta(self) -> None:
         self.sub._casar_as_pontes(self.controles())
 
@@ -236,7 +228,6 @@ def test_o_canto_pelo_radio_vai_ao_fio_com_a_haptica_aberta_e_muda(sala: Mesa) -
     sala.volta()
     primeira = sala.ponte(P1)
     sala.esperar(som, True)
-    sala.mexer(P1)
     sala.volta()
     assert sala.ponte(P1) is primeira, "a partida derrubou a ponte do canto"
     assert sala.leva(P1) is True, "quem joga recebe a háptica junto com o som"
@@ -255,7 +246,6 @@ def test_o_canto_que_comeca_com_a_haptica_tocando_vai_junto_com_ela(sala: Mesa) 
     sala.abrir_a_sala(P2)
     sala.volta()
     sala.esperar(endpoint, True)
-    sala.mexer(P2)
     sala.volta()
     primeira = sala.ponte(P2)
     sala.esperar_o_fio(P2, som=False, haptica=True)
@@ -277,7 +267,6 @@ def test_a_voz_nos_canais_da_frente_do_endpoint_nao_e_haptica(sala: Mesa) -> Non
     sala.abrir_a_sala(P3)
     sala.volta()
     sala.esperar(endpoint, False)
-    sala.mexer(P3)
     sala.volta()
     assert sala.leva(P3) is True
     sala.esperar_o_fio(P3, som=True, haptica=False)
@@ -289,13 +278,10 @@ def test_a_haptica_com_sinal_e_o_alto_falante_mudo_vai_so_a_haptica(sala: Mesa) 
     sala.fonte(endpoint).quadro = MOTOR
     sala.abrir_a_sala(P4)
     sala.volta()
-    assert sala.leva(P4) is False, "ninguém mexeu: o portão segura a háptica"
+    assert sala.leva(P4) is True, "o jogo toca no endpoint: a háptica chega sem toque"
     sala.esperar(som, False)
     sala.esperar(endpoint, True)
-    sala.esperar_o_fio(P4, som=False, haptica=False, prazo_s=0.3)
-    sala.mexer(P4)
     sala.volta()
-    assert sala.leva(P4) is True
     sala.esperar_o_fio(P4, som=False, haptica=True)
 
 
@@ -306,7 +292,6 @@ def test_o_alto_falante_calado_e_a_haptica_que_chega_sem_derrubar_a_ponte(sala: 
     sala.abrir_a_sala(P1)
     sala.volta()
     sala.esperar(som, True)
-    sala.mexer(P1)
     sala.volta()
     primeira = sala.ponte(P1)
     sala.esperar(endpoint, False)
@@ -357,7 +342,6 @@ def test_tiro_e_fala_alternados_nao_trocam_a_ponte(
     som, endpoint = af.nome_do_sink(P2), no_do(P2)
     sala.abrir_a_sala(P2)
     sala.volta()
-    sala.mexer(P2)
     ouvir_o_som = af.fonte_que_ouve(lambda n: VOZ * (n // 4), som)
     calar_o_som = af.fonte_que_ouve(lambda n: bytes(n), som)
     ouvir_o_motor = af.fonte_que_ouve(
@@ -474,7 +458,6 @@ def test_a_ponte_do_som_que_subiu_antes_do_endpoint_ganha_a_haptica(sala: Mesa) 
     segunda = sala.ponte(P4)
     assert segunda is not primeira and segunda.le_a_haptica is True
     sala.esperar(endpoint, False)
-    sala.mexer(P4)
     sala.volta()
     assert sala.ponte(P4) is segunda, "a partida derrubou a ponte de novo"
     sala.esperar_o_fio(P4, som=True, haptica=False)

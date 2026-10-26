@@ -46,8 +46,8 @@ class _Lacos:
         self.ligados.discard(chave)
 
 
-def _portoes(aberto: bool, ganho: float) -> list[list[str]]:
-    """Os comandos que o portão manda ao ``pactl`` para um controle, aberto ou não."""
+def _portoes(ganho: float) -> list[list[str]]:
+    """Os comandos que o laço manda ao ``pactl`` para um controle."""
     escritas: list[list[str]] = []
 
     def pactl(argv: list[str]) -> str:
@@ -55,23 +55,23 @@ def _portoes(aberto: bool, ganho: float) -> list[list[str]]:
         return ""
 
     cabo = HapticaDoCabo(_Lacos(), indice_do_fluxo=lambda _no: "61178", pactl=pactl)
-    cabo.casar({_MARCA: _ROTA}, {_MARCA} if aberto else set(), {_MARCA: ganho})
+    cabo.casar({_MARCA: _ROTA}, {_MARCA: ganho})
     return escritas
 
 
-_CASOS = [(True, 1.0), (True, 2.0), (True, 0.3), (True, 0.0), (False, 2.0)]
+_CASOS = [1.0, 2.0, 0.3, 0.0]
 
 
-@pytest.mark.parametrize(("aberto", "ganho"), _CASOS)
-def test_os_quatro_canais_vao_na_mesma_unidade(aberto: bool, ganho: float) -> None:
+@pytest.mark.parametrize("ganho", _CASOS)
+def test_os_quatro_canais_vao_na_mesma_unidade(ganho: float) -> None:
     """MORDIDA: devolva ``VOLUME_ABERTO = "100%"`` e os portões abertos reprovam."""
-    (argv,) = _portoes(aberto, ganho)
+    (argv,) = _portoes(ganho)
     assert pj.o_pactl_aceita_os_volumes(argv[3:]), f"o pactl recusa {argv[3:]}"
 
 
 def test_duzentos_por_cento_sai_como_fator_dois() -> None:
     """A háptica a 200 % chega ao fluxo como 2,0 nos motores: nem satura a 1, nem vira 0."""
-    (argv,) = _portoes(True, 2.0)
+    (argv,) = _portoes(2.0)
     assert argv[3:] == ["1.0000", "1.0000", "2.0000", "2.0000"]
 
 
@@ -85,17 +85,17 @@ def test_a_falha_do_portao_deixa_rastro_em_info_uma_vez() -> None:
     cabo = HapticaDoCabo(_Lacos(), indice_do_fluxo=lambda _no: "61178", pactl=pactl)
     with structlog.testing.capture_logs() as diario:
         for _ in range(3):
-            cabo.casar({_MARCA: _ROTA}, {_MARCA}, {_MARCA: 1.0})
+            cabo.casar({_MARCA: _ROTA}, {_MARCA: 1.0})
     falhas = [r for r in diario if r["event"] == "haptica_do_cabo_portao_falhou"]
     assert [(r["log_level"], r["uniq"], r["motivo"]) for r in falhas] == [
         ("info", _BRANCO, "pactl_recusou")
     ], "a recusa sai uma vez, e não a cada volta"
-    assert cabo.portao(_MARCA) is True, "a volta seguinte tentou de novo e abriu"
+    assert cabo.volume_aplicado(_MARCA) is True, "a volta seguinte tentou de novo e abriu"
 
 
 def test_sem_o_fluxo_do_laco_a_falha_diz_o_motivo() -> None:
     cabo = HapticaDoCabo(_Lacos(), indice_do_fluxo=lambda _no: None, pactl=lambda _a: "")
     with structlog.testing.capture_logs() as diario:
-        cabo.casar({_MARCA: _ROTA}, {_MARCA}, {_MARCA: 1.0})
+        cabo.casar({_MARCA: _ROTA}, {_MARCA: 1.0})
     motivos = [r["motivo"] for r in diario if r["event"] == "haptica_do_cabo_portao_falhou"]
     assert motivos == ["sem_fluxo_do_laco"]

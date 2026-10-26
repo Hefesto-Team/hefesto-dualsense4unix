@@ -209,7 +209,6 @@ def test_o_pad_uhid_com_a_haptica_do_jogo_tocando_vibra_como_audio(
     ``uhid`` segue ao HID com a háptica do jogo tocando, calando-a.
     """
     controles = _montar(mundo, transporte)
-    mundo.mesa.jogando.add(uniq)
     mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(uniq))
     mundo.mesa.volta(*controles)
     assert mundo.sub.o_jogo_toca_a_haptica_em(uniq), "a háptica do jogo não chegou ao controle"
@@ -254,7 +253,6 @@ def test_a_haptica_que_comeca_com_o_rumble_em_curso_passa_o_motor_ao_audio(
     mundo.rumble(uniq, 100, 200, vpad=UhidDualSense(player=1))
     assert mundo.backend.do(uniq)[-1] == (100, 200)
 
-    mundo.mesa.jogando.add(uniq)
     mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(uniq))
     mundo.mesa.volta(*controles)
 

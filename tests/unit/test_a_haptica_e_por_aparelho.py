@@ -83,7 +83,6 @@ def test_renumerar_a_mesa_nao_troca_o_endpoint_a_ponte_nem_o_laco(
     p2, p3 = _Controle(_P2, "bt", "/dev/hidraw2"), _Controle(_P3, "bt", "/dev/hidraw3")
     mesa.assentos.update({_P2: 2, _P3: 3})
     mesa.servidor.jogo_em.update(eh.nome_do_endpoint(u) for u in (_P1, _P2, _P3))
-    mesa.jogando.update({_P1, _P2, _P3})
     mesa.volta(p1, p2, p3)
     antes = _identidade(mesa, _P3)
     ponte_do_p3 = mesa.sub._pontes[_P3]
@@ -109,7 +108,6 @@ def test_o_aparelho_que_passa_do_cabo_ao_radio_fica_com_o_endpoint(
 ) -> None:
     """A MATRIZ, última linha: o P1 sai do cabo e volta pelo rádio com o jogo aberto."""
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_P1))
-    mesa.jogando.add(_P1)
     mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
     antes = _identidade(mesa, _P1)
     assert _chave(_P1) in mesa.lacos.vivos

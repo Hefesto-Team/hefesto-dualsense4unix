@@ -290,7 +290,7 @@ def test_sem_a_tabela_do_estado_normal_o_dia_estoura(monkeypatch: pytest.MonkeyP
 
 
 @pytest.mark.parametrize("evento", [
-    "haptica_fina_saiu", "haptica_fina_de_pe", "haptica_portao_fechado",
+    "haptica_fina_saiu", "haptica_fina_de_pe",
     "som_radio_sem_ponte", "som_radio_ponte_saiu", "launch_env_materializado",
     "usb_ausente_neste_boot", "backend_hotplug_reconcile",
 ])

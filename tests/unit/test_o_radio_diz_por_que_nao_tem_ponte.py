@@ -45,7 +45,6 @@ def test_cada_um_sem_ponte_diz_por_que_uma_vez(mesa: h._Mesa, quantos: int) -> N
     ultimo = _QUATRO[quantos - 1]
     mesa.volta(*controles)
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(ultimo))
-    mesa.jogando.add(ultimo)
     with structlog.testing.capture_logs() as diario:
         mesa.volta(*controles)
         mesa.volta(*controles)
@@ -63,24 +62,12 @@ def test_a_borda_volta_quando_o_jogo_fecha(mesa: h._Mesa) -> None:  # noqa: F811
         mesa.volta(um)
     assert [u for u, _m in _sem_ponte(diario)] == [h._P1]
     mesa.servidor.jogo_em.add(eh.nome_do_endpoint(h._P1))
-    mesa.jogando.add(h._P1)
     mesa.volta(um)
     assert h._P1 not in mesa.sub._sem_ponte_porque, "a ponte subiu e o motivo ficou"
     mesa.servidor.jogo_em.clear()
     with structlog.testing.capture_logs() as diario:
         mesa.volta(um)
     assert [u for u, _m in _sem_ponte(diario)] == [h._P1]
-
-
-def test_quem_o_jogo_nao_joga_diz_o_portao(mesa: h._Mesa) -> None:  # noqa: F811
-    um = _no_radio(0)
-    mesa.volta(um)
-    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(h._P1))
-    with structlog.testing.capture_logs() as diario:
-        mesa.volta(um)
-    assert [m for _u, m in _sem_ponte(diario)] == [
-        "o jogo não joga com este controle (o portão da vibração está fechado)"
-    ]
 
 
 def test_a_recusa_do_governador_vai_ao_diario_com_a_frase(mesa: h._Mesa) -> None:  # noqa: F811
@@ -92,7 +79,6 @@ def test_a_recusa_do_governador_vai_ao_diario_com_a_frase(mesa: h._Mesa) -> None
     um, dois = _no_radio(0), _no_radio(1)
     mesa.volta(um, dois)
     mesa.servidor.jogo_em.update({eh.nome_do_endpoint(h._P1), eh.nome_do_endpoint(h._P2)})
-    mesa.jogando.update({h._P1, h._P2})
     with structlog.testing.capture_logs() as diario:
         mesa.volta(um, dois)
         mesa.volta(um, dois)

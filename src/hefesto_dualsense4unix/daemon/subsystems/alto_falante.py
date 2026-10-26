@@ -752,9 +752,6 @@ class AltoFalanteSubsystem:
 
     name = "alto_falante"
 
-    _retrato_do_jogo: Any = None
-    _lidos_pelo_evdev: frozenset[str] = frozenset()
-    _portao_fechado: Mapping[str, str] = MappingProxyType({})
     _donos_da_volta: frozenset[str] | None = None
     _no_radio: frozenset[str] = frozenset()
     _o_que_a_volta_viu: frozenset[str] | None = None
@@ -1642,7 +1639,7 @@ class AltoFalanteSubsystem:
         if cabo is not None and marca is not None:
             rota = cabo.aparelhos().get(marca)
             if rota is not None and getattr(rota, "dono", "") == chave:
-                return cabo.portao(marca) is True
+                return cabo.volume_aplicado(marca)
         ponte = self._pontes.get(chave)
         endpoint = self._endpoints.get(marca) if marca is not None else None
         if ponte is None or endpoint is None:
@@ -1718,15 +1715,16 @@ class AltoFalanteSubsystem:
     def _casar_o_cabo(
         self,
         controles: list[Any],
-        jogando: set[str],
         motores: list[str] | None,
     ) -> None:
         """Um laço por DualSense no cabo, do endpoint do aparelho à placa dele.
 
         A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01, itens 3 e 4, pelo aparelho desde
-        a A-HAPTICA-E-POR-APARELHO-01 (02/10/2026). Os motores do laço
-        (os traseiros) abrem só para quem joga — a escolha (b) dela, a mesma
-        do rádio; a frente (o alto-falante) passa sempre. A placa é a do dono
+        a A-HAPTICA-E-POR-APARELHO-01 (02/10/2026). O laço leva ao controle o
+        que o jogo toca no endpoint DELE, nos quatro canais, pelo ganho; sem
+        portão de quem mexe (A-HAPTICA-E-DO-JOGO-SEM-PORTAO-DE-QUEM-MEXE-01):
+        o jogo individualizado toca em cada endpoint o que é de cada um, e o
+        que toca em todos chega a todos. A placa é a do dono
         (``alto_falante_bt.sink_do_controle``), e só vale se for uma placa de
         quatro canais que não é nossa (``motores``, a leitura da volta): sem
         ela o controle segue pela placa, sem laço, e o registro lhe dá o bloco
@@ -1736,30 +1734,16 @@ class AltoFalanteSubsystem:
         segue no cabo FICA como está — ele é um processo do
         PipeWire, e não depende do ``pipewire-pulse`` que travou. Só cai o de
         quem saiu do cabo, que o ``/sys`` diz sem perguntar ao servidor.
-
-        **NO MODO NATIVO O DONO DOS MOTORES É O JOGO** (NO-MODO-XBOX-TUDO-
-        FUNCIONA-01, parte 4, 29/09/2026): o co-op desmonta e o daemon só lê o
-        físico do posto (o limite de ``quem_mexe.py``), e a (b) fechava os
-        motores dos secundários, que vibravam direto pela placa até 28/09. O
-        laço abre os motores de todo controle no cabo, e quem responde é o
-        mesmo dono das três portas do rumble
-        (``rumble.modo_nativo_manda_nos_motores``), a cada volta.
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             e_radio,
             sink_do_controle,
-            sink_esta_tocando,
         )
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import MARCA_DO_NOME
         from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
             RotaDoCabo,
             alvo_do_no,
         )
-
-        o_jogo_manda = self._o_jogo_manda_nos_motores()
-
-        def _abre(uniq: str) -> bool:
-            return o_jogo_manda or uniq.lower() in jogando or self._recebe_o_rumble(uniq)
 
         na_mesa = [str(getattr(c, "uniq", "") or "") for c in controles]
         na_mesa = [u for u in na_mesa if u]
@@ -1773,17 +1757,14 @@ class AltoFalanteSubsystem:
             self._casar_os_ouvidos_das_placas({})
             return
         rotas: dict[str, Any] = {}
-        abertos: set[str] = set()
         if motores is None:
             antes = cabo.aparelhos() if cabo is not None else {}
             for marca, rota in antes.items():
                 dono = str(getattr(rota, "dono", "") or "")
                 if dono in no_cabo and self._aparelho_de.get(dono) == marca:
                     rotas[marca] = rota
-                    if _abre(dono):
-                        abertos.add(marca)
             logger.debug("haptica_do_cabo_servidor_mudo", ficam=sorted(rotas))
-            self._o_cabo().casar(rotas, abertos, self._ganhos_das_rotas(rotas))
+            self._o_cabo().casar(rotas, self._ganhos_das_rotas(rotas))
             return
         placas = set(motores)
         ouvir: dict[str, str] = {}
@@ -1802,18 +1783,7 @@ class AltoFalanteSubsystem:
             rotas[marca] = RotaDoCabo(
                 captura=captura, destino=destino, origem=str(endpoint.nome), dono=uniq
             )
-            este_joga = _abre(uniq)
-            if este_joga:
-                abertos.add(marca)
-            sinal = self._o_no_tem_sinal(str(endpoint.nome))
-            self._vigiar_o_portao(
-                uniq,
-                fechado=(
-                    sink_esta_tocando(str(endpoint.nome)) if sinal is None else sinal
-                ) and not este_joga,
-                controles=controles,
-            )
-        self._o_cabo().casar(rotas, abertos, self._ganhos_das_rotas(rotas))
+        self._o_cabo().casar(rotas, self._ganhos_das_rotas(rotas))
         self._casar_os_ouvidos_das_placas(ouvir)
 
     def _dizer_o_ganho_do_radio(self, vivos: Mapping[str, str]) -> None:
@@ -1952,62 +1922,6 @@ class AltoFalanteSubsystem:
         self._sem_porta[marca] = motivo
         logger.warning("haptica_sem_porta_propria", uniq=uniq, motivo=motivo)
 
-    def _quem_o_jogo_le(self, controles: list[Any]) -> set[str]:
-        """Os ``uniq`` (em minúsculas) cujo evdev algum processo de jogo segura. PISTA, NÃO VOTO.
-
-        QUEM-JOGA-E-QUEM-VIBRA-01 (20/09) fez disto o voto do portão da
-        háptica. A A-HAPTICA-QUEM-JOGA-02 (26/09) o tirou de lá: o GE não segura
-        evdev de DualSense nenhum, e em 21/09 o evdev deixou os QUATRO entrarem
-        num jogo de um jogador. **E DESDE 28/09 A PARTIDA TAMBÉM NÃO SAI DAQUI**
-        (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01): quem a abre é o dono
-        do fluxo no endpoint (:meth:`_quem_mexeu_na_partida`), e esta
-        varredura de ``/proc`` deixou de rodar a cada volta. Ela roda só quando
-        a linha ``haptica_portao_fechado`` vai sair (:meth:`_vigiar_o_portao`),
-        para dizer o que o jogo segura — é por ela que o detentor de 21/09, se
-        voltar, aparece no diário.
-
-        Devolve conjunto VAZIO quando não há jogo, quando `/proc` não se lê, ou
-        quando o que o jogo abriu não se traduz em controle nenhum.
-
-        A lista de físicos vem de TODOS os controles da mesa, e não só dos do
-        rádio: com máscara, o evdev que o jogo seguraria é o do vpad, e quem o
-        alimenta pode ser o do cabo. Quem diz QUEM ALIMENTA cada vpad é o
-        co-op, e não a forja do MAC (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01):
-        o MAC diz de quem o vpad nasceu, e o posto troca de mão sem renascer.
-
-        **A pergunta ao co-op tem ``try`` próprio** (A-HAPTICA-QUEM-JOGA-02): ela
-        só serve para traduzir o evdev de um vpad, e o erro dela não pode levar
-        junto a varredura inteira. Sem tradutor, o vpad não se traduz: nunca se
-        chuta um físico.
-        """
-        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
-            dono_do_vpad_pelo_coop,
-            quem_o_jogo_le,
-        )
-
-        self._retrato_do_jogo = None
-        fisicos = [str(getattr(c, "uniq", "") or "") for c in controles]
-        fisicos = [u for u in fisicos if u]
-        if not fisicos:
-            return set()
-        coop = getattr(getattr(self, "_daemon", None), "_coop_manager", None)
-        dono: Any = None
-        try:
-            dono = dono_do_vpad_pelo_coop(coop, fisicos)
-        except Exception as erro:
-            logger.info("haptica_nao_sei_quem_joga", motivo=str(erro))
-        try:
-            return quem_o_jogo_le(
-                fisicos=fisicos, dono_do_vpad=dono, ao_ver_o_jogo=self._ver_o_jogo
-            )
-        except Exception as erro:
-            logger.info("haptica_nao_sei_quem_joga", motivo=str(erro))
-            return set()
-
-    def _ver_o_jogo(self, retrato: Any) -> None:
-        """Guarda o que a varredura da pista viu do jogo (ver ``_retrato_do_jogo``)."""
-        self._retrato_do_jogo = retrato
-
     def _donos_dos_fluxos(self) -> frozenset[str] | None:
         """Os clientes do servidor de som que tocam nos endpoints de háptica. ``None`` = não sei."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import donos_dos_fluxos
@@ -2025,86 +1939,6 @@ class AltoFalanteSubsystem:
         if donos is not None and nossos:
             donos = frozenset(d for d in donos if d not in nossos)
         return donos
-
-    def _clientes_vivos(self, donos: frozenset[Any]) -> frozenset[Any] | None:
-        """Dos donos de fluxo de antes, os que seguem conectados ao servidor de som."""
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import clientes_conectados
-
-        try:
-            conectados = clientes_conectados()
-        except Exception as erro:
-            logger.debug("haptica_clientes_ilegiveis", err=str(erro))
-            return None
-        if conectados is None:
-            return None
-        return frozenset(d for d in donos if str(d) in conectados)
-
-    def _quem_mexeu_na_partida(self, controles: list[Any]) -> set[str]:
-        """Os ``uniq`` (em minúsculas) de quem teve entrada desde que o jogo abriu."""
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
-        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import _digitos
-
-        marcas = quem_mexe_de(getattr(self, "_daemon", None))
-        if marcas is None:
-            return set()
-        donos = self._donos_dos_fluxos()
-        self._donos_da_volta = donos
-        if donos is not None:
-            marcas.acompanhar_o_jogo(donos, vivos=self._clientes_vivos)
-        mexeram = marcas.quem_joga()
-        if not mexeram:
-            return set()
-        uniqs = (str(getattr(c, "uniq", "") or "") for c in controles)
-        return {u.lower() for u in uniqs if u and _digitos(u) in mexeram}
-
-    def _por_que_o_portao_fecha(self) -> str:
-        """O motivo de um controle estar fora de quem joga, pela partida da volta."""
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import marcas_da_partida
-
-        if self._donos_da_volta is None:
-            return "nao_sei"
-        if marcas_da_partida(getattr(self, "_daemon", None)) is None:
-            return "sem_jogo"
-        return "nao_mexeu"
-
-    def _vigiar_o_portao(self, uniq: str, *, fechado: bool, controles: list[Any]) -> None:
-        """A linha ``haptica_portao_fechado``, SÓ quando o estado anômalo muda."""
-        anterior = self._portao_fechado.get(uniq)
-        if not fechado:
-            if anterior is not None:
-                self._portao_fechado = {
-                    u: m for u, m in self._portao_fechado.items() if u != uniq
-                }
-            return
-        motivo = self._por_que_o_portao_fecha()
-        if anterior == motivo:
-            return
-        self._portao_fechado = {**self._portao_fechado, uniq: motivo}
-        from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
-
-        self._lidos_pelo_evdev = frozenset(self._quem_o_jogo_le(controles))
-        evdev, hidraw = self._o_que_o_jogo_segura()
-        logger.info(
-            "haptica_portao_fechado",
-            uniq=mascarar_endereco(uniq),
-            motivo=motivo,
-            evdev_do_jogo=evdev,
-            hidraw_de_vpad=hidraw,
-            evdev_le_este=uniq.lower() in self._lidos_pelo_evdev,
-        )
-
-    def _o_que_o_jogo_segura(self) -> tuple[int | None, int | None]:
-        """``(eventN, hidrawN de vpad)`` que o jogo segura, do retrato da pista."""
-        retrato = self._retrato_do_jogo
-        if retrato is None:
-            return None, None
-        try:
-            from hefesto_dualsense4unix.integrations.quem_o_jogo_le import hidraws_de_vpad
-
-            return len(retrato.eventos), len(hidraws_de_vpad(retrato.hidraws))
-        except Exception as exc:
-            logger.debug("haptica_portao_sem_contagem", err=str(exc))
-            return None, None
 
     def _casar_as_pontes(self, controles: list[Any]) -> None:
         """Os endpoints dos aparelhos, a ponte de cada controle no rádio e o laço do cabo.
@@ -2259,14 +2093,11 @@ class AltoFalanteSubsystem:
 
         # PRAGMATA de 26/09 ficou sem ninguém), e em 21/09 o evdev pôs os QUATRO
         self._ver_quem_toca_nos_endpoints()
-        jogando = self._quem_mexeu_na_partida(controles)
+        self._donos_da_volta = self._donos_dos_fluxos()
 
-        self._portao_fechado = {
-            u: m for u, m in self._portao_fechado.items() if u in aparelho_de
-        }
         # um laço por DualSense no cabo, do endpoint dele à placa, com os
         try:
-            self._casar_o_cabo(controles, jogando, motores)
+            self._casar_o_cabo(controles, motores)
         except Exception:
             logger.warning("haptica_do_cabo_falhou", exc_info=True)
 
@@ -2284,22 +2115,13 @@ class AltoFalanteSubsystem:
                 self._modo_da_ponte.pop(uniq, None)
                 logger.info("som_ponte_terminou_sozinha", uniq=uniq, motivo=morta.motivo)
             endpoint = self._endpoint_de(uniq)
-            este_joga = o_jogo_manda or uniq.lower() in jogando
-            pelo_rumble = not este_joga and self._recebe_o_rumble(uniq)
             endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)
             # O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01: a háptica vai ao fio com o som
-            # de pé ou sem ele; o portão (quem joga, ou o rumble deste controle) e
-            # o ganho dela decidem, e nunca o alto-falante.
-            leva = bool(
-                endpoint_aberto and (este_joga or pelo_rumble) and GANHO.pct(uniq) > 0
-            )
+            # de pé ou sem ele; o fluxo do jogo no endpoint e o ganho dela decidem
+            # (A-HAPTICA-E-DO-JOGO-SEM-PORTAO-DE-QUEM-MEXE-01), e nunca o alto-falante.
+            leva = bool(endpoint_aberto and GANHO.pct(uniq) > 0)
             leva_de[uniq] = leva
             self._leva_da_ponte = MappingProxyType({**self._leva_da_ponte, uniq: leva})
-            self._vigiar_o_portao(
-                uniq,
-                fechado=endpoint_aberto and not este_joga and not pelo_rumble,
-                controles=controles,
-            )
             som_toca = sink_esta_tocando(
                 nome_do_sink(uniq), na_duvida=uniq in self._pontes
             )
@@ -2315,9 +2137,8 @@ class AltoFalanteSubsystem:
                 and not som_toca
                 and not frente_toca
                 and uniq not in self._pontes
-                and (este_joga or pelo_rumble)
             ):
-                # Quem joga, com o endpoint aberto e a vibração em 0 (é o que
+                # Com o endpoint aberto e a vibração em 0 (é o que
                 # tira a `leva`): ninguém lê a frente, e o ouvido é quem avisa
                 # que o jogo mandou som ao controle.
                 escutar[lendo] = (uniq, CANAIS_DA_HAPTICA, "ouvido-haptica")
@@ -2325,9 +2146,7 @@ class AltoFalanteSubsystem:
                 self._descer_ponte_ociosa(uniq)
                 self._dizer_por_que_sem_ponte(
                     uniq,
-                    self._motivo_da_ponte_ociosa(
-                        uniq, endpoint, endpoint_aberto, este_joga or pelo_rumble
-                    ),
+                    self._motivo_da_ponte_ociosa(uniq, endpoint, endpoint_aberto),
                 )
                 continue
             tipo = "som" if (som_toca or frente_toca) else "haptica"
@@ -2532,7 +2351,7 @@ class AltoFalanteSubsystem:
         if cabo is not None:
             rota = cabo.aparelhos().get(marca)
             if rota is not None and getattr(rota, "dono", "") == chave:
-                return cabo.portao(marca) is True
+                return cabo.volume_aplicado(marca)
         dono = uniq if uniq in self._pontes else chave
         ponte = self._pontes.get(dono)
         if ponte is None or not self._a_ponte_leva_a_haptica(dono):
@@ -2585,16 +2404,12 @@ class AltoFalanteSubsystem:
         return self._leva_da_ponte.get(uniq) is True
 
     @staticmethod
-    def _motivo_da_ponte_ociosa(
-        uniq: str, endpoint: Any, endpoint_aberto: bool, portao_aberto: bool
-    ) -> str:
+    def _motivo_da_ponte_ociosa(uniq: str, endpoint: Any, endpoint_aberto: bool) -> str:
         """Por que a ponte do rádio deste controle não tem o que levar, em uma frase."""
         if endpoint is None:
             return "o controle ainda não tem endpoint de vibração"
         if not endpoint_aberto:
             return "o jogo não abriu o som nem a vibração deste controle"
-        if not portao_aberto:
-            return "o jogo não joga com este controle (o portão da vibração está fechado)"
         if GANHO.pct(uniq) <= 0:
             return "a vibração deste controle está em 0"
         return "o som e a vibração deste controle estão sem sinal"
@@ -2673,7 +2488,6 @@ class AltoFalanteSubsystem:
                 self.governador = None
         self._parar.clear()
         self._acordar.clear()
-        self._ouvir_quem_entra_na_partida(self._acordar_a_volta)
         self._ouvinte = threading.Thread(
             target=self._ouvir_o_retrato, name="hefesto-som-fluxos", daemon=True
         )
@@ -2683,24 +2497,6 @@ class AltoFalanteSubsystem:
         )
         self._thread.start()
         logger.info("som_subsystem_iniciado")
-
-    def _ouvir_quem_entra_na_partida(self, aviso: Any) -> None:
-        """Liga (ou desliga, com ``None``) o aviso do controle que entra na partida."""
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import (
-            ATRIBUTO,
-            QuemMexe,
-            quem_mexe_de,
-        )
-
-        daemon = getattr(self, "_daemon", None)
-        if aviso is None:
-            marcas = getattr(daemon, ATRIBUTO, None)
-            if isinstance(marcas, QuemMexe):
-                marcas.ao_marcar = None
-            return
-        marcas = quem_mexe_de(daemon)
-        if marcas is not None:
-            marcas.ao_marcar = aviso
 
     async def stop(self) -> None:
         """Fecha a porta, derruba as pontes, e SÓ ENTÃO os nós. Idempotente.
@@ -2715,7 +2511,6 @@ class AltoFalanteSubsystem:
         if callable(fechar):
             with contextlib.suppress(Exception):
                 fechar()
-        self._ouvir_quem_entra_na_partida(None)
         from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
         self._acordar.set()

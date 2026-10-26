@@ -1,19 +1,11 @@
-"""Quais controles o evdev diz que o JOGO lê — a PISTA da linha do portão fechado.
+"""Quais controles o evdev diz que o JOGO lê — uma PISTA, que não vota.
 
-**DESDE 26/09/2026 ESTE SINAL NÃO VOTA** (A-HAPTICA-QUEM-JOGA-02, decisão
-``D-2609-QUEM-JOGA-E-QUEM-MEXE``). Quem joga, para o portão da háptica pelo
-rádio, é quem MEXEU desde que o jogo abriu (``daemon/subsystems/quem_mexe.py``).
-
-**E DESDE 28/09/2026 A PARTIDA NÃO SAI DAQUI** (A-HAPTICA-DO-RADIO-OBEDECE-AO-
-SINAL-DO-JOGO-01). Quem abre e fecha a partida é o dono do fluxo no endpoint
-de háptica, perguntado ao servidor de som; :func:`pids_de_jogo`, que lê o
-``environ`` de todo processo, deixou de rodar a cada volta — um ``run``
-auxiliar do GE-Proton, com ``STEAM_COMPAT_DATA_PATH`` e sem jogo nenhum,
-abria e fechava a partida. O :class:`RetratoDoJogo` e o conjunto de
-:func:`quem_o_jogo_le` vão só à linha ``haptica_portao_fechado`` como pista
-(``evdev_le_este``), e só quando ela sai. A guarda do rótulo da háptica, que
-também perguntava a :func:`pids_de_jogo` (``_ha_jogo_aberto``), saiu em
-28/09/2026 com o endpoint por lugar, cujo rótulo não muda. O texto abaixo é o
+**DESDE 26/10/2026 NÃO HÁ PORTÃO DE QUEM JOGA** (A-HAPTICA-E-DO-JOGO-SEM-
+PORTAO-DE-QUEM-MEXE-01): o que o jogo toca no endpoint de um controle chega a
+esse controle, sem depender de quem mexeu (``D-2609-QUEM-JOGA-E-QUEM-MEXE``
+caducou). Este módulo ficou com a pergunta dos pids do jogo
+(:func:`pids_de_jogo`) e o retrato do que o jogo segura; o conjunto de
+:func:`quem_o_jogo_le` não alimenta mais decisão nem diário. O texto abaixo é o
 registro de 20 e 25/09, quando o evdev votava.
 
 **A CORREÇÃO É DO USUÁRIO, 20/09/2026, e derrubou a premissa de uma sprint inteira:**
@@ -66,10 +58,9 @@ o físico por estar na lista de ignorados do SDL, o vpad ``0df2`` por
 26/09: nenhum ``eventN``, o ``hidraw`` dos vpads). Com máscara DualSense este
 sinal sai VAZIO por construção. E o ``hidraw`` não o substitui: o
 ``winedevice`` segura o de TODOS os vpads, e contá-lo devolveria o espelhado
-de 20/09. Quem diz quem joga é a entrada do físico desde que o jogo abriu
-(``daemon/subsystems/quem_mexe.py``), e este sinal não vota nem quando existe:
-em 21/09, com o PRAGMATA de um jogador, o evdev deixou os QUATRO entrarem em
-háptica (A-HAPTICA-QUEM-JOGA-02). Um fd diz o que o processo abriu, não quem
+de 20/09. Este sinal não vota nem quando existe: em 21/09, com o PRAGMATA de
+um jogador, o evdev deixou os QUATRO entrarem em háptica
+(A-HAPTICA-QUEM-JOGA-02). Um fd diz o que o processo abriu, não quem
 está jogando.
 
 QUEM ALIMENTA O VPAD, E NÃO DE QUEM ELE NASCEU

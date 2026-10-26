@@ -52,10 +52,10 @@
       "universo": 405
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-25",
+      "data": "2026-10-26",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 962,
+      "piso": 961,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -111,7 +111,6 @@
         "daemon/subsystems/metrics.py": 1,
         "daemon/subsystems/mouse.py": 10,
         "daemon/subsystems/ouvinte_do_som.py": 3,
-        "daemon/subsystems/quem_mexe.py": 1,
         "daemon/subsystems/recado_do_microfone.py": 1,
         "daemon/subsystems/tato_vivo.py": 4,
         "daemon/subsystems/vigia_do_laco.py": 2,
@@ -245,14 +244,14 @@
       "data": "2026-10-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1219320,
+      "piso": 1217712,
       "por_item": {
-        "docs": 121473,
+        "docs": 121487,
         "scripts": 121414,
-        "src": 324981,
-        "tests": 651452
+        "src": 324567,
+        "tests": 650244
       },
-      "razao": "tamanho: +11 linhas (1219309 -> 1219320), pagas por Origem: D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER; registrado no fecho, topo 6948bd95dee9",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",

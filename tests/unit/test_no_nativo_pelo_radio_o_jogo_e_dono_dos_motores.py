@@ -59,26 +59,13 @@ def test_no_nativo_a_ponte_de_todo_controle_no_radio_vai_a_haptica(sala: Mesa, n
         assert sala.leva(uniq) is True
 
 
-def test_fora_do_nativo_a_escolha_dela_segue_valendo_no_radio(sala: Mesa) -> None:
-    """Sem o Modo Nativo, quem não mexeu não vibra pelo rádio (a escolha (b) dela)."""
-    sala.sub._daemon = _daemon(nativo=False)
-    _o_jogo_toca_nos_motores(sala, MESA[:2])
-    sala.volta()
-    for uniq in MESA[:2]:
-        assert sala.leva(uniq) is False, (
-            "fora do Nativo a ponte de quem não mexeu foi à háptica"
-        )
-
-
-def test_o_cabo_e_o_radio_perguntam_ao_mesmo_dono(
-    sala: Mesa, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("nativo", [False, True], ids=["xbox", "nativo"])
+def test_em_todo_modo_a_ponte_de_todo_controle_no_radio_vai_a_haptica(
+    sala: Mesa, nativo: bool
 ) -> None:
-    """A pergunta é uma só: o dono das portas do rumble responde aos dois transportes."""
-    from hefesto_dualsense4unix.daemon.subsystems import rumble
-
-    sala.sub._daemon = _daemon(nativo=True)
-    monkeypatch.setattr(rumble, "modo_nativo_manda_nos_motores", lambda _d: False)
+    """Sem portão de quem mexeu, o modo não decide: o que o jogo toca no endpoint chega a todos."""
+    sala.sub._daemon = _daemon(nativo=nativo)
     _o_jogo_toca_nos_motores(sala, MESA[:2])
     sala.volta()
     for uniq in MESA[:2]:
-        assert sala.leva(uniq) is False
+        assert sala.leva(uniq) is True, f"nativo={nativo}: a ponte de {uniq} não foi à háptica"

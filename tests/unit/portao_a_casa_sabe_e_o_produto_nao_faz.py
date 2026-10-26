@@ -302,7 +302,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "sob si; em produção a raiz é fixa. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_FORMAT": (
-        "Formato do log (`log_fmt` em `src/hefesto_dualsense4unix/utils/logging_config.py:372`). "
+        "Formato do log (`log_fmt` em `src/hefesto_dualsense4unix/utils/logging_config.py:371`). "
         "Chave de "
         "diagnóstico de "
         "quem lê log, não superfície de produto — não muda o que o aparelho faz. "
@@ -310,7 +310,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL": (
         "Verbosidade do log (`level_name` em "
-        "`src/hefesto_dualsense4unix/utils/logging_config.py:371`). Mesma "
+        "`src/hefesto_dualsense4unix/utils/logging_config.py:370`). Mesma "
         "família da "
         "anterior: instrumento de quem investiga um defeito, e o caminho "
         "publicado para investigar é o `doctor`, não esta chave. MEDIDO em "

@@ -191,7 +191,10 @@ class TestOFisicoAbrePeloFdDoBroker:
             finally:
                 if handle is not None:
                     backend._fechar_os_handles_juntos([handle])
-            assert aparelho.recv(512) == b"", "o fd do handle ficou aberto depois do close"
+            # No cabo a abertura escreve a soltura do motor preso antes do primeiro report;
+            # o que sobra na fila é saída do mesmo id, e o fim dela (EOF) prova o fd fechado.
+            while (resto := aparelho.recv(512)) != b"":
+                assert resto[0] == id_da_saida, "o fd do handle ficou aberto depois do close"
 
     def test_os_quatro_controles_abrem_sem_acl_cabo_e_radio(
         self, tmp_path: Path, caminho_proibido: list[bytes]

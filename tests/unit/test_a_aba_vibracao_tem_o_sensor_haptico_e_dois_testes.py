@@ -37,7 +37,6 @@ from tests.unit.test_a_linha_da_haptica_por_audio_na_vibracao import (
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import BRANCO, _Handlers
 from tests.unit.test_no_modo_xbox_a_haptica_fina import (
     _ABERTO,
-    _FECHADO,
     _QUATRO,
     _motores,
     _Mundo,
@@ -428,10 +427,10 @@ def com_toque(mundo: _Mundo, monkeypatch: pytest.MonkeyPatch) -> _Mundo:  # noqa
 
 
 @pytest.mark.parametrize("lugar", [1, 2, 3, 4])
-def test_no_cabo_o_teste_toca_no_tocador_dele_e_abre_so_o_laco_dele(
+def test_no_cabo_o_teste_toca_no_tocador_dele_e_os_lacos_ficam_abertos(
     com_toque: _Mundo, lugar: int
 ) -> None:
-    """Régua 5: o toque vai ao tocador DAQUELE aparelho, e a volta abre só o laço dele."""
+    """Régua 5: o toque vai ao tocador DAQUELE aparelho; o laço de cada um já é do jogo."""
     m = com_toque
     controles = _no_cabo_os_quatro(m)
     m.mesa.volta(*controles)
@@ -443,7 +442,7 @@ def test_no_cabo_o_teste_toca_no_tocador_dele_e_abre_so_o_laco_dele(
     assert [t[0] for t in tocador.toques] == ["toque"]  # type: ignore[attr-defined]
     m.mesa.volta(*controles)
     for outro in _QUATRO:
-        assert _motores(m, outro) == (_ABERTO if outro == uniq else _FECHADO), outro
+        assert _motores(m, outro) == _ABERTO, outro
     assert m.sub.testar_a_haptica(uniq, True)["leva"] is True
     assert m.sub.testar_a_haptica(uniq, False)["ligado"] is False
     assert tocador.nivel == (0, 0)

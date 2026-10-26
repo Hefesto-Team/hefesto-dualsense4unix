@@ -205,8 +205,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
         af, "fonte_do_monitor_do_no", lambda no, **_kw: ((lambda _n: b""), f"g:{no}", "")
     )
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
-    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, c: set())
-    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_quem_mexeu_na_partida", lambda self, c: set())
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_donos_dos_fluxos", lambda self: frozenset())
     monkeypatch.setattr(mod.AltoFalanteSubsystem, "_ha_jogo_aberto", lambda self: m.jogo)
     return m
 

@@ -699,7 +699,7 @@ def som(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(eh, "endpoints_de_pe", lambda *a, **k: {})
     monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
     monkeypatch.setattr(af, "sinks_com_motores", lambda *a, **k: [])
-    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, c: set())
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_donos_dos_fluxos", lambda self: frozenset())
 
     class _Ger:
         def reconciliar(self, *_a: Any, **_k: Any) -> None:

@@ -43,7 +43,6 @@ _CLIENTE = {eh.marca_do_aparelho(u): str(60 + n) for n, u in enumerate(_QUATRO, 
 # Os quatro canais vão em fator linear (OS-QUATRO-EM-HARMONIA-01, `d592c884a`): a frente cheia e os
 # motores abertos com o ganho de fábrica.
 _ABERTO = ["1.0000", "1.0000", *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
-_FECHADO = ["1.0000", "1.0000", "0.0000", "0.0000"]
 
 
 class _Fluxos:
@@ -464,21 +463,24 @@ def test_sem_tocador_na_maquina_o_hid_segue_sozinho(processos: Any) -> None:
 
 @pytest.mark.parametrize("lugar", [1, 2, 3, 4])
 def test_no_cabo_o_rumble_de_cada_lugar_abre_so_os_motores_dele(mundo: _Mundo, lugar: int) -> None:
-    """Quatro no cabo, ninguém mexeu: o rumble do jogador N abre só os motores do laço dele."""
+    """Quatro no cabo: o laço de todos está aberto, e o rumble do jogador N vai ao tocador dele.
+
+    Sem portão de quem mexe, o caminho do tocador ao controle já está de pé antes do rumble: ele
+    nasce como áudio no endpoint do dono, e o HID não leva o motor dos outros três.
+    """
     controles = _no_cabo_os_quatro(mundo)
     mundo.mesa.volta(*controles)
     uniq = _QUATRO[lugar - 1]
     assert mundo.rumble(uniq, 100, 200) == (100, 200)
-    assert mundo.backend.do(uniq) == [(100, 200)], "antes do caminho, o HID leva"
+    assert mundo.backend.do(uniq) == [(0, 0)], "o laço está de pé: o HID não leva o motor"
     tocador = mundo.tocador(uniq)
     assert (tocador.nivel, tocador.sink, tocador.dono) == (
         (100, 200), eh.nome_do_endpoint(uniq), uniq
     )
     mundo.mesa.volta(*controles)
     for outro in _QUATRO:
-        esperado = _ABERTO if outro == uniq else _FECHADO
-        assert _motores(mundo, outro) == esperado, f"{outro}: {_motores(mundo, outro)}"
-    assert mundo.backend.do(uniq) == [(100, 200), (0, 0)], "o HID não soltou o rumble"
+        assert _motores(mundo, outro) == _ABERTO, f"{outro}: {_motores(mundo, outro)}"
+    assert set(mundo.backend.do(uniq)) == {(0, 0)}, "o HID mexeu no motor com o tocador de pé"
     mundo.rumble(uniq, 150, 50)
     assert mundo.backend.do(uniq)[-1] == (0, 0)
     assert tocador.nivel == (150, 50)
@@ -565,19 +567,27 @@ def test_o_nosso_tocador_nao_abre_a_partida(mundo: _Mundo) -> None:
     assert mundo.sub._donos_dos_fluxos() == frozenset({"42"})
 
 
-def test_o_caminho_que_cai_devolve_o_rumble_ao_hid(mundo: _Mundo) -> None:
-    """O tocador saiu com o rumble ainda pedido: a volta reaplica, e o HID volta a levar."""
+def test_o_tocador_que_saiu_com_o_rumble_pedido_e_levantado_pela_volta(mundo: _Mundo) -> None:
+    """O tocador saiu com o rumble pedido: a volta o reaplica e ele sobe; o HID não leva o motor.
+
+    O caminho do cabo é o laço, sempre de pé, e não depende do fluxo do tocador: o que muda com a
+    saída dele é o retrato do rumble, e é o retrato que a volta reaplica.
+    """
     controles = _no_cabo_os_quatro(mundo)
     mundo.mesa.volta(*controles)
     mundo.rumble(_P2, 30, 60)
     mundo.mesa.volta(*controles)
-    assert mundo.backend.do(_P2) == [(30, 60), (0, 0)]
-    mundo.tocador(_P2).sair()
+    assert set(mundo.backend.do(_P2)) == {(0, 0)}
+    tocador = mundo.tocador(_P2)
+    tocador.sair()
+    assert not tocador.vivo
     mundo.mesa.volta(*controles)
-    assert mundo.backend.do(_P2)[-1] == (30, 60), "o caminho caiu e o motor ficou mudo"
-    assert _motores(mundo, _P2) == _FECHADO
+    assert tocador.vivo and tocador.nivel == (30, 60), "a volta não levantou o tocador"
+    assert set(mundo.backend.do(_P2)) == {(0, 0)} and _motores(mundo, _P2) == _ABERTO
     mundo.mesa.volta(*controles)
-    assert len(mundo.backend.do(_P2)) == 4, "a volta sem mudança reaplicou à toa"
+    aplicados = len(mundo.backend.do(_P2))
+    mundo.mesa.volta(*controles)
+    assert len(mundo.backend.do(_P2)) == aplicados, "a volta sem mudança reaplicou à toa"
 
 
 def test_o_numero_que_anda_nao_cala_o_tocador_do_aparelho(mundo: _Mundo) -> None:

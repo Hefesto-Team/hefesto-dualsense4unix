@@ -256,12 +256,12 @@ def test_o_subsystem_diz_a_borda_da_haptica_ao_controlador(
 def test_no_cabo_o_laco_aberto_com_o_endpoint_tocando_conta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No cabo, o laço do aparelho com o portão aberto e fluxo no endpoint."""
+    """No cabo, o laço do aparelho com o volume aplicado e fluxo no endpoint."""
     sub = _subsystem(monkeypatch, {"hefesto_haptica_3"})
     rota = SimpleNamespace(dono=UNIQS[3])
     portoes = {"aparelho-3": True}
     sub._cabo = SimpleNamespace(
-        aparelhos=lambda: {"aparelho-3": rota}, portao=lambda marca: portoes.get(marca)
+        aparelhos=lambda: {"aparelho-3": rota}, volume_aplicado=lambda marca: portoes.get(marca)
     )
     controles = [SimpleNamespace(uniq=UNIQS[3])]
 

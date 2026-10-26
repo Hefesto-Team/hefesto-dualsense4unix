@@ -4276,7 +4276,6 @@ class Daemon:
         medidor = _MedidorDoTique(self.store)
         passos = _PassosDoLaco(self.store)
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import anotar_o_primario
         previous_buttons: frozenset[str] = frozenset()
         was_connected = False
 
@@ -4426,8 +4425,6 @@ class Daemon:
             current_buttons = state.buttons_pressed
 
             grace_passed = tick_started >= self._input_ready_at
-            if grace_passed:
-                anotar_o_primario(self, state, buttons_pressed)
             gamepad_dispatched = False
             if grace_passed and self._gamepad_device is not None:
                 self._dispatch_gamepad_emulation(state, buttons_pressed)

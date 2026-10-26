@@ -236,10 +236,8 @@ def test_a_ponte_em_haptica_fica_com_o_gravador_novo_do_alto_falante(
         gravadores.toca[endpoint] = (0, 0, 20000, -20000)
         sala.abrir_a_sala(P4)
         sala.volta()
-        assert sala.leva(P4) is False, "ninguém mexeu: o portão segura a háptica"
         sala.esperar(endpoint, True)
         sala.esperar(som, False)
-        sala.mexer(P4)
         sala.volta()
         assert sala.leva(P4) is True
         subiu = time.monotonic()

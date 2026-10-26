@@ -350,14 +350,6 @@ class MesaDeQuatro:
         for uniq in MESA:
             self.servidor.tocar(no_do(uniq), JOGO)
 
-    def mexer(self, *quem: str) -> None:
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
-
-        marcas = quem_mexe_de(self.daemon)
-        assert marcas is not None and marcas.jogo_aberto, "a partida não abriu"
-        for uniq in quem:
-            marcas.marcar(uniq)
-
     def reports_por_controle(self) -> dict[str, int]:
         """Espera as pontes terminarem (o jogo fechou o monitor) e conta o que foi ao fio."""
         for ponte in list(self.sub._pontes.values()):
@@ -405,120 +397,37 @@ _ORDENS = list(__import__("itertools").permutations(MESA))
 def test_so_o_endpoint_com_sinal_manda_em_toda_ordem_de_conexao(
     mesa_de_quatro: Any, ordem: tuple[str, ...]
 ) -> None:
-    """Quatro jogando, o jogo manda vibração só ao P3: só o P3 vai ao rádio."""
+    """O jogo manda vibração só ao P3: as quatro pontes sobem, e só o P3 leva report."""
     mudo = [SILENCIO] * 4
     mesa = mesa_de_quatro({P1: mudo, P2: mudo, P3: [SILENCIO, MOTOR, SILENCIO, SILENCIO], P4: mudo})
     mesa.o_jogo_abre()
     mesa.sub._casar_as_pontes(mesa.controles(ordem))
-    assert mesa.sub._pontes == {}, "ninguém mexeu, e uma ponte subiu"
-    mesa.mexer(*MESA)
-    mesa.sub._casar_as_pontes(mesa.controles(ordem))
-    assert sorted(mesa.sub._pontes) == sorted(MESA)
+    assert sorted(mesa.sub._pontes) == sorted(MESA), "sem toque algum, a ponte não subiu"
     assert mesa.reports_por_controle() == {P1: 0, P2: 0, P3: 2, P4: 0}
 
 
-def test_o_jogo_que_espelha_vibra_so_quem_esta_com_o_controle_na_mao(mesa_de_quatro: Any) -> None:
-    """A noite de 27/09: o PRAGMATA mandou a mesma vibração aos quatro. Vale a (b) dela."""
+def test_o_jogo_que_toca_a_mesma_vibracao_nos_quatro_chega_aos_quatro(
+    mesa_de_quatro: Any,
+) -> None:
+    """A noite de 27/09: o PRAGMATA mandou a mesma vibração aos quatro; todos recebem."""
     tiro = [SILENCIO, MOTOR, MOTOR, SILENCIO]
     mesa = mesa_de_quatro({u: list(tiro) for u in MESA})
     mesa.o_jogo_abre()
     mesa.sub._casar_as_pontes(mesa.controles())
-    mesa.mexer(P2)
-    mesa.sub._casar_as_pontes(mesa.controles())
-    assert sorted(mesa.sub._pontes) == [P2]
-    assert mesa.reports_por_controle() == {P1: 0, P2: 3, P3: 0, P4: 0}
+    assert sorted(mesa.sub._pontes) == sorted(MESA)
+    assert mesa.reports_por_controle() == dict.fromkeys(MESA, 3)
 
 
 def test_no_menu_nenhum_report_vai_ao_radio(mesa_de_quatro: Any) -> None:
-    """A prova 2 da sprint, na mesa de mentira: o jogo no menu, os quatro jogando."""
+    """A prova 2 da sprint, na mesa de mentira: o jogo no menu, silêncio nos quatro."""
     mesa = mesa_de_quatro({u: [SILENCIO] * 12 for u in MESA})
     mesa.o_jogo_abre()
-    mesa.sub._casar_as_pontes(mesa.controles())
-    mesa.mexer(*MESA)
     mesa.sub._casar_as_pontes(mesa.controles())
     assert sorted(mesa.sub._pontes) == sorted(MESA)
     assert mesa.reports_por_controle() == dict.fromkeys(MESA, 0)
 
 
-class TestAPartidaEODonoDoFluxo:
-    def test_o_processo_auxiliar_da_steam_nao_abre_a_partida(
-        self, mesa_de_quatro: Any, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Um ``run`` do GE-Proton com ``STEAM_COMPAT_DATA_PATH`` e sem fluxo: nada abre."""
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
-        from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
-
-        monkeypatch.setattr(qjl, "pids_de_jogo", lambda *_a, **_k: {5555})
-        mesa = mesa_de_quatro({})
-        mesa.sub._casar_as_pontes(mesa.controles())
-        marcas = quem_mexe_de(mesa.daemon)
-        assert marcas is not None
-        assert marcas.jogo_aberto is False, "o processo auxiliar abriu a partida"
-        mesa.o_jogo_abre()
-        mesa.sub._casar_as_pontes(mesa.controles())
-        assert marcas.jogo_aberto is True, "o fluxo do jogo no endpoint não abriu a partida"
-
-    def test_donos_alternados_nao_zeram_a_marca(self) -> None:
-        """Os donos A, B, A, B — os dois vivos: a marca de quem joga não zera."""
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import QuemMexe
-
-        marcas = QuemMexe()
-        vivos = lambda donos: frozenset(donos)  # noqa: E731 - os dois seguem conectados
-        marcas.acompanhar_o_jogo({"A"}, vivos=vivos)
-        marcas.marcar(P1)
-        for dono in ("B", "A", "B", "A", "B"):
-            marcas.acompanhar_o_jogo({dono}, vivos=vivos)
-            assert marcas.joga(P1), f"a marca zerou quando o dono virou {dono}"
-
-    def test_o_dono_que_sai_e_o_outro_que_chega_e_outro_jogo(self) -> None:
-        """Se nenhum dono de antes segue conectado, o dono novo é outro jogo."""
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import QuemMexe
-
-        marcas = QuemMexe()
-        conectados = {"A"}
-        vivos = lambda donos: frozenset(d for d in donos if d in conectados)  # noqa: E731
-        marcas.acompanhar_o_jogo({"A"}, vivos=vivos)
-        marcas.marcar(P1)
-        conectados = {"B"}
-        marcas.acompanhar_o_jogo({"B"}, vivos=vivos)
-        assert marcas.jogo_aberto and not marcas.joga(P1), "a marca do jogo de antes valeu no novo"
-
-    def test_o_jogo_que_fecha_o_fluxo_e_segue_vivo_e_a_mesma_partida(self) -> None:
-        """O GE remira a háptica a cada hotplug de endpoint: o fluxo some e volta."""
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import QuemMexe
-
-        marcas = QuemMexe()
-        vivos = lambda donos: frozenset(donos)  # noqa: E731
-        marcas.acompanhar_o_jogo({"A"}, vivos=vivos)
-        marcas.marcar(P3)
-        marcas.acompanhar_o_jogo(set(), vivos=vivos)
-        assert marcas.jogo_aberto and marcas.joga(P3)
-        marcas.acompanhar_o_jogo(set(), vivos=lambda _d: frozenset())
-        assert not marcas.jogo_aberto and not marcas.joga(P3), "o jogo fechou e a partida seguiu"
-
-    def test_na_duvida_a_partida_nao_muda(self) -> None:
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import QuemMexe
-
-        marcas = QuemMexe()
-        marcas.acompanhar_o_jogo({"A"}, vivos=lambda _d: None)
-        marcas.marcar(P2)
-        marcas.acompanhar_o_jogo({"B"}, vivos=lambda _d: None)
-        marcas.acompanhar_o_jogo(set(), vivos=lambda _d: None)
-        assert marcas.jogo_aberto and marcas.joga(P2)
-
-
 class TestAVoltaAcordaPeloAviso:
-    def test_quem_entra_na_partida_acorda_a_volta(self, mesa_de_quatro: Any) -> None:
-        """O primeiro toque de um controle pede a volta — a ponte dele sobe na hora."""
-        mesa = mesa_de_quatro({})
-        mesa.sub._ouvir_quem_entra_na_partida(mesa.sub._acordar_a_volta)
-        mesa.o_jogo_abre()
-        mesa.sub._casar_as_pontes(mesa.controles())
-        assert not mesa.sub._acordar.is_set()
-        mesa.mexer(P4)
-        assert mesa.sub._volta_pedida is True
-        assert mesa.sub._acordar.is_set()
-
     def test_sem_mudanca_a_espera_nao_pergunta_nada_ao_servidor(
         self, mesa_de_quatro: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -556,7 +465,6 @@ class TestAVoltaAcordaPeloAviso:
         )
         mesa.o_jogo_abre()
         mesa.sub._casar_as_pontes(mesa.controles())
-        mesa.mexer(P1)
         mesa.sub._o_que_a_volta_viu = mesa.sub._o_que_a_mesa_do_som_diz()
         mesa.sub._casar_as_pontes(mesa.controles())
         assert mesa.sub._pontes == {}, "sem fonte, a ponte subiu"
@@ -632,7 +540,7 @@ def test_os_tiros_com_o_adaptador_parado_derrubam_a_ponte() -> None:
     )
 
 
-def test_o_start_liga_o_ouvinte_e_o_aviso_e_o_stop_desliga(
+def test_o_start_liga_o_ouvinte_e_o_stop_desliga(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A cura escrita e nunca ligada é o defeito mais caro desta casa."""
@@ -640,7 +548,6 @@ def test_o_start_liga_o_ouvinte_e_o_aviso_e_o_stop_desliga(
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
-    from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
 
     class _Gerenciador:
         def reconciliar(self, *_a: Any, **_k: Any) -> None:
@@ -678,15 +585,9 @@ def test_o_start_liga_o_ouvinte_e_o_aviso_e_o_stop_desliga(
         ouvinte = sub._ouvinte
         assert ouvinte is not None and ouvinte.is_alive(), "o start não subiu o ouvinte"
         assert ouvinte.name == "hefesto-som-fluxos"
-        marcas = quem_mexe_de(daemon)
-        assert marcas is not None
-        assert marcas.ao_marcar == sub._acordar_a_volta, (
-            "o start não entregou à partida quem acordar no primeiro toque"
-        )
     finally:
         asyncio.run(sub.stop())
     assert not ouvinte.is_alive(), "o stop deixou o ouvinte de pé"
-    assert marcas.ao_marcar is None, "o stop deixou a partida acordando um subsystem parado"
 
 
 def test_a_volta_guarda_o_que_leu_e_a_espera_so_acorda_pela_mudanca(
