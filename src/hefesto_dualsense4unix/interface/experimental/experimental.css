@@ -548,6 +548,9 @@
   font-size:12px;white-space:nowrap }
 #mod-janela .btn.mj-acao.forte { height:32px;padding:0 16px;background:var(--purple);border-color:var(--purple);color:#1e1f29;
   font-weight:700 }
+#mod-janela .btn.mj-acao.armada { border-color:var(--red);color:var(--red) }
+#mod-janela .ap.mj-ap-linha .btn.mj-acao.armada { height:24px;padding:0 8px;gap:4px;font-size:11px;flex:none }
+#mod-janela .ap.mj-ap-linha .btn.mj-acao.armada > svg { display:none }
 #mod-janela .mj-acao.em-curso, #mod-janela .mj-chave.em-curso, #mod-janela .mj-alvo.em-curso {
   animation:mj-pulso 1.2s ease-in-out infinite }
 @keyframes mj-pulso { 0%,100% { box-shadow:0 0 0 0 rgba(189,147,249,.5) } 50% { box-shadow:0 0 0 6px rgba(189,147,249,0) } }

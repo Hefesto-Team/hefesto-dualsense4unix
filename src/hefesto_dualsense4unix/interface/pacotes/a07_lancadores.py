@@ -1222,6 +1222,7 @@ class _Mexida:
     nota_do_css: str = ""
     aba: str = ""
     com_controles: bool = False
+    armada: tuple[str, ...] = ()
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
 
     def limpar(self) -> None:
@@ -1234,6 +1235,7 @@ class _Mexida:
         self.rascunho = {}
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
         self.com_controles = False
+        self.armada = ()
         self.pintura.esquecer()
 
 
@@ -1622,6 +1624,7 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
 
     A coluna «Agora» nasce com o estado lido aqui (o gesto roda em thread) e segue pela ponte.
     """
+    _MEXIDA.armada = ()
     _MEXIDA.menu = _MEXIDA.permissoes = ""
     mod_id = _id_do_clique(o, "configurar-modificacao")
     anterior = _VIVA.mod
@@ -1640,6 +1643,7 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
 @gesto("07-lancadores.html", exp.GESTO_DO_PARAR)
 def parar_tudo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «Parar tudo» da janela: o serviço publica o gesto ``para`` só para esta extensão."""
+    _MEXIDA.armada = ()
     mod_id = _id_do_clique(o, exp.GESTO_DO_PARAR)
     ok, motivo, corpo = p.chamar_com_o_corpo(METODO_DO_PARAR, mod=mod_id)
     if not ok:
@@ -1656,6 +1660,7 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
 
     A caixa e o número agem no ``change``; a chave de ligado, no clique.
     """
+    _MEXIDA.armada = ()
     from hefesto_dualsense4unix.mods import opcoes
 
     mod_id, _, resto = _id_do_clique(o, "guardar-opcao-da-modificacao").partition(":")
@@ -1717,6 +1722,7 @@ def _criar_o_css_da_modificacao(mod_id: str) -> pathlib.Path:
 def editar_o_css_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Editar o meu CSS»: o ``meu.css`` da extensão nasce com o exemplo, se ainda não existe, e
     abre no editor do sistema. Salvar o aplica na janela, sem reabrir (o vigia é o do tema)."""
+    _MEXIDA.armada = ()
     mod_id, _, opcao_id = _id_do_clique(o, exp.GESTO_DO_CSS).partition(":")
     item = _a_instalada(mod_id)
     opcao = item.manifesto.opcao_do_css if item.manifesto else None
@@ -1729,6 +1735,7 @@ def editar_o_css_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dic
 @gesto("07-lancadores.html", exp.GESTO_DO_GUARDAR, grava="_guardar_a_opcao_da_modificacao")
 def guardar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O Guardar da janela da extensão: grava o rascunho inteiro em ``opcoes.json``."""
+    _MEXIDA.armada = ()
     mod_id = _id_do_clique(o, exp.GESTO_DO_GUARDAR)
     recado = _guardar_a_opcao_da_modificacao(mod_id)
     _montar_a_janela_da_extensao(mod_id)
@@ -2508,7 +2515,25 @@ def _pecas_da_janela(manifesto: Any, mod_id: str) -> dict[str, Any]:
     return {"acoes": tuple(_acao_da_janela(a) for a in manifesto.acoes),  # (noqa-acento)
             "aparelhos": _aparelhos_da_janela(manifesto),
             "em_curso": _VIVA.esperando(mod_id, _AGORA.agora()),
-            "livre": _VIVA.ao_vivo(mod_id), "controles": _aba_dos_controles(manifesto)}
+            "livre": _VIVA.ao_vivo(mod_id), "controles": _aba_dos_controles(manifesto),
+            "armada": _armada_de(mod_id)}
+
+
+def _armada_de(mod_id: str) -> tuple[str, ...]:
+    """A ação desta extensão que espera o segundo clique, como (ação, alvo), ou vazio."""
+    return _MEXIDA.armada[1:] if _MEXIDA.armada[:1] == (mod_id,) else ()
+
+
+def _pede_o_segundo_clique(mod_id: str, acao: str, alvo: str) -> bool:
+    """A ação com o glifo que desfaz (``exp.ICONE_QUE_CONFIRMA``): a do aparelho, com ``alvo``, ou
+    a da janela, sem ele."""
+    item = _a_instalada_ou_nada(mod_id)
+    manifesto = item.manifesto if item else None
+    if manifesto is None:
+        return False
+    geridos = manifesto.aparelhos_acoes
+    lista = (geridos.acoes if geridos else ()) if alvo else manifesto.acoes
+    return any(a.id == acao and a.icone == exp.ICONE_QUE_CONFIRMA for a in lista)
 
 
 def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
@@ -2523,7 +2548,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     mod_id, estado, blocos = _MEXIDA.mod, _AGORA.agora(), carga["blocos"]
     aparelhos = _aparelhos_da_janela(manifesto)
     em_curso = _VIVA.esperando(mod_id, estado)
-    gestao = exp.Gestao(mod_id, aparelhos, estado, em_curso) if aparelhos else None
+    armada = _armada_de(mod_id)
+    gestao = exp.Gestao(mod_id, aparelhos, estado, em_curso, armada) if aparelhos else None
     if gestao and gestao.aparelhos.grupo:
         blocos["#mod-aparelhos"] = exp.aparelhos_geridos_html(gestao)
     elif gestao and _MEXIDA.agora:
@@ -2543,7 +2569,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
                   for o in manifesto.opcoes if o.tipo != "livre"]
         com_cc = aba_cc if cartoes else ""
         for n, delas in exp.acoes_por_aba(grupos, acoes, aparelhos, com_cc).items():
-            blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(mod_id, delas, em_curso)
+            blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(
+                mod_id, delas, em_curso, _armada_de(mod_id))
     if manifesto.opcao_livre is not None:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
         blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)
@@ -2561,10 +2588,16 @@ def _partes_do_clique(o: dict[str, Any], gesto_: str, quantas: int) -> list[str]
 def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """Um botão de ação da janela, ou a chave e os botões de um aparelho gerido: o serviço leva o
     clique só a esta extensão (``data-v`` é ``mod:ação[:alvo]``). O botão diz «Em curso» até a
-    extensão devolver o estado novo."""
+    extensão devolver o estado novo. A ação que desfaz pede o segundo clique: o primeiro só a arma
+    («Confirmar») e não manda nada; qualquer outro gesto da janela a desarma."""
     mod_id, acao, alvo = _partes_do_clique(o, exp.GESTO_DA_ACAO, 3)
     if not acao:
         raise RuntimeError("O clique não disse qual ação. Nada foi enviado.")
+    armar = (mod_id, acao, alvo)
+    if _MEXIDA.armada != armar and _pede_o_segundo_clique(mod_id, acao, alvo):
+        _MEXIDA.armada = armar
+        return _a_pintura_agora(ctx)
+    _MEXIDA.armada = ()
     params: dict[str, Any] = {"mod": mod_id, "acao": acao}  # (noqa-acento)
     if alvo:
         params["alvo"] = alvo
@@ -2646,11 +2679,26 @@ def _o_modo_que_vale(mod_id: str) -> dict[str, Any]:
     return {chave: vivo} if chave and vivo else {}
 
 
+@gesto("07-lancadores.html", exp.GESTO_DA_ABA)
+def aba_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """A aba trocada na janela da extensão: ela fica a aberta ao redesenhar, e a ação armada
+    desarma. Age no ``change`` do rádio; o clique que o precede não pinta nada."""
+    mod_id, aba = _partes_do_clique(o, exp.GESTO_DA_ABA, 2)
+    if str(o.get("evento") or "") != "change" or _MEXIDA.mod != mod_id:
+        return None
+    _MEXIDA.aba = aba
+    if not _MEXIDA.armada:
+        return None
+    _MEXIDA.armada = ()
+    return _a_pintura_agora(ctx)
+
+
 @gesto("07-lancadores.html", exp.GESTO_DO_CANCELAR)
 def cancelar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O Cancelar e o X da janela da extensão (o Esc clica o X): o modo do ``livre`` que já valeu
     volta ao guardado na extensão e o rascunho sai. Recusado o desfazer, nada muda (o rascunho diz
     o modo que ainda vale) e a recusa aparece; o reabrir tenta de novo."""
+    _MEXIDA.armada = ()
     mod_id = _id_do_clique(o, exp.GESTO_DO_CANCELAR)
     recusa = _desfazer_o_modo(mod_id, p)
     if recusa is not None:
@@ -2684,6 +2732,7 @@ def mover_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     O serviço segura em 20 por segundo; o que chega fora de ordem cai aqui. Não pinta: o rastro
     é do tique, e a barra é a que o dedo está arrastando.
     """
+    _MEXIDA.armada = ()
     mod_id, opcao_id, valor = _do_trilho(o, exp.GESTO_DO_LIVRE)
     _VIVA.enviar(mod_id, opcao_id, valor, vivo=int(_numero(o.get("vivo"))),
                  carimbo=_numero(o.get("carimbo")), soltou=False, ponte=p)
@@ -2694,6 +2743,7 @@ def mover_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
 def soltar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any],
                                   p: Any) -> dict[str, Any] | None:
     """O soltar da barra (o ``change``): sai sempre, com o valor final, fora do compasso."""
+    _MEXIDA.armada = ()
     if str(o.get("evento") or "") != "change":
         return None
     mod_id, opcao_id, valor = _do_trilho(o, exp.GESTO_DE_SOLTAR)
@@ -2730,6 +2780,7 @@ def gravar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> d
     """«Gravar» começa; o segundo clique, com ele aceso, faz do que se arrastou uma forma nova
     («Meu N») no rascunho do livre. Quem grava no disco é o Guardar da janela, e a forma entra
     na escolha dos botões desta extensão."""
+    _MEXIDA.armada = ()
     from hefesto_dualsense4unix.mods.manifesto import FORMAS_POR_OPCAO
 
     mod_id, opcao_id = _partes_do_clique(o, exp.GESTO_DE_GRAVAR, 2)
@@ -2758,6 +2809,7 @@ def gravar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> d
 def esquecer_a_forma_do_livre(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «x» de uma forma gravada: sai do rascunho do livre, e o botão que a usava volta ao padrão.
     Quem grava é o Guardar da janela."""
+    _MEXIDA.armada = ()
     from hefesto_dualsense4unix.mods import opcoes
 
     mod_id, opcao_id, nome = _partes_do_clique(o, exp.GESTO_DE_ESQUECER_A_FORMA, 3)
@@ -2785,6 +2837,7 @@ def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     """«Soltar», «Segurar» ou «Repetir» (o ``livre`` com ``modos``): o modo vai ao rascunho, como
     as outras escolhas (quem grava no disco é o Guardar), e vale na hora na barra e na extensão.
     ``data-v`` é ``mod:id:modo``."""
+    _MEXIDA.armada = ()
     from hefesto_dualsense4unix.mods import opcoes
 
     mod_id, opcao_id, modo = _partes_do_clique(o, exp.GESTO_DO_MODO, 3)

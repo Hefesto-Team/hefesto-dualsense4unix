@@ -128,6 +128,9 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "acao-da-modificacao"):
         "ato: o serviço leva o clique só àquela extensão (`mods.acao`), e quem age no aparelho é "
         "ela; nenhuma escolha guardada muda no Hefesto",
+    ("07-lancadores.html", "aba-da-modificacao"):
+        "tela: a aba trocada na janela da extensão fica a aberta ao redesenhar e desarma o "
+        "Esquecer que esperava o segundo clique; nada se grava",
     ("07-lancadores.html", "mover-o-livre-da-modificacao"):
         "ato: o arrastar do controle livre vai à extensão (`mods.livre`, 20 por segundo); nada "
         "fica guardado",

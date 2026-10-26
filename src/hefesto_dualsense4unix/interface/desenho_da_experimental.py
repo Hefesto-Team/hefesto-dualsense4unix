@@ -616,6 +616,14 @@ def chave_da_aba(nome: str, itens: Sequence[OpcaoDaJanela]
     return chave, [o for o in itens if o is not chave]
 
 
+def _radio_da_aba(n: int | str, nome: str, aberta: str, mod: str) -> str:
+    """O rádio de uma aba. Na janela de uma extensão a troca avisa o Hefesto (``GESTO_DA_ABA``):
+    a aba fica a aberta ao redesenhar, e a ação armada desarma."""
+    gesto_ = f' data-gesto="{GESTO_DA_ABA}" data-v="{_a(mod)}:{_a(nome)}"' if mod else ""
+    return (f'<input type="radio" name="mj-aba"{gesto_} id="mj-aba-{n}"'
+            f'{" checked" if nome == aberta else ""}>')
+
+
 def _bolinha_da_aba(n: int | str, chave: OpcaoDaJanela | None) -> str:
     """A bolinha da chave da aba, verde ligada e cinza desligada; o clique é o da chave de
     ``ligado`` (``guardar-opcao-da-modificacao``). Pedaço próprio: o clique repinta só ela."""
@@ -687,13 +695,13 @@ def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
     return "".join(partes)
 
 
-def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
+def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str, mod: str = "") -> str:
     """O lado dos ajustes do arranjo C: os grupos do manifesto em abas, um cartão só.
 
-    As abas são rádios (o navegador troca a tela sem gesto); ``aba`` é o grupo que nasce aberto, o
-    da última opção mudada, para a janela redesenhada não voltar à primeira. As telas se empilham
-    na mesma célula (``--n`` é o número de abas): a janela tem a altura da maior e não pula sob o
-    clique. Com um grupo só, é o cartão de sempre.
+    As abas são rádios (o navegador troca a tela, e o rádio avisa o Hefesto); ``aba`` é o grupo
+    que nasce aberto, o da última opção mudada, para a janela redesenhada não voltar à primeira.
+    As telas se empilham na mesma célula (``--n`` é o número de abas): a janela tem a altura da
+    maior e não pula sob o clique. Com um grupo só, é o cartão de sempre.
     """
     grupos = _grupos_das_opcoes(opcoes)
     if len(grupos) < 2:
@@ -703,7 +711,7 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
     for n, (nome, itens) in enumerate(grupos.items()):
         chave, linhas = chave_da_aba(nome, itens)
         telas.append(
-            f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
+            f'{_radio_da_aba(n, nome, aberta, mod)}'
             f'<label for="mj-aba-{n}">{_e(nome)}{_bolinha_da_aba(n, chave)}</label>'
             f'<div class="mj-tela" id="{PEDACO}tela-{n}">{_linhas_da_aba(n, linhas, chave)}</div>')
     partes = "".join(telas)
@@ -900,7 +908,7 @@ def _o_fecho(mod: str) -> str:
 PEDACO = "mod-"
 _SEM_FECHO = frozenset({"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
                         "source", "track", "wbr"})
-_ABA_MARCADA = re.compile(r'(<input type="radio" name="mj-aba" id="mj-aba-\d+") checked>')
+_ABA_MARCADA = re.compile(r'(<input type="radio" name="mj-aba"[^>]*? id="mj-aba-\d+") checked>')
 _BARRA_DO_LIVRE = re.compile(r'<div class="mj-trilho.*?</output></div>', re.S)
 
 
@@ -1034,16 +1042,16 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            porque: str = "", acoes: Sequence[AcaoDaJanela] = (),
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
-                           livre: LivreAoVivo | None = None, controles: str = "") -> str:
+                           livre: LivreAoVivo | None = None, controles: str = "",
+                           armada: Sequence[str] = ()) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
     Cada opção vira uma linha do cartão do grupo dela; o Guardar grava o rascunho. ``agora`` são os
     pedaços da coluna «Agora» (``estado`` é o último ``acessorios.estado``) e ``parar_tudo`` põe o
     botão no topo, os dois só com ``mod``. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é
     o arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` são os
-    pares (ação, alvo) que esperam a extensão, e a opção ``livre`` vai à faixa de baixo.
-    ``controles`` é a aba dos cartões dos controles de cada aparelho (``aparelhos_controles``), que
-    só aparece quando algum aparelho do ``estado`` os tem.
+    pares (ação, alvo) que esperam a extensão, ``armada`` o que espera o segundo clique, ``livre``
+    vai à faixa de baixo e ``controles`` é a aba dos controles de cada aparelho.
     """
     parar = parar_tudo_html(mod) if parar_tudo and mod else ""
     agora = agora if mod else ()
@@ -1051,15 +1059,15 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     vazio = "" if livre_op else VAZIO_DA_JANELA
     opcoes = [o for o in opcoes if o.tipo != "livre"]
     acoes = tuple(acoes) if mod else ()
-    gestao = Gestao(mod, aparelhos, estado, em_curso) if mod and aparelhos else None
+    gestao = Gestao(mod, aparelhos, estado, em_curso, tuple(armada)) if mod and aparelhos else None
     cartoes = controles_dos_aparelhos_html(mod, estado, em_curso) if mod and controles else ""
     cc = (controles, cartoes) if cartoes else ("", "")
     if agora or acoes or gestao or livre_op or cartoes:
         if acoes or (gestao and gestao.aparelhos.grupo) or cartoes:
             ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
-                                         controles=cc)
+                                         controles=cc, armada=armada)
         else:
-            ajustes = _abas_das_opcoes(opcoes, aba) if opcoes else vazio
+            ajustes = _abas_das_opcoes(opcoes, aba, mod) if opcoes else vazio
         fora = dica_da_barra_fora(nome, processo)
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
@@ -1333,9 +1341,13 @@ class Gestao(NamedTuple):
     aparelhos: AparelhosDaJanela
     estado: Mapping[str, Any] | None
     em_curso: frozenset[tuple[str, str]] = frozenset()
+    armada: tuple[str, ...] = ()
 
 
 GESTO_DA_ACAO = "acao-da-modificacao"
+GESTO_DA_ABA = "aba-da-modificacao"
+ICONE_QUE_CONFIRMA = "esquecer"
+ROTULO_DE_CONFIRMAR = "Confirmar"
 GESTO_DO_LIVRE = "mover-o-livre-da-modificacao"
 GESTO_DE_SOLTAR = "soltar-o-livre-da-modificacao"
 GESTO_DE_GRAVAR = "gravar-o-livre-da-modificacao"
@@ -1382,21 +1394,29 @@ def valor_da_acao(mod: str, acao_id: str, alvo: str = "") -> str:
 
 
 def acao_html(mod: str, acao: AcaoDaJanela, *, alvo: str = "", em_curso: bool = False,
-              forte: bool = False) -> str:
+              forte: bool = False, armada: bool = False) -> str:
     """Um botão de ação (:func:`valor_da_acao`). Enquanto a extensão não devolve o estado, ele diz
-    «Em curso»."""
+    «Em curso»; ``armada`` é o primeiro clique numa ação que pede o segundo: ele diz «Confirmar»."""
     v = valor_da_acao(mod, acao.id, alvo)
-    classe = "btn mj-acao" + (" forte" if forte else "") + (" em-curso" if em_curso else "")
+    classe = ("btn mj-acao" + (" forte" if forte else "") + (" em-curso" if em_curso else "")
+              + (" armada" if armada else ""))
     ocupado = ' aria-busy="true"' if em_curso else ""
+    rotulo = EM_CURSO if em_curso else ROTULO_DE_CONFIRMAR if armada else _e(acao.rotulo)
     return (f'<button class="{classe}" data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}"{ocupado}>'
-            f'{_icone_da_acao(acao.icone)}<span>{EM_CURSO if em_curso else _e(acao.rotulo)}</span>'
-            "</button>")
+            f'{_icone_da_acao(acao.icone)}<span>{rotulo}</span></button>')
+
+
+def armada_em(armada: Sequence[str], acao_id: str, alvo: str = "") -> bool:
+    """Se o par (ação, alvo) é o que espera o segundo clique."""
+    return tuple(armada) == (acao_id, alvo)
 
 
 def barra_de_acoes_html(mod: str, acoes: Sequence[AcaoDaJanela],
-                        em_curso: frozenset[tuple[str, str]] = frozenset()) -> str:
+                        em_curso: frozenset[tuple[str, str]] = frozenset(),
+                        armada: Sequence[str] = ()) -> str:
     """As ações de uma aba, numa fileira; a primeira é a forte."""
-    return "".join(acao_html(mod, a, em_curso=(a.id, "") in em_curso, forte=n == 0)
+    return "".join(acao_html(mod, a, em_curso=(a.id, "") in em_curso, forte=n == 0,
+                             armada=armada_em(armada, a.id))
                    for n, a in enumerate(acoes))
 
 
@@ -1421,7 +1441,8 @@ def _chave_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
 
 def _botoes_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
     alvo = str(ap["id"])
-    return "".join(acao_html(g.mod, a, alvo=alvo, em_curso=(a.id, alvo) in g.em_curso)
+    return "".join(acao_html(g.mod, a, alvo=alvo, em_curso=(a.id, alvo) in g.em_curso,
+                             armada=armada_em(g.armada, a.id, alvo))
                    for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
 
 
@@ -1565,6 +1586,8 @@ def aparelhos_na_coluna_html(g: Gestao) -> str:
             continue
         alvo = str(ap["id"])
         botoes = "".join(
+            acao_html(g.mod, a, alvo=alvo, em_curso=(a.id, alvo) in g.em_curso, armada=True)
+            if armada_em(g.armada, a.id, alvo) else
             f'<button class="btn ico mj-acao{" em-curso" if (a.id, alvo) in g.em_curso else ""}" '
             f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(valor_da_acao(g.mod, a.id, alvo))}" '
             f'data-dica="{_a(a.rotulo)}" aria-label="{_a(a.rotulo)}">'
@@ -1689,7 +1712,7 @@ def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDa
 
 def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        acoes: Sequence[AcaoDaJanela], gestao: Gestao | None,
-                       controles: tuple[str, str] = ("", "")) -> str:
+                       controles: tuple[str, str] = ("", ""), armada: Sequence[str] = ()) -> str:
     """As abas do arranjo C com as ações e a lista dos aparelhos geridos.
 
     Cada aba é: a fileira das ações dela (``#mod-acoes-<n>``), a lista dos aparelhos se ela é a do
@@ -1716,7 +1739,7 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
         fileira = ""
         if acoes_da[nome]:
             fileira = (f'<div class="mj-acoes" id="mod-acoes-{n}">'
-                       f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso)}</div>")
+                       f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso, armada)}</div>")
         lista = (f'<div class="mj-aps" id="mod-aparelhos">{aparelhos_geridos_html(gestao)}</div>'
                  if gestao and gestao.aparelhos.grupo == nome else "")
         partes.append(f'<div class="mj-sec">{fileira}{lista}</div>' if fileira and lista
@@ -1727,7 +1750,7 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
         if linhas:
             partes.append(_linhas_da_aba(n, linhas, chave))
         telas.append(
-            f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
+            f'{_radio_da_aba(n, nome, aberta, mod)}'
             f'<label for="mj-aba-{n}">{_e(nome)}{_bolinha_da_aba(n, chave)}</label>'
             f'<div class="mj-tela" id="{PEDACO}tela-{n}">{"".join(partes)}</div>')
     return f'<div class="ac-card mj-abas" style="--n:{len(nomes)}">{"".join(telas)}</div>'
