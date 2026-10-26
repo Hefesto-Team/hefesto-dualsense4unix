@@ -243,14 +243,14 @@
       "data": "2026-10-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1157874,
+      "piso": 1157861,
       "por_item": {
         "docs": 107506,
         "scripts": 109449,
-        "src": 294291,
+        "src": 294278,
         "tests": 646628
       },
-      "razao": "tamanho: +999 linhas (1156875 -> 1157874), pagas por Origem: D-0810-A-FAMILIA-DECLARADA-VALE-PARA-O-DUALSENSE, D-1810-A-JANELA-DA-EXTENSAO-LE-O-KIT-PELA-PASTA-E-NUNCA-MOSTRA-O-IP, D-2010-A-GUARDA-DA-PERFIS-ESCONDE-O-ID-NA-JANELA-ESTREITA; registrado no fecho, topo a9d7245a21b3",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
