@@ -160,8 +160,6 @@ class _Vigiada:
     quer_parar: asyncio.Event = field(default_factory=asyncio.Event)
 
 
-_LINHAS_DO_CANO = re.compile(rb"[^\n]*\n|[^\n]+")
-
 _A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
 
 
@@ -209,6 +207,7 @@ class _AHoraDeCadaLinha:
     """Põe ``HH:MM:SS`` no começo de cada linha, e a data na primeira e quando o dia muda.
 
     Só a linha inteira sai; o pedaço sem quebra espera a quebra, até ``teto`` bytes ou o fim.
+    As linhas de um mesmo pedaço do cano chegaram juntas e levam a mesma hora, lida uma vez.
     """
 
     def __init__(self, relogio: Callable[[], time.struct_time], teto: int) -> None:
@@ -218,12 +217,12 @@ class _AHoraDeCadaLinha:
         self.no_meio = False
         self.resto = b""
 
-    def _carimbo(self) -> bytes:
+    def _carimbos(self) -> tuple[bytes, bytes]:
         agora = self.relogio()
-        dia, hora = time.strftime("%Y-%m-%d", agora), time.strftime("%H:%M:%S", agora)
-        carimbo = f"{hora} " if dia == self.dia else f"{dia} {hora} "
+        dia, hora = time.strftime("%Y-%m-%d", agora), f"{time.strftime('%H:%M:%S', agora)} "
+        primeiro = hora if dia == self.dia else f"{dia} {hora}"
         self.dia = dia
-        return carimbo.encode()
+        return primeiro.encode(), hora.encode()
 
     def marcar(self, pedaco: bytes, *, fim: bool = False) -> bytes:
         dados = self.resto + pedaco
@@ -231,16 +230,19 @@ class _AHoraDeCadaLinha:
         if fim or len(dados) - corte > self.teto:
             corte = len(dados)
         dados, self.resto = dados[:corte], dados[corte:]
-        saida = bytearray()
-        for linha in _LINHAS_DO_CANO.findall(dados):
-            if not self.no_meio:
-                saida += self._carimbo()
-            saida += linha
-            self.no_meio = not linha.endswith(b"\n")
+        saida = b""
+        if dados:
+            inteira = dados.endswith(b"\n")
+            miolo = dados[:-1] if inteira else dados
+            primeiro, hora = (self._carimbos() if b"\n" in miolo or not self.no_meio
+                              else (b"", b""))
+            saida = ((b"" if self.no_meio else primeiro) + miolo.replace(b"\n", b"\n" + hora)
+                     + (b"\n" if inteira else b""))
+            self.no_meio = not inteira
         if fim and self.no_meio:
-            saida += b"\n"
             self.no_meio = False
-        return bytes(saida)
+            saida += b"\n"
+        return saida
 
 
 async def _copiar_para_o_diario(

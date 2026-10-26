@@ -94,8 +94,27 @@ def test_o_pedaco_sem_quebra_entra_quando_o_processo_fecha(tmp_path: Path) -> No
     assert diario.read_bytes().endswith(b"o fim sem quebra\n")
 
 
+def _pelo_cano(diario: Path, pedacos: list[bytes],
+               relogio: Callable[[], time.struct_time]) -> list[str]:
+    async def corrida() -> None:
+        leitor = asyncio.StreamReader()
+        copia = asyncio.create_task(
+            supervisor_mod._copiar_para_o_diario(leitor, diario, relogio=relogio))
+        for pedaco in pedacos:
+            leitor.feed_data(pedaco)
+            await asyncio.sleep(0.01)
+        leitor.feed_eof()
+        await copia
+
+    asyncio.run(corrida())
+    return diario.read_text(encoding="utf-8").splitlines()
+
+
 def test_a_data_volta_quando_o_dia_muda(tmp_path: Path) -> None:
-    linhas = _copiar(tmp_path / "diario.log", _relogio(
+    linhas = _pelo_cano(tmp_path / "diario.log", [
+        b"primeira inteira\n", b"segunda inteira\n", b"a partida ", b"chega inteira\n",
+        b"o fim sem quebra",
+    ], _relogio(
         "2026-10-26 23:59:58", "2026-10-26 23:59:59", "2026-10-27 00:00:01",
         "2026-10-27 00:00:02",
     ))
@@ -105,6 +124,21 @@ def test_a_data_volta_quando_o_dia_muda(tmp_path: Path) -> None:
         "2026-10-27 00:00:01 a partida chega inteira",
         "00:00:02 o fim sem quebra",
     ], linhas
+
+
+def test_o_relogio_e_lido_uma_vez_por_pedaco_do_cano(tmp_path: Path) -> None:
+    leituras: list[int] = []
+
+    def relogio() -> time.struct_time:
+        leituras.append(1)
+        return time.strptime("2026-10-26 13:19:00", "%Y-%m-%d %H:%M:%S")
+
+    linhas = _pelo_cano(tmp_path / "diario.log", [b"linha\n" * 1000, b"\n" * 1000], relogio)
+    assert len(linhas) == 2000, len(linhas)
+    assert linhas[0] == "2026-10-26 13:19:00 linha"
+    assert set(linhas[1:1000]) == {"13:19:00 linha"}
+    assert set(linhas[1000:]) == {"13:19:00 "}
+    assert len(leituras) == 2, len(leituras)
 
 
 def test_a_ultima_linha_que_a_tela_mostra_vem_sem_a_hora(tmp_path: Path) -> None:
