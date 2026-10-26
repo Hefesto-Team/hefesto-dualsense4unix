@@ -89,6 +89,7 @@ def test_sem_busca_a_janela_nao_mostra_andamento(
 
 def test_a_busca_diz_os_segundos_que_faltam_do_prazo(
         dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
+    """Prova da D-2610-O-ANDAMENTO-DO-PAREAR-LE-O-ESTADO-DA-EXTENSAO."""
     andamento, relogio = dono
     primeiro = andamento.ver("lovense", estado(BUSCANDO))
     assert (primeiro.fase, primeiro.restam) == ("busca", 20)
