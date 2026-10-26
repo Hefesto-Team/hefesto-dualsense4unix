@@ -96,7 +96,8 @@ class _Mundo:
 
 
 class _Ops(hb.FsAclOps):
-    """O ``FsAclOps`` de verdade, com o nó regular no lugar do device e o kernel anotado."""
+    """O ``FsAclOps`` de verdade, com o nó regular no lugar do device, o ``0660`` no lugar da
+    ACL e o kernel anotado."""
 
     _e_char_device = staticmethod(stat.S_ISREG)
 
@@ -127,6 +128,9 @@ class _Ops(hb.FsAclOps):
 
     def open_entrada(self, node: str, base: str) -> int:
         return os.open(node, os.O_RDONLY | os.O_CLOEXEC)
+
+    def is_exposed_to(self, node: str, uid: int | None) -> bool:
+        return stat.S_IMODE(os.stat(node).st_mode) == 0o660
 
 
 class _Cena:
@@ -236,6 +240,18 @@ def test_a_volta_nao_repete_o_revoke_nem_a_linha_do_diario(tmp_path: Path) -> No
     assert cena.ops.revogados == antes[0]
     novas = cena.diario[len(antes[1]):]
     assert [e for e, _c in novas if e.startswith("no_do_fisico")] == []
+
+
+def test_a_volta_do_hefesto_tira_o_no_antes_do_pedido_que_a_anunciou(tmp_path: Path) -> None:
+    """O ``expose`` e o ``pad_usb_montar`` também desfazem a entrega, e não fecham nada depois."""
+    cena = _Cena(tmp_path)
+    m = cena.mundo
+    m.abrir_a_sessao()
+    cena.estado.entregue = True
+    m.processo(TECLADO, "cosmic-osk")
+    m.segura(TECLADO, 35, m.ev(1))
+    assert cena.estado.retomar_o_esconderijo() == [cena.nos[0]]
+    assert cena.ops.revogados == [(TECLADO, 35)]
 
 
 def test_o_hidraw_que_alguem_segura_so_vai_ao_diario(tmp_path: Path) -> None:
