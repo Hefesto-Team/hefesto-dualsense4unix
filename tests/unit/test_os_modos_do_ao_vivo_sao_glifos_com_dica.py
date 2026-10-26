@@ -64,6 +64,7 @@ def test_o_botao_nao_tem_palavra_so_o_glifo(janela: Any) -> None:  # noqa: F811
 
 
 def test_cada_modo_diz_o_efeito_na_dica_e_no_aria_label(janela: Any) -> None:  # noqa: F811
+    """Prova da D-2610-OS-MODOS-DO-AO-VIVO-SAO-GLIFOS-COM-DICA."""
     botoes = botoes_do_html(montada(janela, VIVO))
     for modo, frase in EFEITOS.items():
         atributos = botoes[modo][0]

@@ -71,6 +71,7 @@ def test_cada_valor_do_seletor_tem_um_desenho_proprio() -> None:
 
 
 def test_o_direto_sobe_em_reta_e_o_suave_ao_quadrado() -> None:
+    """Prova da D-2610-O-DESENHO-DA-ONDA-DO-DIRETO-E-DO-SUAVE."""
     def alturas(valor: str) -> list[float]:
         return [float(h) for h in re.findall(r'height="([\d.]+)" rx', onda_de(
             linha("entrada_l2", "Gatilho esquerdo (L2)", valor)))]
