@@ -993,8 +993,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             nomes_da_mesa, lambda n: _lugar_vazio(n, nomes_da_mesa)[0])
         fora["guarda.vazio"] = _com_os_lugares_vazios(
             ["" for _ in guarda], lambda _n: "sim")
-        fora["guarda.id"] = _com_os_lugares_vazios(
-            [g.get("id", "") for g in guarda], lambda _n: "")
         fora["guarda.plastico"] = _com_os_lugares_vazios(
             [g.get("plastico", "") for g in guarda],
             lambda n: _lugar_vazio(n, nomes_da_mesa)[1])

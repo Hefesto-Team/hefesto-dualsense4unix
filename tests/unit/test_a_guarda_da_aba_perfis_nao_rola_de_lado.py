@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""A guarda da aba Perfis não rola de lado a 1212 px: o ID da peça cede o lugar (20/10/2026).
+"""A guarda da aba Perfis não rola de lado a 1212 px nem a 1918 px, e o ID da peça não volta.
 
-A escolha, pelo chat: entre encolher o respiro, quebrar as seções em duas linhas e esconder o ID,
-esconder o ID da peça nas larguras em que a tabela não cabe. Acima delas, nada muda.
+20/10/2026: o ID da peça cedia nas larguras em que a tabela não cabia.
+26/10/2026 (D-2610-O-ID-DA-PECA-SAI-DA-TELA, a validar pelo usuário): a coluna sai em toda
+largura, porque a tela não mostra endereço de rádio, nem mascarado.
 """
 from __future__ import annotations
 
 import pathlib
 import sys
+from typing import Any
 
 import pytest
 
@@ -46,7 +48,7 @@ A_GUARDA = """
 """
 
 
-def _mede(largura: int, altura: int, html: pathlib.Path | None = None) -> dict:
+def _mede(largura: int, altura: int, html: pathlib.Path | None = None) -> dict[str, Any]:
     """Abre a aba 10 do desenho (`mockup/`) no Chrome do sistema e devolve o que a guarda mediu."""
     from playwright.sync_api import sync_playwright
 
@@ -71,9 +73,9 @@ def test_a_1212_a_guarda_nao_rola_de_lado_e_o_id_da_peca_cede() -> None:
     assert not m["id_cabecalho"] and not m["id_celula"], f"o ID da peça segue à mostra: {m}"
 
 
-def test_a_1918_o_id_da_peca_segue_visivel_e_nada_rola() -> None:
+def test_a_1918_nada_rola_e_o_id_da_peca_nao_volta() -> None:
     m = _mede(*LARGA)
-    assert m["id_cabecalho"] and m["id_celula"], f"o ID da peça sumiu na vista larga: {m}"
+    assert not m["id_cabecalho"] and not m["id_celula"], f"o ID da peça voltou à tela: {m}"
     assert m["lateral"] <= 0, m
     assert m["documento_vertical"] <= 0, m
 
@@ -91,23 +93,20 @@ def test_em_nenhuma_largura_em_volta_do_corte_a_guarda_rola_de_lado(largura: int
     assert m["lateral"] <= 0, f"a guarda rola de lado a {largura} px: {m}"
 
 
-def test_a_mordida_sem_a_regra_de_largura_a_1212_reprova(tmp_path: pathlib.Path) -> None:
-    """Tira a regra da folha da página e a mesma medição reprova: a régua morde."""
+def test_a_mordida_com_a_coluna_do_id_de_volta_a_1212_reprova(tmp_path: pathlib.Path) -> None:
+    """Devolve a coluna de 114 px do ID à página e a mesma medição reprova: a régua morde."""
     texto = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
-    marca = "@media (max-width:1259px){"
-    assert texto.count(marca) == 1, (
-        "a regra do corte sumiu da aba 10: a guarda volta a rolar de lado")
-    ini = texto.index(marca)
-    n, i = 0, texto.index("{", ini)
-    for j in range(i, len(texto)):
-        n += texto[j] == "{"
-        n -= texto[j] == "}"
-        if n == 0:
-            fim_bloco = j + 1
-            break
-    sem = texto[:ini] + texto[fim_bloco:]
+    fecho = '<col data-coluna="status"></colgroup>'
+    assert fecho in texto, "o `<colgroup>` da guarda mudou: a mordida não sabe onde pôr o ID"
+    com_id = texto.replace(fecho, '<col data-coluna="status"><col style="width:114px"></colgroup>')
+    ini = com_id.index('<div class="guarda">')
+    fim = com_id.index("</table>", ini)
+    guarda = com_id[ini:fim].replace("</th>\n                  </tr></thead>",
+                                     "</th><th>ID da peça</th></tr></thead>")
+    guarda = guarda.replace("</td>\n                  </tr>",
+                            "</td><td>AA:BB:CC:00:00:01</td></tr>")
     arq = tmp_path / "10-perfis.html"
-    arq.write_text(sem, encoding="utf-8")
+    arq.write_text(com_id[:ini] + guarda + com_id[fim:], encoding="utf-8")
     m = _mede(*ESTREITA, html=arq)
     assert m["lateral"] > 0, (
-        f"sem a regra a guarda continua cabendo a 1212 px: a régua não mede nada ({m})")
+        f"com a coluna do ID a guarda continua cabendo a 1212 px: a régua não mede nada ({m})")

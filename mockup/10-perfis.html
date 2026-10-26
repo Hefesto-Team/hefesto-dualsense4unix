@@ -473,7 +473,7 @@
   .gd-nome{vertical-align:middle;white-space:nowrap;font-size:11px}
   .tab.miuda{min-width:524px}
   .gd-pecas{width:271px}
-  .gd-pecas .gls{gap:5px}
+  .gd-pecas .gls{display:flex;width:100%;gap:clamp(5px,calc((100% - 218px) / 9),14px)}
   .gc{position:relative;display:inline-flex}
   .gq{display:inline-flex;align-items:center;gap:2px;border-radius:3px}
   .gq.nd{outline:1px dashed var(--comment);outline-offset:1px}
@@ -483,8 +483,6 @@
   .gr{display:inline-flex;align-items:center;gap:2px;color:var(--fg)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
-  .gd-id{width:118px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
-         color:var(--fg)}
   .tab.miuda td:first-child{position:relative}
   .gd-nome .pl{position:absolute;left:0;top:0;bottom:0;width:3px;
                background:currentColor;color:transparent}
@@ -532,12 +530,6 @@
   .ordem-vale .pega{color:var(--fg);letter-spacing:-2px}
   .guarda table{table-layout:fixed;width:100%;min-width:0 !important}
   .guarda col[data-coluna="controle"]{width:136px}
-  .guarda col[data-coluna="id"]{width:114px}
-  .guarda td.gd-id,.guarda th.gd-id{font-size:10px;letter-spacing:-.2px;padding-left:6px;
-                                    padding-right:6px}
-  @media (max-width:1259px){
-    .guarda col[data-coluna="id"],.guarda th.gd-id,.guarda td.gd-id{display:none}
-  }
   @media (max-height:860px){
     .campo{height:32px}
     .campo input,.campo select,.campo .seg button{height:32px !important;min-height:0}
@@ -837,11 +829,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                 <table class="tab miuda" data-hef="guarda.larguras" data-hef-alvo="atributo"
                        data-hef-atributo="data-larguras" data-tabela="10-perfis.guarda"
                        data-larguras="">
-                  <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
+                  <colgroup><col data-coluna="controle"><col data-coluna="status"></colgroup>
                   <thead><tr>
                     <th data-dica="Um ajuste por controle, guardado no perfil">Controle<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="controle" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
                     <th class="gd-pecas" data-dica="Aceso: ligado agora; o ponto: só deste controle">Status<span class="puxador" data-hef-gesto="largura-da-coluna" data-tabela="10-perfis.guarda" data-coluna="status" data-px="0" role="separator" aria-label="Arraste para mudar a largura da coluna"></span></th>
-                    <th class="gd-id" data-dica="Por este endereço o perfil reconhece o controle">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
                   <tr data-hef-uniq="p1" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora">
@@ -927,7 +918,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
-                    <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:01</td>
                   </tr>
                   <tr data-hef-uniq="p2" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora">
                     <td class="gd-nome">
@@ -1012,7 +1002,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
-                    <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:02</td>
                   </tr>
                   <tr data-hef-uniq="p3" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
                       data-dica="Quando ele voltar, encontra o que você deixou">
@@ -1098,7 +1087,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
-                    <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:03</td>
                   </tr>
                   <tr data-hef-uniq="p4" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora" class="fora"
                       data-dica="Quando ele voltar, encontra o que você deixou">
@@ -1184,7 +1172,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
-                    <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:04</td>
                   </tr>
                   </tbody>
                 </table>

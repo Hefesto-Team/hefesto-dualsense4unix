@@ -195,7 +195,8 @@ def test_a_coluna_de_ajuste_proprio_tem_a_ativacao_e_os_analogicos_depois_do_mov
     """A (recomendada) é o desenho de 16/10: dez células, cada seção com glifo e ponto."""
     html = _ler(DEZ)
     assert tuple(_secoes_da_primeira_linha(html)) == _SECOES_DE_UMA_LINHA
-    assert ".gd-pecas{width:271px}" in html and ".gd-pecas .gls{gap:5px}" in html
+    assert ".gd-pecas{width:271px}" in html
+    assert ".gd-pecas .gls{display:flex;width:100%;gap:clamp(5px," in html
 
 
 @sem_chrome

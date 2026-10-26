@@ -205,9 +205,9 @@ def test_a_tabela_da_guarda_nomeia_os_controles_da_mesa() -> None:
     assert fora["guarda.nome"] == ["Cosmic Red • BT", "Starlight Blue • USB",
                                    "Galactic Purple", "White"]
     assert not any(re.search(r"\bP[1-4]\b", n) for n in fora["guarda.nome"])
-    assert len(fora["guarda.id"]) == 4
-    assert fora["guarda.id"][2:] == ["", ""], (
-        "o lugar sem controle ganhou um ID — sem peça ali, não há o que mostrar")
+    assert "guarda.id" not in fora, (
+        "o pacote voltou a pintar o ID da peça: a tela não mostra endereço de rádio "
+        "(D-2610-O-ID-DA-PECA-SAI-DA-TELA)")
     assert fora["guarda.vazio"] == ["", "", "sim", "sim"], (
         "a marca do lugar vazio não acende nos dois últimos: os glifos do "
         "mockup voltam à tela de um lugar sem controle")
