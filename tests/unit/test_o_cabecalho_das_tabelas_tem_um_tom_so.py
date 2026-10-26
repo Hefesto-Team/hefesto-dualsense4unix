@@ -13,8 +13,9 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-if str(RAIZ / "src") not in sys.path:
-    sys.path.insert(0, str(RAIZ / "src"))
+for _pasta in ("src", "src/hefesto_dualsense4unix/interface"):
+    if str(RAIZ / _pasta) not in sys.path:
+        sys.path.insert(0, str(RAIZ / _pasta))
 
 from hefesto_dualsense4unix.interface import aba10, onde
 
