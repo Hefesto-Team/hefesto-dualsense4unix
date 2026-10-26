@@ -56,7 +56,7 @@ def _parametro(tmp_path: Path, valor: str | None) -> Path:
     return parametro
 
 
-def _doctor(raiz: Path, parametro: Path) -> str:
+def _doctor(raiz: Path, parametro: Path, python: str = sys.executable) -> str:
     roteiro = f"""
     set -uo pipefail
     ROOT_DIR="{RAIZ}"
@@ -68,7 +68,7 @@ def _doctor(raiz: Path, parametro: Path) -> str:
     so_no_checkout() {{ :; }}
     source <(sed -n '/^_regra_que_o_kmod_le()/,/^}}/p' "{DOCTOR}")
     source <(sed -n '/^check_btusb_autosuspend()/,/^}}/p' "{DOCTOR}")
-    _python_do_produto() {{ printf '%s\\n' "{sys.executable}"; }}
+    _python_do_produto() {{ printf '%s\\n' "{python}"; }}
     check_btusb_autosuspend
     """
     ambiente = {
@@ -136,3 +136,13 @@ def test_sem_o_conf_em_lugar_nenhum_os_dois_dizem_que_falta(tmp_path: Path) -> N
 
     assert "não está no lugar" in item.porque, item.porque
     assert "sem o conf do hefesto" in doctor, doctor
+
+
+@pytest.mark.parametrize("python", ["", "/bin/false"])
+def test_o_doctor_sem_o_python_do_produto_diz_que_nao_sabe(tmp_path: Path, python: str) -> None:
+    raiz = _raiz(tmp_path, "usr/lib/modprobe.d")
+
+    doctor = _doctor(raiz, _parametro(tmp_path, "Y"), python)
+
+    assert doctor.startswith("INFO não consegui perguntar ao Hefesto"), doctor
+    assert "enable_autosuspend=Y" in doctor, doctor
