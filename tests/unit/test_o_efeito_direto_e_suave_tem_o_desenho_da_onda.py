@@ -4,12 +4,13 @@ O-EFEITO-DIRETO-E-SUAVE-TEM-O-DESENHO-DA-ONDA-01 (26/10/2026). Nas linhas das en
 (L2, R2, os analógicos, o touchpad, o Sacudir, o Inclinar) o lugar do desenho do efeito ficava
 vazio com «Direto» e «Suave». Agora cada valor que o seletor oferece tem o seu desenho, no mesmo
 lugar e no mesmo traço da onda dos toques: o pontilhado do «Nenhum», a rampa reta do «Direto» e a
-curva em S do «Suave». O desenho vem no pedaço da própria linha, sem repintar a lista.
+curva ao quadrado do «Suave», que é como a extensão o aplica. O desenho vem no pedaço da própria
+linha, sem repintar a lista.
 
 MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas): a onda tirada da
 ``_linha_da_entrada`` (o estado de antes) reprova quatro testes e quebra a fixture do WebKit; a
-curva do «Suave» igual à rampa reprova o desenho próprio de cada valor e a curva em S; o tamanho
-do desenho mudado reprova o lugar vazio e a geometria no WebKit; o «Nenhum» sem o pontilhado
+curva do «Suave» igual à rampa reprova o desenho próprio de cada valor e a curva ao quadrado; o
+tamanho do desenho mudado reprova o lugar vazio e a geometria no WebKit; o «Nenhum» sem o pontilhado
 reprova o desenho próprio e a geometria.
 """
 
@@ -69,19 +70,21 @@ def test_cada_valor_do_seletor_tem_um_desenho_proprio() -> None:
         assert len(set(ondas.values())) == 3, f"{id_}: dois valores com o mesmo desenho"
 
 
-def test_o_direto_sobe_em_reta_e_o_suave_em_curva() -> None:
+def test_o_direto_sobe_em_reta_e_o_suave_ao_quadrado() -> None:
     def alturas(valor: str) -> list[float]:
         return [float(h) for h in re.findall(r'height="([\d.]+)" rx', onda_de(
             linha("entrada_l2", "Gatilho esquerdo (L2)", valor)))]
 
     reta, curva = alturas("Direto"), alturas("Suave")
+    assert len(reta) == len(curva) >= 6
     passos = [b - a for a, b in itertools.pairwise(reta)]
     assert max(passos) - min(passos) < 0.3, f"o Direto não sobe em reta: {reta}"
-    assert reta == sorted(reta) and curva == sorted(curva) and len(reta) == len(curva)
+    assert reta == sorted(reta) and curva == sorted(curva)
+    assert abs(curva[-1] - reta[-1]) < 0.3, (reta, curva)
+    assert all(c < r for c, r in zip(curva[1:-1], reta[1:-1], strict=True)), (
+        f"o Suave não começa leve (a extensão o aplica ao quadrado): {reta} contra {curva}")
     meio = len(reta) // 2
-    assert curva[0] <= reta[0] + 0.01 and curva[-1] >= reta[-1] - 1.0, (reta, curva)
-    assert curva[meio - 1] < reta[meio - 1] and curva[meio + 1] > reta[meio + 1], (
-        f"o Suave não amacia (curva em S): {reta} contra {curva}")
+    assert curva[meio] < reta[meio] * 0.6, (reta, curva)
 
 
 def test_valor_sem_desenho_deixa_o_lugar_vazio_do_mesmo_tamanho() -> None:

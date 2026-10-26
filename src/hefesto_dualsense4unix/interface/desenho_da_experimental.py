@@ -500,18 +500,19 @@ def _rampa(t: float) -> float:
     return t
 
 
-def _curva_em_s(t: float) -> float:
-    return 0.5 - 0.5 * math.cos(math.pi * t)
+def _ao_quadrado(t: float) -> float:
+    return t * t
 
 
-_FORMA_DA_ENTRADA: dict[str, Callable[[float], float]] = {"direto": _rampa, "suave": _curva_em_s}
+_FORMA_DA_ENTRADA: dict[str, Callable[[float], float]] = {"direto": _rampa, "suave": _ao_quadrado}
 
 
 def _onda_da_entrada(escolha: object) -> str:
     """O desenho do efeito da entrada contínua, no mesmo traço e tamanho da onda dos toques.
 
     «Nenhum» é o zero tracejado; «Direto» é a rampa reta (a força segue a entrada) e «Suave» a
-    curva em S que amacia. Um valor sem desenho deixa o lugar vazio, do mesmo tamanho.
+    mesma curva ao quadrado (o começo é leve), como a extensão as aplica. Um valor sem desenho
+    deixa o lugar vazio, do mesmo tamanho.
     """
     nome = str(escolha).strip().casefold()
     cabeca = '<svg class="onda" width="52" height="14" viewBox="0 0 52 14" aria-hidden="true">'
@@ -1394,6 +1395,7 @@ SEM_APARELHOS = "Nenhum aparelho por aqui ainda."
 COMECO_DO_MOTIVO_DA_BUSCA = "Procurando"
 CHAVE_DAS_CONEXOES = "conexoes"  # (noqa-acento)
 PRAZO_DA_BUSCA_S = 20.0
+SILENCIO_QUE_ENCERRA_A_BUSCA_S = 5.0
 FIM_DA_BUSCA_VISIVEL_S = 12.0
 SEM_RAZAO_DA_BUSCA = "Ligue o aparelho e deixe-o perto."
 
@@ -1436,7 +1438,7 @@ class AndamentoDoPareamento:
     def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
         self._relogio = relogio
         self._trava = threading.Lock()
-        self._buscas: dict[str, tuple[float, frozenset[str]]] = {}
+        self._buscas: dict[str, tuple[float, frozenset[str], float]] = {}
         self._fins: dict[str, tuple[float, Andamento]] = {}
 
     def limpar(self) -> None:
@@ -1467,13 +1469,17 @@ class AndamentoDoPareamento:
         with self._trava:
             procurando = self._procurando(estado)
             nomes = self._nomes(estado)
+            visto = self._buscas.get(mod)
+            if visto is not None and agora - visto[2] > SILENCIO_QUE_ENCERRA_A_BUSCA_S:
+                del self._buscas[mod]
             if procurando:
-                desde, antes = self._buscas.setdefault(mod, (agora, frozenset(nomes)))
+                desde, antes, _ = self._buscas.get(mod, (agora, frozenset(nomes), agora))
+                self._buscas[mod] = (desde, antes, agora)
                 self._fins.pop(mod, None)
                 restam = PRAZO_DA_BUSCA_S - (agora - desde)
                 return Andamento("busca", max(0, math.ceil(restam)) if restam > 0 else None)
             if mod in self._buscas:
-                _, antes = self._buscas.pop(mod)
+                _, antes, _ = self._buscas.pop(mod)
                 novos = tuple(n for i, n in nomes.items() if i not in antes)
                 self._fins[mod] = (agora, Andamento(
                     "fim", None, novos, "" if novos else self._razao(estado)))

@@ -10,7 +10,8 @@ Sem aparelho a faixa divide a linha do Parear (é a própria linha do aviso).
 MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas): o estado em curso arrancado (o
 ``ver`` que nunca devolve a busca) reprova a faixa da busca, a contagem e a janela aberta; o fim
 sem o diff dos aparelhos reprova o «Achou»; a razão arrancada reprova a dica do fim sem achar; o
-fim que nunca sai reprova a volta ao aviso.
+fim que nunca sai reprova a volta ao aviso; a busca que ninguém viu acabar, esquecida só depois
+de :data:`SILENCIO_QUE_ENCERRA_A_BUSCA_S`, reprova o teste da janela reaberta.
 """
 
 from __future__ import annotations
@@ -66,6 +67,13 @@ class Relogio:
         return self.t
 
 
+def andar(andamento: exp.AndamentoDoPareamento, relogio: Relogio, segundos: int,
+          cena: dict[str, Any]) -> None:
+    for _ in range(segundos):
+        relogio.t += 1
+        andamento.ver("lovense", cena)
+
+
 @pytest.fixture
 def dono() -> tuple[exp.AndamentoDoPareamento, Relogio]:
     relogio = Relogio()
@@ -84,9 +92,10 @@ def test_a_busca_diz_os_segundos_que_faltam_do_prazo(
     andamento, relogio = dono
     primeiro = andamento.ver("lovense", estado(BUSCANDO))
     assert (primeiro.fase, primeiro.restam) == ("busca", 20)
-    relogio.t += 7
+    andar(andamento, relogio, 6, estado(BUSCANDO))
+    relogio.t += 1
     assert andamento.ver("lovense", estado(BUSCANDO)).restam == 13
-    relogio.t += 30
+    andar(andamento, relogio, 30, estado(BUSCANDO))
     passado = andamento.ver("lovense", estado(BUSCANDO))
     assert passado.fase == "busca" and passado.restam is None
     assert "Procurando aparelhos" in passado.html(vazio=True)
@@ -97,7 +106,8 @@ def test_o_fim_com_aparelho_novo_diz_o_nome_dele(
         dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
     andamento, relogio = dono
     andamento.ver("lovense", estado(BUSCANDO))
-    relogio.t += 8
+    andar(andamento, relogio, 7, estado(BUSCANDO))
+    relogio.t += 1
     fim = andamento.ver("lovense", estado(QUIETA, [NOVO]))
     assert fim.fase == "fim" and fim.achou == ("Lush 3",)
     assert "Achou Lush 3" in fim.html(vazio=False)
@@ -107,7 +117,8 @@ def test_quem_ja_estava_na_lista_nao_conta_como_achado(
         dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
     andamento, relogio = dono
     andamento.ver("lovense", estado(BUSCANDO, [NOVO]))
-    relogio.t += 8
+    andar(andamento, relogio, 7, estado(BUSCANDO, [NOVO]))
+    relogio.t += 1
     fim = andamento.ver("lovense", estado(QUIETA, [NOVO]))
     assert fim.achou == () and "Não achou nenhum aparelho" in fim.html(vazio=False)
 
@@ -116,7 +127,8 @@ def test_o_fim_sem_achar_leva_a_razao_na_dica(
         dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
     andamento, relogio = dono
     andamento.ver("lovense", estado(BUSCANDO))
-    relogio.t += 20
+    andar(andamento, relogio, 19, estado(BUSCANDO))
+    relogio.t += 1
     cena = {exp.CHAVE_DAS_CONEXOES: [FALHOU, {**BUSCANDO, "estado": "desligado", "motivo": None}],
             "aparelhos": []}
     html = andamento.ver("lovense", cena).html(vazio=True)
@@ -125,7 +137,7 @@ def test_o_fim_sem_achar_leva_a_razao_na_dica(
     assert "Bluetooth" not in dica.group(1), "só quem falhou ou procura entra na razão"
     sem_nada = exp.AndamentoDoPareamento(relogio)
     sem_nada.ver("x", estado(BUSCANDO))
-    relogio.t += 5
+    relogio.t += 1
     vazio = {exp.CHAVE_DAS_CONEXOES: [], "aparelhos": []}
     assert exp.SEM_RAZAO_DA_BUSCA in sem_nada.ver("x", vazio).html(vazio=True)
 
@@ -134,10 +146,21 @@ def test_o_fim_sai_da_tela_e_o_aviso_volta(
         dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
     andamento, relogio = dono
     andamento.ver("lovense", estado(BUSCANDO))
-    relogio.t += 5
+    relogio.t += 1
     assert andamento.ver("lovense", estado(QUIETA)).fase == "fim"
     relogio.t += exp.FIM_DA_BUSCA_VISIVEL_S + 1
     assert andamento.ver("lovense", estado(QUIETA)).fase == ""
+
+
+def test_a_busca_que_ninguem_viu_acabar_nao_vira_fim_ao_reabrir_a_janela(
+        dono: tuple[exp.AndamentoDoPareamento, Relogio]) -> None:
+    andamento, relogio = dono
+    andamento.ver("lovense", estado(BUSCANDO))
+    relogio.t += 600
+    volta = andamento.ver("lovense", estado(QUIETA))
+    assert volta.fase == "" and volta.html(vazio=True) == ""
+    nova = andamento.ver("lovense", estado(BUSCANDO))
+    assert (nova.fase, nova.restam) == ("busca", 20)
 
 
 def test_cada_extensao_tem_o_andamento_dela(
@@ -173,7 +196,9 @@ def test_a_janela_aberta_e_o_tique_mostram_a_busca_e_o_fim(
     assert "Procurando aparelhos" in html and exp.SEM_APARELHOS not in html
     ponte = _Ponte({**SEM_APARELHOS, exp.CHAVE_DAS_CONEXOES: [BUSCANDO], "serie": 2})
     a07._AGORA.ler(MOD, ponte)
-    relogio.t += 6
+    relogio.t += 3
+    a07._com_os_aparelhos({"blocos": {}})
+    relogio.t += 3
     blocos = a07._com_os_aparelhos({"blocos": {}})["blocos"]
     assert "Procurando aparelhos" in blocos["#mod-aparelhos"]
     assert re.search(r"mj-busca-resta[^>]*>1[34] s<", blocos["#mod-aparelhos"])
