@@ -15,7 +15,6 @@ TODO = Path(__file__).resolve().parent.parent
 PAGINAS = {"03": "03-gatilhos.html", "04": "04-iluminacao.html", "05": "05-vibracao.html", "06": "06-navegacao.html",
            "07": "07-lancadores.html", "08": "08-conexoes.html", "10": "10-perfis.html"}
 TAMANHOS = [(1212, 809), (1212, 740), (1918, 840)]
-# As mordidas: cada uma devolve um ajuste de propósito, e a régua tem de reprovar (a tentativa roda em todas as páginas, protegida).
 def _m(corpo):
     return "(function(){try{" + corpo + "}catch(e){}})()"
 
@@ -43,7 +42,6 @@ MORDIDAS = {
     "q1-cor": _m("document.querySelector('.g2-canto .sec-rot').style.color='#f8f8f2';"),
     "q2-para": _m("var p=document.querySelector('.ext[data-modificacao=lovense] .ext-para');p.innerHTML='<span class=ext-rot>Para</span>Todos';"),
     "q2-conta": _m("document.querySelector('#lovense .lv-linha:last-child .nj-tog').classList.add('ligado');"),
-    # as respostas à v3 (14/10): c1, n1, n2 na 03; n3 na 07
     "c1-sem-ds": _m("document.querySelector('.g2-gl.g2-ds').remove();"),
     "c1-ds-solto": _m("var d=document.querySelector('.g2-gl.g2-ds svg');d.setAttribute('width','24');d.setAttribute('height','24');"),
     "c1-nome-branco": _m("document.querySelector('.g2-canto .g2-estilo-nome').style.color='#f8f8f2';"),
@@ -55,7 +53,6 @@ MORDIDAS = {
     "dica-passo": _m("var t=document.querySelector('.vib .forca input[type=range]');t.setAttribute('data-dica','Ajuste fino dentro do passo');"),
 }
 
-# Mede o que está visível: o JS roda dentro da página.
 JS_MEDIR = r"""
 (function(){
   function vis(e){var r=e.getBoundingClientRect();var s=getComputedStyle(e);
@@ -88,7 +85,6 @@ JS_MEDIR = r"""
   return out;})()
 """
 
-# Grupos que têm de ter a mesma largura (diferença 0 px): [página, descrição, seletor, ... ]
 JS_IGUAIS = r"""
 (function(grupos){
   var out=[];grupos.forEach(function(g){
@@ -103,7 +99,6 @@ IGUAIS = {
     "08": [["Usar como botões / Trazer de volta", "[data-r3='13'] .features .btn, [data-r3='14'] .features .btn"]],
 }
 
-# O que ela pediu, conferido no DOM: cada página devolve a lista do que falta (vazia = o pedido está ali).
 JS_PEDIDO_BASE = r"""
 (function(aba){
   function vis(e){var r=e.getBoundingClientRect();if(r.width<1||r.height<1)return false;
@@ -250,7 +245,6 @@ def verde_permitido(pagina: str, item) -> bool:
     return tipo == "cor" and not any(g in texto.lower() for g in ("✓", "✔", "●", "ok"))
 
 
-# Os diálogos abertos (pelo #âncora): nada rola dentro, nada passa da tela, alvos de 24 px e letra de 12 px.
 DIALOGOS = {"07": ["lovense", "impedimentos", "lanc-conf"]}
 JS_DIALOGO = r"""
 (function(id){

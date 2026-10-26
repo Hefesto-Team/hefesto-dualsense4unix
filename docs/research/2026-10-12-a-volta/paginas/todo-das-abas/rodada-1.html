@@ -23,7 +23,6 @@ a{color:var(--cyan)}
 .casca{max-width:none;margin:0;padding:0 28px}
 button{font:inherit;color:inherit;cursor:pointer}
 
-/* topo */
 header.topo{position:sticky;top:0;z-index:10;background:rgba(25,26,33,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--borda)}
 .topo .casca{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-top:12px;padding-bottom:12px}
 .marca{display:flex;align-items:baseline;gap:10px;flex:1 1 340px;min-width:0}
@@ -48,7 +47,6 @@ nav.sumario a:hover{border-color:var(--roxo-claro);color:var(--fg)}
 nav.sumario a .cont{font-family:'JetBrains Mono',monospace;color:var(--comment);margin-left:6px;font-size:11.5px}
 nav.sumario a.feito .cont{color:var(--green)}
 
-/* seções */
 main{padding:22px 0 60px}
 section.aba,section.bloco{background:var(--app-bg);border:1px solid var(--borda);border-radius:14px;padding:18px;margin:0 0 22px}
 .cab-aba{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:14px}
@@ -67,7 +65,6 @@ figure img{width:100%;height:auto;display:block}
 figcaption{font-size:12.5px;color:var(--comment);margin-top:5px}
 figcaption b{color:var(--suave);font-weight:600}
 
-/* mudanças */
 h3{font-size:15px;margin:20px 0 10px;color:var(--suave);font-weight:600}
 ol.mudancas{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .item{background:var(--painel);border:1px solid var(--borda);border-radius:var(--raio);padding:12px 14px;position:relative}
@@ -118,7 +115,6 @@ summary{cursor:pointer;color:var(--suave);font-size:13.5px}
 details ul{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--suave)}
 details li{margin:4px 0}
 
-/* perguntas */
 .brief{background:var(--painel);border:1px solid var(--borda);border-radius:var(--raio);padding:14px;margin-bottom:12px}
 .brief h3{margin:0 0 2px;color:var(--fg);font-size:15.5px}
 .brief .de{font-size:12px;color:var(--comment);margin-bottom:8px}
@@ -134,8 +130,6 @@ details li{margin:4px 0}
 .opcao:has(input:checked){border-color:var(--roxo);background:var(--roxo-fundo)}
 .vazio{color:var(--comment);font-style:italic;margin:4px 0 0}
 h2.secao{margin:0 0 12px;font-size:19px}
-/* A largura inteira (pedido de 12/10, ~17h25): as fotos uma embaixo da outra, a 100%; cada mudança com o texto à
-   esquerda e a resposta à direita, e a foto do estado a 100% embaixo; as opções das perguntas em colunas. */
 section.aba,section.bloco{padding:22px 26px}
 figcaption{font-size:13.5px;margin-top:7px}
 .corpo{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,34%);grid-template-rows:auto auto auto 1fr;column-gap:28px;align-items:start}
@@ -166,9 +160,6 @@ textarea{field-sizing:content;max-height:40vh}
   html{scroll-padding-top:150px}
 }
 
-/* ===== Harmonia (12/10, ~17h35: «muito texto gritante e sem respiro») =====
-   Letra de leitura (Inter) no corpo, Space Grotesk só nos títulos; o branco puro fica para os títulos e o texto
-   corre em cinza claro; a linha de leitura para em ~78 caracteres; mais ar entre blocos; etiquetas e notas calmas. */
 :root{--texto:#cfd2de;--texto-2:#a3a8bd;--fino:#3a3d4d;--ar:28px}
 body{font:15.5px/1.7 'Inter',system-ui,sans-serif;color:var(--texto);letter-spacing:.005em}
 h1,h2,h3,.btn,.btn-salvar,.btn-filtro,.voto,nav.sumario a,.n{font-family:'Space Grotesk',system-ui,sans-serif}
@@ -263,7 +254,6 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
   const API = SERVIDO ? '' : 'http://127.0.0.1:8766';
   const TODO = 'todo/';
   const ANEXOS = SERVIDO ? '/anexos/' : `${API}/anexos/`;
-  // A marcação de agora: o que ficou só no navegador (sem servidor) vence; senão o servidor; senão a embutida.
   const LS = 'hefesto-volta-todo-respostas';
   let local = null;
   try { local = JSON.parse(localStorage.getItem(LS) || 'null'); } catch (e) { local = null; }
@@ -304,7 +294,7 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
   const resp = (chave) => (RESP[chave] ||= {voto: '', texto: '', anexos: []});
   let relogio = null;
   const guardarNoNavegador = (pendente) => {
-    try { localStorage.setItem(LS, JSON.stringify({pendente, resp: limpas()})); } catch (e) { /* sem armazenamento */ }
+    try { localStorage.setItem(LS, JSON.stringify({pendente, resp: limpas()})); } catch (e) { }
   };
   const marcarSujo = () => {
     sujo = true;
@@ -316,7 +306,6 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
     relogio = setTimeout(salvar, 700);
   };
 
-  // topo
   const nAbas = DADOS.abas.length;
   document.getElementById('numeros').append(
     el('span', {class: 'num'}, el('b', {text: nAbas}), 'abas'),
@@ -324,7 +313,6 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
     el('span', {class: 'num'}, el('b', {text: DADOS.escolher}), 'recomendadas, a escolher'),
   );
 
-  // anexos
   async function enviarAnexo(chave, arquivo, caixa) {
     const erro = caixa.querySelector('.erro');
     erro.textContent = '';
@@ -418,7 +406,6 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
     for (const f of arquivos) enviarAnexo(itemAtivo.dataset.chave, f, itemAtivo.querySelector('.anexo'));
   });
 
-  // abas
   const miolo = document.getElementById('miolo');
   for (const aba of DADOS.abas) {
     const sec = el('section', {class: 'aba', id: `aba-${aba.id}`, 'aria-labelledby': `t-${aba.id}`});
@@ -487,7 +474,6 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
     miolo.append(sec);
   }
 
-  // perguntas de desenho
   const perg = el('section', {class: 'bloco', id: 'perguntas', 'aria-labelledby': 't-perguntas'},
     el('h2', {class: 'secao', id: 't-perguntas', text: 'As perguntas de desenho'}));
   const nomeDaAba = Object.fromEntries(DADOS.abas.map(a => [a.id, a.nome]));
@@ -527,7 +513,6 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
     el('h2', {class: 'secao', id: 't-bancada', text: 'Bancada'}),
     el('p', {class: 'vazio', text: 'A folha da bancada entra aqui depois.'})));
 
-  // sumário
   const sumario = document.getElementById('sumario');
   const contadores = [];
   for (const aba of DADOS.abas) {
@@ -547,7 +532,6 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
   }
   atualizarSumario();
 
-  // salvar
   function limpas() {
     const out = {};
     for (const [k, v] of Object.entries(RESP)) {
@@ -576,14 +560,12 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
     }
   }
   document.getElementById('salvar').addEventListener('click', salvar);
-  // Fechou ou recarregou antes dos 700 ms: o último toque vai pelo beacon (text/plain não pede licença ao servidor).
   window.addEventListener('pagehide', () => {
     if (!sujo) return;
-    try { navigator.sendBeacon(`${API}/respostas`, new Blob([JSON.stringify(limpas())], {type: 'text/plain'})); } catch (e) { /* fica no navegador */ }
+    try { navigator.sendBeacon(`${API}/respostas`, new Blob([JSON.stringify(limpas())], {type: 'text/plain'})); } catch (e) { }
   });
   if (pendenteAoAbrir) salvar();
 
-  // o filtro «Só o que falta»: esconde o que já tem voto ou escolha; o item em que você está mexendo só some quando você sai dele
   const botaoFiltro = document.getElementById('filtro');
   const FILTRO = 'hefesto-volta-todo-filtro';
   function ocupado(e) { return e === itemAtivo || e.contains(document.activeElement); }
@@ -604,7 +586,7 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
     const on = botaoFiltro.getAttribute('aria-pressed') !== 'true';
     botaoFiltro.setAttribute('aria-pressed', String(on));
     document.body.classList.toggle('so-falta', on);
-    try { localStorage.setItem(FILTRO, on ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
+    try { localStorage.setItem(FILTRO, on ? '1' : '0'); } catch (e) { }
     aplicarFiltro();
   });
   const sair = (ev) => {
@@ -614,7 +596,7 @@ h2.secao{font-size:26px;font-weight:600;color:#fff;margin:0 0 26px;letter-spacin
   document.addEventListener('focusin', sair);
   document.addEventListener('pointerdown', sair);
   let filtroSalvo = '0';
-  try { filtroSalvo = localStorage.getItem(FILTRO) || '0'; } catch (e) { /* sem armazenamento */ }
+  try { filtroSalvo = localStorage.getItem(FILTRO) || '0'; } catch (e) { }
   if (filtroSalvo === '1') { botaoFiltro.setAttribute('aria-pressed', 'true'); document.body.classList.add('so-falta'); }
   aplicarFiltro();
 })();

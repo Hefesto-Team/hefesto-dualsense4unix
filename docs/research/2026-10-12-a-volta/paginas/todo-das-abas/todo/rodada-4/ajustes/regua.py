@@ -20,10 +20,9 @@ PAGINAS = {
     "calibrar": "calibrar-sensores.html",
 }
 TAMANHOS = [(1212, 809), (1212, 740), (1918, 840)]
-# Onde a régua mede alvos, letra e verde: o pedaço que estes ajustes tocaram.
 REGIAO = {
-    "01": "[data-controle]",  # os cartões, onde morava a linha «O jogo vê»
-    "02": ".ctl > .faixa, .ctl[data-conectado=nao]",  # a faixa de cada controle (onde morava o «O que chega») e o desconectado inteiro
+    "01": "[data-controle]",
+    "02": ".ctl > .faixa, .ctl[data-conectado=nao]",
     "07": "#acessorios .ja-tela.t2",
     "calibrar": "body",
 }
@@ -52,7 +51,6 @@ MORDIDAS = {
     "q6-rotulo": _m("document.querySelectorAll('.mira .desl[data-seis=q6] .r').forEach(function(r){r.textContent='Só enquanto eu segurar';});"),
     "q6-opcoes": _m("document.querySelectorAll('select[data-gesto=mira-segurar]').forEach(function(x){var o=document.createElement('option');o.text='Cruz';x.add(o);});"),
     "barra-calibrar": _m("document.querySelectorAll('.lin > .r').forEach(function(x){x.style.flex='0 0 82px';});"),
-    # as respostas à v3 (14/10): c3 na 02, n4 na Calibrar
     "c3-textao": _m("document.querySelectorAll('.chip-virtual>.sw').forEach(function(b){b.lastChild.textContent='Usar giroscópio como analógico';});"),
     "c3-largura": _m("var b=document.querySelector('.chip-virtual>.sw');b.style.width='80%';"),
     "c3-pula": _m("var st=document.createElement('style');st.textContent='.chip-virtual.on>.sw{height:34px!important}';document.head.appendChild(st);"),
@@ -93,7 +91,6 @@ JS_MEDIR = r"""
   return out;})
 """
 
-# Os grupos que têm de ter a mesma largura (e, nas molduras da 07, a mesma altura por linha).
 JS_IGUAIS = r"""
 (function(grupos){
   return grupos.map(function(g){var ws=[];document.querySelectorAll(g[1]).forEach(function(e){var r=e.getBoundingClientRect();
@@ -113,7 +110,6 @@ IGUAIS = {
     "calibrar": [["os quatro lugares", ".controles > .ctr, .controles > .lugar, .grade > .lugar"]],
 }
 
-# O que ela pediu, conferido no DOM: a lista do que falta (vazia = o pedido está ali).
 JS_PEDIDO = r"""
 (function(aba){
   function vis(e){var r=e.getBoundingClientRect();if(r.width<1||r.height<1)return false;
@@ -210,8 +206,6 @@ JS_PEDIDO = r"""
   return falta;})
 """
 
-# Na Calibrar o «Começar» é o botão principal da janela (o verde do tema, igual em todas); na 07 a chave «Ligados» e na 02 a pastilha
-# «Giroscópio» acesa são estado de uma chave, não aviso.
 VERDE_DE_TEMA = ("nj-tog", "pino", "span.txt", "btn.fazer", "btn.prim", "button.sw", "span.p")
 
 
@@ -313,7 +307,6 @@ def medir_conferencia(nav) -> int:
         ap = pg.evaluate("document.querySelector('.aprovadas').getBoundingClientRect().height")
         if ap > 60:
             ruins.append(f"a linha das aprovadas ocupa {ap} px (mais de duas linhas)")
-    # as fotos: cada uma entra na tela e carrega
     n_img = pg.evaluate("document.images.length")
     for i in range(n_img):
         pg.evaluate("i=>document.images[i].scrollIntoView()", i)
@@ -322,7 +315,6 @@ def medir_conferencia(nav) -> int:
     quebradas = pg.evaluate("[...document.images].filter(i=>!(i.complete&&i.naturalWidth>0)).map(i=>i.getAttribute('src'))")
     if quebradas or n_img < 13:
         ruins.append(f"fotos quebradas {quebradas} de {n_img}")
-    # cada cartão: um voto e um texto
     for k, sid in enumerate(esperado):
         voto = "aprova" if k % 2 == 0 else "ajustar"
         pg.click(f'section[data-id="{sid}"] .votos button[data-v="{voto}"]')
@@ -337,10 +329,8 @@ def medir_conferencia(nav) -> int:
     estado = pg.evaluate("document.getElementById('estado').textContent")
     if not estado.startswith("Salvo às"):
         ruins.append(f"o estado diz «{estado}»")
-    # volta do navegador: recarregar com o que ficou guardado nele
     pg.reload()
     pg.wait_for_timeout(700)
-    # volta do servidor: sem nada no navegador, o GET devolve
     pg.evaluate("localStorage.clear()")
     pg.reload()
     pg.wait_for_timeout(900)

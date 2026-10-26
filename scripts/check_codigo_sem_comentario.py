@@ -28,7 +28,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 TIPOS = ("py", "sh", "html", "js", "css")
-FORA = ("docs/",)
+FORA = ("docs/process/",)
 TETO_DA_SAIDA = 40
 
 

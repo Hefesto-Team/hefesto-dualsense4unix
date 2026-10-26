@@ -50,9 +50,7 @@ def sem_carimbo(pagina: str) -> list[str]:
     return [linha for linha in pagina.splitlines() if MARCA not in linha]
 
 
-CSS = """
-/* ── o carimbo da casa · scripts/carimbo_da_casa.py ──────────── */
-.carimbo { font-family: var(--font-dado); font-size: var(--text-xs);
+CSS = """.carimbo { font-family: var(--font-dado); font-size: var(--text-xs);
            color: var(--color-ink-faint); margin: var(--space-md) 0 0;
            padding-top: var(--space-2xs);
            border-top: var(--rule-hair) solid var(--color-rule); }

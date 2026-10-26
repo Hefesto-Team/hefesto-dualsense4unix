@@ -237,6 +237,24 @@ def test_o_repositorio_nao_tem_comentario() -> None:
         str(a) for a in achados[:40])
 
 
+@pytest.mark.parametrize(("rel", "tipo"), [
+    ("docs/specs.html", "html"),
+    ("docs/research/2026-10-12-a-volta/paginas/plano-do-fim.html", "html"),
+    ("docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/regua-final.py", "py"),
+    ("docs/process/ferramentas-da-leva/estado-de-agora.py", None),
+    ("docs/research/o-porque-dos-modulos.md", None),
+])
+def test_so_o_docs_process_fica_fora_do_portao(rel: str, tipo: str | None) -> None:
+    """O código versionado de ``docs/`` (o mapa, as páginas da pesquisa) entra no portão."""
+    assert G.tipo_do_arquivo(rel) == tipo
+
+
+def test_a_pagina_do_mapa_nasce_sem_comentario() -> None:
+    """O ``docs/specs.html`` é gerado: o comentário sai do gerador, não da página."""
+    pagina = _carrega("gerar_mapa_sem_comentario", "gerar-mapa.py").monta()
+    assert not G.achados_do_texto(pagina, "html", "docs/specs.html")
+
+
 def test_o_portao_mora_na_camada_rapida_e_no_ci() -> None:
     tabela = (RAIZ / "scripts" / "portoes.sh").read_text(encoding="utf-8")
     linha = r"^rapido\|codigo-sem-comentario\|py\|scripts/check_codigo_sem_comentario\.py\|"

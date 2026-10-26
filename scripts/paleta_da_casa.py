@@ -3,8 +3,6 @@ from __future__ import annotations
 
 TOKENS = """
 :root {
-  /* Paleta Drácula — a mesma que o produto usa em 82 lugares no código.
-     O mapa tem de parecer parte do Hefesto, não um site sobre ele. */
   --color-paper:      #282a36;
   --color-paper-2:    #21222c;
   --color-paper-3:    #343746;
@@ -12,14 +10,13 @@ TOKENS = """
   --color-ink:        #f8f8f2;
   --color-ink-quiet:  #a8b0c8;
   --color-ink-faint:  #6272a4;
-  --color-accent:     #bd93f9;   /* o literal que set_accent() já substitui */
+  --color-accent:     #bd93f9;
   --color-ok:         #50fa7b;
-  --color-lacuna:     #ffb86c;   /* a casa sabe e o produto não faz */
+  --color-lacuna:     #ffb86c;
   --color-nulo:       #6272a4;
   --color-alerta:     #ff5555;
   --color-frio:       #8be9fd;
 
-  /* Pilha do sistema: nada de fonte web, para o arquivo abrir sem rede. */
   --font-corpo: ui-sans-serif, system-ui, "Cantarell", "Segoe UI", Roboto, sans-serif;
   --font-dado:  ui-monospace, "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", monospace;
 

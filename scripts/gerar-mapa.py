@@ -242,7 +242,6 @@ a { color: var(--color-accent); }
 
 .envelope { max-width: 1440px; margin: 0 auto; padding: 0 var(--space-md); }
 
-/* ── N9 · nav alinhada às bordas ─────────────────────────────── */
 .topo {
   display: flex; flex-wrap: wrap; gap: var(--space-sm);
   align-items: baseline; justify-content: space-between;
@@ -265,7 +264,6 @@ a { color: var(--color-accent); }
   border-color: var(--color-accent); font-weight: 600;
 }
 
-/* ── orientação ──────────────────────────────────────────────── */
 .orienta { padding: var(--space-lg) 0 var(--space-md); max-width: 62ch; }
 .orienta p:first-child {
   font-size: var(--text-display); font-weight: 600; line-height: 1.05;
@@ -273,7 +271,6 @@ a { color: var(--color-accent); }
 }
 .orienta p:last-child { margin: 0; color: var(--color-ink-quiet); }
 
-/* ── o mapa: três controles ──────────────────────────────────── */
 .mapa {
   display: grid; gap: var(--space-md);
   grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
@@ -288,25 +285,14 @@ a { color: var(--color-accent); }
 }
 .ctrl:hover { border-color: var(--color-ink-faint); }
 .ctrl[aria-pressed="true"] { border-color: var(--color-accent); }
-/* Quadro de altura fixa: sem ele os três SVG têm proporções diferentes
-   (2,09 / 1,39 / 1,49) e os rótulos desalinham em zigue-zague. */
 .quadro { height: 150px; display: grid; place-items: center; }
 .quadro svg { max-width: 100%; max-height: 100%; width: auto; height: auto; display: block; }
 
-/* Os desenhos nasceram para fundo CLARO (o traço é #2f333c) e esta página é
-   escura — sem esta inversão eles somem. Os seletores respeitam quem é
-   preenchido e quem é traço: sobrescrever `fill` num path com fill="none"
-   encheria a silhueta de tinta sólida. */
-/* O seletor tem de exigir que o atributo EXISTA: `:not([fill="none"])` sozinho
-   é VERDADEIRO para quem não declara fill nenhum — e os paths do 8BitDo
-   herdam fill="none" do grupo, sem atributo próprio. A versão anterior
-   preenchia de tinta sólida o que era contorno, e o desenho virava um borrão
-   facetado. `[fill]:not([fill="none"])` só pega quem declara e declara cor. */
 .ctrl svg .corpo[fill]:not([fill="none"]) { fill: var(--color-ink-quiet); }
 .ctrl svg .corpo[stroke]:not([stroke="none"]) { stroke: var(--color-ink-quiet); }
 .ctrl svg .peca[fill]:not([fill="none"])  { fill: var(--color-ink-faint); }
 .ctrl svg .peca[stroke]:not([stroke="none"]) { stroke: var(--color-ink-faint); }
-.ctrl svg > g[stroke] { stroke: var(--color-ink-quiet); }   /* 8BitDo: traço no grupo */
+.ctrl svg > g[stroke] { stroke: var(--color-ink-quiet); }
 .ctrl:hover svg .corpo[fill]:not([fill="none"]) { fill: var(--color-ink); }
 .ctrl:hover svg .corpo[stroke]:not([stroke="none"]) { stroke: var(--color-ink); }
 .ctrl .nome { font-weight: 600; }
@@ -321,14 +307,12 @@ a { color: var(--color-accent); }
           color: var(--color-ink-quiet); }
 .placar b { color: var(--color-ink); font-weight: 600; }
 
-/* peça acesa quando a linha correspondente é apontada */
 svg .peca, svg .corpo, svg .luz { transition: fill var(--dur-fast) var(--ease-out),
                                               stroke var(--dur-fast) var(--ease-out); }
 svg g.marcada > .peca { fill: var(--color-accent); }
 svg g.marcada > path[stroke] { stroke: var(--color-accent); }
 svg g.oculta.acesa { opacity: .95; }
 
-/* ── legenda ─────────────────────────────────────────────────── */
 .legenda { display: flex; flex-wrap: wrap; gap: var(--space-md);
            padding: var(--space-sm) 0; border-top: var(--rule-hair) solid var(--color-rule);
            font-size: var(--text-sm); color: var(--color-ink-quiet); }
@@ -337,13 +321,11 @@ svg g.oculta.acesa { opacity: .95; }
 .s-ok { color: var(--color-ok); } .s-lac { color: var(--color-lacuna); }
 .s-nulo { color: var(--color-nulo); } .s-mudo { color: var(--color-rule); }
 
-/* ── as duas perguntas (D-13, 15/08/2026) ────────────────────── */
 .duas { padding: var(--space-sm) 0 0; font-size: var(--text-sm);
         color: var(--color-ink-quiet); max-width: 84ch; }
 .duas p { margin: 0 0 var(--space-3xs); }
 .duas code { font-family: var(--font-dado); color: var(--color-ink); }
 
-/* ── filtros ─────────────────────────────────────────────────── */
 .filtros { display: flex; flex-wrap: wrap; gap: var(--space-2xs);
            align-items: center; padding: var(--space-md) 0 var(--space-sm); }
 .filtros input, .filtros select {
@@ -356,7 +338,6 @@ svg g.oculta.acesa { opacity: .95; }
 .conta { font-family: var(--font-dado); font-size: var(--text-xs);
          color: var(--color-ink-faint); margin-left: auto; white-space: nowrap; }
 
-/* ── tabela ──────────────────────────────────────────────────── */
 .rolo { overflow-x: auto; border: var(--rule-hair) solid var(--color-rule);
         border-radius: var(--radius-md); }
 table { border-collapse: collapse; width: 100%; min-width: 60rem; }
@@ -374,10 +355,6 @@ tbody tr { cursor: pointer; }
 tbody tr:hover { background: var(--color-paper-2); }
 tbody tr.aberta { background: var(--color-paper-2); }
 
-/* O BLOCO DE TRÊS: a mesma chave nos três controles, uma embaixo da outra.
-   A regra grossa em cima da primeira linha é o que faz o bloco existir aos
-   olhos — sem ela a tabela volta a ser uma lista, e comparar os três aparelhos
-   vira procurar. */
 tbody tr.bloco > td { border-top: 2px solid var(--color-rule); }
 td.f-feature { font-weight: 500; min-width: 18rem; }
 td.f-feature .rot { display: block; }
@@ -389,9 +366,6 @@ td.f-cabo  { background: color-mix(in oklab, var(--color-frio) 5%, transparent);
 td.f-radio { background: color-mix(in oklab, var(--color-accent) 5%, transparent); }
 .tag { font-family: var(--font-dado); font-size: var(--text-xs);
        color: var(--color-ink-faint); text-transform: uppercase; letter-spacing: .05em; }
-/* A peça e o evdev sao IDENTIFICADORES — o id do grupo no SVG e a constante do
-   kernel. Passar caixa alta neles faria a tela mostrar `ALTO-FALANTE` onde o
-   desenho diz `alto-falante`, e quem copiasse da tela copiaria errado. */
 .tag .lit { text-transform: none; letter-spacing: 0; color: var(--color-ink-quiet); }
 .chv { font-family: var(--font-dado); font-size: var(--text-xs);
        color: var(--color-accent); }
@@ -406,7 +380,6 @@ td.f-radio { background: color-mix(in oklab, var(--color-accent) 5%, transparent
          font-size: var(--text-xs); }
 .mudo { color: var(--color-rule); font-family: var(--font-dado); font-size: var(--text-xs); }
 
-/* gaveta de detalhe */
 tr.detalhe > td { background: var(--color-paper-2); padding: var(--space-sm) var(--space-md); }
 .lados { display: grid; gap: var(--space-md);
          grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); }
@@ -423,7 +396,6 @@ tr.detalhe > td { background: var(--color-paper-2); padding: var(--space-sm) var
 .cabecalho-linha .nota { color: var(--color-lacuna); font-size: var(--text-sm);
                          max-width: 90ch; }
 
-/* ── caderno de eliminação ───────────────────────────────────── */
 .caderno { margin-bottom: var(--space-md); }
 .cab-caderno { display: flex; flex-wrap: wrap; gap: var(--space-2xs);
                align-items: baseline; margin-bottom: var(--space-2xs); }
@@ -452,7 +424,6 @@ tr.detalhe > td { background: var(--color-paper-2); padding: var(--space-sm) var
 table.ens { min-width: 32rem; }
 table.ens th { position: static; background: var(--color-paper-3); cursor: default; }
 
-/* ── Ft5 · rodapé declaração ─────────────────────────────────── */
 footer { border-top: var(--rule-hair) solid var(--color-rule);
          margin-top: var(--space-xl); padding: var(--space-lg) 0 var(--space-2xl); }
 footer p { max-width: 68ch; margin: 0 0 var(--space-sm); color: var(--color-ink-quiet); }
@@ -460,11 +431,11 @@ footer strong { color: var(--color-ink); font-weight: 600; }
 footer .selo { font-family: var(--font-dado); font-size: var(--text-xs);
                color: var(--color-ink-faint); }
 
-@media (max-width: 640px) {   /* noqa-acento */
+@media (max-width: 640px) {
   .topo { flex-direction: column; align-items: flex-start; }
   .conta { margin-left: 0; width: 100%; }
 }
-@media (prefers-reduced-motion: reduce) {   /* noqa-acento */
+@media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important;
                            animation-duration: .01ms !important; }
 }
@@ -485,9 +456,6 @@ SCRIPT = """
   const esc = s => (s || '').replace(/[&<>"]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  // O simbolo de UM lado. O quarto estado NAO e enfeite: circulo pontilhado
-  // significa "ninguem respondeu por este transporte", que e diferente de
-  // "o aparelho recusa". Confundir os dois foi o que produziu as regressoes.
   const simboloLado = (l, p) => {
     if (!l[p + 'aceita']) return SIM.mudo;
     if (l[p + 'aciona'] === 'sim') return SIM.ok;
@@ -501,9 +469,6 @@ SCRIPT = """
     return SIM.mudo;
   };
 
-  // Assimetria: a MESMA feature, no MESMO controle, com veredicto diferente
-  // entre cabo e radio. E o produto do mapa — a lacuna que causou as regressoes.
-  // Com o grao em (chave, controle) a conta sai da linha, sem juncao por texto.
   D.linhas.forEach(l => {
     l._assim = !!(l.cabo_aceita && l.radio_aceita &&
       (l.cabo_aceita !== l.radio_aceita || l.cabo_aciona !== l.radio_aciona));
@@ -562,8 +527,6 @@ SCRIPT = """
       const x = f(a), y = f(b);
       if (x < y) return desc ? -1 : 1;
       if (x > y) return desc ? 1 : -1;
-      // Dentro do bloco a ordem dos controles e sempre a mesma, para cada um
-      // deles cair na mesma posicao em todo bloco da página.
       return D.ordem_ctrl.indexOf(a.controle) - D.ordem_ctrl.indexOf(b.controle);
     });
     conta.textContent = ls.length + ' de ' + D.linhas.length + ' linhas';
@@ -874,13 +837,6 @@ def monta() -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hefesto · mapa de canais</title>
 <style>
-/* Hallmark · macrostructure: Map / Diagram · nav: N9 edge-aligned · footer: Ft5 statement
- * genre: modern-minimal · theme: custom (paleta Drácula da casa, preservada do pré-voo)
- * paper oklch(~26% .02 280) dark · accent oklch(~72% .16 300) roxo · display: system-sans
- * tone: técnico/utilitário · enrichment: none (os SVG são o conteúdo)
- * pre-emit critique: P5 H4 E4 S5 R5 V4
- * ARQUIVO GERADO por scripts/gerar-mapa.py — não edite à mão.
- */
 {TOKENS}{ESTILO}{CARIMBO_CSS}
 </style>
 </head>

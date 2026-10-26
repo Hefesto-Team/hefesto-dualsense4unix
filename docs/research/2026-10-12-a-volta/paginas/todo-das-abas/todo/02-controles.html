@@ -355,7 +355,7 @@
   select.pronto{display:block;line-height:calc(var(--h-escolha) - 2px)}
   .btn,.mini{height:var(--h-acao);padding-top:0;padding-bottom:0;
              display:inline-flex;align-items:center;justify-content:center}
-  .rodape button{height:var(--h-acao);padding-top:0;padding-bottom:0;min-width:104px;text-align:center;justify-content:center} /* os quatro com o tamanho do maior */
+  .rodape button{height:var(--h-acao);padding-top:0;padding-bottom:0;min-width:104px;text-align:center;justify-content:center}
   .campo .nome,.barra .nome{flex:0 0 var(--rot)}
 
 
@@ -941,16 +941,12 @@
   .touch .todo-terca:nth-child(3){left:66.666%}
   .touch .todo-terca.on{background:var(--sel-bg);box-shadow:inset 0 0 0 1px var(--purple)}
   .moldura.todo-toque-off .touch > :not(.todo-mudo){opacity:.35}
-  /* respiro: as molduras ganham padding de verdade (A3); a da luz respeita o de baixo (todo-02) */
   .moldura{padding:7px 10px 9px}
   .card-corpo > div:last-child > .moldura.leituras{padding:7px 10px 9px}
   .moldura.luz .barra-luz{margin-bottom:2px}
-  /* o cabeçalho: os dois botões com a mesma altura e a mesma borda */
   .sensores{align-items:center;gap:10px}
-  /* a mesma letra do Modo automático ao lado (600 13,5 px Space Grotesk) */
   .sensores .btn{height:34px;border-radius:999px;padding:0 16px;box-sizing:border-box;
                  font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
-  /* as três rotas do alto-falante, uma por linha */
   .rota.tres{gap:3px}
   .rota.tres button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
   .chip-virtual>.sw{padding:4px 4px;gap:3px;line-height:13px;max-width:none}
@@ -976,17 +972,10 @@
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
 </style>
 <style data-aba="rodada-3">
-  /* RODADA 3 (12/10): os dois analógicos (100 px cada) e o vão de 8 somavam 208 numa moldura de 204 por
-     dentro, e o da direita passava 4 px do respiro. Com vão de 4 o par fecha na borda dos dois lados. */
   .moldura > .sticks{column-gap:4px}
 </style>
 <style id="base-comum">
-/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
-   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
-   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
 
-/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
-      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
 [data-dica]{cursor:help}
 button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
 #hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
@@ -995,9 +984,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.visivel{opacity:1;transform:none}
 
-/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
-      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
-      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
 .modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
   border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
   font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
@@ -1009,7 +995,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 .governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
 
-/* 3. O menu do botão direito, no visual das abas. */
 .menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
   background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
@@ -1019,11 +1004,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 <style data-todo-css="desconectado-r4">
-/* Ajuste da rodada 4 (02-18): o controle desconectado mostra só a vaga do jogador e «Desconectado», sem cor de plástico, máscara, microfone, sensores nem bateria. */
 .ctl[data-conectado="nao"] > .faixa > :not(.card-nome){display:none !important}
 </style>
 <style data-todo-css="alvos-r4">
-/* Rodada 4: a sua resposta de 13/10 (~23h40), botões e letra: todo alvo de toque com 24 px e nenhuma letra abaixo de 12 px. ?alvos=hoje mostra a tela sem a mudança. */
 html.alvos-24 :is(button,select,input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea,summary,[role=button],.nj-tog,.sw,.passo,label.faixa,.nav-i,.mudo-i,.padrao-i){min-height:24px;box-sizing:border-box}
 html.alvos-24 :is(button,[role=button],.nj-tog,.passo,.nav-i,.mudo-i,.padrao-i){min-width:24px}
 html.alvos-24 :is(input[type=checkbox],input[type=radio]):not(.radio-mesa){min-width:24px;min-height:24px}
@@ -1031,8 +1014,6 @@ html.alvos-24 input[type=range]{height:24px}
 html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
 </style>
 <style data-todo-css="mira-virtual-v3">
-/* As respostas à v3 (14/10): os dois botões sob os analógicos dizem só «Mira virtual», numa linha, com a mesma largura
-   e a mesma altura, ligados ou não. A explicação fica na dica. */
 .chip-virtual>.sw{white-space:nowrap;height:26px;min-height:26px;line-height:1;font-size:12px;padding:0 8px;gap:6px;
   width:100%;max-width:none;box-sizing:border-box}
 </style>
@@ -2269,7 +2250,6 @@ html.letra-12 .quadro-corpo{gap:7px;padding-bottom:10px}
 
 
 <script data-aba="modo-automatico">
-/* O Modo automático da aba: liga e desliga, e a área que ele governa esmaece (data-governa). */
 document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click', () => {
   const on = b.getAttribute('aria-pressed') !== 'true';
   b.setAttribute('aria-pressed', String(on));
@@ -2281,7 +2261,6 @@ document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click',
   const b = e.target.closest('button'); if (b) s.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }));
 </script>
 <script id="base-comum">
-/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
 (() => {
   const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
   document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
@@ -2302,7 +2281,6 @@ document.querySelectorAll('.seg-criar').forEach(s => s.addEventListener('click',
       if (f === 'in' && el && el !== alvo) mostrar(el);
       if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
     });
-  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
   document.addEventListener('contextmenu', e => {
     e.preventDefault();
     document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());

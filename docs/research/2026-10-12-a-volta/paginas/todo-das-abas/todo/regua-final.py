@@ -29,7 +29,6 @@ def _m(corpo):
     return "(function(){try{" + corpo + "}catch(e){}})()"
 
 
-# ↓ de ajustes-r3/regua.py
 MORDIDAS_R3 = {
     "terceira-linha": _m("var l=document.querySelector('.ext-lista');var k=l.querySelector('.ext');var c=k.cloneNode(true);"
                          "c.removeAttribute('data-modificacao');c.querySelector('.ext-nome').textContent='Exemplo da comunidade';l.appendChild(c);"),
@@ -53,7 +52,6 @@ MORDIDAS_R3 = {
     "q1-cor": _m("document.querySelector('.g2-canto .sec-rot').style.color='#f8f8f2';"),
     "q2-para": _m("var p=document.querySelector('.ext[data-modificacao=lovense] .ext-para');p.innerHTML='<span class=ext-rot>Para</span>Todos';"),
     "q2-conta": _m("document.querySelector('#lovense .lv-linha:last-child .nj-tog').classList.add('ligado');"),
-    # as respostas à v3 (14/10): c1, n1, n2 na 03; n3 na 07
     "c1-sem-ds": _m("document.querySelector('.g2-gl.g2-ds').remove();"),
     "c1-ds-solto": _m("var d=document.querySelector('.g2-gl.g2-ds svg');d.setAttribute('width','24');d.setAttribute('height','24');"),
     "c1-nome-branco": _m("document.querySelector('.g2-canto .g2-estilo-nome').style.color='#f8f8f2';"),
@@ -65,7 +63,6 @@ MORDIDAS_R3 = {
     "dica-passo": _m("var t=document.querySelector('.vib .forca input[type=range]');t.setAttribute('data-dica','Ajuste fino dentro do passo');"),
 }
 
-# Mede o que está visível: o JS roda dentro da página.
 JS_MEDIR_R3 = r"""
 (function(){
   function vis(e){var r=e.getBoundingClientRect();var s=getComputedStyle(e);
@@ -98,7 +95,6 @@ JS_MEDIR_R3 = r"""
   return out;})()
 """
 
-# Grupos que têm de ter a mesma largura (diferença 0 px): [página, descrição, seletor, ... ]
 JS_IGUAIS_R3 = r"""
 (function(grupos){
   var out=[];grupos.forEach(function(g){
@@ -113,7 +109,6 @@ IGUAIS_R3 = {
     "08": [["Usar como botões / Trazer de volta", "[data-r3='13'] .features .btn, [data-r3='14'] .features .btn"]],
 }
 
-# O que ela pediu, conferido no DOM: cada página devolve a lista do que falta (vazia = o pedido está ali).
 JS_PEDIDO_R3 = r"""
 (function(aba){
   function vis(e){var r=e.getBoundingClientRect();if(r.width<1||r.height<1)return false;
@@ -265,7 +260,6 @@ def verde_permitido(pagina: str, item) -> bool:
     return tipo == "cor" and not any(g in texto.lower() for g in ("✓", "✔", "●", "ok"))
 
 
-# Os diálogos abertos (pelo #âncora): nada rola dentro, nada passa da tela, alvos de 24 px e letra de 12 px.
 DIALOGOS = {"07": ["lovense", "impedimentos", "lanc-conf"]}
 JS_DIALOGO = r"""
 (function(id){
@@ -417,11 +411,9 @@ def medir_r3(nav, mordida: str) -> int:
 
 
 
-# ↓ de rodada-4/ajustes/regua.py
-# Onde a régua mede alvos, letra e verde: o pedaço que estes ajustes tocaram.
 REGIAO = {
-    "01": "[data-controle]",  # os cartões, onde morava a linha «O jogo vê»
-    "02": ".ctl > .faixa, .ctl[data-conectado=nao]",  # a faixa de cada controle (onde morava o «O que chega») e o desconectado inteiro
+    "01": "[data-controle]",
+    "02": ".ctl > .faixa, .ctl[data-conectado=nao]",
     "07": "#acessorios .ja-tela.t2",
     "calibrar": "body",
 }
@@ -446,7 +438,6 @@ MORDIDAS_R4 = {
     "q6-rotulo": _m("document.querySelectorAll('.mira .desl[data-seis=q6] .r').forEach(function(r){r.textContent='Só enquanto eu segurar';});"),
     "q6-opcoes": _m("document.querySelectorAll('select[data-gesto=mira-segurar]').forEach(function(x){var o=document.createElement('option');o.text='Cruz';x.add(o);});"),
     "barra-calibrar": _m("document.querySelectorAll('.lin > .r').forEach(function(x){x.style.flex='0 0 82px';});"),
-    # as respostas à v3 (14/10): c3 na 02, n4 na Calibrar
     "c3-textao": _m("document.querySelectorAll('.chip-virtual>.sw').forEach(function(b){b.lastChild.textContent='Usar giroscópio como analógico';});"),
     "c3-largura": _m("var b=document.querySelector('.chip-virtual>.sw');b.style.width='80%';"),
     "c3-pula": _m("var st=document.createElement('style');st.textContent='.chip-virtual.on>.sw{height:34px!important}';document.head.appendChild(st);"),
@@ -487,7 +478,6 @@ JS_MEDIR_R4 = r"""
   return out;})
 """
 
-# Os grupos que têm de ter a mesma largura (e, nas molduras da 07, a mesma altura por linha).
 JS_IGUAIS_R4 = r"""
 (function(grupos){
   return grupos.map(function(g){var ws=[];document.querySelectorAll(g[1]).forEach(function(e){var r=e.getBoundingClientRect();
@@ -507,7 +497,6 @@ IGUAIS_R4 = {
     "calibrar": [["os quatro lugares", ".controles > .ctr, .controles > .lugar, .grade > .lugar"]],
 }
 
-# O que ela pediu, conferido no DOM: a lista do que falta (vazia = o pedido está ali).
 JS_PEDIDO_R4 = r"""
 (function(aba){
   function vis(e){var r=e.getBoundingClientRect();if(r.width<1||r.height<1)return false;
@@ -606,8 +595,6 @@ JS_PEDIDO_R4 = r"""
   return falta;})
 """
 
-# Na Calibrar o «Começar» é o botão principal da janela (o verde do tema, igual em todas); na 07 a chave «Ligados» e na 02 a pastilha
-# «Giroscópio» acesa são estado de uma chave, não aviso.
 VERDE_DE_TEMA = ("nj-tog", "pino", "span.txt", "btn.fazer", "btn.prim", "button.sw", "span.p")
 
 
@@ -674,8 +661,6 @@ def medir_r4(nav, mordida: str) -> int:
 
 
 
-# ↓ as duas checagens novas da fusão, em todas as páginas finais
-# As vagas sem controle (q4B): onde a página mostra a vaga, ela diz só «P3 • Desconectado» e «P4 • Desconectado».
 VAGAS = {"01": 2, "02": 2, "03": 0, "04": 2, "05": 2, "06": 0, "08": 2, "calibrar": 2}
 JS_GERAL = r"""
 (function(){
@@ -706,14 +691,10 @@ JS_GERAL = r"""
 """
 
 MORDIDAS_GERAL = {
-    # devolve um «Player 3»: o primeiro «P3» ou «P4» da página vira «Player 3»
     "player-3": _m("var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),n;while((n=w.nextNode())){if(/^P[34]$/.test(n.textContent.trim())){n.textContent='Player 3';break;}}"),
-    # devolve a «Vitória»: o primeiro «Cosmic Red» da página vira o nome dela
     "vitoria": _m("var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),n;while((n=w.nextNode())){if(/Cosmic Red/.test(n.textContent)&&!n.parentElement.closest('script,style')){n.textContent=n.textContent.replace('Cosmic Red','Vitória');break;}}"),
     "vitoria-na-dica": _m("var e=document.querySelector('[data-dica]');e.setAttribute('data-dica','Controle da Vitória');"),
-    # devolve uma mudança da rodada 4: a 38 (os jogos que os acessórios seguem) sai do diálogo da engrenagem
     "tira-a-38": _m("var j=document.querySelector('[data-todo=\"38\"]');document.querySelector('.miolo, body').appendChild(j);"),
-    # devolve o verde às pílulas da 09 e ao ✓ do Mic e do Som da 08
     "certo-verde": _m("document.querySelectorAll('.saude .selo.ok, .gc-est .certo').forEach(function(e){e.style.background='rgb(80,250,123)';e.style.color='rgb(80,250,123)';});"),
     "rola": _m("var d=document.createElement('div');d.style.height='2000px';(document.querySelector('.janela .miolo')||document.body).appendChild(d);"),
 }

@@ -7,111 +7,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* ---------------------------------------------------------------
-     As 11 cores do GUIA_IMPLEMENTACAO.md. Nenhuma inventada.
-     --------------------------------------------------------------- */
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
-    /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
-       O usuário apontou o sintoma três vezes, em três abas: *"os campos de importância
-       tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
-       de campos e essa fonte tem um contraste horrível"*, *"em todas as abas isso
-       tem que ser visto infelizmente"*.
-       MEDIDO nas dez abas, contraste WCAG de todo texto contra o fundo real:
-       390 elementos abaixo do limiar, e DUAS cores respondem por 93% deles —
-       `--comment` 217 vezes a 3,03:1 e `--texto-mudo` 146 vezes a 4,47:1.
-       O limiar para texto pequeno é 4,5:1; as duas ficavam abaixo, uma delas
-       por muito. Não era defeito de aba nenhuma: era a paleta.
-       O QUE MUDOU É SÓ A LUMINÂNCIA. O matiz e a saturação de cada uma
-       continuam os mesmos — a cara da interface não muda, o texto aparece:
-         --comment    #6272a4 -> #8896c4   3,03:1 -> 4,89:1
-         --texto-mudo #8b8fa8 -> #9a9eb8   4,47:1 -> 5,40:1
-       Os hex de origem eram do GUIA_IMPLEMENTACAO.md, e o `--comment` de lá é a
-       cor de COMENTÁRIO do Dracula — feita para código, onde apagar é o efeito
-       desejado. Usá-la em texto de interface é que era o engano. */
     --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
-    /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
-       `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
-       ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
-       brilho, selecione player tão invisíveis"*. #6272a4 sobre o `--panel`
-       (#282a36) dá contraste 2,6:1 — abaixo do 4,5:1 que texto pequeno pede.
-       O roxo é a cor de destaque DA CASA, medida: as dez abas pintam o
-       `.quadro-titulo` de #bd93f9, sem exceção.
-       Um TOKEN e não um hex por aba: assim a Vibração troca o dela numa linha
-       (o usuário pediu verde lá) sem ninguém digitar cor em seis arquivos — que é
-       exatamente como esta regra virou seis cópias divergentes.
-
-       VERDE, E NÃO ROXO — decisão, 30/08: *"deixa verde os nomes"*
-       (Iluminação) e *"os nomes das seções tem que ser verde"* (Gatilhos). Ela
-       já pedira verde na Vibração horas antes; agora vale para as dez, e a
-       exceção escopada em `.vib` some por ser redundante.
-       O roxo continua sendo a cor do TÍTULO do quadro (`.quadro-titulo`, as dez
-       pintam #bd93f9). São dois papéis: o título nomeia a ABA, o rótulo nomeia a
-       LINHA. Cores diferentes é o que os separa. */
     --rot-campo:var(--green);
-    /* ---------------------------------------------------------------
-       A ESCALA DA BORDA ESTRUTURAL — UMA SÓ, 31/08/2026.
-
-       PEDIDO, vendo Gatilhos, Iluminação e Vibração: *"é preciso remover as
-       bordas sobrando de tudo e deixar as bordas menos perceptíveis mas
-       presentes e modernas de forma que não roube a atenção de forma
-       negativa"*; e sobre a Perfis: *"nessa aba aqui as bordas tão horríveis"*.
-
-       O DEFEITO NÃO ERA UMA BORDA — ERA A FAIXA INTEIRA. Censo do DOM das
-       quatro abas, contraste de cada borda contra o fundo REAL atrás dela: a
-       borda ESTRUTURAL ia de **1,21:1** (`--border-sutil`, que sumia) a
-       **4,89:1** (`.btn`, que usava `--comment`) na MESMA tela — quatro vezes
-       de diferença. É isso que fazia a Gatilhos ler como GRADE: a divisória
-       horizontal gritava a 3,37:1 enquanto a vertical, encostada nela, sumia a
-       1,21:1. Não havia peso demais nem de menos; havia peso NENHUM em comum.
-
-       O VALOR, E DE ONDE ELE SAI. Um só, e ele é o MEIO EM LUMINÂNCIA entre os
-       dois extremos que ela mesma julgou: #343746 tem L 23,9% e ela o chamou de
-       invisível em 30/08; #767a92 tem L 51,8% e é o que ela chamou de excessivo
-       hoje. L 38% é o meio exato, e o matiz e a saturação continuam os da
-       família (H 231, S 13%) — muda só a luminância, como em 30/08.
-
-         --linha  #53576f   2,01:1 sobre --panel · 2,23:1 sobre --app-bg
-
-       São **40% menos** que a linha de 30/08 (3,37:1) e **66% mais** que a
-       borda que sumia (1,21:1). O rótulo verde ao lado dela está a 10,4:1 e o
-       texto mudo a 5,40:1: a linha recua diante dos dois, que é o que "presente
-       e não rouba a atenção" quer dizer em número.
-
-       QUEM NÃO LÊ DAQUI, e é o ponto: a borda que carrega INFORMAÇÃO. A cor do
-       plástico (D-A-BORDA-E-A-IDENTIDADE-DA-PECA), o estado (`.on`,
-       `.aba.ativa`, `:hover`) e o foco continuam com a cor deles — esmaecer
-       essas é apagar o dado, não o enfeite.
-       --------------------------------------------------------------- */
     --linha:#53576f;
-    /* A LINHA QUE SEPARA UM CAMPO DO OUTRO. Pedido: *"linha abaixo de cada
-       campo"* / *"as linhas horizontais deveriam separar os campos em linhas"*
-       e, quando a viu: *"as linhas divisórias em todas as páginas tão
-       invisíveis (…) a primeira coluna serve como nome da linha e a divisória
-       entre eles tem que estar clara"*.
-
-       ELA ESTAVA CERTA, E O NÚMERO ERA BRUTAL. `--border-sutil` (#343746) sobre
-       o painel (#282a36) dá **1,21:1** — a linha existia no DOM e não na tela.
-       `--border-forte` também não servia: 1,56:1.
-
-       O QUE CADUCOU EM 31/08, e é a metade seguinte da mesma medição: o #767a92
-       escolhido em 30/08 mirava a WCAG 1.4.11 (3:1 para componente gráfico) e
-       chegava a **3,37:1**. Só que 1.4.11 é o piso do que IDENTIFICA um
-       controle — um traço que só separa duas células não precisa dele, e a esse
-       peso ele passou a competir com o que separa. O usuário viu o resultado em três
-       abas e pediu o contrário. O nome fica (seis abas o escrevem); quem manda
-       agora é a escala acima, e ela vale para as dez de uma vez. */
     --rot-linha:var(--linha);
-    /* cores de plástico — a borda diz QUAL peça é (D-A-BORDA-E-A-IDENTIDADE-DA-PECA) */
-    /* OS CINCO PLÁSTICOS SÃO GERADOS — `monta.py` os reescreve a cada geração,
-       lendo o `<style>` que `scripts/gerar_cores_do_dualsense.py` pôs no SVG. Os
-       valores abaixo são o retrato do último `python3 abaNN.py`; editá-los à mão
-       não muda nada, porque a geração os substitui. Estavam errados até 27/08:
-       o Cosmic Red era `#b11f54` e a amostragem devolveu `#A51C48`. */
     --cosmic-red:#ae335a; --nova-pink:#e35b8c; --starlight-blue:#7eb8d4;
     --galactic-purple:#74588e; --midnight-black:#606062;
   }
@@ -119,130 +24,18 @@
   body{
     background:#11121a; color:var(--fg);
     font-family:'Space Grotesk',system-ui,sans-serif;
-    /* O RECUO TEM DONO — `--recuo-do-corpo`, no `:root` de baixo. Ele entra
-       DUAS vezes na conta da altura da `.janela` (em cima e embaixo), e era
-       justamente esse 16 que o `interface/janela.py` transcrevia à mão. */
     padding:var(--recuo-do-corpo); display:flex; flex-direction:column; align-items:center; gap:18px;
   }
   .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
-  /* A LARGURA ESTICA, COM TETO — 08/09/2026, decisão de produto.
-
-     ELA ERA `width:1180px` FIXO. Ela, com o produto instalado e os quatro
-     DualSense na mesa: *"o background fica completamente preto"*. Medido: não
-     era falta de fundo — o `body` já pinta `#11121a` logo acima, e o que ela
-     via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
-     desenho parava em 1180, deixando ~360px de casa de cada lado.
-
-     A recomendação foi levada ao usuário e o usuário aprovou (*"eu confio em vc, manda
-     ver"*): ESTICA, COM TETO. As razões, para ninguém as desfazer sem medir:
-     ela tem UMA tela e maximiza, então a sobra é o que ela vê o tempo todo;
-     ela tem QUATRO controles, e as abas de uma coluna por jogador estavam
-     espremidas; e o teto protege a leitura, porque esticar sem limite alonga a
-     linha até ela deixar de se ler.
-
-     DE ONDE SAI O 1600, e ele é HIPÓTESE MEDIDA, não dogma. As dez páginas
-     publicadas foram fotografadas e medidas em 1180, 1400, 1600 e 1900 —
-     geometria computada no Chrome, não o texto deste CSS:
-
-       * NADA QUEBRA em nenhuma das quatro. Zero rolagem lateral, zero caixa
-         fora da moldura, e a contagem de conteúdo-que-não-cabe é IDÊNTICA nas
-         quatro (02: 4 · 03: 51 · 04: 36 · 05: 34) — ela é anterior e não tem a
-         ver com a largura. A grade é fluida e cresce.
-       * O QUE SE GANHA: a coluna por jogador da Gatilhos
-         (`.duas-colunas`, `repeat(4, minmax(0,1fr))`) vai de **228px a 333px**,
-         +46%. É a razão 2 dela, com número.
-       * O QUE SE PAGA, e é o que fecha o teto: a linha de leitura alonga.
-         O registro da Sistema vai de 157 para 237 caracteres por linha; o
-         número de um ajuste da Gatilhos se afasta do nome dele de 87 para
-         183px. Em 1900 os mesmos viram 294 e 258 — o dobro do preço para
-         metade do ganho, e as fotos mostram o botão de modo virando uma caixa
-         de 460px para uma palavra.
-
-     Em 1600 o ganho ainda é grande e o preço ainda é o dobro do aprovado; daí
-     para cima o preço cresce e o ganho não. Se alguém remedir e achar melhor,
-     troque o número E a razão — o que NÃO muda é a decisão: estica, com teto.
-
-     O `min()` faz o teto e o encolhimento na mesma linha; o `max-width:100%`
-     abaixo continua por redundância barata. Abaixo de 1212px de documento nada
-     mudou: quem segura o piso é o `set_size_request` da janela GTK
-     (`interface/janela.py`), e ele ficou MAIS carregado, não menos. O COSMIC
-     que ladrilha não o lê (medido em 13/09/2026: janela de 816 px, a vista
-     rola e o rodapé sai por baixo). */
-  /* A JANELA TEM UMA ALTURA SÓ, nas dez abas. Ela, 27/08: "sair clicando entre
-     as abas causa muito desconforto, pq muda tudo". Media de 530 (Iluminação) a
-     1032 (Conexões) — quase o dobro: o rodapé pulava meia tela a cada clique.
-     DE ONDE SAI O 710, e por que não é a altura da tela. A primeira tentativa
-     foi 1048 — o teto da TV da bancada — para que nenhuma aba precisasse rolar. Deu
-     errado: o conteúdo das dez vai de 281px (Iluminação) a 783px (Conexões), e
-     com 1048 a Iluminação ficava com 518px de quadro vazio. Ela: "iluminação,
-     jogar e outras abas tão muito ruins com esse super espaço vazio na parte
-     inferior".
-     Não existe altura que sirva às duas pontas. 757 é a altura exata da SEXTA
-     aba mais cheia (Lançadores, 508px de conteúdo): seis abas cabem inteiras e
-     as quatro densas rolam POR DENTRO do miolo — que é o que uma janela de
-     aplicativo faz, e não move nada do que está em volta. Foi escolhida assim
-     de propósito: parar num número menor faz aparecer barra de rolagem para
-     8 ou 27 pixels, que é pior do que um vão.
-     O `scrollbar-gutter:stable` reserva a barra sempre: sem ele a largura do
-     miolo mudava 15px entre a aba que rola e a que não rola.
-     O `overflow-y:auto` do miolo é rede: hoje nada passa dos 817px que sobram,
-     e o dia em que passar a janela continua do mesmo tamanho. */
   .janela{
     width:min(100%,1600px); height:var(--alt-janela); max-width:100%; background:var(--app-bg);
-    /* A JANELA NÃO PASSA DA TELA — 19/09/2026, e o defeito é do usuário: os quatro
-       botões do rodapé cortados ao meio pela borda de baixo, com a janela
-       ladrilhada.  <!-- noqa-acento -->
-
-       O NÚMERO É EXATO: a altura é `clamp(--piso-da-vista, 100dvh − recuo×2,
-       --teto-da-vista)`, e o piso de 777 mais os dois recuos de 16 dão **809**.
-       Acima disso a janela encolhe junto e nada se perde; ABAIXO ela TRAVA em
-       777 e passa da viewport — 19 px fora a 790, 49 a 760, 109 a 700. O que
-       sai é justamente o fim da janela, onde mora o `.rodape`.
-
-       O `max-height` É A CURA INTEIRA porque o mecanismo já existe: `.miolo` é
-       `flex:1; min-height:0; overflow-y:auto` e rola por dentro, e o `.rodape`
-       é irmão dele, colado no fim. Limitar a janela faz o miolo absorver a
-       diferença — o rodapé deixa de sair, e nenhuma altura de conteúdo muda.
-
-       O PISO NÃO SE MEXE: ele existe para o conteúdo não se espremer (foi o que
-       curou a aba Navegação), e continua mandando na altura do MIOLO. O que ele
-       não pode mais fazer é empurrar o rodapé para fora da tela.
-
-       E POR QUE O PISO PEDIDO EM CÓDIGO NÃO BASTA, medido em 13/09/2026:
-       *"o COSMIC que ladrilha não o lê"*. Quando ela
-       ladrilha, a janela recebe menos altura que o piso — e a tela tem de
-       aguentar, porque o gesto é dela e não vai ser revogado.
-
-       A RÉGUA É `tests/unit/test_a_janela_nunca_passa_da_tela.py`. */
     max-height:calc(100dvh - var(--recuo-do-corpo) * 2);
     display:flex; flex-direction:column;
     border:1px solid var(--linha); border-radius:10px; overflow:hidden;
     box-shadow:0 18px 50px rgba(0,0,0,.45);
   }
 
-  /* ---------- a marca ----------
-     A FAIXA DE CABEÇALHO SAIU — 10/09/2026, decisão de produto («1 + rodapé»,
-     ALTURA-DA-VISTA-01). Eram 60 px em cada uma das dez abas: o logotipo de
-     46, o `h1` «Hefesto — DualSense4Unix» e a linha «Gerenciador DualSense
-     para Linux».
-
-     A RAZÃO É A MESMA QUE TIROU O SUBTÍTULO DA MOLDURA EM 08/09, e ela serve
-     inteira aqui: *"a barra já diz «Hefesto», e tudo o que muda — a aba, o
-     alvo, o perfil ativo — já está DENTRO da janela"*
-     (`interface/hefesto_vivo.py`). Das 213 px de cromo da `.janela`, essa
-     faixa era a única parcela que REPETIA o que a moldura do sistema já diz.
-
-     O QUE ELA CARREGAVA E NÃO ERA REPETIÇÃO desceu uma faixa: o logotipo
-     DO USUÁRIO, que continua na tela como marca de 24 px à esquerda da linha do
-     alvo, e a contagem de controles, que é dado vivo do daemon e agora mora
-     ao lado do perfil ativo. As duas mudanças estão em `.fita-linha`, logo
-     abaixo.
-
-     O LUGAR DA CONTAGEM (`x USB · y BT`) foi decidido em 13/09/2026, por
-     delegação de produto, com a foto da tela na mão. É reversível: o que muda é
-     este bloco e a linha do alvo, no corpo da página. */
-  /* 46/44 e não 24/22 desde 21/09/2026 — a conta está em `monta.MARCA_DA_LOGO`. */
   .logo{
     width:46px;height:46px;border-radius:50%;flex:0 0 46px;
     background:radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%);
@@ -250,12 +43,6 @@
     display:flex;align-items:center;justify-content:center;font-size:12px;
   }
 
-  /* ---------- a marca + a fita do alvo + a contagem + o perfil ativo ----------
-     O RECUO SUBIU DA `.fita` PARA A LINHA — 10/09/2026. Enquanto a linha tinha
-     um filho só que pagasse o recuo, tanto fazia; agora ela tem quatro (marca,
-     fita, contagem, perfil), e um recuo que mora no segundo deles deixa o
-     primeiro colado na borda. O 10/12 vertical é o MESMO de antes, então a
-     faixa continua medindo o que media. */
   .fita-linha{display:flex;align-items:center;gap:10px;padding:10px 18px 12px}
   .conectado{margin-left:auto;text-align:right;font-size:12.5px;color:var(--green);white-space:nowrap}
   .conectado .bolinha{color:var(--green)}
@@ -268,11 +55,6 @@
   .marca-nome .m-hef{color:var(--pink)}
   .marca-nome .m-4{color:var(--green)}
   .fita > span:first-child{font-size:13.5px;color:var(--texto-suave)}
-  /* o Perfil Ativo — igual nas dez abas, sempre visível.
-     O EMPURRÃO PARA A DIREITA MUDOU DE DONO em 10/09/2026: quem carrega o
-     `margin-left:auto` agora é a `.conectado`, que passou a ser o PRIMEIRO do
-     grupo da direita. Dois `auto` na mesma linha flex não empurram mais: eles
-     PARTEM a sobra ao meio, e a contagem pousaria no centro da faixa. */
   .perfil-ativo{
     display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
@@ -280,22 +62,7 @@
   }
   .pa-rot{font-size:10.5px;color:var(--comment);}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
-  /* A FITA QUE NÃO ESCOLHE TEM OS CHIPS ACESOS COMO QUALQUER OUTRA — 09/10/2026
-     (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, pedido de 29/09: *"a cor de
-     todos os botões do Selecionar deveriam estar acesas e com as bordas
-     corretas"*). Quem acende é `monta.acesos_da_fita`; a folha não tem opinião
-     própria sobre a fita inerte, e as regras `.fita.inerte .chip` que apagavam
-     o chip (FITA-01, 08/09, e o cinza de 30/08) saíram. Só o rótulo
-     `Selecionar:` segue na cor de comentário: não é botão. O `opacity` não
-     volta: escondia o texto do contraste (2,18:1) sem a régua ver. */
   .fita.inerte{color:var(--comment)}
-  /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
-     DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
-     desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
-     camada `.so-no-nativo` cobre a fita inteira, não deixa o clique chegar nos
-     chips e carrega a dica. O PINTOR É O CORPO (`body.nativo`), pintado pelo
-     piloto a cada tique; o resto da trava (o que cada aba por controle grava)
-     mora em `monta.CSS_DO_NATIVO`, só nas cinco páginas que precisam. */
   .fita{position:relative}
   .so-no-nativo{display:none}
   body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
@@ -303,7 +70,6 @@
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
     border-color:var(--border-sutil);background:transparent;color:var(--comment);
     font-weight:400;--borda-do-chip:1px}
-  /* a peça fixa do cartão e a trava do quadro nascem escondidas */
   .visto-fixo,.visto-legenda,.trava-nativo{display:none}
   body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
     gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
@@ -317,31 +83,6 @@
   body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
     margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
   body.nativo .trava-nativo .cad{color:var(--comment)}
-  /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
-     Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
-     maiúsculo." O que ela leu três dias depois, na MESMA tela:
-
-         fita   P1 • Cosmic Red • CABO
-         card   Cosmic Red • cabo
-
-     "Leia o cabo e acordado (ambos minusculo sem iniciar de forma   (noqa-acento: citação literal)
-      capitular). Esse tipo de coisa não pode se repetir na interface."   (noqa-acento: citação literal)
-
-     A REVOGAÇÃO É A LEITURA CERTA DE «coloca maiúsculo», e não humor: a regra
-     de produto é de 30/08 — "a maiúscula a regra é sobre a primeira letra a ser   (noqa-acento: citação literal)
-     capitalizada, é o padrão do projeto" —, e foi por ela que a caixa alta
-     saiu dos rótulos de seção no mesmo dia (`.sec-rot`, nos geradores). Subir
-     a palavra INTEIRA nunca foi o que esse padrão diz.
-
-     E O DOCUMENTO NUNCA FOI O CULPADO: o texto no HTML já era minúsculo (a
-     regra de `monta.rotulo` — maiúscula escrita no HTML tira dela a chance de
-     copiar o nome como ele é). A grafia dupla morava SÓ na folha de estilo, e
-     é por isso que uma régua que lesse apenas o texto das dez páginas daria
-     verde sobre uma tela que gritava. Quem mede as DUAS metades é
-     `scripts/check_a_maiuscula_decorativa.py`, que nasceu com esta cura.
-
-     O `<span class="via">` FICA: ele é o ENDEREÇO da via no rótulo do chip
-     (`monta.rotulo_do_chip`), não um gancho de estilo. */
   .chip{
     --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
@@ -349,49 +90,15 @@
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
-  /* a borda grossa é a cor do plástico; o interior diz se está escolhido */
   .chip.plastico{--borda-do-chip:2px}
-  /* A FITA NÃO SALTA AO TROCAR DE ABA — 13/09/2026, VAO-DO-ESQUELETO-01.
-
-     O DEFEITO: a altura da linha do alvo é a do filho mais alto, e o chip media
-     28 px com a borda de 1 e 30 com a de 2. As três abas que escolhem traziam o
-     chip do plástico com 2 e a linha media 52; as sete de fita inerte, com 1,
-     mediam 51 (o «Perfil ativo», de 29, é quem manda nelas). A barra de abas e
-     o quadro desciam 1 px a cada troca. A sprint mediu 2 px antes de a faixa de
-     cabeçalho sair; remedido depois, com Chrome e com o piloto, é 1.
-
-     A CURA ESCRITA NA SPRINT CAIU AO MEDIR: pôr 2 px na borda do chip inerte
-     devolve a espessura que o usuário mandou tirar em 08/09 («cinza como os demais»,
-     a regra logo abaixo) e deixa a 07 em 51, porque a fita de lá nasce só com
-     o «Todos». Pelo rádio a cor não se lê e nenhum chip ganha a classe do
-     plástico; com a pintura, a mesma aba muda de 51 para 52 no primeiro tique.
-
-     A CURA É NA CAUSA: a espessura tem um dono, `--borda-do-chip`, e o ar de
-     cima e de baixo lê dele. Borda mais ar somam sempre 7 px, que é o chip
-     vivo do plástico (2 + 5): a linha das abas que escolhem não muda um pixel,
-     e todo chip da fita mede 30 em qualquer estado — o «Todos», de borda 1,
-     ganha 1 px de ar em cima e embaixo nas dez. O ar horizontal não mudou.
-     09/10/2026: a fita inerte também leva a borda de 2 px do plástico (o cinza de
-     08/09 foi revogado), e a linha mede o mesmo nas dez. */
   .fita .chip{padding-top:calc(7px - var(--borda-do-chip));
               padding-bottom:calc(7px - var(--borda-do-chip));
               white-space:nowrap}
-  /* A COR DO CHIP VEM DA MESA, NÃO DE UMA CLASSE POR MODELO. Eram
-     `.c-red` e `.c-blue`, uma classe por plástico — com quatro controles na mesa
-     viram quatro, e com os 28 do CSV, vinte e oito. `monta.fita()` escreve a
-     cor no `style` do chip, lida do desenho. */
   .chip.plastico{border-color:var(--plastico, var(--border-forte))}
 
-  /* A LISTA ABERTA DE UM <select> — o usuário viu, 28/08: as opções somem quando o
-     dropdown abre. O popup do <select> é do SISTEMA, não da página: ele nasce com
-     o fundo CLARO do tema do Chrome, e o `color` que a folha dá ao `select`
-     (texto claro, para o nosso fundo escuro) é herdado pelas `option`. Claro
-     sobre claro. Só a linha selecionada se lia, porque o realce a pinta.
-     A cura tem de estar na `option`, não no `select`: são caixas diferentes. */
   select option{background:var(--panel);color:var(--fg)}
   select option:checked{background:var(--sel-bg);color:var(--fg)}
 
-  /* ---------- a tira de abas ---------- */
   .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
     padding:11px 13px;font-size:13px;color:var(--texto-mudo);
@@ -402,26 +109,8 @@
   .aba.falta{opacity:.35;cursor:not-allowed}
   .aba.ativa{color:var(--fg);border-bottom-color:var(--pink);font-weight:600}
 
-  /* ---------- o miolo ---------- */
-  /* padding-right 3 e não 18: o `scrollbar-gutter:stable` reserva 15px à
-     direita SEMPRE — com 18 de padding a margem direita ficava 33 contra 18 da
-     esquerda, visível em toda aba. 3 + 15 = os mesmos 18, e a caixa de
-     conteúdo tem a mesma largura de antes da barra existir. */
   .miolo{padding:16px 3px 18px 18px;display:flex;flex-direction:column;gap:14px;
          flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
-  /* O QUADRO NÃO ESTICA POR PADRÃO. Ele já esticou: com a altura da janela fixa,
-     o último quadro de toda aba encostava no rodapé, e nas abas curtas isso virou
-     um quadro cinza gigante e vazio. Ela, 27/08: "nessa aba encurtar verticalmente
-     o bloco cinza então". O quadro fica do tamanho do que tem dentro, e a sobra
-     fica no fundo da janela, fora dele.
-     `estica` é o caso oposto — a aba cujo conteúdo SABE crescer, como a lista de
-     perfis. Aí o quadro cresce e o conteúdo cresce junto, até o rodapé.
-     `flex-grow`, e NÃO `flex:1`: o atalho zera o `flex-basis` e o quadro passa a
-     caber em menos do que precisa. `flex-shrink:0` mantém a base no conteúdo. */
-  /* `estica` ENCOLHE e cresce: `flex-shrink:0` o travava na altura natural do
-     conteúdo — a lista de perfis inteira, 13 linhas — e o quadro passava 116px
-     do miolo, com a fileira de botões fora da janela. Quem encolhe de verdade é
-     a lista lá dentro, que rola. */
   .miolo > .quadro.estica{flex-grow:1;flex-shrink:1;min-height:0;
                           display:flex;flex-direction:column}
   .miolo > .quadro.estica > .quadro-corpo{flex:1;min-height:0;display:flex;flex-direction:column}
@@ -430,8 +119,7 @@
   .quadro-topo{
     display:flex;align-items:center;gap:8px;padding:11px 14px 0;
   }
-  .quadro-titulo{font-size:13.5px;font-weight:600;color:var(--purple)}  .quadro[data-modo-da-aba]>.quadro-topo{padding-bottom:11px;border-bottom:1px solid var(--linha)} /* a linha abaixo do título Gatilhos */
-  /* o ícone "?" — onde TODO texto longo passa a morar (D4 + D-TUDO-QUE-EXPLICA-VIRA-DICA) */
+  .quadro-titulo{font-size:13.5px;font-weight:600;color:var(--purple)}  .quadro[data-modo-da-aba]>.quadro-topo{padding-bottom:11px;border-bottom:1px solid var(--linha)}
   .ajuda{
     width:17px;height:17px;border-radius:50%;flex:0 0 17px;
     border:1px solid var(--linha);color:var(--texto-mudo);
@@ -439,31 +127,6 @@
   }
   .ajuda:hover{border-color:var(--cyan);color:var(--cyan)}
   .ajuda:hover .dica{display:block}
-  /* ---------- O `?` ABRE NO FOCO, E NÃO SÓ SOB O PONTEIRO — 07/09/2026 ----------
-     ACHADO POR CONFERÊNCIA, medido na aba Navegação: `.ajuda` é um `<span>` sem
-     `tabindex`, e o ÚNICO caminho de revelação era `:hover`. Medido pelo caminho
-     exato que o controle usa (`hefesto_vivo`, `el.click()`):
-
-         APÓS el.click():  display da dica = 'none' · rect = 0 · foco = BODY
-
-     Isto acontecia na aba cujo próprio `?` diz *"Navegar a janela do Hefesto com
-     o controle"* — a tela que ensina a navegar sem rato era a que exigia um.
-
-     A REGRA MORA AQUI, NA FOLHA DA CASA, e não na aba onde foi achado: são 99
-     `?` em dez abas, e uma cura numa aba só deixaria as outras nove ensinando
-     que o `?` não responde ao controle. É a regra de 05/09 — *quando a cura
-     conhece a causa, ela cobre TODOS os chamadores*.
-
-     `:focus-within` E `:focus` OS DOIS, e não é redundância: o `:focus` pega o
-     próprio `?` recebendo o foco, e o `:focus-within` mantém a dica aberta se o
-     foco cair em algo DENTRO dela (um `<b>`, um `<tt>`, ou o que a frase viva
-     do produto trouxer). Sem o segundo, abrir e ler já fechava.
-
-     O `tabindex` É DO EMISSOR, não desta folha — uma regra de estilo não torna
-     um `<span>` focável. Quem já o emite é `aba06.ajuda()`; as outras nove abas
-     estão declaradas como dívida medida no relatório desta leva. Esta regra
-     nasce pronta para elas: no dia em que o atributo chegar, o `?` daquela aba
-     passa a abrir no foco sem tocar nesta folha de novo. */
   .ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
   .ajuda:focus .dica,
   .ajuda:focus-within .dica{display:block}
@@ -476,38 +139,15 @@
   .dica b{color:var(--fg)}
   .quadro-corpo{padding:10px 14px 14px}
 
-  /* ---------- SEÇÃO QUE ABRE E FECHA ----------
-     Pedido, 30/08/2026, sobre a Conexões: *"deixa todas essas seções
-     expansíveis igual fizemos em controles"*.
-
-     MESMO MECANISMO DA CONTROLES, e de propósito: `input` escondido +
-     `:has(:checked)` + `<label>`. Sem uma linha de JavaScript — o mockup abre
-     como arquivo, sem servidor, e é regra desta casa que ele continue assim.
-     A diferença é o TIPO: a Controles usa `radio` (um card aberto por vez, e a
-     fita aponta qual); aqui é `checkbox`, porque as seções são independentes e
-     ela pode querer duas abertas.
-
-     A seta é `::before` no rótulo, não um segundo elemento: um `<span>` a mais
-     no cabeçalho desalinharia o título dos outros nove quadros da casa, que já
-     nascem no mesmo x. */
   .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
   label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
   .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
   .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
-  /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
   .miolo > .quadro.estica:has(> input.abre:not(:checked)){flex:0 0 auto}
 
-  /* O RÓTULO DE LINHA TEM UMA COR SÓ NAS DEZ ABAS — 30/08/2026.
-     Eu curei `.sec-rot` e assumi que era A classe de rótulo. São CINCO —
-     `.sec-rot`, `.linha-rot`, `.rot`, `.stick-rot` e o `<th>` das tabelas — e o usuário
-     viu o resultado: *"dá pra ver em todas as abas problemas que não foram
-     corrigidos"*. A Jogar, a Controles, a Navegação, a Sistema e a Perfis
-     ficaram com rótulo cinza ao lado de cinco abas com rótulo verde.
-     `--rot-campo` é o dono; quem nomeia uma linha lê dele. */
   .linha-rot{font-size:12px;font-weight:600;color:var(--rot-campo);margin-bottom:7px}
 
-  /* seletor segmentado */
   .seg{display:flex;gap:7px;flex-wrap:wrap}
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
@@ -516,14 +156,9 @@
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
-  /* O TRAVADO TINHA CARA DE CLICÁVEL — achado de 31/08. O botão nasce
-     `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
-     dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
-     opacidade mora no ancestral e cega toda régua que lê `color`. */
   .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
   .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
 
-  /* a linha de estado: o que VALE agora */
   .estado{
     display:flex;align-items:center;gap:7px;margin-top:9px;
     font-size:12px;color:var(--texto-mudo);
@@ -532,13 +167,6 @@
   .estado .verde{color:var(--green)}
   .estado .laranja{color:var(--orange)}
 
-  /* a fileira de modos do Hefesto LIGADO — cinco chips na tela.
-     O NÚMERO DA TELA NÃO É O NÚMERO DO PRODUTO, e a diferença é decisão
-     de 31/08: `ponte_escada.ESCADA` tem QUATRO pontes, e uma delas (Nativo)
-     saiu da fileira para virar a posição DESLIGADO do interruptor. Dos cinco
-     chips, três são degrau (DualSense, Xbox, Steam Input) e dois não são
-     (Point And Click, Navegação) — por isso o algarismo do círculo é derivado
-     de `indice_do_degrau`, e não digitado. */
   .escada{display:flex;align-items:stretch;gap:7px}
   .degrau{
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
@@ -556,19 +184,14 @@
     border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600;
   }
   .degrau.on i{border-color:var(--purple);color:var(--purple)}
-  /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
-     #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
-     `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
   .seta{color:var(--texto-mudo);font-size:13px}
 
-  /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
     display:flex;align-items:center;gap:7px;margin-top:8px;padding:7px 10px;
     border:1px dashed var(--orange);border-radius:6px;
     font-size:11.5px;color:var(--orange);background:rgba(255,184,108,.07);
   }
 
-  /* ---------- a área de avisos, com espaço reservado (P8) ---------- */
   .avisos{
     min-height:38px;border:1px solid var(--linha);border-radius:9px;
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
@@ -583,38 +206,20 @@
   .conta{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .link{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan);cursor:pointer}
 
-  /* ---------- controles: SÓ a contagem e a ponte (decisão de produto) ---------- */
   .mesa{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .contagem{font-size:13px}
   .contagem .n{color:var(--cyan);font-weight:600;font-family:'JetBrains Mono',monospace}
   .pecas{display:flex;gap:7px}
-  /* a peça: SVG pequeno na cor do plástico + número */
   .cartao{
     display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;
     border:2px solid var(--linha);border-radius:7px;background:var(--app-bg);
     font-size:11.5px;color:var(--texto-suave);
   }
-  /* CSS MORTO, REMOVIDO em 27/08: `.cartao.c-red` e `.cartao.c-blue` eram uma
-     classe por plástico. Com quatro na mesa faltariam duas; com os 28 do CSV,
-     vinte e seis. A cor vem de `--plastico`, escrita pelo gerador a partir do
-     desenho — o mesmo mecanismo do chip da fita. Zero usos nos dez HTML. */
   .cartao .pl{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:500}
   .cartao .via{color:var(--texto-mudo);font-size:11px}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-  /* A COR DO BOTÃO SECUNDÁRIO MUDOU DE LUGAR — 31/08/2026: do CONTORNO para a
-     PALAVRA. O `.btn` desenhava a borda com `--comment` (4,89:1) e as três
-     variantes com o acento cheio — verde 11,5:1, vermelho 4,53:1, roxo 5,90:1.
-     Numa coluna de Iluminação são dois botões empilhados, e na Vibração outros
-     dois: quatro retângulos gritando em volta de palavras que já dizem tudo.
-     Ela: *"botão com borda ao lado de botão com borda ao lado de célula com
-     borda"*.
-     NADA DE INFORMAÇÃO SAIU: o texto de cada variante continua verde, vermelho
-     ou roxo — é ele que diz "isto liga", "isto desliga", "isto guarda". O que
-     saiu foi o contorno repetindo em 300px de perímetro o que a palavra diz em
-     sete letras. E o acento VOLTA no `:hover`, que é onde ele informa de fato:
-     o botão sob o ponteiro se acende na cor da própria ação. */
   .btn{
     padding:8px 13px;border-radius:7px;font-size:12.5px;font-family:inherit;cursor:pointer;
     border:1px solid var(--linha);background:transparent;color:var(--texto-suave);
@@ -627,38 +232,21 @@
   .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
   .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
 
-  /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
   .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
   .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
-  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
+  .sep{color:var(--texto-mudo);margin:0 3px}
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
   .col-atencao{border-left:1px solid var(--linha);padding-left:16px}
 
 
-  /* ---------- rodapé ----------
-     O RECUO VERTICAL CAIU DE 12 PARA 6 — 10/09/2026, a metade «+ rodapé» da
-     decisão de produto. A faixa media 59 px (12 + 34 do botão + 12 + 1 de borda) e
-     passa a medir 47; os 12 px vão para o quadro, nas DEZ abas de uma vez,
-     porque esta barra existe nas dez.
-
-     O QUE NÃO ENCOLHEU, e é a ressalva de produto: *"nenhum dos quatro botões pode
-     ficar menor do que a mão do usuário alcança"*. O botão continua com
-     `height:var(--h-acao)` = 34 px, que é a escala de ação desta casa
-     (`:root`, lá embaixo) — o que encolheu é o AR em volta dele. Encolher o
-     botão seria trocar a barra de rolagem dela por um alvo de clique menor,
-     que é pagar a queixa com outra queixa. */
   .rodape{
     display:flex;align-items:center;gap:10px;padding:6px 18px;
     border-top:1px solid var(--linha);background:var(--app-bg);
   }
-  /* O EMPURRÃO TROCOU DE DONO. Era o `.recibo{flex:1}` que jogava os quatro
-     botões para a direita; ele saiu da barra em 30/08 (virou dica de cada botão,
-     ver `fim.html`) e sem substituto os botões cairiam para a esquerda. A margem
-     automática no primeiro faz o mesmo serviço sem um elemento vazio no DOM. */
   .rodape .r-aplicar{margin-left:auto}
   .rodape button{
     padding:8px 15px;border-radius:7px;font-size:12.5px;font-family:inherit;
@@ -671,148 +259,29 @@
 
   .marca{color:var(--orange)}
 
-  /* ---------- os SVGs REAIS ----------
-     Logo: layout/assets/hefesto-logo.svg, LIDA pelo `monta.py` e injetada
-     na âncora que fica no cabeçalho, lá embaixo — nenhuma cópia mora aqui.
-     (E a âncora NÃO se escreve aqui: a primeira versão deste comentário a citou
-     literal, o `str.replace(…, 1)` casou com a CITAÇÃO em vez do cabeçalho, e o
-     logotipo inteiro foi parar dentro de um comentário de CSS — invisível, com
-     as dez páginas geradas sem erro nenhum. Hoje o `monta.py` exige que a
-     âncora apareça UMA vez só, que é o que teria pego isto na hora.)
-     · Controle: assets/control-svg/dualsense.svg
-     O controle traz as peças nomeadas do `docs/data/pecas-do-dualsense.csv` e a
-     folha das cores por `data-colorway`, gerada de `docs/data/cores-do-dualsense.csv`
-     — a mesma fonte que o specs.html usa. */
   .logo{background:none;border:none;overflow:hidden}
   .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
 
-  /* O LUGAR VAZIO NÃO DESENHA CONTROLE — 04/09/2026, e é decisão de produto:
-     "aqui os svgs do controle so deveria aparecer se eles tivessem conectados".
-
-     ELA SUBSTITUI A DECISÃO DE 31/08, que dizia o contrário e está escrita em
-     seis lugares (`monta.py:84`, `aba01.py:650`, `aba04.py:689`,
-     `aba05.py:778`, `aba06.py:1042`, `aba10.py:380`), assim:
-     "O DESENHO FICA, apagado. Um lugar sem desenho nenhum não diz que ali cabe
-     um controle; um desenho cinza diz."
-     O lugar CONTINUA na tela — a moldura, o rótulo `P3 · Desconectado` e o
-     travessão ficam, e é isso que segue ensinando que ali cabe um. O que sai é
-     só o desenho do aparelho, que era a parte que afirmava presença.
-
-     É `display:none`, e NÃO remoção do DOM, por duas razões medidas: as réguas
-     cobram a regra e o elemento no publicado
-     (`test_a_06_o_lugar_vazio_nao_veste_o_mockup.py`), e o pintor distribui cor
-     por ÍNDICE — `aba06.py:1047` avisa que "um lugar vazio sem endereço tiraria
-     uma casa da fila e o P4 receberia a cor do P3".
-
-     UMA REGRA PARA AS CINCO ABAS: a marca `data-conectado="nao"` é escrita pelo
-     gerador E pelo piloto (`hefesto_vivo.py:425`), e reaberta quando o controle
-     chega (`:611`). Por isso isto vive aqui, na folha das dez, e não repetido em
-     aba01/04/05/06/10. */
   [data-conectado="nao"] .ds-svg,
   .ds-svg[data-conectado="nao"]{display:none}
   .ds-motores{max-width:250px;margin:6px auto}
-  /* as peças ocultas do SVG acendem quando a classe .acesa entra */
   .ds-svg .oculta{opacity:0}
   .ds-svg .oculta.acesa{opacity:.95}
 
-  /* O DESENHO É DE LINHA, e o `.corpo` do SVG traça SÓ OS PUNHOS — ele é careca por
-     construção. A cabeça do controle vem do `[id$="-touchpad"]` e dos ombros `#l1`/`#r1`, que
-     no aparelho real são o MESMO plástico. Por isso os três levam a cor da peça, e só
-     os controles de entrada (d-pad, botões, analógicos) ficam em tom neutro.
-     Medido em 26/08 isolando cada grupo do SVG num render. */
   .ds-svg .peca{fill:#6b7385}
-  /* `sem-tinta` é o ALVO invisível de uma peça cujo desenho é outro: o do PS é o
-     glifo, e o círculo existe só para receber o clique e o ponteiro. A regra
-     vivia no `mapa.py` e no `exportar.py` e FALTAVA aqui — por isso `.peca`
-     pintava um disco cinza atrás do logo do PS nas dez abas. Ela, 27/08:
-     "tem um círculo no PS de cada imagem, tem que excluir eles e deixar só o
-     glifo lá". */
   .ds-svg .sem-tinta{fill:none !important;stroke:none !important}
-  /* o traço do topo é FINO no arquivo; o stroke iguala à grossura dos punhos */
   .ds-svg [id$="-touchpad"] .peca,
   .ds-svg [id$="-l1"] .peca,
   .ds-svg [id$="-r1"] .peca{stroke-width:.9;stroke-linejoin:round}
-  /* A COR DO PLÁSTICO NÃO MORA MAIS AQUI — 27/08/2026.
-     Este bloco tinha 32 linhas: quatro colorways × oito seletores, escritos à
-     mão, pintando o corpo, o touchpad e os dois ombros com UMA cor cada. Duas
-     coisas o derrubaram no mesmo dia: (1) o hex estava errado e ninguém tinha
-     como ver — o Cosmic Red era `#b11f54` e a amostragem devolveu `#A51C48`;
-     (2) o DualSense não é de uma cor só, e o desenho pintava tudo igual.
-     Agora a folha vem DENTRO do SVG, gerada de `docs/data/cores-do-dualsense.csv`
-     por `scripts/gerar_cores_do_dualsense.py`: 28 modelos × 8 zonas, com a
-     legibilidade contra o fundo escuro pela mesma conta do produto
-     (`integrations/cor_do_plastico.tom_para_a_borda`). O portão que reprova a
-     divergência é `scripts/check_cores_do_dualsense.py`. */
-  /* A BOLA DO POLEGAR (`.miolo`, dentro de cada analógico) nascia com
-     `fill="#b11f54"` gravado no arquivo — o vermelho do Cosmic Red, em TODO
-     controle, inclusive no azul. Ela, 27/08: "esse círculo no centro dos
-     analógicos tem que ter a cor de cada controle".
-     ATENÇÃO ao nome: `.miolo` é TAMBÉM a classe do corpo da página (linha 92).
-     São coisas diferentes; por isso as duas regras andam sempre com `.ds-svg`
-     na frente. */
 
-  /* ---------------------------------------------------------------
-     A ESCALA — uma só altura por família de controle, nas dez abas.
-     Medido em 26/08: havia QUATRO alturas de botão na mesma janela
-     (31 / 35 / 37 / 38 px). Nenhuma errada sozinha; juntas, é o que
-     faz a janela parecer montada por pessoas diferentes.
-     `height` e não `min-height`: min-height não ENCOLHE quem já é
-     mais alto — foi assim que a primeira tentativa deixou o 37 e o
-     38 passarem, com a régua verde de tudo o mais.
-     --------------------------------------------------------------- */
   :root{
-    --h-escolha:36px;   /* botão de escolha, select, campo — o que se clica para decidir */
-    --h-acao:34px;      /* botão de ação: Aplicar, Apagar, Guardar */
-    --gap:14px;         /* o passo vertical entre quadros */
-    --pad-quadro:14px;  /* a margem interna de todo quadro */
-    --rot:92px;         /* a coluna de rótulo, igual em toda aba que tem campo */
-    /* 777 DESDE 31/08/2026, e os 20px a mais são o pedido: *"talvez
-       estender mais verticalmente o Dispositivos Conectados faça caber."*
-       Ela estava certa, e o número diz por quê: o card aberto da Controles
-       ESTICA para preencher o corpo, então a folga de verdade é
-       `o que o corpo dá` menos `o que o card pede no natural`. Com 757 essa
-       conta dava **1px** — o card pede 327 e a caixa oferece 328. Um pixel não
-       é folga: é sorte, e ela já tinha visto a barra aparecer na tela do usuário.
-       Com 777 a folga passa a 21px.
-       O QUE ELE CUSTA, e está medido nas dez: a Jogar vai de 89 para 109px de
-       vão e a Conexões de 216 para 236 — as duas já eram as mais vazias, e o
-       vão delas é o ponto 6.2 da lista dela. Nenhuma outra aba passa a rolar.
-
-       O 777 DEIXOU DE SER A ALTURA E VIROU O PISO — 10/09/2026, decisão de produto
-       («1 + rodapé», ALTURA-DA-VISTA-01). Ela, com a janela maximizada na TV:
-       *"ainda joga pra baixo e abre a barra de navegação. tem espaço vertical  <!-- noqa-acento: citação literal -->
-       pra aproveitar aqui"*.
-
-       O QUE ESTAVA MEDIDO, e é a causa inteira: a vista da `WebView` na TV da bancada
-       mede **840** px e a página pedia **809** (16 + 777 + 16). Os 31 px que
-       sobravam não iam para aba nenhuma — morriam entre a moldura da `.janela`
-       e a borda da janela do sistema. Cresça a janela quanto quiser: com a
-       altura em pixel o `.miolo` ficava nos mesmos 564, e a barra de rolagem
-       que o usuário viu era a mesma que veria numa janela de 809.
-
-       DE ONDE SAI CADA UM DOS TRÊS NÚMEROS:
-
-         piso 777   é o desenho de ontem: nenhuma aba fica pior do que já estava;
-         100dvh     a vista de verdade. Numa `WebView` embutida não há barra de
-                    navegador que apareça e suma, então `dvh`, `svh`, `lvh` e
-                    `vh` valem o mesmo — medido neste WebKit, os quatro dão 840
-                    na vista do usuário. `dvh` fica porque DIZ a intenção;
-         menos 32   o recuo do `body`, que tem dono uma linha acima
-                    (`--recuo-do-corpo`) e não se digita duas vezes;
-         teto 855   a maior vista que este desenho promete PREENCHER. Acima
-                    dela o que sobra viraria vão, e vão vazio é queixa de uso
-                    (*"iluminação, jogar e outras abas tão muito ruins com esse
-                    super espaço vazio na parte inferior"*). Na TV da bancada o teto
-                    nunca é alcançado: 840 − 32 = 808. Numa tela 4K — e a TV
-                    da bancada tem o modo 3840x2160 — sem teto a Navegação ficaria com
-                    mais de mil pixels de vão.
-
-       QUEM MANDA EM QUEM, depois desta linha: o CSS manda em quanto a `.janela`
-       usa da tela; o Python manda no PISO (`interface/janela.PISO_DA_VISTA`,
-       que é o `set_size_request` da janela). Nenhum dos dois copia o número do
-       outro — era o que acontecia até hoje, e a cópia já tinha apodrecido. */
+    --h-escolha:36px;
+    --h-acao:34px;
+    --gap:14px;
+    --pad-quadro:14px;
+    --rot:92px;
     --recuo-do-corpo:16px;
     --piso-da-vista:777px;
     --teto-da-vista:855px;
@@ -829,231 +298,44 @@
   select.pronto{display:block;line-height:calc(var(--h-escolha) - 2px)}
   .btn,.mini{height:var(--h-acao);padding-top:0;padding-bottom:0;
              display:inline-flex;align-items:center;justify-content:center}
-  .rodape button{height:var(--h-acao);padding-top:0;padding-bottom:0;min-width:104px;text-align:center;justify-content:center} /* os quatro com o tamanho do maior */
+  .rodape button{height:var(--h-acao);padding-top:0;padding-bottom:0;min-width:104px;text-align:center;justify-content:center}
   .campo .nome,.barra .nome{flex:0 0 var(--rot)}
 
-  /* O RÓTULO DE UM CONTROLE, na janela inteira, é sempre o mesmo e nesta ordem:
-     player • cor do plástico • transporte. Decisão, 26/08/2026, com a MARCA
-     na frente; ela a tirou em 27/08 — "tira o Sony das outras abas também" —
-     porque a marca se repetia em cada card e em cada chip da fita sem separar
-     um controle do outro. O que resta é o que distingue.
-     O separador é o ponto médio esmaecido — ele agrupa sem competir com o nome. */
-  /* O SEPARADOR É O QUE SUSTENTA A ORDEM DE PRODUTO, e ele estava ilegível.
-     A ordem do rótulo de um controle é decisão, de 26/08:
-     **marca • player • plástico • transporte**. O `•` que a sustenta usava
-     `var(--border-forte)` e media **1,73:1** contra o chip e **1,56:1** contra o
-     quadro — o texto ao lado dele mede 4,96:1, três vezes mais. No chip ESCOLHIDO,
-     onde a leitura mais precisa separar os campos, ele sumia de vez: o P1 lia
-     "P1  Cosmic Red  USB" enquanto o P2 lia "P2 · Starlight Blue · BT".
-     `var(--comment)` põe os dois casos acima de 3:1 — o piso de traço — sem
-     competir com o texto. Medido em 27/08/2026. */
   .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
 
-  /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
-
-  /* ---- S-04 · O LUGAR QUE PERDE O DONO AO VIVO NÃO OFERECE CONTROLE ----
-     QUEIXA, 05/09/2026: *"temos que entender se só tem um controle
-     conectado só aparece config daquele. aba cinco tá errada."*
-
-     E ESTAVA, e não era só a cinco. Medido na tela viva com UM controle ligado:
-     a 02 servia 11 widgets por coluna, a 03 servia 7 nas QUATRO, a 04 servia 16
-     e a 08 servia 3 — todos clicáveis, todos para aparelhos que não estão aqui.
-     A 05 mostrava até um interruptor de motor ACESO em laranja.
-
-     POR QUE O DESENHO NÃO PODIA PREVER: o mockup assa duas colunas ligadas
-     (decisão de 31/08 — *"deixa os outros espaços a mostra ainda mas
-     cinza"*). Quem descobre que só há UMA é o produto, ao vivo, e a diferença
-     entre "o desenho disse vazio" e "o produto descobriu vazio" era o buraco.
-
-     O MECANISMO JÁ EXISTIA E NINGUÉM O HONRAVA: `pacotes.__init__` calcula os
-     `vazios` e o piloto marca cada lugar com `data-conectado="nao"` mais a
-     classe `off`. O travessão dos CAMPOS já chegava (`dict.fromkeys(chaves,
-     TRAVESSAO)`). O que não chegava era o sumiço dos WIDGETS — um botão não é
-     campo de texto, e nenhum `—` o apaga.
-
-     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: uma peça que cada
-     aba precisa lembrar de pedir é uma peça que alguma aba esquece. Foram
-     QUATRO abas com o mesmo defeito e o mesmo remédio.
-
-     `:not(.vazia)` NÃO É DETALHE: o piloto marca `data-conectado="nao"` também
-     nas que já NASCEM vazias, e essas trazem o `<span class="nada">` por
-     dentro. Sem a exclusão, esta regra esconderia o travessão delas e a coluna
-     ficaria em branco — a régua trocada por outra pior.
-
-     O CINZA É POR ESCONDER E NÃO POR `disabled`, ao contrário da S-03 logo
-     abaixo, e a diferença tem razão: ali o botão EXISTE e recusa dizendo o
-     porquê; aqui não há aparelho sobre o qual dizer coisa alguma. Um botão
-     cinza num lugar vazio ainda promete que ali cabe uma escolha. */
   [data-controle][data-conectado="nao"]:not(.vazia) button,
   [data-controle][data-conectado="nao"]:not(.vazia) input,
   [data-controle][data-conectado="nao"]:not(.vazia) select,
   [data-controle][data-conectado="nao"]:not(.vazia) textarea,
   [data-controle][data-conectado="nao"]:not(.vazia) [contenteditable]{
     display:none !important}
-  /* E O QUE SOBRA FICA APAGADO — o rótulo e os números que o travessão do
-     pacote já escreveu. Sem isto o nome do plástico continuaria colorido em
-     cima de uma coluna sem aparelho. */
   [data-controle][data-conectado="nao"]:not(.vazia){border-color:var(--border-forte)}
 
-  /* O DESENHO DO CONTROLE SOME — 05/09/2026, e a palavra é de produto: *"os svgs não
-     deveriam aparecer prós demais controles desconectados"*.
-
-     A VERSÃO ANTERIOR DESTA REGRA PINTAVA o SVG de `var(--linha)` em vez de o
-     tirar. Era menos do que o usuário pediu e pior do que parecia: um controle
-     cinza-chumbo continua sendo um CONTROLE desenhado, e a coluna vazia
-     passava a mostrar um aparelho apagado ao lado de três travessões — a tela
-     desenhando o que não está aqui. Sumir é a resposta honesta, e é a mesma
-     que a S-04 já dava aos botões um parágrafo acima.
-
-     A ALTURA DA FAIXA NÃO CAI JUNTO, e é por isso que a regra é `visibility` e
-     não `display`: as colunas dividem a mesma linha de grade, e um `display:
-     none` faria a faixa do desenho encolher para a altura do travessão — as
-     quatro colunas desalinhariam e a do controle conectado mudaria de tamanho
-     conforme a mesa. `visibility:hidden` tira a tinta e guarda o lugar. */
   [data-controle][data-conectado="nao"]:not(.vazia) .ds-svg{
     visibility:hidden !important}
 
-  /* ---- S-03 · O BOTÃO QUE VAI RECUSAR JÁ NASCE CINZA (D-03) ----
-     A CARA É A DO `.seg button:disabled`, letra por letra. O que muda é o
-     mecanismo: ali o botão está `disabled` de verdade e não recebe clique;
-     aqui a classe é só tinta, e o botão continua respondendo — que é o que o
-     PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
-     tem rato na mão. */
   .btn.apagado,.seg button.apagado{
     border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
     border-color:var(--border-sutil);color:var(--texto-mudo)}
 
-  /* O `?` DA RAZÃO. Ele é o `.ajuda` que a página já tem — a mesma bolinha,
-     a mesma `.dica` — com a classe `porque` dizendo que o texto dela vem do
-     PRODUTO, e não do desenho. A distinção é da aba 08, onde a frase congelada
-     já mentiu ("está no cabo" com o controle no rádio).
-
-     TRÊS JEITOS DE ELE SUMIR, e os três existem porque as abas emitem de três
-     jeitos: colado ao botão (o botão não está cinza -> não há o que explicar),
-     com a dica VAZIA de nascença, e com o marcador `.nada` que o pacote manda
-     quando não há o que dizer. O marcador é preciso porque `escrever()` troca
-     valor vazio por travessão — sem ele, "nada a dizer" vira um `—` solto. */
   .btn:not(.apagado) + .ajuda.porque,
   .seg button:not(.apagado) + .ajuda.porque{display:none}
   .ajuda.porque:has(.dica:empty){display:none}
   .ajuda.porque:has(.nada){display:none}
-  /* ELE COLA NO BOTÃO DELE, e as duas linhas saíram da foto de 04/09: dentro
-     de `.acoes` (vão de 8px) o `?` ficava a 8px dos DOIS vizinhos e lia como
-     se explicasse o botão seguinte; e o `.ajuda` tem 17px de altura fixa num
-     flex que estica, então ele subia para o topo do botão, acima do texto que
-     explica. */
   .ajuda.porque{align-self:center;margin-left:-4px}
 
-  /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
-     No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
-     cobrando a altura da fonte, que é o preço que a regra de 30/08
-     (*"texto na interface é zero"*) não aceita pagar.
-
-     A peça é o `:empty{display:none}` que a `05-vibracao` e a `06-navegacao`
-     já tinham cada uma na sua folha, promovido a peça das dez — com o
-     `:has(.nada)` junto, porque as duas metades são a mesma peça: `:empty`
-     cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
-     piloto pinta a cada tique com "não há o que dizer". Faltando uma das
-     duas, a linha volta a aparecer num dos dois caminhos, calada. */
   .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
-  /* ---- S-05 · O CHIP DA FITA VIRA CONTROLE, E O CURSOR DIZ ----
-     O chip passou de `<span>` a `<label>` em 05/09/2026 (`monta.fita`), e um
-     `<label>` sem cursor continua parecendo texto. A regra é `:not(.inerte)`
-     porque nas SETE abas em que a fita é leitura ele NÃO clica — e um dedinho
-     sobre um chip morto é a mesma promessa vazia por outro meio.
-
-     NENHUM PIXEL MUDA. `cursor` não aparece em foto, e o portão do desenho
-     aprovado compara o que se VÊ; a regra existe para o rato do usuário.
-
-     AQUI E NÃO EM CADA ABA, pela razão desta folha inteira: a fita mora no
-     esqueleto das dez. A `02-controles` já tinha a sua própria linha desde que
-     virou bancada clicável — a dela vira redundante, e redundante é melhor que
-     divergente. */
   .fita:not(.inerte) label.chip{cursor:pointer}
 
 
-  /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
-     `currentColor` faz cada um herdar a cor da linha em que está. */
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
   .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
 
-  /* ---------- Gatilhos · a mesa de quatro ----------
-     UMA GRADE SÓ: uma coluna de rótulos e UMA COLUNA POR CONTROLE da `MESA`.
-     Decisão, 28/08: "os quatro lado a lado, sempre visíveis", e a fita
-     esmaecida — cada coluna é o seu próprio alvo, e um chip que não aponta para
-     nada seria escolha falsa.
-
-     O NOME DA CLASSE É A ÂNCORA DA RÉGUA, e por isso ele fica. `regua.py` mede
-     `.duas-colunas` para "colunas irmãs acabam no mesmo y" e para "as colunas
-     somam a largura da caixa"; trocá-lo por um nome mais bonito desligaria as
-     duas medições EM SILÊNCIO, que é o defeito desta casa. Precedente:
-     `aba08.py` já usa a mesma classe: a regra `.duas-colunas` do CSS da
-     Conexões, e as duas caixas dela nos quadros 1 e 3.
-
-     O NOME DA CLASSE VAI SEM A TAG, e isto é defeito MEDIDO em 06/09/2026:
-     este bloco mora DENTRO da `CSS`, que é uma string, e o gerador conta
-     as aberturas e os fechamentos de tag para se conferir. Escrever a tag
-     por extenso aqui somou uma abertura sem par e o gerador PAROU com
-     `84 x 83 — desbalanceado`. É a quarta vez em quatro dias que o
-     comentário escrito para explicar vira o defeito que ele descreve —
-     e desta vez quem o escreveu foi quem costura.
-
-     AS ALTURAS DE LINHA SÃO COMPARTILHADAS pelas cinco colunas — é isso que faz
-     o rótulo "Ajustes" ficar na linha das quatro caixas de ajuste e as cinco
-     acabarem no MESMO y. (A cura do vão é na ALTURA, nunca `space-between`.)
-     Com a grade compartilhada a dispensa dela para esta aba — "modos diferentes
-     têm números de barra diferentes" — deixa de ser necessária: quem iguala
-     agora é a LINHA, não um preenchimento inventado dentro de cada coluna. */
-  /* AS ALTURAS DE LINHA SAEM DO PYTHON, no fim deste arquivo, e não daqui: a
-     legenda da aba cita a altura da coluna e a altura de uma barra, e um número
-     digitado no CSS mais outro digitado no texto são duas verdades que acabam
-     divergindo. Lá elas são UMA, e a conta da coluna é a soma delas. */
-  /* COLUNA COLADA, RESPIRO NA CÉLULA — 30/08/2026, mesma cura da Iluminação e da
-     Vibração. Com `column-gap:12px` a linha separadora quebrava quatro vezes e o
-     olho lia tracinhos; com o vão em zero e o padding nas células ela atravessa a
-     grade inteira, cortada só pela barra vertical de 1px entre blocos. */
-  /* `--gl` é o tamanho do glifo que titula a seção, e ele é o MESMO número que
-     o Python usa em `glifo(tam=GL)`. Escrito duas vezes, ele diverge no dia em
-     que alguém mudar um dos dois — é a cicatriz das cores do plástico. */
-  /* ---------- A GRADE É UMA SÓ, E AS COLUNAS SÃO `subgrid` ----------
-     DECISÃO, 02/09/2026: *"os ajustes viram lista e a caixa acompanha o
-     modo. A aba passa a rolar nos modos grandes, e isso é aceito. A tela nunca
-     esconde o que está gravado no disco."*
-
-     O QUE ISSO QUEBRAVA: as nove trilhas eram px FIXOS, repetidos em cada uma
-     das cinco colunas — e era a igualdade dos números que fazia as cinco
-     acabarem no mesmo y. A linha de ajustes valia 4 barras à esquerda e 2 à
-     direita. `Galloping` tem CINCO parâmetros e `MultiPositionVibration` tem ONZE:
-     numa trilha de 92px, as sete que sobram vazam para fora da célula e caem
-     por cima da linha de baixo.
-
-     A CURA É `grid-template-rows:subgrid`: as trilhas passam a ser da GRADE
-     GRANDE, e as cinco colunas as compartilham de verdade em vez de coincidirem
-     por acaso. A trilha de ajustes vira `minmax(<o que o desenho reservou>,
-     auto)` — ela cresce até o maior modo que estiver NELA, em qualquer coluna,
-     e as cinco continuam acabando no mesmo y. É a mesma regra que a legenda
-     desta aba já enunciava ("a caixa vale o maior modo que está na LINHA"), com
-     a diferença de que agora quem a calcula é o navegador, com o dado VIVO, e
-     não o Python com a cena do desenho.
-
-     `subgrid` JÁ ERA USADO AQUI (`.rotulos > *:has(.gl)`), então o motor da
-     janela o suporta — não é aposta.
-
-     A COLUNA DE CADA FILHO É EXPLÍCITA, e não por auto-posicionamento: com
-     `grid-row:1/-1` em todos, a colocação automática depende de detalhe de
-     algoritmo, e uma coluna que caia na trilha errada só aparece na foto. */
-  /* `minmax(0,1fr)` E NÃO `1fr`, e a diferença custou uma foto: `1fr` é
-     `minmax(auto,1fr)`, e esse `auto` é o MIN-CONTENT da coluna — qualquer
-     conteúdo que se recuse a encolher empurra a coluna inteira. Medido em
-     02/09/2026, quando o campo do nome do efeito entrou: as colunas foram de
-     220px para 302 e a aba nasceu com **275px de rolagem LATERAL**, com o P4
-     fora da tela. Com o mínimo em zero, quem tem de cede r é o conteúdo, e a
-     grade nunca passa da caixa. */
   .duas-colunas{display:grid;grid-template-columns:var(--larg-rot) repeat(4,minmax(0,1fr));
     column-gap:var(--gap-col);row-gap:var(--r-passo);
     grid-template-rows:var(--r-nome) var(--r-modo) var(--r-pronto)
@@ -1061,82 +343,19 @@
                        var(--r-modo) var(--r-pronto)
                        var(--t-aj-d) var(--r-acao)}
 
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido, 30/08:
-     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
-     nome da linha e a divisória entre eles tem que estar clara. pra todas as
-     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
-     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
-     moldura do quadro já existe. */
-  /* A LINHA É UM PSEUDO-ELEMENTO, e não a borda da célula — 30/08/2026.
-     Como BORDA ela parava no padding da coluna e quebrava em cinco tracinhos;
-     movendo o padding para as células a linha ficou inteira mas o desenho do
-     controle perdeu 9px (a moldura tem `overflow:hidden` e o SVG cresce com a
-     largura). O `::after` com margem negativa resolve os dois: ele sai do
-     padding pelos dois lados e atravessa a coluna inteira, sem tocar em
-     geometria nenhuma. As cinco colunas têm as mesmas alturas de linha, então
-     os cinco segmentos nascem no mesmo y e leem como uma linha só. */
   .duas-colunas > div > *{position:relative}
-  /* A LINHA É `::before` DA CÉLULA DE BAIXO, e não `::after` da de cima.
-     Como `::after` ela era filha da moldura — e a moldura do DESENHO tem
-     `overflow:hidden` para conter o SVG, então ela cortava a própria linha
-     24px antes da divisa. A célula de baixo não recorta nada, e o traço
-     cai no mesmo lugar: entre uma linha e a outra. */
-  /* A LINHA DESCE MEIO PASSO E CAI NO MEIO DO VÃO — 31/08/2026, e é a cura que
-     a Vibração já tinha e esta aba não. Pedido: *"lá precisa de respiro em
-     tudo (…) as bordas das 3 páginas tão sobrando de um jeito feio e tão sem dar
-     respiro."*
-
-     MEDIDO ANTES DA CURA: o respiro das células desta aba era **0px/0px**, e a
-     divisória ficava em `top:0` — encostada no conteúdo de cima, com o vão
-     INTEIRO embaixo dela. O olho lê isso como linha grudada em cima e buraco
-     embaixo, que é exatamente o "sobrando e sem respiro" que o usuário viu. A hipótese
-     da lista dela estava certa: *"o problema não era só contraste — é respiro"*.
-
-     CUSTO DE ALTURA: ZERO. `top:-var(--r-ar)` só muda DE QUE LADO da linha o vão
-     está; a tabela mede o mesmo pixel. E `--r-ar` é o dono do passo (`--r-passo`
-     é o dobro dele, por construção), então nenhuma das duas pode voltar a ficar
-     torta sem que alguém mude as duas de uma vez — e elas são uma só. */
   .duas-colunas > div > *::before{content:'';position:absolute;
     top:calc(var(--r-ar) * -1);height:0;
     left:-13px;right:-12px;border-top:1px solid var(--rot-linha)}
-  /* A CONTA DA MARGEM NEGATIVA: ela tem de cancelar o padding da coluna E o
-     `gap` do grid, senão sobra um buraco do tamanho do vão. À direita são
-     12 de padding + 12 de gap = 24; a ÚLTIMA coluna não tem vão depois
-     dela, então volta a 12. A coluna de rótulos não tem padding: 0 e 12. */
   .duas-colunas > div:not(:last-child) > *::before{right:-24px}
   .duas-colunas > .rotulos > *::before{left:0;right:-12px}
   .duas-colunas > div > *:first-child::before,
   .duas-colunas > div > .vao-l2-r2::before{display:none}
-  /* o `.sep-linha` (um elemento de 1px entre os blocos L2 e R2) SAIU: com a borda
-     de célula acima ele desenhava a SEGUNDA linha, 10px abaixo da primeira. */
 
   .duas-colunas > div{display:grid;grid-row:1/-1;grid-template-rows:subgrid}
-  /* a barra vertical entre blocos irmãos — pedido. Ela mora na COLUNA do
-     controle, e não na de rótulos: é o rótulo que serve as quatro. */
   .duas-colunas .ctrl{border-left:1px solid var(--linha);padding:0 12px 0 13px}
-  /* O RÓTULO OCUPA A ALTURA INTEIRA DA SUA LINHA, e o texto fica centrado
-     dentro dele. Sem isto o rótulo da última linha acaba acima dos botões que
-     ele nomeia, e a régua lê — com razão — um vão entre as colunas. */
   .duas-colunas .rotulos > *{display:flex;flex-direction:column;justify-content:center}
-  /* O NOME DA LINHA ALINHA À DIREITA — 30/08/2026, pedido: *"no nome das
-     linhas deixa alinhadas à direita. Todas"*. Encostado na divisa, o rótulo fica
-     perto do que ele nomeia em vez de ficar perto da borda do quadro — é o que
-     toda tabela de formulário faz, e é o que faz a coluna deixar de ler como
-     lista solta e passar a ler como cabeçalho de linha. */
-  /* ---------- A COLUNA DE RÓTULOS TEM DUAS TRILHAS ----------
-     A da esquerda é do GLIFO que titula a seção; a da direita, dos rótulos de
-     linha. Cada célula diz onde fica (`grid-area`), e nenhuma depende da ORDEM
-     em que está no HTML — a ordem já quebrou esta grade uma vez, quando alguém
-     tirou o `.vao-l2-r2` achando que era enfeite e "Gatilho direito" caiu na
-     trilha de 1px. Com posição explícita, tirar um elemento deixa um buraco
-     visível em vez de deslocar os oito seguintes em silêncio. */
   .duas-colunas .rotulos{grid-template-columns:var(--gl) 1fr;column-gap:var(--vao-gl)}
-  /* TODOS QUALIFICADOS COM `.rotulos`, e a primeira volta não os qualificou:
-     o `.vao-l2-r2` existe nas CINCO colunas (é ele que guarda a trilha de 1px
-     entre o bloco do L2 e o do R2), e um `grid-area:5/1/6/3` solto o mandou
-     ocupar três colunas dentro das colunas de CONTROLE — que têm uma só. A
-     grade delas cresceu para três, o conteúdo saiu de registro e a aba nasceu
-     com rolagem lateral. Pego na foto, na volta seguinte. */
   .duas-colunas .rotulos > .rot-linha-1{grid-area:1/2}
   .duas-colunas .rotulos > .g-l2{grid-area:2/1/5/2}
   .duas-colunas .rotulos > .rot-l2-1{grid-area:2/2}
@@ -1147,138 +366,28 @@
   .duas-colunas .rotulos > .rot-r2-1{grid-area:6/2}
   .duas-colunas .rotulos > .rot-r2-2{grid-area:7/2}
   .duas-colunas .rotulos > .rot-r2-3{grid-area:8/2}
-  /* O GLIFO FICA NO MEIO DA SEÇÃO — decisão, 31/08/2026: *"o l2 e o r2 tem
-     que tá centralizado entre modo, efeito pronto e ajustes (verticalmente)."*
-
-     O desenho anterior prendia o glifo à primeira linha, no argumento de que
-     cabeçalho encosta no que titula. A foto mostrou o contrário: um glifo que
-     titula TRÊS linhas, preso na primeira, lê como se fosse só dela. No meio,
-     ele pertence às três. */
   .duas-colunas .rotulos > .sec-glifo{display:flex;align-items:center;
              justify-content:center}
-  /* O RÓTULO ALINHA À ESQUERDA — decisão, 31/08/2026: *"alinha a esquerda a
-     primeira coluna."*
-
-     E ELA REVOGA A DECISÃO DE PRODUTO MESMA de 30/08 (*"no nome das linhas deixa
-     alinhadas à direita. Todas"*). Não é contradição a resolver: é o projeto
-     vivo, e o que mudou no meio foi a própria coluna — ela encolheu de 138 para
-     o tamanho do conteúdo de cada aba, e à direita, numa coluna justa, o texto
-     passou a encostar na divisa em vez de se aproximar do que nomeia.
-
-     DE QUEBRA ISSO CURA UM DESALINHAMENTO QUE A RÉGUA ACUSAVA e que era
-     consequência aritmética do alinhamento à direita: rótulos de larguras
-     diferentes COMEÇAM em x diferentes. À esquerda, todos começam no mesmo. */
   .duas-colunas .rotulos > *{align-items:flex-start;text-align:left}
   .duas-colunas .rotulos .sec-rot{justify-content:flex-start}
   .duas-colunas .rotulos > * > *{flex:1;display:flex;align-items:center}
-  /* OS DOIS GLIFOS NO MESMO x, E O ALINHAMENTO À DIREITA FICA — 31/08/2026.
-     MEDIDO ANTES DA CURA, no Chrome e no WebKit2 (o motor que a janela usa),
-     com os mesmos números: o L2 nascia em x=434,20 e o R2 em x=448,08 —
-     **13,88px** de diferença, que é exatamente o quanto "esquerdo" (54,80px) é
-     mais largo que "direito" (40,92px). Com o par glifo+palavra encostado na
-     divisa direita, quem manda no x do glifo é a largura da PALAVRA, e as duas
-     palavras não têm a mesma largura. Numa coluna de rótulos isso salta aos
-     olhos, e o usuário viu na foto.
-     A CURA NÃO DESFAZ O PEDIDO: o par glifo+palavra deixa de ser uma caixa
-     que ENCOLHE até o texto e passa a ocupar uma TRILHA da grade, larga o
-     bastante para o maior dos dois. A coluna de rótulos ganha duas trilhas —
-     [1fr elástico][o par] —, e a segunda é COMPARTILHADA pela linha do L2 e pela
-     do R2: o navegador mede o par mais largo e dá a largura dele aos dois. É por
-     isso que ninguém DIGITA "54,8px" aqui — um número desses ficaria errado
-     calado no dia em que a palavra mudasse, e o desalinho voltaria sem aviso.
-     Dentro da trilha, `space-between` prende o glifo na esquerda dela e a palavra
-     na divisa direita: o glifo nasce em x=434,20 nas duas linhas e as duas
-     palavras continuam acabando em x=532, com o resto da coluna igual.
-     O QUE SOBRA VIRA VÃO ENTRE O GLIFO E A PALAVRA — 7px no L2 e 20,88 no R2 —,
-     e isso é inevitável: palavras de larguras diferentes, encostadas à direita,
-     com o glifo no mesmo x. O que se escolhe é onde a diferença aparece, e ela
-     aparece no vão interno em vez de aparecer na coluna de glifos, que é o que
-     o usuário viu.
-     As linhas sem glifo atravessam as duas trilhas (`grid-column:1/-1`) e
-     continuam encostadas na divisa — as divisórias medem os mesmos 404→532 de
-     antes, conferido célula a célula.
-     CUSTO DE ALTURA: ZERO, e é medido. As nove trilhas de linha são px FIXOS
-     (`grid-template-rows`) e nada aqui as toca: o miolo continua com 544px de
-     caixa para 544 de conteúdo, e a grade com os mesmos 444px.
-     `display:contents` NO `.sec-rot` FOI TENTADO E DESCARTADO, e a razão é a
-     régua: sem box, `getBoundingClientRect()` devolve 0 para as duas linhas de
-     gatilho, e o "títulos de seção em x diferentes" do `regua.py` deixa de
-     enxergá-las — passaria a dar verde sobre elas mesmo desalinhadas. A cura que
-     desliga a régua em silêncio é o defeito desta casa, não a cura. Aqui o
-     `.sec-rot` continua com box, e a régua lê nele o x REAL do glifo. */
   .duas-colunas .rotulos{grid-template-columns:1fr auto}
   .duas-colunas .rotulos > *{grid-column:1/-1}
   .duas-colunas .rotulos > *:has(.gl){display:grid;grid-template-columns:subgrid}
   .duas-colunas .rotulos > *:has(.gl) > .sec-rot{grid-column:2;
     justify-content:space-between}
-  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
-     PRIMEIRA LETRA, e o usuário confirmou: *"a maiúscula a regra é sobre a primeira
-     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
-     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
-     o usuário apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
-     é a forma mais difícil de ler que existe.
-     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
-     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
-     player"), então nada precisou ser reescrito. */
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
            gap:7px}
-  /* O RÓTULO DE UMA LISTA FICA NA LINHA DO PRIMEIRO ITEM, e não no meio da
-     caixa. Centrado, o "Ajustes" caía entre a segunda e a terceira barra do P1 e
-     ABAIXO da última barra do P3 — nomeava de baixo uma lista que começa em
-     cima. Os 5px são o que põe a linha de 11px no centro da primeira barra
-     (82px / 4 = 20,5px de altura por barra). */
-  /* O `.no-topo` SAIU — 30/08/2026, pedido: *"centraliza os nomes dentro
-     das distâncias verticais de cada linha"*. Ele prendia "Ajustes" no alto de
-     uma célula de 92px, e o nome ficava a 40px do conteúdo que nomeia. Com o
-     centro, ele cai na altura do bloco — e é a mesma regra que as outras seis
-     linhas da coluna já seguiam. */
-  /* "GATILHO / ESQUERDO" em duas linhas: com o glifo de 36px ao lado, a palavra
-     inteira numa linha só pediria 154px de coluna de rótulo, e sobrariam 218px
-     por controle — 2px a menos do que o efeito pronto mais longo precisa. */
   .sec-rot .duas{display:block;line-height:1.25}
-  /* A LEGENDA NÃO É TÍTULO: sem isto ela herda o `text-transform:uppercase` do
-     rótulo e sai em CAIXA ALTA. */
-  /* `display:block` E NÃO A HERANÇA DO FLEX: a regra acima faz de todo filho de
-     célula um contêiner flex, e num contêiner flex o `<b>` vira um ITEM ao lado
-     do texto — a frase saía quebrada em duas colunas ("Guarda o par L2+R2 em" |
-     "Meus efeitos"). Visto no navegador, 28/08. */
   .duas-colunas .rotulos .legenda{display:block;font-size:10.5px;line-height:1.4;
     color:var(--comment);text-transform:none;letter-spacing:0;padding-top:2px}
 
-  /* O CHIP DO CONTROLE é o mesmo chip da fita, com a borda na cor do plástico —
-     é como ela sabe de quem é a coluna (D-A-BORDA-E-A-IDENTIDADE-DA-PECA). Ele
-     NÃO acende: aqui ele não é escolha, é cabeçalho. */
-  /* O NOME DA COLUNA FICA CENTRADO — decisão, 31/08/2026: *"temos que
-     centralizar o nome das colunas dos controles, ou então colocarmos os SVG de
-     cada controle ao lado direito do nome."*
-
-     ESCOLHI CENTRALIZAR, e a razão é orçamento: o chip mede 126px numa coluna de
-     232, então centrá-lo custa ZERO. O SVG ao lado pediria altura que a linha do
-     nome não tem — ela é `--r-nome`, 24px, e um desenho de 24px de altura é o
-     mesmo caso das lâmpadas do jogador que o usuário mandou sair dos desenhos
-     pequenos: não é desenho apagado, é desenho que não cabe. Para caber, a linha
-     iria a 40px e comeria 16 dos 24px de folga que a grade tem.
-     Se ela quiser o SVG, o preço está aqui e é dela a escolha. */
-  /* `justify-items`, e não `align-items`: a célula é uma GRADE de uma coluna,
-     e `align-items` mexe no eixo vertical — o chip continuou colado à
-     esquerda e a foto mostrou. É o eixo errado, e a diferença só aparece
-     olhando. */
   .duas-colunas .ctrl > *:first-child{justify-items:center;text-align:center}
   .duas-colunas .ctrl .chip{padding:0 8px;font-size:11px;height:22px;
     display:inline-flex;align-items:center;align-self:center;white-space:nowrap}
-  /* O CHIP DO LUGAR VAZIO. A borda inteira se declara aqui, e não só a cor: o
-     `.chip.plastico` usa `var(--plastico)`, e uma `var()` sem valor invalida a
-     declaração TODA — a borda não fica cinza, ela deixa de existir. Medido na
-     aba Controles no mesmo dia, com a foto mostrando dois lugares sem caixa. */
   .duas-colunas .ctrl .chip.vazio{border:1px solid var(--border-forte);
     color:var(--linha);background:transparent}
 
-  /* O SELETOR DOS 19 MODOS. Era uma grade de 19 botões de 172px, e com quatro
-     controles na tela ela não existe mais: a coluna de um controle mede 220px de
-     conteúdo, e a grade pediria 19 fileiras — 566px numa coluna que tem 447px
-     inteiros. Vira o mesmo `<select>` que a Navegação usa nos campos dela
-     ("quando eu falei de drop in eu tava falando de todos os campos"), com as
-     19 descrições no `title` de cada opção: nenhum modo e nenhuma frase saiu. */
   select.modo,select.pronto{
     width:100%;padding:0 9px;border-radius:6px;font-size:11.5px;
     font-family:inherit;border:1px solid var(--linha);
@@ -1289,66 +398,11 @@
               background:var(--sel-bg)}
   select.modo:hover,select.pronto:hover{border-color:var(--comment)}
 
-  /* AS BARRAS DE AJUSTE. Todas as linhas com a MESMA altura — o modo com duas
-     barras ocupa as duas primeiras, e a primeira barra de toda coluna começa no
-     mesmo y. O rótulo é o token `--rot` (92px), o mesmo de toda aba que tem
-     campo; sobram 80px de trilho, que é o que a coluna de 220px permite. */
-  /* A CAIXA CRESCE COM O MODO, e por isso as linhas dela são AUTOMÁTICAS.
-     Ela era `grid-template-rows:repeat(N,1fr)` — N trilhas iguais, com N vindo
-     da cena do desenho. Com o produto trocando a caixa inteira (o `blocos:` do
-     pacote), o número de barras é o do MODO: zero no `Desligado`, quatro na
-     Metralhadora, onze na Vibração por posição. `grid-auto-rows` dá a mesma
-     altura a cada barra e deixa a caixa medir o que ela tem.
-     O DESENHO NÃO MUDA DE PIXEL: `--r-aj-e` é `N_ESQ * --h-barra` por
-     construção, então quatro barras de `--h-barra` enchem a trilha exatamente
-     como as quatro trilhas de `1fr` enchiam. `align-content:start` é o que
-     mantém a primeira barra de toda coluna no mesmo y quando o modo tem menos
-     barras do que a linha reserva. */
   .ajustes{display:grid;grid-auto-rows:var(--h-barra);align-content:start}
 
-  /* ---------- O ACORDEÃO DOS AJUSTES — ROLAGEM-01, 09/09/2026 ----------
-     Proposta DO USUÁRIO, 08/09, olhando o produto instalado e maximizado: *"E tava
-     pensando pra gatilhos talvez fosse interessante colocar a seção do r2 e l2
-     dentros de blocos de expansão igual fizemos na aba controles o que vc
-     acha?"*  <!-- noqa-acento: citação literal, palavra por palavra -->
-
-     A CAUSA ESTÁ MEDIDA, e não era a `.janela` (775/775 nas dez): era o
-     `DIV.miolo`, 863 contra uma caixa de 564. Com os quatro na mesa e o dado
-     VIVO, cada linha de ajustes vale 230px — o desenho reserva 92 e 46, mas o
-     `minmax(…,auto)` do subgrid a deixa crescer até o maior modo da LINHA, e
-     `MultiPositionVibration` tem onze parâmetros. O mockup nunca rolou porque
-     a cena do desenho não tem esse modo em coluna nenhuma.
-
-     O QUE DOBRA É A LINHA DE AJUSTES, e só ela: as três coisas que a §3 da
-     sprint exigia caem de graça neste desenho —
-
-       1. *a linha fechada DIZ o estado*: Modo e Efeito pronto continuam à
-          vista, vivos e editáveis. O que se dobra é o ajuste fino (posição,
-          força), que é o que ninguém precisa ler para saber o que o gatilho
-          está fazendo;
-       2. *dobra por LINHA, não por coluna*: a trilha é da GRADE, e as quatro
-          colunas a partilham por `subgrid`. Não há como dobrar o L2 de uma
-          coluna só — o desalinhamento que a §3 temia é impossível por
-          construção, não por disciplina;
-       3. *«Guardar / Em todos» fica fora*: é a trilha 9, e nenhuma das duas
-          dobras a toca.
-
-     SÓ UM ABRE POR VEZ — é a opção (A) da §6, com o número na mão: os dois
-     abertos pedem 863 (299 de sobra); um aberto pede 633 (69 de sobra); os dois
-     fechados pedem 403, e a caixa tem 564. Os 69px de um só aberto rolam no
-     instante em que ela está mexendo NAQUELE bloco, que é quando ela quer
-     vê-lo inteiro. É a mesma gramática de rádio do acordeão da `02-controles`
-     que ela já aprovou (`aba02.py:2067`, `name="mesa"`).
-
-     `height:0;overflow:hidden;visibility:hidden` E NÃO `display:none`, e a
-     razão está escrita na `02-controles`: a régua de alturas mede o corpo
-     fechado POR DENTRO, e `display:none` a cegaria. Um item de flex/grid com
-     `display:none` some do DOM medido; com altura zero ele continua lá, mudo. */
   .duas-colunas{--t-aj-e:0px;--t-aj-d:0px}
   body:has(#dobra-l2:checked) .duas-colunas{--t-aj-e:minmax(var(--r-aj-e),auto)}
   body:has(#dobra-r2:checked) .duas-colunas{--t-aj-d:minmax(var(--r-aj-d),auto)}
-  /* O RÁDIO NÃO SE VÊ, e não é `display:none`: um controle de formulário
-     escondido assim sai da ordem de tabulação e o teclado perde a dobra. */
   .dobra-estado{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
   .ajustes,.duas-colunas .rotulos > .rot-l2-3,
   .duas-colunas .rotulos > .rot-r2-3{overflow:hidden}
@@ -1357,20 +411,11 @@
   body:not(:has(#dobra-r2:checked)) .ajustes.d,
   body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3{
     height:0;visibility:hidden}
-  /* A CÉLULA DOBRADA NÃO DESENHA A DIVISÓRIA: o `::before` de cada célula é a
-     linha que separa uma linha da outra, e numa trilha de 0px ela cairia em
-     cima da linha de baixo — duas divisórias no mesmo y. */
   body:not(:has(#dobra-l2:checked)) .duas-colunas > div > .ajustes.e::before,
   body:not(:has(#dobra-r2:checked)) .duas-colunas > div > .ajustes.d::before,
   body:not(:has(#dobra-l2:checked)) .duas-colunas .rotulos > .rot-l2-3::before,
   body:not(:has(#dobra-r2:checked)) .duas-colunas .rotulos > .rot-r2-3::before{display:none}
 
-  /* O GLIFO DA SEÇÃO É O QUE SE CLICA. Ele já era o cabeçalho das três linhas
-     (decisão de 31/08: *"o L2 e o R2 deveriam controlar a seção"*) — agora
-     ele controla mesmo. São DOIS `<label>` sobrepostos, e só um está visível:
-     o de abrir aponta para o rádio da seção, o de fechar aponta para o rádio
-     `#dobra-nenhum`. Com um `<label>` só não haveria como FECHAR sem abrir o
-     outro, que é o buraco da gramática de rádio pura. */
   .duas-colunas .rotulos .sec-glifo > label{display:none;cursor:pointer;
        align-items:center;justify-content:center;gap:4px;
        -webkit-user-select:none;user-select:none;border-radius:6px;padding:2px}
@@ -1381,18 +426,6 @@
   body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .abre{display:none}
   body:has(#dobra-l2:checked) .duas-colunas .rotulos > .g-l2 > .fecha,
   body:has(#dobra-r2:checked) .duas-colunas .rotulos > .g-r2 > .fecha{display:flex}
-  /* A SETA DIZ O ESTADO SEM PALAVRA, e é a mesma que o resto da casa usa. Ela
-     mora no `::after` do label para não entrar no SVG do glifo, que é dado.
-
-     ELA É O CARACTERE, e não a fuga CSS — 11/09/2026, e a razão é do PYTHON,
-     não do navegador. Este CSS mora numa string Python, e ali uma barra
-     seguida de dígitos de 0 a 7 é uma fuga OCTAL: o que o gerador escrevia
-     virava o byte 0x15 mais as duas letras que sobravam, e a tela mostrava o
-     retângulo de glifo faltando ao lado do L2 e do R2 — fotografado no produto
-     publicado, com a bancada. O navegador nunca viu fuga nenhuma.
-
-     O RESTO DA CASA JÁ ESCREVIA ASSIM (`topo.html`, `aba08.py`): o caractere
-     cru atravessa Python e CSS sem quem o interprete no meio. */
   .duas-colunas .rotulos .sec-glifo > .abre::after{content:'▾';font-size:10px;
        color:var(--comment)}
   .duas-colunas .rotulos .sec-glifo > .fecha::after{content:'▴';font-size:10px;
@@ -1406,51 +439,9 @@
   .barra .num{flex:0 0 32px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .ajustes-vazio{grid-row:1 / span 2;font-size:11.5px;color:var(--comment);
                  font-style:italic;display:flex;align-items:center}
-  /* O LUGAR VAZIO NÃO SE CLICA — 02/09/2026, e a régua é a foto.
-     Fotografada a aba com a bancada (dois controles), as colunas P3 e P4
-     diziam `Desconectado` no cabeçalho e traziam os dois `<select>` e o
-     "Guardar" e "Em todos" ABERTOS. Escolher `Rígido` num lugar onde não há
-     aparelho é um clique que só pode terminar em recusa — e um botão que
-     convida para uma recusa é pior que um botão que não existe.
-
-     O SELETOR É O `data-conectado`, e não a classe `off`, porque ele é o que o
-     PILOTO mantém vivo: `hefesto_vivo.py:86-93` põe `data-conectado="nao"`
-     em todo lugar que a mesa não tem, a cada tique. Assim a inércia acompanha
-     a bancada — um controle ligado no P3 devolve a coluna sem tocar em CSS —
-     em vez de congelar no estado que o gerador viu.
-
-     `pointer-events` PARA O RATO; o `disabled` teria de vir do piloto, que é de
-     outra frente. A segunda trava é do lado Python: os três gestos desta aba
-     recusam DIZENDO quando a coluna está vazia (`_exigir_controle` em
-     `pacotes/a03_gatilhos.py`), e essa alcança também o clique por JS. */
   .duas-colunas .ctrl[data-conectado="nao"] select,
   .duas-colunas .ctrl[data-conectado="nao"] .btn{pointer-events:none;cursor:default}
 
-  /* E ELE TAMBÉM TEM DE PARECER QUE NÃO SE CLICA — 03/09/2026. A trava acima
-     era só `pointer-events`, que é INVISÍVEL: fotografada a aba com a bancada
-     (dois controles), as colunas P3 e P4 saíam **byte a byte iguais** às duas
-     que funcionam. Medido nos pixels da foto do produto:
-
-         o texto do botão de guardar       P1 e P2  rgb(186,145,246)
-                                            P3 e P4  rgb(186,145,246)
-         a borda da caixa "Modo"            P1       rgb(189,147,249)
-                                            P3 e P4  rgb(189,147,249)
-
-     Quatro botões idênticos, e dois deles mortos. Para quem usa este produto é
-     o pior arranjo possível: *"um botão que responde às vezes é pior que um que
-     recusa sempre"* — aqui ele não responde NUNCA e não diz isso em lugar
-     nenhum. O comentário da regra acima já sabia a lei (*"um botão que convida
-     para uma recusa é pior que um botão que não existe"*) e parou no rato.
-
-     A GRAMÁTICA É A DAS OUTRAS ABAS, e nada aqui é invenção: texto em
-     `var(--linha)`, contorno em `var(--border-forte)`, fundo do quadro, e
-     **nenhum `opacity`** — a lição medida da `.fita.inerte`. É o mesmo que
-     `.nav-ctl.vazia` (06), `.luz-grade .ctrl.vazia` (04) e `.vib .ctrl.vazia`
-     (05) já fazem com um lugar sem aparelho.
-
-     E ELA ACOMPANHA A MESA porque pende do mesmo `data-conectado` que o piloto
-     reescreve a cada tique: ligar um controle no P3 devolve a coluna inteira
-     sem tocar em CSS nenhum. */
   .duas-colunas .ctrl[data-conectado="nao"] select.modo,
   .duas-colunas .ctrl[data-conectado="nao"] select.pronto,
   .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito,
@@ -1460,39 +451,10 @@
   .duas-colunas .ctrl[data-conectado="nao"] select.pronto:hover,
   .duas-colunas .ctrl[data-conectado="nao"] .btn:hover{
     border-color:var(--border-forte);color:var(--linha)}
-  /* A FRASE DOS AJUSTES CAI JUNTO, senão ela vira a coisa mais clara da coluna
-     morta: `--comment` (#8896c4) é mais claro que `--linha`, e apagar tudo em
-     volta a promoveria sozinha. */
   .duas-colunas .ctrl[data-conectado="nao"] .ajustes-vazio{color:var(--linha)}
 
-  /* O BOTÃO É UM POR CONTROLE, e da MESMA largura em todas as colunas. Era um
-     só no pé do quadro, e com quatro controles um botão só não diz o que guarda:
-     é a mesma ambiguidade que o recibo tinha antes de dizer em QUAL controle
-     escreveu. Aqui ele fica na coluna de quem ele guarda. */
   .duas-colunas .ctrl .btn{width:100%;font-size:11.5px;padding:0 6px}
 
-  /* ---------- O NOME DO EFEITO — decisão 17 dela, 02/09/2026 ----------
-     *"Isso é pra quando o user salva algum efeito. É assim que tem que
-     aparecer. O nome que o user deixar lá. Ali é só exemplo."*
-
-     "Meus efeitos" existia no campo de escolha com dois nomes de exemplo e sem
-     dono nenhum — não havia, em todo o `src/`, onde guardar um efeito com nome.
-     O que faltava era ONDE ESCREVER O NOME, e é este campo: o "Guardar esse
-     efeito" ao lado já recolhe a coluna inteira (`data-hef-forma="@controle"`),
-     então o nome viaja junto sem endereço novo.
-
-     ELE DIVIDE A LINHA DO BOTÃO, e não ganha linha própria: a grade tem 24px de
-     folga sobre o teto medido (477px) e uma linha nova custaria 48. Lado a
-     lado, custa ZERO — a linha `--r-acao` já tinha 34px de altura para um botão
-     que ocupa 34.
-
-     O CAMPO ENCOLHE E O BOTÃO NÃO, e as TRÊS declarações do campo são
-     necessárias — medido em 02/09/2026, com a foto: só `min-width:0` NÃO basta.
-     Um `<input>` tem largura intrínseca (o `size` implícito, ~147px aqui), e com
-     `flex-basis:auto` ela vira a contribuição mínima do campo: a linha pediu
-     276px numa coluna de 220 e a aba nasceu com 275px de rolagem lateral, o P4
-     fora da tela. `flex:1 1 0` mais `width:0` zeram a base; o campo passa a
-     CRESCER a partir do nada, em vez de encolher a partir do intrínseco. */
   .duas-colunas .ctrl .guardar{display:flex;align-items:center;gap:6px;min-width:0}
   .duas-colunas .ctrl .guardar .btn{width:auto;flex:0 0 auto;white-space:nowrap}
   .duas-colunas .ctrl .nome-efeito{
@@ -1501,23 +463,8 @@
     background:var(--app-bg);color:var(--fg)}
   .duas-colunas .ctrl .nome-efeito::placeholder{color:var(--comment)}
   .duas-colunas .ctrl .nome-efeito:focus{outline:none;border-color:var(--purple)}
-  /* O LUGAR VAZIO NÃO SE DIGITA, pela mesma razão que ele não se clica: um
-     efeito é de um aparelho, e nomear um que não está aqui só pode terminar em
-     recusa. Ver a trava dos `select` acima. */
   .duas-colunas .ctrl[data-conectado="nao"] .nome-efeito{
     pointer-events:none;opacity:.55}
-
-  /* O REENVIO SAIU DA FAIXA — 06/09/2026, decisão de produto. As duas regras que
-     vestiam o botão (a largura do glifo e a trava do lugar vazio) saíram com
-     ele: folha que veste um elemento que ninguém emite é peso que envelhece
-     calado. A razão da saída, e o que ainda espera o `--publicar 03`, estão no
-     comentário da faixa, junto de onde o botão era escrito.
-
-     O GLIFO NÃO SE ESCREVE AQUI, e a razão é medida: este comentário é EMITIDO
-     para dentro do `<style>` da página, e a régua que vigia o glifo o procura
-     no arquivo. Escrito aqui, ele passaria a achar esta prosa e daria verde
-     sobre um botão que não existe — o mesmo defeito que o comentário do
-     `sem_comentarios_de_css` documenta, e que já custou uma régua nesta aba. */
 
   .par-modo{margin-left:auto;display:inline-grid;grid-template-columns:1fr 1fr;gap:6px}
   .par-modo button{height:22px;padding:0 10px;border-radius:6px;font-family:inherit;
@@ -1536,10 +483,6 @@
     --r-aj-e:92px;--r-sep:1px;--r-aj-d:46px;
     --h-barra:23px;
     --r-acao:34px;--r-ar:7px;--r-passo:calc(var(--r-ar) * 2);
-    /* O TAMANHO DO GLIFO E A LARGURA DA COLUNA DE RÓTULOS saem do Python, do
-       mesmo lugar que o `glifo(tam=GL)` lê. Digitados no CSS, os dois divergem
-       no dia em que alguém mudar um só — é a cicatriz das cores do plástico e a
-       do padrão das lâmpadas. */
     --gl:36px; --larg-rot:135px; --gap-col:16px; --vao-gl:10px;
   }
   .duas-colunas > div:nth-child(1){grid-column:1}
@@ -1560,36 +503,25 @@
   body.nativo.por-controle .guardar,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
-  /* As seis respostas (14/10): a célula à esquerda dos controles diz «Controle» (verde, como os rótulos de linha)
-     e, abaixo, em branco, o estilo de jogo escolhido em Perfis. Começa na borda dos rótulos de baixo. */
   .g2-grade > .g2-canto{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
     gap:3px;height:auto;min-width:0}
   .g2-canto .g2-canto-rot{line-height:16px}
-  /* As respostas à v3 (14/10): «Estilo de jogo» em branco à esquerda e o nome do estilo em roxo à direita, na mesma
-     linha, abaixo de «Controle». Um nome longo (Point and click) desce inteiro para a linha de baixo, à direita, sem
-     invadir a coluna do primeiro controle. Sem estilo no perfil, a linha some e fica só «Controle». */
   .g2-canto{align-self:stretch}
   .g2-canto .g2-estilo{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:8px;width:100%;
     font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help}
   .g2-canto .g2-estilo > span{white-space:nowrap}
   .g2-canto .g2-estilo-nome{color:var(--purple);font-weight:600;margin-left:auto}
   .g2-canto .g2-estilo:has(.g2-estilo-nome:empty){display:none}
-  /* o DualSense na coluna dos ícones, no traço e no tamanho do L2 e do R2 */
   .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:auto}
   .g2-cab.vazio{min-height:36px}
-  /* em tela baixa o respiro entre as linhas diminui, para o desenho com a leitura caber sem rolar */
   @media (max-height:780px){.quadro .g2-grade{row-gap:8px;padding-top:4px}}
 </style>
 
 
 <style data-aba="rodada-2">
-  /* a grade nova dos gatilhos: tudo na mesma linha horizontal, com respiro */
   .g2-grade{display:grid;grid-template-columns:44px 132px repeat(4,minmax(0,1fr));column-gap:14px;row-gap:10px;
     align-items:center;padding:4px 4px 6px}
-  /* a divisória abaixo da linha dos chips é uma reta só, de borda a borda, a mesma do separador entre o L2 e o R2 (.g2-sep).
-     O canto à esquerda dos chips é o das seis respostas (14/10), na folha de cima. */
   .g2-cab{display:flex;justify-content:center}
-  /* §J: o chip do controle tem a largura, a altura e a fonte dos campos de baixo, com o texto no centro */
   .g2-cab > .cabeca,.g2-cab > .cabeca > span{display:flex;width:100%}
   .g2-cab .chip{width:100%;height:36px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
     border-radius:7px;font:600 12.5px 'Space Grotesk',system-ui,sans-serif;padding:0 11px;white-space:nowrap}
@@ -1607,7 +539,6 @@
   .g2-imersao{border-color:rgba(255,121,198,.55);color:var(--fg)}
   .g2-acion:hover,.g2-imersao:hover,.g2-partir:hover{border-color:var(--comment)}
   .g2-grade .g2-gl.g2-r2{margin-top:6px}
-  /* o separador entre o L2 e o R2 */
   .g2-grade .g2-gl.g2-r2, .g2-grade .g2-gl.g2-r2 + .g2-rot, .g2-grade .g2-gl.g2-r2 + .g2-rot ~ .g2-cel:nth-child(-n+19){}
   .g2-criar .g2-partir{width:190px;flex:0 0 auto;height:30px}
   .g2-barras{display:flex;align-items:center;gap:26px;padding:4px 16px 14px}
@@ -1642,12 +573,7 @@
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
 </style>
 <style id="base-comum">
-/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
-   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
-   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
 
-/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
-      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
 [data-dica]{cursor:help}
 button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
 #hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
@@ -1656,9 +582,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.visivel{opacity:1;transform:none}
 
-/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
-      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
-      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
 .modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
   border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
   font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
@@ -1670,7 +593,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 .governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
 
-/* 3. O menu do botão direito, no visual das abas. */
 .menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
   background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
@@ -1684,40 +606,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
 <div class="janela">
 
-  <!-- ================= A LINHA DO ALVO =================
-       A FAIXA DE CABEÇALHO SAIU EM 10/09/2026, decisão de produto («1 + rodapé»).
-       Eram 60 px repetindo o que a moldura do sistema já diz; a razão inteira,
-       com o número, está no bloco `---------- a marca ----------` do `<style>`.
-       O que ela carregava e NÃO era repetição desceu para esta linha: o
-       logotipo dela, agora como marca de 24 px, e a contagem de controles, que
-       é dado vivo do daemon.
-
-       A MARCA CONTINUA VINDO DO ARQUIVO DO USUÁRIO — 30/08/2026, e a razão está
-       medida. Eram 55 linhas de SVG coladas neste arquivo, e por isso eram a
-       versão VELHA: ela redesenhou o logotipo em `assets/hefesto-logo.svg`
-       (6.039 bytes, com `transform-box`/`transform-origin` no anel, a chama
-       nova e a bigorna com sombra) e as dez páginas continuaram mostrando o
-       desenho de antes. Pior: havia TRÊS desenhos vivos ao mesmo tempo — o
-       dela, os 3.466 bytes deste arquivo em oito páginas, e outros 2.566 na
-       02 e na 04, que estavam paradas há mais tempo. Ninguém tinha como saber
-       que existia uma segunda cópia, muito menos uma terceira.
-       É a mesma doença da fita, das cores do plástico e do padrão das
-       lâmpadas: desenho digitado num arquivo que não é o dono dele.
-       O `monta.py` LÊ o `.svg` — ela redesenha, e as dez abas mudam juntas na
-       próxima volta do `regerar.py`. O anti-defeito que morava neste
-       comentário viaja com o arquivo dela: os `<title>` do SVG são TOOLTIP, e
-       os dela já nascem capitalizados ("Bolinha rosa", "Chama amarela").
-
-       A fita fica ESMAECIDA aqui: nada nesta aba ajusta por controle.
-       O PERFIL ATIVO fica à direita, e é IGUAL nas dez abas: em cada tela ele
-       diz em qual perfil aquela mudança vai cair.
-
-       O NOME DO PERFIL NASCE TRAVESSÃO — 13/09/2026, PERFIS-TIRA-BUSCA-ATIVO-01
-       §4.1, absorvida pela VAO-DO-ESQUELETO-01. O arquivo trazia o perfil do
-       exemplo do desenho, e ele ficava na tela até o primeiro tique de cada
-       aba e sempre que a pintura falhava: ela ativou um perfil e o chip seguiu
-       dizendo outro. O travessão é o que `pacotes.topo()` escreve quando nada
-       está valendo — pintura que falha mostra ausência, nunca um perfil falso. -->
   <div class="fita-linha">
     <div class="logo"><svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - DualSense4Unix" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -1828,13 +716,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="perfil-ativo" data-dica="Onde cai o que você salvar">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
-      <!-- `tabindex` de 07/09/2026: este `?` está no CABEÇALHO, logo nas dez
-           abas, e explica onde o "Salvar perfil" grava. Sem ele o `<span>` não
-           recebe foco e o `el.click()` do controle não o abria em aba nenhuma. -->
     </div>
   </div>
 
-  <!-- ================= TIRA ================= -->
   <div class="tira">
     <a class="aba" href="01-jogar.html">Jogar</a>
     <a class="aba" href="02-controles.html">Controles</a>
@@ -1848,7 +732,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <a class="aba" href="10-perfis.html">Perfis</a>
   </div>
 
-  <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
     <div class="quadro" data-modo-da-aba="personalizado" data-campo="modo-dos-gatilhos"
@@ -1929,51 +812,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   </div>
 
-  <!-- ================= RODAPÉ ================= -->
   <div class="rodape">
-    <!-- O RECIBO SAIU DA BARRA E VIROU DICA DOS BOTÕES — 30/08/2026, pedido:
-         *"'Aplicar vale agora • Salvar perfil grava no Mortal Kombat' isso deveria
-         em formato de tooltip ao deixar o mouse sobre os botões aplicar, salvar
-         perfil, importar e exportar. em todas as abas."*
-
-         ISTO DERRUBA A `D-O-RECIBO-DO-RODAPE-ENCURTA-NAO-SAI`, e de propósito. Ela
-         já pedira uma vez ("Remover do rodapé de cada página"); a leitura de então
-         foi ENCURTAR (96 caracteres viraram 57), porque perguntada se saía do
-         mockup ou do produto ela respondeu "deixa ela encurtada tanto lá quanto no
-         mockup" — resposta sobre ONDE, lida como resposta sobre SE. Agora o usuário disse
-         o destino com todas as letras, e o destino não é a barra.
-
-         O QUE A DECISÃO PROTEGIA CONTINUA PROTEGIDO, e é o teste que se aplica:
-         a diferença entre APLICAR (vale agora) e SALVAR (grava no perfil), e o NOME
-         do perfil — "a informação que faltava e lhe custou semanas". As duas coisas
-         estão nas dicas abaixo, palavra por palavra. Nada se perdeu; mudou de lugar.
-
-         E O PRODUTO JÁ FAZIA ASSIM: `gui/main.glade` dá `tooltip-text` aos quatro
-         botões do rodapé (`btn_footer_apply`, `btn_footer_save_profile`,
-         `btn_footer_import`, `btn_footer_restore_default`), e
-         `tests/unit/test_o_rodape_diz_o_que_grava.py` morde exigindo isso. Era o
-         MOCKUP que duplicava a informação como texto fixo na barra. O texto de
-         Aplicar e de Importar é o do produto, lido do `.glade`, não redigido aqui.
-
-         `title=` e não a `.dica` da casa: a `.dica` precisa do embrulho
-         `<span class="ajuda">?…</span>`, que existe para o ícone de interrogação —
-         num botão ela viraria um "?" ao lado do rótulo, que não é o que o usuário pediu.
-         `title=` é o que o `.glade` faz, e é o que já se usa em botão nesta casa
-         (`aba09.py`).
-
-         O NOME DO PERFIL É DADO, E ERA LITERAL — corrigido em 03/09/2026, achado
-         pela régua do mockup e nomeado pelo juiz da leva. O pedido trazia um
-         EXEMPLO — *"Salvar perfil grava no Mortal Kombat"* — e este arquivo
-         congelou o exemplo em vez do nome. Resultado medido: as DEZ abas diziam
-         "Grava no perfil Mortal Kombat" com `meu_perfil` ativo. O comentário aqui
-         em cima já dizia o que importava — *o NOME do perfil, "a informação que
-         faltava e lhe custou semanas"* — e era exatamente essa informação que a
-         dica estava errando.
-
-         AGORA O TEXTO CONGELADO É HONESTO SOZINHO ("no perfil ativo") e o produto
-         o troca pelo nome de verdade, com o alvo `atributo` que nasceu em 03/09.
-         As duas metades importam: sem a primeira, quem abre a página antes de o
-         produto pintar lê uma mentira; sem a segunda, ninguém lê o nome. -->
     <button class="r-aplicar" data-campo="rodape.aplicar"
             data-hef-alvo="atributo" data-hef-atributo="title"
             data-dica="Vale agora, sem gravar no perfil">Aplicar</button>
@@ -1988,13 +827,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
 </div>
 
-<!-- ===== fim da aba ===== -->
-
 
 
 
 <script data-aba="modo-automatico">
-/* O Modo automático da aba: liga e desliga, e a área que ele governa esmaece (data-governa). */
 document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click', () => {
   const on = b.getAttribute('aria-pressed') !== 'true';
   b.setAttribute('aria-pressed', String(on));
@@ -2002,8 +838,6 @@ document.querySelectorAll('.modo-auto').forEach(b => b.addEventListener('click',
 }));
 </script>
 <script data-aba="estilo-do-perfil">
-/* Os dois estados do estilo no mockup: 03-gatilhos.html#sem-estilo mostra o perfil sem estilo (só «Controle»),
-   e #estilo=Point%20and%20click mostra um nome longo. Sem âncora, o perfil tem o estilo FPS. */
 (() => {
   const nome = document.querySelector('.g2-canto [data-estilo]'); if (!nome) return;
   const padrao = nome.textContent;
@@ -2019,7 +853,6 @@ document.querySelectorAll('.g2-barra input').forEach(r => r.addEventListener('in
   const b = r.nextElementSibling; b.textContent = r.value + (b.textContent.endsWith('Hz') ? ' Hz' : ''); }));
 </script>
 <script id="base-comum">
-/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
 (() => {
   const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
   document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
@@ -2040,7 +873,6 @@ document.querySelectorAll('.g2-barra input').forEach(r => r.addEventListener('in
       if (f === 'in' && el && el !== alvo) mostrar(el);
       if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
     });
-  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
   document.addEventListener('contextmenu', e => {
     e.preventDefault();
     document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());

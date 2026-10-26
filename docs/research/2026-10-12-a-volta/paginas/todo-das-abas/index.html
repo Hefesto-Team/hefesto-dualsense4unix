@@ -103,7 +103,7 @@ nav a.r3n{border:1px solid rgba(189,147,249,.35)}
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 1500);
     const r = await fetch(`${API}/respostas`, {signal: ctl.signal}); clearTimeout(t);
     if (r.ok) { const s = await r.json(); if (s && typeof s === 'object') RESP = s; }
-  } catch (e) { /* vale a embutida */ }
+  } catch (e) { }
   const el = (tag, attrs = {}, ...filhos) => {
     const e = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -126,7 +126,7 @@ nav a.r3n{border:1px solid rgba(189,147,249,.35)}
       const a = new Date();
       s.className = 'ok'; s.textContent = `Salvo às ${dd(a.getHours())}:${dd(a.getMinutes())}`;
     } catch (e) {
-      try { localStorage.setItem('hefesto-volta-r2', JSON.stringify(RESP)); } catch (x) { /* sem armazenamento */ }
+      try { localStorage.setItem('hefesto-volta-r2', JSON.stringify(RESP)); } catch (x) { }
       s.className = 'erro'; s.textContent = 'Guardado só neste navegador: o servidor da página está fora do ar.';
     }
   }
@@ -210,7 +210,7 @@ nav a.r3n{border:1px solid rgba(189,147,249,.35)}
   }
   atualizar();
   window.addEventListener('pagehide', () => {
-    try { navigator.sendBeacon(`${API}/respostas`, new Blob([JSON.stringify(RESP)], {type: 'text/plain'})); } catch (e) { /* fica */ }
+    try { navigator.sendBeacon(`${API}/respostas`, new Blob([JSON.stringify(RESP)], {type: 'text/plain'})); } catch (e) { }
   });
 })();
 </script>

@@ -355,7 +355,7 @@
   select.pronto{display:block;line-height:calc(var(--h-escolha) - 2px)}
   .btn,.mini{height:var(--h-acao);padding-top:0;padding-bottom:0;
              display:inline-flex;align-items:center;justify-content:center}
-  .rodape button{height:var(--h-acao);padding-top:0;padding-bottom:0;min-width:104px;text-align:center;justify-content:center} /* os quatro com o tamanho do maior */
+  .rodape button{height:var(--h-acao);padding-top:0;padding-bottom:0;min-width:104px;text-align:center;justify-content:center}
   .campo .nome,.barra .nome{flex:0 0 var(--rot)}
 
 
@@ -591,17 +591,12 @@
   body.nativo.por-controle .r-importar{visibility:hidden}
 </style>
 <style data-aba="rodada-2">
-  /* brief-T2-2: cada modo do Desligado com a cor em que a barra de luz pisca (hotkey.CORES_DO_MODO). */
   .so-desligado .degrau.on[data-degrau="nativo"]{border-color:#f8f8f2;background:rgba(248,248,242,.12);color:#fff}
   .so-desligado .degrau.on[data-degrau="steam"]{border-color:#8be9fd;background:rgba(139,233,253,.13);color:#d4f6fe}
   .so-desligado .degrau.on[data-degrau="navegacao"]{border-color:#ffb86c;background:rgba(255,184,108,.13);color:#ffd9b0}
-  /* todo-01-5: todo alvo com no mínimo 24 px, com a mesma letra. */
   [data-gesto]{min-height:24px}
 </style>
 <style data-aba="rodada-4">
-  /* RODADA 4 (12/10): o botão do canto do quadro é UM só desenho, o mesmo do Modo automático das outras
-     abas (34 px de altura, pílula, 600 13,5 px). O Modo Freestyle e o Reconectar moram no canto superior
-     direito do quadro deles, com a mesma largura e a mesma altura. */
   .quadro-topo{--w-canto:166px}
   .quadro-topo > .cadeado,.quadro-topo > .canto{
     display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;margin-left:auto;
@@ -613,12 +608,7 @@
   .quadro-topo > .cadeado .p{width:11px;height:11px}
 </style>
 <style id="base-comum">
-/* ===== Base comum das abas (rodada 2, 12/10/2026) =====
-   Copiada IGUAL em todo mockup do todo. Três peças: a dica no hover (sem «?»), o Modo automático
-   e o menu do botão direito desenhado no visual das abas (BRIEF-T6, opção B). */
 
-/* 1. A dica: qualquer frase, botão ou área com data-dica mostra a dica ao passar o mouse ou focar.
-      Nenhum botão «?» existe mais. A dica tem no máximo ~12 palavras: show, don't tell. */
 [data-dica]{cursor:help}
 button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"][data-dica]{cursor:pointer}
 #hef-dica{position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px;
@@ -627,9 +617,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.visivel{opacity:1;transform:none}
 
-/* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
-      Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
-      Ligado: ciano cheio, bolinha branca acesa, letra branca; a área que ele governa esmaece. */
 .modo-auto{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
   border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
   font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
@@ -641,7 +628,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .modo-auto:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 .governado-pelo-jogo{opacity:.42;pointer-events:none;filter:saturate(.6)}
 
-/* 3. O menu do botão direito, no visual das abas. */
 .menu-hefesto{position:fixed;z-index:2147482000;min-width:190px;padding:6px;border-radius:12px;
   background:#252733;border:1px solid var(--border-forte,#44475a);box-shadow:0 14px 34px rgba(0,0,0,.5)}
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
@@ -651,13 +637,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 <style data-todo-css="letra-01-r4">
-/* Ajuste da rodada 4: sem a linha «O jogo vê», o cartão fica só com o nome e a forma; a letra dele sobe para 12 px
-   (a regra de 13/10) e a bateria fica na cor do texto, sem o verde de «ok». */
 .cartao,.cartao .via,.cartao .bat{font-size:12px}
 .cartao .bat{color:var(--texto-suave)}
 </style>
 <style data-conserto="a vaga sem controle diz «P3 • Desconectado» (q4B)">
-/* Conserto da fusão (14/10): a vaga sem controle diz «P3 • Desconectado» (q4B). */
 .cartao .so-vaga{display:none}
 .cartao.off .so-vaga{display:inline;color:var(--texto-mudo)}
 .cartao.off .rotulo br,.cartao.off .rotulo [data-campo="identidade"],.cartao.off .rotulo .bat{display:none}
@@ -2494,14 +2477,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
 
 <script data-aba="modos">
-/* Clicar num modo acende ele e apaga os vizinhos da mesma fileira. */
 document.querySelectorAll('.escada .degrau').forEach(d => d.addEventListener('click', () => {
   d.parentElement.querySelectorAll('.degrau').forEach(x => x.classList.toggle('on', x === d));
 }));
 document.querySelectorAll('.cadeado').forEach(b => b.addEventListener('click', () => b.classList.toggle('ligada')));
 </script>
 <script id="base-comum">
-/* Base comum das abas (rodada 2): a dica no hover e o menu do botão direito. Copiada IGUAL em todo mockup. */
 (() => {
   const dica = document.createElement('div'); dica.id = 'hef-dica'; dica.setAttribute('role', 'tooltip');
   document.addEventListener('DOMContentLoaded', () => document.body.append(dica));
@@ -2522,7 +2503,6 @@ document.querySelectorAll('.cadeado').forEach(b => b.addEventListener('click', (
       if (f === 'in' && el && el !== alvo) mostrar(el);
       if (f === 'out' && el && !el.contains(e.relatedTarget)) esconder();
     });
-  // O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar/Ligar, Reiniciar, Fechar.
   document.addEventListener('contextmenu', e => {
     e.preventDefault();
     document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
