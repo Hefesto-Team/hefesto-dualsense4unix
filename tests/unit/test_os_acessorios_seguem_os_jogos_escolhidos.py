@@ -25,6 +25,7 @@ import pytest
 
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AnunciadorDoJogo
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError
 from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, Opcao, ler_manifesto
 from hefesto_dualsense4unix.mods.opcoes import ler, padrao_de, validar
@@ -310,10 +311,10 @@ def test_guardar_o_deslizante_e_marcar_o_jogo_gravam_e_a_janela_repinta(lar, ctx
 
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "acess:vibracao", "valor": "17", "evento": "change"}, _Ponte())
-    assert 'value="17"' in carga["blocos"]["#mod-janela"]
+    assert 'value="17"' in janela_pintada(carga["blocos"])
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "acess:jogos:steam_app_1245620", "valor": "on", "evento": "change"}, _Ponte())
-    assert "checked" in carga["blocos"]["#mod-janela"]
+    assert "checked" in janela_pintada(carga["blocos"])
     assert not (lar.dados / "acess" / "opcoes.json").exists()
     a07.guardar_modificacao(ctx, {"v": "acess"}, _Ponte())
     guardado = json.loads((lar.dados / "acess" / "opcoes.json").read_text(encoding="utf-8"))
