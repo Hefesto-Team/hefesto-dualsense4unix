@@ -1236,9 +1236,11 @@ GESTO_DE_SOLTAR = "soltar-o-livre-da-modificacao"
 GESTO_DE_GRAVAR = "gravar-o-livre-da-modificacao"
 GESTO_DE_ESQUECER_A_FORMA = "esquecer-a-forma-do-livre"
 GESTO_DO_MODO = "modo-do-livre-da-modificacao"
-MODOS_DA_FAIXA = (("soltar", "Soltar", "Ao soltar, volta a zero"),
-                  ("segurar", "Segurar", "Ao soltar, fica onde parou"),
-                  ("repetir", "Repetir", "Ao soltar, repete o que você desenhou"))
+MODOS_DA_FAIXA = (
+    ("soltar", "Volta a zero ao soltar", "M10 3v10M6 9l4 4 4-4M4 17h12"),
+    ("segurar", "Fica onde parou", "M5 9h10v8H5zM7 9V6.5a3 3 0 0 1 6 0V9"),
+    ("repetir", "Repete o que você desenhou",
+     "M4 10a6 6 0 0 1 10.2-4.2M14.5 3v3h-3M16 10a6 6 0 0 1-10.2 4.2M5.5 17v-3h3"))
 ACAO_DE_LIGAR = "ligar"
 EM_CURSO = "Em curso"
 DICA_DA_CHAVE = "Liga ou desliga este aparelho"
@@ -1593,16 +1595,18 @@ def _formas_do_livre_html(o: OpcaoDaJanela) -> str:
 
 
 def modos_do_livre_html(o: OpcaoDaJanela) -> str:
-    """«Soltar», «Segurar» e «Repetir», o que a barra faz ao soltar; aceso, o ``modo`` de agora.
-    Sem ``modo`` (o ``livre`` sem ``modos``), nada."""
+    """Os três modos do que a barra faz ao soltar, em glifos (a frase do efeito vai na dica e no
+    ``aria-label``); aceso, o ``modo`` de agora. Sem ``modo`` (o ``livre`` sem ``modos``), nada."""
     if not o.modo:
         return ""
     aceso = ' class="on"'
     botoes = "".join(
         f'<button{aceso if valor == o.modo else ""} data-modo="{valor}" '
         f'data-gesto="{GESTO_DO_MODO}" data-v="{_a(o.mod)}:{_a(o.id)}:{valor}" '
-        f'aria-pressed="{str(valor == o.modo).lower()}" data-dica="{dica}">{rotulo}</button>'
-        for valor, rotulo, dica in MODOS_DA_FAIXA)
+        f'aria-pressed="{str(valor == o.modo).lower()}" aria-label="{dica}" data-dica="{dica}">'
+        f'<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">'
+        f'<path d="{traco}"/></svg></button>'
+        for valor, dica, traco in MODOS_DA_FAIXA)
     return f'<span class="seg mj-modos" role="group" aria-label="Ao soltar">{botoes}</span>'
 
 
