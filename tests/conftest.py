@@ -2315,9 +2315,10 @@ def _nenhum_pad_em_usb_na_suite(
     E as raízes do físico (A-SUITE-NAO-ALCANCA-O-SYS-REAL-PELO-PADRAO-DO-BROKER-01,
     25/10/2026): o broker lê cada raiz na chamada, da constante, e o ``chmod`` e a
     ACL caem nos nós que ele valida. Todas apontam para a pasta vazia, e o
-    ``/proc`` também (O-NO-DO-FISICO-NAO-FICA-COM-QUEM-O-ABRIU-NA-JANELA-01): a
-    varredura de quem segura o físico nunca revoga um descritor da máquina. O
-    teste que precisa de uma raiz passa a dele.
+    ``/proc`` também, uma pasta que existe e não tem processo
+    (O-NO-DO-FISICO-NAO-FICA-COM-QUEM-O-ABRIU-NA-JANELA-01): a varredura de quem
+    segura o físico nunca revoga um descritor da máquina, e não acusa um ``/proc``
+    que não se lê. O teste que precisa de uma raiz passa a dele.
     """
     vazio = tmp_path_factory.mktemp("sem-pad-em-usb")
     try:
@@ -2334,6 +2335,7 @@ def _nenhum_pad_em_usb_na_suite(
     uhid_gamepad.PEDIR_O_PAD_USB = lambda *_a: None
     for nome, pasta in RAIZES_DO_BROKER.items():
         setattr(hidraw_broker, nome, str(vazio / pasta))
+    (vazio / RAIZES_DO_BROKER["PROC_ROOT"]).mkdir()
     try:
         yield
     finally:
