@@ -10,9 +10,10 @@ from __future__ import annotations
 import functools
 import itertools
 import json
+import math
 import pathlib
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from html.parser import HTMLParser
 from typing import Any, NamedTuple
 
@@ -490,12 +491,51 @@ def glifo_da_entrada(o: OpcaoDaJanela) -> str | None:
     return GLIFO_DA_ENTRADA.get(chave) if chave is not None else None
 
 
+_DEGRAUS_DA_ONDA = 9
+
+
+def _rampa(t: float) -> float:
+    return t
+
+
+def _curva_em_s(t: float) -> float:
+    return 0.5 - 0.5 * math.cos(math.pi * t)
+
+
+_FORMA_DA_ENTRADA: dict[str, Callable[[float], float]] = {"direto": _rampa, "suave": _curva_em_s}
+
+
+def _onda_da_entrada(escolha: object) -> str:
+    """O desenho do efeito da entrada contínua, no mesmo traço e tamanho da onda dos toques.
+
+    «Nenhum» é o zero tracejado; «Direto» é a rampa reta (a força segue a entrada) e «Suave» a
+    curva em S que amacia. Um valor sem desenho deixa o lugar vazio, do mesmo tamanho.
+    """
+    nome = str(escolha).strip().casefold()
+    cabeca = '<svg class="onda" width="52" height="14" viewBox="0 0 52 14" aria-hidden="true">'
+    if nome == "nenhum":
+        return (f'{cabeca}<line class="onda-zero" x1="2" y1="13" x2="{2 + _ONDA_L:g}" y2="13"/>'
+                "</svg>")
+    forma = _FORMA_DA_ENTRADA.get(nome)
+    if forma is None:
+        return f"{cabeca}</svg>"
+    passo = _ONDA_L / _DEGRAUS_DA_ONDA
+    barras = []
+    for i in range(_DEGRAUS_DA_ONDA):
+        altura = max(1.2, _ONDA_A * forma((i + 1) / _DEGRAUS_DA_ONDA))
+        barras.append(f'<rect x="{2 + i * passo:.1f}" y="{14 - altura:.1f}" '
+                      f'width="{passo * 0.9:.1f}" height="{altura:.1f}" rx="1"/>')
+    return f"{cabeca}{''.join(barras)}</svg>"
+
+
 def _linha_da_entrada(o: OpcaoDaJanela) -> str:
-    """A linha da entrada no arranjo dos botões de cima: o glifo, o rótulo na dica e a lista."""
+    """A linha da entrada no arranjo dos botões de cima: o glifo, o desenho do efeito escolhido,
+    o rótulo na dica e a lista."""
+    onda = _onda_da_entrada(o.valor) if o.tipo == "escolha" else ""
     return (f'<div class="tql" id="{PEDACO}op-{_a(o.id)}" data-dica="{_a(o.rotulo)}">'
             f'<svg class="tq-gl" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">'
             f'<use href="#en-{_a(entrada_da_opcao(o) or "")}"/></svg>'
-            f'{_controle_da_opcao(o)}</div>')
+            f'{onda}{_controle_da_opcao(o)}</div>')
 
 
 def _simbolo_do_glifo(ident: str, arquivo: str, terca: float | None = None) -> str:
