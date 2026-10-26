@@ -306,8 +306,10 @@
      na moldura, igual nas dez abas, à direita do perfil ativo. Solto, o cadeado está aberto e os
      controles navegam a janela; apertado (`aria-pressed`, pintado pelo piloto a partir da Interna do
      daemon), o cadeado fecha e acende em ciano, como o Modo automático, e nenhum controle mexe na
-     janela. O valor é o da Interna: o botão não guarda nada. */
-  .trava-nav{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px 0 10px;
+     janela. O valor é o da Interna: o botão não guarda nada. SÓ O CADEADO, sem rótulo: com quatro
+     controles na fita, o rótulo empurrava o botão para fora da janela no piso de 1212 px; o nome
+     mora no `aria-label` e o efeito na dica. */
+  .trava-nav{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;
     border-radius:7px;border:1px solid var(--linha);background:var(--panel);color:var(--fg);
     font-family:inherit;font-weight:600;font-size:12.5px;line-height:1;white-space:nowrap;cursor:pointer;flex:0 0 auto;
     transition:background .15s,border-color .15s,color .15s}
@@ -318,6 +320,15 @@
   .trava-nav[aria-pressed="true"]{background:#0e7c8c;border-color:#5fd3e6;color:#fff}
   .trava-nav[aria-pressed="true"] .t-arco{transform:none}
   .trava-nav:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  /* E O CADEADO NUNCA SAI DA JANELA: com quatro controles de nome longo («Galactic Purple») no piso
+     de 1212 px, a linha passava da janela em 39 px e o cadeado ficava do lado de fora. Quem cede é o
+     nome do plástico nos chips, com reticências (a base comum põe o nome inteiro na dica), e só
+     depois do perfil ativo: o `flex-shrink` mil vezes maior deixa o nome longo de um perfil cortar o
+     dele antes de cortar o de qualquer controle. O «Selecionar:» e o «Todos» não cedem. */
+  .fita{min-width:0}
+  .fita-linha .perfil-ativo{flex-shrink:1000;overflow:hidden}
+  .fita .chip.plastico{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fita > span:first-child,.fita .chip:not(.plastico){flex-shrink:0}
   /* A FITA QUE NÃO ESCOLHE TEM OS CHIPS ACESOS COMO QUALQUER OUTRA — 09/10/2026
      (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, pedido de 29/09: *"a cor de
      todos os botões do Selecionar deveriam estar acesas e com as bordas
@@ -1932,9 +1943,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </div>
     <button type="button" class="trava-nav" data-gesto="travar-navegacao" data-campo="navegacao-travada"
             data-hef-alvo="atributo" data-hef-atributo="aria-pressed" aria-pressed="false"
-            data-dica="Os controles deixam de mexer na janela do Hefesto">
+            aria-label="Travar navegação" data-dica="Travar navegação: os controles deixam de mexer na janela do Hefesto">
       <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.6"/><path class="t-arco" d="M5.2 7V5a2.8 2.8 0 0 1 5.6 0v2"/></svg>
-      <span>Travar navegação</span>
     </button>
     <i hidden data-campo="servico" data-hef-alvo="atributo" data-hef-atributo="data-servico" data-servico="de-pe"></i>
   </div>

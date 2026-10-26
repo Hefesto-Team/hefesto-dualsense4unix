@@ -355,6 +355,7 @@ def test_26_a_moldura_traz_o_botao_pintado_pelo_campo_e_aciona_o_gesto() -> None
     assert topo.count('data-gesto="travar-navegacao"') == 1
     assert 'data-campo="navegacao-travada"' in topo
     assert 'data-hef-atributo="aria-pressed"' in topo
+    assert 'aria-label="Travar navegação"' in topo, "só o cadeado: o nome mora no aria-label"
     pac = _pacotes()
     assert "navegacao-travada" in pac.topo(_contexto(pac))
 
