@@ -13,6 +13,9 @@ MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas): a rolagem devolvida
 ``overflow:auto`` tirado da tela reprova a aba que não cabe e precisa rolar; a tela com
 ``height:0`` reprova a altura da tela; o ``padding-right`` da tela arrancado reprova a barra que
 cobre a borda dos controles.
+
+Desde a A-TOQUES-CABE-NA-JANELA-SEM-ROLAGEM-01 (26/10/2026) toda aba cabe nas duas larguras da
+casa; a aba que não cabe se mede na janela baixa (``BAIXA``), onde a Toques ainda excede a caixa.
 """
 
 from __future__ import annotations
@@ -45,6 +48,7 @@ FOLGA_MAXIMA = 16
 FOLGA_DA_BARRA = 8
 ALTURA_MINIMA_DA_TELA = 150
 QUANTAS_ABAS = 5
+BAIXA = (1212, 640)
 
 _ABRIR = """(function(endereco, h){
   location.hash = endereco;
@@ -84,7 +88,7 @@ def abas(janela: Any, pagina_fresca: Any) -> dict[str, list[dict[str, Any]]]:  #
 
     html = montada(janela, SEM_APARELHOS)
     casos = {}
-    for w, h in VISTAS:
+    for w, h in (*VISTAS, BAIXA):
         passos: list[list[Any]] = [["js", hefesto_vivo.BOOTSTRAP],
                                    ["js", _ABRIR % (json.dumps(ENDERECO), json.dumps(html))],
                                    ["espera", 0.3]]
@@ -150,10 +154,10 @@ def test_a_janela_e_as_abas_ficam_no_mesmo_lugar_ao_trocar_de_aba(
 def test_a_aba_que_nao_cabe_rola_e_alcanca_o_ultimo_controle(
         abas: dict[str, list[dict[str, Any]]]) -> None:
     falhas = []
+    if not any(a["fim"] > a["visivel"] + 1 for lidas in abas.values() for a in lidas):
+        falhas.append("nenhuma aba excede a caixa em vista nenhuma; a régua não mede a rolagem")
     for caso, lidas in abas.items():
         compridas = [a for a in lidas if a["fim"] > a["visivel"] + 1]
-        if not compridas:
-            falhas.append(f"{caso}: nenhuma aba excede a caixa; a régua não mede a rolagem")
         for a in compridas:
             if not a["rola"] or a["folga"] > FOLGA_MAXIMA or a["folga"] < -1:
                 falhas.append(f"{caso} · {a['aba']}: não alcança o último controle "
