@@ -4001,19 +4001,19 @@ check_power_saboteurs() {
     fi
 }
 
-# PLAT-04 item 1: o btusb liga o autosuspend do adaptador BT no probe; o conf do
-# hefesto corta na raiz (N pós-boot). Sem o parâmetro, nada medido. Ganchos HEFESTO_DOCTOR_BTUSB_*.
+# PLAT-04 item 1: o conf do hefesto, onde o kmod o lê, corta o autosuspend do btusb (N pós-boot). Ganchos HEFESTO_DOCTOR_BTUSB_*.
 check_btusb_autosuspend() {
-    local conf="${HEFESTO_DOCTOR_BTUSB_CONF:-/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf}"
-    local param="${HEFESTO_DOCTOR_BTUSB_PARAM:-/sys/module/btusb/parameters/enable_autosuspend}"
-    local val=""
+    local conf="${HEFESTO_DOCTOR_BTUSB_CONF:-}"
+    local param="${HEFESTO_DOCTOR_BTUSB_PARAM:-/sys/module/btusb/parameters/enable_autosuspend}" val=""
     [[ -r "${param}" ]] && val="$(cat "${param}" 2>/dev/null)"
     if [[ "${val}" == "N" || "${val}" == "0" ]]; then
         pass "btusb sem autosuspend (enable_autosuspend=N) — o rádio dos controles não dorme"
+    elif [[ -z "${conf}" ]] && ! conf="$(_regra_que_o_kmod_le hefesto-btusb-no-autosuspend.conf)"; then
+        info "não consegui perguntar ao Hefesto onde o kmod lê o modprobe.d do btusb (enable_autosuspend=${val:-sem o módulo})"
     elif [[ -f "${conf}" && -z "${val}" ]]; then
         info "modprobe.d do btusb instalado; módulo btusb não carregado agora (sem adaptador BT?)"
     elif [[ -f "${conf}" ]]; then
-        info "modprobe.d do btusb instalado, mas o módulo ainda está com enable_autosuspend=${val} — vale no próximo probe (replug do adaptador BT ou reboot); o runtime já é coberto pela regra 81"
+        warn "modprobe.d do btusb instalado, mas o módulo ainda está com enable_autosuspend=${val} — vale no próximo probe (replug do adaptador BT ou reboot); até lá a regra 81 só segura o adaptador de classe e0 em máquina sem bateria"
     elif [[ -z "${val}" ]]; then
         info "módulo btusb não carregado agora (sem adaptador BT?) e sem o conf do hefesto — o adaptador que entrar pode dormir; $(conselho_de_instalacao)$(so_no_checkout "(o conf entra por default)")"
     else
@@ -9573,6 +9573,27 @@ main() {
     fi
     printf '─────────────────────────────────────────\n'
     [[ "${FAILS}" -eq 0 ]]
+}
+
+_regra_que_o_kmod_le() {
+    local py
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || return 1
+    HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - "$1" "${HEFESTO_DOCTOR_BTUSB_RAIZ:-/}" <<'PY' 2>/dev/null
+import os
+import sys
+from pathlib import Path
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import regra_que_o_kmod_le
+except ImportError:
+    raise SystemExit(3)
+caminho = regra_que_o_kmod_le(sys.argv[1], Path(sys.argv[2]))
+print(caminho if caminho is not None else "")
+PY
 }
 
 # `source scripts/doctor.sh` (testes de unidade das funções de parse, ex.

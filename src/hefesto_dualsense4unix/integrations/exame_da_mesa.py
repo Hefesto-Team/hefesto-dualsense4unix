@@ -121,15 +121,17 @@ def _texto_de(caminho: Path) -> str | None:
 def energia_do_radio(
     *,
     parametro: Path = Path("/sys/module/btusb/parameters/enable_autosuspend"),
-    conf: Path = Path("/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"),
+    conf: Path | None = None,
+    raiz: Path = Path("/"),
 ) -> Item:
-    """O rádio dos controles está proibido de dormir? (`doctor.sh:4006-4022`)
+    """O rádio dos controles está proibido de dormir? (`doctor.sh` `check_btusb_autosuspend`)
 
-    O `btusb` liga o autosuspend do adaptador no probe (default do módulo); o
-    conf do Hefesto corta na raiz e o esperado pós-boot é ``N``. Com o conf no
-    disco e o módulo com o valor antigo, a cura só vale no próximo probe: verde
-    ali diria que o rádio não dorme enquanto ele ainda dorme. Sem o parâmetro,
-    o `btusb` não está carregado, e nada foi medido, com ou sem o conf.
+    O `btusb` liga o autosuspend no probe; o conf do Hefesto corta na raiz e o
+    esperado pós-boot é ``N``. Conf no disco com o valor antigo só vale no
+    próximo probe, e a regra 81 só segura o adaptador de classe ``e0`` em
+    máquina sem bateria: é atenção. Sem o parâmetro, o `btusb` não está
+    carregado e nada foi medido. O conf é o que o kmod lê sob ``raiz``
+    (`regra_que_o_kmod_le`), ou o ``conf`` dado.
     """
     valor = _texto_de(parametro)
     if valor in ("N", "0"):
@@ -139,7 +141,12 @@ def energia_do_radio(
             estado=ESTADO_CERTO,
             porque="O sistema não desliga o rádio dos controles.",
         )
-    if conf.is_file():
+    presente = (
+        conf.is_file()
+        if conf is not None
+        else regra_que_o_kmod_le(REGRA_DO_BTUSB, raiz) is not None
+    )
+    if presente:
         if not valor:
             return Item(
                 chave="energia_do_radio",
@@ -181,6 +188,33 @@ def energia_do_radio(
         ),
         cura=cura,
     )
+
+
+REGRA_DO_BTUSB = "hefesto-btusb-no-autosuspend.conf"
+
+DIRETORIOS_DO_KMOD = (
+    "etc/modprobe.d",
+    "run/modprobe.d",
+    "usr/local/lib/modprobe.d",
+    "usr/lib/modprobe.d",
+    "lib/modprobe.d",
+)
+
+
+def regra_que_o_kmod_le(nome: str, raiz: Path = Path("/")) -> Path | None:
+    """O arquivo ``nome`` que o kmod lê, ou ``None`` se ele não lê nenhum.
+
+    O kmod procura em `DIRETORIOS_DO_KMOD`, nesta ordem de prioridade, e o
+    primeiro com o nome vence: o pacote o põe em `/usr/lib/modprobe.d`, e o
+    `install.sh` em `/etc/modprobe.d`. Um que existe sem ser arquivo (o link
+    para `/dev/null` que mascara) apaga os de baixo. O `doctor.sh` pergunta
+    aqui, e não tem lista própria.
+    """
+    for diretorio in DIRETORIOS_DO_KMOD:
+        caminho = raiz / diretorio / nome
+        if caminho.is_symlink() or caminho.exists():
+            return caminho if caminho.is_file() else None
+    return None
 
 
 def energia_das_portas(

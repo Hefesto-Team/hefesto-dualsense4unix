@@ -24,7 +24,7 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 # (conf, parâmetro) -> (estado do exame, linha do doctor)
 CASOS = {
-    (True, "Y"): (ESTADO_ATENCAO, "INFO"),
+    (True, "Y"): (ESTADO_ATENCAO, "WARN"),
     (True, "N"): (ESTADO_CERTO, "PASS"),
     (True, None): (ESTADO_NAO_SEI, "INFO"),
     (False, "Y"): (ESTADO_ATENCAO, "WARN"),
