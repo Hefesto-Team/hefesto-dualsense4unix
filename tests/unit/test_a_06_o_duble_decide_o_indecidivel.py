@@ -46,12 +46,15 @@ NÃO discordavam viraram o quarto controle e as quatro cores lidas.
 NO DESENHO DO TODO (15/10/2026) os cartões por controle, a troca, as teclas e as definições
 saíram da página: o dublê continua discordando em tudo o que a tela ainda pinta (as 22 linhas
 de botão, a Função do teclado, as duas barras, o tipo de navegação, quem navega, o perfil de
-point and click e os gestos do PS). O «Na Steam» só tem uma escolha com dono (o Big Picture),
-e por isso é o único endereço que nenhum dublê consegue mover (`SEM_VARIACAO`).
+point and click e os gestos do PS). O cadeado da moldura
+(O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01, 26/10/2026) crava `navegacao-travada = false`, e
+o dublê o discorda com a Interna desligada (a `interna_ligada` que o cadeado escreve). O «Na
+Steam» só tem uma escolha com dono (o Big Picture), e por isso é o único endereço que nenhum dublê
+consegue mover (`SEM_VARIACAO`).
 
-A MORDIDA: faça o dublê concordar com o desenho em qualquer campo — troque
-`speed` para 6, tire o `button_actions`, ou esvazie `CORES_LIDAS` — e a régua
-nomeia o endereço que voltou a ser indecidível.
+A MORDIDA: faça o dublê concordar com o desenho em qualquer campo — troque `speed` para 6, ligue
+a `interna_ligada`, tire o `button_actions`, ou esvazie `CORES_LIDAS` — e a régua nomeia o
+endereço que voltou a ser indecidível.
 """
 from __future__ import annotations
 
@@ -106,7 +109,7 @@ ESTADO = {
                         "bloqueio": "", "despachando": True},
     "keyboard_emulation": {"enabled": False, "osk_disponivel": False},
     "controllers": CONTROLES,
-    "navegacao": {"interna_ligada": True, "tipo": "computador", "foco": False,
+    "navegacao": {"interna_ligada": False, "tipo": "computador", "foco": False,
                   "big_picture": {"ligado": True, "agindo": False, "quem_le": "hefesto"}},
     "freestyle_ligado": True,
     "paused": True,
