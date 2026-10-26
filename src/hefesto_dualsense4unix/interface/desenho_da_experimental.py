@@ -7,10 +7,12 @@ de exemplo e a forma de cada peça.
 # ruff: noqa: E501
 from __future__ import annotations
 
+import functools
 import json
 import pathlib
 import re
 from collections.abc import Mapping, Sequence
+from html.parser import HTMLParser
 from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.interface.desenho_dos_lancadores import (
@@ -410,7 +412,7 @@ def _jogos_da_opcao(o: OpcaoDaJanela) -> str:
         return '<span class="ext-vazia">Nenhum jogo tem perfil ainda.</span>'
     marcados = set(o.valor) if isinstance(o.valor, (list, tuple)) else set()
     caixas = "".join(
-        f'<label class="jg-l"><input type="checkbox"{" checked" if chave in marcados else ""} '
+        f'<label class="jg-l" id="{PEDACO}op-{_a(o.id)}-{_a(chave)}"><input type="checkbox"{" checked" if chave in marcados else ""} '
         f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}:{_a(chave)}">'
         f'<span class="jg-n">{_e(nome)}</span></label>'
         for chave, nome in o.jogos)
@@ -461,7 +463,7 @@ def _por_botao_da_opcao(o: OpcaoDaJanela) -> str:
         itens = "".join(f'<option{" selected" if nome == atual else ""}>{_e(nome)}</option>'
                         for nome in formas)
         linhas.append(
-            f'<div class="tql"><svg class="tq-gl" viewBox="0 0 32 32" width="22" height="22" '
+            f'<div class="tql" id="{PEDACO}op-{_a(o.id)}-{_a(botao)}"><svg class="tq-gl" viewBox="0 0 32 32" width="22" height="22" '
             f'aria-hidden="true"><use href="#bt-{_a(botao)}"/></svg>'
             f'{_onda_da_forma(formas.get(atual, ()))}'
             f'<select class="ext-sel" data-gesto="guardar-opcao-da-modificacao" '
@@ -528,11 +530,15 @@ _EMPILHADAS = ("jogos", "por_botao")
 
 
 def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
-    """Uma linha por opção: rótulo à esquerda e controle à direita, ou a lista embaixo."""
+    """Uma linha por opção: rótulo à esquerda e controle à direita, ou a lista embaixo.
+
+    Cada opção é um pedaço ``#mod-op-<id>`` (:class:`PinturaDaJanela`): o clique repinta só ela.
+    """
     return "".join(
-        f'<div class="ky-rot"><span>{_e(o.rotulo)}</span></div>{_controle_da_opcao(o)}'
+        f'<div id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span></div>'
+        f'{_controle_da_opcao(o)}</div>'
         if o.tipo in _EMPILHADAS else
-        f'<div class="ky-linha"><div class="ky-rot"><span>{_e(o.rotulo)}</span>'
+        f'<div class="ky-linha" id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span>'
         f'{_nota_da_opcao(o)}</div>'
         f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>' for o in itens)
 
@@ -552,7 +558,7 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
     partes = "".join(
         f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
         f'<label for="mj-aba-{n}">{_e(nome)}</label>'
-        f'<div class="mj-tela">{_linhas_das_opcoes(itens)}</div>'
+        f'<div class="mj-tela" id="{PEDACO}tela-{n}">{_linhas_das_opcoes(itens)}</div>'
         for n, (nome, itens) in enumerate(grupos.items()))
     return f'<div class="ac-card mj-abas" style="--n:{len(grupos)}">{partes}</div>'
 
@@ -742,6 +748,137 @@ GESTO_DO_CANCELAR = "cancelar-modificacao"
 def _o_fecho(mod: str) -> str:
     """O gesto do Cancelar e do X, só na janela de uma extensão (o desenho sem ``mod`` fecha e só)."""
     return f' data-gesto="{GESTO_DO_CANCELAR}" data-v="{_a(mod)}"' if mod else ""
+
+
+PEDACO = "mod-"
+_SEM_FECHO = frozenset({"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+                        "source", "track", "wbr"})
+_ABA_MARCADA = re.compile(r'(<input type="radio" name="mj-aba" id="mj-aba-\d+") checked>')
+_BARRA_DO_LIVRE = re.compile(r'<div class="mj-trilho.*?</output></div>', re.S)
+
+
+class Pedaco(NamedTuple):
+    """Um pedaço ``id="mod-…"`` do miolo: o miolo dele, o dele sem os pedaços de dentro e o pai."""
+
+    miolo: str
+    proprio: str
+    pai: str
+
+
+class _Cortador(HTMLParser):
+    def __init__(self, html: str) -> None:
+        super().__init__(convert_charrefs=False)
+        self.linhas = [0]
+        for n, letra in enumerate(html):
+            if letra == "\n":
+                self.linhas.append(n + 1)
+        self.pilha: list[tuple[str, str]] = []
+        self.abertos: dict[str, tuple[int, str]] = {}
+        self.cortes: dict[str, tuple[int, int, str]] = {}
+        self.feed(html)
+        self.close()
+
+    def _onde(self) -> int:
+        linha, coluna = self.getpos()
+        return self.linhas[linha - 1] + coluna
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in _SEM_FECHO:
+            return
+        ident = next((v for k, v in attrs if k == "id"), None) or ""
+        ident = ident if ident.startswith(PEDACO) else ""
+        if ident:
+            pai = next((i for _t, i in reversed(self.pilha) if i), "")
+            self.abertos[ident] = (self._onde() + len(self.get_starttag_text() or ""), pai)
+            self.cortes[ident] = (0, 0, pai)
+        self.pilha.append((tag, ident))
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _SEM_FECHO or all(t != tag for t, _i in self.pilha):
+            return
+        while self.pilha:
+            aberta, ident = self.pilha.pop()
+            if ident:
+                inicio, pai = self.abertos.pop(ident)
+                self.cortes[ident] = (inicio, self._onde(), pai)
+            if aberta == tag:
+                break
+
+
+def _sem_o_que_a_pessoa_muda(html: str) -> str:
+    return _BARRA_DO_LIVRE.sub("", _ABA_MARCADA.sub(r"\1>", html))
+
+
+@functools.lru_cache(maxsize=8)
+def pedacos_da_janela(html: str) -> tuple[str, dict[str, Pedaco]]:
+    """O esqueleto do miolo e os pedaços ``id="mod-…"`` dele, os de fora antes dos de dentro.
+
+    O esqueleto e o miolo próprio de cada pedaço deixam de fora o miolo dos pedaços de dentro, a aba
+    marcada e a barra do livre: quem muda essas duas é a pessoa, na tela.
+    """
+    cortes = _Cortador(html).cortes
+
+    def proprio(inicio: int, fim: int, dono: str) -> str:
+        partes, onde = [], inicio
+        for ini, fi, pai in sorted(cortes.values()):
+            if pai == dono and inicio <= ini and fi <= fim:
+                partes.append(html[onde:ini])
+                onde = fi
+        return _sem_o_que_a_pessoa_muda("".join(partes) + html[onde:fim])
+
+    pedacos = {ident: Pedaco(html[ini:fi], proprio(ini, fi, ident), pai)
+               for ident, (ini, fi, pai) in cortes.items() if fi >= ini}
+    return proprio(0, len(html), ""), pedacos
+
+
+class PinturaDaJanela:
+    """O que a janela de uma extensão tem na tela, para o tique e o gesto mandarem só o que mudou.
+
+    A janela inteira (``#mod-janela``) só se repinta quando o esqueleto muda: uma aba, uma opção
+    ou um pedaço que nasce ou some. O resto vai nos pedaços ``#mod-…`` que mudaram (uma opção, um
+    botão, a tela de uma aba, os modos do livre), e a lista que a pessoa rolou fica onde estava,
+    na aba em que ela estava. Os pedaços já mandados voltam a cada tique (a ponte pula o que já
+    pintou), para o que ficou adiado sob um clique em voo chegar no tique seguinte.
+    """
+
+    def __init__(self) -> None:
+        self.base = ""
+        self.na_tela: dict[str, Pedaco] = {}
+        self.mandados: set[str] = set()
+
+    def esquecer(self) -> None:
+        self.base, self.na_tela, self.mandados = "", {}, set()
+
+    def blocos(self, novo: str) -> dict[str, str]:
+        if not novo:
+            self.esquecer()
+            return {}
+        raiz, pedacos = pedacos_da_janela(novo)
+        if not self.base or raiz != pedacos_da_janela(self.base)[0]:
+            self.base, self.na_tela, self.mandados = novo, dict(pedacos), set()
+            return {"#mod-janela": novo}
+        cobertos: set[str] = set()
+        for ident, pedaco in pedacos.items():
+            velho = self.na_tela.get(ident)
+            if pedaco.pai in cobertos or velho is None or velho.proprio != pedaco.proprio:
+                cobertos.add(ident)
+                self.na_tela[ident] = pedaco
+                if pedaco.pai not in cobertos:
+                    self.mandados.add(ident)
+        self.mandados &= pedacos.keys()
+        return {"#mod-janela": self.base,
+                **{f"#{i}": self.na_tela[i].miolo for i in pedacos if i in self.mandados}}
+
+
+def janela_pintada(blocos: Mapping[str, Any]) -> str:
+    """O miolo que a ponte deixa na janela da extensão: ``#mod-janela`` e, por cima, cada pedaço
+    ``#mod-…`` dos ``blocos``, na ordem em que vêm."""
+    html = str(blocos.get("#mod-janela") or "")
+    for seletor, miolo in blocos.items():
+        corte = _Cortador(html).cortes.get(seletor[1:]) if seletor != "#mod-janela" else None
+        if corte is not None and corte[1] >= corte[0]:
+            html = html[:corte[0]] + str(miolo) + html[corte[1]:]
+    return html
 
 
 def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: str = "",
@@ -1338,7 +1475,7 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
         telas.append(
             f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
             f'<label for="mj-aba-{n}">{_e(nome)}</label>'
-            f'<div class="mj-tela">{"".join(partes)}</div>')
+            f'<div class="mj-tela" id="{PEDACO}tela-{n}">{"".join(partes)}</div>')
     return f'<div class="ac-card mj-abas" style="--n:{len(nomes)}">{"".join(telas)}</div>'
 
 
@@ -1443,7 +1580,7 @@ def faixa_do_livre_html(o: OpcaoDaJanela, vivo: LivreAoVivo, gestao: Gestao | No
       <div class="mj-faixa-topo"><span class="pc-sub">{_e(o.rotulo)}</span></div>
       <div class="mj-livre-rastro" id="mod-livre-rastro">{rastro_html(vivo)}</div>
       <div {trilho} style="--v:{v}"><input type="range" min="0" max="100" step="1" value="{v}" data-hef-vivo="{GESTO_DO_LIVRE}" data-gesto="{GESTO_DE_SOLTAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-label="{_a(o.rotulo)}" oninput="this.parentNode.style.setProperty('--v',this.value);this.nextElementSibling.textContent=this.value"><output>{v}</output></div>
-      <div class="mj-faixa-pe">{modos_do_livre_html(o)}
+      <div class="mj-faixa-pe" id="{PEDACO}livre-pe">{modos_do_livre_html(o)}
         <button class="{gravar[0]}" data-gesto="{GESTO_DE_GRAVAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-pressed="{gravar[1]}" data-dica="{DICA_DO_GRAVAR}"><i></i>Gravar</button>
         <span class="mj-alvos" id="mod-livre-alvos">{alvos_do_livre_html(gestao)}</span>
         <span class="mj-formas">{_formas_do_livre_html(o)}</span>

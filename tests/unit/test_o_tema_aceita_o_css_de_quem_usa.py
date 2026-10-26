@@ -34,6 +34,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 from hefesto_dualsense4unix.mods import instalador, meu_css, opcoes, tema
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
 
@@ -367,10 +368,10 @@ def test_a_janela_aberta_segue_o_meu_css_salvo(lar: Any, ctx: Any) -> None:
     assert "Linha 2: url()" in janela
     _escrever(lar, ".a{color:red}")
     a07.REGISTRO.esquecer()
-    assert "ky-recusa" not in a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
+    assert "ky-recusa" not in janela_pintada(a07._a_pintura_agora(ctx)["blocos"])
     _escrever(lar, ".a{color:red}\n\n\n.b{background:url(x)}")
     a07.REGISTRO.esquecer()
-    pintada = a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
+    pintada = janela_pintada(a07._a_pintura_agora(ctx)["blocos"])
     assert "Linha 4: url()" in pintada and "não foi aplicado" not in pintada
 
 

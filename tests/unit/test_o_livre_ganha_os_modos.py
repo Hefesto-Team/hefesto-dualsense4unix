@@ -58,6 +58,7 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
     _servico,
     janela,
 )
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 
 COM_MODOS = {**LIVRE, "modos": True}
 
@@ -214,7 +215,7 @@ def test_o_clique_no_modo_acende_vai_ao_rascunho_e_o_guardar_grava(
     html = abrir(ponte)["blocos"]["#mod-janela"]
     assert _modos_na_faixa(html) == {"soltar": True, "segurar": False, "repetir": False}
     carga = a07.modo_do_livre_da_modificacao(ctx, {"v": f"toque:ao-vivo:{modo}"}, ponte)
-    acesos = _modos_na_faixa(carga["blocos"]["#mod-janela"])
+    acesos = _modos_na_faixa(janela_pintada(carga["blocos"]))
     assert acesos == {m: m == modo for m in MODOS_DO_LIVRE}, acesos
     assert _livres(ponte) == [], "o modo sem arrastar nenhum mandou soltar à extensão"
     guardado: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)

@@ -175,6 +175,7 @@ def test_a_janela_da_extensao_com_tres_grupos_vai_em_duas_colunas(navegador, lar
 
 import json
 import shutil
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 
 
 def _a07():
@@ -361,7 +362,7 @@ def test_a_janela_da_extensao_traz_o_valor_de_agora_de_cada_opcao(lar, ctx, tmp_
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
     carga = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    janela = carga["blocos"]["#mod-janela"]
+    janela = janela_pintada(carga["blocos"])
     assert "Configurar · Toque" in janela and "<select" in janela
     assert 'value="50"' in janela and "Nunca" in janela
 
@@ -378,14 +379,14 @@ def test_a_opcao_mudada_espera_o_guardar_e_o_guardar_grava(lar, ctx, tmp_path) -
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
-    assert "<option selected>Nunca" in carga["blocos"]["#mod-janela"], "sem o rascunho na janela"
+    assert "<option selected>Nunca" in janela_pintada(carga["blocos"]), "sem o rascunho na janela"
     assert _guardado(lar) == {}, "a opção gravou antes do Guardar"
     assert a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Sempre", "evento": "click"}, _Ponte()) is None
     feito = a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert feito["recado"] == "Guardado."
     assert _guardado(lar) == {"quando": "Nunca", "avisar": False, "teto": 50.0}
-    assert "<option selected>Nunca" in feito["blocos"]["#mod-janela"]
+    assert "<option selected>Nunca" in janela_pintada(feito["blocos"])
     assert "recado" not in a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte()), (
         "o Guardar sem mudança disse que guardou")
 
@@ -897,7 +898,7 @@ def test_guardar_a_cor_valida_e_normaliza(lar, ctx, tmp_path) -> None:
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:luz", "valor": "#FF8800", "evento": "change"}, _Ponte())
-    assert 'value="#ff8800"' in carga["blocos"]["#mod-janela"]
+    assert 'value="#ff8800"' in janela_pintada(carga["blocos"])
     a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert _guardado(lar)["luz"] == "#ff8800"
     with pytest.raises(RuntimeError, match="#rrggbb"):

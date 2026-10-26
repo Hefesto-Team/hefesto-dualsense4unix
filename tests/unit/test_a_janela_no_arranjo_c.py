@@ -40,6 +40,7 @@ from tests.unit.test_a_aba_lancadores_ganha_as_modificacoes import (  # noqa: F4
 )
 from tests.unit.test_a_aba_lancadores_ganha_as_modificacoes import INTERFACE, MOCKUP
 from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import _Ponte
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 
 ESTADO = "publicar:acessorios.estado"
 FORMAS = {"Nada": [], "Toque": [[1.0, 0.2]], "Duplo": [[1.0, 0.1], [0.0, 0.1], [1.0, 0.1]]}
@@ -130,11 +131,11 @@ def test_o_toque_mudado_num_botao_guarda_os_outros(janela, ctx) -> None:  # noqa
 def test_a_janela_redesenhada_abre_a_aba_da_opcao_mudada(janela, ctx) -> None:  # noqa: F811
     a07, abrir = janela
     abrir(agora=["aparelhos"])
-    html = _mudar(a07, ctx, "toque:onde", "192.168.0.10:8080")["blocos"]["#mod-janela"]
-    assert _aberta(html) == "Ligação"
+    html = janela_pintada(_mudar(a07, ctx, "toque:onde", "192.168.0.10:8080")["blocos"])
+    assert _aberta(a07._MEXIDA.html_mod) == "Ligação"
     assert 'value="192.168.0.10:8080"' in html
     reaberta = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte(VIVO))
-    assert _aberta(reaberta["blocos"]["#mod-janela"]) == "Toques", "reabrir volta à primeira"
+    assert _aberta(janela_pintada(reaberta["blocos"])) == "Toques", "reabrir volta à primeira"
 
 
 def test_o_endereco_torto_e_recusado_dizendo(janela, ctx) -> None:  # noqa: F811

@@ -1222,6 +1222,7 @@ class _Mexida:
     nota_do_css: str = ""
     aba: str = ""
     com_controles: bool = False
+    pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1233,6 +1234,7 @@ class _Mexida:
         self.rascunho = {}
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
         self.com_controles = False
+        self.pintura.esquecer()
 
 
 _MEXIDA = _Mexida()
@@ -1452,7 +1454,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
     blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram))
     _seguir_o_meu_css(instaladas)
     janelas = (("#lanc-janela", _MEXIDA.html_conf), ("#imp-janela", _MEXIDA.html_imp),
-               ("#mod-janela", _MEXIDA.html_mod), ("#lanc-escolha", _ESCOLHA.miolo_novo))
+               ("#lanc-escolha", _ESCOLHA.miolo_novo))
     for seletor, miolo in janelas:
         if miolo:
             blocos[seletor] = miolo
@@ -1462,7 +1464,9 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
             _MEXIDA.agora, _AGORA.agora(),
             processo=exp.processo_de(dela.entrada.ligada, dela.estado) if dela else "",
             porque=dela.porque if dela else "")
-    return _com_os_aparelhos(carga)
+    carga = _com_os_aparelhos(carga)
+    carga["blocos"] = {**_MEXIDA.pintura.blocos(_MEXIDA.html_mod), **carga["blocos"]}
+    return carga
 
 
 def _id_do_clique(o: dict[str, Any], gesto_: str) -> str:
@@ -1624,6 +1628,7 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     _MEXIDA.rascunho = (_o_modo_que_vale(mod_id) if recusa is not None and anterior == mod_id
                         else {})
     _MEXIDA.mod, _MEXIDA.aba = mod_id, ""
+    _MEXIDA.pintura.esquecer()
     _AGORA.abrir(mod_id, p)
     _AGORA.ler(mod_id, p)
     _montar_a_janela_da_extensao(mod_id)
@@ -2528,7 +2533,7 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     cartoes = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso) if aba_cc else ""
     if bool(cartoes) != _MEXIDA.com_controles:
         _montar_a_janela_da_extensao(mod_id, item)
-        blocos["#mod-janela"] = _MEXIDA.html_mod
+        blocos.update(_MEXIDA.pintura.blocos(_MEXIDA.html_mod))
     elif cartoes:
         blocos["#mod-controles"] = cartoes
     acoes = tuple(_acao_da_janela(a) for a in manifesto.acoes)

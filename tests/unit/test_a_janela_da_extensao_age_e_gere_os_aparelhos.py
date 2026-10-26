@@ -57,6 +57,7 @@ from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import (  # no
     _porta,
     curto,
 )
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 
 ESTADO = "publicar:acessorios.estado"
 
@@ -280,7 +281,7 @@ def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(
     instalar(**_pecas(grupo="Aparelhos" if onde == "aba" else None))
     ponte = _Ponte(VIVO)
     carga = abrir(ponte)
-    html = carga["blocos"]["#mod-janela"]
+    html = janela_pintada(carga["blocos"])
     if onde == "aba":
         assert html.count(" data-alvo=") == 4, "quatro aparelhos com id, quatro cartões"
         assert html.count('<div class="mj-ap fora"') == 1, "o desligado fica apagado"
@@ -436,7 +437,7 @@ def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(
     abrir(ponte)
     carga = _gravar(a07, ctx, ponte)
     assert "«Meu 1» gravada" in carga["recado"]
-    html = carga["blocos"]["#mod-janela"]
+    html = janela_pintada(carga["blocos"])
     assert "<option>Meu 1</option>" in html, "a forma gravada não entrou na escolha do botão"
     assert 'data-v="toque:ao-vivo:Meu 1"' in html, "a forma gravada não tem o «x» de esquecer"
     a07.guardar_opcao_da_modificacao(
@@ -467,7 +468,7 @@ def test_esquecer_a_forma_devolve_o_botao_ao_padrao(
         ctx, {"v": "toque:toques:cross", "valor": "Meu 1", "evento": "change"}, ponte)
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     carga = a07.esquecer_a_forma_do_livre(ctx, {"v": "toque:ao-vivo:Meu 1"}, ponte)
-    assert "Meu 1" not in carga["blocos"]["#mod-janela"].replace("«Meu 1»", "")
+    assert "Meu 1" not in janela_pintada(carga["blocos"]).replace("«Meu 1»", "")
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     valores: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert valores["ao-vivo"] == {} and valores["toques"]["cross"] == "Pulso"
@@ -535,7 +536,7 @@ def test_o_gravar_aceso_continua_gravar_e_se_diz_apertado(janela: Any, ctx: Any)
 
     def botao(carga: dict[str, Any]) -> str:
         achado = re.search(r'<button class="([^"]*)" data-gesto="gravar-o-livre-da-modificacao"'
-                           r'[^>]*>(.*?)</button>', carga["blocos"]["#mod-janela"], re.S)
+                           r'[^>]*>(.*?)</button>', janela_pintada(carga["blocos"]), re.S)
         assert achado, "a faixa não tem o «Gravar»"
         return achado.group(0)
 
@@ -554,7 +555,7 @@ def test_gravar_sem_arrastar_nao_cria_forma(janela: Any, ctx: Any) -> None:  # n
     a07.gravar_o_livre_da_modificacao(ctx, {"v": "toque:ao-vivo"}, ponte)
     carga = a07.gravar_o_livre_da_modificacao(ctx, {"v": "toque:ao-vivo"}, ponte)
     assert "Nada foi arrastado" in carga["recado"]
-    assert "<option>Meu 1</option>" not in carga["blocos"]["#mod-janela"]
+    assert "<option>Meu 1</option>" not in janela_pintada(carga["blocos"])
 
 
 def test_os_passos_da_gravacao_cabem_na_forma() -> None:

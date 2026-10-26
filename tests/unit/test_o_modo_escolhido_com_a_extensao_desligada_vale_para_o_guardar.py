@@ -38,6 +38,7 @@ from tests.unit.test_o_livre_ganha_os_modos import (  # noqa: F401
     _modos_na_faixa,
     relogio,
 )
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 
 
 def _guardado(lar: Any) -> Any:  # noqa: F811
@@ -64,7 +65,7 @@ def test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar(
     carga = a07.modo_do_livre_da_modificacao(ctx, {"v": f"toque:ao-vivo:{modo}"}, ponte)
     assert "recado" not in carga, carga.get("recado")
     assert a07._MEXIDA.rascunho.get("ao-vivo:modo") == modo, "a troca fora da porta não ficou"
-    assert _modos_na_faixa(carga["blocos"]["#mod-janela"]) == _acesos(modo)
+    assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos(modo)
     assert a07._VIVA.modo == modo, "a barra seguiu no modo de antes"
     assert len(_livres(ponte)[antes:]) <= 1
     vistos: set[float] = set()
@@ -127,7 +128,7 @@ def test_no_webkit_o_modo_trocado_fora_da_porta_acende_e_o_guardar_leva_o_gesto(
     ponte.rodando = False
     carga = a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
     w, h = VISTAS[1]
-    passos = [["js", _GUARDAR % json.dumps(carga["blocos"]["#mod-janela"])]]
+    passos = [["js", _GUARDAR % json.dumps(janela_pintada(carga["blocos"]))]]
     lido = json.loads(rodar_no_webkit({"janela": (w, h, passos)})["janela"][0])
     assert lido["aceso"] == ["repetir"], lido
     assert lido["vistos"] == ["guardar-modificacao|toque"], lido

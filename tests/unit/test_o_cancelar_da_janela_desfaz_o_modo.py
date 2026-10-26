@@ -59,6 +59,7 @@ from tests.unit.test_o_livre_ganha_os_modos import (  # noqa: F401
     _modos_na_faixa,
     relogio,
 )
+from hefesto_dualsense4unix.interface.desenho_da_experimental import janela_pintada
 
 CANCELAR = "cancelar-modificacao"
 
@@ -100,7 +101,7 @@ def test_trocar_o_modo_e_cancelar_devolve_a_extensao_ao_modo_guardado(
     assert len(volta) == 1, f"o Cancelar mandou {len(volta)} soltares à extensão: {volta}"
     assert volta[0]["soltou"] is True and volta[0]["modo"] == "soltar", volta
     assert "ao-vivo:modo" not in a07._MEXIDA.rascunho, "o Cancelar deixou o modo no rascunho"
-    assert _modos_na_faixa(carga["blocos"]["#mod-janela"]) == _acesos("soltar")
+    assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("soltar")
     relogio[0] += 0.5
     assert a07._VIVA.ao_vivo("toque").valor == 0.0, "a barra não voltou ao «Soltar» guardado"
 
@@ -120,7 +121,7 @@ def test_cancelar_sem_troca_ou_depois_do_guardar_nao_manda_nada(
     antes = len(_livres(ponte))
     carga = _cancelar(a07, ctx, ponte)
     assert len(_livres(ponte)) == antes, "o Cancelar depois do Guardar desfez o que foi guardado"
-    assert _modos_na_faixa(carga["blocos"]["#mod-janela"]) == _acesos("repetir")
+    assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("repetir")
 
 
 def test_reabrir_a_janela_que_fechou_sem_cancelar_devolve_o_modo_guardado(
@@ -201,7 +202,7 @@ def test_a_extensao_fora_da_porta_nao_tem_modo_a_desfazer(
     else:
         carga = abrir(ponte)
         assert "recado" not in carga, carga.get("recado")
-    assert _modos_na_faixa(carga["blocos"]["#mod-janela"]) == _acesos("soltar")
+    assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("soltar")
     assert a07._VIVA.modo == "soltar", "a barra seguiu no modo que a extensão largou"
     relogio[0] += 0.5
     assert a07._VIVA.ao_vivo("toque").valor == 0.0, "a barra não fez o «Soltar» guardado"
