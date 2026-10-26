@@ -790,14 +790,30 @@ def _conexao_html(c: Mapping[str, Any]) -> str:
             f"{estado_html(estado)}</div>")
 
 
+class ComoEsta(NamedTuple):
+    """Como um aparelho se mostra em toda a janela: ``ativo`` é o que recebe força agora."""
+
+    ativo: bool
+    cor: str
+    vivo: str
+    fora: str
+
+
+def como_esta(ap: Mapping[str, Any]) -> ComoEsta:
+    """O dono único de «este aparelho está ativo»: o ``estado`` ligado e a chave (``ligado``) não
+    desligada. O ativo mostra a onda da força; o outro, a pílula do estado, apagado."""
+    estado = "desligado" if ap.get("ligado") is False else str(ap.get("estado") or "ligado")
+    if estado == "ligado":
+        return ComoEsta(True, "acessorio", _forca_html(ap.get("forca")), "")
+    return ComoEsta(False, COR_DO_ESTADO.get(estado, "mudo"), estado_html(estado), " fora")
+
+
 def _aparelho_html(ap: Mapping[str, Any]) -> str:
-    """Um aparelho: o nome, a pilha e, ligado, a onda da força; senão, a pílula do estado."""
-    estado = str(ap.get("estado") or "ligado")
-    vivo = _forca_html(ap.get("forca")) if estado == "ligado" else estado_html(estado)
-    cor = "acessorio" if estado == "ligado" else COR_DO_ESTADO.get(estado, "mudo")
-    return (f'<div class="ap">{icone_html(ICONE_DO_APARELHO, cor)}'
+    """Um aparelho: o nome, a pilha e, ativo, a onda da força; senão, a pílula do estado."""
+    como = como_esta(ap)
+    return (f'<div class="ap{como.fora}">{icone_html(ICONE_DO_APARELHO, como.cor)}'
             f'<span class="ap-nome">{_e(ap.get("nome") or SEM_VALOR)}</span>'
-            f'{bateria_html(ap.get("bateria"))}{vivo}</div>')
+            f'{bateria_html(ap.get("bateria"))}{como.vivo}</div>')
 
 
 def _topo_do_agora(vivo: bool, processo: str, porque: str) -> str:
@@ -1060,15 +1076,15 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     opcoes = [o for o in opcoes if o.tipo != "livre"]
     acoes = tuple(acoes) if mod else ()
     gestao = Gestao(mod, aparelhos, estado, em_curso, tuple(armada)) if mod and aparelhos else None
-    cartoes = controles_dos_aparelhos_html(mod, estado, em_curso) if mod and controles else ""
-    cc = (controles, cartoes) if cartoes else ("", "")
-    if agora or acoes or gestao or livre_op or cartoes:
-        if acoes or (gestao and gestao.aparelhos.grupo) or cartoes:
+    controles = controles if mod else ""
+    cc = (controles, controles_dos_aparelhos_html(mod, estado, em_curso)) if controles else ("", "")
+    if agora or acoes or gestao or livre_op or controles:
+        if acoes or (gestao and gestao.aparelhos.grupo) or controles:
             ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
                                          controles=cc, armada=armada)
         else:
             ajustes = _abas_das_opcoes(opcoes, aba, mod) if opcoes else vazio
-        fora = dica_da_barra_fora(nome, processo)
+        fora = dica_da_barra_fora(nome, processo, gestao)
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
@@ -1363,12 +1379,21 @@ EM_CURSO = "Em curso"
 DICA_DA_CHAVE = "Liga ou desliga este aparelho"
 DICA_DO_GRAVAR = "Grava o que você arrastar como uma forma nova, para os botões do controle"
 DICA_DA_BARRA_FORA = "{nome} não está rodando: a barra não chega a ela."
+DICA_DA_BARRA_SEM_ALVO = "Nenhum aparelho ligado: a barra não chega a nenhum."
 CAMPO_DA_BARRA_FORA = "mod-livre-fora"
 
 
-def dica_da_barra_fora(nome: str, processo: str) -> str:
-    """A dica da barra do livre fora da porta, ou vazio na porta: a regra da montagem e do tique."""
-    return DICA_DA_BARRA_FORA.format(nome=nome) if processo in PROCESSO else ""
+def sem_alvo(g: Gestao | None) -> bool:
+    """A extensão que gere aparelhos e não tem nenhum ativo: o controle livre não tem para onde ir."""
+    return g is not None and not any(como_esta(ap).ativo for ap in _aparelhos_geridos(g.estado))
+
+
+def dica_da_barra_fora(nome: str, processo: str, g: Gestao | None = None) -> str:
+    """A dica da barra do livre fora da porta ou sem alvo, ou vazio: a regra da montagem e do
+    tique."""
+    if processo in PROCESSO:
+        return DICA_DA_BARRA_FORA.format(nome=nome)
+    return DICA_DA_BARRA_SEM_ALVO if sem_alvo(g) else ""
 
 RASTRO_S = 10.0
 _TRACO_DA_ACAO = ('viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" '
@@ -1457,16 +1482,14 @@ def aparelhos_geridos_html(g: Gestao) -> str:
     agora e um botão por ação. O aparelho desligado fica apagado e segue com as ações."""
     cartoes = []
     for ap in _aparelhos_geridos(g.estado):
-        estado = str(ap.get("estado") or "ligado")
-        vivo = _forca_html(ap.get("forca")) if estado == "ligado" else estado_html(estado)
-        fora = "" if ap.get("ligado") is not False else " fora"
+        como = como_esta(ap)
         cartoes.append(
-            f'<div class="mj-ap{fora}" data-alvo="{_a(ap["id"])}"><div class="mj-ap-cab">'
-            f'{icone_html(ICONE_DO_APARELHO, "acessorio" if estado == "ligado" else "mudo")}'
+            f'<div class="mj-ap{como.fora}" data-alvo="{_a(ap["id"])}"><div class="mj-ap-cab">'
+            f'{icone_html(ICONE_DO_APARELHO, como.cor)}'
             f'<span class="mj-ap-nome">{_e(ap.get("nome") or ap["id"])}</span>'
             f'{bateria_html(ap.get("bateria"))}{_por_cento(ap.get("bateria"))}'
             f'{_chave_do_aparelho(g, ap)}</div>'
-            f'<div class="mj-ap-meio">{vivo}</div>'
+            f'<div class="mj-ap-meio">{como.vivo}</div>'
             f'<div class="mj-ap-pe">{_botoes_do_aparelho(g, ap)}</div></div>')
     busca = ANDAMENTO_DO_PAREAR.ver(g.mod, g.estado)
     if not cartoes:
@@ -1475,6 +1498,7 @@ def aparelhos_geridos_html(g: Gestao) -> str:
 
 
 SEM_APARELHOS = "Nenhum aparelho por aqui ainda."
+SEM_CONTROLES = "Nenhum aparelho para ajustar aqui ainda."
 COMECO_DO_MOTIVO_DA_BUSCA = "Procurando"
 CHAVE_DAS_CONEXOES = "conexoes"  # (noqa-acento)
 PRAZO_DA_BUSCA_S = 20.0
@@ -1593,11 +1617,11 @@ def aparelhos_na_coluna_html(g: Gestao) -> str:
             f'data-dica="{_a(a.rotulo)}" aria-label="{_a(a.rotulo)}">'
             f'{_icone_da_acao(a.icone) or _e(a.rotulo[:1])}</button>'
             for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
-        fora = "" if ap.get("ligado") is not False else " fora"
+        como = como_esta(ap)
         nome = str(ap.get("nome") or alvo)
         linhas.append(
-            f'<div class="ap mj-ap-linha{fora}" data-alvo="{_a(alvo)}">'
-            f'{icone_html(ICONE_DO_APARELHO, "acessorio")}'
+            f'<div class="ap mj-ap-linha{como.fora}" data-alvo="{_a(alvo)}">'
+            f'{icone_html(ICONE_DO_APARELHO, como.cor)}'
             f'<span class="ap-nome" data-dica="{_a(nome)}">{_e(nome)}</span>'
             f'{bateria_html(ap.get("bateria"))}{botoes}{_chave_do_aparelho(g, ap)}</div>')
     return "".join(linhas)
@@ -1630,13 +1654,31 @@ def _pedido_do_controle(mod: str, alvo: str, c: Mapping[str, Any], quer: str) ->
             f'data-quer="{_a(quer)}"')
 
 
+GLIFO_DO_CONTROLE = {
+    "lampada": ('<path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 '
+                '1.6V18h6v-2.1c0-.6.3-1.2.8-1.6A6.5 6.5 0 0 0 12 2.5z"/>'),
+}
+
+
+def _marca_do_controle(c: Mapping[str, Any]) -> str:
+    """O que diz o que a chave controla: o glifo do ``icone`` e, sem ele, o rótulo escrito; é o
+    que a separa da chave que liga o aparelho."""
+    desenho = GLIFO_DO_CONTROLE.get(str(c.get("icone") or ""), "")
+    if desenho:
+        return (f'<svg class="mj-cc-gl" viewBox="0 0 24 24" width="16" height="16" '
+                f'aria-hidden="true">{desenho}</svg>')
+    rotulo = str(c.get("rotulo") or "")
+    return f'<span class="mj-cc-marca">{_e(rotulo)}</span>' if rotulo else ""
+
+
 def _chave_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
     ligada = c.get("valor") is True
     classe = "mj-chave" + (" on" if ligada else "") + (" em-curso" if em_curso else "")
     dica = str(c.get("dica") or c.get("rotulo") or "")
-    atributo = f' data-dica="{_a(dica)}"' if dica else ""
-    return (f'<span class="{classe}" role="switch" aria-checked="{str(ligada).lower()}" '
-            f'{_pedido_do_controle(mod, alvo, c, "0" if ligada else "1")}{atributo}></span>')
+    atributo = f' data-dica="{_a(dica)}" aria-label="{_a(dica)}"' if dica else ""
+    return (f'<span class="mj-cc-chave">{_marca_do_controle(c)}'
+            f'<span class="{classe}" role="switch" aria-checked="{str(ligada).lower()}" '
+            f'{_pedido_do_controle(mod, alvo, c, "0" if ligada else "1")}{atributo}></span></span>')
 
 
 def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Sequence[Any]) -> str:
@@ -1680,7 +1722,7 @@ def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool
 def controles_dos_aparelhos_html(mod: str, estado: Mapping[str, Any] | None,
                                  em_curso: frozenset[tuple[str, str]] = frozenset()) -> str:
     """Um cartão por aparelho com ``controles``: o nome e, à direita, a primeira chave; embaixo,
-    uma linha por controle. O desligado fica apagado; o aparelho sem controles não ganha cartão."""
+    uma linha por controle. O inativo fica apagado; sem nenhum, a linha vazia da aba."""
     cartoes = []
     for ap in com_controles(estado):
         alvo = str(ap["id"])
@@ -1690,13 +1732,13 @@ def controles_dos_aparelhos_html(mod: str, estado: Mapping[str, Any] | None,
                  if cabeca else "")
         linhas = "".join(_linha_do_controle(mod, alvo, c, (str(c["id"]), alvo) in em_curso)
                          for c in controles if c is not cabeca)
-        fora = "" if ap.get("ligado") is not False else " fora"
+        como = como_esta(ap)
         cartoes.append(
-            f'<div class="mj-ap mj-cc{fora}" data-alvo="{_a(alvo)}"><div class="mj-ap-cab">'
-            f'{icone_html(ICONE_DO_APARELHO, "acessorio")}'
+            f'<div class="mj-ap mj-cc{como.fora}" data-alvo="{_a(alvo)}"><div class="mj-ap-cab">'
+            f'{icone_html(ICONE_DO_APARELHO, como.cor)}'
             f'<span class="mj-ap-nome">{_e(ap.get("nome") or alvo)}</span>{chave}</div>'
             f"{linhas}</div>")
-    return "".join(cartoes)
+    return "".join(cartoes) or f'<div class="mj-cc-vazio">{SEM_CONTROLES}</div>'
 
 
 def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
@@ -1791,8 +1833,9 @@ def rastro_html(vivo: LivreAoVivo) -> str:
 
 
 def alvos_do_livre_html(g: Gestao | None) -> str:
-    """Quem recebe o controle livre: um chip por aparelho gerido, aceso se ligado. O clique é a
-    mesma chave do cartão (a ação ``ligar``), e só aparece quando o manifesto a declara."""
+    """Quem recebe o controle livre: um chip por aparelho gerido, aceso se ativo (``como_esta``).
+    O clique é a mesma chave do cartão (a ação ``ligar``), e só aparece quando o manifesto a
+    declara."""
     if g is None or not any(a.id == ACAO_DE_LIGAR for a in g.aparelhos.acoes):
         return ""
     chips = []
@@ -1800,7 +1843,8 @@ def alvos_do_livre_html(g: Gestao | None) -> str:
         ligado = ap.get("ligado") is not False
         em_curso = " em-curso" if (ACAO_DE_LIGAR, str(ap["id"])) in g.em_curso else ""
         v = valor_da_acao(g.mod, ACAO_DE_LIGAR, str(ap["id"]))
-        chips.append(f'<span class="chip mj-alvo{" on" if ligado else ""}{em_curso}" '
+        aceso = " on" if como_esta(ap).ativo else " fora"
+        chips.append(f'<span class="chip mj-alvo{aceso}{em_curso}" '
                      f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}" '
                      f'data-ligado="{"0" if ligado else "1"}" data-dica="{DICA_DA_CHAVE}">'
                      f'{_e(ap.get("nome") or ap["id"])}</span>')
@@ -1890,13 +1934,13 @@ ESTADO_DOS_GERIDOS_DO_DESENHO: dict[str, Any] = {
     "aparelhos": [
         {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "bateria": 80,
          "forca": 0.7, "controles": [
-             {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa"},
+             {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa", "icone": "lampada"},
              {"id": "cor", "tipo": "paleta", "valor": "magenta",
               "opcoes": [{"id": i, "cor": c, "rotulo": r}  # (noqa-acento)
                          for i, c, r in CORES_DO_DESENHO]}]},
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "bateria": 45,
          "forca": 0.3, "controles": [{"id": "luz", "tipo": "chave", "valor": False,
-                                      "dica": "Acesa"}]},
+                                      "dica": "Acesa", "icone": "lampada"}]},
         {"id": "ap-3", "nome": "Aparelho 3", "estado": "ligado", "ligado": True, "bateria": 62,
          "forca": 0.5},
         {"id": "ap-4", "nome": "Aparelho 4", "estado": "ligado", "ligado": False, "bateria": 18,

@@ -1221,7 +1221,6 @@ class _Mexida:
     conf_da_modificacao: str = ""
     nota_do_css: str = ""
     aba: str = ""
-    com_controles: bool = False
     armada: tuple[str, ...] = ()
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
 
@@ -1234,7 +1233,6 @@ class _Mexida:
         self.agora = ()
         self.rascunho = {}
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
-        self.com_controles = False
         self.armada = ()
         self.pintura.esquecer()
 
@@ -1558,7 +1556,6 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     _VIVA.com_o_modo(mod_id, _o_modo_de(manifesto, valores) or None)
     _MEXIDA.agora = tuple(manifesto.agora)
     estado = _estado_da_janela(manifesto)
-    _MEXIDA.com_controles = bool(_aba_dos_controles(manifesto) and exp.com_controles(estado))
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
         estado=estado, parar_tudo=manifesto.parar_tudo,
@@ -2557,25 +2554,20 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
             _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
             porque=item.porque, gestao=gestao)
     aba_cc = _aba_dos_controles(manifesto)
-    cartoes = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso) if aba_cc else ""
-    if bool(cartoes) != _MEXIDA.com_controles:
-        _montar_a_janela_da_extensao(mod_id, item)
-        blocos.update(_MEXIDA.pintura.blocos(_MEXIDA.html_mod))
-    elif cartoes:
-        blocos["#mod-controles"] = cartoes
+    if aba_cc:
+        blocos["#mod-controles"] = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso)
     acoes = tuple(_acao_da_janela(a) for a in manifesto.acoes)
-    if acoes or (aparelhos and aparelhos.grupo) or cartoes:
+    if acoes or (aparelhos and aparelhos.grupo) or aba_cc:
         grupos = [exp.OpcaoDaJanela(mod_id, o.id, o.rotulo, o.tipo, "", grupo=o.grupo or "")
                   for o in manifesto.opcoes if o.tipo != "livre"]
-        com_cc = aba_cc if cartoes else ""
-        for n, delas in exp.acoes_por_aba(grupos, acoes, aparelhos, com_cc).items():
+        for n, delas in exp.acoes_por_aba(grupos, acoes, aparelhos, aba_cc).items():
             blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(
                 mod_id, delas, em_curso, _armada_de(mod_id))
     if manifesto.opcao_livre is not None:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
         blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)
         carga.setdefault("mesa", {})[exp.CAMPO_DA_BARRA_FORA] = exp.dica_da_barra_fora(
-            manifesto.nome, exp.processo_de(item.entrada.ligada, item.estado))
+            manifesto.nome, exp.processo_de(item.entrada.ligada, item.estado), gestao)
     return carga
 
 
@@ -2725,6 +2717,16 @@ def _numero(texto: Any) -> float:
         return 0.0
 
 
+def _sem_alvo(mod_id: str) -> bool:
+    """A extensão que gere aparelhos e não tem nenhum ativo agora: a barra não tem para onde ir,
+    pela mesma regra que a apaga (``exp.sem_alvo``)."""
+    item = _a_instalada_ou_nada(mod_id)
+    aparelhos = _aparelhos_da_janela(item.manifesto) if item and item.manifesto else None
+    if not aparelhos:
+        return False
+    return exp.sem_alvo(exp.Gestao(mod_id, aparelhos, _AGORA.agora(), frozenset()))
+
+
 @gesto("07-lancadores.html", exp.GESTO_DO_LIVRE)
 def mover_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O arrastar do controle livre, um gesto VIVO (a cada ``input``): manda e não grava nada.
@@ -2734,6 +2736,8 @@ def mover_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     """
     _MEXIDA.armada = ()
     mod_id, opcao_id, valor = _do_trilho(o, exp.GESTO_DO_LIVRE)
+    if _sem_alvo(mod_id):
+        return {}
     _VIVA.enviar(mod_id, opcao_id, valor, vivo=int(_numero(o.get("vivo"))),
                  carimbo=_numero(o.get("carimbo")), soltou=False, ponte=p)
     return {}
@@ -2747,6 +2751,8 @@ def soltar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any],
     if str(o.get("evento") or "") != "change":
         return None
     mod_id, opcao_id, valor = _do_trilho(o, exp.GESTO_DE_SOLTAR)
+    if _sem_alvo(mod_id):
+        raise RuntimeError(f"{exp.DICA_DA_BARRA_SEM_ALVO} Nada foi enviado.")
     resposta = _VIVA.enviar(mod_id, opcao_id, valor, vivo=0, carimbo=_numero(o.get("carimbo")),
                             soltou=True, ponte=p)
     ok, motivo, corpo = resposta or (True, None, {"enviado": True})

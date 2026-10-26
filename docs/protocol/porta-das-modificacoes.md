@@ -430,15 +430,18 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   antes; o botão pisca e a frase vai ao diário. `modos` fora do `livre` recusa o manifesto.
 - **`aparelhos_controles`**: `{grupo}`, a aba em que moram os `controles` que cada aparelho declara no
   `acessorios.estado`. O aparelho com `controles` tem `id`, e leva até 6 deles, `{id, tipo, valor, opcoes?, rotulo?, <!-- noqa-acento: chave do estado -->
-  dica?}`, com ids sem repetição e nenhum igual ao de uma das `aparelhos_acoes` (o clique dos dois chega como a
+  dica?, icone?}`, com ids sem repetição e nenhum igual ao de uma das `aparelhos_acoes` (o clique dos dois chega como a
   mesma `extensao.acao`, com `acao` e `alvo`, e a porta recusa o estado dizendo o id). O `tipo` é `chave` (`valor` verdadeiro ou falso), `paleta` (`opcoes` = <!-- noqa-acento: chave do estado -->
   `[{id, cor, rotulo?}]`, a `cor` em `#rrggbb` ou uma lista de até 3 delas, desenhada como um ponto em fatias; o
   `rotulo` é a dica do ponto) ou `escolha` (`opcoes` = `[{id, rotulo}]`); a paleta e a escolha levam de 1 a 16
   opções, e o `valor` delas é o `id` de uma opção ou `null`. O `rotulo` (até 30 letras) nomeia a linha do controle
-  (a paleta sem ele diz «Cor») e a `dica` (até 120) é a dica dele. A janela desenha naquela aba um cartão por
+  (a paleta sem ele diz «Cor») e a `dica` (até 120) é a dica dele. O `icone` (só `lampada`, por ora) é o glifo do
+  que a chave controla, desenhado antes dela: é o que a separa da chave que liga o aparelho; sem ele, a chave leva o
+  `rotulo` escrito. A janela desenha naquela aba um cartão por
   aparelho com `controles`: a primeira chave no topo, ao lado do nome, e uma linha por controle embaixo, a paleta
-  com as cores de um ponto numa fileira e as de duas ou três noutra. O aparelho sem `controles` não ganha cartão,
-  e sem aparelho com controle a aba não aparece. O cartão mostra o `valor` do estado: o clique pede, e o valor novo
+  com as cores de um ponto numa fileira e as de duas ou três noutra. O aparelho sem `controles` não ganha cartão;
+  a aba existe sempre que o manifesto a declara e, sem aparelho com controle, mostra a linha vazia. Como em toda a
+  janela, o aparelho com `ligado` falso ou `estado` diferente de `ligado` aparece apagado. O cartão mostra o `valor` do estado: o clique pede, e o valor novo
   só aparece quando a extensão o devolve. Um controle torto recusa o estado inteiro, com a frase.
 
 A extensão recebe as três como eventos (`{"method": "evento", "params": {"topico", "nome", "uniq": null,

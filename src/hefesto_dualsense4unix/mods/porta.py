@@ -66,6 +66,7 @@ TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
 ITENS_DO_ESTADO = 32
 CONTROLES_DO_APARELHO = 6
 TIPOS_DO_CONTROLE = ("chave", "paleta", "escolha")
+ICONES_DO_CONTROLE = ("lampada",)
 OPCOES_DO_CONTROLE = 16
 CORES_DO_PONTO = 3
 _COR_DO_PONTO = re.compile(r"#[0-9a-fA-F]{6}")
@@ -471,7 +472,8 @@ def _controles_do_aparelho(bruto: Any, tem_id: bool,
 
 def _controle(bruto: Any) -> dict[str, Any]:
     """Um controle do aparelho: a chave leva o valor verdadeiro ou falso; a paleta e a escolha levam
-    as opções e, no valor, o ``id`` de uma delas (ou nulo). O rótulo e a dica são opcionais."""
+    as opções e, no valor, o ``id`` de uma delas (ou nulo). O rótulo, a dica e o ícone (um de
+    ``ICONES_DO_CONTROLE``, o glifo do que a chave controla) são opcionais."""
     if not isinstance(bruto, dict):
         raise _recusa_do_estado(
             "cada controle é um objeto {id, tipo, valor, opcoes, dica}.")  # (noqa-acento)
@@ -494,6 +496,11 @@ def _controle(bruto: Any) -> dict[str, Any]:
                                  "o rótulo de um controle", 30)
     if bruto.get("dica") is not None:
         saida["dica"] = _curto(bruto["dica"], "a dica de um controle", 120)
+    if bruto.get("icone") is not None:
+        if bruto["icone"] not in ICONES_DO_CONTROLE:
+            raise _recusa_do_estado(
+                f"o ícone de um controle é um de {', '.join(ICONES_DO_CONTROLE)}.")
+        saida["icone"] = bruto["icone"]
     return saida
 
 

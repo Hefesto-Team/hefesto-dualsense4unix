@@ -20,6 +20,9 @@ MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
 - (25/10/2026, no desenho regerado) o grupo sem quebrar a fileira (``nowrap``), a coluna do
   rótulo de volta aos 40px, e os dois juntos como eram, reprovam
   ``test_toda_opcao_do_contrato_fica_inteira_e_o_rotulo_nao_invade`` nas duas vistas.
+- (26/10/2026, na página gerada agora) o ``padding-bottom`` de volta à linha do controle faz a aba
+  rolar e reprova a mesma régua; a aba nascida do estado reprova
+  ``test_sem_aparelho_com_controles_a_aba_fica_vazia_e_o_primeiro_a_enche``.
 """
 
 from __future__ import annotations
@@ -54,6 +57,9 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
     _pecas as _pecas_geridas,
     _servico,
     janela,
+)
+from tests.unit.test_a_lista_da_janela_configurar_nao_pula_ao_clicar_um_efeito import (  # noqa: F401
+    pagina_fresca,
 )
 
 ABA = "Luz"
@@ -137,26 +143,23 @@ def test_tres_aparelhos_dao_dois_cartoes_cada_um_com_os_seus(janela: Any, ctx: A
     assert 'aria-checked="true"' in um and 'aria-checked="false"' in dois
 
 
-def test_sem_aparelho_com_controles_a_aba_some_e_volta_com_o_primeiro(
+def test_sem_aparelho_com_controles_a_aba_fica_vazia_e_o_primeiro_a_enche(
         janela: Any, ctx: Any) -> None:  # noqa: F811
+    """A aba nasce do manifesto (O-ESTADO-DO-APARELHO-SE-VE-IGUAL-EM-TODA-A-JANELA-DA-EXTENSAO-01):
+    sem aparelho com controle ela mostra a linha vazia, e o tique a enche sem refazer a janela."""
     a07, instalar, abrir = janela
     instalar(**_pecas())
     sem = [{k: v for k, v in ap.items() if k != "controles"} for ap in _aparelhos()]
     ponte = _Ponte(_estado(sem))
     html = abrir(ponte)["blocos"]["#mod-janela"]
-    assert f">{ABA}</label>" not in html and "mod-controles" not in html, "a aba vazia apareceu"
-    ponte.estado = _estado(serie=2)
-    a07._AGORA.ler("toque", ponte)
-    blocos = a07._com_os_aparelhos({"blocos": {}})["blocos"]
-    assert f">{ABA}</label>" in blocos.get("#mod-janela", ""), "o tique não trouxe a aba nova"
-    assert set(_cartoes(blocos["#mod-janela"])) == {"ap-1", "ap-2"}
-    blocos = a07._com_os_aparelhos({"blocos": {}})["blocos"]
-    assert "#mod-janela" not in blocos
-    assert set(_cartoes(blocos["#mod-controles"])) == {"ap-1", "ap-2"}
-    ponte.estado = _estado(sem, serie=3)
-    a07._AGORA.ler("toque", ponte)
-    blocos = a07._com_os_aparelhos({"blocos": {}})["blocos"]
-    assert f">{ABA}</label>" not in blocos.get("#mod-janela", "-"), "a aba ficou sem controle"
+    assert f">{ABA}</label>" in html and 'id="mod-controles"><div class="mj-cc-vazio">' in html
+    for serie, alvos in ((2, {"ap-1", "ap-2"}), (3, set())):
+        ponte.estado = _estado(sem if not alvos else None, serie=serie)
+        a07._AGORA.ler("toque", ponte)
+        blocos = a07._com_os_aparelhos({"blocos": {}})["blocos"]
+        assert "#mod-janela" not in blocos, "o tique refez a janela inteira"
+        assert set(_cartoes(blocos["#mod-controles"])) == alvos
+        assert ("mj-cc-vazio" in blocos["#mod-controles"]) is not bool(alvos)
 
 
 @pytest.mark.parametrize(("grupo", "abas"), [
@@ -407,14 +410,15 @@ print(json.dumps(saida))
 """
 
 
-def rodar_no_webkit(casos: dict[str, tuple[int, int, list[list[Any]]]]) -> dict[str, list[Any]]:
+def rodar_no_webkit(casos: dict[str, tuple[int, int, list[list[Any]]]],
+                    pagina: pathlib.Path = DESENHO) -> dict[str, list[Any]]:
     """Os passos de cada caso no desenho, num WebKit de verdade; sem WebKit, o teste é pulado."""
     import os
     import subprocess
     import sys
 
     ambiente = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-    filho = subprocess.run([sys.executable, "-c", SONDA, str(DESENHO)], input=json.dumps(casos),
+    filho = subprocess.run([sys.executable, "-c", SONDA, str(pagina)], input=json.dumps(casos),
                            env=ambiente, capture_output=True, text=True, timeout=300)
     if filho.returncode != 0:
         pytest.skip(f"o WebKit não subiu na tela de mentira: {filho.stderr.strip()[-300:]}")
@@ -472,12 +476,12 @@ _MEDIR = """(function(){
 
 
 @pytest.fixture(scope="module")
-def na_borda() -> dict[str, dict[str, Any]]:
+def na_borda(pagina_fresca: pathlib.Path) -> dict[str, dict[str, Any]]:  # noqa: F811
     html = _cartoes_na_borda()
     casos: dict[str, tuple[int, int, list[list[Any]]]] = {
         f"{w}x{h}": (w, h, [["js", _ABRIR % json.dumps(html)], ["espera", 0.5], ["js", _MEDIR]])
         for w, h in VISTAS}
-    return {k: json.loads(v[1]) for k, v in rodar_no_webkit(casos).items()}
+    return {k: json.loads(v[1]) for k, v in rodar_no_webkit(casos, pagina_fresca).items()}
 
 
 @pytest.mark.parametrize("vista", [f"{w}x{h}" for w, h in VISTAS])
