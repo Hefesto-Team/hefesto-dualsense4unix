@@ -1094,16 +1094,18 @@ class FsAclOps:
     def processo(self, pid: int) -> _Processo | None:
         """O início (campo 22 do ``stat``), o uid real e o ``comm`` de ``pid``; ``None`` = sumiu."""
         pasta = f"{self._proc_root}/{pid}"
-        try:
+        with contextlib.suppress(FileNotFoundError, ProcessLookupError):
             with open(f"{pasta}/stat", encoding="ascii", errors="replace") as fh:
-                campos = fh.read().rsplit(")", 1)[1].split()
+                campos = fh.read().rsplit(")", 1)[-1].split()
             with open(f"{pasta}/status", encoding="ascii", errors="replace") as fh:
-                uid = next(int(linha.split()[1]) for linha in fh if linha.startswith("Uid:"))
+                uid = next((int(linha.split()[1]) for linha in fh if linha.startswith("Uid:")),
+                           None)
             with open(f"{pasta}/comm", encoding="utf-8", errors="replace") as fh:
                 comm = fh.read().strip()
+            if uid is None or len(campos) < 20 or not campos[19].isdigit():
+                return None
             return _Processo(inicio=int(campos[19]), uid=uid, comm=comm)
-        except (OSError, IndexError, ValueError, StopIteration):
-            return None
+        return None
 
     def inicio_do_processo(self, pid: int) -> int | None:
         """O início de ``pid`` no relógio do boot: o par ``(pid, início)`` não se recicla."""
@@ -1127,25 +1129,23 @@ class FsAclOps:
     def _seguradores(
         self, alvos: dict[str, tuple[str, os.stat_result]]
     ) -> list[tuple[int, int, str, os.stat_result]]:
-        """``(pid, fd, nó, stat do nó)`` de cada descritor aberto num dos ``alvos``."""
-        try:
-            pids = sorted(int(n) for n in os.listdir(self._proc_root) if n.isdigit())
-        except OSError:
-            return []
+        """``(pid, fd, nó, stat do nó)`` de cada descritor aberto num dos ``alvos``.
+
+        O processo ou o descritor que some no meio da varredura não conta; o ``/proc`` que
+        não se lê (a unit sem a capacidade) levanta, e quem chama o diz no diário.
+        """
+        pids = sorted(int(n) for n in os.listdir(self._proc_root) if n.isdigit())
         achados: list[tuple[int, int, str, os.stat_result]] = []
         for pid in pids:
             pasta = f"{self._proc_root}/{pid}/fd"
-            try:
-                fds = sorted(int(n) for n in os.listdir(pasta) if n.isdigit())
-            except OSError:
-                continue
-            for fd in fds:
-                try:
-                    alvo = alvos.get(os.path.basename(os.readlink(f"{pasta}/{fd}")))
-                    if alvo is not None and _mesmo_no(os.stat(f"{pasta}/{fd}"), alvo[1]):
-                        achados.append((pid, fd, alvo[0], alvo[1]))
-                except OSError:
-                    continue
+            with contextlib.suppress(FileNotFoundError, ProcessLookupError):
+                for nome in sorted(os.listdir(pasta), key=lambda n: (len(n), n)):
+                    if not nome.isdigit():
+                        continue
+                    with contextlib.suppress(FileNotFoundError):
+                        alvo = alvos.get(os.path.basename(os.readlink(f"{pasta}/{nome}")))
+                        if alvo is not None and _mesmo_no(os.stat(f"{pasta}/{nome}"), alvo[1]):
+                            achados.append((pid, int(nome), alvo[0], alvo[1]))
         return achados
 
     @staticmethod

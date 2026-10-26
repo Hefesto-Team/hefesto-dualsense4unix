@@ -266,6 +266,15 @@ def test_o_hidraw_que_alguem_segura_so_vai_ao_diario(tmp_path: Path) -> None:
         {"node": cena.nos[0], "pid": TECLADO, "comm": "steam", "motivo": "sem_revoke"}]
 
 
+def test_o_proc_que_nao_se_le_vai_ao_diario(tmp_path: Path) -> None:
+    cena = _Cena(tmp_path)
+    m = cena.mundo
+    m.fechar()
+    m.proc.rmdir()
+    cena.estado._aplicar_entradas(cena.nos[0])
+    assert [c["node"] for c in cena.linhas("revogar_falhou")] == [cena.nos[0]]
+
+
 def test_o_no_aberto_a_sessao_nao_se_revoga(tmp_path: Path) -> None:
     """Exposto de propósito (o físico com o jogo), o nó é de quem o abriu."""
     cena = _Cena(tmp_path)
