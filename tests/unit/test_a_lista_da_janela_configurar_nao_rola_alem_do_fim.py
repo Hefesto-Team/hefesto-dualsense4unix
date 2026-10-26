@@ -73,7 +73,7 @@ _ABA = """(function(n){
   return JSON.stringify({aba: j.querySelectorAll('.mj-abas > label')[n].textContent,
     visivel: caixa.clientHeight, total: caixa.scrollHeight, rolou: caixa.scrollTop,
     rola: rolam.length > 0, lado: tela.getBoundingClientRect().right - direita(tela),
-    alta: tela.clientHeight,    folga: r.bottom - fundo(tela), fim: fim,
+    alta: tela.clientHeight, folga: r.bottom - fundo(tela), fim: fim,
     janela: [Math.round(jr.top), Math.round(jr.bottom)], aba_y: Math.round(rotulo.top)});
 })(%d)"""
 
