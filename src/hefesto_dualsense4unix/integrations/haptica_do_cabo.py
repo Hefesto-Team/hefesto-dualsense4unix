@@ -105,9 +105,12 @@ class HapticaDoCabo:
         """As marcas com laço pedido, e a rota de cada uma. Leitura."""
         return dict(self._rotas)
 
-    def volume_aplicado(self, marca: str) -> bool:
-        """O volume dos motores já foi aplicado ao laço do aparelho?"""
-        return marca in self._motores
+    def leva_os_motores(self, marca: str) -> bool:
+        """O volume dos motores se aplicou ao laço e é maior que 0 (com 0 a háptica não chega)."""
+        try:
+            return float(self._motores.get(marca, "0")) > 0
+        except ValueError:
+            return False
 
     def casar(
         self,

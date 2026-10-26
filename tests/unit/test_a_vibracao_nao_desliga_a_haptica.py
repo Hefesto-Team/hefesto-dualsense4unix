@@ -261,7 +261,7 @@ def test_no_cabo_o_laco_aberto_com_o_endpoint_tocando_conta(
     rota = SimpleNamespace(dono=UNIQS[3])
     portoes = {"aparelho-3": True}
     sub._cabo = SimpleNamespace(
-        aparelhos=lambda: {"aparelho-3": rota}, volume_aplicado=lambda marca: portoes.get(marca)
+        aparelhos=lambda: {"aparelho-3": rota}, leva_os_motores=lambda marca: portoes.get(marca)
     )
     controles = [SimpleNamespace(uniq=UNIQS[3])]
 

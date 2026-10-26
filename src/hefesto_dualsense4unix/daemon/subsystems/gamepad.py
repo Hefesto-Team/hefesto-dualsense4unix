@@ -751,9 +751,9 @@ def _levar_a_haptica_fina(
     """O rumble do pad SEM háptica vai à háptica fina do lugar. True = ela leva.
 
     ``weak``/``strong`` são o par escalado pela barra; ``cru``, o pedido do jogo (a borda e
-    o lado do tiro saem dele). O pad ``uinput`` converte sempre; o ``uhid`` só com a háptica do
-    jogo tocando no controle (o bit do report que acorda o motor a calaria), e anota o rumble
-    (``vivo``) para a volta reaplicá-lo na borda. Quem não converte manda ZERO ao dono.
+    o lado do tiro saem dele). O pad ``uinput`` converte sempre; o ``uhid`` só onde o motor do
+    report não serve (a háptica tocando ou a ponte do rádio de pé), e anota o rumble (``vivo``)
+    para a volta reaplicá-lo na borda. Quem não converte manda ZERO ao dono.
     """
     if not isinstance(target_uniq, str) or not target_uniq:
         return False
@@ -762,7 +762,7 @@ def _levar_a_haptica_fina(
     if not callable(levar):
         return False
     e_xbox = getattr(vpad, "backend", None) == "uinput"
-    converte = e_xbox or _o_jogo_toca_a_haptica(alto_falante, target_uniq)
+    converte = e_xbox or _a_vibracao_vai_pelo_audio(alto_falante, target_uniq)
     # O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01: a onda do periódico que o jogo pediu.
     onda = getattr(vpad, "onda_do_periodico", None) if e_xbox else None
     extra: dict[str, Any] = {"onda": onda} if isinstance(onda, str) else {}
@@ -787,9 +787,9 @@ def _levar_a_haptica_fina(
     return converte and leva is True
 
 
-def _o_jogo_toca_a_haptica(alto_falante: Any, target_uniq: str) -> bool:
-    """A háptica por áudio do jogo toca no endpoint deste controle e chega a ele? Nunca levanta."""
-    pergunta = getattr(alto_falante, "o_jogo_toca_a_haptica_em", None)
+def _a_vibracao_vai_pelo_audio(alto_falante: Any, target_uniq: str) -> bool:
+    """O motor do report não serve a este controle agora (háptica tocando, ponte do rádio)?"""
+    pergunta = getattr(alto_falante, "a_vibracao_vai_pelo_audio_em", None)
     if not callable(pergunta):
         return False
     try:

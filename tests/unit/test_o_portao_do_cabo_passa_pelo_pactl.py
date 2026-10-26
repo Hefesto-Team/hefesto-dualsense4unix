@@ -90,7 +90,7 @@ def test_a_falha_do_portao_deixa_rastro_em_info_uma_vez() -> None:
     assert [(r["log_level"], r["uniq"], r["motivo"]) for r in falhas] == [
         ("info", _BRANCO, "pactl_recusou")
     ], "a recusa sai uma vez, e não a cada volta"
-    assert cabo.volume_aplicado(_MARCA) is True, "a volta seguinte tentou de novo e abriu"
+    assert cabo.leva_os_motores(_MARCA) is True, "a volta seguinte tentou de novo e abriu"
 
 
 def test_sem_o_fluxo_do_laco_a_falha_diz_o_motivo() -> None:

@@ -1248,16 +1248,16 @@ class AltoFalanteSubsystem:
             self._rumble_vivo = MappingProxyType(vivos)
         return retrato
 
-    def o_jogo_toca_a_haptica_em(self, uniq: str) -> bool:
-        """A háptica por áudio toca no endpoint deste controle e o caminho até ele está de pé.
+    def a_vibracao_vai_pelo_audio_em(self, uniq: str) -> bool:
+        """O motor pelo report não serve a este controle agora: a vibração vai como áudio.
 
-        É o mesmo dado que o controlador recebe em ``set_haptica_de_audio_for`` (o endpoint com
-        fluxo e o laço do cabo ou a ponte do rádio de pé). Quem o pergunta é a porta do rumble do
-        jogo: com a háptica tocando, a vibração do pad DualSense também vai como áudio, porque o
-        bit do report que acorda o motor cala o PCM. Nunca levanta.
+        A háptica toca nele (o bit do motor a calaria) ou a ponte do rádio o desliga por quadro.
         """
         try:
-            return any(_mesmo_controle(u, uniq) for u in self._com_haptica_de_audio)
+            return any(_mesmo_controle(u, uniq) for u in self._com_haptica_de_audio) or any(
+                _mesmo_controle(u, uniq) and bool(getattr(p, "esta_de_pe", lambda: False)())
+                for u, p in list(self._pontes.items())
+            )
         except Exception:
             return False
 
@@ -1538,12 +1538,12 @@ class AltoFalanteSubsystem:
                 self._soltar_o_teste_da_haptica(chave)
 
     def _retrato_do_rumble(self, chave: str) -> tuple[str | None, bool, bool, bool]:
-        """``(marca, quer o rumble pelo áudio, a háptica leva, o jogo toca a háptica)`` agora."""
+        """``(marca, quer o rumble pelo áudio, a háptica leva, vai pelo áudio)`` agora."""
         return (
             self._aparelho_de.get(chave),
             self._quer_o_rumble_pelo_audio(chave),
             self._a_haptica_leva(chave),
-            self.o_jogo_toca_a_haptica_em(chave),
+            self.a_vibracao_vai_pelo_audio_em(chave),
         )
 
     def _esquecer_o_rumble(self, uniq: str) -> None:
@@ -1639,7 +1639,7 @@ class AltoFalanteSubsystem:
         if cabo is not None and marca is not None:
             rota = cabo.aparelhos().get(marca)
             if rota is not None and getattr(rota, "dono", "") == chave:
-                return bool(cabo.volume_aplicado(marca))
+                return cabo.leva_os_motores(marca) is True
         ponte = self._pontes.get(chave)
         endpoint = self._endpoints.get(marca) if marca is not None else None
         if ponte is None or endpoint is None:
@@ -2306,7 +2306,7 @@ class AltoFalanteSubsystem:
 
         Tocando = o endpoint com fluxo E o caminho de pé (a ponte do rádio levando a háptica,
         o laço aberto no cabo). O conjunto se guarda mesmo sem controlador que ouça a borda:
-        :meth:`o_jogo_toca_a_haptica_em` o lê. Servidor de som mudo deixa tudo como estava.
+        :meth:`a_vibracao_vai_pelo_audio_em` o lê. Servidor de som mudo deixa tudo como estava.
         """
         definir = getattr(self._backend, "set_haptica_de_audio_for", None)
         from hefesto_dualsense4unix.integrations.alto_falante_bt import sinks_que_tocam
@@ -2351,7 +2351,7 @@ class AltoFalanteSubsystem:
         if cabo is not None:
             rota = cabo.aparelhos().get(marca)
             if rota is not None and getattr(rota, "dono", "") == chave:
-                return bool(cabo.volume_aplicado(marca))
+                return cabo.leva_os_motores(marca) is True
         dono = uniq if uniq in self._pontes else chave
         ponte = self._pontes.get(dono)
         if ponte is None or not self._a_ponte_leva_a_haptica(dono):

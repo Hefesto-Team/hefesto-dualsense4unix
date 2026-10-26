@@ -22,6 +22,7 @@ from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
+from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 from tests.unit import test_a_haptica_chega_a_quem_entra_depois as _da_mesa
@@ -211,7 +212,7 @@ def test_o_pad_uhid_com_a_haptica_do_jogo_tocando_vibra_como_audio(
     controles = _montar(mundo, transporte)
     mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(uniq))
     mundo.mesa.volta(*controles)
-    assert mundo.sub.o_jogo_toca_a_haptica_em(uniq), "a háptica do jogo não chegou ao controle"
+    assert mundo.sub.a_vibracao_vai_pelo_audio_em(uniq), "a háptica do jogo não chegou ao controle"
 
     mundo.rumble(uniq, 100, 200, vpad=UhidDualSense(player=1))
     mundo.mesa.volta(*controles)
@@ -230,7 +231,7 @@ def test_o_pad_uhid_sem_a_haptica_do_jogo_segue_nos_motores_do_hid(
     """
     controles = _montar(mundo, transporte)
     mundo.mesa.volta(*controles)
-    assert not mundo.sub.o_jogo_toca_a_haptica_em(_QUATRO[0])
+    assert not mundo.sub.a_vibracao_vai_pelo_audio_em(_QUATRO[0])
 
     assert mundo.rumble(_QUATRO[0], 100, 200, vpad=UhidDualSense(player=1)) == (100, 200)
     assert _Tocador.criados == {}
@@ -280,3 +281,61 @@ def test_o_marcador_do_tocador_separa_o_nosso_fluxo_do_do_jogo(mundo: _Mundo) ->
     mundo.mesa.volta(*controles)
     assert mundo.fluxos.tocando == {_MARCA[_QUATRO[0]]: "61"}
     assert mundo.sub._donos_dos_fluxos() == frozenset()
+
+
+# --- a soma das duas curas: a ponte do rádio e o ganho em 0 não calam o motor -----------------
+
+
+@pytest.mark.parametrize("uniq", _QUATRO, ids=["P1", "P2", "P3", "P4"])
+def test_no_radio_a_ponte_de_pe_so_com_o_som_leva_a_vibracao_do_pad_uhid_como_audio(
+    mundo: _Mundo, monkeypatch: pytest.MonkeyPatch, uniq: str
+) -> None:
+    """O alto-falante do controle tocando, sem háptica: o rumble do pad ``uhid`` vira áudio.
+
+    Medido em 26/10/2026: o ``0x36`` da ponte, de comum zerado, desliga a cada quadro o motor
+    que o ``0x31`` pediu («uma batida e apagou»). Com a ponte de pé só para o som, o rumble ia
+    ao HID e morria ali; agora ele toca no endpoint, a ponte passa a levar a háptica, e o HID
+    fica em zero. MORDIDA: tire de ``a_vibracao_vai_pelo_audio_em`` o caso da ponte de pé e o
+    tocador nem nasce, com o HID a (100, 200) sob a ponte.
+    """
+    monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
+    controles = _no_radio_os_quatro(mundo)
+    som = af.nome_do_sink(uniq)
+    mundo.mesa.servidor.placa(som, "/devices/virtual/som")
+    mundo.mesa.servidor.jogo_em.add(som)
+    mundo.mesa.volta(*controles)
+    assert uniq in mundo.sub._pontes, "a ponte do som não subiu"
+    assert mundo.sub._leva_da_ponte.get(uniq) is not True
+
+    mundo.rumble(uniq, 100, 200, vpad=UhidDualSense(player=1))
+    assert mundo.tocador(uniq).nivel == (100, 200), "o rumble foi ao HID, sob a ponte que o desliga"
+    mundo.mesa.volta(*controles)
+
+    assert mundo.sub._leva_da_ponte.get(uniq) is True, "a ponte não ganhou a vibração"
+    assert mundo.backend.do(uniq)[-1] == (0, 0), "o HID seguiu com o motor sob a ponte"
+
+
+@pytest.mark.parametrize("transporte", ["cabo", "radio"])
+def test_com_a_haptica_em_zero_a_vibracao_do_pad_uhid_segue_no_motor_nos_dois_transportes(
+    mundo: _Mundo, monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
+    """A háptica do controle em 0 e o jogo tocando no endpoint: o motor do HID segue vibrando.
+
+    O ganho em 0 cala o áudio do controle, e por ele a vibração não chegaria; o report não pode
+    perder o bit que acorda o motor por uma háptica que não chega. Antes, no cabo o laço com
+    os traseiros em ``0.0000`` contava como háptica chegando, e no rádio não: o mesmo controle
+    vibrava num transporte e ficava mudo no outro. MORDIDA: faça ``leva_os_motores`` devolver
+    só «o volume se aplicou» e o cabo diz a háptica ao controlador.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import alto_falante as sub_mod
+
+    monkeypatch.setattr(sub_mod.GANHO, "pct", lambda _u: 0)
+    monkeypatch.setattr(sub_mod.GANHO, "fator", lambda _u: 0.0)
+    controles = _montar(mundo, transporte)
+    mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_QUATRO[0]))
+    mundo.mesa.volta(*controles)
+
+    assert _QUATRO[0] not in mundo.sub._com_haptica_de_audio, "a háptica em 0 contou como chegando"
+    assert not mundo.sub.a_vibracao_vai_pelo_audio_em(_QUATRO[0])
+    assert mundo.rumble(_QUATRO[0], 100, 200, vpad=UhidDualSense(player=1)) == (100, 200)
+    assert mundo.backend.do(_QUATRO[0])[-1] == (100, 200)
