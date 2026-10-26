@@ -510,13 +510,14 @@
   color:var(--texto-suave);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;overflow:hidden }
 #mod-janela .mj-abas > label:hover { color:var(--fg) }
 #mod-janela .mj-abas > input:checked + label { color:var(--purple);border-bottom-color:var(--purple) }
-#mod-janela .mj-aba-chave { display:inline-flex;align-items:center;margin-left:7px }
+#mod-janela .mj-aba-chave { display:inline-flex;align-items:center;margin-left:2px }
 #mod-janela .mj-abas > label:has(.mj-bolinha:not(.on)) { opacity:.6 }
-.mj-bolinha { display:block;width:8px;height:8px;border-radius:50%;background:var(--texto-mudo);cursor:pointer;
+.mj-bolinha { display:grid;place-items:center;width:18px;height:24px;cursor:pointer }
+.mj-bolinha::before { content:"";width:8px;height:8px;border-radius:50%;background:var(--texto-mudo);
   box-shadow:0 0 0 3px transparent }
-.mj-bolinha:hover { box-shadow:0 0 0 3px var(--border-forte) }
-.mj-bolinha.on { background:var(--green);box-shadow:0 0 6px var(--green) }
-.ac-tit .mj-aba-chave { display:inline-flex;align-items:center;margin-left:8px;vertical-align:middle }
+.mj-bolinha:hover::before { box-shadow:0 0 0 3px var(--border-forte) }
+.mj-bolinha.on::before { background:var(--green);box-shadow:0 0 6px var(--green) }
+.ac-tit .mj-aba-chave { display:inline-flex;align-items:center;margin-left:3px;vertical-align:middle }
 .mj-da-chave.apagada { opacity:.5 }
 #mod-janela .mj-abas > .mj-tela { grid-row:2;grid-column:1 / -1;visibility:hidden;border-top:1px solid var(--border-sutil);
   padding-top:6px;min-width:0 }

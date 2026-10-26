@@ -15,6 +15,8 @@ MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas):
   ``test_a_chave_desligada_apaga_as_linhas_da_aba`` e a leitura do WebKit;
 - a regra ``.mj-da-chave.apagada`` arrancada do CSS reprova a opacidade lida no WebKit;
 - a regra do rótulo apagado (``label:has(.mj-bolinha:not(.on))``) arrancada reprova a mesma leitura.
+- o ponto de volta ao próprio ``i`` (sem o ``::before``) fica com 24 px de altura, puxado pelo
+  ``[data-gesto] { min-height:24px }``, e reprova a leitura da bolinha redonda.
 """
 
 from __future__ import annotations
@@ -128,12 +130,15 @@ _LER = """(function(){
     .find(t => getComputedStyle(t).visibility === 'visible');
   const rot = j.querySelector('.mj-abas > input:checked + label');
   const b = rot.querySelector('.mj-bolinha'), lista = tela.querySelector('.tq-lista');
+  const ponto = b ? getComputedStyle(b, '::before') : null;
   const nomes = [...j.querySelectorAll('.mj-abas > label')].map(l => l.textContent.trim());
   const linhas = [...j.querySelectorAll('.mj-tela .ky-rot span')].map(s => s.textContent.trim());
   const sel = tela.querySelector('select');
   return JSON.stringify({aba: rot.textContent, rotulo: getComputedStyle(rot).opacity,
-    cor: b ? getComputedStyle(b).backgroundColor : null,
-    largura: b ? b.getBoundingClientRect().width : 0, dentro: b ? rot.contains(b) : false,
+    cor: ponto ? ponto.backgroundColor : null,
+    largura: ponto ? parseFloat(ponto.width) : 0, altura: ponto ? parseFloat(ponto.height) : 0,
+    alvo: b ? b.getBoundingClientRect().height : 0,
+    dentro: b ? rot.contains(b) : false,
     opac: lista ? getComputedStyle(lista.closest('.mj-da-chave') || lista).opacity : null,
     repete: linhas.filter(r => nomes.includes(r)), mexivel: sel ? !sel.disabled : null});
 })()"""
@@ -159,6 +164,8 @@ def test_no_webkit_a_aba_tem_a_bolinha_e_apaga_as_linhas(
         ligada, desligada = json.loads(ligada), json.loads(desligada)
         assert ligada["aba"] == "Toques" and ligada["dentro"], (caso, ligada)
         assert ligada["largura"] >= 6, (caso, ligada)
+        assert ligada["largura"] == ligada["altura"] == 8, (caso, "a bolinha não é redonda", ligada)
+        assert ligada["alvo"] >= 24, (caso, "o alvo do clique encolheu", ligada)
         assert ligada["repete"] == [] and desligada["repete"] == [], (caso, ligada["repete"])
         assert ligada["cor"] == "rgb(80, 250, 123)", (caso, ligada["cor"])
         assert desligada["cor"] != ligada["cor"], (caso, desligada["cor"])
