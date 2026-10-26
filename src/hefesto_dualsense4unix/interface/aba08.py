@@ -1690,6 +1690,8 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
                             align-items:center}
   .radio .linha.nao-conectou,.radio .linha.desligado{cursor:default}
   .radio .linha.desligado .ds{opacity:.55}
+  /* o controle no cabo não está apagado: a silhueta fica na cor do plástico, como a do rádio */
+  .radio .linha.desligado.no-cabo .ds{opacity:1}
   .radio .lugar.nao-conectou{border-color:var(--orange)}
   /* O RÓTULO DA PISTA QUE É BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
      dela: *«nessa região o svg continua em branco não dá pra entender»*.
@@ -2132,6 +2134,14 @@ def _cena_do_desenho() -> dict:
     aparelhos.append({"id": "D9", "aparelho": "D9", "tipo": "controle", "lugar": cheio["id"],
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
+    # O controle da mesa que está no CABO (A-LINHA-DO-CABO-NAS-CONEXOES-TEM-A-COR-DO-CONTROLE-01): pareado
+    # neste adaptador e ligado no USB, a linha leva a cor e o jogador dele, como a do rádio.
+    for no_cabo in NO_CABO[:1]:
+        aparelhos.append({"id": f"cabo-{no_cabo['pref']}", "aparelho": f"cabo-{no_cabo['pref']}",
+                          "tipo": "controle", "lugar": vazio["id"], "nome": "",
+                          "rotulo": f"Player {no_cabo['jogador']}", "desligado": True, "usb": True,
+                          **_pacote08._a_cara_do_controle(no_cabo),
+                          "esperando": False, "fixo": True})
     cheio["nao_conectou"] = True
     # O aparelho do Bluetooth que nenhuma leitura nomeia, nem o enlace (O-APARELHO-DO-BLUETOOTH-SEM-
     # TIPO-SE-NOMEIA-PELA-PESSOA-01): a linha leva o «?» e a grade «O que é este aparelho?» o nomeia.

@@ -3350,6 +3350,7 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
                 f'tabindex="0" role="button" aria-label="{le} — Enter para mudar de adaptador">')
     else:
         estado = (" esperando" if esperando else " nao-conectou" if ap.get("nao_conectou")
+                  else " desligado no-cabo" if ap.get("desligado") and ap.get("usb")
                   else " desligado" if ap.get("desligado") else "")
         r3 = ' data-r3="14"' if tipo == TIPO_ENTRADA else ""
         abre = (f'<div class="linha{estado}" data-id="{aid}" '
@@ -4971,7 +4972,8 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     aparelhos += falhas
     no_usb = frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados
                        if str(c.get("transport") or "").lower() == "usb")
-    aparelhos += _os_desligados(aparelhos_bz, endereco_do_caminho, aparelhos, no_usb)
+    aparelhos += _os_desligados(aparelhos_bz, endereco_do_caminho, aparelhos, no_usb,
+                                {str(m.get("uniq") or ""): m for m in ctx.mesa})
     for lug in lugares:
         lug["nao_conectou"] = any(f["lugar"] == lug["id"] for f in falhas)
     declaracao_viva = _declaracao()
@@ -5210,16 +5212,12 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
         tipo = ("controle" if m.get("e_controle", True)
                 else _tipo_do_aparelho(str(m.get("icone") or ""),
                                        classe if isinstance(classe, int) else None))
-        cor = _hex_do_plastico(str(eu.get("cor") or ""))
         linhas.append({
             "id": f"nao-conectou-{_so_hex(destino)}-{_so_hex(aparelho)}", "aparelho": aparelho,
             "tipo": tipo, "lugar": destino, "nome": str(m.get("nome") or ""),
-            "modalias": str(m.get("modalias") or ""), "jogador": eu.get("jogador"),
+            "modalias": str(m.get("modalias") or ""), **_a_cara_do_controle(eu),
             "rotulo": ("DualSense" if tipo == "controle"
                        else PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()),
-            "cor": cor if cor.startswith("#") else "",
-            "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
-            else str(eu["nome"]),
             "nao_conectou": True, "esperando": False, "fixo": True,
             "pareado_aqui": (destino, aparelho) in pareados,
         })
@@ -5275,9 +5273,22 @@ def _os_que_nao_viraram_controle(diario: dict[str, Any] | None, enderecos: list[
     return linhas
 
 
+def _a_cara_do_controle(eu: dict[str, Any]) -> dict[str, Any]:
+    """A cor do plástico, o nome dela e o jogador do controle na mesa: a linha dele na sala os
+    leva igual, no rádio ou no cabo (a identidade é do controle, não do transporte)."""
+    cor = _hex_do_plastico(str(eu.get("cor") or ""))
+    nome_da_cor = str(eu.get("nome") or "")
+    return {
+        "jogador": eu.get("jogador"),
+        "cor": cor if cor.startswith("#") else "",
+        "cor_nome": "" if nome_da_cor in ("", _cor_desconhecida()) else nome_da_cor,
+    }
+
+
 def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str, str],
                    ja: list[dict[str, Any]],
-                   no_usb: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
+                   no_usb: frozenset[str] = frozenset(),
+                   da_mesa: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     """Os aparelhos com pareamento NESTE adaptador e fora do ar — o item 3: o"""
     no_ar = {_so_hex(a.endereco) for a in aparelhos_bz if a.conectado is True}
     vivos = {_so_hex(str(a["id"])) for a in ja if not a.get("nao_conectou")}
@@ -5303,12 +5314,17 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
             tipo = _tipo_que_ela_disse(a.endereco) or _tipo_do_aparelho(
                 str(getattr(a, "icone", "") or ""), a.classe, getattr(a, "aparencia", None))
             nome, rotulo = alias, alias or PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()
+        no_cabo = tipo == "controle" and h in no_usb
+        cara = _a_cara_do_controle(next(
+            (m for u, m in (da_mesa or {}).items() if _so_hex(u) == h), {})) if no_cabo else {}
+        if cara.get("jogador") and rotulo == "DualSense":
+            rotulo = f"Player {cara['jogador']}"
         fora.append({
             "id": nome_do_jogador.mac(a.endereco), "aparelho": nome_do_jogador.mac(a.endereco),
             "tipo": tipo,
             "lugar": lugar, "nome": nome, "rotulo": rotulo,
             "modalias": str(a.modalias or ""), "desligado": True,
-            "usb": tipo == "controle" and h in no_usb, "esperando": False, "fixo": True,
+            "usb": no_cabo, "esperando": False, "fixo": True, **cara,
         })
     return fora
 
@@ -5402,8 +5418,6 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         if not uniq or adaptador not in enderecos:
             continue
         eu = da_mesa.get(uniq) or {}
-        slug = str(eu.get("cor") or "")
-        cor = _hex_do_plastico(slug)
         audio = _dicionario(c.get("audio"))
         ponte = c.get("ponte_do_radio")
         tipo_gov, passou = alem.get(_so_hex(uniq), (None, False))
@@ -5416,12 +5430,8 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         fora.append({
             **vaga,
             "id": uniq, "tipo": "controle", "lugar": adaptador,
-            "nome": nome_bz,
-            "jogador": eu.get("jogador"),
+            "nome": nome_bz, **_a_cara_do_controle(eu),
             "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "DualSense",
-            "cor": cor if cor.startswith("#") else "",
-            "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
-            else str(eu["nome"]),
             "mic": (not audio.get("mic_mudo")) if "mic_mudo" in audio
             else bool(c.get("hz_voz")),
             "ponte": ponte if ponte in ("som", "haptica") else None, "alem": passou,
@@ -5441,8 +5451,6 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             ja.update(lugar=nome_do_jogador.mac(m.get("destino")), esperando=True)
             continue
         eu = next((m2 for u, m2 in da_mesa.items() if _so_hex(u) == quem), {})
-        slug = str(eu.get("cor") or "")
-        cor = _hex_do_plastico(slug)
         # «outro» — e o controle, um DualSense sem nome. O `Icon` vem junto: é o
         classe = m.get("classe")
         tipo = ("controle" if m.get("e_controle")
@@ -5452,11 +5460,8 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
                      "lugar": nome_do_jogador.mac(m.get("destino")),
                      "nome": str(m.get("nome") or ""),
                      "modalias": str(m.get("modalias") or ""),
-                     "jogador": eu.get("jogador"),
+                     **_a_cara_do_controle(eu),
                      "rotulo": f"Player {eu['jogador']}" if eu.get("jogador") else "",
-                     "cor": cor if cor.startswith("#") else "",
-                     "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
-                     else str(eu["nome"]),
                      "esperando": True, "fixo": False})
         vistos.add(quem)
     for a in aparelhos_bz:
