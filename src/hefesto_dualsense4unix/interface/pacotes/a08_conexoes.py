@@ -27,7 +27,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.actions import external_controllers as _marcas
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
-from hefesto_dualsense4unix.interface.monta import dono_na_linha
+from hefesto_dualsense4unix.interface.monta import dono_na_linha, nome_sem_dono
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
 from . import TODOS_OS_LUGARES, Contexto, em_fundo, fios, nome_do_jogador, perfil, registrar
@@ -1672,7 +1672,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         if modo_da_mesa is None:
             modo_da_mesa = modo_da_fileira(st)
         colunas[uniq].update(estado_do_controle(c, eu, st, declaracao, modo_da_mesa))
-        colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"))
+        colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"), eu.get("nome") or "")
     medida.somar("gestão", comeco_da_gestao)
     confissao = _confissao_do_mapa()
     with medida.parte("rádio"):
@@ -6157,7 +6157,9 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise ValueError("dono-renomear: o clique não disse em qual controle")
     novo = nome_do_jogador.nome_dado(str(o.get("valor") or ""))
-    if _SO_O_NUMERO.fullmatch(novo):
+    mesa = getattr(ctx, "mesa", None) or ()
+    eu: dict[str, Any] = next((m for m in mesa if str(m.get("uniq") or "") == uniq), {})
+    if _SO_O_NUMERO.fullmatch(novo) or novo == nome_sem_dono(str(eu.get("nome") or "")):
         novo = ""
     if novo == nome_do_jogador.nomes_dos_donos().get(nome_do_jogador.mac(uniq), ""):
         return

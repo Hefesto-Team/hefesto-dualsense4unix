@@ -129,16 +129,16 @@ def numero_do_jogador(n: Any) -> str:
     return f'<span data-campo="jogador" data-hef-alvo="html">{n}</span>'
 
 
-def dono_na_linha(nomes: dict[str, str], uniq: str, jogador: Any, *,
-                  em_html: bool = False) -> str:
-    """Quem joga com o controle: o nome que o usuário deu a ele, ou o «P N» quando não há nome.
+def dono_na_linha(nomes: dict[str, str], uniq: str, jogador: Any, plastico: str | None = None,
+                  *, em_html: bool = False) -> str:
+    """Quem joga com o controle: o nome que o usuário deu a ele, ou o que a linha ainda não diz.
 
-    A REGRA É UMA SÓ, e mora aqui (D-2909-O-CARTAO-DIZ-QUEM-JOGA): a 08 a mostra no campo do dono,
-    o cartão aberto da 02 e a Calibrar a mostram no título. `nomes` é `{endereço: nome}` do
-    leitor da 08 (o `Alias` do BlueZ). Com `em_html`, o nome sai ESCAPADO (é texto dela) e o
-    número leva o endereço de `numero_do_jogador`.
+    A REGRA É UMA SÓ, e mora aqui (D-2909-O-CARTAO-DIZ-QUEM-JOGA): sem nome, a 08 passa a cor
+    `plastico` da mesa e diz a cor ou o modelo (D-2610-O-CONTROLE-SEM-NOME-SE-CHAMA-PELA-COR); a 02
+    e a Calibrar, que já dizem a cor, não a passam e dizem «P N». `nomes` vem do `Alias` do BlueZ.
+    Com `em_html`, o nome sai ESCAPADO (é texto dela) e o número leva o `numero_do_jogador`.
     """
-    nome = nomes.get(str(norm_mac(str(uniq or "")) or "").upper(), "")
+    nome = nomes.get(str(norm_mac(str(uniq or "")) or "").upper(), "") or nome_sem_dono(plastico)
     if nome:
         return html.escape(nome) if em_html else nome
     if isinstance(jogador, int) and not isinstance(jogador, bool):
@@ -945,3 +945,14 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
             f"ERRO em {arq}: <div>={abertas} </div>={fechadas} — desbalanceado")
     onde.gravar(f"{arq}.html", doc)
     return abertas
+
+
+def nome_sem_dono(plastico: str | None) -> str:
+    """O nome do controle sem nome dado: a cor do plástico, ou o modelo sem ela; sem a linha, nada."""
+    if plastico is None:
+        return ""
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import MODELO_GENERICO
+    from hefesto_dualsense4unix.interface.mesa_viva import COR_DESCONHECIDA
+
+    plastico = str(plastico or "").strip()
+    return plastico if plastico and plastico != COR_DESCONHECIDA else MODELO_GENERICO

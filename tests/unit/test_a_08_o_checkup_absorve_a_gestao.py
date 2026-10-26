@@ -83,7 +83,7 @@ def test_os_seis_selos_saem_para_cada_controle(vias: list[str]) -> None:
             assert campo in col, f"o controle {n} ({vias[n - 1]}) não recebeu `{campo}`"
         assert "Xbox 360" in col["est-visto"]
         assert col["nome"].endswith(f"{50 + n}%"), "a bateria mora no nome desde 26/09"
-        assert col["dono"] == f"P{n}", "sem nome, o campo do dono diz «P N»"
+        assert col["dono"] == "DualSense", "sem nome nem cor, o campo do dono diz o modelo"
 
 
 def test_o_mic_desligado_por_escolha_tambem_e_certo() -> None:
