@@ -31,7 +31,7 @@ from tests.unit.test_o_broker_crava_cada_raiz_uma_vez_so import BROKER, RAIZES
 #: as raízes que um parâmetro de função recebe (as do gadget moram no ``RaizesDoPad``).
 RAIZES_DE_PARAMETRO = (
     "DEV_ROOT", "DEV_INPUT_ROOT", "SYS_CLASS_HIDRAW", "SYS_CLASS_INPUT",
-    "SYS_CLASS_BLUETOOTH", "SYS_BUS_HID_DRIVERS",
+    "SYS_CLASS_BLUETOOTH", "SYS_BUS_HID_DRIVERS", "PROC_ROOT",
 )
 BASE = "hidraw987"
 EVENTO = "event987"
@@ -122,7 +122,7 @@ def _motivo_de_recusar_o_acionador(c: _Cena) -> None:
 _DO_FS = {
     "_sys_class_hidraw": "SYS_CLASS_HIDRAW", "_dev_input_root": "DEV_INPUT_ROOT",
     "_sys_class_input": "SYS_CLASS_INPUT", "_sys_class_bluetooth": "SYS_CLASS_BLUETOOTH",
-    "_sys_bus_hid_drivers": "SYS_BUS_HID_DRIVERS",
+    "_sys_bus_hid_drivers": "SYS_BUS_HID_DRIVERS", "_proc_root": "PROC_ROOT",
 }
 
 
@@ -135,6 +135,7 @@ def _BrokerState(c: _Cena) -> None:  # noqa: N802 - o nome do caso é o da class
     st = hb.BrokerState(allowed_uid=1000, log=lambda *_a, **_k: None)
     do_estado = {"_dev_root": "DEV_ROOT", **_DO_FS}
     do_estado.pop("_sys_bus_hid_drivers")
+    do_estado.pop("_proc_root")
     assert {a: getattr(st, a) for a in do_estado} == {
         a: c.raiz[n] for a, n in do_estado.items()}
     assert {a: getattr(st._ops, a) for a in _DO_FS} == {

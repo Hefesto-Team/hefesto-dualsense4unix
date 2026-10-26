@@ -2290,6 +2290,7 @@ RAIZES_DO_BROKER = {
     "SYS_CLASS_INPUT": "input",
     "SYS_CLASS_BLUETOOTH": "bluetooth",
     "SYS_BUS_HID_DRIVERS": "hid-drivers",
+    "PROC_ROOT": "proc",
 }
 
 
@@ -2313,7 +2314,9 @@ def _nenhum_pad_em_usb_na_suite(
 
     E as raízes do físico (A-SUITE-NAO-ALCANCA-O-SYS-REAL-PELO-PADRAO-DO-BROKER-01,
     25/10/2026): o broker lê cada raiz na chamada, da constante, e o ``chmod`` e a
-    ACL caem nos nós que ele valida. Todas as nove apontam para a pasta vazia; o
+    ACL caem nos nós que ele valida. Todas apontam para a pasta vazia, e o
+    ``/proc`` também (O-NO-DO-FISICO-NAO-FICA-COM-QUEM-O-ABRIU-NA-JANELA-01): a
+    varredura de quem segura o físico nunca revoga um descritor da máquina. O
     teste que precisa de uma raiz passa a dele.
     """
     vazio = tmp_path_factory.mktemp("sem-pad-em-usb")

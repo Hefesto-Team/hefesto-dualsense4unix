@@ -97,10 +97,13 @@ UMask=0077
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources @mount @debug @cpu-emulation @obsolete @raw-io @reboot @swap @clock
+SystemCallFilter=pidfd_getfd
 # Capabilities: uid 0 com bounding set mínimo. FOWNER = modo/ACL do nó;
 # DAC_OVERRIDE = open(2) do nó 0600 (cmd open) + robustez;
-# DAC_READ_SEARCH = atravessar/ler /sys mesmo com bits restritivos.
-CapabilityBoundingSet=CAP_FOWNER CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH
+# DAC_READ_SEARCH = atravessar/ler /sys mesmo com bits restritivos;
+# SYS_PTRACE = ler o /proc/<pid>/fd de quem segura o físico fechado e tomar o
+# descritor (pidfd_getfd, que o ~@debug tira) para o EVIOCREVOKE.
+CapabilityBoundingSet=CAP_FOWNER CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_SYS_PTRACE
 AmbientCapabilities=
 # Device cgroup: closed + allow SÓ o grupo hidraw. `rw` e não `r`: o fd
 # servido pelo cmd open é O_RDWR — `r` faria o open falhar com EPERM.

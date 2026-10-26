@@ -442,7 +442,8 @@ class TestAUnit:
             "NoNewPrivileges": ["yes"],
             "DevicePolicy": ["closed"],
             "DeviceAllow": ["char-hidraw rw", "char-input rw"],
-            "CapabilityBoundingSet": ["CAP_FOWNER CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH"],
+            "CapabilityBoundingSet": [
+                "CAP_FOWNER CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_SYS_PTRACE"],
         }.items():
             assert self._diretivas(chave) == esperado, chave
 

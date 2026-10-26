@@ -117,9 +117,9 @@ class TestServiceHardening:
             "~@privileged @resources @mount @debug @cpu-emulation "
             "@obsolete @raw-io @reboot @swap @clock"
         )
-        assert d["SystemCallFilter"] == ["@system-service", negados]
+        assert d["SystemCallFilter"] == ["@system-service", negados, "pidfd_getfd"]
         assert d["CapabilityBoundingSet"] == [
-            "CAP_FOWNER CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH"
+            "CAP_FOWNER CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_SYS_PTRACE"
         ]
 
     def test_socket_activation_e_fail_safe(self, service_text: str) -> None:

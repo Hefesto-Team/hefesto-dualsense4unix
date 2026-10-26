@@ -143,6 +143,17 @@ _SUFIXO_DO_MOVIMENTO = "Motion Sensors"
 _EVIOCGID = 0x80084502
 _INPUT_ID_FMT = "=HHHH"
 SYS_CLASS_INPUT = "/sys/class/input"
+PROC_ROOT = "/proc"
+EVIOCREVOKE = 0x40044591
+_MAQUINA = os.uname().machine
+_SYS_PIDFD_GETFD = None if _MAQUINA.startswith("mips") else (548 if _MAQUINA == "alpha" else 438)
+_SYS_KCMP = {
+    "x86_64": 312, "i386": 349, "i686": 349, "aarch64": 272, "riscv64": 272,
+    "loongarch64": 272, "armv7l": 378, "armv6l": 378, "ppc64le": 354, "ppc64": 354,
+    "s390x": 343,
+}.get(_MAQUINA)
+_KCMP_FILE = 0
+SERVIDOS_PATH = "/run/hefesto-hidraw-broker/servidos"
 REINICIO_SEM_ABRIR_PATH = "/run/hefesto-hidraw-broker/reinicio-sem-abrir"
 REINICIO_SEM_ABRIR_VALIDADE_S = 120.0
 
@@ -620,6 +631,36 @@ class StaleNodeError(Exception):
     """O nome `hidrawN` foi reciclado para OUTRO device entre validar e agir."""
 
 
+def _mesmo_no(a: os.stat_result, b: os.stat_result) -> bool:
+    """Os dois ``stat`` são o mesmo nó: o mesmo device de caractere, ou o mesmo inode."""
+    if stat_mod.S_ISCHR(a.st_mode) and stat_mod.S_ISCHR(b.st_mode):
+        return a.st_rdev == b.st_rdev
+    return (a.st_dev, a.st_ino) == (b.st_dev, b.st_ino)
+
+
+def _syscall(numero: int | None, *argumentos: int) -> int:
+    """Uma syscall sem embrulho no Python; ``numero`` ``None`` é a arquitetura sem ela."""
+    if numero is None:
+        raise OSError(errno.ENOSYS, os.strerror(errno.ENOSYS))
+    import ctypes
+
+    libc = ctypes.CDLL(None, use_errno=True)
+    resposta = int(libc.syscall(ctypes.c_long(numero), *(ctypes.c_long(a) for a in argumentos)))
+    if resposta < 0:
+        codigo = ctypes.get_errno()
+        raise OSError(codigo, os.strerror(codigo))
+    return resposta
+
+
+@dataclass(frozen=True)
+class _Processo:
+    """O que o broker lê de um processo no ``/proc``: o início, o dono e o nome."""
+
+    inicio: int
+    uid: int
+    comm: str
+
+
 class FsAclOps:
     """Operações REAIS de fs (hide/restore/verify/open) — injetável nos testes."""
 
@@ -631,12 +672,14 @@ class FsAclOps:
         sys_class_input: str | None = None,
         sys_class_bluetooth: str | None = None,
         sys_bus_hid_drivers: str | None = None,
+        proc_root: str | None = None,
     ) -> None:
         self._sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
         self._dev_input_root = _raiz(dev_input_root, "DEV_INPUT_ROOT")
         self._sys_class_input = _raiz(sys_class_input, "SYS_CLASS_INPUT")
         self._sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
         self._sys_bus_hid_drivers = _raiz(sys_bus_hid_drivers, "SYS_BUS_HID_DRIVERS")
+        self._proc_root = _raiz(proc_root, "PROC_ROOT")
 
     def _sysfs_rdev(self, base: str) -> tuple[int, int] | None:
         """(major, minor) de /sys/class/hidraw/<base>/dev; None = ilegível."""
@@ -703,7 +746,7 @@ class FsAclOps:
         except OSError:
             return None
         st = os.fstat(fd)
-        if not stat_mod.S_ISCHR(st.st_mode) or self._sysfs_rdev(base) != (
+        if not self._e_char_device(st.st_mode) or self._sysfs_rdev(base) != (
             os.major(st.st_rdev),
             os.minor(st.st_rdev),
         ):
@@ -1047,6 +1090,152 @@ class FsAclOps:
         fcntl.ioctl(fd, _EVIOCGID, buf, True)
         bus, vendor, product, versao = struct.unpack(_INPUT_ID_FMT, bytes(buf))
         return int(bus), int(vendor), int(product), int(versao)
+
+    def processo(self, pid: int) -> _Processo | None:
+        """O início (campo 22 do ``stat``), o uid real e o ``comm`` de ``pid``; ``None`` = sumiu."""
+        pasta = f"{self._proc_root}/{pid}"
+        try:
+            with open(f"{pasta}/stat", encoding="ascii", errors="replace") as fh:
+                campos = fh.read().rsplit(")", 1)[1].split()
+            with open(f"{pasta}/status", encoding="ascii", errors="replace") as fh:
+                uid = next(int(linha.split()[1]) for linha in fh if linha.startswith("Uid:"))
+            with open(f"{pasta}/comm", encoding="utf-8", errors="replace") as fh:
+                comm = fh.read().strip()
+            return _Processo(inicio=int(campos[19]), uid=uid, comm=comm)
+        except (OSError, IndexError, ValueError, StopIteration):
+            return None
+
+    def inicio_do_processo(self, pid: int) -> int | None:
+        """O início de ``pid`` no relógio do boot: o par ``(pid, início)`` não se recicla."""
+        proc = self.processo(pid)
+        return None if proc is None else proc.inicio
+
+    def _fechados(self, nos: list[tuple[str, str]]) -> dict[str, tuple[str, os.stat_result]]:
+        """Dos ``(nó, sysfs)``, os que estão FECHADOS agora (``0600`` sem ACL), pelo nome."""
+        fechados: dict[str, tuple[str, os.stat_result]] = {}
+        for node, sys_dir in nos:
+            fd = self._pin_entrada(node, sys_dir)
+            if fd is None:
+                continue
+            try:
+                if self._ja_esta_no_alvo(fd, None):
+                    fechados[os.path.basename(node)] = (node, os.fstat(fd))
+            finally:
+                os.close(fd)
+        return fechados
+
+    def _seguradores(
+        self, alvos: dict[str, tuple[str, os.stat_result]]
+    ) -> list[tuple[int, int, str, os.stat_result]]:
+        """``(pid, fd, nó, stat do nó)`` de cada descritor aberto num dos ``alvos``."""
+        try:
+            pids = sorted(int(n) for n in os.listdir(self._proc_root) if n.isdigit())
+        except OSError:
+            return []
+        achados: list[tuple[int, int, str, os.stat_result]] = []
+        for pid in pids:
+            pasta = f"{self._proc_root}/{pid}/fd"
+            try:
+                fds = sorted(int(n) for n in os.listdir(pasta) if n.isdigit())
+            except OSError:
+                continue
+            for fd in fds:
+                try:
+                    alvo = alvos.get(os.path.basename(os.readlink(f"{pasta}/{fd}")))
+                    if alvo is not None and _mesmo_no(os.stat(f"{pasta}/{fd}"), alvo[1]):
+                        achados.append((pid, fd, alvo[0], alvo[1]))
+                except OSError:
+                    continue
+        return achados
+
+    @staticmethod
+    def _tomar_o_fd(pid: int, fd: int) -> int:
+        """Uma cópia, no broker, do descritor ``fd`` de ``pid`` (``pidfd_getfd``)."""
+        pidfd = os.pidfd_open(pid)
+        try:
+            return _syscall(_SYS_PIDFD_GETFD, pidfd, fd, 0)
+        finally:
+            os.close(pidfd)
+
+    @staticmethod
+    def _revogar_o_fd(fd: int) -> None:
+        """``EVIOCREVOKE``: a descrição perde o nó, em todo processo que a segura."""
+        fcntl.ioctl(fd, EVIOCREVOKE, 0)
+
+    @staticmethod
+    def _mesma_descricao(pid_a: int, fd_a: int, pid_b: int, fd_b: int) -> bool:
+        """Os dois descritores são a MESMA descrição (``kcmp``)? Sem resposta, «sim»."""
+        try:
+            return _syscall(_SYS_KCMP, pid_a, pid_b, _KCMP_FILE, fd_a, fd_b) == 0
+        except OSError:
+            return True
+
+    def _revogar_um(self, pid: int, fd: int, node: str, alvo: os.stat_result) -> str | None:
+        """Tira o nó do descritor de fora; ``None`` = já revogado ou já é outro arquivo."""
+        if _EVENT_BASE_RE.match(os.path.basename(node)) is None:
+            return "sem_revoke"
+        try:
+            tomado = self._tomar_o_fd(pid, fd)
+        except OSError as exc:
+            return f"falhou_{errno.errorcode.get(exc.errno or 0, exc.errno)}"
+        try:
+            if not _mesmo_no(os.fstat(tomado), alvo):
+                return None
+            self._revogar_o_fd(tomado)
+        except OSError as exc:
+            if exc.errno == errno.ENODEV:
+                return None
+            return f"falhou_{errno.errorcode.get(exc.errno or 0, exc.errno)}"
+        finally:
+            os.close(tomado)
+        return "revogado"
+
+    def _revogar_nos(
+        self, nos: list[tuple[str, str]], poupado: Callable[[int, int], bool]
+    ) -> list[tuple[str, int, str, str]]:
+        """Os descritores de fora nos ``nos`` FECHADOS: ``(nó, pid, comm, desfecho)``.
+
+        Fica quem tem o nó por direito: o broker, o root (o ``logind`` que cede o nó ao
+        compositor), o cliente do broker (``poupado``) e quem divide a descrição com um
+        deles. O resto perde o ``eventN``; o ``jsN`` e o hidraw não têm revoke e voltam
+        com o desfecho ``sem_revoke``.
+        """
+        alvos = self._fechados(nos)
+        if not alvos:
+            return []
+        seguradores = self._seguradores(alvos)
+        processos = {pid: self.processo(pid) for pid in {s[0] for s in seguradores}}
+        eu = os.getpid()
+
+        def de_direito(pid: int) -> bool:
+            proc = processos.get(pid)
+            return proc is not None and (pid == eu or proc.uid == 0 or poupado(pid, proc.inicio))
+
+        donos = [(pid, fd, node) for pid, fd, node, _st in seguradores if de_direito(pid)]
+        saida: list[tuple[str, int, str, str]] = []
+        for pid, fd, node, alvo in seguradores:
+            proc = processos.get(pid)
+            if proc is None or de_direito(pid):
+                continue
+            if any(n == node and self._mesma_descricao(pid, fd, p, f) for p, f, n in donos):
+                continue
+            desfecho = self._revogar_um(pid, fd, node, alvo)
+            if desfecho is not None:
+                saida.append((node, pid, proc.comm, desfecho))
+        return saida
+
+    def revogar_quem_escapou(
+        self, canon: str, base: str, poupado: Callable[[int, int], bool]
+    ) -> list[tuple[str, int, str, str]]:
+        """O hidraw ``canon`` e os nós de entrada do físico ``base``: quem os segura de fora."""
+        nos = [(canon, f"{self._sys_class_hidraw}/{base}"), *self.entradas_do_no(base)]
+        return self._revogar_nos(nos, poupado)
+
+    def revogar_quem_escapou_da_entrada(
+        self, canon: str, base: str, poupado: Callable[[int, int], bool]
+    ) -> list[tuple[str, int, str, str]]:
+        """O nó de entrada ``canon`` (``base`` = ``eventN``): quem o segura de fora."""
+        return self._revogar_nos([(canon, f"{self._sys_class_input}/{base}")], poupado)
 
 
 def reinicio_sem_abrir_pedido(
@@ -1551,6 +1740,7 @@ class BrokerState:
         marca_da_entrega: str | None = None,
         quem_esta_na_frente: Callable[[], int | None] | None = None,
         relogio: Callable[[], float] = time.monotonic,
+        servidos_path: str | None = None,
     ) -> None:
         dev_root = _raiz(dev_root, "DEV_ROOT")
         sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
@@ -1610,6 +1800,10 @@ class BrokerState:
         #: O físico foi ENTREGUE ao sistema (ver :meth:`entregar_ao_linux`) e
         #: nenhum pedido do Hefesto o recolheu ainda.
         self.entregue = False
+        self._servidos_path = servidos_path
+        self._pid_da_conn: dict[int, int] = {}
+        self._servidos: dict[int, int] = self._ler_os_servidos()
+        self._segurados: dict[str, set[tuple[str, int, str]]] = {}
 
 
     def uid_autorizado(self, validade: float = VALIDADE_DA_SESSAO_S) -> int | None:
@@ -1696,6 +1890,86 @@ class BrokerState:
         if mudados:
             evento = "entradas_abertas" if abrir else "entradas_fechadas"
             self._log(evento, node=canon, nos=",".join(mudados))
+        if not abrir:
+            self._revogar_o_que_escapou(canon)
+
+    def lembrar_o_cliente(self, conn_id: int, pid: int) -> None:
+        """O pid da conexão (``SO_PEERCRED``): o cliente vivo segura o físico por direito."""
+        self._pid_da_conn[conn_id] = pid
+
+    def _poupado(self, pid: int, inicio: int) -> bool:
+        """O processo é do Hefesto: um cliente vivo, ou quem recebeu um nó do broker."""
+        return pid in self._pid_da_conn.values() or self._servidos.get(pid) == inicio
+
+    def _ler_os_servidos(self) -> dict[int, int]:
+        """Os ``pid início`` que o broker de antes do reinício serviu (``servidos_path``)."""
+        if self._servidos_path is None:
+            return {}
+        try:
+            with open(self._servidos_path, encoding="ascii") as fh:
+                pares = [linha.split() for linha in fh]
+            return {int(p[0]): int(p[1]) for p in pares if len(p) == 2}
+        except (OSError, ValueError):
+            return {}
+
+    def _anotar_o_servido(self, conn_id: int) -> None:
+        """O processo da conexão recebeu um nó: segue poupado depois de um reinício do broker."""
+        pid = self._pid_da_conn.get(conn_id)
+        inicio_de = getattr(self._ops, "inicio_do_processo", None)
+        if pid is None or not callable(inicio_de):
+            return
+        inicio = inicio_de(pid)
+        if inicio is None or self._servidos.get(pid) == inicio:
+            return
+        vivos = {p: i for p, i in self._servidos.items() if inicio_de(p) == i}
+        vivos[pid] = inicio
+        self._servidos = vivos
+        if self._servidos_path is None:
+            return
+        provisorio = f"{self._servidos_path}.novo"
+        try:
+            with open(provisorio, "w", encoding="ascii") as fh:
+                fh.writelines(f"{p} {i}\n" for p, i in sorted(vivos.items()))
+            os.replace(provisorio, self._servidos_path)
+        except OSError as erro:
+            self._log("servidos_nao_gravados", erro=str(erro))
+
+    def _revogar_o_que_escapou(self, canon: str, *, entrada: str | None = None) -> None:
+        """Quem segura de fora o físico fechado perde o nó, e o diário diz quem era.
+
+        ``canon`` é o hidraw (com os nós de entrada dele), ou o nó de ENTRADA
+        ``entrada``, cujo ``base`` é o ``eventN``. A mesma linha não se repete enquanto
+        o mesmo processo segue segurando o mesmo nó.
+        """
+        if entrada is not None:
+            base = canonical_input_base(entrada, dev_input_root=self._dev_input_root)
+            op = getattr(self._ops, "revogar_quem_escapou_da_entrada", None)
+            chave = entrada
+        else:
+            base = canonical_hidraw_base(canon, dev_root=self._dev_root)
+            op = getattr(self._ops, "revogar_quem_escapou", None)
+            chave = canon
+        if base is None or not callable(op):
+            return
+        try:
+            achados = op(chave, base, self._poupado)
+        except OSError as exc:
+            self._log("revogar_falhou", node=chave, err=str(exc))
+            return
+        vistos: set[tuple[str, int, str]] = set()
+        for node, pid, comm, desfecho in achados:
+            vistos.add((node, pid, desfecho))
+            if (node, pid, desfecho) in self._segurados.get(chave, set()):
+                continue
+            if desfecho == "revogado":
+                self._log("no_do_fisico_revogado", node=node, pid=pid, comm=comm)
+            else:
+                self._log("no_do_fisico_segurado", node=node, pid=pid, comm=comm,
+                          motivo=desfecho)
+        if vistos:
+            self._segurados[chave] = vistos
+        else:
+            self._segurados.pop(chave, None)
 
     def _entradas_seguem(self, resposta: dict[str, object]) -> dict[str, object]:
         """Depois de um comando sobre UM nó, os nós de entrada dele seguem."""
@@ -2082,6 +2356,7 @@ class BrokerState:
                 None,
             )
         state = "hidden" if canon in self.hidden else "exposed"
+        self._anotar_o_servido(conn_id)
         self._log("node_fd_servido", node=canon, conn=conn_id, state=state)
         return ({"ok": True, "cmd": "open", "node": canon, "state": state}, fd)
 
@@ -2250,7 +2525,9 @@ class BrokerState:
                  "errno": exc.errno},
                 None,
             )
+        self._anotar_o_servido(conn_id)
         self._log("entrada_fd_servida", node=canon, conn=conn_id)
+        self._revogar_o_que_escapou(canon, entrada=canon)
         return ({"ok": True, "cmd": "open", "node": canon, "state": "entrada"}, fd)
 
     def _lease_holders(self, canon: str) -> int:
@@ -2349,6 +2626,7 @@ class BrokerState:
             self._log("lease_closed_restored", conn=conn_id, nodes=",".join(restored))
         if failed:
             self._log("lease_restore_parcial", conn=conn_id, failed=",".join(failed))
+        self._pid_da_conn.pop(conn_id, None)
         return restored
 
     def _alguem_segura_um_no(self) -> bool:
@@ -2482,9 +2760,10 @@ class BrokerState:
         """O Hefesto voltou: fecha de novo (``0600 root``) o que a entrega abriu.
 
         Corre ANTES do pedido que o anunciou (``hide``/``expose``/``pad_usb_montar``),
-        que então age sobre um físico já no repouso, como num boot. Nó que a
-        Steam abriu enquanto estava entregue segue aberto no descritor dela:
-        tirar a ACL não fecha fd aberto, e é o preço de ter parado o Hefesto.
+        que então age sobre um físico já no repouso, como num boot. Tirar a ACL não
+        fecha o descritor que alguém abriu enquanto estava entregue: o
+        :meth:`_revogar_o_que_escapou` tira o ``eventN`` de quem o segura e diz no
+        diário quem segura o ``jsN`` e o hidraw, que não têm revoke.
         """
         fechados = fechar_todo_fisico(
             uid=self.uid_para_agir(),
@@ -2500,6 +2779,8 @@ class BrokerState:
             with contextlib.suppress(OSError):
                 os.unlink(self._marca_da_entrega)
         self._log("entrega_desfeita", nodes=",".join(fechados) or "-")
+        for canon in fechados:
+            self._revogar_o_que_escapou(canon)
         return fechados
 
     def restore_everything(self) -> list[str]:
@@ -2787,6 +3068,9 @@ class Broker:
         self._sel.register(sock, selectors.EVENT_READ, ("conn", conn_id))
         self._buffers[conn_id] = bytearray()
         self._peer_uids[conn_id] = uid
+        lembrar = getattr(self._state, "lembrar_o_cliente", None)
+        if callable(lembrar):
+            lembrar(conn_id, pid)
         self._sem_cliente_desde = None
         self._log("peer_accepted", conn=conn_id, peer_uid=uid, peer_pid=pid)
         return conn_id
@@ -3127,6 +3411,7 @@ def main(argv: list[str] | None = None) -> int:
         quem_esta_na_frente=uid_da_sessao_ativa if allowed_uid is None else None,
         no_nasce_fechado=no_nasce_fechado,
         marca_da_entrega=MARCA_DA_ENTREGA_PATH,
+        servidos_path=SERVIDOS_PATH,
     )
     state.entregue = herdada
     broker = Broker(state, listen, graca_da_entrega_s=_graca_da_entrega_do_ambiente())
