@@ -643,6 +643,7 @@ class ProfileManager:
             get_identity_registry().configure(
                 enabled=bool(profile.leds.auto_player_colors),
                 brightness=float(profile.leds.lightbar_brightness),
+                estilo=str(getattr(profile, "estilo", None) or ""),
             )
         except Exception as exc:
             logger.debug("auto_player_colors_configure_falhou", err=str(exc))

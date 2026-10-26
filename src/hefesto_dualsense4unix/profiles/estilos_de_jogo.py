@@ -368,3 +368,34 @@ def cor_da_unidade(estilo: str | Estilo, jogador: int) -> RGB:
     if not 1 <= jogador <= 4:
         raise ValueError(f"jogador fora da mesa: {jogador} (a mesa é 1..4)")
     return as_quatro(estilo)[jogador - 1]
+
+
+def estilo_que_pinta(chave: object) -> Estilo | None:
+    """O estilo do perfil que escolhe a cor da luz, ou ``None``.
+
+    ``None`` sem estilo, com chave desconhecida e nos estilos de ``SEM_COR`` (o Nativo deixa a luz
+    com o jogo e o Personalizado com a mão do usuário). A chave que saiu do catálogo vale como a
+    do estilo que a recebeu.
+    """
+    estilo = POR_CHAVE.get(chave) if isinstance(chave, str) else None
+    if estilo is None or estilo.chave in SEM_COR:
+        return None
+    return estilo
+
+
+def luz_automatica(estilo: object, jogador: int | None,
+                   tom_do_plastico: RGB | None) -> tuple[RGB, float]:
+    """A cor automática de um controle e o fator de brilho dela: ``(cor, fator)``.
+
+    É a resposta única a «que cor acende o controle sem cor escolhida à mão», para o daemon e
+    para a tela. Com um estilo que pinta e o controle num lugar de 1 a 4, a cor da unidade dele
+    na família do estilo (:func:`cor_da_unidade`) e o brilho do estilo; sem isso, a do plástico,
+    e a do número sem ela (``led_control.cor_automatica``), com fator 1,0. Assim o controle que
+    chega depois do gesto da aba Perfis, e o Modo automático da Iluminação, acendem o estilo.
+    """
+    from hefesto_dualsense4unix.core.led_control import cor_automatica
+
+    dono = estilo_que_pinta(estilo)
+    if dono is not None and jogador is not None and 1 <= int(jogador) <= 4:
+        return cor_da_unidade(dono, int(jogador)), float(dono.brilho)
+    return cor_automatica(jogador, tom_do_plastico), 1.0

@@ -283,8 +283,8 @@ def _o_modo_escrito_e_automatico(p: dict[str, Any] | None) -> bool:
 
 
 RECADO_DO_AUTOMATICO_PARADO = (
-    "A iluminação está no modo automático: cada controle acende a cor do plástico dele. "
-    "Passe para o modo personalizado para escolher.")
+    "A iluminação está no modo automático: cada controle acende a cor do estilo do perfil "
+    "ou a do plástico dele. Passe para o modo personalizado para escolher.")
 
 
 def _nao_no_automatico(ctx: Contexto) -> None:
@@ -2396,7 +2396,6 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     `brilho_do_controle` lê o JSON cru e um modelo devolveria `None` em silêncio, sumindo da
     inversão de escala e escurecendo a cor gravada.
     """
-    from hefesto_dualsense4unix.core.led_control import cor_automatica
     from hefesto_dualsense4unix.interface.cartao_do_controle import cor_do_swatch
 
     uniq = str(c.get("uniq") or "")
@@ -2405,7 +2404,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     if tom is not None:
         return tom
     if modo_da_luz_do_perfil(cru) == MODO_AUTOMATICO:
-        return cor_automatica(_numero(ctx, c), _tom_do_plastico(c))
+        return _a_cor_automatica(ctx, cru, c)
     guardada = _a_cor_guardada_que_vale(ctx, cru, c)
     if guardada is not None:
         return guardada
@@ -2416,7 +2415,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
         if efetiva and tuple(efetiva)[:3] != (0, 0, 0):
             r, g, b = tuple(efetiva)[:3]
             return (int(r), int(g), int(b))
-    return cor_automatica(_numero(ctx, c), _tom_do_plastico(c))
+    return _a_cor_automatica(ctx, cru, c)
 
 
 def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
@@ -2470,7 +2469,8 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
 
 
 _RECADO_DO_AUTOMATICO = (
-    "Modo automático: cada controle acende a cor do plástico dele, ou a do número, e duas "
+    "Modo automático: cada controle acende a cor do estilo do perfil, a do plástico dele ou a "
+    "do número, e duas "
     "nunca ficam iguais. A cor que você escolheu para cada um fica guardada e volta no "
     "modo personalizado.")
 
@@ -2921,3 +2921,16 @@ PROVAS = [
                ("player_leds_set_detalhado", [(False, True, False, True, False)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
 ]
+
+
+def _a_cor_automatica(ctx: Contexto, cru: dict[str, Any] | None,
+                      c: dict[str, Any]) -> tuple[int, int, int]:
+    """A cor automática deste controle: a do estilo do perfil no lugar dele, ou a do plástico.
+
+    O dono é ``estilos_de_jogo.luz_automatica``, o mesmo do provider do daemon: a tela diz a cor
+    que o controle acende.
+    """
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import luz_automatica
+
+    estilo = (cru or {}).get("estilo") if isinstance(cru, dict) else None
+    return luz_automatica(estilo, _numero(ctx, c), _tom_do_plastico(c))[0]

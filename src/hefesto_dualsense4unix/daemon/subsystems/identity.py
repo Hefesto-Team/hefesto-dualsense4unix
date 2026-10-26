@@ -211,6 +211,7 @@ class ControllerIdentityRegistry:
         self._auto_colors = True
         self._auto_numbers = True
         self._auto_brightness = 1.0
+        self._estilo: str = ""
         self._fabrica: dict[str, Any] = {}
         self._agenda_da_fabrica: Any = None
         self._perguntar_a_fabrica: Callable[[str], Any] | None = None
@@ -223,22 +224,21 @@ class ControllerIdentityRegistry:
         enabled: bool | None = None,
         brightness: float | None = None,
         numbers: bool | None = None,
+        estilo: str | None = None,
     ) -> None:
         """Configura o estado vigente do automático (chamado na ativação de perfil).
 
-        ``enabled`` = ``profile.leds.auto_player_colors`` — R-14: mapeia SÓ o
-        eixo COR (o campo do schema é literalmente sobre cor; o acoplamento
-        com a numeração era o defeito). ``numbers`` é o eixo da NUMERAÇÃO
-        (padrão de player-LED do DualSense e LED de número dos externos): sem
-        campo no schema ainda, fica ``True`` até alguém pedir o contrário —
-        default compatível com todo perfil já salvo. ``brightness`` =
-        ``profile.leds.lightbar_brightness`` (a cor automática respeita o
-        brilho do perfil — D11). ``None`` preserva o valor atual (chamada
-        parcial). Perfil SEM seção ``leds`` no JSON valida com os defaults do
-        schema (``LedsConfig()``) → auto ON e brilho 1.0 — decisão documentada
-        do COR-03: sem seção = sem opinião = o default do campo (True).
+        ``enabled`` = ``leds.auto_player_colors``, só o eixo COR (R-14).
+        ``numbers`` é o eixo da NUMERAÇÃO, ``True`` até o schema ganhar o campo.
+        ``brightness`` = ``leds.lightbar_brightness``: a cor automática respeita o brilho (D11).
+        ``estilo`` = ``profile.estilo``, ``""`` sem estilo: o estilo que pinta dá a cor automática
+        de cada lugar (``estilos_de_jogo.luz_automatica``).
+        ``None`` preserva o valor atual. Perfil sem ``leds`` usa os defaults do schema: auto
+        ligado e brilho 1.0 (COR-03: sem seção = sem opinião = o default do campo).
         """
         with self._lock:
+            if estilo is not None:
+                self._estilo = str(estilo)
             if enabled is not None:
                 self._auto_colors = bool(enabled)
             if numbers is not None:
@@ -1596,11 +1596,11 @@ def make_auto_output_provider(
     from hefesto_dualsense4unix.core.backend_pydualsense import _DesiredOutput
     from hefesto_dualsense4unix.core.led_control import (
         LedSettings,
-        cor_automatica,
         player_led_pattern,
         player_slot_color,
     )
     from hefesto_dualsense4unix.integrations import cor_do_plastico
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import luz_automatica
 
     registry.armar_a_pergunta_de_fabrica(
         lambda uniq: cor_do_plastico.ler_identidade_pelo_cabo(uniq)
@@ -1612,11 +1612,11 @@ def make_auto_output_provider(
             return None
         campos: dict[str, Any] = {}
         if registry.auto_enabled:
-            brilho = registry.auto_brightness
+            cor, fator = luz_automatica(
+                registry._estilo, slot, registry.tom_do_plastico(uniq))
+            brilho = registry.auto_brightness * fator
             settings = LedSettings(
-                lightbar=cor_automatica(slot, registry.tom_do_plastico(uniq)),
-                brightness_level=brilho,
-            )
+                lightbar=cor, brightness_level=brilho)
             campos["led"] = settings.apply_brightness(brilho).lightbar
         if registry.auto_numbers_enabled:
             campos["player_leds"] = player_led_pattern(slot)
