@@ -10,9 +10,9 @@ A cura faz da tela marcada a caixa que rola, com a mesma janela e a mesma tira d
 
 MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas): a rolagem devolvida à lista
 (``.ja-opcoes:has(> .mj-abas)`` arrancada) reprova a rolagem de cada aba e a aba que cabe; o
-``overflow:auto`` tirado da tela reprova a aba que não cabe e precisa rolar; a tela fora do fluxo
-(``height:0``) reprova o teste da janela e da tira das abas no mesmo lugar; o ``padding-right`` da
-tela arrancado reprova a barra que cobre a borda dos controles.
+``overflow:auto`` tirado da tela reprova a aba que não cabe e precisa rolar; a tela com
+``height:0`` reprova a altura da tela; o ``padding-right`` da tela arrancado reprova a barra que
+cobre a borda dos controles.
 """
 
 from __future__ import annotations
@@ -43,6 +43,7 @@ from tests.unit.test_a_linha_sem_aparelho_fica_a_direita_do_parear import (  # n
 
 FOLGA_MAXIMA = 16
 FOLGA_DA_BARRA = 8
+ALTURA_MINIMA_DA_TELA = 150
 QUANTAS_ABAS = 5
 
 _ABRIR = """(function(endereco, h){
@@ -72,7 +73,7 @@ _ABA = """(function(n){
   return JSON.stringify({aba: j.querySelectorAll('.mj-abas > label')[n].textContent,
     visivel: caixa.clientHeight, total: caixa.scrollHeight, rolou: caixa.scrollTop,
     rola: rolam.length > 0, lado: tela.getBoundingClientRect().right - direita(tela),
-    folga: r.bottom - fundo(tela), fim: fim,
+    alta: tela.clientHeight,    folga: r.bottom - fundo(tela), fim: fim,
     janela: [Math.round(jr.top), Math.round(jr.bottom)], aba_y: Math.round(rotulo.top)});
 })(%d)"""
 
@@ -116,6 +117,14 @@ def test_a_aba_que_cabe_nao_ganha_barra_de_rolagem(
     falhas = [f"{caso} · {a['aba']}: rola {a['rolou']} px com o conteúdo cabendo"
               for caso, lidas in abas.items() for a in lidas
               if a["fim"] <= a["visivel"] and a["rola"]]
+    assert not falhas, "\n".join(falhas)
+
+
+def test_a_tela_de_cada_aba_tem_altura_para_mostrar_os_controles(
+        abas: dict[str, list[dict[str, Any]]]) -> None:
+    falhas = [f"{caso} · {a['aba']}: a tela tem {a['alta']} px de altura"
+              for caso, lidas in abas.items() for a in lidas
+              if a["alta"] < ALTURA_MINIMA_DA_TELA]
     assert not falhas, "\n".join(falhas)
 
 
