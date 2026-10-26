@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import shutil
 import tempfile
 import textwrap
@@ -31,6 +32,8 @@ from hefesto_dualsense4unix.mods.instalador import (
 from hefesto_dualsense4unix.mods.supervisor import Supervisor
 
 TETO = 64 * 1024
+
+_HORA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
 
 _O_FILHO = textwrap.dedent('''
     import os, sys, time
@@ -139,10 +142,10 @@ def test_a_modificacao_que_fala_muito_nao_passa_do_teto_enquanto_roda(
             await _ate(lambda: "a linha final" in _texto(diario))
             assert supervisor.estado_de("falador").estado == "rodando"
             assert diario.stat().st_size <= TETO, diario.stat().st_size
-            texto = _texto(diario)
-            assert texto.splitlines()[-1] == "a linha final"
-            assert texto.splitlines()[0].startswith("linha "), "a metade nova começa na linha"
-            assert len(texto.splitlines()[0]) == len("linha 000000 ") + 50
+            linhas = [_HORA.sub("", linha, count=1) for linha in _texto(diario).splitlines()]
+            assert linhas[-1] == "a linha final"
+            assert linhas[0].startswith("linha "), "a metade nova começa na linha"
+            assert len(linhas[0]) == len("linha 000000 ") + 50
         finally:
             await supervisor.parar()
 

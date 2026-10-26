@@ -26,6 +26,7 @@ import contextlib
 import ctypes
 import json
 import os
+import re
 import secrets
 import shutil
 import signal
@@ -159,8 +160,16 @@ class _Vigiada:
     quer_parar: asyncio.Event = field(default_factory=asyncio.Event)
 
 
-def ultima_linha_do_diario(caminho: Path, *, teto: int = 200) -> str:
-    """A última linha não vazia do diário (o que a tela mostra quando parou)."""
+_LINHAS_DO_CANO = re.compile(rb"[^\n]*\n|[^\n]+")
+
+_A_HORA_DA_LINHA = re.compile(r"^(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2} ")
+
+
+def ultima_linha_do_diario(caminho: Path, *, teto: int = 200, hora: bool = False) -> str:
+    """A última linha não vazia do diário (o que a tela mostra quando parou).
+
+    Com ``hora``, o diário é o que :func:`_copiar_para_o_diario` escreve, e a hora do começo sai.
+    """
     try:
         with caminho.open("rb") as arquivo:
             arquivo.seek(0, os.SEEK_END)
@@ -170,8 +179,9 @@ def ultima_linha_do_diario(caminho: Path, *, teto: int = 200) -> str:
     except OSError:
         return ""
     for linha in reversed(fim.splitlines()):
-        if linha.strip():
-            return linha.strip()[:teto]
+        texto = (_A_HORA_DA_LINHA.sub("", linha, count=1) if hora else linha).strip()
+        if texto:
+            return texto[:teto]
     return ""
 
 
@@ -195,23 +205,78 @@ def _aparar_o_diario(caminho: Path, chegando: int = 0) -> None:
     caminho.write_bytes(resto[quebra + 1:] if quebra >= 0 else b"")
 
 
-async def _copiar_para_o_diario(leitor: asyncio.StreamReader, caminho: Path) -> None:
-    """A saída e o erro do processo vão para o diário sem passar do teto, até o fim do cano.
+class _AHoraDeCadaLinha:
+    """Põe ``HH:MM:SS`` no começo de cada linha, e a data na primeira e quando o dia muda.
+
+    Só a linha inteira sai; o pedaço sem quebra espera a quebra, até ``teto`` bytes ou o fim.
+    """
+
+    def __init__(self, relogio: Callable[[], time.struct_time], teto: int) -> None:
+        self.relogio = relogio
+        self.teto = teto
+        self.dia = ""
+        self.no_meio = False
+        self.resto = b""
+
+    def _carimbo(self) -> bytes:
+        agora = self.relogio()
+        dia, hora = time.strftime("%Y-%m-%d", agora), time.strftime("%H:%M:%S", agora)
+        carimbo = f"{hora} " if dia == self.dia else f"{dia} {hora} "
+        self.dia = dia
+        return carimbo.encode()
+
+    def marcar(self, pedaco: bytes, *, fim: bool = False) -> bytes:
+        dados = self.resto + pedaco
+        corte = dados.rfind(b"\n") + 1
+        if fim or len(dados) - corte > self.teto:
+            corte = len(dados)
+        dados, self.resto = dados[:corte], dados[corte:]
+        saida = bytearray()
+        for linha in _LINHAS_DO_CANO.findall(dados):
+            if not self.no_meio:
+                saida += self._carimbo()
+            saida += linha
+            self.no_meio = not linha.endswith(b"\n")
+        if fim and self.no_meio:
+            saida += b"\n"
+            self.no_meio = False
+        return bytes(saida)
+
+
+async def _copiar_para_o_diario(
+    leitor: asyncio.StreamReader,
+    caminho: Path,
+    *,
+    relogio: Callable[[], time.struct_time] = time.localtime,
+) -> None:
+    """A saída e o erro do processo vão para o diário com a hora de cada linha, sem passar do teto.
 
     O cano é lido até o fim mesmo quando o disco recusa a escrita: um cano parado trava o
-    processo no ``print`` seguinte. A recusa vai ao log uma vez.
+    processo no ``print`` seguinte. A recusa vai ao log uma vez. O pedaço sem quebra que sobra
+    entra quando o cano fecha, ou quando a cópia é cancelada.
     """
     pedaco_max = max(1, TETO_DO_DIARIO_BYTES // 4)
+    hora = _AHoraDeCadaLinha(relogio, pedaco_max)
     recusou = False
-    while pedaco := await leitor.read(pedaco_max):
-        try:
-            _aparar_o_diario(caminho, len(pedaco))
-            with caminho.open("ab") as diario:
-                diario.write(pedaco)
-        except OSError as exc:
-            if not recusou:
-                logger.warning("mods_diario_recusado", diario=str(caminho), err=str(exc))
-            recusou = True
+
+    def gravar(dados: bytes) -> None:
+        nonlocal recusou
+        for inicio in range(0, len(dados), pedaco_max):
+            parte = dados[inicio:inicio + pedaco_max]
+            try:
+                _aparar_o_diario(caminho, len(parte))
+                with caminho.open("ab") as diario:
+                    diario.write(parte)
+            except OSError as exc:
+                if not recusou:
+                    logger.warning("mods_diario_recusado", diario=str(caminho), err=str(exc))
+                recusou = True
+
+    try:
+        while pedaco := await leitor.read(pedaco_max):
+            gravar(hora.marcar(pedaco))
+    finally:
+        gravar(hora.marcar(b"", fim=True))
 
 
 async def _esvaziar_a_copia(copia: asyncio.Task[None] | None, prazo: float) -> None:
@@ -621,7 +686,7 @@ class Supervisor:
             if time.monotonic() - aberto_em >= self.estavel_s:
                 quedas = 0
             quedas += 1
-            ultima = ultima_linha_do_diario(diario)
+            ultima = ultima_linha_do_diario(diario, hora=True)
             logger.warning("mods_caiu", mod=mod_id, codigo=codigo, quedas=quedas)
             if quedas > len(self.esperas):
                 self._marcar(mod_id, EstadoDaModificacao(
