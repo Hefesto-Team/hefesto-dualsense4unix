@@ -5,7 +5,7 @@ deixou de seguir o posto: o jogo toca no endpoint de cada controle e o que toca
 ali chega a ele, sem votação de quem mexeu nem de quem o evdev lê. A matriz de
 174 casos que provava «vibra o controle que dirige o boneco» saiu junto com o
 portão que ela guardava. Ficam aqui as réguas do que o co-op ainda responde:
-``CoopManager.quem_alimenta_cada_vpad`` e ``dono_do_vpad_pelo_coop``.
+``CoopManager.quem_alimenta_cada_vpad``.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5
 zerados; os ``02:fe:`` são os que o produto forja.
@@ -15,10 +15,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
-
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
-from hefesto_dualsense4unix.integrations.quem_o_jogo_le import dono_do_vpad_pelo_coop
 from hefesto_dualsense4unix.integrations.uhid_gamepad import player_mac, vpad_mac
 
 P1 = "aabbcc000001"
@@ -115,26 +112,3 @@ class TestQuemAlimentaCadaVpad:
         jogadores[P2] = _jogador(P2, _VpadDoP2())
         coop = _coop(P1, _Vpad(vpad_mac(P1, 1)), jogadores)
         assert coop.quem_alimenta_cada_vpad() == {vpad_mac(P1, 1): P1, vpad_mac(P2, 2): P2}
-
-
-class TestOTradutor:
-    """``dono_do_vpad_pelo_coop`` — a grafia da mesa, e nunca um chute."""
-
-    MESA = tuple(com_dois_pontos(u) for u in (P1, P2, P3))
-
-    def test_devolve_o_fisico_na_grafia_da_mesa(self) -> None:
-        coop = SimpleNamespace(quem_alimenta_cada_vpad=lambda: {vpad_mac(P1, 1): P2})
-        dono = dono_do_vpad_pelo_coop(coop, self.MESA)
-        assert dono(vpad_mac(P1, 1)) == com_dois_pontos(P2)
-        assert dono(vpad_mac(P1, 1).upper()) == com_dois_pontos(P2)
-
-    def test_vpad_sem_dono_e_dono_fora_da_mesa_dao_ninguem(self) -> None:
-        coop = SimpleNamespace(quem_alimenta_cada_vpad=lambda: {vpad_mac(P1, 1): "aabbcc000009"})
-        dono = dono_do_vpad_pelo_coop(coop, self.MESA)
-        assert dono(vpad_mac(P1, 1)) is None, "o dono não está na mesa"
-        assert dono(player_mac(1)) is None, "ninguém alimenta este vpad"
-
-    @pytest.mark.parametrize("coop", [None, SimpleNamespace()], ids=["sem-co-op", "sem-a-pergunta"])
-    def test_sem_quem_responda_ninguem_vibra_pelo_vpad(self, coop: Any) -> None:
-        dono = dono_do_vpad_pelo_coop(coop, self.MESA)
-        assert dono(vpad_mac(P1, 1)) is None

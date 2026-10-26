@@ -1811,3 +1811,102 @@ garantido.
 de pronto pede dentro dos 50 ms do dono dos laços) e a vibração com o jogo
 aberto. As duas são a prova no aparelho, e são do usuário.
 ~~~~
+
+## quem_o_jogo_le
+
+`src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py (docstring do módulo)`. O sinal do evdev que votava no portão de quem joga; aposentado em 26/10/2026 junto com o portão.
+
+~~~~text
+Quais controles o evdev diz que o JOGO lê — uma PISTA, que não vota.
+
+**DESDE 26/10/2026 NÃO HÁ PORTÃO DE QUEM JOGA** (A-HAPTICA-E-DO-JOGO-SEM-
+PORTAO-DE-QUEM-MEXE-01): o que o jogo toca no endpoint de um controle chega a
+esse controle, sem depender de quem mexeu (``D-2609-QUEM-JOGA-E-QUEM-MEXE``
+caducou). Este módulo ficou com a pergunta dos pids do jogo
+(:func:`pids_de_jogo`) e o retrato do que o jogo segura; o conjunto de
+:func:`quem_o_jogo_le` não alimenta mais decisão nem diário. O texto abaixo é o
+registro de 20 e 25/09, quando o evdev votava.
+
+**A CORREÇÃO É DO USUÁRIO, 20/09/2026, e derrubou a premissa de uma sprint inteira:**
+
+    "na real o certo não era somente o controle do player 1 receber a vibração?
+     pq é um jogo de um player e o erro era que o player 3 tava recebendo a
+     vibração de forma espelhada"
+
+A `O-ROTULO-QUE-COLIDE-01` leu a queixa como *"dois controles não vibram"* e
+curou a colisão de nomes dos gravadores. A colisão era real e a cura fica — mas
+ela não era a causa. A causa é que **o modo háptica entrava em todo controle
+cujo endpoint tivesse stream**, e num jogo de um jogador isso não é ninguém
+além de quem segura o controle.
+
+E a colisão era, por acidente, o que segurava os outros dois: medido no journal
+da bancada, 1 controle entrou em háptica e 270 tentativas de cada um dos outros dois
+foram recusadas. *Curar a colisão sem este gate faria os três vibrarem.*
+
+A REGRA, decidida pelo usuário entre três opções:
+
+    Só o controle que o JOGO está usando entra em modo háptica.
+
+Ela recusou «só o jogador 1» pensando no jogo de quatro do amigo dela: uma
+regra fixa no índice 1 quebraria o co-op. *A regra é uma só, e serve às duas
+mesas.*
+
+O SINAL, e ele é universal
+==========================
+
+**Quem o jogo tem ABERTO.** Os descritores de um processo são legíveis em
+``/proc/<pid>/fd``, e cada ``eventN`` carrega o ``uniq`` do controle no sysfs.
+Não depende de saber o nome do jogo, nem de lista de jogos, nem de lançador —
+o que atende a ordem de 16/09: *o app é de acessibilidade e não se cura
+por caso*.
+
+A DOBRA QUE NENHUMA LEITURA INGÊNUA ATRAVESSA
+=============================================
+
+**Com máscara, o jogo não lê o controle físico — lê o VIRTUAL.** Quando um
+processo de jogo segura o ``eventN`` de um vpad, o ``uniq`` do nó é o MAC que
+o vpad veste, e casar por ``uniq`` físico devolveria "ninguém está jogando" —
+o tipo de resposta plausível e falsa que esta casa persegue. Por isso a
+tradução virtual→físico entra aqui, e quem responde é o dono da ligação.
+
+**E O GE-PROTON NÃO SEGURA EVDEV DE DUALSENSE NENHUM** (conferência de
+26/09/2026, A-HAPTICA-QUEM-JOGA-01). O winebus fecha todo evdev de DualSense —
+o físico por estar na lista de ignorados do SDL, o vpad ``0df2`` por
+«deferring … to a different backend» — e fica só com o ``hidraw`` (o fonte
+``bus_udev.c``, o rastro ``+hid`` do PRAGMATA de 17/09, e os ``fd`` medidos em
+26/09: nenhum ``eventN``, o ``hidraw`` dos vpads). Com máscara DualSense este
+sinal sai VAZIO por construção. E o ``hidraw`` não o substitui: o
+``winedevice`` segura o de TODOS os vpads, e contá-lo devolveria o espelhado
+de 20/09. Este sinal não vota nem quando existe: em 21/09, com o PRAGMATA de
+um jogador, o evdev deixou os QUATRO entrarem em háptica
+(A-HAPTICA-QUEM-JOGA-02). Um fd diz o que o processo abriu, não quem
+está jogando.
+
+QUEM ALIMENTA O VPAD, E NÃO DE QUEM ELE NASCEU
+==============================================
+
+A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01, 25/09/2026. A tradução derivava o
+MAC do vpad de cada físico (``vpad_mac``) e comparava — e isso responde de
+quem o vpad NASCEU. O posto nasce sem identidade no boot (o piso
+``02:fe:00:00:00:01``, que não deriva de ninguém) ou com a do primário de
+quando renasceu, e o primário muda embaixo dele sem ele renascer. Medido na
+bancada de queda com os vpads reais, 174 casos (2, 3 e 4 controles; USB, BT
+e mista; o posto com o P1, o P2 e o P3; um jogador e todos): a forja errava
+138, e em 15 fazia vibrar a mão do P1 que voltou tarde enquanto o P2 ou o P3
+dirigia o posto. Quem sabe quem alimenta cada vpad AGORA é o co-op
+(``CoopManager.quem_alimenta_cada_vpad``), e a mesma resposta é a que o
+rumble do jogo já segue.
+
+**Nada muda sem vpad nem com o vpad ``uinput``.** No Modo Nativo, o jogo que
+segura o evdev do físico casa pelo próprio ``uniq``, e o tradutor não decide
+nada. Com a máscara Xbox o vpad é ``uinput`` e não carrega ``uniq``: o jogo
+que o lê não entra no conjunto, antes e depois desta cura.
+
+AUSÊNCIA É RESPOSTA, E AQUI ELA TEM LADO
+========================================
+
+Sem ``/proc`` legível, sem jogo identificável ou sem vpad mapeável, a resposta
+é o conjunto VAZIO — ninguém entra em háptica. O lado seguro é o silêncio: um
+controle que não vibra é uma falta; um controle que vibra sozinho na mão de
+alguém é o defeito que ela reportou.
+~~~~

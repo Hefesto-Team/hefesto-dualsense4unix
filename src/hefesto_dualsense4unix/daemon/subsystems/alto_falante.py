@@ -1639,7 +1639,7 @@ class AltoFalanteSubsystem:
         if cabo is not None and marca is not None:
             rota = cabo.aparelhos().get(marca)
             if rota is not None and getattr(rota, "dono", "") == chave:
-                return cabo.volume_aplicado(marca)
+                return bool(cabo.volume_aplicado(marca))
         ponte = self._pontes.get(chave)
         endpoint = self._endpoints.get(marca) if marca is not None else None
         if ponte is None or endpoint is None:
@@ -2351,7 +2351,7 @@ class AltoFalanteSubsystem:
         if cabo is not None:
             rota = cabo.aparelhos().get(marca)
             if rota is not None and getattr(rota, "dono", "") == chave:
-                return cabo.volume_aplicado(marca)
+                return bool(cabo.volume_aplicado(marca))
         dono = uniq if uniq in self._pontes else chave
         ponte = self._pontes.get(dono)
         if ponte is None or not self._a_ponte_leva_a_haptica(dono):

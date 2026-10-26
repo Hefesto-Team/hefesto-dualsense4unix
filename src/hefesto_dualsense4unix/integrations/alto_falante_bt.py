@@ -2445,21 +2445,6 @@ def donos_dos_fluxos(
     )
 
 
-def clientes_conectados(
-    runner: Callable[[list[str]], str | None] | None = None,
-) -> frozenset[str] | None:
-    """Os índices dos clientes conectados ao servidor de som agora. ``None`` = não sei."""
-    correr: Any = runner or rodar_pactl
-    saida = correr(["pactl", "list", "short", "clients"])
-    if saida is None:
-        return None
-    return frozenset(
-        linha.split("\t", 1)[0].strip()
-        for linha in saida.splitlines()
-        if linha.strip()
-    )
-
-
 def fonte_do_monitor_do_no(
     id_do_no: str,
     *,

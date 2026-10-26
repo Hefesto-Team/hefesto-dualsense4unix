@@ -1607,11 +1607,8 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         sysfs_vazio = xdg_root / "sys-class-input"
         sysfs_vazio.mkdir(parents=True, exist_ok=True)
         monkeypatch.setattr(evdev_reader, "SYS_CLASS_INPUT", str(sysfs_vazio))
-    from hefesto_dualsense4unix.integrations import quem_o_jogo_le
-
     hidraw_vazio = xdg_root / "sys-class-hidraw"
     hidraw_vazio.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr(quem_o_jogo_le, "RAIZ_CLASS_HIDRAW", str(hidraw_vazio))
     try:
         from hefesto_dualsense4unix.integrations import conexao_zumbi
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI

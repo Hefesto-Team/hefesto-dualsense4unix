@@ -225,15 +225,6 @@ class TestOsSeisLugaresPerguntamAoDono:
         assert achados[MAC_DO_PAD] == ""
         assert achados[MAC_DO_EDGE].endswith("usb1/1-2")
 
-    def test_o_quem_o_jogo_le_ve_o_gadget_como_pad(
-        self, mesa: Mesa, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        from hefesto_dualsense4unix.integrations import quem_o_jogo_le as qjl
-
-        monkeypatch.setattr(qjl, "RAIZ_CLASS_HIDRAW", str(mesa.classe))
-        nomes = [f"hidraw{n}" for n in range(5)]
-        assert qjl.hidraws_de_vpad(nomes) == {"hidraw0", "hidraw1"}
-
     def test_a_sinal_da_barra_lista_o_edge_do_radio_e_nao_o_pad(self, mesa: Mesa) -> None:
         from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
 

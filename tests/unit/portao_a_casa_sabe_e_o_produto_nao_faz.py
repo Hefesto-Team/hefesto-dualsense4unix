@@ -253,7 +253,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "está sempre ligada`. Ausente = LIGADA, e é isolamento de suíte: a suíte "
         "roda na máquina DELA e um teste de GUI que chamasse `Salvar` com a "
         "carona ligada varreria o `localconfig.vdf` REAL. Quem a desliga é o "
-        "`tests/conftest.py:1623` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
+        "`tests/conftest.py:1620` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
         "Onde procurar os arquivos de `assets/` "
@@ -790,6 +790,11 @@ _RODADA_DO_PROTON = (
 )
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "daemon/subsystems/quem_mexe.py::teve_entrada": (
+        "26/10/2026, A-HAPTICA-E-DO-JOGO-SEM-PORTAO-DE-QUEM-MEXE-01 — instrumento de ensaio: o "
+        "portão de quem mexe saiu do produto, e a pergunta «o físico teve entrada» ficou só para "
+        "`scripts/ensaios/a_entrada_que_nasce_sozinha.py` e para a régua da entrada sozinha."
+    ),
     "integrations/telemetria_de_corrida.py::montar_o_pacote": (
         "22/10/2026, A-TELEMETRIA-DA-CORRIDA-CHEGA-AO-GATILHO-01 — instrumento de teste: o "
         "docstring diz «o inverso de ``ler_o_pacote``, para os testes e o ensaio sem jogo». O "

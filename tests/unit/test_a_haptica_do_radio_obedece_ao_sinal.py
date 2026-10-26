@@ -270,13 +270,11 @@ class TestODonoDoFluxo:
         assert af.donos_dos_fluxos(["endpoint::p1", "endpoint::p2", "endpoint::p4"], servidor) == {
             "4243"
         }, "o módulo sem cliente virou dono, ou o fluxo de outro nó entrou"
-        assert af.clientes_conectados(servidor) == {"4243", "77"}
 
     def test_o_servidor_mudo_e_nao_sei(self) -> None:
         servidor = ServidorDeSom()
         servidor.mudo = True
         assert af.donos_dos_fluxos(["endpoint::p1"], servidor) is None
-        assert af.clientes_conectados(servidor) is None
         assert af.sinks_que_tocam(["endpoint::p1"], servidor) is None
 
     def test_sem_nada_a_perguntar_nao_pergunta(self) -> None:
