@@ -21,4 +21,9 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 07-lancadores.html
+- **26/10/2026** — A-LISTA-DA-JANELA-CONFIGURAR-NAO-PULA-AO-CLICAR-UM-EFEITO-01: os pedaços da janela Configurar
+  (`mod-op-…`, `mod-tela-…`, `mod-livre-pe`) já valem no produto, que monta a janela pelo Python; o desenho só ganhou os ids.
+- **26/10/2026** — AS-LINHAS-DA-JANELA-CONFIGURAR-USAM-O-GLIFO-DO-MAPA-DO-CONTROLE-01: as linhas das entradas do controle
+  usam o `<use href="#en-…">` do sprite da página. Até publicar, a linha da entrada no produto tem a lista e o rótulo
+  na dica, e o glifo fica vazio (a página publicada ainda não tem os `en-…`); o `--publicar 07` o desenha.

@@ -8,6 +8,7 @@ de exemplo e a forma de cada peça.
 from __future__ import annotations
 
 import functools
+import itertools
 import json
 import pathlib
 import re
@@ -345,6 +346,10 @@ FORMAS_DO_DESENHO = (
 )
 BOTOES_DO_DESENHO = ("cross", "circle", "square", "triangle", "l1", "r1", "l2", "r2",
                      "dpad_up", "dpad_down", "touchpad_left_press", "touchpad_right_press")
+PREFIXO_DA_ENTRADA = "entrada_"
+GLIFO_DA_ENTRADA = {"l2": "l2", "r2": "r2", "analogico_esquerdo": "stick_l",
+                    "analogico_direito": "stick_r", "touchpad": "touchpad",
+                    "sacudir": "giroscopio", "inclinar": "acelerometro"}
 OPCOES_DO_DESENHO_C = (
     OpcaoDaJanela("exemplo", "toques", "Toque de cada botão", "por_botao",
                   {"cross": "Toque", "circle": "Duplo", "square": "Pulso", "triangle": "Onda",
@@ -472,27 +477,54 @@ def _por_botao_da_opcao(o: OpcaoDaJanela) -> str:
     return f'<div class="tq-lista" aria-label="{_a(o.rotulo)}">{"".join(linhas)}</div>'
 
 
+def entrada_da_opcao(o: OpcaoDaJanela) -> str | None:
+    """A chave da entrada do controle que a opção escolhe (``entrada_<chave>``), ou ``None``."""
+    if o.tipo in _EMPILHADAS or not o.id.startswith(PREFIXO_DA_ENTRADA):
+        return None
+    return o.id[len(PREFIXO_DA_ENTRADA):]
+
+
+def glifo_da_entrada(o: OpcaoDaJanela) -> str | None:
+    """O glifo do mapa do controle para a linha da entrada; ``None`` se a entrada não tem glifo."""
+    chave = entrada_da_opcao(o)
+    return GLIFO_DA_ENTRADA.get(chave) if chave is not None else None
+
+
+def _linha_da_entrada(o: OpcaoDaJanela) -> str:
+    """A linha da entrada no arranjo dos botões de cima: o glifo, o rótulo na dica e a lista."""
+    return (f'<div class="tql" id="{PEDACO}op-{_a(o.id)}" data-dica="{_a(o.rotulo)}">'
+            f'<svg class="tq-gl" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">'
+            f'<use href="#en-{_a(entrada_da_opcao(o) or "")}"/></svg>'
+            f'{_controle_da_opcao(o)}</div>')
+
+
+def _simbolo_do_glifo(ident: str, arquivo: str, terca: float | None = None) -> str:
+    """Um glifo de ``assets/glyphs`` como ``<symbol>`` de uma cor só, ``currentColor``."""
+    pasta = pathlib.Path(__file__).resolve().parents[3] / "assets" / "glyphs"
+    bruto = (pasta / f"{arquivo}.svg").read_text(encoding="utf-8")
+    achado = re.search(r"<svg\b[^>]*>(.*)</svg>", bruto, flags=re.S)
+    miolo = re.sub(r"<!--.*?-->", "", achado.group(1) if achado else "", flags=re.S)
+    miolo = re.sub(r"#[0-9a-fA-F]{6}\b", "currentColor", miolo)
+    if terca is not None:
+        miolo += (f'<rect x="{terca:g}" y="8" width="8.67" height="16" '
+                  'fill="currentColor" opacity=".4"/>')
+    return f'<symbol id="{ident}" viewBox="0 0 32 32">{" ".join(miolo.split())}</symbol>'
+
+
 def sprite_dos_botoes() -> str:
-    """Os glifos dos botões do ``por_botao`` como ``<symbol id="bt-<botão>">``, uma vez na página.
+    """Os glifos dos botões do ``por_botao`` (``bt-<botão>``) e das entradas do controle
+    (``en-<entrada>``) como ``<symbol>``, uma vez na página.
 
     Só o gerador o chama: os glifos moram em ``assets/glyphs`` do repositório, e a janela do produto
     os usa pelo ``<use>`` da página publicada.
     """
-    import re
-
     from hefesto_dualsense4unix.mods.manifesto import BOTOES_DO_POR_BOTAO
 
-    pasta = pathlib.Path(__file__).resolve().parents[3] / "assets" / "glyphs"
-    simbolos = []
-    for botao in BOTOES_DO_POR_BOTAO:
-        bruto = (pasta / f"{GLIFO_DO_BOTAO.get(botao, botao)}.svg").read_text(encoding="utf-8")
-        achado = re.search(r"<svg\b[^>]*>(.*)</svg>", bruto, flags=re.S)
-        miolo = re.sub(r"<!--.*?-->", "", achado.group(1) if achado else "", flags=re.S)
-        miolo = re.sub(r"#[0-9a-fA-F]{6}\b", "currentColor", miolo)
-        if botao in _TERCA_DO_TOUCHPAD:
-            miolo += (f'<rect x="{_TERCA_DO_TOUCHPAD[botao]:g}" y="8" width="8.67" height="16" '
-                      'fill="currentColor" opacity=".4"/>')
-        simbolos.append(f'<symbol id="bt-{botao}" viewBox="0 0 32 32">{" ".join(miolo.split())}</symbol>')
+    simbolos = [_simbolo_do_glifo(f"bt-{botao}", GLIFO_DO_BOTAO.get(botao, botao),
+                                  _TERCA_DO_TOUCHPAD.get(botao))
+                for botao in BOTOES_DO_POR_BOTAO]
+    simbolos += [_simbolo_do_glifo(f"en-{entrada}", glifo)
+                 for entrada, glifo in GLIFO_DA_ENTRADA.items()]
     return ('<svg class="bt-sprite" width="0" height="0" aria-hidden="true" '
             f'style="position:absolute">{"".join(simbolos)}</svg>')
 
@@ -529,18 +561,28 @@ def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
 _EMPILHADAS = ("jogos", "por_botao")
 
 
+def _linha_da_opcao(o: OpcaoDaJanela) -> str:
+    """A linha de uma opção: rótulo à esquerda e controle à direita, ou a lista embaixo."""
+    if o.tipo in _EMPILHADAS:
+        return (f'<div id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span></div>'
+                f'{_controle_da_opcao(o)}</div>')
+    return (f'<div class="ky-linha" id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span>'
+            f'{_nota_da_opcao(o)}</div>'
+            f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>')
+
+
 def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
-    """Uma linha por opção: rótulo à esquerda e controle à direita, ou a lista embaixo.
+    """Uma linha por opção; as entradas do controle com glifo, juntas, no arranjo dos botões.
 
     Cada opção é um pedaço ``#mod-op-<id>`` (:class:`PinturaDaJanela`): o clique repinta só ela.
     """
-    return "".join(
-        f'<div id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span></div>'
-        f'{_controle_da_opcao(o)}</div>'
-        if o.tipo in _EMPILHADAS else
-        f'<div class="ky-linha" id="{PEDACO}op-{_a(o.id)}"><div class="ky-rot"><span>{_e(o.rotulo)}</span>'
-        f'{_nota_da_opcao(o)}</div>'
-        f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>' for o in itens)
+    partes = []
+    for com_glifo, juntas in itertools.groupby(itens, key=lambda o: glifo_da_entrada(o) is not None):
+        if com_glifo:
+            partes.append(f'<div class="tq-lista">{"".join(map(_linha_da_entrada, juntas))}</div>')
+        else:
+            partes.extend(map(_linha_da_opcao, juntas))
+    return "".join(partes)
 
 
 def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
