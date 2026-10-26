@@ -44,6 +44,10 @@ QUEM_STEAM = "steam"
 #: tomaram o lugar de «Quem navega», «Tipo de navegação» e «Navega com». Cada um acende pelas
 #: bandeiras que o daemon já guarda (o Big Picture e o tipo da Interna), sem campo novo no perfil.
 PERMITIR = "permitir-navegacao"
+#: O botão que trava a navegação dos controles, na moldura de TODA aba (`topo.html`), e o campo que
+#: o pinta (`pacotes.topo()`). O valor tem um dono só: a ``ligada`` do ``navegacao_interna.flag``.
+TRAVAR = "travar-navegacao"
+CAMPO_DA_TRAVA = "navegacao-travada"
 PERMITIR_INTERNA = "interna"
 PERMITIR_STEAM = "steam"
 PERMITIR_USO_GERAL = "uso-geral"
@@ -869,6 +873,29 @@ def permitir_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
             "o Hefesto não respondeu — o tipo de navegação ficou como estava") from erro
     if isinstance(resposta, dict) and resposta.get("status") != "ok":
         raise RuntimeError("o tipo de navegação ficou como estava")
+    return None
+
+
+@gesto("*", TRAVAR, grava="navegacao.interna.set")
+def travar_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O botão da moldura: trava a navegação dos controles na janela, ou a destrava.
+
+    O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01 (26/10/2026). Escreve a MESMA ``ligada`` que a
+    Interna já tem (``navegacao.interna.set``), nunca uma segunda flag: travada, nenhum toque se
+    conta e nenhum botão sai do jogo; destravada, só um controle navega por vez. O pedido é o
+    contrário do que a tela mostra agora (o bloco ``navegacao`` do daemon); sem o bloco o gesto
+    recusa em vez de chutar. O tipo da navegação não se toca.
+    """
+    if "interna_ligada" not in _navegacao(ctx.state):
+        raise RuntimeError("o Hefesto não respondeu — a navegação ficou como estava")
+    try:
+        resposta = p.resultado(
+            "navegacao.interna.set", ligada=not interna_ligada(ctx.state), origin=MANUAL)
+    except RuntimeError as erro:
+        raise RuntimeError(
+            "o Hefesto não respondeu — a navegação ficou como estava") from erro
+    if isinstance(resposta, dict) and resposta.get("status") != "ok":
+        raise RuntimeError("a navegação ficou como estava")
     return None
 
 

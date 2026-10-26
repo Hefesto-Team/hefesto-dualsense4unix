@@ -894,12 +894,22 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         "nativo": "sim" if no_nativo(ctx.state) else "nao",  # (noqa-acento) valor que a página lê
         # O item «Desligar»/«Ligar» do menu do botão direito lê daqui (A-BASE-COMUM-DAS-ABAS-01).
         "servico": servico_do_menu(ctx.state),  # (noqa-acento) endereço da página
+        # O botão que trava a navegação dos controles, na moldura de toda aba: aceso quando a
+        # Interna está travada (``interna_ligada`` falso). Sem o bloco do daemon, solto.
+        "navegacao-travada": _a_navegacao_travada(ctx.state),
         "conta-b": conta_b or _o_que_o_topo_diz_da_mesa_vazia(ctx.state),
         "perfil": em_uso or "—",
         "rodape.aplicar": _dica_do_aplicar(ctx.state),
         "rodape.salvar": _dica_do_salvar(do_rodape),
         "rodape.exportar": _dica_do_exportar(do_rodape),
     }
+
+
+def _a_navegacao_travada(state: dict[str, Any] | None) -> str:
+    """``true`` quando o daemon diz a Interna desligada; sem o bloco dele, ``false``."""
+    bloco = (state or {}).get("navegacao")
+    travada = isinstance(bloco, dict) and bloco.get("interna_ligada") is False
+    return "true" if travada else "false"
 
 
 def _o_que_o_topo_diz_da_mesa_vazia(state: dict[str, Any] | None) -> str:

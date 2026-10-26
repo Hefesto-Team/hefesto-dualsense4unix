@@ -214,6 +214,10 @@ RODAPE_VIVO_NO_NATIVO = frozenset({"exportar"})
 #: janela, não escolhas do Hefesto.
 GESTOS_DO_MENU = frozenset({"menu-atualizar", "menu-desligar", "menu-reiniciar", "menu-reconectar",
                             "menu-fechar"})
+
+#: O botão que trava a navegação dos controles é de TODA página (``("*", gesto)``) e vive no Nativo:
+#: a Interna é da janela, não do jogo (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01).
+GESTOS_DA_MOLDURA = frozenset({"travar-navegacao"})
 FRASE_NO_NATIVO = "Em modo nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
 MIRA_CINZA_NO_NATIVO = (
     "Em modo nativo o jogo lê este controle direto, e o analógico virtual não grava."
@@ -249,7 +253,8 @@ def recusa_no_nativo(pagina: str, gesto: str, state: Any) -> str | None:
     """
     if (pagina, gesto) not in FRASES_NO_NATIVO and (
             pagina not in ABAS_POR_CONTROLE or (pagina, gesto) in VIVOS_NO_NATIVO
-            or gesto in RODAPE_VIVO_NO_NATIVO or gesto in GESTOS_DO_MENU):
+            or gesto in RODAPE_VIVO_NO_NATIVO or gesto in GESTOS_DO_MENU
+            or gesto in GESTOS_DA_MOLDURA):
         return None
     if CAMADA.get((pagina, gesto)) == JANELA or not no_nativo(state):
         return None
@@ -265,6 +270,7 @@ __all__ = [
     "CONTROLE",
     "FRASES_NO_NATIVO",
     "FRASE_NO_NATIVO",
+    "GESTOS_DA_MOLDURA",
     "GESTOS_DO_MENU",
     "JANELA",
     "JOGO",

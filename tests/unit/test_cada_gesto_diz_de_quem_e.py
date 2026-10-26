@@ -68,9 +68,15 @@ def _gestos(nome: str, *, publicado: bool) -> set[str]:
 
 
 def _vistos() -> set[tuple[str, str]]:
-    """Todo ``(página, gesto)`` da página publicada e do desenho."""
+    """Todo ``(página, gesto)`` da página publicada e do desenho.
+
+    Fora os gestos da moldura (``camada.GESTOS_DA_MOLDURA``): como o rodapé e o menu, são de TODA
+    página (``("*", gesto)``) e não entram na tabela; a régua deles é a de
+    ``test_o_botao_que_trava_a_navegacao_dos_controles.py``.
+    """
+    moldura = _pacotes().camada.GESTOS_DA_MOLDURA
     return {(nome, g) for nome in _as_dez() for publicado in (True, False)
-            for g in _gestos(nome, publicado=publicado)}
+            for g in _gestos(nome, publicado=publicado) if g not in moldura}
 
 
 def test_todo_gesto_das_dez_tem_camada() -> None:

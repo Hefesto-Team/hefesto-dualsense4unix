@@ -124,6 +124,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                       "no aparelho é o de cada linha, que já responde as quatro",
     "permitir-navegacao": "escolhe a navegação (Interna, Steam ou Uso geral) — é do serviço "
                           "(o Big Picture do `modo-steam` e o tipo da Interna), nunca do perfil",
+    "travar-navegacao": "trava ou destrava a navegação dos controles na janela (a `ligada` do "
+                        "`navegacao_interna.flag`) — é do serviço, nunca do perfil",
     "na-steam": "escolhe o que a Steam navega (o Big Picture) — é do serviço, nunca do perfil",
     "point-and-click-perfil": "escolhe o perfil que o point and click usa — é da máquina "
                               "(`mouse.point_and_click` do `maquina.json`)",
