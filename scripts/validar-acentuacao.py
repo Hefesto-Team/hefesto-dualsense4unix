@@ -1006,12 +1006,12 @@ def main() -> int:
         alvos = listar_arquivos_git(raiz)
     else:
         alvos = []
-        for p in recebidos:
-            if p.is_dir():
+        for recebido in recebidos:
+            if recebido.is_dir():
                 for ext in EXTENSOES_ALVO:
-                    alvos.extend(p.rglob(f"*{ext}"))
+                    alvos.extend(recebido.rglob(f"*{ext}"))
             else:
-                alvos.append(p)
+                alvos.append(recebido)
 
     if args.fix:
         total_fix = 0
