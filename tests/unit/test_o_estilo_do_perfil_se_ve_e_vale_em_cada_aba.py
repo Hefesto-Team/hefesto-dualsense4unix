@@ -170,7 +170,7 @@ def _tique_com_o_perfil(prof: Profile) -> Any:
 
     save_profile(prof)
     vista = perfil_no_modo(prof)
-    conectados = [
+    conectados: list[dict[str, Any]] = [
         {"uniq": u, "player": n, "connected": True, "index": n - 1, "is_primary": n == 1,
          "transport": "usb" if n % 2 else "bt", "battery_pct": 90, "inputs": {}}
         for n, u in enumerate(NA_TELA, start=1)]
