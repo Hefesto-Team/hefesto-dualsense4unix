@@ -67,10 +67,13 @@ def _carga(pagina: str, controles: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _motor() -> str:
-    """O `escrever()` do piloto e o que ele usa — do FONTE, recortado por marcador."""
+    """O `escrever()` do piloto e o que ele usa — do FONTE, recortado por marcador de código.
+
+    O fim do corte é o `achar()`, a função que vem depois: o comentário que o marcava saiu.
+    """
     fonte = PILOTO.read_text(encoding="utf-8")
     i = fonte.index("  function ligado(t){")
-    j = fonte.index("  // OS TRÊS VOCABULÁRIOS DE ENDEREÇO", i)
+    j = fonte.index("  function achar(raiz, chave){", i)
     return fonte[i:j]
 
 

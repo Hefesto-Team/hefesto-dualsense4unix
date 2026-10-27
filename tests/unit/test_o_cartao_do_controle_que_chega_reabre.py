@@ -17,13 +17,13 @@ POR QUE O DESENHO NÃO RESOLVIA: o P3 e o P4 nascem com a marca cravada no HTML,
 por decisão de 31/08. Uma marca que o HTML crava e o produto só sabe
 acrescentar é uma marca de mão única.
 
-**ESTA RÉGUA RODA O JS, e não o lê.** O passo `1b`/`1c` é extraído do
+**ESTA RÉGUA RODA O JS, e não o lê.** O laço dos vazios e o dos ocupados saem do
 `hefesto_vivo.py` e executado no `node` contra um DOM de mentira. Medir o TEXTO
 do piloto seria a forma exata do defeito que esta casa mais paga: *a régua
 confunde a PALAVRA com o ATO* — um `grep` por `remove('off')` daria verde no dia
 em que alguém escrevesse a linha dentro de um `if` que nunca corre.
 
-A MORDIDA: apague o bloco `1c` do piloto (ou o `carga["ocupados"]` do pacote) e
+A MORDIDA: apague o laço de `p.ocupados` do piloto (ou o `carga["ocupados"]` do pacote), e
 :func:`test_o_cartao_fechado_reabre_quando_o_controle_volta` reprova.
 """
 
@@ -39,12 +39,16 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-ABRE = "    // 1b. OS LUGARES VAZIOS"
-FECHA = "    // 2. OS CAMPOS POR CONTROLE"
+ABRE = "    for(const pref of (p.vazios || [])){"
+FECHA = "    for(const [pref, campos] of Object.entries(p.colunas || {})){"
 
 
 def _trecho_do_piloto() -> str:
-    """Os passos 1b e 1c, do FONTE — nunca uma cópia dentro deste arquivo."""
+    """Os passos 1b e 1c, do FONTE — nunca uma cópia dentro deste arquivo.
+
+    O corte é pelo CÓDIGO: do laço de `p.vazios` (o 1b) até o de `p.colunas` (o 2), porque o
+    comentário que rotulava cada passo saiu do fonte.
+    """
     fonte = PILOTO.read_text(encoding="utf-8")
     i = fonte.index(ABRE)
     j = fonte.index(FECHA, i)

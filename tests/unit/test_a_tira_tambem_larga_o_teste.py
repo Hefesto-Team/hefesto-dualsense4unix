@@ -1,6 +1,7 @@
 """O clique na tira também larga o teste da aba Vibração."""
 from __future__ import annotations
 
+import argparse
 import pathlib
 import sys
 import threading
@@ -62,9 +63,14 @@ class _View:
 
 
 class _Piloto:
-    """Só o que o `_carregou` lê, com a instalação contada e não feita."""
+    """Só o que o `_carregou` lê, com a instalação contada e não feita.
+
+    O `args` é o do piloto oculto, o modo em que a régua roda: a aba à vista só se anota no
+    runtime com a janela na tela, e a régua não escreve lá.
+    """
 
     def __init__(self, de: str, para: str, *, pronto: bool = True) -> None:
+        self.args = argparse.Namespace(oculta=True)
         self.view = _View(para)
         self.pagina = de
         self.pronto = pronto

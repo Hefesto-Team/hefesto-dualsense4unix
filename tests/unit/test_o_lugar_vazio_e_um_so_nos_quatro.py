@@ -149,6 +149,7 @@ def test_os_quatro_lugares_vazios_da_04_mostram_a_mesma_coisa() -> None:
 
 
 def _trecho(abre: str, fecha: str) -> str:
+    """O trecho do piloto entre dois marcadores de CÓDIGO (o comentário saiu do fonte)."""
     fonte = PILOTO.read_text(encoding="utf-8")
     i = fonte.index(abre)
     return fonte[i:fonte.index(fecha, i)]
@@ -194,7 +195,8 @@ console.log(JSON.stringify({lugares: fora, n: n}));
 def test_o_passo_1d_move_o_verde_para_quem_navega() -> None:
     """O desenho crava `navega` no P1; a marca diz P2 — o verde muda de lugar."""
     roteiro = _DOM_DAS_MARCAS.replace("__TRECHO__", _trecho(
-        "    // 1d. AS MARCAS DO LUGAR", "    // 2. OS CAMPOS POR CONTROLE"))
+        "    for(const [classe, com] of Object.entries(p.marcas || {})){",
+        "    for(const [pref, campos] of Object.entries(p.colunas || {})){"))
     inicial = {"p1": ["nav-ctl", "navega"], "p2": ["nav-ctl"],
                "p3": ["nav-ctl", "vazia"], "p4": ["nav-ctl", "vazia"]}
     fora = _node(roteiro, json.dumps(inicial),
@@ -247,7 +249,7 @@ console.log(JSON.stringify(fora));
 def test_o_rotulo_igual_com_o_ponto_por_dentro_e_reescrito_uma_vez() -> None:
     """`P3 <span class="pt">•</span> Desconectado` vira texto uma vez, e só."""
     roteiro = _DOM_DO_ESCREVER.replace("__TRECHO__", _trecho(
-        "  function escrever(el, v){", "  // OS TRÊS VOCABULÁRIOS DE ENDEREÇO"))
+        "  function escrever(el, v){", "  function achar(raiz, chave){"))
     casos = [
         {"texto": "P3 • Desconectado", "filhos": ["pt"]},
         {"texto": "USB • Navega o PC", "filhos": ["bolinha", "pt"]},
