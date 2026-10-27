@@ -171,9 +171,13 @@ _FILHO_DA_INTERFACE = textwrap.dedent(
     """
     import os, pathlib, signal, sys
     signal.signal(signal.SIGHUP, signal.SIG_DFL)
-    pathlib.Path(sys.argv[1]).write_text(str(os.getpid()))
+    do_pid = sys.argv[1]
+    pathlib.Path(do_pid).write_text(str(os.getpid()))
     from hefesto_dualsense4unix.interface import abrir
-    raise SystemExit(abrir.abrir(sys.argv[2:]))
+    rc = abrir.abrir(sys.argv[2:])
+    with open(do_pid, "a") as arquivo:
+        arquivo.write(f" {rc}")
+    raise SystemExit(rc)
     """
 )
 
@@ -219,6 +223,9 @@ def test_a_interface_sai_em_menos_de_tres_segundos_com_a_linha_do_fim(
             filho.wait(10)
     texto = diario.read_text(errors="replace")
     assert saiu and levou < PRAZO_S, f"o processo levou {levou:.1f} s\n{texto[-1500:]}"
-    assert filho.returncode == 0, texto[-1500:]
+    lido = arquivo_do_pid.read_text().split()
+    voltou = lido[1] if len(lido) > 1 else "nada: o processo morreu antes de ele voltar"
+    assert filho.returncode == 0, (
+        f"o xvfb-run saiu com {filho.returncode}; o `abrir` devolveu {voltou}\n" + texto[-1500:])
     motivos = [m["motivo"] for linha in texto.splitlines() if (m := FIM.search(linha))]
     assert motivos == [f"sinal {sinal.name}"], texto[-1500:]
