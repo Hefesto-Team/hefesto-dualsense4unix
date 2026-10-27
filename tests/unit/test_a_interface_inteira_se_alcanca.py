@@ -47,7 +47,7 @@ from hefesto_dualsense4unix.interface import hefesto_vivo
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 MOCKUP = RAIZ / "mockup"
 LARGURA, ALTURA = 1212, 809
-MARCA_DO_CONTRATO = "/* O alcance pelo teclado e pelo controle ("
+MARCA_DO_CONTRATO = "(() => {\n  const NATIVO = '"
 
 
 def _paginas() -> list[pathlib.Path]:
@@ -271,7 +271,11 @@ def test_a_barra_das_abas_e_a_calibracao_entram_na_navegacao(navegador: Any) -> 
 
 
 def _sem_o_contrato(texto: str) -> str:
-    """A página sem o IIFE do alcance (do marcador até o fim do `<script id="base-comum">`)."""
+    """A página sem o IIFE do alcance (do marcador até o fim do `<script id="base-comum">`).
+
+    O marcador é o começo do IIFE, com a constante `NATIVO` que só ele declara: o comentário que
+    o anunciava saiu do `base-comum.js`.
+    """
     ini = texto.index(MARCA_DO_CONTRATO)
     fim = texto.index("</script>", ini)
     return texto[:ini] + texto[fim:]

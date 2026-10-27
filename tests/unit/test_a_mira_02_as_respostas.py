@@ -421,10 +421,14 @@ def test_os_dois_inverter_nascem_apagados_e_dizem_o_ato() -> None:
 
 
 def test_o_bloco_nao_tem_vermelho_nem_recado() -> None:
-    """Os dois ajustes não trazem frase nova nem cor de alarme — só o rótulo."""
+    """Os dois ajustes não trazem frase nova nem cor de alarme — só o rótulo.
+
+    O bloco da folha começa na regra que põe a lista e o «Inverter» na linha de baixo do
+    deslizante: o comentário que o abria saiu da página.
+    """
     doc = _bancada_calibrar()
     folha = doc.split("<style>", 1)[1].split("</style>", 1)[0]
-    trecho = folha.split("«SÓ ENQUANTO EU SEGURAR» E «INVERTER»", 1)[1]
+    trecho = folha.split(".desl .lista,.desl .inverter{", 1)[1]
     assert "--red" not in trecho and "--orange" not in trecho
 
 
