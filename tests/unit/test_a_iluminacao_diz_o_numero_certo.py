@@ -714,14 +714,20 @@ def test_a_conversao_do_hex_e_a_do_motor():
     A linha era `tuple(int(hexa[i:i+2], 16) for i in (0, 2, 4))`, escrita neste
     arquivo, que já importava o módulo dono ao lado (`player_slot_color`).
     """
+    import ast
     import inspect
+    import textwrap
 
     from pacotes import a04_iluminacao as pac
 
     p = _clicar("cor", {"uniq": DO_CABO["uniq"], "hex": "#FF8000"})
     assert p.chamadas == [("led_set_detalhado", ((255, 128, 0),),
                           {"brightness": None, "uniq": DO_CABO["uniq"]})]
-    corpo = inspect.getsource(pac.cor).replace(pac.cor.__doc__ or "", "")
+    funcao = ast.parse(textwrap.dedent(inspect.getsource(pac.cor))).body[0]
+    assert isinstance(funcao, ast.FunctionDef)
+    if ast.get_docstring(funcao) is not None:
+        funcao.body = funcao.body[1:]
+    corpo = ast.unparse(funcao)
     assert "int(hexa" not in corpo, (
         "a conversão voltou a ser escrita à mão ao lado do dono que a faz.")
     assert "hex_to_rgb" in corpo

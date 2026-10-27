@@ -30,8 +30,15 @@ async def _run_daemon_ticks(
     *,
     timeout: float = 5.0,
 ) -> None:
-    """Executa o daemon por n_ticks de poll e para."""
+    """Executa o daemon por n_ticks de poll e para.
+
+    O laço daqui segue o `_poll_loop` do produto: ele nasce antes do `connect` (`Daemon.run`
+    cria a tarefa e só depois sobe os subsistemas e conecta), então espera o controle conectar
+    em vez de ler. Lendo antes, o `FakeController` recusa, o laço saía sem parar o daemon e o
+    teste morria no prazo: no 3.14, 8 de 40 voltas (27/10/2026); no 3.12, nenhuma.
+    """
     poll_count = 0
+    erros: list[BaseException] = []
 
     async def _limited_poll() -> None:
         nonlocal poll_count
@@ -43,9 +50,14 @@ async def _run_daemon_ticks(
             if poll_count >= n_ticks:
                 daemon.stop()
                 break
+            if not daemon.controller.is_connected():
+                await asyncio.sleep(period)
+                continue
             try:
                 state = await loop.run_in_executor(daemon._executor, daemon.controller.read_state)
-            except Exception:
+            except Exception as exc:
+                erros.append(exc)
+                daemon.stop()
                 break
             daemon.store.update_controller_state(state)
             daemon.bus.publish(EventTopic.STATE_UPDATE, state)
@@ -61,6 +73,9 @@ async def _run_daemon_ticks(
 
     daemon._poll_loop = _limited_poll  # type: ignore[method-assign]
     await asyncio.wait_for(daemon.run(), timeout=timeout)
+    if erros:
+        raise erros[0]
+    assert poll_count == n_ticks, f"o laço leu {poll_count} de {n_ticks} estados"
 
 
 def _config_base(*, mic_button_toggles_system: bool = True) -> DaemonConfig:
