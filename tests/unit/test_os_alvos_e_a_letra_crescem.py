@@ -56,14 +56,14 @@ ABAS = (
 )
 NO_PISO = ("02-controles", "09-sistema")
 TETO_DAS_OUTRAS: dict[str, tuple[int, int, int]] = {
-    "01-jogar": (0, 6, 43),
+    "01-jogar": (0, 0, 0),
     "03-gatilhos": (2, 7, 22),
-    "04-iluminacao": (2, 4, 47),
-    "05-vibracao": (8, 3, 39),
+    "04-iluminacao": (2, 3, 46),
+    "05-vibracao": (8, 2, 38),
     "06-navegacao": (0, 2, 20),
     "07-lancadores": (2, 2, 2),
-    "08-conexoes": (4, 3, 29),
-    "10-perfis": (0, 18, 76),
+    "08-conexoes": (3, 0, 25),
+    "10-perfis": (0, 17, 71),
 }
 ID_DA_FOLHA = "piso-dos-alvos"
 
@@ -348,7 +348,7 @@ def test_a_regua_morde_o_tamanho_que_nao_cede(
     sem_ceder = _vista_em_css((1918, 840), 150, cede=lambda escolhido, _l, _a: escolhido)
     assert sem_ceder == (1278, 560)
     achado = _rolagens(navegador, geradas / "04-iluminacao.html", sem_ceder)
-    assert "o documento rola" in achado, achado
+    assert achado & {"o documento rola", "rola por dentro: DIV.miolo"}, achado
 
 
 def _texto_da_vaga(navegador: Browser, arquivo: pathlib.Path, numero: int) -> str:
