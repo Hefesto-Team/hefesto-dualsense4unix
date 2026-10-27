@@ -19,7 +19,8 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CASA="${HEFESTO_CASA:-$HOME/.local/state/hefesto-casa}"
 JOBS_TXT="$RAIZ/scripts/ci-local/jobs.txt"
 DOCKERFILE="$RAIZ/scripts/ci-local/Dockerfile"
-BASE="catthehacker/ubuntu:act-24.04"
+BASE="catthehacker/ubuntu:act-26.04-dev"
+BASE_24="catthehacker/ubuntu:act-24.04"
 BASE_22="catthehacker/ubuntu:act-22.04"
 EM_PARALELO="${CI_LOCAL_JOBS:-2}"
 PERNAS="${CI_LOCAL_PERNAS:-3}"
@@ -157,21 +158,27 @@ done
 [ -n "$ACT" ] || { echo "ci-local: não há act (esperado em $CASA/bin/act ou no PATH); nada rodou, e nada rodado não é verde" >&2; exit 2; }
 docker info >/dev/null 2>&1 || { echo "ci-local: o docker não responde; nada rodou, e nada rodado não é verde" >&2; exit 2; }
 
-IMAGEM="${CI_LOCAL_IMAGEM:-}"
-if [ -z "$IMAGEM" ]; then
-  if [ -f "$DOCKERFILE" ]; then
-    IMAGEM="hefesto-ci-local:$(sha256sum "$DOCKERFILE" | cut -c1-10)"
-    if ! docker image inspect "$IMAGEM" >/dev/null 2>&1; then
-      echo "ci-local: montando a imagem $IMAGEM sobre $BASE (uma vez só; a base baixa uns 570 MB)" >&2
-      docker build -q -t "$IMAGEM" -f "$DOCKERFILE" "$RAIZ/scripts/ci-local" >/dev/null 2>&1 \
-        || { echo "ci-local: a imagem $IMAGEM não montou (rede?); nada rodou" >&2; exit 2; }
-    fi
-  else
-    IMAGEM="$BASE"
-    docker image inspect "$IMAGEM" >/dev/null 2>&1 || docker pull -q "$IMAGEM" >/dev/null 2>&1 \
-      || { echo "ci-local: a imagem $IMAGEM não baixou (rede?); nada rodou" >&2; exit 2; }
+imagem_de() {
+  local base="$1" nome
+  if [ ! -f "$DOCKERFILE" ]; then
+    docker image inspect "$base" >/dev/null 2>&1 || docker pull -q "$base" >/dev/null 2>&1 \
+      || { echo "ci-local: a imagem $base não baixou (rede?); nada rodou" >&2; return 2; }
+    echo "$base"
+    return 0
   fi
-fi
+  nome="hefesto-ci-local:$({ cat "$DOCKERFILE"; echo "$base"; } | sha256sum | cut -c1-10)"
+  if ! docker image inspect "$nome" >/dev/null 2>&1; then
+    echo "ci-local: montando a imagem $nome sobre $base (uma vez só; a base baixa uns 570 MB)" >&2
+    docker build -q --build-arg "BASE=$base" -t "$nome" -f "$DOCKERFILE" "$RAIZ/scripts/ci-local" >/dev/null 2>&1 \
+      || { echo "ci-local: a imagem $nome não montou (rede?); nada rodou" >&2; return 2; }
+  fi
+  echo "$nome"
+}
+
+IMAGEM="${CI_LOCAL_IMAGEM:-}"
+[ -n "$IMAGEM" ] || IMAGEM="$(imagem_de "$BASE")" || exit 2
+IMAGEM_24="${CI_LOCAL_IMAGEM_24:-}"
+[ -n "$IMAGEM_24" ] || IMAGEM_24="$(imagem_de "$BASE_24")" || exit 2
 IMAGEM_22=""
 DOCKERFILE_22="$RAIZ/scripts/ci-local/Dockerfile.ubuntu-22.04"
 for j in "${JOBS[@]}"; do
@@ -267,7 +274,7 @@ chamar_act() {
   (
     cd "$ARV" || exit 2
     "$ACT" push -W "$yml" -j "$job" \
-      -P "ubuntu-latest=$IMAGEM" -P "ubuntu-24.04=$IMAGEM" "${extras[@]}" \
+      -P "ubuntu-latest=$IMAGEM" -P "ubuntu-26.04=$IMAGEM" -P "ubuntu-24.04=$IMAGEM_24" "${extras[@]}" \
       --pull=false --rm --container-architecture linux/amd64 "${OFFLINE[@]}" \
       --action-cache-path "$cache" \
       --artifact-server-path "$CASA/ci-local/artefatos" \

@@ -54,7 +54,7 @@ FERRAMENTAS = (
     "uniq",
     "wc",
 )
-RUNNERS_QUE_O_ACT_MAPEIA = {"ubuntu-latest", "ubuntu-24.04"}
+RUNNERS_QUE_O_ACT_MAPEIA = {"ubuntu-latest", "ubuntu-26.04", "ubuntu-24.04"}
 
 
 def _jobs_dos_workflows() -> dict[str, dict[str, Any]]:
@@ -569,8 +569,19 @@ def test_a_matriz_de_runners_roda_uma_perna_por_chamada_com_a_imagem_dela(mundo:
     chamadas = [ln for ln in log.splitlines() if ln.startswith("ARGS:")]
     assert len(chamadas) == 2, chamadas
     assert "--matrix os:ubuntu-24.04" in chamadas[0] and "ubuntu-22.04=" not in chamadas[0]
+    assert "ubuntu-24.04=catthehacker/ubuntu:act-24.04" in chamadas[0]
     assert "--matrix os:ubuntu-22.04" in chamadas[1]
     assert "ubuntu-22.04=catthehacker/ubuntu:act-22.04" in chamadas[1]
+
+
+def test_o_ubuntu_latest_roda_na_imagem_do_26_04_como_o_runner(mundo: Mundo) -> None:
+    """O `ubuntu-latest` do GitHub é o 26.04: na imagem do 24.04 o vermelho dele não aparece."""
+    r = mundo.rodar("--job", "glifos", CI_LOCAL_IMAGEM="")
+    chamadas = [ln for ln in mundo.log("glifos").splitlines() if ln.startswith("ARGS:")]
+    assert r.returncode == 0 and len(chamadas) == 1, r.stderr
+    assert "ubuntu-latest=catthehacker/ubuntu:act-26.04-dev" in chamadas[0]
+    assert "ubuntu-26.04=catthehacker/ubuntu:act-26.04-dev" in chamadas[0]
+    assert "ubuntu-24.04=catthehacker/ubuntu:act-24.04" in chamadas[0]
 
 
 def test_a_perna_pedida_e_a_unica_que_roda(mundo: Mundo) -> None:
