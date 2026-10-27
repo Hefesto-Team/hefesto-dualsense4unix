@@ -365,7 +365,7 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   `{"id": "servidor", "tipo": "endereco", "rotulo": "Servidor", "aparece_com": {"ligacao": "Pela rede"}}`.
   O campo entra depois da 0.9.5, com a mesma `api` 2; um Hefesto até a 0.9.5 recusa o manifesto que o
   declara, como recusa os `modos`.
-- **`dica`**: a frase curta (até 120 letras) da linha, na dica dela; o rótulo fica só com o nome.
+- **`dica`**: a frase curta (até 120 letras) da linha, mostrada na dica; o rótulo fica só com o nome.
 - **`unidade`**: até 4 letras, só no `deslizante`: o número ao lado dele a diz, também enquanto se arrasta
   (`60 %`, `5 min`).
 - **`zero`**: o texto (até 24 letras) que o número do `deslizante` mostra no 0, só quando o `minimo` é 0
@@ -436,7 +436,7 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   `rotulo` é a dica do ponto) ou `escolha` (`opcoes` = `[{id, rotulo}]`); a paleta e a escolha levam de 1 a 16
   opções, e o `valor` delas é o `id` de uma opção ou `null`. O `rotulo` (até 30 letras) nomeia a linha do controle
   (a paleta sem ele diz «Cor») e a `dica` (até 120) é a dica dele. O `icone` (só `lampada`, por ora) é o glifo do
-  que a chave controla, desenhado antes dela: é o que a separa da chave que liga o aparelho; sem ele, a chave leva o
+  que a chave controla, desenhado antes da chave: é o que a separa da que liga o aparelho; sem ele, a chave leva o
   `rotulo` escrito. A janela desenha naquela aba um cartão por
   aparelho com `controles`: a primeira chave no topo, ao lado do nome, e uma linha por controle embaixo, a paleta
   com as cores de um ponto numa fileira e as de duas ou três noutra. O aparelho sem `controles` não ganha cartão;
