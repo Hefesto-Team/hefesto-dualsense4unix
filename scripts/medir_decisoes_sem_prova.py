@@ -72,6 +72,13 @@ CAMPOS_DA_TRIAGEM = ("titulo", "a_pergunta", "escolha", "onde_mora",
                      "recomendacao", "caminhos")
 
 COLISOES_DECLARADAS = {
+    "D-2610-O-DESENHO-DA-ONDA-DO-DIRETO-E-DO-SUAVE": (
+        "É de PRODUTO: a decisão diz o desenho que a janela da extensão mostra para as entradas "
+        "contínuas Direto e Suave, e `test_o_efeito_direto_e_suave_tem_o_desenho_da_onda.py::"
+        "test_o_direto_sobe_em_reta_e_o_suave_ao_quadrado` mede a curva desenhada. A triagem a "
+        "chama de processo porque «onda» é o traço dos toques no desenho, não a onda de "
+        "agentes (26/10/2026)."
+    ),
     "D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE": (
         "É de PRODUTO: a decisão diz o que o `.deb` instala, e `test_as_fontes_da_interface_moram_"
         "no_produto.py::test_o_deb_nao_leva_o_link_do_mockup_quebrado` mede o pacote montado. A "
