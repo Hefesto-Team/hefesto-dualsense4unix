@@ -17,8 +17,8 @@ POR QUE O DESENHO NÃO RESOLVIA: o P3 e o P4 nascem com a marca cravada no HTML,
 por decisão de 31/08. Uma marca que o HTML crava e o produto só sabe
 acrescentar é uma marca de mão única.
 
-**ESTA RÉGUA RODA O JS, e não o lê.** O laço dos vazios e o dos ocupados saem do
-`hefesto_vivo.py` e executado no `node` contra um DOM de mentira. Medir o TEXTO
+**ESTA RÉGUA RODA O JS, e não o lê.** O laço dos vazios e o dos ocupados são extraídos
+do `hefesto_vivo.py` e executados no `node` contra um DOM de mentira. Medir o TEXTO
 do piloto seria a forma exata do defeito que esta casa mais paga: *a régua
 confunde a PALAVRA com o ATO* — um `grep` por `remove('off')` daria verde no dia
 em que alguém escrevesse a linha dentro de um `if` que nunca corre.

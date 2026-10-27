@@ -164,7 +164,7 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     assert len(fora) == 30, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
         f"tradução, não 30: {', '.join(sorted(fora))}. Se o número CAIU, é "
-        "trabalho bom — atualize as três páginas que o citam. Se chegou a "
+        "trabalho bom — baixe o número aqui. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
     assert sum(fora.values()) >= 400, (
