@@ -771,7 +771,13 @@ class ExternalIdentityRegistry:
 
 
 class ExternalImuEnabler:
-    """Liga a IMU do Nintendo Pro REAL na ADOÇÃO (GYRO-02, FASEADO — só USB)."""
+    """Liga a IMU do Nintendo Pro REAL na ADOÇÃO (GYRO-02, FASEADO — só USB).
+
+    O aparelho aceita pelos DOIS transportes: o `hid-nintendo` manda o `ENABLE_IMU` no
+    `joycon_init` em todo barramento. Quem recusa o rádio é o nosso `if`, porque lá o envio é
+    redundante, custa 60 ms entre subcomandos contra 20 ms no cabo e é o território do EXT-04,
+    que desregistrou o 8BitDo.
+    """
 
     def __init__(self) -> None:
         self._lock = threading.RLock()

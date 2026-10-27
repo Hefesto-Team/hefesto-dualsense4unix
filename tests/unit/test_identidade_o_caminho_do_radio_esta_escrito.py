@@ -61,13 +61,12 @@ class TestOEnableImuERecusadoPorNos:
 
     def test_a_constante_diz_que_o_aparelho_aceita_nos_dois(self) -> None:
         """A razão escrita não pode voltar a chamar o rádio de não medido."""
-        fonte = Path(external_identity.__file__).read_text(encoding="utf-8")
-        cabeca = fonte.split('_IMU_ENABLE_ALLOWED_BUS = "usb"')[0]
-        assert cabeca.index("SUBSTITUÍDO") < cabeca.index("kernel-watch"), (
+        razao = external_identity.ExternalImuEnabler.__doc__ or ""
+        assert "kernel-watch" not in razao and "não medido" not in razao, (
             "a razão derrubada voltou VIVA: o rádio não é território não medido "
             "— o driver desta árvore manda o ENABLE_IMU nos dois barramentos"
         )
-        assert "aceita pelos DOIS transportes" in cabeca, (
+        assert "aceita pelos DOIS transportes" in razao, (
             "a razão nova tem de dizer que o APARELHO aceita — sem isso a "
             "próxima pessoa lê o gate como limitação do controle"
         )
