@@ -288,3 +288,40 @@ def test_a_placa_nao_sobe_a_versao_e_o_schema_a_ignora(
     assert disco["version"] == maquina.MAQUINA_SCHEMA_VERSION == 1
     assert "placa" not in maquina.MaquinaConfig.model_fields
     assert maquina.MaquinaConfig.model_validate(maquina._so_o_que_o_schema_conhece(disco))
+
+
+def test_a_leitura_que_nao_regrava_nao_multiplica_o_de_outra_placa(
+    casa: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _gravar(casa, _documento(CONTROLADOR_VIVO, placa=_placa("Fabricante A", "Placa A")))
+    _nesta_placa(tmp_path, monkeypatch)
+
+    def _disco_cheio(documento: dict[str, Any]) -> None:
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(maquina, "_escrever", _disco_cheio)
+
+    for _ in range(3):
+        assert maquina.carregar_maquina().mapa == maquina.MapaDaMesa()
+
+    assert _de_outra_placa(casa) == ["maquina.json.de-outra-placa"]
+    assert _no_disco(casa)["placa"] == _placa("Fabricante A", "Placa A")
+
+
+def test_sem_o_desvio_a_placa_se_le_pela_raiz_do_dono_dela(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hefesto_dualsense4unix.integrations import censo_do_gabinete
+
+    raiz = _sys_de_mentira(tmp_path / "sys-do-dono", fabricante="Fabricante D", modelo="Placa D",
+                           pci=None)
+    monkeypatch.delenv(maquina.RAIZ_DO_SYS_ENV)
+    monkeypatch.setattr(maquina, "_PLACAS_LIDAS", {})
+    monkeypatch.setattr(
+        censo_do_gabinete.ler_a_placa,
+        "__kwdefaults__",
+        {**(censo_do_gabinete.ler_a_placa.__kwdefaults__ or {}),
+         "raiz_dmi_id": str(raiz / "class" / "dmi" / "id")},
+    )
+
+    assert maquina.placa_daqui() == _placa("Fabricante D", "Placa D")

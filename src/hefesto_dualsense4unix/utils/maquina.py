@@ -1926,8 +1926,11 @@ def _raiz_do_sys() -> str:
 
 
 def placa_daqui() -> dict[str, Any] | None:
-    """O fabricante e o modelo da placa-mãe, lidos uma vez por processo; ``None`` se não se leem."""
-    raiz = _raiz_do_sys()
+    """O fabricante e o modelo da placa-mãe, lidos uma vez por processo; ``None`` se não se leem.
+
+    Sem ``HEFESTO_RAIZ_DO_SYS``, a raiz do DMI é a do ``ler_a_placa``, o dono dela.
+    """
+    raiz = os.environ.get(RAIZ_DO_SYS_ENV) or ""
     if raiz in _PLACAS_LIDAS:
         return _PLACAS_LIDAS[raiz]
     from hefesto_dualsense4unix.integrations.censo_do_gabinete import (
@@ -1935,7 +1938,11 @@ def placa_daqui() -> dict[str, Any] | None:
         serve_para_esta_placa,
     )
 
-    lida = ler_a_placa(raiz_dmi_id=os.path.join(raiz, "class", "dmi", "id"))
+    lida = (
+        ler_a_placa(raiz_dmi_id=os.path.join(raiz, "class", "dmi", "id"))
+        if raiz
+        else ler_a_placa()
+    )
     placa = {campo: lida[campo] for campo in ("fabricante", "modelo")}
     legivel = placa if serve_para_esta_placa({PLACA_FIELD: placa}, placa) else None
     _PLACAS_LIDAS[raiz] = legivel
@@ -2035,24 +2042,45 @@ def conferir_a_placa(
 
 
 def _guardar_o_de_outra_placa(guardado: Mapping[str, Any]) -> Path:
-    """Grava o que veio de outra placa ao lado, em ``.de-outra-placa``, sem sobrescrever."""
+    """Grava o que veio de outra placa ao lado, em ``.de-outra-placa``, sem sobrescrever.
+
+    A mesma guarda já gravada não ganha outro arquivo: a leitura que não regrava o
+    ``maquina.json`` (disco cheio, dois processos na mesma primeira leitura) volta aqui.
+    """
     origem = caminho_da_maquina()
     base = origem.name + _SUFIXO_DE_OUTRA_PLACA
     payload = json.dumps(guardado, ensure_ascii=False, indent=2, sort_keys=True).encode()
-    alvo = origem.with_name(base)
-    n = 2
-    while alvo.exists():
-        alvo = origem.with_name(f"{base}-{n}")
+    n = 1
+    while True:
+        alvo = origem.with_name(base if n == 1 else f"{base}-{n}")
         n += 1
-    fd = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    with os.fdopen(fd, "wb") as fh:
-        fh.write(payload)
+        if alvo.exists():
+            if _os_mesmos_bytes(alvo, payload):
+                return alvo
+            continue
+        fd = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(payload)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                alvo.unlink()
+            raise
+        break
     logger.warning(
         "maquina_de_outra_placa_guardada",
         guardado_em=str(alvo),
         secoes=sorted(set(guardado) & set(SECOES_DESTE_COMPUTADOR)),
     )
     return alvo
+
+
+def _os_mesmos_bytes(caminho: Path, payload: bytes) -> bool:
+    try:
+        return caminho.read_bytes() == payload
+    except OSError as exc:
+        logger.debug("maquina_de_outra_placa_nao_lida", caminho=str(caminho), err=str(exc)[:200])
+        return False
 
 
 def _guardar_a_copia_de_antes_da_migracao() -> None:
