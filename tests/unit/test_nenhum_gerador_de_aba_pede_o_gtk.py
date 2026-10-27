@@ -79,7 +79,7 @@ def test_a_lista_vem_do_disco() -> None:
 
 @pytest.mark.parametrize("gerador", GERADORES)
 def test_o_gerador_importa_sem_o_gtk(gerador: str) -> None:
-    """O gerador importa num processo em que o `gi` não existe."""
+    """O gerador importa sem o `gi`: prova da D-2710-O-GERADOR-DE-ABA-NAO-PEDE-O-GTK."""
     veredito = _importar_sem_gtk(f"{PACOTE}.{gerador}", INTERFACE, SRC)
     assert not veredito["gtk"], (
         f"`{gerador}.py` pede o GTK para gerar uma página: {veredito['pilha']} "

@@ -69,5 +69,5 @@ def test_r2_parada_a_aba_pinta_so_as_cargas_inteiras(esconde_e_volta: Any) -> No
 
 
 def test_r2_a_aba_quieta_nao_e_aba_muda(esconde_e_volta: Any) -> None:
-    """O detector de aba muda do `_relatar` não acusa a aba parada."""
+    """A aba parada não é muda: prova da D-2710-A-ABA-QUIETA-SE-MEDE-PELO-TEMPO-DA-PINTURA."""
     _a_aba_quieta_nao_e_muda(esconde_e_volta)
