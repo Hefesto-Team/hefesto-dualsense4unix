@@ -232,13 +232,17 @@ class TestReviveFalhaTotal:
 
 
 def test_o_lifecycle_promove_quando_o_controle_conecta() -> None:
-    """O gancho existe no ponto certo — é a borda de recuperação da degradação."""
+    """O gancho existe no ponto certo — é a borda de recuperação da degradação.
+
+    O trecho se corta pela chamada que publica a borda do primário (o ``controller_connected``
+    do log), que é código: o comentário que ancorava o corte saiu do fonte.
+    """
     from pathlib import Path
 
     from hefesto_dualsense4unix.daemon import lifecycle
 
     fonte = Path(lifecycle.__file__).read_text(encoding="utf-8")
-    idx_connect = fonte.index("controller_connected")
+    idx_connect = fonte.index("_conexao.publicar_a_borda_do_primario(self, {}, None)")
     trecho = fonte[idx_connect:idx_connect + 700]
     assert "upgrade_primary_vpad_to_uhid" in trecho, (
         "a promoção saiu do caminho do controller_connected — o vpad degradado "
