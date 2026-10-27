@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-10-25 20:33
+ensaio:  2026-10-27 01:06
 abas:    10
 modo:    --todas --publicado --doc --vista 1918x840
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -17,13 +17,13 @@ vista:   1918x840
 # tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 
 # soma sha256 de cada foto, em ordem alfabética
-5907a57c561e2662669b340bb1272cba31f0a5aa38ef1977400304026b18ec78  aba-01-jogar.png
-c174db1616a18e7ba2d87bac62ce1d608ead9fe7af323e05b28dae02990c3f56  aba-02-controles.png
-525b2e72e1903957869873d03529836b58b9839c88860b358d14c9c1b37e1cf4  aba-03-gatilhos.png
-5a3bac6f947a0e62a2887d47bf4962c77b3118d33d1dab35cf1b90ac155cf90b  aba-04-iluminacao.png
-5b73fcf4e766edb3e6f2ce8911d2614cd0f37367804035153c702d3308eda2fb  aba-05-vibracao.png
-92768d6af062e98f51610910d8984af1145c9214aaff1bf785f91fcb04b9f646  aba-06-navegacao.png
-be495e4bde64660748d3d6d521949aab14ee590fb3a437414da4b373dab88c90  aba-07-lancadores.png
-ab008e767aefe476d1fc13effba312b62c0230b66c28896f7e9aae6922df973c  aba-08-conexoes.png
-ac5a379fae3b5a1585666a0f6676be9903394d32f96d4d6d8ce7bd50a325d8cd  aba-09-sistema.png
-1bcd59e8ee213e9d69b59cbabe3176147bc07715cf3b2eeaa9cb1cfb4c10bd68  aba-10-perfis.png
+d52bb281112a5a6a2dbdc6d09a81aa6ed246d464fdacd6d88cc74b17c72b6a89  aba-01-jogar.png
+41f9d387a3407f7510f385ba403544682b657b6108d3a58ac4285da0bf841956  aba-02-controles.png
+755afb9eed9cc71606d1d15024056cbcda66ce124ce49fc1002a6fb7c039c544  aba-03-gatilhos.png
+84854220c0584e4dbd736c0133c96718de2ca1f112b2a27b1d1f92f9cd9bb63a  aba-04-iluminacao.png
+b987909e9253ccacb6c8faabea4a9fef1473a10900622207f3b601876b738acc  aba-05-vibracao.png
+ba288ef92ee2a0cf4544146296d4c14da5580a174b1c1d1186c3671d6286f576  aba-06-navegacao.png
+c2501e9ca7b92b74dc4c3d74013146e1ed0f975022a410c792c2a42a686c62da  aba-07-lancadores.png
+ab3864f68c622ab3282dd42e8d6ba2dc26a40f11b7fcdfcdef7664218660c501  aba-08-conexoes.png
+c786021a1be3409b47689c5646510d2cc41b18c5dc4564eb03c036a1d952add5  aba-09-sistema.png
+219747d73aeee2cf55806ae741b43cc6301a1768bc31f2749a71c55453fc7a7d  aba-10-perfis.png
