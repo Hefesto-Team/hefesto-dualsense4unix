@@ -88,7 +88,7 @@ _LER = """(function(){
   return JSON.stringify({botao: r(fileira.querySelector('.mj-acao')), fileira: r(fileira),
     aviso: r(j.querySelector('.mj-ap-vazio')), lista: r(j.querySelector('#mod-aparelhos')),
     cartoes: j.querySelectorAll('#mod-aparelhos .mj-ap').length});
-})()""".replace("FILEIRA", '[id^="mod-acoes-"]')  # (noqa-acento)
+})()""".replace("FILEIRA", '[id^="mod-acoes-"]')
 
 
 @pytest.fixture
