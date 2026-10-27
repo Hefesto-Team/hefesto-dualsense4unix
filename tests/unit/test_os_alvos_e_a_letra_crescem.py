@@ -113,6 +113,12 @@ def _so_o_arquivo(rota: Any) -> None:
         rota.abort()
 
 
+def _o_filho_pede_o_gtk(feito: subprocess.CompletedProcess[str]) -> None:
+    """Sem `gi`, gerador que importa o GTK cai na GUARDA-GI-REAL-01 (pula; no GTK real, falha)."""
+    if feito.returncode != 0 and "ModuleNotFoundError: No module named 'gi'" in feito.stderr:
+        raise ModuleNotFoundError(feito.stderr.strip().splitlines()[-1], name="gi")
+
+
 @pytest.fixture(scope="module")
 def geradas(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
     """As dez abas como os geradores as escrevem hoje, numa bancada de mentira."""
@@ -126,6 +132,7 @@ def geradas(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
             [sys.executable, "-m", f"hefesto_dualsense4unix.interface.aba{numero}"],
             env=ambiente, capture_output=True, text=True, timeout=300, check=False,
         )
+        _o_filho_pede_o_gtk(feito)
         assert feito.returncode == 0, (aba, feito.stdout[-400:], feito.stderr[-800:])
     return bancada
 

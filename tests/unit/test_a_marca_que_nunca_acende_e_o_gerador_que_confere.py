@@ -177,6 +177,12 @@ def _pagina_do(gerador: str) -> str:
     return achadas[0]
 
 
+def _o_filho_pede_o_gtk(feito: subprocess.CompletedProcess[str]) -> None:
+    """Sem `gi`, gerador que importa o GTK cai na GUARDA-GI-REAL-01 (pula; no GTK real, falha)."""
+    if feito.returncode != 0 and "ModuleNotFoundError: No module named 'gi'" in feito.stderr:
+        raise ModuleNotFoundError(feito.stderr.strip().splitlines()[-1], name="gi")
+
+
 @pytest.mark.parametrize("gerador", GERADORES)
 def test_a_recusa_nao_chega_a_bancada(gerador: str, tmp_path: pathlib.Path) -> None:
     """A escrita sabotada recusa, e a bancada sai com o mesmo md5 de antes.
@@ -190,6 +196,7 @@ def test_a_recusa_nao_chega_a_bancada(gerador: str, tmp_path: pathlib.Path) -> N
         [sys.executable, "-c", SABOTAGEM, str(INTERFACE / gerador)],
         capture_output=True, text=True, timeout=300,
         env=_ambiente(bancada, provisorio), cwd=str(RAIZ))
+    _o_filho_pede_o_gtk(r)
     assert r.returncode != 0 and "sabotagem da régua" in r.stderr, (
         f"`{gerador}` não passou pela escrita sabotada (rc={r.returncode}) — a "
         f"régua não mediu nada:\n{r.stderr.strip()[-800:]}")
@@ -217,6 +224,7 @@ def test_o_gerador_que_passa_escreve_a_bancada(gerador: str, tmp_path: pathlib.P
         [sys.executable, str(INTERFACE / gerador)],
         capture_output=True, text=True, timeout=300,
         env=_ambiente(bancada, provisorio), cwd=str(RAIZ))
+    _o_filho_pede_o_gtk(r)
     assert r.returncode == 0, f"`{gerador}` não roda:\n{r.stderr.strip()[-1200:]}"
     assert pagina.read_bytes() == (RAIZ / "mockup" / pagina.name).read_bytes(), (
         f"`{gerador}` conferiu e não copiou a página para a bancada")
