@@ -529,6 +529,9 @@ def _passos():
         for n, (rid, rot, dica) in enumerate(PASSOS, 1))
 
 
+ABA_DO_CALIBRAR = "01-jogar.html"
+
+
 def documento(quem):
     """A página inteira, com os cartões de ``quem``, pronta para gravar."""
     html = f'''<!doctype html>
@@ -542,7 +545,7 @@ def documento(quem):
 
 <div class="cx">
   <div class="topo">
-    {caixa_da_janela.voltar("02-controles.html")}
+    {caixa_da_janela.voltar(ABA_DO_CALIBRAR)}
     <h1><span class="p" data-dica="{AJUDA_DA_PAGINA}">{TITULO}</span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
@@ -570,7 +573,7 @@ def documento(quem):
       <span class="quantos" data-campo="quantos" data-hef-alvo="html">{contagem(len(quem))}</span>
       <span class="acoes">
         <button class="btn fazer" data-gesto="calibrar-comecar"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
-        <a class="btn" href="02-controles.html">Fechar</a>
+        <a class="btn" href="{ABA_DO_CALIBRAR}">Fechar</a>
       </span>
     </div>
 
@@ -584,6 +587,9 @@ def documento(quem):
 
 
 def main():
+    if ABA_DO_CALIBRAR.removesuffix(".html") not in {a for _, a in monta.ABAS}:
+        raise SystemExit(f"ERRO em calibrar-sensores: o «Fechar» leva a {ABA_DO_CALIBRAR}, "
+                         "que não está na tira de abas.")
     quem = monta.CONECTADOS
     onde.pagina("calibrar-sensores.html").write_text(documento(quem))
     print(f"calibrar-sensores.html: {contagem(len(quem))} no desenho · "
