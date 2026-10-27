@@ -182,6 +182,9 @@ _FILHO_DA_INTERFACE = textwrap.dedent(
 )
 
 
+_GUARDA_A_SAIDA = 'saida="$1"; shift; "$@"; s=$?; echo "$s" > "$saida"; exit "$s"'
+
+
 @pytest.mark.parametrize(
     ("modo", "sinal"),
     [("oculta", signal.SIGTERM), ("oculta", signal.SIGHUP), ("janela", signal.SIGTERM)],
@@ -198,9 +201,10 @@ def test_a_interface_sai_em_menos_de_tres_segundos_com_a_linha_do_fim(
     arquivo_do_pid = lar / "pid"
     args = ["--abre", "01-jogar.html"] + (["--oculta"] if modo == "oculta" else [])
     diario = lar / "s" / "hefesto-dualsense4unix" / "interface.log"
+    saida_do_python = lar / "saida-do-python"
     filho = subprocess.Popen(
-        ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24", sys.executable, str(script),
-         str(arquivo_do_pid), *args],
+        ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24", "bash", "-c", _GUARDA_A_SAIDA,
+         "bash", str(saida_do_python), sys.executable, str(script), str(arquivo_do_pid), *args],
         env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
         text=True)
     try:
@@ -225,7 +229,10 @@ def test_a_interface_sai_em_menos_de_tres_segundos_com_a_linha_do_fim(
     assert saiu and levou < PRAZO_S, f"o processo levou {levou:.1f} s\n{texto[-1500:]}"
     lido = arquivo_do_pid.read_text().split()
     voltou = lido[1] if len(lido) > 1 else "nada: o processo morreu antes de ele voltar"
+    python = (saida_do_python.read_text().strip() if saida_do_python.is_file()
+              else "nada: o bash que o esperava morreu junto")
     assert filho.returncode == 0, (
-        f"o xvfb-run saiu com {filho.returncode}; o `abrir` devolveu {voltou}\n" + texto[-1500:])
+        f"o xvfb-run saiu com {filho.returncode}; o python, com {python}; "
+        f"o `abrir` devolveu {voltou}\n" + texto[-1500:])
     motivos = [m["motivo"] for linha in texto.splitlines() if (m := FIM.search(linha))]
     assert motivos == [f"sinal {sinal.name}"], texto[-1500:]

@@ -597,7 +597,7 @@ def _mascara_chaves_da_fstring(literal: str) -> str:
                 saida[k] = " "
 
     def string_de_dentro(j: int) -> int:
-        """`j` é a aspa de uma string da expressão; ela é TEXTO e fica."""
+        """`j` é a aspa de uma string da expressão: o texto fica, e o prefixo e as aspas saem, como no 3.12."""
         comeco = j
         while comeco > 0 and j - comeco < 2 and literal[comeco - 1] in "rRbBuUfF":
             comeco -= 1
