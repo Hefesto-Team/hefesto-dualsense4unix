@@ -454,8 +454,8 @@ def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
     03/09 por trás e um portão de dois sítios guardando o número — **nunca
     chegou ao nó**, e o canal do rádio nascia ACIMA da captura real da placa
     (2009 é o teto medido, 2000 encosta nele) em vez de na faixa que a
-    MONITOR-QUE-VENCE-01 fixou. A constante estava certa desde 03/09; o que não
-    viajava era o valor.
+    MONITOR-QUE-VENCE-01 fixou, acima do monitor mais alto medido (1109). A
+    constante estava certa desde 03/09; o que não viajava era o valor.
 
     **E A RÉGUA QUE VIGIAVA ISSO DAVA VERDE**, porque ela lia o ARGV e não o nó:
     ``test_o_canal_do_radio_nao_perde_para_um_monitor.py::test_a_prioridade_

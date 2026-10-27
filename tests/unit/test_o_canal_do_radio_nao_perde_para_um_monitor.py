@@ -136,13 +136,17 @@ def test_a_prioridade_viaja_de_verdade_no_load_module() -> None:
 
 
 def test_o_porque_esta_junto_do_numero() -> None:
-    """Os números medidos moram junto da regra que eles justificam."""
-    fonte = Path(bt.__file__).read_text(encoding="utf-8")
-    assert "MONITOR-QUE-VENCE-01" in fonte, (
+    """Os números medidos moram junto da regra que eles justificam.
+
+    A régua lê a docstring de quem monta a prioridade no nó, e não o fonte cru: o
+    comentário saiu do código versionado, e o que guarda o porquê é a docstring.
+    """
+    razao = bt.propriedades_da_source.__doc__ or ""
+    assert "MONITOR-QUE-VENCE-01" in razao, (
         "sumiu do módulo o registro de qual medição fixou esta faixa"
     )
     for numero in (str(MONITOR_MAIS_ALTO_MEDIDO), str(CAPTURA_REAL_MEDIDA)):
-        assert numero in fonte, (
+        assert numero in razao, (
             f"o valor medido {numero} sumiu do módulo — sem ele a faixa vira "
             "opinião, e a próxima pessoa não sabe contra o que ela foi calibrada."
         )
