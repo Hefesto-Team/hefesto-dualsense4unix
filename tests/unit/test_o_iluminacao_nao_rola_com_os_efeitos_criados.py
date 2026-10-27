@@ -20,7 +20,7 @@ import pytest
 from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-DESENHO = RAIZ / "mockup" / "04-iluminacao.html"
+DESENHO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/04-iluminacao.html"
 LISTA = re.compile(r'<span class="meus" id="seus-efeitos"[^>]*>(.*?)</span></span>', re.S)
 NOMES = ["Alerta vermelho", "Respiro calmo", "Passos na neve", "Trovão", "Portão",
          "Chuva fina", "Sino", "Tambor", "Brasa", "Mar", "Neon", "Aurora"]

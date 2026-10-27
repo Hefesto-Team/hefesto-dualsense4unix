@@ -1420,7 +1420,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "desenho, não do produto: o `interface/aba03.py` (o gerador do mockup dos Gatilhos, "
         "o import de `src/hefesto_dualsense4unix/interface/aba03.py:36` (`sem_comentarios_de_css`) "
         "e a chamada de "
-        "`src/hefesto_dualsense4unix/interface/aba03.py:619` (`sem_comentarios_de_css`)) tira com "
+        "`src/hefesto_dualsense4unix/interface/aba03.py:676` (`sem_comentarios_de_css`)) tira com "
         "ela os `/* … */` do CSS para "
         "conferir "
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
@@ -1428,9 +1428,9 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "app/telas/vibracao.py::degraus_da_forca": (
         "21/10/2026 — é do gerador do desenho, não do produto: o `interface/aba05.py` (o import "
-        "de `src/hefesto_dualsense4unix/interface/aba05.py:46` (`degraus_da_forca`) e a "
+        "de `src/hefesto_dualsense4unix/interface/aba05.py:42` (`degraus_da_forca`) e a "
         "conferência de "
-        "`src/hefesto_dualsense4unix/interface/aba05.py:80` (`degraus_da_forca`)) confere com ela "
+        "`src/hefesto_dualsense4unix/interface/aba05.py:76` (`degraus_da_forca`)) confere com ela "
         "que os degraus do "
         "desenho são os do "
         "produto antes de gravar o mockup. O 80d0008c5 tirou o chamador do produto com o gesto "

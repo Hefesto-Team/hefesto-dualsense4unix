@@ -75,11 +75,10 @@ def test_tocar_percorre_os_passos_na_ordem_com_o_tempo_de_cada_um_e_reduz_pela_b
 def test_a_tela_nao_tem_interrogacao_nem_meus_toques_nem_texto_de_dica_na_linha() -> None:
     doc = _doc()
     assert 'class="ajuda' not in doc, "o `?` voltou: a dica mora no `data-dica`"
-    for fora in ("Meus toques", "Meus efeitos", "mesa"):
+    for fora in ("Meus toques", "Meus efeitos", "mesa", "Criar efeitos novos", "Sentir"):
         assert fora not in doc, f"o desenho trouxe «{fora}»"
-    for dito in ("Criar efeitos novos", "Modo automático", "Força da vibração", "Sensor háptico",
-                 "Motor esquerdo", "Motor direito", "Testar agora", "Batida", "Onda", "Tranco",
-                 "Esquerdo", "Direito", "Sentir", "Criar"):
+    for dito in ("Modo automático", "Força da vibração", "Sensor háptico",
+                 "Motor esquerdo", "Motor direito", "Testar agora", "Batida", "Onda", "Tranco"):
         assert dito in doc, f"o desenho perdeu «{dito}»"
 
 
@@ -97,7 +96,8 @@ def test_o_automatico_governa_a_forca_e_os_motores_e_nao_o_testar() -> None:
 
 
 def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
-    doc = _doc()
+    publicado = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html"
+    doc = re.sub(r"<(style|script)>.*?</\1>", "", publicado.read_text(encoding="utf-8"), flags=re.S)
     assert doc.count('id="criar-vibracao"') == 1
     for gesto in ("criar-efeito", "testar"):
         botoes = [b for b in re.findall(r"<button[^>]*>", doc)

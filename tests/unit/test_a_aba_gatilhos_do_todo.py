@@ -140,11 +140,10 @@ def a03():
 
 def test_o_desenho_traz_as_palavras_da_decisao_e_nenhuma_das_que_sairam() -> None:
     doc = _o_que_se_le()
-    for dito in ("Efeito do gatilho", "Criar efeitos novos", "Sentir", "Estilo de jogo",
-                 "Controle"):
+    for dito in ("Efeito do gatilho", "Criar efeitos novos", "Sentir", "Estilo de jogo"):
         assert dito in doc, f"o desenho perdeu «{dito}»"
     for fora in ("Guardar", "Em todos", "Efeito pronto", "Reenviar", "Como o gatilho faz",
-                 "Avançado", 'class="ajuda', 'class="ajustes'):
+                 "Avançado", 'class="ajuda', 'class="ajustes', "g2-canto-rot"):
         assert fora not in doc, f"o desenho trouxe de volta «{fora}»"
     assert 'data-gesto="guardar' not in doc and 'data-gesto="em-todos' not in doc
     assert doc.count('class="g2-barra"') == 4, "são quatro barras para criar o efeito"

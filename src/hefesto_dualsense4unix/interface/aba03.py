@@ -80,7 +80,32 @@ MEU_IMERSAO = "Recuo do MK"
 BARRAS = [("inicio", "Início", 0, 9, 2, ""), ("fim", "Fim", 0, 9, 9, ""),
           ("forca", "Força", 0, 8, 4, ""), ("freq", "Frequência", 0, 255, 40, "Hz")]
 
+BASE_DO_CRIADOR = "Machine"
+PARAMETROS_DA_BARRA = {"inicio": {"start", "position"}, "fim": {"end"},
+                       "forca": {"force", "strength", "amplitude"}, "freq": {"frequency"}}
+
+
+def _barras_que_a_base_usa():
+    """A regra que esconde a barra que a base escolhida em «Partir de» não manda ao gatilho."""
+    regras = []
+    for p in PRESETS:
+        if p.name in ("Off", *SEM_NA_LISTA):
+            continue
+        nomes = {getattr(c, "name", c) for c in p.params}
+        for chave, aceitos in PARAMETROS_DA_BARRA.items():
+            if not nomes & aceitos:
+                regras.append(f'  .g2-criar:has(.g2-partir option[value="{p.name}"]:checked) '
+                              f'.g2-barra:has([data-linha="{chave}"]){{display:none}}\n')
+    return "".join(regras)
+
+
 GLIFO_DO_DUALSENSE = _mapa.silhueta_do_dualsense(40)
+
+DO_ESTILO = ("do_estilo", "Do estilo")
+GRUPOS_DO_DESENHO = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
+MUDA_DE_GRUPO = {"rajada-que-sobe-sozinha": "Rajada", "cano-que-esquenta": "Rajada",
+                 "recuo-pesado": "Rajada", "galope-no-chao": "Pulso", "terreno-que-muda": "Pulso",
+                 "clique-no-meio": "Clique"}
 
 TETO_DA_INTENSIDADE = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 PASSO_DA_INTENSIDADE = 5
@@ -114,7 +139,8 @@ CSS = CSS_GLIFO + """  .g2-grade{display:grid;grid-template-columns:44px 132px r
   .g2-cab[data-conectado="nao"] .chip{color:var(--fg);border:1px solid var(--border-sutil)}
   .g2-gl{grid-row:span 1;display:flex;align-items:center;justify-content:center;color:var(--fg);
     align-self:stretch;border-right:1px solid var(--border-sutil)}
-  .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:span 2;border-right:0}
+  .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:span 1;border-right:0}
+  .g2-grade > .g2-rot-forca{grid-column:2}
   .g2-grade .g2-gl.g2-r2{margin-top:6px}
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);gap:7px}
   .g2-rot{display:flex;align-items:center;min-height:36px}
@@ -132,13 +158,11 @@ CSS = CSS_GLIFO + """  .g2-grade{display:grid;grid-template-columns:44px 132px r
   .g2-sep{grid-column:1 / -1;height:1px;background:var(--border-sutil);margin:2px 0}
   .g2-grade > .g2-canto{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;
     justify-content:center;gap:3px;height:auto;min-width:0;align-self:stretch}
-  .g2-canto .g2-canto-rot{line-height:16px}
-  .g2-canto .g2-estilo{display:flex;flex-wrap:wrap;justify-content:space-between;column-gap:8px;
+  .g2-canto .g2-estilo{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;column-gap:8px;
     width:100%;font:500 12px/16px 'Space Grotesk',system-ui,sans-serif;color:var(--fg);cursor:help}
   .g2-canto .g2-estilo > span{white-space:nowrap}
   .g2-canto .g2-estilo-nome{color:var(--purple);font-weight:600;margin-left:auto}
   .g2-canto .g2-estilo-nome::after{content:attr(data-estilo)}
-  .g2-canto .g2-estilo:not(:has(.g2-estilo-nome[data-estilo])){display:none}
   .g2-gl.g2-int-gl{grid-row:auto;border-right:0}
   .g2-int{display:grid;grid-template-columns:36px minmax(0,1fr) 44px 8px;align-items:center;gap:8px;
     height:36px;min-width:0}
@@ -156,6 +180,10 @@ CSS = CSS_GLIFO + """  .g2-grade{display:grid;grid-template-columns:44px 132px r
   .g2-int .trilho.arrasta::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:12px;
     height:12px;border-radius:50%;background:var(--purple);border:2px solid var(--panel);margin-top:-4px}
   .g2-int .trilho.arrasta:focus-visible{outline:2px solid var(--purple);outline-offset:3px}
+  .g2-int .trilho.arrasta{height:9px;border-radius:5px;background:var(--sel-bg)}
+  .g2-int .trilho.arrasta::-webkit-slider-runnable-track{height:9px;border-radius:5px}
+  .g2-int .trilho.arrasta::-webkit-slider-thumb{width:17px;height:17px;background:var(--pink);margin-top:-4px}
+  .g2-int .num{font-weight:700;color:var(--pink)}
   .g2-int[data-conectado="nao"] > *{display:none}
   .g2-int[data-conectado="nao"]::after{content:"—";color:var(--linha);display:flex;
     align-items:center;justify-content:center;grid-column:1/-1;width:100%;height:100%}
@@ -207,7 +235,7 @@ CSS = CSS_GLIFO + """  .g2-grade{display:grid;grid-template-columns:44px 132px r
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
 CSS += "".join(
     f'\n  .g2-fam[data-fam="{f}"] + .g2-imersao{{padding-left:{29 + round(len(f) * 6.6)}px}}'
-    for f in FAMILIAS_DA_PAGINA)
+    for f in dict.fromkeys((*FAMILIAS_DA_PAGINA, *GRUPOS_DO_DESENHO)))
 CSS += "".join(
     f"\n  .g2-forca .degraus i:nth-child({n}){{height:{round(36 * n / DEGRAUS_DA_FORCA)}px}}"
     for n in range(1, DEGRAUS_DA_FORCA + 1))
@@ -215,6 +243,7 @@ CSS += "".join(
     f'\n  .g2-forca:not([data-conectado="nao"]) .escada[data-nivel="{n}"] '
     f"i:nth-child(-n+{n}){{background:var(--purple)}}"
     for n in range(1, DEGRAUS_DA_FORCA + 1)) + "\n"
+CSS += _barras_que_a_base_usa()
 
 
 def _op_vazio(escolhido):
@@ -234,6 +263,19 @@ def _grupo_dos_seus(itens):
     return f'<optgroup label="{SEUS_EFEITOS}">{dentro}</optgroup>'
 
 
+def _nos_grupos_do_desenho(cru):
+    """«Do estilo» no topo e os grupos sem grupo de um efeito só: `MUDA_DE_GRUPO` leva cada efeito."""
+    soltas = cru.split("<optgroup", 1)[0]
+    grupos = {g: [] for g in GRUPOS_DO_DESENHO}
+    for rotulo, dentro in re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', cru, re.S):
+        for opcao in re.findall(r"<option\b.*?</option>", dentro, re.S):
+            valor = re.search(r'value="([^"]*)"', opcao).group(1)
+            grupos.setdefault(MUDA_DE_GRUPO.get(valor, rotulo), []).append(opcao)
+    topo = f'<option value="{DO_ESTILO[0]}">{DO_ESTILO[1]}</option>'
+    return topo + soltas + "".join(f'<optgroup label="{g}">{"".join(o)}</optgroup>'
+                                   for g, o in grupos.items() if o)
+
+
 def opcoes_imersao(escolhida):
     """As opções do efeito do gatilho: as mesmas que o pacote monta, com a escolhida marcada.
 
@@ -243,6 +285,7 @@ def opcoes_imersao(escolhida):
     cru = html_das_opcoes_de_imersao()
     cru = re.sub(r"^<option value=\"" + TRAVESSAO + r"\"[^>]*>[^<]*</option>", "", cru)
     cru = re.sub(r'<optgroup label="' + SEUS_EFEITOS + r'">.*?</optgroup>', "", cru)
+    cru = _nos_grupos_do_desenho(cru)
     alvo = f'<option value="{_escapar(escolhida)}"'
     if alvo in cru:
         cru = cru.replace(alvo, alvo + " selected", 1)
@@ -259,7 +302,7 @@ def _celula_da_imersao(pref, sig, vazio):
     """
     imersao = CENA[pref][sig][1] if not vazio else TRAVESSAO
     dica = SEM_APARELHO_AQUI if vazio else dica_da_imersao(imersao)
-    fam = "" if vazio else familia_da_imersao(imersao)
+    fam = "" if vazio else MUDA_DE_GRUPO.get(imersao, familia_da_imersao(imersao))
     atr_fam = f' data-fam="{_escapar(fam)}"' if fam else ""
     return (f'<div class="g2-cel{_off(vazio)}" data-controle="{pref}"{_marca(vazio)}>'
             f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DA_IMERSAO}{sig}" data-hef-alvo="atributo" '
@@ -316,8 +359,7 @@ def _forcas():
         f'          <div class="g2-forca{_off(not c.get("conectado", True))}" data-controle="{c["pref"]}"'
         f'{_marca(not c.get("conectado", True))}>{_escada(c, "l2")}{_escada(c, "r2")}</div>'
         for c in MESA)
-    return (f'          <div class="g2-gl g2-ds" aria-label="DualSense">{GLIFO_DO_DUALSENSE}</div>\n'
-            '          <div class="g2-rot"><span class="sec-rot" data-dica="O quanto cada gatilho '
+    return ('          <div class="g2-rot g2-rot-forca"><span class="sec-rot" data-dica="O quanto cada gatilho '
             'está apertado agora">Força do aperto</span></div>\n' + celulas)
 
 
@@ -385,7 +427,7 @@ def _barra(chave, rotulo, de, ate, valor, unidade):
 
 def _partir():
     ops = "".join(
-        f'<option value="{p.name}"{" selected" if p.name == "Resistance" else ""}>'
+        f'<option value="{p.name}"{" selected" if p.name == BASE_DO_CRIADOR else ""}>'
         f'{p.label}</option>'
         for p in PRESETS if p.name not in ("Off", *SEM_NA_LISTA))
     return ('<select class="g2-partir" data-linha="partir" aria-label="Partir de" '
@@ -414,7 +456,8 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
       <div class="quadro-corpo">
         <div class="g2-grade">
 {_forcas()}
-          <div class="g2-canto" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-dica="O estilo escolhido em Perfis. Só leitura"><span class="g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-campo="{CAMPO_DO_ESTILO}" data-hef-alvo="atributo" data-hef-atributo="data-estilo" data-estilo="{ESTILO_DA_CENA}"></span></span></div>
+          <div class="g2-gl g2-ds" aria-label="DualSense">{GLIFO_DO_DUALSENSE}</div>
+          <div class="g2-canto" aria-label="Estilo de jogo"><span class="g2-estilo" data-dica="O estilo escolhido em Perfis"><span class="sec-rot g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-campo="{CAMPO_DO_ESTILO}" data-hef-alvo="atributo" data-hef-atributo="data-estilo" data-estilo="{ESTILO_DA_CENA}"></span></span></div>
 {_chips()}
 {sob_os_chips}
           <div class="g2-sep g2-sep-cab"></div>
@@ -560,6 +603,20 @@ def _conferir(doc):
            "a frase do efeito voltou a ser texto embaixo da caixa: ela mora só na dica")
     exigir(corpo.count('<optgroup label="Golpe">') == 2 * n,
            "a lista do efeito do gatilho não abre em grupos por família")
+    for _lista in re.findall(r'<select class="g2-imersao".*?</select>', corpo, re.S):
+        exigir(re.search(r'^<select[^>]*>(?:<option[^>]*hidden>[^<]*</option>)?'
+                         rf'<option value="{DO_ESTILO[0]}"', _lista) is not None,
+               "a lista do efeito do gatilho não abre com «Do estilo»")
+        _sos = [g for g, d in re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', _lista, re.S)
+                if g != SEUS_EFEITOS and d.count("<option") == 1]
+        exigir(not _sos, f"grupo de um efeito só na lista do efeito do gatilho: {_sos}")
+    exigir(re.search(r'class="g2-gl g2-ds"[^>]*>.*?</div>\s*<div class="g2-canto"', corpo, re.S)
+           is not None and "g2-canto-rot" not in corpo,
+           "o desenho do controle saiu do lado do «Estilo de jogo», ou o rótulo «Controle» voltou")
+    exigir(f'value="{BASE_DO_CRIADOR}" selected' in corpo,
+           "o criador do gatilho deixou de partir da Metralhadora")
+    exigir(_barras_que_a_base_usa().strip() in doc,
+           "o criador mostra barra que a base escolhida não manda ao gatilho")
     exigir("g2-avtog" not in corpo and "g2-avtog" not in doc and "Avançado" not in corpo
            and "hef-gatilhos-avancado" not in doc,
            "a chave «Avançado» voltou ao título do quadro: o gatilho só tem o efeito")

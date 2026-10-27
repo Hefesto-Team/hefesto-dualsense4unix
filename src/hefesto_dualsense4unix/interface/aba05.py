@@ -26,15 +26,11 @@ from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (
     GESTO_DO_EFEITO_HAPTICO,
     GESTO_DO_EFEITO_IMERSAO,
     GESTO_DO_MODO,
-    html_dos_toques,
 )
 from hefesto_dualsense4unix.interface.mapa import glifo_do_controle
-from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import TETO_DO_NOME
 
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from hefesto_dualsense4unix.profiles.schema import (
-    HAPTICA_PCT_MAX,
-    HAPTICA_PCT_PADRAO,
     MOTOR_PCT_MAX,
     MOTOR_PCT_PADRAO,
     RUMBLE_CUSTOM_MULT_MAX,
@@ -93,7 +89,7 @@ PASSO_DA_FORCA = 5
 
 TETO_DO_MOTOR = MOTOR_PCT_MAX
 
-TETO_DA_HAPTICA = HAPTICA_PCT_MAX
+TETO_DA_HAPTICA = MOTOR_PCT_MAX
 
 PASSO_DO_MOTOR = 1
 
@@ -104,13 +100,13 @@ SEM_A_FAIXA_DE_ESTADO = True
 ESTADO = {
     "p1": {"pct": 120,
            "esq": (True, 50),   "dir": (True, 100),
-           "hap": (True, HAPTICA_PCT_PADRAO)},
+           "hap": (True, TETO_DA_HAPTICA)},
     "p2": {"pct": 70,
            "esq": (False, 0),   "dir": (True, 100),
-           "hap": (True, 180)},
+           "hap": (True, 80)},
     "p3": {"pct": 30,
            "esq": (True, 100),  "dir": (True, 100),
-           "hap": (True, HAPTICA_PCT_PADRAO)},
+           "hap": (True, TETO_DA_HAPTICA)},
     "p4": {"pct": 100,
            "esq": (True, 100),  "dir": (False, 0),
            "hap": (False, 0)},
@@ -124,12 +120,6 @@ DICA_DA_FORCA = ("Abaixo de 100% a vibração fica mais fraca; acima, a fraca é
                "até o máximo do motor")
 BOTAO_DA_FORCA = ('<span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" '
                   'data-dica="Os dois motores e a háptica: tudo o que vibra">' + GLIFO_DO_CONTROLE + '</span>')
-
-CENA_DOS_TOQUES = {"Coração": {"nome": "Coração", "base": "batida",
-                               "parametros": {"motores": padroes.AMBOS}}}
-
-CHAVE_DO_PADRAO = "padrao"  # (noqa-acento)
-ROTULO_DOS_MOTORES = (("esquerdo", "Esquerdo"), ("direito", "Direito"), ("ambos", "Os dois"))
 
 CSS = """  .vib{
     display:grid;
@@ -160,43 +150,15 @@ CSS = """  .vib{
   .vib .acoes-col{align-items:center}
   .quadro-topo .modo-auto{margin-left:auto}
   .vib .forca > .motor{position:relative}
-  .vib-criar{margin-top:0;flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:4px 16px;flex-wrap:wrap;min-width:0}
-  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
-  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
-  .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
-    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
-    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
-  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
-    color:var(--texto-suave)}
-  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
-  .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
-    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--fg)}
-  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
-    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
-    cursor:pointer;flex:0 0 auto}
-  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
-  .criar .btn-sentir{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--pink);
-    background:rgba(255,121,198,.1);color:var(--pink);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
-    cursor:pointer;flex:0 0 auto}
-  .criar .btn-sentir:hover{background:rgba(255,121,198,.2)}
-  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap}
-  .criar .meu{color:var(--texto-suave);cursor:pointer}
   .vib .forca{display:flex;flex-direction:column;justify-content:center;gap:7px}
   .vib .forca > .motor{height:var(--r-barra);flex:none}
+  .vib .forca .trilho.arrasta{height:9px;border-radius:5px;background:var(--sel-bg)}
+  .vib .forca .trilho.arrasta::-webkit-slider-runnable-track{height:9px;border-radius:5px}
+  .vib .forca .trilho.arrasta::-webkit-slider-thumb{width:17px;height:17px;background:var(--pink);margin-top:-4px}
+  .vib .forca .motor > .num{font-weight:700;color:var(--pink)}
   .motor.haptica .teto.no-ar.on::after{content:'';display:inline-block;width:6px;
     height:6px;border-radius:50%;background:var(--green);margin-left:3px;
     vertical-align:1px}
-  .motor.haptica .trilho.arrasta{
-    background:linear-gradient(to right,transparent calc(50% - 1px),
-      var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
-      transparent calc(50% + 1px)),var(--border-forte)}
   .vib .forca ~ .motor .trilho.travada{display:none}
   .vib .forca.padrao ~ .motor .trilho.arrasta{display:none}
   .vib .forca.padrao ~ .motor .trilho.travada{display:block;background:var(--green);
@@ -235,6 +197,8 @@ CSS = """  .vib{
   .vib > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .vib > div > *:first-child::before{display:none}
   .vib > div > *:nth-child(3)::before{display:none}
+  .vib > .rotulos > *:nth-child(3)::before{display:block}
+  .vib > .ctrl > .acoes-col::before{display:none}
 
   .vib .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
   .vib .rotulos > *{align-items:flex-start;text-align:left}
@@ -443,7 +407,7 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
 
 
 def _linha_da_haptica(valor, ligado, vazio=False):
-    """A linha «Sensor háptico»: interruptor · trilho de 0 a 200 · número · `%` e a luz.
+    """A linha «Sensor háptico»: interruptor · trilho de 0 a 100 · número · `%` e a luz.
 
     Desde 02/10/2026 ela mora na faixa que era do Personalizado, logo abaixo da
     Força (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01); o nome é o
@@ -707,14 +671,6 @@ def _coluna(c, e=None, conectado=None):
           </div>'''
 
 
-def _radios(grupo, opcoes):
-    """Os rádios em pílula da área de criar: o primeiro vem marcado."""
-    return "".join(
-        f'<label><input type="radio" name="{grupo}-criar" value="{valor}" data-linha="{grupo}"'
-        f'{" checked" if i == 0 else ""}><span>{rotulo}</span></label>'
-        for i, (valor, rotulo) in enumerate(opcoes))
-
-
 MIOLO = f'''
 {BLOCO_DA_TINTA}
     <div class="quadro vib-quadro" data-modo-da-aba="{monta_.MODO_PERSONALIZADO}" data-campo="{GESTO_DO_MODO}"
@@ -744,17 +700,6 @@ MIOLO = f'''
 
         </div>
         <div class="vib-estado" id="vib-estado">{html_do_estado(textos_do_estado(CENA_DO_ESTADO))}</div>
-      </div>
-    </div>
-    <div class="quadro criar vib-criar" id="criar-vibracao">
-      <div class="criar-linha">
-        <span class="quadro-titulo" data-dica="O que você criar entra aqui ao lado e toca com um clique">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Forma">{_radios(CHAVE_DO_PADRAO, [(c, padroes.ROTULOS[c]) for c in padroes.FORMAS_DE_CRIAR])}</span>
-        <span class="seg-criar" role="group" aria-label="Motor">{_radios("motores", ROTULO_DOS_MOTORES)}</span>
-        <input class="nome-criar" type="text" data-linha="nome" maxlength="{TETO_DO_NOME}" placeholder="Nome do efeito" aria-label="Nome do efeito">
-        <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-vibracao" data-dica="Guarda e põe ao lado">Criar</button>
-        <button class="btn-sentir" type="button" data-gesto="testar" data-hef-forma="criar-vibracao" data-dica="Toca o efeito no controle escolhido">Sentir</button>
-        <span class="meus" id="seus-toques" aria-label="Seus efeitos">{html_dos_toques("", CENA_DOS_TOQUES)}</span>
       </div>
     </div>
 '''
@@ -954,7 +899,16 @@ def _conferir(doc):
     for tag in da_haptica:
         exigir(f'max="{TETO_DA_HAPTICA}"' in tag and 'data-campo="barra-h"' in tag,
                f"a barra da háptica não para em {TETO_DA_HAPTICA}% ou perdeu o "
-               f"endereço `barra-h` — o teto é o `HAPTICA_PCT_MAX` do esquema")
+               f"endereço `barra-h` — o teto é o dos motores")
+    exigir(TETO_DA_HAPTICA == TETO_DO_MOTOR,
+           f"o «Sensor háptico» para em {TETO_DA_HAPTICA}% e os motores em {TETO_DO_MOTOR}%")
+    exigir('class="quadro criar' not in corpo and "Criar efeitos novos" not in corpo,
+           "o «Criar efeitos novos» voltou à Vibração: ele não criava nada que se usasse")
+    exigir(".vib > .rotulos > *:nth-child(3)::before{display:block}" in doc
+           and ".vib > .ctrl > .acoes-col::before{display:none}" in doc,
+           "a linha entre «Modelo» e «Força» saiu dos rótulos, ou a de «Testar agora» voltou às colunas")
+    exigir(".vib .forca .trilho.arrasta{height:9px" in doc,
+           "a «Força da vibração» perdeu o trilho largo que a separa das outras três barras")
     exigir(len(de_motor) == len(LADOS) * len(MESA),
            f"as barras de motor arrastáveis não são {len(LADOS) * len(MESA)} "
            f"(achei {len(de_motor)}) — cada LUGAR tem UMA por punho, e é "

@@ -16,6 +16,7 @@ from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.schema import (
     HAPTICA_PCT_MAX,
     HAPTICA_PCT_PADRAO,
+    MOTOR_PCT_MAX,
     MatchAny,
     Profile,
 )
@@ -111,14 +112,16 @@ class TestOEndereco:
         assert re.search(r'<span class="sec-rot"[^>]*>Sensor háptico', html)
 
     def test_o_teto_e_lido_do_esquema(self) -> None:
-        """Régua 4: o `max` do trilho é o `HAPTICA_PCT_MAX`. MORDIDA: digitar 100."""
-        for html in ("".join(aba05._coluna(c) for c in aba05.MESA),
-                     MOCKUP.read_text(encoding="utf-8")):
+        """Régua 4: o `max` publicado é o `HAPTICA_PCT_MAX`; o do desenho, o dos motores."""
+        publicado = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html"
+        for html, teto in (("".join(aba05._coluna(c) for c in aba05.MESA), MOTOR_PCT_MAX),
+                           (MOCKUP.read_text(encoding="utf-8"), MOTOR_PCT_MAX),
+                           (publicado.read_text(encoding="utf-8"), HAPTICA_PCT_MAX)):
             trilhos = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', html)
                        if 'data-campo="barra-h"' in t]
             assert len(trilhos) == 4
             for tag in trilhos:
-                assert f'max="{HAPTICA_PCT_MAX}"' in tag and 'data-papel="haptica"' in tag
+                assert f'max="{teto}"' in tag and 'data-papel="haptica"' in tag
 
     def test_a_linha_mora_logo_abaixo_da_forca(self) -> None:
         """A linha é a primeira depois da Força, antes dos dois motores (02/10/2026)."""

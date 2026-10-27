@@ -584,10 +584,10 @@ def test_o_desenho_nao_tem_interrogacao_nem_desligar() -> None:
     """
     doc = _doc()
     assert 'class="ajuda' not in doc, "o `?` voltou: a dica mora no `data-dica`"
-    for fora in ("Desligar", "Opções", "mesa"):
+    for fora in ("Desligar", "Opções", "mesa", "Criar efeitos novos"):
         assert fora not in doc, f"o desenho trouxe «{fora}»"
-    for dito in ("Efeito", "Criar efeitos novos", "Sem efeito", "Luz fixa", "Respirar", "Piscar",
-                 "Arco-íris", "Criar", "Modo automático"):
+    for dito in ("Efeito", "Sem efeito", "Luz fixa", "Respirar", "Piscar",
+                 "Arco-íris", "Modo automático"):
         assert dito in doc, f"o desenho perdeu «{dito}»"
 
 
@@ -606,7 +606,7 @@ def test_cada_coluna_viva_tem_a_lista_de_efeitos_e_o_gesto_dela() -> None:
     assert len(efeitos) == 4, "uma lista por coluna, viva ou vazia"
     assert all('data-gesto="efeito-da-luz"' in s for s in efeitos), efeitos
     assert 'value="luz-fixa" selected' in doc.replace("\n", " ")
-    assert doc.count('data-gesto="criar-efeito"') == 1
+    assert doc.count('data-gesto="criar-efeito"') == 0
 
 
 def test_a_vaga_sem_controle_diz_desconectado_e_nao_tem_gesto() -> None:
@@ -631,7 +631,7 @@ def test_a_aba_cabe_sem_rolar_a_guia_tem_oito_casas_e_o_nome_tem_a_largura_da_co
               nome: q('.ctrl-rot').map(e => e.getBoundingClientRect().width),
               moldura: q('.luz-grade .moldura').map(e => e.getBoundingClientRect().width),
               lista: q('.g4-efeito').map(e => getComputedStyle(e).display),
-              criar: q('#criar-luz .criar-linha').map(e => e.scrollWidth <= e.clientWidth + 1)};
+              criar: q('.quadro.criar').length};
     }"""
     with sync_playwright() as pw:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
@@ -648,4 +648,4 @@ def test_a_aba_cabe_sem_rolar_a_guia_tem_oito_casas_e_o_nome_tem_a_largura_da_co
     assert sorted(m["lista"]) == ["block", "block", "none", "none"] or \
         sorted(m["lista"]) == ["inline-block", "inline-block", "none", "none"] or \
         m["lista"].count("none") == 2, m["lista"]
-    assert m["criar"] and all(m["criar"]), "a linha Criar estoura a largura"
+    assert m["criar"] == 0, "o «Criar efeitos novos» voltou à Iluminação"

@@ -53,6 +53,7 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 LARGURAS = ((1212, 809), (1918, 840), (1212, 740))
 
 FAMILIAS = ("Golpe", "Carga", "Peso", "Travar", "Terreno", "Pulso", "Clique")
+GRUPOS_DA_03 = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 ACIONAMENTOS = ("Resistência", "Metralhadora", "Disparo", "Arco", "Gatilho")
 LUZ_DA_04 = ("Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré", "Piscar",
              "Arco-íris")
@@ -108,7 +109,7 @@ def _problemas_da_lista_do_03(doc: str) -> list[str]:
     if len(efeitos) != 8:
         return [f"o 03 tem {len(efeitos)} listas de efeito do gatilho (8)"]
     for s in efeitos:
-        if not set(FAMILIAS) <= set(_grupos(s)):
+        if not set(GRUPOS_DA_03) <= set(_grupos(s)):
             falta.append("a lista não abre em grupos pelas sete famílias")
         if "Sem efeito" not in _opcoes(s):
             falta.append("a lista perdeu o «Sem efeito»")
@@ -119,7 +120,7 @@ def _problemas_da_lista_do_03(doc: str) -> list[str]:
                 falta.append(f"«{t}» não começa por maiúscula")
             if " · " in t:
                 falta.append(f"«{t}» repete a família, que já é o grupo")
-    dos_seus = r"(?!—|meu:|meu-acionamento:)"
+    dos_seus = r"(?!—|meu:|meu-acionamento:|do_estilo)"
     sem_dica = re.findall(
         r'<option value="' + dos_seus + r'[^"]*"(?![^>]*title=)[^>]*>([^<]*)<', efeitos[0])
     if sem_dica:

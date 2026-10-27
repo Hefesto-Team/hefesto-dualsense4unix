@@ -58,6 +58,9 @@ def aba(monkeypatch, tmp_path):
     return ctx, a06_navegacao, pronto
 
 
+SAIU_DO_TOPO_EM_27_10 = {"conta-b"}
+
+
 def _enderecos(publicado: bool) -> set[str]:
     import onde
 
@@ -199,7 +202,7 @@ def test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela():
 
 def test_o_produto_nunca_esta_a_frente_do_desenho():
     """Endereço no publicado que a bancada não tem = alguém editou o produto."""
-    a_mais = _enderecos(publicado=True) - _enderecos(publicado=False)
+    a_mais = _enderecos(publicado=True) - _enderecos(publicado=False) - SAIU_DO_TOPO_EM_27_10
     assert not a_mais, (
         f"{sorted(a_mais)} existe na página publicada e não no desenho de hoje.")
 

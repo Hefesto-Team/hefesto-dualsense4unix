@@ -39,6 +39,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
+PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/04-iluminacao.html"
 RGB = tuple[int, int, int]
 VERMELHO: RGB = (255, 0, 0)
 NOVAS = ("onda", "relampago")
@@ -286,7 +287,8 @@ def test_as_duas_estao_em_que_se_move_em_cada_lista_do_desenho_e_na_frase_da_dic
 
 
 def test_o_criar_efeitos_novos_oferece_as_duas_como_base() -> None:
-    doc = _doc()
+    doc = re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "",
+                 PUBLICADA.read_text(encoding="utf-8"), flags=re.S)
     criar = doc.split('<div class="quadro criar"', 1)[1]
     jeito = criar.split('class="seg-criar"', 1)[1].split('class="g4-cores"', 1)[0]
     assert re.findall(r'<input type="radio" name="base-criar" value="([^"]+)"', jeito) == [
@@ -354,7 +356,7 @@ def test_a_04_com_as_duas_opcoes_a_mais_nao_rola_na_vertical() -> None:
                                  ignore_default_args=["--hide-scrollbars"])
         for larg, alt in VISTAS_DA_04:
             pg = nav.new_page(viewport={"width": larg, "height": alt})
-            pg.goto(MOCKUP.as_uri())
+            pg.goto(PUBLICADA.as_uri())
             pg.wait_for_load_state("networkidle")
             pg.add_style_tag(content=escondidos)
             pg.wait_for_timeout(300)

@@ -468,10 +468,7 @@ def test_o_grupo_que_reage_esta_nas_quatro_listas_do_desenho_e_o_leiaute_nao_mud
             ("base:reage-ao-botao", "Reage ao botão"), ("base:inclinacao", "Inclinação"),
             ("base:dedo-no-touchpad", "Dedo no touchpad")]
     assert doc.count('class="g4-efeito"') == 4, "uma lista por controle, nada a mais na tela"
-    criar = doc.split('<div class="quadro criar"', 1)[1]
-    jeito = criar.split('class="seg-criar"', 1)[1].split('class="g4-cores"', 1)[0]
-    assert re.findall(r'<input type="radio" name="base-criar" value="([^"]+)"', jeito) == [
-        "respirar", "piscar", "arco-iris", "onda", "relampago"], "o «Jeito» não ganhou nada"
+    assert '<div class="quadro criar"' not in doc, "o «Criar efeitos novos» saiu em 27/10"
 
 
 def _ctx(n: int = 1) -> Any:

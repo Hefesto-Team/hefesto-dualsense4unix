@@ -406,6 +406,7 @@
   .luz-grade > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .luz-grade > div > *:first-child::before{display:none}
   .luz-grade > div > *:nth-child(3)::before{display:none}
+  .luz-grade > .rotulos > *:nth-child(3)::before{display:block}
 
   .luz-grade .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
   .luz-grade .rotulos > *{align-items:flex-start;text-align:left}
@@ -532,43 +533,6 @@
   .g4-efeito:hover{border-color:var(--comment)}
   .g4-efeito-dica{display:contents}
   .quadro-topo .modo-auto{margin-left:auto}
-  .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:8px 10px;padding:7px 16px;flex-wrap:wrap;min-width:0}
-  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
-  .criar .seg-criar{display:inline-flex;gap:3px;flex:0 0 auto}
-  .criar .seg-criar label,.criar .meu{height:30px;padding:0 9px;border-radius:999px;
-    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
-    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
-  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
-    color:var(--texto-suave)}
-  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
-  .criar .nome-criar{height:30px;width:118px;flex:0 0 auto;padding:0 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
-    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--fg)}
-  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
-    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
-    cursor:pointer;flex:0 0 auto}
-  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
-  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap;
-    justify-content:flex-end}
-  .criar .meu{color:var(--texto-suave);cursor:default}
-  .criar .meu.conta{cursor:help;white-space:nowrap}
-  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
-  .g4-cores{display:inline-flex;gap:6px;align-items:center;flex:0 0 auto}
-  .g4-cor{width:24px;height:24px;border-radius:6px;display:block;border:0;padding:0;cursor:pointer}
-  .g4-cor:hover{outline:2px solid var(--comment)}
-  .g4-mais{width:24px;height:24px;border-radius:6px;border:1px dashed var(--linha);background:transparent;
-    color:var(--fg);font:600 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;padding:0}
-  .g4-mais[hidden]{display:none}
-  .g4-vel{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;font-size:12px;font-weight:600;
-    color:var(--rot-campo)}
-  .g4-vel input{width:90px;accent-color:var(--purple);height:24px}
-  .criar:has(input[value="arco-iris"]:checked) .g4-cores{display:none}
 
   .troca{margin:8px 0 12px;font-size:11.5px}
   .troca-linha{display:flex;align-items:center;gap:10px;margin:5px 0;flex-wrap:wrap}
@@ -2441,44 +2405,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
       </div>
     </div>
-    <div class="quadro criar" id="criar-luz">
-      <div class="criar-linha">
-        <span class="quadro-titulo" data-dica="O que você criar entra na lista Efeito">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Jeito"><label><input type="radio" name="base-criar" value="respirar" data-linha="base" checked><span>Respirar</span></label><label><input type="radio" name="base-criar" value="piscar" data-linha="base"><span>Piscar</span></label><label><input type="radio" name="base-criar" value="arco-iris" data-linha="base"><span>Arco-íris</span></label><label><input type="radio" name="base-criar" value="onda" data-linha="base"><span>Onda</span></label><label><input type="radio" name="base-criar" value="relampago" data-linha="base"><span>Relâmpago</span></label></span>
-        <span class="g4-cores" aria-label="Cores"><button type="button" class="g4-cor" data-cor="#0000FF" style="background:#7EB8D4" data-dica="Tirar esta cor"></button><button type="button" class="g4-cor" data-cor="#FF8000" style="background:#FFB86C" data-dica="Tirar esta cor"></button><button type="button" class="g4-mais" aria-label="Mais uma cor" data-dica="Mais uma cor">+</button></span>
-        <input type="hidden" data-linha="cores" value="#0000FF,#FF8000">
-        <label class="g4-vel" data-dica="Velocidade do efeito"><span>Ritmo</span><input type="range" min="1" max="10" value="4" data-linha="ritmo" aria-label="Ritmo do efeito"></label>
-        <input class="nome-criar" type="text" data-linha="nome" maxlength="40" placeholder="Nome do efeito" aria-label="Nome do efeito">
-        <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-luz" data-dica="Guarda e põe na lista Efeito">Criar</button>
-        <span class="meus" id="seus-efeitos" aria-label="Seus efeitos"><span class="meu conta" tabindex="0" data-dica="Alerta vermelho e Respiro calmo. Cada um está na lista do Efeito, em Seus efeitos"><i style="--cor:var(--purple)"></i>Seus efeitos: 2</span></span>
-      </div>
-    </div>
-<script data-aba="criar">
-(function(){
-  var raiz = document.getElementById('criar-luz'); if(!raiz) return;
-  var CRUAS = ["#FFFFFF", "#0000FF", "#FF0000", "#00FF00", "#FF0080", "#FFFF00", "#FF8000", "#8000FF"], TONS = ["#F8F8F2", "#7EB8D4", "#FF5555", "#50FA7B", "#FF79C6", "#F1FA8C", "#FFB86C", "#BD93F9"];
-  var caixa = raiz.querySelector('.g4-cores'), mais = caixa.querySelector('.g4-mais');
-  var oculto = raiz.querySelector('input[data-linha="cores"]');
-  function atuais(){ return [].map.call(caixa.querySelectorAll('.g4-cor'), function(b){ return b.dataset.cor; }); }
-  function sincroniza(){ var n = atuais(); oculto.value = n.join(','); mais.hidden = n.length >= CRUAS.length; }
-  caixa.addEventListener('click', function(ev){
-    var b = ev.target.closest('button'); if(!b) return;
-    if(b === mais){
-      var tem = atuais(), i = CRUAS.findIndex(function(c){ return tem.indexOf(c) < 0; });
-      if(i < 0) return;
-      var novo = document.createElement('button');
-      novo.type = 'button'; novo.className = 'g4-cor'; novo.dataset.cor = CRUAS[i];
-      novo.style.background = TONS[i]; novo.setAttribute('data-dica', 'Tirar esta cor');
-      caixa.insertBefore(novo, mais);
-    } else if(b.classList.contains('g4-cor') && atuais().length > 1){
-      b.remove();
-    }
-    sincroniza();
-  });
-  sincroniza();
-})();
-</script>
-
   </div>
 
   <div class="rodape">

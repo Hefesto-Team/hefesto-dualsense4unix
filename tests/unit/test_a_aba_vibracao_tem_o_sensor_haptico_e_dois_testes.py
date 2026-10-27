@@ -549,7 +549,6 @@ MEDIDA = r"""
     folga: Math.round(m.getBoundingClientRect().bottom - vib.getBoundingClientRect().bottom),
     fundos: fundos,
     fundo_da_grade: Math.round(vib.getBoundingClientRect().bottom),
-    criar_h: Math.round(document.getElementById('criar-vibracao').getBoundingClientRect().height),
     desenho: Math.round(mold.getBoundingClientRect().height),
     linhas: linhas,
   });

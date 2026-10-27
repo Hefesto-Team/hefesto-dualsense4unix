@@ -151,8 +151,7 @@ def test_as_quatro_colunas_ganham_os_dois_itens_e_criar_nao_muda() -> None:
         valores = re.findall(r'<option value="([^"]+)"[^>]*>([^<]+)</option>', opcoes)
         assert valores[-3:] == [("pancada_do_lado", "Pancada do lado"),
                                 ("ressoar", "Ressoar"), ("ricochete", "Ricochete")]
-    criar = html.split('aria-label="Forma"', 1)[1].split("</span>", 1)[0]
-    assert "ressoar" not in criar and "ricochete" not in criar
+    assert 'aria-label="Forma"' not in html, "o «Criar efeitos novos» saiu da Vibração em 27/10"
     assert aba05._ROTULOS_DA_IMERSAO["ressoar"] == "Ressoar"
 
 

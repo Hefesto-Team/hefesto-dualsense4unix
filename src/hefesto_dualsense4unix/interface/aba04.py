@@ -1,13 +1,10 @@
-import json, sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
 import monta as monta_
 from itertools import cycle
 from monta import (monta, trava_do_nativo, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, player_slot_color, tom_da_casa)
 from pacotes import a04_iluminacao as _pacote04
-from pacotes.meus_efeitos import TETO_DO_NOME
-from hefesto_dualsense4unix.profiles.schema import (
-    RITMO_MAXIMO_DA_LUZ, RITMO_MINIMO_DA_LUZ, RITMO_PADRAO_DA_LUZ)
 
 
 def luz(jogador):
@@ -139,6 +136,7 @@ CSS = """  .luz-grade{
   .luz-grade > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .luz-grade > div > *:first-child::before{display:none}
   .luz-grade > div > *:nth-child(3)::before{display:none}
+  .luz-grade > .rotulos > *:nth-child(3)::before{display:block}
 
   .luz-grade .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
   .luz-grade .rotulos > *{align-items:flex-start;text-align:left}
@@ -260,43 +258,6 @@ CSS = """  .luz-grade{
   .g4-efeito:hover{border-color:var(--comment)}
   .g4-efeito-dica{display:contents}
   .quadro-topo .modo-auto{margin-left:auto}
-  .criar{flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:8px 10px;padding:7px 16px;flex-wrap:wrap;min-width:0}
-  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
-  .criar .seg-criar{display:inline-flex;gap:3px;flex:0 0 auto}
-  .criar .seg-criar label,.criar .meu{height:30px;padding:0 9px;border-radius:999px;
-    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
-    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
-  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
-    color:var(--texto-suave)}
-  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
-  .criar .nome-criar{height:30px;width:118px;flex:0 0 auto;padding:0 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
-    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--fg)}
-  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
-    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
-    cursor:pointer;flex:0 0 auto}
-  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
-  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap;
-    justify-content:flex-end}
-  .criar .meu{color:var(--texto-suave);cursor:default}
-  .criar .meu.conta{cursor:help;white-space:nowrap}
-  .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
-  .g4-cores{display:inline-flex;gap:6px;align-items:center;flex:0 0 auto}
-  .g4-cor{width:24px;height:24px;border-radius:6px;display:block;border:0;padding:0;cursor:pointer}
-  .g4-cor:hover{outline:2px solid var(--comment)}
-  .g4-mais{width:24px;height:24px;border-radius:6px;border:1px dashed var(--linha);background:transparent;
-    color:var(--fg);font:600 14px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;padding:0}
-  .g4-mais[hidden]{display:none}
-  .g4-vel{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;font-size:12px;font-weight:600;
-    color:var(--rot-campo)}
-  .g4-vel input{width:90px;accent-color:var(--purple);height:24px}
-  .criar:has(input[value="arco-iris"]:checked) .g4-cores{display:none}
 
   .troca{margin:8px 0 12px;font-size:11.5px}
   .troca-linha{display:flex;align-items:center;gap:10px;margin:5px 0;flex-wrap:wrap}
@@ -493,51 +454,6 @@ def coluna(c):
 
 GESTO_DO_MODO = "modo-da-luz"
 
-def _radios(grupo, opcoes):
-    """Os rádios em pílula da área de criar: o primeiro vem marcado."""
-    return "".join(
-        f'<label><input type="radio" name="{grupo}-criar" value="{valor}" data-linha="{grupo}"'
-        f'{" checked" if i == 0 else ""}><span>{rotulo}</span></label>'
-        for i, (valor, rotulo) in enumerate(opcoes))
-
-
-CORES_DE_PARTIDA = (CRUS_DA_GUIA[1], CRUS_DA_GUIA[6])
-
-
-def _cor_do_efeito(cru):
-    """Uma cor do efeito: a CRUA vai no `data-cor` (é a que o aparelho recebe), o tom da casa pinta."""
-    return (f'<button type="button" class="g4-cor" data-cor="{cru}" '
-            f'style="background:{tom_da_casa(cru)}" data-dica="Tirar esta cor"></button>')
-
-
-SCRIPT_DO_CRIAR = f'''<script data-aba="criar">
-(function(){{
-  var raiz = document.getElementById('criar-luz'); if(!raiz) return;
-  var CRUAS = {json.dumps(CRUS_DA_GUIA)}, TONS = {json.dumps(TONS)};
-  var caixa = raiz.querySelector('.g4-cores'), mais = caixa.querySelector('.g4-mais');
-  var oculto = raiz.querySelector('input[data-linha="cores"]');
-  function atuais(){{ return [].map.call(caixa.querySelectorAll('.g4-cor'), function(b){{ return b.dataset.cor; }}); }}
-  function sincroniza(){{ var n = atuais(); oculto.value = n.join(','); mais.hidden = n.length >= CRUAS.length; }}
-  caixa.addEventListener('click', function(ev){{
-    var b = ev.target.closest('button'); if(!b) return;
-    if(b === mais){{
-      var tem = atuais(), i = CRUAS.findIndex(function(c){{ return tem.indexOf(c) < 0; }});
-      if(i < 0) return;
-      var novo = document.createElement('button');
-      novo.type = 'button'; novo.className = 'g4-cor'; novo.dataset.cor = CRUAS[i];
-      novo.style.background = TONS[i]; novo.setAttribute('data-dica', 'Tirar esta cor');
-      caixa.insertBefore(novo, mais);
-    }} else if(b.classList.contains('g4-cor') && atuais().length > 1){{
-      b.remove();
-    }}
-    sincroniza();
-  }});
-  sincroniza();
-}})();
-</script>
-'''
-
-
 MIOLO = f'''
 {CORES_DO_MAPA}
     <div class="quadro luzes" data-modo-da-aba="{monta_.MODO_PERSONALIZADO}" data-campo="{GESTO_DO_MODO}"
@@ -575,20 +491,7 @@ MIOLO = f'''
         <style id="plastico-vivo"></style>
 
       </div>
-    </div>
-    <div class="quadro criar" id="criar-luz">
-      <div class="criar-linha">
-        <span class="quadro-titulo" data-dica="O que você criar entra na lista Efeito">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Jeito">{_radios("base", [("respirar", "Respirar"), ("piscar", "Piscar"), ("arco-iris", "Arco-íris"), ("onda", "Onda"), ("relampago", "Relâmpago")])}</span>
-        <span class="g4-cores" aria-label="Cores">{"".join(_cor_do_efeito(h) for h in CORES_DE_PARTIDA)}<button type="button" class="g4-mais" aria-label="Mais uma cor" data-dica="Mais uma cor">+</button></span>
-        <input type="hidden" data-linha="cores" value="{",".join(CORES_DE_PARTIDA)}">
-        <label class="g4-vel" data-dica="Velocidade do efeito"><span>Ritmo</span><input type="range" min="{RITMO_MINIMO_DA_LUZ}" max="{RITMO_MAXIMO_DA_LUZ}" value="{RITMO_PADRAO_DA_LUZ}" data-linha="ritmo" aria-label="Ritmo do efeito"></label>
-        <input class="nome-criar" type="text" data-linha="nome" maxlength="{TETO_DO_NOME}" placeholder="Nome do efeito" aria-label="Nome do efeito">
-        <button class="btn-criar" type="button" data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}" data-hef-forma="criar-luz" data-dica="Guarda e põe na lista Efeito">Criar</button>
-        <span class="meus" id="seus-efeitos" aria-label="Seus efeitos">{_pacote04.html_dos_efeitos(CENA_DOS_EFEITOS)}</span>
-      </div>
-    </div>
-{SCRIPT_DO_CRIAR}'''
+    </div>'''
 
 LEGENDA = f'''<div class="nota">
   <div class="nota-troca" data-hef="troca">
@@ -856,10 +759,11 @@ def _conferir(doc):
            "a frase do efeito voltou para a tela: ela é a dica da lista (16/10), uma por lugar")
     exigir("sem-piscar" not in doc and "Sem piscar" not in doc,
            "o «Sem piscar» voltou à aba: ele saiu em 16/10, a «Luz fixa» já é a luz parada")
-    criar = corpo.split('<div class="quadro criar"', 1)[-1]
-    exigir(f'data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}"' in criar and "Criar efeitos novos" in criar
-           and 'id="seus-efeitos"' in criar,
-           "a linha «Criar efeitos novos» não está inteira (título, botão e a lista dos criados)")
+    exigir('class="quadro criar"' not in corpo and "Criar efeitos novos" not in corpo
+           and f'data-gesto="{_pacote04.GESTO_DE_CRIAR_EFEITO}"' not in corpo,
+           "o «Criar efeitos novos» voltou à Iluminação: ele não criava nada que se usasse")
+    exigir(".luz-grade > .rotulos > *:nth-child(3)::before{display:block}" in doc,
+           "a linha entre «Modelo» e «Cor» saiu da coluna dos rótulos")
 
     campos_por_lugar = {}
     vazias, cheias = _cada_coluna(grade)
