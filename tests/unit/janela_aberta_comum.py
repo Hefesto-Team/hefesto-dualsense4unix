@@ -329,7 +329,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             fora.ticks.append(SimpleNamespace(
                 t=time.monotonic(), escondida=piloto._escondida, pintou=no_tique[0],
                 voo=no_ar and piloto._pulados_por_voo > voos,
-                produtivos=sum(piloto.tiques.values()),
+                produtivos=piloto.tiques.get(pagina, 0),
                 leituras=estado.leituras, pactl=len(fora.pactl),
                 batidas=fora.ponte.chamadas.count("rumble_set_checked"),
                 externos=fora.ponte.chamadas.count("resultado"),
