@@ -75,6 +75,7 @@ def _morreu(filho: subprocess.Popen[bytes]) -> bool:
 
 
 def test_a_janela_aberta_fecha_e_volta_na_mesma_tela(lar: Path, filhos: Filhos) -> None:
+    """Prova da D-2610-O-INSTALL-RECARREGA-A-JANELA-E-A-BANDEJA."""
     janela = _subir(filhos, "hefesto", "--gui", tela="wayland-9")
     _anotar_a_janela(lar, janela.pid)
     feito = Registro(subiu=False)
