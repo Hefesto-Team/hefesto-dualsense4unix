@@ -2874,16 +2874,14 @@ else
 fi
 
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    _faria "subir o ícone na bandeja, se a escolha está ligada e nenhum está de pé"
+    _faria "fechar e reabrir a janela e o ícone na bandeja que estiverem abertos, para valer o código novo; sem ícone de pé, subi-lo se a escolha está ligada"
 elif [[ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
     printf '      sem sessão gráfica: a bandeja sobe no próximo login\n'
 elif [[ -x "${VENV_DIR}/bin/python" ]]; then
-    if "${VENV_DIR}/bin/python" -c 'import sys
-from hefesto_dualsense4unix.app.actions.atos_da_bandeja import garantir_a_bandeja
-sys.exit(0 if garantir_a_bandeja() else 1)' >/dev/null 2>&1; then
-        printf '      ícone na bandeja: subiu\n'
+    if _RECARGA="$("${VENV_DIR}/bin/python" -m hefesto_dualsense4unix.app.actions.recarga_do_install 2>/dev/null)"; then
+        printf '%s\n' "${_RECARGA}" | sed 's/^/      /'
     else
-        printf '      ícone na bandeja: já de pé, ou desligado pela escolha\n'
+        warn "não consegui recarregar a janela e a bandeja — feche e abra a interface para valer o código novo"
     fi
 fi
 
