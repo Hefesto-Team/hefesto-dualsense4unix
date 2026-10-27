@@ -50,6 +50,7 @@ FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
 }
 
 PAGINAS = sorted(p.name for p in BANCADA.glob("*.html"))
+EMBUTIDAS = {(BANCADA, "01-jogar.html"): {"02-controles.html"}}
 ARQUIVOS = [pytest.param(pasta, nome, id=f"{rotulo}-{nome}")
             for rotulo, pasta in (("bancada", BANCADA), ("publicada", PUBLICADAS))
             for nome in PAGINAS]
@@ -116,7 +117,7 @@ def test_nenhuma_pagina_emite_o_gesto_de_escrita_de_outra_aba(pasta: Path, nome:
     """Gesto de escrita fora da aba dona reprova; selo, dica e texto passam."""
     emitidos = gestos_da_pagina((pasta / nome).read_text(encoding="utf-8"))
     fora = {g: sorted(d) for g, d in _donos_do_gesto().items()
-            if g in emitidos and nome not in d}
+            if g in emitidos and not ({nome} | EMBUTIDAS.get((pasta, nome), set())) & d}
     assert not fora, f"{nome} emite gesto de escrita que é de outra aba (gesto -> dona): {fora}"
 
 

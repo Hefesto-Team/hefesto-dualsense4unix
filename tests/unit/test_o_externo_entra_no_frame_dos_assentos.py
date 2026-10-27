@@ -64,7 +64,7 @@ def _bloco_equilibrado(doc: str, abertura: str) -> str:
 
 def test_o_endereco_da_aba01_mora_dentro_da_grade_dos_assentos() -> None:
     """`data-campo="externos"` está DENTRO do `<div class="pecas">`."""
-    doc = onde.pagina("01-jogar.html").read_text()
+    doc = onde.pagina("01-jogar.html", publicado=True).read_text()
     grade = _bloco_equilibrado(doc, '<div class="pecas"')
     assert 'data-campo="externos" data-hef-alvo="html"' in grade
 
@@ -79,21 +79,22 @@ def test_o_endereco_da_aba08_mora_dentro_do_acordeao() -> None:
 def test_a_vaga_e_transparente_nas_duas_abas() -> None:
     """`display:contents` — sem ela os cartões caem TODOS numa célula só."""
     assert (".pecas .ext-vaga{display:contents}"
-            in onde.pagina("01-jogar.html").read_text())
+            in onde.pagina("01-jogar.html", publicado=True).read_text())
     assert (".gc .ext-vaga{display:contents}"
             in onde.pagina("08-conexoes.html").read_text())
 
 
 def test_a_vaga_vazia_nao_ocupa_uma_celula() -> None:
     """O marcador `.nada` sai por `display:none`, e não pelo `:empty` da ressalva."""
-    for arquivo, seletor in (("01-jogar.html", ".pecas .ext-vaga > .nada"),
-                             ("08-conexoes.html", ".gc .ext-vaga > .nada")):
-        assert f"{seletor}{{display:none}}" in onde.pagina(arquivo).read_text(), arquivo
+    for arquivo, seletor, publicado in (("01-jogar.html", ".pecas .ext-vaga > .nada", True),
+                                        ("08-conexoes.html", ".gc .ext-vaga > .nada", False)):
+        doc = onde.pagina(arquivo, publicado=publicado).read_text()
+        assert f"{seletor}{{display:none}}" in doc, arquivo
 
 
 def test_nenhum_aparelho_de_exemplo_nasce_dentro_da_moldura() -> None:
     """A moldura parada tem os assentos e mais nada."""
-    grade = _bloco_equilibrado(onde.pagina("01-jogar.html").read_text(),
+    grade = _bloco_equilibrado(onde.pagina("01-jogar.html", publicado=True).read_text(),
                                '<div class="pecas"')
     assert 'class="ext-cartao"' not in grade
     moldura = _bloco_equilibrado(onde.pagina("08-conexoes.html").read_text(),

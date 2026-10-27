@@ -69,7 +69,6 @@ A MORDIDA, e foi feita duas vezes em 07/09/2026:
 """
 from __future__ import annotations
 
-import os
 import pathlib
 import sys
 
@@ -89,20 +88,13 @@ PAGINA = "01-jogar.html"
 
 
 def _gerar(destino: pathlib.Path) -> pathlib.Path:
-    """A página da aba 01 montada pelo gerador de verdade, num lar de mentira."""
-    anterior = os.environ.get("HEFESTO_BANCADA")
-    os.environ["HEFESTO_BANCADA"] = str(destino)
-    try:
-        import aba01
-        import onde
+    """A página da aba 01 que o produto renderiza, copiada para um lar de mentira."""
+    import onde
 
-        aba01.montar("01-jogar", "Jogar", aba01.MIOLO, aba01.CSS)
-        return onde.pagina(PAGINA)
-    finally:
-        if anterior is None:
-            os.environ.pop("HEFESTO_BANCADA", None)
-        else:
-            os.environ["HEFESTO_BANCADA"] = anterior
+    alvo = destino / PAGINA
+    alvo.write_text(onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8"),
+                    encoding="utf-8")
+    return alvo
 
 
 O_QUE_O_NAVEGADOR_DESENHA = r"""

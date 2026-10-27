@@ -74,9 +74,23 @@ def _vistos() -> set[tuple[str, str]]:
     página (``("*", gesto)``) e não entram na tabela; a régua deles é a de
     ``test_o_botao_que_trava_a_navegacao_dos_controles.py``.
     """
-    moldura = _pacotes().camada.GESTOS_DA_MOLDURA
-    return {(nome, g) for nome in _as_dez() for publicado in (True, False)
-            for g in _gestos(nome, publicado=publicado) if g not in moldura}
+    camada = _pacotes().camada
+    vistos = set()
+    for nome in _as_dez():
+        for publicado in (True, False):
+            for g in _gestos(nome, publicado=publicado) - camada.GESTOS_DA_MOLDURA:
+                if (nome, g) in O_DESENHO_A_FRENTE and not publicado:
+                    continue
+                dona = EMBUTIDA_NO_DESENHO.get(nome) if not publicado else None
+                if dona and (nome, g) not in camada.CAMADA and (dona, g) in camada.CAMADA:
+                    vistos.add((dona, g))
+                else:
+                    vistos.add((nome, g))
+    return vistos
+
+
+EMBUTIDA_NO_DESENHO = {"01-jogar.html": "02-controles.html"}
+O_DESENHO_A_FRENTE = {("01-jogar.html", "modo-nintendo")}
 
 
 def test_todo_gesto_das_dez_tem_camada() -> None:

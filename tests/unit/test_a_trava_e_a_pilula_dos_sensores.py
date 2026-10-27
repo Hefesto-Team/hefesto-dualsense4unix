@@ -16,9 +16,15 @@ def _altura_esperada(rotulo: str) -> int:
     """A altura do «Modo Freestyle», lida no dono (`aba01.py`), nunca digitada."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba01.py").read_text(
         encoding="utf-8")
-    achado = re.search(r"\.cadeado(?:,[^{]*)?\{(?:[^}]*;)?\s*height:(\d+)px", fonte)
+    achado = re.search(r"\.cadeado(?:,[^{]*)?\{(?:[^}]*;)?\s*height:(\d+px|var\(--h-acao\))", fonte)
     assert achado, "o `.cadeado` do gerador perdeu a altura — a régua ficaria cega"
-    return int(achado.group(1))
+    valor = achado.group(1)
+    if valor.startswith("var"):
+        topo = (RAIZ / "src/hefesto_dualsense4unix/interface/topo.html").read_text(encoding="utf-8")
+        token = re.search(r"--h-acao:(\d+px)", topo)
+        assert token, "o `--h-acao` saiu do topo — a régua ficaria cega"
+        valor = token.group(1)
+    return int(valor[:-2])
 
 
 def _bootstrap() -> str:

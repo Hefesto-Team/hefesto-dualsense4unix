@@ -139,8 +139,8 @@ def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
     assert vazio == monta.NADA_A_DIZER, (
         f"a Jogar sem externo devolveu {vazio!r} — com `''` o piloto escreve "
         f"`—` e a grade dos assentos ganha um quinto item com um traço dentro")
-    assert ".ext-vaga > .nada{display:none}" in (
-        INTERFACE / "aba01.py").read_text(encoding="utf-8"), (
+    assert ".ext-vaga > .nada{display:none}" in onde.pagina(
+        "01-jogar.html", publicado=True).read_text(encoding="utf-8"), (
         "a regra que esconde o marcador saiu do CSS da aba 01")
 
 
@@ -216,9 +216,9 @@ def test_as_duas_abas_dizem_a_mesma_coisa_do_mesmo_aparelho() -> None:
 
 def test_as_duas_paginas_da_bancada_tem_onde_escrever() -> None:
     """O `data-campo` com alvo `html` está nas duas páginas da bancada."""
-    for arquivo, campo in (("01-jogar.html", "externos"),
-                           ("08-conexoes.html", "externos-lista")):
-        texto = onde.pagina(arquivo).read_text()
+    for arquivo, campo, publicado in (("01-jogar.html", "externos", True),
+                                      ("08-conexoes.html", "externos-lista", False)):
+        texto = onde.pagina(arquivo, publicado=publicado).read_text()
         assert f'data-campo="{campo}" data-hef-alvo="html"' in texto, arquivo
 
 

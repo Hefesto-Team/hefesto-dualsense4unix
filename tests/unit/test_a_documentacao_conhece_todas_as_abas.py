@@ -71,7 +71,10 @@ def _abas_da_interface_nova() -> list[tuple[str, str]]:
 
 @pytest.fixture(scope="module")
 def dez() -> list[tuple[str, str]]:
-    return _abas_da_interface_nova()
+    publicada = (RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html").read_text(
+        encoding="utf-8")
+    return [(rotulo, slug) for slug, rotulo in
+            re.findall(r'<a class="aba[^"]*" href="(\d\d-[a-z]+)\.html">([^<]+)</a>', publicada)]
 
 
 def test_toda_imagem_que_a_documentacao_publica_existe() -> None:
@@ -123,11 +126,10 @@ def test_a_foto_da_doc_mostra_a_aba_inteira() -> None:
     )
 
 
-def test_a_lista_das_dez_vem_do_monta_e_nao_de_uma_lista_a_mao(
-    dez: list[tuple[str, str]],
-) -> None:
+def test_a_lista_das_dez_vem_do_monta_e_nao_de_uma_lista_a_mao() -> None:
     """A régua é conferida contra o fonte por um caminho independente."""
-    assert len(dez) == 10, f"monta.ABAS tem {len(dez)} entradas, e as abas são dez: {dez}"
+    dez = _abas_da_interface_nova()
+    assert len(dez) == 9, f"monta.ABAS tem {len(dez)} entradas, e a tira do desenho tem nove: {dez}"
 
     bruto = MONTA.read_text(encoding="utf-8")
     trecho = bruto.split("ABAS", 1)[1]

@@ -65,7 +65,7 @@ FIM_DA_FILEIRA = '<div class="faixa-final'
 
 
 def bancada() -> str:
-    return onde.pagina("01-jogar.html").read_text(encoding="utf-8")
+    return onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
 
 
 def fileira_de_cartoes() -> str:

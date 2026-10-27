@@ -536,12 +536,13 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
     por_campo = collections.Counter(
         aba01._campo_do_chip(m) for m in aba01.MODOS + aba01.DO_DESLIGADO)
+    lugares = 0 if not publicado and _em_trabalho() else len(monta.MESA)
     esperado = {
         "hef-posicao": len(aba01.INTERRUPTOR),
         "modo-aceso": por_campo["modo-aceso"],
         "steam-input-aceso": por_campo["steam-input-aceso"],
-        "mascara-cartao": len(monta.MASCARAS) * len(aba01.MESA),
-        "pendente-ha": 1,
+        "mascara-cartao": len(monta.MASCARAS) * lugares,
+        "pendente-ha": 1 if lugares else 0,
     }
     for campo, quantos in esperado.items():
         achei = corpo.count(f'data-campo="{campo}" data-hef-alvo="classe"')
@@ -549,21 +550,28 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
             f"{'publicado' if publicado else 'bancada'}: o endereço {campo!r} "
             f"aparece {achei} vezes e deviam ser {quantos}")
     cliques = corpo.count('data-gesto="mascara"')
-    assert cliques == len(monta.MASCARAS) * len(aba01.MESA), (
+    assert cliques == len(monta.MASCARAS) * lugares, (
         f"{'publicado' if publicado else 'bancada'}: o clique da máscara "
         f"alcança {cliques} chips e a mesa tem {len(aba01.MESA)} lugares")
 
 
 def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
     """A régua nos DOIS sentidos — sem ela, o pacote emite para o vazio."""
-    corpo = onde.pagina("01-jogar.html", publicado=not _em_trabalho()).read_text(
-        encoding="utf-8")
     fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
-    for campo in fora:
-        if campo in {"cartoes", "cobertura", "sem_dono", "blocos"}:
-            continue
-        assert f'data-campo="{campo}"' in corpo, (
-            f"o pacote emite {campo!r} e a página publicada não tem onde escrever")
+    for publicado in (True, False) if _em_trabalho() else (True,):
+        corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
+        for campo in fora:
+            if campo in {"cartoes", "cobertura", "sem_dono", "blocos"}:
+                continue
+            if not publicado and campo in SAIRAM_DO_DESENHO_DE_27_10:
+                continue
+            assert f'data-campo="{campo}"' in corpo, (
+                f"o pacote emite {campo!r} e a página {'publicada' if publicado else 'do desenho'} "
+                f"não tem onde escrever")
+
+
+SAIRAM_DO_DESENHO_DE_27_10 = frozenset({
+    "mesa-frase", "mascara-ressalva", "pendente", "pendente-alvo", "pendente-ha", "externos"})
 
 
 def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:

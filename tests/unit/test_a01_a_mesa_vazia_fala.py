@@ -89,7 +89,7 @@ def test_a_pagina_publica_os_dois_elementos_da_linha() -> None:
     `aba01.MIOLO`, regere, e o `_conferir` do gerador reprova ANTES desta régua
     — que é o lugar certo para essa notícia.
     """
-    corpo = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
+    corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
     for campo in ("mesa-frase", "mascara-ressalva"):
         assert corpo.count(f'data-campo="{campo}"') == 2, (
             f"{campo}: a página não tem o par que acende e escreve")

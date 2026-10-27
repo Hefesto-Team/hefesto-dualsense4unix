@@ -945,7 +945,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "interface/monta.py::larg_rotulos": (
         "Auxiliar do gerador do mockup (`larg_rotulos` em "
-        "`src/hefesto_dualsense4unix/interface/monta.py:278`), "
+        "`src/hefesto_dualsense4unix/interface/monta.py:280`), "
         "chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
@@ -954,8 +954,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
-        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:258` (`montaveis`) e "
-        "`src/hefesto_dualsense4unix/interface/aba01.py:1081` (`mascaras_montaveis`) —, "
+        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:179` (`montaveis`) e "
+        "`src/hefesto_dualsense4unix/interface/aba01.py:26` (`mascaras_montaveis`) —, "
         "que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "
         "E ISSO ESTÁ CERTO, e a razão é do dado: a lista de máscaras montáveis "

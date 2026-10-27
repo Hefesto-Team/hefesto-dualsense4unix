@@ -326,19 +326,45 @@ def test_no_nativo_a_fita_e_uma_camada_muda(medido: dict[str, Any]) -> None:
             assert "so-no-nativo" in chip["quem"]
 
 
-def test_no_nativo_a_tela_nao_oferece_mascara(medido: dict[str, Any]) -> None:
-    jogar = medido["01-jogar.html"]["nativo"]
+@pytest.fixture(scope="module")
+def jogar_publicada() -> dict[str, Any]:
+    """A 01 publicada: os cartões com máscara saíram do desenho de 27/10 e ficam no produto."""
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema — a régua não tem motor")
+    from playwright.sync_api import sync_playwright
+
+    import onde
+
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    try:
+        import chrome_sem_rede
+    finally:
+        sys.path.remove(str(RAIZ / "scripts"))
+    arquivo = onde.pagina("01-jogar.html", publicado=True)
+    with sync_playwright() as pw:
+        navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg, _ = chrome_sem_rede.abrir_sem_rede(
+                navegador, arquivo.as_uri(), largura=1280, altura=900)
+            return {"nativo": pg.evaluate(O_QUE_O_MOTOR_DESENHA, True),
+                    "normal": pg.evaluate(O_QUE_O_MOTOR_DESENHA, False)}
+        finally:
+            navegador.close()
+
+
+def test_no_nativo_a_tela_nao_oferece_mascara(jogar_publicada: dict[str, Any]) -> None:
+    jogar = jogar_publicada["nativo"]
     assert jogar["cartoes"], "a Jogar não tem cartão de controle"
     for cartao in jogar["cartoes"]:
         assert cartao["chipsDeMascara"] == 0, "a tela oferece máscara no Nativo"
         assert cartao["pecaFixa"] == ["DualSense"]
         assert cartao["legenda"] == ["O jogo vê o próprio controle"]
-    normal = medido["01-jogar.html"]["normal"]["cartoes"]
+    normal = jogar_publicada["normal"]["cartoes"]
     assert all(c["chipsDeMascara"] == 3 and not c["pecaFixa"] for c in normal)
 
 
-def test_no_nativo_o_cartao_do_alvo_nao_tem_destaque(medido: dict[str, Any]) -> None:
-    cartoes = medido["01-jogar.html"]["nativo"]["cartoes"]
+def test_no_nativo_o_cartao_do_alvo_nao_tem_destaque(jogar_publicada: dict[str, Any]) -> None:
+    cartoes = jogar_publicada["nativo"]["cartoes"]
     assert len({c["fundo"] for c in cartoes}) == 1, (
         f"o cartão do alvo ainda tem fundo próprio: {[c['fundo'] for c in cartoes]}")
 

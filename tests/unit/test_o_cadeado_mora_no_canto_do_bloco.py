@@ -92,9 +92,16 @@ def _altura_do_desenho() -> int:
 
     fonte = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
     achado = re.search(
-        r"\.quadro-topo > \.cadeado,\.quadro-topo > \.canto\{(?:[^}]*;)?height:(\d+)px", fonte)
+        r"\.quadro-topo > \.cadeado,\.quadro-topo > \.canto\{(?:[^}]*;)?"
+        r"height:(\d+px|var\(--h-acao\))", fonte)
     assert achado, "o `.cadeado` do gerador perdeu a altura — a régua ficaria cega"
-    return int(achado.group(1))
+    valor = achado.group(1)
+    if valor.startswith("var"):
+        topo = (INTERFACE / "topo.html").read_text(encoding="utf-8")
+        token = re.search(r"--h-acao:(\d+px)", topo)
+        assert token, "o `--h-acao` saiu do topo — a régua ficaria cega"
+        valor = token.group(1)
+    return int(valor[:-2])
 
 O_QUE_O_MOTOR_DESENHA = """() => {
   const cad = document.querySelector('.cadeado');
@@ -192,8 +199,9 @@ def medido(request: pytest.FixtureRequest) -> dict:
 
 
 def test_o_cadeado_esta_no_bloco_modo(medido: dict) -> None:
-    """É o bloco **Modo** — não outro que por acaso tenha um canto livre."""
-    assert medido["titulo_do_bloco"].startswith("Modo"), (
+    """É o bloco **Modo** (no desenho de 27/10, **Status**), não outro com um canto livre."""
+    titulo = "Status" if medido["_pagina"] == "desenho" else "Modo"
+    assert medido["titulo_do_bloco"].startswith(titulo), (
         f"o cadeado está no bloco {medido['titulo_do_bloco']!r}. Ela pediu o "
         f"canto do bloco Modo, que é onde a trava de perfil pertence.")
 

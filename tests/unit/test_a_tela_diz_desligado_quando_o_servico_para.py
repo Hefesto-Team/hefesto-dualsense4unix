@@ -313,8 +313,8 @@ LER_A_TELA = r"""
       topo_visivel: vis(con),
       topo: vis(con) ? (con.innerText || '').replace(/\s+/g, ' ').trim() : '',
       bolinha: vis(con) && vis(con.querySelector('.bolinha')),
-      frase_acesa: nota.classList.contains('ha'),
-      frase: (nota.innerText || '').replace(/\s+/g, ' ').trim(),
+      frase_acesa: !!nota && nota.classList.contains('ha'),
+      frase: nota ? (nota.innerText || '').replace(/\s+/g, ' ').trim() : '',
     };
   };
   const fora = {};
@@ -423,7 +423,7 @@ def test_no_webkit_com_dois_no_radio_volta_ao_ligado_e_ao_verde(na_tela: dict[st
     fora = na_tela["no_radio"]
     assert fora["ligado"] and not fora["desligado"], f"o Status não voltou ao Ligado: {fora}"
     assert fora["secao_ligado"] and not fora["secao_desligado"]
-    assert fora["topo"] == "● 2 BT" and fora["bolinha"], f"o topo não voltou: {fora['topo']!r}"
+    assert not fora["topo_visivel"], f"o contador voltou ao topo: {fora['topo']!r}"
     assert not fora["frase_acesa"], f"a frase ficou acesa com o serviço de pé: {fora['frase']!r}"
 
 
@@ -473,12 +473,9 @@ def test_no_webkit_o_topo_das_dez_some_com_o_servico_parado(
     nove reprovam aqui; a volta ao verde com dois no rádio prova que a régua acha o topo.
     """
     fora = o_topo_das_dez[aba_html]
-    for nome in ("parado", "parado_de_novo"):
-        assert fora[nome]["achou"], f"{aba_html}: a régua não achou o topo"
-        assert not fora[nome]["visivel"], (
-            f"{aba_html} {nome}: o topo ficou: {fora[nome]['texto']!r}")
-    assert fora["no_radio"]["texto"] == "● 2 BT", (
-        f"{aba_html}: o topo não voltou: {fora['no_radio']}")
+    for nome in ("parado", "no_radio", "parado_de_novo"):
+        assert not fora[nome]["achou"], (
+            f"{aba_html} {nome}: o contador voltou ao topo: {fora[nome]['texto']!r}")
 
 
 @pytest.mark.parametrize("aba_html", AS_DEZ)

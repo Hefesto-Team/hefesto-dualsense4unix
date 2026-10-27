@@ -74,7 +74,7 @@ def _externos(*externos: dict[str, Any]) -> str:
 
 
 def _medir(tamanho: tuple[int, int], frase: str, externos: str) -> dict[str, Any]:
-    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    uri = onde.pagina("01-jogar.html", publicado=True).as_uri()
     js = MEDIR.replace("__A__", json.dumps({"frase": frase, "externos": externos}))
     lido: dict[str, Any] = _no_webkit(uri, tamanho, [js])[0]
     return lido

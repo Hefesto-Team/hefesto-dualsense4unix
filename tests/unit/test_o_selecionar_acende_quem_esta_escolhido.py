@@ -57,7 +57,7 @@ from hefesto_dualsense4unix.interface.pacotes import a06_navegacao, a09_sistema
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 DESENHO = RAIZ / "mockup"
 
-ABAS = [f"{a}.html" for _, a in monta.ABAS]
+ABAS = sorted(f"{a}.html" for a in {a for _, a in monta.ABAS} | set(monta.FORA_DA_TIRA))
 ESCOLHEM = ["01-jogar.html", "02-controles.html", "08-conexoes.html"]
 NAO_ESCOLHEM = [a for a in ABAS if a not in ESCOLHEM]
 

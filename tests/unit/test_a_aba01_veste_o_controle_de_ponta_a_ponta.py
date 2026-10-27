@@ -27,7 +27,7 @@ from hefesto_dualsense4unix.interface.pacotes import a01_jogar
 import hefesto_vivo
 import monta
 
-BANCADA = RAIZ / "mockup/01-jogar.html"
+BANCADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
 
 CRU = re.compile(r'<g id="jg-p1-corpo" class="z-casca"[^>]*>\s*'
                  r'(?:<title>[^<]*</title>\s*)?<path[^>]*fill="(#[0-9a-fA-F]{6})"')

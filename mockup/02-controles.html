@@ -654,7 +654,7 @@
   .moldura > .sticks{column-gap:4px}
   .sensores{align-items:center;gap:10px}
   .sensores .btn{height:34px;border-radius:999px;padding:0 16px;box-sizing:border-box;
-                 font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
+                 font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;gap:9px}
   .glifos[data-botoes] .gb[data-glifo]::before{font-weight:700;font-size:22px;
     line-height:1}
   .glifos[data-botoes="xbox"] .gb[data-glifo="cross"] svg{display:none}
@@ -753,6 +753,7 @@
   body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
+  .fita-linha .perfil-ativo{margin-left:auto}
 </style>
 <style id="base-comum">
 [data-dica]{cursor:help}
@@ -923,7 +924,6 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
       <label for="c-p2" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" title="Clique para abrir este controle. A borda tem a cor dele.">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">BT</span></span></label>
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo" data-dica="Perfil ativo: o que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
@@ -938,7 +938,6 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
 
   <div class="tira">
     <a class="aba" href="01-jogar.html">Jogar</a>
-    <a class="aba ativa" href="02-controles.html">Controles</a>
     <a class="aba" href="03-gatilhos.html">Gatilhos</a>
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba" href="05-vibracao.html">Vibração</a>
@@ -955,7 +954,12 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda nestes ajustes. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
         <span class="sensores">
-          <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="Todos parados numa superfície plana">Calibrar giroscópio</a>
+          <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="Todos parados numa superfície plana"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+
+  <circle cx="16" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+  <ellipse cx="16" cy="16" rx="12" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
+  <ellipse cx="16" cy="16" rx="5" ry="12" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg>Calibrar giroscópio</a>
           <button class="modo-auto" type="button" data-gesto="modo-dos-controles" data-modo="automatico" data-campo="modo-dos-controles-automatico" data-hef-alvo="classe" data-hef-classe="ligado" data-hef-atributo="aria-pressed" aria-pressed="false" data-dica="O jogo decide toque e som; o estilo do jogo ajusta" data-governa=".card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], .card-corpo [data-bloco=alto-falante]"><span class="p"></span>Modo automático</button>
         </span>
       </div>

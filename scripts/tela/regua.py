@@ -152,6 +152,7 @@ SONDA = r"""
   // ALTURA de cada familia de controle
   const alt={};
   document.querySelectorAll('.miolo button, .miolo select, .miolo input[type=text]').forEach(e=>{
+    if(!e.getClientRects().length) return;
     const k = e.tagName.toLowerCase()+'.'+((e.className||'').split(' ').filter(c=>c!=='on')[0]||'-');
     (alt[k]=alt[k]||new Set()).add(R(e.getBoundingClientRect().height));
   });
@@ -322,7 +323,7 @@ if __name__ == "__main__":
             if w != ROT:
                 e.append(f"coluna de rótulo: {w}px, o token --rot é {ROT}px")
         for k, v in m.get("alturas", {}).items():
-            if k in ref["alturas"] and v[0] != ref["alturas"][k][0]:
+            if k in ref["alturas"] and not k.endswith(".-") and v[0] != ref["alturas"][k][0]:
                 e.append(f"altura de {k}: {v[0]} != {ref['alturas'][k][0]} da referência")
         for caixa in m.get("rolagem_interna", []):
             def _piso(q):

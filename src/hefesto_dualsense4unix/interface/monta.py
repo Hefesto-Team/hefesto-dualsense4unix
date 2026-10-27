@@ -52,10 +52,12 @@ if TOPO.count(MARCA_DA_LOGO) != 1:
 TOPO = TOPO.replace(MARCA_DA_LOGO,
                     f'<div class="logo">{_logo_em_linha(LOGO)}</div>', 1)
 
-ABAS = [("Jogar","01-jogar"),("Controles","02-controles"),("Gatilhos","03-gatilhos"),
+ABAS = [("Jogar","01-jogar"),("Gatilhos","03-gatilhos"),
         ("Iluminação","04-iluminacao"),("Vibração","05-vibracao"),("Navegação","06-navegacao"),
         ("Conexões","08-conexoes"),("Sistema","09-sistema"),("Perfis","10-perfis"),
         ("Experimental","07-lancadores")]
+
+FORA_DA_TIRA = ("02-controles",)
 
 sys.path.insert(0, str(RAIZ_DO_REPO / "src"))
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
@@ -352,14 +354,15 @@ ABAS_QUE_ESCOLHEM: frozenset[str] = frozenset({
 def a_fita_escolhe(pagina: str) -> bool:
     """Se a fita daquela aba ESCOLHE controle, ou é só leitura."""
     nome = pagina[:-5] if pagina.endswith(".html") else pagina
-    if nome not in {a for _, a in ABAS}:
+    conhecidas = {a for _, a in ABAS} | set(FORA_DA_TIRA)
+    if nome not in conhecidas:
         prefixo = nome.split("-", 1)[0]
-        if prefixo in {a.split("-", 1)[0] for _, a in ABAS}:
+        if prefixo in {a.split("-", 1)[0] for a in conhecidas}:
             raise SystemExit(
-                f"ERRO: {pagina!r} não é uma das dez abas, e o número {prefixo} "
+                f"ERRO: {pagina!r} não é uma das abas, e o número {prefixo} "
                 f"é de uma delas — isto é erro de digitação. Quem responde "
                 f"'esta aba escolhe controle?' é `monta.ABAS_QUE_ESCOLHEM`, e "
-                f"ele só conhece as dez de `monta.ABAS`.")
+                f"ele só conhece as de `monta.ABAS` e `monta.FORA_DA_TIRA`.")
         return False
     return nome in ABAS_QUE_ESCOLHEM
 
@@ -906,13 +909,10 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
         t = re.sub(rf"--{nome}:#[0-9a-fA-F]{{6}}",
                    f"--{nome}:{cor_da_zona(colorway)}", t, count=1)
 
-    from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva
-
-    usb = sum(1 for c in CONECTADOS if str(c.get("transporte") or "").lower() == "usb")
-    bt = sum(1 for c in CONECTADOS if str(c.get("transporte") or "").lower() == "bt")
-    t = re.sub(r'(<div class="conectado"><span class="bolinha">●</span> )[^<]*<b>[^<]*</b>',
-               rf'\g<1><b data-campo="conta-b">{_mesa_viva.frase_dos_transportes(usb, bt)}</b>',
-               t, count=1)
+    t, sem_contador = re.subn(r'\n *<div class="conectado">.*?</div>', "", t, count=1)
+    if sem_contador != 1:
+        raise SystemExit("ERRO: o contador do cabeçalho mudou de forma no topo.html")
+    t = t.replace("</style>", "  .fita-linha .perfil-ativo{margin-left:auto}\n</style>", 1)
 
     t = t.replace('<span class="pa-nome">',
                   '<span class="pa-nome" data-campo="perfil">', 1)

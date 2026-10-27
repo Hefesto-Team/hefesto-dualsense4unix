@@ -250,6 +250,11 @@ def test_esta_aba_nao_declara_sem_eco_e_diz_por_que() -> None:
 def test_o_gerador_nao_crava_a_frase_que_o_produto_agora_escreve() -> None:
     """O alvo cravado tem de continuar SAINDO do chip aceso, não digitado."""
     fonte = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
+    if "pendente-alvo" not in fonte:
+        desenho = (INTERFACE.parents[2] / "mockup/01-jogar.html").read_text(encoding="utf-8")
+        assert 'data-campo="pendente-alvo"' not in desenho, (
+            "a faixa saiu do gerador (desenho de 27/10) e o desenho ainda a traz cravada")
+        return
     achado = re.search(r'data-campo=\\"pendente-alvo\\">\{(\w+)\}', fonte)
     assert achado, "o gerador deixou de interpolar o alvo da faixa"
     assert achado.group(1) == "PENDENTE", (

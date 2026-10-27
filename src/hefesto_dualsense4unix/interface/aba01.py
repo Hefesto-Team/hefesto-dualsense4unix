@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import onde
 import monta
+import aba02
 from monta import MASCARAS, MESA, glifo, monta as montar, svg
 
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
@@ -18,13 +19,10 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
     CADEADO_DICA,
     CADEADO_ROTULO,
     CHIP_DO_NATIVO,
-    CHIP_DO_POINT_AND_CLICK,
     ESPERA_DICA,
     MARCA_DO_PRIMARIO,
     PRIMARIO_DICA,
-    RESSALVA_DA_MASCARA,
     ROTULO_DO_NATIVO,
-    ROTULO_DO_POINT_AND_CLICK,
     mascaras_montaveis,
 )
 
@@ -47,10 +45,9 @@ MODOS = [
     {"chave": "xbox", "rot": "Xbox", "modo": "",
      "sem_dono": False,
      "dica": "Pelo canal comum, igual ao controle de Xbox"},
-    {"chave": CHIP_DO_POINT_AND_CLICK, "rot": ROTULO_DO_POINT_AND_CLICK,
-     "modo": "desktop", "gesto": "modo-point-and-click",
+    {"chave": "nintendo", "rot": "Nintendo Pro", "modo": "",
      "sem_dono": False,
-     "dica": "Apontar e clicar, pelo perfil da aba Navegação"},
+     "dica": "Pelo canal do Pro Controller"},
 ]
 MODO_ACESO = "dualsense"
 
@@ -72,12 +69,10 @@ PENDENTE = next(m["rot"] for m in MODOS if m["chave"] == MODO_ACESO)
 
 CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
 
-  .hef-topo{padding-left:15px}
-
-  .hef-linha{display:flex;align-items:center;gap:8px}
-  .hef-linha .linha-rot{margin-bottom:0;flex:0 0 auto;margin-right:6px}
+  .hef-q > .quadro-topo{gap:8px}
+  .hef-q > .quadro-topo > .quadro-titulo{margin-right:6px}
   .hef-pos{
-    height:var(--h-escolha);display:inline-flex;align-items:center;gap:9px;
+    height:var(--h-acao);box-sizing:border-box;display:inline-flex;align-items:center;gap:9px;
     padding:0 18px;border-radius:7px;font-size:12.5px;
     border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
     cursor:pointer;user-select:none;
@@ -85,24 +80,28 @@ CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:n
   .hef-pos:hover{border-color:var(--comment);color:var(--texto-suave)}
   .hef-pos .pino{width:9px;height:9px;border-radius:50%;flex:0 0 9px;
                  border:1px solid var(--linha);background:transparent}
-  .hef-topo:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .hef-linha .hef-pos.ligado,
-  .hef-topo:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .hef-linha .hef-pos.desligado,
+  .hef-q:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .quadro-topo .hef-pos.ligado,
+  .hef-q:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .quadro-topo .hef-pos.desligado,
   .hef-pos.on{border-color:var(--purple);background:var(--sel-bg);
               color:var(--fg);font-weight:600}
-  .hef-topo:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .hef-linha .hef-pos.ligado .pino,
+  .hef-q:not(:has(.hef-pos.on)) #hef-ligado:checked ~ .quadro-topo .hef-pos.ligado .pino,
   .hef-pos.ligado.on .pino{background:var(--green);border-color:var(--green);
                            box-shadow:0 0 7px var(--green)}
-  .hef-topo:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .hef-linha .hef-pos.desligado .pino,
+  .hef-q:not(:has(.hef-pos.on)) #hef-desligado:checked ~ .quadro-topo .hef-pos.desligado .pino,
   .hef-pos.desligado.on .pino{background:var(--texto-mudo);
                               border-color:var(--texto-mudo)}
 
-  .hef-topo ~ .quadro .so-ligado,
-  .hef-topo ~ .quadro .so-desligado{display:none}
-  .hef-topo:not(:has(.hef-pos.on)):has(#hef-ligado:checked) ~ .quadro .so-ligado{display:block}
-  .hef-topo:not(:has(.hef-pos.on)):has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
-  .hef-topo:has(.hef-pos.ligado.on) ~ .quadro .so-ligado{display:block}
-  .hef-topo:has(.hef-pos.desligado.on) ~ .quadro .so-desligado{display:block}
-  .hef-modo > .linha-rot{display:flex;align-items:center;height:17px}
+  .hef-q .so-ligado,
+  .hef-q .so-desligado{display:none}
+  .hef-q:not(:has(.hef-pos.on)):has(#hef-ligado:checked) .so-ligado{display:block}
+  .hef-q:not(:has(.hef-pos.on)):has(#hef-desligado:checked) .so-desligado{display:block}
+  .hef-q:has(.hef-pos.ligado.on) .so-ligado{display:block}
+  .hef-q:has(.hef-pos.desligado.on) .so-desligado{display:block}
+  .hef-q .degrau{height:var(--h-acao)}
+  .hef-q ~ .quadro.estica > .quadro-corpo{gap:6px}
+  .degrau .silhueta{height:20px;width:auto;flex:0 0 auto;fill:currentColor}
+  .degrau .silhueta.traco{fill:none;stroke-width:3.6}
+  .degrau .silhueta.contorno path{stroke:currentColor;stroke-width:2.4}
 
   .so-desligado .degrau.on[data-hef-quando="nativo"]{
     border-color:#f8f8f2;background:rgba(248,248,242,.12);color:#fff}
@@ -110,50 +109,19 @@ CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:n
     border-color:#8be9fd;background:rgba(139,233,253,.13);color:#d4f6fe}
   .so-desligado .degrau.on[data-hef-quando="navegacao"]{
     border-color:#ffb86c;background:rgba(255,184,108,.13);color:#ffd9b0}
-  [data-gesto]{min-height:24px}
+  .hef [data-gesto]{min-height:24px}
   .degrau.sem-dono{border-style:dashed;color:var(--fg);cursor:not-allowed}
   .degrau.sem-dono:hover{border-color:var(--linha);color:var(--fg)}
   .degrau.sem-dono i{border-style:dashed}
   .degrau i.tr{color:var(--fg);border-style:dashed}
 
-  .pecas{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-
-  .pecas .ext-vaga{display:contents}
-  .pecas .ext-vaga > .nada{display:none}
-  .pecas .ext-cartao{
-    display:flex;flex-direction:column;justify-content:center;gap:3px;
-    padding:5px 8px 6px;
-    border:2px dashed var(--border-forte);border-radius:7px;
-    background:var(--app-bg);
-    font-size:11.5px;line-height:15px;color:var(--fg);
-  }
-  .pecas .ext-nome{color:var(--fg);font-weight:500}
-  .pecas .ext-via{color:var(--fg)}
-  .pecas .ext-aviso{color:var(--orange)}
-
-  .cartao{
-    position:relative;
-    display:flex;flex-direction:column;align-items:stretch;gap:7px;
-    padding:5px 6px 6px;
-    border-color:var(--border-forte);
-  }
-  .cartao > .pele{
-    position:absolute;inset:-2px;pointer-events:none;
-    border:2px solid currentColor;border-radius:7px;
-    color:var(--border-forte);
-  }
-  .cartao.off > .pele{display:none}
-  .peca-topo{display:flex;align-items:center;gap:6px}
-  .cartao .rotulo{color:var(--fg);line-height:15px;white-space:nowrap}
-  .cartao .rotulo b{color:var(--fg);font-weight:500}
-  .cartao .rotulo b.espera{color:var(--fg);font-weight:400}
   .quadro-topo{--w-canto:166px}
   .quadro-topo > .cadeado,.quadro-topo > .canto{
     display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:0 0 auto;
-    margin-left:auto;width:var(--w-canto);height:34px;padding:0 16px 0 12px;
+    width:var(--w-canto);height:var(--h-acao);padding:0 16px 0 12px;
     box-sizing:border-box;border-radius:999px;
     font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;white-space:nowrap;cursor:pointer}
-  .quadro-topo > .canto{border:1px solid var(--border-forte);background:transparent;
+  .quadro-topo > .canto{margin-left:auto;border:1px solid var(--border-forte);background:transparent;
                         color:var(--texto-suave)}
   .quadro-topo > .canto:hover{border-color:var(--texto-suave);color:var(--fg)}
   .quadro-topo > .canto .gira{flex:0 0 auto}
@@ -164,53 +132,6 @@ CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:n
   .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
                   color:var(--green)}
   .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
-  .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;
-               display:inline-flex;align-items:center;gap:3px;
-               line-height:1;vertical-align:-2px}
-  .cartao .gl{display:inline-block;flex:0 0 auto}
-  .cartao .ds-svg{width:62px;flex:0 0 62px}
-
-  .mascara{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-  .mascara .chip:nth-child(1){grid-column:1/-1}
-  .mascara .chip{
-    display:flex;align-items:center;justify-content:center;
-    cursor:pointer;background:var(--panel);
-  }
-  .mascara .chip:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
-
-  .cartao.alvo{background:var(--sel-bg)}
-
-  .cartao.off{border-color:var(--border-sutil);background:transparent}
-  .cartao.off .rotulo{color:var(--fg)}
-  .cartao.off .bat{color:var(--linha)}
-  .cartao.off .fabricante{display:none}
-  .cartao.off .rotulo b{color:var(--fg);font-weight:400}
-  .cartao.off .ds-svg .peca,
-  .cartao.off .ds-svg .corpo,
-  .cartao.off .ds-svg .miolo *{fill:var(--linha) !important}
-  .cartao.off .ds-svg .corpo{stroke:var(--border-forte) !important}
-  [data-controle][data-conectado="nao"]:not(.vazia) .mascara .chip{
-    visibility:hidden !important}
-
-  .cab-col{display:flex;align-items:center;height:17px;margin-bottom:7px}
-
-  .quadro-corpo{--col-avisos:245px}
-
-  .faixa-final{border-top:1px solid var(--rot-linha);padding-top:6px;margin-top:8px}
-  .faixa-final .pendente{flex:1 1 0;min-width:0;overflow:hidden}
-  .quadro-corpo > div:has(> .pecas){position:relative}
-  .mesa-notas:not(.ha){display:none}
-  .mesa-notas{margin:0 0 6px}
-  .mesa-nota{color:var(--orange);font-size:12px;line-height:16px}
-  .quadro-corpo > div:not(:has(> .pecas [data-conectado]:not([data-conectado="nao"]))) > .mesa-notas{
-    position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
-    z-index:1;margin:0;text-align:center}
-  .quadro-corpo > div:not(:has(> .pecas [data-conectado]:not([data-conectado="nao"]))) > .mesa-notas > .mesa-nota{
-    background:var(--panel);padding:0 8px}
-  .cartao .chip.inerte{opacity:.42;cursor:not-allowed}
-  .cartao .e-primario{display:none;color:var(--fg);cursor:help}
-  .cartao .e-primario.ha{display:inline}
-  .faixa-final:not(.ha){display:none}
 """
 
 
@@ -475,6 +396,26 @@ def _campo_do_chip(m):
     return (CAMPO_DO_STEAM_INPUT if m["chave"] == "steam" else CAMPO_DO_MODO)
 
 
+ARTE_DOS_CONTROLES = onde.RAIZ / "assets" / "control-svg"
+
+SILHUETAS = {"dualsense": ("Sony-dualsense.svg", "contorno"),
+             "xbox": ("xbox.svg", "traco"),
+             "nintendo": ("Nintendo-pro_controller.svg", "")}
+
+
+def silhueta(chave: str) -> str:
+    """O desenho de linha do controle de um modo, tingido pela cor do texto do botão."""
+    arquivo, estilo = SILHUETAS[chave]
+    cru = (ARTE_DOS_CONTROLES / arquivo).read_text(encoding="utf-8")
+    cru = re.sub(r"<\?xml[^>]*\?>", "", cru).strip()
+    raiz = re.search(r"<svg[^>]*>", cru)
+    tag = re.sub(r'\s(?:width|height|xmlns:bx)="[^"]*"', "", raiz.group(0))
+    classe = f"silhueta {estilo}".strip()
+    tag = tag.replace("<svg", f'<svg class="{classe}" aria-hidden="true" focusable="false"', 1)
+    corpo = "".join(linha.strip() for linha in cru[raiz.end():].splitlines())
+    return re.sub(r'"#(?:000|111)(?:000)?"', '"currentColor"', tag + corpo)
+
+
 def _chip_do_modo(m, aceso=MODO_ACESO):
     """Um chip da fileira de modos: os três do Ligado ou os dois do Desligado."""
     classe = ("degrau"
@@ -487,7 +428,8 @@ def _chip_do_modo(m, aceso=MODO_ACESO):
             f'                  data-campo="{_campo_do_chip(m)}"'
             f' data-hef-alvo="classe"'
             f' data-hef-quando="{m["chave"]}"\n'
-            f'                  data-dica="{m["dica"]}">{m["rot"]}</span>')
+            f'                  data-dica="{m["dica"]}">'
+            f'{silhueta(m["chave"]) if m["chave"] in SILHUETAS else ""}{m["rot"]}</span>')
 
 
 _MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
@@ -496,21 +438,13 @@ _MODOS_DO_DESLIGADO = "\n".join(_chip_do_modo(m, NATIVO_ACESO) for m in DO_DESLI
 
 
 MIOLO = f'''
-{TABELA_DAS_CORES}
-    <div class="hef-topo">
-
+    <div class="quadro hef-q">
       <input type="radio" name="hefesto" id="hef-ligado" class="hef-rd"{" checked" if HEFESTO_LIGADO else ""}>
       <input type="radio" name="hefesto" id="hef-desligado" class="hef-rd"{"" if HEFESTO_LIGADO else " checked"}>
-
-      <div class="hef-linha">
-        <span class="linha-rot">Status</span>
-{_INTERRUPTOR}
-      </div>
-    </div>
-
-    <div class="quadro">
       <div class="quadro-topo">
-        <span class="quadro-titulo" data-dica="Como o controle chega ao jogo. PS + R3 pula">Modo</span>
+        <span class="quadro-titulo" data-dica="Como o controle chega ao jogo. PS + R3 pula">Status</span>
+{_INTERRUPTOR}
+        <button class="canto" type="button" data-gesto="reconectar" data-dica="Desliga e liga de novo todos os controles">{_GIRA}Reconectar</button>
         <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" data-dica="{CADEADO_DICA}"><span class="p"></span>{CADEADO_ROTULO}</button>
       </div>
       <div class="quadro-corpo hef">
@@ -531,39 +465,7 @@ MIOLO = f'''
 
       </div>
     </div>
-
-    <div class="quadro">
-      <div class="quadro-topo">
-        <span class="quadro-titulo" data-dica="O desenho dos botões no jogo, por controle">O controle é visto como:</span>
-        <button class="canto" type="button" data-gesto="reconectar" data-dica="Desliga e liga de novo todos os controles">{_GIRA}Reconectar</button>
-      </div>
-      <div class="quadro-corpo">
-
-        <div>
-            <div class="mesa-notas" data-campo="mesa-frase"
-                 data-hef-alvo="classe" data-hef-classe="ha">
-              <span class="mesa-nota" data-campo="mesa-frase"></span>
-            </div>
-            <div class="mesa-notas" data-campo="mascara-ressalva"
-                 data-hef-alvo="classe" data-hef-classe="ha">
-              <span class="mesa-nota" data-campo="mascara-ressalva">{RESSALVA_DA_MASCARA}</span>
-            </div>
-            <div class="pecas" data-lista="cartoes">
-{CARTOES}
-              <div class="ext-vaga" data-campo="externos" data-hef-alvo="html"><i class="nada"></i></div>
-            </div>
-          </div>
-
-        <div class="faixa-final ha" data-campo="pendente-ha" data-hef-alvo="classe" data-hef-classe="ha">
-          <div class="pendente" data-campo="pendente">
-            <span>●</span>
-            <span>Vai mudar para <b data-campo="pendente-alvo">{PENDENTE}</b> quando você clicar em <b>Aplicar</b></span>
-          </div>
-        </div>
-
-      </div>
-    </div>
-'''
+{aba02.MIOLO}'''
 
 
 LEGENDA = f'''<div class="nota">
@@ -924,12 +826,13 @@ def _ancestrais(html: str, classe: str) -> set[str] | None:
 
 
 def _conferir(doc):
-    """As decisões de 31/08, conferidas NA SAÍDA. O gerador para se caírem."""
+    """As decisões da aba, conferidas NA SAÍDA. O gerador para se caírem."""
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
     if len(corpo) < 2000:
         raise SystemExit("ERRO: a régua não achou o miolo — o recorte mudou de forma. "
                          "Uma régua que mede 0 caractere passa com qualquer desenho.")
+    status = corpo.split('<div class="quadro hef-q">', 1)[-1].split('<div class="quadro estica">', 1)[0]
 
     falhas = []
 
@@ -937,90 +840,59 @@ def _conferir(doc):
         if not cond:
             falhas.append(oquê)
 
-    for lado, esperados in (("so-ligado", ["Sony DualSense", "Xbox", "Point and click"]),
-                            ("so-desligado", ["Nativo", "Steam Input", "Navegação"])):
-        secao = corpo.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
-        achados = re.findall(r'<span class="degrau[^"]*"[^>]*>([^<]+)</span>', secao)
+    exigir(corpo.count('<div class="quadro hef-q">') == 1 and len(status) > 1000,
+           "o quadro do Status sumiu, ou nasceu duas vezes")
+    for lado, esperados in (("so-ligado", [m["rot"] for m in MODOS]),
+                            ("so-desligado", [m["rot"] for m in DO_DESLIGADO])):
+        secao = status.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
+        achados = re.findall(r'<span class="degrau[^"]*"[^>]*>(?:<svg.*?</svg>)?([^<]+)</span>',
+                             secao, re.S)
         exigir(achados == esperados,
                f"a fileira do {lado} saiu diferente do desenho: esperava {esperados}, achei {achados}")
         for rotulo in re.findall(r'<span class="degrau[^"]*"([^>]*)>', secao):
             exigir('data-dica="' in rotulo, f"um chip do {lado} ficou sem a dica curta")
-    exigir(corpo.count('data-gesto="modo-point-and-click" data-modo="desktop"') == 1,
-           "o Point and click não é o modo `desktop` do Ligado")
+    exigir([m["rot"] for m in MODOS] == ["Sony DualSense", "Xbox", "Nintendo Pro"],
+           "os modos do Ligado não são Sony DualSense · Xbox · Nintendo Pro")
+    ligado = status.split('class="hef-modo so-ligado"', 1)[-1].split('class="hef-modo so-desligado"', 1)[0]
+    exigir(ligado.count('<svg class="silhueta') == len(MODOS),
+           "um modo do Ligado ficou sem o desenho do controle dentro do botão")
+    exigir("point-and-click" not in corpo and "Point and click" not in corpo,
+           "o Point and click voltou ao modo: ele mora no estilo de jogo")
     exigir(corpo.count('data-gesto="modo-navegacao" data-modo="desktop"') == 1,
            "a Navegação não é o modo `desktop` do Desligado")
-    exigir(len(re.findall(r'<span class="degrau', corpo)) == 6,
+    exigir(len(re.findall(r'<span class="degrau', status)) == len(MODOS) + len(DO_DESLIGADO),
            "a fileira não tem os seis chips (três em cada lado)")
     exigir('class="' 'ajuda"' not in corpo and ">?<" not in corpo,
            "voltou um «?» à aba — as ajudas são dica no mouse (`data-dica`)")
-    _sem_rodape = re.sub(r"<svg.*?</svg>", "", corpo.split('<div class="rodape"', 1)[0], flags=re.S)
-    exigir(' title="' not in _sem_rodape,
-           "voltou um `title` à aba — a dica é `data-dica`, a mesma camada das outras nove")
+    exigir(' title="' not in re.sub(r"<svg.*?</svg>", "", status, flags=re.S),
+           "voltou um `title` ao Status — a dica é `data-dica`")
 
     for frase in ("sem giroscópio", "só chegam ao jogo por aqui",
                   "só chegam ao jogo pelo", "sem touchpad para o jogo"):
         exigir(frase not in corpo, f"um tooltip voltou a negar feature: {frase!r}")
 
-    for novo, velho in (("<span class=\"linha-rot\">Status</span>", ">Hefesto</span>"),
-                        (">Modo</span>", ">Quando o jogo abrir<"),
-                        (">O controle é visto como:</span>", ">Conectado agora<")):
-        exigir(novo in corpo, f"o rótulo novo sumiu: {novo!r}")
-        exigir(velho not in corpo, f"o rótulo antigo voltou: {velho!r}")
-    exigir(corpo.count("O controle é visto como:") == 1,
-           "o rótulo interno das máscaras voltou (o texto aparece 2×)")
-    exigir("O jogo vê cada controle como" not in corpo,
-           "o título anterior voltou — ela o trocou em 31/08")
+    exigir('<span class="quadro-titulo" data-dica="Como o controle chega ao jogo. PS + R3 pula">Status</span>'
+           in status, "o título do quadro de cima não é o Status")
+    exigir(">Modo</span>" not in corpo and 'class="linha-rot">Status' not in corpo,
+           "o quadro «Modo» ou a fileira solta do Status voltou")
+    exigir("O controle é visto como" not in corpo and 'data-lista="cartoes"' not in corpo
+           and 'data-gesto="mascara"' not in corpo,
+           "o quadro «O controle é visto como:» voltou: o modo vale para todos os controles")
+    exigir(corpo.count(">Dispositivos conectados</span>") == 1,
+           "a estrutura da Controles não está na Jogar")
 
-    exigir(corpo.count('data-conectado="sim"') == 2, "não são 2 controles conectados")
-    exigir(corpo.count('data-conectado="nao"') == 2, "não são 2 lugares vazios")
+    tira = doc.split('<div class="tira">', 1)[-1].split("</div>", 1)[0]
+    exigir('href="02-controles.html"' not in tira and ">Controles<" not in tira,
+           "a Controles voltou à fita das abas: ela mora na Jogar")
+    exigir(len(re.findall(r'class="aba[ "]', tira)) == len(monta.ABAS) == 9,
+           "a fita das abas não tem as nove")
+    exigir('class="conectado"' not in doc and 'data-campo="conta-b"' not in doc,
+           "o contador «● N USB · N BT» voltou ao cabeçalho")
     exigir(f"{len(monta.CONECTADOS)} controles:" not in doc,
            "o «N controles:» voltou ao cabeçalho — ela o tirou em 22/09")
-    from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva_
-
-    _usb = sum(1 for c in monta.CONECTADOS if str(c.get("transporte") or "").lower() == "usb")
-    _bt = len(monta.CONECTADOS) - _usb
-    exigir(f'<b data-campo="conta-b">{_mesa_viva_.frase_dos_transportes(_usb, _bt)}</b>' in doc,
-           "o cabeçalho não conta os conectados pelo transporte")
-
-    for pedaco in corpo.split('class="cartao off"')[1:]:
-        exigir('class="chip on"' not in pedaco.split("</div>\n              </div>")[0],
-               "um lugar vazio tem máscara marcada")
-
-    fileira = corpo.split('data-lista="cartoes"', 1)[-1].split('class="faixa-final', 1)[0]
-    exigir(len(fileira) > 2000, "a régua não achou a fileira de cartões")
-    exigir("--plastico" not in fileira, "o cartão voltou a cravar a cor do plástico")
-    exigir(fileira.count('data-campo="plastico" data-hef-alvo="cor"')
-           == len(MESA),
-           "não há uma pele endereçada por LUGAR da mesa — os quatro, e não só "
-           "os conectados: quem chega depois entra num cartão que já existe")
-    for dica in re.findall(r'data-dica="([^"]*)"', fileira):
-        for c in monta.CONECTADOS:
-            exigir(c["nome"] not in dica,
-                   f"uma dica do cartão voltou a nomear o plástico: {dica!r}")
-
-    exigir(fileira.count('data-campo="desenho" data-hef-alvo="atributo"'
-                         ' data-hef-atributo="data-colorway"') == len(MESA),
-           f"esperava {len(MESA)} desenhos endereçados com o alvo `atributo` "
-           "e o atributo NOMEADO — sem os três juntos o piloto escreve o hex "
-           "como texto por cima do controle")
-    exigir("cores-do-dualsense-folha" not in fileira,
-           "um desenho voltou a carregar a folha podada: o endereço acima "
-           "passaria a escrever um modelo que regra nenhuma casa")
-    dela = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', monta.DS))
-    tela = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', corpo))
-    exigir(corpo.count('<style id="cores-do-dualsense-folha">') == 1,
-           "a tabela das cores não está publicada exatamente uma vez na página")
-    exigir(tela == dela,
-           f"a página publica {len(tela)} modelos e o mapa dela tem "
-           f"{len(dela)} — faltam {sorted(dela - tela)[:4]}")
 
     for frase in FRASES_BANIDAS:
         exigir(frase not in corpo, f"um texto voltou a alarmar sem medição: {frase!r}")
-
-    exigir(f"<b data-campo=\"pendente-alvo\">{PENDENTE}</b>" in corpo,
-           "a faixa de pendência não diz o modo marcado")
-    exigir(PENDENTE != "Modo nativo",
-           "a pendência voltou a ser modo nativo com o interruptor em Ligado")
 
     _por_campo = collections.Counter(_campo_do_chip(m) for m in MODOS + DO_DESLIGADO)
     exigir("steam" not in {m["chave"] for m in MODOS},
@@ -1028,175 +900,52 @@ def _conferir(doc):
            "08/10/2026 («Steam Input sai de Ligado»)")
     exigir(_por_campo[CAMPO_DO_STEAM_INPUT] == 1,
            f"o chip do Steam Input não tem campo próprio: esperava 1 chip em "
-           f"`{CAMPO_DO_STEAM_INPUT}`, a tabela dá "
-           f"{_por_campo[CAMPO_DO_STEAM_INPUT]}. Partilhando o "
-           f"`{CAMPO_DO_MODO}`, o Steam Input perde o endereço por onde o "
-           f"emissor o acende — e o chip nunca mais acende")
+           f"`{CAMPO_DO_STEAM_INPUT}`, a tabela dá {_por_campo[CAMPO_DO_STEAM_INPUT]}")
     for campo, quantos, oque in (
         ("hef-posicao", len(INTERRUPTOR), "as posições do interruptor"),
-        (CAMPO_DO_MODO, _por_campo[CAMPO_DO_MODO],
-         "os chips de CAMINHO da fileira de modos"),
+        (CAMPO_DO_MODO, _por_campo[CAMPO_DO_MODO], "os chips de CAMINHO da fileira de modos"),
         (CAMPO_DO_STEAM_INPUT, _por_campo[CAMPO_DO_STEAM_INPUT],
          "o chip do Steam Input, que tem campo próprio"),
-        ("mascara-cartao", len(MASCARAS) * len(MESA),
-         "os chips de máscara dos QUATRO lugares da mesa"),
     ):
-        achei = corpo.count(f'data-campo="{campo}" data-hef-alvo="classe"')
+        achei = status.count(f'data-campo="{campo}" data-hef-alvo="classe"')
         exigir(achei == quantos,
                f"{oque}: esperava {quantos} endereços `{campo}` com alvo "
                f"`classe`, achei {achei}")
-    cliques = corpo.count('data-gesto="mascara"')
-    exigir(cliques == len(MASCARAS) * len(MESA),
-           f"o clique da máscara não alcança os quatro lugares: esperava "
-           f"{len(MASCARAS) * len(MESA)} `data-gesto=\"mascara\"`, achei {cliques}")
-    for morto in ("col-atencao", 'data-campo="aviso-vivo"',
-                  'data-campo="aviso-selo"', 'data-campo="aviso-texto"',
-                  'data-campo="atencao-conta"', 'data-lista="avisos"'):
-        exigir(morto not in corpo, f"a coluna Atenção voltou à Jogar: {morto!r}")
-    exigir(corpo.count('data-gesto="reconectar"') == 1,
-           "o botão Reconectar sumiu junto com a coluna Atenção — ele "
-           "é justamente o que ela mandou deixar")
-    _casa_do_reconectar = _ancestrais(corpo, "canto")
-    exigir(_casa_do_reconectar is not None and "quadro-topo" in _casa_do_reconectar
-           and "faixa-final" not in _casa_do_reconectar,
-           "o Reconectar saiu do canto do quadro «O controle é visto como:» e voltou à "
-           "faixa da pendência (rodada 4)")
-    exigir(corpo.count('data-campo="pendente-ha" data-hef-alvo="classe"') == 1,
-           "a faixa da pendência perdeu o `pendente-ha` — ela volta a mostrar um "
-           "travessão solto quando não há o que anunciar")
 
-    for campo, oque in (("mesa-frase", "a frase da mesa"),
-                        ("mascara-ressalva", "a ressalva da máscara")):
-        de_fora = corpo.count(f'data-campo="{campo}"\n                 '
-                              f'data-hef-alvo="classe"')
-        exigir(de_fora == 1, f"{oque} perdeu o interruptor de existência "
-                             f"(`{campo}` com alvo `classe`), achei {de_fora}")
-        exigir(corpo.count(f'data-campo="{campo}"') == 2,
-               f"{oque}: esperava DOIS elementos com `{campo}` — o de fora que "
-               f"a acende e o de dentro que a escreve")
-    exigir('class="mesa-notas ha"' not in corpo,
-           "uma das linhas por cima dos lugares nasce acesa — ela mudaria a cena "
-           "que ela aprovou, que tem a mesa cheia e o modo jogo ligado")
-
-    sem_motor = [m for m in MASCARAS if m not in mascaras_montaveis()]
-    cinzas = corpo.count('class="chip inerte"')
-    exigir(cinzas == len(sem_motor) * len(MESA),
-           f"esperava {len(sem_motor) * len(MESA)} chips cinza ({sem_motor} por "
-           f"{len(MESA)} lugares), achei {cinzas}")
-    for pedaco in corpo.split('class="chip inerte"')[1:]:
-        exigir(pedaco.lstrip().startswith('data-dica="'),
-               "um chip cinza saiu sem a razão na dica")
-
-    esmaece = corpo.count('data-campo="jogador-espera" data-hef-alvo="classe"'
-                          ' data-hef-classe="espera"')
-    exigir(esmaece == len(MESA),
-           f"esperava {len(MESA)} números de jogador endereçados "
-           f"para o esmaecido (`jogador-espera` com alvo `classe`), achei "
-           f"{esmaece}")
-    exigir(corpo.count('<span data-campo="jogador">') == len(MESA),
-           "o número do jogador deixou de ser FOLHA em algum dos quatro "
-           "lugares: com `data-campo=\"jogador\"` num elemento que tem filho, a "
-           "pintura apaga os filhos")
-    exigir("<b data-campo=\"jogador-espera\" data-hef-alvo=\"classe\""
-           " data-hef-classe=\"espera\" class=" not in corpo
-           and 'class="espera"' not in corpo,
-           "um número de jogador nasce esmaecido — a cena que ela aprovou tem os "
-           "dois controles recebidos pelo jogo")
+    topo = status.split('<div class="quadro-topo">', 1)[-1].split('<div class="quadro-corpo hef">', 1)[0]
+    ordem = [topo.find(marca) for marca in ('>Status</span>', 'class="hef-pos ligado"',
+                                            'class="hef-pos desligado"', 'data-gesto="reconectar"',
+                                            'data-gesto="cadeado"')]
+    exigir(-1 not in ordem and ordem == sorted(ordem),
+           "a linha do Status não é Status · Ligado · Desligado · Reconectar · Modo Freestyle, "
+           "nesta ordem")
+    exigir(corpo.count('data-gesto="reconectar"') == 1, "o Reconectar sumiu ou dobrou")
+    folha = "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, re.S))
+    exigir(".hef-pos{\n    height:var(--h-acao)" in folha
+           and "width:var(--w-canto);height:var(--h-acao)" in folha,
+           "os quatro botões da linha do Status deixaram de ter a mesma altura (`--h-acao`)")
 
     exigir(corpo.count('data-campo="cadeado" data-hef-alvo="classe"') == 1,
-           "o cadeado perdeu o endereço de pintura (`cadeado` com alvo "
-           "`classe`) — a trava deixaria de dizer o que o daemon guardou")
+           "o cadeado perdeu o endereço de pintura (`cadeado` com alvo `classe`)")
     exigir(corpo.count('data-hef-classe="ligada" data-hef-quando="LIGADO"') == 1,
-           "a pílula da trava perdeu a polaridade (`ligada` no `LIGADO`) — com "
-           "`off` no `DESLIGADO` ela nasce VERDE, e o travessão de um daemon "
-           "que não respondeu vira a tela afirmando uma escolha dela")
-    exigir(corpo.count('data-gesto="cadeado"') == 1,
-           "o cadeado perdeu o endereço do clique — a caixa mudaria de marca e "
-           "não mudaria nada no produto")
+           "a pílula da trava perdeu a polaridade (`ligada` no `LIGADO`)")
+    exigir(corpo.count('data-gesto="cadeado"') == 1, "o cadeado perdeu o endereço do clique")
     exigir(CADEADO_ROTULO in corpo, "o rótulo do cadeado sumiu da tela")
     exigir(CADEADO_DICA in corpo, "o cadeado ficou sem a razão na dica")
-    exigir('data-hef-alvo="marcado" checked' not in corpo
-           and 'checked data-campo="cadeado"' not in corpo,
-           "o cadeado nasce marcado — o desenho afirmaria uma escolha dela")
-    if 'class="cadeado"' in corpo:
-        familia = _ancestrais(corpo, "cadeado")
-        exigir(familia is not None,
-               "o cadeado tem a classe e o analisador não o achou — o HTML da "
-               "aba deixou de fechar as tags em volta dele")
-        for secao in ("so-ligado", "so-desligado"):
-            exigir(secao not in familia,
-                   f"o cadeado está aninhado dentro da seção `{secao}` — ele "
-                   f"sumiria da tela na outra posição do interruptor")
-        exigir("quadro-topo" in familia,
-               "o cadeado saiu da linha do título do bloco — ela pediu ele no "
-               "canto superior direito, e embaixo dos modos ele lê como um "
-               "quinto modo")
+    for classe in ("cadeado", "canto"):
+        familia = _ancestrais(corpo, classe)
+        exigir(familia is not None and "quadro-topo" in familia
+               and "so-ligado" not in familia and "so-desligado" not in familia,
+               f"o `{classe}` saiu da linha do título do Status")
 
-    principais = corpo.count('data-campo="marcador-principal" '
-                             'data-hef-alvo="classe" data-hef-classe="ha"')
-    exigir(principais == len(MESA),
-           f"esperava {len(MESA)} marcadores de primário endereçados "
-           f"(`marcador-principal` com alvo `classe`), achei {principais}")
-    exigir(MARCA_DO_PRIMARIO in corpo, "a palavra do marcador sumiu da tela")
-    exigir(PRIMARIO_DICA in corpo, "o marcador ficou sem a razão na dica")
-    exigir('class="e-primario ha"' not in corpo
-           and 'data-hef-classe="ha" class=' not in corpo,
-           "um cartão nasce marcado como primário — quem decide isso é o "
-           "serviço, e o desenho estaria afirmando por ele")
-    exigir(corpo.count('class="cartao alvo"')
-           == sum(1 for c in MESA if c.get("alvo")),
-           "o número de cartões com a classe `alvo` mudou — o marcador do "
-           "primário não pode andar junto com o alvo de edição da fita")
-
-    exigir('class="degradou"' not in corpo and "degradou-cartao" not in corpo,
-           "a marca da emulação degradada voltou ao cartão — ela nunca acende "
-           "no WebKit, e acesa seria frase de aviso numa dica")
-    folhas = re.sub(r"/\*.*?\*/", "",
-                    "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, re.S)),
-                    flags=re.S)
+    folhas = re.sub(r"/\*.*?\*/", "", folha, flags=re.S)
     exigir(".degradou" not in folhas and "[title" not in folhas,
-           "voltou regra de pintura que decide por `[title]` (ou a `.degradou`): "
-           "a camada de dicas tira o `title` do elemento, e no WebKit o "
-           "seletor nunca casa")
-
-    exigir('data-campo="externos" data-hef-alvo="html"' in corpo,
-           "o bloco dos controles que o Hefesto só vê ficou sem endereço — "
-           "sem ele o pacote emite e o `querySelector` devolve `null`, que é "
-           "zero escrito e zero erro")
-    exigir('data-campo="externos" data-hef-alvo="html"'
-           in _dentro_da_grade_dos_assentos(corpo),
-           "o bloco dos externos saiu de dentro da grade dos assentos — ela "
-           "escolheu o MESMO frame em 06/09/2026, e uma faixa à parte é a "
-           "maquete que ela recusou")
-    exigir(".pecas .ext-vaga{display:contents}" in doc,
-           "a vaga dos externos deixou de ser `display:contents` — sem ela os "
-           "cartões voltam a empilhar dentro de uma célula, que é a faixa à "
-           "parte com outro nome")
-    exigir('class="ext-cartao"' not in corpo,
-           "um cartão de controle externo nasceu no desenho — a tela estaria "
-           "afirmando um aparelho que ninguém mediu")
-
-    lugares = _campos_por_lugar(fileira)
-    esperados = [c.get("uniq") or c["pref"] for c in MESA]
-    exigir(sorted(lugares) == sorted(esperados),
-           f"a fileira não tem um cartão por lugar da mesa: esperava "
-           f"{sorted(esperados)}, achei {sorted(lugares)}")
-    modelo = collections.Counter(lugares.get(esperados[0], []))
-    exigir(sum(modelo.values()) > 0,
-           f"o lugar {esperados[0]} não tem endereço nenhum — uma régua que "
-           f"compara listas vazias passa com qualquer desenho")
-    for pref in esperados[1:]:
-        achei = collections.Counter(lugares.get(pref, []))
-        exigir(achei == modelo,
-               f"o lugar {pref} não carrega os mesmos `data-campo` do "
-               f"{esperados[0]} — faltam {sorted((modelo - achei).elements())} "
-               f"e sobram {sorted((achei - modelo).elements())}. Sem endereço, "
-               f"o dado que o daemon publica para este lugar chega e não tem "
-               f"onde pousar: zero escrito e zero erro")
+           "voltou regra de pintura que decide por `[title]` (ou a `.degradou`)")
 
     if falhas:
         raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
+    aba02._conferir(doc, "01-jogar")
 
 
 if __name__ == "__main__":
@@ -1209,10 +958,12 @@ if __name__ == "__main__":
     for _vizinha in _real.glob("*.html"):
         shutil.copy2(_vizinha, _prova / _vizinha.name)
     os.environ[onde._DESVIO] = str(_prova)
-    n = montar("01-jogar", "Jogar", MIOLO, CSS)
-    _conferir(onde.pagina("01-jogar.html").read_text())
+    n = montar("01-jogar", "Jogar", MIOLO, aba02.CSS + CSS)
+    _saida = onde.pagina("01-jogar.html")
+    _saida.write_text(aba02.com_o_piso("02-controles", aba02.cor_do_plastico_por_regra(
+        aba02.fita_clicavel(_saida.read_text()))))
+    _conferir(_saida.read_text())
     shutil.copyfile(_prova / "01-jogar.html", _real / "01-jogar.html")
     shutil.rmtree(_prova)
     print(f"01-jogar: OK, {n} divs · mesa de {len(monta.CONECTADOS)} conectado(s) "
-          f"+ {len(MESA) - len(monta.CONECTADOS)} lugar(es) vazio(s) · "
-          f"máscaras {frase_das_mascaras()} · as 5 decisões dela conferidas")
+          f"+ {len(MESA) - len(monta.CONECTADOS)} lugar(es) vazio(s)")

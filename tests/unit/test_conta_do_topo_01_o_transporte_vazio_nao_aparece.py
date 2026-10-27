@@ -89,11 +89,21 @@ def _fonte_do_monta() -> str:
     return arq.read_text(encoding="utf-8")
 
 
+def _o_desenho_sem_contador() -> bool:
+    """O cabeçalho do desenho saiu sem o contador: nenhum escritor da frase no esqueleto."""
+    import pathlib
+
+    raiz = pathlib.Path(__file__).resolve().parents[2]
+    paginas = sorted((raiz / "mockup").glob("[01][0-9]-*.html"))
+    assert paginas, "a bancada sumiu — régua cega"
+    return all('class="conectado"' not in p.read_text(encoding="utf-8") for p in paginas)
+
+
 def test_o_esqueleto_usa_o_mesmo_dono_da_frase() -> None:
     """O `monta.py` não pode ter uma segunda cópia da formatação."""
     fonte = _fonte_do_monta()
 
-    assert "frase_dos_transportes" in fonte, (
+    assert "frase_dos_transportes" in fonte or _o_desenho_sem_contador(), (
         "o `monta.py` parou de chamar `mesa_viva.frase_dos_transportes` — ele "
         "voltou a formatar a contagem por conta própria, e o esqueleto vai "
         "divergir do que o piloto pinta"
@@ -111,6 +121,8 @@ def test_o_esqueleto_e_o_vivo_dizem_a_mesma_coisa_para_a_mesa_dela() -> None:
     """Fim a fim, no formato: o que o esqueleto grava é o que o piloto pinta."""
     _, vivo = mesa_viva.texto_da_contagem([{"transporte": "bt"}])
 
+    if _o_desenho_sem_contador():
+        pytest.skip("o desenho de 27/10 tirou o contador do cabeçalho (`mockup/DIVERGENCIAS.md`)")
     fonte = _fonte_do_monta()
     assert "frase_dos_transportes(usb, bt)" in fonte, (
         "o `monta.py` chama o dono com outros argumentos que não a contagem "

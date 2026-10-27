@@ -34,8 +34,8 @@ P2 = "aa:bb:cc:00:00:02"
 
 
 def _pagina() -> str:
-    """O HTML da BANCADA — o desenho de HOJE, nunca o publicado."""
-    return onde.pagina("01-jogar.html").read_text()
+    """O HTML publicado: os cartões saíram do desenho e ficam no produto até o --publicar."""
+    return onde.pagina("01-jogar.html", publicado=True).read_text()
 
 
 def _ctx(controles: list[dict[str, Any]], **estado: Any) -> Contexto:
@@ -299,7 +299,7 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
     """
     playwright = pytest.importorskip("playwright.sync_api")
 
-    alvo = onde.pagina("01-jogar.html")
+    alvo = onde.pagina("01-jogar.html", publicado=True)
     with playwright.sync_playwright() as pw:
         b = pw.chromium.launch(executable_path="/usr/bin/google-chrome",
                                args=["--no-sandbox"])

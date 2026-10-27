@@ -325,7 +325,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """  .radio-mesa{position:absolute;width:0;heig
   .moldura > .sticks{column-gap:4px}
   .sensores{align-items:center;gap:10px}
   .sensores .btn{height:34px;border-radius:999px;padding:0 16px;box-sizing:border-box;
-                 font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif}
+                 font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;gap:9px}
 """
 
 GL16 = [("cross","✕"),("circle","○"),("square","□"),("triangle","△"),
@@ -1212,13 +1212,14 @@ CSS += f"""
     border-color:var(--green);color:var(--green)}}
 """
 
+GLIFO_DO_CALIBRAR = re.sub(r"<title>.*?</title>", "", glifo("giroscopio", tam=15))
 MIOLO = f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         {trava_do_nativo("nestes ajustes")}
         <span class="sensores">
-          <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">{ROTULO_DO_CALIBRAR}</a>
+          <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>
           {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
         </span>
       </div>
@@ -1525,7 +1526,7 @@ def campos_de_cada_lugar(corpo: str) -> dict[str, set[str]]:
     return achados
 
 
-def _conferir(doc):
+def _conferir(doc, aba="02-controles"):
     """As decisões de 31/08 nesta aba, conferidas NA SAÍDA."""
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     corpo = re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
@@ -1855,7 +1856,7 @@ def _conferir(doc):
            "seletor nunca casa")
 
     if falhas:
-        raise SystemExit("ERRO em 02-controles — decisão dela desfeita:\n  "
+        raise SystemExit(f"ERRO em {aba} — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 

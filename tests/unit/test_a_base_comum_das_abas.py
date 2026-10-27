@@ -10,8 +10,8 @@ O que a régua cobra, e a mordida de cada uma:
    está em `ISENTOS` com a sprint dona; o número não cresce, e a isenção sai quando o arquivo zera.
 3. **A base entra uma vez em toda página**, no `<style>` e no `<script>` de `id="base-comum"`,
    idêntica aos arquivos `base-comum.css` e `base-comum.js`.
-4. **O `.modo-auto` não existe na 01** (nem de 06 a 10), e o do `monta.modo_auto` fala a língua
-   do piloto: gesto, `data-modo`, `aria-pressed`.
+4. **O `.modo-auto` não existe de 06 a 10** (a 01 o herda da 02), e o do `monta.modo_auto`
+   fala a língua do piloto: gesto, `data-modo`, `aria-pressed`.
 5. **O modo da vibração e o dos controles gravam e voltam iguais** ao reabrir o perfil.
 6. **O menu do botão direito tem dono**: o WebKit cala o dele, e cada item aciona um gesto
    registrado.
@@ -186,14 +186,14 @@ def test_toda_pagina_tem_a_base_uma_vez_e_identica_ao_arquivo(
         assert f'<script id="base-comum">\n{js}</script>' in doc, f"{nome}: JS diferente do arquivo"
 
 
-def test_o_modo_auto_nao_existe_na_01_nem_de_06_a_10(paginas_geradas: dict[str, str]) -> None:
-    """O botão é das abas 02 a 05; a 01 (e as de 06 a 10) não o tem.
+def test_o_modo_auto_nao_existe_de_06_a_10(paginas_geradas: dict[str, str]) -> None:
+    """O botão é das abas 01 a 05; as de 06 a 10 não o têm.
 
     Que ele APAREÇA em 02 a 05 é da sprint de cada aba, que troca o par pelo `monta.modo_auto`.
     """
     com = sorted(nome for nome, doc in paginas_geradas.items()
-                 if 'class="modo-auto"' in doc and not re.match(r"0[2-5]-", nome))
-    assert not com, f"página(s) com o botão «Modo automático» fora das abas 02 a 05: {com}"
+                 if 'class="modo-auto"' in doc and not re.match(r"0[1-5]-", nome))
+    assert not com, f"página(s) com o botão «Modo automático» fora das abas 01 a 05: {com}"
 
 
 def test_o_modo_auto_fala_a_lingua_do_piloto() -> None:

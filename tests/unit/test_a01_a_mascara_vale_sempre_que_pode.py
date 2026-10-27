@@ -155,7 +155,7 @@ def test_o_produto_diz_quais_mascaras_ele_monta() -> None:
 
 def test_o_chip_sem_motor_nasce_cinza_com_a_razao_nos_quatro_lugares() -> None:
     """D-03 dela: *"cinza antes, com a razão na dica."*"""
-    corpo = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
+    corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
     sem_motor = [m for m in monta.MASCARAS if m not in aba.mascaras_montaveis()]
     assert corpo.count('class="chip inerte"') == len(sem_motor) * len(monta.MESA)
     for pedaco in corpo.split('class="chip inerte"')[1:]:
@@ -166,7 +166,7 @@ def test_o_chip_sem_motor_nasce_cinza_com_a_razao_nos_quatro_lugares() -> None:
 
 def test_o_chip_cinza_continua_clicavel_e_recusa_dizendo() -> None:
     """Tirar o `data-gesto` faria o clique sumir CALADO."""
-    corpo = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
+    corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
     assert corpo.count('data-gesto="mascara"') == len(monta.MASCARAS) * len(monta.MESA)
 
     class _Ponte:

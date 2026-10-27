@@ -60,7 +60,7 @@ def lar_novo(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> pathlib
 
 
 def _pagina() -> str:
-    return onde.pagina("01-jogar.html", publicado=False).read_text(encoding="utf-8")
+    return onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
 
 
 def _fileira(corpo: str, lado: str) -> list[tuple[str, str]]:
@@ -71,7 +71,8 @@ def _fileira(corpo: str, lado: str) -> list[tuple[str, str]]:
 
 
 def test_os_rotulos_do_gerador_sao_os_do_desenho() -> None:
-    assert [m["rot"] for m in aba01.MODOS] == LIGADO
+    """No desenho de 27/10 o terceiro do Ligado é o Nintendo; a publicada segue com o Point."""
+    assert [m["rot"] for m in aba01.MODOS] == [*LIGADO[:2], "Nintendo Pro"]
     assert [m["rot"] for m in aba01.DO_DESLIGADO] == DESLIGADO
 
 
