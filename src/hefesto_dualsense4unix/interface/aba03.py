@@ -615,7 +615,7 @@ def _conferir(doc):
            "o desenho do controle saiu do lado do «Estilo de jogo», ou o rótulo «Controle» voltou")
     exigir(f'value="{BASE_DO_CRIADOR}" selected' in corpo,
            "o criador do gatilho deixou de partir da Metralhadora")
-    exigir(_barras_que_a_base_usa().strip() in doc,
+    exigir(_barras_que_a_base_usa().strip() in doc and 'option[value="Resistance"]:checked) .g2-barra:has([data-linha="freq"])' in doc,
            "o criador mostra barra que a base escolhida não manda ao gatilho")
     exigir("g2-avtog" not in corpo and "g2-avtog" not in doc and "Avançado" not in corpo
            and "hef-gatilhos-avancado" not in doc,
