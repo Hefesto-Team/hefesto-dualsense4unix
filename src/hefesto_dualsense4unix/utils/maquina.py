@@ -1947,7 +1947,8 @@ def controladores_usb_daqui() -> frozenset[str] | None:
     raiz = Path(_raiz_do_sys()) / "bus" / "pci" / "devices"
     try:
         nomes = sorted(os.listdir(raiz))
-    except OSError:
+    except OSError as exc:
+        logger.debug("maquina_pci_nao_lido", raiz=str(raiz), err=str(exc)[:200])
         return None
     if not nomes:
         return None
@@ -2038,21 +2039,20 @@ def _guardar_o_de_outra_placa(guardado: Mapping[str, Any]) -> Path:
     origem = caminho_da_maquina()
     base = origem.name + _SUFIXO_DE_OUTRA_PLACA
     payload = json.dumps(guardado, ensure_ascii=False, indent=2, sort_keys=True).encode()
-    for n in range(1, 1000):
-        alvo = origem.with_name(base if n == 1 else f"{base}-{n}")
-        try:
-            fd = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        except FileExistsError:
-            continue
-        with os.fdopen(fd, "wb") as fh:
-            fh.write(payload)
-        logger.warning(
-            "maquina_de_outra_placa_guardada",
-            guardado_em=str(alvo),
-            secoes=sorted(set(guardado) & set(SECOES_DESTE_COMPUTADOR)),
-        )
-        return alvo
-    raise FileExistsError(origem.with_name(base))
+    alvo = origem.with_name(base)
+    n = 2
+    while alvo.exists():
+        alvo = origem.with_name(f"{base}-{n}")
+        n += 1
+    fd = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(payload)
+    logger.warning(
+        "maquina_de_outra_placa_guardada",
+        guardado_em=str(alvo),
+        secoes=sorted(set(guardado) & set(SECOES_DESTE_COMPUTADOR)),
+    )
+    return alvo
 
 
 def _guardar_a_copia_de_antes_da_migracao() -> None:
