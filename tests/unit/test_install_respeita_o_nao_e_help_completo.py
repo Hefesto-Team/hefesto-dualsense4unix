@@ -26,7 +26,7 @@ def _sem_comentarios(texto: str) -> str:
 
 BLOCO_7A = INSTALL[
     INSTALL.index('step "7a/11"') : INSTALL.index(
-        '\nif [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _faria "subir o ícone na bandeja'
+        '\nif [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _faria "fechar e reabrir a janela'
     )
 ]
 AJUDA = INSTALL[INSTALL.index("_ajuda() {\n  cat <<'AJUDA'\n") :]

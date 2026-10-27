@@ -207,7 +207,7 @@ def test_o_install_preserva_a_escolha(tmp_path: pathlib.Path, antes: str | None)
 def _bloco_da_volta() -> str:
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
     inicio = texto.index(
-        'if [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _faria "subir o ícone na bandeja'
+        'if [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _faria "fechar e reabrir a janela'
     )
     fim = texto.index("PRESENCA_UNIT_SRC=", inicio)
     return texto[inicio:fim]
@@ -261,4 +261,4 @@ def test_o_install_devolve_a_bandeja_depois_do_restart(
     else:
         assert not marca.exists(), feito.stdout
     if ensaio:
-        assert "FARIA subir o ícone na bandeja" in feito.stdout, feito.stdout
+        assert "FARIA fechar e reabrir a janela e o ícone na bandeja" in feito.stdout, feito.stdout
