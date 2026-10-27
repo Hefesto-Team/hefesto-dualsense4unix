@@ -607,11 +607,14 @@ def _mascara_chaves_da_fstring(literal: str) -> str:
         k = j + len(q)
         while k < fim and not literal.startswith(q, k):
             k += 2 if literal[k] == "\\" else 1
+        fechou = k < fim
         k = min(k + len(q), fim)
         if "f" in literal[comeco:j].lower():
             saida[comeco:k] = _mascara_chaves_da_fstring(literal[comeco:k])
         else:
-            saida[comeco:j] = literal[comeco:j]
+            apagar(comeco, j + len(q))
+            if fechou:
+                apagar(k - len(q), k)
         return k
 
     def especificacao(j: int) -> int:
