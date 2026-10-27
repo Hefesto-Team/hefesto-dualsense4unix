@@ -11,6 +11,12 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 DIR_ACOES = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "actions"
 
+CONTRIBUINDO = RAIZ / ".github" / "CONTRIBUTING.md"
+
+_TOTAL_PUBLICADO = re.compile(
+    r"Dos \*\*(\d+)\*\* arquivos `\.py` de `src/hefesto_dualsense4unix/app/actions/`"
+)
+
 
 def _modulos_de_acoes() -> list[Path]:
     """Todo `.py` de `app/actions/`, inclusive os de dentro de um pacote."""
@@ -137,18 +143,27 @@ def _convites_em(texto: str, catalogos: set[str]) -> list[tuple[int, str]]:
 
 
 def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
-    """Ancora a medição que sustenta a decisão de produto, e a mantém honesta."""
+    """Ancora a medição que sustenta a decisão de produto, e a mantém honesta.
+
+    São 30 desde 26/10/2026: o `recarga_do_install.py` (e1fe5cbfe) entrou em `app/actions/` com 14
+    literais acentuados e sem a função de tradução, e o total publicado subiu de 32 a 33 com ele.
+    """
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
     total = len(_modulos_de_acoes())
 
-    assert total == 32, (
-        f"`app/actions/` tem {total} módulos, não 32. A contagem citada em "
-        "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
-        "`docs/usage/troubleshooting.md` precisa mudar junto."
+    publicado = _TOTAL_PUBLICADO.search(CONTRIBUINDO.read_text(encoding="utf-8"))
+    assert publicado, (
+        "`.github/CONTRIBUTING.md` não publica mais quantos módulos tem `app/actions/`: "
+        "o bloco da CONTAGEM-GERADA sumiu ou mudou de forma."
     )
-    assert len(fora) == 29, (
+    assert total == int(publicado.group(1)), (
+        f"`app/actions/` tem {total} módulos, e `.github/CONTRIBUTING.md` publica "
+        f"{publicado.group(1)}. O número sai do gerador, nunca à mão: "
+        "`scripts/check_o_projeto_e_traduzivel.py --publicar`."
+    )
+    assert len(fora) == 30, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 29: {', '.join(sorted(fora))}. Se o número CAIU, é "
+        f"tradução, não 30: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
