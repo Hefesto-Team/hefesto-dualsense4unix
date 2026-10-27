@@ -1,7 +1,6 @@
 """QUEM-E-QUEM-03 (29/08/2026) — as features têm dono, e a conta sai da mão."""
 from __future__ import annotations
 
-import inspect
 import re
 from dataclasses import dataclass
 
@@ -284,8 +283,8 @@ def test_o_censo_cobre_o_esquema_nos_dois_sentidos() -> None:
         f"campo(s) de ControllerOverrides fora do censo: {fora}. Uma feature "
         "por controle que não está no censo é uma feature que some quando "
         "ninguém olha — acrescente a linha em CENSO, com o que `None` "
-        "significa e a sprint dona, e conserte a conta do comentário em "
-        "profiles/schema.py."
+        "significa e a sprint dona, e conserte a conta da docstring de "
+        "ControllerOverrides em profiles/schema.py."
     )
 
     faltando = declarados_sem_campo(campos, CENSO)
@@ -300,7 +299,7 @@ def test_o_censo_tem_uma_linha_por_feature_e_nenhuma_repetida() -> None:
     assert len(CENSO) == FEATURES_NA_TELA, (
         f"o censo tem {len(CENSO)} linhas e a tela oferece {FEATURES_NA_TELA}. "
         "Se a tela passou a oferecer outro número, mude FEATURES_NA_TELA e o "
-        "comentário de ControllerOverrides no MESMO commit."
+        "a docstring de ControllerOverrides no MESMO commit."
     )
     nomes = [linha.feature for linha in CENSO]
     assert len(set(nomes)) == len(nomes), f"feature repetida no censo: {nomes}"
@@ -352,48 +351,52 @@ _NUMERAIS = {
 }
 
 _FORMA_DA_CONTA = re.compile(
-    r"#\s*SÃO\s+([^\W\d_]+),\s*e a tela oferece\s+([^\W\d_]+)",
+    r"\bSÃO\s+([^\W\d_]+),\s*e a tela oferece\s+([^\W\d_]+)",
     re.IGNORECASE,
 )
 
 
-def _contas_do_comentario() -> list[tuple[str, str]]:
-    """As contas escritas à mão no corpo de `ControllerOverrides`."""
-    fonte = inspect.getsource(ControllerOverrides)
-    return [(a.upper(), b.upper()) for a, b in _FORMA_DA_CONTA.findall(fonte)]
+def _contas_da_docstring() -> list[tuple[str, str]]:
+    """As contas escritas à mão na docstring de `ControllerOverrides`.
+
+    O código versionado não tem comentário: a conta que morava no corpo da classe passou à
+    docstring dela, e a régua lê o ``__doc__``.
+    """
+    razao = ControllerOverrides.__doc__ or ""
+    return [(a.upper(), b.upper()) for a, b in _FORMA_DA_CONTA.findall(razao)]
 
 
 def test_a_conta_escrita_no_esquema_acompanha_os_campos() -> None:
-    """O comentário `SÃO <n>` bate com quantos campos a classe realmente tem."""
-    contas = _contas_do_comentario()
+    """A conta `SÃO <n>` da docstring bate com quantos campos a classe realmente tem."""
+    contas = _contas_da_docstring()
     assert len(contas) == 1, (
-        f"esperava UMA conta no corpo de ControllerOverrides e achei "
+        f"esperava UMA conta na docstring de ControllerOverrides e achei "
         f"{len(contas)}: {contas}. Duas ocorrências tornam ambíguo qual delas é "
-        "a conta — se você escreveu um comentário que CITA a forma da frase, "
-        "reescreva-o sem citá-la."
+        "a conta — se você escreveu uma frase que CITA a forma da conta, "
+        "reescreva-a sem citá-la."
     )
     palavra_campos, palavra_tela = contas[0]
 
     assert palavra_campos in _NUMERAIS, (
-        f"o comentário diz SÃO {palavra_campos!r}, que não é um numeral que eu "
+        f"a docstring diz SÃO {palavra_campos!r}, que não é um numeral que eu "
         f"saiba ler — conheço {sorted(_NUMERAIS)}"
     )
     assert palavra_tela in _NUMERAIS, (
-        f"o comentário diz que a tela oferece {palavra_tela!r}, que não é um "
+        f"a docstring diz que a tela oferece {palavra_tela!r}, que não é um "
         f"numeral que eu saiba ler — conheço {sorted(_NUMERAIS)}"
     )
 
     escrito = _NUMERAIS[palavra_campos]
     real = len(ControllerOverrides.model_fields)
     assert escrito == real, (
-        f"a conta do comentário de ControllerOverrides diz {escrito} e a "
+        f"a conta da docstring de ControllerOverrides diz {escrito} e a "
         f"classe tem {real} campos ({sorted(ControllerOverrides.model_fields)}). "
-        "Quem acrescentou ou tirou o campo passa por este comentário — a fila "
-        "do que falta está na docstring da classe, ordenada por custo."
+        "Quem acrescentou ou tirou o campo passa por esta conta — a fila do "
+        "que falta está em docs/research/o-porque-dos-modulos.md, ordenada por custo."
     )
 
     assert _NUMERAIS[palavra_tela] == FEATURES_NA_TELA, (
-        f"o comentário diz que a tela oferece {_NUMERAIS[palavra_tela]} e o "
+        f"a docstring diz que a tela oferece {_NUMERAIS[palavra_tela]} e o "
         f"censo tem {FEATURES_NA_TELA} linhas. Os dois números respondem à "
         "mesma pergunta e não podem divergir."
     )

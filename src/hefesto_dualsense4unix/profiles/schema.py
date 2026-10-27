@@ -1333,10 +1333,10 @@ class ControllerOverrides(BaseModel):
 
     Campo ``None`` = sem opinião: o controle herda a seção GLOBAL (merge POR CAMPO, PERFIL-01). A
     exceção é ``mascara``, em que ``None`` quer dizer «volte ao padrão». O campo só entra quando o
-    consumidor por ``uniq`` já existe: a régua é
-    ``test_perfil_por_controle_o_campo_espera_o_caminho.py``. Só o ``mode`` é da SESSÃO (decisão de
-    15/08/2026, ``external_mask.py``): a máscara do gamepad é do jogador. O que falta e a
-    contradição aberta: ``docs/research/o-porque-dos-modulos.md``, seção «ControllerOverrides».
+    consumidor por ``uniq`` já existe (``test_perfil_por_controle_o_campo_espera_o_caminho.py``).
+    Só o ``mode`` é da SESSÃO (decisão de 15/08/2026, ``external_mask.py``): a máscara do gamepad é
+    do jogador. SÃO ONZE, e a tela oferece treze: o que falta e a contradição aberta estão na seção
+    «ControllerOverrides» de ``docs/research/o-porque-dos-modulos.md``.
     """
 
     model_config = ConfigDict(extra="forbid")
