@@ -1405,6 +1405,16 @@ def _pagina_da_uri(uri: str | None) -> str:
     return uri.rstrip("/").split("/")[-1].split("?")[0].split("#")[0]
 
 
+def _anotar_a_aba(pagina: str) -> None:
+    """A aba à vista vai para o runtime, para o install reabrir a janela nela."""
+    from hefesto_dualsense4unix.app.actions.recarga_do_install import arquivo_da_aba
+
+    with contextlib.suppress(OSError):
+        alvo = arquivo_da_aba(os.getpid())
+        alvo.parent.mkdir(parents=True, exist_ok=True)
+        alvo.write_text(pagina + "\n", encoding="utf-8")
+
+
 MUDOS_SEGUIDOS_QUE_VOLTARAM = 3
 
 
@@ -2095,6 +2105,8 @@ class Piloto:
         if nova != self.pagina:
             pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
         self.pagina = nova
+        if not self.args.oculta:
+            _anotar_a_aba(nova)
         if nova not in self.visitadas:
             self.visitadas.append(nova)
         self.pronto = False
@@ -3338,6 +3350,9 @@ def _o_processo_da_janela() -> Iterator[None]:
         yield
     finally:
         pacotes.fios.ligar_a_janela(False)
+        from hefesto_dualsense4unix.app.actions.recarga_do_install import arquivo_da_aba
+
+        arquivo_da_aba(os.getpid()).unlink(missing_ok=True)
         try:
             if _AS_ABAS_CHEGARAM:
                 pacotes.largar_o_que_as_abas_seguram(

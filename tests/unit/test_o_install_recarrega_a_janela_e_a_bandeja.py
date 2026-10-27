@@ -1,6 +1,7 @@
 """O install fecha e reabre a janela e a bandeja que estavam abertas, para valer o código novo."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from collections.abc import Iterator
@@ -21,11 +22,13 @@ Filhos = list[subprocess.Popen[bytes]]
 class Registro:
     def __init__(self, subiu: bool = True) -> None:
         self.telas: list[dict[str, str]] = []
+        self.abas: list[str] = []
         self.subidas = 0
         self.subiu = subiu
 
-    def abrir(self, tela: dict[str, str]) -> bool:
+    def abrir(self, tela: dict[str, str], aba: str) -> bool:
         self.telas.append(tela)
+        self.abas.append(aba)
         return True
 
     def subir(self) -> bool:
@@ -85,6 +88,36 @@ def test_a_janela_aberta_fecha_e_volta_na_mesma_tela(lar: Path, filhos: Filhos) 
     assert _morreu(janela)
     assert feito.telas == [{"WAYLAND_DISPLAY": "wayland-9"}]
     assert "janela: fechada e reaberta" in frases
+
+
+def test_a_janela_volta_na_aba_que_mostrava(lar: Path, filhos: Filhos) -> None:
+    janela = _subir(filhos, "hefesto", "--gui", tela="wayland-9")
+    _anotar_a_janela(lar, janela.pid)
+    recarga.arquivo_da_aba(janela.pid).write_text("08-conexoes.html\n", encoding="utf-8")
+    feito = Registro(subiu=False)
+
+    recarga.recarregar(abrir=feito.abrir, subir_a_bandeja=feito.subir)
+
+    assert feito.abas == ["08-conexoes.html"]
+
+
+def test_a_aba_que_nao_e_pagina_publicada_nao_se_pede(lar: Path, filhos: Filhos) -> None:
+    janela = _subir(filhos, "hefesto", "--gui", tela="wayland-9")
+    _anotar_a_janela(lar, janela.pid)
+    recarga.arquivo_da_aba(janela.pid).write_text("../../etc/passwd\n", encoding="utf-8")
+    feito = Registro(subiu=False)
+
+    recarga.recarregar(abrir=feito.abrir, subir_a_bandeja=feito.subir)
+
+    assert feito.abas == [""]
+
+
+def test_a_janela_anota_a_aba_que_o_install_le(lar: Path) -> None:
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    hefesto_vivo._anotar_a_aba("10-perfis.html")
+
+    assert recarga.a_aba_de(os.getpid()) == "10-perfis.html"
 
 
 def test_sem_janela_aberta_nada_se_abre(lar: Path) -> None:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -10,6 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from hefesto_dualsense4unix.app.actions import atos_da_bandeja as bandeja
+from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.utils import single_instance as si
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
@@ -19,6 +21,24 @@ VARIAVEIS_DA_TELA = (
     "WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY", "GDK_BACKEND",
     "DBUS_SESSION_BUS_ADDRESS", "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP",
 )
+
+FORMA_DA_ABA = re.compile(r"[0-9a-z-]+\.html")
+
+
+def arquivo_da_aba(pid: int) -> Path:
+    """Onde a janela `pid` anota a aba à vista, para o install a reabrir nela."""
+    return runtime_dir() / f"aba-{pid}"
+
+
+def a_aba_de(pid: int) -> str:
+    """A aba que a janela `pid` mostra, se é uma página publicada; senão `""`."""
+    try:
+        nome = arquivo_da_aba(pid).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    if not FORMA_DA_ABA.fullmatch(nome) or not onde.pagina(nome, publicado=True).is_file():
+        return ""
+    return nome
 
 
 def janelas_abertas() -> list[int]:
@@ -62,8 +82,8 @@ def terminar(pid: int, prazo: float) -> bool:
     return not si.is_alive(pid)
 
 
-def abrir_a_janela(tela: dict[str, str]) -> bool:
-    """Abre a janela pelo lançador, desprendida, na tela que ela ocupava. Diz se abriu."""
+def abrir_a_janela(tela: dict[str, str], aba: str = "") -> bool:
+    """Abre a janela pelo lançador, desprendida, na tela e na aba que ela ocupava. Diz se abriu."""
     lancador = shutil.which(bandeja.LANCADOR_DO_PAINEL) or str(
         Path.home() / ".local" / "bin" / bandeja.LANCADOR_DO_PAINEL)
     if not Path(lancador).is_file():
@@ -71,15 +91,15 @@ def abrir_a_janela(tela: dict[str, str]) -> bool:
     ambiente = {**os.environ, **tela, "HEFESTO_NA_TELA": "1"}
     try:
         subprocess.Popen(
-            [lancador], env=ambiente, start_new_session=True, stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            [lancador, *(["--abre", aba] if aba else [])], env=ambiente, start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
         return False
     return True
 
 
 def recarregar(
-    abrir: Callable[[dict[str, str]], bool] = abrir_a_janela,
+    abrir: Callable[[dict[str, str], str], bool] = abrir_a_janela,
     subir_a_bandeja: Callable[[], bool] = bandeja.garantir_a_bandeja,
 ) -> list[str]:
     """Fecha e reabre a janela e a bandeja que estavam abertas. Devolve uma frase por peça."""
@@ -87,10 +107,11 @@ def recarregar(
     frases: list[str] = [] if janelas else ["janela: nenhuma aberta"]
     for pid in janelas:
         tela = a_tela_de(pid)
+        aba = a_aba_de(pid)
         if not terminar(pid, si.PRAZO_DO_DESLIGAMENTO_S):
             frases.append(f"janela: não fechou em {si.PRAZO_DO_DESLIGAMENTO_S:.0f} s")
             continue
-        frases.append("janela: fechada e reaberta" if abrir(tela)
+        frases.append("janela: fechada e reaberta" if abrir(tela, aba)
                       else "janela: fechada, mas não achei o lançador para reabrir")
     viva = bandeja.bandeja_viva()
     if viva is not None and not terminar(viva, PRAZO_DA_BANDEJA_S):
