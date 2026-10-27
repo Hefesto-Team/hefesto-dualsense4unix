@@ -177,8 +177,25 @@ imagem_de() {
 
 IMAGEM="${CI_LOCAL_IMAGEM:-}"
 [ -n "$IMAGEM" ] || IMAGEM="$(imagem_de "$BASE")" || exit 2
+usa_o_24() {
+  local f
+  f="$(arquivo_do_job "$1")"
+  [ -n "$f" ] && [ -f "$RAIZ/.github/workflows/$f" ] || return 1
+  awk -v job="$1" '
+    /^jobs:/ {emjobs=1}
+    emjobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {atual=$1; sub(/:$/, "", atual)}
+    atual==job && /ubuntu-24\.04([^-.0-9]|$)/ {achou=1}
+    END {exit !achou}' "$RAIZ/.github/workflows/$f"
+}
+
 IMAGEM_24="${CI_LOCAL_IMAGEM_24:-}"
-[ -n "$IMAGEM_24" ] || IMAGEM_24="$(imagem_de "$BASE_24")" || exit 2
+if [ -z "$IMAGEM_24" ]; then
+  for j in "${JOBS[@]}"; do
+    usa_o_24 "$j" || continue
+    IMAGEM_24="$(imagem_de "$BASE_24")" || exit 2
+    break
+  done
+fi
 IMAGEM_22=""
 DOCKERFILE_22="$RAIZ/scripts/ci-local/Dockerfile.ubuntu-22.04"
 for j in "${JOBS[@]}"; do
@@ -267,6 +284,7 @@ chamar_act() {
   mkdir -p "$CACHE_ACOES"
   cp -a "$CACHE_ACOES/." "$cache/" 2>/dev/null || mkdir -p "$cache"
   [ -f "$TMP/tag-$job.json" ] && extras+=(-e "$TMP/tag-$job.json")
+  [ -n "$IMAGEM_24" ] && extras+=(-P "ubuntu-24.04=$IMAGEM_24")
   if [ -n "$rotulo" ]; then
     extras+=(--matrix "os:$rotulo")
     [ "$rotulo" = ubuntu-22.04 ] && extras+=(-P "ubuntu-22.04=$IMAGEM_22")
@@ -274,7 +292,7 @@ chamar_act() {
   (
     cd "$ARV" || exit 2
     "$ACT" push -W "$yml" -j "$job" \
-      -P "ubuntu-latest=$IMAGEM" -P "ubuntu-26.04=$IMAGEM" -P "ubuntu-24.04=$IMAGEM_24" "${extras[@]}" \
+      -P "ubuntu-latest=$IMAGEM" -P "ubuntu-26.04=$IMAGEM" "${extras[@]}" \
       --pull=false --rm --container-architecture linux/amd64 "${OFFLINE[@]}" \
       --action-cache-path "$cache" \
       --artifact-server-path "$CASA/ci-local/artefatos" \
