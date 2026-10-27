@@ -465,7 +465,7 @@ MIOLO = f'''
 
       </div>
     </div>
-{aba02.MIOLO}'''
+{aba02.MIOLO_SEM_A_MASCARA}'''
 
 
 LEGENDA = f'''<div class="nota">

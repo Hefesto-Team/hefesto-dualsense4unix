@@ -462,7 +462,7 @@ def sensores_da_peca(c):
           </span>'''
 
 
-def identidade(c, *, bat, carga=None, meio=""):
+def identidade(c, *, bat, carga=None, meio="", com_mascara=True):
     """A LINHA DE IDENTIDADE, e ela é UMA SÓ.
 
     Sai daqui a linha das quatro caixas — a do controle aberto e a dos fechados,
@@ -524,8 +524,7 @@ def identidade(c, *, bat, carga=None, meio=""):
         "quem": f'<span data-campo="quem-joga" data-hef-alvo="html">P{n_com_endereco}</span>',
     }
     return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{n_com_endereco}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}<span class="so-vaga">Player {n_com_endereco} <span class="pt">•</span> {SEM_NINGUEM_AQUI}</span></span>
-          <span class="div">·</span>
-          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b></span>{meio}
+{_a_mascara(c["mascara"]) if com_mascara else ""}{meio}
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
                 data-hef-atributo="aria-label"{_ARIA_DO_GIRO}><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
@@ -708,7 +707,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada, junto=False,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           accel=None, conectado=True,
-          no_jogo=None):
+          no_jogo=None, com_mascara=True):
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
     É UMA função para as duas formas, porque agora é uma caixa só: o rádio diz
@@ -790,7 +789,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     giro_html = chr(10).join(gx("giro", e, v, cor) for e, v, cor in giro)
     accel_html = chr(10).join(gx("accel", e, v, cor) for e, v, cor in (accel or []))
     fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD if conectado else LUGAR_VAZIO_AQUI}">
-{identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo))}
+{identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo), com_mascara=com_mascara)}
       </label>'''
     corpo_do_card = f'''    <div class="{classe}"{casca} data-controle="{c.get("uniq") or c["pref"]}"{marca}>
       <input class="radio-mesa" type="radio" name="mesa" id="{rid}" data-campo="card-aberto" data-hef-alvo="marcado"{" checked" if c["alvo"] else ""}>
@@ -1079,8 +1078,18 @@ ESTADO = {
 
 _VAZIO = "—"
 
+def _a_mascara(mascara):
+    """O que o jogo vê deste controle, na linha da Controles; a Jogar mostra o modo uma vez só."""
+    return (f'          <span class="div">·</span>\n'
+            f'          <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">'
+            f'{mascara}</b></span>')
+
+
 BLOCOS = "\n".join(
     bloco(c, conectado=c.get("conectado", True), **ESTADO[c["pref"]])
+    for c in MESA)
+BLOCOS_SEM_A_MASCARA = "\n".join(
+    bloco(c, conectado=c.get("conectado", True), com_mascara=False, **ESTADO[c["pref"]])
     for c in MESA)
 
 ALTURA_DO_CARD = 304
@@ -1213,7 +1222,8 @@ CSS += f"""
 """
 
 GLIFO_DO_CALIBRAR = re.sub(r"<title>.*?</title>", "", glifo("giroscopio", tam=15))
-MIOLO = f'''
+def _miolo(blocos):
+    return f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
@@ -1225,10 +1235,14 @@ MIOLO = f'''
       </div>
       <div class="quadro-corpo">
         <input class="radio-mesa" type="radio" name="mesa" id="c-todos">
-{BLOCOS}
+{blocos}
       </div>
     </div>
 '''
+
+
+MIOLO = _miolo(BLOCOS)
+MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA)
 
 
 LEGENDA = f'''<div class="nota">
@@ -1771,8 +1785,12 @@ def _conferir(doc, aba="02-controles"):
            "a fileira dos modos do microfone voltou ao cartão")
 
     exigir("vê como" not in corpo, "o texto 'vê como' voltou")
-    exigir(corpo.count('data-campo="mascara"') == len(MESA),
-           "a máscara sumiu com o texto — ela FICA, e é o dado")
+    if aba == "02-controles":
+        exigir(corpo.count('data-campo="mascara"') == len(MESA),
+               "a máscara sumiu com o texto — ela FICA, e é o dado")
+    else:
+        exigir('data-campo="mascara"' not in corpo,
+               "a linha do controle voltou a dizer como o jogo o vê: o modo vale para todos")
 
     exigir(corpo.count('data-campo="quem-joga"') == len(MESA),
            "o «quem joga» do título aberto perdeu o endereço — o nome dela não chega ao cartão")
