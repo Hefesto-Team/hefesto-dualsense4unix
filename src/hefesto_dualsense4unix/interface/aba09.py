@@ -15,8 +15,7 @@ from monta import (
 import onde
 from onde import RAIZ as R
 
-from hefesto_dualsense4unix.interface import janela as _ponte
-from hefesto_dualsense4unix.interface.folha_da_casa import com_o_piso
+from hefesto_dualsense4unix.interface.folha_da_casa import MIOLO_NO_PISO, com_o_piso
 
 N = len(CONECTADOS)
 LUGARES = len(MESA)
@@ -24,7 +23,7 @@ USB = [c for c in CONECTADOS if c["via"] == "USB"]
 BT = [c for c in CONECTADOS if c["via"] == "BT"]
 
 
-MIOLO_H, ALTURA = _ponte.MIOLO_NO_PISO, 530
+MIOLO_H, ALTURA = MIOLO_NO_PISO, 530
 
 
 def _lista(nomes):

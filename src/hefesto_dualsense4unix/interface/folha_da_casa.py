@@ -34,6 +34,12 @@ def tamanho_guardado() -> int:
 
 VISTA_DO_DESENHO = (1212, 809)
 
+RECUO_DO_CORPO = 16
+
+CROMO_DA_JANELA = 143
+
+MIOLO_NO_PISO = VISTA_DO_DESENHO[1] - 2 * RECUO_DO_CORPO - CROMO_DA_JANELA
+
 
 def tamanho_que_cabe(escolhido: int, largura: int, altura: int) -> int:
     """O percentual em uso: o escolhido, ou o maior que ainda põe a vista do desenho na vista da

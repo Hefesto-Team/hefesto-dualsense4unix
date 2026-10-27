@@ -113,12 +113,6 @@ def _so_o_arquivo(rota: Any) -> None:
         rota.abort()
 
 
-def _o_filho_pede_o_gtk(feito: subprocess.CompletedProcess[str]) -> None:
-    """Sem `gi`, gerador que importa o GTK cai na GUARDA-GI-REAL-01 (pula; no GTK real, falha)."""
-    if feito.returncode != 0 and "ModuleNotFoundError: No module named 'gi'" in feito.stderr:
-        raise ModuleNotFoundError(feito.stderr.strip().splitlines()[-1], name="gi")
-
-
 @pytest.fixture(scope="module")
 def geradas(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
     """As dez abas como os geradores as escrevem hoje, numa bancada de mentira."""
@@ -132,7 +126,6 @@ def geradas(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
             [sys.executable, "-m", f"hefesto_dualsense4unix.interface.aba{numero}"],
             env=ambiente, capture_output=True, text=True, timeout=300, check=False,
         )
-        _o_filho_pede_o_gtk(feito)
         assert feito.returncode == 0, (aba, feito.stdout[-400:], feito.stderr[-800:])
     return bancada
 
@@ -334,9 +327,8 @@ def test_o_que_cabe_e_o_menor_entre_o_escolhido_e_a_vista() -> None:
     Prova da D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE.
     """
     from hefesto_dualsense4unix.interface.folha_da_casa import VISTA_DO_DESENHO, tamanho_que_cabe
-    from hefesto_dualsense4unix.interface.janela import LARGURA_DO_DESENHO, PISO_DA_VISTA
 
-    assert VISTA_DO_DESENHO == (LARGURA_DO_DESENHO, PISO_DA_VISTA) == (1212, 809)
+    assert VISTA_DO_DESENHO == (1212, 809)
     assert tamanho_que_cabe(150, 1918, 840) == 103
     assert tamanho_que_cabe(125, 1918, 840) == 103
     assert tamanho_que_cabe(150, 1212, 809) == 100
