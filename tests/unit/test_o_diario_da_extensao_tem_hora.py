@@ -71,6 +71,7 @@ def _sem_a_hora(linha: str) -> str:
 
 
 def test_toda_linha_do_diario_comeca_pela_hora(tmp_path: Path) -> None:
+    """Prova da D-2610-O-DIARIO-DE-CADA-EXTENSAO-TEM-A-HORA-DE-CADA-LINHA."""
     linhas = _copiar(tmp_path / "diario.log")
     assert len(linhas) == 4, linhas
     assert _DATA_E_HORA.match(linhas[0]), linhas[0]

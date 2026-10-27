@@ -52,6 +52,7 @@ def test_nenhuma_coluna_do_cabecalho_tem_fundo_proprio(arquivo: pathlib.Path) ->
 
 
 def test_o_gerador_da_10_pinta_o_cabecalho_num_tom_so() -> None:
+    """Prova da D-2610-O-CABECALHO-TEM-UM-TOM-SO."""
     assert not FUNDO_POR_COLUNA.search(aba10.CSS), "o gerador da 10 voltou a pintar por coluna"
     regra = re.search(r"\.tab thead th\{[^}]*\}", aba10.CSS)
     assert regra is not None, "a regra do cabeçalho de coluna sumiu do gerador da 10"

@@ -31,6 +31,7 @@ def _mesa(transportes: tuple[str, ...]) -> list[dict[str, str]]:
 
 @pytest.mark.parametrize("transportes", TRANSPORTES, ids="-".join)
 def test_nenhuma_linha_da_guarda_leva_o_id(transportes: tuple[str, ...]) -> None:
+    """Prova da D-2610-O-ID-DA-PECA-SAI-DA-TELA."""
     perfil = Profile(name="meu_perfil", match=MatchAny())
     pacote = perfis_web.pacote_da_aba([perfil], ativo="meu_perfil", mesa=_mesa(transportes))
     guarda = pacote["guarda"]

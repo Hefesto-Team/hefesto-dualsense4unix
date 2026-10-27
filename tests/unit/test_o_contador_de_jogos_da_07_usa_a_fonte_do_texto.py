@@ -39,6 +39,7 @@ def _regra_do_contador(css: str) -> str:
 
 
 def test_a_regra_do_contador_nao_usa_a_familia_mono() -> None:
+    """Prova da D-2610-O-CONTADOR-USA-A-FONTE-DO-TEXTO."""
     regra = _regra_do_contador(desenho_da_experimental.CSS)
     assert "font-family" not in regra and "Mono" not in regra, regra
     assert "tabular-nums" in regra, regra

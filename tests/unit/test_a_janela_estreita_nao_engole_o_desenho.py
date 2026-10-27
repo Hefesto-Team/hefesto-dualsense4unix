@@ -586,6 +586,8 @@ def test_com_quatro_controles_o_nome_do_perfil_ativo_fica_a_vista(
 
     MORDIDAS (26/10/2026): o ``topo.html`` de ``08a6ff5ac`` reprova com o nome em 0 px; tirar o
     ``min-width:min-content`` da pílula reprova com o nome passando da borda dela.
+
+    Prova da D-2610-O-ROTULO-DO-PERFIL-ATIVO-CEDE-ANTES-DO-NOME.
     """
     from tests.unit.test_as_telas_de_16_10_no_webkit import _no_webkit
 

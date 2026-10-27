@@ -50,6 +50,7 @@ def _colunas(transportes: tuple[str, ...], nomes: dict[str, str],
 @pytest.mark.parametrize("transportes", TRANSPORTES, ids="-".join)
 def test_sem_nome_a_08_diz_a_cor_e_sem_cor_o_modelo(
         transportes: tuple[str, ...], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prova da D-2610-O-CONTROLE-SEM-NOME-SE-CHAMA-PELA-COR."""
     colunas = _colunas(transportes, {}, monkeypatch)
     for n, uniq in enumerate(UNIQS, start=1):
         dono = colunas[uniq]["dono"]

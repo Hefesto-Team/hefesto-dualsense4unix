@@ -47,6 +47,7 @@ def emitidos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 def test_a_guarda_do_desenho_nao_tem_coluna_de_endereco_nem_traco_no_lugar_vazio() -> None:
+    """Prova da D-2610-O-ID-DA-PECA-SAI-DA-TELA."""
     guarda = _a_guarda(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
     assert "gd-id" not in guarda and 'data-coluna="id"' not in guarda, (
         "a coluna «ID da peça» voltou à guarda (D-2610-O-ID-DA-PECA-SAI-DA-TELA)")
@@ -73,6 +74,7 @@ def test_o_pacote_nao_pinta_endereco_de_radio_em_lugar_nenhum_da_guarda(
 
 
 def test_o_vao_do_status_e_medido_contra_as_secoes_da_guarda() -> None:
+    """Prova da D-2610-O-VAO-DO-STATUS-CRESCE-COM-A-SOBRA."""
     glifos = sum(len(pecas) for _campo, pecas in aba10.SECOES)
     de_dentro = sum(len(pecas) - 1 for _campo, pecas in aba10.SECOES)
     largura = glifos * GLIFO_PX + de_dentro * VAO_DE_DENTRO_PX

@@ -90,6 +90,7 @@ def _no_brilho(cor: tuple[int, int, int], brilho: float) -> tuple[int, int, int]
 
 def test_a_luz_de_cada_estilo_acende_e_se_mostra_de_p1_a_p4_nos_dois_modos(
         registro: Any, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    """Prova da D-2610-A-COR-AUTOMATICA-E-A-DA-FAMILIA-DO-ESTILO."""
     provider, numeros = _mesa(registro, monkeypatch)
     falhas = []
     for estilo in PINTAM:

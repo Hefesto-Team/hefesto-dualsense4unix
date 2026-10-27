@@ -104,6 +104,8 @@ def test_com_haptica_a_vibracao_vai_como_audio_e_o_report_fica_sem_os_bits(
 
     MORDIDA: devolva o ``HAPTICS_SELECT`` ao caso ``_haptica_de_audio`` de ``_build_common``
     (a ``vibra_pelo_audio`` sempre falsa) e o report cala o PCM da háptica.
+
+    Prova da D-2610-NO-CABO-A-VIBRACAO-DO-JOGO-COM-HAPTICA-VIRA-AUDIO.
     """
     h = _handle(v2=v2, haptica=True, tipo=ConnectionType.BT if radio else ConnectionType.USB)
     flag0, flag2 = _bits(h.prepareReport(), radio=radio)

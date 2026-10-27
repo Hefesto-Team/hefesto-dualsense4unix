@@ -50,7 +50,10 @@ def _no_radio(m: _Mesa, numero: int) -> _Controle:
 def test_no_cabo_a_haptica_do_jogo_chega_sem_toque_a_todo_controle(
     mesa: _Mesa, quantos: int  # noqa: F811
 ) -> None:
-    """Fluxo no endpoint e nenhum toque: os traseiros do laço levam o ganho."""
+    """Fluxo no endpoint e nenhum toque: os traseiros do laço levam o ganho.
+
+    Prova da D-2610-A-HAPTICA-E-DO-JOGO-SEM-PORTAO-DE-QUEM-MEXE.
+    """
     controles = [
         _no_cabo(mesa, uniq, n, *_APARELHOS[n - 1]) for n, uniq in enumerate(_QUATRO[:quantos], 1)
     ]
