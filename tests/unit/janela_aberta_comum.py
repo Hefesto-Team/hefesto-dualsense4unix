@@ -268,7 +268,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                            pactl=[], ponte=_PonteDeMentira(), mudas=False,
                            avaliados={}, piloto=None, avisos=[], acabou=False,
                            leitura_escondida_s=0.0, comeco=0.0, fases={}, famintas={},
-                           passos=[], lacos={},
+                           passos=[], lacos={}, voos=[], fim=0.0,
                            teto_da_fase_s=teto_da_fase_s, cadencia_ms=cadencia_ms)
     if teto_s is None:
         teto_s = 8 * max(_teto_da_fase_s(fora, TIQUES_POR_FASE), _teto_da_espera_s(fora)) + 30.0
@@ -303,10 +303,19 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
 
         def perguntar(js: str, cb: Any) -> None:
             carga = _carga_do_pedido(js)
-            if carga is not None:
-                no_tique[0] = True
-                fora.pinturas.append((time.monotonic(), carga, len(js)))
-            original_perguntar(js, cb)
+            if carga is None:
+                original_perguntar(js, cb)
+                return
+            no_tique[0] = True
+            fora.pinturas.append((time.monotonic(), carga, len(js)))
+            voo = [time.monotonic(), None]
+            fora.voos.append(voo)
+
+            def voltou(valor: Any, erro: Any) -> None:
+                voo[1] = time.monotonic()
+                cb(valor, erro)
+
+            original_perguntar(js, voltou)
 
         piloto.ponte.perguntar = perguntar
         tique_original = piloto._tique
@@ -315,9 +324,12 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             if fora.acabou:
                 return False
             no_tique[0] = False
+            no_ar, voos = piloto._pintura_no_ar, piloto._pulados_por_voo
             volta: bool = tique_original()
             fora.ticks.append(SimpleNamespace(
                 t=time.monotonic(), escondida=piloto._escondida, pintou=no_tique[0],
+                voo=no_ar and piloto._pulados_por_voo > voos,
+                produtivos=sum(piloto.tiques.values()),
                 leituras=estado.leituras, pactl=len(fora.pactl),
                 batidas=fora.ponte.chamadas.count("rumble_set_checked"),
                 externos=fora.ponte.chamadas.count("resultado"),
@@ -364,6 +376,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
             gtk.main()
         finally:
             fora.acabou = True
+            fora.fim = time.monotonic()
             piloto.pronto = False
             GLib.source_remove(guarda)
             a05.parar_o_teste()
@@ -559,7 +572,45 @@ def _parada_pinta_so_as_cargas_inteiras(fora: Any) -> None:
         "inteira")
 
 
+def _sequencias_no_ar(fora: Any, ticks: list[Any]) -> list[tuple[int, int, float, bool]]:
+    """As sequências de tiques pulados por voo: `(início, tamanho, ms no ar, voltou)`.
+
+    O tempo no ar vai do envio da pintura que prendeu a sequência até o último sinal dela no ar:
+    o último tique pulado ou a volta da pintura, o que vier depois. A que nunca voltou conta até
+    o fim da corrida. É tempo medido, e não tiques vezes a cadência: na cadência real os tiques
+    da abertura saem colados, e dois deles somam 0 ms."""
+    saida = []
+    for voo, grupo in itertools.groupby(enumerate(ticks), key=lambda par: par[1].voo):
+        if not voo:
+            continue
+        seguidos = list(grupo)
+        primeiro, ultimo = seguidos[0][1].t, seguidos[-1][1].t
+        envio, volta = max((v for v in fora.voos if v[0] <= primeiro),
+                           key=lambda v: v[0], default=(primeiro, None))
+        fim = max(ultimo, fora.fim if volta is None else volta)
+        saida.append((seguidos[0][0], len(seguidos), (fim - envio) * 1000.0, volta is not None))
+    return saida
+
+
 def _a_aba_quieta_nao_e_muda(fora: Any) -> None:
+    """A aba à vista pinta: nenhuma pintura fica no ar mais que um tique do produto, e cada fase
+    à vista conta tique produtivo. Não é um piso de tiques, que mediria a latência da máquina."""
     _sem_fome(fora, "à vista", "de volta")
+    assert "voltou" in fora.marcos, "a página nunca disse que voltou à vista"
+    antes = next((x.produtivos for x in reversed(fora.ticks) if x.t < fora.comeco), 0)
+    de_volta = _janela_escondida(fora)[1]
+    depois = next((x.produtivos for x in reversed(fora.ticks) if x.t < de_volta), 0)
+    fases = (("à vista", _entre(fora, fora.comeco, fora.marcos["esconde"]), antes),
+             ("de volta", _os_primeiros(fora, de_volta, TIQUES_POR_FASE), depois))
+    for nome, ticks, base in fases:
+        for inicio, tamanho, ms, voltou in _sequencias_no_ar(fora, ticks):
+            assert ms <= TIQUE_REAL_MS, (
+                f"{fora.pagina} ({fora.n} controle(s)), fase {nome}: {tamanho} tique(s) "
+                f"seguido(s) pulado(s) por voo, do {inicio + 1}º ao {inicio + tamanho}º da fase, "
+                f"com a pintura no ar por {ms:.0f} ms"
+                f"{'' if voltou else ' (ela nunca voltou)'}; o teto é um tique do produto, "
+                f"{TIQUE_REAL_MS} ms")
+        assert ticks and ticks[-1].produtivos > base, (
+            f"{fora.pagina} ({fora.n} controle(s)), fase {nome}: nenhum tique produtivo em "
+            f"{len(ticks)} tiques ({sum(1 for x in ticks if x.voo)} pulados por voo)")
     assert not fora.mudas, f"o relato acusou {fora.pagina} de aba muda"
-    assert fora.piloto.tiques.get(fora.pagina, 0) >= 60, fora.piloto.tiques
