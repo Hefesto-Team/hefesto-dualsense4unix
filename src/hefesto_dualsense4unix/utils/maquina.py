@@ -71,6 +71,18 @@ MAQUINA_FILE_LOCK = threading.Lock()
 
 MAQUINA_AVISO_LOCK = threading.Lock()
 
+PLACA_FIELD = "placa"
+
+SECOES_DESTE_COMPUTADOR: Final = ("mapa", "mesa", "adaptadores")
+
+RAIZ_DO_SYS_ENV: Final = "HEFESTO_RAIZ_DO_SYS"
+
+_SUFIXO_DE_OUTRA_PLACA = ".de-outra-placa"
+
+_CLASSE_DO_CONTROLADOR_USB = "0x0c03"
+
+_PLACAS_LIDAS: dict[str, dict[str, Any] | None] = {}
+
 _CHAVE_DE_CONTROLE = re.compile(r"^[0-9a-f]{12}$")
 
 _OCTETO_SINTETIZADO = "02"
@@ -1586,6 +1598,14 @@ def gravar_maquina_com_descartes(
             if migrado != bruto:
                 _guardar_a_copia_de_antes_da_migracao()
                 bruto = migrado
+        placa = placa_daqui()
+        bruto, de_outra_placa = conferir_a_placa(bruto, placa)
+        if de_outra_placa is not None:
+            try:
+                _guardar_o_de_outra_placa(de_outra_placa)
+            except OSError as exc:
+                logger.warning("maquina_save_recusado_de_outra_placa", err=str(exc)[:200])
+                return ResultadoDaGravacao(False, ())
         descartados: tuple[str, ...] = ()
         try:
             atual = MaquinaConfig.model_validate(_so_o_que_o_schema_conhece(bruto))
@@ -1610,6 +1630,13 @@ def gravar_maquina_com_descartes(
             _podar(fundido.model_dump(mode="json", exclude=_SEM_OS_CALCULADOS))
         )
         documento[VERSION_FIELD] = MAQUINA_SCHEMA_VERSION
+        if (
+            placa is not None
+            and PLACA_FIELD not in documento
+            and not _secoes_deste_computador(bruto)
+            and _secoes_deste_computador(documento)
+        ):
+            documento[PLACA_FIELD] = _copia_funda(placa)
         _escrever(documento)
         logger.debug("maquina_gravada", campos=sorted(declaracao))
     return ResultadoDaGravacao(True, descartados)
@@ -1870,8 +1897,9 @@ def _o_computador_que_ainda_vale(computador: Any) -> dict[str, Any] | None:
 
 
 def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
-    """:func:`migrar_o_documento` na leitura, e o arquivo regravado migrado."""
-    migrado = migrar_o_documento(bruto)
+    """:func:`migrar_o_documento` e :func:`conferir_a_placa` na leitura, e o arquivo regravado."""
+    placa = placa_daqui()
+    migrado, _ = conferir_a_placa(migrar_o_documento(bruto), placa)
     if migrado == bruto:
         return bruto
     try:
@@ -1879,14 +1907,152 @@ def _migrar_no_disco(bruto: dict[str, Any]) -> dict[str, Any]:
             agora = _ler_documento()
             if agora is None or agora.get(VERSION_FIELD) != MAQUINA_SCHEMA_VERSION:
                 return migrado
-            migrado = migrar_o_documento(agora)
+            de_um_registro = migrar_o_documento(agora)
+            migrado, de_outra_placa = conferir_a_placa(de_um_registro, placa)
             if migrado != agora:
-                _guardar_a_copia_de_antes_da_migracao()
+                if de_um_registro != agora:
+                    _guardar_a_copia_de_antes_da_migracao()
+                    logger.info("maquina_migrada_para_um_registro_por_entrada")
+                if de_outra_placa is not None:
+                    _guardar_o_de_outra_placa(de_outra_placa)
                 _escrever(migrado)
-                logger.info("maquina_migrada_para_um_registro_por_entrada")
     except Exception as exc:
         logger.warning("maquina_migracao_nao_gravou", err=str(exc)[:200])
     return migrado
+
+
+def _raiz_do_sys() -> str:
+    return os.environ.get(RAIZ_DO_SYS_ENV) or "/sys"
+
+
+def placa_daqui() -> dict[str, Any] | None:
+    """O fabricante e o modelo da placa-mãe, lidos uma vez por processo; ``None`` se não se leem."""
+    raiz = _raiz_do_sys()
+    if raiz in _PLACAS_LIDAS:
+        return _PLACAS_LIDAS[raiz]
+    from hefesto_dualsense4unix.integrations.censo_do_gabinete import (
+        ler_a_placa,
+        serve_para_esta_placa,
+    )
+
+    lida = ler_a_placa(raiz_dmi_id=os.path.join(raiz, "class", "dmi", "id"))
+    placa = {campo: lida[campo] for campo in ("fabricante", "modelo")}
+    legivel = placa if serve_para_esta_placa({PLACA_FIELD: placa}, placa) else None
+    _PLACAS_LIDAS[raiz] = legivel
+    return legivel
+
+
+def controladores_usb_daqui() -> frozenset[str] | None:
+    """Os PCI dos controladores USB vivos; ``None`` quando o ``/sys/bus/pci`` não se lê."""
+    raiz = Path(_raiz_do_sys()) / "bus" / "pci" / "devices"
+    try:
+        nomes = sorted(os.listdir(raiz))
+    except OSError:
+        return None
+    if not nomes:
+        return None
+    return frozenset(
+        nome.lower()
+        for nome in nomes
+        if _ler_do_sys(raiz / nome / "class").lower().startswith(_CLASSE_DO_CONTROLADOR_USB)
+    )
+
+
+def _secoes_deste_computador(documento: Mapping[str, Any]) -> dict[str, Any]:
+    return {secao: documento[secao] for secao in SECOES_DESTE_COMPUTADOR if documento.get(secao)}
+
+
+def _controladores_do_mapa(mapa: Any) -> frozenset[str]:
+    """O controlador PCI de cada ``lugar`` do mapa: das entradas e do ``fora``."""
+    if not isinstance(mapa, Mapping):
+        return frozenset()
+    lugares: list[Any] = []
+    portas = mapa.get("portas")
+    if isinstance(portas, Mapping):
+        lugares.extend(p.get("lugar") for p in portas.values() if isinstance(p, Mapping))
+    fora = mapa.get("fora")
+    if isinstance(fora, list):
+        lugares.extend(fora)
+    return frozenset(
+        partes[0]
+        for lugar in lugares
+        if isinstance(lugar, str) and (partes := partes_do_lugar(lugar)) is not None
+    )
+
+
+def _placa_gravada(documento: Mapping[str, Any]) -> dict[str, Any] | None:
+    gravada = documento.get(PLACA_FIELD)
+    if not isinstance(gravada, Mapping):
+        return None
+    for campo in ("fabricante", "modelo"):
+        fato = gravada.get(campo)
+        valor = fato.get("valor") if isinstance(fato, Mapping) else None
+        if not isinstance(valor, str) or not valor:
+            return None
+    return dict(gravada)
+
+
+def conferir_a_placa(
+    documento: dict[str, Any],
+    placa: Mapping[str, Any] | None,
+    controladores: Callable[[], frozenset[str] | None] = controladores_usb_daqui,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """O documento que vale nesta placa, e o que ele trouxe de outra (``None`` se nada).
+
+    O ``mapa``, a ``mesa`` e os ``adaptadores`` descrevem o computador. Com a
+    ``placa`` gravada diferente da lida, os três saem. Sem ``placa`` gravada, o
+    mapa é o juiz: se nenhum ``lugar`` dele cai num controlador USB vivo daqui,
+    os três saem; senão, o documento ganha a placa e não perde nada. Placa ou
+    ``/sys/bus/pci`` que não se leem não carimbam e não esvaziam.
+    """
+    if placa is None:
+        return documento, None
+    from hefesto_dualsense4unix.integrations.censo_do_gabinete import serve_para_esta_placa
+
+    secoes = _secoes_deste_computador(documento)
+    gravada = _placa_gravada(documento)
+    if gravada is not None:
+        if serve_para_esta_placa({PLACA_FIELD: gravada}, dict(placa)):
+            return documento, None
+        de_outra_placa = secoes
+    elif not secoes:
+        return documento, None
+    else:
+        do_mapa = _controladores_do_mapa(documento.get("mapa"))
+        vivos = controladores() if do_mapa else frozenset()
+        if vivos is None:
+            return documento, None
+        de_outra_placa = secoes if do_mapa and not do_mapa & vivos else {}
+    conferido = {campo: valor for campo, valor in documento.items() if campo not in de_outra_placa}
+    conferido[PLACA_FIELD] = _copia_funda(placa)
+    if not de_outra_placa:
+        return conferido, None
+    guardado = {VERSION_FIELD: documento.get(VERSION_FIELD), **de_outra_placa}
+    if gravada is not None:
+        guardado[PLACA_FIELD] = gravada
+    return conferido, guardado
+
+
+def _guardar_o_de_outra_placa(guardado: Mapping[str, Any]) -> Path:
+    """Grava o que veio de outra placa ao lado, em ``.de-outra-placa``, sem sobrescrever."""
+    origem = caminho_da_maquina()
+    base = origem.name + _SUFIXO_DE_OUTRA_PLACA
+    payload = json.dumps(guardado, ensure_ascii=False, indent=2, sort_keys=True).encode()
+    for n in range(1, 1000):
+        alvo = origem.with_name(base if n == 1 else f"{base}-{n}")
+        try:
+            fd = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            continue
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(payload)
+        logger.warning(
+            "maquina_de_outra_placa_guardada",
+            guardado_em=str(alvo),
+            secoes=sorted(set(guardado) & set(SECOES_DESTE_COMPUTADOR)),
+        )
+        return alvo
+    raise FileExistsError(origem.with_name(base))
 
 
 def _guardar_a_copia_de_antes_da_migracao() -> None:

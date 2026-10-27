@@ -2800,6 +2800,9 @@ def pytest_runtest_teardown_congela_o_arquivo(item: Any, nextitem: Any) -> Itera
 
 
 os.environ.setdefault("PYTHONFAULTHANDLER", "1")
+RAIZ_DO_SYS_ENV = "HEFESTO_RAIZ_DO_SYS"
+RAIZ_DO_SYS_DESVIADA = "/dev/null/a-suite-nao-le-a-placa-mae"
+os.environ[RAIZ_DO_SYS_ENV] = RAIZ_DO_SYS_DESVIADA
 
 
 _ARQUIVO_DO_WEBKIT: dict[str, bool] = {}
