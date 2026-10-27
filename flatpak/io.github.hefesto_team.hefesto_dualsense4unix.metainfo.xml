@@ -136,14 +136,14 @@
        adaptive triggers, lightbar, rumble, gyroscope, touchpad, microphone and speaker, over USB or
        Bluetooth, for up to four players.</p>
     <p xml:lang="en">Main features:</p>
-    <ul xml:lang="en">
-      <li>Adaptive triggers with the DualSense effects, set per controller</li>
-      <li>Lightbar color and player light on each controller</li>
-      <li>Rumble strength per controller and per motor</li>
-      <li>Virtual Aim: the gyroscope drives the right analog stick</li>
-      <li>The controller as mouse and keyboard, with an on-screen keyboard</li>
-      <li>Per-game profiles that switch on when the game opens</li>
-      <li>Ten-tab window, tray icon, terminal interface and command line</li>
+    <ul>
+      <li xml:lang="en">Adaptive triggers with the DualSense effects, set per controller</li>
+      <li xml:lang="en">Lightbar color and player light on each controller</li>
+      <li xml:lang="en">Rumble strength per controller and per motor</li>
+      <li xml:lang="en">Virtual Aim: the gyroscope drives the right analog stick</li>
+      <li xml:lang="en">The controller as mouse and keyboard, with an on-screen keyboard</li>
+      <li xml:lang="en">Per-game profiles that switch on when the game opens</li>
+      <li xml:lang="en">Ten-tab window, tray icon, terminal interface and command line</li>
     </ul>
   </description>
 
