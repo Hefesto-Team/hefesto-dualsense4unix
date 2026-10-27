@@ -1784,7 +1784,7 @@ def _conferir(doc, aba="02-controles"):
     exigir('class="rota mic-modo"' not in corpo,
            "a fileira dos modos do microfone voltou ao cartão")
 
-    exigir("vê como" not in corpo, "o texto 'vê como' voltou")
+    exigir("vê como" not in corpo and f'{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}' in corpo, "o texto 'vê como' voltou, ou o Calibrar giroscópio perdeu o glifo do giroscópio")
     if aba == "02-controles":
         exigir(corpo.count('data-campo="mascara"') == len(MESA),
                "a máscara sumiu com o texto — ela FICA, e é o dado")
