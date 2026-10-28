@@ -126,7 +126,7 @@ def _args(**extra: Any) -> argparse.Namespace:
 
 
 def publicar_as_de_hoje(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
-    """As páginas publicadas, com a 02 da BANCADA — a que o gerador faz hoje.
+    """As páginas publicadas, copiadas para uma pasta do teste.
 
     Cada arquivo de teste a embrulha na fixture `publicado_de_hoje` do módulo dele."""
     from hefesto_dualsense4unix.interface import onde
@@ -134,7 +134,6 @@ def publicar_as_de_hoje(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Pat
     pasta = tmp_path_factory.mktemp("publicado-de-hoje")
     for p in onde.PUBLICADO.glob("*.html"):
         shutil.copy2(p, pasta / p.name)
-    shutil.copy2(onde.pagina("02-controles.html"), pasta / "02-controles.html")
     return pasta
 
 
@@ -435,7 +434,7 @@ def _mostrar(fora: Any, piloto: Any) -> bool:
     return True
 
 
-CENARIOS = [(p, n) for p in ("01-jogar.html", "02-controles.html", "08-conexoes.html")
+CENARIOS = [(p, n) for p in ("01-jogar.html", "08-conexoes.html")
             for n in (1, 2, 4)]
 
 

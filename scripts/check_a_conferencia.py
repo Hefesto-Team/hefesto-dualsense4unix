@@ -12,7 +12,7 @@ PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 sys.path.insert(0, str(RAIZ / "src"))
 
 ABAS = {
-    "01": "01-jogar.html", "02": "02-controles.html", "03": "03-gatilhos.html",
+    "01": "01-jogar.html", "03": "03-gatilhos.html",
     "04": "04-iluminacao.html", "05": "05-vibracao.html", "06": "06-navegacao.html",
     "07": "07-lancadores.html", "08": "08-conexoes.html", "09": "09-sistema.html",
     "10": "10-perfis.html",
@@ -35,7 +35,7 @@ def html(nome: str) -> str:
 
 
 def os_quatro_players() -> tuple[bool, str]:
-    """Os quatro lugares carregam o mesmo conjunto de `data-campo`, nas dez."""
+    """Os quatro lugares carregam o mesmo conjunto de `data-campo`, nas nove."""
     saida = subprocess.run(
         [sys.executable, str(RAIZ / "scripts/check_os_quatro_lugares.py"), "--publicado"],
         capture_output=True, text=True, cwd=RAIZ)
@@ -75,7 +75,7 @@ def a_tela_nao_narra_commit() -> tuple[bool, str]:
                 achados.append(f"aba {numero}: {oque} — ...{volta}...")
     if achados:
         return False, f"{len(achados)} vazamento(s): " + " | ".join(achados[:4])
-    return True, "as dez páginas não narram commit nem decisão interna"
+    return True, "as nove páginas não narram commit nem decisão interna"
 
 
 def frases_que_confessam() -> tuple[bool, str]:
@@ -198,7 +198,7 @@ def cor_unica() -> tuple[bool, str]:
 
 
 LINHAS = [
-    ("os 4 players nas dez abas", os_quatro_players),
+    ("os 4 players nas nove abas", os_quatro_players),
     ("Iluminação sem o «Automático»", iluminacao_sem_automatico),
     ("a tela não narra commit nem decisão", a_tela_nao_narra_commit),
     ("a tela não confessa dívida nossa", frases_que_confessam),

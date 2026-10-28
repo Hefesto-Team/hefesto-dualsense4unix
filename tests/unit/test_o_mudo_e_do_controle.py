@@ -214,7 +214,7 @@ class TestUmEscritor:
                                conectados=[dele], estados={})
         ponte = _PonteQueGravaComoODaemon()
 
-        fn = pacotes.gesto_da_pagina("02-controles.html", "mudo")
+        fn = pacotes.gesto_da_pagina("01-jogar.html", "mudo")
         fn(ctx, {"uniq": uniq, "mudo": "microfone"}, ponte)
 
         assert ponte.chamadas == ["mic_canal_set_detalhado"]

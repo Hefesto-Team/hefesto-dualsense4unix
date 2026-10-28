@@ -945,7 +945,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "interface/monta.py::larg_rotulos": (
         "Auxiliar do gerador do mockup (`larg_rotulos` em "
-        "`src/hefesto_dualsense4unix/interface/monta.py:280`), "
+        "`src/hefesto_dualsense4unix/interface/monta.py:287`), "
         "chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
@@ -1316,7 +1316,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "(bancada). A "
         "janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "
-        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3480`) e o daemon "
+        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3470`) e o daemon "
         "publica o estado "
         "do "
         "mudo; as funções soltas do módulo (`sinks_dualsense`, `muted_de_saida`) "

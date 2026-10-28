@@ -21,7 +21,6 @@ D = onde.BANCADA
 
 ABAS = [
     ("Jogar", "01-jogar.html"),
-    ("Controles", "02-controles.html"),
     ("Gatilhos", "03-gatilhos.html"),
     ("Iluminação", "04-iluminacao.html"),
     ("Vibração", "05-vibracao.html"),

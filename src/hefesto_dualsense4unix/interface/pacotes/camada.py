@@ -17,7 +17,7 @@ CAMADAS = frozenset({COMPUTADOR, CONTROLE, JOGO, ATO, JANELA})
 
 _J, _C, _T, _A, _W = JOGO, COMPUTADOR, CONTROLE, ATO, JANELA
 
-PAGINAS_DA_SECAO_DOS_CONTROLES: tuple[str, ...] = ("02-controles.html", "01-jogar.html")
+PAGINAS_DA_SECAO_DOS_CONTROLES: tuple[str, ...] = ("01-jogar.html",)
 
 _DA_SECAO_DOS_CONTROLES: dict[str, str] = {
     "analogico-lado": _J,
@@ -44,7 +44,6 @@ CAMADA: dict[tuple[str, str], str] = {
     ("01-jogar.html", "modo-steam"): _J,
     ("01-jogar.html", "modo-xbox"): _J,
     ("01-jogar.html", "reconectar"): _A,
-    ("02-controles.html", "escolher-na-fita"): _W,
     ("03-gatilhos.html", "criar-efeito"): _C,
     ("03-gatilhos.html", "imersao"): _J,
     ("03-gatilhos.html", "intensidade-do-gatilho"): _C,
@@ -190,8 +189,7 @@ CAMADA: dict[tuple[str, str], str] = {
 }
 
 ABAS_POR_CONTROLE: frozenset[str] = frozenset({
-    "01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
-    "05-vibracao.html",
+    "01-jogar.html", "03-gatilhos.html", "04-iluminacao.html", "05-vibracao.html",
 })
 
 VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({

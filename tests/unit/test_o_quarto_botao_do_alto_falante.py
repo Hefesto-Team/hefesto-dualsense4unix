@@ -128,7 +128,7 @@ def _clicar(m: dict[str, Any], uniq: str, rota: str) -> None:
     ctx = pacotes.Contexto(state={"active_profile": NOME}, mesa=[],
                            conectados=[_entry(u, ponte) for u in TRANSPORTE],
                            estados={})
-    fn = pacotes.gesto_da_pagina("02-controles.html", "rota")
+    fn = pacotes.gesto_da_pagina("01-jogar.html", "rota")
     assert fn is not None, "o botão da rota perdeu o dono"
     fn(ctx, {"uniq": uniq, "rota": rota}, ponte)
 

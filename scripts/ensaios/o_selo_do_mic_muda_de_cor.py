@@ -53,7 +53,7 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
 
-ABA = "02-controles.html"
+ABA = "01-jogar.html"
 
 SELO_MUDO = mesa_viva.selo_do_mic(True, True)
 SELO_ATIVO = mesa_viva.selo_do_mic(False, True)

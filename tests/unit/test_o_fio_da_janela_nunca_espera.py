@@ -27,11 +27,18 @@ from tests.unit.test_o_app_responde_na_hora import casa  # noqa: F401
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 
-ABAS = ("01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
-        "05-vibracao.html", "06-navegacao.html", "07-lancadores.html",
-        "08-conexoes.html", "09-sistema.html", "10-perfis.html")
 
-SEGUNDOS_POR_ABA = 18.0
+def _as_abas() -> tuple[str, ...]:
+    if str(INTERFACE) not in sys.path:
+        sys.path.insert(0, str(INTERFACE))
+    import monta
+
+    return tuple(monta.as_abas_do_produto())
+
+
+ABAS = _as_abas()
+
+SEGUNDOS_POR_ABA = 20.0
 
 TETO_DO_TIQUE_MS = 400.0
 
@@ -101,7 +108,7 @@ def _vigiando() -> Iterator[list[str]]:
 
 
 def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """O piloto oculto passa pelas dez abas no relógio dele, com o gancho no fio da janela."""
+    """O piloto oculto passa pelas abas no relógio dele, com o gancho no fio da janela."""
     gtk = _gtk()
     from gi.repository import GLib
 
@@ -166,7 +173,7 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 def test_tres_minutos_sem_o_fio_da_janela_esperar(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """Dez abas, três minutos: nenhum tique acima do teto e nenhuma espera no fio da janela.
+    """Nove abas, três minutos: nenhum tique acima do teto e nenhuma espera no fio da janela.
 
     Prova da D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA.
     """

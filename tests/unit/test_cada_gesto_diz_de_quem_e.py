@@ -55,9 +55,12 @@ class _Gestos(html.parser.HTMLParser):
 
 
 def _as_dez() -> list[str]:
-    pasta = onde.pagina("01-jogar.html").parent
-    nomes = sorted(p.name for p in pasta.glob("[01][0-9]-*.html"))
-    assert len(nomes) == 10, nomes
+    """As abas do produto, de `monta.ABAS`: a Controles saiu e a seção dela mora na Jogar."""
+    _pacotes()
+    import monta
+
+    nomes = monta.as_abas_do_produto()
+    assert len(nomes) == len(monta.ABAS), nomes
     return nomes
 
 
@@ -78,16 +81,9 @@ def _vistos() -> set[tuple[str, str]]:
     vistos = set()
     for nome in _as_dez():
         for publicado in (True, False):
-            for g in _gestos(nome, publicado=publicado) - camada.GESTOS_DA_MOLDURA:
-                dona = EMBUTIDA_NO_DESENHO.get(nome) if not publicado else None
-                if dona and (nome, g) not in camada.CAMADA and (dona, g) in camada.CAMADA:
-                    vistos.add((dona, g))
-                else:
-                    vistos.add((nome, g))
+            vistos |= {(nome, g) for g in _gestos(nome, publicado=publicado)
+                       - camada.GESTOS_DA_MOLDURA}
     return vistos
-
-
-EMBUTIDA_NO_DESENHO = {"01-jogar.html": "02-controles.html"}
 
 
 def test_todo_gesto_das_dez_tem_camada() -> None:
@@ -103,7 +99,7 @@ def test_todo_gesto_das_dez_tem_camada() -> None:
 
 
 A_ABA_AINDA_TRAZ = {
-    ("02-controles.html", "modo-dos-controles"),
+    ("01-jogar.html", "modo-dos-controles"),
     ("04-iluminacao.html", "apagar"),
 }
 
@@ -189,7 +185,7 @@ def _perfil(nome: str, **campos: Any) -> Profile:
 
 
 CLIQUES: list[tuple[str, str, dict[str, Any]]] = [
-    ("02-controles.html", "volume", {"uniq": UM, "volume": "microfone", "valor": "42"}),
+    ("01-jogar.html", "volume", {"uniq": UM, "volume": "microfone", "valor": "42"}),
     ("04-iluminacao.html", "brilho-luzes", {"uniq": UM, "controle": "p1", "luzes": "forte"}),
     ("05-vibracao.html", "intensidade", {"uniq": UM, "valor": "150"}),
     ("06-navegacao.html", "vel-cursor", {"valor": "11"}),

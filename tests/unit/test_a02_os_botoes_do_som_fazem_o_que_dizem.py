@@ -123,8 +123,8 @@ def _gesto(nome: str) -> Any:
     import pacotes
     import pacotes.a02_controles
 
-    fn = pacotes.gesto_da_pagina("02-controles.html", nome)
-    assert fn is not None, f"02-controles.html:{nome} não tem dono"
+    fn = pacotes.gesto_da_pagina("01-jogar.html", nome)
+    assert fn is not None, f"01-jogar.html:{nome} não tem dono"
     return fn
 
 
@@ -232,7 +232,7 @@ class TestATabelaDosBotoes:
         for nome in self.DA_COLUNA_DO_SOM:
             assert f'data-gesto="{nome}"' in doc, (
                 f"a régua fala de um gesto que a página não tem: {nome}")
-            assert pacotes.gesto_da_pagina("02-controles.html", nome) is not None, (
+            assert pacotes.gesto_da_pagina("01-jogar.html", nome) is not None, (
                 f"a página tem `data-gesto={nome}` e ninguém o atende")
 
     @pytest.mark.parametrize(

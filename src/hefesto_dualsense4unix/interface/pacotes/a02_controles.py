@@ -84,10 +84,7 @@ import threading
 from collections.abc import Callable, Iterator
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.home_actions import (
-    mascara_viva,
-    palavra_do_transporte,
-)
+from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.app.ipc_bridge import (
     alvo_honrado,
     frase_do_ato_do_microfone,
@@ -1296,9 +1293,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         cards[uniq] = {
             "bateria": texto_da_bateria(pct),
             "bateria-barra": estado["bat"],
-            "mascara": casa.get("mascara") or mesa_viva.NOME_DA_MASCARA.get(
-                mascara_viva({"gamepad_emulation": {"backend": c.get("vpad_backend")}})
-                or "", "—"),
             "luz-hex": luz_palavra(rotulo_da_luz, base_da_luz),
             "mic-selo": selo_composto(a),
             "mic-retorno": (mesa_viva.BOTAO_MIC_RETORNO

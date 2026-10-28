@@ -5,7 +5,7 @@
       - any-glob-to-any-file:
           - "src/hefesto_dualsense4unix/interface/**"
           - "mockup/**"
-          - "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md"
+          - "docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md"
 "área: rádio":
   - changed-files:
       - any-glob-to-any-file:

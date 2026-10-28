@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PAGINA_DAS_ABAS = REPO_ROOT / "docs" / "usage" / "AS-DEZ-ABAS-o-que-cada-uma-faz.md"
+PAGINA_DAS_ABAS = REPO_ROOT / "docs" / "usage" / "AS-NOVE-ABAS-o-que-cada-uma-faz.md"
 FOOTER_ACTIONS_PY = (
     REPO_ROOT / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "footer_actions.py"
 )

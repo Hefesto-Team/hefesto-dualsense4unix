@@ -178,7 +178,7 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "29/09/2026 (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01) quem grava é o daemon, "
         "pelo `desktop.arranjo.apply` à mão, e o método sai da tabela do plano "
         "(`_plano_do_chip`), onde a árvore não o vê pelo nome",
-    ("02-controles.html", "touchpad"):
+    ("01-jogar.html", "touchpad"):
         "o `sensor.set` grava `sensores.touchpad` no perfil que vale pelo daemon "
         "(`gravar_pelo_gesto`, A-ABA-CONTROLES-DO-TODO-01, 15/10/2026); a porta da "
         "interface, `sensor_set_detalhado`, é a mesma do giro, que mora em "

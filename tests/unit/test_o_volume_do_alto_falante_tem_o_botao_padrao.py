@@ -390,7 +390,7 @@ def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str
             seguinte()
 
     view.connect("load-changed", carregou)
-    view.load_uri(onde.pagina("02-controles.html", publicado=False).as_uri())
+    view.load_uri(onde.pagina("01-jogar.html", publicado=False).as_uri())
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()

@@ -36,7 +36,7 @@ OUTRO = "aa:bb:cc:00:00:02"
 
 
 def _pagina() -> str:
-    return (INTERFACE.parent.parent.parent / "mockup" / "02-controles.html").read_text(
+    return (INTERFACE.parent.parent.parent / "mockup" / "01-jogar.html").read_text(
         encoding="utf-8")
 
 
@@ -66,8 +66,8 @@ def _ctx(**sensores: Any) -> Any:
 
 
 def _gesto(nome: str) -> Any:
-    fn = pacotes.gesto_da_pagina("02-controles.html", nome)
-    assert fn is not None, f"02-controles.html:{nome} não tem dono"
+    fn = pacotes.gesto_da_pagina("01-jogar.html", nome)
+    assert fn is not None, f"01-jogar.html:{nome} não tem dono"
     return fn
 
 

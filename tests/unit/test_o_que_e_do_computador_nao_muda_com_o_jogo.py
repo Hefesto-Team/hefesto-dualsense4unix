@@ -484,7 +484,7 @@ def _contexto(pac: Any, ativo: str) -> Any:
 
 
 CLIQUES: list[tuple[str, str, str, dict[str, Any]]] = [
-    ("som", "02-controles.html", "volume",
+    ("som", "01-jogar.html", "volume",
      {"uniq": UM, "volume": "microfone", "valor": "42"}),
     ("luz", "04-iluminacao.html", "brilho-luzes",
      {"uniq": UM, "controle": "p1", "luzes": "forte"}),

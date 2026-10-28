@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O PILOTO ÚNICO: uma janela, as dez abas, tudo pintado pelo despachante."""
+"""O PILOTO ÚNICO: uma janela, as nove abas, tudo pintado pelo despachante."""
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator
@@ -70,30 +70,20 @@ TITULO_DE_QUALQUER_ABA = "Hefesto — aba "
 def _a_pagina_pedida(pedido: str) -> str:
     """Resolve o que veio no ``--abre`` para o nome de arquivo da página.
 
-    ACEITA AS TRÊS FORMAS QUE ALGUÉM DIGITA, e a razão é medida: o `--abre`
-    dizia só *"abrir direto numa aba"* e passava a string CRUA ao
-    `onde.pagina`. `--abre 10` virava `paginas/10`, o WebKit carregava a
-    página de erro dele, o piloto seguia o passeio e o relatório saía com as
-    dez abas zeradas — **rc=0 sobre uma foto que dizia "No such file"**.
-
-    * ``"10"``            → ``"10-perfis.html"``
-    * ``"10-perfis"``     → ``"10-perfis.html"``
-    * ``"10-perfis.html"`` → ele mesmo
-
-    O que não casar com nenhuma página volta INTACTO — quem reprova é o
-    `_ir`, que confere a existência do arquivo. Adivinhar aqui esconderia o
-    erro de digitação dela dentro de uma aba que ela não pediu.
+    Aceita ``"10"``, ``"10-perfis"`` e ``"10-perfis.html"``: a string crua já
+    abriu a página de erro do WebKit com rc=0. A página que saiu do produto
+    (`monta.PAGINAS_QUE_SAIRAM`) cai na aba que a absorveu. O que não casar
+    volta intacto, e quem reprova é o `_ir`, que confere o arquivo.
     """
     pedido = (pedido or "").strip()
     if not pedido:
         return pedido
-    nomes = [caminho.name for caminho in onde.paginas(publicado=True)]
-    if pedido in nomes:
-        return pedido
-    for nome in nomes:
-        if nome == f"{pedido}.html" or nome.split("-", 1)[0] == pedido:
-            return nome
-    return pedido
+    nomes = [caminho.name for caminho in onde.paginas(publicado=True)
+             if caminho.name not in monta.PAGINAS_QUE_SAIRAM]
+    nomes += list(monta.PAGINAS_QUE_SAIRAM)
+    achado = next((nome for nome in nomes if pedido in (nome, nome.removesuffix(".html"))
+                   or nome.split("-", 1)[0] == pedido), pedido)
+    return monta.PAGINAS_QUE_SAIRAM.get(achado, achado)
 
 
 SELETOR_DO_DONO: str
@@ -2627,12 +2617,13 @@ class Piloto:
 
     def _agendar(self) -> None:
         if self.args.passear:
-            for i, alvo in enumerate(sorted(pacotes.PACOTES)):
+            roteiro = [p for p in sorted(pacotes.PACOTES) if p not in monta.PAGINAS_QUE_SAIRAM]
+            for i, alvo in enumerate(roteiro):
                 GLib.timeout_add(
                     1200 + i * self.args.parada,
                     lambda a=alvo: self._ir(a),
                 )
-            total = 1600 + len(pacotes.PACOTES) * self.args.parada
+            total = 1600 + len(roteiro) * self.args.parada
         elif self.args.segundos:
             total = int(self.args.segundos * 1000)
         else:
@@ -2645,9 +2636,8 @@ class Piloto:
         GLib.timeout_add(total, fechar)
 
     def _provar_mockup(self) -> bool:
-        """Passa pelas DEZ abas e mede, em cada uma, o que é dado e o que é desenho."""
-        self._fila_de_abas = [
-            p.name for p in onde.paginas(publicado=True) if p.name[:2].isdigit()]
+        """Passa pelas abas de `monta.ABAS` e mede, em cada uma, o que é dado e o que é desenho."""
+        self._fila_de_abas = monta.as_abas_do_produto()
         self.lugar_vazio_com_desenho: dict[str, list[str]] = {}
         print(f"[prova-de-mockup] {len(self._fila_de_abas)} abas · "
               f"{self.args.voltas_por_aba} voltas de {TIQUE_MS} ms em cada uma")
@@ -2656,7 +2646,7 @@ class Piloto:
     def _proxima_aba(self) -> bool:
         if not self._fila_de_abas:
             self._relatar_mockup()
-            self._sair("a prova de mockup passou pelas dez abas")
+            self._sair("a prova de mockup passou pelas abas")
             return False
         self._voltas_da_aba = 0
         self._medindo = False
@@ -2994,7 +2984,7 @@ class Piloto:
                   if c.get("uniq")}
         sem = {str(c.get("uniq") or "") for c in controles
                if c.get("is_primary") and a06_navegacao.o_mouse_navega(st)}
-        dez = [p.name for p in onde.paginas(publicado=True) if p.name[:2].isdigit()]
+        dez = monta.as_abas_do_produto()
         ativa = self._estado_vivo.ativa()
         atos = self._navegador.atos(
             pagina=self.pagina, dez=dez, toques=self._estado_vivo.toques(),
@@ -3390,7 +3380,7 @@ def main() -> None:
                         "padrão) mantém a janela aberta até ela fechar — que é "
                         "o comportamento do PRODUTO. Só a bancada põe prazo.")
     p.add_argument("--passear", action="store_true",
-                   help="visita as dez abas e mede a pintura de cada uma")
+                   help="visita as nove abas e mede a pintura de cada uma")
     p.add_argument("--parada", type=int, default=900,
                    help="ms em cada aba durante o passeio")
     p.add_argument("--foto", default="")
@@ -3419,7 +3409,7 @@ def main() -> None:
                         "ACHATAR e ficar cinza — se continuarem desenhando a "
                         "onda do arquivo, elas nunca foram dado")
     p.add_argument("--prova-de-mockup", action="store_true",
-                   help="passa pelas dez abas e diz, campo a campo, o que é DADO "
+                   help="passa pelas abas e diz, campo a campo, o que é DADO "
                         "e o que ainda é o DESENHO cravado no arquivo")
     p.add_argument("--voltas-por-aba", type=int, default=8,
                    help="quantos tiques a pintura corre em cada aba antes da "
@@ -3471,7 +3461,7 @@ def main() -> None:
         args.oculta = True
 
     if args.prova_de_mockup and not args.oculta:
-        print("[prova-de-mockup] ligando `--oculta`: esta régua abre dez abas e "
+        print("[prova-de-mockup] ligando `--oculta`: esta régua abre as nove abas e "
               "ela tem UMA tela.")
         args.oculta = True
 
@@ -3520,7 +3510,7 @@ def main() -> None:
 
 
 def _ligar_as_abas() -> None:
-    """O que depende das dez abas: o gesto da fita e a lista dos perigosos."""
+    """O que depende das nove abas: o gesto da fita e a lista dos perigosos."""
     global PERIGOSOS, SELETOR_DO_DONO
     _registrar_a_fita()
     _registrar_o_menu()
@@ -3587,7 +3577,7 @@ def _esperar_o_webkit_comecar(tela: Any, teto_s: float = TETO_DA_ESPERA_DO_WEBKI
 
 
 def _importar_as_abas(tela: Any = None) -> None:
-    """As dez abas e a `mesa_viva`, depois de a janela pedir a página."""
+    """As nove abas e a `mesa_viva`, depois de a janela pedir a página."""
     global _AS_ABAS_CHEGARAM, mesa_viva, pacotes, ponte
     if _AS_ABAS_CHEGARAM:
         return

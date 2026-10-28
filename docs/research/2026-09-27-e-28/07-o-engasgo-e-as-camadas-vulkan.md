@@ -263,7 +263,7 @@ produto em uso repinta o exame com a linha própria.
   desligado» ficou, marcado como relato), `assets/hefesto-launch.sh`, `install.sh`,
   `scripts/doctor.sh`, o rodapé de `frase_do_censo`
   (`src/hefesto_dualsense4unix/app/actions/emulation_actions.py`),
-  `docs/usage/interface.md` e `docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md`. O que
+  `docs/usage/interface.md` e `docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md`. O que
   sobrou está em §8.
 - **Réguas que mordem:** `test_a_dica_nao_promete_cura_de_engasgo`,
   `test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta` e

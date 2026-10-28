@@ -59,6 +59,13 @@ ABAS = [("Jogar","01-jogar"),("Gatilhos","03-gatilhos"),
 
 FORA_DA_TIRA = ("02-controles",)
 
+PAGINAS_QUE_SAIRAM: dict[str, str] = {"02-controles.html": "01-jogar.html"}
+
+
+def as_abas_do_produto() -> list[str]:
+    """As páginas que o produto abre, em ordem de nome: as de `ABAS`, e nunca o que a pasta tem."""
+    return sorted(f"{a}.html" for _, a in ABAS)
+
 sys.path.insert(0, str(RAIZ_DO_REPO / "src"))
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,

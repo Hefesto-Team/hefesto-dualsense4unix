@@ -212,7 +212,7 @@ def test_o_modo_auto_fala_a_lingua_do_piloto() -> None:
 
 GESTOS_DO_MODO = [
     ("05-vibracao.html", "modo-da-vibracao", "rumble", "modo"),
-    ("02-controles.html", "modo-dos-controles", None, "controles_modo"),
+    ("01-jogar.html", "modo-dos-controles", None, "controles_modo"),
 ]
 
 

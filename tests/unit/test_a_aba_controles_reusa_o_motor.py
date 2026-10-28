@@ -362,11 +362,13 @@ def test_o_backend_uhid_diz_dualsense(pac, a02):
     backend. A aba não podia: ela procurava `uhid` numa tabela cujas chaves são
     `dualsense` e `xbox`, e o `.get` com padrão devolvia `—` calado.
 
+    NOTA DATADA (28/10/2026): o `mascara` do cartão saiu com a aba Controles (o modo único mostra a
+    máscara na Jogar), e a régua passa a medir a regra no dono dela, `mascara_viva`.
+
     MORDE: devolver `NOME_DA_MASCARA.get(c.get("vpad_backend") or "", "—")`
     reprova aqui com `'—' != 'DualSense'`.
     """
-    d = _card(pac, a02, {**BASE, "vpad_backend": "uhid"})
-    assert d["mascara"] == "DualSense"
+    assert _mascara_do_backend("uhid") == "DualSense"
 
 
 def test_o_backend_uinput_e_ambiguo_e_diz_nao_sei(pac, a02):
@@ -377,8 +379,17 @@ def test_o_backend_uinput_e_ambiguo_e_diz_nao_sei(pac, a02):
     `{"uhid": "DualSense", "uinput": "Xbox 360"}`, e ele estaria ERRADO — é a
     afirmação que `mascara_viva` se recusa a fazer.
     """
-    assert _card(pac, a02, {**BASE, "vpad_backend": "uinput"})["mascara"] == "—"
-    assert _card(pac, a02, {**BASE, "vpad_backend": None})["mascara"] == "—"
+    assert _mascara_do_backend("uinput") == "—"
+    assert _mascara_do_backend(None) == "—"
+    assert "mascara" not in _card(pac, a02, {**BASE, "vpad_backend": "uhid"})
+
+
+def _mascara_do_backend(backend: str | None) -> str:
+    from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
+    from hefesto_dualsense4unix.interface import mesa_viva
+
+    return mesa_viva.NOME_DA_MASCARA.get(
+        mascara_viva({"gamepad_emulation": {"backend": backend}}) or "", "—")
 
 
 TOUCHPAD_COMO_O_DAEMON_PUBLICA = {
@@ -504,10 +515,12 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
     reproduz de graça. Medido: reescrever `texto_volume` dentro do pacote e
     apagar o import passava nos 15 testes e no `ruff`.
 
+    NOTA DATADA (28/10/2026): o `mascara_viva` saiu da lista com o `mascara` do cartão, que saiu
+    com a aba Controles.
+
     MORDE: copiar qualquer um dos cinco para dentro do pacote (que é
     exatamente o que a LEI 0 proíbe) reprova aqui nomeando qual.
     """
-    from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
     from hefesto_dualsense4unix.interface.sensores import (
         texto_toques,
         texto_volume,
@@ -520,7 +533,6 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
         "rotulo_lightbar": motor.rotulo_lightbar,
         "texto_volume": texto_volume,
         "texto_toques": texto_toques,
-        "mascara_viva": mascara_viva,
         "dedos_do_inputs": motor.dedos_do_inputs,
         "acao_mic": motor.acao_mic,
         "acao_speaker_mudo": motor.acao_speaker_mudo,

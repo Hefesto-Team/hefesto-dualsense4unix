@@ -28,7 +28,7 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.interface import hefesto_vivo
 
-ABAS = ("01-jogar.html", "02-controles.html", "03-gatilhos.html",
+ABAS = ("01-jogar.html", "03-gatilhos.html",
         "04-iluminacao.html", "05-vibracao.html", "06-navegacao.html",
         "08-conexoes.html")
 CASAS = ("p1", "p2", "p3", "p4")

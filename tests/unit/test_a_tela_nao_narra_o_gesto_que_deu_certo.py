@@ -63,7 +63,7 @@ FRASES = {
 }
 
 PAGINA_01 = "01-jogar.html"
-PAGINA_02 = "02-controles.html"
+PAGINA_02 = PAGINA_01
 PAGINA_03 = "03-gatilhos.html"
 MIC_P1 = '[data-controle="p1"] [data-mudo="alto-falante"]'
 RECONECTAR = 'button[data-gesto="reconectar"]'
@@ -134,7 +134,11 @@ def _perfil_ativo_no_disco() -> None:
 
 @pytest.fixture(scope="module")
 def medido() -> dict:
-    """Abre o piloto DE VERDADE, oculto, e anda 01 → 02 → 03 → 02."""
+    """Abre o piloto DE VERDADE, oculto, e anda 01 → 03 → 01.
+
+    A seção Controles mora na Jogar desde 28/10/2026 (a 02 saiu do produto):
+    os passos que eram da 02 clicam o 🎙 do p1 na própria 01, sem navegar.
+    """
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -222,7 +226,7 @@ def medido() -> dict:
         ler_a_tela("01-depois")
         fora["01-desfecho"] = desfecho(chave_01)
         fora["01-deposito"] = sorted(getattr(piloto, "_recados", {}))
-        GLib.timeout_add(300, lambda: abrir(PAGINA_02, na_02))
+        GLib.timeout_add(300, na_02)
         return False
 
     def na_02() -> bool:

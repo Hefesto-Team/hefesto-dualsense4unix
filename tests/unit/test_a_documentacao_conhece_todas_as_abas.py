@@ -16,12 +16,12 @@ RETRATO = RAIZ / "src/hefesto_dualsense4unix/interface/olhar.py"
 
 MONTA = RAIZ / "src/hefesto_dualsense4unix/interface/monta.py"
 
-AS_DEZ = RAIZ / "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md"
+AS_NOVE = RAIZ / "docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md"
 
 
 _DOCUMENTOS_COM_IMAGEM = (
     "README.md",
-    "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md",
+    "docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md",
 )
 
 _REFERENCIA = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)\)|<img[^>]+src=\"([^\"]+)\"")
@@ -48,7 +48,7 @@ def _imagens_publicadas() -> list[tuple[str, str, Path]]:
 
 
 def _abas_da_interface_nova() -> list[tuple[str, str]]:
-    """`(rótulo, slug)` das dez, lidos de `monta.ABAS` por `ast`."""
+    """`(rótulo, slug)` das abas, lidos de `monta.ABAS` por `ast`."""
     arvore = ast.parse(MONTA.read_text(encoding="utf-8"))
     for no in ast.walk(arvore):
         if not isinstance(no, ast.Assign):
@@ -92,7 +92,7 @@ def test_toda_imagem_que_a_documentacao_publica_existe() -> None:
     assert not quebradas, (
         "a documentação publica imagem que não existe no disco:\n  "
         + "\n  ".join(quebradas)
-        + "\n\nÉ o defeito de 05/09/2026 de novo: o AS-DEZ-ABAS citava as dez "
+        + "\n\nÉ o defeito de 05/09/2026 de novo: o AS-DEZ-ABAS de então citava as dez "
         "`aba-*.png` e nenhuma existia. Rode: "
         "interface/olhar.py --todas --publicado --doc"
     )
@@ -126,7 +126,7 @@ def test_a_foto_da_doc_mostra_a_aba_inteira() -> None:
     )
 
 
-def test_a_lista_das_dez_vem_do_monta_e_nao_de_uma_lista_a_mao() -> None:
+def test_a_lista_das_nove_vem_do_monta_e_nao_de_uma_lista_a_mao() -> None:
     """A régua é conferida contra o fonte por um caminho independente."""
     dez = _abas_da_interface_nova()
     assert len(dez) == 9, f"monta.ABAS tem {len(dez)} entradas, e a tira do desenho tem nove: {dez}"
@@ -140,9 +140,9 @@ def test_a_lista_das_dez_vem_do_monta_e_nao_de_uma_lista_a_mao() -> None:
     )
 
 
-def test_toda_aba_nova_tem_secao_na_pagina_das_dez(dez: list[tuple[str, str]]) -> None:
-    """Cada uma das dez tem um `## N. <rótulo>` em `AS-DEZ-ABAS`."""
-    texto = AS_DEZ.read_text(encoding="utf-8")
+def test_toda_aba_nova_tem_secao_na_pagina_das_nove(dez: list[tuple[str, str]]) -> None:
+    """Cada aba tem um `## N. <rótulo>` em `AS-NOVE-ABAS`."""
+    texto = AS_NOVE.read_text(encoding="utf-8")
     titulos = set(re.findall(r"^## (.+)$", texto, re.M))
     orfas = [
         rotulo
@@ -150,15 +150,15 @@ def test_toda_aba_nova_tem_secao_na_pagina_das_dez(dez: list[tuple[str, str]]) -
         if f"{i}. {rotulo}" not in titulos
     ]
     assert not orfas, (
-        f"abas da interface nova sem seção em {AS_DEZ.name}: {', '.join(orfas)}. "
+        f"abas da interface nova sem seção em {AS_NOVE.name}: {', '.join(orfas)}. "
         f"Títulos presentes: {sorted(titulos)}"
     )
 
 
-def test_toda_foto_das_dez_existe_e_e_publicada(dez: list[tuple[str, str]]) -> None:
+def test_toda_foto_das_nove_existe_e_e_publicada(dez: list[tuple[str, str]]) -> None:
     """A foto de cada aba nova existe no disco e aparece nos dois documentos."""
     readme = README.read_text(encoding="utf-8")
-    as_dez = AS_DEZ.read_text(encoding="utf-8")
+    as_nove = AS_NOVE.read_text(encoding="utf-8")
     faltando: list[str] = []
     for _, slug in dez:
         arquivo = f"aba-{slug}.png"
@@ -167,13 +167,13 @@ def test_toda_foto_das_dez_existe_e_e_publicada(dez: list[tuple[str, str]]) -> N
             continue
         onde = [
             documento
-            for documento, conteudo in (("README.md", readme), (AS_DEZ.name, as_dez))
+            for documento, conteudo in (("README.md", readme), (AS_NOVE.name, as_nove))
             if arquivo not in conteudo
         ]
         if onde:
             faltando.append(f"{arquivo} (falta em {', '.join(onde)})")
     assert not faltando, (
-        "fotos das dez abas que a documentação promete e não entrega: "
+        "fotos das abas que a documentação promete e não entrega: "
         + "; ".join(faltando)
         + ". Rode: interface/olhar.py --todas --publicado --doc"
     )

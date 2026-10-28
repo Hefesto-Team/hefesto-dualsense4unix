@@ -192,7 +192,7 @@ def candidatas_da_aba(nome: str) -> list[pathlib.Path]:
 
 
 def achar_a_aba(nome: str, *, avisar: bool = True) -> pathlib.Path:
-    """`"02"`, `"controles"` ou `"02-controles.html"` → o arquivo."""
+    """`"03"`, `"gatilhos"` ou `"03-gatilhos.html"` → o arquivo."""
     alvo = pathlib.Path(nome)
     if alvo.is_file():
         return alvo.resolve()
@@ -635,7 +635,7 @@ class Tela:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Dirige uma aba da interface nova.")
-    p.add_argument("--aba", help='"02", "controles" ou um caminho .html')
+    p.add_argument("--aba", help='"03", "gatilhos" ou um caminho .html')
     p.add_argument("--listar", action="store_true", help="as abas que achei")
     p.add_argument("--limites", action="store_true", help="o que ele NÃO faz")
     p.add_argument("--titulo", help="exige este pedaço no <title> da página")

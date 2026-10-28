@@ -320,7 +320,7 @@ def medido() -> dict:
 
     import hefesto_vivo as hv
 
-    chave = ("02-controles.html", "mudo")
+    chave = ("01-jogar.html", "mudo")
     guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.mic_canal_set_detalhado,
                 hv.ponte.speaker_set, hv.pacotes.GESTOS.get(chave))
     do_produto = {
@@ -338,7 +338,7 @@ def medido() -> dict:
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
-        abre="02-controles.html", prova_no_aparelho=False, entre=2500,
+        abre="01-jogar.html", prova_no_aparelho=False, entre=2500,
         espera=1200, incluir_perigosos=False, prova_clique="", sem_cor=True,
         prova_de_mockup=False, voltas_por_aba=8, teto_de_mockup=-1,
         sem_cravado=False, sem_selo=False,
@@ -540,7 +540,7 @@ def _frases(leitura: object) -> list[str]:
 def test_o_gesto_aplicou(medido: dict) -> None:
     assert _leitura(medido, "vigia") == "vigiando"
     assert medido["clique-1"] == "cliquei", medido["clique-1"]
-    assert medido["desfechos"].get("02-controles.html:mudo"), medido["desfechos"]
+    assert medido["desfechos"].get("01-jogar.html:mudo"), medido["desfechos"]
 
 
 def test_a_tela_estava_muda_antes(medido: dict) -> None:

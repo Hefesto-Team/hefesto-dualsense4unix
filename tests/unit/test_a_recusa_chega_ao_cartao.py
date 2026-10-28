@@ -215,7 +215,7 @@ def medido() -> dict:
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
-        abre="02-controles.html", prova_no_aparelho=False, entre=2500,
+        abre="01-jogar.html", prova_no_aparelho=False, entre=2500,
         espera=1200, incluir_perigosos=False, prova_clique="", sem_cor=True,
         prova_de_mockup=False, voltas_por_aba=8, teto_de_mockup=-1,
         sem_cravado=False, sem_selo=False,
@@ -340,9 +340,9 @@ def test_o_gesto_recusou_dizendo(medido: dict) -> None:
     assert medido["clique"] == "cliquei", medido["clique"]
     desfechos = medido["desfechos"]
     assert isinstance(desfechos, dict)
-    assert "02-controles.html:mudo" in desfechos, (
+    assert "01-jogar.html:mudo" in desfechos, (
         f"o clique não chegou ao gesto — os desfechos foram {desfechos}")
-    classe, frase = desfechos["02-controles.html:mudo"]
+    classe, frase = desfechos["01-jogar.html:mudo"]
     assert classe == "recusou dizendo", (classe, frase)
     assert frase.startswith("RuntimeError:"), frase
     assert RECUSA_DO_ATO in frase, frase

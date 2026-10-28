@@ -177,7 +177,7 @@ def test_as_fotos_nao_ficam_atras_do_codigo_da_tela() -> None:
         f"a interface mudou em {commit_do_codigo[:7]} e as fotos de "
         f"`{'`, `'.join(atrasadas)}` "
         f"são de {commit_das_fotos}, que veio ANTES. As imagens do `README.md` "
-        "e do `docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md` documentam uma "
+        "e do `docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md` documentam uma "
         "tela que pode não existir mais.\n\n"
         f"{COMANDOS_DE_CURA}\n\n"
         "Uma execução, nenhum clique. Se as imagens saírem DIFERENTES, olhe-as "

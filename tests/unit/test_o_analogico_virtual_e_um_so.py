@@ -343,7 +343,7 @@ def test_o_clique_no_lado_pela_02(
     servidor = _servidor(tmp_path)
     _ligar_a_ponte_ao_servidor(monkeypatch, servidor)
 
-    _gesto("02-controles.html", "analogico-lado")(
+    _gesto("01-jogar.html", "analogico-lado")(
         _ctx(_lidos(servidor)), {"uniq": _P2, "lado": _ESQ}, ponte)
     dele = _movimento(_P2)
     assert (dele.destino, dele.acelerometro, dele.lado) == (_ESQ, _ESQ, _ESQ)
@@ -369,7 +369,7 @@ def test_clicar_no_lado_aceso_da_02_desliga_a_mira(
 
     servidor = _servidor(tmp_path)
     _ligar_a_ponte_ao_servidor(monkeypatch, servidor)
-    gesto = _gesto("02-controles.html", "analogico-lado")
+    gesto = _gesto("01-jogar.html", "analogico-lado")
 
     gesto(_ctx(_lidos(servidor)), {"uniq": _P2, "lado": _ESQ}, ponte)
     assert _movimento(_P2).destino == _ESQ
@@ -397,7 +397,7 @@ class _Ponte:
 def test_o_gesto_do_lado_recusa_no_nativo_e_o_lado_torto() -> None:
     import pacotes.a02_controles as a02
 
-    tela = "02-controles.html"
+    tela = "01-jogar.html"
 
     entrada = [{"uniq": _P2, "mira": {"virtual": False, "lado": _DIR}}]
     p = _Ponte({"status": "ok"})

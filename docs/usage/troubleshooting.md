@@ -196,5 +196,5 @@ Para anexar a uma issue:
 Tire do arquivo o que for da sua máquina (nome de usuário, endereços dos
 controles) antes de publicar.
 
-Veja também [as dez abas](AS-DEZ-ABAS-o-que-cada-uma-faz.md) e
+Veja também [as nove abas](AS-NOVE-ABAS-o-que-cada-uma-faz.md) e
 [o 8BitDo](troubleshooting-8bitdo.md).

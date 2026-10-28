@@ -1,17 +1,18 @@
-"""O Modo Nativo deixa as cinco abas por controle cinzas, e a recusa é da camada.
+"""O Modo Nativo deixa as quatro abas por controle cinzas, e a recusa é da camada.
 
 DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, itens 4 e 5 (09/10/2026, opção a).
-Com o Hefesto desligado o jogo é o dono do controle, e Jogar, Controles, Gatilhos,
-Iluminação e Vibração mostram os controles sem deixar mexer no que o Hefesto não aplica.
+Com o Hefesto desligado o jogo é o dono do controle, e Jogar (com a seção Controles, desde
+28/10/2026), Gatilhos, Iluminação e Vibração mostram os controles sem deixar mexer no que o
+Hefesto não aplica.
 
 DUAS METADES, e nenhuma prova a outra:
 
-1. **A recusa (sem navegador).** Todo gesto registrado nas cinco abas, e o rodapé
+1. **A recusa (sem navegador).** Todo gesto registrado nas quatro abas, e o rodapé
    (Aplicar, Salvar, Importar) despachado por elas, recusa no Nativo sem uma só chamada ao
    daemon, e a recusa vem do decorador `@gesto` (`pacotes.camada`), não de um `if` na tela.
    Ficam vivos só os de `VIVOS_NO_NATIVO` e o Exportar, que só grava um arquivo.
 2. **A tela (Chrome de verdade).** Com `body.nativo`, o motor responde por `elementFromPoint`:
-   nenhum gesto das cinco abas recebe clique fora dos vivos, a fita é uma camada muda e o
+   nenhum gesto das quatro abas recebe clique fora dos vivos, a fita é uma camada muda e o
    quadro mostra «O jogo manda». O cartão com a máscara saiu da Jogar em 28/10/2026. Sem o
    `nativo` a mesma página oferece tudo (a cura não pode ser
    «cinza para sempre»).
@@ -41,8 +42,7 @@ INTERFACE = Path(hefesto_dualsense4unix.__file__).parent / "interface"
 CHROME = Path("/usr/bin/google-chrome")
 UM = "aa:bb:cc:00:00:01"
 
-AS_CINCO = ("01-jogar.html", "02-controles.html", "03-gatilhos.html",
-            "04-iluminacao.html", "05-vibracao.html")
+AS_QUATRO = ("01-jogar.html", "03-gatilhos.html", "04-iluminacao.html", "05-vibracao.html")
 
 
 def _pacotes() -> Any:
@@ -92,22 +92,23 @@ ENTRADA = {"uniq": UM, "player": 1, "valor": 50, "v": 50, "texto": "x", "campo":
            "lado": "esquerdo", "modo": "x", "mascara": "Xbox 360", "toque": "cursor"}
 
 
-def _gestos_das_cinco() -> list[tuple[str, str]]:
+def _gestos_das_quatro() -> list[tuple[str, str]]:
     pacotes = _pacotes()
-    return sorted((p, n) for (p, n) in pacotes.GESTOS if p in AS_CINCO)
+    return sorted((p, n) for (p, n) in pacotes.GESTOS if p in AS_QUATRO)
 
 
-def test_ha_gestos_nas_cinco_abas() -> None:
+def test_ha_gestos_nas_quatro_abas() -> None:
     """A régua não pode passar por não ter o que medir."""
-    achados = _gestos_das_cinco()
-    assert len(achados) >= 40, f"só {len(achados)} gestos nas cinco abas — o registro não carregou?"
+    achados = _gestos_das_quatro()
+    assert len(achados) >= 40, (
+        f"só {len(achados)} gestos nas quatro abas — o registro não carregou?")
 
 
-def test_no_nativo_nenhum_gesto_das_cinco_abas_chega_ao_daemon() -> None:
+def test_no_nativo_nenhum_gesto_das_quatro_abas_chega_ao_daemon() -> None:
     pacotes = _pacotes()
     camada = _camada()
     chegaram: list[str] = []
-    for pagina, nome in _gestos_das_cinco():
+    for pagina, nome in _gestos_das_quatro():
         if (pagina, nome) in camada.VIVOS_NO_NATIVO:
             continue
         ipc = _Dubla()
@@ -124,7 +125,7 @@ def test_no_nativo_cada_gesto_recusa_pela_camada_com_a_frase() -> None:
     """Recusa = RuntimeError com a frase da camada, e é o decorador que a levanta."""
     pacotes = _pacotes()
     camada = _camada()
-    for pagina, nome in _gestos_das_cinco():
+    for pagina, nome in _gestos_das_quatro():
         if (pagina, nome) in camada.VIVOS_NO_NATIVO or nome in camada.RODAPE_VIVO_NO_NATIVO:
             continue
         frase = camada.recusa_no_nativo(pagina, nome, _ctx(True).state)
@@ -143,7 +144,7 @@ def test_no_nativo_cada_gesto_recusa_pela_camada_com_a_frase() -> None:
 
 def test_fora_do_nativo_a_camada_deixa_passar() -> None:
     camada = _camada()
-    for pagina, nome in _gestos_das_cinco():
+    for pagina, nome in _gestos_das_quatro():
         assert camada.recusa_no_nativo(pagina, nome, _ctx(False).state) is None, (
             f"{pagina} · {nome} recusa FORA do Nativo")
     assert camada.recusa_no_nativo("01-jogar.html", "hefesto", _ctx(True).state) is None
@@ -159,10 +160,10 @@ def test_as_outras_cinco_abas_seguem_vivas_no_nativo() -> None:
             assert camada.recusa_no_nativo(pagina, nome, _ctx(True).state) is None
 
 
-def test_o_rodape_despachado_pelas_cinco_abas_recusa_no_nativo() -> None:
+def test_o_rodape_despachado_pelas_quatro_abas_recusa_no_nativo() -> None:
     """Aplicar, Salvar e Importar mandam o perfil ao controle: recusam; o Exportar segue."""
     pacotes = _pacotes()
-    for pagina in AS_CINCO:
+    for pagina in AS_QUATRO:
         for nome in ("aplicar", "salvar", "importar"):
             ipc = _Dubla()
             fn = pacotes.gesto_da_pagina(pagina, nome)
@@ -174,7 +175,7 @@ def test_o_rodape_despachado_pelas_cinco_abas_recusa_no_nativo() -> None:
     for pagina in ("06-navegacao.html", "10-perfis.html"):
         for nome in ("aplicar", "salvar", "importar", "exportar"):
             assert pacotes.gesto_da_pagina(pagina, nome) is pacotes.GESTOS[("*", nome)], (
-                f"{pagina} · {nome} passou a recusar fora das cinco abas")
+                f"{pagina} · {nome} passou a recusar fora das quatro abas")
 
 
 def test_o_topo_manda_o_nativo_para_o_corpo() -> None:
@@ -241,7 +242,7 @@ O_QUE_O_MOTOR_DESENHA = r"""
 
 @pytest.fixture(scope="module")
 def paginas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
-    """As cinco páginas montadas pelo gerador de verdade, numa bancada de mentira."""
+    """As quatro páginas montadas pelo gerador de verdade, numa bancada de mentira."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     if not GI_REAL_DISPONIVEL:
@@ -251,11 +252,11 @@ def paginas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
         (destino / arq.name).write_text(arq.read_text(encoding="utf-8"), encoding="utf-8")
     env = dict(os.environ, HEFESTO_BANCADA=str(destino),
                PYTHONPATH=str(RAIZ / "src") + os.pathsep + os.environ.get("PYTHONPATH", ""))
-    for n in ("01", "02", "03", "04", "05"):
+    for n in ("01", "03", "04", "05"):
         feito = subprocess.run([sys.executable, f"aba{n}.py"], cwd=INTERFACE, env=env,
                                capture_output=True, text=True, timeout=300)
         assert feito.returncode == 0, f"aba{n}.py: {feito.stdout[-300:]} {feito.stderr[-300:]}"
-    return {p: destino / p for p in AS_CINCO}
+    return {p: destino / p for p in AS_QUATRO}
 
 
 @pytest.fixture(scope="module")
@@ -316,7 +317,7 @@ def test_no_nativo_a_fita_e_uma_camada_muda(medido: dict[str, Any]) -> None:
             assert "so-no-nativo" in chip["quem"]
 
 
-def test_no_nativo_as_quatro_abas_dizem_que_o_jogo_manda(medido: dict[str, Any]) -> None:
-    for pagina in AS_CINCO[1:]:
+def test_no_nativo_as_tres_abas_de_ajuste_dizem_que_o_jogo_manda(medido: dict[str, Any]) -> None:
+    for pagina in AS_QUATRO[1:]:
         assert medido[pagina]["nativo"]["trava"] == ["O jogo manda"], (
             f"{pagina}: a trava «O jogo manda» não aparece no Nativo")

@@ -41,9 +41,9 @@ _GLOBAIS_DA_ACESSIBILIDADE = (*_DA_ACESSIBILIDADE, "cursor")
 _CAMPOS_DO_TECLADO = ("teclado_emulado", "teclado_so_no_jogo", "teclado_sempre", "key_bindings")
 
 SECOES: dict[str, Secao] = {
-    "som": Secao("som", "02-controles.html", "Som",
+    "som": Secao("som", "01-jogar.html", "Som",
                  ("speaker", "mic"), ("speaker",), ("speaker", "mic")),
-    "sensores": Secao("sensores", "02-controles.html", "Sensores",
+    "sensores": Secao("sensores", "01-jogar.html", "Sensores",
                       (), (), ("sensores",)),
     "luz": Secao("luz", "04-iluminacao.html", "Luz",
                  ("leds",), ("leds",), ("leds",)),

@@ -66,7 +66,7 @@ src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc
 Uma execução. Nenhum clique, nenhuma janela aberta, nenhuma tela em foco. Sai um
 PNG por aba em `docs/usage/assets/aba-NN-*.png`, recortado na moldura da janela
 (1180x777) — que são as imagens do `README.md` e do
-[`AS-DEZ-ABAS`](../usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md).
+[`AS-NOVE-ABAS`](../usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md).
 
 O retratista mora dentro do pacote porque depende só do Chrome. O da janela GTK
 (`scripts/gui-captura/`) saiu com ela em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`).

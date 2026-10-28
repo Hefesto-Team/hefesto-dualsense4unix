@@ -9,6 +9,7 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import monta
 import onde
 
 LARG, ALT = 1920, 1080
@@ -20,8 +21,6 @@ DESTINO_DOC = onde.RAIZ / "docs" / "usage" / "assets"
 SUBPASTA_DA_VISTA = "maximizada"
 
 PREFIXO_NOVO = "aba-"
-
-E_ABA = re.compile(r"^\d\d-")
 
 NOME_DA_PROVA = "PROVA-DA-FOTO.txt"
 
@@ -155,8 +154,9 @@ def destino_das_fotos(para_a_doc: bool, vista: tuple[int, int] | None) -> pathli
 
 def _todas(publicado: bool, para_a_doc: bool,
            vista: tuple[int, int] | None = None, tema: str = "") -> int:
-    paginas = [p for p in onde.paginas(publicado=publicado) if E_ABA.match(p.name)]
-    if len(paginas) < 10:
+    do_produto = set(monta.as_abas_do_produto())
+    paginas = [p for p in onde.paginas(publicado=publicado) if p.name in do_produto]
+    if len(paginas) < len(monta.ABAS):
         sys.exit(f"achei {len(paginas)} abas em {'publicado' if publicado else 'bancada'} — o caminho mudou?")
 
     destino = destino_das_fotos(para_a_doc, vista)
@@ -236,8 +236,9 @@ def _palavra(alvo: str, publicado: bool) -> int:
 
     ler = texto_visivel_no_produto if publicado else texto_visivel
 
-    paginas = [p for p in onde.paginas(publicado=publicado) if E_ABA.match(p.name)]
-    if len(paginas) < 10:
+    do_produto = set(monta.as_abas_do_produto())
+    paginas = [p for p in onde.paginas(publicado=publicado) if p.name in do_produto]
+    if len(paginas) < len(monta.ABAS):
         sys.exit(f"achei {len(paginas)} abas — o caminho mudou?")
 
     total = 0
@@ -289,10 +290,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("pagina", nargs="?",  # (noqa-acento)
                    help="uma página, com extensão: 05-vibracao.html")
     p.add_argument("--publicado", action="store_true", help="o que o produto renderiza")
-    p.add_argument("--todas", action="store_true", help="as dez abas de uma vez")
+    p.add_argument("--todas", action="store_true", help="as abas do produto de uma vez")
     p.add_argument("--doc", action="store_true", help="grava em docs/usage/assets/")
     p.add_argument("--palavra", metavar="PALAVRA",
-                   help="lista onde esta palavra é LIDA nas dez abas, com a origem")
+                   help="lista onde esta palavra é LIDA nas abas, com a origem")
     p.add_argument("--vista", metavar="LARGxALT", type=_vista_pedida,
                    help="a vista em que fotografar — 'dela' é a janela dela "
                         "maximizada. Com ela a foto é a VISTA INTEIRA, não o "

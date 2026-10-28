@@ -17,7 +17,7 @@ UNIQ_P2 = "aa:bb:cc:00:00:02"
 
 CHAVE_P1 = "aabbcc000001"
 
-PAGINA = "02-controles.html"
+PAGINA = "01-jogar.html"
 
 PAGINA_DO_SVG = "05-vibracao.html"
 

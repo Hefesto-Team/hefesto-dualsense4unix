@@ -28,7 +28,7 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.interface import hefesto_vivo
 
-ABA = "02-controles.html"
+ABA = "01-jogar.html"
 LUGAR = "p2"
 
 ROTEIRO = r"""

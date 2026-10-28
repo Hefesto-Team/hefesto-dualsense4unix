@@ -78,7 +78,7 @@ ESTADO = {
 }
 
 PAGINA_01 = "01-jogar.html"
-PAGINA_02 = "02-controles.html"
+PAGINA_02 = PAGINA_01
 PAGINA_04 = "04-iluminacao.html"
 PAGINA_06 = "06-navegacao.html"
 PAGINA_09 = "09-sistema.html"
@@ -235,7 +235,11 @@ def _perfil_ativo_no_disco() -> None:
 
 @pytest.fixture(scope="module")
 def medido() -> dict:
-    """Abre o piloto DE VERDADE, oculto, e anda 04 → 02 → 01, marco a marco."""
+    """Abre o piloto DE VERDADE, oculto, e anda 04 → 01, marco a marco.
+
+    O caso «02» é a seção Controles, que mora na Jogar desde 28/10/2026 (a 02
+    saiu do produto): o 🎙 do p1 e o cadeado se clicam na mesma página.
+    """
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -411,7 +415,7 @@ def medido() -> dict:
         def depois() -> None:
             fora["02-armou-desfecho"] = list(
                 piloto.desfechos.get(f"{PAGINA_02}:mudo", ()))
-            abrir(PAGINA_01, BOTOES["01"][2], recusa_da_01)
+            recusa_da_01()
 
         esperar("02-armou", LER_A_TRILHA % js("02-armou"),
                 pousou_e_passou_a_piscada, depois,

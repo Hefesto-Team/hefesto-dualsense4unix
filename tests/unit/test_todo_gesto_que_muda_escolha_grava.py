@@ -18,7 +18,7 @@ from tests.unit import test_todo_gesto_que_grava_esta_protegido as protegido
 Chave = tuple[str, str]
 
 GRAVAM_SEM_DECLARAR: dict[Chave, str] = {
-    ("02-controles.html", "sensor"):
+    ("01-jogar.html", "sensor"):
         "`sensor.set`: o daemon grava `ControllerOverrides.sensores` no perfil "
         "que vale (`_handle_sensor_set` → `save_profile`); a outra ponta é "
         "conferida em `test_o_sensor_grava_pelo_daemon`",
@@ -70,7 +70,7 @@ ATOS: dict[Chave, str] = {
     ("01-jogar.html", "reconectar"):
         "ato: os jogadores voltam e a numeração se ajeita (`coop.sync`); o que "
         "sobra é o estado da mesa, não um campo de perfil",
-    ("02-controles.html", "mic-retorno"):
+    ("01-jogar.html", "mic-retorno"):
         "sessão: o retorno do microfone (ouvir a própria voz) é um teste do "
         "momento, e desligar ou fechar a janela o encerra",
     ("04-iluminacao.html", "player"):
@@ -269,7 +269,7 @@ def test_o_ato_nao_grava(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_o_sensor_grava_pelo_daemon() -> None:
     """As duas pontas do único que grava pelo daemon: o gesto chama, o daemon grava."""
-    gesto = inspect.unwrap(pacotes.GESTOS[("02-controles.html", "sensor")])
+    gesto = inspect.unwrap(pacotes.GESTOS[("01-jogar.html", "sensor")])
     fonte = pathlib.Path(gesto.__code__.co_filename).read_text(encoding="utf-8")
     corpo = next(no for no in ast.walk(ast.parse(fonte))
                  if isinstance(no, ast.FunctionDef) and no.name == gesto.__name__)

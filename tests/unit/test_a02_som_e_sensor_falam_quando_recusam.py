@@ -71,8 +71,8 @@ def _ctx(**over: Any):
 def _gesto(nome: str):
     import pacotes
 
-    fn = pacotes.gesto_da_pagina("02-controles.html", nome)
-    assert fn is not None, f"02-controles.html:{nome} não tem dono"
+    fn = pacotes.gesto_da_pagina("01-jogar.html", nome)
+    assert fn is not None, f"01-jogar.html:{nome} não tem dono"
     return fn
 
 

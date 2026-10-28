@@ -67,7 +67,7 @@ Os quatro lugares que esta página passa a cobrir:
 | `integrations/ordens_da_mesa.py` | a linha `por_que_importa` de R1, com `fonte=` apontando para cá |
 | `integrations/mesa_de_radio.py` | o comentário de `_VELOCIDADE_USB3` |
 | `app/actions/config/secao_mesa.py` | a dica `_DICA_USB3_AO_LADO` da seção A mesa |
-| `docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md` | a frase da seção Conexões |
+| `docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md` | a frase da seção Conexões |
 
 Só o primeiro tem `fonte=` hoje. Dar dono aos outros três é varredura de texto de
 tela, e o texto desta aba tem um dono único — **não** se edita aqui, ou duas pessoas escrevem a

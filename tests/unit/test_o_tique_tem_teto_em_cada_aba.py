@@ -26,9 +26,18 @@ from tests.unit.test_o_app_responde_na_hora import casa  # noqa: F401
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-ABAS = ("01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
-        "05-vibracao.html", "06-navegacao.html", "07-lancadores.html",
-        "08-conexoes.html", "09-sistema.html", "10-perfis.html")
+INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
+
+
+def _as_abas() -> tuple[str, ...]:
+    if str(INTERFACE) not in sys.path:
+        sys.path.insert(0, str(INTERFACE))
+    import monta
+
+    return tuple(monta.as_abas_do_produto())
+
+
+ABAS = _as_abas()
 
 TIQUES = 40
 ASSENTAR = 3
@@ -55,7 +64,7 @@ def _sem_o_rastreador() -> Iterator[None]:
 
 
 def _medir_as_dez(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
-    """O piloto oculto passa pelas dez abas e anota a CPU de cada tique."""
+    """O piloto oculto passa pelas abas do produto e anota a CPU de cada tique."""
     gtk = _gtk()
     from gi.repository import GLib
 

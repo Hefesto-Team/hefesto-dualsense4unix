@@ -106,7 +106,7 @@ def medir(caminho: pathlib.Path, larguras: tuple[int, ...] | int) -> Any:
 
 def main(argv: list[str]) -> int:
     publicado = "--publicado" in argv
-    pagina = _onde.pagina("02-controles.html", publicado=publicado)
+    pagina = _onde.pagina("01-jogar.html", publicado=publicado)
     teto = _aba02.PARA_O_CARD
     if not pagina.exists():
         print(f"ERRO: a página não está no disco — {pagina}")

@@ -32,7 +32,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
                  teto_de_mockup=-1, voltas_por_aba=8, sem_cor=False,
                  prova_no_aparelho=False, entre=2500)
 
-ABAS = ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
+ABAS = ["01-jogar.html", "03-gatilhos.html",
         "04-iluminacao.html", "05-vibracao.html", "06-navegacao.html",
         "07-lancadores.html", "08-conexoes.html", "09-sistema.html",
         "10-perfis.html"]
@@ -144,7 +144,7 @@ def main() -> int:
     alvos = ([a for a in ABAS if any(a.startswith(p) for p in pedidas)]
              if pedidas else list(ABAS))
     if not alvos:
-        print(f"REPROVA: nenhuma aba casa com {pedidas}. As dez estão em `ABAS`.")
+        print(f"REPROVA: nenhuma aba casa com {pedidas}. As nove estão em `ABAS`.")
         return 1
     vista = _vista_pedida(sys.argv[1:])
 

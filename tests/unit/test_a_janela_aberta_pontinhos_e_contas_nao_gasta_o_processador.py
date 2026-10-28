@@ -113,7 +113,7 @@ def _roteiro_o_controle_sai_escondido(fora: Any, piloto: Any, _t: float) -> bool
 
 @pytest.fixture(scope="module")
 def o_controle_sai_escondido(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    return _correr(publicado_de_hoje, "02-controles.html", 2,
+    return _correr(publicado_de_hoje, "01-jogar.html", 2,
                    _roteiro_o_controle_sai_escondido)
 
 
@@ -148,7 +148,7 @@ def so_o_giro(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
         return not _fase(fora, "giro", fora.marcos["medindo"], TIQUES_POR_FASE,
                          _teto_da_fase_s(fora, TIQUES_POR_FASE))
 
-    return _correr(publicado_de_hoje, "02-controles.html", 2, roteiro, anda="giro")
+    return _correr(publicado_de_hoje, "01-jogar.html", 2, roteiro, anda="giro")
 
 
 def test_r2_so_o_giro_mexe_e_so_o_giro_vai(so_o_giro: Any) -> None:
@@ -546,7 +546,7 @@ def os_pontinhos(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
         return ("vazio-depois" not in fora.avaliados
                 and time.monotonic() - de < _teto_da_espera_s())
 
-    return _correr(publicado_de_hoje, "02-controles.html", 4, roteiro, anda="analogico")
+    return _correr(publicado_de_hoje, "01-jogar.html", 4, roteiro, anda="analogico")
 
 
 def test_r5_nenhuma_folha_enderecada_muda_no_tique(os_pontinhos: Any) -> None:

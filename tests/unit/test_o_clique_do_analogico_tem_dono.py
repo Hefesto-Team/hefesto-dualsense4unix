@@ -147,13 +147,20 @@ def test_o_touchpad_deixou_de_ser_constante(pac, a02):
 
 ESPERAM_A_PUBLICACAO: tuple[str, ...] = ()
 
+PAGINA = "01-jogar.html"
+"""A seção Controles mora na Jogar desde 28/10/2026, e a 02 saiu do produto.
+
+O órfão se mede nas chaves dos cartões da seção (as por controle): as do topo
+comum valem para toda página e não são da seção."""
+
 
 def test_a_aba_controles_nao_emite_para_endereco_que_a_pagina_nao_tem():
     """Órfão é valor calculado a cada tique e jogado fora — e conta cobertura falsa."""
     import casamento
 
-    m = casamento.medir("02-controles.html")
-    orfaos = sorted(m["orfaos"])
+    m = casamento.medir(PAGINA)
+    _, da_secao = casamento.do_pacote(PAGINA)
+    orfaos = sorted(m["orfaos"] & da_secao)
     de_descuido = [k for k in orfaos if k not in ESPERAM_A_PUBLICACAO]
     assert de_descuido == [], (
         f"a aba Controles emite {de_descuido} e a página publicada não "
@@ -170,7 +177,7 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
     """O outro lado do espelho: `vazios` era `['l3', 'r3']`."""
     import casamento
 
-    m = casamento.medir("02-controles.html")
+    m = casamento.medir(PAGINA)
     import re as _re
 
     import monta
@@ -182,12 +189,12 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
     }
     sobrando = sorted(set(m["vazios"]) - do_piloto - set(so_de_leitura))
     assert sobrando == [], (
-        f"a página 02-controles.html tem {sobrando} e ninguém os "
+        f"a página {PAGINA} tem {sobrando} e ninguém os "
         f"pinta — o rótulo do mockup fica na tela como se fosse leitura.")
 
     na_pagina = set(_re.findall(
         r'data-campo="([^"]+)"',
-        (RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html")
+        (RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / PAGINA)
         .read_text(encoding="utf-8")))
     mortas = sorted(set(so_de_leitura) - na_pagina)
     assert mortas == [], (
@@ -214,7 +221,7 @@ def test_o_rotulo_do_circulo_e_o_mesmo_no_desenho_e_na_pintura(desenho):
     """A página publicada e o pacote têm de dizer a mesma palavra."""
     from hefesto_dualsense4unix.interface import onde
 
-    html = onde.pagina("02-controles.html", publicado=True).read_text(encoding="utf-8")
+    html = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
     for lado, campo in (("l", "l3"), ("r", "r3")):
         marca = f'data-campo="{campo}">{desenho.ROTULO_DO_CLIQUE[lado]}<'
         assert marca in html, (

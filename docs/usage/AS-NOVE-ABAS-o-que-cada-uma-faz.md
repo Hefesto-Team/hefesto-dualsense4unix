@@ -1,6 +1,6 @@
-# As dez abas
+# As nove abas
 
-A janela do Hefesto tem dez abas, nesta ordem: **Jogar · Controles · Gatilhos ·
+A janela do Hefesto tem nove abas, nesta ordem: **Jogar · Gatilhos ·
 Iluminação · Vibração · Navegação · Conexões · Sistema · Perfis · Experimental**.
 
 ## O que vale em todas
@@ -29,26 +29,18 @@ aparelho, e a traz de volta em outra porta ou pelo Bluetooth.
 - **Ligado / Desligado**: ligado, o Hefesto cuida da luz, da vibração, do
   gatilho e do número do jogador; desligado, o jogo fala direto com o controle,
   e o serviço continua rodando.
-- **Modo**: como o controle chega ao jogo, entre **Sony DualSense · Xbox ·
-  Steam Input · Navegação · Modo nativo**. O Hefesto tenta na ordem da lista e
-  para no primeiro que der certo; PS + R3 pula para o próximo. O **Modo
-  Freestyle** faz o perfil ativo valer em qualquer jogo ([modos.md](modos.md)).
-- **Um cartão por controle**, com o número, a cor do plástico, a conexão e a
-  bateria. Clicar num cartão leva a fita para ele.
-- **O controle é visto como**, em cada cartão: **DualSense**, **Xbox 360** ou
-  **Nintendo Pro**. Muda o desenho dos botões que o jogo mostra, e só daquele
-  controle; PS + L3 troca sem largar o controle ([hotkeys.md](hotkeys.md)).
+- **Modo**: como os controles chegam ao jogo, entre **Sony DualSense · Xbox ·
+  Nintendo Pro · Nativo · Steam Input · Navegação**. O modo vale para todos os
+  controles. O Hefesto tenta na ordem da lista e para no primeiro que der certo;
+  PS + R3 pula para o próximo. O **Modo Freestyle** faz o perfil ativo valer em
+  qualquer jogo ([modos.md](modos.md)).
 
-## 2. Controles
-
-![Aba Controles](assets/aba-02-controles.png)
-
-**Dispositivos conectados**: uma linha por controle, com a borda na cor do
-plástico. Clicar numa linha abre a leitura ao vivo: giroscópio e acelerômetro
-(com um interruptor cada), bateria, touchpad (com o interruptor **Ligado ·
-Desligado**), barra de luz, analógicos (cada um com a **Mira virtual**, que faz o
-movimento do controle mover aquele analógico), gatilhos de 0 a 255 e os botões
-que você aperta.
+**Dispositivos conectados**: um cartão por controle, com a borda na cor do
+plástico, o número, a conexão e a bateria. Clicar num cartão leva a fita para ele
+e abre a leitura ao vivo: giroscópio e acelerômetro (com um interruptor cada),
+bateria, touchpad (com o interruptor **Ligado · Desligado**), barra de luz,
+analógicos (cada um com a **Mira virtual**, que faz o movimento do controle mover
+aquele analógico), gatilhos de 0 a 255 e os botões que você aperta.
 
 - **Microfone**: a barra mostra o som entrando agora, e o botão ao lado liga o
   retorno (você se ouve como o jogo te ouve). O **Volume** é o quanto desse som
@@ -58,7 +50,7 @@ que você aperta.
   «Canais sonoros apenas no DualSense» e «Canais sonoros apenas no PC».
 - **Calibrar giroscópio** calibra os quatro de uma vez.
 
-## 3. Gatilhos
+## 2. Gatilhos
 
 ![Aba Gatilhos](assets/aba-03-gatilhos.png)
 
@@ -75,7 +67,7 @@ Uma coluna por controle, com o L2 e o R2; a fita fica esmaecida.
 Escolher um modo já manda o efeito, e quem está com o controle sente na hora:
 o DualSense não informa o modo em que está, e a confirmação é a mão.
 
-## 4. Iluminação
+## 3. Iluminação
 
 ![Aba Iluminação](assets/aba-04-iluminacao.png)
 
@@ -92,7 +84,7 @@ escolhida e as cinco luzinhas no padrão do número.
   número, o Hefesto o devolve em até um segundo.
 - **Desligar** apaga a barra daquele controle.
 
-## 5. Vibração
+## 4. Vibração
 
 ![Aba Vibração](assets/aba-05-vibracao.png)
 
@@ -107,7 +99,7 @@ Uma coluna por controle. O lado que treme acende em laranja.
   o outro continua.
 - **Testar agora** treme o controle até o **Parar**, que devolve a vibração ao jogo.
 
-## 6. Navegação
+## 5. Navegação
 
 ![Aba Navegação](assets/aba-06-navegacao.png)
 
@@ -123,7 +115,7 @@ Uma coluna por controle. O lado que treme acende em laranja.
 - **O que cada botão faz**: clique de mouse, tecla, teclado na tela, abrir a
   Steam, um programa ou nada. O PS fica de fora: é a saída de emergência.
 
-## 7. Conexões
+## 6. Conexões
 
 ![Aba Conexões](assets/aba-08-conexoes.png)
 
@@ -147,7 +139,7 @@ do rádio está em uso. **Conectar** pareia um controle no adaptador escolhido
 **Esquecer** tira só aquele pareamento ([bluetooth.md](bluetooth.md),
 [bluetooth-varios-adaptadores.md](bluetooth-varios-adaptadores.md)).
 
-## 8. Sistema
+## 7. Sistema
 
 ![Aba Sistema](assets/aba-09-sistema.png)
 
@@ -167,7 +159,7 @@ Esta aba é do computador, não de um controle, e a fita fica esmaecida.
 - **Detalhes técnicos**: o registro do serviço, para copiar ao relatar um
   problema.
 
-## 9. Perfis
+## 8. Perfis
 
 ![Aba Perfis](assets/aba-10-perfis.png)
 
@@ -185,7 +177,7 @@ Um perfil guarda o que você ajustou nas outras abas e o traz quando o jogo abre
   para aquele controle. Para escrever um perfil à mão, ver
   [creating-profiles.md](creating-profiles.md).
 
-## 10. Experimental
+## 9. Experimental
 
 ![Aba Experimental](assets/aba-07-lancadores.png)
 

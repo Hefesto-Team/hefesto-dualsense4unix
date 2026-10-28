@@ -740,19 +740,6 @@
   .mudo-i[data-mic-luz="retorno"]{
     border-color:var(--green);color:var(--green)}
 
-
-  body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar],.menu-hefesto *)){
-    pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
-    background:transparent!important;border-color:var(--border-sutil)!important;
-    color:var(--fg)!important;font-weight:400!important;box-shadow:none!important}
-  body.nativo.por-controle .nativo-nao{pointer-events:none;cursor:default;
-    background:transparent!important;border-color:var(--border-sutil)!important;
-    color:var(--fg)!important;font-weight:400!important;box-shadow:none!important}
-  body.nativo.por-controle :is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar]){pointer-events:auto}
-  body.nativo.por-controle .guardar,body.nativo.por-controle .par-modo,
-  body.nativo.por-controle .modo-auto,
-  body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
-  body.nativo.por-controle .r-importar{visibility:hidden}
   .fita-linha .perfil-ativo{margin-left:auto}
 </style>
 <style id="base-comum">
@@ -814,7 +801,7 @@ body.por-controle .ctl.off > .faixa{height:24px !important;display:flex !importa
 body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !important;align-items:center !important;margin-bottom:0 !important}
 </style>
 </head>
-<body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
+<body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
 
 <div class="janela">
 

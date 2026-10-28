@@ -20,7 +20,7 @@ Versão: 0.9.5 (alfa)
 
 O Hefesto é um serviço para Linux que faz o controle DualSense, do PS5, funcionar por inteiro no PC. Os gatilhos resistem, a barra de luz muda de cor, a vibração tem a força que você escolher, e o giroscópio, o touchpad, o microfone e o alto-falante chegam ao jogo. Cada DualSense ligado vira um jogador, por cabo ou por Bluetooth, até quatro.
 
-Você configura tudo por uma janela com dez abas. Também há um ícone na bandeja, uma interface de terminal e uma linha de comando.
+Você configura tudo por uma janela com nove abas. Também há um ícone na bandeja, uma interface de terminal e uma linha de comando.
 
 ## Para quem é
 
@@ -52,18 +52,18 @@ Controles Nintendo Pro e 8BitDo também são reconhecidos, mas chegam ao jogo co
 
 | | |
 |---|---|
-| Jogar | Controles |
-| ![Jogar](docs/usage/assets/aba-01-jogar.png) | ![Controles](docs/usage/assets/aba-02-controles.png) |
-| Gatilhos | Iluminação |
-| ![Gatilhos](docs/usage/assets/aba-03-gatilhos.png) | ![Iluminação](docs/usage/assets/aba-04-iluminacao.png) |
-| Vibração | Navegação |
-| ![Vibração](docs/usage/assets/aba-05-vibracao.png) | ![Navegação](docs/usage/assets/aba-06-navegacao.png) |
-| Conexões | Sistema |
-| ![Conexões](docs/usage/assets/aba-08-conexoes.png) | ![Sistema](docs/usage/assets/aba-09-sistema.png) |
-| Perfis | Experimental |
-| ![Perfis](docs/usage/assets/aba-10-perfis.png) | ![Experimental](docs/usage/assets/aba-07-lancadores.png) |
+| Jogar | Gatilhos |
+| ![Jogar](docs/usage/assets/aba-01-jogar.png) | ![Gatilhos](docs/usage/assets/aba-03-gatilhos.png) |
+| Iluminação | Vibração |
+| ![Iluminação](docs/usage/assets/aba-04-iluminacao.png) | ![Vibração](docs/usage/assets/aba-05-vibracao.png) |
+| Navegação | Conexões |
+| ![Navegação](docs/usage/assets/aba-06-navegacao.png) | ![Conexões](docs/usage/assets/aba-08-conexoes.png) |
+| Sistema | Perfis |
+| ![Sistema](docs/usage/assets/aba-09-sistema.png) | ![Perfis](docs/usage/assets/aba-10-perfis.png) |
+| Experimental | |
+| ![Experimental](docs/usage/assets/aba-07-lancadores.png) | |
 
-O que cada aba faz: [docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md).
+O que cada aba faz: [docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md).
 
 ## Instalar
 

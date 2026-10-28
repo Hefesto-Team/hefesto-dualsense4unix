@@ -1,12 +1,14 @@
 """Os alvos e a letra crescem, e a interface ganha tamanho (20/10/2026).
 
 O piso é dela (13/10: alvo de 24 px, o WCAG 2.2 critério 2.5.8, e nenhuma letra abaixo de 12 px).
-A régua mede o que os GERADORES escrevem nas dez abas, não o publicado de ontem, com o Chrome do
+A régua mede o que os GERADORES escrevem nas nove abas, não o publicado de ontem, com o Chrome do
 sistema: todo elemento que age, todo título ou rótulo que abre uma dica (o `?` de 17 px é um deles),
-todo texto visível, em quatro vistas e nos estados do acordeão da 02.
+todo texto visível, em quatro vistas e nos estados do acordeão da seção Controles, que
+mora na Jogar desde 28/10/2026 (a 02 saiu do produto; a folha `02-controles` veio junto).
 
-* **02 e 09 chegam a zero**, em toda vista: a escolha de 20/10 («Controles: A», «Sistema: A»).
-* **As outras oito abas têm teto declarado** (`TETO_DAS_OUTRAS`): quanto cada uma ainda fica abaixo
+* **A seção Controles (na Jogar) e a 09 chegam a zero**, em toda vista: a escolha de 20/10
+  («Controles: A», «Sistema: A»).
+* **As outras sete abas têm teto declarado** (`TETO_DAS_OUTRAS`): quanto cada uma ainda fica abaixo
   do piso HOJE. O teto só desce; tela que nasce pequena reprova. Zerar uma delas é o desenho dela,
   que a sprint seguinte pede (a escolha de 20/10 cobriu só a 02 e a 09).
 * **O tamanho da interface** (`interface_escala`, escrito pela 09) é lido pela janela, que põe o
@@ -15,8 +17,8 @@ todo texto visível, em quatro vistas e nos estados do acordeão da 02.
 
 MORDIDAS (todas executadas aqui, sobre cópias do HTML gerado):
 
-* um «?» de 17 px focável na 02 -> `test_a_regua_morde_o_ponto_de_interrogacao_de_17_px`;
-* a folha do piso arrancada da 02 e da 09 -> `test_a_regua_morde_a_folha_do_piso_arrancada`;
+* um «?» de 17 px focável na Jogar -> `test_a_regua_morde_o_ponto_de_interrogacao_de_17_px`;
+* a folha do piso arrancada da Jogar e da 09 -> `test_a_regua_morde_a_folha_do_piso_arrancada`;
 * uma letra de 11 px na 09 -> `test_a_regua_morde_a_letra_pequena`;
 * um alvo pequeno a mais numa aba de teto -> `test_a_regua_morde_o_teto`;
 * a vaga com os traços de volta -> `test_a_vaga_diz_so_player_n_desconectado`;
@@ -51,12 +53,12 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 VISTAS = ((1212, 809), (1918, 840), (1212, 740), (1280, 720))
 ESTADOS_02 = ("c-p1", "c-p2", "c-p3", "c-todos")
 ABAS = (
-    "01-jogar", "02-controles", "03-gatilhos", "04-iluminacao", "05-vibracao",
+    "01-jogar", "03-gatilhos", "04-iluminacao", "05-vibracao",
     "06-navegacao", "07-lancadores", "08-conexoes", "09-sistema", "10-perfis",
 )
-NO_PISO = ("02-controles", "09-sistema")
+NO_PISO = ("01-jogar", "09-sistema")
+FOLHA_DE_CADA_PAGINA = {"01-jogar": "02-controles", "09-sistema": "09-sistema"}
 TETO_DAS_OUTRAS: dict[str, tuple[int, int, int]] = {
-    "01-jogar": (0, 0, 0),
     "03-gatilhos": (2, 7, 22),
     "04-iluminacao": (2, 3, 46),
     "05-vibracao": (8, 2, 38),
@@ -186,7 +188,7 @@ def _casos_do_piso() -> list[tuple[str, tuple[int, int], str]]:
     casos: list[tuple[str, tuple[int, int], str]] = []
     for aba in NO_PISO:
         for vista in VISTAS:
-            for estado in (ESTADOS_02 if aba.startswith("02") else ("",)):
+            for estado in (ESTADOS_02 if aba.startswith("01") else ("",)):
                 casos.append((aba, vista, estado))
     return casos
 
@@ -228,13 +230,15 @@ def test_o_piso_e_uma_folha_so() -> None:
     from hefesto_dualsense4unix.interface import folha_da_casa as fc
 
     assert (fc.ALVO_MINIMO_PX, fc.LETRA_MINIMA_PX) == (24, 12)
-    assert set(fc.PISO_POR_PAGINA) == set(NO_PISO)
+    assert set(fc.PISO_POR_PAGINA) == set(FOLHA_DE_CADA_PAGINA.values())
     for aba in NO_PISO:
         doc = (MOCKUP / f"{aba}.html").read_text(encoding="utf-8")
         assert doc.count(f'<style id="{ID_DA_FOLHA}">') == 1, aba
         assert doc.index(ID_DA_FOLHA) < doc.index("</head>"), f"a folha da {aba} está no corpo"
-        assert fc.PISO_POR_PAGINA[aba] in doc, aba
+        assert fc.PISO_POR_PAGINA[FOLHA_DE_CADA_PAGINA[aba]] in doc, aba
         assert "variante-alvos" not in doc, f"a folha da variante da {aba} ficou no desenho"
+    jogar = (RAIZ / "src/hefesto_dualsense4unix/interface/aba01.py").read_text("utf-8")
+    assert 'com_o_piso("02-controles"' in jogar, "a Jogar deixou de vestir a folha da seção"
     for gerador in ("aba02.py", "aba09.py"):
         fonte = (RAIZ / "src/hefesto_dualsense4unix/interface" / gerador).read_text("utf-8")
         assert "com_o_piso(" in fonte, gerador
@@ -298,7 +302,7 @@ def _rolagens(navegador: Browser, arquivo: pathlib.Path, vista: tuple[int, int],
 def _casos_do_zoom() -> list[tuple[str, tuple[int, int], int, str]]:
     return [(aba, vista, escolhido, estado)
             for aba in ABAS for vista in VISTAS_DA_JANELA for escolhido in TAMANHOS_GRANDES
-            for estado in (("", "c-todos") if aba.startswith("02") else ("",))]
+            for estado in (("", "c-todos") if aba.startswith("01") else ("",))]
 
 
 @pytest.mark.parametrize(("aba", "vista", "escolhido", "estado"), _casos_do_zoom())
@@ -307,7 +311,7 @@ def test_o_tamanho_grande_cabe_na_janela(
     escolhido: int, estado: str,
 ) -> None:
     """125 % e 150 % na vista de quem usa (1918x840) e na menor (1212x809): nada rola nem corta
-    além do que já rola a 100 % na mesma janela (a 100 %, só a 02 com os quatro abertos rola, no
+    além do que já rola a 100 % na mesma janela (a 100 %, só a Jogar com os quatro abertos rola, no
     quadro, por desenho; o documento não rola em aba nenhuma).
 
     A escolha de 23/10/2026, «Cede onde não cabe»: a janela aplica o menor entre o escolhido e o
@@ -374,9 +378,9 @@ def test_a_vaga_diz_so_player_n_desconectado(
 
     MORDIDA: sem a regra que esconde o resto, a vaga volta a mostrar máscara, microfone e bateria.
     """
-    doc = (geradas / "02-controles.html").read_text(encoding="utf-8")
+    doc = (geradas / "01-jogar.html").read_text(encoding="utf-8")
     esperado = f"Player {numero} • Desconectado"
-    assert _texto_da_vaga(navegador, geradas / "02-controles.html", numero) == esperado
+    assert _texto_da_vaga(navegador, geradas / "01-jogar.html", numero) == esperado
     mordido = doc.replace(".ctl.off > .faixa > :not(.card-nome){display:none !important}", "", 1)
     assert mordido != doc
     alvo = tmp_path / "vaga-com-traco.html"
@@ -399,7 +403,7 @@ def test_a_regua_morde_o_ponto_de_interrogacao_de_17_px(
     navegador: Browser, geradas: pathlib.Path, tmp_path: pathlib.Path
 ) -> None:
     """O `?` de 17x17 que abre a dica, em toda aba antes de 20/10: um só basta para reprovar."""
-    doc = (geradas / "02-controles.html").read_text(encoding="utf-8")
+    doc = (geradas / "01-jogar.html").read_text(encoding="utf-8")
     assert _problemas(_medir(navegador, _escreve(tmp_path, "limpa", doc))) == []
     ponto = ('<span class="ajuda" tabindex="0" style="display:inline-block;width:17px;height:17px;'
              'font-size:12px">?</span>')
@@ -415,7 +419,7 @@ def test_a_regua_morde_a_folha_do_piso_arrancada(
         sem = re.sub(rf'<style id="{ID_DA_FOLHA}">.*?</style>\n?', "", doc, count=1, flags=re.S)
         assert sem != doc, aba
         medida = _medir(navegador, _escreve(tmp_path, f"sem-{aba}", sem), VISTAS[0], "c-p1"
-                        if aba.startswith("02") else "")
+                        if aba.startswith("01") else "")
         assert _problemas(medida), f"sem a folha do piso a {aba} passou"
 
 
