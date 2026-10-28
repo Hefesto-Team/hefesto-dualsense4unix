@@ -97,6 +97,13 @@ POR_A_FOLHA = (
     "document.head.appendChild(s);return 'FOLHA-POSTA';})()"
 )
 
+LETRA_LARGA = "*{letter-spacing:.5px !important}"
+POR_A_LETRA_LARGA = (
+    "(function(){var s=document.createElement('style');"
+    f"s.textContent={json.dumps(LETRA_LARGA)};"
+    "document.head.appendChild(s);return 'LETRA-LARGA';})()"
+)
+
 MEDIDA = r"""
 (function(){
   var TOL = 1;
@@ -132,6 +139,7 @@ MEDIDA = r"""
             titulo: tituloAlcancavel(el),
             rotulo: el.getAttribute('aria-label'),
             reticencias: e.textOverflow,
+            no_topo: !!el.closest('.fita-linha'),
             texto: txt(el.textContent).slice(0,90)};
   }
   // O primeiro ancestral que RECORTA. A subida para no primeiro que ROLA: o que
@@ -242,6 +250,7 @@ MEDIDA = r"""
       mono: document.fonts.check('12px "JetBrains Mono"')
     },
     folha_posta: nota ? getComputedStyle(nota).display === 'none' : null,
+    entreletra: getComputedStyle(document.body).letterSpacing,
     janela: Object.assign(cx(j), {ox: getComputedStyle(j).overflowX,
                                   oy: getComputedStyle(j).overflowY}),
     faixas: faixas,
@@ -317,7 +326,8 @@ def _contar(cortes: list[dict[str, Any]]) -> str:
 
 
 def medir(tamanho: Tamanho, abas: tuple[str, ...] = ABAS,
-          pasta: pathlib.Path | None = None) -> dict[str, dict[str, Any]]:
+          pasta: pathlib.Path | None = None,
+          letra_larga: bool = False) -> dict[str, dict[str, Any]]:
     """Abre UMA janela do tamanho pedido e navega pelas abas, medindo cada uma."""
     pasta = pasta or onde.BANCADA
     fora: dict[str, dict[str, Any]] = {}
@@ -341,6 +351,8 @@ def medir(tamanho: Tamanho, abas: tuple[str, ...] = ABAS,
             tela.esperar_ate(chegou, prazo=15,
                              motivo=f"{nome} não terminou de carregar")
             tela.executar(POR_A_FOLHA)
+            if letra_larga:
+                tela.executar(POR_A_LETRA_LARGA)
             lido = json.loads(tela._cru(MEDIDA.strip()))
             assert "erro" not in lido, f"{nome} em {tamanho.rotulo}: {lido['erro']}"
             fora[nome] = lido
@@ -599,3 +611,85 @@ def test_com_quatro_controles_o_nome_do_perfil_ativo_fica_a_vista(
     assert lido["larg"] >= 30, f"o nome do perfil ativo sumiu da fita: {lido}"
     assert lido["dir"] <= lido["dir_da_pilula"] + 1, (
         f"o nome do perfil ativo passa da borda da pílula, que o recorta: {lido}")
+
+
+CASOS_DA_LETRA_LARGA = [
+    pytest.param(aba, tamanho.rotulo, id=f"{aba.removesuffix('.html')}-{tamanho.rotulo}")
+    for tamanho in TAMANHOS[:2]
+    for aba in ABAS
+]
+
+
+@pytest.fixture(scope="module")
+def medido_com_a_letra_larga() -> dict[tuple[str, str], dict[str, Any]]:
+    """As dez abas no tamanho do desenho e na estreita, com meio pixel a mais entre as letras."""
+    fora: dict[tuple[str, str], dict[str, Any]] = {}
+    for tamanho in TAMANHOS[:2]:
+        for nome, leitura in medir(tamanho, letra_larga=True).items():
+            fora[(nome, tamanho.rotulo)] = leitura
+    return fora
+
+
+@pytest.mark.parametrize(("aba", "rotulo"), CASOS_DA_LETRA_LARGA)
+def test_com_a_letra_mais_larga_o_cabecalho_nao_engole_nada(medido_com_a_letra_larga, aba, rotulo):
+    """O cabeçalho cabe com a letra de qualquer computador, nas dez abas.
+
+    O-CABECALHO-TEM-FOLGA-PARA-A-LETRA-DE-QUALQUER-COMPUTADOR-01. A mesma Space Grotesk mede
+    cerca de +0,24 px por letra no ubuntu-26.04 (freetype 2.14, harfbuzz 12), e a linha do topo,
+    que cabia com 4 px na mesa, cortava o nome do controle só lá. A passada põe
+    ``*{letter-spacing:.5px}`` em todo texto e mede de novo: reproduz em qualquer máquina o que
+    aquela pilha faz, sem fixar fonte nem imagem. Vale para a 09 também, sem o ``xfail`` do
+    ``.saude``: só o que mora na ``.fita-linha`` conta.
+    """
+    lido = medido_com_a_letra_larga[(aba, rotulo)]
+    assert lido["entreletra"] == "0.5px", (
+        f"{aba}: a letra larga não pegou (letter-spacing do corpo {lido['entreletra']!r}), "
+        "e a passada mediria a letra comum")
+    fora = [c for c in engolidos(lido) if c["peca"].get("no_topo")]
+    tamanho = next(t for t in TAMANHOS if t.rotulo == rotulo)
+    assert not fora, (
+        f"{aba} em janela {rotulo} ({tamanho.largura}x{tamanho.altura}), com meio pixel a mais "
+        f"por letra, corta {len(fora)} peça(s) do cabeçalho sem guardar a frase{_a_letra(lido)}:\n"
+        + _contar(fora))
+
+
+CONTADOR_DE_VOLTA = r"""
+(function(FOLHA, LARGA){
+  var s = document.createElement('style'); s.textContent = FOLHA; document.head.appendChild(s);
+  if (LARGA) {
+    var t = document.createElement('style'); t.textContent = LARGA; document.head.appendChild(t);
+  }
+  var pa = document.querySelector('.perfil-ativo');
+  var d = document.createElement('div');
+  d.className = 'conectado';
+  d.innerHTML = '<span class="bolinha">●</span> <b>1 USB · 1 BT</b>';
+  pa.parentNode.insertBefore(d, pa);
+  var cortes = [].map.call(document.querySelectorAll('.fita .chip.plastico'),
+                           function(c){ return c.scrollWidth - c.clientWidth; });
+  return JSON.stringify({cortes: cortes,
+                         entreletra: getComputedStyle(document.body).letterSpacing});
+})(@@FOLHA@@, @@LARGA@@)
+"""
+
+
+def test_a_mordida_da_letra_larga_ve_o_corte_que_a_comum_nao_ve() -> None:
+    """A passada larga morde: com o contador de volta no topo, ela corta o chip mais que a comum.
+
+    O contador «● N USB · N BT» saiu do topo com a
+    A-ABA-JOGAR-JUNTA-OS-CONTROLES-E-O-MODO-GERE-TUDO-01. Posto de volta pelo teste, a linha da 01
+    em 940 px cabe com a letra comum da mesa e corta os dois chips com meio pixel a mais por letra:
+    é a cegueira que deixava o vermelho só para o CI.
+    """
+    from tests.unit.test_as_telas_de_16_10_no_webkit import _no_webkit
+
+    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    lidos = {}
+    for nome, larga in (("comum", ""), ("larga", LETRA_LARGA)):
+        passo = (CONTADOR_DE_VOLTA.replace("@@FOLHA@@", json.dumps(FOLHA_DA_CASA))
+                 .replace("@@LARGA@@", json.dumps(larga)))
+        lidos[nome] = _no_webkit(uri, (940, ALTURA_DO_DESENHO), [passo])[0]
+    comum, larga_lida = lidos["comum"], lidos["larga"]
+    assert len(larga_lida["cortes"]) >= 2 and larga_lida["entreletra"] == "0.5px", (
+        f"a mordida não mediu o que devia: {lidos}")
+    assert sum(larga_lida["cortes"]) > 0 and sum(larga_lida["cortes"]) > sum(comum["cortes"]), (
+        f"com o contador de volta, a letra larga tinha de cortar o chip mais que a comum: {lidos}")

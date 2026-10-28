@@ -20,11 +20,16 @@ exigir_gi_real("abre a página num WebKit")
 import json
 from typing import Any
 
+import pytest
+
 from hefesto_dualsense4unix.interface import onde
 from tests.unit.test_as_telas_de_16_10_no_webkit import _no_webkit
 
 MEDIR = r"""
-(function(PLASTICOS, PERFIL){
+(function(PLASTICOS, PERFIL, LARGA){
+  if (LARGA) {
+    const t = document.createElement('style'); t.textContent = LARGA; document.head.appendChild(t);
+  }
   const f = document.querySelector('.fita');
   const modelo = f.querySelector('.chip.plastico');
   f.querySelectorAll('.chip.plastico').forEach(c => c.remove());
@@ -39,28 +44,43 @@ MEDIR = r"""
   const nome = document.querySelector('.pa-nome');
   return JSON.stringify({direita: Math.round(b.right), largura: b.width, vista: de.clientWidth,
     rola: de.scrollWidth - de.clientWidth, cortados: cortados,
-    perfil_corta: nome.scrollWidth > nome.clientWidth});
-})(PLASTICOS_AQUI, PERFIL_AQUI)
+    perfil_corta: nome.scrollWidth > nome.clientWidth,
+    entreletra: getComputedStyle(document.body).letterSpacing});
+})(PLASTICOS_AQUI, PERFIL_AQUI, LARGA_AQUI)
 """
 
 
-def _medir(plasticos: list[str], perfil: str) -> dict[str, Any]:
+LETRA = {"comum": "", "larga": "*{letter-spacing:.5px !important}"}
+
+
+def _medir(plasticos: list[str], perfil: str, letra: str) -> dict[str, Any]:
     uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
     passo = (MEDIR.replace("PLASTICOS_AQUI", json.dumps(plasticos))
-             .replace("PERFIL_AQUI", json.dumps(perfil)))
+             .replace("PERFIL_AQUI", json.dumps(perfil))
+             .replace("LARGA_AQUI", json.dumps(LETRA[letra])))
     lido: dict[str, Any] = _no_webkit(uri, (1212, 809), [passo])[0]
+    if letra == "larga":
+        assert lido["entreletra"] == "0.5px", f"a letra larga não pegou: {lido}"
     return lido
 
 
-def test_com_quatro_plasticos_longos_o_cadeado_fica_na_janela() -> None:
-    lido = _medir(["Galactic Purple", "Starlight Blue"] * 2, "—")
+@pytest.mark.parametrize("letra", LETRA)
+def test_com_quatro_plasticos_longos_o_cadeado_fica_na_janela(letra: str) -> None:
+    lido = _medir(["Galactic Purple", "Starlight Blue"] * 2, "—", letra)
     assert lido["largura"] > 0, f"o cadeado não está na moldura: {lido}"
     assert lido["direita"] <= lido["vista"] and lido["rola"] <= 0, (
         f"com quatro controles de nome longo o cadeado saiu da janela: {lido}")
 
 
-def test_o_nome_longo_do_perfil_corta_o_dele_e_nao_o_dos_controles() -> None:
-    lido = _medir(["DualSense"] * 4, "The Legend of Heroes: Trails through Daybreak")
+@pytest.mark.parametrize("letra", LETRA)
+def test_o_nome_longo_do_perfil_corta_o_dele_e_nao_o_dos_controles(letra: str) -> None:
+    """Quem cede é o nome do perfil, nunca o do controle, também com a letra de outro computador.
+
+    A letra ``larga`` põe meio pixel a mais por letra em todo texto: é o que a pilha de texto do
+    ubuntu-26.04 faz com a mesma Space Grotesk (cerca de +0,24 px por letra), com folga
+    (O-CABECALHO-TEM-FOLGA-PARA-A-LETRA-DE-QUALQUER-COMPUTADOR-01).
+    """
+    lido = _medir(["DualSense"] * 4, "The Legend of Heroes: Trails through Daybreak", letra)
     assert lido["direita"] <= lido["vista"], f"o cadeado saiu da janela: {lido}"
     assert lido["perfil_corta"] and lido["cortados"] == 0, (
         f"o nome longo do perfil cortou o nome de um controle: {lido}")
