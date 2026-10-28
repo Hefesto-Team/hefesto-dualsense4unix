@@ -58,8 +58,8 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-BANCADA = RAIZ / "mockup/02-controles.html"
-PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
+BANCADA = RAIZ / "mockup/01-jogar.html"
+PUBLICADO = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
 
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 
@@ -132,12 +132,12 @@ def test_a_rota_sai_do_mesmo_bloco_que_o_volume(a02):
 
 def _pares(a02, onde=None) -> dict[str, list[str]]:
     rota = sorted(a02.BOTOES_DA_FILEIRA_DO_SOM)
-    if onde == PUBLICADO and _a_02_esta_em_trabalho():
+    if onde == PUBLICADO and _a_jogar_esta_em_trabalho():
         rota = [v for v in rota if v != a02.ROTA_TUDO_NO_CONTROLE]
     return {"alto-rota": rota}
 
 
-def _a_02_esta_em_trabalho() -> bool:
+def _a_jogar_esta_em_trabalho() -> bool:
     """A 02 declarada em trabalho, perguntado ao portão — ver `_pares`."""
     import importlib.util
 
@@ -147,7 +147,7 @@ def _a_02_esta_em_trabalho() -> bool:
     mod = importlib.util.module_from_spec(spec)
     sys.modules["check_desenho_dos_acesos"] = mod
     spec.loader.exec_module(mod)
-    return "02-controles.html" in mod.declaradas()
+    return "01-jogar.html" in mod.declaradas()
 
 
 @pytest.mark.parametrize("onde", [BANCADA, PUBLICADO], ids=["bancada", "publicado"])

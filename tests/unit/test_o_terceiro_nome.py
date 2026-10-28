@@ -19,8 +19,8 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
 )
 
 PUBLICADO = pathlib.Path(
-    "src/hefesto_dualsense4unix/interface/paginas/02-controles.html")
-BANCADA = pathlib.Path("mockup/02-controles.html")
+    "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html")
+BANCADA = pathlib.Path("mockup/01-jogar.html")
 PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
 
@@ -29,8 +29,8 @@ NOME_DELA = "Canais sonoros apenas no PC"
 NOME_DO_QUARTO = "Canais sonoros apenas no DualSense"
 NOME_DE_ONTEM = "Tudo na TV e Nada no Controle"
 
-def _a_02_esta_em_trabalho() -> bool:
-    """A aba 02 está declarada em trabalho no `mockup/DIVERGENCIAS.md`?"""
+def _a_jogar_esta_em_trabalho() -> bool:
+    """A aba Jogar está declarada em trabalho no `mockup/DIVERGENCIAS.md`?"""
     import importlib.util
     import sys
 
@@ -40,7 +40,7 @@ def _a_02_esta_em_trabalho() -> bool:
     mod = importlib.util.module_from_spec(spec)
     sys.modules["check_desenho_do_terceiro"] = mod
     spec.loader.exec_module(mod)
-    return "02-controles.html" in mod.declaradas()
+    return "01-jogar.html" in mod.declaradas()
 
 
 @pytest.mark.parametrize("alvo", [PUBLICADO, BANCADA], ids=["publicado", "mockup"])
@@ -48,8 +48,8 @@ class TestOsTresNomesNaTela:
     """**O PUBLICADO SÓ FICA ATRÁS ENQUANTO A 02 ESTIVER DECLARADA EM"""
 
     def _corpo(self, alvo: pathlib.Path) -> str:
-        if alvo == PUBLICADO and _a_02_esta_em_trabalho():
-            pytest.skip("a 02 está declarada em trabalho: o publicado é o "
+        if alvo == PUBLICADO and _a_jogar_esta_em_trabalho():
+            pytest.skip("a Jogar está declarada em trabalho: o publicado é o "
                         "desenho de ontem até a publicação")
         return alvo.read_text(encoding="utf-8")
 
