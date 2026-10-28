@@ -225,6 +225,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 2,
     "tests/unit/test_toda_fala_declarada_chega_a_tela.py::_FALA_SEM_TELA_HOJE": 0,
     "tests/unit/test_todo_campo_do_caderno_tem_consumidor.py::ISENTOS": 0,
+    "tests/unit/test_todo_deslizante_aplica_ao_soltar.py::EXCECOES": 5,
     "tests/unit/test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula.py::PENDENTES": 0,
 }
 

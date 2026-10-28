@@ -43,12 +43,15 @@ O_PACOTE_DA_01 = ("o volume do cartão da Jogar ganha o dono no pacote da 01 "
                   "(A-JOGAR-ESCOLHE-O-MODO-UNICO-NOS-PACOTES-01)")
 
 EXCECOES: dict[tuple[str, str, str], str] = {
+    # sai com: AS-ABAS-DE-AJUSTE-E-A-TIRA-DE-NOVE-SE-PUBLICAM-01
     **{("publicado", "03-gatilhos.html", c): ATE_O_PUBLICAR
        for c in ("partir", "inicio", "fim", "forca", "freq")},
     ("publicado", "04-iluminacao.html", "ritmo"): ATE_O_PUBLICAR,
+    # fica: o campo do diálogo da 08 se lê ao confirmar, e não ao soltar
     **{(lado, "08-conexoes.html", c): FORMULARIO_DA_08
        for lado in ("desenho", "publicado")
        for c in ("hub-entrada", "acionador-quem", "lugar")},
+    # sai com: A-JOGAR-ESCOLHE-O-MODO-UNICO-NOS-PACOTES-01
     ("desenho", "01-jogar.html", "mic-barra"): O_PACOTE_DA_01,
     ("desenho", "01-jogar.html", "alto-barra"): O_PACOTE_DA_01,
 }
@@ -178,18 +181,17 @@ def _ctx() -> Any:
     return Contexto(state={"active_profile": ""}, mesa=mesa, conectados=[falso], estados={})
 
 
-@pytest.fixture
-def soltar(monkeypatch):
+class _Soltar:
     """Solta um campo do criador do desenho e devolve o que o controle recebeu."""
-    import pacotes
-    from pacotes import a03_gatilhos
 
-    monkeypatch.setattr(a03_gatilhos, "SENTIR_S", 0.0)
-    campos = _criador((DESENHO / PAGINA_DO_CRIADOR).read_text(encoding="utf-8"))
+    def __init__(self, campos: dict[str, dict[str, str]]) -> None:
+        self.campos = campos
 
-    def _soltar(linha: str, valor: str,
-                evento: str = "change") -> list[tuple[str, tuple[Any, ...]]]:
-        o = _carga(campos, linha, valor, evento)
+    def __call__(self, linha: str, valor: str,
+                 evento: str = "change") -> list[tuple[str, tuple[Any, ...]]]:
+        import pacotes
+
+        o = _carga(self.campos, linha, valor, evento)
         assert o["gesto"], f"o campo {linha!r} do criador não manda gesto nenhum ao soltar"
         quem = pacotes.gesto_da_pagina(PAGINA_DO_CRIADOR, o["gesto"])
         assert quem is not None, o["gesto"]
@@ -197,11 +199,17 @@ def soltar(monkeypatch):
         quem(_ctx(), o, ponte)
         return ponte.chamadas
 
-    _soltar.campos = campos
-    return _soltar
+
+@pytest.fixture
+def soltar(monkeypatch: pytest.MonkeyPatch) -> _Soltar:
+    """O criador do desenho, com o toque sem espera."""
+    from pacotes import a03_gatilhos
+
+    monkeypatch.setattr(a03_gatilhos, "SENTIR_S", 0.0)
+    return _Soltar(_criador((DESENHO / PAGINA_DO_CRIADOR).read_text(encoding="utf-8")))
 
 
-def test_soltar_a_forca_toca_o_gatilho_com_a_forca_nova(soltar) -> None:
+def test_soltar_a_forca_toca_o_gatilho_com_a_forca_nova(soltar: _Soltar) -> None:
     forca = soltar.campos["forca"]
     baixa, alta = forca["min"], forca["max"]
     com_a_baixa = soltar("forca", baixa)
@@ -215,18 +223,18 @@ def test_soltar_a_forca_toca_o_gatilho_com_a_forca_nova(soltar) -> None:
 
 
 @pytest.mark.parametrize("linha", ["inicio", "fim", "forca", "freq", "partir"])
-def test_todo_campo_do_criador_toca_ao_soltar(soltar, linha) -> None:
+def test_todo_campo_do_criador_toca_ao_soltar(soltar: _Soltar, linha: str) -> None:
     a = soltar.campos[linha]
     valor = a.get("max") or a["value"]
     chamadas = soltar(linha, valor)
     assert [c[0] for c in chamadas[:2]] == ["set", "set"], (linha, chamadas)
 
 
-def test_soltar_a_lista_toca_o_efeito_escolhido(soltar) -> None:
+def test_soltar_a_lista_toca_o_efeito_escolhido(soltar: _Soltar) -> None:
     chamadas = soltar("partir", "Weapon")
     assert chamadas[0][1][1] == "Weapon", chamadas
 
 
-def test_o_click_do_mesmo_arrasto_nao_toca_de_novo(soltar) -> None:
+def test_o_click_do_mesmo_arrasto_nao_toca_de_novo(soltar: _Soltar) -> None:
     assert soltar("forca", soltar.campos["forca"]["max"], evento="click") == []
     assert soltar("partir", "Weapon", evento="click") == []
