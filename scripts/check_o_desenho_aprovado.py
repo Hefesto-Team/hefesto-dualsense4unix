@@ -12,18 +12,23 @@ RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 from hefesto_dualsense4unix.interface import onde
 
+sys.path.insert(0, str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
+from monta import PAGINAS_QUE_SAIRAM
+
 BANCADA = onde.BANCADA
+SAIRAM = frozenset(PAGINAS_QUE_SAIRAM)
 
 PUBLICADO = onde.PUBLICADO
 DECLARACOES = BANCADA / "DIVERGENCIAS.md"
 
 
 def paginas() -> list[str]:
-    """As páginas que a régua cobre, enumeradas a partir da BANCADA."""
+    """As páginas que a régua cobre, enumeradas a partir da BANCADA, menos as que saíram do produto."""
     return sorted(
         p.name
         for p in BANCADA.glob("*.html")
         if not p.name.startswith(".") and not p.name.endswith(".dc.html")
+        and p.name not in SAIRAM
     )
 
 
@@ -68,7 +73,7 @@ def medir() -> tuple[list[str], list[str], list[str]]:
         elif soma(BANCADA / nome) != soma(no_produto):
             atrasadas.append(nome)
     for p in PUBLICADO.glob("*.html"):
-        if p.name.endswith(".dc.html"):
+        if p.name.endswith(".dc.html") or p.name in SAIRAM:
             continue
         if not (BANCADA / p.name).exists():
             so_publicado.append(p.name)
@@ -103,7 +108,8 @@ def publicar(argv: list[str]) -> int:
         shutil.copy2(BANCADA / nome, PUBLICADO / nome)
     if len(alvos) == len(paginas()):
         for p in PUBLICADO.glob("*.html"):
-            if not p.name.endswith(".dc.html") and not (BANCADA / p.name).exists():
+            if not p.name.endswith(".dc.html") and (
+                    p.name in SAIRAM or not (BANCADA / p.name).exists()):
                 p.unlink()
     _tirar_declaracoes(alvos)
     mudaram = [n for n in alvos if n in atrasadas]
