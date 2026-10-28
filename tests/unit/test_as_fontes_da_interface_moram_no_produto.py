@@ -20,6 +20,12 @@ A CURA, NA ORIGEM: Space Grotesk e JetBrains Mono (OFL) vêm em `interface/asset
    `document.fonts` diz que as duas famílias carregaram;
 5. a mordida da 4 mora no próprio arquivo: com o `<link>` do Google de volta, a mesma página
    NÃO abre.
+
+AS-PAGINAS-DE-FORA-DAS-ABAS-LEVAM-A-LETRA-DA-CASA-01 (27/10/2026): o Calibrar giroscópio, o Mapa
+das portas e o Mapa do rádio entram nas réguas 1 e 2, no desenho e no publicado, e a variável do
+corpo de cada uma começa pela Space Grotesk, e a do dado pela JetBrains Mono. O publicado que o
+`mockup/DIVERGENCIAS.md` declara em trabalho espera o `--publicar` (xfail estrito: o publicar tira
+a declaração e cura a página no mesmo gesto).
 """
 from __future__ import annotations
 
@@ -31,6 +37,8 @@ import pathlib
 import re
 import subprocess
 import sys
+
+import importlib.util
 
 import pytest
 
@@ -51,7 +59,44 @@ def _as_dez(pasta: pathlib.Path) -> list[pathlib.Path]:
     return [p for n in NUMEROS for p in sorted(pasta.glob(f"{n}-*.html"))]
 
 
-PAGINAS = [TOPO, *_as_dez(MOCKUP), *_as_dez(PUBLICADO)]
+DE_FORA = ("calibrar-sensores.html", "mapa-das-portas.html", "mapa-do-radio.html")
+VARIAVEIS_DE_FORA = {
+    "calibrar-sensores.html": ("--f", "--m"),
+    "mapa-das-portas.html": ("--font-corpo", "--font-dado"),
+    "mapa-do-radio.html": ("--font-corpo", "--font-dado"),
+}
+JA_DIZIA_A_CASA = frozenset({"mapa-do-radio.html"})
+
+
+def _declaradas() -> set[str]:
+    """As páginas em trabalho, perguntado ao portão `desenho-aprovado`, o dono."""
+    alvo = RAIZ / "scripts" / "check_o_desenho_aprovado.py"
+    spec = importlib.util.spec_from_file_location("check_desenho_das_fontes", alvo)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["check_desenho_das_fontes"] = mod
+    spec.loader.exec_module(mod)
+    declaradas: set[str] = mod.declaradas()
+    return declaradas
+
+
+_EM_TRABALHO = _declaradas()
+
+
+def _de_fora(pasta: pathlib.Path) -> list[pathlib.Path]:
+    return [pasta / nome for nome in DE_FORA]
+
+
+def _com_a_espera(arq: pathlib.Path) -> object:
+    """O publicado de fora declarado em trabalho espera o `--publicar` do fecho."""
+    if arq.parent == PUBLICADO and arq.name in DE_FORA and arq.name in _EM_TRABALHO:
+        return pytest.param(arq, marks=pytest.mark.xfail(
+            strict=True, reason=f"{arq.name} declarada no DIVERGENCIAS até o --publicar"))
+    return arq
+
+
+PAGINAS = [TOPO, *_as_dez(MOCKUP), *_as_dez(PUBLICADO), *_de_fora(MOCKUP), *_de_fora(PUBLICADO)]
+COM_A_ESPERA = [_com_a_espera(p) for p in PAGINAS]
 
 
 def _id(caminho: pathlib.Path) -> str:
@@ -112,11 +157,12 @@ def test_nenhuma_pagina_pede_recurso_fora_da_maquina(arq: pathlib.Path) -> None:
     assert recursos_de_fora(arq.read_text(encoding="utf-8")) == []
 
 
-def test_o_piso_sao_as_vinte_paginas_e_o_topo() -> None:
+def test_o_piso_sao_as_vinte_e_seis_paginas_e_o_topo() -> None:
     """Lista vazia aprovaria tudo: o piso é o que torna o verde uma medida."""
     assert len(_as_dez(MOCKUP)) == 10
     assert len(_as_dez(PUBLICADO)) == 10
-    assert len(PAGINAS) == 21
+    assert all(p.is_file() for p in [*_de_fora(MOCKUP), *_de_fora(PUBLICADO)])
+    assert len(PAGINAS) == 27
 
 
 @pytest.mark.parametrize(
@@ -175,7 +221,7 @@ def faces_de(texto: str) -> list[tuple[str, list[str]]]:
     return faces
 
 
-@pytest.mark.parametrize("arq", PAGINAS, ids=_id)
+@pytest.mark.parametrize("arq", COM_A_ESPERA, ids=_id)
 def test_todo_font_face_aponta_para_um_arquivo_do_pacote(arq: pathlib.Path) -> None:
     faces = faces_de(arq.read_text(encoding="utf-8"))
     assert {f for f, _ in faces} == FAMILIAS, f"as famílias declaradas em {_id(arq)}: {faces}"
@@ -192,10 +238,21 @@ def test_todo_font_face_aponta_para_um_arquivo_do_pacote(arq: pathlib.Path) -> N
             assert magia in {b"\x00\x01\x00\x00", b"true"}, f"{alvo.name} não é TrueType"
 
 
-PESOS_DE_ANTES = {"Space Grotesk": "400 700", "JetBrains Mono": "400 500"}
+_SELETOR_NA_FRENTE = re.compile(r"[^\s{};>]\s*@font-face")
 
 
 @pytest.mark.parametrize("arq", PAGINAS, ids=_id)
+def test_nenhum_font_face_ganha_seletor_na_frente(arq: pathlib.Path) -> None:
+    """A 08 põe `.radio` na frente de cada regra do primeiro `<style>` do Mapa do rádio: um
+    `@font-face` ali vira `.radio @font-face`, que o navegador descarta."""
+    texto = _COMENTARIO_CSS.sub("", arq.read_text(encoding="utf-8"))
+    assert _SELETOR_NA_FRENTE.findall(texto) == [], _id(arq)
+
+
+PESOS_DE_ANTES = {"Space Grotesk": "400 700", "JetBrains Mono": "400 500"}
+
+
+@pytest.mark.parametrize("arq", COM_A_ESPERA, ids=_id)
 def test_os_pesos_declarados_sao_os_que_o_link_do_google_pedia(arq: pathlib.Path) -> None:
     """Prova da D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO."""
     texto = _COMENTARIO_CSS.sub("", arq.read_text(encoding="utf-8"))
@@ -206,6 +263,25 @@ def test_os_pesos_declarados_sao_os_que_o_link_do_google_pedia(arq: pathlib.Path
         assert familia and peso, bloco[:80]
         achados[familia.group(1).strip()] = peso.group(1)
     assert achados == PESOS_DE_ANTES, f"{_id(arq)}: {achados}"
+
+
+def _comeca_por(texto: str, variavel: str) -> str:
+    achada = re.search(rf"{re.escape(variavel)}\s*:\s*([^;,]+)", _COMENTARIO_CSS.sub("", texto))
+    assert achada, f"{variavel} não está declarada"
+    return achada.group(1).strip().strip("'\"")
+
+
+@pytest.mark.parametrize(
+    "arq",
+    [p if p.name in JA_DIZIA_A_CASA else _com_a_espera(p)
+     for p in [*_de_fora(MOCKUP), *_de_fora(PUBLICADO)]],
+    ids=_id)
+def test_a_pagina_de_fora_comeca_pela_letra_da_casa(arq: pathlib.Path) -> None:
+    """Prova da D-2710-AS-PAGINAS-DE-FORA-LEVAM-A-LETRA-DA-CASA: o corpo e o dado da casa."""
+    texto = arq.read_text(encoding="utf-8")
+    corpo, dado = VARIAVEIS_DE_FORA[arq.name]
+    assert _comeca_por(texto, corpo) == "Space Grotesk", f"{_id(arq)}: {corpo}"
+    assert _comeca_por(texto, dado) == "JetBrains Mono", f"{_id(arq)}: {dado}"
 
 
 def test_o_mockup_e_o_publicado_chegam_ao_mesmo_arquivo_pelo_mesmo_endereco() -> None:

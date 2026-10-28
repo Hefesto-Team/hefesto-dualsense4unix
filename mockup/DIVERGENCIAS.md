@@ -29,6 +29,13 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## calibrar-sensores.html
 - **27/10/2026** — o «Fechar» e o «Voltar» levam à Jogar, porque a Controles saiu da tira. Até publicar, o produto continua levando à Controles, que ainda é aba própria.
+- **27/10/2026** — a página embute a letra das abas (Space Grotesk e JetBrains Mono, do pacote). Até publicar, o produto continua com a letra do sistema.
+
+## mapa-das-portas.html
+- **27/10/2026** — a página embute a letra das abas (Space Grotesk e JetBrains Mono, do pacote). Até publicar, o produto continua com a letra do sistema.
+
+## mapa-do-radio.html
+- **27/10/2026** — a página embute a letra das abas num `<style>` próprio, depois da folha que a aba Conexões lê. Até publicar, o produto continua sem o `@font-face` e cai na letra do sistema onde a Space Grotesk não está instalada.
 
 ## 03-gatilhos.html
 - **27/10/2026** — a tira tem nove abas (a Controles entrou na Jogar) e o contador «N USB · N BT» saiu do cabeçalho; até publicar, o produto continua com as dez abas e o contador.

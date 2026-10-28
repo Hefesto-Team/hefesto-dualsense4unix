@@ -34,6 +34,16 @@ def _regra(css: str, seletor: str) -> dict[str, str]:
     return declaracoes
 
 
+def letra_da_casa(topo: str | None = None) -> str:
+    """As duas linhas `@font-face` das abas, a Space Grotesk e a JetBrains Mono do pacote."""
+    css = _folha_do_topo(TOPO.read_text(encoding="utf-8") if topo is None else topo)
+    faces = re.findall(r"@font-face\s*\{[^{}]*\}", css)
+    if len(faces) != 2:
+        raise SystemExit(f"ERRO: o topo.html tem {len(faces)} `@font-face`, e as páginas "
+                         "avulsas levam as duas letras das abas.")
+    return "".join(f"\n  {face}" for face in faces)
+
+
 def moldura(topo: str | None = None, caixa: str = ".cx") -> str:
     """A folha que dá a ``caixa`` o recuo e o tamanho da `.janela` das dez abas."""
     css = _folha_do_topo(TOPO.read_text(encoding="utf-8") if topo is None else topo)

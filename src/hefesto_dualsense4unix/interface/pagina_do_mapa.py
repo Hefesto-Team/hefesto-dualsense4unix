@@ -6265,7 +6265,33 @@ EDICOES_DO_MAPA_SEM_LEITURA: tuple[Edicao, ...] = (
     ),
 )
 
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+_DA_SPRINT_DA_LETRA = "27/10/2026, AS-PAGINAS-DE-FORA-DAS-ABAS-LEVAM-A-LETRA-DA-CASA-01"
+
+_A_ABERTURA_DA_FOLHA = "<style>\n  :root {\n"
+
+_AS_LETRAS_DO_SISTEMA = (
+    '    --font-corpo: ui-sans-serif, system-ui, "Cantarell", "Fira Sans", "Segoe UI", Roboto, '
+    'sans-serif;\n'
+    '    --font-dado:  ui-monospace, "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", '
+    'monospace;\n'
+)
+
+EDICOES_DA_LETRA_DA_CASA: tuple[Edicao, ...] = (
+    Edicao(
+        antes=_A_ABERTURA_DA_FOLHA,
+        depois="<style>" + caixa_da_janela.letra_da_casa().replace("\n  ", "") + "\n  :root {\n",
+        porque=(f"{_DA_SPRINT_DA_LETRA}: as duas letras das abas vêm do pacote, e a medida da "
+                "página é a mesma em qualquer computador."),
+    ),
+    Edicao(
+        antes=_AS_LETRAS_DO_SISTEMA,
+        depois=("    --font-corpo: 'Space Grotesk', system-ui, sans-serif;\n"
+                "    --font-dado:  'JetBrains Mono', ui-monospace, monospace;\n"),
+        porque=f"{_DA_SPRINT_DA_LETRA}: o corpo e o dado começam pela letra da casa.",
+    ),
+)
+
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = EDICOES_DA_LETRA_DA_CASA
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

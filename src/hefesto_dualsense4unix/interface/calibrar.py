@@ -191,8 +191,8 @@ CSS = """
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555;
     --sel-bg:rgba(189,147,249,.16);
-    --f:ui-sans-serif,system-ui,"Cantarell","Segoe UI",Roboto,sans-serif;
-    --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
+    --f:'Space Grotesk',system-ui,sans-serif;
+    --m:'JetBrains Mono',ui-monospace,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--fundo-da-pagina);color:var(--fg);font-family:var(--f);
@@ -539,7 +539,7 @@ def documento(quem):
 <head>
 <meta charset="utf-8">
 <title>Hefesto — calibrar giroscópio</title>
-<style>{CSS}{moldura()}</style>
+<style>{caixa_da_janela.letra_da_casa()}{CSS}{moldura()}</style>
 </head>
 <body>
 
