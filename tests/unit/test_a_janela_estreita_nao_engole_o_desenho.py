@@ -675,23 +675,32 @@ CONTADOR_DE_VOLTA = r"""
 
 
 def test_a_mordida_da_letra_larga_ve_o_corte_que_a_comum_nao_ve() -> None:
-    """A passada larga morde: com o contador de volta no topo, ela corta o chip mais que a comum.
+    """A passada larga morde: com o contador de volta no topo, a régua dela acusa o chip cortado.
 
     O contador «● N USB · N BT» saiu do topo com a
     A-ABA-JOGAR-JUNTA-OS-CONTROLES-E-O-MODO-GERE-TUDO-01. Posto de volta pelo teste, a linha da 01
     em 940 px cabe com a letra comum da mesa e corta os dois chips com meio pixel a mais por letra:
-    é a cegueira que deixava o vermelho só para o CI.
+    é a cegueira que deixava o vermelho só para o CI. A prova passa pela MEDIDA e pelo
+    ``engolidos`` da passada, e não por uma conta à parte: é a régua que tem de ver o corte.
     """
     from tests.unit.test_as_telas_de_16_10_no_webkit import _no_webkit
 
     uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
     lidos = {}
+    no_topo = {}
     for nome, larga in (("comum", ""), ("larga", LETRA_LARGA)):
         passo = (CONTADOR_DE_VOLTA.replace("@@FOLHA@@", json.dumps(FOLHA_DA_CASA))
                  .replace("@@LARGA@@", json.dumps(larga)))
-        lidos[nome] = _no_webkit(uri, (940, ALTURA_DO_DESENHO), [passo])[0]
+        lidos[nome], medida = _no_webkit(uri, (940, ALTURA_DO_DESENHO), [passo, MEDIDA.strip()])
+        no_topo[nome] = [c for c in engolidos(medida) if c["peca"].get("no_topo")]
     comum, larga_lida = lidos["comum"], lidos["larga"]
     assert len(larga_lida["cortes"]) >= 2 and larga_lida["entreletra"] == "0.5px", (
         f"a mordida não mediu o que devia: {lidos}")
     assert sum(larga_lida["cortes"]) > 0 and sum(larga_lida["cortes"]) > sum(comum["cortes"]), (
         f"com o contador de volta, a letra larga tinha de cortar o chip mais que a comum: {lidos}")
+    vistos = [c["peca"]["texto"] for c in no_topo["larga"]]
+    assert any("Cosmic Red" in t or "Starlight Blue" in t for t in vistos), (
+        f"a passada larga não acusou o chip que corta {larga_lida['cortes']} px: {vistos}")
+    assert (sum(c["sobra"] for c in no_topo["larga"])
+            > sum(c["sobra"] for c in no_topo["comum"])), (
+        f"a régua larga tinha de ver mais corte que a comum: {no_topo}")
