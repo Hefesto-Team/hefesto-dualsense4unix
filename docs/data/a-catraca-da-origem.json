@@ -240,12 +240,12 @@
       "data": "2026-10-28",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1161482,
+      "piso": 1161474,
       "por_item": {
         "docs": 107562,
         "scripts": 109528,
-        "src": 294339,
-        "tests": 650053
+        "src": 294345,
+        "tests": 650039
       },
       "razao": "o teto desceu sozinho com o número",
       "subidas": [
