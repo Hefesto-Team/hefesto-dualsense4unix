@@ -206,6 +206,10 @@ ATOS: dict[Chave, str] = {
 }
 
 
+GRAVAM_SEM_DECLARAR = protegido.com_a_secao(GRAVAM_SEM_DECLARAR, pacotes.GESTOS)
+ATOS = protegido.com_a_secao(ATOS, pacotes.GESTOS)
+
+
 def _declarados() -> set[Chave]:
     return set(pacotes.GESTOS_QUE_MEXEM)
 

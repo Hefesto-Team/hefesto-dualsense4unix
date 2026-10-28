@@ -58,7 +58,11 @@ from hefesto_dualsense4unix.daemon.ipc_handlers import origem_do_pedido
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import ORIGENS_GESTO_DELA
 from hefesto_dualsense4unix.integrations import steam_input_ponte as ponte
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+from hefesto_dualsense4unix.integrations.virtual_pad import (
+    modo_do_par,
+    normalizar_caminho,
+    par_do_modo,
+)
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
@@ -123,8 +127,11 @@ class DaemonDeMentira:
             return True
         vpad = self.state.setdefault("gamepad_emulation", {})
         vpad["enabled"] = enabled
-        if enabled and caminho is not None:
-            vpad["caminho"] = normalizar_caminho(caminho)
+        flavor = params.get("flavor")
+        if enabled and (caminho is not None or flavor is not None):
+            novo, mascara = par_do_modo(modo_do_par(normalizar_caminho(caminho or ""),
+                                                    flavor or caminho))
+            vpad["caminho"], vpad["flavor"] = novo or "dualsense", mascara
         return True
 
 
@@ -239,6 +246,7 @@ def _clicar(chave: str, ctx: Contexto, daemon: DaemonDeMentira) -> Any:
 TABELA_DA_SPRINT = {
     "dualsense": ("gamepad", "dualsense", False),
     "xbox": ("gamepad", "xbox", False),
+    "nintendo": ("gamepad", None, False),
     "navegacao": ("desktop", None, False),
     "nativo": ("native", None, False),
     "steam": ("native", None, True),

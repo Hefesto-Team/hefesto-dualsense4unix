@@ -186,7 +186,24 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "pintados": len(DA_PAGINA) + len(cartoes) * len(POR_CARTAO),
         "sem_dono": 0,
     }
+    from . import a02_controles
+
+    if a02_controles.a_secao_esta_na_pagina(PAGINA):
+        _com_a_secao_dos_controles(fora, a02_controles.pacote(ctx))
     return fora
+
+
+def _com_a_secao_dos_controles(fora: dict[str, Any], secao: dict[str, Any]) -> None:
+    """A seção Controles na Jogar, pintada pelo pacote da 02: o card dela vale sobre o cartão."""
+    from . import LUGAR_VAZIO
+
+    cartoes = fora["cartoes"]
+    for uniq, campos in (secao.get("cards") or {}).items():
+        cartoes[uniq] = {**cartoes.get(uniq, {}), **campos}
+    for chave, valor in (secao.get("mesa") or {}).items():
+        fora.setdefault(chave, valor)
+    fora[LUGAR_VAZIO] = {**(secao.get(LUGAR_VAZIO) or {}), **(fora.get(LUGAR_VAZIO) or {})}
+    fora["cobertura"]["pintados"] += int((secao.get("cobertura") or {}).get("pintados") or 0)
 
 
 def _cor_do_plastico(slug: str) -> str:
@@ -684,8 +701,10 @@ def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
         return LinhaDaFileira(MODE_NATIVE, None, False)
     achar = CHIP_DA_NAVEGACAO if chave == CHIP_DO_POINT_AND_CLICK else chave
     chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == achar), None)
-    if chip is None or chip.ponte is None:
+    if chip is None or (chip.ponte is None and not chip.modo):
         raise ValueError(f"modo: {chave!r} não é chip da fileira desta aba")
+    if chip.ponte is None:
+        return LinhaDaFileira(str(chip.modo), None, False)
     ponte = chip.ponte
     if chave == CHIP_DO_STEAM_INPUT:
         return LinhaDaFileira(MODE_NATIVE, None, bool(ponte.steam_input))
@@ -984,14 +1003,16 @@ def _chip_do_caminho(state: dict[str, Any]) -> str:
     sobre o do «Sony DualSense») e quem diz se está de pé é a lista (:func:`_estado_da_tela`). `""`
     quando nenhum casa: o Nativo, ou caminho que o daemon não publicou.
     """
+    from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
+
     painel = _painel()
     modo = painel.modo_vivo(state)
-    caminho = painel.caminho_vivo(state)
+    unico = painel.modo_unico_vivo(state)
     for chip in painel.CHIPS_DA_ESCADA:
         linha = o_que_o_chip_faz(str(chip.chave))
         if linha.steam_input or linha.modo != modo:
             continue
-        if linha.caminho is None or linha.caminho == caminho:
+        if linha.modo != MODE_GAMEPAD or str(chip.chave) == unico:
             return str(chip.chave)
     return ""
 
@@ -1073,10 +1094,9 @@ def _rotulo_de(campo: str, valor: str) -> str:
     `painel.CHIPS_DA_ESCADA`, que é o dono dos rótulos da fileira — digitá-los
     aqui seria a segunda cópia da palavra de produto.
     """
-    if campo == "caminho":
-        for chip in _painel().CHIPS_DA_ESCADA:
-            if chip.caminho == valor:
-                return str(chip.rotulo)
+    for chip in _painel().CHIPS_DA_ESCADA:
+        if (campo, valor) in (("caminho", chip.caminho), ("mascara", chip.chave)):
+            return str(chip.rotulo)
     return valor
 
 
@@ -1105,11 +1125,13 @@ def _pendencia(state: dict[str, Any]) -> dict[str, str]:
         reconciliar_pendente,
     )
     from hefesto_dualsense4unix.app.actions.mode_transition import mode_of_state
+    from hefesto_dualsense4unix.integrations.virtual_pad import par_do_modo
 
+    unico = _painel().modo_unico_vivo(state)
     lembrete = SimpleNamespace(
         _escolha_pendente=dict(_ESCOLHA) or None,
         _modo_vigente_do_daemon=mode_of_state(state),
-        _caminho_vigente_do_daemon=_painel().caminho_vivo(state),
+        _caminho_vigente_do_daemon=par_do_modo(unico)[0] if unico else None,
         _mascara_vigente_do_daemon=mascara_do_aparelho(state),
     )
     sobra: dict[str, str] = dict(reconciliar_pendente(lembrete) or {})
@@ -1310,15 +1332,19 @@ def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
         MODE_GAMEPAD,
         plan_mode_transition,
     )
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_modo
 
     linha = o_que_o_chip_faz(chave)
     if linha.modo == MODE_DESKTOP and chave in ARRANJO_DO_CHIP:
         return plan_mode_transition(MODE_DESKTOP, arranjo=ARRANJO_DO_CHIP[chave])
     if linha.modo != MODE_GAMEPAD:
         return _plano(linha.modo)
-    if not linha.caminho:
+    if linha.caminho:
+        return _plano(MODE_GAMEPAD, caminho=linha.caminho)
+    sem_caminho = normalizar_modo(chave)
+    if sem_caminho is None:
         raise RuntimeError(BOTOES_SEM_DONO.get(f"modo-{chave}", "sem dono no produto"))
-    return _plano(MODE_GAMEPAD, caminho=linha.caminho)
+    return _plano(MODE_GAMEPAD, mascara=sem_caminho)
 
 
 def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
@@ -1341,8 +1367,10 @@ def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
     if linha.modo != MODE_GAMEPAD:
         _lembrar("modo", linha.modo, rotulo)
         return
-    if linha.caminho:
-        _lembrar("caminho", linha.caminho, rotulo)
+    campo, outro = ("caminho", "mascara") if linha.caminho else ("mascara", "caminho")
+    _ESCOLHA.pop(outro, None)
+    _ROTULO.pop(outro, None)
+    _lembrar(campo, linha.caminho or chave, rotulo)
 
 
 def _o_clique_da_fileira(ctx: Contexto, o: dict[str, Any], p: Any,
@@ -1417,6 +1445,18 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
     (:func:`o_que_o_chip_faz`).
     """
     return _o_clique_da_fileira(ctx, o, p, "xbox")
+
+
+@gesto("01-jogar.html", "modo-nintendo",
+       grava="o modo no perfil ativo, pelo gamepad.emulation.set à mão (o daemon grava)")
+def modo_nintendo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """"Nintendo Pro": todos os controles chegam ao jogo como o Pro Controller.
+
+    É o modo único sem caminho (`virtual_pad.par_do_modo`): o plano leva a máscara `nintendo` e o
+    daemon a vale para todos os controles, pelo escritor único do modo. Tira o jogo da vez do Steam
+    Input, como o «Xbox» (:func:`o_que_o_chip_faz`; o clique é :func:`_o_clique_da_fileira`).
+    """
+    return _o_clique_da_fileira(ctx, o, p, "nintendo")
 
 
 @gesto("01-jogar.html", "modo-nativo",

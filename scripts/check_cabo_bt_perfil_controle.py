@@ -92,6 +92,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "modo-point-and-click": "idem: é o mesmo modo `desktop` da Navegação, no lado Ligado da tela",
     "modo-steam": "idem",
     "modo-xbox": "idem",
+    "modo-nintendo": "idem: o Nintendo Pro é o modo único sem caminho, igual para todos "
+                     "(`D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES`)",
     "modo-nativo": "idem: o Nativo tira o Hefesto do meio para todos, e a Steam do jogo da vez",
     "configurar-lancador": "abre a janela do lançador — é da tela",
     "identificar-lancador": "procura o lançador de novo no disco — é leitura da máquina",
@@ -494,6 +496,44 @@ def _texto(expr: ast.expr, arquivo: pathlib.Path, src: pathlib.Path) -> str | No
     return None
 
 
+@functools.cache
+def _tuplas(arquivo: pathlib.Path) -> dict[str, list[ast.expr]]:
+    """As tuplas do módulo: `NOME = (..., ...)`, com os elementos ainda por resolver."""
+    fora: dict[str, list[ast.expr]] = {}
+    for no in _arvore(arquivo).body:
+        if isinstance(no, ast.Assign):
+            alvos, valor = no.targets, no.value
+        elif isinstance(no, ast.AnnAssign) and no.value is not None:
+            alvos, valor = [no.target], no.value
+        else:
+            continue
+        if isinstance(valor, ast.Tuple):
+            fora.update({a.id: list(valor.elts) for a in alvos if isinstance(a, ast.Name)})
+    return fora
+
+
+def _paginas(expr: ast.expr, arquivo: pathlib.Path, src: pathlib.Path,
+             fundo: int = 0) -> list[str] | None:
+    """As páginas do primeiro argumento: um texto, ou uma tupla de textos do módulo ou importada."""
+    um = _texto(expr, arquivo, src)
+    if um is not None:
+        return [um]
+    elementos: list[ast.expr] | None = None
+    if isinstance(expr, ast.Tuple):
+        elementos = list(expr.elts)
+    elif isinstance(expr, ast.Name) and expr.id in _tuplas(arquivo):
+        elementos = _tuplas(arquivo)[expr.id]
+    elif isinstance(expr, ast.Name) and fundo < 4:
+        de_onde = _importados(arquivo, src).get(expr.id)
+        outro = _arquivo_do_modulo(de_onde[0], src) if de_onde and de_onde[1] else None
+        if de_onde and de_onde[1] and outro is not None:
+            return _paginas(ast.Name(id=de_onde[1]), outro, src, fundo + 1)
+    if not elementos:
+        return None
+    textos = [_texto(e, arquivo, src) for e in elementos]
+    return None if None in textos else [t for t in textos if t is not None]
+
+
 def _e_o_decorador(func: ast.expr) -> bool:
     if isinstance(func, ast.Name):
         return func.id == "gesto"
@@ -518,9 +558,10 @@ def registro_do_fonte(
         for no in ast.walk(_arvore(arquivo)):
             if not (isinstance(no, ast.Call) and _e_o_decorador(no.func)):
                 continue
-            textos = [_texto(a, arquivo, src) for a in no.args[:2]]
-            if len(textos) == 2 and textos[0] is not None and textos[1] is not None:
-                pares.add((textos[0], textos[1]))
+            paginas = _paginas(no.args[0], arquivo, src) if len(no.args) == 2 else None
+            nome = _texto(no.args[1], arquivo, src) if len(no.args) == 2 else None
+            if paginas and nome is not None:
+                pares.update((pagina, nome) for pagina in paginas)
             else:
                 onde = arquivo.relative_to(RAIZ) if arquivo.is_relative_to(RAIZ) else arquivo
                 sem_texto.append(f"{onde}:{no.lineno} {ast.unparse(no)}")

@@ -101,6 +101,8 @@ from hefesto_dualsense4unix.integrations import ponte_escada
 from hefesto_dualsense4unix.integrations.virtual_pad import (
     CAMINHO_DUALSENSE,
     CAMINHO_XBOX,
+    MODO_NINTENDO,
+    modo_do_par,
     normalizar_caminho,
 )
 
@@ -174,6 +176,21 @@ def caminho_vivo(state: dict[str, Any] | None) -> str | None:
     if gamepad.get("backend") == "uhid":
         return CAMINHO_DUALSENSE
     return None
+
+
+def modo_unico_vivo(state: dict[str, Any] | None) -> str | None:
+    """O modo único de pé agora (`dualsense`, `xbox`, `nintendo`), ou ``None`` sem leitura.
+
+    O par do daemon (o caminho e o `flavor` do `gamepad_emulation`) vira o aparelho que o jogo
+    vê, pelo dono da regra (`virtual_pad.modo_do_par`): o Nintendo Pro não tem caminho, e o
+    caminho que o daemon publica nele é o de reserva.
+    """
+    caminho = caminho_vivo(state)
+    if caminho is None or not isinstance(state, dict):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    flavor = gamepad.get("flavor") if isinstance(gamepad, dict) else None
+    return modo_do_par(caminho, flavor)
 
 
 ESCRITOR_DOS_MODOS: dict[str, str] = {
@@ -306,6 +323,7 @@ CHIPS_DA_ESCADA: tuple[Chip, ...] = (
         ponte_escada.Ponte(ponte_escada.KIND_GAMEPAD, ponte_escada.MASCARA_XBOX),
         caminho=CAMINHO_XBOX,
     ),
+    Chip(MODO_NINTENDO, "Nintendo Pro", None, modo=MODE_GAMEPAD),
     Chip(
         "steam",
         "Steam Input",
@@ -421,11 +439,9 @@ ROTULO_DO_NATIVO_NA_ORIGEM = "Desligado"
 
 
 def _rotulo_do_gamepad(state: dict[str, Any]) -> str:
-    """O chip da fileira do caminho de pé («Sony DualSense» ou «Xbox»), ou «Ligado»."""
-    bloco = state.get("gamepad_emulation")
-    caminho = bloco.get("caminho") if isinstance(bloco, dict) else None
-    return next((c.rotulo for c in CHIPS_DA_ESCADA if c.caminho and c.caminho == caminho),
-                "Ligado")
+    """O chip do modo único de pé («Sony DualSense», «Xbox» ou «Nintendo Pro»), ou «Ligado»."""
+    unico = modo_unico_vivo(state)
+    return next((c.rotulo for c in CHIPS_DA_ESCADA if unico and c.chave == unico), "Ligado")
 
 
 def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:

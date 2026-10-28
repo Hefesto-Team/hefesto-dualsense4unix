@@ -199,6 +199,9 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
     ("01-jogar.html", "modo-xbox"):
         "grava o caminho `xbox` na seção `mode` do perfil ativo pelo daemon, "
         "pela mesma porta do «Sony DualSense», fora da vista da árvore",
+    ("01-jogar.html", "modo-nintendo"):
+        "grava o modo `nintendo` na seção `mode` do perfil ativo pelo daemon, "
+        "pela mesma porta do «Sony DualSense», fora da vista da árvore",
     ("09-sistema.html", "correcoes-automaticas"):
         "escreve o arquivo do interruptor do guarda do jogo novo (`_guardar_o_interruptor`, "
         "`Path.write_text` sobre o caminho de `vigia_do_jogo_novo`) e, no duplo clique, "
@@ -238,6 +241,17 @@ def _gestos_registrados():
     from hefesto_dualsense4unix.interface import hefesto_vivo, pacotes  # noqa: F401
 
     return dict(pacotes.GESTOS)
+
+
+def com_a_secao(tabela: dict[tuple[str, str], str],
+                registrados: dict[tuple[str, str], object]) -> dict[tuple[str, str], str]:
+    """A tabela e o MESMO gesto registrado noutra página (a seção Controles também na Jogar)."""
+    def _fn(chave: tuple[str, str]) -> object:
+        return getattr(registrados.get(chave), "__wrapped__", chave)
+
+    return {**tabela, **{outra: razao for chave, razao in tabela.items()
+                         for outra in registrados
+                         if outra[1] == chave[1] and _fn(outra) is _fn(chave)}}
 
 
 def _declaracoes():
@@ -300,12 +314,13 @@ def _escreve(fn) -> str:
 def test_todo_gesto_que_escreve_declara_grava() -> None:
     """DIREÇÃO A — a que faltou quatro vezes: grava e não declarou."""
     declarados = _declaracoes()
+    isentos = com_a_secao(ISENTOS, _gestos_registrados())
     desprotegidos = []
     for (pagina, nome), fn in sorted(_gestos_registrados().items()):
         portas = _portas(fn)
         if not portas or (pagina, nome) in declarados:
             continue
-        if (pagina, nome) in ISENTOS:
+        if (pagina, nome) in isentos:
             continue
         desprotegidos.append(
             f"{pagina}·{nome} (escreve por `{sorted(portas)[0]}`)")
@@ -322,6 +337,7 @@ def test_todo_gesto_que_escreve_declara_grava() -> None:
 def test_toda_declaracao_a_arvore_confirma() -> None:
     """DIREÇÃO B — declarou e a árvore não acha."""
     registrados = _gestos_registrados()
+    assinados = com_a_secao(FORA_DA_ARVORE, registrados)
     mentiras = []
     for (pagina, nome), declarado in sorted(_declaracoes().items()):
         fn = registrados.get((pagina, nome))
@@ -329,7 +345,7 @@ def test_toda_declaracao_a_arvore_confirma() -> None:
             f"declaração de gesto inexistente: {pagina}·{nome} — impossível "
             "pelo decorador, logo alguém escreveu em `GESTOS_QUE_MEXEM` à mão")
         if " " in declarado:
-            if (pagina, nome) not in FORA_DA_ARVORE:
+            if (pagina, nome) not in assinados:
                 mentiras.append(
                     f"{pagina}·{nome} declarou por FRASE ({declarado!r}) e não "
                     "está em `FORA_DA_ARVORE`")

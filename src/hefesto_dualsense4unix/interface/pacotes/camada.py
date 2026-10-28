@@ -17,28 +17,36 @@ CAMADAS = frozenset({COMPUTADOR, CONTROLE, JOGO, ATO, JANELA})
 
 _J, _C, _T, _A, _W = JOGO, COMPUTADOR, CONTROLE, ATO, JANELA
 
+PAGINAS_DA_SECAO_DOS_CONTROLES: tuple[str, ...] = ("02-controles.html", "01-jogar.html")
+
+_DA_SECAO_DOS_CONTROLES: dict[str, str] = {
+    "analogico-lado": _J,
+    "mic-retorno": _W,
+    "modo-dos-controles": _J,
+    "mudo": _C,
+    "rota": _C,
+    "sensor": _C,
+    "touchpad": _C,
+    "volume": _C,
+    "volume-padrao": _C,
+}
+
 CAMADA: dict[tuple[str, str], str] = {
+    **{(pagina, gesto): dono for pagina in PAGINAS_DA_SECAO_DOS_CONTROLES
+       for gesto, dono in _DA_SECAO_DOS_CONTROLES.items()},
     ("01-jogar.html", "cadeado"): _C,
     ("01-jogar.html", "escolher-na-fita"): _W,
     ("01-jogar.html", "hefesto"): _J,
     ("01-jogar.html", "mascara"): _J,
     ("01-jogar.html", "modo-dualsense"): _J,
+    ("01-jogar.html", "modo-nintendo"): _J,
     ("01-jogar.html", "modo-nativo"): _J,
     ("01-jogar.html", "modo-navegacao"): _J,
     ("01-jogar.html", "modo-point-and-click"): _J,
     ("01-jogar.html", "modo-steam"): _J,
     ("01-jogar.html", "modo-xbox"): _J,
     ("01-jogar.html", "reconectar"): _A,
-    ("02-controles.html", "analogico-lado"): _J,
     ("02-controles.html", "escolher-na-fita"): _W,
-    ("02-controles.html", "mic-retorno"): _W,
-    ("02-controles.html", "modo-dos-controles"): _J,
-    ("02-controles.html", "mudo"): _C,
-    ("02-controles.html", "rota"): _C,
-    ("02-controles.html", "sensor"): _C,
-    ("02-controles.html", "touchpad"): _C,
-    ("02-controles.html", "volume"): _C,
-    ("02-controles.html", "volume-padrao"): _C,
     ("03-gatilhos.html", "criar-efeito"): _C,
     ("03-gatilhos.html", "imersao"): _J,
     ("03-gatilhos.html", "intensidade-do-gatilho"): _C,
@@ -211,7 +219,7 @@ MIRA_CINZA_NO_NATIVO = (
 )
 
 FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
-    ("02-controles.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
+    (pagina, "analogico-lado"): MIRA_CINZA_NO_NATIVO for pagina in PAGINAS_DA_SECAO_DOS_CONTROLES
 }
 
 
@@ -260,6 +268,7 @@ __all__ = [
     "JANELA",
     "JOGO",
     "MIRA_CINZA_NO_NATIVO",
+    "PAGINAS_DA_SECAO_DOS_CONTROLES",
     "RODAPE_VIVO_NO_NATIVO",
     "VIVOS_NO_NATIVO",
     "no_nativo",

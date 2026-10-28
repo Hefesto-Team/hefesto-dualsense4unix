@@ -1294,7 +1294,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "fecho do "
         "`hefesto_vivo`). A janela viva monta a MESMA sequência pelo dono "
         "único "
-        "(`plan_mode_transition` em `src/hefesto_dualsense4unix/app/actions/jogar/painel.py:227`), "
+        "(`plan_mode_transition` em `src/hefesto_dualsense4unix/app/actions/jogar/painel.py:244`), "
         "e a "
         "executa pela ponte (`interface/pacotes/a01_jogar.py`, `PROVAS`). Sai "
         "com o piloto da aba Controles."

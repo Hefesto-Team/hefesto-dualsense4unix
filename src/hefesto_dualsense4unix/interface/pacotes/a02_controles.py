@@ -137,6 +137,7 @@ from . import (
     poda,
     registrar,
 )
+from .camada import PAGINAS_DA_SECAO_DOS_CONTROLES
 
 
 def dedos_do_controle(
@@ -1133,19 +1134,37 @@ def carga_na_tela(estado: object) -> str:
 
 _ENDERECOS: frozenset[str] | None = None
 
+_GESTOS_PUBLICADOS: dict[str, frozenset[str]] = {}
+
+
+def _publicada(pagina: str) -> str:
+    """O texto da página PUBLICADA, ou `""` quando ela não abre."""
+    from hefesto_dualsense4unix.interface import onde
+
+    try:
+        return onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
 
 def _enderecos_da_pagina() -> frozenset[str]:
-    """Todo `data-campo` da página PUBLICADA. Vazio quando ela não abre."""
+    """Todo `data-campo` das páginas PUBLICADAS que mostram a seção. Vazio quando nenhuma abre."""
     global _ENDERECOS
     if _ENDERECOS is None:
-        from hefesto_dualsense4unix.interface import onde
-
-        try:
-            doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-        except OSError:
-            doc = ""
+        doc = "".join(_publicada(pagina) for pagina in PAGINAS_DA_SECAO_DOS_CONTROLES)
         _ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', doc))
     return _ENDERECOS
+
+
+def a_secao_esta_na_pagina(pagina: str) -> bool:
+    """A página publicada mostra a seção Controles: tem botão de algum gesto desta seção."""
+    if pagina not in _GESTOS_PUBLICADOS:
+        _GESTOS_PUBLICADOS[pagina] = frozenset(
+            re.findall(r'data-gesto="([^"]+)"', _publicada(pagina)))
+    from . import GESTOS
+
+    da_secao = {nome for (_pg, nome), fn in GESTOS.items() if fn.__module__ == __name__}
+    return bool(da_secao & _GESTOS_PUBLICADOS[pagina])
 
 
 PALAVRA_DO_PADRAO = "Padrão"
@@ -1858,7 +1877,7 @@ def _o_som_lembrado(ctx: Contexto, uniq: str, chave: str, prof: Any,
     return adiante
 
 
-@gesto("02-controles.html", "mic-retorno")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "mic-retorno")
 def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O 🎙 — **um interruptor**: aceso, você se ouve; apagado, silêncio."""
     uniq = _uniq(o)
@@ -1886,7 +1905,7 @@ def mic_retorno(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "não consegui ligar o retorno do microfone deste controle")
 
 
-@gesto("02-controles.html", "mudo", grava="gravar_pelo_gesto")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "mudo", grava="gravar_pelo_gesto")
 def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O 🎙 e o ♪ — os dois botões de calar, e eles ALTERNAM o que a tela mostra.
 
@@ -1992,7 +2011,7 @@ def _dizer_a_fonte_ao_daemon(p: Any, uniq: str, fonte: str) -> None:
         p.speaker_set(uniq=uniq, fonte=fonte)
 
 
-@gesto("02-controles.html", "rota", grava="gravar_pelo_gesto")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "rota", grava="gravar_pelo_gesto")
 def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Onde o som do controle sai — os TRÊS botões da fileira, um gesto só.
 
@@ -2113,7 +2132,7 @@ SEM_LEITURA_DE_SENSOR = (
 )
 
 
-@gesto("02-controles.html", "sensor")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "sensor")
 def sensor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Giroscópio e Acelerômetro — **os quatro botões que respondiam calados**.
 
@@ -2192,7 +2211,7 @@ SEM_LEITURA_DO_TOUCHPAD = (
 )
 
 
-@gesto("02-controles.html", "touchpad",
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "touchpad",
        grava="grava o toque deste controle no perfil ativo, pelo daemon")
 def touchpad(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O interruptor «Ligado | Desligado» do touchpad de UM controle (15/10/2026).
@@ -2305,7 +2324,7 @@ def escolher_o_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(MIRA_SEM_O_CONTROLE)
 
 
-@gesto("02-controles.html", "analogico-lado", grava="mira_set_detalhado")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "analogico-lado", grava="mira_set_detalhado")
 def analogico_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O «Mira virtual» embaixo de um analógico: no apagado liga o lado, no aceso desliga a mira."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
@@ -2325,7 +2344,7 @@ def analogico_lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     escolher_o_lado(ctx, o, p)
 
 
-@gesto("02-controles.html", "volume", grava="gravar_pelo_gesto")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "volume", grava="gravar_pelo_gesto")
 def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Os DOIS deslizantes — o do microfone e o do alto-falante (D-08).
 
@@ -2404,7 +2423,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                      f"'microfone' ou 'alto-falante'")
 
 
-@gesto("02-controles.html", "volume-padrao", grava="gravar_pelo_gesto")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "volume-padrao", grava="gravar_pelo_gesto")
 def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão «Padrão» do volume do alto-falante: um interruptor, como o ♪ ao lado.
 
@@ -2458,7 +2477,7 @@ def modo_dos_controles_do_perfil(p: dict[str, Any] | None) -> str:
     return MODO_AUTOMATICO if escrito == MODO_AUTOMATICO else MODO_PERSONALIZADO
 
 
-@gesto("02-controles.html", GESTO_DO_MODO, grava="save_profile")
+@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, GESTO_DO_MODO, grava="save_profile")
 def modo_dos_controles(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão «Modo automático» da aba: grava ``controles_modo`` no perfil ativo.
 

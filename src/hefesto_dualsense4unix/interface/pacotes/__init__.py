@@ -93,7 +93,7 @@ GESTOS: dict[tuple[str, str], Gesto] = {}
 GESTOS_QUE_MEXEM: dict[tuple[str, str], str] = {}
 
 
-def gesto(pagina: str, nome: str, *,
+def gesto(pagina: str | tuple[str, ...], nome: str, *,
           grava: str = "") -> Callable[[Gesto], Gesto]:
     """Decorador: `@gesto("04-iluminacao.html", "cor")` liga um botão.
 
@@ -126,33 +126,41 @@ def gesto(pagina: str, nome: str, *,
     o `save_profile`. O que sai daqui é `hefesto_vivo.PERIGOSOS`, a lista do que
     a prova botão a botão NÃO clica sozinha.
     """
+    paginas = (pagina,) if isinstance(pagina, str) else tuple(pagina)
     limpo = grava.strip()
     if grava and not limpo:
         raise SystemExit(
-            f"ERRO: o gesto {nome!r} de {pagina} declarou `grava=` em branco. "
+            f"ERRO: o gesto {nome!r} de {paginas[0]} declarou `grava=` em branco. "
             f"Declaração vazia é pior que nenhuma: ela some da lista derivada "
             f"sem ninguém notar. Diga a porta ou diga a frase.")
 
     def dentro(fn: Gesto) -> Gesto:
-        chave = (pagina, nome)
-        if chave in GESTOS:
-            raise SystemExit(
-                f"ERRO: o gesto {nome!r} de {pagina} já tem dono "
-                f"({GESTOS[chave].__module__}). Dois donos para o mesmo botão é "
-                f"o defeito que este despachante existe para impedir.")
-
-        @functools.wraps(fn)
-        def guardado(ctx: Contexto, o: dict[str, Any], ipc: Any) -> Any:
-            recusa = recusa_no_nativo(pagina, nome, getattr(ctx, "state", None))
-            if recusa:
-                raise RuntimeError(recusa)
-            return fn(ctx, o, ipc)
-
-        GESTOS[chave] = guardado
-        if limpo:
-            GESTOS_QUE_MEXEM[chave] = limpo
-        return guardado
+        for uma in paginas:
+            if (uma, nome) in GESTOS:
+                raise SystemExit(
+                    f"ERRO: o gesto {nome!r} de {uma} já tem dono "
+                    f"({GESTOS[(uma, nome)].__module__}). Dois donos para o mesmo botão é "
+                    f"o defeito que este despachante existe para impedir.")
+        guardados = [_guardado_na_pagina(uma, nome, fn) for uma in paginas]
+        for uma, guardado in zip(paginas, guardados, strict=True):
+            GESTOS[(uma, nome)] = guardado
+            if limpo:
+                GESTOS_QUE_MEXEM[(uma, nome)] = limpo
+        return guardados[0]
     return dentro
+
+
+def _guardado_na_pagina(pagina: str, nome: str, fn: Gesto) -> Gesto:
+    """O gesto com a recusa do Nativo daquela página na frente."""
+
+    @functools.wraps(fn)
+    def guardado(ctx: Contexto, o: dict[str, Any], ipc: Any) -> Any:
+        recusa = recusa_no_nativo(pagina, nome, getattr(ctx, "state", None))
+        if recusa:
+            raise RuntimeError(recusa)
+        return fn(ctx, o, ipc)
+
+    return guardado
 
 
 Batimento = Callable[[], str]

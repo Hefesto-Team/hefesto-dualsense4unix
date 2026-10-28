@@ -140,7 +140,8 @@ def test_nenhum_pacote_atende_o_gesto_de_escrita_de_outra_aba() -> None:
     pacotes = _pacotes()
     donos = _donos_do_gesto()
     fora = sorted(f"{pagina}:{gesto}" for (pagina, gesto) in pacotes.GESTOS
-                  if gesto in donos and pagina not in donos[gesto])
+                  if gesto in donos
+                  and not ({pagina} | EMBUTIDAS.get((BANCADA, pagina), set())) & donos[gesto])
     assert not fora, f"gesto de escrita atendido por outra aba: {fora}"
 
 
