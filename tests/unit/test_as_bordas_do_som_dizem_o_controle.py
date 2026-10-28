@@ -60,7 +60,7 @@ def test_o_portao_do_cabo_diz_o_controle_dono() -> None:
     """MORDIDA: tire o ``uniq=dono`` do ``haptica_do_cabo_portao``."""
     cabo = _CaboDeMentira()
     with structlog.testing.capture_logs() as diario:
-        cabo.volta(_dono(branco=50, preto=150), [BRANCO, PRETO])
+        cabo.volta(_dono(branco=25, preto=75), [BRANCO, PRETO])
     ditos = {r["uniq"]: r["motores"] for r in _eventos(diario, "haptica_do_cabo_portao")}
     assert ditos == {BRANCO: "0.5000", PRETO: "1.5000"}
 
