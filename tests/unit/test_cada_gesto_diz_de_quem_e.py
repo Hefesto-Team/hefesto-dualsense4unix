@@ -137,6 +137,19 @@ def test_todo_gesto_registrado_da_vibracao_tem_elemento() -> None:
     assert not sobra, f"gesto da 05 sem elemento na página: {sobra}"
 
 
+def test_todo_gesto_registrado_da_jogar_tem_elemento() -> None:
+    """Cada gesto que a 01 atende tem elemento na publicada ou no desenho.
+
+    O cartão velho saiu com a máscara por controle: o gesto `mascara` registrado sem botão seria
+    um segundo escritor do modo. MORDIDA: devolva o `@gesto("01-jogar.html", "mascara")` e reprova.
+    """
+    pac = _pacotes()
+    vistos = _vistos()
+    sobra = sorted(g for p, g in pac.GESTOS
+                   if p == "01-jogar.html" and (p, g) not in vistos)
+    assert not sobra, f"gesto da 01 sem elemento na página: {sobra}"
+
+
 def test_quem_grava_pelo_dono_e_do_computador() -> None:
     """A camada concorda com o que o gesto declara que grava."""
     pac = _pacotes()

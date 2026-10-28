@@ -38,6 +38,16 @@ def test_as_dez_tem_pacote_e_nenhuma_esta_de_fora(pacotes_mod):
         f"a lista de quem pinta mudou sem a decisão dela mudar: {sorted(tem)}")
 
 
+def test_a_pagina_que_saiu_abre_na_que_a_absorveu():
+    """O ``--abre`` da 02 cai na Jogar, e a 02 não volta à tira."""
+    import hefesto_vivo
+
+    assert set(ABAS).isdisjoint(monta.PAGINAS_QUE_SAIRAM), ABAS
+    for pedido in ("02", "02-controles", "02-controles.html"):
+        assert hefesto_vivo._a_pagina_pedida(pedido) == "01-jogar.html", pedido
+    assert hefesto_vivo._a_pagina_pedida("10") == "10-perfis.html"
+
+
 FALSO = {
     "uniq": "aa:bb:cc:00:00:01", "player": 1, "battery_pct": 95, "transport": "usb",
     "vpad_backend": "uhid", "lightbar_rgb": [0, 0, 255], "is_primary": True,
