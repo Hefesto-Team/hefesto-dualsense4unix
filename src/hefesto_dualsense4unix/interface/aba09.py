@@ -16,6 +16,7 @@ import onde
 from onde import RAIZ as R
 
 from hefesto_dualsense4unix.interface.folha_da_casa import MIOLO_NO_PISO, com_o_piso
+from hefesto_dualsense4unix.interface.pacotes.a09_sistema import PEDEM_ACAO, dica_da_linha
 
 N = len(CONECTADOS)
 LUGARES = len(MESA)
@@ -269,9 +270,10 @@ def ligavel(rotulo, gesto, campo, ligado, dica):
 def linha(selo, cls, g, txt, ident="", href="", dica="", tema=""):
     """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto, com o tema."""
     tag = "a" if href else "div"
-    vai = (" vai" if href else "") + (" longa" if cls in ("aviso", "falha") else "")
+    vai = (" vai" if href else "") + (" longa" if cls in PEDEM_ACAO else "")
     i = (f' data-id="{ident}"' if ident else "") + (f' data-tema="{tema}"' if tema else "")
     h = f' href="{href}"' if href else ""
+    dica = dica_da_linha(txt, dica, cls in PEDEM_ACAO)
     t = f' data-dica="{dica}"' if dica else ""
     return (f'            <{tag} class="saude{vai}"{i}{h}>'
             f'<span class="selo {cls}"><span class="sg">{g}</span>{selo}</span>'
@@ -426,7 +428,7 @@ MIOLO = f'''
           </div>
           <div class="risco"></div>
           <div class="coluna saude-app">
-{chr(10).join(ligavel(*x) for x in LIGAVEIS)}
+{chr(10).join(ligavel(*x[:4], dica_da_linha(x[0], x[4])) for x in LIGAVEIS)}
 {item("Restaurar de fábrica", "Volta ao padrão; seus perfis salvos ficam. Pergunta antes", "btn amarelo-padrao", gesto=_gesto("restaurar-de-fabrica"))}
           </div>
         </div>

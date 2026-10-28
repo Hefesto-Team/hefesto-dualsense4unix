@@ -419,7 +419,17 @@ def _partir():
 ROTEIRO_DAS_BARRAS = (
     "<script>document.addEventListener('input',function(ev){var r=ev.target;"
     "if(!r||r.type!=='range'||!r.closest||!r.closest('.g2-barra'))return;var b=r.nextElementSibling;"
-    "if(b)b.textContent=r.value+(r.dataset.unidade?' '+r.dataset.unidade:'');});</script>")
+    "if(b)b.textContent=r.value+(r.dataset.unidade?' '+r.dataset.unidade:'');});"
+    "var dicas=function(){document.querySelectorAll('select').forEach(function(s){"
+    "if(s.hasAttribute('data-dica')&&!s.hasAttribute('data-dica-da-escolha'))return;"
+    "var o=s.options[s.selectedIndex],t=o?o.textContent.trim():'';if(!t)return;"
+    "var w=s.parentElement&&s.parentElement.closest('[data-dica]'),"
+    "d=w?w.getAttribute('data-dica'):'',i=d.indexOf('. '),"
+    "n=i>=0&&d.toLowerCase().indexOf(t.toLowerCase())>=0?t+'. '+d.slice(i+2):t;"
+    "if(s.getAttribute('data-dica')!==n){s.setAttribute('data-dica',n);"
+    "s.setAttribute('data-dica-da-escolha','');}});};"
+    "document.addEventListener('change',dicas);"
+    "window.addEventListener('load',function(){dicas();setInterval(dicas,500);});</script>")
 
 def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
     """O miolo da aba. `entra` põe a «Intensidade do gatilho» `acima` (sob os chips) ou `abaixo` (depois do R2)."""

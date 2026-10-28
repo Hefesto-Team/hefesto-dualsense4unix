@@ -1431,11 +1431,20 @@ def _html_do_status(linhas: list[dict[str, Any]]) -> str:
     return "".join(linha_do_status(linha) for linha in linhas)
 
 
+def dica_da_linha(frase: str, dica: str = "", longa: bool = False) -> str:
+    """A dica da linha que corta com reticências: a frase da tela inteira e, depois, a própria."""
+    frase, dica = frase.strip(), dica.strip()
+    if longa or frase in dica:
+        return dica
+    return f"{frase.rstrip('.')}. {dica}" if dica else frase
+
+
 def linha_do_status(linha: dict[str, Any]) -> str:
     """Uma linha do Status. Tudo escapado: o texto vem da camada do produto."""
     cls = html.escape(str(linha.get("cls") or "nt"))
     ident = html.escape(str(linha.get("id") or ""))
-    dica = html.escape(str(linha.get("dica") or ""))
+    dica = html.escape(dica_da_linha(str(linha.get("txt") or ""), str(linha.get("dica") or ""),
+                                     linha.get("cls") in PEDEM_ACAO), quote=True)
     titulo = f' data-dica="{dica}"' if dica else ""
     href = str(linha.get("href") or "")
     tag, fim = ("a", "a") if href else ("div", "div")
@@ -1498,8 +1507,9 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
     """
     cls = html.escape(str(achado.get("cls") or "nt"))
     txt = _sem_o_prefixo_da_cura(str(achado.get("txt") or ""))
-    dica = _sem_o_prefixo_da_cura(str(achado.get("dica") or "")) or txt
     curta = str(achado.get("curta") or "") or frase_curta_do_exame(txt)
+    propria = _sem_o_prefixo_da_cura(str(achado.get("dica") or ""))
+    dica = dica_da_linha(curta, propria, achado.get("cls") in PEDEM_ACAO) if propria else txt
     ident = f' data-id="{html.escape(str(achado["id"]))}"' if achado.get("id") else ""
     href = str(achado.get("href") or "")
     tag = "a" if href else "div"

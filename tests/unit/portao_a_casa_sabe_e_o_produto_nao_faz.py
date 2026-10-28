@@ -1420,7 +1420,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "desenho, não do produto: o `interface/aba03.py` (o gerador do mockup dos Gatilhos, "
         "o import de `src/hefesto_dualsense4unix/interface/aba03.py:36` (`sem_comentarios_de_css`) "
         "e a chamada de "
-        "`src/hefesto_dualsense4unix/interface/aba03.py:676` (`sem_comentarios_de_css`)) tira com "
+        "`src/hefesto_dualsense4unix/interface/aba03.py:686` (`sem_comentarios_de_css`)) tira com "
         "ela os `/* … */` do CSS para "
         "conferir "
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
@@ -2903,7 +2903,7 @@ class TestOPortaoMorde:
         ), (
             "a varredura não vê despacho por STRING — `getattr(pin, "
             '"lock_proton_for_all_games", None)` em '
-            "`src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py:2506` "
+            "`src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py:2516` "
             "(`lock_proton_for_all_games`) é o ÚNICO caminho "
             "deste "
             "símbolo. Foi assim que a passada anterior errou cinco vezes numa "

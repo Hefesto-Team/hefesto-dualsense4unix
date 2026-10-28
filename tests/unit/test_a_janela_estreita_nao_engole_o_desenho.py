@@ -184,7 +184,7 @@ MEDIDA = r"""
     if (precisa > cabe + TOL)
       apertados.push({texto: escolhido, precisa: Math.round(precisa),
                       cabe: Math.round(cabe), sobra: Math.round(precisa - cabe),
-                      titulo: sel.getAttribute('title'),
+                      titulo: sel.getAttribute('title') || sel.getAttribute('data-dica'),
                       rotulo: sel.getAttribute('aria-label'),
                       campo: sel.getAttribute('data-campo') || '',
                       cls: (sel.getAttribute('class')||'').slice(0,48)});
@@ -369,17 +369,6 @@ def medido() -> dict[tuple[str, str], dict[str, Any]]:
     return fora
 
 
-ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
-    ("09-sistema.html", "estreita"): (
-        "DEFEITO VIVO — o `<span>` de dentro de `.saude .txt` "
-        "(interface/aba09.py:300, emitido em `saude()` na linha 648) recorta com "
-        "reticências e não guarda `title`. A 940 px 'Steam Input estava ligado em "
-        "2 jogos — desliguei' perde 123 px. E a MESMA aba já resolveu isto no "
-        "`.est .val` (aba09.py:182-187), com o `title` guardando a frase inteira: "
-        "CURA é aplicar ali a decisão que ela mesma escreveu"
-    ),
-}
-
 CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
     # fica: é o desenho decidido (a frase longa corta e a dica guarda a inteira), não um defeito
     ("07-lancadores.html", "Os jogos do KytyPS5"): (
@@ -388,41 +377,14 @@ CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
     ),
 }
 
-ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
-    ("03-gatilhos.html", "estreita"): (
-        "DEFEITO VIVO — três campos da aba Gatilhos escondem a escolha a 940 px, "
-        "e dois deles TÊM `title`: ele diz o nome do campo ('Efeito pronto do "
-        "gatilho esquerdo') e não o valor escolhido ('Recuo do MK — pesado no "
-        "fim'), que é o que sumiu. CURA: o `title` do campo passar a carregar a "
-        "opção escolhida, como a aba Conexões faz nos dez `<select>` dela"
-    ),
-}
+CASOS = [
+    pytest.param(aba, tamanho.rotulo, id=f"{aba.removesuffix('.html')}-{tamanho.rotulo}")
+    for tamanho in TAMANHOS
+    for aba in ABAS
+]
 
 
-def _casos(esperado: dict[tuple[str, str], str] | None = None) -> list[Any]:
-    """Os trinta casos (aba x tamanho), com a marca vinda da TABELA."""
-    return [
-        pytest.param(
-            aba, tamanho.rotulo,
-            marks=(
-                [pytest.mark.xfail(strict=True, reason=esperado[(aba, tamanho.rotulo)])]
-                if esperado and (aba, tamanho.rotulo) in esperado
-                else []
-            ),
-            id=f"{aba.removesuffix('.html')}-{tamanho.rotulo}",
-        )
-        for tamanho in TAMANHOS
-        for aba in ABAS
-    ]
-
-
-CASOS = _casos(ESPERADO_VERMELHO)
-CASOS_SELECT = _casos(ESPERADO_VERMELHO_SELECT)
-
-CASOS_SEM_MARCA = _casos()
-
-
-@pytest.mark.parametrize(("aba", "rotulo"), CASOS_SEM_MARCA)
+@pytest.mark.parametrize(("aba", "rotulo"), CASOS)
 def test_a_pagina_abriu_inteira_e_no_tamanho_pedido(medido, aba, rotulo):
     """Zero é resposta legítima do DOM — e por isso tem de ser proibida aqui."""
     lido = medido[(aba, rotulo)]
@@ -493,7 +455,7 @@ def test_nada_some_sem_afordancia(medido, aba, rotulo):
         f"frase num `title`{_a_letra(lido)}:\n" + _contar(fora))
 
 
-@pytest.mark.parametrize(("aba", "rotulo"), CASOS_SELECT)
+@pytest.mark.parametrize(("aba", "rotulo"), CASOS)
 def test_o_select_estreito_nao_esconde_o_valor_escolhido(medido, aba, rotulo):
     """O BURACO QUE A GEOMETRIA NÃO VÊ, e ele custou uma foto para aparecer."""
     lido = medido[(aba, rotulo)]
@@ -505,7 +467,7 @@ def test_o_select_estreito_nao_esconde_o_valor_escolhido(medido, aba, rotulo):
         f"`title` não o devolve{_a_letra(lido)}:\n" + _contar_selects(mudos))
 
 
-@pytest.mark.parametrize(("aba", "rotulo"), CASOS_SEM_MARCA)
+@pytest.mark.parametrize(("aba", "rotulo"), CASOS)
 def test_as_tres_faixas_cabem_dentro_da_janela(medido, aba, rotulo):
     """`.tira`, `.miolo` e `.rodape` dentro da `.janela`, que não rola nada."""
     lido = medido[(aba, rotulo)]
@@ -522,7 +484,7 @@ def test_as_tres_faixas_cabem_dentro_da_janela(medido, aba, rotulo):
         + "\n".join(fora))
 
 
-@pytest.mark.parametrize(("aba", "rotulo"), CASOS_SEM_MARCA)
+@pytest.mark.parametrize(("aba", "rotulo"), CASOS)
 def test_o_que_fica_fora_da_tela_se_alcanca_rolando(medido, aba, rotulo):
     """Janela maior que a tela é ACEITÁVEL — desde que o documento role."""
     lido = medido[(aba, rotulo)]
@@ -640,8 +602,7 @@ def test_com_a_letra_mais_larga_o_cabecalho_nao_engole_nada(
     cerca de +0,24 px por letra no ubuntu-26.04 (freetype 2.14, harfbuzz 12), e a linha do topo,
     que cabia com 4 px na mesa, cortava o nome do controle só lá. A passada põe
     ``*{letter-spacing:.5px}`` em todo texto e mede de novo: reproduz em qualquer máquina o que
-    aquela pilha faz, sem fixar fonte nem imagem. Vale para a 09 também, sem o ``xfail`` do
-    ``.saude``: só o que mora na ``.fita-linha`` conta.
+    aquela pilha faz, sem fixar fonte nem imagem. Só o que mora na ``.fita-linha`` conta.
     """
     lido = medido_com_a_letra_larga[(aba, rotulo)]
     assert lido["entreletra"] == "0.5px", (

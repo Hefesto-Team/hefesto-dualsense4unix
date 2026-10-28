@@ -344,7 +344,7 @@ def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None
     html = a09.linha_do_status(tela.status_do_servico("online_systemd",
                                                       {"paused": False}))
     assert 'class="ajuda"' not in html, html
-    assert 'data-dica="Roda por trás e volta sozinho se travar."' in html, html
+    assert 'data-dica="Serviço. Roda por trás e volta sozinho se travar."' in html, html
     assert 'title=' not in html, html
     pagina = PUBLICADA.read_text(encoding="utf-8")
     lista = re.search(r'data-campo="status-lista"[^>]*>(.*?)\n\s*</div>\n', pagina, re.S)

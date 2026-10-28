@@ -300,7 +300,7 @@ def test_sem_controle_a_linha_do_gamepad_diz_nenhum_controle(estado: Any) -> Non
 def test_linha_do_status_e_do_exame_falam_pela_dica_curta() -> None:
     saida = a09.linha_do_status({"id": "hefesto-estado", "selo": "LIGADO", "cls": "ok", "g": "✓",
                                  "txt": "Serviço", "dica": "Roda por trás."})
-    assert 'data-dica="Roda por trás."' in saida
+    assert 'data-dica="Serviço. Roda por trás."' in saida
     assert "title=" not in saida
 
 
