@@ -1812,7 +1812,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"O dongle fica acima da cabeça de quem joga sentado?" — grava a resposta.
 
     Uma das duas coisas que barramento nenhum responde, logo DECLARADA:
-    `MesaDeclarada.altura_da_antena` (`utils/maquina.py:141`), só `"acima"`, `"abaixo"` ou `None`.
+    `MesaDeclarada.altura_da_antena` (`utils/maquina.py:178`), só `"acima"`, `"abaixo"` ou `None`.
     `exame_da_mesa.vizinhanca_das_portas` a recebe e muda a linha do Check-up desta aba.
 
     O `data-modo` traz o id do esquema e `""` ("Não sei") vira `None` aqui: a string `"nao_sei"`
