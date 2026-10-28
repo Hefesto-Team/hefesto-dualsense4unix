@@ -21,8 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## mapa-das-portas.html
-- **27/10/2026** — a página embute a letra das abas (Space Grotesk e JetBrains Mono, do pacote). Até publicar, o produto continua com a letra do sistema.
-
-## mapa-do-radio.html
-- **27/10/2026** — a página embute a letra das abas num `<style>` próprio, depois da folha que a aba Conexões lê. Até publicar, o produto continua sem o `@font-face` e cai na letra do sistema onde a Space Grotesk não está instalada.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
