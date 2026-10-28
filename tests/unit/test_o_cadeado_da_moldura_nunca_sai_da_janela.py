@@ -10,6 +10,11 @@ do plástico nos chips, com reticências.
 MORDIDAS (26/10/2026, executadas aqui): tirar o ``.fita{min-width:0}`` da 01 reprova
 ``test_com_quatro_plasticos_longos_o_cadeado_fica_na_janela``; tirar o ``flex-shrink:1000`` do
 perfil ativo reprova ``test_o_nome_longo_do_perfil_corta_o_dele_e_nao_o_dos_controles``.
+
+A letra ``larga`` (27/10/2026, O-CABECALHO-TEM-FOLGA-PARA-A-LETRA-DE-QUALQUER-COMPUTADOR-01)
+põe meio pixel a mais por letra. MORDIDA: no rootfs do ubuntu-26.04, o ``topo.html`` de
+``1c8a5a93a`` reprova o perfil longo na letra larga com os quatro chips cortados, e o de agora
+passa.
 """
 from __future__ import annotations
 
