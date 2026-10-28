@@ -396,7 +396,8 @@ CSS_TELA = """
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:306px minmax(0,1fr) 306px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
-  @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:284px minmax(0,1fr) 284px;gap:12px}}
+  @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:284px minmax(0,1fr) 284px;gap:12px}
+    .mc-perfil{grid-template-columns:284px minmax(0,1fr) fit-content(284px)}}
   .mc-lado{display:flex;flex-direction:column;gap:7px;justify-content:space-between}
   .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
     border-radius:8px;border:1px solid var(--border-sutil);background:var(--panel);color:var(--fg);font:12px var(--f);
