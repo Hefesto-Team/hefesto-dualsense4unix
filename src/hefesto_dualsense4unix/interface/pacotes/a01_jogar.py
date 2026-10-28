@@ -24,19 +24,9 @@ DA_PAGINA: tuple[str, ...] = (
     "cadeado",
     CADEADO_CEGO,
     "hef-posicao",
-    "mascara-ressalva",
-    "mesa-frase",
     "modo-aceso",
     "steam-input-aceso",
-    "pendente",
-    "pendente-alvo",
-    "pendente-ha",
-    "externos",
 )
-
-POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera",
-                               "bateria", "identidade", "mascara-cartao",
-                               "marcador-principal")
 
 
 ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
@@ -55,11 +45,6 @@ def lugares_da_mesa() -> int:
     """Quantos cartões a página publica. Lido de `monta.MESA`, nunca digitado."""
     return len(_monta().MESA)
 
-
-RESSALVA_DA_MASCARA = (
-    "Guardada neste controle. Ela passa a valer quando o Hefesto voltar a "
-    "entregá-lo ao jogo."
-)
 
 ESPERA_DICA = "O número acende quando o jogo receber o controle"
 
@@ -144,48 +129,17 @@ def mascaras_montaveis() -> frozenset[str]:
 @registrar("01-jogar.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """Os valores da aba Jogar, com os NOMES que a página tem."""
-    da_sessao = _rotulo_da_mascara(_mascara_da_sessao(ctx.state))
-    from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
-
-    cartoes = {}
-    for c in ctx.conectados:
-        uniq = str(c.get("uniq") or "")
-        casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
-        nome = casa.get("nome") or "—"
-        via = palavra_do_transporte(casa.get("transporte") or c.get("transport"))
-        cartoes[uniq] = {
-            "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
-            "desenho": _colorway_do_desenho(str(casa.get("cor") or "")),
-            "jogador": f"Player {jogador_de(c) or '—'}",
-            "jogador-espera": _jogador_esperando(c),
-            "bateria": f"{c.get('battery_pct')}%" if c.get("battery_pct") is not None else "—",
-            "identidade": f"{nome} · {via}",
-            "mascara-cartao": _mascara_do_cartao(casa, da_sessao),
-            "marcador-principal": _e_o_primario(c),
-        }
-
-
     _relatar_a_pendencia(_faixa_do_pendente(ctx.state)[0])
     tela = _a_fileira_com_a_mesa(_estado_da_tela(ctx.state), ctx.mesa)
-    espera = _o_que_o_chip_diz(ctx.state, tela)
 
     fora: dict[str, Any] = {
-        "mesa-frase": _frase_da_mesa(ctx),
-        "mascara-ressalva": _ressalva_da_mascara(ctx.state),
         "cadeado": _cadeado(ctx.state),
         CADEADO_CEGO: _cadeado_cego(ctx.state),
-        "cartoes": cartoes,
+        "cartoes": {},
         **tela,
-        "pendente": espera,
-        "pendente-alvo": "",
-        "pendente-ha": "1" if espera else "",
         "blocos": _o_rotulo_do_chip(ctx.state),
-        "externos": _html_dos_externos(ctx),
     }
-    fora["cobertura"] = {
-        "pintados": len(DA_PAGINA) + len(cartoes) * len(POR_CARTAO),
-        "sem_dono": 0,
-    }
+    fora["cobertura"] = {"pintados": len(DA_PAGINA), "sem_dono": 0}
     from . import a02_controles
 
     if a02_controles.a_secao_esta_na_pagina(PAGINA):
@@ -521,95 +475,6 @@ def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
     return _em_ordem(_avisos_sem_outra_casa(ctx))
 
 
-def _frase_da_mesa(ctx: Contexto) -> str:
-    """A linha por cima dos lugares apagados — ``""`` quando a mesa cabe na tela.
-
-    Com o serviço parado (estado vazio) ela não diz nada: o Status marcado em Desligado é o único
-    sinal (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE). Com a mesa vazia também não: os quatro
-    lugares «Desconectado» já dizem (ordem, 19/10/2026, que tirou a frase «Nenhum controle
-    ligado…»).
-    """
-    if not ctx.state:
-        return ""
-    quantos = len(ctx.conectados)
-    lugares = lugares_da_mesa()
-    if quantos > lugares:
-        return (f"Há {quantos} controles ligados e esta tela mostra "
-                f"{lugares}: o cabeçalho conta todos.")
-    return ""
-
-
-def _html_dos_externos(ctx: Contexto) -> str:
-    """Um cartão por controle que o Hefesto VÊ e NÃO adota — ``""`` sem nenhum.
-
-    Linha 16 do CSV da paridade, uma regressão: *"com dois DualSense e um 8BitDo na mesa a aba dizia
-    '2 controles' ao lado de três cards noutra tela"*. A janela antiga fechou em 25/08 (a `I5`) e a
-    tela nova nasceu com ele de volta, não por falta de dado (`controller.list {external: true}`
-    responde) mas porque ninguém perguntava.
-
-    **Nenhum texto se escreve aqui**; as três frases têm dono na janela antiga:
-
-    * ``_format_external_title``: *"Controle 3 — 8BitDo"*. O número é o SLOT GLOBAL de co-op, **o
-    mesmo que o Hefesto escreve no LED de player**; a marca vem de
-    ``external_controllers.brand_of``, a única que desmente o VID mentido pelo clone em modo
-    DualShock4 (o OUI do MAC vence);
-    * ``_format_external_subtitle``: *"cabo · o Hefesto só vê"*, com a palavra do transporte de
-      ``home_actions.palavra_do_transporte``;
-    * ``external_controllers.nintendo_bt_warning``: a armadilha do ``hid-nintendo`` (SINAL da linha
-      305 do CSV), só no rádio e só para VID Nintendo; ``None`` nos outros e a linha não nasce.
-
-    **Sem cor de plástico**: a folha das 28 é dos DualSense (`docs/data/cores-do-dualsense.csv`) e
-    inventar borda afirmaria modelo que ninguém mediu (mesma regra que faz `_cor_do_plastico`
-    devolver `""`). Nota de 08/10/2026 (O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01): a cor que
-    o usuário declarou (`controles.cor`) é palavra dele e não medida; o cartão a mostra na borda,
-    com a família dos botões declarada, e sem declaração nada se desenha. Quem lê é
-    `a08_conexoes.marcas_do_externo`, dono dos dois cartões. **Sem número de jogador esmaecido nem
-    bateria**: o externo não é jogador do co-op (`plataforma.vpad@sn30` está em `existe:
-    desconhecido` no mapa de canais) e o daemon não lê a carga; campo sem informação não mostra
-    nada.
-
-    **Nasce dentro da grade dos quatro assentos (escolha, 06/09/2026)**: a EXTERNOS-01 os entregou
-    numa faixa à parte e perguntou faixa ou o mesmo frame da GTK; a resposta foi o mesmo frame. O
-    cabeçalho da seção morreu com a seção; quem faz o cartão virar item da grade é o CSS da bancada
-    (`aba01.py`, `.pecas .ext-vaga{display:contents}`), e este pacote só devolve os cartões. **Não é
-    um cartão `.cartao`**: essa classe é dos quatro assentos, tem `data-controle="pN"`, entra na
-    conta de `apagar_os_lugares_sem_dono` e recebe o alvo da fita; dar a mesma classe faria as duas
-    coisas brigarem no mesmo pixel (o erro que o `marcador-principal` já pagou). **Estar no mesmo
-    frame é escolha de DESENHO; ser assento é afirmação sobre o aparelho**, que esta função não faz.
-    Quem o distingue é a marca, como na GTK: o assento diz *"Sony
-    · Player 1"*, o externo *"Controle 3 — 8BitDo"*, e a marca vem de
-    ``external_controllers.brand_of`` por dentro de ``_format_external_title``.
-    """
-    if not ctx.externos:
-        return str(_monta().NADA_A_DIZER)
-    from hefesto_dualsense4unix.app.actions.external_controllers import (
-        nintendo_bt_warning,
-    )
-    from hefesto_dualsense4unix.app.actions.home_actions import (
-        _format_external_subtitle,
-        _format_external_title,
-        externos_na_mesa,
-    )
-    def _e(x: object) -> str:
-        """Escapa para HTML — pelo `html.escape` da biblioteca, e não pelo `_e`"""
-        return html.escape(str(x), quote=True)
-
-    from . import a08_conexoes
-
-    fora = []
-    for entrada in externos_na_mesa(None, ctx.externos):
-        aviso = nintendo_bt_warning(entrada)
-        linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
-                          if aviso else "")
-        da_borda, botoes = a08_conexoes.marcas_do_externo(entrada, "div")
-        fora.append(
-            f'<div class="ext-cartao"{da_borda}>'
-            f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
-            f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
-            f'{botoes}{linha_do_aviso}</div>')
-    return "".join(fora) or str(_monta().NADA_A_DIZER)
-
-
 def _cadeado_cego(state: dict[str, Any]) -> str:
     """A ressalva do cadeado: o detector está cego? — marcador quando não.
 
@@ -633,34 +498,6 @@ def _cadeado_cego(state: dict[str, Any]) -> str:
     )
 
     return texto_do_cadeado_cego(state) or str(_monta().NADA_A_DIZER)
-
-
-def _ressalva_da_mascara(state: dict[str, Any]) -> str:
-    """A linha da máscara fora do modo jogo — ``""`` em TODO estado desde 13/09/2026.
-
-    Nota datada, 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.1: devolvia `RESSALVA_DA_MASCARA` em modo
-    nativo e na Navegação, pintada a cada tique até sem máscara escolhida. A palavra de produto
-    sobre as frases de status (*"em todas as abas da interface"*, TELA-CALADA-01) a tirou da tela. O
-    FATO continua e tem régua (`test_a01_a_mascara_vale_sempre_que_pode`): `gamepad.mask.set` grava
-    sem gate de modo e o chip do CARTÃO acende a escolha pelo `por_aparelho` do daemon
-    (`ipc_handlers._mascaras_por_aparelho`). O argumento antigo (*"esta tela deixava clicar e ficava
-    calada"*) era de antes do chip ser por controle (03/09): hoje o chip responde ao clique. Segue
-    dona da linha, não um literal no `pacote()`: o endereço `mascara-ressalva` fica na página e a
-    frase volta mudando UMA função.
-
-    Registro do raciocínio de 04/09, queixa do usuário (*"independente do modo a mascara deve
-    funcionar ali sempre."*): fora do modo `gamepad` **não existe gamepad virtual** e
-    `mascara_efetiva` só é lida na criação de um (`gamepad.py`); o clique era aceito, gravado e não
-    mudava nada visível, e a GTK escondia a caixa fora do modo `gamepad` (`home_actions.py`). **A
-    escolha não se perde**: `gamepad.mask.set` grava sempre e `set_mask` persiste em
-    `controller_masks.json`; esconder a caixa apagaria escolha que É possível fazer agora. Quem
-    responde pelo modo é `painel.modo_vivo`, o ponto único (comparar `native_mode` e
-    `gamepad_emulation.enabled` aqui seria o terceiro leitor). A frase não nomeia o modo: são DOIS
-    sem vpad, Nativo e Navegação, e na Navegação o interruptor está em **Ligado**
-    (`painel.MODOS_LIGADOS` tem `gamepad` e `desktop`), então "ligue o Hefesto" mandaria ligar o que
-    já está ligado.
-    """
-    return ""
 
 
 TTL_DO_STEAM_INPUT_S = 20.0
@@ -1753,101 +1590,6 @@ def _fechar_a_steam_e_ligar(alvo: str) -> dict[str, Any]:
     return {"blocos": _o_rotulo_do_chip(None)}
 
 
-MASCARA_VALE_SEM_PERFIL = (
-    "A máscara vale agora, mas não ficou guardada. Escolha um perfil na aba "
-    "Perfis para ela ser lembrada."
-)
-MASCARA_VALE_SEM_ENDERECO = (
-    "A máscara vale agora, mas o perfil não consegue guardá-la só para este "
-    "controle."
-)
-MASCARA_VALE_SEM_GUARDAR = (
-    "A máscara vale agora, mas não consegui guardá-la no perfil."
-)
-MODO_NAO_VESTIU = "Os controles não vestiram o modo pedido; ficou o de antes."
-
-_FRASE_DA_MASCARA_NAO_GUARDADA = {
-    "sem_perfil": MASCARA_VALE_SEM_PERFIL,
-    "sem_endereco": MASCARA_VALE_SEM_ENDERECO,
-    "sem_mudanca": "",
-}
-
-
-def _recado_da_mascara(motivo: str | None) -> str:
-    """A frase do cartão para o `motivo` que o daemon devolveu — `""` se calou."""
-    if not motivo:
-        return ""
-    return _FRASE_DA_MASCARA_NAO_GUARDADA.get(motivo, MASCARA_VALE_SEM_GUARDAR)
-
-
-@gesto("01-jogar.html", "mascara", grava="gamepad.mask.set")
-def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A máscara de UM aparelho — os chips dentro do cartão de cada controle.
-
-    Pedido de produto, 03/09/2026: *"É uma máscara por controle. Mesmo caso do anterior."* Os seis
-    chips estavam MORTOS (a leva que clicou as dez abas mediu *"`mascara` (6 chips nos cartões) ·
-    máscara POR CONTROLE · **NADA. SEM DONO**"*). A casa tinha a metade difícil: `external_mask`
-    guarda a escolha por APARELHO desde 15/08/2026 (MÁSCARA-POR-JOGADOR-01) e `mascara_efetiva` é
-    consultada na criação de todo gamepad virtual (três degraus do daemon fechados em 29/08);
-    faltava a rota de escrita, `gamepad.mask.set`, nascida em 03/09.
-
-    As três máscaras têm motor desde 07/09/2026: `mascaras_validas()` devolve `{dualsense, xbox,
-    nintendo}` e é dele que a recusa sai, nunca de lista digitada. Rótulo fora do catálogo continua
-    RECUSANDO DIZENDO em vez de gravar valor que o daemon não monta (o silêncio repetiria o defeito
-    que o gesto veio curar). O alcance é o cartão: sem `uniq` não há a quem aplicar, e "todos" seria
-    a máscara da sessão, outro botão (o de cima); a recusa separa os casos como a `03-gatilhos`
-    (coluna vazia é uma frase, clique sem controle é outra).
-    """
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        mascaras_validas,
-        normalizar_mascara,
-    )
-    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
-
-    uniq = str(o.get("uniq") or "").strip()
-    if not uniq:
-        lugar = str(o.get("controle") or "").strip()
-        if lugar:
-            raise RuntimeError(
-                f"Não há controle no lugar {lugar.upper()}. Ligue um controle "
-                "aqui para ele receber a máscara.")
-        raise ValueError("mascara: o clique não disse em qual controle")
-
-    rotulo = str(o.get("mascara") or o.get("rotulo") or "").strip()
-    if not rotulo:
-        raise ValueError("mascara: o chip não disse qual máscara")
-
-    por_rotulo = {v: k for k, v in NOME_DA_MASCARA.items()}
-    flavor = por_rotulo.get(rotulo) or normalizar_mascara(rotulo)
-    if flavor is None or flavor not in mascaras_validas():
-        tem = ", ".join(NOME_DA_MASCARA[f] for f in sorted(mascaras_validas())
-                        if f in NOME_DA_MASCARA)
-        raise RuntimeError(
-            f"“{rotulo}” não é uma máscara que exista. As que existem: {tem}.")
-
-    ok, motivo = p.chamar_detalhado("gamepad.mask.set", uniq=uniq, flavor=flavor)
-    if not ok:
-        if motivo:
-            raise RuntimeError(motivo)
-        return None
-    if motivo == "aparelho_nao_vestiu":
-        raise RuntimeError(MODO_NAO_VESTIU)
-    recado = _recado_da_mascara(motivo)
-    return {"recado": recado} if recado else None
-
-
-@gesto("01-jogar.html", "modo-point-and-click",
-       grava="liga o mouse emulado e o ponteiro anda na tela dela")
-def modo_point_and_click(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Point and click" (Ligado): apontar e clicar, pelo perfil da aba Navegação.
-
-    O mesmo modo `desktop` da Navegação do Desligado (:data:`CHIP_DO_POINT_AND_CLICK`): sai do
-    gamepad virtual, liga o mouse e aplica (`desktop.arranjo.apply`, arranjo ``point_and_click``) a
-    tabela de botões do «Perfil jogo - navegação» que a aba Navegação escolheu.
-    """
-    return _o_clique_da_fileira(ctx, o, p, CHIP_DO_POINT_AND_CLICK)
-
-
 @gesto("01-jogar.html", "modo-navegacao",
        grava="liga o mouse emulado e o ponteiro anda na tela dela")
 def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
@@ -2019,7 +1761,6 @@ METODOS_DA_TROCA_DE_MODO = {
 }
 METODOS = METODOS_DA_TROCA_DE_MODO | {
     "desktop.arranjo.apply",
-    "gamepad.mask.set",
     "launch_env.refresh",
 }
 
@@ -2049,19 +1790,9 @@ PROVAS = [
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
                ("chamar", ["desktop.arranjo.apply"],
                 {"origin": "manual", "arranjo": "navegacao"})]},
-    {"pagina": PAGINA, "gesto": "modo-point-and-click",  # (noqa-acento)
-     "clique": {},
-     "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
-               ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
-               ("chamar", ["desktop.arranjo.apply"],
-                {"origin": "manual", "arranjo": "point_and_click"})]},
     {"pagina": PAGINA, "gesto": "reconectar", "clique": {},  # (noqa-acento)
      "chama": [("resultado", ["coop.sync"], {}),
                ("resultado", ["identity.renumber"], {})]},
-    {"pagina": PAGINA, "gesto": "mascara",  # (noqa-acento)
-     "clique": {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"},
-     "chama": [("chamar_detalhado", ["gamepad.mask.set"],
-                {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})]},
     {"pagina": PAGINA,  # (noqa-acento)
      "gesto": "cadeado", "clique": {"evento": "click"},
      "chama": [("freestyle_set", [], {"ligado": True})]},
