@@ -13,6 +13,13 @@ A régua que morde é a do caminho: o sinal destrói a janela antes de o laço a
 MORDIDA: voltar o `_chegou_o_sinal` a `anotar_o_fim` + `Gtk.main_quit` (sem passar pelo
 `fechar`): os dois casos do caminho reprovam («a janela não foi destruída dentro do laço»).
 
+O mesmo sinal chega de novo depois do laço, e o processo tem de sair com rc 0. Medido no runner
+ubuntu-26.04 (GLib 2.88) em 28/10/2026, por `strace`: a fonte que devolvia `False` se desligava, a
+GLib voltava o SIGTERM ao `SIG_DFL`, e uma thread dela relançava o sinal pendente com `tgkill`; o
+`abrir` voltava 0 e o python morria com 143. A GLib 2.80 não relança, e o segundo sinal é o que faz
+a régua morder nela também. MORDIDA: o `_chegou_o_sinal` volta a devolver `False`, e os dois
+casos do caminho reprovam («o mesmo sinal, depois do laço, matou o processo»).
+
 Tudo roda num filho sob `xvfb-run`, num lar de mentira (HOME, XDG e o barramento de sistema
 desviados; o soquete do broker aponta para dentro do lar): nada fala com a sessão, o serviço
 ou o aparelho de quem roda.
@@ -118,6 +125,8 @@ _FILHO_DO_CAMINHO = textwrap.dedent(
     Gtk.main()
     no_laco[0] = False
     print("SAIU-DO-LACO", flush=True)
+    os.kill(os.getpid(), int(sys.argv[2]))
+    print("SOBREVIVEU", flush=True)
     """
 )
 
@@ -137,7 +146,7 @@ def test_o_sinal_destroi_a_janela_dentro_do_laco_como_o_fechar(
         encoding="utf-8")
     filho = subprocess.Popen(
         ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24", sys.executable, str(script),
-         str(lar / "prova.html")],
+         str(lar / "prova.html"), str(int(sinal))],
         env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     linhas: list[str] = []
     try:
@@ -163,6 +172,9 @@ def test_o_sinal_destroi_a_janela_dentro_do_laco_como_o_fechar(
         "a janela não foi destruída dentro do laço: o sinal saiu sem passar pelo `fechar`\n"
         + saida[-1500:])
     assert linhas.index("DESTRUIDA dentro-do-laco") < linhas.index("SAIU-DO-LACO")
+    assert "SOBREVIVEU" in linhas, (
+        "o mesmo sinal, depois do laço, matou o processo: a fonte do sinal se desligou e a GLib o "
+        "devolveu ao padrão\n" + saida[-1500:])
     motivos = [m["motivo"] for linha in linhas if (m := FIM.search(linha))]
     assert motivos == [f"sinal {sinal.name}"], saida[-1500:]
 

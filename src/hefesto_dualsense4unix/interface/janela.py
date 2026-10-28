@@ -618,6 +618,7 @@ class JanelaDaAba:
         self._nasceu = time.monotonic()
         self._fim_dito = False
         self._motivo_pedido: str | None = None
+        self._sinal_recebido = False
         self.mudancas_de_tamanho = 0
         self._tamanho_visto: tuple[int, int, str, int, str] | None = None
         self._tamanho_por_dizer: tuple[int, int, str, int, str] | None = None
@@ -907,9 +908,15 @@ class JanelaDaAba:
         ]
 
     def _chegou_o_sinal(self, numero: int) -> bool:
-        """O sinal fecha pelo `fechar`, que destrói a janela (e o GL do WebView) dentro do laço."""
-        self.fechar(f"sinal {signal.Signals(numero).name}")
-        return False
+        """O sinal fecha pelo `fechar`, que destrói a janela (e o GL do WebView) dentro do laço.
+
+        A fonte fica ligada até o fim do processo, e o segundo sinal só não fecha de novo: sem
+        fonte, a GLib devolve o sinal ao `SIG_DFL`, e a 2.88 relança o que ficou pendente por uma
+        thread dela, que mata com 143 o processo cujo `abrir` já tinha voltado 0."""
+        if not self._sinal_recebido:
+            self._sinal_recebido = True
+            self.fechar(f"sinal {signal.Signals(numero).name}")
+        return True
 
     def _o_tamanho_mudou(self, *_args: Any) -> bool:
         """`configure-event` e `window-state-event`: lê a janela como ela está agora."""
