@@ -5666,6 +5666,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DO_CODEQL,
     *EDICOES_DO_PORTE,
     *EDICOES_DO_MAPA_SEM_LEITURA,
+    *EDICOES_DA_LETRA_DA_CASA,
 )
 
 
@@ -6291,7 +6292,7 @@ EDICOES_DA_LETRA_DA_CASA: tuple[Edicao, ...] = (
     ),
 )
 
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = EDICOES_DA_LETRA_DA_CASA
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
