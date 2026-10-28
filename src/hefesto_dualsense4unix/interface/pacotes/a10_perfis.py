@@ -1530,17 +1530,26 @@ def _molde_do(estilo: Any) -> str | None:
     return getattr(invisivel, "molde", None)
 
 
+def _linhas_que_o_estilo_deixou(estilo: Any) -> dict[str, str]:
+    """As linhas que o estilo grava, e as que gravava antes (o `so_mouse` do Point and click)."""
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import MOLDE_QUE_O_ESTILO_GRAVAVA
+
+    de_antes = MOLDE_QUE_O_ESTILO_GRAVAVA.get(str(getattr(estilo, "chave", "") or ""))
+    return {**_tabela_do_molde(de_antes), **_tabela_do_molde(_molde_do(estilo))}
+
+
 def _com_a_tabela_do_estilo(prof: Any, estilo: Any) -> dict[str, Any]:
     """O que o estilo muda na tabela de botões do perfil: `button_actions` e `tabela_no_jogo`.
 
-    Estilo com molde (o Point and click, o Visual novel) grava as linhas do molde por cima da
+    Estilo com molde (o Visual novel) grava as linhas do molde por cima da
     tabela do perfil e liga a chave «Também no jogo», porque sem ela a tabela não age com o jogo
     aberto. As linhas que o molde do estilo ANTERIOR gravou e o usuário não mexeu saem antes:
     escolher outro estilo não deixa o PageUp do visual novel num jogo de tiro. O que o usuário
     escreveu à mão fica. Estilo sem molde só tira as linhas do anterior; a tabela do usuário
-    não se toca.
+    não se toca. O Point and click não grava linha: a tabela dele é a da aba Navegação, pelo
+    arranjo (D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06).
     """
-    anterior = _tabela_do_molde(_molde_do(_estilo_do_perfil(prof)))
+    anterior = _linhas_que_o_estilo_deixou(_estilo_do_perfil(prof))
     atual = dict(getattr(prof, "button_actions", None) or {})
     base = {b: a for b, a in atual.items() if anterior.get(b) != a}
     novo = _tabela_do_molde(_molde_do(estilo))
@@ -1617,8 +1626,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     o único caminho pelo qual a lei cairia depois de o motor dizer que está tudo distinto.
 
     A receita invisível (08/10/2026, O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01) entra
-    pelos motores existentes: `ajustes_do_gatilho` nos parâmetros do modo e o `modo` na seção `mode`
-    (o Point and click liga a Navegação), que nasce em `manager.secao_do_modo_do_estilo`. O resto
+    pelos motores existentes: `ajustes_do_gatilho` nos parâmetros do modo, e o `modo` e o arranjo
+    do `desktop` na seção `mode`, que nasce em `manager.secao_do_modo_do_estilo`. O resto
     (`estilos_de_jogo.SO_DADO`) não se escreve aqui: o perfil guarda a CHAVE (`Profile.estilo`,
     O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) e o motor do tato lê a receita por ela.
 
@@ -1649,7 +1658,8 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         mudanca["rumble"] = RumbleConfig(
             passthrough=bool(getattr(prof.rumble, "passthrough", True)),
             policy=estilo.vibracao)
-    mudou, secao = secao_do_modo_do_estilo(prof.mode, invisivel.modo if invisivel else None)
+    mudou, secao = secao_do_modo_do_estilo(
+        prof.mode, invisivel.modo if invisivel else None, invisivel.arranjo if invisivel else None)
     if mudou:
         mudanca["mode"] = secao
     mudanca.update(_com_a_tabela_do_estilo(prof, estilo))
@@ -1807,7 +1817,8 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     luz = (f"e a luz de {pintados} controle{'s' if pintados != 1 else ''}"
            if pintados else "e nenhum controle ligado para acender")
     invisivel = estilo.receita_invisivel
-    modo = ", e o modo Navegação" if invisivel and invisivel.modo else ""
+    modo = ((", e o Point and click" if invisivel.arranjo == "point_and_click"
+             else ", e o modo Navegação") if invisivel and invisivel.modo else "")
     tabela = (" A tabela de botões do estilo entrou no perfil."
               if invisivel and invisivel.molde else "")
     proprio = (f" {largaram} controle{'s deixaram' if largaram != 1 else ' deixou'} "

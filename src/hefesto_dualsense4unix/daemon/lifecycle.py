@@ -654,6 +654,7 @@ class Daemon:
     _hotkey_manager: Any = None
     _emulation_suppressed: bool = False
     _tabela_no_jogo: Any = None
+    _arranjo_do_perfil: str | None = None
     _teclado_so_no_jogo: bool = False
     _teclado_sempre: bool = False
     _estava_no_jogo: bool = False
@@ -1408,6 +1409,7 @@ class Daemon:
                 "desktop",
                 porta=grava_o_modo,
                 mouse_ligado=True if mouse_vivo else None,
+                arranjo=arranjo,
             )
         return relatorio
 
@@ -1780,6 +1782,7 @@ class Daemon:
         mascara: str | None = None,
         porta: PortaQueGrava,
         mouse_ligado: bool | None = None,
+        arranjo: str | None = None,
     ) -> str | None:
         """O modo que o usuário escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
 
@@ -1835,6 +1838,7 @@ class Daemon:
                 kind=kind,
                 caminho=caminho,
                 mascara=mascara,
+                arranjo=arranjo,
                 porta=porta,
                 mouse_ligado=mouse_ligado,
                 velocidades=velocidades,
@@ -4532,12 +4536,16 @@ class Daemon:
 
     @property
     def arranjo_do_desktop(self) -> str:
-        """O arranjo do modo `desktop`: ``navegacao`` ou ``point_and_click``, guardado na sessão.
+        """O arranjo do modo `desktop`: ``navegacao`` ou ``point_and_click``.
 
-        O «Point and click» (Ligado) e a «Navegação» (Desligado) são o mesmo modo do serviço com
-        tabelas de botões diferentes; o `state_full` o publica como ``desktop_arranjo``, e a aba
-        Jogar lê dali o lado do interruptor.
+        O do perfil ativo (`mode.arranjo`, que o estilo de jogo escreve) e, sem ele, o guardado
+        na sessão. O «Point and click» e a «Navegação» são o mesmo modo do serviço com tabelas de
+        botões diferentes; o `state_full` o publica como ``desktop_arranjo``.
         """
+        return self._arranjo_do_perfil or self._arranjo_da_sessao()
+
+    def _arranjo_da_sessao(self) -> str:
+        """O último arranjo que um gesto escolheu, guardado na sessão."""
         guardado: str | None = getattr(self, "_arranjo_do_desktop", None)
         if guardado is None:
             from hefesto_dualsense4unix.utils.session import load_arranjo_do_desktop
@@ -4547,15 +4555,20 @@ class Daemon:
         return guardado
 
     def _guardar_o_arranjo(self, arranjo: str | None) -> str:
-        """Grava o arranjo pedido (um valor fora da lista é ignorado) e devolve o que vale."""
+        """Grava o arranjo pedido (um valor fora da lista é ignorado) e devolve o que vale.
+
+        O arranjo pedido é o gesto mais novo: vale por cima do arranjo do perfil ativo.
+        """
         from hefesto_dualsense4unix.utils.session import (
             ARRANJOS_DO_DESKTOP,
             save_arranjo_do_desktop,
         )
 
-        if arranjo in ARRANJOS_DO_DESKTOP and arranjo != self.arranjo_do_desktop:
-            save_arranjo_do_desktop(str(arranjo))
-            self._arranjo_do_desktop = str(arranjo)
+        if arranjo in ARRANJOS_DO_DESKTOP:
+            self._arranjo_do_perfil = None
+            if arranjo != self._arranjo_da_sessao():
+                save_arranjo_do_desktop(str(arranjo))
+                self._arranjo_do_desktop = str(arranjo)
         return self.arranjo_do_desktop
 
     def _tabelas_do_arranjo(self, arranjo: str, base: Any | None) -> Any | None:
@@ -4648,9 +4661,18 @@ class Daemon:
         """A seção `mode` do perfil (:meth:`_o_modo_do_perfil`), e o Point and click por cima.
 
         É o último applier da ativação, depois das tabelas do perfil: no `desktop` com o arranjo
-        ``point_and_click``, a tabela do «Perfil jogo - navegação» volta (o perfil que diz
-        `desktop` entra no último arranjo guardado).
+        ``point_and_click``, a tabela do «Perfil jogo - navegação» volta. O arranjo é o do perfil
+        (`mode.arranjo`) e, sem ele, o da sessão (D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-
+        DA-06).
         """
+        from hefesto_dualsense4unix.utils.session import ARRANJOS_DO_DESKTOP
+
+        do_perfil = getattr(mode, "arranjo", None)
+        self._arranjo_do_perfil = (
+            do_perfil
+            if getattr(mode, "kind", None) == "desktop" and do_perfil in ARRANJOS_DO_DESKTOP
+            else None
+        )
         resultado = self._o_modo_do_perfil(mode, profile=profile, origin=origin)
         self._repor_o_point_and_click()
         return resultado

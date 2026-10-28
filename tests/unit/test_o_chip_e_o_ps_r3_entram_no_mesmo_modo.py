@@ -38,9 +38,10 @@ class _DaemonDoGesto:
         *,
         origin: str = "manual",
         grava_o_modo: Literal[False, "ipc", "controle"] = False,
+        arranjo: str | None = None,
     ) -> dict[str, str]:
         self.recebeu.append(
-            ("arranjo", {"origin": origin, "grava_o_modo": grava_o_modo})
+            ("arranjo", {"origin": origin, "grava_o_modo": grava_o_modo, "arranjo": arranjo})
         )
         return {"mouse": "aplicado"}
 
@@ -84,13 +85,18 @@ def test_os_dois_caminhos_terminam_no_mesmo_arranjo() -> None:
 
 
 def test_o_gesto_e_o_chip_pedem_o_mesmo_arranjo() -> None:
-    """Nenhum parâmetro só do gesto: as duas portas pedem o MESMO arranjo."""
+    """As duas portas pedem o arranjo pelo mesmo método, e o gesto pede a Navegação.
+
+    NOTA DATADA (27/10/2026, D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06): o Point
+    and click é estilo de jogo, e o PS + R3 nunca cai nele; por isso o gesto diz o arranjo.
+    """
     d = _DaemonDoGesto()
     hotkey._aplicar_ponte(d, hotkey.PONTE_MOUSE_TECLADO)
 
     arranjos = [p for nome, p in d.recebeu if nome == "arranjo"]
     assert arranjos, f"o gesto não chamou o arranjo: {d.efeitos()}"
-    assert arranjos[0] == {"origin": "manual", "grava_o_modo": "controle"}, (
+    assert arranjos[0] == {"origin": "manual", "grava_o_modo": "controle",
+                           "arranjo": "navegacao"}, (
         f"o gesto pediu um arranjo diferente do chip: {arranjos[0]}")
 
     passos = dict(plan_mode_transition(MODE_DESKTOP))

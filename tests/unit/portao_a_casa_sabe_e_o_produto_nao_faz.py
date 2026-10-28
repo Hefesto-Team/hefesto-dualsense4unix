@@ -695,20 +695,20 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_JOGADOR": (
         "daemon/subsystems/hotkey.py::start_hotkey_manager",
         "02/10/2026 — a mão é o despachante dos gestos: "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:753` (`start_hotkey_manager`) "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:759` (`start_hotkey_manager`) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
         "script dela antes de rodá-lo (`_rodar_o_script_do_gesto` em "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2623`). Não há `Environment=` a "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2629`). Não há `Environment=` a "
         "escrever: a chave"
         " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),
     "HEFESTO_TRANSPORTE": (
         "daemon/subsystems/hotkey.py::start_hotkey_manager",
         "02/10/2026 — a mão é o despachante dos gestos: "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:753` (`start_hotkey_manager`) "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:759` (`start_hotkey_manager`) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
         "script dela antes de rodá-lo (`_rodar_o_script_do_gesto` em "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2623`). Não há `Environment=` a "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2629`). Não há `Environment=` a "
         "escrever: a chave"
         " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),
@@ -735,7 +735,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "(True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1612`, "
+        "(`save_keyboard_emulation` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:1614`, "
         "dentro de "
         "`set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço antigo, a linha 1300, caducou; "
@@ -753,7 +753,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "dono em cinco "
         "degraus — `system_warnings` pelo "
         "`_dualsense_mic_intended` em `src/hefesto_dualsense4unix/core/system_check.py:110` "
-        "(chamada por `system_warnings` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:3553`) "
+        "(chamada por `system_warnings` em `src/hefesto_dualsense4unix/daemon/lifecycle.py:3557`) "
         "e o doctor pelo "
         "`_prefere_mic_do_dualsense`. A env é o degrau 2 desses cinco, o atalho "
         "de quem exporta à mão; gravá-la no instalador daria uma SEGUNDA fonte "
@@ -1333,8 +1333,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "integrations/plano_de_radio.py::microfone_nasce_ligado": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o DONO declarado do "
         "padrão «o microfone nasce ligado», não promessa ao produto: "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2400` (`microfone_nasce_ligado`) e "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2814` (`microfone_nasce_ligado`) o citam "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2407` (`microfone_nasce_ligado`) e "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2821` (`microfone_nasce_ligado`) o citam "
         "em `dono=` por nome, e "
         "`tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` "
         "(`test_o_dono_declarado_resolve`) importa o endereço e reprova se ele "

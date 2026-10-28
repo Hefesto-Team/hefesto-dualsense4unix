@@ -913,15 +913,22 @@ class ProfileModeConfig(BaseModel):
     kind: Literal["desktop", "gamepad", "native"]
     gamepad_flavor: MascaraDeGamepad | None = None
     caminho: Literal["dualsense", "xbox"] | None = None
+    arranjo: Literal["navegacao", "point_and_click"] | None = None
 
     @model_serializer(mode="wrap")
     def _sem_caminho_a_chave_nem_aparece(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """Perfil sem caminho escolhido sai do dump IDÊNTICO ao que era."""
+        """Perfil sem caminho nem arranjo escolhido sai do dump IDÊNTICO ao que era.
+
+        O `arranjo` é o do `desktop` (D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06):
+        quem o escreve é o estilo de jogo; sem ele, vale o arranjo da sessão.
+        """
         dados = handler(self)
-        if isinstance(dados, dict) and dados.get("caminho") is None:
-            dados.pop("caminho", None)
+        if isinstance(dados, dict):
+            for sem_escolha in ("caminho", "arranjo"):
+                if dados.get(sem_escolha) is None:
+                    dados.pop(sem_escolha, None)
         return dados
 
 

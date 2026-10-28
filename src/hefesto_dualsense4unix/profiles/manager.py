@@ -58,6 +58,7 @@ from hefesto_dualsense4unix.profiles.steam_app import (
     steam_appid_from_wm_class,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.session import ARRANJOS_DO_DESKTOP
 
 logger = get_logger(__name__)
 
@@ -1846,6 +1847,7 @@ def secao_do_modo_com_o_caminho(
     kind: str,
     caminho: object = None,
     mascara: object = None,
+    arranjo: object = None,
 ) -> ProfileModeConfig:
     """A seção `mode` depois de o MODO mudar — o ESCRITOR ÚNICO do caminho e da máscara.
 
@@ -1853,7 +1855,8 @@ def secao_do_modo_com_o_caminho(
     andam em PAR (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_do_modo`),
     e o par é o que o jogo vê com o que chegou
     (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.modo_do_par`). Sem caminho
-    nem máscara, os dois ficam como estão.
+    nem máscara, os dois ficam como estão. O `arranjo` do ``desktop`` (D-2710-O-POINT-
+    AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06) só se escreve no ``desktop``; fora dele, fica.
     """
     from hefesto_dualsense4unix.integrations.virtual_pad import (
         modo_do_par,
@@ -1873,6 +1876,8 @@ def secao_do_modo_com_o_caminho(
             )
     else:
         campos["caminho"] = None
+    if kind == "desktop" and arranjo in ARRANJOS_DO_DESKTOP:
+        campos["arranjo"] = arranjo
     return ProfileModeConfig(**campos)  # type: ignore[arg-type]
 
 
@@ -1880,19 +1885,21 @@ MODO_QUE_O_ESTILO_TIRA = "desktop"
 
 
 def secao_do_modo_do_estilo(
-    atual: ProfileModeConfig | None, modo_do_estilo: str | None
+    atual: ProfileModeConfig | None, modo_do_estilo: str | None, arranjo: str | None = None
 ) -> tuple[bool, ProfileModeConfig | None]:
     """A seção `mode` que um estilo de jogo deixa no perfil: ``(mudou, seção)``.
 
-    O estilo com modo (a Navegação do Point and click) passa pelo escritor único,
-    :func:`secao_do_modo_com_o_caminho`. O estilo sem modo tira só o `desktop`
-    (estilo de jogo não deixa o controle como teclado e mouse) e deixa os outros
-    modos, a máscara e o caminho como estão. A janela pede; a seção nasce aqui.
+    O estilo com modo passa pelo escritor único, :func:`secao_do_modo_com_o_caminho`, com o
+    arranjo dele (o Point and click abre na tabela da aba Navegação, o Visual novel na
+    Navegação). O estilo sem modo tira o `desktop` (estilo de jogo não deixa o controle como
+    teclado e mouse) e o arranjo que o estilo anterior deixou, e o resto fica como está.
     """
     if modo_do_estilo:
-        return True, secao_do_modo_com_o_caminho(atual, kind=modo_do_estilo)
+        return True, secao_do_modo_com_o_caminho(atual, kind=modo_do_estilo, arranjo=arranjo)
     if getattr(atual, "kind", None) == MODO_QUE_O_ESTILO_TIRA:
         return True, None
+    if atual is not None and atual.arranjo is not None:
+        return True, atual.model_copy(update={"arranjo": None})
     return False, atual
 
 
@@ -1969,6 +1976,7 @@ def gravar_o_modo_no_perfil_ativo(
     kind: str,
     caminho: object = None,
     mascara: object = None,
+    arranjo: object = None,
     porta: str,
     mouse_ligado: bool | None = None,
     velocidades: tuple[int, int] | None = None,
@@ -2015,7 +2023,9 @@ def gravar_o_modo_no_perfil_ativo(
         return None
     profile = load_profile(nome)
     antes = profile.mode
-    depois = secao_do_modo_com_o_caminho(antes, kind=kind, caminho=caminho, mascara=mascara)
+    depois = secao_do_modo_com_o_caminho(
+        antes, kind=kind, caminho=caminho, mascara=mascara,
+        arranjo=arranjo if getattr(antes, "arranjo", None) else None)
     mudou: dict[str, Any] = {}
     if antes is None or antes.model_dump() != depois.model_dump():
         mudou["mode"] = depois

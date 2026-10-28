@@ -219,8 +219,10 @@ class _FakeDaemon:
         *,
         origin: str = "manual",
         grava_o_modo: Any = False,
+        arranjo: str | None = None,
     ) -> dict[str, str]:
-        self.arranjo.append({"origin": origin, "grava_o_modo": grava_o_modo})
+        self.arranjo.append(
+            {"origin": origin, "grava_o_modo": grava_o_modo, "arranjo": arranjo})
         return {"mouse": "aplicado"}
 
 
@@ -249,8 +251,9 @@ async def test_gesto_troca_a_mascara_com_origin_manual() -> None:
     d = _FakeDaemon(flavor=PONTE_DUALSENSE)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     chamadas = [t for t in d.trilha if t[0] == "gamepad"]
-    assert chamadas == [("gamepad", True, None, "manual", PONTE_XBOX)]
-    assert d._gamepad_device.flavor == PONTE_DUALSENSE, "o gesto trocou a máscara"
+    assert chamadas == [("gamepad", True, PONTE_XBOX, "manual", PONTE_XBOX)]
+    assert d._gamepad_device.flavor == PONTE_XBOX, (
+        "o modo único (D-2710, 27/10/2026) anda com a máscara do par")
     assert d.grava_o_modo == ["controle"], (
         f"o gesto não disse a porta ao setter: {d.grava_o_modo}")
 
@@ -285,7 +288,8 @@ async def test_ponte_mouse_teclado_derruba_o_vpad_e_carrega_o_arranjo() -> None:
     d = _FakeDaemon(flavor=PONTE_XBOX)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("gamepad", False, None, "manual", None) in d.trilha
-    assert d.arranjo == [{"origin": "manual", "grava_o_modo": "controle"}], (
+    assert d.arranjo == [
+        {"origin": "manual", "grava_o_modo": "controle", "arranjo": "navegacao"}], (
         f"o gesto não pediu o arranjo do desktop como o chip pede: {d.arranjo}"
     )
     assert d.mouse == [] and d.teclado == [] and d.supressao == [], (

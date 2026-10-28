@@ -9,6 +9,11 @@ rolagem. O estilo Visual novel não existia.
 
 Os leitores são o perfil gravado (a tabela EFETIVA, com as três camadas) e as teclas que o uinput de
 mentira recebe, nunca a constante que a cura usa.
+
+NOTA DATADA (27/10/2026, D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06): o Point and click
+não grava mais o molde `so_mouse`; ele abre no arranjo `point_and_click`, com a tabela da aba
+Navegação (`test_o_point_and_click_e_estilo_e_abre_na_navegacao_do_jogo.py`). Aqui fica o Visual
+novel, e a faxina das linhas que o `so_mouse` deixou nos perfis de antes.
 """
 from __future__ import annotations
 
@@ -96,8 +101,10 @@ def test_o_visual_novel_e_estilo_com_a_receita_do_point_and_click() -> None:
 
 
 def test_o_molde_do_estilo_sai_do_estilo_e_nao_da_marca() -> None:
-    assert ej.POR_CHAVE["visual_novel"].receita_invisivel.molde == "visual_novel"
-    assert ej.POR_CHAVE["point_and_click"].receita_invisivel.molde == "so_mouse"
+    vn = ej.POR_CHAVE["visual_novel"].receita_invisivel
+    pc = ej.POR_CHAVE["point_and_click"].receita_invisivel
+    assert (vn.molde, vn.arranjo) == ("visual_novel", "navegacao")
+    assert (pc.molde, pc.arranjo) == (None, "point_and_click")
 
 
 def test_o_molde_visual_novel_tem_as_quatro_teclas_do_renpy() -> None:
@@ -123,27 +130,23 @@ def test_a_lista_de_acoes_ganha_as_teclas_do_jogo_de_clicar() -> None:
         "as teclas do analógico não cabem na linha do PS")
 
 
-@pytest.mark.parametrize("rotulo", ["Point and click", "Visual novel"])
-def test_aplicar_o_estilo_grava_a_tabela_e_liga_o_tambem_no_jogo(
-    disco: dict[str, Any], rotulo: str,
-) -> None:
+def test_aplicar_o_estilo_grava_a_tabela_e_liga_o_tambem_no_jogo(disco: dict[str, Any]) -> None:
     """MORDIDA: aplicar só o modo, como antes, deixa `button_actions` vazio."""
-    _aplicar(rotulo)
+    _aplicar("Visual novel")
     prof = disco["perfil"]
-    molde = ej.MOLDES[ej.POR_ROTULO[rotulo].receita_invisivel.molde]
-    assert prof.button_actions == molde
+    assert prof.button_actions == ej.MOLDES["visual_novel"]
     assert prof.tabela_no_jogo is True
-    assert prof.mode is not None and prof.mode.kind == "desktop"
+    assert prof.mode is not None
+    assert (prof.mode.kind, prof.mode.arranjo) == ("desktop", "navegacao")
 
 
-@pytest.mark.parametrize("rotulo", ["Point and click", "Visual novel"])
-def test_nenhuma_linha_leva_alt_tab_nem_super(disco: dict[str, Any], rotulo: str) -> None:
+def test_nenhuma_linha_leva_alt_tab_nem_super(disco: dict[str, Any]) -> None:
     """Nem com a tabela antiga (`key_bindings`) do perfil de partida."""
     disco["perfil"] = disco["perfil"].model_copy(update={"key_bindings": {
         "l1": ["KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"], "r1": ["KEY_LEFTALT", "KEY_TAB"],
         "options": ["KEY_LEFTMETA"]}})
     assert _sem_atalho_de_sistema(_efetiva(disco["perfil"])) != []
-    _aplicar(rotulo)
+    _aplicar("Visual novel")
     assert _sem_atalho_de_sistema(_efetiva(disco["perfil"])) == []
 
 
@@ -158,13 +161,24 @@ def test_o_visual_novel_chega_ao_teclado_como_tecla_segurada(disco: dict[str, An
     assert _efetiva(prof)["cross"] == "BTN_LEFT", "o clique continua o de fábrica"
 
 
-def test_o_so_mouse_cala_os_ombros_e_deixa_os_cliques(disco: dict[str, Any]) -> None:
+def test_o_point_and_click_de_antes_deixa_o_perfil_sem_as_linhas_do_so_mouse(
+    disco: dict[str, Any],
+) -> None:
+    """O perfil que escolheu o estilo antes guarda as linhas do `so_mouse`; elas saem.
+
+    MORDIDA: tire o `MOLDE_QUE_O_ESTILO_GRAVAVA` da faxina (`a10_perfis`) e os ombros do perfil
+    seguem mudos no estilo seguinte.
+    """
+    disco["perfil"] = disco["perfil"].model_copy(update={
+        "estilo": "point_and_click", "tabela_no_jogo": True,
+        "button_actions": {**ej.MOLDES["so_mouse"], "dpad_up": "KEY_W"}})
+    _aplicar("FPS")
+    assert disco["perfil"].button_actions == {"dpad_up": "KEY_W"}
+    assert disco["perfil"].tabela_no_jogo is None
+    disco["perfil"] = disco["perfil"].model_copy(update={
+        "estilo": "point_and_click", "button_actions": dict(ej.MOLDES["so_mouse"])})
     _aplicar("Point and click")
-    tabela = _efetiva(disco["perfil"])
-    assert tabela["l1"] == tabela["r1"] == tabela["options"] == acoes.TOKEN_NADA
-    assert tabela["cross"] == tabela["l2"] == "BTN_LEFT"
-    assert tabela["triangle"] == tabela["r2"] == "BTN_RIGHT"
-    assert tabela["l3_direcao"] == acoes.TOKEN_CURSOR
+    assert disco["perfil"].button_actions is None
 
 
 def test_o_estilo_novo_tira_so_as_linhas_do_molde_anterior(disco: dict[str, Any]) -> None:

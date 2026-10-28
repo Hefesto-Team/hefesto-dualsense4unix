@@ -128,7 +128,8 @@ class Receita:
     som_quando_o_jogo_cala: bool = True
     rumble_no_dedo: bool = False
     modo: Literal["desktop"] | None = None
-    molde: Literal["visual_novel", "so_mouse", "teclado_e_mouse"] | None = None
+    arranjo: Literal["navegacao", "point_and_click"] | None = None
+    molde: Literal["visual_novel", "teclado_e_mouse"] | None = None
     luz_base: str | None = None
     luz_ritmo: int = 0
     alto_falante: AltoFalanteDoEstilo | None = None
@@ -163,7 +164,9 @@ MOLDES: dict[str, dict[str, str]] = {
 SOM_DO_PC_TAMBEM_NO_CONTROLE = AltoFalanteDoEstilo("mix", rota=SAIDA_L_FONE_R_ALTO_FALANTE)
 MUSICA_SO_NO_PC = AltoFalanteDoEstilo("sfx")
 
-APLICADAS = ("ajustes_do_gatilho", "modo", "molde", "luz_base", "luz_ritmo")
+MOLDE_QUE_O_ESTILO_GRAVAVA: dict[str, str] = {"point_and_click": "so_mouse"}
+
+APLICADAS = ("ajustes_do_gatilho", "modo", "arranjo", "molde", "luz_base", "luz_ritmo")
 SO_DADO = ("luz", "luz_por_segundo", "duracao_da_vibracao_ms", "toque_por_tiro",
            "lado_do_som", "som_quando_o_jogo_cala", "rumble_no_dedo", "alto_falante",
            "microfone_ligado")
@@ -251,12 +254,12 @@ ESTILOS: tuple[Estilo, ...] = (
            Lado("Resistance", "golpe-carregado"), Lado("Resistance", "pique-que-cansa")),
     Estilo("point_and_click", "Point and click", "Weapon", "economia", (0, 200, 210), 0.4,
            "os gatilhos são os botões do mouse e respondem como um; vibração baixa não distrai",
-           Receita(modo="desktop", molde="so_mouse", som_quando_o_jogo_cala=False),
+           Receita(modo="desktop", arranjo="point_and_click", som_quando_o_jogo_cala=False),
            Lado("Weapon", "clique-mouse"), Lado("Weapon", "clique-mouse")),
     Estilo("visual_novel", "Visual novel", "Off", "economia", (0, 200, 210), 0.5,
            "o texto é longo e a luz não disputa a leitura; os ombros voltam, pulam e abrem o menu",
-           Receita(modo="desktop", molde="visual_novel", luz_base="mare", luz_ritmo=1,
-                   som_quando_o_jogo_cala=False)),
+           Receita(modo="desktop", arranjo="navegacao", molde="visual_novel", luz_base="mare",
+                   luz_ritmo=1, som_quando_o_jogo_cala=False)),
     Estilo("adulto", "Adulto", "Off", "max", (250, 128, 114), 1.0,
            "o gatilho é do jogo; a vibração sobe e a luz fica parada, sem reação a tiro",
            Receita()),

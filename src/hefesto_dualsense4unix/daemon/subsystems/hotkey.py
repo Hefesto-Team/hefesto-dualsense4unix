@@ -415,7 +415,11 @@ def avisar_troca_de_modo(daemon: DaemonProtocol) -> str | None:
 
 
 def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
-    """Constrói a ponte `alvo`. True = de pé ao final."""
+    """Constrói a ponte `alvo`. True = de pé ao final.
+
+    O `desktop` do gesto é sempre a Navegação: o Point and click é estilo de jogo, e só o
+    estilo o escolhe (D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06).
+    """
     setter = getattr(daemon, "set_gamepad_emulation", None)
     if setter is None:
         logger.warning("ponte_sem_setter_de_gamepad")
@@ -432,8 +436,10 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
     if not callable(arranjo):
         logger.warning("ponte_sem_arranjo_do_desktop")
         return True
+    from hefesto_dualsense4unix.utils.session import ARRANJO_NAVEGACAO
+
     with contextlib.suppress(Exception):
-        arranjo(origin="manual", grava_o_modo="controle")
+        arranjo(origin="manual", grava_o_modo="controle", arranjo=ARRANJO_NAVEGACAO)
     return True
 
 
