@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-27",
+      "data": "2026-10-28",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 33,
+      "piso": 32,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -25,7 +25,6 @@
         "interface/aba07.py::transporte": 2,
         "interface/aba08.py::transporte": 1,
         "interface/aba09.py::transporte": 2,
-        "interface/aba10.py::mascara": 1,
         "interface/monta.py::jogador": 1,
         "interface/pacotes/a08_conexoes.py::transporte": 3,
         "interface/sistema.py::transporte": 1,
@@ -241,12 +240,12 @@
       "data": "2026-10-28",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1162046,
+      "piso": 1161482,
       "por_item": {
-        "docs": 107561,
+        "docs": 107562,
         "scripts": 109528,
-        "src": 294638,
-        "tests": 650319
+        "src": 294339,
+        "tests": 650053
       },
       "razao": "o teto desceu sozinho com o número",
       "subidas": [
