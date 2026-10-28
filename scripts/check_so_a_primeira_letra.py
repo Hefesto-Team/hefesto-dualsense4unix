@@ -69,6 +69,9 @@ PECAS_CSV = RAIZ / "docs" / "data" / "pecas-do-dualsense.csv"
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
 MAPAS = ("mapa-das-portas.html", "mapa-do-controle.html", "mapa-do-radio.html")
 
+sys.path.insert(0, str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
+import monta
+
 TITULO_EM_TODA_PALAVRA = re.compile(r"function\s+emTitulo\b|TODA PALAVRA COM MAI[UÚ]SCULA")
 
 sys.path.insert(0, str(RAIZ / "src"))
@@ -243,8 +246,9 @@ def titulo_em_toda_palavra(paginas: list[pathlib.Path]) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     alvo = BANCADA if "--bancada" in argv else PUBLICADO
-    abas = sorted(p for p in alvo.glob("*.html") if E_ABA.match(p.name))
-    if len(abas) != 10:
+    do_produto = set(monta.as_abas_do_produto())
+    abas = sorted(p for p in alvo.glob("*.html") if E_ABA.match(p.name) and p.name in do_produto)
+    if len(abas) != len(do_produto):
         print(f"achei {len(abas)} abas em {alvo} — o caminho mudou?", file=sys.stderr)
         return 2
     faltam = [m for m in MAPAS if not (alvo / m).exists()]
