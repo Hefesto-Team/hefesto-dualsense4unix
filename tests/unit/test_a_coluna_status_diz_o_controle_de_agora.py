@@ -24,7 +24,7 @@ AS RÉGUAS (a numeração é a da sprint):
 3. o «não sei» não acende nem apaga;
 4. o ponto é o disco inteiro (`ControllerOverrides.model_fields`);
 5. na tela (WebKit), o ponto e o glifo aceso são geometrias diferentes;
-6. na tela, os dez grupos cabem na célula.
+6. na tela, os grupos cabem na célula.
 
 AS MORDIDAS estão no relato da entrega: `guarda.secao` de volta ao disco (1 e
 2 reprovam nomeando a seção), o `None` do alto-falante virando apagado (3), o
@@ -72,7 +72,7 @@ UNIQS = ["aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014"]
 
 MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
-    "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
+    "mic": {}, "sensores": {}, "movimento": {},
     "ativacao": {"alternar": ["l1"]},  # (noqa-acento)
     "analogicos": {"zona_morta": 20},
     "remapeamento": {"cross": "circle"},
@@ -116,7 +116,7 @@ def _estado(*entradas: dict[str, Any]) -> dict[str, Any]:
 
 
 def _o_cenario() -> dict[str, Any]:
-    """P1 com o microfone mudo, P2 com a barra apagada, P3 com a máscara Xbox,"""
+    """P1 com o microfone mudo, P2 com a barra apagada, P4 com a mira ligada."""
     return _estado(
         _entrada(UNIQS[0], 1, audio={"mic_mudo": True},
                  acessibilidade={"ativacao": False}),  # (noqa-acento)
@@ -157,8 +157,7 @@ def _por_linha(lista: list[Any]) -> list[dict[str, Any]]:
             for i in range(0, len(lista), largura)]
 
 
-def _o_dono_diz(secao: str, entrada: dict[str, Any], state: dict[str, Any],
-                mascara: str) -> bool | None:
+def _o_dono_diz(secao: str, entrada: dict[str, Any], state: dict[str, Any]) -> bool | None:
     """O que o DONO responde para aquela seção, chamado sobre a mesma entrada."""
     if secao == "leds":
         tira = a04_iluminacao.estado_da_tira(rotulo_lightbar(entrada, state)[0])
@@ -182,8 +181,6 @@ def _o_dono_diz(secao: str, entrada: dict[str, Any], state: dict[str, Any],
         lidos = {a02_controles._sensor_ligado(entrada, q)
                  for q in ("giroscopio", "acelerometro")}
         return True if True in lidos else (False if lidos == {False} else None)
-    if secao == "mascara":
-        return mascara == mesa_viva.NOME_DA_MASCARA["dualsense"]
     if secao == "movimento":
         destinos = {a02_controles._destino_da_mira(entrada, c) for c in ("toque", "inclinacao")}
         return bool(a02_controles._mira_ligada(entrada)) or bool(
@@ -203,31 +200,29 @@ def test_o_glifo_diz_o_que_o_dono_diz_de_cada_controle(
     """Quatro controles, quatro combinações, e um perfil que guarda TUDO dos"""
     state = _o_cenario()
     fora = _emitidos(monkeypatch, state, [_perfil("Régua A", TUDO)])
-    mesa = mesa_viva.mesa_do_estado(state, {})
     linhas = _por_linha(fora["guarda.secao"])
     errados = []
-    for n, (entrada, casa) in enumerate(zip(state["controllers"], mesa, strict=True)):
+    for n, entrada in enumerate(state["controllers"]):
         for secao in a10_perfis.SECOES_DA_COLUNA:
-            quer = _como_a_celula(_o_dono_diz(secao, entrada, state, casa["mascara"]))
+            quer = _como_a_celula(_o_dono_diz(secao, entrada, state))
             if linhas[n][secao] != quer:
                 errados.append(f"P{n + 1}/{secao}: tela={linhas[n][secao]!r} dono={quer!r}")
     assert not errados, (
         "a coluna «Status» não diz o que o controle diz:\n  " + "\n  ".join(errados))
     assert linhas[0]["mic"] == "" and linhas[0]["rumble"] == ""
     assert linhas[1]["leds"] == ""
-    assert linhas[2]["mascara"] == ""
     assert linhas[3]["movimento"] == "sim"
     assert linhas[0]["ativacao"] == "" and linhas[1]["analogicos"] == ""  # (noqa-acento)
     assert [linha["triggers"] for linha in linhas] == [TRAVESSAO] * 4
 
 
-def test_a_dica_diz_qual_mascara_e_o_nao_sei(monkeypatch: pytest.MonkeyPatch) -> None:
-    """«Aceso no DualSense», e a dica diz qual (pergunta [40], 29/09)."""
+def test_a_dica_diz_o_nao_sei_e_a_coluna_nao_tem_mascara(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A máscara saiu da coluna com o modo único: P3 jogando como Xbox não muda célula."""
     fora = _emitidos(monkeypatch, _o_cenario(), [_perfil("Régua A", TUDO)])
+    assert "mascara" not in a10_perfis.SECOES_DA_COLUNA
     dicas = _por_linha(fora["guarda.dica"])
-    assert dicas[2]["mascara"] == a10_perfis.DICA_DA_MASCARA.format(
-        mascara=mesa_viva.NOME_DA_MASCARA["xbox"])
-    assert [dicas[i]["mascara"] for i in (0, 1, 3)] == ["", "", ""]
+    assert dicas[2] == dicas[0]
     assert [d["triggers"] for d in dicas] == [a10_perfis.DICA_DO_NAO_DIZ] * 4
     incertos = _por_linha(fora["guarda.incerto"])
     assert [i["triggers"] for i in incertos] == ["sim"] * 4
@@ -321,8 +316,7 @@ def test_o_desenho_e_o_pacote_dizem_as_mesmas_dicas() -> None:
     """O gerador não importa o pacote (ele traz o GTK); a régua confere."""
     aba10 = _gerador()
     assert aba10.DICA_DO_NAO_DIZ == a10_perfis.DICA_DO_NAO_DIZ
-    assert aba10.DICA_DA_MASCARA == a10_perfis.DICA_DA_MASCARA
-    assert mesa_viva.NOME_DA_MASCARA["dualsense"] == aba10.MASCARA_QUE_ACENDE
+    assert "mascara" not in {campo for campo, _pecas in aba10.SECOES}
     assert aba10.NAO_DIZ == a10_perfis.AGORA_NAO_DIZ
     assert set(a10_perfis.QUEM_DIZ_O_AGORA) == set(a10_perfis.SECOES_DA_COLUNA)
 

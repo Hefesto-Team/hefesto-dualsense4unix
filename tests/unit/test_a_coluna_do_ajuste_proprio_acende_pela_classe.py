@@ -218,7 +218,6 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
     menor_corpo: dict[str, Any] = {
         "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
-        "mascara": "xbox",
         "mic": {},
         "sensores": {},
         "movimento": {},

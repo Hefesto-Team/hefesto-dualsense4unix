@@ -22,7 +22,6 @@ SECOES = [
     ("speaker", ("alto-falante",)),
     ("mic", ("mic",)),
     ("sensores", ("giroscopio", "acelerometro")),
-    ("mascara", ("ps",)),
     ("movimento", ("stick_r",)),
     ("ativacao", ("cross",)),  # (noqa-acento)
     ("analogicos", ("stick_l",)),
@@ -35,7 +34,6 @@ NOME_DA_SECAO = {
     "speaker": "alto-falante",
     "mic": "microfone",
     "sensores": "sensores",
-    "mascara": "máscara",
     "movimento": "comandos virtuais",
     "ativacao": "ativação dos botões",  # (noqa-acento)
     "analogicos": "curva dos analógicos",
@@ -57,7 +55,7 @@ QUANTAS_SECOES = _EXTENSO[len(SECOES)]
 GUARDA = {
     "p1": {"leds", "triggers", "rumble", "mic", "movimento"},
     "p2": {"leds", "rumble", "sensores"},
-    "p3": {"leds", "mascara"},
+    "p3": {"leds"},
     "p4": set(),
 }
 
@@ -69,8 +67,6 @@ AGORA = {
     "p4": {"triggers": NAO_DIZ},
 }
 DICA_DO_NAO_DIZ = "O controle não diz"
-DICA_DA_MASCARA = "Máscara: {mascara}"
-MASCARA_QUE_ACENDE = "DualSense"
 DICA_DO_STATUS = "Aceso: ligado agora; o ponto: só deste controle"
 
 CSS = CSS_GLIFO + """  .perfis{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;align-items:stretch;
@@ -413,18 +409,7 @@ _RESUMO_DA_MIRA_NA_CENA = _resumo_da_mira(_mira_de_nascenca()) or ""
 
 
 def _celula_de_agora(c, campo, agora):
-    """`(aceso, não_diz, dica)` de uma célula do cenário `AGORA`.
-
-    A máscara é a da `MESA` (`c["mascara"]`), com a regra do pacote
-    (`a10_perfis._mascara_agora`): acesa só na DualSense.
-    """
-    if campo == "mascara" and campo not in agora:
-        mascara = str(c.get("mascara") or "")
-        if mascara in ("", NAO_DIZ):
-            return False, True, DICA_DO_NAO_DIZ
-        if mascara != MASCARA_QUE_ACENDE:
-            return False, False, DICA_DA_MASCARA.format(mascara=mascara)
-        return True, False, ""
+    """`(aceso, não_diz, dica)` de uma célula do cenário `AGORA`."""
     valor = agora.get(campo, "sim")
     if valor == NAO_DIZ:
         return False, True, DICA_DO_NAO_DIZ
@@ -1059,9 +1044,7 @@ def _conferir(html: str) -> None:
     dicas_das_celulas = re.findall(
         r'<span class="gc" data-hef="guarda\.dica"[^>]*?data-dica="([^"]*)"', html)
     estranhas = [d for d in dicas_das_celulas
-                 if d not in (DICA_DO_NAO_DIZ, _RESUMO_DA_MIRA_NA_CENA)
-                 and not re.fullmatch(re.escape(DICA_DA_MASCARA).replace(
-                     re.escape("{mascara}"), ".+"), d)]
+                 if d not in (DICA_DO_NAO_DIZ, _RESUMO_DA_MIRA_NA_CENA)]
     exigir(not estranhas,
            f"a célula da coluna «Status» ganhou uma dica que o pacote não "
            f"escreve: {estranhas}")

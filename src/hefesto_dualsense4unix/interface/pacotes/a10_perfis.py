@@ -87,7 +87,7 @@ SEM_DONO: dict[str, str] = {}
 
 
 SECOES_DA_COLUNA: tuple[str, ...] = (
-    "leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
+    "leds", "triggers", "rumble", "speaker", "mic", "sensores",
     "movimento", "ativacao", "analogicos")  # (noqa-acento)
 
 ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
@@ -2356,7 +2356,6 @@ SEM_ECO = ("perfis.renomear", "editor.jogo", "editor.estilo",
 AGORA_NAO_DIZ = TRAVESSAO
 
 DICA_DO_NAO_DIZ = "O controle não diz"
-DICA_DA_MASCARA = "Máscara: {mascara}"
 
 
 def _luz_agora(entrada: dict[str, Any], state: dict[str, Any], _linha: dict[str, Any]
@@ -2443,17 +2442,6 @@ def _sensores_agora(entrada: dict[str, Any], _state: dict[str, Any],
     return False if all(valor is False for valor in lidos) else None
 
 
-def _mascara_agora(_entrada: dict[str, Any], _state: dict[str, Any],
-                   linha: dict[str, Any]) -> bool | None:
-    """A máscara deste controle é a DualSense (`mesa_viva.NOME_DA_MASCARA`)."""
-    import mesa_viva
-
-    mascara = str(linha.get("mascara") or "")
-    if mascara in ("", TRAVESSAO):
-        return None
-    return mascara == str(mesa_viva.NOME_DA_MASCARA["dualsense"])
-
-
 def _comandos_virtuais_agora(entrada: dict[str, Any], _state: dict[str, Any],
                              _linha: dict[str, Any]) -> bool | None:
     """Mira, toque ou inclinação ligados (`a02_controles._mira_ligada` e"""
@@ -2496,7 +2484,6 @@ QUEM_DIZ_O_AGORA: dict[str, Callable[[dict[str, Any], dict[str, Any], dict[str, 
     "speaker": _alto_falante_agora,
     "mic": _microfone_agora,
     "sensores": _sensores_agora,
-    "mascara": _mascara_agora,
     "movimento": _comandos_virtuais_agora,
     "ativacao": _ativacao_agora,  # (noqa-acento)
     "analogicos": _analogicos_agora,
@@ -2516,8 +2503,6 @@ def o_agora_da_linha(linha: dict[str, Any], state: dict[str, Any]
         aceso = dono(entrada, state, linha)
         if aceso is None:
             fora.append((AGORA_NAO_DIZ, DICA_DO_NAO_DIZ))
-        elif secao == "mascara" and not aceso:
-            fora.append(("", DICA_DA_MASCARA.format(mascara=linha.get("mascara"))))
         else:
             fora.append(("sim" if aceso else "", _dica_do_agora(secao, entrada)))
     return fora
