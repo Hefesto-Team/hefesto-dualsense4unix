@@ -461,6 +461,22 @@ class TestOProximoDaFila:
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
         assert bancada.apertar(P3, "ps", "r3") == ["ponte"]
 
+    def test_o_ato_fora_de_um_gesto_e_do_proximo_da_fila_e_nunca_do_p1_ausente(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+    ) -> None:
+        """O ato do gesto pergunta de quem ele é ao dono único: na vaga, o P2, não o P1 que saiu."""
+        bancada = montar_atalhos(monkeypatch, kernel, 3)
+        _fora_dentro_do_prazo(bancada, P1)
+        assert bancada.vaga() and bancada.inst.primary_uniq == P1
+        do_ps = hotkey._o_ato_do_ps_para_o_fio(bancada.daemon, [object()], None)
+        assert do_ps["quem"] == P2
+        atos = hotkey._AtosDoGesto(bancada.daemon)
+        feitos: list[str | None] = []
+        monkeypatch.setattr(atos, "escolha", lambda _gesto: SimpleNamespace(faz="nada"))
+        monkeypatch.setattr(atos, "fazer", lambda _g, _e, quem: feitos.append(quem))
+        atos.callback("ps_r3")()
+        assert feitos == [P2]
+
     @pytest.mark.parametrize(
         "posto", [0, 1, 2, 3], ids=["posto-p1", "posto-p2", "posto-p3", "posto-p4"]
     )

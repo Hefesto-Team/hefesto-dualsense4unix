@@ -2442,14 +2442,14 @@ def _o_ato_do_ps_para_o_fio(
     daemon: Any, quem_atende: list[Any], do_computador: Any
 ) -> dict[str, Any]:
     """O que o fio do PS precisa para fazer o ⑥ fora do laço."""
-    from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
+    from hefesto_dualsense4unix.daemon.subsystems.poll import quem_segura_os_atalhos
 
     if quem_atende[0] is None:
         quem_atende[0] = _AtosDoGesto(daemon)
     return {
         "atos": quem_atende[0],
         "escolha": do_computador,
-        "quem": quem_faz_o_gesto(),
+        "quem": quem_segura_os_atalhos(daemon),
         "laco": _o_laco_de_agora(),
         "contexto": contextvars.copy_context(),
     }
@@ -2491,11 +2491,11 @@ class _AtosDoGesto:
 
     def callback(self, gesto: str) -> Any:
         """O que o ``HotkeyManager`` chama para ``gesto``: lê a tabela e faz."""
-        from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
+        from hefesto_dualsense4unix.daemon.subsystems.poll import quem_segura_os_atalhos
 
         def _ato() -> Any:
             escolha = self.escolha(gesto)
-            quem = quem_faz_o_gesto()
+            quem = quem_segura_os_atalhos(self.daemon)
             logger.info("gesto_fez", gesto=gesto, acao=escolha.faz, **_de_quem(quem))
             return self.fazer(gesto, escolha, quem)
 
