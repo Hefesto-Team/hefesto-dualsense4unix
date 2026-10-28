@@ -80,7 +80,7 @@ def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
 
     Desde a D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES é o modo único, igual para todos;
     quem decide é `external_mask.mascara_efetiva`, e repetir a regra faria duas verdades. NUNCA
-    levanta: o que não abre não derruba o ``, a tela mostra a máscara da sessão.
+    levanta: o que não abre não derruba o `state_full`, a tela mostra a máscara da sessão.
     """
     fora: dict[str, str] = {}
     try:

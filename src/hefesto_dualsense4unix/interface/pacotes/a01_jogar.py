@@ -1764,6 +1764,7 @@ MASCARA_VALE_SEM_ENDERECO = (
 MASCARA_VALE_SEM_GUARDAR = (
     "A máscara vale agora, mas não consegui guardá-la no perfil."
 )
+MODO_NAO_VESTIU = "Os controles não vestiram o modo pedido; ficou o de antes."
 
 _FRASE_DA_MASCARA_NAO_GUARDADA = {
     "sem_perfil": MASCARA_VALE_SEM_PERFIL,
@@ -1829,6 +1830,8 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         if motivo:
             raise RuntimeError(motivo)
         return None
+    if motivo == "aparelho_nao_vestiu":
+        raise RuntimeError(MODO_NAO_VESTIU)
     recado = _recado_da_mascara(motivo)
     return {"recado": recado} if recado else None
 

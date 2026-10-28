@@ -243,3 +243,18 @@ def test_a_mascara_nao_consta_mais_como_botao_sem_dono() -> None:
         f"{mentem}. A lista manda a próxima pessoa construir o que já está "
         f"construído — foi o que o `mascara` fez em 03/09 e o `modo-steam` "
         f"em 20/09")
+
+
+def test_o_modo_que_nao_subiu_recusa_dizendo() -> None:
+    """O `gamepad.mask.set` que não vestiu responde `aparelho_nao_vestiu` com o RPC bem-sucedido.
+
+    Sem a tradução, a frase de reserva dizia «A máscara vale agora», sobre um modo que não subiu.
+    """
+    class _Ponte:
+        def chamar_detalhado(self, metodo: str, **k: Any) -> tuple[bool, str | None]:
+            return True, "aparelho_nao_vestiu"
+
+    with pytest.raises(RuntimeError) as erro:
+        aba.mascara_do_controle(
+            _ctx(VIVO_GAMEPAD), {"uniq": "aa:bb:cc:00:00:02", "mascara": "Xbox 360"}, _Ponte())
+    assert str(erro.value) == aba.MODO_NAO_VESTIU
