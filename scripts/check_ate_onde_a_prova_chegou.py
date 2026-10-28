@@ -62,18 +62,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "A régua dos dublês grava e relê o campo por controle; falta o jogo aberto, com o "
         "Desligado calando o toque no controle dela, que é a prova da sprint",
     ),
-    "mascara": (
-        "grande",
-        "2026-09-08-SENSORES-NO-JOGO-01-o-giroscopio-e-o-acelerometro-provados-ate-o-jogo.md",
-        "o destino da máscara é o JOGO, não o plástico: quem lê `057E:2009` é "
-        "quem abre o vpad. `plataforma.vpad@dualsense` está em MONTOU nos dois "
-        "transportes, com `de_onde_sei = inferido-do-codigo` e `provado_por` "
-        "vazio — o report é montado e ninguém viu um jogo abrir o nó. É a "
-        "cicatriz de 04/09 (a máscara que nunca gravou um byte) no degrau "
-        "seguinte. O degrau que vem primeiro — `O JOGO RECEBEU` — espera o "
-        "instrumento que a SENSORES-NO-JOGO-01 precisa escrever para o degrau "
-        "3 dela; o destino, um andar acima, só a mão dela fecha",
-    ),
     "sensor": (
         "grande",
         "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
