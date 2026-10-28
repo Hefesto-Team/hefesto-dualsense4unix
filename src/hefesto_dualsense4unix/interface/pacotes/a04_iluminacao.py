@@ -2796,7 +2796,7 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Dar o Player N a este controle" — o número E as cinco lâmpadas.
 
     Não é `identity.renumber` (COMPACTA todos preservando a ordem relativa e mora na aba Início,
-    `interface/pacotes/a01_jogar.py:1954`); "este controle é o 2" foi o comando que faltou até
+    `interface/pacotes/a01_jogar.py:1715`); "este controle é o 2" foi o comando que faltou até
     25/07.
 
     Devolve `(ok, motivo)` com o motivo já em frase (`_MOTIVOS_NUMERO`); levantar com ele faz o

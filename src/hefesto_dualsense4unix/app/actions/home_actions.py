@@ -299,7 +299,7 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     Nasceu em 05/09/2026, e a razão é um defeito medido: ela dispensava o aviso
     na aba Lançadores e **três outras telas continuavam acusando** — a Início, a
     Status e a coluna Atenção da aba Jogar
-    (`app/actions/jogar/painel.py:358`), porque as três chamavam
+    (`app/actions/jogar/painel.py:533`), porque as três chamavam
     `wrapper_banner_text` direto, sem consultar lista nenhuma.
 
     A decisão, 05/09/2026 (pergunta `07-Q3`): *"as duas recusas calam
