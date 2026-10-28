@@ -70,7 +70,8 @@ def test_sem_o_escape_a_guarda_age_mesmo_com_sessao_viva() -> None:
         cwd=RAIZ, capture_output=True, text=True, env=env, timeout=60,
     )
     assert r.returncode == 0, r.stderr
-    assert "None" in r.stdout and ":1" not in r.stdout, (
+    wayland, display = r.stdout.strip().splitlines()[-1].split()
+    assert wayland == "None" and display != ":1", (
         "a guarda deixou a sessão viva de pé — a próxima suíte vai abrir "
         "janela na tela dela.\n" + r.stdout
     )
