@@ -12,7 +12,9 @@ from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core.controller import OutputSpec
+from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+from hefesto_dualsense4unix.interface.pacotes.camada import PAGINAS_DA_SECAO_DOS_CONTROLES
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _INTERFACE = _RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -69,7 +71,7 @@ def test_quem_manda_nao_clicar_nos_botoes_do_cartao_nomeia_todos() -> None:
     Desde o desenho do todo (15/10/2026) o cartão tem «Giroscópio» e «Acelerômetro» no
     alto e a «Mira virtual» embaixo de cada analógico.
     """
-    pagina = (_PAGINAS / "02-controles.html").read_text(encoding="utf-8")
+    pagina = onde.pagina(PAGINAS_DA_SECAO_DOS_CONTROLES[0]).read_text(encoding="utf-8")
     botoes = sorted(set(re.findall(
         r'<button class="sw[^"]*" data-gesto="(?:sensor|analogico-lado)"[^>]*>'
         r'<span class="p"></span>([^<]+)</button>', pagina)))
