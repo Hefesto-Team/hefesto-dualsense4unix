@@ -40,16 +40,18 @@ FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
     ("máscara", "escolher"): (
         "01-jogar.html", frozenset({"modo-dualsense", "modo-xbox", "modo-nintendo"})),
     ("analógico virtual", "ligar e escolher o lado"): (
-        "02-controles.html", frozenset({"analogico-lado", "analogico-virtual", "mira"})),
+        "01-jogar.html", frozenset({"analogico-lado", "analogico-virtual", "mira"})),
     ("velocidade do cursor", "ajustar"): (
         "06-navegacao.html", frozenset({"vel-cursor"})),
     ("atalho do jogo", "aplicar nos lançadores, política global"): (
         "09-sistema.html", frozenset({"correcoes-automaticas"})),
 }
 
-PAGINAS = sorted(p.name for p in BANCADA.glob("*.html"))
-EMBUTIDAS = {(BANCADA, "01-jogar.html"): {"02-controles.html"},
-             (PUBLICADAS, "01-jogar.html"): {"02-controles.html"}}
+if str(RAIZ / "src/hefesto_dualsense4unix/interface") not in sys.path:
+    sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
+import monta
+
+PAGINAS = sorted(p.name for p in BANCADA.glob("*.html") if p.name not in monta.PAGINAS_QUE_SAIRAM)
 ARQUIVOS = [pytest.param(pasta, nome, id=f"{rotulo}-{nome}")
             for rotulo, pasta in (("bancada", BANCADA), ("publicada", PUBLICADAS))
             for nome in PAGINAS]
@@ -116,7 +118,7 @@ def test_nenhuma_pagina_emite_o_gesto_de_escrita_de_outra_aba(pasta: Path, nome:
     """Gesto de escrita fora da aba dona reprova; selo, dica e texto passam."""
     emitidos = gestos_da_pagina((pasta / nome).read_text(encoding="utf-8"))
     fora = {g: sorted(d) for g, d in _donos_do_gesto().items()
-            if g in emitidos and not ({nome} | EMBUTIDAS.get((pasta, nome), set())) & d}
+            if g in emitidos and nome not in d}
     assert not fora, f"{nome} emite gesto de escrita que é de outra aba (gesto -> dona): {fora}"
 
 
@@ -140,7 +142,7 @@ def test_nenhum_pacote_atende_o_gesto_de_escrita_de_outra_aba() -> None:
     donos = _donos_do_gesto()
     fora = sorted(f"{pagina}:{gesto}" for (pagina, gesto) in pacotes.GESTOS
                   if gesto in donos
-                  and not ({pagina} | EMBUTIDAS.get((BANCADA, pagina), set())) & donos[gesto])
+                  and pagina not in donos[gesto])
     assert not fora, f"gesto de escrita atendido por outra aba: {fora}"
 
 

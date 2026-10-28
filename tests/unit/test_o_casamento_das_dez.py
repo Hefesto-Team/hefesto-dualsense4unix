@@ -14,7 +14,6 @@ sys.path.insert(0, str(RAIZ / "scripts/tela"))
 
 PISO = {
     "01-jogar.html": 9,
-    "02-controles.html": 9,
     "03-gatilhos.html": 19,
     "04-iluminacao.html": 8,
     "05-vibracao.html": 9,

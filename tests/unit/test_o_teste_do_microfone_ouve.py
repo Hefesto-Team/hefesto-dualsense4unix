@@ -5,7 +5,7 @@ from __future__ import annotations
 import pathlib
 
 PAGINA = pathlib.Path(
-    "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
+    "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
 )
 GERADOR = pathlib.Path("src/hefesto_dualsense4unix/interface/aba02.py")
 

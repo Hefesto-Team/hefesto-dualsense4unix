@@ -551,8 +551,8 @@ def _campos_do_arquivo(caminho: pathlib.Path) -> frozenset[str]:
         re.findall(r'data-campo="([^"]+)"', caminho.read_text(encoding="utf-8")))
 
 
-BANCADA = RAIZ / "mockup/02-controles.html"
-PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
+BANCADA = RAIZ / "mockup/01-jogar.html"
+PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
 
 DA_BANCADA = tuple(sorted(_campos_do_arquivo(BANCADA) - _campos_do_arquivo(PUBLICADA)))
 

@@ -73,7 +73,7 @@ def _ctx(entry: dict[str, Any] | None = None, **extra: Any) -> Contexto:
 
 def _enderecos_da_bancada() -> frozenset[str]:
     """Todo `data-campo` do DESENHO de hoje — e a bancada é onde ele mora."""
-    doc = onde.pagina("02-controles.html").read_text(encoding="utf-8")
+    doc = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
     import re as _re
     return frozenset(_re.findall(r'data-campo="([^"]+)"', doc))
 
@@ -296,7 +296,7 @@ def test_o_desacordo_nao_vira_mais_frase_no_cartao() -> None:
     assert "alto-ressalva" not in campos, campos.get("alto-ressalva")
     assert not hasattr(a02, "recado_da_rota"), (
         "a leitura do recado ficou no pacote sem ninguém para chamá-la")
-    pagina = onde.pagina(a02.PAGINA, publicado=True).read_text(encoding="utf-8")
+    pagina = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
     assert 'data-campo="alto-ressalva"' not in pagina, (
         "a página publicada ainda tem o endereço da ressalva do alto-falante")
 
@@ -500,7 +500,7 @@ def desenhado() -> dict[str, Any]:
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     from playwright.sync_api import sync_playwright
 
-    alvo = onde.pagina("02-controles.html")
+    alvo = onde.pagina("01-jogar.html")
     with sync_playwright() as pw:
         navegador = pw.chromium.launch(executable_path=str(CHROME),
                                        args=["--no-sandbox"])
@@ -655,7 +655,7 @@ def som() -> dict[str, Any]:
 
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
-    alvo = onde.pagina("02-controles.html")
+    alvo = onde.pagina("01-jogar.html")
     with sync_playwright() as pw:
         navegador = pw.chromium.launch(executable_path=str(CHROME),
                                        args=["--no-sandbox"])

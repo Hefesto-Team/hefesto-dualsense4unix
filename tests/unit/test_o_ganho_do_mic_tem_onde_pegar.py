@@ -11,8 +11,8 @@ import pathlib
 from hefesto_dualsense4unix.integrations import ganho_do_microfone as gm
 
 PUBLICADO = pathlib.Path(
-    "src/hefesto_dualsense4unix/interface/paginas/02-controles.html")
-BANCADA = pathlib.Path("mockup/02-controles.html")
+    "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html")
+BANCADA = pathlib.Path("mockup/01-jogar.html")
 
 
 def test_o_desenho_do_todo_nao_tem_a_linha_do_ganho() -> None:

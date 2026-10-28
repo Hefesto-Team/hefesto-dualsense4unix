@@ -1035,7 +1035,7 @@ def selo_do_som(saida_muda: bool | None) -> str:
     return TEXTO_SELO_SAIDA_MUDA if saida_muda is True else ""
 
 
-PAGINA = "02-controles.html"
+PAGINA = PAGINAS_DA_SECAO_DOS_CONTROLES[0]
 
 
 def texto_da_bateria(pct: int | None) -> str:

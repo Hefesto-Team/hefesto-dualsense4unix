@@ -324,7 +324,7 @@ def test_o_molde_do_lugar_nao_guarda_controle_nenhum(
         mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """O `_MOLDE` é por (página, perfil) e não precisa de poda. Medido."""
     _sem_pactl(monkeypatch)
-    molde = pacotes.molde_do_lugar("02-controles.html", _ctx(), {})
+    molde = pacotes.molde_do_lugar("01-jogar.html", _ctx(), {})
     assert molde, ("o molde saiu vazio e a régua não mediu nada — a página "
                    "publicada não abriu")
     assert all(v == pacotes.TRAVESSAO for v in molde.values()), molde

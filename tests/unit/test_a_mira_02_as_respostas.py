@@ -193,7 +193,7 @@ _DICA_COM_A_MIRA = ("Com o analógico virtual aceso, o giro deste controle vai a
 
 
 def _bancada_02() -> str:
-    return (_RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
+    return (_RAIZ / "mockup/01-jogar.html").read_text(encoding="utf-8")
 
 
 def _ctx(nativo: bool = False, **miras: Any) -> Any:
@@ -349,7 +349,7 @@ def test_antes_do_ok_dela_o_produto_nao_pinta_o_desenho_novo() -> None:
     import pacotes.a02_controles as a02
 
     publicado = (_RAIZ / "src/hefesto_dualsense4unix/interface/paginas/"
-                 "02-controles.html").read_text(encoding="utf-8")
+                 "01-jogar.html").read_text(encoding="utf-8")
     if 'data-campo="giro-dica"' in publicado:
         pytest.skip("a 02 já foi publicada com a dica — a guarda cumpriu o papel")
     cards = a02.pacote(_ctx(**{"aa:bb:cc:00:00:02": {"ligada": True, "virtual": True}}))["cards"]

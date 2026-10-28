@@ -411,7 +411,7 @@ def test_a_pagina_publicada_da_aba_02_nao_cega_a_regua() -> None:
     from hefesto_dualsense4unix.interface import regua_do_mockup
 
     pagina = (pathlib.Path(__file__).resolve().parents[2] /
-              "src/hefesto_dualsense4unix/interface/paginas/02-controles.html")
+              "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html")
     marcados = {c.endereco: c.valor
                 for c in regua_do_mockup._campos_cravados(
                     pagina.read_text(encoding="utf-8"))

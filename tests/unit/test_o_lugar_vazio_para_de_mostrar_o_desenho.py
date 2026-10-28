@@ -94,14 +94,13 @@ def test_o_molde_e_o_que_a_aba_pinta_menos_barra_e_html(pacotes_mod):
         assert set(molde) <= set(da_aba), (
             f"{pagina}: o molde alcança {sorted(set(molde) - set(da_aba))}, que "
             "a aba NÃO pinta — é endereço de desenho, não de dado")
-    assert len(olhadas) >= 7, (
+    assert len(olhadas) >= 6, (
         f"só {len(olhadas)} páginas com lugar de controle — este teste está "
         "medindo quase nada")
 
 
 PISO_DO_MOLDE = {
     "01-jogar.html": 3,
-    "02-controles.html": 8,
     "03-gatilhos.html": 10,
     "04-iluminacao.html": 4,
     "05-vibracao.html": 4,
@@ -113,8 +112,10 @@ PISO_DO_MOLDE = {
 def test_o_molde_de_cada_pagina_nao_encolhe(pacotes_mod):
     """O molde de uma aba inteira podia ir a ZERO sem um teste piscar."""
     ctx = _mesa_vazia(pacotes_mod)
+    import monta
+
     com_lugar = [p for p in sorted(pacotes_mod.PACOTES)
-                 if pacotes_mod.lugares_da_pagina(p)]
+                 if p not in monta.PAGINAS_QUE_SAIRAM and pacotes_mod.lugares_da_pagina(p)]
     assert set(com_lugar) == set(PISO_DO_MOLDE), (
         f"as páginas com lugar de controle mudaram: {sorted(com_lugar)} — o "
         "piso do molde precisa acompanhar")
@@ -162,23 +163,23 @@ def test_a_aba_que_ja_emite_coluna_dispensa_o_molde(pacotes_mod):
     """A segunda guarda de `molde_do_lugar`, que não tinha régua nenhuma."""
     ctx = _mesa_vazia(pacotes_mod)
     ja_tem = {"colunas": {"p1": {"bateria": "95%"}}}
-    assert pacotes_mod.molde_do_lugar("02-controles.html", ctx, ja_tem) == {}, (
+    assert pacotes_mod.molde_do_lugar("01-jogar.html", ctx, ja_tem) == {}, (
         "a aba já emitiu coluna sem controle nenhum — o molde tem de se calar, "
         "senão ele compete com o dado de verdade pelo mesmo endereço")
-    assert pacotes_mod.molde_do_lugar("02-controles.html", ctx, {})
+    assert pacotes_mod.molde_do_lugar("01-jogar.html", ctx, {})
 
 
 def test_a_barra_e_o_html_ficam_de_fora(pacotes_mod):
     """`largura` e `html` não aceitam travessão, e as duas foram medidas.
 
-    `bateria-barra` da `02-controles` é `data-hef-alvo="largura"`: o piloto
+    `bateria-barra` da seção Controles da Jogar é `data-hef-alvo="largura"`: o piloto
     monta `el.style.width = "—%"`, o CSSOM recusa, a barra fica na largura do
     mockup e o contador de pintura soma +1 por tique para sempre.
     `players` da `04-iluminacao` é `html`: o travessão APAGA os quatro botões
     de jogador.
     """
     ctx = _mesa_vazia(pacotes_mod)
-    controles = pacotes_mod.molde_do_lugar("02-controles.html", ctx, {})
+    controles = pacotes_mod.molde_do_lugar("01-jogar.html", ctx, {})
     assert "bateria" in controles, "a bateria é TEXTO e tem de ganhar travessão"
     assert "bateria-barra" not in controles, (
         "a barra entrou no molde: `width: \"—%\"` é recusado pelo CSSOM e o "
@@ -215,7 +216,7 @@ def test_o_molde_escreve_o_travessao_do_desenho(pacotes_mod):
     """O texto do vazio é DO USUÁRIO, e já está no desenho — nada novo nasce aqui."""
     from hefesto_dualsense4unix.interface import onde
 
-    doc = onde.pagina("02-controles.html", publicado=True).read_text(encoding="utf-8")
+    doc = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
     vazio = re.search(r'data-controle="p3".*?</div>\s*</div>', doc, re.S)
     assert vazio is not None, "o lugar P3 sumiu da página publicada"
     assert f">{pacotes_mod.TRAVESSAO}<" in vazio.group(0), (
@@ -223,12 +224,12 @@ def test_o_molde_escreve_o_travessao_do_desenho(pacotes_mod):
         "é dela, e esta cura tem de seguir o que o desenho faz")
 
     ctx = _mesa_vazia(pacotes_mod)
-    molde = pacotes_mod.molde_do_lugar("02-controles.html", ctx, {})
+    molde = pacotes_mod.molde_do_lugar("01-jogar.html", ctx, {})
     assert set(molde.values()) == {pacotes_mod.TRAVESSAO}
 
 
 @pytest.mark.parametrize("pagina",  # (noqa-acento)
-                         ["01-jogar.html", "02-controles.html",
+                         ["01-jogar.html",
                           "04-iluminacao.html", "05-vibracao.html"])
 def test_os_quatro_lugares_ficam_no_travessao_e_marcados(pacotes_mod, pagina):
     """O desfecho que a foto cobra: nada de dado, e a moldura de vazio acesa.

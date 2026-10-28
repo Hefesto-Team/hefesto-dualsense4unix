@@ -68,15 +68,14 @@ def test_todo_gesto_do_desenho_tem_quem_o_atenda() -> None:
     assert not orfaos, f"o desenho da Jogar tem botões sem dono: {orfaos}"
 
 
-def test_a_secao_atende_pelo_mesmo_gesto_nas_duas_paginas() -> None:
-    for (pagina, nome), fn in pacotes.GESTOS.items():
-        if pagina != a02_controles.PAGINA:
-            continue
-        na_jogar = pacotes.GESTOS.get((PAGINA, nome))
-        assert na_jogar is not None, nome
-        assert getattr(na_jogar, "__wrapped__", None) is getattr(fn, "__wrapped__", None), nome
-        assert pacotes.GESTOS_QUE_MEXEM.get((PAGINA, nome)) == pacotes.GESTOS_QUE_MEXEM.get(
-            (pagina, nome)), nome
+def test_a_secao_atende_na_jogar() -> None:
+    assert a02_controles.PAGINA == PAGINA
+    da_secao = {nome for (_pg, nome), fn in pacotes.GESTOS.items()
+                if fn.__module__ == a02_controles.__name__}
+    assert {"mudo", "volume", "rota", "analogico-lado"} <= da_secao, "premissa"
+    for nome in da_secao:
+        assert pacotes.GESTOS.get((PAGINA, nome)) is not None, nome
+        assert pacotes.GESTOS.get(("02-controles.html", nome)) is None, nome
 
 
 class _Ipc:
@@ -146,10 +145,8 @@ def test_o_pendente_do_nintendo_some_quando_o_daemon_chega() -> None:
 @pytest.fixture
 def jogar_publicada_com_a_secao(tmp_path: pathlib.Path,
                                 monkeypatch: pytest.MonkeyPatch) -> None:
-    """O publicado de mentira: a 01 do desenho e a 02 de hoje."""
+    """O publicado de mentira: a 01 do desenho."""
     shutil.copy(DESENHO, tmp_path / PAGINA)
-    shutil.copy(onde.pagina(a02_controles.PAGINA, publicado=True),
-                tmp_path / a02_controles.PAGINA)
     monkeypatch.setattr(onde, "PUBLICADO", tmp_path)
     monkeypatch.setattr(a02_controles, "_ENDERECOS", None)
     monkeypatch.setattr(a02_controles, "_GESTOS_PUBLICADOS", {})

@@ -13,7 +13,7 @@ UNIQ = "aa:bb:cc:00:00:01"
 PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
 PAGINA = pathlib.Path(
-    "src/hefesto_dualsense4unix/interface/paginas/02-controles.html")
+    "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html")
 
 
 class _Falso:

@@ -22,6 +22,7 @@ _INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 if str(_INTERFACE) not in sys.path:
     sys.path.insert(0, str(_INTERFACE))
 
+import monta
 import pacotes
 import regua_do_mockup
 
@@ -30,7 +31,7 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, onde
 PILOTO = _INTERFACE / "hefesto_vivo.py"
 
 COM_CARTAO = sorted(p for p in pacotes.PACOTES
-              if p[:2].isdigit() and pacotes.lugares_da_pagina(p))
+              if p in monta.as_abas_do_produto() and pacotes.lugares_da_pagina(p))
 
 SIMULADOS = frozenset({"html", "cor", "atributo"})
 
@@ -219,9 +220,9 @@ def _o_que_diz(cravados: list[regua_do_mockup._Campo], vivos: list[str],
             if c.dono == pref and c.chave == chave]
 
 
-def test_as_paginas_com_cartao_sao_as_seis() -> None:
+def test_as_paginas_com_cartao_sao_as_cinco() -> None:
     """A parametrização abaixo não pode passar por vacuidade."""
-    assert COM_CARTAO == ["01-jogar.html", "02-controles.html", "03-gatilhos.html",
+    assert COM_CARTAO == ["01-jogar.html", "03-gatilhos.html",
                         "04-iluminacao.html", "05-vibracao.html", "08-conexoes.html"], COM_CARTAO
 
 

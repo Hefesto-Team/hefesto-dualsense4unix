@@ -340,7 +340,7 @@ def test_a_prova_de_gesto_clica_cada_botao_da_fileira_publicada() -> None:
     import re
 
     fonte = RAIZ / "src/hefesto_dualsense4unix/interface/controles_vivos.py"
-    publicado = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
+    publicado = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html"
     passos: tuple[tuple[Any, ...], ...] = ()
     for no in ast.walk(ast.parse(fonte.read_text(encoding="utf-8"))):
         if (isinstance(no, ast.AnnAssign) and isinstance(no.target, ast.Name)

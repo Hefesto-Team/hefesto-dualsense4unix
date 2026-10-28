@@ -11,11 +11,9 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 FERR = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(FERR))
 
-ABAS = [
-    "01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
-    "05-vibracao.html", "06-navegacao.html", "07-lancadores.html",
-    "08-conexoes.html", "09-sistema.html", "10-perfis.html",
-]
+import monta
+
+ABAS = monta.as_abas_do_produto()
 
 SEM_PACOTE: set[str] = set()
 

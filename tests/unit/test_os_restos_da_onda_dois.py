@@ -14,7 +14,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-PAGINA_02 = "02-controles.html"
+PAGINA_02 = "01-jogar.html"
 PAGINA_09 = "09-sistema.html"
 
 UNIQ_P1 = "aa:bb:cc:00:00:3a"

@@ -28,6 +28,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
+import monta
 import pacotes
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
@@ -404,7 +405,7 @@ def test_no_webkit_o_servico_parado_marca_desligado_e_nao_escreve_nada(
     """O que a pessoa vê: Desligado aceso, o topo sem texto e sem ponto, e a mesa sem frase.
 
     A MORDIDA: tire o `display:none` da regra `.fita-linha:has(i[data-servico="parado"]) .conectado`
-    (`topo.html`, e o `regerar.py` a leva às dez) e `topo_visivel` volta a ser verdadeiro.
+    (`topo.html`, e o `regerar.py` a leva a todas) e `topo_visivel` volta a ser verdadeiro.
     """
     for nome in ("parado", "parado_de_novo"):
         fora = na_tela[nome]
@@ -426,9 +427,7 @@ def test_no_webkit_com_dois_no_radio_volta_ao_ligado_e_ao_verde(na_tela: dict[st
     assert not fora["frase_acesa"], f"a frase ficou acesa com o serviço de pé: {fora['frase']!r}"
 
 
-AS_DEZ = ("01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
-          "05-vibracao.html", "06-navegacao.html", "07-lancadores.html", "08-conexoes.html",
-          "09-sistema.html", "10-perfis.html")
+AS_ABAS = tuple(monta.as_abas_do_produto())
 
 LER_O_TOPO = r"""
 (function(){
@@ -459,13 +458,13 @@ def o_topo_das_dez() -> dict[str, dict[str, Any]]:
     cargas = json.dumps([["parado", so_o_topo(_parado())], ["no_radio", so_o_topo(_no_radio())],
                          ["parado_de_novo", so_o_topo(_parado())]])
     return {aba_html: _no_webkit(LER_O_TOPO.replace("CARGAS", cargas), aba_html)
-            for aba_html in AS_DEZ}
+            for aba_html in AS_ABAS}
 
 
-@pytest.mark.parametrize("aba_html", AS_DEZ)
+@pytest.mark.parametrize("aba_html", AS_ABAS)
 def test_no_webkit_o_topo_das_dez_some_com_o_servico_parado(
         o_topo_das_dez: dict[str, dict[str, Any]], aba_html: str) -> None:
-    """O topo é o mesmo nas dez abas: com o serviço parado ele some em todas, não só na Jogar.
+    """O topo é o mesmo em todas as abas: com o serviço parado ele some em todas, não só na Jogar.
 
     A regra morou só na `aba01.py` e as outras nove mostravam «● —» em verde com o serviço fora.
     A MORDIDA: devolva a regra à `aba01.py` (fora do `topo.html`), rode o `regerar.py`, e as
@@ -477,7 +476,7 @@ def test_no_webkit_o_topo_das_dez_some_com_o_servico_parado(
             f"{aba_html} {nome}: o contador voltou ao topo: {fora[nome]['texto']!r}")
 
 
-@pytest.mark.parametrize("aba_html", AS_DEZ)
+@pytest.mark.parametrize("aba_html", AS_ABAS)
 def test_no_webkit_o_perfil_ativo_fica_a_direita_com_o_servico_parado(
         o_topo_das_dez: dict[str, dict[str, Any]], aba_html: str) -> None:
     """Com o topo fora, o «Perfil ativo» continua encostado na direita, onde ele mora de pé.

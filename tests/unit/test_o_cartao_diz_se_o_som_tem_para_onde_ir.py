@@ -27,7 +27,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as mod
 
-PAGINA = "02-controles.html"
+PAGINA = "01-jogar.html"
 
 UNIQ = "aa:bb:cc:00:00:02"
 SINK = "alsa_output.pci-0000_00_1f.3.analog-stereo"
