@@ -517,6 +517,17 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "/usr/share/wireplumber falso». Nenhuma unit, install ou empacotamento a escreve, e "
         "ligá-la não abre feature nenhuma."
     ),
+    "HEFESTO_RAIZ_DO_SYS": (
+        "28/10/2026 — a raiz do `/sys` de onde o `maquina.json` lê a placa-mãe e os "
+        "controladores USB (`utils/maquina.placa_daqui` e `controladores_usb_daqui`, "
+        "pelo `RAIZ_DO_SYS_ENV`). O `tests/conftest.py` a desvia para um caminho que não "
+        "existe, para a suíte não ler a placa da máquina dela e não mandar o mapa dela "
+        "para o `maquina.json.de-outra-placa`; o "
+        "`test_o_mapa_de_outra_placa_nao_vale_aqui` a aponta para um `/sys` de mentira "
+        "com outra placa. É instrumento e não promessa: sem ela o produto lê o `/sys` "
+        "de verdade, nenhuma unit, install ou empacotamento a escreve, e ligá-la não abre "
+        "feature nenhuma."
+    ),
 }
 
 _PROMESSA_DE_AMBIENTE: dict[str, str] = {
