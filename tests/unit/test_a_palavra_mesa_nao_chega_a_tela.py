@@ -62,6 +62,7 @@ from __future__ import annotations
 
 import ast
 import re
+import sys
 from pathlib import Path
 
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
@@ -76,14 +77,19 @@ RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 BANCADA = RAIZ / "mockup"
 PRODUTO = INTERFACE / "paginas"  # (noqa-acento)
+
+sys.path.insert(0, str(INTERFACE))
+
+import monta
 PACOTES = INTERFACE / "pacotes"
 
 
 def _paginas() -> list[Path]:
-    """As dez abas da bancada — e RECUSA achar menos que dez."""
-    achadas = sorted(p for p in BANCADA.glob("??-*.html"))
-    assert len(achadas) == 10, (
-        f"achei {len(achadas)} abas em {BANCADA} e o produto tem dez — "
+    """As abas do produto (`monta.ABAS`) na bancada — e RECUSA achar menos."""
+    achadas = sorted(BANCADA / nome for nome in monta.as_abas_do_produto()
+                     if (BANCADA / nome).is_file())
+    assert len(achadas) == len(monta.ABAS), (
+        f"achei {len(achadas)} abas em {BANCADA} e o produto tem {len(monta.ABAS)} — "
         "o caminho mudou, e uma régua que não acha a tela não mede a tela."
     )
     return achadas
@@ -142,10 +148,11 @@ def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_abas() -> None:
 
 
 def _paginas_do_produto() -> list[Path]:
-    """As dez abas PUBLICADAS — as que o `WebKit2.WebView` carrega."""
-    achadas = sorted(p for p in PRODUTO.glob("??-*.html"))
-    assert len(achadas) == 10, (
-        f"achei {len(achadas)} abas em {PRODUTO} e o produto tem dez — "
+    """As abas PUBLICADAS — as que o `WebKit2.WebView` carrega."""
+    achadas = sorted(PRODUTO / nome for nome in monta.as_abas_do_produto()
+                     if (PRODUTO / nome).is_file())
+    assert len(achadas) == len(monta.ABAS), (
+        f"achei {len(achadas)} abas em {PRODUTO} e o produto tem {len(monta.ABAS)} — "
         "o caminho mudou, e uma régua que não acha a tela não mede a tela."
     )
     return achadas

@@ -1729,7 +1729,7 @@ def test_a_pagina_nasce_do_readme_com_todas_as_fotos_e_sem_link_relativo(tmp_pat
     assert "<h1>" in pagina and "<title>Hefesto" in pagina
     assert mp.links_relativos(pagina) == []
     fotos = [x for x in mp.imagens_citadas(pagina) if x.startswith("docs/usage/assets/aba-")]
-    assert len(fotos) == 10, "as dez abas do README"
+    assert len(fotos) == 9, "as nove abas do README"
     assert all((tmp_path / "site" / f).is_file() for f in fotos)
 
 

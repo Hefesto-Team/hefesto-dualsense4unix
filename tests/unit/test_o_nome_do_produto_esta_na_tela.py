@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+import pathlib
 import re
+import sys
 
 import pytest
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]
+                       / "src" / "hefesto_dualsense4unix" / "interface"))
 
+import monta
 from hefesto_dualsense4unix.interface import onde, pacotes
 
-ABAS = sorted(p.name for p in onde.paginas(publicado=True) if p.name[:2].isdigit())
+ABAS = [nome for nome in monta.as_abas_do_produto()
+        if onde.pagina(nome, publicado=True).is_file()]
 
 
 def _pagina(nome: str) -> str:
@@ -23,8 +29,8 @@ def _linha_da_fita(doc: str) -> str:
 
 
 def test_sao_as_dez() -> None:
-    """A parametrização abaixo não passa por vacuidade."""
-    assert len(ABAS) == 10, ABAS
+    """A parametrização abaixo não passa por vacuidade: toda aba de `monta.ABAS` está publicada."""
+    assert len(ABAS) == len(monta.ABAS), ABAS
 
 
 @pytest.mark.parametrize("arquivo", ABAS)

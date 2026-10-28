@@ -16,7 +16,7 @@ A CURA, NA ORIGEM: Space Grotesk e JetBrains Mono (OFL) vêm em `interface/asset
    verdade;
 3. a licença e a origem (versão e SHA-256) estão ao lado, o pacote leva a pasta, e o `.deb` não
    leva o link `assets/fontes` do mockup quebrado;
-4. no WebKit, com a rede que não responde, a 02 e a 10 chegam ao `complete` em menos de 3 s e o
+4. no WebKit, com a rede que não responde, a 01 e a 10 chegam ao `complete` em menos de 3 s e o
    `document.fonts` diz que as duas famílias carregaram;
 5. a mordida da 4 mora no próprio arquivo: com o `<link>` do Google de volta, a mesma página
    NÃO abre.
@@ -50,9 +50,13 @@ MOCKUP = RAIZ / "mockup"
 PUBLICADO = INTERFACE / "paginas"  # (noqa-acento)
 TOPO = INTERFACE / "topo.html"
 
+sys.path.insert(0, str(INTERFACE))
+
+import monta
+
 REDE_MUDA = "http://10.255.255.1:9"
 
-NUMEROS = tuple(f"{n:02d}" for n in range(1, 11))
+NUMEROS = tuple(aba[:2] for _, aba in monta.ABAS)
 FAMILIAS = {"Space Grotesk", "JetBrains Mono"}
 
 
@@ -160,10 +164,10 @@ def test_nenhuma_pagina_pede_recurso_fora_da_maquina(arq: pathlib.Path) -> None:
 
 def test_o_piso_sao_as_vinte_e_seis_paginas_e_o_topo() -> None:
     """Lista vazia aprovaria tudo: o piso é o que torna o verde uma medida."""
-    assert len(_as_dez(MOCKUP)) == 10
-    assert len(_as_dez(PUBLICADO)) == 10
+    assert len(_as_dez(MOCKUP)) == len(monta.ABAS)
+    assert len(_as_dez(PUBLICADO)) == len(monta.ABAS)
     assert all(p.is_file() for p in [*_de_fora(MOCKUP), *_de_fora(PUBLICADO)])
-    assert len(PAGINAS) == 27
+    assert len(PAGINAS) == 1 + 2 * len(monta.ABAS) + 2 * len(DE_FORA)
 
 
 @pytest.mark.parametrize(
@@ -402,7 +406,7 @@ def _abrir_sem_rede(pagina: pathlib.Path, prazo: float) -> dict[str, object]:
 
 
 @pytest.mark.parametrize("raiz", [MOCKUP, PUBLICADO], ids=["mockup", "publicado"])
-@pytest.mark.parametrize("aba", ["02", "10"])
+@pytest.mark.parametrize("aba", ["01", "10"])
 def test_com_a_rede_muda_a_pagina_abre_em_menos_de_3s_e_a_fonte_carrega(
     raiz: pathlib.Path, aba: str,
 ) -> None:
@@ -457,7 +461,7 @@ def test_a_mordida_sem_o_font_face_a_pagina_de_fora_nao_carrega_a_letra(
 
 def test_a_mordida_com_o_link_do_google_de_volta_a_pagina_nao_abre(tmp_path: pathlib.Path) -> None:
     """A régua de cima só vale se reprova quando a causa volta: o `<link>` trava o `complete`."""
-    (original,) = sorted(MOCKUP.glob("02-*.html"))
+    (original,) = sorted(MOCKUP.glob("01-*.html"))
     google = (
         '<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700'
         '&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">'

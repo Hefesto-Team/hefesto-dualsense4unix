@@ -26,6 +26,7 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("test_wrapper_banner: importa código da janela GTK")
 
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -90,8 +91,12 @@ class TestDecisaoPura:
         paginas = Path(__file__).resolve().parents[2] / (
             "src/hefesto_dualsense4unix/interface/paginas"
         )
-        arquivos = sorted(paginas.glob("[0-9][0-9]-*.html"))
-        assert len(arquivos) == 10, f"as dez abas viraram {len(arquivos)}"
+        sys.path.insert(0, str(paginas.parent))
+        import monta
+
+        arquivos = sorted(paginas / nome for nome in monta.as_abas_do_produto()
+                          if (paginas / nome).is_file())
+        assert len(arquivos) == len(monta.ABAS), f"as abas viraram {len(arquivos)}"
         for rotulo in ("Aplicar", "Salvar perfil"):
             assert rotulo in WRAPPER_MISSING_TEXT
             for html in arquivos:

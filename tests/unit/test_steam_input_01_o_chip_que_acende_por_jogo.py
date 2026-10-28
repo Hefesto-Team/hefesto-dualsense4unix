@@ -607,7 +607,10 @@ def _texto_visivel_das_abas() -> str:
     from hefesto_dualsense4unix.interface import onde
 
     pedacos = []
-    for pagina in sorted(onde.PUBLICADO.glob("[01][0-9]-*.html")):
+    import monta
+
+    nomes = set(monta.as_abas_do_produto())
+    for pagina in sorted(p for p in onde.PUBLICADO.glob("[01][0-9]-*.html") if p.name in nomes):
         texto = pagina.read_text(encoding="utf-8")
         texto = re.sub(r"<!--.*?-->", " ", texto, flags=re.S)
         texto = re.sub(r"<(script|style)\b.*?</\1>", " ", texto, flags=re.S)
@@ -615,7 +618,8 @@ def _texto_visivel_das_abas() -> str:
         if nota >= 0:
             texto = texto[:nota]
         pedacos.append(_html.unescape(re.sub(r"<[^>]+>", " ", texto)))
-    assert len(pedacos) == 10, f"esperava as dez abas publicadas, achei {len(pedacos)}"
+    assert len(pedacos) == len(nomes), (
+        f"esperava as {len(nomes)} abas publicadas, achei {len(pedacos)}")
     return re.sub(r"\s+", " ", " ".join(pedacos))
 
 

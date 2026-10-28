@@ -20,17 +20,22 @@ travessão para sempre, que é a outra metade do mesmo defeito.
 
 from __future__ import annotations
 
+import pathlib
 import re
+import sys
 from typing import Any
 
 import pytest
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]
+                       / "src" / "hefesto_dualsense4unix" / "interface"))
 
+import monta
 from hefesto_dualsense4unix.interface import onde, pacotes
 
 CHIP = re.compile(r'<span class="pa-nome"([^>]*)>([^<]*)</span>')
 
-ABAS = tuple(f"{n:02d}-" for n in range(1, 11))
+ABAS = tuple(aba for _, aba in monta.ABAS)
 
 
 class _Ctx:
@@ -47,7 +52,7 @@ def _sem_perfil() -> str:
 
 
 def _paginas() -> list[Any]:
-    """As vinte páginas: o publicado e a bancada, cada um com as dez abas."""
+    """As páginas do publicado e da bancada, cada um com as abas de `monta.ABAS`."""
     fora = []
     for pasta, rotulo in ((onde.PUBLICADO, "publicado"), (onde.BANCADA, "bancada")):
         for prefixo in ABAS:

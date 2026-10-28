@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,10 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 BANCADA = RAIZ / "mockup"
 PRODUTO = INTERFACE / "paginas"  # (noqa-acento)
 
+sys.path.insert(0, str(INTERFACE))
+
+import monta
+
 PAGINA = (
     '<style>/* <div class="nota">isto é comentário</div> a mesa */</style>\n'
     '<div class="rodape">\n'
@@ -35,9 +40,10 @@ PAGINA = (
 
 
 def _paginas(pasta: Path) -> list[Path]:
-    achadas = sorted(pasta.glob("??-*.html"))
-    assert len(achadas) == 10, (
-        f"achei {len(achadas)} abas em {pasta} e o produto tem dez — régua que "
+    achadas = sorted(pasta / nome for nome in monta.as_abas_do_produto()
+                     if (pasta / nome).is_file())
+    assert len(achadas) == len(monta.ABAS), (
+        f"achei {len(achadas)} abas em {pasta} e o produto tem {len(monta.ABAS)} — régua que "
         "não acha a tela não mede a tela."
     )
     return achadas

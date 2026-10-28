@@ -22,7 +22,8 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-for _p in (str(RAIZ / "src"), str(RAIZ / "scripts")):
+for _p in (str(RAIZ / "src"), str(RAIZ / "scripts"),
+           str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
@@ -34,8 +35,12 @@ _SPEC.loader.exec_module(regua)
 
 
 def _dez(raiz: pathlib.Path) -> list[pathlib.Path]:
-    paginas = sorted(p for p in raiz.glob("*.html") if regua.E_ABA.match(p.name))
-    assert len(paginas) == 10, f"as dez abas viraram {len(paginas)} em {raiz}"
+    import monta
+
+    nomes = set(monta.as_abas_do_produto())
+    paginas = sorted(p for p in raiz.glob("*.html")
+                     if regua.E_ABA.match(p.name) and p.name in nomes)
+    assert len(paginas) == len(monta.ABAS), f"as abas viraram {len(paginas)} em {raiz}"
     return paginas
 
 
