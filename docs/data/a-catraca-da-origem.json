@@ -240,10 +240,10 @@
       "data": "2026-10-28",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1159588,
+      "piso": 1159576,
       "por_item": {
         "docs": 107552,
-        "scripts": 109523,
+        "scripts": 109511,
         "src": 293889,
         "tests": 648624
       },

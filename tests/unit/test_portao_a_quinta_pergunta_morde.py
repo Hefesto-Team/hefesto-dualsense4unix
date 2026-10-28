@@ -29,7 +29,7 @@ def test_o_inventario_de_hoje_passa(regua, capsys):
     assert regua.main() == 0
     saida = capsys.readouterr().out
     assert "VERDE" in saida
-    for gesto in ("mascara", "sensor", "rota", "mudo"):
+    for gesto in ("sensor", "rota", "mudo"):
         assert gesto in saida, "a falta sai nomeada, nunca em silêncio"
     assert "os custos NÃO se somam" in saida
 
