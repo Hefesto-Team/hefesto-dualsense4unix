@@ -42,10 +42,11 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
+import monta
 from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto, a01_jogar, a02_controles
 
-MARCADAS = {"01-jogar.html": "degradou-cartao", "02-controles.html": "mascara-degradou"}
+MARCADAS = {"01-jogar.html": ("degradou-cartao", "mascara-degradou")}
 
 DEGRADADO: dict[str, Any] = {
     "uniq": "aa:bb:cc:00:00:01", "connected": True, "player_slot": 1, "player": 1,
@@ -81,7 +82,7 @@ def test_o_card_da_02_nao_emite_a_marca() -> None:
     página não tem, e sem isto um campo devolvido ao pacote sumiria no filtro e
     a régua passaria por ausência.
     """
-    doc = onde.pagina("02-controles.html").read_text(encoding="utf-8")
+    doc = onde.pagina(a02_controles.PAGINA).read_text(encoding="utf-8")
     a02_controles._ENDERECOS = (
         frozenset(re.findall(r'data-campo="([^"]+)"', doc)) | {"mascara-degradou"})
     try:
@@ -104,8 +105,8 @@ def test_a_pagina_nao_tem_a_marca(nome: str, publicado: bool) -> None:
     doc = onde.pagina(nome, publicado=publicado).read_text(encoding="utf-8")
     sem_nota = re.sub(r"<!--.*?-->", "", doc, flags=re.S)
     assert 'class="degradou"' not in sem_nota, f"{nome}: o `<sup>` da marca voltou"
-    assert f'data-campo="{MARCADAS[nome]}"' not in sem_nota, (
-        f"{nome}: o endereço `{MARCADAS[nome]}` voltou")
+    for marca in MARCADAS[nome]:
+        assert f'data-campo="{marca}"' not in sem_nota, f"{nome}: o endereço `{marca}` voltou"
     assert ".degradou" not in _folhas(doc), f"{nome}: a regra `.degradou` voltou"
 
 
@@ -122,7 +123,8 @@ def test_nenhuma_folha_das_dez_decide_pintura_por_title(publicado: bool) -> None
     """
     paginas = [p for p in onde.paginas(publicado=publicado)
                if re.match(r"\d\d-", p.name)]
-    assert len(paginas) >= 10, f"achei {len(paginas)} páginas — a régua mediria o vazio"
+    assert len(paginas) >= len(monta.ABAS), (
+        f"achei {len(paginas)} páginas — a régua mediria o vazio")
     achados = [p.name for p in paginas if "[title" in _folhas(p.read_text(encoding="utf-8"))]
     assert not achados, (
         f"folha que decide pintura por `[title]` em {achados}: a camada de dicas "

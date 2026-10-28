@@ -40,7 +40,7 @@ from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
+PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / a02.PAGINA
 
 UNIQ = "aa:bb:cc:00:00:02"
 

@@ -8,11 +8,13 @@ from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.interface.pacotes.camada import PAGINAS_DA_SECAO_DOS_CONTROLES
+
 RAIZ = Path(__file__).resolve().parents[2]
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py"
 PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
-PUBLICADO = PAGINAS / "02-controles.html"
-BANCADA = RAIZ / "mockup" / "02-controles.html"
+PUBLICADO = PAGINAS / PAGINAS_DA_SECAO_DOS_CONTROLES[0]
+BANCADA = RAIZ / "mockup" / PAGINAS_DA_SECAO_DOS_CONTROLES[0]
 
 
 def _roteiro() -> tuple[tuple[int, str], ...]:

@@ -13,6 +13,10 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 ABA02 = RAIZ / "src/hefesto_dualsense4unix/interface/aba02.py"
 
+from pacotes.camada import PAGINAS_DA_SECAO_DOS_CONTROLES
+
+PAGINA_DA_SECAO = PAGINAS_DA_SECAO_DOS_CONTROLES[0]
+
 
 @pytest.fixture(autouse=True)
 def sem_tocar_o_pipewire_da_maquina() -> Any:
@@ -147,7 +151,7 @@ class TestOGeradorEnderecou:
         """MORDIDA: publique uma página sem os endereços novos."""
         from hefesto_dualsense4unix.interface import onde
 
-        doc = onde.pagina("02-controles.html", publicado=True).read_text(
+        doc = onde.pagina(PAGINA_DA_SECAO, publicado=True).read_text(
             encoding="utf-8")
         assert doc.count('data-campo="mic-num"') == 4
         assert doc.count('data-campo="mic-barra"') == 8
@@ -163,7 +167,7 @@ class TestOGeradorEnderecou:
 
         from hefesto_dualsense4unix.interface import onde
 
-        doc = onde.pagina("02-controles.html", publicado=True).read_text(
+        doc = onde.pagina(PAGINA_DA_SECAO, publicado=True).read_text(
             encoding="utf-8")
         tags = re.findall(r'<[^>]*data-campo="mic-barra"[^>]*>', doc)
         assert len(tags) == 8

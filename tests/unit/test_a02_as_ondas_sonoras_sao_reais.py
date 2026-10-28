@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.interface.pacotes import (
 )
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
-PAGINA = "02-controles.html"
+PAGINA = a02.PAGINA
 
 
 class _FluxoDeMentira:

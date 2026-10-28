@@ -187,7 +187,7 @@ def _superficies(estado: dict[str, Any], mesa: list[dict[str, Any]]) -> dict[str
     ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"], estados={})
     cartoes = a01_jogar.pacote(ctx)["cartoes"]
     return {
-        "cartão da Jogar": str(cartoes[UNIQ_A]["identidade"]),
+        "cartão da Jogar": str(cartoes[UNIQ_A]["via"]),
         "chip da Lançadores": _primeiro_chip(hefesto_vivo._fita(mesa, "07-lancadores.html")),
         "chip da Sistema": a09_sistema._um_chip(mesa[0]),
         "linha da Sistema": a09_sistema._linha_de_identidade(estado["controllers"][0], mesa),
@@ -239,7 +239,7 @@ def test_o_transporte_ausente_diz_que_nao_se_sabe() -> None:
     frase = home_actions.PALAVRA_DE_TRANSPORTE_DESCONHECIDO
 
     ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"], estados={})
-    assert frase in str(a01_jogar.pacote(ctx)["cartoes"][UNIQ_A]["identidade"])
+    assert frase in str(a01_jogar.pacote(ctx)["cartoes"][UNIQ_A]["via"])
     assert frase in a09_sistema._linha_de_identidade(estado["controllers"][0], mesa)
 
 
@@ -247,7 +247,7 @@ def test_um_transporte_que_o_mapa_nao_conhece_aparece_cru() -> None:
     """Transporte novo TEM de aparecer, e não sumir atrás de uma frase genérica."""
     estado, mesa = _mesa("thunderbolt")
     ctx = Contexto(state=estado, mesa=mesa, conectados=estado["controllers"], estados={})
-    cartao = str(a01_jogar.pacote(ctx)["cartoes"][UNIQ_A]["identidade"])
+    cartao = str(a01_jogar.pacote(ctx)["cartoes"][UNIQ_A]["via"])
     assert "thunderbolt" in cartao, cartao
     assert home_actions.PALAVRA_DE_TRANSPORTE_DESCONHECIDO not in cartao, (
         "um transporte que o mapa não conhece virou 'não sei por onde'. Ele "

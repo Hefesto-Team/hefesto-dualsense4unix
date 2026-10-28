@@ -84,7 +84,7 @@ def test_so_gtk_que_a_tela_nova_ja_chama_reprova(portao):
     def mexer(linhas):
         linha = linhas[0]
         linha["veredito"] = "SO-GTK"
-        linha["dono"] = "app/actions/home_actions.py:mascara_viva"
+        linha["dono"] = "app/actions/home_actions.py:palavra_do_transporte"
 
     assert portao(mexer) == 1
 

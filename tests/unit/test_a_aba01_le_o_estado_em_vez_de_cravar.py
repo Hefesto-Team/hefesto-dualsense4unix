@@ -51,10 +51,9 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import monta
 from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.interface import aba01, onde
-from pacotes import Contexto
+from pacotes import LUGAR_VAZIO, Contexto
 from pacotes import a01_jogar as aba
 
 VIVO_NAVEGACAO: dict[str, Any] = {
@@ -429,13 +428,12 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
     por_campo = collections.Counter(
         aba01._campo_do_chip(m) for m in aba01.MODOS + aba01.DO_DESLIGADO)
-    lugares = 0 if not publicado and _em_trabalho() else len(monta.MESA)
     esperado = {
         "hef-posicao": len(aba01.INTERRUPTOR),
         "modo-aceso": por_campo["modo-aceso"],
         "steam-input-aceso": por_campo["steam-input-aceso"],
-        "mascara-cartao": len(monta.MASCARAS) * lugares,
-        "pendente-ha": 1 if lugares else 0,
+        "mascara-cartao": 0,
+        "pendente-ha": 0,
     }
     for campo, quantos in esperado.items():
         achei = corpo.count(f'data-campo="{campo}" data-hef-alvo="classe"')
@@ -443,9 +441,9 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
             f"{'publicado' if publicado else 'bancada'}: o endereço {campo!r} "
             f"aparece {achei} vezes e deviam ser {quantos}")
     cliques = corpo.count('data-gesto="mascara"')
-    assert cliques == len(monta.MASCARAS) * lugares, (
-        f"{'publicado' if publicado else 'bancada'}: o clique da máscara "
-        f"alcança {cliques} chips e a mesa tem {len(aba01.MESA)} lugares")
+    assert cliques == 0, (
+        f"{'publicado' if publicado else 'bancada'}: o clique da máscara do cartão "
+        f"voltou em {cliques} chips, e a máscara saiu da Jogar com o cartão")
 
 
 def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
@@ -454,17 +452,11 @@ def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
     for publicado in (True, False) if _em_trabalho() else (True,):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
         for campo in fora:
-            if campo in {"cartoes", "cobertura", "sem_dono", "blocos"}:
-                continue
-            if not publicado and campo in SAIRAM_DO_DESENHO_DE_27_10:
+            if campo in {"cartoes", "cobertura", "sem_dono", "blocos", LUGAR_VAZIO}:
                 continue
             assert f'data-campo="{campo}"' in corpo, (
                 f"o pacote emite {campo!r} e a página {'publicada' if publicado else 'do desenho'} "
                 f"não tem onde escrever")
-
-
-SAIRAM_DO_DESENHO_DE_27_10 = frozenset({
-    "mesa-frase", "mascara-ressalva", "pendente", "pendente-alvo", "pendente-ha", "externos"})
 
 
 def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:

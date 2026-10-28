@@ -34,7 +34,7 @@ def test_o_portao_passa_na_arvore_de_hoje() -> None:
 
 AS_QUE_SAIRAM = (
     ("06-navegacao.html", "o Hefesto ainda não faz"),
-    ("02-controles.html", "não faz o som sair neste alto-falante"),
+    ("01-jogar.html", "não faz o som sair neste alto-falante"),
     ("01-jogar.html", "não sabe montar esta máscara"),
 )
 
