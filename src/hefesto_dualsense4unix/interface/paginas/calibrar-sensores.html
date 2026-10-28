@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <title>Hefesto — calibrar giroscópio</title>
 <style>
+  @font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400 700;font-display:swap;src:url('../assets/fontes/SpaceGrotesk-wght.ttf') format('truetype')}
+  @font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 500;font-display:swap;src:url('../assets/fontes/JetBrainsMono-wght.ttf') format('truetype')}
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --fundo-da-pagina:#11121a;
@@ -12,8 +14,8 @@
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555;
     --sel-bg:rgba(189,147,249,.16);
-    --f:ui-sans-serif,system-ui,"Cantarell","Segoe UI",Roboto,sans-serif;
-    --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
+    --f:'Space Grotesk',system-ui,sans-serif;
+    --m:'JetBrains Mono',ui-monospace,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--fundo-da-pagina);color:var(--fg);font-family:var(--f);
@@ -214,7 +216,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
 <div class="cx">
   <div class="topo">
-    <a class="voltar" href="02-controles.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
+    <a class="voltar" href="01-jogar.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
     <h1><span class="p" data-dica="Mede o zero de cada controle parado">Calibrar giroscópio</span></h1>
     <div class="perfil-ativo"><span class="pa-rot">Perfil ativo</span><span class="pa-nome" data-campo="perfil">—</span></div>
   </div>
@@ -912,7 +914,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <span class="quantos" data-campo="quantos" data-hef-alvo="html">2 controles conectados</span>
       <span class="acoes">
         <button class="btn fazer" data-gesto="calibrar-comecar"><span class="t1">Começar</span><span class="t2">Medindo…</span><span class="t3">Calibrar de novo</span></button>
-        <a class="btn" href="02-controles.html">Fechar</a>
+        <a class="btn" href="01-jogar.html">Fechar</a>
       </span>
     </div>
 

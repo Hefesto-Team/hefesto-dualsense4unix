@@ -21,15 +21,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 01-jogar.html
-- **27/10/2026** — a Jogar junta os controles: o quadro Status (Ligado, Desligado, Reconectar e Modo Freestyle na mesma linha, os modos Sony DualSense, Xbox e Nintendo Pro com a silhueta de cada um) e, embaixo, os Dispositivos conectados da antiga Controles. Sai o «O controle é visto como» (o quadro e a máscara na linha de cada controle) e o Point and click. Aberto: o daemon e a ponte não conhecem o gesto `modo-nintendo` nem o modo único para todos os controles. Até publicar, o produto continua com a Jogar de hoje, o quadro do «visto como» e a aba Controles.
-
 ## 02-controles.html
 - **27/10/2026** — a página deixa a tira e vive dentro da Jogar; o Calibrar giroscópio ganhou o glifo do giroscópio. Até publicar, o produto continua com a Controles como aba própria e o Calibrar sem glifo.
-
-## calibrar-sensores.html
-- **27/10/2026** — o «Fechar» e o «Voltar» levam à Jogar, porque a Controles saiu da tira. Até publicar, o produto continua levando à Controles, que ainda é aba própria.
-- **27/10/2026** — a página embute a letra das abas (Space Grotesk e JetBrains Mono, do pacote). Até publicar, o produto continua com a letra do sistema.
 
 ## mapa-das-portas.html
 - **27/10/2026** — a página embute a letra das abas (Space Grotesk e JetBrains Mono, do pacote). Até publicar, o produto continua com a letra do sistema.
