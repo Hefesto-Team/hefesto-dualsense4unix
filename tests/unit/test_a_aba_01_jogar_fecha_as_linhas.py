@@ -544,8 +544,8 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
     modo = loader.load_profile(nome).mode
     assert modo is not None and modo.caminho == "xbox", (
         f"o caminho não entrou na seção `mode`: {modo!r}")
-    assert modo.gamepad_flavor is None, (
-        f"o escritor do modo escreveu a máscara do perfil: {modo!r}")
+    assert modo.gamepad_flavor == "xbox", (
+        f"o caminho e a máscara não andaram em par (D-2710): {modo!r}")
 
 
 def test_a_escrita_no_perfil_nunca_levanta(monkeypatch) -> None:
@@ -615,7 +615,11 @@ def test_sem_perfil_ativo_nao_se_inventa_um() -> None:
 
 
 def test_a_secao_do_modo_e_a_regra_do_dono() -> None:
-    """A máscara não é do modo, e não é inventada fora dele."""
+    """A máscara não se apaga fora do `gamepad`, e no `gamepad` anda em par com o caminho.
+
+    NOTA DATADA (27/10/2026, D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): o caminho escolhido
+    leva a máscara junto; antes, `None` queria dizer «mantém a atual».
+    """
     from hefesto_dualsense4unix.profiles.manager import secao_do_modo_com_o_caminho
     from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
@@ -629,8 +633,8 @@ def test_a_secao_do_modo_e_a_regra_do_dono() -> None:
         "a máscara do disco foi apagada por um clique que não a escolheu — é a "
         "cicatriz do `or \"xbox\"` pelo avesso")
     do_zero = secao_do_modo_com_o_caminho(None, kind="gamepad", caminho="xbox")
-    assert do_zero.gamepad_flavor is None, (
-        "a regra inventou uma máscara — `None` quer dizer «mantém a atual»")
+    assert (do_zero.caminho, do_zero.gamepad_flavor) == ("xbox", "xbox"), (
+        "o caminho escolhido não levou a máscara do par")
 
 
 def _painel_do_produto() -> Any:

@@ -767,6 +767,10 @@ class _DaemonDoChip:
                              "grava_o_modo": grava_o_modo})
         return True
 
+    def escolher_o_modo_unico(self, modo: object, *, porta: str) -> str:
+        self.pedidos.append({"modo": modo, "porta": porta})
+        return "ok"
+
 
 @pytest.mark.parametrize(("modo", "esperado"), [
     ({"kind": "gamepad", "caminho": "xbox"}, "xbox"),
@@ -805,7 +809,11 @@ def test_ligar_sem_caminho_pergunta_o_modo_ao_perfil_ativo(
 
 
 def test_o_caminho_que_ela_manda_vence_o_do_perfil(semeadura_ligada: None) -> None:
-    """O chip de modo manda o caminho: o pedido é a escolha, e vai como escolha."""
+    """O chip de modo manda o caminho: o pedido é a escolha, e vai como escolha.
+
+    NOTA DATADA (27/10/2026, D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): o caminho
+    escolhido à mão vai pelo escritor único do modo, `Daemon.escolher_o_modo_unico`.
+    """
     loader.load_all_profiles()
     store = StateStore()
     h = _Handlers(store, _liga(store))
@@ -815,6 +823,4 @@ def test_o_caminho_que_ela_manda_vence_o_do_perfil(semeadura_ligada: None) -> No
     asyncio.run(h._handle_gamepad_emulation_set(
         {"enabled": True, "origin": "manual", "caminho": "xbox"}))
 
-    assert daemon.pedidos[-1] == {"enabled": True, "caminho": "xbox",
-                                  "caminho_e_escolha": True,
-                                  "grava_o_modo": "ipc"}
+    assert daemon.pedidos[-1] == {"modo": "xbox", "porta": "ipc"}

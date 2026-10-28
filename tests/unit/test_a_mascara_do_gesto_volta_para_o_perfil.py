@@ -152,7 +152,7 @@ class TestOGestoDelaChegaAoPerfil:
 
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
-        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, "xbox", "manual", "xbox")], "o gesto tem de obedecer"
 
         gesto = pt.gesto_em_curso(d)
         assert gesto is not None, "o gesto dela não deixou rastro"
@@ -169,7 +169,8 @@ class TestOGestoDelaChegaAoPerfil:
         depois = _no_disco()
         assert depois.mode is not None
         assert depois.mode.caminho == "xbox", "o caminho do gesto não voltou"
-        assert depois.mode.gamepad_flavor == "dualsense", "o gesto reescreveu a máscara"
+        assert depois.mode.gamepad_flavor == "xbox", (
+            "o caminho e a máscara não voltaram em par (D-2710, 27/10/2026)")
         assert depois.ponte is not None
         assert depois.ponte.gamepad_flavor == "xbox", "o carimbo velho ficou"
         assert depois.ponte.confirmada_por == CONFIRMADA_POR_GESTO
@@ -232,7 +233,7 @@ class TestOGestoDelaChegaAoPerfil:
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, "xbox", "manual", "xbox")], "o gesto tem de obedecer"
         assert pt.gesto_em_curso(d) is None
         le.tique_da_escada(d, agora=time.monotonic() + 1e6)
         assert _no_disco().mode.gamepad_flavor == "dualsense"  # type: ignore[union-attr]
