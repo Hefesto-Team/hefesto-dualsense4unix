@@ -50,6 +50,11 @@ texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado
 `usb`, `bluetooth`, `rede` ou `local`, `estado` é o mesmo dos aparelhos e `motivo` (até 120 letras, ou `null`) diz
 por que ela não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32003`, com a frase).
 
+`falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
+que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
+dizendo o gesto («Ligue o adaptador USB da Lovense»). A aba Conexões não desenha a conexão `desligado`, e a janela da
+extensão a mostra apagada, com o `motivo` na dica.
+
 Quem só mostra o estado (a coluna «Agora» e a aba Conexões) pede `publicar:acessorios.estado`: o serviço guarda o
 último para a janela e para a aba, e ele NÃO vai ao barramento, então os gestos do PS ficam os de sempre. Com
 `ler:acessorios.gesto` o estado vai também ao barramento, e é ele que liga os gestos.
