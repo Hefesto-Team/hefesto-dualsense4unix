@@ -1,14 +1,11 @@
-"""A-JOGAR-ESCOLHE-O-MODO-UNICO-NOS-PACOTES-01 — a Jogar atende todo gesto do desenho dela.
+"""A-JOGAR-ESCOLHE-O-MODO-UNICO-NOS-PACOTES-01 — a Jogar atende todo gesto do desenho.
 
-O desenho da 01 (`mockup/01-jogar.html`) traz o chip «Nintendo Pro» e a seção Controles da 02.
-D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: o Nintendo Pro é o modo único sem caminho, pelo
-escritor único do modo, e acende pelo par do daemon para todos os controles. A seção atende nas
-páginas de `a02_controles.PAGINAS_DA_SECAO`, sem cópia, e o pacote da Jogar a pinta pelo pacote
-da 02 quando a página publicada a mostra.
+D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: o chip «Nintendo Pro» pede o modo único sem caminho
+ao escritor único e acende pelo par do daemon. A seção Controles atende nas páginas de
+`camada.PAGINAS_DA_SECAO_DOS_CONTROLES`, sem cópia, e a Jogar a pinta quando a publicada a mostra.
 
-MORDIDAS: tire «01-jogar.html» de `PAGINAS_DA_SECAO` (os nove gestos da seção ficam órfãos e
-`test_todo_gesto_do_desenho_tem_quem_o_atenda` reprova); tire o chip «nintendo» de
-`painel.CHIPS_DA_ESCADA` (o clique recusa e a luz não acende).
+MORDIDAS: tire «01-jogar.html» da lista da camada; tire o chip «nintendo» de
+`painel.CHIPS_DA_ESCADA`; troque o caminho vigente do `_pendencia` pelo `caminho_vivo`.
 """
 from __future__ import annotations
 
