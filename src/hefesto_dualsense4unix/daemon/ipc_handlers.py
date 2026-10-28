@@ -4792,7 +4792,7 @@ class IpcHandlersMixin:
 
             pedido = resolver_flavor(flavor) if flavor is not None else caminho
             ok = self.daemon.escolher_o_modo_unico(
-                modo_do_par(caminho, pedido), porta=_porta_que_grava(origem)
+                modo_do_par(caminho, pedido), porta="ipc"
             ) in DESFECHOS_EMULACAO_ATIVA
         else:
             modo: dict[str, Any] = {"caminho": caminho} if caminho is not None else {}

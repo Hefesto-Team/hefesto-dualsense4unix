@@ -274,5 +274,9 @@ class DaemonProtocol(Protocol):
         """Aplica a seção `speaker` de um perfil (SOM-02/E4)."""
         ...
 
+    def escolher_o_modo_unico(self, modo: object, *, porta: PortaQueGrava) -> str:
+        """O modo único de todos os controles (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES)."""
+        ...
+
 
 __all__ = ["DaemonProtocol", "GravaOModo", "PortaQueGrava"]
