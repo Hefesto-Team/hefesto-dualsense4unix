@@ -21,9 +21,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 01-jogar.html
-- **28/10/2026** — o controle que o Hefesto só vê entra como mais uma linha da seção Controles, depois dos assentos, e sem ele nada aparece. Até publicar, o produto continua sem lugar para essa linha.
-
 ## mapa-das-portas.html
 - **27/10/2026** — a página embute a letra das abas (Space Grotesk e JetBrains Mono, do pacote). Até publicar, o produto continua com a letra do sistema.
 

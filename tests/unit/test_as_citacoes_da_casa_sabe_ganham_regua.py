@@ -205,7 +205,7 @@ OITO = [
     ("02-controles", "Alto-falante — qual botão de rota está aceso",
      "src/hefesto_dualsense4unix/interface/aba02.py", "ROTULO_SO_OS_EFEITOS", "alto-rota"),
     ("02-controles", "Alto-falante — qual botão de rota está aceso",
-     "src/hefesto_dualsense4unix/interface/paginas/02-controles.html", "DualSense", "rota"),
+     "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html", "DualSense", "rota"),
     ("05-vibracao", "Os oito interruptores de lado",
      "src/hefesto_dualsense4unix/interface/hefesto_vivo.py", "gesto", "dono"),
     ("06-navegacao", 'A tela "Estilo Point-and-click"',
