@@ -43,11 +43,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
-from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-    _zerar_registro_de_mascaras,
-    registro_de_mascaras,
-    vpad_ficou_para_tras,
-)
+from hefesto_dualsense4unix.daemon.subsystems.external_mask import vpad_ficou_para_tras
 from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     NINTENDO_VENDOR,
@@ -160,9 +156,6 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
 
     monkeypatch.setattr(xdg_paths, "config_dir", _config_dir)
     monkeypatch.setattr(session_mod, "config_dir", _config_dir)
-    _zerar_registro_de_mascaras()
-    yield
-    _zerar_registro_de_mascaras()
 
 
 @pytest.fixture(autouse=True)
@@ -217,14 +210,12 @@ class TestNoModoXboxOAparelhoEOXbox360:
         finally:
             pad.stop()
 
-    def test_o_cartao_de_cada_controle_nao_escapa_do_modo(self) -> None:
-        """Os quatro cartões com máscaras diferentes, a sessão em DualSense: no
-        modo Xbox os quatro são Xbox 360, e cada um guarda o seu cartão."""
-        cartoes = dict(zip(MACS, ("dualsense", "nintendo", "xbox", "dualsense"), strict=True))
-        for mac, mascara in cartoes.items():
-            registro_de_mascaras().set_mask(mac, mascara)
-        for jogador, (mac, mascara) in enumerate(cartoes.items(), start=1):
-            pad = _pad("dualsense", CAMINHO_XBOX, identity=mac, player=jogador)
+    @pytest.mark.parametrize("mascara", MASCARAS)
+    def test_o_modo_unico_dos_quatro_nao_escapa_do_caminho(self, mascara: str) -> None:
+        """A máscara do modo único vale para os quatro controles: no caminho Xbox
+        os quatro são Xbox 360, e cada um guarda a máscara do modo."""
+        for jogador, mac in enumerate(MACS, start=1):
+            pad = _pad(mascara, CAMINHO_XBOX, identity=mac, player=jogador)
             try:
                 assert _no_de(pad).vidpid == (XBOX360_VENDOR, XBOX360_PRODUCT), mac
                 assert pad.flavor == mascara, mac
@@ -355,9 +346,8 @@ class TestNenhumJuizRecriaEmLaco:
     def test_o_p1_do_modo_xbox_fica_de_pe(
         self, cartao: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        registro_de_mascaras().set_mask(MACS[0], cartao)
         d = _daemon_do_p1(monkeypatch)
-        gp.start_gamepad_emulation_desfecho(d, "dualsense", origin="profile", caminho="xbox")
+        gp.start_gamepad_emulation_desfecho(d, cartao, origin="profile", caminho="xbox")
         pad = d._gamepad_device
         assert _no_de(pad).vidpid == (XBOX360_VENDOR, XBOX360_PRODUCT), "premissa"
         try:
@@ -365,7 +355,7 @@ class TestNenhumJuizRecriaEmLaco:
                 assert gp.reconciliar_as_mascaras(d) is None
             assert (
                 gp.start_gamepad_emulation_desfecho(
-                    d, "dualsense", origin="profile", caminho="xbox"
+                    d, cartao, origin="profile", caminho="xbox"
                 )
                 == gp.EMU_JA_ESTAVA
             )
@@ -374,18 +364,17 @@ class TestNenhumJuizRecriaEmLaco:
         finally:
             gp.stop_gamepad_emulation(d, persist=False)
 
+    @pytest.mark.parametrize("mascara", MASCARAS)
     def test_os_jogadores_2_a_4_do_modo_xbox_ficam_de_pe(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, mascara: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(
             "hefesto_dualsense4unix.daemon.launch_env.materialize_launch_env", lambda _d: None
         )
-        for mac, cartao in zip(MACS[1:], ("dualsense", "nintendo", "xbox"), strict=True):
-            registro_de_mascaras().set_mask(mac, cartao)
         daemon = SimpleNamespace(
             config=SimpleNamespace(
                 coop_enabled=True,
-                gamepad_flavor="dualsense",
+                gamepad_flavor=mascara,
                 gamepad_caminho=CAMINHO_XBOX,
                 gamepad_emulation_enabled=True,
             ),
@@ -422,8 +411,7 @@ class TestNenhumJuizRecriaEmLaco:
                     vpad.stop()
 
     def test_voltar_ao_modo_dualsense_recria_o_cartao_dualsense(self) -> None:
-        """A volta do PS + R3: o cartão DualSense tem de sair do Xbox 360."""
-        registro_de_mascaras().set_mask(MACS[0], "dualsense")
+        """A volta do PS + R3: o modo DualSense tem de sair do Xbox 360."""
         pad = _pad("dualsense", CAMINHO_XBOX, identity=MACS[0])
         try:
             assert not vpad_ficou_para_tras(
@@ -458,7 +446,6 @@ class TestATrocaDeModoComOPadDePe:
                             ("wait_for_bind", lambda self, timeout_s=2.0: True)):
             monkeypatch.setattr(uhid_gamepad.UhidDualSense, nome, feito)
         monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
-        registro_de_mascaras().set_mask(MACS[0], "dualsense")
         d = _daemon_do_p1(monkeypatch)
         try:
             gp.start_gamepad_emulation_desfecho(
@@ -485,15 +472,14 @@ class TestATrocaDeModoComOPadDePe:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O juiz pelo aparelho, no P1 — e sem laço depois dele."""
-        registro_de_mascaras().set_mask(MACS[0], "nintendo")
         d = _daemon_do_p1(monkeypatch)
         try:
             gp.start_gamepad_emulation_desfecho(
-                d, "dualsense", origin="profile", caminho=CAMINHO_DUALSENSE
+                d, "nintendo", origin="profile", caminho=CAMINHO_DUALSENSE
             )
             assert _vidpid_do_p1(d)[0] == NINTENDO_VENDOR, "premissa: o Pro"
             gp.start_gamepad_emulation_desfecho(
-                d, "dualsense", origin="profile", caminho=CAMINHO_XBOX
+                d, "nintendo", origin="profile", caminho=CAMINHO_XBOX
             )
             gp.reconciliar_as_mascaras(d)
             assert _vidpid_do_p1(d) == (XBOX360_VENDOR, XBOX360_PRODUCT), (
@@ -508,7 +494,7 @@ class TestATrocaDeModoComOPadDePe:
                 )
             assert (
                 gp.start_gamepad_emulation_desfecho(
-                    d, "dualsense", origin="profile", caminho=CAMINHO_XBOX
+                    d, "nintendo", origin="profile", caminho=CAMINHO_XBOX
                 )
                 == gp.EMU_JA_ESTAVA
             )
@@ -521,16 +507,15 @@ class TestATrocaDeModoComOPadDePe:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Sem modo escolhido o Pro segue Pro, e o juiz não o recria em laço."""
-        registro_de_mascaras().set_mask(MACS[0], "nintendo")
         d = _daemon_do_p1(monkeypatch)
         try:
-            gp.start_gamepad_emulation_desfecho(d, "dualsense", origin="profile", caminho=None)
+            gp.start_gamepad_emulation_desfecho(d, "nintendo", origin="profile", caminho=None)
             assert _vidpid_do_p1(d)[0] == NINTENDO_VENDOR, "premissa: o Pro"
             pad = d._gamepad_device
             for _ in range(10):
                 assert gp.reconciliar_as_mascaras(d) is None
             assert (
-                gp.start_gamepad_emulation_desfecho(d, "dualsense", origin="profile", caminho=None)
+                gp.start_gamepad_emulation_desfecho(d, "nintendo", origin="profile", caminho=None)
                 == gp.EMU_JA_ESTAVA
             )
             assert d._gamepad_device is pad
@@ -539,12 +524,11 @@ class TestATrocaDeModoComOPadDePe:
             gp.stop_gamepad_emulation(d, persist=False)
 
     def test_o_juiz_do_coop_ve_o_pro_ficar_para_tras(self) -> None:
-        registro_de_mascaras().set_mask(MACS[1], "nintendo")
-        pad = _pad("dualsense", CAMINHO_DUALSENSE, identity=MACS[1], player=2)
+        pad = _pad("nintendo", CAMINHO_DUALSENSE, identity=MACS[1], player=2)
         try:
             assert _no_de(pad).vidpid[0] == NINTENDO_VENDOR, "premissa: o Pro"
             assert vpad_ficou_para_tras(
-                pad.flavor, MACS[1], "dualsense", vpad=pad, caminho=CAMINHO_XBOX
+                pad.flavor, MACS[1], "nintendo", vpad=pad, caminho=CAMINHO_XBOX
             ), "o modo Xbox chegou e o juiz do co-op deixou o Pro de pé"
         finally:
             pad.stop()

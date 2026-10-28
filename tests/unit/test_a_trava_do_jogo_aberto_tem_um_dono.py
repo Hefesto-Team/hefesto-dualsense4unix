@@ -38,9 +38,7 @@ from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-    _zerar_registro_de_mascaras,
     mascara_efetiva,
-    registro_de_mascaras,
 )
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
@@ -110,7 +108,7 @@ class _Nascidos:
 
 @pytest.fixture(autouse=True)
 def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Disco em tmp, o registro zerado, a borda do pad e do evdev dublada."""
+    """Disco em tmp, a borda do pad e do evdev dublada."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     alvo = tmp_path / "config"
@@ -139,9 +137,7 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda self: True
     )
     monkeypatch.setattr("hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {})
-    _zerar_registro_de_mascaras()
     yield
-    _zerar_registro_de_mascaras()
 
 
 def _na_mesa(monkeypatch: pytest.MonkeyPatch, secundarios: int) -> None:
@@ -186,13 +182,13 @@ def _linhas(diario: list[dict[str, Any]], evento: str) -> list[dict[str, Any]]:
 def test_o_juiz_do_co_op_espera_o_jogo_e_converge_quando_ele_fecha(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O registro diz Xbox para o P2 (o perfil automático), e `/dev/input` muda."""
+    """O modo único vira Xbox (o perfil automático), e `/dev/input` muda."""
     d = _daemon()
     mesa = _a_mesa(d, monkeypatch, 1)
     p2 = SECUNDARIOS[0]
     antes = mesa._players[p2].vpad
     _jogo(d, "game")
-    registro_de_mascaras().set_mask(p2, "xbox")
+    d.config.gamepad_flavor = "xbox"
 
     with structlog.testing.capture_logs() as diario:
         mesa.sync()
@@ -218,7 +214,6 @@ def test_o_p1_morto_que_renasce_sozinho_leva_a_origem_ao_co_op(
     p2 = SECUNDARIOS[0]
     antes = mesa._players[p2].vpad
     _jogo(d, "game")
-    registro_de_mascaras().set_mask(p2, "xbox")
     morto = d._gamepad_device
     monkeypatch.setattr(gp, "vpad_vivo", lambda dev: dev is not morto)
 
@@ -301,8 +296,7 @@ def test_o_aviso_da_espera_e_um_por_origem_e_so_com_o_que_recriar(
     assert _linhas(quieto, "vpad_recriacao_bloqueada_por_jogo") == [], (
         "o dono disse espera sem nada para trás")
 
-    registro_de_mascaras().set_mask(MAC_P1, "xbox")
-    registro_de_mascaras().set_mask(SECUNDARIOS[0], "xbox")
+    d.config.gamepad_flavor = "xbox"
     with structlog.testing.capture_logs() as diario:
         for volta in range(60):
             if volta % 3 == 0:
@@ -331,7 +325,6 @@ SYNC_FORCADO: dict[tuple[str, str], bool] = {
     ("daemon/ipc_handlers.py", "_handle_coop_sync"): False,
     ("daemon/lifecycle.py", "set_gamepad_emulation_desfecho"): True,
     ("daemon/lifecycle.py", "depois_de_ligar"): True,
-    ("daemon/lifecycle.py", "vestir_a_mascara_do_aparelho"): True,
     ("daemon/lifecycle.py", "set_coop_enabled"): False,
     ("daemon/subsystems/gamepad.py", "reconciliar_as_mascaras"): False,
 }
@@ -425,9 +418,9 @@ def test_toda_origem_que_passa_aponta_uma_decisao_dela() -> None:
     assert set(gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.values()) == {DO_GESTO, DA_ORDEM}
 
 
-def test_toda_ativacao_e_mascara_por_peca_dizem_a_origem_pelo_nome() -> None:
-    """O padrão `origin="manual"` do `activate` e do `apply_controller_mascaras` não vira gesto."""
-    alvos = {"activate", "apply_controller_mascaras"}
+def test_toda_ativacao_diz_a_origem_pelo_nome() -> None:
+    """O padrão `origin="manual"` do `activate` não vira gesto."""
+    alvos = {"activate"}
     sem = []
     for arq in sorted(SRC.rglob("*.py")):
         for x in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):

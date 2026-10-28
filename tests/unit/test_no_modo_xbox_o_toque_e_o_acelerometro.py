@@ -487,11 +487,6 @@ class _NoGravado:
 
 @pytest.fixture
 def _evdev_que_grava(monkeypatch: pytest.MonkeyPatch) -> None:
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        _zerar_registro_de_mascaras,
-    )
-
-    _zerar_registro_de_mascaras()
     _NoGravado.criados = []
     mod = types.ModuleType("evdev")
     mod.UInput = _NoGravado  # type: ignore[attr-defined]

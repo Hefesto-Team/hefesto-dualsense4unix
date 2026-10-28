@@ -16,7 +16,6 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-    registro_de_mascaras,
     vpad_ficou_para_tras,
 )
 from hefesto_dualsense4unix.integrations import uhid_gamepad
@@ -126,7 +125,6 @@ def test_o_p1_que_caiu_fica_de_pe_e_volta_ao_uhid_quando_o_canal_volta(
     olha o `flavor` e o `backend`, que o pad vestido guarda.
     """
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
-    registro_de_mascaras().set_mask(MACS[0], "dualsense")
     d = _daemon_do_p1(monkeypatch)
     try:
         gp.start_gamepad_emulation_desfecho(d, "dualsense", origin="profile", caminho=DS)

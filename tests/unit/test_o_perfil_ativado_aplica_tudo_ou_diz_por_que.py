@@ -7,10 +7,12 @@ mascara=xbox) e a do outro VOLTOU AO PADRÃO (`profile_mascara_devolvida_ao_padr
 A causa era do LEITOR (`relato_da_ativacao`): ele chamava de «não entrou» tudo o
 que não vinha escrito «aplicado», e a seção por controle `mascara:<id>` não
 responde com um estado, responde com o DADO aplicado (o nome da máscara).
+
+NOTA DATADA, 27/10/2026: a máscara por controle saiu com o modo único
+(D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES), e a ativação não relata mais
+`mascara:<id>`; a régua segue cobrando o leitor pelo alto-falante de cada controle.
 """
 from __future__ import annotations
-
-from typing import Any
 
 import pytest
 
@@ -26,21 +28,8 @@ P2 = "aabbcc000002"
 P3 = "aabbcc000003"
 
 
-@pytest.fixture
-def registro_de_mentira(monkeypatch: pytest.MonkeyPatch):
-    """Um registro de máscaras que não toca o disco."""
-    from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
-
-    monkeypatch.setattr(em.ExternalMaskRegistry, "_load_locked", lambda self: None)
-    monkeypatch.setattr(em.ExternalMaskRegistry, "_save_locked", lambda self: None)
-    em._zerar_registro_de_mascaras()
-    yield em.registro_de_mascaras()
-    em._zerar_registro_de_mascaras()
-
-
-def _ativacao_do_avatar(registro: Any, estado_do_speaker_de_p3: str) -> dict[str, str]:
-    """O que o `profile.switch` relata: máscara em P1, P2 devolvido ao padrão, 3 alto-falantes."""
-    registro.set_mask(P2, "xbox")
+def _ativacao_do_avatar(estado_do_speaker_de_p3: str) -> dict[str, str]:
+    """O que o `profile.switch` relata: os 3 alto-falantes; a chave velha do cartão cai."""
     estados = {P1: "aplicado", P2: "aplicado", P3: estado_do_speaker_de_p3}
     gerente = ProfileManager(
         controller=FakeController(),
@@ -59,26 +48,22 @@ def _ativacao_do_avatar(registro: Any, estado_do_speaker_de_p3: str) -> dict[str
         },
     })
     relatorio: dict[str, str] = {"leds": "aplicado"}
-    gerente.apply_controller_mascaras(perfil, relatorio=relatorio)
     gerente.apply_controller_speakers(perfil, relatorio=relatorio)
     return relatorio
 
 
-def test_mascara_aplicada_e_devolvida_ao_padrao_nao_e_falta(registro_de_mentira) -> None:
-    relatorio = _ativacao_do_avatar(registro_de_mentira, "aplicado")
-    assert relatorio[f"mascara:{P1}"] == "xbox"
-    assert relatorio[f"mascara:{P2}"] == "padrão"
+def test_o_perfil_com_a_chave_velha_nao_relata_mascara() -> None:
+    relatorio = _ativacao_do_avatar("aplicado")
+    assert not [chave for chave in relatorio if chave.startswith("mascara:")], relatorio
 
     assert pa.mensagem_de_ativacao("Avatar Legends", {"secoes": relatorio}) == (
         "Perfil ativado: Avatar Legends"
     )
 
 
-def test_o_alto_falante_de_um_controle_que_nao_esta_ligado_nao_e_falta(
-    registro_de_mentira,
-) -> None:
+def test_o_alto_falante_de_um_controle_que_nao_esta_ligado_nao_e_falta() -> None:
     """Sem o controle não há o que escrever; ele recebe quando reconecta."""
-    relatorio = _ativacao_do_avatar(registro_de_mentira, "ignorado_sem_controle")
+    relatorio = _ativacao_do_avatar("ignorado_sem_controle")
     assert relatorio[f"speaker:{P3}"] == "ignorado_sem_controle"
 
     assert pa.mensagem_de_ativacao("Avatar Legends", {"secoes": relatorio}) == (
@@ -86,15 +71,14 @@ def test_o_alto_falante_de_um_controle_que_nao_esta_ligado_nao_e_falta(
     )
 
 
-def test_o_que_falhou_de_verdade_segue_dito_e_sem_chave_crua(registro_de_mentira) -> None:
-    relatorio = _ativacao_do_avatar(registro_de_mentira, "falhou")
-    relatorio[f"mascara:{P1}"] = "recusado"
+def test_o_que_falhou_de_verdade_segue_dito_e_sem_chave_crua() -> None:
+    relatorio = _ativacao_do_avatar("falhou")
 
     frase = pa.mensagem_de_ativacao("Avatar Legends", {"secoes": relatorio})
 
     assert frase.startswith("Perfil ativado: Avatar Legends — Aplicado, menos: ")
-    assert "máscara de um controle" in frase and "alto-falante de um controle" in frase
-    assert "mascara:" not in frase and "speaker:" not in frase
+    assert "alto-falante de um controle" in frase
+    assert "speaker:" not in frase
 
 
 @pytest.mark.parametrize(("chave", "estado", "nome"), [
@@ -121,7 +105,7 @@ def test_o_global_sem_controle_segue_dito() -> None:
 
 
 def test_o_gesto_ativar_da_aba_perfis_diz_so_o_nome_quando_tudo_entrou(
-    monkeypatch: pytest.MonkeyPatch, registro_de_mentira
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A PONTA: o `ativar` da aba 10 com o corpo que o produto de fato produz.
 
@@ -139,7 +123,7 @@ def test_o_gesto_ativar_da_aba_perfis_diz_so_o_nome_quando_tudo_entrou(
     _o_disco_tem(monkeypatch, "Avatar Legends", "Sackboy")
     _o_marcador_diz(monkeypatch, None)
     a10_perfis._ESCOLHIDO = "Avatar Legends"
-    corpo = {"secoes": _ativacao_do_avatar(registro_de_mentira, "ignorado_sem_controle")}
+    corpo = {"secoes": _ativacao_do_avatar("ignorado_sem_controle")}
 
     carga = a10_perfis.ativar(_ctx(ativo="Sackboy"), {"texto": "Ativar"},
                               PonteDeMentira(corpo=corpo))

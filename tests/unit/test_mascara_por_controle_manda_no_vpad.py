@@ -1,5 +1,10 @@
 """A MÁSCARA POR CONTROLE CHEGOU AO VPAD — a corrente ligada, medida ponta a ponta.
 
+NOTA DATADA, 27/10/2026: desde a D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES a máscara é
+o modo único, igual para todos, e as réguas da DIFERENÇA entre controles (os itens 1, 2 e 5
+abaixo) saíram: não há diferença a medir. Ficam a identidade chegando à fábrica, o vpad que
+não se recria fora do gesto (3) e o que ficou para trás de verdade (4).
+
 Decisão, 29/08/2026: ``D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`` — *"a
 máscara por controle vale ao clicar em Aplicar, mesmo com jogo aberto"*.
 
@@ -73,13 +78,7 @@ from typing import Any, ClassVar
 import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
-from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-    _zerar_registro_de_mascaras,
-    registro_de_mascaras,
-)
-from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
-    XBOX360_VENDOR,
     UinputGamepad,
 )
 from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
@@ -98,7 +97,7 @@ APLICARES = 50
 
 @pytest.fixture(autouse=True)
 def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """``config_dir`` em tmp + registro do processo ZERADO antes e depois."""
+    """``config_dir`` em tmp."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     target = tmp_path / "config"
@@ -109,9 +108,7 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         return target
 
     monkeypatch.setattr(xdg_paths, "config_dir", fake_config_dir)
-    _zerar_registro_de_mascaras()
-    yield target
-    _zerar_registro_de_mascaras()
+    return target
 
 
 @pytest.fixture(autouse=True)
@@ -127,117 +124,12 @@ def _cria(flavor: str | None, identity: str | None) -> Any:
     return pad
 
 
-def test_dois_controles_com_mascaras_diferentes_nascem_com_flavors_diferentes() -> None:
-    """A mordida. Mesma sessão, mesma chamada, DOIS resultados — pela escolha.
-
-    É a decisão de produto funcionando: o P2 marcado `dualsense` nasce com o
-    cartão DualSense enquanto o P1 marcado `xbox` nasce Xbox 360, e a máscara da
-    sessão (`"xbox"`, o argumento posicional) é só o padrão herdado.
-    """
-    registro_de_mascaras().set_mask(MAC_P1, "xbox")
-    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
-
-    pad1 = _cria("xbox", UNIQ_P1)
-    pad2 = _cria("xbox", UNIQ_P2)
-
-    assert pad1.flavor == "xbox"
-    assert pad2.flavor == "dualsense"
-    assert pad1.flavor != pad2.flavor, (
-        "dois controles com máscaras DIFERENTES gravadas nasceram com o MESMO "
-        "flavor — a identidade não chegou ao `mascara_efetiva`"
-    )
-    assert (pad1.vendor, pad2.vendor) == (XBOX360_VENDOR, XBOX360_VENDOR)
-    assert pad2.troca_motivo == vp.MOTIVO_SEM_CANAL_PROPRIO
-    assert getattr(pad1, "troca_motivo", None) is None
-
-
-def test_arrancar_a_identidade_faz_os_dois_nascerem_iguais() -> None:
-    """A MORDIDA, provada por arrancar a cura — com os números."""
-    registro_de_mascaras().set_mask(MAC_P1, "xbox")
-    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
-
-    com = {_cria("xbox", UNIQ_P1).flavor, _cria("xbox", UNIQ_P2).flavor}
-    sem = {_cria("xbox", None).flavor, _cria("xbox", None).flavor}
-
-    assert com == {"xbox", "dualsense"}, f"com a identidade: {sorted(com)}"
-    assert len(com) == 2
-    assert sem == {"xbox"}, f"sem a identidade: {sorted(sem)}"
-    assert len(sem) == 1, (
-        "sem `identity` os dois vpads TÊM de nascer iguais — se este número "
-        "for 2, a resolução está vazando de outro lugar e a régua não mede o "
-        "que promete"
-    )
-
-
-def test_quem_nao_escolheu_herda_a_mascara_do_jogo_mesmo_com_a_mesa_marcada() -> None:
-    """O contrato do padrão herdado, com a mesa toda marcada em volta."""
-    registro_de_mascaras().set_mask(MAC_P1, "xbox")
-    registro_de_mascaras().set_mask(MAC_P2, "xbox")
-
-    assert _cria("dualsense", UNIQ_P3).flavor == "dualsense"
-    assert _cria("dualsense", UNIQ_P1).flavor == "xbox"
-
-
-def test_o_gate_do_uhid_recebe_a_mascara_efetiva_e_nao_a_do_jogo(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A armadilha que `external_mask.py:59-68` descreveu, medida.
-
-    Um jogador que escolheu `dualsense` numa sessão `xbox`: o `_try_uhid` tem
-    de receber `"dualsense"`, senão o gate dele veta o uhid e o jogador cai no uinput COM máscara
-    DualSense — o par
-    degradado em que a vibração do jogo morre. O defeito seria invisível aqui
-    (o `flavor` sai certo!) e apareceria só com o controle na mão, como
-    "escolhi DualSense e o jogo parou de vibrar".
-
-    Com o `key = normalize_flavor(flavor)` que estava nesta linha até 29/08, o
-    valor abaixo seria `"xbox"`.
-    """
-    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
-    recebido: list[str] = []
-
-    def _espiao(flavor: str, **kwargs: Any) -> tuple[None, None]:
-        recebido.append(flavor)
-        return None, None
-
-    monkeypatch.setattr(vp, "_try_uhid", _espiao)
-
-    pad = make_virtual_pad("xbox", identity=UNIQ_P2, allow_uhid=True)
-
-    assert recebido == ["dualsense"], (
-        f"o gate do uhid recebeu {recebido!r} — se for ['xbox'], a resolução "
-        "está DEPOIS da escolha do backend e o jogador cai no par degradado "
-        "(uinput + máscara DualSense = rumble do jogo morto)"
-    )
-    assert pad is not None
-    assert pad.flavor == "dualsense"
-
-
-def test_o_uhid_e_vetado_para_quem_escolheu_xbox_numa_sessao_dualsense(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O outro lado da armadilha: a escolha também diz NÃO.
-
-    Sessão `dualsense`, aparelho marcado `xbox`. O `_try_uhid` recebe `"xbox"`
-    e devolve `(None, None)` — uinput por DESIGN, não degradação. Se recebesse
-    a máscara do jogo, subiria um DualSense Edge REAL no kernel para um
-    controle que o usuário pediu para aparecer como Xbox.
-    """
-    registro_de_mascaras().set_mask(MAC_P1, "xbox")
-    recebido: list[str] = []
-
-    def _espiao(flavor: str, **kwargs: Any) -> tuple[None, None]:
-        recebido.append(flavor)
-        return None, None
-
-    monkeypatch.setattr(vp, "_try_uhid", _espiao)
-
-    pad = make_virtual_pad("dualsense", identity=UNIQ_P1, allow_uhid=True)
-
-    assert recebido == []
-    assert pad is not None
-    assert pad.flavor == "xbox"
-    assert getattr(pad, "fallback_motivo", None) is None
+@pytest.mark.parametrize("modo", ["dualsense", "xbox", "nintendo"])
+def test_dois_controles_nascem_no_modo_unico(modo: str) -> None:
+    """A identidade chega à fábrica e não muda a máscara: os dois nascem no modo."""
+    p1 = _cria(modo, MAC_P1)
+    p2 = _cria(modo, MAC_P2)
+    assert (p1.flavor, p2.flavor) == (modo, modo)
 
 
 class _VpadDeMentira:
@@ -339,7 +231,6 @@ def test_duzentos_tiques_do_coop_nao_recriam_o_vpad_de_quem_escolheu(
     coop: CoopManager,
 ) -> None:
     """O CORAÇÃO DO RISCO: 200 voltas, e as criações continuam sendo 2."""
-    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
 
     for _ in range(VOLTAS):
         coop.sync(force=True)
@@ -352,45 +243,11 @@ def test_duzentos_tiques_do_coop_nao_recriam_o_vpad_de_quem_escolheu(
         "teardown+respawn em tique quieto — a recriação que a R-04 mediu como "
         "'abri o jogo e o controle morreu no meio da partida'."
     )
-    assert flavors == ["dualsense", "xbox"], (
-        "o P2 escolheu dualsense e o P3 herdou a sessão xbox — se os dois "
-        "saírem iguais a identidade não chegou ao co-op"
-    )
+    assert flavors == ["xbox", "xbox"], "os dois secundários nascem no modo único"
     assert not any(v.stopped for v in criados), (
         "nenhum vpad podia ter sido parado: parar é a primeira metade da "
         "recriação, e ela não pode acontecer fora do Aplicar"
     )
-
-
-def test_arrancar_o_ficou_para_tras_faz_o_churn_aparecer(
-    coop: CoopManager, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A cura arrancada, com os números — e o custo por segundo."""
-    registro_de_mascaras().set_mask(MAC_P2, "dualsense")
-    monkeypatch.setattr(
-        "hefesto_dualsense4unix.daemon.subsystems.external_mask.vpad_ficou_para_tras",
-        lambda flavor_do_vpad, identity, flavor_do_jogo, **_kw: (
-            flavor_do_vpad != flavor_do_jogo
-        ),
-    )
-    voltas = 20
-
-    for _ in range(voltas):
-        coop.sync(force=True)
-
-    criados = len(_VpadDeMentira.criados)
-    assert criados > 2, (
-        "com a cura arrancada a régua TINHA de acusar churn e não acusou — "
-        f"{criados} criações em {voltas} voltas. Se este número for 2, o "
-        "teste de cima não morde e a corrente não está sendo medida."
-    )
-    assert criados >= voltas, (
-        f"o churn é por TIQUE: esperado ~{voltas + 1} criações, medido "
-        f"{criados}. Menos que uma por volta significa que o laço não está "
-        "chegando na comparação de flavor."
-    )
-    do_p3 = [v for v in _VpadDeMentira.criados if v.identity == UNIQ_P3]
-    assert len(do_p3) == 1, f"o P3 (sem escolha) foi recriado {len(do_p3)}x"
 
 
 def test_a_mascara_que_ficou_para_tras_de_verdade_ainda_recria(
@@ -481,14 +338,11 @@ def test_cinquenta_aplicares_identicos_nao_recriam_o_vpad_do_p1(p1: Any) -> None
         start_gamepad_emulation_desfecho,
     )
 
-    registro_de_mascaras().set_mask(MAC_P1, "dualsense")
-
     primeiro = start_gamepad_emulation_desfecho(p1, "xbox", origin="manual")
     assert primeiro == EMU_APLICADO
     device = p1._gamepad_device
-    assert device.flavor == "dualsense", (
-        "o vpad do P1 nasceu com a máscara da SESSÃO — a identidade do "
-        "primário não chegou à factory"
+    assert (device.flavor, device.identity) == ("xbox", UNIQ_P1), (
+        "o vpad do P1 nasceu fora do modo, ou sem a identidade do primário"
     )
 
     desfechos = [
@@ -509,42 +363,22 @@ def test_cinquenta_aplicares_identicos_nao_recriam_o_vpad_do_p1(p1: Any) -> None
     assert not device.stopped
 
 
-def test_o_aplicar_recria_quando_a_escolha_dela_muda(p1: Any) -> None:
-    """E o Aplicar CONTINUA aplicando — a decisão de produto vale no gesto.
-    (D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR)
-    """
+def test_o_aplicar_recria_quando_o_modo_muda(p1: Any) -> None:
+    """E o gesto CONTINUA aplicando (D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR)."""
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
         EMU_APLICADO,
         start_gamepad_emulation_desfecho,
     )
 
-    registro_de_mascaras().set_mask(MAC_P1, "dualsense")
-    start_gamepad_emulation_desfecho(p1, "xbox", origin="manual")
+    start_gamepad_emulation_desfecho(p1, "dualsense", origin="manual")
     primeiro = p1._gamepad_device
     assert primeiro.flavor == "dualsense"
 
-    registro_de_mascaras().set_mask(MAC_P1, "xbox")
     assert start_gamepad_emulation_desfecho(p1, "xbox", origin="manual") == EMU_APLICADO
 
     assert len(_VpadDeMentira.criados) == 2
     assert primeiro.stopped, "o vpad anterior tinha de ser parado na troca"
     assert p1._gamepad_device.flavor == "xbox"
-
-
-def test_a_escolha_do_aparelho_nao_vira_a_mascara_da_sessao(p1: Any) -> None:
-    """SÃO DUAS MÁSCARAS, e confundi-las destrói dado dela."""
-    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-        start_gamepad_emulation_desfecho,
-    )
-
-    registro_de_mascaras().set_mask(MAC_P1, "dualsense")
-    start_gamepad_emulation_desfecho(p1, "xbox", origin="manual")
-
-    assert p1._gamepad_device.flavor == "dualsense"
-    assert p1.config.gamepad_flavor == "xbox", (
-        "a escolha do APARELHO vazou para a máscara da SESSÃO — o próximo "
-        "`save_gamepad_emulation` gravaria a escolha errada em disco"
-    )
 
 
 def test_o_que_o_disco_recebe_e_a_mascara_do_jogo(
@@ -558,8 +392,6 @@ def test_o_que_o_disco_recebe_e_a_mascara_do_jogo(
         "hefesto_dualsense4unix.utils.session.save_gamepad_emulation",
         lambda ativo, flavor=None: gravado.append((ativo, str(flavor))),
     )
-    registro_de_mascaras().set_mask(MAC_P1, "dualsense")
-
     gp.start_gamepad_emulation_desfecho(p1, "xbox", origin="manual")
 
     assert gravado == [(True, "xbox")], (
@@ -590,7 +422,6 @@ def test_sem_mac_do_primario_o_p1_segue_a_sessao(monkeypatch: pytest.MonkeyPatch
         start_gamepad_emulation_desfecho,
     )
 
-    registro_de_mascaras().set_mask(MAC_P1, "dualsense")
     daemon = _daemon_do_p1(None, "xbox")
 
     assert primary_identity(daemon) is None

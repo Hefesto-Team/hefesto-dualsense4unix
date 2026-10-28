@@ -47,7 +47,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-from hefesto_dualsense4unix.daemon.subsystems import external_mask as mask_mod
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -85,14 +84,10 @@ def perfil_no_disco() -> Iterator[str]:
         f"profiles_dir() caiu DENTRO do lar real dela: {alvo}. Esta régua grava "
         "perfil e marcadores — sem o desvio do `conftest` ela gravaria no "
         "~/.config que o daemon vivo está usando agora.")
-    mask_mod._zerar_registro_de_mascaras()
-    try:
-        save_profile(Profile(name=NO_DISCO, match=MatchManual()), origem="regua")
-        sessao.save_last_profile(NO_DISCO)
-        sessao.save_active_marker(NO_DISCO)
-        yield NO_DISCO
-    finally:
-        mask_mod._zerar_registro_de_mascaras()
+    save_profile(Profile(name=NO_DISCO, match=MatchManual()), origem="regua")
+    sessao.save_last_profile(NO_DISCO)
+    sessao.save_active_marker(NO_DISCO)
+    yield NO_DISCO
 
 
 def _com_o_daemon_calado() -> Contexto:

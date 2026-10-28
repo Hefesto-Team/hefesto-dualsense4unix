@@ -14,14 +14,14 @@ na mesa (a do `test_mascara_por_controle_manda_no_vpad.py`). Dublados só o vpad
 o reader evdev, a descoberta de `/dev/input`, o sysfs de LED, o grab, o launch
 env e as flags de sessão. `display_authority="game"`: o jogo está aberto.
 
-MORDE: tirar de `external_mask.escolher_a_mascara` a chamada
-`vestir_a_mascara_do_aparelho` — o registro grava e nenhum vpad é recriado.
+NOTA DATADA, 27/10/2026 (O-MODO-UNICO-VALE-PARA-TODOS-OS-CONTROLES-01): a máscara é o
+modo único, e o `gamepad.mask.set` de QUALQUER cartão leva os três controles ao modo novo,
+com o jogo aberto, pelo escritor único `Daemon.escolher_o_modo_unico`, que grava o par
+(caminho, máscara) no perfil ativo.
 
-NOTA DATADA — TROCA-DENTRO-DO-JOGO-01, 14/09/2026: a mordida citava
-`_handle_gamepad_mask_set._vestir_a_mascara_na_hora`. O ato saiu do handler do
-socket e virou `external_mask.escolher_a_mascara`, chamado pela rota IPC e pelo
-gesto PS + L3 — antes o gesto alcançava o handler privado por string. O que esta
-régua mede não mudou: o vpad tem de nascer vestindo a escolha do usuário.
+MORDE: troque, no handler, o `escolher_o_modo_unico` pelo `set_gamepad_emulation` sem o
+caminho — o P2 e o P3 ficam no canal de antes; ou devolva o degrau por identidade à
+`mascara_efetiva` — o vpad nasce na máscara velha.
 """
 from __future__ import annotations
 
@@ -138,7 +138,8 @@ class _Daemon:
         for nome in (
             "set_gamepad_emulation",
             "set_gamepad_emulation_desfecho",
-            "vestir_a_mascara_do_aparelho",
+            "escolher_o_modo_unico",
+            "gravar_o_modo_escolhido",
         ):
             setattr(self, nome, functools.partial(getattr(lifecycle.Daemon, nome), self))
 
@@ -193,10 +194,8 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     )
     monkeypatch.setattr("hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {})
     monkeypatch.setattr(CoopManager, "_calibration_pronta", lambda self, identity: (True, None))
-    em._zerar_registro_de_mascaras()
-    (xdg_paths.config_dir(ensure=True) / "controller_masks.json").unlink(missing_ok=True)
+    (xdg_paths.config_dir(ensure=True) / em.ARQUIVO_DE_MASCARAS_DE_ANTES).unlink(missing_ok=True)
     yield
-    em._zerar_registro_de_mascaras()
 
 
 def _mesa_com_o_jogo_aberto() -> _Daemon:
@@ -210,6 +209,7 @@ def _mesa_com_o_jogo_aberto() -> _Daemon:
         origem="teste",
     )
     d = _Daemon("dualsense")
+    d.store = SimpleNamespace(active_profile=PERFIL)
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
     d._coop_manager = CoopManager(d)  # type: ignore[arg-type]
     d._coop_manager.sync(force=True)
@@ -232,64 +232,42 @@ def _cartao(d: _Daemon, uniq: str, mascara: str) -> dict[str, Any]:
     )
 
 
-def test_o_cartao_do_p1_em_xbox_360_recria_o_vpad_dele_com_o_jogo_aberto() -> None:
+@pytest.mark.parametrize("quem", [P1, P2, P3, None])
+def test_o_cartao_de_qualquer_controle_leva_os_tres_ao_modo_novo(quem: str | None) -> None:
     d = _mesa_com_o_jogo_aberto()
-    p1_antes = d._gamepad_device
-    p2_antes, p3_antes = _vpad_do(P2), _vpad_do(P3)
-    assert (p1_antes.flavor, p2_antes.flavor, p3_antes.flavor) == ("dualsense",) * 3
+    antes = [d._gamepad_device, _vpad_do(P2), _vpad_do(P3)]
+    assert [v.flavor for v in antes] == ["dualsense"] * 3, "premissa"
 
-    resposta = _cartao(d, P1, "xbox")
+    params = {"flavor": "xbox"} if quem is None else {"uniq": quem, "flavor": "xbox"}
+    resposta = asyncio.run(ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), params))
 
-    vivo = d._gamepad_device
-    assert vivo is not p1_antes and p1_antes.parado, (
-        "o cartão gravou e o vpad do P1 continuou o mesmo — o jogo segue vendo o "
-        f"DualSense com o cartão aceso em Xbox 360. Resposta: {resposta}"
+    assert resposta["status"] == "ok", resposta
+    assert all(v.parado for v in antes), (
+        "o modo único mudou e um vpad ficou de pé na máscara velha, com o jogo aberto"
     )
-    assert vivo.flavor == "xbox", "o vpad recriado não veste a máscara do cartão"
-    assert resposta["vestiu"] == gp.EMU_APLICADO
-    assert not p2_antes.parado and not p3_antes.parado, "o cartão do P1 recriou um secundário"
-    assert d.config.gamepad_flavor == "dualsense", "o cartão trocou a máscara da sessão"
+    agora = [d._gamepad_device, _vpad_do(P2), _vpad_do(P3)]
+    assert [(v.flavor, v.backend) for v in agora] == [("xbox", "uinput")] * 3
+    assert (d.config.gamepad_flavor, d.config.gamepad_caminho) == ("xbox", "xbox")
+    modo = loader.load_profile(PERFIL).mode
+    assert (modo.caminho, modo.gamepad_flavor) == ("xbox", "xbox"), "o par não foi ao perfil"
 
 
-def test_o_cartao_do_p2_recria_so_o_p2_pelo_ciclo_forcado_do_coop() -> None:
+@pytest.mark.parametrize("flavor", ["", "wiimote", None])
+def test_o_modo_vazio_ou_desconhecido_e_recusado(flavor: str | None) -> None:
     d = _mesa_com_o_jogo_aberto()
-    p1_antes = d._gamepad_device
-    p2_antes, p3_antes = _vpad_do(P2), _vpad_do(P3)
-
-    resposta = _cartao(d, P2, "xbox")
-
-    assert resposta["vestiu"] == "coop"
-    assert p2_antes.parado, (
-        "o cartão do P2 gravou e o vpad dele não foi recriado — o ciclo forçado "
-        f"do co-op não rodou. Resposta: {resposta}"
-    )
-    assert _vpad_do(P2).flavor == "xbox"
-    assert d._gamepad_device is p1_antes and not p1_antes.parado, "recriou o P1"
-    assert _vpad_do(P3) is p3_antes, "recriou o P3, que não escolheu nada"
+    with pytest.raises(ValueError, match="modo desconhecido"):
+        asyncio.run(
+            ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), {"flavor": flavor})
+        )
+    assert d.config.gamepad_flavor == "dualsense"
 
 
-def test_o_chip_de_modo_leva_os_secundarios_ao_caminho_novo() -> None:
-    """O modo é um para todos (08/09); a máscara é por controle.
-
-    ACRESCENTADA NA VALIDAÇÃO — 13/09/2026, na mesma bancada do co-op REAL. Medido:
-    arrancar o `caminho=` do `CoopManager._spawn_player`, ou a comparação de canal
-    de `external_mask.vpad_ficou_para_tras`, passava com todas as réguas verdes.
-    Com o jogo aberto e o cartão do P2 em Xbox 360, o chip «Xbox» (origem manual)
-    leva o P1 e o P3 ao canal comum vestindo DualSense; o P2, que já estava nele,
-    não é recriado.
-
-    MORDE: qualquer uma das duas curas arrancada — o P3 fica no `uhid`.
-    """
+def test_o_nintendo_pro_sobe_sem_caminho_para_os_tres() -> None:
     d = _mesa_com_o_jogo_aberto()
-    _cartao(d, P2, "xbox")
-    p2_antes, p3_antes = _vpad_do(P2), _vpad_do(P3)
-    assert (p2_antes.backend, p3_antes.backend) == ("uinput", "uhid"), "premissa"
 
-    desfecho = d.set_gamepad_emulation_desfecho(True, origin="manual", caminho="xbox")
+    asyncio.run(ih.IpcHandlersMixin._handle_gamepad_mask_set(_Handlers(d), {"flavor": "nintendo"}))
 
-    assert desfecho == gp.EMU_APLICADO
-    assert (d._gamepad_device.backend, d._gamepad_device.flavor) == ("uinput", "dualsense")
-    p3 = _vpad_do(P3)
-    assert p3 is not p3_antes and p3_antes.parado, "o P3 ficou no canal antigo"
-    assert (p3.backend, p3.flavor) == ("uinput", "dualsense"), "o P3 trocou de máscara"
-    assert _vpad_do(P2) is p2_antes, "recriou o P2 sem ele mudar de canal"
+    agora = [d._gamepad_device, _vpad_do(P2), _vpad_do(P3)]
+    assert [(v.flavor, v.backend) for v in agora] == [("nintendo", "uinput")] * 3
+    modo = loader.load_profile(PERFIL).mode
+    assert (modo.caminho, modo.gamepad_flavor) == (None, "nintendo")

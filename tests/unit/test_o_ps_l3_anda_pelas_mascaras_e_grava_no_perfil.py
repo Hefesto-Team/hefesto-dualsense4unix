@@ -1,4 +1,14 @@
-"""PS-L3-MASCARA-01 — o PS + L3 anda pelas MÁSCARAS, grava no perfil e não mexe no modo."""
+"""PS-L3-MASCARA-01 — o PS + L3 anda pelos MODOS ÚNICOS e grava o par no perfil.
+
+NOTA DATADA, 27/10/2026 (O-MODO-UNICO-VALE-PARA-TODOS-OS-CONTROLES-01): o gesto andava
+pela máscara do cartão do P1 e deixava o modo parado. Desde a
+D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES a máscara É o modo: o gesto, de qualquer
+controle, leva todos a DualSense → Xbox → Nintendo Pro pelo escritor único
+`Daemon.escolher_o_modo_unico`, e o perfil ativo recebe o par (caminho, máscara).
+
+MORDE: troque o `escolher(alvo, porta="controle")` do gesto por um `set_gamepad_emulation`
+só com a máscara — o caminho fica no `uhid` e o Xbox não sobe no canal comum.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -22,13 +32,8 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     HotkeyManager,
 )
 from hefesto_dualsense4unix.profiles import loader
-from hefesto_dualsense4unix.profiles.schema import (
-    ControllerOverrides,
-    MatchAny,
-    Profile,
-    ProfileModeConfig,
-)
-from hefesto_dualsense4unix.utils import session, xdg_paths
+from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileModeConfig
+from hefesto_dualsense4unix.utils import session
 
 P1 = "aabbcc000001"
 PERFIL = "Bancada"
@@ -80,16 +85,18 @@ class _Daemon:
         self._gamepad_device: Any = None
         self._mouse_device = None
         self._coop_manager = None
-        self.store = None
+        self.store = SimpleNamespace(active_profile=PERFIL)
         self._emu_lock = threading.Lock()
         self._native_mode = False
         self._emu_manual_ts = 0.0
         self._mode_from_profile = None
         self.display_authority = "unknown"
+        self._devolver_as_tabelas_do_perfil = lambda: None
         for nome in (
             "set_gamepad_emulation",
             "set_gamepad_emulation_desfecho",
-            "vestir_a_mascara_do_aparelho",
+            "escolher_o_modo_unico",
+            "gravar_o_modo_escolhido",
         ):
             setattr(self, nome, functools.partial(getattr(lifecycle.Daemon, nome), self))
         self._ipc_server = _Servidor(self)
@@ -130,10 +137,7 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
     monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, *, origem=None: None)
     monkeypatch.setattr(hotkey, "PULSO_SEG", 0.0)
-    em._zerar_registro_de_mascaras()
-    (xdg_paths.config_dir(ensure=True) / "controller_masks.json").unlink(missing_ok=True)
     yield
-    em._zerar_registro_de_mascaras()
 
 
 @pytest.fixture
@@ -153,25 +157,25 @@ def luz(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[Any]]:
     return anotado
 
 
-def _perfil_com_cartao_dualsense() -> None:
+def _perfil_em_dualsense() -> None:
     loader.save_profile(
         Profile(
             name=PERFIL,
             match=MatchAny(),
-            mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox", caminho="dualsense"),
-            controllers={P1: ControllerOverrides(mascara="dualsense")},
+            mode=ProfileModeConfig(
+                kind="gamepad", gamepad_flavor="dualsense", caminho="dualsense"
+            ),
         ),
         origem="teste",
     )
     session.save_last_profile(PERFIL)
     session.save_active_marker(PERFIL)
-    em.registro_de_mascaras().set_mask(P1, "dualsense")
 
 
-def _mascara_gravada() -> str | None:
-    perfil = loader.load_profile(PERFIL)
-    dele = (perfil.controllers or {}).get(P1)
-    return getattr(dele, "mascara", None)
+def _par_gravado() -> tuple[str | None, str | None]:
+    modo = loader.load_profile(PERFIL).mode
+    assert modo is not None and modo.kind == "gamepad"
+    return modo.caminho, modo.gamepad_flavor
 
 
 def test_o_ciclo_cobre_o_catalogo_inteiro() -> None:
@@ -181,36 +185,32 @@ def test_o_ciclo_cobre_o_catalogo_inteiro() -> None:
 
 
 @pytest.mark.asyncio
-async def test_tres_apertos_andam_pelas_mascaras_com_o_jogo_aberto(
+async def test_tres_apertos_andam_pelos_modos_com_o_jogo_aberto(
     luz: dict[str, list[Any]],
 ) -> None:
-    _perfil_com_cartao_dualsense()
+    _perfil_em_dualsense()
     d = _Daemon()
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
-    assert d._gamepad_device.backend == "uhid", "premissa: Sony DualSense com cartão DualSense"
+    assert d._gamepad_device.backend == "uhid", "premissa: Sony DualSense"
     d.display_authority = "game"
-    caminho_antes = d.config.gamepad_caminho
 
     gesto = hotkey.build_next_mask_callback(d)  # type: ignore[arg-type]
-    esperado = [("xbox", "uinput"), ("nintendo", "uinput"), ("dualsense", "uhid")]
-    for aperto, (mascara, canal) in enumerate(esperado, start=1):
+    esperado = [
+        ("xbox", "xbox", "uinput"),
+        ("nintendo", None, "uinput"),
+        ("dualsense", "dualsense", "uhid"),
+    ]
+    for aperto, (mascara, caminho, canal) in enumerate(esperado, start=1):
         await gesto()
         vivo = d._gamepad_device
         assert vivo is not None, f"aperto {aperto}: o vpad sumiu"
         assert (vivo.flavor, vivo.backend) == (mascara, canal), f"aperto {aperto}"
-        assert _mascara_gravada() == mascara, (
-            f"aperto {aperto}: o cartão do perfil ativo ficou em {_mascara_gravada()!r}"
-        )
-        assert em.registro_de_mascaras().mask_for(P1) == mascara, f"aperto {aperto}"
-        assert d.config.gamepad_caminho == caminho_antes, (
-            f"aperto {aperto}: o gesto de máscara mexeu no modo "
-            f"({caminho_antes!r} -> {d.config.gamepad_caminho!r})"
-        )
-        modo = loader.load_profile(PERFIL).mode
-        assert modo is not None and (modo.kind, modo.caminho) == ("gamepad", "dualsense")
+        assert (d.config.gamepad_caminho, d.config.gamepad_flavor) == (caminho, mascara)
+        assert _par_gravado() == (caminho, mascara), f"aperto {aperto}: o perfil não andou"
+        assert hotkey.mascara_atual(d) == mascara  # type: ignore[arg-type]
 
     assert [cor for cor, _m in luz["piscadas"]] == [
-        hotkey.CORES_DA_MASCARA[m] for m, _c in esperado
+        hotkey.CORES_DA_MASCARA[m] for m, _c, _k in esperado
     ]
     riscos = [s for s in luz["sequencias"] if s and s[0][0] == hotkey.COR_AVISO_RISCO]
     assert len(riscos) == 3, "com jogo na mão, cada troca avisa o risco — e nenhuma falha"
@@ -218,42 +218,43 @@ async def test_tres_apertos_andam_pelas_mascaras_com_o_jogo_aberto(
 
 
 @pytest.mark.asyncio
-async def test_na_navegacao_o_gesto_guarda_a_mascara_sem_ligar_o_vpad(
+async def test_na_navegacao_o_gesto_entra_no_modo_seguinte(
     luz: dict[str, list[Any]],
 ) -> None:
-    _perfil_com_cartao_dualsense()
+    """Escolher o modo entra no modo, como o chip e o PS + R3 (D-2710)."""
+    _perfil_em_dualsense()
     d = _Daemon()
     assert d._gamepad_device is None
 
     await hotkey.build_next_mask_callback(d)()  # type: ignore[arg-type]
 
-    assert d._gamepad_device is None, "escolher máscara não liga o Hefesto"
-    assert _mascara_gravada() == "xbox"
+    assert d._gamepad_device is not None and d._gamepad_device.flavor == "xbox"
+    assert _par_gravado() == ("xbox", "xbox")
     assert hotkey.mascara_atual(d) == "xbox"  # type: ignore[arg-type]
-    assert luz["piscadas"] == [(hotkey.CORES_DA_MASCARA["xbox"], "mascara:xbox")]
+    assert luz["piscadas"] == [(hotkey.CORES_DA_MASCARA["xbox"], "xbox")]
 
 
 @pytest.mark.asyncio
-async def test_o_aparelho_que_nao_veste_a_mascara_nao_ganha_a_cor_dela(
+async def test_o_aparelho_que_nao_veste_o_modo_nao_ganha_a_cor_dele(
     luz: dict[str, list[Any]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A prova é o aparelho, e a escolha que não pegou não fica pendurada."""
-    _perfil_com_cartao_dualsense()
+    """A prova é o aparelho: o modo que não pegou não pisca a cor dele.
+
+    O pad teimoso nasce no par DualSense (máscara e caminho) com a sessão já pedindo Xbox:
+    quem pergunta à sessão, e não ao pad vivo, pisca verde sobre o DualSense.
+    """
+    _perfil_em_dualsense()
     d = _Daemon()
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
 
     def _teimoso(flavor: Any, *, identity: Any = None, caminho: Any = None, **_kw: Any) -> _Vpad:
-        return _Vpad("dualsense", identity, caminho)
+        return _Vpad("dualsense", identity, "dualsense")
 
     monkeypatch.setattr(vp, "make_virtual_pad", _teimoso)
 
     await hotkey.build_next_mask_callback(d)()  # type: ignore[arg-type]
 
     assert d._gamepad_device is not None and d._gamepad_device.flavor == "dualsense"
-    assert em.registro_de_mascaras().mask_for(P1) == "dualsense", (
-        "a escolha que o aparelho recusou ficou pendurada esperando o próximo vpad"
-    )
-    assert _mascara_gravada() == "dualsense", "o perfil recebeu uma máscara que não pegou"
     assert luz["piscadas"] == [], "a cor do Xbox numa barra que continua DualSense"
     assert luz["sequencias"][-1] == hotkey._pulsos_de_falha()
 
@@ -263,7 +264,7 @@ async def test_dois_apertos_seguidos_andam_duas_casas(
     luz: dict[str, list[Any]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """TROCA-DENTRO-DO-JOGO-01 (14/09/2026): o segundo aperto não se perde."""
-    _perfil_com_cartao_dualsense()
+    _perfil_em_dualsense()
     d = _Daemon()
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
     d.display_authority = "game"
@@ -279,7 +280,7 @@ async def test_dois_apertos_seguidos_andam_duas_casas(
 
     await asyncio.gather(gesto(), gesto())
 
-    assert _mascara_gravada() == "nintendo", "o segundo aperto mirou o mesmo alvo"
+    assert _par_gravado() == (None, "nintendo"), "o segundo aperto mirou o mesmo alvo"
     assert d._gamepad_device is not None
     assert d._gamepad_device.flavor == "nintendo"
     assert [cor for cor, _m in luz["piscadas"]] == [
@@ -289,17 +290,30 @@ async def test_dois_apertos_seguidos_andam_duas_casas(
 
 
 @pytest.mark.asyncio
-async def test_sem_mac_do_primario_o_gesto_recusa_pela_luz(
+async def test_sem_mac_do_primario_o_gesto_vale_igual(
     luz: dict[str, list[Any]],
 ) -> None:
+    """O modo é de todos: o primário sem endereço não barra o gesto."""
+    _perfil_em_dualsense()
     d = _Daemon()
     d.controller = SimpleNamespace(primary_uniq=None)
 
     await hotkey.build_next_mask_callback(d)()  # type: ignore[arg-type]
 
-    assert luz["piscadas"] == [], "sem cartão não há máscara a anunciar"
+    assert _par_gravado() == ("xbox", "xbox")
+    assert luz["piscadas"] == [(hotkey.CORES_DA_MASCARA["xbox"], "xbox")]
+
+
+@pytest.mark.asyncio
+async def test_sem_o_escritor_unico_o_gesto_recusa_pela_luz(
+    luz: dict[str, list[Any]],
+) -> None:
+    d = SimpleNamespace(config=SimpleNamespace(gamepad_flavor="dualsense"), store=None)
+
+    await hotkey.build_next_mask_callback(d)()  # type: ignore[arg-type]
+
+    assert luz["piscadas"] == []
     assert luz["sequencias"] == [hotkey._pulsos_de_falha()], "a recusa tem de aparecer na luz"
-    assert em.registro_de_mascaras().snapshot() == {}, "nada foi gravado"
 
 
 def test_ps_l3_dispara_a_mascara_e_nao_vaza_o_l3() -> None:

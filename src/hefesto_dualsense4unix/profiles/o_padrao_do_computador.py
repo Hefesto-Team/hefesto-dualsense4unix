@@ -63,7 +63,6 @@ SECOES: dict[str, Secao] = {
 
 DO_JOGO: dict[str, str] = {
     "mode": "o modo (Sony, Xbox, Navegação, Nativo) é de cada jogo",
-    "mascara": "como o controle aparece no jogo",
     "movimento": "a Mira é do jogo que mira",
     "triggers": "o efeito do gatilho é de cada jogo; a intensidade é do computador",
     "remapeamento": "a troca de botões é do jogo",

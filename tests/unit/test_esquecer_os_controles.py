@@ -187,7 +187,7 @@ def test_o_inventario_aponta_para_onde_os_donos_gravam(raizes: m.Raizes) -> None
 
     assert caminho("fila-dos-numeros") == identity.ControllerIdentityRegistry._path()
     assert caminho("fila-dos-numeros") == external_identity.ExternalIdentityRegistry._path()
-    assert caminho("mascaras-por-aparelho") == external_mask.ExternalMaskRegistry._path()
+    assert caminho("mascaras-por-aparelho") == external_mask._o_arquivo_de_mascaras()
     assert caminho("declaracao-da-mesa") == maquina.caminho_da_maquina()
     assert caminho("lugares-dos-adaptadores") == bluez_dbus._memoria_dos_lugares()
     assert caminho("conexao-zumbi") == conexoes.caminho_do_diario()

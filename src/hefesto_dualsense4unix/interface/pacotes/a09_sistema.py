@@ -1657,9 +1657,9 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
     (`daemon/ipc_handlers.py:3840`) e `new_cfg = replace(self.daemon.config)` é
     uma cópia de valor igual (`:4553`). Os dois ramos que reaplicariam mouse e
-    teclado comparam `old` com `new` (`daemon/lifecycle.py:1236` e `:1149`) e
+    teclado comparam `old` com `new` (`daemon/lifecycle.py:1236` e `:1157`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
-    Duas coisas acontecem, e são estas: `lifecycle.py:1117-1118` derruba e sobe
+    Duas coisas acontecem, e são estas: `lifecycle.py:1148-1149` derruba e sobe
     o leitor dos atalhos do controle, e `ipc_handlers.py:3897` reescreve os
     arquivos de ambiente que a Steam usa. **A dica da aba diz essas duas**
     (`interface/aba09.py`, da `ONDA5-09-01`), e esta é a medição que a sustenta.

@@ -201,6 +201,7 @@ CICLO_DE_PONTES: tuple[str, ...] = (PONTE_DUALSENSE, PONTE_XBOX, PONTE_MOUSE_TEC
 
 MODO_STEAM_INPUT = "steam_input"
 MODO_NATIVO = "nativo"
+MODO_NINTENDO = "nintendo"
 
 CORES_DO_MODO: dict[str, tuple[int, int, int]] = {
     MODO_STEAM_INPUT: (139, 233, 253),
@@ -208,6 +209,7 @@ CORES_DO_MODO: dict[str, tuple[int, int, int]] = {
     MODO_NATIVO: (248, 248, 242),
     PONTE_DUALSENSE: (255, 121, 198),
     PONTE_MOUSE_TECLADO: (255, 184, 108),
+    MODO_NINTENDO: (189, 147, 249),
 }
 COR_AVISO_RISCO = (255, 0, 0)
 PULSO_SEG = 0.14
@@ -302,7 +304,10 @@ def modo_vigente(daemon: DaemonProtocol) -> str:
 
         if steam_input_excecao_ativa(daemon):
             return MODO_STEAM_INPUT
-    return ponte_atual(daemon)
+    ponte = ponte_atual(daemon)
+    if ponte != PONTE_MOUSE_TECLADO and mascara_atual(daemon) == MODO_NINTENDO:
+        return MODO_NINTENDO
+    return ponte
 
 
 LE_A_STEAM = "steam"
@@ -313,6 +318,7 @@ QUEM_LE_O_CONTROLE: dict[str, str] = {
     PONTE_DUALSENSE: LE_O_HEFESTO,
     PONTE_XBOX: LE_O_HEFESTO,
     PONTE_MOUSE_TECLADO: LE_O_HEFESTO,
+    MODO_NINTENDO: LE_O_HEFESTO,
 }
 
 
@@ -415,8 +421,11 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         logger.warning("ponte_sem_setter_de_gamepad")
         return False
     if alvo in (PONTE_DUALSENSE, PONTE_XBOX):
+        from hefesto_dualsense4unix.integrations.virtual_pad import par_do_modo
+
+        caminho, mascara = par_do_modo(alvo)
         return bool(
-            setter(True, None, origin="manual", caminho=alvo, grava_o_modo="controle")
+            setter(True, mascara, origin="manual", caminho=caminho, grava_o_modo="controle")
         )
     setter(False, origin="manual")
     arranjo = getattr(daemon, "aplicar_o_arranjo_do_desktop", None)
@@ -2101,7 +2110,7 @@ CICLO_DE_MASCARAS: tuple[str, ...] = ("dualsense", "xbox", "nintendo")
 CORES_DA_MASCARA: dict[str, tuple[int, int, int]] = {
     "dualsense": CORES_DO_MODO[PONTE_DUALSENSE],
     "xbox": CORES_DO_MODO[PONTE_XBOX],
-    "nintendo": (189, 147, 249),
+    "nintendo": CORES_DO_MODO[MODO_NINTENDO],
 }
 
 _PULSOS_DE_RISCO: list[tuple[tuple[int, int, int], float]] = [
@@ -2124,59 +2133,34 @@ def _pulsos_de_falha() -> list[tuple[tuple[int, int, int], float]]:
 
 
 def mascara_atual(daemon: DaemonProtocol, uniq: str | None = None) -> str:
-    """A máscara do cartão `uniq` AGORA: a que o vpad veste, ou a que ele vestiria."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        mascara_efetiva,
-        mascara_vestida,
+    """O modo único AGORA, o mesmo para todo controle: o do pad do P1, ou o da sessão.
+
+    D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: o ``uniq`` não decide nada, e fica
+    para quem pergunta por cartão. O modo é o que o jogo vê
+    (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.modo_do_par`) com a máscara
+    DO PAD VIVO: o pad que nasceu no caminho DualSense mostra a máscara dele, qualquer que
+    seja o caminho pedido; os outros, o par com o caminho escolhido. Sem pad, o da sessão.
+    """
+    del uniq
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        CAMINHO_DUALSENSE,
+        caminho_do_vpad,
+        modo_do_par,
     )
-    from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
 
-    vivo = mascara_vestida(daemon, uniq)
-    if isinstance(vivo, str) and vivo in CICLO_DE_MASCARAS:
-        return vivo
-    sessao = getattr(getattr(daemon, "config", None), "gamepad_flavor", None)
-    return mascara_efetiva(uniq if uniq is not None else primary_identity(daemon), sessao)
-
-
-def _e_o_cartao_do_posto(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O cartão `uniq` é o do dono do posto de P1 (o vpad `_gamepad_device`)?"""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mesma_identidade
-    from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
-
-    return mesma_identidade(uniq, primary_identity(daemon))
-
-
-def _vpad_do_cartao_de_pe(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O vpad do cartão `uniq` está de pé? O do jogador 1 é o `_gamepad_device`."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_vestida
-
-    if _e_o_cartao_do_posto(daemon, uniq):
-        return getattr(daemon, "_gamepad_device", None) is not None
-    return mascara_vestida(daemon, uniq) is not None
-
-
-_ESPERA_DO_VPAD_DO_COOP_S = 3.0
-_PASSO_DA_ESPERA_DO_VPAD_S = 0.02
-
-
-async def _o_vpad_do_cartao_volta(daemon: DaemonProtocol, uniq: str) -> bool:
-    """Espera, com prazo, o vpad do cartão `uniq` voltar de pé. True = voltou."""
-    import time
-
-    if _vpad_do_cartao_de_pe(daemon, uniq):
-        return True
-    if _e_o_cartao_do_posto(daemon, uniq):
-        return False
-    fim = time.monotonic() + _ESPERA_DO_VPAD_DO_COOP_S
-    while time.monotonic() < fim:
-        await asyncio.sleep(_PASSO_DA_ESPERA_DO_VPAD_S)
-        if _vpad_do_cartao_de_pe(daemon, uniq):
-            return True
-    return False
+    cfg = getattr(daemon, "config", None)
+    escolhido = getattr(cfg, "gamepad_caminho", None)
+    pad = getattr(daemon, "_gamepad_device", None)
+    vivo = getattr(pad, "flavor", None)
+    if vivo not in CICLO_DE_MASCARAS:
+        return modo_do_par(escolhido, getattr(cfg, "gamepad_flavor", None))
+    if caminho_do_vpad(pad) == CAMINHO_DUALSENSE:
+        return modo_do_par(CAMINHO_DUALSENSE, vivo)
+    return modo_do_par(escolhido, vivo)
 
 
 def proxima_mascara(atual: str) -> str:
-    """A máscara seguinte no ciclo, com volta. Desconhecida → a primeira."""
+    """O modo seguinte no ciclo, com volta. Desconhecido → o primeiro."""
     if atual not in CICLO_DE_MASCARAS:
         return CICLO_DE_MASCARAS[0]
     indice = CICLO_DE_MASCARAS.index(atual)
@@ -2184,73 +2168,70 @@ def proxima_mascara(atual: str) -> str:
 
 
 def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
-    """Cria o callback do gesto PS + L3: PRÓXIMA MÁSCARA do cartão de quem o faz."""
+    """Cria o callback do gesto PS + L3: o PRÓXIMO MODO ÚNICO, para todos os controles.
 
-    async def _ciclar_mascara() -> None:
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            escolher_a_mascara,
-            mascara_vestida,
+    D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: DualSense → Xbox → Nintendo Pro, de
+    qualquer controle, pelo escritor único (``Daemon.escolher_o_modo_unico``, porta
+    ``controle``), que recria o P1 e os secundários e grava o par no perfil ativo. A barra
+    de todos pisca a cor do modo novo e o anúncio fica carimbado, para o aviso de modo
+    trocado não repetir. No Modo Nativo o gesto não faz nada: o controle é do jogo.
+    """
+
+    async def _ciclar_modo() -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            DESFECHOS_EMULACAO_ATIVA,
+            depois_do_p1,
+            esperar_o_p1_que_nasce,
         )
-        from hefesto_dualsense4unix.daemon.subsystems.poll import quem_segura_os_atalhos
 
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("mascara_ciclo_skip_native_mode")
             return
-        identidade = quem_segura_os_atalhos(daemon)
-        if not identidade:
-            logger.warning("mascara_do_gesto_sem_cartao", identidade=identidade)
+        escolher = getattr(daemon, "escolher_o_modo_unico", None)
+        if not callable(escolher):
+            logger.warning("modo_unico_sem_escritor")
             await _sinalizar_lightbar(daemon, _pulsos_de_falha())
             return
 
         jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
-        if mascara_vestida(daemon, identidade) is not None and jogo_no_controle:
+        if getattr(daemon, "_gamepad_device", None) is not None and jogo_no_controle:
             await _sinalizar_lightbar(daemon, _PULSOS_DE_RISCO)
 
-        atual = mascara_atual(daemon, identidade)
+        atual = mascara_atual(daemon)
         alvo = proxima_mascara(atual)
-        vpad_antes = _vpad_do_cartao_de_pe(daemon, identidade)
         logger.info(
             "mascara_troca_pedida_por_gesto",
             de=atual,
             para=alvo,
-            vpad=vpad_antes,
             jogo_com_autoridade=jogo_no_controle,
         )
 
-        resposta: dict[str, Any] | None = None
+        desfecho: str | None = None
         try:
-            resposta = escolher_a_mascara(daemon, identidade, alvo)
+            desfecho = str(escolher(alvo, porta="controle"))
+            nasceu = await esperar_o_p1_que_nasce(daemon, depois_do_p1(daemon))
+            if nasceu is not None:
+                desfecho = nasceu
         except Exception as exc:
             logger.warning("mascara_do_gesto_falhou", para=alvo, err=str(exc))
 
-        vpad_depois = (
-            await _o_vpad_do_cartao_volta(daemon, identidade)
-            if vpad_antes
-            else _vpad_do_cartao_de_pe(daemon, identidade)
-        )
-        efetiva = mascara_atual(daemon, identidade)
-        if resposta is not None and efetiva == alvo and vpad_depois >= vpad_antes:
+        efetiva = mascara_atual(daemon)
+        if desfecho in DESFECHOS_EMULACAO_ATIVA and efetiva == alvo:
             if store is not None:
                 with contextlib.suppress(Exception):
                     store.bump("hotkey.mascara.cycled")
-            logger.info(
-                "mascara_trocada_por_gesto",
-                de=atual,
-                para=alvo,
-                perfil=resposta.get("perfil"),
-                gravado=resposta.get("gravado"),
-                motivo=resposta.get("motivo"),
-                vestiu=resposta.get("vestiu"),
-            )
-            _disparar_piscada(daemon, CORES_DA_MASCARA[alvo], modo=f"mascara:{alvo}")
+            logger.info("mascara_trocada_por_gesto", de=atual, para=alvo, desfecho=desfecho)
+            if _disparar_piscada(daemon, CORES_DA_MASCARA[alvo], modo=alvo):
+                with contextlib.suppress(Exception):
+                    daemon._modo_anunciado = modo_vigente(daemon)  # type: ignore[attr-defined]
             return
         logger.warning(
-            "mascara_nao_subiu", pedida=alvo, efetiva=efetiva, resposta=resposta
+            "mascara_nao_subiu", pedida=alvo, efetiva=efetiva, desfecho=desfecho
         )
         await _sinalizar_lightbar(daemon, _pulsos_de_falha())
 
-    return _ciclar_mascara
+    return _ciclar_modo
 
 
 _O_QUE_O_CANAL_LE: tuple[str, ...] = ("sources", "server")

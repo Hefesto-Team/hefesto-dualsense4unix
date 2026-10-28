@@ -966,7 +966,6 @@ class ProfileManager:
                     profile=profile.name,
                     err=str(exc),
                 )
-        self.apply_controller_mascaras(profile, origin=origin, relatorio=resultado)
         if self.mode_applier is not None:
             try:
                 resultado["mode"] = _estado_da_secao(
@@ -1022,124 +1021,6 @@ class ProfileManager:
         self.apply_controller_mics(profile, origin=origin, relatorio=resultado)
         self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
         _faltas_do_som_do_estilo(self.apply_som_do_estilo(profile, origin=origin), resultado)
-        return resultado
-
-    def apply_controller_mascaras(
-        self,
-        profile: Profile,
-        *,
-        origin: str = "manual",
-        relatorio: dict[str, str] | None = None,
-    ) -> dict[str, str]:
-        """Aplica a MÁSCARA das UNIDADES que o perfil declara (08/09/2026).
-
-        Decisão de produto, MASCARA-NO-PERFIL-01: *"pode entrar sim"* — a máscara por
-        controle entra no perfil, ao lado de luz, gatilho, vibração, som, mic e
-        sensores. **A consequência que ela sentiu, e que abriu a sprint:**
-        trocar de perfil trocava o modo e **não trocava a máscara** de ninguém,
-        porque a máscara era da SESSÃO e sobrevivia ao perfil.
-
-        QUEM É O DONO AGORA — e é o ponto inteiro desta entrega. O
-        ``controller_masks.json`` (``daemon/subsystems/external_mask.py``)
-        deixou de ser dono e virou **cache do que o perfil ativo diz**. Ele
-        continua existindo, e por uma razão medida: ``mascara_efetiva`` é
-        consultada na criação de todo gamepad virtual **e no tique do co-op**,
-        que compara para decidir recriar. Ler o perfil do disco ali seria uma
-        tempestade de syscalls — a mesma lição do
-        ``gamepad._motores_do_perfil_ativo``. Então o perfil escreve no
-        registro, e o registro responde em memória.
-
-        **O PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO, 09/09/2026.** A
-        pergunta era *"um perfil que não fala de máscara deve devolver todo
-        mundo ao padrão, ou deixar cada um como está?"*, e a resposta de produto foi
-        a primeira: *"Default é Hefesto dualsense padrão"*. Então esta função
-        varre o registro e **apaga a máscara própria de todo controle que o
-        perfil não declara** (:meth:`ExternalMaskRegistry.manter_somente`).
-        Aquele controle passa a herdar o degrau de baixo — o
-        ``mode.gamepad_flavor`` do perfil e, na falta dele, o
-        ``DaemonConfig.gamepad_flavor``, que de fábrica é ``dualsense``. Isto
-        SUBSTITUI a leitura provisória que esta docstring trazia (*"``mascara``
-        ausente não mexe na máscara daquela peça"*): aqui ``None`` não é silêncio
-        — é *"volte ao padrão"*, e só nesta seção.
-
-        **O CUSTO FOI MEDIDO ANTES DE SER PAGO, e ele é pequeno** (09/09/2026,
-        esta árvore). O medo escrito na entrega de ontem era *"derrubar e
-        recriar os quatro vpads dela ao ativar um perfil calado"*. Não é o que
-        acontece, e o número diz por quê:
-
-        * quem derruba vpad é o laço do co-op, por ``vpad_ficou_para_tras``, e
-          ele compara a máscara EFETIVA. Apagar a entrada de quem já estava no
-          padrão não muda a efetiva — a comparação dá igual e o vpad **não
-          cai**. Só cai o vpad de quem estava FORA do padrão, que é exatamente
-          quem a decisão de produto manda trazer de volta;
-        * medido nos quatro assentos, com o padrão em ``dualsense``: **0 de 4**
-          vpads caem quando a mesa já seguia o padrão, **1 de 4** quando um só
-          estava em Xbox, **4 de 4** quando os quatro estavam. E **0 de 4**
-          quando os quatro TINHAM entrada própria, mas igual ao padrão: as
-          quatro entradas somem do disco e nenhum controle do usuário sai da partida;
-        * a varredura em si custa **0,034 ms** e ZERO escrita de disco quando
-          não há nada a devolver — o caso comum —, e **0,21 ms** com uma
-          escrita só quando há quatro. (Mediana de 200 voltas, ``ext4``. O
-          ``manter_somente`` batelha de propósito: quatro ``clear_mask``
-          seguidos custariam 0,63 ms e quatro ``_save_locked``.)
-
-        **UMA POR CONTROLE, E SÓ PARA QUEM MUDOU.** A escrita é peça a peça, na
-        ordem em que o perfil as declara, e a máscara que já está valendo não é
-        reescrita: ``set_mask`` só persiste quando o valor difere, e
-        ``vpad_ficou_para_tras`` compara antes de derrubar. Um perfil que repete
-        a máscara de três jogadores e muda a do quarto derruba UM vpad.
-
-        Relatório: ``mascara:<uniq>`` → a máscara, uma chave por unidade, no
-        mesmo formato-por-peça do ``mic:<uniq>`` e do ``sensores:<uniq>``. Quem
-        foi devolvido ao padrão entra com o valor ``"padrão"``, e não com uma
-        máscara: o nome do flavor herdado é do degrau de baixo, que esta função
-        não conhece (ela não vê a config do daemon) e não pode fingir conhecer.
-        """
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            registro_de_mascaras,
-        )
-
-        resultado: dict[str, str] = relatorio if relatorio is not None else {}
-        registro = registro_de_mascaras()
-        controllers = getattr(profile, "controllers", None) or {}
-        declaradas: list[str] = []
-        for uniq, cfg in controllers.items():
-            mascara = getattr(cfg, "mascara", None)
-            if mascara is None:
-                continue
-            alvo = str(uniq)
-            declaradas.append(alvo)
-            anterior = registro.mask_for(alvo)
-            if anterior == str(mascara):
-                resultado[f"mascara:{alvo}"] = str(mascara)
-                continue
-            if not registro.set_mask(alvo, str(mascara)):
-                resultado[f"mascara:{alvo}"] = "recusado"
-                logger.warning(
-                    "profile_mascara_por_peca_recusada",
-                    profile=getattr(profile, "name", None),
-                    uniq=alvo,
-                    origin=origin,
-                    mascara=str(mascara),
-                )
-                continue
-            resultado[f"mascara:{alvo}"] = str(mascara)
-            logger.info(
-                "profile_mascara_por_peca",
-                profile=getattr(profile, "name", None),
-                uniq=alvo,
-                origin=origin,
-                mascara=str(mascara),
-                anterior=anterior,
-            )
-        for chave in registro.manter_somente(declaradas):
-            resultado[f"mascara:{chave}"] = "padrão"
-            logger.info(
-                "profile_mascara_devolvida_ao_padrao",
-                profile=getattr(profile, "name", None),
-                uniq=chave,
-                origin=origin,
-            )
         return resultado
 
     def apply_controller_sensores(
@@ -1960,17 +1841,36 @@ def alinhar_o_modo_com_a_ponte(
 
 
 def secao_do_modo_com_o_caminho(
-    atual: ProfileModeConfig | None, *, kind: str, caminho: object = None
+    atual: ProfileModeConfig | None,
+    *,
+    kind: str,
+    caminho: object = None,
+    mascara: object = None,
 ) -> ProfileModeConfig:
-    """A seção `mode` depois de o MODO mudar — o ESCRITOR ÚNICO do caminho."""
-    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+    """A seção `mode` depois de o MODO mudar — o ESCRITOR ÚNICO do caminho e da máscara.
+
+    D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: no ``gamepad`` o caminho e a máscara
+    andam em PAR (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_do_modo`),
+    e o par é o que o jogo vê com o que chegou
+    (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.modo_do_par`). Sem caminho
+    nem máscara, os dois ficam como estão.
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        modo_do_par,
+        normalizar_caminho,
+        normalizar_modo,
+        par_do_modo,
+    )
 
     campos: dict[str, object] = {} if atual is None else atual.model_dump()
     campos["kind"] = kind
     if kind == "gamepad":
         escolhido = normalizar_caminho(caminho)
-        if escolhido is not None:
-            campos["caminho"] = escolhido
+        pedida = normalizar_modo(mascara) or escolhido
+        if pedida is not None:
+            campos["caminho"], campos["gamepad_flavor"] = par_do_modo(
+                modo_do_par(escolhido, pedida)
+            )
     else:
         campos["caminho"] = None
     return ProfileModeConfig(**campos)  # type: ignore[arg-type]
@@ -2068,6 +1968,7 @@ def gravar_o_modo_no_perfil_ativo(
     *,
     kind: str,
     caminho: object = None,
+    mascara: object = None,
     porta: str,
     mouse_ligado: bool | None = None,
     velocidades: tuple[int, int] | None = None,
@@ -2106,12 +2007,15 @@ def gravar_o_modo_no_perfil_ativo(
 
     NADA MUDOU, NADA SE GRAVA: o `.json` dela não ganha uma versão idêntica a
     cada aperto repetido.
+
+    `mascara` (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): o modo único que o
+    escritor do daemon pediu; vai com o caminho, em par, para todos os controles.
     """
     if not nome:
         return None
     profile = load_profile(nome)
     antes = profile.mode
-    depois = secao_do_modo_com_o_caminho(antes, kind=kind, caminho=caminho)
+    depois = secao_do_modo_com_o_caminho(antes, kind=kind, caminho=caminho, mascara=mascara)
     mudou: dict[str, Any] = {}
     if antes is None or antes.model_dump() != depois.model_dump():
         mudou["mode"] = depois
@@ -2137,6 +2041,7 @@ def gravar_o_modo_no_perfil_ativo(
         profile=novo.name,
         kind=kind,
         caminho=depois.caminho,
+        mascara=depois.gamepad_flavor,
         porta=porta,
         **({"mouse_enabled": mudou["mouse"].enabled} if "mouse" in mudou else {}),
         **({"ponte_confirmada_por": carimbo.confirmada_por} if carimbo else {}),
@@ -2240,35 +2145,6 @@ def chave_de_peca_que_grava(alvo: str) -> str | None:
     if chave.startswith(VPAD_UNIQ_PREFIX):
         return None
     return chave
-
-
-def gravar_a_mascara_no_perfil_ativo(
-    nome: str | None, *, chave: str | None, mascara: str | None
-) -> tuple[str | None, bool, str | None]:
-    """A máscara de UMA peça no perfil ATIVO — a irmã de `gravar_o_modo_no_perfil_ativo`."""
-    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
-
-    if not chave:
-        return None, False, "sem_endereco"
-    if not nome:
-        return None, False, "sem_perfil"
-    perfil = load_profile(nome)
-    atuais = dict(perfil.controllers or {})
-    dele = atuais.get(chave) or ControllerOverrides()
-    if getattr(dele, "mascara", None) == mascara:
-        return nome, False, "sem_mudanca"
-    novo = dele.model_copy(update={"mascara": mascara})
-    if all(
-        getattr(novo, campo, None) is None for campo in ControllerOverrides.model_fields
-    ):
-        atuais.pop(chave, None)
-    else:
-        atuais[chave] = novo
-    save_profile(perfil.model_copy(update={"controllers": atuais or None}))
-    logger.info(
-        "gamepad_mascara_gravada_no_perfil", uniq=chave, perfil=nome, mascara=mascara
-    )
-    return nome, True, None
 
 
 def _estado_da_secao(valor: object) -> str:

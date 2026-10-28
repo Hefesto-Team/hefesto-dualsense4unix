@@ -205,7 +205,11 @@ class _FakeStore:
 
 
 class _DaemonDoGesto:
-    """AJUSTADO À REGRA DE PRODUTO — MODO-DE-CONEXAO-01, 13/09/2026."""
+    """AJUSTADO À REGRA DE PRODUTO — MODO-DE-CONEXAO-01, 13/09/2026.
+
+    NOTA DATADA, 27/10/2026: com o modo único (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES)
+    o degrau `dualsense` ou `xbox` do PS + R3 pede o par inteiro, a máscara junto com o caminho.
+    """
 
     def __init__(self, *, flavor: str = "dualsense", aplica: bool = True) -> None:
         self.controller = SimpleNamespace()
@@ -270,7 +274,7 @@ class TestOGesto:
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(True, None, "manual", "xbox")]
+        assert d.pedidos == [(True, "xbox", "manual", "xbox")]
         tentativa = pt.em_curso(d)
         assert tentativa is not None
         assert tentativa.degrau == pe.ESCADA[1], "a escada não avançou"
@@ -284,7 +288,7 @@ class TestOGesto:
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, "xbox", "manual", "xbox")], "o gesto tem de obedecer"
 
     @pytest.mark.asyncio
     async def test_a_escada_nao_avanca_quando_a_mascara_nao_sobe(self) -> None:
@@ -335,7 +339,7 @@ class TestOGesto:
 
         assert d.pedidos == [
             (False, None, "manual", None),
-            (True, None, "manual", "dualsense"),
+            (True, "dualsense", "manual", "dualsense"),
         ], "ficou presa no degrau caro, ou comeu um aperto"
 
     @pytest.mark.asyncio
@@ -348,7 +352,7 @@ class TestOGesto:
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
         assert pt.em_curso(d) is None
-        assert d.pedidos == [(True, None, "manual", "xbox")], "o gesto tem de obedecer"
+        assert d.pedidos == [(True, "xbox", "manual", "xbox")], "o gesto tem de obedecer"
 
     def test_o_degrau_do_steam_input_nunca_e_subido_pelo_gesto(self) -> None:
         """Ele exige fechar a Steam, reabrir a Steam e reabrir o jogo — e

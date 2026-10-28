@@ -40,9 +40,13 @@ def test_o_computador_vai_ao_disco_so_com_o_que_foi_declarado() -> None:
 
 
 def test_o_computador_recusa_o_que_e_do_jogo() -> None:
-    """A máscara, os gatilhos e a mira de um controle são do jogo (`DO_JOGO`)."""
+    """A troca de botões, os gatilhos e a mira de um controle são do jogo (`DO_JOGO`).
+
+    NOTA DATADA, 27/10/2026: o exemplo era a máscara do controle, que saiu com o modo
+    único (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): o modo já é do jogo pelo `mode`.
+    """
     with pytest.raises(ValueError, match="do jogo"):
-        m.gravar_o_computador({"controles": {P2: {"mascara": "xbox"}}})
+        m.gravar_o_computador({"controles": {P2: {"remapeamento": {"cross": "circle"}}}})
     with pytest.raises(ValueError):
         m.gravar_o_computador({"global": {"mouse": {"speed": 99}}})
 

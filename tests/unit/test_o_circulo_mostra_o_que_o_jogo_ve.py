@@ -60,11 +60,6 @@ _P1, _P2, _P3, _P4 = (
 @pytest.fixture
 def _evdev_que_grava(monkeypatch: pytest.MonkeyPatch) -> None:
     """O `evdev` sem kernel da régua do modo Xbox: o pad escreve num `_NoGravado`."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        _zerar_registro_de_mascaras,
-    )
-
-    _zerar_registro_de_mascaras()
     _NoGravado.criados = []
     mod = types.ModuleType("evdev")
     mod.UInput = _NoGravado  # type: ignore[attr-defined]

@@ -176,9 +176,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Bancada]:
         lambda d: SimpleNamespace(sync=lambda force=False, origem=None: None),
     )
     monkeypatch.setattr(launch_env, "materialize_launch_env", lambda d: None)
-    em._zerar_registro_de_mascaras()
     yield b
-    em._zerar_registro_de_mascaras()
 
 
 def _daemon() -> _DaemonDaCasa:
@@ -313,17 +311,20 @@ def test_o_modo_que_o_aparelho_recusou_nao_vai_ao_disco(bancada: _Bancada) -> No
     assert _versoes(FREESTYLE) == versoes
 
 
-def test_so_a_porta_grava_o_cartao_e_a_chamada_direta_nao(bancada: _Bancada) -> None:
-    """Um perfil sem `mode`, e o pad de pé."""
+def test_so_a_porta_grava_e_a_chamada_direta_nao(bancada: _Bancada) -> None:
+    """Um perfil sem `mode`, e o pad de pé. Desde 27/10/2026 não há cartão de máscara: a
+    chamada direta é o setter do pad sem porta (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES).
+    """
     d = _daemon()
     _perfil(JOGO, mode=None)
     d.store.set_active_profile(JOGO)
     _pad_de_pe(d, None)
     antes = _sha(_arquivo(JOGO))
 
-    assert d.vestir_a_mascara_do_aparelho(P1) in (gp.EMU_APLICADO, gp.EMU_JA_ESTAVA), (
-        "premissa: o cartão do P1 passa pelo setter do pad")
-    assert _modo_no_disco(JOGO) is None, "o cartão escreveu opinião de modo no perfil"
+    assert d.set_gamepad_emulation_desfecho(True, origin="profile") in (
+        gp.EMU_APLICADO, gp.EMU_JA_ESTAVA,
+    ), "premissa: o setter do pad sem porta"
+    assert _modo_no_disco(JOGO) is None, "o setter sem porta escreveu opinião de modo no perfil"
 
     d.aplicar_o_arranjo_do_desktop(origin="manual")
     assert _modo_no_disco(JOGO) is None, (

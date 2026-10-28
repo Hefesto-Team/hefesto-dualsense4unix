@@ -12,11 +12,7 @@ from hefesto_dualsense4unix.daemon import lifecycle as lc
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
-from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-    _zerar_registro_de_mascaras,
-    mascara_efetiva,
-    registro_de_mascaras,
-)
+from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.profiles.schema import (
     MascaraDeGamepad,
@@ -48,7 +44,7 @@ class _Pad:
 
 @pytest.fixture(autouse=True)
 def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Disco em tmp (o flag e os cartões) e o registro zerado antes e depois."""
+    """Disco em tmp: o flag da máquina."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     alvo = tmp_path / "config"
@@ -60,9 +56,7 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
 
     monkeypatch.setattr(xdg_paths, "config_dir", _config_dir)
     monkeypatch.setattr(session_mod, "config_dir", _config_dir)
-    _zerar_registro_de_mascaras()
     yield
-    _zerar_registro_de_mascaras()
 
 
 @pytest.fixture(autouse=True)
@@ -123,8 +117,6 @@ def _o_proximo_nao_opina(d: Any, jeito: str) -> None:
         perfil = _perfil_sem_modo()
         d.apply_profile_mode(perfil.mode, profile=perfil, origin="autoswitch")
         return
-    if jeito == "com_cartao":
-        registro_de_mascaras().set_mask(MAC_P1, "dualsense")
     d.apply_profile_mode(
         ProfileModeConfig(kind="gamepad", gamepad_flavor=None, caminho="dualsense"),
         origin="launch",
@@ -136,7 +128,7 @@ class TestOJogoSemOpiniaoNaoHerdaAMascaraDoAnterior:
 
     @pytest.mark.parametrize("transporte", TRANSPORTES)
     @pytest.mark.parametrize("anterior", MASCARAS_DE_OUTRO_JOGO)
-    @pytest.mark.parametrize("jeito", ["com_cartao", "sem_cartao", "sem_modo"])
+    @pytest.mark.parametrize("jeito", ["sem_cartao", "sem_modo"])
     def test_o_p1_volta_ao_dualsense(self, transporte: str, anterior: str, jeito: str) -> None:
         d = _daemon(transporte)
         _jogo_que_opina(d, anterior)
@@ -172,11 +164,11 @@ class TestOsCartoesChegamDepoisDoModo:
     """MORDIDA: `reconciliar_as_mascaras` devolvendo `None` na primeira linha"""
 
     @pytest.mark.parametrize("transporte", TRANSPORTES)
-    def test_o_cartao_novo_refaz_o_boneco_do_p1(self, transporte: str) -> None:
+    def test_o_modo_novo_refaz_o_boneco_do_p1(self, transporte: str) -> None:
         d = _daemon(transporte)
         _jogo_que_opina(d, "xbox")
 
-        registro_de_mascaras().set_mask(MAC_P1, "dualsense")
+        d.config.gamepad_flavor = "dualsense"
         gp.reconciliar_as_mascaras(d)
 
         assert d._gamepad_device.flavor == "dualsense"
@@ -185,7 +177,7 @@ class TestOsCartoesChegamDepoisDoModo:
         """A R-04 inteira: ninguém recria o boneco na mão do usuário."""
         d = _daemon()
         _jogo_que_opina(d, "xbox")
-        registro_de_mascaras().set_mask(MAC_P1, "dualsense")
+        d.config.gamepad_flavor = "dualsense"
         d._game_signal = SimpleNamespace(authority="game")
         antes = d._gamepad_device
 
@@ -226,15 +218,12 @@ class TestOsCartoesChegamDepoisDoModo:
 class TestAMesaInteiraSegueAMesmaRegra:
     """MORDIDA: tirar `daemon.config.gamepad_flavor = key` do ramo"""
 
-    def test_o_p1_certo_pelo_cartao_nao_segura_a_sobra_na_sessao(self) -> None:
+    def test_o_jogo_sem_opiniao_nao_segura_a_sobra_na_sessao(self) -> None:
         d = _daemon()
-        registro_de_mascaras().set_mask(MAC_P1, "xbox")
         _jogo_que_opina(d, "xbox")
-        boneco = d._gamepad_device
 
         _o_proximo_nao_opina(d, "sem_cartao")
 
-        assert d._gamepad_device is boneco, "o cartão dela (xbox) é respeitado"
         assert d.config.gamepad_flavor == "dualsense", (
             "a sessão seguiu `xbox`, e todo secundário sem cartão herdaria o Xbox"
         )
@@ -251,7 +240,12 @@ class TestAMesaInteiraSegueAMesmaRegra:
         mesa._players[macs[-1]].vpad = _Pad("xbox", None)
         assert mesa.algum_boneco_ficou_para_tras()
 
-        registro_de_mascaras().set_mask(macs[-1], "xbox")
+        d.config.gamepad_flavor = "xbox"
+        assert mesa.algum_boneco_ficou_para_tras() is (secundarios > 1), (
+            "o modo único vale para todos: quem ficou no DualSense ficou para trás"
+        )
+        for mac in macs:
+            mesa._players[mac].vpad = _Pad("xbox", None)
         assert not mesa.algum_boneco_ficou_para_tras()
 
     def test_o_juiz_manda_o_co_op_refazer_so_sem_o_jogo_na_autoridade(self) -> None:

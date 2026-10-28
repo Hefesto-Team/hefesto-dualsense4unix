@@ -16,7 +16,6 @@ from hefesto_dualsense4unix.core.controller import Transport
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_COMUM
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
-from hefesto_dualsense4unix.daemon.subsystems.external_mask import registro_de_mascaras
 from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
@@ -110,7 +109,6 @@ def test_o_p1_que_nasce_no_meio_do_jogo_veste_o_comum(
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
     monkeypatch.setattr(gp, "_o_broker_atende", lambda _d: True)
     _uhid_de_pe(monkeypatch)
-    registro_de_mascaras().set_mask(MACS[quem], "dualsense")
     d = _daemon_do_p1(monkeypatch)
     d.controller = FakeController(transport=transporte)
     d.controller.primary_uniq = MACS[quem]

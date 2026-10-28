@@ -88,8 +88,6 @@ ESCREVEM = {
     "voltar_o_computador_ao_de_fabrica",
     "guardar_meus_efeitos",
     "machine_declare",
-    "set_mask",
-    "clear_mask",
     "freestyle_set",
     "save_freestyle_ligado",
     "dar_nome_ao_adaptador",

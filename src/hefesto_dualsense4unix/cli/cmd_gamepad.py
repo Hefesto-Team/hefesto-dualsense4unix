@@ -87,45 +87,23 @@ def cmd_status(
 
 @app.command("mask")
 def cmd_mask(
-    sabor: str | None = typer.Argument(
-        None,
+    sabor: str = typer.Argument(
+        ...,
         help=(
-            "A máscara que este controle veste para o jogo (xbox, dualsense, nintendo…). "
+            "O modo único de todos os controles: dualsense, xbox ou nintendo. "
             "O serviço recusa o nome que não conhece."
         ),
     ),
-    uniq: str = typer.Option(
-        ..., "--uniq", help="O controle (o MAC normalizado): a máscara é de UM aparelho."
-    ),
-    limpar: bool = typer.Option(
-        False, "--limpar", help="Sem máscara própria: o controle volta a herdar a do perfil."
-    ),
 ) -> None:
-    """Troca a máscara de UM controle: `gamepad mask xbox --uniq <endereço>`."""
-    if (sabor is None) == (not limpar):
-        console.print(
-            "[red]diga a máscara ou use --limpar[/red] — "
-            "`gamepad mask <sabor> --uniq <endereço>`."
-        )
-        raise typer.Exit(code=2)
-    result = chamar_o_daemon(
-        console, "gamepad.mask.set", {"uniq": uniq, "flavor": "" if limpar else sabor}
-    )
+    """Troca o modo único de todos os controles: `gamepad mask xbox`."""
+    result = chamar_o_daemon(console, "gamepad.mask.set", {"flavor": sabor})
     corpo = result if isinstance(result, dict) else {}
-    if corpo.get("motivo") == "aparelho_nao_vestiu":
+    if corpo.get("status") != "ok":
         console.print(
-            "[yellow]o controle não vestiu a máscara pedida; ficou a de antes[/yellow]"
+            "[yellow]o modo pedido não subiu; ficou o de antes[/yellow]"
         )
         raise typer.Exit(code=1)
-    flavor = corpo.get("flavor")
-    if flavor:
-        console.print(f"[green]máscara do controle:[/green] {flavor}")
-    else:
-        console.print("[green]máscara do controle:[/green] a do perfil")
-    if corpo.get("gravado") is False:
-        console.print(
-            "[dim]vale agora; o perfil não guardou a escolha[/dim]"
-        )
+    console.print(f"[green]modo de todos os controles:[/green] {corpo.get('flavor') or sabor}")
 
 
 __all__ = ["app"]

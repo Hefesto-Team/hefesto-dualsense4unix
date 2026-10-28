@@ -75,13 +75,6 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "grabado"
         ),
     ),
-    "mascara": ConsumidorPorUnidade(
-        funcao="apply_controller_mascaras",
-        chega_em=(
-            "set_mask(uniq) → mascara_efetiva(uniq) devolve a do perfil, e o "
-            "vpad daquela peça nasce (ou é recriado) com o VID/PID dela"
-        ),
-    ),
     "movimento": ConsumidorPorUnidade(
         funcao="_controllers_to_miras",
         chega_em=(
@@ -151,7 +144,6 @@ def test_a_regua_sabe_recusar() -> None:
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
         "analogicos",
         "ativacao",  # (noqa-acento)
-        "mascara",
         "mic",
         "movimento",
         "remapeamento",
@@ -278,35 +270,6 @@ def _prova_sensores(uniq: str) -> object:
         REGISTRO.limpar()
 
 
-def _prova_mascara(uniq: str) -> object:
-    """A máscara escrita para UMA peça vale só nela (MASCARA-NO-PERFIL-01)."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        _zerar_registro_de_mascaras,
-        mascara_efetiva,
-        registro_de_mascaras,
-    )
-
-    _zerar_registro_de_mascaras()
-    try:
-        gerente = ProfileManager(
-            controller=object(),  # type: ignore[arg-type]
-            store=_StoreSemTrava(),  # type: ignore[arg-type]
-        )
-        perfil = Profile(
-            name="uma_peca_so",
-            match=MatchAny(),
-            controllers={uniq: ControllerOverrides(mascara="xbox")},
-        )
-        gerente.apply_controller_mascaras(perfil)
-        return (
-            mascara_efetiva(uniq, "dualsense") == "xbox"
-            and mascara_efetiva("aa:bb:cc:00:00:ff", "dualsense") == "dualsense"
-        ) or None
-    finally:
-        registro_de_mascaras().clear_mask(uniq)
-        _zerar_registro_de_mascaras()
-
-
 def _prova_movimento(uniq: str) -> object:
     """A mira escrita para UMA peça vale só nela (A-MIRA-POR-MOVIMENTO-NA-TELA-01)."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
@@ -411,7 +374,6 @@ _PROVAS = {
     "speaker": _prova_speaker,
     "mic": _prova_mic,
     "sensores": _prova_sensores,
-    "mascara": _prova_mascara,
     "movimento": _prova_movimento,
     "remapeamento": _prova_remapeamento,
     "ativacao": _prova_ativacao,  # (noqa-acento)

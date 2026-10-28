@@ -313,7 +313,7 @@ def _o_ramo_do_pad(
 
 
 def _mascara_da_sessao(daemon: Any) -> str:
-    """A máscara do jogo que a sessão vale agora (a que os sem cartão herdam)."""
+    """A máscara do modo único que a sessão vale agora."""
     from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
 
     vale = getattr(getattr(daemon, "config", None), "gamepad_flavor", None)
@@ -321,7 +321,7 @@ def _mascara_da_sessao(daemon: Any) -> str:
 
 
 def _o_p1_vestiria(daemon: Any, flavor_do_jogo: str) -> str:
-    """A máscara que o boneco do P1 vestiria com `flavor_do_jogo`, cartão incluído."""
+    """A máscara que o boneco do P1 vestiria com `flavor_do_jogo` (a do modo único)."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
 
@@ -432,11 +432,11 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
     ela pedir, e é a que tira giroscópio, acelerômetro e touchpad do jogo. Um
     `dualsense` no arquivo não precisa de conserto — já é o default.
 
-    **E NENHUMA TELA ESCREVE `xbox` AQUI, medido em 21/09.** O chip de modo da
-    aba Jogar não manda `flavor` desde MODO-DE-CONEXAO-01 (13/09) e o chip do
-    CARTÃO usa `gamepad.mask.set`, que grava no registro por aparelho
-    (`controller_masks.json` — os quatro dela em `dualsense`). O único caminho
-    intencional é a CLI (`cli/cmd_gamepad.py:53`, com `--flavor`).
+    **QUEM ESCREVE `xbox` AQUI É A ESCOLHA DO USUÁRIO**: desde a
+    D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES o modo é um par (caminho, máscara),
+    e o escritor único (`Daemon.escolher_o_modo_unico`) leva a máscara junto, do chip,
+    do PS + L3, do PS + R3 e da CLI. O que esta migração devolve é só o valor de antes
+    da marca.
 
     **UMA VEZ, e não a cada boot**, pela marca `MARCA_DA_MASCARA_DEVOLVIDA`
     (O-MODO-XBOX-NAO-E-QUEDA-02, 27/09/2026). Até ali a docstring dizia que a
@@ -772,6 +772,14 @@ class Daemon:
             if mouse_scroll is not None:
                 self.config.mouse_scroll_speed = max(
                     _um.SCROLL_SPEED_MIN, min(_um.SCROLL_SPEED_MAX, int(mouse_scroll)))
+        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
+            o_arquivo_de_mascaras_vira_o_modo,
+        )
+        from hefesto_dualsense4unix.profiles.manager import nome_do_perfil_que_grava
+        with contextlib.suppress(Exception):
+            o_arquivo_de_mascaras_vira_o_modo(
+                nome_do_perfil_que_grava(getattr(self.store, "active_profile", None))
+            )
         from hefesto_dualsense4unix.utils.session import load_gamepad_emulation
         gp_enabled, gp_flavor = load_gamepad_emulation()
         if gp_enabled and not self._native_mode:
@@ -1729,6 +1737,7 @@ class Daemon:
                 self.gravar_o_modo_escolhido(
                     "gamepad",
                     caminho=caminho if caminho_e_escolha else None,
+                    mascara=flavor,
                     porta=grava_o_modo,
                 )
 
@@ -1768,6 +1777,7 @@ class Daemon:
         kind: str,
         *,
         caminho: str | None = None,
+        mascara: str | None = None,
         porta: PortaQueGrava,
         mouse_ligado: bool | None = None,
     ) -> str | None:
@@ -1785,8 +1795,9 @@ class Daemon:
         O perfil é o de :func:`manager.nome_do_perfil_que_grava` (o ativo: com o
         Freestyle ligado, o Freestyle; desligado, o do jogo que vale ou a
         escolha do usuário; «sem escolha», nenhum), e a regra da seção é a do dono,
-        :func:`manager.secao_do_modo_com_o_caminho`: o modo não escreve a
-        máscara, e nada mudou, nada se grava. `porta` vai ao `profile_salvo`.
+        :func:`manager.secao_do_modo_com_o_caminho`: o caminho e a máscara vão em
+        par (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES), e nada mudou, nada se
+        grava. `porta` vai ao `profile_salvo`.
 
         `mouse_ligado` (O-MOUSE-SEGUE-A-NAVEGACAO-01): a entrada na Navegação
         grava, na MESMA gravação, o ``mouse.enabled`` que ela deixou de pé,
@@ -1823,6 +1834,7 @@ class Daemon:
                 nome,
                 kind=kind,
                 caminho=caminho,
+                mascara=mascara,
                 porta=porta,
                 mouse_ligado=mouse_ligado,
                 velocidades=velocidades,
@@ -1836,49 +1848,35 @@ class Daemon:
             return None
         return getattr(salvo, "name", None)
 
-    def vestir_a_mascara_do_aparelho(self, uniq: str) -> str:
-        """A máscara que o cartão acabou de gravar passa a valer COM O VPAD DE PÉ.
+    def escolher_o_modo_unico(self, modo: object, *, porta: PortaQueGrava) -> str:
+        """O modo único de TODOS os controles: o escritor só, do IPC, do PS + L3 e do PS + R3.
 
-        MODO-DE-CONEXAO-01, §D.6 (13/09/2026). Medido pelo estudo da sprint: o
-        `gamepad.mask.set` gravava o registro e o perfil e **não recriava o
-        vpad** — o cartão acendia «Xbox 360» e o jogo continuava recebendo o
-        DualSense; e reativar o perfil também não recriava, porque
-        `apply_profile_mode` compara o `mode.gamepad_flavor`, não a máscara
-        efetiva. Nada aplicava a máscara do cartão com o jogo aberto, e a regra
-        de produto é *"eles precisam funcionar durante o jogo"*.
-
-        O ATO MORA AQUI, e o handler só o chama: a máscara é gesto do usuário, logo
-        `origin="manual"` — a origem que a trava R-04 deixa passar com o jogo
-        aberto. O P1 é o vpad desta classe (`start_gamepad_emulation_desfecho`,
-        que compara a máscara efetiva e só recria se ela mudou); os outros são
-        do co-op, e o ciclo FORÇADO recria só quem ficou para trás
-        (`external_mask.vpad_ficou_para_tras`).
-
-        Devolve o desfecho `EMU_*` do P1, ``"coop"`` para um secundário, ou
-        ``""`` quando não há vpad de pé — e aí nada é ligado: escolher máscara
-        não liga o Hefesto.
+        D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES. O modo é o par (caminho, máscara) de
+        :func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_do_modo`: DualSense é o
+        caminho ``dualsense`` com a máscara ``dualsense`` (``uhid``), Xbox é o ``xbox`` com o
+        ``xbox``, Nintendo Pro é a máscara ``nintendo`` sem caminho (``uinput``). O pedido
+        entra pelo :meth:`set_gamepad_emulation_desfecho` com ``origin="manual"`` (a origem
+        que a trava do jogo aberto deixa passar), o P1 recria quando o par mudou, o co-op
+        recria os secundários que ficaram para trás, e o par vai ao perfil ativo pela
+        ``porta``. Escolher o modo ENTRA no modo: o pad liga, como o chip e o PS + R3 sempre
+        fizeram. Modo desconhecido levanta ``ValueError``. Devolve o desfecho ``EMU_*``.
         """
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            mesma_identidade,
+        from hefesto_dualsense4unix.integrations.virtual_pad import (
+            MODOS,
+            normalizar_modo,
+            par_do_modo,
         )
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import primary_identity
 
-        if not (
-            self.config.gamepad_emulation_enabled and self._gamepad_device is not None
-        ):
-            return ""
-        if mesma_identidade(uniq, primary_identity(self)):
-            return self.set_gamepad_emulation_desfecho(
-                True,
-                origin="manual",
-                caminho=_caminho_do_dono(self, "mascara_do_cartao"),
-                caminho_e_escolha=False,
+        alvo = normalizar_modo(modo)
+        if alvo is None:
+            raise ValueError(
+                f"modo desconhecido {modo!r} — aceito: {', '.join(MODOS)}"
             )
-        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
-
-        with contextlib.suppress(Exception):
-            get_coop_manager(self).sync(force=True, origem="manual")
-        return "coop"
+        caminho, mascara = par_do_modo(alvo)
+        logger.info("modo_unico_pedido", modo=alvo, porta=porta)
+        return self.set_gamepad_emulation_desfecho(
+            True, mascara, origin="manual", caminho=caminho, grava_o_modo=porta
+        )
 
     def set_coop_enabled(
         self,

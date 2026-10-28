@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**69 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **29** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**69 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **28** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -81,41 +81,41 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mouse.emulation.set` | `daemon/ipc_handlers.py:4412` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
 | `mouse.emulation.restore` | `daemon/ipc_handlers.py:4471` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | **não** |
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:4488` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click. | sim |
-| `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6037` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
+| `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6030` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
 | `keyboard.emulation.set` | `daemon/ipc_handlers.py:4691` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
 | `desktop.status.set` | `daemon/ipc_handlers.py:4518` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
 | `navegacao.interna.set` | `daemon/ipc_handlers.py:4566` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06). | sim |
 | `navegacao.foco` | `daemon/ipc_handlers.py:4590` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | sim |
 | `navegacao.big_picture.set` | `daemon/ipc_handlers.py:4668` (`_handle_navegacao_big_picture_set`) | Liga ou desliga o Modo Big Picture na Steam. | sim |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:4766` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
-| `gamepad.mask.set` | `daemon/ipc_handlers.py:4719` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
-| `coop.set` | `daemon/ipc_handlers.py:4852` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
-| `coop.sync` | `daemon/ipc_handlers.py:4882` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
-| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:4898` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:4747` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
+| `gamepad.mask.set` | `daemon/ipc_handlers.py:4719` (`_handle_gamepad_mask_set`) | O MODO ÚNICO de todos os controles: `gamepad.mask.set {flavor}`. | sim |
+| `coop.set` | `daemon/ipc_handlers.py:4845` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
+| `coop.sync` | `daemon/ipc_handlers.py:4875` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
+| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:4891` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
 | `led.player_set` | `daemon/ipc_handlers.py:936` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
 | `led.player_brightness_set` | `daemon/ipc_handlers.py:966` (`_handle_led_player_brightness_set`) | O brilho das cinco luzes de número: Fraco, Médio ou Forte. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1049` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos). | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1206` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle. | sim |
-| `machine.declare` | `daemon/ipc_handlers.py:4910` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:4974` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:4982` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
-| `mods.agora` | `daemon/ipc_handlers.py:5000` (`_handle_mods_agora`) | A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` publicado. | **não** |
-| `mods.parar_tudo` | `daemon/ipc_handlers.py:5015` (`_handle_mods_parar_tudo`) | O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``. | **não** |
-| `mods.jogos` | `daemon/ipc_handlers.py:5040` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado. | **não** |
-| `mods.acao` | `daemon/ipc_handlers.py:6069` (`_handle_mods_acao`) | O clique numa ação da janela: ``extensao.acao`` vai só à extensão ``{mod}``. | **não** |
-| `mods.livre` | `daemon/ipc_handlers.py:6096` (`_handle_mods_livre`) | O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``. | **não** |
-| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5345` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
-| `radio.mover` | `daemon/ipc_handlers.py:5375` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:5468` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
-| `haptica.testar` | `daemon/ipc_handlers.py:5676` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
-| `radio.busca.set` | `daemon/ipc_handlers.py:5707` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
-| `radio.dispensar` | `daemon/ipc_handlers.py:5722` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
-| `motion.calibrate` | `daemon/ipc_handlers.py:5803` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
-| `perfil.ativacao.set` | `daemon/ipc_handlers.py:5977` (`_handle_perfil_ativacao_set`) | `perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça. | **não** |
-| `perfil.analogicos.set` | `daemon/ipc_handlers.py:5982` (`_handle_perfil_analogicos_set`) | `perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça. | **não** |
-| `perfil.cursor.set` | `daemon/ipc_handlers.py:5987` (`_handle_perfil_cursor_set`) | `perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor. | **não** |
-| `sequencia.gravar` | `daemon/ipc_handlers.py:5992` (`_handle_sequencia_gravar`) | `sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos. | **não** |
-| `sequencia.tocar` | `daemon/ipc_handlers.py:6013` (`_handle_sequencia_tocar`) | `sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra. | **não** |
+| `machine.declare` | `daemon/ipc_handlers.py:4903` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:4967` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:4975` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
+| `mods.agora` | `daemon/ipc_handlers.py:4993` (`_handle_mods_agora`) | A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` publicado. | **não** |
+| `mods.parar_tudo` | `daemon/ipc_handlers.py:5008` (`_handle_mods_parar_tudo`) | O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``. | **não** |
+| `mods.jogos` | `daemon/ipc_handlers.py:5033` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado. | **não** |
+| `mods.acao` | `daemon/ipc_handlers.py:6062` (`_handle_mods_acao`) | O clique numa ação da janela: ``extensao.acao`` vai só à extensão ``{mod}``. | **não** |
+| `mods.livre` | `daemon/ipc_handlers.py:6089` (`_handle_mods_livre`) | O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``. | **não** |
+| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5338` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.mover` | `daemon/ipc_handlers.py:5368` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
+| `mira.set` | `daemon/ipc_handlers.py:5461` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `haptica.testar` | `daemon/ipc_handlers.py:5669` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
+| `radio.busca.set` | `daemon/ipc_handlers.py:5700` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
+| `radio.dispensar` | `daemon/ipc_handlers.py:5715` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
+| `motion.calibrate` | `daemon/ipc_handlers.py:5796` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
+| `perfil.ativacao.set` | `daemon/ipc_handlers.py:5970` (`_handle_perfil_ativacao_set`) | `perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça. | **não** |
+| `perfil.analogicos.set` | `daemon/ipc_handlers.py:5975` (`_handle_perfil_analogicos_set`) | `perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça. | **não** |
+| `perfil.cursor.set` | `daemon/ipc_handlers.py:5980` (`_handle_perfil_cursor_set`) | `perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor. | **não** |
+| `sequencia.gravar` | `daemon/ipc_handlers.py:5985` (`_handle_sequencia_gravar`) | `sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos. | **não** |
+| `sequencia.tocar` | `daemon/ipc_handlers.py:6006` (`_handle_sequencia_tocar`) | `sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra. | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -794,6 +794,19 @@ O fim chega pelo `state_full`: cada controle traz `zero: {estado, guardado}`, co
 `estado` em `medindo`, `pronto` (o zero guardado, nesta medida ou numa de antes),
 `mexeu` (a medida não guardou nada) ou `parado` (sem zero e sem medida nesta sessão,
 ou a medida sem leitura), e `guardado` dizendo se há zero deste controle; `zero` é `null` para o controle sem endereço.
+
+### `gamepad.mask.set` — o modo único, para todos os controles
+
+| Método             | Parâmetros                         | Retorno |
+|--------------------|------------------------------------|---------|
+| `gamepad.mask.set` | `{flavor: "dualsense" \| "xbox" \| "nintendo", uniq?: str}` | o do `gamepad.emulation.set`; `motivo: "aparelho_nao_vestiu"` quando o modo não subiu |
+
+Desde 27/10/2026 (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES) o `flavor` é o modo
+de TODOS os controles, gravado no perfil ativo pelo mesmo escritor do PS + L3 e do chip
+de modo; o `uniq` não escolhe controle. Modo vazio ou desconhecido é erro de parâmetro.
+O `gamepad.emulation.set` manual com `flavor` ou `caminho` passa pelo mesmo escritor, e
+o par (caminho, máscara) se grava junto. O `controller_masks.json` de antes vira o modo
+no boot e sai do disco.
 
 ## Perfil com seção `mouse`
 

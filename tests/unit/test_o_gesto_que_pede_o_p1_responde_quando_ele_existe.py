@@ -4,12 +4,16 @@ A bancada é a do P1 que nasce pelo fio (o `Daemon` real, o `CoopManager` real, 
 nascimento e o broker de mentira de 2 s), com o P1 dono de um endereço forjado, para que
 a máscara dele se escolha. Três pontas:
 
-1. o `gamepad.mask.set` (e o PS + L3, pela mesma porta) responde depois do pad, e o
-   registro volta ao de antes quando o pad não nasce;
+1. o `gamepad.mask.set` (e o PS + L3, pelo mesmo escritor) responde depois do pad, e o
+   perfil só recebe o modo que ficou de pé;
 2. o pedido igual em voo se junta ao primeiro, e o que segue o pad roda uma vez, depois;
 3. o teto da interface dos dois métodos sai do prazo do daemon, de uma constante só.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
+
+NOTA DATADA, 27/10/2026 (O-MODO-UNICO-VALE-PARA-TODOS-OS-CONTROLES-01): a máscara é o
+modo único. Saíram o registro por aparelho e a escolha que esperava no registro enquanto
+outro P1 nascia; o que se mede é o par que o perfil recebe pelo escritor único.
 """
 
 from __future__ import annotations
@@ -30,11 +34,9 @@ from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
-from hefesto_dualsense4unix.profiles import manager as perfis
 from hefesto_dualsense4unix.utils import xdg_paths
 from tests.unit.test_o_p1_que_nasce_fora_do_tique_nasce_no_fio_de_nascimento import (
     _BROKER_S,
-    _NA_HORA_S,
     _TIQUE_S,
     _ate,
     _Ipc,
@@ -48,16 +50,13 @@ __all__ = ["mesa"]
 
 _P1 = "aabbcc000001"
 _PEDIDAS = ("xbox", "nintendo")
-_ANTES = (None, "dualsense")
 
 
 @pytest.fixture(autouse=True)
 def _lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """O registro de máscaras num diretório de mentira, novo a cada teste."""
+    """O `config_dir` num diretório de mentira, novo a cada teste."""
     monkeypatch.setattr(xdg_paths, "config_dir", lambda ensure=False: tmp_path)
-    em._zerar_registro_de_mascaras()
     yield
-    em._zerar_registro_de_mascaras()
 
 
 @pytest.fixture
@@ -76,11 +75,13 @@ def bancada(mesa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch) -> SimpleNam
     monkeypatch.setattr(vp, "make_virtual_pad", _fabrica)
     gravadas: list[tuple[str | None, Any]] = []
 
-    def _gravar(nome: Any, *, chave: Any, mascara: Any) -> tuple[Any, bool, Any]:
-        gravadas.append((mascara, mesa.daemon._gamepad_device))
-        return "Bancada", True, None
+    def _gravar(modo: str, **kw: Any) -> str:
+        pad = mesa.daemon._gamepad_device
+        mesa.gravados.append((modo, pad))
+        gravadas.append((kw.get("mascara"), pad))
+        return "Bancada"
 
-    monkeypatch.setattr(perfis, "gravar_a_mascara_no_perfil_ativo", _gravar)
+    monkeypatch.setattr(mesa.daemon, "gravar_o_modo_escolhido", _gravar)
     tabelas: list[Any] = []
     monkeypatch.setattr(mesa.daemon, "_devolver_as_tabelas_do_perfil",
                         lambda: tabelas.append(mesa.daemon._gamepad_device))
@@ -95,11 +96,6 @@ def _o_p1_novo(b: SimpleNamespace) -> Any:
     novo = b.m.estado.pads.get("None")
     atual = b.m.daemon._gamepad_device
     return atual if atual is not None and atual is novo else None
-
-
-def _antes_no_registro(antes: str | None) -> None:
-    if antes is not None:
-        em.registro_de_mascaras().set_mask(_P1, antes)
 
 
 def _no_laco(
@@ -132,95 +128,47 @@ def _no_laco(
 def _mascara_pela_ipc(b: SimpleNamespace, flavor: str) -> tuple[Any, float]:
     ipc = _Ipc(b.m.daemon)
     cast(Any, ipc).store = None
-    return _no_laco(b, lambda: ipc._handle_gamepad_mask_set({"uniq": _P1, "flavor": flavor}))
+    return _no_laco(b, lambda: ipc._handle_gamepad_mask_set({"flavor": flavor}))
 
 
-@pytest.mark.parametrize("antes", _ANTES, ids=["sem-escolha", "escolhida"])
 @pytest.mark.parametrize("pedida", _PEDIDAS)
-def test_a_mascara_pela_ipc_diz_falhou_e_volta_a_de_antes(
-    bancada: SimpleNamespace, pedida: str, antes: str | None,
+def test_o_modo_pela_ipc_diz_falhou_e_nao_grava(
+    bancada: SimpleNamespace, pedida: str,
 ) -> None:
-    """A fábrica do P1 demora e falha: a resposta é «falhou», e o registro volta."""
-    _antes_no_registro(antes)
+    """A fábrica do P1 demora e falha: a resposta é «falhou», e o perfil não muda."""
     bancada.m.estado.falhar = True
     resposta, gasto = _mascara_pela_ipc(bancada, pedida)
-    assert gasto >= _BROKER_S, f"a máscara respondeu antes do desfecho ({gasto * 1000:.0f} ms)"
-    assert resposta["vestiu"] == gp.EMU_FALHOU, resposta
-    assert resposta["motivo"] == "aparelho_nao_vestiu" and resposta["mudou"] is False, resposta
-    assert em.registro_de_mascaras().mask_for(_P1) == antes, "a máscara não voltou à de antes"
-    assert bancada.gravadas == [], "o perfil guardou a máscara que não vestiu"
+    assert gasto >= _BROKER_S, f"o modo respondeu antes do desfecho ({gasto * 1000:.0f} ms)"
+    assert resposta["status"] == "failed" and resposta["enabled"] is False, resposta
+    assert resposta["motivo"] == "aparelho_nao_vestiu", resposta
+    assert bancada.gravadas == [], "o perfil guardou o modo que não vestiu"
 
 
 @pytest.mark.parametrize("pedida", _PEDIDAS)
-def test_a_mascara_pela_ipc_responde_depois_do_pad_vestido(
+def test_o_modo_pela_ipc_responde_depois_do_pad_vestido(
     bancada: SimpleNamespace, pedida: str,
 ) -> None:
     resposta, gasto = _mascara_pela_ipc(bancada, pedida)
     novo = _o_p1_novo(bancada)
-    assert novo is not None and novo.flavor == pedida, "o P1 não nasceu na máscara pedida"
-    assert gasto >= _BROKER_S, f"a máscara respondeu antes do pad ({gasto * 1000:.0f} ms)"
-    assert resposta["vestiu"] == gp.EMU_APLICADO and resposta["mudou"] is True, resposta
+    assert novo is not None and novo.flavor == pedida, "o P1 não nasceu no modo pedido"
+    assert gasto >= _BROKER_S, f"o modo respondeu antes do pad ({gasto * 1000:.0f} ms)"
+    assert resposta["status"] == "ok" and resposta["flavor"] == pedida, resposta
     assert bancada.gravadas == [(pedida, novo)], (
-        "o perfil guarda a máscara uma vez, depois de o pad existir", bancada.gravadas)
+        "o perfil guarda o modo uma vez, depois de o pad existir", bancada.gravadas)
 
 
-@pytest.mark.parametrize("antes", _ANTES, ids=["sem-escolha", "escolhida"])
 @pytest.mark.parametrize("falha", [False, True], ids=["nasce", "falha"])
-def test_o_ps_l3_confere_e_grava_quando_o_p1_existe(
-    bancada: SimpleNamespace, falha: bool, antes: str | None,
-) -> None:
-    """O gesto no tique (sem esperar): o registro e o perfil se decidem no desfecho."""
-    _antes_no_registro(antes)
+def test_o_ps_l3_grava_quando_o_p1_existe(bancada: SimpleNamespace, falha: bool) -> None:
+    """O gesto espera o desfecho no laço, e o perfil só recebe o modo que ficou de pé."""
     bancada.m.estado.falhar = falha
-    inicio = time.monotonic()
-    resposta = em.escolher_a_mascara(bancada.m.daemon, _P1, "xbox")
-    gasto = time.monotonic() - inicio
-    assert gasto < _NA_HORA_S, f"o gesto segurou o tique ({gasto * 1000:.0f} ms)"
-    assert resposta["vestiu"] == gp.EMU_APLICADO, resposta
-    assert bancada.gravadas == [], "o perfil guardou a máscara antes de o P1 existir"
-    _ate(bancada.m, lambda: gp.o_p1_que_nasce(bancada.m.daemon) is None)
+    _no_laco(bancada, hotkey.build_next_mask_callback(bancada.m.daemon))
     _tique(bancada.m)
     if falha:
-        assert em.registro_de_mascaras().mask_for(_P1) == antes, (
-            "a máscara que não vestiu ficou no registro")
-        assert bancada.gravadas == []
+        assert bancada.gravadas == [], "o modo que não vestiu foi ao perfil"
     else:
         novo = _o_p1_novo(bancada)
         assert novo is not None and novo.flavor == "xbox"
-        assert em.registro_de_mascaras().mask_for(_P1) == "xbox"
         assert bancada.gravadas == [("xbox", novo)], bancada.gravadas
-
-
-def test_a_mascara_escolhida_com_outro_p1_nascendo_fica_e_o_pad_a_veste(
-    bancada: SimpleNamespace,
-) -> None:
-    """O P1 de outro pedido nasce na máscara de antes, e a escolha chega no meio: ela não
-    se confere por esse pad, fica no registro e no perfil, e a reconciliação a veste.
-
-    Mordida: deixe o `_o_p1_que_veste` devolver o pedido em voo sem olhar a máscara dele,
-    e o pad de antes «recusa» a escolha, que sai do registro.
-    """
-    bancada.m.daemon._gamepad_device = None
-    bancada.m.daemon.config.gamepad_emulation_enabled = False
-    ipc = _Ipc(bancada.m.daemon)
-    cast(Any, ipc).store = None
-
-    async def _ligar_e_escolher() -> Any:
-        ligar = asyncio.ensure_future(ipc._handle_gamepad_emulation_set(
-            {"enabled": True, "origin": "manual"}))
-        await asyncio.sleep(4 * _TIQUE_S)
-        assert gp.o_p1_que_nasce(bancada.m.daemon) is not None, "o P1 não está nascendo"
-        resposta = await ipc._handle_gamepad_mask_set({"uniq": _P1, "flavor": "xbox"})
-        await ligar
-        return resposta
-
-    resposta, _gasto = _no_laco(bancada, _ligar_e_escolher)
-    assert resposta["motivo"] != "aparelho_nao_vestiu", resposta
-    assert em.registro_de_mascaras().mask_for(_P1) == "xbox", "a escolha saiu do registro"
-    assert [m for m, _pad in bancada.gravadas] == ["xbox"], bancada.gravadas
-    _ate(bancada.m, lambda: _o_p1_novo(bancada) is not None)
-    gp.reconciliar_as_mascaras(bancada.m.daemon)
-    _ate(bancada.m, lambda: getattr(_o_p1_novo(bancada), "flavor", None) == "xbox")
 
 
 @pytest.mark.parametrize("ponte", [hotkey.PONTE_XBOX, hotkey.PONTE_DUALSENSE])

@@ -274,7 +274,7 @@ def armar_o_ato_do_daemon(
         Daemon.set_gamepad_emulation_desfecho, d
     )
     d._devolver_as_tabelas_do_perfil = lambda: None
-    d.vestir_a_mascara_do_aparelho = Daemon.vestir_a_mascara_do_aparelho.__get__(d)
+    d.escolher_o_modo_unico = Daemon.escolher_o_modo_unico.__get__(d)
     d.config.gamepad_emulation_enabled = True
     dubles: dict[str, Any] = {
         "_set_controller_grab": lambda _d, _grab: None,
@@ -306,6 +306,7 @@ def armar_o_ato_do_daemon(
         kind: str,
         *,
         caminho: str | None = None,
+        mascara: str | None = None,
         porta: str,
         mouse_ligado: bool | None = None,
     ) -> str | None:
@@ -313,7 +314,6 @@ def armar_o_ato_do_daemon(
         return None
 
     d.gravar_o_modo_escolhido = _gravar_o_modo_escolhido
-    monkeypatch.setattr(hotkey, "_PASSO_DA_ESPERA_DO_VPAD_S", 0.0)
     return anotado
 
 
@@ -609,8 +609,14 @@ class TestAVagaEDoBackend:
 
 
 @pytest.mark.usefixtures("config_isolado")
-class TestOPsL3AndaOCartaoDeQuemSegura:
-    """Na espera, o PS + L3 do P2 anda o cartão DELE — o do P1 ausente não se mexe."""
+class TestOPsL3NaEsperaAndaOModoDeTodos:
+    """Na espera, o PS + L3 do P2 anda o modo único de TODOS, e o posto segue de pé.
+
+    NOTA DATADA, 27/10/2026 (O-MODO-UNICO-VALE-PARA-TODOS-OS-CONTROLES-01): o gesto andava
+    o cartão de quem segurava os atalhos, e a prova era o vpad desse cartão. Desde a
+    D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES o modo é um só: a prova é o modo do posto
+    e de cada secundário, e a espera não cai.
+    """
 
     @staticmethod
     def _preparar(bancada: MesaDosAtalhos, monkeypatch: pytest.MonkeyPatch) -> list[Any]:
@@ -618,97 +624,61 @@ class TestOPsL3AndaOCartaoDeQuemSegura:
         return luz
 
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
-    def test_o_ps_l3_do_p2_na_espera_troca_a_mascara_dele(
+    def test_o_ps_l3_do_p2_na_espera_anda_o_modo_de_todos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
-        """A luz diz o que o aparelho fez: o vpad do P2 volta num tique seguinte."""
         bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
         luz = self._preparar(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
-        posto = bancada.daemon._gamepad_device
-        vpad_do_p3 = bancada.vpad_de(P3)
         assert em.mascara_vestida(bancada.daemon, P2) == "dualsense"
 
         _gesto_com_o_laco(bancada, build_next_mask_callback(bancada.daemon))  # type: ignore[arg-type]
-        bancada.tique()
+        for _ in range(3):
+            bancada.tique(0.0)
 
-        assert em.mascara_vestida(bancada.daemon, P2) == "xbox", "a máscara do P2 não trocou"
-        assert em.registro_de_mascaras().mask_for(P1) is None, "o cartão do P1 ausente andou"
-        assert bancada.daemon._gamepad_device is posto and posto.vivo, (
-            "o vpad parado no lugar do P1 foi recriado com o jogo aberto"
-        )
-        assert bancada.vpad_de(P3) is vpad_do_p3, "o gesto do P2 recriou o P3"
-        assert luz == [("pulsos", len(hotkey._PULSOS_DE_RISCO)), ("piscada", "mascara:xbox")], (
-            f"a luz disse {luz}: a troca pegou, e os pulsos de falha a negam"
-        )
-        assert bancada.dono_do_vpad_do_p1() is None
-        assert bancada.a_tela() == {P2: 2, P3: 3}
+        assert getattr(bancada.daemon._gamepad_device, "flavor", None) == "xbox"
+        assert em.mascara_vestida(bancada.daemon, P2) == "xbox", "o P2 ficou no modo velho"
+        assert em.mascara_vestida(bancada.daemon, P3) == "xbox", "o P3 ficou no modo velho"
+        assert ("piscada", "xbox") in luz, f"a luz disse {luz}"
+        assert ("pulsos", len(hotkey._pulsos_de_falha())) not in luz
+        assert bancada.vaga(), "o PS + L3 do P2 soltou o posto que espera o P1"
+        assert bancada.dono_do_vpad_do_p1() is None, "o P2 passou a dirigir o boneco 1"
         bancada.o_jogo_segue_a_tela()
 
-    @pytest.mark.parametrize("transporte", list(TRANSPORTES))
-    def test_o_ps_l3_do_p2_anda_o_ciclo_dele_e_nao_o_do_p1(
-        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
+    def test_tres_apertos_do_p2_andam_o_ciclo_inteiro(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
-        """Três apertos do P2 na espera: o ciclo parte da máscara DELE a cada vez."""
-        bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
+        bancada = montar_atalhos(monkeypatch, kernel, 3)
         luz = self._preparar(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
-        posto = bancada.daemon._gamepad_device
-        vpad_do_p3 = bancada.vpad_de(P3)
 
         vestiu = []
         for _ in range(3):
             _gesto_com_o_laco(bancada, build_next_mask_callback(bancada.daemon))  # type: ignore[arg-type]
-            bancada.tique(0.0)
+            for _ in range(3):
+                bancada.tique(0.0)
             vestiu.append(em.mascara_vestida(bancada.daemon, P2))
 
-        assert vestiu == ["xbox", "nintendo", "dualsense"], f"o ciclo do P2 andou {vestiu}"
+        assert vestiu == ["xbox", "nintendo", "dualsense"], f"o ciclo andou {vestiu}"
         assert [modo for tipo, modo in luz if tipo == "piscada"] == [
-            "mascara:xbox", "mascara:nintendo", "mascara:dualsense"
+            "xbox", "nintendo", "dualsense"
         ]
         assert ("pulsos", len(hotkey._pulsos_de_falha())) not in luz
-        assert em.registro_de_mascaras().mask_for(P1) is None, "o cartão do P1 ausente andou"
-        assert bancada.daemon._gamepad_device is posto and posto.vivo
-        assert bancada.vpad_de(P3) is vpad_do_p3, "os gestos do P2 recriaram o P3"
-        bancada.o_jogo_segue_a_tela()
+        assert bancada.vaga()
 
-    def test_o_ps_l3_do_p2_que_nao_volta_da_os_pulsos_de_falha(
+    def test_com_todos_na_mesa_o_ps_l3_pede_o_modo_uma_vez(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
-        """A prova é o vpad DELE: o do posto de pé não responde pelo do P2."""
         bancada = montar_atalhos(monkeypatch, kernel, 3)
         luz = self._preparar(bancada, monkeypatch)
-        monkeypatch.setattr(hotkey, "_ESPERA_DO_VPAD_DO_COOP_S", 0.05)
-        _fora_dentro_do_prazo(bancada, P1)
-        bancada.mesa.grab_recusado.add(P2)  # type: ignore[attr-defined]
-
-        _gesto_com_o_laco(bancada, build_next_mask_callback(bancada.daemon))  # type: ignore[arg-type]
-
-        assert em.mascara_vestida(bancada.daemon, P2) is None, "premissa: o P2 não voltou"
-        assert not any(tipo == "piscada" for tipo, _ in luz), f"a luz disse que trocou: {luz}"
-        assert luz[-1] == ("pulsos", len(hotkey._pulsos_de_falha())), luz
-
-    def test_a_espera_cobre_o_prazo_da_calibracao_do_co_op(self) -> None:
-        """O vpad que volta mais tarde é o que espera a calibração: a prova espera mais."""
-        from hefesto_dualsense4unix.daemon.subsystems import coop
-
-        assert hotkey._ESPERA_DO_VPAD_DO_COOP_S > coop._CALIB_PRAZO_S
-
-    def test_com_todos_na_mesa_o_ps_l3_anda_o_cartao_do_p1(
-        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
-    ) -> None:
-        """O contrapeso: fora da espera, quem segura é o P1, e é o cartão dele."""
-        bancada = montar_atalhos(monkeypatch, kernel, 3)
-        luz = self._preparar(bancada, monkeypatch)
-        escolhas: list[str] = []
-        real = em.escolher_a_mascara
-        monkeypatch.setattr(
-            em, "escolher_a_mascara",
-            lambda d, uniq, alvo, **kw: escolhas.append(uniq) or real(d, uniq, alvo, **kw),
+        escolhas: list[tuple[str, str]] = []
+        real = bancada.daemon.escolher_o_modo_unico
+        bancada.daemon.escolher_o_modo_unico = (  # type: ignore[attr-defined]
+            lambda modo, *, porta: escolhas.append((modo, porta)) or real(modo, porta=porta)
         )
         _gesto_com_o_laco(bancada, build_next_mask_callback(bancada.daemon))  # type: ignore[arg-type]
-        assert escolhas == [P1]
-        assert ("piscada", "mascara:xbox") in luz
+        assert escolhas == [("xbox", "controle")]
+        assert ("piscada", "xbox") in luz
 
 
 class _OPostoSoltouNoMeioDoAtoError(AssertionError):
@@ -773,7 +743,6 @@ class TestOPsR3DoP2TrocaOModo:
         bancada = montar_atalhos(monkeypatch, kernel, quantos)
         armar_o_ato_do_daemon(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
-        monkeypatch.setattr(hotkey, "_ESPERA_DO_VPAD_DO_COOP_S", 0.0)
         asyncio.run(gesto(bancada.daemon)())
         assert em.mascara_vestida(bancada.daemon, P2) is None, "premissa: o P2 renasce"
         observar_os_atalhos(bancada.daemon, evdev_buttons_once(bancada.daemon), now=0.0)

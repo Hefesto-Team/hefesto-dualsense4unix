@@ -81,12 +81,13 @@ def test_a_escolha_da_mascara_persiste_e_vale_na_criacao_do_vpad() -> None:
     """As duas pontas do caminho que a queixa de uso supõe quebrado."""
     from hefesto_dualsense4unix.daemon.subsystems import external_mask
 
-    assert hasattr(external_mask.registro_de_mascaras(), "set_mask")
+    assert callable(external_mask.o_arquivo_de_mascaras_vira_o_modo), (
+        "a escolha de antes do modo único perdeu quem a leva ao modo")
     fonte = (RAIZ / "src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py"
              ).read_text(encoding="utf-8")
     assert "mascara_efetiva(" in fonte, (
         "a criação do gamepad virtual deixou de consultar `mascara_efetiva` — a "
-        "escolha por aparelho parou de valer, e a ressalva da tela passou a "
+        "escolha do modo parou de valer, e a ressalva da tela passou a "
         "prometer o que não acontece")
 
 

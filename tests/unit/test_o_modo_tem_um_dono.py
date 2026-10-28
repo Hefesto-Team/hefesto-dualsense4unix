@@ -118,7 +118,6 @@ class _Daemon:
         for nome in (
             "set_gamepad_emulation",
             "set_gamepad_emulation_desfecho",
-            "vestir_a_mascara_do_aparelho",
             "aplicar_gamepad_para_multiplos_controles",
             "_log_gamepad_multi",
             "_restore_emulation_from_stash",
@@ -163,7 +162,7 @@ def _dublar_a_borda(monkeypatch: pytest.MonkeyPatch, nascidos: list[Any]) -> Non
 
 @pytest.fixture
 def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """A borda dublada; o registro de máscaras zerado."""
+    """A borda dublada; o arquivo de máscaras de antes fora da casa."""
     _dublar_a_borda(monkeypatch, [])
     monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)
     monkeypatch.setattr(coop_mod, "numero_do_nome_do_primario", lambda d, fallback=1: 1)
@@ -173,21 +172,19 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     )
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda *a, **k: None)
     monkeypatch.setattr(session, "load_gamepad_preference", lambda: (None, None))
-    em._zerar_registro_de_mascaras()
-    (xdg_paths.config_dir(ensure=True) / "controller_masks.json").unlink(missing_ok=True)
+    (xdg_paths.config_dir(ensure=True) / em.ARQUIVO_DE_MASCARAS_DE_ANTES).unlink(missing_ok=True)
     yield
-    em._zerar_registro_de_mascaras()
 
 
-def _mesa_no_modo_xbox(cartao: str | None = None) -> _Daemon:
+def _mesa_no_modo_xbox(mascara: str | None = None) -> _Daemon:
     """O perfil pôs o modo Xbox de pé: o pad do P1 no caminho Xbox, o dono em Xbox.
 
-    A máscara do P1 é a DualSense da sessão (ou a do `cartao`): é com ela que
+    A máscara do P1 é a DualSense da sessão (ou a `mascara` dada): é com ela que
     um start sem opinião volta ao DualSense, e é o caso que morde.
     """
-    if cartao is not None:
-        em.registro_de_mascaras().set_mask(P1, cartao)
     d = _Daemon()
+    if mascara is not None:
+        d.config.gamepad_flavor = mascara
     desfecho = gp.start_gamepad_emulation_desfecho(d, None, origin="profile", caminho="xbox")
     assert desfecho == gp.EMU_APLICADO, "premissa da bancada"
     assert vp.caminho_do_vpad(d._gamepad_device) == "xbox"
@@ -207,11 +204,6 @@ def _pelo_revive(d: _Daemon) -> None:
     assert gp.upgrade_primary_vpad_to_uhid(d) is True  # type: ignore[arg-type]
 
 
-def _pelo_cartao(d: _Daemon) -> None:
-    em.registro_de_mascaras().set_mask(P1, "dualsense")
-    assert d.vestir_a_mascara_do_aparelho(P1) == gp.EMU_APLICADO
-
-
 def _pela_saida_do_modo_nativo(d: _Daemon) -> None:
     _parar(d)
     d._native_emu_stash = {"gamepad": [True, "dualsense"]}  # type: ignore[attr-defined]
@@ -224,14 +216,13 @@ def _por_dois_controles_na_mesa(d: _Daemon) -> None:
 
 
 def _pelo_juiz_das_mascaras(d: _Daemon) -> None:
-    em.registro_de_mascaras().set_mask(P1, "dualsense")
+    d.config.gamepad_flavor = "dualsense"
     assert gp.reconciliar_as_mascaras(d) == gp.EMU_APLICADO
 
 
 RESTARTS: dict[str, tuple[Any, str | None]] = {
     "ordem_do_coop": (_pela_ordem_do_coop, None),
     "revive_pos_falha_total": (_pelo_revive, None),
-    "mascara_do_cartao": (_pelo_cartao, "nintendo"),
     "saida_do_modo_nativo": (_pela_saida_do_modo_nativo, None),
     "dois_controles_na_mesa": (_por_dois_controles_na_mesa, None),
     "mascara_reconciliada": (_pelo_juiz_das_mascaras, "nintendo"),
@@ -243,12 +234,15 @@ RESTARTS: dict[str, tuple[Any, str | None]] = {
 def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
     """Com o modo Xbox de pé, nenhum restart devolve o pad ao DualSense.
 
-    MORDE: tire o `caminho=` do cartão, da saída do Modo Nativo ou dos dois
+    NOTA DATADA, 27/10/2026: o restart do cartão de máscara saiu com o modo único
+    (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES); a máscara que muda passa pelo juiz.
+
+    MORDE: tire o `caminho=` da saída do Modo Nativo ou dos dois
     controles (o start sem opinião limpa o slot e o pad volta uhid); ou devolva à
     promoção o caminho do pad velho.
     """
-    restart, cartao = RESTARTS[motivo]
-    d = _mesa_no_modo_xbox(cartao)
+    restart, mascara = RESTARTS[motivo]
+    d = _mesa_no_modo_xbox(mascara)
     with structlog.testing.capture_logs() as diario:
         restart(d)
 
@@ -263,17 +257,6 @@ def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
     ], (
         "o restart não disse quem pediu: foi o buraco do diário de 27/09"
     )
-
-
-@pytest.mark.usefixtures("_bancada")
-def test_o_cartao_nao_vira_a_escolha_dela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O gesto do cartão é `manual`, e o modo que ele repassa não é escolha."""
-    escritos: list[Any] = []
-    monkeypatch.setattr(session, "save_gamepad_caminho", lambda *a, **k: escritos.append(a))
-    d = _mesa_no_modo_xbox("nintendo")
-    _pelo_cartao(d)
-    assert escritos == []
-    assert d.config.gamepad_caminho_global is None
 
 
 @pytest.mark.usefixtures("_bancada")
@@ -380,7 +363,6 @@ def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     casa = xdg_paths.config_dir(ensure=True)
     if not str(casa).startswith(str(tmp_path)):
         pytest.exit(f"a régua ia ler o config_dir de verdade: {casa}", returncode=3)
-    em._zerar_registro_de_mascaras()
     return casa
 
 
@@ -407,9 +389,7 @@ def _lar_do_boot(monkeypatch: pytest.MonkeyPatch, _lar: Any) -> Iterator[list[An
         "hefesto_dualsense4unix.daemon.launch_env.materialize_launch_env",
         lambda daemon: None,
     )
-    em._zerar_registro_de_mascaras()
     yield nascidos
-    em._zerar_registro_de_mascaras()
 
 
 def _config_do_boot() -> lifecycle.DaemonConfig:
@@ -563,14 +543,11 @@ def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_dela(
 
 
 def _perfis_do_g3() -> None:
-    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
-
     loader.save_profile(
         Profile(
             name=DE_FORA,
             match=MatchAny(),
-            mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
-            controllers={P1: ControllerOverrides(mascara="dualsense")},
+            mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense", caminho="xbox"),
         ),
         origem="teste",
     )
@@ -599,10 +576,12 @@ def _daemon_do_g3() -> tuple[lifecycle.Daemon, Any]:
 def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
     origem: str, _lar: Any
 ) -> None:
-    """Freestyle (Xbox, cartão DualSense) → Future Knight (Xbox, máscara Xbox).
+    """Freestyle (Xbox, máscara DualSense) → Future Knight (Xbox, máscara Xbox).
 
-    MORDE: devolva o `apply_controller_mascaras` para DEPOIS do `mode_applier`
-    em `ProfileManager.apply_emulation` — o P1 segue DualSense.
+    NOTA DATADA, 27/10/2026: a máscara do Freestyle era o cartão do P1, e a régua mordia
+    pela ordem do `apply_controller_mascaras`. Com o modo único
+    (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES) a máscara mora no `mode`, e a régua
+    cobra que o `mode` do jogo chegue ao P1 na mesma ativação.
     """
     _perfis_do_g3()
     daemon, gerente = _daemon_do_g3()
@@ -614,8 +593,7 @@ def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
     gerente.activate("Future Knight", origin=origem)
 
     assert daemon._gamepad_device.flavor == "xbox", (
-        "a máscara do perfil do jogo não chegou ao P1: o cartão do Freestyle "
-        "seguiu vestido (G3)"
+        "a máscara do perfil do jogo não chegou ao P1: a do Freestyle seguiu vestida (G3)"
     )
     assert vp.caminho_do_vpad(daemon._gamepad_device) == "xbox"
 
@@ -678,7 +656,7 @@ APPID_DO_G3 = 1599660
 def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
     _lar: Any, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O ARME do Future Knight com o Xbox já de pé e o cartão do Freestyle no P1.
+    """O ARME do Future Knight com o Xbox já de pé e a máscara DualSense do Freestyle no P1.
 
     É o caminho do G3 inteiro: o marcador do wrapper, o `arm_launch_profile`, a
     ativação do lançamento e a conferência do aparelho. O caminho já confere
@@ -690,7 +668,7 @@ def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
     pendência que a sprint registra.
 
     MORDE: tire do arme a ativação do perfil (`_ativar_o_perfil_do_lancamento`)
-    — o cartão do Freestyle fica no registro, e o P1 segue DualSense.
+    — a máscara do Freestyle fica, e o P1 segue DualSense.
     """
     from hefesto_dualsense4unix.daemon import launch_env as le
 
@@ -698,7 +676,7 @@ def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
     daemon, gerente = _daemon_do_g3()
     gerente.activate(DE_FORA, origin="autoswitch")
     assert daemon._gamepad_device is not None
-    assert daemon._gamepad_device.flavor == "dualsense", "premissa: o cartão do Freestyle"
+    assert daemon._gamepad_device.flavor == "dualsense", "premissa: a máscara do Freestyle"
     perfil = loader.load_profile("Future Knight")
     (tmp_path / "last_run").write_text(
         f"appid={APPID_DO_G3}\nepoch=1000\npid=1\n", encoding="utf-8"

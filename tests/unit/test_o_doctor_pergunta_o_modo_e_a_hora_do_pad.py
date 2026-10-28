@@ -51,7 +51,6 @@ from hefesto_dualsense4unix.core.o_modo_no_ar import (
 )
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon
-from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
 from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
 from hefesto_dualsense4unix.integrations import uhid_gamepad
@@ -91,7 +90,12 @@ class _UInputDeMentira:
 
 @dataclass
 class Jogador:
-    """Um controle na mesa e como o pad dele nasceu."""
+    """Um controle na mesa e como o pad dele nasceu.
+
+    A ``mascara`` vai direto à fábrica: desde 27/10/2026 o modo é um só para todos
+    (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES), e o pad de outra máscara é o que
+    o doctor tem de ler quando ele aparece, não uma escolha por controle.
+    """
 
     nasce: str = "pelo_modo"
     mascara: str | None = None
@@ -121,9 +125,7 @@ def fabrica(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, bool]]:
         return UhidDualSense(player=player, identity=identity), None
 
     monkeypatch.setattr(vp, "_try_uhid", _uhid)
-    em._zerar_registro_de_mascaras()
     yield ar
-    em._zerar_registro_de_mascaras()
 
 
 def _pad(jogador: Jogador, uniq: str, numero: int, caminho: str | None) -> Any:
@@ -132,7 +134,9 @@ def _pad(jogador: Jogador, uniq: str, numero: int, caminho: str | None) -> Any:
         assert pad.start()
         return pad
     nasce_com = {"pelo_modo": caminho, "sem_caminho": None, "no_xbox": "xbox"}[jogador.nasce]
-    pad = vp.make_virtual_pad("dualsense", identity=uniq, player=numero, caminho=nasce_com)
+    pad = vp.make_virtual_pad(
+        jogador.mascara or "dualsense", identity=uniq, player=numero, caminho=nasce_com
+    )
     assert pad is not None, "a fábrica não entregou pad"
     return pad
 
@@ -157,9 +161,6 @@ async def _estado(
         }
         for i in range(len(jogadores))
     ]
-    for uniq, jogador in zip(UNIQS, jogadores, strict=False):
-        if jogador.mascara is not None:
-            assert em.registro_de_mascaras().set_mask(uniq, jogador.mascara)
     daemon.config.gamepad_flavor = "dualsense"
     daemon.config.gamepad_caminho = caminho
     if nativo:
@@ -243,9 +244,10 @@ class TestOModoContraOAr:
     async def test_quatro_jogadores_quatro_linhas_certas(self) -> None:
         """Modo DualSense, e cada jogador num estado: as quatro linhas não se misturam.
 
-        P1 no `uhid` (certo); P2 no Xbox 360 do cartão, `uinput` (certo: o
-        `uhid` não veste essa máscara); P3 no `uinput` que nasceu no Xbox com a
-        máscara DualSense (o PRAGMATA de 27/09); P4 no pad antigo sem `uhid`.
+        P1 no `uhid` (certo); P2 no Xbox 360, `uinput` (falha: com o modo único,
+        D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES de 27/10/2026, o P2 ficou no modo
+        velho; antes o cartão dele valia e a linha era certa); P3 no `uinput` que nasceu
+        no Xbox com a máscara DualSense (o PRAGMATA de 27/09); P4 no pad antigo sem `uhid`.
         """
         estado = await _estado(
             "dualsense",
@@ -253,7 +255,7 @@ class TestOModoContraOAr:
         )
         assert _resumo(modo_contra_o_ar(estado)) == [
             (1, "dualsense", "uhid", OK),
-            (2, "dualsense", "uinput", OK),
+            (2, "dualsense", "uinput", FALHA),
             (3, "dualsense", "uinput", FALHA),
             (4, "dualsense", "uinput", AVISO),
         ]

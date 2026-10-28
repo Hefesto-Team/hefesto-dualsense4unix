@@ -35,7 +35,6 @@ from hefesto_dualsense4unix.core.numeros_da_sony import (
 from hefesto_dualsense4unix.daemon import launch_env
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
-from hefesto_dualsense4unix.daemon.subsystems.external_mask import registro_de_mascaras
 from hefesto_dualsense4unix.integrations import pad_usb, uhid_gamepad
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
@@ -443,7 +442,6 @@ def test_vestir_a_roupa_recria_o_p1(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
     monkeypatch.setattr(gp, "_o_broker_atende", lambda _d: True)
     _uhid_de_pe(monkeypatch)
-    registro_de_mascaras().set_mask(MACS[0], "dualsense")
     d = _daemon_do_p1(monkeypatch)
     try:
         gp.start_gamepad_emulation_desfecho(d, "dualsense", origin="profile", caminho=DS)

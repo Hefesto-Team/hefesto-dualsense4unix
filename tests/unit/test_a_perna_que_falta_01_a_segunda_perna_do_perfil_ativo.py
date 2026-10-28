@@ -69,7 +69,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
         sys.path.insert(0, _caminho)
 
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
-from hefesto_dualsense4unix.daemon.subsystems import external_mask as mask_mod
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
 from hefesto_dualsense4unix.interface.pacotes import perfil as pac_perfil
@@ -96,11 +95,7 @@ def lar_de_mentira() -> pathlib.Path:
         f"profiles_dir() caiu DENTRO do lar real dela: {alvo}. Esta régua "
         "escreve perfil, session.json e marcador — sem o desvio do `conftest` "
         "ela escreveria no ~/.config que o daemon vivo está usando agora.")
-    mask_mod._zerar_registro_de_mascaras()
-    try:
-        yield alvo
-    finally:
-        mask_mod._zerar_registro_de_mascaras()
+    yield alvo
 
 
 @pytest.fixture
@@ -157,25 +152,36 @@ def test_o_marcador_orfao_nao_vira_excecao_na_mao_dela(
     assert _Handlers(ativo=None)._perfil_que_grava() is None
 
 
-def _mask_set(h: _Handlers, **params: Any) -> dict[str, Any]:
-    return asyncio.run(h._handle_gamepad_mask_set(params))
+def _gravar_o_modo() -> str | None:
+    """O escritor do modo único do daemon, com o store calado (``active_profile: None``)."""
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+
+    daemon = SimpleNamespace(store=_Store(None), config=SimpleNamespace())
+    return Daemon.gravar_o_modo_escolhido(  # type: ignore[arg-type]
+        daemon, "gamepad", caminho="xbox", mascara="xbox", porta="ipc"
+    )
 
 
-def test_a_mascara_entra_no_perfil_com_o_daemon_calado(
+def test_o_modo_entra_no_perfil_com_o_daemon_calado(
     a_maquina_dela: pathlib.Path,
 ) -> None:
-    """O QUARTO CHAMADOR, medido no disco: antes e depois."""
+    """O QUARTO CHAMADOR, medido no disco: antes e depois.
+
+    NOTA DATADA, 27/10/2026 (O-MODO-UNICO-VALE-PARA-TODOS-OS-CONTROLES-01): o quarto
+    chamador era o ``ipc_handlers._mascara_no_perfil``, que gravava a máscara de UM
+    controle. Com o modo único (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES) o
+    ``gamepad.mask.set`` passa pelo escritor do modo do daemon
+    (``Daemon.gravar_o_modo_escolhido``), e é ele que precisa da segunda perna.
+    """
     antes = _no_disco(a_maquina_dela)
-    assert not antes.get("controllers"), (
-        "o perfil já nasceu com opinião sobre alguma peça; a régua mediria o "
-        "que ela mesma plantou")
+    assert not antes.get("mode"), (
+        "o perfil já nasceu com opinião de modo; a régua mediria o que ela mesma plantou")
 
-    resposta = _mask_set(_Handlers(ativo=None), uniq=P1, flavor="xbox")
+    assert _gravar_o_modo() == NO_DISCO
 
-    depois = _no_disco(a_maquina_dela)
-    assert depois["controllers"][P1_CHAVE]["mascara"] == "xbox", (
-        f"a máscara não chegou ao disco: {depois.get('controllers')!r}")
-    assert resposta["perfil"] == NO_DISCO and resposta["gravado"] is True
+    modo = _no_disco(a_maquina_dela).get("mode") or {}
+    assert (modo.get("caminho"), modo.get("gamepad_flavor")) == ("xbox", "xbox"), (
+        f"o modo não chegou ao disco: {modo!r}")
 
 
 def test_com_a_cura_arrancada_o_json_fica_byte_identico(
@@ -189,14 +195,20 @@ def test_com_a_cura_arrancada_o_json_fica_byte_identico(
     )
     bytes_antes = a_maquina_dela.read_bytes()
 
-    resposta = _mask_set(_Handlers(ativo=None), uniq=P1, flavor="xbox")
-
-    assert resposta["status"] == "ok", (
-        "o defeito não era um erro visível — era um 'ok' sobre nada")
-    assert resposta["gravado"] is False and resposta["motivo"] == "sem_perfil"
+    assert _gravar_o_modo() is None
     assert a_maquina_dela.read_bytes() == bytes_antes, (
         "com a cura arrancada o arquivo MUDOU — então esta régua não estava "
         "medindo o byte que ela promete medir")
+
+
+def test_sem_daemon_o_mask_set_recusa_e_nao_diz_ok(
+    a_maquina_dela: pathlib.Path,
+) -> None:
+    """O defeito de 04/09 era um 'ok' sobre nada: sem daemon, a recusa é dita."""
+    bytes_antes = a_maquina_dela.read_bytes()
+    with pytest.raises(ValueError, match="daemon"):
+        asyncio.run(_Handlers(ativo=None)._handle_gamepad_mask_set({"flavor": "xbox"}))
+    assert a_maquina_dela.read_bytes() == bytes_antes
 
 
 def test_a_barra_de_motor_tambem_esperava_a_segunda_perna(

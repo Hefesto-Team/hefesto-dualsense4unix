@@ -61,7 +61,7 @@ def _caminho_publicado(daemon: object) -> str | None:
 
     O escolhido (`config.gamepad_caminho`) ou, sem escolha, o de fábrica (`dualsense`,
     CAMINHO-CONTAGIO-01); ``None`` sem config legível. O-MODO-XBOX-NAO-E-QUEDA-02: modo, máscara e
-    conexão são três eixos, e o modo não se deduz da máscara do P1 (a de cada controle sai em
+    conexão são três eixos, e o modo não se deduz da máscara do P1 (a de todos sai em
     `por_aparelho`).
     """
     from hefesto_dualsense4unix.integrations.virtual_pad import (
@@ -78,9 +78,9 @@ def _caminho_publicado(daemon: object) -> str | None:
 def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
     """`{uniq: máscara efetiva}` para cada controle conectado agora (MASCARA-NA-TELA-01).
 
-    A herança não se reescreve aqui: quem decide é `external_mask.mascara_efetiva`
-    (MÁSCARA-POR-JOGADOR-01), e repetir a regra faria duas verdades. NUNCA levanta: registro que não
-    abre não derruba o `state_full`, a tela mostra a máscara da sessão.
+    Desde a D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES é o modo único, igual para todos;
+    quem decide é `external_mask.mascara_efetiva`, e repetir a regra faria duas verdades. NUNCA
+    levanta: o que não abre não derruba o ``, a tela mostra a máscara da sessão.
     """
     fora: dict[str, str] = {}
     try:
@@ -4719,49 +4719,30 @@ class IpcHandlersMixin:
     async def _handle_gamepad_mask_set(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`.
+        """O MODO ÚNICO de todos os controles: `gamepad.mask.set {flavor}`.
 
-        MASCARA-NA-TELA-01 (03/09/2026): *"é uma máscara por controle."* Era o ÚNICO degrau que
-        faltava (o `external_mask` o nomeava desde 15/08: o lado da escrita); `set_mask` e
-        `clear_mask` não tinham chamador em `src/`.
-
-        **GRAVA NO PERFIL DESDE 08/09/2026** (MASCARA-NO-PERFIL-01, *"pode entrar sim"*): a forma do
-        gesto não mudou; a escolha vai a `controllers[uniq].mascara` do perfil ATIVO, a mesma
-        estrada do `rumble.motores.set`. DUAS ESCRITAS, a ordem é o contrato:
-
-        1. **o registro vivo** (`external_mask.registro_de_mascaras`), que a `mascara_efetiva`
-        consulta na criação de todo vpad e no tique do co-op, e faz a escolha valer AGORA (sem ele a
-        tela diria "aplicado" sobre um vpad que não mudou);
-        2. **o perfil ativo**, o DONO, para a escolha sobreviver à troca de perfil.
-
-        SEM PERFIL ATIVO (ou `uniq` que não é MAC de peça) a escrita 2 não ocorre e a 1 sim: a
-        resposta diz `gravado: false` com o `motivo` em vez de recusar o gesto (recusar deixaria a
-        máquina sem perfil sem máscara nenhuma). `flavor` VAZIO LIMPA a escolha e o aparelho volta a
-        herdar a do perfil (campo em branco = sem opinião, como `ControllerOverrides`); sem isso a
-        escolha não se desfaz. A RECUSA É EM VOZ ALTA: a `normalizar_mascara` é estrita e o `None`
-        dela vira erro, não `xbox` calado.
-
-        NÃO PROMETE: **ninguém verificou** se um jogo aceita dois vpads com máscaras diferentes ao
-        mesmo tempo; se embaralhar os jogadores, é aviso na tela, não defeito nosso.
-
-        A ROTA É A CASCA (TROCA-DENTRO-DO-JOGO-01, 14/09/2026): o ato mora em
-        `external_mask.escolher_a_mascara`, o mesmo do gesto PS + L3 (que antes achava este método
-        privado por string); o perfil só recebe a escolha depois de o aparelho vestir, como o PS +
-        R3 faz com o modo.
+        D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES (27/10/2026). Era a máscara de UM
+        aparelho (MASCARA-NA-TELA-01, 03/09); agora o `flavor` (`dualsense`, `xbox`,
+        `nintendo`) é o modo de todos, pelo escritor único
+        (`Daemon.escolher_o_modo_unico`), o mesmo do PS + L3 e do chip de modo. O `uniq`
+        fica opcional e não escolhe controle: a 01 publicada ainda o manda. Vazio ou
+        desconhecido é recusado em voz alta. A resposta é a do `gamepad.emulation.set`; o modo
+        que não subiu leva ``motivo: aparelho_nao_vestiu``, a palavra que a tela já traduz.
         """
-        from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            escolher_a_mascara_e_esperar,
-        )
+        from hefesto_dualsense4unix.integrations.virtual_pad import MODOS, normalizar_modo
 
-        uniq = str(params.get("uniq") or "").strip()
-        if not uniq:
+        flavor = params.get("flavor")
+        if normalizar_modo(flavor) is None:
             raise ValueError(
-                "gamepad.mask.set exige 'uniq' — a máscara é de UM aparelho, e "
-                "sem o endereço dele a escrita iria para o registro errado")
-
-        return await escolher_a_mascara_e_esperar(
-            self.daemon, uniq, params.get("flavor"), store=self.store
+                f"gamepad.mask.set: modo desconhecido {flavor!r} — o modo vale para "
+                f"todos os controles; aceito: {', '.join(MODOS)}"
+            )
+        resposta = await self._handle_gamepad_emulation_set(
+            {"enabled": True, "flavor": flavor, "origin": "manual"}
         )
+        if resposta.get("status") != "ok":
+            resposta["motivo"] = "aparelho_nao_vestiu"
+        return resposta
 
     async def _handle_gamepad_emulation_set(
         self, params: dict[str, Any]
@@ -4801,20 +4782,32 @@ class IpcHandlersMixin:
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o gamepad virtual")
 
-        modo: dict[str, Any] = {"caminho": caminho} if caminho is not None else {}
-        if enabled and caminho is None:
-            do_dono = self._caminho_do_perfil_ativo()
-            if do_dono is not None:
-                modo = {"caminho": do_dono, "caminho_e_escolha": False}
         origem = origem_do_pedido(params)
-        if enabled and origem == "manual":
-            modo["grava_o_modo"] = _porta_que_grava(origem)
-        ok = self.daemon.set_gamepad_emulation(
-            enabled=enabled,
-            flavor=flavor,
-            origin=origem,
-            **modo,
-        )
+        if enabled and origem == "manual" and (flavor is not None or caminho is not None):
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                DESFECHOS_EMULACAO_ATIVA,
+            )
+            from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
+            from hefesto_dualsense4unix.integrations.virtual_pad import modo_do_par
+
+            pedido = resolver_flavor(flavor) if flavor is not None else caminho
+            ok = self.daemon.escolher_o_modo_unico(
+                modo_do_par(caminho, pedido), porta=_porta_que_grava(origem)
+            ) in DESFECHOS_EMULACAO_ATIVA
+        else:
+            modo: dict[str, Any] = {"caminho": caminho} if caminho is not None else {}
+            if enabled and caminho is None:
+                do_dono = self._caminho_do_perfil_ativo()
+                if do_dono is not None:
+                    modo = {"caminho": do_dono, "caminho_e_escolha": False}
+            if enabled and origem == "manual":
+                modo["grava_o_modo"] = _porta_que_grava(origem)
+            ok = self.daemon.set_gamepad_emulation(
+                enabled=enabled,
+                flavor=flavor,
+                origin=origem,
+                **modo,
+            )
         if enabled and ok:
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                 EMU_APLICADO,
@@ -4830,7 +4823,7 @@ class IpcHandlersMixin:
             "enabled": enabled and ok,
             "flavor": active_flavor,
         }
-        if caminho is not None:
+        if caminho is not None or (enabled and origem == "manual" and flavor is not None):
             resposta["caminho"] = _caminho_publicado(self.daemon)
         return resposta
 

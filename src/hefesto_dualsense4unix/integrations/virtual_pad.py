@@ -88,6 +88,41 @@ def normalizar_caminho(valor: object) -> str | None:
     return None
 
 
+MODO_NINTENDO = "nintendo"
+MODOS: tuple[str, ...] = (CAMINHO_DUALSENSE, CAMINHO_XBOX, MODO_NINTENDO)
+
+_CAMINHO_DO_MODO: dict[str, str | None] = {
+    CAMINHO_DUALSENSE: CAMINHO_DUALSENSE,
+    CAMINHO_XBOX: CAMINHO_XBOX,
+    MODO_NINTENDO: None,
+}
+
+
+def normalizar_modo(valor: object) -> str | None:
+    """O modo único reconhecido (`dualsense`, `xbox`, `nintendo`), ou ``None``."""
+    if isinstance(valor, str):
+        limpo = valor.strip().lower()
+        if limpo in MODOS:
+            return limpo
+    return None
+
+
+def par_do_modo(modo: str) -> tuple[str | None, str]:
+    """``(caminho, máscara)`` do modo único: o par que vale para todos os controles.
+
+    DualSense é o caminho `dualsense` com a máscara `dualsense` (uhid); Xbox, o caminho `xbox`
+    com a máscara `xbox`; Nintendo Pro, a máscara `nintendo` sem caminho (uinput).
+    """
+    return _CAMINHO_DO_MODO[modo], modo
+
+
+def modo_do_par(caminho: object, mascara: object) -> str:
+    """O modo único que o par ``(caminho, máscara)`` mostra ao jogo."""
+    if not isinstance(mascara, str) or mascara not in MODOS:
+        mascara = CAMINHO_DUALSENSE
+    return mascara_no_jogo(caminho, mascara)
+
+
 def caminho_resolvido(caminho: object, mascara: object) -> str:
     """O caminho que vale: o escolhido, ou — sem escolha — o que sai da máscara."""
     escolhido = normalizar_caminho(caminho)
@@ -679,6 +714,8 @@ __all__ = [
     "CAMINHO_XBOX",
     "LINHA_DA_PRO_NO_UINPUT",
     "MASCARA_DO_CANAL_COMUM",
+    "MODOS",
+    "MODO_NINTENDO",
     "MOTIVO_MODO_XBOX_ESCOLHIDO",
     "MOTIVO_SEM_CANAL_PROPRIO",
     "UHID_BIND_TIMEOUT_S",
@@ -690,11 +727,14 @@ __all__ = [
     "caminho_resolvido",
     "make_virtual_pad",
     "mascara_no_jogo",
+    "modo_do_par",
     "motivo_da_degradacao",
     "motivo_da_troca",
     "normalizar_caminho",
+    "normalizar_modo",
     "o_aparelho_mudou",
     "o_fio_de_nascimento",
     "o_jogo_ve_a_pro",
+    "par_do_modo",
     "quer_uhid",
 ]

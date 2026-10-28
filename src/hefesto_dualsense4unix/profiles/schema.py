@@ -1331,11 +1331,12 @@ class ControllerSensoresOverride(BaseModel):
 class ControllerOverrides(BaseModel):
     """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
 
-    Campo ``None`` = sem opinião: o controle herda a seção GLOBAL (merge POR CAMPO, PERFIL-01). A
-    exceção é ``mascara``, em que ``None`` quer dizer «volte ao padrão». O campo só entra quando o
-    consumidor por ``uniq`` já existe (``test_perfil_por_controle_o_campo_espera_o_caminho.py``).
-    Só o ``mode`` é da SESSÃO (decisão de 15/08/2026, ``external_mask.py``): a máscara do gamepad é
-    do jogador. SÃO ONZE, e a tela oferece treze: o que falta e a contradição aberta estão na seção
+    Campo ``None`` = sem opinião: o controle herda a seção GLOBAL (merge POR CAMPO, PERFIL-01). O
+    campo só entra quando o consumidor por ``uniq`` já existe
+    (``test_perfil_por_controle_o_campo_espera_o_caminho.py``). O ``mode`` é da SESSÃO e vale para
+    todos os controles (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): a ``mascara`` por controle
+    saiu, e a chave que um perfil antigo ainda traz é levada ao ``mode`` pelo
+    :meth:`Profile._a_mascara_de_cada_controle_vira_o_modo`. SÃO DEZ: o que falta está na seção
     «ControllerOverrides» de ``docs/research/o-porque-dos-modulos.md``.
     """
 
@@ -1347,11 +1348,18 @@ class ControllerOverrides(BaseModel):
     speaker: ProfileSpeakerConfig | None = None
     mic: ControllerMicOverride | None = None
     sensores: ControllerSensoresOverride | None = None
-    mascara: MascaraDeGamepad | None = None
     movimento: ProfileMovimentoConfig | None = None
     ativacao: ProfileAtivacaoConfig | None = None
     analogicos: ProfileAnalogicosConfig | None = None
     remapeamento: dict[str, str] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _a_mascara_de_antes_cai(cls, data: Any) -> Any:
+        """A chave ``mascara`` de um perfil antigo cai: o modo único mora no ``mode`` do perfil."""
+        if isinstance(data, dict) and "mascara" in data:
+            return {k: v for k, v in data.items() if k != "mascara"}
+        return data
 
     @field_validator("remapeamento")
     @classmethod
@@ -1405,6 +1413,32 @@ PRIORIDADE_MAXIMA = 200
 
 
 _MARCAS_QUE_VIRARAM_ESTILO: frozenset[str] = frozenset({"visual_novel", "adulto"})
+
+
+def _as_mascaras_dos_controles(controles: dict[Any, Any], caminho: object) -> list[str]:
+    """O que o jogo via de cada controle que declarava máscara, na ordem do perfil."""
+    from hefesto_dualsense4unix.integrations.virtual_pad import modo_do_par, normalizar_modo
+
+    achadas: list[str] = []
+    for cfg in controles.values():
+        if not isinstance(cfg, dict):
+            continue
+        mascara = normalizar_modo(cfg.get("mascara"))
+        if mascara is not None:
+            achadas.append(modo_do_par(caminho, mascara))
+    return achadas
+
+
+def _a_mascara_que_fica(mascaras: list[str], caminho: object) -> str:
+    """A máscara que vira o modo único: a regra de desempate da migração, num lugar só."""
+    distintas = list(dict.fromkeys(mascaras))
+    if len(distintas) == 1:
+        return distintas[0]
+    if isinstance(caminho, str) and caminho.strip().lower() in distintas:
+        return caminho.strip().lower()
+    contagem = {m: mascaras.count(m) for m in distintas}
+    maior = max(contagem.values())
+    return next(m for m in distintas if contagem[m] == maior)
 
 
 class Profile(BaseModel):
@@ -1466,6 +1500,49 @@ class Profile(BaseModel):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
         return dados
+
+    @model_validator(mode="before")
+    @classmethod
+    def _a_mascara_de_cada_controle_vira_o_modo(cls, data: Any) -> Any:
+        """A máscara que cada controle tinha vira o modo único do perfil (``mode``).
+
+        D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: vale o que o jogo via
+        (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.modo_do_par`). Todas iguais,
+        essa; misturadas, a que casa com o caminho escrito, senão a mais frequente, e no
+        empate a do primeiro controle. No ``gamepad`` o caminho se alinha ao modo
+        (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_do_modo`); sem ``mode``,
+        ganha o ``gamepad``. A chave sai na próxima gravação; perfil sem ela não muda.
+        """
+        if not isinstance(data, dict):
+            return data
+        controles = data.get("controllers")
+        if not isinstance(controles, dict):
+            return data
+        if not any(isinstance(c, dict) and "mascara" in c for c in controles.values()):
+            return data
+        sem_chave = {
+            uniq: ({k: v for k, v in c.items() if k != "mascara"} if isinstance(c, dict) else c)
+            for uniq, c in controles.items()
+        }
+        novo = {**data, "controllers": sem_chave}
+        modo_bruto = data.get("mode")
+        secao = dict(modo_bruto) if isinstance(modo_bruto, dict) else {"kind": "gamepad"}
+        caminho_escrito = secao.get("caminho")
+        mascaras = _as_mascaras_dos_controles(controles, caminho_escrito)
+        if not mascaras:
+            return novo
+        from hefesto_dualsense4unix.integrations.virtual_pad import par_do_modo
+
+        caminho, mascara = par_do_modo(_a_mascara_que_fica(mascaras, caminho_escrito))
+        secao["gamepad_flavor"] = mascara
+        if secao.get("kind") == "gamepad":
+            secao["caminho"] = caminho
+        novo["mode"] = secao
+        get_logger(__name__).info(
+            "mascara_por_controle_virou_o_modo",
+            perfil=str(data.get("name", "")), modo=mascara, de=mascaras,
+        )
+        return novo
 
     @model_validator(mode="before")
     @classmethod
@@ -2357,8 +2434,8 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ProfileModeConfig.gamepad_flavor": Nascimento(
         NASCE_NO_LEITOR,
-        "`None` é o degrau 2 vazio: a máscara efetiva cai no "
-        "`DaemonConfig.gamepad_flavor`, que nasce `dualsense`. O controle "
+        "`None` = o modo único que o computador escolheu: a máscara cai "
+        "no `DaemonConfig.gamepad_flavor`, que nasce `dualsense`. O controle "
         "nunca fica SEM máscara.",
         dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
     ),
@@ -2458,13 +2535,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "ControllerOverrides.mic": Nascimento(E_CONTRATO, "Ver `ControllerOverrides.leds`."),
     "ControllerOverrides.sensores": Nascimento(
         E_CONTRATO, "Ver `ControllerOverrides.leds`."
-    ),
-    "ControllerOverrides.mascara": Nascimento(
-        NASCE_NO_LEITOR,
-        "A EXCEÇÃO nomeada desta classe: `None` = *'volte ao padrão'* "
-        "(decisão dela, 09/09), e o padrão é `dualsense`. O controle não "
-        "declarado perde a máscara própria em vez de mantê-la.",
-        dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
     ),
     "ControllerOverrides.movimento": Nascimento(
         E_CONTRATO,

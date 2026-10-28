@@ -199,12 +199,10 @@ CASOS: list[tuple[list[str], str, dict[str, Any], dict[str, Any]]] = [
      {"status": "ok", "volume": 60}),
     (["mic", "volume", "35", "--uniq", "02:fe:00:00:00:02"], "mic.volume.set",
      {"volume": 35, "uniq": "02:fe:00:00:00:02"}, {"status": "ok", "volume": 35}),
-    (["gamepad", "mask", "xbox", "--uniq", "02:fe:00:00:00:03"], "gamepad.mask.set",
-     {"uniq": "02:fe:00:00:00:03", "flavor": "xbox"},
-     {"status": "ok", "flavor": "xbox", "gravado": True}),
-    (["gamepad", "mask", "--limpar", "--uniq", "02:fe:00:00:00:03"], "gamepad.mask.set",
-     {"uniq": "02:fe:00:00:00:03", "flavor": ""},
-     {"status": "ok", "flavor": None, "gravado": True}),
+    (["gamepad", "mask", "xbox"], "gamepad.mask.set", {"flavor": "xbox"},
+     {"status": "ok", "flavor": "xbox"}),
+    (["gamepad", "mask", "nintendo"], "gamepad.mask.set", {"flavor": "nintendo"},
+     {"status": "ok", "flavor": "nintendo"}),
 ]
 
 
@@ -288,16 +286,17 @@ def test_volume_sem_fonte_diz_que_nao_ha_fonte(monkeypatch: pytest.MonkeyPatch) 
     assert "fonte de captura" in resultado.output
 
 
-def test_mascara_que_o_aparelho_nao_vestiu_nao_e_anunciada(
+def test_o_modo_que_o_aparelho_nao_vestiu_nao_e_anunciado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """O verbo troca o modo único de todos (D-2710, 27/10/2026); a falha diz que ficou o velho."""
     _com_cliente(
         monkeypatch,
-        resposta={"status": "ok", "flavor": "nintendo", "motivo": "aparelho_nao_vestiu"},
+        resposta={"status": "failed", "flavor": "nintendo", "motivo": "aparelho_nao_vestiu"},
     )
-    resultado = _rodar("gamepad", "mask", "nintendo", "--uniq", "02:fe:00:00:00:03")
+    resultado = _rodar("gamepad", "mask", "nintendo")
     assert resultado.exit_code == 1
-    assert "não vestiu" in resultado.output
+    assert "não subiu" in resultado.output
 
 
 @pytest.mark.parametrize(
@@ -312,8 +311,9 @@ def test_mascara_que_o_aparelho_nao_vestiu_nao_e_anunciada(
         ["rumble", "policy", "custom"],
         ["rumble", "policy", "max", "0.5"],
         ["rumble", "passthrough", "talvez"],
-        ["gamepad", "mask", "--uniq", "02:fe:00:00:00:03"],
-        ["gamepad", "mask", "xbox", "--limpar", "--uniq", "02:fe:00:00:00:03"],
+        ["gamepad", "mask"],
+        ["gamepad", "mask", "xbox", "--uniq", "02:fe:00:00:00:03"],
+        ["gamepad", "mask", "xbox", "--limpar"],
     ],
 )
 def test_pedido_mal_formado_sai_com_2_sem_falar_com_o_servico(

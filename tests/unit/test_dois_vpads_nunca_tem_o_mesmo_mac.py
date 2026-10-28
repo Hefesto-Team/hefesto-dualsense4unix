@@ -288,18 +288,10 @@ FISICOS_DAS_BANCADAS = tuple(f"aa:bb:cc:00:00:0{n}" for n in range(1, 6))
 
 @contextmanager
 def kernel_de_mentira(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
-    """O kernel de mentira no lugar do ``/dev/uhid``, com o registro de máscaras zerado."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        _zerar_registro_de_mascaras,
-    )
-
-    _zerar_registro_de_mascaras()
+    """O kernel de mentira no lugar do ``/dev/uhid``."""
     k = KernelDoHidPlaystation(fisicos=FISICOS_DAS_BANCADAS)
     k.instalar(monkeypatch)
-    try:
-        yield k
-    finally:
-        _zerar_registro_de_mascaras()
+    yield k
 
 
 @pytest.fixture

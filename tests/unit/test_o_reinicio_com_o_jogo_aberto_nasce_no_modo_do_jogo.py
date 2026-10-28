@@ -111,9 +111,7 @@ def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Iterator[list[str]]:
         await sincronizar(self)
 
     monkeypatch.setattr(lifecycle.Daemon, "_sync_game_signal", _sincroniza_e_anota)
-    em._zerar_registro_de_mascaras()
     yield ordem
-    em._zerar_registro_de_mascaras()
 
 
 def _o_disco(caso: str) -> str:

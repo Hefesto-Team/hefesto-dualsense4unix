@@ -151,33 +151,27 @@ def _o_gesto_pelo_laco(bancada: MesaDosAtalhos, uniq: str, *botoes: str) -> None
 
 
 @pytest.mark.usefixtures("config_isolado")
-class TestOPsL3AndaOCartaoDeQuemFaz:
-    """Com o P1 na mesa, o PS + L3 do P3 troca a máscara DO P3."""
+class TestOPsL3DeQualquerControleAndaOModoDeTodos:
+    """Com o P1 na mesa, o PS + L3 do P3 anda o modo único dos três (D-2710, 27/10/2026)."""
 
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
-    def test_o_ps_l3_do_p3_troca_a_mascara_dele(
+    def test_o_ps_l3_do_p3_anda_o_modo_de_todos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
         bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
         luz = armar_o_ato_do_daemon(bancada, monkeypatch).luz
         bancada.daemon._hotkey_manager.on_next_mask = build_next_mask_callback(bancada.daemon)
-        posto = bancada.daemon._gamepad_device
-        vpad_do_p2 = bancada.vpad_de(P2)
         assert em.mascara_vestida(bancada.daemon, P3) == "dualsense"
 
         with structlog.testing.capture_logs() as registros:
             _o_gesto_pelo_laco(bancada, P3, "ps", "l3")
-        bancada.tique()
+        for _ in range(3):
+            bancada.tique()
 
         assert _disparos_no_diario(registros) == [("mascara", P3)]
-        assert em.mascara_vestida(bancada.daemon, P3) == "xbox", "a máscara do P3 não trocou"
-        assert em.registro_de_mascaras().mask_for(P1) is None, "o cartão do P1 andou"
-        assert em.registro_de_mascaras().mask_for(P2) is None, "o cartão do P2 andou"
-        assert bancada.daemon._gamepad_device is posto and posto.vivo, (
-            "o gesto do P3 recriou o vpad do P1"
-        )
-        assert bancada.vpad_de(P2) is vpad_do_p2, "o gesto do P3 recriou o P2"
-        assert ("piscada", "mascara:xbox") in luz, f"a luz disse {luz}"
+        for uniq in (P1, P2, P3):
+            assert em.mascara_vestida(bancada.daemon, uniq) == "xbox", f"{uniq} ficou para trás"
+        assert ("piscada", "xbox") in luz, f"a luz disse {luz}"
         assert bancada.a_tela() == {P1: 1, P2: 2, P3: 3}
         bancada.o_jogo_segue_a_tela()
 

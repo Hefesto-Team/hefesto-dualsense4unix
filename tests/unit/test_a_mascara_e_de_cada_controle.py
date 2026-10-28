@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""A máscara é de CADA aparelho — e a tela e a escrita finalmente sabem disso.
+"""A máscara de cada aparelho na tela e na escrita.
+
+NOTA DATADA, 27/10/2026: desde a D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES a máscara
+é o modo único, igual para todos; o registro por aparelho saiu, e o `por_aparelho`
+repete o modo para cada controle conectado.
 
 O PEDIDO É DE PRODUTO, 03/09/2026: *"É uma máscara por controle. Mesmo caso do
 anterior."* — o "anterior" é a decisão dos quatro lugares, do mesmo dia.
@@ -35,55 +39,13 @@ UNIQ_A = "aa:bb:cc:00:00:01"
 UNIQ_B = "aa:bb:cc:00:00:02"
 
 
-@pytest.fixture
-def registro(tmp_path, monkeypatch):
-    """Um registro de máscaras num lar de mentira — nunca o dela."""
-    from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
-
-    monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
-    em._zerar_registro_de_mascaras()
-    yield em.registro_de_mascaras()
-    em._zerar_registro_de_mascaras()
-
-
-def test_sem_escolha_o_aparelho_herda_a_sessao(registro) -> None:
-    """Quem não escolheu segue o jogo. É a semântica de `ControllerOverrides`."""
+def test_todo_aparelho_recebe_o_modo_unico() -> None:
+    """D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES (27/10/2026): a escolha por
+    aparelho saiu; os dois controles recebem o modo único, na mesma sessão."""
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
 
-    assert mascara_efetiva(UNIQ_A, "xbox") == "xbox"
-    assert mascara_efetiva(UNIQ_B, "dualsense") == "dualsense"
-
-
-def test_dois_aparelhos_com_mascaras_diferentes(registro) -> None:
-    """O PEDIDO, na forma mais curta que se pode medir.
-
-    Um escolhe DualSense, o outro não escolhe nada — e os dois recebem coisas
-    diferentes na MESMA sessão.
-    """
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
-
-    registro.set_mask(UNIQ_A, "dualsense")
-    assert mascara_efetiva(UNIQ_A, "xbox") == "dualsense"
-    assert mascara_efetiva(UNIQ_B, "xbox") == "xbox"
-
-
-def test_a_escolha_sobrevive_a_troca_de_sessao(registro) -> None:
-    """Trocar a máscara do JOGO não apaga a escolha do APARELHO."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
-
-    registro.set_mask(UNIQ_A, "dualsense")
-    assert mascara_efetiva(UNIQ_A, "xbox") == "dualsense"
-    assert mascara_efetiva(UNIQ_A, "dualsense") == "dualsense"
-
-
-def test_limpar_devolve_a_heranca(registro) -> None:
-    """Um registro em que só se entra é uma armadilha."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
-
-    registro.set_mask(UNIQ_A, "dualsense")
-    registro.clear_mask(UNIQ_A)
-    assert mascara_efetiva(UNIQ_A, "xbox") == "xbox"
+    for modo in ("dualsense", "xbox", "nintendo"):
+        assert mascara_efetiva(UNIQ_A, modo) == mascara_efetiva(UNIQ_B, modo) == modo
 
 
 def _mesa(por_aparelho: dict[str, str], da_sessao: str = "xbox"):

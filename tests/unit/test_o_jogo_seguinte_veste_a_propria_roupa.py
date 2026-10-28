@@ -34,9 +34,6 @@ from hefesto_dualsense4unix.daemon import lifecycle as lc
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
-from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-    _zerar_registro_de_mascaras,
-)
 from hefesto_dualsense4unix.daemon.subsystems.game_signal import (
     HYSTERESIS_SEC,
     GameSignal,
@@ -135,7 +132,7 @@ class _Relogio:
 
 @pytest.fixture(autouse=True)
 def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Disco em tmp, o registro zerado, a borda do pad, do evdev e do broker dublada."""
+    """Disco em tmp, a borda do pad, do evdev e do broker dublada."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     alvo = tmp_path / "config"
@@ -170,9 +167,7 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda self: True
     )
     monkeypatch.setattr("hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {})
-    _zerar_registro_de_mascaras()
     yield
-    _zerar_registro_de_mascaras()
 
 
 def _na_mesa(monkeypatch: pytest.MonkeyPatch, secundarios: int) -> None:

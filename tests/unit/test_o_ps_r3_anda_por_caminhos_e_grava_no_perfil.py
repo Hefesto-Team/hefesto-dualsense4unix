@@ -18,6 +18,10 @@ o co-op e a lightbar. O perfil ativo é achado pela perna do disco
 (`session.json` + o marcador), que é o estado da máquina do usuário com o daemon
 calado.
 
+NOTA DATADA, 27/10/2026 (O-MODO-UNICO-VALE-PARA-TODOS-OS-CONTROLES-01): «a máscara do
+vpad não muda em aperto nenhum» caducou. O modo é o par (caminho, máscara): o degrau Xbox
+veste o Xbox e o DualSense veste o DualSense, e o par vai junto ao perfil.
+
 MORDE, e são duas curas independentes:
 
 * `ponte_atual` lendo `device.flavor` — o primeiro aperto não sobe (`efetiva`
@@ -51,12 +55,11 @@ from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.schema import (
-    ControllerOverrides,
     MatchAny,
     Profile,
     ProfileModeConfig,
 )
-from hefesto_dualsense4unix.utils import session, xdg_paths
+from hefesto_dualsense4unix.utils import session
 
 P1 = "aabbcc000001"
 PERFIL = "Bancada"
@@ -176,10 +179,7 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, *, origem=None: None)
     monkeypatch.setattr(hotkey, "PULSO_SEG", 0.0)
     monkeypatch.setattr(hotkey, "_appid_do_jogo_do_wrapper", lambda: None)
-    em._zerar_registro_de_mascaras()
-    (xdg_paths.config_dir(ensure=True) / "controller_masks.json").unlink(missing_ok=True)
     yield
-    em._zerar_registro_de_mascaras()
 
 
 @pytest.fixture
@@ -199,14 +199,14 @@ def _preparar_cartao_dualsense() -> _Daemon:
         Profile(
             name=PERFIL,
             match=MatchAny(),
-            mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense"),
-            controllers={P1: ControllerOverrides(mascara="dualsense")},
+            mode=ProfileModeConfig(
+                kind="gamepad", gamepad_flavor="dualsense", caminho="dualsense"
+            ),
         ),
         origem="teste",
     )
     session.save_last_profile(PERFIL)
     session.save_active_marker(PERFIL)
-    em.registro_de_mascaras().set_mask(P1, "dualsense")
     d = _Daemon("dualsense")
     assert gp.start_gamepad_emulation_desfecho(d, None, origin="profile") == gp.EMU_APLICADO
     return d
@@ -222,27 +222,27 @@ async def test_tres_apertos_andam_pelos_caminhos_e_cada_um_fica_no_perfil(
 
     gesto = hotkey.build_next_bridge_callback(d)  # type: ignore[arg-type]
     esperado = [
-        (hotkey.PONTE_XBOX, "uinput", ("gamepad", "xbox")),
-        (hotkey.PONTE_MOUSE_TECLADO, None, ("desktop", None)),
-        (hotkey.PONTE_DUALSENSE, "uhid", ("gamepad", "dualsense")),
+        (hotkey.PONTE_XBOX, "uinput", ("gamepad", "xbox"), "xbox"),
+        (hotkey.PONTE_MOUSE_TECLADO, None, ("desktop", None), "xbox"),
+        (hotkey.PONTE_DUALSENSE, "uhid", ("gamepad", "dualsense"), "dualsense"),
     ]
     andou: list[str] = []
-    for aperto, (ponte, canal, modo) in enumerate(esperado, start=1):
+    for aperto, (ponte, canal, modo, mascara) in enumerate(esperado, start=1):
         await gesto()
         andou.append(hotkey.ponte_atual(d))
         assert andou[-1] == ponte, f"aperto {aperto}: o ciclo andou {andou}"
         vivo = d._gamepad_device
         assert (vivo.backend if vivo is not None else None) == canal, f"aperto {aperto}"
         if vivo is not None:
-            assert vivo.flavor == "dualsense", f"aperto {aperto}: o gesto trocou a máscara"
+            assert vivo.flavor == mascara, f"aperto {aperto}: a máscara não seguiu o modo"
         gravado = loader.load_profile(PERFIL).mode
         assert gravado is not None
         assert (gravado.kind, gravado.caminho) == modo, (
             f"aperto {aperto}: o perfil ativo ficou em {gravado!r}, e o gesto "
             "grava na hora — sem esperar silêncio nem jogo"
         )
-        assert gravado.gamepad_flavor == "dualsense", (
-            f"aperto {aperto}: o gesto apagou a máscara padrão do perfil: {gravado!r}"
+        assert gravado.gamepad_flavor == mascara, (
+            f"aperto {aperto}: o par (caminho, máscara) não foi junto ao perfil: {gravado!r}"
         )
 
     vermelhas = [seq for seq in luzes if seq and seq[0][0] == hotkey.COR_AVISO_RISCO]
@@ -250,4 +250,4 @@ async def test_tres_apertos_andam_pelos_caminhos_e_cada_um_fica_no_perfil(
         f"{len(vermelhas)} sequência(s) de pulsos vermelhos — `ponte_nao_subiu`: o "
         "aparelho não concordou com o aperto"
     )
-    assert em.mascara_efetiva(P1, d.config.gamepad_flavor) == "dualsense", "o cartão mudou"
+    assert em.mascara_efetiva(P1, d.config.gamepad_flavor) == "dualsense", "o modo não voltou"

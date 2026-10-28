@@ -235,15 +235,15 @@ INVENTARIO: tuple[Lugar, ...] = (
     ),
     Lugar(
         "mascaras-por-aparelho", "config", f"{_C}/controller_masks.json",
-        "daemon/subsystems/external_mask.py:_MASKS_FILE",
+        "daemon/subsystems/external_mask.py:ARQUIVO_DE_MASCARAS_DE_ANTES",
         USUARIO, CONTROLES, MOVER,
-        "a máscara escolhida para cada controle externo, por endereço",
+        "a máscara de cada controle de antes do modo único, que o boot leva ao modo e apaga",
     ),
     Lugar(
         "mascaras-ilegiveis", "config", f"{_C}/controller_masks.json.ilegivel-*",
-        "daemon/subsystems/external_mask.py:SUFIXO_DO_ILEGIVEL",
+        "daemon/subsystems/external_mask.py:ARQUIVO_DE_MASCARAS_DE_ANTES",
         USUARIO, CONTROLES, MOVER,
-        "os bytes do controller_masks.json que não se leram, guardados antes da escrita",
+        "os bytes do controller_masks.json que não se leram, guardados antes do modo único",
     ),
     Lugar(
         "declaracao-da-mesa", "config", f"{_C}/maquina.json",
