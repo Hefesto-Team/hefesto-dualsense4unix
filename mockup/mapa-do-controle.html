@@ -53,7 +53,7 @@
   .voltar2{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:7px;text-decoration:none;
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
   .voltar2:hover{border-color:var(--purple);color:var(--fg)}
-  .mc-topo > .mc-rot{margin-left:auto}
+  .mc-vale{display:flex;align-items:center;gap:16px;margin-left:auto;min-width:0}
   .mc-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
   .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
     background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center;
@@ -61,8 +61,8 @@
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
   .chip .pt{color:var(--fg);margin:0 2px}
   @media (max-width:1000px){.mc-chips{flex:1 1 auto;gap:5px;grid-auto-columns:auto}.chip{padding:0 7px}
-    .mc-topo h1{flex:none;width:6em}}
-  .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
+    .mc-topo h1{flex:none;width:6em}.mc-topo{flex-wrap:wrap;row-gap:10px}.mc-vale{flex:1 1 auto}}
+  .mc-perfil{display:grid;grid-template-columns:306px minmax(0,1fr) 306px;gap:20px;align-items:center;
     padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
   .mc-perfil .cel{display:flex;align-items:center;gap:12px;min-width:0}
   .mc-rot{font-size:12px;color:var(--texto-suave);white-space:nowrap}
@@ -78,9 +78,9 @@
     border:1px solid var(--tipo);color:var(--fg);background:transparent;font-family:var(--f)}
   .usar-em .mais{border-style:dashed;color:var(--fg);border-color:var(--border-forte);cursor:pointer}
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
-  .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
+  .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:306px minmax(0,1fr) 306px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
-  @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:252px minmax(0,1fr) 252px;gap:12px}}
+  @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:284px minmax(0,1fr) 284px;gap:12px}}
   .mc-lado{display:flex;flex-direction:column;gap:7px;justify-content:space-between}
   .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
     border-radius:8px;border:1px solid var(--border-sutil);background:var(--panel);color:var(--fg);font:12px var(--f);
@@ -100,11 +100,15 @@
   .mc-desenho{display:flex;justify-content:center;min-height:0}
   .mc-desenho .ds{width:100%;height:auto;max-height:380px}
   .mc-baixo{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
-  .mc-baixo .b2{grid-template-columns:24px 58px minmax(0,1fr);gap:8px}
+  .mc-baixo .b2{display:flex;flex-wrap:wrap;align-items:center;align-content:center;height:auto;min-height:37px;
+    padding:5px 10px;gap:4px 8px}
+  .mc-baixo .b2-gl{flex:none;width:24px}.mc-baixo .b2-nm{flex:none;width:58px}
+  .mc-baixo .b2-val{flex:1 1 auto;min-width:0}
   .mc-baixo .b2:last-child{grid-column:1 / -1;justify-self:center;width:calc(50% - 6px)}
   @media (max-width:1000px){.b2,.mc-baixo .b2{grid-template-columns:24px 60px minmax(0,1fr);gap:6px;padding:0 8px}
     .mc-baixo{grid-template-columns:minmax(0,1fr)}
-    .mc-baixo .b2:last-child{grid-column:auto;justify-self:stretch;width:auto}}
+    .mc-baixo .b2:last-child{grid-column:auto;justify-self:stretch;width:auto}
+    .mc-baixo .b2{padding:5px 8px;gap:4px 6px}.mc-baixo .b2-nm{width:60px}}
   .sel2{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:5;background:var(--panel);
     border:1px solid var(--pink);border-radius:11px;box-shadow:0 18px 50px rgba(0,0,0,.55);
     display:flex;flex-direction:column;padding:14px 16px;gap:12px}
@@ -313,7 +317,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <div class="mc-topo">
     <a class="voltar2 voltar" href="06-navegacao.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a Navegação">← Voltar</a>
     <h1 id="mc-titulo">Mapa do controle</h1>
-    <span class="mc-rot" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#74588e" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#e4e0d8" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div>
+    <span class="mc-vale"><span class="mc-rot" data-dica="O mapa vale só para o controle escolhido; cada controle guarda o seu">Vale para</span><div class="mc-chips" data-bloco="controles-do-mapa"><button class="chip plastico on" style="--plastico:#ae335a" data-colorway="cosmic-red" data-jogador="1" data-luz="#0000ff">Cosmic Red <span class="pt">•</span> USB</button><button class="chip plastico" style="--plastico:#7eb8d4" data-colorway="starlight-blue" data-jogador="2" data-luz="#ff0000">Starlight Blue <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#74588e" data-colorway="galactic-purple" data-jogador="3" data-luz="#00ff00">Galactic Purple <span class="pt">•</span> BT</button><button class="chip plastico" style="--plastico:#e4e0d8" data-colorway="white" data-jogador="4" data-luz="#ff0080">White <span class="pt">•</span> USB</button></div></span>
   </div>
   <div class="corpo">
   <div class="mc-perfil" data-fixo="sim" data-campo="mc-fixo" data-hef-alvo="atributo" data-hef-atributo="data-fixo">
