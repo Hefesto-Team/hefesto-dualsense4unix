@@ -335,6 +335,12 @@ def quem_le_o_controle(daemon: DaemonProtocol) -> str:
     return QUEM_LE_O_CONTROLE.get(modo, LE_O_HEFESTO)
 
 
+def _carimbar_o_anuncio(daemon: DaemonProtocol, modo: str) -> None:
+    """Guarda o modo já anunciado, para o aviso de modo trocado não o repetir."""
+    with contextlib.suppress(Exception):
+        daemon._modo_anunciado = modo  # type: ignore[attr-defined]
+
+
 def _disparar_piscada(
     daemon: DaemonProtocol, cor: tuple[int, int, int], *, modo: str
 ) -> bool:
@@ -396,20 +402,17 @@ def avisar_troca_de_modo(daemon: DaemonProtocol) -> str | None:
     if modo == anterior:
         return None
     if anterior is _NUNCA_ANUNCIADO:
-        with contextlib.suppress(Exception):
-            daemon._modo_anunciado = modo  # type: ignore[attr-defined]
+        _carimbar_o_anuncio(daemon, modo)
         logger.debug("aviso_de_modo_primeira_leitura", modo=modo)
         return None
     cor = CORES_DO_MODO.get(modo)
     if cor is None:
         logger.warning("aviso_de_modo_sem_cor", modo=modo, de=anterior)
-        with contextlib.suppress(Exception):
-            daemon._modo_anunciado = modo  # type: ignore[attr-defined]
+        _carimbar_o_anuncio(daemon, modo)
         return None
     if not _disparar_piscada(daemon, cor, modo=modo):
         return None
-    with contextlib.suppress(Exception):
-        daemon._modo_anunciado = modo  # type: ignore[attr-defined]
+    _carimbar_o_anuncio(daemon, modo)
     logger.info("aviso_de_modo_trocado", de=anterior, para=modo, cor=cor)
     return modo
 
@@ -2229,8 +2232,7 @@ def build_next_mask_callback(daemon: DaemonProtocol) -> Any:
                     store.bump("hotkey.mascara.cycled")
             logger.info("mascara_trocada_por_gesto", de=atual, para=alvo, desfecho=desfecho)
             if _disparar_piscada(daemon, CORES_DA_MASCARA[alvo], modo=alvo):
-                with contextlib.suppress(Exception):
-                    daemon._modo_anunciado = modo_vigente(daemon)  # type: ignore[attr-defined]
+                _carimbar_o_anuncio(daemon, modo_vigente(daemon))
             return
         logger.warning(
             "mascara_nao_subiu", pedida=alvo, efetiva=efetiva, desfecho=desfecho

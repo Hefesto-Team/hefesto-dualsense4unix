@@ -695,20 +695,20 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_JOGADOR": (
         "daemon/subsystems/hotkey.py::start_hotkey_manager",
         "02/10/2026 — a mão é o despachante dos gestos: "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:759` (`start_hotkey_manager`) "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:762` (`start_hotkey_manager`) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
         "script dela antes de rodá-lo (`_rodar_o_script_do_gesto` em "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2629`). Não há `Environment=` a "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2631`). Não há `Environment=` a "
         "escrever: a chave"
         " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),
     "HEFESTO_TRANSPORTE": (
         "daemon/subsystems/hotkey.py::start_hotkey_manager",
         "02/10/2026 — a mão é o despachante dos gestos: "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:759` (`start_hotkey_manager`) "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:762` (`start_hotkey_manager`) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
         "script dela antes de rodá-lo (`_rodar_o_script_do_gesto` em "
-        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2629`). Não há `Environment=` a "
+        "`src/hefesto_dualsense4unix/daemon/subsystems/hotkey.py:2631`). Não há `Environment=` a "
         "escrever: a chave"
         " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),

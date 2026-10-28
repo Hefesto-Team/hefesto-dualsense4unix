@@ -416,8 +416,7 @@ SEM_LETRA: dict[str, str] = {
     "__init__.py:guardado ← recusa":
         "a recusa da camada (`pacotes/camada.py:recusa_no_nativo`), levantada inteira "
         "antes de o gesto existir",
-    "__init__.py:gesto ← recusa": "idem, no despachante de cada gesto",
-    "__init__.py:dentro ← recusa": "idem, no gesto de dentro do cartão",
+    "__init__.py:_guardado_na_pagina ← recusa": "idem, no gesto de cada página que o mostra",
     "__init__.py:na_pagina ← frase": "idem, no gesto do rodapé que toda página despacha",
     "__init__.py:gesto_da_pagina ← frase": "idem, no coringa do rodapé",
     "a13_mapa_do_controle.py:_com_as_sequencias ← frase":
