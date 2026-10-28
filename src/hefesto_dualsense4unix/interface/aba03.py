@@ -101,11 +101,7 @@ def _barras_que_a_base_usa():
 
 GLIFO_DO_DUALSENSE = _mapa.silhueta_do_dualsense(40)
 
-DO_ESTILO = ("do_estilo", "Do estilo")
-GRUPOS_DO_DESENHO = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
-MUDA_DE_GRUPO = {"rajada-que-sobe-sozinha": "Rajada", "cano-que-esquenta": "Rajada",
-                 "recuo-pesado": "Rajada", "galope-no-chao": "Pulso", "terreno-que-muda": "Pulso",
-                 "clique-no-meio": "Clique"}
+from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import DO_ESTILO  # noqa: E402
 
 TETO_DA_INTENSIDADE = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 PASSO_DA_INTENSIDADE = 5
@@ -235,7 +231,7 @@ CSS = CSS_GLIFO + """  .g2-grade{display:grid;grid-template-columns:44px 132px r
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
 CSS += "".join(
     f'\n  .g2-fam[data-fam="{f}"] + .g2-imersao{{padding-left:{29 + round(len(f) * 6.6)}px}}'
-    for f in dict.fromkeys((*FAMILIAS_DA_PAGINA, *GRUPOS_DO_DESENHO)))
+    for f in FAMILIAS_DA_PAGINA)
 CSS += "".join(
     f"\n  .g2-forca .degraus i:nth-child({n}){{height:{round(36 * n / DEGRAUS_DA_FORCA)}px}}"
     for n in range(1, DEGRAUS_DA_FORCA + 1))
@@ -263,19 +259,6 @@ def _grupo_dos_seus(itens):
     return f'<optgroup label="{SEUS_EFEITOS}">{dentro}</optgroup>'
 
 
-def _nos_grupos_do_desenho(cru):
-    """«Do estilo» no topo e os grupos sem grupo de um efeito só: `MUDA_DE_GRUPO` leva cada efeito."""
-    soltas = cru.split("<optgroup", 1)[0]
-    grupos = {g: [] for g in GRUPOS_DO_DESENHO}
-    for rotulo, dentro in re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', cru, re.S):
-        for opcao in re.findall(r"<option\b.*?</option>", dentro, re.S):
-            valor = re.search(r'value="([^"]*)"', opcao).group(1)
-            grupos.setdefault(MUDA_DE_GRUPO.get(valor, rotulo), []).append(opcao)
-    topo = f'<option value="{DO_ESTILO[0]}">{DO_ESTILO[1]}</option>'
-    return topo + soltas + "".join(f'<optgroup label="{g}">{"".join(o)}</optgroup>'
-                                   for g, o in grupos.items() if o)
-
-
 def opcoes_imersao(escolhida):
     """As opções do efeito do gatilho: as mesmas que o pacote monta, com a escolhida marcada.
 
@@ -285,7 +268,6 @@ def opcoes_imersao(escolhida):
     cru = html_das_opcoes_de_imersao()
     cru = re.sub(r"^<option value=\"" + TRAVESSAO + r"\"[^>]*>[^<]*</option>", "", cru)
     cru = re.sub(r'<optgroup label="' + SEUS_EFEITOS + r'">.*?</optgroup>', "", cru)
-    cru = _nos_grupos_do_desenho(cru)
     alvo = f'<option value="{_escapar(escolhida)}"'
     if alvo in cru:
         cru = cru.replace(alvo, alvo + " selected", 1)
@@ -302,7 +284,7 @@ def _celula_da_imersao(pref, sig, vazio):
     """
     imersao = CENA[pref][sig][1] if not vazio else TRAVESSAO
     dica = SEM_APARELHO_AQUI if vazio else dica_da_imersao(imersao)
-    fam = "" if vazio else MUDA_DE_GRUPO.get(imersao, familia_da_imersao(imersao))
+    fam = "" if vazio else familia_da_imersao(imersao)
     atr_fam = f' data-fam="{_escapar(fam)}"' if fam else ""
     return (f'<div class="g2-cel{_off(vazio)}" data-controle="{pref}"{_marca(vazio)}>'
             f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DA_IMERSAO}{sig}" data-hef-alvo="atributo" '
@@ -605,11 +587,29 @@ def _conferir(doc):
            "a lista do efeito do gatilho não abre em grupos por família")
     for _lista in re.findall(r'<select class="g2-imersao".*?</select>', corpo, re.S):
         exigir(re.search(r'^<select[^>]*>(?:<option[^>]*hidden>[^<]*</option>)?'
-                         rf'<option value="{DO_ESTILO[0]}"', _lista) is not None,
+                         rf'<option value="{DO_ESTILO}"', _lista) is not None,
                "a lista do efeito do gatilho não abre com «Do estilo»")
         _sos = [g for g, d in re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', _lista, re.S)
                 if g != SEUS_EFEITOS and d.count("<option") == 1]
         exigir(not _sos, f"grupo de um efeito só na lista do efeito do gatilho: {_sos}")
+        _grupos = [g for g in re.findall(r'<optgroup label="([^"]+)">', _lista) if g != SEUS_EFEITOS]
+        exigir(_grupos == list(FAMILIAS_DA_PAGINA),
+               f"a lista do efeito do gatilho não tem os grupos do produto, na ordem: {_grupos}")
+        for _grupo, _dentro in re.findall(r'<optgroup label="([^"]+)">(.*?)</optgroup>', _lista,
+                                          re.S):
+            if _grupo == SEUS_EFEITOS:
+                continue
+            for _valor in re.findall(r'<option value="([^"]+)"', _dentro):
+                exigir(familia_da_imersao(_valor) == _grupo,
+                       f"o efeito {_valor!r} está no grupo {_grupo!r} e a etiqueta dele diz "
+                       f"{familia_da_imersao(_valor)!r}")
+    for _fam, _sel in re.findall(r'<i class="g2-fam"[^>]*?(?:data-fam="([^"]*)")?></i>'
+                                 r'<select class="g2-imersao"[^>]*>(.*?)</select>', corpo, re.S):
+        _marcada = re.search(r'<option value="([^"]*)" selected', _sel)
+        exigir(_marcada is None or _fam == familia_da_imersao(_marcada.group(1)),
+               f"a etiqueta {_fam!r} ao lado da lista não é o grupo do efeito marcado")
+        exigir(_marcada is None or _marcada.group(1) != DO_ESTILO or not _fam,
+               "a etiqueta de família apareceu ao lado do «Do estilo»")
     exigir(re.search(r'class="g2-gl g2-ds"[^>]*>.*?</div>\s*<div class="g2-canto"', corpo, re.S)
            is not None and "g2-canto-rot" not in corpo,
            "o desenho do controle saiu do lado do «Estilo de jogo», ou o rótulo «Controle» voltou")

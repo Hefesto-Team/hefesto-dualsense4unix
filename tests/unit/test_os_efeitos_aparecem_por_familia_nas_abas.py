@@ -52,7 +52,7 @@ PUBLICADO = _INTERFACE / "paginas"  # (noqa-acento)
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 LARGURAS = ((1212, 809), (1918, 840), (1212, 740))
 
-FAMILIAS = ("Golpe", "Carga", "Peso", "Travar", "Terreno", "Pulso", "Clique")
+FAMILIAS = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 GRUPOS_DA_03 = ("Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 ACIONAMENTOS = ("Resistência", "Metralhadora", "Disparo", "Arco", "Gatilho")
 LUZ_DA_04 = ("Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré", "Piscar",

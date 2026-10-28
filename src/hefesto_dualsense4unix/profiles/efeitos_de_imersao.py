@@ -124,7 +124,7 @@ IMERSOES: tuple[Imersao, ...] = (
             "Parede longa e dura que estala no fundo.",
             {"Weapon": {"start": 2, "end": 8, "force": 191}},
             na_frente=("terror",)),
-    Imersao("clique-no-meio", "Carga · dois estágios", "arma",
+    Imersao("clique-no-meio", "Clique · dois estágios", "arma",
             "Um clique na metade, e a resistência cresce depois dele.",
             {"Weapon": {"start": 4, "end": 6, "force": 160}},
             momentos=(Momento(QUANDO_PASSOU_DO_CLIQUE, 300, "Resistance",
@@ -143,7 +143,7 @@ IMERSOES: tuple[Imersao, ...] = (
             "Um clique duro logo no começo do curso.",
             {"Weapon": {"start": 2, "end": 4, "force": 224}},
             na_frente=("souls",)),
-    Imersao("rajada-que-sobe-sozinha", "Golpe · rajada que sobe", "metralhadora",
+    Imersao("rajada-que-sobe-sozinha", "Rajada · rajada que sobe", "metralhadora",
             "As batidas começam médias e ficam mais fortes a cada meio segundo segurando.",
             {"Machine": {"start": 0, "end": 9, "strength": 4, "frequency": 40},
              "Vibration": {"position": 0, "amplitude": 5, "frequency": 8}},
@@ -159,7 +159,7 @@ IMERSOES: tuple[Imersao, ...] = (
                       Momento("segurando", 1500, "Vibration", {"amplitude": 8},
                               valem_em=("Vibration",))),
             na_frente=("fps",)),
-    Imersao("cano-que-esquenta", "Golpe · rajada que esquenta", "metralhadora",
+    Imersao("cano-que-esquenta", "Rajada · rajada que esquenta", "metralhadora",
             "Batidas rápidas e fortes que ficam lentas e pesadas depois de 3 s segurando.",
             {"Machine": {"start": 0, "end": 9, "strength": 6, "frequency": 20},
              "Vibration": {"position": 0, "amplitude": 6, "frequency": 20}},
@@ -168,7 +168,7 @@ IMERSOES: tuple[Imersao, ...] = (
                       Momento("segurando", 3000, "Vibration", {"frequency": 8},
                               valem_em=("Vibration",))),
             na_frente=()),
-    Imersao("recuo-pesado", "Golpe · rajada de recuo", "metralhadora",
+    Imersao("recuo-pesado", "Rajada · rajada de recuo", "metralhadora",
             "Solavancos espaçados e fortes, como arma de calibre grande.",
             {"Machine": {"start": 0, "end": 9, "strength": 8, "frequency": 6},
              "Vibration": {"position": 0, "amplitude": 8, "frequency": 6}},
@@ -249,7 +249,7 @@ IMERSOES: tuple[Imersao, ...] = (
             "Duas travas no curso, uma na entrada e outra no meio.",
             {"MultiPositionFeedback": _curva(1, 2, 8, 0, 0, 1, 2, 8, 0, 0)},
             na_frente=()),
-    Imersao("galope-no-chao", "Terreno · passos", "galope",
+    Imersao("galope-no-chao", "Pulso · passos", "galope",
             "Patas lentas e baixas, só se sentem devagar.",
             {"Galloping": {"start": 0, "end": 9, "first_foot": 6, "second_foot": 3,
                            "frequency": 6}},
@@ -260,7 +260,7 @@ IMERSOES: tuple[Imersao, ...] = (
                            "frequency": 12}},
             momentos=_rampa("Galloping", "frequency", 12, 33, 500),
             na_frente=("corrida",), a_validar=True),
-    Imersao("terreno-que-muda", "Terreno · irregular", "galope",
+    Imersao("terreno-que-muda", "Pulso · irregular", "galope",
             "Passadas desiguais, uma fraca e uma forte, como piso irregular.",
             {"Galloping": {"start": 1, "end": 8, "first_foot": 4, "second_foot": 6,
                            "frequency": 16}},
@@ -328,7 +328,7 @@ def _familia_do_modo(modo: str) -> str:
 
 
 FAMILIAS_DA_PAGINA: tuple[str, ...] = (
-    "Golpe", "Carga", "Peso", "Travar", "Terreno", "Pulso", "Clique")
+    "Golpe", "Rajada", "Carga", "Peso", "Travar", "Pulso", "Clique")
 SEPARADOR_DO_NOME = " · "
 IGUAL_A: dict[str, str] = {"arma-pesada": "golpe-pesado"}
 

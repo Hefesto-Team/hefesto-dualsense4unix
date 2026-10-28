@@ -401,11 +401,41 @@ def _o_que_o_controle_recebe(p: dict[str, Any] | None, uniq: str,
         escrito = seus.get(disco) if isinstance(seus, dict) else None
         if isinstance(escrito, dict) and escrito:
             return escrito
-    globais = p.get("triggers")
+    return _o_que_o_perfil_da(p, disco)
+
+
+def _o_que_o_perfil_da(p: dict[str, Any] | None, disco: str) -> dict[str, Any]:
+    """O gatilho que o perfil dá a todo controle daquele lado: a seção global `triggers`.
+
+    Com um estilo escolhido, é a receita dele (`a10_perfis._com_o_estilo` a escreve ali), e é
+    o que o lado sem escolha do controle herda (`model_fields_set`).
+    """
+    globais = (p or {}).get("triggers")
     escrito = globais.get(disco) if isinstance(globais, dict) else None
     if isinstance(escrito, dict) and escrito:
         return escrito
     return _o_lado_que_o_perfil_cala(disco)
+
+
+def _a_escolha_e_do_estilo(p: dict[str, Any] | None, uniq: str, disco: str) -> bool:
+    """O lado daquele controle segue o estilo: há estilo, e nem o controle nem a sessão o escrevem.
+
+    No modo automático ESCRITO a tela segue no «Sem efeito» (`_o_que_o_controle_recebe`).
+    """
+    if not p or not _estilo_do_perfil(p) or _o_modo_escrito_e_automatico(p):
+        return False
+    if _do_rascunho(uniq, disco):
+        return False
+    alvo = _chave_no_perfil(uniq)
+    controles = p.get("controllers")
+    for chave, dele in (controles.items() if isinstance(controles, dict) else ()):
+        if not alvo or _chave_no_perfil(str(chave)) != alvo or not isinstance(dele, dict):
+            continue
+        seus = dele.get("triggers")
+        escrito = seus.get(disco) if isinstance(seus, dict) else None
+        if isinstance(escrito, dict) and escrito:
+            return False
+    return True
 
 
 def meus_efeitos() -> dict[str, Any]:
@@ -540,6 +570,10 @@ DICA_DO_SEM_IMERSAO = "O gatilho livre, de fábrica."
 
 CAMPO_DO_ESTILO = "estilo-do-perfil"
 
+DO_ESTILO = "do_estilo"
+
+ROTULO_DO_ESTILO = "Do estilo"
+
 SELETOR_DOS_SEUS = "#criar-gatilhos .meus"
 
 
@@ -646,7 +680,7 @@ def _com_maiuscula(texto: str) -> str:
 
 
 def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str = "") -> str:
-    """As opções do «Efeito do gatilho»: Sem efeito, um grupo por família e «Seus efeitos».
+    """As opções do «Efeito do gatilho»: Do estilo, Sem efeito, as famílias e «Seus efeitos».
 
     O texto da opção é a variante e o grupo é a família; a frase de cada efeito mora SÓ no
     `title`. Com um estilo no perfil, os efeitos dele vão na frente. O `—` é o do lugar sem
@@ -655,6 +689,7 @@ def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str
     o acionamento de um perfil antigo que nenhum efeito da lista descreve.
     """
     partes = [f'<option value="{TRAVESSAO}" disabled="" hidden="">{TRAVESSAO}</option>',
+              f'<option value="{DO_ESTILO}">{ROTULO_DO_ESTILO}</option>',
               f'<option value="{SEM_IMERSAO}" title="{_escapar(DICA_DO_SEM_IMERSAO)}">'
               f"{ROTULO_DO_SEM_IMERSAO}</option>"]
     if do_perfil.startswith(PREFIXO_DO_ACIONAMENTO):
@@ -955,9 +990,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             feita = _efeito_da_lista(
                 str(d["modo-chave"]), list(d["params"]), d["cru"], LADOS[sig], cfgs[sig])
             d["feita"] = feita
-            col[f"{CAMPO_DA_IMERSAO}-{sig}"] = feita
+            do_estilo = _a_escolha_e_do_estilo(p, uniq, LADOS[sig])
+            col[f"{CAMPO_DA_IMERSAO}-{sig}"] = DO_ESTILO if do_estilo else feita
             col[f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}"] = dica_da_imersao(feita)
-            col[f"{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}"] = familia_da_imersao(feita)
+            col[f"{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}"] = (
+                "" if do_estilo else familia_da_imersao(feita))
         colunas[uniq] = col
         pintados += sum(1 for k in col if k in tem_endereco)
         blocos.update(_blocos_da_coluna(pref_de.get(uniq) or uniq, deste, estilo=estilo))
@@ -1636,6 +1673,7 @@ def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     gatilho faz» saiu). «Sem efeito» solta o gatilho (`trigger.reset`). `meu:<nome>` leva o
     acionamento de onde a pessoa partiu. `acionamento:<modo>` (o perfil antigo) segue com os
     números do gatilho (`_ajustes_de_agora`); `meu-acionamento:<nome>`, com a metade guardada.
+    «Do estilo» apaga a escolha daquele controle e lado (`_seguir_o_estilo`).
     """
     _nao_no_automatico(ctx)
     uniq, lado = _exigir_controle(o, "imersão"), _lado(o)
@@ -1646,6 +1684,8 @@ def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         raise ValueError(
             "imersão: `—` é como esta tela diz que não há controle neste lugar, e não "
             "um efeito a aplicar. Escolha `Sem efeito` para soltar o gatilho.")
+    if chave == DO_ESTILO:
+        return _seguir_o_estilo(ctx, p, uniq, lado)
     modo_ = _modo_de_agora(ctx, uniq, lado)
     nome = chave
     if chave == SEM_IMERSAO:
@@ -1949,6 +1989,82 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
         return None
     atuais[chave] = dele.model_copy(update={"triggers": novos})
     return prof.model_copy(update={"controllers": atuais})
+
+
+def _seguir_o_estilo(ctx: Contexto, p: Any, uniq: str, disco: str) -> dict[str, Any]:
+    """«Do estilo»: o gatilho recebe o que o perfil dá a todos, e a escolha do controle sai.
+
+    O aparelho recebe o lado global do perfil (`_o_que_o_perfil_da`), que é a receita do estilo;
+    só depois que o byte saiu o lado sai do `controllers[uniq].triggers` e do rascunho, como a
+    Vibração faz com a chave dela. É o mesmo gatilho que o perfil daria na próxima ativação.
+    """
+    cfg = _o_que_o_perfil_da(perfil.ativo(ctx.state.get("active_profile")), disco)
+    modo_, params = str(cfg.get("mode") or "Off"), _params_inteiros(cfg)
+    if modo_ == "Off":
+        ok, motivo, corpo = _desfecho(p.trigger_reset_detalhado(disco, uniq=uniq))
+    else:
+        ok, motivo, corpo = _desfecho(p.trigger_set_detalhado(disco, modo_, params, uniq=uniq))
+    if not ok:
+        raise RuntimeError(_na_lingua_da_tela(motivo, modo_)
+                           or f"o Hefesto não aplicou «{ROTULO_DO_ESTILO}»")
+    nao_guardou = ""
+    if _chegou_ao_aparelho(corpo):
+        _RASCUNHO.pop(_chave_do_rascunho(uniq, disco), None)
+        nao_guardou = _tirar_do_perfil(ctx, p, uniq, disco)
+    _conferir_o_desfecho(disco, modo_, ok, motivo, corpo, ctx, uniq)
+    if not nao_guardou:
+        return {"recado": ""}
+    return {"recado": _E_TAMBEM.join((_recibo(disco, modo_, corpo, ctx, uniq), nao_guardou))}
+
+
+def _tirar_do_perfil(ctx: Contexto, p: Any, uniq: str, disco: str) -> str:
+    """Apaga do perfil ativo o lado escolhido daquele controle; a frase do que não deu, ou `""`."""
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    if not nome:
+        return ""
+    try:
+        prof = perfil._com_o_src().load_profile(nome)
+    except Exception:
+        return (f"o gatilho voltou ao estilo, mas o perfil {nome} não abriu. "
+                f"Ele vale até você trocar de perfil.")
+    try:
+        novo = _sem_o_lado(prof, uniq, disco)
+        if novo is not None:
+            _gravar_so_o_gatilho(novo, p)
+    except Exception as erro:
+        raise RuntimeError(
+            f"o gatilho voltou ao estilo, mas o perfil {nome} não guardou. "
+            f"Ele vale até você trocar de perfil.") from erro
+    return ""
+
+
+def _sem_o_lado(prof: Any, uniq: str, disco: str) -> Any:
+    """O perfil sem o lado `disco` no gatilho daquele controle, ou `None` se ele não o escrevia.
+
+    Sair é deixar o `model_fields_set`, que o disco grava (`exclude_unset`), como o
+    `a10_perfis._sem_o_ajuste_do_estilo`: o gatilho sem nada escrito sai do controle, e o controle
+    sem nada escrito sai do perfil.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, TriggersConfig
+
+    alvo = _chave_no_perfil(uniq)
+    atuais = dict(prof.controllers or {})
+    for chave, dele in atuais.items():
+        antes = getattr(dele, "triggers", None)
+        if _chave_no_perfil(chave) != alvo or antes is None:
+            continue
+        if disco not in antes.model_fields_set:
+            return None
+        resto = {k: getattr(antes, k) for k in antes.model_fields_set if k != disco}
+        campos = {k: getattr(dele, k) for k in dele.model_fields_set if k != "triggers"}
+        if resto:
+            campos["triggers"] = TriggersConfig(**resto)
+        if campos:
+            atuais[chave] = ControllerOverrides(**campos)
+        else:
+            del atuais[chave]
+        return prof.model_copy(update={"controllers": atuais or None})
+    return None
 
 
 GESTO_DA_INTENSIDADE = "intensidade-do-gatilho"

@@ -32,7 +32,7 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 03-gatilhos.html
 - **27/10/2026** — a tira tem nove abas (a Controles entrou na Jogar) e o contador «N USB · N BT» saiu do cabeçalho; até publicar, o produto continua com as dez abas e o contador.
-- **27/10/2026** — o efeito do gatilho abre com «Do estilo» e os grupos de um efeito só se juntam (Rajada, Pulso, Clique); o desenho do controle fica ao lado do «Estilo de jogo», sem o rótulo «Controle»; o criador parte da Metralhadora e mostra só as barras que a base escolhida manda ao gatilho. Aberto: o produto não conhece a opção «Do estilo» no gatilho nem os grupos novos (`efeitos_de_imersao.FAMILIAS_DA_PAGINA`). Até publicar, o produto continua com a lista de hoje e o criador com as quatro barras sempre à mostra.
+- **27/10/2026** — o efeito do gatilho abre com «Do estilo» e os grupos de um efeito só se juntam (Rajada, Pulso, Clique); o desenho do controle fica ao lado do «Estilo de jogo», sem o rótulo «Controle»; o criador parte da Metralhadora e mostra só as barras que a base escolhida manda ao gatilho. O produto já conhece o «Do estilo» e os grupos novos (`efeitos_de_imersao.FAMILIAS_DA_PAGINA`, gesto `imersao`). Até publicar, a página publicada continua com o criador de quatro barras sempre à mostra.
 
 ## 04-iluminacao.html
 - **27/10/2026** — a tira tem nove abas (a Controles entrou na Jogar) e o contador «N USB · N BT» saiu do cabeçalho; até publicar, o produto continua com as dez abas e o contador.
