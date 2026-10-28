@@ -50,10 +50,10 @@
       "universo": 406
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-26",
+      "data": "2026-10-28",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 958,
+      "piso": 956,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -102,7 +102,7 @@
         "daemon/subsystems/external_identity.py": 17,
         "daemon/subsystems/external_mask.py": 1,
         "daemon/subsystems/gamepad.py": 40,
-        "daemon/subsystems/hotkey.py": 39,
+        "daemon/subsystems/hotkey.py": 37,
         "daemon/subsystems/identity.py": 8,
         "daemon/subsystems/keyboard.py": 8,
         "daemon/subsystems/luz_do_mic.py": 6,
@@ -235,18 +235,18 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 405
+      "universo": 406
     },
     "tamanho": {
-      "data": "2026-10-27",
+      "data": "2026-10-28",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1162102,
+      "piso": 1162046,
       "por_item": {
-        "docs": 107543,
-        "scripts": 109488,
-        "src": 294837,
-        "tests": 650234
+        "docs": 107561,
+        "scripts": 109528,
+        "src": 294638,
+        "tests": 650319
       },
       "razao": "o teto desceu sozinho com o número",
       "subidas": [
@@ -1200,7 +1200,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3219
+      "universo": 3223
     }
   }
 }
