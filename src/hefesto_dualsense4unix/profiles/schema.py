@@ -2477,6 +2477,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "o do jogo anterior) e o dono é o resolvedor, não este campo.",
         dono="hefesto_dualsense4unix.integrations.virtual_pad:caminho_resolvido",
     ),
+    "ProfileModeConfig.arranjo": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = o estilo de jogo não escolheu, e vale o arranjo do `desktop` guardado na "
+        "sessão; sem ele, o Point and click.",
+        dono="hefesto_dualsense4unix.utils.session:load_arranjo_do_desktop",
+    ),
     "PonteConfirmada.kind": Nascimento(
         E_OBRIGATORIO, "Registro de uma confirmação; sem o modo não há o que registrar."
     ),
