@@ -234,11 +234,27 @@ def _paginas_publicadas(raiz: Path) -> list[Path]:
     return sorted(p for p in pasta.glob("[0-9][0-9]-*.html"))
 
 
+def _paginas_que_sairam(monta: Path) -> dict[str, str]:
+    if not monta.is_file():
+        return {}
+    for no in ast.parse(monta.read_text(encoding="utf-8")).body:
+        if isinstance(no, ast.AnnAssign) and isinstance(no.target, ast.Name):
+            alvo, valor = no.target.id, no.value
+        elif isinstance(no, ast.Assign) and isinstance(no.targets[0], ast.Name):
+            alvo, valor = no.targets[0].id, no.value
+        else:
+            continue
+        if alvo == "PAGINAS_QUE_SAIRAM" and valor is not None:
+            return dict(ast.literal_eval(valor))
+    return {}
+
+
 def _geradores(raiz: Path) -> list[Path]:
     pasta = raiz / GERADORES
     if not pasta.is_dir():
         return []
-    return sorted(pasta.glob("aba[0-9][0-9].py"))
+    sairam = {nome[:2] for nome in _paginas_que_sairam(pasta / "monta.py")}
+    return sorted(g for g in pasta.glob("aba[0-9][0-9].py") if g.stem[3:] not in sairam)
 
 
 def conferir_as_dez_abas(raiz: Path, censo: Censo) -> str:
