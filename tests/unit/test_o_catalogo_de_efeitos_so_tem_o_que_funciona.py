@@ -189,8 +189,7 @@ PUBLICADO = onde.PUBLICADO / "03-gatilhos.html"
 
 @pytest.mark.parametrize("arq", [
     DESENHO,
-    pytest.param(PUBLICADO, marks=pytest.mark.xfail(
-        strict=True, reason="a folga da Rajada entra no 03 publicado pela costura")),
+    PUBLICADO,
 ], ids=["desenho", "publicado"])
 def test_toda_familia_que_o_pacote_pinta_tem_a_folga_da_etiqueta(arq: pathlib.Path) -> None:
     doc = arq.read_text(encoding="utf-8")
