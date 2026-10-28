@@ -3609,9 +3609,12 @@ window.__hefTocar = window.__hefTocar || {
   },
   achar: function(raiz, pedido){
     const linha = String(pedido).split('@')[1] || '';
-    return Array.from(raiz.querySelectorAll(this.seletor(pedido))).find(function(el){
-      return !linha || el.dataset.linha === linha || el.dataset.campo === linha;
-    }) || null;
+    const todos = Array.from(raiz.querySelectorAll(this.seletor(pedido)));
+    const casa = function(el){
+      return linha ? el.dataset.linha === linha || el.dataset.campo === linha
+                   : !el.dataset.linha && !el.dataset.campo;
+    };
+    return todos.find(casa) || (linha ? null : todos[0] || null);
   },
   tocar: function(el){
     const tag = (el.tagName || '').toLowerCase();
