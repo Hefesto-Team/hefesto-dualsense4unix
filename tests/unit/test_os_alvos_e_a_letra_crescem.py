@@ -62,7 +62,7 @@ TETO_DAS_OUTRAS: dict[str, tuple[int, int, int]] = {
     "05-vibracao": (8, 2, 38),
     "06-navegacao": (0, 2, 20),
     "07-lancadores": (2, 2, 2),
-    "08-conexoes": (3, 0, 25),
+    "08-conexoes": (4, 3, 29),
     "10-perfis": (0, 17, 71),
 }
 ID_DA_FOLHA = "piso-dos-alvos"
