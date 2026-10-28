@@ -21,7 +21,6 @@ import pathlib
 import re
 import sys
 from itertools import pairwise
-from typing import Any
 
 import pytest
 
@@ -286,30 +285,13 @@ def test_as_duas_estao_em_que_se_move_em_cada_lista_do_desenho_e_na_frase_da_dic
     assert "Estrobo" not in doc and "estrobo" not in doc.lower(), "o nome na tela é «Relâmpago»"
 
 
-def test_o_criar_efeitos_novos_oferece_as_duas_como_base() -> None:
-    doc = re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "",
-                 PUBLICADA.read_text(encoding="utf-8"), flags=re.S)
-    criar = doc.split('<div class="quadro criar"', 1)[1]
-    jeito = criar.split('class="seg-criar"', 1)[1].split('class="g4-cores"', 1)[0]
-    assert re.findall(r'<input type="radio" name="base-criar" value="([^"]+)"', jeito) == [
-        "respirar", "piscar", "arco-iris", "onda", "relampago"]
-    assert "<span>Onda</span>" in jeito and "<span>Relâmpago</span>" in jeito
-
-
-def _criar(forma: dict[str, Any]) -> None:
-    import pacotes
-
-    ctx = pacotes.Contexto(state={"active_profile": ""}, mesa=[], conectados=[], estados={})
-    pacotes.gesto_da_pagina("04-iluminacao.html", "criar-efeito")(ctx, {"forma": forma}, None)
-
-
 @pytest.mark.parametrize("base", NOVAS)
-def test_criar_um_efeito_com_a_onda_ou_o_relampago_guarda_na_biblioteca(base: str) -> None:
+def test_o_efeito_guardado_com_a_onda_ou_o_relampago_se_le(base: str) -> None:
+    """O efeito que a biblioteca já guarda segue valendo na lista, sem o quadro de criar."""
     from pacotes import a04_iluminacao as a04
 
-    _criar({"base": base, "cores": "#ff0000,#00ff00", "ritmo": "6", "nome": f"Meu {base}"})
-    guardado = a04.meus_efeitos("luz")[f"Meu {base}"]
-    assert guardado["base"] == base
+    guardado = {"nome": f"Meu {base}", "base": base,
+                "parametros": {"cores": "#FF0000,#00FF00", "ritmo": 6}}
     assert a04.efeito_do_item(guardado) == f"{base};FF0000,00FF00;6"
     assert ler_o_efeito_da_luz(a04.efeito_do_item(guardado)) is not None
 
@@ -330,7 +312,7 @@ VISTAS_DA_04 = [(1212, 809), (1272, 860), (1512, 860), (1900, 1000)]
 
 @pytest.mark.skipif(not CHROME.exists(), reason="sem o Chrome do sistema: a régua não tem motor")
 def test_a_04_com_as_duas_opcoes_a_mais_nao_rola_na_vertical() -> None:
-    """A linha «Criar efeitos novos» fica numa linha só (com 5 jeitos no lugar de 3) e nada rola."""
+    """Com as duas opções a mais na lista do Efeito, nada rola na 04 publicada."""
     from playwright.sync_api import sync_playwright
 
     from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
@@ -347,8 +329,7 @@ def test_a_04_com_as_duas_opcoes_a_mais_nao_rola_na_vertical() -> None:
       }
       const d = document.documentElement;
       if (d.scrollHeight - window.innerHeight > 1) rola.push('doc');
-      const linha = document.querySelector('.criar-linha').getBoundingClientRect();
-      return {rola, linha: Math.round(linha.height)};
+      return {rola};
     }"""
     achados = []
     with sync_playwright() as pw:
@@ -361,8 +342,8 @@ def test_a_04_com_as_duas_opcoes_a_mais_nao_rola_na_vertical() -> None:
             pg.add_style_tag(content=escondidos)
             pg.wait_for_timeout(300)
             m = pg.evaluate(medir)
-            if m["rola"] or m["linha"] > 50:
+            if m["rola"]:
                 achados.append((larg, alt, m))
             pg.close()
         nav.close()
-    assert not achados, f"a 04 rola ou a linha de criar quebrou: {achados}"
+    assert not achados, f"a 04 rola: {achados}"

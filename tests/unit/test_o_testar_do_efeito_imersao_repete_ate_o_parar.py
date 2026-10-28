@@ -5,7 +5,7 @@ real. A háptica tem a régua dela em
 `test_o_testar_toca_a_forma_escolhida_e_o_fim_do_padrao_poupa_o_par`.
 
 MORDIDAS:
-  * troque `_repetir_o_padrao` por `_tocar_o_padrao` no `testar`: o padrão toca uma volta só;
+  * troque `_repetir_o_padrao` por `_padrao_neste_controle` no `testar`: o padrão toca uma volta só;
   * tire o ramo `_REPIQUE_DO_PADRAO` do `_refrescar_o_teste`: o arraste não muda a volta seguinte;
   * tire o `_cortar_o_repique` do começo do `parar`: um par sai depois do stop;
   * tire o `join` do `_cortar_o_repique`: o stop sai com um pedido ainda em curso.
@@ -130,15 +130,3 @@ def test_a_janela_que_fecha_corta_o_padrao(coice: None) -> None:
     depois = len(_pares(ponte))
     time.sleep(VOLTA_S * 2)
     assert len(_pares(ponte)) == depois and a05._REPIQUE_DO_PADRAO == {}
-
-
-def test_o_chip_ainda_toca_uma_volta_so(coice: None) -> None:
-    """O chip e o «Sentir» da área de criar mostram a forma uma vez, como antes."""
-    ponte = _Ponte()
-    gesto = pacotes.gesto_da_pagina(PAGINA, "testar")
-    assert gesto is not None
-    clique = {"uniq": UNIQ, "padrao": "coice", "motores": "ambos"}  # (noqa-acento)
-    gesto(_ctx({"rumble_policy": "balanceado"}), clique, ponte)
-    time.sleep(VOLTA_S * 2)
-    assert _pares(ponte).count((120, 200)) == 1
-    assert a05._REPIQUE_DO_PADRAO == {}

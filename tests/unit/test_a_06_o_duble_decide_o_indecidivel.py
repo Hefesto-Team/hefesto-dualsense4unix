@@ -374,17 +374,11 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
         "régua confere 14 nominalmente. Se um endereço sumiu, ele perdeu a "
         "guarda contra valor destruidor — confira antes de baixar este piso.")
 
-    ligados = [c for c in CONTROLES if c.get("connected")]
-    usb = sum(1 for c in ligados if c.get("transport") == "usb")
-    bt = len(ligados) - usb
     rato = ESTADO["mouse_emulation"]
-    conta_b = str(valor["conta-b"])
 
-    assert "conta" not in valor, (
-        f"o cabeçalho voltou a emitir o «N controles:»: {valor.get('conta')!r}")
-    assert f"{usb} USB" in conta_b and f"{bt} BT" in conta_b, (
-        f"o dublê tem {usb} no cabo e {bt} no rádio, e a segunda metade do "
-        f"cabeçalho diz {conta_b!r}")
+    assert "conta" not in valor and "conta-b" not in valor, (
+        "o cabeçalho voltou a emitir o contador «N USB · N BT»: "
+        f"{valor.get('conta')!r} {valor.get('conta-b')!r}")
     assert valor["perfil"] == ESTADO["active_profile"], (
         f"o perfil ativo do dublê é {ESTADO['active_profile']!r} e a tela "
         f"receberia {valor['perfil']!r}")

@@ -1,9 +1,8 @@
-"""A aba Vibração do todo: os padrões (dado), o Modo automático, os chips e o quadro de criar.
+"""A aba Vibração do todo: os padrões (dado), o Modo automático e o padrão tocado num controle.
 
 MORDIDAS: voltar o `?` (`class="ajuda`), pôr «Meus toques», tirar o `data-governa` do Modo
-automático ou deixá-lo governar o Testar, devolver o Sentir sem a mão ao jogo, trocar a ordem dos
-motores, deixar o padrão passar do teto, não guardar o efeito criado e dar altura fixa à grade
-reprovam.
+automático ou deixá-lo governar o Testar, tocar o padrão sem devolver a mão ao jogo, trocar a ordem
+dos motores, deixar o padrão passar do teto e dar altura fixa à grade reprovam.
 """
 
 from __future__ import annotations
@@ -21,7 +20,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 MOCKUP = RAIZ / "mockup" / "05-vibracao.html"
-PADRAO = "padrao"  # (noqa-acento)
 UNIQ = "aa:bb:cc:00:00:01"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
@@ -95,19 +93,6 @@ def test_o_automatico_governa_a_forca_e_os_motores_e_nao_o_testar() -> None:
         "o Testar e o Parar não são escolha do jogo: o automático não os trava")
 
 
-def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
-    publicado = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html"
-    doc = re.sub(r"<(style|script)>.*?</\1>", "", publicado.read_text(encoding="utf-8"), flags=re.S)
-    assert doc.count('id="criar-vibracao"') == 1
-    for gesto in ("criar-efeito", "testar"):
-        botoes = [b for b in re.findall(r"<button[^>]*>", doc)
-                  if f'data-gesto="{gesto}"' in b and "data-hef-forma" in b]
-        assert botoes, gesto
-        assert all('data-hef-forma="criar-vibracao"' in b for b in botoes), (gesto, botoes)
-    assert doc.count('data-linha="padrao"') == len(padroes.FORMAS_DE_CRIAR), "uma linha por forma"
-    assert doc.count('data-linha="motores"') == 3, "são três escolhas de motor"
-
-
 class _Ponte:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
@@ -146,15 +131,12 @@ def _ctx() -> Any:
         estados={})
 
 
-def test_o_chip_toca_o_padrao_dele_no_controle_dele_e_devolve_a_mao_ao_jogo(a05) -> None:
-    import pacotes
-
+def test_o_padrao_toca_no_controle_dele_e_devolve_a_mao_ao_jogo(a05) -> None:
     ponte = _Ponte()
-    pacotes.gesto_da_pagina("05-vibracao.html", "testar")(
-        _ctx(), {"uniq": UNIQ, PADRAO: "batida", "motores": "ambos"}, ponte)
+    a05._padrao_neste_controle(_ctx(), ponte, UNIQ, "batida", padroes.AMBOS)
     sets = [c for c in ponte.chamadas if c[0] == "rumble_set_checked"]
     assert len(sets) == len(padroes.PADROES["batida"])
-    assert all(k.get("uniq") == UNIQ for _, _, k in sets), "o padrão toca no controle do chip"
+    assert all(k.get("uniq") == UNIQ for _, _, k in sets), "o padrão toca no controle dele"
     assert sets[0][1][:2] == (255, 255)
     assert ponte.nomes[-2:] == ["rumble_stop", "rumble_passthrough"], (
         "sem devolver a mão ao jogo o controle fica mudo depois do efeito")
@@ -163,30 +145,14 @@ def test_o_chip_toca_o_padrao_dele_no_controle_dele_e_devolve_a_mao_ao_jogo(a05)
 
 def test_o_motor_esquerdo_e_o_pesado_e_vai_no_segundo_argumento(a05) -> None:
     """`rumble_set_checked(direito, esquerdo)`: o esquerdo é o `strong`."""
-    import pacotes
-
     ponte = _Ponte()
-    pacotes.gesto_da_pagina("05-vibracao.html", "testar")(
-        _ctx(), {"uniq": UNIQ, PADRAO: "tranco", "motores": "esquerdo"}, ponte)
+    a05._padrao_neste_controle(_ctx(), ponte, UNIQ, "tranco", padroes.ESQUERDO)
     for _, (fraco, *_), _k in [c for c in ponte.chamadas if c[0] == "rumble_set_checked"]:
         assert fraco == 0, "o direito tem de ficar calado"
     assert any(c[1][1] for c in ponte.chamadas if c[0] == "rumble_set_checked")
 
 
-def test_o_sentir_da_area_de_criar_le_a_forma_e_o_que_falta_recusa_dizendo(a05) -> None:
-    import pacotes
-
-    gesto = pacotes.gesto_da_pagina("05-vibracao.html", "testar")
-    ponte = _Ponte()
-    gesto(_ctx(), {"uniq": UNIQ, "forma": {PADRAO: "onda", "motores": "direito"}}, ponte)
-    assert "rumble_set_checked" in ponte.nomes
-    with pytest.raises(RuntimeError, match="Escolha a forma"):
-        gesto(_ctx(), {"uniq": UNIQ, "forma": {PADRAO: "", "motores": "direito"}}, _Ponte())
-
-
 def test_o_efeito_que_a_ponte_recusa_para_e_devolve_a_mao_ao_jogo(a05) -> None:
-    import pacotes
-
     class Recusa(_Ponte):
         def rumble_set_checked(self, *a: Any, **k: Any) -> Any:
             self.chamadas.append(("rumble_set_checked", a, k))
@@ -194,67 +160,9 @@ def test_o_efeito_que_a_ponte_recusa_para_e_devolve_a_mao_ao_jogo(a05) -> None:
 
     ponte = Recusa()
     with pytest.raises(RuntimeError, match="não está na mesa"):
-        pacotes.gesto_da_pagina("05-vibracao.html", "testar")(
-            _ctx(), {"uniq": UNIQ, PADRAO: "onda", "motores": "ambos"}, ponte)
+        a05._padrao_neste_controle(_ctx(), ponte, UNIQ, "onda", padroes.AMBOS)
     assert len([c for c in ponte.chamadas if c[0] == "rumble_set_checked"]) == 1
     assert ponte.nomes[-2:] == ["rumble_stop", "rumble_passthrough"]
-
-
-def test_o_efeito_criado_entra_na_biblioteca_da_vibracao_e_vira_chip(a05) -> None:
-    import pacotes
-
-    criar = pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")
-    assert a05.meus_efeitos("vibracao") == {}
-    criar(_ctx(), {"forma": {PADRAO: "onda", "motores": "esquerdo", "nome": "Maré"}}, _Ponte())
-    guardado = a05.meus_efeitos("vibracao")
-    assert guardado["Maré"]["base"] == "onda"
-    assert guardado["Maré"]["parametros"] == {"motores": "esquerdo"}
-    chip = a05.html_dos_toques(UNIQ)
-    assert 'data-padrao="onda"' in chip and 'data-motores="esquerdo"' in chip
-    assert f'data-uniq="{UNIQ}"' in chip and ">Maré<" in chip
-    assert a05.meus_efeitos("gatilhos") == {} and a05.meus_efeitos("imersao") == {}, (
-        "o efeito de vibração não entra nas bibliotecas dos gatilhos")
-
-
-@pytest.mark.parametrize("forma,frase", [
-    ({PADRAO: "onda", "motores": "ambos", "nome": ""}, "Dê um nome"),
-    ({PADRAO: "", "motores": "ambos", "nome": "x"}, "Escolha a forma"),
-    ({PADRAO: "onda", "motores": "", "nome": "x"}, "Escolha em qual motor"),
-    ({PADRAO: "onda", "motores": "ambos", "nome": "n" * 200}, "no máximo"),
-])
-def test_criar_sem_o_que_falta_recusa_dizendo_e_nao_guarda(a05, forma, frase) -> None:
-    import pacotes
-
-    with pytest.raises(RuntimeError, match=frase):
-        pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")(
-            _ctx(), {"forma": forma}, _Ponte())
-    assert a05.meus_efeitos("vibracao") == {}
-
-
-def test_o_pacote_manda_o_gesto_do_modo_e_o_bloco_dos_chips(a05) -> None:
-    import pacotes
-
-    pac = pacotes.pacote_da_pagina("05-vibracao.html", _ctx()) or {}
-    assert a05.SELETOR_DOS_TOQUES in (pac.get("blocos") or {})
-
-
-def test_o_chip_toca_no_controle_escolhido_na_fita_e_sem_escolha_no_primeiro(a05) -> None:
-    """De um a quatro: o chip não fica preso ao primeiro controle quando outro está escolhido."""
-    import pacotes
-
-    outro = "aa:bb:cc:00:00:02"
-    pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")(
-        _ctx(), {"forma": {PADRAO: "batida", "motores": "ambos", "nome": "Pulso"}}, _Ponte())
-    ctx = _ctx()
-    ctx.mesa.append({"pref": "p2", "jogador": 2, "uniq": outro, "nome": "Outro", "via": "BT",
-                     "cor": "cosmic-red"})
-    ctx.conectados.append({"uniq": outro, "connected": True, "transport": "bt", "index": 1,
-                           "player": 2})
-    for escolhido, uniq in (("p2", outro), ("", UNIQ)):
-        ctx.escolhido = escolhido
-        bloco = (pacotes.pacote_da_pagina("05-vibracao.html", ctx) or {})["blocos"][
-            a05.SELETOR_DOS_TOQUES]
-        assert f'data-uniq="{uniq}"' in bloco, (escolhido, bloco)
 
 
 def test_a_aba_cabe_sem_rolar_sem_vao_e_o_nome_tem_a_largura_da_coluna() -> None:

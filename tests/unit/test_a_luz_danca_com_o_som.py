@@ -501,13 +501,3 @@ def test_trocar_a_cor_leva_o_ao_som_junto() -> None:
     _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": "base:ao-som"}, None)
     a04.cor(_ctx(), {"uniq": JOGADORES[0], "hex": "FF8000"}, _Ponte())
     assert o_computador().controles["aabbcc000001"].leds.efeito == "ao-som;FF8000;5"
-
-
-def test_o_criar_efeitos_novos_recusa_o_ao_som() -> None:
-    import pacotes
-
-    ctx = pacotes.Contexto(state={"active_profile": ""}, mesa=[], conectados=[], estados={})
-    with pytest.raises(RuntimeError, match="Escolha como a luz se move"):
-        pacotes.gesto_da_pagina("04-iluminacao.html", "criar-efeito")(
-            ctx, {"forma": {"base": "ao-som", "cores": "#ff0000", "ritmo": "5", "nome": "X"}},
-            None)

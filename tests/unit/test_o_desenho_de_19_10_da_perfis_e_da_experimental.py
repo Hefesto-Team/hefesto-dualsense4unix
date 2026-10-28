@@ -171,7 +171,7 @@ def test_a_aba_jogos_continua_com_a_ordem_do_que_vale() -> None:
     assert m["ordem_visivel"] and not m["visivel"], m
 
 
-_SECOES_DE_UMA_LINHA = ("leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
+_SECOES_DE_UMA_LINHA = ("leds", "triggers", "rumble", "speaker", "mic", "sensores",
                         "movimento", "ativacao", "analogicos")  # (noqa-acento)
 _MEDE_A_FILEIRA = """() => {
   const linhas = [...document.querySelectorAll('.guarda tbody tr')].filter(
@@ -192,7 +192,7 @@ def _secoes_da_primeira_linha(html: str) -> list[str]:
 
 
 def test_a_coluna_de_ajuste_proprio_tem_a_ativacao_e_os_analogicos_depois_do_movimento() -> None:
-    """A (recomendada) é o desenho de 16/10: dez células, cada seção com glifo e ponto."""
+    """O desenho de 16/10, cada seção com glifo e ponto; a máscara saiu em 27/10."""
     html = _ler(DEZ)
     assert tuple(_secoes_da_primeira_linha(html)) == _SECOES_DE_UMA_LINHA
     assert ".gd-pecas{width:271px}" in html
@@ -204,7 +204,7 @@ def test_a_coluna_de_ajuste_proprio_tem_a_ativacao_e_os_analogicos_depois_do_mov
 def test_a_fileira_das_secoes_cabe_na_celula_em_toda_vista(vista: tuple[int, int]) -> None:
     """A fileira inteira fica dentro da célula do Status (a 940 px a de dez passava 16 px)."""
     linhas = _no_chrome(DEZ, vista, _MEDE_A_FILEIRA)
-    assert linhas and all(ln["celulas"] == 10 for ln in linhas), linhas
+    assert linhas and all(ln["celulas"] == len(_SECOES_DE_UMA_LINHA) for ln in linhas), linhas
     assert all(ln["sobra"] >= 0 for ln in linhas), linhas
 
 

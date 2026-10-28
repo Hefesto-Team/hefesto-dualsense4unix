@@ -13,6 +13,7 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+PUBLICADO = INTERFACE / "paginas"  # (noqa-acento)
 
 ORDEM = ("01-jogar", "02-controles", "03-gatilhos", "04-iluminacao", "05-vibracao", "06-navegacao",
          "08-conexoes", "09-sistema", "10-perfis", "07-lancadores")
@@ -23,14 +24,25 @@ _ABA = re.compile(r'<a class="aba[^"]*" href="(\d\d-[a-z]+)\.html"')
 DOCUMENTOS = [
     INTERFACE / "topo.html",
     *sorted((RAIZ / "mockup").glob("[01]*.html")),
-    *sorted((INTERFACE / "paginas").glob("[01]*.html")),  # (noqa-acento)
+    *sorted(PUBLICADO.glob("[01]*.html")),
 ]
+
+
+EM_TRABALHO = set(re.findall(r"^## (\S+\.html)$",
+                             (RAIZ / "mockup" / "DIVERGENCIAS.md").read_text(encoding="utf-8"),
+                             re.M))
 
 
 @pytest.mark.parametrize("documento", DOCUMENTOS, ids=lambda p: f"{p.parent.name}/{p.name}")
 def test_a_fita_tem_a_experimental_por_ultimo(documento: Path) -> None:
-    """A prova da D-2110-A-EXPERIMENTAL-E-A-ULTIMA-ABA."""
-    esperada = ORDEM_DO_DESENHO if documento.parent.name == "mockup" else ORDEM
+    """A prova da D-2110-A-EXPERIMENTAL-E-A-ULTIMA-ABA.
+
+    A página publicada leva a fita do desenho quando a aba saiu do `DIVERGENCIAS`; enquanto a
+    aba está em trabalho, o produto segue com a fita de dez.
+    """
+    do_desenho = documento.parent.name == "mockup" or (
+        documento.parent == PUBLICADO and documento.name not in EM_TRABALHO)
+    esperada = ORDEM_DO_DESENHO if do_desenho else ORDEM
     assert tuple(_ABA.findall(documento.read_text(encoding="utf-8"))) == esperada
 
 

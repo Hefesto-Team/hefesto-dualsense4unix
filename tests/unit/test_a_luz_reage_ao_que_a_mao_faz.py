@@ -530,17 +530,6 @@ def test_trocar_a_cor_leva_o_reage_ao_botao_junto_e_nao_mexe_nas_que_nao_levam_c
         assert o_computador().controles[chave].leds.efeito == depois, base
 
 
-@pytest.mark.parametrize("base", BASES_DA_MAO_DA_LUZ)
-def test_o_criar_efeitos_novos_recusa_as_que_leem_a_mao(base: str) -> None:
-    """Elas dependem de um dado vivo do controle: ficam só na lista, nunca no «Criar»."""
-    import pacotes
-
-    ctx = pacotes.Contexto(state={"active_profile": ""}, mesa=[], conectados=[], estados={})
-    with pytest.raises(RuntimeError, match="Escolha como a luz se move"):
-        pacotes.gesto_da_pagina("04-iluminacao.html", "criar-efeito")(
-            ctx, {"forma": {"base": base, "cores": "#ff0000", "ritmo": "5", "nome": "X"}}, None)
-
-
 def test_a_dica_de_cada_base_nova_cabe_na_coluna_e_comeca_maiuscula() -> None:
     from pacotes import a04_iluminacao as a04
 

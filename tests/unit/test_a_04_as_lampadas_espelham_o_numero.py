@@ -325,13 +325,13 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
             f"um gesto que a tela não alcança é código morto, e ela mandou "
             f"remover a botoeira inteira em 07/09/2026")
     assert vivos == {"cor", "apagar", "brilho", "player", "modo-da-luz",
-                     "brilho-luzes", "efeito-da-luz", "criar-efeito"}, (
+                     "brilho-luzes", "efeito-da-luz"}, (
         f"a poda da botoeira levou junto um gesto que FICA: {sorted(vivos)}")
 
 
 def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
     """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data."""
-    assert a04.PISO_DA_ABA == 8, (
+    assert a04.PISO_DA_ABA == 7, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
         f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
         f"lâmpadas, 8 para 6 com os dois botões do automático — e subiu UMA em "
@@ -339,7 +339,8 @@ def test_o_piso_da_aba_desceu_com_a_ordem_dela(a04):
         f"decidiu; subiu de 7 para 9 em 14/10/2026 com a lista Efeito e o criar "
         f"efeitos do desenho dela, e de 9 para 10 em 15/10/2026 com o interruptor «Sem piscar»; "
         f"desceu de 10 para 8 em 16/10/2026, quando ela tirou o «Sem piscar» e a caixa do "
-        f"hexadecimal, que reenviava. Cada degrau pede a palavra dela")
+        f"hexadecimal, que reenviava; desceu de 8 para 7 em 28/10/2026, com o «Criar efeitos "
+        f"novos» que saiu do desenho aprovado em 27/10. Cada degrau pede a palavra dela")
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():

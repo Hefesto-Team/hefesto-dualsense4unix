@@ -668,14 +668,3 @@ def test_trocar_a_cor_leva_a_aurora_e_as_estrelas_junto_mas_nao_a_bateria() -> N
         _gesto("efeito-da-luz")(_ctx(), {"uniq": JOGADORES[0], "valor": f"base:{base}"}, None)
         a04.cor(_ctx(), {"uniq": JOGADORES[0], "hex": "FF8000"}, _Ponte())
         assert o_computador().controles["aabbcc000001"].leds.efeito == esperado, base
-
-
-def test_o_criar_efeitos_novos_recusa_as_de_ambiente() -> None:
-    import pacotes
-
-    ctx = pacotes.Contexto(state={"active_profile": ""}, mesa=[], conectados=[], estados={})
-    for base in BASES_DE_AMBIENTE_DA_LUZ:
-        with pytest.raises(RuntimeError, match="Escolha como a luz se move"):
-            pacotes.gesto_da_pagina("04-iluminacao.html", "criar-efeito")(
-                ctx, {"forma": {"base": base, "cores": "#ff0000", "ritmo": "5", "nome": "X"}},
-                None)

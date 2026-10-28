@@ -343,14 +343,3 @@ class TestOTestar:
         sets = [c for c in ponte.chamadas if c[0] == "rumble_set_checked"]
         assert len(sets) == 1, "o sustentado é UM pedido, que fica até o Parar"
         assert UNIQ in a05.em_teste()
-
-    def test_a_area_de_criar_lista_as_formas_do_produto(self) -> None:
-        """A recusa do «Sentir» sem forma diz as formas de criar (`FORMAS_DE_CRIAR`)."""
-        gesto = pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")
-        assert gesto is not None
-        with pytest.raises(RuntimeError) as erro:
-            pedido = {"forma": {"padrao": "", "motores": "ambos"},  # (noqa-acento)
-                      "nome": "x"}
-            gesto(_ctx(), pedido, _PonteQueGrava(_Handlers(ativo=None, primario=None)))
-        for chave in padroes.FORMAS_DE_CRIAR:
-            assert padroes.ROTULOS[chave].lower() in str(erro.value)

@@ -44,24 +44,24 @@
     display:flex;align-items:center;justify-content:center;font-size:12px;
   }
 
-  .fita-linha{display:flex;align-items:center;gap:10px;padding:10px 18px 12px}
+  .fita-linha{display:flex;align-items:center;gap:8px;padding:10px 18px 12px}
   .conectado{margin-left:auto;text-align:right;font-size:12.5px;color:var(--green);white-space:nowrap}
   .conectado .bolinha{color:var(--green)}
   .fita-linha:has(i[data-servico="parado"]) .conectado{display:none}
   .fita-linha:has(i[data-servico="parado"]) .perfil-ativo{margin-left:auto}
   .fita{
-    display:flex;align-items:center;gap:8px;
+    display:flex;align-items:center;gap:6px;
     font-size:12px;color:var(--fg);
   }
   .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
-              white-space:nowrap;color:var(--fg);margin-right:6px}
+              white-space:nowrap;color:var(--fg);margin-right:2px}
   .marca-nome .m-hef{color:var(--pink)}
   .marca-nome .m-4{color:var(--green)}
   .fita > span:first-child{font-size:13.5px;color:var(--texto-suave)}
   .perfil-ativo{
     display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--panel);min-width:0;
+    border:1px solid var(--linha);background:var(--panel);min-width:0;font-size:12.5px;
   }
   .pa-rot{font-size:12.5px;color:var(--fg);white-space:nowrap}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600;white-space:nowrap;
@@ -377,43 +377,15 @@
   .vib .acoes-col{align-items:center}
   .quadro-topo .modo-auto{margin-left:auto}
   .vib .forca > .motor{position:relative}
-  .vib-criar{margin-top:0;flex:0 0 auto}
-  .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:4px 16px;flex-wrap:wrap;min-width:0}
-  .criar .quadro-titulo{flex:0 0 auto;margin-right:4px}
-  .criar .seg-criar{display:inline-flex;gap:4px;flex:0 0 auto}
-  .criar .seg-criar label,.criar .meu{height:30px;padding:0 12px;border-radius:999px;
-    font:500 12.5px/1 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
-    display:inline-flex;align-items:center;gap:7px;box-sizing:border-box}
-  .criar .seg-criar input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
-  .criar .seg-criar label:has(input:checked){border-color:var(--purple);background:var(--sel-bg);
-    color:var(--fg);font-weight:600}
-  .criar .seg-criar label:hover:not(:has(input:checked)),.criar .meu:hover{border-color:var(--comment);
-    color:var(--texto-suave)}
-  .criar .seg-criar label:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
-  .criar .nome-criar{height:30px;width:150px;flex:0 0 auto;padding:0 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);
-    font:500 12.5px 'Space Grotesk',system-ui,sans-serif}
-  .criar .nome-criar::placeholder{color:var(--fg)}
-  .criar .btn-criar{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--purple);
-    background:rgba(189,147,249,.12);color:var(--purple);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
-    cursor:pointer;flex:0 0 auto}
-  .criar .btn-criar:hover{background:rgba(189,147,249,.22)}
-  .criar .btn-sentir{height:30px;padding:0 14px;border-radius:7px;border:1px solid var(--pink);
-    background:rgba(255,121,198,.1);color:var(--pink);font:600 12.5px/1 'Space Grotesk',system-ui,sans-serif;
-    cursor:pointer;flex:0 0 auto}
-  .criar .btn-sentir:hover{background:rgba(255,121,198,.2)}
-  .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap}
-  .criar .meu{color:var(--texto-suave);cursor:pointer}
   .vib .forca{display:flex;flex-direction:column;justify-content:center;gap:7px}
   .vib .forca > .motor{height:var(--r-barra);flex:none}
+  .vib .forca .trilho.arrasta{height:9px;border-radius:5px;background:var(--sel-bg)}
+  .vib .forca .trilho.arrasta::-webkit-slider-runnable-track{height:9px;border-radius:5px}
+  .vib .forca .trilho.arrasta::-webkit-slider-thumb{width:17px;height:17px;background:var(--pink);margin-top:-4px}
+  .vib .forca .motor > .num{font-weight:700;color:var(--pink)}
   .motor.haptica .teto.no-ar.on::after{content:'';display:inline-block;width:6px;
     height:6px;border-radius:50%;background:var(--green);margin-left:3px;
     vertical-align:1px}
-  .motor.haptica .trilho.arrasta{
-    background:linear-gradient(to right,transparent calc(50% - 1px),
-      var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
-      transparent calc(50% + 1px)),var(--border-forte)}
   .vib .forca ~ .motor .trilho.travada{display:none}
   .vib .forca.padrao ~ .motor .trilho.arrasta{display:none}
   .vib .forca.padrao ~ .motor .trilho.travada{display:block;background:var(--green);
@@ -452,6 +424,8 @@
   .vib > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .vib > div > *:first-child::before{display:none}
   .vib > div > *:nth-child(3)::before{display:none}
+  .vib > .rotulos > *:nth-child(3)::before{display:block}
+  .vib > .ctrl > .acoes-col::before{display:none}
 
   .vib .rotulos > *{display:flex;flex-direction:column;justify-content:center;gap:5px}
   .vib .rotulos > *{align-items:flex-start;text-align:left}
@@ -805,6 +779,7 @@
   body.nativo.por-controle .modo-auto,
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
+  .fita-linha .perfil-ativo{margin-left:auto}
 </style>
 <style id="base-comum">
 [data-dica]{cursor:help}
@@ -946,7 +921,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo" data-dica="Perfil ativo: o que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
@@ -961,7 +935,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   <div class="tira">
     <a class="aba" href="01-jogar.html">Jogar</a>
-    <a class="aba" href="02-controles.html">Controles</a>
     <a class="aba" href="03-gatilhos.html">Gatilhos</a>
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba ativa" href="05-vibracao.html">Vibração</a>
@@ -1005,7 +978,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             </div>
             <div><span class="sec-rot">Modelo</span></div>
             <div><span class="sec-rot" data-dica="Abaixo de 100% a vibração fica mais fraca; acima, a fraca é reforçada, até o máximo do motor. O perfil de bateria pode impor um teto: a escolha continua valendo, só não passa dele.">Força da vibração</span></div>
-            <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 100%: o jogo como ele mandou. O perfil de bateria pode impor um teto: a escolha continua valendo, só não passa dele. Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
+            <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 50%: o jogo como ele mandou. O perfil de bateria pode impor um teto: a escolha continua valendo, só não passa dele. Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
             <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e Sem efeito cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">Motor esquerdo</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho direito: contrapeso menor, som fino">Motor direito</span></div>
@@ -1328,7 +1301,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">150</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 100%. 50% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">100</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option><option value="eco">Eco</option><option value="grao">Grão</option><option value="motor_de_epoca">Motor de época</option></select></span></div>
             <div class="motor mult" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado on" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -1671,7 +1644,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">180</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="80" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 100%. 50% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">80</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option><option value="eco">Eco</option><option value="grao">Grão</option><option value="motor_de_epoca">Motor de época</option></select></span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -2014,7 +1987,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 100%. 50% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option><option value="eco">Eco</option><option value="grao">Grão</option><option value="motor_de_epoca">Motor de época</option></select></span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -2357,7 +2330,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <rect x="3" y="13" width="26" height="14" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M8 9 q2 -3 4 0 t4 0 t4 0 t4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M11 4 q1.5 -2.5 3 0 t3 0 t3 0 t3 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 100%. 50% é o jogo como ele mandou. Grava na hora, só para ele."><span class="trilho travada" role="img" aria-disabled="true" aria-label="Padrão: o sinal do jogo, sem ajuste"></span><span class="num" data-campo="barra-h-pct">—</span><span class="teto no-ar" data-campo="haptica-no-ar" data-hef-alvo="classe" title="Aceso: há háptica chegando a este controle agora.">%</span></div>
             <div class="efeito-lista"><span class="vib-efeito-dica" data-campo="haptico-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O que o estilo pede"><select class="vib-efeito" data-gesto="efeito-haptico" aria-label="Efeito háptico" data-campo="haptico-escolha" data-hef-alvo="valor"><option value="do_estilo" selected>Do estilo</option><option value="sem_efeito">Sem efeito</option><option value="toque">Toque</option><option value="impacto">Impacto</option><option value="estalo">Estalo</option><option value="guarda">Guarda</option><option value="aparo">Aparo</option><option value="som_no_corpo">Som no corpo</option><option value="eco">Eco</option><option value="grao">Grão</option><option value="motor_de_epoca">Motor de época</option></select></span></div>
             <div class="motor mult off" data-campo="motor-e-pedido" data-hef-alvo="atributo" data-hef-atributo="title"><button class="lado" data-gesto="lado" data-lado="e" data-campo="lado-e" data-hef-alvo="classe" data-hef-quando="1" title="Motor de vibração esquerdo — Contrapeso maior — soa grosso."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
 
@@ -2388,17 +2361,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
         </div>
         <div class="vib-estado" id="vib-estado"></div>
-      </div>
-    </div>
-    <div class="quadro criar vib-criar" id="criar-vibracao">
-      <div class="criar-linha">
-        <span class="quadro-titulo" data-dica="O que você criar entra aqui ao lado e toca com um clique">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Forma"><label><input type="radio" name="padrao-criar" value="batida" data-linha="padrao" checked><span>Batida</span></label><label><input type="radio" name="padrao-criar" value="onda" data-linha="padrao"><span>Onda</span></label><label><input type="radio" name="padrao-criar" value="tranco" data-linha="padrao"><span>Tranco</span></label><label><input type="radio" name="padrao-criar" value="coice" data-linha="padrao"><span>Coice</span></label><label><input type="radio" name="padrao-criar" value="pancada_do_lado" data-linha="padrao"><span>Pancada do lado</span></label></span>
-        <span class="seg-criar" role="group" aria-label="Motor"><label><input type="radio" name="motores-criar" value="esquerdo" data-linha="motores" checked><span>Esquerdo</span></label><label><input type="radio" name="motores-criar" value="direito" data-linha="motores"><span>Direito</span></label><label><input type="radio" name="motores-criar" value="ambos" data-linha="motores"><span>Os dois</span></label></span>
-        <input class="nome-criar" type="text" data-linha="nome" maxlength="40" placeholder="Nome do efeito" aria-label="Nome do efeito">
-        <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-vibracao" data-dica="Guarda e põe ao lado">Criar</button>
-        <button class="btn-sentir" type="button" data-gesto="testar" data-hef-forma="criar-vibracao" data-dica="Toca o efeito no controle escolhido">Sentir</button>
-        <span class="meus" id="seus-toques" aria-label="Seus efeitos"><button class="meu" type="button" data-gesto="testar" data-padrao="batida" data-motores="ambos" data-uniq="" data-dica="Batida, os dois motores">Coração</button></span>
       </div>
     </div>
 

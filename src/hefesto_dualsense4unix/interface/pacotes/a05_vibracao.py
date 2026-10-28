@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import contextlib
 import functools
-import html
 import sys
 import threading
 from time import monotonic as _monotonic
@@ -39,9 +38,8 @@ from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as _pad
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO, partes_do_modelo
 from hefesto_dualsense4unix.profiles import formas_de_haptica as _formas
 
-from . import Contexto, fila_do_controle, na_fila, registrar
+from . import Contexto, registrar
 from . import perfil as _perfil
-from .meus_efeitos import TETO_DO_NOME, guardar_meus_efeitos, meus_efeitos
 from .nome_do_jogador import nomes_dos_donos, o_nome_de
 
 SEM_DONO: dict[str, str] = {}
@@ -589,63 +587,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": colunas,
         "mesa": {},
-        "blocos": {"#vib-estado": estado,
-                   SELETOR_DOS_TOQUES: html_dos_toques(_controle_dos_chips(ctx))},
+        "blocos": {"#vib-estado": estado},
         GESTO_DO_MODO: modo,
         f"{GESTO_DO_MODO}-automatico": "sim" if modo == MODO_AUTOMATICO else "",
         "sem_dono": dict(SEM_DONO),
         "cobertura": {"pintados": sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},
     }
-
-
-SELETOR_DOS_TOQUES = "#seus-toques"
-
-
-def _primeiro_vivo(ctx: Contexto) -> str:
-    """O `uniq` do primeiro controle ligado: onde os chips tocam. `""` sem nenhum."""
-    for c in ctx.conectados:
-        if c.get("uniq"):
-            return str(c["uniq"])
-    return ""
-
-
-def _controle_dos_chips(ctx: Contexto) -> str:
-    """O `uniq` onde os chips tocam: o controle escolhido na fita, senão o primeiro ligado."""
-    vivos = {str(c.get("uniq") or "") for c in ctx.conectados} - {""}
-    for m in ctx.mesa:
-        if ctx.escolhido and str(m.get("pref") or "") == ctx.escolhido:
-            dele = str(m.get("uniq") or "")
-            if dele in vivos:
-                return dele
-    return _primeiro_vivo(ctx)
-
-
-def html_dos_toques(uniq: str, efeitos: dict[str, Any] | None = None) -> str:
-    """Um chip por efeito criado. O chip leva o `uniq` de onde toca e o padrão que ele repete.
-
-    `efeitos` é a cena do desenho; sem ela vale o que está guardado.
-    """
-    chips = []
-    guardados = meus_efeitos("vibracao") if efeitos is None else efeitos
-    for nome, item in sorted(guardados.items()):
-        base = str(item.get("base") or "")
-        parametros = item.get("parametros")
-        motores = str(parametros.get("motores") or "") if isinstance(parametros, dict) else ""
-        if base not in _padroes.PADROES:
-            continue
-        if motores not in _padroes.MOTORES:
-            motores = _padroes.AMBOS
-        dica = f"{_padroes.ROTULOS[base]}, {_QUAIS_MOTORES[motores]}"
-        chips.append(
-            f'<button class="meu" type="button" data-gesto="testar" data-padrao="{base}"'
-            f' data-motores="{motores}" data-uniq="{html.escape(uniq, quote=True)}"'
-            f' data-dica="{html.escape(dica, quote=True)}">{html.escape(nome)}</button>')
-    return "".join(chips)
-
-
-_QUAIS_MOTORES = {_padroes.ESQUERDO: "motor esquerdo", _padroes.DIREITO: "motor direito",
-                  _padroes.AMBOS: "os dois motores"}
 
 
 def _identidade_do_modelo(item: dict[str, Any] | None, nomes: dict[str, str], pronta: str) -> str:
@@ -1590,14 +1538,10 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Testar": AQUELE controle treme até o «Parar», com o par das barras dele.
 
     O pedido leva o `uniq` dele; a aba não mira o seletor global (`controller.target.set`).
-    Com um padrão de `padroes_de_vibracao.PADROES` (o do chip, a `forma` do quadro de criar ou o
-    Padrão da coluna), o chip e a área de criar tocam a forma uma vez e devolvem a mão ao
-    jogo; o Padrão dos motores da coluna repete o padrão até o «Parar», com as barras ao vivo. O
-    porquê está em docs/research/o-porque-dos-modulos.md, «o Testar da aba Vibração».
+    Com um padrão de `padroes_de_vibracao.PADROES` no Padrão dos motores da coluna, o padrão se
+    repete até o «Parar», com as barras ao vivo. O porquê está em
+    docs/research/o-porque-dos-modulos.md, «o Testar da aba Vibração».
     """
-    if _o_padrao_do_clique(o)[0] or o.get("forma"):
-        _tocar_o_padrao(ctx, o, p)
-        return
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
@@ -1630,56 +1574,6 @@ def _pontos_das_barras(ctx: Contexto, uniq: str) -> tuple[int, int]:
     return (barras["e"], barras["d"])
 
 
-def _o_padrao_do_clique(o: dict[str, Any]) -> tuple[str, str]:
-    """`(padrão, motores)` do clique: do chip (`data-padrao`) ou da área de criar (`forma`)."""
-    bruta = o.get("forma")
-    forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
-    padrao = str(o.get("padrao") or forma.get("padrao") or "").strip()  # (noqa-acento)
-    motores = str(o.get("motores") or forma.get("motores") or _padroes.AMBOS).strip()
-    return padrao, motores
-
-
-def _controle_do_toque(ctx: Contexto, o: dict[str, Any]) -> str:
-    """O `uniq` onde o efeito toca: o do clique, o escolhido, o primeiro ligado."""
-    if _uniq(o):
-        return _uniq(o)
-    lugar = str(o.get("controle") or getattr(ctx, "escolhido", "") or "").strip()
-    for m in ctx.mesa:
-        if lugar and lugar in (str(m.get("pref") or ""), str(m.get("uniq") or "")):
-            return str(m.get("uniq") or "")
-    return _primeiro_vivo(ctx)
-
-
-def _tocar_o_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Toca o padrão do clique no controle do clique e devolve a mão dele ao jogo.
-
-    Com o `uniq` no clique, o gesto já anda na fila desse controle (`pacotes.despachar`) e nunca
-    se cruza com um «Testar» dele. Sem `uniq` (o «Sentir» da área de criar, o chip `.meu`), o
-    controle só se resolve aqui, depois do despacho: o resto roda DENTRO da fila dele, com espera,
-    para o `finally` do padrão não cortar o par que um «Testar» do mesmo controle fixou.
-    """
-    padrao, motores = _o_padrao_do_clique(o)
-    if padrao not in _padroes.PADROES or motores not in _padroes.MOTORES:
-        raise RuntimeError("Escolha a forma e o motor do efeito antes de sentir.")
-    uniq = _controle_do_toque(ctx, o)
-    if not uniq:
-        raise RuntimeError("Nenhum controle ligado para sentir o efeito. Ligue um e tente de novo.")
-    if _uniq(o):
-        _padrao_neste_controle(ctx, p, uniq, padrao, motores)
-        return
-    recusa: list[Exception] = []
-
-    def na_vez_dele() -> None:
-        try:
-            _padrao_neste_controle(ctx, p, uniq, padrao, motores)
-        except Exception as erro:
-            recusa.append(erro)
-
-    na_fila([fila_do_controle(uniq)], na_vez_dele, nome="padrao-sem-uniq").join()
-    if recusa:
-        raise recusa[0]
-
-
 def _padrao_neste_controle(
     ctx: Contexto, p: Any, uniq: str, padrao: str, motores: str
 ) -> None:
@@ -1698,33 +1592,6 @@ def _padrao_neste_controle(
                        pontos_esquerdo=esquerdo, pontos_direito=direito)
     finally:
         _devolver_ao_jogo(p, uniq)
-
-
-@gesto("05-vibracao.html", "criar-efeito", grava="guardar_meus_efeitos")
-def criar_efeito_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Guarda um efeito novo: a forma (de `padroes_de_vibracao.FORMAS_DE_CRIAR`), o motor e o nome.
-
-    Só a caixa de preferências da interface é gravada: nenhum perfil e nenhum aparelho. O
-    efeito entra como chip em «Criar efeitos novos» e toca no clique (o `testar` do chip).
-    """
-    forma = o.get("forma")
-    if not isinstance(forma, dict) or not forma:
-        raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
-    padrao = str(forma.get("padrao") or "").strip()  # (noqa-acento)
-    if padrao not in _padroes.FORMAS_DE_CRIAR:
-        nomes = [_padroes.ROTULOS[chave].lower() for chave in _padroes.FORMAS_DE_CRIAR]
-        raise RuntimeError(f"Escolha a forma: {', '.join(nomes[:-1])} ou {nomes[-1]}.")
-    motores = str(forma.get("motores") or "").strip()
-    if motores not in _padroes.MOTORES:
-        raise RuntimeError("Escolha em qual motor o efeito toca.")
-    apelido = str(forma.get("nome") or "").strip()
-    if not apelido:
-        raise RuntimeError("Dê um nome ao efeito.")
-    if len(apelido) > TETO_DO_NOME:
-        raise RuntimeError(f"O nome do efeito tem no máximo {TETO_DO_NOME} letras.")
-    todos = meus_efeitos("vibracao")
-    todos[apelido] = {"nome": apelido, "base": padrao, "parametros": {"motores": motores}}
-    guardar_meus_efeitos(todos, "vibracao")
 
 
 @gesto("05-vibracao.html", "parar")

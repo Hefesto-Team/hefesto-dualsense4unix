@@ -1,32 +1,19 @@
 """O-TESTAR-DA-VIBRACAO-TOCA-A-FORMA-ESCOLHIDA-E-NAO-CORTA-O-PAR-FIXADO-01.
 
-A. O botão «Háptica» toca a forma que o controle escolheu em «Efeito háptico» (a mesma leitura e o
-   mesmo tocador do toque do tiro), cabo e rádio igual, e cada controle com a sua.
-B. O padrão que chega SEM `uniq` (o «Sentir» da área de criar) roda na fila do controle e o fim
-   dele não corta o par que um «Testar» do mesmo controle fixou.
+O botão «Háptica» toca a forma que o controle escolheu em «Efeito háptico» (a mesma leitura e o
+mesmo tocador do toque do tiro), cabo e rádio igual, e cada controle com a sua.
 """
 
 from __future__ import annotations
-
-import threading
-import time
-from typing import Any
 
 import pytest
 
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as af_sub
-from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as padroes
 from hefesto_dualsense4unix.daemon.subsystems import tato_vivo
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
-from hefesto_dualsense4unix.interface import pacotes
-from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from tests.unit.test_a_aba_vibracao_tem_o_sensor_haptico_e_dois_testes import (
-    PAGINA,
-    UNIQ,
-    _ctx,
-    _Ponte,
     _sem_teste_ligado,  # noqa: F401
     com_toque,  # noqa: F401
 )
@@ -218,79 +205,3 @@ def test_a_forma_curta_toca_no_radio_mesmo_sem_fatia(
     com_toque.sub._esperando_vaga = [(uniq, "haptica")]
     assert com_toque.sub.testar_a_haptica(uniq, True)["forma"] == formas.ESTALO
     assert _toques(com_toque, uniq) == [formas.ESTALO]
-
-
-def _clique_sem_controle() -> dict[str, Any]:
-    """O «Sentir» da área de criar: a forma e o motor, e nenhum `uniq`."""
-    forma = {"padrao": next(iter(padroes.PADROES)), "motores": padroes.AMBOS}  # (noqa-acento)
-    return {"forma": forma}
-
-
-class _Cena:
-    """Um «Sentir» sem `uniq` parado no meio do padrão, e um «Testar» do mesmo controle atrás."""
-
-    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        self.ponte = _Ponte()
-        self.dentro = threading.Event()
-        self.solta = threading.Event()
-        self.passos = 0
-        monkeypatch.setattr(a05, "_segurar", self._segurar)
-
-    def _segurar(self, _s: float) -> None:
-        self.passos += 1
-        if self.passos == 1:
-            self.dentro.set()
-            assert self.solta.wait(5), "o teste esqueceu de soltar o padrão"
-
-    def sentir_sem_uniq(self) -> threading.Thread:
-        gesto = pacotes.gesto_da_pagina(PAGINA, "testar")
-        assert gesto is not None
-        o = _clique_sem_controle()
-        ctx = _ctx({"rumble_policy": "balanceado"})
-        return pacotes.despachar(PAGINA, "testar", o, lambda: gesto(ctx, o, self.ponte))
-
-    def testar_do_controle(self) -> threading.Thread:
-        gesto = pacotes.gesto_da_pagina(PAGINA, "testar")
-        assert gesto is not None
-        o = {"uniq": UNIQ}
-        ctx = _ctx({"rumble_policy": "balanceado"})
-        return pacotes.despachar(PAGINA, "testar", o, lambda: gesto(ctx, o, self.ponte))
-
-
-def test_o_testar_no_meio_do_sentir_espera_o_padrao_e_o_par_fica_de_pe(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    cena = _Cena(monkeypatch)
-    sentir = cena.sentir_sem_uniq()
-    assert cena.dentro.wait(5)
-    testar = cena.testar_do_controle()
-    time.sleep(0.15)
-    nomes = cena.ponte.nomes()
-    assert UNIQ not in a05._EM_TESTE, "o Testar começou com o padrão ainda tocando"
-    assert nomes.count("rumble_set_checked") == 1, nomes
-    cena.solta.set()
-    sentir.join(5)
-    testar.join(5)
-    nomes = cena.ponte.nomes()
-    fim_do_padrao = max(i for i, n in enumerate(nomes) if n == "rumble_passthrough")
-    par_fixado = max(i for i, n in enumerate(nomes) if n == "rumble_set_checked")
-    assert par_fixado > fim_do_padrao, nomes
-    assert "rumble_stop" not in nomes[par_fixado:], nomes
-    assert UNIQ in a05._EM_TESTE, "o par foi cortado e a marca caiu"
-
-
-def test_o_sentir_sem_uniq_devolve_a_recusa_a_quem_o_chamou(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O erro do padrão, agora numa fila, volta ao gesto como o de antes."""
-    gesto = pacotes.gesto_da_pagina(PAGINA, "testar")
-    assert gesto is not None
-
-    class _Recusa(_Ponte):
-        def rumble_set_checked(self, weak: int, strong: int, uniq: str | None = None) -> Any:
-            return False, "o aparelho recusou"
-
-    monkeypatch.setattr(a05, "_segurar", lambda _s: None)
-    o = _clique_sem_controle()
-    with pytest.raises(RuntimeError, match="o aparelho recusou"):
-        gesto(_ctx({"rumble_policy": "balanceado"}), o, _Recusa())

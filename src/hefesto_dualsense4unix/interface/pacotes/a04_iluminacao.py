@@ -50,7 +50,6 @@ estar no plástico.
 from __future__ import annotations
 
 import contextlib
-import re
 from typing import Any
 
 from hefesto_dualsense4unix.interface.monta import (
@@ -61,7 +60,7 @@ from hefesto_dualsense4unix.interface.monta import (
 from hefesto_dualsense4unix.profiles.schema import BASES_SEM_COR_DA_LUZ
 
 from . import LUGAR_VAZIO, TRAVESSAO, Contexto, perfil, registrar
-from .meus_efeitos import TETO_DO_NOME, guardar_meus_efeitos, meus_efeitos
+from .meus_efeitos import meus_efeitos
 from .nome_do_jogador import nomes_dos_donos, o_nome_de
 
 SEM_DONO: dict[str, str] = {}
@@ -1290,7 +1289,6 @@ CAMPO_DA_DICA_DA_IDENTIDADE = "identidade-dica"
 SEM_EFEITO = "sem-efeito"
 LUZ_FIXA = "luz-fixa"
 PREFIXO_DA_BASE = "base:"
-SELETOR_DOS_EFEITOS = "#seus-efeitos"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "arco-iris": "Arco-íris",
                   "batimento": "Batida", "chama": "Chama", "mare": "Maré", "onda": "Onda",
@@ -1469,28 +1467,6 @@ def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
     return "".join(partes)
 
 
-def html_dos_efeitos(biblioteca: dict[str, Any] | None = None) -> str:
-    """Um chip só, «Seus efeitos: N», com os nomes na dica; sem efeito criado, nada.
-
-    Um chip por efeito quebrava a linha da barra «Criar efeitos novos» a partir do terceiro, e a
-    aba rolava a 1212 px (O-ILUMINACAO-NAO-ROLA-COM-OS-EFEITOS-CRIADOS-01, variante A). Cada
-    efeito já está na lista do «Efeito» de cada controle, no grupo «Seus efeitos».
-    """
-    import html as _html
-
-    guardados = meus_efeitos("luz") if biblioteca is None else biblioteca
-    nomes = [nome for nome, item in sorted(guardados.items()) if efeito_do_item(item) is not None]
-    if not nomes:
-        return ""
-    if len(nomes) == 1:
-        dica = f"{nomes[0]}. Está na lista do Efeito, em Seus efeitos"
-    else:
-        dica = (f"{', '.join(nomes[:-1])} e {nomes[-1]}. "
-                "Cada um está na lista do Efeito, em Seus efeitos")
-    return (f'<span class="meu conta" tabindex="0" data-dica="{_html.escape(dica, quote=True)}">'
-            f'<i style="--cor:var(--purple)"></i>Seus efeitos: {len(nomes)}</span>')
-
-
 def efeito_do_controle(p: dict[str, Any] | None, uniq: str) -> str | None:
     """O efeito do controle no perfil CRU: o do override, senão o do perfil. `None` = luz fixa."""
     if not isinstance(p, dict):
@@ -1619,7 +1595,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "sim" if modo_da_aba == MODO_PERSONALIZADO else "",
         "sem_dono": {},
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
-                   SELETOR_DOS_EFEITOS: html_dos_efeitos(biblioteca),
                    **listas_de_efeito,
                    "#plastico-vivo": (_folha_do_plastico(ctx.mesa, CAIXA_DA_COLUNA)
                                       + folha_da_luz(luz_do_desenho))},
@@ -2619,53 +2594,6 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     return None
 
 
-@gesto("04-iluminacao.html", GESTO_DE_CRIAR_EFEITO, grava="guardar_meus_efeitos")
-def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Guarda um efeito novo: a base (um dos cinco do «Jeito»), as cores, o ritmo e o nome.
-
-    Só a caixa de preferências da interface é gravada: nenhum perfil e nenhum aparelho. O efeito
-    entra como chip em «Criar efeitos novos» e na lista «Efeito» de cada coluna.
-    """
-    from hefesto_dualsense4unix.profiles.schema import (
-        BASES_DA_LUZ,
-        RITMO_MAXIMO_DA_LUZ,
-        RITMO_MINIMO_DA_LUZ,
-        TETO_DE_CORES_DO_EFEITO,
-    )
-
-    forma = o.get("forma")
-    if not isinstance(forma, dict) or not forma:
-        raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
-    base = str(forma.get("base") or "").strip()
-    if base not in BASES_DA_LUZ:
-        raise RuntimeError("Escolha como a luz se move: respirar, piscar, arco-íris, onda ou relâmpago.")  # noqa: E501
-    cores = [c.strip().upper() for c in str(forma.get("cores") or "").split(",") if c.strip()]
-    if not all(re.fullmatch(r"#[0-9A-F]{6}", c) for c in cores):
-        raise RuntimeError("Alguma cor do efeito não é válida. Nada foi guardado.")
-    if base == "arco-iris":
-        cores = []
-    elif not cores:
-        raise RuntimeError("Escolha ao menos uma cor para o efeito.")
-    if len(cores) > TETO_DE_CORES_DO_EFEITO:
-        raise RuntimeError(f"O efeito tem no máximo {TETO_DE_CORES_DO_EFEITO} cores.")
-    try:
-        ritmo = int(str(forma.get("ritmo") or "").strip())
-    except ValueError:
-        raise RuntimeError("Escolha o ritmo do efeito.") from None
-    if not RITMO_MINIMO_DA_LUZ <= ritmo <= RITMO_MAXIMO_DA_LUZ:
-        raise RuntimeError(
-            f"O ritmo vai de {RITMO_MINIMO_DA_LUZ} a {RITMO_MAXIMO_DA_LUZ}.")
-    apelido = str(forma.get("nome") or "").strip()
-    if not apelido:
-        raise RuntimeError("Dê um nome ao efeito.")
-    if len(apelido) > TETO_DO_NOME:
-        raise RuntimeError(f"O nome do efeito tem no máximo {TETO_DO_NOME} letras.")
-    todos = meus_efeitos("luz")
-    todos[apelido] = {"nome": apelido, "base": base,
-                      "parametros": {"cores": ",".join(cores), "ritmo": ritmo}}
-    guardar_meus_efeitos(todos, "luz")
-
-
 _RECONCILIAR_O_COOP = "coop.sync"
 
 
@@ -2904,7 +2832,7 @@ METODOS = {"coop.sync"}
 
 
 PAGINA = "04-iluminacao.html"
-PISO_DA_ABA = 8
+PISO_DA_ABA = 7
 PROVAS = [
     {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento)
      "chama": [("led_set_detalhado", [(255, 128, 0)],

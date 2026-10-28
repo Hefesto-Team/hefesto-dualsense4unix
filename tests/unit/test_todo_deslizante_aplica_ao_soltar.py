@@ -8,9 +8,10 @@ publicada, e as exceções moram em :data:`EXCECOES`, cada uma com o motivo.
 O criador do gatilho é o caso que faltava: as quatro barras e a lista «Partir de» mandam o `sentir`
 com o que está na área de criar, no controle escolhido, sem gravar.
 
-MORDIDAS: tirar o gesto de uma barra do criador, tirar a exceção do `ritmo` da 04 publicada ou
-trocar o `data-hef-gesto` de um `<select>` da 10 por nada reprova a régua; o `sentir` que não lê a
-barra nova, ou que toca de novo no `click` do mesmo arrasto, reprova o caso do criador.
+MORDIDAS: tirar o gesto de uma barra do criador (no desenho ou na publicada), tirar uma exceção do
+formulário da 08 ou trocar o `data-hef-gesto` de um `<select>` da 10 por nada reprova a régua; o
+`sentir` que não lê a barra nova, ou que toca de novo no `click` do mesmo arrasto, reprova o caso do
+criador.
 """
 
 from __future__ import annotations
@@ -35,25 +36,14 @@ UNIQ = "aa:bb:cc:00:00:01"
 
 ATRIBUTOS_DE_GESTO = ("data-gesto", "data-papel", "data-hef-vivo", "data-hef-gesto")
 
-ATE_O_PUBLICAR = ("o desenho já aplica ao soltar; a página publicada muda com o --publicar "
-                  "(AS-ABAS-DE-AJUSTE-E-A-TIRA-DE-NOVE-SE-PUBLICAM-01)")
 FORMULARIO_DA_08 = ("campo de formulário: o botão do diálogo o lê ao confirmar, e o desenho da 08 "
                     "não se toca nesta leva")
-O_PACOTE_DA_01 = ("o volume do cartão da Jogar ganha o dono no pacote da 01 "
-                  "(A-JOGAR-ESCOLHE-O-MODO-UNICO-NOS-PACOTES-01)")
 
 EXCECOES: dict[tuple[str, str, str], str] = {
-    # sai com: AS-ABAS-DE-AJUSTE-E-A-TIRA-DE-NOVE-SE-PUBLICAM-01
-    **{("publicado", "03-gatilhos.html", c): ATE_O_PUBLICAR
-       for c in ("partir", "inicio", "fim", "forca", "freq")},
-    ("publicado", "04-iluminacao.html", "ritmo"): ATE_O_PUBLICAR,
     # fica: o campo do diálogo da 08 se lê ao confirmar, e não ao soltar
     **{(lado, "08-conexoes.html", c): FORMULARIO_DA_08
        for lado in ("desenho", "publicado")
        for c in ("hub-entrada", "acionador-quem", "lugar")},
-    # sai com: A-JOGAR-ESCOLHE-O-MODO-UNICO-NOS-PACOTES-01
-    ("desenho", "01-jogar.html", "mic-barra"): O_PACOTE_DA_01,
-    ("desenho", "01-jogar.html", "alto-barra"): O_PACOTE_DA_01,
 }
 
 

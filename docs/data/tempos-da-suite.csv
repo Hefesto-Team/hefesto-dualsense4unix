@@ -1252,7 +1252,6 @@ tests/unit/test_o_hub_de_sensores_nao_atravessa_o_caso.py,720,medido
 tests/unit/test_o_hub_diz_de_qual_entrada_pende.py,720,medido
 tests/unit/test_o_hz_tem_a_cor_do_que_chega.py,2770,medido
 tests/unit/test_o_ignorado_fica_fora_do_indice.py,566,medido
-tests/unit/test_o_iluminacao_nao_rola_com_os_efeitos_criados.py,820,medido
 tests/unit/test_o_instalador_que_aprovou_o_monitor.py,10589,medido
 tests/unit/test_o_install_diz_reinicie_quando_ha_pendencia.py,448,medido
 tests/unit/test_o_install_do_wireplumber_so_reinicia_se_mudou.py,1641,medido

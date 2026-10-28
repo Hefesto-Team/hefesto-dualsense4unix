@@ -44,24 +44,24 @@
     display:flex;align-items:center;justify-content:center;font-size:12px;
   }
 
-  .fita-linha{display:flex;align-items:center;gap:10px;padding:10px 18px 12px}
+  .fita-linha{display:flex;align-items:center;gap:8px;padding:10px 18px 12px}
   .conectado{margin-left:auto;text-align:right;font-size:12.5px;color:var(--green);white-space:nowrap}
   .conectado .bolinha{color:var(--green)}
   .fita-linha:has(i[data-servico="parado"]) .conectado{display:none}
   .fita-linha:has(i[data-servico="parado"]) .perfil-ativo{margin-left:auto}
   .fita{
-    display:flex;align-items:center;gap:8px;
+    display:flex;align-items:center;gap:6px;
     font-size:12px;color:var(--fg);
   }
   .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
-              white-space:nowrap;color:var(--fg);margin-right:6px}
+              white-space:nowrap;color:var(--fg);margin-right:2px}
   .marca-nome .m-hef{color:var(--pink)}
   .marca-nome .m-4{color:var(--green)}
   .fita > span:first-child{font-size:13.5px;color:var(--texto-suave)}
   .perfil-ativo{
     display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--panel);min-width:0;
+    border:1px solid var(--linha);background:var(--panel);min-width:0;font-size:12.5px;
   }
   .pa-rot{font-size:12.5px;color:var(--fg);white-space:nowrap}
   .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600;white-space:nowrap;
@@ -471,7 +471,7 @@
   .gd-nome{vertical-align:middle;white-space:nowrap;font-size:11px}
   .tab.miuda{min-width:524px}
   .gd-pecas{width:271px}
-  .gd-pecas .gls{display:flex;width:100%;gap:clamp(5px,calc((100% - 218px) / 9),14px)}
+  .gd-pecas .gls{display:flex;width:100%;gap:clamp(5px,calc((100% - 203px) / 8),14px)}
   .gc{position:relative;display:inline-flex}
   .gq{display:inline-flex;align-items:center;gap:2px;border-radius:3px}
   .gq.nd{outline:1px dashed var(--comment);outline-offset:1px}
@@ -544,6 +544,7 @@
     .tab.miuda thead th{padding:3px 8px}
   }
 
+  .fita-linha .perfil-ativo{margin-left:auto}
 </style>
 <style id="base-comum">
 [data-dica]{cursor:help}
@@ -685,7 +686,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
       <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
     </div>
-    <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
     <div class="perfil-ativo" data-dica="Perfil ativo: o que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
@@ -700,7 +700,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   <div class="tira">
     <a class="aba" href="01-jogar.html">Jogar</a>
-    <a class="aba" href="02-controles.html">Controles</a>
     <a class="aba" href="03-gatilhos.html">Gatilhos</a>
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba" href="05-vibracao.html">Vibração</a>
@@ -896,11 +895,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-
-  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
-    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
-  </g>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -980,12 +974,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Máscara: Xbox 360"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-
-  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
-    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
-  </g>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="O quanto um gesto anda: 6 • Ignorar tremor até: 3 graus/s • Só enquanto eu segurar: Sempre"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -1065,12 +1054,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-
-  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
-    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
-  </g>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
+</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -1150,11 +1134,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <line x1="3" y1="24" x2="29" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M20,16 h7 m-3,-3 l3,3 l-3,3" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Máscara: Nintendo Pro"><span class="gr" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="mascara"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>PS</title>
-
-  <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
-    <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
-  </g>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="movimento"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico direito</title>
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>

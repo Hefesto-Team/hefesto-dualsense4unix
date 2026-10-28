@@ -116,11 +116,13 @@ class _Aba:
         return caixa["v"]
 
     def opacidades(self) -> dict[str, str]:
+        """A opacidade de cada peça que a página tem; a que a página não tem fica de fora."""
         import json
 
         todos = ESCONDIDOS + MOLDURA
         return json.loads(self.ler(
-            "JSON.stringify(Object.fromEntries(" + repr(list(todos)) + ".map(s => "
+            "JSON.stringify(Object.fromEntries(" + repr(list(todos)) + ".filter(s => "
+            "document.querySelector(s)).map(s => "
             "[s, getComputedStyle(document.querySelector(s)).opacity])))"))
 
 
@@ -138,8 +140,9 @@ def test_a_pagina_nasce_sem_o_desenho_e_aparece_na_primeira_pintura() -> None:
     aba = _Aba(esperar=True)
     try:
         antes = aba.opacidades()
+        assert {"div.miolo", ".fita", *MOLDURA} <= set(antes), antes
         for s in ESCONDIDOS:
-            assert antes[s] == "0", f"{s} apareceu antes da pintura: {antes}"
+            assert antes.get(s, "0") == "0", f"{s} apareceu antes da pintura: {antes}"
         for s in MOLDURA:
             assert antes[s] == "1", f"a moldura sumiu junto ({s}): {antes}"
         aba.ler(hefesto_vivo.BOOTSTRAP)

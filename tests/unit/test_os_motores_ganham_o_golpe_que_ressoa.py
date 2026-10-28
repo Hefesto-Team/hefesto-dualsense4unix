@@ -168,11 +168,3 @@ def test_o_clique_grava_no_perfil_e_a_pintura_poe_a_dica(perfis: Path, chave: st
     coluna: dict[str, Any] = next(iter(a05.pacote(_ctx("Bancada"))["colunas"].values()))
     assert coluna["imersao-escolha"] == chave
     assert coluna["imersao-dica"] == pv.DICAS[chave]
-
-
-def test_criar_efeito_recusa_os_dois_que_moram_nos_dois_motores(perfis: Path) -> None:  # noqa: F811
-    gesto = pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")
-    assert gesto is not None
-    with pytest.raises(RuntimeError, match="Escolha a forma"):
-        forma = {"padrao": "ressoar", "motores": pv.ESQUERDO, "nome": "x"}  # (noqa-acento)
-        gesto(_ctx(), {"forma": forma}, None)

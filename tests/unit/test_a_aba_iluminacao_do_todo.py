@@ -514,53 +514,6 @@ def test_o_gesto_do_efeito_sem_controle_recusa() -> None:
             _ctx(), {"valor": "luz-fixa"}, None)
 
 
-def _criar(forma: dict[str, Any]) -> None:
-    import pacotes
-
-    pacotes.gesto_da_pagina("04-iluminacao.html", "criar-efeito")(_ctx(), {"forma": forma}, None)
-
-
-def test_criar_efeito_guarda_so_na_biblioteca_da_luz() -> None:
-    from pacotes import a04_iluminacao as a04
-
-    assert a04.meus_efeitos("luz") == {}
-    _criar({"base": "piscar", "cores": "#ff0000,#00ff00", "ritmo": "6", "nome": "Alerta"})
-    guardado = a04.meus_efeitos("luz")["Alerta"]
-    assert guardado["base"] == "piscar"
-    assert guardado["parametros"] == {"cores": "#FF0000,#00FF00", "ritmo": 6}
-    assert a04.meus_efeitos("vibracao") == {} and a04.meus_efeitos("gatilhos") == {}
-    assert a04.efeito_do_item(guardado) == "piscar;FF0000,00FF00;6"
-    assert "Alerta" in a04.html_dos_efeitos()
-
-
-def test_o_arco_iris_criado_nao_guarda_cor() -> None:
-    from pacotes import a04_iluminacao as a04
-
-    _criar(
-        {"base": "arco-iris", "cores": "#ff0000", "ritmo": "3", "nome": "Giro"})
-    assert a04.meus_efeitos("luz")["Giro"]["parametros"]["cores"] == ""
-
-
-@pytest.mark.parametrize("forma,frase", [
-    ({"base": "", "cores": "#FF0000", "ritmo": "4", "nome": "x"}, "como a luz se move"),
-    ({"base": "piscar", "cores": "", "ritmo": "4", "nome": "x"}, "ao menos uma cor"),
-    ({"base": "piscar", "cores": "vermelho", "ritmo": "4", "nome": "x"}, "não é válida"),
-    ({"base": "piscar", "cores": ",".join(["#FF0000"] * 9), "ritmo": "4", "nome": "x"},
-     "no máximo 8 cores"),
-    ({"base": "piscar", "cores": "#FF0000", "ritmo": "0", "nome": "x"}, "ritmo vai de 1 a 10"),
-    ({"base": "piscar", "cores": "#FF0000", "ritmo": "", "nome": "x"}, "Escolha o ritmo"),
-    ({"base": "piscar", "cores": "#FF0000", "ritmo": "4", "nome": ""}, "Dê um nome"),
-    ({"base": "piscar", "cores": "#FF0000", "ritmo": "4", "nome": "n" * 200}, "no máximo"),
-])
-def test_criar_sem_o_que_falta_recusa_dizendo_e_nao_guarda(forma: dict[str, Any],
-                                                          frase: str) -> None:
-    from pacotes import a04_iluminacao as a04
-
-    with pytest.raises(RuntimeError, match=frase):
-        _criar(forma)
-    assert a04.meus_efeitos("luz") == {}
-
-
 def test_a_guia_tem_o_branco_e_as_cores_de_jogador_e_nenhuma_das_de_fora() -> None:
     """MORDIDA: devolver uma cor ao `FORA_DA_GUIA`, ou o ciano do Player 6 à fileira.
 
