@@ -1016,30 +1016,30 @@ def _fita(mesa: list[dict[str, Any]], pagina: str) -> str:
         return ""
 
 
-SELETOR = ("(document.querySelector('[data-gesto=\"%s\"],[data-hef-gesto=\"%s\"],"
-           "[data-papel=\"%s\"],.r-%s')||{click(){}}).click()")
+SELETOR = ("(function(p){const t=window.__hefTocar;const el=t.achar(document,p);"
+           "if(el)t.tocar(el);})(%s)")
 
 CLIQUE_COM_ALVO = r"""
 (function(g, prefs){
-  const sel = '[data-gesto="' + g + '"],[data-hef-gesto="' + g + '"],'
-            + '[data-papel="' + g + '"],.r-' + g;
+  const t = window.__hefTocar;
+  if(!t) return 'SEM O TOCAR';
   for(const p of prefs){
     const bloco = document.querySelector('[data-controle="' + p + '"]');
-    const dentro = bloco && bloco.querySelector(sel);
-    if(dentro){ window.__hef.alvoPadrao = p; dentro.click(); return 'no bloco de ' + p; }
+    const dentro = bloco && t.achar(bloco, g);
+    if(dentro){ window.__hef.alvoPadrao = p; t.tocar(dentro); return 'no bloco de ' + p; }
   }
-  const el = document.querySelector(sel);
+  const el = t.achar(document, g);
   if(!el) return 'NAO ACHEI NA PAGINA';
   const dono = el.closest(
     '[data-uniq],[data-controle=""],[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]');
   if(dono){
     const q = dono.dataset.controle || dono.dataset.uniq || '';
     window.__hef.alvoPadrao = q;
-    el.click();
+    t.tocar(el);
     return 'no bloco de ' + q;
   }
   window.__hef.alvoPadrao = prefs[0] || '';
-  el.click();
+  t.tocar(el);
   return 'ALVO FORCADO ' + (prefs[0] || '(mesa vazia)');
 })(%s, %s)
 """
@@ -2837,8 +2837,8 @@ class Piloto:
         continua sendo a porta, e aí é escolha de quem roda.
         """
         proibidos = sorted(
-            g for g in dict.fromkeys(self.args.prova_clique.split(","))
-            if (self.pagina, g.strip()) in PERIGOSOS or ("*", g.strip()) in PERIGOSOS)
+            g for g in dict.fromkeys(x.strip().split("@")[0] for x in self.args.prova_clique.split(","))
+            if (self.pagina, g) in PERIGOSOS or ("*", g) in PERIGOSOS)
         if proibidos and not self.args.incluir_perigosos:
             print(f"[prova] RECUSA: {', '.join(proibidos)} mexe(m) na máquina "
                   f"dela em {self.pagina}. Use --incluir-perigosos se for "
@@ -2847,7 +2847,7 @@ class Piloto:
         def clicar(g: str) -> bool:
             if not self.pronto:
                 return True
-            self._js(SELETOR % (g, g, g, g))
+            self._js(TOCAR + SELETOR % _json(g.strip(), pagina=self.pagina))
             return False
 
         for i, gesto in enumerate(self.args.prova_clique.split(",")):
@@ -2918,7 +2918,7 @@ class Piloto:
             self._onde_clicou[nome] = (
                 f"o clique falhou: {erro}" if erro is not None else str(valor))
 
-        self.ponte.perguntar(CLIQUE_COM_ALVO % (_json(nome, pagina=self.pagina),
+        self.ponte.perguntar(TOCAR + CLIQUE_COM_ALVO % (_json(nome, pagina=self.pagina),
                                                 _json(prefs, pagina=self.pagina)), anotou)
         from pacotes import ponte as _p
 
@@ -3409,8 +3409,8 @@ def main() -> None:
                    help="inclui os gestos que mexem na máquina dela (desligar, "
                         "reiniciar, restaurar) — escolha de quem roda")
     p.add_argument("--prova-clique", default="",
-                   help="lista de gestos a clicar, separada por vírgula — "
-                        "eles chegam ao daemon de verdade")
+                   help="gestos a tocar, por vírgula, até o daemon; `gesto@linha` escolhe o "
+                        "`data-linha`; a barra é arrastada e solta, e a lista passa à seguinte")
     p.add_argument("--sem-cor", action="store_true",
                    help="MORDIDA: sem o leitor de cor do plástico")
     p.add_argument("--sem-ondas", action="store_true",
@@ -3598,6 +3598,47 @@ def _importar_as_abas(tela: Any = None) -> None:
 
     _AS_ABAS_CHEGARAM = True
     _ligar_as_abas()
+
+
+TOCAR = r"""
+window.__hefTocar = window.__hefTocar || {
+  seletor: function(pedido){
+    const g = String(pedido).split('@')[0];
+    return '[data-gesto="' + g + '"],[data-hef-gesto="' + g + '"],'
+         + '[data-papel="' + g + '"],.r-' + g;
+  },
+  achar: function(raiz, pedido){
+    const linha = String(pedido).split('@')[1] || '';
+    return Array.from(raiz.querySelectorAll(this.seletor(pedido))).find(function(el){
+      return !linha || el.dataset.linha === linha || el.dataset.campo === linha;
+    }) || null;
+  },
+  tocar: function(el){
+    const tag = (el.tagName || '').toLowerCase();
+    if(tag === 'input' && String(el.type).toLowerCase() === 'range'){
+      const antes = el.value;
+      el.stepUp();
+      if(el.value === antes) el.stepDown();
+      el.dispatchEvent(new Event('input', {bubbles: true}));
+      el.dispatchEvent(new Event('change', {bubbles: true}));
+      return;
+    }
+    if(tag === 'select'){
+      const n = el.options.length;
+      for(let k = 1; k < n; k++){
+        const i = (el.selectedIndex + k) % n;
+        const o = el.options[i];
+        if(o.disabled || o.hidden || (o.parentElement && o.parentElement.disabled)) continue;
+        el.selectedIndex = i;
+        el.dispatchEvent(new Event('change', {bubbles: true}));
+        return;
+      }
+      return;
+    }
+    el.click();
+  },
+};
+"""
 
 
 if __name__ != "__main__":

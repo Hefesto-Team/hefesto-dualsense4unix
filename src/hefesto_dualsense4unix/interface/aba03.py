@@ -421,7 +421,7 @@ def _barra(chave, rotulo, de, ate, valor, unidade):
     uni = f' data-unidade="{unidade}"' if unidade else ""
     mostra = f"{valor} {unidade}".strip()
     return (f'<label class="g2-barra"><span class="g2-bn">{rotulo}</span>'
-            f'<input type="range" data-linha="{chave}" min="{de}" max="{ate}" value="{valor}"{uni}>'
+            f'<input type="range" data-linha="{chave}" data-gesto="sentir" data-hef-forma="criar-gatilhos" min="{de}" max="{ate}" value="{valor}"{uni}>'
             f'<b>{mostra}</b></label>')
 
 
@@ -430,7 +430,7 @@ def _partir():
         f'<option value="{p.name}"{" selected" if p.name == BASE_DO_CRIADOR else ""}>'
         f'{p.label}</option>'
         for p in PRESETS if p.name not in ("Off", *SEM_NA_LISTA))
-    return ('<select class="g2-partir" data-linha="partir" aria-label="Partir de" '
+    return (f'<select class="g2-partir" data-linha="partir" data-gesto="sentir" data-hef-forma="criar-gatilhos" aria-label="Partir de" '
             f'data-dica="O ponto de partida">{ops}</select>')
 
 
@@ -543,8 +543,8 @@ def _conferir(doc):
     exigir('data-gesto="modo"' not in corpo and "acion-" not in corpo and 'g2-acion' not in doc,
            "o acionamento voltou ao desenho: o gatilho só tem o efeito")
     exigir(corpo.count('id="criar-gatilhos"') == 1
-           and corpo.count('data-hef-forma="criar-gatilhos"') == 2,
-           "o Criar e o Sentir não apontam para o quadro de criar: o gesto não leria as barras")
+           and corpo.count('data-hef-forma="criar-gatilhos"') == 7,
+           "o Criar, o Sentir e as barras não apontam para o quadro de criar: o gesto não leria as barras")
     exigir(corpo.count('data-hef-alvo="valor"') == 2 * n + n,
            "um campo de escolha, ou o trilho da intensidade, do desenho não pinta por valor")
 
@@ -675,6 +675,10 @@ def _conferir(doc):
 
     _css = sem_comentarios_de_css(doc)
     exigir("minmax(0,1fr)" in _css, "a grade deixou de usar `minmax(0,1fr)`")
+    for _chave in ("partir", "inicio", "fim", "forca", "freq"):
+        _campo = re.search(rf'<(?:input|select)\b[^>]*data-linha="{_chave}"[^>]*>', corpo)
+        exigir(_campo is not None and 'data-gesto="sentir" data-hef-forma="criar-gatilhos"'
+               in _campo.group(0), f"o campo {_chave!r} do criador não toca o gatilho ao soltar")
     _controles = sorted({hex(ord(ch)) for ch in doc if ord(ch) < 32 and ch not in "\n\t"})
     exigir(not _controles, f"há caractere de controle no documento ({', '.join(_controles)})")
     exigir(SEPARADOR_DOS_MEUS not in corpo, "o separador antigo da lista de «Meus efeitos» voltou")

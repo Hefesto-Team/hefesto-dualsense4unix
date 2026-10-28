@@ -1797,7 +1797,14 @@ def sentir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     Passado o tempo, cada gatilho volta ao que o controle recebe AGORA (`Off` vira
     `trigger.reset`), lido depois do toque: uma escolha feita durante ele vale. Não grava
     perfil, não mexe no rascunho e não cria efeito.
+
+    Cada barra e a lista «Partir de» também mandam este gesto, no `change` (ao soltar). O
+    `click` que o mesmo arrasto entrega, e o que abre a lista, não tocam: levariam o valor de
+    antes e repetiriam o toque.
     """
+    if (str(o.get("tipo") or "").lower() in ("input", "select")
+            and str(o.get("evento") or "").lower() == "click"):
+        return
     partir, forma = _da_area_de_criar(o)
     uniq = _controle_do_sentir(ctx, o)
     params = _padroes(partir)
