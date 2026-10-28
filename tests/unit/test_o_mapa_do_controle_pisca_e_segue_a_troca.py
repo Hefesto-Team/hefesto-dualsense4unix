@@ -4,7 +4,10 @@ controle mostra.
 MORDIDAS: pintar o pisca com o controle errado, esquecer a troca no valor da linha, tirar o
 endereço de um lado, soltar a peça do desenho quando a linha pisca, tirar o `@media` que encolhe
 o chip na vista estreita (reprova sob a DejaVu) ou impor `.chip{width:40px}` (o `vaza` reprova
-nas três vistas, e o Range sozinho também) reprovam."""
+nas três vistas, e o Range sozinho também) reprovam. A passada `larga` põe um pixel a mais por
+letra, que cobre a distância medida entre duas letras comuns do sistema (Noto e DejaVu, ≈0,9 px):
+voltar as colunas dos lados a 292 e 252 px, ou a ação de baixo a uma linha só, reprova na mesa e no
+rootfs do 26.04."""
 from __future__ import annotations
 
 import csv
@@ -330,20 +333,36 @@ def _mede_na_vista(js: str, largura: int, altura: int,
     return json.loads(saiu[0])
 
 
-def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
-    return list(_mede_na_vista(CHIPS, largura, altura))
+LETRA = {"comum": "", "larga": "*{letter-spacing:1px !important}"}
 
 
+def _na_letra(js: str, vista: str, letra: str) -> Any:
+    """A medida com a letra do computador, ou com um pixel a mais por letra posto pelo teste."""
+    envolta = (
+        "(function(){var s=document.createElement('style');"
+        f"s.textContent={json.dumps(LETRA[letra])};document.head.appendChild(s);"
+        "document.body.offsetWidth;"
+        "return JSON.stringify({entreletra: getComputedStyle(document.body).letterSpacing,"
+        f" medida: JSON.parse({js.strip()})}});}})()"
+    )
+    saiu = _mede_na_vista(envolta, *VISTAS_DO_MAPA[vista])
+    if letra == "larga":
+        assert saiu["entreletra"] == "1px", f"o pixel a mais não pegou: {saiu['entreletra']}"
+    return saiu["medida"]
+
+
+@pytest.mark.parametrize("letra", LETRA)
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
-def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str) -> None:
+def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str, letra: str) -> None:
     """8 (conferência final, 02/10/2026): os chips levam o nome do controle
 
     Prova da D-1810-O-CHIP-DO-MAPA-EM-UMA-LINHA-COMPACTA-NA-VISTA-ESTREITA.
     """
-    chips = _chips_na_vista(*VISTAS_DO_MAPA[vista])
+    chips = list(_na_letra(CHIPS, vista, letra))
     assert len(chips) >= 3, f"a página não tem os chips do «Controle»: {chips}"
     ruins = [c for c in chips if c["vaza"] or c["fora"]]
-    assert ruins == [], f"na janela {vista}, o nome vaza do chip ou o chip sai do bloco: {ruins}"
+    assert ruins == [], (
+        f"na janela {vista}, letra {letra}, o nome vaza do chip ou sai do bloco: {ruins}")
 
 
 CENTRO = r"""
@@ -447,14 +466,16 @@ FOLGA_DOS_CHIPS = r"""
 """
 
 
+@pytest.mark.parametrize("letra", LETRA)
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
-def test_o_nome_de_exemplo_nao_ganha_reticencia_por_um_pixel_quebrado(vista: str) -> None:
+def test_o_nome_de_exemplo_nao_ganha_reticencia_por_um_pixel_quebrado(
+        vista: str, letra: str) -> None:
     """O corte do nome comprido não pega o nome de exemplo: o texto cabe na caixa de dentro."""
-    chips = list(_mede_na_vista(FOLGA_DOS_CHIPS, *VISTAS_DO_MAPA[vista]))
+    chips = list(_na_letra(FOLGA_DOS_CHIPS, vista, letra))
     assert len(chips) == 4, chips
     apertados = [(c["texto"], round(c["folga"], 3)) for c in chips if c["folga"] < 0]
     assert apertados == [], (
-        f"na janela {vista}, o texto passa da caixa de dentro do chip: {apertados}")
+        f"na janela {vista}, letra {letra}, o texto passa da caixa de dentro do chip: {apertados}")
 
 
 ACOES = r"""
@@ -474,19 +495,21 @@ ACOES = r"""
 """
 
 
+@pytest.mark.parametrize("letra", LETRA)
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
-def test_a_acao_de_cada_linha_se_le_em_toda_janela(vista: str) -> None:
+def test_a_acao_de_cada_linha_se_le_em_toda_janela(vista: str, letra: str) -> None:
     """O-CHIP-DO-MAPA-CABE-A-860-PX-01: dar o centro ao controle não pode tirar a ação das colunas
     dos lados. Com as laterais a 200 px, a 860 px dezessete ações saíam cortadas a seco.
 
     Prova da D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA.
     """
-    linhas = list(_mede_na_vista(ACOES, *VISTAS_DO_MAPA[vista]))
+    linhas = list(_na_letra(ACOES, vista, letra))
     assert len(linhas) == 23, linhas
     do_lado = [x["texto"] for x in linhas if x["lado"] and x["corta"]]
-    assert do_lado == [], f"na janela {vista}, a ação da linha do lado sai cortada: {do_lado}"
+    assert do_lado == [], (
+        f"na janela {vista}, letra {letra}, a ação da linha do lado sai cortada: {do_lado}")
     if vista == "estreita":
         cortadas = [x["texto"] for x in linhas if x["corta"]]
-        assert cortadas == [], f"na janela {vista}, a ação sai cortada: {cortadas}"
+        assert cortadas == [], f"na janela {vista}, letra {letra}, a ação sai cortada: {cortadas}"
     a_seco = [x["texto"] for x in linhas if x["corta"] and not x["reticencia"]]
     assert a_seco == [], f"na janela {vista}, a ação corta sem reticências: {a_seco}"
