@@ -128,20 +128,6 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         mora_em="",
     ),
     LinhaDoCenso(
-        feature="o controle é visto como",
-        nivel="por-controle",
-        campo="mascara",
-        subcampo=None,
-        sem_opiniao="esta peça não escolheu como aparecer nos jogos",
-        quem_responde=(
-            "o `mode.gamepad_flavor` do perfil e, sem ele, o padrão do daemon "
-            "— a mesma herança de sempre, agora com o perfil como dono"
-        ),
-        dono="MASCARA-NO-PERFIL-01",
-        chave_do_mapa="plataforma.vpad",
-        mora_em="",
-    ),
-    LinhaDoCenso(
         feature="mira virtual",
         nivel="por-controle",
         campo="movimento",
@@ -225,7 +211,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
 
 FEATURE_SEM_DONO = "touchpad"
 
-FEATURES_NA_TELA = 13
+FEATURES_NA_TELA = 12
 
 
 def campos_declarados_por_controle(censo: tuple[LinhaDoCenso, ...]) -> set[str]:

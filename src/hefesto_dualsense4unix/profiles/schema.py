@@ -1367,8 +1367,8 @@ class ControllerOverrides(BaseModel):
     (``test_perfil_por_controle_o_campo_espera_o_caminho.py``). O ``mode`` é da SESSÃO e vale para
     todos os controles (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): a ``mascara`` por controle
     saiu, e a chave que um perfil antigo ainda traz é levada ao ``mode`` pelo
-    :meth:`Profile._a_mascara_de_cada_controle_vira_o_modo`. SÃO DEZ: o que falta está na seção
-    «ControllerOverrides» de ``docs/research/o-porque-dos-modulos.md``.
+    :meth:`Profile._a_mascara_de_cada_controle_vira_o_modo`. SÃO DEZ, e a tela oferece doze: o
+    que falta está na seção «ControllerOverrides» de ``docs/research/o-porque-dos-modulos.md``.
     """
 
     model_config = ConfigDict(extra="forbid")
