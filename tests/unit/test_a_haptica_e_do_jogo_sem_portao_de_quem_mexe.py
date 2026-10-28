@@ -18,7 +18,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.haptica_do_cabo import VOLUME_ABERTO
-from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO, fator_da_haptica
 from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
     _P1,
     _P2,
@@ -31,7 +31,7 @@ from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
 )
 
 _QUATRO = (_P1, _P2, _P3, _P4)
-_PADRAO = f"{HAPTICA_PCT_PADRAO / 100:.4f}"
+_PADRAO = f"{fator_da_haptica(HAPTICA_PCT_PADRAO):.4f}"
 _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 _FONTE = pathlib.Path(mod.__file__)
 

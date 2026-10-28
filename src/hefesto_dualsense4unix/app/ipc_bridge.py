@@ -612,7 +612,7 @@ def rumble_motores_set(
     ``efeito_haptico`` e ``efeito_imersao`` levam a chave da escolha; ``"do_estilo"`` volta ao
     automático e o daemon recusa chave que não existe. Devolve ``(ok, corpo)``: o corpo é o do
     daemon (`status`, `motivo` quando recusa, `perfil`, `gravado` e os valores que passaram a
-    valer); `None` quer dizer daemon fora do ar. A faixa 0-100 (0-200 na háptica) é da borda do
+    valer); `None` quer dizer daemon fora do ar. A faixa 0-100, também na háptica, é da borda do
     esquema, e o porquê está em docs/research/o-porque-dos-modulos.md.
     """
     params: dict[str, Any] = {}

@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     HAPTICA_PCT_MAX,
     MatchAny,
     Profile,
+    fator_da_haptica,
 )
 from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from tests.unit.test_a_haptica_chega_a_quem_entra_depois import mesa  # noqa: F401
@@ -169,14 +170,14 @@ def test_a_politica_pelo_nome_poe_o_cursor_no_numero_dela(nome: str) -> None:
 
 
 def test_a_sensor_haptico_grava_o_ganho_no_perfil(perfis: pathlib.Path) -> None:  # noqa: F811
-    """Régua 3: o arraste a 180 grava o ``haptica_pct``, relido do DISCO pelo esquema."""
+    """Régua 3: o arraste a 90 grava a ``haptica``, relida do DISCO pelo esquema."""
     save_profile(Profile(name="Bancada", match=MatchAny()))
     ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
     gesto = pacotes.gesto_da_pagina(PAGINA, "haptica")
     assert gesto is not None
-    gesto(_ctx({}), {"uniq": BRANCO, "valor": "180"}, ponte)
+    gesto(_ctx({}), {"uniq": BRANCO, "valor": "90"}, ponte)
     dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
-    assert dele.rumble is not None and dele.rumble.haptica_pct == 180
+    assert dele.rumble is not None and dele.rumble.haptica == 90
 
 
 @pytest.mark.parametrize(("no_ar", "acesa"), [(True, "1"), (False, ""), (None, "")])
@@ -359,11 +360,11 @@ class TestOsDoisTestes:
 
 
 def test_o_par_do_teste_no_teto_do_ganho_nao_corta() -> None:
-    """Régua 5, a conta: o bloco do par a 200% fica em 0,996, abaixo de 1,0."""
+    """Régua 5, a conta: o par no fim do trilho (o fator 2,0) fica em 0,996, abaixo de 1,0."""
     import array
 
     bloco = array.array("f", eh.bloco_da_haptica(*af_sub.PAR_DO_TESTE_DA_HAPTICA))
-    pico = max(abs(x) for x in bloco) * HAPTICA_PCT_MAX / 100
+    pico = max(abs(x) for x in bloco) * fator_da_haptica(HAPTICA_PCT_MAX)
     assert pico <= 1.0, pico
     assert pico > 0.99, f"o teste ficou fraco demais: {pico}"
     assert af_sub.PAR_DO_TESTE_DA_HAPTICA[0] == af_sub.PAR_DO_TESTE_DA_HAPTICA[1]

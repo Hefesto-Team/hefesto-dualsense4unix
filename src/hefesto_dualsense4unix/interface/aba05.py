@@ -429,7 +429,7 @@ def _linha_da_haptica(valor, ligado, vazio=False):
              f'title="Háptica por áudio — a vibração fina que o jogo manda como som.">'
              f'{glifo("haptica", ativo=ligado, tam=18)}</button>')
     titulo = (f'A força da háptica por áudio neste controle — 0 a {TETO_DA_HAPTICA}%.'
-              f' 100% é o jogo como ele mandou. Grava na hora, só para ele.')
+              f' 50% é o jogo como ele mandou. Grava na hora, só para ele.')
     trilho = _trilho(valor, TETO_DA_HAPTICA, PASSO_DO_MOTOR, "barra-h", "haptica",
                      titulo)
     return (f'<div class="motor mult haptica"'
@@ -689,7 +689,7 @@ MIOLO = f'''
             </div>
             <div><span class="sec-rot">Modelo</span></div>
             <div><span class="sec-rot" data-dica="{DICA_DA_FORCA}. {DICA_DO_TETO_DA_MESA}">Força da vibração</span></div>
-            <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 100%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA} Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
+            <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 50%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA} Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
             <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e Sem efeito cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">{ESQ["rot"]}</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho direito: contrapeso menor, som fino">{DIR["rot"]}</span></div>
@@ -864,9 +864,9 @@ def _conferir(doc):
     _achou = _re.search(r'data-dica="([^"]*)">Sensor háptico</span>', corpo)
     _haptica = _achou.group(1) if _achou else ""
     exigir(_haptica and DICA_DO_TETO_DA_MESA in _haptica
-           and _haptica.index("O risco no meio é 100%")
+           and _haptica.index("O risco no meio é 50%")
            < _haptica.index(DICA_DO_TETO_DA_MESA) < _haptica.index("Cinza quando"),
-           "o «?» da sensor háptico perdeu a frase do teto do perfil de bateria (logo depois do 100%)")
+           "o «?» da sensor háptico perdeu a frase do teto do perfil de bateria (logo depois do 50%)")
     sobrando = papeis - set(PAPEIS_QUE_SAO_GESTO)
     exigir(not sobrando,
            f"`data-papel` sem gesto que atenda: {sorted(sobrando)} — o ouvinte "

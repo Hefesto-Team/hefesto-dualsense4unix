@@ -14,7 +14,7 @@ from typing import Any, ClassVar
 
 import pytest
 
-from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO, fator_da_haptica
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
@@ -457,7 +457,7 @@ def test_cada_um_no_cabo_recebe_o_sinal_do_seu_endpoint_sem_esperar_o_toque(mesa
     p2 = _no_cabo(mesa, _P2, 2, "3-7", 29)
     mesa.servidor.jogo_em.update({eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)})
     mesa.volta(p1, p2)
-    aberto = f"{HAPTICA_PCT_PADRAO / 100:.4f}"
+    aberto = f"{fator_da_haptica(HAPTICA_PCT_PADRAO):.4f}"
     esperado = [VOLUME_ABERTO, VOLUME_ABERTO, aberto, aberto]
     for u in (_P1, _P2):
         volumes = mesa.servidor.volumes[mesa.servidor.fluxo_do_laco(u)]

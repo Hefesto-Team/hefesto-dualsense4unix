@@ -1459,14 +1459,14 @@ def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A linha «Háptica por áudio»: o trilho grava o ganho, o interruptor liga e desliga.
 
     UM GESTO para as duas peças da linha, e o que as separa é o `valor`: o
-    trilho manda o número dela (0 a 200); o interruptor é um botão, e chega sem
+    trilho manda o número dela (0 a 100); o interruptor é um botão, e chega sem
     número. É o par das linhas dos motores, sem campo booleano à parte:
     desligar grava 0, ligar devolve o padrão do dono (`haptica_pct_padrao`, do
     `state_full`), e o aceso é a leitura da barra acima de zero.
 
     Um gesto próprio, e não o `motor`/`lado` com uma terceira sigla: as réguas
-    das barras dos motores contam dois por lugar, com teto 100, e a háptica tem
-    teto 200. A faixa quem recusa é a borda do esquema (`HAPTICA_PCT_MAX`).
+    das barras dos motores contam dois por lugar, e a háptica tem dono de ganho próprio.
+    A faixa quem recusa é a borda do esquema (`HAPTICA_PCT_MAX`).
     """
     uniq = _uniq(o)
     if not uniq:

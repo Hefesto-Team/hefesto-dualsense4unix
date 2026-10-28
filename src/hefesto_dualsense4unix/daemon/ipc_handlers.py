@@ -3635,7 +3635,7 @@ class IpcHandlersMixin:
         for campo, chave_ipc, teto in (
             ("motor_forte_pct", "forte_pct", MOTOR_PCT_MAX),
             ("motor_fraco_pct", "fraco_pct", MOTOR_PCT_MAX),
-            ("haptica_pct", "haptica_pct", HAPTICA_PCT_MAX),
+            ("haptica", "haptica_pct", HAPTICA_PCT_MAX),
         ):
             if chave_ipc not in params:
                 continue
@@ -3704,7 +3704,7 @@ class IpcHandlersMixin:
                 dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
             )
             for campo, valor in pedidos.items():
-                padrao = HAPTICA_PCT_PADRAO if campo == "haptica_pct" else MOTOR_PCT_PADRAO
+                padrao = HAPTICA_PCT_PADRAO if campo == "haptica" else MOTOR_PCT_PADRAO
                 if valor == padrao:
                     campos.pop(campo, None)
                 else:

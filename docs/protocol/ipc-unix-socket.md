@@ -258,7 +258,7 @@ antiga) publica `null`.
 
 | Método               | Parâmetros                                         | Retorno                                                        |
 |----------------------|----------------------------------------------------|----------------------------------------------------------------|
-| `rumble.motores.set` | `{uniq?: str, forte_pct?: 0-100, fraco_pct?: 0-100, haptica_pct?: 0-200, efeito_haptico?: str, efeito_imersao?: str}` | `{status, uniq, perfil, gravado, forte_pct, fraco_pct, haptica_pct, efeito_haptico, efeito_imersao}` |
+| `rumble.motores.set` | `{uniq?: str, forte_pct?: 0-100, fraco_pct?: 0-100, haptica_pct?: 0-100, efeito_haptico?: str, efeito_imersao?: str}` | `{status, uniq, perfil, gravado, forte_pct, fraco_pct, haptica_pct, efeito_haptico, efeito_imersao}` |
 
 Decisão, 04/09/2026. **A barra não é um comando: é POLÍTICA**, e ela
 MULTIPLICA o degrau da coluna — `efetivo(motor) = degrau x barra(motor)`. Com o
@@ -298,13 +298,15 @@ motores: tranco, batida, onda, coice, pancada_do_lado, ressoar, ricochete), e as
 que não existe é recusada com a lista das que existem. A leitura volta na resposta; a tela as lê do
 perfil.
 
-**O ganho da háptica por áudio vai no mesmo pedido** (29/09/2026): `haptica_pct`, de 0 a 200, com o mesmo contrato (omitido não mexe; o
-padrão, 150, apaga a chave). Ele não multiplica o degrau: no PCM do jogo a Força não
+**O ganho da háptica por áudio vai no mesmo pedido** (29/09/2026): `haptica_pct`, de 0 a 100, com o mesmo contrato (omitido não mexe; o
+padrão, 75, apaga a chave). Desde 27/10/2026 a faixa é a dos motores e o 100 é o fator 2,0, o que o
+200 de antes dava (o 75 é o fator 1,5 e o 50, o jogo como mandou); no perfil, o campo é `haptica`, e a
+chave velha `haptica_pct` (0 a 200) se converte pela metade na leitura. Ele não multiplica o degrau: no PCM do jogo a Força não
 alcança, e esta barra é o único fator. Quem o aplica é o dono do ganho
 (`daemon/ganho_da_haptica.py`), relido no mesmo ato: os traseiros do fluxo do laço daquele
 controle no cabo, em fator linear (a placa fica cheia), e o conversor da ponte no rádio, antes do int8. No
 `state_full`, cada controle traz `haptica_pct` (o que o usuário escolheu), `haptica_vale_pct`
-(o que vale: na Economia, no máximo 30), `haptica_alcanca` (o Hefesto está no caminho
+(o que vale: na Economia, no máximo 15), `haptica_alcanca` (o Hefesto está no caminho
 dele) e `haptica_no_ar` (há háptica chegando a ele agora: no cabo, o monitor da placa
 dele; no rádio, a ponte em háptica com sinal), e `haptica_pct_padrao` traz o padrão.
 
@@ -718,7 +720,7 @@ do tiro (`tato_vivo.escolhas_ativas`, `tocar_o_toque`): «Do estilo» e sem esco
 tocam a forma do estilo (o Toque), o Som no corpo toca um grave fixo, e «Sem
 efeito» recusa com `status: "sem_efeito"` e `motivo`. O par `(127, 127)` só entra
 quando a forma não pode tocar (a longa no rádio sem fatia livre), com `par` e
-`motivo_da_forma` (a amplitude é `nível / 255`, e com o ganho no teto, 200 %, dá
+`motivo_da_forma` (a amplitude é `nível / 255`, e com o ganho no teto, o fator 2,0, dá
 0,996, sem cortar). O ganho da linha «Sensor Háptico» vale depois (a placa no
 cabo, o conversor da ponte no rádio), com as recusas do rumble convertido do modo
 Xbox: o endpoint com fluxo de jogo, o alto-falante tocando pelo rádio e o ganho

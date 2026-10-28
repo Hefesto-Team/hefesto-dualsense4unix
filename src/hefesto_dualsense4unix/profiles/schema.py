@@ -1099,7 +1099,7 @@ class ControllerRumbleOverride(BaseModel):
 
     motor_fraco_pct: int | None = None
 
-    haptica_pct: int | None = None
+    haptica: int | None = None
 
     efeito_haptico: str | None = None
 
@@ -1119,14 +1119,37 @@ class ControllerRumbleOverride(BaseModel):
     def _o_que_ninguem_escreveu_nao_vai_ao_disco(
         self, handler: SerializerFunctionWrapHandler
     ) -> Any:
-        """O que ninguém escreveu (``haptica_pct`` e os dois efeitos) não vai ao arquivo."""
+        """O que ninguém escreveu (``haptica`` e os dois efeitos) não vai ao arquivo."""
         dados = handler(self)
         if isinstance(dados, dict):
-            if "haptica_pct" not in self.model_fields_set:
-                dados.pop("haptica_pct", None)
+            if "haptica" not in self.model_fields_set:
+                dados.pop("haptica", None)
             for campo in ("efeito_haptico", "efeito_imersao"):
                 if getattr(self, campo) is None:
                     dados.pop(campo, None)
+        return dados
+
+    @model_validator(mode="before")
+    @classmethod
+    def _a_haptica_de_0_a_200_vira_de_0_a_100(cls, data: Any) -> Any:
+        """A chave velha ``haptica_pct`` (0 a 200) vira ``haptica`` (0 a 100), com o mesmo fator.
+
+        O-SENSOR-HAPTICO-PARA-EM-100-COMO-OS-MOTORES-01 (27/10/2026): o 100 novo é o fator
+        ``HAPTICA_FATOR_MAX`` (2,0) que o 200 dava. A chave nova é a marca, e o que já a tem não
+        se converte de novo. As duas juntas são recusadas: um pedido no número novo com o nome
+        velho seria dividido por 2 calado.
+        """
+        if not isinstance(data, dict) or "haptica_pct" not in data:
+            return data
+        if "haptica" in data:
+            raise ValueError(
+                "controllers[...].rumble: 'haptica_pct' (0 a 200) e 'haptica' (0 a 100) no "
+                "mesmo documento — a chave velha só vale sozinha, e vira 'haptica' pela metade."
+            )
+        dados = dict(data)
+        velho = dados.pop("haptica_pct")
+        numero = isinstance(velho, (int, float)) and not isinstance(velho, bool)
+        dados["haptica"] = round(velho / 2) if numero else velho
         return dados
 
     @model_validator(mode="before")
@@ -1172,13 +1195,14 @@ class ControllerRumbleOverride(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _validate_haptica_pct(self) -> ControllerRumbleOverride:
+    def _validate_haptica(self) -> ControllerRumbleOverride:
         """A faixa da háptica é 0-``HAPTICA_PCT_MAX``, recusada na borda."""
-        valor = self.haptica_pct
+        valor = self.haptica
         if valor is not None and not (0 <= valor <= HAPTICA_PCT_MAX):
             raise ValueError(
-                f"controllers[...].rumble.haptica_pct fora de [0, "
-                f"{HAPTICA_PCT_MAX}]: {valor}"
+                f"controllers[...].rumble.haptica fora de [0, "
+                f"{HAPTICA_PCT_MAX}]: {valor}. O {HAPTICA_PCT_MAX} já é o fator "
+                f"{HAPTICA_FATOR_MAX:g}, o mais forte que a háptica alcança."
             )
         return self
 
@@ -2480,9 +2504,9 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "ControllerRumbleOverride.motor_fraco_pct": Nascimento(
         E_CONTRATO, "Ver `ControllerRumbleOverride.policy`."
     ),
-    "ControllerRumbleOverride.haptica_pct": Nascimento(
+    "ControllerRumbleOverride.haptica": Nascimento(
         NASCE_NO_LEITOR,
-        "`None` vale `HAPTICA_PCT_PADRAO` (150): a háptica por áudio nasce "
+        "`None` vale `HAPTICA_PCT_PADRAO` (75, o fator 1,5): a háptica por áudio nasce "
         "ligada, pela palavra dela de 17/09.",
         dono="hefesto_dualsense4unix.profiles.schema:pct_da_haptica",
     ),
@@ -3043,30 +3067,42 @@ __all__ = [
 ]
 
 
-HAPTICA_PCT_PADRAO = 150
+HAPTICA_PCT_PADRAO = 75
 
 ESCOLHAS_DE_IMERSAO = (
     "do_estilo", "sem_efeito", "tranco", "batida", "onda", "coice", "pancada_do_lado", "ressoar",
     "ricochete")
 
-HAPTICA_PCT_MAX = 200
+HAPTICA_PCT_MAX = 100
+
+HAPTICA_FATOR_MAX = 2.0
+
+
+def fator_da_haptica(pct: float) -> float:
+    """O fator linear de amplitude de um número da barra: o 100 é ``HAPTICA_FATOR_MAX``."""
+    return pct / HAPTICA_PCT_MAX * HAPTICA_FATOR_MAX
+
+
+def pct_do_fator_da_haptica(fator: float) -> int:
+    """O número da barra que dá este fator — o inverso de :func:`fator_da_haptica`."""
+    return round(fator / HAPTICA_FATOR_MAX * HAPTICA_PCT_MAX)
 
 
 def pct_da_haptica(rumble: ControllerRumbleOverride | None) -> int:
-    """O ganho da háptica por áudio desta peça, em % — o padrão sem opinião."""
-    if rumble is None or rumble.haptica_pct is None:
+    """O ganho da háptica por áudio desta peça, de 0 a 100 — o padrão sem opinião."""
+    if rumble is None or rumble.haptica is None:
         return HAPTICA_PCT_PADRAO
-    return int(rumble.haptica_pct)
+    return int(rumble.haptica)
 
 
 def pcts_da_haptica_dos_controles(
     controllers: dict[str, ControllerOverrides] | None,
 ) -> dict[str, int]:
-    """``{uniq: haptica_pct}`` de toda peça do perfil que ESCREVEU o campo."""
+    """``{uniq: haptica}`` de toda peça do perfil que ESCREVEU o campo."""
     fora: dict[str, int] = {}
     for uniq, cfg in (controllers or {}).items():
         rumble = getattr(cfg, "rumble", None)
-        if rumble is None or "haptica_pct" not in rumble.model_fields_set:
+        if rumble is None or "haptica" not in rumble.model_fields_set:
             continue
         fora[uniq] = pct_da_haptica(rumble)
     return fora

@@ -20,7 +20,7 @@ CHAVE = "aabbcc000001"
 
 ESCOLHAS = {
     "motor_forte_pct": 50,
-    "haptica_pct": 80,
+    "haptica": 80,
     "efeito_haptico": "guarda",
     "efeito_imersao": "coice",
 }

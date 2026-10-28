@@ -1,8 +1,9 @@
 """O «?» da sensor háptico avisa o teto do perfil de bateria (A-TELA-PERGUNTA-AO-DONO-01, opção a).
 
 Desde 02/10/2026 a Economia corta a háptica como corta a Força, e só o «?» da Força dizia a
-frase do dono. O usuário escolheu (08/10/2026) a opção a: a frase vem logo depois do 100%, antes do
-«Cinza quando…». A frase NÃO é digitada aqui: vem de ``app.telas.vibracao.DICA_DO_TETO_DA_MESA``.
+frase do dono. O usuário escolheu (08/10/2026) a opção a: a frase vem logo depois do risco no
+meio, antes do «Cinza quando…». A frase NÃO é digitada aqui: vem de
+``app.telas.vibracao.DICA_DO_TETO_DA_MESA``.
 
 A régua lê a FONTE (o gerador) e o ``mockup/05-vibracao.html``, que ele reescreve; não depende
 do ``--publicar``, que é da costura.
@@ -33,10 +34,10 @@ def _dica(rotulo: str) -> str:
     return re.sub(r"\s+", " ", achou.group(1))
 
 
-def test_o_ponto_da_haptica_diz_o_teto_logo_depois_do_100() -> None:
+def test_o_ponto_da_haptica_diz_o_teto_logo_depois_do_risco_no_meio() -> None:
     texto = _dica("Sensor háptico")
     assert DICA_DO_TETO_DA_MESA in texto
-    assert (texto.index("O risco no meio é 100%")
+    assert (texto.index("O risco no meio é 50%")
             < texto.index(DICA_DO_TETO_DA_MESA) < texto.index("Cinza quando")), texto
 
 

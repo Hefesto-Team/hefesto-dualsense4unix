@@ -112,8 +112,9 @@ class TestOEndereco:
         assert re.search(r'<span class="sec-rot"[^>]*>Sensor háptico', html)
 
     def test_o_teto_e_lido_do_esquema(self) -> None:
-        """Régua 4: o `max` publicado é o `HAPTICA_PCT_MAX`; o do desenho, o dos motores."""
+        """Régua 4: o `max` do desenho e o do publicado são o `HAPTICA_PCT_MAX`, o dos motores."""
         publicado = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html"
+        assert HAPTICA_PCT_MAX == MOTOR_PCT_MAX
         for html, teto in (("".join(aba05._coluna(c) for c in aba05.MESA), MOTOR_PCT_MAX),
                            (MOCKUP.read_text(encoding="utf-8"), MOTOR_PCT_MAX),
                            (publicado.read_text(encoding="utf-8"), HAPTICA_PCT_MAX)):
@@ -134,16 +135,16 @@ class TestOEndereco:
 
 class TestOGesto:
     def test_o_arraste_grava_no_perfil(self, perfis: Path) -> None:
-        """Régua 2: o trilho a 180 → o disco lido pelo esquema diz 180."""
+        """Régua 2: o trilho a 90 → o disco lido pelo esquema diz 90."""
         save_profile(Profile(name="Bancada", match=MatchAny()))
         ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "haptica")
         assert gesto is not None
-        gesto(_ctx(haptica=HAPTICA_PCT_PADRAO), {"uniq": BRANCO, "valor": "180"}, ponte)
+        gesto(_ctx(haptica=HAPTICA_PCT_PADRAO), {"uniq": BRANCO, "valor": "90"}, ponte)
         dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
-        assert dele.rumble is not None and dele.rumble.haptica_pct == 180
+        assert dele.rumble is not None and dele.rumble.haptica == 90
 
-    @pytest.mark.parametrize(("antes", "grava"), [(150, 0), (180, 0), (0, HAPTICA_PCT_PADRAO)])
+    @pytest.mark.parametrize(("antes", "grava"), [(75, 0), (90, 0), (0, HAPTICA_PCT_PADRAO)])
     def test_o_interruptor_e_o_par_da_barra(self, antes: int, grava: int) -> None:
         """Régua 3: desligar grava 0, ligar grava o padrão que o `state_full` diz.
 
@@ -171,8 +172,8 @@ class TestOGesto:
 
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "haptica")
         assert gesto is not None
-        gesto(_ctx(haptica=0, padrao=120), {"uniq": UNIQ, "valor": ""}, _P())
-        assert pedidos[0]["haptica_pct"] == 120
+        gesto(_ctx(haptica=0, padrao=60), {"uniq": UNIQ, "valor": ""}, _P())
+        assert pedidos[0]["haptica_pct"] == 60
 
     def test_a_recusa_do_daemon_chega_dizendo(self) -> None:
         class _P:
@@ -182,22 +183,22 @@ class TestOGesto:
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "haptica")
         assert gesto is not None
         with pytest.raises(RuntimeError, match="Ative um perfil"):
-            gesto(_ctx(haptica=150), {"uniq": UNIQ, "valor": "90"}, _P())
+            gesto(_ctx(haptica=75), {"uniq": UNIQ, "valor": "90"}, _P())
 
 
 class TestAPintura:
     def test_o_numero_e_o_do_dono(self) -> None:
-        coluna = _coluna(haptica=180, alcanca=True)
-        assert (coluna["barra-h"], coluna["barra-h-pct"], coluna["lado-h"]) == ("180", "180", "1")
+        coluna = _coluna(haptica=90, alcanca=True)
+        assert (coluna["barra-h"], coluna["barra-h-pct"], coluna["lado-h"]) == ("90", "90", "1")
         assert coluna["haptica-fora"] == ""
 
     def test_em_padrao_o_numero_vira_a_palavra_e_a_barra_trava(self) -> None:
         """04/10/2026: em Padrão as barras ficam travadas, com «Padrão» no lugar do número."""
-        coluna = _coluna(haptica=180, alcanca=True, politica="balanceado")
+        coluna = _coluna(haptica=90, alcanca=True, politica="balanceado")
         assert coluna["barra-h-pct"] == "Padrão" and coluna["padrao"] == "1"  # (noqa-acento)
         assert coluna["barra-e-pct"] == "Padrão" and coluna["barra-d-pct"] == "Padrão"
-        fora = _coluna(haptica=180, alcanca=True, politica="max")
-        assert fora["barra-h-pct"] == "180" and fora["padrao"] == ""  # (noqa-acento)
+        fora = _coluna(haptica=90, alcanca=True, politica="max")
+        assert fora["barra-h-pct"] == "90" and fora["padrao"] == ""  # (noqa-acento)
 
     def test_sem_o_numero_vale_o_padrao_publicado(self) -> None:
         coluna = _coluna(padrao=HAPTICA_PCT_PADRAO)
@@ -208,7 +209,7 @@ class TestAPintura:
 
     def test_cinza_onde_o_hefesto_nao_alcanca(self) -> None:
         """Régua 6: `haptica_alcanca=False` → a linha cinza e o trilho inerte."""
-        assert _coluna(haptica=150, alcanca=False)["haptica-fora"] == "1"
+        assert _coluna(haptica=75, alcanca=False)["haptica-fora"] == "1"
         html = MOCKUP.read_text(encoding="utf-8")
         assert 'data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"' in html
         assert ".motor.haptica.fora .trilho.arrasta" in aba05.CSS

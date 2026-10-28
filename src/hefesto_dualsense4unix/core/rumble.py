@@ -22,7 +22,7 @@ def vale_o_padrao(politica: str | None) -> bool:
     **É A ÚNICA PERGUNTA** que as barras por canal (os dois motores e o ganho da
     háptica) fazem antes de se aplicar: em Padrão elas ficam guardadas, os
     motores chegam como o jogo mandou e a háptica vai ao ganho de fábrica
-    (``HAPTICA_PCT_PADRAO``, 150%); em Economia, Máximo ou Personalizado elas voltam.
+    (``HAPTICA_PCT_PADRAO``, 75, o fator 1,5); em Economia, Máximo ou Personalizado voltam.
     """
     return politica == POLITICA_PADRAO
 

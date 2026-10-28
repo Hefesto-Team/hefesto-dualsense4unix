@@ -232,15 +232,15 @@ class TestOGesto:
         save_profile(Profile(
             name="Bancada", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
-                efeito_haptico="aparo", haptica_pct=150))}))
+                efeito_haptico="aparo", haptica=75))}))
         ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "efeito-imersao")
         assert gesto is not None
         gesto(_ctx("Bancada"), {"uniq": UNIQ, "valor": "onda"}, ponte)
         rumble = _rumble_do_disco()
         assert rumble is not None
-        assert (rumble.efeito_haptico, rumble.efeito_imersao, rumble.haptica_pct) == (
-            "aparo", "onda", 150)
+        assert (rumble.efeito_haptico, rumble.efeito_imersao, rumble.haptica) == (
+            "aparo", "onda", 75)
 
     @pytest.mark.parametrize("campo", sorted(GESTOS))
     def test_valor_fora_da_lista_e_recusado_sem_pedir_ao_daemon(

@@ -23,6 +23,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerRumbleOverride,
     MatchAny,
     Profile,
+    fator_da_haptica,
     pct_da_haptica,
 )
 from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
@@ -103,7 +104,7 @@ def _dono(**pcts: int) -> GanhoDaHaptica:
     dono = GanhoDaHaptica()
     nomes = {"branco": BRANCO, "preto": PRETO}
     dono.ler_do_perfil({
-        nomes[k]: ControllerOverrides(rumble=ControllerRumbleOverride(haptica_pct=v))
+        nomes[k]: ControllerOverrides(rumble=ControllerRumbleOverride(haptica=v))
         for k, v in pcts.items()
     })
     return dono
@@ -113,23 +114,23 @@ class TestOCampo:
     def test_sem_opiniao_vale_o_padrao(self) -> None:
         assert pct_da_haptica(None) == HAPTICA_PCT_PADRAO
         assert pct_da_haptica(ControllerRumbleOverride()) == HAPTICA_PCT_PADRAO
-        assert pct_da_haptica(ControllerRumbleOverride(haptica_pct=0)) == 0
+        assert pct_da_haptica(ControllerRumbleOverride(haptica=0)) == 0
 
     @pytest.mark.parametrize("valor", [-1, HAPTICA_PCT_MAX + 1])
     def test_fora_da_faixa_morre_na_borda(self, valor: int) -> None:
-        with pytest.raises(ValueError, match="haptica_pct"):
-            ControllerRumbleOverride(haptica_pct=valor)
+        with pytest.raises(ValueError, match="haptica"):
+            ControllerRumbleOverride(haptica=valor)
 
-    def test_a_faixa_passa_de_cem(self) -> None:
-        assert ControllerRumbleOverride(haptica_pct=HAPTICA_PCT_MAX).haptica_pct == 200
+    def test_a_faixa_para_em_cem_como_os_motores(self) -> None:
+        assert ControllerRumbleOverride(haptica=HAPTICA_PCT_MAX).haptica == 100
 
     def test_o_perfil_antigo_nao_ganha_a_chave(self) -> None:
-        """Régua 6: o ``load → save`` de um perfil sem ``haptica_pct`` sai igual."""
+        """Régua 6: o ``load → save`` de um perfil sem ``haptica`` sai igual."""
         velho = ControllerRumbleOverride.model_validate({"motor_forte_pct": 50})
-        assert "haptica_pct" not in velho.model_dump()
-        assert "haptica_pct" not in velho.model_dump(mode="json")
-        mexeu = ControllerRumbleOverride.model_validate({"haptica_pct": 180})
-        assert mexeu.model_dump(mode="json")["haptica_pct"] == 180
+        assert "haptica" not in velho.model_dump()
+        assert "haptica" not in velho.model_dump(mode="json")
+        mexeu = ControllerRumbleOverride.model_validate({"haptica": 90})
+        assert mexeu.model_dump(mode="json")["haptica"] == 90
 
 
 CHEIO = ("Volume: front-left: 65536 / 100% / 0.00 dB,   front-right: 65536 / 100% / 0.00 dB,   "
@@ -175,21 +176,21 @@ class TestNoCaboOGanhoMoraNoFluxoDoLaco:
         assert escritas == []
 
     def test_o_laco_recebe_fator_linear(self) -> None:
-        """150 % vira 1,5 no fluxo, e não 3,375 (o ``%`` do servidor é cúbico)."""
+        """75 vira 1,5 no fluxo, e não 3,375 (o ``%`` do servidor é cúbico)."""
         mesa = _CaboDeMentira()
-        mesa.volta(_dono(branco=150), [BRANCO])
+        mesa.volta(_dono(branco=75), [BRANCO])
         assert mesa.motores(BRANCO) == [1.5, 1.5]
         assert mesa.escritas[-1][3:5] == ["1.0000", "1.0000"], "a frente do laço passa cheia"
 
     def test_sem_opiniao_vale_o_padrao_no_laco(self) -> None:
         mesa = _CaboDeMentira()
         mesa.volta(GanhoDaHaptica(), [BRANCO])
-        assert mesa.motores(BRANCO) == [HAPTICA_PCT_PADRAO / 100] * 2
+        assert mesa.motores(BRANCO) == [fator_da_haptica(HAPTICA_PCT_PADRAO)] * 2
 
     def test_o_ganho_vai_ao_laco_daquele_controle_e_so_a_ele(self) -> None:
-        """Dois controles, 50 e 150: cada laço leva o seu."""
+        """Dois controles, 25 e 75: cada laço leva o seu."""
         mesa = _CaboDeMentira()
-        mesa.volta(_dono(branco=50, preto=150), [BRANCO, PRETO])
+        mesa.volta(_dono(branco=25, preto=75), [BRANCO, PRETO])
         assert mesa.motores(BRANCO) == [0.5, 0.5]
         assert mesa.motores(PRETO) == [1.5, 1.5]
 
@@ -201,9 +202,9 @@ class TestNoCaboOGanhoMoraNoFluxoDoLaco:
     def test_mudar_o_deslizante_reescreve_e_repetir_nao(self) -> None:
         mesa = _CaboDeMentira()
         for _ in range(3):
-            mesa.volta(_dono(branco=150), [BRANCO])
+            mesa.volta(_dono(branco=75), [BRANCO])
         assert len(mesa.escritas) == 1
-        mesa.volta(_dono(branco=60), [BRANCO])
+        mesa.volta(_dono(branco=30), [BRANCO])
         assert len(mesa.escritas) == 2
         assert mesa.motores(BRANCO) == [0.6, 0.6]
 
@@ -252,7 +253,7 @@ class TestORadioOConversor:
 
     def test_o_ganho_e_perguntado_ao_dono_por_controle(self) -> None:
         """A ponte recebe o chamável do dono (``functools.partial(GANHO.fator, uniq)``)."""
-        dono = _dono(branco=200, preto=100)
+        dono = _dono(branco=100, preto=50)
         assert set(_bloco(functools.partial(dono.fator, BRANCO))) == {127}
         assert set(_bloco(functools.partial(dono.fator, PRETO))) == {64}
         assert set(_bloco(functools.partial(dono.fator, "aa:bb:cc:00:00:99"))) == {95}
@@ -288,7 +289,7 @@ class TestOPedido:
     def test_grava_no_perfil_e_o_dono_rele_no_mesmo_ato(
         self, perfis: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O arraste a 180 cai no disco, relido pelo esquema, e o dono já responde 180."""
+        """O arraste a 90 cai no disco, relido pelo esquema, e o dono já responde 90."""
         from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod
 
         dono = GanhoDaHaptica()
@@ -296,15 +297,15 @@ class TestOPedido:
         save_profile(Profile(name="Bancada", match=MatchAny()))
         h = _Handlers(ativo="Bancada", primario=BRANCO)
 
-        corpo = _grava_ipc(h, uniq=BRANCO, haptica_pct=180)
+        corpo = _grava_ipc(h, uniq=BRANCO, haptica_pct=90)
 
         assert corpo["status"] == "ok" and corpo["gravado"] is True
-        assert corpo["haptica_pct"] == 180
+        assert corpo["haptica_pct"] == 90
         dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
-        assert dele.rumble is not None and dele.rumble.haptica_pct == 180
+        assert dele.rumble is not None and dele.rumble.haptica == 90
         assert "motor_forte_pct" not in dele.rumble.model_fields_set
-        assert dono.pct_guardado(BRANCO) == 180
-        assert dono.pct(BRANCO) == 180, "o daemon de mentira está em Máximo: o ganho vale"
+        assert dono.pct_guardado(BRANCO) == 90
+        assert dono.pct(BRANCO) == 90, "o daemon de mentira está em Máximo: o ganho vale"
 
     def test_o_padrao_nao_ocupa_chave(self, perfis: Path) -> None:
         save_profile(Profile(name="Bancada", match=MatchAny()))
@@ -314,13 +315,13 @@ class TestOPedido:
         assert corpo["haptica_pct"] == HAPTICA_PCT_PADRAO
         dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}).get(BRANCO)
         assert dele is None or dele.rumble is None or (
-            "haptica_pct" not in dele.rumble.model_fields_set
+            "haptica" not in dele.rumble.model_fields_set
         )
 
     def test_fora_da_faixa_e_recusado_sem_gravar(self, perfis: Path) -> None:
         save_profile(Profile(name="Bancada", match=MatchAny()))
         h = _Handlers(ativo="Bancada", primario=BRANCO)
-        with pytest.raises(ValueError, match="haptica_pct"):
+        with pytest.raises(ValueError, match="haptica"):
             _grava_ipc(h, uniq=BRANCO, haptica_pct=HAPTICA_PCT_MAX + 1)
         assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
 
@@ -337,8 +338,8 @@ class TestOPedido:
         monkeypatch.setattr(
             ipc_bridge, "_corpo_do_daemon", lambda m, p: pedidos.append((m, p)) or {"status": "ok"}
         )
-        ok, _ = ipc_bridge.rumble_motores_set(uniq=BRANCO, haptica_pct=175)
-        assert ok and pedidos == [("rumble.motores.set", {"haptica_pct": 175, "uniq": BRANCO})]
+        ok, _ = ipc_bridge.rumble_motores_set(uniq=BRANCO, haptica_pct=88)
+        assert ok and pedidos == [("rumble.motores.set", {"haptica_pct": 88, "uniq": BRANCO})]
 
 
 class TestOStateFull:
@@ -348,7 +349,7 @@ class TestOStateFull:
         from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod
         from hefesto_dualsense4unix.daemon.subsystems import rumble
 
-        monkeypatch.setattr(mod, "GANHO", _dono(branco=180))
+        monkeypatch.setattr(mod, "GANHO", _dono(branco=90))
         monkeypatch.setattr(rumble, "modo_nativo_manda_nos_motores", lambda _d: True)
         h = _Handlers(ativo=None, primario=BRANCO)
         h._sensor_hub = object()  # type: ignore[attr-defined]
@@ -358,7 +359,7 @@ class TestOStateFull:
             {"uniq": PRETO, "transport": "bt"},
         ]
         h._merge_radio(entries)
-        assert entries[0]["haptica_pct"] == 180 and entries[0]["haptica_alcanca"] is True
+        assert entries[0]["haptica_pct"] == 90 and entries[0]["haptica_alcanca"] is True
         assert entries[1]["haptica_pct"] == HAPTICA_PCT_PADRAO
         assert entries[1]["haptica_alcanca"] is False, (
             "Nativo pelo rádio sem a ponte: o jogo escreve no hidraw e o ganho não alcança"
@@ -376,7 +377,7 @@ class TestALeituraDoPerfil:
 
         cargas: list[str] = []
         perfil = SimpleNamespace(controllers={
-            BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(haptica_pct=60))
+            BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(haptica=30))
         })
 
         def _carregar(nome: str) -> Any:
@@ -390,7 +391,7 @@ class TestALeituraDoPerfil:
         dono = GanhoDaHaptica()
         dono.ler_do_daemon(daemon)
         dono.ler_do_daemon(daemon)
-        assert dono.pct(BRANCO) == 60 and cargas == ["Estilo"]
+        assert dono.pct(BRANCO) == 30 and cargas == ["Estilo"]
         dono.ler_do_daemon(daemon, forcar=True)
         assert cargas == ["Estilo", "Estilo"]
 
@@ -400,7 +401,7 @@ def _haptica_do_p1_em(pct: int, monkeypatch: pytest.MonkeyPatch, uniq: str) -> N
     from hefesto_dualsense4unix.daemon import ganho_da_haptica
 
     dono = ganho_da_haptica.GANHO
-    perfil = {uniq: ControllerOverrides(rumble=ControllerRumbleOverride(haptica_pct=pct))}
+    perfil = {uniq: ControllerOverrides(rumble=ControllerRumbleOverride(haptica=pct))}
     monkeypatch.setattr(dono, "ler_do_daemon", lambda *_a, **_k: dono.ler_do_perfil(perfil))
     dono.ler_do_perfil(perfil)
 
@@ -449,12 +450,12 @@ def _mesa_com_orcamento(orcamento: str | None) -> Any:
 
 class TestAEconomiaCortaAHaptica:
     def test_na_economia_o_dono_responde_o_teto_nas_duas_portas(self) -> None:
-        """Régua 7: ``haptica_pct=150`` vale 0,3 na Economia, e 1,5 sem o teto (e em Padrão)."""
-        dono = _dono(branco=150)
+        """Régua 7: ``haptica=75`` vale 0,3 na Economia, e 1,5 sem o teto (e em Padrão)."""
+        dono = _dono(branco=75)
         dono.ler_o_teto(_mesa_com_orcamento("economia"))
         assert dono.fator(BRANCO) == pytest.approx(0.3)
-        assert dono.pct(BRANCO) == 150, "o teto é leitura: o que ela escolheu não muda"
-        assert dono.pct_que_vale(BRANCO) == 30
+        assert dono.pct(BRANCO) == 75, "o teto é leitura: o que ela escolheu não muda"
+        assert dono.pct_que_vale(BRANCO) == 15
         mesa = _CaboDeMentira()
         mesa.volta(dono, [BRANCO])
         assert mesa.motores(BRANCO) == [0.3, 0.3]
@@ -466,8 +467,8 @@ class TestAEconomiaCortaAHaptica:
         assert mesa.motores(BRANCO) == [1.5, 1.5]
 
     def test_o_teto_e_min_e_nunca_produto(self) -> None:
-        """Abaixo do teto, o ganho passa inteiro: 20 % na Economia é 0,2, e não 0,06."""
-        dono = _dono(branco=20)
+        """Abaixo do teto, o ganho passa inteiro: 10 na Economia é 0,2, e não 0,06."""
+        dono = _dono(branco=10)
         dono.ler_o_teto(_mesa_com_orcamento("economia"))
         assert dono.fator(BRANCO) == pytest.approx(0.2)
 
@@ -480,7 +481,7 @@ class TestAEconomiaCortaAHaptica:
         from hefesto_dualsense4unix.profiles import manager
 
         perfil = SimpleNamespace(controllers={
-            BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(haptica_pct=150))
+            BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(haptica=75))
         })
         monkeypatch.setattr(loader_module, "perfil_em_disco", lambda _n: perfil)
         monkeypatch.setattr(manager, "nome_do_perfil_que_grava", lambda _a: "Estilo")
@@ -501,7 +502,7 @@ class TestAEconomiaCortaAHaptica:
     ) -> None:
         from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod
 
-        dono = _dono(branco=150)
+        dono = _dono(branco=75)
         dono.ler_o_teto(_mesa_com_orcamento("economia"))
         monkeypatch.setattr(mod, "GANHO", dono)
         h = _Handlers(ativo=None, primario=BRANCO)
@@ -509,8 +510,8 @@ class TestAEconomiaCortaAHaptica:
         monkeypatch.setattr(h, "_adaptadores_do_radio", lambda _u: {}, raising=False)
         entries: list[dict[str, Any]] = [{"uniq": BRANCO, "transport": "usb"}]
         h._merge_radio(entries)
-        assert entries[0]["haptica_pct"] == 150
-        assert entries[0]["haptica_vale_pct"] == 30
+        assert entries[0]["haptica_pct"] == 75
+        assert entries[0]["haptica_vale_pct"] == 15
 
     def test_a_economia_de_um_controle_corta_a_haptica_dele_e_so_a_dele(self) -> None:
         """O botão de economia da linha do controle corta a háptica DAQUELE controle."""
@@ -525,11 +526,11 @@ class TestAEconomiaCortaAHaptica:
         )
         schema.registrar_declaracao_da_mesa(lambda: declaracao)
         try:
-            dono = _dono(branco=150, preto=150)
+            dono = _dono(branco=75, preto=75)
             dono.ler_o_teto(_mesa_com_orcamento(None))
             assert dono.fator(BRANCO) == pytest.approx(0.3)
-            assert dono.pct_que_vale(BRANCO) == 30
-            assert dono.pct(BRANCO) == 150, "o teto é leitura: o que ela escolheu não muda"
+            assert dono.pct_que_vale(BRANCO) == 15
+            assert dono.pct(BRANCO) == 75, "o teto é leitura: o que ela escolheu não muda"
             assert dono.fator(PRETO) == pytest.approx(1.5), "a economia é DAQUELE controle"
             mesa = _CaboDeMentira()
             mesa.volta(dono, [BRANCO, PRETO])
@@ -557,7 +558,7 @@ class TestAEconomiaCortaAHaptica:
 
         from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod
 
-        monkeypatch.setattr(mod, "GANHO", _dono(branco=150))
+        monkeypatch.setattr(mod, "GANHO", _dono(branco=75))
         perguntas: list[str] = []
 
         def no_ar(uniq: str) -> bool:
@@ -611,7 +612,7 @@ def test_pelo_radio_a_haptica_desligada_deixa_o_radio_com_o_alto_falante(
     )
 
     sala = sala_do_radio
-    _ganho_fixo(monkeypatch, **{P4: 0, P3: 150})
+    _ganho_fixo(monkeypatch, **{P4: 0, P3: 75})
     for uniq in (P3, P4):
         sala.fonte(no_do(uniq)).quadro = MOTOR
     sala.abrir_a_sala(P3, P4)
@@ -636,7 +637,7 @@ def test_no_radio_a_luz_e_a_ponte_em_haptica_com_sinal(
     )
 
     sala = sala_do_radio
-    _ganho_fixo(monkeypatch, **{P2: 150})
+    _ganho_fixo(monkeypatch, **{P2: 75})
     endpoint = no_do(P2)
     sala.fonte(endpoint).quadro = MOTOR
     sala.abrir_a_sala(P2)
@@ -648,7 +649,7 @@ def test_no_radio_a_luz_e_a_ponte_em_haptica_com_sinal(
     assert sala.sub.haptica_no_ar(P2) is True
     _ganho_fixo(monkeypatch, **{P2: 0})
     assert sala.sub.haptica_no_ar(P2) is False, "com o ganho em 0 o motor não mexe"
-    _ganho_fixo(monkeypatch, **{P2: 150})
+    _ganho_fixo(monkeypatch, **{P2: 75})
     sala.fonte(endpoint).quadro = None
     sala.esperar(endpoint, False)
     assert sala.leva(P2) is True
@@ -663,7 +664,7 @@ def test_no_cabo_a_luz_ouve_a_placa_do_controle(monkeypatch: pytest.MonkeyPatch)
     gravadores = Gravadores(monkeypatch)
     monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
     monkeypatch.setattr(af, "JANELA_DO_SINAL_S", 0.2)
-    _ganho_fixo(monkeypatch, **{BRANCO: 150})
+    _ganho_fixo(monkeypatch, **{BRANCO: 75})
     sub = AltoFalanteSubsystem(daemon=None)
     try:
         gravadores.toca[PLACA_BRANCO] = (0, 0, 9000, -9000)
@@ -737,36 +738,36 @@ def _daemon_em(politica: str) -> Any:
 
 class TestOPadraoNaoAplicaOGuardado:
     """04/10/2026, desenho aprovado: em Padrão o ganho guardado não se aplica (vale o de fábrica,
-    150 % desde 22/10) e volta com a Economia ou o Máximo.
+    o fator 1,5 desde 22/10) e volta com a Economia ou o Máximo.
 
-    MORDIDA: tirar o ``_vale_o_padrao`` do ``pct`` (o 50% guardado passa a valer em Padrão).
+    MORDIDA: tirar o ``_vale_o_padrao`` do ``pct`` (o 25 guardado passa a valer em Padrão).
     """
 
-    def test_padrao_com_50_guardado_chega_a_150_por_cento_e_ao_fator_1_5(self) -> None:
-        dono = _dono(branco=50)
+    def test_padrao_com_25_guardado_chega_a_75_e_ao_fator_1_5(self) -> None:
+        dono = _dono(branco=25)
         dono.ler_o_teto(_daemon_em("balanceado"))
         assert dono.pct(BRANCO) == HAPTICA_PCT_PADRAO
         assert dono.fator(BRANCO) == pytest.approx(1.5)
-        assert dono.pct_guardado(BRANCO) == 50, "o guardado espera, não se perde"
+        assert dono.pct_guardado(BRANCO) == 25, "o guardado espera, não se perde"
 
-    def test_voltar_a_maximo_restaura_os_50_guardados(self) -> None:
-        dono = _dono(branco=50)
+    def test_voltar_a_maximo_restaura_os_25_guardados(self) -> None:
+        dono = _dono(branco=25)
         dono.ler_o_teto(_daemon_em("balanceado"))
         assert dono.fator(BRANCO) == pytest.approx(1.5)
         dono.ler_o_teto(_daemon_em("max"))
-        assert dono.pct(BRANCO) == 50 and dono.fator(BRANCO) == pytest.approx(0.5)
+        assert dono.pct(BRANCO) == 25 and dono.fator(BRANCO) == pytest.approx(0.5)
 
     def test_o_degrau_da_propria_peca_vence_o_global(self) -> None:
         dono = GanhoDaHaptica()
         dono.ler_do_perfil({
             BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
-                policy="balanceado", haptica_pct=50)),
+                policy="balanceado", haptica=25)),
             PRETO: ControllerOverrides(rumble=ControllerRumbleOverride(
-                policy="max", haptica_pct=50)),
+                policy="max", haptica=25)),
         })
         dono.ler_o_teto(_daemon_em("economia"))
         assert dono.pct(BRANCO) == HAPTICA_PCT_PADRAO, "a peça em Padrão leva o de fábrica"
-        assert dono.pct(PRETO) == 50, "a que escolheu Máximo leva o ganho dela"
+        assert dono.pct(PRETO) == 25, "a que escolheu Máximo leva o ganho dela"
 
     def test_a_tela_publica_o_guardado_e_nao_o_que_vale(self) -> None:
         """O `haptica_pct` do state_full é o que a barra mostra ao destravar: o guardado."""

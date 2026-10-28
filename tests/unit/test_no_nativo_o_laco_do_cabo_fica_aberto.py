@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO, fator_da_haptica
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
@@ -27,7 +27,7 @@ from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
 _QUATRO = (_P1, _P2, _P3, _P4)
 _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 
-_ABERTO = [VOLUME_ABERTO, VOLUME_ABERTO, *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
+_ABERTO = [VOLUME_ABERTO, VOLUME_ABERTO, *[f"{fator_da_haptica(HAPTICA_PCT_PADRAO):.4f}"] * 2]
 
 
 def _daemon(*, nativo: bool) -> Any:

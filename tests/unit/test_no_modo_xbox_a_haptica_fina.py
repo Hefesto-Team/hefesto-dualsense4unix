@@ -15,7 +15,7 @@ from typing import Any, ClassVar
 
 import pytest
 
-from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO, fator_da_haptica
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
@@ -40,7 +40,7 @@ _QUATRO = (_P1, _P2, _P3, _P4)
 _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 _MARCA = {u: eh.marca_do_aparelho(u) for u in _QUATRO}
 _CLIENTE = {eh.marca_do_aparelho(u): str(60 + n) for n, u in enumerate(_QUATRO, 1)}
-_ABERTO = ["1.0000", "1.0000", *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
+_ABERTO = ["1.0000", "1.0000", *[f"{fator_da_haptica(HAPTICA_PCT_PADRAO):.4f}"] * 2]
 
 
 class _Fluxos:

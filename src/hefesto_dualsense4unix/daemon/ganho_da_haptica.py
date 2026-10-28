@@ -127,7 +127,7 @@ class GanhoDaHaptica:
         return vale_o_padrao(propria or self._politica_global)
 
     def pct_guardado(self, uniq: str | None) -> int:
-        """O ganho que o usuário escolheu para este controle, em % (0 a ``HAPTICA_PCT_MAX``)."""
+        """O ganho que o usuário escolheu para este controle, de 0 a ``HAPTICA_PCT_MAX``."""
         from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 
         chave = _chave(uniq)
@@ -136,11 +136,11 @@ class GanhoDaHaptica:
         return self._escritos.get(chave, HAPTICA_PCT_PADRAO)
 
     def pct(self, uniq: str | None) -> int:
-        """O ganho que VALE antes do teto, em %: o guardado, ou o de fábrica em Padrão.
+        """O ganho que VALE antes do teto, de 0 a 100: o guardado, ou o de fábrica em Padrão.
 
         Em Padrão o ganho guardado não se aplica (04/10/2026) e o de fábrica
-        vale: 150 %, como nos outros modos (22/10/2026, escolha do usuário; antes o
-        Padrão travava em 100 %). O guardado volta com a Economia ou o Máximo.
+        vale: o fator 1,5, como nos outros modos (22/10/2026, escolha do usuário; antes o
+        Padrão travava no fator 1,0). O guardado volta com a Economia ou o Máximo.
         """
         if self._vale_o_padrao(uniq):
             from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
@@ -149,14 +149,17 @@ class GanhoDaHaptica:
         return self.pct_guardado(uniq)
 
     def fator(self, uniq: str | None) -> float:
-        """O ganho que VALE em fator linear de amplitude (150 % → 1,5; na Economia, 0,3)."""
+        """O ganho que VALE em fator linear de amplitude (75 → 1,5; 100 → 2,0; na Economia, 0,3)."""
         from hefesto_dualsense4unix.core.rumble import _sob_o_teto
+        from hefesto_dualsense4unix.profiles.schema import fator_da_haptica
 
-        return _sob_o_teto(self.pct(uniq) / 100.0, self._teto_de(uniq))
+        return _sob_o_teto(fator_da_haptica(self.pct(uniq)), self._teto_de(uniq))
 
     def pct_que_vale(self, uniq: str | None) -> int:
-        """O ganho que vale agora, em %: o escolhido sob o teto do orçamento."""
-        return round(self.fator(uniq) * 100.0)
+        """O ganho que vale agora, de 0 a 100: o escolhido sob o teto (na Economia, 15)."""
+        from hefesto_dualsense4unix.profiles.schema import pct_do_fator_da_haptica
+
+        return pct_do_fator_da_haptica(self.fator(uniq))
 
 
 GANHO = GanhoDaHaptica()
