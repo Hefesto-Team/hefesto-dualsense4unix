@@ -18,9 +18,10 @@ posição do interruptor, chip aceso, máscara acesa — chegava do daemon.
 
 O QUE A RÉGUA COBRA, e cada item é uma forma de a cura morrer calada:
 
-* o pacote **lê** os três estados (posição, chip, máscara) das funções do
-  produto, e a régua troca essas funções para provar que ele as segue — uma
-  régua que comparasse textos passaria com o pacote digitando o valor;
+* o pacote **lê** os estados (posição, chip) das funções do produto (a máscara do
+  cartão saiu da Jogar com o cartão em 28/10/2026), e a régua troca essas funções
+  para provar que ele as segue — uma régua que comparasse textos passaria com o
+  pacote digitando o valor;
 * **daemon calado não pinta nada.** É a armadilha desta aba: ``mode_of_state({})``
   devolve ``desktop``, então um pacote descuidado acende **Ligado** sobre um
   estado que ninguém leu;
@@ -111,15 +112,10 @@ def _com_mesa(state: dict[str, Any], por_aparelho: dict[str, str] | None = None,
     return Contexto(state=cheio, mesa=mesa, conectados=conectados, estados={})
 
 
-def _mascaras_dos_cartoes(ctx: Contexto) -> list[str]:
-    """O que cada cartão recebeu, na ordem da mesa."""
-    return [c["mascara-cartao"] for c in aba.pacote(ctx)["cartoes"].values()]
-
-
 @pytest.mark.parametrize(
     ("state", "posicao", "chip"),
     [
-        (VIVO_NAVEGACAO, "ligado", "pointclick"),
+        (VIVO_NAVEGACAO, "desligado", "navegacao"),
         (VIVO_GAMEPAD_XBOX, "ligado", "xbox"),
         (VIVO_NATIVO, "desligado", "nativo"),
     ],
@@ -144,83 +140,6 @@ def test_o_interruptor_e_o_chip_saem_do_daemon(
     assert fora["modo-aceso"] == chip, (
         f"o chip aceso saiu {fora['modo-aceso']!r} e o daemon está em "
         f"{painel.modo_vivo(state)!r}")
-
-
-def test_a_mascara_do_cartao_e_a_do_aparelho() -> None:
-    """Quem não escolheu segue a sessão — e é o cartão que recebe, não a página."""
-    assert _mascaras_dos_cartoes(_com_mesa(VIVO_NAVEGACAO)) == ["DualSense"]
-    assert _mascaras_dos_cartoes(_com_mesa(VIVO_GAMEPAD_XBOX)) == ["Xbox 360"]
-
-
-def test_dois_controles_duas_mascaras() -> None:
-    """A DECISÃO, 03/09/2026: *"É uma máscara por controle."*
-
-    ESTE É O DEFEITO QUE A CURA MATOU, e ele era de PINTURA, não de leitura:
-    `mesa_viva` já trazia a máscara de cada aparelho, mas o pacote emitia
-    `mascara-cartao` como valor DE PÁGINA — e o piloto escreve valor de página
-    em todo elemento com aquele `data-campo`. A máscara da SESSÃO ia para os
-    três chips dos quatro cartões, e dois controles com escolhas diferentes
-    acendiam o MESMO chip.
-
-    A MORDIDA: devolva `"mascara-cartao"` a `DA_PAGINA` e emita-o uma vez em
-    `_estado_da_tela` — este teste reprova com os dois cartões em `DualSense`,
-    que é exatamente o que a tela do usuário mostrava.
-    """
-    ctx = _com_mesa(VIVO_GAMEPAD_XBOX,
-                    por_aparelho={UNIQ_A: "dualsense", UNIQ_B: "xbox"},
-                    quantos=2)
-    assert _mascaras_dos_cartoes(ctx) == ["DualSense", "Xbox 360"], (
-        "os dois cartões receberam a mesma máscara — o valor voltou a ser da "
-        "página, e a escolha por aparelho parou de chegar à tela")
-    assert "mascara-cartao" not in aba.pacote(ctx), (
-        "`mascara-cartao` voltou ao nível de página: o piloto o escreveria em "
-        "TODOS os chips de TODOS os cartões, que é o defeito curado em 03/09")
-
-
-def test_rotulo_desenhado_que_o_produto_nao_monta_fica_apagado(
-    monkeypatch: Any,
-) -> None:
-    """O chip apaga quando a tela DESENHA um rótulo que o produto não monta."""
-    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
-
-    so_no_desenho = "Máscara Só Desenhada"
-    assert so_no_desenho not in set(NOME_DA_MASCARA.values()), (
-        "o rótulo de mentira virou rótulo de verdade — troque-o")
-    monkeypatch.setattr(
-        aba, "_MASCARAS_DESENHADAS",
-        lambda: set(NOME_DA_MASCARA.values()) | {so_no_desenho})
-
-    ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: so_no_desenho})
-    assert _mascaras_dos_cartoes(ctx) == [""], (
-        "um rótulo que a tela desenha e o produto não sabe montar acendeu um "
-        "chip — o cartão passou a afirmar uma máscara que o daemon recusa")
-
-    ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: "nem desenhado"})
-    assert _mascaras_dos_cartoes(ctx) == ["Xbox 360"], (
-        "os dois silêncios voltaram a ser um só: um nome que a tela nem "
-        "desenha tem de herdar a sessão, não apagar o chip")
-
-
-def test_a_nintendo_pro_acende_como_as_outras_duas() -> None:
-    """A máscara nova é chip de primeira classe — 07/09/2026, ordem de produto."""
-    from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-        mascaras_validas,
-    )
-    from hefesto_dualsense4unix.interface.mesa_viva import NOME_DA_MASCARA
-
-    assert "nintendo" in mascaras_validas(), (
-        "a máscara saiu do catálogo — se foi decisão dela, este teste cai "
-        "junto; se não foi, o chip dela apagou na tela sem ninguém pedir")
-
-    for sabor in sorted(mascaras_validas()):
-        rotulo = NOME_DA_MASCARA.get(sabor)
-        assert rotulo, (
-            f"{sabor!r} está no catálogo e não tem rótulo em `NOME_DA_MASCARA` "
-            "— o chip dele nasce cinza na tela dela")
-        ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: sabor})
-        assert _mascaras_dos_cartoes(ctx) == [rotulo], (
-            f"o cartão não acendeu o chip de {sabor!r}: a escolha por aparelho "
-            "não chegou à tela")
 
 
 def test_o_daemon_calado_nao_acende_nada() -> None:
@@ -255,32 +174,6 @@ def test_a_leitura_e_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
     assert fora["modo-aceso"] == "xbox", (
         "o pacote deixou de usar `painel.modo_vivo` + `painel.caminho_vivo` — ou "
         "voltou a acender o chip de modo pela máscara")
-
-
-def test_a_mascara_do_cartao_tem_a_MESA_por_dona() -> None:  # noqa: N802
-    """Quem responde pela máscara de um aparelho é `mesa_viva`, e não o pacote.
-
-    A REGRA DE HERANÇA MORA NO REGISTRO (`external_mask.mascara_efetiva`) e
-    chega à tela por `mesa_viva.mesa_do_estado`, que lê `por_aparelho` e cai na
-    sessão para quem não escolheu. Se o pacote relesse o `state` por conta
-    própria, seriam DUAS verdades sobre o mesmo fato — e a de cá envelheceria no
-    dia em que a herança mudasse.
-
-    A RÉGUA TROCA A MESA em vez de comparar textos: um valor digitado no pacote
-    passaria em todos os outros testes deste arquivo.
-    """
-    ctx = _com_mesa(VIVO_GAMEPAD_XBOX, por_aparelho={UNIQ_A: "dualsense"})
-    assert _mascaras_dos_cartoes(ctx) == ["DualSense"], (
-        "o cartão ignorou o que a mesa disse — o pacote voltou a ler o estado")
-
-    sem_mascara = Contexto(
-        state=ctx.state,
-        mesa=[{k: v for k, v in m.items() if k != "mascara"} for m in ctx.mesa],
-        conectados=ctx.conectados,
-        estados={},
-    )
-    assert _mascaras_dos_cartoes(sem_mascara) == ["Xbox 360"], (
-        "a mesa muda deixou de herdar a máscara da sessão")
 
 
 VIVO_JOGO_SEM_ATALHO: dict[str, Any] = {

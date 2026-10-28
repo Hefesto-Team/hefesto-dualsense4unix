@@ -90,15 +90,14 @@ FRASES_QUE_SAIRAM = ("O Hefesto está desligado", "Esta tela parou de ler o serv
 def test_com_o_servico_parado_nenhuma_frase_e_escrita() -> None:
     """A mesa, o topo e a coluna de avisos calam; só o Status diz Desligado.
 
-    A MORDIDA: devolva `return "SERVICO_CALADO"` no `if not ctx.state` de `_frase_da_mesa`, o
-    `"conta-b"` de `_o_que_o_topo_diz_da_mesa_vazia` ou a linha do selo SERVIÇO em `_avisos`, e
-    este teste reprova.
+    A MORDIDA: devolva o `"conta-b"` de `_o_que_o_topo_diz_da_mesa_vazia` ou a linha do selo
+    SERVIÇO em `_avisos`, e este teste reprova. A frase da mesa saiu com o cartão (28/10/2026).
 
     Prova da D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE.
     """
     ctx = _parado()
     pacote = aba.pacote(ctx)
-    assert pacote["mesa-frase"] == "", f"a mesa disse {pacote['mesa-frase']!r}"
+    assert "mesa-frase" not in pacote, "a frase da mesa voltou com o cartão que saiu"
     topo = pacotes.topo(ctx)
     assert topo["conta-b"] == "", f"o topo disse {topo['conta-b']!r}"
     assert topo["servico"] == "parado"  # (noqa-acento)
@@ -124,7 +123,7 @@ def test_com_dois_controles_no_radio_volta_ao_ligado_e_aos_cartoes() -> None:
     ctx = _no_radio()
     fora = aba.pacote(ctx)
     assert fora["hef-posicao"] == "ligado"
-    assert fora["mesa-frase"] == ""
+    assert "mesa-frase" not in fora
     assert set(fora["cartoes"]) == {UNIQ_ROXO, UNIQ_VERMELHO}
     topo = pacotes.topo(ctx)
     assert topo["conta-b"] == "2 BT"
@@ -134,7 +133,7 @@ def test_com_dois_controles_no_radio_volta_ao_ligado_e_aos_cartoes() -> None:
 def test_servico_de_pe_sem_controle_continua_dizendo_que_nao_ha_controle() -> None:
     """O serviço respondeu e a mesa está vazia: aí «Nenhum controle» é verdade, e só o topo diz."""
     ctx = _de_pe_sem_controle()
-    assert aba.pacote(ctx)["mesa-frase"] == ""
+    assert "mesa-frase" not in aba.pacote(ctx)
     assert pacotes.topo(ctx)["conta-b"] == pacotes.SEM_CONTROLE_NA_MESA
 
 

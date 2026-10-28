@@ -144,8 +144,11 @@ def test_a_mordida_do_alvo_plastico(portao: object,
 
 
 def test_a_mordida_da_fita(portao: object, colorways: set[str]) -> None:
-    """A ``.fita`` é isenta porque o piloto a TROCA INTEIRA a cada tique."""
-    pagina = (PAGINAS / "01-jogar.html").read_text(encoding="utf-8")
+    """A ``.fita`` é isenta porque o piloto a TROCA INTEIRA a cada tique.
+
+    Mede-se na Gatilhos: desde 28/10/2026 a fita da Jogar não traz o nome do plástico.
+    """
+    pagina = (PAGINAS / "03-gatilhos.html").read_text(encoding="utf-8")
     assert _conta(portao, colorways, pagina, "plastico") == 0
 
     mordida = _portao()

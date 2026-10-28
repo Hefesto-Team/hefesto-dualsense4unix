@@ -35,8 +35,9 @@ AS QUATRO MORDIDAS (§5 da sprint), e cada uma tem o seu bloco abaixo:
 1. arrancar a segunda perna do ``salvar`` → a régua reprova;
 2. arrancar a de ``_mascara_no_perfil`` → a máscara SOME do JSON com o store
    vazio, e quem vê isso é o ``json.load``, não o retorno;
-3. devolver ``chamar`` no lugar de ``chamar_detalhado`` → a ressalva some da
-   tela;
+3. devolver ``chamar`` no lugar de ``chamar_detalhado`` → a ponte deixa de ler a
+   recusa no corpo (o cartão que a mostrava saiu da Jogar em 28/10/2026, e a
+   régua da ponte ficou);
 4. **a que morde mais** — um dublê de store que responde ``None`` **e** um
    ``session.json`` válido no lar de mentira. É a combinação da máquina do usuário, e
    era a que nenhuma régua exercitava.
@@ -70,7 +71,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.interface.pacotes import Contexto
-from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
 from hefesto_dualsense4unix.interface.pacotes import perfil as pac_perfil
 from hefesto_dualsense4unix.interface.pacotes import ponte as pac_ponte
 from hefesto_dualsense4unix.interface.pacotes import rodape
@@ -377,63 +377,6 @@ def test_o_aplicar_e_o_exportar_atravessam_com_o_daemon_calado(
     assert [c[0] for c in q.chamadas] == ["salvar_arquivo"]
     assert NO_DISCO in q.chamadas[0][2]["sugestao"], (
         f"o exportar sugeriu outro arquivo: {q.chamadas[0][2]['sugestao']!r}")
-
-
-class _PonteQueRecusaNoCorpo:
-    """A ponte com as DUAS funções, para a régua trocar uma pela outra."""
-
-    def __init__(self, motivo: str | None) -> None:
-        self.motivo = motivo
-        self.chamadas: list[tuple[str, dict]] = []
-
-    def chamar(self, metodo: str, timeout: float | None = None, **p: Any) -> bool:
-        self.chamadas.append((metodo, p))
-        return True
-
-    def chamar_detalhado(self, metodo: str, **p: Any) -> tuple[bool, str | None]:
-        self.chamadas.append((metodo, p))
-        return True, self.motivo
-
-
-def _clique_na_mascara(p: Any) -> Any:
-    return aba.mascara_do_controle(
-        Contexto(state={}, mesa=[], conectados=[], estados={}),
-        {"uniq": P1, "mascara": "Xbox 360"},
-        p,
-    )
-
-
-def test_a_recusa_do_corpo_vira_frase_no_cartao() -> None:
-    """``sem_perfil`` vira o que ELA faz a seguir — nunca o nome do estado."""
-    resposta = _clique_na_mascara(_PonteQueRecusaNoCorpo("sem_perfil"))
-    assert resposta == {"recado": aba.MASCARA_VALE_SEM_PERFIL}
-    frase = aba.MASCARA_VALE_SEM_PERFIL
-    assert "sem_perfil" not in frase and "active_profile" not in frase
-    assert "mesa" not in frase.lower(), "a palavra banida entrou na tela"
-    assert "vale agora" in frase and "Perfis" in frase
-
-
-def test_o_sem_mudanca_nao_vira_aviso() -> None:
-    """O perfil JÁ guardava essa máscara — a piscada verde responde sozinha."""
-    assert _clique_na_mascara(_PonteQueRecusaNoCorpo("sem_mudanca")) is None
-    assert _clique_na_mascara(_PonteQueRecusaNoCorpo(None)) is None
-
-
-def test_um_motivo_desconhecido_nao_chega_cru_ao_cartao() -> None:
-    """Token interno não é texto de tela. A frase genérica cobre o caso novo."""
-    resposta = _clique_na_mascara(_PonteQueRecusaNoCorpo("um_motivo_que_nasce_amanha"))
-    assert resposta == {"recado": aba.MASCARA_VALE_SEM_GUARDAR}
-
-
-def test_com_o_chamar_de_volta_a_ressalva_some(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A MORDIDA 3, literal: devolva `chamar` e a tela volta a ficar calada."""
-    ponte_velha = _PonteQueRecusaNoCorpo("sem_perfil")
-    ponte_velha.chamar_detalhado = (  # type: ignore[assignment]
-        lambda metodo, **p: (ponte_velha.chamar(metodo, **p), None)
-    )
-    assert _clique_na_mascara(ponte_velha) is None, (
-        "com o `chamar` de volta a régua ainda viu a ressalva — então ela não "
-        "estava medindo a ponte")
 
 
 def test_a_ponte_junta_as_duas_formas_de_o_daemon_dizer_nao(

@@ -1,7 +1,8 @@
 """MODO-DE-CONEXAO-01 — o texto do modo não fala da máscara.
 
 Desde a aba Jogar do todo (15/10/2026) a página não tem «?»: a dica de cada quadro e de
-cada chip mora no `data-dica` dele.
+cada chip mora no `data-dica` dele. Desde 28/10/2026 a fileira de modos mora no quadro
+Status, e o cartão que falava da máscara saiu com a seção Controles.
 """
 from __future__ import annotations
 
@@ -27,10 +28,8 @@ DA_MASCARA = (
     "Y B A X",
 )
 
-O_CARTAO_GUARDA = ("desenho", "botões")
-
-CHIPS_DE_MODO = {"modo-dualsense", "modo-xbox", "modo-steam", "modo-navegacao", "modo-nativo",
-                 "modo-point-and-click"}
+CHIPS_DE_MODO = {"modo-dualsense", "modo-xbox", "modo-nintendo", "modo-steam", "modo-navegacao",
+                 "modo-nativo"}
 
 
 def _pagina() -> str:
@@ -82,17 +81,9 @@ def test_as_dicas_dos_chips_de_modo_nao_falam_da_mascara() -> None:
     )
 
 
-def test_a_dica_do_quadro_modo_nao_fala_da_mascara() -> None:
-    dica = _dica_do_quadro("Modo")
-    assert "chega ao jogo" in dica, f"a dica do Modo deixou de dizer o que é o modo: {dica!r}"
+def test_a_dica_do_quadro_status_nao_fala_da_mascara() -> None:
+    dica = _dica_do_quadro("Status")
+    assert "chega ao jogo" in dica, f"a dica do Status deixou de dizer o que é o modo: {dica!r}"
     termos = _vocabulario_da_mascara_em(dica)
-    assert not termos, f"a dica do quadro Modo fala da máscara ({termos}): {dica!r}"
+    assert not termos, f"a dica do quadro Status fala da máscara ({termos}): {dica!r}"
 
-
-def test_o_assunto_da_mascara_continua_na_dica_dos_cartoes() -> None:
-    dica = _dica_do_quadro("O controle é visto como:")
-    faltam = [termo for termo in O_CARTAO_GUARDA if termo not in dica]
-    assert not faltam, (
-        f"a dica dos cartões perdeu o vocabulário da máscara ({faltam}) — tirar "
-        f"o assunto do modo não pode apagá-lo da tela: {dica!r}"
-    )

@@ -69,10 +69,9 @@ def test_o_cartao_da_01_nao_emite_a_marca() -> None:
               "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
               "controllers": [DEGRADADO]}
     ctx = Contexto(state=estado, mesa=[], conectados=[DEGRADADO], estados={})
-    cartao = a01_jogar.pacote(ctx)["cartoes"][DEGRADADO["uniq"]]
+    cartao = a01_jogar.pacote(ctx)["cartoes"].get(DEGRADADO["uniq"], {})
     assert "degradou-cartao" not in cartao, (
         "o cartão da 01 voltou a emitir a marca da emulação degradada")
-    assert "degradou-cartao" not in a01_jogar.POR_CARTAO
 
 
 def test_o_card_da_02_nao_emite_a_marca() -> None:

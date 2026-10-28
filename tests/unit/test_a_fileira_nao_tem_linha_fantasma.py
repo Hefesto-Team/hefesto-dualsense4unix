@@ -11,7 +11,9 @@ tela voltou a ter um chip «Point and click», agora SÓ no Ligado, e a «Navega
 Desligado. É o mesmo modo `desktop` dos dois lados, então a tabela segue com UMA linha para
 ele (`navegacao`) e o `pointclick` é só o nome do lado do Ligado (`CHIP_DO_POINT_AND_CLICK`):
 a pergunta 2 o aceita por essa chave, e por nenhuma outra. A decisão de 31/08 continua
-valendo para o que ela cobrava: nenhuma linha da tabela fica sem lugar na tela.
+valendo para o que ela cobrava: nenhuma linha da tabela fica sem lugar na tela. Desde 28/10/2026
+o chip «Point and click» saiu da fileira (é estilo de jogo), e a pergunta 2 não aceita chave
+fora da tabela.
 
 SÃO DUAS PERGUNTAS, e confundi-las é o defeito inteiro:
 
@@ -71,9 +73,7 @@ def test_todo_degrau_da_fileira_esta_na_tabela() -> None:
     """A pergunta 2: nenhum chip na tela sem linha que o descreva."""
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
-    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CHIP_DO_POINT_AND_CLICK
-
-    da_tabela = {c.chave for c in painel.CHIPS_DA_ESCADA} | {CHIP_DO_POINT_AND_CLICK}
+    da_tabela = {c.chave for c in painel.CHIPS_DA_ESCADA}
     orfaos = [chave for chave in _degraus_da_pagina() if chave not in da_tabela]
     assert not orfaos, (
         f"a página publica {orfaos} e a tabela não os conhece — o rótulo, o "

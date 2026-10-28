@@ -551,8 +551,6 @@ ROTULO_DO_NATIVO = "Nativo"
 
 CHIPS_DO_DESLIGADO: tuple[str, ...] = (CHIP_DO_NATIVO, CHIP_DO_STEAM_INPUT, "navegacao")
 
-CHIP_DO_POINT_AND_CLICK = "pointclick"
-ROTULO_DO_POINT_AND_CLICK = "Point and click"
 CHIP_DA_NAVEGACAO = "navegacao"
 
 
@@ -569,7 +567,7 @@ def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
 
     A fileira é um grupo de rádio: qualquer chip deixa AQUELE aceso, e clicar no aceso REAPLICA.
     Todos tiram o jogo da vez do Steam Input; só o Steam Input o põe. Nativo e Steam Input são o
-    modo `native`; Point and click e Navegação, o `desktop`. Cada linha sai da `ponte` em
+    modo `native`; a Navegação, o `desktop`. Cada linha sai da `ponte` em
     `painel.CHIPS_DA_ESCADA`, sem digitar o caminho aqui; a máscara vira caminho em
     `virtual_pad.caminho_resolvido`.
     """
@@ -578,8 +576,7 @@ def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
 
     if chave == CHIP_DO_NATIVO:
         return LinhaDaFileira(MODE_NATIVE, None, False)
-    achar = CHIP_DA_NAVEGACAO if chave == CHIP_DO_POINT_AND_CLICK else chave
-    chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == achar), None)
+    chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == chave), None)
     if chip is None or (chip.ponte is None and not chip.modo):
         raise ValueError(f"modo: {chave!r} não é chip da fileira desta aba")
     if chip.ponte is None:
@@ -794,13 +791,7 @@ def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> d
 
 ARRANJO_DO_CHIP: dict[str, str] = {
     CHIP_DA_NAVEGACAO: "navegacao",
-    CHIP_DO_POINT_AND_CLICK: "point_and_click",
 }
-
-
-def _navegacao_no_desligado(state: dict[str, Any]) -> bool:
-    """O `desktop` vivo está no arranjo da Navegação (Desligado)? ``False`` na dúvida."""
-    return state.get("desktop_arranjo") == ARRANJO_DO_CHIP[CHIP_DA_NAVEGACAO]
 
 
 def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
@@ -846,10 +837,7 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
         steam = _steam_input_da_tela(state)
         aceso = "" if steam else CHIP_DO_NATIVO
     elif aceso == CHIP_DA_NAVEGACAO:
-        if _navegacao_no_desligado(state):
-            ligado = False
-        else:
-            aceso = CHIP_DO_POINT_AND_CLICK
+        ligado = False
     return {
         "hef-posicao": "" if ligado is None else ("ligado" if ligado else "desligado"),
         "modo-aceso": aceso,
@@ -1061,8 +1049,6 @@ def _rotulo_do_chip(chave: str) -> str:
     """A palavra aprovada pelo usuário para o chip, de `painel.CHIPS_DA_ESCADA`."""
     if chave == CHIP_DO_NATIVO:
         return ROTULO_DO_NATIVO
-    if chave == CHIP_DO_POINT_AND_CLICK:
-        return ROTULO_DO_POINT_AND_CLICK
     return next((str(c.rotulo) for c in _painel().CHIPS_DA_ESCADA
                  if c.chave == chave), chave)
 

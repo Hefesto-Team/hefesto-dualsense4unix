@@ -37,10 +37,8 @@ FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
         "06-navegacao.html", frozenset({"point-and-click-perfil"})),
     ("point and click", "escolher o estilo do perfil"): (
         "10-perfis.html", frozenset({"editor.estilo"})),
-    ("point and click", "ativar"): (
-        "01-jogar.html", frozenset({"modo-point-and-click"})),
     ("máscara", "escolher"): (
-        "01-jogar.html", frozenset({"mascara"})),
+        "01-jogar.html", frozenset({"modo-dualsense", "modo-xbox", "modo-nintendo"})),
     ("analógico virtual", "ligar e escolher o lado"): (
         "02-controles.html", frozenset({"analogico-lado", "analogico-virtual", "mira"})),
     ("velocidade do cursor", "ajustar"): (
@@ -50,7 +48,8 @@ FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
 }
 
 PAGINAS = sorted(p.name for p in BANCADA.glob("*.html"))
-EMBUTIDAS = {(BANCADA, "01-jogar.html"): {"02-controles.html"}}
+EMBUTIDAS = {(BANCADA, "01-jogar.html"): {"02-controles.html"},
+             (PUBLICADAS, "01-jogar.html"): {"02-controles.html"}}
 ARQUIVOS = [pytest.param(pasta, nome, id=f"{rotulo}-{nome}")
             for rotulo, pasta in (("bancada", BANCADA), ("publicada", PUBLICADAS))
             for nome in PAGINAS]

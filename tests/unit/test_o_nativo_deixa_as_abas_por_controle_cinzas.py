@@ -11,16 +11,15 @@ DUAS METADES, e nenhuma prova a outra:
    daemon, e a recusa vem do decorador `@gesto` (`pacotes.camada`), não de um `if` na tela.
    Ficam vivos só os de `VIVOS_NO_NATIVO` e o Exportar, que só grava um arquivo.
 2. **A tela (Chrome de verdade).** Com `body.nativo`, o motor responde por `elementFromPoint`:
-   nenhum gesto das cinco abas recebe clique fora dos vivos, a fita é uma camada muda, o
-   cartão não oferece máscara (a peça fixa «DualSense» com cadeado ocupa o lugar) e o quadro
-   mostra «O jogo manda». Sem o `nativo` a mesma página oferece tudo (a cura não pode ser
+   nenhum gesto das cinco abas recebe clique fora dos vivos, a fita é uma camada muda e o
+   quadro mostra «O jogo manda». O cartão com a máscara saiu da Jogar em 28/10/2026. Sem o
+   `nativo` a mesma página oferece tudo (a cura não pode ser
    «cinza para sempre»).
 
 A MORDIDA (feita em 09/10/2026, md5 antes e depois):
  (i)   tire a guarda do decorador (`guardado` devolve `fn` direto) → reprovam as recusas;
  (ii)  esvazie `VIVOS_NO_NATIVO` → reprova o gesto vivo e a lista de seletores do CSS;
- (iii) apague `CSS_DO_NATIVO` (monta.py) → reprova o motor, com o gesto nomeado;
- (iv)  tire `body.nativo .mascara .chip{display:none}` do `topo.html` → reprova a máscara.
+ (iii) apague `CSS_DO_NATIVO` (monta.py) → reprova o motor, com o gesto nomeado.
 """
 from __future__ import annotations
 
@@ -230,20 +229,11 @@ O_QUE_O_MOTOR_DESENHA = r"""
     return {clicavel: !!em && (em === c || c.contains(em)),
             quem: em ? em.className : ''};
   });
-  const cartoes = Array.from(document.querySelectorAll('.cartao:not(.off)')).map((c) => ({
-    chipsDeMascara: Array.from(c.querySelectorAll('.mascara .chip')).filter(visivel).length,
-    pecaFixa: Array.from(c.querySelectorAll('.visto-fixo')).filter(visivel)
-      .map((e) => e.textContent.trim()),
-    legenda: Array.from(c.querySelectorAll('.visto-legenda')).filter(visivel)
-      .map((e) => e.textContent.trim()),
-    fundo: getComputedStyle(c).backgroundColor,
-    alvo: c.classList.contains('alvo'),
-  }));
   const trava = Array.from(document.querySelectorAll('.trava-nativo')).filter(visivel)
     .map((e) => e.textContent.trim());
   const camadaDaFita = Array.from(document.querySelectorAll('.fita .so-no-nativo'))
     .filter(visivel).length;
-  return {gestos, chipsDaFita, cartoes, trava, camadaDaFita,
+  return {gestos, chipsDaFita, trava, camadaDaFita,
           corpo: document.body.className};
 }
 """
@@ -324,49 +314,6 @@ def test_no_nativo_a_fita_e_uma_camada_muda(medido: dict[str, Any]) -> None:
         for chip in n["chipsDaFita"]:
             assert not chip["clicavel"], f"{pagina}: um chip da fita ainda recebe clique"
             assert "so-no-nativo" in chip["quem"]
-
-
-@pytest.fixture(scope="module")
-def jogar_publicada() -> dict[str, Any]:
-    """A 01 publicada: os cartões com máscara saíram do desenho de 27/10 e ficam no produto."""
-    if not CHROME.exists():
-        pytest.skip("sem o Chrome do sistema — a régua não tem motor")
-    from playwright.sync_api import sync_playwright
-
-    import onde
-
-    sys.path.insert(0, str(RAIZ / "scripts"))
-    try:
-        import chrome_sem_rede
-    finally:
-        sys.path.remove(str(RAIZ / "scripts"))
-    arquivo = onde.pagina("01-jogar.html", publicado=True)
-    with sync_playwright() as pw:
-        navegador = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
-        try:
-            pg, _ = chrome_sem_rede.abrir_sem_rede(
-                navegador, arquivo.as_uri(), largura=1280, altura=900)
-            return {"nativo": pg.evaluate(O_QUE_O_MOTOR_DESENHA, True),
-                    "normal": pg.evaluate(O_QUE_O_MOTOR_DESENHA, False)}
-        finally:
-            navegador.close()
-
-
-def test_no_nativo_a_tela_nao_oferece_mascara(jogar_publicada: dict[str, Any]) -> None:
-    jogar = jogar_publicada["nativo"]
-    assert jogar["cartoes"], "a Jogar não tem cartão de controle"
-    for cartao in jogar["cartoes"]:
-        assert cartao["chipsDeMascara"] == 0, "a tela oferece máscara no Nativo"
-        assert cartao["pecaFixa"] == ["DualSense"]
-        assert cartao["legenda"] == ["O jogo vê o próprio controle"]
-    normal = jogar_publicada["normal"]["cartoes"]
-    assert all(c["chipsDeMascara"] == 3 and not c["pecaFixa"] for c in normal)
-
-
-def test_no_nativo_o_cartao_do_alvo_nao_tem_destaque(jogar_publicada: dict[str, Any]) -> None:
-    cartoes = jogar_publicada["nativo"]["cartoes"]
-    assert len({c["fundo"] for c in cartoes}) == 1, (
-        f"o cartão do alvo ainda tem fundo próprio: {[c['fundo'] for c in cartoes]}")
 
 
 def test_no_nativo_as_quatro_abas_dizem_que_o_jogo_manda(medido: dict[str, Any]) -> None:

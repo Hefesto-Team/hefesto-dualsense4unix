@@ -204,12 +204,15 @@ def _contexto_com(slots: dict[str, int]) -> Contexto:
 
 
 def test_o_cartao_diz_o_numero_novo_no_tique_seguinte() -> None:
-    """O P2 e o P3 viram P1 e P2, e o cartão de cada um diz o número novo."""
+    """O P2 e o P3 viram P1 e P2, e o lugar de cada um na seção Controles diz o número novo.
+
+    Desde 28/10/2026 o cartão da Jogar é o da seção Controles, que escreve só o número.
+    """
     antes = aba.pacote(_contexto_com({UNIQ_P2: 2, UNIQ_P3: 3}))["cartoes"]
     depois = aba.pacote(_contexto_com({UNIQ_P2: 1, UNIQ_P3: 2}))["cartoes"]
     assert {u: c["jogador"] for u, c in antes.items()} == {
-        UNIQ_P2: "Player 2", UNIQ_P3: "Player 3"}, antes
+        UNIQ_P2: "2", UNIQ_P3: "3"}, antes
     assert {u: c["jogador"] for u, c in depois.items()} == {
-        UNIQ_P2: "Player 1", UNIQ_P3: "Player 2"}, (
+        UNIQ_P2: "1", UNIQ_P3: "2"}, (
         "o cartão não mostrou o número novo — sem ele, o silêncio da decisão "
         "D-2409-O-RECONECTAR-NAO-DIZ-NADA esconderia a mudança")

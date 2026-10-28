@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""O «Reconectar controles» fica onde está — JOGAR-A-FAIXA-QUE-PULA-01."""
+"""O «Reconectar controles» fica onde está — JOGAR-A-FAIXA-QUE-PULA-01.
+
+NOTA DATADA, 28/10/2026 (A-JOGAR-SE-PUBLICA-COM-OS-CONTROLES-E-A-02-SAI-01): o botão mora no
+canto do quadro Status, a faixa final, a frase da mesa, a ressalva da máscara e os chips de
+máscara do cartão saíram da Jogar. As cenas que mexiam neles saíram; as que sobram medem o botão
+no canto, com os lugares da seção Controles apagados e com o piloto de verdade. O vizinho de
+texto longo modelava o recibo pousando na faixa; sem faixa, quem o barra é a primeira régua.
+"""
 from __future__ import annotations
 
 import pathlib
@@ -107,23 +114,12 @@ MEDIR = "() => {" + ONDE_O_BOTAO_ESTA + """
 
 CENAS: tuple[tuple[str, str], ...] = (
     ("a página como nasce", "(a) => 0"),
-    ("a faixa apaga (sai o .ha)",
-     "(a) => { document.querySelector('.faixa-final').classList.remove('ha'); return 0; }"),
-    ("o piloto escreve o travessão na pendência",
-     "(a) => { document.querySelector('[data-campo=\"pendente\"]').textContent = '\\u2014';"
-     " document.querySelector('.faixa-final').classList.remove('ha'); return 0; }"),
-    ("a frase do produto acende",
-     "(a) => { document.querySelector('[data-campo=\"pendente\"]').textContent = a.frase;"
-     " document.querySelector('.faixa-final').classList.add('ha'); return 0; }"),
     ("o piloto pousa o recibo de sucesso",
      "(a) => { const f = document.querySelector('[data-hef-recados~=\"sucesso\"]');"
      " if (!f) return 0; const el = document.createElement('div');"
      " el.className = 'hef-recado ' + (f.dataset.hefRecadoClasse || '');"
      " el.style.cssText = 'pointer-events:none;'; el.textContent = a.longa;"
      " f.appendChild(el); return 1; }"),
-    ("um vizinho de texto longo entra na fileira",
-     "(a) => { const d = document.createElement('div'); d.textContent = a.longa;"
-     " document.querySelector('.faixa-final').appendChild(d); return 1; }"),
     ("o botão voa e pousa verde",
      "(a) => { const b = document.querySelector('[data-gesto=\"reconectar\"]');"
      " b.classList.add('hef-em-voo'); b.classList.add('hef-deu-certo'); return 0; }"),
@@ -132,15 +128,13 @@ CENAS: tuple[tuple[str, str], ...] = (
 
 @pytest.mark.parametrize("largura", LARGURAS)
 def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
-    """Uma linha, colado à direita, e x e y iguais (±1 px) nas sete cenas."""
+    """Uma linha, no canto do Status, e x e y iguais (±1 px) nas três cenas."""
     if not CHROME.exists():
         pytest.skip("sem /usr/bin/google-chrome: o layout não se mede sem motor")
     sync_api = pytest.importorskip("playwright.sync_api")
-    from hefesto_dualsense4unix.app.actions.relancar import texto_do_pendente
     from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
 
-    frase = texto_do_pendente(mascara="Xbox")
-    argumento = {"frase": frase[:2] + frase[2:3].upper() + frase[3:], "longa": TRES_FRASES}
+    argumento = {"longa": TRES_FRASES}
     pagina = onde.pagina("01-jogar.html", publicado=True).as_uri()
 
     medidas: list[tuple[str, dict[str, Any]]] = []
@@ -168,9 +162,9 @@ def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
     for nome, m in medidas:
         onde_ = f"{largura}px · {nome}"
         assert m["linhas"] == 1, f"{onde_}: o botão quebrou em {m['linhas']} linhas"
-        assert abs(m["direita"]) <= 1, (
-            f"{onde_}: o botão não está colado à direita — sobram "
-            f"{m['direita']:.1f} px entre ele e a borda da faixa")
+        assert abs(m["direita"] - base["direita"]) <= 1, (
+            f"{onde_}: o botão descolou do canto — {base['direita']:.1f} px → "
+            f"{m['direita']:.1f} px até a borda do quadro")
         assert abs(m["x"] - base["x"]) <= 1 and abs(m["y"] - base["y"]) <= 1, (
             f"{onde_}: o botão mudou de lugar — x {base['x']:.1f} → {m['x']:.1f}, "
             f"y {base['y']:.1f} → {m['y']:.1f}")
@@ -180,58 +174,14 @@ LUGAR_VAZIO = "nao"  # (noqa-acento)
 
 APAGAR_OS_QUATRO = ("for (const el of document.querySelectorAll('[data-controle]'))"
                     " { el.dataset.conectado = a.vazio; el.classList.add('off'); }")
-ACENDER_A_FRASE = ("document.querySelector('.mesa-notas[data-campo=\"mesa-frase\"]')"
-                   ".classList.add('ha');")
 CENAS_DO_ESTADO: tuple[tuple[str, str], ...] = (
     ("o serviço não respondeu: os quatro lugares apagam",
      "(a) => { " + APAGAR_OS_QUATRO + " return 0; }"),
-    ("os lugares apagam e a frase da mesa acende por cima",
-     "(a) => { " + APAGAR_OS_QUATRO + " " + ACENDER_A_FRASE + " return 0; }"),
 )
 
 TOLERANCIA_DO_ESTADO = 2
 
-MEDIR_O_ESTADO = "() => {" + ONDE_O_BOTAO_ESTA + """
-  const n = document.querySelector('.mesa-notas[data-campo="mesa-frase"]');
-  const p = document.querySelector('.pecas');
-  if (!n || !p) return {erro: 'sem a frase da mesa ou .pecas'};
-  const rn = n.getBoundingClientRect(), rp = p.getBoundingClientRect();
-  return {x: rb.left, y: rb.top, direita: borda - rb.right, linhas: tops.size,
-          frase: {altura: rn.height, meio: rn.top + rn.height / 2},
-          fileira: {topo: rp.top, base: rp.bottom}};
-}"""
-
-CLIQUE_NO_CHIP_ESCONDIDO = "(a) => { " + APAGAR_OS_QUATRO + """
-  const saida = [];
-  for (const chip of document.querySelectorAll('[data-controle] .mascara .chip')) {
-    const r = chip.getBoundingClientRect();
-    const em = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-    saida.push({lugar: chip.closest('[data-controle]').dataset.controle,
-                rotulo: chip.textContent.trim(), altura: r.height,
-                pega: !!em && (em === chip || chip.contains(em)),
-                no_ponto: em ? em.tagName + '.' + em.className : ''});
-  }
-  return saida;
-}"""
-
-O_QUE_A_FRASE_DO_QUINTO_COBRE = "(a) => { " + (
-    "for (const el of document.querySelectorAll('.pecas [data-controle]'))"
-    " { el.dataset.conectado = 'sim'; el.classList.remove('off'); } "
-) + ACENDER_A_FRASE + """
-  const s = document.querySelector('.mesa-notas[data-campo="mesa-frase"] .mesa-nota');
-  s.textContent = a.frase;
-  const r = s.getBoundingClientRect();
-  const cobre = [];
-  for (const g of document.querySelectorAll('.pecas [data-controle] [data-gesto]')) {
-    const rg = g.getBoundingClientRect();
-    if (getComputedStyle(g).visibility === 'hidden' || !rg.width || !rg.height) continue;
-    if (rg.left < r.right && r.left < rg.right && rg.top < r.bottom && r.top < rg.bottom)
-      cobre.push(g.closest('[data-controle]').dataset.controle + ' · `' + g.dataset.gesto
-                 + '` ("' + g.textContent.trim().slice(0, 20) + '")');
-  }
-  return {altura: r.height, cobre: cobre};
-}"""
-
+MEDIR_O_ESTADO = MEDIR
 
 def _medir_no_chrome(largura: int, cenas: tuple[tuple[str, str], ...],
                      argumento: dict[str, Any], medir: str) -> list[tuple[str, Any]]:
@@ -265,7 +215,7 @@ def _medir_no_chrome(largura: int, cenas: tuple[tuple[str, str], ...],
 
 @pytest.mark.parametrize("largura", LARGURAS)
 def test_o_botao_nao_muda_de_lugar_quando_o_estado_apaga_os_lugares(largura: int) -> None:
-    """As duas cenas do estado contra a página como nasce."""
+    """A cena do estado contra a página como nasce."""
     medidas = _medir_no_chrome(
         largura, (("a página como nasce", "(a) => 0"), *CENAS_DO_ESTADO),
         {"vazio": LUGAR_VAZIO}, MEDIR_O_ESTADO)
@@ -275,71 +225,21 @@ def test_o_botao_nao_muda_de_lugar_quando_o_estado_apaga_os_lugares(largura: int
         onde_ = f"{largura}px · {nome}"
         assert "erro" not in m, f"{onde_}: {m.get('erro')}"
         assert m["linhas"] == 1, f"{onde_}: o botão quebrou em {m['linhas']} linhas"
-        assert abs(m["direita"]) <= 1, (
-            f"{onde_}: o botão descolou da direita — sobram {m['direita']:.1f} px")
+        assert abs(m["direita"] - base["direita"]) <= 1, (
+            f"{onde_}: o botão descolou do canto — {base['direita']:.1f} px → "
+            f"{m['direita']:.1f} px")
         dy = m["y"] - base["y"]
         assert abs(m["x"] - base["x"]) <= 1 and abs(dy) <= TOLERANCIA_DO_ESTADO, (
             f"{onde_}: o botão {'subiu' if dy < 0 else 'desceu'} {abs(dy):.0f} px — "
             f"y {base['y']:.1f} → {m['y']:.1f}, x {base['x']:.1f} → {m['x']:.1f}")
 
-    _, acesa = medidas[2]
-    assert acesa["frase"]["altura"] > 0, (
-        f"{largura}px: a frase da mesa acendeu sem caixa — sumir com ela não é "
-        f"pousá-la por cima dos lugares")
-    fileira, meio = acesa["fileira"], acesa["frase"]["meio"]
-    assert fileira["topo"] <= meio <= fileira["base"], (
-        f"{largura}px: a frase da mesa não está por cima dos lugares — o meio "
-        f"dela em y {meio:.1f}, a fileira de {fileira['topo']:.1f} a "
-        f"{fileira['base']:.1f}")
-
-
-def test_o_clique_no_chip_escondido_nao_devolve_o_chip() -> None:
-    """O lugar apagado guarda o vão do chip, e o clique no centro dele cai fora."""
-    [(_, chips)] = _medir_no_chrome(
-        LARGURAS[0], (("os quatro lugares apagam", "(a) => 0"),),
-        {"vazio": LUGAR_VAZIO}, CLIQUE_NO_CHIP_ESCONDIDO)
-    assert {c["lugar"] for c in chips} == {"p1", "p2", "p3", "p4"}, chips
-    sem_vao = [f'{c["lugar"]} · {c["rotulo"]}' for c in chips if c["altura"] <= 0]
-    assert not sem_vao, (
-        "o chip do lugar vazio saiu do fluxo de novo — a fileira volta a cair e "
-        "o botão sobe: " + ", ".join(sem_vao))
-    pegam = [f'{c["lugar"]} · {c["rotulo"]} ({c["no_ponto"]})' for c in chips if c["pega"]]
-    assert not pegam, (
-        "o clique no centro do chip escondido DEVOLVE o chip — um lugar sem "
-        "controle voltou a oferecer a escolha: " + ", ".join(pegam))
-
-
-@pytest.mark.parametrize("largura", LARGURAS)
-def test_a_frase_do_quinto_controle_nao_cobre_cartao_cheio(largura: int) -> None:
-    """Com mais controles que lugares a frase acende sobre quatro cartões CHEIOS.
-
-    POR CIMA DELES, ELA COBRIA A MÁSCARA — achado da validação desta sprint, em
-    13/09/2026: no Chrome a 1228 e 1300, e no piloto oculto, a frase do quinto
-    controle pousava sobre o chip «DualSense» do P2 e do P3, e o clique nela
-    caía nesse chip. Por cima só dos lugares apagados; com um lugar cheio, a
-    linha fica acima da fileira.
-
-    A FRASE É A DO DONO (`a01_jogar._frase_da_mesa`, com cinco controles): um
-    texto digitado aqui mediria a caixa de outra frase.
-    """
-    cinco = [{"uniq": f"aa:bb:cc:00:00:0{n}", "connected": True} for n in range(1, 6)]
-    frase = aba._frase_da_mesa(Contexto(state={**VIVO_DUALSENSE, "controllers": cinco},
-                                        mesa=[], conectados=cinco, estados={}))
-    assert frase, "com cinco controles o pacote não escreveu a frase — a régua mediria nada"
-    [(_, m)] = _medir_no_chrome(
-        largura, (("os quatro cheios e a frase do quinto", "(a) => 0"),),
-        {"frase": frase}, O_QUE_A_FRASE_DO_QUINTO_COBRE)
-    assert m["altura"] > 0, f"{largura}px: a frase do quinto não acendeu — a régua mediria nada"
-    assert not m["cobre"], (
-        f"{largura}px: a frase do quinto controle cobre o que se clica num cartão "
-        f"cheio — " + ", ".join(m["cobre"]))
 
 
 @pytest.mark.parametrize("estado", [VIVO_NATIVO, VIVO_NAVEGACAO, VIVO_DUALSENSE, {}],
                          ids=["nativo", "navegacao", "jogo", "sem-daemon"])
 def test_a_ressalva_da_mascara_nao_chega_a_tela(estado: dict[str, Any]) -> None:
     """§3.1: em modo nenhum — e era no Nativo e na Navegação que ela era pintada."""
-    assert aba.pacote(_ctx(estado))["mascara-ressalva"] == ""
+    assert "mascara-ressalva" not in aba.pacote(_ctx(estado))
 
 
 def test_a_pendencia_nao_acende_a_faixa_e_vai_ao_diario(
@@ -350,7 +250,7 @@ def test_a_pendencia_nao_acende_a_faixa_e_vai_ao_diario(
 
     fora = aba.pacote(_ctx(VIVO_DUALSENSE))
     for campo in ("pendente", "pendente-alvo", "pendente-ha"):
-        assert fora[campo] == "", f"a faixa voltou a falar: {campo}={fora[campo]!r}"
+        assert campo not in fora, f"a faixa voltou a falar: {campo}={fora[campo]!r}"
     assert aba._faixa_do_pendente(VIVO_DUALSENSE)[1] == "Xbox", (
         "a dona da pendência parou de medir — o diário ficaria mudo junto")
 
@@ -470,10 +370,8 @@ def _vazia_pintada(a: dict[str, Any]) -> bool:
 LER_A_FILEIRA = r"""(() => {
   const b = document.querySelector('[data-gesto="reconectar"]');
   const p1 = document.querySelector('[data-controle="p1"]');
-  const n = document.querySelector('.mesa-notas[data-campo="mesa-frase"]');
-  if (!b || !p1 || !n) return JSON.stringify({erro: 'sem o botão, o P1 ou a frase da mesa'});
-  return JSON.stringify({y: b.getBoundingClientRect().top, p1: p1.dataset.conectado || '',
-                         frase: n.classList.contains('ha')});
+  if (!b || !p1) return JSON.stringify({erro: 'sem o botão ou o P1'});
+  return JSON.stringify({y: b.getBoundingClientRect().top, p1: p1.dataset.conectado || ''});
 })()"""
 
 
@@ -614,9 +512,7 @@ def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
         tique_mudo: dict[str, Any]) -> None:
     """O y do botão no repouso, com os lugares apagados e com a lista vazia.
 
-    Com o serviço calado a frase da mesa não acende (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE): só
-    o Status diz Desligado. A frase acesa por cima dos lugares se mede no geométrico, acima.
-    MORDIDA: devolva a frase do serviço calado ao `_frase_da_mesa` e os apagados acendem.
+    Com o serviço calado só o Status diz Desligado (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE).
     """
     amostras = tique_mudo["amostras"]
     repouso = [a["y"] for a in amostras if a["fase"] == "bom" and a["p1"] == "sim"]
@@ -625,9 +521,6 @@ def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
     assert repouso and apagados and vazia, (
         "a régua não viu o repouso, os lugares apagados ou a lista vazia — "
         "ficaria verde sobre nada")
-    acesos = [a for a in apagados[1:] if a["frase"]]
-    assert not acesos, (
-        f"o serviço calou e a frase da mesa acendeu em {len(acesos)} de {len(apagados)} amostras")
     base = repouso[-1]
     for rotulo, grupo in (("com os lugares apagados", apagados),
                           ("com a lista vazia", vazia)):
@@ -636,16 +529,3 @@ def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
         assert abs(dy) <= TOLERANCIA_DO_ESTADO, (
             f"no WebKit, {rotulo}, o botão {'subiu' if dy < 0 else 'desceu'} "
             f"{abs(dy):.0f} px — y {base:.1f} → {pior['y']:.1f}")
-
-
-def test_no_webkit_a_lista_vazia_nao_acende_frase(tique_mudo: dict[str, Any]) -> None:
-    """Com a lista vazia, os quatro «Desconectado» bastam: a linha por cima saiu (19/10/2026).
-
-    Mede-se do segundo tique vazio em diante: o primeiro ainda chega com a frase do serviço calado
-    pintada pela fase anterior. A MORDIDA: devolva a frase ao `_frase_da_mesa` com a mesa vazia.
-    """
-    vazia = [a for a in tique_mudo["amostras"] if _vazia_pintada(a)]
-    assert vazia, "nenhuma amostra da lista vazia — a régua não viu o que promete"
-    acesas = [a for a in vazia if a["frase"]]
-    assert not acesas, (
-        f"a lista vazia acendeu a frase da mesa em {len(acesas)} de {len(vazia)} amostras")

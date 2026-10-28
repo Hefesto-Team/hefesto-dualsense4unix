@@ -332,13 +332,12 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
 
 
 @pytest.mark.parametrize("para", CHIPS)
-@pytest.mark.parametrize("origem", ["xbox", "navegacao", "pointclick"])
+@pytest.mark.parametrize("origem", ["xbox", "navegacao"])
 def test_a_origem_que_a_primeira_cura_deixava(vdf, monkeypatch, origem, para) -> None:
-    """O «Xbox», a «Navegação» ou o «Point and click» COM o jogo na lista e a ponte de pé.
+    """O «Xbox» ou a «Navegação» COM o jogo na lista e a ponte de pé.
 
-    A «Navegação» e o «Point and click» são o mesmo modo `desktop` do daemon desde o todo de
-    15/10/2026 (A-ABA-JOGAR-DO-TODO-01); quem acende um ou outro é o arranjo que o serviço publica
-    (O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01)."""
+    O «Point and click» saiu da fileira em 28/10/2026 (é estilo de jogo): o `desktop` em
+    qualquer arranjo acende a «Navegação»."""
     _ponte_de_pe()
     _a_maquina(monkeypatch, jogo_aberto=True, steam_aberta=True)
     ctx = _ctx(aberto=True, caminho="xbox",

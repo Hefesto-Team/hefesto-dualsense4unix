@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""As duas decisões da aba Jogar que a ONDA2-01 fecha, e a que ela NÃO fecha."""
+"""As duas decisões da aba Jogar que a ONDA2-01 fecha, e a que ela NÃO fecha.
+
+NOTA DATADA, 28/10/2026: o esmaecido do «Player N» do cartão saiu com o cartão
+(A-JOGAR-SE-PUBLICA-COM-OS-CONTROLES-E-A-02-SAI-01); a seção Controles escreve o número sem ele.
+"""
 from __future__ import annotations
 
 import pathlib
@@ -17,7 +21,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import monta
 from hefesto_dualsense4unix.interface import onde
 from pacotes import TRAVESSAO, Contexto
 from pacotes import a01_jogar as aba
@@ -41,91 +44,6 @@ def _pagina() -> str:
 def _ctx(controles: list[dict[str, Any]], **estado: Any) -> Contexto:
     return Contexto(state={**VIVO, **estado, "controllers": controles},
                     mesa=[], conectados=controles, estados={})
-
-
-def test_o_numero_esmaece_so_enquanto_o_jogo_nao_recebeu() -> None:
-    """O dano que a decisão [02] mata, com a medição que o revelou.
-
-    02/09/2026, na bancada, com os dois controles::
-
-        uniq …0003 · bt  · player 1    · player_slot 1
-        uniq …00d8 · usb · player None · player_slot 2   ← "Player 2" assim mesmo
-
-    O segundo tinha RESERVADO o lugar e o jogo ainda não o via — e o cartão
-    afirmava um jogador que não existia.
-
-    A MORDIDA: troque o corpo de `_jogador_esperando` por `return ""` e esta
-    régua reprova dizendo que o cartão do P2 continua afirmando o jogador.
-    """
-    numerado = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1}
-    esperando = {"uniq": P2, "connected": True, "player_slot": 2, "player": None}
-
-    fora = aba.pacote(_ctx([numerado, esperando]))
-    cartoes = fora["cartoes"]
-
-    assert cartoes[P1]["jogador-espera"] == "", (
-        "o cartão do controle que o JOGO já recebeu (player=1) está esmaecido — "
-        "a tela diria 'espere' sobre um jogador que já está jogando")
-    assert cartoes[P2]["jogador-espera"] == "1", (
-        "o cartão do controle que o jogo NÃO recebeu (player=None) não esmaece. "
-        "É o defeito medido em 02/09 na mesa dela: 'Player 2' afirmado com o "
-        "co-op mostrando UM jogador")
-
-
-def test_o_esmaecido_nao_toca_a_palavra() -> None:
-    """A D-04 dela venceu a minha recomendação, e ela vale."""
-    esperando = {"uniq": P2, "connected": True, "player_slot": 2, "player": None}
-    cartao = aba.pacote(_ctx([esperando]))["cartoes"][P2]
-
-    assert cartao["jogador"] == "Player 2", (
-        f"o cartão escreve {cartao['jogador']!r}. A D-04 dela é "
-        f"'Player N, como está hoje' — o esmaecido NÃO toca a palavra")
-
-
-def test_sem_numero_nenhum_nao_ha_o_que_esmaecer() -> None:
-    """Um travessão esmaecido prometeria que ALGUÉM está esperando.
-
-    Sem `player_slot` e sem `player`, `jogador_de` devolve ``None`` e o cartão
-    mostra ``Player —``. Acender a classe aí diria "o jogo ainda não recebeu
-    este controle" sobre um controle que a tela nem numerou — é a diferença
-    entre *não sei* e *sei, e está esperando*, que é a D-O-QUE-O-PRODUTO-DIZ-
-    SEM-SABER desta casa.
-
-    A MORDIDA: apague o `if jogador_de(c) is None: return ""` e esta régua
-    reprova.
-    """
-    mudo = {"uniq": P1, "connected": True}
-    cartao = aba.pacote(_ctx([mudo]))["cartoes"][P1]
-
-    assert cartao["jogador"] == "Player —"
-    assert cartao["jogador-espera"] == "", (
-        "o cartão sem número nenhum está esmaecido — a tela prometeria um "
-        "jogador a caminho onde ela nem sabe dizer o número")
-
-
-def test_a_pagina_tem_os_dois_elementos_do_esmaecido() -> None:
-    """A classe e o texto em elementos SEPARADOS, e o de dentro é FOLHA."""
-    doc = _pagina()
-    lugares = len(monta.MESA)
-
-    assert doc.count('data-campo="jogador-espera" data-hef-alvo="classe"'
-                     ' data-hef-classe="espera"') == lugares, (
-        f"os {lugares} lugares da mesa não têm o endereço do esmaecido")
-    assert doc.count('<span data-campo="jogador">') == lugares, (
-        "o número do jogador deixou de ser folha — a pintura apagaria os filhos")
-    assert 'class="espera"' not in doc, (
-        "um cartão nasce esmaecido: a cena que ela aprovou tem os dois "
-        "controles recebidos pelo jogo")
-    vazios = doc.split('class="cartao off"')[1:]
-    assert len(vazios) == lugares - len(monta.CONECTADOS), (
-        "a cena que ela aprovou deixou de ter dois lugares vazios")
-    for pedaco in vazios:
-        cartao = pedaco.split("</div>\n              </div>")[0]
-        assert '<span data-campo="jogador">—</span>' in cartao, (
-            "um lugar vazio deixou de mostrar o travessão no número do jogador"
-        )
-        assert '<span data-campo="identidade">—</span>' in cartao, (
-            "um lugar vazio deixou de mostrar o travessão na identidade")
 
 
 def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
@@ -292,10 +210,7 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
 
     A MORDIDA: mova o `<button class="cadeado">` para dentro do
     `<div class="hef-modo so-ligado">`, gere de novo e esta régua reprova na
-    posição Desligado. Tirar o `.cartao .rotulo b.espera` da `aba01.py` reprova o
-    esmaecido; devolver a ele `color:var(--texto-mudo)` reprova o cinza (16/10/2026).
-
-    Prova da D-1610-O-CINZA-SAI-DA-LETRA.
+    posição Desligado.
     """
     playwright = pytest.importorskip("playwright.sync_api")
 
@@ -319,20 +234,6 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
           const fora = {ligado: ler()};
           document.getElementById('hef-desligado').checked = true;
           fora.desligado = ler();
-          // E A COR DO "PLAYER N", medida ANTES e DEPOIS da classe — a folha do
-          // esmaecido é o que nenhuma contagem de endereço alcança.
-          const p1 = document.querySelector(
-            '[data-controle="p1"] b[data-campo="jogador-espera"]');
-          const p2 = document.querySelector(
-            '[data-controle="p2"] b[data-campo="jogador-espera"]');
-          const ler_b = (el) => getComputedStyle(el).color + ' '
-                                + getComputedStyle(el).fontWeight;
-          const cor = {p1: ler_b(p1), antes: ler_b(p2)};
-          p2.classList.add('espera');
-          cor.depois = ler_b(p2);
-          cor.letra = getComputedStyle(p2).color;
-          cor.texto = p2.querySelector('[data-campo="jogador"]').textContent;
-          fora.cor = cor;
           return fora;
         })()""")
         b.close()
@@ -350,19 +251,6 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
         "o cadeado sumiu com o Hefesto DESLIGADO — ele foi aninhado dentro de "
         "uma seção do interruptor, e a troca automática de perfil vale nos dois")
 
-    assert medido["cor"]["antes"] == medido["cor"]["p1"], (
-        "os dois cartões já nascem com cores diferentes — a régua está medindo "
-        "outra coisa")
-    assert medido["cor"]["depois"] != medido["cor"]["antes"], (
-        f"o número do jogador ficou igual com a classe `espera` acesa "
-        f"({medido['cor']['depois']}) — a classe pinta e a folha não responde")
-    assert medido["cor"]["letra"] not in (
-        "rgb(136, 150, 196)", "rgb(154, 158, 184)", "rgb(83, 87, 111)"), (
-        f"o número que espera voltou ao cinza ({medido['cor']['letra']}): o "
-        f"pedido de 16/10 tirou o cinza da letra, e o esmaecido é pelo peso")
-    assert medido["cor"]["texto"] == "Player 2", (
-        f"a pintura trocou a PALAVRA para {medido['cor']['texto']!r}. A D-04 "
-        f"dela é 'Player N, como está hoje' — o esmaecido só muda a cor")
 
 
 def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
@@ -420,9 +308,7 @@ def test_o_servico_calado_para_de_afirmar_e_nao_escreve() -> None:
         "o interruptor não disse Desligado com o serviço calado")
     assert fora["modo-aceso"] == "", "um chip da fileira acendeu sem estado"
     assert fora["cadeado"] == TRAVESSAO, "o cadeado afirmou uma escolha dela"
-    assert fora["mesa-frase"] == "", (
-        "a mesa não escreve que o serviço parou, nem 'nenhum controle na mesa' sobre um tique "
-        "sem resposta")
+    assert "mesa-frase" not in fora, "a frase da mesa voltou com o cartão que saiu"
     assert not fora["cartoes"], "um cartão foi afirmado sem estado"
 
 

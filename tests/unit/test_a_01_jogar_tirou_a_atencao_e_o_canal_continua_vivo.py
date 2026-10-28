@@ -88,15 +88,17 @@ def test_o_travessao_solto_dos_externos_morreu() -> None:
     (`test_a_interface_ve_os_controles_que_o_hefesto_so_ve`): devolva `""` em
     qualquer um dos DOIS `return` de `_html_dos_externos`. Aqui a cobrança é a
     da TELA — o que a página publicada mostra entre os cartões e o botão.
+
+    Desde 28/10/2026 a vaga mora na seção Controles (`.quadro.estica`), e o CSS dela esconde o
+    `.nada` e deixa a vaga em `display:contents`.
     """
     import monta
 
     assert aba.pacote(_ctx())["externos"] == monta.NADA_A_DIZER, (
         "sem externo o campo voltou a ser `''`, e o piloto escreve `—` nele")
     corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
-    meio = corpo.split('data-lista="cartoes"', 1)[-1].split(
-        '<div class="faixa-final', 1)[0]
-    assert "ext-vaga" in meio, "o bloco dos externos saiu da grade dos assentos"
+    meio = corpo.split('<div class="quadro estica">', 1)[-1]
+    assert 'class="ext-vaga"' in meio, "o bloco dos externos saiu da seção Controles"
     assert 'data-campo="aviso' not in meio, "sobrou endereço de aviso no meio"
 
 

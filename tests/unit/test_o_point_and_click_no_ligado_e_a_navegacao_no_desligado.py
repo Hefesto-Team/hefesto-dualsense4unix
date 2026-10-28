@@ -1,10 +1,11 @@
-"""A-ABA-JOGAR-DO-TODO-01 (opção A do BRIEF-T2, 15/10/2026): «Point and click» é do Ligado e
-«Navegação» é o terceiro chip do Desligado.
+"""A fileira da Jogar: três chips no Ligado, três no Desligado, e o Point and click fora dela.
 
-Os dois são o MESMO modo `desktop` do daemon (o controle vira mouse e teclado e o Hefesto segue
-lendo; sem gamepad virtual), com tabelas de botões diferentes. Desde 21/10/2026
-(O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01) o lado é o ARRANJO que o serviço
-guarda e publica no `state_full` (``desktop_arranjo``), e cada chip o leva no plano.
+A-ABA-JOGAR-DO-TODO-01 (15/10/2026) pôs o «Point and click» no Ligado e a «Navegação» no
+Desligado, os dois no MESMO modo `desktop` do daemon com tabelas de botões diferentes. Desde
+O-POINT-AND-CLICK-E-ESTILO-DE-JOGO-E-NAO-MODO-01 o Point and click é estilo de jogo, e o desenho
+de 27/10/2026 (publicado em 28/10) põe o «Nintendo Pro» no terceiro lugar do Ligado. O `desktop`
+vivo, em qualquer arranjo, acende a «Navegação» no Desligado (decisão de 28/10/2026, a
+validar pelo usuário): o arranjo é do estilo de jogo, e o chip diz o modo.
 
 Esta régua mede cinco coisas, cada uma com a sua mordida:
 
@@ -12,10 +13,11 @@ Esta régua mede cinco coisas, cada uma com a sua mordida:
 2. o modo de cada chip (`o_que_o_chip_faz`) e o `data-modo` que a página emite;
 3. o lado da tela por `_estado_da_tela` com o daemon em `desktop`, nos dois arranjos;
 4. as cores do Desligado, que são as da barra de luz (`hotkey.CORES_DO_MODO`), e o alvo de 24 px;
-5. a aba sem «?» e sem `title`: toda frase é `data-dica` curta.
+5. o quadro Status sem «?» e sem `title`: toda frase é `data-dica` curta.
 
-A MORDIDA: ponha «Navegação» de volta no Ligado em `aba01.MODOS` (no lugar do Point and click)
-e os casos 1 e 2 reprovam; ignore o `desktop_arranjo` em `_estado_da_tela` e o caso 3 reprova.
+A MORDIDA: devolva o ramo que acendia o Point and click no `desktop` sem o arranjo da
+Navegação em `_estado_da_tela` e o caso 3 reprova; ponha o Point and click de volta em
+`aba01.MODOS` e o caso 1 reprova.
 """
 from __future__ import annotations
 
@@ -39,7 +41,7 @@ from hefesto_dualsense4unix.interface import aba01, onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-LIGADO = ["Sony DualSense", "Xbox", "Point and click"]
+LIGADO = ["Sony DualSense", "Xbox", "Nintendo Pro"]
 DESLIGADO = ["Nativo", "Steam Input", "Navegação"]
 
 VIVO_DESKTOP: dict[str, Any] = {
@@ -66,13 +68,13 @@ def _pagina() -> str:
 def _fileira(corpo: str, lado: str) -> list[tuple[str, str]]:
     """(rótulo, atributos) dos chips de um lado da fileira, na ordem da página."""
     secao = corpo.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
+    secao = re.sub(r"<svg.*?</svg>", "", secao, flags=re.S)
     return [(m.group(2).strip(), m.group(1))
             for m in re.finditer(r'<span class="degrau[^"]*"([^>]*)>([^<]+)</span>', secao)]
 
 
 def test_os_rotulos_do_gerador_sao_os_do_desenho() -> None:
-    """No desenho de 27/10 o terceiro do Ligado é o Nintendo; a publicada segue com o Point."""
-    assert [m["rot"] for m in aba01.MODOS] == [*LIGADO[:2], "Nintendo Pro"]
+    assert [m["rot"] for m in aba01.MODOS] == LIGADO
     assert [m["rot"] for m in aba01.DO_DESLIGADO] == DESLIGADO
 
 
@@ -82,16 +84,17 @@ def test_a_pagina_poe_cada_rotulo_no_seu_lado() -> None:
     assert [r for r, _ in _fileira(corpo, "so-desligado")] == DESLIGADO
 
 
-def test_a_navegacao_nao_mora_no_ligado_nem_o_point_and_click_no_desligado() -> None:
+def test_a_navegacao_nao_mora_no_ligado_e_o_point_and_click_nao_e_chip() -> None:
     corpo = _pagina()
     assert "Navegação" not in [r for r, _ in _fileira(corpo, "so-ligado")]
-    assert "Point and click" not in [r for r, _ in _fileira(corpo, "so-desligado")]
+    chips = [r for lado in ("so-ligado", "so-desligado") for r, _ in _fileira(corpo, lado)]
+    assert "Point and click" not in chips
 
 
 @pytest.mark.parametrize(("chip", "modo", "steam"), [
     ("dualsense", "gamepad", False),
     ("xbox", "gamepad", False),
-    (aba.CHIP_DO_POINT_AND_CLICK, "desktop", False),
+    ("nintendo", "gamepad", False),
     (aba.CHIP_DO_NATIVO, "native", False),
     ("steam", "native", True),
     (aba.CHIP_DA_NAVEGACAO, "desktop", False),
@@ -101,14 +104,8 @@ def test_o_modo_de_cada_chip(chip: str, modo: str, steam: bool) -> None:
     assert (linha.modo, linha.steam_input) == (modo, steam)
 
 
-def test_os_dois_do_desktop_so_diferem_no_arranjo() -> None:
-    assert aba.o_que_o_chip_faz(aba.CHIP_DO_POINT_AND_CLICK) == aba.o_que_o_chip_faz(
-        aba.CHIP_DA_NAVEGACAO)
-    ponto = aba._plano_do_chip(aba.CHIP_DO_POINT_AND_CLICK)
+def test_a_navegacao_leva_o_arranjo_dela() -> None:
     nav = aba._plano_do_chip(aba.CHIP_DA_NAVEGACAO)
-    assert ponto[:-1] == nav[:-1]
-    metodo = "desktop.arranjo.apply"
-    assert ponto[-1] == (metodo, {"origin": "manual", "arranjo": "point_and_click"})
     assert nav[-1] == ("desktop.arranjo.apply", {"origin": "manual", "arranjo": "navegacao"})
 
 
@@ -116,30 +113,33 @@ def test_a_pagina_emite_o_gesto_e_o_modo_de_cada_chip() -> None:
     corpo = _pagina()
     ligado = dict(_fileira(corpo, "so-ligado"))
     desligado = dict(_fileira(corpo, "so-desligado"))
-    assert 'data-gesto="modo-point-and-click"' in ligado["Point and click"]
-    assert 'data-modo="desktop"' in ligado["Point and click"]
     assert 'data-gesto="modo-navegacao"' in desligado["Navegação"]
     assert 'data-modo="desktop"' in desligado["Navegação"]
     assert 'data-gesto="modo-navegacao"' not in "".join(ligado.values())
+    assert 'data-gesto="modo-point-and-click"' not in corpo
 
 
-def test_o_gesto_do_point_and_click_existe_e_tem_prova() -> None:
-    assert callable(aba.modo_point_and_click)
-    assert any(p["gesto"] == "modo-point-and-click" for p in aba.PROVAS)
+def test_o_gesto_do_point_and_click_saiu_da_jogar() -> None:
+    import pacotes
+
+    assert not hasattr(aba, "modo_point_and_click")
+    assert ("01-jogar.html", "modo-point-and-click") not in pacotes.GESTOS
+    assert not any(p["gesto"] == "modo-point-and-click" for p in aba.PROVAS)
 
 
 def _tela(state: dict[str, Any]) -> dict[str, str]:
     return aba._estado_da_tela(state)
 
 
-def test_sem_o_arranjo_o_desktop_acende_o_point_and_click_no_ligado() -> None:
+def test_sem_o_arranjo_o_desktop_acende_a_navegacao_no_desligado() -> None:
     tela = _tela(VIVO_DESKTOP)
-    assert (tela["hef-posicao"], tela["modo-aceso"]) == ("ligado", "pointclick")
+    assert (tela["hef-posicao"], tela["modo-aceso"]) == ("desligado", "navegacao")
 
 
-def test_no_arranjo_point_and_click_o_desktop_acende_o_point_and_click() -> None:
+def test_no_arranjo_point_and_click_o_desktop_acende_a_navegacao_no_desligado() -> None:
+    """O estilo de jogo Point and click abre no arranjo dele; a fileira diz o modo."""
     tela = _tela({**VIVO_DESKTOP, "desktop_arranjo": "point_and_click"})
-    assert (tela["hef-posicao"], tela["modo-aceso"]) == ("ligado", "pointclick")
+    assert (tela["hef-posicao"], tela["modo-aceso"]) == ("desligado", "navegacao")
 
 
 def test_no_arranjo_da_navegacao_o_desktop_acende_a_navegacao_no_desligado() -> None:
@@ -148,14 +148,13 @@ def test_no_arranjo_da_navegacao_o_desktop_acende_a_navegacao_no_desligado() -> 
     assert tela["steam-input-aceso"] == ""
 
 
-def test_o_clique_em_cada_chip_leva_o_arranjo_dele(monkeypatch) -> None:
+def test_o_clique_na_navegacao_leva_o_arranjo_dela(monkeypatch) -> None:
     planos: list[Any] = []
     monkeypatch.setattr(aba, "_aplicar", lambda p, plano: planos.append(plano) or True)
     monkeypatch.setattr(aba, "_lembrar_do_chip", lambda *a, **k: None)
     ctx = Contexto(state=VIVO_DESKTOP, mesa=[], conectados=[], estados={})
     aba.modo_navegacao(ctx, {}, object())
-    aba.modo_point_and_click(ctx, {}, object())
-    assert [plano[-1][1].get("arranjo") for plano in planos] == ["navegacao", "point_and_click"]
+    assert [plano[-1][1].get("arranjo") for plano in planos] == ["navegacao"]
 
 
 VIVO_NATIVO: dict[str, Any] = {**VIVO_DESKTOP, "native_mode": True}
@@ -206,8 +205,12 @@ def test_todo_alvo_clicavel_tem_24_px() -> None:
 
 
 def _miolo_da_pagina() -> str:
-    """O miolo da aba, sem comentário e sem SVG: a fita e o rodapé são do esqueleto."""
-    corpo = _pagina().split('<div class="miolo">', 1)[-1].split('<div class="rodape"', 1)[0]
+    """O quadro Status, sem comentário e sem SVG.
+
+    A seção Controles (`<div class="quadro estica">`) veio da aba 02 com os `title` dela, e a
+    régua dela é a da seção; esta mede o que é só da Jogar.
+    """
+    corpo = _pagina().split('<div class="miolo">', 1)[-1].split('<div class="quadro estica">', 1)[0]
     corpo = re.sub(r"<svg.*?</svg>", "", corpo, flags=re.S)
     return re.sub(r"<!--.*?-->", "", corpo, flags=re.S)
 

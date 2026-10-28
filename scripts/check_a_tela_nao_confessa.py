@@ -391,8 +391,6 @@ def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
 SEM_LETRA: dict[str, str] = {
     "a10_perfis.py:editor_jogo ← recado":
         "idem, no campo do jogo",
-    "a01_jogar.py:mascara_do_controle ← motivo":
-        "a recusa do `gamepad.mask.set`, palavra por palavra do daemon",
     "a02_controles.py:mudo ← frase":
         "a recusa do `mic.set`, montada pelo motor do microfone",
     "a02_controles.py:rota ← desfecho.motivo":

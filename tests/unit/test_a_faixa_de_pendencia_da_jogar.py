@@ -31,6 +31,9 @@ TELA. Medido no código e em dublê: o chip da fileira pede com
 acende o `flavor` que o daemon grava — o chip já mostra a escolha. A regra da
 pendência continua aqui, medida na dona (`_faixa_do_pendente`); a frase vai ao
 diário da janela, e os três endereços do `pacote()` saem vazios.
+
+NOTA DATADA — 28/10/2026, A-JOGAR-SE-PUBLICA-COM-OS-CONTROLES-E-A-02-SAI-01: os endereços
+vazios saíram da página e do pacote; o primeiro item da lista acima caducou.
 """
 from __future__ import annotations
 
@@ -98,21 +101,15 @@ def faixa(state: dict[str, Any]) -> tuple[str, str]:
     return aba._faixa_do_pendente(state)
 
 
-def test_a_pagina_publicada_tem_os_dois_enderecos() -> None:
-    """Sem eles na página, pintar é escrever num `querySelector` que dá `null`."""
+def test_os_enderecos_da_faixa_sairam_da_pagina_e_do_pacote() -> None:
+    """A frase mora no diário desde 13/09; os endereços vazios saíram com o cartão em 28/10."""
     corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
-    for endereco in ("pendente", "pendente-alvo"):
-        assert f'data-campo="{endereco}"' in corpo, (
-            f"o endereço {endereco!r} sumiu da página publicada — a pintura "
-            f"passaria a escrever em lugar nenhum, calada")
-
-
-def test_o_pacote_emite_os_dois_em_todo_estado() -> None:
-    """Emitir só quando HÁ pendência deixaria a frase cravada viva na tela."""
     for state in (VIVO_DUALSENSE, VIVO_XBOX, VIVO_NATIVO, {}):
         fora = aba.pacote(Contexto(state=state, mesa=[], conectados=[], estados={}))
-        assert "pendente" in fora and "pendente-alvo" in fora, (
-            f"o pacote calou um dos dois endereços com o estado {state!r}")
+        for endereco in ("pendente", "pendente-alvo"):
+            assert endereco not in fora, f"o pacote voltou a emitir {endereco!r} com {state!r}"
+            assert f'data-campo="{endereco}"' not in corpo, (
+                f"o endereço {endereco!r} voltou à página publicada sem quem o escreva")
 
 
 def test_sem_pedido_nenhum_a_faixa_sai_vazia() -> None:

@@ -53,19 +53,15 @@ sortudo em vez de uma regra que segue a mesa.
 chegasse — o defeito que a `_chips_de_mascara` fechou em 03/09. Um teste sem
 navegador cobra os doze chips no HTML.
 
-A MORDIDA, e foi feita duas vezes em 07/09/2026:
+NOTA DATADA, 28/10/2026 (A-JOGAR-SE-PUBLICA-COM-OS-CONTROLES-E-A-02-SAI-01): o cartão
+com os chips de máscara saiu da Jogar, e os lugares dela são os da seção Controles, a que
+morava na 02. A régua mede os gestos de cada lugar com a gaveta dele aberta (`#c-pN`), porque
+só a gaveta aberta mostra os gestos do miolo; o endereço que o HTML guarda é o do touchpad.
 
-  (i)  devolva o chip clicável ao lugar vazio — troque a regra
-       ``[data-controle][data-conectado="nao"]:not(.vazia) .mascara .chip{
-       visibility:hidden !important}`` da ``aba01.py`` pela meia cura de 30/08
-       (``cursor:default`` e sem ``:hover``). Reprova
-       ``test_o_lugar_vazio_nao_oferece_gesto`` nomeando o lugar e o gesto:
-       *"p3 · gesto `mascara` (\"DualSense\") continua com caixa 256.8x28 e
-       RECEBE clique num lugar sem aparelho"*.
-  (ii) esconda o chip TAMBÉM no lugar cheio — tire o
-       ``[data-conectado="nao"]`` do seletor. Reprovam
-       ``test_o_lugar_cheio_oferece_o_gesto`` e
-       ``test_o_passo_1c_do_piloto_devolve_o_gesto_sem_recarregar``.
+A MORDIDA (28/10/2026): são duas camadas, e só as duas juntas devolvem o gesto ao vazio. Na
+página publicada, troque o `display:none` da folha S-04 (`CSS_FOLHA` da `monta.py`) e apague as
+regras do `_fechado_de_vez` da `aba02.py`: reprovam o lugar vazio, o desenho e o passo `1b`.
+Uma camada só não morde, e é a outra que segura.
 """
 from __future__ import annotations
 
@@ -101,9 +97,11 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
 (() => {
   const medir = () => {
     const saida = {};
-    for (const bloco of document.querySelectorAll('[data-controle]')) {
+    for (const bloco of document.querySelectorAll('.quadro.estica [data-controle]')) {
       const quem = bloco.dataset.controle || '';
       if (!/^p[0-9]+$/.test(quem)) continue;  // (noqa-acento) `data-controle` é atributo HTML
+      const gaveta = document.getElementById('c-' + quem);
+      if (gaveta) gaveta.checked = true;
       const gestos = [];
       for (const el of bloco.querySelectorAll('[data-gesto]')) {
         const r = el.getBoundingClientRect();
@@ -180,7 +178,9 @@ def medido(tmp_path_factory: pytest.TempPathFactory) -> dict:
 
 
 def _lugares(estado: dict, marca: str) -> dict:
-    """Os lugares de um estado cuja marca de conexão é `marca`."""
+    """Os lugares de um estado cuja marca de conexão é `marca` (o cheio nasce sem ela)."""
+    if marca == "sim":
+        return {q: d for q, d in estado.items() if d["conectado"] in ("sim", "")}
     return {q: d for q, d in estado.items() if d["conectado"] == marca}
 
 
@@ -240,7 +240,7 @@ def test_o_lugar_cheio_oferece_o_gesto(medido: dict) -> None:
     ]
     assert not mudos, (
         "a cura do lugar vazio comeu o gesto de um lugar que TEM controle — a "
-        "cena que ela aprovou tem os dois cartões cheios escolhendo máscara:\n"
+        "cena que ela aprovou tem os dois lugares cheios com os gestos na gaveta:\n"
         "  - " + "\n  - ".join(mudos))
 
 
@@ -272,15 +272,13 @@ def test_o_passo_1b_do_piloto_recolhe_o_gesto_sem_recarregar(medido: dict) -> No
 
 
 def test_o_endereco_do_gesto_continua_no_html(tmp_path: pathlib.Path) -> None:
-    """Os doze chips continuam no arquivo: quatro lugares vezes três máscaras."""
+    """O touchpad de cada lugar continua no arquivo, cheio ou vazio."""
     import monta
 
     corpo = _gerar(tmp_path).read_text()
-    esperado = len(monta.MASCARAS) * len(monta.MESA)
-    achado = corpo.count('data-gesto="mascara"')
+    esperado = len(monta.MESA)
+    achado = corpo.count('data-gesto="touchpad"')
     assert achado == esperado, (
-        f"o HTML tem {achado} chips de máscara com endereço e devia ter "
-        f"{esperado} ({len(monta.MESA)} lugares vezes {len(monta.MASCARAS)} "
-        f"máscaras). Quem esconde o gesto do lugar vazio é o CSS, pela marca "
-        f"`data-conectado`; apagar o endereço faz o chip voltar mudo quando o "
-        f"controle chegar")
+        f"o HTML tem {achado} interruptores de touchpad com endereço e devia ter "
+        f"{esperado}, um por lugar. Quem esconde o gesto do lugar vazio é o CSS, pela marca "
+        f"`data-conectado`; apagar o endereço faz o gesto voltar mudo quando o controle chegar")

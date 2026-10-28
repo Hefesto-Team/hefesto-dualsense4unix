@@ -774,9 +774,15 @@ def test_r6_fora_da_renovacao_nada_muda(renovacao: Any) -> None:
 
 
 def test_r7_cem_mil_tiques_guardam_so_os_ultimos(publicado_de_hoje: pathlib.Path) -> None:
-    """100 mil custos de tique guardam no máximo 6.000 — 10 min de tique."""
-    def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
-        return not _fase(fora, "dos custos", fora.comeco, 10, _teto_da_fase_s(fora, 10))
+    """100 mil custos de tique guardam no máximo 6.000 — 10 min de tique.
+
+    A fase acaba com cinco custos guardados, e não com dez tiques: na cadência acelerada a
+    pintura da Jogar com a seção Controles (28/10/2026) fica no ar por mais de oito tiques, e
+    o tique em voo não guarda custo.
+    """
+    def roteiro(fora: Any, piloto: Any, _t: float) -> bool:
+        return not ((len(piloto.custos) >= 5 and len(piloto.custo_do_ipc) >= 5)
+                    or _fase(fora, "dos custos", fora.comeco, 60, _teto_da_fase_s(fora, 60)))
 
     fora = _correr(publicado_de_hoje, "01-jogar.html", 1, roteiro)
     _sem_fome(fora, "dos custos")

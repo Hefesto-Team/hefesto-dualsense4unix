@@ -34,14 +34,16 @@ cuidado (*"cinza antes, com a razão na dica"*):
 NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.1: a RESSALVA saiu da
 tela (*"em todas as abas da interface"*, TELA-CALADA-01). O motor que ela
 anunciava continua trancado aqui; o que mudou de contrato é a metade 2.
+
+NOTA DATADA — 28/10/2026, A-JOGAR-SE-PUBLICA-COM-OS-CONTROLES-E-A-02-SAI-01: o chip da
+máscara saiu da Jogar com o cartão (a máscara é o modo único desde a D-2710, escolhido
+na fileira do Status). Ficam o motor e o catálogo; as réguas do chip saíram com ele.
 """
 from __future__ import annotations
 
 import pathlib
 import sys
-from typing import Any
 
-import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -51,31 +53,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import monta
-from hefesto_dualsense4unix.interface import onde
-from pacotes import Contexto
 from pacotes import a01_jogar as aba
-
-VIVO_GAMEPAD: dict[str, Any] = {
-    "connected": True, "native_mode": False,
-    "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-    "paused": False,
-}
-VIVO_NATIVO: dict[str, Any] = {
-    "connected": True, "native_mode": True,
-    "gamepad_emulation": {"enabled": False, "flavor": "dualsense"},
-    "paused": False,
-}
-VIVO_NAVEGACAO: dict[str, Any] = {
-    "connected": True, "native_mode": False,
-    "gamepad_emulation": {"enabled": False, "flavor": "dualsense"},
-    "paused": False,
-}
-
-
-def _ctx(state: dict[str, Any]) -> Contexto:
-    return Contexto(state=state, mesa=[], conectados=[], estados={})
-
 
 def test_a_escolha_da_mascara_persiste_e_vale_na_criacao_do_vpad() -> None:
     """As duas pontas do caminho que a queixa de uso supõe quebrado."""
@@ -89,51 +67,6 @@ def test_a_escolha_da_mascara_persiste_e_vale_na_criacao_do_vpad() -> None:
         "a criação do gamepad virtual deixou de consultar `mascara_efetiva` — a "
         "escolha do modo parou de valer, e a ressalva da tela passou a "
         "prometer o que não acontece")
-
-
-def test_o_gesto_da_mascara_nao_tem_gate_de_modo() -> None:
-    """*"independente do modo"* — e o gesto não pergunta o modo a ninguém."""
-    import inspect
-
-    corpo = inspect.getsource(aba.mascara_do_controle)
-    for proibido in ("modo_vivo", "native_mode", "MODE_GAMEPAD", "mode_of_state"):
-        assert proibido not in corpo, (
-            f"o gesto da máscara voltou a olhar o modo ({proibido!r}): a decisão "
-            "dela é que a escolha vale em qualquer um")
-
-
-@pytest.mark.parametrize("estado", [VIVO_NATIVO, VIVO_NAVEGACAO])
-def test_fora_do_modo_jogo_a_escolha_fica_guardada_sem_frase_na_tela(
-        estado: dict[str, Any]) -> None:
-    """Os DOIS modos sem vpad — e a frase que os anunciava saiu da tela."""
-    fora = aba.pacote(_ctx(estado))
-    assert fora["mascara-ressalva"] == "", (
-        f"a ressalva voltou a ser pintada fora do modo jogo: "
-        f"{fora['mascara-ressalva']!r}")
-
-
-def test_no_modo_jogo_a_ressalva_nao_existe() -> None:
-    """Com o vpad de pé a escolha vale AGORA — e a linha não ocupa nada."""
-    assert aba.pacote(_ctx(VIVO_GAMEPAD))["mascara-ressalva"] == ""
-
-
-def test_sem_daemon_a_ressalva_nao_afirma_nada() -> None:
-    """`mode_of_state({})` devolve **desktop** — a armadilha desta aba.
-
-    Sem a guarda, um tique sem resposta acusaria "o Hefesto não está entregando
-    o controle ao jogo" sobre um estado que ninguém leu.
-    """
-    assert aba.pacote(Contexto(state={}, mesa=[], conectados=[],
-                               estados={}))["mascara-ressalva"] == ""
-
-
-def test_a_ressalva_nao_manda_ligar_o_que_ja_esta_ligado() -> None:
-    """A frase não nomeia o modo, e é escolha medida."""
-    frase = aba.RESSALVA_DA_MASCARA.lower()
-    for armadilha in ("ligue", "ligado", "modo nativo", "navegação"):
-        assert armadilha not in frase, (
-            f"a ressalva nomeia um modo/uma ação que não vale nos dois casos: "
-            f"{armadilha!r} em {aba.RESSALVA_DA_MASCARA!r}")
 
 
 def test_o_produto_diz_quais_mascaras_ele_monta() -> None:
@@ -154,79 +87,6 @@ def test_o_produto_diz_quais_mascaras_ele_monta() -> None:
         "dele — nos dois casos o chip volta a nascer cinza")
 
 
-def test_o_chip_sem_motor_nasce_cinza_com_a_razao_nos_quatro_lugares() -> None:
-    """D-03 dela: *"cinza antes, com a razão na dica."*"""
-    corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
-    sem_motor = [m for m in monta.MASCARAS if m not in aba.mascaras_montaveis()]
-    assert corpo.count('class="chip inerte"') == len(sem_motor) * len(monta.MESA)
-    for pedaco in corpo.split('class="chip inerte"')[1:]:
-        assert pedaco.lstrip().startswith('title="'), (
-            "um chip cinza saiu sem a razão na dica — troca 'clico e não "
-            "acontece nada' por 'não deixa clicar e não diz por quê'")
-
-
-def test_o_chip_cinza_continua_clicavel_e_recusa_dizendo() -> None:
-    """Tirar o `data-gesto` faria o clique sumir CALADO."""
-    corpo = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
-    assert corpo.count('data-gesto="mascara"') == len(monta.MASCARAS) * len(monta.MESA)
-
-    class _Ponte:
-        def __init__(self) -> None:
-            self.chamadas: list[tuple[str, Any]] = []
-
-        def chamar_detalhado(self, metodo: str, **k: Any) -> tuple[bool, str | None]:
-            self.chamadas.append((metodo, k))
-            return True, None
-
-    p = _Ponte()
-    aba.mascara_do_controle(
-        _ctx(VIVO_GAMEPAD),
-        {"uniq": "aa:bb:cc:00:00:01", "mascara": "Nintendo Pro"}, p)
-    assert p.chamadas, "o chip com motor não chamou o daemon"
-
-    q = _Ponte()
-    with pytest.raises(RuntimeError) as erro:
-        aba.mascara_do_controle(
-            _ctx(VIVO_GAMEPAD),
-            {"uniq": "aa:bb:cc:00:00:01", "mascara": "Wiimote"}, q)
-    assert "Wiimote" in str(erro.value)
-    assert "DualSense" in str(erro.value), (
-        "a recusa não diz quais máscaras existem")
-    assert q.chamadas == [], "a recusa gravou alguma coisa no daemon"
-
-
-def test_a_mascara_que_o_produto_monta_e_gravada_fora_do_nativo() -> None:
-    """Fora do Nativo o clique GRAVA; no Nativo a camada recusa (03/10/2026).
-
-    A «máscara em qualquer modo» (D-2309) foi revogada em parte pela
-    DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, item 5: com o Hefesto
-    desligado o jogo lê o controle direto, e a máscara não é do Hefesto.
-    """
-    class _Ponte:
-        def __init__(self) -> None:
-            self.chamadas: list[tuple[str, Any]] = []
-
-        def chamar_detalhado(self, metodo: str, **k: Any) -> tuple[bool, str | None]:
-            self.chamadas.append((metodo, k))
-            return True, None
-
-    for estado in (VIVO_NAVEGACAO, VIVO_GAMEPAD):
-        p = _Ponte()
-        aba.mascara_do_controle(
-            _ctx(estado), {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"}, p)
-        assert p.chamadas == [
-            ("gamepad.mask.set",
-             {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})], (
-            f"a máscara não foi gravada neste modo: {p.chamadas!r}")
-
-    p = _Ponte()
-    with pytest.raises(RuntimeError) as erro:
-        aba.mascara_do_controle(
-            _ctx(VIVO_NATIVO), {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"}, p)
-    assert "modo nativo" in str(erro.value)
-    assert p.chamadas == [], "no Nativo a máscara chegou ao daemon"
-
-
 def test_a_mascara_nao_consta_mais_como_botao_sem_dono() -> None:
     """Ela tinha dono desde 03/09, e o arquivo listava os dois ao mesmo tempo."""
     assert "mascara" not in aba.BOTOES_SEM_DONO, (
@@ -243,18 +103,3 @@ def test_a_mascara_nao_consta_mais_como_botao_sem_dono() -> None:
         f"{mentem}. A lista manda a próxima pessoa construir o que já está "
         f"construído — foi o que o `mascara` fez em 03/09 e o `modo-steam` "
         f"em 20/09")
-
-
-def test_o_modo_que_nao_subiu_recusa_dizendo() -> None:
-    """O `gamepad.mask.set` que não vestiu responde `aparelho_nao_vestiu` com o RPC bem-sucedido.
-
-    Sem a tradução, a frase de reserva dizia «A máscara vale agora», sobre um modo que não subiu.
-    """
-    class _Ponte:
-        def chamar_detalhado(self, metodo: str, **k: Any) -> tuple[bool, str | None]:
-            return True, "aparelho_nao_vestiu"
-
-    with pytest.raises(RuntimeError) as erro:
-        aba.mascara_do_controle(
-            _ctx(VIVO_GAMEPAD), {"uniq": "aa:bb:cc:00:00:02", "mascara": "Xbox 360"}, _Ponte())
-    assert str(erro.value) == aba.MODO_NAO_VESTIU

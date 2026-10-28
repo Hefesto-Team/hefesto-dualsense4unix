@@ -89,7 +89,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "modo-dualsense": "o modo é UM para todos — decisão dela de 08/09 "
                       "(`D-0809-O-MODO-E-UM-PARA-TODOS-OS-CONTROLES`)",
     "modo-navegacao": "idem",
-    "modo-point-and-click": "idem: é o mesmo modo `desktop` da Navegação, no lado Ligado da tela",
     "modo-steam": "idem",
     "modo-xbox": "idem",
     "modo-nintendo": "idem: o Nintendo Pro é o modo único sem caminho, igual para todos "
@@ -279,7 +278,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
-    "mascara": ("plataforma.vpad",),
     "mudo": ("audio.microfone.mudo",),
     "volume": ("audio.microfone.volume", "audio.alto_falante.volume"),
     "rota": ("audio.alto_falante.rota",),
@@ -318,7 +316,6 @@ A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
 }
 
 NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
-    "mascara": ("mode", None),
     "volume": ("mic", "mic"),
     "rota": ("speaker", "speaker"),
     "volume-padrao": ("speaker", "speaker"),
