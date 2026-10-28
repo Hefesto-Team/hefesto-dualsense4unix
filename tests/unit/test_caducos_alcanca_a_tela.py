@@ -136,8 +136,11 @@ def test_as_dez_paginas_reais_estao_no_alcance() -> None:
         RAIZ_REAL / "src" / "hefesto_dualsense4unix"
         / "interface" / "paginas"  # (noqa-acento)
     )
+    sys.path.insert(0, str(pasta.parent))
+    import monta
+
     paginas = sorted(pasta.glob("[0-9][0-9]-*.html"))
-    assert len(paginas) >= 10, (
+    assert len(paginas) >= len(monta.ABAS), (
         f"achei {len(paginas)} páginas publicadas em {pasta} — o caminho mudou?"
     )
     vivos = modulo._arquivos_vivos(RAIZ_REAL)

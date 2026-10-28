@@ -75,7 +75,9 @@ O_QUE_O_MOTOR_DESENHA = """() => {
 
 
 def _abas() -> list[pathlib.Path]:
-    return sorted(PUBLICADO.glob("[0-9][0-9]-*.html"))
+    import monta
+
+    return [PUBLICADO / nome for nome in monta.as_abas_do_produto() if (PUBLICADO / nome).is_file()]
 
 
 @pytest.fixture(scope="module")
@@ -83,8 +85,10 @@ def medido() -> dict:
     """Cada aba publicada, nas três larguras. Uma abertura de Chrome para todas."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
+    import monta
+
     paginas = _abas()
-    assert len(paginas) >= 10, (
+    assert len(paginas) == len(monta.ABAS), (
         f"achei {len(paginas)} abas em {PUBLICADO} — o caminho mudou? "
         f"Uma régua de largura que mede zero página passa sobre tudo.")
 
@@ -156,7 +160,7 @@ def test_no_piso_a_janela_entrega_o_desenho_inteiro(medido: dict) -> None:
 
 
 def test_nenhuma_aba_rola_de_lado_nem_perde_caixa(medido: dict) -> None:
-    """Nas três larguras, nas DEZ: zero rolagem lateral e zero caixa fora da moldura."""
+    """Nas três larguras, em toda aba: zero rolagem lateral e zero caixa fora da moldura."""
     ruins = []
     for nome, por_larg in medido.items():
         for larg, r in por_larg.items():

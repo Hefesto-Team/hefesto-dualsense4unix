@@ -75,6 +75,7 @@ from __future__ import annotations
 
 import ast
 import re
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -109,10 +110,13 @@ _CLIQUE_COM_ASPAS_RETAS = re.compile(
 
 @lru_cache(maxsize=1)
 def rotulos_clicaveis() -> frozenset[str]:
-    """O texto visível de tudo que se clica nas dez páginas publicadas."""
-    achadas = sorted(PAGINAS.glob("??-*.html"))
-    assert len(achadas) == 10, (
-        f"achei {len(achadas)} páginas em {PAGINAS} e o produto tem dez — "
+    """O texto visível de tudo que se clica nas abas publicadas (`monta.ABAS`)."""
+    sys.path.insert(0, str(PAGINAS.parent))
+    import monta
+
+    achadas = [PAGINAS / nome for nome in monta.as_abas_do_produto() if (PAGINAS / nome).is_file()]
+    assert len(achadas) == len(monta.ABAS), (
+        f"achei {len(achadas)} páginas em {PAGINAS} e o produto tem {len(monta.ABAS)} — "
         "régua que não acha a tela não mede a tela."
     )
     fora: set[str] = set()

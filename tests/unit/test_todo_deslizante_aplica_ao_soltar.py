@@ -67,8 +67,12 @@ def _nome(a: dict[str, str]) -> str:
 
 
 def _paginas() -> list[tuple[str, pathlib.Path]]:
-    desenhos = [p for p in onde.paginas() if re.match(r"\d\d-", p.name)]
-    publicadas = onde.paginas(publicado=True)
+    """O desenho e o publicado de cada página, menos a que saiu do produto e não tem mais pacote."""
+    from monta import PAGINAS_QUE_SAIRAM
+
+    desenhos = [p for p in onde.paginas()
+                if re.match(r"\d\d-", p.name) and p.name not in PAGINAS_QUE_SAIRAM]
+    publicadas = [p for p in onde.paginas(publicado=True) if p.name not in PAGINAS_QUE_SAIRAM]
     return [("desenho", p) for p in desenhos] + [("publicado", p) for p in publicadas]
 
 

@@ -63,28 +63,12 @@ def test_o_chip_da_fita_nao_quebra_de_linha(arquivo: str) -> None:
         f"{arquivo}: o chip da fita voltou a poder quebrar de linha")
 
 
-EM_TRABALHO = set(re.findall(
-    r"^## (\S+\.html)$",
-    (onde.pagina("01-jogar.html").parent / "DIVERGENCIAS.md").read_text(encoding="utf-8"), re.M))
-
-
 @pytest.mark.parametrize("arquivo", ABAS)
 def test_o_cabecalho_nao_diz_mais_n_controles(arquivo: str) -> None:
-    """O «N controles:» saiu; o `x USB · y BT` fica só na aba que ainda não se publicou do desenho.
-
-    O desenho de 27/10 tira o contador do cabeçalho: a aba que saiu do `DIVERGENCIAS` não o tem.
-    """
+    """O «N controles:» e o `x USB · y BT` saíram do cabeçalho de toda aba (desenho de 27/10)."""
     linha = _linha_da_fita(_pagina(arquivo))
-    achado = re.search(r'<div class="conectado">.*?</div>', linha, re.S)
-    if arquivo not in EM_TRABALHO:
-        assert achado is None and 'data-campo="conta' not in linha, (
-            f"{arquivo}: o contador voltou ao cabeçalho publicado")
-        return
-    assert achado is not None, f"{arquivo}: a conta por transporte sumiu"
-    conectado = achado.group(0)
-    assert "controles:" not in conectado and 'data-campo="conta"' not in conectado, (
-        f"{arquivo}: o «N controles:» voltou — {conectado}")
-    assert 'data-campo="conta-b"' in conectado, f"{arquivo}: a conta por transporte sumiu"
+    assert '<div class="conectado">' not in linha and 'data-campo="conta' not in linha, (
+        f"{arquivo}: o contador voltou ao cabeçalho publicado")
 
 
 @pytest.mark.parametrize("arquivo", ABAS)
