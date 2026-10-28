@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""controles_vivos.py — a aba Controles VIVA: o desenho dela com a bancada.
+"""controles_vivos.py — a seção Controles VIVA, na página da Jogar, com a bancada.
 
 O mockup aprovado rodando num `WebKit2.WebView` dentro de uma janela GTK3
 (`D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`), e o `daemon.state_full`
@@ -115,8 +115,8 @@ from hefesto_dualsense4unix.interface.pacotes import fios  # noqa: E402
 
 import aba02  # noqa: E402  # isort:skip
 
-PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "02-controles.html"  # (noqa-acento)
-TITULO_ESPERADO = "Hefesto — aba CONTROLES"
+PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "01-jogar.html"  # (noqa-acento)
+TITULO_ESPERADO = "Hefesto — aba JOGAR"
 
 TIQUE_MS = 100
 TIQUE_LENTO_MS = 2000
@@ -249,7 +249,7 @@ def html_da_fita(mesa: list[dict[str, Any]]) -> str:
     try:
         bruta = monta.fita(
             ativo=(mesa[0]["pref"] if mesa else "todos"), mesa=mesa,
-            inerte=not monta.a_fita_escolhe("02-controles.html"))
+            inerte=not monta.a_fita_escolhe(PAGINA.name))
         return aba02.fita_clicavel(bruta, mesa=mesa)
     finally:
         monta.MESA, aba02.MESA = antes_monta, antes_aba
@@ -732,7 +732,7 @@ class Janela:
 
     def _marcar_o_interruptor_de_mentira(self) -> None:
         """Cliques SINTÉTICOS na fileira de modos — os TRÊS, e todos aplicam."""
-        jogar = (PAGINA.parent / "01-jogar.html").as_uri()
+        jogar = PAGINA.as_uri()
         roteiro: list[tuple[int, Any]] = [
             (1200, lambda: self.view.load_uri(jogar)),
             (2600, lambda: self._js(
