@@ -85,12 +85,14 @@ def _o_modo_vivo_e_o_do_duble(monkeypatch: pytest.MonkeyPatch) -> None:
     (hotkey.PONTE_DUALSENSE, hotkey.LE_O_HEFESTO),
     (hotkey.PONTE_XBOX, hotkey.LE_O_HEFESTO),
     (hotkey.PONTE_MOUSE_TECLADO, hotkey.LE_O_HEFESTO),
+    (hotkey.MODO_NINTENDO, hotkey.LE_O_HEFESTO),
 ])
 def test_1_cada_um_dos_cinco_modos_tem_quem_lhe_le_o_controle(modo: str, quem: str) -> None:
     assert hotkey.quem_le_o_controle(_daemon(modo)) == quem
     assert set(hotkey.QUEM_LE_O_CONTROLE) == {
         hotkey.MODO_NATIVO, hotkey.MODO_STEAM_INPUT, hotkey.PONTE_DUALSENSE,
-        hotkey.PONTE_XBOX, hotkey.PONTE_MOUSE_TECLADO}, "a tabela não cobre os cinco modos"
+        hotkey.PONTE_XBOX, hotkey.PONTE_MOUSE_TECLADO, hotkey.MODO_NINTENDO,
+    }, "a tabela não cobre os seis modos"
 
 
 def test_1_na_duvida_o_controle_e_do_hefesto() -> None:
@@ -103,6 +105,7 @@ def test_1_na_duvida_o_controle_e_do_hefesto() -> None:
     (hotkey.PONTE_DUALSENSE, True),
     (hotkey.PONTE_XBOX, True),
     (hotkey.PONTE_MOUSE_TECLADO, True),
+    (hotkey.MODO_NINTENDO, True),
 ])
 def test_1_o_hefesto_so_entra_onde_o_controle_e_dele(modo: str, age: bool) -> None:
     """Prova da D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO."""

@@ -45,7 +45,7 @@ class TestOBotaoTrocouDeAtoNaTela:
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py"
         ).read_text(encoding="utf-8")
-        assert '@gesto("02-controles.html", "mic-retorno")' in fonte
+        assert '@gesto(PAGINAS_DA_SECAO_DOS_CONTROLES, "mic-retorno")' in fonte
         assert "def mic_retorno(" in fonte
         assert "monitor_do_microfone.ligar(" in fonte, (
             "o gesto não chama o ato — é a cura escrita e nunca ligada"
