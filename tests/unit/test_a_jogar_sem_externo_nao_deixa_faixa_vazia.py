@@ -102,7 +102,10 @@ def test_sem_externo_nada_fica_sob_as_linhas_dos_controles(tamanho: tuple[int, i
 
 @pytest.mark.parametrize("tamanho", TAMANHOS, ids=lambda t: f"{t[0]}x{t[1]}")
 def test_o_externo_e_a_ultima_linha_e_nada_fica_sob_ele(tamanho: tuple[int, int]) -> None:
-    """O externo vem depois dos assentos, na altura da linha fechada, sem rolagem na seção."""
+    """O externo vem depois dos assentos, na altura da linha fechada, sem rolagem na seção.
+
+    Prova da D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR.
+    """
     lido = _medir(tamanho, _externos(UM_EXTERNO))
     assert lido["externos"] and lido["externos"][0].startswith("Controle 3"), lido
     assert lido["a_ultima_e_o_externo"], lido

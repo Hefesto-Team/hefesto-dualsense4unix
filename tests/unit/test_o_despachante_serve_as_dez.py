@@ -39,7 +39,10 @@ def test_as_dez_tem_pacote_e_nenhuma_esta_de_fora(pacotes_mod):
 
 
 def test_a_pagina_que_saiu_abre_na_que_a_absorveu():
-    """O ``--abre`` da 02 cai na Jogar, e a 02 não volta à tira."""
+    """O ``--abre`` da 02 cai na Jogar, e a 02 não volta à tira.
+
+    Prova da D-2710-A-CONTROLES-SAI-DO-PRODUTO-E-VIVE-NA-JOGAR.
+    """
     import hefesto_vivo
 
     assert set(ABAS).isdisjoint(monta.PAGINAS_QUE_SAIRAM), ABAS

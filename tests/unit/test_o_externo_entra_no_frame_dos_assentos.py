@@ -75,7 +75,10 @@ def _a_secao_dos_controles(publicado: bool = True) -> str:
 
 
 def test_o_endereco_da_aba01_mora_na_secao_dos_controles_depois_dos_assentos() -> None:
-    """`data-campo="externos"` está DENTRO da seção Controles, depois do último assento."""
+    """`data-campo="externos"` está DENTRO da seção Controles, depois do último assento.
+
+    Prova da D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR.
+    """
     secao = _a_secao_dos_controles()
     vaga = secao.find('data-campo="externos" data-hef-alvo="html"')
     assert vaga >= 0, "a vaga do externo não está na seção Controles da Jogar"

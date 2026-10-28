@@ -55,6 +55,7 @@ def _fator_no_laco(perfil: Profile, uniq: str) -> float:
                                                        (100, 50, 1.0), (0, 0, 0.0)])
 def test_o_perfil_velho_carrega_na_escala_nova_com_o_mesmo_fator(
         velho: int, novo: int, fator: float) -> None:
+    """Prova da D-2710-A-HAPTICA-VAI-DE-0-A-100-COM-O-MESMO-FATOR: a chave velha vira a metade."""
     perfil = Profile.model_validate(_perfil_velho(velho))
     for uniq in _QUATRO:
         rumble = (perfil.controllers or {})[uniq].rumble
@@ -114,6 +115,7 @@ def test_o_maquina_json_com_os_quatro_a_200_sai_com_os_quatro_a_100(
 
 def test_o_ipc_de_100_grava_100_e_chega_ao_fator_2(
         perfis: Path, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    """Prova da D-2710-A-HAPTICA-VAI-DE-0-A-100-COM-O-MESMO-FATOR: o 100 do IPC é o fator 2,0."""
     from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod
 
     dono = GanhoDaHaptica()

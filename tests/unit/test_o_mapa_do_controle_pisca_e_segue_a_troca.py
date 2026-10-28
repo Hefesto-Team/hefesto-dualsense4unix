@@ -356,7 +356,8 @@ def _na_letra(js: str, vista: str, letra: str) -> Any:
 def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str, letra: str) -> None:
     """8 (conferência final, 02/10/2026): os chips levam o nome do controle
 
-    Prova da D-1810-O-CHIP-DO-MAPA-EM-UMA-LINHA-COMPACTA-NA-VISTA-ESTREITA.
+    Prova da D-1810-O-CHIP-DO-MAPA-EM-UMA-LINHA-COMPACTA-NA-VISTA-ESTREITA e da
+    D-2710-O-MAPA-DO-CONTROLE-TEM-FOLGA-PARA-A-LETRA-DO-SISTEMA, também na letra larga.
     """
     chips = list(_na_letra(CHIPS, vista, letra))
     assert len(chips) >= 3, f"a página não tem os chips do «Controle»: {chips}"
@@ -470,7 +471,10 @@ FOLGA_DOS_CHIPS = r"""
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
 def test_o_nome_de_exemplo_nao_ganha_reticencia_por_um_pixel_quebrado(
         vista: str, letra: str) -> None:
-    """O corte do nome comprido não pega o nome de exemplo: o texto cabe na caixa de dentro."""
+    """O corte do nome comprido não pega o nome de exemplo: o texto cabe na caixa de dentro.
+
+    Prova da D-2710-O-MAPA-DO-CONTROLE-TEM-FOLGA-PARA-A-LETRA-DO-SISTEMA, também na letra larga.
+    """
     chips = list(_na_letra(FOLGA_DOS_CHIPS, vista, letra))
     assert len(chips) == 4, chips
     apertados = [(c["texto"], round(c["folga"], 3)) for c in chips if c["folga"] < 0]
@@ -501,7 +505,8 @@ def test_a_acao_de_cada_linha_se_le_em_toda_janela(vista: str, letra: str) -> No
     """O-CHIP-DO-MAPA-CABE-A-860-PX-01: dar o centro ao controle não pode tirar a ação das colunas
     dos lados. Com as laterais a 200 px, a 860 px dezessete ações saíam cortadas a seco.
 
-    Prova da D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA.
+    Prova da D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA e da
+    D-2710-O-MAPA-DO-CONTROLE-TEM-FOLGA-PARA-A-LETRA-DO-SISTEMA, também na letra larga.
     """
     linhas = list(_na_letra(ACOES, vista, letra))
     assert len(linhas) == 23, linhas

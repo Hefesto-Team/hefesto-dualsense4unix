@@ -58,6 +58,7 @@ def _perfil(controles: dict[str, Any], modo: dict[str, Any] | None = None) -> Pr
 
 
 def test_o_mask_set_leva_o_modo_a_todo_controle() -> None:
+    """Prova da D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES: um pedido muda o modo dos três."""
     d = _mesa_com_o_jogo_aberto()
 
     resposta = asyncio.run(
@@ -83,7 +84,10 @@ async def test_o_ps_l3_anda_o_modo_de_todos() -> None:
 
 
 def test_o_perfil_misturado_vira_o_modo_que_o_jogo_via() -> None:
-    """P1 DualSense, P2 Xbox e o caminho Xbox: o jogo via o Xbox 360 nos dois."""
+    """P1 DualSense, P2 Xbox e o caminho Xbox: o jogo via o Xbox 360 nos dois.
+
+    Prova da D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES, na migração do perfil misturado.
+    """
     perfil = _perfil(
         {P1: {"mascara": "dualsense"}, P2: {"mascara": "xbox"}},
         {"kind": "gamepad", "gamepad_flavor": "dualsense", "caminho": "xbox"},

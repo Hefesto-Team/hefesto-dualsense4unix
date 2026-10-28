@@ -72,6 +72,7 @@ def _na_navegacao_da_sessao(d: _DaemonQueAnota) -> None:
 
 
 def test_o_estilo_grava_o_desktop_com_o_arranjo_e_sem_molde(disco: dict[str, Any]) -> None:
+    """Prova da D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06: o estilo grava o arranjo."""
     _aplicar("Point and click")
 
     prof = disco["perfil"]
@@ -83,6 +84,7 @@ def test_o_estilo_grava_o_desktop_com_o_arranjo_e_sem_molde(disco: dict[str, Any
 
 
 def test_o_perfil_do_estilo_abre_no_point_and_click_com_a_sessao_na_navegacao() -> None:
+    """Prova da D-2710-O-POINT-AND-CLICK-E-ESTILO-COM-A-TABELA-DA-06: o arranjo é do perfil."""
     receita = ej.POR_CHAVE["point_and_click"].receita_invisivel
     assert receita is not None
     _mudou, modo = secao_do_modo_do_estilo(None, receita.modo, receita.arranjo)
@@ -142,6 +144,7 @@ class _DaemonDoGesto(_DaemonQueAnota):
 def test_o_ps_r3_cai_na_navegacao_e_nunca_no_point_and_click(
     modo: str, perfil_com_estilo: bool,
 ) -> None:
+    """Prova da D-2710-DO-NINTENDO-PRO-O-PS-R3-VAI-A-NAVEGACAO, e do Xbox também."""
     corpo = _com_o_modo({"kind": "desktop", "arranjo": "point_and_click"}
                         if perfil_com_estilo else None)
     d = _DaemonDoGesto(modo, controller=FakeController(transport="usb"),

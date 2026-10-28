@@ -69,6 +69,7 @@ def test_todo_gesto_do_desenho_tem_quem_o_atenda() -> None:
 
 
 def test_a_secao_atende_na_jogar() -> None:
+    """Prova da D-2710-A-CONTROLES-SAI-DO-PRODUTO-E-VIVE-NA-JOGAR: os gestos moram na Jogar."""
     assert a02_controles.PAGINA == PAGINA
     da_secao = {nome for (_pg, nome), fn in pacotes.GESTOS.items()
                 if fn.__module__ == a02_controles.__name__}
