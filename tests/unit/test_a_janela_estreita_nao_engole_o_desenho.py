@@ -631,7 +631,9 @@ def medido_com_a_letra_larga() -> dict[tuple[str, str], dict[str, Any]]:
 
 
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS_DA_LETRA_LARGA)
-def test_com_a_letra_mais_larga_o_cabecalho_nao_engole_nada(medido_com_a_letra_larga, aba, rotulo):
+def test_com_a_letra_mais_larga_o_cabecalho_nao_engole_nada(
+        medido_com_a_letra_larga: dict[tuple[str, str], dict[str, Any]], aba: str, rotulo: str
+) -> None:
     """O cabeçalho cabe com a letra de qualquer computador, nas dez abas.
 
     O-CABECALHO-TEM-FOLGA-PARA-A-LETRA-DE-QUALQUER-COMPUTADOR-01. A mesma Space Grotesk mede
