@@ -25,7 +25,8 @@ AS-PAGINAS-DE-FORA-DAS-ABAS-LEVAM-A-LETRA-DA-CASA-01 (27/10/2026): o Calibrar gi
 das portas e o Mapa do rádio entram nas réguas 1 e 2, no desenho e no publicado, e a variável do
 corpo de cada uma começa pela Space Grotesk, e a do dado pela JetBrains Mono. O publicado que o
 `mockup/DIVERGENCIAS.md` declara em trabalho espera o `--publicar` (xfail estrito: o publicar tira
-a declaração e cura a página no mesmo gesto).
+a declaração e cura a página no mesmo gesto). No WebKit, as três do desenho carregam as duas
+famílias; sem o `@font-face`, o Calibrar não carrega a Space Grotesk.
 """
 from __future__ import annotations
 
@@ -418,6 +419,41 @@ def test_com_a_rede_muda_a_pagina_abre_em_menos_de_3s_e_a_fonte_carrega(
     mono = fontes.get("JetBrains Mono")
     assert mono in {"loaded", "unloaded"}, f"a JetBrains Mono falhou: {fontes}"
 
+
+
+def _as_duas_no_webkit(arq: pathlib.Path) -> dict[str, object]:
+    r = _abrir_sem_rede(arq, prazo=10.0)
+    assert r["abriu"] is True, f"{arq.name} não chegou ao complete com a rede muda: {r}"
+    fontes = r["fontes"]
+    assert isinstance(fontes, dict)
+    return fontes
+
+
+@pytest.mark.parametrize("arq", _de_fora(MOCKUP), ids=_id)
+def test_a_pagina_de_fora_carrega_a_letra_da_casa_no_webkit(arq: pathlib.Path) -> None:
+    fontes = _as_duas_no_webkit(arq)
+    assert fontes.get("Space Grotesk") == "loaded", f"{_id(arq)}: {fontes}"
+    assert fontes.get("JetBrains Mono") == "loaded", f"{_id(arq)}: {fontes}"
+
+
+def test_a_mordida_sem_o_font_face_a_pagina_de_fora_nao_carrega_a_letra(
+    tmp_path: pathlib.Path,
+) -> None:
+    """A régua de cima só vale se reprova quando a página volta a não embutir a letra."""
+    original = MOCKUP / "calibrar-sensores.html"
+    texto = original.read_text(encoding="utf-8")
+    sem = re.sub(r"@font-face\s*\{[^}]*\}", "", texto)
+    assert sem != texto, "a mordida não achou o @font-face"
+    paginas = {}
+    for nome, conteudo in (("mordida", sem), ("controle", texto)):
+        (tmp_path / nome / "mockup").mkdir(parents=True)
+        (tmp_path / nome / "assets").symlink_to(RAIZ / "assets")
+        paginas[nome] = tmp_path / nome / "mockup" / original.name
+        paginas[nome].write_text(conteudo, encoding="utf-8")
+    fontes = _as_duas_no_webkit(paginas["mordida"])
+    assert fontes.get("Space Grotesk") != "loaded", f"sem o @font-face a letra carregou: {fontes}"
+    fontes = _as_duas_no_webkit(paginas["controle"])
+    assert fontes.get("Space Grotesk") == "loaded", f"a cópia intacta não carregou: {fontes}"
 
 def test_a_mordida_com_o_link_do_google_de_volta_a_pagina_nao_abre(tmp_path: pathlib.Path) -> None:
     """A régua de cima só vale se reprova quando a causa volta: o `<link>` trava o `complete`."""

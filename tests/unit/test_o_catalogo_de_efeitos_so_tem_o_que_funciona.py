@@ -14,7 +14,8 @@ moram agora no rótulo de cada efeito (`efeitos_de_imersao.FAMILIAS_DA_PAGINA`).
 - «Do estilo» manda ao gatilho o que o perfil dá a todos e apaga a escolha daquele controle e lado.
 
 MORDIDAS: dar a duas imersões os mesmos ajustes faz `test_nenhuma_imersao_repete_a_outra` apontar o
-par; tirar o ramo `DO_ESTILO` do gesto `imersao` reprova os casos do «Do estilo».
+par; tirar o ramo `DO_ESTILO` do gesto `imersao` reprova os casos do «Do estilo»; tirar a folga de
+uma família do CSS do `aba03` reprova o caso «desenho» da etiqueta.
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     preset_to_positional_params,
 )
 from hefesto_dualsense4unix.core.trigger_effects import bloco_do_efeito, build_from_name, off
+from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO
 from hefesto_dualsense4unix.profiles import efeitos_de_imersao as imersoes
 from hefesto_dualsense4unix.profiles import efeitos_de_luz as luz
@@ -180,6 +182,22 @@ def test_todo_efeito_da_lista_esta_no_grupo_do_rotulo_dele() -> None:
     for grupo, chaves in _grupos(html_das_opcoes_de_imersao()).items():
         for chave in chaves:
             assert imersoes.familia_da_pagina(imersoes.POR_CHAVE[chave]) == grupo, (chave, grupo)
+
+
+PUBLICADO = onde.PUBLICADO / "03-gatilhos.html"
+
+
+@pytest.mark.parametrize("arq", [
+    DESENHO,
+    pytest.param(PUBLICADO, marks=pytest.mark.xfail(
+        strict=True, reason="a folga da Rajada entra no 03 publicado pela costura")),
+], ids=["desenho", "publicado"])
+def test_toda_familia_que_o_pacote_pinta_tem_a_folga_da_etiqueta(arq: pathlib.Path) -> None:
+    doc = arq.read_text(encoding="utf-8")
+    com_folga = set(re.findall(
+        r'\.g2-fam\[data-fam="([^"]+)"\] \+ \.g2-imersao\{padding-left:', doc))
+    sem_folga = [f for f in imersoes.FAMILIAS_DA_PAGINA if f not in com_folga]
+    assert not sem_folga, f"{arq.name}: a etiqueta cobre o nome do efeito em {sem_folga}"
 
 
 class _Ponte:
