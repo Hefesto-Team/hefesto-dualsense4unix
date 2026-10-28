@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-25",
+      "data": "2026-10-27",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 36,
+      "piso": 33,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -21,14 +21,12 @@
         "integrations/dualsense_bt_audio.py::modelo": 1,
         "integrations/ponte_escada.py::mascara": 1,
         "integrations/storm_doctor.py::transporte": 1,
-        "interface/aba01.py::transporte": 1,
         "interface/aba02.py::transporte": 1,
         "interface/aba07.py::transporte": 2,
         "interface/aba08.py::transporte": 1,
         "interface/aba09.py::transporte": 2,
         "interface/aba10.py::mascara": 1,
         "interface/monta.py::jogador": 1,
-        "interface/monta.py::transporte": 2,
         "interface/pacotes/a08_conexoes.py::transporte": 3,
         "interface/sistema.py::transporte": 1,
         "testing/fake_controller.py::transporte": 1
@@ -49,7 +47,7 @@
         }
       ],
       "unidade": "ramos",
-      "universo": 405
+      "universo": 406
     },
     "remendos-de-sintoma": {
       "data": "2026-10-26",
@@ -243,14 +241,14 @@
       "data": "2026-10-27",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1162329,
+      "piso": 1162102,
       "por_item": {
         "docs": 107543,
-        "scripts": 109487,
-        "src": 295146,
-        "tests": 650153
+        "scripts": 109488,
+        "src": 294837,
+        "tests": 650234
       },
-      "razao": "tamanho: +667 linhas (1161662 -> 1162329), pagas por Origem: D-2710-A-ABA-QUIETA-SE-MEDE-PELO-TEMPO-DA-PINTURA, D-2710-O-GERADOR-DE-ABA-NAO-PEDE-O-GTK; registrado no fecho, topo 5394ef66e3ff",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
