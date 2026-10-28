@@ -22,6 +22,7 @@ CADEADO_CEGO = "cadeado-cego"
 
 DA_PAGINA: tuple[str, ...] = (
     "cadeado",
+    "externos",
     CADEADO_CEGO,
     "hef-posicao",
     "modo-aceso",
@@ -136,6 +137,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "cadeado": _cadeado(ctx.state),
         CADEADO_CEGO: _cadeado_cego(ctx.state),
         "cartoes": {},
+        "externos": _html_dos_externos(ctx),
         **tela,
         "blocos": _o_rotulo_do_chip(ctx.state),
     }
@@ -475,6 +477,46 @@ def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
     return _em_ordem(_avisos_sem_outra_casa(ctx))
 
 
+def _html_dos_externos(ctx: Contexto) -> str:
+    """Uma linha por externo (o Hefesto VÊ e NÃO adota) na seção Controles; sem nenhum, o marcador.
+
+    D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR: a linha vem depois dos assentos, na forma
+    da linha fechada (`aba01.py`, `.quadro.estica .ext-cartao`). Nenhum texto se escreve aqui: o
+    título, o transporte e o aviso do `hid-nintendo` são da janela antiga
+    (``_format_external_title``, ``_format_external_subtitle``, ``nintendo_bt_warning``), e a cor
+    e os botões declarados são de ``a08_conexoes.marcas_do_externo``. Não leva `.ctl`, `.cartao`
+    nem `data-controle`: essas marcas são dos assentos.
+    """
+    if not ctx.externos:
+        return str(_monta().NADA_A_DIZER)
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        nintendo_bt_warning,
+    )
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        _format_external_subtitle,
+        _format_external_title,
+        externos_na_mesa,
+    )
+
+    from . import a08_conexoes
+
+    def _e(x: object) -> str:
+        return html.escape(str(x), quote=True)
+
+    fora = []
+    for entrada in externos_na_mesa(None, ctx.externos):
+        aviso = nintendo_bt_warning(entrada)
+        linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
+                          if aviso else "")
+        da_borda, botoes = a08_conexoes.marcas_do_externo(entrada, "div")
+        fora.append(
+            f'<div class="ext-cartao"{da_borda}>'
+            f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
+            f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
+            f'{botoes}{linha_do_aviso}</div>')
+    return "".join(fora) or str(_monta().NADA_A_DIZER)
+
+
 def _cadeado_cego(state: dict[str, Any]) -> str:
     """A ressalva do cadeado: o detector está cego? — marcador quando não.
 
@@ -661,8 +703,8 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     | o que se sabe | como | a tela |
     | --- | --- | --- |
     | **LIGADO** | o jogo da vez está na lista dela **e** o vdf vivo diz diferente de `"0"` | chip
-    aceso | | **PENDENTE** | na lista dela, e o vdf ainda diz `"0"` | chip **aceso**, e «Liga quando
-    a Steam fechar» na faixa (:func:`_o_que_o_chip_diz`) | | **DESLIGADO** | não está na lista |
+    aceso | | **PENDENTE** | na lista dela, e o vdf ainda diz `"0"` | chip **aceso**, e a pendência
+    vai ao diário (:func:`_faixa_do_pendente`) | | **DESLIGADO** | não está na lista |
     chip apagado | | **NÃO SE SABE** | sem appid, ou a vigia ainda não voltou | chip apagado |
 
     Fato substituído (O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026): o PENDENTE ficava apagado
@@ -734,23 +776,6 @@ def o_guarda_liga_o_steam_input() -> bool:
     liga = any(linha.startswith("ExecStart=") and "disable_steam_input.sh" in linha
                and "--apply-quiet" in linha for linha in texto.splitlines())
     return liga and habilitado
-
-
-STEAM_INPUT_ESPERA = "Liga quando a Steam fechar"
-
-
-def _o_que_o_chip_diz(state: dict[str, Any] | None, tela: dict[str, str]) -> str:
-    """A faixa de baixo com a frase de produto — `""` quando o chip não está esperando."""
-    if tela.get("steam-input-aceso") != CHIP_DO_STEAM_INPUT:
-        return ""
-    if not _a_ponte_que_falta(state):
-        return ""
-    dado = VIGIA_DO_STEAM_INPUT.agora()
-    if dado is None or not dado.o_guarda_liga:
-        return ""
-    from hefesto_dualsense4unix.app.actions.relancar import MARCADOR_PENDENTE
-
-    return f"{MARCADOR_PENDENTE} {STEAM_INPUT_ESPERA}"
 
 
 def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> dict[str, str]:
@@ -1455,7 +1480,7 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     próximo arranque e ela clicaria de novo achando que não pegou;
     2. **a ponte**: reescreve o `localconfig.vdf` DO USUÁRIO, e a Steam tem de estar FECHADA (ela
       regrava o arquivo ao sair e engole a edição). Aberta, o dono ADIA; o chip acende pela escolha
-      e a faixa diz «Liga quando a Steam fechar» (:func:`_o_que_o_chip_diz`).
+      e a pendência vai ao diário (:func:`_faixa_do_pendente`).
 
     **O primeiro clique avisa, o segundo fecha** (23/09/2026,
     `D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`). Com a Steam aberta, sem jogo aberto e o jogo em `"0"`,

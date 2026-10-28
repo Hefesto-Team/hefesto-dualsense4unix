@@ -99,6 +99,14 @@ CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:n
   .hef-q:has(.hef-pos.desligado.on) .so-desligado{display:block}
   .hef-q .degrau{height:var(--h-acao)}
   .hef-q ~ .quadro.estica > .quadro-corpo{gap:6px}
+  .quadro.estica .ext-vaga{display:contents}
+  .quadro.estica .ext-vaga > .nada{display:none}
+  .quadro.estica .ext-cartao{display:flex;align-items:center;gap:9px;flex:0 0 auto;height:26px;
+    padding:0 26px;border:1px dashed var(--border-forte);border-radius:9px;
+    background:transparent;font-size:12.5px;line-height:14px;color:var(--fg);
+    white-space:nowrap;overflow:hidden}
+  .quadro.estica .ext-nome{font-weight:600}
+  .quadro.estica .ext-aviso{color:var(--orange);overflow:hidden;text-overflow:ellipsis}
   .degrau .silhueta{height:20px;width:auto;flex:0 0 auto;fill:currentColor}
   .degrau .silhueta.traco{fill:none;stroke-width:3.6}
   .degrau .silhueta.contorno path{stroke:currentColor;stroke-width:2.4}

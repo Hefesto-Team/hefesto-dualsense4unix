@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""O controle que o Hefesto só VÊ entra no MESMO frame dos assentos — e não vira um."""
+"""O controle que o Hefesto só VÊ entra no MESMO frame dos assentos — e não vira um.
+
+Na Jogar, o frame é a seção Controles (D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR): o
+externo é mais uma linha, depois das linhas dos quatro assentos, e sem ele nada aparece.
+"""
 from __future__ import annotations
 
 import pathlib
@@ -62,11 +66,21 @@ def _bloco_equilibrado(doc: str, abertura: str) -> str:
     raise AssertionError(f"{abertura!r} nunca fecha")
 
 
-def test_o_endereco_da_aba01_mora_dentro_da_grade_dos_assentos() -> None:
-    """`data-campo="externos"` está DENTRO do `<div class="pecas">`."""
-    doc = onde.pagina("01-jogar.html", publicado=True).read_text()
-    grade = _bloco_equilibrado(doc, '<div class="pecas"')
-    assert 'data-campo="externos" data-hef-alvo="html"' in grade
+SECAO_DOS_CONTROLES = '<div class="quadro estica">'
+
+
+def _a_secao_dos_controles(publicado: bool = True) -> str:
+    return _bloco_equilibrado(onde.pagina("01-jogar.html", publicado=publicado).read_text(),
+                              SECAO_DOS_CONTROLES)
+
+
+def test_o_endereco_da_aba01_mora_na_secao_dos_controles_depois_dos_assentos() -> None:
+    """`data-campo="externos"` está DENTRO da seção Controles, depois do último assento."""
+    secao = _a_secao_dos_controles()
+    vaga = secao.find('data-campo="externos" data-hef-alvo="html"')
+    assert vaga >= 0, "a vaga do externo não está na seção Controles da Jogar"
+    ultimo_assento = max(secao.find(f'data-controle="p{n}"') for n in range(1, 5))
+    assert 0 <= ultimo_assento < vaga, "a linha do externo tem de vir depois dos assentos"
 
 
 def test_o_endereco_da_aba08_mora_dentro_do_acordeao() -> None:
@@ -78,7 +92,7 @@ def test_o_endereco_da_aba08_mora_dentro_do_acordeao() -> None:
 
 def test_a_vaga_e_transparente_nas_duas_abas() -> None:
     """`display:contents` — sem ela os cartões caem TODOS numa célula só."""
-    assert (".pecas .ext-vaga{display:contents}"
+    assert (".quadro.estica .ext-vaga{display:contents}"
             in onde.pagina("01-jogar.html", publicado=True).read_text())
     assert (".gc .ext-vaga{display:contents}"
             in onde.pagina("08-conexoes.html").read_text())
@@ -86,7 +100,7 @@ def test_a_vaga_e_transparente_nas_duas_abas() -> None:
 
 def test_a_vaga_vazia_nao_ocupa_uma_celula() -> None:
     """O marcador `.nada` sai por `display:none`, e não pelo `:empty` da ressalva."""
-    for arquivo, seletor, publicado in (("01-jogar.html", ".pecas .ext-vaga > .nada", True),
+    for arquivo, seletor, publicado in (("01-jogar.html", ".quadro.estica .ext-vaga > .nada", True),
                                         ("08-conexoes.html", ".gc .ext-vaga > .nada", False)):
         doc = onde.pagina(arquivo, publicado=publicado).read_text()
         assert f"{seletor}{{display:none}}" in doc, arquivo
@@ -94,9 +108,7 @@ def test_a_vaga_vazia_nao_ocupa_uma_celula() -> None:
 
 def test_nenhum_aparelho_de_exemplo_nasce_dentro_da_moldura() -> None:
     """A moldura parada tem os assentos e mais nada."""
-    grade = _bloco_equilibrado(onde.pagina("01-jogar.html", publicado=True).read_text(),
-                               '<div class="pecas"')
-    assert 'class="ext-cartao"' not in grade
+    assert 'class="ext-cartao"' not in _a_secao_dos_controles()
     moldura = _bloco_equilibrado(onde.pagina("08-conexoes.html").read_text(),
                                  '<div class="gc">')
     assert 'class="ext-linha"' not in moldura

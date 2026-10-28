@@ -954,7 +954,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
-        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:179` (`montaveis`) e "
+        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:187` (`montaveis`) e "
         "`src/hefesto_dualsense4unix/interface/aba01.py:26` (`mascaras_montaveis`) —, "
         "que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "
@@ -1294,7 +1294,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "fecho do "
         "`hefesto_vivo`). A janela viva monta a MESMA sequência pelo dono "
         "único "
-        "(`plan_mode_transition` em `src/hefesto_dualsense4unix/app/actions/jogar/painel.py:244`), "
+        "(`plan_mode_transition` em `src/hefesto_dualsense4unix/app/actions/jogar/painel.py:255`), "
         "e a "
         "executa pela ponte (`interface/pacotes/a01_jogar.py`, `PROVAS`). Sai "
         "com o piloto da aba Controles."

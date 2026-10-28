@@ -126,10 +126,13 @@ class Modo(NamedTuple):
 
 _ROTULO_DO_MODO: dict[str, str] = dict(home_actions._MODE_ITEMS)
 
+MODO_DA_SECAO_CONTROLES = "automatico"  # (noqa-acento)
+
 MODOS_DA_TELA: tuple[Modo, ...] = (
     Modo(MODE_GAMEPAD, _ROTULO_DO_MODO[MODE_GAMEPAD], MODE_GAMEPAD),
     Modo(MODE_NATIVE, _ROTULO_DO_MODO[MODE_NATIVE], MODE_NATIVE),
     Modo(MODE_DESKTOP, _ROTULO_DO_MODO[MODE_DESKTOP], MODE_DESKTOP),
+    Modo(MODO_DA_SECAO_CONTROLES, "Modo automático", None),
 )
 
 MODOS_LIGADOS: tuple[str, ...] = (MODE_GAMEPAD, MODE_DESKTOP)
@@ -210,9 +213,17 @@ ESCRITOR_DOS_MODOS: dict[str, str] = {
 }
 
 
+ESCRITOR_POR_OUTRO_GESTO: dict[str, str] = {
+    MODO_DA_SECAO_CONTROLES: "o gesto `modo-dos-controles` da seção Controles "
+    "(`interface/pacotes/a02_controles.modo_dos_controles`), que grava o "
+    "`controles_modo` no perfil ativo (`save_profile`). Ele não troca o modo do "
+    "Hefesto, e por isso não tem plano de IPC aqui.",
+}
+
+
 def escritor_do_modo(chave: str) -> str:
     """Quem APLICA este botão, ou o porquê de ninguém aplicar."""
-    escritor = ESCRITOR_DOS_MODOS.get(chave)
+    escritor = ESCRITOR_DOS_MODOS.get(chave) or ESCRITOR_POR_OUTRO_GESTO.get(chave)
     if escritor is not None:
         return escritor
     for modo in MODOS_DA_TELA:
@@ -230,7 +241,7 @@ def escritor_do_modo(chave: str) -> str:
 
 def porque_nao_aplica(chave: str) -> str:
     """Vazio quando o botão TEM escritor; a recusa do dono, quando não tem."""
-    if chave in ESCRITOR_DOS_MODOS:
+    if chave in ESCRITOR_DOS_MODOS or chave in ESCRITOR_POR_OUTRO_GESTO:
         return ""
     return escritor_do_modo(chave)
 
@@ -556,10 +567,12 @@ __all__ = [
     "AVISOS_DA_TELA",
     "CHIPS_DA_ESCADA",
     "ESCRITOR_DOS_MODOS",
+    "ESCRITOR_POR_OUTRO_GESTO",
     "FRASE_DA_ORIGEM_DO_MODO",
     "FRASE_DO_MODO_NATIVO",
     "MODOS_DA_TELA",
     "MODOS_LIGADOS",
+    "MODO_DA_SECAO_CONTROLES",
     "RECONECTAR_SEM_SERVICO",
     "SELO_DO_MODO",
     "SEM_ALGARISMO",

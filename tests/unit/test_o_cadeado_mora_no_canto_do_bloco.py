@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA POSIÇÃO: o cadeado do perfil mora no canto do bloco Modo.
+"""A RÉGUA DA POSIÇÃO: o cadeado do perfil mora no canto do bloco Status.
 
 PEDIDO, 08/09/2026, olhando a aba Jogar: *"esse não trocar de perfil. Pode
 colocar ele no canto superior direito do bloco tipo esse banco de provas na guia
@@ -198,12 +198,15 @@ def medido(request: pytest.FixtureRequest) -> dict:
     return {**saida, "_pagina": request.param}
 
 
-def test_o_cadeado_esta_no_bloco_modo(medido: dict) -> None:
-    """É o bloco **Modo** (no desenho de 27/10, **Status**), não outro com um canto livre."""
-    titulo = "Status" if medido["_pagina"] == "desenho" else "Modo"
-    assert medido["titulo_do_bloco"].startswith(titulo), (
-        f"o cadeado está no bloco {medido['titulo_do_bloco']!r}. Ela pediu o "
-        f"canto do bloco Modo, que é onde a trava de perfil pertence.")
+def test_o_cadeado_esta_no_bloco_status(medido: dict) -> None:
+    """É o bloco **Status**, o que carrega o interruptor, e não outro com um canto livre.
+
+    D-2810-O-CADEADO-MORA-NO-CANTO-DO-STATUS: o bloco Modo virou o Status no desenho de 27/10,
+    e o publicado o seguiu em 28/10.
+    """
+    assert medido["titulo_do_bloco"].startswith("Status"), (
+        f"o cadeado está no bloco {medido['titulo_do_bloco']!r}. O canto dele é o do "
+        f"bloco Status, que é onde a trava de perfil pertence.")
 
 
 def test_o_cadeado_esta_na_linha_do_titulo(medido: dict) -> None:

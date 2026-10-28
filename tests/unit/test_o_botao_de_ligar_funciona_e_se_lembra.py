@@ -97,7 +97,8 @@ def test_todo_botao_do_desenho_tem_linha_na_fileira() -> None:
 def test_todo_botao_ou_tem_escritor_ou_tem_motivo() -> None:
     """Um botão sem escritor tem de dizer POR QUÊ, em português."""
     for chave in modos_do_desenho():
-        tem_escritor = chave in painel.ESCRITOR_DOS_MODOS
+        tem_escritor = (chave in painel.ESCRITOR_DOS_MODOS
+                        or chave in painel.ESCRITOR_POR_OUTRO_GESTO)
         motivo = painel.porque_nao_aplica(chave)
         assert tem_escritor != bool(motivo), (
             f"{chave!r}: escritor={tem_escritor} e motivo={motivo!r} — "
@@ -130,6 +131,14 @@ def test_todo_passo_que_define_modo_declara_origem_manual() -> None:
                     f"{chave!r} → {metodo}: sem origin=manual, o daemon lê o "
                     "clique dela como automático e pode recusá-lo"
                 )
+
+
+def test_o_automatico_tem_dono_e_nao_tem_plano_de_modo() -> None:
+    """O «Modo automático» da seção Controles grava o perfil, não troca o modo do Hefesto."""
+    chave = painel.MODO_DA_SECAO_CONTROLES
+    assert "modo-dos-controles" in painel.escritor_do_modo(chave)
+    assert painel.porque_nao_aplica(chave) == ""
+    assert painel.plano_do_modo(chave) is None
 
 
 def test_gesto_de_endereco_inventado_nao_derruba_nem_aplica() -> None:

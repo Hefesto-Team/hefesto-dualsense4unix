@@ -50,13 +50,13 @@ def _secao(corpo: str, classe: str) -> str:
     return achado.group(1)
 
 
-@pytest.mark.parametrize(("publicado", "terceiro"), [
-    (True, "modo-point-and-click"), (False, "modo-nintendo")], ids=["publicada", "desenho"])
-def test_os_botoes_de_cada_lado_do_interruptor(publicado: bool, terceiro: str) -> None:
-    """Ligado: DualSense, Xbox e Point and click. Desligado: Nativo, Steam Input e Navegação.
+@pytest.mark.parametrize("publicado", [True, False], ids=["publicada", "desenho"])
+def test_os_botoes_de_cada_lado_do_interruptor(publicado: bool) -> None:
+    """Ligado: DualSense, Xbox e Nintendo. Desligado: Nativo, Steam Input e Navegação.
 
-    A Navegação mudou de lado no todo de 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, opção A). No
-    desenho de 27/10 o terceiro do Ligado é o Nintendo; o Point and click vai ao estilo do jogo.
+    A Navegação mudou de lado no todo de 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, opção A). Desde o
+    desenho de 27/10, publicado em 28/10, o terceiro do Ligado é o Nintendo; o Point and click
+    vai ao estilo do jogo.
 
     A MORDIDA: devolva o «Steam Input» ao `aba01.MODOS` (ou a faixa fixa do
     «Modo Nativo» ao Desligado) e a régua reprova.
@@ -64,7 +64,7 @@ def test_os_botoes_de_cada_lado_do_interruptor(publicado: bool, terceiro: str) -
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
     ligado = re.findall(r'data-gesto="(modo-[a-z-]+)"', _secao(corpo, "so-ligado"))
     desligado = _secao(corpo, "so-desligado")
-    assert ligado == ["modo-dualsense", "modo-xbox", terceiro], ligado
+    assert ligado == ["modo-dualsense", "modo-xbox", "modo-nintendo"], ligado
     assert re.findall(r'data-gesto="(modo-[a-z-]+)"', desligado) == [
         "modo-nativo", "modo-steam", "modo-navegacao"]
     classes = re.findall(r'<span class="([^"]+)"[^>]*data-gesto="modo-', desligado)

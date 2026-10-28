@@ -1222,7 +1222,7 @@ CSS += f"""
 """
 
 GLIFO_DO_CALIBRAR = re.sub(r"<title>.*?</title>", "", glifo("giroscopio", tam=15))
-def _miolo(blocos):
+def _miolo(blocos, depois=""):
     return f'''
     <div class="quadro estica">
       <div class="quadro-topo">
@@ -1235,14 +1235,17 @@ def _miolo(blocos):
       </div>
       <div class="quadro-corpo">
         <input class="radio-mesa" type="radio" name="mesa" id="c-todos">
-{blocos}
+{blocos}{depois}
       </div>
     </div>
 '''
 
 
 MIOLO = _miolo(BLOCOS)
-MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA)
+VAGA_DOS_EXTERNOS = (
+    f'\n    <div class="ext-vaga" data-campo="externos" data-hef-alvo="html">'
+    f'{_monta_modulo.NADA_A_DIZER}</div>')
+MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA, VAGA_DOS_EXTERNOS)
 
 
 LEGENDA = f'''<div class="nota">

@@ -357,9 +357,8 @@ def test_com_a_steam_aberta_o_gesto_grava_a_vontade_e_nao_toca_no_vdf(
     assert "Ligo assim que a Steam fechar" in diario
     ctx.mesa.append(dict(UM_CONTROLE))
     tela = aba.pacote(ctx)
-    assert (tela["pendente"], tela["pendente-ha"]) == (f"● {aba.STEAM_INPUT_ESPERA}", "1"), (
-        f"a faixa não disse a frase dela: {tela['pendente']!r} "
-        f"(ha={tela['pendente-ha']!r})")
+    assert "pendente" not in tela and "pendente-ha" not in tela, (
+        "a faixa da pendência saiu da Jogar com o cartão velho; a frase mora no diário")
 
 
 def test_desligar_com_a_steam_aberta_tira_da_lista_e_diz_quando(
@@ -455,7 +454,7 @@ def test_o_primeiro_clique_avisa_e_o_segundo_fecha_liga_e_reabre(
     tela = aba.pacote(ctx)
     assert tela["blocos"] == _ARMADO_NA_TELA["blocos"], (
         f"o tique não manteve o chip armado: {tela['blocos']!r}")
-    assert tela["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}"
+    assert "pendente" not in tela
 
     resposta = aba.modo_steam(ctx, _o_segundo_clique(), PonteDeMentira())
 
@@ -468,10 +467,10 @@ def test_o_primeiro_clique_avisa_e_o_segundo_fecha_liga_e_reabre(
     em_repouso = {f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}
     assert resposta == {"blocos": em_repouso}, f"o chip não voltou ao repouso: {resposta!r}"
     depois = aba.pacote(ctx)
-    assert (depois["blocos"], depois["pendente"], depois["steam-input-aceso"]) == (
-        em_repouso, "", "steam"), (
+    assert (depois["blocos"], depois["steam-input-aceso"]) == (em_repouso, "steam"), (
         f"depois do segundo clique: blocos={depois['blocos']!r} "
-        f"faixa={depois['pendente']!r} aceso={depois['steam-input-aceso']!r}")
+        f"aceso={depois['steam-input-aceso']!r}")
+    assert aba._faixa_do_pendente(ctx.state)[0] == "", "o diário segue com pendência"
 
 
 def test_o_clique_sem_o_rotulo_armado_nao_fecha_a_steam(lar, monkeypatch) -> None:
@@ -756,7 +755,7 @@ def test_com_o_jogo_aberto_a_lista_e_gravada_e_o_vdf_espera(lar, monkeypatch) ->
         aba._faixa_do_pendente(ctx.state)[0])
     assert confirmacao.armado_agora() == "", "o chip armou com um jogo aberto"
     ctx.mesa.append(dict(UM_CONTROLE))
-    assert aba.pacote(ctx)["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}"
+    assert "pendente" not in aba.pacote(ctx)
 
 
 def test_sem_jogo_o_gesto_recusa_dizendo_e_nada_e_escrito(lar) -> None:
@@ -1003,7 +1002,7 @@ def test_sem_controle_na_mesa_nenhum_botao_do_modo_acende(lar) -> None:
     assert vazio["steam-input-aceso"] == "" and vazio["modo-aceso"] == "", (
         f"sem controle na mesa o Modo acendeu: steam={vazio['steam-input-aceso']!r} "
         f"modo={vazio['modo-aceso']!r}")
-    assert vazio["pendente"] == "", "a faixa falou de um chip que a tela não acende"
+    assert "pendente" not in vazio, "a faixa da pendência saiu da Jogar"
 
     for mesa in (MESA_DE_QUATRO[:1], MESA_DE_QUATRO[1:2], MESA_DE_QUATRO):
         ctx = _ctx()
@@ -1019,8 +1018,8 @@ def test_sem_controle_na_mesa_nenhum_botao_do_modo_acende(lar) -> None:
     (MESA_DE_QUATRO, "xbox", False),
     (MESA_DE_QUATRO, "dualsense", True),
 ], ids=["mesa-vazia", "sobre-o-xbox", "na-navegacao"])
-def test_a_faixa_so_fala_com_o_chip_aceso(lar, mesa, caminho, desktop) -> None:
-    """«Liga quando a Steam fechar» diz o que FALTA ao chip aceso — e só a ele."""
+def test_a_pendencia_da_ponte_fica_no_diario_e_nao_na_tela(lar, mesa, caminho, desktop) -> None:
+    """A pendência do Steam Input vai ao diário; a faixa saiu da Jogar em 28/10."""
     slo.add_appid_to_steam_input_allowlist(APPID)
     aba.VIGIA_DO_STEAM_INPUT.esquecer()
     aba.VIGIA_DO_STEAM_INPUT.ler()
@@ -1030,9 +1029,9 @@ def test_a_faixa_so_fala_com_o_chip_aceso(lar, mesa, caminho, desktop) -> None:
     ctx.mesa.extend(dict(c) for c in mesa)
     fora = aba.pacote(ctx)
     assert fora["steam-input-aceso"] == ""
-    assert (fora["pendente"], fora["pendente-ha"]) == ("", ""), (
-        f"a faixa falou sem o chip aceso: {fora['pendente']!r}")
+    assert "pendente" not in fora and "pendente-ha" not in fora, fora.keys()
 
     aceso = _ctx()
     aceso.mesa.extend(dict(c) for c in MESA_DE_QUATRO)
-    assert aba.pacote(aceso)["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}"
+    assert "pendente" not in aba.pacote(aceso)
+    assert aba._faixa_do_pendente(aceso.state)[0], "o diário perdeu a pendência da ponte"

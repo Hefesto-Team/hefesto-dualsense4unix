@@ -323,12 +323,12 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
             f"o «Steam Input» PENDENTE não levou a frase do dono à faixa:\n"
             f"  faixa {falta!r}\n  dono  {dono!r}")
         assert dono in aba._faixa_do_pendente(ctx.state)[0]
-        assert aba.pacote(ctx)["pendente"] == f"● {aba.STEAM_INPUT_ESPERA}", (
-            "o «Steam Input» PENDENTE não disse, na faixa, a frase dela")
+        assert "pendente" not in aba.pacote(ctx), (
+            "a faixa da pendência saiu da Jogar; a frase mora no diário")
     else:
         assert falta == "", f"sobrou pendência do Steam Input depois de «{para}»: {falta!r}"
-        assert aba.pacote(ctx)["pendente"] == "", (
-            f"a faixa falou depois de «{para}» sem o Steam Input esperando")
+        assert "pendente" not in aba.pacote(ctx), (
+            f"a faixa voltou à Jogar depois de «{para}»")
 
 
 @pytest.mark.parametrize("para", CHIPS)
@@ -415,8 +415,8 @@ def test_sem_o_vigia_a_faixa_nao_promete(vdf, monkeypatch, como) -> None:
         "sem o vigia, o segundo clique é o único caminho — o chip tem de armar")
     assert _aceso(ctx) == aba.CHIP_DO_STEAM_INPUT
     assert aba._a_ponte_que_falta(ctx.state), "o diário perdeu a frase do dono"
-    assert aba.pacote(ctx)["pendente"] == "", (
-        f"a faixa prometeu o que o vigia não faz nesta máquina ({como})")
+    assert "pendente" not in aba.pacote(ctx), (
+        f"a tela voltou a prometer o que o vigia não faz nesta máquina ({como})")
 
 
 @pytest.mark.parametrize("jogo_aberto", [False, True], ids=["jogo-fechado", "jogo-aberto"])
