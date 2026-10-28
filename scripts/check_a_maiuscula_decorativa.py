@@ -76,6 +76,7 @@ PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  #
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
 
 sys.path.insert(0, str(RAIZ / "src"))
+sys.path.insert(0, str(RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 
 SOBE_A_CAIXA = frozenset({"uppercase", "capitalize"})
 
@@ -200,8 +201,11 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     so_lista = "--lista" in argv
 
-    paginas = sorted(p for p in PUBLICADO.glob("*.html") if E_ABA.match(p.name))
-    if len(paginas) != 10:
+    import monta
+
+    do_produto = set(monta.as_abas_do_produto())
+    paginas = sorted(p for p in PUBLICADO.glob("*.html") if E_ABA.match(p.name) and p.name in do_produto)
+    if len(paginas) != len(do_produto):
         print(f"achei {len(paginas)} abas em {PUBLICADO} — o caminho mudou?",
               file=sys.stderr)
         return 2
