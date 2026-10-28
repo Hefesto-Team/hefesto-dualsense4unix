@@ -1017,7 +1017,7 @@ def _fita(mesa: list[dict[str, Any]], pagina: str) -> str:
 
 
 SELETOR = ("(function(p){const t=window.__hefTocar;const el=t.achar(document,p);"
-           "if(el)t.tocar(el);})(%s)")
+           "if(el)t.tocar(el,p);})(%s)")
 
 CLIQUE_COM_ALVO = r"""
 (function(g, prefs){
@@ -1026,7 +1026,7 @@ CLIQUE_COM_ALVO = r"""
   for(const p of prefs){
     const bloco = document.querySelector('[data-controle="' + p + '"]');
     const dentro = bloco && t.achar(bloco, g);
-    if(dentro){ window.__hef.alvoPadrao = p; t.tocar(dentro); return 'no bloco de ' + p; }
+    if(dentro){ window.__hef.alvoPadrao = p; t.tocar(dentro, g); return 'no bloco de ' + p; }
   }
   const el = t.achar(document, g);
   if(!el) return 'NAO ACHEI NA PAGINA';
@@ -1035,11 +1035,11 @@ CLIQUE_COM_ALVO = r"""
   if(dono){
     const q = dono.dataset.controle || dono.dataset.uniq || '';
     window.__hef.alvoPadrao = q;
-    t.tocar(el);
+    t.tocar(el, g);
     return 'no bloco de ' + q;
   }
   window.__hef.alvoPadrao = prefs[0] || '';
-  t.tocar(el);
+  t.tocar(el, g);
   return 'ALVO FORCADO ' + (prefs[0] || '(mesa vazia)');
 })(%s, %s)
 """
@@ -3410,7 +3410,7 @@ def main() -> None:
                         "reiniciar, restaurar) — escolha de quem roda")
     p.add_argument("--prova-clique", default="",
                    help="gestos a tocar, por vírgula, até o daemon; `gesto@linha` escolhe o "
-                        "`data-linha`; a barra é arrastada e solta, e a lista passa à seguinte")
+                        "`data-linha` e `gesto@linha=valor` a opção da lista; a barra é arrastada e solta, e a lista passa à seguinte")
     p.add_argument("--sem-cor", action="store_true",
                    help="MORDIDA: sem o leitor de cor do plástico")
     p.add_argument("--sem-ondas", action="store_true",
@@ -3608,7 +3608,7 @@ window.__hefTocar = window.__hefTocar || {
          + '[data-papel="' + g + '"],.r-' + g;
   },
   achar: function(raiz, pedido){
-    const linha = String(pedido).split('@')[1] || '';
+    const linha = (String(pedido).split('@')[1] || '').split('=')[0];
     const todos = Array.from(raiz.querySelectorAll(this.seletor(pedido)));
     const casa = function(el){
       return linha ? el.dataset.linha === linha || el.dataset.campo === linha
@@ -3616,8 +3616,14 @@ window.__hefTocar = window.__hefTocar || {
     };
     return todos.find(casa) || (linha ? null : todos[0] || null);
   },
-  tocar: function(el){
+  tocar: function(el, pedido){
     const tag = (el.tagName || '').toLowerCase();
+    const valor = String(pedido || '').split('=')[1];
+    if(tag === 'select' && valor !== undefined){
+      el.value = valor;
+      el.dispatchEvent(new Event('change', {bubbles: true}));
+      return;
+    }
     if(tag === 'input' && String(el.type).toLowerCase() === 'range'){
       const antes = el.value;
       el.stepUp();
