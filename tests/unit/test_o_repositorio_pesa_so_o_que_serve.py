@@ -41,7 +41,10 @@ GRANDES: dict[str, str] = {
         "a captura do btmon em texto que o estudo PAREADO cita por «Handle» e por pacote",
 }
 
-ESPERAM_A_ESCOLHA: dict[str, str] = {}
+ESPERAM_A_ESCOLHA: dict[str, str] = {
+    "2810-01-jogar-abas-dos-controles.html":
+        "as abas dos controles na Jogar; espera o OK (AS-ABAS-DOS-CONTROLES-NA-ABA-JOGAR-01)",
+}
 
 
 def _versionados(raiz: Path = RAIZ) -> list[str]:
