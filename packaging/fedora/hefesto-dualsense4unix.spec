@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.9.5
+Version:        0.9.5.1
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -607,6 +607,12 @@ fi
 %{_datadir}/%{app_id}/docs/
 
 %changelog
+* Thu Oct 29 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5.1-1
+- Com a modificação do KytyPS5 ligada, ele aparece entre os lançadores, os jogos dele entram na escolha do perfil e cada jogo pode ter o seu perfil.
+- O prontuário mostra, para cada jogo, o que a Steam e os arquivos do jogo dizem sobre controle: se ele entende o DualSense, se conta com a tradução do Steam Input ou se só declara Xbox, e quais modelos de controle Sony o jogo conhece. Ele explica por que a capa da Steam pode dizer que o controle não é suportado.
+- Antes de trocar o Proton que o Hefesto fixa, a versão nova passa por uma prova automática da vibração, do gatilho e do microfone; se alguma falha, o Proton fixado continua o mesmo.
+- O Hefesto passa a servir o giroscópio, o acelerômetro e o touchpad de cada controle pelo protocolo DSU (cemuhook), e emuladores como Cemu, Dolphin e Azahar os recebem em qualquer máscara, inclusive a Xbox, pelo cabo e pelo rádio.
+- A lista de navegação interna na aba Navegação não fazia nada. Agora o interruptor liga o tipo escolhido, interno ou do computador. Na interna, R1 e L1 trocam de aba em círculo, cada controle tem a sua seleção com moldura na cor do plástico, o direcional move, o X aciona e o Start salva no perfil.
 * Tue Oct 06 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5-1
 - Uma janela nova, com dez abas: Jogar, Controles, Gatilhos, Iluminação, Vibração, Navegação, Lançadores, Conexões, Sistema e Perfis.
 - Cada controle é um jogador, com gatilhos, luz, vibração, microfone, alto-falante e máscara próprios no perfil.

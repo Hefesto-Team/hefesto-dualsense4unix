@@ -2,7 +2,7 @@
 
 set -e
 
-HEFESTO_VERSION_FALLBACK="0.9.5"
+HEFESTO_VERSION_FALLBACK="0.9.5.1"
 
 PYTHON=""
 for candidate in "$APPDIR"/opt/python*/bin/python3.*; do
