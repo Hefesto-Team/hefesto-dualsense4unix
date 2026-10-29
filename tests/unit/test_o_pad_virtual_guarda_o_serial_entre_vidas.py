@@ -109,3 +109,12 @@ def test_a_memoria_torta_vale_como_nenhuma(tmp_path: Path, lixo: str) -> None:
     arquivo.parent.mkdir(parents=True, exist_ok=True)
     arquivo.write_text(lixo, encoding="ascii")
     assert gp.o_dono_lembrado_do_p1() is None
+
+
+@pytest.mark.parametrize("numero", [2, 3, 4])
+def test_o_p2_ao_p4_nascem_do_proprio_controle_e_nao_precisam_da_memoria(numero: int) -> None:
+    """Só o P1 nasce antes de saber o dono; o coop cria o pad de cada jogador com a chave dele."""
+    dono = f"aa:bb:cc:00:00:0{numero}"
+    assert vpad_mac(dono, numero) == vpad_mac(dono, numero) != player_mac(numero)
+    fonte = (Path(gp.__file__).parent / "coop.py").read_text(encoding="utf-8")
+    assert "make_virtual_pad(flavor, identity=player.identity" in fonte
