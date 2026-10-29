@@ -1000,7 +1000,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
-        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:250` (`montaveis`) e "
+        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:257` (`montaveis`) e "
         "`src/hefesto_dualsense4unix/interface/aba01.py:26` (`mascaras_montaveis`) —, "
         "que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "

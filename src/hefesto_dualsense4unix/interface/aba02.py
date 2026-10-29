@@ -1227,14 +1227,15 @@ GESTO_DA_ABA = _monta_modulo.GESTO_DA_FITA
 
 
 def abas_dos_controles(mesa=None):
-    """A fileira das abas dos controles da Jogar: uma por lugar da mesa, o vazio nasce apagado."""
+    """A fileira das abas dos controles da Jogar: uma por lugar da mesa, e o vazio diz «Desconectado»."""
     linhas = []
     for c in (MESA if mesa is None else mesa):
         pref = c["pref"]
         cheio = c.get("conectado", True)
-        via = str(c.get("transporte") or "").lower()
-        nome = str(c.get("nome") or "")
-        dica = f'{nome} · {palavra_do_transporte(c.get("transporte"))}'
+        via = str(c.get("transporte") or "").lower() if cheio else ""
+        nome = str(c.get("nome") or "") if cheio else SEM_NINGUEM_AQUI
+        dica = (f'{nome} · {palavra_do_transporte(c.get("transporte"))}' if cheio
+                else SEM_NINGUEM_AQUI)
         linhas.append(
             f'          <label class="aba-ctl{"" if cheio else " off"}" for="c-{pref}" role="tab" '
             f'data-gesto="{GESTO_DA_ABA}" data-pref="{pref}" data-controle="{pref}">'
@@ -1250,14 +1251,19 @@ def abas_dos_controles(mesa=None):
             + "\n".join(linhas) + "\n        </div>")
 
 
-def _miolo(blocos, depois="", abas=None):
+CALIBRAR_NO_CANTO = (f'<a class="canto calibra nativo-nao" href="calibrar-sensores.html" '
+                     f'data-dica="{DICA_DO_CALIBRAR}">{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>')
+
+
+def _miolo(blocos, depois="", abas=None, calibrar=True):
+    botao = (f'<a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">'
+             f'{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>\n          ') if calibrar else ""
     return f'''
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
         <span class="sensores">
-          <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>
-          {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
+          {botao}{_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
         </span>
       </div>
       <div class="quadro-corpo">
@@ -1272,7 +1278,8 @@ MIOLO = _miolo(BLOCOS)
 VAGA_DOS_EXTERNOS = (
     f'\n    <div class="ext-vaga" data-campo="externos" data-hef-alvo="html">'
     f'{_monta_modulo.NADA_A_DIZER}</div>')
-MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA, VAGA_DOS_EXTERNOS, abas_dos_controles())
+MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA, VAGA_DOS_EXTERNOS, abas_dos_controles(),
+                             calibrar=False)
 
 
 LEGENDA = f'''<div class="nota">

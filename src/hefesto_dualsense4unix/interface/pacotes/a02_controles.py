@@ -127,6 +127,7 @@ from hefesto_dualsense4unix.interface.sensores import (
 from . import (
     LUGAR_VAZIO,
     NOME_SEM_LEITURA,
+    SEM_NINGUEM_AQUI,
     TRAVESSAO,
     Contexto,
     fios,
@@ -1273,6 +1274,9 @@ def _quem_joga(nomes: dict[str, str], uniq: str, jogador: Any) -> dict[str, Any]
 
 VIAS_DA_ABA = {"USB": "usb", "BT": "bt"}
 
+ABA_DO_LUGAR_VAZIO: dict[str, str] = {
+    "aba-nome": SEM_NINGUEM_AQUI, "aba-via": "", "aba-dica": SEM_NINGUEM_AQUI}
+
 
 def campos_da_aba(
     nomes: dict[str, str], uniq: str, casa: dict[str, Any], via_na_tela: str
@@ -1459,7 +1463,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             == MODO_AUTOMATICO else ""),
     })
     return {"cards": cards, "mesa": da_pagina, "sem_dono": {},
-            LUGAR_VAZIO: {"alto-canal": TRAVESSAO},
+            LUGAR_VAZIO: {"alto-canal": TRAVESSAO, **_so_se_a_pagina_tiver(ABA_DO_LUGAR_VAZIO)},
             "cobertura": {"pintados": sum(len(v) for v in cards.values()) + len(da_pagina),
                           "sem_dono": 0}}
 

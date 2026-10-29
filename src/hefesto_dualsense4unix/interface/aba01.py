@@ -131,6 +131,8 @@ CSS = """  .hef-rd{position:absolute;width:0;height:0;opacity:0;pointer-events:n
     font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;white-space:nowrap;cursor:pointer}
   .quadro-topo > .canto{margin-left:auto;border:1px solid var(--border-forte);background:transparent;
                         color:var(--texto-suave)}
+  .quadro-topo > .canto ~ .canto{margin-left:0}
+  .quadro-topo > .canto.calibra{width:auto;text-decoration:none}
   .quadro-topo > .canto:hover{border-color:var(--texto-suave);color:var(--fg)}
   .quadro-topo > .canto .gira{flex:0 0 auto}
   .cadeado{border:1px solid var(--border-forte);background:var(--app-bg);
@@ -150,7 +152,7 @@ _BLOCO_DAS_CORES = re.compile(r'<defs id="[^"]*cores-do-dualsense">.*?</defs>', 
 
 
 CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
-  .miolo > .quadro.estica > .quadro-corpo{gap:0;padding-top:6px;padding-bottom:10px}
+  .miolo > .quadro.estica > .quadro-corpo{gap:0;padding-top:10px;padding-bottom:6px}
   .abas-ctl{display:flex;align-items:flex-end;gap:4px;height:var(--alt-aba);padding:0 12px;
     position:relative;z-index:2;margin-bottom:-2px;flex:0 0 auto;min-width:0;max-width:56%}
   .aba-ctl{display:inline-flex;align-items:center;gap:8px;height:calc(var(--alt-aba) - 4px);min-width:0;
@@ -180,7 +182,12 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
   .ctl:not(.off):has(> input:checked) > .faixa .card-nome{display:none}
   .ctl:has(> input:checked) > .faixa .no-jogo[aria-label]{max-width:200px}
   body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
-  .aba-ctl.off{display:none}
+  .aba-ctl.off{border-style:dashed;border-color:var(--border-forte);background:transparent}
+  .aba-ctl .via-g:not([data-via="usb"],[data-via="bt"]){display:none}
+  .abas-ctl:has(.aba-ext[for="c-x1"]) .aba-ctl.off[data-controle="p1"],
+  .abas-ctl:has(.aba-ext[for="c-x2"]) .aba-ctl.off[data-controle="p2"],
+  .abas-ctl:has(.aba-ext[for="c-x3"]) .aba-ctl.off[data-controle="p3"],
+  .abas-ctl:has(.aba-ext[for="c-x4"]) .aba-ctl.off[data-controle="p4"]{display:none}
   .aba-ctl .aba-dentro{display:contents}
   .abas-ctl .abas-ext{display:contents}
   .abas-ctl .abas-ext > .nada{display:none}
@@ -515,6 +522,7 @@ MIOLO = f'''
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Como o controle chega ao jogo. PS + R3 pula">Status</span>
 {_INTERRUPTOR}
+        {aba02.CALIBRAR_NO_CANTO}
         <button class="canto" type="button" data-gesto="reconectar" data-dica="Desliga e liga de novo todos os controles">{_GIRA}Reconectar</button>
         <button class="cadeado" data-gesto="cadeado" data-campo="cadeado" data-hef-alvo="classe" data-hef-classe="ligada" data-hef-quando="LIGADO" data-dica="{CADEADO_DICA}"><span class="p"></span>{CADEADO_ROTULO}</button>
       </div>
@@ -992,11 +1000,13 @@ def _conferir(doc):
 
     topo = status.split('<div class="quadro-topo">', 1)[-1].split('<div class="quadro-corpo hef">', 1)[0]
     ordem = [topo.find(marca) for marca in ('>Status</span>', 'class="hef-pos ligado"',
-                                            'class="hef-pos desligado"', 'data-gesto="reconectar"',
-                                            'data-gesto="cadeado"')]
+                                            'class="hef-pos desligado"', 'href="calibrar-sensores.html"',
+                                            'data-gesto="reconectar"', 'data-gesto="cadeado"')]
     exigir(-1 not in ordem and ordem == sorted(ordem),
-           "a linha do Status não é Status · Ligado · Desligado · Reconectar · Modo Freestyle, "
-           "nesta ordem")
+           "a linha do Status não é Status · Ligado · Desligado · Calibrar giroscópio · Reconectar · "
+           "Modo Freestyle, nesta ordem")
+    exigir(corpo.count('href="calibrar-sensores.html"') == 1,
+           "o Calibrar giroscópio dobrou, ou voltou sozinho ao quadro dos controles")
     exigir(corpo.count('data-gesto="reconectar"') == 1, "o Reconectar sumiu ou dobrou")
     folha = "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, re.S))
     exigir(".hef-pos{\n    height:var(--h-acao)" in folha
@@ -1025,6 +1035,8 @@ def _conferir(doc):
            f"as abas dos controles não são uma por lugar da mesa: {[p for _, p in abas]}")
     exigir(sum(1 for off, _ in abas if off) == len(MESA) - len(monta.CONECTADOS),
            "um lugar vazio ganhou aba acesa, ou um conectado nasceu sem aba")
+    exigir(not re.search(r"\.aba-ctl\.off\{[^}]*display:\s*none", doc),
+           "a aba do lugar vazio voltou a sumir: a Jogar mostra P1 a P4, como as outras abas")
     corpo_do_quadro = corpo.split('<div class="quadro estica">', 1)[-1]
     exigir(0 <= corpo_do_quadro.find('class="abas-ctl"') < corpo_do_quadro.find('<div class="ctl card'),
            "a fileira das abas saiu do topo do quadro dos controles")

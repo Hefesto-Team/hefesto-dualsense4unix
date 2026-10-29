@@ -330,14 +330,15 @@ def test_no_nativo_a_aba_de_cada_controle_da_jogar_escolhe_o_cartao(
         medido: dict[str, Any]) -> None:
     """A Jogar não tem fita, e escolher o cartão é da janela.
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR: as
+    quatro abas recebem clique, a dos dois conectados e a dos dois lugares vazios.
     """
     n = medido["01-jogar.html"]["nativo"]
     assert n["camadaDaFita"] == 0 and not n["chipsDaFita"]
     abas = [g for g in n["gestos"] if g["nome"] == "escolher-na-fita"]
     oferecidas = [g["texto"][:1] for g in abas if g["oferecido"]]
-    assert oferecidas == ["1", "2"], (
-        f"no Nativo as abas dos dois conectados não recebem clique: {abas}")
+    assert oferecidas == ["1", "2", "3", "4"], (
+        f"no Nativo as quatro abas da Jogar não recebem clique: {abas}")
 
 
 def test_nenhuma_das_quatro_abas_diz_que_o_jogo_manda(medido: dict[str, Any]) -> None:

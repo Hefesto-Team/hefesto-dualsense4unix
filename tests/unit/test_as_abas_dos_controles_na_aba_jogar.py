@@ -3,7 +3,9 @@
 O desenho aprovado em 28/10/2026 (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR): na Jogar, o
 «Selecionar:», a fita e o «Todos» saem, e cada controle conectado ganha uma aba no topo do
 cartão. A aba e o cartão se pintam pela mesma regra do plástico, o clique troca o cartão pelo
-mesmo gesto da fita, e o lugar vazio não vira aba.
+mesmo gesto da fita. Desde 29/10/2026 (D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR), o lugar vazio
+também tem aba, tracejada e «Desconectado», como nas outras abas; só some quando um externo
+ocupa o número dele.
 
 AS RÉGUAS:
 
@@ -12,9 +14,9 @@ AS RÉGUAS:
 2. a folha do plástico é uma só e pinta a aba com o tom do plástico dela;
 3. o pacote diz o nome, a via e a dica de cada aba;
 4. o gesto da aba escolhe o controle do cartão;
-5. na tela (WebKit, com o BOOTSTRAP do piloto): N controles, N abas, cada uma da cor do
-   plástico; o clique troca o cartão; o que chega ganha aba, o que sai a perde, e o cartão
-   escolhido que sai passa ao seguinte.
+5. na tela (WebKit, com o BOOTSTRAP do piloto): as quatro abas sempre, N delas da cor do
+   plástico e as outras tracejadas e «Desconectado»; o clique troca o cartão; a aba de quem
+   sai fica vazia, e o cartão escolhido que sai passa ao seguinte.
 """
 from __future__ import annotations
 
@@ -114,6 +116,28 @@ def test_o_pacote_diz_o_nome_a_via_e_a_dica_da_aba() -> None:
     assert com_nome == {"aba-nome": "Ana &amp; Bia", "aba-via": "bt", "aba-dica": "Ana & Bia · BT"}
 
 
+def test_o_lugar_vazio_ganha_a_aba_desconectado_no_tique() -> None:
+    """Com um controle na mesa, o tique escreve «Desconectado» e a via vazia na aba dos outros.
+
+    D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR.
+    """
+    from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
+
+    conectados = [{"uniq": "aa:bb:cc:00:00:01", "connected": True, "player_slot": 1,
+                   "transport": "usb"}]
+    estado = {"connected": True, "controllers": conectados}
+    mesa = mesa_viva.mesa_do_estado(estado, {})
+    ctx = pacotes.Contexto(state=estado, mesa=mesa, conectados=conectados, estados={})
+    carga = pacotes.normalizar(pacotes.pacote_da_pagina(JOGAR.name, ctx) or {},
+                               {str(m.get("uniq") or ""): m["pref"] for m in mesa})
+    pacotes.apagar_os_lugares_sem_dono(carga, hefesto_vivo._com_dono(ctx), pagina=JOGAR.name)
+    assert carga["vazios"] == ["p2", "p3", "p4"]
+    for pref in carga["vazios"]:
+        coluna = carga["colunas"][pref]
+        assert (coluna["aba-nome"], coluna["aba-via"]) == ("Desconectado", ""), (pref, coluna)
+    assert carga["colunas"]["p1"]["aba-nome"] != "Desconectado"
+
+
 def test_o_gesto_da_aba_escolhe_o_controle_do_cartao(monkeypatch: pytest.MonkeyPatch) -> None:
     """O clique na aba chega ao `_escolher_na_fita`, e o tique seguinte mira aquele controle.
 
@@ -155,10 +179,13 @@ def tela() -> Any:
 
 LER = r"""
 (function(){
-  var abas = [];
+  var abas = [], vazias = [];
   document.querySelectorAll('.aba-ctl').forEach(function(a){
     if(!a.getClientRects().length) return;
     abas.push([a.dataset.controle, getComputedStyle(a).borderTopColor]);
+    if(a.classList.contains('off'))
+      vazias.push([a.dataset.controle, getComputedStyle(a).borderTopStyle,
+                   a.innerText.replace(/\s+/g,' ').trim()]);
   });
   var cartoes = [];
   document.querySelectorAll('.ctl.card').forEach(function(c){
@@ -166,7 +193,7 @@ LER = r"""
       cartoes.push(c.dataset.controle);
   });
   var m = document.querySelector('.radio-mesa:checked');
-  return JSON.stringify({abas: abas, cartoes: cartoes, marcado: m ? m.id : ''});
+  return JSON.stringify({abas: abas, vazias: vazias, cartoes: cartoes, marcado: m ? m.id : ''});
 })()
 """
 
@@ -176,10 +203,16 @@ def _rgb(hexa: str) -> str:
     return f"rgb({r}, {g}, {b})"
 
 
+def _com_os_vazios(carga: dict[str, Any], prefs: list[str]) -> dict[str, Any]:
+    carga["colunas"] = {p: {} for p in prefs}
+    carga[pacotes.LUGAR_VAZIO] = dict(a02.ABA_DO_LUGAR_VAZIO)
+    return pacotes.apagar_os_lugares_sem_dono(carga, prefs, pagina=JOGAR.name)
+
+
 def _pintar(tela: Any, prefs: list[str], alvo: str = "") -> dict[str, Any]:
     mesa = [{"pref": p, "cor": PLASTICOS[p]} for p in prefs]
-    carga = {"mesa": {"plastico-css": a02.folha_do_plastico(mesa)}, "alvo": alvo,
-             "ocupados": prefs, "vazios": [p for p in PLASTICOS if p not in prefs]}
+    carga = _com_os_vazios({"mesa": {"plastico-css": a02.folha_do_plastico(mesa)},
+                            "alvo": alvo}, prefs)
     tela.executar(f"(function(){{window.__hef.pintar({json.dumps(carga)});return 'ok';}})()")
     tela.avancar(0.15)
     return dict(json.loads(tela.executar(LER)))
@@ -188,13 +221,18 @@ def _pintar(tela: Any, prefs: list[str], alvo: str = "") -> dict[str, Any]:
 @skip_sem_gi_real
 @pytest.mark.parametrize("prefs", [["p1"], ["p1", "p2"], ["p1", "p2", "p3", "p4"]])
 def test_n_controles_n_abas_cada_uma_da_cor_dela(tela: Any, prefs: list[str]) -> None:
-    """Com 1, 2 e 4 na mesa: uma aba visível por controle, com a borda do plástico dele.
+    """Com 1, 2 e 4 na mesa: as quatro abas à vista; a de cada controle com a borda do
+    plástico dele, e a do lugar vazio tracejada, com o nome «Desconectado».
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR.
     """
     lido = _pintar(tela, prefs, prefs[0])
-    assert [p for p, _cor in lido["abas"]] == prefs
+    assert [p for p, _cor in lido["abas"]] == list(PLASTICOS)
+    vazios = [p for p in PLASTICOS if p not in prefs]
+    assert lido["vazias"] == [[p, "dashed", f"{p[1:]} Desconectado"] for p in vazios], lido
     for pref, cor in lido["abas"]:
+        if pref in vazios:
+            continue
         assert cor == _rgb(a02.cor_da_borda(PLASTICOS[pref])), (
             f"a aba {pref} está {cor}, e o plástico {PLASTICOS[pref]} pede "
             f"{a02.cor_da_borda(PLASTICOS[pref])}")
@@ -219,17 +257,19 @@ def test_o_clique_na_aba_troca_o_cartao_e_manda_o_gesto(tela: Any) -> None:
 
 @skip_sem_gi_real
 def test_quem_chega_ganha_aba_e_o_escolhido_que_sai_passa_ao_seguinte(tela: Any) -> None:
-    """No tempo: o P4 chega e ganha aba; o P2 escolhido sai, perde a aba, e o cartão passa.
+    """No tempo: o P4 chega e a aba dele se acende; o P2 escolhido sai, a aba dele fica vazia,
+    e o cartão passa.
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR.
     """
     _pintar(tela, ["p1", "p2"], "p2")
     tela.clicar('.aba-ctl[data-controle="p2"]')
     lido = _pintar(tela, ["p1", "p2", "p4"], "p2")
-    assert [p for p, _c in lido["abas"]] == ["p1", "p2", "p4"]
+    assert [p for p, _c in lido["abas"]] == list(PLASTICOS)
+    assert [p for p, *_ in lido["vazias"]] == ["p3"]
     assert lido["cartoes"] == ["p2"]
     lido = _pintar(tela, ["p1", "p4"], "p1")
-    assert [p for p, _c in lido["abas"]] == ["p1", "p4"]
+    assert [p for p, *_ in lido["vazias"]] == ["p2", "p3"]
     assert lido["cartoes"] == ["p1"] and lido["marcado"] == "c-p1", lido
     lido = _pintar(tela, ["p4"], "")
     assert lido["cartoes"] == ["p4"], "o escolhido saiu e nenhum cartão ficou à vista"
@@ -237,12 +277,13 @@ def test_quem_chega_ganha_aba_e_o_escolhido_que_sai_passa_ao_seguinte(tela: Any)
 
 @skip_sem_gi_real
 def test_sem_controle_nenhum_a_secao_diz_player_1_desconectado(tela: Any) -> None:
-    """Sem aba nenhuma, o lugar aberto é a linha fechada do vazio, com o texto dela.
+    """Sem controle nenhum, as quatro abas ficam vazias, e o lugar aberto é a linha fechada
+    do vazio, com o texto dela.
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR.
     """
     lido = _pintar(tela, [], "")
-    assert lido["abas"] == []
+    assert [p for p, *_ in lido["vazias"]] == list(PLASTICOS), lido
     texto = tela.executar(
         "(function(){var c=document.querySelector('.quadro-corpo > .ctl:has(> input:checked)');"
         "return c ? c.innerText.replace(/\\s+/g,' ').trim() : '';})()")
@@ -387,8 +428,8 @@ LER_COM_EXTERNOS = r"""
 def _pintar_com_externos(tela: Any, prefs: list[str], externos: list[dict[str, Any]],
                          alvo: str = "") -> dict[str, Any]:
     mesa_ds = [{"pref": p, "cor": PLASTICOS[p]} for p in prefs]
-    carga = {"mesa": {"plastico-css": a02.folha_do_plastico(mesa_ds), **_os_externos(externos)},
-             "alvo": alvo, "ocupados": prefs, "vazios": [p for p in PLASTICOS if p not in prefs]}
+    carga = _com_os_vazios({"mesa": {"plastico-css": a02.folha_do_plastico(mesa_ds),
+                                     **_os_externos(externos)}, "alvo": alvo}, prefs)
     tela.executar(f"(function(){{window.__hef.pintar({json.dumps(carga)});return 'ok';}})()")
     tela.avancar(0.15)
     return dict(json.loads(tela.executar(LER_COM_EXTERNOS)))
@@ -434,7 +475,7 @@ def test_a_escolha_do_externo_sobrevive_a_lista_que_muda(tela_com_externos: Any)
     tela.clicar('.aba-ctl[for="c-x4"]')
     tela.avancar(0.15)
     lido = _pintar_com_externos(tela, ["p1", "p2"], EXTERNOS[1:], "p1")
-    assert [a for a, _c in lido["abas"]] == ["p1", "p2", "x4"]
+    assert [a for a, _c in lido["abas"]] == ["p1", "p2", "p3", "x4"]
     assert lido["abertos"] == ["x4"] and lido["marcado"] == "c-x4", lido
     lido = _pintar_com_externos(tela, ["p1", "p2"], EXTERNOS, "p1")
     assert lido["abertos"] == ["x4"], lido
@@ -454,7 +495,7 @@ def test_so_com_externos_o_primeiro_abre_e_o_dualsense_que_chega_toma_o_lugar(
     tela.executar("(function(){window.__hef.abaSincronizada=false;"
                   "window.__hef.abaEscolhida='';return 'ok';})()")
     lido = _pintar_com_externos(tela, [], EXTERNOS, "")
-    assert [a for a, _c in lido["abas"]] == ["x3", "x4"]
+    assert [a for a, _c in lido["abas"]] == ["p1", "p2", "x3", "x4"]
     assert lido["abertos"] == ["x3"], lido
     lido = _pintar_com_externos(tela, ["p1"], EXTERNOS, "p1")
     assert lido["abertos"] == ["p1"], lido
