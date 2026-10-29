@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import pathlib
+import sys
 
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+sys.path.insert(0, str(INTERFACE))
+
+import monta
 DESENHO = RAIZ / "mockup"
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
@@ -29,8 +33,8 @@ O_QUE_O_MOTOR_DESENHA = """() => {
   const linha = document.querySelector('.fita-linha');
   const miolo = document.querySelector('.miolo');
   const fita = document.querySelector('.fita');
-  if (!linha || !miolo || !fita) return {erro: 'a página não tem linha do alvo, fita ou miolo'};
-  const chips = [...fita.querySelectorAll('.chip')].map(c => ({
+  if (!linha || !miolo) return {erro: 'a página não tem linha do alvo ou miolo'};
+  const chips = [...(fita ? fita.querySelectorAll('.chip') : [])].map(c => ({
     texto: (c.textContent || '').trim(),
     altura: c.getBoundingClientRect().height,
     borda: getComputedStyle(c).borderTopWidth,
@@ -38,7 +42,8 @@ O_QUE_O_MOTOR_DESENHA = """() => {
   return {
     linha: linha.getBoundingClientRect().height,
     miolo: miolo.getBoundingClientRect().y,
-    inerte: fita.classList.contains('inerte'),
+    fita: !!fita,
+    inerte: !!fita && fita.classList.contains('inerte'),
     chips,
   };
 }"""
@@ -73,7 +78,10 @@ def medido() -> dict[str, dict[str, dict]]:
                         pg.evaluate("() => {" + js + "}")
                     r = pg.evaluate(O_QUE_O_MOTOR_DESENHA)
                     assert "erro" not in r, f"{p.name}: {r['erro']}"
-                    assert r["chips"], f"{p.name} ({estado}): a fita saiu sem chip nenhum"
+                    if p.stem in monta.ABAS_SEM_A_FITA:
+                        assert not r["fita"], f"{p.name}: a fita voltou à aba que não a tem"
+                    else:
+                        assert r["chips"], f"{p.name} ({estado}): a fita saiu sem chip nenhum"
                     fora[estado][p.name] = r
         finally:
             nav.close()
