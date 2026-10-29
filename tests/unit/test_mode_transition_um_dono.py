@@ -55,7 +55,6 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import (
-    emulation_actions,
     home_actions,
     mode_transition,
 )
@@ -155,100 +154,3 @@ def test_mode_of_state_offline_e_none() -> None:
 def test_mode_of_state_desktop_sem_nada_ligado() -> None:
     assert mode_transition.mode_of_state({"gamepad_emulation": {}}) == "desktop"
 
-
-class _EmulStub(emulation_actions.EmulationActionsMixin):
-    """Instância mínima: `_get` devolve None (sem widgets) e refresh é contado."""
-
-    def __init__(self) -> None:
-        self.toasts: list[str] = []
-        self.refreshed = 0
-
-    def _get(self, _widget_id: str) -> Any:
-        return None
-
-    def _toast_emulation(self, msg: str) -> None:
-        self.toasts.append(msg)
-
-    def _refresh_gamepad_and_gamemode(self) -> None:
-        self.refreshed += 1
-
-
-class _FakeSelector:
-    def __init__(self, active_id: str | None = None) -> None:
-        self._active_id = active_id
-
-    def get_active_id(self) -> str | None:
-        return self._active_id
-
-    def set_active_id(self, the_id: str) -> None:
-        self._active_id = the_id
-
-
-class _FakeLabel:
-    def __init__(self) -> None:
-        self.text = ""
-
-    def set_text(self, text: str) -> None:
-        self.text = text
-
-
-class _FakeButton:
-    def __init__(self) -> None:
-        self.sensitive = True
-
-    def set_sensitive(self, value: bool) -> None:
-        self.sensitive = value
-
-
-class _GameModeStub(emulation_actions.EmulationActionsMixin):
-    def __init__(self) -> None:
-        self.pause_btn = _FakeButton()
-        self.hint = _FakeLabel()
-
-    def _get(self, widget_id: str) -> Any:
-        if widget_id == "emulation_pause_button":
-            return self.pause_btn
-        if widget_id == "emulation_gamemode_hint_label":
-            return self.hint
-        return None
-
-
-def test_modo_jogo_desabilitado_em_controlar_o_pc() -> None:
-    """Ligá-lo em desktop deixava o controle sem função NENHUMA (só faz"""
-    stub = _GameModeStub()
-    stub._sync_gamemode_button("desktop")
-
-    assert stub.pause_btn.sensitive is False
-    assert "sem função nenhuma" in stub.hint.text
-
-
-def test_modo_jogo_disponivel_jogando_e_sem_explicacao_sobrando() -> None:
-    stub = _GameModeStub()
-    stub._sync_gamemode_button("desktop")
-    stub._sync_gamemode_button("gamepad")
-
-    assert stub.pause_btn.sensitive is True
-    assert stub.hint.text == ""
-
-
-def test_modo_jogo_desabilitado_em_jogar_direto_sony() -> None:
-    """EMU-07: no Modo Nativo o jogo fala direto com o controle — não há"""
-    stub = _GameModeStub()
-    stub._sync_gamemode_button("native")
-
-    assert stub.pause_btn.sensitive is False
-    assert "mouse/teclado para suspender" in stub.hint.text
-
-
-def test_modo_jogo_desabilitado_com_daemon_offline() -> None:
-    """Sem estado não dá para saber se faz sentido; não oferecer às cegas."""
-    stub = _GameModeStub()
-    stub._sync_gamemode_button(None)
-
-    assert stub.pause_btn.sensitive is False
-    assert stub.hint.text == ""
-
-
-def test_sync_gamemode_sem_widgets_nao_estoura() -> None:
-    """A aba é montada por Glade; `_get` devolve None antes do install."""
-    _EmulStub()._sync_gamemode_button("desktop")

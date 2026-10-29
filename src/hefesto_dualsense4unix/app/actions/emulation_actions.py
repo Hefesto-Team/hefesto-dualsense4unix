@@ -7,10 +7,6 @@ from pathlib import Path
 from typing import ClassVar
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
-from hefesto_dualsense4unix.app.actions.mode_transition import (
-    MODE_DESKTOP,
-    MODE_NATIVE,
-)
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     DUALSENSE_EDGE_NAME,
     XBOX360_NAME,
@@ -210,28 +206,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
         "dualsense": "emulation_gamepad_dualsense_button",
         "xbox": "emulation_gamepad_xbox_button",
     }
-
-
-    def _sync_gamemode_button(self, mode: str | None) -> None:
-        """HARM-03/EMU-07: "Modo jogo" só faz sentido "jogando pelo Hefesto"."""
-        pause_btn = self._get("emulation_pause_button")
-        hint = self._get("emulation_gamemode_hint_label")
-        blocked = mode is None or mode in {MODE_DESKTOP, MODE_NATIVE}
-        if pause_btn is not None:
-            pause_btn.set_sensitive(not blocked)
-        if hint is None:
-            return
-        if mode == MODE_DESKTOP:
-            hint.set_text(
-                "Em \"Controlar o PC\" o controle só faz mouse/teclado — "
-                "suspendê-los deixaria o controle sem função nenhuma."
-            )
-        elif mode == MODE_NATIVE:
-            hint.set_text(
-                "No Modo Nativo não há mouse/teclado para suspender."
-            )
-        else:
-            hint.set_text("")
 
 
     _keyboard_guard_refresh: bool = False

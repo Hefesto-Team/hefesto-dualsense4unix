@@ -652,7 +652,7 @@ LEGENDA = f'''<div class="nota">
       passa a ser o terceiro chip do Desligado. A ordem de 17/09 segue: <i>"o modo point and click é o modo navegação e o modo que nós mesmos
       podemos usar e configurar na aba navegação. Ele ativa o modo configurado lá."</i>
       <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
-      (<code>apply_mode('desktop')</code>, o antigo "Controlar o PC"), e desde 17/09 ele
+      (<code>apply_mode('desktop')</code>), e desde 17/09 ele
       <b>carrega o seu perfil</b> ao entrar — o mouse, as teclas, os botões e a função do
       teclado que você gravou na aba Navegação. O <b>PS + R3</b> para nela e entra pela mesma
       porta. O que ela não é, e por isso leva traço no lugar do algarismo, é degrau da escada

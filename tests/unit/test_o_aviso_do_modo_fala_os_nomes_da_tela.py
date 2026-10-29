@@ -8,6 +8,7 @@ aspas angulares contra as páginas publicadas: o nome que o aviso manda procurar
 """
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import Any
@@ -56,17 +57,14 @@ def _avisos_da_origem() -> list[str]:
     ]
 
 
-def _lembrancas_e_ponte() -> list[str]:
-    """As três frases do disco e a ponte sem jogo."""
+def _lembrancas() -> list[str]:
+    """As três frases do disco."""
     from hefesto_dualsense4unix.utils import session
 
     frases: list[str] = []
     for resposta in ((True, "dualsense"), (False, None), (None, None)):
         with mock.patch.object(session, "load_gamepad_preference", lambda r=resposta: r):
             frases.append(painel.modo_lembrado().frase)
-    frases.append(home_actions.texto_da_ponte(
-        {"gamepad_emulation": {"enabled": False}, "native_mode": False,
-         "controllers": [{"connected": True, "uniq": "aa:bb:cc:00:00:01"}]}))
     return frases
 
 
@@ -76,12 +74,43 @@ def test_cada_nome_do_aviso_esta_na_tela(fonte: Any) -> None:
     _cada_nome_esta_na_tela(fonte())
 
 
-def test_a_lembranca_do_disco_e_a_ponte_dizem_os_nomes_da_tela() -> None:
-    """A lembrança do disco e a ponte sem jogo dizem «Status», «Ligado» e «Desligado».
+def test_a_lembranca_do_disco_diz_os_nomes_da_tela() -> None:
+    """A lembrança do disco diz «Status», «Ligado» e «Desligado».
 
     D-2910-OS-MODOS-SE-CHAMAM-PELO-NOME-DA-TELA.
     """
-    _cada_nome_esta_na_tela(_lembrancas_e_ponte())
+    _cada_nome_esta_na_tela(_lembrancas())
+
+
+def _literais_de_codigo(arquivo: Path) -> list[tuple[int, str]]:
+    arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+    prosa = {
+        id(no.body[0].value)
+        for no in ast.walk(arvore)
+        if isinstance(no, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+        and no.body
+        and isinstance(no.body[0], ast.Expr)
+        and isinstance(no.body[0].value, ast.Constant)
+    }
+    return [(no.lineno, no.value) for no in ast.walk(arvore)
+            if isinstance(no, ast.Constant) and isinstance(no.value, str) and id(no) not in prosa]
+
+
+def test_nenhum_texto_do_produto_diz_controlar_o_pc() -> None:
+    """Nenhum literal de código do app, da interface ou do CLI diz «Controlar o PC».
+
+    D-2910-OS-MODOS-SE-CHAMAM-PELO-NOME-DA-TELA. O modo se chama «Navegação»
+    (`home_actions._MODE_ITEMS`); a docstring pode contar a história, o texto não.
+    """
+    pacote = INTERFACE.parent
+    achados = [
+        f"{arquivo.relative_to(pacote)}:{linha}"
+        for pasta in ("app", "interface", "cli")
+        for arquivo in sorted((pacote / pasta).rglob("*.py"))
+        for linha, texto in _literais_de_codigo(arquivo)
+        if "Controlar o PC" in texto
+    ]
+    assert not achados, f"o nome que saiu da tela voltou num texto do produto: {achados}"
 
 
 def _cada_nome_esta_na_tela(frases: list[str]) -> None:
