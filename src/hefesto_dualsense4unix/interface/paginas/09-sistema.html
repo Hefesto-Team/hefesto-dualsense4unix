@@ -89,7 +89,7 @@
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
     border-color:var(--border-sutil);background:transparent;color:var(--fg);
     font-weight:400;--borda-do-chip:1px}
-  .visto-fixo,.visto-legenda,.trava-nativo{display:none}
+  .visto-fixo,.visto-legenda{display:none}
   body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
     gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
     background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
@@ -99,9 +99,6 @@
   body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
-  body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
-    margin-right:10px;color:var(--fg);font-size:12px;cursor:default}
-  body.nativo .trava-nativo .cad{color:var(--fg)}
   .chip{
     --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
@@ -589,7 +586,7 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
       <label class="chip on">Todos</label>
       <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" title="Cosmic Red — a borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></label>
       <label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" title="Starlight Blue — a borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></label>
-      <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
+      <span class="so-no-nativo"></span>
     </div>
     <div class="perfil-ativo" data-dica="Perfil ativo: o que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
       <span class="pa-rot">Perfil ativo</span>
