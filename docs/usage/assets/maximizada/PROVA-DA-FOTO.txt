@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-10-28 11:52
+ensaio:  2026-10-29 01:51
 abas:    9
 modo:    --todas --publicado --doc --vista 1918x840
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -17,7 +17,7 @@ vista:   1918x840
 # tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 
 # soma sha256 de cada foto, em ordem alfabética
-d5af3ef057716571fa7cf099a5e561cbfbc60d7f6317a14f712f1fed3659d421  aba-01-jogar.png
+4ac0bc9d38f70c5bfcff335592f6e384cf4bf8a9535b12e4757d7df91702ad7e  aba-01-jogar.png
 f319b35dea68202549d54097b00b8a75de5b16aa1d94b5a5100fae1af0797e7f  aba-03-gatilhos.png
 d7968ad058f530f40a652a9bedc38c6a0a8e3eb13f7686c2339029d5bd7353fd  aba-04-iluminacao.png
 b15d05db0533b3feacaa7948ac02591183da3015cc990f0a5e0d997852c00aa3  aba-05-vibracao.png
