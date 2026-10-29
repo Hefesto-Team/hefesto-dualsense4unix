@@ -295,28 +295,48 @@ BOOTSTRAP = r"""
     }
     return k;
   };
+  document.addEventListener('change', function(e){
+    const r = e.target;
+    if(r && r.classList && r.classList.contains('radio-mesa') && r.checked){
+      window.__hef.abaEscolhida = r.id.replace(/^c-/, '');
+      window.__hef.abaSincronizada = true;
+    }
+  }, true);
   window.__hef.abaQueVale = function(){
     if(!document.querySelector('.abas-ctl')) return 0;
     const aceso = function(pref){
-      const card = pref && document.querySelector('.ctl[data-controle="' + pref + '"]');
-      return !!(card && !card.classList.contains('off'));
+      if(!pref) return false;
+      const card = document.querySelector('.ctl[data-controle="' + pref + '"]');
+      if(card) return !card.classList.contains('off');
+      const radio = document.getElementById('c-' + pref);
+      return !!(radio && radio.closest('.ext-cartao'));
     };
     const marcado = document.querySelector('.radio-mesa:checked');
     const agora = marcado ? marcado.id.replace(/^c-/, '') : '';
     const querido = window.__hef.alvoPadrao || '';
+    const lembrada = window.__hef.abaEscolhida || '';
+    const doAssento = function(id){
+      const r = document.getElementById('c-' + id);
+      return !(r && r.closest('.ext-cartao'));
+    };
     if(aceso(agora) && (window.__hef.abaSincronizada || !aceso(querido) || agora === querido)){
-      window.__hef.abaSincronizada = true;
+      if(doAssento(agora)) window.__hef.abaSincronizada = true;
+      window.__hef.abaEscolhida = agora;
       return 0;
     }
-    let vez = aceso(querido) ? querido : '';
+    let vez = '';
+    if(!agora && window.__hef.abaSincronizada && aceso(lembrada)) vez = lembrada;
+    if(!vez && aceso(querido)) vez = querido;
     if(!vez){
-      const primeiro = document.querySelector('.ctl[data-controle]:not(.off)');
-      vez = primeiro ? primeiro.dataset.controle : 'p1';
+      const primeiro = document.querySelector('.ctl[data-controle]:not(.off)')
+        || document.querySelector('.ext-cartao > .radio-mesa');
+      vez = !primeiro ? 'p1' : (primeiro.dataset.controle || primeiro.id.replace(/^c-/, ''));
     }
     const radio = document.getElementById('c-' + vez);
     if(!radio || radio.checked) return 0;
     radio.checked = true;
-    window.__hef.abaSincronizada = true;
+    if(doAssento(vez)) window.__hef.abaSincronizada = true;
+    window.__hef.abaEscolhida = vez;
     return 1;
   };
   window.__hef.pintar = function(p){

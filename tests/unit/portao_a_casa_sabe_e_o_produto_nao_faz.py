@@ -1000,7 +1000,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
-        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:231` (`montaveis`) e "
+        "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:250` (`montaveis`) e "
         "`src/hefesto_dualsense4unix/interface/aba01.py:26` (`mascaras_montaveis`) —, "
         "que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "
@@ -1362,7 +1362,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "(bancada). A "
         "janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "
-        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3497`) e o daemon "
+        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3517`) e o daemon "
         "publica o estado "
         "do "
         "mudo; as funções soltas do módulo (`sinks_dualsense`, `muted_de_saida`) "

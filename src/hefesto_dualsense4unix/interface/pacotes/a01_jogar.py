@@ -21,6 +21,7 @@ from . import TRAVESSAO, Contexto, confirmacao, fios, jogador_de, registrar
 CADEADO_CEGO = "cadeado-cego"
 
 DA_PAGINA: tuple[str, ...] = (
+    "abas-externos",
     "cadeado",
     "externos",
     CADEADO_CEGO,
@@ -138,6 +139,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         CADEADO_CEGO: _cadeado_cego(ctx.state),
         "cartoes": {},
         "externos": _html_dos_externos(ctx),
+        "abas-externos": _abas_dos_externos(ctx),
         **tela,
         "blocos": _o_rotulo_do_chip(ctx.state),
     }
@@ -511,9 +513,62 @@ def _html_dos_externos(ctx: Contexto) -> str:
         da_borda, botoes = a08_conexoes.marcas_do_externo(entrada, "div")
         fora.append(
             f'<div class="ext-cartao"{da_borda}>'
+            f'<input class="radio-mesa" type="radio" name="mesa" id="c-{_id_do_externo(entrada)}">'
             f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
             f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
             f'{botoes}{linha_do_aviso}</div>')
+    return "".join(fora) or str(_monta().NADA_A_DIZER)
+
+
+def _id_do_externo(entrada: dict[str, Any]) -> str:
+    """O endereço da aba e do cartão do externo: `x` e o número do jogador, como o `pN`."""
+    from hefesto_dualsense4unix.app.actions.external_controllers import slot_label, slot_of
+
+    return f"x{slot_label(slot_of(entrada, 0, 0))}"
+
+
+def _abas_dos_externos(ctx: Contexto) -> str:
+    """Uma aba por externo na fileira das abas da Jogar, com o número, a marca e o glifo da via.
+
+    O externo é um controle conectado como o DualSense, e ganha a aba dele ao lado das dos
+    assentos (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR). A borda é a cor que o usuário declarou,
+    pelo mesmo `tom_para_a_borda` do assento, e o neutro sem declaração. O clique só abre o
+    cartão: o Hefesto não escreve no externo, e por isso a aba não leva gesto nem `data-controle`.
+    """
+    if not ctx.externos:
+        return str(_monta().NADA_A_DIZER)
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        brand_of,
+        slot_label,
+        slot_of,
+    )
+    from hefesto_dualsense4unix.app.actions.home_actions import (
+        externos_na_mesa,
+        palavra_do_transporte,
+    )
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
+
+    from . import a02_controles, a08_conexoes
+
+    def _e(x: object) -> str:
+        return html.escape(str(x), quote=True)
+
+    fora = []
+    for entrada in externos_na_mesa(None, ctx.externos):
+        numero = slot_label(slot_of(entrada, 0, 0))
+        marca = brand_of(entrada)
+        via = palavra_do_transporte(entrada.get("bus"))
+        tom = tom_para_a_borda(a08_conexoes.a_declaracao_do_externo(entrada)["cor"])
+        borda = tom or a02_controles.BORDA_SEM_COR
+        tinta = a02_controles.tinta_sobre(tom) if tom else "var(--fg)"
+        fora.append(
+            f'<label class="aba-ctl aba-ext" for="c-{_id_do_externo(entrada)}" role="tab" '
+            f'data-dica="{_e(f"{marca} · {via}")}" '
+            f'style="order:{_e(numero)};--plastico:{borda};--tinta:{tinta}">'
+            f'<span class="n-jog">{_e(numero)}</span>'
+            f'<span class="aba-nome">{_e(marca)}</span>'
+            f'<span class="via-g" data-via="{a02_controles.VIAS_DA_ABA.get(via, "")}"></span>'
+            f'</label>')
     return "".join(fora) or str(_monta().NADA_A_DIZER)
 
 

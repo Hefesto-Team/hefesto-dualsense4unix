@@ -255,7 +255,8 @@ def test_a_palavra_mesa_nao_entra_no_cartao_do_externo() -> None:
     )
 
     for aba, html in _html_das_duas([UM_8BITDO, UM_PRO_NO_CABO]):
-        assert primeiro_trecho_banido(html) is None, aba
+        sem_o_radio = re.sub(r'<input class="radio-mesa"[^>]*>', "", html)
+        assert primeiro_trecho_banido(sem_o_radio) is None, aba
 
 
 def test_sem_externo_nenhum_as_duas_abas_devolvem_vazio() -> None:

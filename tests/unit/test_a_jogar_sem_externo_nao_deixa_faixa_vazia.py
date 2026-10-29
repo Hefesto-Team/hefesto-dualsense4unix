@@ -1,8 +1,8 @@
 """A-JOGAR-SEM-EXTERNO-NAO-DEIXA-FAIXA-VAZIA-01 (21/10/2026), medida no WebKit (`WebKit2`).
 
 Sob os cartões da Jogar sobrava uma faixa vazia com uma linha: era a `.faixa-final` da pendência,
-que saiu da Jogar com o cartão velho em 28/10. O externo virou mais uma linha da seção Controles
-(D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR), depois dos assentos, e o marcador vazio dele
+que saiu da Jogar com o cartão velho em 28/10. O externo está na seção Controles, com a aba dele
+(D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR), e o marcador vazio dele
 (`.ext-vaga > .nada`) não pode deixar nada sob as linhas. A página é a do desenho (`mockup/`), que
 o `--publicar 01` copia byte a byte, pintada com o que o pacote da aba entrega; sem daemon.
 
@@ -46,6 +46,9 @@ MEDIR = r"""
 (function(){
   const A = __A__;
   document.querySelector('.ext-vaga').innerHTML = A.externos;
+  document.querySelector('[data-campo="abas-externos"]').innerHTML = A.abas;
+  const aberto = document.querySelector('.ext-cartao > .radio-mesa');
+  if (aberto) aberto.checked = true;
   const vis = el => { const cs = getComputedStyle(el), r = el.getBoundingClientRect();
     return cs.display !== 'none' && cs.visibility !== 'hidden' && r.width > 0 && r.height > 0; };
   const corpo = document.querySelector('.quadro.estica > .quadro-corpo');
@@ -70,6 +73,8 @@ MEDIR = r"""
     rolagem: corpo.scrollHeight - corpo.clientHeight,
     externos: ext.map(e => (e.innerText || '').replace(/\s+/g, ' ').trim()),
     pendente: !!document.querySelector('[data-campo="pendente"], .faixa-final'),
+    aba_do_externo: [...document.querySelectorAll('.aba-ext')].filter(vis)
+      .map(el => (el.innerText || '').replace(/\s+/g, ' ').trim()),
     itens_da_vaga: [...document.querySelectorAll('.ext-vaga > :not(.ext-cartao)')]
       .filter(el => getComputedStyle(el).display !== 'none').map(el => el.tagName),
   });
@@ -77,14 +82,15 @@ MEDIR = r"""
 """
 
 
-def _externos(*externos: dict[str, Any]) -> str:
+def _externos(*externos: dict[str, Any]) -> dict[str, str]:
     ctx = Contexto(state=dict(VIVO), mesa=[], conectados=[], externos=list(externos))
-    return str(jogar.pacote(ctx)["externos"])
+    feito = jogar.pacote(ctx)
+    return {"externos": str(feito["externos"]), "abas": str(feito["abas-externos"])}
 
 
-def _medir(tamanho: tuple[int, int], externos: str) -> dict[str, Any]:
+def _medir(tamanho: tuple[int, int], externos: dict[str, str]) -> dict[str, Any]:
     uri = onde.pagina("01-jogar.html").as_uri()
-    js = MEDIR.replace("__A__", json.dumps({"externos": externos}))
+    js = MEDIR.replace("__A__", json.dumps(externos))
     lido: dict[str, Any] = _no_webkit(uri, tamanho, [js])[0]
     return lido
 
@@ -104,17 +110,18 @@ def test_sem_externo_nada_fica_sob_as_linhas_dos_controles(tamanho: tuple[int, i
 
 @pytest.mark.parametrize("tamanho", TAMANHOS, ids=lambda t: f"{t[0]}x{t[1]}")
 def test_o_externo_e_a_ultima_linha_e_nada_fica_sob_ele(tamanho: tuple[int, int]) -> None:
-    """O externo vem depois dos assentos, na altura da linha fechada, sem rolagem na seção.
+    """O externo tem a aba dele, e aberto ele é o cartão da seção, sem nada sob ele e sem rolagem.
 
-    Com as abas (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR) o lugar vazio não aparece; a régua o
-    mostra só pelo tempo de medir a altura da linha fechada.
+    Com as abas (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR) a forma de um controle é a aba: a do
+    externo abre o cartão dele no lugar do cartão do DualSense.
 
     Prova da D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR.
     """
     lido = _medir(tamanho, _externos(UM_EXTERNO))
     assert lido["externos"] and lido["externos"][0].startswith("Controle 3"), lido
-    assert lido["a_ultima_e_o_externo"], lido
-    assert lido["altura_do_externo"] == lido["altura_da_vaga"], lido
+    assert lido["aba_do_externo"] == ["3 8BitDo"], lido
+    assert lido["a_ultima_e_o_externo"] and lido["linhas"] == 1, lido
+    assert lido["altura_do_externo"] > lido["altura_da_vaga"], lido
     assert lido["abaixo"] == [], lido
     if tamanho == CHEIA:
         assert lido["rolagem"] <= 0, f"a seção rolou {lido['rolagem']} px com o externo"

@@ -1244,6 +1244,8 @@ def abas_dos_controles(mesa=None):
             f'<span class="aba-nome" data-campo="aba-nome" data-hef-alvo="html">{nome}</span>'
             f'<span class="via-g" data-campo="aba-via" data-hef-alvo="atributo" '
             f'data-hef-atributo="data-via" data-via="{via}"></span></span></label>')
+    linhas.append(f'          <span class="abas-ext" data-campo="abas-externos" data-hef-alvo="html">'
+                  f'{_monta_modulo.NADA_A_DIZER}</span>')
     return ('        <div class="abas-ctl" role="tablist">\n'
             + "\n".join(linhas) + "\n        </div>")
 

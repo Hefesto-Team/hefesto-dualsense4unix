@@ -299,3 +299,191 @@ def test_na_vista_do_desenho_as_quatro_abas_e_a_faixa_cabem_sem_rolar() -> None:
             assert lido == {"x": 0, "y": 0, "doc": 0, "lateral": 0}, alvo
     finally:
         t.fechar()
+
+
+EXTERNOS = [
+    {"name": "Pro Controller", "vid": "057e", "pid": "2009", "bus": "usb",
+     "uniq": "aa:bb:cc:00:00:e1", "driver": "nintendo", "player_slot": 3},
+    {"name": "Xbox Wireless Controller", "vid": "045e", "pid": "0b13", "bus": "bluetooth",
+     "uniq": "aa:bb:cc:00:00:e2", "driver": "xpadneo", "player_slot": 4},
+]
+
+
+def _com_a_cor_do_pro(monkeypatch: pytest.MonkeyPatch) -> str:
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
+    from hefesto_dualsense4unix.interface import mesa_viva
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    declaracao = MaquinaConfig.model_validate(
+        {"controles": {"aabbcc0000e1": {"cor": "Galactic Purple"}}})
+    monkeypatch.setattr(mesa_viva, "_declaracao_do_disco", lambda: declaracao)
+    return tom_para_a_borda(a08_conexoes.a_declaracao_do_externo(EXTERNOS[0])["cor"])
+
+
+def _os_externos(externos: list[dict[str, Any]]) -> dict[str, str]:
+    from hefesto_dualsense4unix.interface.pacotes import a01_jogar
+
+    ctx = pacotes.Contexto(state={"connected": True}, mesa=[], conectados=[],
+                           externos=list(externos))
+    return {"externos": a01_jogar._html_dos_externos(ctx),
+            "abas-externos": a01_jogar._abas_dos_externos(ctx)}
+
+
+def test_o_externo_ganha_a_aba_dele_sem_marca_de_assento(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Xbox, Nintendo Pro e 8BitDo também são controles conectados: cada um ganha a aba dele.
+
+    A aba abre o rádio do cartão do externo (`c-xN`, N o número do jogador), na ordem do
+    número, e não leva `data-controle` nem gesto: o Hefesto não escreve no externo.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    tom = _com_a_cor_do_pro(monkeypatch)
+    feito = _os_externos(EXTERNOS)
+    abas = re.findall(r'<label class="aba-ctl aba-ext" for="c-(x\d)"[^>]*style="([^"]*)"',
+                      feito["abas-externos"])
+    assert [x for x, _s in abas] == ["x3", "x4"]
+    assert f"--plastico:{tom};" in abas[0][1] and "order:3;" in abas[0][1]
+    assert f"--plastico:{a02.BORDA_SEM_COR};" in abas[1][1]
+    for marca in ("data-controle", "data-gesto", "data-uniq"):
+        assert marca not in feito["abas-externos"], marca
+    for x in ("x3", "x4"):
+        assert re.search(rf'<div class="ext-cartao"[^>]*><input class="radio-mesa" type="radio" '
+                         rf'name="mesa" id="c-{x}">', feito["externos"]), x
+    assert ">Nintendo<" in feito["abas-externos"] and ">Xbox<" in feito["abas-externos"]
+    assert _os_externos([])["abas-externos"] == monta.NADA_A_DIZER
+
+
+def test_a_fileira_das_abas_tem_o_lugar_dos_externos() -> None:
+    """O endereço das abas dos externos mora dentro da fileira, e o pacote o promete."""
+    from hefesto_dualsense4unix.interface.pacotes import a01_jogar
+
+    fileira = _corpo().split('class="abas-ctl"', 1)[1].split("</div>", 1)[0]
+    assert 'data-campo="abas-externos" data-hef-alvo="html"' in fileira
+    assert "abas-externos" in a01_jogar.DA_PAGINA
+
+
+LER_COM_EXTERNOS = r"""
+(function(){
+  function vis(e){
+    return !!(e && e.getClientRects().length && getComputedStyle(e).display !== 'none');
+  }
+  function esq(a){ return a.getBoundingClientRect().left; }
+  var abas = [];
+  [...document.querySelectorAll('.aba-ctl')].filter(vis)
+    .sort(function(a, b){ return esq(a) - esq(b); })
+    .forEach(function(a){
+      abas.push([a.getAttribute('for').slice(2), getComputedStyle(a).borderTopColor]);
+    });
+  var todos = '.quadro-corpo > .ctl.card, .quadro-corpo .ext-cartao';
+  var abertos = [...document.querySelectorAll(todos)].filter(vis).map(function(c){
+    return c.dataset.controle || c.querySelector('.radio-mesa').id.slice(2);
+  });
+  var m = document.querySelector('.radio-mesa:checked');
+  return JSON.stringify({abas: abas, abertos: abertos, marcado: m ? m.id : ''});
+})()
+"""
+
+
+def _pintar_com_externos(tela: Any, prefs: list[str], externos: list[dict[str, Any]],
+                         alvo: str = "") -> dict[str, Any]:
+    mesa_ds = [{"pref": p, "cor": PLASTICOS[p]} for p in prefs]
+    carga = {"mesa": {"plastico-css": a02.folha_do_plastico(mesa_ds), **_os_externos(externos)},
+             "alvo": alvo, "ocupados": prefs, "vazios": [p for p in PLASTICOS if p not in prefs]}
+    tela.executar(f"(function(){{window.__hef.pintar({json.dumps(carga)});return 'ok';}})()")
+    tela.avancar(0.15)
+    return dict(json.loads(tela.executar(LER_COM_EXTERNOS)))
+
+
+@pytest.fixture()
+def tela_com_externos(tela: Any) -> Any:
+    yield tela
+    _pintar_com_externos(tela, ["p1"], [], "p1")
+
+
+@skip_sem_gi_real
+def test_o_externo_tem_aba_e_o_clique_abre_o_cartao_dele(
+        tela_com_externos: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Dois DualSense e dois externos dão quatro abas na ordem do número; o clique no Xbox
+    abre o cartão dele, esconde o do DualSense e não manda gesto ao daemon.
+
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    tela = tela_com_externos
+    tom = _com_a_cor_do_pro(monkeypatch)
+    lido = _pintar_com_externos(tela, ["p1", "p2"], EXTERNOS, "p1")
+    assert [a for a, _c in lido["abas"]] == ["p1", "p2", "x3", "x4"], lido
+    assert dict(lido["abas"])["x3"] == _rgb(tom), lido
+    assert lido["abertos"] == ["p1"], lido
+    tela.limpar_recados()
+    tela.clicar('.aba-ctl[for="c-x4"]')
+    tela.avancar(0.15)
+    lido = json.loads(tela.executar(LER_COM_EXTERNOS))
+    assert lido["abertos"] == ["x4"] and lido["marcado"] == "c-x4", lido
+    assert not tela.recados(monta.GESTO_DA_FITA), "a aba do externo mandou gesto ao daemon"
+
+
+@skip_sem_gi_real
+def test_a_escolha_do_externo_sobrevive_a_lista_que_muda(tela_com_externos: Any) -> None:
+    """No tempo: o Xbox escolhido segue aberto quando o Pro sai e volta (a lista se reescreve),
+    e quando o próprio Xbox sai, o cartão passa ao controle do alvo.
+
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    tela = tela_com_externos
+    _pintar_com_externos(tela, ["p1", "p2"], EXTERNOS, "p1")
+    tela.clicar('.aba-ctl[for="c-x4"]')
+    tela.avancar(0.15)
+    lido = _pintar_com_externos(tela, ["p1", "p2"], EXTERNOS[1:], "p1")
+    assert [a for a, _c in lido["abas"]] == ["p1", "p2", "x4"]
+    assert lido["abertos"] == ["x4"] and lido["marcado"] == "c-x4", lido
+    lido = _pintar_com_externos(tela, ["p1", "p2"], EXTERNOS, "p1")
+    assert lido["abertos"] == ["x4"], lido
+    lido = _pintar_com_externos(tela, ["p1", "p2"], EXTERNOS[:1], "p1")
+    assert lido["abertos"] == ["p1"] and lido["marcado"] == "c-p1", lido
+
+
+@skip_sem_gi_real
+def test_so_com_externos_o_primeiro_abre_e_o_dualsense_que_chega_toma_o_lugar(
+        tela_com_externos: Any) -> None:
+    """Sem DualSense, o cartão aberto é o do primeiro externo; o DualSense que chega, e é o
+    alvo, abre o dele (a escolha automática do externo não prende o cartão).
+
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    tela = tela_com_externos
+    tela.executar("(function(){window.__hef.abaSincronizada=false;"
+                  "window.__hef.abaEscolhida='';return 'ok';})()")
+    lido = _pintar_com_externos(tela, [], EXTERNOS, "")
+    assert [a for a, _c in lido["abas"]] == ["x3", "x4"]
+    assert lido["abertos"] == ["x3"], lido
+    lido = _pintar_com_externos(tela, ["p1"], EXTERNOS, "p1")
+    assert lido["abertos"] == ["p1"], lido
+
+
+VISTAS = [(1920, 1080), (1918, 840), (1668, 730), (1212, 809)]
+
+
+@skip_sem_gi_real
+@pytest.mark.parametrize(("largura", "altura"), VISTAS)
+def test_com_externos_nenhuma_vista_rola(largura: int, altura: int) -> None:
+    """Dois DualSense e dois externos, cada aba aberta por vez: nada rola nas quatro vistas.
+
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
+        pytest.skip("sem servidor gráfico: rode sob `xvfb-run -a` (pulo não é verde)")
+    sys.path.insert(0, str(RAIZ / "scripts"))
+    import regua_de_tela
+
+    t = regua_de_tela.Tela(JOGAR, titulo_esperado="Hefesto", largura=largura, altura=altura)
+    try:
+        t.executar(_bootstrap() + ";'ok'")
+        for aba in ("p1", "p2", "x3", "x4"):
+            _pintar_com_externos(t, ["p1", "p2"], EXTERNOS, "p1")
+            t.clicar(f'.aba-ctl[for="c-{aba}"]')
+            t.avancar(0.15)
+            assert json.loads(t.executar(LER_COM_EXTERNOS))["abertos"] == [aba]
+            lido = json.loads(t.executar(TRANSBORDA))
+            assert lido == {"x": 0, "y": 0, "doc": 0, "lateral": 0}, (aba, lido)
+    finally:
+        t.fechar()

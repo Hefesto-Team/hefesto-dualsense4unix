@@ -920,6 +920,25 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
   body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
   .aba-ctl.off{display:none}
   .aba-ctl .aba-dentro{display:contents}
+  .abas-ctl .abas-ext{display:contents}
+  .abas-ctl .abas-ext > .nada{display:none}
+  .aba-ctl[data-controle="p1"]{order:1}
+  .aba-ctl[data-controle="p2"]{order:2}
+  .aba-ctl[data-controle="p3"]{order:3}
+  .aba-ctl[data-controle="p4"]{order:4}
+  .aba-ctl.aba-ext{border-style:dashed}
+  body:has(#c-x1:checked) .aba-ctl[for="c-x1"],
+  body:has(#c-x2:checked) .aba-ctl[for="c-x2"],
+  body:has(#c-x3:checked) .aba-ctl[for="c-x3"],
+  body:has(#c-x4:checked) .aba-ctl[for="c-x4"]{height:var(--alt-aba);padding-bottom:2px;color:var(--fg);
+    font-weight:600;background:var(--panel);cursor:default}
+  .miolo > .quadro.estica:has(.ext-cartao > input:checked){flex:1 1 auto}
+  .quadro.estica .ext-cartao:not(:has(> input:checked)){display:none}
+  .quadro.estica .ext-cartao:has(> input:checked){flex:1 1 auto;height:auto;min-height:0;flex-direction:column;
+    justify-content:center;gap:8px;border-width:2px;border-radius:9px;background:var(--panel);
+    font-size:14px;line-height:18px}
+  .quadro.estica .ext-cartao:has(> input:checked) .ext-nome{font-size:16px}
+  body.nativo.por-controle .abas-ctl .aba-ext{pointer-events:auto;cursor:pointer}
   body.nativo.por-controle .abas-ctl .aba-ctl[data-controle]{pointer-events:auto;cursor:pointer;
     border-color:var(--plastico)!important;color:var(--texto-suave)!important;font-weight:500!important;
     background:color-mix(in srgb,var(--plastico) 16%,var(--app-bg))!important}
@@ -1127,6 +1146,7 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
           <label class="aba-ctl" for="c-p2" role="tab" data-gesto="escolher-na-fita" data-pref="p2" data-controle="p2"><span class="aba-dentro" data-campo="aba-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Starlight Blue · BT"><span class="n-jog"><span data-campo="jogador" data-hef-alvo="html">2</span></span><span class="aba-nome" data-campo="aba-nome" data-hef-alvo="html">Starlight Blue</span><span class="via-g" data-campo="aba-via" data-hef-alvo="atributo" data-hef-atributo="data-via" data-via="bt"></span></span></label>
           <label class="aba-ctl off" for="c-p3" role="tab" data-gesto="escolher-na-fita" data-pref="p3" data-controle="p3"><span class="aba-dentro" data-campo="aba-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Galactic Purple · BT"><span class="n-jog"><span data-campo="jogador" data-hef-alvo="html">3</span></span><span class="aba-nome" data-campo="aba-nome" data-hef-alvo="html">Galactic Purple</span><span class="via-g" data-campo="aba-via" data-hef-alvo="atributo" data-hef-atributo="data-via" data-via="bt"></span></span></label>
           <label class="aba-ctl off" for="c-p4" role="tab" data-gesto="escolher-na-fita" data-pref="p4" data-controle="p4"><span class="aba-dentro" data-campo="aba-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="White · USB"><span class="n-jog"><span data-campo="jogador" data-hef-alvo="html">4</span></span><span class="aba-nome" data-campo="aba-nome" data-hef-alvo="html">White</span><span class="via-g" data-campo="aba-via" data-hef-alvo="atributo" data-hef-atributo="data-via" data-via="usb"></span></span></label>
+          <span class="abas-ext" data-campo="abas-externos" data-hef-alvo="html"><i class="nada"></i></span>
         </div>
     <div class="ctl card" data-controle="p1">
       <input class="radio-mesa" type="radio" name="mesa" id="c-p1" data-campo="card-aberto" data-hef-alvo="marcado" checked>

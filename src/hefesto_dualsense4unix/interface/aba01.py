@@ -182,6 +182,25 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
   body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
   .aba-ctl.off{display:none}
   .aba-ctl .aba-dentro{display:contents}
+  .abas-ctl .abas-ext{display:contents}
+  .abas-ctl .abas-ext > .nada{display:none}
+  .aba-ctl[data-controle="p1"]{order:1}
+  .aba-ctl[data-controle="p2"]{order:2}
+  .aba-ctl[data-controle="p3"]{order:3}
+  .aba-ctl[data-controle="p4"]{order:4}
+  .aba-ctl.aba-ext{border-style:dashed}
+  body:has(#c-x1:checked) .aba-ctl[for="c-x1"],
+  body:has(#c-x2:checked) .aba-ctl[for="c-x2"],
+  body:has(#c-x3:checked) .aba-ctl[for="c-x3"],
+  body:has(#c-x4:checked) .aba-ctl[for="c-x4"]{height:var(--alt-aba);padding-bottom:2px;color:var(--fg);
+    font-weight:600;background:var(--panel);cursor:default}
+  .miolo > .quadro.estica:has(.ext-cartao > input:checked){flex:1 1 auto}
+  .quadro.estica .ext-cartao:not(:has(> input:checked)){display:none}
+  .quadro.estica .ext-cartao:has(> input:checked){flex:1 1 auto;height:auto;min-height:0;flex-direction:column;
+    justify-content:center;gap:8px;border-width:2px;border-radius:9px;background:var(--panel);
+    font-size:14px;line-height:18px}
+  .quadro.estica .ext-cartao:has(> input:checked) .ext-nome{font-size:16px}
+  body.nativo.por-controle .abas-ctl .aba-ext{pointer-events:auto;cursor:pointer}
   body.nativo.por-controle .abas-ctl .aba-ctl[data-controle]{pointer-events:auto;cursor:pointer;
     border-color:var(--plastico)!important;color:var(--texto-suave)!important;font-weight:500!important;
     background:color-mix(in srgb,var(--plastico) 16%,var(--app-bg))!important}
