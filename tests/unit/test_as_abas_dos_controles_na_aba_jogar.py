@@ -406,7 +406,7 @@ def test_o_externo_tem_aba_e_o_clique_abre_o_cartao_dele(
     """Dois DualSense e dois externos dão quatro abas na ordem do número; o clique no Xbox
     abre o cartão dele, esconde o do DualSense e não manda gesto ao daemon.
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR.
     """
     tela = tela_com_externos
     tom = _com_a_cor_do_pro(monkeypatch)
