@@ -187,10 +187,12 @@ def test_os_dois_pisos_gemeos_nao_divergiram(aba02, a02):
 
 
 def test_o_seletor_do_assento_e_o_mesmo_dos_dois_lados(aba02, a02):
-    """Bancada e produto têm de escrever o MESMO seletor, ou a troca não cobre."""
+    """Bancada e produto escrevem o MESMO seletor, pela regra de um dono só."""
     do_produto = a02.folha_do_plastico([{"pref": "p1", "cor": "white"}])
     seletor = do_produto.splitlines()[1].split("{", 1)[0]
-    assert seletor == aba02.seletor_do_plastico("p1")
+    assert aba02.regra_do_plastico is a02.regra_do_plastico
+    assert seletor == a02.seletor_do_plastico("p1")
+    assert '.aba-ctl[data-controle="p1"]' in seletor
 
 
 def test_a_bancada_mostra_o_desenho_que_ela_aprovou(doc):

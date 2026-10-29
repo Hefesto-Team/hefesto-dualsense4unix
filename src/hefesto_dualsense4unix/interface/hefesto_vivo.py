@@ -295,6 +295,30 @@ BOOTSTRAP = r"""
     }
     return k;
   };
+  window.__hef.abaQueVale = function(){
+    if(!document.querySelector('.abas-ctl')) return 0;
+    const aceso = function(pref){
+      const card = pref && document.querySelector('.ctl[data-controle="' + pref + '"]');
+      return !!(card && !card.classList.contains('off'));
+    };
+    const marcado = document.querySelector('.radio-mesa:checked');
+    const agora = marcado ? marcado.id.replace(/^c-/, '') : '';
+    const querido = window.__hef.alvoPadrao || '';
+    if(aceso(agora) && (window.__hef.abaSincronizada || !aceso(querido) || agora === querido)){
+      window.__hef.abaSincronizada = true;
+      return 0;
+    }
+    let vez = aceso(querido) ? querido : '';
+    if(!vez){
+      const primeiro = document.querySelector('.ctl[data-controle]:not(.off)');
+      vez = primeiro ? primeiro.dataset.controle : '';
+    }
+    const radio = vez && document.getElementById('c-' + vez);
+    if(!radio) return 0;
+    radio.checked = true;
+    window.__hef.abaSincronizada = true;
+    return 1;
+  };
   window.__hef.pintar = function(p){
     let n = 0;
     if(window.__hefDica) window.__hefDica.varrer();
@@ -407,6 +431,7 @@ BOOTSTRAP = r"""
         }
       }
     }
+    n += window.__hef.abaQueVale();
     if(document.documentElement.classList.contains('hef-esperando'))
       document.documentElement.classList.remove('hef-esperando');
     return n;
@@ -2393,7 +2418,8 @@ class Piloto:
         for chave, valor in pacotes.topo(ctx).items():
             carga["mesa"].setdefault(chave, valor)
 
-        carga["fita"] = _fita(ctx.mesa, self.pagina)
+        carga["fita"] = ("" if self.pagina.removesuffix(".html") in monta.ABAS_SEM_A_FITA
+                         else _fita(ctx.mesa, self.pagina))
 
         alvo = (_pref_escolhido(ctx.mesa)
                 if _a_fita_desta_pagina_escolhe(self.pagina) else "")

@@ -1271,6 +1271,22 @@ def _quem_joga(nomes: dict[str, str], uniq: str, jogador: Any) -> dict[str, Any]
     return campos
 
 
+VIAS_DA_ABA = {"USB": "usb", "BT": "bt"}
+
+
+def campos_da_aba(
+    nomes: dict[str, str], uniq: str, casa: dict[str, Any], via_na_tela: str
+) -> dict[str, str]:
+    """A aba do controle na Jogar: o nome (o dado, senão a cor), o glifo da via e a dica."""
+    plastico = str(casa.get("nome") or "")
+    nome = dono_na_linha(nomes, uniq, casa.get("jogador"), plastico)
+    return {
+        "aba-nome": dono_na_linha(nomes, uniq, casa.get("jogador"), plastico, em_html=True),
+        "aba-via": VIAS_DA_ABA.get(via_na_tela, ""),
+        "aba-dica": f"{nome} · {via_na_tela}" if nome else via_na_tela,
+    }
+
+
 @registrar("02-controles.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """Os valores da aba Controles, com os nomes que a página tem.
@@ -1406,6 +1422,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 "luz-cor": _cor_da_barra(rotulo_da_luz, base_da_luz),
                 "lampadas": luzinhas(int(casa.get("jogador") or 0) or 1),
                 **_so_se_a_pagina_tiver(_quem_joga(nomes, uniq, casa.get("jogador"))),
+                **_so_se_a_pagina_tiver(campos_da_aba(nomes, uniq, casa, via_na_tela)),
                 "peca": "" if nome_na_tela == ultimo_degrau else nome_na_tela,
                 "via": via_na_tela,
                 "alto-rota": aceso_da_fileira(uniq, c),
