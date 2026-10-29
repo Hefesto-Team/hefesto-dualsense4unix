@@ -1550,6 +1550,8 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
 
 STEAM_INPUT_ARMADO = "Fechar a Steam?"
 
+SELETOR_DO_ROTULO_DO_STEAM_INPUT = f'[data-gesto="{GESTO_DO_STEAM_INPUT}"] .rot-do-modo'
+
 
 def _chave_do_chip(appid: object) -> str:
     """A chave do chip «Steam Input» armado para AQUELE jogo."""
@@ -1577,7 +1579,7 @@ def _o_rotulo_do_chip(state: dict[str, Any] | None) -> dict[str, str]:
         appid, _quando = _qual_jogo(state)
         if appid is not None and armado == _chave_do_chip(appid):
             rotulo = STEAM_INPUT_ARMADO
-    return {f'[data-gesto="{GESTO_DO_STEAM_INPUT}"]': html.escape(rotulo)}
+    return {SELETOR_DO_ROTULO_DO_STEAM_INPUT: html.escape(rotulo)}
 
 
 def _armar_se_a_steam_segura(ctx: Contexto) -> dict[str, Any] | None:

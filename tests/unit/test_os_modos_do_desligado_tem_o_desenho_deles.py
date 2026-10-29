@@ -30,6 +30,7 @@ def test_o_botao_de_cada_modo_do_desligado_desenha_o_dele(publicado: bool) -> No
     fileira = doc.split('class="hef-modo so-desligado"', 1)[1].split("</div>", 1)[0]
     for m in aba01.DO_DESLIGADO:
         botao = re.search(rf'<span class="degrau[^"]*"[^>]*data-hef-quando="{m["chave"]}"'
-                          rf'[^>]*>(.*?)</span>', fileira, re.S)
+                          rf'[^>]*>(.*?)</span></span>', fileira, re.S)
         assert botao, m["chave"]
-        assert botao.group(1) == aba01.silhueta(m["chave"]) + m["rot"], m["chave"]
+        assert botao.group(1) == (aba01.silhueta(m["chave"])
+                                  + f'<span class="{aba01.ROTULO_DO_MODO}">{m["rot"]}'), m["chave"]

@@ -42,7 +42,7 @@ MESA_DE_QUATRO = [
 UM_CONTROLE = MESA_DE_QUATRO[0]
 
 _ARMADO_NA_TELA = {"blocos": {
-    f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': aba.STEAM_INPUT_ARMADO}}
+    aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT: aba.STEAM_INPUT_ARMADO}}
 
 CONTA = "1000"
 
@@ -464,7 +464,7 @@ def test_o_primeiro_clique_avisa_e_o_segundo_fecha_liga_e_reabre(
     assert _valor(lar, APPID) == ponte.LIGADO, (
         f"a Steam fechou e o vdf continua {_valor(lar, APPID)!r}")
     assert APPID in _lista()
-    em_repouso = {f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}
+    em_repouso = {aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT: "Steam Input"}
     assert resposta == {"blocos": em_repouso}, f"o chip não voltou ao repouso: {resposta!r}"
     depois = aba.pacote(ctx)
     assert (depois["blocos"], depois["steam-input-aceso"]) == (em_repouso, "steam"), (
@@ -494,7 +494,7 @@ def test_o_rotulo_armado_fora_do_prazo_recusa_e_nao_fecha(lar, monkeypatch) -> N
     assert str(erro.value) == aba.STEAM_INPUT_A_PERGUNTA_VENCEU
     assert (steam.fechou, _valor(lar, APPID)) == (0, "0")
     assert aba._o_rotulo_do_chip(_ctx().state)[
-        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]'] == "Steam Input", (
+        aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT] == "Steam Input", (
         "a pergunta venceu e o chip continua dizendo «Fechar a Steam?»")
 
 
@@ -542,7 +542,7 @@ def test_com_a_ponte_de_pe_o_segundo_clique_nao_fecha_a_steam_por_nada(
 
     assert steam.fechou == 0, "a ponte já estava de pé e a Steam fechou assim mesmo"
     assert resposta == {"blocos": {
-        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}}
+        aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT: "Steam Input"}}
 
 
 def test_outro_chip_desarma_o_steam_input(lar, monkeypatch) -> None:
@@ -573,7 +573,7 @@ def test_o_consentimento_e_para_aquele_jogo(lar, monkeypatch) -> None:
     outro = _ctx()
     outro.state["window_detect_last_class"] = f"steam_app_{OUTRO}"
     assert aba._o_rotulo_do_chip(outro.state) == {
-        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}, (
+        aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT: "Steam Input"}, (
         "o tique pintou «Fechar a Steam?» para um jogo que não foi perguntado")
     antes = lar.read_text(encoding="utf-8")
 
@@ -980,7 +980,7 @@ def test_o_chip_e_a_aba_09_dividem_um_relogio(lar, monkeypatch) -> None:
     a09._ARMADO.clear()
     a09._ARMADO.update(gesto="restaurar-de-fabrica", ate=float("inf"))
     assert aba._o_rotulo_do_chip(_ctx().state) == {
-        f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}, (
+        aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT: "Steam Input"}, (
         "a 09 armou e o chip continuou dizendo «Fechar a Steam?»")
 
 

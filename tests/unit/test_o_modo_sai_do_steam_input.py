@@ -299,7 +299,7 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
         + (" Com ele na lista a Steam pegaria o controle por baixo do chip aceso"
            if na_lista else " Sem ele na lista o «Steam Input» não tem o que ligar"))
     arma = quer and steam_aberta and not jogo_aberto
-    esperada = ({"blocos": {f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]':
+    esperada = ({"blocos": {aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT:
                             aba.STEAM_INPUT_ARMADO}} if arma else None)
     assert resposta == esperada, (
         f"de «{de}» para «{para}» (jogo aberto={jogo_aberto}, Steam "
@@ -409,7 +409,7 @@ def test_sem_o_vigia_a_faixa_nao_promete(vdf, monkeypatch, como) -> None:
 
     resposta = _clicar("steam", ctx, daemon)
 
-    assert resposta == {"blocos": {f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]':
+    assert resposta == {"blocos": {aba.SELETOR_DO_ROTULO_DO_STEAM_INPUT:
                                    aba.STEAM_INPUT_ARMADO}}, (
         "sem o vigia, o segundo clique é o único caminho — o chip tem de armar")
     assert _aceso(ctx) == aba.CHIP_DO_STEAM_INPUT

@@ -497,6 +497,9 @@ def silhueta(chave: str) -> str:
     return re.sub(r'"#(?:000|111)(?:000)?"', '"currentColor"', tag + corpo)
 
 
+ROTULO_DO_MODO = "rot-do-modo"
+
+
 def _chip_do_modo(m, aceso=MODO_ACESO):
     """Um chip da fileira de modos: os três do Ligado ou os dois do Desligado."""
     classe = ("degrau"
@@ -510,7 +513,8 @@ def _chip_do_modo(m, aceso=MODO_ACESO):
             f' data-hef-alvo="classe"'
             f' data-hef-quando="{m["chave"]}"\n'
             f'                  data-dica="{m["dica"]}">'
-            f'{silhueta(m["chave"]) if m["chave"] in SILHUETAS else ""}{m["rot"]}</span>')
+            f'{silhueta(m["chave"]) if m["chave"] in SILHUETAS else ""}'
+            f'<span class="{ROTULO_DO_MODO}">{m["rot"]}</span></span>')
 
 
 _MODOS = "\n".join(_chip_do_modo(m) for m in MODOS)
@@ -934,7 +938,8 @@ def _conferir(doc):
     for lado, esperados in (("so-ligado", [m["rot"] for m in MODOS]),
                             ("so-desligado", [m["rot"] for m in DO_DESLIGADO])):
         secao = status.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
-        achados = re.findall(r'<span class="degrau[^"]*"[^>]*>(?:<svg.*?</svg>)?([^<]+)</span>',
+        achados = re.findall(r'<span class="degrau[^"]*"[^>]*>(?:<svg.*?</svg>)?'
+                             rf'<span class="{ROTULO_DO_MODO}">([^<]+)</span></span>',
                              secao, re.S)
         exigir(achados == esperados,
                f"a fileira do {lado} saiu diferente do desenho: esperava {esperados}, achei {achados}")
