@@ -1727,6 +1727,8 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
             return None
         valor = o.get("valor")
     _MEXIDA.aba = opcao.grupo or ""
+    if opcao.tipo == "deslizante":
+        _OPCOES_VIVAS.soltou(mod_id, opcao_id, _numero(o.get("carimbo")))
     _guardar_a_opcao_da_modificacao(item, {opcao_id: _validada(opcao, valor, item)})
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
@@ -2872,7 +2874,56 @@ def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     return _a_pintura_agora(ctx)
 
 
-METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE}
+METODO_DA_OPCAO = "mods.opcao"
+
+
+class _OpcoesVivas:
+    """A ordem do arrastar de cada deslizante: o carimbo do evento descarta o arrastar que chega
+    fora de ordem e o que chega depois do soltar, que grava; a chamada ao serviço sai dentro da
+    trava, na ordem em que foi aceita."""
+
+    def __init__(self) -> None:
+        self._trava = threading.Lock()
+        self._ultimo: dict[tuple[str, str], float] = {}
+
+    def soltou(self, mod: str, opcao_id: str, carimbo: float) -> None:
+        with self._trava:
+            chave = (mod, opcao_id)
+            self._ultimo[chave] = max(self._ultimo.get(chave, float("-inf")), carimbo)
+
+    def enviar(self, mod: str, opcao_id: str, valor: float, carimbo: float,
+               ponte: Any) -> tuple[bool, str | None, Any] | None:
+        with self._trava:
+            chave = (mod, opcao_id)
+            if carimbo <= self._ultimo.get(chave, float("-inf")):
+                return None
+            self._ultimo[chave] = carimbo
+            numero: int | float = int(valor) if float(valor).is_integer() else valor
+            return ponte.chamar_com_o_corpo(  # type: ignore[no-any-return]
+                METODO_DA_OPCAO, mod=mod, id=opcao_id, valor=numero)
+
+
+_OPCOES_VIVAS = _OpcoesVivas()
+
+
+@gesto("07-lancadores.html", exp.GESTO_DA_OPCAO_VIVA)
+def arrastar_a_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any],
+                                    p: Any) -> dict[str, Any]:
+    """O arrastar de um deslizante da extensão, um gesto VIVO (a cada ``input``): a extensão
+    aplica o valor na hora e nada se grava; grava o soltar (``guardar-opcao-da-modificacao``).
+    O serviço segura em 20 por segundo; o que chega fora de ordem cai aqui."""
+    _MEXIDA.armada = ()
+    mod_id, opcao_id = _partes_do_clique(o, exp.GESTO_DA_OPCAO_VIVA, 2)
+    try:
+        valor = float(str(o.get("valor")))
+    except ValueError:
+        return {}
+    _OPCOES_VIVAS.enviar(mod_id, opcao_id, valor, _numero(o.get("carimbo")), p)
+    return {}
+
+
+METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE, METODO_DA_OPCAO}
 SEM_ECO = (*SEM_ECO, exp.GESTO_DA_ACAO, exp.GESTO_DO_LIVRE, exp.GESTO_DE_SOLTAR,
+           exp.GESTO_DA_OPCAO_VIVA,
            exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA, exp.GESTO_DO_MODO,
            exp.GESTO_DO_CANCELAR)

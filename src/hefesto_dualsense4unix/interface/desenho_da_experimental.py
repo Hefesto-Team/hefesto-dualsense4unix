@@ -402,6 +402,7 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
     if o.tipo == "deslizante":
         return (f'<span class="ext-desl"><input type="range" min="{o.minimo:g}" '
                 f'max="{o.maximo:g}" step="{o.passo:g}" value="{_a(o.valor)}" {alvo} '
+                f'data-hef-vivo="{GESTO_DA_OPCAO_VIVA}" '
                 f'aria-label="{_a(o.rotulo)}" oninput="{_NUMERO_AO_ARRASTAR}">'
                 f'<b data-unidade="{_a(o.unidade)}" data-zero="{_a(o.zero)}">'
                 f'{_e(numero_do_deslizante(o.valor, o.unidade, o.zero))}</b></span>')
@@ -1385,6 +1386,7 @@ GESTO_DA_ABA = "aba-da-modificacao"
 ICONE_QUE_CONFIRMA = "esquecer"
 ROTULO_DE_CONFIRMAR = "Confirmar"
 GESTO_DO_LIVRE = "mover-o-livre-da-modificacao"
+GESTO_DA_OPCAO_VIVA = "arrastar-a-opcao-da-modificacao"
 GESTO_DE_SOLTAR = "soltar-o-livre-da-modificacao"
 GESTO_DE_GRAVAR = "gravar-o-livre-da-modificacao"
 GESTO_DE_ESQUECER_A_FORMA = "esquecer-a-forma-do-livre"

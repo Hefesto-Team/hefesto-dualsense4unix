@@ -459,7 +459,7 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   janela, o aparelho com `ligado` falso ou `estado` diferente de `ligado` aparece apagado. O cartão mostra o `valor` do estado: o clique pede, e o valor novo
   só aparece quando a extensão o devolve. Um controle torto recusa o estado inteiro, com a frase.
 
-A extensão recebe as três como eventos (`{"method": "evento", "params": {"topico", "nome", "uniq": null,
+A extensão recebe estes como eventos (`{"method": "evento", "params": {"topico", "nome", "uniq": null,
 "dados"}}`), só ela, sem assinar tópico nenhum:
 
 - `extensao.acao` com `dados: {mod, acao, alvo, valor?}`: `alvo` é o `id` do aparelho (ou `null` nas `acoes` da
@@ -467,15 +467,18 @@ A extensão recebe as três como eventos (`{"method": "evento", "params": {"topi
   controle, e o `valor`, o pedido (a chave, `true` ou `false`; a paleta e a escolha, o `id` da opção);
 - `extensao.livre` com `dados: {mod, id, valor (0 a 1), soltou, modo?}`: no máximo 20 por segundo. O primeiro
   arrastar abre um compasso de 50 ms e ao fim dele sai o valor mais novo; o soltar (`soltou: true`) sai na hora,
-  fora do compasso, e leva o valor final. `modo` vem só no `livre` com `modos`, e diz o que fazer ao soltar.
+  fora do compasso, e leva o valor final. `modo` vem só no `livre` com `modos`, e diz o que fazer ao soltar;
+- `extensao.opcao` com `dados: {mod, id, valor}`: o arrastar de um `deslizante` da janela, com o valor na faixa
+  dele, no mesmo compasso de 20 por segundo. Não grava: o soltar grava no `opcoes.json`, e a extensão aplica o
+  valor ao vivo até ler o arquivo de novo.
 
 A janela os pede ao serviço por `mods.acao {mod, acao, alvo?, valor?}` (volta `{enviada}`) e
 `mods.livre {mod, id, valor, soltou, modo?}` (volta `{enviado}`; `modo` só no `livre` com `modos`, e sem ele
-vale `"soltar"`); os dois voltam falso quando a extensão não está
+vale `"soltar"`) e `mods.opcao {mod, id, valor}` (volta `{enviado}`); os três voltam falso quando a extensão não está
 conectada, e a janela recusa dizendo que ela não está rodando. O serviço recusa (`-32003`, com a frase) a ação
 que o manifesto não declara ali (nos aparelhos com `alvo`, na janela sem ele), o controle que o aparelho `alvo`
 não publicou no último estado (ou de um manifesto sem `aparelhos_controles`), o `valor` fora do tipo do
-controle, o `livre` de outro `id`, o `modo` de um `livre` sem `modos` e o `modo` fora dos três. O botão
+controle, o `livre` de outro `id`, o `deslizante` que o manifesto não declara ou o valor fora da faixa dele, o `modo` de um `livre` sem `modos` e o `modo` fora dos três. O botão
 diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada estado guardado ganha um `serie`, que
 `mods.agora` devolve e que sobe a cada estado; sem estado novo em 5 s, o botão volta.
 

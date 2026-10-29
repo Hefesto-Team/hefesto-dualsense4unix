@@ -66,6 +66,8 @@ ISENTOS: dict[str, str] = {
                  "ações de um aparelho que ela gere); no terminal, a extensão tem os verbos dela",
     "mods.livre": _GESTO_DA_TELA + " (o arrastar do controle livre da janela da extensão, a 20 "
                   "por segundo)",
+    "mods.opcao": _GESTO_DA_TELA + " (o arrastar de um deslizante da janela da extensão, a 20 "
+                  "por segundo; o valor gravado mora no `opcoes.json` da extensão)",
     "sequencia.gravar": _GESTO_DA_TELA + " (a gravação segue os toques com a aba Sequência "
                         "aberta, e o controle fica com ela enquanto grava)",
     "sequencia.tocar": _GESTO_DA_TELA + " (o «Tocar para ouvir» do editor da sequência)",

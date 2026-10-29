@@ -73,6 +73,7 @@ _COR_DO_PONTO = re.compile(r"#[0-9a-fA-F]{6}")
 EVENTO_DO_PARAR = "extensao.parar"
 EVENTO_DA_ACAO = "extensao.acao"
 EVENTO_DO_LIVRE = "extensao.livre"
+EVENTO_DA_OPCAO = "extensao.opcao"
 LIVRE_POR_SEGUNDO = 20
 TOPICO_DOS_BOTOES = "botoes"
 TOPICO_DAS_ENTRADAS = "entradas"
@@ -703,6 +704,7 @@ class Porta:
         self._entradas_enviadas: dict[str | None, tuple[_Valores | None, float, Any, Any]] = {}
         self._series: dict[str, int] = {}
         self._livres: dict[tuple[str, str], _Compasso] = {}
+        self._opcoes_vivas: dict[tuple[str, str], _Compasso] = {}
         self._movimento_enviado: dict[str | None, tuple[_Movimento | None, float, Any, Any]] = {}
 
     def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str],
@@ -1163,13 +1165,30 @@ class Porta:
                 1.0 / LIVRE_POR_SEGUNDO, self._fim_do_compasso, chave)
         return True
 
-    def _fim_do_compasso(self, chave: tuple[str, str]) -> None:
-        compasso = self._livres.get(chave)
+    def _fim_do_compasso(self, chave: tuple[str, str],
+                         compassos: dict[tuple[str, str], _Compasso] | None = None,
+                         evento: str = EVENTO_DO_LIVRE) -> None:
+        compasso = (self._livres if compassos is None else compassos).get(chave)
         if compasso is None:
             return
         dados, compasso.pendente, compasso.relogio = compasso.pendente, None, None
         if dados is not None:
-            self._avisar_a(chave[0], EVENTO_DO_LIVRE, dados)
+            self._avisar_a(chave[0], evento, dados)
+
+    def opcao_viva(self, mod_id: str, opcao_id: str, valor: float) -> bool:
+        """O arrastar de um deslizante da janela: ``extensao.opcao {mod, id, valor}`` só para
+        ``mod_id``, no compasso do ``livre`` (o valor mais novo a cada ``1 / LIVRE_POR_SEGUNDO``
+        s). Quem grava é o soltar, no ``opcoes.json``. ``False`` sem a extensão na porta."""
+        if not self._conexoes_de(mod_id):
+            return False
+        chave = (mod_id, opcao_id)
+        compasso = self._opcoes_vivas.setdefault(chave, _Compasso())
+        compasso.pendente = {"mod": mod_id, "id": opcao_id, "valor": valor}
+        if compasso.relogio is None:
+            compasso.relogio = asyncio.get_running_loop().call_later(
+                1.0 / LIVRE_POR_SEGUNDO, self._fim_do_compasso, chave, self._opcoes_vivas,
+                EVENTO_DA_OPCAO)
+        return True
 
     def le_os_botoes(self) -> bool:
         """Alguma extensão assinou o tópico ``botoes``? Sem ela, o tique não lê controle nenhum."""
@@ -1732,6 +1751,7 @@ __all__ = [
     "CODE_SEM_PERMISSAO",
     "ENTRADAS_POR_SEGUNDO",
     "EVENTO_DA_ACAO",
+    "EVENTO_DA_OPCAO",
     "EVENTO_DO_LIVRE",
     "EVENTO_DO_PARAR",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",

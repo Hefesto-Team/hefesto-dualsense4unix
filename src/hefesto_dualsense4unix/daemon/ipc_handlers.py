@@ -6128,6 +6128,29 @@ class IpcHandlersMixin:
         return {"enviado": bool(porta.livre(mod, livre.id, float(valor), soltou=soltou,
                                             **com_modo))}
 
+    async def _handle_mods_opcao(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O arrastar de um deslizante da janela: ``extensao.opcao`` só à extensão ``{mod}``.
+
+        ``{mod, id, valor}``, com o valor dentro da faixa que o manifesto declara; a porta solta
+        no máximo 20 por segundo. Não grava: o soltar grava no ``opcoes.json``. ``{enviado}`` é
+        falso quando a extensão não está conectada à porta.
+        """
+        mod = self._mod_do_pedido(params)
+        opcao_id, valor = params.get("id"), params.get("valor")
+        if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+            raise ValueError("o valor do deslizante é um número")
+        achado = await self._manifesto_da_janela(mod)
+        if achado is None:
+            return {"enviado": False}
+        manifesto, porta = achado
+        opcao = next((o for o in manifesto.opcoes
+                      if o.id == opcao_id and o.tipo == "deslizante"), None)
+        if opcao is None:
+            raise ValueError(f"«{manifesto.nome}» não declara o deslizante «{opcao_id}».")
+        if not opcao.minimo <= valor <= opcao.maximo:
+            raise ValueError(f"o valor de «{opcao.id}» vai de {opcao.minimo:g} a {opcao.maximo:g}")
+        return {"enviado": bool(porta.opcao_viva(mod, opcao.id, valor))}
+
 
 def _conferir_a_acao(manifesto: Any, porta: Any, mod: str, alvo: str | None, acao: str,
                      valor: Any, declarada: bool) -> None:

@@ -218,6 +218,7 @@ class IpcServer(IpcHandlersMixin):
             "mods.jogos": self._handle_mods_jogos,
             "mods.acao": self._handle_mods_acao,
             "mods.livre": self._handle_mods_livre,
+            "mods.opcao": self._handle_mods_opcao,
             "radio.ponte.ligar_aqui": self._handle_radio_ponte_ligar_aqui,
             "radio.mover": self._handle_radio_mover,
             "mira.set": self._handle_mira_set,

@@ -131,6 +131,9 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "mover-o-livre-da-modificacao"):
         "ato: o arrastar do controle livre vai à extensão (`mods.livre`, 20 por segundo); nada "
         "fica guardado",
+    ("07-lancadores.html", "arrastar-a-opcao-da-modificacao"):
+        "ato: o arrastar de um deslizante vai à extensão (`mods.opcao`, 20 por segundo) e ela "
+        "aplica na hora; quem grava é o soltar, no `guardar-opcao-da-modificacao`",
     ("07-lancadores.html", "soltar-o-livre-da-modificacao"):
         "ato: o soltar da barra do controle livre vai à extensão com o valor final; nada fica "
         "guardado",
