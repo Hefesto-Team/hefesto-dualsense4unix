@@ -240,14 +240,14 @@
       "data": "2026-10-29",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1161090,
+      "piso": 1161105,
       "por_item": {
         "docs": 107645,
         "scripts": 109678,
         "src": 292286,
-        "tests": 651481
+        "tests": 651496
       },
-      "razao": "tamanho: +91 linhas (1160999 -> 1161090), pagas por Origem: D-2910-A-ABA-VAZIA-E-SO-O-NUMERO; registrado no fecho, topo 9098764c6edc",
+      "razao": "tamanho: +15 linhas (1161090 -> 1161105), pagas por Origem: D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA; registrado no fecho, topo 61924c3e6143",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1214,6 +1214,12 @@
           "de": 1160999,
           "para": 1161090,
           "razao": "tamanho: +91 linhas (1160999 -> 1161090), pagas por Origem: D-2910-A-ABA-VAZIA-E-SO-O-NUMERO; registrado no fecho, topo 9098764c6edc"
+        },
+        {
+          "data": "2026-10-29",
+          "de": 1161090,
+          "para": 1161105,
+          "razao": "tamanho: +15 linhas (1161090 -> 1161105), pagas por Origem: D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA; registrado no fecho, topo 61924c3e6143"
         }
       ],
       "unidade": "linhas",
