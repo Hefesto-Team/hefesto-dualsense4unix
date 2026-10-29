@@ -415,7 +415,7 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
   `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
   toque de confirmação, e o serviço confere o «parar curto» só da extensão. Volta `{parado}`, falso quando ela não
   está conectada: o botão então recusa dizendo que ela não está rodando, em vez de piscar o «enviado». Com a
-  `chave`, a opção dela é gravada desligada antes do gesto, também quando a extensão não está conectada. Recusa
+  `chave`, a opção da extensão é gravada desligada antes do gesto, também quando a extensão não está conectada. Recusa
   (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara `parar_tudo` nem a
   `chave`.
 
