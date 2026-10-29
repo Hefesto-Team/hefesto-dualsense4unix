@@ -41,7 +41,7 @@ permissões que a pessoa aceitou.
    - `escrever:luz|vibracao|gatilho`;
    - `rede:nenhuma|local|internet`;
    - `publicar:jogo.acessorio` e `pedir:luz.pulso`;
-   - `bluetooth`, `lancador`, `tema` e `aparelhos`.
+   - `bluetooth`, `lancador`, `tema`, `aparelhos` e `jogos`.
 
    Toda escrita leva o `uniq`, porque escrever em todos é proibido (BROADCAST-PROIBIDO-01). Ela também
    nunca entra num canal que o jogo está escrevendo naquele controle. Uma atualização que pede permissão
@@ -61,7 +61,9 @@ permissões que a pessoa aceitou.
      - os processos ficam num espaço de PID próprio: o que a modificação abrir morre com ela;
      - `--unshare-net` entra quando a rede é `nenhuma`;
      - o barramento do sistema fica escondido sem `bluetooth`, e o `/dev` real fica escondido sem
-       `aparelhos`.
+       `aparelhos`;
+     - com `jogos`, cada pasta `steamapps` das bibliotecas da Steam aparece só de leitura, e o
+       `HEFESTO_MOD_JOGOS` as lista.
    - **Sem `bwrap`**, o filho roda sem caixa, e o estado diz isso numa linha.
    - Um filho que cai volta três vezes, esperando 1, 2 e 4 s. Na quarta queda ele fica «parou», com a
      última linha do diário, e só volta quando a pessoa o liga de novo ou o atualiza.

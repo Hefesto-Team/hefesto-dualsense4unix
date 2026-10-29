@@ -16,6 +16,7 @@ O supervisor abre o processo com este ambiente, e com mais nada da sessão:
 | `HEFESTO_MOD_ID` | o `id` do manifesto |
 | `HEFESTO_MOD_DADOS` | a pasta gravável da modificação |
 | `HEFESTO_MOD_API` | a versão da porta que este Hefesto fala |
+| `HEFESTO_MOD_JOGOS` | só com a permissão `jogos`: as pastas `steamapps` de toda biblioteca da Steam, separadas por `:`; na caixa, cada uma aparece só de leitura, mesmo a que mora na `HOME` |
 
 O diretório de trabalho é a pasta do código, que dentro da caixa é só de leitura. A saída e o erro do
 processo vão para `diario.log`, na pasta de dados, que fica em até 1 MiB: a escrita que passaria

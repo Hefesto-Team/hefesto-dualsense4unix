@@ -673,7 +673,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
         "põe a chave no ambiente da modificação antes de abri-la "
-        "(`HEFESTO_MOD_ID` em `src/hefesto_dualsense4unix/mods/supervisor.py:726`), "
+        "(`HEFESTO_MOD_ID` em `src/hefesto_dualsense4unix/mods/supervisor.py:744`), "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -682,7 +682,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
         "põe a chave no ambiente da modificação antes de abri-la "
-        "(`HEFESTO_MOD_SOCKET` em `src/hefesto_dualsense4unix/mods/supervisor.py:727`), "
+        "(`HEFESTO_MOD_SOCKET` em `src/hefesto_dualsense4unix/mods/supervisor.py:745`), "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -691,7 +691,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
         "põe a chave no ambiente da modificação antes de abri-la "
-        "(`HEFESTO_MOD_FICHA` em `src/hefesto_dualsense4unix/mods/supervisor.py:728`), "
+        "(`HEFESTO_MOD_FICHA` em `src/hefesto_dualsense4unix/mods/supervisor.py:746`), "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -700,7 +700,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
         "põe a chave no ambiente da modificação antes de abri-la "
-        "(`HEFESTO_MOD_DADOS` em `src/hefesto_dualsense4unix/mods/supervisor.py:729`), "
+        "(`HEFESTO_MOD_DADOS` em `src/hefesto_dualsense4unix/mods/supervisor.py:747`), "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -709,7 +709,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
         "põe a chave no ambiente da modificação antes de abri-la "
-        "(`HEFESTO_MOD_API` em `src/hefesto_dualsense4unix/mods/supervisor.py:730`), "
+        "(`HEFESTO_MOD_API` em `src/hefesto_dualsense4unix/mods/supervisor.py:748`), "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",

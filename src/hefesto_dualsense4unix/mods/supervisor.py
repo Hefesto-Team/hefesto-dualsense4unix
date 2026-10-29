@@ -302,6 +302,7 @@ def comando_na_caixa(
     manifesto: Manifesto,
     casa: Path,
     execucao: tuple[Path, ...],
+    jogos: tuple[Path, ...] = (),
 ) -> list[str]:
     """A linha do ``bwrap`` para ``comando``.
 
@@ -336,10 +337,27 @@ def comando_na_caixa(
         "--bind", str(dados), str(dados),
         "--ro-bind", str(porta), str(porta),
     ]
+    if "jogos" in manifesto.permissoes:
+        argv += [arg for p in jogos for arg in ("--ro-bind", str(p), str(p))]
     if manifesto.rede == "nenhuma":
         argv.append("--unshare-net")
     argv += ["--die-with-parent", "--new-session", "--chdir", str(codigo), "--", *comando]
     return argv
+
+
+def pastas_dos_jogos(manifesto: Manifesto, casa: Path) -> tuple[Path, ...]:
+    """As pastas ``steamapps`` reais de toda biblioteca da casa, só com a permissão ``jogos``."""
+    if "jogos" not in manifesto.permissoes:
+        return ()
+    from hefesto_dualsense4unix.integrations.steam_launch_options import pastas_steamapps
+
+    pastas: list[Path] = []
+    for pasta in pastas_steamapps(casa):
+        with contextlib.suppress(OSError):
+            real = pasta.resolve()
+            if real.is_dir() and real not in pastas:
+                pastas.append(real)
+    return tuple(pastas)
 
 
 def _execucao_da_sessao(xdg: str | None, porta: Path) -> tuple[Path, ...]:
@@ -731,6 +749,9 @@ class Supervisor:
         }
         if execucao_bruta:
             ambiente["XDG_RUNTIME_DIR"] = execucao_bruta
+        jogos = pastas_dos_jogos(manifesto, casa)
+        if jogos:
+            ambiente["HEFESTO_MOD_JOGOS"] = os.pathsep.join(str(p) for p in jogos)
         if self.bwrap:
             argv = comando_na_caixa(
                 bwrap=self.bwrap,
@@ -741,6 +762,7 @@ class Supervisor:
                 manifesto=manifesto,
                 casa=casa,
                 execucao=_execucao_da_sessao(execucao_bruta, self.porta.caminho),
+                jogos=jogos,
             )
         else:
             argv = comando
@@ -842,6 +864,7 @@ __all__ = [
     "Supervisor",
     "comando_na_caixa",
     "parar_o_grupo",
+    "pastas_dos_jogos",
     "supervisor_do_servico",
     "ultima_linha_do_diario",
 ]

@@ -84,7 +84,7 @@ CANAIS_DE_ESCRITA = ("luz", "vibracao", "gatilho")
 
 ALCANCES_DE_REDE = ("nenhuma", "local", "internet")
 
-PERMISSOES_SIMPLES = ("bluetooth", "lancador", "tema", "aparelhos")
+PERMISSOES_SIMPLES = ("bluetooth", "lancador", "tema", "aparelhos", "jogos")
 
 _O_QUE_DEIXA: dict[str, str] = {
     "ler:estado": "Ler os botões, os eixos, os gatilhos e a bateria do controle do jogador 1.",
@@ -128,6 +128,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     "lancador": "Acrescentar um lançador de jogos e abrir os jogos que ele lista.",
     "tema": "Trocar as cores da interface e o lado dos botões da janela.",
     "aparelhos": "Abrir aparelhos ligados ao computador.",
+    "jogos": "Ler as pastas dos jogos instalados na Steam, sem mudar nada nelas.",
 }
 
 BOTOES_DO_POR_BOTAO = (
