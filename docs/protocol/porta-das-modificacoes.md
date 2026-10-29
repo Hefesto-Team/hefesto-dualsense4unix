@@ -381,6 +381,10 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   `{"id": "tempo_maximo", "tipo": "deslizante", "rotulo": "Tempo máximo", "minimo": 0, "maximo": 600,
   "passo": 30, "padrao": 0, "unidade": "s", "zero": "Sem limite", "dica": "Para sozinho depois desse tempo"}`.
   Os três entram depois da 0.9.5, com a mesma `api` 2; um Hefesto até a 0.9.5 recusa o manifesto que os declara.
+- **`degraus`**: só no `deslizante` e sem `unidade`: os degraus do aparelho (de 1 a 1000). O número ao lado
+  mostra o degrau que o aparelho faz naquela posição (`7/20`), também enquanto se arrasta: a fração da faixa
+  em `degraus`, arredondada para cima, e o degrau 1 em toda posição acima do mínimo. A faixa anda pelo `passo`.
+  Entra na mesma `api` 2; o Hefesto de antes dele recusa o manifesto pelo campo.
 - **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
   `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a

@@ -239,7 +239,7 @@ def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_fecha_pelo_x() 
     titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
     assert titulos == ["Geral", "Luz e vibração", "Avançado"], titulos
     assert "mj-abas" not in janela and 'type="radio"' not in janela
-    assert janela.count('<div class="ky-linha" id="mod-op-') == 7
+    assert janela.count('<div class="ky-linha" id="mod-op-') == 8
     assert ('<a class="tn-x" href="#" data-dica="Fechar" data-gesto="cancelar-modificacao" '
             'data-v="exemplo">') in janela
     assert 'class="tn-rod"' not in janela and "guardar-modificacao" not in janela

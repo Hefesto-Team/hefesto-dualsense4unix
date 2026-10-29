@@ -322,6 +322,7 @@ class OpcaoDaJanela(NamedTuple):
     dica: str = ""
     unidade: str = ""
     zero: str = ""
+    degraus: int = 0
 
 
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
@@ -334,6 +335,8 @@ OPCOES_DO_DESENHO = (
     OpcaoDaJanela("exemplo", "avisar", "Avisar quando sair versão nova", "ligado", False, (), "Geral"),
     OpcaoDaJanela("exemplo", "brilho", "Brilho da luz", "deslizante", "70", (), "Luz e vibração",
                   0, 100, 5),
+    OpcaoDaJanela("exemplo", "forca", "Força", "deslizante", "33", (), "Luz e vibração",
+                  0, 100, 1, degraus=20),
     OpcaoDaJanela("exemplo", "vibracao", "Vibração dos jogos", "escolha", "Como o jogo pede",
                   ("Como o jogo pede", "Mais fraca", "Mais forte"), "Luz e vibração"),
     OpcaoDaJanela("exemplo", "espera", "Espera, em segundos", "numero", "3", (), "Avançado"),
@@ -404,8 +407,10 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
                 f'max="{o.maximo:g}" step="{o.passo:g}" value="{_a(o.valor)}" {alvo} '
                 f'data-hef-vivo="{GESTO_DA_OPCAO_VIVA}" '
                 f'aria-label="{_a(o.rotulo)}" oninput="{_NUMERO_AO_ARRASTAR}">'
-                f'<b data-unidade="{_a(o.unidade)}" data-zero="{_a(o.zero)}">'
-                f'{_e(numero_do_deslizante(o.valor, o.unidade, o.zero))}</b></span>')
+                f'<b data-unidade="{_a(o.unidade)}" data-zero="{_a(o.zero)}"'
+                f'{_degraus_do_numero(o.degraus)}>'
+                f'{_e(numero_do_deslizante(o.valor, o.unidade, o.zero, o.degraus, o.minimo, o.maximo))}'
+                '</b></span>')
     if o.tipo == "jogos":
         return _jogos_da_opcao(o)
     if o.tipo == "por_botao":
@@ -651,19 +656,48 @@ def _linhas_da_aba(n: int | str, itens: Sequence[OpcaoDaJanela], chave: OpcaoDaJ
 _EMPILHADAS = ("jogos", "por_botao")
 
 
-_NUMERO_AO_ARRASTAR = ("const b=this.nextElementSibling;b.textContent=Number(this.value)===0"
-                       "&amp;&amp;b.dataset.zero?b.dataset.zero:this.value+(b.dataset.unidade?"
-                       "&#39; &#39;+b.dataset.unidade:&#39;&#39;)")
+DEGRAU_EM_JS = ("const f=Math.min(1,Math.max(0,(v-Number(this.min))/(Number(this.max)"
+                "-Number(this.min))));const k=f<=0?0:Math.min(n,Math.max(1,"
+                "Math.ceil(Number((f*n).toFixed(6)))));")
+_NUMERO_AO_ARRASTAR = _a(
+    "const b=this.nextElementSibling,v=Number(this.value),n=Number(b.dataset.degraus||0);"
+    "if(v===0&&b.dataset.zero){b.textContent=b.dataset.zero}else if(n>0){" + DEGRAU_EM_JS
+    + "b.textContent=k+'/'+n}else{b.textContent=this.value+(b.dataset.unidade?"
+    "' '+b.dataset.unidade:'')}")
 
 
-def numero_do_deslizante(valor: Any, unidade: str = "", zero: str = "") -> str:
-    """O número ao lado do deslizante: o texto do ``zero`` no 0, senão o valor com a unidade."""
+def degrau_da_faixa(valor: Any, minimo: float, maximo: float, degraus: int) -> int:
+    """O degrau que o aparelho faz nesta posição da faixa: a fração da faixa em ``degraus``,
+    arredondada para cima, e o degrau 1 em toda posição acima do mínimo. É o arredondamento do
+    lado que manda (o da extensão) e o do :data:`DEGRAU_EM_JS`, que o número segue ao arrastar."""
+    try:
+        v = float(valor)
+    except (TypeError, ValueError):
+        return 0
+    if degraus <= 0 or not maximo > minimo:
+        return 0
+    f = min(1.0, max(0.0, (v - minimo) / (maximo - minimo)))
+    if f <= 0:
+        return 0
+    return min(degraus, max(1, math.ceil(round(f * degraus, 6))))
+
+
+def _degraus_do_numero(degraus: int) -> str:
+    return f' data-degraus="{degraus}"' if degraus > 0 else ""
+
+
+def numero_do_deslizante(valor: Any, unidade: str = "", zero: str = "", degraus: int = 0,
+                         minimo: float = 0, maximo: float = 0) -> str:
+    """O número ao lado do deslizante: o texto do ``zero`` no 0; com ``degraus``, o degrau que o
+    aparelho faz (``7/20``); senão, o valor com a unidade."""
     try:
         no_zero = float(valor) == 0
     except (TypeError, ValueError):
         no_zero = False
     if zero and no_zero:
         return zero
+    if degraus > 0:
+        return f"{degrau_da_faixa(valor, minimo, maximo, degraus)}/{degraus}"
     return f"{valor} {unidade}" if unidade else str(valor)
 
 

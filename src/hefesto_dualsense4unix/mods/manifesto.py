@@ -289,6 +289,7 @@ class Opcao(BaseModel):
     dica: str | None = Field(default=None, min_length=1, max_length=120)
     unidade: str | None = Field(default=None, min_length=1, max_length=4)
     zero: str | None = Field(default=None, min_length=1, max_length=24)
+    degraus: int | None = Field(default=None, ge=1, le=1000)
 
     @field_validator("id")
     @classmethod
@@ -322,6 +323,8 @@ class Opcao(BaseModel):
             raise ValueError(f"a opção {self.id} não é deslizante e declara faixa ou passo")
         elif self.unidade is not None or self.zero is not None:
             raise ValueError(f"a opção {self.id} não é deslizante e declara unidade ou zero")
+        elif self.degraus is not None:
+            raise ValueError(f"a opção {self.id} não é deslizante e declara degraus")
         if self.tipo == "jogos":
             self._conferir_os_jogos()
         elif isinstance(self.padrao, list):
@@ -396,6 +399,8 @@ class Opcao(BaseModel):
             raise ValueError(f"o padrão do deslizante {self.id} está fora da faixa")
         if self.zero is not None and self.minimo != 0:
             raise ValueError(f"o deslizante {self.id} declara zero e o mínimo não é 0")
+        if self.degraus is not None and self.unidade is not None:
+            raise ValueError(f"o deslizante {self.id} declara degraus e unidade")
 
     def _conferir_os_jogos(self) -> None:
         if self.padrao is None:

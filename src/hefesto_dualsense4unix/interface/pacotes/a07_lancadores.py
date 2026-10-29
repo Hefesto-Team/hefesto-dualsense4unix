@@ -1549,7 +1549,8 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         formas=_formas_da_opcao(manifesto, x, valores),
         botoes=x.botoes_da_janela if x.tipo == "por_botao" else (),
         modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "",
-        dica=x.dica or "", unidade=x.unidade or "", zero=x.zero or "")
+        dica=x.dica or "", unidade=x.unidade or "", zero=x.zero or "",
+        degraus=x.degraus or 0)
         for x in manifesto.opcoes if x.id in aparecem and x.id != manifesto.chave]
     chave = bool(guardados[manifesto.chave]) if manifesto.chave else None
     _MEXIDA.desligada = chave is False
