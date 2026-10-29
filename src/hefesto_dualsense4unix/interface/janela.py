@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.interface import tema_da_sessao as tema  # noqa: E40
 from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     CLASSE_DA_ESPERA,
     FOLHA_DA_CASA,
+    MENOR_QUE_CEDE,
     VISTA_DO_DESENHO,
     caminho_do_tamanho,
     tamanho_guardado,
@@ -262,6 +263,8 @@ def por_os_botoes_no_lado(barra: Any, botoes: dict[str, Any], lado: str) -> None
 
 TAMANHO_NA_TELA = (LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
 TAMANHO_OCULTA = (LARGURA_DO_DESENHO, PISO_DA_VISTA)
+PISO_DA_JANELA = (LARGURA_DO_DESENHO * MENOR_QUE_CEDE // 100,
+                  PISO_DA_VISTA * MENOR_QUE_CEDE // 100 + ALTURA_DA_BARRA)
 
 SEM_JANELA_NA_TELA = "HEFESTO_SEM_JANELA"
 
@@ -675,7 +678,7 @@ class JanelaDaAba:
             self.janela.set_default_size(*(tamanho or TAMANHO_NA_TELA))
             largura, altura = tamanho or TAMANHO_NA_TELA
             self._vista_pedida = (largura, altura - ALTURA_DA_BARRA)
-            self.janela.set_size_request(LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
+            self.janela.set_size_request(*PISO_DA_JANELA)
             barra, self._botoes_da_barra = montar_a_barra(
                 titulo, subtitulo or "", self._gesto_da_barra, cor=self._cor_da_barra,
                 lado=self._lado,

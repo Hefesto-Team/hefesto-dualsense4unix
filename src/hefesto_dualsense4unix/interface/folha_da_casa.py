@@ -34,6 +34,8 @@ def tamanho_guardado() -> int:
 
 VISTA_DO_DESENHO = (1212, 809)
 
+MENOR_QUE_CEDE = 50
+
 RECUO_DO_CORPO = 16
 
 CROMO_DA_JANELA = 143
@@ -43,16 +45,15 @@ MIOLO_NO_PISO = VISTA_DO_DESENHO[1] - 2 * RECUO_DO_CORPO - CROMO_DA_JANELA
 
 def tamanho_que_cabe(escolhido: int, largura: int, altura: int) -> int:
     """O percentual em uso: o escolhido, ou o maior que ainda põe a vista do desenho na vista da
-    janela (`largura` x `altura`, em pixels da tela). Nunca abaixo de 100: menor que isso é o
-    tamanho de hoje encolhido, e o 100 é o que a janela sempre mostrou.
+    janela (`largura` x `altura`, em pixels da tela). Nunca abaixo de `MENOR_QUE_CEDE`.
 
-    A escolha de 23/10/2026 (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01, «Cede onde não
-    cabe»): o zoom divide a vista em CSS pelo tamanho, e 150 % numa vista de 840 px de altura dá
-    560, onde a 04 rola. A 840 px, o que cabe é 103 %.
+    D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE: 150 % numa vista de 840 px rolava a 04; ali cabe 103 %.
+    D-2910-O-TAMANHO-CEDE-ABAIXO-DE-100: a janela ladrilhada em 1172x768 cortava o rodapé; ali
+    cabe 90 %, e o desenho inteiro aparece.
     """
     piso_l, piso_a = VISTA_DO_DESENHO
     cabe = min(largura * 100 // piso_l, altura * 100 // piso_a)
-    return max(PERCENTUAIS_DO_TAMANHO[0], min(int(escolhido), cabe))
+    return max(MENOR_QUE_CEDE, min(int(escolhido), cabe))
 
 CLASSE_DA_ESPERA = "hef-esperando"
 

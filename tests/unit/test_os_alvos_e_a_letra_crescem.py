@@ -325,12 +325,20 @@ def test_o_tamanho_grande_cabe_na_janela(
 
 
 def test_o_que_cabe_e_o_menor_entre_o_escolhido_e_a_vista() -> None:
-    """A conta da janela: 840 px de altura comportam 103 %; a vista alta, o escolhido; e nunca
-    abaixo de 100, que é o tamanho de hoje.
+    """A conta da janela: 840 px de altura comportam 103 %; a vista alta, o escolhido; a vista
+    menor que o desenho cede abaixo de 100, até `MENOR_QUE_CEDE`.
 
-    Prova da D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE.
+    Prova da D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE e da D-2910-O-TAMANHO-CEDE-ABAIXO-DE-100: a
+    janela ladrilhada em 1172x768 (vista de 1172x729) mostra o desenho inteiro a 90 %.
+
+    MORDIDA: devolver o piso de 100 em `tamanho_que_cabe` reprova o 90 % e a vista em CSS da
+    janela ladrilhada, que volta a 1172x729, menor que o desenho.
     """
-    from hefesto_dualsense4unix.interface.folha_da_casa import VISTA_DO_DESENHO, tamanho_que_cabe
+    from hefesto_dualsense4unix.interface.folha_da_casa import (
+        MENOR_QUE_CEDE,
+        VISTA_DO_DESENHO,
+        tamanho_que_cabe,
+    )
 
     assert VISTA_DO_DESENHO == (1212, 809)
     assert tamanho_que_cabe(150, 1918, 840) == 103
@@ -339,8 +347,10 @@ def test_o_que_cabe_e_o_menor_entre_o_escolhido_e_a_vista() -> None:
     assert tamanho_que_cabe(150, 1918, 1300) == 150
     assert tamanho_que_cabe(150, 1918, 1041) == 128
     assert tamanho_que_cabe(100, 1918, 1300) == 100
-    assert tamanho_que_cabe(150, 940, 600) == 100
-    for vista in ((1918, 840), (1212, 809), (1918, 1041), (1600, 900)):
+    assert tamanho_que_cabe(100, 1172, 729) == 90
+    assert tamanho_que_cabe(150, 940, 600) == 74
+    assert tamanho_que_cabe(150, 300, 200) == MENOR_QUE_CEDE == 50
+    for vista in ((1918, 840), (1212, 809), (1918, 1041), (1600, 900), (1172, 729), (940, 600)):
         largura, altura = _vista_em_css(vista, 150)
         assert largura >= 1212 and altura >= 809, vista
 

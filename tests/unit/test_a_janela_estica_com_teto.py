@@ -27,8 +27,10 @@ O PISO NÃO MUDOU, e é a parte que se lê errado
 `interface/janela.LARGURA_DO_DESENHO` continua 1212 (`16+1180+16`), e continua
 certo: 1180 é o ponto abaixo do qual as colunas em px do miolo não têm para onde
 encolher. O que mudou é que **o CSS não escreve mais esse número** — quem segura
-o piso agora é só o `set_size_request` da janela GTK. Esta régua mede isso de
-propósito, para que apagar aquela linha deixe de ser barato.
+o piso agora é o zoom da janela (`folha_da_casa.tamanho_que_cabe`): a janela que
+encolhe abaixo do desenho ganha zoom menor que 100 %, e a vista em CSS continua
+com 1212 de largura. Esta régua mede isso de propósito, para que apagar aquela
+conta deixe de ser barato.
 
 A MORDIDA
 ---------
