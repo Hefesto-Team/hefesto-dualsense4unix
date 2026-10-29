@@ -2523,7 +2523,7 @@ def modo_dos_controles_do_perfil(p: dict[str, Any] | None) -> str:
 def modo_dos_controles(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão «Modo automático» da aba: grava ``controles_modo`` no perfil ativo.
 
-    Automático é os quatro controles aceitarem o que o jogo manda, sem ajuste do Hefesto. O
+    Automático é os quatro controles aceitarem o que o jogo pede, sem ajuste do Hefesto. O
     ``data-modo`` do botão diz o que o usuário PEDIU, e pedir o modo em que o perfil já está não
     grava nada. Nada se apaga: as escolhas da aba ficam no perfil, e o Personalizado as devolve.
     """

@@ -2,7 +2,7 @@ import sys, pathlib, re; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde
 import monta as monta_
 from itertools import cycle
-from monta import (monta, trava_do_nativo, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
+from monta import (monta, svg, CSS_GLIFO, CSS_LUZINHAS, MESA,
                    cor_da_zona, player_slot_color, tom_da_casa)
 from pacotes import a04_iluminacao as _pacote04
 
@@ -460,7 +460,6 @@ MIOLO = f'''
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="A luz diz de quem é cada controle">Iluminação</span>
-        {trava_do_nativo("na luz").replace("title=", "data-dica=", 1)}
         {monta_.modo_auto(GESTO_DO_MODO, governa=".luz-grade .ctrl", dica="O jogo pinta a barra; o estilo do perfil ajusta")}
       </div>
       <div class="quadro-corpo">

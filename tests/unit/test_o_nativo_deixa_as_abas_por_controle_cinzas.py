@@ -13,8 +13,9 @@ DUAS METADES, e nenhuma prova a outra:
    Ficam vivos só os de `VIVOS_NO_NATIVO` e o Exportar, que só grava um arquivo.
 2. **A tela (Chrome de verdade).** Com `body.nativo`, o motor responde por `elementFromPoint`:
    nenhum gesto das quatro abas recebe clique fora dos vivos, a fita é uma camada muda (a Jogar
-   não tem fita: a aba de cada controle é da janela) e o
-   quadro mostra «O jogo manda». O cartão com a máscara saiu da Jogar em 28/10/2026. Sem o
+   não tem fita: a aba de cada controle é da janela) e nenhum quadro diz «O jogo manda» (o selo
+   com cadeado saiu por ordem em 29/10/2026). O cartão com a máscara saiu da Jogar em
+   28/10/2026. Sem o
    `nativo` a mesma página oferece tudo (a cura não pode ser
    «cinza para sempre»).
 
@@ -231,11 +232,14 @@ O_QUE_O_MOTOR_DESENHA = r"""
     return {clicavel: !!em && (em === c || c.contains(em)),
             quem: em ? em.className : ''};
   });
-  const trava = Array.from(document.querySelectorAll('.trava-nativo')).filter(visivel)
-    .map((e) => e.textContent.trim());
+  const trava = document.querySelectorAll('.trava-nativo').length;
+  const jogoManda = (/jogo manda/i.test(document.body.innerText) ? ['texto'] : []).concat(
+    Array.from(document.querySelectorAll('[title],[data-dica]')).filter((e) => /jogo manda/i.test(
+      (e.getAttribute('title') || '') + ' ' + (e.getAttribute('data-dica') || '')))
+      .map((e) => e.className || e.tagName));
   const camadaDaFita = Array.from(document.querySelectorAll('.fita .so-no-nativo'))
     .filter(visivel).length;
-  return {gestos, chipsDaFita, trava, camadaDaFita,
+  return {gestos, chipsDaFita, trava, jogoManda, camadaDaFita,
           corpo: document.body.className};
 }
 """
@@ -336,7 +340,11 @@ def test_no_nativo_a_aba_de_cada_controle_da_jogar_escolhe_o_cartao(
         f"no Nativo as abas dos dois conectados não recebem clique: {abas}")
 
 
-def test_no_nativo_as_tres_abas_de_ajuste_dizem_que_o_jogo_manda(medido: dict[str, Any]) -> None:
-    for pagina in AS_QUATRO[1:]:
-        assert medido[pagina]["nativo"]["trava"] == ["O jogo manda"], (
-            f"{pagina}: a trava «O jogo manda» não aparece no Nativo")
+def test_nenhuma_das_quatro_abas_diz_que_o_jogo_manda(medido: dict[str, Any]) -> None:
+    """Ordem de 29/10/2026: o selo com cadeado e a frase saem de todas, no Nativo e fora."""
+    for pagina in AS_QUATRO:
+        for modo in ("nativo", "normal"):
+            m = medido[pagina][modo]
+            assert m["trava"] == 0, f"{pagina} ({modo}): o selo `.trava-nativo` voltou"
+            assert m["jogoManda"] == [], (
+                f"{pagina} ({modo}): «jogo manda» voltou à tela: {m['jogoManda']}")

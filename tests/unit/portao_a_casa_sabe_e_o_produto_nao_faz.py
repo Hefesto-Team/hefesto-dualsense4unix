@@ -1189,15 +1189,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/` contam para este portão. A página publicada leva a folha "
         "podada de cada desenho (`monta._so_o_colorway`)."
     ),
-    "interface/monta.py::trava_do_nativo": (
-        "09/10/2026, leva 1-11 (251abb29a, «no Nativo a interface não oferece o que o Linux "
-        "puro não aceita») — é do gerador do desenho, não do produto: quem a chama são os "
-        "geradores da 02, da 03, da 04 e da 05 (`interface/aba02.py`, `aba03.py`, `aba04.py`, "
-        "`aba05.py`, a peça «O jogo manda» no cabeçalho de cada quadro), que são BANCADA e "
-        "saem da conta pela poda de `promessas_sem_caminho`. A peça vai cravada no HTML "
-        "publicado de `interface/paginas/`, nascida escondida; quem a mostra no produto é a "
-        "regra `body.nativo .trava-nativo` de `interface/topo.html`, a folha comum das abas."
-    ),
     "interface/monta.py::folha_de_realce": (
         "29/09/2026, A-TELA-PERGUNTA-AO-DONO-01 — a regra CSS do `apertados=` de "
         "`monta.svg` é do INSTRUMENTO: quem a chama é a mesa de medição "
@@ -1466,7 +1457,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "desenho, não do produto: o `interface/aba03.py` (o gerador do mockup dos Gatilhos, "
         "o import de `src/hefesto_dualsense4unix/interface/aba03.py:36` (`sem_comentarios_de_css`) "
         "e a chamada de "
-        "`src/hefesto_dualsense4unix/interface/aba03.py:686` (`sem_comentarios_de_css`)) tira com "
+        "`src/hefesto_dualsense4unix/interface/aba03.py:685` (`sem_comentarios_de_css`)) tira com "
         "ela os `/* … */` do CSS para "
         "conferir "
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "

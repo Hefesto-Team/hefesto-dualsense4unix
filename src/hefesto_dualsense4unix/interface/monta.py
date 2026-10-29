@@ -418,7 +418,7 @@ def par_de_modos(gesto: str, modo: str) -> str:
             + "".join(botoes) + "</span>")
 
 
-DICA_DO_MODO_AUTO = "O jogo manda; o estilo do perfil ajusta o resto"
+DICA_DO_MODO_AUTO = "O jogo decide; o estilo do perfil ajusta o resto"
 
 
 def modo_auto(gesto: str, ligado: bool = False, governa: str = "",
@@ -450,9 +450,7 @@ def rotulo_do_chip(c: dict[str, Any]) -> str:
     return texto
 
 
-DICA_DA_FITA_NO_NATIVO = (
-    '<span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: '
-    'aqui só se vê quem está conectado."></span>')
+CAMADA_DA_FITA_NO_NATIVO = '<span class="so-no-nativo"></span>'
 
 
 def fita(ativo: str = "todos", inerte: bool = False,
@@ -540,7 +538,7 @@ def fita(ativo: str = "todos", inerte: bool = False,
     rotulo = f"<span>{ROTULO_DA_FITA}</span>" if lista else ""
     return (f'<div class="fita{" inerte" if inerte else ""}"{balao}>\n'
             f"      {rotulo}\n      " + "\n      ".join(chips)
-            + f'\n      {DICA_DA_FITA_NO_NATIVO}\n    </div>')
+            + f'\n      {CAMADA_DA_FITA_NO_NATIVO}\n    </div>')
 
 
 def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
@@ -875,19 +873,6 @@ CSS_DO_NATIVO = """
   body.nativo.por-controle .r-aplicar,body.nativo.por-controle .r-salvar,
   body.nativo.por-controle .r-importar{visibility:hidden}
 """
-
-
-def trava_do_nativo(o_que: str) -> str:
-    """A peça «O jogo manda» do cabeçalho de um quadro, com cadeado, nascida
-    escondida e mostrada por `body.nativo`. `o_que`: sobre o que o jogo manda
-    («nos gatilhos», «na luz»...)."""
-    return (
-        '<span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda '
-        f'{o_que}. O que está aqui volta a valer quando ligar, na aba Jogar.">'
-        '<svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
-        '<path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" '
-        'stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" '
-        'fill="currentColor"/></svg>O jogo manda</span>')
 
 
 def corpo_da_pagina(arq: str) -> str:

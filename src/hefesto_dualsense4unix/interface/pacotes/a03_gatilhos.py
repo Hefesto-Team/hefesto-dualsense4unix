@@ -192,7 +192,7 @@ def _specs() -> Any:
 
 
 DICA_DO_MODO = {
- "Off": "O jogo manda no gatilho; sem jogo, ele fica solto, como num controle comum.",
+ "Off": "O jogo decide o gatilho; sem jogo, ele fica solto, como num controle comum.",
  "Resistance": "Peso firme a partir do ponto escolhido, sem estalo — pedal, alavanca, remada.",
  "Weapon": "Resiste, estala e rearma sozinho a cada aperto: um tiro por aperto.",
  "Bow": "Fica cada vez mais pesado até o fim do curso, e então solta de uma vez.",
@@ -1930,7 +1930,7 @@ def modo_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         "triggers": prof.triggers.model_copy(update={"modo": pedido})})
     _gravar_so_o_gatilho(novo, p)
     perfil.reaplicar(nome, ctx, p)
-    return {"recado": ("Gatilhos no modo automático: o jogo manda; o estilo ajusta."
+    return {"recado": ("Gatilhos no modo automático: o jogo decide; o estilo ajusta."
                        if pedido == MODO_AUTOMATICO
                        else "Gatilhos no modo personalizado: valem as suas escolhas.")}
 

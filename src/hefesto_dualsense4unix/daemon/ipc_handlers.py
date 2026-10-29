@@ -4049,7 +4049,7 @@ class IpcHandlersMixin:
             if not isinstance(fonte, str) or fonte not in (FONTE_MIX, FONTE_SFX):
                 raise ValueError(
                     f"speaker.set: 'fonte' precisa ser {FONTE_SFX!r} (só o que "
-                    f"o jogo mandar para este controle) ou {FONTE_MIX!r} (todo "
+                    f"o jogo envia para este controle) ou {FONTE_MIX!r} (todo "
                     f"o som da máquina cai nele também)"
                 )
         if release and (

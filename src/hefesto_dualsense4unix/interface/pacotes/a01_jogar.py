@@ -1368,7 +1368,7 @@ def modo_nativo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     """"Nativo": o Hefesto fora do meio, e a Steam fora do jogo da vez.
 
     NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026: *«Desligado seria garantir que a
-    steam não se mete e o jogo manda.»* O clique é o da fileira (:func:`_o_clique_da_fileira`): modo
+    steam não se mete»* O clique é o da fileira (:func:`_o_clique_da_fileira`): modo
     `native`, jogo da vez fora da lista do Steam Input e `localconfig.vdf` relido. Com a Steam
     aberta a escrita espera e o guarda do vdf completa quando ela fechar (e tira a Steam de todo
     jogo fora da lista a cada saída dela).

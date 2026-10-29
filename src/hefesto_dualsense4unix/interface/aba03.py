@@ -6,7 +6,7 @@ import re
 import onde
 import mapa as _mapa
 import monta as monta_
-from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta, trava_do_nativo
+from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta
 
 sys.path.insert(0, str(R / "src"))
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
@@ -63,7 +63,7 @@ SEM_NA_LISTA = ("Custom",)
 GESTO_DO_MODO = "modo-dos-gatilhos"
 
 GOVERNA = ".g2-grade > :is(.g2-gl:not(.g2-ds),.g2-rot,.g2-cel,.g2-sep:not(.g2-sep-cab))"
-DICA_DO_AUTOMATICO = "O jogo manda; o estilo do perfil ajusta"
+DICA_DO_AUTOMATICO = "O jogo decide os gatilhos; o estilo do perfil ajusta"
 
 CENA = {
     "p1": {"e": ("Machine", "rajada-que-sobe-sozinha"),
@@ -442,7 +442,6 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Uma coluna por controle; vale na hora">Gatilhos</span>
-        {trava_do_nativo("nos gatilhos")}
         {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}
       </div>
       <div class="quadro-corpo">

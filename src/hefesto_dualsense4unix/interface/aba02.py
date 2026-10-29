@@ -2,7 +2,7 @@ import re, sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import mesa_viva
 import monta as _monta_modulo
 import onde
-from monta import (monta, trava_do_nativo, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
+from monta import (monta, glifo, rotulo, cabe_o_todos, CSS_GLIFO, CSS_LUZINHAS,
                    MESA, CONECTADOS,
                    NADA_A_DIZER, SEPARADOR, cor_da_zona, luzinhas, numero_do_jogador,
                    player_slot_color,
@@ -1255,7 +1255,6 @@ def _miolo(blocos, depois="", abas=None):
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
-        {trava_do_nativo("nestes ajustes")}
         <span class="sensores">
           <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="{DICA_DO_CALIBRAR}">{GLIFO_DO_CALIBRAR}{ROTULO_DO_CALIBRAR}</a>
           {_monta_modulo.modo_auto(GESTO_DO_MODO, False, GOVERNA_DO_MODO_AUTOMATICO, DICA_DO_MODO_AUTOMATICO)}
@@ -1708,8 +1707,7 @@ def _conferir(doc, aba="02-controles"):
     exigir('data-rota="junto"' not in corpo and 'class="rota trio"' in corpo
            and corpo.count('class="rota trio"') == len(MESA),
            "a fileira do alto-falante não tem as três rotas, uma por linha")
-    _canto = re.sub(r'<span class="trava-nativo".*?</span>', "",
-                    MIOLO.split('<div class="quadro-corpo">', 1)[0], flags=re.S)
+    _canto = MIOLO.split('<div class="quadro-corpo">', 1)[0]
     _trilhos = "".join(re.findall(r'<input class="puxa-vol"[^>]*>', corpo))
     exigir("title=" not in _canto and "title=" not in _trilhos,
            "o canto do alto ou o deslizante de volume ganhou `title` estático: a dica é `data-dica`")

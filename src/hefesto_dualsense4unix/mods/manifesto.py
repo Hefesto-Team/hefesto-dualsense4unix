@@ -100,7 +100,7 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Saber o efeito de gatilho que o jogo pede a cada controle."
     ),
     "ler:jogo.haptica": (
-        "Saber a intensidade da vibração fina que o jogo manda a cada controle."
+        "Saber a intensidade da vibração fina que o jogo envia a cada controle."
     ),
     "ler:perfil.jogo": "Saber o perfil, o jogo e o estilo em uso em cada controle.",
     "ler:jogo.acessorio": (
