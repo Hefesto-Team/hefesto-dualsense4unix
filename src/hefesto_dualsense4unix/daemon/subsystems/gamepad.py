@@ -56,10 +56,13 @@ Política:
 from __future__ import annotations
 
 import contextlib
+import os
+import re
 import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -1324,6 +1327,54 @@ def primary_identity(daemon: DaemonProtocol) -> str | None:
     return uniq if isinstance(uniq, str) and uniq else None
 
 
+DONO_DO_P1_ENV = "HEFESTO_DONO_DO_P1"
+
+
+def _arquivo_do_dono_do_p1() -> Path:
+    from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
+
+    declarado = os.environ.get(DONO_DO_P1_ENV, "").strip()
+    return Path(declarado) if declarado else runtime_dir() / "dono-do-p1"
+
+
+def _doze_hex(identity: object) -> bool:
+    return isinstance(identity, str) and len(re.sub(r"[^0-9a-fA-F]", "", identity)) == 12
+
+
+def o_dono_lembrado_do_p1() -> str | None:
+    """O último dono do posto do P1 nesta sessão (o runtime), para o pad renascer com ele."""
+    try:
+        lido = _arquivo_do_dono_do_p1().read_text(encoding="ascii").strip()
+    except (OSError, UnicodeDecodeError):
+        return None
+    return lido if _doze_hex(lido) else None
+
+
+def lembrar_o_dono_do_p1(identity: str | None) -> None:
+    """Grava o dono do posto do P1 no runtime da sessão; nunca levanta."""
+    if not _doze_hex(identity) or identity == o_dono_lembrado_do_p1():
+        return
+    assert identity is not None
+    arquivo = _arquivo_do_dono_do_p1()
+    try:
+        arquivo.parent.mkdir(parents=True, exist_ok=True)
+        provisorio = arquivo.with_name(f".{arquivo.name}.{os.getpid()}")
+        provisorio.write_text(identity, encoding="ascii")
+        os.chmod(provisorio, 0o600)
+        os.replace(provisorio, arquivo)
+    except OSError as exc:
+        logger.warning("dono_do_p1_nao_gravado", err=str(exc))
+
+
+def a_identidade_do_p1_que_nasce(daemon: DaemonProtocol) -> str | None:
+    """O dono do posto agora; sem ele (o começo do daemon), o último que a sessão viu."""
+    identity = primary_identity(daemon)
+    if identity is None:
+        return o_dono_lembrado_do_p1()
+    lembrar_o_dono_do_p1(identity)
+    return identity
+
+
 def ancorar_o_p1_no_aparelho(daemon: DaemonProtocol) -> bool:
     """O pad do P1 segue o dono do posto de agora: a âncora do gadget vai junto.
 
@@ -1335,6 +1386,7 @@ def ancorar_o_p1_no_aparelho(daemon: DaemonProtocol) -> bool:
     identity = primary_identity(daemon)
     if identity is None:
         return False
+    lembrar_o_dono_do_p1(identity)
     ancorar = getattr(getattr(daemon, "_gamepad_device", None), "ancorar_no_aparelho", None)
     if not callable(ancorar):
         return False
@@ -1868,7 +1920,7 @@ def start_gamepad_emulation_desfecho(
     key = normalize_flavor(
         flavor if flavor is not None else getattr(daemon.config, "gamepad_flavor", None)
     )
-    identity = primary_identity(daemon)
+    identity = a_identidade_do_p1_que_nasce(daemon)
     mascara_do_p1 = mascara_efetiva(identity, key)
     caminho_pedido = normalizar_caminho(caminho) or _caminho_a_herdar(daemon)
     uhid_pedido = quer_uhid(caminho_pedido, mascara_do_p1)

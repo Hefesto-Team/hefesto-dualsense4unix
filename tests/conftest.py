@@ -1565,6 +1565,7 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(home_dir))
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
+    monkeypatch.setenv("HEFESTO_DONO_DO_P1", str(xdg_root / "dono-do-p1"))
     monkeypatch.setenv("HEFESTO_WIREPLUMBER_SISTEMA", str(xdg_root / "wireplumber-de-sistema"))
     try:
         from hefesto_dualsense4unix.core import evdev_reader
