@@ -478,7 +478,10 @@ ARTE_DOS_CONTROLES = onde.RAIZ / "assets" / "control-svg"
 
 SILHUETAS = {"dualsense": ("Sony-dualsense.svg", "contorno"),
              "xbox": ("xbox.svg", "traco"),
-             "nintendo": ("Nintendo-pro_controller.svg", "")}
+             "nintendo": ("Nintendo-pro_controller.svg", ""),
+             CHIP_DO_NATIVO: ("dualsense-edge.svg", "traco"),
+             "steam": ("steam.svg", "traco"),
+             "navegacao": ("teclado-e-mouse.svg", "traco")}
 
 
 def silhueta(chave: str) -> str:
@@ -942,6 +945,11 @@ def _conferir(doc):
     ligado = status.split('class="hef-modo so-ligado"', 1)[-1].split('class="hef-modo so-desligado"', 1)[0]
     exigir(ligado.count('<svg class="silhueta') == len(MODOS),
            "um modo do Ligado ficou sem o desenho do controle dentro do botão")
+    desligado = status.split('class="hef-modo so-desligado"', 1)[-1]
+    for m in DO_DESLIGADO:
+        exigir(f'data-hef-quando="{m["chave"]}"' in desligado
+               and m["chave"] in SILHUETAS and silhueta(m["chave"]) in desligado,
+               f"o {m['rot']} do Desligado ficou sem o desenho dele dentro do botão")
     exigir("point-and-click" not in corpo and "Point and click" not in corpo,
            "o Point and click voltou ao modo: ele mora no estilo de jogo")
     exigir(corpo.count('data-gesto="modo-navegacao" data-modo="desktop"') == 1,
