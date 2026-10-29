@@ -30,6 +30,7 @@ import yaml
 
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
+RELEASE = RAIZ / ".github" / "workflows" / "release.yml"
 SCRIPT = RAIZ / "scripts" / "rodar-a-suite.sh"
 
 UM_PROCESSO_SO = re.compile(r"pytest\s+tests/unit(?![/\w])")
@@ -289,6 +290,39 @@ def test_mordida_lint_test_de_volta_ao_processo_unico() -> None:
     passo = _passo_da_suite(jobs["lint-test"])
     passo["run"] = "pytest tests/unit -v --continue-on-collection-errors"
     achados = todas_as_faltas(jobs, 24)
+    assert any("num processo só" in f for f in achados)
+    assert any("nenhum passo roda scripts/rodar-a-suite.sh" in f for f in achados)
+
+
+def faltas_do_release(jobs: dict[str, Any]) -> list[str]:
+    """O build da release roda a suíte pelo mesmo dono do comando que o lint-test."""
+    faltas = [
+        f"release / {nome} / {p.get('name')}: roda `tests/unit` num processo só"
+        for nome, job in jobs.items()
+        for p in job.get("steps", [])
+        if UM_PROCESSO_SO.search(str(p.get("run", "")))
+    ]
+    passos = jobs.get("build", {}).get("steps", [])
+    if not any("scripts/rodar-a-suite.sh" in str(p.get("run", "")) for p in passos):
+        faltas.append("release / build: nenhum passo roda scripts/rodar-a-suite.sh")
+    return faltas
+
+
+def _jobs_do_release() -> dict[str, Any]:
+    jobs: dict[str, Any] = yaml.safe_load(RELEASE.read_text(encoding="utf-8"))["jobs"]
+    return jobs
+
+
+def test_a_release_roda_a_suite_em_partes_como_o_ci() -> None:
+    """O run 40874748294 (v0.9.5.1) reprovou 42 testes num processo só, com `select()` após 1024."""
+    assert faltas_do_release(_jobs_do_release()) == []
+
+
+def test_mordida_release_de_volta_ao_processo_unico() -> None:
+    jobs = copy.deepcopy(_jobs_do_release())
+    passo = _passo_da_suite(jobs["build"])
+    passo["run"] = "pytest tests/unit -v --continue-on-collection-errors"
+    achados = faltas_do_release(jobs)
     assert any("num processo só" in f for f in achados)
     assert any("nenhum passo roda scripts/rodar-a-suite.sh" in f for f in achados)
 

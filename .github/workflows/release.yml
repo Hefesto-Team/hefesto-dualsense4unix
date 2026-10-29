@@ -86,12 +86,13 @@ jobs:
           REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
         run: python3 scripts/release/versao.py conferir-tag "${REF_NAME}"
       - name: Instalar e testar
+        env:
+          SAIDA: /tmp/suite-release
+          SUITE_PYTEST_ARGS: --continue-on-collection-errors
         run: |
           pip install -c constraints.txt -e ".[dev]"
           ruff check src/ tests/
-          pytest tests/unit -v --continue-on-collection-errors
-          # tests/core (12 testes) também não rodava aqui — mesma lacuna que o
-          # CI-TESTS-CORE-ORFAO-01 fechou do lado do ci.yml.
+          bash scripts/rodar-a-suite.sh
           pytest tests/core -v
       - name: Mypy (gate rígido, o mesmo do ci.yml)
         run: mypy src/hefesto_dualsense4unix
@@ -345,7 +346,8 @@ jobs:
             # cai no ramo "ausente" e tenta de novo até o limite.
             LINHA="$(gh api \
               "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=100" \
-              --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0] // empty
+              --jq '.workflow_runs | sort_by(.created_at) | reverse
+                    | ((map(select(.conclusion == "success")) | .[0]) // .[0]) // empty
                     | "\(.status)|\(.conclusion)|\(.html_url)"' || true)"
             if [ -z "${LINHA}" ]; then
               STATUS="ausente"; CONCLUSAO=""; URL=""
