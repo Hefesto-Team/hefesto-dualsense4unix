@@ -204,8 +204,10 @@ def _aparar_o_diario(caminho: Path, chegando: int = 0) -> None:
 
 
 class _AHoraDeCadaLinha:
-    """Põe ``HH:MM:SS`` no começo de cada linha, e a data na primeira e quando o dia muda.
+    """Põe ``AAAA-MM-DD HH:MM:SS`` no começo de cada linha.
 
+    A data vai em toda linha: com ela só na primeira e na troca do dia, a poda do teto levava a
+    linha da data, e o resto do diário ficava sem dia (medido em 28/10/2026).
     Só a linha inteira sai; o pedaço sem quebra espera a quebra, até ``teto`` bytes ou o fim.
     As linhas de um mesmo pedaço do cano chegaram juntas e levam a mesma hora, lida uma vez.
     """
@@ -213,16 +215,12 @@ class _AHoraDeCadaLinha:
     def __init__(self, relogio: Callable[[], time.struct_time], teto: int) -> None:
         self.relogio = relogio
         self.teto = teto
-        self.dia = ""
         self.no_meio = False
         self.resto = b""
 
     def _carimbos(self) -> tuple[bytes, bytes]:
-        agora = self.relogio()
-        dia, hora = time.strftime("%Y-%m-%d", agora), f"{time.strftime('%H:%M:%S', agora)} "
-        primeiro = hora if dia == self.dia else f"{dia} {hora}"
-        self.dia = dia
-        return primeiro.encode(), hora.encode()
+        carimbo = time.strftime("%Y-%m-%d %H:%M:%S ", self.relogio()).encode()
+        return carimbo, carimbo
 
     def marcar(self, pedaco: bytes, *, fim: bool = False) -> bytes:
         dados = self.resto + pedaco
