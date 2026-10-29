@@ -14,7 +14,9 @@ import shlex
 import signal
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -137,20 +139,26 @@ def _linha_da_bandeja() -> list[str]:
     return [sys.executable, "-m", "hefesto_dualsense4unix.cli.app", "tray"]
 
 
-def garantir_a_bandeja() -> bool:
-    """Sobe a bandeja, desprendida, se a escolha está ligada e nenhuma está viva. Diz se subiu."""
+def garantir_a_bandeja(abrir: Callable[..., Any] | None = None) -> bool:
+    """Sobe a bandeja, fora da unidade de quem chama, se a escolha está ligada e nenhuma está viva.
+
+    Pelo `fora_do_servico`, como a janela da recarga: de dentro de uma unidade que termina, um
+    filho por `Popen` morre com ela. Diz se subiu."""
     if not bandeja_ligada() or bandeja_viva() is not None:
         return False
+    from hefesto_dualsense4unix.integrations import fora_do_servico
+
     try:
-        filho = subprocess.Popen(
-            _linha_da_bandeja(), start_new_session=True, stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        abertura = (abrir or fora_do_servico.abrir)(
+            _linha_da_bandeja(), env=dict(os.environ), aplicativo="bandeja")
     except OSError as erro:
         console.print(f"[yellow]não consegui subir a bandeja:[/] {erro}")
         return False
-    with contextlib.suppress(OSError):
-        caminho_do_pid().parent.mkdir(parents=True, exist_ok=True)
-        caminho_do_pid().write_text(f"{filho.pid}\n", encoding="ascii")
+    filho = getattr(abertura, "processo", None)
+    if filho is not None:
+        with contextlib.suppress(OSError):
+            caminho_do_pid().parent.mkdir(parents=True, exist_ok=True)
+            caminho_do_pid().write_text(f"{filho.pid}\n", encoding="ascii")
     return True
 
 

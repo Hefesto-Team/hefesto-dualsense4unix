@@ -5,12 +5,13 @@ import os
 import re
 import shutil
 import signal
-import subprocess
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from hefesto_dualsense4unix.app.actions import atos_da_bandeja as bandeja
+from hefesto_dualsense4unix.integrations import fora_do_servico
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.utils import single_instance as si
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
@@ -82,17 +83,20 @@ def terminar(pid: int, prazo: float) -> bool:
     return not si.is_alive(pid)
 
 
-def abrir_a_janela(tela: dict[str, str], aba: str = "") -> bool:
-    """Abre a janela pelo lançador, desprendida, na tela e na aba que ela ocupava. Diz se abriu."""
+def abrir_a_janela(tela: dict[str, str], aba: str = "", *,
+                   abrir: Callable[..., Any] = fora_do_servico.abrir) -> bool:
+    """Abre a janela pelo lançador, na tela e na aba que ela ocupava, fora da unidade de quem chama.
+
+    Com um jogo aberto, a recarga roda dentro da unidade `hefesto-troca-no-fim-do-jogo`, e um filho
+    por `Popen` morre com ela dois segundos depois. Diz se abriu."""
     lancador = shutil.which(bandeja.LANCADOR_DO_PAINEL) or str(
         Path.home() / ".local" / "bin" / bandeja.LANCADOR_DO_PAINEL)
     if not Path(lancador).is_file():
         return False
     ambiente = {**os.environ, **tela, "HEFESTO_NA_TELA": "1"}
     try:
-        subprocess.Popen(
-            [lancador, *(["--abre", aba] if aba else [])], env=ambiente, start_new_session=True,
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        abrir([lancador, *(["--abre", aba] if aba else [])], env=ambiente,
+              aplicativo=bandeja.LANCADOR_DO_PAINEL)
     except OSError:
         return False
     return True
