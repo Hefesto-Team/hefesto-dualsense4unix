@@ -70,7 +70,9 @@ def _fileira(corpo: str, lado: str) -> list[tuple[str, str]]:
     secao = corpo.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
     secao = re.sub(r"<svg.*?</svg>", "", secao, flags=re.S)
     return [(m.group(2).strip(), m.group(1))
-            for m in re.finditer(r'<span class="degrau[^"]*"([^>]*)>([^<]+)</span>', secao)]
+            for m in re.finditer(rf'<span class="degrau[^"]*"([^>]*)>'
+                                 rf'<span class="{aba01.ROTULO_DO_MODO}">([^<]+)</span></span>',
+                                 secao)]
 
 
 def test_os_rotulos_do_gerador_sao_os_do_desenho() -> None:
