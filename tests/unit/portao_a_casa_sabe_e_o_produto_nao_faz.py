@@ -1344,8 +1344,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "integrations/plano_de_radio.py::microfone_nasce_ligado": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o DONO declarado do "
         "padrão «o microfone nasce ligado», não promessa ao produto: "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2437` (`microfone_nasce_ligado`) e "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2857` (`microfone_nasce_ligado`) o citam "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2467` (`microfone_nasce_ligado`) e "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2887` (`microfone_nasce_ligado`) o citam "
         "em `dono=` por nome, e "
         "`tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` "
         "(`test_o_dono_declarado_resolve`) importa o endereço e reprova se ele "

@@ -79,6 +79,8 @@ PARES: dict[str, tuple[tuple[str, ...], ...]] = {
     "leds": (("lightbar", "lightbar_para_o_numero"),),
 }
 
+ACOMPANHA: dict[str, tuple[str, ...]] = {"speaker": ("volume",)}
+
 _DENSAS: dict[str, dict[str, Any]] = {
     "leds": LedsConfig().model_dump(mode="json"),
     "rumble": RumbleConfig().model_dump(mode="json"),
@@ -507,7 +509,17 @@ def _no_perfil_so_o_que_mudou(perfil: Profile, globais: Mapping[str, Any],
             else:
                 controles.pop(original, None)
         cru["controllers"] = controles or None
+    _o_som_vai_inteiro(cru)
     save_profile(Profile.model_validate(cru), origem=origem or "computador-ou-jogo")
+
+
+def _o_som_vai_inteiro(cru: Mapping[str, Any]) -> None:
+    """O ``speaker`` que vai ao disco passa pela regra do schema, que a carga tolera."""
+    controles = cru.get("controllers") or {}
+    for secao in (cru.get("speaker"),
+                  *(c.get("speaker") for c in controles.values() if isinstance(c, Mapping))):
+        if isinstance(secao, Mapping):
+            ProfileSpeakerConfig.model_validate(dict(secao))
 
 
 def _carregar_cru(nome: str | None) -> Profile | None:
@@ -566,7 +578,11 @@ def _houve_mudanca(secao: str, mudou: Any) -> bool:
 
 
 def _diferenca_de_secao(secao: str, antes: Any, depois: Any) -> Any:
-    """O que mudou numa seção: ``{campo: valor}``, ``None`` (tirada), ``{}`` ou ``_IGUAL``."""
+    """O que mudou numa seção: ``{campo: valor}``, ``None`` (tirada), ``{}`` ou ``_IGUAL``.
+
+    O campo de ``ACOMPANHA`` vai junto de qualquer outro que mude, com o valor que vale
+    (o ``volume`` que o ``speaker`` exige); sozinho, ele não arrasta os outros.
+    """
     if secao not in _MODELOS:
         return depois if antes != depois else _IGUAL
     if depois is None:
@@ -580,6 +596,12 @@ def _diferenca_de_secao(secao: str, antes: Any, depois: Any) -> Any:
             for campo in par:
                 if campo not in mudou and campo in novo:
                     mudou[campo] = novo[campo]
+    acompanhantes = ACOMPANHA.get(secao, ())
+    if set(mudou) - set(acompanhantes):
+        completo = depois.model_dump(mode="json")
+        for campo in acompanhantes:
+            if campo not in mudou and completo.get(campo) is not None:
+                mudou[campo] = completo[campo]
     return mudou
 
 

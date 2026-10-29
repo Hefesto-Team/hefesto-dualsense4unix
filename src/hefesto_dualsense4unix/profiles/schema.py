@@ -1449,6 +1449,10 @@ _MARCAS_QUE_VIRARAM_ESTILO: frozenset[str] = frozenset({"visual_novel", "adulto"
 _MIGRACOES_JA_CONTADAS: dict[str, tuple[str, tuple[str, ...]]] = {}
 
 
+def _som_sem_volume(speaker: object) -> bool:
+    return isinstance(speaker, dict) and "volume" not in speaker
+
+
 def _as_mascaras_dos_controles(controles: dict[Any, Any], caminho: object) -> list[str]:
     """O que o jogo via de cada controle que declarava máscara, na ordem do perfil."""
     from hefesto_dualsense4unix.integrations.virtual_pad import modo_do_par, normalizar_modo
@@ -1534,6 +1538,32 @@ class Profile(BaseModel):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
         return dados
+
+    @model_validator(mode="before")
+    @classmethod
+    def _o_som_sem_volume_cai_na_carga(cls, data: Any) -> Any:
+        """O ``speaker`` sem ``volume`` (o gesto de rota de antes da cura) cai; o perfil carrega."""
+        if not isinstance(data, dict):
+            return data
+        novo = data
+        if _som_sem_volume(data.get("speaker")):
+            novo = {k: v for k, v in data.items() if k != "speaker"}
+            get_logger(__name__).warning(
+                "speaker_sem_volume_descartado", perfil=str(data.get("name", "")))
+        controles = data.get("controllers")
+        if isinstance(controles, dict) and any(
+            isinstance(c, dict) and _som_sem_volume(c.get("speaker")) for c in controles.values()
+        ):
+            novo = {**novo, "controllers": {
+                uniq: ({k: v for k, v in c.items() if k != "speaker"}
+                       if isinstance(c, dict) and _som_sem_volume(c.get("speaker")) else c)
+                for uniq, c in controles.items()
+            }}
+            get_logger(__name__).warning(
+                "speaker_sem_volume_descartado", perfil=str(data.get("name", "")),
+                controles=sorted(str(u) for u, c in controles.items()
+                                 if isinstance(c, dict) and _som_sem_volume(c.get("speaker"))))
+        return novo
 
     @model_validator(mode="before")
     @classmethod
