@@ -126,6 +126,7 @@ def test_a_vista_do_gtk_encolhe_com_a_janela_ladrilhada(medida: dict) -> None:
 
 
 def test_a_janela_ladrilhada_mostra_o_rodape_sem_rolar(medida: dict) -> None:
+    """Prova da D-2910-O-TAMANHO-CEDE-ABAIXO-DE-100."""
     doc = medida["doc"]
     assert medida["zoom"] < 1.0, f"o zoom não cedeu: {medida['zoom']}"
     assert doc["rola"] <= 0, f"o documento rola {doc['rola']} px: {doc}"
