@@ -237,17 +237,17 @@
       "universo": 406
     },
     "tamanho": {
-      "data": "2026-10-28",
+      "data": "2026-10-29",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1157551,
+      "piso": 1161985,
       "por_item": {
-        "docs": 107561,
-        "scripts": 109541,
-        "src": 291764,
-        "tests": 648685
+        "docs": 107597,
+        "scripts": 109679,
+        "src": 292946,
+        "tests": 651763
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +4434 linhas (1157551 -> 1161985), pagas por Origem: D-2910-O-CACHE-DAS-PAGINAS-SE-LIMPA-A-CADA-ABERTURA; registrado no fecho, topo 866edb14540a",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1196,10 +1196,16 @@
           "de": 1161662,
           "para": 1162329,
           "razao": "tamanho: +667 linhas (1161662 -> 1162329), pagas por Origem: D-2710-A-ABA-QUIETA-SE-MEDE-PELO-TEMPO-DA-PINTURA, D-2710-O-GERADOR-DE-ABA-NAO-PEDE-O-GTK; registrado no fecho, topo 5394ef66e3ff"
+        },
+        {
+          "data": "2026-10-29",
+          "de": 1157551,
+          "para": 1161985,
+          "razao": "tamanho: +4434 linhas (1157551 -> 1161985), pagas por Origem: D-2910-O-CACHE-DAS-PAGINAS-SE-LIMPA-A-CADA-ABERTURA; registrado no fecho, topo 866edb14540a"
         }
       ],
       "unidade": "linhas",
-      "universo": 3218
+      "universo": 3236
     }
   }
 }
