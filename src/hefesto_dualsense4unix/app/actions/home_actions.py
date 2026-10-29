@@ -42,9 +42,9 @@ logger = get_logger(__name__)
 
 
 _MODE_ITEMS = [
-    ("desktop", "Controlar o PC"),
-    ("gamepad", "Jogar pelo Hefesto"),
-    ("native", "Conexão Nativa (Sony)"),
+    ("desktop", "Navegação"),
+    ("gamepad", "Ligado"),
+    ("native", "Desligado"),
 ]
 
 _FLAVOR_ITEMS = [
@@ -736,7 +736,7 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
     return (
         PONTE_PREFIXO
         + f'<span foreground="{_COR_AVISO}">nenhuma</span> — nenhum jogo está '
-        'recebendo controle do Hefesto. Escolha "Jogar pelo Hefesto" para o '
+        "recebendo controle do Hefesto. Ponha o «Status» em «Ligado» para o "
         "jogo ver um controle."
     )
 

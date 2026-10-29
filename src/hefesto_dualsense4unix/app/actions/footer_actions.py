@@ -56,20 +56,6 @@ _NOMES_DE_SECAO: dict[str, str] = {
 _MAX_SECOES_NO_TEXTO = 3
 
 
-def _rotulo_do_modo(escolha: dict[str, str]) -> str:
-    """"Jogar pelo Hefesto (Xbox 360)" a partir de ``{"modo","mascara"}``."""
-    from hefesto_dualsense4unix.app.actions.home_actions import (
-        _flavor_label,
-        _mode_label,
-    )
-
-    alvo = _mode_label(escolha.get("modo"))
-    mascara = escolha.get("mascara")
-    if mascara:
-        alvo = f"{alvo} ({_flavor_label(mascara)})"
-    return alvo
-
-
 def _lista_de_secoes(secoes: Any) -> str:
     """Nomes legíveis das seções, curtos o bastante para a statusbar."""
     if isinstance(secoes, dict):

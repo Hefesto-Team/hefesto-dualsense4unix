@@ -247,7 +247,7 @@ class TestTextoDaPonte:
         frase = home_actions.texto_da_ponte(_estado(enabled=False))
 
         assert "nenhuma" in frase
-        assert "Jogar pelo Hefesto" in frase
+        assert "«Ligado»" in frase
 
     def test_offline_nao_sabe(self) -> None:
         frase = home_actions.texto_da_ponte(None)

@@ -18,9 +18,9 @@ class TestLabelsDosToasts:
     """LEIGO-02: os toasts falam o rótulo do botão, nunca o id interno."""
 
     def test_modo_vira_o_texto_do_botao(self) -> None:
-        assert _mode_label("gamepad") == "Jogar pelo Hefesto"
-        assert _mode_label("desktop") == "Controlar o PC"
-        assert _mode_label("native") == "Conexão Nativa (Sony)"
+        assert _mode_label("gamepad") == "Ligado"
+        assert _mode_label("desktop") == "Navegação"
+        assert _mode_label("native") == "Desligado"
 
     def test_aparencia_vira_o_texto_do_botao(self) -> None:
         assert _flavor_label("xbox") == "Xbox 360"

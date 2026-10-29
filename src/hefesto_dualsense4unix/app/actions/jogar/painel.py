@@ -279,21 +279,21 @@ def modo_lembrado() -> Lembranca:
         return Lembranca(
             True,
             mascara,
-            f"Está gravado como LIGADO{marca}: “Jogar pelo Hefesto” volta assim "
+            f"Está gravado como LIGADO{marca}: o «Status» volta em «Ligado» "
             "depois de reiniciar o Hefesto ou o computador.",
         )
     if ligado is False:
         return Lembranca(
             False,
             None,
-            "Está gravado como DESLIGADO de propósito: “Jogar pelo Hefesto” "
-            "continua desligado depois de reiniciar o Hefesto ou o computador, "
+            "Está gravado como DESLIGADO de propósito: o «Status» continua em "
+            "«Desligado» depois de reiniciar o Hefesto ou o computador, "
             "e o Hefesto não o religa sozinho nem com dois controles ligados.",
         )
     return Lembranca(
         None,
         None,
-        "Ninguém decidiu ainda: o Hefesto pode ligar “Jogar pelo Hefesto” "
+        "Ninguém decidiu ainda: o Hefesto pode pôr o «Status» em «Ligado» "
         "sozinho quando vir dois controles ligados.",
     )
 

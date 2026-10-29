@@ -159,8 +159,8 @@ class TestAPonteNaoAcendeSobreMesaVazia:
         )
 
         assert vazia != desktop
-        assert 'Jogar pelo Hefesto"' in desktop
-        assert 'Jogar pelo Hefesto"' not in vazia
+        assert "«Ligado»" in desktop
+        assert "«Ligado»" not in vazia
 
     def test_com_controle_na_mesa_a_ponte_volta_a_ser_verde(self) -> None:
         """A régua sabe dizer SIM — senão "nunca verde" passaria por severo."""
