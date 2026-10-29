@@ -67,10 +67,10 @@ def _base(**extra: Any) -> dict[str, Any]:
 
 
 def test_o_manifesto_confere_a_chave() -> None:
-    manifesto = Manifesto.model_validate(_base(opcoes=[LIGADA], chave="ligada"))  # (noqa-acento)
+    manifesto = Manifesto.model_validate(_base(opcoes=[LIGADA], chave="ligada"))
     assert manifesto.chave == "ligada"
     casos = {
-        "não existe": _base(opcoes=[LIGADA], chave="outra"),  # (noqa-acento)
+        "não existe": _base(opcoes=[LIGADA], chave="outra"),
         "tipo ligado": _base(opcoes=[{**LIGADA, "tipo": "escolha", "escolhas": ["a"],
                                       "padrao": "a"}], chave="ligada"),  # (noqa-acento)
         "sem aparece_com": _base(opcoes=[LIGADA, {**LIGADA, "id": "x"},
@@ -86,7 +86,7 @@ def test_o_manifesto_confere_a_chave() -> None:
 def _instalada_com_a_chave(lugares: Any) -> None:
     pasta = lugares.codigo / "acessorios"
     pasta.mkdir(parents=True)
-    manifesto = {**_base(opcoes=[LIGADA], chave="ligada"), "id": "acessorios",  # (noqa-acento)
+    manifesto = {**_base(opcoes=[LIGADA], chave="ligada"), "id": "acessorios",
                  "nome": "Acessórios"}
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
 
