@@ -45,8 +45,6 @@ def test_a_lista_da_sistema_nao_traz_o_aviso_do_opt_out(monkeypatch: Any,
     (tmp_path / "gamepad_disabled.flag").write_text("", encoding="utf-8")
     monkeypatch.setattr(session, "config_dir", lambda *a, **k: tmp_path)
     assert painel.modo_lembrado().ligado is False, "o opt-out não ficou gravado"
-    monkeypatch.setattr(a01_jogar, "_do_exame", lambda: [])
-    monkeypatch.setattr(a01_jogar, "_aviso_da_cura_do_travamento", lambda: None)
     um = _INERTE["controllers"]
     ctx = Contexto(state=_INERTE, mesa=um, conectados=um, estados={})
     linhas = a01_jogar.coluna_de_atencao(ctx)

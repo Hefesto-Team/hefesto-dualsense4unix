@@ -6,7 +6,6 @@ arquivo,milissegundos,fonte
 tests/unit/test_a01_a_coluna_atencao_acende_o_mais_grave.py,900,medido
 tests/unit/test_a01_a_mascara_vale_sempre_que_pode.py,820,medido
 tests/unit/test_a01_a_mesa_vazia_fala.py,850,medido
-tests/unit/test_a01_a_ponte_entra_na_coluna.py,840,medido
 tests/unit/test_a02_a_fonte_do_som_ganha_gesto.py,850,medido
 tests/unit/test_a02_as_ondas_sonoras_sao_reais.py,860,medido
 tests/unit/test_a02_mic_e_um_ato_so_nos_dois_transportes.py,790,medido

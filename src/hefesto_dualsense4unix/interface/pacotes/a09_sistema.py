@@ -1194,10 +1194,8 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
     A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. A coluna Atenção saiu da Jogar em
     07/09, por ordem de produto, e as fontes que só ela publicava ficaram caladas no
     produto: as de `painel.AVISOS_DA_TELA` e a que o pacote da Jogar junta a
-    elas (a divergência de máscara). Ficam fora as
-    que a tela já diz noutro lugar (`a01_jogar._avisos_com_outra_casa`): a
-    ponte com o jogo, que aqui saía como «AVISO · Nenhuma», e a pausa, o
-    detector cego e o Freestyle, que o Status desta aba e a Jogar já mostram
+    elas (a divergência de máscara). Ficam fora a pausa, o detector cego e o
+    Freestyle, que o Status desta aba e a Jogar já mostram
     (`a01_jogar.FONTES_DO_PAINEL_COM_OUTRA_CASA`).
 
     QUEM ESCOLHE E ORDENA É O DONO DO CANAL (`a01_jogar.coluna_de_atencao`),

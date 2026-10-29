@@ -351,17 +351,15 @@ def test_a_ordem_calada_com_arranjo_vazio_nao_cala(pacote, cena, mesa) -> None:
         "guardado pelo desfazer casou com o vazio do padrão")
 
 
-def test_a_aba_jogar_nao_recebe_a_ordem_calada(pacote, cena, mesa) -> None:
-    """Passo 2 — `_exame()` é CONTRATO, e o consumidor é outra aba."""
-    from hefesto_dualsense4unix.interface.pacotes import a01_jogar
-
+def test_o_exame_nao_devolve_a_ordem_calada(pacote, cena, mesa) -> None:
+    """Passo 2 — `_exame()` filtra a ordem calada; a tira desta aba continua vendo tudo."""
     dispensada = _dispensa_a_primeira(cena)
     mesa(cena, dispensada)
     calada = next(iter(dispensada))
     assert calada in [i.chave for i in pacote._itens_da_tela()], (
         "a cena não tem a linha calada na tira — o teste não mede nada")
-    assert calada not in [i["chave"] for i in a01_jogar._do_exame()], (
-        "a aba Jogar recebeu a ordem que ela calou na Conexões")
+    assert calada not in [i["chave"] for i in pacote._exame()], (
+        "o exame devolveu a ordem que ela calou na Conexões")
 
 
 def test_a_linha_que_voltou_apaga_a_tinta(pacote, cena, mesa) -> None:

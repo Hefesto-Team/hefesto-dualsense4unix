@@ -1951,3 +1951,29 @@ aparelho e a mexer noutro.
 
 A frase vai ao diário da janela desde 13/09/2026 (TELA-CALADA-01: a tarja de rodapé que a mostrava saiu por
 pedido, *"em todas as abas da interface"*). Na tela, o clique responde pela piscada (`MS_DA_PISCADA`).
+
+## o exame da Conexões (`interface/pacotes/a08_conexoes.py`, `_exame`), 29/10/2026
+
+O que a docstring dizia quando a Jogar ainda o chamava (o `a01_jogar._do_exame` saiu em 29/10/2026, sem
+chamador, com A-PONTE-MORTA-E-O-CONTROLAR-O-PC-SAEM-01):
+
+As linhas do Check-up, em dicionário. **ESTE NOME É CONTRATO.**
+
+A aba Jogar o chama (`a01_jogar._do_exame`): o aviso do cartão dela sai do MESMO exame desta aba
+(*"duas contagens do mesmo fato divergiriam no primeiro achado novo"*). Medido em 01/09/2026: ao
+dividir a função em `_conferencias()` + `_itens_da_tela()` o nome `_exame` sumiu, o `except
+Exception: return []` do `_do_exame` da Jogar transformou o `AttributeError` em **lista vazia**
+e a Jogar parou de emitir `aviso-selo` e `aviso-texto` sem erro algum (acusou o
+`test_o_casamento_das_dez`: 7 endereços, piso 9). Renomear função privada de um pacote pode
+apagar meia tela de outro, e um `except` largo faz a AUSÊNCIA de dado se ler como "não havia
+achado".
+
+**A calada não atravessa** (ONDA5-08-01, 06/09/2026): desde a 08-Q5 a ordem dispensada FICA na
+tira desta aba, em cinza, e a filtragem é daqui; sem ela, calar um alarme na Conexões o deixaria
+aceso na coluna **Atenção** da Jogar. É aqui e não em `_itens_da_tela` porque a cura cobre TODOS
+os chamadores sem tocar arquivo de outra posse: a pintura desta aba chama `_itens_da_tela()`
+direto, a 08 continua vendo tudo e a 01 só o que fala (regra paga duas vezes em 05/09).
+
+**A leitura dos controles também não atravessa** (28/09/2026): a Jogar diz esse fato pelo dono
+(`painel.aviso_do_grab_dobrado`, mesma condição de `home_actions.aviso_de_grab`); a linha desta
+aba só acrescenta a causa.

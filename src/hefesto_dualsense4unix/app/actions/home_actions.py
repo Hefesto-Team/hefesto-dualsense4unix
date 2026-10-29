@@ -518,10 +518,7 @@ def texto_do_desktop_sem_emulacao(
     return None
 
 
-_COR_OK = "#50fa7b"
 _COR_AVISO = "#ffb86c"
-
-PONTE_PREFIXO = "Ponte com o jogo: "
 
 DIVERGENCIA_PREFIXO = "Sua escolha: "
 
@@ -643,101 +640,6 @@ def texto_da_divergencia(
         prefixo
         + f'<span foreground="{_COR_AVISO}">não chegou ao aparelho</span> — '
         f"{quem} {quero}; o Hefesto está com {tenho}. Escolha de novo."
-    )
-
-
-def controles_na_mesa(state: dict[str, Any] | None) -> int:
-    """Quantos controles CONECTADOS o daemon reporta — função pura."""
-    if not isinstance(state, dict):
-        return 0
-    entradas = state.get("controllers") or []
-    return len(
-        [c for c in entradas if isinstance(c, dict) and c.get("connected")]
-    )
-
-
-def texto_da_ponte(state: dict[str, Any] | None) -> str:
-    """Markup da linha "Ponte com o jogo" — função pura, voz da aba Sistema.
-
-    Responde a pergunta que a janela inteira não respondia: **por onde o jogo
-    está recebendo o controle agora?** A ordem das perguntas é a ordem em que
-    uma resposta invalida a seguinte:
-
-    1. sem daemon não há o que afirmar (mesma disciplina do `autoswitch_lock_
-       text`: offline é "não sei", nunca "nenhuma");
-    2. Modo Nativo — o físico vai para o jogo e o Hefesto não está no caminho;
-    3. gamepad do Hefesto, dizendo QUAL máscara o jogo vê — e, com a mesa
-       vazia, dizendo que a ponte está de pé e sem quem a atravesse;
-    4. nenhuma — e aí a frase aponta o botão que constrói uma.
-
-    ERAM CINCO, e a segunda saiu — I6, ramo 2, 25/08/2026
-    -----------------------------------------------------
-
-    A pergunta que saiu era *"exceção de Steam Input com o vpad suspenso"*, e a
-    frase de produto dizia: *"pelo Steam Input — neste jogo a Steam entrega os botões,
-    e o Hefesto segue cuidando dos gatilhos, da cor e da vibração."* Ela nunca
-    apareceu na tela, e não pode voltar como estava. Três medições, nesta ordem:
-
-    1. **A condição é inalcançável** — `VPAD-SUSPENSO-MORTO-01`/E1, MEDIDO em
-       25/08/2026: `daemon._steam_input_vpad_suspenso` só anda para `False`
-       desde o commit `08e4633` (09/08/2026), e esta era uma das CINCO leituras
-       de produção de um valor impossível. O flag e as cinco leituras saíram
-       em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01).
-    2. **Trocar a condição por `excecao_ativa` sozinho — a saída recomendada
-       para o PAR — publicaria aqui uma frase que a medição derruba.** Desde a
-       `ESCONDER-EM-VEZ-DE-SAIR-01` (09/08/2026, decisão de produto: *a allowlist do
-       Steam Input NÃO tira o Hefesto da frente*), a exceção **esconde o
-       físico** (`esconder_o_fisico_para_o_jogo`) e **mantém o vpad de pé**. Ou
-       seja: na exceção quem alimenta o jogo continua sendo o gamepad do
-       Hefesto — o oposto do que a frase dizia.
-    3. **E há medição em jogo, não só leitura de código** —
-       `docs/protocol/pilha-steam-input-xpad-sdl.md`, §2.4-bis, MEDIDO em
-       11/08/2026 com um appid da allowlist DO USUÁRIO em sessão: **zero espelhos**
-       da Steam no sistema, os dois vpads do Hefesto de pé, quatro controles
-       com jogador e vibração, e o aceite de produto. A Steam não estava entregando
-       botão nenhum.
-
-    Logo, com a exceção ativa, a resposta verdadeira é a da terceira pergunta —
-    que é a que a aba já dá. **Silêncio aqui não é buraco:** quem tem a fita da
-    exceção de Steam Input é a aba Emulação (`markup_status_steam_input`), e é
-    lá que ela é nomeada.
-
-    O que fica em aberto, e é DO USUÁRIO: se a Início deve NOMEAR a exceção (algo
-    como "…e a Steam está no meio neste jogo"). É texto novo na primeira tela,
-    e texto de tela é palavra de produto — PROVA-DE-TELA-01.
-    """
-    if not isinstance(state, dict):
-        return PONTE_PREFIXO + "não sei — o Hefesto está desligado."
-    if state.get("native_mode"):
-        return (
-            PONTE_PREFIXO
-            + f'<span foreground="{_COR_OK}">direto (Sony)</span> — o jogo fala '
-            "com o DualSense sem o Hefesto no meio."
-        )
-    gamepad = state.get("gamepad_emulation")
-    if isinstance(gamepad, dict) and gamepad.get("enabled"):
-        if not controles_na_mesa(state):
-            return (
-                PONTE_PREFIXO
-                + f'<span foreground="{_COR_AVISO}">de pé, e vazia</span> — o '
-                "gamepad do Hefesto está montado, e não há nenhum controle "
-                "ligado para alimentá-lo. Ligue um controle para o jogo "
-                "receber alguma coisa."
-            )
-        no_aparelho = mascara_do_aparelho(state)
-        visto = (
-            _escapar(_flavor_label(no_aparelho)) if no_aparelho else "um controle"
-        )
-        return (
-            PONTE_PREFIXO
-            + f'<span foreground="{_COR_OK}">pelo Hefesto</span> — o jogo '
-            f"recebe o controle do gamepad do Hefesto, e o vê como {visto}."
-        )
-    return (
-        PONTE_PREFIXO
-        + f'<span foreground="{_COR_AVISO}">nenhuma</span> — nenhum jogo está '
-        "recebendo controle do Hefesto. Ponha o «Status» em «Ligado» para o "
-        "jogo ver um controle."
     )
 
 
@@ -867,7 +769,6 @@ __all__ = [
     "FONTE_GESTO_DELA",
     "FONTE_PERFIL",
     "PALAVRA_DE_TRANSPORTE_DESCONHECIDO",
-    "PONTE_PREFIXO",
     "RECONCILIAR_JOGO_ABERTO_TEXT",
     "TEXTO_DESKTOP_SEM_MOUSE",
     "TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO",
@@ -879,7 +780,6 @@ __all__ = [
     "appid_do_jogo_em_foco",
     "aviso_do_wrapper",
     "controles_bt_frageis",
-    "controles_na_mesa",
     "ela_ja_respondeu_sobre",
     "externos_na_mesa",
     "jogadores_degradados",
@@ -891,7 +791,6 @@ __all__ = [
     "texto_coop_degradado",
     "texto_da_divergencia",
     "texto_da_pausa",
-    "texto_da_ponte",
     "texto_do_cadeado_cego",
     "texto_do_desktop_sem_emulacao",
     "texto_do_radio_fragil",

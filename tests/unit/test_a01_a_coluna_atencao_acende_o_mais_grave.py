@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pathlib
-import re
 import sys
 from typing import Any
 
@@ -16,7 +15,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
         sys.path.insert(0, _caminho)
 
 from hefesto_dualsense4unix.app.actions.jogar import painel
-from hefesto_dualsense4unix.integrations import storm_doctor
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
@@ -39,36 +37,9 @@ def _acesas(fora: list[dict[str, str]]) -> tuple[list[str], list[str]]:
     return [a["selo"] for a in fora], [a["texto"] for a in fora]
 
 
-def _canal(ctx: Contexto) -> list[dict[str, str]]:
-    """O CANAL INTEIRO, na ordem da gravidade — com as fontes que têm outra casa."""
-    return aba._em_ordem(aba._avisos(ctx))
-
-
 def _so_estes(monkeypatch: Any, avisos: list[dict[str, str]]) -> None:
     """Cala as outras fontes: a régua mede a ORDEM, não quem fala."""
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: list(avisos))
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: None)
-
-
-QUIRK_DE_PE = "054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m\n"
-
-
-def _maquina(monkeypatch: Any, quirk_flags: str,
-             conf: pathlib.Path) -> tuple[str, str]:
-    """Põe a máquina no estado pedido e devolve o que o DONO responde nele."""
-    real = storm_doctor.check_snd_quirk
-    monkeypatch.setattr(storm_doctor, "check_snd_quirk",
-                        lambda *a, **k: real(quirk_flags, conf))
-    return real(quirk_flags, conf)
-
-
-def _so_a_cura(monkeypatch: Any) -> None:
-    """Cala TODAS as fontes menos a cura do travamento."""
-    monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
 
 
 def test_o_mais_grave_sobe_e_a_ordem_e_a_da_gravidade(monkeypatch: Any) -> None:
@@ -117,35 +88,8 @@ def test_a_lista_leva_todos_os_avisos(monkeypatch: Any) -> None:
         f"a lista cortou avisos: {textos!r}")
 
 
-def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
-    """A ponte, a cura e o exame dos controles: no canal, e fora da lista da 09.
-
-    O serviço calado saiu do canal (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE): com o serviço
-    parado, só o Status da Jogar diz Desligado, e aviso nenhum o repete.
-    """
-    monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: {
-        "selo": aba.SELO_DA_PONTE, "texto": "nenhuma — nenhum jogo",
-        "fonte": "home_actions.texto_da_ponte"})
-    monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: {
-        "selo": aba.SELO_DA_CURA, "texto": "a cura", "fonte": "storm_doctor.check_snd_quirk"})
-    monkeypatch.setattr(aba, "_do_exame", lambda: [
-        {"selo": "AVISO", "titulo": "um achado grave", "grave": True}])
-    vazio = Contexto(state={}, mesa=[], conectados=[], estados={})
-
-    no_canal = {a["fonte"] for a in aba._avisos(vazio)}
-    assert {"storm_doctor.check_snd_quirk", "a08_conexoes._exame",
-            "home_actions.texto_da_ponte"} <= no_canal, (
-        f"o canal perdeu uma fonte: {sorted(no_canal)}")
-    assert "home_actions._render_home (ramo offline)" not in no_canal, (
-        "o aviso do serviço calado voltou ao canal")
-    assert aba.coluna_de_atencao(vazio) == [], (
-        "uma fonte que já tem casa na tela foi levada à lista da 09: "
-        f"{aba.coluna_de_atencao(vazio)!r}")
-
-
 def test_o_que_o_status_da_09_ja_diz_nao_se_repete_no_exame() -> None:
-    """Pausa, detector cego e Freestyle: no canal, e fora da lista da 09."""
+    """Pausa, detector cego e Freestyle: o painel os diz, e eles ficam fora da lista da 09."""
     from hefesto_dualsense4unix.interface import sistema as aba_sistema
 
     estado = {**VIVO_NAVEGACAO, "paused": True, "freestyle_ligado": True,
@@ -154,167 +98,12 @@ def test_o_que_o_status_da_09_ja_diz_nao_se_repete_no_exame() -> None:
     ctx = _ctx(estado)
     tres = {"home_actions.texto_da_pausa", "home_actions.texto_do_cadeado_cego",
             "home_actions.autoswitch_lock_text"}
-    no_canal = {a["fonte"] for a in aba._avisos(ctx)}
-    assert tres <= no_canal, f"o canal perdeu uma das três: {sorted(tres - no_canal)}"
+    no_painel = {a["fonte"] for a in painel.avisos_do_estado(estado)}
+    assert tres <= no_painel, f"o painel perdeu uma das três: {sorted(tres - no_painel)}"
     na_09 = {a["fonte"] for a in aba.coluna_de_atencao(ctx)} & tres
     assert not na_09, f"voltou à lista da 09, ao lado da linha que já diz o mesmo: {na_09}"
     assert aba_sistema.status_do_servico("online_systemd", estado)["selo"] == "PAUSADO"
     assert aba_sistema.status_da_troca(estado)["selo"] == "SEM VER"
-
-
-_EM_MS = re.compile(r"\b(\d+(?:[.,]\d+)?)\s*ms\b")
-
-
-def _tique_ms() -> float:
-    """O tique do piloto, LIDO do fonte — e o import fica de fora de propósito."""
-    fonte = (INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8")
-    achado = re.search(r"^TIQUE_MS\s*=\s*(\d+)", fonte, re.MULTILINE)
-    assert achado, "`TIQUE_MS` sumiu de `hefesto_vivo.py` — a régua perdeu o alvo"
-    return float(achado.group(1))
-
-
-def test_o_custo_da_cura_esta_medido_no_docstring() -> None:
-    """Quanto custa por tique tem de estar ESCRITO, como a 09 escreveu os dela."""
-    doc = aba._aviso_da_cura_do_travamento.__doc__ or ""
-    medidos = [float(m.group(1).replace(",", ".")) for m in _EM_MS.finditer(doc)]
-    tique = _tique_ms()
-    assert medidos, (
-        "o docstring de `_aviso_da_cura_do_travamento` não declara quanto ela "
-        "custa por tique — a fonte lê dois arquivos do sistema a cada 100 ms")
-    assert tique in medidos, (
-        f"o docstring não nomeia o tique ({tique:g} ms): um custo sem o teto "
-        "ao lado não diz se cabe")
-    assert min(medidos) < tique, (
-        f"nenhuma medida do docstring é menor que o tique: {medidos!r}")
-
-
-def test_a_cura_ativa_nao_vira_alarme(monkeypatch: Any, tmp_path: Any) -> None:
-    """``[ OK ]`` NÃO entra: boa notícia não é Atenção — e é o estado dela hoje."""
-    _so_a_cura(monkeypatch)
-    selo, _ = _maquina(monkeypatch, QUIRK_DE_PE, tmp_path / "nao-existe.conf")
-    assert selo == storm_doctor.OK, "o estado montado não é o `[ OK ]` do dono"
-
-    assert aba._aviso_da_cura_do_travamento() is None
-    fora = _canal(_ctx(VIVO_NAVEGACAO))
-    assert fora == [], f"a cura DE PÉ virou aviso: {fora!r}"
-
-
-def test_a_cura_ausente_chega_a_coluna(monkeypatch: Any, tmp_path: Any) -> None:
-    """``[WARN]`` entra, com a frase do dono — palavra por palavra."""
-    _so_a_cura(monkeypatch)
-    selo, frase = _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
-    assert selo == storm_doctor.WARN, "o estado montado não é o `[WARN]` do dono"
-
-    selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
-    assert textos == [frase], (
-        f"a frase do dono não chegou inteira ao canal: {textos!r}")
-    assert selos == [aba.SELO_DA_CURA], f"o selo não é o da cura: {selos!r}"
-
-
-def test_a_cura_agendada_tambem_e_trabalho_pendente(
-        monkeypatch: Any, tmp_path: Any) -> None:
-    """``[INFO]`` entra: *"desconecte e reconecte"* é gesto do usuário, não estado bom."""
-    conf = tmp_path / "hefesto-dualsense-storm.conf"
-    conf.write_text(f"options snd_usb_audio quirk_flags={QUIRK_DE_PE}",
-                    encoding="utf-8")
-    _so_a_cura(monkeypatch)
-    selo, frase = _maquina(monkeypatch, "", conf)
-    assert selo == storm_doctor.INFO, "o estado montado não é o `[INFO]` do dono"
-
-    _, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
-    assert textos == [frase], (
-        f"a cura AGENDADA não chegou ao canal: {textos!r}")
-
-
-def test_o_selo_novo_esta_na_escada(monkeypatch: Any, tmp_path: Any) -> None:
-    """``CONTROLE`` está em `ORDEM_DA_GRAVIDADE` — senão a cura desce."""
-    monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [
-        {"selo": "RÁDIO", "texto": "frágil", "fonte": "x"},
-        {"selo": "PERFIL", "texto": "cadeado", "fonte": "x"},
-        {"selo": "PERFIL", "texto": "cego", "fonte": "x"},
-    ])
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    _, frase = _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
-
-    selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
-    assert aba.SELO_DA_CURA in aba.ORDEM_DA_GRAVIDADE, (
-        "o selo da cura saiu da escada — ele vai para depois de tudo")
-    assert selos[0] == aba.SELO_DA_CURA, (
-        f"a cura não subiu na escada: {selos!r}")
-    assert textos[0] == frase, f"a frase da cura não é a do dono: {textos!r}"
-
-
-def test_o_selo_nao_e_o_do_radio(monkeypatch: Any, tmp_path: Any) -> None:
-    """A cura é do CABO; quem já ocupa ``RÁDIO`` fala de Bluetooth."""
-    monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [
-        {"selo": "RÁDIO", "texto": "o rádio está frágil", "fonte": "x"},
-    ])
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
-
-    selos, _ = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
-    assert aba.SELO_DA_CURA != "RÁDIO", "a cura do cabo pegou o selo do rádio"
-    assert len(set(selos)) == len(selos) == 2, (
-        f"o cabo e o rádio saíram com o mesmo selo: {selos!r}")
-
-
-def test_a_fonte_que_levanta_vira_erro_e_nao_derruba_a_coluna(
-        monkeypatch: Any) -> None:
-    """A política do `try` próprio: a coluna sobrevive à fonte que quebra.
-
-    É a mesma de `painel.avisos_do_estado`, do opt-out e do exame. Esta fonte
-    é a PRIMEIRA desta coluna a tocar o disco a cada tique — um `/sys`
-    remontado ou um `/etc` sem permissão não pode apagar as outras nove linhas.
-
-    A MORDIDA: tire o `try/except` que embrulha a chamada em
-    `_avisos_com_outra_casa` e o canal inteiro levanta — as outras linhas somem
-    com ele.
-
-    ELA JÁ DERRUBOU O `pacote()` INTEIRO, e isso mudou em 07/09/2026: `_avisos`
-    era chamado no meio de `pacote()`, então uma fonte que quebrasse levava
-    junto a mesa, os cartões e a faixa. Com a coluna fora da Jogar o estrago
-    ficou menor — mas a política do `try` próprio não afrouxa por isso, e é o
-    que esta régua continua cobrando.
-    """
-    def _explode() -> dict[str, str]:
-        raise OSError("o /sys sumiu")
-
-    monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", _explode)
-
-    selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
-    assert selos == ["ERRO"], f"a fonte que levantou não virou ERRO: {selos!r}"
-    assert "OSError" in textos[0], (
-        f"o aviso de erro não diz o que quebrou: {textos[0]!r}")
-
-
-def test_a_frase_da_cura_nao_se_digita_nesta_aba(tmp_path: Any) -> None:
-    """A frase tem DONO, e a aba a lê — não a redigita."""
-    _, frase = storm_doctor.check_snd_quirk("", tmp_path / "nao-existe.conf")
-    trecho = frase.split(" — ", 1)[0].strip()
-    assert len(trecho) > 20, f"o trecho do dono ficou curto demais: {trecho!r}"
-
-    caminho = "src/hefesto_dualsense4unix/interface/pacotes/a01_jogar.py"
-    fonte = (RAIZ / caminho).read_text(encoding="utf-8")
-    dentro_de_prosa = False
-    acusados: list[str] = []
-    for numero, linha in enumerate(fonte.splitlines(), start=1):
-        nua = linha.strip()
-        if nua.count('"""') == 1:
-            dentro_de_prosa = not dentro_de_prosa
-            continue
-        if dentro_de_prosa or nua.startswith("#") or not nua:
-            continue
-        if trecho in nua.split("#", 1)[0]:
-            acusados.append(f"{caminho}:{numero}: {nua}")
-    assert not acusados, (
-        "a frase da cura foi redigitada em código:\n  " + "\n  ".join(acusados)
-        + "\nEla vem inteira de `storm_doctor.check_snd_quirk` e de mais lugar "
-          "nenhum")
 
 
 def test_a_lista_do_exame_da_09_recebe_os_avisos(monkeypatch: Any) -> None:

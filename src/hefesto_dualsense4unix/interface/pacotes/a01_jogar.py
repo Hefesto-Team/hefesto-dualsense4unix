@@ -32,13 +32,8 @@ DA_PAGINA: tuple[str, ...] = (
 
 
 ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
-    "PAUSA", "ERRO", "GAMEPAD", "MODO", "PONTE", "JOGO", "CONTROLE", "RÁDIO",
-    "PERFIL",
+    "PAUSA", "ERRO", "GAMEPAD", "MODO", "JOGO", "RÁDIO", "PERFIL",
 )
-
-SELO_DA_PONTE = "PONTE"
-
-SELO_DA_CURA = "CONTROLE"
 
 POSICAO_COM_O_SERVICO_PARADO = "desligado"
 
@@ -201,68 +196,6 @@ def _colorway_do_desenho(slug: str) -> str:
     return slug if slug and _monta().o_desenho_conhece(slug) else ""
 
 
-def _do_exame() -> list[dict[str, Any]]:
-    """Os achados do exame da mesa, ou lista vazia. Nunca levanta.
-
-    O selo é do produto. Medido em 03/09/2026 esta função montava ``{"selo": "RÁDIO" if i["grave"]
-    else "AVISO", **i}``, e o ``**i`` DEPOIS sobrescreve a chave: `a08_conexoes._linha` já emite
-    ``selo`` de `interface.conexoes.SELO_DO_ESTADO`, dono da palavra, e as duas digitadas aqui nunca
-    chegaram a uma tela. Chegava o selo do exame, de quatro estados incluindo o **CERTO**
-    (fotografado na 01 em 02/09: o selo `CERTO` sob o cabeçalho laranja **Atenção**, "Economia de
-    energia desligada", boa notícia vestida de alarme). Repor as palavras devolveria a divergência
-    no primeiro estado novo; sai o que o exame diz, e quem escolhe o que vai para **Atenção** é
-    :func:`_avisos`, que só leva o ``grave``.
-
-    O `except` largo continua, e o preço está no dono (`a08_conexoes._exame`): um `AttributeError`
-    já virou lista vazia e apagou meia coluna sem erro. O silêncio acabou: :func:`_avisos`
-    transforma a falha em aviso de selo ``ERRO``, a política de `painel.avisos_do_estado`.
-    """
-    from . import a08_conexoes
-
-    return list(a08_conexoes._exame())
-
-
-def _avisos(ctx: Contexto) -> list[dict[str, str]]:
-    """As fontes de aviso do produto: ``[{"selo", "texto", "fonte"}, …]``.
-
-    **Perdeu a tela em 07/09/2026, não as fontes.** Ordem de produto: a seção Atenção sai da aba
-    Jogar e fica só o Reconectar controles. Os quatro endereços (`atencao-conta`, `aviso-selo`,
-    `aviso-texto`, `aviso-vivo`) saíram de :data:`DA_PAGINA` (endereço sem elemento é órfão). Das
-    fontes de então **só a 5** (o exame, `a08_conexoes._exame`) tem segunda casa publicada, a aba
-    Conexões; as outras nove chegavam à tela SÓ por aqui (na medição, a coluna tinha UMA linha viva,
-    `home_actions.texto_do_cadeado_cego`). **Foram para a aba 09, Sistema (28/09/2026,
-    A-TELA-PERGUNTA-AO-DONO-01)**, cujo trabalho é a máquina se explicar: `a09_sistema.pacote`
-    pergunta a :func:`coluna_de_atencao` e acrescenta as linhas ao exame, com o selo de aviso do
-    exame. Vão as SEM outra casa (:func:`_avisos_sem_outra_casa`); as já mostradas em outro lugar
-    ficam no canal e fora da 09 (:func:`_avisos_com_outra_casa`).
-
-    **Nada se escreve aqui**: as fontes existiam fora do arquivo e faltava o produto novo CHAMÁ-LAS.
-    Medido em 03/09/2026 quem consumia `painel.AVISOS_DA_TELA` era `jogar_vivo.py`
-    (BANCADA), e a aba publicada mostrava no lugar o Check-up da Conexões, dois conjuntos DISJUNTOS.
-
-    O que entra, em ordem:
-
-    1. **as seis de `painel.AVISOS_DA_TELA`**: pausa, vpad degradado, rádio frágil, jogo sem
-      wrapper, cadeado da troca automática e detector cego; funções puras de `home_actions`, e
-      `painel.avisos_do_estado` trata a que levanta (selo ``ERRO``);
-    2. **a ponte com o jogo** (:func:`_aviso_da_ponte`), só quando é má notícia; fica no canal e
-      fora da 09 (:func:`_avisos_com_outra_casa`); 2-bis. **a divergência de máscara**
-      (:func:`_aviso_da_divergencia_de_mascara`), o ALARME do daemon desde a MASCARA-01; mora aqui e
-      não em `AVISOS_DA_TELA` porque volta em markup do Pango, como a ponte (portão);
-    3. **a cura do travamento do USB** (:func:`_aviso_da_cura_do_travamento`), ONDA5-01-01,
-      06/09/2026; lê o disco e não o `state`;
-    4. **os achados GRAVES do exame** (`a08_conexoes._exame`); os ``certo`` ficam de fora, a coluna
-      chama-se Atenção.
-
-    O que fica escrito é a LISTA, que se conta sozinha: o número desta docstring errou três vezes
-    (06/09/2026); quem acrescentar uma fonte acrescenta um item, não um número. O aviso do opt-out
-    antigo saiu em 29/10/2026, com os nomes velhos dos modos que ele citava.
-    """
-    fora: list[dict[str, str]] = _avisos_sem_outra_casa(ctx)
-    fora += _avisos_com_outra_casa(ctx)
-    return fora
-
-
 FONTES_DO_PAINEL_COM_OUTRA_CASA: dict[str, str] = {
     "home_actions.texto_da_pausa":
         "a linha «Serviço» do Status da 09 diz PAUSADO",
@@ -273,29 +206,29 @@ FONTES_DO_PAINEL_COM_OUTRA_CASA: dict[str, str] = {
 }
 
 
-def _do_painel(ctx: Contexto, com_outra_casa: bool) -> list[dict[str, str]]:
-    """As fontes de `painel.AVISOS_DA_TELA`, de um lado ou do outro da 09.
+def _do_painel(ctx: Contexto) -> list[dict[str, str]]:
+    """As fontes de `painel.AVISOS_DA_TELA` que vão à 09.
 
-    Uma leitura do dono (`painel.avisos_do_estado`), cortada pelo nome da fonte
-    em :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`. A linha de ``ERRO`` de uma fonte
-    que levantou vai para o mesmo lado da fonte.
+    Uma leitura do dono (`painel.avisos_do_estado`), sem as fontes de
+    :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`. A linha de ``ERRO`` de uma fonte
+    que levantou segue a fonte.
     """
     painel = _painel()
     return [a for a in painel.avisos_do_estado(ctx.state)
-            if (a.get("fonte") in FONTES_DO_PAINEL_COM_OUTRA_CASA) is com_outra_casa]
+            if a.get("fonte") not in FONTES_DO_PAINEL_COM_OUTRA_CASA]
 
 
 def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
     """As fontes que SÓ a coluna Atenção publicava — as que vão à aba Sistema.
 
-    Separadas das outras em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01) para a lista do exame da 09 as
-    receber (:func:`coluna_de_atencao`). As que ficam de fora já têm casa e levá-las poria a mesma
-    notícia duas vezes: o serviço calado (Status da 09), a ponte com o jogo (fileira da Jogar), a
-    cura do travamento do USB (o exame da 09 a lê pelo mesmo dono, `storm_doctor.check_snd_quirk`,
-    dentro do `storm_report`), os achados do exame dos controles (aba Conexões) e as três do
-    `painel` de :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`.
+    A coluna Atenção saiu da Jogar em 07/09/2026, e desde 28/09 (A-TELA-PERGUNTA-AO-DONO-01) a lista
+    do exame da 09 recebe estas fontes por :func:`coluna_de_atencao`: as de `painel.AVISOS_DA_TELA`
+    menos as três de :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`, e a divergência de máscara, que volta
+    em markup do Pango. As fontes que já tinham outra casa (a ponte com o jogo, a cura do travamento
+    do USB e o exame dos controles) ficaram sem chamador e saíram em 29/10/2026
+    (A-PONTE-MORTA-E-O-CONTROLAR-O-PC-SAEM-01).
     """
-    fora: list[dict[str, str]] = _do_painel(ctx, com_outra_casa=False)
+    fora: list[dict[str, str]] = _do_painel(ctx)
 
     try:
         divergencia = _aviso_da_divergencia_de_mascara(ctx.state)
@@ -308,69 +241,6 @@ def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
                      "fonte": "home_actions.mascara_divergente_do_daemon"})
 
     return fora
-
-
-def _avisos_com_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
-    """As fontes do canal que a tela já mostra em outro lugar."""
-    fora: list[dict[str, str]] = _do_painel(ctx, com_outra_casa=True)
-    ponte = _aviso_da_ponte(ctx.state)
-    if ponte:
-        fora.append(ponte)
-    try:
-        cura = _aviso_da_cura_do_travamento()
-        if cura:
-            fora.append(cura)
-    except Exception as erro:
-        fora.append({"selo": "ERRO",
-                     "texto": f"a cura do travamento não respondeu ({type(erro).__name__}).",
-                     "fonte": "storm_doctor.check_snd_quirk"})
-
-    try:
-        fora += [{"selo": str(i["selo"]), "texto": str(i["titulo"]),
-                  "fonte": "a08_conexoes._exame"}
-                 for i in _do_exame() if i.get("grave")]
-    except Exception as erro:
-        fora.append({"selo": "ERRO",
-                     "texto": f"o exame dos controles não respondeu ({type(erro).__name__}).",
-                     "fonte": "a08_conexoes._exame"})
-    return fora
-
-
-def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
-    """A linha *"Ponte com o jogo"*, e só quando ela é MÁ NOTÍCIA.
-
-    Órfã da D-10 (*"Todas na coluna Atenção"*): das três frases da decisão, **duas já estavam na
-    coluna** desde 03/09 (a PAUSA é `AVISOS_DA_TELA[0]`; o cadeado são as duas últimas,
-    `autoswitch_lock_text` e `texto_do_cadeado_cego`) e a ponte era a única sem canal.
-
-    **Quem decide se é má notícia é o produto, pela cor dele.** `texto_da_ponte` devolve markup do
-    Pango e pinta o veredito: `_COR_OK` nos dois desfechos bons ("direto (Sony)", "pelo Hefesto"),
-    `_COR_AVISO` nos dois ruins ("de pé, e vazia", "nenhuma") e cor NENHUMA no "não sei" de daemon
-    desligado. Ler a cor é ler a escada de gravidade da função; reescrever as quatro perguntas seria
-    a segunda cópia da regra. A boa notícia e o "não sei" ficam de fora (a coluna chama-se Atenção;
-    sem daemon não se afirma nada, como em `autoswitch_lock_text`).
-
-    O markup não chega à tela: `interface.sistema.sem_markup` o tira (a `a09_sistema` já o usa),
-    senão o `<span foreground="#ffb86c">` iria LITERAL ao `textContent`. A constante privada é de
-    propósito, e a guarda também: `_COR_AVISO` é o único lugar em que a função declara *"isto é
-    ruim"*; se sumir, a régua **cala** em vez de alarmar (um `"" in frase` casaria com tudo e
-    encheria a coluna de boa notícia vestida de alerta, o defeito que `_do_exame` já custou).
-    """
-    if not state:
-        return None
-    from hefesto_dualsense4unix.app.actions import home_actions
-
-    ruim = str(getattr(home_actions, "_COR_AVISO", "") or "")
-    if not ruim:
-        return None
-    frase = home_actions.texto_da_ponte(state)
-    if ruim not in frase:
-        return None
-    texto = _sem_markup(frase)
-    if texto.startswith(home_actions.PONTE_PREFIXO):
-        texto = texto[len(home_actions.PONTE_PREFIXO):]
-    return {"selo": SELO_DA_PONTE, "texto": texto,
-            "fonte": "home_actions.texto_da_ponte"}
 
 
 def _sem_markup(frase: str) -> str:
@@ -400,49 +270,6 @@ def _aviso_da_divergencia_de_mascara(state: dict[str, Any]) -> dict[str, str] | 
         return None
     return {"selo": "GAMEPAD", "texto": _sem_markup(frase),
             "fonte": "home_actions.mascara_divergente_do_daemon"}
-
-
-def _aviso_da_cura_do_travamento() -> dict[str, str] | None:
-    """A linha da **cura do travamento do USB**, e só quando ela pede ação.
-
-    Palavra do usuário (05/09/2026) sobre o aviso do modo nativo: *"Não me lembro disso acontecer. E
-    não deveria. Mas caso ocorra na coluna atenção"*; a medição confirma. O Hefesto **conserta** a
-    causa desde a SPRINT-GAME-RUMBLE-01 (o quirk `054c:0ce6:…ignore_ctl_error` do `snd_usb_audio`,
-    que torna o probe do mixer UAC tolerante e para de martelar o EP0) e o `install.sh` o instala;
-    na máquina do usuário a cura está de pé (``[ OK ]``, 06/09/2026). A linha aparece no dia em que
-    ela cai (kernel novo, `/etc/modprobe.d` limpo, instalação sem replug).
-
-    **Fecha o defeito de duas telas discordando sobre a mesma máquina**: `check_snd_quirk` já
-    chegava à aba **Sistema** (`storm_report`, em `a09_sistema._achados`) e a **Jogar**, aberta
-    enquanto o jogo roda, dizia *"nenhum aviso"*. Nada se digita aqui: a frase vem de
-    `storm_doctor.check_snd_quirk`, com o ``O que fazer:`` do ``PREFIXO_DA_CURA`` e o gesto desta
-    instalação (`gesto_de_atualizar`); reescrevê-la seria a segunda cópia de palavra com dono (o
-    defeito do "RÁDIO"/"AVISO" de `_do_exame`). **Só ``check_snd_quirk``, nunca ``storm_report``**:
-    o pacote da 09 roda seis exames e cinco não têm a ver com esta coluna.
-
-    Entram ``[WARN]`` (a cura em lugar nenhum) e ``[INFO]`` (agendada, esperando o replug), trabalho
-    pendente; ``[ OK ]`` fica de fora (boa notícia não é Atenção, como os ``certo`` do exame e os
-    desfechos bons de :func:`_aviso_da_ponte`; foi um ``CERTO`` sob o cabeçalho laranja, fotografado
-    em 02/09, que ensinou).
-
-    **Custo por tique, medido antes de ligar** (06/09/2026, máquina do usuário, `.venv` da raiz):
-    **0,030 ms** no caminho ``[ OK ]`` (dois ``open``, de
-    `/sys/module/snd_usb_audio/parameters/quirk_flags` e
-    `/etc/modprobe.d/hefesto-dualsense-storm.conf`), **0,075 ms** no ``[WARN]`` (chama
-    `gesto_de_atualizar`) e **0,79 ms** na PRIMEIRA chamada do ``[WARN]`` por processo (o
-    `main.glade` lido para o rótulo do botão, em `_ROTULOS_EM_CACHE`). O tique é de 100 ms
-    (`interface/hefesto_vivo.TIQUE_MS`): pior caso **0,8%**, normal **0,03%**, **sem cache** de
-    propósito, pois o que estes arquivos dizem muda no replug e no boot e a coluna seguiria
-    alarmando depois do que a frase mandou. A MORDIDA está em
-    `tests/unit/test_a01_a_coluna_atencao_acende_o_mais_grave.py`.
-    """
-    from hefesto_dualsense4unix.integrations import storm_doctor
-
-    selo, frase = storm_doctor.check_snd_quirk()
-    if selo == storm_doctor.OK:
-        return None
-    return {"selo": SELO_DA_CURA, "texto": str(frase),
-            "fonte": "storm_doctor.check_snd_quirk"}
 
 
 def _em_ordem(avisos: list[dict[str, str]]) -> list[dict[str, str]]:

@@ -8,10 +8,9 @@ que cada uma passou a dizer no lugar:
   pintava o caminho feliz inteiro — *"o Hefesto acende as luzes, faz o controle
   vibrar e dá um jogador para cada controle"* — enquanto nada disso acontecia.
   A aba Emulação, com o MESMO campo, já dizia "O Hefesto está em pausa";
-* **I6 — a ponte sobre mesa vazia.** MEDIDO na bancada de 23/08/2026 com ZERO
-  DualSense na casa: o frame dizia "Nenhum controle conectado." e a linha logo
-  acima dizia, em VERDE, *"pelo Hefesto — o jogo recebe o controle"*. A função
-  respondia sobre o **vpad**; a pessoa lê como resposta sobre o **jogo**;
+* **I6 — a ponte sobre mesa vazia.** A linha da ponte perdeu o chamador e
+  saiu em 29/10/2026 (A-PONTE-MORTA-E-O-CONTROLAR-O-PC-SAEM-01); fica a régua
+  que impede a aba de voltar a ler ``vpad_suspenso``;
 * **I11 — o cadeado cego.** Na máquina do usuário, agora, a troca automática de
   perfil por janela está cega (``window_detect_seeing=False``,
   ``reason='sem_conexao_x'``) e o produto se declara são
@@ -32,7 +31,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("test_home_para_de_afirmar_o_que_nao_sabe: importa código da janela GTK")
 
 import ast
-import json
 import sys
 import types
 from pathlib import Path
@@ -44,12 +42,6 @@ import pytest
 from hefesto_dualsense4unix.app.actions import home_actions
 
 RAIZ = Path(__file__).resolve().parents[2]
-FIXTURE_MEDIDA = RAIZ / "tests" / "fixtures" / "state_full_mesa_vazia_medida.json"
-
-
-def _payload_medido() -> dict[str, Any]:
-    """O `state_full` de 23/08/2026, com o daemon vivo e a mesa vazia."""
-    return json.loads(FIXTURE_MEDIDA.read_text(encoding="utf-8"))
 
 
 class _Widget:
@@ -136,118 +128,8 @@ class TestAPausaChegaNaPrimeiraAba:
         assert home_actions.texto_da_pausa(None) is None
 
 
-class TestAPonteNaoAcendeSobreMesaVazia:
-    def test_o_payload_medido_nao_produz_verde(self) -> None:
-        """A MORDIDA da I6, literal do §5: o payload do §2.1 não pode sair verde."""
-        frase = home_actions.texto_da_ponte(_payload_medido())
-
-        assert "#50fa7b" not in frase, (
-            f"a ponte acendeu VERDE sobre a mesa vazia: {frase!r}. É o estado "
-            "vazio pintado com a cor do estado bom (defeito de forma F7)."
-        )
-        assert frase.startswith(home_actions.PONTE_PREFIXO)
-
-    def test_a_mesa_vazia_nao_e_a_mesma_frase_de_nenhuma_ponte(self) -> None:
-        """Quarto veredito, e não o terceiro reaproveitado."""
-        vazia = home_actions.texto_da_ponte(_payload_medido())
-        desktop = home_actions.texto_da_ponte(
-            {
-                "gamepad_emulation": {"enabled": False},
-                "native_mode": False,
-                "controllers": [],
-            }
-        )
-
-        assert vazia != desktop
-        assert "«Ligado»" in desktop
-        assert "«Ligado»" not in vazia
-
-    def test_com_controle_na_mesa_a_ponte_volta_a_ser_verde(self) -> None:
-        """A régua sabe dizer SIM — senão "nunca verde" passaria por severo."""
-        estado = _payload_medido()
-        estado["controllers"] = [
-            {"index": 0, "connected": True, "transport": "usb", "is_primary": True}
-        ]
-
-        frase = home_actions.texto_da_ponte(estado)
-
-        assert "#50fa7b" in frase
-        assert "pelo Hefesto" in frase
-
-    def test_a_contagem_da_ponte_usa_o_mesmo_filtro_do_frame(self) -> None:
-        """`connected=False` é o card fantasma — e não conta como mesa."""
-        assert home_actions.controles_na_mesa(_payload_medido()) == 0
-        assert (
-            home_actions.controles_na_mesa(
-                {"controllers": [{"connected": True}, {"connected": False}]}
-            )
-            == 1
-        )
-        assert home_actions.controles_na_mesa(None) == 0
-
-    def test_a_ordem_das_perguntas_nao_mudou(self) -> None:
-        """O Modo Nativo continua vencendo o gamepad, com mesa vazia.
-
-        A bifurcação da I6 mora DENTRO da pergunta do gamepad. Se ela tivesse
-        subido, o Modo Nativo com mesa vazia passaria a dizer "de pé e vazia" —
-        apagando o veredito que explica que o jogo fala direto com o DualSense,
-        sem o Hefesto no meio.
-        """
-        vazio: list[dict[str, Any]] = []
-        nativo = home_actions.texto_da_ponte(
-            {"native_mode": True, "gamepad_emulation": {"enabled": True},
-             "controllers": vazio}
-        )
-
-        assert "direto (Sony)" in nativo
-
-
 class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
     """25/08/2026 — o ramo que a sprint mandou "registrar e seguir", fechado."""
-
-    @staticmethod
-    def _mesa_de_um(**delta: Any) -> dict[str, Any]:
-        """Um controle no cabo, emulação de pé — o caminho feliz mínimo."""
-        estado: dict[str, Any] = {
-            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-            "controllers": [
-                {"index": 0, "connected": True, "transport": "usb", "is_primary": True}
-            ],
-        }
-        estado.update(delta)
-        return estado
-
-    def test_com_a_excecao_ativa_a_ponte_continua_sendo_o_hefesto(self) -> None:
-        """O payload de HOJE: exceção ligada, vpad de pé (o único possível)."""
-        linha = home_actions.texto_da_ponte(
-            self._mesa_de_um(
-                steam_input={"excecao_ativa": True, "vpad_suspenso": False}
-            )
-        )
-
-        assert "pelo Hefesto" in linha
-        assert "Steam" not in linha
-
-    def test_a_aba_nao_diz_que_a_steam_entrega_os_botoes(self) -> None:
-        """Nem pelo payload impossível de ontem."""
-        linha = home_actions.texto_da_ponte(
-            self._mesa_de_um(
-                steam_input={"excecao_ativa": True, "vpad_suspenso": True}
-            )
-        )
-
-        assert "entrega os botões" not in linha
-        assert "pelo Steam Input" not in linha
-
-    def test_com_a_excecao_ativa_e_a_mesa_vazia_a_ponte_nao_acende(self) -> None:
-        """A exceção não pode reacender o verde que a I6 apagou."""
-        estado = _payload_medido()
-        estado["steam_input"] = {"excecao_ativa": True, "vpad_suspenso": False}
-
-        linha = home_actions.texto_da_ponte(estado)
-
-        assert "#50fa7b" not in linha
-        assert "de pé, e vazia" in linha
 
     def test_a_aba_nao_le_uma_flag_que_so_anda_para_um_lado(self) -> None:
         """O portão de forma, e ele é o que impede a volta silenciosa."""

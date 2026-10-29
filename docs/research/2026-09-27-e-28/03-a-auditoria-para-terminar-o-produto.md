@@ -371,7 +371,7 @@ apontam para uma pasta fora do git.
   `profiles/schema.py:1503-1510` trata os dois igual). Texto novo na dica não
   é cura.
 - **O nome dado ao controle só existe pelo Alias do BlueZ**
-  (`interface/pacotes/a08_conexoes.py:5050-5072`): no cabo sem pareamento, ou
+  (`interface/pacotes/a08_conexoes.py:5035-5057`): no cabo sem pareamento, ou
   numa máquina sem Bluetooth, o controle fica em «P N».
 - **A partida da háptica zera marcas no meio do jogo** (o `isdisjoint` de
   `quem_mexe.py:122`): às 05h07 de 27/09, as quatro marcas do Sackboy foram

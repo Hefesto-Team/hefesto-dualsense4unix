@@ -81,7 +81,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 <!-- TABELA-DA-PARIDADE -->
 | aba | feats | IGUAL | DIFER | FALTA | SO_HTML | ? | paridade |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 01-jogar | 40 | 11 | 22 | 4 | 2 | 1 | 28% |
+| 01-jogar | 40 | 10 | 23 | 4 | 2 | 1 | 25% |
 | 02-controles | 48 | 15 | 24 | 5 | 4 | 0 | 31% |
 | 03-gatilhos | 31 | 8 | 10 | 7 | 5 | 1 | 26% |
 | 04-iluminacao | 34 | 8 | 13 | 6 | 6 | 1 | 24% |
@@ -91,7 +91,7 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 08-conexoes | 44 | 12 | 23 | 9 | 0 | 0 | 27% |
 | 09-sistema | 38 | 12 | 19 | 4 | 3 | 0 | 32% |
 | 10-perfis | 48 | 12 | 21 | 9 | 6 | 0 | 25% |
-| TODAS | 378 | 105 | 169 | 60 | 41 | 3 | 28% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 378 | 104 | 170 | 60 | 41 | 3 | 28% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -322,7 +322,7 @@ uma linha que a árvore já tinha movido, e os três foram lidos e corrigidos:
 | --- | --- | --- |
 | `app/actions/relancar.py:2794` | `app/actions/home_actions.py:1804` | `render_pendente(self)` — o arquivo velho tem 301 linhas |
 | `interface/pacotes/a03_gatilhos.py:524` | `.../a03_gatilhos.py:628` | `def pacote(ctx: Contexto)` |
-| `interface/pacotes/a08_conexoes.py:1266` | `.../a08_conexoes.py:1476` | a frase da recusa do cabo |
+| `interface/pacotes/a08_conexoes.py:1251` | `.../a08_conexoes.py:1461` | a frase da recusa do cabo |
 
 É o que a regra `endereco-morto` existe para pegar antes da próxima pessoa.
 

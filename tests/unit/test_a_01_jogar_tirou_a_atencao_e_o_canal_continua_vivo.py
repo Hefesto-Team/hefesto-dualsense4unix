@@ -111,12 +111,10 @@ def test_as_onze_fontes_continuam_de_pe_e_com_porta_propria() -> None:
             f"a porta do canal mudou de vocabulário: {sorted(aviso)}")
 
 
-def test_a_unica_fonte_com_segunda_casa_e_o_exame() -> None:
+def test_a_porta_do_canal_e_uma_so() -> None:
     """A porta do canal é UMA: quem chama as fontes é só o `a01_jogar`.
 
-    Das fontes, só o exame da mesa (`a08_conexoes._exame`) é publicado
-    noutra aba — a Conexões, de onde ele vem. As outras perderam a tela em
-    07/09 e voltaram a ela em 28/09 pela aba Sistema, que as recebe por
+    As fontes perderam a tela em 07/09 e voltaram a ela em 28/09 pela aba Sistema, que as recebe por
     `coluna_de_atencao` (`a09_sistema._avisos_do_produto`) e não as chama uma a
     uma: uma segunda aba chamando a fonte direto seria o segundo dono da mesma
     linha.
@@ -128,7 +126,6 @@ def test_a_unica_fonte_com_segunda_casa_e_o_exame() -> None:
     pacotes = INTERFACE / "pacotes"
     fontes = {
         "texto_do_cadeado_cego": "o detector de janela cego",
-        "cura_do_travamento": "a cura do travamento do USB",
         "divergencia_de_mascara": "a divergência de máscara",
         "AVISOS_DA_TELA": "as seis de `painel`",
     }

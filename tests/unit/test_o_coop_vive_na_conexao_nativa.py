@@ -44,7 +44,6 @@ import sys
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -215,19 +214,13 @@ def test_fora_do_modo_nativo_a_linha_nao_existe() -> None:
     assert painel.aviso_do_modo_nativo(_estado(nativo=False, quantos=3)) is None
 
 
-def test_a_linha_do_modo_chega_a_coluna_da_aba(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_linha_do_modo_chega_a_coluna_da_aba() -> None:
     """O caminho INTEIRO: do estado à lista que a aba Sistema recebe.
 
-    As outras fontes ficam caladas porque esta régua mede o TRAJETO, não a
-    concorrência: um aviso do disco desta máquina entraria na lista — verde
-    aqui, vermelho no CI, e nenhum dos dois falando do defeito medido.
     `painel.avisos_do_estado` fica REAL de propósito: é ele que está sob
     medição. (Até 28/09/2026 o destino era a coluna Atenção da Jogar, que saiu
     da tela em 07/09; ver `a01_jogar.coluna_de_atencao`.)
     """
-    monkeypatch.setattr(aba, "_do_exame", lambda: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: None)
     ctx = Contexto(
         state=_estado(nativo=True, quantos=2), mesa=[], conectados=[], estados={})
     fora = aba.coluna_de_atencao(ctx)
@@ -245,7 +238,7 @@ def test_o_selo_do_modo_esta_na_escada_da_gravidade() -> None:
         f"o selo {painel.SELO_DO_MODO!r} não está na escada de gravidade")
     ordem = aba.ORDEM_DA_GRAVIDADE
     assert ordem.index("GAMEPAD") < ordem.index(painel.SELO_DO_MODO) < ordem.index(
-        "PONTE"
+        "JOGO"
     ), "a linha do modo saiu de junto do GAMEPAD, que responde à mesma pergunta"
 
 

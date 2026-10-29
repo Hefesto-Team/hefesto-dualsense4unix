@@ -301,8 +301,8 @@ def test_o_servico_calado_para_de_afirmar_e_nao_escreve() -> None:
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
     fora = aba.pacote(ctx)
 
-    assert aba._avisos(ctx) == [] or all(
-        a["selo"] != "SERVIÇO" for a in aba._avisos(ctx)), (
+    assert aba.coluna_de_atencao(ctx) == [] or all(
+        a["selo"] != "SERVIÇO" for a in aba.coluna_de_atencao(ctx)), (
         "a coluna de avisos escreveu que o serviço parou")
     assert fora["hef-posicao"] == "desligado", (
         "o interruptor não disse Desligado com o serviço calado")
@@ -316,7 +316,7 @@ def test_com_o_servico_vivo_a_coluna_nao_traz_o_selo_do_servico() -> None:
     """O selo SERVIÇO saiu da escada junto com a frase."""
     c1 = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
           "is_primary": True, "transport": "usb"}
-    fora = aba._avisos(_ctx([c1]))
+    fora = aba.coluna_de_atencao(_ctx([c1]))
     assert "SERVIÇO" not in [a["selo"] for a in fora]
     assert "SERVIÇO" not in aba.ORDEM_DA_GRAVIDADE
     assert not hasattr(aba, "SELO_DO_SERVICO")
@@ -324,31 +324,11 @@ def test_com_o_servico_vivo_a_coluna_nao_traz_o_selo_do_servico() -> None:
 
 def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
     """As palavras proibidas do glossário não entram em texto de tela."""
-    from hefesto_dualsense4unix.app.actions import home_actions
-
     de_maquina = ("uinput", "hidraw", "vpad", "evdev", "uniq")
     minhas = [aba.PRIMARIO_DICA,
               aba.MARCA_DO_PRIMARIO]
-    da_ponte = [
-        home_actions.texto_da_ponte(cena)
-        for cena in (
-            {"connected": True, "native_mode": False,
-             "gamepad_emulation": {"enabled": False, "flavor": "dualsense"}},
-            {"connected": True, "native_mode": False, "controllers": [],
-             "gamepad_emulation": {"enabled": True, "flavor": "dualsense"}},
-            {"connected": True, "native_mode": False,
-             "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-             "controllers": [{"uniq": P1, "connected": True, "player_slot": 1}]},
-            {"connected": True, "native_mode": True,
-             "gamepad_emulation": {"enabled": False, "flavor": "dualsense"},
-             "controllers": [{"uniq": P1, "connected": True, "player_slot": 1}]},
-            None,
-        )
-    ]
-    assert len(set(da_ponte)) == 5, (
-        f"as cinco pontes deixaram de ser cinco frases distintas: {da_ponte!r}")
 
-    for frase in minhas + da_ponte:
+    for frase in minhas:
         baixa = f" {frase.lower()} "
         for palavra in de_maquina:
             assert palavra not in baixa, (
