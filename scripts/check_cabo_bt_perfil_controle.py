@@ -261,6 +261,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                            "aparelho) — é do serviço da extensão, não de um controle",
     "mover-o-livre-da-modificacao": "o controle livre da extensão, no compasso de 1/20 s — é do "
                                     "serviço da extensão, não de um controle",
+    "arrastar-a-opcao-da-modificacao": "o arrastar de um deslizante da extensão, no compasso de "
+                                       "1/20 s — é do serviço da extensão, não de um controle",
     "soltar-o-livre-da-modificacao": "o soltar do controle livre zera o que a extensão toca — é "
                                      "do serviço da extensão",
     "gravar-o-livre-da-modificacao": "grava o arrastar numa forma do rascunho da janela — é da "

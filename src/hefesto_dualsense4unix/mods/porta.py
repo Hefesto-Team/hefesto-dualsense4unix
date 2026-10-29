@@ -90,6 +90,7 @@ OJogoEscreve = Callable[[str, str], bool]
 UniqDoPosto = Callable[[], str | None]
 Controles = Callable[[], list[dict[str, Any]]]
 Pulsador = Callable[[str, dict[str, Any]], dict[str, Any]]
+LigarAChave = Callable[[str], Awaitable[bool]]
 
 
 class RecusaError(Exception):
@@ -683,9 +684,11 @@ class Porta:
         uniq_do_posto: UniqDoPosto,
         pulsador: Pulsador | None = None,
         controles: Controles | None = None,
+        ligar_a_chave: LigarAChave | None = None,
         relogio: Callable[[], float] = time.monotonic,
     ) -> None:
         self.caminho = caminho
+        self._ligar_a_chave = ligar_a_chave
         self._controles = controles
         self.bus = bus
         self._pulsador = pulsador
@@ -851,6 +854,8 @@ class Porta:
                 return _resposta(req_id, self._pulsar(con.sessao, params))
             if metodo == "lancador.jogos":
                 return _resposta(req_id, self._jogos_do_lancador(con.sessao, params))
+            if metodo == "chave.ligar":
+                return _resposta(req_id, await self._ligar_a_chave_de(con.sessao))
             if metodo == "controles.lista":
                 return _resposta(req_id, await asyncio.to_thread(
                     self._lista_dos_controles, con.sessao))
@@ -947,6 +952,13 @@ class Porta:
         for publico in largados:
             con.desassinar(publico, self.bus)
         return {"desassinados": largados}
+
+    async def _ligar_a_chave_de(self, sessao: _Credencial) -> dict[str, Any]:
+        """O ``chave.ligar``: a extensão liga a própria chave, gravada como o clique da janela.
+        Só a da extensão que pede, e só com a ``chave`` no manifesto instalado."""
+        if self._ligar_a_chave is None or not await self._ligar_a_chave(sessao.mod_id):
+            raise RecusaError(CODE_SEM_PERMISSAO, "a extensão não declara a chave")
+        return {"ligada": True}
 
     def _lista_dos_controles(self, sessao: _Credencial) -> dict[str, Any]:
         """Os controles ligados agora, ``{controles: [{uniq, jogador}]}``, a quem lê a conexão.

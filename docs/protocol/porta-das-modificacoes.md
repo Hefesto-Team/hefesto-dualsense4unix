@@ -43,6 +43,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
+| `chave.ligar` | `{}` | a `chave` no manifesto instalado | `{ligada}` |
 
 Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?, controles?}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
@@ -391,7 +392,8 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
 - **`chave`** (desde 28/10/2026): o `id` de uma opção `ligado` da própria extensão, sem `aparece_com`. Ela vira a
   chave Ligado/Desligado do topo da janela, sem texto e no lugar do «Parar tudo», e sai das abas de opções. O
   clique grava a opção na hora, como toda escolha da janela, e ela segue gravada ao reabrir. Desligar manda o
-  gesto `para`, como o «Parar tudo»; ligar só grava, e a extensão relê as opções. Com ela desligada, os botões de
+  gesto `para`, como o «Parar tudo»; ligar só grava, e a extensão relê as opções. A extensão liga a própria chave
+  pelo `chave.ligar` (desde 28/10/2026, para ligar sozinha no jogo adulto em que funciona); desligar é só da janela. Com ela desligada, os botões de
   ação da janela (os da barra e os de cada aparelho), a chave de cada aparelho e os `controles` dele (a luz)
   ficam à vista, apagados e sem gesto. Pede `ler:acessorios.gesto` ou `publicar:acessorios.estado`. A extensão desligada publica
   `ligado: false` e só manda zero aos aparelhos até ser ligada de novo.

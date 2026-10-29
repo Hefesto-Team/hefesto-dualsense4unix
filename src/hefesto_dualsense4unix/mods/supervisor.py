@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
-from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
+from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES, opcoes
 from hefesto_dualsense4unix.mods.instalador import (
     CHAVES_OFICIAIS,
     Entrada,
@@ -47,6 +47,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     aviso_por_ver,
     commit_novo,
     ler_registro,
+    manifesto_instalado,
 )
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
@@ -422,6 +423,7 @@ class Supervisor:
             uniq_do_posto=uniq_do_posto,
             pulsador=pulsador,
             controles=controles,
+            ligar_a_chave=self._ligar_a_chave,
         )
         self.bwrap = bwrap or (shutil.which("bwrap") if procurar_bwrap else None)
         self.esperas = esperas
@@ -787,6 +789,20 @@ class Supervisor:
                              acoes_dos_aparelhos=_acoes_dos_aparelhos(manifesto))
         logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap))
         return processo
+
+    async def _ligar_a_chave(self, mod_id: str) -> bool:
+        """A chave da extensão ``mod_id`` gravada ligada, como o clique da janela; ``False`` sem a
+        ``chave`` no manifesto instalado."""
+        try:
+            manifesto = await asyncio.to_thread(manifesto_instalado, mod_id, lugares=self.lugares)
+            if not manifesto.chave:
+                return False
+            await asyncio.to_thread(opcoes.guardar, manifesto, manifesto.chave, True, self.lugares)
+        except (InstalacaoRecusadaError, OSError) as exc:
+            logger.warning("mods_chave_nao_ligou", mod=mod_id, err=str(exc))
+            return False
+        logger.info("mods_chave_ligada_pela_extensao", mod=mod_id)
+        return True
 
     async def _parar_uma(self, mod_id: str) -> None:
         vigiada = self._vigiadas.pop(mod_id, None)
