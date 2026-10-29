@@ -666,6 +666,13 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "12/08/2026: LIGADA — não pela env, e sim pelo companheiro declarado em "
         "`_MAO_FORA_DO_AMBIENTE`."
     ),
+    "HEFESTO_MOD_JOGOS": (
+        "28/10/2026, A-LOVENSE-MOSTRA-QUE-O-JOGO-APONTA-PARA-OUTRA-MAQUINA-01 — o Hefesto PÕE "
+        "esta chave no ambiente da "
+        "modificação que tem a permissão `jogos` (as pastas steamapps de toda biblioteca, só "
+        "de leitura na caixa): é o contrato do supervisor com a modificação filha, que a lê "
+        "para achar os jogos. Quem a liga é o próprio supervisor, a cada modificação aberta."
+    ),
 }
 
 _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
@@ -803,6 +810,15 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "pelo `machine.declare` no 'Aplicar'. A env continua sem porta que a "
         "escreva, e continua certo que continue: ela liga a mesa INTEIRA, e a "
         "decisão dela de 22/08 é *'por controle'*.",
+    ),
+    "HEFESTO_MOD_JOGOS": (
+        "mods/supervisor.py::Supervisor",
+        "28/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
+        "põe a chave no ambiente da modificação que tem a permissão `jogos` "
+        "(`HEFESTO_MOD_JOGOS` em `src/hefesto_dualsense4unix/mods/supervisor.py:754`), "
+        "com as pastas de `pastas_dos_jogos`, e o serviço o sobe pelo `Daemon._start_mods` "
+        "(daemon/lifecycle.py). Não há `Environment=` a escrever: a chave nasce a cada "
+        "modificação, para ela, e não para o serviço.",
     ),
 }
 
