@@ -754,3 +754,6 @@ D-1510-O-LANCAMENTO-PODA-DO-PREFIXO-O-SOM-QUE-NAO-EXISTE-MAIS
 # 15/10/2026: a linha de botão da Navegação, delegada (A-ABA-NAVEGACAO-DO-TODO-01); o gesto não tem teste próprio
 D-1510-A-LINHA-DE-BOTAO-GRAVA-NA-HORA
 # 20/10/2026: o desenho dos efeitos escolhido por ela; a prova nasce com a OS-EFEITOS-APARECEM-POR-FAMILIA-NAS-ABAS-03-04-E-05-01, que sai daqui
+# 28/10/2026: duas decisões da extensão Lovense, a validar por ela; a prova mora no repositório da extensão
+D-2810-A-FORCA-SOBE-AO-DEGRAU-DO-BRINQUEDO
+D-2810-OS-BRINQUEDOS-PAREADOS-FICAM-NA-LISTA
