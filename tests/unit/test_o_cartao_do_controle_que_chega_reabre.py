@@ -41,18 +41,23 @@ PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
 ABRE = "    for(const pref of (p.vazios || [])){"
 FECHA = "    for(const [pref, campos] of Object.entries(p.colunas || {})){"
+ABA_ABRE = "  function aba_do_lugar(el, pref, cheio){"
+ABA_FECHA = "  window.__hef.pintar = function(p){"
 
 
 def _trecho_do_piloto() -> str:
     """Os passos 1b e 1c, do FONTE — nunca uma cópia dentro deste arquivo.
 
     O corte é pelo CÓDIGO: do laço de `p.vazios` (o 1b) até o de `p.colunas` (o 2), porque o
-    comentário que rotulava cada passo saiu do fonte.
+    comentário que rotulava cada passo saiu do fonte. Os dois laços chamam o `aba_do_lugar`, que
+    vem junto, cortado do fonte do mesmo jeito.
     """
     fonte = PILOTO.read_text(encoding="utf-8")
+    a = fonte.index(ABA_ABRE)
+    b = fonte.index(ABA_FECHA, a)
     i = fonte.index(ABRE)
     j = fonte.index(FECHA, i)
-    return fonte[i:j]
+    return fonte[a:b] + fonte[i:j]
 
 
 _DOM = """
