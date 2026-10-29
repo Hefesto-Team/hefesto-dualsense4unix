@@ -1446,6 +1446,9 @@ PRIORIDADE_MAXIMA = 200
 _MARCAS_QUE_VIRARAM_ESTILO: frozenset[str] = frozenset({"visual_novel", "adulto"})
 
 
+_MIGRACOES_JA_CONTADAS: dict[str, tuple[str, tuple[str, ...]]] = {}
+
+
 def _as_mascaras_dos_controles(controles: dict[Any, Any], caminho: object) -> list[str]:
     """O que o jogo via de cada controle que declarava máscara, na ordem do perfil."""
     from hefesto_dualsense4unix.integrations.virtual_pad import modo_do_par, normalizar_modo
@@ -1542,7 +1545,8 @@ class Profile(BaseModel):
         essa; misturadas, a que casa com o caminho escrito, senão a mais frequente, e no
         empate a do primeiro controle. No ``gamepad`` o caminho se alinha ao modo
         (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_do_modo`); sem ``mode``,
-        ganha o ``gamepad``. A chave sai na próxima gravação; perfil sem ela não muda.
+        ganha o ``gamepad``. A chave sai na próxima gravação; perfil sem ela não muda. O diário
+        conta a migração uma vez por processo, e de novo só se o resultado mudar.
         """
         if not isinstance(data, dict):
             return data
@@ -1569,10 +1573,12 @@ class Profile(BaseModel):
         if secao.get("kind") == "gamepad":
             secao["caminho"] = caminho
         novo["mode"] = secao
-        get_logger(__name__).info(
-            "mascara_por_controle_virou_o_modo",
-            perfil=str(data.get("name", "")), modo=mascara, de=mascaras,
-        )
+        perfil = str(data.get("name", ""))
+        if _MIGRACOES_JA_CONTADAS.get(perfil) != (mascara, tuple(mascaras)):
+            _MIGRACOES_JA_CONTADAS[perfil] = (mascara, tuple(mascaras))
+            get_logger(__name__).info(
+                "mascara_por_controle_virou_o_modo", perfil=perfil, modo=mascara, de=mascaras,
+            )
         return novo
 
     @model_validator(mode="before")
