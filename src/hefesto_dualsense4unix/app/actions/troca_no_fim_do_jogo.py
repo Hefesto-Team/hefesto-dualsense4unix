@@ -188,7 +188,8 @@ def _a_trava_da_vigia() -> int | None:
     try:
         arquivo.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(arquivo.with_name(f".{arquivo.name}.vigia"), os.O_RDWR | os.O_CREAT, 0o600)
-    except OSError:
+    except OSError as erro:
+        logger.warning("troca_no_fim_do_jogo_vigia_sem_trava", err=str(erro))
         return None
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
