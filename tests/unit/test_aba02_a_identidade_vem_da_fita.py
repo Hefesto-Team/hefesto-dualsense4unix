@@ -140,7 +140,7 @@ def test_o_pacote_escreve_a_cor_do_plastico_como_folha(a02, ctx):
     folha = a02.pacote(ctx)["mesa"]["plastico-css"]
     assert '.ctl[data-controle="p1"]' in folha
     assert a02.cor_da_borda("white") in folha
-    assert f'{{--plastico:{a02.BORDA_SEM_COR}}}' in folha
+    assert f'{{--plastico:{a02.BORDA_SEM_COR};' in folha
 
 
 def test_o_pacote_escreve_os_chips_da_fita(a02, ctx):

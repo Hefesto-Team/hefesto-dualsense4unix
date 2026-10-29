@@ -72,14 +72,14 @@ TOPO = r"""
 
 def test_o_perfil_ativo_fica_numa_linha_com_quatro_controles_e_nome_longo() -> None:
     """MORDIDA (16/10/2026): tirar o `white-space:nowrap` do `.pa-rot` e do `.pa-nome` no
-    `topo.html` e regerar a 01 quebra o «Perfil ativo» em duas linhas e estica o topo.
+    `topo.html` e regerar a 03 quebra o «Perfil ativo» em duas linhas e estica o topo.
 
     Prova da D-1610-O-PERFIL-ATIVO-NUMA-LINHA-DO-TAMANHO-DO-NOME.
     """
     import json
 
     nome = "The Legend of Heroes: Trails through Daybreak"
-    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    uri = onde.pagina("03-gatilhos.html", publicado=False).as_uri()
     lido = _no_webkit(uri, (1212, 809), [TOPO % json.dumps(nome)])[0]
     assert lido["rotulo"] == 1 and lido["nome"] == 1, f"o «Perfil ativo» quebrou: {lido}"
     assert lido["h"] == lido["vazio"], f"o nome do perfil esticou o topo: {lido}"

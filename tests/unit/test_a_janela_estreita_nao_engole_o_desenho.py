@@ -568,7 +568,7 @@ def test_com_quatro_controles_o_nome_do_perfil_ativo_fica_a_vista(
     plasticos = ["Galactic Purple", "Starlight Blue"] * 2
     passo = (QUATRO_NA_FITA.replace("@@PLASTICOS@@", json.dumps(plasticos))
              .replace("@@PERFIL@@", json.dumps(perfil)))
-    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    uri = onde.pagina("03-gatilhos.html", publicado=False).as_uri()
     lido: dict[str, Any] = _no_webkit(uri, (largura, ALTURA_DO_DESENHO), [passo])[0]
     assert lido["larg"] >= 30, f"o nome do perfil ativo sumiu da fita: {lido}"
     assert lido["dir"] <= lido["dir_da_pilula"] + 1, (
@@ -639,14 +639,14 @@ def test_a_mordida_da_letra_larga_ve_o_corte_que_a_comum_nao_ve() -> None:
     """A passada larga morde: com o contador de volta no topo, a régua dela acusa o chip cortado.
 
     O contador «● N USB · N BT» saiu do topo com a
-    A-ABA-JOGAR-JUNTA-OS-CONTROLES-E-O-MODO-GERE-TUDO-01. Posto de volta pelo teste, a linha da 01
+    A-ABA-JOGAR-JUNTA-OS-CONTROLES-E-O-MODO-GERE-TUDO-01. Posto de volta pelo teste, a linha da 03
     em 940 px cabe com a letra comum da mesa e corta os dois chips com meio pixel a mais por letra:
     é a cegueira que deixava o vermelho só para o CI. A prova passa pela MEDIDA e pelo
     ``engolidos`` da passada, e não por uma conta à parte: é a régua que tem de ver o corte.
     """
     from tests.unit.test_as_telas_de_16_10_no_webkit import _no_webkit
 
-    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    uri = onde.pagina("03-gatilhos.html", publicado=False).as_uri()
     lidos = {}
     no_topo = {}
     for nome, larga in (("comum", ""), ("larga", LETRA_LARGA)):

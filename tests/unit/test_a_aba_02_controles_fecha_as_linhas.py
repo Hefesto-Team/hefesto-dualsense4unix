@@ -574,7 +574,7 @@ def test_o_nada_a_dizer_nao_divergiu_do_da_folha() -> None:
 
 O_SOM_EM_TRES_ESTADOS = r"""
 (() => {
-  const card = document.querySelector('[data-controle="p1"]');
+  const card = document.querySelector('.ctl[data-controle="p1"]');
   const bloco = card.querySelector('[data-bloco="alto-falante"]');
   const botao = bloco.querySelector('.mudo-i[data-mudo="alto-falante"]');
   const linha = bloco.querySelector('.vol');

@@ -7,7 +7,8 @@ navegação») passava da janela; só com o cadeado, os quatro plásticos de nom
 ``topo.html``: o perfil ativo cede primeiro (``flex-shrink`` mil vezes maior), e depois o nome
 do plástico nos chips, com reticências.
 
-MORDIDAS (26/10/2026, executadas aqui): tirar o ``.fita{min-width:0}`` da 01 reprova
+MORDIDAS (26/10/2026, executadas aqui): tirar o ``.fita{min-width:0}`` da 03 (a 01 não tem
+fita desde D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR) reprova
 ``test_com_quatro_plasticos_longos_o_cadeado_fica_na_janela``; tirar o ``flex-shrink:1000`` do
 perfil ativo reprova ``test_o_nome_longo_do_perfil_corta_o_dele_e_nao_o_dos_controles``.
 
@@ -59,7 +60,7 @@ LETRA = {"comum": "", "larga": "*{letter-spacing:.5px !important}"}
 
 
 def _medir(plasticos: list[str], perfil: str, letra: str) -> dict[str, Any]:
-    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    uri = onde.pagina("03-gatilhos.html", publicado=False).as_uri()
     passo = (MEDIR.replace("PLASTICOS_AQUI", json.dumps(plasticos))
              .replace("PERFIL_AQUI", json.dumps(perfil))
              .replace("LARGA_AQUI", json.dumps(LETRA[letra])))

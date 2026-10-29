@@ -217,7 +217,7 @@ def test_o_molde_escreve_o_travessao_do_desenho(pacotes_mod):
     from hefesto_dualsense4unix.interface import onde
 
     doc = onde.pagina("01-jogar.html", publicado=True).read_text(encoding="utf-8")
-    vazio = re.search(r'data-controle="p3".*?</div>\s*</div>', doc, re.S)
+    vazio = re.search(r'class="ctl card[^"]*" data-controle="p3".*?</div>\s*</div>', doc, re.S)
     assert vazio is not None, "o lugar P3 sumiu da página publicada"
     assert f">{pacotes_mod.TRAVESSAO}<" in vazio.group(0), (
         "o desenho deixou de usar o travessão no lugar vazio — o texto de tela "

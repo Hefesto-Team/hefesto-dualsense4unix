@@ -123,7 +123,7 @@ ROTEIRO = r"""
 
 
 def _no_webkit(montagem: str, cargas: list[dict[str, Any]], *,
-               preparo: str = "", raiz: str = "alvo") -> dict[str, Any]:
+               preparo: str = "", raiz: str = "alvo", pagina: str = PAGINA) -> dict[str, Any]:
     """Abre uma página PUBLICADA num WebKit offscreen, com o BOOTSTRAP dentro."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
@@ -168,7 +168,7 @@ def _no_webkit(montagem: str, cargas: list[dict[str, Any]], *,
             v.evaluate_javascript(hv.BOOTSTRAP, -1, None, None, None, bootou)
 
     view.connect("load-changed", carregou)
-    view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
+    view.load_uri(onde.pagina(pagina, publicado=True).as_uri())
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -422,13 +422,17 @@ def test_o_tique_nao_enfileira_com_a_ponte_lenta() -> None:
 
 
 def test_a_fita_nao_e_trocada_com_um_chip_em_voo() -> None:
-    """A fita é o caso EXTREMO do bloco: ela troca o próprio nó, não o miolo."""
+    """A fita é o caso EXTREMO do bloco: ela troca o próprio nó, não o miolo.
+
+    Medida na 03: a Jogar não tem fita (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR).
+    """
     fora = _no_webkit(
         "",
         [{"fita": '<div class="fita">a fita nova</div>'}] * 3,
         preparo=("(function(){const f=document.querySelector('.fita');"
                  "f.firstElementChild.classList.add('hef-em-voo');})()"),
         raiz="document.querySelector('.fita').parentElement",
+        pagina="03-gatilhos.html",
     )
     assert fora["pintou"] == [0, 0, 0], (
         f"a fita foi trocada com um chip em voo dentro — {fora['pintou']}")

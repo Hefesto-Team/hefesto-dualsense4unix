@@ -60,6 +60,7 @@ DESENHO = RAIZ / "mockup"
 ABAS = sorted(f"{a}.html" for a in {a for _, a in monta.ABAS} | set(monta.FORA_DA_TIRA))
 ESCOLHEM = ["01-jogar.html", "02-controles.html", "08-conexoes.html"]
 NAO_ESCOLHEM = [a for a in ABAS if a not in ESCOLHEM]
+COM_FITA = [a for a in ABAS if a.removesuffix(".html") not in monta.ABAS_SEM_A_FITA]
 
 MOTOR = """() => {
   const sonda = document.createElement('i');
@@ -106,14 +107,14 @@ def dez(navegador) -> dict[str, dict[str, Any]]:
     """A fita de cada página do desenho, medida no motor (uma abertura para todas)."""
     fora: dict[str, dict[str, Any]] = {}
     pg = navegador.new_page(viewport={"width": 1600, "height": 900})
-    for nome in ABAS:
+    for nome in COM_FITA:
         pg.goto((DESENHO / nome).as_uri())
         pg.wait_for_load_state("networkidle")
         r = pg.evaluate(MOTOR)
         assert "erro" not in r, f"{nome}: {r.get('erro')}"
         fora[nome] = r
     pg.close()
-    assert len(fora) == 10
+    assert len(fora) == len(COM_FITA)
     return fora
 
 
@@ -128,7 +129,7 @@ def test_nas_sete_que_nao_escolhem_todo_chip_esta_aceso(dez: dict, nome: str) ->
         f"O aceso é medido contra o `--fg` da própria página, com peso de 600 ou mais.")
 
 
-@pytest.mark.parametrize("nome", ESCOLHEM)
+@pytest.mark.parametrize("nome", [a for a in ESCOLHEM if a in COM_FITA])
 def test_nas_tres_que_escolhem_so_o_p1_do_desenho_esta_aceso(dez: dict, nome: str) -> None:
     r = dez[nome]
     assert not r["inerte"], f"{nome}: a fita virou de leitura"
@@ -138,7 +139,7 @@ def test_nas_tres_que_escolhem_so_o_p1_do_desenho_esta_aceso(dez: dict, nome: st
         f"{nome}: no cenário do desenho (P1 escolhido) só o P1 acende; acesos={acesos}")
 
 
-@pytest.mark.parametrize("nome", ABAS)
+@pytest.mark.parametrize("nome", COM_FITA)
 def test_o_chip_de_cada_controle_tem_a_borda_do_plastico_lida_da_mesa(
         dez: dict, nome: str) -> None:
     """2 px na cor de `monta.cor_da_zona(<cor da mesa>)`, e não no `style` do chip."""

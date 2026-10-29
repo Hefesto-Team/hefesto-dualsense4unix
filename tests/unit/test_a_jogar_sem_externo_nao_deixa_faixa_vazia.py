@@ -63,8 +63,10 @@ MEDIR = r"""
     linhas: linhas.length, abaixo: abaixo,
     a_ultima_e_o_externo: !!derradeira && derradeira.classList.contains('ext-cartao'),
     altura_do_externo: ext.length ? ext[0].getBoundingClientRect().height : 0,
-    altura_da_vaga: corpo.querySelector('.ctl.off')
-      ? corpo.querySelector('.ctl.off').getBoundingClientRect().height : 0,
+    altura_da_vaga: (() => { const off = corpo.querySelector('.ctl.off');
+      if (!off) return 0;
+      const antes = off.style.display; off.style.display = 'block';
+      const h = off.getBoundingClientRect().height; off.style.display = antes; return h; })(),
     rolagem: corpo.scrollHeight - corpo.clientHeight,
     externos: ext.map(e => (e.innerText || '').replace(/\s+/g, ' ').trim()),
     pendente: !!document.querySelector('[data-campo="pendente"], .faixa-final'),
@@ -103,6 +105,9 @@ def test_sem_externo_nada_fica_sob_as_linhas_dos_controles(tamanho: tuple[int, i
 @pytest.mark.parametrize("tamanho", TAMANHOS, ids=lambda t: f"{t[0]}x{t[1]}")
 def test_o_externo_e_a_ultima_linha_e_nada_fica_sob_ele(tamanho: tuple[int, int]) -> None:
     """O externo vem depois dos assentos, na altura da linha fechada, sem rolagem na seção.
+
+    Com as abas (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR) o lugar vazio não aparece; a régua o
+    mostra só pelo tempo de medir a altura da linha fechada.
 
     Prova da D-2810-O-EXTERNO-ENTRA-NA-SECAO-CONTROLES-DA-JOGAR.
     """
