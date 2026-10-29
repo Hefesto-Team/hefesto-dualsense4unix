@@ -101,8 +101,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "configurar-modificacao": "abre a janela de uma extensão — é da tela",
     "guardar-opcao-da-modificacao": "guarda uma opção da extensão no `opcoes.json` dela — é da máquina",
     "mais-da-modificacao": "o ⋮ da extensão (atualizar, ver as permissões, remover) — é da máquina",
-    "guardar-modificacao": "o Guardar da janela da extensão grava o rascunho no `opcoes.json` "
-                           "dela — é da máquina",
     "parar-tudo-da-modificacao": "o «Parar tudo» da janela pede à extensão que zere os aparelhos "
                                  "dela — é do serviço, não de um controle",
     "chave-da-modificacao": "a chave Ligado/Desligado da janela grava a opção da extensão no "

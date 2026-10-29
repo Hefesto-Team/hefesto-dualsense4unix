@@ -384,8 +384,6 @@ def test_a_opcao_mudada_grava_na_hora(lar, ctx, tmp_path) -> None:
         "a opção esperou o Guardar")
     assert a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Sempre", "evento": "click"}, _Ponte()) is None
-    assert "recado" not in a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte()), (
-        "o Guardar sem mudança disse que guardou")
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
     assert "<option selected>Nunca" in janela, "o reabrir largou a opção gravada"
 
@@ -410,7 +408,7 @@ def test_a_chave_de_ligado_vira_no_clique_e_o_numero_valida(lar, ctx, tmp_path) 
     with pytest.raises(RuntimeError, match="não tem essa opção"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "toque:inventada", "valor": "x", "evento": "change"}, _Ponte())
-    assert _guardado(lar) == antes and a07._MEXIDA.rascunho == {}, "a recusa gravou"
+    assert _guardado(lar) == antes, "a recusa gravou"
 
 
 def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
@@ -432,7 +430,7 @@ def test_remover_pede_o_segundo_clique_e_apaga_o_codigo_e_os_dados(lar, ctx, tmp
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
-    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _guardado(lar)["avisar"] is True
     primeiro = a07.mais_da_modificacao(ctx, {"v": "toque:remover"}, _Ponte())
     assert primeiro.get("armou") is True and "recado" not in primeiro
     assert "Confirmar remoção" in primeiro["blocos"][".ext-lista"]
@@ -864,10 +862,9 @@ def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, 
     assert "mg-aba" not in janela and 'type="radio"' not in janela
     assert 'type="color"' in janela and 'value="#00aaff"' in janela
     assert '<span class="ext-rot">Para</span>Todos' in janela.split('class="tn-corpo"')[0]
-    rodape = janela.split('class="tn-rod"')[1]
-    assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="toque">'
-            'Cancelar</a>') in rodape
-    assert re.search(r'data-gesto="guardar-modificacao" data-v="toque"[^>]*>Guardar</a>', rodape)
+    assert 'class="tn-rod"' not in janela and ">Guardar</a>" not in janela, "a janela tem rodapé"
+    assert re.search(r'<a class="tn-x" href="#"[^>]*data-gesto="cancelar-modificacao" '
+                     r'data-v="toque">', janela), "o X fecha a janela"
 
 
 def test_um_grupo_so_desenha_um_cartao(lar, ctx, tmp_path) -> None:
@@ -886,7 +883,6 @@ def test_guardar_a_cor_valida_e_normaliza(lar, ctx, tmp_path) -> None:
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:luz", "valor": "#FF8800", "evento": "change"}, _Ponte())
     assert 'value="#ff8800"' in janela_pintada(carga["blocos"])
-    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert _guardado(lar)["luz"] == "#ff8800"
     with pytest.raises(RuntimeError, match="#rrggbb"):
         a07.guardar_opcao_da_modificacao(

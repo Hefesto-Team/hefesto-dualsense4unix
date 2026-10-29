@@ -170,21 +170,19 @@ def test_a_janela_mostra_o_dependente_na_hora_e_esconde_sem_apagar(
         f"a volta ao USB deixou o servidor (ou o filho dele) na tela: {volta}")
     assert "endereco-do-telefone" not in _linhas(_mudar(a07, ctx, ponte, "telefone"))
 
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     guardados: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert guardados["servidor"] == "10.0.0.2:9000", "esconder apagou o endereço guardado"
     assert guardados["seguro"] is True and guardados["ligacao"] == USB
 
 
 def test_a_janela_reaberta_le_o_guardado(janela: Any, ctx: Any) -> None:  # noqa: F811
-    """A condição vale pelo valor guardado, não só pelo rascunho: reabrir a janela com «Servidor
-    na rede» guardado mostra o servidor."""
+    """A condição vale pelo valor guardado: reabrir a janela com «Servidor na rede» guardado
+    mostra o servidor."""
     a07, instalar, abrir = janela
     instalar(opcoes=_opcoes())
     ponte = _Ponte(VIVO)
     abrir(ponte)
     _mudar(a07, ctx, ponte, "ligacao", REDE)
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     a07._MEXIDA.limpar()
     assert "servidor" in _linhas(abrir(ponte)["blocos"]["#mod-janela"])
 

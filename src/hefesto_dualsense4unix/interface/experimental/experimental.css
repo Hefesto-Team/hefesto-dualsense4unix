@@ -468,10 +468,6 @@
 .miolo > .quadro.estica:has(> .quadro-corpo > .lanc-fila) { flex-grow:0 }
 #mod-janela .ja-topo .tn-tit + .tn-x, #mod-janela .ja-topo .tn-tit + .mj-fecho > .tn-x { margin-left:auto }
 #mod-janela .mj-fecho { display:contents }
-#mod-janela .tn-x:not([href]), #mod-janela .tn-rod .btn:not([href]) { cursor:pointer }
-#mod-janela .tn-rod .btn.roxo.apagado { opacity:.45 }
-#mod-janela .tn-rod .btn.roxo.aceso { border-color:var(--purple);background:rgba(189,147,249,.16);color:var(--fg) }
-#mod-janela .tn-rod .btn.vermelho { border-color:var(--red) }
 #mod-janela .ja-corpo { grid-template-columns:252px minmax(0,1fr) }
 #mod-janela .ja-agora { gap:6px }
 #mod-janela .ja-cxs, #mod-janela .ja-aps { display:flex;flex-direction:column;gap:2px }
@@ -563,7 +559,8 @@
 #mod-janela .mj-ap { border:1px solid var(--border-sutil);border-radius:9px;background:var(--app-bg);padding:10px 12px;
   display:flex;flex-direction:column;gap:8px;min-width:0 }
 #mod-janela .mj-ap.fora, #mod-janela .ap.fora, #mod-janela .mj-alvo.fora { opacity:.5 }
-#mod-janela .mj-acao.apagado { opacity:.45;cursor:default;pointer-events:none }
+#mod-janela .mj-acao.apagado, #mod-janela .mj-chave[aria-disabled="true"],
+#mod-janela .mj-cores button[aria-disabled="true"] { opacity:.45;cursor:default;pointer-events:none }
 #mod-janela .tn-tit + .ja-chave { flex:none }
 #mod-janela .mj-ap-cab { display:flex;align-items:center;gap:8px;min-width:0 }
 #mod-janela .mj-ap-nome { font-size:13.5px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;

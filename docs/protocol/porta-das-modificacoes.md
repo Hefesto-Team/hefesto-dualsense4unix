@@ -390,10 +390,10 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   `extensao.parar`, a quem não lê o gesto), e o nível e o perfil ficam guardados.
 - **`chave`** (desde 28/10/2026): o `id` de uma opção `ligado` da própria extensão, sem `aparece_com`. Ela vira a
   chave Ligado/Desligado do topo da janela, sem texto e no lugar do «Parar tudo», e sai das abas de opções. O
-  clique grava a opção na hora, fora do rascunho do Guardar, e ela segue gravada ao reabrir. Desligar manda o
+  clique grava a opção na hora, como toda escolha da janela, e ela segue gravada ao reabrir. Desligar manda o
   gesto `para`, como o «Parar tudo»; ligar só grava, e a extensão relê as opções. Com ela desligada, os botões de
-  ação da janela (os da barra e os de cada aparelho) ficam à vista, apagados e sem gesto; a chave de cada
-  aparelho segue. Pede `ler:acessorios.gesto` ou `publicar:acessorios.estado`. A extensão desligada publica
+  ação da janela (os da barra e os de cada aparelho), a chave de cada aparelho e os `controles` dele (a luz)
+  ficam à vista, apagados e sem gesto. Pede `ler:acessorios.gesto` ou `publicar:acessorios.estado`. A extensão desligada publica
   `ligado: false` e só manda zero aos aparelhos até ser ligada de novo.
 
 `agora` só vale com `ler:acessorios.gesto` ou `publicar:acessorios.estado` nas permissões, que é o retorno que
@@ -432,15 +432,15 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   `[[força, segundos], …]` (até 16 passos, 160 s); o valor da opção são as formas gravadas, `{nome: passos}`,
   até 16, e o `padrao`, opcional, tem a mesma forma. As formas do `livre` entram nas `formas` das opções
   `por_botao` da MESMA extensão: um botão pode tocar «Meu 1», e a forma esquecida devolve o botão ao padrão. A
-  forma de uma extensão nunca aparece na janela de outra, e o «Guardar» de outra a recusa.
+  forma de uma extensão nunca aparece na janela de outra, e a escolha na janela de outra a recusa.
   A opção `livre` aceita `modos: true`. Com ele, `extensao.livre` e `mods.livre` levam `modo`, um de
   `"soltar"`, `"segurar"` e `"repetir"` (`"soltar"` por padrão). Sem `modos`, o campo não vai. A faixa ganha os
   três botões do que a barra faz ao soltar: «Soltar» volta a zero, «Segurar» fica onde parou e «Repetir» toca
   em laço o trecho do último arrastar (o trecho de menos de 0,1 s fica, como no «Segurar»). O modo escolhido
-  vai a `opcoes.json` na chave `<id>:modo` pelo «Guardar», e vale na hora: depois de um arrastar, a troca manda
-  um soltar com o valor de agora e o modo novo. O «Cancelar» e o X da janela (e o Esc) desfazem o modo que já
-  valeu pelo mesmo caminho: um soltar com o modo guardado, só quando o vivo difere; reabrir a janela que fechou
-  sem eles faz o mesmo; a extensão fora da porta não tem modo a desfazer, porque volta lendo o guardado. Na
+  vai a `opcoes.json` na chave `<id>:modo` no clique, e vale na hora: depois de um arrastar, a troca manda
+  um soltar com o valor de agora e o modo novo. A janela não tem Guardar nem Cancelar (desde 28/10/2026): toda
+  escolha grava no gesto, e o X (e o Esc) fecha; ao fechar ou reabrir, um soltar com o modo guardado sai só
+  quando o vivo difere dele; a extensão fora da porta volta lendo o guardado. Na
   troca, o soltar que o serviço recusa (ou que volta `{enviado: false}`) devolve a barra e o botão ao modo de
   antes; o botão pisca e a frase vai ao diário. `modos` fora do `livre` recusa o manifesto.
 - **`aparelhos_controles`**: `{grupo}`, a aba em que moram os `controles` que cada aparelho declara no

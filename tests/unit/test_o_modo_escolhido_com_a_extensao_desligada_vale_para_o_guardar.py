@@ -4,8 +4,9 @@ O-MODO-ESCOLHIDO-COM-A-EXTENSAO-DESLIGADA-VALE-PARA-O-GUARDAR-01 (25/10/2026). D
 arrastar, trocar «Soltar», «Segurar» ou «Repetir» manda à extensão o soltar com o modo novo. Fora
 da porta ela não segura modo nenhum (volta lendo o guardado): a troca vale na barra, sem acusar
 recusa, pelo dono ``_Viva.sem_a_extensao``. Desde 28/10/2026
-(D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA) a troca grava no clique, sem esperar o
-Guardar. Na porta, a recusa de verdade continua voltando o modo e piscando, e nada se grava.
+(D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA) a troca grava no clique, e a janela
+não tem mais Guardar. Na porta, a recusa de verdade continua voltando o modo e piscando, e nada se
+grava.
 
 MORDIDAS (25/10/2026 e 28/10/2026, executadas sobre a cura e devolvidas):
 
@@ -91,10 +92,8 @@ def test_na_porta_a_recusa_da_troca_continua_piscando(
     ponte.recusa = "A extensão recusou o modo."
     with pytest.raises(RuntimeError, match=r"A extensão recusou o modo\."):
         a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
-    assert "ao-vivo:modo" not in a07._MEXIDA.rascunho, "o modo recusado ficou no rascunho"
     assert a07._VIVA.modo == "soltar", "o modo recusado ficou valendo na barra"
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
-    assert _guardado(lar) == "soltar", "o Guardar gravou o modo que a extensão recusou"
+    assert _guardado(lar) == "soltar", "o modo que a extensão recusou foi gravado"
 
 
 _ACESO = """(function(h){

@@ -229,8 +229,10 @@ def _janela(html: str, ident: str) -> str:
     return sem[inicio:fim if fim > 0 else len(sem)]
 
 
-def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guardar() -> None:
-    """A (recomendada): um cartão por grupo, e não as abas de antes (a extensão sem ``agora``)."""
+def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_fecha_pelo_x() -> None:
+    """A (recomendada): um cartão por grupo, e não as abas de antes (a extensão sem ``agora``).
+    Desde 28/10/2026 (D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA) não há rodapé: o X
+    fecha."""
     import desenho_da_experimental as exp
 
     janela = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO, mod="exemplo")
@@ -238,10 +240,9 @@ def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guarda
     assert titulos == ["Geral", "Luz e vibração", "Avançado"], titulos
     assert "mj-abas" not in janela and 'type="radio"' not in janela
     assert janela.count('<div class="ky-linha" id="mod-op-') == 7
-    assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="exemplo">'
-            'Cancelar</a>') in janela
-    assert re.search(r'<a class="btn roxo[^"]*" href="#" data-gesto="guardar-modificacao"', janela)
-    assert ">Fechar</a>" not in janela.split('class="tn-rod"')[1]
+    assert ('<a class="tn-x" href="#" data-dica="Fechar" data-gesto="cancelar-modificacao" '
+            'data-v="exemplo">') in janela
+    assert 'class="tn-rod"' not in janela and "guardar-modificacao" not in janela
 
 
 def test_a_janela_da_extensao_com_agora_no_desenho_e_o_arranjo_c() -> None:
@@ -252,7 +253,7 @@ def test_a_janela_da_extensao_com_agora_no_desenho_e_o_arranjo_c() -> None:
     assert janela.count(" checked>") >= 1 and 'id="mj-aba-0" checked' in janela
     assert 'id="mod-agora"' in janela and "Para</span>Todos" not in janela
     assert 'class="ja-parar" data-gesto="parar-tudo-da-modificacao"' in janela
-    assert re.search(r'<a class="btn roxo[^"]*" href="#" data-gesto="guardar-modificacao"', janela)
+    assert 'class="tn-rod"' not in janela and "guardar-modificacao" not in janela
 
 
 @sem_chrome

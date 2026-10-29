@@ -1,9 +1,10 @@
-"""O Cancelar da janela da extensão não desfaz o modo já gravado, e a recusa da extensão aparece.
+"""O X da janela da extensão não desfaz o modo já gravado, e a recusa da extensão aparece.
 
 O-CANCELAR-DA-JANELA-DESFAZ-O-MODO-E-A-RECUSA-APARECE-01 (25/10/2026) fazia o Cancelar, o X, o Esc
 e o reabrir devolverem à extensão o modo guardado, porque o modo esperava o Guardar no rascunho.
 Desde 28/10/2026 (D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA) o modo grava no clique:
-o Cancelar e o reabrir não mandam nada, e a janela e a barra seguem o modo escolhido. O modo que a
+o X (o Cancelar saiu com o Guardar) e o reabrir não mandam nada, e a janela e a barra seguem o
+modo escolhido. O modo que a
 extensão recusa volta na janela e na barra, e a recusa vai à mesma borda e ao mesmo diário dos
 outros gestos. Na porta, o controle de um aparelho com o id de uma ação dos aparelhos é recusado
 nomeando o id: o clique dos dois chega à extensão com a mesma forma (a ação e o alvo), e o serviço
@@ -15,7 +16,7 @@ MORDIDAS (25/10/2026 e 28/10/2026, executadas sobre a cura e devolvidas):
   ``test_o_modo_trocado_grava_e_o_cancelar_e_o_reabrir_nao_o_desfazem`` (o soltar do guardado);
 - o ``mudar_o_modo`` que não volta ao modo de antes na recusa reprova a recusa (a barra e a janela);
 - o gesto do modo que ignora a resposta reprova a recusa (nada levanta);
-- o Cancelar e o X sem o ``data-gesto`` reprovam o HTML e o WebKit;
+- o X sem o ``data-gesto`` reprova o HTML e o WebKit;
 - a porta sem a conferência do id da ação reprova os três casos dela, e o supervisor que não passa
   as ações à porta reprova o caso dele.
 """
@@ -79,13 +80,9 @@ def _acesos(modo: str) -> dict[str, bool]:
 
 
 def _cancelar(a07: Any, ctx: Any, ponte: _Ponte) -> dict[str, Any]:  # noqa: F811
-    """Com rascunho, o primeiro gesto só arma o «Descartar» (O-RASCUNHO-DA-JANELA-…-01), e o
-    segundo é o Cancelar que desfaz."""
-    antes = len(ponte.chamadas)
+    """O X fecha no primeiro gesto: não há rascunho a descartar."""
     carga = dict(a07.cancelar_modificacao(ctx, {"v": "toque"}, ponte))
-    if carga.get("armou"):
-        assert len(ponte.chamadas) == antes, "o primeiro gesto já mandou o desfazer"
-        carga = dict(a07.cancelar_modificacao(ctx, {"v": "toque"}, ponte))
+    assert "armou" not in carga, "o X armou um Descartar"
     return carga
 
 
@@ -110,7 +107,7 @@ def test_o_modo_trocado_grava_e_o_cancelar_e_o_reabrir_nao_o_desfazem(
     assert a07._VIVA.modo == "segurar", "a barra largou o modo gravado"
 
 
-def test_cancelar_sem_troca_ou_depois_do_guardar_nao_manda_nada(
+def test_o_x_sem_troca_ou_depois_da_troca_nao_manda_nada(
         janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
@@ -119,17 +116,23 @@ def test_cancelar_sem_troca_ou_depois_do_guardar_nao_manda_nada(
     _arrastar_e_soltar(a07, ctx, ponte, relogio)
     antes = len(_livres(ponte))
     _cancelar(a07, ctx, ponte)
-    assert len(_livres(ponte)) == antes, "o Cancelar sem troca mandou soltar à extensão"
+    assert len(_livres(ponte)) == antes, "o X sem troca mandou soltar à extensão"
     a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     antes = len(_livres(ponte))
     carga = _cancelar(a07, ctx, ponte)
-    assert len(_livres(ponte)) == antes, "o Cancelar depois do Guardar desfez o que foi guardado"
+    assert len(_livres(ponte)) == antes, "o X depois da troca desfez o que foi gravado"
     assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("repetir")
 
 
+def _o_modo_guardado(lar: Any) -> Any:  # noqa: F811
+    from hefesto_dualsense4unix.mods import opcoes
+    from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
+
+    return opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)["ao-vivo:modo"]
+
+
 def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
-        janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
+        janela: Any, ctx: Any, lar: Any, relogio: list[float]) -> None:  # noqa: F811
     """Prova da D-2510-A-RECUSA-DO-MODO-DEVOLVE-A-BARRA."""
     frase = "A extensão recusou o modo."
     a07, instalar, abrir = janela
@@ -137,25 +140,25 @@ def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
     ponte = _PonteQueRecusa(VIVO)
     abrir(ponte)
     a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:segurar"}, ponte)
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     _arrastar_e_soltar(a07, ctx, ponte, relogio)
     ponte.recusa = frase
     with pytest.raises(RuntimeError, match=frase):
         a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:soltar"}, ponte)
     assert a07._VIVA.modo == "segurar", "o modo recusado ficou valendo na barra"
-    assert "ao-vivo:modo" not in a07._MEXIDA.rascunho, "o modo recusado ficou no rascunho"
+    assert _o_modo_guardado(lar) == "segurar", "o modo recusado foi gravado"
     assert _modos_na_faixa(a07._MEXIDA.html_mod) == _acesos("segurar")
     relogio[0] += 0.5
     assert a07._VIVA.ao_vivo("toque").valor == 1.0, "a barra fez o «Soltar» que a extensão recusou"
 
 
 def _fechos(html: str) -> list[str]:
-    """As etiquetas do Cancelar e do X da janela."""
-    return re.findall(r'<a class="(?:btn|tn-x)" href="#"[^>]*>(?:Cancelar|\u00d7)</a>', html)
+    """As etiquetas de fecho da janela: só o X, sem rodapé de Cancelar e Guardar."""
+    return re.findall(r'<a class="(?:btn|tn-x)" href="#"[^>]*>(?:Cancelar|Guardar|\u00d7)</a>',
+                      html)
 
 
 @pytest.mark.parametrize("arranjo", ["com o livre", "simples"])
-def test_o_cancelar_e_o_x_da_janela_levam_o_gesto(
+def test_o_x_da_janela_leva_o_gesto_e_e_o_unico_fecho(
         janela: Any, ctx: Any, arranjo: str) -> None:  # noqa: F811
     _a07, instalar, abrir = janela
     opcao = {"id": "telefone", "rotulo": "Telefone", "tipo": "ligado",
@@ -164,7 +167,8 @@ def test_o_cancelar_e_o_x_da_janela_levam_o_gesto(
         "opcoes": [opcao]}))  # (noqa-acento)
     html = abrir(_Ponte(VIVO))["blocos"]["#mod-janela"]
     fechos = _fechos(html)
-    assert len(fechos) == 2, fechos
+    assert len(fechos) == 1 and "tn-x" in fechos[0], fechos
+    assert "guardar-modificacao" not in html and 'id="mod-rodape"' not in html
     for fecho in fechos:
         assert f'data-gesto="{CANCELAR}" data-v="toque"' in fecho, fecho
 
@@ -187,26 +191,26 @@ _FECHAR = """(function(h, como){
   if (como === 'esc') {
     document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}));
   } else {
-    [...j.querySelectorAll('a.btn')].find(a => a.textContent.trim() === 'Cancelar').click();
+    j.querySelector('a.tn-x').click();
   }
   document.removeEventListener('click', ouvir, true);
   return JSON.stringify({vistos: vistos, aberta: getComputedStyle(tela).display !== 'none'});
 })(%s, %s)"""
 
 
-def test_no_webkit_o_esc_e_o_cancelar_mandam_o_gesto_e_fecham(
+def test_no_webkit_o_esc_e_o_x_mandam_o_gesto_e_fecham(
         janela: Any, ctx: Any) -> None:  # noqa: F811
-    """O HTML da janela posto no desenho, num WebKit de verdade: o Esc clica o X e o Cancelar
-    clica a si; os dois levam o gesto, e a janela fecha."""
+    """O HTML da janela posto no desenho, num WebKit de verdade: o Esc clica o X, e o X clica a
+    si; os dois levam o gesto, e a janela fecha."""
     from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import VISTAS, rodar_no_webkit
 
     _a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     html = abrir(_Ponte(VIVO))["blocos"]["#mod-janela"]
     w, h = VISTAS[1]
-    passos = [["js", _FECHAR % (json.dumps(html), json.dumps(como))] for como in ("esc", "botao")]
+    passos = [["js", _FECHAR % (json.dumps(html), json.dumps(como))] for como in ("esc", "x")]
     lidos = rodar_no_webkit({"janela": (w, h, passos)})
-    for como, bruto in zip(("esc", "botao"), lidos["janela"], strict=True):
+    for como, bruto in zip(("esc", "x"), lidos["janela"], strict=True):
         lido = json.loads(bruto)
         assert lido["vistos"] == [f"{CANCELAR}|toque"], f"{como}: {lido}"
         assert lido["aberta"] is False, f"{como}: a janela ficou aberta"

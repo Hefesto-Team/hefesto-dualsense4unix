@@ -146,10 +146,14 @@ def test_a_janela_redesenhada_abre_a_aba_da_opcao_mudada(janela, ctx) -> None:  
 
 def test_o_endereco_torto_e_recusado_dizendo(janela, ctx) -> None:  # noqa: F811
     a07, abrir = janela
+    from hefesto_dualsense4unix.mods import opcoes
+
     abrir(agora=["aparelhos"])
+    manifesto = a07._a_instalada("toque").manifesto
+    antes = opcoes.ler(manifesto, a07._lugares())["onde"]
     with pytest.raises(RuntimeError, match="IP e a porta"):
         _mudar(a07, ctx, "toque:onde", "sem-porta")
-    assert "onde" not in a07._MEXIDA.rascunho
+    assert opcoes.ler(manifesto, a07._lugares())["onde"] == antes, "o endereço torto foi gravado"
 
 
 def _a08():

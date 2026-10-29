@@ -396,12 +396,11 @@ def test_o_botao_recusa_extensao_sem_a_opcao_e_nao_cria_nada(
     assert not meu_css.caminho("tema-x", lar).exists()
 
 
-def test_a_chave_do_css_liga_e_desliga_pelo_guardar(lar: Any, ctx: Any) -> None:
+def test_a_chave_do_css_liga_e_desliga_na_hora(lar: Any, ctx: Any) -> None:
     a07 = _a07()
     _instalada(lar)
     a07.configurar_modificacao(ctx, {"v": "tema-x"}, _Ponte())
     a07.guardar_opcao_da_modificacao(ctx, {"v": "tema-x:meu_css", "evento": "click"}, _Ponte())
-    a07.guardar_modificacao(ctx, {"v": "tema-x"}, _Ponte())
     manifesto = instalador.manifesto_instalado("tema-x", lugares=lar)
     assert opcoes.ler(manifesto, lar)["meu_css"] is True
 

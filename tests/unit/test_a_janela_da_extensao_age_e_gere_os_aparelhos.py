@@ -442,7 +442,6 @@ def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(
     assert 'data-v="toque:ao-vivo:Meu 1"' in html, "a forma gravada não tem o «x» de esquecer"
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:toques:circle", "valor": "Meu 1", "evento": "change"}, ponte)
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     toque: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert toque["toques"]["circle"] == "Meu 1"
     assert set(toque["ao-vivo"]) == {"Meu 1"} and len(toque["ao-vivo"]["Meu 1"]) <= 16
@@ -466,10 +465,8 @@ def test_esquecer_a_forma_devolve_o_botao_ao_padrao(
     _gravar(a07, ctx, ponte)
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:toques:cross", "valor": "Meu 1", "evento": "change"}, ponte)
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     carga = a07.esquecer_a_forma_do_livre(ctx, {"v": "toque:ao-vivo:Meu 1"}, ponte)
     assert "Meu 1" not in janela_pintada(carga["blocos"]).replace("«Meu 1»", "")
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     valores: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert valores["ao-vivo"] == {} and valores["toques"]["cross"] == "Pulso"
 
@@ -526,7 +523,7 @@ def test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada(
 
 def test_o_gravar_aceso_continua_gravar_e_se_diz_apertado(janela: Any, ctx: Any) -> None:  # noqa: F811
     """O arranjo C: o «Gravar» aceso é o mesmo botão, vermelho e apertado; ele não promete guardar,
-    porque quem grava no disco é o Guardar da janela."""
+    porque a forma só grava quando o arrasto termina."""
     import re
 
     a07, instalar, abrir = janela

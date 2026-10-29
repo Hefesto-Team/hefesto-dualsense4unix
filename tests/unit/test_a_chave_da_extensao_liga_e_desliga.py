@@ -16,7 +16,9 @@ MORDIDAS (28/10/2026, executadas sobre a cura e devolvidas):
 - o ``desligada`` tirado do ``acao_html`` reprova
   ``test_a_chave_no_topo_grava_na_hora_e_desligada_apaga_as_acoes``;
 - o ``not (gestao and gestao.controles)`` tirado de ``_abas_com_as_pecas`` reprova
-  ``test_os_controles_do_aparelho_moram_no_cartao_quando_dividem_a_aba``.
+  ``test_os_controles_do_aparelho_moram_no_cartao_quando_dividem_a_aba``;
+- o ``if desligada`` tirado do ``_pedido_do_controle`` (ou o ``g.desligada`` do
+  ``_chave_do_aparelho``) reprova ``test_desligada_a_luz_e_a_chave_de_cada_aparelho_nao_agem``.
 """
 
 from __future__ import annotations
@@ -133,7 +135,9 @@ def test_a_chave_no_topo_grava_na_hora_e_desligada_apaga_as_acoes(
     html = janela_pintada(abrir(ponte)["blocos"])
     assert 'aria-checked="false"' in _topo(html)
     assert not re.search(BOTAO_DA_ACAO, html), "nenhum botão de ação clicável desligada"
-    assert 'data-v="toque:ligar:ap-1"' in html, "a chave de cada aparelho segue escolhendo"
+    assert 'data-v="toque:ligar:ap-1"' not in html, "a chave de cada aparelho não age desligada"
+    assert re.search(r'<span class="mj-chave[^"]*" role="switch" aria-checked="(true|false)" '
+                     r'aria-disabled="true"></span>', html), "e segue à vista, apagada"
     assert html.count("mj-acao apagado") >= 2, "o Parear e o Testar seguem à vista, apagados"
 
     ponte.chamadas.clear()
@@ -173,3 +177,26 @@ def test_os_controles_do_aparelho_moram_no_cartao_quando_dividem_a_aba(
             linha = cartao["ap-1"].split('class="mj-ap-cc"')[1].split('class="mj-ap-pe"')[0]
             assert 'data-v="toque:acesa:ap-1"' in linha and 'data-v="toque:cor:ap-1"' in linha
             assert "mj-cc-rot" not in linha and ">Cor<" not in linha, "mostra e não diz"
+
+
+@pytest.mark.parametrize("aba", ["Aparelhos", "Luz"])
+def test_desligada_a_luz_e_a_chave_de_cada_aparelho_nao_agem(
+        janela: Any, ctx: Any, aba: str) -> None:  # noqa: F811
+    """Prova da D-2810-A-CHAVE-DA-EXTENSAO-NO-LUGAR-DO-PARAR-TUDO: desligada, nenhum controle de
+    aparelho tem gesto (no cartão, no ``#mod-controles`` e no tique), e todos seguem à vista."""
+    a07, instalar, abrir = janela
+    instalar(opcoes=[LIGADA], chave="ligada", aparelhos_acoes=GERIDOS,
+             aparelhos_controles={"grupo": aba})
+    aparelhos = [dict(VIVO["aparelhos"][0], controles=LUZ), VIVO["aparelhos"][1]]
+    ponte = _Ponte({**VIVO, "aparelhos": aparelhos})
+    ligada = janela_pintada(abrir(ponte)["blocos"])
+    assert 'data-v="toque:acesa:ap-1"' in ligada and 'data-v="toque:ligar:ap-1"' in ligada
+    a07.chave_da_modificacao(ctx, {"v": "toque"}, ponte)
+    html = janela_pintada(abrir(ponte)["blocos"])
+    tique = a07._com_os_aparelhos({"blocos": {}})["blocos"]
+    for pintado in (html, *tique.values()):
+        for alvo in ("ap-1", "ap-2"):
+            for controle in ("acesa", "cor", "ligar"):
+                assert f'data-v="toque:{controle}:{alvo}"' not in pintado, (controle, alvo)
+    assert html.count('aria-disabled="true"') >= 2 + 3, "a chave dos dois e a luz, apagadas"
+    assert "lampada" in html or ">Luz<" in html or "mj-cores" in html, "a luz segue à vista"

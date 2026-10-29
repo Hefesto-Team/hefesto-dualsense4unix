@@ -1216,13 +1216,11 @@ class _Mexida:
     html_imp: str = ""
     html_mod: str = ""
     agora: tuple[str, ...] = ()
-    rascunho: dict[str, Any] = dataclasses.field(default_factory=dict)
     onde_escolhido: str = ""
     conf_da_modificacao: str = ""
     nota_do_css: str = ""
     aba: str = ""
     armada: tuple[str, ...] = ()
-    descartar: tuple[str, ...] = ()
     desligada: bool = False
     pintura: exp.PinturaDaJanela = dataclasses.field(default_factory=exp.PinturaDaJanela)
 
@@ -1233,9 +1231,8 @@ class _Mexida:
         self.vistas = {}
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
-        self.rascunho = {}
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
-        self.armada = self.descartar = ()
+        self.armada = ()
         self.desligada = False
         self.pintura.esquecer()
 
@@ -1532,15 +1529,14 @@ def _seguir_o_meu_css(instaladas: Sequence[_Instalada]) -> None:
 
 
 def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) -> None:
-    """O miolo da janela de opções: o valor guardado de cada opção, com o rascunho por cima."""
+    """O miolo da janela de opções: o valor guardado de cada opção."""
     from hefesto_dualsense4unix.mods import opcoes
 
     item = item or _a_instalada(mod_id)
     manifesto = item.manifesto
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
-    guardados = opcoes.ler(manifesto, _lugares())
-    valores = {**guardados, **(_MEXIDA.rascunho if _MEXIDA.mod == mod_id else {})}
+    valores = guardados = opcoes.ler(manifesto, _lugares())
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
     aparecem = opcoes.aparecem(manifesto, valores)
@@ -1565,22 +1561,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
         estado=estado, parar_tudo=manifesto.parar_tudo, chave=chave,
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
-        porque=item.porque, rascunho=_o_rascunho_da_janela(mod_id, guardados),
-        **_pecas_da_janela(manifesto, mod_id))
-
-
-def _o_rascunho_da_janela(mod_id: str, guardados: dict[str, Any]) -> exp.Rascunho:
-    """Pendente quando um valor do rascunho difere do guardado; o Descartar armado vale só para
-    o rascunho de quando foi armado (mudar uma opção depois o desarma)."""
-    rascunho = _MEXIDA.rascunho if _MEXIDA.mod == mod_id else {}
-    pendente = any(k not in guardados or guardados[k] != v for k, v in rascunho.items())
-    return exp.Rascunho(pendente, pendente and _MEXIDA.descartar == _o_armar_do_descartar(mod_id))
-
-
-def _o_armar_do_descartar(mod_id: str) -> tuple[str, ...]:
-    import json
-
-    return (mod_id, json.dumps(_MEXIDA.rascunho, sort_keys=True, default=str))
+        porque=item.porque, **_pecas_da_janela(manifesto, mod_id))
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1646,9 +1627,7 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     mod_id = _id_do_clique(o, "configurar-modificacao")
     anterior = _VIVA.mod
     recusa = _desfazer_o_modo(anterior, p) if anterior else None
-    _MEXIDA.rascunho = (_o_modo_que_vale(mod_id) if recusa is not None and anterior == mod_id
-                        else {})
-    _MEXIDA.mod, _MEXIDA.aba, _MEXIDA.descartar = mod_id, "", ()
+    _MEXIDA.mod, _MEXIDA.aba = mod_id, ""
     _MEXIDA.pintura.esquecer()
     _AGORA.abrir(mod_id, p)
     _AGORA.ler(mod_id, p)
@@ -1672,7 +1651,7 @@ def parar_tudo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[
 
 
 def _guardar_a_chave_da_modificacao(mod_id: str, ligada: bool) -> None:
-    """A opção da chave gravada na hora, fora do rascunho (as outras mudanças dele ficam)."""
+    """A opção da chave gravada na hora."""
     from hefesto_dualsense4unix.mods import opcoes
 
     item = _a_instalada(mod_id)
@@ -1721,8 +1700,6 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     A caixa e o número agem no ``change``; a chave de ligado, no clique.
     """
     _MEXIDA.armada = ()
-    from hefesto_dualsense4unix.mods import opcoes
-
     mod_id, _, resto = _id_do_clique(o, "guardar-opcao-da-modificacao").partition(":")
     opcao_id, _, jogo = resto.partition(":")
     item = _a_instalada(mod_id)
@@ -1749,13 +1726,8 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         if evento == "click":
             return None
         valor = o.get("valor")
-    with _dizendo_a_recusa():
-        certo = opcoes.validar(opcao, valor, formas_extras=_formas_da_janela(item))
-    if _MEXIDA.mod != mod_id:
-        _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
-    _MEXIDA.rascunho[opcao_id] = certo
     _MEXIDA.aba = opcao.grupo or ""
-    _guardar_a_opcao_da_modificacao(mod_id)
+    _guardar_a_opcao_da_modificacao(item, {opcao_id: _validada(opcao, valor, item)})
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
 
@@ -1793,30 +1765,13 @@ def editar_o_css_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dic
     return _a_pintura_agora(ctx)
 
 
-@gesto("07-lancadores.html", exp.GESTO_DO_GUARDAR, grava="_guardar_a_opcao_da_modificacao")
-def guardar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O Guardar da janela da extensão: grava o rascunho inteiro em ``opcoes.json``."""
-    _MEXIDA.armada = ()
-    mod_id = _id_do_clique(o, exp.GESTO_DO_GUARDAR)
-    recado = _guardar_a_opcao_da_modificacao(mod_id)
-    _montar_a_janela_da_extensao(mod_id)
-    carga = _a_pintura_agora(ctx)
-    return {**carga, "recado": recado} if recado else carga
-
-
-def _guardar_a_opcao_da_modificacao(mod_id: str) -> str:
-    """Grava cada opção do rascunho, validada de novo contra o manifesto, e esvazia o rascunho."""
+def _guardar_a_opcao_da_modificacao(item: _Instalada, valores: dict[str, Any]) -> None:
+    """Grava cada opção validada no ``opcoes.json``, o ``livre`` primeiro."""
     from hefesto_dualsense4unix.mods import opcoes
 
-    item = _a_instalada(mod_id)
-    rascunho = _MEXIDA.rascunho if _MEXIDA.mod == mod_id else {}
-    if not rascunho:
-        return ""
     with _dizendo_a_recusa():
-        for opcao_id, valor in _livre_primeiro(item.manifesto, rascunho):
+        for opcao_id, valor in _livre_primeiro(item.manifesto, valores):
             opcoes.guardar(item.manifesto, opcao_id, valor, _lugares())
-    _MEXIDA.rascunho = {}
-    return "Guardado."
 
 
 def _jogos_com_a_caixa(marcados: list[str], jogo: str) -> list[str]:
@@ -1831,11 +1786,9 @@ def _jogos_com_a_caixa(marcados: list[str], jogo: str) -> list[str]:
 
 
 def _valor_na_janela(item: _Instalada, opcao: Any) -> Any:
-    """O que a janela mostra agora: o rascunho, ou o guardado."""
+    """O que a janela mostra agora: o guardado."""
     from hefesto_dualsense4unix.mods import opcoes
 
-    if _MEXIDA.mod == item.entrada.id and opcao.id in _MEXIDA.rascunho:
-        return _MEXIDA.rascunho[opcao.id]
     return opcoes.ler(item.manifesto, _lugares())[opcao.id]
 
 
@@ -1915,7 +1868,6 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
     _MEXIDA.menu = _MEXIDA.permissoes = _MEXIDA.remover = ""
     if _MEXIDA.mod == mod_id:
         _MEXIDA.mod = _MEXIDA.html_mod = ""
-        _MEXIDA.rascunho = {}
     REGISTRO.esquecer()
     if restos:
         raise RuntimeError(f"Não consegui remover {nome} por inteiro: {'; '.join(restos)}.")
@@ -2271,7 +2223,7 @@ SEM_ECO: tuple[str, ...] = (
            "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",
            "mais-da-modificacao", "instalar-modificacao", "escolher-arquivo-da-modificacao",
            exp.GESTO_DO_PARAR, exp.GESTO_DA_CHAVE_DA_EXTENSAO,
-           exp.GESTO_DO_GUARDAR, exp.GESTO_DE_ESCOLHER,
+           exp.GESTO_DE_ESCOLHER,
            exp.GESTO_DO_GUARDAR_LANCADOR,
            "ver-impedimentos", "resolver-impedimento", "resolver-todos-os-impedimentos",
            "identificar-lancador", "configurar-lancador", "criar-perfil-do-jogo")
@@ -2511,7 +2463,7 @@ def _nome_da_forma_nova(formas: dict[str, Any]) -> str:
 
 
 def _formas_do_livre_na_janela(item: _Instalada) -> dict[str, Any]:
-    """As formas gravadas que a janela mostra agora: o rascunho, ou o guardado."""
+    """As formas gravadas que a janela mostra agora."""
     from hefesto_dualsense4unix.mods import opcoes
 
     livre = item.manifesto.opcao_livre if item.manifesto else None
@@ -2521,7 +2473,7 @@ def _formas_do_livre_na_janela(item: _Instalada) -> dict[str, Any]:
 
 
 def _formas_da_janela(item: _Instalada) -> tuple[str, ...]:
-    """Os nomes das formas gravadas no livre (o rascunho por cima): os botões as aceitam."""
+    """Os nomes das formas gravadas no livre: os botões as aceitam."""
     return tuple(_formas_do_livre_na_janela(item))
 
 
@@ -2536,16 +2488,15 @@ def _formas_da_opcao(manifesto: Any, opcao: Any, valores: dict[str, Any]) -> tup
     return tuple((f, tuple((a, b) for a, b in passos)) for f, passos in formas.items())
 
 
-def _livre_primeiro(manifesto: Any, rascunho: dict[str, Any]) -> list[tuple[str, Any]]:
-    """O rascunho com o ``livre`` na frente: o ``por_botao`` que usa uma forma gravada agora só
+def _livre_primeiro(manifesto: Any, valores: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Os valores com o ``livre`` na frente: o ``por_botao`` que usa uma forma gravada agora só
     passa depois que ela está no disco."""
     livre = manifesto.opcao_livre if manifesto else None
-    return sorted(rascunho.items(), key=lambda par: livre is None or par[0] != livre.id)
+    return sorted(valores.items(), key=lambda par: livre is None or par[0] != livre.id)
 
 
 def _o_modo_de(manifesto: Any, valores: dict[str, Any]) -> str:
-    """O modo do ``livre`` com ``modos`` que a janela mostra (o rascunho por cima do guardado), ou
-    vazio sem ``modos``."""
+    """O modo do ``livre`` com ``modos`` que a janela mostra, ou vazio sem ``modos``."""
     from hefesto_dualsense4unix.mods import opcoes
 
     chave = opcoes.chave_do_modo(manifesto)
@@ -2626,7 +2577,8 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
             _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
             porque=item.porque, gestao=gestao)
     if aba_cc and not (gestao and gestao.controles):
-        blocos["#mod-controles"] = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso)
+        blocos["#mod-controles"] = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso,
+                                                                    _MEXIDA.desligada)
     acoes = tuple(_acao_da_janela(a) for a in manifesto.acoes)
     if acoes or (aparelhos and aparelhos.grupo) or aba_cc:
         grupos = [exp.OpcaoDaJanela(mod_id, o.id, o.rotulo, o.tipo, "", grupo=o.grupo or "")
@@ -2733,15 +2685,6 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
     return _o_modo_na_extensao(mod_id, livre.id, guardado, p)
 
 
-def _o_modo_que_vale(mod_id: str) -> dict[str, Any]:
-    """O rascunho que diz o modo que ainda vale na extensão, depois de um desfazer recusado."""
-    from hefesto_dualsense4unix.mods import opcoes
-
-    chave = opcoes.chave_do_modo(_a_instalada(mod_id).manifesto)
-    vivo = _VIVA.modo_de(mod_id)
-    return {chave: vivo} if chave and vivo else {}
-
-
 @gesto("07-lancadores.html", exp.GESTO_DA_ABA)
 def aba_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A aba trocada na janela da extensão: ela fica a aberta ao redesenhar, e a ação armada
@@ -2758,32 +2701,16 @@ def aba_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 
 @gesto("07-lancadores.html", exp.GESTO_DO_CANCELAR)
 def cancelar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O Cancelar e o X da janela da extensão (o Esc clica o X). Com rascunho por gravar, o primeiro
-    gesto só arma o «Descartar» e a janela fica; o segundo (ou o primeiro, sem rascunho) devolve ao
-    guardado o modo do ``livre`` que já valeu e o rascunho sai. Recusado o desfazer, nada muda (o
-    rascunho diz o modo que ainda vale) e a recusa aparece; o reabrir tenta de novo."""
+    """O X da janela da extensão (o Esc clica o X): fecha. Toda escolha já está gravada; o modo do
+    ``livre`` volta ao guardado na extensão, e a recusa dela aparece."""
     _MEXIDA.armada = ()
     mod_id = _id_do_clique(o, exp.GESTO_DO_CANCELAR)
-    if _MEXIDA.mod == mod_id and _MEXIDA.descartar != _o_armar_do_descartar(mod_id):
-        item = _a_instalada(mod_id)
-        if item.manifesto and _o_rascunho_da_janela(mod_id, _guardados_de(item)).pendente:
-            _MEXIDA.descartar = _o_armar_do_descartar(mod_id)
-            _montar_a_janela_da_extensao(mod_id, item)
-            return {**_a_pintura_agora(ctx), "armou": True}
-    _MEXIDA.descartar = ()
     recusa = _desfazer_o_modo(mod_id, p)
     if recusa is not None:
         raise RuntimeError(recusa)
     if _MEXIDA.mod == mod_id:
-        _MEXIDA.rascunho = {}
         _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
-
-
-def _guardados_de(item: _Instalada) -> dict[str, Any]:
-    from hefesto_dualsense4unix.mods import opcoes
-
-    return opcoes.ler(item.manifesto, _lugares())
 
 
 def _do_trilho(o: dict[str, Any], gesto_: str) -> tuple[str, str, float]:
@@ -2855,15 +2782,12 @@ def _o_livre_de(item: _Instalada, opcao_id: str) -> Any:
     return livre
 
 
-def _ao_rascunho(mod_id: str, opcao: Any, valor: Any, item: _Instalada) -> None:
-    """Uma opção validada vai ao rascunho da janela, como no ``guardar-opcao-da-modificacao``."""
+def _validada(opcao: Any, valor: Any, item: _Instalada) -> Any:
+    """O valor da opção validado contra o manifesto e as formas gravadas; a recusa aparece."""
     from hefesto_dualsense4unix.mods import opcoes
 
     with _dizendo_a_recusa():
-        certo = opcoes.validar(opcao, valor, formas_extras=_formas_da_janela(item))
-    if _MEXIDA.mod != mod_id:
-        _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
-    _MEXIDA.rascunho[opcao.id] = certo
+        return opcoes.validar(opcao, valor, formas_extras=_formas_da_janela(item))
 
 
 @gesto("07-lancadores.html", exp.GESTO_DE_GRAVAR, grava="_guardar_a_opcao_da_modificacao")
@@ -2891,8 +2815,8 @@ def gravar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> d
             recado = "Nada foi arrastado enquanto gravava: nenhuma forma nova."
         else:
             nome = _nome_da_forma_nova(formas)
-            _ao_rascunho(mod_id, livre, {**formas, nome: passos}, item)
-            _guardar_a_opcao_da_modificacao(mod_id)
+            _guardar_a_opcao_da_modificacao(
+                item, {livre.id: _validada(livre, {**formas, nome: passos}, item)})
             recado = f"«{nome}» gravada: já está na escolha dos botões."
     _montar_a_janela_da_extensao(mod_id)
     carga = _a_pintura_agora(ctx)
@@ -2905,25 +2829,21 @@ def esquecer_a_forma_do_livre(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[
     """O «x» de uma forma gravada: sai na hora do ``opcoes.json``, e o botão que a usava volta
     ao padrão."""
     _MEXIDA.armada = ()
-    from hefesto_dualsense4unix.mods import opcoes
-
     mod_id, opcao_id, nome = _partes_do_clique(o, exp.GESTO_DE_ESQUECER_A_FORMA, 3)
     item = _a_instalada(mod_id)
     livre = _o_livre_de(item, opcao_id)
     formas = _formas_do_livre_na_janela(item)
     if nome not in formas:
         raise RuntimeError("Essa forma não está gravada. Nada foi esquecido.")
-    _ao_rascunho(mod_id, livre, {f: s for f, s in formas.items() if f != nome}, item)
+    valores = {livre.id: _validada(livre, {f: s for f, s in formas.items() if f != nome}, item)}
     for opcao in (item.manifesto.opcoes if item.manifesto else ()):
         if opcao.tipo != "por_botao":
             continue
         atual = _valor_na_janela(item, opcao)
         if isinstance(atual, dict) and nome in atual.values():
-            sem = {b: f for b, f in atual.items() if f != nome}
-            with _dizendo_a_recusa():
-                _MEXIDA.rascunho[opcao.id] = opcoes.validar(
-                    opcao, sem, formas_extras=_formas_da_janela(item))
-    _guardar_a_opcao_da_modificacao(mod_id)
+            valores[opcao.id] = _validada(
+                opcao, {b: f for b, f in atual.items() if f != nome}, item)
+    _guardar_a_opcao_da_modificacao(item, valores)
     _montar_a_janela_da_extensao(mod_id)
     return {**_a_pintura_agora(ctx), "recado": f"«{nome}» esquecida."}
 
@@ -2943,16 +2863,11 @@ def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         raise RuntimeError("Este controle livre não tem modos. Nada foi guardado.")
     with _dizendo_a_recusa():
         certo = opcoes.modo_valido(modo)
-    if _MEXIDA.mod != mod_id:
-        _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
-    antes = dict(_MEXIDA.rascunho)
-    _MEXIDA.rascunho[chave] = certo
     recusa = _o_modo_na_extensao(mod_id, livre.id, certo, p)
     if recusa is not None:
-        _MEXIDA.rascunho = antes
         _montar_a_janela_da_extensao(mod_id)
         raise RuntimeError(recusa)
-    _guardar_a_opcao_da_modificacao(mod_id)
+    _guardar_a_opcao_da_modificacao(item, {chave: certo})
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
 

@@ -463,7 +463,7 @@ def _onda_da_forma(passos: Sequence[tuple[float, float]]) -> str:
 def _por_botao_da_opcao(o: OpcaoDaJanela) -> str:
     """Uma linha por botão: o glifo, a onda da forma escolhida e a lista das formas.
 
-    A lista age no ``change``, com o botão no ``data-v``; o valor de cada botão é o do rascunho.
+    A lista age no ``change``, com o botão no ``data-v``; o valor de cada botão é o guardado.
     """
     formas = dict(o.formas)
     escolhidas = o.valor if isinstance(o.valor, Mapping) else {}
@@ -887,7 +887,7 @@ def parar_tudo_html(mod: str) -> str:
 
 def chave_da_extensao_html(mod: str, ligada: bool) -> str:
     """A chave Ligado/Desligado do topo da janela, sem texto: o clique pede o contrário, e a
-    escolha se grava na hora, fora do rascunho."""
+    escolha se grava na hora."""
     dica = DICA_DA_CHAVE_LIGADA if ligada else DICA_DA_CHAVE_DESLIGADA
     return (f'<span class="mj-chave ja-chave{" on" if ligada else ""}" role="switch" '
             f'aria-checked="{"true" if ligada else "false"}" aria-label="{_a(dica)}" '
@@ -895,22 +895,11 @@ def chave_da_extensao_html(mod: str, ligada: bool) -> str:
             f'data-ligado="{"0" if ligada else "1"}" data-dica="{_a(dica)}"></span>')
 
 
-class Rascunho(NamedTuple):
-    """O rodapé da janela da extensão: ``pendente`` quando o rascunho difere do guardado, e
-    ``descartar`` quando o primeiro X ou Cancelar já pediu, e o segundo joga o rascunho fora."""
-
-    pendente: bool = False
-    descartar: bool = False
-
-
-SEM_RASCUNHO = Rascunho()
-
-
 def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
                estado: Mapping[str, Any] | None, parar: str, processo: str = "",
-               porque: str = "", faixa: str = "", gestao: Gestao | None = None,
-               rascunho: Rascunho = SEM_RASCUNHO) -> str:
-    """A janela do arranjo C: «Parar tudo» no topo, a coluna «Agora» e os ajustes, e o rodapé.
+               porque: str = "", faixa: str = "", gestao: Gestao | None = None) -> str:
+    """A janela do arranjo C: a chave (ou o «Parar tudo») e o X no topo, a coluna «Agora» e os
+    ajustes. Toda escolha grava no clique: não há rodapé.
 
     ``faixa`` é a do controle livre, fixa embaixo das duas colunas; sem ``agora``, os ajustes
     ocupam a largura inteira.
@@ -922,59 +911,27 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
               + (" com-faixa" if faixa and (agora or ajustes) else ""))
     return f'''    <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
-      {_o_x(mod, rascunho)}
+      {_o_x(mod)}
     </div>
     <div class="{classe}">
       {coluna}
       {opcoes}
       {faixa}
-    </div>
-    {_o_rodape(mod, rascunho)}'''
+    </div>'''
 
 
-DESCARTAR = "Descartar"
-DICA_DO_DESCARTAR = "As mudanças não guardadas se perdem."
-DICA_DO_GUARDAR_SEM_MUDANCA = "Nada mudou para guardar."
-
-
-def _fecha_na_hora(mod: str, rascunho: Rascunho) -> bool:
-    return not mod or not rascunho.pendente or rascunho.descartar
-
-
-def _href_do_fecho(mod: str, rascunho: Rascunho) -> str:
-    return ' href="#"' if _fecha_na_hora(mod, rascunho) else ' role="button" tabindex="0"'
-
-
-def _o_x(mod: str, rascunho: Rascunho) -> str:
-    """O X do topo, num pedaço próprio: com rascunho, o primeiro gesto (o Esc clica o X) não fecha."""
-    dica = DICA_DO_DESCARTAR if rascunho.descartar else "Fechar"
-    x = (f'<a class="tn-x"{_href_do_fecho(mod, rascunho)} data-dica="{dica}"'
-         f'{_o_fecho(mod)}>\u00d7</a>')
+def _o_x(mod: str) -> str:
+    """O X do topo, num pedaço próprio (o Esc clica o X): fecha na hora."""
+    x = f'<a class="tn-x" href="#" data-dica="Fechar"{_o_fecho(mod)}>\u00d7</a>'
     return f'<span class="mj-fecho" id="mod-fecho">{x}</span>' if mod else x
 
 
-def _o_rodape(mod: str, rascunho: Rascunho) -> str:
-    """Cancelar e Guardar: o Guardar acende com o rascunho, e o Cancelar armado diz «Descartar»."""
-    if rascunho.descartar:
-        cancelar = (f'<a class="btn vermelho"{_href_do_fecho(mod, rascunho)} '
-                    f'data-dica="{DICA_DO_DESCARTAR}"{_o_fecho(mod)}>{DESCARTAR}</a>')
-    else:
-        cancelar = f'<a class="btn"{_href_do_fecho(mod, rascunho)}{_o_fecho(mod)}>Cancelar</a>'
-    aceso = " aceso" if rascunho.pendente else (" apagado" if mod else "")
-    dica = "" if rascunho.pendente or not mod else f' data-dica="{DICA_DO_GUARDAR_SEM_MUDANCA}"'
-    guardar = (f'<a class="btn roxo{aceso}" href="#" data-gesto="{GESTO_DO_GUARDAR}" '
-               f'data-v="{_a(mod)}"{dica}>Guardar</a>')
-    pedaco = ' id="mod-rodape"' if mod else ""
-    return f'<div class="tn-rod"{pedaco}>\n      {cancelar}\n      {guardar}\n    </div>'
-
-
-GESTO_DO_GUARDAR = "guardar-modificacao"
 VAZIO_DA_JANELA = '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
 GESTO_DO_CANCELAR = "cancelar-modificacao"
 
 
 def _o_fecho(mod: str) -> str:
-    """O gesto do Cancelar e do X, só na janela de uma extensão (o desenho sem ``mod`` fecha e só)."""
+    """O gesto do X, só na janela de uma extensão (o desenho sem ``mod`` fecha e só)."""
     return f' data-gesto="{GESTO_DO_CANCELAR}" data-v="{_a(mod)}"' if mod else ""
 
 
@@ -1117,16 +1074,16 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            livre: LivreAoVivo | None = None, controles: str = "",
-                           armada: Sequence[str] = (),
-                           rascunho: Rascunho = SEM_RASCUNHO) -> str:
-    """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
+                           armada: Sequence[str] = ()) -> str:
+    """O conteúdo da janela de uma extensão: um cartão por grupo e «Para» no topo; toda escolha
+    grava no clique, sem rodapé.
 
     Cada opção vira uma linha do cartão do grupo dela. ``agora`` (com ``estado``) é a coluna
     «Agora»; ``parar_tudo`` põe o «Parar tudo» no topo, e ``chave`` (o valor guardado da opção
     ``chave`` do manifesto) a chave Ligado/Desligado, que desligada apaga as ações. Com ``agora``,
     as ações, os ``aparelhos`` ou o ``livre``, é o arranjo C: a coluna à esquerda e os grupos em
     abas (``aba`` é a aberta); ``em_curso`` e ``armada`` são as ações que esperam, ``livre`` a
-    faixa de baixo, ``controles`` a aba dos controles e ``rascunho`` acende o Guardar.
+    faixa de baixo e ``controles`` a aba dos controles.
     """
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
@@ -1140,7 +1097,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     gestao = (Gestao(mod, aparelhos, estado, em_curso, tuple(armada), desligada,
                      bool(controles) and controles == aparelhos.grupo)
               if mod and aparelhos else None)
-    cc = (controles, controles_dos_aparelhos_html(mod, estado, em_curso)) if controles else ("", "")
+    cc = ((controles, controles_dos_aparelhos_html(mod, estado, em_curso, desligada))
+          if controles else ("", ""))
     if agora or acoes or gestao or livre_op or controles:
         if acoes or (gestao and gestao.aparelhos.grupo) or controles:
             ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
@@ -1151,18 +1109,16 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
-                          processo=processo, porque=porque, faixa=faixa, gestao=gestao,
-                          rascunho=rascunho)
+                          processo=processo, porque=porque, faixa=faixa, gestao=gestao)
     corpo = _cartoes_das_opcoes(opcoes) if opcoes else vazio
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}
-      {_o_x(mod, rascunho)}
+      {_o_x(mod)}
     </div>
     <div class="tn-corpo">
       {corpo}
-    </div>
-    {_o_rodape(mod, rascunho)}'''
+    </div>'''
 
 
 class JogoDaLista(NamedTuple):
@@ -1385,7 +1341,7 @@ def telas() -> str:
 
 
 class AcaoDaJanela(NamedTuple):
-    """Uma ação do manifesto: o botão que age na hora, sem rascunho e sem «Guardar»."""
+    """Uma ação do manifesto: o botão que age na hora."""
 
     id: str
     rotulo: str
@@ -1521,14 +1477,18 @@ def _aparelhos_geridos(estado: Mapping[str, Any] | None) -> list[dict[str, Any]]
 
 
 def _chave_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
-    """A chave do cartão, quando o manifesto declara ``ligar``: o clique pede o contrário."""
+    """A chave do cartão, quando o manifesto declara ``ligar``: o clique pede o contrário. Com a
+    chave da extensão desligada, ela fica à vista, apagada e sem gesto."""
     if not any(a.id == ACAO_DE_LIGAR for a in g.aparelhos.acoes):
         return ""
     ligado = ap.get("ligado") is not False
     em_curso = (ACAO_DE_LIGAR, str(ap["id"])) in g.em_curso
     classe = "mj-chave" + (" on" if ligado else "") + (" em-curso" if em_curso else "")
+    marcado = f'role="switch" aria-checked="{"true" if ligado else "false"}"'
+    if g.desligada:
+        return f'<span class="{classe}" {marcado} aria-disabled="true"></span>'
     v = valor_da_acao(g.mod, ACAO_DE_LIGAR, str(ap["id"]))
-    return (f'<span class="{classe}" role="switch" aria-checked="{"true" if ligado else "false"}" '
+    return (f'<span class="{classe}" {marcado} '
             f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}" '
             f'data-ligado="{"0" if ligado else "1"}" data-dica="{DICA_DA_CHAVE}"></span>')
 
@@ -1556,8 +1516,8 @@ def _controles_no_cartao(g: Gestao, ap: Mapping[str, Any]) -> str:
     partes = []
     for c in controles:
         em_curso = (str(c["id"]), alvo) in g.em_curso
-        miolo = (_chave_do_controle(g.mod, alvo, c, em_curso) if c["tipo"] == "chave"
-                 else _miolo_do_controle(g.mod, alvo, c, em_curso))
+        miolo = (_chave_do_controle(g.mod, alvo, c, em_curso, g.desligada) if c["tipo"] == "chave"
+                 else _miolo_do_controle(g.mod, alvo, c, em_curso, g.desligada))
         dica = f' data-dica="{_a(c["dica"])}"' if c.get("dica") and c["tipo"] != "chave" else ""
         partes.append(f'<span class="mj-ap-cc-um" data-controle-do-aparelho="{_a(c["id"])}"'
                       f"{dica}>{miolo}</span>")
@@ -1739,9 +1699,13 @@ def _fundo_do_ponto(cor: Any) -> str:
     return f"conic-gradient({fatias})"
 
 
-def _pedido_do_controle(mod: str, alvo: str, c: Mapping[str, Any], quer: str) -> str:
+def _pedido_do_controle(mod: str, alvo: str, c: Mapping[str, Any], quer: str,
+                        desligada: bool = False) -> str:
     """O gesto de um controle: a ação é o ``id`` dele, o ``alvo`` é o aparelho e ``data-quer`` é o
-    valor pedido (``1``/``0`` na chave, o ``id`` da opção nas outras)."""
+    valor pedido (``1``/``0`` na chave, o ``id`` da opção nas outras). Com a chave da extensão
+    desligada, nenhum gesto: o controle fica à vista, apagado."""
+    if desligada:
+        return 'aria-disabled="true"'
     return (f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(valor_da_acao(mod, str(c["id"]), alvo))}" '
             f'data-quer="{_a(quer)}"')
 
@@ -1763,17 +1727,20 @@ def _marca_do_controle(c: Mapping[str, Any]) -> str:
     return f'<span class="mj-cc-marca">{_e(rotulo)}</span>' if rotulo else ""
 
 
-def _chave_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
+def _chave_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool,
+                       desligada: bool = False) -> str:
     ligada = c.get("valor") is True
     classe = "mj-chave" + (" on" if ligada else "") + (" em-curso" if em_curso else "")
     dica = str(c.get("dica") or c.get("rotulo") or "")
     atributo = f' data-dica="{_a(dica)}" aria-label="{_a(dica)}"' if dica else ""
     return (f'<span class="mj-cc-chave">{_marca_do_controle(c)}'
             f'<span class="{classe}" role="switch" aria-checked="{str(ligada).lower()}" '
-            f'{_pedido_do_controle(mod, alvo, c, "0" if ligada else "1")}{atributo}></span></span>')
+            f'{_pedido_do_controle(mod, alvo, c, "0" if ligada else "1", desligada)}{atributo}>'
+            '</span></span>')
 
 
-def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Sequence[Any]) -> str:
+def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Sequence[Any],
+                        desligada: bool = False) -> str:
     botoes = []
     for op in opcoes:
         aceso = op["id"] == c.get("valor")
@@ -1785,11 +1752,13 @@ def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Seque
         atributo = f' data-dica="{_a(dica)}"' if dica else ""
         classe = ' class="on"' if aceso else ""
         botoes.append(f'<button{classe} aria-pressed="{str(aceso).lower()}" '
-                      f'{_pedido_do_controle(mod, alvo, c, str(op["id"]))}{atributo}>{miolo}</button>')
+                      f'{_pedido_do_controle(mod, alvo, c, str(op["id"]), desligada)}{atributo}>'
+                      f'{miolo}</button>')
     return "".join(botoes)
 
 
-def _miolo_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
+def _miolo_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool,
+                       desligada: bool = False) -> str:
     """Os botões de um controle de escolhas; a paleta, numa fileira as cores de um ponto e
     noutra as de dois ou três."""
     opcoes = list(c.get("opcoes") or [])  # (noqa-acento)
@@ -1799,16 +1768,18 @@ def _miolo_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool
     classe = "mj-cores" + (" mj-pontos" if c["tipo"] == "paleta" else "") + (
         " em-curso" if em_curso else "")
     return "".join(f'<span class="{classe}" role="group">'
-                   f"{_botoes_do_controle(mod, alvo, c, f)}</span>" for f in fileiras if f)
+                   f"{_botoes_do_controle(mod, alvo, c, f, desligada)}</span>"
+                   for f in fileiras if f)
 
 
-def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
+def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool,
+                       desligada: bool = False) -> str:
     """Uma linha do cartão: o rótulo e o controle. A paleta põe as cores de um ponto numa fileira
     e as de dois ou três noutra, como no arranjo C."""
     rotulo = str(c.get("rotulo")
                  or (ROTULO_DA_PALETA if c["tipo"] == "paleta" else ""))
-    miolo = (_chave_do_controle(mod, alvo, c, em_curso) if c["tipo"] == "chave"
-             else _miolo_do_controle(mod, alvo, c, em_curso))
+    miolo = (_chave_do_controle(mod, alvo, c, em_curso, desligada) if c["tipo"] == "chave"
+             else _miolo_do_controle(mod, alvo, c, em_curso, desligada))
     dica = f' data-dica="{_a(c["dica"])}"' if c.get("dica") and c["tipo"] != "chave" else ""
     return (f'<div class="mj-cc-linha" data-controle-do-aparelho="{_a(c["id"])}"{dica}>'
             f'<span class="mj-cc-rot">{_e(rotulo)}</span>'
@@ -1816,17 +1787,20 @@ def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool
 
 
 def controles_dos_aparelhos_html(mod: str, estado: Mapping[str, Any] | None,
-                                 em_curso: frozenset[tuple[str, str]] = frozenset()) -> str:
+                                 em_curso: frozenset[tuple[str, str]] = frozenset(),
+                                 desligada: bool = False) -> str:
     """Um cartão por aparelho com ``controles``: o nome e, à direita, a primeira chave; embaixo,
-    uma linha por controle. O inativo fica apagado; sem nenhum, a linha vazia da aba."""
+    uma linha por controle. O inativo fica apagado; sem nenhum, a linha vazia da aba. Com a chave
+    da extensão desligada, os controles ficam à vista, apagados e sem gesto."""
     cartoes = []
     for ap in com_controles(estado):
         alvo = str(ap["id"])
         controles = list(ap["controles"])
         cabeca = next((c for c in controles if c["tipo"] == "chave"), None)
-        chave = (_chave_do_controle(mod, alvo, cabeca, (str(cabeca["id"]), alvo) in em_curso)
-                 if cabeca else "")
-        linhas = "".join(_linha_do_controle(mod, alvo, c, (str(c["id"]), alvo) in em_curso)
+        chave = (_chave_do_controle(mod, alvo, cabeca, (str(cabeca["id"]), alvo) in em_curso,
+                                    desligada) if cabeca else "")
+        linhas = "".join(_linha_do_controle(mod, alvo, c, (str(c["id"]), alvo) in em_curso,
+                                            desligada)
                          for c in controles if c is not cabeca)
         como = como_esta(ap)
         cartoes.append(
@@ -1950,7 +1924,7 @@ def alvos_do_livre_html(g: Gestao | None) -> str:
 
 
 def _formas_do_livre_html(o: OpcaoDaJanela) -> str:
-    """As formas gravadas: um chip com a onda e o nome, e o «x» que a esquece (no rascunho)."""
+    """As formas gravadas: um chip com a onda e o nome, e o «x» que a esquece."""
     formas = o.valor if isinstance(o.valor, Mapping) else {}
     chips = []
     for nome, passos in formas.items():
