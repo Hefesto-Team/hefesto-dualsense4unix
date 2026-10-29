@@ -382,9 +382,18 @@ def test_o_gadget_que_chega_depois_do_stop_volta_ao_broker(
 ) -> None:
     """O pad para com a nova tentativa em voo: o gadget que chega tarde se desmonta.
 
+    A-REGUA-DO-GADGET-TARDIO-NAO-CORRE-CONTRA-O-PRAZO-DO-STOP-01 (28/10/2026): o
+    ``stop`` espera o pedido largado por ``_DESCIDA_ESPERA_S``, e o dublê preso
+    esperava o mesmo prazo; o caminho saía no sorteio, e no do gadget depois do
+    ``stop`` a régua lia o broker antes de o fio da descida devolvê-lo. Zerado o
+    prazo, o gadget chega sempre depois do ``stop``, e a régua espera a descida
+    pela porta do daemon que para (``esperar_as_descidas``).
+
     Mordida: tire o ``desmontar`` do pedido largado, e o gadget fica montado sem pad.
     """
     m = Mesa(monkeypatch, tmp_path, "sem_sessao_ativa")
+    monkeypatch.setattr(m.ug, "_DESCIDA_AO_BROKER", m.ug._DescidaAoBroker())
+    monkeypatch.setattr(m.ug, "_DESCIDA_ESPERA_S", 0.0)
     solta = threading.Event()
     pedir = m.ug.PEDIR_O_PAD_USB
 
@@ -405,6 +414,7 @@ def test_o_gadget_que_chega_depois_do_stop_volta_ao_broker(
         solta.set()
         for pedido in m.pedidos_vistos:
             assert pedido.esperar(5.0), "o pedido largado não terminou"
+        assert m.ug.esperar_as_descidas(5.0), "a descida do gadget tardio não terminou"
         assert len(m.b.clientes) == len(pads)
         assert all(cliente.desmontados for cliente in m.b.clientes), (
             "o gadget que chegou depois do stop ficou montado sem pad"
