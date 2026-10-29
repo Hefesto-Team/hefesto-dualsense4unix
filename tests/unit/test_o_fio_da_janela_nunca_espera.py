@@ -124,7 +124,8 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(el, "_rodar", lambda _argv: (1, ""))
     monkeypatch.setattr(ondas_de_som, "_LIGADO", [False])
     fora = SimpleNamespace(tiques={aba: [] for aba in ABAS}, achados=[], i=-1, acabou=False,
-                           prazo=time.monotonic() + SEGUNDOS_POR_ABA * len(ABAS) + 60)
+                           prazo=time.monotonic() + SEGUNDOS_POR_ABA * len(ABAS) + 60,
+                           antes=[], parada="", t0=time.monotonic())
     with hv._o_processo_da_janela():
         piloto = hv.Piloto(_args(sem_ondas=True))
         tique_original = piloto._tique
@@ -137,7 +138,12 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
             custo = (time.perf_counter() - t0) * 1000
             if 0 <= fora.i < len(ABAS) and piloto.pagina == ABAS[fora.i]:
                 fora.tiques[ABAS[fora.i]].append(custo)
+            else:
+                fora.antes.append(custo)
             if custo > TETO_DO_TIQUE_MS or time.monotonic() > fora.prazo:
+                fora.parada = fora.parada or (
+                    f"o laço parou aos {time.monotonic() - fora.t0:.1f} s, na aba {fora.i} "
+                    f"({piloto.pagina}), com um tique de {custo:.0f} ms")
                 gtk.main_quit()
             return volta
 
@@ -185,10 +191,14 @@ def test_tres_minutos_sem_o_fio_da_janela_esperar(
     acima = {aba: f"{max(t):.0f} ms" for aba, t in fora.tiques.items()
              if t and max(t) > TETO_DO_TIQUE_MS}
     assert not acima, f"tique acima do teto de {TETO_DO_TIQUE_MS:.0f} ms: {acima}"
+    assert max(fora.antes, default=0) <= TETO_DO_TIQUE_MS, (
+        f"tique fora das abas acima do teto de {TETO_DO_TIQUE_MS:.0f} ms: {fora.parada}")
     famintas = {aba: len(t) for aba, t in fora.tiques.items() if len(t) < TIQUES_MINIMOS_POR_ABA}
     assert not famintas, (
         f"abas com menos de {TIQUES_MINIMOS_POR_ABA} tiques em {SEGUNDOS_POR_ABA:.0f} s: "
-        f"{famintas} (o tique parou, ou o laço andou devagar)")
+        f"{famintas} (o tique parou, ou o laço andou devagar); {fora.parada or 'sem parada'}; "
+        f"tiques fora das abas: {len(fora.antes)}, o maior de "
+        f"{max(fora.antes, default=0):.0f} ms")
 
 
 def test_os_fios_da_interface_nascem_por_um_dono_so() -> None:
