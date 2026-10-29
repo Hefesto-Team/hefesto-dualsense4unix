@@ -26,6 +26,7 @@ def _quadros(doc: str) -> tuple[str, str]:
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["desenho", "publicado"])
 def test_o_calibrar_esta_no_status_antes_do_reconectar_e_so_ali(publicado: bool) -> None:
+    """D-2910-O-CALIBRAR-MORA-NO-STATUS-DA-JOGAR."""
     doc = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
     status, dispositivos = _quadros(doc)
     assert doc.split("<body", 1)[1].count(LINK) == 1

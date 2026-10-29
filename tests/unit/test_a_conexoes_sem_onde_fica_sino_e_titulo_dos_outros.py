@@ -20,6 +20,7 @@ PROIBIDOS = ("Onde fica?", "Outros dispositivos sem fio", 'class="sino"', 'class
 
 @pytest.mark.parametrize("publicado", [False, True], ids=["desenho", "publicado"])
 def test_a_pagina_da_08_nao_tem_nenhum_dos_tres(publicado: bool) -> None:
+    """D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS."""
     doc = onde.pagina("08-conexoes.html", publicado=publicado).read_text(encoding="utf-8")
     achados = [p for p in PROIBIDOS if p in doc]
     assert not achados, f"voltou à Conexões: {achados}"

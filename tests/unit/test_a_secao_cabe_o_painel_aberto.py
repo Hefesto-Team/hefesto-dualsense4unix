@@ -187,6 +187,7 @@ BAIXA = (1212, 790)
 @pytest.mark.parametrize("tamanho", [(1212, 809), BAIXA, (1512, 860)],
                          ids=lambda t: f"{t[0]}x{t[1]}")
 def test_a_linha_do_5ghz_fica_sem_titulo_e_o_miolo_nao_rola(tamanho: tuple[int, int]) -> None:
+    """D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS."""
     f = _no_webkit(MOCKUP, 0, prepara=PREPARA_O_AR, mede=MEDE_O_AR, tamanho=tamanho)
     assert f["linha_visivel"] is True and f["titulo"] is False, f
     assert f["miolo_rola"] <= 0, f
