@@ -1496,9 +1496,14 @@ def _chave_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
 
 
 def _botoes_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
+    """Um botão por ação. O aparelho fora do alcance (procurando, desligado ou que falhou) só
+    esquece, como o controle desconectado na aba Conexões: as outras ficam apagadas."""
     alvo = str(ap["id"])
+    alcancavel = str(ap.get("estado") or "ligado") == "ligado"
     return "".join(acao_html(g.mod, a, alvo=alvo, em_curso=(a.id, alvo) in g.em_curso,
-                             armada=armada_em(g.armada, a.id, alvo), desligada=g.desligada)
+                             armada=armada_em(g.armada, a.id, alvo),
+                             desligada=g.desligada or not (
+                                 alcancavel or a.icone == ICONE_QUE_CONFIRMA))
                    for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
 
 
@@ -1529,7 +1534,7 @@ def _controles_no_cartao(g: Gestao, ap: Mapping[str, Any]) -> str:
 def aparelhos_geridos_html(g: Gestao) -> str:
     """Os cartões dos aparelhos geridos, dois por fileira: o nome, a pilha, a chave, a força de
     agora, os controles do aparelho (com ``g.controles``) e um botão por ação. O aparelho
-    desligado fica apagado e segue com as ações."""
+    desligado pela chave fica apagado e segue com as ações; o fora do alcance só esquece."""
     cartoes = []
     for ap in _aparelhos_geridos(g.estado):
         como = como_esta(ap)
