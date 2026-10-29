@@ -785,6 +785,7 @@ def desinstalar_de_mentira(r: m.Raizes, monkeypatch: pytest.MonkeyPatch) -> None
         if pasta.is_dir():
             shutil.copytree(pasta, backup / pasta.name, dirs_exist_ok=True)
             shutil.rmtree(pasta)
+    shutil.rmtree(r.execucao / m.SLUG, ignore_errors=True)
     for rel in (".config/systemd/user/hefesto-dualsense4unix.service",
                 ".config/autostart/hefesto-dualsense4unix.desktop",
                 ".local/bin/hefesto-dualsense4unix",

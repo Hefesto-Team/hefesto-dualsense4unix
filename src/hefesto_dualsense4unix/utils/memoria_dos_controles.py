@@ -291,6 +291,12 @@ INVENTARIO: tuple[Lugar, ...] = (
         "a última volta do vigia de conexões, com o endereço de cada link",
     ),
     Lugar(
+        "dono-do-p1", "execucao", f"{_C}/dono-do-p1",  # (noqa-acento)
+        "daemon/subsystems/gamepad.py:_arquivo_do_dono_do_p1",
+        USUARIO, CONTROLES, MOVER,
+        "o endereço do dono do posto do P1 nesta sessão, para o pad virtual renascer com ele",
+    ),
+    Lugar(
         "diario-do-radio", "estado", f"{_C}/radio-diario*.jsonl*",
         "integrations/diario_do_radio.py:NOME_DO_DIARIO",
         USUARIO, CONTROLES, MOVER,
@@ -444,6 +450,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "maquina.json": (CONTROLES, "declaracao-da-mesa"),
     "lugares-dos-adaptadores.json": (CONTROLES, "lugares-dos-adaptadores"),
     "conexao-zumbi.json": (CONTROLES, "conexao-zumbi"),
+    "dono-do-p1": (CONTROLES, "dono-do-p1"),
     "radio-diario.jsonl": (CONTROLES, "diario-do-radio"),
     "zeros-dos-sensores.json": (CONTROLES, "zeros-dos-sensores"),
     "profiles": (CONTROLES, "ajustes-por-controle (a chave controllers de cada perfil)"),
