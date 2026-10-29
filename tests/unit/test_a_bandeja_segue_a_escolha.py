@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import shlex
 import shutil
 import subprocess
 import sys
@@ -210,7 +211,11 @@ def _bloco_da_volta() -> str:
         'if [[ "${DRY_RUN:-0}" -eq 1 ]]; then\n    _faria "fechar e reabrir a janela'
     )
     fim = texto.index("PRESENCA_UNIT_SRC=", inicio)
-    return texto[inicio:fim]
+    camada = RAIZ / "scripts/lib/camada_de_maquina.sh"
+    assert f'source "${{ROOT_DIR}}/{camada.relative_to(RAIZ)}"' in texto[:inicio], (
+        "o install deixou de carregar a camada antes do bloco da volta")
+    carga = f"ROOT_DIR={shlex.quote(str(RAIZ))}\nsource {shlex.quote(str(camada))}\n"
+    return carga + texto[inicio:fim]
 
 
 @pytest.mark.parametrize(
