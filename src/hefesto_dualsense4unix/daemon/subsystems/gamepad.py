@@ -1343,9 +1343,13 @@ def _doze_hex(identity: object) -> bool:
 
 def o_dono_lembrado_do_p1() -> str | None:
     """O último dono do posto do P1 nesta sessão (o runtime), para o pad renascer com ele."""
+    caminho = _arquivo_do_dono_do_p1()
+    if not caminho.is_file():
+        return None
     try:
-        lido = _arquivo_do_dono_do_p1().read_text(encoding="ascii").strip()
-    except (OSError, UnicodeDecodeError):
+        lido = caminho.read_text(encoding="ascii").strip()
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning("dono_do_p1_ilegivel", err=str(exc))
         return None
     return lido if _doze_hex(lido) else None
 

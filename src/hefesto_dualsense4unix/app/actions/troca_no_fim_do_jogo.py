@@ -74,12 +74,13 @@ def _pedir_a_troca_ao_broker() -> bool:
 
 
 def _rodar(cmd: Sequence[str]) -> bool:
+    """O prazo é o do systemd (``TimeoutStartSec`` da unit), como no install."""
     try:
         feito = subprocess.run(
-            list(cmd), stdin=subprocess.DEVNULL, capture_output=True, text=True,
-            timeout=60, check=False,
+            list(cmd), stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False,
         )
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError as erro:
+        logger.warning("troca_no_fim_do_jogo_sem_comando", cmd=cmd[0], err=str(erro))
         return False
     return feito.returncode == 0
 

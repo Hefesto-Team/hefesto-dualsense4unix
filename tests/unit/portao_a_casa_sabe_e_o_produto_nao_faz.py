@@ -478,7 +478,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "08/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 — quanto "
         "o broker espera sem cliente antes de entregar o físico ao sistema "
         "(`_graca_da_entrega_do_ambiente` em "
-        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:3263`). O "
+        "`src/hefesto_dualsense4unix/broker/hidraw_broker.py:3265`). O "
         "padrão é a medida (30 s, o dobro do pior reinício do daemon), e "
         "nenhuma unit, install ou empacotamento a escreve: `0` é a válvula de "
         "quem depura o broker para voltar ao comportamento de antes. Nenhum "

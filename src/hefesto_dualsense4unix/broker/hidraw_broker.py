@@ -1714,7 +1714,7 @@ class BrokerState:
         self.entregue = False
         self.herdados: set[str] = set()
         self._binario = binario
-        self._sha_do_binario = _sha_do_arquivo(binario) if binario else None
+        self._sha_do_binario = self._sha_do_binario_em_disco()
         self._marca_do_reinicio = marca_do_reinicio
         self.trocar = False
         self._servidos_path = servidos_path
@@ -2281,6 +2281,16 @@ class BrokerState:
         self._log("node_fd_servido", node=canon, conn=conn_id, state=state)
         return ({"ok": True, "cmd": "open", "node": canon, "state": state}, fd)
 
+    def _sha_do_binario_em_disco(self) -> str | None:
+        if self._binario is None:
+            return None
+        try:
+            with open(self._binario, "rb") as arquivo:
+                return hashlib.sha256(arquivo.read()).hexdigest()
+        except OSError as erro:
+            self._log("binario_ilegivel", binario=self._binario, erro=str(erro))
+            return None
+
     def _cmd_trocar_se_mudou(self) -> dict[str, object]:
         """A troca que o install adiou pelo jogo aberto: sai se o binário do disco é outro.
 
@@ -2290,7 +2300,7 @@ class BrokerState:
         resposta: dict[str, object] = {"ok": True, "cmd": "trocar_se_mudou", "troca": False}
         if self._binario is None or self._sha_do_binario is None:
             return resposta
-        agora = _sha_do_arquivo(self._binario)
+        agora = self._sha_do_binario_em_disco()
         if agora is None or agora == self._sha_do_binario:
             return resposta
         try:
@@ -3250,14 +3260,6 @@ def _parse_allowed_uid_from_unit(unit_path: str) -> int | None:
     if match is None:
         return None
     return int(match.group(1))
-
-
-def _sha_do_arquivo(caminho: str) -> str | None:
-    try:
-        with open(caminho, "rb") as arquivo:
-            return hashlib.sha256(arquivo.read()).hexdigest()
-    except OSError:
-        return None
 
 
 def _graca_da_entrega_do_ambiente() -> float:
