@@ -240,14 +240,14 @@
       "data": "2026-10-29",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1162050,
+      "piso": 1160999,
       "por_item": {
-        "docs": 107619,
+        "docs": 107644,
         "scripts": 109678,
-        "src": 292582,
-        "tests": 652171
+        "src": 292265,
+        "tests": 651412
       },
-      "razao": "tamanho: +112 linhas (1161938 -> 1162050), pagas por Origem: D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA, D-2910-OS-MODOS-SE-CHAMAM-PELO-NOME-DA-TELA; registrado no fecho, topo 3e8d8dd5f550",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1211,7 +1211,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3242
+      "universo": 3241
     }
   }
 }
