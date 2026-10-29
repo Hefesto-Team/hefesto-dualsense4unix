@@ -93,6 +93,7 @@ CHAVES_QUE_O_VIVO_RECUSA = ("blocos", "fita", "recado", "recados")
 BOOTSTRAP = r"""
 (function(){
   window.__hef = window.__hef || {};
+  const GESTO_DA_ABA = 'escolher-na-fita';
   function ligado(t){
     const b = String(t).trim().toLowerCase();
     return !(b === '' || b === '—' || b === '0' || b === 'false'
@@ -300,9 +301,6 @@ BOOTSTRAP = r"""
     if(r && r.classList && r.classList.contains('radio-mesa') && r.checked){
       window.__hef.abaEscolhida = r.id.replace(/^c-/, '');
       window.__hef.abaSincronizada = true;
-      const card = document.querySelector('.ctl[data-controle="' + window.__hef.abaEscolhida + '"]');
-      window.__hef.vagaPedida = card && card.classList.contains('off')
-        ? window.__hef.abaEscolhida : '';
     }
   }, true);
   window.__hef.abaQueVale = function(){
@@ -322,8 +320,6 @@ BOOTSTRAP = r"""
       const r = document.getElementById('c-' + id);
       return !(r && r.closest('.ext-cartao'));
     };
-    if(agora && agora === window.__hef.vagaPedida && !aceso(agora)) return 0;
-    if(aceso(agora)) window.__hef.vagaPedida = '';
     if(aceso(agora) && (window.__hef.abaSincronizada || !aceso(querido) || agora === querido)){
       if(doAssento(agora)) window.__hef.abaSincronizada = true;
       window.__hef.abaEscolhida = agora;
@@ -344,6 +340,20 @@ BOOTSTRAP = r"""
     window.__hef.abaEscolhida = vez;
     return 1;
   };
+  function aba_do_lugar(el, pref, cheio){
+    if(!el.classList.contains('aba-ctl')) return 0;
+    if(cheio === el.hasAttribute('for')) return 0;
+    if(cheio){
+      el.setAttribute('for', 'c-' + pref);
+      el.setAttribute('data-gesto', GESTO_DA_ABA);
+      el.removeAttribute('aria-disabled');
+    } else {
+      el.removeAttribute('for');
+      el.removeAttribute('data-gesto');
+      el.setAttribute('aria-disabled', 'true');
+    }
+    return 1;
+  }
   window.__hef.pintar = function(p){
     let n = 0;
     if(window.__hefDica) window.__hefDica.varrer();
@@ -428,6 +438,7 @@ BOOTSTRAP = r"""
         }
         if(!el.classList.contains('off')){ el.classList.add('off'); }
         if(el.classList.contains('alvo')){ el.classList.remove('alvo'); }
+        n += aba_do_lugar(el, pref, false);
       }
     }
     for(const pref of (p.ocupados || [])){
@@ -436,6 +447,7 @@ BOOTSTRAP = r"""
           el.dataset.conectado = 'sim'; n += 1;
         }
         if(el.classList.contains('off')){ el.classList.remove('off'); }
+        n += aba_do_lugar(el, pref, true);
       }
     }
     for(const [classe, com] of Object.entries(p.marcas || {})){
@@ -937,10 +949,10 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
                       ipc: Any) -> dict[str, Any]:
     """O clique no chip do `Selecionar:` ou na aba da Jogar: ele ESCOLHE para onde a aba mira.
 
-    Só o «Todos» fala com o serviço; um lugar dos quatro de `monta.MESA` sem controle na mesa
-    abre sem recusa e sem mudar a escolha (D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA); o `pref`
-    que não é lugar nenhum recusa dizendo. O recado vai ao diário da janela, não à tela. O
-    porquê: docs/research/o-porque-dos-modulos.md, «o gesto da fita».
+    Só o «Todos» fala com o serviço; o `pref` que não está na mesa recusa dizendo, e a aba de
+    um lugar vazio não chega aqui, porque não se clica (D-2910-A-ABA-VAZIA-E-SO-O-NUMERO). O
+    recado vai ao diário da janela, não à tela. O porquê: docs/research/o-porque-dos-modulos.md,
+    «o gesto da fita».
     """
     pref = str(o.get("pref") or "").strip()
     if pref == "todos":
@@ -955,9 +967,9 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
         if str(c.get("pref") or "") == pref:
             ESCOLHA_DA_FITA.uniq = norm_mac(str(c.get("uniq") or "")) or ""
             return {"recado": f"Esta aba passa a mirar o {pref.upper()}."}
-    if any(str(lugar.get("pref") or "") == pref for lugar in monta.MESA):
-        return {"recado": f"O {pref.upper()} está vazio: nenhum controle neste lugar."}
-    raise ValueError(f"o chip {pref!r} não é nenhum dos quatro lugares.")
+    raise ValueError(
+        f"o chip {pref!r} não está na mesa de agora — o controle saiu entre o "
+        f"desenho da fita e o clique.")
 
 
 def _registrar_a_fita() -> None:

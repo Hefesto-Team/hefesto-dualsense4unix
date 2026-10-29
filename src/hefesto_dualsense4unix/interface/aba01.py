@@ -160,7 +160,7 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
     border-radius:9px 9px 0 0;background:color-mix(in srgb,var(--plastico) 16%,var(--app-bg));
     color:var(--texto-suave);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;
     -webkit-user-select:none;user-select:none;transition:background .12s}
-  .aba-ctl:hover{background:color-mix(in srgb,var(--plastico) 30%,var(--app-bg));color:var(--fg)}
+  .aba-ctl:not(.off):hover{background:color-mix(in srgb,var(--plastico) 30%,var(--app-bg));color:var(--fg)}
   .aba-ctl[hidden]{display:none}
   .aba-ctl .aba-nome{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .aba-ctl .n-jog{flex:0 0 18px;width:18px;height:18px;border-radius:50%;background:var(--plastico);
@@ -182,7 +182,10 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
   .ctl:not(.off):has(> input:checked) > .faixa .card-nome{display:none}
   .ctl:has(> input:checked) > .faixa .no-jogo[aria-label]{max-width:200px}
   body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
-  .aba-ctl.off{border-style:dashed;border-color:var(--border-forte);background:transparent}
+  .aba-ctl.off{border-style:dashed;border-color:var(--border-forte);background:transparent;padding:0 7px;
+    cursor:default}
+  .aba-ctl.off .aba-nome,.aba-ctl.off .via-g{display:none}
+  .aba-ctl.off .n-jog{background:var(--border-forte);color:var(--fg);opacity:.6}
   .aba-ctl .via-g:not([data-via="usb"],[data-via="bt"]){display:none}
   .abas-ctl:has(.aba-ext[for="c-x1"]) .aba-ctl.off[data-controle="p1"],
   .abas-ctl:has(.aba-ext[for="c-x2"]) .aba-ctl.off[data-controle="p2"],
@@ -208,7 +211,7 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
     font-size:14px;line-height:18px}
   .quadro.estica .ext-cartao:has(> input:checked) .ext-nome{font-size:16px}
   body.nativo.por-controle .abas-ctl .aba-ext{pointer-events:auto;cursor:pointer}
-  body.nativo.por-controle .abas-ctl .aba-ctl[data-controle]{pointer-events:auto;cursor:pointer;
+  body.nativo.por-controle .abas-ctl .aba-ctl[data-controle]:not(.off){pointer-events:auto;cursor:pointer;
     border-color:var(--plastico)!important;color:var(--texto-suave)!important;font-weight:500!important;
     background:color-mix(in srgb,var(--plastico) 16%,var(--app-bg))!important}
   body.nativo.por-controle:has(#c-p1:checked) .abas-ctl .aba-ctl[for="c-p1"],
@@ -1042,12 +1045,15 @@ def _conferir(doc):
     cabeca = doc.split('<div class="tira">', 1)[0]
     exigir(not re.search(r'class="fita[ "]', cabeca) and "Selecionar:" not in doc and 'id="c-todos"' not in doc,
            "a fita do «Selecionar:» ou o «Todos» voltou à Jogar: quem escolhe o controle são as abas")
-    abas = re.findall(r'<label class="aba-ctl( off)?" for="c-(p\d)" role="tab" '
-                      rf'data-gesto="{aba02.GESTO_DA_ABA}" data-pref="\2" data-controle="\2">', corpo)
-    exigir([p for _, p in abas] == [c["pref"] for c in MESA],
-           f"as abas dos controles não são uma por lugar da mesa: {[p for _, p in abas]}")
-    exigir(sum(1 for off, _ in abas if off) == len(MESA) - len(monta.CONECTADOS),
+    abas = re.findall(r'<label class="aba-ctl( off)?" (?:for="c-(p\d)" role="tab" '
+                      rf'data-gesto="{aba02.GESTO_DA_ABA}"|role="tab" aria-disabled="true") '
+                      r'data-pref="(p\d)" data-controle="\3">', corpo)
+    exigir([p for *_, p in abas] == [c["pref"] for c in MESA],
+           f"as abas dos controles não são uma por lugar da mesa: {[p for *_, p in abas]}")
+    exigir(sum(1 for off, _, _ in abas if off) == len(MESA) - len(monta.CONECTADOS),
            "um lugar vazio ganhou aba acesa, ou um conectado nasceu sem aba")
+    exigir(all(bool(off) != bool(para) for off, para, _ in abas),
+           "a aba do lugar vazio voltou a se clicar, ou a de um conectado perdeu o clique")
     exigir(not re.search(r"\.aba-ctl\.off\{[^}]*display:\s*none", doc),
            "a aba do lugar vazio voltou a sumir: a Jogar mostra P1 a P4, como as outras abas")
     corpo_do_quadro = corpo.split('<div class="quadro estica">', 1)[-1]

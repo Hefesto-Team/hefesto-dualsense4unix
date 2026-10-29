@@ -4,18 +4,19 @@ O desenho aprovado em 28/10/2026 (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR): na Jog
 «Selecionar:», a fita e o «Todos» saem, e cada controle conectado ganha uma aba no topo do
 cartão. A aba e o cartão se pintam pela mesma regra do plástico, o clique troca o cartão pelo
 mesmo gesto da fita. Desde 29/10/2026 (D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR), o lugar vazio
-também tem aba, tracejada e «Desconectado», como nas outras abas; só some quando um externo
-ocupa o número dele.
+também tem aba; desde a D-2910-A-ABA-VAZIA-E-SO-O-NUMERO, ela é só o número, tracejada e sem
+clique. Só some quando um externo ocupa o número dele.
 
 AS RÉGUAS:
 
 1. o desenho (o mockup que o `--publicar 01` leva): sem fita, uma aba por lugar da mesa,
-   o vazio apagado, com o gesto da fita e o endereço do nome, da via e da dica;
+   o vazio apagado e sem gesto, o cheio com o gesto da fita, e todos com o endereço do nome, da
+   via e da dica;
 2. a folha do plástico é uma só e pinta a aba com o tom do plástico dela;
 3. o pacote diz o nome, a via e a dica de cada aba;
 4. o gesto da aba escolhe o controle do cartão;
 5. na tela (WebKit, com o BOOTSTRAP do piloto): as quatro abas sempre, N delas da cor do
-   plástico e as outras tracejadas e «Desconectado»; o clique troca o cartão; a aba de quem
+   plástico e as outras tracejadas e só com o número; o clique troca o cartão; a aba de quem
    sai fica vazia, e o cartão escolhido que sai passa ao seguinte.
 """
 from __future__ import annotations
@@ -41,8 +42,9 @@ JOGAR = onde.BANCADA / "01-jogar.html"
 
 PLASTICOS = {"p1": "midnight-black", "p2": "starlight-blue", "p3": "cosmic-red", "p4": "white"}
 
-ABA = re.compile(r'<label class="aba-ctl( off)?" for="c-(p\d)" role="tab" data-gesto="([^"]+)" '
-                 r'data-pref="\2" data-controle="\2">(.*?)</label>', re.S)
+ABA = re.compile(r'<label class="aba-ctl( off)?" (?:for="c-p\d" role="tab" data-gesto="([^"]+)"|'
+                 r'role="tab" aria-disabled="true") data-pref="(p\d)" data-controle="\3">'
+                 r'(.*?)</label>', re.S)
 
 
 def _doc() -> str:
@@ -66,16 +68,16 @@ def test_a_jogar_nao_tem_mais_a_fita_nem_o_todos() -> None:
 
 
 def test_uma_aba_por_lugar_e_o_vazio_nasce_apagado() -> None:
-    """Uma aba por lugar da mesa, na ordem; a do lugar vazio nasce com `off`.
+    """Uma aba por lugar da mesa, na ordem; a do lugar vazio nasce com `off` e sem gesto.
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2910-A-ABA-VAZIA-E-SO-O-NUMERO.
     """
     abas = ABA.findall(_corpo())
-    assert [p for _off, p, _g, _d in abas] == [c["pref"] for c in monta.MESA]
+    assert [p for _off, _g, p, _d in abas] == [c["pref"] for c in monta.MESA]
     vazios = {c["pref"] for c in monta.MESA if not c.get("conectado", True)}
-    assert {p for off, p, _g, _d in abas if off} == vazios
-    for _off, pref, gesto, dentro in abas:
-        assert gesto == monta.GESTO_DA_FITA, f"a aba {pref} não escolhe pelo gesto da fita"
+    assert {p for off, _g, p, _d in abas if off} == vazios
+    for off, gesto, pref, dentro in abas:
+        assert gesto == ("" if off else monta.GESTO_DA_FITA), f"a aba {pref}: gesto {gesto!r}"
         for campo in ("aba-nome", "aba-via", "aba-dica", "jogador"):
             assert f'data-campo="{campo}"' in dentro, f"a aba {pref} perdeu o endereço `{campo}`"
 
@@ -116,10 +118,10 @@ def test_o_pacote_diz_o_nome_a_via_e_a_dica_da_aba() -> None:
     assert com_nome == {"aba-nome": "Ana &amp; Bia", "aba-via": "bt", "aba-dica": "Ana & Bia · BT"}
 
 
-def test_o_lugar_vazio_ganha_a_aba_desconectado_no_tique() -> None:
-    """Com um controle na mesa, o tique escreve «Desconectado» e a via vazia na aba dos outros.
+def test_o_lugar_vazio_fica_so_com_o_numero_no_tique() -> None:
+    """Com um controle na mesa, o tique esvazia o nome, a via e a dica da aba dos outros.
 
-    D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR.
+    D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR e D-2910-A-ABA-VAZIA-E-SO-O-NUMERO.
     """
     from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
 
@@ -134,8 +136,9 @@ def test_o_lugar_vazio_ganha_a_aba_desconectado_no_tique() -> None:
     assert carga["vazios"] == ["p2", "p3", "p4"]
     for pref in carga["vazios"]:
         coluna = carga["colunas"][pref]
-        assert (coluna["aba-nome"], coluna["aba-via"]) == ("Desconectado", ""), (pref, coluna)
-    assert carga["colunas"]["p1"]["aba-nome"] != "Desconectado"
+        assert (coluna["aba-nome"], coluna["aba-via"], coluna["aba-dica"]) == ("", "", ""), (
+            pref, coluna)
+    assert carga["colunas"]["p1"]["aba-nome"]
 
 
 def test_o_gesto_da_aba_escolhe_o_controle_do_cartao(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -222,14 +225,15 @@ def _pintar(tela: Any, prefs: list[str], alvo: str = "") -> dict[str, Any]:
 @pytest.mark.parametrize("prefs", [["p1"], ["p1", "p2"], ["p1", "p2", "p3", "p4"]])
 def test_n_controles_n_abas_cada_uma_da_cor_dela(tela: Any, prefs: list[str]) -> None:
     """Com 1, 2 e 4 na mesa: as quatro abas à vista; a de cada controle com a borda do
-    plástico dele, e a do lugar vazio tracejada, com o nome «Desconectado».
+    plástico dele, e a do lugar vazio tracejada e só com o número.
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR, D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR e
+    D-2910-A-ABA-VAZIA-E-SO-O-NUMERO.
     """
     lido = _pintar(tela, prefs, prefs[0])
     assert [p for p, _cor in lido["abas"]] == list(PLASTICOS)
     vazios = [p for p in PLASTICOS if p not in prefs]
-    assert lido["vazias"] == [[p, "dashed", f"{p[1:]} Desconectado"] for p in vazios], lido
+    assert lido["vazias"] == [[p, "dashed", p[1:]] for p in vazios], lido
     for pref, cor in lido["abas"]:
         if pref in vazios:
             continue
@@ -413,7 +417,8 @@ LER_COM_EXTERNOS = r"""
   [...document.querySelectorAll('.aba-ctl')].filter(vis)
     .sort(function(a, b){ return esq(a) - esq(b); })
     .forEach(function(a){
-      abas.push([a.getAttribute('for').slice(2), getComputedStyle(a).borderTopColor]);
+      abas.push([(a.getAttribute('for') || 'c-' + a.dataset.controle).slice(2),
+                 getComputedStyle(a).borderTopColor]);
     });
   var todos = '.quadro-corpo > .ctl.card, .quadro-corpo .ext-cartao';
   var abertos = [...document.querySelectorAll(todos)].filter(vis).map(function(c){

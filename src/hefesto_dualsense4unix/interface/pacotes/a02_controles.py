@@ -127,7 +127,6 @@ from hefesto_dualsense4unix.interface.sensores import (
 from . import (
     LUGAR_VAZIO,
     NOME_SEM_LEITURA,
-    SEM_NINGUEM_AQUI,
     TRAVESSAO,
     Contexto,
     fios,
@@ -1274,8 +1273,7 @@ def _quem_joga(nomes: dict[str, str], uniq: str, jogador: Any) -> dict[str, Any]
 
 VIAS_DA_ABA = {"USB": "usb", "BT": "bt"}
 
-ABA_DO_LUGAR_VAZIO: dict[str, str] = {
-    "aba-nome": SEM_NINGUEM_AQUI, "aba-via": "", "aba-dica": SEM_NINGUEM_AQUI}
+ABA_DO_LUGAR_VAZIO: dict[str, str] = {"aba-nome": "", "aba-via": "", "aba-dica": ""}
 
 
 def campos_da_aba(

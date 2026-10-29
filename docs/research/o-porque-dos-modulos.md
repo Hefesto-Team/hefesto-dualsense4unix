@@ -1942,12 +1942,12 @@ Ele não troca de perfil e não grava no disco do usuário. Só o «Todos» fala
 do serviço é o «só este» da 08. O registro `("*", …)` é o mesmo coringa do rodapé: a fita mora no `topo.html`,
 o esqueleto das dez, e registrá-la por página seria a mesma linha dez vezes.
 
-O lugar vazio abre sem recusa (29/10/2026, D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA): desde que os quatro
-lugares têm aba na Jogar, clicar a aba de um lugar sem controle recusava dizendo que um controle tinha saído, e
-a aba ganhava o contorno laranja; a frase era falsa. O lugar vazio devolve recado, sem IPC e sem mudar
-`ESCOLHA_DA_FITA`, e o `abaQueVale` do BOOTSTRAP não devolve ao escolhido a aba vazia que se clicou. A recusa
-fica para o `pref` fora dos quatro: escolher calado o primeiro que sobrou é como a tela passa a mostrar um
-aparelho e a mexer noutro.
+A aba de um lugar vazio não chega ao gesto (29/10/2026, D-2910-A-ABA-VAZIA-E-SO-O-NUMERO): desde que os
+quatro lugares têm aba na Jogar, ela é só o número, sem `for` e sem `data-gesto`, e o `aba_do_lugar` do
+BOOTSTRAP devolve os dois quando um controle chega ao lugar. Por isso a recusa vale para todo `pref` fora da
+mesa: escolher calado o primeiro que sobrou é como a tela passa a mostrar um aparelho e a mexer noutro.
+CADUCOU em 29/10/2026 a D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA, do mesmo dia, em que a aba vazia se
+clicava e abria a linha fechada, e o gesto devolvia recado em vez de recusar.
 
 A frase vai ao diário da janela desde 13/09/2026 (TELA-CALADA-01: a tarja de rodapé que a mostrava saiu por
 pedido, *"em todas as abas da interface"*). Na tela, o clique responde pela piscada (`MS_DA_PISCADA`).

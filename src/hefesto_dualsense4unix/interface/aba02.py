@@ -1227,20 +1227,22 @@ GESTO_DA_ABA = _monta_modulo.GESTO_DA_FITA
 
 
 def abas_dos_controles(mesa=None):
-    """A fileira das abas dos controles da Jogar: uma por lugar da mesa, e o vazio diz «Desconectado»."""
+    """A fileira das abas dos controles da Jogar: uma por lugar da mesa; a do vazio é só o número."""
     linhas = []
     for c in (MESA if mesa is None else mesa):
         pref = c["pref"]
         cheio = c.get("conectado", True)
         via = str(c.get("transporte") or "").lower() if cheio else ""
-        nome = str(c.get("nome") or "") if cheio else SEM_NINGUEM_AQUI
-        dica = (f'{nome} · {palavra_do_transporte(c.get("transporte"))}' if cheio
-                else SEM_NINGUEM_AQUI)
+        nome = str(c.get("nome") or "") if cheio else ""
+        dica = (f' data-dica="{nome} · {palavra_do_transporte(c.get("transporte"))}"' if cheio
+                else "")
+        clique = (f'for="c-{pref}" role="tab" data-gesto="{GESTO_DA_ABA}"' if cheio
+                  else 'role="tab" aria-disabled="true"')
         linhas.append(
-            f'          <label class="aba-ctl{"" if cheio else " off"}" for="c-{pref}" role="tab" '
-            f'data-gesto="{GESTO_DA_ABA}" data-pref="{pref}" data-controle="{pref}">'
+            f'          <label class="aba-ctl{"" if cheio else " off"}" {clique} '
+            f'data-pref="{pref}" data-controle="{pref}">'
             f'<span class="aba-dentro" data-campo="aba-dica" data-hef-alvo="atributo" '
-            f'data-hef-atributo="data-dica" data-dica="{dica}">'
+            f'data-hef-atributo="data-dica"{dica}>'
             f'<span class="n-jog">{numero_do_jogador(c["jogador"])}</span>'
             f'<span class="aba-nome" data-campo="aba-nome" data-hef-alvo="html">{nome}</span>'
             f'<span class="via-g" data-campo="aba-via" data-hef-alvo="atributo" '
