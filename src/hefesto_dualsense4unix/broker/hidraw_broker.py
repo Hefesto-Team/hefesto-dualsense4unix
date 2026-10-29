@@ -1710,6 +1710,7 @@ class BrokerState:
         self.pads_by_conn: dict[int, dict[str, int]] = {}
         self._serial_do_gadget: dict[str, str] = {}
         self.entregue = False
+        self.herdados: set[str] = set()
         self._servidos_path = servidos_path
         self._pid_da_conn: dict[int, int] = {}
         self._servidos: dict[int, int] = self._ler_os_servidos()
@@ -2053,6 +2054,7 @@ class BrokerState:
                 "error": "reject_not_physical_dualsense",
             }
         canon = f"{self._dev_root}/{base}"
+        self.herdados.discard(canon)
         pai = self._pai_hid(base)
         resposta = self._fs_restore(canon, base, peer_uid)
         resposta["cmd"] = "expose"
@@ -2144,6 +2146,7 @@ class BrokerState:
                 "error": "reject_not_physical_dualsense",
             }
         canon = f"{self._dev_root}/{base}"
+        self.herdados.discard(canon)
         pai = self._pai_hid(base)
         self.podados_by_conn.get(conn_id, set()).discard(canon)
         held = self.by_conn.setdefault(conn_id, set())
@@ -2185,6 +2188,7 @@ class BrokerState:
         if base is None:
             return {"ok": False, "cmd": "restore", "node": raw, "error": "reject_bad_path"}
         canon = f"{self._dev_root}/{base}"
+        self.herdados.discard(canon)
         podado = canon in self.podados_by_conn.get(conn_id, set())
         self.podados_by_conn.get(conn_id, set()).discard(canon)
         held = self.by_conn.get(conn_id, set())
@@ -2264,10 +2268,20 @@ class BrokerState:
                  "errno": exc.errno},
                 None,
             )
-        state = "hidden" if canon in self.hidden else "exposed"
+        state = self._estado_do_no(canon)
         self._anotar_o_servido(conn_id)
         self._log("node_fd_servido", node=canon, conn=conn_id, state=state)
         return ({"ok": True, "cmd": "open", "node": canon, "state": state}, fd)
+
+    def _estado_do_no(self, canon: str) -> str:
+        """O que o nó É agora: escondido por lease, aberto, ou fechado no repouso."""
+        if canon in self.hidden:
+            return "hidden"
+        if canon in self.herdados:
+            return "fechado"
+        if canon in self.expostos or self.entregue or not self.no_nasce_fechado:
+            return "exposed"
+        return "fechado"
 
     def _cmd_pad_usb_montar(
         self, conn_id: int, request: dict[str, Any]
@@ -2566,7 +2580,9 @@ class BrokerState:
         Sem a cura instalada (``no_nasce_fechado`` falso) o nó já nasce aberto e
         não há o que entregar.
         """
-        if not self.no_nasce_fechado or self._alguem_segura_um_no():
+        if not self.no_nasce_fechado:
+            return self._devolver_os_herdados()
+        if self._alguem_segura_um_no():
             return []
         uid = self.uid_autorizado(
             validade=VALIDADE_NA_VARREDURA_S if self.entregue else VALIDADE_DA_SESSAO_S
@@ -2601,6 +2617,47 @@ class BrokerState:
         elif entregues:
             self._log("fisico_novo_entregue_ao_sistema", nodes=",".join(entregues))
         return entregues
+
+    def herdar_os_escondidos(self) -> list[str]:
+        """Guarda os físicos que o broker anterior deixou fechados no reinício pedido.
+
+        No mundo histórico o nó nasce aberto e o broker que sobe abriria tudo; no
+        reinício do install com o Hefesto vivo isso expõe o físico ao jogo até o
+        daemon pedir o ``hide`` de novo. O que está fechado fica fechado, e o
+        :meth:`_devolver_os_herdados` abre depois da graça, se ninguém o pedir.
+        """
+        uid = self.uid_para_agir()
+        try:
+            entries = sorted(os.listdir(self._sys_class_hidraw))
+        except OSError:
+            return []
+        for base in entries:
+            canon = f"{self._dev_root}/{base}"
+            if self._validate(canon) is None:
+                continue
+            if uid is None or not self._ops.is_exposed_to(canon, uid):
+                self.herdados.add(canon)
+        self._log("escondidos_herdados", nodes=",".join(sorted(self.herdados)) or "-")
+        return sorted(self.herdados)
+
+    def _devolver_os_herdados(self) -> list[str]:
+        """Sem cliente na graça, o herdado volta ao repouso do mundo histórico: aberto."""
+        uid = self.uid_para_agir()
+        if not self.herdados or uid is None or self._alguem_segura_um_no():
+            return []
+        abrir = getattr(self._ops, "abrir_entradas", None)
+        devolvidos: list[str] = []
+        for canon in sorted(self.herdados):
+            base = canon.rsplit("/", 1)[-1]
+            resposta = self._fs_restore(canon, base, uid)
+            if callable(abrir) and resposta.get("state") != "gone":
+                with contextlib.suppress(OSError):
+                    abrir(base, uid)
+            if resposta.get("ok"):
+                devolvidos.append(canon)
+        self.herdados.clear()
+        self._log("escondidos_herdados_devolvidos", nodes=",".join(devolvidos) or "-")
+        return devolvidos
 
     def _religar_o_driver_dos_fisicos(self) -> list[str]:
         """Solta e prende o driver HID de cada DualSense físico, na primeira entrega.
@@ -2687,7 +2744,7 @@ class BrokerState:
     def restore_everything(self) -> list[str]:
         """Belt do shutdown do broker: restaura TODO nó ainda escondido."""
         restored: list[str] = []
-        if self.no_nasce_fechado and self._reinicio_sem_abrir():
+        if self._reinicio_sem_abrir():
             self._log(
                 "reinicio_sem_abrir",
                 escondidos=",".join(sorted(self.hidden)) or "-",
@@ -3183,7 +3240,9 @@ def entrega_herdada(path: str | None = None) -> bool:
         return False
 
 
-def _o_repouso_do_inicio(allowed_uid: int | None, *, no_nasce_fechado: bool) -> bool:
+def _o_repouso_do_inicio(
+    allowed_uid: int | None, *, no_nasce_fechado: bool, herdar: bool = False
+) -> bool:
     """O físico no começo do broker; ``True`` = a entrega foi herdada e ficou.
 
     Com a cura do nó fechado, o broker fecha tudo ao nascer, salvo quando a
@@ -3192,6 +3251,9 @@ def _o_repouso_do_inicio(allowed_uid: int | None, *, no_nasce_fechado: bool) -> 
     devolveria o controle a ninguém.
     """
     if not no_nasce_fechado:
+        if herdar:
+            _log("reinicio_sem_abrir", belt="inicio")
+            return False
         uid = allowed_uid if allowed_uid is not None else uid_da_sessao_ativa()
         if uid is None:
             _log("repouso_sem_sessao_ativa")
@@ -3276,7 +3338,7 @@ def main(argv: list[str] | None = None) -> int:
             fechados = fechar_todo_fisico(uid=allowed_uid)
             _log("fechar_tudo_done", count=len(fechados))
             return 0
-        if args.restore_all_and_exit and no_nasce_fechado and reinicio_sem_abrir_pedido():
+        if args.restore_all_and_exit and reinicio_sem_abrir_pedido():
             _log("reinicio_sem_abrir", belt="restore-all-and-exit")
             return 0
         if allowed_uid is None:
@@ -3290,7 +3352,8 @@ def main(argv: list[str] | None = None) -> int:
         _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
         return 1
 
-    herdada = _o_repouso_do_inicio(allowed_uid, no_nasce_fechado=no_nasce_fechado)
+    herdar = not no_nasce_fechado and reinicio_sem_abrir_pedido()
+    herdada = _o_repouso_do_inicio(allowed_uid, no_nasce_fechado=no_nasce_fechado, herdar=herdar)
 
     listen = _sd_listen_socket()
     if listen is None:
@@ -3306,6 +3369,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     state.entregue = herdada
     broker = Broker(state, listen, graca_da_entrega_s=_graca_da_entrega_do_ambiente())
+    if herdar and state.herdar_os_escondidos():
+        broker._sem_cliente_desde = broker._relogio()
 
     def _stop(_signum: int, _frame: object) -> None:
         broker.stopping = True

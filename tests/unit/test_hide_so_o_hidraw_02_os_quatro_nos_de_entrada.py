@@ -868,9 +868,15 @@ class TestOReinicioPedidoNaoAbre:
         st.restore_everything()
         assert ops.aberta("hidraw3")
 
-    def test_no_mundo_historico_o_pedido_nao_muda_nada(self) -> None:
-        """Sem a cura instalada o nó nasce aberto, e abrir ao parar é só"""
+    def test_no_mundo_historico_o_pedido_tambem_segura(self) -> None:
+        """O nó nasce aberto, mas o reinício pedido não o abre (O-BROKER-NOVO-HERDA-...-01)."""
         st, ops, _ = _estado(no_nasce_fechado=False, reinicio_sem_abrir=lambda: True)
+        _pede(st, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
+        assert st.restore_everything() == []
+        assert "/dev/hidraw3" in ops.fechados
+
+    def test_no_mundo_historico_a_parada_de_verdade_abre(self) -> None:
+        st, ops, _ = _estado(no_nasce_fechado=False, reinicio_sem_abrir=lambda: False)
         _pede(st, 1, {"cmd": "hide", "node": "/dev/hidraw3"})
         assert st.restore_everything() == ["/dev/hidraw3"]
         assert ops.aberta("hidraw3")
