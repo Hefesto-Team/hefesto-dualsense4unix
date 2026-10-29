@@ -240,14 +240,14 @@
       "data": "2026-10-29",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1160999,
+      "piso": 1161090,
       "por_item": {
-        "docs": 107644,
+        "docs": 107645,
         "scripts": 109678,
-        "src": 292265,
-        "tests": 651412
+        "src": 292286,
+        "tests": 651481
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +91 linhas (1160999 -> 1161090), pagas por Origem: D-2910-A-ABA-VAZIA-E-SO-O-NUMERO; registrado no fecho, topo 9098764c6edc",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1208,6 +1208,12 @@
           "de": 1161938,
           "para": 1162050,
           "razao": "tamanho: +112 linhas (1161938 -> 1162050), pagas por Origem: D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA, D-2910-OS-MODOS-SE-CHAMAM-PELO-NOME-DA-TELA; registrado no fecho, topo 3e8d8dd5f550"
+        },
+        {
+          "data": "2026-10-29",
+          "de": 1160999,
+          "para": 1161090,
+          "razao": "tamanho: +91 linhas (1160999 -> 1161090), pagas por Origem: D-2910-A-ABA-VAZIA-E-SO-O-NUMERO; registrado no fecho, topo 9098764c6edc"
         }
       ],
       "unidade": "linhas",
