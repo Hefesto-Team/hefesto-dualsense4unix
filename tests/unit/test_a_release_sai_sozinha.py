@@ -468,6 +468,12 @@ def test_o_bloco_publico_e_lido_e_o_resto_da_sprint_fica_em_casa(
         ("tipo", "novidade", "`tipo` é um destes"),
         ("area", "inexistente", "`area` é uma destas"),
         ("titulo", "x" * 81, "passa de 80"),
+        ("muda", "O endereço AA:BB:CC:00:00:01 aparece na lista.", "vaza um endereço de rádio"),
+        ("pronto", "O arquivo em /home/fulana/.config muda.", "vaza um caminho da máquina"),
+        ("muda", "Medido em ~/.local/state/x.", "vaza um caminho da máquina"),
+        ("titulo", "O prompt corrige o perfil", "vaza rastro de ferramenta"),
+        ("muda", "O workflow abre o pedido.", "vaza rastro de ferramenta"),
+        ("muda", "A IA escreveu a curva.", "vaza rastro de ferramenta"),
     ],
 )
 def test_a_regua_do_publico_reprova_palavra_da_casa_e_campo_torto(
@@ -487,6 +493,51 @@ def test_a_regua_do_publico_reprova_palavra_da_casa_e_campo_torto(
     bloco[campo] = valor
     erros = modulo.validar(bloco, brinquedo)
     assert any(trecho in e for e in erros), erros
+
+
+@pytest.mark.parametrize(
+    "frase",
+    ["O codec Opus a 48 kHz fica no alto-falante.", "O modelo do controle aparece no cartão.",
+     "Ia e voltava sem aviso.", "A versão 0.9.5.1 traz o botão."],
+)
+def test_o_vazamento_nao_acusa_a_palavra_do_produto(
+    frase: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.syspath_prepend(str(RELEASE))
+    import publico as modulo
+
+    assert modulo.vazamentos(frase) == []
+
+
+def test_mordida_o_vazamento_tambem_barra_o_texto_solto(
+    brinquedo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.syspath_prepend(str(RELEASE))
+    import publico as modulo
+
+    assert modulo.erros_de_texto("Entregue na versão 0.9.5.1.", brinquedo, autoria=False) == []
+    erros = modulo.erros_de_texto("Entregue em /mnt/x pelo workflow.", brinquedo, autoria=False)
+    assert any("caminho da máquina" in e for e in erros) and any("ferramenta" in e for e in erros)
+    assert not any("/mnt/x" in e or "workflow" in e for e in erros), "o erro não repete o vazamento"
+
+
+def test_o_marco_da_issue_nasce_do_estado_da_sprint_e_o_que_sai_nao_vale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.syspath_prepend(str(RELEASE))
+    import publico as modulo
+
+    (tmp_path / ".github").mkdir()
+    shutil.copy2(RAIZ / ".github" / "repositorio.yml", tmp_path / ".github" / "repositorio.yml")
+    marcos = modulo.marcos_do_arquivo(tmp_path)
+    assert "Primeira versão pública" not in marcos
+    assert modulo.marco_que_recebe(tmp_path, "aberta") in marcos
+    recebe = modulo.marco_que_recebe
+    assert recebe(tmp_path, "escrita") == recebe(tmp_path, "aberta")
+    assert len({recebe(tmp_path, e) for e in ("aberta", "feita", "espera-ela")}) == 3
+    bloco = {"titulo": "Um", "tipo": "adicionado", "muda": "Liga.", "pronto": "Liga.",
+             "marco": "Primeira versão pública"}
+    assert any("`marco` é um destes" in e for e in modulo.validar(bloco, tmp_path, autoria=False))
 
 
 def test_o_publico_passa_pela_regua_de_autoria_quando_ela_existe(

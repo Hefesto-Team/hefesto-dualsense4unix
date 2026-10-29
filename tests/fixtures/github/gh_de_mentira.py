@@ -825,6 +825,15 @@ if mi:
             i["state_reason"] = "reopened" if i["state_reason"] == "completed" else i["state_reason"]
         saida(200, corpo_da_issue(i))
 mm_ = re.fullmatch(r"milestones/(\d+)", sub)
+if mm_ and metodo == "DELETE":
+    m = marco_de(int(mm_.group(1)))
+    if m is None:
+        saida(404)
+    st["milestones"].remove(m)
+    for i in st["issues"]:
+        if i.get("marco") == m["number"]:
+            i["marco"] = None
+    saida(204)
 if mm_ and metodo == "GET":
     m = marco_de(int(mm_.group(1)))
     if m is None:

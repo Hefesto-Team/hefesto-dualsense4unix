@@ -185,6 +185,10 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
         lambda d: d["configuração"].update(ramo_padrao=["dev"]),
         lambda d: d["configuração"].update(ramo_inventado="x"),
         lambda d: d.pop("configuração"),
+        lambda d: d["milestones"][0].update(recebe="talvez"),
+        lambda d: d["milestones"][1].update(recebe=d["milestones"][0]["recebe"]),
+        lambda d: d["milestones"][0].update(sai="sim"),
+        lambda d: d["milestones"][0].update(sai=True),
     ],
 )
 def test_mordida_o_esquema_reprova_o_arquivo_estragado(estraga: Any) -> None:
@@ -928,7 +932,8 @@ def test_rotulos_exclusivos_apagam_o_que_nao_esta_no_arquivo(gh: Mentira, tmp_pa
 def test_os_marcos_chegam_e_a_deriva_volta(gh: Mentira) -> None:
     assert rodar("--aplicar", "--so", "milestones") == 0
     quer = _dados()["milestones"]
-    assert [m["title"] for m in gh.estado["milestones"]] == [m["titulo"] for m in quer]
+    assert [m["title"] for m in gh.estado["milestones"]] == [m["titulo"] for m in quer
+                                                             if not m.get("sai")]
     e = gh.estado
     e["milestones"][0]["description"] = "outra coisa"
     _gravar(gh, e)
@@ -937,6 +942,32 @@ def test_os_marcos_chegam_e_a_deriva_volta(gh: Mentira) -> None:
         rodar("--aplicar", "--so", "milestones") == 0
         and rodar("--conferir", "--so", "milestones") == 0
     )
+
+
+def _marco_que_sai(gh: Mentira, com_issue: bool) -> None:
+    e = gh.estado
+    e["milestones"] = [{"number": 1, "title": "Primeira versão pública", "state": "open",
+                        "description": "x", "due_on": None}]
+    if com_issue:
+        e["issues"] = [{"number": 1, "node_id": "I_1", "title": "t", "body": "", "state": "open",
+                        "state_reason": None, "rotulos": [], "marco": 1}]
+    _gravar(gh, e)
+
+
+def test_o_marco_que_sai_vazio_e_apagado(gh: Mentira) -> None:
+    _marco_que_sai(gh, com_issue=False)
+    assert rodar("--conferir", "--so", "milestones") == 1
+    assert rodar("--aplicar", "--so", "milestones") == 0
+    assert "Primeira versão pública" not in [m["title"] for m in gh.estado["milestones"]]
+    assert rodar("--conferir", "--so", "milestones") == 0
+
+
+def test_mordida_o_marco_que_sai_com_issue_fica_e_pede_a_mao(gh: Mentira, tmp_path: Path) -> None:
+    _marco_que_sai(gh, com_issue=True)
+    codigo, detalhe = _detalhe(tmp_path, "--aplicar", "--so", "milestones")
+    assert codigo == 1 and "à mão" in detalhe
+    assert "Primeira versão pública" in [m["title"] for m in gh.estado["milestones"]]
+    assert not [x for x in gh.escritas() if x["m"] == "DELETE"]
 
 
 def test_a_data_do_marco_chega_ao_servidor(gh: Mentira, tmp_path: Path) -> None:

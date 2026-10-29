@@ -8,7 +8,7 @@ bloco, um trecho cercado no corpo da sprint:
     titulo: O microfone de cada controle liga sozinho
     tipo: adicionado          # adicionado | mudado | removido | corrigido
     area: tela                # opcional; uma das áreas do rótulo «área: …» de .github/repositorio.yml
-    marco: Primeira versão pública   # opcional; um dos marcos (`milestones`) de .github/repositorio.yml
+    marco: 0.9.5.2            # opcional; um dos marcos (`milestones`) de .github/repositorio.yml
     muda: O botão do microfone liga e desliga só o microfone daquele controle.
     pronto: Ao apertar o botão, só o microfone daquele controle muda.
     ```
@@ -17,9 +17,11 @@ bloco, um trecho cercado no corpo da sprint:
 continua o campo anterior. `muda` vira a linha do CHANGELOG e o corpo da issue; `pronto` é o critério dela.
 
 A RÉGUA: todo campo passa pelas palavras que o texto público não pode ter (as de `check_texto_publico.py`,
-mais as do trabalho em equipe: mesa, agente, leva, worktree) e, quando o `check_autoria.py` existe na árvore,
-pelo `check_autoria.py texto`, que nunca imprime o termo que casou. Sem a lista de termos, ele sai «não
-medido» e o bloco é reprovado: o que não se mediu não se publica.
+mais as do trabalho em equipe: mesa, agente, leva, worktree), pelo VAZAMENTO (`vazamentos`: endereço de
+rádio pela forma, caminho da máquina de quem desenvolve e rastro de ferramenta) e, quando o
+`check_autoria.py` existe na árvore, pelo `check_autoria.py texto`, que nunca imprime o termo que casou. Sem a
+lista de termos, ele sai «não medido» e o bloco é reprovado: o que não se mediu não se publica. O vazamento
+não depende de lista de fora da árvore: ele vale no clone limpo e diz só o tipo do que vazou, nunca o trecho.
 
     publico.py ARQUIVO...          confere o bloco de cada sprint (saída 1 se algum reprova)
 """
@@ -41,12 +43,30 @@ OBRIGATORIOS = ("titulo", "tipo", "muda", "pronto")
 TIPOS = ("adicionado", "mudado", "removido", "corrigido")
 MARCADOR = "A-PREENCHER"
 LIMITES = {"titulo": 80, "muda": 400, "pronto": 400}
+VAZAMENTOS = (
+    ("um endereço de rádio", re.compile(r"(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}(?![0-9A-Fa-f])")),
+    ("um caminho da máquina", re.compile(
+        r"(?:/home/|/mnt/|/run/user/|/tmp/|/root/|~/|\bhefesto-(?:casa|voo)\b|\.local/state)", re.IGNORECASE)),
+    ("rastro de ferramenta", re.compile(
+        r"\b(?:sonnet|haiku|"
+        r"workflows?|prompts?|intelig[êe]ncia artificial|modelos? de (?:linguagem|ia))\b"
+        r"|(?-i:\bIA\b)|\bopus\s+[3-9](?:\.\d+)?\b(?!\s*k?hz)", re.IGNORECASE)),
+)
 DA_CASA = (
     ("mesa", re.compile(r"\bmesa\b", re.IGNORECASE)),
     ("agente", re.compile(r"\bagentes?\b", re.IGNORECASE)),
     ("leva", re.compile(r"\blevas?\b", re.IGNORECASE)),
     ("worktree", re.compile(r"\bworktrees?\b", re.IGNORECASE)),
 )
+
+
+def vazamentos(texto: str) -> list[str]:
+    """O tipo de cada vazamento que o texto carrega (nunca o trecho, que repetiria o vazamento)."""
+    achados = []
+    for nome, padrao in VAZAMENTOS:
+        if padrao.search(texto):
+            achados.append(nome)
+    return achados
 
 
 def extrair(texto: str) -> dict[str, str] | None:
@@ -104,16 +124,40 @@ def passa_pela_autoria(raiz: Path, texto: str) -> str | None:
     return "a régua de autoria recusou o texto" + (f": {primeira[0][:120]}" if primeira else "")
 
 
-def marcos_do_arquivo(raiz: Path) -> list[str]:
+def _marcos(raiz: Path) -> list[dict[str, str]]:
     arq = raiz / ".github" / "repositorio.yml"
     if not arq.is_file():
         return []
-    return re.findall(r'^\s+- titulo:\s*"([^"]+)"', arq.read_text(encoding="utf-8"), re.MULTILINE)
+    secao = re.search(r"^milestones:\n((?:[ \t]+.*\n|\n)*)", arq.read_text(encoding="utf-8"), re.MULTILINE)
+    if not secao:
+        return []
+    marcos: list[dict[str, str]] = []
+    for linha in secao.group(1).splitlines():
+        m = re.match(r'^\s+-\s+titulo:\s*"([^"]+)"', linha)
+        if m:
+            marcos.append({"titulo": m.group(1)})
+            continue
+        m = re.match(r"^\s+(recebe|sai):\s*(\S+)", linha)
+        if m and marcos:
+            marcos[-1][m.group(1)] = m.group(2)
+    return marcos
+
+
+def marcos_do_arquivo(raiz: Path) -> list[str]:
+    """Os marcos que valem: os de `milestones` sem `sai: true`."""
+    return [m["titulo"] for m in _marcos(raiz) if m.get("sai") != "true"]
+
+
+def marco_que_recebe(raiz: Path, estado: str) -> str | None:
+    """O marco em que nasce a issue de uma sprint neste estado (`recebe:` do arquivo do repositório): a feita
+    no da próxima versão, a espera-ela no de quem espera o aparelho e as outras no da série aberta."""
+    chave = estado if estado in {"feita", "espera-ela"} else "aberta"
+    return next((m["titulo"] for m in _marcos(raiz) if m.get("recebe") == chave and m.get("sai") != "true"), None)
 
 
 def erros_de_texto(texto: str, raiz: Path, autoria: bool = True) -> list[str]:
     """Os defeitos de um texto solto que vai a quem usa (o comentário de entrega, por exemplo)."""
-    erros: list[str] = []
+    erros: list[str] = [f"vaza {v}: tire-o do texto" for v in vazamentos(texto)]
     for nome, padrao in _expressoes_da_casa(raiz):
         if padrao.search(texto):
             erros.append(f"tem uma palavra da casa («{nome}»): escreva para quem usa")
@@ -144,6 +188,7 @@ def validar(bloco: dict[str, str], raiz: Path, autoria: bool = True) -> list[str
         if len(bloco.get(campo, "")) > limite:
             erros.append(f"`{campo}` passa de {limite} caracteres")
     for campo in CAMPOS:
+        erros += [f"`{campo}` vaza {v}: tire-o do texto" for v in vazamentos(bloco.get(campo, ""))]
         for nome, padrao in _expressoes_da_casa(raiz):
             if padrao.search(bloco.get(campo, "")):
                 erros.append(f"`{campo}` tem uma palavra da casa («{nome}»): escreva para quem usa")

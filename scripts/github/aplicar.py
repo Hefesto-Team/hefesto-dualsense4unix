@@ -408,6 +408,9 @@ def _validar_rotulos(rotulos: Any) -> list[str]:
     return erros
 
 
+RECEBE_DO_MARCO = ("aberta", "feita", "espera-ela")
+
+
 def _validar_milestones(ms: Any) -> list[str]:
     if not isinstance(ms, list) or not ms:
         return ["milestones: lista com pelo menos um"]
@@ -424,6 +427,14 @@ def _validar_milestones(ms: Any) -> list[str]:
         data = m.get("data")
         if data is not None and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(data)):
             erros.append(f"milestones.{m['titulo']}.data: AAAA-MM-DD ou vazia")
+        if m.get("sai") not in (None, True):
+            erros.append(f"milestones.{m['titulo']}.sai: true, ou fora")
+        if m.get("recebe") is not None and m.get("recebe") not in RECEBE_DO_MARCO:
+            erros.append(f"milestones.{m['titulo']}.recebe: um destes: {', '.join(RECEBE_DO_MARCO)}")
+        if m.get("recebe") is not None and m.get("sai"):
+            erros.append(f"milestones.{m['titulo']}: o marco que sai não recebe issue")
+    recebem = [m.get("recebe") for m in ms if isinstance(m, dict) and m.get("recebe")]
+    erros += [f"milestones: só um marco recebe `{r}`" for r in sorted(set(recebem)) if recebem.count(r) > 1]
     return erros
 
 
@@ -985,6 +996,19 @@ def planejar_milestones(c: Contexto) -> list[Acao]:
     existentes = {m["title"]: m for m in c.gh.ler_lista(f"repos/{c.repo}/milestones?state=all")}
     acoes: list[Acao] = []
     for m in c.dados["milestones"]:
+        if m.get("sai"):
+            atual = existentes.get(m["titulo"])
+            if atual is None:
+                continue
+            _, contas = c.gh.ler(f"repos/{c.repo}/milestones/{atual['number']}")
+            issues = int(contas.get("open_issues", 0)) + int(contas.get("closed_issues", 0))
+            if issues:
+                acoes.append(Acao(f"milestones: «{m['titulo']}» sai, mas tem {issues} issue(s)", lambda: None,
+                                  a_mao="mova as issues para outro marco e rode de novo: o marco com issue não se apaga"))
+            else:
+                acoes.append(Acao(f"milestones: «{m['titulo']}» sai (sem issue)",
+                                  c.escreve("DELETE", f"milestones/{atual['number']}")))
+            continue
         quer: dict[str, Any] = {"title": m["titulo"], "description": m["descrição"]}
         if m.get("data"):
             quer["due_on"] = f"{m['data']}T00:00:00Z"

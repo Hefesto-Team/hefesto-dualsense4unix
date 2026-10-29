@@ -138,12 +138,27 @@ rotulos:
     - {nome: "prioridade: média", cor: "fbca04", descrição: "Atrapalha, mas dá para jogar"}
     - {nome: "prioridade: baixa", cor: "0e8a16", descrição: "Pode esperar"}
 
-# As datas ficam em branco até quem mantém decidir; o título diz o que cabe em cada marco.
+# Um marco por versão, na série de `release.serie`. `recebe` diz em que marco a issue nasce, pelo estado do
+# trabalho: `feita` (o que já está pronto e sai na próxima versão), `aberta` (o que vem depois) e
+# `espera-ela` (o que espera o teste no aparelho). A cada versão que sai, os dois números andam uma casa.
+# `sai: true` tira o marco do servidor quando ele não tem issue nenhuma; com issue, o `aplicar.py` diz e
+# quem mantém move as issues à mão. As datas ficam em branco até quem mantém decidir.
 milestones:
+  - titulo: "0.9.5.1"
+    descrição: "O que já está pronto e sai na versão 0.9.5.1."
+    recebe: feita
+  - titulo: "0.9.5.2"
+    descrição: "O que está planejado para a versão 0.9.5.2."
+    recebe: aberta
+  - titulo: "Aguarda o teste no aparelho"
+    descrição: "Pronto no código; falta o teste com o controle na mão para entrar numa versão."
+    recebe: espera-ela
   - titulo: "Primeira versão pública"
     descrição: "O que entra na primeira versão pública do Hefesto."
+    sai: true
   - titulo: "Depois da primeira versão"
     descrição: "O que fica para as versões seguintes."
+    sai: true
 
 # Os tipos de issue são da organização; os formulários de `ISSUE_TEMPLATE/` os escolhem pelo nome.
 tipos_de_issue:
