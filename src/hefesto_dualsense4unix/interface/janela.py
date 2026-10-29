@@ -437,6 +437,30 @@ def montar_a_barra(
     return barra, botoes
 
 
+_CACHE_LIMPO: list[bool] = []
+
+
+def limpar_o_cache_uma_vez(view: Any) -> None:
+    """Na primeira ponte do processo, todo o cache das páginas sai do disco e da memória.
+
+    O WebKit precisa do WebView nascido: o `clear` antes dele derruba o processo.
+    """
+    if _CACHE_LIMPO:
+        return
+    _CACHE_LIMPO.append(True)
+    tipos = WebKit2.WebsiteDataTypes
+    view.get_context().get_website_data_manager().clear(
+        tipos.DISK_CACHE | tipos.MEMORY_CACHE | tipos.OFFLINE_APPLICATION_CACHE, 0, None,
+        _ao_limpar_o_cache)
+
+
+def _ao_limpar_o_cache(gerente: Any, resultado: Any) -> None:
+    try:
+        gerente.clear_finish(resultado)
+    except GLib.Error as erro:
+        print(f"[cache] não limpou o cache das páginas: {erro.message}", file=sys.stderr)
+
+
 def vestir_a_cara_do_maximizar(botoes: dict[str, Any], maximizada: bool) -> bool:
     """Põe no botão do meio a cara do estado em que a janela ESTÁ."""
     botao = botoes.get("maximizar")
@@ -492,6 +516,7 @@ class PonteDaTela:
                 )
             )
         self.view = WebKit2.WebView.new_with_user_content_manager(ucm)
+        limpar_o_cache_uma_vez(self.view)
         self.view.connect("context-menu", self._calar_o_menu_do_webkit)
 
     def _por_as_folhas(self) -> None:
