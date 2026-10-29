@@ -67,7 +67,6 @@ def bancada(monkeypatch: Any) -> Any:
     monkeypatch.setattr(em_fundo, "_FUNDO", {})
     monkeypatch.setattr(p, "_ABERTO", {})
     monkeypatch.setattr(p, "_mesa_do_radio", lambda recarregar=False: Mesa())
-    monkeypatch.setattr(p, "_ler_o_historico", lambda: {})
 
     def declarar(nomes: list[str] | None) -> None:
         if nomes is None:

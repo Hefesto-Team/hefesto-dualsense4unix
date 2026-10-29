@@ -2550,7 +2550,6 @@ _LARGURA_DA_PONTE = round((FATIAS_DA_PONTE + 1) * HZ_DA_PONTE, 1)
 SEGURE = "Segure PS + Create"
 NOMEAR = "Nomear"
 ADAPTADOR_SEM_NOME = "Adaptador"
-ONDE_FICA = "Onde fica?"
 MARCA_VARRENDO = ("Outro programa está procurando aparelhos por aqui. "
                   "Controle novo vai para outro adaptador.")
 USB3_AO_LADO = "Entrada USB 3.0: faz ruído no rádio. Prefira uma 2.0."
@@ -2900,12 +2899,6 @@ ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
 PASSAGEIROS = (("giro", "Giroscópio e acelerômetro"), ("touch", "Touchpad"),
                ("botoes", "Botões, sticks e gatilhos"))
 
-FRASE_DO_DIARIO = {
-    "adaptador cheio": "Pediram som com o adaptador cheio",
-    "fila parada": "O adaptador parou de enviar",
-    "ponte subiu": "Som além do limite",
-}
-PAROU_DE_REINICIAR = "parou de reiniciar o adaptador"
 
 
 def _x(texto: object) -> str:
@@ -3361,14 +3354,8 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
     partes.append(f'<span class="espera busca" data-alvo="" '
                   f'title="Segure PS + Create no controle até a luz piscar.">'
                   f'{_silhueta({})}{SEGURE}</span>')
-    if not lug.get("sabido", True):
-        pass
-    elif not lug.get("lugar"):
+    if lug.get("sabido", True) and not lug.get("lugar"):
         partes.append(f'<span>{_x(lug.get("entrada") or DENTRO_DA_MAQUINA)}</span>')
-    elif not lug.get("face"):
-        partes.append(f'<a class="ensina" href="#mapear-entrada-a-entrada" '
-                      f'data-alvo="{_x(lug.get("lugar") or "")}" title="Mapear entrada a entrada">'
-                      f'{_ic("uma-a-uma")}{ONDE_FICA}</a>')
     return '<span class="onde">' + "".join(partes) + "</span>"
 
 
@@ -3461,12 +3448,6 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
     ver = ("Esconder" if aberto else "Ver") + " os aparelhos deste adaptador"
     nome = str(lug.get("nome") or "")
     largura = max(len(nome or NOMEAR) + 2, 10)
-    sino = ""
-    quedas = lug.get("quedas") or []
-    if quedas:
-        dica = f"{len(quedas)} {'queda' if len(quedas) == 1 else 'quedas'} — ver quando"
-        sino = (f'<button class="sino" title="{dica}" aria-label="{dica}" '
-                f'data-gesto="adaptador-historico" data-alvo="{lid}">{_ic("aviso")}</button>')
     chegou = " ".join(sorted(_x(c) for c in lug.get("chegou") or ()))
     unica = len(cena.get("lugares") or ()) == 1
     if vazio:
@@ -3482,7 +3463,7 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         f'value="{_x(nome)}" placeholder="{NOMEAR}" '
         f'aria-label="Nome deste adaptador" style="width:{largura}ch" '
         f'data-gesto="adaptador-renomear" data-alvo="{lid}">'
-        + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
+        + _marcas_de_onde(lug, cena) + _barra_do_lugar(lug, cena)
         + _conta_do_lugar(lug, cena) + "</div>")
     linhas = "".join(html_da_linha(ap, cena, com_hz) for ap in moradores)
     fila = f'<div class="soltar-fila">{lampada}</div>' if lampada else ""
@@ -3625,17 +3606,6 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
                and a.get("tipo") not in SO_OCUPA_A_PORTA]
     for lug in lugares:
         lid = str(lug["id"])
-        if lug.get("quedas"):
-            linhas = "".join(
-                f'<div class="queda">{_ic("aviso")}<span>{_x(_maiuscula(q["porque"]))}</span>'
-                f'<span class="quando">{_x(q["quando"])}</span></div>'
-                for q in lug["quedas"])
-            if lug.get("quedas_desde"):
-                linhas += (f'<div class="queda-desde">Quedas contadas desde '
-                           f'{_x(lug["quedas_desde"])}</div>')
-            moldes.append(f'<template class="painel-molde" data-painel="sino" '
-                          f'data-alvo="{_x(lid)}" data-titulo="{_x(_titulo_do_lugar(lug))}">'
-                          f'<div class="historico">{linhas}</div></template>')
         vem = [(("ds" if a.get("tipo") == "controle"
                  else glifo_do_tipo(a.get("tipo"))),
                 nome_na_conexoes(a),
@@ -4150,23 +4120,6 @@ def _o_ponto(linha: Any) -> str:
             f'aria-label="{_x(fala)}"></span>')
 
 
-def _e_fora_da_faixa(linha: Any) -> bool:
-    """A linha que não divide a faixa dos controles (o Wi-Fi em 5 GHz): não tem célula nenhuma."""
-    return not linha.celulas and linha.sem_faixa == faixas_do_ar.FORA_DA_FAIXA
-
-
-def _o_fora_no_titulo(linha: Any) -> str:
-    """O selo «Wi-Fi · 5 GHz · canal 161 ●» que mora no título «Outros dispositivos sem fio».
-
-    Escondido de saída: a página o mostra no lugar da linha só quando a seção não cabe no miolo
-    (``oQueEstaForaDaFaixaCabe``, desenho de 06/10/2026, pergunta 1, opção A). O ponto é o mesmo
-    da linha, e o texto é o que a linha diz.
-    """
-    texto = " · ".join(t for t in (linha.nome, linha.sub) if t)
-    return (f'<span class="ar-no-titulo" data-linha="{_x(linha.id)}">{_x(texto)}'
-            f'{_o_ponto(linha)}</span>')
-
-
 def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str, str]) -> str:
     cor = cores[linha.id]
     nada = _passo_da_linha(linha.id) == receptor_sem_fio.PASSO_NADA
@@ -4197,10 +4150,9 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
             faixa = (f'<div class="ar-faixa sem" role="img" '
                      f'aria-label="{_x(frase or linha.sem_faixa)}">{passo}</div>')
     donos = " ".join(dict.fromkeys(t for t, _n in linha.quem))
-    fora = " data-fora-da-faixa" if _e_fora_da_faixa(linha) else ""
     return (f'<div class="ar-linha" data-id="{_x(linha.id)}" data-tipo="{_x(linha.tipo)}" '
             f'data-briga="{_x(" ".join(linha.briga))}" data-quem="{_x(donos)}" tabindex="0" '
-            f'style="--cor:{_x(cor)}"{fora}>{rot}{faixa}'
+            f'style="--cor:{_x(cor)}">{rot}{faixa}'
             f'<div class="ar-estado">{_o_ponto(linha)}</div></div>')
 
 
@@ -4212,7 +4164,6 @@ def _o_rotulo_do_aparelho(linha: Any) -> str:
 
 
 LINHAS_NUMA_COLUNA = 3
-OUTROS_SEM_FIO = "Outros dispositivos sem fio"
 
 
 def _em_colunas(linhas: list[str]) -> list[str]:
@@ -4225,12 +4176,11 @@ def _em_colunas(linhas: list[str]) -> list[str]:
 
 
 def html_dos_canais(cena: dict[str, Any]) -> str:
-    """Uma faixa por aparelho, os mesmos 79 canais, e embaixo os outros dispositivos sem fio.
+    """Uma faixa por aparelho, os mesmos 79 canais, e embaixo, sem título, os outros rádios.
 
     Cada linha é ícone · faixa · ponto (desenho aprovado de 05/10/2026). A entrada sem aparelho
     no ar não ganha linha. O Wi-Fi conectado tem linha sempre, também em 5 GHz, com o trilho
-    dizendo a banda e o canal (desenho de 06/10/2026, item 1); quando a seção não cabe no miolo,
-    essa linha vira um selo no título do grupo (pergunta 1, opção A).
+    dizendo a banda e o canal (desenho de 06/10/2026, item 1).
     """
     if not cena.get("lugares"):
         return ""
@@ -4259,9 +4209,7 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
                 + "</div>"]
     outros = list(regua.outros)
     if outros:
-        no_titulo = "".join(_o_fora_no_titulo(ln) for ln in outros if _e_fora_da_faixa(ln))
-        saida.append(f'<div class="ar-grupo outros">{OUTROS_SEM_FIO}{no_titulo}</div>'
-                     '<div class="ar-do">'
+        saida.append('<div class="ar-do outros">'
                      + "".join(_a_linha_do_ar(ln, rotulos[ln.id], cores, nomes) for ln in outros)
                      + "</div>")
     return '<div class="ar">' + "".join(saida) + "</div>"
@@ -4504,75 +4452,8 @@ def _ler_a_maquina() -> tuple[Any, dict[int, str]]:
     return carregar_maquina(), dict(controladores_dos_barramentos())
 
 
-def _ler_o_historico() -> dict[str, Any]:
-    """O que o sino lê: as quedas do `kernel.log`, desde quando se mede, e o diário."""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations import diario_do_radio, storm_doctor
-
-    contagens = storm_doctor.historico_do_radio()
-    try:
-        linhas = storm_doctor.caminho_do_kernel_log().read_text(
-            encoding="utf-8", errors="replace").splitlines()
-    except OSError:
-        linhas = []
-    diario = diario_do_radio.ler()
-    quedas = sorted(storm_doctor.quedas(storm_doctor.ler_eventos_do_radio(linhas)),
-                    key=lambda e: e.carimbo)
-    familia = contagens.get(storm_doctor.FAMILIA_DA_QUEDA)
-    return {
-        "desde": familia.medida_desde if familia is not None else "",
-        "quedas": [(q, storm_doctor.o_fato_da_queda(q, diario),
-                    diario_do_radio.pontes_de_pe(diario, q.carimbo)) for q in quedas],
-        "diario": diario,
-    }
-
-
 def _dicionario(valor: object) -> dict[str, Any]:
     return valor if isinstance(valor, dict) else {}
-
-
-def _hora(carimbo: float, hoje: float) -> str:
-    local = time.localtime(carimbo)
-    if time.strftime("%Y%m%d", local) == time.strftime("%Y%m%d", time.localtime(hoje)):
-        return time.strftime("%H:%M", local)
-    return time.strftime("%d/%m %H:%M", local)
-
-
-def _quedas_por_adaptador(historico: dict[str, Any] | None, caminhos: dict[str, str],
-                          maquina: Any, controladores: dict[int, str],
-                          ) -> dict[str, list[dict[str, Any]]]:
-    """`{endereço: [{quando, porque, carimbo}]}` — o sino de cada adaptador, pela hora."""
-    if not historico:
-        return {}
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations import entrada_a_entrada
-
-    agora = time.time()
-    por: dict[str, list[dict[str, Any]]] = {}
-
-    def pousar(endereco: str, carimbo: float, porque: str) -> None:
-        if endereco and porque:
-            por.setdefault(endereco, []).append(
-                {"carimbo": carimbo, "quando": _hora(carimbo, agora), "porque": porque})
-
-    for queda, fato, de_pe in historico.get("quedas") or ():
-        cheio = max(de_pe.items(), key=lambda par: len(par[1]), default=("", set()))[0]
-        pousar(nome_do_jogador.mac(cheio), float(queda.carimbo), fato or "Os controles caíram")
-    for linha in historico.get("diario") or ():
-        o_que = str(linha.get("o_que") or "")
-        carimbo = float(linha.get("carimbo") or 0.0)
-        if o_que == "ponte subiu" and not linha.get("alem_do_limite"):
-            continue
-        if o_que in FRASE_DO_DIARIO:
-            pousar(nome_do_jogador.mac(linha.get("adaptador")), carimbo, FRASE_DO_DIARIO[o_que])
-        elif o_que == PAROU_DE_REINICIAR:
-            dita = entrada_a_entrada.com_o_nome_dela(
-                linha, maquina=maquina, controladores=controladores)
-            pousar(caminhos.get(str(linha.get("porta") or ""), ""), carimbo,
-                   str(dita.get("frase") or "O adaptador não se cura sozinho. Tire e ponha ele."))
-    for lista in por.values():
-        lista.sort(key=lambda q: q["carimbo"], reverse=True)
-    return por
 
 
 def _tipo_pela_classe(classe: int | None) -> str:
@@ -4736,7 +4617,6 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     apertadas = {n for par in getattr(mesa, "apertadas", ()) or () for n in par}
 
     lugares: list[dict[str, Any]] = []
-    caminho_para_endereco: dict[str, str] = {}
     evitados: list[dict[str, Any]] = []
     canais_medidos: dict[str, bool] = {}
     enlaces: dict[str, dict[str, Any]] = {}
@@ -4746,8 +4626,6 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         mz = por_hci.get(str(getattr(bz, "hci", ""))) if bz is not None else None
         lugar = str(getattr(bz, "lugar", "") or getattr(mz, "lugar", "") or "")
         caminho = str(getattr(mz, "caminho", "") or "")
-        if caminho:
-            caminho_para_endereco[caminho] = end
         documento = maquina if maquina is not None else MaquinaConfig()
         entrada = entrada_a_entrada.rotulo_da_entrada(
             lugar, maquina=documento, controladores=controladores) if lugar else None
@@ -4784,14 +4662,6 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             portas.append({"id": f"porta-{end}", "caminho": caminho, "usb": "2.0",
                            "ocupa": end, "grupo": _grupo_da_porta(caminho),
                            "rotulo": entrada or caminho})
-    sino = _quedas_por_adaptador(em_fundo.em_fundo("sino", _ler_o_historico, 60.0),
-                                 caminho_para_endereco, maquina, controladores)
-    lido_do_sino = em_fundo.lido("sino") or {}
-    desde = str(lido_do_sino.get("desde") or "")
-    for lug in lugares:
-        lug["quedas"] = sino.get(lug["id"], [])
-        if lug["quedas"] and desde:
-            lug["quedas_desde"] = desde[8:10] + "/" + desde[5:7]
 
     endereco_do_caminho = {str(getattr(a, "caminho", "")): nome_do_jogador.mac(a.endereco)
                            for a in adaptadores_bz}
@@ -5917,15 +5787,6 @@ def aceitar_sugestao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     return _so_abre()
 
 
-@gesto("08-conexoes.html", "adaptador-historico")
-def adaptador_historico(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O sino: o que aconteceu com este adaptador, pela hora (a página o abre)."""
-    lug = _lugar_na_tela(o)
-    if not lug.get("quedas"):
-        raise RuntimeError("nada aconteceu com este adaptador")
-    return _so_abre()
-
-
 @gesto("08-conexoes.html", "custo-mic", grava="mic_canal_set_detalhado")
 def custo_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O microfone de um controle: o MESMO ato do 🎙 da aba Controles (D-12)."""
@@ -5937,7 +5798,7 @@ def custo_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "entrada-comecar")
 def entrada_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Abrir a âncora começa o laço — no lugar do «Onde fica?», se veio de um."""
+    """Abrir a âncora começa o laço, no lugar que a âncora trouxe."""
     _laco().comecar(str(o.get("alvo") or "") or None)
     return {"armou": True}
 

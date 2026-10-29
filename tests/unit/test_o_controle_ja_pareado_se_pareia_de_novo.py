@@ -157,7 +157,6 @@ def test_a_cena_marca_o_par_velho_pelo_que_o_bluez_diz(
                  _aparelho(CONTROLES[2], outro, True))
     monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, aparelhos))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
-    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
     monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
     destino = _com_dois_pontos(ADAPTADORES[adaptador])

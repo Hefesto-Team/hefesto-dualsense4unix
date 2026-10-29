@@ -1210,8 +1210,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .sala-vazia{color:var(--fg);font-size:12.5px;padding:10px 4px}
   .radio .moldes{display:none}
   .radio .btn.apagado{cursor:not-allowed;border-color:var(--border-sutil);color:var(--fg)}
-  .radio .historico{display:flex;flex-direction:column;gap:6px}
-  .radio .queda-desde{font-size:11px;color:var(--fg);padding:2px 4px}
   .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
   .radio .soltar.apagado,.radio .lampada.apagado{cursor:not-allowed;opacity:.5}
   .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch 22px;min-height:0;height:30px;
@@ -1234,7 +1232,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
   .radio .lugar-topo{min-height:28px}
   .radio .lugar-nome,.radio .abre-lugar{height:22px;min-height:0;padding-top:0;padding-bottom:0}
-  .radio .lugar-topo .ensina{min-height:0;height:20px;padding-top:0;padding-bottom:0}
   .radio .abre-lugar:disabled{opacity:.35;cursor:default}
   #rd-secao > .quadro-topo{padding-top:6px;padding-bottom:6px}
   #rd-secao .quadro-corpo{padding-top:0;padding-bottom:8px}
@@ -1276,7 +1273,8 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-grupo{display:flex;align-items:center;gap:8px;font-size:12px;
                    color:var(--fg);margin-top:6px;padding-top:6px;
                    border-top:1px dashed var(--border-sutil)}
-  .radio .ar-grupo.outros{color:var(--fg)}
+  .radio .ar-do.outros:not(:first-child){margin-top:6px;padding-top:6px;
+                                         border-top:1px dashed var(--border-sutil)}
   .radio .ar-grupo:first-child{margin-top:0;padding-top:0;border-top:0}
   .radio .ar-grupo b{font-weight:600;color:var(--cor-do-grupo,var(--fg))}
   .radio .ar-grupo .glifo-do-grupo{color:var(--cor-do-grupo,var(--texto-suave));font-size:14px}
@@ -1317,10 +1315,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .ar-faixa.fora{display:flex;align-items:center;font-size:11px;color:var(--fg);
                        background:linear-gradient(var(--vazio),var(--vazio)) center/100% 2px no-repeat}
   .radio .ar-faixa.fora span{background:var(--panel);padding:0 8px 0 0}
-  .radio .ar-no-titulo{display:none;align-items:center;gap:6px;margin-left:10px;font-size:11px;
-                       color:var(--fg)}
-  .radio .pistas[data-fora-no-titulo] .ar-no-titulo{display:inline-flex}
-  .radio .pistas[data-fora-no-titulo] .ar-linha[data-fora-da-faixa]{display:none}
   .radio .ar-estado{display:flex;align-items:center;justify-content:center;width:12px}
   .radio .ar-selo{display:inline-block;box-sizing:border-box;width:10px;height:10px;padding:0;
                   border-radius:50%;border:0;background:var(--orange);box-shadow:0 0 0 3px rgba(255,184,108,.2)}
@@ -1386,10 +1380,10 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
   .radio .ar,.radio .ar-do{gap:5px}
   .radio .ar-duas{row-gap:5px}
-  .radio .ar-grupo{margin-top:3px}
+  .radio .ar-grupo,.radio .ar-do.outros:not(:first-child){margin-top:3px}
   .radio .ar-rot,.radio .ar-rot button.rotulo{height:20px}
   .radio .sala{gap:5px;display:grid;column-gap:8px;
-               grid-template-columns:calc(10px + 24px) auto minmax(116px,max-content) 26px
+               grid-template-columns:calc(10px + 24px) auto minmax(116px,max-content)
                                      minmax(110px,1fr) auto}
   .radio .sala > *,.radio .lugar > *{grid-column:1/-1}
   .radio .sala > .lugar{display:grid;grid-template-columns:subgrid;column-gap:normal}
@@ -1398,9 +1392,8 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .lugar-topo > .abre-lugar{grid-column:1}
   .radio .lugar-topo > .lugar-nome{grid-column:2}
   .radio .lugar-topo > .onde{grid-column:3;min-width:0;white-space:nowrap}
-  .radio .lugar-topo > .sino{grid-column:4}
-  .radio .lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
-  .radio .lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;
+  .radio .lugar-topo > .barra-do-lugar{grid-column:4;min-width:0}
+  .radio .lugar-topo > .lugar-conta{grid-column:5;margin-left:0;display:grid;
                                     grid-template-columns:auto auto 48px;column-gap:8px;
                                     justify-content:end}
   .radio .lugar-topo > .lugar-conta > .sobra{justify-self:start}
@@ -1594,13 +1587,6 @@ def _cena_do_desenho() -> dict:
         for a in controles:
             voz = min(RADIO["HZ_AUDIO_COM_MIC"], parte * fracao_da_voz) if a["mic"] else 0.0
             a["hz_mov"], a["hz_voz"] = parte - voz, (voz if a["mic"] else None)
-    quedas = [q for q in _csv_do_desenho("quedas")]
-    for lug in lugares:
-        lug["quedas"] = [{"carimbo": 0.0, "quando": q["quando"],
-                          "porque": _pacote08.FRASE_DO_DIARIO["ponte subiu"]}
-                         for q in quedas if q["lugar"] == lug["id"]]
-        if lug["quedas"]:
-            lug["quedas_desde"] = "23/09"
     evitados = [{"lugar": x["a"], "ini": int(x["b"]), "fim": int(x["c"])}
                 for x in linhas if x["tabela"] == "evitado"]
     tipo_do_desenho = {"teclado": "teclado", "mouse": "mouse", "wifi": "wifi"}
@@ -2022,28 +2008,11 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var alvo = Math.floor(Math.min(precisa, teto));
       if(alvo > s.offsetHeight) s.style.minHeight = alvo + 'px';
     }
-    function oQueEstaForaDaFaixaCabe(){
-      var pistas = um('.radio .pistas'), miolo = pistas && pistas.closest('.miolo');
-      if(!miolo) return;
-      pistas.removeAttribute('data-fora-no-titulo');
-      var precisa = !!um('.ar-linha[data-fora-da-faixa]', pistas) && miolo.scrollHeight > miolo.clientHeight;
-      if(precisa) pistas.setAttribute('data-fora-no-titulo', '');
-    }
     window.addEventListener('resize', aSecaoCabeOPainel);
     window.addEventListener('resize', function(){
       oPainelDeixaOsMenus(document.getElementById('rd-painel'));
     });
-    window.addEventListener('resize', oQueEstaForaDaFaixaCabe);
-    document.addEventListener('change', function(ev){
-      if(ev.target && ev.target.name === 'cx8-secao') oQueEstaForaDaFaixaCabe();
-    });
-    var pistasDoAr = um('.radio .pistas');
-    if(pistasDoAr && window.MutationObserver){
-      new MutationObserver(oQueEstaForaDaFaixaCabe).observe(pistasDoAr, {childList: true});
-    }
     if(window.ResizeObserver){
-      var olhoDoMiolo = new ResizeObserver(function(){ oQueEstaForaDaFaixaCabe(); });
-      todos('.miolo > *').forEach(function(q){ olhoDoMiolo.observe(q); });
       var olhoDoPainel = new ResizeObserver(function(){
         oPainelDeixaOsMenus(document.getElementById('rd-painel')); aSecaoCabeOPainel();
       });
@@ -2095,7 +2064,6 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         fecharPainel(); return;
       }
       var b;
-      if((b = perto(ev, '.radio .sino'))){ abrirPainel('sino', b.dataset.alvo); return; }
       if((b = perto(ev, '.radio .soltar'))){
         if(b.classList.contains('apagado')) balancar(b); else abrirPainel('quem-vem', b.dataset.alvo);
         return;
@@ -2275,19 +2243,16 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       setTimeout(function(){ olho.disconnect(); }, 30000);
     }, true);
 
-    var alvoDaCerimonia = '', ultimaTela = '';
+    var ultimaTela = '';
     document.addEventListener('click', function(ev){
-      var a = perto(ev, '.radio a.ensina');
-      if(a) alvoDaCerimonia = a.dataset.alvo || '';
       if(!comPiloto() && perto(ev, '[data-gesto="entrada-face"],[data-gesto="entrada-pular"]'))
         location.hash = 'mapear-entrada-a-entrada-fim';
     }, true);
     window.addEventListener('hashchange', function(){
       if(location.hash === '#mapear-entrada-a-entrada' && !ultimaTela){
         var b = document.getElementById('rd-comecar');
-        if(b){ b.dataset.alvo = alvoDaCerimonia; b.click(); }
+        if(b){ b.dataset.alvo = ''; b.click(); }
       }
-      alvoDaCerimonia = '';
     });
     function seguirATela(){
       var el = um('[data-campo="entrada-tela"]');

@@ -173,7 +173,6 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, aparelhos))
     maquina = MaquinaConfig(adaptadores={A1.replace(":", ""): {"nome": "Sala"}})
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
-    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     return a08
 
 
@@ -591,38 +590,18 @@ def test_quem_passou_do_limite_e_quem_o_governador_marcou(mesa: Any) -> None:
     assert laranjas == [U1], f"o som laranja está em outra linha: {laranjas}"
 
 
-def test_o_sino_diz_so_o_que_a_tela_sabe_dizer_e_pela_hora(a08: Any) -> None:
-    """MORDIDA: pouse o `motivo` da linha do diário em vez da frase."""
-    agora = time.time()
-    diario = [
-        {"o_que": "adaptador cheio", "carimbo": agora - 300, "adaptador": A1,
-         "motivo": "EAGAIN na fila de saída do hci0"},
-        {"o_que": "fila parada", "carimbo": agora - 60, "adaptador": A1},
-        {"o_que": "ponte subiu", "carimbo": agora - 30, "adaptador": A1},
-        {"o_que": "ponte subiu", "carimbo": agora - 10, "adaptador": A1,
-         "alem_do_limite": True},
-        {"o_que": "reset do controlador hci0", "carimbo": agora - 5, "adaptador": A1},
-    ]
-    sino = a08._quedas_por_adaptador({"diario": diario}, {}, None, {})[I1]
-    assert [q["porque"] for q in sino] == [
-        a08.FRASE_DO_DIARIO["ponte subiu"], a08.FRASE_DO_DIARIO["fila parada"],
-        a08.FRASE_DO_DIARIO["adaptador cheio"]]
-    assert [q["carimbo"] for q in sino] == sorted((q["carimbo"] for q in sino), reverse=True)
-    for q in sino:
-        assert "EAGAIN" not in q["porque"] and "hci" not in q["porque"]
+def test_a_linha_do_adaptador_sem_face_nao_tem_onde_fica_nem_sino(mesa: Any) -> None:
+    """Pedido de 29/10/2026: o «Onde fica?» e o triângulo ao lado do adaptador saem da linha.
 
-
-def test_o_sino_diz_desde_quando_se_mede(mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «desde» vem do `medida_desde` do dono, no dia e mês dela."""
-    from hefesto_dualsense4unix.interface.pacotes import em_fundo
-    monkeypatch.setattr(mesa, "_ler_o_historico", lambda: {
-        "desde": "2026-09-21T08:00:00", "quedas": [],
-        "diario": [{"o_que": "fila parada", "carimbo": time.time(), "adaptador": A1}]})
-    em_fundo._FUNDO.clear()
+    MORDIDA: devolva o ramo `elif not lug.get("face")` do «Onde fica?» em `_marcas_de_onde`.
+    """
     cena = mesa.cena_do_radio(_ctx(_estado()))
-    lug = next(lg for lg in cena["lugares"] if lg["id"] == I1)
-    assert lug["quedas_desde"] == "21/09"
-    assert 'data-gesto="adaptador-historico"' in mesa.html_da_sala(cena)
+    assert any(lg.get("lugar") and not lg.get("face") and lg.get("sabido")
+               for lg in cena["lugares"]), "a cena perdeu o adaptador sem face que a régua mede"
+    sala = mesa.html_da_sala(cena)
+    for proibido in ("Onde fica", 'class="ensina"', 'class="sino"', "adaptador-historico"):
+        assert proibido not in sala, proibido
+    assert 'data-painel="sino"' not in mesa._moldes_de_painel(cena)
 
 
 def test_a_porta_sem_numero_se_chama_pelo_devpath() -> None:

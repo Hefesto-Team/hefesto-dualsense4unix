@@ -48,7 +48,6 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
         monkeypatch.setattr(a08_conexoes, nome, {})
     monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
-    monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
     maquina = MaquinaConfig(adaptadores={_id(ADAPTADORES[i]).lower(): {"nome": NOMES[i]}
                                          for i in range(3)})
     monkeypatch.setattr(a08_conexoes, "_ler_a_maquina", lambda: (maquina, {3: PCI}))

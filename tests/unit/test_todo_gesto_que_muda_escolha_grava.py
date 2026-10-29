@@ -146,8 +146,6 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "aparelho-menu"):
         "tela: abre o menu «⋮» da linha; quem muda o pareamento é o "
         "«Esquecer» de lá, confirmado na pergunta, que declara `grava=`",
-    ("08-conexoes.html", "adaptador-historico"):
-        "leitura: o que aconteceu com este adaptador, pela hora",
     ("08-conexoes.html", "alvo"):
         "sessão: para qual controle as ações de saída miram agora "
         "(`controller.target.set`)",

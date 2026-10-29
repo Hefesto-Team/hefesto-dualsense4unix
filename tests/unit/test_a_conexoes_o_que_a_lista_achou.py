@@ -342,7 +342,6 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(a08_conexoes, "_SALA_NA_TELA", {})
     monkeypatch.setattr(a08_conexoes, "_CHEGADAS", {})
     monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
-    monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
     return a08_conexoes
 
 

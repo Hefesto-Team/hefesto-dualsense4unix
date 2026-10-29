@@ -103,7 +103,9 @@ def test_cada_linha_do_ar_e_icone_faixa_e_ponto_e_so_o_que_fala_pelo_ar() -> Non
     wifi = [x for x in linhas if x.startswith("wifi")]
     assert len(wifi) == 1, "o Wi-Fi conectado tem linha também em 5 GHz"
     assert re.search(rf'data-id="{wifi[0]}".*?class="ar-faixa fora".*?<span>5 GHz', html, re.S)
-    assert a08.OUTROS_SEM_FIO in html and "Os outros rádios da casa" not in html
+    assert '<div class="ar-do outros">' in html, "os outros rádios perderam o bloco deles"
+    for titulo in ("Outros dispositivos sem fio", "Os outros rádios da casa", "ar-no-titulo"):
+        assert titulo not in html, f"o título dos outros rádios voltou: {titulo}"
     assert "dividem o tempo" not in html and "nenhum aparelho no ar" not in html
     assert 'data-grupo="L2"' not in html, "o adaptador sem ninguém no ar ganhou linha"
     assert html.count('class="ar-duas"') == 1, "cinco aparelhos numa entrada vão em duas colunas"

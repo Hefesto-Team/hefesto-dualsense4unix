@@ -233,7 +233,6 @@ def test_a_cena_inteira_anda_o_gesto_pelo_censo_e_guarda_a_linha_do_receptor_tir
     monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: na_mesa["mesa"])
     monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((), ()))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
-    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
     monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
 
@@ -279,7 +278,6 @@ def test_o_censo_da_porta_se_rele_so_enquanto_o_gesto_anda(
     monkeypatch.setattr(mesa_de_radio, "ler_a_mesa", ler_a_mesa)
     monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((), ()))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
-    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
     monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
 
@@ -372,7 +370,6 @@ def test_a_faixa_medida_vai_ao_maquina_json_e_volta_pintada_na_linha_do_receptor
     monkeypatch.setattr(a08, "_mesa_do_radio", lambda recarregar=False: Mesa(radios=(receptor,)))
     monkeypatch.setattr(a08, "_e_um_receptor", lambda no: True)
     monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((), ()))
-    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
     monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
 

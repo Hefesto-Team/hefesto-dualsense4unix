@@ -114,15 +114,6 @@
   .lugar-nome:focus { outline: none; border-color: var(--purple); background: var(--panel); }
   .lugar-nome::placeholder { color: var(--orange); font-weight: 400; font-style: italic; }
 
-  .sino {
-    width: 26px; height: 26px; padding: 0; flex: none;
-    display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 50%; border: 1px solid rgba(255,184,108,.5);
-    background: transparent; color: var(--orange); cursor: pointer; font-size: 14px;
-  }
-  .sino:hover { background: rgba(255,184,108,.14); }
-  .sino:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
-
   .onde { display: flex; align-items: center; gap: 6px;
           font-family: var(--font-dado); font-size: 11px; color: var(--texto-mudo); }
   .onde .marca {
@@ -132,17 +123,6 @@
   .onde .marca.hub   { color: var(--orange); }
   .onde .marca.junto { color: var(--orange); }
   .onde .marca.usb3  { color: var(--yellow); }
-
-  .ensina {
-    display: inline-flex; align-items: center; gap: 4px; min-height: 26px;
-    padding: 1px 9px; border-radius: 20px; font-size: 11.5px;
-    color: var(--purple); border: 1px solid rgba(189,147,249,.65);
-    background: transparent; cursor: pointer; font-family: var(--font-corpo);
-    text-decoration: none;
-  }
-  .ensina:hover { background: var(--sel-bg); }
-  .ensina:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
-  .ensina .i { font-size: 13px; }
 
   .lugar-conta { display: flex; align-items: center; gap: 8px; margin-left: auto;
                  font-family: var(--font-dado); font-size: 11.5px; color: var(--texto-mudo); }
@@ -515,12 +495,6 @@
   .achado .forca { margin-left: auto; font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo); }
   .achado .btn { padding: 4px 10px; font-size: 11.5px; min-height: 26px; }
 
-  .queda {
-    display: flex; align-items: center; gap: 8px; padding: 6px 9px;
-    border-radius: 9px; background: var(--app-bg); border: 1px solid var(--linha);
-    font-size: 12px;
-  }
-  .queda .quando { font-family: var(--font-dado); font-size: 10.5px; color: var(--texto-mudo); margin-left: auto; }
 
   .painel .escolha { display: flex; flex-direction: column; gap: 7px; }
 
@@ -567,16 +541,15 @@
   @font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 500;font-display:swap;src:url('../assets/fontes/JetBrainsMono-wght.ttf') format('truetype')}
 </style>
 <style id="rodada-3-g3">
-.sala{display:grid;column-gap:8px;grid-template-columns:calc(10px + 24px) auto minmax(116px,max-content) 26px minmax(110px,1fr) auto}
+.sala{display:grid;column-gap:8px;grid-template-columns:calc(10px + 24px) auto minmax(116px,max-content) minmax(110px,1fr) auto}
 .sala > *,.lugar > *{grid-column:1/-1}
 .sala > .lugar{display:grid;grid-template-columns:subgrid;column-gap:normal}
 .lugar-topo{display:grid;grid-template-columns:subgrid;column-gap:normal;align-items:center}
 .lugar-topo > .abre-lugar{grid-column:1}
 .lugar-topo > .lugar-nome{grid-column:2}
 .lugar-topo > .onde{grid-column:3;min-width:0;white-space:nowrap}
-.lugar-topo > .sino{grid-column:4}
-.lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
-.lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;grid-template-columns:auto auto 48px;column-gap:8px;justify-content:end}
+.lugar-topo > .barra-do-lugar{grid-column:4;min-width:0}
+.lugar-topo > .lugar-conta{grid-column:5;margin-left:0;display:grid;grid-template-columns:auto auto 48px;column-gap:8px;justify-content:end}
 .lugar-topo > .lugar-conta > .sobra{justify-self:start}
 .aparelhos > .linha{padding-right:6px}
 </style>
@@ -782,13 +755,6 @@ D2,Xiaomi Scale S400,outro,-78,nao
 D3,Xiaomi Band 9,outro,-81,nao
 </script>
 
-<script type="text/csv" id="quedas">
-lugar,quando,porque
-L3,18:47,4 controles com som (limite 2)
-L3,17:12,3 controles com som (limite 2)
-L3,16:47,4 controles com som (limite 2)
-</script>
-
 <script>
 function lerCsv(id) {
   const cru = document.getElementById(id).textContent.trim().split('\n');
@@ -847,7 +813,6 @@ const PORTAS = lerCsv('dados').filter(l => l.tabela === 'porta').map(l => ({
   id: l.id, caminho: l.a, usb: l.b, ocupa: l.c, grupo: l.d,
 }));
 
-const QUEDAS = lerCsv('quedas');
 
 const CUSTO_DE_UM_CONTROLE = 520.8 + 32.6 + 375;
 const FATIAS_DO_PACOTE_A2DP = 6;
@@ -1132,30 +1097,7 @@ function pintar() {
       e.title = 'Segure PS + Create no ' + (ap.cor_nome || ap.nome) + ' até a luz piscar.';
       onde.appendChild(e);
     }
-    if (!lug.face) {
-      const b = document.createElement('a');
-      b.className = 'ensina';
-      b.href = '#mapear-entrada-a-entrada';
-      b.appendChild(icone('i-uma-a-uma'));
-      b.append('Onde fica?');
-      b.title = 'Mapear entrada a entrada';
-      b.dataset.alvo = lug.id;
-      b.addEventListener('click', () => ensinarOnde(lug));
-      onde.appendChild(b);
-    }
     topo.appendChild(onde);
-
-    if (lug.quedas > 0) {
-      const sino = document.createElement('button');
-      sino.className = 'sino';
-      sino.appendChild(icone('i-aviso'));
-      sino.title = lug.quedas + ' quedas — ver quando';
-      sino.setAttribute('aria-label', sino.title);
-      sino.dataset.gesto = 'adaptador-historico';
-      sino.dataset.alvo = lug.id;
-      sino.addEventListener('click', () => abrirHistorico(lug));
-      topo.appendChild(sino);
-    }
 
     const conta = document.createElement('span');
     conta.className = 'lugar-conta';
@@ -2011,23 +1953,6 @@ document.getElementById('b-conectar').addEventListener('click', () => {
   corpo.appendChild(lista);
   abrirPainel('Procurando', corpo, true);
 });
-
-function abrirHistorico(lug) {
-  const corpo = document.createElement('div');
-  corpo.style.cssText = 'display:flex;flex-direction:column;gap:6px';
-  for (const q of QUEDAS.filter(q => q.lugar === lug.id)) {
-    const d = document.createElement('div');
-    d.className = 'queda';
-    d.appendChild(icone('i-aviso'));
-    const t = document.createElement('span'); t.textContent = maiuscula(q.porque);
-    d.appendChild(t);
-    const w = document.createElement('span');
-    w.className = 'quando'; w.textContent = q.quando;
-    d.appendChild(w);
-    corpo.appendChild(d);
-  }
-  abrirPainel(lug.nome || 'Entrada ' + lug.entrada, corpo);
-}
 
 const FACES = ['Frente do gabinete', 'Traseira', 'Num hub ou extensão', 'Na escrivaninha'];
 function ensinarOnde(lug) {

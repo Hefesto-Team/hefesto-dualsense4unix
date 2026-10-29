@@ -212,7 +212,6 @@ def test_a_cena_inteira_do_bluez_ate_a_linha(monkeypatch: pytest.MonkeyPatch) ->
         for k, e in enumerate(ACESSORIOS))
     monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: (adaptadores, aparelhos))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
-    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
     monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
     estado = {"controllers": [], "radio_ar": {ADAPTADOR: {

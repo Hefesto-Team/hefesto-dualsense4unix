@@ -180,7 +180,6 @@ def test_a_cena_inteira_diz_de_que_dongle_e_cada_adaptador(
     adaptador = AdaptadorDoBluez("/org/bluez/hci0", "hci0", ADAPTADOR, varrendo=False)
     monkeypatch.setattr(em_fundo, "ler_o_bluez", lambda: ((adaptador,), ()))
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
-    monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     monkeypatch.setattr(a08, "_ler_o_wifi", lambda: None)
     monkeypatch.setattr(a08, "_ler_os_zumbis", lambda: {})
     cena = a08.cena_do_radio(pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[]))

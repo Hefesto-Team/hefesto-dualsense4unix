@@ -1,4 +1,4 @@
-"""A linha do adaptador cabe na coluna do «onde», e o sino não cobre nada.
+"""A linha do adaptador cabe na coluna do «onde», sem o «Onde fica?» e sem o triângulo ao lado.
 
 Sprint: A-LINHA-DO-ADAPTADOR-NAO-CABE-NA-COLUNA-DO-ONDE-01.
 
@@ -7,17 +7,19 @@ linha do adaptador tinha 116 px fixos, e a marca da USB 3.0, a espera «Segure P
 «Onde fica?» passavam dela; a espera ficava sob o sino, o «Onde fica?» quebrava em duas linhas e o
 «Dentro da máquina» em três. A cura é a grade UMA, a da sala, herdada por cada caixa (`subgrid`): a
 coluna do «onde» cresce até o que ela leva, para todos os adaptadores, e as barras continuam na
-mesma reta.
+mesma reta. Em 29/10/2026, a pedido, o «Onde fica?» e o sino (o triângulo ao lado do adaptador)
+saíram da linha, e a régua reprova se um dos dois voltar.
 
 A régua pinta a sala no WebKit (o pintor do piloto, `radio-sala`) com a cena do desenho mudada para
 a mesa mista e confere, em cada linha: nenhum filho do «onde» passa da borda dele, nenhum filho da
-linha cruza outro (o sino incluído), o «Onde fica?» e a espera ocupam uma linha, as barras começam
-e acabam na mesma reta, e nada rola de lado.
+linha cruza outro, a espera ocupa uma linha, nenhum «Onde fica?» nem sino aparece, as barras
+começam e acabam na mesma reta, e nada rola de lado.
 
 TUDO É DE MENTIRA: a página num WebKit fora da tela; nada chega a daemon.
 
 MORDIDA (24/10/2026): devolver a coluna de 116 px (`24px auto 116px 26px …` na linha, sem a grade
-da sala) reprova a régua no transbordo e no sino.
+da sala) reprova a régua no transbordo. MORDIDA (29/10/2026): o ramo do «Onde fica?» de volta em
+`_marcas_de_onde` reprova as cenas com o lugar sem face.
 """
 
 from __future__ import annotations
@@ -43,7 +45,6 @@ DESENHO = RAIZ / "mockup" / "08-conexoes.html"
 PUBLICADA = onde.pagina("08-conexoes.html", publicado=True)
 MARCA_DA_CURA = "minmax(116px,max-content)"
 TAMANHOS = ((1212, 809), (1280, 860), (1920, 1000))
-QUEDA = {"carimbo": 0.0, "quando": "18:47", "porque": "Som além do limite"}
 
 
 def _cena_base() -> dict[str, Any]:
@@ -63,10 +64,10 @@ def _cena_base() -> dict[str, Any]:
 
 
 def _com_a_foto_dela(cena: dict[str, Any], lid: str, quem: tuple[str, ...]) -> dict[str, Any]:
-    """O lugar da foto: sem face (o «Onde fica?»), na USB 3.0, perto de um vizinho, com o sino e
-    com quem está em `quem` esperando PS + Create."""
+    """O lugar da foto: sem face, na USB 3.0, perto de um vizinho, e com quem está em `quem`
+    esperando PS + Create."""
     lug = next(lg for lg in cena["lugares"] if lg["id"] == lid)
-    lug.update(face="", hub=False, usb3=True, junto="encostado em outro rádio", quedas=[QUEDA])
+    lug.update(face="", hub=False, usb3=True, junto="encostado em outro rádio")
     for ap in cena["aparelhos"]:
         if ap["id"] in quem:
             ap["lugar"] = lid
@@ -111,7 +112,7 @@ const vis = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility
 const R = e => e.getBoundingClientRect();
 const cruza = (a, b) => a.left < b.right - 0.5 && a.right > b.left + 0.5
                      && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
-const defeitos = [], visto = {esperas: 0, ensinas: 0, sinos: 0, linhas: 0};
+const defeitos = [], visto = {esperas: 0, proibidos: 0, linhas: 0};
 const topos = [...document.querySelectorAll('.radio .sala .lugar > .lugar-topo')].filter(vis);
 for (const [i, topo] of topos.entries()) {
   visto.linhas++;
@@ -125,11 +126,10 @@ for (const [i, topo] of topos.entries()) {
       defeitos.push(`linha ${i}: «${(f.textContent || f.className).trim()}» passa da coluna ` +
                     `do onde (${Math.round(rf.left)} a ${Math.round(rf.right)} em ` +
                     `${Math.round(ro.left)} a ${Math.round(ro.right)})`);
-    if (f.matches('.espera,.ensina') && f.getClientRects().length !== 1)
+    if (f.matches('.espera') && f.getClientRects().length !== 1)
       defeitos.push(`linha ${i}: «${f.textContent.trim()}» quebra em ` +
                     `${f.getClientRects().length} linhas`);
     if (f.matches('.espera')) visto.esperas++;
-    if (f.matches('.ensina')) visto.ensinas++;
   }
   const textos = [...ond.children].filter(e => vis(e) && e.tagName === 'SPAN' && !e.className);
   for (const t of textos)
@@ -137,7 +137,8 @@ for (const [i, topo] of topos.entries()) {
       defeitos.push(`linha ${i}: «${t.textContent.trim()}» quebra a linha ` +
                     `(${Math.round(R(t).height)} px)`);
   const pecas = [...topo.children].filter(vis);
-  visto.sinos += pecas.filter(e => e.matches('.sino')).length;
+  visto.proibidos += topo.querySelectorAll('.sino,.ensina,[data-gesto="adaptador-historico"]')
+    .length + (topo.textContent.includes('Onde fica') ? 1 : 0);
   const miudas = [ond, ...[...ond.children].filter(vis)];
   for (const a of pecas.concat(miudas.slice(1)))
     for (const b of pecas)
@@ -174,8 +175,8 @@ def _conferir(pagina: Path, tamanho: tuple[int, int], nome: str) -> None:
     visto = medida["visto"]
     esperando = sum(1 for a in cena["aparelhos"] if a.get("esperando"))
     assert visto["linhas"] == len(cena["lugares"]), visto
-    assert visto["esperas"] == esperando and visto["sinos"] >= 1, visto
-    assert visto["ensinas"] >= (0 if nome == "dentro-da-maquina" else 1), visto
+    assert visto["esperas"] == esperando, visto
+    assert visto["proibidos"] == 0, f"o «Onde fica?» ou o sino voltou à linha: {visto}"
     assert medida["defeitos"] == [], f"{nome} a {tamanho[0]} px: {medida['defeitos']}"
 
 
@@ -193,15 +194,6 @@ def test_a_linha_do_adaptador_cabe_na_pagina_publicada(tamanho: tuple[int, int])
     if MARCA_DA_CURA not in PUBLICADA.read_text(encoding="utf-8"):
         pytest.skip("o publicado da 08 ainda é o de antes; o `--publicar` é da costura")
     _conferir(PUBLICADA, tamanho, "a-foto-dela")
-
-
-@skip_sem_gi_real
-def test_o_onde_fica_abre_o_mapear_entrada_a_entrada() -> None:
-    lidas = _no_webkit(DESENHO, TAMANHOS[0], [
-        _clicar('label[for="cx8-3"]'), _pintar_a_sala(_cena_da_foto()),
-        _clicar(".radio .sala .lugar-topo .ensina"), "location.hash"])
-    assert lidas[2] == "clicou", lidas
-    assert lidas[-1] == "#mapear-entrada-a-entrada", lidas
 
 
 def _grade_da_sala(texto: str, prefixo: str) -> str:
