@@ -53,8 +53,20 @@ def _paginas() -> list[str]:
 
 @pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento)
 def test_a_fita_de_leitura_nasce_e_continua_esmaecida(hv, pagina):
-    """O que o piloto REPINTA tem de concordar com o que o arquivo publica."""
+    """O que o piloto REPINTA tem de concordar com o que o arquivo publica.
+
+    A Jogar não tem a fita desde as abas dos controles (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR):
+    o tique manda a fita vazia às `monta.ABAS_SEM_A_FITA`, e o arquivo dela não publica a `.fita`.
+    """
     monta = _monta()
+    publicado = (RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / pagina)
+    arquivo = publicado.read_text(encoding="utf-8")
+    do_arquivo = re.search(r'<div class="(fita(?: inerte)?)"', arquivo)
+    if pagina.removesuffix(".html") in monta.ABAS_SEM_A_FITA:
+        assert do_arquivo is None, (
+            f"{pagina}: o arquivo publica a `.fita` e o tique a manda vazia — "
+            "a fita sumiria no primeiro tique")
+        return
     vivo = hv._fita(MESA, pagina)
     assert vivo, f"{pagina}: `_fita` devolveu vazio — a fita ficaria no desenho"
 
@@ -64,9 +76,6 @@ def test_a_fita_de_leitura_nasce_e_continua_esmaecida(hv, pagina):
         f"{pagina}: a fita repintada {'PERDEU' if escolhe else 'GANHOU'} o "
         f"`inerte` — `monta.ABAS_QUE_ESCOLHEM` diz escolhe={escolhe}")
 
-    publicado = (RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / pagina)
-    arquivo = publicado.read_text(encoding="utf-8")
-    do_arquivo = re.search(r'<div class="(fita(?: inerte)?)"', arquivo)
     assert do_arquivo, f"{pagina}: não achei a `.fita` no HTML publicado"
     assert (do_arquivo.group(1) == "fita inerte") is tem_inerte, (
         f"{pagina}: o arquivo publica `{do_arquivo.group(1)}` e o produto "

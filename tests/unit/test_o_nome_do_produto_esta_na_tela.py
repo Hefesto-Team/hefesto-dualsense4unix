@@ -35,15 +35,23 @@ def test_sao_as_dez() -> None:
 
 @pytest.mark.parametrize("arquivo", ABAS)
 def test_o_nome_esta_ao_lado_da_logo_com_o_4_verde(arquivo: str) -> None:
-    """Uma vez por aba, depois da logo e antes da fita, com o `4` à parte."""
+    """Uma vez por aba, depois da logo e antes da fita, com o `4` à parte.
+
+    Na Jogar, que não tem a fita (`monta.ABAS_SEM_A_FITA`), o nome vem antes do perfil ativo.
+    """
     linha = _linha_da_fita(_pagina(arquivo))
     assert linha.count('class="marca-nome"') == 1, f"{arquivo}: o nome não está no banner"
     assert '<span class="m-hef">Hefesto</span>' in linha, arquivo
     assert 'DualSense<span class="m-4">4</span>Unix' in linha, (
         f"{arquivo}: o 4 de DualSense4Unix perdeu o elemento próprio — o verde sumiu")
     fita = re.search(r'<div class="fita[ "]', linha)
-    assert fita, f"{arquivo}: a fita sumiu da linha"
-    assert linha.index('class="logo"') < linha.index('class="marca-nome"') < fita.start(), (
+    if arquivo.removesuffix(".html") in monta.ABAS_SEM_A_FITA:
+        assert fita is None, f"{arquivo}: a fita voltou à aba que não a tem"
+        vizinho = linha.index('class="perfil-ativo"')
+    else:
+        assert fita, f"{arquivo}: a fita sumiu da linha"
+        vizinho = fita.start()
+    assert linha.index('class="logo"') < linha.index('class="marca-nome"') < vizinho, (
         f"{arquivo}: o nome saiu do lugar do A2 (entre a logo e a fita)")
 
 
