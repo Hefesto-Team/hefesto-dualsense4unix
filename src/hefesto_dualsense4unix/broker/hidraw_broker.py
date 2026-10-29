@@ -3282,6 +3282,21 @@ def entrega_herdada(path: str | None = None) -> bool:
         return False
 
 
+def o_reinicio_herda(*, no_nasce_fechado: bool) -> bool:
+    """O broker que sobe pelo reinício pedido no modo histórico herda os nós fechados."""
+    return not no_nasce_fechado and reinicio_sem_abrir_pedido()
+
+
+def herdar_no_reinicio(state: BrokerState, broker: Broker, *, herdar: bool) -> list[str]:
+    """Guarda os herdados e conta a graça da devolução a partir de agora."""
+    if not herdar:
+        return []
+    herdados = state.herdar_os_escondidos()
+    if herdados:
+        broker._sem_cliente_desde = broker._relogio()
+    return herdados
+
+
 def _o_repouso_do_inicio(
     allowed_uid: int | None, *, no_nasce_fechado: bool, herdar: bool = False
 ) -> bool:
@@ -3394,7 +3409,7 @@ def main(argv: list[str] | None = None) -> int:
         _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
         return 1
 
-    herdar = not no_nasce_fechado and reinicio_sem_abrir_pedido()
+    herdar = o_reinicio_herda(no_nasce_fechado=no_nasce_fechado)
     herdada = _o_repouso_do_inicio(allowed_uid, no_nasce_fechado=no_nasce_fechado, herdar=herdar)
 
     listen = _sd_listen_socket()
@@ -3412,8 +3427,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     state.entregue = herdada
     broker = Broker(state, listen, graca_da_entrega_s=_graca_da_entrega_do_ambiente())
-    if herdar and state.herdar_os_escondidos():
-        broker._sem_cliente_desde = broker._relogio()
+    herdar_no_reinicio(state, broker, herdar=herdar)
 
     def _stop(_signum: int, _frame: object) -> None:
         broker.stopping = True

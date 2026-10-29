@@ -7,7 +7,8 @@ começo abriam o nó de verdade.
 
 A MORDIDA: devolva o `no_nasce_fechado and` à condição do cinto em `hidraw_broker.main`
 (ou do `restore_everything`), e o modo histórico abre o nó no reinício pedido; devolva o
-`"hidden" if canon in self.hidden else "exposed"` ao `_cmd_open`, e o rótulo volta a mentir.
+`"hidden" if canon in self.hidden else "exposed"` ao `_cmd_open`, e o rótulo volta a mentir;
+faça o `herdar_no_reinicio`, que o `main` chama, não herdar, e o histórico expõe o físico.
 """
 from __future__ import annotations
 
@@ -110,12 +111,15 @@ def test_o_reinicio_pedido_nao_abre_o_no_ate_o_hide_do_daemon_novo(
     disco.aberturas.clear()
 
     _cinto(monkeypatch, disco, no_nasce_fechado=fechado_de_nascenca)
-    herdar = not fechado_de_nascenca
+    herdar = hb.o_reinicio_herda(no_nasce_fechado=fechado_de_nascenca)
+    assert herdar is (not fechado_de_nascenca)
     repouso = hb._o_repouso_do_inicio(UID, no_nasce_fechado=fechado_de_nascenca, herdar=herdar)
     assert repouso is False
     novo = _estado(tmp_path, disco, no_nasce_fechado=fechado_de_nascenca, pedido=True)
-    if herdar:
-        assert novo.herdar_os_escondidos() == [NO]
+    broker = hb.Broker(novo, None, log=lambda *_a, **_k: None)
+    herdados = hb.herdar_no_reinicio(novo, broker, herdar=herdar)
+    assert herdados == ([] if fechado_de_nascenca else [NO])
+    assert (broker._sem_cliente_desde is not None) is bool(herdados)
 
     aberto = _pede(novo, 7, {"cmd": "open", "node": NO})
     assert aberto["ok"] is True and aberto["state"] == "fechado"
