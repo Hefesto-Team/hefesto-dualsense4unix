@@ -89,7 +89,7 @@
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
     border-color:var(--border-sutil);background:transparent;color:var(--fg);
     font-weight:400;--borda-do-chip:1px}
-  .visto-fixo,.visto-legenda,.trava-nativo{display:none}
+  .visto-fixo,.visto-legenda{display:none}
   body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
     gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
     background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
@@ -99,9 +99,6 @@
   body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
-  body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
-    margin-right:10px;color:var(--fg);font-size:12px;cursor:default}
-  body.nativo .trava-nativo .cad{color:var(--fg)}
   .chip{
     --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
@@ -909,7 +906,7 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
       <label for="c-todos" class="chip" data-gesto="escolher-na-fita" data-pref="todos" data-controle="" title="Abre os quatro de uma vez.">Todos</label>
       <label for="c-p1" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p1" data-controle="" title="Clique para abrir este controle. A borda tem a cor dele.">P1 <span class="pt">•</span> <span data-campo="fita-peca">Cosmic Red</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">USB</span></span></label>
       <label for="c-p2" class="chip plastico" data-campo="fita-chip" data-gesto="escolher-na-fita" data-pref="p2" data-controle="" title="Clique para abrir este controle. A borda tem a cor dele.">P2 <span class="pt">•</span> <span data-campo="fita-peca">Starlight Blue</span> <span class="pt">•</span> <span data-campo="fita-via"><span class="via">BT</span></span></label>
-      <span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: aqui só se vê quem está conectado."></span>
+      <span class="so-no-nativo"></span>
     </div>
     <div class="perfil-ativo" data-dica="Perfil ativo: o que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
       <span class="pa-rot">Perfil ativo</span>
@@ -939,7 +936,6 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
     <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Clique num controle para abrir">Dispositivos conectados</span>
-        <span class="trava-nativo" title="Com o Hefesto desligado, o jogo manda nestes ajustes. O que está aqui volta a valer quando ligar, na aba Jogar."><svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M3.6 5.2V3.9a2.4 2.4 0 0 1 4.8 0v1.3" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2.3" y="5.2" width="7.4" height="5.4" rx="1.1" fill="currentColor"/></svg>O jogo manda</span>
         <span class="sensores">
           <a class="btn nativo-nao" href="calibrar-sensores.html" data-dica="Todos parados numa superfície plana"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
