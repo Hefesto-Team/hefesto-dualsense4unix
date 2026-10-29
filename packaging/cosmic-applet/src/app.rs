@@ -677,9 +677,9 @@ impl HefestoApplet {
         // Nativa (Sony)" na janela; o painel acompanha no mesmo passo (a nota
         // mora em `app/actions/home_actions.py::_MODE_ITEMS`).
         let entries = [
-            (SystemMode::Desktop, "Controlar o PC"),
-            (SystemMode::Gamepad, "Jogar pelo Hefesto"),
-            (SystemMode::Native, "Conexão Nativa (Sony)"),
+            (SystemMode::Desktop, "Navegação"),
+            (SystemMode::Gamepad, "Ligado"),
+            (SystemMode::Native, "Desligado"),
         ];
         for (entry, label) in entries {
             let is_active = mode == entry;
@@ -842,8 +842,7 @@ fn system_mode(state: &DaemonState) -> SystemMode {
 
 /// HARM-03: LIGAR o "Modo jogo" só faz sentido com um jogo no comando.
 ///
-/// Espelha `_sync_gamemode_button` (`app/actions/emulation_actions.py`), a
-/// mesma regra: em "Controlando o PC" o controle SÓ faz mouse/teclado, e o modo
+/// A regra: em "Controlando o PC" o controle SÓ faz mouse/teclado, e o modo
 /// jogo é exatamente o que os suspende — ligá-lo lá deixa o controle sem função
 /// nenhuma. Modo desconhecido (`None`, daemon offline) também não oferece: sem
 /// estado não dá para saber o que o clique faria.

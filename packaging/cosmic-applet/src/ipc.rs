@@ -446,7 +446,7 @@ pub async fn set_gamepad_emulation(enabled: bool, flavor: Option<&str>) -> Resul
 /// Religa o mouse conforme a preferência que o daemon persistiu (HARM-06).
 ///
 /// É o terceiro passo do `plan_mode_transition("desktop")` da GUI. Sem ele,
-/// "Controlar o PC" pelo applet só DESLIGA gamepad/nativo e o controle fica sem
+/// "Navegação" pelo applet só DESLIGA gamepad/nativo e o controle fica sem
 /// função nenhuma até a pessoa achar a aba Mouse — o defeito que o HARM-06 curou
 /// na GUI e que o applet reproduzia por ter o plano de modo duplicado aqui.
 pub async fn restore_mouse() -> Result<bool, IpcError> {
