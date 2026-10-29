@@ -4906,6 +4906,24 @@ async def _corpo_do_sinal_de_jogo(daemon: Any) -> None:
         await daemon._sync_game_signal()
     except Exception as exc:
         logger.warning("game_signal_tique_falhou", err=str(exc))
+    await _a_troca_que_o_jogo_adiou()
+
+
+async def _a_troca_que_o_jogo_adiou() -> None:
+    """O install com jogo em cena adiou a troca; com o jogo fechado, ela sai fora do serviço."""
+    from hefesto_dualsense4unix.app.actions import troca_no_fim_do_jogo as troca
+    from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+    try:
+        if not troca.troca_pendente():
+            return
+        if await asyncio.to_thread(uhid_gamepad.JOGO_ABERTO):
+            return
+        itens = troca.colher_a_troca()
+        if itens:
+            await asyncio.to_thread(troca.disparar, itens)
+    except Exception as exc:
+        logger.warning("troca_no_fim_do_jogo_falhou", err=str(exc))
 
 
 def _o_movimento_vai_ao_stick(daemon: Any, uniq: str | None) -> bool:

@@ -157,10 +157,15 @@ echo "[3/3] carregando uinput + uhid + reload udev + trigger..."
 sudo modprobe uinput 2>/dev/null || echo "  aviso: modprobe uinput falhou (kernel sem suporte CONFIG_INPUT_UINPUT?)"
 sudo modprobe uhid 2>/dev/null || echo "  aviso: modprobe uhid falhou (kernel sem CONFIG_UHID?)"
 sudo udevadm control --reload-rules
-sudo udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
-sudo udevadm trigger --subsystem-match=usb    --attr-match=idVendor=054c 2>/dev/null || true
-sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
-sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
+if python3 -I "$HERE/src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py" \
+        --ha-jogo --proc "${HEFESTO_RAIZ_PROC:-/proc}" >/dev/null 2>&1; then
+    echo "  com um jogo aberto, o controle não é reenumerado: as regras novas valem no próximo plugue"
+else
+    sudo udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
+    sudo udevadm trigger --subsystem-match=usb    --attr-match=idVendor=054c 2>/dev/null || true
+    sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
+    sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
+fi
 sudo udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true
 sudo udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true
 sudo udevadm trigger --action=change --subsystem-match=pci 2>/dev/null || true

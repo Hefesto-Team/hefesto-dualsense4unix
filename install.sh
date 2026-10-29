@@ -2855,7 +2855,18 @@ else
         printf '      para religar tudo como estava:  hefesto-chave on\n'
         enable_daemon=0
     fi
-    if [[ "${enable_daemon}" -eq 1 ]]; then
+    _TROCA_ADIADA=0
+    if [[ "${enable_daemon}" -eq 1 ]] && jogo_em_cena; then
+        systemctl --user enable "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 || true
+        _TROCA_ADIADA=1
+    elif systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}" && jogo_em_cena; then
+        _TROCA_ADIADA=1
+    fi
+    if [[ "${_TROCA_ADIADA}" -eq 1 ]]; then
+        adiar_para_o_fim_do_jogo daemon
+        adiar_para_o_fim_do_jogo recarga
+        printf '      com um jogo aberto, o daemon novo, a janela e a bandeja entram quando o jogo fechar\n'
+    elif [[ "${enable_daemon}" -eq 1 ]]; then
         if systemctl --user enable "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
            && systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1; then
             printf '      daemon habilitado e no ar\n'
@@ -2877,6 +2888,8 @@ if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "fechar e reabrir a janela e o ícone na bandeja que estiverem abertos, para valer o código novo; sem ícone de pé, subi-lo se a escolha está ligada"
 elif [[ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
     printf '      sem sessão gráfica: a bandeja sobe no próximo login\n'
+elif [[ "${_TROCA_ADIADA:-0}" -eq 1 ]]; then
+    :
 elif [[ -x "${VENV_DIR}/bin/python" ]]; then
     if _RECARGA="$("${VENV_DIR}/bin/python" -m hefesto_dualsense4unix.app.actions.recarga_do_install 2>/dev/null)"; then
         printf '%s\n' "${_RECARGA}" | sed 's/^/      /'

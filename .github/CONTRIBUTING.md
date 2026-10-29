@@ -74,7 +74,7 @@ O português do Brasil é a língua do Hefesto: é a língua em que o produto es
 O encanamento de tradução existe (`po/`, `scripts/i18n_extract.sh`, `scripts/i18n_compile.sh` e `src/hefesto_dualsense4unix/utils/i18n.py`), mas a maior parte do texto das abas ainda não passa por ele:
 
 <!-- CONTAGEM-GERADA — não edite à mão: scripts/check_o_projeto_e_traduzivel.py --publicar -->
-Dos **33** arquivos `.py` de `src/hefesto_dualsense4unix/app/actions/`
+Dos **34** arquivos `.py` de `src/hefesto_dualsense4unix/app/actions/`
 — os que escrevem o texto vivo das abas —, **21** escrevem prosa com
 acentuação portuguesa fora da função de tradução, e **2** importam essa
 função. Quem traduzisse os catálogos inteiros veria o esqueleto fixo mudar

@@ -25,6 +25,17 @@ anotar_reinicio_pendente() {
     return 0
 }
 
+jogo_em_cena() {
+    python3 -I "${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/quem_o_jogo_le.py" \
+        --ha-jogo --proc "${HEFESTO_RAIZ_PROC:-/proc}" >/dev/null 2>&1
+}
+
+adiar_para_o_fim_do_jogo() {
+    local _arq="${HEFESTO_TROCA_NO_FIM_DO_JOGO:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix/troca-no-fim-do-jogo}"
+    mkdir -p "$(dirname "${_arq}")" 2>/dev/null || return 0
+    grep -qsx "$1" "${_arq}" || printf '%s\n' "$1" >> "${_arq}"
+}
+
 modulo_pede_reinicio() {
     local nome="$1" raiz="${HEFESTO_SYS_MODULE:-/sys/module}" carregado arquivo novo
     carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
@@ -93,6 +104,9 @@ install_udev_host() {
     elif command -v sudo >/dev/null 2>&1; then
         if bash "${ROOT_DIR}/scripts/install_udev.sh" "${_udev_args[@]}" >/dev/null 2>&1; then
             printf '      udev rules aplicadas + recarregadas\n'
+            if jogo_em_cena; then
+                printf '      com um jogo aberto, o controle não é reenumerado: as regras novas valem no próximo plugue\n'
+            fi
         else
             warn "install_udev.sh falhou — rode manualmente: sudo bash scripts/install_udev.sh"
         fi
@@ -188,7 +202,10 @@ install_broker_host() {
             else
                 warn "enable do hefesto-hidraw-broker.service falhou — o físico no cabo nasce aberto no boot até o daemon conectar"
             fi
-            if sudo systemctl is-active --quiet hefesto-hidraw-broker.service; then
+            if sudo systemctl is-active --quiet hefesto-hidraw-broker.service && jogo_em_cena; then
+                adiar_para_o_fim_do_jogo broker
+                printf '      com um jogo aberto, o broker novo entra quando o jogo fechar\n'
+            elif sudo systemctl is-active --quiet hefesto-hidraw-broker.service; then
                 _marca=/run/hefesto-hidraw-broker/reinicio-sem-abrir
                 if sudo install -Dm0644 -o root -g root /dev/null "${_marca}" 2>/dev/null \
                    && sudo systemctl kill -s SIGKILL hefesto-hidraw-broker.service >/dev/null 2>&1 \

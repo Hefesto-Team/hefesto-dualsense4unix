@@ -221,6 +221,11 @@ class HidrawBrokerClient:
         response = self._request({"cmd": "ping"})
         return bool(response is not None and response.get("ok"))
 
+    def trocar_se_mudou(self) -> bool:
+        """Pede ao broker que dê lugar ao binário novo que o install deixou no disco."""
+        response = self._request({"cmd": "trocar_se_mudou"})
+        return bool(response is not None and response.get("ok"))
+
     def is_available(self) -> bool:
         """True se o socket existe E o broker responde (abre a lease)."""
         if not os.path.exists(self._path):

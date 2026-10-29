@@ -1661,6 +1661,8 @@ class BrokerState:
         quem_esta_na_frente: Callable[[], int | None] | None = None,
         relogio: Callable[[], float] = time.monotonic,
         servidos_path: str | None = None,
+        binario: str | None = None,
+        marca_do_reinicio: str = REINICIO_SEM_ABRIR_PATH,
     ) -> None:
         dev_root = _raiz(dev_root, "DEV_ROOT")
         sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
@@ -1711,6 +1713,10 @@ class BrokerState:
         self._serial_do_gadget: dict[str, str] = {}
         self.entregue = False
         self.herdados: set[str] = set()
+        self._binario = binario
+        self._sha_do_binario = _sha_do_arquivo(binario) if binario else None
+        self._marca_do_reinicio = marca_do_reinicio
+        self.trocar = False
         self._servidos_path = servidos_path
         self._pid_da_conn: dict[int, int] = {}
         self._servidos: dict[int, int] = self._ler_os_servidos()
@@ -2028,6 +2034,8 @@ class BrokerState:
             return self._cmd_pad_usb_montar(conn_id, request)
         if cmd == "pad_usb_desmontar":
             return (self._cmd_pad_usb_desmontar(conn_id, request.get("gadget")), None)
+        if cmd == "trocar_se_mudou":
+            return (self._cmd_trocar_se_mudou(), None)
         return (
             {
                 "ok": False,
@@ -2272,6 +2280,30 @@ class BrokerState:
         self._anotar_o_servido(conn_id)
         self._log("node_fd_servido", node=canon, conn=conn_id, state=state)
         return ({"ok": True, "cmd": "open", "node": canon, "state": state}, fd)
+
+    def _cmd_trocar_se_mudou(self) -> dict[str, object]:
+        """A troca que o install adiou pelo jogo aberto: sai se o binário do disco é outro.
+
+        O broker que sai deixa a marca do reinício sem abrir, e o ``.socket`` sobe o
+        binário novo na próxima conexão; o mesmo binário não troca nada.
+        """
+        resposta: dict[str, object] = {"ok": True, "cmd": "trocar_se_mudou", "troca": False}
+        if self._binario is None or self._sha_do_binario is None:
+            return resposta
+        agora = _sha_do_arquivo(self._binario)
+        if agora is None or agora == self._sha_do_binario:
+            return resposta
+        try:
+            os.makedirs(os.path.dirname(self._marca_do_reinicio), exist_ok=True)
+            with open(self._marca_do_reinicio, "w", encoding="ascii"):
+                pass
+            os.chmod(self._marca_do_reinicio, 0o644)
+        except OSError as erro:
+            self._log("troca_sem_marca", erro=str(erro))
+            return {"ok": False, "cmd": "trocar_se_mudou", "error": "troca_sem_marca"}
+        self.trocar = True
+        self._log("troca_no_fim_do_jogo", binario=self._binario)
+        return {**resposta, "troca": True}
 
     def _estado_do_no(self, canon: str) -> str:
         """O que o nó É agora: escondido por lease, aberto, ou fechado no repouso."""
@@ -3072,7 +3104,7 @@ class Broker:
 
     def run(self) -> None:
         try:
-            while not self.stopping:
+            while not (self.stopping or self._state.trocar):
                 self.step(timeout=1.0)
                 self.tique_da_entrega()
         finally:
@@ -3218,6 +3250,14 @@ def _parse_allowed_uid_from_unit(unit_path: str) -> int | None:
     if match is None:
         return None
     return int(match.group(1))
+
+
+def _sha_do_arquivo(caminho: str) -> str | None:
+    try:
+        with open(caminho, "rb") as arquivo:
+            return hashlib.sha256(arquivo.read()).hexdigest()
+    except OSError:
+        return None
 
 
 def _graca_da_entrega_do_ambiente() -> float:
@@ -3366,6 +3406,7 @@ def main(argv: list[str] | None = None) -> int:
         no_nasce_fechado=no_nasce_fechado,
         marca_da_entrega=MARCA_DA_ENTREGA_PATH,
         servidos_path=SERVIDOS_PATH,
+        binario=os.path.abspath(__file__),
     )
     state.entregue = herdada
     broker = Broker(state, listen, graca_da_entrega_s=_graca_da_entrega_do_ambiente())
