@@ -1,19 +1,22 @@
-"""O modo escolhido com a extensão desligada vale para o Guardar.
+"""O modo escolhido com a extensão fora da porta vale na hora e fica gravado.
 
 O-MODO-ESCOLHIDO-COM-A-EXTENSAO-DESLIGADA-VALE-PARA-O-GUARDAR-01 (25/10/2026). Depois de um
 arrastar, trocar «Soltar», «Segurar» ou «Repetir» manda à extensão o soltar com o modo novo. Fora
-da porta ela não segura modo nenhum (volta lendo o guardado): a troca vale para o rascunho e para
-a barra, sem acusar recusa, pelo mesmo dono do Cancelar fora da porta (``_Viva.sem_a_extensao``).
-Na porta, a recusa de verdade continua voltando o modo e piscando.
+da porta ela não segura modo nenhum (volta lendo o guardado): a troca vale na barra, sem acusar
+recusa, pelo dono ``_Viva.sem_a_extensao``. Desde 28/10/2026
+(D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA) a troca grava no clique, sem esperar o
+Guardar. Na porta, a recusa de verdade continua voltando o modo e piscando, e nada se grava.
 
-MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas):
+MORDIDAS (25/10/2026 e 28/10/2026, executadas sobre a cura e devolvidas):
 
 - o gesto do modo que acusa a extensão fora da porta (sem o ``_o_modo_na_extensao``) reprova
-  ``test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar`` (os três modos);
+  ``test_fora_da_porta_o_modo_trocado_depois_do_arrastar_grava_na_hora`` (os três modos);
 - o ``_o_modo_na_extensao`` sem o ``sem_a_extensao`` reprova o mesmo teste no «Soltar» e no
-  «Repetir» (a barra fica no modo de antes) e o Cancelar fora da porta;
+  «Repetir» (a barra fica no modo de antes);
+- o ``_guardar_a_opcao_da_modificacao`` tirado do ``modo_do_livre_da_modificacao`` reprova o mesmo
+  teste (o disco segue no modo de antes);
 - o ``_o_modo_na_extensao`` que toma a recusa de verdade como fora da porta reprova
-  ``test_na_porta_a_recusa_da_troca_continua_piscando`` e os três casos de recusa do Cancelar.
+  ``test_na_porta_a_recusa_da_troca_continua_piscando``.
 """
 
 from __future__ import annotations
@@ -49,22 +52,20 @@ def _guardado(lar: Any) -> Any:  # noqa: F811
 
 
 @pytest.mark.parametrize("modo", MODOS_DO_LIVRE)
-def test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar(
+def test_fora_da_porta_o_modo_trocado_depois_do_arrastar_grava_na_hora(
         janela: Any, ctx: Any, lar: Any, relogio: list[float], modo: str) -> None:  # noqa: F811
-    """Prova da D-2510-O-MODO-FORA-DA-PORTA-VALE-PARA-O-GUARDAR."""
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _Ponte(VIVO)
     abrir(ponte)
     if modo == "soltar":
         a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:segurar"}, ponte)
-        a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     _arrastar_e_soltar(a07, ctx, ponte, relogio)
     ponte.rodando = False
     antes = len(_livres(ponte))
     carga = a07.modo_do_livre_da_modificacao(ctx, {"v": f"toque:ao-vivo:{modo}"}, ponte)
     assert "recado" not in carga, carga.get("recado")
-    assert a07._MEXIDA.rascunho.get("ao-vivo:modo") == modo, "a troca fora da porta não ficou"
+    assert _guardado(lar) == modo, "a troca fora da porta esperou o Guardar"
     assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos(modo)
     assert a07._VIVA.modo == modo, "a barra seguiu no modo de antes"
     assert len(_livres(ponte)[antes:]) <= 1
@@ -76,9 +77,6 @@ def test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar(
         assert len(vistos) > 1, f"a barra não tocou o trecho em laço: {vistos}"
     else:
         assert vistos == {0.0}, f"a barra não fez o «{modo.title()}» escolhido: {vistos}"
-    carga = a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
-    assert carga.get("recado") == "Guardado."
-    assert _guardado(lar) == modo, "o Guardar não gravou o modo escolhido fora da porta"
     html = abrir(ponte)["blocos"]["#mod-janela"]
     assert _modos_na_faixa(html) == _acesos(modo), "o reabrir largou o modo guardado"
 
@@ -99,23 +97,16 @@ def test_na_porta_a_recusa_da_troca_continua_piscando(
     assert _guardado(lar) == "soltar", "o Guardar gravou o modo que a extensão recusou"
 
 
-_GUARDAR = """(function(h){
+_ACESO = """(function(h){
   const j = document.getElementById('mod-janela');
   j.innerHTML = h;
   location.hash = '#' + j.closest('.tela-nova').id;
-  const aceso = [...j.querySelectorAll('.mj-modos button.on')].map(b => b.dataset.modo);
-  const vistos = [];
-  const ouvir = e => { const g = e.target.closest && e.target.closest('[data-gesto]');
-    vistos.push(g ? g.dataset.gesto + '|' + g.dataset.v : ''); };
-  document.addEventListener('click', ouvir, true);
-  [...j.querySelectorAll('a.btn')].find(a => a.textContent.trim() === 'Guardar').click();
-  document.removeEventListener('click', ouvir, true);
-  return JSON.stringify({aceso: aceso, vistos: vistos});
+  return JSON.stringify([...j.querySelectorAll('.mj-modos button.on')].map(b => b.dataset.modo));
 })(%s)"""
 
 
-def test_no_webkit_o_modo_trocado_fora_da_porta_acende_e_o_guardar_leva_o_gesto(
-        janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
+def test_no_webkit_o_modo_trocado_fora_da_porta_acende(
+        janela: Any, ctx: Any, lar: Any, relogio: list[float]) -> None:  # noqa: F811
     import json
 
     from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import VISTAS, rodar_no_webkit
@@ -128,7 +119,7 @@ def test_no_webkit_o_modo_trocado_fora_da_porta_acende_e_o_guardar_leva_o_gesto(
     ponte.rodando = False
     carga = a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
     w, h = VISTAS[1]
-    passos = [["js", _GUARDAR % json.dumps(janela_pintada(carga["blocos"]))]]
+    passos = [["js", _ACESO % json.dumps(janela_pintada(carga["blocos"]))]]
     lido = json.loads(rodar_no_webkit({"janela": (w, h, passos)})["janela"][0])
-    assert lido["aceso"] == ["repetir"], lido
-    assert lido["vistos"] == ["guardar-modificacao|toque"], lido
+    assert lido == ["repetir"], lido
+    assert _guardado(lar) == "repetir"

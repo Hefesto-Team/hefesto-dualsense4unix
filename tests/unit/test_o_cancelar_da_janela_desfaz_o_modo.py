@@ -1,21 +1,19 @@
-"""O Cancelar da janela da extensão desfaz o modo do controle livre, e a recusa da extensão aparece.
+"""O Cancelar da janela da extensão não desfaz o modo já gravado, e a recusa da extensão aparece.
 
-O-CANCELAR-DA-JANELA-DESFAZ-O-MODO-E-A-RECUSA-APARECE-01 (25/10/2026). Trocar «Soltar», «Segurar»
-ou «Repetir» vale na hora na extensão, e o modo fica no rascunho até o Guardar. O Cancelar, o X e
-o Esc (que clica o X) devolvem à extensão o modo guardado, pelo mesmo caminho que aplica: um
-soltar com ele, só quando o modo vivo difere. Reabrir a janela que fechou sem Cancelar faz o mesmo.
-O modo que a extensão recusa volta na janela e na barra, e a recusa vai à mesma borda e ao mesmo
-diário dos outros gestos (fora da porta, a troca vale para o Guardar: o teste dela é o do
-O-MODO-ESCOLHIDO-COM-A-EXTENSAO-DESLIGADA-VALE-PARA-O-GUARDAR-01). Na porta, o controle de um
-aparelho com o id de uma ação dos aparelhos é recusado nomeando o id: o clique dos dois chega à
-extensão com a mesma forma (a ação e o alvo), e o serviço o tomava pela ação declarada.
+O-CANCELAR-DA-JANELA-DESFAZ-O-MODO-E-A-RECUSA-APARECE-01 (25/10/2026) fazia o Cancelar, o X, o Esc
+e o reabrir devolverem à extensão o modo guardado, porque o modo esperava o Guardar no rascunho.
+Desde 28/10/2026 (D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA) o modo grava no clique:
+o Cancelar e o reabrir não mandam nada, e a janela e a barra seguem o modo escolhido. O modo que a
+extensão recusa volta na janela e na barra, e a recusa vai à mesma borda e ao mesmo diário dos
+outros gestos. Na porta, o controle de um aparelho com o id de uma ação dos aparelhos é recusado
+nomeando o id: o clique dos dois chega à extensão com a mesma forma (a ação e o alvo), e o serviço
+o tomava pela ação declarada.
 
-MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas):
+MORDIDAS (25/10/2026 e 28/10/2026, executadas sobre a cura e devolvidas):
 
-- o gesto do Cancelar sem o soltar do modo guardado reprova o Cancelar e o reabrir;
-- o reabrir sem o mesmo desfazer reprova ``test_reabrir_a_janela_que_fechou_sem_cancelar``;
+- o ``_guardar_a_opcao_da_modificacao`` tirado do ``modo_do_livre_da_modificacao`` reprova
+  ``test_o_modo_trocado_grava_e_o_cancelar_e_o_reabrir_nao_o_desfazem`` (o soltar do guardado);
 - o ``mudar_o_modo`` que não volta ao modo de antes na recusa reprova a recusa (a barra e a janela);
-- o desfazer que acusa a extensão fora da porta (sem o ``sem_a_extensao``) reprova o caso dela;
 - o gesto do modo que ignora a resposta reprova a recusa (nada levanta);
 - o Cancelar e o X sem o ``data-gesto`` reprovam o HTML e o WebKit;
 - a porta sem a conferência do id da ação reprova os três casos dela, e o supervisor que não passa
@@ -91,26 +89,25 @@ def _cancelar(a07: Any, ctx: Any, ponte: _Ponte) -> dict[str, Any]:  # noqa: F81
     return carga
 
 
-@pytest.mark.parametrize("modo", ["segurar", "repetir"])
-def test_trocar_o_modo_e_cancelar_devolve_a_extensao_ao_modo_guardado(
-        janela: Any, ctx: Any, relogio: list[float], modo: str) -> None:  # noqa: F811
-    """Prova da D-2510-O-CANCELAR-DA-JANELA-DESFAZ-O-MODO."""
+@pytest.mark.parametrize("como", ["cancelar", "reabrir"])
+def test_o_modo_trocado_grava_e_o_cancelar_e_o_reabrir_nao_o_desfazem(
+        janela: Any, ctx: Any, lar: Any, relogio: list[float], como: str) -> None:  # noqa: F811
+    from hefesto_dualsense4unix.mods import opcoes
+    from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
+
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _Ponte(VIVO)
     abrir(ponte)
     _arrastar_e_soltar(a07, ctx, ponte, relogio)
-    a07.modo_do_livre_da_modificacao(ctx, {"v": f"toque:ao-vivo:{modo}"}, ponte)
-    assert _livres(ponte)[-1]["modo"] == modo
+    a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:segurar"}, ponte)
+    guardado = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
+    assert guardado["ao-vivo:modo"] == "segurar", "o modo esperou o Guardar"
     antes = len(_livres(ponte))
-    carga = _cancelar(a07, ctx, ponte)
-    volta = _livres(ponte)[antes:]
-    assert len(volta) == 1, f"o Cancelar mandou {len(volta)} soltares à extensão: {volta}"
-    assert volta[0]["soltou"] is True and volta[0]["modo"] == "soltar", volta
-    assert "ao-vivo:modo" not in a07._MEXIDA.rascunho, "o Cancelar deixou o modo no rascunho"
-    assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("soltar")
-    relogio[0] += 0.5
-    assert a07._VIVA.ao_vivo("toque").valor == 0.0, "a barra não voltou ao «Soltar» guardado"
+    carga = _cancelar(a07, ctx, ponte) if como == "cancelar" else abrir(ponte)
+    assert _livres(ponte)[antes:] == [], f"o {como} desfez o modo gravado"
+    assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("segurar")
+    assert a07._VIVA.modo == "segurar", "a barra largou o modo gravado"
 
 
 def test_cancelar_sem_troca_ou_depois_do_guardar_nao_manda_nada(
@@ -129,22 +126,6 @@ def test_cancelar_sem_troca_ou_depois_do_guardar_nao_manda_nada(
     carga = _cancelar(a07, ctx, ponte)
     assert len(_livres(ponte)) == antes, "o Cancelar depois do Guardar desfez o que foi guardado"
     assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("repetir")
-
-
-def test_reabrir_a_janela_que_fechou_sem_cancelar_devolve_o_modo_guardado(
-        janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
-    """A janela que saiu de vista sem o Cancelar (a pessoa foi a outra aba) e volta a abrir."""
-    a07, instalar, abrir = janela
-    instalar(**_com(COM_MODOS))
-    ponte = _Ponte(VIVO)
-    abrir(ponte)
-    _arrastar_e_soltar(a07, ctx, ponte, relogio)
-    a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:segurar"}, ponte)
-    antes = len(_livres(ponte))
-    html = abrir(ponte)["blocos"]["#mod-janela"]
-    volta = _livres(ponte)[antes:]
-    assert [(p["soltou"], p["modo"]) for p in volta] == [(True, "soltar")], volta
-    assert _modos_na_faixa(html) == _acesos("soltar")
 
 
 def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
@@ -166,67 +147,6 @@ def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
     assert _modos_na_faixa(a07._MEXIDA.html_mod) == _acesos("segurar")
     relogio[0] += 0.5
     assert a07._VIVA.ao_vivo("toque").valor == 1.0, "a barra fez o «Soltar» que a extensão recusou"
-
-
-def test_o_cancelar_recusado_diz_por_que_e_o_reabrir_desfaz_quando_ela_volta(
-        janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
-    a07, instalar, abrir = janela
-    instalar(**_com(COM_MODOS))
-    ponte = _PonteQueRecusa(VIVO)
-    abrir(ponte)
-    _arrastar_e_soltar(a07, ctx, ponte, relogio)
-    a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
-    ponte.recusa = "O serviço não respondeu."
-    with pytest.raises(RuntimeError, match="O serviço não respondeu"):
-        _cancelar(a07, ctx, ponte)
-    assert a07._MEXIDA.rascunho.get("ao-vivo:modo") == "repetir", \
-        "o Cancelar recusado jogou fora o modo que ainda vale na extensão"
-    ponte.recusa = None
-    antes = len(_livres(ponte))
-    html = abrir(ponte)["blocos"]["#mod-janela"]
-    assert [p["modo"] for p in _livres(ponte)[antes:]] == ["soltar"]
-    assert _modos_na_faixa(html) == _acesos("soltar")
-
-
-@pytest.mark.parametrize("como", ["cancelar", "reabrir"])
-def test_a_extensao_fora_da_porta_nao_tem_modo_a_desfazer(
-        janela: Any, ctx: Any, relogio: list[float], como: str) -> None:  # noqa: F811
-    """A extensão que saiu da porta depois da troca volta lendo o guardado: o Cancelar e o reabrir
-    não acusam recusa, e a janela e a barra mostram o guardado, não o modo que ela largou.
-
-    Prova da D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER.
-    """
-    a07, instalar, abrir = janela
-    instalar(**_com(COM_MODOS))
-    ponte = _PonteQueRecusa(VIVO)
-    abrir(ponte)
-    _arrastar_e_soltar(a07, ctx, ponte, relogio)
-    a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
-    ponte.rodando = False
-    if como == "cancelar":
-        carga = _cancelar(a07, ctx, ponte)
-        assert "ao-vivo:modo" not in a07._MEXIDA.rascunho, "o Cancelar deixou o modo no rascunho"
-    else:
-        carga = abrir(ponte)
-        assert "recado" not in carga, carga.get("recado")
-    assert _modos_na_faixa(janela_pintada(carga["blocos"])) == _acesos("soltar")
-    assert a07._VIVA.modo == "soltar", "a barra seguiu no modo que a extensão largou"
-    relogio[0] += 0.5
-    assert a07._VIVA.ao_vivo("toque").valor == 0.0, "a barra não fez o «Soltar» guardado"
-
-
-def test_o_reabrir_recusado_mostra_o_modo_que_vale_na_extensao(
-        janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
-    a07, instalar, abrir = janela
-    instalar(**_com(COM_MODOS))
-    ponte = _PonteQueRecusa(VIVO)
-    abrir(ponte)
-    _arrastar_e_soltar(a07, ctx, ponte, relogio)
-    a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
-    ponte.recusa = "A extensão recusou o modo."
-    html = abrir(ponte)["blocos"]["#mod-janela"]
-    assert _modos_na_faixa(html) == _acesos("repetir"), "a janela mostrou um modo que não vale"
-    assert a07._MEXIDA.rascunho.get("ao-vivo:modo") == "repetir"
 
 
 def _fechos(html: str) -> list[str]:

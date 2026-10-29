@@ -3,9 +3,9 @@
 O-LIVRE-GANHA-OS-MODOS-SOLTAR-SEGURAR-REPETIR-01 (24/10/2026). A opção ``livre`` do manifesto
 aceita ``modos: true``; com ele, ``extensao.livre`` e ``mods.livre`` levam ``modo``, um de
 ``soltar``, ``segurar`` e ``repetir`` (``soltar`` por padrão), e sem ele o campo não vai. A janela
-desenha os três botões na faixa só com ``modos``; o clique vai ao rascunho (quem grava é o
-Guardar) e vale na hora: «Soltar» volta a barra a zero, «Segurar» a deixa onde parou e «Repetir»
-toca em laço o trecho do último arrastar.
+desenha os três botões na faixa só com ``modos``; o clique grava na hora (desde 28/10/2026,
+sem esperar o Guardar) e vale na hora: «Soltar» volta a barra a zero, «Segurar» a deixa onde
+parou e «Repetir» toca em laço o trecho do último arrastar.
 
 A matriz: com e sem ``modos``, os três modos e duas extensões na porta de verdade (o modo de uma
 não chega à outra).
@@ -17,7 +17,7 @@ MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
 - o zero do «Soltar» tirado do ``_soltar_no_modo`` reprova
   ``test_soltar_volta_a_zero_segurar_fica_e_repetir_toca_o_trecho[soltar]``;
 - o ``modo`` tirado do ``mods.livre`` que o arrastar da janela manda reprova
-  ``test_o_clique_no_modo_acende_vai_ao_rascunho_e_o_guardar_grava`` (os três modos).
+  ``test_o_clique_no_modo_acende_e_grava_na_hora`` (os três modos).
 - (25/10/2026, no desenho regerado) o zero do «Soltar», o ``setInterval`` do laço e o
   ``aoSoltar`` do clique tirados do ``comportamento.js`` reprovam, cada um,
   ``test_no_navegador_soltar_volta_a_zero_segurar_fica_e_repetir_toca_em_laco``.
@@ -204,7 +204,7 @@ def _livres(ponte: _Ponte) -> list[dict[str, Any]]:
 
 
 @pytest.mark.parametrize("modo", MODOS_DO_LIVRE)
-def test_o_clique_no_modo_acende_vai_ao_rascunho_e_o_guardar_grava(
+def test_o_clique_no_modo_acende_e_grava_na_hora(
         janela: Any, ctx: Any, lar: Any, modo: str) -> None:  # noqa: F811
     from hefesto_dualsense4unix.mods import opcoes
     from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
@@ -219,10 +219,7 @@ def test_o_clique_no_modo_acende_vai_ao_rascunho_e_o_guardar_grava(
     assert acesos == {m: m == modo for m in MODOS_DO_LIVRE}, acesos
     assert _livres(ponte) == [], "o modo sem arrastar nenhum mandou soltar à extensão"
     guardado: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
-    assert guardado["ao-vivo:modo"] == "soltar", "o clique gravou antes do Guardar"
-    a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
-    guardado = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
-    assert guardado["ao-vivo:modo"] == modo
+    assert guardado["ao-vivo:modo"] == modo, "o clique esperou o Guardar"
     _mover(a07, ctx, ponte, 30, 1)
     _mover(a07, ctx, ponte, 40, 2, evento="change")
     assert [p.get("modo") for p in _livres(ponte)] == [modo, modo], _livres(ponte)

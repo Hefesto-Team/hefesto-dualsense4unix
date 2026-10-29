@@ -387,6 +387,13 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   `nivel`, `perfil`, `aparelhos` e `conexoes`, sem repetir.
 - **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda a ela o gesto `para` (ou o
   `extensao.parar`, a quem não lê o gesto), e o nível e o perfil ficam guardados.
+- **`chave`** (desde 28/10/2026): o `id` de uma opção `ligado` da própria extensão, sem `aparece_com`. Ela vira a
+  chave Ligado/Desligado do topo da janela, sem texto e no lugar do «Parar tudo», e sai das abas de opções. O
+  clique grava a opção na hora, fora do rascunho do Guardar, e ela segue gravada ao reabrir. Desligar manda o
+  gesto `para`, como o «Parar tudo»; ligar só grava, e a extensão relê as opções. Com ela desligada, os botões de
+  ação da janela (os da barra e os de cada aparelho) ficam à vista, apagados e sem gesto; a chave de cada
+  aparelho segue. Pede `ler:acessorios.gesto` ou `publicar:acessorios.estado`. A extensão desligada publica
+  `ligado: false` e só manda zero aos aparelhos até ser ligada de novo.
 
 `agora` só vale com `ler:acessorios.gesto` ou `publicar:acessorios.estado` nas permissões, que é o retorno que
 ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pede permissão. A janela os pede ao serviço por dois métodos do IPC da interface (o
@@ -400,8 +407,10 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 - `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e
   `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
   toque de confirmação, e o serviço confere o «parar curto» só da extensão. Volta `{parado}`, falso quando ela não
-  está conectada: o botão então recusa dizendo que ela não está rodando, em vez de piscar o «enviado». Recusa (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
-  `parar_tudo`.
+  está conectada: o botão então recusa dizendo que ela não está rodando, em vez de piscar o «enviado». Com a
+  `chave`, a opção dela é gravada desligada antes do gesto, também quando a extensão não está conectada. Recusa
+  (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara `parar_tudo` nem a
+  `chave`.
 
 ### As ações, os aparelhos e o controle livre
 

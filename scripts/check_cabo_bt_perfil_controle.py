@@ -105,6 +105,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                            "dela — é da máquina",
     "parar-tudo-da-modificacao": "o «Parar tudo» da janela pede à extensão que zere os aparelhos "
                                  "dela — é do serviço, não de um controle",
+    "chave-da-modificacao": "a chave Ligado/Desligado da janela grava a opção da extensão no "
+                            "`opcoes.json` dela e, desligada, pede que zere os aparelhos — é da "
+                            "máquina e do serviço, não de um controle",
     "escolher-o-lancador": "abre o seletor do sistema para apontar o atalho do lançador — é da máquina",
     "guardar-lancador": "guarda o atalho e o perfil por jogo do lançador — é da máquina",
     "instalar-modificacao": "instala uma extensão de um endereço git ou de uma pasta — é da máquina",

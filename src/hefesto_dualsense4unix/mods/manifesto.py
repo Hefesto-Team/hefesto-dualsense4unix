@@ -474,6 +474,7 @@ class Manifesto(BaseModel):
         Literal["nivel", "perfil", "aparelhos", "conexoes"]  # (noqa-acento)
     ] = Field(default_factory=list)
     parar_tudo: bool = False
+    chave: str | None = Field(default=None, min_length=1, max_length=32)
     acoes: list[Acao] = Field(default_factory=list, max_length=ACOES_DA_JANELA)
     aparelhos_acoes: AcoesDosAparelhos | None = None
     aparelhos_controles: ControlesDosAparelhos | None = None
@@ -550,6 +551,7 @@ class Manifesto(BaseModel):
             raise ValueError(
                 "agora pede a permissão publicar:acessorios.estado ou ler:acessorios.gesto")
         self._conferir_as_acoes_e_o_livre()
+        self._conferir_a_chave()
         self._conferir_o_aparece_com()
         self._conferir_o_lado_e_as_opcoes_do_tema()
         self._conferir_a_opcao_do_css()
@@ -574,6 +576,28 @@ class Manifesto(BaseModel):
         if geridos is not None and geridos.grupo is None and "aparelhos" not in self.agora:
             raise ValueError(
                 "aparelhos_acoes sem grupo mora na coluna Agora, e agora não lista aparelhos")
+
+    def _conferir_a_chave(self) -> None:
+        """A ``chave`` (o Ligado/Desligado do topo da janela) nomeia uma opção ``ligado`` daqui,
+        sempre à vista, e pede a permissão do estado: desligar publica o gesto ``para``, que o
+        supervisor confere pelo ``ligado`` do estado."""
+        if self.chave is None:
+            return
+        opcao = next((o for o in self.opcoes if o.id == self.chave), None)
+        if opcao is None:
+            raise ValueError(f"a chave aponta para a opção {self.chave!r}, que não existe")
+        if opcao.tipo != "ligado":
+            raise ValueError(f"a chave: a opção {self.chave!r} precisa ser do tipo ligado")
+        if opcao.aparece_com:
+            raise ValueError(
+                f"a chave: a opção {self.chave!r} fica sempre à vista, sem aparece_com")
+        if not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
+            raise ValueError("a chave pede a permissão publicar:acessorios.estado")
+
+    @property
+    def opcao_da_chave(self) -> Opcao | None:
+        """A opção ``ligado`` que a chave do topo da janela liga e desliga, quando declarada."""
+        return next((o for o in self.opcoes if o.id == self.chave), None) if self.chave else None
 
     def _conferir_o_aparece_com(self) -> None:
         """Cada ``aparece_com`` aponta para outra ``escolha`` ou ``ligado`` daqui, com um valor que

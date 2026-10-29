@@ -72,6 +72,12 @@ def test_nenhuma_linha_repete_o_nome_da_aba(janela: Any) -> None:  # noqa: F811
     assert 'class="mj-bolinha on"' in rotulo.group(1)
 
 
+def _opcoes_gravadas(a07: Any) -> dict[str, Any]:
+    from hefesto_dualsense4unix.mods import opcoes
+
+    return dict(opcoes.ler(a07._a_instalada(MOD).manifesto, a07._lugares()))
+
+
 def test_a_chave_desligada_apaga_as_linhas_da_aba(janela: Any, ctx: Any) -> None:  # noqa: F811
     a07, _instalar, _abrir = janela
     html = montada(janela, VIVO)
@@ -83,7 +89,7 @@ def test_a_chave_desligada_apaga_as_linhas_da_aba(janela: Any, ctx: Any) -> None
     assert blocos.get("#mod-janela") == html, "o clique na bolinha repintou a janela inteira"
     assert re.search(r'class="mj-bolinha"[^>]*aria-checked="false"', tudo), blocos.keys()
     assert re.search(r'class="mj-da-chave apagada" id="mod-da-chave-\d+"', tudo), blocos.keys()
-    assert a07._MEXIDA.rascunho == {"toques": False}
+    assert _opcoes_gravadas(a07)["toques"] is False, "a bolinha esperou o Guardar"
     assert "<select" in tudo and "disabled" not in tudo, "a aba apagada continua mexível"
     de_volta = dict(a07.guardar_opcao_da_modificacao(
         ctx, {"v": f"{MOD}:toques", "evento": "click"}, ponte) or {})

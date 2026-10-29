@@ -114,9 +114,6 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "cancelar-modificacao"):
         "rascunho da janela da extensão: o Cancelar joga o rascunho fora e devolve à extensão o "
         "modo guardado do controle livre; nada se grava, o guardado é o que volta",
-    ("07-lancadores.html", "guardar-opcao-da-modificacao"):
-        "rascunho da janela da extensão: a opção mudada espera o Guardar "
-        "(`guardar-modificacao`), que declara `grava=`; gravar a cada clique salvaria meia escolha",
     ("07-lancadores.html", "escolher-o-lancador"):
         "rascunho da janela «Configurar»: o atalho apontado espera o Guardar "
         "(`guardar-lancador`), que declara `grava=`",
@@ -137,15 +134,6 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "soltar-o-livre-da-modificacao"):
         "ato: o soltar da barra do controle livre vai à extensão com o valor final; nada fica "
         "guardado",
-    ("07-lancadores.html", "gravar-o-livre-da-modificacao"):
-        "rascunho da janela da extensão: a forma gravada espera o Guardar "
-        "(`guardar-modificacao`), que declara `grava=`",
-    ("07-lancadores.html", "esquecer-a-forma-do-livre"):
-        "rascunho da janela da extensão: a forma esquecida sai no Guardar "
-        "(`guardar-modificacao`), que declara `grava=`",
-    ("07-lancadores.html", "modo-do-livre-da-modificacao"):
-        "rascunho da janela da extensão: o modo do controle livre espera o Guardar "
-        "(`guardar-modificacao`), que declara `grava=`; a barra e a extensão o seguem na hora",
     ("07-lancadores.html", "ver-impedimentos"):
         "leitura: sonda a Steam de novo e abre a lista dos impedimentos; quem cura é o "
         "«Resolver», que declara `grava=`",

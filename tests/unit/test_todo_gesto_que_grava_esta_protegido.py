@@ -132,6 +132,7 @@ ESCREVEM = {
     "_mexer_na_modificacao",
     "_criar_o_css_da_modificacao",
     "_guardar_a_opcao_da_modificacao",
+    "_guardar_a_chave_da_modificacao",
     "_curar_o_impedimento",
 
 }

@@ -723,6 +723,9 @@ NIVEL_MAXIMO = 10
 SEM_VALOR = "—"
 DICA_DO_PARAR = "Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."
 GESTO_DO_PARAR = "parar-tudo-da-modificacao"
+GESTO_DA_CHAVE_DA_EXTENSAO = "chave-da-modificacao"
+DICA_DA_CHAVE_LIGADA = "Ligada. Desligar põe todos os aparelhos a zero e os deixa assim."
+DICA_DA_CHAVE_DESLIGADA = "Desligada: todos os aparelhos ficam a zero. Ligar volta a agir."
 PALAVRA_DO_ESTADO = {"ligado": "Ligado", "procurando": "Procurando", "desligado": "Desligado",
                      "falhou": "Falhou"}
 COR_DO_ESTADO = {"ligado": "verde", "procurando": "amarelo", "desligado": "mudo",
@@ -880,6 +883,16 @@ def parar_tudo_html(mod: str) -> str:
             f'data-dica="{DICA_DO_PARAR}"><svg viewBox="0 0 16 16" width="13" height="13">'
             '<rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>'
             "Parar tudo</button>")
+
+
+def chave_da_extensao_html(mod: str, ligada: bool) -> str:
+    """A chave Ligado/Desligado do topo da janela, sem texto: o clique pede o contrário, e a
+    escolha se grava na hora, fora do rascunho."""
+    dica = DICA_DA_CHAVE_LIGADA if ligada else DICA_DA_CHAVE_DESLIGADA
+    return (f'<span class="mj-chave ja-chave{" on" if ligada else ""}" role="switch" '
+            f'aria-checked="{"true" if ligada else "false"}" aria-label="{_a(dica)}" '
+            f'data-gesto="{GESTO_DA_CHAVE_DA_EXTENSAO}" data-v="{_a(mod)}" '
+            f'data-ligado="{"0" if ligada else "1"}" data-dica="{_a(dica)}"></span>')
 
 
 class Rascunho(NamedTuple):
@@ -1098,8 +1111,9 @@ def janela_pintada(blocos: Mapping[str, Any]) -> str:
 
 def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: str = "",
                            agora: Sequence[str] = (), estado: Mapping[str, Any] | None = None,
-                           parar_tudo: bool = False, aba: str = "", processo: str = "",
-                           porque: str = "", acoes: Sequence[AcaoDaJanela] = (),
+                           parar_tudo: bool = False, chave: bool | None = None, aba: str = "",
+                           processo: str = "", porque: str = "",
+                           acoes: Sequence[AcaoDaJanela] = (),
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            livre: LivreAoVivo | None = None, controles: str = "",
@@ -1107,27 +1121,30 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            rascunho: Rascunho = SEM_RASCUNHO) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
-    Cada opção vira uma linha do cartão do grupo dela; o Guardar grava o rascunho. ``agora`` são os
-    pedaços da coluna «Agora» (``estado`` é o último ``acessorios.estado``) e ``parar_tudo`` põe o
-    botão no topo, os dois só com ``mod``. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é
-    o arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` são os
-    pares (ação, alvo) que esperam a extensão, ``armada`` o que espera o segundo clique, ``livre``
-    vai à faixa de baixo e ``controles`` é a aba dos controles de cada aparelho; ``rascunho`` acende
-    o Guardar e arma o Descartar.
+    Cada opção vira uma linha do cartão do grupo dela. ``agora`` (com ``estado``) é a coluna
+    «Agora»; ``parar_tudo`` põe o «Parar tudo» no topo, e ``chave`` (o valor guardado da opção
+    ``chave`` do manifesto) a chave Ligado/Desligado, que desligada apaga as ações. Com ``agora``,
+    as ações, os ``aparelhos`` ou o ``livre``, é o arranjo C: a coluna à esquerda e os grupos em
+    abas (``aba`` é a aberta); ``em_curso`` e ``armada`` são as ações que esperam, ``livre`` a
+    faixa de baixo, ``controles`` a aba dos controles e ``rascunho`` acende o Guardar.
     """
-    parar = parar_tudo_html(mod) if parar_tudo and mod else ""
+    parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
+             else parar_tudo_html(mod) if parar_tudo and mod else "")
+    desligada = chave is False and bool(mod)
     agora = agora if mod else ()
     livre_op = next((o for o in opcoes if o.tipo == "livre"), None) if mod else None
     vazio = "" if livre_op else VAZIO_DA_JANELA
     opcoes = [o for o in opcoes if o.tipo != "livre"]
     acoes = tuple(acoes) if mod else ()
-    gestao = Gestao(mod, aparelhos, estado, em_curso, tuple(armada)) if mod and aparelhos else None
     controles = controles if mod else ""
+    gestao = (Gestao(mod, aparelhos, estado, em_curso, tuple(armada), desligada,
+                     bool(controles) and controles == aparelhos.grupo)
+              if mod and aparelhos else None)
     cc = (controles, controles_dos_aparelhos_html(mod, estado, em_curso)) if controles else ("", "")
     if agora or acoes or gestao or livre_op or controles:
         if acoes or (gestao and gestao.aparelhos.grupo) or controles:
             ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
-                                         controles=cc, armada=armada)
+                                         controles=cc, armada=armada, desligada=desligada)
         else:
             ajustes = _abas_das_opcoes(opcoes, aba, mod) if opcoes else vazio
         fora = dica_da_barra_fora(nome, processo, gestao)
@@ -1394,13 +1411,17 @@ class LivreAoVivo(NamedTuple):
 
 
 class Gestao(NamedTuple):
-    """A lista dos aparelhos geridos de uma extensão, pronta para virar cartões ou linhas."""
+    """A lista dos aparelhos geridos de uma extensão, pronta para virar cartões ou linhas.
+    ``controles`` põe os controles de cada aparelho no cartão dele, numa linha: é quando a aba
+    deles é a dos aparelhos."""
 
     mod: str
     aparelhos: AparelhosDaJanela
     estado: Mapping[str, Any] | None
     em_curso: frozenset[tuple[str, str]] = frozenset()
     armada: tuple[str, ...] = ()
+    desligada: bool = False
+    controles: bool = False
 
 
 GESTO_DA_ACAO = "acao-da-modificacao"
@@ -1462,9 +1483,14 @@ def valor_da_acao(mod: str, acao_id: str, alvo: str = "") -> str:
 
 
 def acao_html(mod: str, acao: AcaoDaJanela, *, alvo: str = "", em_curso: bool = False,
-              forte: bool = False, armada: bool = False) -> str:
+              forte: bool = False, armada: bool = False, desligada: bool = False) -> str:
     """Um botão de ação (:func:`valor_da_acao`). Enquanto a extensão não devolve o estado, ele diz
-    «Em curso»; ``armada`` é o primeiro clique numa ação que pede o segundo: ele diz «Confirmar»."""
+    «Em curso»; ``armada`` é o primeiro clique numa ação que pede o segundo: ele diz «Confirmar».
+    Com a chave da extensão desligada, ele fica à vista, apagado e sem gesto."""
+    if desligada:
+        return (f'<span class="btn mj-acao apagado{" forte" if forte else ""}" '
+                f'aria-disabled="true">{_icone_da_acao(acao.icone)}<span>{_e(acao.rotulo)}</span>'
+                "</span>")
     v = valor_da_acao(mod, acao.id, alvo)
     classe = ("btn mj-acao" + (" forte" if forte else "") + (" em-curso" if em_curso else "")
               + (" armada" if armada else ""))
@@ -1481,10 +1507,10 @@ def armada_em(armada: Sequence[str], acao_id: str, alvo: str = "") -> bool:
 
 def barra_de_acoes_html(mod: str, acoes: Sequence[AcaoDaJanela],
                         em_curso: frozenset[tuple[str, str]] = frozenset(),
-                        armada: Sequence[str] = ()) -> str:
+                        armada: Sequence[str] = (), desligada: bool = False) -> str:
     """As ações de uma aba, numa fileira; a primeira é a forte."""
     return "".join(acao_html(mod, a, em_curso=(a.id, "") in em_curso, forte=n == 0,
-                             armada=armada_em(armada, a.id))
+                             armada=armada_em(armada, a.id), desligada=desligada)
                    for n, a in enumerate(acoes))
 
 
@@ -1510,7 +1536,7 @@ def _chave_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
 def _botoes_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
     alvo = str(ap["id"])
     return "".join(acao_html(g.mod, a, alvo=alvo, em_curso=(a.id, alvo) in g.em_curso,
-                             armada=armada_em(g.armada, a.id, alvo))
+                             armada=armada_em(g.armada, a.id, alvo), desligada=g.desligada)
                    for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
 
 
@@ -1520,9 +1546,28 @@ def _por_cento(bateria: Any) -> str:
     return f'<span class="mj-pct">{max(0, min(100, bateria))}%</span>'
 
 
+def _controles_no_cartao(g: Gestao, ap: Mapping[str, Any]) -> str:
+    """Os controles do aparelho numa linha do cartão dele, sem rótulo: a chave com o glifo e,
+    ao lado, as escolhas. Vazio quando a aba dos controles é outra ou ele não os tem."""
+    controles = list(ap.get("controles") or []) if g.controles else []
+    if not controles:
+        return ""
+    alvo = str(ap["id"])
+    partes = []
+    for c in controles:
+        em_curso = (str(c["id"]), alvo) in g.em_curso
+        miolo = (_chave_do_controle(g.mod, alvo, c, em_curso) if c["tipo"] == "chave"
+                 else _miolo_do_controle(g.mod, alvo, c, em_curso))
+        dica = f' data-dica="{_a(c["dica"])}"' if c.get("dica") and c["tipo"] != "chave" else ""
+        partes.append(f'<span class="mj-ap-cc-um" data-controle-do-aparelho="{_a(c["id"])}"'
+                      f"{dica}>{miolo}</span>")
+    return f'<div class="mj-ap-cc">{"".join(partes)}</div>'
+
+
 def aparelhos_geridos_html(g: Gestao) -> str:
     """Os cartões dos aparelhos geridos, dois por fileira: o nome, a pilha, a chave, a força de
-    agora e um botão por ação. O aparelho desligado fica apagado e segue com as ações."""
+    agora, os controles do aparelho (com ``g.controles``) e um botão por ação. O aparelho
+    desligado fica apagado e segue com as ações."""
     cartoes = []
     for ap in _aparelhos_geridos(g.estado):
         como = como_esta(ap)
@@ -1533,6 +1578,7 @@ def aparelhos_geridos_html(g: Gestao) -> str:
             f'{bateria_html(ap.get("bateria"))}{_por_cento(ap.get("bateria"))}'
             f'{_chave_do_aparelho(g, ap)}</div>'
             f'<div class="mj-ap-meio">{como.vivo}</div>'
+            f'{_controles_no_cartao(g, ap)}'
             f'<div class="mj-ap-pe">{_botoes_do_aparelho(g, ap)}</div></div>')
     busca = ANDAMENTO_DO_PAREAR.ver(g.mod, g.estado)
     if not cartoes:
@@ -1653,6 +1699,9 @@ def aparelhos_na_coluna_html(g: Gestao) -> str:
             continue
         alvo = str(ap["id"])
         botoes = "".join(
+            f'<span class="btn ico mj-acao apagado" aria-disabled="true" '
+            f'data-dica="{_a(a.rotulo)}">{_icone_da_acao(a.icone) or _e(a.rotulo[:1])}</span>'
+            if g.desligada else
             acao_html(g.mod, a, alvo=alvo, em_curso=(a.id, alvo) in g.em_curso, armada=True)
             if armada_em(g.armada, a.id, alvo) else
             f'<button class="btn ico mj-acao{" em-curso" if (a.id, alvo) in g.em_curso else ""}" '
@@ -1740,22 +1789,26 @@ def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Seque
     return "".join(botoes)
 
 
+def _miolo_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
+    """Os botões de um controle de escolhas; a paleta, numa fileira as cores de um ponto e
+    noutra as de dois ou três."""
+    opcoes = list(c.get("opcoes") or [])  # (noqa-acento)
+    fileiras = ([[o for o in opcoes if not isinstance(o.get("cor"), list)],
+                 [o for o in opcoes if isinstance(o.get("cor"), list)]]
+                if c["tipo"] == "paleta" else [opcoes])
+    classe = "mj-cores" + (" mj-pontos" if c["tipo"] == "paleta" else "") + (
+        " em-curso" if em_curso else "")
+    return "".join(f'<span class="{classe}" role="group">'
+                   f"{_botoes_do_controle(mod, alvo, c, f)}</span>" for f in fileiras if f)
+
+
 def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
     """Uma linha do cartão: o rótulo e o controle. A paleta põe as cores de um ponto numa fileira
     e as de dois ou três noutra, como no arranjo C."""
     rotulo = str(c.get("rotulo")
                  or (ROTULO_DA_PALETA if c["tipo"] == "paleta" else ""))
-    if c["tipo"] == "chave":
-        miolo = _chave_do_controle(mod, alvo, c, em_curso)
-    else:
-        opcoes = list(c.get("opcoes") or [])  # (noqa-acento)
-        fileiras = ([[o for o in opcoes if not isinstance(o.get("cor"), list)],
-                     [o for o in opcoes if isinstance(o.get("cor"), list)]]
-                    if c["tipo"] == "paleta" else [opcoes])
-        classe = "mj-cores" + (" mj-pontos" if c["tipo"] == "paleta" else "") + (
-            " em-curso" if em_curso else "")
-        miolo = "".join(f'<span class="{classe}" role="group">'
-                        f"{_botoes_do_controle(mod, alvo, c, f)}</span>" for f in fileiras if f)
+    miolo = (_chave_do_controle(mod, alvo, c, em_curso) if c["tipo"] == "chave"
+             else _miolo_do_controle(mod, alvo, c, em_curso))
     dica = f' data-dica="{_a(c["dica"])}"' if c.get("dica") and c["tipo"] != "chave" else ""
     return (f'<div class="mj-cc-linha" data-controle-do-aparelho="{_a(c["id"])}"{dica}>'
             f'<span class="mj-cc-rot">{_e(rotulo)}</span>'
@@ -1797,7 +1850,8 @@ def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDa
 
 def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        acoes: Sequence[AcaoDaJanela], gestao: Gestao | None,
-                       controles: tuple[str, str] = ("", ""), armada: Sequence[str] = ()) -> str:
+                       controles: tuple[str, str] = ("", ""), armada: Sequence[str] = (),
+                       desligada: bool = False) -> str:
     """As abas do arranjo C com as ações e a lista dos aparelhos geridos.
 
     Cada aba é: a fileira das ações dela (``#mod-acoes-<n>``), a lista dos aparelhos se ela é a do
@@ -1824,12 +1878,13 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
         fileira = ""
         if acoes_da[nome]:
             fileira = (f'<div class="mj-acoes" id="mod-acoes-{n}">'
-                       f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso, armada)}</div>")
+                       f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso, armada, desligada)}"
+                       "</div>")
         lista = (f'<div class="mj-aps" id="mod-aparelhos">{aparelhos_geridos_html(gestao)}</div>'
                  if gestao and gestao.aparelhos.grupo == nome else "")
         partes.append(f'<div class="mj-sec">{fileira}{lista}</div>' if fileira and lista
                       else fileira + lista)
-        if controles[0] and controles[0] == nome:
+        if controles[0] and controles[0] == nome and not (gestao and gestao.controles):
             partes.append(f'<div class="mj-aps mj-ccs" id="mod-controles">{controles[1]}</div>')
         chave, linhas = chave_da_aba(nome, por_aba[nome])
         if linhas:

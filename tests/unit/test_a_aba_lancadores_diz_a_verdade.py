@@ -132,7 +132,8 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
                                   "desligar-steam-input",
                                   "deixar-tudo-pronto",
                                   "consertar-lancador",
-                                  "parar-tudo-da-modificacao"}, (
+                                  "parar-tudo-da-modificacao",
+                                  "chave-da-modificacao"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
 

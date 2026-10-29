@@ -372,35 +372,22 @@ def _guardado(lar) -> dict:
     return json.loads(arquivo.read_text(encoding="utf-8")) if arquivo.exists() else {}
 
 
-def test_a_opcao_mudada_espera_o_guardar_e_o_guardar_grava(lar, ctx, tmp_path) -> None:
-    """D-1910-A-JANELA-DA-EXTENSAO-GUARDA-NO-GUARDAR: a mudança é rascunho até o Guardar."""
+def test_a_opcao_mudada_grava_na_hora(lar, ctx, tmp_path) -> None:
+    """D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA (revogou o Guardar da D-1910)."""
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
-    assert "<option selected>Nunca" in janela_pintada(carga["blocos"]), "sem o rascunho na janela"
-    assert _guardado(lar) == {}, "a opção gravou antes do Guardar"
+    assert "<option selected>Nunca" in janela_pintada(carga["blocos"])
+    assert _guardado(lar) == {"quando": "Nunca", "avisar": False, "teto": 50.0}, (
+        "a opção esperou o Guardar")
     assert a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Sempre", "evento": "click"}, _Ponte()) is None
-    feito = a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    assert feito["recado"] == "Guardado."
-    assert _guardado(lar) == {"quando": "Nunca", "avisar": False, "teto": 50.0}
-    assert "<option selected>Nunca" in janela_pintada(feito["blocos"])
     assert "recado" not in a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte()), (
         "o Guardar sem mudança disse que guardou")
-
-
-def test_o_cancelar_joga_fora_o_rascunho(lar, ctx, tmp_path) -> None:
-    a07 = _a07()
-    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
-    a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    a07.guardar_opcao_da_modificacao(
-        ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
-    assert "<option selected>Sempre" in janela
-    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    assert _guardado(lar) == {}
+    assert "<option selected>Nunca" in janela, "o reabrir largou a opção gravada"
 
 
 def test_a_chave_de_ligado_vira_no_clique_e_o_numero_valida(lar, ctx, tmp_path) -> None:
@@ -408,12 +395,12 @@ def test_a_chave_de_ligado_vira_no_clique_e_o_numero_valida(lar, ctx, tmp_path) 
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
-    assert a07._MEXIDA.rascunho == {"avisar": True}
-    a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
-    assert a07._MEXIDA.rascunho == {"avisar": False}, "o segundo clique não virou o rascunho"
-    a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
-    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert _guardado(lar)["avisar"] is True
+    a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    assert _guardado(lar)["avisar"] is False, "o segundo clique não virou a chave"
+    a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    antes = _guardado(lar)
+    assert antes["avisar"] is True
     with pytest.raises(RuntimeError, match="pede um número"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "toque:teto", "valor": "muito", "evento": "change"}, _Ponte())
@@ -423,7 +410,7 @@ def test_a_chave_de_ligado_vira_no_clique_e_o_numero_valida(lar, ctx, tmp_path) 
     with pytest.raises(RuntimeError, match="não tem essa opção"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "toque:inventada", "valor": "x", "evento": "change"}, _Ponte())
-    assert a07._MEXIDA.rascunho == {}, "a recusa entrou no rascunho"
+    assert _guardado(lar) == antes and a07._MEXIDA.rascunho == {}, "a recusa gravou"
 
 
 def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:

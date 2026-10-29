@@ -302,7 +302,7 @@ def test_a_janela_desenha_o_range_do_manifesto_e_uma_caixa_por_jogo_com_perfil(
         "uma caixa por jogo que tem perfil, na ordem dos nomes, e nenhuma marcada de fábrica")
 
 
-def test_guardar_o_deslizante_e_marcar_o_jogo_gravam_e_a_janela_repinta(lar, ctx, tmp_path) -> None:
+def test_o_deslizante_e_marcar_o_jogo_gravam_na_hora_e_a_janela_repinta(lar, ctx, tmp_path) -> None:
     save_profile(Profile(name="Elden Ring", priority=5,
                          match=MatchCriteria(window_class=["steam_app_1245620"])))
     a07 = _a07()
@@ -315,8 +315,6 @@ def test_guardar_o_deslizante_e_marcar_o_jogo_gravam_e_a_janela_repinta(lar, ctx
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "acess:jogos:steam_app_1245620", "valor": "on", "evento": "change"}, _Ponte())
     assert "checked" in janela_pintada(carga["blocos"])
-    assert not (lar.dados / "acess" / "opcoes.json").exists()
-    a07.guardar_modificacao(ctx, {"v": "acess"}, _Ponte())
     guardado = json.loads((lar.dados / "acess" / "opcoes.json").read_text(encoding="utf-8"))
     assert guardado == {"vibracao": 17.0, "jogos": ["steam_app_1245620"]}
 
@@ -324,7 +322,6 @@ def test_guardar_o_deslizante_e_marcar_o_jogo_gravam_e_a_janela_repinta(lar, ctx
         ctx, {"v": "acess:jogos:steam_app_1245620", "evento": "click"}, _Ponte()) is None
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "acess:jogos:steam_app_1245620", "valor": "on", "evento": "change"}, _Ponte())
-    a07.guardar_modificacao(ctx, {"v": "acess"}, _Ponte())
     assert ler(_manifesto_de(lar), lar)["jogos"] == []
 
 

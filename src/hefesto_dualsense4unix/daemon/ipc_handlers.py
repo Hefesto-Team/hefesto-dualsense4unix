@@ -5008,8 +5008,10 @@ class IpcHandlersMixin:
     async def _handle_mods_parar_tudo(self, params: dict[str, Any]) -> dict[str, Any]:
         """O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``.
 
-        Só vale para a extensão cujo manifesto instalado declara ``parar_tudo``. ``{parado}`` é
-        falso quando ela não está conectada à porta (nada a parar).
+        Só vale para a extensão cujo manifesto instalado declara ``parar_tudo`` ou a ``chave``. Com
+        a ``chave``, a opção dela é gravada desligada antes do gesto, e a extensão segue desligada
+        depois de reaberta. ``{parado}`` é falso quando ela não está conectada à porta (nada a
+        parar); a chave fica desligada assim mesmo.
         """
         from hefesto_dualsense4unix.mods.instalador import (
             InstalacaoRecusadaError,
@@ -5026,8 +5028,17 @@ class IpcHandlersMixin:
             )
         except InstalacaoRecusadaError as exc:
             raise ValueError(exc.frase) from exc
-        if not manifesto.parar_tudo:
+        if not (manifesto.parar_tudo or manifesto.chave):
             raise ValueError(f"«{manifesto.nome}» não declara o «Parar tudo».")
+        if manifesto.chave:
+            from hefesto_dualsense4unix.mods import opcoes
+
+            try:
+                await asyncio.to_thread(
+                    opcoes.guardar, manifesto, manifesto.chave, False, supervisor.lugares
+                )
+            except (InstalacaoRecusadaError, OSError) as exc:
+                raise ValueError(f"A chave de «{manifesto.nome}» não foi gravada: {exc}") from exc
         return {"parado": bool(supervisor.porta.parar_tudo(mod))}
 
     async def _handle_mods_jogos(self, params: dict[str, Any]) -> dict[str, Any]:

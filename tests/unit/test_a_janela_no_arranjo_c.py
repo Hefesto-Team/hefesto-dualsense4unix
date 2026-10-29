@@ -113,13 +113,19 @@ def test_o_por_botao_mostra_cada_botao_com_as_formas_declaradas(janela) -> None:
     assert "<option selected>Toque" in linha, "o padrão do manifesto"
 
 
+def _toques_gravados(a07: Any) -> Any:
+    from hefesto_dualsense4unix.mods import opcoes
+
+    return opcoes.ler(a07._a_instalada("toque").manifesto, a07._lugares())["toques"]
+
+
 def test_o_toque_mudado_num_botao_guarda_os_outros(janela, ctx) -> None:  # noqa: F811
     a07, abrir = janela
     abrir(agora=["aparelhos"])
     _mudar(a07, ctx, "toque:toques:circle", "Duplo")
-    assert a07._MEXIDA.rascunho["toques"] == {"cross": "Toque", "circle": "Duplo", "r1": "Nada"}
+    assert _toques_gravados(a07) == {"cross": "Toque", "circle": "Duplo", "r1": "Nada"}
     _mudar(a07, ctx, "toque:toques:r1", "Toque")
-    assert a07._MEXIDA.rascunho["toques"] == {"cross": "Toque", "circle": "Duplo", "r1": "Toque"}
+    assert _toques_gravados(a07) == {"cross": "Toque", "circle": "Duplo", "r1": "Toque"}
     assert a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:toques:r1", "valor": "Duplo", "evento": "click"}, _Ponte(VIVO)) is None
     with pytest.raises(RuntimeError, match="Qual botão"):
