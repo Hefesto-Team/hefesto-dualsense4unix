@@ -18,52 +18,28 @@ Versão: 0.9.5 (alfa)
 
 ## O que é
 
-O Hefesto é um serviço para Linux que faz o controle DualSense, do PS5, funcionar por inteiro no PC. Os gatilhos resistem, a barra de luz muda de cor, a vibração tem a força que você escolher, e o giroscópio, o touchpad, o microfone e o alto-falante chegam ao jogo. Cada DualSense ligado vira um jogador, por cabo ou por Bluetooth, até quatro.
+Um serviço para Linux que faz o DualSense, do PS5, funcionar por inteiro no PC. Cada DualSense ligado vira um jogador, por cabo ou por Bluetooth, até quatro. Você configura tudo por uma janela com nove abas; há também um ícone na bandeja, uma interface de terminal e uma linha de comando.
 
-Você configura tudo por uma janela com nove abas. Também há um ícone na bandeja, uma interface de terminal e uma linha de comando.
-
-## Para quem é
-
-Para quem joga no Linux com um DualSense, e em especial para quem precisa adaptar o controle ao próprio corpo. Com o Hefesto dá para:
-
-- trocar um botão por outro, inclusive em jogos que não deixam remapear;
-- mirar movendo o controle: o Analógico Virtual leva o giroscópio e a inclinação ao analógico escolhido, o esquerdo ou o direito;
-- usar o controle como mouse e teclado, com teclado na tela;
-- diminuir, aumentar ou desligar a vibração de cada lado, em cada controle;
-- deixar os gatilhos macios, duros ou sem resistência;
-- guardar esses ajustes num perfil por jogo, que entra sozinho quando o jogo abre.
-
-## O que ele faz
-
-- Gatilhos adaptativos com os efeitos do DualSense (rígido, pulso, arco, galope, metralhadora e outros), ajustados por controle.
-- Cor da barra de luz e luz de jogador em cada controle.
-- Vibração com força por controle e por motor.
-- Giroscópio, acelerômetro e touchpad entregues ao jogo.
-- Microfone e alto-falante de cada controle como dispositivos de áudio do sistema.
-- Co-op local, com um controle virtual por jogador.
+- Gatilhos adaptativos (rígido, pulso, arco, galope, metralhadora e outros), cor da barra de luz, luz de jogador e força da vibração por motor, tudo por controle.
+- Giroscópio, acelerômetro, touchpad, microfone e alto-falante de cada controle chegam ao jogo e ao sistema.
 - O jogo pode enxergar um DualSense, um Xbox 360 ou um Nintendo Pro, ou falar direto com o controle físico.
-- Perfis por jogo para Steam, Heroic (Epic · GOG) e Flatpak; os outros lançadores chegam por [extensão](#extensões).
-- Compatibilidade parcial com mods do DualSenseX, por UDP em `127.0.0.1:6969` ([udp-schema.md](docs/protocol/udp-schema.md)).
-- Automação: um socket JSON-RPC local ([ipc-unix-socket.md](docs/protocol/ipc-unix-socket.md)) e plugins em Python, que se ligam com `hefesto-dualsense4unix plugin ligar` ([exemplos](examples/)).
+- Botão trocado por outro, inclusive em jogos que não deixam remapear; mira pelo giroscópio no analógico escolhido (o Analógico Virtual); o controle como mouse e teclado, com teclado na tela.
+- Perfis por jogo para Steam, Heroic (Epic · GOG) e Flatpak, que entram sozinhos quando o jogo abre; os outros lançadores chegam por [extensão](#extensões).
+- Compatibilidade parcial com mods do DualSenseX ([udp-schema.md](docs/protocol/udp-schema.md)), socket JSON-RPC local ([ipc-unix-socket.md](docs/protocol/ipc-unix-socket.md)) e plugins em Python ([exemplos](examples/)).
 
 Controles Nintendo Pro e 8BitDo também são reconhecidos, mas chegam ao jogo como o controle que já são.
 
 ## A janela
 
-| | |
-|---|---|
-| Jogar | Gatilhos |
-| ![Jogar](docs/usage/assets/aba-01-jogar.png) | ![Gatilhos](docs/usage/assets/aba-03-gatilhos.png) |
-| Iluminação | Vibração |
-| ![Iluminação](docs/usage/assets/aba-04-iluminacao.png) | ![Vibração](docs/usage/assets/aba-05-vibracao.png) |
-| Navegação | Conexões |
-| ![Navegação](docs/usage/assets/aba-06-navegacao.png) | ![Conexões](docs/usage/assets/aba-08-conexoes.png) |
-| Sistema | Perfis |
-| ![Sistema](docs/usage/assets/aba-09-sistema.png) | ![Perfis](docs/usage/assets/aba-10-perfis.png) |
-| Experimental | |
-| ![Experimental](docs/usage/assets/aba-07-lancadores.png) | |
+| Jogar | Gatilhos | Iluminação |
+|---|---|---|
+| ![Jogar](docs/usage/assets/aba-01-jogar.png) | ![Gatilhos](docs/usage/assets/aba-03-gatilhos.png) | ![Iluminação](docs/usage/assets/aba-04-iluminacao.png) |
+| **Vibração** | **Navegação** | **Conexões** |
+| ![Vibração](docs/usage/assets/aba-05-vibracao.png) | ![Navegação](docs/usage/assets/aba-06-navegacao.png) | ![Conexões](docs/usage/assets/aba-08-conexoes.png) |
+| **Sistema** | **Perfis** | **Experimental** |
+| ![Sistema](docs/usage/assets/aba-09-sistema.png) | ![Perfis](docs/usage/assets/aba-10-perfis.png) | ![Experimental](docs/usage/assets/aba-07-lancadores.png) |
 
-O que cada aba faz: [docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md).
+O que cada aba faz: [AS-NOVE-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md).
 
 ## Instalar
 
@@ -75,93 +51,27 @@ cd hefesto-dualsense4unix
 ./install.sh
 ```
 
-O instalador instala as dependências pelo gerenciador de pacotes da distribuição (apt, dnf ou pacman), pede a senha de administrador uma vez e pergunta antes dos passos opcionais. Enter aceita a resposta padrão. Sem terminal interativo, use `./install.sh --yes`. Não rode com `sudo` na frente.
+Não rode com `sudo` na frente: o instalador pede a senha uma vez e pergunta antes dos passos opcionais (sem terminal interativo, `./install.sh --yes`). Ele instala regras udev, serviços do systemd, quatro módulos de kernel via DKMS, parâmetros de boot e ajustes no Bluetooth e na Steam. Cada item tem opção para pular, e `./install.sh --dry-run` mostra o plano sem mudar nada. Com o Secure Boot ligado, registre a chave do DKMS que o instalador indicar e reinicie. Detalhes, os pacotes `.deb`, Flatpak, AppImage, Arch, Fedora e Nix (o caminho testado é o `./install.sh`) e o `./uninstall.sh` estão em [instalacao.md](docs/usage/instalacao.md).
 
-Com o Secure Boot ligado, os módulos de kernel só carregam depois de você registrar a chave do DKMS: `sudo mokutil --import /var/lib/dkms/mok.pub` e reiniciar. Sem isso, um controle Nintendo pode sumir depois de reiniciar.
-
-Depois, abra o Hefesto pelo menu de aplicativos ou com `hefesto-dualsense4unix-gui`. O serviço passa a subir sozinho no login.
-
-A primeira configuração é mais simples com o controle no cabo USB. Para parear por Bluetooth, ligue o Procurar na aba Conexões, segure PS + Create no controle e clique em Parear na linha dele.
-
-### O que o instalador muda no sistema
-
-O Hefesto mexe em partes do sistema que um programa comum não toca. Com as opções padrão, ele instala:
-
-- regras udev para os controles e para os dispositivos virtuais;
-- serviços do systemd, do usuário e do sistema;
-- quatro módulos de kernel corrigidos, compilados via DKMS (`hid-playstation`, `hid-nintendo`, `rtw88-usb` e `usb-f-hid`);
-- parâmetros de boot para o USB do controle;
-- ajustes no Bluetooth e, se você confirmar, uma versão corrigida do BlueZ;
-- ajustes na Steam: opções de inicialização dos jogos e uma versão fixa do Proton.
-
-Cada item tem uma opção para pular. Para ver o plano sem mudar nada, rode `./install.sh --dry-run`. A lista completa está em [instalacao.md](docs/usage/instalacao.md).
-
-Há também pacotes `.deb`, Flatpak, AppImage, Arch, Fedora e Nix, mas o caminho testado é o `./install.sh`.
-
-### Desinstalar
-
-```bash
-./uninstall.sh
-```
-
-Desfaz o que o instalador fez. Seus perfis ficam guardados; com `--purge-config` eles também saem, depois de uma cópia de segurança.
+Depois, abra o Hefesto pelo menu de aplicativos ou com `hefesto-dualsense4unix-gui`; o serviço passa a subir sozinho no login. Para parear por Bluetooth, ligue o Procurar na aba Conexões, segure PS + Create no controle e clique em Parear na linha dele.
 
 ## Usar
 
-A aba Jogar decide como o controle chega ao jogo:
-
-- Status: ligado, o Hefesto cuida da luz, da vibração, dos gatilhos e do número de cada jogador; desligado, o jogo fala direto com o controle.
-- Modo: Sony DualSense, Xbox, Steam Input, Navegação ou Nativo. O Hefesto tenta na ordem da lista e fica no primeiro que funcionar. Navegação transforma o controle em mouse e teclado. Nativo deixa o jogo falar com o controle sem o Hefesto no meio.
-- Máscara: DualSense, Xbox 360 ou Nintendo Pro. Ela muda o desenho dos botões que o jogo mostra; o controle na sua mão continua o mesmo.
-
-Com o Modo Freestyle ligado, o perfil ativo continua valendo quando você abre outro jogo; desligado, o Hefesto volta a escolher o perfil de cada jogo. As outras abas ajustam gatilhos, luz, vibração e sensores, e o botão Salvar Perfil guarda tudo no perfil ativo. Para escolher modo e máscara em cada jogo, veja [jogos-e-mascaras.md](docs/usage/jogos-e-mascaras.md).
-
-### Atalhos no controle
-
-| Gesto | O que faz |
-|---|---|
-| PS + direcional para cima / para baixo | próximo perfil / perfil anterior |
-| PS + R3 | próximo modo |
-| PS + L3 | próxima máscara |
-| PS + Options | pausa o mouse e o teclado do controle |
-| PS, sozinho | abre a Steam (dá para trocar) |
-| L3 / R3, no modo Navegação | abre / fecha o teclado na tela |
-| Botão do microfone | liga e desliga o microfone daquele controle |
-
-Mais em [hotkeys.md](docs/usage/hotkeys.md).
-
-### Linha de comando
+Na aba Jogar, o **Status** decide se o Hefesto fica entre o jogo e o controle, o **Modo** escolhe como o controle chega ao jogo (Sony DualSense, Xbox, Steam Input, Navegação ou Nativo) e a **Máscara** muda o desenho dos botões que o jogo mostra (DualSense, Xbox 360 ou Nintendo Pro). As outras abas ajustam gatilhos, luz, vibração e sensores, e o Salvar Perfil guarda tudo no perfil ativo. Modo e máscara por jogo: [jogos-e-mascaras.md](docs/usage/jogos-e-mascaras.md). Atalhos no controle (PS + direcional troca o perfil, PS + R3 o modo, PS + L3 a máscara): [hotkeys.md](docs/usage/hotkeys.md).
 
 ```bash
 hefesto-dualsense4unix status                    # serviço e controles
 hefesto-dualsense4unix doctor                    # diagnóstico; --fix corrige o que puder
-hefesto-dualsense4unix profile list              # perfis salvos
 hefesto-dualsense4unix profile activate <nome>
-hefesto-dualsense4unix led --color "#FF0080"     # cor da barra de luz
 hefesto-dualsense4unix gamepad on --flavor xbox  # o jogo vê um Xbox 360
-hefesto-dualsense4unix native on                 # o jogo fala direto com o controle
 hefesto-dualsense4unix tui                       # interface de terminal
-```
-
-O serviço roda na sua sessão:
-
-```bash
-systemctl --user status hefesto-dualsense4unix.service
-journalctl --user -u hefesto-dualsense4unix -f
 ```
 
 Referência completa em [cli.md](docs/usage/cli.md).
 
 ## Extensões
 
-Uma extensão acrescenta ao Hefesto o que nem todo mundo usa. Cada uma mora no seu repositório, com o
-aviso de uso e os testes, e se instala na aba Experimental (**Instalar de um endereço**) ou pela linha
-de comando:
-
-```bash
-hefesto-dualsense4unix mod instalar https://github.com/Hefesto-Team/hefesto-mod-lutris
-hefesto-dualsense4unix mod ligar lutris
-```
+Uma extensão acrescenta o que nem todo mundo usa. Cada uma mora no seu repositório, com o aviso de uso e os testes, e se instala na aba Experimental (**Instalar de um endereço**) ou com `hefesto-dualsense4unix mod instalar <endereço>`. O contrato está em [porta-das-modificacoes.md](docs/protocol/porta-das-modificacoes.md).
 
 | extensão | o que traz |
 | --- | --- |
@@ -173,34 +83,19 @@ hefesto-dualsense4unix mod ligar lutris
 | [hefesto-mod-kytyps5](https://github.com/Hefesto-Team/hefesto-mod-kytyps5) | o KytyPS5 (PlayStation 5) |
 | [hefesto-mod-intiface](https://github.com/Hefesto-Team/hefesto-mod-intiface) | o DualSense como aparelho do protocolo Buttplug (conteúdo para maiores de 18 anos) |
 
-Nenhuma é afiliada às donas das marcas. Emulador é para o jogo que você comprou e copiou do seu
-próprio console: não baixe jogo pirata, compre na loja oficial (PlayStation Store, Nintendo eShop,
-GOG, Steam). O Hefesto mostra o aviso de cada extensão antes de instalar. A instalada pelo git se
-atualiza sozinha; a de uma pasta local, nunca. O contrato está em
-[porta-das-modificacoes.md](docs/protocol/porta-das-modificacoes.md).
+Nenhuma é afiliada às donas das marcas. Emulador é para o jogo que você comprou e copiou do seu próprio console: não baixe jogo pirata.
 
 ## Limitações
 
-- É uma versão alfa. Os testes com controle de verdade são feitos em Pop!_OS 24.04 com COSMIC. O Ubuntu passa pelo CI, sem controle. Fedora, Arch, Debian e Mint têm pacote, mas ainda não foram testados com um controle ligado. As versões conferidas estão em [versoes-validadas.md](docs/usage/versoes-validadas.md).
-- Distribuições sem `systemd-logind` (Alpine com OpenRC, Void, Artix) não são suportadas.
-- A troca automática de perfil reconhece os jogos em X11 e XWayland, o que inclui a Steam e o Proton. A janela Wayland nativa é reconhecida no COSMIC e, com o `wlrctl` instalado, no Sway, no Hyprland e nos outros compositores wlroots; no GNOME e no KDE, não.
-- Pelo Bluetooth, o microfone de cada controle já vem ligado, e enquanto algum programa o escuta ele divide o rádio com os comandos do controle. No cabo não há esse custo.
-- Os pareamentos Bluetooth podem sumir por dois motivos: um defeito conhecido do BlueZ, que derruba o `bluetoothd`, ou o controle pareado por Bluetooth e ligado no cabo ao mesmo tempo. O instalador oferece um BlueZ corrigido, e o Hefesto guarda cópia dos pareamentos. Detalhes em [bluetooth.md](docs/usage/bluetooth.md).
-- O 8BitDo por Bluetooth funciona no modo DirectInput/PS4, e não no modo Switch. Detalhes em [troubleshooting-8bitdo.md](docs/usage/troubleshooting-8bitdo.md).
+- É uma versão alfa, testada com controle em Pop!_OS 24.04 com COSMIC; as outras distribuições estão em [versoes-validadas.md](docs/usage/versoes-validadas.md). Sem `systemd-logind` (Alpine com OpenRC, Void, Artix), não funciona.
+- A troca automática de perfil reconhece janelas X11 e XWayland (Steam e Proton incluídos) e as Wayland nativas no COSMIC e, com o `wlrctl`, nos compositores wlroots; no GNOME e no KDE, não.
+- Pelo Bluetooth, enquanto um programa escuta o microfone, ele divide o rádio com os comandos do controle, e os pareamentos podem sumir por um defeito do BlueZ ([bluetooth.md](docs/usage/bluetooth.md)). O 8BitDo funciona no modo DirectInput/PS4, não no Switch ([troubleshooting-8bitdo.md](docs/usage/troubleshooting-8bitdo.md)).
 
 Quando algo não funcionar, comece por `hefesto-dualsense4unix doctor` e por [troubleshooting.md](docs/usage/troubleshooting.md).
 
 ## Contribuir
 
-Issues são bem-vindas. Para mexer no código, abra uma issue antes, para combinarmos o caminho: o pull request de quem ainda não contribuiu só é revisado depois dessa conversa. O guia está em [CONTRIBUTING.md](.github/CONTRIBUTING.md).
-
-Relatos de outras distribuições ajudam muito: abra uma issue com a saída de `hefesto-dualsense4unix doctor`, o nome da distribuição e a versão do kernel.
-
-O projeto é escrito em português do Brasil: código, documentação e commits.
-
-## Apoiar
-
-Se o Hefesto te ajuda, considere apoiar pelo [Patreon](https://www.patreon.com/Hefesto_Team).
+Issues são bem-vindas, inclusive relatos de outras distribuições com a saída de `hefesto-dualsense4unix doctor`. Para mexer no código, abra uma issue antes: o pull request de quem ainda não contribuiu só é revisado depois dessa conversa. O guia está em [CONTRIBUTING.md](.github/CONTRIBUTING.md), e o projeto é escrito em português do Brasil. Se o Hefesto te ajuda, considere apoiar pelo [Patreon](https://www.patreon.com/Hefesto_Team).
 
 ## Licença
 
