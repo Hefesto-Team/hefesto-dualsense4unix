@@ -203,6 +203,8 @@ def test_a_borda_de_palavra_deixa_o_nome_interno_em_paz() -> None:
         'data-campo="mesa-frase"',
         "perfil-da-mesa",
         "radio-mesa",
+        '<input class="radio-mesa" type="radio" name="mesa" id="c-x1">',
+        '"<input name=\\"mesa\\">"',
         '{"mesa": {"conta": 2}}',
         "uma remessa nova",
     ):
@@ -216,6 +218,9 @@ def test_a_borda_de_palavra_deixa_o_nome_interno_em_paz() -> None:
         "Mesa: 4 faces",
         "este controle saiu da mesa",
         '{"mesa": {"aviso": "sem controle na mesa"}}',
+        '<b title="mesa">x</b>',
+        '<input data-dica="mesa">',
+        '<input name="mesa inteira">',
     ):
         assert palavra_banida_em(frase) == "mesa", (
             f"{frase!r} é FRASE de tela e a régua a deixou passar."

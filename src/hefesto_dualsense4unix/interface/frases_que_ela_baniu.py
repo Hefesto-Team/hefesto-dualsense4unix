@@ -333,6 +333,15 @@ def frase_banida_em(texto: str) -> str | None:
     return None
 
 
+_ATRIBUTO_DE_ENDERECO = re.compile(r'(?<![\w-])(?:name|id|for|class)=\\?"$')
+
+
+def _valor_de_atributo_de_endereco(texto: str, inicio: int, fim: int) -> bool:
+    """A palavra é o valor inteiro de ``name``, ``id``, ``for`` ou ``class``: a tela não a lê."""
+    return (bool(_ATRIBUTO_DE_ENDERECO.search(texto[max(0, inicio - 10):inicio]))
+            and texto[fim:fim + 2] in ('"', '\\"', '" ', '">', '"/'))
+
+
 def palavra_banida_em(texto: str) -> str | None:
     """A primeira palavra banida presente em ``texto``, ou ``None``."""
     for palavra in PALAVRAS_BANIDAS:
@@ -342,6 +351,8 @@ def palavra_banida_em(texto: str) -> str | None:
             antes = texto[achada.start() - 1:achada.start()]
             depois = texto[achada.end():achada.end() + 2]
             if antes == '"' and depois == '":':
+                continue
+            if _valor_de_atributo_de_endereco(texto, achada.start(), achada.end()):
                 continue
             return palavra
     return None
