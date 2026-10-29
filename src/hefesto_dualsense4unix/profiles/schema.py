@@ -795,10 +795,10 @@ class ProfileSpeakerConfig(BaseModel):
     `muted=False` restaura a preferência, e a preferência é `0`).
 
     Um perfil que trouxesse só ``muted`` cairia direto nessa armadilha na
-    ativação. A recusa é na BORDA do esquema, e não no applier, pela mesma
-    razão do ``custom_mult`` do rumble: o arquivo inválido é rejeitado no
-    load, com mensagem que explica, em vez de virar um comportamento errado
-    silencioso meses depois. Quem quer "mudo" escreve o volume que quer de
+    ativação. A recusa é na BORDA do esquema, e não no applier: a seção sem
+    ``volume`` é recusada com mensagem que explica, e o ``Profile`` a derruba na
+    carga com aviso no diário (``_o_som_sem_volume_cai_na_carga``, 28/10/2026),
+    sem recusar o perfil inteiro. Quem quer "mudo" escreve o volume que quer de
     volta ao clicar em Ativar — que é o que o par
     ``{"volume": 180, "muted": true}`` diz.
 

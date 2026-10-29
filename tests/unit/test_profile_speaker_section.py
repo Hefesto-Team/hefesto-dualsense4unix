@@ -169,21 +169,26 @@ def test_secao_extra_forbid() -> None:
 
 
 def test_mudo_sem_volume_e_recusado_com_mensagem_que_explica() -> None:
-    """A armadilha 1, barrada na BORDA do esquema."""
+    """A armadilha 1, barrada na BORDA do esquema: a seção recusa, e o perfil carrega sem ela.
+
+    Desde 28/10 (O-GESTO-DE-SOM-GRAVA-O-SPEAKER-COMPLETO-01) o perfil com `speaker` sem `volume`
+    não é recusado inteiro: a seção cai na carga. O mudo sem volume continua sem chegar ao
+    alto-falante, que é o que a armadilha pede.
+    """
     with pytest.raises(ValidationError) as exc:
         ProfileSpeakerConfig(muted=True)  # type: ignore[call-arg]
     texto = str(exc.value)
     assert "volume" in texto
     assert "posse" in texto or "ZERO" in texto
 
-    with pytest.raises(ValidationError):
-        Profile.model_validate(
-            {
-                "name": "so_mudo",
-                "match": {"type": "any"},
-                "speaker": {"muted": True},
-            }
-        )
+    perfil = Profile.model_validate(
+        {
+            "name": "so_mudo",
+            "match": {"type": "any"},
+            "speaker": {"muted": True},
+        }
+    )
+    assert perfil.speaker is None
 
 
 def test_profile_com_a_secao_roundtrip_json() -> None:
