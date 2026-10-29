@@ -120,6 +120,7 @@ def _rodar(lar: pathlib.Path, *argumentos: str) -> None:
 def test_a_ponte_da_janela_apaga_o_cache_que_a_vida_anterior_gravou(
     tmp_path: pathlib.Path, endereco: str,
 ) -> None:
+    """Prova da D-2910-O-CACHE-DAS-PAGINAS-SE-LIMPA-A-CADA-ABERTURA."""
     if shutil.which("xvfb-run") is None:  # pragma: no cover
         pytest.skip("sem `xvfb-run` não há onde o WebKit desenhe")
     _rodar(tmp_path, "grava", NOME_DO_PROGRAMA, endereco)
