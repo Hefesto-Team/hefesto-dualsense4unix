@@ -1,10 +1,10 @@
 """A chave Ligado/Desligado do topo da janela da extensão, no lugar do «Parar tudo».
 
-A-CHAVE-LIGADO-DESLIGADO-DA-EXTENSAO-01 (28/10/2026). O usuário disse: «Deveríamos deixar um
-slider de ligado e desligado ao invés do parar tudo. O parar tudo é meio contraintuitivo.» O
-manifesto declara ``"chave": "<opção ligado>"``; a janela põe a chave no topo, sem texto, grava
-na hora e, desligada, apaga as ações e pede o gesto ``para``.
-O ``parar_tudo`` de antes segue valendo.
+A-CHAVE-LIGADO-DESLIGADO-NO-LUGAR-DO-PARAR-TUDO-01 (28/10/2026). O usuário disse: «Deveríamos
+deixar um slider de ligado e desligado ao invés do parar tudo. O parar tudo é meio
+contraintuitivo.» O manifesto declara ``"chave": "<opção ligado>"``; a janela põe a chave no
+topo, sem texto, grava na hora e, desligada, apaga as ações e pede o gesto ``para``. O
+``parar_tudo`` de antes segue valendo.
 
 E os controles do aparelho no cartão dele quando a aba deles é a dos aparelhos (O-CONTROLE-DO-
 APARELHO-MORA-NO-CARTAO-DELE-01): uma linha por aparelho, sem rótulo, e nenhum cartão à parte.
