@@ -21,5 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 01-jogar.html
-- **28/10/2026** — as abas dos controles no topo do quadro «Dispositivos conectados», no lugar do «Selecionar:» (aprovado por você em 28/10, D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR). Enquanto quem coordena não publicar, o produto continua com a fita do «Selecionar:» na Jogar.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
