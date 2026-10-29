@@ -901,20 +901,3 @@ __all__ = [
 ]
 
 
-def aviso_de_opt_out_antigo(
-    state: dict[str, Any] | None, *, opt_out: bool, conectados: int
-) -> str | None:
-    """O produto está inerte por uma escolha ANTIGA dela. ``None`` = nada a dizer."""
-    if not isinstance(state, dict) or not opt_out or conectados < 1:
-        return None
-    if state.get("native_mode"):
-        return None
-    gamepad = state.get("gamepad_emulation")
-    if isinstance(gamepad, dict) and gamepad.get("enabled"):
-        return None
-    return (
-        "O controle está em “Controlar o PC” porque a emulação foi desligada "
-        "numa sessão anterior, e essa escolha vale até você mudá-la. Enquanto "
-        "estiver assim, o giroscópio e a vibração não chegam a jogo nenhum — "
-        "escolha “Jogar pelo Hefesto” ou “Conexão Nativa (Sony)” aqui em cima."
-    )

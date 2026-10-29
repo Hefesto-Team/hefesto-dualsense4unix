@@ -65,7 +65,7 @@ def cmd_passthrough(
         params["uniq"] = uniq
     chamar("rumble.passthrough", params)
     if ligado:
-        console.print("vibração: [green]o jogo manda[/green]")
+        console.print("vibração: [green]do jogo[/green]")
     else:
         console.print(
             "vibração: [dim]sem mudança — o serviço só solta a vibração fixada "

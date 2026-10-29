@@ -1,4 +1,10 @@
-"""O-DESLIGADO-DE-ONTEM-01 — o produto inerte por uma decisão de ontem, em silêncio."""
+"""O-DESLIGADO-DE-ONTEM-01 — o aviso do opt-out antigo saiu da tela, com os nomes velhos dos modos.
+
+Por pedido (29/10/2026, O-AVISO-DO-OPT-OUT-ANTIGO-SAI-COM-OS-NOMES-VELHOS-01), o aviso
+«escolha “Jogar pelo Hefesto” ou “Conexão Nativa (Sony)” aqui em cima» sai: nenhum dos dois nomes
+existe na tela de hoje. Com o ``gamepad_disabled.flag`` gravado e um controle ligado, a lista que a
+aba Sistema recebe não o traz.
+"""
 
 from __future__ import annotations
 
@@ -6,69 +12,51 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("test_o_desligado_de_ontem_01: importa código da janela GTK")
 
+import pathlib
+import sys
 from typing import Any
 
-import pytest
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
+    if _caminho not in sys.path:
+        sys.path.insert(0, _caminho)
 
-from hefesto_dualsense4unix.app.actions.home_actions import aviso_de_opt_out_antigo
+from hefesto_dualsense4unix.app.actions import home_actions
+from hefesto_dualsense4unix.app.actions.jogar import painel
+from hefesto_dualsense4unix.utils import session
+from pacotes import Contexto
+from pacotes import a01_jogar, a09_sistema
 
 _INERTE: dict[str, Any] = {
+    "connected": True,
     "native_mode": False,
     "gamepad_emulation": {"enabled": False},
+    "paused": False,
+    "controllers": [{"uniq": "aa:bb:cc:00:00:01", "connected": True, "player_slot": 1}],
 }
 
-
-def test_o_caso_dela_ganha_o_aviso() -> None:
-    """A cura. Morde ao fazer a função devolver `None` sempre."""
-    texto = aviso_de_opt_out_antigo(_INERTE, opt_out=True, conectados=1)
-    assert texto is not None
-    assert "sessão anterior" in texto, "tem de dizer que a decisão é ANTIGA"
-    assert "giroscópio" in texto, "tem de nomear o que para de funcionar"
-    assert "Jogar pelo Hefesto" in texto and "Conexão Nativa" in texto, (
-        "aviso sem saída é beco: as duas saídas são os rótulos da própria aba"
-    )
+_NOMES_VELHOS = ("Jogar pelo Hefesto", "Conexão Nativa", "sessão anterior")
 
 
-def test_a_frase_nao_chama_a_escolha_dela_de_erro() -> None:
-    """Ela desligou de propósito, e isso é um direito, não um defeito."""
-    texto = (aviso_de_opt_out_antigo(_INERTE, opt_out=True, conectados=1) or "").lower()
-    for proibido in ("erro", "errado", "problema", "falha", "incorreto", "esqueceu"):
-        assert proibido not in texto
+def test_a_lista_da_sistema_nao_traz_o_aviso_do_opt_out(monkeypatch: Any,
+                                                        tmp_path: pathlib.Path) -> None:
+    """Com o opt-out gravado e um controle, nenhuma linha fala do opt-out nem dos nomes velhos."""
+    (tmp_path / "gamepad_disabled.flag").write_text("", encoding="utf-8")
+    monkeypatch.setattr(session, "config_dir", lambda *a, **k: tmp_path)
+    assert painel.modo_lembrado().ligado is False, "o opt-out não ficou gravado"
+    monkeypatch.setattr(a01_jogar, "_do_exame", lambda: [])
+    monkeypatch.setattr(a01_jogar, "_aviso_da_cura_do_travamento", lambda: None)
+    um = _INERTE["controllers"]
+    ctx = Contexto(state=_INERTE, mesa=um, conectados=um, estados={})
+    linhas = a01_jogar.coluna_de_atencao(ctx)
+    assert not [a for a in linhas if "opt_out" in a.get("fonte", "")], linhas
+    for linha in linhas:
+        for nome in _NOMES_VELHOS:
+            assert nome not in linha.get("texto", ""), linha
 
 
-@pytest.mark.parametrize(
-    ("estado", "opt_out", "conectados", "porque"),
-    [
-        (_INERTE, False, 1, "sem opt-out não há decisão antiga a explicar"),
-        (
-            {"native_mode": False, "gamepad_emulation": {"enabled": True}},
-            True,
-            1,
-            "a emulação está ligada agora — o gesto novo já venceu",
-        ),
-        (
-            {"native_mode": True, "gamepad_emulation": {"enabled": False}},
-            True,
-            1,
-            "Conexão Nativa é escolha ATUAL dela, e ali o jogo fala direto",
-        ),
-        (_INERTE, True, 0, "sem controle na mesa não há nada a atravessar"),
-        (None, True, 1, "sem daemon a aba já diz que está desligado"),
-    ],
-)
-def test_o_aviso_cala_quando_nao_ha_o_que_dizer(
-    estado: Any, opt_out: bool, conectados: int, porque: str
-) -> None:
-    """Cinco silêncios, cada um com a razão."""
-    assert aviso_de_opt_out_antigo(estado, opt_out=opt_out, conectados=conectados) is None, porque
-
-
-def test_o_aviso_some_no_instante_em_que_ela_troca_de_modo() -> None:
-    """É aviso de ESTADO, não pedido repetido."""
-    ligado = {"native_mode": False, "gamepad_emulation": {"enabled": True}}
-    assert aviso_de_opt_out_antigo(ligado, opt_out=True, conectados=1) is None
-
-
-def test_estado_sem_a_chave_do_gamepad_ainda_avisa() -> None:
-    """Daemon antigo, ou payload sem a seção: a ausência não é "ligado"."""
-    assert aviso_de_opt_out_antigo({"native_mode": False}, opt_out=True, conectados=1)
+def test_a_funcao_e_o_tema_do_aviso_sairam() -> None:
+    """Sem a função no dono e sem o tema dela na aba Sistema."""
+    assert not hasattr(home_actions, "aviso_de_opt_out_antigo")
+    assert not [f for f in a09_sistema.TEMA_DA_FONTE if "opt_out" in f]

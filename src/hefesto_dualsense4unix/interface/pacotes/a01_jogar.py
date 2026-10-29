@@ -223,12 +223,12 @@ def _do_exame() -> list[dict[str, Any]]:
 
 
 def _avisos(ctx: Contexto) -> list[dict[str, str]]:
-    """As dez fontes de aviso do produto: ``[{"selo", "texto", "fonte"}, …]``.
+    """As fontes de aviso do produto: ``[{"selo", "texto", "fonte"}, …]``.
 
     **Perdeu a tela em 07/09/2026, não as fontes.** Ordem de produto: a seção Atenção sai da aba
     Jogar e fica só o Reconectar controles. Os quatro endereços (`atencao-conta`, `aviso-selo`,
     `aviso-texto`, `aviso-vivo`) saíram de :data:`DA_PAGINA` (endereço sem elemento é órfão). Das
-    dez fontes **só a 5** (o exame, `a08_conexoes._exame`) tem segunda casa publicada, a aba
+    fontes de então **só a 5** (o exame, `a08_conexoes._exame`) tem segunda casa publicada, a aba
     Conexões; as outras nove chegavam à tela SÓ por aqui (na medição, a coluna tinha UMA linha viva,
     `home_actions.texto_do_cadeado_cego`). **Foram para a aba 09, Sistema (28/09/2026,
     A-TELA-PERGUNTA-AO-DONO-01)**, cujo trabalho é a máquina se explicar: `a09_sistema.pacote`
@@ -245,23 +245,18 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     1. **as seis de `painel.AVISOS_DA_TELA`**: pausa, vpad degradado, rádio frágil, jogo sem
       wrapper, cadeado da troca automática e detector cego; funções puras de `home_actions`, e
       `painel.avisos_do_estado` trata a que levanta (selo ``ERRO``);
-    2. **o opt-out antigo** (`home_actions.aviso_de_opt_out_antigo`): fora de `AVISOS_DA_TELA`
-      porque pede dois argumentos que só a tela sabe (escolha de disco DESLIGADA,
-      `painel.modo_lembrado()` lendo o ``gamepad_disabled.flag``; e quantos controles há,
-      `ctx.conectados`); é a pergunta de 31/08 (*"não sei se segue desativado"*);
-    3. **a ponte com o jogo** (:func:`_aviso_da_ponte`), só quando é má notícia; fica no canal e
-      fora da 09 (:func:`_avisos_com_outra_casa`); 3-bis. **a divergência de máscara**
+    2. **a ponte com o jogo** (:func:`_aviso_da_ponte`), só quando é má notícia; fica no canal e
+      fora da 09 (:func:`_avisos_com_outra_casa`); 2-bis. **a divergência de máscara**
       (:func:`_aviso_da_divergencia_de_mascara`), o ALARME do daemon desde a MASCARA-01; mora aqui e
       não em `AVISOS_DA_TELA` porque volta em markup do Pango, como a ponte (portão);
-    4. **a cura do travamento do USB** (:func:`_aviso_da_cura_do_travamento`), ONDA5-01-01,
+    3. **a cura do travamento do USB** (:func:`_aviso_da_cura_do_travamento`), ONDA5-01-01,
       06/09/2026; lê o disco e não o `state`;
-    5. **os achados GRAVES do exame** (`a08_conexoes._exame`); os ``certo`` ficam de fora, a coluna
+    4. **os achados GRAVES do exame** (`a08_conexoes._exame`); os ``certo`` ficam de fora, a coluna
       chama-se Atenção.
 
     O que fica escrito é a LISTA, que se conta sozinha: o número desta docstring errou três vezes
-    (06/09/2026); quem acrescentar uma fonte acrescenta um item, não um número. O selo do opt-out é
-    ``GAMEPAD``, o mesmo que `AVISOS_DA_TELA` dá ao vpad degradado (mesmo assunto, o gamepad virtual
-    que o jogo vê); selo novo poria palavra de tela num arquivo que não é dono de nenhuma.
+    (06/09/2026); quem acrescentar uma fonte acrescenta um item, não um número. O aviso do opt-out
+    antigo saiu em 29/10/2026, com os nomes velhos dos modos que ele citava.
     """
     fora: list[dict[str, str]] = _avisos_sem_outra_casa(ctx)
     fora += _avisos_com_outra_casa(ctx)
@@ -300,24 +295,7 @@ def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
     dentro do `storm_report`), os achados do exame dos controles (aba Conexões) e as três do
     `painel` de :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`.
     """
-    painel = _painel()
     fora: list[dict[str, str]] = _do_painel(ctx, com_outra_casa=False)
-
-    try:
-        from hefesto_dualsense4unix.app.actions import home_actions
-
-        texto = home_actions.aviso_de_opt_out_antigo(
-            ctx.state,
-            opt_out=painel.modo_lembrado().ligado is False,
-            conectados=len(ctx.conectados),
-        )
-        if texto:
-            fora.append({"selo": "GAMEPAD", "texto": str(texto),
-                         "fonte": "home_actions.aviso_de_opt_out_antigo"})
-    except Exception as erro:
-        fora.append({"selo": "ERRO",
-                     "texto": f"o opt-out antigo não respondeu ({type(erro).__name__}).",
-                     "fonte": "home_actions.aviso_de_opt_out_antigo"})
 
     try:
         divergencia = _aviso_da_divergencia_de_mascara(ctx.state)

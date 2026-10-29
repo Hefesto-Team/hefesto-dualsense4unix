@@ -2940,7 +2940,7 @@ class TestOPortaoMorde:
         ), (
             "a varredura não vê despacho por STRING — `getattr(pin, "
             '"lock_proton_for_all_games", None)` em '
-            "`src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py:2516` "
+            "`src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py:2515` "
             "(`lock_proton_for_all_games`) é o ÚNICO caminho "
             "deste "
             "símbolo. Foi assim que a passada anterior errou cinco vezes numa "

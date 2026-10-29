@@ -26,7 +26,7 @@ O QUE A RÉGUA COBRA, e cada item é uma forma de a cura morrer calada:
   devolve ``desktop``, então um pacote descuidado acende **Ligado** sobre um
   estado que ninguém leu;
 * a coluna **Atenção** sai de ``painel.avisos_do_estado`` — as seis fontes puras
-  da GTK — mais o opt-out antigo, e **não** dos achados `certo` do Check-up;
+  da GTK —, e **não** dos achados `certo` do Check-up;
 * o selo do exame é o do produto: a linha antiga montava
   ``{"selo": …, **i}`` e o ``**i`` sobrescrevia o selo pretendido;
 * a página publica os endereços, na quantidade certa — um a menos deixa uma

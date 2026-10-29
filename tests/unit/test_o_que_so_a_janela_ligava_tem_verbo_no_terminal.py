@@ -342,3 +342,13 @@ def test_a_pagina_da_linha_de_comando_cita_os_verbos_novos() -> None:
         "mic canal", "mic volume", "gamepad mask",
     ):
         assert trecho in texto, trecho
+
+
+def test_o_passthrough_diz_do_jogo_sem_frase_banida(monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import FRASES_BANIDAS
+
+    _com_cliente(monkeypatch, resposta={"status": "ok", "passthrough": True})
+    resultado = _rodar("rumble", "passthrough", "on")
+    assert resultado.exit_code == 0, resultado.output
+    assert "vibração: do jogo" in resultado.output
+    assert not [f for f in FRASES_BANIDAS if f in resultado.output], resultado.output

@@ -54,7 +54,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-from hefesto_dualsense4unix.app.actions import home_actions
 from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.daemon.subsystems.coop import (
     CoopManager,
@@ -229,8 +228,6 @@ def test_a_linha_do_modo_chega_a_coluna_da_aba(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: None)
-    monkeypatch.setattr(
-        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     ctx = Contexto(
         state=_estado(nativo=True, quantos=2), mesa=[], conectados=[], estados={})
     fora = aba.coluna_de_atencao(ctx)

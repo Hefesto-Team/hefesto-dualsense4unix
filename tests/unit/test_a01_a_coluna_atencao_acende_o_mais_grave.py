@@ -15,7 +15,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-from hefesto_dualsense4unix.app.actions import home_actions
 from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.integrations import storm_doctor
 from pacotes import Contexto
@@ -51,8 +50,6 @@ def _so_estes(monkeypatch: Any, avisos: list[dict[str, str]]) -> None:
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
     monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: None)
-    monkeypatch.setattr(
-        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
 
 
 QUIRK_DE_PE = "054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m\n"
@@ -72,8 +69,6 @@ def _so_a_cura(monkeypatch: Any) -> None:
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(
-        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
 
 
 def test_o_mais_grave_sobe_e_a_ordem_e_a_da_gravidade(monkeypatch: Any) -> None:
@@ -132,8 +127,6 @@ def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: {
         "selo": aba.SELO_DA_PONTE, "texto": "nenhuma — nenhum jogo",
         "fonte": "home_actions.texto_da_ponte"})
-    monkeypatch.setattr(
-        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: {
         "selo": aba.SELO_DA_CURA, "texto": "a cura", "fonte": "storm_doctor.check_snd_quirk"})
     monkeypatch.setattr(aba, "_do_exame", lambda: [
@@ -242,8 +235,6 @@ def test_o_selo_novo_esta_na_escada(monkeypatch: Any, tmp_path: Any) -> None:
     ])
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(
-        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     _, frase = _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
 
     selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
@@ -261,8 +252,6 @@ def test_o_selo_nao_e_o_do_radio(monkeypatch: Any, tmp_path: Any) -> None:
     ])
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(
-        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
 
     selos, _ = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
@@ -295,8 +284,6 @@ def test_a_fonte_que_levanta_vira_erro_e_nao_derruba_a_coluna(
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
-    monkeypatch.setattr(
-        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", _explode)
 
     selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
