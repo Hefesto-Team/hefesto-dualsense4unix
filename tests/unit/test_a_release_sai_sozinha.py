@@ -524,6 +524,7 @@ def test_mordida_o_vazamento_tambem_barra_o_texto_solto(
 def test_o_marco_da_issue_nasce_do_estado_da_sprint_e_o_que_sai_nao_vale(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Prova da D-2910-A-ISSUE-NASCE-COM-A-SPRINT."""
     monkeypatch.syspath_prepend(str(RELEASE))
     import publico as modulo
 

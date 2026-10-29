@@ -955,6 +955,7 @@ def _marco_que_sai(gh: Mentira, com_issue: bool) -> None:
 
 
 def test_o_marco_que_sai_vazio_e_apagado(gh: Mentira) -> None:
+    """Prova da D-2910-A-ISSUE-NASCE-COM-A-SPRINT."""
     _marco_que_sai(gh, com_issue=False)
     assert rodar("--conferir", "--so", "milestones") == 1
     assert rodar("--aplicar", "--so", "milestones") == 0
