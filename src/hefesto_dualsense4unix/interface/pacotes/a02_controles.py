@@ -342,7 +342,40 @@ def leitura_viva(
 
 BORDA_SEM_COR = "var(--border-forte)"
 
-PISO_DA_FOLHA = ".ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}"
+TINTA_CLARA = "#f8f8f2"
+
+TINTA_ESCURA = "#1e1f29"
+
+PISO_DA_FOLHA = (".ctl[data-controle],.fita .chip[for],.aba-ctl[data-controle]"
+                 "{--plastico:var(--border-forte);--tinta:var(--fg)}")
+
+
+def seletor_do_plastico(pref: str) -> str:
+    """Os três lugares onde o plástico de um assento pinta: a caixa, o chip da fita e a aba."""
+    return (f'.ctl[data-controle="{pref}"],.fita .chip[for="c-{pref}"],'
+            f'.aba-ctl[data-controle="{pref}"]')
+
+
+def tinta_sobre(borda: str) -> str:
+    """A letra que se lê sobre o plástico: a clara ou a escura, a que contrastar mais."""
+    from hefesto_dualsense4unix.utils.color_contrast import razao_contraste
+
+    bruto = (borda or "").strip().lstrip("#")
+    if not borda.startswith("#") or len(bruto) != 6:
+        return "var(--fg)"
+    rgb = tuple(int(bruto[i:i + 2], 16) for i in (0, 2, 4))
+
+    def _rgb(hexa: str) -> tuple[int, ...]:
+        return tuple(int(hexa[i:i + 2], 16) for i in (1, 3, 5))
+
+    clara = razao_contraste(rgb, _rgb(TINTA_CLARA))
+    escura = razao_contraste(rgb, _rgb(TINTA_ESCURA))
+    return TINTA_CLARA if clara >= escura else TINTA_ESCURA
+
+
+def regra_do_plastico(pref: str, borda: str) -> str:
+    """A regra de um assento na folha do plástico: a borda e a letra que se lê sobre ela."""
+    return f"{seletor_do_plastico(pref)}{{--plastico:{borda};--tinta:{tinta_sobre(borda)}}}"
 
 
 def _monta() -> Any:
@@ -422,9 +455,7 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
     dos 28 modelos dela sem borda nenhuma. Ver :func:`cor_da_borda`.
     """
     return "\n".join([PISO_DA_FOLHA] + [
-        f'.ctl[data-controle="{c.get("pref")}"],'
-        f'.fita .chip[for="c-{c.get("pref")}"]'
-        f'{{--plastico:{cor_da_borda(str(c.get("cor") or ""))}}}'
+        regra_do_plastico(str(c.get("pref")), cor_da_borda(str(c.get("cor") or "")))
         for c in mesa
         if c.get("pref")
     ])

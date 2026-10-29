@@ -376,6 +376,8 @@ def a_fita_escolhe(pagina: str) -> bool:
 
 GESTO_DA_FITA = "escolher-na-fita"
 
+ABAS_SEM_A_FITA: frozenset[str] = frozenset({"01-jogar"})
+
 
 def _endereco_do_chip(pref: str, inerte: bool) -> str:
     """O que faz o chip CLICAR — e o vazio que o mantém honesto quando não deve."""
@@ -927,8 +929,11 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
     viva = a_fita_escolhe(arq)
     i = t.index(MARCA_DA_FITA)
     j = t.index("</div>", t.index('class="fita', i)) + len("</div>")
-    t = (t[:i] + RECUO_DA_FITA
-         + fita(ativo=("p1" if viva else "todos"), inerte=not viva) + t[j:])
+    if arq in ABAS_SEM_A_FITA:
+        t = t[:i] + t[j + 1:]
+    else:
+        t = (t[:i] + RECUO_DA_FITA
+             + fita(ativo=("p1" if viva else "todos"), inerte=not viva) + t[j:])
     tira = ['  <div class="tira">']
     for nome, a in ABAS:
         existe = onde.pagina(f"{a}.html").exists() or a == arq

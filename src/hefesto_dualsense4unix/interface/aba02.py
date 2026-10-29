@@ -21,6 +21,7 @@ from pacotes.a02_controles import (DICA_ALTO_SEM_POSSE,
 from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
                                    DICA_DO_GIRO_NO_CURSOR, MIRA_NO_NATIVO)
 from pacotes.a02_controles import GESTO_DO_MODO, INCLINACAO_PARADA, regiao_do_toque
+from pacotes.a02_controles import PISO_DA_FOLHA, regra_do_plastico
 from pacotes.a02_controles import (ACENDE_O_JOGO, CAMPOS_DO_JOGO,
                                    DICA_DO_PONTO_DO_JOGO)
 from pacotes.a02_controles import (CAMPOS_DA_POSICAO, MAX_DEDOS,
@@ -1222,7 +1223,32 @@ CSS += f"""
 """
 
 GLIFO_DO_CALIBRAR = re.sub(r"<title>.*?</title>", "", glifo("giroscopio", tam=15))
-def _miolo(blocos, depois=""):
+GESTO_DA_ABA = _monta_modulo.GESTO_DA_FITA
+
+
+def abas_dos_controles(mesa=None):
+    """A fileira das abas dos controles da Jogar: uma por lugar da mesa, o vazio nasce apagado."""
+    linhas = []
+    for c in (MESA if mesa is None else mesa):
+        pref = c["pref"]
+        cheio = c.get("conectado", True)
+        via = str(c.get("transporte") or "").lower()
+        nome = str(c.get("nome") or "")
+        dica = f'{nome} · {palavra_do_transporte(c.get("transporte"))}'
+        linhas.append(
+            f'          <label class="aba-ctl{"" if cheio else " off"}" for="c-{pref}" role="tab" '
+            f'data-gesto="{GESTO_DA_ABA}" data-pref="{pref}" data-controle="{pref}">'
+            f'<span class="aba-dentro" data-campo="aba-dica" data-hef-alvo="atributo" '
+            f'data-hef-atributo="data-dica" data-dica="{dica}">'
+            f'<span class="n-jog">{numero_do_jogador(c["jogador"])}</span>'
+            f'<span class="aba-nome" data-campo="aba-nome" data-hef-alvo="html">{nome}</span>'
+            f'<span class="via-g" data-campo="aba-via" data-hef-alvo="atributo" '
+            f'data-hef-atributo="data-via" data-via="{via}"></span></span></label>')
+    return ('        <div class="abas-ctl" role="tablist">\n'
+            + "\n".join(linhas) + "\n        </div>")
+
+
+def _miolo(blocos, depois="", abas=None):
     return f'''
     <div class="quadro estica">
       <div class="quadro-topo">
@@ -1234,7 +1260,7 @@ def _miolo(blocos, depois=""):
         </span>
       </div>
       <div class="quadro-corpo">
-        <input class="radio-mesa" type="radio" name="mesa" id="c-todos">
+{abas if abas is not None else '        <input class="radio-mesa" type="radio" name="mesa" id="c-todos">'}
 {blocos}{depois}
       </div>
     </div>
@@ -1245,7 +1271,7 @@ MIOLO = _miolo(BLOCOS)
 VAGA_DOS_EXTERNOS = (
     f'\n    <div class="ext-vaga" data-campo="externos" data-hef-alvo="html">'
     f'{_monta_modulo.NADA_A_DIZER}</div>')
-MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA, VAGA_DOS_EXTERNOS)
+MIOLO_SEM_A_MASCARA = _miolo(BLOCOS_SEM_A_MASCARA, VAGA_DOS_EXTERNOS, abas_dos_controles())
 
 
 LEGENDA = f'''<div class="nota">
@@ -1475,15 +1501,10 @@ CHIP_COM_COR = re.compile(
     r'(<label for="(c-[^"]+)" class="chip plastico"[^>]*?)'
     r' style="--plastico:(#[0-9a-fA-F]{3,8})"')
 
-PISO_DO_PLASTICO = ".ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}"
+PISO_DO_PLASTICO = PISO_DA_FOLHA
 
 
-def seletor_do_plastico(pref: str) -> str:
-    """Os dois lugares onde o plástico de um assento pinta: a caixa e o chip."""
-    return f'.ctl[data-controle="{pref}"],.fita .chip[for="c-{pref}"]'
-
-
-def cor_do_plastico_por_regra(doc):
+def cor_do_plastico_por_regra(doc, *, com_a_fita=True):
     """Tira o `--plastico` cravado do `style=` e o devolve como folha VIVA."""
     das_caixas: dict[str, str] = {}
     dos_chips: dict[str, str] = {}
@@ -1498,19 +1519,19 @@ def cor_do_plastico_por_regra(doc):
 
     doc, caixas = CAIXA_COM_COR.subn(_caixa, doc)
     doc, chips = CHIP_COM_COR.subn(_chip, doc)
-    if caixas != len(CONECTADOS) or chips != len(CONECTADOS):
+    chips_da_mesa = len(CONECTADOS) if com_a_fita else 0
+    if caixas != len(CONECTADOS) or chips != chips_da_mesa:
         raise SystemExit(
             f"ERRO no plástico: {caixas} caixa(s) e {chips} chip(s) com cor cravada, "
             f"e a mesa tem {len(CONECTADOS)} conectado(s) — a forma mudou.")
-    if das_caixas != dos_chips:
+    if com_a_fita and das_caixas != dos_chips:
         raise SystemExit(
             f"ERRO no plástico: as caixas dizem {das_caixas} e os chips dizem "
             f"{dos_chips} — o mesmo assento com duas cores.")
     if "--plastico:#" in doc.split("</head>", 1)[-1]:
         raise SystemExit("ERRO no plástico: sobrou cor cravada no corpo da página")
     regras = [PISO_DO_PLASTICO] + [
-        f"{seletor_do_plastico(pref)}{{--plastico:{cor}}}"
-        for pref, cor in das_caixas.items()
+        regra_do_plastico(pref, cor) for pref, cor in das_caixas.items()
     ]
     folha = ('<style data-campo="plastico-css" data-hef-alvo="html">\n'
              + "\n".join(f"  {r}" for r in regras)
@@ -1797,7 +1818,8 @@ def _conferir(doc, aba="02-controles"):
 
     exigir(corpo.count('data-campo="quem-joga"') == len(MESA),
            "o «quem joga» do título aberto perdeu o endereço — o nome dela não chega ao cartão")
-    exigir(corpo.count('data-campo="jogador" data-hef-alvo="html"') == 3 * len(MESA),
+    na_aba = len(MESA) if aba == "01-jogar" else 0
+    exigir(corpo.count('data-campo="jogador" data-hef-alvo="html"') == 3 * len(MESA) + na_aba,
            "o número do jogador do cabeçalho perdeu o endereço: ele voltou a ser o assento "
            "cravado pelo gerador, e discorda do daemon quando a mesa conta por posição")
     for campo in ("peca", "via"):
@@ -1805,8 +1827,8 @@ def _conferir(doc, aba="02-controles"):
                f"o `{campo}` do cabeçalho do card perdeu o endereço — "
                "a tela volta a mostrar o controle do desenho")
     for campo in ("fita-peca", "fita-via"):
-        exigir(doc.count(f'data-campo="{campo}"') == len(CONECTADOS),
-               f"o `{campo}` do chip da fita perdeu o endereço")
+        exigir(doc.count(f'data-campo="{campo}"') == (len(CONECTADOS) if aba == "02-controles" else 0),
+               f"o `{campo}` do chip da fita perdeu o endereço, ou a fita voltou à {aba}")
     exigir("--plastico:#" not in doc.split("</head>", 1)[-1],
            "a cor do plástico voltou para o `style=` — estilo de linha vence "
            "folha de estilo, e o produto não tem como reescrevê-la")
@@ -1862,7 +1884,9 @@ def _conferir(doc, aba="02-controles"):
            and chip_da_inclinacao("analogico_direito", aceso=True) not in corpo,
            f"o anel do exemplo acende sem o «{ROTULO_DA_INCLINACAO}» do mesmo analógico aceso")
     for nome in {str(c["nome"]) for c in CONECTADOS}:
-        exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>'),
+        exigir(corpo.count(nome) == corpo.count(f'<span data-campo="peca">{nome}</span>')
+               + corpo.count(f'data-campo="aba-nome" data-hef-alvo="html">{nome}</span>')
+               + corpo.count(f'data-dica="{nome} · '),
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")
 
     exigir('class="degradou"' not in corpo and "mascara-degradou" not in corpo,

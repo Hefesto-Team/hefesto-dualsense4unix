@@ -149,6 +149,50 @@ _BATERIA_GLIFO = glifo("bateria", tam=13).replace("<title>Bateria</title>", "")
 _BLOCO_DAS_CORES = re.compile(r'<defs id="[^"]*cores-do-dualsense">.*?</defs>', re.S)
 
 
+CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
+  .miolo > .quadro.estica > .quadro-corpo{gap:0;padding-top:6px;padding-bottom:10px}
+  .abas-ctl{display:flex;align-items:flex-end;gap:4px;height:var(--alt-aba);padding:0 12px;
+    position:relative;z-index:2;margin-bottom:-2px;flex:0 0 auto;min-width:0;max-width:62%}
+  .aba-ctl{display:inline-flex;align-items:center;gap:8px;height:calc(var(--alt-aba) - 4px);min-width:0;
+    max-width:250px;padding:0 14px 0 10px;border:2px solid var(--plastico);border-bottom:0;
+    border-radius:9px 9px 0 0;background:color-mix(in srgb,var(--plastico) 16%,var(--app-bg));
+    color:var(--texto-suave);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;
+    -webkit-user-select:none;user-select:none;transition:background .12s}
+  .aba-ctl:hover{background:color-mix(in srgb,var(--plastico) 30%,var(--app-bg));color:var(--fg)}
+  .aba-ctl[hidden]{display:none}
+  .aba-ctl .aba-nome{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .aba-ctl .n-jog{flex:0 0 16px;width:16px;height:16px;border-radius:50%;background:var(--plastico);
+    color:var(--tinta);font:700 10px/16px 'JetBrains Mono',ui-monospace,monospace;text-align:center}
+  .aba-ctl .via-g{flex:0 0 14px;width:14px;height:14px;background:currentColor;opacity:.8;
+    -webkit-mask:var(--glifo) center/contain no-repeat;mask:var(--glifo) center/contain no-repeat}
+  .via-g[data-via="usb"]{--glifo:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v15M9 5l3-3 3 3M12 14l5-3V8M12 12 7 9V7'/%3E%3Crect x='15.5' y='5.5' width='3' height='3' fill='%23000'/%3E%3Ccircle cx='7' cy='6' r='1.6' fill='%23000'/%3E%3Ccircle cx='12' cy='19.5' r='2.3' fill='%23000'/%3E%3C/svg%3E")}
+  .via-g[data-via="bt"]{--glifo:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5 7.5l11 9-5.5 4.5V3l5.5 4.5-11 9'/%3E%3C/svg%3E")}
+  body:has(#c-p1:checked) .aba-ctl[for="c-p1"],
+  body:has(#c-p2:checked) .aba-ctl[for="c-p2"],
+  body:has(#c-p3:checked) .aba-ctl[for="c-p3"],
+  body:has(#c-p4:checked) .aba-ctl[for="c-p4"]{height:var(--alt-aba);padding-bottom:2px;color:var(--fg);font-weight:600;
+    background:color-mix(in srgb,var(--plastico) 9%,var(--panel));cursor:default}
+  .quadro-corpo > .ctl:not(:has(> input:checked)){display:none}
+  .quadro-corpo > .ctl:has(> input:checked){background:color-mix(in srgb,var(--plastico) 9%,var(--panel))}
+  .ctl:has(> input:checked) > .faixa{position:absolute;top:calc(-1 * var(--alt-aba) - 2px);right:-2px;
+    height:calc(var(--alt-aba) - 2px);margin:0;padding:0;border:0;background:transparent;
+    flex-wrap:nowrap;white-space:nowrap;cursor:default;max-width:38%}
+  .ctl:has(> input:checked) > .faixa .card-nome{display:none}
+  .ctl:has(> input:checked) > .faixa .no-jogo[aria-label]{max-width:200px}
+  body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
+  .aba-ctl.off{display:none}
+  .aba-ctl .aba-dentro{display:contents}
+  body.nativo.por-controle .abas-ctl .aba-ctl[data-controle]{pointer-events:auto;cursor:pointer;
+    border-color:var(--plastico)!important;color:var(--texto-suave)!important;font-weight:500!important;
+    background:color-mix(in srgb,var(--plastico) 16%,var(--app-bg))!important}
+  body.nativo.por-controle:has(#c-p1:checked) .abas-ctl .aba-ctl[for="c-p1"],
+  body.nativo.por-controle:has(#c-p2:checked) .abas-ctl .aba-ctl[for="c-p2"],
+  body.nativo.por-controle:has(#c-p3:checked) .abas-ctl .aba-ctl[for="c-p3"],
+  body.nativo.por-controle:has(#c-p4:checked) .abas-ctl .aba-ctl[for="c-p4"]{color:var(--fg)!important;
+    font-weight:600!important;cursor:default;background:color-mix(in srgb,var(--plastico) 9%,var(--panel))!important}
+"""
+
+
 def _tabela_das_cores():
     """As 28 cores dela, publicadas UMA vez — 03/09/2026, e é a lei de produto."""
     achou = _BLOCO_DAS_CORES.search(monta.DS)
@@ -833,6 +877,13 @@ def _ancestrais(html: str, classe: str) -> set[str] | None:
     return cadeia.achado
 
 
+def com_as_abas(doc):
+    """A folha das abas dos controles, por último no `<head>`, depois do piso dos alvos."""
+    if "</head>" not in doc or 'id="abas-dos-controles"' in doc:
+        raise SystemExit("ERRO nas abas dos controles: a página não tem `</head>`, ou já tem a folha")
+    return doc.replace("</head>", f'<style id="abas-dos-controles">\n{CSS_DAS_ABAS}</style>\n</head>', 1)
+
+
 def _conferir(doc):
     """As decisões da aba, conferidas NA SAÍDA. O gerador para se caírem."""
     corpo = doc.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
@@ -946,6 +997,22 @@ def _conferir(doc):
                and "so-ligado" not in familia and "so-desligado" not in familia,
                f"o `{classe}` saiu da linha do título do Status")
 
+    cabeca = doc.split('<div class="tira">', 1)[0]
+    exigir(not re.search(r'class="fita[ "]', cabeca) and "Selecionar:" not in doc and 'id="c-todos"' not in doc,
+           "a fita do «Selecionar:» ou o «Todos» voltou à Jogar: quem escolhe o controle são as abas")
+    abas = re.findall(r'<label class="aba-ctl( off)?" for="c-(p\d)" role="tab" '
+                      rf'data-gesto="{aba02.GESTO_DA_ABA}" data-pref="\2" data-controle="\2">', corpo)
+    exigir([p for _, p in abas] == [c["pref"] for c in MESA],
+           f"as abas dos controles não são uma por lugar da mesa: {[p for _, p in abas]}")
+    exigir(sum(1 for off, _ in abas if off) == len(MESA) - len(monta.CONECTADOS),
+           "um lugar vazio ganhou aba acesa, ou um conectado nasceu sem aba")
+    corpo_do_quadro = corpo.split('<div class="quadro estica">', 1)[-1]
+    exigir(0 <= corpo_do_quadro.find('class="abas-ctl"') < corpo_do_quadro.find('<div class="ctl card'),
+           "a fileira das abas saiu do topo do quadro dos controles")
+    exigir(aba02.PISO_DO_PLASTICO in doc and ".aba-ctl[data-controle=" in doc
+           and doc.count('<style id="abas-dos-controles">') == 1,
+           "a aba perdeu a cor do plástico, ou a folha das abas sumiu")
+
     folhas = re.sub(r"/\*.*?\*/", "", folha, flags=re.S)
     exigir(".degradou" not in folhas and "[title" not in folhas,
            "voltou regra de pintura que decide por `[title]` (ou a `.degradou`)")
@@ -968,8 +1035,8 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     n = montar("01-jogar", "Jogar", MIOLO, aba02.CSS + CSS)
     _saida = onde.pagina("01-jogar.html")
-    _saida.write_text(aba02.com_o_piso("02-controles", aba02.cor_do_plastico_por_regra(
-        aba02.fita_clicavel(_saida.read_text()))))
+    _saida.write_text(com_as_abas(aba02.com_o_piso("02-controles", aba02.cor_do_plastico_por_regra(
+        _saida.read_text(), com_a_fita=False))))
     _conferir(_saida.read_text())
     shutil.copyfile(_prova / "01-jogar.html", _real / "01-jogar.html")
     shutil.rmtree(_prova)
