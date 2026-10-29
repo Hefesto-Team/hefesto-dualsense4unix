@@ -4906,22 +4906,39 @@ async def _corpo_do_sinal_de_jogo(daemon: Any) -> None:
         await daemon._sync_game_signal()
     except Exception as exc:
         logger.warning("game_signal_tique_falhou", err=str(exc))
-    await _a_troca_que_o_jogo_adiou()
+    await _a_troca_que_o_jogo_adiou(daemon)
 
 
-async def _a_troca_que_o_jogo_adiou() -> None:
-    """O install com jogo em cena adiou a troca; com o jogo fechado, ela sai fora do serviço."""
+async def _a_troca_que_o_jogo_adiou(
+    daemon: Any, *, relogio: Callable[[], float] = time.monotonic
+) -> None:
+    """O install com jogo em cena adiou a troca; com o jogo fechado de vez, ela sai fora do serviço.
+
+    Fechado de vez é a ``EsperaSemJogo`` da troca: o intervalo entre um jogo e o seguinte não
+    conta. O disparo que falha devolve a pendência.
+    """
     from hefesto_dualsense4unix.app.actions import troca_no_fim_do_jogo as troca
     from hefesto_dualsense4unix.integrations import uhid_gamepad
 
     try:
         if not troca.troca_pendente():
             return
-        if await asyncio.to_thread(uhid_gamepad.JOGO_ABERTO):
+        espera = getattr(daemon, "_espera_da_troca", None)
+        if espera is None:
+            espera = troca.EsperaSemJogo()
+            daemon._espera_da_troca = espera
+        jogo = await asyncio.to_thread(uhid_gamepad.JOGO_ABERTO)
+        if not espera.fechou_de_vez(jogo, relogio()):
             return
+        espera.zerar()
         itens = troca.colher_a_troca()
-        if itens:
+        if not itens:
+            return
+        try:
             await asyncio.to_thread(troca.disparar, itens)
+        except Exception:
+            troca.devolver_a_troca(itens)
+            raise
     except Exception as exc:
         logger.warning("troca_no_fim_do_jogo_falhou", err=str(exc))
 

@@ -1,7 +1,11 @@
 """A migração do modo único conta uma vez por perfil, e de novo só quando o resultado muda.
 
 A-MIGRACAO-DO-MODO-UNICO-NAO-LOGA-A-CADA-CARGA-01: em 28/10 foram 1363 linhas de
-`mascara_por_controle_virou_o_modo` em três minutos, uma por carga do mesmo perfil.
+`mascara_por_controle_virou_o_modo` em três minutos, uma por carga do mesmo perfil. O
+`speaker_sem_volume_descartado` da cura do gesto de som carrega o mesmo perfil e conta igual.
+
+A MORDIDA: tire o teste de `_MIGRACOES_JA_CONTADAS` (ou o de `_SONS_JA_DESCARTADOS`) e as cem
+cargas voltam a dar cem linhas.
 """
 from __future__ import annotations
 
@@ -21,10 +25,14 @@ P2 = "aabbcc000002"
 @pytest.fixture(autouse=True)
 def _memoria_limpa() -> Iterator[None]:
     guardada = dict(schema._MIGRACOES_JA_CONTADAS)
+    sons = set(schema._SONS_JA_DESCARTADOS)
     schema._MIGRACOES_JA_CONTADAS.clear()
+    schema._SONS_JA_DESCARTADOS.clear()
     yield
     schema._MIGRACOES_JA_CONTADAS.clear()
     schema._MIGRACOES_JA_CONTADAS.update(guardada)
+    schema._SONS_JA_DESCARTADOS.clear()
+    schema._SONS_JA_DESCARTADOS.update(sons)
 
 
 def _carregar(nome: str, controles: dict[str, Any]) -> Profile:
@@ -59,3 +67,14 @@ def test_cada_perfil_conta_a_sua() -> None:
         for nome in ("Um", "Dois", "Um", "Dois"):
             _carregar(nome, {P1: {"mascara": "dualsense"}})
     assert sorted(e["perfil"] for e in _linhas(captured)) == ["Dois", "Um"]
+
+
+def test_o_som_sem_volume_descartado_conta_uma_vez_por_alvo() -> None:
+    with structlog.testing.capture_logs() as captured:
+        for _ in range(100):
+            Profile.model_validate({
+                "name": "Planet Lust", "match": {"type": "any"}, "speaker": {"rota": 2},
+                "controllers": {P2: {"speaker": {"rota": 3}}},
+            })
+    linhas = [e for e in captured if e.get("event") == "speaker_sem_volume_descartado"]
+    assert [e.get("controles") for e in linhas] == [None, [P2]]

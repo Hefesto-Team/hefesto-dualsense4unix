@@ -30,10 +30,48 @@ jogo_em_cena() {
         --ha-jogo --proc "${HEFESTO_RAIZ_PROC:-/proc}" >/dev/null 2>&1
 }
 
+arquivo_da_troca_adiada() {
+    printf '%s\n' "${HEFESTO_TROCA_NO_FIM_DO_JOGO:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix/troca-no-fim-do-jogo}"
+}
+
 adiar_para_o_fim_do_jogo() {
-    local _arq="${HEFESTO_TROCA_NO_FIM_DO_JOGO:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix/troca-no-fim-do-jogo}"
+    local _arq
+    _arq="$(arquivo_da_troca_adiada)"
     mkdir -p "$(dirname "${_arq}")" 2>/dev/null || return 0
     grep -qsx "$1" "${_arq}" || printf '%s\n' "$1" >> "${_arq}"
+}
+
+cumprir_a_troca() {
+    local _arq _resto
+    _arq="$(arquivo_da_troca_adiada)"
+    [[ -f "${_arq}" ]] || return 0
+    _resto="$(grep -vx "$1" "${_arq}" 2>/dev/null || true)"
+    if [[ -n "${_resto}" ]]; then
+        printf '%s\n' "${_resto}" > "${_arq}"
+    else
+        rm -f "${_arq}"
+    fi
+    return 0
+}
+
+vigiar_o_fim_do_jogo() {
+    local _arq _v _python="${1:-}"
+    _arq="$(arquivo_da_troca_adiada)"
+    [[ -s "${_arq}" && -x "${_python}" ]] || return 0
+    command -v systemd-run >/dev/null 2>&1 || return 0
+    local _env=("--setenv=HEFESTO_TROCA_NO_FIM_DO_JOGO=${_arq}")
+    for _v in WAYLAND_DISPLAY DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS; do
+        if [[ -n "${!_v:-}" ]]; then
+            _env+=("--setenv=${_v}=${!_v}")
+        fi
+    done
+    if systemd-run --user --quiet --collect --unit=hefesto-troca-no-fim-do-jogo \
+            --description="Hefesto: a troca do install que espera o jogo fechar" \
+            "${_env[@]}" "${_python}" -m hefesto_dualsense4unix.app.actions.troca_no_fim_do_jogo \
+            --esperar >/dev/null 2>&1; then
+        printf '      a troca sai sozinha quando o jogo fechar\n'
+    fi
+    return 0
 }
 
 modulo_pede_reinicio() {
@@ -216,6 +254,7 @@ install_broker_host() {
                     sudo "${_broker_bin_dst}" --restore-all-and-exit >/dev/null 2>&1 || true
                 fi
                 sudo rm -f "${_marca}"
+                cumprir_a_troca broker
             fi
         else
             warn "enable --now do hefesto-hidraw-broker.socket falhou — habilite manualmente"
@@ -817,6 +856,11 @@ trocar_usb_f_hid_a_quente() {
     if [[ "$(_usb_f_hid_refcnt)" != "0" ]]; then
         if [[ "${_nossos}" -eq 0 ]]; then
             warn "o usb_f_hid de fábrica está preso (refcnt $(_usb_f_hid_refcnt)) sem gadget do Hefesto — não troco; o curado vale no próximo boot"
+            anotar_reinicio_pendente "${_pendente}"
+            return 0
+        fi
+        if jogo_em_cena; then
+            printf '      com um jogo aberto, os pads USB virtuais ficam de pé: o usb_f_hid curado vale no próximo boot\n'
             anotar_reinicio_pendente "${_pendente}"
             return 0
         fi

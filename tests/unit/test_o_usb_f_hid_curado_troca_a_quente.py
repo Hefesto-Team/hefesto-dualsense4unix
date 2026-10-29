@@ -12,7 +12,9 @@ AS MORDIDAS: tirar o `_usb_f_hid_tem_a_marca` da volta cedo da troca reprova
 reprova `test_pads_nossos_param_o_daemon_trocam_e_sobem`; trocar o `fail` do
 doctor por `warn` reprova `test_o_doctor_sem_a_marca_e_defeito`; arrancar o
 `medir_a_marca_do_f_hid` do `_o_pad_em_usb` reprova
-`test_o_pad_anota_a_marca_ao_montar`.
+`test_o_pad_anota_a_marca_ao_montar`; tirar o `jogo_em_cena` da troca reprova
+`test_com_jogo_aberto_os_pads_ficam_de_pe` (28/10/2026,
+O-INSTALL-NAO-DERRUBA-O-CONTROLE-DO-JOGO-ABERTO-01).
 """
 
 from __future__ import annotations
@@ -90,8 +92,14 @@ def _trocar(
     refcnt: int = 0,
     gadgets: tuple[str, ...] = (),
     daemon_ativo: bool = False,
+    jogo: bool = False,
 ) -> tuple[str, list[str], Path]:
     sys_module = _sys_module(tmp_path, carregado=carregado, marca=marca, refcnt=refcnt)
+    proc = tmp_path / "proc"
+    (proc / "42").mkdir(parents=True)
+    (proc / "42" / "environ").write_bytes(
+        b"HOME=/x\0" + (b"STEAM_COMPAT_DATA_PATH=/compat/1\0" if jogo else b"")
+    )
     bin_ = _bin(tmp_path, sys_module, daemon_ativo=daemon_ativo)
     script = "\n".join(
         (
@@ -112,6 +120,7 @@ def _trocar(
             "HEFESTO_SYS_MODULE": str(sys_module),
             "HEFESTO_USB_GADGET_ROOT": str(_gadgets(tmp_path, *gadgets)),
             "HEFESTO_USB_F_HID_PRAZO_S": "1",
+            "HEFESTO_RAIZ_PROC": str(proc),
         },
     )
     assert r.returncode == 0, r.stderr
@@ -161,6 +170,15 @@ def test_pads_nossos_param_o_daemon_trocam_e_sobem(tmp_path: Path) -> None:
     assert chamadas.index(parar) < chamadas.index("sudo modprobe -r usb_f_hid"), chamadas
     assert chamadas.index("sudo modprobe usb_f_hid") < chamadas.index(subir), chamadas
     assert "trocado a quente" in saida, saida
+
+
+def test_com_jogo_aberto_os_pads_ficam_de_pe(tmp_path: Path) -> None:
+    """O daemon parado no meio do jogo desmontaria o pad que o jogo lê."""
+    saida, chamadas, _ = _trocar(
+        tmp_path, refcnt=4, gadgets=("hefesto-pad-1",), daemon_ativo=True, jogo=True
+    )
+    assert chamadas == [], chamadas
+    assert "PENDENTE: a função HID dos pads USB virtuais (usb_f_hid)" in saida, saida
 
 
 def test_refcnt_preso_nao_troca_e_sobe_o_daemon(tmp_path: Path) -> None:

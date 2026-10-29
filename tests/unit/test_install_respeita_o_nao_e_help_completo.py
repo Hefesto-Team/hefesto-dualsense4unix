@@ -41,7 +41,7 @@ def _constantes_do_install() -> str:
 
 
 def _roda_passo_7a(
-    tmp_path: Path, skip_systemd: int, enable_daemon: int, daemon_ativo: bool
+    tmp_path: Path, skip_systemd: int, enable_daemon: int, daemon_ativo: bool, jogo: bool = False
 ) -> subprocess.CompletedProcess[str]:
     """Executa o passo 7a real com HOME em tmp e `systemctl` stubado."""
     stubs = tmp_path / "bin"
@@ -70,9 +70,17 @@ def _roda_passo_7a(
         f"SKIP_SYSTEMD={skip_systemd}\n"
         f"enable_daemon={enable_daemon}\n"
         f"ROOT_DIR='{REPO_ROOT}'\n"
+        f"source '{REPO_ROOT / 'scripts' / 'lib' / 'camada_de_maquina.sh'}'\n"
         f"{BLOCO_7A}\n"
     )
     env = dict(os.environ)
+    proc = tmp_path / "proc"
+    (proc / "42").mkdir(parents=True, exist_ok=True)
+    (proc / "42" / "environ").write_bytes(
+        b"HOME=/x\0" + (b"STEAM_COMPAT_DATA_PATH=/compat/1\0" if jogo else b"")
+    )
+    env["HEFESTO_RAIZ_PROC"] = str(proc)
+    env["HEFESTO_TROCA_NO_FIM_DO_JOGO"] = str(tmp_path / "troca-no-fim-do-jogo")
     env["PATH"] = f"{stubs}:{env.get('PATH', '/usr/bin:/bin')}"
     env["HOME"] = str(casa)
     env["XDG_CONFIG_HOME"] = str(casa / ".config")
@@ -133,6 +141,27 @@ class TestPasso7aObedece:
         assert f"restart {UNIT}" in r.log_systemctl
         assert f"enable {UNIT}" not in r.log_systemctl
         assert "unit atualizada" in r.stdout
+
+    @pytest.mark.parametrize(("enable_daemon", "daemon_ativo"), [(1, True), (0, True), (1, False)])
+    def test_com_jogo_aberto_o_daemon_espera_o_jogo(
+        self, tmp_path: Path, enable_daemon: int, daemon_ativo: bool
+    ) -> None:
+        """O-INSTALL-NAO-DERRUBA-O-CONTROLE-DO-JOGO-ABERTO-01: nada sobe nem reinicia no jogo."""
+        r = _roda_passo_7a(tmp_path, skip_systemd=0, enable_daemon=enable_daemon,
+                           daemon_ativo=daemon_ativo, jogo=True)
+        assert r.returncode == 0, r.stderr
+        assert f"restart {UNIT}" not in r.log_systemctl
+        assert f"start {UNIT}" not in r.log_systemctl
+        pendencia = (tmp_path / "troca-no-fim-do-jogo").read_text(encoding="utf-8").split()
+        assert pendencia == ["daemon", "recarga"]
+
+    def test_sem_jogo_o_restart_cumpre_a_troca_que_um_anterior_adiou(self, tmp_path: Path) -> None:
+        (tmp_path / "troca-no-fim-do-jogo").write_text("daemon\nrecarga\n", encoding="utf-8")
+        r = _roda_passo_7a(tmp_path, skip_systemd=0, enable_daemon=1, daemon_ativo=True)
+        assert r.returncode == 0, r.stderr
+        assert f"restart {UNIT}" in r.log_systemctl
+        pendencia = (tmp_path / "troca-no-fim-do-jogo").read_text(encoding="utf-8").split()
+        assert pendencia == ["recarga"]
 
 
 class TestPasso7aContratoDeTexto:

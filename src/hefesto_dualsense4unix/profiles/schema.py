@@ -1447,6 +1447,19 @@ _MARCAS_QUE_VIRARAM_ESTILO: frozenset[str] = frozenset({"visual_novel", "adulto"
 
 
 _MIGRACOES_JA_CONTADAS: dict[str, tuple[str, tuple[str, ...]]] = {}
+_SONS_JA_DESCARTADOS: set[tuple[str, tuple[str, ...]]] = set()
+
+
+def _contar_o_som_descartado(perfil: str, controles: tuple[str, ...]) -> None:
+    """Uma linha por perfil e alvo, e não uma a cada carga do mesmo arquivo."""
+    if (perfil, controles) in _SONS_JA_DESCARTADOS:
+        return
+    _SONS_JA_DESCARTADOS.add((perfil, controles))
+    if controles:
+        get_logger(__name__).warning(
+            "speaker_sem_volume_descartado", perfil=perfil, controles=list(controles))
+    else:
+        get_logger(__name__).warning("speaker_sem_volume_descartado", perfil=perfil)
 
 
 def _som_sem_volume(speaker: object) -> bool:
@@ -1548,8 +1561,7 @@ class Profile(BaseModel):
         novo = data
         if _som_sem_volume(data.get("speaker")):
             novo = {k: v for k, v in data.items() if k != "speaker"}
-            get_logger(__name__).warning(
-                "speaker_sem_volume_descartado", perfil=str(data.get("name", "")))
+            _contar_o_som_descartado(str(data.get("name", "")), ())
         controles = data.get("controllers")
         if isinstance(controles, dict) and any(
             isinstance(c, dict) and _som_sem_volume(c.get("speaker")) for c in controles.values()
@@ -1559,10 +1571,9 @@ class Profile(BaseModel):
                        if isinstance(c, dict) and _som_sem_volume(c.get("speaker")) else c)
                 for uniq, c in controles.items()
             }}
-            get_logger(__name__).warning(
-                "speaker_sem_volume_descartado", perfil=str(data.get("name", "")),
-                controles=sorted(str(u) for u, c in controles.items()
-                                 if isinstance(c, dict) and _som_sem_volume(c.get("speaker"))))
+            _contar_o_som_descartado(str(data.get("name", "")), tuple(sorted(
+                str(u) for u, c in controles.items()
+                if isinstance(c, dict) and _som_sem_volume(c.get("speaker")))))
         return novo
 
     @model_validator(mode="before")

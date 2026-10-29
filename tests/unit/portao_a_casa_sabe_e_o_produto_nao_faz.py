@@ -37,7 +37,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "— as dez curas de HOST saíram do instalador e viraram "
         "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:964` (`camada_de_maquina`) passa a "
         "carregar com `source`. O `install_broker_host` de lá "
-        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:156`) é quem "
+        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:194`) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "`assets/systemd/hefesto-hidraw-broker.service:34` (`ExecStart`). O .deb "
@@ -48,7 +48,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "`install.sh:3306` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "`install.sh:3312` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
         "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:28`); o "
         "`scripts/doctor.sh:1656` (`check_sentinela_wrapper`, --censo) também o roda",
@@ -61,26 +61,26 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`scripts/disable_steam_input.sh:193` (`desligar`), e esse roteiro é "
         "o ExecStart "
         "de `assets/hefesto-steam-input-guard.service:13` (`__SCRIPT__`), que o "
-        "`install.sh:3305` (`__SCRIPT__`) troca pelo caminho dele",
+        "`install.sh:3311` (`__SCRIPT__`) troca pelo caminho dele",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "`install.sh:3337` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
+        "`install.sh:3343` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
         "`uninstall.sh:1601` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1853` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "`install.sh:3184` (`PROTON_PIN_PY`, com `--ensure`) e "
+        "`install.sh:3190` (`PROTON_PIN_PY`, com `--ensure`) e "
         "`uninstall.sh:1530` (`PROTON_PIN_PY`) o rodam; "
         "`scripts/doctor.sh:3848` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "`install.sh:3295` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
+        "`install.sh:3301` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
         "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:53`) — o mesmo "
@@ -100,7 +100,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
         "`scripts/doctor.sh:3789` (`check_exame_da_mesa`) o roda — e o "
-        "`install.sh:3430` (`doctor`) roda o doctor",
+        "`install.sh:3436` (`doctor`) roda o doctor",
     ),
 }
 
@@ -270,7 +270,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "está sempre ligada`. Ausente = LIGADA, e é isolamento de suíte: a suíte "
         "roda na máquina DELA e um teste de GUI que chamasse `Salvar` com a "
         "carona ligada varreria o `localconfig.vdf` REAL. Quem a desliga é o "
-        "`tests/conftest.py:1590` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
+        "`tests/conftest.py:1593` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
         "Onde procurar os arquivos de `assets/` "
@@ -652,7 +652,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "doctor. É "
         "escolha dela por definição. REMEDIDO em 03/10/2026: a mão existe e não "
         "é a env — é a marca do gesto, que `install.sh --keep-dualsense-mic` "
-        "grava (`fix_wireplumber_default_source` em `install.sh:3103`). Ver "
+        "grava (`fix_wireplumber_default_source` em `install.sh:3109`). Ver "
         "`_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
@@ -779,7 +779,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "REMEDIDO em 03/10/2026, e a lacuna de 12/08 já estava curada desde "
         "26/08 (DROPIN-AMBIGUO-01): `install.sh --keep-dualsense-mic` grava a "
         "MARCA DO GESTO (`fix_wireplumber_default_source.sh --marcar-gesto-do-mic`, "
-        "`fix_wireplumber_default_source` em `install.sh:3103`), e as duas perguntas leem o mesmo "
+        "`fix_wireplumber_default_source` em `install.sh:3109`), e as duas perguntas leem o mesmo "
         "dono em cinco "
         "degraus — `system_warnings` pelo "
         "`_dualsense_mic_intended` em `src/hefesto_dualsense4unix/core/system_check.py:110` "
@@ -1363,8 +1363,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "integrations/plano_de_radio.py::microfone_nasce_ligado": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o DONO declarado do "
         "padrão «o microfone nasce ligado», não promessa ao produto: "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2467` (`microfone_nasce_ligado`) e "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2887` (`microfone_nasce_ligado`) o citam "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2478` (`microfone_nasce_ligado`) e "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2898` (`microfone_nasce_ligado`) o citam "
         "em `dono=` por nome, e "
         "`tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` "
         "(`test_o_dono_declarado_resolve`) importa o endereço e reprova se ele "

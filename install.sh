@@ -2867,6 +2867,7 @@ else
         adiar_para_o_fim_do_jogo recarga
         printf '      com um jogo aberto, o daemon novo, a janela e a bandeja entram quando o jogo fechar\n'
     elif [[ "${enable_daemon}" -eq 1 ]]; then
+        cumprir_a_troca daemon
         if systemctl --user enable "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
            && systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1; then
             printf '      daemon habilitado e no ar\n'
@@ -2875,6 +2876,7 @@ else
         fi
     else
         if systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"; then
+            cumprir_a_troca daemon
             systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
                 || warn "restart do daemon já em execução falhou"
             printf '      unit atualizada; auto-start NÃO habilitado (respeitando a resposta do passo 6)\n'
@@ -2891,11 +2893,15 @@ elif [[ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
 elif [[ "${_TROCA_ADIADA:-0}" -eq 1 ]]; then
     :
 elif [[ -x "${VENV_DIR}/bin/python" ]]; then
+    cumprir_a_troca recarga
     if _RECARGA="$("${VENV_DIR}/bin/python" -m hefesto_dualsense4unix.app.actions.recarga_do_install 2>/dev/null)"; then
         printf '%s\n' "${_RECARGA}" | sed 's/^/      /'
     else
         warn "não consegui recarregar a janela e a bandeja — feche e abra a interface para valer o código novo"
     fi
+fi
+if [[ "${DRY_RUN:-0}" -ne 1 ]]; then
+    vigiar_o_fim_do_jogo "${VENV_DIR}/bin/python"
 fi
 
 PRESENCA_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-presenca.service"
