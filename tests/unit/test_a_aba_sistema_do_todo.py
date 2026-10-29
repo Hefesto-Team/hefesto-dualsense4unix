@@ -276,7 +276,7 @@ def test_as_posicoes_do_exame_sao_as_do_dono(tmp_path: pathlib.Path) -> None:
     (_estado(4, 4), "ok", "Um gamepad virtual por jogador"),
     (_estado(2, 0), "falha", "Nenhum gamepad virtual subiu"),
     (_estado(2, 1), "nt", "1 de 2 controles com gamepad virtual"),
-    (_estado(2, 0, native=True), "nt", "Conexão nativa: o jogo fala direto com o controle"),
+    (_estado(2, 0, native=True), "nt", "Modo Nativo: sem gamepad virtual"),
     (_estado(2, 0, emulacao=False), "nt", "Gamepad virtual: emulação desligada"),
     ({"controllers": []}, "nt", "Gamepads virtuais: sem leitura do serviço"),
     (None, "nt", "Gamepads virtuais: sem leitura do serviço"),

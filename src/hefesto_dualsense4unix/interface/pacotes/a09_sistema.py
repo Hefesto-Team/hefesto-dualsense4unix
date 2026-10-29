@@ -1309,8 +1309,8 @@ def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any]:
     native = bool(state.get("native_mode"))
     emulacao = bool(bloco["enabled"])
     if native:
-        return linha(nota, "Conexão nativa: o jogo fala direto com o controle",
-                     "Na Conexão Nativa (Sony) não há gamepad virtual: o jogo usa o controle.")
+        return linha(nota, "Modo Nativo: sem gamepad virtual",
+                     "No Modo Nativo não há gamepad virtual: o jogo usa o controle.")
     if not emulacao:
         return linha(nota, "Gamepad virtual: emulação desligada",
                      "Com a emulação desligada nenhum jogo recebe gamepad virtual.")

@@ -54,7 +54,7 @@ MODO_ACESO = "dualsense"
 DO_DESLIGADO = [
     {"chave": CHIP_DO_NATIVO, "rot": ROTULO_DO_NATIVO, "modo": "",
      "sem_dono": False,
-     "dica": "O jogo fala direto com o controle, sem Steam"},
+     "dica": "O jogo vê o controle como ele é, sem Steam"},
     {"chave": "steam", "rot": "Steam Input", "modo": "",
      "sem_dono": False,
      "dica": "A Steam traduz o controle para o jogo"},

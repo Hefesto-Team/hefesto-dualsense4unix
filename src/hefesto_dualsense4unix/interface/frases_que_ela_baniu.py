@@ -89,6 +89,9 @@ FRASES_BANIDAS: tuple[str, ...] = (
     "resultado é ZERO",
     "gatilhos ficam duros",
     "foram renumerados",
+    "jogo manda",
+    "fala direto com o controle",
+    "quem manda nele",
 )
 
 

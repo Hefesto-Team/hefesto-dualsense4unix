@@ -61,14 +61,25 @@ def _ocorrencias_no_fonte(
     return sorted(achados)
 
 
-def test_a_lista_tem_as_quatro_e_a_busca_e_por_substring() -> None:
-    """As três de 04/09 continuam banidas, e a quarta entrou em 24/09/2026."""
+def test_a_lista_tem_as_sete_e_a_busca_e_por_substring() -> None:
+    """As três de 04/09, a quarta de 24/09 e as três do Modo Nativo de 29/10/2026."""
     assert set(FRASES_BANIDAS) == {
         "derrubam o controle",
         "resultado é ZERO",
         "gatilhos ficam duros",
         "foram renumerados",
+        "jogo manda",
+        "fala direto com o controle",
+        "quem manda nele",
     }
+    assert frase_banida_em("Com o Hefesto desligado, o jogo manda nos gatilhos.") == (
+        "jogo manda"
+    )
+    assert frase_banida_em("O jogo manda") == "jogo manda"
+    assert frase_banida_em(
+        "Conexão Nativa (Sony): o jogo fala direto com o controle, e a intensidade") == (
+        "fala direto com o controle"
+    )
     assert frase_banida_em("Alguns jogos derrubam o controle no meio") == (
         "derrubam o controle"
     )

@@ -11,7 +11,7 @@ from monta import CONECTADOS, DADOS_DO_REPO
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from monta import (
-    MESA, cor_da_zona, glifo, monta, svg, trava_do_nativo,
+    MESA, cor_da_zona, glifo, monta, svg,
 )
 
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as padroes
@@ -426,7 +426,7 @@ def _linha_da_haptica(valor, ligado, vazio=False):
              f'data-gesto="haptica" '
              f'data-campo="lado-h" data-hef-alvo="classe" '
              f'data-hef-quando="1" '
-             f'title="Háptica por áudio — a vibração fina que o jogo manda como som.">'
+             f'title="Háptica por áudio — a vibração fina que o jogo envia como som.">'
              f'{glifo("haptica", ativo=ligado, tam=18)}</button>')
     titulo = (f'A força da háptica por áudio neste controle — 0 a {TETO_DA_HAPTICA}%.'
               f' 50% é o jogo como ele mandou. Grava na hora, só para ele.')
@@ -677,7 +677,6 @@ MIOLO = f'''
          data-hef-alvo="atributo" data-hef-atributo="data-modo-da-aba">
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Quanto do que o jogo pede chega a cada controle. A fita do topo não escolhe nada aqui">Vibração</span>
-        {trava_do_nativo("na vibração")}
         {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}
       </div>
       <div class="quadro-corpo">
@@ -689,7 +688,7 @@ MIOLO = f'''
             </div>
             <div><span class="sec-rot">Modelo</span></div>
             <div><span class="sec-rot" data-dica="{DICA_DA_FORCA}. {DICA_DO_TETO_DA_MESA}">Força da vibração</span></div>
-            <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 50%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA} Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
+            <div><span class="sec-rot" data-dica="A vibração fina que o jogo envia como som, no cabo e no BT. O risco no meio é 50%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA}">Sensor háptico</span></div>
             <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e Sem efeito cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">{ESQ["rot"]}</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho direito: contrapeso menor, som fino">{DIR["rot"]}</span></div>
@@ -865,7 +864,7 @@ def _conferir(doc):
     _haptica = _achou.group(1) if _achou else ""
     exigir(_haptica and DICA_DO_TETO_DA_MESA in _haptica
            and _haptica.index("O risco no meio é 50%")
-           < _haptica.index(DICA_DO_TETO_DA_MESA) < _haptica.index("Cinza quando"),
+           < _haptica.index(DICA_DO_TETO_DA_MESA),
            "o «?» da sensor háptico perdeu a frase do teto do perfil de bateria (logo depois do 50%)")
     sobrando = papeis - set(PAPEIS_QUE_SAO_GESTO)
     exigir(not sobrando,

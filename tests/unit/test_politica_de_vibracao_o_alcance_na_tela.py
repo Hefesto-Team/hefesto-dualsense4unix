@@ -98,14 +98,13 @@ def test_vpad_que_nao_subiu_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
     )
 
 
-def test_no_nativo_a_frase_e_outra() -> None:
-    """Ali não há defeito nenhum: é o modo funcionando como deve."""
-    texto = rumble_actions.texto_do_alcance_da_intensidade(
-        {"rumble_ff": {"vpads": 0}, "native_mode": True}
-    )
-    assert texto is not None
-    assert "Conexão Nativa (Sony)" in texto
-    assert "Jogar pelo Hefesto" not in texto
+def test_no_nativo_a_vibracao_nao_avisa_nada() -> None:
+    """Ali não há defeito nenhum, e aviso de modo não existe em aba nenhuma (ordem, 29/10/2026)."""
+    for emulacao in (None, False):
+        estado: dict = {"rumble_ff": {"vpads": 0}, "native_mode": True}
+        if emulacao is not None:
+            estado["gamepad_emulation"] = {"enabled": emulacao}
+        assert rumble_actions.texto_do_alcance_da_intensidade(estado) is None, estado
 
 
 @pytest.mark.parametrize(

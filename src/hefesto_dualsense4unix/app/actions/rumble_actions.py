@@ -95,9 +95,9 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
        ``D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO``): nenhum jogo recebe
        gamepad ali, por decisão de produto (``D-1409``), e a intensidade fica
        guardada e vale no primeiro pedido de um jogo com gamepad;
-    3. **Conexão Nativa (Sony) sem gamepad virtual?** A intensidade também não
-       alcança, mas é o modo funcionando como deve: a frase não manda consertar
-       nada;
+    3. **Modo Nativo sem gamepad virtual?** A intensidade também não alcança, mas é o modo
+       funcionando como deve, e a tela não avisa nada (ordem de 29/10/2026: aviso de modo
+       não existe em aba nenhuma);
     4. **Sobrou.** Há gamepad virtual e a intensidade alcança: nada a dizer.
 
     A frase do defeito termina dizendo o que a intensidade AINDA faz: vale para
@@ -123,13 +123,6 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
             _ALCANCE_O_QUE_ACONTECE
             + _CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU
             + _ALCANCE_O_QUE_SOBRA
-        )
-    if vpads == 0 and native:
-        return (
-            "Conexão Nativa (Sony): o jogo fala direto com o controle, e a "
-            "intensidade acima não passa por ele. Enquanto o modo estiver "
-            "ligado, fixar vibração aqui embaixo também não chega ao motor — "
-            "quem manda nele é o jogo."
         )
     return None
 

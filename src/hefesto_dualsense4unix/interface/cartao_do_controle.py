@@ -350,7 +350,7 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     o «no Hefesto ele segue ativo» dela contradiria o chip na mesma linha.
     """
     if bool(state_global.get("native_mode")):
-        return f"Giroscópio: {_FRASE_NATIVO}"
+        return None
     sensores = entry.get("sensores")
     if isinstance(sensores, dict) and sensores.get("giroscopio_ligado") is False:
         return None
@@ -370,9 +370,6 @@ _FRASE_MASCARA_XBOX: Final[dict[str, str]] = {
         "o jogo vê este controle como Xbox 360, e essa API não leva "
         "touchpad — no Hefesto ele segue ativo"),
 }
-
-_FRASE_NATIVO: Final[str] = "o jogo fala direto com o controle"
-
 
 def _item_do_vpad(
     entry: dict[str, Any], state_global: dict[str, Any]
@@ -412,7 +409,7 @@ def motores_no_fisico(item: Any) -> tuple[int, int] | None:
       três minutos atrás ao lado da palavra "chegando" é a mentira confortável
       que esta tela existe para não contar.
 
-    O par ``(0, 0)`` fresco também some: ele é o jogo mandando PARAR, e a
+    O par ``(0, 0)`` fresco também some: ele é o pedido do jogo para PARAR, e a
     parada não é o número que responde *"a vibração saiu do nosso lado?"*.
     """
     if not isinstance(item, dict):

@@ -228,8 +228,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
         elif mode == MODE_NATIVE:
             hint.set_text(
-                "Em \"Conexão Nativa (Sony)\" o jogo fala direto com o controle — "
-                "não há mouse/teclado para suspender."
+                "No Modo Nativo não há mouse/teclado para suspender."
             )
         else:
             hint.set_text("")

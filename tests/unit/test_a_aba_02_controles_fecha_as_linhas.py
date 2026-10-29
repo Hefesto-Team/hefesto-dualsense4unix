@@ -798,8 +798,7 @@ def test_a_linha_do_giroscopio_e_a_do_dono_palavra_por_palavra() -> None:
     comparações caem juntas — é o dono que decide, não o pacote e muito menos
     esta régua.
     """
-    for estado in ({"native_mode": True},
-                   {**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}}):
+    for estado in ({**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}},):
         card = _card({}, state=estado)
         esperado = texto_motion({**BASE}, estado)
         assert esperado, "o dublê não acordou o dono — a régua mediria o vazio"
@@ -808,31 +807,24 @@ def test_a_linha_do_giroscopio_e_a_do_dono_palavra_por_palavra() -> None:
 
 
 def test_as_situacoes_dizem_frases_diferentes_no_cartao() -> None:
-    """O Nativo, a máscara Xbox e o caso comum — três respostas, e a comum cala."""
+    """A máscara Xbox fala; o Nativo e o caso comum calam (o Nativo desde 29/10/2026)."""
     nativo = _card({}, state={"native_mode": True})
     xbox = _card({}, state={**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}})
     comum = _card({}, state=_com_vpad())
-    frases = {nativo["giro-no-jogo"], xbox["giro-no-jogo"], comum["giro-no-jogo"]}
-    assert len(frases) == 3, (
-        f"as três situações do cartão colapsaram em {len(frases)} frase(s): "
-        f"{frases!r}")
+    assert not nativo["giro-no-jogo"] and not comum["giro-no-jogo"]
+    assert xbox["giro-no-jogo"], "a máscara Xbox calou a linha do giroscópio"
 
 
-def test_a_excecao_do_modo_nativo_chega_ao_cartao() -> None:
-    """Em Nativo o jogo lê o controle direto, e a linha tem de dizer isso.
+def test_no_modo_nativo_o_cartao_cala_ate_com_a_mascara_xbox() -> None:
+    """Aviso de modo não existe em aba nenhuma (ordem, 29/10/2026): no Nativo a linha cala.
 
-    MORDE: arranque o ramo `native_mode` de `texto_motion` (ou deixe de passar o
-    `state` global ao dono) e o cartão CALA no exato modo em que o giroscópio
-    chega inteiro — o silêncio ali lê como defeito.
+    MORDE: devolva o ramo `native_mode` de `texto_motion` com qualquer frase, ou tire o ramo e
+    deixe a máscara Xbox falar no Nativo, e o cartão volta a avisar sobre o modo.
     """
-    nativo = _card({}, state={"native_mode": True})["giro-no-jogo"]
-    comum = _card({}, state=_com_vpad())["giro-no-jogo"]
-    assert nativo == texto_motion({**BASE}, {"native_mode": True})
-    assert nativo and nativo != comum, (
-        "o Modo Nativo caiu na frase comum — a exceção sumiu do cartão")
-    assert "Hz" not in nativo, (
-        "em Nativo o cartão anunciou uma frequência de espelho: não há gamepad "
-        f"virtual a que perguntar, e o jogo lê o controle direto — {nativo!r}")
+    for estado in ({"native_mode": True},
+                   {**_com_vpad(), "native_mode": True, "gamepad_emulation": {"flavor": "xbox"}}):
+        assert texto_motion({**BASE}, estado) is None, estado
+        assert not _card({}, state=estado)["giro-no-jogo"], estado
 
 
 def test_a_excecao_da_mascara_xbox_chega_ao_cartao() -> None:

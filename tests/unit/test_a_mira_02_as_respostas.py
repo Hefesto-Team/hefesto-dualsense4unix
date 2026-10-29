@@ -314,8 +314,7 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     acesa = {**entrada, "mira": {"ligada": True, "virtual": True}}
     assert texto_motion(apagada, estado) is None
     assert texto_motion(acesa, estado) is None
-    nativo = texto_motion(acesa, {**estado, "native_mode": True})
-    assert nativo and "direto com o controle" in nativo, nativo
+    assert texto_motion(acesa, {**estado, "native_mode": True}) is None
     dele = {"uniq": _P2, "transport": "usb", "connected": True, "inputs": {},
             "audio": {}, "speaker": {}, **acesa}
     import pacotes
