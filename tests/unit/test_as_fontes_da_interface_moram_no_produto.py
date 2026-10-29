@@ -384,11 +384,16 @@ t.fechar()
 """
 
 
-def _abrir_sem_rede(pagina: pathlib.Path, prazo: float) -> dict[str, object]:
+def _abrir_sem_rede(
+    pagina: pathlib.Path, prazo: float, cache: pathlib.Path, **lar: str,
+) -> dict[str, object]:
+    """O filho abre a página com a rede muda e o `XDG_CACHE_HOME` morno do módulo: a régua
+    mede a página, não o registro do GStreamer que o WebKit monta a frio (~2,7 s)."""
     if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
         pytest.skip("sem servidor gráfico: rode sob `xvfb-run -a` (pulo não é verde)")
     ambiente = {
-        **os.environ,
+        **os.environ, **lar,
+        "XDG_CACHE_HOME": str(cache),
         "https_proxy": REDE_MUDA, "http_proxy": REDE_MUDA,
         "HTTPS_PROXY": REDE_MUDA, "HTTP_PROXY": REDE_MUDA,
         "PYTHONPATH": str(RAIZ / "src"),
@@ -405,13 +410,29 @@ def _abrir_sem_rede(pagina: pathlib.Path, prazo: float) -> dict[str, object]:
     return resposta
 
 
+@pytest.fixture(scope="module")
+def cache_morno(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
+    """Uma carga de aquecimento, num lar só dela, monta o registro do GStreamer uma vez: o
+    `AudioContext` é o que pede o registro, e uma página sem ele não o monta."""
+    lar = tmp_path_factory.mktemp("lar-morno")
+    cache = lar / "cache"
+    aquecer = lar / "aquecer.html"
+    aquecer.write_text("<!doctype html><title>Hefesto</title><script>new AudioContext()</script>",
+                       encoding="utf-8")
+    _abrir_sem_rede(aquecer, 30.0, cache, HOME=str(lar),
+                    XDG_CONFIG_HOME=str(lar / "config"), XDG_DATA_HOME=str(lar / "data"),
+                    XDG_STATE_HOME=str(lar / "state"))
+    assert any(cache.glob("gstreamer-1.0/registry.*.bin")), "o aquecimento não montou o registro"
+    return cache
+
+
 @pytest.mark.parametrize("raiz", [MOCKUP, PUBLICADO], ids=["mockup", "publicado"])
 @pytest.mark.parametrize("aba", ["01", "10"])
 def test_com_a_rede_muda_a_pagina_abre_em_menos_de_3s_e_a_fonte_carrega(
-    raiz: pathlib.Path, aba: str,
+    raiz: pathlib.Path, aba: str, cache_morno: pathlib.Path,
 ) -> None:
     (pagina,) = sorted(raiz.glob(f"{aba}-*.html"))
-    r = _abrir_sem_rede(pagina, prazo=10.0)
+    r = _abrir_sem_rede(pagina, 10.0, cache_morno)
     assert r["abriu"] is True, f"{_id(pagina)} não chegou ao complete com a rede muda: {r}"
     assert r["estado"] == "complete"
     assert isinstance(r["carga_ms"], (int, float)) and r["carga_ms"] < 3000, (
@@ -425,8 +446,8 @@ def test_com_a_rede_muda_a_pagina_abre_em_menos_de_3s_e_a_fonte_carrega(
 
 
 
-def _as_duas_no_webkit(arq: pathlib.Path) -> dict[str, object]:
-    r = _abrir_sem_rede(arq, prazo=10.0)
+def _as_duas_no_webkit(arq: pathlib.Path, cache: pathlib.Path) -> dict[str, object]:
+    r = _abrir_sem_rede(arq, 10.0, cache)
     assert r["abriu"] is True, f"{arq.name} não chegou ao complete com a rede muda: {r}"
     fontes = r["fontes"]
     assert isinstance(fontes, dict)
@@ -434,14 +455,16 @@ def _as_duas_no_webkit(arq: pathlib.Path) -> dict[str, object]:
 
 
 @pytest.mark.parametrize("arq", _de_fora(MOCKUP), ids=_id)
-def test_a_pagina_de_fora_carrega_a_letra_da_casa_no_webkit(arq: pathlib.Path) -> None:
-    fontes = _as_duas_no_webkit(arq)
+def test_a_pagina_de_fora_carrega_a_letra_da_casa_no_webkit(
+    arq: pathlib.Path, cache_morno: pathlib.Path,
+) -> None:
+    fontes = _as_duas_no_webkit(arq, cache_morno)
     assert fontes.get("Space Grotesk") == "loaded", f"{_id(arq)}: {fontes}"
     assert fontes.get("JetBrains Mono") == "loaded", f"{_id(arq)}: {fontes}"
 
 
 def test_a_mordida_sem_o_font_face_a_pagina_de_fora_nao_carrega_a_letra(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, cache_morno: pathlib.Path,
 ) -> None:
     """A régua de cima só vale se reprova quando a página volta a não embutir a letra."""
     original = MOCKUP / "calibrar-sensores.html"
@@ -454,12 +477,14 @@ def test_a_mordida_sem_o_font_face_a_pagina_de_fora_nao_carrega_a_letra(
         (tmp_path / nome / "assets").symlink_to(RAIZ / "assets")
         paginas[nome] = tmp_path / nome / "mockup" / original.name
         paginas[nome].write_text(conteudo, encoding="utf-8")
-    fontes = _as_duas_no_webkit(paginas["mordida"])
+    fontes = _as_duas_no_webkit(paginas["mordida"], cache_morno)
     assert fontes.get("Space Grotesk") != "loaded", f"sem o @font-face a letra carregou: {fontes}"
-    fontes = _as_duas_no_webkit(paginas["controle"])
+    fontes = _as_duas_no_webkit(paginas["controle"], cache_morno)
     assert fontes.get("Space Grotesk") == "loaded", f"a cópia intacta não carregou: {fontes}"
 
-def test_a_mordida_com_o_link_do_google_de_volta_a_pagina_nao_abre(tmp_path: pathlib.Path) -> None:
+def test_a_mordida_com_o_link_do_google_de_volta_a_pagina_nao_abre(
+    tmp_path: pathlib.Path, cache_morno: pathlib.Path,
+) -> None:
     """A régua de cima só vale se reprova quando a causa volta: o `<link>` trava o `complete`."""
     (original,) = sorted(MOCKUP.glob("01-*.html"))
     google = (
@@ -471,10 +496,10 @@ def test_a_mordida_com_o_link_do_google_de_volta_a_pagina_nao_abre(tmp_path: pat
     mordido = tmp_path / original.name
     mordido.write_text(texto.replace("<style>", google + "\n<style>", 1), encoding="utf-8")
     assert recursos_de_fora(mordido.read_text(encoding="utf-8")), "a mordida não pôs o link"
-    r = _abrir_sem_rede(mordido, prazo=5.0)
+    r = _abrir_sem_rede(mordido, 5.0, cache_morno)
     assert r["abriu"] is False, f"com o link do Google a página abriu com a rede muda: {r}"
     controle = tmp_path / "controle" / original.name
     controle.parent.mkdir()
     controle.write_text(texto, encoding="utf-8")
-    r = _abrir_sem_rede(controle, prazo=5.0)
+    r = _abrir_sem_rede(controle, 5.0, cache_morno)
     assert r["abriu"] is True, f"a cópia sem o link não abriu: a mordida mede outra coisa {r}"
