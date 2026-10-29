@@ -1934,3 +1934,20 @@ VIGIA-QUE-DERRUBA-01: a vigia reiniciou o `bluetooth.service` por nove recusas d
 estava de pé, e levou junto o `hefesto-bt-agent`, que confirmaria o repareamento. A doença de 21/07, que a
 vigia existe para pegar, é o daemon recusando vários aparelhos ao mesmo tempo; dois aparelhos distintos é
 o menor limiar que separa as duas leituras.
+
+## o gesto da fita (`interface/hefesto_vivo.py`, `_escolher_na_fita`)
+
+Ele não troca de perfil e não grava no disco do usuário. Só o «Todos» fala com o serviço
+(`_devolver_o_alvo_a_todos`, escolha de 23/10/2026); os chips de um controle apontam a aba, e o alvo de saída
+do serviço é o «só este» da 08. O registro `("*", …)` é o mesmo coringa do rodapé: a fita mora no `topo.html`,
+o esqueleto das dez, e registrá-la por página seria a mesma linha dez vezes.
+
+O lugar vazio abre sem recusa (29/10/2026, D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA): desde que os quatro
+lugares têm aba na Jogar, clicar a aba de um lugar sem controle recusava dizendo que um controle tinha saído, e
+a aba ganhava o contorno laranja; a frase era falsa. O lugar vazio devolve recado, sem IPC e sem mudar
+`ESCOLHA_DA_FITA`, e o `abaQueVale` do BOOTSTRAP não devolve ao escolhido a aba vazia que se clicou. A recusa
+fica para o `pref` fora dos quatro: escolher calado o primeiro que sobrou é como a tela passa a mostrar um
+aparelho e a mexer noutro.
+
+A frase vai ao diário da janela desde 13/09/2026 (TELA-CALADA-01: a tarja de rodapé que a mostrava saiu por
+pedido, *"em todas as abas da interface"*). Na tela, o clique responde pela piscada (`MS_DA_PISCADA`).

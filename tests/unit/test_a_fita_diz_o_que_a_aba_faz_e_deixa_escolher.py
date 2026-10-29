@@ -161,11 +161,17 @@ def test_a_escolha_nao_e_apagada_quando_o_controle_sai(hv):
     assert hv._pref_escolhido(MESA) == "p2", "e volta a ser ele quando ele volta"
 
 
-def test_o_chip_de_quem_nao_esta_na_mesa_recusa_dizendo(hv):
-    """Escolher calado o que sobrou é como a tela mostra um e mexe noutro."""
-    with pytest.raises(ValueError, match="não está na mesa"):
-        hv._escolher_na_fita(_ctx(MESA), {"pref": "p4"}, None)
+def test_o_chip_que_nao_e_lugar_nenhum_recusa_dizendo(hv):
+    """Escolher calado o que sobrou é como a tela mostra um e mexe noutro.
+
+    O lugar vazio (o P4 com dois na mesa) abre sem recusa desde a
+    D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA; a recusa fica para o `pref` fora dos quatro.
+    """
+    with pytest.raises(ValueError, match="nenhum dos quatro lugares"):
+        hv._escolher_na_fita(_ctx(MESA), {"pref": "p9"}, None)
     assert hv.ESCOLHA_DA_FITA.uniq == "", "a recusa não pode ter mexido na escolha"
+    hv._escolher_na_fita(_ctx(MESA), {"pref": "p4"}, None)
+    assert hv.ESCOLHA_DA_FITA.uniq == "", "o lugar vazio não pode ter mexido na escolha"
 
 
 def test_o_todos_so_se_escolhe_quando_ha_o_que_agrupar(hv):

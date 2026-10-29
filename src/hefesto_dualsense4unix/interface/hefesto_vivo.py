@@ -300,6 +300,9 @@ BOOTSTRAP = r"""
     if(r && r.classList && r.classList.contains('radio-mesa') && r.checked){
       window.__hef.abaEscolhida = r.id.replace(/^c-/, '');
       window.__hef.abaSincronizada = true;
+      const card = document.querySelector('.ctl[data-controle="' + window.__hef.abaEscolhida + '"]');
+      window.__hef.vagaPedida = card && card.classList.contains('off')
+        ? window.__hef.abaEscolhida : '';
     }
   }, true);
   window.__hef.abaQueVale = function(){
@@ -319,6 +322,8 @@ BOOTSTRAP = r"""
       const r = document.getElementById('c-' + id);
       return !(r && r.closest('.ext-cartao'));
     };
+    if(agora && agora === window.__hef.vagaPedida && !aceso(agora)) return 0;
+    if(aceso(agora)) window.__hef.vagaPedida = '';
     if(aceso(agora) && (window.__hef.abaSincronizada || !aceso(querido) || agora === querido)){
       if(doAssento(agora)) window.__hef.abaSincronizada = true;
       window.__hef.abaEscolhida = agora;
@@ -930,23 +935,12 @@ def _devolver_o_alvo_a_todos(ctx: pacotes.Contexto, ipc: Any) -> None:
 
 def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
                       ipc: Any) -> dict[str, Any]:
-    """O clique no chip do `Selecionar:` — ele ESCOLHE, e só o «Todos» fala com o serviço.
+    """O clique no chip do `Selecionar:` ou na aba da Jogar: ele ESCOLHE para onde a aba mira.
 
-    O QUE ELE NÃO FAZ: não troca de perfil e não grava no disco do usuário. Só o «Todos»
-    fala com o serviço (`_devolver_o_alvo_a_todos`, escolha de 23/10/2026); os chips de um
-    controle apontam a aba, e o alvo de saída do serviço é o «só este» da 08.
-
-    O `("*", …)` É O MESMO CORINGA DO RODAPÉ: a fita mora no `topo.html`, o
-    esqueleto das dez, e registrá-la por página seria a mesma linha dez vezes.
-
-    ELE RECUSA DIZENDO quando o `pref` clicado não está na mesa — um chip de um
-    controle que saiu entre o desenho e o clique. Escolher calado o primeiro que
-    sobrou é como a tela passa a mostrar um aparelho e a mexer noutro.
-
-    E ELE MANDA A PRÓPRIA FRASE, que desde 13/09/2026 vai ao diário da janela e
-    não à tela (TELA-CALADA-01: a tarja de rodapé que a mostrava saiu por pedido, *"em todas as abas da interface"*). Na tela, o clique responde pela
-    piscada (`MS_DA_PISCADA`). O cartão fica de fora de propósito: ver
-    `_endereco_do_chip`.
+    Só o «Todos» fala com o serviço; um lugar dos quatro de `monta.MESA` sem controle na mesa
+    abre sem recusa e sem mudar a escolha (D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA); o `pref`
+    que não é lugar nenhum recusa dizendo. O recado vai ao diário da janela, não à tela. O
+    porquê: docs/research/o-porque-dos-modulos.md, «o gesto da fita».
     """
     pref = str(o.get("pref") or "").strip()
     if pref == "todos":
@@ -961,9 +955,9 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
         if str(c.get("pref") or "") == pref:
             ESCOLHA_DA_FITA.uniq = norm_mac(str(c.get("uniq") or "")) or ""
             return {"recado": f"Esta aba passa a mirar o {pref.upper()}."}
-    raise ValueError(
-        f"o chip {pref!r} não está na mesa de agora — o controle saiu entre o "
-        f"desenho da fita e o clique.")
+    if any(str(lugar.get("pref") or "") == pref for lugar in monta.MESA):
+        return {"recado": f"O {pref.upper()} está vazio: nenhum controle neste lugar."}
+    raise ValueError(f"o chip {pref!r} não é nenhum dos quatro lugares.")
 
 
 def _registrar_a_fita() -> None:
