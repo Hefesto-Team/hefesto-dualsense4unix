@@ -161,8 +161,8 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
   .aba-ctl:hover{background:color-mix(in srgb,var(--plastico) 30%,var(--app-bg));color:var(--fg)}
   .aba-ctl[hidden]{display:none}
   .aba-ctl .aba-nome{min-width:0;overflow:hidden;text-overflow:ellipsis}
-  .aba-ctl .n-jog{flex:0 0 16px;width:16px;height:16px;border-radius:50%;background:var(--plastico);
-    color:var(--tinta);font:700 10px/16px 'JetBrains Mono',ui-monospace,monospace;text-align:center}
+  .aba-ctl .n-jog{flex:0 0 18px;width:18px;height:18px;border-radius:50%;background:var(--plastico);
+    color:var(--tinta);font:700 12px/18px 'JetBrains Mono',ui-monospace,monospace;text-align:center}
   .aba-ctl .via-g{flex:0 0 14px;width:14px;height:14px;background:currentColor;opacity:.8;
     -webkit-mask:var(--glifo) center/contain no-repeat;mask:var(--glifo) center/contain no-repeat}
   .via-g[data-via="usb"]{--glifo:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2v15M9 5l3-3 3 3M12 14l5-3V8M12 12 7 9V7'/%3E%3Crect x='15.5' y='5.5' width='3' height='3' fill='%23000'/%3E%3Ccircle cx='7' cy='6' r='1.6' fill='%23000'/%3E%3Ccircle cx='12' cy='19.5' r='2.3' fill='%23000'/%3E%3C/svg%3E")}
@@ -173,11 +173,11 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
   body:has(#c-p4:checked) .aba-ctl[for="c-p4"]{height:var(--alt-aba);padding-bottom:2px;color:var(--fg);font-weight:600;
     background:color-mix(in srgb,var(--plastico) 9%,var(--panel));cursor:default}
   .quadro-corpo > .ctl:not(:has(> input:checked)){display:none}
-  .quadro-corpo > .ctl:has(> input:checked){background:color-mix(in srgb,var(--plastico) 9%,var(--panel))}
-  .ctl:has(> input:checked) > .faixa{position:absolute;top:calc(-1 * var(--alt-aba) - 2px);right:-2px;
+  .quadro-corpo > .ctl:not(.off):has(> input:checked){background:color-mix(in srgb,var(--plastico) 9%,var(--panel))}
+  .ctl:not(.off):has(> input:checked) > .faixa{position:absolute;top:calc(-1 * var(--alt-aba) - 2px);right:-2px;
     height:calc(var(--alt-aba) - 2px);margin:0;padding:0;border:0;background:transparent;
     flex-wrap:nowrap;white-space:nowrap;cursor:default;width:44%;justify-content:flex-end}
-  .ctl:has(> input:checked) > .faixa .card-nome{display:none}
+  .ctl:not(.off):has(> input:checked) > .faixa .card-nome{display:none}
   .ctl:has(> input:checked) > .faixa .no-jogo[aria-label]{max-width:200px}
   body.por-controle .ctl:has(> input:checked) .card-corpo{padding-top:8px !important}
   .aba-ctl.off{display:none}

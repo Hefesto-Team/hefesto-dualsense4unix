@@ -9,7 +9,7 @@ O DEFEITO QUE ESTA RÉGUA FECHA, medido em 05/09/2026: o gesto era
 `_safe_call` devolve `False` para **serviço desligado, socket ausente, timeout
 de conexão e erro JSON-RPC** (`app/ipc_bridge.py:74-81`) — e como o gesto não
 levantava, o piloto executava o ramo do sucesso
-(`interface/hefesto_vivo.py:1862-1864`) e depositava **"Pronto."** em verde. Com
+(`interface/hefesto_vivo.py:1863-1865`) e depositava **"Pronto."** em verde. Com
 o serviço parado, o botão trocava de palavra, esperava o teto, voltava ao rótulo
 e afirmava ter feito. **Nenhum byte havia saído.**
 

@@ -1687,7 +1687,7 @@ def _fora_do_voo(fn: Callable[[], None]) -> None:
     """Roda `fn` numa linha própria, sem segurar o botão que está em voo.
 
     **O GESTO JÁ NÃO RODA NO TIQUE** — medido em 06/09/2026 no piloto: ele
-    despacha cada gesto numa thread (`interface/hefesto_vivo.py:3155`), porque
+    despacha cada gesto numa thread (`interface/hefesto_vivo.py:3156`), porque
     *"`daemon.reload` leva 9,5 segundos"*. Logo a tela não congela nem se o som
     for chamado direto, e o `TIQUE_MS` de 100 ms segue livre.
 

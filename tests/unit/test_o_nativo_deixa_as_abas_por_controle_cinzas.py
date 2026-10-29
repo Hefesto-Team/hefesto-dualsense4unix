@@ -12,7 +12,8 @@ DUAS METADES, e nenhuma prova a outra:
    daemon, e a recusa vem do decorador `@gesto` (`pacotes.camada`), não de um `if` na tela.
    Ficam vivos só os de `VIVOS_NO_NATIVO` e o Exportar, que só grava um arquivo.
 2. **A tela (Chrome de verdade).** Com `body.nativo`, o motor responde por `elementFromPoint`:
-   nenhum gesto das quatro abas recebe clique fora dos vivos, a fita é uma camada muda e o
+   nenhum gesto das quatro abas recebe clique fora dos vivos, a fita é uma camada muda (a Jogar
+   não tem fita: a aba de cada controle é da janela) e o
    quadro mostra «O jogo manda». O cartão com a máscara saiu da Jogar em 28/10/2026. Sem o
    `nativo` a mesma página oferece tudo (a cura não pode ser
    «cinza para sempre»).
@@ -287,8 +288,10 @@ def test_no_nativo_o_motor_nao_entrega_clique_a_gesto_nenhum(medido: dict[str, A
     vivos = {n for (_p, n) in camada.VIVOS_NO_NATIVO} | set(camada.RODAPE_VIVO_NO_NATIVO)
     vivos |= {"r-exportar"}
     for pagina, m in medido.items():
+        da_janela = {g for (p, g), dono in camada.CAMADA.items()
+                     if p == pagina and dono == camada.JANELA}
         pegam = sorted({g["nome"] for g in m["nativo"]["gestos"]
-                        if g["oferecido"] and g["nome"] not in vivos})
+                        if g["oferecido"] and g["nome"] not in vivos | da_janela})
         assert not pegam, f"{pagina}: no Nativo o Chrome ainda entrega clique a {pegam}"
         assert len(m["nativo"]["gestos"]) >= 5, f"{pagina}: poucos gestos para medir"
         assert "nativo" in m["nativo"]["corpo"]
@@ -309,12 +312,28 @@ def test_os_vivos_da_jogar_recebem_clique_no_nativo(medido: dict[str, Any]) -> N
 
 def test_no_nativo_a_fita_e_uma_camada_muda(medido: dict[str, Any]) -> None:
     for pagina, m in medido.items():
+        if pagina == "01-jogar.html":
+            continue
         n = m["nativo"]
         assert n["camadaDaFita"] == 1, f"{pagina}: a camada da fita não aparece no Nativo"
         assert n["chipsDaFita"], f"{pagina}: sem chips na fita para medir"
         for chip in n["chipsDaFita"]:
             assert not chip["clicavel"], f"{pagina}: um chip da fita ainda recebe clique"
             assert "so-no-nativo" in chip["quem"]
+
+
+def test_no_nativo_a_aba_de_cada_controle_da_jogar_escolhe_o_cartao(
+        medido: dict[str, Any]) -> None:
+    """A Jogar não tem fita, e escolher o cartão é da janela.
+
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    n = medido["01-jogar.html"]["nativo"]
+    assert n["camadaDaFita"] == 0 and not n["chipsDaFita"]
+    abas = [g for g in n["gestos"] if g["nome"] == "escolher-na-fita"]
+    oferecidas = [g["texto"][:1] for g in abas if g["oferecido"]]
+    assert oferecidas == ["1", "2"], (
+        f"no Nativo as abas dos dois conectados não recebem clique: {abas}")
 
 
 def test_no_nativo_as_tres_abas_de_ajuste_dizem_que_o_jogo_manda(medido: dict[str, Any]) -> None:

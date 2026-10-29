@@ -311,10 +311,10 @@ BOOTSTRAP = r"""
     let vez = aceso(querido) ? querido : '';
     if(!vez){
       const primeiro = document.querySelector('.ctl[data-controle]:not(.off)');
-      vez = primeiro ? primeiro.dataset.controle : '';
+      vez = primeiro ? primeiro.dataset.controle : 'p1';
     }
-    const radio = vez && document.getElementById('c-' + vez);
-    if(!radio) return 0;
+    const radio = document.getElementById('c-' + vez);
+    if(!radio || radio.checked) return 0;
     radio.checked = true;
     window.__hef.abaSincronizada = true;
     return 1;
@@ -1039,9 +1039,10 @@ CLIQUE_COM_ALVO = r"""
   const t = window.__hefTocar;
   if(!t) return 'SEM O TOCAR';
   for(const p of prefs){
-    const bloco = document.querySelector('[data-controle="' + p + '"]');
-    const dentro = bloco && t.achar(bloco, g);
-    if(dentro){ window.__hef.alvoPadrao = p; t.tocar(dentro, g); return 'no bloco de ' + p; }
+    for(const bloco of document.querySelectorAll('[data-controle="' + p + '"]')){
+      const dentro = t.achar(bloco, g);
+      if(dentro){ window.__hef.alvoPadrao = p; t.tocar(dentro, g); return 'no bloco de ' + p; }
+    }
   }
   const el = t.achar(document, g);
   if(!el) return 'NAO ACHEI NA PAGINA';
@@ -3256,8 +3257,8 @@ def _o_que_mudou(antes: dict[tuple[str, ...], tuple[Any, Any]],
 
 
 def _a_diferenca_muda_a_forma(dif: dict[str, Any], moldes: frozenset[str]) -> bool:
-    """A diferença troca ou clona nós? A fita, um bloco ou a lista de um molde."""
-    return ("fita" in dif or "blocos" in dif
+    """A diferença troca ou clona nós? A fita, os lugares, um bloco ou a lista de um molde."""
+    return ("fita" in dif or "ocupados" in dif or "vazios" in dif or "blocos" in dif
             or any(k in moldes for k in (dif.get("mesa") or {})))
 
 

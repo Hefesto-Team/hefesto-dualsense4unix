@@ -235,6 +235,34 @@ def test_quem_chega_ganha_aba_e_o_escolhido_que_sai_passa_ao_seguinte(tela: Any)
     assert lido["cartoes"] == ["p4"], "o escolhido saiu e nenhum cartão ficou à vista"
 
 
+@skip_sem_gi_real
+def test_sem_controle_nenhum_a_secao_diz_player_1_desconectado(tela: Any) -> None:
+    """Sem aba nenhuma, o lugar aberto é a linha fechada do vazio, com o texto dela.
+
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    lido = _pintar(tela, [], "")
+    assert lido["abas"] == []
+    texto = tela.executar(
+        "(function(){var c=document.querySelector('.quadro-corpo > .ctl:has(> input:checked)');"
+        "return c ? c.innerText.replace(/\\s+/g,' ').trim() : '';})()")
+    assert texto == "Player 1 • Desconectado"
+
+
+@skip_sem_gi_real
+def test_o_clique_do_piloto_com_alvo_acha_o_cartao_e_nao_para_na_aba(tela: Any) -> None:
+    """A aba também é `[data-controle]`: o clique do piloto mirado no P3 cai no cartão do P3.
+
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR.
+    """
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    _pintar(tela, ["p1", "p2", "p3"], "p1")
+    js = hefesto_vivo.TOCAR + hefesto_vivo.CLIQUE_COM_ALVO % (json.dumps("mudo"),
+                                                              json.dumps(["p3"]))
+    assert tela.executar(js) == "no bloco de p3"
+
+
 TRANSBORDA = r"""
 (function(){
   var q = document.querySelector('.quadro.estica .quadro-corpo');

@@ -39,12 +39,12 @@ família de defeito que esta casa pagou onze vezes em 26/08.
    com caixa maior que zero, nenhum recebendo clique.
 2. **VISÍVEL NO CHEIO** — ``data-conectado="sim"``: TODOS com caixa e TODOS
    recebendo clique. E não só como o arquivo nasce: a régua faz o que o piloto
-   faz no passo ``1c`` (``hefesto_vivo.py:1132``) — vira a marca para ``"sim"``
+   faz no passo ``1c`` (``hefesto_vivo.py:1133``) — vira a marca para ``"sim"``
    **sem recarregar a página** — e cobra que os três chips do P3 e do P4 voltem
    no mesmo tique. É o estado da bancada, que está com os quatro DualSense
    agora; o piloto vira marca e escreve campo, ele não materializa widget.
 
-E O PASSO ``1b`` TAMBÉM (``hefesto_vivo.py:1107``): a régua esvazia o P1 ao vivo
+E O PASSO ``1b`` TAMBÉM (``hefesto_vivo.py:1108``): a régua esvazia o P1 ao vivo
 e cobra que os gestos dele sumam. Sem isto a cura poderia ser um estado inicial
 sortudo em vez de uma regra que segue a mesa.
 
@@ -127,7 +127,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
     }
     return saida;
   };
-  // O PASSO 1c DO PILOTO, letra por letra (`hefesto_vivo.py:1132`): a marca
+  // O PASSO 1c DO PILOTO, letra por letra (`hefesto_vivo.py:1133`): a marca
   // vira e a classe sai. NENHUM nó é criado — é justamente o ponto.
   const encher = (quem) => {
     for (const el of document.querySelectorAll('[data-controle="' + quem + '"]')) {
@@ -135,7 +135,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
       el.classList.remove('off');
     }
   };
-  // E O PASSO 1b (`hefesto_vivo.py:1107`), que é o simétrico.
+  // E O PASSO 1b (`hefesto_vivo.py:1108`), que é o simétrico.
   const esvaziar = (quem) => {
     for (const el of document.querySelectorAll('[data-controle="' + quem + '"]')) {
       el.dataset.conectado = 'nao';  // (noqa-acento) o valor, não a palavra

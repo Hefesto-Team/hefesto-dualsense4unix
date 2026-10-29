@@ -1346,7 +1346,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "(bancada). A "
         "janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "
-        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3496`) e o daemon "
+        "(`ligar` em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py:3497`) e o daemon "
         "publica o estado "
         "do "
         "mudo; as funções soltas do módulo (`sinks_dualsense`, `muted_de_saida`) "
