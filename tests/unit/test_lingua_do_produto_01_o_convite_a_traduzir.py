@@ -17,6 +17,8 @@ _TOTAL_PUBLICADO = re.compile(
     r"Dos \*\*(\d+)\*\* arquivos `\.py` de `src/hefesto_dualsense4unix/app/actions/`"
 )
 
+_CRUS_PUBLICADOS = re.compile(r"\*\*(\d+)\*\* escrevem prosa com\s+acentuação portuguesa")
+
 
 def _modulos_de_acoes() -> list[Path]:
     """Todo `.py` de `app/actions/`, inclusive os de dentro de um pacote."""
@@ -78,12 +80,21 @@ def _importa_a_funcao_de_traducao(arvore: ast.Module) -> bool:
 
 
 def _literais_de_prosa(arvore: ast.Module) -> int:
-    """Quantos literais de texto do módulo carregam acentuação portuguesa."""
+    """Quantos literais de texto do módulo, fora de docstring, carregam acentuação portuguesa."""
+    docstrings = {
+        id(no.body[0].value)
+        for no in ast.walk(arvore)
+        if isinstance(no, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+        and no.body
+        and isinstance(no.body[0], ast.Expr)
+        and isinstance(no.body[0].value, ast.Constant)
+    }
     total = 0
     for no in ast.walk(arvore):
         if (
             isinstance(no, ast.Constant)
             and isinstance(no.value, str)
+            and id(no) not in docstrings
             and _ACENTUADA.search(no.value)
         ):
             total += 1
@@ -145,13 +156,16 @@ def _convites_em(texto: str, catalogos: set[str]) -> list[tuple[int, str]]:
 def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
     """Ancora a medição que sustenta a decisão de produto, e a mantém honesta.
 
-    São 30 desde 26/10/2026: o `recarga_do_install.py` (e1fe5cbfe) entrou em `app/actions/` com 14
-    literais acentuados e sem a função de tradução, e o total publicado subiu de 32 a 33 com ele.
+    O critério é o publicado na `.github/CONTRIBUTING.md` pelo gerador: literal acentuado fora
+    de docstring. A docstring não chega à tela, e o módulo que só a tem (o
+    `troca_no_fim_do_jogo.py`, 28/10) não escreve texto vivo.
     """
     fora = _modulos_que_escrevem_portugues_cru(DIR_ACOES)
     total = len(_modulos_de_acoes())
 
-    publicado = _TOTAL_PUBLICADO.search(CONTRIBUINDO.read_text(encoding="utf-8"))
+    contribuindo = CONTRIBUINDO.read_text(encoding="utf-8")
+    publicado = _TOTAL_PUBLICADO.search(contribuindo)
+    crus = _CRUS_PUBLICADOS.search(contribuindo)
     assert publicado, (
         "`.github/CONTRIBUTING.md` não publica mais quantos módulos tem `app/actions/`: "
         "o bloco da CONTAGEM-GERADA sumiu ou mudou de forma."
@@ -161,16 +175,18 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
         f"{publicado.group(1)}. O número sai do gerador, nunca à mão: "
         "`scripts/check_o_projeto_e_traduzivel.py --publicar`."
     )
-    assert len(fora) == 30, (
+    assert crus, "a `.github/CONTRIBUTING.md` não publica mais quantos módulos escrevem prosa crua."
+    assert len(fora) == int(crus.group(1)), (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 30: {', '.join(sorted(fora))}. Se o número CAIU, é "
-        "trabalho bom — baixe o número aqui. Se chegou a "
+        f"tradução, e a `.github/CONTRIBUTING.md` publica {crus.group(1)}: "
+        f"{', '.join(sorted(fora))}. O número sai do gerador: "
+        "`scripts/check_o_projeto_e_traduzivel.py --publicar`. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
-    assert sum(fora.values()) >= 400, (
+    assert sum(fora.values()) >= 200, (
         f"os {len(fora)} módulos somam agora {sum(fora.values())} literais "
-        "acentuados; "
-        "eram 561 em 07/08/2026. Uma queda desta ordem significa que o texto "
+        "acentuados fora de docstring; "
+        "eram 280 em 29/10/2026. Uma queda desta ordem significa que o texto "
         "vivo das abas mudou de lugar, e a decisão da língua precisa ser "
         "remedida antes de continuar valendo como está escrita."
     )
@@ -279,6 +295,9 @@ def test_o_criterio_reconhece_o_encanamento_ligado(tmp_path: Path) -> None:
         'TEXTO = "Não foi possível aplicar"\n', encoding="utf-8"
     )
     (tmp_path / "sem_prosa.py").write_text('CHAVE = "trigger_mode"\n', encoding="utf-8")
+    (tmp_path / "so_docstring.py").write_text(
+        '"""A troca que o install adiou."""\nCHAVE = "troca"\n', encoding="utf-8"
+    )
 
     fora = _modulos_que_escrevem_portugues_cru(tmp_path)
 
