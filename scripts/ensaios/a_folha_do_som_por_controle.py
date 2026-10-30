@@ -160,7 +160,7 @@ class Campo:
 
 @dataclass(frozen=True)
 class Botao:
-    """Um ato. O byte muda a condição; o ATO é o que ela ouve ou vê."""
+    """Um ato. O byte muda a condição; o ATO é o que se ouve ou vê."""
 
     rotulo: str
     acao: str
@@ -257,7 +257,7 @@ def _linha_da_luz(envelope: str) -> Linha:
         id=f"a-luz-por-{envelope}",
         titulo=f"A luz por {NOME_DO_ENVELOPE[envelope]} — o positivo do ENVELOPE",
         pergunta="este envelope chega ao firmware pelo rádio? (a barra azul responde)",
-        olhar="A barra de luz. Ela fica AZUL por um segundo e volta ao daemon. "
+        olhar="A barra de luz. Fica AZUL por um segundo e volta ao daemon. "
         "Se acender, o envelope chega — e o silêncio do áudio por ele passa a ser do ÁUDIO.",
         linha_do_mapa="plataforma.escada_de_output@dualsense",
         sprint="SOM-POR-CONTROLE-01",
@@ -366,7 +366,7 @@ class Coluna:
         return self._seq
 
     def bater(self) -> None:
-        """O martelo da condição. Só bate quando ELA assumiu esta coluna."""
+        """O martelo da condição. Só bate quando esta coluna foi assumida."""
         if not self.assumido:
             return
         self.escrever(report_para(self.alvo.transporte, self.common(), self.proximo_seq()))
@@ -837,7 +837,7 @@ class Folha:
                         fonte="scripts/ensaios/a_folha_do_som_por_controle.py",
                         nota=f"{valor}{feito}; martelo "
                         f"{HZ_DO_MARTELO:g} Hz {'ligado' if coluna.assumido else 'desligado'}; "
-                        f"ela: {nota or '(sem resposta — esta linha é a FORMA, não uma medição)'}",
+                        f"resposta: {nota or '(sem resposta — esta linha é a FORMA, não uma medição)'}",
                     )
                 )
         sys.stdout.flush()
@@ -931,7 +931,7 @@ def imprimir_o_que_se_le(colunas: list[Coluna], alvos: list[Aparelho]) -> None:
     print(
         resumo(
             "leitura pura — nenhum nó hidraw aberto, nenhum byte escrito no aparelho. "
-            "A medição é ela apertando os botões, com os controles na mão."
+            "A medição é quem usa apertando os botões, com os controles na mão."
         )
     )
 

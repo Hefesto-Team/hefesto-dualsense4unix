@@ -142,7 +142,7 @@ def main() -> int:
 
     print(f"\nOK: um clique troca {saida['desenho']['rotulo']!r} por "
           f"{a09_sistema.CONFIRMA!r}, o tique repõe em {espera:.0f}s, e o daemon "
-          f"dela continua no MainPID {saida['pid-antes']}.")
+          f"de quem usa continua no MainPID {saida['pid-antes']}.")
     return 0
 
 

@@ -215,7 +215,7 @@ class Painel:
 
         aviso = Gtk.Label()
         aviso.set_markup(
-            "<b>Mexa e olhe a barra.</b>  Se ela piscar entre dois brilhos, o byte age — "
+            "<b>Mexa e olhe a barra.</b>  Se a barra piscar entre dois brilhos, o byte age — "
             "é o daemon e este painel disputando."
         )
         aviso.set_line_wrap(True)
@@ -273,7 +273,7 @@ class Painel:
                     nota=f"nível {coluna.nivel} ({NOME_DO_NIVEL[coluna.nivel]}), "
                     f"bit {'ligado' if coluna.com_bit else 'apagado'}, cor {coluna.cor}, "
                     f"martelo {HZ:g} Hz, {coluna.escritas} escritas; "
-                    f"ela: {nota or '(sem resposta)'}",
+                    f"resposta: {nota or '(sem resposta)'}",
                 )
             )
         sys.stdout.flush()

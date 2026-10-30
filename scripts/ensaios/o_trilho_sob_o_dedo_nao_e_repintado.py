@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O trilho que ela está arrastando não é repintado por baixo do dedo."""
+"""O trilho que quem usa está arrastando não é repintado por baixo do dedo."""
 
 from __future__ import annotations
 
@@ -128,7 +128,7 @@ def main() -> int:
     print(f"  SEM foco, pus {MEU_VALOR} e esperei .... {sem}"
           f"   {'(o pintor sobrescreveu — o campo está VIVO)' if sem != MEU_VALOR else '(NÃO sobrescreveu)'}")
     print(f"  COM foco, pus {MEU_VALOR} e esperei .... {com}"
-          f"   {'(a guarda segurou)' if com == MEU_VALOR else '(SOBRESCREVEU sob o dedo dela)'}")
+          f"   {'(a guarda segurou)' if com == MEU_VALOR else '(SOBRESCREVEU sob o dedo)'}")
     print(f"  soltei e esperei ......... {solto}"
           f"   {'(a pintura voltou)' if solto != MEU_VALOR else '(NÃO voltou — a guarda MATOU o campo)'}")
 
@@ -142,13 +142,13 @@ def main() -> int:
         return 2
     if not segurou:
         print("REPROVA: o trilho foi repintado com o campo focado. É o defeito "
-              "que ela viu — o polegar volta sozinho no meio do arraste.")
+              "que se viu — o polegar volta sozinho no meio do arraste.")
         return 1
     if not voltou:
         print("REPROVA: depois de soltar, o valor do disco não voltou. A guarda "
-              "ADIA a pintura; se ela a MATA, a tela para de dizer a verdade.")
+              "ADIA a pintura; se a guarda a MATA, a tela para de dizer a verdade.")
         return 1
-    print("PASSA: sob o dedo o trilho é dela; solto, ele volta a ser do disco.")
+    print("PASSA: sob o dedo o trilho é de quem arrasta; solto, ele volta a ser do disco.")
     return 0
 
 

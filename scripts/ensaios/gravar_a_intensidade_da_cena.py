@@ -8,7 +8,7 @@ pessoa marca à mão, em três gêneros. Duas metades:
 1. O GRAVADOR (``--gravar SEGUNDOS --jogo NOME --genero GENERO --saida ARQUIVO``): pergunta
    ``daemon.state_full`` ao serviço no ar a cada 100 ms e guarda o bloco ``intensidade_da_cena``
    (a energia do som do jogo, as bordas do rumble e as do dedo por segundo, a intensidade e a
-   faixa). Só LÊ o estado; é da bancada, com o jogo aberto num estilo que liga o motor do tato
+   faixa). Só LÊ o estado; é do ensaio no aparelho, com o jogo aberto num estilo que liga o motor do tato
    (Ação, por exemplo). A marca do trecho vem do teclado deste terminal, uma letra e Enter:
    ``c`` calmo, ``t`` tenso, ``x`` combate, ``-`` fora de trecho. Nenhum endereço é gravado.
 2. A ANÁLISE (``--analisar ARQUIVO...``): pura, lê as gravações e imprime, por jogo, a mediana
@@ -93,7 +93,7 @@ def ler_marcas(texto: str) -> list[tuple[float, float, str]]:
 
 
 def com_as_marcas(gravacao: Gravacao, marcas: Iterable[tuple[float, float, str]]) -> Gravacao:
-    """A gravação com a marca de cada pergunta trocada pela do arquivo (fora delas, nenhuma)."""
+    """A gravação com a marca de cada pergunta trocada pela do arquivo (fora das perguntas, nenhuma)."""
     lista = list(marcas)
     perguntas = []
     for pergunta in gravacao.perguntas:
@@ -193,7 +193,7 @@ class _Marcador:
 
 
 def gravar(segundos: float, marcador: _Marcador) -> list[dict[str, Any]]:
-    """Bancada: pergunta o estado ao serviço no ar por ``segundos`` (só leitura)."""
+    """No aparelho: pergunta o estado ao serviço no ar por ``segundos`` (só leitura)."""
     from hefesto_dualsense4unix.app.ipc_bridge import _run_call
 
     perguntas: list[dict[str, Any]] = []

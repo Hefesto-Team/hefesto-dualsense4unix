@@ -99,7 +99,7 @@ def alimentacao(aparelho: Aparelho) -> tuple[str, str]:
 
 @dataclass
 class Calibracao:
-    """A régua do giroscópio DESTA unidade, lida do feature 0x05 dela."""
+    """A régua do giroscópio DESTA unidade, lida do seu feature 0x05."""
 
     ok: bool = False
     motivo: str = ""
@@ -124,7 +124,7 @@ class Calibracao:
 
 
 def ler_calibracao(aparelho: Aparelho) -> Calibracao:
-    """O feature 0x05 desta unidade -> a régua do giroscópio dela."""
+    """O feature 0x05 desta unidade -> a régua do seu giroscópio."""
     try:
         no = abrir_no_hidraw(aparelho.caminho_hidraw, escrita=False)
     except (PortaFechadaError, OSError) as erro:
@@ -573,7 +573,7 @@ def _escrever_csv(caminho: str, medidas: list[Medida], quando: str, laco_ms: flo
 
 
 def veredicto(medidas: list[Medida], laco_ms: float) -> str:
-    """A linha final — e ela reprova o INSTRUMENTO antes de julgar o aparelho."""
+    """A linha final — e reprova o INSTRUMENTO antes de julgar o aparelho."""
     com_amostra = [m for m in medidas if m.aproveitados]
     if not com_amostra:
         return (

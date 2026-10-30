@@ -109,7 +109,7 @@ def main() -> int:
 
     if m["reaberto"] != m["aberto"]:
         print(f"\nREPROVA: o cartão do {LUGAR.upper()} não voltou ao que era — "
-              f"{m['aberto']} contra {m['reaberto']}. O dado dela chega "
+              f"{m['aberto']} contra {m['reaberto']}. O dado de quem usa chega "
               "invisível, e só recarregar a página desfaz.")
         return 1
 

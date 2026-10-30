@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clica o chip de máscara nos QUATRO cartões da Jogar, dentro do WebKit dela.
+"""Clica o chip de máscara nos QUATRO cartões da Jogar, dentro do WebKit do produto.
 
 O PEDIDO É DE PRODUTO, 03/09/2026: *"É uma máscara por controle. (…) Se isso não
 ocorre com os 4 controles em cada aba, então temos que construir isso e garantir
@@ -15,16 +15,16 @@ dizia uma palavra.
 
 NADA CHEGA AO DAEMON DO USUÁRIO. ``pacotes.ponte.chamar`` é trocado por um gravador
 antes do primeiro clique: o caminho inteiro é percorrido e a chamada
-``gamepad.mask.set`` é ANOTADA em vez de despachada. Ela está usando a máquina;
-um ensaio que trocasse a máscara do controle no cabo dela seria um estrago, não
+``gamepad.mask.set`` é ANOTADA em vez de despachada. Quem usa está com a máquina;
+um ensaio que trocasse a máscara do controle no cabo seria um estrago, não
 uma medição.
 
-A PÁGINA É A DA BANCADA, e isto é deliberado: o piloto abre o PUBLICADO
+A PÁGINA É A DO DESENHO, e isto é deliberado: o piloto abre o PUBLICADO
 (`hefesto_vivo._ir`), e o publicado só recebe endereço pelo
 ``check_o_desenho_aprovado.py --publicar-enderecos``, que é ato de quem
 coordena. Medir o publicado hoje daria **verde sobre a página congelada** — a
 armadilha mais cara do `docs/method/COMO-OLHAR-A-TELA.md`. O desvio é uma cópia
-num diretório temporário; a bancada não é tocada.
+num diretório temporário; o desenho não é tocado.
 
 OS TRÊS DESFECHOS QUE ELE SABE SEPARAR, e a diferença é o ponto inteiro:
 
@@ -36,7 +36,7 @@ OS TRÊS DESFECHOS QUE ELE SABE SEPARAR, e a diferença é o ponto inteiro:
     SEM RESPOSTA ....... ninguém ouviu o clique. É o defeito, e era o estado do
                          P3 e do P4.
 
-Uso (sempre oculto; ela tem UMA tela)::
+Uso (sempre oculto; a máquina tem UMA tela)::
 
     scripts/ensaios/os_quatro_cartoes_mudam_a_mascara.py
     scripts/ensaios/os_quatro_cartoes_mudam_a_mascara.py --publicado
@@ -107,7 +107,7 @@ BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
 
 
 def _desviar_para_o_ensaio(pilha: list[pathlib.Path]) -> None:
-    """Aponta o PUBLICADO do piloto para uma cópia da bancada, em /tmp."""
+    """Aponta o PUBLICADO do piloto para uma cópia do desenho, em /tmp."""
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="ensaio-jogar-"))
     pilha.append(tmp)
     shutil.copy2(onde.ENSAIO / ABA, tmp / ABA)
@@ -117,7 +117,7 @@ def _desviar_para_o_ensaio(pilha: list[pathlib.Path]) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--publicado", action="store_true",
-                    help="mede a página do produto em vez da bancada")
+                    help="mede a página do produto em vez do desenho")
     opcoes = ap.parse_args()
 
     lixo: list[pathlib.Path] = []
@@ -175,7 +175,7 @@ def main() -> int:
 
     mudos = []
     print(f"  chip clicado: {CHIP} · página: "
-          f"{'PUBLICADA' if opcoes.publicado else 'bancada'}\n")
+          f"{'PUBLICADA' if opcoes.publicado else 'desenho'}\n")
     for a in achados:
         dom = a["dom"]
         if not dom.get("achou"):
@@ -192,7 +192,7 @@ def main() -> int:
 
     if mudos:
         print(f"\nREPROVA: {len(mudos)} cartão(ões) não respondeu ao clique — "
-              f"{', '.join(mudos)}. O chip está desenhado e o dedo dela não "
+              f"{', '.join(mudos)}. O chip está desenhado e o dedo de quem usa não "
               f"alcança nada: nem muda, nem diz por quê.")
         return 1
 

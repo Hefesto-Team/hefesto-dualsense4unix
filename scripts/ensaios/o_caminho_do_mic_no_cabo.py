@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """o_caminho_do_mic_no_cabo.py — MIC-CABO-LIMPO-01: o censo do caminho do cabo.
 
-A QUEIXA, E É DO USUÁRIO — 17/09/2026:
-
-    *"sobre o mic do cabo ficar limpo igual o do mic no bt"*  # noqa-acento: citação literal
-
-E o outro lado da mesma frase, do mesmo dia, sobre o RÁDIO: *"o som do mic ta
-divino"*.  # noqa-acento: citação literal
+A QUEIXA DE 17/09/2026: o microfone do cabo tem de sair tão limpo quanto o do
+rádio, que no mesmo dia soava muito bem.
 
 POR QUE ESTE INSTRUMENTO EXISTE, E POR QUE ELE NÃO CURA NADA
 =============================================================
@@ -48,22 +44,22 @@ DO AVESSO EM 20/09/2026, e a cura de uma ponta é o contrário da cura da outra.
 O elemento ALSA de captura do DualSense no cabo chama-se ``Headset`` (Feature
 Unit 5 do descritor UAC, faixa 0…12288 = 0…+48 dB). A MIC-USB-01 o mediu a
 **31%** em 25/07/2026; **esse número caiu**. Lido em repouso em 17/09 e de novo
-em 20/09/2026, nesta bancada: ``Mono: Capture 101 [100%] [48.00dB] [on]`` — **no
+em 20/09/2026, nesta máquina de teste: ``Mono: Capture 101 [100%] [48.00dB] [on]`` — **no
 topo da faixa**.
 
 A H1 dizia *"um sinal que nasce a um terço e é amplificado depois"*; o que se
 mede é o **oposto**: o sinal nasce com **+48 dB de ganho que ninguém escolheu**,
 e o produto não alcança o botão.
 ``grep -rn "amixer|alsactl|snd_ctl|alsaaudio" src/ scripts/ install.sh``
-continua **VAZIO**, e a ``mic.volume`` dela trava em 0–100% em
-``integrations/audio_control.py`` — ela atenua, nunca amplifica, e não fala com
+continua **VAZIO**, e a ``mic.volume`` do perfil trava em 0–100% em
+``integrations/audio_control.py`` — atenua, nunca amplifica, e não fala com
 este elemento. A pergunta deixa de ser *"falta ganho?"* e passa a ser **"sobra
 ganho, e ele não tem dono"**.
 
 O que decide se esses +48 dB pioram o som é se o ganho é analógico (o pré-amp
 traz ruído próprio) ou digital (o SNR não muda) — e **isso não se sabe**. Só o
-par controlado do ``--ganho`` separa os dois, ele ESCREVE no mixer dela, e por
-isso é janela própria, com ela presente. Ver ``--ganho-plano``.
+par controlado do ``--ganho`` separa os dois, ele ESCREVE no mixer do sistema, e
+por isso é janela própria, com quem usa presente. Ver ``--ganho-plano``.
 
 **H2 — o remix que ninguém escolheu.** O ``parec`` do alimentador é lançado com
 ``--rate``/``--channels`` tirados do **DESTINO** (o ``module-pipe-source``, que é
@@ -85,7 +81,7 @@ então isso hoje é invisível a todos os portões.
     Map`` da placa fecha: ``chmap-fixed=FL,FR``, dois canais de verdade.
     O que **ainda poderia** degradar é *comb filtering* por diferença de fase
     entre os dois microfones — e isso **não foi medido**. A correlação cruzada
-    só responde com FALA: sobre ruído de fundo ela é plana por construção, e
+    só responde com FALA: sobre ruído de fundo a curva é plana por construção, e
     *"não há atraso"* seria indistinguível de *"o instrumento não mede"*.
     **Essa medição precisa da orelha do usuário.**
 
@@ -115,8 +111,8 @@ DOIS canais e mede RMS e pico de CADA canal separado. Se um dos dois estiver
 morto ou só com ruído, o remix está custando 6 dB e trazendo lixo junto. Fecha
 sem a orelha do usuário.
 
-A cura da H2, se ela se confirmar, **não é fixar «canal 0»** dentro do
-``canal_do_microfone``: é o alimentador PERGUNTAR à origem o que ela é, e quem
+A cura da H2, se a H2 se confirmar, **não é fixar «canal 0»** dentro do
+``canal_do_microfone``: é o alimentador PERGUNTAR à origem o que é, e quem
 responde tem de ser o dono único que já existe
 (``integrations/fontes_de_captura``). Uma segunda régua escrita dentro do
 ``canal_do_microfone`` sobre o mesmo estado é RECEITA-ERRADA-01 de novo.
@@ -127,7 +123,7 @@ RMS, pico e **piso de ruído entre as frases**. Se o piso subir junto com a voz,
 o ganho não é a cura; se a voz subir e o piso ficar, é. Ganho demais satura, e
 por isso o número final é do usuário.
 
-O dono da cura, se ela se confirmar, é o ``scripts/doctor.sh``: ele JÁ é o dono
+O dono da cura, se a hipótese se confirmar, é o ``scripts/doctor.sh``: ele JÁ é o dono
 da camada 2 (o perfil da placa, ``_dualsense_perfil_status``) e já tem o
 ``--fix``. **Não** o daemon, e **não** um ``subprocess`` solto numa integração.
 É capacidade nova — o produto não tem uma linha de ``amixer`` —, e por isso
@@ -138,7 +134,7 @@ de hoje) e 10 s com ``AUDIO_CONTROL_BASE_SEGURA`` escrito, pelo broker, como
 fazem os instrumentos de 09/09. Se não mudar nada, a hipótese cai e fica
 registrado que o default do firmware já traz o cancelamento no cabo.
 
-**PASSO 5 — A ORELHA DO USUÁRIO, E SÓ ELA: o ``NOISE_CANCEL``.** Duas passadas iguais,
+**PASSO 5 — SÓ A ORELHA DO USUÁRIO: o ``NOISE_CANCEL``.** Duas passadas iguais,
 com e sem o bit3, pelo ``scripts/ensaios/a_folha_dos_ensaios.py``, como em
 ``folha-mic-volume-o-byte-age-cabo-0909``. **A palavra de produto decide.**
 
@@ -153,8 +149,8 @@ O QUE VALE NOS DOIS TRANSPORTES, E É ORDEM DE PRODUTO
 **Cura por transporte é proibida** — ordem de 16/09/2026, o app é de
 acessibilidade, trave a CLASSE. Qualquer opinião nova sobre o ``NOISE_CANCEL``
 ou sobre o ganho de captura vale nos DOIS transportes, com a mesma justificativa
-escrita. Ligar o bit3 só no cabo seria exatamente a cura por instância que ela
-vetou.
+escrita. Ligar o bit3 só no cabo seria exatamente a cura por instância que a
+casa vetou.
 
 E pela ordem de 17/09 — *"os jogos e perfis tem que iniciar com todas as
 features ativadas por default"* — o que o passo 5 decidir deixa de ser um bit
@@ -180,7 +176,7 @@ AS ARMADILHAS DESTE CAMINHO, e as três já custaram
    comando, **um fator por vez**.
 
 E A ARMADILHA DE NOME: a sprint ``SOM-CABO-QUALIDADE-01``, de hoje, tem quase
-este nome e é do **ALTO-FALANTE** no cabo, não do microfone. A posse dela é
+este nome e é do **ALTO-FALANTE** no cabo, não do microfone. A posse da sprint é
 ``integrations/alto_falante_bt.py``. São duas peças.
 
 A PORTA, DECLARADA
@@ -255,20 +251,20 @@ mesmo motivo e por outro dono:** o ``SectionDevice."Mic"`` declara
 ``CapturePCM`` e ``CapturePriority``, e nenhum ``CaptureVolume`` ou
 ``CaptureMixerElem``.
 
-A RECOMENDAÇÃO, EM UMA LINHA, PARA ELA
-=======================================
+A RECOMENDAÇÃO, EM UMA LINHA, PARA QUEM USA
+============================================
 
 **NÃO trocar o perfil da placa** — o perfil está certo e quem mentia era o nome;
 trocar corta o áudio no meio da sessão e, sem headset no P2, devolve a source
 sem porta de captura que já entregou 327.680 bytes de silêncio digital.
 **O que há a decidir é outra coisa:** se o Hefesto passa a LIGAR o
 ``Headset Capture Volume`` no próprio UCM — o que põe o ganho ao alcance da tela
-e dela — e, se sim, com que valor, porque hoje ele está no topo (+48 dB) e
-ninguém escolheu isso. O preço de cada lado: **ligar** dá o botão a ela e deixa
+e de quem usa — e, se sim, com que valor, porque hoje ele está no topo (+48 dB) e
+ninguém escolheu isso. O preço de cada lado: **ligar** dá o botão a quem usa e deixa
 o WirePlumber restaurar volume de captura por rota (que é uma camada a mais de
 estado persistido, a mesma família do mudo da camada 1); **não ligar** mantém os
 +48 dB fixos, fora do alcance de todos. A medição que separa as duas é o
-``--ganho``, e ela é com a orelha do usuário.
+``--ganho``, e é com a orelha do usuário.
 
 USO
 ====
@@ -279,7 +275,7 @@ USO
 
 Sem argumento, faz o censo. O ``--descritor`` é o único que roda com o servidor
 de som caído. O ``--ganho-plano`` **imprime o protocolo e não mede nada**: o
-passo que ele descreve escreve no mixer dela.
+passo que ele descreve escreve no mixer do sistema.
 """
 
 from __future__ import annotations
@@ -690,21 +686,21 @@ def _ganho_plano() -> int:
     print("       conversor. O SNR não muda. A H1 morre inteira, e fica registrado")
     print("       para ninguém remedir.")
     print("   o piso cai MAIS que a voz  → o ganho é analógico e o pré-amp traz")
-    print("       ruído próprio. Há cura, e o número é dela.")
+    print("       ruído próprio. Há cura, e o número é de quem usa.")
     print("   a voz satura em +48 e não em +24 → há recorte hoje, e é audível.")
     print("       Há cura, e é urgente.")
     print()
     print("  -- POR QUE ESTE COMANDO NÃO O EXECUTA --------------------------------")
-    print("   Escrever no `Headset Capture Volume` é escrever no SISTEMA dela, não")
+    print("   Escrever no `Headset Capture Volume` é escrever no SISTEMA, não")
     print("   no Hefesto. O produto não tem hoje uma linha de amixer/alsactl em")
     print("   src/, scripts/ nem install.sh. Se esse ganho ganhar dono, o dono é o")
     print("   scripts/doctor.sh — que já é dono da camada 2 e já tem --fix — e ele")
     print("   nasce com DEFAULT escrito e justificado, nunca «deixa como está».")
     print()
-    print("  -- A RECOMENDAÇÃO, EM UMA LINHA, PARA ELA ---------------------------")
+    print("  -- A RECOMENDAÇÃO, EM UMA LINHA, PARA QUEM USA ----------------------")
     print("   NÃO trocar o perfil da placa: o perfil está certo e quem mentia era")
     print("   o nome. O que há a decidir é se o Hefesto passa a LIGAR o")
-    print("   `Headset Capture Volume` no próprio UCM — ligar dá o botão a ela e")
+    print("   `Headset Capture Volume` no próprio UCM — ligar dá o botão a quem usa e")
     print("   traz uma camada a mais de estado persistido; não ligar mantém os")
     print("   +48 dB fixos, fora do alcance de todos.")
     print("-" * 78)
@@ -729,7 +725,7 @@ def _censo() -> int:
     if not (no or card or indice):
         print()
         print("  NÃO HÁ DUALSENSE NO CABO NESTA MÁQUINA.")
-        print("  O passo 0 é dela, e nada abaixo se mede sem ele.")
+        print("  O passo 0 é de quem usa, e nada abaixo se mede sem ele.")
         print("-" * 78)
         print("RESUMO: mesa vazia — nenhuma afirmação sobre o caminho do cabo é")
         print("        possível a partir desta corrida.")
@@ -761,15 +757,15 @@ def _censo() -> int:
         print(f"   {linha}")
     print()
     print("   O produto NUNCA escreve aqui: `amixer`/`alsactl`/`snd_ctl` não")
-    print("   aparecem em src/, scripts/ nem install.sh. E a `mic.volume` dela")
-    print("   trava em 0–100% — ela ATENUA, nunca amplifica, e não fala com este")
+    print("   aparecem em src/, scripts/ nem install.sh. E a `mic.volume` do perfil")
+    print("   trava em 0–100% — ATENUA, nunca amplifica, e não fala com este")
     print("   elemento.")
     print()
     print("   O 31% de 25/07/2026 (MIC-USB-01) CAIU. Lido em repouso em 17/09 e")
     print("   de novo em 20/09/2026: 100% / +48,00 dB — o TOPO da faixa. A H1 não")
     print("   morreu, virou do avesso: não é que falte ganho, é que SOBRA ganho e")
     print("   ele não tem dono. Se é analógico ou digital, só o par controlado do")
-    print("   `--ganho-plano` separa, e esse passo é com ela.")
+    print("   `--ganho-plano` separa, e esse passo é com quem usa.")
 
     print()
     print("  -- A ORIGEM NATIVA (antes do perfil) ---------------------------------")
@@ -780,8 +776,8 @@ def _censo() -> int:
     print()
     print("-" * 78)
     print("RESUMO: censo feito. O passo 2 (`--canais`) decide a H2 sozinho; o")
-    print("        passo 3 mede a H1 mas o VALOR final é dela; o passo 5 é")
-    print("        inteiramente dela, por decisão escrita desta casa.")
+    print("        passo 3 mede a H1 mas o VALOR final é de quem usa; o passo 5 é")
+    print("        inteiramente de quem usa, por decisão escrita desta casa.")
     print("-" * 78)
     return 0
 
@@ -790,7 +786,7 @@ def _canais(segundos: int) -> int:
     """PASSO 2 — o remix, decidido por número: RMS e pico de CADA canal."""
     no = _no_do_cabo()
     if not no:
-        print("NÃO HÁ nó de captura de DualSense. O passo 0 é dela.")
+        print("NÃO HÁ nó de captura de DualSense. O passo 0 é de quem usa.")
         return 2
     if shutil.which("parec") is None:
         print("`parec` não está nesta máquina — sem ele não há como ler a origem.")

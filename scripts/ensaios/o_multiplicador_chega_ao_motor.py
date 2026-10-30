@@ -22,7 +22,7 @@ sobre um aparelho que não sabe cumpri-lo — e a régua verde não teria visto.
 O DESENHO — e a sacada é medir a RAZÃO, não o valor absoluto
 -------------------------------------------------------------
 O par sai da conta DO PRODUTO (`daemon.subsystems.gamepad._mults_por_motor`,
-com um daemon sintético carregando os números dela), nunca de um `150` e um
+com um daemon sintético carregando os números do perfil), nunca de um `150` e um
 `75` digitados aqui: um par digitado mediria o palpite de quem o digitou.
 
 O par é entregue pelo `rumble.set` do daemon VIVO, que é a porta de escrita
@@ -57,10 +57,10 @@ o andar de baixo: que o par que a conta produz **chega ao motor como par**, com
 os dois motores em intensidades diferentes. O andar de cima é o teste de
 unidade, e os dois juntos fecham a afirmação.
 
-A BANCADA É DO USUÁRIO
------------------
-Escrever no aparelho exige a bancada. O ensaio chama `scripts/ensaio.sh exigir`
-sozinho e PARA com `rc=2` se ela estiver tomada — nunca contorna por outro
+O APARELHO SE RESERVA
+---------------------
+Escrever no aparelho exige a reserva. O ensaio chama `scripts/ensaio.sh exigir`
+sozinho e PARA com `rc=2` se o aparelho estiver tomado — nunca contorna por outro
 caminho, que é como se inventa medição falsa.
 
 Uso::
@@ -145,7 +145,7 @@ def _exigir_ensaio() -> bool:
     )
     saida = (proc.stdout + proc.stderr).strip()
     if saida:
-        print(f"  bancada ..... {saida}")
+        print(f"  reserva ..... {saida}")
     return proc.returncode == 0
 
 
@@ -164,7 +164,7 @@ def main() -> int:
     ap.add_argument("--degrau", default=DEGRAU_DO_USUARIO,
                     help="a política da coluna: economia|balanceado|max|custom")
     ap.add_argument("--sem-escrever", action="store_true",
-                    help="só imprime a conta; não toca no aparelho nem na bancada")
+                    help="só imprime a conta; não toca no aparelho nem na reserva")
     args = ap.parse_args()
 
     print("o multiplicador chega ao motor — procedência declarada:")
@@ -173,7 +173,7 @@ def main() -> int:
 
     weak, strong, mf, mF = _par_da_conta(args.degrau, args.base)
     print()
-    print(f"A CONTA DO PRODUTO, com os números dela (degrau {args.degrau!r}, "
+    print(f"A CONTA DO PRODUTO, com os números do perfil (degrau {args.degrau!r}, "
           f"barra fraca {BARRA_FRACA_DO_USUARIO}%, barra forte {BARRA_FORTE_DO_USUARIO}%):")
     print(f"  mult do motor FRACO ... {mf:.4f}")
     print(f"  mult do motor FORTE ... {mF:.4f}")
@@ -200,7 +200,7 @@ def main() -> int:
           "força, nunca a razão)")
 
     if not _exigir_ensaio():
-        print("BANCADA TOMADA — esperar, e dizer na entrega que se está "
+        print("APARELHO TOMADO — esperar, e dizer na entrega que se está "
               "esperando. Nada foi escrito.", file=sys.stderr)
         return 2
 
@@ -214,7 +214,7 @@ def main() -> int:
         ("PAR SIMÉTRICO  (controle POSITIVO)", args.base, args.base,
          "os DOIS têm de tremer — se não, o instrumento não está no caminho"),
         ("O PAR DA CONTA", weak, strong,
-         "o fraco inteiro, o forte pela metade — a assimetria dela"),
+         "o fraco inteiro, o forte pela metade — a assimetria do perfil"),
         ("SÓ O FRACO", args.base, 0, "o motor pequeno sozinho (o agudo)"),
         ("SÓ O FORTE", 0, args.base, "o motor grande sozinho (o grave)"),
         ("SILÊNCIO       (controle NEGATIVO)", 0, 0,
@@ -250,9 +250,9 @@ def main() -> int:
         print("  ATENÇÃO: o estado de vibração NÃO voltou ao que era "
               f"({antes!r} antes, {devolvido!r} agora). Devolva à mão: "
               "`rumble_passthrough(True)`.", file=sys.stderr)
-    print("  A LEITURA ACIMA É DO DAEMON, e ela prova que o par ASSIMÉTRICO "
-          "atravessa como par.\n  O que ela NÃO prova é o plástico: o veredito "
-          "de qual motor treme mais é da MÃO DELA.")
+    print("  A LEITURA ACIMA É DO DAEMON, e prova que o par ASSIMÉTRICO "
+          "atravessa como par.\n  O que NÃO prova é o plástico: o veredito "
+          "de qual motor treme mais é da MÃO DE QUEM CONFERE.")
     return 0
 
 

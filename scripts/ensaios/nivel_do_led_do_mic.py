@@ -6,8 +6,8 @@ A PERGUNTA QUE ELE RESPONDE
 *O `common[8]` (`mute_button_led`, autorizado pelo bit 0x01 do flag1) obedece a
 valores além de 0 e 1? Existe meio-brilho? Existe piscar?*
 
-POR QUE ELA IMPORTA, e a pergunta é dela
------------------------------------------
+POR QUE A PERGUNTA IMPORTA, e de quem é
+---------------------------------------
 Em 02/09/2026 o usuário decidiu que a luz do microfone deve dizer DUAS coisas ao
 mesmo tempo, com brilho diferente:
 
@@ -37,8 +37,8 @@ autorização — e este instrumento não o toca. Acender a luz não muta nada: 
 mesmo fato que sustenta a inversão que o usuário pediu, e as três recusas medidas
 (BT-E-VPAD-01, MIC-BT-DONO-01, MIC-DOIS-DONOS-01) são todas sobre o byte 9.
 
-A DEVOLUÇÃO É OBRIGATÓRIA e está no `finally`, inclusive para o Ctrl+C. Sem ela
-o `common[8]` fica nosso e o botão físico dela para de mandar na luz até o
+A DEVOLUÇÃO É OBRIGATÓRIA e está no `finally`, inclusive para o Ctrl+C. Sem a
+devolução o `common[8]` fica nosso e o botão físico para de mandar na luz até o
 controle ser desligado — é a porta de emergência descrita em
 `_handle_mic_led_set`.
 
@@ -54,9 +54,9 @@ caminho certo é o do produto: quem segura o valor entre um report e o próximo
 COMO SE LÊ O RESULTADO
 ----------------------
 Quem lê é o olho de quem confere: o registrador **não tem caminho de leitura** no
-firmware. O instrumento imprime o que está MANDANDO e espera; ela diz o que a
-luz fez. É por isso que a linha do mapa vai nascer `provado_por = olho-do-usuario`, e
-nunca `bancada`.
+firmware. O instrumento imprime o que está MANDANDO e espera; quem confere diz o
+que a luz fez. É por isso que a linha do mapa vai nascer `provado_por = olho-do-usuario`, e
+nunca o ensaio sem olho.
 
     scripts/ensaios/nivel_do_led_do_mic.py             # a escada padrão
     scripts/ensaios/nivel_do_led_do_mic.py --pausa 4   # mais tempo por degrau

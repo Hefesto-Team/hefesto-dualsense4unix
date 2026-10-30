@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""o_tato_vivo_x_ou_y.py — o interruptor da bancada do tato vivo, um campo por vez.
+"""o_tato_vivo_x_ou_y.py — o interruptor do ensaio do tato vivo, um campo por vez.
 
 O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01 (09/10/2026). O motor do tato
 (`daemon/subsystems/tato_vivo.py`) lê a receita do estilo que o perfil guarda
-(`Profile.estilo`) e, por cima dela, o desvio da bancada (`Profile.receita_do_tato`),
+(`Profile.estilo`) e, por cima da receita, o desvio do ensaio (`Profile.receita_do_tato`),
 campo a campo. Este ensaio troca X por Y nesse desvio sem editar código: liga
 ou desliga o toque por tiro, o lado do som, a luz e o gatilho no ritmo, um por
 vez, para quem sente na mão não saber o esperado.

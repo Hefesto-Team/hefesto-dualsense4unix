@@ -4,8 +4,8 @@
 A PERGUNTA QUE ELE RESPONDE
 ----------------------------
 *Para onde vai cada som, e quem manda nisso?* O DualSense tem uma saída de áudio
-PRÓPRIA — o alto-falante interno, o canal que poucos jogos usam para SFX — e ela
-convive com a saída normal do sistema (no caso desta bancada, o HDMI da TV).
+PRÓPRIA — o alto-falante interno, o canal que poucos jogos usam para SFX — e essa
+saída convive com a normal do sistema (nesta máquina de teste, o HDMI da TV).
 Saber que "o som funciona" não diz nada: a pergunta é qual som sai por onde.
 
 O DESENHO É DO USUÁRIO, de 15/08/2026, e a sacada está nos DOIS TIMBRES:
@@ -14,10 +14,9 @@ O DESENHO É DO USUÁRIO, de 15/08/2026, e a sacada está nos DOIS TIMBRES:
   som B  "bep bep bep"  1300 Hz pulsado a 2 Hz                       — agudo
 
 Um tom só, tocado duas vezes, produz o relato ambíguo "ouvi" — que não diz de
-onde nem qual. Com dois timbres opostos, o relato dela JÁ carrega a resposta:
-o usuário disse *"tuc hmmmmmm no controle"* e *"bep bep bep"*, e nenhuma das duas
-frases cabe no outro caso. Nas palavras do usuário: *"som da tv tipo AAAAAA e no
-controle apenas um BBêeee. Sons diferentes."*
+onde nem qual. Com dois timbres opostos, o relato JÁ carrega a resposta:
+o grave pulsado no controle e o bipe agudo não cabem um no outro caso, e o som
+da TV e o do controle se distinguem só pelo ouvido.
 
 OS TRÊS CASOS, e o terceiro é o que fecha
 ------------------------------------------
@@ -37,9 +36,9 @@ O QUE ESTE ENSAIO ISOLOU, e é a razão de ele existir
 **A POSSE DOS BYTES DE VOLUME É A CAUSA.** Medido por dose-resposta em 15/08,
 com o azul no cabo:
 
-  volume nunca escrito por nós ....... ela: "nenhum"          MUDO
-  `speaker volume 85`  ............... ela: "bep bep bep"     SOA
-  `speaker volume 0`   ............... ela: "mudo"            MUDO
+  volume nunca escrito por nós ....... ouvido: "nenhum"       MUDO
+  `speaker volume 85`  ............... ouvido: "bep bep bep"  SOA
+  `speaker volume 0`   ............... ouvido: "mudo"         MUDO
 
 Nada mais mudou entre as três passadas: mesma rota, mesmo sink, mesmo arquivo, e
 o sink conferido antes sem mudo e a 100% nos quatro canais. O culpado é o
@@ -52,7 +51,7 @@ report"*, e ninguém tinha ligado isso ao silêncio.
 Por isso este instrumento toma a posse ANTES de tocar qualquer coisa, e oferece
 `--controle-negativo` para reproduzir o silêncio de propósito.
 
-A ROTA, e o que ainda falta dela
+A ROTA, e o que ainda falta medir
 ---------------------------------
 `common[7]` bits 4-5, e a tabela é de `profiles/schema.py:255-259`:
 
@@ -61,12 +60,12 @@ A ROTA, e o que ainda falta dela
   2  L -> fone, R -> ALTO-FALANTE     ("Sons do jogo" na tela; o caso Zelda)
   3  R -> alto-falante interno        ("Todo o som do PC" na tela)
 
-Este ensaio roda na **rota 3**. A **rota 2 continua NÃO EXERCIDA** — e ela é
+Este ensaio roda na **rota 3**. A **rota 2 continua NÃO EXERCIDA** — e é
 justamente o SFX que só alguns jogos mandam. As rotas 0 e 1 exigem fone plugado.
 
 O QUE ELE NÃO PROVA
 --------------------
-Que o caminho da JANELA funcione. Ela relatou, na mesma sessão, que pela
+Que o caminho da JANELA funcione. O relato da mesma sessão diz que pela
 interface o bipe não sai hoje nem no cabo, tendo saído antes. Este instrumento
 prova o CAMINHO; a regressão da janela é outra frente e continua aberta.
 
@@ -86,7 +85,7 @@ O QUE ELE DEVOLVE
 ------------------
 O sink padrão de produto é guardado ANTES e devolvido no fim, inclusive se o ensaio
 morrer no meio (`try/finally`). Trocar a saída de áudio de alguém e não devolver
-é estragar a máquina de quem emprestou a bancada.
+é estragar a máquina de quem emprestou o aparelho.
 
 USO
     tres_casos_de_som.py --listar
@@ -224,7 +223,7 @@ def main() -> int:
     sinks = sinks_de_controle()
     if args.listar or not args.alvo:
         print("porta: pactl/pw-play (PipeWire) · IPC do daemon para a rota")
-        print("escreve no aparelho? SIM — volume e rota. Bloco DELA.\n")
+        print("escreve no aparelho? SIM — volume e rota. Bloco DO USUÁRIO.\n")
         for mac, nome in sinks.items():
             print(f"  {mac}  ->  {nome}")
         if not sinks:
@@ -247,7 +246,7 @@ def main() -> int:
     print(f"rota ....... {args.rota}")
     print(f"volume ..... {0 if args.controle_negativo else args.volume}"
           f"{'  <- CONTROLE NEGATIVO: tem de sair MUDO' if args.controle_negativo else ''}")
-    print("\nO RETORNO DESTE SCRIPT NÃO É A MEDIÇÃO. Quem mede é a orelha dela.\n")
+    print("\nO RETORNO DESTE SCRIPT NÃO É A MEDIÇÃO. Quem mede é a orelha de quem confere.\n")
 
     with tempfile.TemporaryDirectory(prefix="tres-casos-") as tmp:
         d = Path(tmp)
@@ -261,13 +260,13 @@ def main() -> int:
                       "  esperado: sai na TV, controle MUDO.  [Enter]")
                 subprocess.run(["pw-play", f"--target={hdmi}", str(d / "a.wav")],
                                timeout=20)
-                print("  -> o que ela ouviu, e ONDE?\n")
+                print("  -> o que se ouviu, e ONDE?\n")
             if 2 in casos:
                 input(f"CASO 2 — só o controle. Som B: {SOM_B[0]}\n"
                       "  esperado: sai no controle, TV MUDA.  [Enter]")
                 subprocess.run(["pw-play", f"--target={sink}", str(d / "b.wav")],
                                timeout=20)
-                print("  -> o que ela ouviu, e ONDE?\n")
+                print("  -> o que se ouviu, e ONDE?\n")
             if 3 in casos:
                 input("CASO 3 — os DOIS juntos, no controle (o botão 'Todo o som "
                       "do PC').\n  esperado: A e B ao mesmo tempo, os dois pelo "
@@ -277,7 +276,7 @@ def main() -> int:
                 p2 = subprocess.Popen(["pw-play", str(d / "b.wav")])
                 p1.wait(timeout=20)
                 p2.wait(timeout=20)
-                print("  -> ela ouviu os DOIS timbres? no controle?\n")
+                print("  -> os DOIS timbres se ouviram? no controle?\n")
         finally:
             if anterior:
                 _pactl("set-default-sink", anterior)

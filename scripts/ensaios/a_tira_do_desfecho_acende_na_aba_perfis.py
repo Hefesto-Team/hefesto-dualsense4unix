@@ -4,7 +4,7 @@
 POR QUE ELE EXISTE, e é a regra desta casa: o teste de unidade
 ``test_aba10_os_cinco_gestos_calados_passaram_a_falar`` prova que os cinco
 handlers DEVOLVEM a frase. Isso prova a CONTA. O que prova o PRODUTO é o mesmo
-clique dentro do ``WebKit2.WebView`` que ela usa — porque entre o handler e o
+clique dentro do ``WebKit2.WebView`` do produto — porque entre o handler e o
 olho de quem confere ainda há o embrulho (``{"mesa": …}``), o ``_deu_certo`` do piloto, o
 ``window.__hef.pintar`` e a folha de estilo que acende a `.desfecho` pela
 classe. Cada um desses degraus já quebrou calado nesta casa.
@@ -13,7 +13,7 @@ classe. Cada um desses degraus já quebrou calado nesta casa.
 de mentira ANTES de qualquer import do produto — é lá que `platformdirs` decide
 onde ficam os perfis —, e o ensaio semeia dois perfis próprios. O
 ``XDG_RUNTIME_DIR`` fica o real, para a janela achar o daemon do usuário e pintar com
-estado de verdade; o que ela pode receber daqui é um ``launch_env.refresh``,
+estado de verdade; o que a janela pode receber daqui é um ``launch_env.refresh``,
 que relê e não escreve.
 
 **POR QUE NÃO O `--prova-clique` DO PILOTO:** ele faz ``el.click()``, e num
@@ -37,10 +37,10 @@ meio segundo depois", que é exatamente a diferença que o ``remover`` tinha.
 500 ms não é sincronizado com o clique: um ``_anotar`` cujo clique caia logo
 antes de um tique já aparece "falando" aos 250 ms. Medido em 03/09/2026, contra
 o código de ANTES da cura: o ``remover`` (que era ``_anotar``) saiu "fala" nas
-duas colunas. Logo, a segunda coluna só produz FALSO NEGATIVO — ela pode deixar
+duas colunas. Logo, a segunda coluna só produz FALSO NEGATIVO — pode deixar
 passar um ``_anotar``, nunca acusar um ``_dizer``. Quem separa os dois com
 precisão é o teste de unidade, que lê o RETORNO do handler
-(``test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte``). Aqui ela é indício,
+(``test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte``). Aqui a coluna é indício,
 e o que REPROVA de verdade é a coluna "assentado".
 
 **O TRAVESSÃO CONTA COMO MUDO.** O ``escrever()`` do piloto põe ``'—'`` no
@@ -48,7 +48,7 @@ lugar de um valor vazio, então uma régua que só perguntasse "tem texto?" dari
 VERDE sobre a tira apagada — foi o que a primeira versão deste ensaio fez, e o
 ensaio inteiro passou contra o código de ANTES da cura.
 
-Uso (sempre oculto; ela tem UMA tela)::
+Uso (sempre oculto; a máquina tem UMA tela)::
 
     scripts/ensaios/a_tira_do_desfecho_acende_na_aba_perfis.py
     scripts/ensaios/a_tira_do_desfecho_acende_na_aba_perfis.py --foto /tmp/x.png
@@ -257,7 +257,7 @@ def main() -> int:
     if tarde:
         print(f"\nREPROVA: {len(tarde)} gesto(s) só falaram DEPOIS do tique de "
               f"500 ms — é o `_anotar` sem o `_dizer`: {', '.join(tarde)}. Meio "
-              f"segundo de silêncio é o intervalo em que ela clica de novo.")
+              f"segundo de silêncio é o intervalo em que quem usa clica de novo.")
         return 1
     print(f"\nOK: os {len(cobrados)} gestos que gravam acenderam a tira do "
           f"desfecho NO ATO, dentro do WebKit vivo.")

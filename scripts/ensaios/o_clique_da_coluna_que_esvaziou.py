@@ -225,7 +225,7 @@ def main() -> int:
     na_tela = " ".join(r["texto"] for r in ensaio.recados)
     if PEDACO_ERRADO in na_tela:
         culpados.append(
-            f"a tela acusa o clique dela: {na_tela!r}. O clique DISSE — veio "
+            f"a tela acusa o clique de quem usa: {na_tela!r}. O clique DISSE — veio "
             f"com controle={ensaio.assento!r}, e a coluna existe na tela")
     if PEDACO_CERTO not in na_tela:
         culpados.append(

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """o_som_pelo_035.py — o alto-falante por rádio pelo report que as implementações VIVAS usam.
 
-DE ONDE ISTO VEM — a caçada de 10/09/2026, e ela derrubou três coisas nossas
+DE ONDE ISTO VEM — a caçada de 10/09/2026, que derrubou três coisas nossas
 --------------------------------------------------------------------------------
 Cinco frentes de pesquisa leram o código de quem FAZ SOM no alto-falante do
 DualSense por Bluetooth. O que voltou explica o silêncio desta casa, e não é uma
@@ -259,7 +259,7 @@ def main() -> int:
             fechar()
 
     print(resumo(
-        "se ela OUVIU, o caminho é o 0x35 com o primer — e a ponte do alto-falante "
+        "se o som SAIU, o caminho é o 0x35 com o primer — e a ponte do alto-falante "
         "por rádio nasce daqui. Se calou, rode --sem-primer e --crc-errado para "
         "saber o que este ensaio ainda não sabe."))
     return 0

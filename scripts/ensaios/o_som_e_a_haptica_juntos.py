@@ -265,7 +265,7 @@ def main() -> int:
     for alvo, _no, conta in portas:
         print(f"  {mascarar(alvo.mac)}: {conta['enviados']} report(s) aceitos, "
               f"{conta['recusas']} recusa(s)")
-    print(resumo("o veredito é dela: o tom saiu inteiro? o motor vibrou junto? "
+    print(resumo("o veredito é de quem confere: o tom saiu inteiro? o motor vibrou junto? "
                  "O controle está devolvido; suba o daemon de novo."))
     return 0
 

@@ -267,7 +267,7 @@ def main() -> int:
             resumo(
                 f"OS DOIS: o vpad MORREU em {sem_vpad}s e CONGELOU em "
                 f"{congelados}s. A linha do tempo acima diz qual veio primeiro — "
-                "e é ela que decide a ordem da cura."
+                "e é a linha do tempo que decide a ordem da cura."
             )
         )
     elif sem_vpad:

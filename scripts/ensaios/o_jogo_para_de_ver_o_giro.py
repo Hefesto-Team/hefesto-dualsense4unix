@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """O JOGO para de ver o giro — medido pelo SDL que o jogo CARREGA, não pela interface.
 
-SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão, 04/09/2026:
-
-    *"ele tem que funcionar de verdade. ambos independente do modo e da
-    mascara."* <!-- noqa-acento: citação literal -->
+SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão de 04/09/2026: o giro tem de funcionar de verdade, nos dois, qualquer
+que seja o modo e a máscara.
 
 **A DIFERENÇA QUE ESTE ENSAIO EXISTE PARA NÃO CONFUNDIR** é a mesma que
 derrubou quatro réguas em 04/09: *"a interface parou de mostrar"* e *"o jogo
@@ -19,7 +17,7 @@ esta data o ensaio carregava `libSDL2-2.0.so.0` pelo loader do sistema — a
 processo próprio: as de `--lib`, ou, sem a opção, as dos runtimes da Steam
 achadas na instalação (`~/.steam/root` e as pastas do `libraryfolders.vdf`).
 Cada veredito nomeia a biblioteca, a revisão lida por `SDL_GetRevision` e a
-dica com que ela rodou.
+dica com que rodou.
 
 Sem janela: o SDL sobe só o subsistema de controle, com `SDL_VIDEODRIVER` em
 `dummy`, e o processo de cada biblioteca nasce sem `DISPLAY` e sem
@@ -67,8 +65,8 @@ processo: ``0`` (o padrão, e é o que o wrapper entrega ao jogo desde 13/09 —
 `compose_env`, em `daemon/launch_env.py`), ``1``, ou ``ausente`` (sem a
 variável, como um jogo aberto por fora do Hefesto).
 
-O QUE AS BANCADAS MEDIRAM, e é o que este cabeçalho existe para não deixar remedir
----------------------------------------------------------------------------------
+O QUE OS ENSAIOS MEDIRAM, e é o que este cabeçalho existe para não deixar remedir
+--------------------------------------------------------------------------------
 **10/09/2026** — dois DualSense na mesa, P1 no cabo e P2 no rádio, **só a
 libSDL2 2.30.0 do sistema Ubuntu**, sem a dica:
 
@@ -130,7 +128,7 @@ prova NADA sobre `O JOGO REAGIU`: um jogo de verdade, mirando, é o degrau
 seguinte, e esse só fecha com o olho de quem confere.
 
 SAÍDA: o relatório em JSON, e o código de retorno ``3`` quando alguma
-biblioteca não pôde ser medida ou a enumeração dela não alcançou o piso.
+biblioteca não pôde ser medida ou a sua enumeração não alcançou o piso.
 """
 from __future__ import annotations
 
@@ -1215,7 +1213,7 @@ def sondar_o_jogador(
 
     ``todos`` é o `per_vpad` por jogador; ``fotografar()`` devolve os contadores dos vpads
     naquele instante (o degrau 2), e é chamado antes de abrir, no fim de cada fase e depois de
-    fechar. ``avisar(fase)`` chama quem está na bancada no começo de cada fase: sem ele, ninguém
+    fechar. ``avisar(fase)`` chama quem está no aparelho no começo de cada fase: sem ele, ninguém
     sabe quando soltar o controle e quando pôr o dedo.
     """
     medida: dict[str, Any] = {"contadores": {"antes": fotografar()}}
@@ -1382,7 +1380,7 @@ def _pilha_do_processo(pid: int) -> list[str]:
 
 
 def _o_jogador(args: argparse.Namespace) -> int:
-    """O lado de FORA: recusa o que não vale, toma a bancada, roda o processo e dá o laudo."""
+    """O lado de FORA: recusa o que não vale, reserva o aparelho, roda o processo e dá o laudo."""
     if args.so_medir:
         print("RECUSO: --jogador abre o vpad com o HIDAPI ligado e escreve no aparelho; "
               "isto não combina com --so-medir")
@@ -1397,7 +1395,7 @@ def _o_jogador(args: argparse.Namespace) -> int:
     exigir = subprocess.run(["bash", str(RAIZ / "scripts" / "ensaio.sh"), "exigir"],
                             capture_output=True, text=True, check=False)
     if exigir.returncode != 0:
-        print("RECUSO: a bancada está tomada por outra reserva; esperar é a resposta")
+        print("RECUSO: o aparelho está tomado por outra reserva; esperar é a resposta")
         return 2
     comando = [sys.executable, str(pathlib.Path(__file__).resolve()), "--processo", "vpad",
                "--lib", args.lib[0], "--jogador", args.jogador, "--hidapi", args.hidapi,

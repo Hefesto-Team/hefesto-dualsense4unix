@@ -26,7 +26,7 @@ que ninguém confirmou existir naquela posição é o erro que a sprint nomeia.
 O DESENHO, e a sacada é não mexer no comando
 ---------------------------------------------
 Manda-se **o mesmo `common`** pedindo uma cor, no **mesmo report**, variando SÓ o
-recheio depois dele. A lightbar é o sensor — e ela é boa porque é observável pelo
+recheio depois dele. A lightbar é o sensor — e é boa porque é observável pelo
 olho de quem confere, sem instrumento que possa mentir sobre si mesmo.
 
   passo   recheio dos bytes extras              cor pedida
@@ -39,7 +39,7 @@ olho de quem confere, sem instrumento que possa mentir sobre si mesmo.
           (maior que o espaço restante)
 
   Se os cinco acendem  -> o excedente é IGNORADO naquela posição.
-  Se algum QUEBRA      -> há FORMA, e ela mora no que aquele passo mudou.
+  Se algum QUEBRA      -> há FORMA, e a forma mora no que aquele passo mudou.
                           O passo que quebrar vira o começo do mapa do formato.
 
 OS DOIS CONTROLES, e sem eles o ensaio não vale nada
@@ -73,7 +73,7 @@ que o daemon manda.
 O QUE ELE RECUSA POR CONSTRUÇÃO
 --------------------------------
 * qualquer report fora de `0x31`-`0x39` — a família `0xF0`-`0xF7` é o canal de
-  atualização de firmware, e ela está BLOQUEADA por decisão de 15/08;
+  atualização de firmware, e está BLOQUEADA por decisão de 15/08;
 * alvo sem `--exigir-mac` conferido, para não escrever no controle errado;
 * aparelho no CABO — a escada só existe no rádio, e escrever ali seria medir outra
   coisa.
@@ -202,7 +202,7 @@ def main() -> int:
     aparelhos = [a for a in fisicos(descobrir_aparelhos()) if a.transporte == RADIO]
     if args.listar or not args.alvo:
         print("porta: broker (SCM_RIGHTS) · escrita CRUA por os.write")
-        print("escreve no aparelho? SIM — degraus 0x31-0x39 apenas. BLOCO DELA.")
+        print("escreve no aparelho? SIM — degraus 0x31-0x39 apenas. BLOCO DO USUÁRIO.")
         print("daemon precisa parar? não — a porta é o broker\n")
         print("controles NO RÁDIO (a escada só existe neles):")
         for a in aparelhos:
@@ -234,7 +234,7 @@ def main() -> int:
           f"({DEGRAUS[rid] - 4 - 3 - COMMON_LEN} de recheio)")
     print(f"CRC ........ semente {BT_CRC_SEED:#04x}"
           f"{'  *** DELIBERADAMENTE ERRADO ***' if args.crc_errado else ''}")
-    print("\nO RETORNO DO os.write NÃO É A MEDIÇÃO — quem mede é o olho dela.\n")
+    print("\nO RETORNO DO os.write NÃO É A MEDIÇÃO — quem mede é o olho de quem confere.\n")
 
     seq = 0
     try:

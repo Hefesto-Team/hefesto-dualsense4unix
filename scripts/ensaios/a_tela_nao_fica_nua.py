@@ -85,7 +85,7 @@ def main() -> int:
     p.add_argument("--intervalo", type=float, default=60.0,
                    help="segundos entre uma leitura e a próxima (padrão: 60)")
     p.add_argument("--abre", default="03-gatilhos.html",
-                   help="a aba a vigiar — a da foto dela, por omissão")
+                   help="a aba a vigiar — a da foto do defeito, por omissão")
     p.add_argument("--passear", action="store_true",
                    help="troca de aba entre as leituras, para exercitar as dez")
     p.add_argument("--matar-aos", type=float, default=0.0,

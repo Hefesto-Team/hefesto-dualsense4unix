@@ -19,7 +19,7 @@ verdade pelo rádio e OUVIR o áudio"* (`docs/data/mapa-controles.csv`,
 exatamente isso e devolve o número.
 
 Ele sobe a ponte de Opus tunelado em HID num controle, abre um ouvinte no canal
-que ela publica e mede **o que o aplicativo recebeu**: quantas amostras, quantos
+que a ponte publica e mede **o que o aplicativo recebeu**: quantas amostras, quantos
 por cento de zeros, pico, RMS e dBFS. É a ponta do outro lado — não o que a
 ponte julga ter mandado.
 

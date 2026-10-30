@@ -304,7 +304,7 @@ def degrau_do_mapa(chave: str, transporte: str) -> str:
 def linha_para_o_caderno(
     p: Pergunta, c: Controle, resultado: str, feitos: Sequence[Gesto], nota: str = ""
 ) -> str:
-    """A linha do caderno — e ela NÃO SAI sem gesto."""
+    """A linha do caderno — e NÃO SAI sem gesto."""
     gestos = [c.mascarar_no_texto(g.texto) for g in feitos if g.argv]
     if not gestos:
         return ""
@@ -317,7 +317,7 @@ def linha_para_o_caderno(
         resultado=resultado,
         observado_por={"ouvi": "orelha-do-usuario", "vi": "olho-do-usuario"}.get(p.sentido, "mão-do-usuario"),
         fonte=FONTE,
-        nota=f"controle {c.mascarado}; " + " ; ".join(gestos) + (f" ; ela: {nota}" if nota else ""),
+        nota=f"controle {c.mascarado}; " + " ; ".join(gestos) + (f" ; resposta: {nota}" if nota else ""),
     )
 
 
@@ -350,7 +350,7 @@ def _pico_em_db(bruto: bytes) -> float:
 
 
 def executar(g: Gesto) -> tuple[str, bool]:
-    """Roda o gesto: o que ela precisa ler na célula, e se ele RODOU."""
+    """Roda o gesto: o que quem confere precisa ler na célula, e se ele RODOU."""
     if not g.argv:
         return g.recusa, False
     if shutil.which(g.argv[0]) is None and not os.access(g.argv[0], os.X_OK):
@@ -360,7 +360,7 @@ def executar(g: Gesto) -> tuple[str, bool]:
         return recusa, False
     if g.fica_aberto:
         subprocess.Popen(g.argv, start_new_session=True)
-        return "a Forja abriu — faça o gesto nela, e feche quando acabar", True
+        return "a Forja abriu — faça o gesto na Forja, e feche quando acabar", True
     if g.argv[0] == "parec":
         proc = subprocess.Popen(g.argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         time.sleep(SEGUNDOS_DO_MICROFONE)

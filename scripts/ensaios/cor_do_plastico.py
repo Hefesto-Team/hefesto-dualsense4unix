@@ -3,9 +3,9 @@
 
 A PERGUNTA
 ----------
-A D-15 foi respondida por ela em 15/08/2026: *a cor física é a cor do
+A D-15 foi respondida em 15/08/2026: *a cor física é a cor do
 PLÁSTICO, lida do aparelho, por cabo E por rádio*. E a D-16: *a cor mora no
-APARELHO* — sem arquivo por endereço, sem ela escolher numa lista.
+APARELHO* — sem arquivo por endereço, sem escolha numa lista.
 
 O serial de fábrica de 17 caracteres carrega a cor nos caracteres 5 e 6. Ele
 não está em report nenhum de graça: é preciso PEDIR, e pedir é escrever.
@@ -24,8 +24,8 @@ família, mudando DOIS bytes do payload:
 
 O nosso `[1, 19]` é leitura pura — ele pede um bloco de informação de sistema e
 o firmware responde no `0x81`. Mas um byte errado no payload escreve onde não
-devia, **e não há desfazer**. Ela tem quatro controles e nenhum deles é
-reposição.
+devia, **e não há desfazer**. A máquina de teste tem quatro controles e nenhum
+deles é reposição.
 
 As travas, todas exercidas em código e não em recomendação:
 
@@ -41,7 +41,7 @@ As travas, todas exercidas em código e não em recomendação:
 4. UM alvo por execução, obrigatoriamente (`--alvo hidrawN`). Não existe modo
    "todos": a disciplina de um de cada vez é estrutural, não é lembrete.
 5. A família `0xF0`-`0xF7` — por onde o firmware é atualizado — é recusada por
-   uma trava própria, que nem sabe escrever. A D-32 dela foi explícita: *ler a
+   uma trava própria, que nem sabe escrever. A D-32 foi explícita: *ler a
    família inteira, só leitura, NUNCA escrever*.
 6. Antes e depois de cada escrita o instrumento PROVA que o controle continua
    são: o feature `0x20` sai igual byte a byte, o `hardware_version` do sysfs
@@ -288,7 +288,7 @@ def recusar_familia_do_firmware(report_id: int) -> None:
     if report_id in FAMILIA_DO_FIRMWARE:
         raise PayloadRecusadoError(
             f"0x{report_id:02x} está na família do FIRMWARE (0xf0-0xf7). "
-            "A decisão dela (D-32) é explícita: ler, nunca escrever."
+            "A decisão D-32 é explícita: ler, nunca escrever."
         )
 
 
@@ -528,7 +528,7 @@ def envelope_de_radio(
 
     O QUE FALTA PARA RODAR, e é curto:
 
-    1. Ela reconectar os dois controles de rádio (botão PS).
+    1. Reconectar os dois controles de rádio (botão PS).
     2. Rodar SECO primeiro, com `--alvo <hidraw do rádio> --radio-a-serio`, e
        conferir na tela o buffer com o CRC.
     3. Rodar com `--escrever`. Se o firmware recusar, a assinatura importa e
@@ -538,8 +538,8 @@ def envelope_de_radio(
        respondendo outra coisa.
     4. A DÚVIDA HONESTA, que só a medição resolve: não se sabe se o firmware
        exige o CRC num `SET_REPORT` de feature ou se ele só o EMITE nas
-       respostas. Por isso `--sem-crc` existe — é a segunda tentativa, e ela
-       tem de ser feita depois da primeira, não em vez dela. Nenhuma das duas
+       respostas. Por isso `--sem-crc` existe — é a segunda tentativa, e
+       tem de ser feita depois da primeira, não em vez da primeira. Nenhuma das duas
        muda os bytes do COMANDO: `01 13` continua sendo `01 13`, e a trava de
        `conferir_payload` roda igual nos dois casos.
     """

@@ -7,8 +7,8 @@ O caminho legal é medir no PC, com um jogo que fala DualSense, o que ele escrev
 do controle. Duas decisões da leva do tato dependem do número: «o jogo manda o gatilho uma
 vez por arma» e «rearmar por tiro só se um jogo fizer isso».
 
-DUAS METADES, e só uma delas precisa do aparelho
-------------------------------------------------
+DUAS METADES, e só uma precisa do aparelho
+------------------------------------------
 1. O CONTADOR (``contar``, ``tiros_do_audio``, ``ler_gravacao``): puro, lê uma GRAVAÇÃO e
    devolve a tabela. Roda em qualquer lugar, sem aparelho, sem daemon, sem ``/dev/uhid``.
    É o que os testes prendem. ``--ler ARQUIVO`` usa só ele.
@@ -24,7 +24,7 @@ Linhas JSON, uma por evento: ``{"t": s, "tipo": "saida", "corpo": "<hex>"}`` (o 
 report 0x02 sem o byte do id, como o ``_replicate_from_output`` o recebe),
 ``{"t": s, "tipo": "abriu"}`` (o jogo abriu o controle), ``{"t": s, "tipo": "audio",
 "energia": x}`` (energia do monitor dos canais 3 e 4, que a ponte já captura) e
-``{"t": s, "tipo": "tiro"}`` (marca explícita). Os tiros são as marcas; sem elas, as rajadas
+``{"t": s, "tipo": "tiro"}`` (marca explícita). Os tiros são as marcas; sem as marcas, as rajadas
 de energia do áudio (uma amostra curta por bala, no PS5); sem nenhum dos dois não há «por
 tiro», só «por segundo», e a tabela diz isso.
 
@@ -385,7 +385,7 @@ def gravar_no_aparelho(
 ) -> list[Evento]:
     """O daemon do produto NESTE processo, com a escuta no vpad, por ``segundos``.
 
-    BANCADA. O jogo só atira com um controle que responde, e quem liga o físico ao vpad é o
+    NO APARELHO. O jogo só atira com um controle que responde, e quem liga o físico ao vpad é o
     daemon: um vpad que só ouvisse não teria entrada, e o jogo escreveria no controle que a
     tem. Então, durante a sessão, o ensaio É o daemon (com o serviço parado antes, o que a
     recusa do daemon no ar garante) e a escuta anota o que o jogo escreve no vpad. No fim do
@@ -417,7 +417,7 @@ def _parser() -> argparse.ArgumentParser:
     grupo = p.add_mutually_exclusive_group(required=True)
     grupo.add_argument("--ler", type=Path, help="conta uma gravação (só leitura, em qualquer lugar)")
     grupo.add_argument("--gravar", type=float, metavar="SEGUNDOS",
-                       help="bancada: sobe o vpad que só ouve por estes segundos")
+                       help="no aparelho: sobe o vpad que só ouve por estes segundos")
     p.add_argument("--saida", type=Path, help="com --gravar: onde guardar a gravação")
     p.add_argument("--jogo", default="PRAGMATA")
     p.add_argument("--transporte", choices=("cabo", "radio"), default="cabo")

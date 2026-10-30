@@ -6,7 +6,7 @@ A PERGUNTA QUE ELE DECIDE
 **O firmware do DualSense trata diferente um report que chega por L2CAP direto
 e um que chega pelo HIDP do kernel?**
 
-Ela nasceu de uma ressalva que esta casa escreveu e nunca atacou —
+O ensaio nasceu de uma ressalva que esta casa escreveu e nunca atacou —
 `integrations/alto_falante_bt.py`, ressalva (c) do achado do alto-falante:
 
     *"o DS5Dongle é um DONGLE — fala L2CAP direto e nunca toca `/dev/hidraw`.
@@ -20,7 +20,7 @@ no canal é o BlueZ. Ninguém desta casa mandou um byte por socket L2CAP.
 O QUE A MEDIÇÃO DO USUÁRIO DE 10/09/2026 DEIXOU DE PÉ, e é o que torna este ensaio o
 próximo
 --------------------------------------------------------------------------------
-Com dois controles na mesa, um no cabo e um no rádio, ela mediu:
+Com dois controles na mesa, um no cabo e um no rádio, a medição deu:
 
 * o tom pelo CABO — **ouviu**. O instrumento não é mudo;
 * o `0x31` de COR pelo rádio, nos **DOIS** envelopes (`write()` no canal de
@@ -34,10 +34,10 @@ E a direção contrária já funciona: o microfone por rádio entrega voz desde
 25/07/2026 (`integrations/dualsense_bt_audio.py`), com Opus dentro do mesmo HID.
 O cano existe nas duas direções.
 
-O DESENHO — o POSITIVO primeiro, e ele é o mesmo que ela já viu acender
------------------------------------------------------------------------
-Este ensaio **não manda áudio**. Ele manda o `0x31` de COR — o report que ela
-acabou de ver acender pelo hidraw — pelo caminho novo. A ordem importa:
+O DESENHO — o POSITIVO primeiro, e ele é o mesmo que já se viu acender
+----------------------------------------------------------------------
+Este ensaio **não manda áudio**. Ele manda o `0x31` de COR — o report que
+acabou de acender pelo hidraw — pelo caminho novo. A ordem importa:
 
 1. **conectar** um socket L2CAP ao controle no PSM de interrupção (`0x13`).
    Se nem conectar, o resto não se mede;
@@ -64,7 +64,7 @@ DOIS DEGRAUS, E O SEGUNDO CUSTA O CONTROLE DO USUÁRIO
   recusa é resultado: diz que o controle só aceita um canal por PSM;
 * **degrau B (`--assumir-o-canal`)** — desconecta o perfil de input do BlueZ
   antes de abrir. **O controle SOME como gamepad enquanto o ensaio corre**, e
-  volta com `--devolver`. Só com ela sabendo, e nunca no meio de um jogo.
+  volta com `--devolver`. Só com quem usa sabendo, e nunca no meio de um jogo.
 
 ESCREVE NO APARELHO? Só com `--acender`. Sem ele, este ensaio conecta, mede o
 que o socket aceitou e não manda byte nenhum.
@@ -188,7 +188,7 @@ def main() -> None:
     ap.add_argument("--mtu", type=int, default=0,
                     help="sobe imtu/omtu antes de conectar (o dongle usa 1024)")
     ap.add_argument("--segundos", type=float, default=3.0,
-                    help="quanto tempo a cor fica acesa antes de devolver — ela precisa OLHAR")
+                    help="quanto tempo a cor fica acesa antes de devolver — quem confere precisa OLHAR")
     ap.add_argument("--psm", type=lambda s: int(s, 0), default=PSM_INTERRUPCAO,
                     help="0x13 interrupção (padrão) ou 0x11 controle")
     args = ap.parse_args()
@@ -220,9 +220,9 @@ def main() -> None:
         print(f"  1. socket L2CAP para {mascarar(mac)} no PSM {args.psm:#04x}")
         print(f"  2. o MESMO 0x31 de cor AZUL que acendeu pelo hidraw, com o "
               f"{HIDP_DATA_OUTPUT:#04x} escrito por nós")
-        print("  3. ela olha a barra e diz")
+        print("  3. quem confere olha a barra e diz")
         print("\n  o degrau A (--conectar) não derruba nada.")
-        print("  o degrau B (--assumir-o-canal) TIRA o controle dela enquanto corre.")
+        print("  o degrau B (--assumir-o-canal) TIRA o controle de quem usa enquanto corre.")
         print(resumo("leitura pura — nenhum socket aberto, nenhum byte escrito."))
         return
 
@@ -279,7 +279,7 @@ def main() -> None:
                 print(f"  {len(pacotes) - recusas} enviados, {recusas} recusa(s)")
                 time.sleep(1.0)
             print(resumo("os reports de áudio SAÍRAM pelo socket L2CAP direto — o mesmo "
-                         "canal em que a cor acendeu. Se ela ouviu, o caminho é este; "
+                         "canal em que a cor acendeu. Se houve som, o caminho é este; "
                          "se não ouviu, o canal não era a parede e a recusa é do "
                          "FORMATO do bloco de áudio."))
             return
@@ -292,7 +292,7 @@ def main() -> None:
         print(f"ESCREVI {enviados} B pelo canal novo "
               f"({HIDP_DATA_OUTPUT:#04x} + report 0x31 de {len(pacote) - 1} B)")
         print(f"\n  >>> OLHE A BARRA DE LUZ DO CONTROLE pelos próximos "
-              f"{args.segundos:g} s. Ela ficou AZUL?", flush=True)
+              f"{args.segundos:g} s. A barra ficou AZUL?", flush=True)
         fim = time.monotonic() + args.segundos
         seq = 1
         while time.monotonic() < fim:

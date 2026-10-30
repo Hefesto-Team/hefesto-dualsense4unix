@@ -89,7 +89,7 @@ do caderno, e RECUSAM rodar (rc=2):
 ## Os instrumentos documentados aqui
 
 **Os de 09/09/2026 — as decisões de produto viraram instrumento antes de virarem
-campo** (*"1-b;2b;3-c;4a"*; a regra é *a bancada vem antes do campo*):
+campo** (as escolhas 1-b, 2b, 3-c e 4a; a regra é *o ensaio vem antes do campo*):
 
 | instrumento | sprint | escreve? | o que decide |
 | --- | --- | --- | --- |
@@ -114,7 +114,7 @@ um ensaio só do PLANO-DA-MESA-2-2 (`imu_no_cabo.py`, `giro_e_buraco.py`,
 que é o que o plano manda ler antes de rodar. Os de baixo são os que servem a
 mais de uma pergunta.
 
-**Uma terceira régua, e ela responde a uma pergunta que a casa dava por
+**Uma terceira régua, e responde a uma pergunta que a casa dava por
 impossível** (A-1, 15/08/2026, `entrada_em_repouso.py` — bruto em
 [`docs/data/ensaios-brutos/2026-08-15-A1-entrada-em-repouso.txt`](../../docs/data/ensaios-brutos/2026-08-15-A1-entrada-em-repouso.txt)):
 
@@ -137,7 +137,7 @@ impossível** (A-1, 15/08/2026, `entrada_em_repouso.py` — bruto em
 
 - **Giroscópio.** `DS_GYRO_RES_PER_DEG_S = 1024` é a resolução **de SAÍDA**, do
   `ABS_RX/RY/RZ` que o kernel publica **depois** de calibrar. Dividir o valor
-  **CRU** do fio por ela erra por **~62x**. A régua do cru sai do **feature
+  **CRU** do fio por essa escala erra por **~62x**. A régua do cru sai do **feature
   0x05 de cada unidade**: `cru * speed_2x / sens_denom` (~16,4 LSB por grau/s,
   medido nas quatro). Quem precisa de graus/s usa o `giro_e_buraco.py`.
 - **Perda de report.** O `seq_number` de `corpo[6]` só anda **no cabo**; por
@@ -228,7 +228,7 @@ Ele carrega quatro coisas que custaram caro:
 - **O aparelho pode devolver o report errado.** Um respondeu `0x80` a um pedido
   de `0x20` — resposta trocada, não erro, com o ioctl retornando sucesso. Por
   isso `buf[0] == report_id` é validado sempre.
-- **A cor de fábrica não sai daqui.** Ela exige um `SET_FEATURE 0x80` antes, que
+- **A cor de fábrica não sai daqui.** Exige um `SET_FEATURE 0x80` antes, que
   é **escrita**. `--mostrar-comando-da-cor` imprime o comando exato e para.
 
 **O CRC-32 de semente `0xA3` é o enquadramento do Bluetooth**, e só é conferido
@@ -393,7 +393,7 @@ de toda comparação entre transportes.
 
 A régua que separa vpad de aparelho é reusada de
 [`scripts/identidade_do_vpad.py`](../identidade_do_vpad.py), nunca
-reimplementada — duas leituras do mesmo dado são duas réguas, e uma delas
+reimplementada — duas leituras do mesmo dado são duas réguas, e uma das duas
 envelhece calada.
 
 ---
@@ -411,7 +411,7 @@ data e quem mediu.
 | os feature reports são lidos por rádio com retry + validação de id; o CRC-32 confere em todos os que trazem trailer | **medido** 15/08 | `censo_features.py` |
 | o rádio entrega movimento a taxa **maior** que o cabo — ~414 Hz contra 250,0 Hz cravados no cabo | **medido** 15/08, janela de 5 s | `taxa_de_entrada.py`, daemon parado |
 | reports que o descritor declara e o firmware não implementa devolvem `EPIPE` na hora (10 deles no cabo) | **medido** 15/08 | `censo_features.py` |
-| a cor de fábrica está nos caracteres 5–6 do serial, via `SET 0x80` + `GET 0x81` | **medido** 15/08 **no CABO, em 4 de 4 unidades**; e **medido POR RÁDIO** em 27/08 (`hidraw8`) e 02/09 (`hidraw5`), em 2 unidades | `cor_do_plastico.py`. Os quatro códigos batem com o nome que ela usa (00 White, 02 Cosmic Red, 04 Galactic Purple, 05 Starlight Blue). **SUBSTITUÍDO o "medido-negativo" de 15/08**, que dizia *"por rádio o `SET 0x80` volta `EIO` imediato — e a causa é o TRANSPORTE, não a unidade"*: o `EIO` era o NOSSO envelope. Por rádio o feature vai assinado com CRC-32 de semente **`0x53`** (`SET_REPORT\|FEATURE`), e não `0xA3`; com ela o aparelho devolve 64 bytes, eco `[1, 19, 2]` e o código, em 13,6 ms. Sem assinatura nenhuma o firmware recusa igual — o CRC não é opcional no rádio |
+| a cor de fábrica está nos caracteres 5–6 do serial, via `SET 0x80` + `GET 0x81` | **medido** 15/08 **no CABO, em 4 de 4 unidades**; e **medido POR RÁDIO** em 27/08 (`hidraw8`) e 02/09 (`hidraw5`), em 2 unidades | `cor_do_plastico.py`. Os quatro códigos batem com o nome da cor do plástico (00 White, 02 Cosmic Red, 04 Galactic Purple, 05 Starlight Blue). **SUBSTITUÍDO o "medido-negativo" de 15/08**, que dizia *"por rádio o `SET 0x80` volta `EIO` imediato — e a causa é o TRANSPORTE, não a unidade"*: o `EIO` era o NOSSO envelope. Por rádio o feature vai assinado com CRC-32 de semente **`0x53`** (`SET_REPORT\|FEATURE`), e não `0xA3`; com essa semente o aparelho devolve 64 bytes, eco `[1, 19, 2]` e o código, em 13,6 ms. Sem assinatura nenhuma o firmware recusa igual — o CRC não é opcional no rádio |
 | existe crachá que distingue a unidade nos DOIS transportes **sem escrita**: é o **MAC** | **medido** 15/08, 4 unidades, os dois braços | `identidade_nos_dois_transportes.py`. Sai de graça no `HID_UNIQ` do sysfs; o feature `0x09` confirma. O `0x20` e o `hardware_version` **não** servem: agrupam por revisão de placa, e a data de compilação do firmware colide em PARES nos quatro controles do usuário |
 | a escada `0x32`–`0x39` carrega áudio | **hipótese viva** | o canal existe; provar exige escrever |
 | `hardware_version` distingue os quatro controles | **medido** 15/08, mas **não é a cor** | o byte *Variation* é `0x00` nos quatro; o que varia é a revisão de placa. Dois controles da mesma cor comprados juntos teriam o mesmo valor — é chave de diagnóstico, não fonte de cor |

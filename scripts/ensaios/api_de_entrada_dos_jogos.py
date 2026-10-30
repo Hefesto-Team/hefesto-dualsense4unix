@@ -6,7 +6,7 @@ A PERGUNTA QUE ELE RESPONDE
 *Dá para saber, LENDO O DISCO e sem rodar o jogo, se um jogo entende a máscara
 DualSense do Hefesto?*
 
-A resposta medida em 16/08/2026, nos 24 jogos instalados dela, é **NÃO** — e
+A resposta medida em 16/08/2026, nos 24 jogos instalados da máquina de teste, é **NÃO** — e
 este instrumento existe para que qualquer pessoa reproduza essa resposta em
 dez segundos, em vez de reabrir a discussão de memória.
 

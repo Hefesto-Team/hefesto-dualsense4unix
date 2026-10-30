@@ -7,7 +7,7 @@ A PERGUNTA QUE ELE RESPONDE
 sair pelo rádio para AQUELE controle — e, saindo, ele é igual ao que sai para
 um controle são no mesmo instante?*
 
-Ela existe por causa de um defeito perecível: em 15/08/2026 a casa teve, ao
+O instrumento existe por causa de um defeito perecível: em 15/08/2026 a casa teve, ao
 vivo e ao mesmo tempo, um DualSense de rádio com a barra APAGADA que ignora as
 escritas do kernel, e outro DualSense de rádio, também por rádio, que OBEDECE
 ao mesmo comando. O `docs/data/mapa-controles.csv` registra o sintoma
@@ -37,7 +37,7 @@ dele; se não aparece, o comando morreu ANTES do ar.
 O `btmon` é passivo: ele não fala com o adaptador, não abre conexão, não toca
 em nenhum controle. Precisa de `CAP_NET_RAW`, e por isso este instrumento — e
 só este trecho dele — roda `sudo -n btmon -w`. A captura nasce 0600 e sai
-depois de lida (`CapturaDoFio`): se um controle reconecta no meio, ela leva a
+depois de lida (`CapturaDoFio`): se um controle reconecta no meio, a captura leva a
 chave de pareamento em claro.
 
 A RÉGUA, DECLARADA
@@ -216,11 +216,11 @@ class CapturaDoFio:
         if entrega.returncode != 0 and os.path.lexists(self.caminho):
             self.queixas.append(
                 f"a captura não foi entregue a quem mede (rc={entrega.returncode}): "
-                "ela continua do root, 0600, e não se lê sem root."
+                "a captura continua do root, 0600, e não se lê sem root."
             )
 
     def apagar(self) -> str:
-        """Apaga a captura e o diretório dela; devolve a linha para a saída."""
+        """Apaga a captura e o seu diretório; devolve a linha para a saída."""
         atexit.unregister(self.apagar)
         if self._linha:
             return self._linha

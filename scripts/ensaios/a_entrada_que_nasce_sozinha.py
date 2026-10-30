@@ -449,7 +449,7 @@ def veredito(
     if sumiram:
         return 2, (
             f"MEDIÇÃO INVÁLIDA — {len(sumiram)} nó(s) saíram durante a corrida. "
-            "Desligar o BT do controle é o gesto com que ela CURA o defeito, "
+            "Desligar o BT do controle é o gesto que CURA o defeito, "
             "então o que sobrou aqui é o estado curado. "
             f"{total} evento(s) medido(s), e eles NÃO respondem à pergunta. "
             "Refaça com o aparelho na mesa do começo ao fim."
@@ -525,7 +525,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(cabecalho_do_instrumento(
         "a_entrada_que_nasce_sozinha",
-        "qual nó mexe no cursor e no teclado dela quando ninguém encosta no controle?",
+        "qual nó mexe no cursor e no teclado de quem usa quando ninguém encosta no controle?",
         bibliotecas=["evdev"],
         escreve_no_aparelho=False,
         nos_evdev=[no.caminho for no in nos if no.porta == PORTA_DIRETA]))

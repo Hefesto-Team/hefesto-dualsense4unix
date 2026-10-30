@@ -8,7 +8,7 @@ manda **o mesmo byte** para as duas: `set_audio_volumes(headphone=efetivo,
 speaker=efetivo)` (`core/backend_pydualsense.py`), por uma razão medida em
 15/08 (`sfx-o-fone-manda-por-cima`: o fone manda por cima da rota, e um fone
 em zero silenciaria quem plugasse um headset). O usuário decidiu que o fone ganha
-campo próprio no perfil, por controle. **Antes do campo, a bancada:** o
+campo próprio no perfil, por controle. **Antes do campo, o ensaio:** o
 firmware obedece a um `common[4]` diferente do `common[5]`?
 
 O mapa diz `MONTOU` nos dois transportes para `audio.jack.volume@dualsense`, e
@@ -148,7 +148,7 @@ def sink_do_alvo(mac: str, macs_na_mesa: list[str]) -> str:
 
 
 def tocar(sink: str, caminho_do_wav: str) -> subprocess.Popen[bytes] | None:
-    """`paplay` no sink do controle, em segundo plano. Sem sink, não toca — na TV da bancada, nunca."""
+    """`paplay` no sink do controle, em segundo plano. Sem sink, não toca — na TV da máquina de teste, nunca."""
     if not sink:
         return None
     try:
@@ -171,7 +171,7 @@ def main() -> int:
                     help="fixa o alto-falante neste valor (0..0xFF) em todo passo; "
                          "sem isto o byte dele não é tocado")
     ap.add_argument("--sink", default=None, help="o sink onde tocar o tom (padrão: o do controle)")
-    ap.add_argument("--sem-tom", action="store_true", help="não toca nada: ela põe o som")
+    ap.add_argument("--sem-tom", action="store_true", help="não toca nada: quem confere põe o som")
     ap.add_argument("--uma-vez", action="store_true", help="escreve uma vez por passo, sem martelar")
     ap.add_argument("--hz", type=float, default=10.0, help="o ritmo do martelo")
     args = ap.parse_args()
@@ -204,7 +204,7 @@ def main() -> int:
     sink = ""
     if alvo.transporte == RADIO:
         print("\nNO RÁDIO NÃO HÁ SINK DE SOM: este instrumento só ESCREVE o 0x31 e não tem o que tocar.")
-        print("A orelha dela depende do ensaio 13 do índice do rádio. O que sai daqui é MONTOU.\n")
+        print("A orelha de quem confere depende do ensaio 13 do índice do rádio. O que sai daqui é MONTOU.\n")
     elif not args.sem_tom:
         sink = args.sink or sink_do_alvo(alvo.mac, [a.mac for a in aparelhos if a.transporte == CABO])
         print(f"sink do tom .... {sink or 'NÃO SEI — passe --sink <nome> ou --sem-tom'}")
@@ -220,7 +220,7 @@ def main() -> int:
 
     wav = ""
     respostas: dict[int, str] = {}
-    print("\nO RETORNO DO os.write NÃO É A MEDIÇÃO — quem mede é a orelha dela, no fone.\n")
+    print("\nO RETORNO DO os.write NÃO É A MEDIÇÃO — quem mede é a orelha de quem confere, no fone.\n")
     try:
         if sink:
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
@@ -265,9 +265,9 @@ def main() -> int:
             fonte="scripts/ensaios/o_fone_tem_volume_proprio.py",
             nota=f"fone {volume:#04x}, bit {'ligado' if com_bit else 'apagado'}, "
                  f"alto-falante {'não tocado' if alto_falante is None else f'{alto_falante:#04x}'}; "
-                 f"ela: {resposta or '(sem resposta)'}",
+                 f"resposta: {resposta or '(sem resposta)'}",
         ))
-    print(resumo("o resultado é a orelha dela: preencha `resultado` (obedece / não obedece) por passo."))
+    print(resumo("o resultado é a orelha de quem confere: preencha `resultado` (obedece / não obedece) por passo."))
     return 0
 
 

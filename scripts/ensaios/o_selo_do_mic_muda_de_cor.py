@@ -3,7 +3,7 @@
 
 POR QUE ELE EXISTE, e é a armadilha desta frente: o gerador escreve
 ``class="selo-ativo off"`` na PRIMEIRA montagem, e um teste que leia o HTML no
-disco passa. O que ela vê é outra coisa — a repintura do tique escreve TEXTO
+disco passa. O que quem usa vê é outra coisa — a repintura do tique escreve TEXTO
 (``escrever()`` cai no alvo padrão, ``el.textContent = t``), e **um elemento
 aceita UM alvo de pintura**. O card que nasceu ATIVO e ficou mudo mostrava a
 palavra ``MUDO`` sobre o fundo VERDE.
@@ -19,9 +19,9 @@ caia no meio da medição.
 
 MEDE PIXEL, NÃO CLASSE: a cor sai de ``getComputedStyle``, e o risco sai do
 ``content`` do ``::after``. Uma régua sobre ``className`` daria verde no dia em
-que o CSS trocasse de nome de classe — e o que ela vê é a cor.
+que o CSS trocasse de nome de classe — e o que quem usa vê é a cor.
 
-Uso (a janela é OCULTA; ela tem UMA tela)::
+Uso (a janela é OCULTA; a máquina tem UMA tela)::
 
     scripts/ensaios/o_selo_do_mic_muda_de_cor.py
 """
@@ -69,31 +69,21 @@ PINTA_E_LE = r"""
                  ? window.__hef.pintar(carga) : -1;
   const fora = [], vistos = [];
   for(const el of document.querySelectorAll('[data-campo="mic-selo"]')){
-    // O DONO DA COR é quem carrega a classe `selo-ativo`; com o <span>
-    // aninhado, quem tem o TEXTO é o filho. Sobe até achar quem pinta.
     let pinta = el;
     while(pinta && !pinta.classList.contains('selo-ativo')) pinta = pinta.parentElement;
     pinta = pinta || el;
     const card = el.closest('[data-controle]');
     const glifo = pinta.querySelector('.mic-glifo');
-    if(vistos.indexOf(pinta) >= 0) continue;   // três endereços, UM selo
+    if(vistos.indexOf(pinta) >= 0) continue;
     vistos.push(pinta);
     fora.push({
       controle: card ? (card.dataset.controle || '') : '',
       texto: (pinta.textContent || '').trim(),
       classe: pinta.className,
       fundo: getComputedStyle(pinta).backgroundColor,
-      // O RISCO É DO GLIFO, não do selo: ele cruza o microfone, não a palavra.
       risco: glifo ? getComputedStyle(glifo, '::after').content : 'sem glifo',
       icone: !!glifo,
-      // A ARMADILHA MEDIDA, e este número é ela: com UM endereço no selo, o
-      // piloto alcança um alvo só — e o que ele alcança é o texto, porque é o
-      // padrão. A cor fica na que o gerador desenhou, para sempre.
       enderecos: 1 + pinta.querySelectorAll('[data-campo="mic-selo"]').length,
-      // O ÍCONE CUSTA LARGURA, e a linha do rótulo do microfone já era
-      // apertada — o card mede 328px e o comentário do `luz-hex` registra que
-      // "a frase inteira do rótulo não cabe". Se o selo empurrar o vizinho para
-      // fora da linha, a régua tem de dizer, e não a foto.
       transbordou: (function(){
         const linha = pinta.parentElement;
         if(!linha) return false;
@@ -117,10 +107,10 @@ def main() -> int:
     linha = argparse.ArgumentParser(description=__doc__)
     linha.add_argument("--ensaio", action="store_true",
                        help="medir o DESENHO (`mockup/`) em vez do publicado. "
-                            "É onde a cura vive até ela dar o OK.")
+                            "É onde a cura vive até o OK do desenho.")
     linha.add_argument("--foto", default="",
                        help="retratar a página no fim da medição. A janela é "
-                            "OCULTA: ela tem UMA tela.")
+                            "OCULTA: a máquina tem UMA tela.")
     linha.add_argument("--selo", default="",
                        help="deixar o selo NESTE estado antes da foto "
                             "(ATIVO/MUDO/—). Sem isto a foto sai no último "

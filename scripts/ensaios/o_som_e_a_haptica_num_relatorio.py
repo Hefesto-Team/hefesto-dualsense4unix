@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """o_som_e_a_haptica_num_relatorio.py — o 0x36 com o som e a háptica, num controle, pelo rádio.
 
-O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026), o primeiro tempo. Na
-bancada de 03/10, pelo rádio, cada controle carregou som OU háptica: com os
+O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026), o primeiro tempo. No
+ensaio de 03/10, pelo rádio, cada controle carregou som OU háptica: com os
 dois pedidos, as pontes ficaram no ``0x35`` e a háptica não subiu, com dois ou
 quatro controles por adaptador. A casa usa dois escritores por controle, o
 ``0x35`` do som e o ``0x32`` da háptica, cada um com o seu contador no
@@ -29,12 +29,12 @@ nada vai ao aparelho. COM ``--escrever``, ele RECUSA, nesta ordem:
 3. o controle no cabo (o ``0x36`` é do rádio);
 4. sem ``--eu-estou-ouvindo`` (rc=3): o ensaio é escrever com o ouvido e a
    mão do usuário do outro lado;
-5. a bancada tomada por outra reserva (``scripts/ensaio.sh exigir`` passa
-   só com ela LIVRE: quem reservou mede, e o ensaio não escreve por cima).
+5. o aparelho tomado por outra reserva (``scripts/ensaio.sh exigir`` passa
+   só com o aparelho LIVRE: quem reservou mede, e o ensaio não escreve por cima).
 
 O RETORNO DO ``os.write()`` NÃO É A MEDIÇÃO: o kernel aceita a entrega que o
-firmware descarta calado. O veredito é dela (ouviu o tom contínuo? sentiu a
-onda, sem alternar?), e vai ao ``docs/data/ensaios.csv`` com o relato dela.
+firmware descarta calado. O veredito é de quem confere (ouviu o tom contínuo? sentiu
+a onda, sem alternar?), e vai ao ``docs/data/ensaios.csv`` com o relato.
 """
 
 from __future__ import annotations
@@ -287,12 +287,12 @@ def em_seco(argumentos: argparse.Namespace) -> int:
 
 
 def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
-    """A porta do ensaio de bancada: recusa muito mais do que aceita."""
+    """A porta do ensaio no aparelho: recusa muito mais do que aceita."""
     if daemon_no_ar():
         print(
             "RECUSADO: o daemon está no ar. Ele escreve no mesmo hidraw, e o 0x31\n"
-            "  dele no meio do ensaio mediria outra coisa. Peça a ela que pare o\n"
-            "  serviço pela mão dela, e rode de novo."
+            "  dele no meio do ensaio mediria outra coisa. Peça a quem usa que pare\n"
+            "  o serviço pela própria mão, e rode de novo."
         )
         return 2
     from hefesto_dualsense4unix.daemon.subsystems.alto_falante import controles_na_lista
@@ -311,13 +311,13 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         return 2
     if not argumentos.eu_estou_ouvindo:
         print("PARADO ANTES DE ESCREVER, e de propósito.\n" + resumo(argumentos, controle.caminho))
-        print("  Acrescente --eu-estou-ouvindo com o ouvido e a mão dela do outro lado.")
+        print("  Acrescente --eu-estou-ouvindo com o ouvido e a mão de quem confere do outro lado.")
         return 3
     livre, recado = _exigir_ensaio()
     if recado:
-        print(f"  bancada ..... {recado}")
+        print(f"  reserva ..... {recado}")
     if not livre:
-        print("RECUSADO: a bancada está tomada por outra reserva. Esperar é a resposta.")
+        print("RECUSADO: o aparelho está tomado por outra reserva. Esperar é a resposta.")
         return 2
 
     print("\nO QUE VAI SAIR, E POR QUANTO TEMPO\n" + resumo(argumentos, controle.caminho))
@@ -340,8 +340,8 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     for linha in contagem.linhas():
         print(linha)
     print(
-        "\nO VEREDITO É DELA: o tom saiu contínuo pelo alto-falante? A onda foi\n"
-        "  sentida no lado pedido, sem alternar com o som? A frase dela vai ao\n"
+        "\nO VEREDITO É DE QUEM CONFERE: o tom saiu contínuo pelo alto-falante? A onda foi\n"
+        "  sentida no lado pedido, sem alternar com o som? A frase vai ao\n"
         "  docs/data/ensaios.csv; estes números não."
     )
     return 0
@@ -349,10 +349,10 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     analisador = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    analisador.add_argument("--escrever", action="store_true", help="a porta do ensaio de bancada")
+    analisador.add_argument("--escrever", action="store_true", help="a porta do ensaio no aparelho")
     analisador.add_argument("--exigir-mac", default="", help="endereço conferido do alvo")
     analisador.add_argument("--eu-estou-ouvindo", action="store_true",
-                            help="o ouvido e a mão dela do outro lado; sem isto, rc=3")
+                            help="o ouvido e a mão de quem confere do outro lado; sem isto, rc=3")
     analisador.add_argument("--segundos", type=float, default=SEGUNDOS_PADRAO,
                             help=f"duração (teto {TETO_DE_SEGUNDOS:.0f} s)")
     analisador.add_argument("--tom-hz", type=float, default=TOM_HZ_PADRAO)

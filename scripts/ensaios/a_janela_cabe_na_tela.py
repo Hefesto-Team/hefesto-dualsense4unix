@@ -41,12 +41,12 @@ LARGURA_MAXIMIZADA = 1918
 
 POR_DESENHO: dict[str, tuple[str, str]] = {
     "10-perfis.html": ("DIV.rolo", "a lista de perfis rola por desenho — quantos "
-                                   "perfis ela tem é dela, e a caixa não pode "
+                                   "perfis existem é de quem usa, e a caixa não pode "
                                    "crescer com eles (§1 da ROLAGEM-01, 08/09)"),
     "07-lancadores.html": ("DIV.lancadores",
                            "a grade de cartões rola por desenho — quantos "
-                           "lançadores ela tem, e quantos jogos com pendência, é "
-                           "dela: medido, a grade foi de 493 a 534px sozinha "
+                           "lançadores existem, e quantos jogos com pendência, é "
+                           "de quem usa: medido, a grade foi de 493 a 534px sozinha "
                            "numa sessão, quando o cartão da Steam ganhou um jogo "
                            "pendente (ROLAGEM-01 §8, 09/09)"),
     "09-sistema.html": ("DIV.log",
@@ -134,7 +134,7 @@ def _vista_pedida(argv: list[str]) -> int:
             if not bruto.isdigit() or int(bruto) < 200:
                 raise SystemExit(
                     f"ERRO: `--vista={bruto}` não é uma altura de tela. "
-                    "Ela é um inteiro de pixels, e a da TV dela é 840.")
+                    "É um inteiro de pixels, e a da TV da máquina de teste é 840.")
             return int(bruto)
     return 0
 
@@ -154,7 +154,7 @@ def main() -> int:
     fila = list(alvos)
 
     def esticar() -> None:
-        """Põe a vista na altura pedida, e a largura da janela maximizada dela."""
+        """Põe a vista na altura pedida, e a largura da janela maximizada."""
         if vista:
             piloto.tela.view.set_size_request(LARGURA_MAXIMIZADA, vista)
 
@@ -235,12 +235,12 @@ def main() -> int:
                 f"acima dele o que sobra viraria vão dentro do quadro")
         if d.get("culpado") and not _e_por_desenho(d["url"], d["culpado"]):
             culpados.append(
-                f"{d['url']}: {d['culpado']} — a caixa não cabe no que ela vê, "
+                f"{d['url']}: {d['culpado']} — a caixa não cabe no que se vê, "
                 f"e é aí que a barra nasce")
         elif rola_d:
             culpados.append(
                 f"{d['url']}: o DOCUMENTO tem {da}px numa vista de {dc}px "
-                f"({da - dc}px). A `.janela` cabe — o que sobra está FORA dela.")
+                f"({da - dc}px). A `.janela` cabe — o que sobra está FORA da janela.")
         if d.get("cortado") and not d.get("culpado"):
             cortes.append(f"{d['url']}: {d['cortado']}")
 

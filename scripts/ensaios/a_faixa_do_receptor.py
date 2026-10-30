@@ -9,7 +9,7 @@ O «Descobrir a faixa» da Conexões (``receptor_sem_fio.Descoberta``) compara o
 adaptadores Bluetooth evitam sem e com o receptor na porta. O teclado do usuário deu «não achei», e o
 «não achei» juntava três medidas: sem enlace clássico não há mapa (1); o receptor salta de canal e
 deixa canais espalhados (2); o AFH leva mais que 25 s para marcar a faixa (3). A procura agora diz
-qual delas viu; este ensaio grava os mapas na bancada e reproduz a procura sobre eles, trocando os
+qual das três viu; este ensaio grava os mapas no aparelho e reproduz a procura sobre eles, trocando os
 números um por um.
 
 O QUE ELE GRAVA
@@ -25,8 +25,8 @@ USO
     a_faixa_do_receptor.py gravar --momento com --saida mapas.jsonl --medir   # o receptor dentro
     a_faixa_do_receptor.py classificar mapas.jsonl [--espera 25 --ate 120 --solta 60 --salto 6]
 
-OS INTERRUPTORES (trocar X por Y na bancada sem editar código)
---------------------------------------------------------------
+OS INTERRUPTORES (trocar X por Y no ensaio sem editar código)
+-------------------------------------------------------------
 ``--espera`` / ``HEFESTO_FAIXA_ESPERA_S`` (25: a leitura que fecha cada medida),
 ``--ate`` / ``HEFESTO_FAIXA_ATE_S`` (120: até quando a medida «com ele» relê se nada mudou),
 ``--solta`` / ``HEFESTO_FAIXA_SOLTA_S`` (60: até quando a medida «sem ele» relê e fica com o menor),

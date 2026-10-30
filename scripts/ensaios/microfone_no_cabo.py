@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """microfone_no_cabo.py — o microfone do cabo capta? E a companhia custa? (E-5 e E-6)
 
-AS DUAS PERGUNTAS, E POR QUE ELAS MORAM NO MESMO INSTRUMENTO
--------------------------------------------------------------
+AS DUAS PERGUNTAS, E POR QUE MORAM NO MESMO INSTRUMENTO
+--------------------------------------------------------
 **E-5:** *o microfone do controle NO CABO capta de verdade?* A célula
 `audio.microfone@dualsense`, coluna `cabo_de_onde_sei`, está em
 `inferido-do-codigo`, e a evidência de hoje é **o arquivo do WirePlumber** — o

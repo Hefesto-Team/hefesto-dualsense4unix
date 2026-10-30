@@ -20,7 +20,7 @@ laudo lê os quatro, e o que o curador vai gravar sai do dono da lista
 **A GRAVAÇÃO POR CANAL** (``--gravar SEGUNDOS``) nasce aqui, versionada: o
 ``medidas/grava_endpoints.sh`` que a auditoria de 27/09 e a
 A-HAPTICA-DO-RADIO citam morava no ``/tmp`` e não existe mais (procurado em
-28/09). Ela lê o monitor de cada endpoint ao mesmo tempo e diz o RMS de cada
+28/09). A gravação lê o monitor de cada endpoint ao mesmo tempo e diz o RMS de cada
 um dos quatro canais — a frente é o alto-falante, os traseiros são os motores
 —, que é como se vê, sem a mão do usuário, se o jogo espelha a vibração nos quatro
 lugares ou manda a cada um a sua. Ler o monitor não escreve nada em lugar
@@ -73,11 +73,11 @@ com a caixa de som da pessoa. O jogo abriria a háptica no aparelho errado.
 Então o sink aponta o ``sysfs.path`` para um ``usb_device`` REAL que não tem
 placa de som — uma ÂNCORA. O GUID que sai dali é real, é único e é calculável
 dos dois lados: aqui, e no ``audio_ks_dualsense.py``, que grava o device KS.
-A âncora é só um endereço de onde tirar quatro números; nada é escrito nela.
+A âncora é só um endereço de onde tirar quatro números; nada é escrito na âncora.
 
 O QUE ESTE ENSAIO NÃO DECIDE
 -----------------------------
-Se a RE Engine ACEITA este endpoint. Isso é medida de bancada, com o jogo
+Se a RE Engine ACEITA este endpoint. Isso é medida no aparelho, com o jogo
 aberto e o controle no rádio, e está escrita na sprint. Aqui se mede só o que é
 medível sem o jogo: que os campos chegam ao nó como o GE os lê.
 """
@@ -254,7 +254,7 @@ def nossos_sinks() -> list[dict[str, str]]:
 
 
 def _laudo(sink: dict[str, str]) -> list[tuple[bool, str]]:
-    """As perguntas do GE, uma linha por pergunta. Nenhuma delas é opinião."""
+    """As perguntas do GE, uma linha por pergunta. Nenhuma é opinião."""
     nome = sink["nome"]
     return [
         (sink["bus"] == "usb", f'device.bus == "usb"  (é "{sink["bus"]}")'),

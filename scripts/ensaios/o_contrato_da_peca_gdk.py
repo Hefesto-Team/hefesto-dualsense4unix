@@ -13,7 +13,7 @@ Hefesto (`xgameruntime=b` e o `WINEDLLPATH` na pasta da peça). Julga as seis pr
 - `composto_de_composto`: o trabalho e a conclusão andam;
 - `terminate_espera`: o `XTaskQueueTerminate(wait)` volta só depois da conclusão.
 
-`--mordida` quebra a cura numa cópia do fonte (nunca no repo) e confere que a prova dela reprova.
+`--mordida` quebra a cura numa cópia do fonte (nunca no repo) e confere que a prova reprova.
 O prefixo é sempre de teste, fora do HOME: nunca o do jogo, nunca o `~/.wine`. Nada abre janela.
 """
 from __future__ import annotations

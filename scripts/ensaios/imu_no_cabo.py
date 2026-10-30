@@ -19,7 +19,7 @@ cronometrar nada: o controle deitado já é a condição de ensaio.
 
 Isso não é conveniência — é a **Lei 2** do plano da mesa 2+2. Pedir movimento a
 mão humana é a armadilha `A-8`/`A-9`/`A-21` desta casa, que já custou duas
-rodadas em 11/08. O desenho que precisasse dela estaria errado.
+rodadas em 11/08. O desenho que precisasse da mão estaria errado.
 
 E é também a escapatória da **Lei 4** (o confundimento braço/unidade): 1 g é
 referência absoluta. Nenhuma conclusão deste instrumento depende de comparar um
@@ -43,7 +43,7 @@ número que a canônica §5 registra. Para que a régua não seja um número cop
 de documentação, o instrumento **confere o valor contra o kernel desta máquina**
 por `EVIOCGABS` no nó *Motion Sensors* de cada controle (ioctl puro, sem
 `python-evdev`) e imprime os dois lado a lado. Essa conferência **não entra na
-conta**: ela existe para que uma divergência apareça na tela em vez de virar
+conta**: existe para que uma divergência apareça na tela em vez de virar
 resultado.
 
 OS OFFSETS, IMPRESSOS — porque cabo e rádio NÃO são o mesmo deslocamento
@@ -512,7 +512,7 @@ def main() -> int:
         "na MESMA janela."
     )
     print("  >> NÃO mexa nos controles: parados na mesa eles medem a gravidade,")
-    print("  >> e é o módulo dela (1 g) que é a régua deste ensaio.")
+    print("  >> e é o módulo da gravidade (1 g) que é a régua deste ensaio.")
     print()
     medir(medidas, argumentos.segundos)
 

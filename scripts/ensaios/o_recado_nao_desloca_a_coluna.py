@@ -91,7 +91,7 @@ def fim():
         print("VEREDITO: INCONCLUSIVO — sem o desenho do p1 não há o que medir")
     elif d.get("recado") != "NAO EXISTE":
         print(f"VEREDITO: VERMELHO — a recusa voltou a pousar no cartão "
-              f"(`{d.get('recado')}`), e ela saiu da tela em 13/09/2026")
+              f"(`{d.get('recado')}`), e a recusa saiu da tela em 13/09/2026")
     elif a.get("topo") != d.get("topo"):
         print(f"VEREDITO: VERMELHO — a recusa deslocou o desenho "
               f"{a.get('topo')} -> {d.get('topo')} px")

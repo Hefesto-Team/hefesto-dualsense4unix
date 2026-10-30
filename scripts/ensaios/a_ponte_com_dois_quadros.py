@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """a_ponte_com_dois_quadros.py — a háptica com dois blocos por relatório, às cegas, um controle por vez.
 
-A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01 (09/10/2026), o item 2: a bancada
+A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01 (09/10/2026), o item 2: o ensaio
 sensorial do degrau do meio, ANTES de o degrau entrar no produto.
 
 A PERGUNTA
@@ -20,16 +20,16 @@ Num controle pelo rádio, ``--rodadas`` rodadas de ``--segundos`` cada, em ordem
 - «um»: o ``0x36`` de hoje, um bloco ``0x12`` por relatório, 93,75 relatórios/s;
 - «dois»: o ``0x36`` com dois blocos ``0x12``, 46,875 relatórios/s.
 
-Na tela sai só «rodada N», e ela diz o que sentiu (o que digitar vai ao arquivo). No fim, a
+Na tela sai só «rodada N», e quem usa diz o que sentiu (o que digitar vai ao arquivo). No fim, a
 chave (qual rodada foi qual) vai ao ``--saida``, e uma linha curta por rodada.
 
 SEM ``--escrever``, monta os dois arranjos em seco e mostra os blocos e o CRC. COM
 ``--escrever``, RECUSA nesta ordem: o daemon no ar (ele escreve no mesmo hidraw), sem
-``--exigir-mac`` conferido, o controle no cabo, sem ``--eu-estou-sentindo`` (rc=3) e a
-bancada tomada (``scripts/ensaio.sh exigir``). Nenhum endereço é impresso nem gravado.
+``--exigir-mac`` conferido, o controle no cabo, sem ``--eu-estou-sentindo`` (rc=3) e o
+aparelho reservado por outro (``scripts/ensaio.sh exigir``). Nenhum endereço é impresso nem gravado.
 
-OS INTERRUPTORES (trocar X por Y na bancada sem editar código)
---------------------------------------------------------------
+OS INTERRUPTORES (trocar X por Y no ensaio sem editar código)
+-------------------------------------------------------------
 ``--arranjo`` / ``HEFESTO_DOIS_QUADROS_ARRANJO``: ``cadeia`` (dois blocos ``0x12`` seguidos,
 cada um com a sua tag; o padrão) ou ``duplo`` (uma tag com o bit de bloco duplo e 128 B).
 ``--contador`` / ``HEFESTO_DOIS_QUADROS_CONTADOR``: o contador do ``0x11`` anda ``1`` por
@@ -283,7 +283,7 @@ def rodar(
 def linhas_curtas(rodadas: Sequence[Rodada]) -> list[str]:
     """Uma linha por rodada, a chave aberta: o arranjo, o ritmo entregue e o que o usuário disse."""
     return [f"rodada {r.numero}: {r.arranjo} bloco(s) por relatório, {r.por_segundo:g}/s "
-            f"entregues, ela: {r.resposta or '(nada)'}" for r in rodadas]
+            f"entregues, resposta: {r.resposta or '(nada)'}" for r in rodadas]
 
 
 def daemon_no_ar() -> bool:
@@ -312,7 +312,7 @@ def daemon_no_ar() -> bool:
 def recusa(args: argparse.Namespace, *, daemon: Callable[[], bool] = daemon_no_ar) -> str:
     """A primeira recusa que vale, ou ``""``. A ordem é a do cabeçalho."""
     if daemon():
-        return "o daemon está no ar: ele escreve no mesmo hidraw. Ela para o serviço, e roda de novo"
+        return "o daemon está no ar: ele escreve no mesmo hidraw. Pare o serviço, e rode de novo"
     if not args.exigir_mac:
         return "--escrever exige --exigir-mac com o endereço conferido"
     return ""
@@ -335,12 +335,12 @@ def escrever_no_aparelho(args: argparse.Namespace) -> int:
         print("RECUSO: o controle está no cabo; o 0x36 é do rádio")
         return 2
     if not args.eu_estou_sentindo:
-        print("PARADO ANTES DE ESCREVER: acrescente --eu-estou-sentindo com a mão dela no controle")
+        print("PARADO ANTES DE ESCREVER: acrescente --eu-estou-sentindo com a mão no controle")
         return 3
     proc = subprocess.run(["bash", str(_RAIZ / "scripts" / "ensaio.sh"), "exigir"],
                           capture_output=True, text=True, check=False)
     if proc.returncode != 0:
-        print("RECUSO: a bancada está tomada por outra reserva; esperar é a resposta")
+        print("RECUSO: o aparelho está tomado por outra reserva; esperar é a resposta")
         return 2
     from hefesto_dualsense4unix.integrations.dualsense_bt_audio import abrir_hidraw_rw
 

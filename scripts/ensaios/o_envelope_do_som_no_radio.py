@@ -132,7 +132,7 @@ def main() -> int:
         print(f"sem porta para {mascarar(alvo.mac)}: {erro}")
         return 1
     print(f"porta ....... {getattr(no, 'linha_de_relatorio', 'broker')}")
-    print("\nO RETORNO DO write/ioctl NÃO É A MEDIÇÃO — quem mede é a orelha (e, no passo 0, o olho) dela.\n")
+    print("\nO RETORNO DO write/ioctl NÃO É A MEDIÇÃO — quem mede é a orelha (e, no passo 0, o olho) de quem confere.\n")
 
     respostas: list[tuple[str, str, str]] = []
     seq = 0
@@ -221,7 +221,7 @@ def main() -> int:
             resultado="",
             observado_por="olho-do-usuario",
             fonte="scripts/ensaios/o_envelope_do_som_no_radio.py",
-            nota=f"arranjo {nome}, envelope {envelope}, CRC {'errado' if args.crc_errado else 'certo'}; ela: {resposta or '(sem resposta)'}",
+            nota=f"arranjo {nome}, envelope {envelope}, CRC {'errado' if args.crc_errado else 'certo'}; resposta: {resposta or '(sem resposta)'}",
         ))
     print(resumo("som num envelope e silêncio no outro fecha o ensaio 13; silêncio nos dois com a luz do passo 0 acesa pelos dois é do áudio, não do envelope."))
     return 0

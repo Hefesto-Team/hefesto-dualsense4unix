@@ -71,7 +71,7 @@ ENSAIO_PULSOS_HZ = 2.0
 
 
 def pcm_pulsado(taxa: int = af.TAXA_DO_ENCODER) -> Callable[[int], bytes]:
-    """Uma fonte de PCM infinita com o timbre da bancada. `s16le` estéreo, à `taxa`."""
+    """Uma fonte de PCM infinita com o timbre do ensaio. `s16le` estéreo, à `taxa`."""
     fase = itertools.count()
 
     def _ler(quantos: int) -> bytes:
@@ -183,7 +183,7 @@ def medir_motor() -> int:
         iguais = len(set(pacotes.values())) == 1
         print(f"  os dois corpos são iguais? {'SIM' if iguais else 'NÃO — e é o ponto'}")
         print(
-            "  quem escolhe é a orelha dela no ensaio 1 da MESA-DE-QUATRO-01."
+            "  quem escolhe é a orelha de quem confere no ensaio 1 da MESA-DE-QUATRO-01."
             " Este script não escolhe.\n"
         )
     return 0 if fecha and not iguais else 1
@@ -357,13 +357,12 @@ def rodar_o_arranjo(
 
 
 def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
-    """A porta do ensaio de bancada — e ela recusa muito mais do que aceita.
+    """A porta do ensaio no aparelho — e recusa muito mais do que aceita.
 
     **Este caminho é o ensaio 1 da MESA-DE-QUATRO-01**, não deste script
     sozinho. Até 07/09/2026 ele parava ANTES de escrever, com rc=3, e a razão
-    estava escrita: *"ele existe aqui para que o instrumento esteja pronto
-    quando a bancada e a orelha do usuário estiverem"*. As duas chegaram — ela está
-    na bancada com os quatro DualSense —, e o que faltava do nosso lado era o
+    estava escrita: o instrumento ficava pronto à espera do aparelho e da orelha
+    do usuário. As duas chegaram — o ensaio tem os quatro DualSense —, e o que faltava do nosso lado era o
     laço entre o encoder e o fio, que agora existe (:func:`rodar_o_arranjo`).
 
     **O QUE NÃO MUDOU, E É O PONTO:** ele continua parando em rc=3 sem
@@ -377,11 +376,11 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
     3. aparelho no CABO (a escada só existe no rádio);
     4. arranjo não escolhido (as duas fontes divergem, e a escolha é de produto);
     5. degrau fora da escada ``0x31``-``0x39``;
-    6. **sem a declaração de que ela está ouvindo**, e sem a bancada reservada.
+    6. **sem a declaração de que alguém está ouvindo**, e sem o aparelho reservado.
 
     E O RETORNO DO ``os.write()`` CONTINUA NÃO SENDO A MEDIÇÃO. O kernel aceita
     a entrega; o firmware descarta calado. Quem mede é a orelha do usuário, e o
-    veredito vai para ``docs/data/ensaios.csv`` com o relato dela, nunca com o
+    veredito vai para ``docs/data/ensaios.csv`` com o relato, nunca com o
     número deste script.
     """
     from hefesto_dualsense4unix.daemon.subsystems.alto_falante import controles_na_lista
@@ -418,8 +417,8 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
             f"  arranjo     {arranjo.nome} — {arranjo.fonte}\n"
             f"  degrau      0x{arranjo.degrau:02x} ({arranjo.tamanho} B)\n"
             f"{linha_do_common}"
-            "  A escrita é o ensaio 1 da MESA-DE-QUATRO-01: ela precisa da bancada\n"
-            "  reservada (scripts/ensaio.sh exigir) e da orelha dela do outro lado.\n"
+            "  A escrita é o ensaio 1 da MESA-DE-QUATRO-01: precisa do aparelho\n"
+            "  reservado (scripts/ensaio.sh exigir) e da orelha de quem confere.\n"
             "  Acrescente --eu-estou-ouvindo quando as duas coisas forem verdade.\n"
             "  O retorno do os.write() NÃO é a medição — o kernel aceita entrega que\n"
             "  o firmware descarta calado."
@@ -427,9 +426,9 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         return 3
     reservada, recado = _exigir_ensaio()
     if recado:
-        print(f"  bancada ..... {recado}")
+        print(f"  reserva ..... {recado}")
     if not reservada:
-        print("RECUSADO: a bancada não está reservada. Esperar é a resposta.")
+        print("RECUSADO: o aparelho não está reservado. Esperar é a resposta.")
         return 2
 
     print(
@@ -479,9 +478,9 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         "  Nada acima é medição de som. O que este ensaio produziu foi um canal\n"
         "  exercitado com um conteúdo candidato — e o mapa proíbe, com todas as\n"
         "  letras, concluir daí que a ponte funciona (FALÁCIA DO CANAL QUE\n"
-        "  RESPONDE). O veredito é UMA frase dela, e ela vai para\n"
-        "  docs/data/ensaios.csv com o relato dela, não com estes números.\n"
-        "  Se ela não ouviu nada: rode de novo com o OUTRO arranjo antes de\n"
+        "  RESPONDE). O veredito é UMA frase de quem ouviu, e vai para\n"
+        "  docs/data/ensaios.csv com o relato, não com estes números.\n"
+        "  Se nada se ouviu: rode de novo com o OUTRO arranjo antes de\n"
         "  concluir qualquer coisa — os dois são candidatos, e medir um e\n"
         "  concluir sobre o outro é o erro que montar os dois existe para matar."
     )
@@ -492,13 +491,13 @@ def main(argv: list[str] | None = None) -> int:
     analisador = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     analisador.add_argument("--motor", action="store_true", help="a escada, o encoder, os arranjos")
     analisador.add_argument("--sink", action="store_true", help="carrega e LÊ o nó no PipeWire")
-    analisador.add_argument("--escrever", action="store_true", help="a porta do ensaio de bancada")
+    analisador.add_argument("--escrever", action="store_true", help="a porta do ensaio no aparelho")
     analisador.add_argument("--exigir-mac", default="", help="endereço conferido do alvo")
     analisador.add_argument(
         "--arranjo", default="",
         help="ds5dongle | senshi | common-preservado")
     analisador.add_argument("--eu-estou-ouvindo", action="store_true",
-                            help="a orelha dela está do outro lado — sem isto, rc=3")
+                            help="a orelha de quem confere está do outro lado — sem isto, rc=3")
     analisador.add_argument("--segundos", type=float, default=SEGUNDOS_PADRAO,
                             help=f"duração do timbre (teto {TETO_DE_SEGUNDOS:.0f}s)")
     analisador.add_argument("--tag", type=lambda s: int(s, 0), default=af.BLOCO_SPEAKER,

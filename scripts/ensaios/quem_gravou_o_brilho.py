@@ -16,10 +16,10 @@ O que faz, por ordem:
    `interface.log*` (e do diário, quando ele alcança): quantas gravações, de que
    janela, de que `origem`, de que GESTO, e se foi uma rajada de arraste ou uma
    gravação de abertura. O gesto é a linha `[gesto] <página> · <nome>` que o
-   piloto imprime quando o gesto termina: ela não tem hora, e vem DEPOIS das
-   gravações que o gesto fez (a primeira depois delas, na mesma janela).
-3. Lê a migração de `profiles/loader.py` e diz se ela toca o brilho.
-4. Diz o escritor que a medida sustenta, e o que falta quando ela não alcança.
+   piloto imprime quando o gesto termina: a linha não tem hora, e vem DEPOIS das
+   gravações que o gesto fez (a primeira depois das gravações, na mesma janela).
+3. Lê a migração de `profiles/loader.py` e diz se a migração toca o brilho.
+4. Diz o escritor que a medida sustenta, e o que falta quando a medida não alcança.
 
 Os controles saem por LETRA (A, B, C…), na ordem em que aparecem na primeira
 cópia: nenhum endereço sai na saída, em forma nenhuma (a máscara é a última
@@ -66,7 +66,7 @@ def mascarar(texto: str) -> str:
 
 
 class Copia(NamedTuple):
-    """Uma versão do perfil, com a hora em que ela era a vigente."""
+    """Uma versão do perfil, com a hora em que era a vigente."""
 
     hora: dt.datetime
     rotulo: str
@@ -301,7 +301,7 @@ def agrupar_por_janela(gravacoes: list[Gravacao],
 
 
 def ler_a_migracao(loader: pathlib.Path) -> tuple[int | None, bool | None]:
-    """A linha da troca Personalizado→Freestyle e se ela fala de brilho/luz."""
+    """A linha da troca Personalizado→Freestyle e se a linha fala de brilho/luz."""
     try:
         fonte = loader.read_text(encoding="utf-8").splitlines()
     except OSError:
@@ -431,7 +431,7 @@ def relatorio(copias: list[Copia], gravacoes: list[Gravacao], aberturas: list[dt
                 escrita = chegada[0]
                 saida.append(
                     f"    a cópia de chegada tem a hora da gravação de {_h(escrita.hora)}, "
-                    f"pelo gesto «{escrita.gesto}»: o arquivo dela é o que esse gesto "
+                    f"pelo gesto «{escrita.gesto}»: o seu arquivo é o que esse gesto "
                     "gravou (o valor pode já estar no perfil antes dele).")
             monta, grava = trilho
             onde = (f" (a04_iluminacao.py:{monta} monta, :{grava} grava, no código "
@@ -480,7 +480,7 @@ def relatorio(copias: list[Copia], gravacoes: list[Gravacao], aberturas: list[dt
         saida.append(
             f"A migração Personalizado -> Freestyle (loader.py:{linha}) não toca o "
             "brilho nem os leds: grava os dados como estão, só trocando o nome (e a "
-            "regra de janela do próprio Hefesto); ela não é a escritora.")
+            "regra de janela do próprio Hefesto); a migração não é a escritora.")
     return mascarar("\n".join(saida))
 
 

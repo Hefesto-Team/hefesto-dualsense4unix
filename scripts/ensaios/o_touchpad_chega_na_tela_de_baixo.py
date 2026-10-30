@@ -24,7 +24,7 @@ OS QUATRO DEGRAUS, e o instrumento fecha três
 ----------------------------------------------
 0. **O recurso está LIGADO?** — o emulador tem, na própria interface, a opção
    *"Map touchpads on controllers like the DualSense directly to touch"*. Se
-   ela estiver desligada, o dedo no touchpad não faz nada **por configuração**,
+   a opção estiver desligada, o dedo no touchpad não faz nada **por configuração**,
    e medir o resto sem dizer isso é montar a acusação errada. Lido do
    `qt-config.ini` do emulador, nunca da memória de ninguém.
 1. **O nó EXISTE?** — o daemon publica um nó de touchpad por controle. Resolvido
@@ -51,7 +51,7 @@ AS ARMADILHAS QUE ELE FOI DESENHADO PARA NÃO REPETIR
   é um processo cujo modo de falha É TRAVAR. Por isso `--abrir` tem teto de
   tempo e o travamento sai como RESULTADO — com a assinatura das threads — e
   não como espera para sempre.
-- **A janela não nasce na tela do usuário.** Ela tem uma tela só. O `--abrir` desvia
+- **A janela não nasce na tela do usuário.** A máquina tem uma tela só. O `--abrir` desvia
   o emulador para o `Xvfb` da casa antes de o processo existir; a janela não
   tem para onde nascer na sessão viva.
 
@@ -81,7 +81,7 @@ COMO USAR
     # travamento em vez de travar junto:
     o_touchpad_chega_na_tela_de_baixo.py --abrir --sem-cura
 
-O degrau 3 é do usuário, e o `--o-gesto` imprime o que ela tem de fazer.
+O degrau 3 é do usuário, e o `--o-gesto` imprime o que o usuário tem de fazer.
 """
 from __future__ import annotations
 
@@ -526,9 +526,9 @@ def matar(proc: subprocess.Popen[bytes] | None) -> str:
 
 
 O_GESTO = """\
-O DEGRAU 3 É DELA, e é este o gesto:
+O DEGRAU 3 É DO USUÁRIO, e é este o gesto:
 
-  1. Abra o emulador pelo atalho e carregue a ROM (a ROM é dela; este
+  1. Abra o emulador pelo atalho e carregue a ROM (a ROM é do usuário; este
      instrumento não baixa nem procura nenhuma).
   2. Com o jogo RODANDO, arraste o dedo no touchpad do controle.
      A pergunta é uma só: A TELA DE BAIXO DO 3DS RESPONDEU?
@@ -567,7 +567,7 @@ def imprimir_degrau_dois(r: dict) -> tuple[bool, bool | None]:
         return False, None
 
     if r["janelas"] is None:
-        diga("  janelas na tela ........... NÃO PERGUNTEI — a tela é dela, e "
+        diga("  janelas na tela ........... NÃO PERGUNTEI — a tela é do usuário, e "
              "listá-la não é medição")
         nasceu = None
     else:
@@ -582,7 +582,7 @@ def imprimir_degrau_dois(r: dict) -> tuple[bool, bool | None]:
         futex = assinatura_do_futex(r["threads"])
         diga("")
         diga("  >> TRAVOU — a janela do emulador NUNCA NASCEU dentro do teto.")
-        diga("  >> É o sintoma que ela vê: o Qt sobe inteiro e o processo dorme.")
+        diga("  >> É o sintoma que o usuário vê: o Qt sobe inteiro e o processo dorme.")
         if futex:
             def _peso(t: tuple[int, str, str]) -> tuple[int, int]:
                 marcada = t[1].startswith(THREAD_DO_TRAVAMENTO[:15])
@@ -623,9 +623,9 @@ def imprimir_degrau_dois(r: dict) -> tuple[bool, bool | None]:
         herdadas = sum(1 for _t, comm, _w in r["threads"]
                        if comm == r["threads"][0][1]) if r["threads"] else 0
         if herdadas > 1:
-            diga(f"  >> {herdadas} delas têm o nome do PROCESSO — são threads "
+            diga(f"  >> {herdadas} threads têm o nome do PROCESSO — são threads "
                  "sem nome próprio, e")
-            diga("  >> nelas o censo por nome não responde nada. Quem responde "
+            diga("  >> nessas o censo por nome não responde nada. Quem responde "
                  "é a pilha:")
         motivo, quadros = pilha_do_travamento(r["pids"])
         if motivo:
@@ -776,7 +776,7 @@ def main() -> int:
     diga("  NÃO MEDIDO por este instrumento, e ele não vai fingir que mediu.")
     diga("  Descritor fechado é evidência forte, não prova: o emulador poderia")
     diga("  ler o toque por um caminho que ninguém procurou. Quem fecha é o")
-    diga("  dedo dela no touchpad, com a ROM carregada. Veja `--o-gesto`.")
+    diga("  dedo do usuário no touchpad, com a ROM carregada. Veja `--o-gesto`.")
 
     if not r["pids"]:
         diga(resumo(

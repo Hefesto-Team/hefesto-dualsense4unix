@@ -34,7 +34,7 @@ def _rotulo_do_produto(qual: str) -> str:
 
 
 def _falta(qual: str, numero: int, nome_de_dentro: str) -> str:
-    """A frase da coluna de faltas: o rótulo que ela lê E o nome que o censo procurou."""
+    """A frase da coluna de faltas: o rótulo que quem usa lê E o nome que o censo procurou."""
     rotulo = _rotulo_do_produto(qual)
     pedacos = [f"«{rotulo} {numero}»" if rotulo else "", f"({nome_de_dentro})" if nome_de_dentro else ""]
     alvo = " ".join(p for p in pedacos if p)

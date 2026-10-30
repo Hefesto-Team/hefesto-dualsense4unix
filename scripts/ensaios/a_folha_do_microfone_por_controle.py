@@ -265,7 +265,7 @@ class OuvidoDoPico:
 
 @dataclass(frozen=True)
 class Linha:
-    """Uma linha da folha: o que ela pergunta e com que forma ela pergunta."""
+    """Uma linha da folha: o que pergunta e com que forma pergunta."""
 
     id: str
     titulo: str
@@ -282,7 +282,7 @@ LINHAS: tuple[Linha, ...] = (
         titulo="1 · O nó existe?",
         forma="leitura",
         pergunta="o que o SISTEMA publica para este controle, agora — relido a cada volta",
-        olhar="O nome que ela vê na lista de som. «NÃO EXISTE» aqui é a metade "
+        olhar="O nome que se vê na lista de som. «NÃO EXISTE» aqui é a metade "
         "de cima da pergunta 3.",
         sprint="MIC-OS-QUATRO-01",
         linha_do_mapa="audio.microfone@dualsense",
@@ -321,7 +321,7 @@ LINHAS: tuple[Linha, ...] = (
         id="o-campo-da-tela",
         titulo="5 · O campo que a tela oferece (a FONTE, 0-100 %)",
         forma="campo",
-        pergunta="o ganho da fonte no PipeWire — a outra coisa, e ela mexe mesmo",
+        pergunta="o ganho da fonte no PipeWire — a outra coisa, e essa mexe mesmo",
         olhar="É o deslizante do card na aba Controles. Compare com a linha 4: "
         "se só este move o pico, o byte não ganha campo.",
         sprint="MIC-VOLUME-02",
@@ -351,7 +351,7 @@ def linha_de(id_: str) -> Linha:
 def veredito_da_tarja(
     leitura: LeituraDoSistema, corpo: dict[str, Any] | None, *, perguntou: bool
 ) -> str:
-    """A frase que põe o SISTEMA e o DAEMON lado a lado. Ela não conclui a sprint."""
+    """A frase que põe o SISTEMA e o DAEMON lado a lado. Não conclui a sprint."""
     if not perguntou:
         return (
             "ninguém perguntou ainda — aperte «Perguntar ao daemon», ou mexa no "
@@ -460,7 +460,7 @@ class ControleNaFolha:
         return self.common[rep.COMMON_MIC_VOLUME]
 
     def bater(self) -> None:
-        """O martelo. Só bate o que ela assumiu — e só se a porta abriu."""
+        """O martelo. Só bate o que se assumiu — e só se a porta abriu."""
         if not self.assumido or self.escritor is None or self.erro:
             return
         try:
@@ -740,7 +740,7 @@ class Folha:
         barra.set_size_request(-1, 26)
         barra.connect("draw", self._pintar_barra, controle)
         barra.set_tooltip_text(
-            "O nível AGORA (barra) e o máximo desde que ela zerou (o traço). "
+            "O nível AGORA (barra) e o máximo desde que se zerou (o traço). "
             "A amostra é descartada: nada vai para disco."
         )
         self.barras.append((barra, controle))
@@ -852,7 +852,7 @@ class Folha:
 
     @staticmethod
     def _frase_do_pedido(corpo: dict[str, Any] | None, quero: bool) -> str:
-        """As DUAS metades do ato viajam separadas — e é isso que ela precisa ver."""
+        """As DUAS metades do ato viajam separadas — e é isso que se precisa ver."""
         if corpo is None:
             return "o daemon não respondeu ao `mic.canal.set`"
         status = corpo.get("status")
@@ -901,7 +901,7 @@ class Folha:
         threading.Thread(target=no_fundo, name="mic-volume", daemon=True).start()
 
     def _pintar_a_resposta(self, controle: ControleNaFolha) -> bool:
-        """A linha 6, do jeito que ela é: o corpo CRU e o veredito da tarja."""
+        """A linha 6, do jeito que é: o corpo CRU e o veredito da tarja."""
         frase = frase_da_resposta_do_daemon(
             controle.leitura,
             controle.resposta_do_volume,
@@ -1035,7 +1035,7 @@ class Folha:
         sys.stdout.flush()
 
     def _nota_da_linha(self, linha: Linha, controle: ControleNaFolha, do_usuario: str) -> str:
-        """O que a linha do caderno carrega de MEDIDO, além da frase de produto."""
+        """O que a linha do caderno carrega de MEDIDO, além do que o produto diz."""
         maximo = controle.ouvido.maximo if controle.ouvido is not None else 0.0
         medido = [
             f"sistema: {controle.leitura.frase()}",
@@ -1053,7 +1053,7 @@ class Folha:
         ]
         if linha.forma == "pedido":
             medido.append(f"mic.canal.set: {controle.resposta_do_canal}")
-        return "; ".join(medido) + f"; ela: {do_usuario}"
+        return "; ".join(medido) + f"; resposta: {do_usuario}"
 
     def _fechar(self, *_: Any) -> None:
         for controle in self.controles:
@@ -1094,7 +1094,7 @@ def listar(alvos: list[Any]) -> int:
     for a in alvos:
         leitura = leituras.get(a.mac, LeituraDoSistema())
         print(f"{mascarar(a.mac):<22} {a.transporte:<7} {leitura.frase()}")
-    print(f"\n{'linha':<22} {'sprint':<20} o que ela decide")
+    print(f"\n{'linha':<22} {'sprint':<20} o que decide")
     print("-" * 100)
     for linha in LINHAS:
         print(f"{linha.id:<22} {linha.sprint:<20} {linha.pergunta}")

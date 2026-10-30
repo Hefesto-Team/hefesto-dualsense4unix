@@ -6,10 +6,10 @@ A PERGUNTA QUE ELE RESPONDE
 *Quando o produto manda o som do PC para o alto-falante do controle, a leitura
 de volta acompanha a escrita nas DUAS camadas — ou só no byte do firmware?*
 
-POR QUE ELA IMPORTA, e a decisão é de produto
-----------------------------------------
-Decisão, 04/09/2026, meio-dia: *"sons do pc e sons do jogo. veja como
-fizemo no gtk."*  # noqa-acento: citação literal
+POR QUE A ROTA IMPORTA, e a decisão é de produto
+------------------------------------------------
+Decisão de 04/09/2026, meio-dia: os dois botões são «Sons do jogo» e «Todo o som
+do PC», do jeito que a janela GTK fazia.
 
 São DOIS caminhos independentes, e a janela antiga já sabia disso
 (`interface/cartao_do_controle.CANAIS_DO_SPEAKER`):
@@ -27,8 +27,8 @@ PC" ACESO com o som saindo na TV. A tela acendia o botão pelo FIRMWARE e mais
 nada — ninguém lia o default sink. Uma régua que só confere o byte dá verde
 sobre exatamente esse estado.
 
-O QUE ELE FAZ, E POR QUE PODE SER RODADO COM ELA NA MÁQUINA
-------------------------------------------------------------
+O QUE ELE FAZ, E POR QUE PODE SER RODADO COM QUEM USA NA MÁQUINA
+----------------------------------------------------------------
 Ele **vai e VOLTA**, e a volta está no `finally`:
 
     1. fotografa a saída padrão do sistema ANTES de tocar em qualquer coisa;
@@ -104,7 +104,7 @@ def _byte_da_rota(uniq: str) -> object:
     """O `speaker.rota` que o daemon publica para este controle.
 
     LÊ O `state_full`, e não a resposta do `speaker.set`: a resposta do `set` é
-    o eco do que mandamos — em Modo Nativo ela volta idêntica com o aparelho
+    o eco do que mandamos — em Modo Nativo a resposta volta idêntica com o aparelho
     parado (medido em 04/09). O `state_full` é a leitura.
     """
     estado = asyncio.run(_chamar("daemon.state_full", {}))
@@ -212,7 +212,7 @@ def main() -> int:
 
     if args.sem_volta:
         falhas.append(
-            "a devolução da camada 1 foi pulada (--sem-volta): sem ela o som "
+            "a devolução da camada 1 foi pulada (--sem-volta): sem a devolução o som "
             "do PC fica preso no controle, e é isto que a mordida prova"
         )
     print()

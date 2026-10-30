@@ -9,7 +9,7 @@ Os limiares do sinal (``radio_da_mesa.SINAL_QUE_ATRASA_DBM`` = -48, ``SINAL_QUE_
 = -52) saíram de um adaptador só, e o Equilibrar compara o RSSI do ENLACE (``HCI_Read_RSSI``, o
 do governador) com o da VARREDURA de outro adaptador (o ``RSSI`` do BlueZ), somando a margem de
 ``plano_de_radio.MARGEM_DO_SINAL_QUE_COMPENSA_DBM`` (8). As duas réguas nunca foram postas lado a
-lado. No BR/EDR o ``HCI_Read_RSSI`` pode ser a distância à faixa ideal do chip (0 dentro dela),
+lado. No BR/EDR o ``HCI_Read_RSSI`` pode ser a distância à faixa ideal do chip (0 dentro da faixa),
 e não dBm: num chip assim, os limiares nunca disparam.
 
 O QUE ELE GRAVA
@@ -39,8 +39,8 @@ USO
     o_sinal_em_dois_adaptadores.py resumo x.jsonl
     o_sinal_em_dois_adaptadores.py conferir [x.json]   # as constantes contra os pares gravados
 
-OS INTERRUPTORES (trocar X por Y na bancada sem editar código)
---------------------------------------------------------------
+OS INTERRUPTORES (trocar X por Y no ensaio sem editar código)
+-------------------------------------------------------------
 ``--a`` / ``HEFESTO_SINAL_A`` e ``--b`` / ``HEFESTO_SINAL_B`` (``hci0``, ``hci1``: trocar A e B é a
 repetição do roteiro), ``--segundos`` / ``HEFESTO_SINAL_SEGUNDOS`` (60; 120 na fase 3), ``--nome``
 / ``HEFESTO_SINAL_NOME`` (o nome que a varredura casa, «Wireless Controller»); no resumo e no
@@ -435,13 +435,13 @@ def conferir(
 
 
 def gravada(caminho: Path | None = None) -> list[Par] | None:
-    """Os pares gravados da bancada, ou ``None`` enquanto ela não rodou."""
+    """Os pares gravados do ensaio, ou ``None`` enquanto o ensaio não rodou."""
     alvo = PARES_GRAVADOS if caminho is None else caminho
     return ler_pares(alvo) if alvo.exists() else None
 
 
 def roteiro(a: str, b: str) -> list[str]:
-    """O roteiro exato da bancada: as três fases, depois A e B trocados, depois com o P2."""
+    """O roteiro exato do ensaio: as três fases, depois A e B trocados, depois com o P2."""
     script = "scripts/ensaios/o_sinal_em_dois_adaptadores.py"
     saida = ["Pare o daemon antes e religue-o no fim. Marcas no chão: "
              + ", ".join(DISTANCIAS) + "."]
@@ -497,7 +497,7 @@ def main(argv: Sequence[str] | None = None, portas: Portas | None = None) -> int
     if args.comando in ("resumo", "conferir"):
         pares = ler_pares(args.arquivo) if args.arquivo else gravada()
         if pares is None:
-            print("sem pares gravados: a bancada ainda não rodou")
+            print("sem pares gravados: o ensaio ainda não rodou")
             return 0
         if args.comando == "resumo":
             print("\n".join(linhas_curtas(pares)))

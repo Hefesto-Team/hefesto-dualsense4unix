@@ -37,7 +37,7 @@ AS VARIÁVEIS (uma linha por variável no fim)
 - o jogo: em qual controle cada fluxo toca;
 - o Wine: a ordem em que os nós aparecem no log.
 
-O protocolo da bancada e a tabela das medidas estão em
+O protocolo do ensaio e a tabela das medidas estão em
 ``docs/process/estudos/2026-10-08-o-som-de-cada-pad/MEDIDAS.md``.
 """
 

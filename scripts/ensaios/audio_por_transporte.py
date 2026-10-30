@@ -36,7 +36,7 @@ O QUE ELE OLHA, EM QUATRO CAMADAS
 O QUE ELE NUNCA FAZ
 --------------------
 **Não escreve nada no aparelho.** Nem um byte. Inventariar a escada `0x32`-`0x39`
-é ler o descritor, não escrever nela — e confirmar que a escada carrega áudio
+é ler o descritor, não escrever na escada — e confirmar que a escada carrega áudio
 exigiria ESCREVER, que não é desta rodada.
 
 PRECISA DO DAEMON PARADO? Não. Tudo aqui é `/proc`, `/sys` e `pactl`; nada
@@ -242,7 +242,7 @@ def _tabela_de_output_hid(alvos: list[Aparelho]) -> None:
     print(tabela(["aparelho", "transporte", "reports OUTPUT", "escada 0x32-0x39", "maior"], linhas))
     print()
     print("    A escada 0x32-0x39 é DECLARADA pelo descritor, não medida em uso.")
-    print("    Que ela exista não prova que carrega áudio; provar exigiria ESCREVER")
+    print("    Que a escada exista não prova que carrega áudio; provar exigiria ESCREVER")
     print("    no aparelho, que não é desta rodada. Registre como hipótese viva.")
     print()
     print("    Leia a coluna junto com a das placas ALSA: onde há placa USB Audio")

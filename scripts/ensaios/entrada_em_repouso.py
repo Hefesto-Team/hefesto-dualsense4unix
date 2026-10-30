@@ -27,12 +27,12 @@ fixo, e são esses milhares de quadros que a máquina conta. O que precisa de
 dedo — *qual bit acende quando se aperta o quadrado* — está no modo
 ``--apertar``, que é O BLOCO DO USUÁRIO e sai marcado como tal no relatório.
 
-A RÉGUA, DECLARADA — e ela é ABSOLUTA
---------------------------------------
+A RÉGUA, DECLARADA — e é ABSOLUTA
+---------------------------------
 * **Deriva** = número de valores DISTINTOS que um eixo assumiu na janela, e a
   amplitude entre o menor e o maior. Um é UM: `distintos == 1` é repouso morto,
   `distintos > 1` é chiado. Nunca "mais que o outro braço".
-* **Centro** = a MODA do eixo na janela, em LSB, e o desvio dela para 128.
+* **Centro** = a MODA do eixo na janela, em LSB, e o seu desvio para 128.
 * **Fidelidade do vpad** = igualdade EXATA, byte a byte, entre o eixo do físico
   e o eixo do vpad que ele alimenta. Zero de diferença, ou a diferença em LSB.
 * **Paridade de envelope** = diferença simétrica de CONJUNTOS (quais offsets se
@@ -756,8 +756,8 @@ def evdev_principal(dir_device: str) -> str:
 
 
 TEXTO_APERTAR = """
-O BLOCO DELA — e é o único pedaço deste ensaio que precisa de dedo (Lei 2)
-==========================================================================
+O BLOCO DO USUÁRIO — e é o único pedaço deste ensaio que precisa de dedo (Lei 2)
+================================================================================
 O que a máquina NÃO consegue medir sozinha é QUAL BIT acende quando se aperta
 um botão. Tudo o mais deste instrumento já foi medido com a mesa parada.
 
@@ -870,7 +870,7 @@ def monta_relatorio(coletas: dict[str, Coleta], segundos: float) -> tuple[str, s
             "  Nada aqui olha MAC, número de jogador ou ordem de enumeração: o casamento"
         )
         partes.append(
-            "  sai de propriedades FÍSICAS da unidade, que ela leva para qualquer PC."
+            "  sai de propriedades FÍSICAS da unidade, que viajam com a unidade para qualquer PC."
         )
         partes.append("")
         partes.append("(4) FIDELIDADE DO VPAD — o produto repete o byte do aparelho, ou muda?")
@@ -900,7 +900,7 @@ def monta_relatorio(coletas: dict[str, Coleta], segundos: float) -> tuple[str, s
     partes.append(
         "  quadrado é o mesmo bit nos dois braços é preciso apertar, e apertar é O BLOCO"
     )
-    partes.append("  DELA — veja `--apertar`.")
+    partes.append("  DO USUÁRIO — veja `--apertar`.")
 
     n_cabo = sum(1 for c in fisicos.values() if c.transporte == CABO)
     n_radio = sum(1 for c in fisicos.values() if c.transporte == RADIO)
@@ -979,7 +979,7 @@ def main() -> int:
     ap.add_argument(
         "--apertar",
         action="store_true",
-        help="imprime O BLOCO DELA (o único degrau que precisa de dedo) e para",
+        help="imprime O BLOCO DO USUÁRIO (o único degrau que precisa de dedo) e para",
     )
     args = ap.parse_args()
 

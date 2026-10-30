@@ -20,10 +20,10 @@ discordando.
 
 Estas duas são independentes de verdade, e não só "diferentes":
 
-- a do inode olha o **hospedeiro**: `/proc`, `/sys`, `os.stat`. Ela responde
+- a do inode olha o **hospedeiro**: `/proc`, `/sys`, `os.stat`. Responde
   *"qual nó do kernel está na mão de quem"*;
 - esta olha o que o **próprio Wine escreveu sobre si mesmo** enquanto rodava
-  dentro do contêiner. Ela responde *"o que o winebus enxergou, o que ele
+  dentro do contêiner. Responde *"o que o winebus enxergou, o que ele
   registrou no PnP do Windows, e quantos reports ele empurrou pilha acima"*.
 
 Nenhuma das duas lê a saída da outra. Uma pode ficar cega sem que a outra sinta.
@@ -65,18 +65,18 @@ O QUE ESTA RÉGUA NÃO OLHA, DE PROPÓSITO
 ----------------------------------------
 - **vid/pid**, como identidade. O vpad forja `054c:0df2` (DualSense Edge) de
   propósito, e o DualSense Edge **existe de verdade**: casar por vid/pid faria
-  o Edge dela virar "o nosso vpad" no dia em que um entrasse na mesa. O vid/pid
+  o Edge de quem usa virar "o nosso vpad" no dia em que um entrasse na mesa. O vid/pid
   entra como corroboração fraca, rotulado como fraca, e nunca decide;
 - **topologia de sysfs**. Com BlueZ >= 5.73 o HID dos controles físicos de
   RÁDIO nasce sob `/devices/virtual/misc/uhid/`, no mesmíssimo lugar do vpad.
   Armadilha paga em 11/08/2026. O caminho no log não é crachá de ninguém;
 - **o nome do aparelho**. `(Hefesto P1)` já mudou uma vez (BT-E-VPAD-01).
 
-O QUE ELA NÃO VÊ, E ISTO TEM DE FICAR NA TELA
-----------------------------------------------
+O QUE ESTA LEITURA NÃO VÊ, E ISTO TEM DE FICAR NA TELA
+------------------------------------------------------
 - **o inode.** O log traz CAMINHO e CARIMBO, nunca inode. Quando esta régua e a
   do inode discordarem sobre QUAL nó, a do inode ganha — o critério do degrau é
-  o dela. Esta ganha sobre se os reports ATRAVESSARAM, que é o que a do inode
+  o do inode. Esta ganha sobre se os reports ATRAVESSARAM, que é o que a do inode
   não consegue ver;
 - **o relógio.** Sem `+timestamp` no `WINEDEBUG` não há hora em linha alguma
   deste log. Este instrumento CONTA reports e **nunca** calcula Hz. Quem quer
@@ -88,7 +88,7 @@ E UMA HONESTIDADE SOBRE A LEITURA DAS LINHAS
 ---------------------------------------------
 `process_hid_report` e `deliver_next_report` são funções do winebus, e **o
 fonte do Wine desta build não está nesta máquina** — conferido. A leitura que
-este instrumento faz delas é INFERIDA do próprio traço, e ele diz isso na tela
+este instrumento faz das linhas é INFERIDA do próprio traço, e ele diz isso na tela
 em vez de fingir que leu o código:
 
 - `process_hid_report device H` aparece uma vez por report, sempre na thread do
@@ -100,8 +100,8 @@ em vez de fingir que leu o código:
 Por isso o veredicto se apoia em `process_hid_report`, que é o mais simples de
 ler, e `deliver_next_report` sai ao lado como número que corrobora.
 
-COMO GRAVAR O LOG (é ela quem grava, com o jogo aberto)
---------------------------------------------------------
+COMO GRAVAR O LOG (quem usa grava, com o jogo aberto)
+------------------------------------------------------
     o_jogo_no_log_do_proton.py --como-gravar
 
 COMO LER O QUE JÁ EXISTE
@@ -599,7 +599,7 @@ def _procedencia(nome: str) -> str:
 
 
 def cabecalho(log: Log) -> str:
-    """A procedência, ANTES do primeiro número. Regra da casa, e o motivo dela."""
+    """A procedência, ANTES do primeiro número. Regra da casa, e o seu motivo."""
     linhas = [
         "=" * 78,
         "  o_jogo_no_log_do_proton.py   (o vpad atravessou a fronteira do Wine?)",
@@ -643,7 +643,7 @@ def cabecalho(log: Log) -> str:
         )
     linhas += [
         "  escreve em algo? . NÃO — leitura de um arquivo de texto, e só",
-        "  preenche o mapa? . NÃO — nenhuma célula, nunca. Quem preenche é ela",
+        "  preenche o mapa? . NÃO — nenhuma célula, nunca. Quem preenche é quem usa",
         "=" * 78,
     ]
     return "\n".join(linhas)
@@ -750,7 +750,7 @@ def imprimir(log: Log, decisao: str, razoes: list[str]) -> None:
 
 
 def como_gravar() -> str:
-    """O comando exato, para ela. O instrumento não abre jogo nenhum."""
+    """O comando exato, para quem usa. O instrumento não abre jogo nenhum."""
     return "\n".join(
         [
             "Para gravar um log que responda esta pergunta:",
@@ -772,7 +772,7 @@ def como_gravar() -> str:
             "inicialização depois de medir.",
             "",
             "E o que ele NÃO vai poder dizer: se o personagem andou. Isso é o degrau",
-            "`O JOGO REAGIU`, e o único sensor dele é ela.",
+            "`O JOGO REAGIU`, e o único sensor dele é quem joga.",
         ]
     )
 

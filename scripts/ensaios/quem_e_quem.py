@@ -50,7 +50,7 @@ O ENSAIO DO APERTO: FÍSICO ↔ PAD ↔ CARTÃO (`--apertar`)
 Nenhum arquivo de `/sys` liga o pad ao controle que o alimenta (o vpad nasce
 por `/dev/uhid` ou `/dev/uinput` sem ponteiro para o físico; quem carrega a
 ligação é o daemon, em `coop.jogadores`). O `--apertar` a mede por fora, e
-mede junto a pergunta que a bancada de 29/09/2026 fez: *o botão apertado
+mede junto a pergunta que o ensaio de 29/09/2026 fez: *o botão apertado
 naquele controle acende o cartão dele na aba Controles?*
 
 Ele lê DUAS fontes, e quem diz «houve aperto» nunca sai do estado:

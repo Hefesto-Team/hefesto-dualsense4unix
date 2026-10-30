@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """a_captura_armada_do_som_no_radio.py — o instrumento que espera o som do usuário voltar.
 
-A PERGUNTA QUE ELE EXISTE PARA RESPONDER, E ELA ESTÁ ABERTA HÁ VINTE DIAS
---------------------------------------------------------------------------
-Em 16/08/2026, 00h10, ela ouviu **~6 segundos** de um pulsado saindo de um
-DualSense que estava no RÁDIO, e reconheceu o timbre sem hesitar: *"era esse
-som, esse mesmo som, o exato som"* — o pulsado de 1700 Hz a 6 Hz que ela tinha
-ouvido minutos antes pelo cabo.
+A PERGUNTA QUE ELE EXISTE PARA RESPONDER, ABERTA HÁ VINTE DIAS
+--------------------------------------------------------------
+Em 16/08/2026, 00h10, saíram **~6 segundos** de um pulsado de um DualSense que
+estava no RÁDIO, com o mesmo timbre, sem hesitação de quem ouviu: o pulsado de
+1700 Hz a 6 Hz ouvido minutos antes pelo cabo.
 
 QUATRO réplicas negativas depois, o ensaio ``som-no-radio-observado-nao-replicado``
 foi gravado no caderno com o resultado **inconclusivo**, e a nota dele diz, com
@@ -15,7 +14,7 @@ todas as letras, o que faltou capturar:
     ``btmon`` durante o evento, e o report que sai no fio para o ``hidraw8``
     naquele instante.
 
-**Não se conclui que ela ouviu errado; conclui-se que não sabemos.** Este
+**Não se conclui que o ouvido errou; conclui-se que não sabemos.** Este
 instrumento é a única forma de sair do "não sabemos": ele não tenta REPRODUZIR
 o evento — quatro tentativas já falharam nisso —, ele fica **ARMADO** para
 quando ele acontecer de novo.
@@ -23,14 +22,14 @@ quando ele acontecer de novo.
 O DESENHO, E ELE INVERTE A PERGUNTA
 ------------------------------------
 Um ensaio normal PROVOCA e mede. Este não pode: ninguém sabe o que provocou o
-evento. Então ele grava tudo o tempo todo e deixa **ela** dizer quando:
+evento. Então ele grava tudo o tempo todo e deixa **quem ouve** dizer quando:
 
-    ela ouve  ->  ela aperta o botão de MUDO do plástico  ->  o instrumento
+    ouve  ->  aperta o botão de MUDO do plástico  ->  o instrumento
     carimba o instante e recorta uma janela de ±N segundos das DUAS metades.
 
 **POR QUE O BOTÃO DE MUDO, e a escolha é sobre o risco, não sobre elegância.**
-Ela tem UMA tela e quatro aparelhos na mesa; o marcador tem de ser algo que ela
-alcance sem tirar os olhos da bancada e que **não mexa na máquina do usuário**:
+Há UMA tela e quatro aparelhos na mesa; o marcador tem de ser algo que se
+alcance sem tirar os olhos do aparelho e que **não mexa na máquina do usuário**:
 
 * **o touchpad** seria o marcador óbvio (grande, fácil de acertar no escuro) e
   está DESCARTADO: clicar nele é um clique de mouse na tela do usuário, e um clique
@@ -39,8 +38,8 @@ alcance sem tirar os olhos da bancada e que **não mexa na máquina do usuário*
   Steam a cada marca;
 * **o mudo do microfone** muda um bit do firmware, é reversível apertando de
   novo, não move cursor, não abre nada — e **já é marcador provado nesta casa**:
-  o ensaio ``mic-radio-negativo-do-mudo-0907`` (07/09/2026) foi medido com ela
-  apertando exatamente este botão.
+  o ensaio ``mic-radio-negativo-do-mudo-0907`` (07/09/2026) foi medido apertando
+  exatamente este botão.
 
 O que se lê é a transição do bit ``STATUS_MIC_MUDO`` no report de entrada, pelo
 mesmo extrator do produto (``core/physical_report_reader.extract_jack_status``),
@@ -51,7 +50,7 @@ sem essa recusa lia Opus como estado de botão.
 AS DUAS METADES, E POR QUE PRECISA DAS DUAS
 --------------------------------------------
 =========================  =================================================
-metade                     o que ela decide
+metade                     o que decide
 =========================  =================================================
 o FIO (``btmon``)          se saiu ALGUMA COISA nossa para aquele controle
                            no instante. Se não saiu nada, o som — se houve —
@@ -75,7 +74,7 @@ que a captura pode ver são as do PRODUTO, em regime.
 O PRIVILÉGIO, E A DEGRADAÇÃO HONESTA
 -------------------------------------
 O ``btmon`` precisa de ``CAP_NET_RAW``, e nesta máquina ``sudo -n`` pede senha.
-Sem ela **a metade do FIO não é capturada** — e o instrumento diz isso em
+Sem a capacidade **a metade do FIO não é capturada** — e o instrumento diz isso em
 letras grandes em vez de entregar meio relatório com cara de inteiro. Para ter
 as duas metades::
 
@@ -89,7 +88,7 @@ biblioteca antes da primeira linha de medição. O parser de ``btsnoop`` **não 
 novo**: é o do ``o_formato_btsnoop.py`` (o mesmo que o ``byte_no_fio.py`` usa),
 importado, porque duas leituras do mesmo formato é como esta casa fabrica
 divergência silenciosa. O ciclo da captura vem do ``byte_no_fio.py``
-(``CapturaDoFio``): ela nasce 0600 e sai depois de lida.
+(``CapturaDoFio``): a captura nasce 0600 e sai depois de lida.
 """
 
 from __future__ import annotations
@@ -161,7 +160,7 @@ _READ_LEN = 128
 
 @dataclass
 class Marca:
-    """Um instante que ela carimbou apertando o mudo do plástico."""
+    """Um instante carimbado apertando o mudo do plástico."""
 
     monotonico: float
     relogio: str
@@ -184,7 +183,7 @@ class LeituraDoHidraw:
             f"  reports de entrada lidos ... {self.reports}",
             f"  com o bit de ÁUDIO ligado .. {self.reports_de_audio}",
             f"  de estado (CRC ok, sem áudio) {self.reports_de_estado}",
-            f"  marcas dela ................ {len(self.marcas)}",
+            f"  marcas do usuário ......... {len(self.marcas)}",
         ]
 
 
@@ -196,19 +195,19 @@ E_NADA = "nada"
 def classificar_report(bruto: bytes) -> tuple[str, bool]:
     """``(classe, mudo)`` de um report de entrada. **A função pura da marca.**
 
-    Ela existe separada do laço por uma razão só: é ela que a régua morde. O
-    laço abre hidraw e olha o relógio; a decisão *"isto é uma marca dela?"* não
+    A função existe separada do laço por uma razão só: é a que a régua morde. O
+    laço abre hidraw e olha o relógio; a decisão *"isto é uma marca do usuário?"* não
     precisa de nenhum dos dois, e uma decisão que só é exercível com aparelho
     na mesa é uma decisão que ninguém testa.
 
-    **A recusa do report de ÁUDIO vem antes de tudo, e o preço dela está pago
+    **A recusa do report de ÁUDIO vem antes de tudo, e o seu preço está pago
     por escrito.** Com o microfone ligado o DualSense manda Opus no MESMO
     report ``0x31``, com os MESMOS 78 bytes e CRC válido — a única diferença é
     o bit ``0x02`` do byte 1. Em 16/08/2026 um caminho sem essa recusa leu Opus
     como estado de botão, MIC e PS ficaram presos e o daemon tentou abrir a
-    Steam dezenas de vezes por segundo; ela descreveu como *"o teclado e o
-    mouse com vida própria"*. Aqui o estrago seria mais barato e mais
-    traiçoeiro: marcas que ela nunca fez, com a hora certa.
+    Steam dezenas de vezes por segundo: o teclado e o mouse ganharam vida
+    própria. Aqui o estrago seria mais barato e mais
+    traiçoeiro: marcas que ninguém fez, com a hora certa.
 
     O resto é do ``extract_jack_status``, que é o dono — ele já recusa CRC
     ruim, tamanho errado e report que não é de estado, e devolve ``None``.
@@ -360,7 +359,7 @@ def _escolher_alvo(
     if len(candidatos) > 1:
         return None, (
             f"há {len(candidatos)} DualSense no rádio — diga qual com --exigir-mac "
-            "ou --no. Armar no controle errado é gastar a janela dela."
+            "ou --no. Armar no controle errado é gastar a janela do ensaio."
         )
     return candidatos[0], ""
 
@@ -379,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(cabecalho_do_instrumento(
         "a_captura_armada_do_som_no_radio",
-        "quando ela ouvir o som do rádio de novo, o que estava no fio naquele "
+        "quando o som do rádio voltar, o que estava no fio naquele "
         "instante — e o que o aparelho estava dizendo?",
         bibliotecas=["os", "select", "subprocess", "threading"],
         nos_evdev=[],
@@ -421,7 +420,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n  metade do FIO: `btmon -w {captura.caminho}` de pé (0600).")
 
     print(
-        "\nO GESTO DELA, e é UM só:\n"
+        "\nO GESTO DO USUÁRIO, e é UM só:\n"
         "  quando ouvir som saindo deste controle, aperte o botão de MUDO do\n"
         "  plástico (o do microfone). Aperte de novo para desfazer o mudo — as\n"
         "  DUAS transições viram marca, então não há gesto errado.\n"
@@ -448,7 +447,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not leitura.marcas:
         print(
-            "\nNENHUMA MARCA. Isto NÃO é 'o som não aconteceu' — é 'ela não\n"
+            "\nNENHUMA MARCA. Isto NÃO é 'o som não aconteceu' — é 'ninguém\n"
             "carimbou nada nesta janela'. O ensaio segue inconclusivo, que é\n"
             "exatamente onde ele estava; nada aqui muda uma célula do mapa."
         )
@@ -456,7 +455,7 @@ def main(argv: list[str] | None = None) -> int:
     if captura is None:
         print(
             "\nA METADE DO FIO NÃO EXISTE NESTE RELATÓRIO.\n"
-            "  Sem ela não se responde 'saiu report nosso naquele instante?', que\n"
+            "  Sem essa metade não se responde 'saiu report nosso naquele instante?', que\n"
             "  é a pergunta que o ensaio `som-no-radio-observado-nao-replicado`\n"
             "  deixou escrita. Não conclua nada sobre o fio a partir daqui."
         )
@@ -503,9 +502,9 @@ def main(argv: list[str] | None = None) -> int:
     print(resumo(
         "NADA AQUI PROVA SOM, e nada aqui vira célula do mapa. O que este\n"
         "instrumento entrega é o par que faltava — o fio e a entrada, no mesmo\n"
-        "instante que ELA carimbou. O veredito continua sendo a orelha dela, e o\n"
+        "instante carimbado à mão. O veredito continua sendo o ouvido, e o\n"
         "ensaio `som-no-radio-observado-nao-replicado` continua `inconclusivo`\n"
-        "até que uma marca dela venha com report nosso do lado."
+        "até que uma marca venha com report nosso do lado."
     ))
     return 0
 

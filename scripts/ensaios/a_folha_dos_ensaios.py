@@ -100,7 +100,7 @@ FONTES_DESTE_ENSAIO = (
 
 
 def respondidos() -> set[str]:
-    """As `linha_id` que esta bancada já fechou, LIDAS do caderno."""
+    """As `linha_id` que esta folha já fechou, LIDAS do caderno."""
     import csv
 
     try:
@@ -158,7 +158,7 @@ BASE_DO_BYTE_7 = rep.AUDIO_CONTROL_BASE_SEGURA
 
 @dataclass
 class Campo:
-    """Um controle da folha: o byte que ele escreve e como ela o mexe."""
+    """Um controle da folha: o byte que ele escreve e como se mexe nele."""
 
     rotulo: str
     offset: int
@@ -175,7 +175,7 @@ class Campo:
 
 @dataclass
 class Ensaio:
-    """Uma medição: os campos que ela mexe, e o bit que os autoriza."""
+    """Uma medição: os campos que se mexem, e o bit que os autoriza."""
 
     id: str
     titulo: str
@@ -243,7 +243,7 @@ ENSAIOS: tuple[Ensaio, ...] = (
         acoes=("tocar",),
         titulo="Volume do alto-falante do controle",
         pergunta="o curso inteiro do byte é útil, ou ele satura antes do teto?",
-        olhar="O alto-falante do controle. Ela mediu em 01/08: mudo até 38, satura em 102.",
+        olhar="O alto-falante do controle. Medido em 01/08: mudo até 38, satura em 102.",
         sprint="SOM-POR-CONTROLE-01",
         linha_do_mapa="audio.alto_falante.volume@dualsense",
         campos=(
@@ -273,7 +273,7 @@ ENSAIOS: tuple[Ensaio, ...] = (
         id="rota-da-saida",
         acoes=("tocar",),
         titulo="Para onde o som vai",
-        pergunta="as quatro rotas fazem o que o nome delas diz?",
+        pergunta="as quatro rotas fazem o que o seu nome diz?",
         olhar="Onde o som sai: fone, alto-falante do controle, ou os dois divididos.",
         sprint="SOM-POR-CONTROLE-01",
         linha_do_mapa="audio.alto_falante.rota@dualsense",
@@ -345,7 +345,7 @@ ENSAIOS: tuple[Ensaio, ...] = (
         id="cor-da-barra",
         titulo="Cor da barra de luz",
         pergunta="a cor obedece sem depender de nenhum outro bit? (a regressão do caminho da cor)",
-        olhar="A barra. Ela NÃO deve depender da autorização de brilho.",
+        olhar="A barra. NÃO deve depender da autorização de brilho.",
         sprint="—",
         linha_do_mapa="luz.lightbar.cor@dualsense",
         campos=(
@@ -968,7 +968,7 @@ class Folha:
                     nota=f"{campo.rotulo}={self._valor(campo, aparelho)}; "
                          f"autorização {ensaio.flag_nome} "
                          f"{'ligada' if assumido else 'desligada'}; "
-                         f"martelo {HZ:g} Hz; ela: {nota or '(sem resposta)'}",
+                         f"martelo {HZ:g} Hz; resposta: {nota or '(sem resposta)'}",
                 ))
         sys.stdout.flush()
 

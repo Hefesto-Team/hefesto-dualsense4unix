@@ -18,8 +18,8 @@ saem os dois ``k`` candidatos: o do modelo LÍQUIDO (o do mapa do rádio,
 ``(k - 1) x 93,75``) e o do BRUTO (``(k + 1) x 93,75``). Quem decide qual vale é o
 ``k`` que cai num pacote que existe (3 ou 5).
 
-O QUE ELE FAZ, NA BANCADA
--------------------------
+O QUE ELE FAZ, NO APARELHO
+--------------------------
 Roda com o daemon NO AR: a ponte vive nele. Num adaptador escolhido, com os
 controles que estiverem nele, sobe 0, 1 e 2 pontes tocando sinal no nó de som de
 cada controle (a ponte sob demanda sobe com som), e em cada passo lê, por janela
@@ -50,10 +50,10 @@ USO
 
 Gravada a tabela, o ``FATIAS_DA_PONTE``, a procedência da linha do ``k`` no
 ``docs/data/orcamento-de-ar.csv`` e o ``MARGINAL_DA_PONTE`` do mapa do rádio têm de
-dizer o ``k`` que ela mede, e a régua cobra.
+dizer o ``k`` que a tabela mede, e a régua cobra.
 
-OS INTERRUPTORES (trocar X por Y na bancada sem editar código)
---------------------------------------------------------------
+OS INTERRUPTORES (trocar X por Y no ensaio sem editar código)
+-------------------------------------------------------------
 ``--janela`` / ``HEFESTO_PONTE_JANELA_S`` (30), ``--descarte`` /
 ``HEFESTO_PONTE_DESCARTE_S`` (5), ``--pontes`` / ``HEFESTO_PONTE_PONTES`` («0,1,2»),
 ``--sinal`` / ``HEFESTO_PONTE_SINAL_DBFS`` («auto», ou um nível como «-60»), e no
@@ -428,26 +428,26 @@ def marginal_do_desenho(caminho: Path = DESENHO) -> float | None:
 def conferir_a_constante(
     gravada: Sequence[Janela] | None, *, fatias: float, procedencia: str, marginal: float | None
 ) -> list[str]:
-    """O que destoa entre a tabela gravada da bancada, a constante, o CSV e o desenho.
+    """O que destoa entre a tabela gravada do ensaio, a constante, o CSV e o desenho.
 
-    Sem tabela gravada, o ``k`` é «provisório» no CSV. Com ela, a constante, o CSV («medido») e o
+    Sem tabela gravada, o ``k`` é «provisório» no CSV. Com a tabela, a constante, o CSV («medido») e o
     ``MARGINAL_DA_PONTE`` do desenho seguem o ``k`` que a tabela mede, e o 3 antigo reprova se a
     medida disser 5.
     """
     if gravada is None:
         if not procedencia.startswith("provisório"):
-            return [f"não há tabela gravada da bancada e o CSV diz «{procedencia}» para o k"]
+            return [f"não há tabela gravada do ensaio e o CSV diz «{procedencia}» para o k"]
         return []
     medido = k_do_ensaio(tabela(gravada))
     if medido is None:
         return ["a tabela gravada não casa com pacote nenhum (3-DH3 ou 2-DH5) em modelo nenhum: "
-                "a conta da ponte é outra, e a constante não se escolhe por ela"]
+                "a conta da ponte é outra, e a constante não se escolhe pela tabela"]
     k, modelo = medido
     problemas: list[str] = []
     if float(fatias) != k:
-        problemas.append(f"a bancada mediu k = {k} (modelo {modelo}) e FATIAS_DA_PONTE é {fatias:g}")
+        problemas.append(f"o ensaio mediu k = {k} (modelo {modelo}) e FATIAS_DA_PONTE é {fatias:g}")
     if not procedencia.startswith("medido"):
-        problemas.append(f"a bancada mediu e o CSV ainda diz «{procedencia}» para o k")
+        problemas.append(f"o ensaio mediu e o CSV ainda diz «{procedencia}» para o k")
     if marginal is None or marginal != (k - 1) * rm.HZ_DA_PONTE:
         problemas.append(f"o MARGINAL_DA_PONTE do desenho é {marginal} e o medido dá "
                          f"{(k - 1) * rm.HZ_DA_PONTE:g}")
@@ -455,7 +455,7 @@ def conferir_a_constante(
 
 
 def gravada(caminho: Path | None = None) -> list[Janela] | None:
-    """A tabela que a bancada gravou nas fixtures, ou ``None`` enquanto não houver."""
+    """A tabela que o ensaio gravou nas fixtures, ou ``None`` enquanto não houver."""
     alvo = caminho or TABELA_GRAVADA
     return ler_janelas(alvo) if alvo.exists() else None
 
@@ -640,7 +640,7 @@ def medir(
 
 
 def ler_janelas(caminho: Path) -> list[Janela]:
-    """As janelas de um arquivo: o JSONL que a bancada escreve, ou a lista JSON gravada."""
+    """As janelas de um arquivo: o JSONL que o ensaio escreve, ou a lista JSON gravada."""
     texto = caminho.read_text(encoding="utf-8")
     if texto.lstrip().startswith("["):
         brutas = json.loads(texto)
@@ -650,7 +650,7 @@ def ler_janelas(caminho: Path) -> list[Janela]:
 
 
 def gravar(origem: Path, destino: Path | None = None) -> Path:
-    """Copia as janelas de uma sessão de bancada para a tabela versionada (lista JSON)."""
+    """Copia as janelas de uma sessão de ensaio para a tabela versionada (lista JSON)."""
     alvo = destino or TABELA_GRAVADA
     brutas = [j.linha() for j in ler_janelas(origem)]
     alvo.parent.mkdir(parents=True, exist_ok=True)

@@ -175,7 +175,7 @@ class Medida:
 
 
 def medir_um(aparelho: Aparelho, ids: list[int], intervalo: float) -> list[Medida]:
-    """Duas passadas no mesmo aparelho, com `intervalo` segundos entre elas."""
+    """Duas passadas no mesmo aparelho, com `intervalo` segundos entre as duas."""
     tamanhos = tamanhos_do_descritor(aparelho.dir_device)["feature"]
     hw = ler_texto(os.path.join(aparelho.dir_device, "hardware_version")).strip()
     cru = bytes_do_mac(aparelho.mac)
@@ -400,7 +400,7 @@ def main() -> int:
     ))
 
     vereditos = julgar(medidas, ids, unidades)
-    print("\n  O JULGAMENTO — os três critérios da pergunta dela\n")
+    print("\n  O JULGAMENTO — os três critérios da pergunta\n")
     print(tabela(
         ["report", "(a) distingue", "(b) nos dois transportes", "(c) sem escrita",
          "estável", "veredito"],

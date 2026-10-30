@@ -36,7 +36,7 @@ Metade deste instrumento é aquele, e o que se aproveita se aproveita por
 importação, não por cópia:
 
 - **a árvore do jogo sai da MESMA função** (`quem_o_jogo_abre.arvore_do_jogo`),
-  e não de uma segunda implementação — mas ela passa por uma ÂNCORA aqui, e a
+  e não de uma segunda implementação — mas passa por uma ÂNCORA aqui, e a
   âncora nasceu de um falso positivo MEDIDO em 20/08/2026. Com nenhum jogo
   aberto, `arvore_do_jogo(r"\\.exe|Shipping")` devolveu DOIS processos nesta
   máquina: o `earlyoom`, cuja lista de `--avoid` cita a palavra, e um binário
@@ -94,7 +94,7 @@ máscaras do produto (`uinput_gamepad.FLAVORS`: a Xbox, a DualSense Edge e a
 Nintendo), lidos do fonte. Três consequências, e as três viajam no relatório:
 
 1. a régua compartilhada `e_vpad_do_hefesto` **não reconhece** o vpad de
-   uinput: ela procura `(Hefesto P` no nome, e o nome do uinput é o da
+   uinput: a régua procura `(Hefesto P` no nome, e o nome do uinput é o da
    máscara. Por isso o ramo do uinput existe à parte e declarado, e mora na
    mesma régua compartilhada (`identidade_do_vpad.e_pad_uinput_do_hefesto`);
 2. o casamento é por nome **EXATO** e pela morada do uinput
@@ -119,7 +119,7 @@ Não escreve em aparelho, não abre nem fecha jogo, não toca na Steam, não mex
 em configuração, não cria dispositivo de entrada. O pior desfecho de um erro
 aqui é um relatório errado.
 
-E não fecha o degrau sozinho: `O JOGO REAGIU` é do usuário, e só dela.
+E não fecha o degrau sozinho: `O JOGO REAGIU` é do usuário, e só do usuário.
 
 OS CINCO VEREDITOS
 -------------------
@@ -130,7 +130,7 @@ OS CINCO VEREDITOS
     SEGURA OS DOIS ............... nosso E físico. É o sintoma do controle em
                                    dobro, e não é bom presságio.
     NENHUM ....................... a árvore do jogo existe, o censo DO USUÁRIO
-                                   fechou, e ela não segura nem um nem outro.
+                                   fechou, e a árvore não segura nem um nem outro.
                                    AFIRMAÇÃO POSITIVA — só se imprime com o
                                    censo fechado.
     NÃO SONDADO .................. não há árvore de jogo; ou o alvo não se
@@ -139,7 +139,7 @@ OS CINCO VEREDITOS
 
 O CENSO QUE TEM DE FECHAR É O DA ÁRVORE, E NÃO O DO MUNDO
 ----------------------------------------------------------
-A varredura de `/proc` é global — é ela que responde *"e quem está segurando,
+A varredura de `/proc` é global — é a varredura que responde *"e quem está segurando,
 então?"* —, mas o `NENHUM` é sobre o JOGO, e é o censo da ÁRVORE DELE que
 precisa ter fechado. A diferença não é sutileza: nesta máquina há três
 processos do próprio usuário que **nunca** se deixam ler
@@ -156,7 +156,7 @@ COMO USAR
 
 Rode com o jogo NA TELA, não no menu da Steam: o jogo só enumera controle
 depois de subir. Sem jogo aberto ele roda igual e responde `NÃO SONDADO` — a
-tabela de posse continua valendo, e é ela que mostra quem mais está com o
+tabela de posse continua valendo, e é a tabela que mostra quem mais está com o
 nosso nó na mão (o cliente Steam abre, e sessão aberta NÃO é evidência de
 jogo: é o veto da NUMA-02).
 """
@@ -253,7 +253,7 @@ def estado_do_produto(timeout: float = 5.0) -> tuple[dict, str]:
     """`daemon.state_full` pelo socket do daemon: `({}, motivo)` se não deu.
 
     Uma chamada, no começo e só uma. Não é o instrumento perguntando ao
-    produto o que ele deveria medir sozinho: é a régua A, e ela existe porque o
+    produto o que ele deveria medir sozinho: é a régua A, e existe porque o
     produto é o único que sabe qual nó é dele sem adivinhar.
 
     O laço de `recv` até o `\\n` não é firula: o `state_full` desta casa passa
@@ -293,7 +293,7 @@ def estado_do_produto(timeout: float = 5.0) -> tuple[dict, str]:
 
 @dataclass
 class VpadDoProduto:
-    """O que a régua A diz de UM vpad, e o que falta nela."""
+    """O que a régua A diz de UM vpad, e o que falta na régua."""
 
     player: int
     uniq: str | None
@@ -492,7 +492,7 @@ def transporte_por_duas_rotas(
       que `comum._transporte_do_hid_id` já lê, e vem pronta no `Aparelho`.
     - **rota 2**: o `id/bustype` do NÓ DE ENTRADA. O `ps_allocate_input_dev`
       copia `bustype` do `hdev` para o `input_dev`, então as duas TÊM de
-      concordar — e quando não concordam, alguma delas está olhando para outro
+      concordar — e quando não concordam, uma das duas está olhando para outro
       aparelho, que é exatamente o que se quer descobrir antes de escrever
       "cabo" numa célula.
 
@@ -642,8 +642,8 @@ def montar_alvos(
                 avisos.append(
                     f"P{vpad.player}: o bloco publicado JÁ NÃO VALE — o nó foi "
                     "renumerado entre a leitura do daemon e a minha. É a "
-                    "renumeração que o inode existe para pegar, e ela "
-                    "aconteceu agora."
+                    "renumeração que o inode existe para pegar, e a "
+                    "renumeração aconteceu agora."
                 )
     return alvos, avisos
 
@@ -835,7 +835,7 @@ def decidir(
             "um processo da árvore do jogo tem o inode de um nó NOSSO aberto. "
             "É o que o degrau `O JOGO RECEBEU` pede, e nada além disso: que o "
             "jogo REAJA ao que chega é o degrau seguinte, e o sensor dele é "
-            "ela.",
+            "quem joga.",
         )
     if tem_fisico:
         return (
@@ -1129,7 +1129,7 @@ def main(argv: list[str] | None = None) -> int:
     print("  ABRE algum nó? ........ NÃO. `os.stat` resolve caminho e não abre")
     print("                          descritor: nada de UHID_OPEN, nada de modo")
     print("                          jogo armado, ninguém fecha por último.")
-    print("  a linha `porta` acima . este instrumento não abre hidraw; ela vale")
+    print("  a linha `porta` acima . este instrumento não abre hidraw; a linha vale")
     print("                          por OUTRO motivo — com o broker vivo o")
     print("                          hidraw do FÍSICO está escondido do jogo, e")
     print("                          isso muda como se lê `não segura o físico`.")
@@ -1161,7 +1161,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(resumo(f"{veredito} — {motivo}"))
     print("Este instrumento NÃO preenche célula do mapa. Ele mede; quem escreve")
-    print("no caderno é quem olhou — e `O JOGO REAGIU` é dela, e só dela.")
+    print("no caderno é quem olhou — e `O JOGO REAGIU` é de quem joga, e só de quem joga.")
     return 0
 
 

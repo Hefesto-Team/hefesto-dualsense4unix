@@ -4,7 +4,7 @@
 Lança `sonda.exe` (assets/sonda-proton/sonda.c) sob a candidata, num prefixo
 novo e sem a Steam, em cada caso da matriz, e julga as três provas (háptica,
 gatilho e microfone) e a contagem do que o jogo vê. Escreve a linha do recibo
-(`docs/data/proton-qualificacao.csv`). Na máquina de quem joga ela RECUSA: o
+(`docs/data/proton-qualificacao.csv`). Na máquina de quem joga o ensaio RECUSA: o
 kernel é um só, e o vpad de prova apareceria para os jogos.
 """
 from __future__ import annotations
@@ -90,7 +90,7 @@ def ler_sonda(saida: str) -> dict[str, dict[str, object]]:
 
 @dataclass(frozen=True)
 class MedidaDoOutroLado:
-    """O que a bancada da VM mediu do lado do Linux enquanto a sonda rodava."""
+    """O que a máquina de teste da VM mediu do lado do Linux enquanto a sonda rodava."""
 
     eco_rl_rr: float
     bytes_no_uhid: str
@@ -128,7 +128,7 @@ def julgar(caso: Caso, sonda: dict[str, dict[str, object]], lado: MedidaDoOutroL
 
 
 class Ensaio(Protocol):
-    """A bancada da VM (a da Forja): o vpad, o endpoint e a fonte vestidos."""
+    """A máquina de teste da VM (a da Forja): o vpad, o endpoint e a fonte vestidos."""
 
     def montar(self, caso: Caso) -> dict[str, str]: ...
     def medir(self) -> MedidaDoOutroLado: ...

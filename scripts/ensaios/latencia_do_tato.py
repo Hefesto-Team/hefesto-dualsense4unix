@@ -20,7 +20,7 @@ desvio, o resultado é «nenhum toque lido» (``None``), nunca zero.
 O QUE ELE RECUSA (o instrumento que briga com o produto recusa, não anuncia)
 ----------------------------------------------------------------------------
 1. fora do lar de mentira (``HOME`` é o lar real: nada deste instrumento
-   precisa do ``~/.config`` dela, e quem roda no lar real migra o perfil do usuário);
+   precisa do ``~/.config`` real, e quem roda no lar real migra o perfil do usuário);
 2. o daemon no ar, em QUALQUER socket conhecido — o do ambiente e o do
    ``/run/user/<uid>``, porque num lar de mentira o primeiro engana: ele escreve
    no mesmo hidraw e o relatório dele no meio do ensaio mediria outra coisa;
@@ -41,7 +41,7 @@ primeiro quadro que mostra o motor), não a do firmware por dentro. O relógio d
 escrita é ``time.time()`` imediatamente antes do ``os.write``, o mesmo relógio
 (``CLOCK_REALTIME``) do carimbo do evdev. A parte real deste arquivo
 (``rodar_no_aparelho``) NÃO foi rodada na árvore de desenvolvimento: o recibo
-da tabela em ``docs/protocol/latencia-do-tato.md`` é da bancada.
+da tabela em ``docs/protocol/latencia-do-tato.md`` é do ensaio no aparelho.
 """
 
 from __future__ import annotations
@@ -269,7 +269,7 @@ def recusas(env: dict[str, str], uid: int, casa_real: str | None) -> list[str]:
     motivos: list[str] = []
     if not lar_e_de_mentira(env.get("HOME"), casa_real):
         motivos.append(
-            "HOME é o lar real: rode no lar de mentira da bancada "
+            "HOME é o lar real: rode no lar de mentira do ensaio "
             "(docs/process/ferramentas-da-leva/ensaio-de-tela-em-lar-de-mentira/)")
     if ha_daemon(sockets_do_daemon(env, uid)):
         motivos.append(
@@ -324,7 +324,7 @@ def rodar_no_aparelho(
 ) -> tuple[list[Quadro], list[float]]:
     """Dispara ``toques`` toques de teste e devolve os quadros do giro e as escritas.
 
-    BANCADA: não roda na árvore de desenvolvimento. Escreve no ``hidraw`` e lê o
+    NO APARELHO: não roda na árvore de desenvolvimento. Escreve no ``hidraw`` e lê o
     nó de movimento; ao sair, por qualquer caminho, manda o relatório zerado.
     """
     from evdev import InputDevice, ecodes
@@ -377,7 +377,7 @@ class Opcoes:
 
 def _parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Latência do atuador lida pelo giro do próprio controle (sem a mão dela).")
+        description="Latência do atuador lida pelo giro do próprio controle (sem a mão do usuário).")
     p.add_argument("--medir", action="store_true",
                    help="escreve toques de teste no --hidraw e lê o --movimento")
     p.add_argument("--transporte", choices=("cabo", "radio"), default="cabo")

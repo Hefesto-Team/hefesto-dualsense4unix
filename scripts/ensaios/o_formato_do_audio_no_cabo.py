@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 """o_formato_do_audio_no_cabo.py — o mesmo bloco de áudio, no controle do CABO.
 
-A PERGUNTA, E É DO USUÁRIO — 10/09/2026, com os dois controles na mesa:
+A PERGUNTA DE 10/09/2026, com os dois controles na mesa: o mesmo teste funciona
+primeiro no controle do cabo? O áudio, mesmo no cabo, pede tomar o controle.
 
-    *"manda antes pro controle com fio. eu quero saber se o mesmo teste
-     funcionaria nele, pq o audio mesmo com cabo a gnt precisa tomar o
-     controle."*  # noqa-acento: citação literal
-
-**O que ela desenhou é o controle positivo que faltava, e ele separa duas coisas
+**Esse é o controle positivo que faltava, e ele separa duas coisas
 que esta casa vinha medindo juntas: o FORMATO e o TRANSPORTE.**
 
 Toda passada de áudio por rádio deu silêncio — as seis de 08/09 pelo hidraw, os
 seis cruzamentos de 10/09 pelos dois envelopes, e a rajada de 10/09 pelo socket
-L2CAP direto com o MTU levantado a 1024. Em todas elas variou-se o CAMINHO. **O
+L2CAP direto com o MTU levantado a 1024. Em todas variou-se o CAMINHO. **O
 bloco de áudio em si nunca foi posto à prova contra um aparelho que se sabe
 capaz de tocar.**
 
-O controle do CABO é esse aparelho: ele toca, e ela ouviu.
+O controle do CABO é esse aparelho: ele toca, e o som se ouviu.
 
 O QUE CADA RESULTADO DECIDE
 ----------------------------
@@ -30,8 +27,8 @@ O QUE CADA RESULTADO DECIDE
 O segundo resultado é o que mais move a casa, e é por isso que este ensaio é
 barato e vem antes de qualquer outra ideia.
 
-O QUE ELE MANDA — três formas, e a diferença entre elas é declarada
---------------------------------------------------------------------
+O QUE ELE MANDA — três formas, e a diferença entre as três é declarada
+----------------------------------------------------------------------
 O report de áudio dos arranjos é o ``0x39`` de 547 B, com CRC-32 no rabo. O CRC
 é coisa de BLUETOOTH: por cabo o DualSense não usa CRC em report de saída
 (``build_usb_report`` não escreve nenhum). Então há três candidatos honestos, e
@@ -43,15 +40,15 @@ o ensaio manda os três em vez de escolher um por palpite:
    usa para o estado (64 B). É o candidato mais fraco e está aqui porque custa
    nada: se o firmware exigir o tamanho do transporte, é ele que passa.
 
-**E o `common` da condição vai junto**, com o volume que ela ouviu (85), rota só
+**E o `common` da condição vai junto**, com o volume que se ouviu (85), rota só
 no alto-falante e o pré-amplificador do kernel — senão um silêncio por volume
 zero se leria como silêncio de formato.
 
 QUEM MANDA NO APARELHO ENQUANTO ISSO
 -------------------------------------
 O daemon está vivo e é o dono da barra e do estado. Este ensaio **não assume** o
-controle: ele escreve os reports de áudio e sai. É a palavra de produto — *"o audio
-mesmo com cabo a gnt precisa tomar o controle"* — e ela tem razão para o REGIME;
+controle: ele escreve os reports de áudio e sai. A regra de 10/09 é que o
+áudio, mesmo no cabo, pede tomar o controle — e isso vale para o REGIME;
 para uma rajada de 5 s o que decide é se o firmware ACEITA o corpo, e isso não
 depende de posse.
 
@@ -163,7 +160,7 @@ def main() -> int:
         print()
         for forma, porque in FORMAS.items():
             print(f"  {forma:12s} — {porque}")
-        print(resumo("leitura pura — nenhum byte escrito. Rode com --tocar, com ela ouvindo."))
+        print(resumo("leitura pura — nenhum byte escrito. Rode com --tocar, com quem confere ouvindo."))
         return 0
 
     no = abrir_no_hidraw(alvo.caminho_hidraw, escrita=True)
@@ -197,7 +194,7 @@ def main() -> int:
     if callable(fechar):
         fechar()
     print(resumo(
-        "se ela OUVIU em alguma combinação, o formato daquela linha é o certo e o "
+        "se o som SAIU em alguma combinação, o formato daquela linha é o certo e o "
         "silêncio do rádio é de transporte; se calou em TODAS, o formato do bloco "
         "de áudio está errado e o rádio nunca foi o problema."))
     return 0

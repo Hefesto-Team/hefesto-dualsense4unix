@@ -45,9 +45,6 @@ ROTEIRO = r"""
     }
   }
 
-  // A CAIXA DO TEXTO DE VERDADE, e não a do elemento: um `<td>` estica com a
-  // linha, e comparar caixas de `<td>` diria que tudo alinha mesmo quando o
-  // glifo não alinha. `Range` devolve onde o desenho POUSA.
   function caixaDoTexto(el) {
     if (!el) { return null; }
     var r = document.createRange();
@@ -79,11 +76,6 @@ ROTEIRO = r"""
         ? Math.round((Math.max.apply(null, c) - Math.min.apply(null, c)) * 100) / 100
         : null);
     }
-    // `quarta` É O NOME, e é mais exato que o ordinal genérico: o desenho tem
-    // QUATRO lugares, sempre. O ordinal em português levaria acento e um
-    // identificador de JavaScript não leva — o portão de acentuação reprova a
-    // forma sem ele, e ESTE comentário seria a primeira ocorrência do defeito
-    // que descreve. A armadilha é conhecida nesta casa; ela mordeu de novo aqui.
     var quarta = linhas.length ? linhas[linhas.length - 1] : null;
     var visivel = null;
     var rg = g ? g.getBoundingClientRect() : null;
@@ -177,12 +169,12 @@ def _queixas(medida: dict) -> list[str]:
         return [f"a página não respondeu: {medida['erro']}"]
     if not medida.get("achou_a_tira"):
         fora.append(
-            "a tira do desfecho (`.desfecho`) não está na página — sem ela este "
+            "a tira do desfecho (`.desfecho`) não está na página — sem a tira este "
             "ensaio mediria os dois estados IGUAIS e daria verde por vacuidade")
     if medida.get("tem_quadro_de_modo"):
         fora.append(
-            "o quadro «Modo» voltou ao editor — ele saiu por ordem dela em "
-            "11/09/2026, e era a fileira dele (36px) que tirava a linha do P4 "
+            "o quadro «Modo» voltou ao editor — ele saiu em 11/09/2026, por "
+            "decisão de produto, e era a fileira dele (36px) que tirava a linha do P4 "
             "do quadro sempre que a tira acendia")
     for nome, estado in (("sem a tira", medida.get("sem_a_tira") or {}),
                          ("com a tira acesa", medida.get("com_a_tira") or {})):
@@ -205,7 +197,7 @@ def _queixas(medida: dict) -> list[str]:
             fora.append(
                 f"{nome}: as três colunas de uma linha desalinham {maior}px "
                 f"(o teto é {ESPALHAMENTO_TOLERADO}) — é a linha «quebrada» que "
-                f"ela fotografou")
+                f"a foto de 11/09 mostrou")
     return fora
 
 
@@ -213,7 +205,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--publicado", action="store_true",
-                   help="mede a página que o produto renderiza, e não a bancada")
+                   help="mede a página que o produto renderiza, e não o desenho")
     p.add_argument("--json", action="store_true", help="a medida crua")
     args = p.parse_args()
 
@@ -226,7 +218,7 @@ def main() -> int:
     if args.json:
         print(json.dumps(medida, ensure_ascii=False, indent=2))
 
-    onde_esta = "publicada" if args.publicado else "bancada"
+    onde_esta = "publicada" if args.publicado else "desenho"
     for nome, estado in (("sem a tira ", medida.get("sem_a_tira") or {}),
                          ("com a tira ", medida.get("com_a_tira") or {})):
         print(f"{onde_esta} · {nome}: quadro {estado.get('disponivel')}px · "

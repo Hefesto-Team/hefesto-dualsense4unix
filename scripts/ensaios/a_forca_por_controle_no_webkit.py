@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Arrasta o trilho da Força na coluna do P1, DENTRO do WebKit dela, e mede.
+"""Arrasta o trilho da Força na coluna do P1, DENTRO do WebKit do produto, e mede.
 
 Desde 20/10/2026 a «Força» é só o trilho de 0 a 200% (O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01).
 """

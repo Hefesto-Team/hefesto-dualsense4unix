@@ -19,7 +19,7 @@ uinput, uhid, gadget ou rádio de verdade. Julga:
 - de uma segunda rodada, sem DualSense: `sem_aparelho` (a peça carregada responde E_NOTIMPL, como
   o GameInput do Proton, e o jogo que lê a entrada pelo GameInput cai na XInput como hoje).
 
-`--mordida` quebra a cura numa cópia do fonte (nunca no repo) e confere que a prova dela reprova.
+`--mordida` quebra a cura numa cópia do fonte (nunca no repo) e confere que a prova reprova.
 O prefixo é sempre de teste, fora do HOME: nunca o do jogo, nunca o `~/.wine`. Nada abre janela.
 """
 from __future__ import annotations

@@ -22,12 +22,12 @@ lado que ninguém mediu: o RÁDIO.
 
 O DESENHO — e a sacada é medir o número, não o adjetivo
 --------------------------------------------------------
-Ela fala um "aaaa" contínuo no microfone do controle. O byte vai a `0x00`,
+Quem confere fala um "aaaa" contínuo no microfone do controle. O byte vai a `0x00`,
 `0x20` e `0x40`, e a CADA nível o instrumento grava N segundos da placa do
 controle (o mesmo `arecord` e o mesmo analisador do `microfone_no_cabo.py`) e
 mede o PICO e o RMS. A fonte no sistema fica onde estiver — o ganho do
 sistema é fator comum às três gravações, e um fator comum não muda a razão
-entre elas::
+entre as três::
 
     byte 0x00  ->  pico p0
     byte 0x20  ->  pico p1
@@ -50,7 +50,7 @@ Este bloco dizia *"o daemon NÃO toca neste byte (AUDIO-OWNER-01 apaga os bits
 de áudio que não são dele, e o microfone nunca é), então uma escrita basta e
 não há martelo"*. **Caducou na mesma semana, por esta medição.** O usuário mandou
 ligar o byte, e a MIC-VOLUME-02 ligou: `set_microphone_volume` toma a posse do
-`common[6]` quando ela mexe no deslizante (`mic.volume.set`) ou quando um
+`common[6]` quando quem usa mexe no deslizante (`mic.volume.set`) ou quando um
 perfil com `mic.volume` é aplicado. A partir daí o `_build_common` manda
 aquele byte, com o flag0 `0x40`, em **todo report** — e a escrita deste
 instrumento é desfeita pelo keepalive seguinte.
@@ -71,7 +71,7 @@ NO RÁDIO
 --------
 Não há placa ALSA: a captura vem da fonte que a ponte publica
 (`integrations/audio_control.fonte_de_captura_do_controle`). O instrumento
-grava por `-D pulse` com `PULSE_SOURCE` nela. Sem ponte de pé, ele diz e para.
+grava por `-D pulse` com `PULSE_SOURCE` apontado para a fonte. Sem ponte de pé, ele diz e para.
 
 Porta: o broker (`comum.abrir_no_hidraw`), com o daemon VIVO. Escreve no
 aparelho? SIM — `common[6]` e o flag0 `0x40`.

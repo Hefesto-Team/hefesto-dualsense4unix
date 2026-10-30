@@ -15,7 +15,7 @@ com endereço, e é nossa:
 4. o daemon desliga o microfone — e sem o `0x32` o firmware para de oscilar,
    então nunca mais nasce borda e o mic não volta.
 
-No journal da bancada, hoje às 09:42, a assinatura exata::
+No journal da máquina de teste, hoje às 09:42, a assinatura exata::
 
     mic_da_mesa_borda    mudo=True  repiques_engolidos=15  seq=1
     bt_mic_palavra_do_usuario  ligado=False
@@ -34,15 +34,15 @@ O QUE ELE FAZ, E O QUE NÃO FAZ
 Ele **lê** o `hidrawN` do controle e cronometra cada permanência do bit 2 do
 byte 55 (`STATUS_MIC_MUDO`). **Não escreve um byte** e não abre janela.
 
-Ele **não liga o microfone** — quem liga é o daemon, quando ela aperta o botão
-do plástico. Cada aperto dá ~1,1 s de gating antes de o defeito o derrubar, e
+Ele **não liga o microfone** — quem liga é o daemon, quando o botão do
+plástico é apertado. Cada aperto dá ~1,1 s de gating antes de o defeito o derrubar, e
 ~17 permanências. Aperte umas cinco vezes durante a corrida.
 
 QUEM VIRA O BIT SEM A MÃO (28/09/2026, O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01)
 -------------------------------------------------------------------------
 A sustentação de 300 ms saiu do produto: o gesto passou a ser o BOTÃO
 (`buttons[2]` bit 2), e o bit de mudo só diz o que o firmware segura. Mas na
-sessão do usuário de 28/09 o bit do branco virou três vezes sem ela apertar, e quem
+sessão do usuário de 28/09 o bit do branco virou três vezes sem ninguém apertar, e quem
 o escreveu ninguém mediu. Por isso a corrida também conta, pelo MESMO extrator
 do produto (`core/physical_report_reader.extract_estado_do_mic`, com CRC e sem
 o quadro de áudio), cada aperto e cada virada do bit de mudo que aconteceu com
@@ -50,7 +50,7 @@ o botão parado — com a hora do relógio, para casar com o diário do daemon.
 
 USO
     a_permanencia_do_bit_do_mic.py --listar          # só diz o que leria
-    a_permanencia_do_bit_do_mic.py --segundos 60     # mede, e ela aperta o mic
+    a_permanencia_do_bit_do_mic.py --segundos 60     # mede, e quem usa aperta o mic
     a_permanencia_do_bit_do_mic.py --no hidraw5 --segundos 600
                                   # com mais de um DualSense no rádio, diga qual
 """
@@ -255,8 +255,8 @@ def main() -> int:
     todas = em_mudo + em_claro
     if not todas:
         print(resumo(
-            "ZERO transições. Ou o microfone não subiu durante a corrida (ela "
-            "apertou o botão?), ou o gating não acontece nesta configuração — "
+            "ZERO transições. Ou o microfone não subiu durante a corrida (o "
+            "botão foi apertado?), ou o gating não acontece nesta configuração — "
             "e a segunda resposta valeria tanto quanto a primeira."))
         return 2
 
@@ -274,16 +274,16 @@ def main() -> int:
             f"NENHUMA permanência abaixo de 1 s em {len(todas)} transição(ões): "
             "**o gating não está acontecendo**. Com o microfone no ar, isto é o "
             "resultado que a cura do driver (MIC-NAO-E-BOTAO-01) produz — antes "
-            "dela esta mesma corrida colhia mais de mil, com mediana de 6 ms. "
+            "da cura esta mesma corrida colhia mais de mil, com mediana de 6 ms. "
             "Se o microfone NÃO estava no ar, o resultado não diz nada."))
         return 0
 
     print(resumo(
-        f"{len(todas)} permanências, {len(curtas)} delas abaixo de 1 s — estas "
+        f"{len(todas)} permanências, {len(curtas)} abaixo de 1 s — estas "
         f"são o GATING (mediana {statistics.median(curtas):.0f} ms). As demais "
         "são o bit PARADO, e não entram na conta. "
         "A janela certa é a menor que zere a coluna acima sem atrasar o gesto "
-        "dela — e se nenhuma zerar, a resposta não é aumentar a janela: é que "
+        "do usuário — e se nenhuma zerar, a resposta não é aumentar a janela: é que "
         "a sustentação é PALIATIVO, e a cura está no driver "
         "(MIC-NAO-E-BOTAO-01)."))
     return 0

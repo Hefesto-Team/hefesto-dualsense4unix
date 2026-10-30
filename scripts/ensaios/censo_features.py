@@ -237,7 +237,7 @@ def imprimir_tabela_cabo_x_radio(
     resultados: dict[str, dict[int, Leitura]],
     ids: list[int],
 ) -> tuple[int, int]:
-    """A tabela que ela lê. Devolve (reports iguais, reports que diferem)."""
+    """A tabela que se lê. Devolve (reports iguais, reports que diferem)."""
     do_cabo = [a for a in alvos if a.transporte == "cabo"]
     do_radio = [a for a in alvos if a.transporte == "rádio"]
 
@@ -360,7 +360,7 @@ COMANDO_DA_COR = """
   independentes concordam (nsfm/dualsense-ts, TechAntohere/Senshi).
 
   NÃO MEDIDO POR NÓS, e a honestidade aqui é o ponto: a leitura exige a escrita
-  acima, que ela ainda não autorizou, e por RÁDIO ninguém no mundo demonstrou —
+  acima, que ninguém autorizou ainda, e por RÁDIO ninguém no mundo demonstrou —
   o dualshock-tools recusa Bluetooth de saída. Registre como CAMINHO
   IDENTIFICADO, NÃO MEDIDO, e não como "o controle não sabe a própria cor":
   essa segunda frase seria a FALÁCIA DO PERFIL AUSENTE.
@@ -403,7 +403,7 @@ def main() -> int:
 
     if argumentos.mostrar_comando_da_cor:
         print(COMANDO_DA_COR)
-        print(resumo("comando impresso; NADA foi escrito no aparelho. A decisão é dela."))
+        print(resumo("comando impresso; NADA foi escrito no aparelho. A decisão é de quem usa."))
         return 0
 
     aparelhos = descobrir_aparelhos()

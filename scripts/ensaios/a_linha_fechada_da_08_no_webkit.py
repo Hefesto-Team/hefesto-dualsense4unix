@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A linha fechada da Gestão de Controles, medida DENTRO do WebKit dela."""
+"""A linha fechada da Gestão de Controles, medida DENTRO do WebKit do produto."""
 from __future__ import annotations
 
 import argparse
@@ -69,7 +69,7 @@ BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
 
 
 def _do_arquivo() -> dict[str, list[str]]:
-    """O ANTES — o que a bancada crava em cada endereço, lido do arquivo."""
+    """O ANTES — o que o desenho crava em cada endereço, lido do arquivo."""
     import re
 
     html = onde.pagina(ABA).read_text(encoding="utf-8")
@@ -129,7 +129,7 @@ def main() -> int:
         print(f"REPROVA: não li o DOM da {ABA}. {saida.get('erro', '')}")
         return 1
 
-    print(f"ANTES (o que a bancada crava): {antes}")
+    print(f"ANTES (o que o desenho crava): {antes}")
     print()
     for pref, d in sorted(dom["controles"].items()):
         print(f"  {pref}  conectado={d['conectado']!r}")

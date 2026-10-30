@@ -4,13 +4,13 @@
 A PERGUNTA QUE ELE RESPONDE
 ---------------------------
 *Quando um controle do rádio cai abaixo de 50 pacotes de movimento por
-segundo, o que mais estava acontecendo na mesma janela?* A bancada de 29/09
+segundo, o que mais estava acontecendo na mesma janela?* O ensaio de 29/09
 viu quatro colapsos (01:30, 02:02, 02:13 e 02:37) e não separou a causa: o
 jogo, as duas Steam, a memória da placa de vídeo, o modo, a nossa saída e o
 par no mesmo adaptador já saíram do «necessário»; a voz no ar, o adaptador 1
 e o ar em volta dele, o controle e as vigias do Hefesto ficaram. Este
 instrumento mede uma janela por vez (10 s por padrão) com TODOS os fatores na
-mesma linha, e o ``resumo`` agrupa as janelas pelo que elas MEDIRAM, e não
+mesma linha, e o ``resumo`` agrupa as janelas pelo que MEDIRAM, e não
 pelo rótulo que alguém digitou.
 
 O QUE ELE LÊ, A CADA SEGUNDO
@@ -28,7 +28,7 @@ O QUE ELE LÊ, A CADA SEGUNDO
 - **a varredura**: o ``Discovering`` de cada adaptador
   (``varredura_do_radio.quem_esta_varrendo``);
 - **os processos** (``/proc``): a Steam, classificada pelo ``HOME`` do
-  ``environ`` (a dela, a de teste sob ``/pytest-of-``, ou outra), o
+  ``environ`` (a do usuário, a de teste sob ``/pytest-of-``, ou outra), o
   ``winedevice.exe``, o pytest vivo e o ``giro_e_buraco.py`` (o I-3). O
   próprio instrumento e quem o chamou ficam FORA da conta: um ``pgrep -f``
   já casou o shell que perguntava;
@@ -51,7 +51,7 @@ de cada controle é o ``uniq``, e ele nunca sai do processo.
 
 A JANELA FORA DO VEREDITO
 -------------------------
-Uma janela que falha uma condição da bancada não some: ela sai marcada, com o
+Uma janela que falha uma condição do ensaio não some: sai marcada, com o
 motivo, e não conta como colapso nem como não-colapso. As condições: um
 adaptador varrendo (ou o ``Discovering`` em «não sei»), um pytest vivo, a
 Steam de teste viva, o daemon mudo a janela inteira, e **as réguas que
@@ -152,7 +152,7 @@ class Rotulos:
     O controle é chaveado pelo ``uniq`` e sai pelo modelo com o número de
     chegada naquele modelo: dois «White» são «White 1» e «White 2», e trocar a
     ordem deles no ``state_full`` não troca os números de ninguém. O adaptador
-    sai numerado pela ordem do endereço (a mesma do ``passo.sh`` da bancada), e
+    sai numerado pela ordem do endereço (a mesma do ``passo.sh`` do ensaio), e
     a interface do Wi-Fi por número.
     """
 
@@ -515,7 +515,7 @@ def linha_da_janela(
     rotulos: Rotulos,
     contexto: ContextoDaJanela,
 ) -> dict[str, Any]:
-    """A linha JSON de UMA janela. Nenhum endereço entra nela."""
+    """A linha JSON de UMA janela. Nenhum endereço entra na linha."""
     respostas = [a for a in amostras if a.estado is not None]
     por_uniq: dict[str, list[dict[str, Any]]] = {}
     radio_ar: dict[str, list[Mapping[str, Any]]] = {}
@@ -754,7 +754,7 @@ def fatores_do_grupo(linha: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def resumir(linhas: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
-    """Os grupos de janelas, pelo que elas mediram, na ordem em que apareceram."""
+    """Os grupos de janelas, pelo que mediram, na ordem em que apareceram."""
     grupos: dict[str, dict[str, Any]] = {}
     for linha in linhas:
         fatores = fatores_do_grupo(linha)
@@ -820,7 +820,7 @@ def resumo_em_texto(grupos: Sequence[Mapping[str, Any]]) -> str:
         f = grupo["fatores"]
         arranjo = "; ".join(f"{numero}: {' + '.join(nomes)}" for numero, nomes in f["arranjo"])
         partes.append(
-            f"grupo {n} · Steam dela {f['steam_do_usuario']} · jogo {_ou_traco(f['jogo'])} · "
+            f"grupo {n} · Steam do usuário {f['steam_do_usuario']} · jogo {_ou_traco(f['jogo'])} · "
             f"arranjo [{arranjo or '-'}] · cabo [{', '.join(f['cabo']) or '-'}] · "
             f"voz no ar [{', '.join(f['voz_no_ar']) or '-'}] · "
             f"pads [{', '.join(f['pads']) or '-'}]"
@@ -904,7 +904,7 @@ def main(argv: list[str] | None = None) -> int:
     janela.add_argument("--janelas", type=int, default=0, help="0 = até o Ctrl-C")
     janela.add_argument("--saida", required=True)
     janela.add_argument("--passo", default="")
-    resumo = sub.add_parser("resumo", help="agrupa as janelas pelo que elas mediram")
+    resumo = sub.add_parser("resumo", help="agrupa as janelas pelo que mediram")
     resumo.add_argument("jsonl")
     resumo.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)

@@ -29,7 +29,7 @@ co-op ligado, nenhum dos DualSense físicos abre por `open()`: o próprio Hefest
 os esconde do jogo (`broker/hidraw_broker.py`, `chmod 0600` + ACL removida).
 Quem bate ali mede `EACCES`; quem bate na porta certa — o `cmd open` do broker,
 que devolve o fd por SCM_RIGHTS — mede o aparelho. As duas coisas produzem
-relatório, e só uma delas produz medição. **Por isso a porta usada vai no
+relatório, e só uma produz medição. **Por isso a porta usada vai no
 cabeçalho, ao lado da biblioteca.**
 
 E um andar abaixo, o mesmo modo de falha: o co-op faz `EVIOCGRAB` no evdev
@@ -360,7 +360,7 @@ def _largura(texto: str) -> int:
 
 
 def tabela(cabecalho: list[str], linhas: list[list[str]]) -> str:
-    """Uma tabela alinhada, para ler na tela. Ela lê isto, não JSON."""
+    """Uma tabela alinhada, para ler na tela. Lê-se isto, não JSON."""
     if not linhas:
         colunas = [_largura(c) for c in cabecalho]
     else:
@@ -454,7 +454,7 @@ def cabecalho_do_instrumento(
 
 
 def resumo(texto: str) -> str:
-    """A linha final. Uma só, e ela diz o que a medição decidiu."""
+    """A linha final. Uma só, e diz o que a medição decidiu."""
     return "\n" + "-" * 78 + f"\nRESUMO: {texto}\n" + "-" * 78
 
 
@@ -503,7 +503,7 @@ def o_tema_e_escuro() -> bool:
 
 
 def pintar_fundo_solido(janela: object) -> None:
-    """Um fundo SÓLIDO e LEGÍVEL para a folha — razão dela: *"o fundo tá muito transparente"*."""
+    """Um fundo SÓLIDO e LEGÍVEL para a folha: o fundo transparente não se lia."""
     import gi
 
     gi.require_version("Gtk", "3.0")

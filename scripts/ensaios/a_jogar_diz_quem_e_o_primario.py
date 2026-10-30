@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""As quatro linhas novas da aba Jogar, medidas DENTRO do WebKit que ela usa.
+"""As quatro linhas novas da aba Jogar, medidas DENTRO do WebKit que o produto usa.
 
 POR QUE ELE EXISTE (JOGAR-O-QUE-FALTA-01, 06/09/2026): os testes de unidade
 provam a CONTA — que `is_primary` vira `"1"`, que a máscara clicada entra na
@@ -8,8 +8,8 @@ seção `mode`, que o serviço calado ganha uma linha na coluna Atenção. O que
 acrescentou e nunca viu pintar não está entregue. É a regra desta casa, e o caso
 que a fundou foi o `--prova-gesto` dando verde sobre dois botões mortos.
 
-**ELE ABRE A BANCADA, e não o publicado** — `mockup/01-jogar.html`. Publicar é
-ato dela; até o OK, o desenho está à frente do produto, e uma régua apontada
+**ELE ABRE O DESENHO, e não o publicado** — `mockup/01-jogar.html`. Publicar
+vem com o OK; até o OK, o desenho está à frente do produto, e uma régua apontada
 para a página publicada daria verde sobre a tela de ontem. É a armadilha que o
 `COMO-OLHAR-A-TELA` chama de *"régua que pergunta no lugar errado"*. A foto do
 publicado sai junto, com `--foto-publicado`, e é o ANTES desta entrega.
@@ -20,7 +20,7 @@ O QUE ELE MEDE, e cada linha é um passo da sprint:
    primário no dublê e o marcador muda de cartão. E o **alvo de edição da fita
    NÃO se move junto**: os dois significados ficam em pixels diferentes;
 2. **a marca da emulação degradada SAIU do cartão em 13/09/2026**
-   (A-MARCA-DA-DEGRADACAO-01), e a leitura dela saiu deste ensaio junto;
+   (A-MARCA-DA-DEGRADACAO-01), e a sua leitura saiu deste ensaio junto;
 3. **o serviço calado** — com o estado vazio a coluna Atenção DIZ, e os quatro
    cartões param de afirmar;
 4. **o clique no chip Xbox chega ao PERFIL ATIVO**, e o valor é lido de volta
@@ -36,7 +36,7 @@ função que devolve a cena. **O interruptor NÃO é clicado**, e é decisão: o
 `hefesto` chama `a09_sistema.ativar_o_servico()`, que roda `systemctl` na
 máquina do usuário de verdade.
 
-Uso (sempre oculto; ela tem UMA tela)::
+Uso (sempre oculto; a máquina tem UMA tela)::
 
     scripts/ensaios/a_jogar_diz_quem_e_o_primario.py
     scripts/ensaios/a_jogar_diz_quem_e_o_primario.py \
@@ -349,9 +349,9 @@ def _uma_volta(*, publicado: bool, foto: str = "",
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--foto-depois", default="",
-                        help="a BANCADA com o marcador aceso")
+                        help="o DESENHO com o marcador aceso")
     parser.add_argument("--foto-publicado", default="",
-                        help="o que ela vê HOJE: a página publicada, sem os "
+                        help="o que quem usa vê HOJE: a página publicada, sem os "
                              "dois endereços novos")
     opcoes = parser.parse_args()
 
@@ -363,14 +363,14 @@ def main() -> int:
     print(f"perfil de ensaio: {PERFIL} — modo no disco: {_modo_no_disco()!r}")
 
     if opcoes.foto_publicado:
-        print("\n=== O PUBLICADO — o que ela vê hoje ===")
+        print("\n=== O PUBLICADO — o que quem usa vê hoje ===")
         antes = _uma_volta(publicado=True, foto=opcoes.foto_publicado,
                            fazer_o_clique=False)
         _relatar(antes, "publicado")
 
-    print("\n=== A BANCADA — o desenho de hoje ===")
+    print("\n=== O DESENHO — o de hoje ===")
     depois = _uma_volta(publicado=False, foto=opcoes.foto_depois)
-    _relatar(depois, "bancada")
+    _relatar(depois, "desenho")
     return 0
 
 

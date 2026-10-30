@@ -13,12 +13,12 @@ A barra do DualSense tem DOIS brilhos, e a casa os confundia até 08/09:
   `flag2` bit0 em `common[38]`. O produto manda o byte sempre em 0 e **o
   kernel desta máquina nem define o bit**. `nao-medido` nos dois transportes.
 
-O usuário decidiu medir. Este instrumento escreve o byte, com e sem o bit, e ela
-olha a barra.
+O usuário decidiu medir. Este instrumento escreve o byte, com e sem o bit, e quem
+confere olha a barra.
 
 O DESENHO
 ---------
-Cor fixa (branco por omissão, com o bit da barra ligado para ela acender) e o
+Cor fixa (branco por omissão, com o bit da barra ligado para a barra acender) e o
 `common[42]` variando::
 
     nível 0   alto    (o que o produto manda hoje — a linha de base)
@@ -151,13 +151,13 @@ def main() -> int:
         return 1
 
     respostas: list[tuple[int, str]] = []
-    print("\nO RETORNO DO os.write NÃO É A MEDIÇÃO — quem mede é o olho dela, na barra.\n")
+    print("\nO RETORNO DO os.write NÃO É A MEDIÇÃO — quem mede é o olho de quem confere, na barra.\n")
     try:
         for nivel in escada:
             common = common_do_nivel(nivel, com_bit=com_bit, cor=args.cor)
             print(f"NÍVEL {nivel} — {NOME_DO_NIVEL[nivel]}")
             if nivel == 0:
-                print("  ^ é a linha de base: o brilho de sempre. Se ela mudar aqui, PARE.")
+                print("  ^ é a linha de base: o brilho de sempre. Se mudar aqui, PARE.")
             if args.uma_vez:
                 escritor.escrever(common)
                 time.sleep(args.segundos)
@@ -183,9 +183,9 @@ def main() -> int:
             observado_por="olho-do-usuario",
             fonte="scripts/ensaios/o_brilho_de_hardware_da_barra.py",
             nota=f"nível {nivel} ({NOME_DO_NIVEL[nivel]}), bit {'ligado' if com_bit else 'apagado'}, "
-                 f"cor {args.cor}, martelo {'não' if args.uma_vez else f'{args.hz:g} Hz'}; ela: {resposta or '(sem resposta)'}",
+                 f"cor {args.cor}, martelo {'não' if args.uma_vez else f'{args.hz:g} Hz'}; resposta: {resposta or '(sem resposta)'}",
         ))
-    print(resumo("o resultado é o olho dela: `obedece` se o nível 2 escureceu e o 0 voltou; senão `não obedece`."))
+    print(resumo("o resultado é o olho de quem confere: `obedece` se o nível 2 escureceu e o 0 voltou; senão `não obedece`."))
     return 0
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""escrita_pelo_broker.py — a porta de ESCRITA dos instrumentos de bancada de 09/09."""
+"""escrita_pelo_broker.py — a porta de ESCRITA dos instrumentos de ensaio de 09/09."""
 
 from __future__ import annotations
 
@@ -155,7 +155,7 @@ def linha_do_caderno(**campos: str) -> str:
 
 
 def perguntar(texto: str) -> str:
-    """A pergunta para ela, e a resposta de produto — verbatim, sem limpar."""
+    """A pergunta a quem usa, e a resposta como veio, sem limpar."""
     try:
         return input(texto).strip()
     except EOFError:

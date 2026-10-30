@@ -7,7 +7,7 @@ SVG**. A lightbar do desenho grande e as cinco lâmpadas do indicador nunca
 foram campo: o gerador CRAVA ``style="--luz:#7EB8D4"`` no ``<g>`` e a classe
 ``led-on`` nos ``<rect>`` que o MOCKUP escolheu, e nada no produto os alcança.
 
-O que isso custa está fotografado em 03/09/2026, na bancada, com UM controle
+O que isso custa está fotografado em 03/09/2026, no ensaio, com UM controle
 no cabo: a coluna do P1 dizia ``#0000FF`` na caixa do hexadecimal e desenhava a
 barra em ``#7EB8D4`` — a mesma célula afirmando duas cores. Quem olha a tela lê
 o desenho antes de ler o número.
@@ -29,7 +29,7 @@ diferentes, e é isso que faz a divergência aparecer em vez de se cancelar.
 REPROVA quando a coluna tem controle e as duas luzes discordam. Uma coluna sem
 controle não é medida — não há luz a afirmar, e é a regra de produto.
 
-Uso (a janela é OCULTA; ela tem UMA tela)::
+Uso (a janela é OCULTA; a máquina tem UMA tela)::
 
     scripts/ensaios/a_luz_do_desenho_e_a_luz_do_aparelho.py
 """

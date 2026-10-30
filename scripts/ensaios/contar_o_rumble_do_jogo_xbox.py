@@ -8,8 +8,8 @@ O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01 (22/10/2026). Duas metades:
    ``FF_PERIODIC``, quanto cada subida dura, por onde o rumble foi (háptica fina ou motores do
    HID) e o porquê. ``--ler ARQUIVO`` usa só ele; é o que os testes prendem.
 2. O GRAVADOR (``--gravar SEGUNDOS --saida ARQUIVO``): pergunta ``daemon.state_full`` ao
-   serviço no ar a cada 100 ms e guarda os campos ``ff_*`` de cada pad. Só LÊ o estado; é da
-   bancada, com o jogo aberto. O endereço sai mascarado (octetos 4 e 5 zerados).
+   serviço no ar a cada 100 ms e guarda os campos ``ff_*`` de cada pad. Só LÊ o estado; é do
+   ensaio no aparelho, com o jogo aberto. O endereço sai mascarado (octetos 4 e 5 zerados).
 
 A gravação: linhas JSON ``{"t": s, "per_vpad": [{"uniq", "player", "ff_play_count",
 "ff_nao_nulo_count", "ff_por_classe", "ff_forma_do_periodico", "ff_ultimos_trechos",
@@ -164,7 +164,7 @@ def _mascarar(uniq: Any) -> Any:
 
 
 def gravar(segundos: float) -> list[dict[str, Any]]:
-    """Bancada: pergunta o estado ao serviço no ar por ``segundos`` (só leitura)."""
+    """No aparelho: pergunta o estado ao serviço no ar por ``segundos`` (só leitura)."""
     from hefesto_dualsense4unix.app.ipc_bridge import _run_call
 
     perguntas: list[dict[str, Any]] = []
@@ -186,7 +186,7 @@ def _parser() -> argparse.ArgumentParser:
     grupo = p.add_mutually_exclusive_group(required=True)
     grupo.add_argument("--ler", type=Path, help="conta uma gravação (só leitura)")
     grupo.add_argument("--gravar", type=float, metavar="SEGUNDOS",
-                       help="bancada: pergunta o estado ao serviço no ar")
+                       help="no aparelho: pergunta o estado ao serviço no ar")
     p.add_argument("--saida", type=Path, help="com --gravar: onde guardar a gravação")
     p.add_argument("--jogo", default="Tenebris Somnia")
     p.add_argument("--transporte", choices=("cabo", "radio"), default="cabo")
