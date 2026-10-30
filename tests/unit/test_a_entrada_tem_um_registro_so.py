@@ -289,12 +289,6 @@ def test_o_centro_nao_volta_ao_adaptador_do_meio(tmp_path: Path) -> None:
     assert nome_dado_ao_adaptador(documento, ADAPTADOR_DO_MEIO) == "Meio"
     porta = ee.nome_da_porta(LUGAR_DO_MEIO, maquina=documento, controladores=BOOT_1)
     assert porta != "Centro" and porta == "Entrada 4.1.1", porta
-    linha = ee.com_o_nome_dela(
-        {"porta": LUGAR_DO_MEIO, "frase": f"O adaptador da porta {LUGAR_DO_MEIO} travou."},
-        maquina=documento,
-        controladores=BOOT_1,
-    )
-    assert "Centro" not in json.dumps(linha, ensure_ascii=False)
     mapa = ee.ler_o_mapa(maquina=documento, censo=None, entradas=(), raiz_usb=str(tmp_path),
                          adaptadores=(), storm={})
     assert "Centro" not in json.dumps(mapa.como_dicionario(), ensure_ascii=False)

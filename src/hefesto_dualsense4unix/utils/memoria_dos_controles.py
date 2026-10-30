@@ -374,7 +374,7 @@ INVENTARIO: tuple[Lugar, ...] = (
     ),
     Lugar(
         "historico-do-kernel", "estado", f"{_C}/kernel*",
-        "integrations/storm_doctor.py:caminho_do_kernel_log",
+        "scripts/storm_watch.sh:LOG",
         USUARIO, CASA, COPIAR,
         "o kernel.log da vigia e a marca do boot (histórico)",
         devolve=False,

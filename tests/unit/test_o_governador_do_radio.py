@@ -15,9 +15,9 @@ manda ceder na fonte quando o adaptador não escoa. Esta régua cobra:
    vaga em X» — uma entrada só no diário —, e «Ligar aqui» a sobe marcada.
    Sem vaga em lugar nenhum (R4), ela sobe marcada sozinha.
 5. **O DIÁRIO:** ``PONTE_SUBIU``/``PONTE_DESCEU`` com controle, adaptador e
-   tipo — sem eles, ``storm_doctor.o_fato_da_queda`` devolve ``None``.
-6. **UM DONO:** o limite é o ``N_MAX_PONTES`` do ``radio_da_mesa`` nos três
-   leitores, e o ``state_full`` lê a amostra do governador.
+   tipo — sem eles, ``diario_do_radio.pontes_de_pe`` não acha a ponte de pé.
+6. **UM DONO:** o limite é o ``N_MAX_PONTES`` do ``radio_da_mesa``, e o
+   ``state_full`` lê a amostra do governador.
 
 Nada aqui abre socket de Bluetooth, lê o sysfs dela ou escreve no diário dela:
 o ioctl é um dublê com o layout do kernel escrito à mão, e o diário mora em
@@ -30,6 +30,7 @@ import asyncio
 import contextlib
 import fcntl
 import functools
+import math
 import os
 import struct
 import time
@@ -45,7 +46,7 @@ from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
 from hefesto_dualsense4unix.integrations import diario_do_radio as diario
-from hefesto_dualsense4unix.integrations import radio_da_mesa, storm_doctor
+from hefesto_dualsense4unix.integrations import radio_da_mesa
 
 ADAPTADOR_A = "aa:bb:cc:00:00:a1"
 ADAPTADOR_B = "aa:bb:cc:00:00:b2"
@@ -555,8 +556,8 @@ def test_a_ponte_que_desce_devolve_a_vaga() -> None:
     assert len(registro.de(diario.PONTE_DESCEU)) == 1
 
 
-def test_as_pontes_no_diario_dao_o_fato_da_queda(tmp_path: Path) -> None:
-    """Sem o `PONTE_SUBIU` com controle, adaptador e tipo, o sino não tem fato."""
+def test_as_pontes_no_diario_dizem_controle_adaptador_e_tipo(tmp_path: Path) -> None:
+    """Sem o `PONTE_SUBIU` com controle, adaptador e tipo, o diário não acha a ponte."""
     caminho = tmp_path / "diario.jsonl"
     relogio = _Relogio()
     governador = gov.GovernadorDoRadio(
@@ -568,22 +569,13 @@ def test_as_pontes_no_diario_dao_o_fato_da_queda(tmp_path: Path) -> None:
         vaga = governador.pedir_vaga(uniq, "som")
         assert isinstance(vaga, gov.Vaga)
         vaga.subiu()
-    queda = storm_doctor.EventoDoRadio(
-        quando="agora", carimbo=time.time() + 1, tag="[BT-SOCKET]", familia="2A",
-        ocorrencias=1, borda=True, texto="BT socket write error",
-    )
-    fato = storm_doctor.o_fato_da_queda(queda, diario.ler(caminhos=[caminho]))
-    assert fato == "3 controles com som (limite 2)"
+    de_pe = diario.pontes_de_pe(diario.ler(caminhos=[caminho]), math.inf)
+    assert de_pe == {ADAPTADOR_A: {(u, "som") for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)}}
 
 
 def test_o_limite_de_pontes_tem_um_dono_so() -> None:
-    """O governador, o orçamento e o sino leem o MESMO número."""
-    assert storm_doctor.LIMITE_DE_PONTES_POR_ADAPTADOR == radio_da_mesa.N_MAX_PONTES
+    """O governador e o orçamento leem o MESMO número."""
     assert gov.GovernadorDoRadio().n_max == radio_da_mesa.N_MAX_PONTES
-    fonte = Path(storm_doctor.__file__).read_text(encoding="utf-8")
-    assert "\nLIMITE_DE_PONTES_POR_ADAPTADOR = N_MAX_PONTES\n" in fonte, (
-        "o storm_doctor voltou a digitar o limite em vez de lê-lo do dono"
-    )
 
 
 def test_no_modo_falso_o_governador_nao_mede_o_ar() -> None:

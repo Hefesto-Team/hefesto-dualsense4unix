@@ -7,7 +7,6 @@ import itertools
 import math
 import re
 import threading
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -17,7 +16,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
-from hefesto_dualsense4unix.integrations import bluez_dbus, mesa_de_radio, storm_doctor
+from hefesto_dualsense4unix.integrations import bluez_dbus, mesa_de_radio
 from hefesto_dualsense4unix.integrations import diario_do_radio as diario
 from hefesto_dualsense4unix.utils import maquina
 
@@ -491,13 +490,6 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
     assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Sala"
 
 
-def _queda_agora() -> storm_doctor.EventoDoRadio:
-    return storm_doctor.EventoDoRadio(
-        quando="agora", carimbo=time.time() + 1, tag="[BT-SOCKET]", familia="2A",
-        ocorrencias=1, borda=True, texto="BT socket write error",
-    )
-
-
 def _o_daemon_que_morreu(caminho: Path) -> None:
     """Duas pontes de pé, e nenhum ``stop()``: o ``SIGKILL`` não escreve nada."""
     for uniq in (CONTROLE_1, CONTROLE_2):
@@ -508,11 +500,13 @@ def _o_daemon_que_morreu(caminho: Path) -> None:
 
 
 def test_o_arranque_fecha_as_pontes_que_o_daemon_morto_deixou(tmp_path: Path) -> None:
-    """O fato de uma queda depois do reinício não conta ponte que não existe."""
+    """Depois do reinício, o diário não conta ponte que não existe."""
     caminho = tmp_path / "diario.jsonl"
     _o_daemon_que_morreu(caminho)
-    antes = storm_doctor.o_fato_da_queda(_queda_agora(), diario.ler(caminhos=[caminho]))
-    assert antes == "2 controles com som (limite 2)", "o dublê do daemon morto não pegou"
+    antes = diario.pontes_de_pe(diario.ler(caminhos=[caminho]), math.inf)
+    assert antes == {ADAPTADOR_A: {(CONTROLE_1, "som"), (CONTROLE_2, "som")}}, (
+        "o dublê do daemon morto não pegou"
+    )
 
     governador = gov.GovernadorDoRadio(
         adaptador_de=lambda _u: ADAPTADOR_A,
@@ -529,10 +523,7 @@ def test_o_arranque_fecha_as_pontes_que_o_daemon_morto_deixou(tmp_path: Path) ->
         (CONTROLE_2, gov.MOTIVO_DO_REINICIO),
     ]
     assert all(e["adaptador"] == ADAPTADOR_A and e["tipo"] == "som" for e in descidas)
-    assert diario.pontes_de_pe(entradas, math.inf) == {}
-    assert storm_doctor.o_fato_da_queda(_queda_agora(), entradas) is None, (
-        "a ponte fantasma entrou no fato da queda"
-    )
+    assert diario.pontes_de_pe(entradas, math.inf) == {}, "a ponte fantasma ficou de pé"
 
 
 def test_o_arranque_nao_fecha_a_ponte_que_o_daemon_novo_tem(tmp_path: Path) -> None:

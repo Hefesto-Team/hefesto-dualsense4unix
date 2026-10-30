@@ -359,49 +359,6 @@ def test_o_adaptador_na_entrada_numerada_nao_herda_o_numero() -> None:
     assert not maquina.nome_dado_ao_adaptador(documento, adaptador.endereco)
 
 
-_FRASES_DA_PONTE_ROOT = re.compile(r'"(O adaptador da porta \$\{porta\}[^"]*)"')
-
-
-def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
-    """A ponte root escreve o caminho do sistema no diário; quem lê o diário"""
-    documento = MaquinaConfig.model_validate(
-        {
-            "mapa": {
-                "faces": [{"nome": ee.FACE_ATRAS, "portas": ["3"]}],
-                "portas": {
-                    "3": {"lugar": f"pci-{PCI_B}-usb-0:4.1.4", "nos": ["3-4.1-port4"]}
-                },
-            },
-        }
-    )
-    script = (RAIZ / "scripts" / "bt_ponte_privilegiada.sh").read_text(encoding="utf-8")
-    moldes = sorted(set(_FRASES_DA_PONTE_ROOT.findall(script)))
-    assert moldes, "a ponte root não escreve mais «O adaptador da porta …» — a régua perdeu o alvo"
-    for molde in moldes:
-        linha = {
-            "o_que": "reiniciou o adaptador",
-            "porta": "3-4.1.4",
-            "familia": "3",
-            "frase": molde.replace("${porta}", "3-4.1.4"),
-        }
-        com_nome = ee.com_o_nome_dela(linha, maquina=documento, controladores=BOOT_1)
-        assert com_nome["frase"] == molde.replace("porta ${porta}", "Entrada 3"), molde
-        assert com_nome["porta_nome"] == "Entrada 3"
-
-    do_dono = {"o_que": bd.MUDOU_DE_LUGAR, "porta": f"pci-{PCI_B}-usb-0:4.1.4",
-               "frase": "Este adaptador mudou de porta."}
-    assert ee.com_o_nome_dela(do_dono, maquina=documento)["porta_nome"] == "Entrada 3"
-
-    sem_mapa = ee.com_o_nome_dela(linha, maquina=MaquinaConfig(), controladores=BOOT_1)
-    assert sem_mapa["porta_nome"] == "Entrada 4.1.4"
-    assert "3-4.1.4" not in sem_mapa["frase"], "o caminho do sistema chegou cru à frase"
-
-    fora_de_forma = {**linha, "porta": "hci3", "frase": "O adaptador hci3 travou."}
-    assert ee.com_o_nome_dela(fora_de_forma, maquina=MaquinaConfig()) == fora_de_forma, (
-        "o que não é porta não ganha nome"
-    )
-
-
 def test_dar_nome_ao_adaptador_grava_e_apaga_o_nome(disco: Path) -> None:
     """O nome é NOSSO e mora no ``maquina.json``; o ``Alias`` é do script"""
     feito = ee.dar_nome_ao_adaptador("AA:BB:CC:00:00:01", "  Extensor à esquerda ")

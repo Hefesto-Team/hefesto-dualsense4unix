@@ -1158,25 +1158,6 @@ def face_do_lugar(
     return next((f.nome for f in documento.mapa.faces if numero in f.portas), None)
 
 
-def com_o_nome_dela(
-    linha: Mapping[str, Any],
-    *,
-    maquina: MaquinaConfig | None = None,
-    controladores: Mapping[int, str] | None = None,
-) -> dict[str, Any]:
-    """Uma linha do diário do rádio com o nome que o usuário deu à porta."""
-    saida = dict(linha)
-    porta = str(linha.get("porta") or "")
-    nome = nome_da_porta(porta, maquina=maquina, controladores=controladores)
-    if not nome:
-        return saida
-    saida["porta_nome"] = nome
-    frase = saida.get("frase")
-    if isinstance(frase, str) and porta in frase:
-        saida["frase"] = frase.replace(f"porta {porta}", nome).replace(porta, nome)
-    return saida
-
-
 def dar_nome_ao_adaptador(
     endereco: str,
     nome: str,
@@ -2539,7 +2520,6 @@ __all__ = [
     "Pergunta",
     "PortaDoMapa",
     "PortaVista",
-    "com_o_nome_dela",
     "dar_nome_a_entrada",
     "dar_nome_ao_adaptador",
     "de_quem_pende",

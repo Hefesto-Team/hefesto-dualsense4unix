@@ -14,10 +14,7 @@ frase acima — «a cura de raiz do storm é o quirk» — vale só para a famí
 :func:`classificar_o_historico` separa as quatro a partir do ``kernel.log`` do
 kernel-watch: 1 (porta USB), 2A e 2B (o rádio afogado: o bluetoothd que leva
 EAGAIN, a fila do uhid parada), 3 (o controlador travado em laço) e 4 (a
-entrada descartada por CRC). É essa separação que dá fonte ao sino da aba
-Conexões: cada queda do rádio pode dizer o fato — «4 controles com som
-(limite 2)» — com :func:`o_fato_da_queda`, que junta o histórico com o diário
-comum (``integrations/diario_do_radio.py``).
+entrada descartada por CRC).
 """
 from __future__ import annotations
 
@@ -31,9 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
-from hefesto_dualsense4unix.integrations.radio_da_mesa import N_MAX_PONTES
 from hefesto_dualsense4unix.utils.repo_files import (
     FRASE_DE_ATUALIZAR,
     esta_instalacao_e_um_checkout,
@@ -706,8 +701,6 @@ FAMILIAS_DO_RADIO: dict[str, tuple[str, str]] = {
 
 FAMILIA_DA_QUEDA = "2A"
 
-LIMITE_DE_PONTES_POR_ADAPTADOR = N_MAX_PONTES
-
 _TAGS_GENERICAS = frozenset({"[BT-HCI]", "[KERNEL]"})
 _RECLASSIFICAR: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"output queue is full", re.I), "[FILA-CHEIA]"),
@@ -854,50 +847,9 @@ def classificar_o_historico(linhas: Iterable[str]) -> dict[str, ContagemDaFamili
     return contagens
 
 
-def caminho_do_kernel_log() -> Path:
-    """O ``kernel.log`` do kernel-watch desta conta."""
-    from hefesto_dualsense4unix.utils.xdg_paths import state_dir
-
-    return state_dir() / "kernel.log"
-
-
-def historico_do_radio(caminho: Path | None = None) -> dict[str, ContagemDaFamilia]:
-    """:func:`classificar_o_historico` sobre o ``kernel.log``. Nunca levanta."""
-    texto = _safe_read(caminho or caminho_do_kernel_log())
-    return classificar_o_historico(texto.splitlines())
-
-
 def quedas(eventos: Iterable[EventoDoRadio]) -> list[EventoDoRadio]:
     """As bordas da família que derruba os controles (:data:`FAMILIA_DA_QUEDA`)."""
     return [e for e in eventos if e.familia == FAMILIA_DA_QUEDA and e.borda]
-
-
-def o_fato_da_queda(
-    queda: EventoDoRadio,
-    entradas_do_diario: Iterable[dict[str, Any]],
-    *,
-    limite: int = LIMITE_DE_PONTES_POR_ADAPTADOR,
-) -> str | None:
-    """O fato de uma queda, dito do jeito que a tela diz. ``None`` = não sei."""
-    from hefesto_dualsense4unix.integrations.diario_do_radio import pontes_de_pe
-
-    por_adaptador = pontes_de_pe(list(entradas_do_diario), queda.carimbo)
-    if not por_adaptador:
-        return None
-    pontes = max(por_adaptador.values(), key=len)
-    controles = {controle for controle, _tipo in pontes}
-    tipos = {tipo for _controle, tipo in pontes}
-    if not controles:
-        return None
-    if tipos == {"som"}:
-        o_que = "com som"
-    elif tipos == {"vibracao"}:
-        o_que = "com vibração"
-    else:
-        o_que = "com som ou vibração"
-    quantos = len(controles)
-    palavra = "controle" if quantos == 1 else "controles"
-    return f"{quantos} {palavra} {o_que} (limite {limite})"
 
 
 def _safe_read(path: Path) -> str:
@@ -914,13 +866,11 @@ __all__ = [
     "GESTO_DE_ATUALIZAR",
     "GESTO_DE_INSTALAR",
     "JANELA_DA_RAJADA_S",
-    "LIMITE_DE_PONTES_POR_ADAPTADOR",
     "NOME_DA_DEPENDENCIA",
     "PACOTE_POR_FORMATO",
     "PREFIXO_DA_CURA",
     "ContagemDaFamilia",
     "EventoDoRadio",
-    "caminho_do_kernel_log",
     "check_authorized_rule",
     "check_quirk",
     "check_snd_audio_healthy",
@@ -934,9 +884,7 @@ __all__ = [
     "formato_desta_instalacao",
     "gesto_de_atualizar",
     "gesto_de_instalar",
-    "historico_do_radio",
     "ler_eventos_do_radio",
-    "o_fato_da_queda",
     "quedas",
     "rotulo_do_botao",
     "rotulos_de_reserva",

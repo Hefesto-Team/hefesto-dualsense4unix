@@ -1478,6 +1478,23 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "o `interface/aba08.py` (a chamada `_pacote08.html_do_acionador`) escreve com ela a "
         "janela do acionador no mockup, e o produto a mostra pela página publicada."
     ),
+    "app/actions/jogar/painel.py::modo_lembrado": (
+        "30/10/2026 — é o instrumento do piloto da aba Controles e da régua do opt-out, não "
+        "promessa ao produto: o único leitor no produto era o aviso do opt-out antigo da Jogar, "
+        "que saiu a pedido dela em b99bac069 "
+        "(O-AVISO-DO-OPT-OUT-ANTIGO-SAI-COM-OS-NOMES-VELHOS-01). "
+        "Hoje só `src/hefesto_dualsense4unix/interface/controles_vivos.py:661` (`modo_lembrado`) a "
+        "chama (bancada, fora do fecho do `hefesto_vivo`), e a "
+        "`tests/unit/test_o_desligado_de_ontem_01.py:47` (`modo_lembrado`) prova por ela que o "
+        "opt-out continua gravado. Sai com o piloto da aba Controles."
+    ),
+    "integrations/storm_doctor.py::classificar_o_historico": (
+        "30/10/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh:3172` "
+        "(`classificar_o_historico`), num heredoc Python, para resumir as famílias do rádio no "
+        "kernel-watch (régua: `tests/unit/test_o_doctor_resume_as_familias_do_radio.py`). O "
+        "leitor do produto era o sino da Conexões, que saiu com tudo o que só ele usava em "
+        "114ffb079 (D-2910-A-CONEXOES-SEM-ONDE-FICA-SINO-E-TITULO-DOS-OUTROS)."
+    ),
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {

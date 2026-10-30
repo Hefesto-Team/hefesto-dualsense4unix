@@ -228,18 +228,7 @@ def test_o_storm_doctor_separa_as_quatro_familias() -> None:
     assert historico["1"].primeira.startswith("2026-09-21")
 
 
-def test_o_storm_doctor_le_o_kernel_log_do_lar(tmp_path: Path) -> None:
-    log = tmp_path / "kernel.log"
-    log.write_text(
-        "# 2026-09-22 16:00:00 kernel-watch iniciado (banner)\n"
-        + _kernel_log_de_mentira(),
-        encoding="utf-8",
-    )
-    assert storm_doctor.historico_do_radio(log)["2A"].rajadas == 1
-    assert storm_doctor.historico_do_radio(tmp_path / "nao-existe.log") == {}
-
-
-def test_cada_queda_diz_o_fato_das_pontes(tmp_path: Path) -> None:
+def test_cada_queda_acha_as_pontes_de_pe_no_diario(tmp_path: Path) -> None:
     """A queda de 22/09 14:58:40 com quatro pontes de som num adaptador só."""
     eventos = storm_doctor.ler_eventos_do_radio(_kernel_log_de_mentira().splitlines())
     [queda] = storm_doctor.quedas(eventos)
@@ -251,8 +240,10 @@ def test_cada_queda_diz_o_fato_das_pontes(tmp_path: Path) -> None:
             controle=f"aa:bb:cc:00:00:0{n}", adaptador="AA:BB:CC:00:00:CE", tipo="som",
         )
     entradas = diario.ler(caminhos=[alvo])
-    assert storm_doctor.o_fato_da_queda(queda, entradas) == "4 controles com som (limite 2)"
-    assert storm_doctor.o_fato_da_queda(queda, []) is None
+    assert diario.pontes_de_pe(entradas, queda.carimbo) == {
+        "AA:BB:CC:00:00:CE": {(f"aa:bb:cc:00:00:0{n}", "som") for n in range(1, 5)}
+    }
+    assert diario.pontes_de_pe([], queda.carimbo) == {}
 
 
 BANNER_DE_20_07 = (
