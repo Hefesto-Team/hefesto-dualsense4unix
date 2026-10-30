@@ -160,7 +160,7 @@ cmd_aplicar() {
         for id in ${IDS_TODOS}; do
             case " ${IDS_DECIDIDOS} ${PROVADOS} " in
                 *" ${id} "*) ;;
-                *) _dizer "${id}: não aplicado, a provar na bancada (ainda não está na lista dos provados do install)" ;;
+                *) _dizer "${id}: não aplicado (ainda sem medida que o garanta em toda máquina); para ligar mesmo assim: bash ${_SCRIPT_DIR}/desempenho.sh aplicar ${id}" ;;
             esac
         done
     fi

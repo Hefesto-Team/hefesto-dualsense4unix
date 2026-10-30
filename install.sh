@@ -532,6 +532,36 @@ _pkg_nome() {
     esac
 }
 
+_pedir_o_que_o_dkms_compila() {
+    local _p _rc=0
+    local _obrigatorios=() _cabecalhos=()
+    for _p in "$@"; do
+        if [[ "${_p}" == "kernel-headers" ]]; then _cabecalhos+=("${_p}"); else _obrigatorios+=("${_p}"); fi
+    done
+    if (( ${#_obrigatorios[@]} )); then
+        run_pkg "${_obrigatorios[@]}" || _rc=$?
+        if [[ "${_rc}" -ne 0 ]]; then
+            warn "não consegui instalar ${_obrigatorios[*]}: os três módulos DKMS vão ser pulados"
+            printf '      O produto funciona com os drivers do kernel, sem as curas do Hefesto.\n'
+            printf '      A conferência no fim do install diz o que faltou.\n'
+            return "${_rc}"
+        fi
+    fi
+    if (( ${#_cabecalhos[@]} )); then
+        run_pkg kernel-headers || _rc=$?
+        if [[ "${_rc}" -ne 0 ]]; then
+            warn "os cabeçalhos do kernel $(uname -r) não vieram (kernel próprio, ou fora do repositório da distro)"
+            printf '      O dkms e o compilador ficam instalados, mas os três módulos não compilam para este kernel:\n'
+            printf '      o microfone do DualSense pelo rádio fica desligado, dois DualSense no mesmo adaptador\n'
+            printf '      podem virar um só, e o controle da Nintendo pode não subir pelo rádio.\n'
+            printf '      Instale os cabeçalhos deste kernel e rode o install de novo:   %s\n' \
+                "$(comando_manual_pkg kernel-headers)"
+            return "${_rc}"
+        fi
+    fi
+    printf '      pronto para compilar os módulos\n'
+}
+
 _run_pkg_quieto() {
     local _tmp
     _tmp="$(mktemp)"
@@ -1106,7 +1136,7 @@ _ensaio_camada() {
             if [[ -n "${DESEMPENHO_PROVADOS//[[:space:]]/}" ]]; then
                 _faria_root "os ajustes provados no aparelho (${DESEMPENHO_PROVADOS}): arquivos em /etc/modprobe.d e /etc/tmpfiles.d (hefesto-desempenho-nvidia.conf, hefesto-desempenho-audio.conf, hefesto-desempenho-aspm.conf), valem no próximo boot"
             else
-                _nao_faria "os ajustes ainda sem prova no aparelho (NVIDIA, áudio HDA, ASPM): o doctor os diz «a provar»"
+                _nao_faria "os ajustes ainda sem medida que os garanta em toda máquina (NVIDIA, áudio HDA, ASPM): o doctor os lista, com o comando para ligar cada um à mão"
             fi
             ;;
         dkms-playstation)
@@ -1361,13 +1391,7 @@ elif [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" != "nenhum" ]]; then
         printf '      controle da Nintendo pode não subir pelo rádio.\n\n'
         ask_yn "instalar agora com sudo?" "${AUTO_YES}"
         if [[ "${REPLY,,}" =~ ^y ]]; then
-            if run_pkg "${_dkms_faltando[@]}"; then
-                printf '      pronto para compilar os módulos\n'
-            else
-                warn "não consegui instalar ${_dkms_faltando[*]} — os módulos DKMS vão ser pulados"
-                printf '      O produto funciona com os drivers in-tree, sem as curas do Hefesto.\n'
-                printf '      A conferência final no fim vai dizer quais faltaram.\n'
-            fi
+            _pedir_o_que_o_dkms_compila "${_dkms_faltando[@]}" || true
         else
             warn "sem ${_dkms_faltando[*]}: os três módulos DKMS vão ser pulados"
             printf '      Reexecute o install depois de instalá-los para ganhar as curas.\n'
@@ -2189,7 +2213,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                 printf '          (os controles BT caem até reconectar; se algum não voltar,\n'
                 printf '          aperte o PS dele). Na migração 5.72 -> 5.8x os bonds antigos\n'
                 printf '          se perdiam (reparear uma vez); entre revisões do 5.86 não se\n'
-                printf '          mediu perda, e do 5.86 para o 5.87 a bancada confere. É a ÚNICA exceção à regra de nunca reiniciar o\n'
+                printf '          mediu perda, e do 5.86 para o 5.87 ainda não se mediu. É a ÚNICA exceção à regra de nunca reiniciar o\n'
                 printf '          serviço: quem reinicia é o postinst do PRÓPRIO pacote bluez.\n\n'
                 ask_yn "aplicar o backport agora?" "${AUTO_YES}" "y"
                 if [[ "${REPLY,,}" =~ ^y ]]; then
@@ -2343,7 +2367,7 @@ install_pipewire_da_casa() {
             ;;
     esac
     if ! _pw_da_casa_serve_aqui; then
-        warn "o PipeWire da casa é do Pop!_OS 24.04, e esta máquina é $(_pw_nome_da_distro): o PipeWire dela fica como está"
+        warn "o PipeWire da casa é do Pop!_OS 24.04, e esta máquina é $(_pw_nome_da_distro): o PipeWire desta máquina fica como está"
         printf '      sem a 1.6.9, a Steam pode não fechar depois de o som reiniciar; a cura vem da distro (o doctor avisa quando chegar)\n'
         return 0
     fi
@@ -3240,6 +3264,8 @@ fi
 
 step "11a" "Proton pinado: baixar e conferir a versão validada (antes de fechar a Steam)"
 PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
+PYTHON_DO_PINO="/usr/bin/env python3"
+[[ -x "${VENV_DIR}/bin/python" ]] && PYTHON_DO_PINO="${VENV_DIR}/bin/python"
 _pp_pronto=0
 if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
     printf '      pulado (--no-proton-pin) — sem o pin, um upgrade de Proton pode duplicar o controle\n'
@@ -3271,14 +3297,18 @@ else
             warn "sem rede e sem cache — o pin fica PENDENTE (rode ./install.sh de novo com internet); trava adiada"
             ;;
         4)
-            warn "pino do Proton ADIADO: não há Steam nativa onde extraí-lo (o motivo está na linha acima) — nada foi criado na pasta da Steam"
+            warn "o Proton fixado ficou guardado, sem instalar na Steam: esta máquina não tem a Steam nativa (o motivo está na linha acima) — nada foi criado na pasta da Steam"
             warn "  quando a Steam nativa existir, o vigia da Steam extrai do cache e trava sozinho; ou rode: python3 ${PROTON_PIN_PY} --ensure && python3 ${PROTON_PIN_PY} --lock --todos"
             ;;
         5)
             warn "o Proton bateu com o SHA256 e a EXTRAÇÃO falhou — veja o espaço livre em disco e rode: python3 ${PROTON_PIN_PY} --ensure"
             ;;
         7)
-            warn "pino do Proton ADIADO: a Steam desta máquina é Flatpak/Snap, e o Proton extraído aqui fora não serve dentro da caixa dela — nada foi baixado (o motivo está na linha acima)"
+            warn "o Proton fixado não foi instalado: a Steam desta máquina é Flatpak/Snap, e o Proton extraído aqui fora não serve dentro da caixa do Flatpak/Snap — nada foi baixado (o motivo está na linha acima)"
+            ;;
+        8)
+            printf '      nada foi baixado: nenhum lançador de jogos (Steam, Heroic ou outro) está instalado para usar o Proton fixado (~540 MB)\n'
+            printf '      quando um lançador for instalado, o vigia da Steam baixa e fixa sozinho; ou rode: python3 %s --ensure\n' "${PROTON_PIN_PY}"
             ;;
         *)
             warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --ensure"
@@ -3287,7 +3317,7 @@ else
     unset _pp_rc _pp_saida
 fi
 
-step "11a-bis" "Steam: fechar uma vez só, para os passos que editam os arquivos dela"
+step "11a-bis" "Steam: fechar uma vez só, para os passos que editam os arquivos da Steam"
 LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
 _steam_fechada_pelo_install=0
 _reabrir_a_steam_se_o_install_fechou() {
@@ -3323,7 +3353,7 @@ elif [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
             :
             ;;
         *)
-            warn "a Steam segue aberta (jogo aberto, ou ela não fechou) — os passos 11 a 11c adiam o que precisar dela, cada um com o comando"
+            warn "a Steam segue aberta (jogo aberto, ou ela não fechou) — os passos 11 a 11c adiam o que precisar da Steam fechada, cada um com o comando"
             ;;
     esac
     unset _fs_rc
@@ -3376,6 +3406,7 @@ else
     if sed ${_guard_linhas_que_saem[@]+"${_guard_linhas_que_saem[@]}"} \
         -e "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
         -e "s#__SENTINELA__#${SENTINELA_PY}#g" \
+        -e "s#__PYTHON_DO_PINO__#${PYTHON_DO_PINO}#g" \
         -e "s#__PROTON_PIN__#${PROTON_PIN_PY}#g" \
         -e "s#__OPCOES_POR_JOGO__#${OPCOES_POR_JOGO_PY}#g" \
         "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${_guard_tmp}" 2>/dev/null \
@@ -3479,6 +3510,13 @@ else
         warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock --todos"
     fi
     unset _pl_rc
+fi
+if [[ "${NO_PROTON_PIN}" -eq 0 && "${DRY_RUN:-0}" -ne 1 && -f "${PROTON_PIN_PY}" ]]; then
+    # shellcheck disable=SC2086
+    ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --lancadores \
+        || warn "os outros lançadores não foram fixados agora; o vigia da Steam tenta de novo em até 30 minutos"
+elif [[ "${DRY_RUN:-0}" -eq 1 && "${NO_PROTON_PIN}" -eq 0 ]]; then
+    _faria "apontar para a mesma versão do Proton os jogos do Heroic (nativo e Flatpak) e os das extensões que dizem como fixar; o jogo que roda pelo Wine fica, e a aba Lançadores o mostra"
 fi
 
 if [[ "${_steam_fechada_pelo_install}" -eq 1 ]]; then

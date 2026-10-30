@@ -13,7 +13,7 @@ nascem do `_proton_de_mentira` da régua da ficha; a Steam viva e o Heroic vivo 
 AS MORDIDAS (feitas na sprint, com a cura devolvida e o md5 conferido): o `pino_que_vale` que volta
 ao pino do conf (ou à mínima) reprova o caso da mais recente; o que aceita a nova sem a ficha
 reprova o caso da que reprova; o lock que usa o nome do conf reprova o caso do fluxo inteiro; o
-`apontar_o_heroic_para` que não escreve, ou o que escreve com o Heroic aberto, reprova os casos
+`fixar_o_heroic` que não escreve, ou o que escreve com o Heroic aberto, reprova os casos
 do Heroic; o «mantém a citada» da Steam de volta (a sobra que não espera o lock) reprova o caso
 do fluxo.
 """
@@ -150,7 +150,7 @@ def test_o_fluxo_inteiro_deixa_so_a_mais_nova(casa: Path, monkeypatch: pytest.Mo
     assert VELHA not in _nomes(antes), "o lock ainda não rodou: a velha segue em uso"
 
     _travar(casa)
-    assert pp.apontar_os_lancadores_para_o_pino(casa, conf=CONF) == 1
+    assert pp.apontar_os_lancadores_para_o_pino(casa, conf=CONF).reescritas == 1
 
     sobras = pp.versoes_que_sobram(casa)
     assert _nomes(sobras) == {VELHA}
@@ -167,8 +167,7 @@ def test_o_heroic_passa_a_apontar_para_a_nova_e_guarda_a_copia(casa: Path) -> No
     _jogo_do_heroic(casa, VELHA)
     _yml(casa, DO_HEROIC, "config.json", json.dumps({"defaultSettings": {"wineVersion": {
         "bin": f"{_compat(casa)}/{VELHA}/proton", "name": VELHA, "type": "proton"}}}))
-    feito = censo.apontar_o_heroic_para(
-        NOVA, _compat(casa), frozenset({VELHA}), lar=casa, aberto=lambda: False)
+    feito = censo.fixar_o_heroic(casa / DO_HEROIC, _compat(casa) / NOVA, aberto=lambda: False)
     assert feito.reescritas == 2
     jogo = json.loads((casa / DO_HEROIC / "GamesConfig" / "abc123.json").read_text())
     assert jogo["abc123"]["wineVersion"]["name"] == NOVA
@@ -185,29 +184,34 @@ def test_o_heroic_aberto_nao_e_escrito(casa: Path) -> None:
     _jogo_do_heroic(casa, VELHA)
     arquivo = casa / DO_HEROIC / "GamesConfig" / "abc123.json"
     antes = arquivo.read_bytes()
-    feito = censo.apontar_o_heroic_para(
-        NOVA, _compat(casa), frozenset({VELHA}), lar=casa, aberto=lambda: True)
-    assert feito.reescritas == 0 and "aberto" in feito.recusa
+    feito = censo.fixar_o_heroic(casa / DO_HEROIC, _compat(casa) / NOVA, aberto=lambda: True)
+    assert feito.reescritas == 0
+    assert censo.ForaDoPino("heroic", "", censo.PORQUE_HEROIC_ABERTO) in feito.fora
     assert arquivo.read_bytes() == antes
 
 
-def test_o_heroic_so_troca_o_proton_do_pino_e_deixa_o_resto(casa: Path) -> None:
-    """O Wine do próprio Heroic e um Proton de fora da pasta do pino não são do pino."""
+def test_o_heroic_deixa_o_wine_e_o_diz_e_leva_ao_pino_o_proton_de_fora(casa: Path) -> None:
+    """O Wine do Heroic fica (o prefixo do jogo é dele) e vai à aba; o Proton de fora vai ao pino.
+
+    D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO: até 30/10 o Proton de fora da pasta do pino ficava.
+    """
     _instalar(casa, NOVA)
     _yml(casa, DO_HEROIC, "GamesConfig/wine.json", json.dumps({"w": {"wineVersion": {
         "bin": "/opt/heroic/wine/bin/wine64", "name": VELHA, "type": "wine"}}}))
     _yml(casa, DO_HEROIC, "GamesConfig/fora.json", json.dumps({"f": {"wineVersion": {
         "bin": f"/outro/lugar/{VELHA}/proton", "name": VELHA, "type": "proton"}}}))
-    feito = censo.apontar_o_heroic_para(
-        NOVA, _compat(casa), frozenset({VELHA}), lar=casa, aberto=lambda: False)
-    assert feito.reescritas == 0
+    feito = censo.fixar_o_heroic(casa / DO_HEROIC, _compat(casa) / NOVA, aberto=lambda: False)
+    assert feito.reescritas == 1
+    assert feito.fora == (censo.ForaDoPino("heroic", "w", censo.PORQUE_PELO_WINE),)
+    fora = json.loads((casa / DO_HEROIC / "GamesConfig" / "fora.json").read_text())
+    assert fora["f"]["wineVersion"]["bin"] == f"{_compat(casa)}/{NOVA}/proton"
 
 
 def test_o_json_do_heroic_que_nao_se_le_fica_como_esta(casa: Path) -> None:
     _yml(casa, DO_HEROIC, "GamesConfig/quebrado.json", "{nao e json")
-    feito = censo.apontar_o_heroic_para(
-        NOVA, _compat(casa), frozenset({VELHA}), lar=casa, aberto=lambda: False)
+    feito = censo.fixar_o_heroic(casa / DO_HEROIC, _compat(casa) / NOVA, aberto=lambda: False)
     assert feito.reescritas == 0
+    assert censo.ForaDoPino("heroic", "quebrado", censo.PORQUE_ILEGIVEL) in feito.fora
     assert (casa / DO_HEROIC / "GamesConfig" / "quebrado.json").read_text() == "{nao e json"
 
 
@@ -253,7 +257,7 @@ def test_sem_nada_a_apontar_o_heroic_nao_e_tocado(casa: Path) -> None:
     _jogo_do_heroic(casa, VELHA)
     arquivo = casa / DO_HEROIC / "GamesConfig" / "abc123.json"
     antes = arquivo.read_bytes()
-    assert pp.apontar_os_lancadores_para_o_pino(casa, conf=CONF) == 0
+    assert pp.apontar_os_lancadores_para_o_pino(casa, conf=CONF).reescritas == 0
     assert arquivo.read_bytes() == antes
 
 

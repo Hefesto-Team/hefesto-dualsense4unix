@@ -47,7 +47,7 @@ import urllib.request
 from collections.abc import Callable, Collection, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 try:
     from .steam_launch_options import (
@@ -67,6 +67,9 @@ except ImportError:  # pragma: no cover
         steam_game_running,
         steam_running,
     )
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import FixadoNoLancador
 
 MANIFEST_BASENAME = ".hefesto-proton-pin.json"
 
@@ -103,6 +106,7 @@ RC_ADIADO = 4
 RC_EXTRACAO_FALHOU = 5
 RC_CONF_ILEGIVEL = 6
 RC_STEAM_NA_CAIXA = 7
+RC_SEM_LANCADOR = 8
 
 FORA_DO_PINO_RELPATH = "hefesto-dualsense4unix/jogos_fora_do_pino.txt"
 
@@ -1671,40 +1675,139 @@ def conf_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> dict[
             "instalada": "1"}
 
 
+PROTON_MINIMO = (11, 7)
+
+
+def _onde_ja_esta(pasta: Path, nome: str, compat: Path) -> Path | None:
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import e_da_caixa_do_flatpak
+
+    if not e_da_caixa_do_flatpak(pasta) and pinned_proton_installed(nome, compat):
+        return compat / nome
+    proprio = pasta / "tools" / "proton"
+    return proprio / nome if pinned_proton_installed(nome, proprio) else None
+
+
+def onde_o_heroic_ve_o_pino(pasta: Path, pino: str, *, conf: dict[str, str], compat: Path,
+                            cache: Path, extrair: bool = True) -> Path | None:
+    """A pasta do Proton fixado que ESTA casa do Heroic enxerga, ou ``None``.
+
+    O Heroic nativo usa o da Steam quando ele está lá; a caixa do Flatpak só vê a própria
+    ``tools/proton``. Sem nenhum dos dois, o do conf sai do tarball conferido do cache para a
+    ``tools/proton`` da casa, sem rede (``extrair``). Nunca levanta.
+    """
+    for nome in dict.fromkeys((pino, conf["name"])):
+        achado = _onde_ja_esta(pasta, nome, compat)
+        if achado is not None:
+            return achado
+    if not extrair or not (cache / f"{conf['name']}.tar.gz").is_file():
+        return None
+    proprio = pasta / "tools" / "proton"
+    try:
+        proprio.mkdir(parents=True, exist_ok=True)
+        ensure_pinned_proton(conf, compat_dir=proprio, cache_dir=cache, downloader=None)
+    except OSError:
+        return None
+    return proprio / conf["name"] if pinned_proton_installed(conf["name"], proprio) else None
+
+
+def quem_usa_o_proton(home: Path | None = None) -> tuple[str, ...]:
+    """Os lançadores deste disco que rodam jogo pelo Proton do host, pelo nome. Nunca levanta.
+
+    A Steam nativa, cada casa do Heroic, cada extensão de lançador que diz como fixar o Proton e
+    cada lançador que virou extensão pelo Proton e tem pasta aqui. A Steam do Flatpak ou do Snap
+    não entra: o Proton de fora não serve dentro da caixa dela.
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    quem: list[str] = []
+    with contextlib.suppress(Exception):
+        if steam_root_ou_recusa(home).raiz is not None:
+            quem.append("Steam")
+    with contextlib.suppress(Exception):
+        if censo.pastas_que_existem("Heroic", home):
+            quem.append("Heroic")
+    with contextlib.suppress(Exception):
+        quem += [e.bloco.rotulo for e in censo.lancadores_das_extensoes()
+                 if e.bloco.fixador is not None]
+    with contextlib.suppress(Exception):
+        quem += [v.nome for v in censo.lancadores_que_viraram_extensao(home) if v.proton]
+    return tuple(dict.fromkeys(quem))
+
+
+def _tarball_do_conf(conf: dict[str, str], cache: Path) -> Path | None:
+    tarball = cache / f"{conf['name']}.tar.gz"
+    return tarball if tarball.is_file() else None
+
+
 def apontar_os_lancadores_para_o_pino(
     home: Path | None = None,
     *,
     conf: dict[str, str] | None = None,
     compat_dir: Path | None = None,
-) -> int:
-    """Aponta o Heroic para o pino que vale, no lugar de toda outra versão do Proton instalada.
+    cache_dir: Path | None = None,
+    escrever: bool = True,
+    bwrap: str | bool | None = True,
+) -> FixadoNoLancador:
+    """Fixa no Proton que vale todo jogo de todo lançador que não é a Steam (30/10/2026).
 
-    A Steam é do lock (:func:`lock_proton_for_all_games`); o Heroic guarda o Proton no JSON dele, e
-    quem sabe onde é o censo (:func:`censo_dos_lancadores.apontar_o_heroic_para`). Sem isto a
-    versão velha ficaria «em uso» e não sairia. O Lutris é extensão e só se lê: se ele cita a
-    velha, ela fica (:func:`versoes_que_sobram`). Devolve quantas escolhas trocou; nunca levanta.
+    O dono da ordem «o pin vale para qualquer usuário e todo jogo»
+    (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO). A Steam é do lock
+    (:func:`lock_proton_for_all_games`); aqui entram cada casa do Heroic
+    (:func:`censo_dos_lancadores.fixar_o_heroic`, com o pino onde ela o enxerga) e cada extensão
+    de lançador ligada, pelo ``fixador`` que o manifesto declara. O que não se fixa vem em
+    ``fora``, com o porquê, para a aba Lançadores dizer. ``escrever=False`` só mede (é o que a aba
+    lê). Nunca levanta.
     """
-    try:
-        compat = compat_dir if compat_dir is not None else default_compat_dir(home)
-        pino = pino_que_vale(conf if conf is not None else _load_conf(None), compat)
-        if not pinned_proton_installed(pino, compat):
-            return 0
-        outras: set[str] = set()
-        for pasta in compat.iterdir():
-            if pasta.is_symlink() or not pasta.is_dir() or pasta.name == pino:
-                continue
-            nomes = (pasta.name, *nomes_internos(pasta))
-            if all(e_da_familia_proton(n) for n in nomes) and pino not in nomes:
-                outras.update(nomes)
-        if not outras:
-            return 0
-        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
-            apontar_o_heroic_para,
-        )
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-        return apontar_o_heroic_para(pino, compat, frozenset(outras), lar=home).reescritas
+    try:
+        conf = conf if conf is not None else _load_conf(None)
+        compat = compat_dir if compat_dir is not None else default_compat_dir(home)
+        cache = cache_dir if cache_dir is not None else default_cache_dir(home)
+        pino = pino_que_vale(conf, compat)
+        lar = home if home is not None else Path.home()
     except Exception:
-        return 0
+        return censo.FixadoNoLancador()
+    total = 0
+    fora: list[censo.ForaDoPino] = []
+    with contextlib.suppress(Exception):
+        for pasta in censo.pastas_que_existem("Heroic", home):
+            pino_dir = onde_o_heroic_ve_o_pino(pasta, pino, conf=conf, compat=compat,
+                                               cache=cache, extrair=escrever)
+            feito = censo.fixar_o_heroic(pasta, pino_dir, escrever=escrever)
+            total += feito.reescritas
+            fora.extend(feito.fora)
+    cuidadas: set[str] = set()
+    pelo_proton = censo.viraram_extensao_pelo_proton()
+    extensoes: tuple[censo.LancadorDaExtensao, ...] = ()
+    with contextlib.suppress(Exception):
+        extensoes = censo.lancadores_das_extensoes()
+    for ext in extensoes:
+        bloco = ext.bloco
+        if bloco.fixador is not None and escrever:
+            cuidadas.add(bloco.chave)
+            feito = censo.fixar_por_processo(
+                bloco.fixador, nome=pino,
+                pino_dir=compat / pino if pinned_proton_installed(pino, compat) else None,
+                tarball=_tarball_do_conf(conf, cache), lar=lar, bwrap=bwrap)
+            total += feito.reescritas
+            fora.extend(feito.fora)
+            continue
+        porque = censo.PORQUE_AINDA_NAO if bloco.fixador else censo.PORQUE_SEM_FIXADOR
+        if bloco.leitor is not None:
+            cuidadas.add(bloco.chave)
+            with contextlib.suppress(Exception):
+                lida = censo.ler_por_processo(bloco.leitor)
+                fora.extend(censo.fora_do_pino_nos_jogos(bloco.chave, lida.jogos, pino,
+                                                         porque=porque))
+        elif bloco.chave in pelo_proton and bloco.fixador is None:
+            cuidadas.add(bloco.chave)
+            fora.append(censo.ForaDoPino(bloco.chave, "", porque))
+    with contextlib.suppress(Exception):
+        for antigo in censo.lancadores_que_viraram_extensao(home):
+            if antigo.proton and antigo.chave not in cuidadas:
+                fora.append(censo.ForaDoPino(antigo.chave, "", censo.PORQUE_SEM_A_EXTENSAO))
+    return censo.FixadoNoLancador(total, tuple(fora))
 
 
 def _tamanho_da_pasta(pasta: Path) -> int:
@@ -1944,12 +2047,15 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
         raiz, motivo = steam_root_ou_recusa()
         if raiz is None:
             _avisar_da_raiz_envenenada()
-            if steam_em_caixa() is not None:
+            quem = quem_usa_o_proton()
+            if not quem:
                 print(
-                    f"[proton-pin] {conf['name']}: adiado ({motivo}) — nada "
-                    "baixado: o Proton extraído no host não serve dentro da caixa"
+                    f"[proton-pin] {conf['name']}: não baixado — nenhum lançador "
+                    "desta máquina roda jogo pelo Proton (a Steam, o Heroic ou uma "
+                    f"extensão de lançador; {motivo}). Quando um aparecer, o vigia "
+                    "da Steam baixa e fixa sozinho."
                 )
-                return RC_STEAM_NA_CAIXA
+                return RC_STEAM_NA_CAIXA if steam_em_caixa() is not None else RC_SEM_LANCADOR
             result = adiantar_para_o_cache(
                 conf, cache_dir=cache, downloader=downloader
             )
@@ -1958,10 +2064,9 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
             if result.state != "em_cache":
                 return _rc_do_ensure(result)
             print(
-                f"[proton-pin] pino adiado até a Steam nativa existir ({motivo}): "
-                "o tarball conferido ficou no cache, nada foi extraído e nada "
-                "foi criado na pasta da Steam. Quando ela existir, o vigia da "
-                "Steam (ou o próximo install) extrai e trava, sem rede."
+                f"[proton-pin] baixado para {', '.join(quem)}. A Steam fica de "
+                f"fora ({motivo}): nada foi criado na pasta da Steam, e quando a "
+                "Steam existir o vigia extrai e trava, sem rede."
             )
             return RC_ADIADO
         compat = raiz / "compatibilitytools.d"
@@ -1978,24 +2083,77 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
     return _rc_do_ensure(result)
 
 
-def _cmd_manter(args: argparse.Namespace) -> int:
-    """O que o vigia da Steam roda: repõe o pino sem rede, e trava todo jogo."""
+def _baixar_se_falta(conf: dict[str, str], cache: Path, offline: bool, prefixo: str
+                     ) -> EnsureResult | None:
+    """Baixa o tarball do conf para o cache quando ele falta; ``None`` se não baixou.
+
+    Com um jogo aberto não baixa: a rede é do jogo, e a volta seguinte do vigia tenta de novo.
+    """
+    if _tarball_do_conf(conf, cache) is not None or offline or steam_game_running():
+        return None
+    print(f"[proton-pin] {prefixo}: baixando {conf['name']} para o cache ({cache}), uma vez só")
+    return adiantar_para_o_cache(conf, cache_dir=cache, downloader=baixar_a_release)
+
+
+def _manter_os_lancadores(conf: dict[str, str], args: argparse.Namespace, prefixo: str) -> int:
+    """Fixa no pino cada lançador que não é a Steam e diz o que ficou de fora."""
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    quem = [q for q in quem_usa_o_proton() if q != "Steam"]
+    if not quem:
+        return 0
+    compat = args.compat_dir if args.compat_dir else default_compat_dir()
+    cache = args.cache_dir if args.cache_dir else default_cache_dir()
+    medida = apontar_os_lancadores_para_o_pino(conf=conf, compat_dir=compat, cache_dir=cache,
+                                               escrever=False)
+    if (not pinned_proton_installed(pino_que_vale(conf, compat), compat)
+            or any(f.porque == censo.PORQUE_SEM_O_PINO for f in medida.fora)):
+        baixado = _baixar_se_falta(conf, cache, args.offline, prefixo)
+        if baixado is not None and baixado.state != "em_cache":
+            print(f"[proton-pin] {prefixo}: {conf['name']}: {baixado.state}"
+                  + (f" ({baixado.detail})" if baixado.detail else ""))
+    feito = apontar_os_lancadores_para_o_pino(conf=conf, compat_dir=compat, cache_dir=cache)
+    print(f"[proton-pin] {prefixo}: {', '.join(quem)}: {feito.reescritas} escolha(s) "
+          "apontada(s) para o Proton fixado")
+    for fora in feito.fora:
+        jogo = f" «{fora.jogo}»" if fora.jogo else ""
+        print(f"[proton-pin] {prefixo}: fora do Proton fixado — {fora.lancador}{jogo}: "
+              f"{fora.porque}")
+    return 0
+
+
+def _cmd_lancadores(args: argparse.Namespace) -> int:
     conf = _conf_ou_rc(args)
     if isinstance(conf, int):
         return conf
+    return _manter_os_lancadores(conf, args, "lançadores")
+
+
+def _cmd_manter(args: argparse.Namespace) -> int:
+    """O que o vigia da Steam roda: repõe o pino, trava todo jogo da Steam e fixa os lançadores."""
+    conf = _conf_ou_rc(args)
+    if isinstance(conf, int):
+        return conf
+    rc = _manter_a_steam(conf, args)
+    _manter_os_lancadores(conf, args, "manter")
+    return rc
+
+
+def _manter_a_steam(conf: dict[str, str], args: argparse.Namespace) -> int:
     raiz, motivo = steam_root_ou_recusa()
     if raiz is None:
         _avisar_da_raiz_envenenada()
-        print(f"[proton-pin] manter: nada a fazer — {motivo}")
+        print(f"[proton-pin] manter: a Steam fica de fora — {motivo}")
         return 0
     compat = args.compat_dir if args.compat_dir else raiz / "compatibilitytools.d"
     name = pino_que_vale(conf, compat)
     if not pinned_proton_installed(name, compat):
         cache = args.cache_dir if args.cache_dir else default_cache_dir()
+        baixado = _baixar_se_falta(conf, cache, args.offline, "manter")
         if not (cache / f"{name}.tar.gz").is_file():
             print(f"[proton-pin] manter: {name} ainda não está em {compat}, e o "
                   f"tarball não está no cache ({cache})")
-            return _rc_do_ensure(EnsureResult(
+            return _rc_do_ensure(baixado or EnsureResult(
                 "unavailable", "sem cache local e sem downloader (offline?)"))
         recusa = _steam_gate()
         if recusa is not None:
@@ -2235,8 +2393,15 @@ def main(argv: list[str] | None = None) -> int:
     group.add_argument(
         "--manter",
         action="store_true",
-        help="o que o vigia da Steam roda: repõe o pino do cache (sem rede) e "
-             "trava todo jogo (--lock --todos); adia com a Steam aberta",
+        help="o que o vigia da Steam roda: repõe o pino do cache (baixa uma vez se "
+             "um lançador o pede e o cache não o tem), trava todo jogo (--lock --todos) "
+             "e fixa os outros lançadores (--lancadores); adia com a Steam aberta",
+    )
+    group.add_argument(
+        "--lancadores",
+        action="store_true",
+        help="fixa no Proton fixado todo jogo dos lançadores que não são a Steam "
+             "(o Heroic e as extensões de lançador) e diz o que ficou de fora",
     )
     group.add_argument(
         "--fora-do-pino", default=None, metavar="APPID",
@@ -2284,6 +2449,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_unlock(args)
         if args.manter:
             return _cmd_manter(args)
+        if args.lancadores:
+            return _cmd_lancadores(args)
         if args.fora_do_pino is not None:
             return _cmd_fora_do_pino(args)
         if args.de_volta_ao_pino is not None:
@@ -2298,4 +2465,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":  # pragma: no cover
+    sys.path.insert(1, str(Path(__file__).resolve().parents[2]))
     sys.exit(main())

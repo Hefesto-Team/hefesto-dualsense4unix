@@ -84,6 +84,7 @@ class Lancador:
     fora: str = ""
     tem_lista: bool = False
     presente: bool = False
+    fora_do_pino: str = ""
 
 
 _DURO = "\u00a0"
@@ -168,6 +169,20 @@ def sem_o_ambiente_html(chave: str, onde: tuple[str, ...]) -> str:
     if chave in POR_JOGO:
         return f"<b>{_plural(len(onde), 'jogo', 'jogos')} sem o ambiente do Hefesto</b>"
     return "<b>Sem o ambiente do Hefesto</b>"
+
+
+def fora_do_pino_html(fora: tuple[tuple[str, str], ...]) -> str:
+    """A linha do cartão com os jogos que o Proton fixado não alcança, e o porquê na dica.
+
+    ``fora`` é ``((jogo, porquê), …)``; o jogo vazio é o lançador inteiro
+    (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO). Vazia quando nada fica de fora.
+    """
+    if not fora:
+        return ""
+    dica = " · ".join(f"{jogo}: {porque}" if jogo else porque for jogo, porque in fora)
+    jogos = sum(1 for jogo, _ in fora if jogo)
+    rotulo = f"{jogos} fora do Proton fixado" if jogos else "Fora do Proton fixado"
+    return f'<span class="lf-imped" data-dica="{_a(dica)}">{_e(rotulo)}</span>'
 
 
 def contador_html(pontes: int) -> str:
@@ -592,6 +607,8 @@ class DoDisco:
 
     sem_ambiente: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
+    fora_do_pino: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = ()
+
     def resumo(self, chave: str) -> str:
         return dict(self.resumos).get(chave, "")
 
@@ -600,6 +617,9 @@ class DoDisco:
 
     def sem_ambiente_de(self, chave: str) -> tuple[str, ...]:
         return dict(self.sem_ambiente).get(chave, ())
+
+    def fora_do_pino_de(self, chave: str) -> tuple[tuple[str, str], ...]:
+        return dict(self.fora_do_pino).get(chave, ())
 
 
 SEM_DISCO = DoDisco()
@@ -1037,11 +1057,13 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
                         jogos="—", diz=DIZ_NAO_ACHEI,
                         acoes=localizar + tirar)
     resumo = do_disco.resumo(item.chave)
-    falta = sem_o_ambiente_html(item.chave, do_disco.sem_ambiente_de(item.chave))
+    faltas = [linha for linha in (
+        sem_o_ambiente_html(item.chave, do_disco.sem_ambiente_de(item.chave)),
+        fora_do_pino_html(do_disco.fora_do_pino_de(item.chave))) if linha]
     return Lancador(
-        chave=item.chave, nome=item.nome, selo="warn" if falta else "localizado",
+        chave=item.chave, nome=item.nome, selo="warn" if faltas else "localizado",
         jogos=resumo or "—",
-        diz=contador_html(do_disco.pontes_de(item.chave)) + (f"<br>{falta}" if falta else ""),
+        diz=contador_html(do_disco.pontes_de(item.chave)) + "".join(f"<br>{x}" for x in faltas),
         acoes=fileira_comum(item.chave) + tirar, presente=True)
 
 
@@ -1061,7 +1083,8 @@ def cartoes(lida: Leitura | None) -> list[Lancador]:
         if item.chave == STEAM:
             continue
         fora.append(cartao_sem_censo(item, onde_estao.get(item.chave), do_disco))
-    return fora
+    return [dataclasses.replace(
+        x, fora_do_pino=fora_do_pino_html(do_disco.fora_do_pino_de(x.chave))) for x in fora]
 
 
 @dataclass

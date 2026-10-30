@@ -157,7 +157,7 @@ class TestOMecanismo:
         assert r.returncode == 0, r.stdout + r.stderr
         assert m.escritos() == {UNIT, WANTS}, m.escritos()
         for id_ in ("nvidia", "audio", "aspm"):
-            assert f"{id_}: não aplicado, a provar" in r.stdout, r.stdout
+            assert f"{id_}: não aplicado (ainda sem medida" in r.stdout, r.stdout
 
     def test_a_unit_pede_performance_ao_system76_power(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path)
@@ -447,7 +447,7 @@ class TestOEnsaioEAsFlags:
         faria = "\n".join(ln for ln in saida.splitlines() if "FARIA" in ln)
         assert "hefesto-desempenho.service" in faria, saida[-3000:]
         assert "hefesto-desempenho-nvidia.conf" not in faria
-        assert "o doctor os diz «a provar»" in saida
+        assert "o doctor os lista, com o comando para ligar cada um à mão" in saida
 
     def test_com_sem_desempenho_o_plano_nao_tem_nada(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path, bateria=False)

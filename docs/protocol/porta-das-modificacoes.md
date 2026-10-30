@@ -233,7 +233,8 @@ frase, o manifesto em que falta um deles ou cujo bloco não serve. O bloco aceit
   tem de ser um dos `comandos`;
 - `janelas`: os app-ids das janelas que o lançador abre, para o perfil «todos os jogos»;
 - `titulo_do_jogo`: a expressão (`re.search`) que o `titulo_do_jogo` de cada jogo tem de casar;
-- `leitor`: o leitor da biblioteca, abaixo.
+- `leitor`: o leitor da biblioteca, abaixo;
+- `fixador`: como fixar o Proton dos jogos do lançador, abaixo.
 
 As listas vão até 16 itens.
 
@@ -260,6 +261,22 @@ disco) imprime o objeto `{"jogos": [...], "pastas": [...]}`: `jogos` é a mesma 
 caminhos absolutos que ele percorreu, até 64. A data de cada pasta da última leitura entra na assinatura
 das bibliotecas, e o jogo que entra nela faz a leitura sair de novo. A pasta torta (relativa, vazia, com
 byte nulo) sai sozinha; a lista sem o objeto continua valendo.
+
+### O fixador no manifesto
+
+O Proton fixado vale para todo jogo instalado, de qualquer lançador (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO).
+O Hefesto não conhece o formato da configuração de um lançador que é extensão: quem sabe fixar é ela, pelo
+`lancador.fixador`. O vigia da Steam, o install e o «Aplicar soluções» o rodam na mesma caixa do leitor, sem
+rede, com as `fontes` graváveis:
+
+- `executar` e `prazo_s`: como no leitor;
+- `fontes` (exigido): o que o fixador escreve, relativo à `HOME`, até 16 (o `*` vale só no último pedaço).
+
+O ambiente traz `HEFESTO_PROTON_NOME` (o nome da versão, `GE-Proton11-7-x86_64`), `HEFESTO_PROTON_PINO` (a pasta
+dele, quando está instalado na Steam) e `HEFESTO_PROTON_TARBALL` (o tarball conferido, no cache). O fixador
+imprime `{"fixados": N, "fora": [{"nome": …, "porque": …}]}`: `fixados` conta as escolhas reescritas, e cada
+item de `fora` é um jogo que ele não fixou, que a aba Lançadores mostra no cartão do lançador com o porquê.
+Sem fixador, os jogos que o leitor diz noutro Proton aparecem ali como fora do Proton fixado.
 
 Os lançadores que eram de fábrica e saíram em 19/10/2026 (o Lutris, o RetroArch, o Dolphin e o mGBA)
 estão em `mods/viraram_extensao.json`, com o endereço do repositório de cada um; o Azahar e o KytyPS5

@@ -6029,7 +6029,7 @@ fix_proton_pinado() {
         return 0
     fi
     local rc=0
-    python3 "${py}" --manter >/dev/null 2>&1 || rc=$?
+    python3 "${py}" --manter --offline >/dev/null 2>&1 || rc=$?
     case "${rc}" in
         0) pass "Proton pinado conferido e jogos travados nele (--manter)" ;;
         2) warn "trava do Proton pinado ESPERA o pino: ele não está instalado e o tarball não está no cache (o --fix não baixa nada) — $(conselho_de_instalacao)" ;;

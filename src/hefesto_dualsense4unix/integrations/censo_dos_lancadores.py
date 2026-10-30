@@ -10,7 +10,7 @@ import shutil
 import signal
 import subprocess
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -486,15 +486,6 @@ def _proton_do_heroic(pasta: Path) -> tuple[list[str], list[str]]:
     return versoes, duvida
 
 
-@dataclass(frozen=True)
-class ApontadoNoHeroic:
-    """O que :func:`apontar_o_heroic_para` fez: quantas escolhas trocou, ou por que não mexeu."""
-
-    reescritas: int = 0
-    recusa: str = ""
-    ilegiveis: int = 0
-
-
 def heroic_aberto() -> bool:
     """O Heroic está rodando? Ele regrava a configuração ao sair: aberto, nada se escreve."""
     for pid in os.listdir("/proc"):
@@ -509,102 +500,164 @@ def heroic_aberto() -> bool:
     return False
 
 
-def _reapontar_a_ferramenta(
-    ferramenta: object, pino: str, compat_dir: Path, velhas: frozenset[str],
-) -> bool:
-    """Troca no lugar o ``wineVersion`` que aponta para uma das ``velhas``; ``True`` se trocou.
+@dataclass(frozen=True)
+class ForaDoPino:
+    """Um jogo, ou o lançador inteiro (``jogo`` vazio), que o Proton fixado não alcança."""
 
-    Só o Proton que mora em ``compat_dir`` (o que o pino governa) e só o do tipo ``proton``: o
-    Wine do próprio Heroic e as ferramentas que ele baixa em outra pasta não são do pino.
-    """
-    if not isinstance(ferramenta, dict) or str(ferramenta.get("type", "")).casefold() != "proton":
-        return False
-    binario = ferramenta.get("bin")
-    pasta_velha = (Path(binario.strip()).parent.name
-                   if isinstance(binario, str) and binario.strip() else "")
-    nome = ferramenta.get("name")
-    nome_velho = nome.strip() if isinstance(nome, str) else ""
-    em_compat = bool(pasta_velha) and (
-        Path(str(binario).strip()).parent.parent.resolve() == compat_dir.resolve())
-    acha = {v.casefold() for v in velhas}
-    if pasta_velha.casefold() == pino.casefold() or nome_velho.casefold() == pino.casefold():
-        return False
-    if pasta_velha:
-        if not em_compat or pasta_velha.casefold() not in acha:
-            return False
-    elif nome_velho.casefold() not in acha:
-        return False
-    ferramenta["bin"] = str(compat_dir / pino / "proton")
-    antigo = pasta_velha or nome_velho
-    ferramenta["name"] = (nome_velho.replace(antigo, pino) if antigo and antigo in nome_velho
-                          else pino)
-    return True
+    lancador: str
+    jogo: str
+    porque: str
 
 
-def _reapontar_o_json(
-    arquivo: Path, pino: str, compat_dir: Path, velhas: frozenset[str],
-) -> int:
-    """Reescreve um arquivo do Heroic (config.json ou de um jogo); devolve quantas trocou."""
+PORQUE_PELO_WINE = "roda pelo Wine, e não pelo Proton"
+PORQUE_HEROIC_ABERTO = "o Heroic está aberto: o Proton fixado entra quando ele fechar"
+PORQUE_SEM_O_PINO = "o Proton fixado ainda não chegou onde este lançador o enxerga"
+PORQUE_AINDA_NAO = "ainda em outra versão: o Proton fixado entra na próxima volta"
+PORQUE_ILEGIVEL = "a configuração do jogo não se lê"
+PORQUE_SEM_FIXADOR = "a extensão não diz como fixar o Proton dos jogos dela"
+PORQUE_SEM_A_EXTENSAO = "sem a extensão ligada, o Hefesto não fixa o Proton dos jogos dele"
+
+
+@dataclass(frozen=True)
+class FixadoNoLancador:
+    """O que a fixação do Proton fez num lançador: quantas escolhas trocou e o que ficou de fora."""
+
+    reescritas: int = 0
+    fora: tuple[ForaDoPino, ...] = ()
+
+
+def e_da_caixa_do_flatpak(pasta: Path) -> bool:
+    """A pasta mora na caixa de um Flatpak (``~/.var/app/<app id>/…``)?"""
+    partes = pasta.parts
+    return any(partes[i:i + 2] == (".var", "app") for i in range(len(partes) - 1))
+
+
+def nativos_do_heroic(pasta: Path) -> frozenset[str]:
+    """As chaves dos jogos que o Heroic instalou na versão Linux: eles não rodam por Proton."""
+    nativos: set[str] = set()
+    for arq in _REGISTROS_DO_HEROIC:
+        with contextlib.suppress(Exception):
+            registro, _existe, _erros = _registro_do_heroic(pasta, arq)
+            nativos.update(chave for chave, dado in registro.items()
+                           if str(dado.get("platform", "")).casefold() == "linux")
+    return frozenset(nativos)
+
+
+def _no_pino(ferramenta: object, binario: Path) -> bool:
+    return (isinstance(ferramenta, dict)
+            and str(ferramenta.get("type", "")).casefold() == "proton"
+            and isinstance(ferramenta.get("bin"), str)
+            and Path(str(ferramenta["bin"]).strip()) == binario)
+
+
+def _apontar_para(ferramenta: dict[str, object], pino_dir: Path) -> None:
+    binario, nome = ferramenta.get("bin"), ferramenta.get("name")
+    antigo = (Path(binario.strip()).parent.name
+              if isinstance(binario, str) and binario.strip() else "")
+    nome = nome.strip() if isinstance(nome, str) else ""
+    ferramenta["bin"] = str(pino_dir / "proton")
+    ferramenta["name"] = (nome.replace(antigo, pino_dir.name) if antigo and antigo in nome
+                          else pino_dir.name)
+    ferramenta["type"] = "proton"
+
+
+def _escrever_o_json(arquivo: Path, dado: object) -> None:
+    copia = arquivo.with_name(f"{arquivo.name}.bak.hefesto-proton-{int(time.time())}")
+    shutil.copy2(arquivo, copia)
+    temporario = arquivo.with_name(arquivo.name + ".tmp")
+    temporario.write_text(json.dumps(dado, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    temporario.replace(arquivo)
+
+
+def _fixar_o_padrao(arquivo: Path, pino_dir: Path, escrever: bool) -> int:
     dado = json.loads(arquivo.read_text(encoding="utf-8"))
     if not isinstance(dado, dict):
+        raise ValueError("config.json sem objeto")
+    padroes = dado.setdefault("defaultSettings", {})
+    if not isinstance(padroes, dict):
+        raise ValueError("defaultSettings sem objeto")
+    if _no_pino(padroes.get("wineVersion"), pino_dir / "proton"):
         return 0
+    if escrever:
+        ferramenta = padroes.get("wineVersion")
+        if not isinstance(ferramenta, dict):
+            ferramenta = padroes["wineVersion"] = {}
+        _apontar_para(ferramenta, pino_dir)
+        _escrever_o_json(arquivo, dado)
+    return 1
+
+
+def _fixar_um_jogo(arquivo: Path, pino_dir: Path, nativos: frozenset[str], escrever: bool,
+                   ) -> tuple[int, list[tuple[str, str]]]:
+    dado = json.loads(arquivo.read_text(encoding="utf-8"))
+    if not isinstance(dado, dict):
+        raise ValueError("configuração do jogo sem objeto")
     trocadas = 0
-    padroes = dado.get("defaultSettings")
-    if isinstance(padroes, dict):
-        trocadas += _reapontar_a_ferramenta(
-            padroes.get("wineVersion"), pino, compat_dir, velhas)
-    trocadas += _reapontar_a_ferramenta(dado.get("wineVersion"), pino, compat_dir, velhas)
-    for valor in dado.values():
-        if isinstance(valor, dict):
-            trocadas += _reapontar_a_ferramenta(
-                valor.get("wineVersion"), pino, compat_dir, velhas)
+    fora: list[tuple[str, str]] = []
+    for chave, valor in dado.items():
+        if not isinstance(valor, dict) or chave in nativos:
+            continue
+        ferramenta = valor.get("wineVersion")
+        if not isinstance(ferramenta, dict) or _no_pino(ferramenta, pino_dir / "proton"):
+            continue
+        if str(ferramenta.get("type", "")).casefold() != "proton":
+            fora.append((chave, PORQUE_PELO_WINE))
+            continue
+        if not escrever:
+            fora.append((chave, PORQUE_AINDA_NAO))
+            continue
+        _apontar_para(ferramenta, pino_dir)
+        trocadas += 1
     if trocadas:
-        copia = arquivo.with_name(f"{arquivo.name}.bak.hefesto-proton-{int(time.time())}")
-        shutil.copy2(arquivo, copia)
-        temporario = arquivo.with_name(arquivo.name + ".tmp")
-        temporario.write_text(json.dumps(dado, indent=2, ensure_ascii=False) + "\n",
-                              encoding="utf-8")
-        temporario.replace(arquivo)
-    return trocadas
+        _escrever_o_json(arquivo, dado)
+    return trocadas, fora
 
 
-def apontar_o_heroic_para(
-    pino: str,
-    compat_dir: Path,
-    velhas: frozenset[str],
-    *,
-    lar: Path | None = None,
-    xdg_config: Path | None = None,
-    xdg_data: Path | None = None,
-    aberto: Callable[[], bool] | None = None,
-) -> ApontadoNoHeroic:
-    """Aponta para ``pino`` todo jogo e o padrão do Heroic que usa uma das ``velhas`` (22/10/2026).
+def fixar_o_heroic(pasta: Path, pino_dir: Path | None, *, escrever: bool = True,
+                   aberto: Callable[[], bool] | None = None) -> FixadoNoLancador:
+    """Aponta para ``pino_dir`` o padrão e todo jogo pelo Proton de UMA casa do Heroic (30/10/2026).
 
-    O dono do saber de onde o Heroic guarda o Proton (a mesma leitura de :func:`proton_em_uso`),
-    agora também do caminho de volta. Com o Heroic aberto não escreve nada (ele regrava ao sair),
-    e um arquivo que não se lê fica como está: quem decide apagar a versão relê o censo e a vê
-    ainda em uso. Nunca levanta.
+    ``pino_dir`` é o Proton fixado onde ESTA casa o enxerga (a do Flatpak só vê a própria caixa);
+    ``None`` = ele ainda não chegou ali, e a casa inteira fica de fora, dita. O padrão
+    (``defaultSettings.wineVersion``) vai ao pino mesmo vindo do Wine: é dele que o jogo instalado
+    depois nasce. O jogo que já roda pelo Wine fica (trocar apagaria o prefixo dele) e é dito; o
+    jogo nativo do Linux não conta. Com o Heroic aberto nada se escreve (ele regrava ao sair).
+    ``escrever=False`` só diz o que está fora. Nunca levanta.
     """
-    if (aberto or heroic_aberto)():
-        return ApontadoNoHeroic(0, "o Heroic está aberto")
-    try:
-        pastas = pastas_que_existem("Heroic", lar, xdg_config=xdg_config, xdg_data=xdg_data)
-    except Exception:
-        return ApontadoNoHeroic(0, "não deu para achar o Heroic")
+    if pino_dir is None:
+        return FixadoNoLancador(0, (ForaDoPino("heroic", "", PORQUE_SEM_O_PINO),))
+    fora: list[ForaDoPino] = []
+    if escrever and (aberto or heroic_aberto)():
+        escrever = False
+        fora.append(ForaDoPino("heroic", "", PORQUE_HEROIC_ABERTO))
     total = 0
-    ilegiveis = 0
-    for pasta in pastas:
-        arquivos: list[Path] = []
-        with contextlib.suppress(OSError):
-            if (pasta / "config.json").is_file():
-                arquivos.append(pasta / "config.json")
-            arquivos += sorted((pasta / "GamesConfig").glob("*.json"))
-        for arquivo in arquivos:
-            try:
-                total += _reapontar_o_json(arquivo, pino, compat_dir, velhas)
-            except (OSError, ValueError):
-                ilegiveis += 1
-    return ApontadoNoHeroic(total, ilegiveis=ilegiveis)
+    padrao = pasta / "config.json"
+    if padrao.is_file():
+        try:
+            total += _fixar_o_padrao(padrao, pino_dir, escrever)
+        except (OSError, ValueError):
+            fora.append(ForaDoPino("heroic", "", PORQUE_ILEGIVEL))
+    nativos = nativos_do_heroic(pasta)
+    arquivos: list[Path] = []
+    with contextlib.suppress(OSError):
+        arquivos = sorted((pasta / "GamesConfig").glob("*.json"))
+    for arquivo in arquivos:
+        try:
+            trocadas, dele = _fixar_um_jogo(arquivo, pino_dir, nativos, escrever)
+        except (OSError, ValueError):
+            fora.append(ForaDoPino("heroic", arquivo.stem, PORQUE_ILEGIVEL))
+            continue
+        total += trocadas
+        fora.extend(ForaDoPino("heroic", jogo, porque) for jogo, porque in dele)
+    return FixadoNoLancador(total if escrever else 0, tuple(fora))
+
+
+def fora_do_pino_nos_jogos(chave: str, jogos: Sequence[JogoDoLancador], pino: str, *,
+                           porque: str) -> tuple[ForaDoPino, ...]:
+    """Os jogos de uma biblioteca lida cujo ``proton`` não é o ``pino``, com o mesmo porquê."""
+    alvo = pino.casefold()
+    return tuple(ForaDoPino(chave, j.nome, porque) for j in jogos
+                 if j.proton and alvo not in j.proton.casefold())
 
 
 def proton_em_uso(lar: Path | None = None, *, xdg_config: Path | None = None,
@@ -732,7 +785,7 @@ def biblioteca_do_cartao(chave: str, lar: Path | None = None, *,
 
 
 CAMPOS_DO_LANCADOR = frozenset(
-    {"rotulo", "atalhos", "comandos", "janelas", "titulo_do_jogo", "leitor"})
+    {"rotulo", "atalhos", "comandos", "janelas", "titulo_do_jogo", "leitor", "fixador"})
 
 PRAZO_DO_LEITOR_S = 5.0
 PRAZO_MAXIMO_DO_LEITOR_S = 10.0
@@ -768,6 +821,24 @@ class LeitorPorProcesso:
 
 
 @dataclass(frozen=True)
+class FixadorPorProcesso:
+    """O comando que aponta os jogos de um lançador de extensão para o Proton fixado (30/10/2026).
+
+    Roda na caixa do leitor, com as ``fontes`` (caminhos da ``HOME``) graváveis e o resto só de
+    leitura. Recebe o pino em ``HEFESTO_PROTON_PINO`` (a pasta, quando ela está no disco),
+    ``HEFESTO_PROTON_NOME`` e ``HEFESTO_PROTON_TARBALL`` (o arquivo conferido, quando há), e
+    devolve ``{"fixados": N, "fora": [{"nome": …, "porque": …}]}``.
+    """
+
+    modificacao: str
+    rotulo: str
+    comando: tuple[str, ...]
+    pasta: Path
+    fontes: tuple[str, ...]
+    prazo_s: float = PRAZO_DO_LEITOR_S
+
+
+@dataclass(frozen=True)
 class LancadorDaModificacao:
     """O bloco ``lancador`` de uma modificação, já conferido."""
 
@@ -778,6 +849,7 @@ class LancadorDaModificacao:
     janelas: tuple[str, ...] = ()
     titulo_do_jogo: str = ""
     leitor: LeitorPorProcesso | None = None
+    fixador: FixadorPorProcesso | None = None
 
 
 def _agulhas(bloco: dict[str, object], campo: str) -> tuple[str, ...]:
@@ -790,39 +862,53 @@ def _agulhas(bloco: dict[str, object], campo: str) -> tuple[str, ...]:
     return limpas
 
 
-def _fontes_do_leitor(bruto: object) -> tuple[str, ...]:
+def _fontes_do_leitor(bruto: object, campo: str = "leitor") -> tuple[str, ...]:
     """As ``fontes`` do leitor: caminhos relativos à ``HOME``, sem ``..``, até 16."""
     if not isinstance(bruto, list) or not all(isinstance(x, str) for x in bruto):
-        raise ValueError("«leitor.fontes» precisa ser uma lista de textos")
+        raise ValueError(f"«{campo}.fontes» precisa ser uma lista de textos")
     limpas = tuple(dict.fromkeys(x.strip() for x in bruto if x.strip()))
     if len(limpas) > _MAXIMO_DE_AGULHAS:
-        raise ValueError(f"«leitor.fontes» passa de {_MAXIMO_DE_AGULHAS} itens")
+        raise ValueError(f"«{campo}.fontes» passa de {_MAXIMO_DE_AGULHAS} itens")
     for fonte in limpas:
         partes = Path(fonte).parts
         if (fonte.startswith(("/", "~")) or ".." in partes or len(fonte) > 200
                 or any("*" in parte for parte in partes[:-1])):
-            raise ValueError(f"«leitor.fontes» tem {fonte!r}, que não é um caminho da HOME")
+            raise ValueError(f"«{campo}.fontes» tem {fonte!r}, que não é um caminho da HOME")
     return limpas
 
 
-def _leitor_do_bloco(mod_id: str, rotulo: str, bruto: object, pasta: Path,
-                     molde: str) -> LeitorPorProcesso:
+def _executar_e_prazo(bruto: object, campo: str) -> tuple[tuple[str, ...], float]:
     if not isinstance(bruto, dict) or set(bruto) - {"executar", "prazo_s", "fontes"}:
-        raise ValueError("«leitor» aceita só «executar», «prazo_s» e «fontes»")
+        raise ValueError(f"«{campo}» aceita só «executar», «prazo_s» e «fontes»")
     executar = bruto.get("executar")
     if (not isinstance(executar, list) or not executar
             or not all(isinstance(x, str) for x in executar) or not executar[0].strip()):
-        raise ValueError("«leitor.executar» precisa ser uma lista de textos")
+        raise ValueError(f"«{campo}.executar» precisa ser uma lista de textos")
     primeiro = executar[0]
     if primeiro.startswith("/") or ".." in Path(primeiro).parts:
-        raise ValueError("«leitor.executar» aponta para fora da pasta da modificação")
+        raise ValueError(f"«{campo}.executar» aponta para fora da pasta da modificação")
     prazo = bruto.get("prazo_s", PRAZO_DO_LEITOR_S)
     if (isinstance(prazo, bool) or not isinstance(prazo, (int, float))
             or not 0 < prazo <= PRAZO_MAXIMO_DO_LEITOR_S):
         raise ValueError(
-            f"«leitor.prazo_s» precisa estar entre 0 e {PRAZO_MAXIMO_DO_LEITOR_S:g} s")
-    return LeitorPorProcesso(mod_id, rotulo, tuple(executar), pasta, float(prazo), molde,
-                             _fontes_do_leitor(bruto.get("fontes", [])))
+            f"«{campo}.prazo_s» precisa estar entre 0 e {PRAZO_MAXIMO_DO_LEITOR_S:g} s")
+    return tuple(executar), float(prazo)
+
+
+def _leitor_do_bloco(mod_id: str, rotulo: str, bruto: object, pasta: Path,
+                     molde: str) -> LeitorPorProcesso:
+    executar, prazo = _executar_e_prazo(bruto, "leitor")
+    return LeitorPorProcesso(mod_id, rotulo, executar, pasta, prazo, molde,
+                             _fontes_do_leitor(cast("dict[str, object]", bruto).get("fontes", [])))
+
+
+def _fixador_do_bloco(mod_id: str, rotulo: str, bruto: object, pasta: Path,
+                      ) -> FixadorPorProcesso:
+    executar, prazo = _executar_e_prazo(bruto, "fixador")
+    fontes = _fontes_do_leitor(cast("dict[str, object]", bruto).get("fontes", []), "fixador")
+    if not fontes:
+        raise ValueError("«fixador.fontes» diz o que o fixador pode escrever, e está vazio")
+    return FixadorPorProcesso(mod_id, rotulo, executar, pasta, fontes, prazo)
 
 
 def lancador_da_modificacao(mod_id: str, bloco: object, pasta: Path
@@ -855,9 +941,12 @@ def lancador_da_modificacao(mod_id: str, bloco: object, pasta: Path
             raise ValueError(f"«lancador.titulo_do_jogo» não é expressão válida: {erro}") from erro
     leitor = (None if "leitor" not in bloco
               else _leitor_do_bloco(mod_id, rotulo, bloco["leitor"], pasta, molde))
+    fixador = (None if "fixador" not in bloco
+               else _fixador_do_bloco(mod_id, rotulo, bloco["fixador"], pasta))
     return LancadorDaModificacao(
         chave=mod_id, rotulo=rotulo, atalhos=atalhos, comandos=comandos,
-        janelas=_agulhas(bloco, "janelas"), titulo_do_jogo=molde, leitor=leitor)
+        janelas=_agulhas(bloco, "janelas"), titulo_do_jogo=molde, leitor=leitor,
+        fixador=fixador)
 
 
 def _execucao_escondida() -> tuple[str, ...]:
@@ -890,7 +979,7 @@ def linha_do_leitor(leitor: LeitorPorProcesso, comando: list[str],
     return argv
 
 
-def _comando_do_leitor(leitor: LeitorPorProcesso) -> list[str] | None:
+def _comando_do_leitor(leitor: LeitorPorProcesso | FixadorPorProcesso) -> list[str] | None:
     primeiro = leitor.pasta / leitor.comando[0]
     if primeiro.is_file():
         return [str(primeiro), *leitor.comando[1:]]
@@ -901,7 +990,7 @@ def _comando_do_leitor(leitor: LeitorPorProcesso) -> list[str] | None:
     return None
 
 
-def _ambiente_do_leitor(leitor: LeitorPorProcesso) -> dict[str, str]:
+def _ambiente_do_leitor(leitor: LeitorPorProcesso | FixadorPorProcesso) -> dict[str, str]:
     ambiente = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"),
                 "LANG": os.environ.get("LANG", "C.UTF-8"),
                 "HOME": os.environ.get("HOME", str(Path.home())),
@@ -1076,6 +1165,83 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
     ignoradas = len(bruto) - len(fora)
     erros = [f"{ignoradas} linhas do leitor não serviam"] if ignoradas else []
     return BibliotecaDoLancador(nome, LIDO, leitor.pasta, fora, erros)
+
+
+PORQUE_O_FIXADOR_FALHOU = "a extensão tentou fixar o Proton e não conseguiu"
+
+
+def linha_do_fixador(fixador: FixadorPorProcesso, comando: list[str], bwrap: str | None,
+                     lar: Path, leituras: Sequence[Path] = ()) -> list[str]:
+    """A caixa do leitor (:func:`linha_do_leitor`), com as ``fontes`` graváveis."""
+    if not bwrap:
+        return comando
+    argv = [bwrap, "--ro-bind", "/", "/", "--unshare-all", "--die-with-parent",
+            "--new-session", "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+    for pasta in _execucao_escondida():
+        argv += ["--tmpfs", pasta]
+    for fonte in fixador.fontes:
+        for alvo in sorted(lar.glob(fonte)) if "*" in fonte else [lar / fonte]:
+            if alvo.exists() and not alvo.is_symlink():
+                argv += ["--bind", str(alvo), str(alvo)]
+    for leitura in leituras:
+        if leitura.exists():
+            argv += ["--ro-bind", str(leitura), str(leitura)]
+    argv += ["--ro-bind", str(fixador.pasta), str(fixador.pasta),
+             "--chdir", str(fixador.pasta), "--", *comando]
+    return argv
+
+
+def _fora_do_fixador(chave: str, bruto: object) -> tuple[ForaDoPino, ...]:
+    if not isinstance(bruto, list):
+        return ()
+    fora: list[ForaDoPino] = []
+    for linha in bruto[:JOGOS_MAXIMOS_DO_LEITOR]:
+        if not isinstance(linha, dict):
+            continue
+        nome = _texto_curto(linha.get("nome"), 200)
+        porque = _texto_curto(linha.get("porque"), 200)
+        if nome:
+            fora.append(ForaDoPino(chave, nome, porque or PORQUE_O_FIXADOR_FALHOU))
+    return tuple(fora)
+
+
+def fixar_por_processo(fixador: FixadorPorProcesso, *, nome: str, pino_dir: Path | None,
+                       tarball: Path | None, lar: Path,
+                       bwrap: str | bool | None = True) -> FixadoNoLancador:
+    """Roda o fixador da extensão e devolve o que ele fixou e o que ficou fora. Nunca levanta."""
+    falhou = FixadoNoLancador(0, (ForaDoPino(fixador.modificacao, "", PORQUE_O_FIXADOR_FALHOU),))
+    comando = _comando_do_leitor(fixador)
+    if comando is None:
+        return falhou
+    ambiente = {**_ambiente_do_leitor(fixador),
+                "HEFESTO_PROTON_NOME": nome,
+                "HEFESTO_PROTON_PINO": str(pino_dir) if pino_dir is not None else "",
+                "HEFESTO_PROTON_TARBALL": str(tarball) if tarball is not None else ""}
+    leituras = [p for p in (pino_dir, tarball) if p is not None]
+    caixa = shutil.which("bwrap") if bwrap is True else (bwrap or None)
+    try:
+        processo = subprocess.Popen(
+            linha_do_fixador(fixador, comando, caixa, lar, leituras), cwd=str(fixador.pasta),
+            env=ambiente, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        return falhou
+    try:
+        saida, _motivo = _saida_do_leitor(processo, fixador.prazo_s)
+    finally:
+        _parar(processo, fixador.prazo_s)
+        if processo.stdout is not None:
+            processo.stdout.close()
+    if saida is None:
+        return falhou
+    try:
+        bruto = json.loads(saida.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return falhou
+    fixados = bruto.get("fixados") if isinstance(bruto, dict) else None
+    if isinstance(fixados, bool) or not isinstance(fixados, int) or fixados < 0:
+        return falhou
+    return FixadoNoLancador(fixados, _fora_do_fixador(fixador.modificacao, bruto.get("fora")))
 
 
 def _pastas_do_leitor(bruto: object) -> tuple[str, ...]:
@@ -1452,6 +1618,12 @@ def _os_que_viraram_extensao() -> list[dict[str, object]]:
     bruto = _json(ARQUIVO_DOS_QUE_VIRARAM_EXTENSAO)
     linhas = bruto.get("lancadores") if isinstance(bruto, dict) else None
     return [x for x in linhas if isinstance(x, dict)] if isinstance(linhas, list) else []
+
+
+def viraram_extensao_pelo_proton() -> frozenset[str]:
+    """As chaves dos lançadores que viraram extensão e rodam jogo pelo Proton (``proton: true``)."""
+    return frozenset(str(x.get("id")) for x in _os_que_viraram_extensao()
+                     if x.get("proton") is True and isinstance(x.get("id"), str))
 
 
 def lancadores_que_viraram_extensao(lar: Path | None = None, *,

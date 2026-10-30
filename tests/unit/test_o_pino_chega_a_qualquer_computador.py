@@ -165,6 +165,7 @@ class TestSemSteamOEnsureNaoEnvenena:
         self, lar: Path, download_local: dict, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """A LACUNA CENTRAL. MORDIDA: tire a consulta a `steam_root_ou_recusa`"""
+        (lar / ".config/heroic").mkdir(parents=True)
         cache = lar / ".cache/hefesto-dualsense4unix/proton"
         rc = pp.main(["--ensure", "--conf", str(download_local["conf"]),
                       "--cache-dir", str(cache)])
@@ -175,7 +176,24 @@ class TestSemSteamOEnsureNaoEnvenena:
         assert (cache / f"{PINO}.tar.gz").is_file(), "o download não foi adiantado"
         assert download_local["baixou"] == 1
         assert f"{PINO}: em_cache" in saida, saida
-        assert "pino adiado até a Steam nativa existir" in saida, saida
+        assert "baixado para Heroic. A Steam fica de fora" in saida, saida
+
+    def test_sem_lancador_nenhum_nao_baixa_e_diz_por_que(
+        self, lar: Path, download_local: dict, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """OS-AVISOS-DO-INSTALL-FALAM-COM-QUEM-INSTALA-01: 538 MB sem ninguém que os use.
+
+        MORDIDA: com o `quem_usa_o_proton` fora do `--ensure`, o tarball desce à toa.
+        """
+        cache = lar / ".cache/hefesto-dualsense4unix/proton"
+        rc = pp.main(["--ensure", "--conf", str(download_local["conf"]),
+                      "--cache-dir", str(cache)])
+
+        saida = capsys.readouterr().out
+        assert rc == pp.RC_SEM_LANCADOR
+        assert download_local["baixou"] == 0 and not cache.exists()
+        assert "nenhum lançador desta máquina roda jogo pelo Proton" in saida, saida
+        assert "o vigia da Steam baixa e fixa sozinho" in saida, saida
 
     def test_steam_na_caixa_nao_baixa_nada(
         self, lar: Path, download_local: dict
@@ -529,12 +547,15 @@ class TestOVigiaTravaSozinho:
         """MORDIDA: tire a linha do `--manter` da unidade."""
         execs = self._execstarts()
         assert len(execs) == 4, execs
-        assert execs[2] == "-/usr/bin/env python3 __PROTON_PIN__ --manter"
+        assert execs[2] == "-__PYTHON_DO_PINO__ __PROTON_PIN__ --manter"
         assert execs[3] == "-/usr/bin/env python3 __OPCOES_POR_JOGO__ --aplicar"
 
     def test_o_install_substitui_o_placeholder(self) -> None:
         assert "s#__PROTON_PIN__#${PROTON_PIN_PY}#g" in INSTALL
         assert INSTALL.index('PROTON_PIN_PY="${ROOT_DIR}') < INSTALL.index("s#__PROTON_PIN__#")
+        assert "s#__PYTHON_DO_PINO__#${PYTHON_DO_PINO}#g" in INSTALL
+        assert INSTALL.index('PYTHON_DO_PINO="${VENV_DIR}/bin/python"') < INSTALL.index(
+            "s#__PYTHON_DO_PINO__#")
 
     def test_com_no_proton_pin_so_a_linha_do_pino_sai(self) -> None:
         """A pessoa disse não ao pino: o vigia não pode desdizer a cada meia hora."""
@@ -587,6 +608,7 @@ class TestOVigiaTravaSozinho:
                  "USER_UNIT_DIR": str(unidades),
                  "SENTINELA_PY": "/x/sentinela_do_wrapper.py",
                  "PROTON_PIN_PY": "/x/proton_pin.py",
+                 "PYTHON_DO_PINO": "/x/.venv/bin/python",
                  "OPCOES_POR_JOGO_PY": "/x/opcoes_por_jogo.py",
                  "KEEP_STEAM_INPUT": str(keep), "NO_PROTON_PIN": str(no_pin)},
         )
@@ -596,7 +618,8 @@ class TestOVigiaTravaSozinho:
         execs = [ln for ln in unidade.splitlines() if ln.startswith("ExecStart=")]
         assert len(execs) == esperado, execs
         assert any("disable_steam_input.sh" in e for e in execs) is (keep == 0), execs
-        assert any("proton_pin.py --manter" in e for e in execs) is (no_pin == 0), execs
+        assert any(e == "ExecStart=-/x/.venv/bin/python /x/proton_pin.py --manter"
+                   for e in execs) is (no_pin == 0), execs
         assert any("sentinela_do_wrapper.py" in e for e in execs), execs
         assert any("opcoes_por_jogo.py --aplicar" in e for e in execs), execs
         assert not any(re.search(r"__[A-Z_]+__", e) for e in execs), execs
@@ -633,11 +656,27 @@ class TestOVigiaTravaSozinho:
         monkeypatch.setattr(pp, "steam_running", lambda: True)
 
         rc = pp.main(["--manter", "--conf", str(download_local["conf"]),
-                      "--cache-dir", str(lar / "cache-vazio"),
+                      "--cache-dir", str(lar / "cache-vazio"), "--offline",
                       "--state", str(lar / "estado.json")])
 
         assert rc == pp.RC_SEM_REDE_E_SEM_CACHE
         assert download_local["baixou"] == 0, "o vigia foi à rede"
+
+    def test_sem_cache_o_vigia_baixa_uma_vez_e_trava_na_volta_seguinte(
+        self, lar: Path, download_local: dict, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Com o download do install adiado (rc 8), quem baixa é o vigia, uma vez só."""
+        raiz = _steam_de_verdade(lar)
+        cache = lar / "cache"
+        argv = ["--manter", "--conf", str(download_local["conf"]),
+                "--cache-dir", str(cache), "--state", str(lar / "estado.json")]
+        monkeypatch.setattr(pp, "steam_running", lambda: True)
+        assert pp.main(argv) == 3
+        assert download_local["baixou"] == 1 and (cache / f"{PINO}.tar.gz").is_file()
+        monkeypatch.setattr(pp, "steam_running", lambda: False)
+        assert pp.main(argv) == 0
+        assert download_local["baixou"] == 1, "o vigia baixou de novo com o cache cheio"
+        assert pp.pinned_proton_installed(PINO, raiz / "compatibilitytools.d")
 
     def test_o_manter_repoe_do_cache_e_trava_todo_jogo(
         self, lar: Path, download_local: dict
@@ -947,7 +986,7 @@ class TestODoctorVeOQueAntesCalava:
         corpo = re.search(r"^apply_fixes\(\) \{$.*?^\}$", texto, re.M | re.S)
         assert corpo and "fix_proton_pinado" in corpo.group(0)
         dono = re.search(r"^fix_proton_pinado\(\) \{$.*?^\}$", texto, re.M | re.S)
-        assert dono and '"${py}" --manter' in dono.group(0)
+        assert dono and '"${py}" --manter --offline' in dono.group(0), "o --fix foi à rede"
         assert "--lock" not in dono.group(0)
 
     @pytest.mark.parametrize("disse_nao", [True, False], ids=["sem-o-pino", "com-o-pino"])
@@ -1100,7 +1139,7 @@ class TestSemOPinoNadaSeTrava:
         antes = vdf.read_bytes()
 
         rc = pp.main(["--manter", "--conf", str(download_local["conf"]),
-                      "--cache-dir", str(lar / "cache-vazio"),
+                      "--cache-dir", str(lar / "cache-vazio"), "--offline",
                       "--state", str(lar / "estado.json")])
 
         assert rc == pp.RC_SEM_REDE_E_SEM_CACHE

@@ -453,6 +453,23 @@ def _onde_falta_o_ambiente(
     return tuple(fora)
 
 
+def _fora_do_pino() -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+    """``((cartão, ((jogo, porquê), …)), …)``: o que o Proton fixado não alcança, por cartão.
+
+    Só mede (``escrever=False``): quem fixa é o vigia da Steam, o install e o «Aplicar soluções».
+    """
+    from hefesto_dualsense4unix.integrations import proton_pin
+
+    por_cartao: dict[str, list[tuple[str, str]]] = {}
+    try:
+        medida = proton_pin.apontar_os_lancadores_para_o_pino(escrever=False)
+    except Exception:
+        return ()
+    for fora in medida.fora:
+        por_cartao.setdefault(fora.lancador, []).append((fora.jogo, fora.porque))
+    return tuple((chave, tuple(linhas)) for chave, linhas in por_cartao.items())
+
+
 def _ler_do_disco() -> desenho.Leitura:
     """Uma passada de leitura. **Nunca escreve** — nem no vdf, nem no registro.
 
@@ -488,7 +505,8 @@ def _ler_do_disco() -> desenho.Leitura:
     do_disco = desenho.medir_no_disco(onde_estao, declarados, com_ponte=com_ponte,
                                       da_porta=da_porta)
     do_disco = dataclasses.replace(
-        do_disco, sem_ambiente=_onde_falta_o_ambiente(onde_estao, declarados))
+        do_disco, sem_ambiente=_onde_falta_o_ambiente(onde_estao, declarados),
+        fora_do_pino=_fora_do_pino())
 
     viraram = _os_que_viraram_extensao()
     try:
@@ -1437,7 +1455,8 @@ def _fila_de(lancadores: list[desenho.Lancador],
     """A fila: um por cartão e, no fim, a linha da migração de cada um que virou extensão."""
     cartoes = {x.chave for x in lancadores}
     return [exp.Fila(chave=x.chave, nome=x.nome, jogos=_jogos_da_fila(x), achado=x.presente,
-                     configurar=JANELA_DO_LANCADOR) for x in lancadores] + [
+                     configurar=JANELA_DO_LANCADOR, fora_do_pino=x.fora_do_pino)
+            for x in lancadores] + [
         exp.Fila(chave=chave, nome=nome, jogos="", achado=False,
                  configurar=JANELA_DO_LANCADOR, virou=endereco)
         for chave, nome, endereco in viraram if chave not in cartoes]

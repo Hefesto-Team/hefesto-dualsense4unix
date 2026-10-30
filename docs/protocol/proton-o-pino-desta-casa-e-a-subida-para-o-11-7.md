@@ -122,7 +122,7 @@ Steam fechada.
 
 ### O passo `[11c]` do install
 
-`install.sh:2671-2729`, **ligado por default**, opt-out `--no-proton-pin`.
+`install.sh:2695-2753`, **ligado por default**, opt-out `--no-proton-pin`.
 Roda `--ensure`, lê o `rc`, e só então `--lock`:
 
 | rc do `--ensure` | o que o install diz |
@@ -130,8 +130,9 @@ Roda `--ensure`, lê o `rc`, e só então `--lock`:
 | 1 | checksum não bateu — passo ABORTADO, nada instalado |
 | 2 | sem rede e sem cache — pin PENDENTE, trava adiada |
 | 3 (do `--lock`) | Steam aberta — trava ADIADA, com a instrução |
+| 8 | nenhum lançador de jogos instalado — nada baixado, e o vigia baixa quando um aparecer |
 
-E o doctor confere no fim (`check_proton_pin`, `install.sh:2720`), com
+E o doctor confere no fim (`check_proton_pin` em `scripts/doctor.sh:3860`), com
 `proton_pin_report` — read-only.
 
 ---
@@ -525,7 +526,7 @@ o atendem é que são dois. **A casa deve os dois — um já entrega por rádio
 
 Três lugares afirmavam que *"o GE-Proton 11-4 fechou o casamento do `ContainerId`
 do HID com o MMDevice que o jogo abre, e o 11-6 refez esse caminho pelo
-`dsound`"*: `assets/proton-pin.conf`, `install.sh:3224-3225` e
+`dsound`"*: `assets/proton-pin.conf`, `install.sh:3248-3249` e
 `tests/unit/test_proton_pin.py:53`.
 
 **Medido em 17/09/2026:** as palavras `dsound`, `ContainerId` e `MMDevice` não

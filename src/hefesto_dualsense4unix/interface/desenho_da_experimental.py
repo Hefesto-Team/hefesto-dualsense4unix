@@ -48,11 +48,14 @@ class Fila(NamedTuple):
     achado: bool
     configurar: str
     virou: str = ""
+    fora_do_pino: str = ""
 
 
 LANCADORES = (
     Fila("steam", "Steam", "48 jogos", True, "#lanc-conf"),
-    Fila("lutris", "Lutris", "12 jogos", True, "#lanc-conf"),
+    Fila("lutris", "Lutris", "12 jogos", True, "#lanc-conf",
+         fora_do_pino='<span class="lf-imped" data-dica="Corrida de Inverno: roda pelo Wine, '
+                      'e não pelo Proton">1 fora do Proton fixado</span>'),
     Fila("heroic", "Heroic (Epic · GOG)", "", False, "#lanc-conf"),
     Fila("flatpak", "Flatpak", "", False, "#lanc-conf"),
     Fila("retroarch", "RetroArch", "", False, "#lanc-conf",
@@ -154,7 +157,8 @@ def fila_html(fila: Fila) -> str:
         destino = fila.configurar if gesto == "configurar-lancador" else destino
         ativo = botao_ativo(gesto, fila.achado)
         botoes.append(_botao(gesto, rotulo, destino, fila.chave, ativo))
-    contagem = f'<span class="lf-n">{_e(fila.jogos)}</span>' if fila.achado else ""
+    contagem = (f'<span class="lf-n">{_e(fila.jogos)}</span>{fila.fora_do_pino}'
+                if fila.achado else "")
     nome_cl = "lf-nome lf-nome-2" if fila.achado else "lf-nome"
     vazio = "" if fila.achado else '\n            <span class="lanc-jogos"></span>'
     classe = "lf" if fila.achado else "lf ausente"
