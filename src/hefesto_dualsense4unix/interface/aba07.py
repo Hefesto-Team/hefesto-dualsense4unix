@@ -41,7 +41,7 @@ def identidade_congelada(doc: str) -> list[str]:
         do_mapa = cor_da_zona(apelido) or ""
         if tom.lower() != do_mapa.lower():
             achados.append(
-                f"a página traz `--{apelido}:{tom}` e o mapa dela diz "
+                f"a página traz `--{apelido}:{tom}` e o mapa diz "
                 f"`{do_mapa or 'nada'}`. As cinco variáveis de plástico do "
                 f"esqueleto são REESCRITAS por `monta.cor_da_zona`; um valor "
                 f"que diverge é hexadecimal digitado à mão, não leitura do CSV.")
@@ -68,16 +68,16 @@ def identidade_congelada(doc: str) -> list[str]:
                     for m in re.finditer(agulha, limpo) if _fora_da_tabela(m.start())]
 
     achados += [f"a página usa `var(--{apelido})`. Aquelas cinco são a paleta do "
-                f"DESENHO, congelada no esqueleto: elas respondem por 5 dos 28 "
+                f"DESENHO, congelada no esqueleto: as cinco respondem por 5 dos 28 "
                 f"modelos do mapa, e quem tiver o sexto vê a cor de outro "
-                f"aparelho. A cor do controle DELA vem do pacote, no tique."
+                f"aparelho. A cor do controle LIDO vem do pacote, no tique."
                 for apelido in apelidos if f"var(--{apelido})" in limpo]
 
     for tom in tons:
         achados += [f"hexadecimal do mapa cravado na página: {tom}. Ele não tem "
                     f"nome nem `--plastico:` e por isso atravessa as duas réguas "
                     f"que já havia — e é a cor de um modelo que pode não ser o "
-                    f"dela."
+                    f"lido."
                     for m in re.finditer(re.escape(tom), limpo, re.I)
                     if _fora_da_tabela(m.start())]
 
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     if _MARCA not in _DOC or _TIRA not in _DOC:
         raise SystemExit(
             "ERRO: a marca do fim da aba ou a tira mudou no `fim.html` ou no `monta.py`; "
-            "sem elas as janelas não entram e o clique em «Configurar» abre nada.")
+            "sem as duas as janelas não entram e o clique em «Configurar» abre nada.")
     _DOC = _DOC.replace(_MARCA, exp.telas().strip() + "\n\n" + _MARCA, 1)
 
     _CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)

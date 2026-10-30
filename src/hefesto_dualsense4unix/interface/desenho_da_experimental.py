@@ -198,7 +198,7 @@ ONDE_DA_CONF = "conf"
 
 def menu_html(chave: str, permissoes: Sequence[str] | None = None, *, remover: bool = False,
               fecha: bool = False, apagado: bool = False) -> str:
-    """O conteúdo do ⋮ de uma extensão: três botões e, se pedido, o que ela pode fazer.
+    """O conteúdo do ⋮ de uma extensão: três botões e, se pedido, o que a extensão pode fazer.
 
     ``remover`` é o primeiro clique em Remover: o botão passa a dizer «Confirmar remoção».
     ``fecha`` é o ⋮ da janela «Configurar»: a confirmação fecha a janela do lançador que sai.
@@ -660,7 +660,7 @@ def _radio_da_aba(n: int | str, nome: str, aberta: str, mod: str) -> str:
 
 def _bolinha_da_aba(n: int | str, chave: OpcaoDaJanela | None) -> str:
     """A bolinha da chave da aba, verde ligada e cinza desligada; o clique é o da chave de
-    ``ligado`` (``guardar-opcao-da-modificacao``). Pedaço próprio: o clique repinta só ela."""
+    ``ligado`` (``guardar-opcao-da-modificacao``). Pedaço próprio: o clique repinta só a bolinha."""
     if chave is None:
         return ""
     ligada = bool(chave.valor)
@@ -747,7 +747,7 @@ def _linha_da_opcao(o: OpcaoDaJanela) -> str:
 def _linhas_das_opcoes(itens: Sequence[OpcaoDaJanela]) -> str:
     """Uma linha por opção; as entradas do controle com glifo, juntas, no arranjo dos botões.
 
-    Cada opção é um pedaço ``#mod-op-<id>`` (:class:`PinturaDaJanela`): o clique repinta só ela.
+    Cada opção é um pedaço ``#mod-op-<id>`` (:class:`PinturaDaJanela`): o clique repinta só a opção.
     """
     partes = []
     for com_glifo, juntas in itertools.groupby(itens, key=lambda o: glifo_da_entrada(o) is not None):
@@ -897,10 +897,10 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     """O miolo da coluna «Agora»: só os pedaços que o manifesto declara, do ``acessorios.estado``.
 
     Sem estado, ou com a extensão parada (``ligado`` falso), o nível e o perfil ficam vazios: nenhum
-    número que a extensão não deu. As conexões e os aparelhos são os que ela publicou, parada ou não:
+    número que a extensão não deu. As conexões e os aparelhos são os que a extensão publicou, parada ou não:
     o «Parar tudo» zera a força, e o adaptador segue ligado (a conexão que cai já devolve o estado
     vazio, sem item nenhum). O perfil e os nomes vêm de terceiros: escapados. ``processo`` e
-    ``porque`` são os do supervisor: sem conexão, o canto diz se ela caiu, liga ou foi recusada.
+    ``porque`` são os do supervisor: sem conexão, o canto diz se a conexão caiu, liga ou foi recusada.
     ``gestao`` são os aparelhos geridos sem ``grupo``: cada linha ganha a chave e as ações.
     """
     vivo = bool(estado and estado.get("ligado") is True)
@@ -1090,7 +1090,7 @@ class PinturaDaJanela:
     A janela inteira (``#mod-janela``) só se repinta quando o esqueleto muda: uma aba, uma opção
     ou um pedaço que nasce ou some. O resto vai nos pedaços ``#mod-…`` que mudaram (uma opção, um
     botão, a tela de uma aba, os modos do livre), e a lista que a pessoa rolou fica onde estava,
-    na aba em que ela estava. Os pedaços já mandados voltam a cada tique (a ponte pula o que já
+    na aba em que estava. Os pedaços já mandados voltam a cada tique (a ponte pula o que já
     pintou), para o que ficou adiado sob um clique em voo chegar no tique seguinte.
     """
 
@@ -1419,7 +1419,7 @@ class AcaoDaJanela(NamedTuple):
 
 
 class AparelhosDaJanela(NamedTuple):
-    """As ações de cada aparelho gerido e a aba em que a lista mora (sem ela, a coluna «Agora»)."""
+    """As ações de cada aparelho gerido e a aba em que a lista mora (sem a aba, a coluna «Agora»)."""
 
     acoes: tuple[AcaoDaJanela, ...]
     grupo: str = ""
@@ -1468,7 +1468,7 @@ ACAO_DE_LIGAR = "ligar"
 EM_CURSO = "Em curso"
 DICA_DA_CHAVE = "Liga ou desliga este aparelho"
 DICA_DO_GRAVAR = "Grava o que você arrastar como uma forma nova, para os botões do controle"
-DICA_DA_BARRA_FORA = "{nome} não está rodando: a barra não chega a ela."
+DICA_DA_BARRA_FORA = "{nome} não está rodando: a barra não chega a essa extensão."
 DICA_DA_BARRA_SEM_ALVO = "Nenhum aparelho ligado: a barra não chega a nenhum."
 CAMPO_DA_BARRA_FORA = "mod-livre-fora"
 
@@ -1548,7 +1548,7 @@ def _aparelhos_geridos(estado: Mapping[str, Any] | None) -> list[dict[str, Any]]
 
 def _chave_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
     """A chave do cartão, quando o manifesto declara ``ligar``: o clique pede o contrário. Com a
-    chave da extensão desligada, ela fica à vista, apagada e sem gesto."""
+    chave da extensão desligada, a chave fica à vista, apagada e sem gesto."""
     if not any(a.id == ACAO_DE_LIGAR for a in g.aparelhos.acoes):
         return ""
     ligado = ap.get("ligado") is not False
@@ -1633,7 +1633,7 @@ SEM_RAZAO_DA_BUSCA = "Ligue o aparelho e deixe-o perto."
 
 class Andamento(NamedTuple):
     """O que a janela diz do «Parear» agora: ``busca`` (os segundos que faltam, ``None`` passado o
-    prazo) ou o fim dela (``achou``, os nomes; ``razao``, a dica quando não achou nenhum)."""
+    prazo) ou o fim da busca (``achou``, os nomes; ``razao``, a dica quando não achou nenhum)."""
 
     fase: str = ""
     restam: int | None = None
@@ -1641,7 +1641,7 @@ class Andamento(NamedTuple):
     razao: str = ""
 
     def html(self, *, vazio: bool) -> str:
-        """A faixa do andamento; vazia quando não há busca nem fim a mostrar. Sem aparelho, ela é a
+        """A faixa do andamento; vazia quando não há busca nem fim a mostrar. Sem aparelho, a faixa é a
         própria linha do aviso (``mj-ap-vazio``) e divide a linha do Parear."""
         if not self.fase:
             return ""
@@ -1661,9 +1661,9 @@ class Andamento(NamedTuple):
 
 
 class AndamentoDoPareamento:
-    """O dono do andamento do «Parear» de cada extensão, lido do estado que ela devolve: a busca
+    """O dono do andamento do «Parear» de cada extensão, lido do estado que a extensão devolve: a busca
     começa quando uma conexão «procurando» tem o motivo começado por
-    :data:`COMECO_DO_MOTIVO_DA_BUSCA` e termina quando ela deixa de tê-lo. O fim fica à vista
+    :data:`COMECO_DO_MOTIVO_DA_BUSCA` e termina quando a conexão deixa de tê-lo. O fim fica à vista
     :data:`FIM_DA_BUSCA_VISIVEL_S`, com o que apareceu de novo ou a razão."""
 
     def __init__(self, relogio: Callable[[], float] = time.monotonic) -> None:
@@ -1889,7 +1889,7 @@ def controles_dos_aparelhos_html(mod: str, estado: Mapping[str, Any] | None,
 def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
                          aparelhos: AparelhosDaJanela | None, controles: str = "") -> list[str]:
     """As abas na ordem: a dos aparelhos, as das ações, as das opções e, por último, a dos
-    controles dos aparelhos (só quando algum os tem), como a Luz no arranjo C; se ela é a aba de
+    controles dos aparelhos (só quando algum os tem), como a Luz no arranjo C; se essa é a aba de
     uma opção, fica no lugar daquela."""
     nomes = [aparelhos.grupo if aparelhos else "", *(a.grupo for a in acoes),
              *(o.grupo for o in opcoes), controles]
@@ -1903,8 +1903,8 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                        desligada: bool = False) -> str:
     """As abas do arranjo C com as ações e a lista dos aparelhos geridos.
 
-    Cada aba é: a fileira das ações dela (``#mod-acoes-<n>``), a lista dos aparelhos se ela é a do
-    ``grupo`` deles (``#mod-aparelhos``), os cartões dos controles se ela é a do ``grupo`` deles
+    Cada aba é: a fileira das próprias ações (``#mod-acoes-<n>``), a lista dos aparelhos se a aba é a do
+    ``grupo`` deles (``#mod-aparelhos``), os cartões dos controles se a aba é a do ``grupo`` deles
     (``#mod-controles``; ``controles`` é o par aba e cartões, a aba vazia quando nenhum aparelho
     os tem) e as linhas das opções. A ação sem ``grupo`` vai à primeira aba, como a opção sem
     grupo. A ponte repinta os blocos a cada tique, e a aba não pula. Ações e aparelhos da mesma
@@ -1948,7 +1948,7 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
 def acoes_por_aba(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
                   aparelhos: AparelhosDaJanela | None,
                   controles: str = "") -> dict[int, tuple[AcaoDaJanela, ...]]:
-    """As ações de cada aba pelo número dela, o mesmo de ``#mod-acoes-<n>``: quem repinta usa.
+    """As ações de cada aba pelo número da aba, o mesmo de ``#mod-acoes-<n>``: quem repinta usa.
     ``controles`` é a aba dos controles dos aparelhos, só quando algum os tem."""
     nomes = _grupos_com_as_pecas(opcoes, acoes, aparelhos, controles)
     return {n: tuple(a for a in acoes if (a.grupo or nomes[0]) == nome)

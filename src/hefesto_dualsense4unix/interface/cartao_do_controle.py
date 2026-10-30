@@ -27,10 +27,10 @@ mantenedora depois de olhar a tela:
   vertical amarrando as duas linhas de título — o degrau de 20px nascia do
   rótulo da esquerda quebrar em 3 linhas e o da direita em 2;
 * o **glifo dos botões derivado da escala de fonte** (:func:`glyph_size`), que
-  era o único tamanho da interface fora do alcance do ajuste dela.
+  era o único tamanho da interface fora do alcance do ajuste de escala.
 
-STATUS-SIMETRIA-02 é o veredito dela sobre aquela entrega: *"só distanciou as
-coisas"*. Espalhar os módulos pela largura resolveu o amontoamento e não
+STATUS-SIMETRIA-02 é o veredito sobre aquela entrega: só distanciou as
+coisas. Espalhar os módulos pela largura resolveu o amontoamento e não
 produziu leitura. As seis mudanças desta rodada, todas medidas na tela do usuário:
 
 * **o microfone não sai mais da faixa** (MIC-PRESENTE-01). Os dois ``hide()``
@@ -53,10 +53,10 @@ produziu leitura. As seis mudanças desta rodada, todas medidas na tela do usuá
 * **a bateria aparece uma vez só**: com um controle, quem fala é o frame
   "Estado"; com 2+, quem fala é cada card.
 
-SOM-01 é a terceira rodada, e vem dos três pedidos que ela fez olhando a v2
-("quase perfeito"): *"dava pra colocar o auto falante abaixo do microfone"*,
-*"aumentar e espaçar mais os botões do controle tipo x quadrado bola e
-triângulo e afins"* e *"permitir a expansão da janela"*. As três mudanças:
+SOM-01 é a terceira rodada, e vem dos três pedidos feitos olhando a v2
+(quase perfeita): o alto-falante abaixo do microfone,
+os botões do controle (xis, quadrado, bola, triângulo e afins) maiores e mais
+espaçados, e a janela que se expande. As três mudanças:
 
 * **o alto-falante mudou de coluna**: saiu de baixo da lightbar (coluna da
   esquerda) e passou a ficar imediatamente ABAIXO do microfone, numa coluna de
@@ -100,7 +100,7 @@ Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
   inputs): repetir o mesmo estado a 10 Hz não re-renderiza nada.
 
 Sem timers RECORRENTES próprios (quem agenda o tique é a mixin de status, com
-os timers que ela JÁ tinha; o aceite do STATUS-02 é diff contra esse baseline)
+os timers que a mixin JÁ tinha; o aceite do STATUS-02 é diff contra esse baseline)
 e sem popups (cosmic-epoch#2497): tudo inline, sempre visível. A ÚNICA exceção
 é o repouso do controle deslizante de volume (SOM-02/E1): um
 ``GLib.timeout_add`` de UM disparo, armado por gesto humano e desarmado ao
@@ -286,7 +286,7 @@ def rotulo_lightbar(
       porque é um aviso sobre a CONFIANÇA no valor, não sobre o valor: com a
       Steam segurando o hidraw, o que a classe LED devolve é o que o Hefesto
       PEDIU — a madrugada de 16/08 leu ``[0 255 0]`` com a barra apagada e
-      ``[0 255 0]`` com ela verde. Dizer "apagada" ou pintar a bolinha de
+      ``[0 255 0]`` com a barra verde. Dizer "apagada" ou pintar a bolinha de
       verde sem ressalva seria, nos dois casos, afirmar o que ninguém mediu.
 
       LUZ-CEGA-01/F2 (22/08/2026) — a frase era *"a Steam também escreve
@@ -330,11 +330,11 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     ser a resposta certa, e só dois. A decisão medida acima continua inteira
     — a ausência da linha não é alarme, e "sem giroscópio" em todo card seria
     ruído crônico. O que mudou é que há duas situações em que o silêncio faz
-    a tela parecer QUEBRADA quando ela está certa:
+    a tela parecer QUEBRADA quando está certa:
 
     * **máscara Xbox 360** — o JOGO não recebe giroscópio, e o motivo não é
       defeito nosso: a API do controle de Xbox não tem esse sensor. Sem a
-      frase, ela vê um card com giroscópio desenhado e nenhum sinal de que o
+      frase, o usuário vê um card com giroscópio desenhado e nenhum sinal de que o
       dado não sai dali. **O sujeito é o jogo, e não o controle** (21/09/2026,
       ordem de produto): o aparelho segue publicando movimento, e a Navegação e os
       gestos seguem usando;
@@ -347,7 +347,7 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     O Nativo vem antes (o jogo lê o `hidraw` do físico, e o interruptor não o
     alcança). Com o chip Giroscópio desligado (o `False` de
     `sensores.giroscopio_ligado`, A-MIRA-NA-NAVEGACAO-01), a frase da Xbox cala:
-    o «no Hefesto ele segue ativo» dela contradiria o chip na mesma linha.
+    a frase «no Hefesto ele segue ativo» contradiria o chip na mesma linha.
     """
     if bool(state_global.get("native_mode")):
         return None
@@ -440,14 +440,14 @@ def _mascara_e_xbox(
     (`controllers[uniq].mascara` do perfil ativo) **vence** o degrau 2
     (`mode.gamepad_flavor`). Ler só o degrau 2 é perguntar a quem perde.
 
-    Medido na bancada naquele dia, com o perfil PRAGMATA:
+    Medido no ensaio naquele dia, com o perfil PRAGMATA:
 
         flavor (global) = "xbox"
         por_aparelho    = {os quatro: "dualsense"}
 
     A máscara efetiva dos quatro era DualSense, e a tela dizia Xbox — e com
-    ela vinha a frase do giroscópio, que ela leu e recusou: *"essa frase não
-    deveria existir"*. **As duas queixas eram o mesmo defeito.**
+    a máscara vinha a frase do giroscópio, lida e recusada: a frase não
+    deveria existir. **As duas queixas eram o mesmo defeito.**
 
     O `flavor` continua sendo o FALLBACK, e não some: é o que responde quando
     aquele controle não escolheu, que é a regra de herança da D-5 (*máscara do
@@ -640,7 +640,7 @@ def acao_speaker_mudo(entry: Any) -> AcaoSpeaker:
     ==============================  ==========  ===================
 
     **A primeira linha é INSENSÍVEL, e isso é a entrega.** A chave ``speaker``
-    só existe depois de um ``speaker.set`` nosso com volume; antes dela, um
+    só existe depois de um ``speaker.set`` nosso com volume; antes desse set, um
     ``muted=True`` faria o backend assumir a posse com preferência ZERO, e o
     ``muted=False`` seguinte "restauraria" essa preferência — o par tranca o
     alto-falante em ``{'volume': 0, 'muted': True}`` e o próprio botão não tem
@@ -674,16 +674,16 @@ def saida_muda_do_entry(entry: Any, mic: Any = None) -> bool | None:
     transportes) não produz som nenhum: o bloco ficaria dizendo uma
     porcentagem enquanto nada sai.
 
-    Duas posições aceitas, nesta ordem, e nenhuma delas inventada aqui:
+    Duas posições aceitas, nesta ordem, e nenhuma das duas inventada aqui:
 
     1. o PAYLOAD do daemon, em ``speaker.saida_muda`` ou ``audio.saida_muda`` —
        é onde a leitura mora quando quem lê o PipeWire é o daemon;
     2. a leitura do microfone da própria janela (``LeituraMic.saida_muda``), lida
-       por ``getattr`` defensivo — é onde ela mora se quem passar a ler o sink
+       por ``getattr`` defensivo — é onde a posição mora se quem passar a ler o sink
        for o ``app/mic_monitor.py``, que já é o leitor de PipeWire desta
        interface e já roda fora da thread GTK.
 
-    **A posição 2 EXISTE desde então, e é por ela que o selo acende hoje.** O
+    **A posição 2 EXISTE desde então, e é por essa posição que o selo acende hoje.** O
     ``MicMonitor`` ganhou a thread supervisora do sink (``_saidas_mudas``,
     `app/mic_monitor.py:335`, preenchida em `:622` e servida em `:507`), e a
     ``LeituraMic`` carrega o campo. A posição 1 (o daemon publicar
@@ -692,7 +692,7 @@ def saida_muda_do_entry(entry: Any, mic: Any = None) -> bool | None:
 
     Isto **substitui** a afirmação anterior desta docstring ("hoje nenhuma das
     duas existe", medida em 01/08/2026), que caducou sem que ninguém percebesse
-    e custou uma bancada: em 17/08 o JANELA-CORTADA-01 tentou revelar o selo
+    e custou um ensaio: em 17/08 o JANELA-CORTADA-01 tentou revelar o selo
     montando um card com ``speaker={"muted": True}`` e concluiu que ele "continua
     escondido". Continua mesmo — ``muted`` é a camada 2 (o registrador HID) e
     esta função lê a camada 1 (o sink do PipeWire). São chaves diferentes, de

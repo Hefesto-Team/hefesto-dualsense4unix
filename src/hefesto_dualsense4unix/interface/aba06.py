@@ -254,7 +254,7 @@ def _escolha_do_gesto():
     """«+ Gesto»: um botão por candidato, só com o glifo; o usado e o proibido ficam indisponíveis.
 
     O nome da peça vai para a dica: ao lado do glifo, numa casa de 34 px, ele vazava sobre os
-    vizinhos e para fora da caixa (o «Share» por cima do «Options», o «R1» fora dela).
+    vizinhos e para fora da caixa (o «Share» por cima do «Options», o «R1» fora da caixa).
     """
     botoes = []
     for b in _acoes_do_gesto.BOTOES_DA_ESCOLHA:

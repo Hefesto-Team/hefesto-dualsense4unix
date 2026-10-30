@@ -26,9 +26,9 @@ FIM_DA_ABA = '<script id="base-comum">'
 
 
 def com_a_base(doc: str) -> str:
-    """O documento com a base comum posta UMA vez; levanta se ela já estiver lá ou faltar âncora."""
+    """O documento com a base comum posta UMA vez; levanta se a base já estiver lá ou faltar âncora."""
     if 'id="base-comum"' in doc:
-        raise SystemExit("ERRO: a base comum já está nesta página; ela entra uma vez só")
+        raise SystemExit("ERRO: a base comum já está nesta página; a base entra uma vez só")
     if doc.count("</head>") != 1 or doc.count("</body>") != 1:
         raise SystemExit("ERRO: a página não tem um `</head>` e um `</body>` para a base comum")
     doc = doc.replace("</head>", f'<style id="base-comum">\n{BASE_CSS}</style>\n</head>', 1)
@@ -40,7 +40,7 @@ MARCA_DA_LOGO = '<div class="logo"><!--LOGO--></div>'
 
 
 def _logo_em_linha(x: str) -> str:
-    """O SVG dela, pronto para viver dentro do HTML."""
+    """O SVG da marca, pronto para viver dentro do HTML."""
     x = re.sub(r"<\?xml[^>]*\?>\s*", "", x).strip()
     return re.sub(r'<svg width="\d+" height="\d+"', '<svg width="40" height="40"',
                   x, count=1)
@@ -99,7 +99,7 @@ def nome_do_glifo(nome: str) -> str:
     if nome not in NOME_DA_PECA:
         raise SystemExit(
             f"ERRO em glifo({nome!r}): a peça não tem linha em "
-            f"docs/data/pecas-do-dualsense.csv — o nome em português dela não se "
+            f"docs/data/pecas-do-dualsense.csv — o nome em português da peça não se "
             f"inventa aqui, escreva a linha lá")
     return NOME_DA_PECA[nome]
 
@@ -145,7 +145,7 @@ def dono_na_linha(nomes: dict[str, str], uniq: str, jogador: Any, plastico: str 
     A REGRA É UMA SÓ, e mora aqui (D-2909-O-CARTAO-DIZ-QUEM-JOGA): sem nome, a 08 passa a cor
     `plastico` da mesa e diz a cor ou o modelo (D-2610-O-CONTROLE-SEM-NOME-SE-CHAMA-PELA-COR); a 02
     e a Calibrar, que já dizem a cor, não a passam e dizem «P N». `nomes` vem do `Alias` do BlueZ.
-    Com `em_html`, o nome sai ESCAPADO (é texto dela) e o número leva o `numero_do_jogador`.
+    Com `em_html`, o nome sai ESCAPADO (é texto de quem usa) e o número leva o `numero_do_jogador`.
     """
     nome = nomes.get(str(norm_mac(str(uniq or "")) or "").upper(), "") or nome_sem_dono(plastico)
     if nome:
@@ -238,8 +238,8 @@ def o_desenho_conhece(colorway: str) -> bool:
 def cor_de_css(colorway: str, zona: str = "casca-solida") -> str:
     """A cor daquele modelo QUE UM CAMPO DE COR CSS ACEITA — ou `""`.
 
-    O DEFEITO QUE ELA CURA, achado pelos DOIS auditores da leva de 03/09/2026 e
-    medido no WebKit desta máquina: **oito dos vinte e oito modelos dela**
+    O DEFEITO QUE A FUNÇÃO CURA, achado pelos DOIS auditores da leva de 03/09/2026 e
+    medido no WebKit desta máquina: **oito dos vinte e oito modelos do mapa**
     (Grey Camouflage, Chroma Teal, Chroma Indigo, Chroma Pearl, Ghost of Yōtei,
     Marathon, Genshin Impact e 007 First Light) não têm hexa amostrado, e
     :func:`cor_da_zona` devolve para eles ``url(#hachura-sem-hex)`` — uma
@@ -254,7 +254,7 @@ def cor_de_css(colorway: str, zona: str = "casca-solida") -> str:
     **É a queixa de uso literal, com os donos trocados** — *"os svgs mudam de
     acordo com o controle identificado (…) isso tá errado"* —, e é pior do que
     não pintar: não pintar é uma lacuna, pintar OUTRO MODELO é uma afirmação
-    falsa. São 8 de 28, 29% do mapa dela.
+    falsa. São 8 de 28, 29% do mapa.
 
     O `""` É A REGRA DE PRODUTO, e não zelo: *campo sem informação não mostra nada*. O
     alvo `cor` com valor vazio APAGA a declaração em linha, e a pele cai no
@@ -265,7 +265,7 @@ def cor_de_css(colorway: str, zona: str = "casca-solida") -> str:
 
     NÃO HÁ TABELA NOVA AQUI: a lista dos oito não se digita. O discriminador é
     a FORMA do valor — quem não começa por `#` não é cor —, e por isso ele
-    continua certo no dia em que ela amostrar mais um modelo ou em que nascer
+    continua certo no dia em que o mapa amostrar mais um modelo ou em que nascer
     um gradiente novo.
     """
     try:
@@ -308,7 +308,7 @@ def cabe_o_todos(mesa: Sequence[Any] | None = None) -> bool:
     `None` cai nos `CONECTADOS` do desenho, que é o mesmo padrão de `fita()`.
 
     O TIPO É `Sequence`, E NÃO `list[dict]`, porque a regra é sobre a CONTAGEM e
-    só sobre ela. Quem pergunta nem sempre tem itens de mesa à mão — o
+    só sobre a contagem. Quem pergunta nem sempre tem itens de mesa à mão — o
     `jogar_vivo._indice_na_fita` tem as CHAVES de remontagem, uma por controle —
     e obrigá-lo a forjar dicionários vazios só para caber na anotação seria a
     régua mentindo sobre o que precisa.
@@ -367,7 +367,7 @@ def a_fita_escolhe(pagina: str) -> bool:
         if prefixo in {a.split("-", 1)[0] for a in conhecidas}:
             raise SystemExit(
                 f"ERRO: {pagina!r} não é uma das abas, e o número {prefixo} "
-                f"é de uma delas — isto é erro de digitação. Quem responde "
+                f"é de uma das abas — isto é erro de digitação. Quem responde "
                 f"'esta aba escolhe controle?' é `monta.ABAS_QUE_ESCOLHEM`, e "
                 f"ele só conhece as de `monta.ABAS` e `monta.FORA_DA_TIRA`.")
         return False
@@ -549,7 +549,7 @@ def identidade_do_chip(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     NUNCA a posição — a posição foi o que fez o mesmo controle mudar de nome
     quando o segundo entrou na mesa.
 
-    **A TRADUÇÃO DE UMA CHAVE, e ela é a única lógica daqui:** `identidade_de`
+    **A TRADUÇÃO DE UMA CHAVE, a única lógica daqui:** `identidade_de`
     lê `transport` (o nome CRU do daemon) e o item da mesa guarda o mesmo fato
     como `transporte` (`mesa_viva.mesa_do_estado:328`). Sem esta linha o último
     degrau da ordem — «o transporte sozinho» — cai no travessão, e o controle
@@ -780,7 +780,7 @@ def svg(pref: str, colorway: str, classes: str = "ds-svg",
 
     POR QUE ISSO É UM PARÂMETRO, e não uma regra de CSS. Decisão, 28/08:
     **as lâmpadas do jogador SOMEM dos desenhos pequenos; ficam só nos grandes,
-    da Iluminação.** Elas medem 1,15 de 60 unidades do desenho — num cartão de
+    da Iluminação.** As lâmpadas medem 1,15 de 60 unidades do desenho — num cartão de
     62px isso dá **1,06 × 0,36 px**, e na Navegação, com 111px, **1,90 × 0,64 px**.
     Abaixo de um pixel de altura não há contraste que resolva: não é lâmpada
     apagada, é lâmpada que não cabe.
@@ -793,7 +793,7 @@ def svg(pref: str, colorway: str, classes: str = "ds-svg",
     é o que não volta sozinho.
 
     Quem PASSA `jogador=` está pedindo as lâmpadas acesas — pedir isso com
-    `lampadas=False` é contradição, e ela para a geração aqui em vez de deixar
+    `lampadas=False` é contradição, e a função para a geração aqui em vez de deixar
     a aba mentir.
     """
     if jogador and not lampadas:
@@ -878,7 +878,7 @@ CSS_DO_NATIVO = """
 def corpo_da_pagina(arq: str) -> str:
     """A abertura do `<body>`. O ENDEREÇO `nativo` mora nas dez (o cabeçalho
     comum, `pacotes.topo`, o escreve), e a classe `por-controle` só nas cinco
-    abas de `camada.ABAS_POR_CONTROLE` (a mesma lista que a recusa usa): é ela
+    abas de `camada.ABAS_POR_CONTROLE` (a mesma lista que a recusa usa): é essa classe
     que o CSS do Nativo usa para travar o que a aba grava. Quem pinta `body.nativo` é o piloto, a cada tique."""
     from hefesto_dualsense4unix.interface.pacotes.camada import ABAS_POR_CONTROLE
     classe = "por-controle" if f"{arq}.html" in ABAS_POR_CONTROLE else ""
@@ -947,7 +947,7 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
 
 
 def nome_sem_dono(plastico: str | None) -> str:
-    """O nome do controle sem nome dado: a cor do plástico, ou o modelo sem ela; sem a linha, nada."""
+    """O nome do controle sem nome dado: a cor do plástico, ou o modelo sem a cor; sem a linha, nada."""
     if plastico is None:
         return ""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import MODELO_GENERICO

@@ -42,7 +42,7 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
 
 COM_MODOS = {**LIVRE, "modos": True}
 VAZIO = "Esta extensão não tem opções para ajustar."
-DICA_FORA = "Toque não está rodando: a barra não chega a ela."
+DICA_FORA = "Toque não está rodando: a barra não chega a essa extensão."
 
 
 def _miolo(janela: Any, ponte: _Ponte | None = None) -> str:  # noqa: F811

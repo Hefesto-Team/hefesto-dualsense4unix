@@ -23,7 +23,7 @@ for _p in (str(AQUI), str(RAIZ / "src")):
 
 
 def _pede_a_tela_de_mentira(argv: list[str], ambiente: Any) -> bool:
-    """O `--conta-tamanho` sem `--oculta` abre uma janela com barra: ela nasce num Xvfb próprio."""
+    """O `--conta-tamanho` sem `--oculta` abre uma janela com barra: a janela nasce num Xvfb próprio."""
     conta = any(a == "--conta-tamanho" or a.startswith("--conta-tamanho=") for a in argv)
     return conta and "--oculta" not in argv and ambiente.get("HEFESTO_NA_TELA") != "1"
 
@@ -897,17 +897,17 @@ def _com_dono(ctx: pacotes.Contexto) -> list[str]:
     NASCEU DE UMA REGRESSÃO, no mesmo dia. O passo `1c` do piloto (o que
     REABRE o cartão de um controle que chega) lia `carga["ocupados"]`, e a
     primeira versão daquela conta era `set(colunas)` — as colunas que a aba
-    emitiu. Medido no DOM vivo, com UM controle na bancada: a `03-gatilhos`
+    emitiu. Medido no DOM vivo, com UM controle no ensaio: a `03-gatilhos`
     manda coluna para os QUATRO lugares, porque as vazias levam travessão de
     propósito, e o piloto passou a escrever `data-conectado="sim"` em dois
     lugares onde não há aparelho nenhum.
 
     **TER COLUNA NÃO É TER DONO.** A aba manda coluna para desenhar; quem diz
-    quem está aqui é a MESA. Esta função é essa pergunta, e ela tem um dono só.
+    quem está aqui é a MESA. Esta função é essa pergunta, e tem um dono só.
 
-    A DECISÃO QUE ELA SUSTENTA é de 03/09/2026: *"tem que aparecer desligado
-    enquanto não tem nenhum controle. A partir do momento que tiver, ele aparece
-    o controle devidamente conectado."*
+    A DECISÃO QUE A FUNÇÃO SUSTENTA é de 03/09/2026: o lugar aparece desligado
+    enquanto não tem nenhum controle e, a partir do momento em que tiver, mostra
+    o controle devidamente conectado.
     """
     prefs: list[str] = []
     por_uniq = {str(c.get("uniq") or ""): c.get("pref") for c in ctx.mesa}
@@ -1448,7 +1448,7 @@ def _pagina_da_uri(uri: str | None) -> str:
 
 
 def _anotar_a_aba(pagina: str) -> None:
-    """A aba à vista vai para o runtime, para o install reabrir a janela nela."""
+    """A aba à vista vai para o runtime, para o install reabrir a janela ali."""
     from hefesto_dualsense4unix.app.actions.recarga_do_install import arquivo_da_aba
 
     with contextlib.suppress(OSError):
@@ -1471,7 +1471,7 @@ def _o_servico_so_demorou(erro: BaseException) -> bool:
 class FolgaDoServicoMudo:
     """O estado que o tique pinta quando o serviço não respondeu — RECONECTAR-SAMBA-02.
 
-    Cada TRANSIÇÃO do que a tela mostra deixa uma linha no diário, para a foto dela se cruzar
+    Cada TRANSIÇÃO do que a tela mostra deixa uma linha no diário, para a foto da tela se cruzar
     com a hora: `[tela] estado velho desde <hora>` (pintando o último estado bom), `[tela] vazio`
     (a verdade, `{}`) e `[tela] novo` (voltou a resposta). Uma linha por transição, nunca por
     tique; o que a tela mostra não muda.
@@ -1524,17 +1524,17 @@ def _declarar_o_foco(ativa: bool) -> Any:
 class LeitorDoEstado:
     """O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01, 15/09/2026.
 
-    A QUEIXA DE USO, com os dois controles na mesa: *"tem algo muito estranho
-    travando a interface do app. como um todo."*  (noqa-acento: citação)
+    A QUEIXA DE USO, com os dois controles na mesa: algo muito estranho
+    travava a interface do app como um todo.
 
     A CAUSA JÁ ESTAVA ESCRITA DENTRO DO PRÓPRIO TIQUE, na A-TELA-SAMBA-01 de
-    03/09: *"as DUAS VIAGENS de IPC do começo deste método são SÍNCRONAS — elas
+    03/09: *"as DUAS VIAGENS de IPC do começo deste método são SÍNCRONAS — as duas
     seguram o laço do GTK inteiro"*. O que aquela leva fez foi PULAR o tique
     seguinte, que encurta a fila e não desbloqueia nada: enquanto o
     `estado_do_daemon()` não volta, o laço do GTK não roda, e a janela inteira
     — rolagem, clique, `:hover`, o cursor de texto — fica parada.
 
-    O NÚMERO, medido no diário dela (`interface.log`, a sessão de 14/09):
+    O NÚMERO, medido no diário da interface (`interface.log`, a sessão de 14/09):
 
     ========  ======  ==========  ===========
     aba       lentos  IPC médio   IPC pior
@@ -1545,17 +1545,17 @@ class LeitorDoEstado:
     ========  ======  ==========  ===========
 
     612 tiques lentos numa sessão, e em 457 deles o IPC é **80% ou mais** do
-    custo. Seis segundos de janela morta é o que ela chama de travar.
+    custo. Seis segundos de janela morta é o que se chama de travar.
 
     A CURA É DE FORMA, e não de velocidade: a leitura passa a um fio próprio,
     que lê na mesma cadência de antes (uma por tique) e deixa a resposta num
     escaninho. O tique pega o que está lá e segue — **nunca espera**. Um daemon
     que demore seis segundos deixa a tela com dado de seis segundos atrás, que é
-    exatamente o que ela já mostrava enquanto congelava; o que muda é que a
+    exatamente o que a tela já mostrava enquanto congelava; o que muda é que a
     janela continua andando.
 
     A FOLGA CONTINUA CONTANDO RESPOSTAS, E NÃO TIQUES, e é por isso que existe a
-    `self._geracao`: sem ela, uma leitura que falhasse seria entregue a dez
+    `self._geracao`: sem a geração, uma leitura que falhasse seria entregue a dez
     tiques por segundo, e os `MUDOS_SEGUIDOS_QUE_VOLTARAM` da
     `FolgaDoServicoMudo` — três respostas mudas — queimariam em 300 ms. O
     tique só mexe na folga quando a geração ANDA; entre duas respostas ele
@@ -1626,7 +1626,7 @@ class LeitorDoEstado:
         """Sobe o fio, que lê JÁ e chama o `avisar`. Chamar duas vezes não sobe dois.
 
         Nota de 21/10/2026 (O-FIO-DA-JANELA-NUNCA-ESPERA-01): a primeira leitura era
-        semeada aqui, no fio de quem chama, que é o do GTK — um IPC no `_instalado`. Ela
+        semeada aqui, no fio de quem chama, que é o do GTK — um IPC no `_instalado`. A semeadura
         passou ao fio; o tique sem resposta não pinta, e o aviso traz a primeira pintura.
         """
         if self._fio is not None:
@@ -1816,7 +1816,7 @@ class Piloto:
         POR QUE `Gtk.Dialog.run()` E NÃO UM CALLBACK: o gesto está numa thread
         (os gestos correm fora do laço, porque `daemon.reload` leva 9,5 s), e
         precisa do caminho para seguir. `run()` bombeia o laço do GTK por
-        dentro, então a janela continua viva enquanto ela escolhe.
+        dentro, então a janela continua viva enquanto o usuário escolhe.
 
         COM A JANELA OCULTA NÃO HÁ DIÁLOGO: uma `Gtk.OffscreenWindow` não tem
         onde pôr um modal, e abrir um sem pai o jogaria NA TELA DO USUÁRIO — que é
@@ -1862,7 +1862,7 @@ class Piloto:
         return o
 
     def _gesto_vivo(self, o: dict[str, Any], pagina: str, nome: str) -> None:
-        """A quarta porta — o gesto que LÊ enquanto ela digita, e não grava."""
+        """A quarta porta — o gesto que LÊ enquanto o usuário digita, e não grava."""
         serial = str(o.get("vivo") or "")
         chave = str(o.get("vivoChave") or f"{pagina}:{nome}")
         acao = pacotes.gesto_da_pagina(pagina, nome)
@@ -1876,7 +1876,7 @@ class Piloto:
         if grava:
             self.vivos_recusados.append(f"{pagina}:{nome} (grava: {grava})")
             print(f"[vivo recusado] {pagina} · {nome} declara gravação "
-                  f"({grava}) — a quarta porta é de LEITURA, e ela dispara a "
+                  f"({grava}) — a quarta porta é de LEITURA, e o gesto dispararia a "
                   f"cada tecla", file=sys.stderr)
             return
         self._vivos[chave] = serial
@@ -1898,7 +1898,7 @@ class Piloto:
 
     def _vivo_voltou(self, pagina: str, nome: str, chave: str, serial: str,
                      resposta: object) -> bool:
-        """A leitura chegou. Se ainda é a mais nova, ela pinta."""
+        """A leitura chegou. Se ainda é a mais nova, a leitura pinta."""
         if self._vivos.get(chave) != serial:
             self.vivos_descartados += 1
             return False
@@ -2061,13 +2061,13 @@ class Piloto:
         valendo inteira.
 
         A OUTRA METADE CADUCOU EM 05/09/2026, e a data importa. Este parágrafo
-        dizia que ELA recusara *o campo que pisca* (aba 03) e *a faixa embaixo
+        dizia que o produto recusara *o campo que pisca* (aba 03) e *a faixa embaixo
         da grade* (aba 05), e mandava: **"não construa nenhum dos dois"**. Quem
         recusou foi o PO, lendo a D-01 (*"no próprio cartão, como a recusa"*)
-        como se ela fechasse a FORMA — os conflitos C-3 e C-6 de
+        como se a D-01 fechasse a FORMA — os conflitos C-3 e C-6 de
         `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` são dele, não
-        dela. Em 05/09 ela respondeu a `03-Q4` vendo as quatro formas lado a
-        lado e escolheu o campo que pisca. **A palavra de produto vence a leitura que
+        do produto. Em 05/09 a `03-Q4` foi respondida vendo as quatro formas lado a
+        lado, e a escolha foi o campo que pisca. **A palavra de produto vence a leitura que
         o PO fez da palavra de produto.**
 
         E a piscada não é um segundo canal para o mesmo fato: é o mesmo fato num
@@ -2081,10 +2081,10 @@ class Piloto:
         `data-campo="recado"` que não existe.
 
         E QUANDO NÃO HÁ FRASE, A TELA NÃO FALA — 05/09/2026, decisão de produto na
-        `03-Q4`. Até aqui valia uma frase do piloto (*"Pronto."*), e ela tirou
+        `03-Q4`. Até aqui valia uma frase do piloto (*"Pronto."*), e a decisão tirou
         a palavra nova da tela:
 
-            *"nada muda de lugar e nenhuma palavra nova entra na tela"*
+            nada muda de lugar e nenhuma palavra nova entra na tela
 
         A regra que isso escrevia — *"quando ele tem NOTÍCIA, a tela fala"* —
         caducou em 13/09/2026 (nota abaixo). Quem pisca continua sendo o
@@ -2107,7 +2107,7 @@ class Piloto:
         **A metade da recusa caducou no mesmo dia** (FRASES-E-DICAS-01): ver
         `_recusou_dizendo`.
 
-        E A CHAVE `armou` SAI JUNTO COM O `recado` — 13/09/2026. Ela é sinal
+        E A CHAVE `armou` SAI JUNTO COM O `recado` — 13/09/2026. A chave é sinal
         para o POUSO (`CHAVE_DO_CLIQUE_QUE_SO_ARMOU`, lida em `_gesto`), e não
         endereço de página.
         """
@@ -2226,7 +2226,7 @@ class Piloto:
 
     def _entregar(self, pagina: str, dado: Any, *, reexame: bool = False,
                   como: str = "", porque: str = "") -> bool:
-        """O arranjo lido (ou o porquê de não haver) vai à página, no laço do GTK e se ela é a dele."""
+        """O arranjo lido (ou o porquê de não haver) vai à página, no laço do GTK e se a página é a dele."""
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
         if self.pagina != pagina:
@@ -2883,7 +2883,7 @@ class Piloto:
         AVISA do risco fica ao lado do código que o comete.
 
         A recusa é BARULHENTA e não um pulo em silêncio: uma régua que pula
-        calado ensina quem a roda que ela cobriu o botão. `--incluir-perigosos`
+        calado ensina quem a roda que a régua cobriu o botão. `--incluir-perigosos`
         continua sendo a porta, e aí é escolha de quem roda.
         """
         proibidos = sorted(
@@ -2891,7 +2891,7 @@ class Piloto:
             if (self.pagina, g) in PERIGOSOS or ("*", g) in PERIGOSOS)
         if proibidos and not self.args.incluir_perigosos:
             print(f"[prova] RECUSA: {', '.join(proibidos)} mexe(m) na máquina "
-                  f"dela em {self.pagina}. Use --incluir-perigosos se for "
+                  f"de quem usa em {self.pagina}. Use --incluir-perigosos se for "
                   "mesmo isso que você quer.", file=sys.stderr)
             raise SystemExit(1)
         def clicar(g: str) -> bool:
@@ -2937,7 +2937,7 @@ class Piloto:
             print(f"[prova] `data-papel` que o ouvinte aceita como gesto e nenhum "
                   f"pacote registra: {', '.join(papeis)}")
         if pulados:
-            print(f"[prova] pulados por mexerem na máquina dela: {', '.join(pulados)}")
+            print(f"[prova] pulados por mexerem na máquina de quem usa: {', '.join(pulados)}")
         if not alvos:
             print(f"[prova] {self.pagina} não tem gesto seguro a clicar")
             return False
@@ -3104,7 +3104,7 @@ class Piloto:
     def _ir(self, pagina: str) -> bool:
         """Abre uma aba. `False` para o GLib — ver `_proximo_da_fila`.
 
-        Antes de a primeira carga confirmar, a troca espera por ela: a carga cortada no meio
+        Antes de a primeira carga confirmar, a troca espera por essa carga: a carga cortada no meio
         dá um FINISHED com a página em branco, que a guarda da janela lê como carga errada e
         fecha a janela."""
         alvo = onde.pagina(_a_pagina_pedida(pagina), publicado=True)
@@ -3353,7 +3353,7 @@ def _json(obj: Any, pagina: str = "") -> str:
                 continue
             _BANIDAS_JA_DENUNCIADAS.add(dono)
             print(f"[texto banido] {banida!r} em {_onde_foi(pagina, campo)}. A frase "
-                  "é defeito do dono dela — ver `interface/frases_banidas.py`.",
+                  "é defeito do dono da frase — ver `interface/frases_banidas.py`.",
                   file=sys.stderr)
     return saida
 
@@ -3396,7 +3396,7 @@ def _o_processo_da_janela() -> Iterator[None]:
     do serviço fica como rede só para a janela que morre sem `finally`.
 
     A saída ESPERA a largada na fila dos controles: um «Testar» ou um «Parar»
-    ainda no ar termina antes dela, e as filas são de fios que morrem com o
+    ainda no ar termina antes da saída, e as filas são de fios que morrem com o
     processo. O prazo fica abaixo do teto do serviço, que é a rede de depois.
     """
     from hefesto_dualsense4unix.profiles import loader
@@ -3440,12 +3440,12 @@ def _recusar_a_tela_que_nao_foi_desviada(desviada: str | None) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--oculta", action="store_true",
-                   help="Gtk.OffscreenWindow — nada aparece na tela dela. "
-                        "Ela tem UMA tela; é o padrão de toda régua desta casa.")
+                   help="Gtk.OffscreenWindow — nada aparece na tela de quem usa. "
+                        "Há UMA tela só; é o padrão de toda régua desta casa.")
     p.add_argument("--segundos", type=float, default=0.0,
                    help="fecha a janela depois de N segundos e relata. ZERO (o "
-                        "padrão) mantém a janela aberta até ela fechar — que é "
-                        "o comportamento do PRODUTO. Só a bancada põe prazo.")
+                        "padrão) mantém a janela aberta até alguém fechar — que é "
+                        "o comportamento do PRODUTO. Só o ensaio põe prazo.")
     p.add_argument("--passear", action="store_true",
                    help="visita as nove abas e mede a pintura de cada uma")
     p.add_argument("--parada", type=int, default=900,
@@ -3457,13 +3457,13 @@ def main() -> None:
                         "(`10-perfis.html`). Página que não existe REPROVA")
     p.add_argument("--prova-no-aparelho", action="store_true",
                    help="clica CADA gesto da aba, um por vez, e mede o que mudou "
-                        "no estado do daemon — a prova que ela pediu")
+                        "no estado do daemon — a prova pedida")
     p.add_argument("--entre", type=int, default=2500,
                    help="ms entre um gesto e o próximo")
     p.add_argument("--espera", type=int, default=1200,
                    help="ms entre o clique e a leitura do daemon")
     p.add_argument("--incluir-perigosos", action="store_true",
-                   help="inclui os gestos que mexem na máquina dela (desligar, "
+                   help="inclui os gestos que mexem na máquina de quem usa (desligar, "
                         "reiniciar, restaurar) — escolha de quem roda")
     p.add_argument("--prova-clique", default="",
                    help="gestos a tocar, por vírgula, até o daemon; `gesto@linha` escolhe o "
@@ -3474,7 +3474,7 @@ def main() -> None:
                    help="MORDIDA: arranca o medidor de áudio das ondas sonoras "
                         "da aba 02. As catorze barrinhas de cada medidor têm de "
                         "ACHATAR e ficar cinza — se continuarem desenhando a "
-                        "onda do arquivo, elas nunca foram dado")
+                        "onda do arquivo, as ondas nunca foram dado")
     p.add_argument("--prova-de-mockup", action="store_true",
                    help="passa pelas abas e diz, campo a campo, o que é DADO "
                         "e o que ainda é o DESENHO cravado no arquivo")
@@ -3488,11 +3488,11 @@ def main() -> None:
                         "vira catraca quando o número começar a cair")
     p.add_argument("--sem-cravado", action="store_true",
                    help="MORDIDA: arranca a comparação com o arquivo publicado e "
-                        "compara a tela com ela mesma. A régua tem de parar de "
-                        "acusar — se continuar acusando, ela não mede o que diz")
+                        "compara a tela consigo mesma. A régua tem de parar de "
+                        "acusar — se continuar acusando, a régua não mede o que diz")
     p.add_argument("--na-frente", action="store_true",
                    help="PROVA: a janela (mesmo oculta) se declara na frente à "
-                        "Navegação Interna, para a bancada no lar de mentira "
+                        "Navegação Interna, para o ensaio no lar de mentira "
                         "provar o R1, o L1 e a seleção sem janela visível")
     p.add_argument("--sem-selo", action="store_true",
                    help="MORDIDA: arranca o selo da visita. Os campos que "
@@ -3524,12 +3524,12 @@ def main() -> None:
         _recusar_a_tela_que_nao_foi_desviada(garantir_tela_de_mentira(anunciar=False))
 
     if args.conta_mutacoes and not args.oculta:
-        print("[conta-mutações] ligando `--oculta`: ela tem UMA tela.")
+        print("[conta-mutações] ligando `--oculta`: há UMA tela só.")
         args.oculta = True
 
     if args.prova_de_mockup and not args.oculta:
         print("[prova-de-mockup] ligando `--oculta`: esta régua abre as nove abas e "
-              "ela tem UMA tela.")
+              "há UMA tela só.")
         args.oculta = True
 
     from hefesto_dualsense4unix.integrations import ondas_de_som

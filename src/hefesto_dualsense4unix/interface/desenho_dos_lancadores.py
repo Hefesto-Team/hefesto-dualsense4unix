@@ -9,9 +9,9 @@ Medido em 02/09/2026 com o `censo_do_wrapper`:
     o produto responde  63 appids com o wrapper no vdf, 23 jogos instalados,
                         0 faltantes, 0 com ponte confirmada
 
-É o defeito que ela mediu ao abrir o produto: *"basicamente todas as telas são mockups e estão com
-informações incorretas ou desatualizadas ou não integradas de fato."*
-<!-- noqa-acento: citação literal -->
+É o defeito medido ao abrir o produto: as telas eram, quase todas, mockups, com
+informações incorretas, desatualizadas ou não integradas de fato.
+
 
 A cura é dar ao desenho UMA fonte (o mesmo arranjo de `interface/conexoes.html_do_mapa`, cuja página
 regerada saiu byte a byte igual à aprovada); dois donos do mesmo cartão e o segundo envelhece
@@ -115,7 +115,7 @@ def _e(txt: object) -> str:
 
     `html.escape(quote=True)` emite `&#x27;` e `&quot;`, e o DOM devolve os dois CRUS no texto: um
     jogo com apóstrofo no nome (a biblioteca do usuário tem 63) faria a lista e a grade serem
-    reescritas duas vezes por segundo, para sempre, matando o foco e o `:hover`. A régua dela saiu
+    reescritas duas vezes por segundo, para sempre, matando o foco e o `:hover`. A régua saiu
     com a grade da 07 antiga em 18/10/2026; desde 06/09/2026 (A-TELA-SAMBA-01) o piloto compara
     o bloco com o que ele mesmo escreveu, e não com o `innerHTML`.
     """
@@ -160,7 +160,7 @@ POR_JOGO = ("heroic",)
 def sem_o_ambiente_html(chave: str, onde: tuple[str, ...]) -> str:
     """A linha do cartão em que o ambiente do Hefesto falta — vazia quando não.
 
-    Mesma forma do «N jogos sem o atalho» da Steam, pela estrada dela: o selo vira `COM IMPEDIMENTO`
+    Mesma forma do «N jogos sem o atalho» da Steam, pela mesma via: o selo vira `COM IMPEDIMENTO`
     e quem aplica é o «Aplicar soluções nos lançadores» da aba Sistema (ou a próxima troca de
     controle).
     """
@@ -228,7 +228,7 @@ LISTA_VAZIA = "<!-- nenhum jogo pendente, tirado ou dispensado na Steam -->"
 
 
 def acoes_html(lanc: Lancador) -> str:
-    """A fileira de botões DO CARTÃO, com o carimbo no fim dela.
+    """A fileira de botões DO CARTÃO, com o carimbo no fim da fileira.
 
     É pintada INTEIRA: no cartão da Steam os botões MUDAM com o estado (`Consertar` só existe quando
     há o que consertar); estática, ou o `Consertar` ficaria aceso sobre biblioteca em ordem, ou não
@@ -294,7 +294,7 @@ DICA_DO_NOVO = (
 
 
 def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
-    """A pop-up em que ela diz onde o lançador está. Sem uma linha de script.
+    """A pop-up em que o usuário diz onde o lançador está. Sem uma linha de script.
 
     Abre por `:target` (`monta.CSS_POPUP`, o mecanismo das cinco pop-ups das abas 06 e 08): o botão
     é uma âncora para o `id` daqui, e o fechar e o `Cancelar` são âncoras para `#`; um segundo
@@ -320,7 +320,7 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
     **O «?» encurtou em 11/09/2026 — A2-033, aprovada pelo usuário: 403 → 165.** O parágrafo do meio
     era a dica do campo em prosa (o `placeholder` já mostra `emulador · /opt/Emulador/emulador ·
     org.exemplo.Emulador`) e o de cima descrevia como o produto PROCURA, mecânica dita de novo pela
-    recusa de `_achar_o_que_o_usuario_digitou` quando serve. Sobrou o que ela precisa antes de
+    recusa de `_achar_o_que_o_usuario_digitou` quando serve. Sobrou o que o usuário precisa antes de
     digitar: o que vale, e que o produto confere antes de guardar.
     """
     return f'''<div class="tela-nova" id="{TELA_DO_NOVO}">
@@ -412,7 +412,7 @@ def conta_html(achados: int, impedidos: int) -> str:
     """A contagem do quadro: `N encontrados · M com impedimento`.
 
     Derivada da lista de cartões que o produto montou, não da que o gerador digitou (a aba dizia "6
-    encontrados" contando o cartão que ela mesma carimba `NÃO ACHEI`).
+    encontrados" contando o cartão que a própria aba carimba `NÃO ACHEI`).
     """
     return (f'{_plural(achados, "localizado", "localizados")} '
             f'<span class="sep">·</span> '
@@ -473,12 +473,12 @@ def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:
     É a que se procura em disco, se ordena e vira cartão: embutido e declarado passam pelo MESMO
     procurador, com os mesmos três campos (`atalhos`, `comandos`, `nome`).
 
-    **Chave repetida não vira segundo cartão, ENSINA o primeiro.** Se ela declarar `retroarch` (o
+    **Chave repetida não vira segundo cartão, ENSINA o primeiro.** Se alguém declarar `retroarch` (o
     botão de localizar do cartão que não achou manda a chave do cartão), os `atalhos` e `comandos`
-    dela se SOMAM aos de fábrica no mesmo cartão, o sentido literal do botão (mostrar onde ele já
+    novos se SOMAM aos de fábrica no mesmo cartão, o sentido literal do botão (mostrar onde ele já
     está). Dois cartões com a mesma `chave` seriam pior que inútil: os endereços levam a chave como
     prefixo (`data-campo="retroarch-selo"`) e o piloto pintaria o valor de um nos DOIS. O nome de
-    fábrica vence no cartão ensinado (o rótulo é desenho aprovado; o que ela acrescentou foi ONDE
+    fábrica vence no cartão ensinado (o rótulo é desenho aprovado; o que se acrescentou foi ONDE
     procurar).
 
     A ordem é estável: os de fábrica na ordem do desenho, os novos no fim na ordem em que o disco os
@@ -564,7 +564,7 @@ NOVO_PARA_QUEM = "lanc-novo-para-quem"
 
 
 def linha_do_wrapper_html(linha: str) -> str:
-    """A linha de inicialização À MOSTRA, para ela selecionar e copiar à mão.
+    """A linha de inicialização À MOSTRA, para o usuário selecionar e copiar à mão.
 
     É a segunda saída da decisão [01]: pôr texto na área de transferência não devolve resposta e
     pode falhar CALADO; a janela velha resolve igual (o aviso *"continua selecionável"* quando a
@@ -574,7 +574,7 @@ def linha_do_wrapper_html(linha: str) -> str:
 
     Não é inventada aqui: o módulo **não importa nada do produto** (para o gerador rodar solto),
     então a linha chega pelo contrato frio `Leitura.linha`, que o pacote enche de
-    `steam_launch_options.WRAPPER_LAUNCH`. Sem ela o desenho cala em vez de escrever linha de
+    `steam_launch_options.WRAPPER_LAUNCH`. Sem a linha o desenho cala em vez de escrever linha de
     mentira.
 
     `<code>` e não `<pre>`: são 143 caracteres numa coluna de cartão e o `<pre>` não quebra,
@@ -593,7 +593,7 @@ class DoDisco:
     **Existe porque a pintura não pode perguntar** (09/09/2026, recaída medida): a biblioteca de
     cada lançador, a linha do «Flatpak» e quem tem estrada para a cura nasceram dentro de
     :func:`cartao_sem_censo`, chamadas ao desenhar o cartão, DEZ VEZES POR SEGUNDO no tique. Medido
-    nesta bancada com os cinco lançadores do usuário no disco: `cartoes()` levava **6,4 ms de
+    neste ensaio com os cinco lançadores do usuário no disco: `cartoes()` levava **6,4 ms de
     mediana** (30 voltas, máximo 18,6 ms) num orçamento de 100 ms para a janela inteira, e agora
     **0,03 ms**; o disco voltou para a :class:`a07_lancadores._Vigia` (*"a pintura NUNCA
     bloqueia"*).
@@ -713,7 +713,7 @@ class Leitura:
 
         Não basta `onde_esta_a_steam`: as duas buscas respondem coisas diferentes e podem discordar
         sem erro. Steam instalada por caminho que os três `.desktop` conhecidos não cobrem
-        (AppImage, script no `~/bin`) não aparece na procura, e o `localconfig.vdf` dela está lá com
+        (AppImage, script no `~/bin`) não aparece na procura, e o `localconfig.vdf` está lá com
         a biblioteca inteira; dizer `NÃO ACHEI` sobre biblioteca recém-lida trocaria um erro por
         outro. O `erros` entra na conta: vdf ilegível EXISTE.
         """
@@ -726,7 +726,7 @@ def _plural(n: int, um: str, muitos: str) -> str:
 
 
 def lista_de_jogos(lida: Leitura) -> str:
-    """As linhas dentro do cartão da Steam: quem falta, quem ELA tirou e quem mandou não perguntar
+    """As linhas dentro do cartão da Steam: quem falta, quem se tirou e quem mandou não perguntar
     mais.
 
     Os intocáveis aparecem SEM botão: o produto não os repõe (`apply_wrapper_vdf_text` os pula) e
@@ -738,7 +738,7 @@ def lista_de_jogos(lida: Leitura) -> str:
 
     A lista é outra, não a dos recusados: `jogos_sem_wrapper.txt` diz *"não ponha o atalho neste
     jogo"* e o dispensado *"não me lembre deste jogo"*; um jogo pode estar num, no outro ou nos
-    dois, e juntá-las apagaria a diferença do que ela mesma pediu.
+    dois, e juntá-las apagaria a diferença do que o próprio usuário pediu.
     """
     itens = [
         JogoNaLista(appid=a, rotulo=r, porque=p,
@@ -770,7 +770,7 @@ def acao_de_localizar(chave: str, rotulo: str = ADICIONAR_ROTULO) -> Acao:
     do cartão, que ali não existia (clicar onde não havia nada, sem como dizer onde a Steam está).
 
     A cura é esta função e não uma segunda cópia da linha (regra de 05/09: *quando a cura conhece a
-    causa, ela cobre TODOS os chamadores*). O `href` abre a tela (`.tela-nova` por `:target`,
+    causa, a cura cobre TODOS os chamadores*). O `href` abre a tela (`.tela-nova` por `:target`,
     `monta.CSS_POPUP`; só uma âncora muda o fragmento: :attr:`Acao.href`).
 
     **O rótulo é parâmetro desde 11/09/2026 — A2-022, o gesto não**: o localizado diz
@@ -1036,10 +1036,10 @@ def cartao_sem_censo(item: SemCenso, onde: str | None,
     nenhum caminho o produzia.
 
     **O botão fica nos três estados** — decisão de 02/09/2026, que DESFAZ uma mudança nunca
-    submetida a ela: o `off` nasceu com `acoes=()` pelo argumento de que "Abrir o lançador" sobre
+    submetida ao OK: o `off` nasceu com `acoes=()` pelo argumento de que "Abrir o lançador" sobre
     lançador ausente seria botão que finge. O argumento tem mérito e **não é desta frente
     decidi-lo**: o desenho aprovado tem o botão nos CINCO cartões; se deve sumir com o lançador
-    ausente, quem diz é ela (`espera_a_palavra_do_usuario`, com as três frases).
+    ausente, quem diz é o produto (`espera_a_palavra_do_usuario`, com as três frases).
 
     O botão ganhou endereço nos SEIS em 03/09/2026 (decisão 17). **O produto só sabe abrir a Steam**
     (`steam_launch_options.reopen_steam`); nos outros cinco o gesto RECUSA dizendo, melhor que o
