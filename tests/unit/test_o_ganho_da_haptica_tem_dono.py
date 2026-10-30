@@ -294,40 +294,40 @@ class TestOPedido:
 
         dono = GanhoDaHaptica()
         monkeypatch.setattr(mod, "GANHO", dono)
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
 
         corpo = _grava_ipc(h, uniq=BRANCO, haptica_pct=90)
 
         assert corpo["status"] == "ok" and corpo["gravado"] is True
         assert corpo["haptica_pct"] == 90
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[BRANCO]
         assert dele.rumble is not None and dele.rumble.haptica == 90
         assert "motor_forte_pct" not in dele.rumble.model_fields_set
         assert dono.pct_guardado(BRANCO) == 90
         assert dono.pct(BRANCO) == 90, "o daemon de mentira está em Máximo: o ganho vale"
 
     def test_o_padrao_nao_ocupa_chave(self, perfis: Path) -> None:
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         _grava_ipc(h, uniq=BRANCO, haptica_pct=0)
         corpo = _grava_ipc(h, uniq=BRANCO, haptica_pct=HAPTICA_PCT_PADRAO)
         assert corpo["haptica_pct"] == HAPTICA_PCT_PADRAO
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}).get(BRANCO)
+        dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {}).get(BRANCO)
         assert dele is None or dele.rumble is None or (
             "haptica" not in dele.rumble.model_fields_set
         )
 
     def test_fora_da_faixa_e_recusado_sem_gravar(self, perfis: Path) -> None:
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         with pytest.raises(ValueError, match="haptica"):
             _grava_ipc(h, uniq=BRANCO, haptica_pct=HAPTICA_PCT_MAX + 1)
-        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
+        assert not (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})
 
     def test_a_barra_dos_motores_segue_com_teto_cem(self, perfis: Path) -> None:
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         with pytest.raises(ValueError):
             _grava_ipc(h, uniq=BRANCO, forte_pct=150)
 
@@ -454,7 +454,7 @@ class TestAEconomiaCortaAHaptica:
         dono = _dono(branco=75)
         dono.ler_o_teto(_mesa_com_orcamento("economia"))
         assert dono.fator(BRANCO) == pytest.approx(0.3)
-        assert dono.pct(BRANCO) == 75, "o teto é leitura: o que ela escolheu não muda"
+        assert dono.pct(BRANCO) == 75, "o teto é leitura: o que quem usa escolheu não muda"
         assert dono.pct_que_vale(BRANCO) == 15
         mesa = _CaboDeMentira()
         mesa.volta(dono, [BRANCO])
@@ -530,7 +530,7 @@ class TestAEconomiaCortaAHaptica:
             dono.ler_o_teto(_mesa_com_orcamento(None))
             assert dono.fator(BRANCO) == pytest.approx(0.3)
             assert dono.pct_que_vale(BRANCO) == 15
-            assert dono.pct(BRANCO) == 75, "o teto é leitura: o que ela escolheu não muda"
+            assert dono.pct(BRANCO) == 75, "o teto é leitura: o que quem usa escolheu não muda"
             assert dono.fator(PRETO) == pytest.approx(1.5), "a economia é DAQUELE controle"
             mesa = _CaboDeMentira()
             mesa.volta(dono, [BRANCO, PRETO])
@@ -767,7 +767,7 @@ class TestOPadraoNaoAplicaOGuardado:
         })
         dono.ler_o_teto(_daemon_em("economia"))
         assert dono.pct(BRANCO) == HAPTICA_PCT_PADRAO, "a peça em Padrão leva o de fábrica"
-        assert dono.pct(PRETO) == 25, "a que escolheu Máximo leva o ganho dela"
+        assert dono.pct(PRETO) == 25, "a que escolheu Máximo leva o próprio ganho"
 
     def test_a_tela_publica_o_guardado_e_nao_o_que_vale(self) -> None:
         """O `haptica_pct` do state_full é o que a barra mostra ao destravar: o guardado."""

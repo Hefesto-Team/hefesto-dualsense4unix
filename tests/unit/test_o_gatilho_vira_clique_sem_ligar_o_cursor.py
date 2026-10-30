@@ -8,7 +8,7 @@ Medido antes de curar (08/10/2026), no uinput de mentira que grava o que sai:
    direito» emitia `BTN_LEFT`, e a linha do L2 caía em «sem dono»;
 3. o gatilho clicava a 27% do curso (limiar de 64/255) — com o dedo encostado;
 4. com o gamepad virtual despachando, o laço pulava a emulação inteira: a tabela
-   não agia com o jogo aberto, por mais que ela quisesse.
+   não agia com o jogo aberto, por mais que quem usa quisesse.
 
 Os leitores aqui são os EVENTOS gravados pelo uinput de mentira e as capacidades
 que o device declara — nunca a constante que a cura usa.
@@ -444,7 +444,7 @@ def test_o_l3_no_jogo_segue_o_atendente_do_daemon_depois_da_funcao_do_teclado(
     dois_devices: _UinputPorDevice, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Desligar a Função do teclado fecha e esquece o atendente do daemon; a tabela
-    aberta segue com o jogo, e o L3 dela vai ao atendente que a parada fecha.
+    aberta segue com o jogo, e o L3 vai ao atendente que a parada fecha.
 
     MORDIDA: prender o callback ao `dispatch_token` do atendente da abertura (como
     era) manda o L3 ao atendente fechado, que ninguém fecha mais, e esta régua reprova.
@@ -479,7 +479,7 @@ def test_o_l3_no_jogo_segue_o_atendente_do_daemon_depois_da_funcao_do_teclado(
 def test_suspender_mouse_e_teclado_cala_a_tabela_no_jogo(de_quem: str) -> None:
     """«Suspender mouse e teclado» (o PS + Options) vale com o jogo aberto.
 
-    A supressão que ELA ligou cala a tabela; a do perfil do jogo não, porque o
+    A supressão que QUEM USA ligou cala a tabela; a do perfil do jogo não, porque o
     jogo aberto é justamente onde a chave age. MORDIDA: tirar o
     `_suspenso_pelo_usuario` de `despachar_no_jogo` faz o caso «gesto» reprovar.
     """
@@ -491,13 +491,13 @@ def test_suspender_mouse_e_teclado_cala_a_tabela_no_jogo(de_quem: str) -> None:
     sub_mouse.despachar_no_jogo(daemon, _estado(), frozenset({"cross"}), no_jogo=True)
     apertou = [c for c in mouse.chamadas if isinstance(c, dict) and c["buttons"]]
     if de_quem == "gesto":
-        assert not apertou, "a tabela clicou com o mouse e o teclado suspensos por ela"
+        assert not apertou, "a tabela clicou com o mouse e o teclado suspensos à mão"
     else:
         assert apertou, "a supressão do perfil do jogo calou a chave «Também no jogo»"
 
 
 def test_suspender_cala_o_teclado_so_dentro_do_jogo() -> None:
-    """O mesmo para o teclado «Só dentro do jogo»: suspenso por ela, não digita."""
+    """O mesmo para o teclado «Só dentro do jogo»: suspenso à mão, não digita."""
     daemon = _daemon_de_mentira()
     daemon._teclado_so_no_jogo = True
     daemon._keyboard_device = _Gravador()
@@ -506,7 +506,7 @@ def test_suspender_cala_o_teclado_so_dentro_do_jogo() -> None:
     daemon._emulation_suppressed = True
     daemon._suppress_from_profile = False
     sub_mouse.despachar_no_jogo(daemon, _estado(), frozenset({"cross"}), no_jogo=True)
-    assert not digitou, "«Só dentro do jogo» digitou com o teclado suspenso por ela"
+    assert not digitou, "«Só dentro do jogo» digitou com o teclado suspenso à mão"
 
 
 @pytest.mark.asyncio
@@ -563,7 +563,7 @@ async def test_o_laco_solta_a_tabela_na_parada(
 async def test_no_nativo_a_tabela_nao_age(monkeypatch: pytest.MonkeyPatch) -> None:
     """No Modo Nativo o jogo lê o controle direto: a chave ligada não aperta nada.
 
-    A tela apaga a chave no Nativo; o laço tem de concordar com ela.
+    A tela apaga a chave no Nativo; o laço tem de concordar com a tela.
     MORDIDA: tirar o `not self._native_mode` do `input_ready` faz o L2 chegar à tabela.
     """
     monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)

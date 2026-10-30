@@ -3,9 +3,9 @@
 São DOIS lados, e cada um tem a sua mordida escrita na docstring do teste:
 
 1. **O UCM DESTA CASA LIGA O ELEMENTO.** `assets/ucm/DualSense-HiFi.conf` é a
-   definição da porta `[In] Mic`, e até 20/09/2026 ela declarava só
+   definição da porta `[In] Mic`, e até 20/09/2026 a porta declarava só
    `CapturePCM`/`CapturePriority` — o `Headset Capture Volume` (0…+48 dB, o
-   aparelho no topo) ficava fora do alcance do PipeWire, do produto e dela.
+   aparelho no topo) ficava fora do alcance do PipeWire, do produto e de quem usa.
 2. **O LEITOR PERGUNTA AO APARELHO.** O valor vem do `amixer` e não de um
    número escrito: é o `integrations.ganho_do_microfone`, que o perfil usa para
    aplicar o ganho. A tela do todo (15/10/2026) não tem mais a linha do ganho,
@@ -13,7 +13,7 @@ São DOIS lados, e cada um tem a sua mordida escrita na docstring do teste:
 
 **A RÉGUA NÃO REIMPLEMENTA A REGRA DO UCM.** Quem decide se uma porta liga o
 elemento é `_dualsense_porta_de_captura_status`, no `scripts/doctor.sh`, e é a
-ele que este arquivo pergunta — com o `amixer scontents` REAL da bancada como
+ele que este arquivo pergunta — com o `amixer scontents` REAL da máquina de teste como
 segundo texto. Reescrever aqui a busca por `CaptureVolume` seria a segunda
 régua para o mesmo fato, e a divergência entre as duas é o defeito que esta
 casa já pagou (o `validar-caducos.py` e o `portao_a_casa_sabe`).
@@ -99,7 +99,7 @@ class TestOUcmLigaOElemento:
         assert fora == "não", (
             "o `SectionDevice.\"Mic\"` desta casa tem de LIGAR o "
             f"`{ELEMENTO} Capture Volume`. Com ele fora, o ganho de 0…+48 dB "
-            "fica sem dono — nem o PipeWire, nem a tela, nem ela"
+            "fica sem dono — nem o PipeWire, nem a tela, nem quem usa"
         )
 
     def test_a_secao_recortada_nao_e_o_arquivo_inteiro(self) -> None:
@@ -163,7 +163,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
     """O valor vem do `amixer`, pelo leitor de `integrations.ganho_do_microfone`."""
 
     def test_o_ganho_sai_da_gravacao_do_aparelho(self) -> None:
-        """O leitor tira `(por cento, dB)` do `scontents` REAL da bancada."""
+        """O leitor tira `(por cento, dB)` do `scontents` REAL da máquina de teste."""
         from hefesto_dualsense4unix.integrations import ganho_do_microfone as gm
 
         bruto = (FIXTURES / "scontents-dualsense-2026-09-20.txt").read_text(
@@ -200,7 +200,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
 
         **O ARRANJO DIFÍCIL é um elemento `pvolume pswitch cswitch`**, cuja
         linha de valor traz o número do PLAYBACK e a palavra `Capture` na mesma
-        linha. Ele existe: nesta bancada o `Front Mic Boost` da placa de bordo
+        linha. Ele existe: nesta máquina de teste o `Front Mic Boost` da placa de bordo
         declara canais de Playback **e** de Capture no mesmo controle simples.
 
         **O QUE A MORDIDA ARRANCA:** tire o `cvolume` e o leitor devolve
@@ -227,7 +227,7 @@ class TestODonoDoNumeroPerguntaAoAparelho:
         )
         assert gm.elemento_e_ganho_do_scontents(dificil) == ("Headset,0", 76, 36.5), (
             "o leitor pegou o elemento de SAÍDA: a linha dele tem a palavra "
-            "`Capture` e um por cento, e sem a exigência de `cvolume` ela casa"
+            "`Capture` e um por cento, e sem a exigência de `cvolume` a linha casa"
         )
 
     def test_a_ordem_da_gravacao_nao_decide_qual_elemento_e_o_ganho(self) -> None:

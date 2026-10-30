@@ -156,7 +156,7 @@ def test_com_so_o_adaptador_do_usuario_na_amostra_vale_a_r4_medida() -> None:
 
 
 def test_a_primeira_janela_medida_acorda_quem_espera() -> None:
-    """A medida chega e a volta do som acorda, em vez de esperar os 5 s dela."""
+    """A medida chega e a volta do som acorda, em vez de esperar os 5 s da espera."""
     relogio, registro, volta = _Relogio(), _Diario(), _Volta()
     governador = _governador(_MedidorDaMesa({ADAPTADOR_A: ""}), relogio, registro)
     governador.ao_autorizar = volta
@@ -371,7 +371,7 @@ def test_a_vaga_do_cabo_nunca_cede_nem_entra_na_conta() -> None:
 
 
 def test_a_vaga_que_nasce_no_episodio_e_sobe_depois_dele_volta_a_escrever() -> None:
-    """A vaga concedida no meio de um episódio nasce cedendo, e a ponte dela"""
+    """A vaga concedida no meio de um episódio nasce cedendo, e a ponte"""
     relogio, registro = _Relogio(), _Diario()
     medidor = _AdaptadorQueEscoaDuas(capacidade=20)
     governador = _governador(medidor, relogio, registro)

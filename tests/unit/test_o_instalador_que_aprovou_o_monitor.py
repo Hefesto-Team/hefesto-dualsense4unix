@@ -13,13 +13,13 @@ Um dos dois critérios estava errado, e era o do install. O
 ``verify_active_not_dualsense`` do ``fix_wireplumber_default_source.sh`` só
 perguntava *"o ativo é o mic do DualSense?"* — um monitor não é, então a resposta
 saía ``OK`` e o instalador imprimia sucesso. A pergunta é estreita demais para a
-afirmação que o passo faz com ela. O doctor estava certo: monitor como fonte
+afirmação que o passo faz com a resposta. O doctor estava certo: monitor como fonte
 padrão é defeito PRÓPRIO, e é privacidade — tudo o que se grava é o áudio de
 saída, e o medidor de nível mostra sinal, então PARECE que está funcionando.
 
 A MEDIÇÃO QUE A SPRINT SEM-MICROFONE-NENHUM-01 DEIXOU PENDENTE
 ==============================================================
-Ela estava marcada SEM PROVA ("é plausível que o pipewire-pulse faça a própria
+A medição estava marcada SEM PROVA ("é plausível que o pipewire-pulse faça a própria
 seleção quando a metadata está vazia"). Está feita, e REFUTA a hipótese:
 
     $ pw-metadata -n default
@@ -32,8 +32,8 @@ cura pelo lado dele CHEGA no ``pactl get-default-source``. GRAU: MEDIDO.
 
 A mesma medição mostra o segundo defeito: o ``configured`` é a onboard, que o
 ``reset_default_source`` elegeu — e o WirePlumber a recusa (as três portas de
-captura dela estão ``not available``) e reelege o sink. O instalador elegia um nó
-que não para de pé, sobrescrevia a preferência persistida dela com ele, e chamava
+captura da onboard estão ``not available``) e reelege o sink. O instalador elegia um nó
+que não para de pé, sobrescrevia a preferência persistida de quem usa com ele, e chamava
 o resultado de sucesso.
 
 O QUE ESTE ARQUIVO TRAVA
@@ -209,7 +209,7 @@ def test_nao_elege_fonte_sem_porta_usavel(tmp_path: Path) -> None:
 
 
 def test_elege_a_fonte_com_porta_usavel_quando_o_usuario_existe(tmp_path: Path) -> None:
-    """Com a webcam plugada, o alvo é ela — e nunca um monitor."""
+    """Com a webcam plugada, o alvo é a webcam — e nunca um monitor."""
     env = _dubla_pactl(
         tmp_path,
         padrao=MONITOR_DO_USUARIO,
@@ -242,7 +242,7 @@ def test_install_confere_a_fonte_padrao_depois_da_cura() -> None:
 
 
 def test_install_reprova_o_monitor_com_a_consequencia_na_tela() -> None:
-    """Não basta dizer "monitor": ela tem de ler o que isso faz com a voz do usuário."""
+    """Não basta dizer "monitor": quem usa tem de ler o que isso faz com a voz do usuário."""
     texto = _texto_do_install()
     assert "o microfone padrão do sistema é um MONITOR" in texto
     assert "SAI do PC" in texto, "a consequência sumiu do texto do install"
@@ -322,19 +322,19 @@ def _roda_o_passo_10(
 def test_install_trata_o_exit_3_sem_declarar_reeleicao(tmp_path: Path) -> None:
     """rc 3 não é falha do drop-in — mas também não é "fonte padrão reeleita".
 
-    A RÉGUA ANTERIOR CRAVAVA A FORMA, e por isso reprovou a melhora: ela exigia
+    A RÉGUA ANTERIOR CRAVAVA A FORMA, e por isso reprovou a melhora: a régua exigia
     o literal `"${rc:-0}" -eq 3` no texto do install. Em 01/09/2026 (a3c41fa9)
     nasceu um terceiro desfecho — o `2`, "o DualSense é a ÚNICA fonte de captura
     com porta usável" —, o `if [[ … -eq 3 ]]` virou `case "${rc:-0}" in`, e a
     régua passou a reprovar um install que trata o rc 3 melhor do que antes.
 
-    Agora ela EXECUTA o passo com o wp-fix dublado em cada código de saída e lê
+    Agora a régua EXECUTA o passo com o wp-fix dublado em cada código de saída e lê
     o que foi para a tela. Que forma o shell usa para despachar deixou de ser
-    assunto da régua; o que ela mede é o que ela promete no nome.
+    assunto da régua; o que a régua mede é o que promete no nome.
 
     NOTA DATADA 13/09/2026 (MIC-PADRAO-NO-CABO-01). Esta régua exigia, no rc 3,
     a frase «a fonte padrão ainda não é um microfone». No install de 13/09 com o
-    P1 no cabo ela saiu e, três linhas abaixo, a conferência final disse
+    P1 no cabo a frase saiu e, três linhas abaixo, a conferência final disse
     «entrada de verdade» sobre o DualSense: dois vereditos no mesmo passo. O rc 3
     agora só diz que o veredito sai no fim, e quem o dá é a conferência final,
     que também deixou de chamar de «entrada de verdade» a onboard sem porta

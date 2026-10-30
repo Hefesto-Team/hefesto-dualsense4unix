@@ -9,7 +9,7 @@ retoma um estacionado) descia do mesmo jeito. Com o broker preso, a entrada de
 TODOS os controles parava junto, justo quando um deles perdeu a porta.
 
 O cliente da descida é o de VERDADE (``HidrawBrokerClient``) contra um socket
-que aceita e não responde; o resto do gadget vem da bancada do gadget, o mesmo
+que aceita e não responde; o resto do gadget vem do ensaio do gadget, o mesmo
 dublê das outras réguas do pad em USB.
 """
 

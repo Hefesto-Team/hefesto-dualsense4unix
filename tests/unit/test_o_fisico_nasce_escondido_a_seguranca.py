@@ -8,7 +8,7 @@ deixam a máquina pior do que estava — de 1 a N vezes, em qualquer ordem:
 1. **o install roda numa máquina nova e roda duas vezes**: o `rm` da regra de
    antes tem de ser `rm -f`, porque o `install_udev.sh` corre sob `set -e` e a
    máquina nova não tem a velha. As réguas de antes criavam a velha ANTES de
-   instalar, e um `rm` sem `-f` passava nelas;
+   instalar, e um `rm` sem `-f` passava nessas regras;
 2. **o `--no-fechar-o-no` vai e volta**: fechada → aberta → fechada, e o fim é
    o asset byte a byte;
 3. **o uninstall roda duas vezes** e tira a regra da máquina que só tem a
@@ -22,7 +22,7 @@ deixam a máquina pior do que estava — de 1 a N vezes, em qualquer ordem:
    isso (reabria o nó); com a 73-hefesto falando por último, vale em toda
    máquina. A regra preservada vira a variante aberta;
 5. **o doctor só LÊ**: as funções novas não têm verbo que escreva, e o IPC que
-   elas fazem é o `daemon.state_full`;
+   as regras fazem é o `daemon.state_full`;
 6. **o doctor não diz que a barra está acesa**: a cor que ele imprime é a
    PEDIDA (`cor_pedida=`), não a lâmpada.
 
@@ -299,7 +299,7 @@ def test_a_aberta_e_o_link_para_dev_null_ficam_como_estao(tmp_path: Path) -> Non
 
 
 def test_a_fechada_que_nao_reabre_sai(tmp_path: Path) -> None:
-    """A transformação recusa uma forma que ela não alcança: aberto é o lado seguro."""
+    """A transformação recusa uma forma que não alcança: aberto é o lado seguro."""
     etc = _etc(tmp_path)
     estranha = (
         'KERNEL=="hidraw*", KERNELS=="0005:054C:0CE6.*", MODE="0600", TAG-="uaccess"\n'

@@ -20,7 +20,7 @@ montado com o mesmo dado que a função lia.*
 O ORÁCULO DA CLASSE NÃO SAI DO CÓDIGO
 ======================================
 `e_controle` decide pela *class of device* que o aparelho anuncia, não pelo
-nome. O número contra o qual ela é medida — 9480 — foi lido na bancada em
+nome. O número contra o qual a espera é medida — 9480 — foi lido no ensaio em
 20/09/2026 (`busctl get-property … org.bluez.Device1 Class` nos seis objetos de
 DualSense do BlueZ, que também respondem `Icon` = `input-gaming`). Montar o
 esperado a partir de `CLASSE_MAIOR_PERIFERICO` seria tautologia.
@@ -80,7 +80,7 @@ CLASSE_DO_JOYSTICK = 0x002504
 
 @pytest.fixture()
 def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """O BlueZ de mentira da bancada — ver `tests/unit/barramento_de_mentira.py`."""
+    """O BlueZ de mentira do ensaio — ver `tests/unit/barramento_de_mentira.py`."""
     raiz = montar(tmp_path)
     for chave in ("SUDO_UID", "SUDO_USER"):
         monkeypatch.delenv(chave, raising=False)

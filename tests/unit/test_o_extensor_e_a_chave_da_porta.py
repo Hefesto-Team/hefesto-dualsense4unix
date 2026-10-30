@@ -1,9 +1,9 @@
-"""O extensor é a chave da porta, não o que está ligado nela.
+"""O extensor é a chave da porta, não o que está ligado na porta.
 
 O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026). O usuário disse: *«marcar Extensor impede
 dizer que há um dispositivo BT ali»*. Antes, «Extensor» era uma das respostas de «O que tem
 na entrada», ao lado de «Direto» e «Hub», e criava uma entrada-filha (a ponta). Agora é uma
-chave ``extensor`` da própria entrada, que convive com o que ela declara estar ligado nela, e
+chave ``extensor`` da própria entrada, que convive com o que a entrada declara ter ligado, e
 que o motor lê como entrada esticada.
 
 TUDO AQUI É DE MENTIRA: barramentos ``usb9``/``usb10`` e o ``maquina.json`` no ``tmp_path``
@@ -91,7 +91,7 @@ def test_o_extensor_pesa_no_motor_so_nas_entradas_que_o_usuario_marcou() -> None
     }
     ponta = "na ponta do extensor: a antena que fica mais longe das outras"
     assert ponta in razoes["7"], "o BT na entrada esticada não ganhou a razão do extensor"
-    assert ponta not in razoes["5"], "o extensor vazou para uma entrada que ela não marcou"
+    assert ponta not in razoes["5"], "o extensor vazou para uma entrada que quem usa não marcou"
 
 
 def test_o_disco_antigo_com_liga_extensor_e_a_ponta_vira_a_chave(disco: Path) -> None:
@@ -124,7 +124,7 @@ def test_o_hub_e_o_nome_da_ponta_antiga_passam_para_a_entrada(disco: Path) -> No
     porta = carregar_maquina().mapa.portas["1"]
     assert porta.extensor is True
     assert porta.liga == "hub", "o hub que estava na ponta do extensor se perdeu"
-    assert porta.nome == "Mesa", "o nome que ela deu à ponta se perdeu"
+    assert porta.nome == "Mesa", "o nome dado à ponta se perdeu"
 
 
 def test_o_extensor_convive_com_o_hub_e_cada_um_se_desliga_sozinho(disco: Path) -> None:

@@ -298,7 +298,7 @@ def montar(
 
 
 def _a_regra_de_antes() -> str:
-    """O conteúdo como a bancada o tinha até 25/09: `MODE=`, sem atribuição final."""
+    """O conteúdo como a máquina de teste o tinha até 25/09: `MODE=`, sem atribuição final."""
     return a_regra_do_no().read_text(encoding="utf-8").replace(
         'MODE:="0600", OWNER:="root", GROUP:="root"', 'MODE="0600", OWNER="root", GROUP="root"'
     )
@@ -331,7 +331,7 @@ class TestOUdevDeBolsoReproduzAMesaDoUsuario:
             tmp_path, nome_da_regra=NOME_DE_ANTES, conteudo_da_regra=_a_regra_de_antes()
         )
         ap = rodar(FISICOS[aparelho](), raiz)
-        assert ap.acl_da_sessao, "o udev de bolso não reproduz a mesa dela"
+        assert ap.acl_da_sessao, "o udev de bolso não reproduz a mesa de casa"
         assert ap.modo == "0660"
 
     @pytest.mark.parametrize("aparelho", sorted(FISICOS))

@@ -1,4 +1,4 @@
-"""O hub de dois chips mostra quem está nele — e só quem ela plugou."""
+"""O hub de dois chips mostra quem está nele — e só quem foi plugado."""
 
 from __future__ import annotations
 

@@ -2,9 +2,9 @@
 """O GESTO NOVO DO PS DISPARA, E O REMOVIDO SAI DE VEZ (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01,
 N8).
 
-O pedido de 16/10: *«os gestos do PS falta adicionar botão pra adicionar gesto novo (…) e remover
-também fora que essa seção fica de olho pra ver se algum atalho tá proibido. aí ele não deixa se
-já tiver sendo usado (…) e remove onde tem só o ps sozinho»*. <!-- noqa-acento: citação literal -->
+O pedido de 16/10: os gestos do PS ganham um botão para adicionar gesto novo e outro para
+remover; a seção vigia o atalho proibido, não deixa repetir o que já está em uso e remove
+o gesto que é só o PS sozinho.
 
 O que se mede aqui, com o daemon de mentira e o `machine.declare` de verdade (o handler do IPC
 grava o `maquina.json` do lar de mentira da suíte):
@@ -70,7 +70,7 @@ def _daemon() -> Any:
 
 @pytest.fixture(autouse=True)
 def sem_steam(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """O PS que se solta sem gesto pede a Steam: aqui ela é um anotador, nunca a de verdade."""
+    """O PS que se solta sem gesto pede a Steam: aqui a Steam é um anotador, nunca a de verdade."""
     pedidos: list[str] = []
     monkeypatch.setattr(steam_launcher, "open_or_focus_steam",
                         lambda *a, **k: pedidos.append("steam") or True)

@@ -1,25 +1,25 @@
-"""O governador do rádio — GOVERNADOR-DO-RADIO-01 (23/09/2026), R2, R3 e R4 dela.
+"""O governador do rádio — GOVERNADOR-DO-RADIO-01 (23/09/2026), R2, R3 e R4.
 
-Em 22/09 a terceira ponte num adaptador derrubou os quatro controles da bancada em 11 a 89
+Em 22/09 a terceira ponte num adaptador derrubou os quatro controles do ensaio em 11 a 89
 segundos. O governador é quem dá a vaga de cada ponte e quem
 manda ceder na fonte quando o adaptador não escoa. Esta régua cobra:
 
 1. **O TEMPO REAL:** com o ``acl_tx`` do adaptador preso (o dublê do ioctl) e a
    bomba escrevendo, a bomba cede na primeira janela — em até 250 ms. **A
-   mordida:** sem o ramo da vaga na bomba, ela escreve os quadros todos.
+   mordida:** sem o ramo da vaga na bomba, a bomba escreve os quadros todos.
 2. **«NÃO SEI» NUNCA É ZERO:** ``saida_por_s`` ``None`` não vira déficit.
 3. **O TETO:** o escritor que devolve ``EAGAIN`` para sempre derruba a ponte
    em dois segundos, com o motivo certo e o diário dizendo o adaptador; e o
    adaptador que não escoa pelo governador também cai no mesmo teto.
 4. **A ADMISSÃO:** a terceira ponte num adaptador com duas volta «cheio, há
    vaga em X» — uma entrada só no diário —, e «Ligar aqui» a sobe marcada.
-   Sem vaga em lugar nenhum (R4), ela sobe marcada sozinha.
+   Sem vaga em lugar nenhum (R4), a ponte sobe marcada sozinha.
 5. **O DIÁRIO:** ``PONTE_SUBIU``/``PONTE_DESCEU`` com controle, adaptador e
    tipo — sem eles, ``diario_do_radio.pontes_de_pe`` não acha a ponte de pé.
 6. **UM DONO:** o limite é o ``N_MAX_PONTES`` do ``radio_da_mesa``, e o
    ``state_full`` lê a amostra do governador.
 
-Nada aqui abre socket de Bluetooth, lê o sysfs dela ou escreve no diário dela:
+Nada aqui abre socket de Bluetooth, lê o sysfs real ou escreve no diário real:
 o ioctl é um dublê com o layout do kernel escrito à mão, e o diário mora em
 ``tmp_path``.
 """
@@ -485,7 +485,7 @@ def _dois_adaptadores_de_pe(relogio: _Relogio, registro: _Diario,
 
 
 def test_a_terceira_ponte_pergunta_e_ligar_aqui_a_sobe_marcada() -> None:
-    """R3: sempre pedir mover antes de subir a 3ª ponte. R4: se ela escolher"""
+    """R3: sempre pedir mover antes de subir a 3ª ponte. R4: se quem usa escolher"""
     relogio, registro = _Relogio(), _Diario()
     onde = {CONTROLE_1: ADAPTADOR_A, CONTROLE_2: ADAPTADOR_A, CONTROLE_3: ADAPTADOR_A}
     governador = _dois_adaptadores_de_pe(relogio, registro, onde)
@@ -538,7 +538,7 @@ def test_sem_vaga_em_lugar_nenhum_a_ponte_sobe_marcada_e_o_diario_diz() -> None:
     [subida] = [e for e in registro.de(diario.PONTE_SUBIU) if e["controle"] == CONTROLE_3]
     assert subida["alem_do_limite"] is True
     assert subida["por_que"] == "não há vaga em outro adaptador"
-    assert "ela" not in subida["por_que"].split(), "o diário atribuiu a ela uma escolha"
+    assert "ligou" not in subida["por_que"], "o diário atribuiu uma escolha a quem usa"
 
 
 def test_a_ponte_que_desce_devolve_a_vaga() -> None:
@@ -709,7 +709,7 @@ def som(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def test_a_terceira_espera_a_resposta_sem_gravador_e_sem_derrubar_o_no(som: Any) -> None:
-    """A pergunta está com ela: a ponte não sobe, o `pw-record` não nasce, e o"""
+    """A pergunta está com quem usa: a ponte não sobe, o `pw-record` não nasce, e o"""
     sub, gravadores = som
     sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
     assert sorted(sub._pontes) == [CONTROLE_1, CONTROLE_2]
@@ -723,7 +723,7 @@ def test_a_terceira_espera_a_resposta_sem_gravador_e_sem_derrubar_o_no(som: Any)
 def test_quem_espera_vaga_nao_acorda_a_volta_e_a_resposta_acorda(
     som: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A pergunta está com ela: esperar a vaga não acorda a volta, e a resposta sim."""
+    """A pergunta está com quem usa: esperar a vaga não acorda a volta, e a resposta sim."""
     sub, _ = som
     monkeypatch.setattr(
         af, "sinks_que_tocam", lambda nomes: {n for n in nomes if n == af.nome_do_sink(CONTROLE_3)}
@@ -773,7 +773,7 @@ async def test_o_ipc_ligar_aqui_responde_pelo_governador() -> None:
     resposta = await handlers._handle_radio_ponte_ligar_aqui({"uniq": CONTROLE_3})
     assert resposta == {"status": "ok", "uniq": CONTROLE_3}
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
-    assert isinstance(vaga, gov.Vaga), "ela respondeu «Ligar aqui» e a ponte seguiu recusada"
+    assert isinstance(vaga, gov.Vaga), "a resposta «Ligar aqui» veio e a ponte seguiu recusada"
     assert vaga.alem_do_limite is True and vaga.por_escolha_do_usuario is True
 
     with pytest.raises(ValueError):
@@ -787,7 +787,7 @@ async def test_o_ipc_ligar_aqui_responde_pelo_governador() -> None:
 def test_o_start_liga_o_aviso_e_o_ligar_aqui_acaba_a_espera(
     som: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O ``start()`` entrega ao governador quem acordar quando ela responde.
+    """O ``start()`` entrega ao governador quem acordar quando vier a resposta.
 
     O casamento corre com o subsistema no ar, como no daemon: depois do
     ``stop`` nenhuma ponte se guarda (O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01).
@@ -811,7 +811,7 @@ def test_o_start_liga_o_aviso_e_o_ligar_aqui_acaba_a_espera(
         sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
         assert sub._esperando_vaga == frozenset({(CONTROLE_3, "som")})
         assert governador.ligar_aqui(CONTROLE_3.replace(":", "").upper()) is True
-        assert sub._esperando_vaga == frozenset(), "ela respondeu e o controle seguiu esperando"
+        assert sub._esperando_vaga == frozenset(), "a resposta veio e o controle seguiu esperando"
         sub._casar_as_pontes([_Controle(u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3)])
         assert sorted(sub._pontes) == [CONTROLE_1, CONTROLE_2, CONTROLE_3]
         assert sub._pontes[CONTROLE_3].vaga.alem_do_limite is True

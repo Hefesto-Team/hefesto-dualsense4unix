@@ -161,7 +161,7 @@ def test_a_pagina_nova_nao_pinta_o_funciona_em(
 def test_a_maquina_sem_lancador_nenhum_nao_oferece_jogo(
     maquina_pelada: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**A ORDEM DE PRODUTO:** o produto é para qualquer pessoa, não para esta bancada."""
+    """**A ORDEM DE PRODUTO:** o produto é para qualquer pessoa, não para esta máquina de teste."""
     _o_disco_tem(monkeypatch, Profile(name="Universal", priority=0,
                                       match=MatchAny()))
 
@@ -189,7 +189,7 @@ def test_o_perfil_que_ja_existe_diz_de_onde_ele_vem(
 def test_a_regra_que_a_tela_nao_sabe_mostrar_continua_travando(
     maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A válvula do R-12 não morreu — ela só passou a falar a língua nova."""
+    """A válvula do R-12 não morreu — a válvula só passou a falar a língua nova."""
     fino = MatchCriteria(window_title_regex="Elden Ring.*",
                          process_name=["eldenring.exe"])
     _o_disco_tem(monkeypatch, Profile(name="Fino", priority=90, match=fino))
@@ -218,7 +218,7 @@ def test_a_lista_de_baixo_segue_o_campo_de_cima(
 def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
     maquina_do_usuario: pathlib.Path,
 ) -> None:
-    """``ELDEN RING · 1245620``, e nunca ``eldenring.exe`` — item 12 da lista dela."""
+    """``ELDEN RING · 1245620``, e nunca ``eldenring.exe`` — item 12 da lista de pedidos."""
     html = a10._html_dos_jogos("Steam")
     assert 'label="ELDEN RING · 1245620"' in html
     assert ".exe" not in html
@@ -245,7 +245,7 @@ def test_o_jargao_saiu_das_duas_telas(caminho: str) -> None:
         f"e pelo «Aplicar em»")
     for jargao in ("Jogo da Steam", "Jogo (pela janela)", ">Jogo<"):
         assert jargao not in html, (
-            f"“{jargao}” voltou a `{caminho}` — é o jargão de implementação que ela mandou "
+            f"“{jargao}” voltou a `{caminho}` — é o jargão de implementação que o pedido mandou "
             f"tirar em 11/09/2026")
     assert 'data-hef="editor.estilo"' in html
     assert ">Estilo de jogo:</span>" in html

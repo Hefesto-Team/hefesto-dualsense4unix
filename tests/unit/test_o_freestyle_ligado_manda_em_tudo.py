@@ -302,7 +302,7 @@ def _perfil_de_mentira(nome: str, mascara: str) -> SimpleNamespace:
 def test_a_mascara_antecipada_le_o_freestyle_ligado(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ligado: bool,
 ) -> None:
-    """O jogo lê a env UMA vez, no `exec`: ligado, ela diz a máscara DO FREESTYLE."""
+    """O jogo lê a env UMA vez, no `exec`: ligado, a env diz a máscara DO FREESTYLE."""
     freestyle = _perfil_de_mentira(FREESTYLE, "xbox")
     jogo = _perfil_de_mentira(JOGO, "dualsense")
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
@@ -414,7 +414,7 @@ def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
 
 
 def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(semeadura_ligada: None) -> None:
-    """Ligado e sem o `freestyle.json` (ela o apagou): o boot desliga e segue."""
+    """Ligado e sem o `freestyle.json` (quem usa o apagou): o boot desliga e segue."""
     loader.load_all_profiles()
     loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0))
     (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
@@ -457,7 +457,7 @@ def test_sair_do_nativo_com_ele_ligado_volta_ao_freestyle(
 def test_o_primeiro_pad_nasce_no_modo_do_freestyle(semeadura_ligada: None) -> None:
     """A prova 5, no código: com ele ligado, o boot sobe o pad no modo DELE.
 
-    O Freestyle dela está em Xbox, e a sessão aponta um perfil «sempre» em
+    O Freestyle está em Xbox, e a sessão aponta um perfil «sempre» em
     DualSense: o boot pergunta pelo Freestyle, pela memória e pelo disco.
 
     MORDIDA: tire o ramo `if manda:` de `perfil_que_o_boot_restaura` e as duas
@@ -540,7 +540,7 @@ def test_gravar_numa_aba_nao_muda_o_modo(semeadura_ligada: None, ligado: bool) -
 
     Conferência de 28/09/2026. Toda aba que grava passa pelo funil
     `interface/pacotes/perfil.gravar_e_reaplicar`. Até 01/10/2026 ele mandava
-    `profile.switch` (a ativação à mão): o primeiro ajuste dela mexia no Modo
+    `profile.switch` (a ativação à mão): o primeiro ajuste mexia no Modo
     Freestyle, e o perfil do jogo posto pelo lançamento virava a escolha do usuário.
     Desde O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 é o `profile.reaplicar`. É o
     funil de verdade, com o handler de verdade, nas duas pontas: o jogo valendo
@@ -639,7 +639,7 @@ def test_o_cadeado_antigo_vira_o_freestyle_uma_vez(cadeado: bool) -> None:
 
 
 class _FioDeMentira:
-    """O `device` de um handle de bancada: guarda o que seria escrito, e só."""
+    """O `device` de um handle de ensaio: guarda o que seria escrito, e só."""
 
     def __init__(self) -> None:
         self.quadros: list[bytes] = []
@@ -711,7 +711,7 @@ def test_com_o_jogo_vivo_a_janela_de_fora_nao_tira_o_perfil_dele(semeadura_ligad
     """A L2 do PRAGMATA (27/09, 21:09:06), curada: a janela em outra tela não o tira.
 
     Nota de 14/10/2026 (D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO): o jogo que morre também
-    não devolve a escolha. O perfil do jogo lançado fica até ela mudar ou outro jogo
+    não devolve a escolha. O perfil do jogo lançado fica até quem usa mudar ou outro jogo
     iniciar, aqui e depois do reinício do serviço; até então a escolha («Sofá») voltava.
     """
     loader.load_all_profiles()
@@ -784,7 +784,7 @@ def test_ligar_sem_caminho_pergunta_o_modo_ao_perfil_ativo(
 
     Nos três modos: Xbox, DualSense e mouse e teclado (a Navegação não diz o
     canal, e vale o padrão da máquina). O caminho do perfil não é escolha nova
-    dela: vai com `caminho_e_escolha=False`, e o arquivo global não muda.
+    de quem usa: vai com `caminho_e_escolha=False`, e o arquivo global não muda.
 
     MORDIDA: tire o `if enabled and caminho is None:` do
     `_handle_gamepad_emulation_set` e a célula `xbox` reprova com o pad em

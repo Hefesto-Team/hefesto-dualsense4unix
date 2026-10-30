@@ -1,12 +1,9 @@
 """O Hz tem a cor do que chega — O-HZ-TEM-A-COR-DA-DISTANCIA-01.
 
-O que o usuário disse em 30/09/2026, ~02h, com a aba Conexões aberta e os quatro
-DualSense no rádio:
-*«naquela sessão do hertz eles precisam ter os
-numeros com fontes mudando de cores do vermelho <!-- noqa-acento: citação literal -->
-branco e verde pra indicar o quão bom a sua
-distancia tá daquele conector.»* <!-- noqa-acento: citação literal -->
-E às ~03h, sobre quais números: *«isso. um pra cada conector»* — o Hz de cada
+O pedido de 30/09/2026, ~02h, com a aba Conexões aberta e os quatro DualSense no rádio: na
+seção dos hertz, os números mudam de cor entre vermelho, branco e verde para dizer quão boa
+é a distância até aquele conector. Às ~03h, sobre quais números: um para cada conector — o
+Hz de cada
 controle e o «N/79» de cada adaptador.
 
 MEDIDO antes da cura (02/10, sobre ``cba4c97ab``, o mesmo instrumento antes e
@@ -19,7 +16,7 @@ As decisões (decisão de produto, 30/09/2026):
 D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE e
 D-3009-OS-CANAIS-SE-PINTAM-PELO-PISO-DO-SALTO. A distância de verdade é o RSSI
 do enlace (D-3009-A-DISTANCIA-E-O-RSSI-E-ESPERA-A-PROVA), e o leitor dele
-espera a prova 0 na bancada.
+espera a prova 0 no aparelho.
 
 Nenhuma régua espera o que a própria função devolve: os números de entrada são
 os medidos pela casa (a sprint cita as fontes), e os cortes vêm de donos que

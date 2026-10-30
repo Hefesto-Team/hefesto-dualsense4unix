@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO ESCOPO DA GRAVAÇÃO DO GATILHO: o clique grava, e não reaplica a mesa.
 
-O DEFEITO QUE ELA FECHA, medido em 03/09/2026 clicando o produto INSTALADO com
+O DEFEITO QUE A RÉGUA FECHA, medido em 03/09/2026 clicando o produto INSTALADO com
 um DualSense no cabo. O gesto terminava em `perfil.gravar_e_reaplicar`, que
 termina em `p.profile_switch(...)` — o daemon aplica o perfil INTEIRO. Com a
 barra de luz apagada antes e UM gesto só (`--prova-clique guardar`):
@@ -9,9 +9,9 @@ barra de luz apagada antes e UM gesto só (`--prova-clique guardar`):
     antes   lightbar_on: false · lightbar_rgb: [0, 0, 0]
     depois  lightbar_on: true  · lightbar_rgb: [0, 0, 255]
 
-Ela desliga a barra na aba Iluminação, vai aos Gatilhos, clica "Guardar esse
+Quem usa desliga a barra na aba Iluminação, vai aos Gatilhos, clica "Guardar esse
 efeito" — e a barra acende. Um botão cujo nome promete UM efeito desfazendo
-escolha viva dela em outra aba, calado.
+escolha viva feita em outra aba, calado.
 
 POR QUE A REAPLICAÇÃO NÃO FAZ FALTA: esta aba aplica NA HORA (decisão de
 01/09, *"clicar já aplica"*): o clique já mandou o efeito ao aparelho, e o
@@ -26,7 +26,7 @@ AS TRÊS COISAS QUE ESTA RÉGUA COBRA:
 
 1. **Grava.** Tirar o `profile_switch` não pode ter tirado a gravação junto.
 2. **Não chama `profile_switch`.** É a cura.
-3. **Chama `launch_env.refresh`.** É a metade que tinha de sobreviver: sem ela o
+3. **Chama `launch_env.refresh`.** É a metade que tinha de sobreviver: sem a chamada o
    perfil novo só chega ao jogo no próximo start do daemon.
 
 A MORDIDA: devolva `perfil.gravar_e_reaplicar(novo, ctx, p)` no lugar de
@@ -116,14 +116,14 @@ def test_o_clique_grava_no_disco(pac, gesto, disco) -> None:
 
 
 def test_o_clique_nao_manda_reaplicar_o_perfil_inteiro(pac, gesto, disco) -> None:
-    """Caso 2, A CURA: `profile_switch` reaplica a barra de luz por cima dela."""
+    """Caso 2, A CURA: `profile_switch` reaplica a barra de luz por cima da escolha."""
     p = PonteDeMentira()
     gesto(_ctx(pac), _clique(), p)
     assert "profile_switch" not in p.chamadas, (
         "o clique do gatilho mandou o daemon REAPLICAR o perfil inteiro "
-        f"(chamadas={p.chamadas}). Isso reacende a barra de luz que ela apagou "
+        f"(chamadas={p.chamadas}). Isso reacende a barra de luz apagada "
         "na aba Iluminação — um botão de escopo estreito desfazendo escolha "
-        "viva dela em outra aba, calado. Esta aba já aplica na hora; não há "
+        "viva feita em outra aba, calado. Esta aba já aplica na hora; não há "
         "gatilho a reaplicar aqui.")
 
 

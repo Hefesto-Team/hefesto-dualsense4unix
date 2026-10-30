@@ -2,7 +2,7 @@
 
 O fio da janela é o do GTK. Medido no lar de mentira em 21/10/2026, antes da cura, ele
 fazia em três minutos 6.103 aberturas no `/sys`, 178 no `/proc`, 187 varreduras do
-`/sys/bus/usb/devices`, cinco subprocessos e uma conexão ao serviço; depois dela, nenhuma.
+`/sys/bus/usb/devices`, cinco subprocessos e uma conexão ao serviço; depois da primeira, nenhuma.
 A régua de tempo roda o piloto oculto de verdade por três minutos, no relógio do
 produto (a regressão de 29/08 só aparecia aos 181 s), e reprova o tique acima do teto e
 a espera proibida no fio da janela. As outras são as de cada cura, sem a janela.
@@ -213,7 +213,7 @@ def test_tres_minutos_sem_o_fio_da_janela_esperar(
 def test_a_troca_pedida_na_primeira_carga_espera_a_pagina_e_nao_fecha_a_janela(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """A troca de aba pedida na primeira carga sai depois que ela confirma, com a janela de pé.
+    """A troca de aba pedida na primeira carga sai depois que a carga confirma, com a janela de pé.
 
     Medido em 30/10/2026: a troca no STARTED da primeira carga a cortava, o FINISHED vinha com a
     página em branco, a guarda da janela a lia como carga errada e fechava o laço em 1,5 s, sem
@@ -252,7 +252,7 @@ def test_a_troca_pedida_na_primeira_carga_espera_a_pagina_e_nao_fecha_a_janela(
             piloto._estado_vivo.parar()
             piloto.tela.janela.destroy()
             ondas_de_som.o_de_sempre().seguir({})
-    assert fora.cortou, "a primeira carga não começou: a troca não foi pedida no meio dela"
+    assert fora.cortou, "a primeira carga não começou: a troca não foi pedida no meio da carga"
     assert piloto.tela.morreu is None, f"a janela fechou sozinha: {piloto.tela.morreu}"
     assert fora.chegou, f"a troca pedida na primeira carga não chegou: a aba é {piloto.pagina}"
 
@@ -438,7 +438,7 @@ def test_a_primeira_mesa_do_radio_da_08_nao_se_le_no_fio_de_quem_pinta(
 
 def test_a_largada_da_troca_de_pagina_sai_do_fio_da_janela_e_fica_na_fila(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com a mesa, a largada roda num fio, e o gesto seguinte do controle entra atrás dela."""
+    """Com a mesa, a largada roda num fio, e o gesto seguinte do controle entra atrás da largada."""
     from hefesto_dualsense4unix.interface import pacotes
 
     ordem: list[str] = []

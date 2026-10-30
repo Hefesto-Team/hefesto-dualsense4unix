@@ -175,14 +175,14 @@ def test_o_gancho_chama_o_portao() -> None:
     ]
     assert invoca, (
         "o `pre-commit` parou de INVOCAR o portão da régua (mencioná-lo num "
-        "comentário não basta). Sem a chamada, o pedido dela de 29/08 vira "
+        "comentário não basta). Sem a chamada, o pedido de 29/08 vira "
         "prosa — e prosa foi o que não impediu os nove branches de interface "
         "sem foto em 24/08."
     )
 
 
 def test_o_codigo_de_veredito_nao_e_o_do_traceback() -> None:
-    """O contrato de saída, medido na bancada de 29/08."""
+    """O contrato de saída, medido no ensaio de 29/08."""
     assert portao.VEREDITO_REPROVA != 1, (
         "o veredito não pode usar o mesmo código que o Python devolve para "
         "traceback, senão instrumento quebrado vira portão fechado."
@@ -191,12 +191,12 @@ def test_o_codigo_de_veredito_nao_e_o_do_traceback() -> None:
     assert f'= "{portao.VEREDITO_REPROVA}"' in codigo, (
         "o gancho tem de propagar SÓ o código de veredito. Com `|| true` "
         "sozinho o grau 3 nasce inerte; com `|| falhou=1` sozinho, um "
-        "traceback trava a árvore dela."
+        "traceback trava a árvore de quem usa."
     )
 
 
 def test_no_grau_de_hoje_ele_nao_segura_commit_nenhum() -> None:
-    """O verbo dela é INDUZIR. Enquanto `GRAU < 3`, nada é reprovado."""
+    """O verbo do pedido é INDUZIR. Enquanto `GRAU < 3`, nada é reprovado."""
     assert portao.GRAU < 3, (
         "o grau 3 reprova commits. Confirme o `--censo` antes de deixar isto "
         "passar, e escreva o número na mensagem do commit que subiu o degrau."

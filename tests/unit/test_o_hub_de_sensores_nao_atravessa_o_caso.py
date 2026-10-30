@@ -5,7 +5,7 @@ OS-TRES-VERMELHOS-DE-TEMPO-DO-LINT-TEST-NO-CI-01 (20/10/2026). O `lint-test` do 
 
 * o `SensorHub` que o `_garantir_sensor_hub` criou seguia com a manutenção viva (42 no lote
   de 96 arquivos), e no segundo ciclo dentro de um caso de mesa de mentira abria o touchpad
-  dela (o inventário e o sysfs reprovavam pelo nó do DualSense aberto);
+  de quem usa (o inventário e o sysfs reprovavam pelo nó do DualSense aberto);
 * as árvores de sintaxe que os portões guardam em cache deixavam 2 milhões de objetos na
   varredura do coletor, e a passada cheia (4,2 s sob carga) caía dentro do prazo de 1 s do
   `daemon.state_full`.

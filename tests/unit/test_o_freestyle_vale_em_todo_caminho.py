@@ -28,7 +28,7 @@ teste):
    `test_gui_review_fixes.py::test_restore_dialog_nao_cita_navegacao`.
 
 A MATRIZ (regra, 23/09): os QUATRO controles — P1 e P3 no USB, P2 e P4 no BT —
-no backend REAL (`PyDualSenseController`, handles de bancada sem aparelho nenhum
+no backend REAL (`PyDualSenseController`, handles de ensaio sem aparelho nenhum
 atrás), com o boot real, nos três caminhos da sessão: vazia, com um perfil de
 janela, com o Freestyle. O gatilho se mede no BYTE do report de cada transporte
 (0x02 no cabo, 0x31 no rádio), pelo mesmo envelope que a
@@ -92,7 +92,7 @@ def semeadura_ligada(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class _FioDeMentira:
-    """O `device` de um handle de bancada: guarda o que seria escrito, e só."""
+    """O `device` de um handle de ensaio: guarda o que seria escrito, e só."""
 
     def __init__(self) -> None:
         self.quadros: list[bytes] = []
@@ -105,7 +105,7 @@ class _FioDeMentira:
 def _mesa_de_quatro(
     fabrica_de_ensaio: Any,
 ) -> tuple[PyDualSenseController, list[tuple[Any, EnvelopeDeTransporte]]]:
-    """O backend REAL com os quatro handles de bancada, dois em cada transporte."""
+    """O backend REAL com os quatro handles de ensaio, dois em cada transporte."""
     ctl = PyDualSenseController()
     pecas: list[tuple[Any, EnvelopeDeTransporte]] = []
     for mac, transporte in MESA:
@@ -213,7 +213,7 @@ def test_o_boot_nao_reescreve_a_escolha_do_usuario(
 
     assert (session.load_last_profile(), session.read_active_marker()) == (JOGO, JOGO)
     assert not store.manual_profile_lock_active(time.monotonic()), (
-        "o boot armou a trava da troca à mão: ele virou escolha dela")
+        "o boot armou a trava da troca à mão: ele virou escolha de quem usa")
 
 
 def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
@@ -361,7 +361,7 @@ def test_os_tres_gestos_sem_perfil_ativo_agem_no_freestyle(
 def test_sem_freestyle_no_disco_os_tres_recusam_dizendo(
     semeadura_ligada: None, tmp_path: Path, gesto: str,
 ) -> None:
-    """Ela apagou o Freestyle: nenhum dos três inventa perfil, nem toca o disco."""
+    """Quem usa apagou o Freestyle: nenhum dos três inventa perfil, nem toca o disco."""
     from hefesto_dualsense4unix.interface.pacotes import rodape
 
     loader.load_all_profiles()
@@ -391,7 +391,7 @@ def test_a_fabrica_do_freestyle_nasce_com_o_gatilho_de_nascimento_do_produto() -
 
 
 def test_a_lista_das_fabricas_de_antes_e_fechada() -> None:
-    """Seis versões, e o asset de hoje fora dela."""
+    """Seis versões, e o asset de hoje fora da lista."""
     antigas = loader._FABRICAS_ANTERIORES_DO_FREESTYLE
     hoje = json.loads(ASSET.read_text(encoding="utf-8"))
     assert hoje not in antigas
@@ -438,7 +438,7 @@ def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
     loader.restaurar_do_historico(loader.SLUG_DO_PADRAO)
     assert (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes() == bruto
     assert loader.o_freestyle_de_fabrica_nasce_ligado() is None, (
-        "a volta que ela pediu foi desfeita pela migração")
+        "a volta pedida foi desfeita pela migração")
 
 
 @pytest.mark.parametrize("arquivo_antigo", ["meu_perfil.json", "personalizado.json"])
@@ -458,14 +458,14 @@ def test_a_fabrica_de_antes_com_o_nome_de_antes_chega_a_de_hoje_numa_carga(
 
 
 def _o_freestyle_do_usuario() -> dict[str, Any]:
-    """A fábrica de 24/09 com UM ajuste dela: a cor do P1 por controle."""
+    """A fábrica de 24/09 com UM ajuste de quem usa: a cor do P1 por controle."""
     do_usuario = json.loads(json.dumps(loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4]))
     do_usuario["controllers"] = {"AA:BB:CC:00:00:01": {"leds": {"lightbar": [255, 0, 128]}}}
     return do_usuario
 
 
 def test_o_freestyle_do_usuario_nao_muda(semeadura_ligada: None) -> None:
-    """Um byte de ajuste dela e ele deixa de ser fábrica: nem arquivo, nem histórico."""
+    """Um byte de ajuste e o arquivo deixa de ser fábrica: nem arquivo, nem histórico."""
     pasta = profiles_dir(ensure=True)
     bruto = _grava(pasta, _o_freestyle_do_usuario())
     (pasta / loader.SEED_MARKER_NAME).write_text("freestyle.json\n", encoding="utf-8")
@@ -493,7 +493,7 @@ def test_sem_a_copia_no_historico_nada_muda_e_a_proxima_carga_tenta(
 def test_o_personalizado_do_usuario_vence_a_fabrica_de_antes_que_o_shell_copiou(
     semeadura_ligada: None,
 ) -> None:
-    """O disco de quem atualizou em 24/09: o shell copiou a fábrica em Off ao lado dela."""
+    """O disco de quem atualizou em 24/09: o shell copiou a fábrica em Off ao lado da nova."""
     pasta = profiles_dir(ensure=True)
     _grava(pasta, loader._FABRICAS_ANTERIORES_DO_FREESTYLE[4])
     do_usuario = dict(_o_freestyle_do_usuario(), name="Personalizado")
@@ -612,7 +612,7 @@ def _o_titulo_do_salvar(html: str) -> str:
 
 
 def test_o_rodape_congelado_diz_o_mesmo_que_a_tela_pinta_sem_perfil() -> None:
-    """O `fim.html` e a pintura sem perfil dizem a MESMA frase, e ela não promete jogo."""
+    """O `fim.html` e a pintura sem perfil dizem a MESMA frase, e a frase não promete jogo."""
     from hefesto_dualsense4unix.interface import onde, pacotes
 
     congelado = _o_titulo_do_salvar((onde.AQUI / "fim.html").read_text(encoding="utf-8"))
@@ -631,7 +631,7 @@ def test_o_ensaio_das_dez_traz_o_rodape_novo(pagina: str) -> None:
 
     caminhos = sorted(onde.saida().glob(f"{pagina}*.html"))
     if not caminhos:
-        pytest.skip(f"não há página na bancada para {pagina}")
+        pytest.skip(f"não há página na máquina de teste para {pagina}")
     congelado = _o_titulo_do_salvar((onde.AQUI / "fim.html").read_text(encoding="utf-8"))
 
     assert _o_titulo_do_salvar(caminhos[0].read_text(encoding="utf-8")) == congelado

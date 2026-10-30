@@ -97,7 +97,7 @@ def test_nenhum_segundo_leitor_do_grafo_em_src() -> None:
 
 
 def test_o_dono_esta_na_varredura() -> None:
-    """A varredura enxerga o dono: sem isso, um verde dela não diz nada."""
+    """A varredura enxerga o dono: sem isso, um verde da varredura não diz nada."""
     rel = "integrations/retrato_do_som.py"
     achados = leitores_do_grafo((SRC / rel).read_text(encoding="utf-8"), rel)
     assert {(a, f) for a, _l, f in achados} == set(DONO), achados

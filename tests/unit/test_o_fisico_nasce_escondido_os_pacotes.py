@@ -15,7 +15,7 @@ FECHADA em /etc, fora do manifesto do pacote. A atualização troca a 70 aberta
 de /usr/lib pela 73 aberta, e a 70 de /etc deixa de sombreá-la: a 73 aberta
 corre DEPOIS e reabre o nó em TODA máquina, com ou sem a `71-sony`, até
 alguém rodar o helper de novo. A cura é o pós-instalação levar a 70 de /etc
-para o nome novo — e ela leva a ESCOLHA de quem instalou (a fechada ou a
+para o nome novo — e o nome novo leva a ESCOLHA de quem instalou (a fechada ou a
 aberta), sem decidir por ninguém.
 
 E o outro lado: a remoção do pacote desliga o broker, e a 73 fechada que o

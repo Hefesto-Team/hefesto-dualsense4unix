@@ -1,8 +1,8 @@
 """O-GOVERNADOR-NAO-FAZ-UMA-PONTE-SO-CEDER-01 — cede só o que não cabe.
 
-A bancada de 03/10 (com ela): com dois controles por adaptador, `cedidos=0` e o
+O ensaio de 03/10: com dois controles por adaptador, `cedidos=0` e o
 som contínuo nos quatro; com quatro num adaptador, ~22% cedidos e o som
-alternando. E ela já tinha ouvido alternância com UM controle por adaptador.
+alternando. E já se tinha ouvido alternância com UM controle por adaptador.
 Lido no código: em `_a_vez`, ``ceder = min(n, max(1, n - cabem))`` fazia pelo
 menos uma ponte ceder em todo episódio, mesmo a única do adaptador; e o
 episódio abria com 20 pacotes de fila, colado nas ~23 escritas que uma ponte de
@@ -13,11 +13,11 @@ ar (o engasgo), e o limiar relativo ao que uma ponte escreve por janela
 (`JANELAS_DO_LIMIAR`, com o piso de 20). A defesa de 22/09 (a terceira ponte
 num adaptador que escoa duas cede, em rodízio) segue de pé.
 
-A BANCADA é o governador real, com o relógio e o diário de mentira, e um
+O ENSAIO é o governador real, com o relógio e o diário de mentira, e um
 adaptador de mentira que escoa até a capacidade de cada janela, com a fila do
 host de verdade (o que não sai fica para a janela seguinte): o mesmo dublê das
 réguas da O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01. As pontes escrevem 93,75
-quadros/s cada. A MORDIDA de cada régua está no docstring dela.
+quadros/s cada. A MORDIDA de cada régua está no docstring de cada uma.
 """
 
 from __future__ import annotations
@@ -163,7 +163,7 @@ def test_uma_ponte_no_adaptador_parado_de_fato_ainda_cede_e_cai() -> None:
 def test_duas_pontes_num_adaptador_que_escoa_duas_nao_cedem() -> None:
     """Régua 2: duas pontes, o adaptador escoando duas com engasgos (44 e 50).
 
-    É a bancada de 03/10 com dois controles por adaptador: `cedidos=0`.
+    É o ensaio de 03/10 com dois controles por adaptador: `cedidos=0`.
 
     MORDIDA: o limiar fixo de 20 pacotes (``fila > LIMIAR_DO_DEFICIT``) abre
     episódio no engasgo, e a janela de 44 (uma ponte e meia) cede uma ponte.

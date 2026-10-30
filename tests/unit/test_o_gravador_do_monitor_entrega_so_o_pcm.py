@@ -1,19 +1,19 @@
 """O gravador do monitor entrega só PCM: o primeiro bloco de um nó mudo é mudo.
 
 **A queixa, 01/10/2026**, depois de jogar com visitas (dois DualSense no
-Bluetooth): *«Háptica por áudio não funcionou, nem no bt e nem aumentou a
-intensidade durante o jogo.»* <!-- noqa-acento: citação literal -->
+Bluetooth): a háptica por áudio não funcionou, nem no BT, e não aumentou de
+intensidade durante o jogo.
 
 **A causa, medida em 02/10/2026.** O ``pw-record`` sem ``--raw`` escreve um
 cabeçalho AU de 24 bytes antes do PCM. Medido num PipeWire 1.6.8 PRIVADO (o
 mesmo binário da máquina do usuário, num diretório de execução próprio, sem tocar o
-servidor dela): o argv do produto gravou ``64 6e 73 2e 18 00 00 00 ff ff ff ff
+servidor real): o argv do produto gravou ``64 6e 73 2e 18 00 00 00 ff ff ff ff
 03 00 00 00 80 bb 00 00 04 00 00 00`` e depois o PCM, little-endian e alinhado
 ao quadro; com ``--raw``, o PCM começa no byte 0. Os 24 bytes têm 11 não nulos,
 três deles nos canais traseiros do primeiro quadro de quatro canais.
 
 O ``OUVIDO`` (dono de «este nó tem sinal agora?», 29/09) ouvia esses bytes
-como SINAL por um segundo, em todo gravador novo. O diário dela de 01/10 tem
+como SINAL por um segundo, em todo gravador novo. O diário de 01/10 tem
 os dois desenhos que isso faz:
 
 * no modo Xbox (o rumble convertido em háptica), às 19h01m45: a ponte sobe em
@@ -220,7 +220,7 @@ def test_o_sinal_que_o_jogo_toca_ainda_chega_inteiro(
 def test_a_ponte_em_haptica_fica_com_o_gravador_novo_do_alto_falante(
     gravadores: Gravadores, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O desenho de 18h22m44 do diário dela, na volta de produção."""
+    """O desenho de 18h22m44 do diário, na volta de produção."""
     from tests.unit.test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio import (
         P4,
         Mesa,

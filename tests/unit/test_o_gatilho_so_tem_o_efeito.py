@@ -1,7 +1,7 @@
 """O-GATILHO-SO-TEM-O-EFEITO-01 — o gatilho só tem o efeito (22/10/2026).
 
-O pedido de 21/10: *«o botão avançado em gatilhos não faz sentido e como o gatilho faz não faz
-sentido também»*, e na pergunta do chat, «Sai tudo». <!-- noqa-acento: citação literal -->
+O pedido de 21/10: a chave «Avançado» dos gatilhos e a linha «Como o gatilho faz» não
+faziam sentido, e a resposta à pergunta foi tirar tudo.
 A aba Gatilhos não tem a chave «Avançado», nem a linha «Como o gatilho faz», nem o tipo
 Acionamento no «Criar efeitos novos». O acionamento vem dentro de cada efeito da lista «Efeito do
 gatilho»; o gesto `modo` do daemon e o perfil gravado ficam, e nada some do disco.
@@ -14,7 +14,7 @@ MORDIDAS (cada uma reprova a régua que a guarda):
 * tirar a opção «Do perfil» (`acionamento:<modo>`) do `html_das_opcoes_de_imersao` -> o perfil
   antigo só com acionamento abre sem a opção e
   `test_perfil_so_com_acionamento_abre_com_a_opcao_certa` reprova;
-* trocar o prefixo `meu-acionamento:` do que ela guardou ->
+* trocar o prefixo `meu-acionamento:` do que quem usa guardou ->
   `test_o_acionamento_guardado_continua_na_lista`;
 * devolver o `tipo` ao `criar-efeito` (guardar na biblioteca dos gatilhos) ->
   `test_criar_sempre_cria_um_efeito_da_lista_unica`;
@@ -141,7 +141,7 @@ def test_o_solto_segue_sendo_sem_efeito(a03, monkeypatch):
 
 
 def test_o_acionamento_guardado_continua_na_lista(a03, monkeypatch):
-    """O acionamento que ela guardou mora em «Seus efeitos», do lado dele, e o perfil o acha."""
+    """O acionamento que quem usa guardou mora em «Seus efeitos», e o perfil o acha."""
     from pacotes import meus_efeitos as me
 
     me.guardar_meus_efeitos(
@@ -190,7 +190,7 @@ def _ctx_com(monkeypatch, esquerdo: dict, direito: dict):
 
 
 def test_escolher_o_acionamento_guardado_manda_a_metade_dele(a03, monkeypatch):
-    """O que está em «Seus» não só aparece: escolhido, ele vai ao gatilho com os números dela.
+    """O que está em «Seus» não só aparece: escolhido, ele vai ao gatilho com os números guardados.
 
     MORDIDA: tirar de `imersao_escolhida` o ramo do `meu-acionamento:` (a escolha cai na lista
     do produto e é recusada como imersão que não existe).
@@ -207,7 +207,7 @@ def test_escolher_o_acionamento_guardado_manda_a_metade_dele(a03, monkeypatch):
     a03.imersao_escolhida(ctx, {"uniq": UNIQ, "lado": "d", "valor": valor}, ponte)
     (nome, args), = ponte.chamadas
     assert nome == "set" and args[0] == "right" and args[1] == "Resistance", ponte.chamadas
-    assert list(args[2]) == [3, 6], "o gatilho não recebeu os números que ela guardou"
+    assert list(args[2]) == [3, 6], "o gatilho não recebeu os números guardados"
 
     with pytest.raises(RuntimeError, match="só o outro lado"):
         a03.imersao_escolhida(ctx, {"uniq": UNIQ, "lado": "e", "valor": valor}, _Ponte())

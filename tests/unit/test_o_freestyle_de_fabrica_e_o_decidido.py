@@ -10,11 +10,10 @@ O QUE O USUÁRIO DISSE, e em que ordem. Nas palavras que abrem a sprint: *«no f
 é tudo estar no ultra até vibração e afins.»* — e o item 1 da sprint o escreveu
 campo a campo: vibração no Máximo com o jogo passando, alto-falante no teto,
 microfone aberto com o ganho no teto, as luzes no brilho mais forte, os sensores
-ligados. Na noite de 27/09 (a resposta 12): *«Quero testar algo diferente do
-padrão e jogar e salvar ele. Aperto o botão do freestyle e o jogo que eu tiver
-jogando vai ter essa config independente do perfil do jogo. Só isso. E lá se eu
-configurar te no ultra ok»* (noqa-acento: citação literal) — o Freestyle tem
-o que ela configurar, e o «ultra» vale **só como fábrica do arquivo novo**. Esta
+ligados. Na noite de 27/09 (a resposta 12), o pedido foi testar algo diferente do
+padrão, apertar o botão do Freestyle e ter essa config no jogo em curso, independente
+do perfil do jogo, começando do «ultra». O Freestyle tem o que quem usa configurar,
+e o «ultra» vale **só como fábrica do arquivo novo**. Esta
 régua mede o arquivo novo.
 
 O TETO DE CADA ESCALA É O DA CASA, perguntado ao dono de cada uma — nunca o topo
@@ -25,7 +24,7 @@ satura, e não 255), a vibração no degrau «Máximo» da escada
 
 O MODO FICA DE FORA DE PROPÓSITO: o de fábrica é o DualSense da máquina
 (`DaemonConfig`), e um `mode` no asset faria o Freestyle, desligado, ligar o pad
-no desktop de quem usa o mouse emulado. O Xbox dela é o arquivo dela, e não o
+no desktop de quem usa o mouse emulado. O Xbox de quem usa mora no arquivo, e não no
 asset (O-PRODUTO, B6).
 
 MORDIDA: devolva ao `assets/profiles_default/freestyle.json` a versão de 24/09

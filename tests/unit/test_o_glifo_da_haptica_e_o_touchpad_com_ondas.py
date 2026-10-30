@@ -1,7 +1,7 @@
 """A háptica tem glifo PRÓPRIO: a área do touchpad com ondinhas na borda de cima.
 
-Ela, 03/10/2026 (A-VIBRACAO-E-A-HAPTICA-DE-CADA-CONTROLE-SAO-INDEPENDENTES-01):
-*«precisamos de um svg específico pro hático»* e, sobre o desenho, a área do touchpad com ondas
+O pedido de 03/10/2026 (A-VIBRACAO-E-A-HAPTICA-DE-CADA-CONTROLE-SAO-INDEPENDENTES-01):
+um SVG próprio para a háptica e, sobre o desenho, a área do touchpad com ondas
 na parte superior. Até aqui a linha «Sensor Háptico» usava o desenho do
 motor esquerdo.
 
@@ -45,7 +45,7 @@ def test_o_glifo_e_o_touchpad_com_ondas_em_cima() -> None:
     for onda in ondas:
         ys = [float(n) for n in re.findall(r"[Mm]\s*-?[\d.]+\s+(-?[\d.]+)", onda.get("d", ""))]
         assert ys and max(ys) < topo, (
-            "uma onda desce para dentro do retângulo: elas saem da borda de cima"
+            "uma onda desce para dentro do retângulo: as ondas saem da borda de cima"
         )
 
 

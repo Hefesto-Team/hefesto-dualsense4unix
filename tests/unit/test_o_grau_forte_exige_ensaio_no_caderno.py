@@ -1,4 +1,4 @@
-"""O grau forte do mapa exige ensaio no caderno de bancada — ou o portão reprova."""
+"""O grau forte do mapa exige ensaio no caderno de ensaios — ou o portão reprova."""
 from __future__ import annotations
 
 import csv
@@ -57,7 +57,7 @@ def ensaio(
         "presente": "sim",
         "resultado": resultado,
         "observado_por": observado_por,
-        "fonte": "bancada de mentira",
+        "fonte": "ensaio de mentira",
         "nota": "escrito por um teste",
     }
 
@@ -191,7 +191,7 @@ def test_saiu_no_fio_se_sustenta_com_ensaio_que_nega(tmp_path: Path) -> None:
 
 
 def test_montou_nao_pede_ensaio_nenhum(tmp_path: Path) -> None:
-    """`MONTOU` é o que a suíte prova sozinha: pedir bancada para ele seria cobrar"""
+    """`MONTOU` é o que a suíte prova sozinha: pedir ensaio no aparelho para ele seria cobrar"""
     caminho = monta_arvore(
         tmp_path,
         [linha_com_grau(cabo_ate_onde_foi="MONTOU", radio_ate_onde_foi="MONTOU")],
@@ -268,7 +268,7 @@ def test_ensaio_sem_o_olho_do_usuario_avisa_e_nao_derruba(tmp_path: Path) -> Non
     caminho = monta_arvore(
         tmp_path,
         [linha_com_grau(radio_ate_onde_foi="MONTOU")],
-        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
+        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="aparelho")],
     )
     processo = rodar(caminho, tmp_path)
     assert processo.returncode == 0, processo.stdout
@@ -280,7 +280,7 @@ def test_a_promocao_do_olho_do_usuario_e_uma_constante_que_funciona(tmp_path: Pa
     caminho = monta_arvore(
         tmp_path,
         [linha_com_grau(radio_ate_onde_foi="MONTOU")],
-        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="bancada")],
+        [ensaio("audio.jack.deteccao@pro", "cabo", observado_por="aparelho")],
     )
     censo.OLHO_DO_USUARIO_REPROVA = True
     achados, _, _ = censo.censo(caminho, tmp_path, censo.date(2026, 8, 12))
@@ -408,7 +408,7 @@ def test_o_jogo_recebeu_fecha_com_instrumento_e_nao_pede_o_olho_do_usuario(
                 "audio.jack.deteccao@pro",
                 "cabo",
                 degrau=DEGRAUS_DE_ENTRADA[0],
-                observado_por="bancada",
+                observado_por="aparelho",
             )
         ],
     )
@@ -436,7 +436,7 @@ def test_o_jogo_reagiu_sem_o_olho_do_usuario_derruba_e_nao_apenas_avisa(
                 "audio.jack.deteccao@pro",
                 "cabo",
                 degrau=DEGRAUS_DE_ENTRADA[1],
-                observado_por="bancada",
+                observado_por="aparelho",
             )
         ],
     )
@@ -445,7 +445,7 @@ def test_o_jogo_reagiu_sem_o_olho_do_usuario_derruba_e_nao_apenas_avisa(
     assert "FALHA reagiu-sem-olho-do-usuario:" in processo.stdout
     assert "O JOGO RECEBEU" in processo.stdout, (
         "a mensagem tem de oferecer o degrau que um instrumento consegue "
-        f"fechar, senão ela só diz não:\n{processo.stdout}"
+        f"fechar, senão a régua só diz não:\n{processo.stdout}"
     )
 
 

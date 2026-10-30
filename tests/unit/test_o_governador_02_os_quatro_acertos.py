@@ -111,14 +111,14 @@ def test_a_ponte_que_desceu_nao_gasta_o_ligar_aqui_enquanto_ele_fica_no_adaptado
     relogio.agora += 1.0
     de_novo = governador.pedir_vaga(CONTROLE_3, "haptica")
     assert isinstance(de_novo, gov.Vaga), (
-        "a ponte desceu e subiu de novo, com ele no mesmo adaptador, e perguntou a ela"
+        "a ponte desceu e subiu de novo, com ele no mesmo adaptador, e perguntou de novo"
     )
     assert de_novo.alem_do_limite is True and de_novo.por_escolha_do_usuario is True
     assert governador.publicar()[ADAPTADOR_A]["pedidos"] == []
 
 
 def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_do_usuario() -> None:
-    """Ela respondeu, e a ponte ainda não esteve no ar: não se pergunta de novo."""
+    """Quem usa respondeu, e a ponte ainda não esteve no ar: não se pergunta de novo."""
     relogio, registro = _Relogio(), _Diario()
     governador = _a_terceira_no_a_com_vaga_no_b(relogio, registro)
     assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
@@ -129,12 +129,12 @@ def test_a_vaga_que_nunca_subiu_nao_gasta_a_resposta_do_usuario() -> None:
     sem_fonte.soltar("o som não teve fonte")
 
     vaga = governador.pedir_vaga(CONTROLE_3, "som")
-    assert isinstance(vaga, gov.Vaga), "a vaga que nunca subiu gastou a resposta dela"
+    assert isinstance(vaga, gov.Vaga), "a vaga que nunca subiu gastou a resposta dada"
     assert vaga.alem_do_limite is True and vaga.por_escolha_do_usuario is True
 
 
 def test_a_marca_alem_do_limite_sai_de_quem_voltou_a_caber() -> None:
-    """Quatro pontes num adaptador só (R4: não há outro), e elas descem."""
+    """Quatro pontes num adaptador só (R4: não há outro), e as quatro descem."""
     relogio, registro = _Relogio(), _Diario()
     governador = _governador(relogio, registro, {})
     vagas = {u: _subir(governador, u) for u in (CONTROLE_1, CONTROLE_2, CONTROLE_3, CONTROLE_4)}
@@ -467,7 +467,7 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
         ADAPTADOR_B: ar.ArDoAdaptador(hci=5, endereco=ADAPTADOR_B),
     }
     assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Entrada 4.1.4", (
-        "a porta que ela não mapeou não se chama como o desenho aprovado mostra"
+        "a porta que quem usa não mapeou não se chama como o desenho aprovado mostra"
     )
     assert gov.nome_da_porta(ADAPTADOR_B, amostra=amostra) == "", "o embutido ganhou entrada"
     assert gov.nome_da_porta("aa:bb:cc:00:00:ee", amostra=amostra) == ""
@@ -477,7 +477,7 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
     )
     monkeypatch.setattr(ee, "carregar_maquina", lambda: declarada)
     assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Entrada 9", (
-        "ela declarou a entrada 9 e a frase inventou outro nome"
+        "quem usa declarou a entrada 9 e a frase inventou outro nome"
     )
     assert gov.nome_da_porta(ADAPTADOR_A.upper(), amostra=amostra) == "Entrada 9"
 

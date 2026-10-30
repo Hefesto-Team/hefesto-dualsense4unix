@@ -82,7 +82,7 @@ def test_a_foto_da_vista_nao_paga_a_divida_das_dez_do_readme() -> None:
 
     assert veredito == portao.BLOQUEADO, (
         "o gancho aceitou a foto da vista como prova das dez do README. A "
-        "partir daí, gravar só em `maximizada/` quitaria a dívida delas para "
+        "partir daí, gravar só em `maximizada/` quitaria a dívida das abas para "
         "sempre, sem uma linha de aviso."
     )
     assert culpados == [UMA_ABA]

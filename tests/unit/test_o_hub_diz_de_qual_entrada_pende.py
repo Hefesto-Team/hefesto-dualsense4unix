@@ -90,7 +90,7 @@ def test_hub_declarado_na_3_nao_cria_face() -> None:
 
 
 def test_so_hub_na_5_vale_a_do_usuario_e_diz_onde_o_computador_le() -> None:
-    """Só «Hub» na 5, e nada na 3: vale a dela, com a linha a mais — e sem a"""
+    """Só «Hub» na 5, e nada na 3: vale a declarada, com a linha a mais — e sem a"""
     dado = _arranjo(_documento(**{"5": {"liga": "hub"}}))
     face = _a_face(dado, _HUB)
     assert face["daEntrada"] == "5"

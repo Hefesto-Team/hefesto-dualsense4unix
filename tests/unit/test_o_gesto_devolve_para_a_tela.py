@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DO CAMINHO DE VOLTA: o gesto que MOSTRA escreve mesmo na página.
 
-POR QUE ELA EXISTE, e a data é 01/09/2026: até este dia um gesto devolvia
+POR QUE A RÉGUA EXISTE, e a data é 01/09/2026: até este dia um gesto devolvia
 `None` e o piloto descartava. Isso deixava sem dono toda a espécie de botão cuja
 promessa é MOSTRAR — "Ver os plugins carregados" e "Ver detalhes", da aba
 Sistema —, e o próprio pacote registrava a razão:

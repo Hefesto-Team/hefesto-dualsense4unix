@@ -164,7 +164,7 @@ class TestOGanhoViajaNoPerfil:
     def test_o_apply_mic_chama_mesmo_o_aplicador_do_ganho(self):
         """**A RÉGUA DE CIMA MEDE O MÉTODO; ESTA MEDE A LIGAÇÃO.**
 
-        Sem ela, `_aplicar_ganho_do_mic` poderia existir inteiro e correto e
+        Sem a chamada, `_aplicar_ganho_do_mic` poderia existir inteiro e correto e
         nunca ser chamado — *a cura escrita e nunca ligada*, que é o defeito
         mais caro desta casa e já custou uma leva inteira.
 

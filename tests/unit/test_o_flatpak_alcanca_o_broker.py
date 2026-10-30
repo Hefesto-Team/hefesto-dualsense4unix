@@ -28,7 +28,7 @@ NAO_SE_EXPOE: dict[str, str] = {
     ),
     "/run/systemd": (
         "é a sonda de «há systemd?» do `daemon_actions`; dentro do sandbox a "
-        "resposta certa é não, e o FLATPAK_ID já decide antes dela"
+        "resposta certa é não, e o FLATPAK_ID já decide antes da pergunta"
     ),
     "/run/user": (
         "é o XDG_RUNTIME_DIR, e o que o produto usa dele vem pela linha "

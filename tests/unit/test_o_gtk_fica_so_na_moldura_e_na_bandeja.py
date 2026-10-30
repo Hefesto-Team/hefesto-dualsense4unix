@@ -133,7 +133,7 @@ def test_o_piloto_novo_entra_pelo_nome(tmp_path: Path) -> None:
 
 
 def test_entrada_da_lista_que_envelheceu_reprova(tmp_path: Path) -> None:
-    """A lista é a fonte: dono que já não importa Gtk, ou que sumiu, sai dela."""
+    """A lista é a fonte: dono que já não importa Gtk, ou que sumiu, sai da lista."""
     raiz = _arvore_em_ordem(tmp_path)
     (raiz / PACOTE / "app/tray.py").write_text("X = 1\n", encoding="utf-8")
     saida = _rodar(raiz)

@@ -24,7 +24,7 @@ MESA_DO_USUARIO: tuple[tuple[str, str], ...] = (
 
 
 class _PonteDeMentira:
-    """O mínimo que `_aplicar_a_palavra_do_usuario` toca — e a porta que ela chama."""
+    """O mínimo que `_aplicar_a_palavra_do_usuario` toca — e a porta que a função chama."""
 
     def __init__(self, uniq: str, caminho: str | None = None) -> None:
         self.no = _no(uniq, caminho)
@@ -208,7 +208,7 @@ def test_o_ato_do_microfone_diz_a_palavra_do_usuario(gancho, registro) -> None: 
 
 
 def test_o_ato_de_calar_tambem_e_dito(gancho, registro) -> None:  # type: ignore[no-untyped-def]
-    """O mudo dela é palavra, não ausência de palavra."""
+    """O mudo é palavra, não ausência de palavra."""
     d = _DaemonDeMentira()
     d._eleitor_de_microfone.eleito = P1
     asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=False))
@@ -262,7 +262,7 @@ def test_a_ponte_que_nasce_depois_recebe_a_palavra_do_usuario(subsystem, monkeyp
     assert "/dev/hidraw5" not in subsystem._gerenciador.pontes
     nova = subsystem._gerenciador.pontes["/dev/hidraw9"]
     assert nova.ditos[-1:] == [True], (
-        "a ponte que nasceu depois do hotplug não recebeu o pedido dela; no "
+        "a ponte que nasceu depois do hotplug não recebeu o pedido; no "
         f"rádio isso é o microfone caindo sozinho na reconexão: {nova.ditos}"
     )
 
@@ -290,7 +290,7 @@ def test_o_controle_que_sai_da_mesa_perde_a_palavra(subsystem, registro) -> None
 
 
 def test_desmarcar_o_modo_apaga_a_palavra(subsystem, registro) -> None:  # type: ignore[no-untyped-def]
-    """Quinta porta: `soltar` (o "Aplicar" dela) leva a palavra junto."""
+    """Quinta porta: `soltar` (o "Aplicar" da tela) leva a palavra junto."""
     subsystem.no_ar(P1, True)
     registro.soltar(P1)
     assert registro.no_ar() == {}, (
@@ -303,7 +303,7 @@ def test_a_sessao_que_acaba_leva_a_palavra(subsystem, registro) -> None:  # type
     subsystem.no_ar(P1, True)
     registro.limpar()
     assert registro.no_ar() == {}, (
-        f"a palavra dela sobreviveu ao fim da sessão: {registro.no_ar()}"
+        f"a palavra de quem usa sobreviveu ao fim da sessão: {registro.no_ar()}"
     )
 
 
@@ -390,7 +390,7 @@ def test_o_ato_recusado_nao_deixa_o_microfone_no_ar(gancho, registro) -> None:  
         assert ato.feito is False, f"{uniq}: a recusa saiu como ato feito"
         assert ato.canal_no_sistema.feita is False
         assert registro.no_ar() == {}, (
-            f"{uniq}: o ato foi RECUSADO e a palavra dela ficou ligada — a "
+            f"{uniq}: o ato foi RECUSADO e a palavra de quem usa ficou ligada — a "
             "tela diz recusado, o LED não acende, e a varredura seguinte "
             f"entrega `True` à ponte: {registro.no_ar()}"
         )
@@ -420,19 +420,19 @@ def test_o_ato_recusado_devolve_a_palavra_que_ja_valia(gancho, registro) -> None
     ato = asyncio.run(hotkey.ligar_o_microfone(d, P1, ligado=True))
     assert ato.feito is False
     assert registro.no_ar() == {"aabbcc000001": True}, (
-        "a recusa apagou a palavra que já valia — o microfone dela saiu do ar "
+        "a recusa apagou a palavra que já valia — o microfone de quem usa saiu do ar "
         f"por causa de um ato que não aconteceu: {registro.no_ar()}"
     )
 
 
 def test_o_mudo_recusado_continua_calando(gancho, registro) -> None:  # type: ignore[no-untyped-def]
-    """SÓ o `ligado=True` se desfaz. O mudo dela não depende de eleição."""
+    """SÓ o `ligado=True` se desfaz. O mudo não depende de eleição."""
     d = _DaemonDeMentira(_EleitorDeMentira(recusa=RECUSA_SEM_CANAL))
     _mesa_de_quatro(d)
     asyncio.run(hotkey.ligar_o_microfone(d, P2, ligado=False))
     assert registro.no_ar() == {"aabbcc000002": False}, (
-        "o mudo dela foi desfeito por uma recusa de eleição — a voz volta ao "
-        f"ar sem ela ter pedido: {registro.no_ar()}"
+        "o mudo de quem usa foi desfeito por uma recusa de eleição — a voz volta ao "
+        f"ar sem pedido de quem usa: {registro.no_ar()}"
     )
 
 

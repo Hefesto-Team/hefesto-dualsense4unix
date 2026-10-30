@@ -236,7 +236,7 @@ def test_r1_o_gravador_preso_morre_no_descer_por_sigpipe(
 
     assert proc.poll() is not None, (
         f"o gravador (pid {proc.pid}) continua vivo depois do `descer`, com "
-        f"wchan={_wchan(proc.pid)!r} — é o órfão que segurou a sessão de som dela"
+        f"wchan={_wchan(proc.pid)!r} — é o órfão que segurou a sessão de som"
     )
     assert proc.returncode == -signal.SIGPIPE, (
         f"morreu com {proc.returncode}, e não por SIGPIPE: o cano não foi fechado "
@@ -279,7 +279,7 @@ def test_r3_na_queda_o_gravador_e_colhido_e_o_no_fica(
 
     sub._reconciliar(ger)
 
-    assert proc.poll() is not None, "a ponte caiu e o gravador dela continua vivo"
+    assert proc.poll() is not None, "a ponte caiu e o gravador continua vivo"
     assert P1 not in sub._pontes
     assert P1 in ger.nos and saidas == [], "o nó saiu com o controle: ele fica até o stop"
 
@@ -559,7 +559,7 @@ def test_r9_a_fonte_sem_saida_no_subsystem_e_colhida(
     assert sub._pontes == {}
     assert len(dubles) == 1, "o processo nem foi lançado — a régua não mede nada"
     assert dubles[0].poll() is not None, (
-        "a fonte voltou sem PCM e o processo dela ficou vivo — sem ponte, ninguém "
+        "a fonte voltou sem PCM e o processo ficou vivo — sem ponte, ninguém "
         "mais o derruba"
     )
 
@@ -593,7 +593,7 @@ def test_a_ponte_que_nao_sobe_colhe_o_gravador(
     assert sub._pontes == {}
     assert len(dubles) == 1, "o gravador nem foi lançado — a régua não mede nada"
     assert dubles[0].poll() is not None, (
-        "a ponte não subiu e o gravador dela ficou vivo, sem ninguém para lê-lo"
+        "a ponte não subiu e o gravador ficou vivo, sem ninguém para lê-lo"
     )
     assert dubles[0].returncode == -signal.SIGPIPE, f"morreu com {dubles[0].returncode}"
 

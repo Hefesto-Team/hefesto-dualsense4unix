@@ -1,6 +1,6 @@
 """O-GESTO-QUE-PEDE-O-P1-RESPONDE-QUANDO-ELE-EXISTE-01 — o desfecho de verdade.
 
-A bancada é a do P1 que nasce pelo fio (o `Daemon` real, o `CoopManager` real, o fio de
+O ensaio é o do P1 que nasce pelo fio (o `Daemon` real, o `CoopManager` real, o fio de
 nascimento e o broker de mentira de 2 s), com o P1 dono de um endereço forjado, para que
 a máscara dele se escolha. Três pontas:
 
@@ -79,7 +79,7 @@ def ensaio(mesa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch) -> SimpleName
         pad = mesa.daemon._gamepad_device
         mesa.gravados.append((modo, pad))
         gravadas.append((kw.get("mascara"), pad))
-        return "Bancada"
+        return "Ensaio"
 
     monkeypatch.setattr(mesa.daemon, "gravar_o_modo_escolhido", _gravar)
     tabelas: list[Any] = []

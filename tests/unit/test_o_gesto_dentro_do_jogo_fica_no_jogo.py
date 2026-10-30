@@ -45,7 +45,7 @@ def test_com_jogo_em_foco_a_escolha_global_nao_e_tocada() -> None:
 
 
 def test_sem_jogo_em_foco_a_escolha_global_e_escrita() -> None:
-    """O outro lado, e ele não pode cair junto: no desktop, ela escolhe."""
+    """O outro lado, e ele não pode cair junto: no desktop, quem usa escolhe."""
     daemon = _Daemon(jogo_em_foco=False)
 
     _gesto_manual(daemon, "xbox")
@@ -86,7 +86,7 @@ def test_so_o_gesto_manual_escreve_no_global(origem: str) -> None:
 
 
 def test_o_xbox_do_vazamento_e_devolvido(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O flag dela diz `xbox` desde 18/09 por causa do vazamento, não de escolha."""
+    """O flag de quem usa diz `xbox` desde 18/09 por causa do vazamento, não de escolha."""
     escritos: list[str | None] = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_gamepad_caminho",
@@ -108,4 +108,4 @@ def test_o_que_nao_e_o_xbox_do_vazamento_passa_intacto(
     )
     antes = lifecycle._a_escolha_do_usuario_sem_o_vazamento(valor)
     assert antes != "dualsense" or valor == "dualsense"
-    assert escritos == [], "nada a devolver não pode escrever no disco dela"
+    assert escritos == [], "nada a devolver não pode escrever no disco"

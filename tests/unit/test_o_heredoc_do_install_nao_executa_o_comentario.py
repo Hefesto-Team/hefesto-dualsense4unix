@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O HEREDOC SEM ASPAS DO INSTALL NÃO PODE TER CRASE — ela vira comando."""
+"""O HEREDOC SEM ASPAS DO INSTALL NÃO PODE TER CRASE — a crase vira comando."""
 from __future__ import annotations
 
 import re

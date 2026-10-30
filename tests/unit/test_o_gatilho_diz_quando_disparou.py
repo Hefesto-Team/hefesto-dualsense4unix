@@ -7,7 +7,7 @@ report[42] e [43]) e no rádio (`0x31`, base 2: report[43] e [44]), pelo mesmo
 `_struct_base` dos outros bytes, ou seja, com o CRC e o filtro do áudio.
 
 Os relatórios são sintéticos (nenhum aparelho é tocado): o que sustenta o
-deslocamento no controle de verdade é a bancada, e a referência canônica diz
+deslocamento no controle de verdade é o ensaio no aparelho, e a referência canônica diz
 isso. Nenhum endereço de rádio aparece aqui.
 """
 

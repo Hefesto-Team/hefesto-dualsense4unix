@@ -1,7 +1,7 @@
 """O gesto de qualquer aba pergunta o perfil ativo ao DONO, não ao daemon cru.
 
-A QUEIXA QUE ISTO CURA — 19/09/2026: *"nessa aba o botão máximo economia e
-balanceado voltou a travar de novo"*.  <!-- noqa-acento: citação literal -->
+A QUEIXA QUE ISTO CURA — 19/09/2026: na aba Vibração, os botões Máximo, Economia e
+Balanceado voltaram a travar.
 
 O DEFEITO, MEDIDO NO DIÁRIO DO USUÁRIO (`interface.log`, 19/09 por volta de 01:00)::
 
@@ -32,11 +32,11 @@ pergunta errada.
 dos gestos** levantavam ANTES de chegar a qualquer uma das duas, e por isso
 nenhuma das curas as alcançava: catorze leituras cruas, em sete abas.
 
-A REGRA QUE ISSO DEIXA, e ela já é da casa: *quando a cura conhece a causa, ela
+A REGRA QUE ISSO DEIXA, e a regra já é da casa: *quando a cura conhece a causa, a cura
 cobre TODOS os chamadores.* Cobrir um deixa a próxima pessoa remedindo o mesmo
 defeito — e foi o que aconteceu três vezes com esta linha.
 
-ONDE ELA MORDE: devolva `str(ctx.state.get("active_profile") or "").strip()` a
+ONDE A RÉGUA MORDE: devolva `str(ctx.state.get("active_profile") or "").strip()` a
 qualquer uma das guardas e o teste da aba correspondente reprova com a frase de
 recusa que o usuário viu na tela.
 """
@@ -114,7 +114,7 @@ def test_a_guarda_nao_recusa_com_o_perfil_no_disco(
         alvo(ctx, None, "aa:bb:cc:00:00:01", "balanced", None)
     except RuntimeError as erro:
         assert "não há perfil ativo" not in str(erro), (
-            f"{pacote}.{guarda} recusou o gesto dela por 'não há perfil ativo' "
+            f"{pacote}.{guarda} recusou o gesto por 'não há perfil ativo' "
             f"com {PERFIL!r} no disco — é o defeito do dia 19/09: a guarda lê o "
             f"`active_profile` CRU do daemon, e o daemon o publica como None em "
             f"toda sessão com perfil de janela. Erro: {erro}")
@@ -135,6 +135,6 @@ def test_nenhuma_guarda_de_gesto_le_o_cru() -> None:
             if 'get("active_profile")' in linha and ".strip()" in linha:
                 presos.append(f"{arq.name}:{n}")
     assert not presos, (
-        "guarda de gesto lendo o `active_profile` CRU do daemon — ela vai "
-        "recusar o clique dela com um perfil valendo no disco. Use "
+        "guarda de gesto lendo o `active_profile` CRU do daemon — a guarda vai "
+        "recusar o clique com um perfil valendo no disco. Use "
         "`perfil.nome_do_ativo(ctx.state)`: " + ", ".join(presos))

@@ -125,7 +125,7 @@ class TestOGestoSeComportaIgual:
 
         esperado = ["xbox", "mouse_teclado", "dualsense", "xbox"]
         assert sequencias["sackboy"] == esperado, (
-            "o jogo SEM carimbo divergiu — é o defeito que ela chamou de "
+            "o jogo SEM carimbo divergiu — é o defeito que se chamou de "
             f"gambiarra. Sequências: {sequencias}"
         )
         assert len(set(map(tuple, sequencias.values()))) == 1, (
@@ -137,8 +137,8 @@ class TestOGestoSeComportaIgual:
     async def test_nenhum_aperto_e_comido(self) -> None:
         """Toda apertada troca a ponte. Quatro apertos, quatro trocas.
 
-        É a régua direta do que ela usa o gesto para fazer: testar a ponte sem
-        fechar o jogo. Um aperto que não troca nada é um teste que ela não
+        É a régua direta do que o gesto serve para fazer: testar a ponte sem
+        fechar o jogo. Um aperto que não troca nada é um teste que quem usa não
         consegue fazer.
 
         MORDE qualquer `return` antecipado em `_ciclar_ponte` antes do
@@ -159,7 +159,7 @@ class TestOPuloSeAnuncia:
     async def test_a_lightbar_pisca_a_cor_do_degrau_pulado(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ela tem de saber que o Nativo ficou para o lançamento."""
+        """Quem usa tem de saber que o Nativo ficou para o lançamento."""
         pintadas: list[tuple[int, int, int]] = []
 
         async def _espiao(daemon: Any, cores: list[Any]) -> None:
@@ -172,10 +172,10 @@ class TestOPuloSeAnuncia:
         await _apertar(d, 2)
 
         assert hk.CORES_DO_MODO[hk.MODO_NATIVO] in pintadas, (
-            "o degrau `native` foi pulado sem ela ficar sabendo"
+            "o degrau `native` foi pulado sem aviso a quem usa"
         )
         assert hk.CORES_DO_MODO[hk.MODO_STEAM_INPUT] in pintadas, (
-            "o degrau `steam_input` foi pulado sem ela ficar sabendo"
+            "o degrau `steam_input` foi pulado sem aviso a quem usa"
         )
 
     @pytest.mark.asyncio

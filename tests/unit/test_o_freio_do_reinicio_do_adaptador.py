@@ -164,7 +164,7 @@ def test_o_freio_solta_quando_o_laco_some_e_volta_a_valer_depois(tmp_path: Path)
 
 
 def test_a_porta_vazia_solta_o_freio_sem_dizer_que_o_adaptador_voltou(tmp_path: Path) -> None:
-    """Ela tirou o adaptador e ainda não o pôs de volta: a porta está VAZIA."""
+    """Quem usa tirou o adaptador e ainda não o pôs de volta: a porta está VAZIA."""
     agora = int(time.time())
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": PORTA})
     _carimbar(tmp_path, anterior=agora - 901, seguidos=3)

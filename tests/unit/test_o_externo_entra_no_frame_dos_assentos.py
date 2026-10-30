@@ -94,7 +94,7 @@ def test_o_endereco_da_aba08_mora_dentro_do_acordeao() -> None:
 
 
 def test_a_vaga_e_transparente_nas_duas_abas() -> None:
-    """`display:contents` — sem ela os cartões caem TODOS numa célula só."""
+    """`display:contents` — sem isso os cartões caem TODOS numa célula só."""
     assert (".quadro.estica .ext-vaga{display:contents}"
             in onde.pagina("01-jogar.html", publicado=True).read_text())
     assert (".gc .ext-vaga{display:contents}"
@@ -199,8 +199,8 @@ def test_a_marca_nao_e_digitada_em_lugar_nenhum_da_interface() -> None:
     diferença ou reprova a página inteira sobre o texto certo.
 
     A RÉGUA MEDE O QUE VAI À TELA, e não o texto dos arquivos — e as duas
-    primeiras voltas dela reprovaram sobre PROSA: o comentário de `aba01.py` que
-    explica a sprint cita a queixa de uso (*"…e um 8BitDo…"*), e a legenda de
+    primeiras voltas da régua reprovaram sobre PROSA: o comentário de `aba01.py` que
+    explica a sprint cita a queixa que nomeia um 8BitDo, e a legenda de
     `aba08.py` diz, com todas as letras, que Nintendo e 8BitDo são decisão de produto.
     É a armadilha nomeada no `COMO-OLHAR-A-TELA.md` — *régua que casa um token
     em qualquer lugar do texto, em vez do campo que o significa*. Citação não é

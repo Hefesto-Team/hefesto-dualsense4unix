@@ -50,7 +50,7 @@ def _ferramenta(compat: Path, pasta: str, nome: str | None = None) -> Path:
 
 @pytest.fixture
 def steam(tmp_path: Path) -> Path:
-    """A casa de mentira com uma Steam nativa e cinco GE, como a dela em 01/10."""
+    """A casa de mentira com uma Steam nativa e cinco GE, como a da máquina de teste em 01/10."""
     casa = tmp_path / "casa"
     raiz = casa / ".steam" / "steam"
     (raiz / "config").mkdir(parents=True)
@@ -86,7 +86,7 @@ def test_a_versao_de_um_jogo_fica(steam: Path) -> None:
 
 
 def test_a_chave_global_conta(steam: Path) -> None:
-    """A chave `"0"` é o Proton padrão da Steam: a versão dela fica."""
+    """A chave `"0"` é o Proton padrão da Steam: a versão do padrão fica."""
     _mapa(steam, {"0": "GE-Proton10-34", "1": PINO})
     assert "GE-Proton10-34" not in _nomes(pp.versoes_que_sobram(steam, pino=PINO))
 
@@ -170,7 +170,7 @@ def test_nada_fora_de_compatibilitytools_d_e_tocado(steam: Path) -> None:
 
 
 def test_a_steam_aberta_nao_apaga_nada(steam: Path) -> None:
-    """A Steam regrava o que viu ao sair: com ela aberta, ou com jogo aberto, tudo fica."""
+    """A Steam regrava o que viu ao sair: com a Steam aberta, ou com jogo aberto, tudo fica."""
     _mapa(steam, {"1": PINO})
     sobras = pp.versoes_que_sobram(steam, pino=PINO)
     for barra, frase in (("steam_aberta", "a Steam está aberta"),
@@ -194,7 +194,7 @@ def test_sem_dizer_nada_a_porta_da_steam_e_a_de_verdade(
 
 
 def test_a_pasta_em_uso_fica(steam: Path) -> None:
-    """A fila da Steam roda de dentro da pasta logo depois de ela abrir."""
+    """A fila da Steam roda de dentro da pasta logo depois de a Steam abrir."""
     _mapa(steam, {"1": PINO})
     sobras = pp.versoes_que_sobram(steam, pino=PINO)
     saiu, recusadas = pp.desinstalar_as_que_sobram(

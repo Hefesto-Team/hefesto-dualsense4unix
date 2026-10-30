@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA D2 NOS GATILHOS: o que ela aplicou no clique VAI PARA O DISCO.
+"""A RÉGUA DA D2 NOS GATILHOS: o que se aplicou no clique VAI PARA O DISCO.
 
 O usuário pediu, com estas palavras, em 05/09/2026:
 
@@ -26,21 +26,21 @@ AS SETE COISAS QUE ESTA RÉGUA COBRA
 ------------------------------------
 1. **O clique grava.** `modo` e `imersao` põem o gatilho no override daquele
    controle, no perfil ativo.
-2. **SÓ O LADO QUE ELA TOCOU.** Clicar no L2 não pode escrever opinião sobre o
+2. **SÓ O LADO TOCADO.** Clicar no L2 não pode escrever opinião sobre o
    R2: `profiles/manager._controllers_to_specs` lê `model_fields_set` lado a
    lado, e um `Off` implícito virado explícito SILENCIA o gatilho direito que a
    seção global do perfil dava àquele controle.
 3. **O `reenviar` NÃO grava.** Ele reenvia o que está na tela, e a tela pode
    estar mostrando o global — persistir criaria uma opinião por-controle que
-   ela nunca deu.
+   quem usa nunca deu.
 4. **Nada mudou, nada grava.** Regravar o perfil idêntico troca a data do
    arquivo e faz o daemon reaplicá-lo.
 5. **O aparelho recusou, o disco não guarda.** A guarda é a mesma do rascunho.
 6. **Sem perfil ativo não grava e NÃO levanta** — o efeito foi para o aparelho e
-   o rascunho o segura; dizer "não deu" sobre um efeito que ela sente na mão
+   o rascunho o segura; dizer "não deu" sobre um efeito que se sente na mão
    seria a tela mentindo do lado caro.
 7. **QUANDO MEIO ATO DEU CERTO, A FRASE DIZ AS DUAS METADES** — 06/09/2026, a
-   decisão **D-17** dela (*"as duas abas falam"*),
+   decisão **D-17** (*"as duas abas falam"*),
    a sprint `AS-DUAS-ABAS-FALAM-01`. Perfil NOMEADO
    que não abre não cala mais: o recibo sai *«… aplicado · o efeito FOI para o
    aparelho, mas não consegui ABRIR o perfil …»*, pelo canal do `recado` verde
@@ -50,7 +50,7 @@ AS SETE COISAS QUE ESTA RÉGUA COBRA
 A MORDIDA: apague o `_guardar_no_perfil(...)` de `_aplicar` (ou troque o
 `guardar` para `False`) — o caso 1 reprova dizendo que o clique não chegou ao
 disco. Densifique os dois lados em `_com_os_gatilhos` (o que o código fazia até
-05/09) — o caso 2 reprova dizendo que o R2 ganhou dono sem ela pedir. Devolva o
+05/09) — o caso 2 reprova dizendo que o R2 ganhou dono sem ninguém pedir. Devolva o
 `except Exception: return` de `_guardar_no_perfil` (o que o código fazia até
 06/09) — o caso 7 reprova nos QUATRO lugares em que ele fala.
 """
@@ -209,13 +209,13 @@ def test_o_clique_num_lado_nao_da_dono_ao_outro(pac, disco) -> None:
 
     lados = _triggers_gravados(gravados[0]).model_fields_set
     assert lados == {"left"}, (
-        f"o clique no L2 escreveu {sorted(lados)} no override. O lado que ela "
-        f"não tocou tem de continuar SEM OPINIÃO — escrito, ele vence a seção "
+        f"o clique no L2 escreveu {sorted(lados)} no override. O lado que não "
+        f"foi tocado tem de continuar SEM OPINIÃO — escrito, ele vence a seção "
         f"global do perfil e silencia o gatilho direito só neste controle.")
 
 
 def test_o_segundo_lado_soma_e_nao_substitui(pac, disco) -> None:
-    """Clicar nos dois lados deixa os DOIS no disco — a soma é o que ela espera."""
+    """Clicar nos dois lados deixa os DOIS no disco — a soma é o esperado."""
     _, gravados = disco
     ctx = _ctx(pac)
     _gesto(pac, "modo")(ctx, {"uniq": UNIQ, "lado": "e", "valor": "Rigid"},
@@ -241,7 +241,7 @@ def test_a_secao_global_do_perfil_fica_intacta(pac, disco) -> None:
 
     assert gravados[0].triggers.left == TriggersConfig().left, (
         "o clique mexeu na seção GLOBAL do perfil — o gatilho do P1 mudaria "
-        "quando ela clicasse na coluna do P2")
+        "com um clique na coluna do P2")
 
 
 def test_nada_mudou_nada_grava(pac, disco) -> None:
@@ -305,7 +305,7 @@ def test_perfil_que_nao_abre_aplica_grava_nada_e_nao_levanta(
     assert gravados == [], "gravou num perfil que não abriu"
     assert saida and "recado" in saida, (
         "o gesto virou erro porque o perfil ativo não abriu — o efeito FOI "
-        "para o aparelho e ela está sentindo na mão")
+        "para o aparelho e já se sente na mão")
 
 
 def test_a_falha_de_abrir_o_perfil_diz_as_duas_metades(
@@ -316,11 +316,11 @@ def test_a_falha_de_abrir_o_perfil_diz_as_duas_metades(
     abas falam**. O que este caso mede é o *como*:
 
     1. **as duas metades** — `aparelho` e `perfil` na mesma frase. Só a primeira
-       esconderia o defeito; só a segunda mandaria ela procurar no aparelho um
+       esconderia o defeito; só a segunda mandaria procurar no aparelho um
        efeito que ESTÁ lá;
     2. **o nome do perfil** — sem ele a frase não diz o que consertar, e é
-       justamente o nome que separa "apagado" de "renomeado" na bancada;
-    3. **o recibo vem PRIMEIRO** — a frase abre pelo que ela FEZ. Invertida, o
+       justamente o nome que separa "apagado" de "renomeado" no ensaio;
+    3. **o recibo vem PRIMEIRO** — a frase abre pelo que foi FEITO. Invertida, o
        cartão começa por uma queixa sobre um gesto que funcionou;
     4. **o canal é o verde** — `{"recado": …}`, nunca um `RuntimeError`. O
        laranja de 30 s é o da RECUSA, e este gesto não recusou nada.
@@ -343,7 +343,7 @@ def test_a_falha_de_abrir_o_perfil_diz_as_duas_metades(
     assert gravados == [], "gravou num perfil que não abriu"
     assert isinstance(saida, dict), (
         f"o gesto devolveu {saida!r} — a falha de ABRIR o perfil virou recusa, "
-        f"e o cartão pintaria laranja sobre um efeito que ela sente na mão")
+        f"e o cartão pintaria laranja sobre um efeito que já se sente na mão")
     frase = str(saida["recado"])
 
     baixo = frase.lower()
@@ -351,10 +351,10 @@ def test_a_falha_de_abrir_o_perfil_diz_as_duas_metades(
         f"a frase não diz as DUAS metades — «o aparelho recebeu · o perfil não "
         f"guardou» é o contrato da D-17, e esta diz: {frase!r}")
     assert SUMIU in frase, (
-        f"a frase não nomeia o perfil que não abriu, e sem o nome ela não diz o "
+        f"a frase não nomeia o perfil que não abriu, e sem o nome não se diz o "
         f"que consertar: {frase!r}")
     assert frase.startswith(_assunto("left", "Rigid")), (
-        f"a frase não abre pelo que ela FEZ — a segunda metade vem DEPOIS do "
+        f"a frase não abre pelo que foi FEITO — a segunda metade vem DEPOIS do "
         f"recibo, nunca antes: {frase!r}")
     assert _E_TAMBEM in frase, (
         f"as duas metades vieram coladas sem o separador desta aba: {frase!r}")
@@ -371,7 +371,7 @@ def test_os_gestos_que_gravam_carregam_a_frase(
 
     Uma cura escrita dentro de um gesto passa em METADE desta régua — e é
     exatamente o defeito que esta casa pagou duas vezes em 05/09: *"quando a
-    cura conhece a causa, ela cobre TODOS os chamadores"*. A espera pela página
+    cura conhece a causa, a cura cobre TODOS os chamadores"*. A espera pela página
     nasceu aplicada a um dos quatro chamadores do piloto, e a frente da aba 10
     teve de escrever um driver próprio por causa disso.
 
@@ -391,7 +391,7 @@ def test_os_gestos_que_gravam_carregam_a_frase(
     baixo = str(saida["recado"]).lower()
     assert "aparelho" in baixo and "perfil" in baixo, (
         f"o gesto {gesto_!r} calou a segunda metade: {saida['recado']!r}. A soma "
-        f"é do `_aplicar` — se ela vive dentro de um gesto, o outro continua "
+        f"é do `_aplicar` — se a soma vive dentro de um gesto, o outro continua "
         f"mudo.")
     assert SUMIU in str(saida["recado"]), (
         f"o gesto {gesto_!r} não nomeou o perfil: {saida['recado']!r}")
@@ -418,7 +418,7 @@ def test_a_falha_de_disco_diz_as_duas_metades(pac, monkeypatch) -> None:
     frase = str(erro.value).lower()
     assert "aparelho" in frase and "perfil" in frase, frase
     assert isinstance(erro.value.__cause__, OSError), (
-        "a razão de baixo saiu da frase E da cadeia — assim ela some de vez, e "
+        "a razão de baixo saiu da frase E da cadeia — assim a razão some de vez, e "
         "quem depura fica sem o que aconteceu")
     assert "disco cheio" not in frase, (
-        f"o texto cru do OSError voltou ao cartão dela: {frase}")
+        f"o texto cru do OSError voltou ao cartão: {frase}")

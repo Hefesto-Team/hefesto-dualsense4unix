@@ -140,7 +140,7 @@ def test_o_boot_abre_na_escolha_do_usuario(
     _boot(controle, store)
 
     assert store.active_profile == esperado, (
-        f"o boot abriu em {store.active_profile!r}, e a escolha dela era {esperado!r}")
+        f"o boot abriu em {store.active_profile!r}, e a escolha feita era {esperado!r}")
     assert (pelo_pad.name if pelo_pad else None) == esperado
     if esperado is None:
         assert store.active_profile != FREESTYLE
@@ -182,7 +182,7 @@ def _ticar(vigia: AutoSwitcher, info: dict[str, str], de: float, ate: float) -> 
 def test_sair_do_jogo_fica_no_jogo_ate_o_usuario_mudar() -> None:
     """A escolha A, o jogo B pela janela, e o terminal: o B fica (OS-QUATRO-EM-HARMONIA-01).
 
-    A regra, 14/10/2026: o perfil fica no último jogo até ela mudar ou
+    A regra, 14/10/2026: o perfil fica no último jogo até quem usa mudar ou
     outro jogo iniciar. Mudar volta a valer na hora.
     """
     _o_disco()
@@ -201,7 +201,7 @@ def test_sair_do_jogo_fica_no_jogo_ate_o_usuario_mudar() -> None:
     assert store.active_profile == JOGO, "o terminal tirou o perfil do último jogo"
     gerente.activate(AVATAR, origin="manual")
     _ticar(vigia, TERMINAL, inicio + 60.5, inicio + 75.0)
-    assert store.active_profile == AVATAR, "a mudança dela não valeu"
+    assert store.active_profile == AVATAR, "a mudança feita não valeu"
     assert FREESTYLE not in pedidos, "o autoswitch pediu o Freestyle desligado"
 
 
@@ -242,7 +242,7 @@ def test_a_troca_a_mao_nao_cai_por_janela_nem_por_tempo(
 
 
 def test_o_jogo_do_usuario_fechando_solta_a_trava_e_diz(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com o jogo em cena, ela escolhe A à mão; o jogo fecha, e a trava solta com a linha."""
+    """Com o jogo em cena, quem usa escolhe A à mão; o jogo fecha, e a trava solta com a linha."""
     import time
 
     relogio = [1000.0]
@@ -289,7 +289,7 @@ def test_o_lancamento_de_jogo_com_perfil_solta_a_trava_e_diz() -> None:
     assert store.active_profile == JOGO
     assert _soltas(linhas) == ["lancamento_de_jogo_com_perfil"]
     assert not store.manual_profile_lock_active(time.monotonic())
-    assert session.load_last_profile() == AVATAR, "o lançamento virou escolha dela"
+    assert session.load_last_profile() == AVATAR, "o lançamento virou escolha de quem usa"
 
 
 def test_o_jogo_que_fecha_solta_a_trava_no_tique_e_reabrir_volta_ao_perfil_dele(
@@ -332,7 +332,7 @@ def test_o_jogo_que_fecha_solta_a_trava_no_tique_e_reabrir_volta_ao_perfil_dele(
 def test_o_perfil_de_jogo_que_a_mao_tirou_sem_o_jogo_aberto_nao_segura_nada(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A escolha era um perfil de jogo (o Avatar) sem o jogo aberto, e ela ativa outro."""
+    """A escolha era um perfil de jogo (o Avatar) sem o jogo aberto, e quem usa ativa outro."""
     import time
 
     relogio = [1000.0]
@@ -472,11 +472,11 @@ def test_desligar_com_o_jogo_vivo_devolve_o_jogo_e_a_escolha_fica(
 
     assert resposta["active_profile"] == JOGO
     assert (store.active_profile, store.freestyle_ligado) == (JOGO, False)
-    assert session.load_last_profile() == AVATAR, "o jogo vivo virou a escolha dela"
+    assert session.load_last_profile() == AVATAR, "o jogo vivo virou a escolha de quem usa"
 
 
 def test_a_maquina_nova_nasce_acesa_uma_vez_so() -> None:
-    """Sem sessão e sem flag: o botão nasce aceso; apagado por ela, fica apagado."""
+    """Sem sessão e sem flag: o botão nasce aceso; apagado à mão, fica apagado."""
     assert session.migrar_a_escolha_do_usuario() == "maquina_nova_nasce_acesa"
     assert session.load_freestyle_ligado() is True
 
