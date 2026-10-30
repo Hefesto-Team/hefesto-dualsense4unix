@@ -67,7 +67,7 @@ class StateStore:
         `ControllerState` para sempre — sem escrita nenhuma na queda — e a
         bateria/transporte de um controle que já saiu da mesa continuavam
         respondendo como se ele estivesse lá (medido: `connected: true,
-        transport: "bt", battery_pct: 75` com ZERO controles na bancada,
+        transport: "bt", battery_pct: 75` com ZERO controles no ensaio,
         ONDA0-Z5 §2.2-2.3). `None` aqui é o "não sei" honesto — diferente de
         escrever um `ControllerState` com campos obrigatórios (`battery_pct`,
         `transport`) sem valor honesto para "sem controle" (§3 da sprint).

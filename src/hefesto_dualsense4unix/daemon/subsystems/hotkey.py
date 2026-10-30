@@ -101,7 +101,7 @@ def _a_metade_da_maquina(cfg: Any, escolha: str | None, do_computador: Any = Non
 
 
 def _a_acao_da_maquina(da_maquina: str, comando: Any, **ato: Any) -> None:
-    """A metade do PS que fala com o sistema: o ⑥ da tabela, ou o programa dela."""
+    """A metade do PS que fala com o sistema: o ⑥ da tabela, ou o programa do usuário."""
     appid = _jogo_aberto_agora()
     if appid is not None:
         logger.info("hotkey_ps_solo_skip_jogo_vivo", appid=appid, sinal="wrapper")
@@ -378,16 +378,16 @@ def avisar_troca_de_modo(daemon: DaemonProtocol) -> str | None:
     controles dualsense conectados, seja via bt, seja via cabo. seja com steam
     aberta ou não"* — e *"o lightbar de todos pisca 3 vezes rápido"*.
 
-    **Por que é level-triggered, e não um callback do gesto.** Ela troca de
+    **Por que é level-triggered, e não um callback do gesto.** O usuário troca de
     modo por quatro portas: o gesto no controle, a janela, a CLI/IPC e o
     autoswitch por jogo. Pendurar o aviso no callback do gesto faria a barra
-    dizer a verdade só numa delas — e o combinado é que o controle diga o modo,
+    dizer a verdade só numa das duas — e o combinado é que o controle diga o modo,
     não que ele conte quem mexeu. Comparando o estado VIVO com o último modo
     ANUNCIADO, toda troca acende, tenha vindo de onde tiver vindo. É a mesma
     disciplina do `ponte_atual`: acreditar no vivo, nunca no papel.
 
     **O boot não é troca.** Na primeira passada o modo só é memorizado — um
-    daemon que sobe já em máscara DualSense não pode piscar como se ela tivesse
+    daemon que sobe já em máscara DualSense não pode piscar como se o usuário tivesse
     acabado de mexer em alguma coisa.
 
     **Só carimba o que ANUNCIOU.** Se a piscada não saiu (backend sem a rota,
@@ -465,7 +465,7 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
     com `origin="manual"`. O que mudou é que agora alguém ESCUTA:
 
     - **para o laço da escada, este gesto significa "o degrau de pé não
-      funcionou"**. É o único sinal que a escada tem, e é dela que ela
+      funcionou"**. É o único sinal que a escada tem, e é deste gesto que a escada
       aprende (`ponte_tentativa.avancar_por_gesto`);
     - com uma tentativa em curso, o ALVO passa a ser o próximo degrau da
       `ESCADA` em vez do próximo item do `CICLO_DE_PONTES`. A diferença é o
@@ -479,12 +479,12 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
     A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026). O gesto sozinho
     continua não confirmando nada — ele é o contrário de uma confirmação. O que
     mudou é que ele deixa RASTRO: a máscara que ficou de pé é anotada
-    (`ponte_tentativa.gesto_deixou_de_pe`), e se ela parar de apertar e
+    (`ponte_tentativa.gesto_deixou_de_pe`), e se o usuário parar de apertar e
     continuar jogando, o tique de 1 Hz grava essa máscara no perfil do jogo —
     carimbo `POR_GESTO` **e** `mode.gamepad_flavor`, porque num perfil que opina
     o carimbo sozinho não muda o próximo lançamento. Sem isso, o gesto era um
-    trabalho que ela refazia a cada abertura: 24 apertos em 7 dias, medidos no
-    journal, com 23 perfis pedindo `dualsense` e ela jogando em `xbox`.
+    trabalho que o usuário refazia a cada abertura: 24 apertos em 7 dias, medidos no
+    journal, com 23 perfis pedindo `dualsense` e o usuário jogando em `xbox`.
 
     NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. O gesto troca o CAMINHO, e não
     a máscara, e grava no perfil ATIVO logo que o aparelho concorda, sem esperar
@@ -519,7 +519,7 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
 
     A cura é no GESTO e em nada mais: o degrau que não se alcança ao vivo é
     pulado (`ponte_tentativa.avancar_por_gesto`), e a `ESCADA`, o `como_subir`
-    e o `comecar` do lançamento ficaram intactos. O que ela usa o gesto para
+    e o `comecar` do lançamento ficaram intactos. O que a escada usa o gesto para
     fazer é *"testar a bridge sem fechar o jogo"* — e um degrau que exige
     fechar o jogo não pertence a ele.
 
@@ -714,7 +714,7 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
 def gestos_dos_acessorios_valem(daemon: Any) -> Callable[[str | None], Any]:
     """``valem(de)`` dos gestos do PS: as opções da modificação de acessórios, ou None.
 
-    Valem com o estado dela no barramento (``acessorios.estado``) e algum aparelho nele. No Modo
+    Valem com o estado no barramento (``acessorios.estado``) e algum aparelho nele. No Modo
     Nativo o tique congela antes dos atalhos, então só a opção «Gestos no Modo Nativo» os deixa.
     """
     from hefesto_dualsense4unix.core.events import EventTopic
@@ -816,7 +816,7 @@ def start_mic_do_jogo(daemon: DaemonProtocol) -> None:
     ``mic_button_toggles_system`` diz «o botão é nosso», e o pedido do jogo não
     é o botão. O mudo que o jogo pede chega ao controle do jogador com o
     interruptor ligado ou desligado, como a luz (``luz_do_mic``), e a borda do
-    plástico segue publicada nos dois casos: é ela que o laço da luz lê para
+    plástico segue publicada nos dois casos: é a borda que o laço da luz lê para
     saber que O usuário mandou depois do jogo (``luz_do_mic.a_pessoa_mandou``). O que
     o interruptor segura é a eleição, no :func:`mic_button_loop`.
     """
@@ -949,10 +949,10 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
 
     MIC-DA-MESA-ELEICAO-01 (01/09/2026) — ESTE LAÇO MUDOU DE DONO E DE EIXO.
 
-    Decisão de produto, com as palavras do usuário: *"Se eu apertar o botão físico mic do
-    controle e ele acender, significa que eu quero que o canal de áudio do
-    microfone seja o controle. O botão de silenciar é confuso e mexendo com
-    ambos os canais de áudio é péssimo."*
+    Decisão de produto: apertar o botão físico do microfone e vê-lo acender
+    significa querer o canal de áudio do microfone no controle. Um botão de
+    silenciar que mexe nos dois canais de áudio é confuso e
+    ruim.
 
     O QUE SAIU, e as três medições que mandaram sair:
 
@@ -961,18 +961,18 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
         quem quer que seja o padrão. Isso é o oposto do gesto do usuário, que é
         *escolher* um canal, não silenciar dois.
 
-    (b) **A guarda `fonte_padrao_e_o_controle`.** Ela pergunta por SUBSTRING
+    (b) **A guarda `fonte_padrao_e_o_controle`.** A guarda pergunta por SUBSTRING
         "dualsense" (`integrations/audio_control.py`), logo responde *"a fonte
         padrão é ALGUM DualSense"* e nunca *"é ESTE"* — numa mesa de quatro os
-        quatro respondem `True`. E ela está escrita **de costas para o gesto
+        quatro respondem `True`. E está escrita **de costas para o gesto
         novo**: só deixava agir quando a fonte padrão JÁ era o controle, que é
         exatamente o caso em que eleger não teria efeito nenhum.
-        O que ela protegia (BT-E-VPAD-01: o botão do controle não pode mutar
+        O que a guarda protegia (BT-E-VPAD-01: o botão do controle não pode mutar
         aparelho de terceiro) continua protegido **por construção** — o gesto
         novo não muta nada, ele elege.
 
     (c) **O `BUTTON_DOWN`.** O botão do mic não chega lá: o `hid-playstation`
-        CONSOME a borda e ela não vira evdev. E o `BUTTON_DOWN` não carrega
+        CONSOME a borda e a borda não vira evdev. E o `BUTTON_DOWN` não carrega
         `uniq`, então o Jogador 2 apertando elegeria o Jogador 1. A borda com
         endereço vem de `daemon/subsystems/mic_da_mesa.py`.
 
@@ -1057,7 +1057,7 @@ def _relogio() -> float:
 
 @dataclass(frozen=True)
 class MetadeDoAto:
-    """Uma das duas metades do ato, e o motivo quando ela não aconteceu."""
+    """Uma das duas metades do ato, e o motivo quando a metade não aconteceu."""
 
     feita: bool
     motivo: str = ""
@@ -1067,19 +1067,19 @@ class MetadeDoAto:
 class AtoDoMicrofone:
     """O ato inteiro: o canal no sistema **e** o mudo no firmware.
 
-    O CONCEITO É DO USUÁRIO, e ele derrubou a pergunta anterior. O microfone foi levado
-    como *"duas camadas se contradizem"* e foram oferecidos três arranjos
-    que GUARDAVAM a contradição; ela recusou os três:
+    O CONCEITO É DE PRODUTO, e derrubou a pergunta anterior. O microfone foi levado
+    como «duas camadas se contradizem» e foram oferecidos três arranjos
+    que GUARDAVAM a contradição; os três foram recusados:
 
-        *"tá errado o conceito da coisa. o botão é pra ligar o microfone e ele
-        ser ouvido no canal específico dele."*
+        o botão serve para ligar o microfone, e o microfone ser ouvido no
+        canal específico dele.
 
-    E ao meio-dia de 04/09 acrescentou as duas regras que faltavam, com todas
+    E ao meio-dia de 04/09 vieram as duas regras que faltavam, com todas
     as letras:
 
-        *"o botão fisico do mic se ligado no  # (noqa-acento: citação)
-        microfone ele fica ligado tambem.  # (noqa-acento: citação)
-        indepente se nativo ou virtual"*  # (noqa-acento: citação)
+        com o botão físico ligado, o microfone fica
+        ligado também,
+        independente de o modo ser nativo ou virtual.
     Não são duas camadas com duas verdades: é UM ato, e ele só está feito
     quando as duas metades estão feitas. Por isso este tipo carrega as duas
     separadas — para a frase de recusa poder dizer QUAL faltou, que é o que a
@@ -1205,7 +1205,7 @@ async def _metade_do_canal(
     microfone do controle no ar seguia só o estado da source. Como o ato ELEGE
     o canal como fonte padrão, e eleger não põe nó nenhum em ``RUNNING``, a
     source ficava ``SUSPENDED`` e o `0x32` saía DESLIGADO: medido no journal
-    da bancada em 07/09/2026, quase três minutos de botão apertado com a ponte em
+    do ensaio em 07/09/2026, quase três minutos de botão apertado com a ponte em
     `bt_mic_pedido ligar=False`. O ato respondia `feito=True` sobre um
     microfone mudo no ar.
 
@@ -1213,8 +1213,8 @@ async def _metade_do_canal(
     os DOIS chamadores de `ligar_o_microfone` — o 🎙 da tela e a borda do botão
     do plástico. Costurar isto no `ipc_handlers` deixaria o plástico de fora,
     com a suíte verde, e a regra de produto é explícita:
-    *"o botão fisico do mic se ligado no microfone  # (noqa-acento: citação literal)
-    ele fica ligado tambem. indepente se nativo ou virtual"*.  # (noqa-acento: citação literal)
+    com o botão físico ligado, o microfone fica ligado também,
+    independente de o modo ser nativo ou virtual.
 
     **ANTES da eleição** porque ligar pode PRECISAR da ponte subir: com a
     palavra já guardada, a ponte que `_canal_no_ar` faz nascer já recebe o
@@ -1238,8 +1238,8 @@ async def _metade_do_canal(
 
     **DESFAZER É DEVOLVER O QUE HAVIA, não apagar.** `palavra_no_ar` é lido
     ANTES do ato exatamente para isso: um ato que não aconteceu não muda nada.
-    Apagar sempre tiraria do ar o microfone que ela já tinha posto lá num ato
-    ANTERIOR que deu certo; dizer `False` a calaria sem ela ter pedido.
+    Apagar sempre tiraria do ar o microfone que o usuário já tinha posto lá num ato
+    ANTERIOR que deu certo; dizer `False` a calaria sem pedido.
 
     **E SÓ O `ligado=True` SE DESFAZ.** O `False` é *"me cale"* e não depende
     de eleição nenhuma: a recusa de quem não elegeu diz, com todas as letras,
@@ -1249,10 +1249,10 @@ async def _metade_do_canal(
     defeito de privacidade com o sinal trocado.
 
     **NO CABO A PALAVRA CALA O NÓ, NÃO A PLACA**: o `BtMicSubsystem` escreve o
-    mudo dela no `hefesto_mic_*` de cada canal de pé, no cabo e no rádio
+    mudo do usuário no `hefesto_mic_*` de cada canal de pé, no cabo e no rádio
     (`_dizer_o_mudo_aos_canais`); quem grava a placa física do controle não
     passa pelo nó, e o bit do firmware (`_metade_do_firmware`) é o que a cala.
-    Uma regra só no ato, em vez de um `if` de transporte no caminho dela.
+    Uma regra só no ato, em vez de um `if` de transporte no caminho do ato.
     """
     antes = palavra_no_ar(uniq)
     dizer_no_ar(uniq, ligado)
@@ -1295,9 +1295,9 @@ async def _metade_do_firmware(
     **É IDEMPOTENTE, E ISSO NÃO É ZELO — É A DECISÃO DE PRODUTO.** Escrever o byte
     toma a posse dele do `hid-playstation`, e enquanto a posse for nossa o
     botão do plástico **deixa de valer** (`_handle_mic_set`: *"é uma ORDEM, e
-    enquanto ela vigorar o botão físico não manda mais"*). Vindo do plástico,
+    enquanto a ordem vigorar o botão físico não manda mais"*). Vindo do plástico,
     o kernel JÁ pôs o bit no valor certo antes de a borda chegar aqui — então
-    não há o que escrever, e não escrever é o que mantém o botão dela vivo.
+    não há o que escrever, e não escrever é o que mantém o botão vivo.
     Só o gesto de TELA encontra o bit divergente, e só ele escreve.
 
     **E A POSSE VOLTA AO KERNEL depois de o valor ir ao fio**, pela mesma
@@ -1307,7 +1307,7 @@ async def _metade_do_firmware(
     o `report_thread` — devolver na linha seguinte apagaria o bit de validação
     antes de o report sair, e o valor nunca aconteceria.
 
-    O QUE ELA DEVOLVE quando o aparelho não confirma: `feita=True` com o
+    O QUE O ATO DEVOLVE quando o aparelho não confirma: `feita=True` com o
     pedido ACEITO pelo backend é o que se sabe AGORA — a confirmação chega
     numa volta do report, e a ponte da GUI tem teto de 250 ms. Quem diz a verdade conferida
     é o `state_full`, e é de lá que o selo composto se pinta. O que NÃO se faz
@@ -1382,7 +1382,7 @@ def _mutar(setter: Any, muted: bool | None, uniq: str) -> bool:
     **ISSO ACONTECEU AQUI, em 04/09/2026, e o teste estava VERDE.** O dublê da
     régua tinha `async def _run_blocking(self, fn, *a, **kw)` — mais frouxo que
     o daemon real —, e quem revelou foi o APARELHO: o ato respondeu "não
-    conseguiu escrever" na bancada, com o backend intacto. É a mesma família da
+    conseguiu escrever" no ensaio, com o backend intacto. É a mesma família da
     máscara que nunca gravou um byte (`p.chamar("gamepad.mask.set", {…})` com
     o dicionário virando o `timeout` posicional).
 
@@ -1405,7 +1405,7 @@ def _agendar_a_devolucao_da_posse(
 
     **NÃO devolve quando a confirmação não vem**, e isso é deliberado: em Modo
     Nativo o `report_thread` não escreve nada (contrato de zero escrita,
-    FEAT-NATIVE-OUTPUT-MUTE-01, medido na bancada em 04/09 — `mic.set`
+    FEAT-NATIVE-OUTPUT-MUTE-01, medido no ensaio em 04/09 — `mic.set`
     respondeu `ok` com o `mic_mudo` parado). Devolver ali apagaria o bit de
     validação e o pedido morreria calado. Ele fica represado, a posse
     fica nossa, e o `state_full` publica a discordância — que é o que o selo
@@ -1594,7 +1594,7 @@ def _eleitor(daemon: DaemonProtocol) -> Any:
     Se cada borda criasse um eleitor novo, a memória do "anterior" seria a
     fonte que a borda passada acabou de eleger — e numa mesa em turnos o
     caminho de volta devolveria o microfone ao controle do jogador anterior em
-    vez de ao microfone real dela.
+    vez de ao microfone real do usuário.
 
     O import de `EleitorDeMicrofone` era preguiçoso e deixou de comprar
     qualquer coisa em 02/09/2026, quando `recusa_de_quem_nao_elegeu` — do MESMO
@@ -1689,7 +1689,7 @@ class MicrofonesNoAr:
         `None` é *"não sei"* e não conta para nada — nem para sair, nem para
         zerar a conta de quem já faltou uma vez.
 
-        **SÓ SOME O CANAL QUE JÁ SUBIU — 22/09/2026.** Medido no journal da bancada,
+        **SÓ SOME O CANAL QUE JÁ SUBIU — 22/09/2026.** Medido no journal do ensaio,
         com dois DualSense no rádio: o P2 nasceu no ar às 13:51:53, este laço
         contou duas faltas e o tirou às 13:51:56, e o canal dele só foi
         publicado às 13:52:01. O nascimento (`nascer_no_ar`) põe o controle
@@ -1739,7 +1739,7 @@ def _o_firmware_esta_mudo(daemon: DaemonProtocol, uniq: str) -> bool:
 
 
 async def _o_controle_pede_silencio(daemon: DaemonProtocol, uniq: str) -> bool:
-    """Ela calou ESTE microfone? Pergunta ao dono da resposta."""
+    """O usuário calou ESTE microfone? Pergunta ao dono da resposta."""
     controller = getattr(daemon, "controller", None)
     if controller is None:
         return False
@@ -1766,7 +1766,7 @@ def _fila_do_nascimento(daemon: Any) -> asyncio.Lock:
 
 
 async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O microfone deste controle NASCE NO AR, sem gesto nenhum dela."""
+    """O microfone deste controle NASCE NO AR, sem gesto nenhum."""
     if not uniq or not norm_mac(str(uniq)):
         logger.debug("mic_nascimento_sem_endereco", uniq=uniq)
         return False
@@ -1794,7 +1794,7 @@ def _microfone_que_ja_e_da_maquina() -> str | None:
     set-default-source` — que vira o default CONFIGURADO do WirePlumber e vence
     a prioridade 1500 do drop-in 51. Numa máquina com headset, o primeiro
     DualSense de cada sessão do daemon tomava o microfone da pessoa, o contrário
-    do que o passo 10/11 do `install.sh` promete. Na bancada o único
+    do que o passo 10/11 do `install.sh` promete. No ensaio o único
     microfone com porta usável é o do controle, e por isso nunca se viu.
 
     **DUAS PERGUNTAS, E AS DUAS TÊM DONO.** *"O controle como padrão foi
@@ -1809,8 +1809,8 @@ def _microfone_que_ja_e_da_maquina() -> str | None:
     **E NÃO É A PERGUNTA DO INSTALL** (`--melhor-fonte-elegivel`), que foi a
     primeira escrita desta cura: aquela lista deixa o canal por controle
     (`hefesto_mic_<marca>`) entrar de propósito (§D.2 da MIC-PADRAO-NO-CABO-01),
-    e com ela o canal do primeiro controle passaria por headset. Lido no
-    código, não medido: na bancada, com os canais do rádio de pé desde a
+    e com o headset o canal do primeiro controle passaria por headset. Lido no
+    código, não medido: no ensaio, com os canais do rádio de pé desde a
     partida, nenhum controle elegeria mais.
 
     **"NÃO DEU PARA PERGUNTAR" LEVANTA** `ConsultaIndisponivelError`, e não volta
@@ -1830,7 +1830,7 @@ def _microfone_que_ja_e_da_maquina() -> str | None:
 
 
 def _a_escolha_gravada_e_de_outro_controle(uniq: str, conectados: list[str]) -> str | None:
-    """O microfone padrão que ela GRAVOU é o de OUTRO controle que está na mesa?
+    """O microfone padrão que o usuário GRAVOU é o de OUTRO controle que está na mesa?
 
     Devolve o nome gravado quando é, e `None` quando o nascimento de `uniq`
     pode seguir para as outras perguntas.
@@ -1838,7 +1838,7 @@ def _a_escolha_gravada_e_de_outro_controle(uniq: str, conectados: list[str]) -> 
     **O DEFEITO, e ele nasceu com a partida que nasce no ar** (18/09/2026).
     Toda partida do daemon — o restart do `install.sh`, uma atualização, um
     tombo, o login — solta um nascimento por controle já na mesa, em ordem de
-    `alvos_conectados`, e o primeiro, com a mesa sem dono, elegia. Com ela
+    `alvos_conectados`, e o primeiro, com a mesa sem dono, elegia. Com a mesa
     tendo escolhido o Controle 2, o `default.configured.audio.source` do
     WirePlumber dizia o canal DELE — e antes da partida nascer no ar essa
     escolha voltava sozinha quando o canal do Controle 2 subia. Com a partida
@@ -2383,9 +2383,9 @@ def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
     pulava a conferência, a hora ficava no passado, a espera virava prazo
     zero, e o ``esperar_async`` de prazo zero volta sem ceder o laço: a
     corrotina girava sem um ``await`` que suspendesse, e o laço inteiro do
-    serviço parava com ela. Sem IPC (a janela dela travada), sem o
+    serviço parava junto. Sem IPC (a janela travada), sem o
     ``reconnect_loop`` (o controle que voltava não era aceito) e sem o
-    SIGTERM, que o laço atende. Foi o que o diário dela mostrou em 30/09 às
+    SIGTERM, que o laço atende. Foi o que o diário mostrou em 30/09 às
     01h13 e em 01/10 às 13h28 e às 19h05, os três logo depois do
     ``controller_disconnected reason=probe_offline`` do último controle, e o
     que o daemon do produto repetiu num lar de mentira em 02/10, com o
@@ -2395,7 +2395,7 @@ def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
     pilha do fio do laço em ``canal_do_microfone_loop``.
 
     **A CURA É O ESTADO DO BOOT**: sem controle não há conferência a fazer, e o
-    relógio dela volta a ``None``, que é como o daemon nasce. A espera volta a
+    relógio da espera volta a ``None``, que é como o daemon nasce. A espera volta a
     ser o prazo inteiro (ou o evento do som), e o controle que chega é
     conferido na primeira volta, como depois de uma mesa vazia longa já era.
     Vale para o cabo e para o rádio, de um a quatro: a mesa vazia é uma só.

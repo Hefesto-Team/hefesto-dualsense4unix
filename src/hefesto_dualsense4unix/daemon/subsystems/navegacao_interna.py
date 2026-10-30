@@ -1,21 +1,21 @@
 """A Navegação Interna: um valor, um dono, e o foco decide.
 
 A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01 (29/09/2026, com o
-desenho dela de 03/10). Com a Interna ligada e a janela do Hefesto na frente,
+desenho de 03/10). Com a Interna ligada e a janela do Hefesto na frente,
 cada controle anda as abas com R1 e L1, anda a seleção com o direcional, aciona
 com X, sai com O e guarda com Start. Enquanto a janela está na frente esses
 botões não chegam ao jogo (D-22) e o R1/L1 não saem como Alt+Tab (D-20); fora
-dela, tudo volta a ser o de sempre.
+da janela, tudo volta a ser o de sempre.
 
 O FOCO TEM PRAZO. A janela declara que está na frente pelo ``navegacao.foco``,
-num pulso quando ganha ou perde o foco e numa renovação a cada tique dela. O
+num pulso quando ganha ou perde o foco e numa renovação a cada tique da janela. O
 daemon larga o foco sozinho ``PRAZO_DO_FOCO_S`` depois da última renovação:
 uma janela que morre sem se despedir não deixa botão roubado.
 
 OS TOQUES SÃO CONTADORES QUE SÓ SOBEM. O leitor evdev de cada controle já conta
 cada borda de aperto (``EvdevSnapshot.apertos``); aqui se soma só a diferença
 entre duas leituras feitas com o foco vivo. A janela aplica a diferença com o
-que leu antes, e um toque curto entre dois tiques dela não se perde, o que o
+que leu antes, e um toque curto entre dois tiques da janela não se perde, o que o
 nível (``buttons``) perderia.
 """
 from __future__ import annotations
@@ -75,7 +75,7 @@ class NavegacaoInterna:
 
     @classmethod
     def da_sessao(cls) -> NavegacaoInterna:
-        """A escolha guardada (``navegacao_interna.flag``); sem ela, ligada (19/10/2026)."""
+        """A escolha guardada (``navegacao_interna.flag``); sem a escolha, ligada (19/10/2026)."""
         from hefesto_dualsense4unix.utils.session import load_navegacao_interna
 
         ligada, tipo = load_navegacao_interna()
@@ -111,7 +111,7 @@ class NavegacaoInterna:
         return self.ligada and self.foco_vivo()
 
     def roubar(self, botoes: frozenset[str]) -> frozenset[str]:
-        """Os botões que vão ao pad virtual: sem os que navegam, quando ela age."""
+        """Os botões que vão ao pad virtual: sem os que navegam, quando a Interna age."""
         if not botoes or not self.age():
             return botoes
         return botoes - BOTOES_QUE_NAVEGAM
@@ -123,7 +123,7 @@ class NavegacaoInterna:
 
         Quem navega o PC (mouse ligado) perde o R1 e o L1, que são o Alt+Tab, e o
         Start, que guarda o perfil; o resto segue tecla. Quem não navega o PC
-        (mouse desligado) navega a Interna: todo botão dela, e os que o perfil
+        (mouse desligado) navega a Interna: todo botão da Interna, e os que o perfil
         ligou a uma tecla, fica com a Interna e não sai como tecla.
         """
         if not botoes or not self.age():
@@ -133,7 +133,7 @@ class NavegacaoInterna:
     def contar(self, apertos_por_uniq: Mapping[str, Mapping[str, int] | None]) -> None:
         """Soma nos toques a diferença dos ``apertos`` de cada leitor.
 
-        Só com a Interna agindo: fora dela a leitura só ressincroniza a base,
+        Só com a Interna agindo: fora da Interna a leitura só ressincroniza a base,
         e o R1 que saiu como Alt+Tab não vira aba depois. Um leitor reiniciado
         (o contador dele voltou para trás) conta a partir do zero novo.
         """

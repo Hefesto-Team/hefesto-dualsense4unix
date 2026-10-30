@@ -18,7 +18,7 @@ Regras (§3.3 da sprint, a fonte é o documento do protocolo):
 - Um pacote por amostra nova, no máximo 250 por segundo por slot e no mínimo um
   a cada 100 ms; amostra `None` rende «conectado» com pacote neutro.
 - O timestamp nunca recua por slot; o contador nunca recua por cliente.
-- O interruptor dela vale: sensor desligado e peça que mira perdem o giro ou a
+- O interruptor da peça vale: sensor desligado e peça que mira perdem o giro ou a
   aceleração; o toque segue.
 - Antes de parar um slot sai um pacote neutro (o Azahar guarda o último estado,
   e um dedo ficaria «apertado» para sempre).
@@ -409,7 +409,7 @@ class ServidorDsu:
     def _movimento(
         self, uniq: str, amostra: Any
     ) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-        """(giro, aceleração) já nos sinais do protocolo, com o interruptor dela."""
+        """(giro, aceleração) já nos sinais do protocolo, com o interruptor da peça."""
         zero = (0.0, 0.0, 0.0)
         if amostra is None or not amostra.com_movimento:
             return zero, zero

@@ -156,7 +156,7 @@ async def anunciar_bordas_por_alvo(
     *,
     troca_de_transporte: bool = False,
 ) -> None:
-    """As bordas que o agregado esconde: quem saiu da mesa e quem voltou a ela.
+    """As bordas que o agregado esconde: quem saiu da mesa e quem voltou à mesa.
 
     O controle que entra com outro já de pé ganha o `controller.connected` dele, com o `uniq`:
     o agregado só vê o primeiro, e o segundo ao quarto ficavam sem o evento. A troca de
@@ -191,7 +191,7 @@ async def anunciar_bordas_por_alvo(
 def _quem_entrou(
     daemon: DaemonProtocol, antes: dict[str, str | None], agora: dict[str, str | None]
 ) -> list[tuple[str, str]]:
-    """Os `(key, uniq)` que entraram na mesa: chave nova com um `uniq` que não estava nela.
+    """Os `(key, uniq)` que entraram na mesa: chave nova com um `uniq` que não estava na mesa.
 
     O que volta de uma troca de transporte (`em_troca_de_transporte`) não é conexão nova: a
     queda dele também não foi anunciada. É a pergunta do evento e a da Chegada.
@@ -795,7 +795,7 @@ def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
 
 
 def registrar_a_chegada(daemon: DaemonProtocol) -> None:
-    """Fia a Chegada no mecanismo genérico: ela toca quando a rajada da Steam passa."""
+    """Fia a Chegada no mecanismo genérico: a Chegada toca quando a rajada da Steam passa."""
     from hefesto_dualsense4unix.daemon.subsystems.chegada import (
         ESPERA_S,
         NOME_DO_GATILHO,
@@ -919,7 +919,7 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     """Sonda quem segura o hidraw e ARMA o gatilho da cor quando é o caso.
 
     ESCRITOR-CRU-01 — a metade que faltava do GATILHO-DA-COR-01. O gatilho já
-    existia, já escrevia o report que venceu a Steam na bancada de 12/08, e já
+    existia, já escrevia o report que venceu a Steam no ensaio de 12/08, e já
     esperava a rajada passar; o que ele **não** tinha era um evento para a
     situação que a madrugada de 16/08 mediu. Dois eventos entram aqui, e cada
     um responde a uma metade da medição:
@@ -927,12 +927,12 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     - ``pintura_com_escritor_cru`` — *"a barra fica APAGADA depois de cada
       comando nosso"*. O produto pintou (contador do `_pintar_por_hidraw_bt`) e
       há um escritor cru segurando o nó: quem escrever por ÚLTIMO ganha, e
-      hoje é ela. O gatilho reafirma 1,5 s depois que a sequência de comandos
+      hoje é a Steam. O gatilho reafirma 1,5 s depois que a sequência de comandos
       sossega — uma escrita por rajada, não uma por comando;
     - ``escritor_cru_novo`` — *"o daemon NÃO reagiu em 60 s"*. Um nó que estava
       livre passou a ser segurado: é a assinatura da Steam subindo, que é
-      exatamente quando ela repinta tudo o que enxerga (medido em 12/08:
-      98 reports de saída numa probe com ela viva, contra 6 sem ela).
+      exatamente quando a Steam repinta tudo o que enxerga (medido em 12/08:
+      98 reports de saída numa probe com a Steam viva, contra 6 sem a Steam).
 
     **Modo Nativo é no-op TOTAL — nem sonda.** Regra de produto: no Nativo (e na Conexão) o
     controle volta à Steam, e todo o resto é do Hefesto. Ali o dono do hidraw é o jogo, e um
@@ -946,13 +946,13 @@ async def vigiar_escritor_cru(daemon: DaemonProtocol, *, forcar: bool) -> int:
     para o `pgrep`); sem ele, só sonda quando o produto acabou de pintar, e
     ainda assim reaproveita a foto dentro da validade. Em mesa parada com a
     Steam aberta o dia inteiro isto custa **duas sondas por minuto e ZERO
-    escritas** — o custo de não sondar seria a barra apagada dela.
+    escritas** — o custo de não sondar seria a barra apagada de quem usa.
 
     Devolve quantos eventos armaram o gatilho (0 = nada a fazer). Best-effort:
     nada aqui pode derrubar o laço de reconexão.
 
     Preço declarado: a sonda vai pelo `_run_blocking` (executor de 2 threads,
-    o mesmo do `connect`/`read_state`) e o pior caso dela são os dois `pgrep`
+    o mesmo do `connect`/`read_state`) e o pior caso da sonda são os dois `pgrep`
     com 1 s de timeout cada. É o mesmo custo que a sonda de holders do
     inventário de externos já paga; fica registrado porque um `pgrep`
     pendurado ocupa um worker, e este laço divide o executor com o poll loop.
@@ -1172,7 +1172,7 @@ def _uniqs_que_o_backend_segura(daemon: DaemonProtocol) -> frozenset[str]:
     quando o controller é enxuto (dublês da suíte) ou nada está aberto, e aí o
     carimbo é no-op TOTAL.
 
-    A normalização é a cura de 25/08/2026, e ela vale por si: o backend chaveia
+    A normalização é a cura de 25/08/2026, e vale por si: o backend chaveia
     sem os dois-pontos (`_key_to_uniq` → `norm_mac` → `a0fa9c…`) e o sysfs
     devolve com (`HID_UNIQ=a0:fa:9c:…`, MEDIDO no `uevent` do DualSense do cabo
     desta máquina). Enquanto os dois lados eram comparados crus, o filtro logo

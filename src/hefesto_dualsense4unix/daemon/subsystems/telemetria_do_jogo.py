@@ -5,7 +5,7 @@ fecha a porta quando o estilo sai; nada se injeta no jogo. Traduz, com o portão
 de ``PRIORIDADE``: o L2 pulsa como o ABS com a roda travada sob freio, o R2 vibra com a patinação
 sob acelerador (de leve na zebra), a marcha é um Toque, a batida é um Impacto e a luz segue a
 rotação sem passar de três subidas por segundo. Onde o jogo escreve, o jogo decide (``decidir``).
-O porquê, os valores de partida e a bancada: ``docs/protocol/telemetria-da-corrida.md``.
+O porquê, os valores de partida e o ensaio: ``docs/protocol/telemetria-da-corrida.md``.
 """
 from __future__ import annotations
 
@@ -419,7 +419,7 @@ class AtuadorDaTelemetria:
         return [lado for lado in _LADO_DO_BACKEND if (uniq, lado) in self._escrito]
 
     def quer_o_lado(self, uniq: str, lado: str, agora: float) -> bool:
-        """A corrida escreve este lado deste controle agora (o momento da imersão cede a ela).
+        """A corrida escreve este lado deste controle agora (o momento da imersão cede à corrida).
 
         A mesma conta do ``_gatilhos``: na Bateria longa a corrida não escreve, e o momento não
         cede o lado a quem não vai escrevê-lo.

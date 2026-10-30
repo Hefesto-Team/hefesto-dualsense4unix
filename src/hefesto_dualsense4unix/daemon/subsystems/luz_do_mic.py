@@ -11,18 +11,18 @@ LUZ-DO-MIC-01, PEÇA C (03/09/2026). Este módulo é o único que ESCREVE no
     pisca lento (3)  = idem, E a bateria deste controle < 30%
 
 O `2` não pergunta mais quem ouve (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01, a resposta de
-13/10/2026: *«quando tiver audio sendo captado nela. ele fica piscando»*). Até ali ele exigia um
-app de fora com o microfone aberto, e com ela falando sem app nenhum a luz ficava parada. Quem
-mede é a PEÇA B, e ela segue todo microfone ligado no CABO; no RÁDIO, abrir o canal para medir
+13/10/2026: com áudio sendo captado no microfone, a luz fica piscando). Até ali ele exigia um
+app de fora com o microfone aberto, e falando sem app nenhum a luz ficava parada. Quem
+mede é a PEÇA B, e segue todo microfone ligado no CABO; no RÁDIO, abrir o canal para medir
 sobe a ponte do microfone daquele controle e divide o adaptador com um áudio que ninguém pediu,
 então ali só se mede quem a PEÇA A já diz ter ouvinte (ver `_a_medir`).
 
-A precedência está em `decidir`, e ela é a §1.1 escrita em código.
+A precedência está em `decidir`, e é a §1.1 escrita em código.
 
 **O `0` DEIXOU DE SER DUAS COISAS — 19/09/2026, decisão de produto**
 (a sprint `A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01`). O
 contrato de 02/09 dizia *"apagado = MUDO, ou ninguém ouvindo — OS DOIS SÃO A
-MESMA LUZ"*, e foi isso que custou a noite dela: com o microfone LIGADO e
+MESMA LUZ"*, e foi isso que custou uma noite de uso: com o microfone LIGADO e
 ninguém gravando, a luz apagada lhe disse *"desligado"*, o usuário apertou o botão
 para ligar e **desligou** — o vigia mediu `mudo=False canal_ativo=True` antes
 do primeiro clique.
@@ -50,7 +50,7 @@ voltou a ser dele.
 * **não abre o hidraw** — escrever cru é a armadilha do instrumento que briga
   com o produto (`docs/method/COMO-OLHAR-A-TELA.md`): o daemon reafirma o
   report de saída e a escrita crua morre em milissegundos. Tudo passa pelo backend;
-* **não rouba o botão físico dela** — o gesto continua sendo do
+* **não rouba o botão físico de quem usa** — o gesto continua sendo do
   `hid-playstation` (que alterna `ds->mic_muted`) e do `mic_da_mesa`/`hotkey`
   (que elege). Este laço só LÊ o mudo e pinta;
 * **não reafirma o mesmo valor** — escreve só na MUDANÇA. Reafirmar a cada
@@ -69,7 +69,7 @@ fixa onde devia piscar, que se lê como *"a PEÇA B não está detectando som"*.
 **DUAS CADÊNCIAS NUM LAÇO SÓ, e o número tem razão.** A decisão roda a
 `INTERVALO_S` (4 Hz) porque o `2` é atividade de voz e a 1 Hz a luz acompanha o
 parágrafo, não a fala. A PEÇA A é a cara — três `pactl` por leitura, 6,8 ms de
-CPU medidos, e a própria sprint pede *"leitura de ~1 Hz"* — então ela é
+CPU medidos, e a própria sprint pede *"leitura de ~1 Hz"* — então a peça é
 perguntada a cada `INTERVALO_DE_QUEM_OUVE_S` e a resposta fica guardada entre
 uma pergunta e outra. As leituras de mudo e bateria são `getattr` sobre o que a
 thread de report já atualizou, sem HID I/O, e a da PEÇA B é um `dict` sob
@@ -87,16 +87,16 @@ travada. Tudo que fala com o mundo passa por `_fora_do_laco`, que é o
 nomes de função em cada uma, e para a PEÇA B nenhum dos quatro existia:
 
 * a PEÇA A é uma FUNÇÃO — `quem_ouve_agora(uniqs) -> {uniq: [clientes]} | None`,
-  e a docstring dela diz, com todas as letras, *"é esta a função que a PEÇA C
+  e a docstring da função diz, com todas as letras, *"é esta a função que a PEÇA C
   chama"*;
 * a PEÇA B é um OBJETO COM ESTADO — `NivelDoMicrofone`, dirigido por
-  `seguir({uniq: fonte})` e lido por `captando() -> {uniq: bool|None}`. Ela
-  segura processos `parec` VIVOS, e por isso o laço é dono dela: quem a cria é
-  quem a PARA no `finally`. Um medidor que vaza prende a fonte de captura dela
+  `seguir({uniq: fonte})` e lido por `captando() -> {uniq: bool|None}`. A peça
+  segura processos `parec` VIVOS, e por isso o laço é dono da peça: quem a cria é
+  quem a PARA no `finally`. Um medidor que vaza prende a fonte de captura da peça
   aberta indefinidamente — um `parec` órfão com o stdout em `/dev/null` nunca
-  toma `SIGPIPE` e vive para sempre. Já aconteceu nesta bancada.
+  toma `SIGPIPE` e vive para sempre. Já aconteceu nesta máquina de teste.
 
-**O `seguir` precisa do NOME DA FONTE, e a PEÇA A não o devolve.** Ela responde
+**O `seguir` precisa do NOME DA FONTE, e a PEÇA A não o devolve.** A peça responde
 QUEM ouve, não POR ONDE. O nome sai das réguas que a casa já tem
 (`fontes_de_captura_agora` + `casamento_usb_agora` + `escolher_fonte`), e só
 para quem `_a_medir` escolhe: no mudo nada se mede, e com a mesa toda muda (ou
@@ -104,7 +104,7 @@ só rádio sem ouvinte) não se resolve fonte, não se abre `parec`, e o medidor
 chega a nascer.
 
 **AS PEÇAS PODEM NÃO EXISTIR, e a degradação é declarada.** O laço as procura
-por `import` tolerante e, sem elas, entrega o que SABE decidir:
+por `import` tolerante e, sem as peças, entrega o que SABE decidir:
 
 ===========================  ===========================================
 o que está no ar             o que a luz faz
@@ -133,14 +133,14 @@ pode ter pintado por cima.
 
 Até 29/09/2026 o laço ESQUECIA o que escreveu e relia o bit de mudo no tique
 seguinte — e esse bit ainda era o de antes do aperto: a volta do handle lia UM
-report de uma fila de 63, e na bancada de 29/09 a luz repintou o estado velho
+report de uma fila de 63, e no ensaio de 29/09 a luz repintou o estado velho
 por cima da eleição por ~2,3 s, com os quatro no rádio
 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01). A leitura fresca não basta sozinha: o
 `mudo` da borda não é o que o ato faz (`hotkey._o_que_a_borda_pede` troca o
 calar por LIGAR no primeiro aperto depois de conectar), então a luz espera o
 ato e decide pelo que ele deixou (ver `_mudo`). No caso de sempre, os dois
 escritores escrevem o mesmo valor na mesma borda. **A briga quando a eleição
-RECUSA** (ela apaga, e o firmware livre acende) segue aberta, para quem
+RECUSA** (a eleição apaga, e o firmware livre acende) segue aberta, para quem
 coordena.
 """
 
@@ -201,7 +201,7 @@ def quem_ouve_este_mic(uniq: str) -> list[str] | None:
     `quem_ouve_agora` devolve, já sem os gravadores do próprio Hefesto
     (`e_stream_do_hefesto`, regra 3): o medidor de nível da aba Controle grava
     o mesmo canal o tempo todo, e contá-lo faria a tela dizer que alguém a
-    ouve porque ela está aberta.
+    ouve porque o canal está aberto.
 
     Leitura barata (um `dict`), pensada para o `state_full`.
     """
@@ -261,7 +261,7 @@ def decidir(
     **O pisca é o som, e não mais quem ouve** (13/10/2026,
     O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01). A lista de ouvintes segue publicada para a
     tela (`quem_ouve_este_mic`, o campo `mic-ressalva` da aba Controle) e decide só QUEM o laço
-    mede no rádio (`_a_medir`); aqui ela não entra.
+    mede no rádio (`_a_medir`); aqui a ressalva não entra.
 
     **O `None` é um valor de primeira classe, e não um buraco.** Ele sai só com `mudo is None`: o
     controle ainda não reportou o byte de estado de áudio. Chutar `False` acenderia a luz de quem
@@ -365,7 +365,7 @@ def _baterias(backend: Any) -> dict[str, int]:
 
     Quem não reportou a carga NÃO entra no dicionário, em vez de entrar com
     `None`: assim `bateria_pct is None` em `decidir` significa uma coisa só —
-    *"não sei a carga"* — venha ela da chave ausente ou do backend calado.
+    *"não sei a carga"* — venha da chave ausente ou do backend calado.
     """
     descrever = getattr(backend, "describe_controllers", None)
     if not callable(descrever):
@@ -862,7 +862,7 @@ def _instante(em: Any) -> float:
 
 
 def _o_jogo_pede_a_luz(chave: str, valor: int, em: float) -> bool:
-    """Guarda o pedido de luz do jogo se ele é mais novo que a ordem de produto."""
+    """Guarda o pedido de luz do jogo se ele é mais novo que a ordem do produto."""
     if em <= _A_PESSOA_MANDOU_EM.get(chave, float("-inf")):
         logger.info("luz_do_mic_pedido_velho_do_jogo", uniq=chave, luz=valor)
         return False

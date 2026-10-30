@@ -93,7 +93,7 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
     dois donos do mesmo fato.
 
     **A PRIMEIRA LEITURA É ANTES DE ESCUTAR QUALQUER EVENTO**, e a ordem é a
-    entrega: sem ela a tela ficaria sem resposta até a primeira mudança
+    entrega: sem a primeira leitura a tela ficaria sem resposta até a primeira mudança
     acontecer — que pode ser nunca.
 
     **QUEM PARA O LAÇO SOLTA O RETRATO**: sem ouvinte não há evento, e uma

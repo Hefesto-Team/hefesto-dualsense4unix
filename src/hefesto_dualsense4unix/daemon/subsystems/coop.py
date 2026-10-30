@@ -74,7 +74,7 @@ def identidade_do_vpad(vpad: Any) -> dict[str, Any]:
       **FATO SUBSTITUÍDO — A-MESMA-LINGUA-01, 07/09/2026.** Esta linha dizia
       que ele era *"o `player_index` de ALOCAÇÃO"*, e era verdade até hoje: o
       nome nascia do índice do co-op enquanto o número publicado saía da fila
-      de chegada, e os dois divergiam em 4 de 4 na bancada. Agora o nome
+      de chegada, e os dois divergiam em 4 de 4 no ensaio. Agora o nome
       nasce da MESMA fila (:meth:`CoopManager.numero_para_o_nome`), então este
       campo é *o número da carta no instante do nascimento do vpad*.
 
@@ -237,7 +237,7 @@ class CoopManager:
         `scripts/ensaios/quem_e_quem.py` declara em voz alta: *"Nenhum arquivo
         de /sys carrega essa ligação"*).
 
-        **A informação nunca precisou ser medida: ela existe aqui dentro por
+        **A informação nunca precisou ser medida: existe aqui dentro por
         construção.** É este manager que cria o vpad de cada secundário a
         partir de um físico (`_spawn_player` → `_promote_player`), e o par
         `identity ↔ vpad` fica guardado em `_SecondaryPlayer`. O que faltava
@@ -246,11 +246,11 @@ class CoopManager:
 
         **Isto é IDENTIFICAÇÃO INTERNA E DIAGNÓSTICO, não vocabulário de
         interface e não seleção de alvo — a distinção é DELIBERADA.** O alvo
-        por MAC foi derrubado por ela em 13/08/2026 como estratégia de produto
+        por MAC foi derrubado por decisão em 13/08/2026 como estratégia de produto
         (nenhuma aba escolhe controle por endereço, e nenhuma passa a
         escolher). O que esta lista responde é outra pergunta, a de quem
         depura: *o produto está mesmo ligando cada físico ao vpad que ele
-        pensa?* A tela consome isto como DICA (tooltip) do card que ela já lê,
+        pensa?* A tela consome isto como DICA (tooltip) do card que a tela já lê,
         nunca como rótulo nem como seletor.
 
         O item, por jogador. Os dois primeiros campos repetem de propósito o
@@ -278,7 +278,7 @@ class CoopManager:
           **O QUE ELE SIGNIFICA MUDOU EM 07/09/2026 (A-MESMA-LINGUA-01), e a
           diferença é o ponto inteiro.** Até hoje ele dizia *"estes dois
           inteiros vêm de espaços de numeração diferentes"* — e por isso ficava
-          `True` para sempre, nos quatro controles da bancada, sem que nada
+          `True` para sempre, nos quatro controles do ensaio, sem que nada
           jamais o apagasse. Agora o nome NASCE do número da carta
           (:meth:`CoopManager.numero_para_o_nome`), então o normal é `False` e
           o alarme passa a dizer uma coisa só, verificável e temporária: *a
@@ -298,7 +298,7 @@ class CoopManager:
         ``controllers[].uniq``; publicar um MAC mascarado AQUI criaria um
         segundo endereço, incapaz de casar com o primeiro, e a GUI (que casa
         card↔vpad por `uniq`) não teria como usar a lista — a cura nasceria
-        morta. (2) O `state_full` só trafega no socket LOCAL dela
+        morta. (2) O `state_full` só trafega no socket LOCAL do usuário
         (`ipc_server`), sob permissão de usuário. (3) A regra dura da casa é
         *"nada de MAC real em ARQUIVO VERSIONADO"*, e nenhum caminho leva
         daqui a um: o que o repositório guarda são os ensaios e os testes, e
@@ -389,7 +389,7 @@ class CoopManager:
     def _calar_o_motor_que_o_pad_deixou(self, identity: str, player: Any) -> None:
         """Na cessão, antes do retarget: o motor que o pad do cedido deixou ligado para.
 
-        Depois dela o pad dele não fala mais com o aparelho, e o zero do jogo
+        Depois da troca o pad dele não fala mais com o aparelho, e o zero do jogo
         cairia no descarte; sem este, o motor ficaria preso até o pad 1 escrever.
         """
         if identity.startswith("path:"):
@@ -735,7 +735,7 @@ class CoopManager:
             self._promote_player(jogador)
 
     def vestir_a_roupa(self) -> list[str]:
-        """Todo secundário que veste outra roupa renasce nela, em sequência, na ordem da carta.
+        """Todo secundário que veste outra roupa renasce vestido, em sequência, na ordem da carta.
 
         A porta do `gamepad.vestir_a_roupa`, que já perguntou a trava. Devolve
         as identidades dos que vestem a roupa de agora ao final.
@@ -765,7 +765,7 @@ class CoopManager:
 
         O-CAMINHO-NAO-VAZA-01 (17/09/2026) — ESTA LINHA NÃO MUDOU, e a razão
         está aqui porque a leva chegou querendo mudá-la. O vazamento que levava
-        a mesa inteira para o `xbox` do jogo anterior era o SLOT que ela lê
+        a mesa inteira para o `xbox` do jogo anterior era o SLOT que a mesa lê
         ficar rançoso: `gamepad._guardar_o_caminho` nunca o limpava, então o
         jogo sem opinião herdava o canal do anterior e os três secundários
         nasciam em uinput atrás de um P1 já em uhid — sem
@@ -806,11 +806,11 @@ class CoopManager:
         mostra sai de :meth:`numeros_de_jogador` — a fila de chegada
         (`identity_registry`), a MESMA função que escolhe o desenho aceso na
         barra de player e o rótulo do card desde a MESA-CHEIA-12. O nome do
-        vpad passa a sair dela também, em vez de guardar cópia do
+        vpad passa a sair da fila também, em vez de guardar cópia do
         `player_index`. É a regra desta casa: *quando um valor tem dono, a
         régua PERGUNTA ao dono.*
 
-        O QUE ESTAVA ERRADO, medido na bancada em 07/09/2026 com os
+        O QUE ESTAVA ERRADO, medido no ensaio em 07/09/2026 com os
         QUATRO na mesa — e era **4 de 4**, nenhum acerto por sorte:
 
         | aparelho                | carta | nome do vpad |
@@ -836,7 +836,7 @@ class CoopManager:
         `INPUT2` — e nada mais); o uinput é igual, o nome vai no `UI_DEV_SETUP`
         antes do `UI_DEV_CREATE`. Renomear é DERRUBAR e RECRIAR.
 
-        **O PREÇO DE RECRIAR, medido no journal da bancada, 07/09/2026**
+        **O PREÇO DE RECRIAR, medido no journal do ensaio, 07/09/2026**
         (um replug real do controle branco, `uhid_device_created` →
         `vpad_uhid_ativo` → sinks de volta → `launch_env` reassentado):
 
@@ -886,10 +886,10 @@ class CoopManager:
         a medição inteira em `integrations.uinput_gamepad.NINTENDO_PROCON_NAME`.
 
         E `SDL_JoystickGetDevicePlayerIndex` não é saída: ele devolve a ordem
-        de ENUMERAÇÃO (0..7 nesta bancada), nunca a carta.
+        de ENUMERAÇÃO (0..7 nesta máquina de teste), nunca a carta.
 
         **O QUE ISSO NÃO DERRUBA:** a cura continua certa e continua valendo.
-        O defeito que ela fechou era a casa falar duas línguas sobre si mesma
+        O defeito que a cura fechou era a casa falar duas línguas sobre si mesma
         — a carta dizendo 2 e o nó dizendo `Hefesto P1`, em 4 de 4. O que a
         medição acrescenta é que fazer o JOGO ler esse número é outro
         trabalho, e não se ganha trocando o nome: pede mapping por GUID
@@ -1647,7 +1647,7 @@ class CoopManager:
         """Quem recebe número nesta mesa, e o `fallback` de cada um.
 
         Ordem fixa e declarada — primário primeiro, depois os secundários na
-        ordem em que entraram —, porque é ela que decide quem fica com o
+        ordem em que entraram —, porque é a ordem que decide quem fica com o
         número em caso de empate dentro de `_numero_exibido`. Identidade sem
         MAC (`path:`) fica de fora: não há como casar o controle.
         """
@@ -1695,13 +1695,13 @@ class CoopManager:
 
         As duas ordens só coincidem por sorte: a do co-op é a ordem em que o
         grab confirmou nesta sessão, a da fila é a do registro de identidade.
-        Um replug basta para separá-las — e nesta mesa elas estavam separadas
+        Um replug basta para separá-las — e nesta mesa as duas estavam separadas
         nos três secundários.
 
         A verdade única é a FILA DE CHEGADA, por decisão de produto (sprint
-        `2026-08-14-INDICE-a-cor-do-controle-e-o-som-de-cada-jogador`: *"a
-        ordem deve ser por ordem de conexão daquele momento"*, e essa ordem
-        prevalece). Ela já governava a lâmpada e a cor automática
+        `2026-08-14-INDICE-a-cor-do-controle-e-o-som-de-cada-jogador`: a
+        ordem é a da conexão naquele momento, e essa ordem
+        prevalece). A fila já governava a lâmpada e a cor automática
         (`identity.make_identity_output_provider`); a partir daqui governa
         também o número PUBLICADO — a lâmpada e o rótulo passam a ser a mesma
         função do mesmo MAC, sempre, por construção.
@@ -2558,7 +2558,7 @@ class CoopManager:
 
 
     def _numeros_em_duas_passadas(self) -> dict[str, int]:
-        """O corpo de `numeros_de_jogador`: quem tem carta fica com ela, os outros depois."""
+        """O corpo de `numeros_de_jogador`: quem tem carta fica com a carta, os outros depois."""
         alvos = self._alvos_de_numeracao()
         cartas = {mac: self._numero_da_carta(mac) for mac, _fallback in alvos}
         numeros: dict[str, int] = {}
@@ -2606,7 +2606,7 @@ class CoopManager:
 
         O nome vai no `UHID_CREATE2` e não se troca vivo
         (:meth:`numero_para_o_nome`): um vpad que nasceu antes de a fila andar
-        guarda o número de quando nasceu. Medido na bancada de queda em
+        guarda o número de quando nasceu. Medido no ensaio de queda em
         28/09/2026, nas 24 ordens de chegada dos quatro e sem jogo: a carta 1
         sai além do prazo, a NUM-01 renumera, e os vpads do roxo e do azul
         seguem «Hefesto P3» e «Hefesto P4» com a carta dizendo 2 e 3 — a
@@ -2806,7 +2806,7 @@ class CoopManager:
 
         A lâmpada do ausente não tem número (`numero_da_lampada` dá ``None``), e
         sem isto `_ordenar` saía cedo enquanto alguém esperava. Só com o jogo na
-        autoridade, como o posto vago: sem ela, quem espera fica fora dos `fixos`
+        autoridade, como o posto vago: sem a autoridade, quem espera fica fora dos `fixos`
         e a ordem recriaria o vpad parado; `_ordenar` sai cedo até o `sync` soltá-lo.
         """
         if lugar is None or chave not in self.quem_espera_no_lugar():
@@ -2875,7 +2875,7 @@ def _numeros_sem_vpad(
       ``_sync_identity_registry`` antes do gate de conexão, a cada 2 s). Era
       dado pronto que a tela não publicava.
 
-    **A PREMISSA QUE CAIU, e ela estava escrita:** o docstring de
+    **A PREMISSA QUE CAIU, e estava escrita:** o docstring de
     :func:`resolve_player_numbers` dizia *"sem gamepad virtual (modo
     desktop/nativo): não existe jogador"*. Isso é verdade do desktop e falso da
     Conexão Nativa — o modo mais fiel ao aparelho era o único em que a tela
@@ -2907,7 +2907,7 @@ def _numeros_sem_vpad(
     **POR QUE ESTE PARÁGRAFO MORA AQUI e não lá em cima**, que é onde ele
     seria lido primeiro: ``docs/data/mapa-controles.csv`` cita
     o ``coop.py`` por FAIXA de linha, e uma linha
-    acrescentada antes delas apodrece as seis citações no portão
+    acrescentada antes das seis apodrece as seis citações no portão
     ``citacoes-de-linha``. O mapa é da SPECS-A-PROCEDENCIA-01 e não se edita
     daqui — logo o topo deste arquivo está congelado para quem não o possui.
     Medido nesta leva, com o portão vermelho na mão.

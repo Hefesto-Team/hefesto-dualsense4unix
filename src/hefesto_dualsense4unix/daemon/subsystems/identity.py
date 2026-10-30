@@ -105,7 +105,7 @@ def order_entries(data: Any) -> list[tuple[str, str, int]]:
     "o fim" só existe se a lista chegar ordenada.
 
     **A FAIXA SINTÉTICA NÃO É EXPURGADA AQUI, e a decisão é de 18/09/2026.**
-    Na bancada havia quatro endereços ``aa:bb:cc:00:00:0{1..4}`` na fila,
+    No ensaio havia quatro endereços ``aa:bb:cc:00:00:0{1..4}`` na fila,
     escritos por uma corrida da suíte em 22/08, ocupando os postos 4 a 7 e
     empurrando um DualSense real para o **oitavo**. A primeira cura escrita
     descartava-os aqui — e foi RECUADA no mesmo dia, medida contra a suíte:
@@ -686,7 +686,7 @@ class ControllerIdentityRegistry:
     def segurar_os_prazos(self, segura: bool) -> None:
         """Com o jogo na autoridade, o prazo do lugar guardado espera. Idempotente.
 
-        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (dela, 02/10/2026, «Esperar o
+        D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026, o «Esperar o
         jogo»): com um jogo aberto, quem cai ou entra não muda o número de
         ninguém. Ao segurar, o relógio do prazo para no instante de agora (o
         vencimento não corre, e quem sai durante o jogo guarda o lugar a partir
@@ -787,7 +787,7 @@ class ControllerIdentityRegistry:
         APARELHO-NAO-SE-CONTRADIZ-01, decisão de 20/09/2026, verbatim:
         *"As lâmpadas esperam a cor"*.
 
-        **O QUE FOI MEDIDO, e é a razão desta função existir.** Ela desligou o
+        **O QUE FOI MEDIDO, e é a razão desta função existir.** O usuário desligou o
         P3 e olhou o P4, com os quatro DualSense na mesa::
 
             23:56:17.747  controller_disconnected
@@ -812,14 +812,14 @@ class ControllerIdentityRegistry:
 
         **E A ESTREIA NUNCA SENTA NO COLO DE NINGUÉM.** Se o número de agora do
         que estreia já está congelado com OUTRO, ele fica sem opinião (ausente
-        da tabela) até a liberação. Esta guarda não é zelo: sem ela, o caminho
+        da tabela) até a liberação. Esta guarda não é zelo: sem a guarda, o caminho
         *"o P3 sai, o P5 chega antes do gatilho"* poria dois controles no mesmo
         jogador — que é exatamente o defeito de 27/08/2026 que a
         ``numero_da_lampada`` existe para ter matado. Congelar nunca pode
         ressuscitar uma colisão.
 
         **ESTA LEITURA NÃO CONGELA NADA**, e é o ponto de desenho desta cura.
-        A única coisa que ela escreve em ``self._lampadas`` é a PODA de quem
+        A única coisa que a leitura escreve em ``self._lampadas`` é a PODA de quem
         saiu da mesa; quem põe número ali é só :meth:`liberar_as_lampadas`. Uma
         leitura que congelasse gravaria o número da mesa PELA METADE — o lote
         que o ``_assentar_mesa_locked`` e a MESA-NO-MEIO-DO-LOTE-01 vieram
@@ -872,7 +872,7 @@ class ControllerIdentityRegistry:
           onde o ausente continua contando. É a resposta certa para um
           rótulo de GUI ("Controle 1" continua sendo dele) e a resposta
           ERRADA para uma lâmpada;
-        - aqui a pergunta é *"que número este controle acende AGORA"*, e ela
+        - aqui a pergunta é *"que número este controle acende AGORA"*, e a resposta
           só tem resposta para quem está na mesa. Ausente devolve ``None``,
           que o provider de cor lê como "sem opinião" — o controle segue com
           o que já tinha até o próximo batimento, em vez de acender um
@@ -899,7 +899,7 @@ class ControllerIdentityRegistry:
         cor avança. Quem quer a mesa de AGORA — a TELA — chama
         :meth:`numeros_da_mesa`, que não espera nada.
 
-        **E ELA GOVERNA OS DOIS CAMPOS DA CAMADA AUTOMÁTICA**, a cor e o
+        **E A FILA GOVERNA OS DOIS CAMPOS DA CAMADA AUTOMÁTICA**, a cor e o
         número (``make_auto_output_provider``), porque é isso que impede a
         contradição: fossem dois números, a cura seria uma corrida entre duas
         rotas de escrita — que é justamente o defeito medido.
@@ -926,7 +926,7 @@ class ControllerIdentityRegistry:
 
         D-30 mudou UMA coisa: quem decide "antes" entre os DualSense
         presentes é a FILA DO MOMENTO, não o ``rank``. O mecanismo é uma
-        permutação, e ela é o que mantém o resto da casa intacto: os postos
+        permutação, e é o que mantém o resto da casa intacto: os postos
         que os presentes ocupam são os MESMOS (``postos``), só muda de quem é
         cada um. O conjunto que ``present_ranks()`` publica para o lado dos
         externos não se mexe, então a contagem 1..N da mesa inteira continua
@@ -983,7 +983,7 @@ class ControllerIdentityRegistry:
         daqui. Ele existia só deste lado (o registro dos externos nunca
         expirou nada), e a assimetria era medível: com os dois DualSense
         desligados, o primeiro a acordar levava o slot 1 — cor e número
-        trocavam de dono. Renumerar por vontade dela é o ``compact`` do
+        trocavam de dono. Renumerar por vontade do usuário é o ``compact`` do
         "Renumerar agora"; por schema novo, o ``load``.
 
         R-24 (auditoria 25/07) — por que ATRIBUIR aqui e não só no
@@ -992,7 +992,7 @@ class ControllerIdentityRegistry:
         ficava vazio e o piso lido pelos externos (``_ds_reserve``) valia 0 —
         o Pro Nintendo USB tomava o slot 1 no primeiro tick de externo e os
         dois DualSense herdavam 2 e 3 (o "não existe Controle 1" medido
-        na bancada). O lifecycle chama ESTE método ANTES de agendar o tick
+        no ensaio). O lifecycle chama ESTE método ANTES de agendar o tick
         dos externos no MESMO ciclo do poll loop, então quem está na mesa
         ocupa 1..N primeiro. A ORDEM do iterável é significativa (o
         lifecycle entrega em ordem de ``describe_controllers``, primário
@@ -1243,7 +1243,7 @@ class ControllerIdentityRegistry:
         E3, não desta função.
 
         O-ASSENTO-GUARDADO-NAO-ANDA-01: renumerar é fechar a fila agora, por
-        vontade dela — o lugar guardado não sobrevive ao gesto.
+        vontade do usuário — o lugar guardado não sobrevive ao gesto.
         """
         self.soltar_os_lugares_guardados()
         with self._lock:
@@ -1262,7 +1262,7 @@ class ControllerIdentityRegistry:
         """Grava a fila do momento AGORA, sem esperar a janela de estabilidade.
 
         Existe para UM chamador — ``identity.number.set``, a escolha à mão —
-        e a razão é que o clique do usuário é sobre **o que ela está vendo**. Quem
+        e a razão é que o clique do usuário é sobre **o que o usuário está vendo**. Quem
         planeja a troca lê os lugares GRAVADOS (``snapshot``); quem pinta a
         tela lê a FILA DO MOMENTO (``_ordem_do_momento_locked``). Enquanto os
         dois discordam, o plano é calculado sobre uma mesa que não é a da
@@ -1270,7 +1270,7 @@ class ControllerIdentityRegistry:
         {}}`` sem mover nada.
 
         MEDIDO em 29/08/2026, dois DualSense, o gravado dizendo ``A=1, B=2``
-        e ela ligando o **B** primeiro (a tela mostra ``B=1, A=2``): pedir o
+        e o usuário ligando o **B** primeiro (a tela mostra ``B=1, A=2``): pedir o
         1 para o A devolvia ``changed={}`` e a tela não se mexia. Com o
         alinhamento antes do plano, o mesmo gesto move os dois.
 
@@ -1278,11 +1278,11 @@ class ControllerIdentityRegistry:
         :meth:`_congelar_locked` que a mesa estável dispara sozinha 4,0 s
         depois (D-30) — só que adiantado para o instante do clique. A regra
         automática de quem vira jogador 1 quando os controles chegam fica
-        INTACTA; o que muda é só o momento em que ela é gravada.
+        INTACTA; o que muda é só o momento em que a ordem é gravada.
 
         Devolve ``True`` quando algo mudou de lugar.
 
-        O-ASSENTO-GUARDADO-NAO-ANDA-01: o que ela vê tem o BURACO de quem
+        O-ASSENTO-GUARDADO-NAO-ANDA-01: o que o usuário vê tem o BURACO de quem
         saiu dentro do prazo — o P3 continua 3 com o P2 fora —, então o lugar
         guardado entra no alinhamento e NÃO se solta. Soltá-lo (a primeira
         escrita desta sprint) fechava a fila no instante do clique, e a troca
@@ -1306,17 +1306,17 @@ class ControllerIdentityRegistry:
     def escolha_da_mao(self, ranks: dict[str, int]) -> None:
         """Aplica a escolha do usuário — e a fila do momento passa a concordar.
 
-        A forma é a que ela já fixou para o microfone
+        A forma é a que já se fixou para o microfone
         (``D-O-MICROFONE-A-MAQUINA-DA-O-PADRAO-O-PERFIL-SOBREPOE``): **a
         máquina dá o padrão, a escolha sobrepõe.** Aqui o padrão é a ordem de
         chegada (D-30), que continua decidindo quem nasce jogador 1; o que
-        esta função faz é deixar a escolha à mão VALER por cima dela.
+        esta função faz é deixar a escolha à mão VALER por cima da chegada.
 
         Por que ``compact`` não serve, e a própria docstring dele já dizia:
         *"a fila do momento NÃO é tocada aqui de propósito"*. Escrever só o
         ``rank`` mexe no DESEMPATE de quem chegou junto — e nada mais. Com os
         controles chegando em ondas diferentes (ligar um por um, o caso
-        normal dela), a exibição é decidida pela ONDA, o ``rank`` nem é
+        normal), a exibição é decidida pela ONDA, o ``rank`` nem é
         consultado, e a escolha ficava invisível. Pior: 4,0 s depois o
         :meth:`_congelar_locked` reescrevia os ``rank`` a partir das ondas e
         **apagava a escolha da memória e do disco**.
@@ -1328,7 +1328,7 @@ class ControllerIdentityRegistry:
             NA TELA                        : {A: 1, B: 2, C: 3}   <- não mexeu
             rank depois do congelamento    : {A: 1, B: 2, C: 3}   <- apagou
 
-        **A cura, e ela é uma permutação:** as ONDAS que os presentes já
+        **A cura, e é uma permutação:** as ONDAS que os presentes já
         detêm são redistribuídas ENTRE ELES, na ordem dos lugares novos —
         exatamente o que :meth:`_congelar_locked` faz com os ``postos``, no
         sentido inverso. O conjunto de ondas não muda, então nenhuma onda é
@@ -1341,7 +1341,7 @@ class ControllerIdentityRegistry:
         ordenadas na mesma sequência deixa a onda NÃO-DECRESCENTE nessa
         ordem. Logo a chave ``(onda, rank)`` de
         :meth:`_ordem_do_momento_locked` é estritamente crescente na ordem
-        desejada — e ordenar por ela devolve exatamente essa ordem. O
+        desejada — e ordenar por essa ordem devolve exatamente essa ordem. O
         congelamento seguinte encontra ``_ordem`` já igual à fila do momento
         e não escreve nada: **a escolha sobrevive ao tempo**, que é o que os
         testes verdes de antes não viam (nenhum deles injetava relógio).
@@ -1350,7 +1350,7 @@ class ControllerIdentityRegistry:
         replug devolve a onda que a escolha deu — ``mark_disconnected``
         preserva a marca de chegada de propósito (D2/R-15). A exceção é o
         LUGAR GUARDADO (O-ASSENTO-GUARDADO-NAO-ANDA-01): ele é parte da mesa
-        que ela vê, a troca pode ser com ele, e sem a onda junto a exibição o
+        que o usuário vê, a troca pode ser com ele, e sem a onda junto a exibição o
         poria de volta onde estava.
         """
         with self._lock:
@@ -1574,7 +1574,7 @@ def make_auto_output_provider(
       - o **tique lento** (:meth:`sync_connected`, ~2,0 s pelo ``lifecycle``)
         SUBSTITUI o conjunto inteiro pelo que o backend reporta conectado;
       - a **leitura de cor** (:func:`make_auto_output_provider` →
-        :meth:`numero_da_lampada` → :meth:`slot_for`) ADICIONAVA — e ela roda a
+        :meth:`numero_da_lampada` → :meth:`slot_for`) ADICIONAVA — e a leitura roda a
         **10 Hz** enquanto a aba Status está aberta.
 
       A janela é exatamente a de um controle que piscou no Bluetooth: o tique o
@@ -1683,7 +1683,7 @@ def relogio_do_lugar_guardado() -> float:
     :func:`prazo_do_lugar_guardado`. É o relógio padrão dos dois registros (o
     dos DualSense e o dos externos), e por isso o prazo de um controle que saiu
     antes de a máquina suspender vence junto com o posto de primário, contando o
-    tempo em que ela dormiu.
+    tempo em que a máquina dormiu.
 
     Mora no fim do módulo porque o mapa de canais cita este arquivo por linha.
     """

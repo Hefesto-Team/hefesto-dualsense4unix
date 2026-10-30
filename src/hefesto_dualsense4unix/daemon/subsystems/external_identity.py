@@ -220,7 +220,7 @@ def identity_for_entry(entry: dict[str, Any]) -> str:
 
     1. o campo :data:`EXTERNAL_IDENTITY_FIELD`, quando a entrada já o carrega —
        calcular DE NOVO é o que faz duas camadas divergirem, e a GUI nem teria
-       como (o cálculo lê o sysfs do aparelho, que é do daemon, não dela);
+       como (o cálculo lê o sysfs do aparelho, que é do daemon, não da GUI);
     2. :func:`~hefesto_dualsense4unix.core.evdev_reader._external_dedup_key` —
        a MESMA função com que a enumeração deduplica o inventário: MAC quando
        ele identifica o aparelho, ``dev:<instância HID>`` quando o ``uniq``
@@ -271,7 +271,7 @@ class ExternalIdentityRegistry:
     - sem expiração por sessão-esvaziou: a persistência ATRAVESSA o boot
       (R-23) e o disconnect apenas RESERVA o slot — para MAC de HARDWARE.
       MODO-01: identidade VOLÁTIL (endereço sintetizado, key ``path:...``)
-      não ganha essa promessa; ausente, ela solta o slot.
+      não ganha essa promessa; ausente, solta o slot.
 
     Thread-safety: os métodos são chamados pelo tick do lifecycle (via
     executor) e pela leitura IPC (``asyncio.to_thread``) — RLock próprio.
@@ -529,7 +529,7 @@ class ExternalIdentityRegistry:
 
         MODO-01 (25/07): a reserva eterna vale para MAC de HARDWARE. Uma
         identidade VOLÁTIL ausente solta o slot (ver
-        :meth:`_prune_volatile_locked`) — ela não é aparelho nenhum, então
+        :meth:`_prune_volatile_locked`) — não é aparelho nenhum, então
         não há promessa de estabilidade a honrar, e segurar slot era
         exatamente o que empurrava o controle CONECTADO para o número 5.
         """
@@ -623,7 +623,7 @@ class ExternalIdentityRegistry:
         NUM-01: os valores de ``mapping`` são LUGARES NA FILA, não números
         exibidos (o exibido pode nem mudar — ele já contava só os presentes).
         O-ASSENTO-GUARDADO-NAO-ANDA-01: NÃO solta o lugar guardado — a troca
-        do ``identity.number.set`` passa por aqui e é sobre o que ela vê, com
+        do ``identity.number.set`` passa por aqui e é sobre o que quem usa vê, com
         o buraco; quem solta no "Renumerar agora" é o ``compact`` do DualSense.
         """
         with self._lock:
@@ -914,9 +914,9 @@ class ExternalLedSync:
        classe LED, que é memória do valor **PEDIDO**; o kernel o grava antes de
        tentar o hardware e nunca o reverte na falha. Uma escrita que morreu no
        rádio (``-110``) continua sendo relida como o número pedido. Logo esta
-       comparação **não pode** distinguir firmware de terceiro: ela só enxerga
+       comparação **não pode** distinguir firmware de terceiro: só enxerga
        escrita de **outro processo** pelo mesmo ``sysfs`` (a Steam pintando
-       "player 1+3"), que é tudo o que ela sempre pôde enxergar.
+       "player 1+3"), que é tudo o que sempre pôde enxergar.
 
        **Quem for contar repinturas em qualquer janela do journal precisa ler
        isto antes:** o número não mede disputa de LED. A medição, e a correção
@@ -972,7 +972,7 @@ class ExternalLedSync:
         2..N) e escreve isso direto nos nós sysfs de player-LED. Se o piso dos
         externos ignora esse alcance, um Pro Nintendo ou 8BitDo pode receber um
         número que o co-op também está acendendo em outro controle — os "dois
-        player 1 / dois player 2" que ela vê.
+        player 1 / dois player 2" que se vê.
 
         Tomar o máximo dos dois empurra os externos para depois do último
         jogador de co-op. `player_count()` é leitura de um dict em memória
@@ -985,7 +985,7 @@ class ExternalLedSync:
         DualSense era só LAZY (via provider de cor), o registro estava vazio
         no boot e o piso lido aqui era 0: o Pro Nintendo USB abocanhava o
         slot 1 e os dois DualSense nasciam 2 e 3 — "não existe Controle 1",
-        medido no `controllers.json` dela. A ordem daquele laço é, portanto,
+        medido no `controllers.json` do ensaio. A ordem daquele laço é, portanto,
         parte do contrato desta função.
 
         NOTA: isto governa atribuições NOVAS. Lugares já persistidos em
@@ -1035,7 +1035,7 @@ class ExternalLedSync:
         (``auto_player_colors``), então um clique de cor na GUI — que desliga
         aquele flag — congelava a numeração dos externos junto com a paleta
         dos DualSense (a queixa "dois player 1, dois player 2", com o
-        ``fps.json`` dela salvo com ``auto_player_colors:false``). Agora lê
+        ``fps.json`` do ensaio salvo com ``auto_player_colors:false``). Agora lê
         ``identity_registry.auto_numbers_enabled``.
 
         Ausência do registro/atributo (FakeController, daemon sem fiação,

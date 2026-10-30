@@ -39,7 +39,7 @@ def slot_de_sessao(daemon: Any, chave: str) -> int | None:
     pergunta é a MESMA que a interface faz pelo IPC —
     ``ipc_handlers._player_slot_for``: ``slot_for(uniq, assign=False)``, leitura
     pura. ``assign=False`` não é detalhe: expor estado nunca pode ALOCAR lugar
-    na fila, senão nomear um nó de som mudaria a numeração da bancada.
+    na fila, senão nomear um nó de som mudaria a numeração da mesa.
 
     **É o DAEMON que entra, não o registro**, e a razão é de ordem medida em
     12/09/2026: ``Daemon.run()`` chama ``_safe_start("bt_mic", …)`` e
@@ -75,7 +75,7 @@ def numero_do_assento_na_mesa(
 ) -> int | None:
     """O «Controle N» deste controle — a conta DA CASA, alcançada pelo daemon.
 
-    ESTA FUNÇÃO NÃO TEM CONTA PRÓPRIA, e é isso que ela entrega. Havia TRÊS
+    ESTA FUNÇÃO NÃO TEM CONTA PRÓPRIA, e é isso que entrega. Havia TRÊS
     números para o mesmo «Controle N» (TRES-CONTAS-PARA-UM-NUMERO-01):
 
     ======================================== ==================================
@@ -90,9 +90,9 @@ def numero_do_assento_na_mesa(
     lado do daemon (``_numero_de_exibicao``), e as duas primeiras continuam
     amarradas pelo portão que já existia
     (``tests/unit/test_mesa_cheia_11_a_janela_conta_quatro.py``). **A cura não
-    mexeu na conta da casa — ela a ALCANÇOU**, que é o que a sprint pedia.
+    mexeu na conta da casa — a ALCANÇOU**, que é o que a sprint pedia.
 
-    A DIVERGÊNCIA QUE ISTO MATA, medida na bancada em 09/09/2026 às 22h::
+    A DIVERGÊNCIA QUE ISTO MATA, medida no ensaio em 09/09/2026 às 22h::
 
         pactl list sources → Description: Microfone do Controle 2   ← o daemon
         a tela             → P1 • White • cabo                      ← o cartão

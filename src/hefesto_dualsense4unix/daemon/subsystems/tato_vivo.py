@@ -687,7 +687,7 @@ RUMBLE_JUNTA_S = 0.03
 class BordaDoRumble:
     """O par ``(fraco, forte)`` do jogo, controle a controle: um evento por subida.
 
-    A borda e o lado vêm do pedido CRU do jogo; a barra de intensidade dela só
+    A borda e o lado vêm do pedido CRU do jogo; a barra de intensidade do estilo só
     entra na energia (``efetivo``). O jogo manda, e o ajuste do Hefesto só
     potencializa, nunca veta: com a barra a 50 % o tiro de 150 continua tiro.
     """
@@ -915,7 +915,7 @@ class AtuadorDaHaptica:
 
     def _toque_da_unidade(self, uniq: str) -> str:
         """O Toque na nota da cor do plástico (a Assinatura), na mesma regra da Chegada: todo
-        estilo menos o Nativo e o Personalizado; o Toque de 160 Hz fora dela ou sem nota."""
+        estilo menos o Nativo e o Personalizado; o Toque de 160 Hz fora da regra ou sem nota."""
         from hefesto_dualsense4unix.daemon.subsystems.chegada import a_chegada_vale
 
         estilo = self._estilo_de()
@@ -1241,7 +1241,7 @@ def _plano_do_lado(cfg: Any) -> PlanoDoGatilho | None:
 
     O perfil salvo com a chave que saiu da lista de onze (`SemiAutoGun`, `Rigid`…) passa pela
     mesma tradução da fábrica e da tela: o aparelho recebe o bloco da chave de hoje, a tela
-    mostra a imersão dela, e o motor toca os momentos dela. A volta à mão é o bloco do PERFIL,
+    mostra a imersão da chave, e o motor toca os momentos. A volta à mão é o bloco do PERFIL,
     não o da imersão: com os números de ontem os dois diferem, e o aparelho fica como a tela.
     """
     from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
@@ -1303,7 +1303,7 @@ def _modo_de_hoje_do_estilo(estilo: str, lado: str = LADO_DIREITO) -> str | None
 def _plano_do_automatico(estilo: str, lado: str = LADO_DIREITO) -> PlanoDoGatilho | None:
     """No Modo automático: a imersão com momentos que o estilo do jogo põe num dos lados.
 
-    O ``Lado`` do estilo diz a imersão do gatilho (``R2`` e ``L2`` são receitas separadas); sem ela
+    O ``Lado`` do estilo diz a imersão do gatilho (``R2`` e ``L2`` são receitas separadas); senão
     o lado fica no acionamento seco (o R2 do FPS é a Metralhadora, não a rajada que sobe). O estilo
     que saiu do catálogo (o Arco) vale pelo que o recebeu.
     """
@@ -1465,7 +1465,7 @@ def momentos_em_efeito(
     nasce do instante em que o status do Disparo chegou a 2 (``desde_o_clique``); sem o status
     (``sem_status``), cai no relógio do aperto, e o ``apos_ms`` dele é esse relógio. O «sempre»
     sem ``dura_ms`` expira em ``TETO_DO_SEMPRE_S``. A repetição só diz em que volta o momento
-    está: quem escreve olha o bloco, não ela.
+    está: quem escreve olha o bloco, não a repetição.
     """
     vale: list[tuple[int, int]] = []
     for indice, momento in enumerate(momentos):
@@ -2069,7 +2069,7 @@ _TIPOS_DA_LUZ = frozenset({TIPO_DEDO, TIPO_RUMBLE})
 
 
 def pico_do_pulso(base: tuple[int, int, int]) -> tuple[int, int, int] | None:
-    """A cor do perfil no brilho máximo; se ela já está lá, o pulso é um mergulho."""
+    """A cor do perfil no brilho máximo; se já está lá, o pulso é um mergulho."""
     maior = max(base)
     if maior <= 0:
         return None
@@ -2085,7 +2085,7 @@ class SessaoDoMotor:
     """Os canais de estado que o motor segura em cada controle.
 
     A volta do backend é a sessão inteira (`end_game_session_for` devolve o
-    gatilho E a luz do perfil): ela só sai quando o motor solta o último canal
+    gatilho E a luz do perfil): a sessão só sai quando o motor solta o último canal
     daquele controle. Se o jogo tomou o canal, o motor larga sem encerrar.
     """
 

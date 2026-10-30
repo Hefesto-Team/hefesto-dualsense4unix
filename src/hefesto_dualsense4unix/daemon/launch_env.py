@@ -40,7 +40,7 @@ era literalmente isso — omitia `SDL_GAMECONTROLLER_IGNORE_DEVICES` e
 gamepad virtual de pé é o próprio duplicado: medido ao vivo com UM DualSense
 no cabo, o Mullet Mad Jack (2111190) enxergava js0=vpad e js2=físico (mais os
 dois pads que o Steam Input cria), atribuía jogador 1 a um e jogador 2 ao
-outro e metade dos comandos dela ia para o controle que o jogo não estava
+outro e metade dos comandos do usuário ia para o controle que o jogo não estava
 lendo. O invariante que faltava, e que segue valendo nos dois lados desta
 fronteira: **um controle físico produz exatamente UM dispositivo de jogo**.
 
@@ -50,7 +50,7 @@ marca passou a significar "esconda o controle FÍSICO neste jogo", e não "entre
 o físico à Steam"; o jogo marcado recebe exatamente a mesma env de qualquer
 outro jogo. O obituário do ramo, com o motivo de cada linha dele, está em
 `materialize_launch_env`. O appid da allowlist continua vivo aqui para DUAS
-outras coisas, e só elas: decidir a sessão da exceção
+outras coisas, e só essas: decidir a sessão da exceção
 (`steam_input_exception_appid`) e pular o arming da máscara
 (`arm_launch_profile`).
 """
@@ -393,7 +393,7 @@ def steam_input_appids(path: Path | None = None) -> set[int]:
     Steam Input DAQUELE jogo ligado). Até aqui o arquivo só era lido pelo guard
     de VDF (`disable_steam_input.sh`/`storm_doctor`) — o caminho de LANÇAMENTO
     e o broker o ignoravam por completo, então o Hefesto continuava escondendo
-    o hidraw do controle físico e a exceção que ela configurou era inerte.
+    o hidraw do controle físico e a exceção que o usuário configurou era inerte.
 
     A leitura reusa `storm_doctor.steam_input_allowlist` (fonte única do
     formato: uma linha por appid, `#` comenta) e converte para int — appid é
@@ -543,8 +543,8 @@ def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
     Medido no daemon do usuário em 22/08/2026: perfil Sackboy pedindo
     `gamepad_flavor="dualsense"`, quatro vpads uinput com máscara `xbox` e
     `mode_from_profile=null`. Ou seja, marcar o jogo REMOVIA features em vez de
-    preservá-las — o oposto exato da decisão de produto (*"a allowlist do Steam Input
-    NÃO tira o Hefesto da frente"*).
+    preservá-las — o oposto exato da decisão de produto: a allowlist do Steam Input
+    NÃO tira o Hefesto da frente.
 
     **Não é um segundo escritor da máscara.** Quem escreve continua sendo
     `lifecycle.apply_profile_mode` -> `_pedir_mascara_do_perfil`, com o gate
@@ -553,13 +553,13 @@ def _mode_applier_so_a_mascara(daemon: DaemonProtocol) -> Callable[..., str]:
     exatamente como o `_mode_applier_ao_sair_do_nativo` do `lifecycle.py`, que
     barra só o `native`.
 
-    **A precondição é o que garante que SÓ a máscara passa**, e ela não é
+    **A precondição é o que garante que SÓ a máscara passa**, e não é
     confiança no ramo do applier: a chamada só é feita quando o estado vivo JÁ
     é o `kind` que o perfil pede — emulação ligada, vpad de pé, nativo
     desligado. Nessa condição as duas linhas de disputa do ramo `gamepad`
     (`set_native_mode(False)` e o `set_gamepad_emulation` de ligar) são
     no-ops por construção, e a única coisa que sobra para mudar é o flavor.
-    Fora dela o applier nem é chamado — ligar o vpad num jogo marcado seria a
+    Fora da precondição o applier nem é chamado — ligar o vpad num jogo marcado seria a
     disputa que a allowlist pula.
     """
 
@@ -823,7 +823,7 @@ def arm_launch_profile(
     O arming é idempotente por `(appid, epoch)`: um mesmo launch arma UMA vez,
     por mais vezes que a reconciliação rode.
 
-    Ordem deliberada: a `.env` por appid NÃO depende deste arming — ela já é
+    Ordem deliberada: a `.env` por appid NÃO depende deste arming — já é
     materializada com a opinião do perfil (e, desde o R-05, com o backend
     PROGNOSTICADO). Por isso o arming pode ser assíncrono ao ping do wrapper
     sem risco: o que ele conserta é a MÁSCARA, que o jogo só consulta segundos
@@ -836,12 +836,12 @@ def arm_launch_profile(
     de entrada.
 
     NOTA DATADA — 07/08/2026. O parágrafo acima dizia que a allowlist é opt-in
-    de *"o Hefesto sai de cena neste jogo"*, e essa leitura está **refutada
-    pela metade** pela medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`, seção
+    de «o Hefesto sai de cena neste jogo», e essa leitura está **refutada
+    pela metade** pela medição de 06/08 (`CONTROLE-SONY-MEDIDO-01`, seção
     *A INVERSÃO*, grau MEDIDO): o Hefesto sai da ENTRADA e **fica inteiro na
-    saída** — os gatilhos dela seguraram e a cor dela ficou, com o jogo da
+    saída** — os gatilhos seguraram e a cor escolhida ficou, com o jogo da
     lista aberto. A decisão de código NÃO muda (a máscara continua fora, e por
-    um motivo agora mais preciso); o que muda é a frase que a descreve, e ela
+    um motivo agora mais preciso); o que muda é a frase que a descreve, e a frase
     é a mesma que o estudo
     o estudo «desenho-a-flag-do-jogo-e-o-perfil-a-partir-da-biblioteca» de 06/08/2026
     (seção 5.3, item 2) já cobrava desta função.
@@ -853,9 +853,9 @@ def arm_launch_profile(
     contradizer a própria exceção"* — deixou de existir: não há mais exceção a
     contradizer, e a máscara do perfil do usuário é uma opinião sobre o vpad que o
     jogo marcado agora enxerga. **O código NÃO foi mudado nesta leva, de
-    propósito.** Ligar o arming num jogo marcado muda o que ela vê ao abrir o
-    jogo, e trocar o modo de um jogo do usuário sem que ela peça é a regra mais velha
-    desta casa ao contrário. Fica registrado como pergunta para ela, com o preço
+    propósito.** Ligar o arming num jogo marcado muda o que o usuário vê ao abrir o
+    jogo, e trocar o modo de um jogo do usuário sem pedido dele é a regra mais velha
+    desta casa ao contrário. Fica registrado como pergunta de produto, com o preço
     declarado: enquanto isto for assim, marcar um jogo continua desligando,
     calado, o modo do perfil daquele jogo NO LANÇAMENTO.
 
@@ -865,7 +865,7 @@ def arm_launch_profile(
     `suppress_desktop_emulation` — o "modo jogo", que só PARA o mouse/teclado
     emulados do desktop — nunca era aplicado nesses appids. O que a allowlist
     existe para evitar é o Hefesto ROUBAR o controle (máscara/grab/vpad); parar
-    de mexer o cursor enquanto ela joga não rouba nada de ninguém. Agora a
+    de mexer o cursor enquanto o usuário joga não rouba nada de ninguém. Agora a
     allowlist pula SÓ a seção `mode`; a supressão do perfil é aplicada
     normalmente.
 
@@ -875,7 +875,7 @@ def arm_launch_profile(
     - **o perfil manda.** Perfil com `mode` continua sendo aplicado como
       sempre, mesmo que o carimbo diga outra coisa. A divergência é
       GRITADA (`ponte_confirmada_diverge_do_perfil`) e devolvida no dicionário,
-      nunca resolvida às escondidas — trocar o modo de um jogo do usuário sem ela
+      nunca resolvida às escondidas — trocar o modo de um jogo do usuário sem o usuário
       pedir é a regra mais velha desta casa ao contrário;
     - **o carimbo preenche o silêncio.** Perfil SEM `mode` é ausência de
       opinião (R-02), e era o ramo em que nada era armado. Com o
@@ -884,7 +884,7 @@ def arm_launch_profile(
     - **a ponte entregue é relatada**, e só quando a máscara CONVERGIU. Dizer
       "entreguei" sobre uma troca que o gate R-04 recusou é a mesma mentira
       que a MASCARA-01 tirou daqui em 19/08. E o arming NÃO carimba nada: quem
-      confirma é o gesto do usuário, ou o silêncio dela com o jogo vivo
+      confirma é o gesto do usuário, ou o silêncio dele com o jogo vivo
       (`ponte_escada.confirmacao_por_silencio`), e quem grava é
       `profiles/manager.confirmar_ponte`.
     """
@@ -1125,7 +1125,7 @@ def cobertura_total(*, backends: Sequence[str], fisicos: int) -> bool:
 
     WRAPPER-EM-TODOS-01 (03/08/2026) escreveu esta conta dentro do
     `compose_env`; a IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) a tirou para
-    fora porque agora existe um segundo leitor dela — o vigia que compara a
+    fora porque agora existe um segundo leitor do ambiente — o vigia que compara a
     mesa de agora com a que foi materializada da última vez
     (`_assinatura_da_mesa`). Duas cópias da mesma conta é como esta casa
     reintroduz um defeito já pago; uma função com nome é o preço de não repetir.
@@ -1843,7 +1843,7 @@ def _avisar_canal_sem_imu(
     materialização já é a transição, e é por isso que ele mora aqui e não no
     `state_full` de 20 Hz, que viraria enxurrada.
 
-    `linhas` sai com as chaves do mapa, em ordem estável, porque é por elas que
+    `linhas` sai com as chaves do mapa, em ordem estável, porque é pelas chaves que
     se procura: `movimento.giroscopio.jogo` é greppável no mapa, na suíte e no
     journal, e uma frase bonita não é.
     """
@@ -2365,7 +2365,7 @@ def _mascara_do_primario(daemon: Any, cfg: Any) -> str:
 
     Esta env lia `config.gamepad_flavor`, a máscara da SESSÃO, e o jogo vê a do
     CARTÃO quando há uma (`external_mask.mascara_efetiva`). Medido
-    na bancada em 14/09: sessão `xbox`, cartão `dualsense`, o journal dizendo
+    no ensaio em 14/09: sessão `xbox`, cartão `dualsense`, o journal dizendo
     `mascara_viva=xbox` com o vpad vestindo DualSense, e a env do Sony DualSense
     saindo com o `SDL_JOYSTICK_HIDAPI=0` do Xbox.
 
@@ -2419,7 +2419,7 @@ def _mascara_prevista(
 def _backends_da_troca(
     mascara: str, caminho: Any, permite_uhid: bool, *, quantos: int = 1
 ) -> tuple[str, ...]:
-    """Os canais que os vpads vão ter quando ela subir para um modo de jogo.
+    """Os canais que os vpads vão ter quando a mesa subir para um modo de jogo.
 
     `quantos` é a COBERTURA prometida — um vpad por DualSense físico quando o
     co-op está ligado, senão um só (TROCA-DENTRO-DO-JOGO-01, 14/09/2026). Sem
@@ -2436,7 +2436,7 @@ def _backends_da_troca(
 
 
 def _vpads_previstos(daemon: Any, fisicos: int) -> int:
-    """Quantos vpads existirão quando ela subir um modo de jogo.
+    """Quantos vpads existirão quando a mesa subir um modo de jogo.
 
     Com o co-op LIGADO, um por DualSense físico (é o que o `coop` faz ao subir);
     desligado, um só — todos os controles alimentam o mesmo vpad, e a mesa é de
@@ -2464,7 +2464,7 @@ def modo_do_estado_vivo(
     DISABLE, e o jogo aberto assim via o DualSense de plástico. Como a env é lida
     UMA vez no `exec`, o PS + R3 dentro do jogo não a alcança: o físico morre
     grabado e o vpad chega como segundo controle. Era o defeito medido no Future
-    Knight — e o Future Knight só era o jogo com perfil próprio. Na bancada,
+    Knight — e o Future Knight só era o jogo com perfil próprio. No ensaio,
     em 14/09, 1 dos 30 perfis tinha `mode`: os outros 29 jogos liam este arquivo.
 
     DECISÃO DE PRODUTO (D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL): fora do Modo

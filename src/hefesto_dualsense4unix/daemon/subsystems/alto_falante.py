@@ -11,31 +11,31 @@ O DEFEITO QUE ELE EXISTE PARA MATAR
 A placa ALSA do DualSense é do **TRANSPORTE**, não da unidade — medido por
 INVERSÃO em 15/08/2026, com os quatro aparelhos trocados de braço: quem foi
 para o fio ganhou placa, quem foi para o ar perdeu. A consequência para quem
-joga é a que esta sprint ataca: **ela tira o cabo no meio da partida e o
+joga é a que esta sprint ataca: **quem joga tira o cabo no meio da partida e o
 dispositivo de saída que o jogo escolheu desaparece do sistema.** Não é o som
 que fica ruim — é a rota que some debaixo do jogo.
 
 Depois deste subsystem, o jogo aponta para **um nó que não sai do lugar**: o
 nome vem do ``uniq`` do controle (``hefesto_som_<marca>``), e o cabo, o rádio e
 o "não tem para onde ir" acontecem por baixo dele. É o mesmo contrato do
-gamepad virtual, que é o precedente que ela citou: *o jogo escolhe um
-dispositivo, não um transporte* (``integrations/virtual_pad.py``).
+gamepad virtual, que é o precedente citado: o jogo escolhe um
+dispositivo, não um transporte (``integrations/virtual_pad.py``).
 
-AS TRÊS DECISÕES DE PRODUTO, E ELAS SÃO CURTAS
+AS TRÊS DECISÕES DE PRODUTO, TODAS CURTAS
 -----------------------------------------
 ``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE`` (06/09/2026, por delegação,
 reversível numa frase — ``docs/data/decisoes-de-produto.csv:213``):
 
-1. **REVERTIDA POR ELA EM 08/09/2026.** Dizia *"o nó vive só enquanto há
-   controle"* — decisão por DELEGAÇÃO, e declarada reversível numa frase. Ela
-   reverteu com todas as letras em `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-
-   SEMPRE` (*"concordo com as 5"*): **nó que some quebra o jogo que o
+1. **REVERTIDA EM 08/09/2026.** Dizia que o nó vive só enquanto há
+   controle — decisão por DELEGAÇÃO, e declarada reversível numa frase. A
+   reversão está em `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-
+   SEMPRE`, com as cinco aceitas: **nó que some quebra o jogo que o
    escolheu.** O que vai e volta é a ROTA, e o nó fica;
 2. **no cabo ele não vira saída padrão.** ``priority.session`` baixa
    (``integrations.alto_falante_bt.PRIORIDADE_SESSAO_DO_SOM``). Publicar o nó
    é uma coisa; mandar o som do sistema para ele é outra, e a segunda é do usuário;
 3. **o degrau é o ``0x36`` combinado desde 03/10/2026**: o som e a háptica do
-   controle num relatório só, com o ``0x10`` em todo quadro (provado na bancada), e é ele que a
+   controle num relatório só, com o ``0x10`` em todo quadro (provado no aparelho), e é ele que a
    ``PonteDeSomPorRadio`` que este subsystem sobe por
    controle no rádio escreve.
 
@@ -43,7 +43,7 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
 ---------------------------------------------------
 * **não escreve no aparelho do cabo.** No cabo o som é da placa USB do
   próprio controle; no rádio, :meth:`AltoFalanteSubsystem._casar_as_pontes`
-  sobe uma ``PonteDeSomPorRadio`` por controle, e é ela que escreve o
+  sobe uma ``PonteDeSomPorRadio`` por controle, e é a ponte que escreve o
   ``0x36`` no hidraw. A régua que fica é a da
   **FALÁCIA DO CANAL QUE RESPONDE** — concluir que, porque um canal
   responde, ele FAZ o que se esperava dele: o mapa segura o degrau em
@@ -90,16 +90,16 @@ registro existem, e são as três que a receita exige:
 (o ``_safe_start("alto_falante", …)`` no ``run()``) e ``daemon/connection.py``
 (o ``_stop_alto_falante`` no ``shutdown()``). Fazer só duas é a armadilha que o
 ``subsystems/__init__.py`` nomeia: sobe o subsystem e nunca o para, e o nó fica
-na lista de saída dela **depois de o daemon morrer**.
+na lista de saída do sistema **depois de o daemon morrer**.
 
 **E EM 12/09/2026 O DAEMON PASSOU A ENTRAR PELO CONSTRUTOR** (TRES-CONTAS-PARA-
 UM-NUMERO-01): é por ele que o «Controle N» do rótulo chega ao mesmo número do
-cartão dela, perguntando o ``player_slot`` ao ``identity_registry``.
+cartão do controle, perguntando o ``player_slot`` ao ``identity_registry``.
 
 A régua que trava o par continua sendo
-``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`` — e ela sempre permitiu
-esta cura: *"ela NÃO proíbe ligar o subsystem; ela trava o PAR — se ele subir,
-o nó tem de ter rota"*.
+``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py`` — e sempre permitiu
+esta cura: não proíbe ligar o subsystem, trava o PAR — se ele subir,
+o nó tem de ter rota.
 """
 
 from __future__ import annotations
@@ -207,7 +207,7 @@ class GerenciadorDeNosDeSom:
     rota, o ``module-null-sink`` e o id ficam, e a rota volta com o controle. **A PORTA**
     (O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01): a volta e o stop partilham o
     ``_acordar`` sob a ``_trava``; fechada (:meth:`fechar`), nenhum nó nasce e o que termina
-    de subir depois dela desce fora de ``_nos``. :meth:`abrir` é do ``start``.
+    de subir depois do fechamento desce fora de ``_nos``. :meth:`abrir` é do ``start``.
     """
 
     def __init__(
@@ -271,7 +271,7 @@ class GerenciadorDeNosDeSom:
         O parâmetro ``descricao``  (noqa-acento) nome de parâmetro
         existe para UM chamador — a VOLTA de :meth:`_republicar`,
         que precisa reerguer o nó com o rótulo que estava no ar, e não com o de
-        agora. Sem ela a volta seria uma segunda tentativa do mesmo ato que
+        agora. Sem o rótulo antigo a volta seria uma segunda tentativa do mesmo ato que
         acabou de falhar, e não um desfazer.
         """
         if self._fabrica is not None:
@@ -846,21 +846,21 @@ class AltoFalanteSubsystem:
         vezes, e a régua que as amarrava era o que sobrava por não haver um dono
         só. Agora as duas chamam
         ``subsystems/base.numero_do_assento_na_mesa`` — e aquela função não
-        conta nada: **ela pergunta o ``player_slot`` ao dono**, o
+        conta nada: **a função pergunta o ``player_slot`` ao dono**, o
         ``identity_registry``, e aplica a regra da casa.
 
-        Os dois rótulos que ela lê — «Alto-falante do Controle N» e «Microfone
+        Os dois rótulos que a função lê — «Alto-falante do Controle N» e «Microfone
         do Controle N» — continuam obrigados a dizer o MESMO número sobre o
         MESMO aparelho, lado a lado na mesma lista de som. Agora eles o dizem
         porque é o mesmo código, não porque duas cópias combinaram.
 
         E o número passou a ser o da TELA. Antes era a posição entre os
-        conectados, que é a ordem dos HANDLES — na bancada, às 22h de 09/09,
+        conectados, que é a ordem dos HANDLES — no ensaio, às 22h de 09/09,
         isso batizou de «Microfone do Controle 2» o aparelho cujo cartão dizia
         P1.
 
         **CONTINUA NÃO SENDO ``coop.resolve_player_numbers``:** com o co-op
-        desligado ele responde ``1`` para todos, e a lista dela ganharia quatro
+        desligado ele responde ``1`` para todos, e a lista do sistema ganharia quatro
         «Alto-falante do Controle 1».
 
         Sem daemon vivo não há número: ``None`` é *"não sei"*, e o rótulo nasce
@@ -905,7 +905,7 @@ class AltoFalanteSubsystem:
 
 
     def _fonte_do_controle(self, uniq: str) -> str:
-        """`mix` ou `sfx` para ESTE controle, lido do perfil ativo dela."""
+        """`mix` ou `sfx` para ESTE controle, lido do perfil ativo."""
         from hefesto_dualsense4unix.integrations.alto_falante_bt import FONTE_PADRAO
 
         viva = self._fonte_viva.get(_uniq_de_perfil(uniq))
@@ -1011,7 +1011,7 @@ class AltoFalanteSubsystem:
     def _ha_jogo_aberto(self) -> bool:
         """Algum processo da máquina é um jogo, pelo ambiente e não pelo nome.
 
-        É a pergunta de ``quem_o_jogo_le.pids_de_jogo``, e ela não depende de
+        É a pergunta de ``quem_o_jogo_le.pids_de_jogo``, e não depende de
         lista de jogos nem de lançador.
         """
         from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
@@ -1078,7 +1078,7 @@ class AltoFalanteSubsystem:
 
         O-SOM-DE-CADA-PAD-NA-ORDEM-DO-HIDRAW-01 (09/10/2026): o nó nasce na
         ordem do assento (o número do rótulo, :func:`numero_do_assento`), e o
-        que ficou fora dela (o controle que saiu e voltou renasce no fim da
+        que ficou fora da ordem (o controle que saiu e voltou renasce no fim da
         lista) renasce atrás de quem chegou. Só sem jogo aberto, e só se nenhum
         deles toca ou alimenta uma ponte: nó que some debaixo do jogo quebra o
         jogo que o escolheu (decisão de 08/09). «Não sei» não reordena: nem o
@@ -1143,7 +1143,7 @@ class AltoFalanteSubsystem:
         A-HAPTICA-E-POR-APARELHO-01, item 5 — o preço que o usuário aceitou na
         pergunta [27]: o device KS se grava no lançamento, e o aparelho que
         chega com o jogo aberto ganha um endpoint que o jogo não conhece até
-        reabrir. Uma linha por aparelho e partida, para a bancada e o doctor
+        reabrir. Uma linha por aparelho e partida, para o ensaio e o doctor
         saberem por quê. A partida é a da volta anterior: algum jogo dono de
         fluxo nos endpoints (:meth:`_donos_dos_fluxos`).
         """
@@ -1696,7 +1696,7 @@ class AltoFalanteSubsystem:
         que toca em todos chega a todos. A placa é a do dono
         (``alto_falante_bt.sink_do_controle``), e só vale se for uma placa de
         quatro canais que não é nossa (``motores``, a leitura da volta): sem
-        ela o controle segue pela placa, sem laço, e o registro lhe dá o bloco
+        a placa nossa o controle segue pela placa, sem laço, e o registro lhe dá o bloco
         pelo ``BUSNUM-DEVNUM`` (``audio_ks_dualsense.controles_do_registro``).
 
         ``motores`` ``None`` é o servidor que não respondeu: o laço de quem
@@ -1845,7 +1845,7 @@ class AltoFalanteSubsystem:
         """Guarda o que a volta subiu, se o stop não passou. False = quem chama desce.
 
         O ``stop`` põe o ``_parar`` sob a mesma ``_porta``, e só depois tira a
-        cópia do que desce: o que a volta guarda antes dele, ele vê; o que ela
+        cópia do que desce: o que a volta guarda antes dele, ele vê; o que a volta
         subiu depois, não entra nos dicionários.
         """
         with self._porta:
@@ -2299,7 +2299,7 @@ class AltoFalanteSubsystem:
             return False
 
     def _esquecer_a_espera(self, uniq: str) -> None:
-        """Ela respondeu «Ligar aqui»: quem esperava vaga deixa de esperar."""
+        """Quem usa respondeu «Ligar aqui»: quem esperava vaga deixa de esperar."""
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
         alvo = norm_mac(uniq) or uniq.lower()

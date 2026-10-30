@@ -100,7 +100,7 @@ def padrao_que_vale(escolha: object, estilo: object) -> str | None:
     """O padrão que toca de verdade, ou ``None`` quando os motores deste controle não tocam nada.
 
     Sem escolha («Do estilo») vale o do estilo, e nenhum quando o estilo não pede; «Sem efeito»
-    cala. A Bateria longa não troca o padrão: ela só baixa a força, e quem baixa é o chamador.
+    cala. A Bateria longa não troca o padrão: só baixa a força, e quem baixa é o chamador.
     """
     if escolha == SEM_EFEITO:
         return None
@@ -142,7 +142,7 @@ def tocar(
 ) -> None:
     """Percorre o padrão: `enviar(esquerdo, direito)` e `esperar(segundos)` a cada passo.
 
-    `pontos_*` é a barra de cada motor (0 a 100): o padrão sai reduzido por ela, como o
+    `pontos_*` é a barra de cada motor (0 a 100): o padrão sai reduzido pela barra, como o
     «Testar». O silêncio final é de quem chama (devolver a mão ao jogo).
     """
     for ms, esq, dir_ in sequencia(padrao, motores):

@@ -72,7 +72,7 @@ class BigPicture:
 
     @classmethod
     def da_sessao(cls) -> BigPicture:
-        """A escolha guardada (``big_picture.flag``); sem ela, desligado."""
+        """A escolha guardada (``big_picture.flag``); sem a escolha, desligado."""
         from hefesto_dualsense4unix.utils.session import load_big_picture
 
         return cls(ligado=load_big_picture())

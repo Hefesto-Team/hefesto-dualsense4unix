@@ -12,7 +12,7 @@ inputs só com STATUS-01/02. O buraco real é o **modo Nativo** (…) e
 emulação-off"*. A aposta continua verdadeira — medido em 04/09/2026 com os
 dois DualSense do usuário em USB e co-op ligado, os DOIS controles publicam
 `inputs` com giro, acelerômetro e touchpad, e este hub não abre reader de
-gamepad NENHUM. O que ela fecha é o buraco: nos modos em que o co-op está
+gamepad NENHUM. O que o hub fecha é o buraco: nos modos em que o co-op está
 desmontado (Nativo, emulação off, suspensão por Steam Input) o secundário
 ficava com `inputs: None` e METADE DA MESA emudecia por desenho.
 
@@ -51,20 +51,20 @@ evdev entrega o mesmo evento a todos os fds abertos, e isto não é hidraw
 (a armadilha nº 3 desta casa, o instrumento que briga com o produto, mora na
 outra camada).
 
-**O reader de MOTION é a exceção, e ela nasceu deliberada em 04/09/2026**
-(SENSOR-DE-VERDADE-01, decisão de produto: *"ele tem que funcionar de verdade.
-ambos independente do modo e da mascara"*). <!-- noqa-acento: citação literal -->
+**O reader de MOTION é a exceção, e nasceu deliberada em 04/09/2026**
+(SENSOR-DE-VERDADE-01, decisão de produto: o sensor funciona de verdade,
+os dois, independente do modo e da máscara).
 O node "Motion Sensors" é SEPARADO do node do controle: grabá-lo esconde o
 giro e o acelerômetro de quem lê evdev **sem tocar um único botão** — os
 gatilhos, os analógicos e o d-pad continuam chegando ao jogo pelo outro node.
 É o oposto do caso acima, e é por isso que a mesma máquina de grab serve aos
-dois com sinais trocados. Só grabamos quando ELA desligou um sensor; sem
+dois com sinais trocados. Só grabamos quando o USUÁRIO desligou um sensor; sem
 pedido, este hub continua sendo um observador que não disputa nada
 (:meth:`SensorHub._reconciliar_grabs`).
 
 **Quem grabou o node é que fica com os eventos, e por isso o `ipc_handlers`
 NÃO pede `entradas()` de um controle que o co-op já segura.** MEDIDO no
-hardware dela em 04/09/2026, e o resultado é PIOR do que "o card fica em
+hardware de teste em 04/09/2026, e o resultado é PIOR do que "o card fica em
 zero": abrindo um reader passivo sobre os dois nodes que o daemon já grabava,
 os dois abriram sem erro e publicaram
 
@@ -199,7 +199,7 @@ class SensorHub:
 
         TEM UM DONO SÓ, e ele está escrito para ninguém acrescentar o segundo:
         o roteador de movimento, no tique do jogo. Um segundo chamador
-        dividiria o movimento entre os dois e a mira dela andaria pela metade —
+        dividiria o movimento entre os dois e a mira andaria pela metade —
         é a mesma regra do `TouchpadReader.consume_motion`, cujo dono é o poll
         loop.
 

@@ -1,7 +1,7 @@
 """A lista única de subsystems do daemon: o que sobe, quando, e em que ordem para.
 
 ``SUBSYSTEM_REGISTRY`` é a ÚNICA fonte. ``Daemon.run()`` percorre a lista na ordem
-em que ela está escrita (``subir``) e ``connection.shutdown`` a percorre pela ordem
+em que está escrita (``subir``) e ``connection.shutdown`` a percorre pela ordem
 de parada declarada em cada entrada (``parar``). Ligar um subsystem novo é
 **acrescentar uma entrada aqui**: não há mais um ``_safe_start`` no ``run()`` nem um
 ``_stop_*`` no ``shutdown()`` para esquecer (foi assim que o ``BtMicSubsystem`` e o
@@ -9,7 +9,7 @@ de parada declarada em cada entrada (``parar``). Ligar um subsystem novo é
 ``tests/unit/test_o_subsystem_sobe_e_desce_por_uma_lista_so.py``.
 
 Cada ``Passo`` declara o nome, a condição (``quando``, sobre a ``DaemonConfig``;
-``None`` é «sempre»), a partida, a parada e a posição dela (``parar_em``). A ordem de
+``None`` é «sempre»), a partida, a parada e a posição do passo (``parar_em``). A ordem de
 parada NÃO é a de partida, e é declarada de propósito: o som e o microfone caem antes
 do IPC (a leitura do sysfs e do servidor de som termina antes de a porta fechar), e o
 controle é a última coisa a ir (``soltar_o_controle``). O passo sem ``partida`` só
@@ -454,7 +454,7 @@ def a_ordem_de_parada() -> list[Passo]:
 
 
 async def parar(daemon: Any) -> None:
-    """Para tudo o que a lista declara parar, na ordem de parada dela.
+    """Para tudo o que a lista declara parar, na ordem de parada da lista.
 
     Uma parada que falha vira aviso no diário e as demais seguem: limpeza quebrada nunca
     derruba a parada. ``CancelledError`` passa (não é ``Exception``).

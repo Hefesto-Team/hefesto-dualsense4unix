@@ -63,7 +63,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                          -> {status, speaker, fonte?}
                          `rota` é o OUTPUT_PATH_SEL do firmware: 0 estéreo no
                          fone · 1 mono no fone · 2 L=fone/TV, R=alto-falante
-                         («Efeitos do Jogo») · 3 só no alto-falante. Ela estava
+                         («Efeitos do Jogo») · 3 só no alto-falante. O modo estava
                          implementada e validada desde a SOM-ROTA-01 e FALTAVA
                          nesta linha — o contrato mentia por omissão, e foi
                          preciso ler o handler para descobrir que dava para
@@ -71,7 +71,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                          `fonte` é a CAMADA 1 (o PipeWire): `sfx` deixa o nó
                          daquele controle livre para o que o jogo endereçar a
                          ele, `mix` derrama nele todo o som da máquina sem
-                         tirá-lo da TV. Ela exige `uniq` e não toma a posse do
+                         tirá-lo da TV. O modo exige `uniq` e não toma a posse do
                          volume. Entrou em 20/09/2026: até ali a escolha do usuário
                          só chegava ao nó pelo PERFIL ATIVO, e sem perfil ativo
                          não chegava nunca.

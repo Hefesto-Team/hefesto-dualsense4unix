@@ -3,7 +3,7 @@
 Embrulha ``integrations/dualsense_bt_audio.py`` no contrato ``Subsystem`` do daemon. É fino de
 propósito. Um canal por controle, que pode existir sem capturar; ganha ponte quem foi PROCURADO
 (``PEDIDOS``), declarado (``bt_mic_uniqs``) ou a mesa inteira pela env. Desligar desliga: o
-silêncio dela vence. A razão de cada regra: ``docs/research/o-porque-dos-modulos.md``, seção
+silêncio de quem usa vence. A razão de cada regra: ``docs/research/o-porque-dos-modulos.md``, seção
 «bt_mic».
 """
 from __future__ import annotations
@@ -124,7 +124,7 @@ class RegistroDePedidosDeCanal:
         return True
 
     def esquecer_a_palavra(self, uniq: str) -> bool:
-        """Ela deixa de ter dito qualquer coisa — a decisão volta ao ouvinte."""
+        """Quem usa deixa de ter dito qualquer coisa — a decisão volta ao ouvinte."""
         chave = norm_mac(str(uniq)) or ""
         with self._lock:
             saiu = self._no_ar.pop(chave, None) is not None
@@ -193,14 +193,14 @@ def uniqs_declarados(maquina: MaquinaConfig | None) -> frozenset[str]:
 
 
 def uniqs_recusados(maquina: MaquinaConfig | None) -> frozenset[str]:
-    """Os `uniq` que ela DESLIGOU — a única coisa que tira um microfone do ar.
+    """Os `uniq` que o usuário DESLIGOU — a única coisa que tira um microfone do ar.
 
-    **A INVERSÃO — 18/09/2026, ordem de produto:** *"todos os controles tem que
-    nascer com tudo mic, giroscopio e afins"*. Até aqui o microfone era
+    **A INVERSÃO — 18/09/2026, ordem de produto:** todo controle
+    nasce com tudo ligado, microfone, giroscópio e afins. Até aqui o microfone era
     opt-in: um DualSense novo na mesa nascia sem canal, e a aba respondia *"o
     sistema não vê um microfone neste controle"* — uma recusa que a pessoa não
     tinha como resolver, porque o botão que a resolveria estava atrás de uma
-    declaração que ninguém sabia existir. MEDIDO na bancada no mesmo dia:
+    declaração que ninguém sabia existir. MEDIDO no ensaio no mesmo dia:
     dos quatro DualSense ligados, DOIS tinham microfone; os outros dois nunca
     haviam sido declarados.
 
@@ -213,7 +213,7 @@ def uniqs_recusados(maquina: MaquinaConfig | None) -> frozenset[str]:
     que não é a mesma coisa que "não quero" — e era por isso que o `False` não
     chegava ao disco.
 
-    `None` (ausente) = **nasce ligado**. `False` = ela desligou, e a ponte fica
+    `None` (ausente) = **nasce ligado**. `False` = o usuário desligou, e a ponte fica
     no chão. `True` = ligado, como sempre foi — quem já declarou não perde nada.
     """
     if maquina is None:
@@ -424,8 +424,8 @@ class BtMicSubsystem:
         """O que do SISTEMA segura a ponte do rádio agora, ou `""`.
 
         É a resposta que o `state_full` publica como `bt_mic.motivo`: a recusa
-        dela (o «Desligado» do card) não entra aqui, porque ela sabe o que
-        pediu; entra o que ela não tem como ver da tela.
+        do usuário (o «Desligado» do card) não entra aqui, porque quem usa sabe o que
+        pediu; entra o que o usuário não tem como ver da tela.
         """
         return self._motivo
 
@@ -436,10 +436,10 @@ class BtMicSubsystem:
         return True
 
     def alvos(self, nos: list[Any]) -> list[Any]:
-        """Os nós de BT que ganham ponte: TODOS, menos os que ela desligou.
+        """Os nós de BT que ganham ponte: TODOS, menos os que o usuário desligou.
 
         **A INVERSÃO DE 18/09/2026** (ver :func:`uniqs_recusados` para a ordem
-        de produto e o que ela substitui). Antes a lista era a UNIÃO de quem pediu
+        de produto e o que a inversão substitui). Antes a lista era a UNIÃO de quem pediu
         com quem foi declarado, e um controle fora das duas ficava sem
         microfone para sempre. Agora a régua é a recusa: um DualSense TEM
         microfone, e isso é fato do aparelho, não escolha de configuração.
@@ -458,7 +458,7 @@ class BtMicSubsystem:
         `_esquecer_quem_saiu_da_mesa`.
 
         Um nó sem `HID_UNIQ` legível continua NUNCA entrando: sem endereço não
-        há como saber de quem é o microfone, nem como ela o desligaria depois.
+        há como saber de quem é o microfone, nem como o usuário o desligaria depois.
 
         **E O DRIVER TEM A PRIMEIRA PALAVRA (28/09/2026).** Um nó que o
         `playstation` lê sem a guarda do áudio não entra, com ou sem a env e a
@@ -505,7 +505,7 @@ class BtMicSubsystem:
         return ok
 
     def esquecer_a_palavra(self, uniq: str) -> bool:
-        """Ela deixa de ter dito qualquer coisa sobre este microfone.
+        """Quem usa deixa de ter dito qualquer coisa sobre este microfone.
 
         Quem chama é o microfone que saiu do ar DE FATO, pelo mesmo gancho: o
         canal dele sumiu ou o controle saiu da mesa
@@ -530,7 +530,7 @@ class BtMicSubsystem:
         return saiu
 
     def palavra_no_ar(self, uniq: str) -> bool | None:
-        """O que o usuário disse sobre ESTE microfone. `None` = ela não disse nada."""
+        """O que o usuário disse sobre ESTE microfone. `None` = nada foi dito."""
         chave = norm_mac(str(uniq)) or ""
         return self._registro.no_ar().get(chave)
 
@@ -703,7 +703,7 @@ class BtMicSubsystem:
 
         **CONTINUA NÃO SENDO `resolve_player_numbers`:** aquele é o número que o
         JOGO vê, e com o co-op desligado ele responde `1` para todos — quatro
-        «Microfone do Controle 1» na lista dela.
+        «Microfone do Controle 1» na lista do sistema.
 
         Sem daemon, sem registro fiado, ou controle que ainda não estreou na
         fila, a regra da casa cai no `index + 1` — o mesmo número que o cartão
@@ -861,7 +861,7 @@ class BtMicSubsystem:
         erguia a ponte de todo controle (``alvos``); o cabo só erguia o canal
         de quem o pedia pelo botão. Agora todo DualSense conectado pelo fio
         ganha o «Microfone do Controle N»; o pedido continua valendo para quem
-        ainda não está na mesa, e a recusa dela continua tirando o canal.
+        ainda não está na mesa, e a recusa do usuário continua tirando o canal.
         """
         do_radio = frozenset(
             (norm_mac(str(getattr(no, "uniq", ""))) or "") for no in nos
@@ -1073,11 +1073,11 @@ class BtMicSubsystem:
         fio→laço da casa (`call_soon_threadsafe`); até 29/09 ele chamava a
         volta à máquina direto e pulava quem estava no ar. E a porta abre
         também com o `canal_de_controle` (o herdeiro calado que o WirePlumber
-        escolhe): antes ela só abria com monitor, fantasma ou vazio, e o canal
+        escolhe): antes a recusa só abria com monitor, fantasma ou vazio, e o canal
         de um calado herdava o padrão sem a pergunta ser feita.
 
         **E QUANDO NÃO HÁ PARA ONDE VOLTAR, a recusa vai para o diário.** Foi o
-        caso medido nesta bancada: o único microfone do usuário é o do DualSense, e
+        caso medido nesta máquina de teste: o único microfone do usuário é o do DualSense, e
         com o controle fora da mesa e ninguém mais no ar não sobra captura com
         porta usável que não seja controle. Aí nada é escrito, e o que fica no
         journal é o NOME do nó que herdou a eleição — porque uma denúncia sem o

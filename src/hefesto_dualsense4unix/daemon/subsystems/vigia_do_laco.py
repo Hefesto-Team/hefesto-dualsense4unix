@@ -65,7 +65,7 @@ class VigiaDoLaco:
 
 
     def olhar(self) -> None:
-        """UMA olhada na batida: diz a parada uma vez, e a volta quando ela vem."""
+        """UMA olhada na batida: diz a parada uma vez, e a volta quando a batida vem."""
         idade = self._relogio() - self._batida
         if idade > self.limite_s:
             if self._parado_desde is None:
@@ -86,7 +86,7 @@ class VigiaDoLaco:
 
 
     def ligar(self) -> None:
-        """Liga as três peças. Chamado DE DENTRO do laço que ela vigia."""
+        """Liga as três peças. Chamado DE DENTRO do laço que o vigia observa."""
         self._batida = self._relogio()
         self._armar()
         self._tarefa = asyncio.get_running_loop().create_task(self._bater())

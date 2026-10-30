@@ -2,7 +2,7 @@
 
 OS-EVENTOS-DO-PERFIL-ENTRAM-PELO-QUE-O-DAEMON-JA-SABE-01: «Controle conectado» entra ao
 `controller.connected` (cabo ou rádio); «Programa aberto» é o `match` pelo autoswitch; «Meu
-comando» entra quando o comando dela passa a sair com 0 (sem shell, a cada 15 s, prazo de 5 s).
+comando» entra quando o comando escrito passa a sair com 0 (sem shell, a cada 15 s, prazo de 5 s).
 Cena, Menu, Pausa e Hora marcada gravam sem motor: falta a fonte. Nenhum evento tira o perfil de
 um jogo em cena, a escolha manual dos últimos 30 s nem o Modo Nativo; o motor sobe depois do
 controle, e a conexão do boot é a da sessão restaurada.
@@ -38,7 +38,7 @@ def perfis_do_momento(momento: str, perfis: Iterable[Any]) -> list[Any]:
 
 
 def argv_do_comando(texto: str) -> list[str]:
-    """O comando dela em argumentos, sem shell; lista vazia quando ela não escreveu nada.
+    """O comando do usuário em argumentos, sem shell; lista vazia quando nada foi escrito nada.
 
     Aspas abertas levantam o `ValueError` do `shlex`, e quem roda diz o porquê.
     """

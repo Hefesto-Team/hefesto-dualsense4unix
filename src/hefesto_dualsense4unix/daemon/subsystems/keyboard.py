@@ -8,7 +8,7 @@ correspondentes assim que o serviço sobe.
 EMULACAO-NO-JOGO-01 (29/07) corrigiu a assimetria que este cabeçalho declarava:
 o teclado NÃO tinha toggle explícito nenhum — nem gate de criação, nem flag em
 disco, nem IPC —, e por isso o R1 (Alt+Tab, `core/keyboard_mappings.py`)
-trocava de aplicativo no meio da partida dela. Agora `keyboard_emulation_enabled`
+trocava de aplicativo no meio da partida do usuário. Agora `keyboard_emulation_enabled`
 é respeitado no gate de criação abaixo (molde de `subsystems/mouse.py`), a
 preferência é persistida em `keyboard_emulation.flag`
 (`utils/session.py:save_keyboard_emulation`) e o runtime alterna por
@@ -100,7 +100,7 @@ def osk_disponivel_no_sistema() -> bool:
 
     Existe para quem precisa da resposta SEM ter um `_OSKController` à mão — o
     `state_full` do daemon, que a publica para a janela. A janela não pode fazer
-    o `shutil.which` por conta própria: num Flatpak ela olharia dentro do
+    o `shutil.which` por conta própria: num Flatpak a janela olharia dentro do
     sandbox e responderia sobre uma máquina que não é a da usuária.
 
     Mesmo TTL do `_OSKController._resolve` e pelo mesmo motivo (instalar o
@@ -450,7 +450,7 @@ def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     cabeçalho de `assets/76-dualsense-touchpad-libinput-ignore.rules`). Nem a
     descoberta olha transporte: `_discover_dualsense_por_nome` filtra por
     vendor/product e marcador de nome, sem uma linha sobre `bustype`. Medido de
-    novo em 25/08 no DualSense do CABO desta bancada: gamepad em `event21` e
+    novo em 25/08 no DualSense do CABO desta máquina de teste: gamepad em `event21` e
     touchpad em `event23`, a mesma identidade nos dois.
 
     O que faz as três regiões não dispararem tecla HOJE é outra coisa, e é

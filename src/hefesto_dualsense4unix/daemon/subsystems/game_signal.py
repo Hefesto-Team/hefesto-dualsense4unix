@@ -64,19 +64,19 @@ def classify(
        agulha `SteamLaunch AppId=<dígitos>` na cmdline), lida pelo
        `lifecycle._gather_game_signal_inputs`.
 
-       **Por que ela é a cura, e não mais uma perna:** as evidências 1 e 2
+       **Por que a varredura é a cura, e não mais uma perna:** as evidências 1 e 2
        exigem o detector enxergando e a 3 exige o wrapper. Medido em 31/07 na
        máquina do usuário, o jogo NÃO passa pelo wrapper — sobrava uma perna só, e
        o detector cegar no meio da partida derrubava a autoridade sem nada ter
        acontecido no jogo.
 
-       **E é ela que tira do `WRAPPER_MARKER_WINDOW_SEC` (900 s) o poder de
+       **E é a varredura que tira do `WRAPPER_MARKER_WINDOW_SEC` (900 s) o poder de
        matar um jogo vivo.** A evidência 3 avalia o teto de frescor ANTES de
        olhar o pid (`launch_env.wrapper_game_running`), então uma partida mais
        longa que 15 min deixava de ser evidência com o pid de pé. A varredura
        não tem teto: enquanto o processo do jogo estiver vivo, ele é evidência.
        O que o teto cobria era o PID RECICLADO, e a varredura não corre esse
-       risco — ela lê a cmdline do processo de AGORA, não um número gravado em
+       risco — lê a cmdline do processo de AGORA, não um número gravado em
        arquivo (o mesmo raciocínio que `autoswitch.jogo_do_wrapper_vivo` já
        tinha registrado por outra porta).
 
@@ -244,7 +244,7 @@ class GameSignal:
 
     @property
     def appid(self) -> int | None:
-        """O appid da evidência que pôs (ou mantém) a autoridade em `game`; fora dela, ``None``.
+        """O appid da evidência que pôs (ou mantém) a autoridade em `game`; senão, ``None``.
 
         Quem pergunta é o arme de um lançamento (`launch_env`): a autoridade que é do
         PRÓPRIO jogo que está abrindo não é o resíduo de um jogo que acabou. Evidência só
@@ -283,7 +283,7 @@ class GameSignal:
 
         O lançamento de outro jogo, sem nenhum outro vivo (`outro_jogo_vivo`), é a
         prova de que o anterior acabou. A histerese de 30 s é da janela que pisca
-        dentro do MESMO jogo, e segue valendo para ela. O tique seguinte reavalia o
+        dentro do MESMO jogo, e segue valendo para a janela. O tique seguinte reavalia o
         veredito cru como sempre, e o jogo novo volta a `game` pela evidência dele.
         """
         if self._authority != "game":

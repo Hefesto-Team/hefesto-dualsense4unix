@@ -17,7 +17,7 @@ na mão, não para quem lê log.
 **POR QUE UM DEPÓSITO, e não um evento.** A interface pinta a cada 500 ms lendo
 `daemon.state_full`; o toque no botão do microfone dura um instante. Uma frase
 publicada só no tique em que a borda chegou tem probabilidade ~0 de coincidir
-com o tique em que a tela lê — ela existiria e ninguém a veria. O recado fica
+com o tique em que a tela lê — o recado existiria e ninguém a veria. O recado fica
 guardado no daemon e sai em TODO `state_full` até a próxima borda daquele
 controle o substituir.
 
@@ -102,7 +102,7 @@ class RecadoDoMicrofone:
 def mesa_de_agora(daemon: Any) -> list[str] | None:
     """Os `uniq` na mesa AGORA, ou `None` quando o backend não sabe dizer.
 
-    **É A ÚNICA LEITURA DE "TEM CARD NA TELA", e ela é pública por isso.**
+    **É A ÚNICA LEITURA DE "TEM CARD NA TELA", e é pública por isso.**
     Nasceu privada em 02/09/2026 e o preço apareceu no mesmo dia: o
     `hotkey._eleger_ou_devolver` perguntava a mesma coisa a `_uniqs_conectados`,
     que NÃO exige o `connected`, e as duas respostas divergiam exatamente na
@@ -127,11 +127,11 @@ def mesa_de_agora(daemon: Any) -> list[str] | None:
 
     É a mesma fonte que `hotkey._uniqs_conectados` e
     `ipc_handlers._uniqs_conectados` leem — só getattrs baratos, sem HID I/O —
-    e por isso ela cabe no caminho de leitura, que roda a 10 Hz.
+    e por isso cabe no caminho de leitura, que roda a 10 Hz.
 
-    **E ELA EXIGE O `connected`, que aquelas duas não exigem** — que é
+    **E A LEITURA EXIGE O `connected`, que aquelas duas não exigem** — que é
     justamente por que a pergunta *"tem card na tela?"* tem de vir a esta
-    função e não a elas. O
+    função e não às outras duas. O
     `describe_controllers` do backend real devolve uma entrada POR HANDLE e
     preenche o `uniq` mesmo com `connected: False`
     (`core/backend_pydualsense.py:4702`) — ler só o `uniq` daria "está na mesa"
@@ -226,7 +226,7 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
       `src/` limpou a posse, então a tela tem um dono que não tem card. Pintar
       o nome dele seria a nona vez que esta casa nomeia um controle fora da
       mesa.
-    * ``recados`` — um por `uniq`, com a frase, a idade dela e o ``vale_agora``
+    * ``recados`` — um por `uniq`, com a frase, a idade da frase e o ``vale_agora``
       que diz se o retrato da mesa gravado JUNTO com a frase ainda é o de
       agora. **Recado passado de `VALIDADE_DO_RECADO_S` não sai** — a chave do
       `uniq` some, e a tela fica sem o que pintar, que é o que o usuário decidiu
@@ -244,7 +244,7 @@ def publicar(daemon: Any, agora_s: float | None = None) -> dict[str, Any]:
     `eleito` de dentro do recado virou história, e uma frase de ``recusa`` —
     que nasce exatamente desse retrato — não pode mais ser pintada no
     presente. ``True`` não promete que a frase é verdade; promete que o mundo
-    que ela descreve ainda é este.
+    que a frase descreve ainda é este.
 
     Daemon ausente (testes legados, modos sem daemon) devolve o bloco VAZIO em
     vez de sumir: chave que aparece e desaparece é o defeito que o

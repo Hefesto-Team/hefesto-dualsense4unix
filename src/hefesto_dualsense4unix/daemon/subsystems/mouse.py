@@ -161,7 +161,7 @@ def _com_o_modo(
     """O filtro e o modo (alternar, repetir, longo, duplo) deste controle, ANTES de a tabela somar.
 
     A tabela lê os botões como o controle os aperta (sem a troca de botões), então guarda
-    o estado dela à parte do pad virtual: o filtro primeiro, como no pad, e o modo depois.
+    o estado do mouse à parte do pad virtual: o filtro primeiro, como no pad, e o modo depois.
     """
     agora = _agora()
     botoes, l2, r2, _ = filtro_de_botao.traduzir(
@@ -180,7 +180,7 @@ class TabelaNoJogo:
     PRIVADOS, de mouse e de teclado, criados só quando a chave está ligada, que
     nunca tocam o gamepad virtual nem o `_mouse_device` do desktop.
 
-    O QUE ELA AGE, em frases:
+    O QUE A TABELA AGE, em frases:
 
     * cada controle aperta as PRÓPRIAS linhas — a união dos botões de P1 a P4,
       com o gatilho analógico de cada um virando `l2`/`r2` pelo mesmo limiar
@@ -480,7 +480,7 @@ def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
 
     Chamado a cada ativação (e a cada `reaplicar`), ANTES de qualquer saída por
     lock manual: a chave é do perfil, não da supressão. Fecha a tabela anterior
-    (solta o que ela segurava) e abre outra só quando a chave estiver ligada.
+    (solta o que a tabela segurava) e abre outra só quando a chave estiver ligada.
     """
     anterior = getattr(daemon, "_tabela_no_jogo", None)
     if anterior is not None:
@@ -514,13 +514,13 @@ def despachar_no_jogo(
 ) -> None:
     """O que o laço faz com o gamepad virtual despachando, e a saída dele.
 
-    * Tabela ligada: ela age (mouse e teclado privados). O teclado do desktop
+    * Tabela ligada: age (mouse e teclado privados). O teclado do desktop
       não despacha junto, para a mesma tecla não sair duas vezes.
     * O teclado «Só dentro do jogo» ou «Sempre»: o teclado do desktop despacha daqui,
       mesmo com a emulação suprimida pelo perfil do jogo.
     * Ao sair do jogo (ou ao largar a chave) tudo é solto.
     * «Suspender mouse e teclado» (o gesto, a interface, o IPC) cala os dois aqui
-      também: a supressão que ELA ligou vale com o jogo aberto. A do perfil do jogo
+      também: a supressão que o USUÁRIO ligou vale com o jogo aberto. A do perfil do jogo
       não cala, porque o jogo aberto é justamente onde a chave e o «Só dentro» agem.
     """
     if no_jogo:

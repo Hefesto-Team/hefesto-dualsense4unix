@@ -166,7 +166,7 @@ def o_arquivo_de_mascaras_vira_o_modo(perfil_ativo: object) -> str | None:
 
     O arquivo era o CACHE da máscara de cada controle: com perfil ativo, o que ele
     guardava é o que o perfil declarava, e a migração do perfil já o levou ao ``mode``.
-    O que só o arquivo sabia é a escolha feita sem perfil nenhum: ela vai ao padrão do
+    O que só o arquivo sabia é a escolha feita sem perfil nenhum: vai ao padrão do
     computador (``gamepad_emulation.flag``), pela regra de desempate da migração do
     perfil; com o pad desligado o padrão não tem onde guardá-la, e o arquivo espera o
     próximo boot. O arquivo que não se lê fica onde está, intocado. Devolve a máscara

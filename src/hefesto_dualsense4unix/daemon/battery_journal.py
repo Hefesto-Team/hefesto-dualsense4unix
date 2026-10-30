@@ -24,9 +24,9 @@ as **duas** leituras:
 
 Se as duas discordarem em mais de um degrau, **o resultado é sobre o
 instrumento**, não sobre a bateria — e é por isso que as duas vão para o
-journal, não a "melhor" delas.
+journal, não a "melhor" das duas.
 
-A cadência, e por que ela é esta
+A cadência, e por que é esta
 --------------------------------
 - **A cada tique (60 Hz) polui e some no ruído**: seriam ~5,2 milhões de linhas
   por dia. E o ``BatteryDebouncer`` do ``subsystems/poll.py`` também não serve
@@ -51,18 +51,18 @@ de 5 (5, 15, 25, … 95) — com estas faixas, **todo** degrau do hardware cruza
 fronteira, então nenhum se perde.
 
 Volume esperado numa sessão de 16 h: ~10 linhas de faixa + ~32 âncoras + as
-bordas de cabo, algo como 45 linhas. O evento mais frequente do journal da bancada
+bordas de cabo, algo como 45 linhas. O evento mais frequente do journal da máquina de teste
 (``hidraw_broker_hidden``) teve 14.105 ocorrências em 7 dias — este diário é
 0,3% disso. GRAU: MEDIDO (contagem do protocolo de 07/08).
 
 O endereço NÃO vai cru
 ----------------------
-O journal da bancada já publica ``uniq=`` cru hoje, e o repositório é público: o
+O journal da máquina de teste já publica ``uniq=`` cru hoje, e o repositório é público: o
 endereço de rádio identifica o aparelho. Toda linha daqui sai com a **máscara da
 casa** — octetos 4 e 5 zerados (``OUI:00:00:NN``), a mesma convenção que o
 portão ``tests/unit/test_docs_mac_anonimato.py`` cobra dos arquivos versionados.
 A máscara preserva o que a análise precisa (fabricante + último octeto
-distinguem os dois DualSense da bancada) e apaga o que identifica o aparelho.
+distinguem os dois DualSense do ensaio) e apaga o que identifica o aparelho.
 
 A linha da queda
 ----------------

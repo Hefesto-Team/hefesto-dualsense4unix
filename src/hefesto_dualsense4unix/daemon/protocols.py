@@ -176,7 +176,7 @@ class DaemonProtocol(Protocol):
 
         Entrar na Navegação LIGA o mouse, pelas duas portas (o chip e o PS +
         R3), com as velocidades do perfil (D-2909-A-NAVEGACAO-LIGA-O-MOUSE,
-        O-MOUSE-SEGUE-A-NAVEGACAO-01); o socorro `forcar_mouse` saiu com ela.
+        O-MOUSE-SEGUE-A-NAVEGACAO-01); o socorro `forcar_mouse` saiu com a navegação.
 
         `grava_o_modo`: a porta da escolha do usuário; o modo `desktop` vai ao perfil ativo depois
         do arranjo, com o `mouse.enabled` que a entrada ligou (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).

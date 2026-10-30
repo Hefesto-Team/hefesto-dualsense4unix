@@ -1556,7 +1556,7 @@ class IpcHandlersMixin:
 
         A permissão de `uinput` entra por `device_ativo`: `UinputMouseDevice.start()` falha sem
         acesso ao nó e `_mouse_device` fica `None` com o interruptor em pé. Uma sonda de `os.access`
-        na janela responderia pelo processo dela (no Flatpak, pelo sandbox). `getattr` defensivo
+        na janela responderia pelo processo do app (no Flatpak, pelo sandbox). `getattr` defensivo
         (caminho do `state_full`, 10-20 Hz).
         """
         daemon = self.daemon
@@ -1662,9 +1662,9 @@ class IpcHandlersMixin:
     async def _handle_freestyle_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Liga/desliga o Modo Freestyle — o botão «Modo Freestyle» da aba Jogar.
 
-        O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), no lugar do `autoswitch.lock`. A palavra de
-        produto: *«Aperto o botão do freestyle e o jogo que eu tiver jogando vai ter essa config
-        independente do perfil do jogo.»*  (noqa-acento: citação)
+        O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), no lugar do `autoswitch.lock`. A regra de
+        produto: com o botão do Freestyle apertado, o jogo em cena recebe essa configuração
+        independente do perfil do jogo.
 
         `ligado` opcional: ausente → inverte. **LIGAR** é o «Ativar» do Freestyle na aba Perfis, o
         mesmo caminho (o `profile.switch` dele, com a ativação à mão, liga o modo SEMPRE:
@@ -2558,7 +2558,7 @@ class IpcHandlersMixin:
         return bool(self.daemon is not None and ha_jogo(self.daemon))
 
     def _jogo_tem_toque_proprio(self, uniq: str) -> bool:
-        """O jogo em foco recebe o toque desta peça pelo vpad: a máscara dela é a DualSense.
+        """O jogo em foco recebe o toque desta peça pelo vpad: a máscara da peça é a DualSense.
 
         A ficha do jogo (``ficha_declarada``) ainda não chega ao daemon; enquanto isso vale a
         máscara. Perfil em cursor/zonas e cliente DSU têm demanda própria no hub.
@@ -2574,7 +2574,7 @@ class IpcHandlersMixin:
     ) -> dict[str, Any] | None:
         """Entrega STATUS-04: `inputs` de quem não tem NENHUMA outra fonte.
 
-        Com o co-op desmontado (Nativo, emulação off) metade da mesa ficava muda justo quando ela
+        Com o co-op desmontado (Nativo, emulação off) metade da mesa ficava muda bem quando se
         joga. As TRÊS recusas, cada uma evita uma mentira:
 
         - **primário**: seria um snapshot evdev paralelo ao `state` do topo (A-09); `state is None`
@@ -2763,11 +2763,11 @@ class IpcHandlersMixin:
         """True quando OUTRO processo segura o hidraw DESTE controle (ESCRITOR-CRU-01).
 
         O sysfs guarda o PEDIDO, nunca o aceso (16/08: o mesmo `[0 255 0]` com a barra apagada e com
-        ela verde); com escritor cru a tela só pode afirmar "esta é a cor que o Hefesto pediu". Sai
+        luz verde); com escritor cru a tela só pode afirmar "esta é a cor que o Hefesto pediu". Sai
         da foto do sentinela (tique de 30 s do `reconnect_loop`): sondar `/proc` seria um `pgrep`
         por segundo.
 
-        **ESCRITOR-CRU-03 (19/09/2026): a foto é CONFERIDA, não repetida.** Crua, ela contava o
+        **ESCRITOR-CRU-03 (19/09/2026): a foto é CONFERIDA, não repetida.** Crua, a foto contava o
         passado (Steam com SIGTERM e o `state_full` dizendo ``True`` sete segundos depois; em Modo
         Nativo o vigia nem sonda). `segurado_de_fato` confere se os PIDs da foto ainda EXISTEM (um
         `stat` em `/proc/<pid>`): só pode apagar um aviso, nunca acender.
@@ -2963,7 +2963,7 @@ class IpcHandlersMixin:
 
         `daemon.display_authority` ('game'|'daemon'|'unknown', NUMA-01) é a MESMA leitura do
         merge-gate (`_game_wins`) e do `ExternalLedSync.tick`, nunca uma segunda fonte.
-        ``degradado`` deriva dela: ``"unknown"`` JÁ é o estado fail-safe (detector cego, marker
+        ``degradado`` deriva daí: ``"unknown"`` JÁ é o estado fail-safe (detector cego, marker
         ilegível, sinal não fiado). O diagnóstico rico (`daemon._game_signal.diagnostico()`) é
         best-effort: hoje ``evidencia``/``motivo``/``desde`` ficam ``None``, salvo
         `motivo="sinal_nao_wireado"` sem `display_authority`; exceção nele não derruba o
@@ -4248,7 +4248,7 @@ class IpcHandlersMixin:
         return None
 
     def _uniq_do_primario(self) -> str | None:
-        """Em quem o ato cai quando ela não disse o endereço (UM-NUMERO-SO-01, 18/09/2026).
+        """Em quem o ato cai quando quem usa não disse o endereço (UM-NUMERO-SO-01, 18/09/2026).
 
         Ordem do mais explícito ao menos: o `uniq` do próprio pedido (resolvido pelo chamador), o
         alvo de saída DESTA sessão, e só então o primário (a conveniência de quem tem um controle
@@ -4298,7 +4298,7 @@ class IpcHandlersMixin:
             (este IPC, `mic led-release`, desligamento) ganharem por um lugar.
 
         `aceso` é OBRIGATÓRIA (omitir levanta erro, não vira `False` silencioso; o defeito do commit
-        `3d9bb7e` no byte vizinho). É a PORTA DE EMERGÊNCIA da inversão: sem ela só desligar o
+        `3d9bb7e` no byte vizinho). É a PORTA DE EMERGÊNCIA da inversão: sem isso só desligar o
         controle devolvia a luz ao kernel.
         """
         if "aceso" not in params:
@@ -4337,7 +4337,7 @@ class IpcHandlersMixin:
         (no cabo, o source ALSA; no rádio, o da ponte de áudio).
 
         **FATO SUBSTITUÍDO EM 09/09/2026:** o registrador de ganho EXISTE, é o `common[6]`
-        (`mic_volume`, `0x0 - 0x40`, nomeado pelo `hid-playstation`), e a bancada mediu a captura
+        (`mic_volume`, `0x0 - 0x40`, nomeado pelo `hid-playstation`), e o ensaio mediu a captura
         mudando no cabo (`docs/data/ensaios.csv`, `folha-mic-volume-o-byte-age-cabo-0909`). A fonte
         no sistema segue como o degrau universal e o byte do aparelho é medido só no cabo; por isso
         os dois, nesta ordem.
@@ -4694,7 +4694,7 @@ class IpcHandlersMixin:
         """Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01).
 
         Params: ``enabled`` bool (obrigatório). Molde do `mouse.emulation.set`; nasceu da queixa de
-        29/07: ela desligou "o modo mouse teclado", o mouse obedeceu (flag em disco,
+        29/07: o usuário desligou "o modo mouse teclado", o mouse obedeceu (flag em disco,
         FEAT-MOUSE-PERSIST-01) e o teclado seguiu emitindo Alt+Tab no R1 dentro da partida.
 
         Resposta: `{"status": "ok"|"failed", "enabled": bool, "keyboard_emulation": {...}}`, o bloco
@@ -5009,8 +5009,8 @@ class IpcHandlersMixin:
         """O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``.
 
         Só vale para a extensão cujo manifesto instalado declara ``parar_tudo`` ou a ``chave``. Com
-        a ``chave``, a opção dela é gravada desligada antes do gesto, e a extensão segue desligada
-        depois de reaberta. ``{parado}`` é falso quando ela não está conectada à porta (nada a
+        a ``chave``, a opção é gravada desligada antes do gesto, e a extensão segue desligada
+        depois de reaberta. ``{parado}`` é falso quando o mod não está conectado à porta (nada a
         parar); a chave fica desligada assim mesmo.
         """
         from hefesto_dualsense4unix.mods.instalador import (
@@ -5105,7 +5105,7 @@ class IpcHandlersMixin:
         Só números: teclas apertadas repetindo e buracos no movimento do mouse, por ``usb:vid:pid``,
         nunca o código de uma tecla (``integrations/receptor_sem_fio``). O monitor nasce na primeira
         pergunta e lê o evdev numa thread; sob a suíte e no modo falso a chave sai vazia, salvo a
-        régua que injeta o dela.
+        régua que injeta a própria.
         """
         monitor = self._monitor_de_receptores
         if monitor is None:
@@ -6279,10 +6279,10 @@ def _com_a_marca_do_f_hid(result: dict[str, Any]) -> None:
 
 
 def _na_steam(handlers: Any) -> bool:
-    """A janela em foco é o cliente da Steam: ela conta como jogo, mas o toque fica no cursor.
+    """A janela em foco é o cliente da Steam: conta como jogo, mas o toque fica no cursor.
 
     O ``ha_jogo`` vê a Steam como jogo; com a máscara DualSense e o Ligado, o hub agarraria o
-    touchpad nela, e o cursor pararia na loja e na biblioteca.
+    touchpad na Steam, e o cursor pararia na loja e na biblioteca.
     """
     from hefesto_dualsense4unix.profiles.steam_app import e_janela_do_cliente_steam
 

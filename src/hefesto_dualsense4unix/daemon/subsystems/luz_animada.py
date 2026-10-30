@@ -96,7 +96,7 @@ class PlanoDoControle:
     """O que o perfil manda tocar num controle: o efeito, o brilho da barra, o lugar e a semente.
 
     ``posicao`` é o lugar do controle na mesa (0 a 3): o arco-íris defasa um quarto de volta por
-    lugar. ``semente`` é do controle (do endereço dele): a chama passeia por ela. ``amplitude``
+    lugar. ``semente`` é do controle (do endereço dele): a chama passeia pela semente. ``amplitude``
     é a fração dos 30 graus que a Maré pode andar sem aproximar este controle dos outros.
     """
 

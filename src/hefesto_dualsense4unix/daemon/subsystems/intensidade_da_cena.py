@@ -7,7 +7,7 @@ mínima, e a faixa gradua só o que o Hefesto soma: a força do toque do tiro, d
 e do corpo, e o ritmo da luz que respira. O rumble, a háptica, o gatilho e a luz que o jogo manda
 nunca passam por aqui. Uma intensidade por sessão de jogo; a força continua de cada controle.
 Sem jogo, e no Nativo e no Personalizado, o fator é 1,0 (o comportamento de antes).
-Valores de partida, por delegação, a validar pelo usuário na bancada.
+Valores de partida, por delegação, a validar pelo usuário no ensaio.
 """
 from __future__ import annotations
 
@@ -207,7 +207,7 @@ class IntensidadeDaCena:
         return min(1.0, alvo / ritmo)
 
     def estado(self, estilo: Any = None) -> dict[str, Any]:
-        """O que a bancada lê ao vivo: os sinais, a intensidade, a faixa e o fator."""
+        """O que o ensaio lê ao vivo: os sinais, a intensidade, a faixa e o fator."""
         return {
             "jogo": self.jogo,
             "ouvido": self.ouvido,

@@ -513,7 +513,7 @@ class UdpHandler:
     def _do_trigger_threshold(self, params: list[Any]) -> None:
         """Deadzone do gatilho analógico — o que a instrução significa no DSX.
 
-        `TriggerThreshold` NÃO é um efeito háptico: no DSX ela é um corte no
+        `TriggerThreshold` NÃO é um efeito háptico: no DSX é um corte no
         valor ANALÓGICO que o gatilho entrega ao gamepad EMULADO
         (`L2_Analog >= threshold ? L2_Analog : 0`, sem reescala). Não existe
         campo de limiar no report de saída do DualSense — o hardware não tem

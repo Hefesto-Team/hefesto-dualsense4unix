@@ -25,7 +25,7 @@ Política:
     intensidade do reassert. `dispatch_gamepad` bombeia o FF a cada tick.
   - **Um controle físico = UM dispositivo de jogo** (JOGO-01): a allowlist do
     Steam Input escolhe QUAL dispositivo o jogo enxerga, nunca QUANTOS.
-  - **A marca esconde o FÍSICO; ela não tira o Hefesto da frente**
+  - **A marca esconde o FÍSICO; não tira o Hefesto da frente**
     (ESCONDER-EM-VEZ-DE-SAIR-01, 09/08/2026 — decisão de produto). Um controle
     duplicado se cura por dois lados: escondendo o virtual (o produto saindo de
     cena) ou escondendo o físico (o produto ficando). O caminho escolhido é o
@@ -37,19 +37,19 @@ Política:
     os gamepads virtuais** (`suspend_vpads_for_steam_input`). Curava o duplicado
     com UM controle e derrubava o jogador 2 junto, porque o jogador 2 **é** um
     gamepad virtual — `coop_derrubado_pela_excecao_steam_input`, vinte
-    ocorrências no journal da bancada em 08/08. O raciocínio antigo não estava errado
+    ocorrências no journal do ensaio em 08/08. O raciocínio antigo não estava errado
     sobre o duplicado; estava errado sobre o preço, que ninguém tinha declarado.
     As funções da suspensão saíram em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01):
-    sem chamador desde 09/08, o flag que elas armavam nunca podia ser verdade.
-  - **A exceção mexe na ENTRADA, e só nela** (NOTA DATADA, 07/08/2026): a casa
-    dizia *"o Hefesto sai da frente"*, e a medição dela de 06/08
+    sem chamador desde 09/08, o flag que as duas armavam nunca podia ser verdade.
+  - **A exceção mexe na ENTRADA, e só na entrada** (NOTA DATADA, 07/08/2026): a casa
+    dizia «o Hefesto sai da frente», e a medição de 06/08
     (a sprint `CONTROLE-SONY-MEDIDO-01`,
     seção *A INVERSÃO*, grau MEDIDO) mostrou que a frase é meia verdade.
     **Nenhum caminho fecha o handle de saída**: os chamadores de
     `steam_input_excecao_ativa` estão todos NESTE arquivo, nenhum em `core/`, e
     por isso lightbar, gatilhos, vibração e LED de jogador seguem sendo
     escritos no físico durante a exceção inteira. Com o Mullet Mad Jack aberto,
-    os gatilhos dela seguraram duros e o vermelho dela ficou. Com a inversão de
+    os gatilhos seguraram duros e o vermelho escolhido ficou. Com a inversão de
     09/08 isso deixou de ser meia verdade e virou verdade inteira: a entrada
     também continua sendo do Hefesto.
 """
@@ -255,9 +255,9 @@ def sync_steam_input_exception(
 
     NOTA DATADA — o que esta função fazia até 08/08, e por que morreu
     ----------------------------------------------------------------
-    Ela era o "Modo Nativo por appid": na borda de entrada soltava o grab,
+    A exceção era o "Modo Nativo por appid": na borda de entrada soltava o grab,
     pedia `restore_all` ao broker e **suspendia os gamepads virtuais**; na
-    saída, devolvia tudo. Cada peça tinha medição por trás e nenhuma delas era
+    saída, devolvia tudo. Cada peça tinha medição por trás e nenhuma das peças era
     boba:
 
     - **R-06 (23/07)** — a allowlist era INERTE: o daemon grabava e escondia o
@@ -267,7 +267,7 @@ def sync_steam_input_exception(
       Mullet Mad Jack enumerava js0=vpad e js2=físico e repartia os dois entre
       dois jogadores. Daí a suspensão do vpad.
 
-    O que ninguém tinha declarado é o preço, e ele foi MEDIDO na bancada em
+    O que ninguém tinha declarado é o preço, e ele foi MEDIDO no ensaio em
     08/08: **o jogador 2 é um gamepad virtual.** Derrubar os virtuais para curar
     o duplicado do jogador 1 derruba o jogador 2 junto —
     `coop_derrubado_pela_excecao_steam_input`, vinte ocorrências num dia.
@@ -528,8 +528,8 @@ def _pcts_dos_motores(daemon: Any, target_uniq: str | None) -> tuple[int, int]:
     """`(forte_pct, fraco_pct)` da peça mirada — `(100, 100)` sem opinião.
 
     **Em Padrão as barras não se aplicam** (04/10/2026): o jogo chega como
-    mandou, e o que ela guardou nas barras fica no perfil, esperando o dia em
-    que ela escolher Economia ou Máximo.
+    mandou, e o que o usuário guardou nas barras fica no perfil, esperando o dia em
+    que escolher Economia ou Máximo.
     """
     from hefesto_dualsense4unix.core.rumble import vale_o_padrao
 
@@ -547,14 +547,14 @@ def _mults_por_motor(
 ) -> tuple[float, float]:
     """`(mult_fraco, mult_forte)` — o DEGRAU da coluna VEZES a barra de cada motor.
 
-    A CONTA DO USUÁRIO, 04/09/2026, com os números dela:
+    A CONTA DO USUÁRIO, 04/09/2026, com os números do ensaio:
 
         efetivo(motor) = degrau x barra(motor)
 
         degrau 150 %, fraca 100 %, forte 100 %  ->  150 % e 150 %
         degrau 150 %, fraca 100 %, forte  50 %  ->  150 % e  75 %
 
-    **É O ÚNICO LUGAR ONDE A MULTIPLICAÇÃO ACONTECE.** Se ela aparecesse em
+    **É O ÚNICO LUGAR ONDE A MULTIPLICAÇÃO ACONTECE.** Se a multiplicação aparecesse em
     dois, um dos dois envelheceria sozinho — e a barra é justamente o tipo de
     ajuste que só se percebe errado com a mão no plástico.
 
@@ -582,7 +582,7 @@ def apply_game_rumble(
     escrita recusada pelo backend). MOTOR-QUE-NAO-SE-VE-01, 09/08/2026: o
     valor de retorno é o único jeito de o vpad — e por ele a aba Status —
     saber o que chegou aos motores. Entre o pedido do jogo e este par há a
-    multiplicação da política de intensidade, e ela era invisível: em
+    multiplicação da política de intensidade, e era invisível: em
     `economia` (0,3) um pedido de 1 vira ZERO e a tela continuava dizendo
     "vibração chegando". Chamador que ignora o retorno continua correto (era
     o contrato até aqui).
@@ -601,7 +601,7 @@ def apply_game_rumble(
         motor leva a SUA barra, `efetivo(motor) = degrau x barra(motor)`. Os
         dois `mult` abaixo saem de :func:`_mults_por_motor`, e por isso `weak`
         e `strong` podem sair com fatores diferentes do MESMO controle: é o
-        caso dela, `degrau 150 · fraca 100 · forte 50 → 150 % e 75 %`. Sem
+        caso do ensaio, `degrau 150 · fraca 100 · forte 50 → 150 % e 75 %`. Sem
         barra escrita no perfil os dois fatores são o degrau, e o par é
         byte-idêntico ao que era.
       - `target_uniq` (MAC) mira o controle de UM jogador via a API por-uniq
@@ -624,7 +624,7 @@ def apply_game_rumble(
       - NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4 (29/09/2026): com ``vpad`` o
         pad ``uinput`` (o que só tem os dois motores para o jogo), o par
         efetivo vai também à háptica fina do lugar (:func:`_levar_a_haptica_fina`).
-        Quando ela o leva até o controle, os motores do HID ficam em ZERO —
+        Quando a háptica fina o leva até o controle, os motores do HID ficam em ZERO —
         o bit que pede rumble ao firmware cala a háptica por áudio — e o par
         devolvido é o que chegou pela háptica. Sem ``vpad`` (os chamadores de
         antes) nada muda.
@@ -741,7 +741,7 @@ def _levar_a_haptica_fina(
     reaplicar: Callable[[], object] | None = None,
     cru: tuple[int, int] | None = None,
 ) -> bool:
-    """O rumble do pad SEM háptica vai à háptica fina do lugar. True = ela leva.
+    """O rumble do pad SEM háptica vai à háptica fina do lugar. True = a háptica leva.
 
     ``weak``/``strong`` são o par escalado pela barra; ``cru``, o pedido do jogo (a borda e
     o lado do tiro saem dele). O pad ``uinput`` converte sempre; o ``uhid`` só onde o motor do
@@ -1092,7 +1092,7 @@ def a_roupa_que_o_pad_veste(daemon: Any) -> int:
 def vestir_a_roupa(daemon: Any, roupa: object) -> list[str]:
     """Grava a roupa da sessão e recria, na hora e em sequência, todo pad que veste outra.
 
-    É a porta que o arme do lançamento chama ANTES da trava dele: depois dela,
+    É a porta que o arme do lançamento chama ANTES da trava dele: depois da porta,
     toda recriação que não é gesto do usuário espera o jogo (`_recriacao_bloqueada_por_jogo`),
     e por isso, com a trava de pé, a troca é recusada sem gravar nada. O P1 se
     recria pelo mesmo juiz do `start_gamepad_emulation_desfecho` e os secundários
@@ -1213,7 +1213,7 @@ def _reconciliar_launch(daemon: DaemonProtocol) -> None:
     """Reconciliação de LAUNCH (R-04 arming + R-06 exceção).
 
     Quem a chama é o relógio ``launch`` do `_poll_loop` (1 Hz, com fase própria),
-    depois da entrada do tique: o `dispatch_gamepad` não a chama mais, porque ela
+    depois da entrada do tique: o `dispatch_gamepad` não a chama mais, porque a porta
     varre `/proc` e o encaminhamento do botão ao jogo não espera por isso.
     """
     with contextlib.suppress(Exception):
@@ -1557,19 +1557,19 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
     —, e era o vazamento inteiro: o `"xbox"` que o perfil do DON'T SCREAM pede
     ficava lá e virava lei sobre os 29 perfis que não opinam. O PRAGMATA, que
     não tem sequer seção `mode`, abria em uinput, e com ele iam embora as dez
-    linhas do mapa que só existem no caminho DualSense — a IMU entre elas. A
-    queixa de uso: *"joguei um jogo com controle por movimento e na hora do vamos
-    ver o controle não deu resposta"*.
+    linhas do mapa que só existem no caminho DualSense — a IMU entre as dez. A
+    queixa de uso: num jogo com controle por movimento, na hora de usar o
+    movimento, o controle não respondeu.
 
     É função nomeada, e não uma linha embutida, para a régua poder MORDER o
     ponto exato: `test_o_caminho_nao_vaza_entre_jogos` repõe aqui a leitura
-    velha e o laço de produção inteiro roda por cima dela.
+    velha e o laço de produção inteiro roda por cima da leitura velha.
 
     E AGORA NÃO HERDA DE LUGAR NENHUM — CAMINHO-CONTAGIO-01, ponto 2 do escopo
     de 19/09/2026, e é ordem de produto:
 
-        *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
-        esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
+        tudo DualSense e tudo ligado, a máscara DualSense por padrão, e o
+        vazamento como a preocupação a curar.
 
     A O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança — do slot da sessão para a
     escolha do usuário — e o vazamento voltou por outra porta: o `gamepad_caminho.flag`
@@ -1591,7 +1591,7 @@ def _caminho_a_herdar(daemon: DaemonProtocol) -> str | None:
 
     **DEVOLVER ``None`` É O QUE ENTREGA «TUDO DUALSENSE», E NÃO CRAVAR
     `dualsense`** — medido em 19/09, e a diferença aparece num caso só, que é
-    justamente o dela. ``None`` significa *"ninguém escolheu"*, e quem lê
+    justamente o do ensaio. ``None`` significa *"ninguém escolheu"*, e quem lê
     aplica `virtual_pad.caminho_resolvido`, que responde pela MÁSCARA:
 
         caminho_resolvido(None, "dualsense")  ->  dualsense   (UHID: tudo ligado)
@@ -1860,7 +1860,7 @@ def start_gamepad_emulation_desfecho(
 
     `caminho_e_escolha=False` (O-MODO-XBOX-NAO-E-QUEDA-02, 28/09/2026): o
     `caminho` veio do dono da sessão (:func:`caminho_da_sessao`) e não de uma
-    escolha, então vale para o pad e para o slot e nunca chega ao arquivo dela,
+    escolha, então vale para o pad e para o slot e nunca chega ao arquivo do usuário,
     nem com `origin="manual"` (o gesto do cartão escolhe máscara, não modo).
 
     MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO de conexão
@@ -1895,7 +1895,7 @@ def start_gamepad_emulation_desfecho(
     NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01). Aqui havia a trava da
     JOGO-01: *"com a exceção de Steam Input ATIVA, todo apply AUTOMÁTICO é
     recusado — nos appids da allowlist o dispositivo do jogo é o físico, e o
-    autoswitch recriaria o vpad que a suspensão acabou de retirar"*. Ela existia
+    autoswitch recriaria o vpad que a suspensão acabou de retirar"*. A suspensão existia
     para PROTEGER a suspensão, e a suspensão saiu do caminho da marca: no jogo
     marcado o dispositivo do jogo passou a ser o vpad. Recusar o apply do perfil
     ali seria recusar justamente o dispositivo que a marca promete entregar. O
@@ -1903,7 +1903,7 @@ def start_gamepad_emulation_desfecho(
     flag da suspensão e não pela exceção: ele existe para o daemon que subiu
     ANTES desta cura e está com uma suspensão de pé agora. Deixou de ser só o
     gesto do usuário — QUALQUER apply passa a encerrá-la, e tem de ser assim, porque
-    do contrário a suspensão herdada sobreviveria até ela lembrar de clicar no
+    do contrário a suspensão herdada sobreviveria até o usuário lembrar de clicar no
     botão. Por isso a origem foi para dentro do log.
     """
     from hefesto_dualsense4unix.daemon.subsystems.coop import (
@@ -2012,7 +2012,7 @@ def start_gamepad_emulation_desfecho(
         },
     )
     def gravar_o_gesto(desfecho: str) -> None:
-        """O gesto manual que pôs o pad de pé vai ao arquivo dela; o que falhou, não."""
+        """O gesto manual que pôs o pad de pé vai ao arquivo do usuário; o que falhou, não."""
         if desfecho != EMU_APLICADO:
             return
         if origin == "manual":
@@ -2207,7 +2207,7 @@ def _avisar_troca_de_modo(daemon: DaemonProtocol) -> None:
     `daemon/subsystems/hotkey.avisar_troca_de_modo`. Aqui fica só o GATILHO,
     porque é este arquivo que tem o ponto por onde toda troca passa.
 
-    **Os dois pontos, e por que são estes dois.** Ela troca de modo por quatro
+    **Os dois pontos, e por que são estes dois.** O usuário troca de modo por quatro
     portas — o gesto, a janela, a CLI/IPC e o autoswitch — e o aviso tem de
     acender nas quatro. Não há função única que todas atravessem, mas há dois
     estados e cada um tem seu ponto:
@@ -2611,7 +2611,7 @@ def _a_inclinacao(
 
     O giro entra para a regra saber se alguém segura a peça (o controle parado não
     inclina, D-2909-O-CONTROLE-PARADO-NAO-INCLINA), e é lido mesmo com o giroscópio
-    desligado por ela: ler para saber não roteia nada ao jogo.
+    desligado pelo usuário: ler para saber não roteia nada ao jogo.
     """
     from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
 
@@ -2968,7 +2968,7 @@ def _selo_do_que_vale(nome: str | None) -> Any:
     """A chave dos mapas memoizados das barras e dos degraus: o ``maquina.json`` e o PERFIL.
 
     :func:`_motores_do_perfil_ativo` e :func:`_politicas_do_perfil_ativo` se chaveiam pelo nome
-    do perfil ativo e por este selo. Só o da máquina não bastava: o degrau que ela clica numa
+    do perfil ativo e por este selo. Só o da máquina não bastava: o degrau que se clica numa
     coluna da aba 05 grava no perfil ATIVO, que segue com o mesmo nome, e o «Aplicar» não passa
     por :func:`esquecer_motores_do_perfil`; a tela dizia Máximo e o motor seguia em Padrão até
     o daemon reiniciar. O arquivo do perfil é relido no máximo uma vez por segundo, como o da
@@ -3185,7 +3185,7 @@ def com_os_acionadores(daemon: Any, uniq: object, botoes: frozenset[str]) -> fro
 def gatilhos_dos_acionadores(daemon: Any, uniq: object, l2: int, r2: int) -> tuple[int, int]:
     """O L2 e o R2 que uma tecla do acionador segura vão inteiros (o gatilho do pad é eixo).
 
-    Só a tecla: o gatilho apertado pela mão segue com a força dela, e a troca dele vem depois.
+    Só a tecla: o gatilho apertado pela mão segue com a força da mão, e a troca dele vem depois.
     """
     from hefesto_dualsense4unix.core.remapeamento_de_botao import FORCA_CHEIA, GATILHOS
 
@@ -3224,7 +3224,7 @@ def _parar_o_pad_do_p1(daemon: DaemonProtocol, device: Any) -> None:
     ao uhid, a IPC que desliga, o mouse que liga); com o broker preso, a entrada
     de todos parava ~4 s. A descida vai à fila (`uhid_gamepad.parar_fora_do_tique`),
     que guarda a ordem do MAC e do serial; a parada do daemon espera, porque nada
-    depois dela espera a fila por ele.
+    depois da parada espera a fila por ele.
     """
     if _daemon_parando(daemon):
         device.stop()

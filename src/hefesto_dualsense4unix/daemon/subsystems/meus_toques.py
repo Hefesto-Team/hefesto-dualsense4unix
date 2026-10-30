@@ -495,7 +495,7 @@ class MeusToques:
         """O pedido do jogo, já com a força, junto aos toques de agora; ``None`` = não mexe.
 
         Chamada pelo ``apply_game_rumble``. A háptica por áudio fica como veio: os motores
-        calados e os toques sem escrever no canal dela.
+        calados e os toques sem escrever no canal da háptica.
         """
         with self._trava:
             estado = self._por_uniq.setdefault(uniq, _Estado())

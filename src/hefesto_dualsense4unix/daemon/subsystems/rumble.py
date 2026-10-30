@@ -37,7 +37,7 @@ def sem_dono_do_rumble(
     **O QUE ESTE PREDICADO JÁ CHAMOU DE «SEM DONO» E NÃO É.** Medido em
     11/08/2026, sem vpad e sem Nativo o jogo via o físico à vista. Desde 14/09
     (``D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL``) isso só vale com a
-    emulação ligada: com ela desligada é a Navegação, o jogo nasce sem o físico
+    emulação ligada: com a emulação desligada é a Navegação, o jogo nasce sem o físico
     (``launch_env.modo_do_estado_vivo``) e os nós ficam fechados para qualquer
     outro programa. Não há dono em disputa, e a intensidade escolhida fica
     guardada e vale no instante em que um jogo ganha o gamepad
@@ -215,7 +215,7 @@ def soltar_os_que_vibram(cfg: Any) -> list[str | None]:
 
     É a soltura do ``rumble.passthrough`` de um perfil: o par que vibra volta ao
     jogo, e o silêncio deliberado (o «Parar», o par em zero) fica, porque ele não
-    é vibração fixada. Ela olha CADA par, e não só o resumo: com o P1 vibrando e o
+    é vibração fixada. A guarda olha CADA par, e não só o resumo: com o P1 vibrando e o
     P2 acabado de parar, o resumo é ``(0, 0)`` e o P1 seguia fixado.
     """
     pares = _pares_de_pe(cfg)
@@ -316,7 +316,7 @@ def silenciar_dono_abandonado(
     """Zera o controle que vibrava quando o par TROCA de dono. Devolve se zerou.
 
     **MESA-CHEIA-05 (E0), terceira rodada — a rota de volta.** Congelar o dono
-    matou a migração do par, mas criou o abandono: ela fixa 160/220 no Controle
+    matou a migração do par, mas criou o abandono: o abandono fixa 160/220 no Controle
     2, move o seletor para o 3 e clica «Parar» (ou aplica outro par). Os zeros
     vão para o 3, o dono passa a ser o 3, e o **Controle 2 fica em 220/160 sem
     receber mais escrita nenhuma**. Antes de haver dono, o reassert seguia o
@@ -448,7 +448,7 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
     fique girando por esse buraco: pelos escritores do próprio daemon ele não
     fica — `apply_game_rumble` ignora o FF do jogo com par fixado, e a entrada
     do Modo Nativo solta o par. Quem alcança o buraco é escritor de FORA
-    (jogo no hidraw direto, Steam Input), que esta bancada não tem como medir.
+    (jogo no hidraw direto, Steam Input), que esta máquina de teste não tem como medir.
     """
     par = daemon.config.rumble_active
     if par is not None and any(par):
@@ -476,7 +476,7 @@ MOTIVO_MODO_NATIVO_MANDA_NOS_MOTORES = (
 
 MOTIVO_MODO_NATIVO_SOLTOU_O_PAR = (
     "Em Modo Nativo quem manda nos motores é o jogo, e o Hefesto não consegue "
-    "pará-los. A vibração fixada por aqui foi solta — ela não volta quando o "
+    "pará-los. A vibração fixada por aqui foi solta e não volta quando o "
     "Modo Nativo sair."
 )
 

@@ -1,4 +1,4 @@
-"""A borda do botão de microfone, COM ENDEREÇO — e o que ela faz na mesa.
+"""A borda do botão de microfone, COM ENDEREÇO — e o que a borda faz na mesa.
 
 MIC-DA-MESA-ELEICAO-01 (01/09/2026). Este é o dono do *"quem apertou"*.
 
@@ -31,7 +31,7 @@ existem por defeito medido. Escrever um debounce novo aqui criaria a segunda
 régua sobre o mesmo estado, que é o defeito que esta casa já pagou onze vezes.
 
 A JANELA DE SOSSEGO (MIC-REPIQUE-01, 19/08/2026) — a análise inteira, que
-DESCEU DO `mic_button_loop` junto com a guarda, porque ela continua valendo
+DESCEU DO `mic_button_loop` junto com a guarda, porque a análise continua valendo
 palavra por palavra e o que mudou foi só o laço onde a guarda mora.
 
 O journal da noite de 18→19/08 tem três `mic_hotkey_toggle` em 2,5 s às
@@ -43,7 +43,7 @@ um verificável no fonte:
 1. **O relógio dele começa no INÍCIO da chamada**
    (`integrations/audio_control.py`: `self._last_call_at = now` é gravado ANTES
    dos subprocessos). Como a chamada roda `wpctl`/`pactl` com `timeout=2.0`,
-   ela pode levar segundos — e quando termina o debounce já expirou faz tempo.
+   a chamada pode levar segundos — e quando termina o debounce já expirou faz tempo.
    A janela efetiva é ``max(0, 0.2 - duração)``, ou seja: ZERO sempre que o
    áudio demora.
 2. **Ele protege a coisa errada.** 200 ms é medida de teclinha repicando; do
@@ -53,7 +53,7 @@ um verificável no fonte:
    **micBtn fantasma** ao (re)conectar (`INPUT_GRACE_SEC`) e já pegou áudio do
    próprio microfone sendo lido como estado de botão (commit `702f5b6`).
 
-A guarda daqui não precisa saber qual das fontes disparou: ela é contada a
+A guarda daqui não precisa saber qual das fontes disparou: a guarda é contada a
 partir do último gesto ACEITO e engole tudo que chegar dentro de
 `MIC_SOSSEGO_S`. O preço de um falso engolir é um toque ignorado — visível e
 refazível num segundo; o preço de um falso gesto era a usuária muda no jogo sem

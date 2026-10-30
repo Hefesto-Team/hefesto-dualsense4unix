@@ -1,6 +1,6 @@
 """governador_do_radio.py — duas pontes por adaptador, e o adaptador que não escoa.
 
-GOVERNADOR-DO-RADIO-01 (23/09/2026), decisões R2, R3 e R4 dela. O estudo de
+GOVERNADOR-DO-RADIO-01 (23/09/2026), decisões R2, R3 e R4. O estudo de
 23/09 mediu que o que transborda um adaptador são as saídas de RITMO FIXO — a
 ponte de som (``0x35``) e a de vibração (``0x32``), 93,75 relatórios por
 segundo cada, que não cedem sozinhas. A entrada do controle é elástica e não
@@ -18,7 +18,7 @@ não é recusada calada:
 
 * há vaga em outro adaptador → :class:`Recusa` com a frase «A Entrada 3 já
   tem 2 controles com som ou vibração. Há vaga na Entrada 5.», e o pedido
-  fica publicado para a tela PERGUNTAR (R3: sempre pedir mover). Ela escolhe
+  fica publicado para a tela PERGUNTAR (R3: sempre pedir mover). Quem usa escolhe
   «Ligar aqui» (:meth:`GovernadorDoRadio.ligar_aqui`) e a ponte sobe marcada
   «além do limite»;
 * não há vaga em adaptador nenhum → a ponte sobe marcada «além do limite» e o
@@ -90,7 +90,7 @@ nada pergunta ao rádio de ninguém.
 QUEM O LIGA
 ===========
 O ``AltoFalanteSubsystem``, que é o dono das pontes: ele pede a vaga antes de
-subir a ponte e a entrega a ela; a ponte diz ao governador quando subiu e
+subir a ponte e a entrega à ponte; a ponte diz ao governador quando subiu e
 quando desceu (é o que o diário conta, e o que o ``storm_doctor`` lê no
 instante de cada queda).
 
@@ -99,7 +99,7 @@ OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
 1. **«Ligar aqui» vale enquanto o CONTROLE ficar naquele adaptador.** REVISTO
    em 23/09 pela A-COSTURA-DA-ONDA-2-01, decisão registrada: a
    GOVERNADOR-02 dizia «enquanto a ponte estiver de pé», e o preço medido na
-   conferência foi perguntar a ela no meio da partida — cada controle tem uma
+   conferência foi perguntar a quem usa no meio da partida — cada controle tem uma
    ponte só, a troca som → vibração derruba e sobe a ponte, e a ponte do som
    sob demanda desce sempre que o som para. A R3 (*sempre pedir mover*) vale a
    cada vez que o controle CHEGA ao adaptador cheio; a resposta de produto cai quando
@@ -114,7 +114,7 @@ OS CINCO ACERTOS DA CONFERÊNCIA (GOVERNADOR-DO-RADIO-02, 23/09/2026)
    contadas, não escritas.
 4. **A frase da recusa diz o NOME, nunca o endereço.** O adaptador é dito como
    a tela o diz, por :func:`nome_da_porta`, que pergunta ao DONO do nome da
-   porta — o ``entrada_a_entrada`` (A-COSTURA-DA-ONDA-2-01). A porta que ela não
+   porta — o ``entrada_a_entrada`` (A-COSTURA-DA-ONDA-2-01). A porta que a tela não
    nomeou é «Entrada 4.1.4», pelo dono (TRANSPLANTE-DA-SECAO-01); sem porta
    nenhuma — o adaptador embutido —, a frase diz «este adaptador».
 5. **Ponte fantasma não conta.** O daemon que morre sem ``stop()`` deixa no
@@ -281,7 +281,7 @@ def _nada_a_listar(_raiz: str) -> list[str]:
 
 
 def _nenhum_diario() -> list[dict[str, Any]]:
-    """O leitor do governador de régua: não há diário dela para ler."""
+    """O leitor do governador de régua: não há diário do governador para ler."""
     return []
 
 
@@ -645,7 +645,7 @@ class GovernadorDoRadio:
         )
 
     def _na_ordem_da_d8(self, livres: list[str], exceto: str) -> tuple[str, ...]:
-        """As vagas na ordem de ``plano_de_radio.ordem_dos_destinos`` — a D8 dela.
+        """As vagas na ordem de ``plano_de_radio.ordem_dos_destinos`` — a D8.
 
         A-COSTURA-DA-ONDA-2-01, item 5: a tela pergunta «Mover para ...?» pela
         PRIMEIRA vaga, e a central escolhe o destino pela mesma função. Por
@@ -873,7 +873,7 @@ class GovernadorDoRadio:
         if not vaga.alem_do_limite:
             por_que = "há som para mandar"
         elif vaga.por_escolha_do_usuario:
-            por_que = "ela ligou além do limite"
+            por_que = "o usuário ligou além do limite"
         elif vaga.sem_medida:
             por_que = POR_QUE_NAO_SEI_SE_HA_VAGA
         else:

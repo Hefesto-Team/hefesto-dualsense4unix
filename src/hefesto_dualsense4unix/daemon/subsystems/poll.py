@@ -375,7 +375,7 @@ def _botoes_passivos(entradas: object, uniq: str) -> frozenset[str]:
 
 
 def _o_proximo_da_fila(daemon: object) -> str | None:
-    """Na vaga do posto de P1: o MAC do próximo da fila na mesa. Fora dela, None."""
+    """Na vaga do posto de P1: o MAC do próximo da fila na mesa. Fora da mesa, None."""
     if not _o_posto_esta_vago(daemon):
         return None
     coop = getattr(daemon, "_coop_manager", None)

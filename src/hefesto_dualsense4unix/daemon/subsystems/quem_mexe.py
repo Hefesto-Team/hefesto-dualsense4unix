@@ -5,7 +5,7 @@ que caducou em 26/10/2026 (A-HAPTICA-E-DO-JOGO-SEM-PORTAO-DE-QUEM-MEXE-01):
 o que o jogo toca no endpoint de um controle chega a esse controle, mexa
 alguém nele ou não, e o Hefesto só potencializa, nunca veta. As marcas da
 partida (``QuemMexe``) e a fiação que as alimentava no laço e no co-op saíram.
-Fica só a pergunta, que a bancada da entrada sozinha
+Fica só a pergunta, que o ensaio da entrada sozinho
 (``scripts/ensaios/a_entrada_que_nasce_sozinha.py``) usa para separar o chiado
 do aparelho da mão.
 """

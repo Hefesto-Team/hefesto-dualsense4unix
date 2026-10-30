@@ -515,7 +515,7 @@ def test_a_terceira_ponte_pergunta_e_ligar_aqui_a_sobe_marcada() -> None:
     [subida] = [e for e in registro.de(diario.PONTE_SUBIU) if e["controle"] == CONTROLE_3]
     assert subida["alem_do_limite"] is True
     assert subida["frase"] == "3 pontes num adaptador (limite 2)."
-    assert subida["por_que"] == "ela ligou além do limite"
+    assert subida["por_que"] == "o usuário ligou além do limite"
 
 
 def test_sem_vaga_em_lugar_nenhum_a_ponte_sobe_marcada_e_o_diario_diz() -> None:
