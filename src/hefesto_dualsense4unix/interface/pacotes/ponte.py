@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """A PONTE PARA O PRODUTO — o que os gestos usam para agir. Nada se reescreve.
 
-PERGUNTA, 01/09/2026, e ela mudou esta camada: *"mas vc comparou com o
-produto estável? tipo não estamos refazendo do zero né?"* — seguida de *"em
-todas as abas temos praticamente tudo pronto"*.
+PERGUNTA, 01/09/2026, que mudou esta camada: houve comparação com o
+produto estável, para não refazer do zero? Seguida de: em
+todas as abas havia praticamente tudo pronto.
 
 Não estávamos refazendo o motor, mas estávamos reescrevendo a camada de cima: os
 primeiros gestos chamavam o socket CRU, montando o payload à mão. Isso perde o
@@ -113,7 +113,7 @@ def chamar_detalhado(metodo: str, **params: Any) -> tuple[bool, str | None]:
     falha calado é a mesma doença de um botão que não faz nada.
 
     **`motivo` JUNTA AS DUAS FORMAS DE O DAEMON DIZER NÃO** — A-PERNA-QUE-FALTA-01,
-    11/09/2026 — e até hoje ela só trazia uma.
+    11/09/2026 — e até hoje a função só trazia uma.
 
     Esta casa tem dois "não" (`ipc_bridge._recusa_no_corpo`): o erro JSON-RPC de
     parâmetro inválido, e a FRASE NO CORPO de uma resposta bem-sucedida — o
@@ -153,7 +153,7 @@ def chamar_com_o_corpo(metodo: str, **params: Any) -> tuple[bool, str | None, An
 def profile_reaplicar(nome: str, *, prender: bool = False) -> dict[str, Any] | None:
     """A resposta do `profile.reaplicar`, ou ``None``.
 
-    `prender` é só do gesto que ela fez («Aplicar» do rodapé, «Voltar à de ontem»): arma a
+    `prender` é só do gesto que o usuário fez («Aplicar» do rodapé, «Voltar à de ontem»): arma a
     trava da troca à mão. O reaplicar de um ajuste de aba segue o padrão, sem trava
     (D-1410-O-APLICAR-SEGURA).
     """
@@ -169,7 +169,7 @@ def profile_reaplicar(nome: str, *, prender: bool = False) -> dict[str, Any] | N
 def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
     """O QUE O DAEMON RESPONDEU — e não só se ele aceitou.
 
-    POR QUE ELA PRECISOU EXISTIR, 01/09/2026: `chamar()` devolve `bool` e joga
+    POR QUE A FUNÇÃO PRECISOU EXISTIR, 01/09/2026: `chamar()` devolve `bool` e joga
     fora o `result` que o `_safe_call` já traz de graça. Para um botão que
     ESCREVE isso basta; para um botão cuja promessa é MOSTRAR, não — e foi
     exatamente o que deixou `ver-plugins` sem dono na aba Sistema, com o daemon
@@ -177,7 +177,7 @@ def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:
     descartasse a lista seria o botão "Ver os plugins carregados" que não mostra
     plugin nenhum: o botão que responde calado.
 
-    ELA LEVANTA quando o daemon não atende, em vez de devolver `None`: um `None`
+    A FUNÇÃO LEVANTA quando o daemon não atende, em vez de devolver `None`: um `None`
     silencioso viraria "não há plugins", que é uma afirmação diferente de "não
     consegui perguntar". O piloto pega a exceção e a imprime como `[gesto
     falhou]` — quem clicou fica sabendo.
@@ -196,7 +196,7 @@ def escolher_arquivo(titulo: str, padrao: str = "*", **_: Any) -> str | None:
 
 
 def salvar_arquivo(titulo: str, sugestao: str = "", **_: Any) -> str | None:
-    """Onde ela quer gravar, ou `None` se cancelou. Substituído pelo piloto."""
+    """Onde o usuário quer gravar, ou `None` se cancelou. Substituído pelo piloto."""
     raise RuntimeError(
         f"salvar_arquivo({titulo!r}) foi chamado fora da janela. Só o piloto "
         f"pode abrir o seletor do sistema — ele substitui esta função ao subir.")
@@ -214,12 +214,12 @@ def dentro_da_janela() -> bool:
 
     **POR QUE ISSO PRECISOU EXISTIR — 06/09/2026, por um defeito medido.** O som
     de confirmação da aba 02 (A-CONFISSAO-NO-BOTAO-01) chama o tocador do
-    sistema. Medido na bancada: com o `pactl` DUBLADO de uma régua vizinha, o
+    sistema. Medido no ensaio: com o `pactl` DUBLADO de uma régua vizinha, o
     sink do DualSense casa pela regra do um-para-um, o motor o encontra "na
     lista viva" e segue para o `paplay` — que **não** está dublado. A suíte
     tocava som no alto-falante do controle do usuário, enquanto ele trabalhava.
 
-    A guarda-mãe do `audio_saida` não alcança este caso de propósito: ela
+    A guarda-mãe do `audio_saida` não alcança este caso de propósito: a guarda
     confere o sink contra a lista viva, e numa régua a lista viva é de mentira.
     Quem sabe que ninguém clicou é esta camada.
 

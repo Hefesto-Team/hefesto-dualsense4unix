@@ -3,19 +3,19 @@
 
 O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, 26/09/2026. Até aqui um clique nesta página
 chegava ao piloto como `[gesto sem dono] mapa-das-portas.html · clique · …`: a
-página não tinha pacote, e o que ela declarava numa entrada sumia ao reler.
+página não tinha pacote, e o que o usuário declarava numa entrada sumia ao reler.
 
 Os dois pedidos que isto atende:
 
-* *«ao clicar em um desses usb mapeados eu pudesse setar que tem tal coisa lá.
-  no caso o hub ou afins»* — «O que tem aqui»: Direto, Hub ou Extensor;
+* ao clicar numa dessas entradas USB mapeadas, dizer o que está nela,
+  como um hub ou afins — «O que tem aqui»: Direto, Hub ou Extensor;
 * a velocidade da entrada, porque o par SuperSpeed que o firmware da placa
   publica (``peer``) não prova o conector: na mesa em que isto nasceu, as duas
   USB 2.0 pretas de trás têm o par, e a frente que o gabinete chama de 3.0
   está num conector 2.0 da placa — «Velocidade»: USB 3.0 ou 2.0 (desde 04/10/2026
-  só na entrada VAZIA: com aparelho nela, a máquina mede e a medida vence).
+  só na entrada VAZIA: com aparelho ali, a máquina mede e a medida vence).
 
-<!-- noqa-acento: citação literal -->
+
 
 Os dois vão ao `maquina.json` DO USUÁRIO, em `mapa.portas[N]`, pelo gravador único do
 Mapear (`integrations/entrada_a_entrada`), sem IPC: a declaração é dado de
@@ -36,8 +36,8 @@ abertura.
 O QUE ELE NÃO FAZ: não pinta nada (a página recebe o arranjo inteiro pelo
 `hefesto_vivo._entregar_o_arranjo`, e entrar em `PACOTES` faria o despachante
 das dez contar onze), e não grava as entradas do hub desenhado (`5.1`…): o
-número delas não cabe no disco, e o editor da página nem manda o gesto para
-elas. A ponta do extensor grava desde a 02, como entrada-filha.
+número das entradas não cabe no disco, e o editor da página nem manda o gesto para
+as entradas. A ponta do extensor grava desde a 02, como entrada-filha.
 """
 from __future__ import annotations
 
@@ -92,7 +92,7 @@ EXTENSOR_DE_ANTES = "extensor"
 
 @gesto(PAGINA, "entrada-o-que-tem", grava="declarar_a_ligacao")
 def entrada_o_que_tem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Direto» ou «Hub» na entrada — no `maquina.json` dela.
+    """«Direto» ou «Hub» na entrada — no `maquina.json`.
 
     O «Extensor» deixou de ser uma resposta daqui (04/10/2026): é a chave da porta, o gesto
     ``entrada-extensor``. A página publicada até o próximo ``--publicar`` ainda o manda por
@@ -117,7 +117,7 @@ def entrada_extensor(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
 
 @gesto(PAGINA, "entrada-lugar", grava="declarar_o_lugar_da_entrada")
 def entrada_lugar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O «Lugar» da entrada: a face do gabinete em que ela está (a do Mapear, no mesmo dono)."""
+    """O «Lugar» da entrada: a face do gabinete em que está (a do Mapear, no mesmo dono)."""
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
     face = str(o.get("valor") or "").strip()
@@ -135,7 +135,7 @@ def _o_modelo(o: dict[str, Any]) -> str:
 
 @gesto(PAGINA, "aparelho-tipo", grava="declarar_o_aparelho")
 def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O tipo que ela dá ao aparelho (o que a máquina não mede) — pelo ``vid:pid`` dele.
+    """O tipo que o usuário dá ao aparelho (o que a máquina não mede) — pelo ``vid:pid`` dele.
 
     Desde o painel único (05/10/2026) o tipo é uma lista: o valor chega em ``valor``, e o clique
     que só abre a lista não grava nada.
@@ -148,7 +148,7 @@ def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto(PAGINA, "aparelho-nome", grava="declarar_o_aparelho")
 def aparelho_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O nome que ela dá ao aparelho — pelo ``vid:pid`` dele; vazio apaga."""
+    """O nome que o usuário dá ao aparelho — pelo ``vid:pid`` dele; vazio apaga."""
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
     return _gravou(ee.declarar_o_aparelho(_o_modelo(o), apelido=str(o.get("valor") or "")), ctx)
@@ -164,7 +164,7 @@ def voltar_ao_automatico(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
 
 @gesto(PAGINA, "entrada-velocidade", grava="declarar_a_velocidade")
 def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """USB 3.0 ou USB 2.0 na entrada — o que ela diz vence o firmware da placa."""
+    """USB 3.0 ou USB 2.0 na entrada — o que o usuário diz vence o firmware da placa."""
     try:
         usb = int(str(o.get("usb") or ""))
     except ValueError:
@@ -174,7 +174,7 @@ def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 
 @gesto(PAGINA, "entrada-nome", grava="dar_nome_a_entrada")
 def entrada_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O nome que ela dá à entrada — da POSIÇÃO, no `maquina.json` dela."""
+    """O nome que o usuário dá à entrada — da POSIÇÃO, no `maquina.json`."""
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
     return _gravou(ee.dar_nome_a_entrada(_a_entrada(o), str(o.get("valor") or "")), ctx)
@@ -193,7 +193,7 @@ def entrada_trocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
 
 @gesto(PAGINA, "entrada-ensinar", grava="ensinar_a_entrada")
 def entrada_ensinar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Ensinar: o aparelho fora do mapa está NESTA entrada — o nó dele passa a ser dela."""
+    """Ensinar: o aparelho fora do mapa está NESTA entrada — o nó dele passa a ser da entrada."""
     caminho = str(o.get("caminho") or "").strip()
     if not caminho:
         raise ValueError("o clique não disse qual aparelho")

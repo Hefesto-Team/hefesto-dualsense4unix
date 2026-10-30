@@ -147,7 +147,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
 
 def _com_a_secao_dos_controles(fora: dict[str, Any], secao: dict[str, Any]) -> None:
-    """A seção Controles na Jogar, pintada pelo pacote da 02: o card dela vale sobre o cartão."""
+    """A seção Controles na Jogar, pintada pelo pacote da 02: o card da 02 vale sobre o cartão."""
     from . import LUGAR_VAZIO
 
     cartoes = fora["cartoes"]
@@ -383,11 +383,11 @@ def _cadeado_cego(state: dict[str, Any]) -> str:
     Existe desde 07/09/2026: a caixa *"Não trocar de perfil sozinho ao abrir um jogo"* governa a
     troca automática POR JANELA, que com o detector cego **não acontece de jeito nenhum**, e a caixa
     passaria a oferecer congelar algo já parado. Quem dizia isso era a coluna **Atenção**, que saiu
-    da aba por ordem de produto (a frase era a única linha acesa dela na medição); sem ela a tela
+    da aba por ordem do produto (era a única linha acesa da aba na medição); sem a frase a tela
     oferece controle sem dizer que não tem sobre o que agir.
 
     A fonte é a da janela antiga, `home_actions.texto_do_cadeado_cego`, palavra por palavra (texto
-    de tela é decisão de produto; o que ela já leu não, como `CADEADO_ROTULO` e `CADEADO_DICA`). A
+    de tela é decisão de produto; o que já foi lido não, como `CADEADO_ROTULO` e `CADEADO_DICA`). A
     ausência da chave conta como "não sei", e o dono garante: daemon mais velho não publica
     `window_detect_seeing` e a função devolve `""` em vez de acender aviso sobre detector que
     ninguém leu. O marcador no lugar do vazio é `monta.NADA_A_DIZER` (razão paga pelos externos em
@@ -548,7 +548,7 @@ def _ponte_do_steam_input() -> Any:
 
 
 def _qual_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
-    """`(appid, "aberto"|"fechado")` — as TRÊS evidências, e ela NÃO é daqui."""
+    """`(appid, "aberto"|"fechado")` — as TRÊS evidências, e NÃO é daqui."""
     from .a07_lancadores import a_escada_do_jogo
 
     return a_escada_do_jogo(state)
@@ -559,8 +559,8 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
 
     | o que se sabe | como | a tela |
     | --- | --- | --- |
-    | **LIGADO** | o jogo da vez está na lista dela **e** o vdf vivo diz diferente de `"0"` | chip
-    aceso | | **PENDENTE** | na lista dela, e o vdf ainda diz `"0"` | chip **aceso**, e a pendência
+    | **LIGADO** | o jogo da vez está na lista **e** o vdf vivo diz diferente de `"0"` | chip
+    aceso | | **PENDENTE** | na lista, e o vdf ainda diz `"0"` | chip **aceso**, e a pendência
     vai ao diário (:func:`_faixa_do_pendente`) | | **DESLIGADO** | não está na lista |
     chip apagado | | **NÃO SE SABE** | sem appid, ou a vigia ainda não voltou | chip apagado |
 
@@ -568,10 +568,10 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     (acender seria afirmar ponte que não está de pé, o `excecao_inerte` da PONTE-STEAM-INPUT-01). Na
     fileira que é grupo de rádio o chip aceso é o que o usuário ESCOLHEU: com a Steam aberta o
     clique voltava apagado, a queixa «cliquei e nada acendeu». A ponte que não subiu vai para a
-    faixa com a frase curta dela, e o guarda do vdf completa quando a Steam fechar. O quarto estado
+    faixa com a frase curta, e o guarda do vdf completa quando a Steam fechar. O quarto estado
     não é buraco: acender chip por padrão afirmaria escolha que ninguém fez. A escolha é **POR
-    JOGO** (ordem de produto, *"setar o jogo pra funcionar usando os controladores da própria
-    steam"*): a chave da Steam é indexada por appid (`UseSteamControllerConfig`), e chip que
+    JOGO** (ordem do produto: o jogo passa a funcionar com os controladores da própria
+    Steam): a chave da Steam é indexada por appid (`UseSteamControllerConfig`), e chip que
     acendesse para a MÁQUINA mentiria em 15 dos 16 jogos do usuário.
     """
     return (CHIP_DO_STEAM_INPUT
@@ -678,7 +678,7 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     Fato substituído (STEAM-INPUT-01, 20/09/2026): dizia-se que o Steam Input NUNCA acende por não
     ter caminho (`Chip.caminho` é `None`) nem IPC. A primeira metade é o desenho (§4.1: o `caminho`
     escolhe o CANAL do vpad, e o Steam Input senta EM CIMA do DualSense); a segunda caiu: quem o diz
-    é o `localconfig.vdf` contra a lista dela, lido por `ponte.estado_da_ponte` (read-only, roda com
+    é o `localconfig.vdf` contra a lista, lido por `ponte.estado_da_ponte` (read-only, roda com
     a Steam aberta). Acende por :func:`_steam_input_da_tela`, em CAMPO PRÓPRIO (a razão está em
     :data:`DA_PAGINA`).
 
@@ -789,7 +789,7 @@ _ROTULO: dict[str, str] = {}
 
 
 def _lembrar(campo: str, valor: str, rotulo: str) -> None:
-    """Anota o que ela acabou de pedir. Escritor ÚNICO dos dois dicionários."""
+    """Anota o que o usuário acabou de pedir. Escritor ÚNICO dos dois dicionários."""
     if not valor:
         return
     _ESCOLHA[campo] = valor
@@ -994,7 +994,7 @@ def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     **Ligado passou a ligar o serviço também (03/09/2026):** *"Adiciona essa função extra quando
     clicar em ligar. E em sistema um específico pra parar o Daemon E Ativar o Daemon (sendo que em
     jogar também consegue isso)."* Vem ANTES do plano porque os três IPCs atravessam a ponte e com o
-    serviço parado ela não tem socket; a ordem inversa recusaria o clique e deixaria o serviço
+    serviço parado o daemon não tem socket; a ordem inversa recusaria o clique e deixaria o serviço
     parado, falhando no caso que o usuário pediu que funcionasse. O ato é
     `a09_sistema.ativar_o_servico()`, o mesmo do botão "Ativar o serviço", com o
     `_user_stopped_daemon` desarmado junto (sem ele o `ensure_daemon_running` mata o daemon na
@@ -1175,8 +1175,8 @@ def modo_nativo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026: *«Desligado seria garantir que a
     steam não se mete»* O clique é o da fileira (:func:`_o_clique_da_fileira`): modo
     `native`, jogo da vez fora da lista do Steam Input e `localconfig.vdf` relido. Com a Steam
-    aberta a escrita espera e o guarda do vdf completa quando ela fechar (e tira a Steam de todo
-    jogo fora da lista a cada saída dela).
+    aberta a escrita espera e o guarda do vdf completa quando a Steam fechar (e tira a Steam de todo
+    jogo fora da lista a cada saída da Steam).
     """
     return _o_clique_da_fileira(ctx, o, p, CHIP_DO_NATIVO)
 
@@ -1248,17 +1248,17 @@ STEAM_INPUT_SAIU_MAS_CONTINUA = (
 
 
 def _reconciliar_o_vdf(alvo: str, ligar: bool) -> str:
-    """Faz o `localconfig.vdf` concordar com a vontade dela — ou diz o que falta.
+    """Faz o `localconfig.vdf` concordar com a vontade do usuário — ou diz o que falta.
 
     **A escrita é do dono, inteira** (`steam_input_ponte`): backup `.bak.…` ao lado, `tmp` +
     `replace`, segunda régua conferindo o texto antes de trocar o arquivo; a ORDEM DOS PORTÕES é a
     dele (jogo aberto, Steam aberta, e só então a escrita). **Nunca fecha a Steam do usuário**: com
-    ela aberta o dono ADIA, e quem pode fechá-la é só o segundo clique já armado
+    a Steam aberta o dono ADIA, e quem pode fechá-la é só o segundo clique já armado
     (:func:`_fechar_a_steam_e_ligar`). Sem ele o produto completa sozinho:
     `hefesto-steam-input-guard.path` (**active** e **enabled** em 20/09/2026,
     `PathChanged=%h/.steam/steam/userdata`) acorda quando a Steam acaba de sair, o único instante em
     que a escrita sobrevive, e roda `disable_steam_input.sh --apply-quiet`, que zera o
-    `UseSteamControllerConfig` de todo jogo FORA da lista e liga os que estão nela, **nos dois
+    `UseSteamControllerConfig` de todo jogo FORA da lista e liga os que estão ali, **nos dois
     sentidos, sem novo clique**.
 
     **O que a Steam ainda não fez não é recusa** (O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01, 23/09/2026):
@@ -1305,8 +1305,8 @@ GESTO_DO_STEAM_INPUT = "modo-steam"
 def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Steam Input": a Steam entrega a ENTRADA **daquele jogo**, e só dele.
 
-    O escopo é por jogo (ordem de produto: *"setar **o jogo** pra funcionar usando os controladores
-    da própria steam"*): a chave é indexada por appid (`UseSteamControllerConfig`,
+    O escopo é por jogo (ordem do produto: **o jogo** passa a funcionar com os controladores
+    da própria Steam): a chave é indexada por appid (`UseSteamControllerConfig`,
     `steam_input_ponte`) e chip que escrevesse para a MÁQUINA aplicaria ao jogo que estivesse aberto
     (`CAMINHO-CONTAGIO-01` com outro campo). **É um botão do Desligado**
     (NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026: *«Steam Input sai de
@@ -1320,13 +1320,13 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
 
     As duas metades têm preços diferentes, e só uma acontece sempre:
 
-    1. **a vontade dela**: uma linha num arquivo NOSSO, reversível, com a recarga atrás. A lista é
+    1. **a vontade**: uma linha num arquivo NOSSO, reversível, com a recarga atrás. A lista é
     relida do disco a cada consulta, mas o que entrega a entrada do jogo ao controle só nasce quando
     o daemon rematerializa o `steam_app_<appid>.env`; sem `launch_env.refresh` a marca só valeria no
-    próximo arranque e ela clicaria de novo achando que não pegou;
-    2. **a ponte**: reescreve o `localconfig.vdf` DO USUÁRIO, e a Steam tem de estar FECHADA (ela
-      regrava o arquivo ao sair e engole a edição). Aberta, o dono ADIA; o chip acende pela escolha
-      e a pendência vai ao diário (:func:`_faixa_do_pendente`).
+    próximo arranque e o usuário clicaria de novo achando que não pegou;
+    2. **a ponte**: reescreve o `localconfig.vdf` DO USUÁRIO, e a Steam tem de estar FECHADA (a
+      Steam regrava o arquivo ao sair e engole a edição). Aberta, o dono ADIA; o chip acende pela
+      escolha e a pendência vai ao diário (:func:`_faixa_do_pendente`).
 
     **O primeiro clique avisa, o segundo fecha** (23/09/2026,
     `D-2309-STEAM-INPUT-A-FRASE-E-O-CLIQUE`). Com a Steam aberta, sem jogo aberto e o jogo em `"0"`,
@@ -1336,11 +1336,11 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     (fechar a Steam o derrubaria); o guarda do vdf completa quando os dois saírem. Fato substituído
     (24/09/2026): dizia-se que o gesto *"não fecha a Steam"* porque chip é `<span>` estático sem
     rótulo para trocar; o `blocos:` troca o miolo como nos botões armados da aba 09
-    (:func:`_o_rotulo_do_chip`), e o rótulo lido de volta no clique prova que ela LEU a pergunta.
+    (:func:`_o_rotulo_do_chip`), e o rótulo lido de volta no clique prova que a pergunta foi LIDA.
 
     **O veredito é o arquivo:** nenhum desfecho verde sai sem :func:`_o_que_o_vdf_diz` reler o vdf.
     `status` de sucesso sobre arquivo que não mudou é o `excecao_inerte` que a PONTE-STEAM-INPUT-01
-    existiu para matar (*"a lista só preserva o que já estava ligado, ela nunca liga"*), e foi assim
+    existiu para matar (a lista só preservava o que estava ligado, e nunca ligava), e foi assim
     que a janela velha cantou "Steam Input desligado" sobre um no-op até a HONESTIDADE-STEAM-01. Sem
     jogo, nada acontece: a recusa é a frase do dono (`format_game_broken_result(status="sem_jogo")`)
     e nem lista, vdf ou caminho são tocados (o quarto estado de :func:`_steam_input_da_tela` do lado
@@ -1392,7 +1392,7 @@ def _armar_se_a_steam_segura(ctx: Contexto) -> dict[str, Any] | None:
 
     Arma com as três condições, cada uma pergunta ao dono na hora: o vdf diz `"0"` para o jogo
     (:func:`_o_que_o_vdf_diz`; sem o jogo no vdf, `None`, fechar a Steam não muda nada e não se
-    oferece); a Steam está aberta (`steam_running`, ela segura a escrita); NENHUM jogo aberto
+    oferece); a Steam está aberta (`steam_running`, a Steam segura a escrita); NENHUM jogo aberto
     (`steam_game_running`; fechar a Steam o mataria e `with_steam_closed` recusaria, e oferecer
     segundo clique que só pode recusar é pedir consentimento para nada). Devolve o `blocos:` com o
     rótulo armado para a troca ser INSTANTÂNEA (o tique também o põe); `None` quando não arma.
@@ -1435,7 +1435,7 @@ def _fechar_a_steam_e_ligar(alvo: str) -> dict[str, Any]:
     (portão de JOGO aberto antes de tudo, Steam que não fecha não é editada, reabertura em
     `finally`), a escrita é `garantir_ponte` com `allowlist=[alvo]`, como no primeiro clique, e a
     recusa é `daemon_actions.format_steam_janela_recusa`. A lista é garantida antes (o primeiro
-    clique a gravou e um segundo `add_…` devolve `ja_estava`; sem ela o guarda do vdf desligaria o
+    clique a gravou e um segundo `add_…` devolve `ja_estava`; sem isso o guarda do vdf desligaria o
     jogo na próxima saída da Steam). O veredito é o arquivo (:func:`_o_que_o_vdf_diz`).
     """
     from hefesto_dualsense4unix.app.actions.daemon_actions import (
@@ -1464,7 +1464,7 @@ def _fechar_a_steam_e_ligar(alvo: str) -> dict[str, Any]:
 
 
 @gesto("01-jogar.html", "modo-navegacao",
-       grava="liga o mouse emulado e o ponteiro anda na tela dela")
+       grava="liga o mouse emulado e o ponteiro anda na tela")
 def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Navegação" (Desligado): o controle vira teclado e mouse do computador.
 
@@ -1477,14 +1477,14 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     ligar o mouse antes de o gamepad sair faria a exclusão mútua do daemon derrubá-lo; a ordem é do
     plano.
 
-    **O terceiro passo trocou de fonte** (POINT-AND-CLICK-01, 17/09/2026, ordem de produto: *"o modo
-    point and click é o modo navegação e o modo que nós mesmos podemos usar e configurar na aba
-    navegação. **Ele ativa o modo configurado lá.**"*): era `mouse.emulation.restore`, que lê a flag
+    **O terceiro passo trocou de fonte** (POINT-AND-CLICK-01, 17/09/2026, ordem do produto: o modo
+    point and click é o modo navegação, o que se usa e se configura na aba
+    Navegação; **ele ativa o modo configurado lá**): era `mouse.emulation.restore`, que lê a flag
     de sessão da MÁQUINA; é `desktop.arranjo.apply`, que lê o PERFIL ATIVO (mouse, `key_bindings`,
     `button_actions`, `teclado_emulado` e a queda da supressão). As cinco coisas que a aba Navegação
     grava chegavam ao disco e não voltavam, e o chip daqui é a única porta (a aba manda ir à Jogar
     trocar o modo). O PS+R3 para na Navegação desde 13/09/2026 (`hotkey.CICLO_DE_PONTES`) e desde
-    17/09 entra pela MESMA porta deste clique; o que ela não tem é degrau na `ESCADA` automática,
+    17/09 entra pela MESMA porta deste clique; o que não tem é degrau na `ESCADA` automática,
     outra pergunta. Tira o jogo da vez do Steam Input, como o «Xbox» (:func:`o_que_o_chip_faz`; o
     clique é :func:`_o_clique_da_fileira`).
     """
@@ -1512,7 +1512,7 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`hefesto_vivo.BOOTSTRAP`) e `<input type="checkbox">` dispara os dois (o `change` nasceu para
     `<select>` e campos de texto); dois toggles seriam NO-OP;
     2. **o daemon poderia inverter a partir de outro estado**: o absoluto é a escolha lida da tela,
-      o toggle é a tela obedecendo a estado que ela não viu.
+      o toggle é a tela obedecendo a estado que o usuário não viu.
 
     O `evento` filtra a segunda entrega para o disco receber UMA escrita por clique
     (`profiles.manager.ligar_o_freestyle` grava). O `change` é o escolhido por só disparar quando a
@@ -1522,11 +1522,11 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `freestyle_ligado`, e se a escrita não pegar a caixa **volta sozinha**.
 
     Relato fechado (06/09/2026, `ONDA3-GESTO-DECLARA-01`): a declaração mora no PRÓPRIO decorador
-    (`grava="freestyle_set"`) e `PERIGOSOS` deriva dela; quem escreve o gesto fecha o contrato. Fato
+    (`grava="freestyle_set"`) e `PERIGOSOS` deriva daí; quem escreve o gesto fecha o contrato. Fato
     substituído (06/09/2026): a caixa está na página publicada (`onde.PUBLICADO`; a régua
     `test_o_cadeado_esta_publicado` lê o arquivo). O `--prova-gesto` não a clica por outra razão,
     `PERIGOSOS`: clicar GRAVA no disco do usuário (`utils/session.save_freestyle_ligado`, pelo
-    `freestyle.set`), e régua que mudasse preferência dela para provar que sabe clicar seria pior
+    `freestyle.set`), e régua que mudasse preferência de uso para provar que sabe clicar seria pior
     que a cobertura que compra.
 
     **O verde é o recibo e só acende quando o serviço confirmou** (05/09/2026, `03-Q4`: *"O campo

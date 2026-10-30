@@ -32,7 +32,7 @@ class AindaNaoChegou(BaseException):
 
     Quem levanta é o pacote, no fio da janela; quem pega é o `Piloto._tique`, que devolve
     `True` e deixa a pintura para o tique seguinte. A página fica como estava, que é o que
-    ela já mostrava enquanto a janela esperava a leitura, só que sem congelar.
+    a tela já mostrava enquanto a janela esperava a leitura, só que sem congelar.
 
     Herda de `BaseException` de propósito: os pacotes embrulham a leitura num
     `except Exception` que pinta «não deu», e a primeira leitura ainda no ar não é falha.

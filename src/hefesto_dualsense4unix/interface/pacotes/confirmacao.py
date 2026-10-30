@@ -16,7 +16,7 @@ def chave(*partes: object) -> str:
 
 
 def armado_agora() -> str:
-    """A chave armada NESTE instante, ou ``""`` — e ela desarma sozinha no tempo."""
+    """A chave armada NESTE instante, ou ``""`` — e desarma sozinha no tempo."""
     if ARMADO and time.monotonic() >= float(ARMADO.get("ate") or 0.0):
         ARMADO.clear()
     return str(ARMADO.get("gesto") or "")

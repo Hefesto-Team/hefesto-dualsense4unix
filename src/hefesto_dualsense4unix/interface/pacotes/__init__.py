@@ -19,15 +19,15 @@ O CONTRATO, e ele é o que impede a integração de virar um segundo projeto:
 
     def pacote(ctx: Contexto) -> dict[str, object]
 
-Uma função por página. Ela recebe o que o daemon respondeu, já mastigado, e
+Uma função por página. A função recebe o que o daemon respondeu, já mastigado, e
 devolve **endereço → valor**: o que a pintura consome. Nenhuma função de pacote
-toca GTK, WebView ou IPC — elas são puras, e é por isso que dá para testá-las
+toca GTK, WebView ou IPC — são puras, e é por isso que dá para testá-las
 sem abrir janela.
 
 DE ONDE VEM O ENDEREÇO DE CADA VALOR, e é a parte que o usuário apontou: o
 `docs/data/mapa-controles.csv` (308 linhas, o mesmo que gera o `specs.html`) diz,
 para cada peça do controle, o canal, o `report_id` e o comando **por transporte**
-— e se ela ACIONA no cabo e no rádio. Quem o pergunta em tempo de execução é
+— e se ACIONA no cabo e no rádio. Quem o pergunta em tempo de execução é
 `mesa_viva.aciona(chave, transporte)`, o leitor que o produto usa para a cor, o
 giroscópio e o alto-falante. O segundo leitor (`pacotes/mapa.py`) saiu em
 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): nasceu em 01/09, nenhuma aba o chamou,
@@ -118,10 +118,10 @@ def gesto(pagina: str | tuple[str, ...], nome: str, *,
       protegido` LÊ a árvore do gesto e cobra que a porta declarada esteja lá:
       declaração errada ou envelhecida reprova nomeando;
     * **uma frase**, quando o perigo não é uma chamada — `grava="para o serviço
-      e ela fica sem controle"`. Aí a árvore não tem o que confirmar, e quem
-      assembla é a régua, no `FORA_DA_ARVORE` dela, com a medição do lado.
+      e fica sem controle"`. Aí a árvore não tem o que confirmar, e quem
+      assembla é a régua, no próprio `FORA_DA_ARVORE`, com a medição do lado.
 
-    NÃO É "grava no disco", é **"muda algo dela que ela não mandou mudar"** — a
+    NÃO É "grava no disco", é **"muda algo do usuário que ele não mandou mudar"** — a
     área de transferência da 07 e o cursor da 06 estão aqui pela mesma razão que
     o `save_profile`. O que sai daqui é `hefesto_vivo.PERIGOSOS`, a lista do que
     a prova botão a botão NÃO clica sozinha.
@@ -131,7 +131,7 @@ def gesto(pagina: str | tuple[str, ...], nome: str, *,
     if grava and not limpo:
         raise SystemExit(
             f"ERRO: o gesto {nome!r} de {paginas[0]} declarou `grava=` em branco. "
-            f"Declaração vazia é pior que nenhuma: ela some da lista derivada "
+            f"Declaração vazia é pior que nenhuma: some da lista derivada "
             f"sem ninguém notar. Diga a porta ou diga a frase.")
 
     def dentro(fn: Gesto) -> Gesto:
@@ -204,14 +204,14 @@ def na_mesa_agora(ctx: Contexto) -> frozenset[str]:
 def podar_o_que_saiu(ctx: Contexto) -> frozenset[str]:
     """Quem saiu da mesa desde o tique anterior — e já esquecido por todos.
 
-    **Nunca levanta**, pela mesma razão de `bater_os_coracoes`: ela roda DENTRO
+    **Nunca levanta**, pela mesma razão de `bater_os_coracoes`: a função roda DENTRO
     do tique, e um tique que levanta para de pintar a aba inteira.
 
     **A PODA SÓ ACONTECE QUANDO ALGUÉM SAI**, e não a cada tique: varrer seis
     caches dez vezes por segundo para não achar nada é trabalho por nada, e o
     evento que a queixa de uso nomeia é raro — é a mão do usuário tirando o cabo.
 
-    ELA NÃO PODA QUEM CHEGA. Um controle que entra não deixa lixo em cache
+    A FUNÇÃO NÃO PODA QUEM CHEGA. Um controle que entra não deixa lixo em cache
     nenhum; o que ele encontra é a própria entrada, da sessão anterior dele, e
     quem a tirou foi a poda da SAÍDA. Curar na chegada seria curar tarde: entre
     a saída e a volta a tela já teria mostrado o dado velho.
@@ -306,7 +306,7 @@ def largar_o_que_as_abas_seguram(p: Any, *, esperar_s: float = 0.0,
     """Devolve ao jogo/à máquina tudo o que as abas seguravam. **Nunca levanta.**
 
     A LARGADA É UM «PARAR» DE TODOS, e anda na fila de cada controle: com um
-    gesto ou um batimento ainda no ar, ela entra atrás deles e só larga quando
+    gesto ou um batimento ainda no ar, a função entra atrás deles e só larga quando
     eles terminam. Sem isso, um «Testar» lento deixado na troca de página
     marcava o controle em teste DEPOIS da largada, e o coração o rebatia na aba
     seguinte; e um batimento já conferido mandava o par depois do `rumble.stop`.
@@ -422,7 +422,7 @@ def gesto_da_pagina(pagina: str, nome: str) -> Gesto | None:
 
 
 def pacote_da_pagina(pagina: str, ctx: Contexto) -> dict[str, Any] | None:
-    """O pacote daquela página, ou `None` se ela ainda não tem quem a pinte."""
+    """O pacote daquela página, ou `None` se ainda não tem quem a pinte."""
     fn = PACOTES.get(pagina)
     if fn is None:
         return None
@@ -615,7 +615,7 @@ _ALVOS: dict[str, _OlhoNaPagina] = {}
 
 
 def _olhar_a_pagina(pagina: str) -> _OlhoNaPagina | None:
-    """A página publicada, lida e lembrada. `None` quando ela não abre."""
+    """A página publicada, lida e lembrada. `None` quando não abre."""
     lembrado = _ALVOS.get(pagina)
     if lembrado is not None:
         return lembrado
@@ -635,10 +635,10 @@ def _olhar_a_pagina(pagina: str) -> _OlhoNaPagina | None:
 def alvos_da_pagina(pagina: str) -> dict[str, set[str]]:
     """Com que alvo cada endereço da página PUBLICADA é escrito.
 
-    LER A PÁGINA AQUI NÃO É O MESMO que tirar dela a LISTA de campos — e a
+    LER A PÁGINA AQUI NÃO É O MESMO que tirar daí a LISTA de campos — e a
     diferença é o que separa esta cura da destruição que `molde_do_lugar`
     descreve. A lista de campos sai da aba, que sabe o que é dado; a página só
-    responde **como** cada endereço é escrito, que é informação que só ela tem
+    responde **como** cada endereço é escrito, que é informação que só a página tem
     (`data-hef-alvo` é atributo do desenho).
 
     Vazio quando a página não abre — e aí `molde_do_lugar` desiste, porque sem
@@ -852,7 +852,7 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     todas as abas, porque cada função de pacote cuidava da sua aba e ninguém
     cuidava do que era de todas.
 
-    A contagem sai do `mesa_viva.texto_da_contagem`, que já é dona dela e
+    A contagem sai do `mesa_viva.texto_da_contagem`, que já é dona da contagem e
     devolve as duas metades separadas — o desenho põe a segunda em `<b>`, e
     escrever a frase inteira num `textContent` apagaria a tag.
     """
@@ -1141,7 +1141,7 @@ def _na_fila_da_mesa(filas: tuple[str, ...], mesa: Any) -> tuple[str, ...]:
     troca de página rodava no fio do GTK, e com um teste no ar isso eram dois IPC por
     controle (`rumble.stop` e `rumble.passthrough`) com a janela parada. Quem passa a
     `mesa` (a troca de página) larga sempre num fio, e na fila de cada controle do usuário: o
-    gesto que ela der na aba seguinte entra atrás da largada, como entrava quando havia
+    gesto que o usuário der na aba seguinte entra atrás da largada, como entrava quando havia
     fila. A saída da janela não passa `mesa` e continua como era.
     """
     return (*filas, *(fila_do_controle(str(c.get("uniq") or "")) for c in mesa or ()

@@ -21,7 +21,7 @@ no disco do usuário o tempo todo, e a `gui/aba_*.py` que o usuário usa hoje j�
 
 O QUE O PERFIL É, e a distinção muda o que a tela deve dizer: ele é o que está
 **salvo**, não o que está **aplicado**. Para a cor da barra isso importa — o
-daemon publica a cor viva, e ela vence. Para o gatilho não existe escolha: o
+daemon publica a cor viva, e vence. Para o gatilho não existe escolha: o
 DualSense **não devolve** o modo em que está (é comando de ida, e o
 `docs/data/mapa-controles.csv` diz o mesmo pela outra ponta). Logo o perfil é a
 melhor fonte que existe, e mostrar `Rigid` é mais verdadeiro que mostrar `—`.
@@ -31,11 +31,11 @@ memória de `arquivo()` e a do último arquivo lido são do processo, e a única
 marca no disco é o `.lock` que a varredura do loader deixa ao lado do arquivo
 que lê (o `FileLock` não o apaga, e o daemon deixa os mesmos). **Duas** funções
 no fim do arquivo escrevem, e as duas moram aqui pela MESMA razão — mais de uma aba
-precisou delas, e a segunda cópia é a que esquece um dos tempos:
+precisou das duas, e a segunda cópia é a que esquece um dos tempos:
 
 * `gravar_e_reaplicar()` (01/09/2026) — disco, reaplicar, `launch_env.refresh`;
 * `com_a_carona()` (06/09/2026) — o atalho de inicialização que a Steam comeu,
-  reposto de carona no gesto que ela já dá. Ver o docstring de cada uma.
+  reposto de carona no gesto que o usuário já dá. Ver o docstring de cada uma.
 
 E QUEM RESPONDE "QUAL PERFIL ESTÁ VALENDO" É `nome_do_ativo()` (06/09/2026,
 PERFIL-MODO-01): ele pergunta ao dono do §P1 em vez de ler
@@ -64,7 +64,7 @@ def _com_o_src() -> Any:
 
 
 def pasta() -> pathlib.Path | None:
-    """A pasta de perfis DESTA variante, perguntada a quem é dono dela."""
+    """A pasta de perfis DESTA variante, perguntada a quem é dono da pasta."""
     try:
         _com_o_src()
         from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
@@ -78,7 +78,7 @@ def nome_do_ativo(state: Any = None) -> str:
     """Qual perfil está valendo AGORA, perguntado ao dono — `""` quando ninguém.
 
     PERFIL-MODO-01, Passo 2 (06/09/2026). **É a releitura que o «Ativar» não
-    tinha**, e ela mora aqui porque o dono do estado é este módulo — a cura na
+    tinha**, e a função mora aqui porque o dono do estado é este módulo — a cura na
     aba Perfis seria uma segunda leitura na aba que já sabe, e as outras nove
     continuariam cegas.
 
@@ -269,10 +269,10 @@ def arquivo(nome: str, onde: pathlib.Path | None = None) -> pathlib.Path | None:
     `name` e a subpasta dos Estilos de Jogo, nessa ordem. Aqui não se digita
     perna nenhuma.
 
-    A PASTA É A DE :func:`pasta` — ela continua a dona da pasta desta tela, e é
+    A PASTA É A DE :func:`pasta` — a função continua a dona da pasta desta tela, e é
     o que mantém `ativo()` e `lista()` olhando o mesmo lugar (a régua
     `test_o_perfil_chega_na_tela.py` pegou os dois divergindo em 01/09). Do
-    loader vem a regra de como um nome vira arquivo DENTRO dela.
+    loader vem a regra de como um nome vira arquivo DENTRO da pasta.
 
     A RESPOSTA QUE CUSTOU FICA NA MEMÓRIA (:data:`CUSTO_QUE_SE_GUARDA_S`) por
     :data:`VALIDADE_DO_ARQUIVO_S`, e a assinatura da pasta (:func:`_assinatura`)
@@ -363,7 +363,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01, item 9 da
     cura): era o `profile.switch`, que é a ativação À MÃO — a cada clique que
     grava, o perfil que vale virava a escolha do usuário, e com um perfil de jogo
-    posto pelo autoswitch ela passava a abrir o Hefesto naquele jogo. O
+    posto pelo autoswitch o perfil passava a abrir o Hefesto naquele jogo. O
     `profile.reaplicar` roda a mesma cadeia da ativação sem gravar a escolha
     (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01).
 
@@ -377,8 +377,8 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     ANTERIOR — num renomear, é ele que tem de casar com o ativo, porque o daemon
     ainda não ouviu falar do nome novo.
 
-    POR QUE ELA MORA AQUI, e não na aba Perfis onde nasceu: a partir de
-    01/09/2026 ela tem DOIS chamadores — o `a10_perfis`, que edita o perfil
+    POR QUE A FUNÇÃO MORA AQUI, e não na aba Perfis onde nasceu: a partir de
+    01/09/2026 a função tem DOIS chamadores — o `a10_perfis`, que edita o perfil
     inteiro, e o `a06_navegacao`, que devolve os atalhos de botão ao de fábrica.
     Deixá-la lá obrigaria a segunda aba a importar a primeira (um pacote de aba
     dependendo de outro, que é o oposto do território exclusivo) ou a escrever
@@ -404,7 +404,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     continuava com o perfil anterior — enquanto a MESMA aba realçava a linha do
     perfil, porque o realce (`a10_perfis._valendo:1043`) já usava o dono certo.
 
-    É o sintoma que ela leu como *"não está salvando"*, e a segunda linha desta
+    É o sintoma que o usuário leu como «não está salvando», e a segunda linha desta
     docstring já o anunciava: *"Gravar sem reaplicar deixa a tela dizendo uma
     coisa e o aparelho fazendo outra"*.
 
@@ -413,7 +413,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     no boot). Perguntar a ele é o que faz o realce e o reaplicar responderem
     sobre o MESMO perfil.
 
-    ELA NÃO CHAMA A CARONA, E A RAZÃO É MEDIDA — 06/09/2026, ONDA5-07-02
+    A FUNÇÃO NÃO CHAMA A CARONA, E A RAZÃO É MEDIDA — 06/09/2026, ONDA5-07-02
     -------------------------------------------------------------------
     Parece o lugar óbvio: na janela estável o funil equivalente
     (`app/actions/profile_writer.py`) carrega UMA chamada de carona que cobre
@@ -426,7 +426,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     CARONA REPARA"): *"'sempre' faria uma varredura de disco e duas escritas a
     cada clique"*.
 
-    ONDE ELA ENTRA, então: no gesto de PERFIL — «Ativar» (já pega), os três do
+    ONDE A FUNÇÃO ENTRA, então: no gesto de PERFIL — «Ativar» (já pega), os três do
     rodapé (`rodape.py`, 06/09) e o funil `a10_perfis._gravar`, que é o único
     chamador cujos OITO gestos são o perfil inteiro (renomear, prioridade,
     ambiente, estilo, jogo, detectar, novo, duplicar) e não um campo. Esse é o
@@ -459,16 +459,16 @@ def com_a_carona(frase: str = "") -> str:
     um botão na gui, mas ele se auto corrigir ao clicarmos em aplicar ou salvar
     o perfil seja dentro ou fora da guia de perfis."*
 
-    O QUE ELA CURA: a Steam guarda UMA linha de `LaunchOptions` por jogo, e
-    qualquer coisa escrita nela substitui a chamada do `hefesto-launch` em
+    O QUE A FUNÇÃO CURA: a Steam guarda UMA linha de `LaunchOptions` por jogo, e
+    qualquer coisa escrita ali substitui a chamada do `hefesto-launch` em
     silêncio. Sem o atalho, o `launch_env` que o daemon materializa nunca é
-    lido — o jogo é instruído a ignorar o vpad que nós criamos para ele. Nas
-    palavras do usuário: *"parou de ser reconhecido no jogo, mas o perfil segue ativo
-    no controle com tudo funcionando"*.
+    lido — o jogo é instruído a ignorar o vpad que nós criamos para ele. O
+    sintoma relatado: o controle parava de ser reconhecido no jogo, com o perfil ativo
+    e tudo funcionando no controle.
 
     POR QUE AQUI, E NÃO NO PACOTE DE UMA ABA — 06/09/2026, ONDA5-07-02
     ------------------------------------------------------------------
-    Ela nasceu em `a10_perfis._com_a_carona`, e o «Ativar» daquela aba era o
+    A função nasceu em `a10_perfis._com_a_carona`, e o «Ativar» daquela aba era o
     ÚNICO gesto da interface nova que a pegava. O rodapé é das DEZ abas e tem
     três gestos que gravam ou aplicam perfil — `aplicar`, `salvar` e
     `importar` —, e nenhum a pegava. Um pacote de aba importando outro é o
@@ -488,7 +488,7 @@ def com_a_carona(frase: str = "") -> str:
     `HEFESTO_CARONA_WRAPPER=0`). Uma régua desta casa não vai ao `/proc` do usuário,
     e não reescreve a biblioteca da máquina em que roda.
 
-    NUNCA LEVANTA. Ela é efeito colateral de um gesto que já deu certo: uma
+    NUNCA LEVANTA. A carona é efeito colateral de um gesto que já deu certo: uma
     exceção aqui transformaria uma gravação bem-sucedida em tarja de recusa.
 
     O SILÊNCIO É O CASO COMUM, DE PROPÓSITO. `frase` vazia de volta quer dizer
@@ -500,7 +500,7 @@ def com_a_carona(frase: str = "") -> str:
     OS DOIS REGISTROS DE CHAMADA, e os dois são legítimos:
 
     * `com_a_carona(frase)` — quem já tem uma frase de desfecho (o «Ativar» da
-      aba Perfis) recebe a notícia GRUDADA nela, com o `·` no meio;
+      aba Perfis) recebe a notícia GRUDADA à frase, com o `·` no meio;
     * `com_a_carona()` — quem não tem (os três gestos do rodapé) recebe a
       notícia sozinha, **sem o separador órfão** que um `f"{''} · …"` deixaria.
 
@@ -509,7 +509,7 @@ def com_a_carona(frase: str = "") -> str:
     Steam já fechou?" até o reparo caber, e a memória do episódio
     (`_carona_ja_avisado`), que impede o mesmo aviso a cada gesto. As duas
     dependem do `GLib.timeout_add` da janela e são território do piloto — não
-    deste pacote. Enquanto elas não vierem, um reparo adiado é REDITO a cada
+    deste pacote. Enquanto essas não vierem, um reparo adiado é REDITO a cada
     gesto do usuário; é ruído conhecido, com endereço, e não defeito novo.
     """
     from hefesto_dualsense4unix.app.actions import carona_do_wrapper as carona
@@ -607,7 +607,7 @@ def a_volta_do_perfil(ctx: Any, p: Any) -> None:
     volta agora é um jogador que o ``coop.sync`` ainda alcança nesta volta. Os
     dois botões de origem ficam como estão, para a volta inteira.
 
-    NUNCA LEVANTA: quando ela começa, o disco e o aparelho já receberam o
+    NUNCA LEVANTA: quando a carona começa, o disco e o aparelho já receberam o
     perfil. A falha de um passo vai ao diário com o motivo e não impede o
     seguinte; o botão responde pelo ato dele, e nenhuma frase nova vai à tela.
     """

@@ -26,7 +26,7 @@ VENCIDA = float("-inf")
 
 
 def em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
-    """A última leitura de `chave`; pede outra num fio quando ela venceu."""
+    """A última leitura de `chave`; pede outra num fio quando venceu."""
     agora = time.monotonic()
     with _TRAVA_DO_FUNDO:
         visto = _FUNDO.get(chave)
@@ -85,7 +85,7 @@ def ler_o_bluez() -> tuple[tuple[Any, ...], tuple[Any, ...]] | None:
 
 
 def e_controle_do_bluez(a: Any) -> bool:
-    """Pergunta à CLASSE (o dono é `gesto_de_pareamento.e_controle`); sem ela, ao ícone."""
+    """Pergunta à CLASSE (o dono é `gesto_de_pareamento.e_controle`); sem a classe, ao ícone."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations.gesto_de_pareamento import e_controle
 

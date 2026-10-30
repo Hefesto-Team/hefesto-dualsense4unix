@@ -1,6 +1,6 @@
 """A camada de cada gesto: de quem é o valor que ele grava. Das dez abas.
 
-**E O QUE ELA RECUSA NO NATIVO** (09/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01,
+**E O QUE RECUSA NO NATIVO** (09/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01,
 itens 4 e 5): com o Hefesto desligado o jogo é o dono do controle, e nas cinco abas que falam de
 controle (Jogar, Controles, Gatilhos, Iluminação e Vibração) nenhum gesto chega ao daemon, a não ser
 os que a tabela `VIVOS_NO_NATIVO` nomeia (o caminho de volta e o que é do computador). A recusa é

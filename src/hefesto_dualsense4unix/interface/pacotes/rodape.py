@@ -29,10 +29,10 @@ aplicar, ele não aplica e não abre o pop up"*.
 
 A CARONA DO ATALHO DE INICIALIZAÇÃO — QUEM PEGA E QUEM NÃO PEGA (06/09/2026)
 ---------------------------------------------------------------------------
-Decisão de produto, `07-Q1`: *"Deve aplicar automaticamente como era no gtk"* — e o
-desenho é dela desde 16/08: *"nem precisa ter um botão na gui, mas ele se auto
-corrigir ao clicarmos em aplicar ou salvar o perfil seja dentro ou fora da guia
-de perfis."* Quem repõe é `perfil.com_a_carona()`, atrás do `carona.ligada()`
+Decisão do produto, `07-Q1`: aplicar automaticamente, como era na GTK — e o
+desenho é esse desde 16/08: sem botão na interface, o atalho se corrige
+sozinho ao aplicar ou salvar o perfil, dentro ou fora da guia
+de perfis. Quem repõe é `perfil.com_a_carona()`, atrás do `carona.ligada()`
 do dono. A notícia (quando há) vai ao diário da janela e não à tela — desde
 13/09/2026, ver `_recado`.
 
@@ -48,7 +48,7 @@ Exportar   não      copia um arquivo para FORA (`origem.read_bytes()`) e não
                     toca o perfil ativo: não há nada a repor
 =========  =======  ==========================================================
 
-**E a carona não muda o desfecho do gesto**: ela roda DEPOIS do trabalho dar
+**E a carona não muda o desfecho do gesto**: a carona roda DEPOIS do trabalho dar
 certo, nunca antes, e `com_a_carona` nunca levanta. Uma exceção ali
 transformaria uma gravação bem-sucedida em tarja de recusa.
 
@@ -72,12 +72,12 @@ PAGINA = "*"
 def _recado(frase: str) -> None:
     """A notícia da carona vai ao DIÁRIO da janela — e não mais à tela.
 
-    ATÉ 13/09/2026 ELA IA AO CARTÃO, como `{"recado": …}` pelo canal de sucesso
+    ATÉ 13/09/2026 A FRASE IA AO CARTÃO, como `{"recado": …}` pelo canal de sucesso
     do piloto (a D-01). O usuário mandou tirar, com a foto deste rodapé: *"essas
     frases de status que aparecem no rodapé isso não deveria estar
     aparecendo"*, *"em todas as abas da interface"* (TELA-CALADA-01). Medido no
     piloto oculto antes da cura: o «Aplicar» com um jogo sem o atalho escrevia
-    a frase na faixa da 01, no cartão do P1 da 02 — onde ela já chegava vinda
+    a frase na faixa da 01, no cartão do P1 da 02 — onde a frase já chegava vinda
     da 01 — e na faixa da 05.
 
     QUEM REPÕE O ATALHO É A CARONA, NÃO A FRASE: os três gestos continuam
@@ -198,16 +198,16 @@ def perfil_do_rodape(state: Any) -> str:
 
 @gesto("*", "exportar")
 def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Escreve o perfil ativo num `.json` na pasta pessoal dela.
+    """Escreve o perfil ativo num `.json` na pasta pessoal do usuário.
 
     FEATURE NOVA, e a nota importa: o produto estável NÃO tem exportação — não
     há handler no `src/` nem botão no `main.glade`. O botão veio do desenho.
 
-    ELA ESCOLHE ONDE, pelo seletor do sistema — o mesmo ponto de extensão do
+    O USUÁRIO ESCOLHE ONDE, pelo seletor do sistema — o mesmo ponto de extensão do
     "Importar", injetado pelo piloto. A sugestão é `hefesto-<perfil>.json` na
     pasta pessoal, para que aceitar sem pensar já dê num lugar previsível.
 
-    Copia o arquivo do disco em vez de reserializar o perfil: o que ela leva
+    Copia o arquivo do disco em vez de reserializar o perfil: o que o usuário leva
     para outra máquina é byte a byte o que está aqui — sem passar pelo pydantic,
     que normalizaria campos e mudaria o arquivo sem ninguém pedir.
 
@@ -233,7 +233,7 @@ def exportar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "importar")
 def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Carrega um perfil de um `.json` que ela escolhe.
+    """Carrega um perfil de um `.json` que o usuário escolhe.
 
     O SELETOR É DO SISTEMA, e por isso vem INJETADO: o WebView não abre
     `FileChooserDialog` e a página não alcança o disco. Quem o abre é o piloto,
@@ -250,7 +250,7 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     DEPOIS DE GRAVAR, A VOLTA (:func:`perfil.a_volta_do_perfil`, 02/10/2026),
     como o «Salvar»: todo botão do rodapé que grava perfil termina igual (a
-    resposta 44 dela na O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01).
+    resposta 44 na O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01).
     """
     caminho = p.escolher_arquivo("Escolha o perfil para importar", padrao="*.json")
     if not caminho:

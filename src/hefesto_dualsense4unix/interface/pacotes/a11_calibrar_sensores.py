@@ -9,7 +9,7 @@ estava medido antes desta sprint (`PAGINAS-ESPECIAIS-B1`, §2.4):
     **zero pinturas**.
 
 O QUE A TELA DIZIA E O QUE O APARELHO RESPONDIA, medido no daemon do usuário em
-11/09/2026 com os dois DualSense na bancada::
+11/09/2026 com os dois DualSense no ensaio::
 
     a tela                          o `daemon.state_full`
     P1 · Cosmic Red · USB           P1 · Starlight Blue · USB
@@ -18,7 +18,7 @@ O QUE A TELA DIZIA E O QUE O APARELHO RESPONDIA, medido no daemon do usuário em
     accel +0.105 / +0.976 / +0.170  `inputs` sem chave `accel`
 
 **Os dois controles trocados e as doze leituras inventadas** — e com quatro na
-bancada ela veria dois, porque a lista era `monta.CONECTADOS`, o DESENHO.
+ensaio a tela veria dois, porque a lista era `monta.CONECTADOS`, o DESENHO.
 
 ESTE PACOTE É A METADE QUE FALTAVA. Ele faz três coisas, e só três:
 
@@ -47,11 +47,11 @@ DE ONDE VEM CADA IMPORT, porque dois deles surpreendem:
   `sys.path` já tem a pasta `interface/` quando este módulo carrega — quem a põe
   é o `pacotes/__init__.py`, no topo — e assim os dois são os MESMOS objetos que
   o piloto e os geradores usam, em vez de uma segunda cópia de cada;
-* `meias_da_barra` é PÚBLICA e tem um dono só. Ela re-expressa o que
+* `meias_da_barra` é PÚBLICA e tem um dono só. A função re-expressa o que
   `mesa_viva._barra_bipolar` devolve na gramática que o produto alcança (duas
   metades ancoradas no centro), e redigitá-la aqui seria a segunda cópia que a
-  LEI 0 desta casa proíbe. A aba Controles é onde ela mora porque foi lá que
-  nasceu; nada nela é da aba.
+  LEI 0 desta casa proíbe. A aba Controles é onde a função mora porque foi lá que
+  nasceu; nada ali é da aba.
 """
 from __future__ import annotations
 
@@ -120,7 +120,7 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
     O bloco é o que o `daemon.state_full` publica por controle
     (`ipc_handlers._merge_mira`) — os números que o tique DESTE controle usa.
     Sem ele, travessão nos números e o trilho onde está: escrever uma posição
-    de palpite moveria o polegar dela para um valor que ninguém leu.
+    de palpite moveria o polegar do usuário para um valor que ninguém leu.
     """
     bloco = entrada.get("mira")
     b: dict[str, Any] = bloco if isinstance(bloco, dict) else {}
@@ -267,12 +267,12 @@ def passos_da_fita(estados: list[str]) -> dict[str, str]:
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """O que o tique escreve nesta página: os cartões, as leituras e a conta.
 
-    A ORDEM DOS CARTÕES É A DA BANCADA (`ctx.mesa`), que é a ordem do PRODUTO —
+    A ORDEM DOS CARTÕES É A DA MESA (`ctx.mesa`), que é a ordem do PRODUTO —
     por `player_slot`, não pela posição no `controllers` do IPC. Desenhar por
     índice inverte os dois controles do usuário na primeira execução, e a razão inteira
     está em `mesa_viva`, disciplina 1.
 
-    A CHAVE DA COLUNA É O `pref` DA BANCADA, e não o endereço do aparelho: é o
+    A CHAVE DA COLUNA É O `pref` DA MESA, e não o endereço do aparelho: é o
     `pref` que o gerador acaba de escrever no `data-controle` de cada cartão,
     duas linhas acima. Mandar o endereço obrigaria a tradução do despachante a
     casar de volta o que este mesmo pacote já sabe.

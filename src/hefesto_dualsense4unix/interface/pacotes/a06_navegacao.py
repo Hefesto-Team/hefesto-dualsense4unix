@@ -143,7 +143,7 @@ def _o_que_a_pagina_oferece() -> frozenset[str]:
     """As `<option>` da "Função do teclado" NA PÁGINA QUE O PILOTO CARREGA.
 
     `publicado=True` é deliberado (a mesma exceção de `a03_gatilhos._pagina_publicada`): o padrão de
-    `onde.pagina` é a BANCADA, mas quem pinta pinta no que está no `WebView`, e o piloto abre SEMPRE
+    `onde.pagina` é o MOCKUP, mas quem pinta pinta no que está no `WebView`, e o piloto abre SEMPRE
     o publicado. Lê uma vez por versão do arquivo, selo `(mtime_ns, tamanho)`: a página tem 385 KB e
     a pintura roda a cada 100 ms (reler a cada tique seria 3,8 MB/s). `frozenset()` quando o arquivo
     não abre: aí `_o_teclado_em_palavras` cai na palavra de produto, o destino correto para produto
@@ -278,7 +278,7 @@ def colorway_do_aparelho(slug: str) -> str:
 def folha_do_plastico(mesa: list[dict[str, Any]], caixa: str = ".nav-ctl") -> str:
     """A folha de estilo VIVA que pinta o casco de cada lugar da mesa.
 
-    Ela é o cinto e o alvo `atributo` é o suspensório (03/09/2026): com o alvo, o `data-colorway` de
+    É o cinto e o alvo `atributo` é o suspensório (03/09/2026): com o alvo, o `data-colorway` de
     cada `<svg>` é um campo (`colorway_do_aparelho`) e a página publica os 28 modelos; a folha fica
     por pintar o casco numa árvore em que o alvo ainda não chegou, e sai quando ele estiver no `dev`
     e provado na tela.
@@ -297,7 +297,7 @@ def folha_do_plastico(mesa: list[dict[str, Any]], caixa: str = ".nav-ctl") -> st
 
     :param caixa: o seletor da CAIXA de um lugar da mesa, que muda de aba (`.nav-ctl` aqui, `.ctrl`
     na Iluminação). Parâmetro desde 03/09/2026, quando a aba 04 precisou da mesma folha (o desenho
-    GRANDE dela mostrava o Cosmic Red e o Starlight Blue do mockup sob um rótulo `P1 • White • USB`,
+    GRANDE mostrava o Cosmic Red e o Starlight Blue do mockup sob um rótulo `P1 • White • USB`,
     `rgb(174,51,90)` no corpo contra `rgb(228,224,216)` na moldura da MESMA célula); duas cópias
     divergiriam no primeiro modelo novo. O seletor precisa vencer o `svg[data-colorway="…"]` de
     dentro do SVG (0,1,1); `.nav-ctl[…] .ds-svg` e `.ctrl[…] .ds-svg` valem (0,3,0).
@@ -363,11 +363,11 @@ def chips_da_fita(mesa: list[dict[str, Any]]) -> str:
     """Os chips da fita do topo, para a `06`, com os controles da MESA.
 
     Por que esta aba tem os seus, e não os de `monta.fita()`: o piloto troca a fita INTEIRA
-    (`hefesto_vivo._fita`), mas ela **desiste** quando um controle da mesa não tem cor (`if not mesa
+    (`hefesto_vivo._fita`), mas **desiste** quando um controle da mesa não tem cor (`if not mesa
     or any(not c.get("cor") …): return ""`), e pelo rádio a cor não se lê. Medido em 03/09/2026 com
     os dois controles do usuário e o daemon no ar: a fita da `06` mostrava `P1 · Cosmic Red · USB` e
     `P2 · Starlight Blue · BT` (os do mockup) ao lado de um cabeçalho certo. Este endereço salva a
-    fita quando o dono dela desiste; quando `_fita` responde, ele troca o bloco antes (primeiro
+    fita quando o dono da fita desiste; quando `_fita` responde, ele troca o bloco antes (primeiro
     passo do `pintar`) e os dois dizem a mesma coisa.
 
     Acesos e borda (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, 09/10/2026): a aba não escolhe
@@ -750,7 +750,7 @@ def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
 
 
 def _numero_da_barra(o: dict[str, Any], oque: str) -> int:
-    """O inteiro que a barra mandou, ou uma frase que chega ao cartão dela.
+    """O inteiro que a barra mandou, ou uma frase que chega ao cartão do controle.
 
     O `data-hef-alvo="valor"` do `<input type=range>` faz o ouvinte mandar `valor: alvo.value`; um
     `<div>` não teria `value` e o gesto chegaria com a chave vazia (defeito que a aba Vibração
@@ -951,7 +951,7 @@ def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
         try:
             p.resultado(REPOR_O_POINT_AND_CLICK)
         except RuntimeError:
-            recado = ("guardei a escolha, mas o Hefesto não respondeu: ela vale na próxima "
+            recado = ("guardei a escolha, mas o Hefesto não respondeu: a escolha vale na próxima "
                       "entrada no Point and click.")
     return {"recado": recado} if recado else None
 
@@ -1191,7 +1191,7 @@ def _nome_na_troca(botao: str) -> str:
 
 
 def _frase_da_troca(exc: remap.RemapeamentoRecusadoError) -> str:
-    """A recusa do motor, com os nomes que ela lê na tela."""
+    """A recusa do motor, com os nomes que o usuário lê na tela."""
     if exc.motivo == remap.MOTIVO_COLISAO:
         *origens, destino = exc.botoes
         return (
@@ -1403,7 +1403,7 @@ def acao_do_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
 
     qual = str(o.get("linha") or "").strip()
     if qual not in ag.TODOS_OS_GESTOS:
-        raise ValueError(f"a lista não disse de qual gesto ela é ({qual!r})")
+        raise ValueError(f"a lista não disse de qual gesto se trata ({qual!r})")
     if _declarar_o_gesto(qual, str(o.get("rotulo") or o.get("valor") or "").strip(), p):
         _avisar_se_sem_saida_de_emergencia()
     return None

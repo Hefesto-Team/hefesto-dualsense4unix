@@ -2,7 +2,7 @@
 
 A biblioteca mora em `app/gui_prefs.py`, a caixa de preferências da própria interface. Cada
 feature tem a sua chave, e a dos gatilhos (`gatilhos_meus_efeitos`) é a que já existia: mudar o
-nome dela perderia o que a pessoa guardou. O item dos gatilhos segue o seu formato antigo
+nome do item perderia o que a pessoa guardou. O item dos gatilhos segue o seu formato antigo
 (`left`/`right`); o das outras features é `{nome, base, parametros}`.
 
 Ausente quer dizer «ainda não guardou nenhum», e é diferente de «guardou e apagou todos»: por isso
@@ -68,7 +68,7 @@ def guardar_meus_efeitos(todos: dict[str, Any], feature: str = "gatilhos") -> No
     """Escreve a biblioteca de volta, PRESERVANDO o resto das preferências.
 
     O `load` antes do `save` não é cerimônia: `save_gui_prefs` grava o dicionário INTEIRO, e
-    escrever só a nossa chave apagaria o `advanced_editor` e o `ambiente_corrigido` dela.
+    escrever só a nossa chave apagaria o `advanced_editor` e o `ambiente_corrigido` do perfil.
     """
     from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, save_gui_prefs
 

@@ -664,7 +664,7 @@ def mapa_usar_em(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto(PAGINA, "mapa-botao")
 def mapa_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O usuário clicou numa linha: ela vira a escolhida.
+    """O usuário clicou numa linha: a linha vira a escolhida.
 
     Sem `b`, o seletor fechou e nada fica aceso.
     """
@@ -1002,7 +1002,7 @@ def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
 
     Com `mac`, a troca é a DESSE controle (`ControllerOverrides.remapeamento`): o botão que o
     perfil já troca e que a pessoa solta aqui fica `botão: botão` (cancela só nesta peça), e a ação
-    de mouse e de teclado segue do perfil, que é o único dono dela.
+    de mouse e de teclado segue do perfil, que é o único dono.
     """
     acoes_do_perfil = dict(prof.button_actions or {})
     sequencias = _sequencias_do_perfil(prof, mac)

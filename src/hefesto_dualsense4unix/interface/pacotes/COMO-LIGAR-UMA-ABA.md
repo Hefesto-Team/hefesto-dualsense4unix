@@ -1,7 +1,7 @@
 # Como ligar os botões de uma aba
 
 O que você vai fazer: os botões daquela aba **agem**. O clique sai da tela,
-atravessa a ponte e chega ao aparelho dela.
+atravessa a ponte e chega ao aparelho do usuário.
 
 **Leia o exemplo antes de escrever uma linha:** `a04_iluminacao.py`, o bloco
 `OS GESTOS`. Ele está comentado para ser copiado.
@@ -10,8 +10,8 @@ atravessa a ponte e chega ao aparelho dela.
 
 ## A regra número um: NADA SE REESCREVE
 
-Pergunta dela, 01/09/2026: *"não estamos refazendo do zero né?"* — *"em todas as
-abas temos praticamente tudo pronto."* Está mesmo. Três degraus, **nesta ordem**:
+A pergunta de 01/09/2026: se não se estava refazendo do zero, já que em todas as
+abas havia praticamente tudo pronto. Está mesmo. Três degraus, **nesta ordem**:
 
 | onde | o que tem | como usar |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ METODOS: set[str] = set()    # os métodos crus, se usar `p.chamar`
 
   | campo | o que traz |
   | --- | --- |
-  | `valor` | o `value` de um `<input>` ou `<select>` — o que ela digitou ou escolheu |
+  | `valor` | o `value` de um `<input>` ou `<select>` — o que o usuário digitou ou escolheu |
   | `rotulo` | o texto VISÍVEL da opção escolhida num `<select>` |
   | `tipo` | `input`, `select`, `button`… |
   | `evento` | `click` ou `change` |
@@ -130,7 +130,7 @@ invertidas o reset apagaria a cor que acabou de ir.
 O `uniq` do clique de prova é sempre `aa:bb:cc:00:00:01` (faixa sintética da
 casa — há dois portões de anonimato nesta árvore).
 
-**4. Prove clicando**, com a janela OCULTA — ela tem UMA tela:
+**4. Prove clicando**, com a janela OCULTA — a máquina de uso tem UMA tela:
 
 ```bash
 HEFESTO_VARIANTE=dev .venv/bin/python -u layout/_ferramentas/hefesto_vivo.py \
@@ -149,7 +149,7 @@ responde calado é pior que um que recusa — quem clicou conclui que funcionou.
 Sete gestos da aba Sistema estão assim de propósito (`reiniciar`, `desligar`,
 `autostart`, `corrigir-modo`…): são `systemctl`, não IPC.
 
-## Duas decisões dela que valem para todas as abas
+## Duas decisões que valem para todas as abas
 
 1. **Clicar já aplica.** Ação imediata, não rascunho à espera de um "Aplicar".
 2. **Nada fica num estado morto.** Se largar um recurso (como a luz volta para o
