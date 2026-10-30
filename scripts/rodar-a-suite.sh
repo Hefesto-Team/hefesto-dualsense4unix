@@ -391,6 +391,10 @@ rodar_pytest() {
   if [ "$rc_do_processo" -gt 128 ]; then
     linha="$linha · MORREU PELO SINAL $((rc_do_processo - 128)): a pilha está em $log"
   fi
+  if grep -q '^CANARIO-FS-01 PORTÃO' "$log"; then
+    linha="$linha · CANARIO-FS-01 PORTÃO: a parte alcançou o lar ou o serviço real, veja $log"
+    vermelha=1
+  fi
   local semx="${linha//xfailed/}"
   semx="${semx//xpassed/}"
   case "$semx" in

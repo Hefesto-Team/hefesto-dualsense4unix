@@ -297,8 +297,10 @@ def _rodar_o_ninho(
     ambiente["HEFESTO_SEM_CANARIO_FS"] = "1"
     if com_a_cura:
         ambiente.pop(berco._LAR_DESLIGADO_ENV, None)
+        ambiente.pop(berco._GUARDA_DESLIGADA_ENV, None)
     else:
         ambiente[berco._LAR_DESLIGADO_ENV] = "1"
+        ambiente[berco._GUARDA_DESLIGADA_ENV] = "1"
 
     saida = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "test_ninho.py"],

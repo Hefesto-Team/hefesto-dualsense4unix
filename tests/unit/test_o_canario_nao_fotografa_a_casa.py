@@ -36,6 +36,8 @@ def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.delenv(canario._CANARIO_DESLIGADO_ENV, raising=False)
     monkeypatch.setattr(canario, "_CANARIO_TETO_ENTRADAS", TETO)
     monkeypatch.setattr(canario, "_deltas_do_congelado", lambda: [])
+    monkeypatch.setattr(canario, "_gestos_da_janela_dela", lambda: [])
+    monkeypatch.setattr(canario, "_GUARDA_DA_SESSAO", [])
     return lar
 
 

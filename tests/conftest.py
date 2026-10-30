@@ -796,6 +796,7 @@ def _nascidos_fora_do_berco() -> list[str]:
     lar = lar_de_sessao()
     if lar is not None:
         novos.discard(lar.name)
+    novos.discard(f"{_RUNTIME_PREFIXO}{os.getpid()}")
     for nosso in (som_de_mentira(), lancador_de_mentira()):
         if nosso is not None:
             novos.discard(nosso.name)
@@ -914,13 +915,18 @@ def lar_de_sessao() -> Path | None:
 
 def _lares_orfaos(raiz: Path) -> list[Path]:
     """Lares de sessões MORTAS — mesmo critério por pid do `_bercos_orfaos`."""
+    return _orfaos_por_pid(raiz, _LAR_PREFIXO)
+
+
+def _orfaos_por_pid(raiz: Path, prefixo: str) -> list[Path]:
+    """As pastas `<prefixo><pid>` sob `raiz` cujo pid morreu."""
     orfaos: list[Path] = []
     with contextlib.suppress(OSError):
         for entrada in raiz.iterdir():
             nome = entrada.name
-            if not nome.startswith(_LAR_PREFIXO):
+            if not nome.startswith(prefixo):
                 continue
-            cauda = nome[len(_LAR_PREFIXO):]
+            cauda = nome[len(prefixo):]
             if not cauda.isdigit():
                 continue
             if not entrada.is_dir() or entrada.is_symlink():
@@ -1006,12 +1012,14 @@ def _armar_lar_de_sessao(session: Any) -> None:
     for var, padrao in _VARS_DO_LAR:
         _LAR_ENV_ANTES[var] = os.environ.get(var)
         _LAR_ENV_DEPOIS[var] = _destino_no_duble(var, padrao, destino)
+    _LAR_ENV_ANTES["XDG_RUNTIME_DIR"] = os.environ.get("XDG_RUNTIME_DIR")
+    _LAR_ENV_DEPOIS["XDG_RUNTIME_DIR"] = str(_espelhar_o_runtime(_raiz_do_runtime() / "s"))
     _aplicar_o_lar_de_sessao()
     atexit.register(_fechar_o_lar_de_sessao)
 
 
 def _devolver_o_ambiente_real() -> None:
-    """Repõe os cinco valores de antes do desvio. Não apaga o lar de mentira."""
+    """Repõe os seis valores de antes do desvio. Não apaga o lar de mentira."""
     for var, valor in _LAR_ENV_ANTES.items():
         if valor is None:
             os.environ.pop(var, None)
@@ -1045,6 +1053,219 @@ def _fechar_o_lar_de_sessao() -> None:
         shutil.rmtree(destino, ignore_errors=True)
 
 
+_RUNTIME_PREFIXO = "hr-"
+
+_RUNTIME_REAL: list[Path] = []
+
+_RAIZ_DO_RUNTIME: list[Path] = []
+
+_CASOS_DO_RUNTIME = itertools.count()
+
+
+def runtime_real() -> Path:
+    """O `XDG_RUNTIME_DIR` de verdade, o de antes do desvio, onde mora o socket do daemon dela."""
+    if _RUNTIME_REAL:
+        return _RUNTIME_REAL[0]
+    bruto = (os.environ.get("XDG_RUNTIME_DIR") or "").strip()
+    return Path(bruto) if bruto else Path(f"/run/user/{os.getuid()}")
+
+
+def _espelhar_o_runtime(destino: Path) -> Path:
+    """Um runtime de mentira: link para tudo do real, menos o que é do Hefesto."""
+    destino.mkdir(mode=0o700, parents=True, exist_ok=True)
+    with contextlib.suppress(OSError):
+        for entrada in sorted(runtime_real().iterdir()):
+            if entrada.name.startswith("hefesto"):
+                continue
+            with contextlib.suppress(OSError):
+                (destino / entrada.name).symlink_to(entrada)
+    return destino
+
+
+def _raiz_do_runtime() -> Path:
+    """A raiz curta dos runtimes de mentira: o caminho do socket cabe nos 108 bytes."""
+    if _RAIZ_DO_RUNTIME:
+        return _RAIZ_DO_RUNTIME[0]
+    base = _TMP_REAL[0] if _TMP_REAL else Path(tempfile.gettempdir())
+    for orfao in _orfaos_por_pid(base, _RUNTIME_PREFIXO):
+        shutil.rmtree(orfao, ignore_errors=True)
+    raiz = base / f"{_RUNTIME_PREFIXO}{os.getpid()}"
+    shutil.rmtree(raiz, ignore_errors=True)
+    raiz.mkdir(mode=0o700, parents=True, exist_ok=True)
+    _RAIZ_DO_RUNTIME.append(raiz)
+    atexit.register(_fechar_o_runtime)
+    return raiz
+
+
+def _runtime_do_caso() -> Path:
+    """O runtime de mentira de um caso só, curto e novo."""
+    return _espelhar_o_runtime(_raiz_do_runtime() / f"c{next(_CASOS_DO_RUNTIME)}")
+
+
+def _fechar_o_runtime() -> None:
+    raiz = _RAIZ_DO_RUNTIME[0] if _RAIZ_DO_RUNTIME else None
+    _RAIZ_DO_RUNTIME.clear()
+    if raiz is not None:
+        shutil.rmtree(raiz, ignore_errors=True)
+
+
+_GUARDA_DESLIGADA_ENV = "HEFESTO_SEM_GUARDA_DO_REAL"
+
+_GUARDA_PORTAO = "CANARIO-FS-01 PORTÃO"
+
+_FLAGS_DE_ESCRITA = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
+
+_ESCRITAS_PELO_PRIMEIRO = frozenset({
+    "os.mkdir", "os.rmdir", "os.remove", "os.truncate", "os.utime", "os.chmod", "os.chown",
+    "shutil.rmtree",
+})
+
+_ESCRITAS_PELO_SEGUNDO = frozenset({"os.symlink", "os.link"})
+
+
+class GuardaDoReal:
+    """Recusa, e anota, o teste que conecta ao serviço real ou escreve no lar real de quem roda."""
+
+    def __init__(self, pastas: list[Path], prefixos: list[str]) -> None:
+        self.pastas = tuple(os.path.normpath(str(p)) for p in pastas)
+        self.prefixos = tuple(os.path.normpath(p) for p in prefixos)
+        self.recusas: list[str] = []
+
+    def protege(self, caminho: str) -> bool:
+        if any(caminho == p or caminho.startswith(p + os.sep) for p in self.pastas):
+            return True
+        return any(caminho.startswith(p) for p in self.prefixos)
+
+    @staticmethod
+    def _caminho(alvo: Any) -> str | None:
+        if isinstance(alvo, (str, bytes, os.PathLike)):
+            texto = os.fsdecode(os.fspath(alvo))
+        else:
+            return None
+        if "hefesto" not in texto or texto.startswith("\0"):
+            return None
+        if not os.path.isabs(texto):
+            try:
+                texto = os.path.join(os.getcwd(), texto)
+            except OSError:
+                return None
+        return os.path.normpath(texto)
+
+    def __call__(self, evento: str, args: tuple[Any, ...]) -> None:
+        if evento == "open":
+            if len(args) < 3 or not isinstance(args[2], int) or not args[2] & _FLAGS_DE_ESCRITA:
+                return
+            alvos = args[:1]
+        elif evento == "socket.connect":
+            alvos = args[1:2]
+        elif evento == "os.rename":
+            alvos = args[:2]
+        elif evento in _ESCRITAS_PELO_SEGUNDO:
+            alvos = args[1:2]
+        elif evento in _ESCRITAS_PELO_PRIMEIRO:
+            alvos = args[:1]
+        else:
+            return
+        for alvo in alvos:
+            caminho = self._caminho(alvo)
+            if caminho is None or not self.protege(caminho):
+                continue
+            caso = os.environ.get("PYTEST_CURRENT_TEST", "fora de um caso")
+            self.recusas.append(f"{evento} {caminho} ({caso})")
+            if evento == "socket.connect":
+                recusa = "a suíte não fala com o serviço real"
+                raise ConnectionRefusedError(errno.ECONNREFUSED, recusa, caminho)
+            raise PermissionError(errno.EACCES, "a suíte não escreve no lar real", caminho)
+
+
+_GUARDAS: list[GuardaDoReal] = []
+
+_GUARDA_DA_SESSAO: list[GuardaDoReal] = []
+
+_AUDITORIA_ARMADA: list[bool] = []
+
+
+def _auditar(evento: str, args: tuple[Any, ...]) -> None:
+    for guarda in _GUARDAS:
+        guarda(evento, args)
+
+
+def _pastas_reais_do_produto() -> list[Path]:
+    """As quatro pastas do produto no lar real, e as dos `XDG_*` reais quando apontam para fora."""
+    pastas = {lar_real().joinpath(*folha) for folha in _DIRS_DO_PRODUTO}
+    for var, _padrao in _VARS_DO_LAR[1:]:
+        bruto = (os.environ.get(var) or "").strip()
+        if bruto:
+            pastas.add(Path(bruto) / _NOME_DO_PRODUTO)
+    return sorted(pastas)
+
+
+def _armar_a_guarda_do_real() -> None:
+    """Liga a auditoria e, sem a escotilha, a guarda que cobre o lar e o serviço reais."""
+    if not _AUDITORIA_ARMADA:
+        sys.addaudithook(_auditar)
+        _AUDITORIA_ARMADA.append(True)
+    if _GUARDA_DA_SESSAO or os.environ.get(_GUARDA_DESLIGADA_ENV) == "1":
+        return
+    guarda = GuardaDoReal(_pastas_reais_do_produto(), [str(runtime_real() / "hefesto")])
+    _GUARDA_DA_SESSAO.append(guarda)
+    _GUARDAS.append(guarda)
+
+
+def _guarda_no_fim_da_sessao(session: Any) -> None:
+    """O portão da guarda: uma recusa durante a sessão reprova a sessão."""
+    recusas = [r for guarda in _GUARDA_DA_SESSAO for r in guarda.recusas]
+    if not recusas:
+        return
+    mostrados = recusas[:_CANARIO_LIMITE_AVISO]
+    restam = len(recusas) - len(mostrados)
+    _escrever_no_terminal(session, [
+        "",
+        f"{_GUARDA_PORTAO}: a suíte tentou alcançar o serviço ou o lar real de quem a roda, "
+        f"e a guarda recusou ({len(recusas)}):",
+        *[f"  - {r}" for r in mostrados],
+        *([f"  ... e mais {restam}"] if restam > 0 else []),
+        "  O HOME e o XDG_RUNTIME_DIR da sessão são de mentira: quem chegou aqui montou o",
+        "  caminho por fora deles (constante de import, caminho absoluto, getpwuid).",
+    ])
+    session.exitstatus = 1
+
+
+_INTERFACE_LOG_INICIO: list[tuple[Path, int]] = []
+
+
+def _interface_log_real() -> Path:
+    """O diário da janela de quem roda a suíte, no state real."""
+    bruto = (os.environ.get("XDG_STATE_HOME") or "").strip()
+    base = Path(bruto) if bruto else lar_real() / ".local" / "state"
+    return base / _NOME_DO_PRODUTO / "interface.log"
+
+
+def _marcar_o_diario_da_janela() -> None:
+    caminho = _interface_log_real()
+    try:
+        tamanho = caminho.stat().st_size
+    except OSError:
+        tamanho = 0
+    _INTERFACE_LOG_INICIO.append((caminho, tamanho))
+
+
+def _gestos_da_janela_dela() -> list[str]:
+    """Os `[gesto]` que a janela DELA anotou desde o começo da sessão."""
+    if not _INTERFACE_LOG_INICIO:
+        return []
+    caminho, inicio = _INTERFACE_LOG_INICIO[0]
+    try:
+        with open(caminho, "rb") as diario:
+            if os.fstat(diario.fileno()).st_size < inicio:
+                inicio = 0
+            diario.seek(inicio)
+            novo = diario.read(_CANARIO_LIMITE_RESUMO).decode("utf-8", "replace")
+    except OSError:
+        return []
+    return [linha.strip() for linha in novo.splitlines() if "[gesto]" in linha]
+
+
 _MODULO_DA_IDENTIDADE = "hefesto_dualsense4unix.daemon.subsystems.identity"
 
 
@@ -1065,6 +1286,10 @@ def pytest_sessionstart(session: Any) -> None:
     global _CANARIO_ARMADO, _FAIXA_ARMADA
     if not _LAR_REAL:
         _LAR_REAL.append(Path(os.environ.get("HOME") or os.path.expanduser("~")))
+    if not _RUNTIME_REAL:
+        _RUNTIME_REAL.append(runtime_real())
+    _armar_a_guarda_do_real()
+    _marcar_o_diario_da_janela()
     _armar_berco(session)
     _instalar_popen_da_sessao()
     _armar_som_de_mentira()
@@ -1178,6 +1403,8 @@ def _sessionfinish_das_guardas(session: Any) -> None:
 
     _faixa_no_fim_da_sessao(session)
 
+    _guarda_no_fim_da_sessao(session)
+
     if not _canario_ligado() or not _CANARIO_ARMADO:
         return
 
@@ -1216,10 +1443,32 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     deltas = _deltas_do_canario(_CANARIO_FOTO_INICIAL, foto_fim)
     if not deltas:
         return
+    config = str(Path(os.path.expanduser("~")) / ".config" / _NOME_DO_PRODUTO)
+    no_config = [
+        d for d in deltas
+        if (resto := d.split(None, 1)[-1]) == config
+        or resto.startswith((config + os.sep, config + " ("))
+    ]
+    gestos = _gestos_da_janela_dela() if no_config else []
+    if gestos:
+        _escrever_no_terminal(session, [
+            "",
+            "CANARIO-FS-01 (aviso, não é portão): o ~/.config do produto mudou com a janela "
+            f"de quem roda aberta, e ela anotou {len(gestos)} gesto(s) no mesmo intervalo:",
+            *[f"  - {d}" for d in no_config],
+            *[f"  gesto: {g}" for g in gestos[-_CANARIO_LIMITE_AVISO:]],
+        ])
+        deltas = [d for d in deltas if d not in no_config]
+        if not deltas:
+            return
     linhas = [
         "",
         "CANARIO-FS-01: a suíte ESCREVEU nos diretórios reais da usuária "
         f"({len(deltas)} mudança(s)):",
+        *([
+            f"{_GUARDA_PORTAO}: escrita no ~/.config do produto sem gesto da janela dela "
+            "no intervalo"
+        ] if any(d in no_config for d in deltas) else []),
         *[f"  - {d}" for d in deltas],
         "  Um teste hermético não deixa rastro em $HOME. Procure constante de",
         "  módulo com Path.home() avaliada no import (monkeypatch de HOME não a",
@@ -1522,7 +1771,9 @@ def _o_produto_nao_roda_neste_ambiente(erro: ModuleNotFoundError) -> bool:
 
 
 @pytest.fixture(autouse=True)
-def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def _hefesto_fake_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, request: pytest.FixtureRequest
+) -> None:
     """Ativa HEFESTO_DUALSENSE4UNIX_FAKE=1 e ISOLA os diretórios XDG em todo teste.
 
     FAKE=1 — garantia defensiva: subsystems que fazem probing de hardware real
@@ -1563,6 +1814,9 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     home_dir = xdg_root / "home"
     home_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("HOME", str(home_dir))
+    runtime = _runtime_do_caso()
+    request.addfinalizer(lambda: shutil.rmtree(runtime, ignore_errors=True))
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
     monkeypatch.setenv("HEFESTO_DONO_DO_P1", str(xdg_root / "dono-do-p1"))
