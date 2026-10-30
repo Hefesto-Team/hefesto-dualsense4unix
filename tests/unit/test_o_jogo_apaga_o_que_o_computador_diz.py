@@ -4,7 +4,7 @@
 
 O perfil do jogo só diz o que difere do computador, e a chave ausente quer
 dizer «herde». Apagar, dentro de um jogo, uma tecla que o computador define
-gravava o dicionário SEM ela, e a junção ``{**computador, **jogo}`` a devolvia.
+gravava o dicionário SEM a chave, e a junção ``{**computador, **jogo}`` a devolvia.
 A cura é a lápide: a lista vazia, o «— Nada —» que o schema aceita e a
 resolução já lê, escrita só onde o computador define a tecla.
 

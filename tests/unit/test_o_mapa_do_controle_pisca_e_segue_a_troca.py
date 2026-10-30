@@ -269,7 +269,7 @@ def test_o_pisca_e_a_troca_aparecem_no_desenho(com_troca: dict[str, Any]) -> Non
     assert com_p1["peca_tri"] != ROSA and com_p1["peca_cruz"] == ROSA, com_p1
 
 
-VISTAS_DO_MAPA = {"dela": (1918, 840), "ladrilhada": (1212, 809), "estreita": (860, 809)}
+VISTAS_DO_MAPA = {"notebook": (1918, 840), "ladrilhada": (1212, 809), "estreita": (860, 809)}
 
 CHIPS = r"""
 (function(){
@@ -442,7 +442,7 @@ def test_o_nome_comprido_do_controle_corta_no_chip_e_leva_o_nome_na_dica(
         f"na janela {vista}, o chip de nome comprido sai do bloco ou da caixa: {fora}")
     sem_corte = [c["texto"] for c in chips if not c["reticencia"]]
     assert sem_corte == [], f"o chip não corta com reticências: {sem_corte}"
-    if vista != "dela":
+    if vista != "notebook":
         assert all(c["corta"] for c in chips), (
             f"na janela {vista} nenhum nome devia caber inteiro: {chips}")
     cortados = [c for c in chips if c["corta"]]

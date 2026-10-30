@@ -57,7 +57,7 @@ def test_a_unit_impede_o_agente_de_entrar_em_failed() -> None:
 
     assert re.search(r"^Restart=always$", corpo, re.MULTILINE), (
         "a unit perdeu o `Restart=always`. Para este serviço não há desfecho em\n"
-        "que ficar fora seja correto: sem ele, o pareamento dela não funciona."
+        "que ficar fora seja correto: sem ele, o pareamento de quem usa não funciona."
     )
 
 

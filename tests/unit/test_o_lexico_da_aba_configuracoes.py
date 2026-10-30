@@ -29,24 +29,24 @@ PARAGRAFOS_QUE_FICAM: dict[str, str] = {
     "Nenhum controle ligado agora.": (
         "seção VAZIA: só existe quando não há controle nenhum, logo é o próprio "
         "estado dos controles. `secao_controles`. A frase dizia `na mesa` até "
-        "05/09/2026, quando ela mandou tirar a palavra da interface."
+        "05/09/2026, quando o pedido mandou tirar a palavra da interface."
     ),
     "Não sei quem está no rádio": (
         "estado do daemon: só aparece quando ele não respondeu. `secao_orcamento`."
     ),
     "Você ainda não mapeou as suas entradas.": (
-        "estado da declaração dela: some no instante em que o mapa é desenhado. "
+        "estado da declaração de quem usa: some no instante em que o mapa é desenhado. "
         "`secao_mesa`. A frase dizia `Você ainda não desenhou a sua mesa.` até "
         "05/09/2026, e a razão escrita aqui era que a palavra FICAVA — por ser "
-        "a mesa FÍSICA, a escrivaninha e as entradas USB. **Ela derrubou esse "
-        "juízo no mesmo dia**: *\"muda o termo pra objeto e sinônimos nesses "
-        "casos\"*. O verbo acompanhou o botão ao lado, que é o \"o que fazer\" "
+        "a mesa FÍSICA, a escrivaninha e as entradas USB. **Esse juízo caiu "
+        "no mesmo dia**: o termo passou a ser o objeto, com sinônimos nesses "
+        "casos. O verbo acompanhou o botão ao lado, que é o \"o que fazer\" "
         "desta frase e passou a chamar-se `Mapear Entradas`."
     ),
     "A sessão não diz qual é o ambiente.": (
         "estado da SESSÃO: `app/ambiente.frase_do_detectado` só a escreve quando "
         "a sessão não declara ambiente nenhum; com um declarado, a linha é o "
-        "curto «Detectado: …». Numa sessão gráfica ela nunca aparece, e por isso "
+        "curto «Detectado: …». Numa sessão gráfica a frase nunca aparece, e por isso "
         "a régua só a viu no job `gtk-real` do CI, que roda sem sessão "
         "(corrida 36119169814, 25/09/2026)."
     ),
@@ -64,7 +64,7 @@ AINDA_NA_PAGINA: dict[str, str] = {
         "`test_a_aba_diz_quando_a_escolha_fica_guardada.py`: o coletor passa a "
         "colher `get_tooltip_text()` junto. Aquele arquivo não está na posse "
         "da LEVA-4-A (R-A), então a frente relata em vez de editar.\n"
-        "Ela também é a única casa da `QUANDO_VALE` em `secao_controles`: numa "
+        "A frase também é a única casa da `QUANDO_VALE` em `secao_controles`: numa "
         "mesa sem controle nenhum, o interruptor que a frase explica não "
         "existe. Quem mover a frase move a dica junto."
     ),

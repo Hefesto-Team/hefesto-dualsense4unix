@@ -1,7 +1,7 @@
 """O «Mapa do controle» tem duas portas: a aba Conexões (29/09) e a Navegação (rodada 3, 13/10).
 
 A Navegação abre o mapa pelos botões «Trocar os botões» e «Point and click» da fila de baixo, e
-volta para ela pelo «← Voltar» (a reserva do `history.back`).
+volta para a Conexões pelo «← Voltar» (a reserva do `history.back`).
 """
 from __future__ import annotations
 

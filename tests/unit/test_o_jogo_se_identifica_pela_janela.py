@@ -1,4 +1,4 @@
-"""**LANCADOR-AGNOSTICO-01 — a derivação que caiu no dia em que ela abriu o jogo.**"""
+"""**LANCADOR-AGNOSTICO-01 — a derivação que caiu no dia em que o jogo abriu de verdade.**"""
 
 from __future__ import annotations
 
@@ -29,13 +29,13 @@ class TestOParQueDerrubouADerivacao:
         basename = EXECUTAVEL_DO_GOTG.rsplit("/", 1)[-1]
         assert basename == "gotg.exe"
         assert basename != JANELA_DO_GOTG, (
-            "a derivação pelo executável voltou — e ela nunca casou com a "
+            "a derivação pelo executável voltou — e a derivação nunca casou com a "
             "janela que o Heroic anuncia")
 
 
 class TestOsTresDegraus:
     def test_1_o_umu_vence(self):
-        """O umu-id vem do lançador que ELA usou; o appid da Steam é o que a"""
+        """O umu-id vem do lançador que QUEM USA abriu; o appid da Steam é o que a"""
         assert classe_de_janela(
             umu_id=UMU_DO_GOTG, appid_da_steam="999999") == JANELA_DO_GOTG
 
@@ -189,7 +189,7 @@ class TestOPerfilQueJaNasceuTortoSeConserta:
         return feitos, gravados
 
     def test_o_gotg_exe_vira_a_janela_de_verdade(self, monkeypatch, tmp_path):
-        """O caso dela, exato."""
+        """O caso medido, exato."""
         feitos, gravados = self._rodar(
             monkeypatch, tmp_path, [self._perfil(["gotg.exe"])], self._catalogo())
         assert feitos == ("Marvel's Guardians of the Galaxy",)

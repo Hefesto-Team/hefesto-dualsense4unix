@@ -117,7 +117,7 @@ def test_o_censo_pede_as_ferramentas_do_pulseaudio() -> None:
     assert linha is not None, (
         "as ferramentas do PulseAudio saíram do censo `_DEPS_DE_SISTEMA`: a "
         "luz do microfone volta a depender de instalação à mão, contra a regra "
-        "dela — toda cura entra no install, sem flag"
+        "da casa — toda cura entra no install, sem flag"
     )
 
 
@@ -127,7 +127,7 @@ def test_a_checagem_pede_os_dois_binarios() -> None:
     assert linha is not None, "a linha do pactl sumiu do censo"
     checagem = linha.split("|")[2]
     assert checagem == CHECAGEM, (
-        f"a checagem virou {checagem!r}. Ela tem de pedir os DOIS binários "
+        f"a checagem virou {checagem!r}. A checagem tem de pedir os DOIS binários "
         f"({CHECAGEM}): o `pactl` dá o 'quem está ouvindo' e o `parec` dá o "
         "'está entrando som'. Com um só, metade da luz morre em silêncio"
     )
@@ -145,8 +145,8 @@ def test_a_criticidade_e_importante_e_a_razao_diz_o_que_quebra() -> None:
     )
     assert razao.strip(), "a linha ficou sem o 'o que quebra sem ele'"
     assert "luz" in razao.lower(), (
-        "a razão não diz que quem quebra é a LUZ do microfone. Ela é o texto "
-        "que o install imprime na tela dela quando a dependência falta"
+        "a razão não diz que quem quebra é a LUZ do microfone. A razão é o texto "
+        "que o install imprime na tela de quem usa quando a dependência falta"
     )
 
 
@@ -156,7 +156,7 @@ def test_a_tabela_traduz_o_canonico_em_cada_familia(familia: str) -> None:
     proc = _roda(f"_pkg_nome {CANONICO} {familia}")
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == NOMES_DE_PACOTE[familia], (
-        f"o nome do pacote em {familia} mudou. O `apt` foi MEDIDO nesta bancada "
+        f"o nome do pacote em {familia} mudou. O `apt` foi MEDIDO nesta máquina de teste "
         "em 03/09/2026 (`dpkg -S` de `/usr/bin/pactl` e de `/usr/bin/pacat`, "
         "para onde o `parec` aponta, devolvem os dois `pulseaudio-utils`); as "
         "outras duas colunas vêm da DEPS-UNIVERSAIS-01 e este teste as tranca "
@@ -176,7 +176,7 @@ def _path_so_com(tmp_path: Path, binarios: tuple[str, ...]) -> str:
 
 
 def _checagem_do_censo() -> str:
-    """A checagem COMO ELA ESTÁ NO `install.sh`, não a constante deste arquivo."""
+    """A checagem COMO ESTÁ NO `install.sh`, não a constante deste arquivo."""
     linha = _linha_do_censo(CANONICO)
     assert linha is not None, "a linha do pactl sumiu do censo `_DEPS_DE_SISTEMA`"
     return linha.split("|")[2]
@@ -246,11 +246,11 @@ def test_o_censo_oferece_o_pactl_sozinho_quando_ele_falta() -> None:
     saida = proc.stdout + proc.stderr
     assert proc.returncode == 0, saida
     assert "falta pactl" in saida, (
-        "o laço do install não NOMEOU o `pactl` como faltando. Sem isso ela "
+        "o laço do install não NOMEOU o `pactl` como faltando. Sem isso quem usa "
         f"não tem como saber o que instalar. Saída:\n{saida}"
     )
     assert "luz do microfone" in saida, (
-        "o install disse o nome da dependência mas não o que quebra sem ela — "
+        "o install disse o nome da dependência mas não o que quebra sem a dependência — "
         f"a razão do censo não chegou à tela. Saída:\n{saida}"
     )
     assert re.search(r"^run_pkg .*\bpactl\b", saida, re.MULTILINE), (
@@ -328,7 +328,7 @@ def test_a_regua_de_imports_le_stdlib_puro_como_limpo(tmp_path: Path) -> None:
     )
     assert _imports_de_terceiros(alvo) == set(), (
         "a régua acusou biblioteca de terceiro num módulo que só usa stdlib, a "
-        "casa e import relativo — ela reprovaria a PEÇA B correta"
+        "casa e import relativo — a régua reprovaria a PEÇA B correta"
     )
 
 
@@ -338,7 +338,7 @@ def test_a_regua_de_imports_pega_a_biblioteca_nao_declarada(tmp_path: Path) -> N
     alvo.write_text("import numpy as np\nimport struct\n", encoding="utf-8")
     assert "numpy" in _imports_de_terceiros(alvo), (
         "a régua deixou o `numpy` passar. Ele NÃO está no `pyproject.toml` — "
-        "vive só no `~/.local/lib` desta bancada — e uma árvore criada com "
+        "vive só no `~/.local/lib` desta máquina de teste — e uma árvore criada com "
         '`pip install -e ".[dev,emulation,cosmic]"` nasceria com a luz morta'
     )
 
@@ -356,7 +356,7 @@ def test_nenhum_modulo_do_src_importa_biblioteca_de_audio_nao_declarada() -> Non
     assert not achados, (
         "biblioteca NÃO declarada no `pyproject.toml` importada em `src/`: "
         + "; ".join(achados)
-        + ". É a dívida do `playwright` repetida: a bancada de quem escreveu "
+        + ". É a dívida do `playwright` repetida: a máquina de quem escreveu "
         "tem a biblioteca, e toda árvore nova nasce quebrada sem dizer por quê"
     )
 
@@ -377,7 +377,7 @@ def test_as_pecas_da_luz_so_importam_o_que_o_install_entrega() -> None:
                 achados.append(f"{caminho.relative_to(RAIZ)}: {nome}")
     assert not achados, (
         "as peças da luz importam biblioteca que o `pyproject.toml` não "
-        "declara: " + "; ".join(achados) + ". Ou ela entra no `pyproject.toml` "
+        "declara: " + "; ".join(achados) + ". Ou a biblioteca entra no `pyproject.toml` "
         "(e no `.spec`, no `PKGBUILD`, no `control` e no flatpak junto), ou o "
         "código volta para a stdlib — que é o que a medição de custo mandou"
     )
@@ -433,7 +433,7 @@ LACUNAS_DECLARADAS = {
 
 
 def _campos_debian(texto: str) -> str:
-    """Junta as continuações (linhas que começam com espaço) ao campo delas."""
+    """Junta as continuações (linhas que começam com espaço) ao campo de cada uma."""
     linhas: list[str] = []
     for bruta in texto.splitlines():
         if bruta[:1] in (" ", "\t") and linhas:
@@ -494,7 +494,7 @@ def test_a_lista_de_lacunas_nao_guarda_lacuna_ja_fechada() -> None:
 
 
 def test_o_motivo_da_lacuna_do_flatpak_continua_verdadeiro() -> None:
-    """O motivo do flatpak é uma AFIRMAÇÃO sobre o manifesto, e ela pode caducar."""
+    """O motivo do flatpak é uma AFIRMAÇÃO sobre o manifesto, e a afirmação pode caducar."""
     manifesto = RAIZ / "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
     assert manifesto.exists(), "o manifesto do flatpak sumiu"
     texto = manifesto.read_text(encoding="utf-8")
@@ -509,7 +509,7 @@ def test_o_motivo_da_lacuna_do_flatpak_continua_verdadeiro() -> None:
 
 
 def test_familia_sem_tratamento_ainda_diz_o_nome_do_pacote() -> None:
-    """A quarta família, e ela existe por decisão, de 19/08/2026."""
+    """A quarta família, e a família existe por decisão, de 19/08/2026."""
     proc = _roda(
         f"comando_manual_pkg {CANONICO}",
         preludo=_extrai_funcao("comando_manual_pkg"),
@@ -544,7 +544,7 @@ def test_a_regua_de_gate_enxerga_um_subsistema_que_e_gateado() -> None:
     )
     assert gates[SUBSISTEMA_GATEADO], (
         f"o `{SUBSISTEMA_GATEADO}` deixou de ser gateado. Ou a régua parou de "
-        "enxergar cercas — e aí ela daria verde para uma luz gateada —, ou o "
+        "enxergar cercas — e aí a régua daria verde para uma luz gateada —, ou o "
         "controle positivo mudou de lugar e este teste precisa de outro"
     )
 

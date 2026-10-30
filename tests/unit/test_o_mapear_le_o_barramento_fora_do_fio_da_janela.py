@@ -1,12 +1,11 @@
 """O Mapear não congela a janela — O-MAPEAR-NAO-CONGELA-A-JANELA-01 (26/09/2026).
 
-A queixa de uso: *«o mapear entradas toda hora tá fechando o app. dá um crash
-feio. acho que é se eu continuar nessa tela e trocar antes de fechar essa tela
-de mapear.»* <!-- noqa-acento: citação literal -->
+A queixa de uso: o Mapear Entradas fechava o app a toda hora, ao trocar de tela antes de fechar
+a do Mapear.
 
 Medido: não era crash. O tique da aba 08 lia o ``/sys`` USB no fio da janela
 (o censo lê ``product`` e ``bMaxPower``, que o kernel serve sob o lock do
-aparelho), e com ela trocando o DualSense de entrada o kernel segurava o lock
+aparelho), e com quem usa trocando o DualSense de entrada o kernel segurava o lock
 enquanto enumerava: o tique custava 5, 10 e 15 s e o COSMIC derrubava a
 janela.
 
@@ -250,7 +249,7 @@ def test_o_tique_da_cerimonia_volta_na_hora_com_o_sys_preso(
         custos, campos = _medir(pac._campos_da_cerimonia)
         assert max(custos) < TETO_S, (
             f"o tique da cerimônia esperou o /sys: {[round(c * 1000) for c in custos]} ms")
-        assert campos["entrada-tela"] == ee.TELAS[ee.SENTADA], "a tela aberta continua a dela"
+        assert campos["entrada-tela"] == ee.TELAS[ee.SENTADA], "a tela aberta continua a de antes"
         assert portao.entrou.wait(2), "o tique não pediu a leitura ao fio"
         assert portao.leituras == antes + 1, "dez tiques, UMA leitura no ar"
     finally:
@@ -314,7 +313,7 @@ def test_o_censo_da_aba_nao_e_lido_no_fio_da_janela(
 def test_a_leitura_que_passa_do_folego_esconde_a_porta_de_antes(
     gabinete: Gabinete, disco: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Ela tira o controle da porta e o encaixa noutra: o kernel segura o"""
+    """Quem usa tira o controle da porta e o encaixa noutra: o kernel segura o"""
     pac = _pac()
     monkeypatch.setattr(ee, "FOLEGO_DA_LEITURA_S", 0.05)
     gabinete.plugar(1, "5", DUALSENSE)
@@ -345,9 +344,9 @@ def test_a_leitura_que_passa_do_folego_esconde_a_porta_de_antes(
 
 
 def test_o_salvar_vai_para_onde_o_controle_esta(gabinete: Gabinete, disco: Path) -> None:
-    """Ela levou o DualSense para a próxima porta e, antes de a foto voltar,
+    """Quem usa levou o DualSense para a próxima porta e, antes de a foto voltar,
     deu o nome e salvou: o nome vai para onde o controle ESTÁ, e a primeira
-    porta continua com o nome dela."""
+    porta continua com o nome dado."""
     fluxo = ee.MapearAsPortas(
         ler=gabinete.ler, entradas=gabinete.entradas, storm={}, adaptadores=lambda: ()
     )
@@ -370,7 +369,7 @@ def test_o_salvar_vai_para_onde_o_controle_esta(gabinete: Gabinete, disco: Path)
         "o Salvar da segunda porta renomeou a primeira")
     assert nome_de(lugar_de(PCI_A, "3")) == "Frente de cima"
     assert fluxo.foto_sem_esperar()["porta"]["aparelho"] == "1-3", (
-        "a foto do tique seguinte não mostra o que ela acabou de salvar")
+        "a foto do tique seguinte não mostra o que acabou de ser salvo")
     fluxo.parar()
 
 
@@ -442,11 +441,11 @@ def test_o_tique_inteiro_da_08_nao_espera_o_barramento(
 def test_a_leitura_de_antes_de_reabrir_nao_e_a_primeira_da_vez_nova(
     gabinete: Gabinete, disco: Path
 ) -> None:
-    """Ela fechou o Mapear com uma leitura presa no kernel, encaixou o segundo
+    """Quem usa fechou o Mapear com uma leitura presa no kernel, encaixou o segundo
     DualSense e abriu de novo. A leitura que saiu ANTES viu um controle só; se
-    ela valesse como a primeira da vez nova, o segundo, que já estava
-    encaixado quando ela abriu, viraria «Entrada encontrada»: uma porta que
-    ela não mostrou."""
+    a leitura valesse como a primeira da vez nova, o segundo, que já estava
+    encaixado quando o Mapear abriu, viraria «Entrada encontrada»: uma porta que
+    quem usa não mostrou."""
     gabinete.plugar(1, "5", DUALSENSE)
     de_antes = [gabinete.ler()]
     portao = Portao(lambda: de_antes.pop() if de_antes else gabinete.ler())
@@ -476,7 +475,7 @@ def test_a_leitura_de_antes_de_reabrir_nao_e_a_primeira_da_vez_nova(
 def test_ja_chega_durante_o_comecar_nao_reabre_a_cerimonia(
     gabinete: Gabinete, disco: Path
 ) -> None:
-    """Ela abriu a cerimônia com o kernel segurando o ``/sys`` e, antes de a"""
+    """Quem usa abriu a cerimônia com o kernel segurando o ``/sys`` e, antes de a"""
     gabinete.plugar(1, "3", TECLADO)
     portao = Portao(gabinete.ler)
     laco = ee.LacoDaEntrada(ler=portao, entradas=gabinete.entradas)
@@ -490,14 +489,14 @@ def test_ja_chega_durante_o_comecar_nao_reabre_a_cerimonia(
         portao.soltar()
         fio.join(SONO_S)
     assert laco.foto_sem_esperar()["estado"] == ee.PARADO, (
-        "a leitura presa reabriu a cerimônia que ela fechou")
+        "a leitura presa reabriu a cerimônia já fechada")
 
 
 @pytest.mark.parametrize("depois", ["pular", "parar"])
 def test_a_resposta_dada_antes_vale_para_a_pergunta_do_clique(
     gabinete: Gabinete, disco: Path, depois: str
 ) -> None:
-    """Ela respondeu «Frente» para o teclado e, com o kernel segurando a"""
+    """Quem usa respondeu «Frente» para o teclado e, com o kernel segurando a"""
     gabinete.plugar(1, "3", TECLADO)
     gabinete.plugar(1, "4", MOUSE)
     portao = Portao(gabinete.ler)
@@ -521,7 +520,7 @@ def test_a_resposta_dada_antes_vale_para_a_pergunta_do_clique(
     teclado = entrada_do_lugar(documento, lugar_de(PCI_A, "3"))
     mouse = entrada_do_lugar(documento, lugar_de(PCI_A, "4"))
     assert teclado, "a resposta não foi para o teclado"
-    assert not mouse, "a face dela foi para o mouse"
+    assert not mouse, "a face do teclado foi para o mouse"
     if depois == "pular":
         foto = laco.foto_sem_esperar()
         assert foto["pergunta"]["caminho"] == "1-4", "o mouse saiu da fila sem resposta"
@@ -529,7 +528,7 @@ def test_a_resposta_dada_antes_vale_para_a_pergunta_do_clique(
 
 
 def test_o_salvar_antes_da_primeira_foto_nao_apaga_o_71(gabinete: Gabinete, disco: Path) -> None:
-    """Com o kernel segurando a primeira leitura, ela deu o nome e salvou"""
+    """Com o kernel segurando a primeira leitura, quem usa deu o nome e salvou"""
     gabinete.plugar(1, "5", DUALSENSE)
     fluxo = ee.MapearAsPortas(
         ler=gabinete.ler, entradas=gabinete.entradas, storm={"1-5": 3},

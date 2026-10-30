@@ -6,14 +6,14 @@ dirigia o jogador 1 do jogo enquanto a lâmpada e a tela diziam 2. Agora, com o
 jogo aberto, o vpad do P1 fica parado à espera dele e o P2 continua no vpad 2.
 Passado o prazo, vale a NUM-01.
 
-**A bancada é a de queda (COOP-QUE-NÃO-DESMONTA-01/E4), com a classe real:** o
+**O ensaio é o de queda (COOP-QUE-NÃO-DESMONTA-01/E4), com a classe real:** o
 ``PyDualSenseController`` com o ``connect()`` e o ``read_state()`` de verdade,
 o ``CoopManager`` com ``sync()`` e ``forward_all()`` de verdade, e o
 ``ControllerIdentityRegistry`` de verdade — o dono do número que a tela e a
-lâmpada mostram. Os dublês são os da bancada de queda (a mesa, os leitores
+lâmpada mostram. Os dublês são os do ensaio de queda (a mesa, os leitores
 evdev com grab exclusivo, o vpad), e nenhum nó uinput nasce.
 
-**O que ela mede é o vpad de cada jogador, pelo lado do JOGO:** a mesa do jogo
+**O que a régua mede é o vpad de cada jogador, pelo lado do JOGO:** a mesa do jogo
 que o co-op guarda (o lugar de cada vpad, no modelo do SDL) e, para o vpad do
 P1, o que o ``read_state()`` entrega a ele — o leitor do P1 carimba de quem é o
 node que ele lê.
@@ -40,11 +40,11 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   :class:`TestOPrazoAtravessaASuspensao`;
 - o leitor do P1 seguindo o P2 com o posto vago reprova pela metade dos
   BOTÕES (``evdev_buttons_once``) — a régua que lia só o ``read_state()``
-  passava 47 de 47 sobre ela (conferência de 24/09/2026);
+  passava 47 de 47 sobre o defeito (conferência de 24/09/2026);
 - o topo da vaga de volta a ``battery_pct=0`` reprova
   :class:`TestOTopoDoEstadoNaVaga`;
 - (conferência da O-ASSENTO-GUARDADO-NAO-ANDA-03) o co-op reescrevendo a
-  própria mesa sem recriar vpad nenhum reprova 9 desta régua, entre elas as
+  própria mesa sem recriar vpad nenhum reprova 9 desta régua, entre as quais as
   seis de ``test_depois_do_prazo_vale_a_num01``: o jogo agora é lido de fora
   (:class:`JogoPorFora`), e com ele lido da mesa guardada as 56 passavam.
 
@@ -123,14 +123,14 @@ _CLOCK_GETTIME_REAL = time.clock_gettime
 
 
 class _MesaDeCinco(_Mesa):
-    """A mesa da bancada de queda, com os cinco controles desta régua."""
+    """A mesa do ensaio de queda, com os cinco controles desta régua."""
 
     def _keys_presentes(self) -> list[str]:
         return [CHAVE_DE[u] for u in self.nodes]
 
 
 class _LeitorDoP1(_LeitorDoPrimario):
-    """O leitor do P1 da bancada de queda, que diz DE QUEM é o node que lê."""
+    """O leitor do P1 do ensaio de queda, que diz DE QUEM é o node que lê."""
 
     def snapshot(self) -> Any:
         dono = next((u for u, n in self._mesa.nodes.items() if n == self.node), None)
@@ -181,7 +181,7 @@ class Kernel:
 
 @pytest.fixture
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`config_dir` em tmp — nada aqui toca o `controllers.json` dela."""
+    """`config_dir` em tmp — nada aqui toca o `controllers.json` real."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     def fake_config_dir(ensure: bool = False) -> Path:
@@ -234,7 +234,7 @@ class JogoPorFora:
 
 
 class _VpadDaMesa(_VpadFalso):
-    """O vpad da bancada de queda que avisa o jogo quando nasce e quando morre."""
+    """O vpad do ensaio de queda que avisa o jogo quando nasce e quando morre."""
 
     def __init__(self, player: int, jogo: JogoPorFora) -> None:
         super().__init__(player)
@@ -305,7 +305,7 @@ class MesaDoJogo:
     def _nascer_vpad(
         self, _flavor: Any, *, player: int = 1, identity: str | None = None, **_kw: Any
     ) -> _VpadFalso:
-        """O vpad da bancada com o MAC do PRODUTO: o do aparelho, não o do número."""
+        """O vpad do ensaio com o MAC do PRODUTO: o do aparelho, não o do número."""
         vpad = _VpadDaMesa(player, self.jogo)
         vpad.mac = vpad_mac(identity, player)
         vpad.identidade = identity  # type: ignore[attr-defined]
@@ -348,7 +348,7 @@ class MesaDoJogo:
         """Em TODO instante: sem EBUSY, nenhum aparelho com dois pads, sem MAC repetido.
 
         O aparelho de um pad é a identidade com que ele nasceu (o MAC do
-        produto sai dela). A MAC-DA-VOLTA (17/10/2026): a volta sem lâmpada
+        produto sai da identidade). A MAC-DA-VOLTA (17/10/2026): a volta sem lâmpada
         deixava o pad do P1 vestindo quem o co-op promovia a secundário. Com
         o jogo segurando, o pad do posto não renasce (D-3009) e segue vestindo
         quem era o primário quando nasceu; o MAC é a O-VPAD-DO-P1-NAO-REPETE-
@@ -464,7 +464,7 @@ def montar(
     if coop:
         esperado = {n + 1: UNIQS[n] for n in range(quantos)}
         assert ensaio.o_jogo_ve() == esperado, (
-            f"a bancada não montou a mesa: {ensaio.o_jogo_ve()}"
+            f"o ensaio não montou a mesa: {ensaio.o_jogo_ve()}"
         )
         assert ensaio.a_tela() == {UNIQS[n]: n + 1 for n in range(quantos)}
     return ensaio
@@ -599,7 +599,7 @@ class TestOsOutrosTresLugares:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestQuandoOPostoNaoEspera:
-    """As três portas de saída da vaga, e os dois casos em que ela nem começa."""
+    """As três portas de saída da vaga, e os dois casos em que a vaga nem começa."""
 
     def test_fora_do_co_op_o_outro_assume_na_hora(
         self, monkeypatch: pytest.MonkeyPatch
@@ -780,7 +780,7 @@ class TestORelogioEUmSo:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestAVoltaPeloOutroTransporte:
-    """A linha 3 da bancada: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
+    """A linha 3 do ensaio: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
 
     @pytest.mark.parametrize(
         ("de", "para"), [("usb", "bt"), ("bt", "usb")], ids=["cabo-para-radio", "radio-para-cabo"]

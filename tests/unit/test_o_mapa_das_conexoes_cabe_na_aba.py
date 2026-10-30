@@ -28,9 +28,9 @@ SPRINT_DOS_940 = "O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01"
 
 NO_ENSAIO = any(SPRINT in e.porque or SPRINT_DOS_940 in e.porque
                  for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO)
-QUAL = "bancada" if NO_ENSAIO else "publicada"
+QUAL = "ensaio" if NO_ENSAIO else "publicada"
 
-VISTAS = {"foto-3": (1920, 887), "dela": (1918, 840), "ladrilhada": (1212, 809),
+VISTAS = {"foto-3": (1920, 887), "notebook": (1918, 840), "ladrilhada": (1212, 809),
           "estreita": (860, 809),
           "940": (940, 809), "1272": (1272, 809), "1512": (1512, 809)}
 
@@ -243,7 +243,7 @@ def _medido(vista: str) -> dict[str, Any]:
     return _MEDIDAS[vista]
 
 
-@pytest.mark.parametrize("vista", ["foto-3", "dela"])
+@pytest.mark.parametrize("vista", ["foto-3", "notebook"])
 def test_o_atual_cabe_na_caixa_da_aba_sem_rolar(vista: str) -> None:
     """MORDIDA: tire a regra da bandeja do ``@media (min-width: 901px)`` →"""
     m = _medido(vista)
@@ -263,7 +263,7 @@ def test_na_janela_ladrilhada_sobra_no_maximo_uma_linha_de_chapa() -> None:
     assert sobra <= SOBRA_NA_LADRILHADA, f"({QUAL}) o Atual rola {sobra} px na janela ladrilhada"
 
 
-@pytest.mark.parametrize("vista", ["foto-3", "dela", "ladrilhada"])
+@pytest.mark.parametrize("vista", ["foto-3", "notebook", "ladrilhada"])
 def test_atualmente_conectado_acaba_no_fim_do_hub_e_rola(vista: str) -> None:
     atual = _medido(vista)["atual"]
     assert atual["titulo_da_bandeja"].lower() == "a cadeia"
@@ -283,7 +283,7 @@ def test_com_o_palco_numa_coluna_a_lista_tem_altura_e_rola() -> None:
 
 def test_as_entradas_se_arrumam_em_quantas_colunas_couberem() -> None:
     """MORDIDA: tire a ``.chapa.coluna`` do ``auto-fill`` → a Frente volta a uma"""
-    chapas = _medido("dela")["atual"]["chapas"]
+    chapas = _medido("notebook")["atual"]["chapas"]
     assert [c["n"] for c in chapas] == [2, 6, 7], chapas
     assert len(chapas[0]["linhas"]) == 1, f"({QUAL}) as duas da Frente não estão lado a lado"
     for chapa in chapas:
@@ -295,7 +295,7 @@ def test_as_entradas_se_arrumam_em_quantas_colunas_couberem() -> None:
 
 def test_o_resumo_do_atual_e_uma_linha_e_a_legenda_mora_no_alto() -> None:
     """MORDIDA: volte o resumo a dois ``<p>``, ou tire a legenda da linha dos modos."""
-    atual = _medido("dela")["atual"]
+    atual = _medido("notebook")["atual"]
     resumo = atual["resumo"]
     assert resumo is not None and "entradas mapeadas" in resumo["texto"].lower(), resumo
     assert resumo["altura"] < 1.5 * resumo["linha"], (
@@ -308,14 +308,14 @@ def test_o_resumo_do_atual_e_uma_linha_e_a_legenda_mora_no_alto() -> None:
 def test_nenhum_texto_sem_acento_e_um_so_reexaminar() -> None:
     """MORDIDA: desfaça um «então», ou devolva o ``id="reexaminar"`` ao «Já movi»."""
     for modo in ("atual", "sugestoes", "adicionar"):
-        lido = _medido("dela")[modo]
+        lido = _medido("notebook")[modo]
         assert not lido["entao"], f"({QUAL}) o {modo} diz uma palavra sem acento"
         assert lido["ids_reexaminar"] == 1, (
             f"({QUAL}) {lido['ids_reexaminar']} elementos com o id `reexaminar` no {modo}")
-    assert _medido("dela")["sugestoes"]["ja_movi"], "o «Já movi» sumiu do Sugestões"
+    assert _medido("notebook")["sugestoes"]["ja_movi"], "o «Já movi» sumiu do Sugestões"
 
 
-@pytest.mark.parametrize("vista", ["foto-3", "dela"])
+@pytest.mark.parametrize("vista", ["foto-3", "notebook"])
 def test_o_sugestoes_fala_menos_e_o_mapa_comeca_na_vista(vista: str) -> None:
     """MORDIDA: devolva o parágrafo «Eu não presumo» (ou a chamada das variantes)
 
@@ -334,7 +334,7 @@ def test_o_sugestoes_fala_menos_e_o_mapa_comeca_na_vista(vista: str) -> None:
 
 def test_o_mapa_do_sugestoes_diz_so_o_veredito() -> None:
     """No mapa do Sugestões cada entrada diz só o veredito («vem para cá», «sai"""
-    sug = _medido("dela")["sugestoes"]
+    sug = _medido("notebook")["sugestoes"]
     assert sug["porques"] == [], (
         f"({QUAL}) o mapa do Sugestões explica o veredito: {sug['porques']}")
     assert not sug["faces_null"], f"({QUAL}) o mapa do Sugestões diz «null» ou «undefined»"
@@ -348,7 +348,7 @@ def test_a_razao_de_cada_movimento_mora_na_dica_do_titulo() -> None:
 
     MORDIDA: devolva o ``<span class="ajuda">`` ao título, ou tire o ``data-dica`` do ``h4``.
     """
-    dica = _medido("dela")["dica"]
+    dica = _medido("notebook")["dica"]
     assert dica["existe"], f"({QUAL}) o título do movimento não tem a dica das razões"
     assert dica["sem_interrogacao"], f"({QUAL}) o «?» voltou à receita"
     assert not dica["razao_na_tela"], f"({QUAL}) a razão ficou escrita na tela: {dica['razao']}"
@@ -360,7 +360,7 @@ def test_a_razao_de_cada_movimento_mora_na_dica_do_titulo() -> None:
 
 
 def test_o_adicionar_e_uma_linha_com_a_pergunta_do_usuario() -> None:
-    mao = _medido("dela")["adicionar"]
+    mao = _medido("notebook")["adicionar"]
     assert mao["pergunta"] and mao["pergunta"].lower() == "o que vai conectar?", mao
     topo_p, topo_e, fim_p, fim_e = mao["pergunta_e_escolhas"]
     assert topo_e < fim_p and topo_p < fim_e, (

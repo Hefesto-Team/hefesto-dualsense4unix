@@ -72,8 +72,8 @@ def test_o_atalho_versionado_abre_o_motor_com_a_tela() -> None:
     exec_ = _exec_do_atalho()
     assert _abre_com_tela(exec_), (
         "o `Exec=` do .desktop não abre `run.sh --gui` com `HEFESTO_NA_TELA=1` — "
-        "sem a variável, o atalho dela atravessa a guarda TELA-DO-USUARIO-02 e a "
-        "janela nasce num `Xvfb` que ela não vê:\n  " + exec_
+        "sem a variável, o atalho de quem usa atravessa a guarda TELA-DO-USUARIO-02 e a "
+        "janela nasce num `Xvfb` que ninguém vê:\n  " + exec_
     )
 
 
@@ -117,7 +117,7 @@ def test_o_motor_nao_declara_a_tela() -> None:
     ]
     assert not vivas, (
         "`run.sh` passou a declarar `HEFESTO_NA_TELA` — todo instrumento que o "
-        "chama abre janela na tela dela. A variável viaja com o atalho, não com "
+        "chama abre janela na tela de quem usa. A variável viaja com o atalho, não com "
         "o motor:\n  " + "\n  ".join(vivas)
     )
 
@@ -131,7 +131,7 @@ def test_a_guarda_honra_o_escape_declarado() -> None:
     fonte = Path(tm.__file__ or "").read_text(encoding="utf-8")
     assert 'os.environ.get("HEFESTO_NA_TELA") == "1"' in fonte, (
         "a guarda deixou de ler `HEFESTO_NA_TELA` — o escape do lançador virou "
-        "letra morta e o atalho dela volta a abrir no vazio"
+        "letra morta e o atalho de quem usa volta a abrir no vazio"
     )
     antes = os.environ.get("HEFESTO_NA_TELA")
     antes_display = os.environ.get("DISPLAY")

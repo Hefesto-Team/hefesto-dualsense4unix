@@ -12,7 +12,7 @@ escrevem o de fábrica para dizer isso), e é por isso que
 arquivo não há como separar «o usuário escolheu 6» de «a cópia do 6»: separar pede um
 escritor esparso e uma marca de escolha no arquivo (``schema.py``), e a
 sprint manda isso VOLTAR COMO PERGUNTA. A régua do caso aberto é ``xfail``
-estrito: quando a pergunta for resolvida, ela vira verde e o ``strict`` obriga
+estrito: quando a pergunta for resolvida, a régua vira verde e o ``strict`` obriga
 a tirar a marca.
 
 A MORDIDA das duas que valem hoje: tire o filtro de fábrica de

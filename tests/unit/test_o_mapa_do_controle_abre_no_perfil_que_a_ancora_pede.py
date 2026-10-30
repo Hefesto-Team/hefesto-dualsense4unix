@@ -2,7 +2,7 @@
 
 A aba Navegação aponta para o mapa com `#point-and-click` e `#trocar`. A página lê a âncora e o
 Python diz a chave que cada uma pede: `ancora-pac` é a escolha do point and click da aba Navegação
-(lida pela função dela, sem segunda leitura) e `ancora-trocar` é o perfil ativo, quando ele tem
+(lida pela função da âncora, sem segunda leitura) e `ancora-trocar` é o perfil ativo, quando ele tem
 lugar no seletor. Sem âncora, ou com outra, abre em Navegar. O perfil de um estilo de clicar
 (Point and click, Visual novel) é do tipo `pac` pela receita do catálogo de estilos, não por uma
 chave escrita no mapa.
@@ -342,7 +342,7 @@ def test_seguida_a_ancora_o_seletor_e_de_quem_usa(monkeypatch: pytest.MonkeyPatc
     segunda = _pintar(depois)
     lidas = _no_webkit("#trocar", [OUVIR, primeira, LER, segunda, LER])
     assert lidas[2]["mudou"] == [f"perfil:{ATIVO}"], lidas[2]
-    assert lidas[4]["valor"] == f"perfil:{ATIVO}", f"o seletor saiu da mão dela: {lidas[4]}"
+    assert lidas[4]["valor"] == f"perfil:{ATIVO}", f"o seletor saiu da mão de quem usa: {lidas[4]}"
     assert lidas[4]["mudou"] == [f"perfil:{ATIVO}"], f"um segundo `change` saiu: {lidas[4]}"
 
 

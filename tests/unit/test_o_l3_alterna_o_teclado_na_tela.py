@@ -5,20 +5,20 @@ DECISÃO, 02/09/2026, verbatim: *"deixar no preset do botão L3, no
 mapeamento, abrir o teclado virtual e fechar o teclado virtual caso apertado
 novamente."*
 
-POR QUE ESTA RÉGUA EXISTE, e por que ela não mede o primeiro toque: **todo
+POR QUE ESTA RÉGUA EXISTE, e por que a régua não mede o primeiro toque: **todo
 alternador desta casa nasce verde medindo só a ida.** `open()` sozinho passa em
 qualquer teste que aperte uma vez — e passaria igual se o segundo aperto abrisse
 uma segunda janela por cima, que é exatamente o defeito que a pessoa vê. O caso
 que decide é o SEGUNDO, e por isso ele vem primeiro aqui.
 
-E ELA ANDA PELO CAMINHO DO PRODUTO, não pelo controlador direto: o aperto entra
+E A RÉGUA ANDA PELO CAMINHO DO PRODUTO, não pelo controlador direto: o aperto entra
 em `UinputKeyboardDevice.dispatch(frozenset({"l3"}))`, que é quem o daemon chama
 a cada tique, e sai no `virtual_token_callback` — o mesmo fio que
 `start_keyboard_emulation` liga ao `_OSKController`. Uma régua que chamasse
 `ctrl.toggle()` mediria o método e não o botão: bastaria o mapa de fábrica
-apontar para outro token e ela continuaria verde com o L3 morto.
+apontar para outro token e a régua continuaria verde com o L3 morto.
 
-O QUE ELA NÃO TOCA: nenhum processo de verdade. O `Popen` é dublê e o
+O QUE A RÉGUA NÃO TOCA: nenhum processo de verdade. O `Popen` é dublê e o
 `shutil.which` é dublê — nada de wvkbd/onboard nascendo na tela de quem roda a
 suíte.
 """
@@ -135,14 +135,14 @@ def test_o_release_nao_fecha_o_que_o_press_acabou_de_abrir(
     assert mesa["ctrl"].esperar_os_toques(5.0)
     assert mesa["processos"][0].terminado is False, (
         "o release fechou o teclado na tela — o L3 abriria e fecharia no mesmo "
-        "aperto, e ela veria a janela piscar")
+        "aperto, e quem usa veria a janela piscar")
     assert mesa["ctrl"].aberto() is True
 
 
 def test_a_janela_morta_por_fora_faz_o_toque_seguinte_abrir(
     mesa: dict[str, Any],
 ) -> None:
-    """Ela fechou o wvkbd no X — o L3 tem de ABRIR, não fechar o que já morreu."""
+    """Quem usa fechou o wvkbd no X — o L3 tem de ABRIR, não fechar o que já morreu."""
     mesa["apertar_l3"]()
     mesa["processos"][0].morrer_por_fora()
 

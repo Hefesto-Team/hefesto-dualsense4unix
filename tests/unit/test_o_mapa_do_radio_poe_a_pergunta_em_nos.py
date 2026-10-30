@@ -48,7 +48,7 @@ def test_a_pergunta_poe_a_frase_pelo_poe_frase(caminho: Path) -> None:
 def _no_webkit(pagina: str, tmp_path: Path) -> dict[str, Any]:
     if (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("HEFESTO_NA_TELA")
             or not os.environ.get("DISPLAY")):
-        pytest.skip("sem o X de mentira: o WebKit abriria na tela dela ou não abriria")
+        pytest.skip("sem o X de mentira: o WebKit abriria na tela de quem usa ou não abriria")
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre o mapa do rádio no WebKit")

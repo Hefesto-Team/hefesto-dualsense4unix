@@ -1,8 +1,7 @@
 """O jogo manda; na ausência dele, o perfil ganha — a decisão de 03/10/2026.
 
-*«o certo seria os controles obedecerem quando o jogo manda e na
-ausencia disso o perfil ganha.»* <!-- noqa-acento: citação literal -->
-(ela, 03/10/2026 ~18h15, na bancada do Forja; revoga a PERFIL-MANDA-01 de
+Os controles obedecem quando o jogo manda, e na ausência disso o perfil ganha
+(03/10/2026 ~18h15, no ensaio do Forja; revoga a PERFIL-MANDA-01 de
 16/09, «meu perfil manda»).
 
 A causa, medida no `79fdccbbd` (`agentes/mic-15/medida-o-jogo-manda.txt`): com a
@@ -196,7 +195,7 @@ class TestOGestoDoUsuarioNoMeioDoJogo:
     """O gesto do usuário na interface é a ordem mais nova: vale até o jogo pintar de novo."""
 
     def test_a_cor_que_o_usuario_escolhe_agora_vence_e_o_jogo_que_repinta_volta(self) -> None:
-        """MORDIDA: o gesto sem soltar a camada do jogo e a cor dela não aparece."""
+        """MORDIDA: o gesto sem soltar a camada do jogo e a cor da camada não aparece."""
         ctl, _no, _ = _controle()
         ctl.set_game_output_for(MAC_1, led=COR_DO_JOGO)
 

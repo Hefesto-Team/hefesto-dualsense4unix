@@ -82,7 +82,7 @@ def test_o_lugar_vazio_declarado_chega_aos_tres_vazios_e_nao_ao_ocupado() -> Non
         assert fora["colunas"][pref]["luz"] == "APAGADO", pref
         assert fora["colunas"][pref]["brilho"] == pacotes.TRAVESSAO, pref
     assert pacotes.LUGAR_VAZIO not in fora, (
-        "a chave do lugar vazio viajou até a página — ela é instrução para o "
+        "a chave do lugar vazio viajou até a página — a chave é instrução para o "
         "despachante, não valor de tela")
 
 
@@ -133,7 +133,7 @@ def test_a_linha_leds_do_lugar_vazio_e_o_desenho_apagado() -> None:
     luz = a04_iluminacao.o_lugar_vazio()["luz"]
     assert luz.count("tira-luz") == 2, luz
     assert luz.count(a04_iluminacao.TIRA_APAGADA) == 2, (
-        "uma das tiras do lugar vazio saiu ACESA — é a queixa dela de volta")
+        "uma das tiras do lugar vazio saiu ACESA — é a queixa de uso de volta")
     assert luz.count("<i") == 5 and 'class="on"' not in luz, luz
 
 

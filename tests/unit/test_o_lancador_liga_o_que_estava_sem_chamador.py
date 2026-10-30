@@ -107,7 +107,7 @@ def berco(monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
 
 
 def _subir_o_primeiro(modo: str, pasta: Path) -> subprocess.Popen[str]:
-    """Sobe a janela que já estava aberta e espera ela tomar a vez."""
+    """Sobe a janela que já estava aberta e espera a janela tomar a vez."""
     piloto = pasta / "piloto_que_fica.py"
     piloto.write_text(_PILOTO_QUE_FICA, encoding="utf-8")
     filho = subprocess.Popen(

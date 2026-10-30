@@ -1,6 +1,7 @@
 """A extensão liga a própria chave pelo ``chave.ligar`` (28/10/2026).
 
-Ela: «todo jogo adulto no estilo de jogo liga a extensão, caso note que funcione». Quem nota que o
+O pedido: todo jogo adulto no estilo de jogo liga a extensão, quando se nota que funciona.
+Quem nota que o
 jogo funciona é a extensão (a ponte do jogo conversou, ou o kit do jogo alcança a ponte); a chave
 mora no ``opcoes.json`` que só o Hefesto grava. O ``chave.ligar`` a grava ligada como o clique da
 janela, só a da extensão que pede, e só com a ``chave`` no manifesto instalado.

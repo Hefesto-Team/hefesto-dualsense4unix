@@ -1,10 +1,10 @@
 """PS-L3-MASCARA-01 — o jogo abre pronto para trocar de modo e de máscara dentro dele.
 
-O que se mediu na bancada em 14/09/2026, com a matriz de modo e máscara no
+O que se mediu no aparelho em 14/09/2026, com a matriz de modo e máscara no
 daemon vivo e a libSDL2 do sistema: os seis pares dão o aparelho certo em 1,5 s,
 e em todos o DualSense de PLÁSTICO (054c:0ce6) continua na lista do SDL como
 PS5. Quem o esconde do jogo é a env do lançamento, lida UMA vez no `exec` — e
-ela seguia o modo e a máscara do INSTANTE em que o jogo abriu:
+a env seguia o modo e a máscara do INSTANTE em que o jogo abriu:
 
 * o PS + R3 parou na Navegação, gravou `kind=desktop` no perfil do Future
   Knight, e o `steam_app_4235410.env` ficou sem IGNORE e sem DISABLE. Ao subir

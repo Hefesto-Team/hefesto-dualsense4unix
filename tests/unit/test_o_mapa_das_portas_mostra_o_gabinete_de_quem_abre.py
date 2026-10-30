@@ -167,9 +167,9 @@ def test_o_cabecalho_diz_de_quando_e_o_que_esta_na_tela() -> None:
     escondidas = {s.lstrip(".").split()[-1] for s in seletores_escondidos()}
     assert classe not in escondidas, (
         f"a folha do produto esconde `.{classe}` — o aviso da página volta a "
-        f"existir só no Chrome. O que ela esconde hoje: {sorted(escondidas)}")
+        f"existir só no Chrome. O que a página esconde hoje: {sorted(escondidas)}")
     assert "if (el && fonte.quando !== EXEMPLO.quando) el.remove();" in pagina, (
-        "a leitura desta máquina voltou a se anunciar no cabeçalho — ela pediu "
+        "a leitura desta máquina voltou a se anunciar no cabeçalho — o pedido foi "
         "que saísse")
 
     documento, censo = _gabinete()

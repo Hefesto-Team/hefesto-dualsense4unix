@@ -235,8 +235,8 @@ def test_o_apelido_vence_tambem_no_registro(
 
 def test_a_entrada_com_nome_aparece_com_o_nome_do_usuario_no_registro(
         sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
-    """O nome da entrada tem um dono só (`entrada_a_entrada.rotulo_do_numero`): a entrada que ela
-    batizou aparece no registro como no resto do mapa, e não como «Entrada 5»."""
+    """O nome da entrada tem um dono só (`entrada_a_entrada.rotulo_do_numero`): a entrada
+    batizada aparece no registro como no resto do mapa, e não como «Entrada 5»."""
     arquivo = _uma_noite(sys_usb, tmp_path, relogio)
     documento = _documento()
     documento.mapa.portas[ENTRADA_DO_WIFI] = PortaDeclarada.model_validate(

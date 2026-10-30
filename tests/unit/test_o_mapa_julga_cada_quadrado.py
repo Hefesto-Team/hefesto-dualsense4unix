@@ -62,12 +62,12 @@ def test_o_rascunho_nao_derruba_o_que_so_o_usuario_sabe_da_face() -> None:
     documento = logica.como_documento()
 
     assert documento["faces"][0].get("perto") is True, (
-        "a face que ela marcou como a mais perto voltou do rascunho sem o "
-        f"fato dela: {documento['faces'][0]}"
+        "a face marcada como a mais perto voltou do rascunho sem o "
+        f"fato marcado: {documento['faces'][0]}"
     )
     assert documento["faces"][2].get("alto") is True, (
-        "a face que ela marcou como a do alto voltou do rascunho sem o fato "
-        f"dela: {documento['faces'][2]}"
+        "a face marcada como a do alto voltou do rascunho sem o fato "
+        f"marcado: {documento['faces'][2]}"
     )
     ensaio = ensaio_do_rascunho(logica, ensaio_de_agora().censo())
     assert ensaio.mesa.faces[0].perto is True

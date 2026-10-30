@@ -119,7 +119,7 @@ def _no_webkit(pagina: str, tmp_path: Any) -> dict[str, Any]:
 
     if (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("HEFESTO_NA_TELA")
             or not os.environ.get("DISPLAY")):
-        pytest.skip("sem o X de mentira: o WebKit abriria na tela dela ou não abriria")
+        pytest.skip("sem o X de mentira: o WebKit abriria na tela de quem usa ou não abriria")
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre o mapa das portas no WebKit")

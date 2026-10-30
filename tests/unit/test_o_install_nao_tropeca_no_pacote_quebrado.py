@@ -1,6 +1,6 @@
 """O install não tropeça no pacote quebrado do sistema (17/10/2026).
 
-O defeito medido na bancada: com um kernel novo baixado e sem configurar
+O defeito medido na máquina de teste: com um kernel novo baixado e sem configurar
 (`iF`/`iU` no dpkg), TODO `apt-get install` tenta configurá-lo de novo, o DKMS
 de um módulo que não é do Hefesto falha de novo e o apt sai com 100. A cura é
 perguntar o estado ao dpkg ANTES, sem root, e não chamar o apt com pacote a
@@ -91,7 +91,7 @@ def _linhas(arquivo: Path) -> list[str]:
 
 
 def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
-    """O caso da bancada: `iF`/`iU` no dpkg. Nenhum `apt-get` roda, e o recado diz
+    """O caso da máquina de teste: `iF`/`iU` no dpkg. Nenhum `apt-get` roda, e o recado diz
     o pacote, o que é do sistema e os dois comandos.
 
     Prova da D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO.

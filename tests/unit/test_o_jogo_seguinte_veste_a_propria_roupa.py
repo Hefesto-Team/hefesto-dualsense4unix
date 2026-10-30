@@ -1,6 +1,6 @@
 """O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA-01 — o jogo seguinte veste a própria roupa.
 
-O que se mediu em 23/10 (a sessão C da bancada, o rádio, 10 s entre o fecho de um jogo
+O que se mediu em 23/10 (a sessão C do ensaio, o rádio, 10 s entre o fecho de um jogo
 e o lançamento do seguinte): a autoridade do sinal de jogo ficava `game` pela histerese
 de 30 s do jogo que já fechou, o arme do jogo novo não recriava o pad
 (`gamepad._recriacao_bloqueada_por_jogo` recusa a origem `profile`) e o jogo novo
@@ -523,7 +523,7 @@ def test_a_mesma_janela_que_pisca_segue_com_a_histerese(pausa_s: float) -> None:
 
 
 def test_sem_jogo_a_histerese_de_30s_encerra_como_sempre() -> None:
-    """O encerramento explícito não toca a histerese: ela expira aos 30 s sem jogo."""
+    """O encerramento explícito não toca a histerese: a histerese expira aos 30 s sem jogo."""
     relogio = _Relogio()
     sinal = GameSignal(time_fn=relogio)
     base: dict[str, Any] = {
@@ -580,7 +580,7 @@ def test_o_tique_que_cruza_o_encerramento_reenvia_as_saidas_retidas(
     """O encerramento defende a tela como a borda `game -> daemon`; o tique que o cruza vê a volta.
 
     O `_sync_game_signal` lê a autoridade DEPOIS da varredura: se o arme encerrou a
-    autoridade enquanto ela rodava, o jogo novo volta a `game` pela evidência dele e o
+    autoridade enquanto a varredura rodava, o jogo novo volta a `game` pela evidência dele e o
     tique reenvia as saídas retidas (`replay_retained_game_outputs`).
 
     MORDIDA: leia o `anterior` antes da espera (como era) e o replay não acontece.

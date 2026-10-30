@@ -52,7 +52,7 @@ def test_a_razao_nomeia_o_caminho_que_faltou_e_a_linha_que_o_exclui(
 
 
 def test_a_razao_diz_o_que_fazer_a_respeito(tmp_path: Path) -> None:
-    """A razão não é só diagnóstico: ela diz o que fazer, nos dois cenários."""
+    """A razão não é só diagnóstico: a razão diz o que fazer, nos dois cenários."""
     raiz = _arvore_de_mentira(tmp_path, "docs/process/\n")
     motivo = motivo_do_pulo("docs/process/sprints", raiz=raiz)
     assert motivo is not None

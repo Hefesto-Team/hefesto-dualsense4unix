@@ -47,7 +47,7 @@ def test_a_regua_acha_instrumentos_para_medir() -> None:
 
 
 def test_todo_instrumento_que_abre_janela_chama_a_guarda() -> None:
-    """A METADE QUE IMPORTA — e ela cobre o script que ainda não existe."""
+    """A METADE QUE IMPORTA — e a metade cobre o script que ainda não existe."""
     sem_guarda = [
         p.relative_to(RAIZ)
         for p in _instrumentos_que_abrem_janela()
@@ -55,7 +55,7 @@ def test_todo_instrumento_que_abre_janela_chama_a_guarda() -> None:
     ]
     assert not sem_guarda, (
         "estes instrumentos abrem `Gtk.Window` e não chamam a guarda — a "
-        "janela deles nasce na tela dela:\n  "
+        "janela deles nasce na tela de quem usa:\n  "
         + "\n  ".join(str(p) for p in sem_guarda)
         + "\n\nPonha no topo, antes do `import gi`:\n"
         "    from hefesto_dualsense4unix.utils.tela_de_mentira import (\n"
@@ -65,7 +65,7 @@ def test_todo_instrumento_que_abre_janela_chama_a_guarda() -> None:
 
 
 def test_a_guarda_desvia_e_se_anuncia() -> None:
-    """Ela age, e DIZ que agiu — um 1x1 inexplicado vira diagnóstico errado."""
+    """A guarda age, e DIZ que agiu — um 1x1 inexplicado vira diagnóstico errado."""
     from hefesto_dualsense4unix.utils import tela_de_mentira as tm
 
     fonte = Path(tm.__file__ or "").read_text(encoding="utf-8")

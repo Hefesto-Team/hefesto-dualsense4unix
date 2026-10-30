@@ -36,7 +36,7 @@ def test_o_grao_continua_sendo_chave_por_controle():
     )
     assert cabecalho[0] == "chave", (
         f"a primeira coluna é {cabecalho[0]!r} e devia ser 'chave' — no formato "
-        "antigo ela era 'id', então isto é um mapa de antes da migração"
+        "antigo a chave era 'id', então isto é um mapa de antes da migração"
     )
 
 
@@ -64,5 +64,5 @@ def test_o_migrador_de_uma_vez_so_nao_voltou():
         "`scripts/migrar-mapa-v2.py` voltou ao disco. Ele é um migrador de uma "
         "vez só que JÁ RODOU em 11/08/2026, e rodá-lo de novo escreve o retrato "
         "daquele dia por cima do mapa de hoje. Se a intenção é outra migração, "
-        "ela precisa de nome próprio e de ler o mapa de HOJE como fonte."
+        "a régua precisa de nome próprio e de ler o mapa de HOJE como fonte."
     )

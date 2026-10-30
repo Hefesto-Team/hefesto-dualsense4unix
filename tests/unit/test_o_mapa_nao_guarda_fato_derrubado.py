@@ -23,7 +23,7 @@ JANELA = 600
 
 @dataclass(frozen=True)
 class Derrubado:
-    """Um fato que a bancada desta casa mediu e derrubou."""
+    """Um fato que o ensaio desta casa mediu e derrubou."""
 
     nome: str
     padrao: re.Pattern[str]
@@ -43,7 +43,7 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
         ),
         caiu_em="09/08/2026",
         quem_derrubou=(
-            "um restart do daemon repinta (medido por ela), e os ensaios "
+            "um restart do daemon repinta (medido no aparelho), e os ensaios "
             "`lightbar-bt-aceso-0808-1639`, `-0808-2135`, `-0808-2348` e "
             "`-1108-1140` do caderno mostram a barra acesa no rádio sem "
             "power-off nenhum"
@@ -120,7 +120,7 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
         padrao=re.compile(r"nenhum aparelho trocou de braço", re.IGNORECASE),
         caiu_em="15/08/2026, 19h",
         quem_derrubou=(
-            "ela inverteu os braços à mão e as medições rodaram de novo às "
+            "os braços foram invertidos à mão e as medições rodaram de novo às "
             "19h32, com os quatro aparelhos passando pelos dois transportes — "
             "bruto em docs/data/ensaios-brutos/"
             "2026-08-15-TROCA-DE-BRACOS-taxa-e-0x22-depois.txt"
@@ -144,8 +144,8 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
         padrao=re.compile(r"A RECONEXAO CURA|A RECONEXÃO CURA", re.IGNORECASE),
         caiu_em="12/08/2026",
         quem_derrubou=(
-            "o `scripts/eliminacao.py` devolve CONFUSO para o suspeito, e ela "
-            "parou o registro antes de virar fato: reconectar cura já tinha "
+            "o `scripts/eliminacao.py` devolve CONFUSO para o suspeito, e o "
+            "registro parou antes de virar fato: reconectar cura já tinha "
             "caído quatro vezes nesta frente"
         ),
     ),
@@ -328,7 +328,7 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
         caiu_em="28/09/2026",
         quem_derrubou=(
             "a O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01: o bit de mudo vira com "
-            "qualquer um que escreva o mudo no firmware (três bordas que ela "
+            "qualquer um que escreva o mudo no firmware (três bordas que a mão "
             "não deu, no branco, na sessão de 28/09); o gesto passou a ser o "
             "botão (`buttons[2]` bit 2), lido com o `status[1]` do mesmo "
             "report por `extract_estado_do_mic`"
@@ -383,7 +383,7 @@ def vivos(caminho: Path | str) -> list[tuple[Derrubado, str, str]]:
 
 
 def test_nenhum_fato_derrubado_esta_vivo_no_mapa() -> None:
-    """Nenhuma célula afirma, sem enterrar, algo que a bancada já derrubou."""
+    """Nenhuma célula afirma, sem enterrar, algo que o ensaio já derrubou."""
     achados = vivos(MAPA)
     if achados:
         recado = "\n".join(
@@ -440,7 +440,7 @@ def test_a_regua_aceita_a_mesma_frase_quando_o_usuario_vem_enterrada(
 
 
 def test_a_marca_depois_da_frase_nao_enterra_nada(tmp_path: Path) -> None:
-    """A ORDEM É O CONTRATO — e foi a mordida que provou que ela precisa ser."""
+    """A ORDEM É O CONTRATO — e foi a mordida que provou que a ordem precisa ser."""
     torta = tmp_path / "mapa.csv"
     torta.write_text(
         "id,cabo_ressalva\n"

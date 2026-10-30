@@ -1,21 +1,21 @@
 """O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01 — quem procura externo não abre o DualSense.
 
-Medido na bancada em 25/09/2026, com os quatro DualSense ligados: o
+Medido no aparelho em 25/09/2026, com os quatro DualSense ligados: o
 inventário dos externos abria pelo broker o nó de gamepad de cada controle a
 cada 1,3 s (o tique dos externos, 2 s, e a janela, `controller.list` a cada
 4 s), só para ler a identidade e descartar. Cada abertura é uma linha em cada
-diário, e elas eram 95% do diário do daemon e 99% do do broker.
+diário, e essas linhas eram 95% do diário do daemon e 99% do do broker.
 
-A MESA DE MENTIRA. Nenhuma régua daqui toca o `/dev/input` dela (ela está no
+A MESA DE MENTIRA. Nenhuma régua daqui toca o `/dev/input` real (quem usa está no
 grupo `input`, e 20 nós respondem): o `/dev/input` é uma pasta de arquivos
 em tmp, com os nós do DualSense `0000` quando escondidos (é o que o
-`0600 root` é para ela) e `0660` quando abertos (o Nativo). O
+`0600 root` é para quem usa) e `0660` quando abertos (o Nativo). O
 `evdev.list_devices` lista pelo critério da biblioteca, o do acesso. O
 `InputDevice` é o da biblioteca, com o `__init__` de verdade: ele recusa o nó
 escondido com o `PermissionError` do próprio `os.open` e conta cada
 tentativa; os ioctls respondem a identidade do nó que o fd aponta. O `sysfs`
 (`SYS_CLASS_INPUT`) é uma árvore em tmp, e o `os.path.realpath` do
-`/sys/class/input/*/device` fixo aponta para ela. O broker é um servidor Unix
+`/sys/class/input/*/device` fixo aponta para essa árvore. O broker é um servidor Unix
 de verdade num caminho curto, e o `HidrawBrokerClient` que fala com ele é o
 real: é ele quem escreve a linha `hidraw_broker_fd_recebido state=entrada`.
 Um `os.open` ou um `open` em `/dev/input`, `/dev/hidraw`, `/dev/uinput`,
@@ -632,7 +632,7 @@ async def test_r1_o_tique_e_a_janela_nao_abrem_o_dualsense_no_tempo(
     {external: true}` a cada 4 s, intercalados. Depois de CADA passo: zero
     pedidos no socket, zero `hidraw_broker_fd_recebido state=entrada`, zero
     `InputDevice` em nó de DualSense, e o Pro com o mesmo número. E o irmão
-    que mede antes, também a cada passo: o passo CHEGOU à vista, e ela
+    que mede antes, também a cada passo: o passo CHEGOU à vista, e a vista
     RESPONDEU. O tique engole a exceção da enumeração (nunca derruba o laço),
     então um tique que não enumera daria zero pedidos sobre nada — um «não
     sei» lido como zero. A MORDIDA: tire o pulo da vista e a régua reprova no
@@ -703,7 +703,7 @@ async def test_r1_o_tique_e_a_janela_nao_abrem_o_dualsense_no_tempo(
             passos.append(_foto(f"janela t={t:.0f}s"))
 
     assert len(passos) == 90
-    assert not mudos, f"passo que não chegou à vista, ou em que ela não respondeu: {mudos[:3]}"
+    assert not mudos, f"passo que não chegou à vista, ou em que a vista não respondeu: {mudos[:3]}"
     sujos = [p for p in passos if any(p[1:])]
     assert not sujos, (
         f"o primeiro passo sujo: {sujos[0][0]} (pedidos, linhas state=entrada, "

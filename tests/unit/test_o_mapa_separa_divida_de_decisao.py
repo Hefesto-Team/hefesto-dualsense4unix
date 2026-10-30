@@ -11,7 +11,7 @@ o acelerômetro do DualSense passou a ser lido nos dois transportes —
 ONDA-CONTROLES-04. O número desce quando a dívida é paga; é para isso que ele
 está aqui. **Voltou a 41 em 02/09/2026, e a subida é de HONESTIDADE, não de
 dívida:** os dois lados de `movimento.imu.ligar@dualsense` subiram de
-`inferido-do-codigo` para `medido` porque o caderno tem dois ensaios de bancada
+`inferido-do-codigo` para `medido` porque o caderno tem dois ensaios no aparelho
 para eles desde 15/08 — a casa passou a admitir que MEDIU, e o `aciona = não`
 não mudou. As duas células entraram com `nada-a-acionar`, que é DECISÃO: não há
 o que acionar porque não existe comando de ligar a IMU e o sensor emite sempre.
@@ -46,7 +46,7 @@ e o número desceu — que é para isso que ele está aqui.*
 entraram são do lado do RÁDIO, e a subida é de HONESTIDADE pela quarta vez
 neste arquivo: `audio.alto_falante@dualsense` e
 `audio.saida_dedicada.payload_do_degrau@dualsense` subiram para `medido`
-porque o som SAIU pelo rádio na bancada (report `0x35`, 70 s com a
+porque o som SAIU pelo rádio no aparelho (report `0x35`, 70 s com a
 orelha do usuário) — e o `aciona = não` continua onde estava, porque o contrato
 daquela célula pede TRÊS coisas e a corrida cumpriu uma: falta o **negativo de
 rota** e o **teste cego**, que são do usuário. *A casa passou a admitir que mediu, e
@@ -55,11 +55,10 @@ a dívida não se moveu.*
 **RECONTADO EM 09/09/2026: eram 45** — 23 no cabo, 22 no rádio. As DUAS que
 entraram são os dois lados de `luz.lightbar.brilho@dualsense`, e a subida é de
 HONESTIDADE pela terceira vez neste arquivo: a BRILHO-DE-HARDWARE-01 mediu o
-byte na bancada e a premissa da sprint caiu junto — o `common[42]` obedece
+byte no aparelho e a premissa da sprint caiu junto — o `common[42]` obedece
 nos dois transportes, mas o que ele atenua são as **lâmpadas de numeração**, não
-a barra. Palavra de produto, com os quatro na mão: *"o que o slicer altera não são as
-cores do lightbar mas os leds que indicam qual player é o dono daquele
-controle"*. <!-- noqa-acento: citação literal -->
+a barra. A medição, com os quatro na mão: o que o deslizador altera não são as cores
+da barra de luz, e sim os LEDs que dizem qual jogador é o dono daquele controle.
 A célula subiu de `nao-medido` para `medido` e o `aciona = não` continua onde
 estava — agora por MEDIÇÃO, e não por falta de olhar. O mapa ganhou a chave
 `luz.led_jogador.brilho` para o dono verdadeiro do byte.
@@ -68,15 +67,15 @@ estava — agora por MEDIÇÃO, e não por falta de olhar. O mapa ganhou a chave
 E o saldo é o que este número existe para mostrar: **três SAÍRAM porque a
 dívida foi paga** — `identidade.cor_do_aparelho@dualsense` no rádio e o
 `movimento.acelerometro@dualsense` nos dois transportes passaram a ser
-acionados pelo produto — e **cinco entraram**, quatro delas por HONESTIDADE, não
+acionados pelo produto — e **cinco entraram**, quatro das cinco por HONESTIDADE, não
 por dívida nova: `movimento.imu.ligar@dualsense` nos dois lados,
 `identidade.pareamento@dualsense` e `plataforma.crc32@dualsense` no cabo subiram
 para `medido` porque a casa passou a admitir que mediu, e o `aciona = não` já
 estava lá. A quinta é `plataforma.udev_autosuspend@sn30` no rádio.
 
 *A recontagem esperou:* a sprint SPECS-A-PROCEDENCIA-01 viu o vermelho, o
-declarou no relatório dele e NÃO recontou — *"recontar é reescrever a prosa do
-arquivo, e ela é de quem a escreveu"*. Estava certo: um número que se conserta
+declarou no relatório dele e NÃO recontou: recontar é reescrever a prosa do
+arquivo, e a prosa é de quem a escreveu. Estava certo: um número que se conserta
 sozinho para o teste passar é um número que ninguém leu.
 
 O
@@ -89,7 +88,7 @@ Contar não bastava, e a razão é o motivo de nunca ter existido portão aqui:
 
 - `identidade.revisao_de_placa@dualsense` não é acionada porque o mapa diz, em
   letras grandes, *"NÃO É A COR"* — ler aquele nó para nomear jogador daria dois
-  "controles iguais" no dia em que ela comprar um par. **Não acionar é o certo.**
+  "controles iguais" no dia em que quem usa comprar um par. **Não acionar é o certo.**
 - `movimento.imu.perda@dualsense` não é acionada porque a cura está medida e
   nunca foi ligada — o `__le32` de `corpo[11..14]` é contador de reports nos DOIS
   transportes e o produto não o lê em transporte nenhum. **Não acionar é falta.**
@@ -98,7 +97,7 @@ Um portão que reprovasse as 41 juntas reprovaria a decisão junto com a dívida
 seria desligado na primeira semana — que é exatamente o que teria acontecido se
 alguém tivesse escrito um antes de existir a coluna que separa as duas.
 
-A COLUNA, E POR QUE ELA É UM PAR
+A COLUNA, E POR QUE A COLUNA É UM PAR
 --------------------------------
 `cabo_por_que_nao_aciona` / `radio_por_que_nao_aciona`, ao lado de
 `cabo_aciona`/`radio_aciona`. É par por transporte porque a resposta MUDA de
@@ -111,7 +110,7 @@ O domínio, e ele responde *"não aciona — e daí?"*:
 ===================  ============================================================
 `` (vazio)           ninguém respondeu. É o que a regra 1 cobra.
 `divida`             falta fazer, e há quem queira. **É o que a regra 3 limita.**
-`decisao-tomada`     não acionar é a escolha, e ela está certa hoje.
+`decisao-tomada`     não acionar é a escolha, e a escolha está certa hoje.
 `nada-a-acionar`     não há feature a acionar: ou o aparelho não oferece, ou a
                      linha é de MEDIÇÃO e `aciona = não` responde "o fenômeno
                      não aconteceu", nunca "o produto não faz".
@@ -121,7 +120,7 @@ O domínio, e ele responde *"não aciona — e daí?"*:
 
 Os valores são hifenizados por um motivo mecânico que vale registrar:
 `scripts/validar-acentuacao.py` reprova a palavra "decisão" escrita sem o til, e
-está certo — mas não a reprova quando ela é parte de um identificador maior.
+está certo — mas não a reprova quando a palavra é parte de um identificador maior.
 Daí `decisao-tomada`, e daí `so-o-usuario-decide`.
 
 O retrato de 22/08/2026, com as 41 preenchidas: **4 dívidas**, 15 decisões,
@@ -130,7 +129,7 @@ O retrato de 22/08/2026, com as 41 preenchidas: **4 dívidas**, 15 decisões,
 Em 29/08/2026 as duas `so-o-usuario-decide` saíram — eram o acelerômetro do DualSense
 no cabo e no rádio, e a decisão de produto foi que ele não sai: ele tem de FUNCIONAR. A palavra
 continua no domínio, sem uso e com a
-razão escrita, em `RESERVADOS`: o estado que ela nomeia não morreu com a linha
+razão escrita, em `RESERVADOS`: o estado que a palavra nomeia não morreu com a linha
 que a usava.
 
 POR QUE O PORTÃO MORA NUM TESTE, E NÃO NO `check_paridade_transporte.py`
@@ -273,14 +272,14 @@ def test_a_coluna_existe_nos_dois_lados() -> None:
     cabecalho = _cabecalho(MAPA)
     faltando = [f"{lado}_{SUFIXO}" for lado in LADOS if f"{lado}_{SUFIXO}" not in cabecalho]
     assert not faltando, (
-        "o mapa perdeu a(s) coluna(s) " + ", ".join(faltando) + " — sem elas este "
+        "o mapa perdeu a(s) coluna(s) " + ", ".join(faltando) + " — sem as colunas este "
         "portão aprovaria o arquivo inteiro sem dizer uma palavra, que é pior "
         "que portão nenhum"
     )
 
 
 def test_toda_celula_medida_e_nao_acionada_diz_por_que() -> None:
-    """Regra 1 — medir e não fazer é afirmação forte, e ela deve o porquê."""
+    """Regra 1 — medir e não fazer é afirmação forte, e a afirmação deve o porquê."""
     ditas = respostas(MAPA)
     mudas = [chave for chave in populacao(MAPA) if not ditas.get(chave)]
     assert not mudas, (
@@ -317,7 +316,7 @@ def test_a_divida_nao_cresce() -> None:
 
 
 def test_a_decisao_pode_crescer_sem_reprovar() -> None:
-    """A promessa da regra 3, exercida — senão ela é só uma frase no docstring."""
+    """A promessa da regra 3, exercida — senão a regra é só uma frase no docstring."""
     import tempfile
 
     with tempfile.TemporaryDirectory() as pasta:
@@ -340,7 +339,7 @@ def test_a_populacao_nao_depende_da_coluna_que_o_usuario_confere() -> None:
         depois = populacao(vazio)
     assert antes == depois, (
         "a população mudou quando a coluna conferida foi apagada — quer dizer "
-        "que ela é derivada da própria coluna, e o portão ficaria verde "
+        "que a população é derivada da própria coluna, e o portão ficaria verde "
         "justamente quando alguém esquecesse de responder"
     )
     assert len(antes) == 45, (
@@ -367,10 +366,10 @@ _A_RESERVA_DE_29_08_QUE_CADUCOU = {
     SO_O_USUARIO_DECIDE: (
         "29/08/2026, ONDA-CONTROLES-04. O último uso era "
         "`movimento.acelerometro@dualsense`, nos dois lados, e ele saiu porque "
-        "a causa FOI RESOLVIDA: ela decidiu (*\"não era pra ele sair. era pra "
-        "ele FUNCIONAR\"*), o produto passou a ler `ABS_X/Y/Z` e a célula virou "
+        "a causa FOI RESOLVIDA: a decisão foi que ele não saísse, e sim que "
+        "FUNCIONASSE; o produto passou a ler `ABS_X/Y/Z` e a célula virou "
         "`aciona=sim`, sem causa a declarar. A palavra fica porque o ESTADO que "
-        "ela nomeia — o produto pode, e a escolha é dela — não deixou de "
+        "a palavra nomeia — o produto pode, e a escolha é de quem usa — não deixou de "
         "existir com esta linha: a ONDA-CONTROLES-07 (o interruptor do sensor) "
         "e a 08 (a calibração) nascem exatamente nele. Tirá-la do domínio "
         "obrigaria a próxima pessoa a escrever `divida` para uma escolha que "
@@ -472,7 +471,7 @@ def respostas_que_voltaram(
                 continue
             causa = _celula(linha, f"{lado}_{SUFIXO}")
             if causa != DECISAO:
-                achados.append(f"{ident} ({lado}): `{SUFIXO}` = {causa!r}, e ela respondeu")
+                achados.append(f"{ident} ({lado}): `{SUFIXO}` = {causa!r}, e já houve resposta")
         texto = " ".join(valor or "" for valor in linha.values())
         if decisao not in texto:
             achados.append(f"{ident}: nenhuma célula cita `{decisao}`")
@@ -482,15 +481,15 @@ def respostas_que_voltaram(
 
 
 def test_a_resposta_do_usuario_nao_volta_a_ser_pergunta() -> None:
-    """MORDE: devolva `so-o-usuario-decide` a uma das doze, apague o id dela, ou mexa no
+    """MORDE: devolva `so-o-usuario-decide` a uma das doze, apague o id da decisão, ou mexa no
     `aciona`."""
     voltaram = respostas_que_voltaram(MAPA, DECISOES_DO_USUARIO)
     assert not voltaram, (
-        f"{len(voltaram)} achado(s) nas linhas que ela respondeu em 24/09/2026: "
+        f"{len(voltaram)} achado(s) nas linhas respondidas em 24/09/2026: "
         + "; ".join(voltaram)
         + ". A pergunta tem resposta: os dois lados dizem `aciona = não`, a causa é "
         "`decisao-tomada` e a linha cita a decisão pelo id. Se a pergunta voltou, a "
-        "decisão sai de `decidida` no arquivo dela e a linha sai de "
+        "decisão sai de `decidida` no arquivo de decisões e a linha sai de "
         "`RESPONDIDAS_PELO_USUARIO` no mesmo gesto"
     )
 
@@ -508,7 +507,7 @@ def test_a_regua_das_respostas_ve_uma_que_volta() -> None:
 
 
 def _decisoes_com_o_estado(destino: Path, ident: str, estado: str) -> Path:
-    """Uma cópia do registro dela com o `estado` de UMA decisão trocado."""
+    """Uma cópia do registro de decisões com o `estado` de UMA decisão trocado."""
     linhas = list(csv.DictReader(io.StringIO(DECISOES_DO_USUARIO.read_text(encoding="utf-8"))))
     for linha in linhas:
         if linha["id"] == ident:
@@ -576,7 +575,7 @@ def test_o_veto_alcanca_o_pro() -> None:
     assert not voltaram, (
         f"{len(voltaram)} achado(s) nas linhas do Pro e da taxa que o veto alcança: "
         + "; ".join(voltaram)
-        + ". A pergunta dela nomeava o 8BitDo E o Pro: a não-adoção do Pro é "
+        + ". A pergunta nomeava o 8BitDo E o Pro: a não-adoção do Pro é "
         "`decisao-tomada` com o id, não `nada-a-acionar`. Se o veto caiu, a decisão "
         "sai de `decidida` e a linha sai de `O_VETO_ALCANCA_O_PRO` no mesmo gesto"
     )
@@ -593,7 +592,7 @@ def test_o_veto_alcanca_o_pro() -> None:
 )
 def test_a_regua_do_veto_ve_o_pro_que_volta(ident: str, colunas: dict[str, str],
                                            achado: str) -> None:
-    """A régua de cima tem de VER a linha do Pro que desfaz a resposta de produto."""
+    """A régua de cima tem de VER a linha do Pro que desfaz a resposta do produto."""
     import tempfile
 
     with tempfile.TemporaryDirectory() as pasta:

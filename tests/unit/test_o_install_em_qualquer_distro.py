@@ -208,7 +208,7 @@ def test_o_reconhecimento_diz_a_familia_imutavel(tmp_path: Path) -> None:
     ],
 )
 def test_a_cura_de_host_pula_dizendo_o_efeito(tmp_path: Path, rotina: str, efeito: str) -> None:
-    """A MORDIDA: tire o `_pula_por_so_leitura` da função e ela tenta o `sudo`."""
+    """A MORDIDA: tire o `_pula_por_so_leitura` da função e a função tenta o `sudo`."""
     corpo = (
         "set -euo pipefail\n"
         "NO_DKMS=0; NO_UCM=0; SKIP_UDEV=0; COM_UHID_CONTRAPRESSAO=0\n"

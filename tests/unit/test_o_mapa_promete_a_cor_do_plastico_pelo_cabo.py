@@ -7,7 +7,7 @@ Até 22/08/2026 a linha 111 de ``docs/data/mapa-controles.csv`` dizia
 ``cabo_aciona = não`` e ``cabo_codigo_ref = "zero linhas no produto"``. Isso
 CADUCOU na leva da aba Configurações: a leitura saiu de ``scripts/ensaios/`` e
 entrou em ``src/hefesto_dualsense4unix/integrations/cor_do_plastico.py``
-(``ler_pelo_cabo``), e é ela que pinta a borda de cada card
+(``ler_pelo_cabo``), e é a leitura que pinta a borda de cada card
 (``app/actions/config/secao_controles.py::_perguntar_as_cores``).
 
 Virar a célula para ``sim`` sem rede seria exatamente o defeito-mãe que o
@@ -256,7 +256,7 @@ class TestOEnvelopeDoRadio:
         assert pedido == envelope_de_radio(montar_pedido())
 
     def test_o_comando_dentro_do_envelope_e_o_mesmo_do_cabo(self) -> None:
-        """A assinatura envelopa; ela não muda `[1, 19]`. Se mudasse, o rádio"""
+        """A assinatura envelopa; a assinatura não muda `[1, 19]`. Se mudasse, o rádio"""
         assinado = _pedido_que_sai(_DUALSENSE_NO_RADIO)
         nu = montar_pedido()
         assert assinado[:-TAMANHO_DO_CRC] == nu[:-TAMANHO_DO_CRC]
@@ -347,7 +347,7 @@ def _abre_o_no_pela_porta_do_broker() -> bool:
             "`_perguntar_ao_hidraw` tem de usar UMA das duas portas, e esta "
             f"régua vê {sorted(n for n in nomes if 'open' in n or 'abrir' in n)}. "
             "As duas juntas (ou nenhuma) deixam a régua sem sinal, que é como "
-            "ela mentiu em 29/08/2026."
+            "a promessa mentiu em 29/08/2026."
         )
         return pela_porta
     raise AssertionError("`_perguntar_ao_hidraw` sumiu do módulo da cor")
@@ -368,7 +368,7 @@ class TestOMapaEOProdutoNaoDivergem:
     Uma régua que só travasse o `não` novo repetiria o defeito ao contrário: no
     dia em que alguém trocar o `os.open` pela porta do broker
     (`A-COR-PELA-PORTA-DO-BROKER-01`), a cura passaria com a célula mentindo
-    `não`. Por isso a asserção é BICONDICIONAL — ela lê o código e exige que a
+    `não`. Por isso a asserção é BICONDICIONAL — a asserção lê o código e exige que a
     célula diga a mesma coisa, em qualquer das duas direções.
     """
 
@@ -410,7 +410,7 @@ class TestOMapaEOProdutoNaoDivergem:
     def test_a_celula_do_radio_segue_o_que_o_produto_faz(
         self, linha_do_mapa: dict[str, str]
     ) -> None:
-        """Bicondicional, pelo mesmo motivo da do cabo — e ela não é decorativa."""
+        """Bicondicional, pelo mesmo motivo da do cabo — e não é decorativa."""
         le_por_radio = _o_produto_pergunta_por_radio()
         esperado = "sim" if le_por_radio else "não"
         assert linha_do_mapa["radio_aciona"] == esperado, (
@@ -434,7 +434,7 @@ class TestOMapaEOProdutoNaoDivergem:
                 "a semente do CRC no sentido de ESCRITA é `0x53`, não `0xA3` — "
                 "medido em 27/08/2026 e de novo em 02/09/2026, com o aparelho "
                 "devolvendo o serial por rádio. `o-aparelho-recusa` aqui é "
-                "acusar o controle dela pelo nosso bug"
+                "acusar o controle de quem usa pelo nosso bug"
             )
         assert linha_do_mapa["assimetria_declarada"].strip(), (
             "a assimetria entre o que o ENSAIO lê e o que o PRODUTO lê tem de "

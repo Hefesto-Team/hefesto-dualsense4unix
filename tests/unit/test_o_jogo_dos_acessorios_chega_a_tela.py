@@ -2,7 +2,7 @@
 
 No desenho do todo, aprovado em 12/10/2026 (`todo-05`, «Meus toques sai daqui; vai para a 07»), os
 toques do jogador deixaram a aba Vibração. A janela dos acessórios que os recebia saiu da 07 em
-19/10/2026, com o adulto: o que ela fazia é da extensão `intiface`, que desenha a dela pelo
+19/10/2026, com o adulto: o que a janela fazia é da extensão `intiface`, que desenha a própria pelo
 manifesto, na janela genérica «Configurar · <extensão>».
 
 Só o desenho (`mockup/05-vibracao.html` e `mockup/07-lancadores.html`). Rótulos com só a primeira

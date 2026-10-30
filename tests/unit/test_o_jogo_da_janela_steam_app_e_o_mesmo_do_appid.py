@@ -83,7 +83,7 @@ def test_a_marca_velha_com_a_forma_da_janela_continua_valendo(tmp_path: Path) ->
     """A marca escrita ANTES da cura (``janela:steam_app_<N>``) é a mesma identidade.
 
     O jogo semeado pela janela antes de 03/10 ficou na marca com a forma velha.
-    Se ela apagou aquele perfil, a marca é o que impede o produto de recriá-lo;
+    Se quem usa apagou aquele perfil, a marca é o que impede o produto de recriá-lo;
     lida sem a conversão, a identidade nova (``<N>``) não estaria lá e o perfil
     apagado voltaria na próxima varredura.
     """

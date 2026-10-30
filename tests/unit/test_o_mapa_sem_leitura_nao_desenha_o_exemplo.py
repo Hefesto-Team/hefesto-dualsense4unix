@@ -121,7 +121,7 @@ def test_o_piloto_sem_leitura_diz_o_porque_a_pagina(monkeypatch: pytest.MonkeyPa
         contexto.iteration(False)
         leu.wait(0.01)
     assert perguntas == [arranjo_desta_maquina.js_sem_leitura(pagina_do_mapa.SEM_MAPA)], (
-        "sem leitura o piloto não disse nada à página, e ela fica no gabinete de exemplo")
+        "sem leitura o piloto não disse nada à página, e a página fica no gabinete de exemplo")
 
 
 @pytest.fixture

@@ -73,7 +73,7 @@ def _instalar_peca(casa: Path, conteudo: bytes = _PECA_DE_MENTIRA) -> Path:
 @pytest.fixture
 def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Biblioteca Steam num HOME de mentira, com a peça do Hefesto instalada e um pino de
-    mentira que bate com ela (o pino de verdade é o sha256 do binário compilado)."""
+    mentira que bate com a receita (o pino de verdade é o sha256 do binário compilado)."""
     casa = tmp_path / "casa"
     biblioteca = casa / ".local" / "share" / "Steam"
     (biblioteca / "steamapps").mkdir(parents=True)
@@ -413,16 +413,16 @@ def test_a_pasta_sem_o_override_nao_passa(tmp_path: Path) -> None:
 
 def test_a_variavel_ja_posta_no_ambiente_nao_e_sobrescrita(tmp_path: Path) -> None:
     saida = _lancar(
-        tmp_path, [f"WINEDLLOVERRIDES={_ESPERADO}"], extra={"WINEDLLOVERRIDES": "dela=b"}
+        tmp_path, [f"WINEDLLOVERRIDES={_ESPERADO}"], extra={"WINEDLLOVERRIDES": "outra=b"}
     )
-    assert saida == "dela=b"
+    assert saida == "outra=b"
 
 
 @pytest.mark.parametrize(
     ("extra", "esperado"),
     [
-        ({"WINEDLLOVERRIDES": "dela=n"}, ("dela=n", "ausente")),
-        ({"WINEDLLPATH": "/dela"}, ("ausente", "/dela")),
+        ({"WINEDLLOVERRIDES": "outra=n"}, ("outra=n", "ausente")),
+        ({"WINEDLLPATH": "/outra"}, ("ausente", "/outra")),
     ],
 )
 def test_o_que_quem_lancou_pos_derruba_a_receita_inteira(

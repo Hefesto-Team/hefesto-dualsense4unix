@@ -1,17 +1,15 @@
 """O interruptor de punho da aba Vibração acende com a barra, e o clique escreve.
 
-ORDEM, 14/09/2026, com os dois controles na mesa e a foto da aba na mão:
-
-    *"ao abrir o vibração o motor esquerdo do controle azul não fica ativado e
-     nem se eu clicar em máximo ele liga. ele deveria ligar se > 0 no slicer
-     dele."*  (noqa-acento: citação literal)
+ORDEM, 14/09/2026, com os dois controles na mesa e a foto da aba na mão: ao abrir a aba
+Vibração, o motor esquerdo do controle azul não ficava ativo, e nem o clique em Máximo o
+ligava; ele deveria ligar sempre que a barra dele estiver acima de zero.
 
 O QUE ESTAVA QUEBRADO, e eram DUAS metades — as duas mentindo do mesmo jeito,
 medidas no daemon do usuário no mesmo dia:
 
 1. **não havia pintura.** A classe `on` dos oito botões era a da CENA do mockup:
    o P1 com os dois punhos acesos e o P2 com o esquerdo apagado, cravados no
-   HTML. Medido no `state_full` dela às 23h: as DUAS barras do P2 em **100**, e a
+   HTML. Medido no `state_full` às 23h: as DUAS barras do P2 em **100**, e a
    tela mostrando o punho esquerdo dele apagado. A tela afirmava o contrário do
    produto, e afirmava para sempre — nenhum tique a corrigia;
 2. **não havia clique.** O botão trazia `data-hef="lado"`, e `data-hef` **não
@@ -25,13 +23,13 @@ A CASA SABIA DOS DOIS, e por escrito: `a05_vibracao.SEM_DONO["lado:ligado"]` e
 `app/telas/vibracao.SEM_FONTE["lado:ligado"]` declaravam a dívida desde 02/09,
 com sprint (`MIGRA-VIBRACAO-06`) e com a razão certa — *não há campo de habilitar
 motor por lado em `profiles/schema.py`*. **A cura de 14/09 não criou o campo.**
-Ela leu o que já existia: a barra daquele motor.
+A cura leu o que já existia: a barra daquele motor.
 
 A REGRA É DE PRODUTO E TEM UMA FONTE SÓ: aceso = `barra(motor) > 0`. O clique é o par —
 desligar escreve 0, ligar devolve 100 —, pelo mesmo `rumble.motores.set` que o
 arraste usa. Um campo `ligado` separado do valor seria a segunda verdade desta
 linha, e na primeira vez que os dois divergissem a tela diria "ligado" com a
-barra em zero — que é, ao contrário, exatamente o defeito que ela relatou.
+barra em zero — que é, ao contrário, exatamente o defeito relatado.
 
 O QUE ESTA RÉGUA MORDE, e são as três pontas que faltavam:
 
@@ -107,8 +105,8 @@ def test_o_botao_do_punho_tem_o_endereco_da_pintura() -> None:
     for botao in botoes:
         assert 'data-hef-alvo="classe"' in botao, (
             f"interruptor sem alvo de pintura: {botao}. Sem ele a classe `on` "
-            f"volta a ser a da cena do mockup, cravada — que é o defeito que ela "
-            f"relatou em 14/09"
+            f"volta a ser a da cena do mockup, cravada — que é o defeito "
+            f"relatado em 14/09"
         )
         assert re.search(r'data-campo="lado-[a-z]+"', botao), (
             f"interruptor sem `data-campo`: {botao}"
@@ -149,7 +147,7 @@ def test_o_punho_acende_pela_barra(
     coluna = _coluna(barra_e, barra_d)
     assert coluna["lado-e"] == aceso_e, (
         f"com a barra esquerda em {barra_e}, o punho devia estar "
-        f"{'aceso' if aceso_e else 'apagado'} — a regra dela é *«> 0 no slicer»*"
+        f"{'aceso' if aceso_e else 'apagado'} — a regra é barra acima de zero"
     )
     assert coluna["lado-d"] == aceso_d
 
@@ -193,7 +191,7 @@ def test_o_gesto_existe() -> None:
 def test_o_clique_escreve_o_par_certo(
     lado: str, barra_antes: int, campo: str, valor: int
 ) -> None:
-    """O interruptor é o PAR da barra, e escreve pelo método dela."""
+    """O interruptor é o PAR da barra, e escreve pelo método da barra."""
     ctx = _ctx(barra_antes if lado == "e" else 50,
                barra_antes if lado == "d" else 50)
     ponte = _Ponte()
@@ -209,7 +207,7 @@ def test_o_clique_escreve_o_par_certo(
     )
     assert escritas[0].get("uniq") == UNIQ, (
         "o clique foi sem endereço — `rumble.motores.set` sem `uniq` alcança "
-        "outro controle que não o da coluna que ela clicou"
+        "outro controle que não o da coluna clicada"
     )
 
 
@@ -243,10 +241,10 @@ def test_o_estado_vem_do_daemon_e_nao_do_que_o_clique_afirma() -> None:
 def test_a_recusa_fala_com_quem_tem_o_controle_na_mao(
     clique: dict[str, Any], pedaco: str
 ) -> None:
-    """`RuntimeError` leva a frase ao cartão dela; `ValueError` fica no `stderr`.
+    """`RuntimeError` leva a frase ao cartão; `ValueError` fica no `stderr`.
 
     É o contrato do piloto (`hefesto_vivo._recusou_dizendo`), e as duas recusas
-    deste gesto são sobre um gesto do usuário — as duas têm de chegar aos olhos dela.
+    deste gesto são sobre um gesto do usuário — as duas têm de chegar aos olhos de quem usa.
     """
     gesto = pacotes.gesto_da_pagina("05-vibracao.html", "lado")
     assert gesto is not None

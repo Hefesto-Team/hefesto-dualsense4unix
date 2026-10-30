@@ -4,7 +4,7 @@ O usuário mandou, em 14/10/2026: «Reinicia só se mudou». O `--install` do
 `scripts/fix_wireplumber_default_source.sh` reiniciava o WirePlumber a CADA volta, mesmo com
 os drop-ins já iguais; o `install.sh`, o `doctor --fix` e o `doctor --fix-safe` passam todos por
 ele, então o dono da pergunta é um só: `restart_wireplumber_se_alterou`. O «Refazer os consertos»
-da aba Sistema não chama este script (o `CONSERTOS` dela é só o `disable_steam_input.sh`): ele não
+da aba Sistema não chama este script (o `CONSERTOS` da aba é só o `disable_steam_input.sh`): ele não
 reinicia o WirePlumber em volta nenhuma.
 Reiniciar o WirePlumber recria os nós de áudio da sessão (endpoints de háptica, laços), e
 repetir o gesto não tem motivo para isso.

@@ -2,13 +2,13 @@
 """A RÉGUA DO MAPA DO GABINETE: o desenho é o DO USUÁRIO, e os seis botões o mudam.
 
 O QUE ESTAVA ERRADO ATÉ 01/09/2026, e é a razão de esta régua existir: a aba
-Conexões mostrava um gabinete de BANCADA — duas faces e dez entradas escritas
+Conexões mostrava um gabinete de ENSAIO — duas faces e dez entradas escritas
 como constantes no gerador (`FACES`, `QUEM_ESTA`, `CENSO`) — enquanto o
-`maquina.json` dela **não existe** e o mapa declarado está vazio.
+`maquina.json` de quem usa **não existe** e o mapa declarado está vazio.
 
 Era por isso que os seis botões do mapa não podiam ser ligados: clicar
 declararia no disco do usuário o desenho de um exemplo. A medição que os segurava
-estava certa; o que faltava era a aba pintar o gabinete dela.
+estava certa; o que faltava era a aba pintar o gabinete de quem usa.
 
 AS QUATRO COISAS QUE ESTA RÉGUA COBRA:
 
@@ -21,7 +21,7 @@ AS QUATRO COISAS QUE ESTA RÉGUA COBRA:
    "isto quebrou", e o produto já tinha a frase (`ROTULO_SEM_FACE`).
 4. **Os seis gestos mudam o rascunho e GRAVAM O INTEIRO.** As faces são uma
    LISTA e `fundir_declaracao` troca lista inteira — mandar pedaço apagaria as
-   faces que ela já tinha.
+   faces que já tinha.
 
 A MORDIDA: troque `como_documento()` por um pedaço no `_gravar_o_mapa` — o caso
 do inteiro reprova dizendo que as faces antigas se perderiam.
@@ -90,7 +90,7 @@ def test_o_gerador_do_mockup_usa_o_desenho_do_produto() -> None:
         encoding="utf-8")
     assert "_aba_conexoes.html_do_mapa(" in fonte, (
         "o gerador da aba Conexões parou de usar `interface/conexoes.html_do_mapa`. "
-        "Com dois desenhos, o que ela aprova e o que ela usa deixam de ser o "
+        "Com dois desenhos, o que se aprova e o que se usa deixam de ser o "
         "mesmo — e ninguém compara.")
 
 

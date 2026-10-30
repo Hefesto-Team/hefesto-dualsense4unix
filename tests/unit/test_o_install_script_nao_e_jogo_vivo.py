@@ -78,7 +78,7 @@ def test_o_token_so_vale_nos_argumentos_do_reaper() -> None:
 
 
 def test_o_jogo_de_verdade_continua_sendo_jogo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Contraprova: a régua sabe dizer "jogo". Sem ela, um None fixo passaria."""
+    """Contraprova: a régua sabe dizer "jogo". Sem a contraprova, um None fixo passaria."""
     _instalar_proc(monkeypatch, {"100": _JOGO.format(appid=1599660)})
 
     assert slo.steam_game_running_appid() == 1599660

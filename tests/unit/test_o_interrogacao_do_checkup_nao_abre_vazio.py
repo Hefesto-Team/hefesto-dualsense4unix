@@ -12,7 +12,7 @@ do arranjo e não é nenhuma das cinco, e `cura=ordem.acao or None`, que pode se
 vazio. Sem verbete e sem cura, `_dica_da_linha` devolvia `""`, o `escrever()` do
 piloto punha o travessão, e o `?` abria uma caixa de 330px com um traço dentro.
 
-A decisão 9 dela — *"o `?` para de repetir a linha"* — tirou a metade do meio
+A decisão 9 (o `?` para de repetir a linha) tirou a metade do meio
 (o `Item.porque`, que a linha ao lado passou a mostrar). Quem não tinha as
 outras duas ficou sem nenhuma.
 
@@ -62,7 +62,7 @@ def _ordem(acao: str = "") -> Ordem:
 
 
 def _item_de_ordem(acao: str = "") -> Item:
-    """O `Item` que `exame_da_mesa.itens_das_ordens` monta a partir dela."""
+    """O `Item` que `exame_da_mesa.itens_das_ordens` monta a partir da ordem."""
     ordem = _ordem(acao)
     return Item(
         chave=ordem.chave,
@@ -83,7 +83,7 @@ def test_a_chave_de_uma_ordem_nao_tem_verbete_e_e_por_isso_que_doia() -> None:
     item = _item_de_ordem()
     assert item.chave not in DICAS_DAS_LINHAS, (
         f"{item.chave!r} ganhou verbete em DICAS_DAS_LINHAS — o buraco desta "
-        "régua mudou de forma, e ela precisa ser reescrita contra a nova.")
+        "régua mudou de forma, e a régua precisa ser reescrita contra a nova.")
     assert not item.cura, "o dublê pôs cura onde o defeito era não ter nenhuma"
 
 
@@ -105,7 +105,7 @@ def test_ele_traz_as_duas_frases_do_produto_com_o_rotulo_do_usuario() -> None:
 
 
 def test_ele_nao_repete_a_linha_que_esta_ao_lado() -> None:
-    """DECISÃO 9 DO USUÁRIO, e ela continua valendo: *"o `?` para de repetir a linha"*."""
+    """DECISÃO 9, e continua valendo: o `?` para de repetir a linha."""
     linha = a08._linha(_item_de_ordem())
     assert linha["porque"] == VI, "a linha deixou de mostrar a medição"
     assert VI not in linha["dica"], (

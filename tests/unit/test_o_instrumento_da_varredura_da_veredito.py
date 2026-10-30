@@ -1,4 +1,4 @@
-"""BUSCA-DO-RADIO-02 — o instrumento que mede a varredura e DIZ o que ela quer dizer."""
+"""BUSCA-DO-RADIO-02 — o instrumento que mede a varredura e DIZ o que a varredura quer dizer."""
 
 from __future__ import annotations
 
@@ -78,6 +78,6 @@ def test_maquina_de_um_adaptador_nao_ganha_conselho_de_reserva(tmp_path: Path) -
     saida = _veredito("hci0=true", ["hci0"], tmp_path)
     assert "UM ADAPTADOR SÓ" in saida, (
         "numa máquina de um adaptador o instrumento aconselhou reservar — não "
-        "há para onde. É a presunção da bancada de quem escreveu."
+        "há para onde. É a presunção da máquina de quem escreveu."
     )
     assert "RESERVA RESOLVE" not in saida

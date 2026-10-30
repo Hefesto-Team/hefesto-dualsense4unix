@@ -63,7 +63,7 @@ def _bloco(**extra: object) -> dict[str, object]:
 def _plantar(tmp_path: Path, *, mod_id: str = "kytyps5", ligada: bool = True,
              aceitas: tuple[str, ...] = ("lancador",), bloco: object = None,
              leitor: str = _LEITOR_BOM) -> Lugares:
-    """Uma modificação instalada no lar de mentira, e o registro dela."""
+    """Uma modificação instalada no lar de mentira, e o registro da modificação."""
     lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento)
                  registro=tmp_path / "config" / "mods.json",
                  estado=tmp_path / "run" / "mods-estado.json")
@@ -134,7 +134,7 @@ def test_a_modificacao_ligada_vira_cartao_pelo_mesmo_procurador(
     assert desenho.REMOVER_ROTULO not in html, (
         "o cartão da modificação ganhou o «Tirar daqui»: sair é desligá-la")
     assert "odifica" not in kyty.nome + kyty.diz, (
-        "o cartão leva marca de modificação, e a escolha dela de 09/10 diz que não")
+        "o cartão leva marca de modificação, e a escolha de 09/10 diz que não")
 
 
 def test_desligada_ou_sem_a_permissao_o_cartao_some(

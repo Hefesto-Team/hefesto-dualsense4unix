@@ -1,4 +1,4 @@
-"""O mapa que ela corrige, NA TELA — o WebKit fora da tela, com o gesto de verdade."""
+"""O mapa que quem usa corrige, NA TELA — o WebKit fora da tela, com o gesto de verdade."""
 
 from __future__ import annotations
 
@@ -612,7 +612,7 @@ _A_GEOMETRIA_DO_PAINEL = r"""
 
 
 def test_o_painel_cabe_a_1212_e_o_cabecalho_cabe_com_o_nome_comprido(disco: Path) -> None:
-    """A conferência da O-MAPA-QUE-O-USUARIO-CORRIGE-01, no WebKit à largura do notebook dela.
+    """A conferência da O-MAPA-QUE-O-USUARIO-CORRIGE-01, no WebKit à largura do notebook de casa.
 
     Até 04/10/2026 o editor da entrada tinha 300 px e a face descia com o nome de 24. O painel
     único do desenho aprovado de 05/10 é um só para a entrada e o aparelho, largo o bastante

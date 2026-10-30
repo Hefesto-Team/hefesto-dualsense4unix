@@ -45,8 +45,8 @@ def test_o_molde_nao_roda_a_pintura_de_quem_nao_tem_lugar(pacotes_mod):
     depois = (a10_perfis._PINTADO_PARA, a10_perfis._ULTIMO_TIQUE,
               a10_perfis._ESCOLHIDO)
     assert antes == depois, (
-        "o molde rodou a pintura da 10-perfis e mexeu na memória dela — no "
-        f"tique seguinte o produto repinta o que ela digita. antes={antes} "
+        "o molde rodou a pintura da 10-perfis e mexeu na memória da página — no "
+        f"tique seguinte o produto repinta o que quem usa digita. antes={antes} "
         f"depois={depois}")
     assert not pacotes_mod.lugares_da_pagina("10-perfis.html"), (
         "a 10-perfis ganhou lugar de controle — a trava precisa de outra razão")
@@ -62,7 +62,7 @@ def _o_que_o_piloto_faz(pacotes_mod, carga):
 
 
 def test_com_controle_na_mesa_o_molde_se_cala(pacotes_mod):
-    """Com UMA coluna viva, a união das chaves dela é melhor que o molde."""
+    """Com UMA coluna viva, a união das chaves da coluna é melhor que o molde."""
     ctx = pacotes_mod.Contexto(state=ESTADO, mesa=MESA_COM_DONO,
                                conectados=[COM_DONO], estados={})
     for pagina in sorted(pacotes_mod.PACOTES):
@@ -221,7 +221,7 @@ def test_o_molde_escreve_o_travessao_do_desenho(pacotes_mod):
     assert vazio is not None, "o lugar P3 sumiu da página publicada"
     assert f">{pacotes_mod.TRAVESSAO}<" in vazio.group(0), (
         "o desenho deixou de usar o travessão no lugar vazio — o texto de tela "
-        "é dela, e esta cura tem de seguir o que o desenho faz")
+        "é do desenho, e esta cura tem de seguir o que o desenho faz")
 
     ctx = _mesa_vazia(pacotes_mod)
     molde = pacotes_mod.molde_do_lugar("01-jogar.html", ctx, {})

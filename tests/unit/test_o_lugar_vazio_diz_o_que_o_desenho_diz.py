@@ -235,7 +235,7 @@ def test_as_paginas_com_cartao_com_a_mesa_vazia(pagina: str) -> None:
         cravados, vivos, carga["vazios"], texto)
     assert not vazaram, (
         f"{pagina}: lugar SEM controle mostrando o desenho de um lugar COM "
-        "controle — a foto dela de 23/09/2026:\n  " + "\n  ".join(vazaram))
+        "controle — a foto de 23/09/2026:\n  " + "\n  ".join(vazaram))
 
 
 @pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento)
@@ -294,7 +294,7 @@ def test_o_p2_sai_e_volta_ao_lugar_vazio_no_tique_seguinte() -> None:
     assert _o_que_diz(cravados, sem, "p2", "nome") == [
         vazio_da_08(2)], (
         "o controle saiu e o cartão do P2 continuou dizendo o nome dele — o "
-        "«cache» que ela fotografou")
+        "«cache» que a foto mostrou")
     assert _o_que_diz(cravados, sem, "p2", "plastico") == [""]
     assert not hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
         cravados, sem, vazio["vazios"], texto)
@@ -302,7 +302,7 @@ def test_o_p2_sai_e_volta_ao_lugar_vazio_no_tique_seguinte() -> None:
 
 @pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento)
 def test_o_que_a_regra_escreve_no_vazio_a_aba_reescreve_no_cheio(pagina: str) -> None:
-    """A trava da regra: ela só escreve onde a aba escreve."""
+    """A trava da regra: a regra só escreve onde a aba escreve."""
     vazio = _carga(pagina, [])
     cheio = _carga(pagina, [NO_P2])
     diz = pacotes.o_que_o_desenho_diz_do_lugar_vazio(pagina).get("p2", {})

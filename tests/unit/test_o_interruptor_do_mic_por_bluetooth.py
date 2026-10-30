@@ -32,7 +32,7 @@ def _raiz() -> Path:
 
 @pytest.mark.parametrize("peca", PECAS_DO_INTERRUPTOR)
 def test_o_card_nao_carrega_mais_nenhuma_peca_do_interruptor(peca: str) -> None:
-    """A MORDIDA: devolva qualquer uma delas ao módulo e este teste reprova."""
+    """A MORDIDA: devolva qualquer uma das peças ao módulo e este teste reprova."""
     assert not hasattr(cc, peca), (
         f"`{peca}` voltou ao card: a ponte de mic por BT prende o botão PS em "
         f"pulsos de ~17 ms e o daemon abre a Steam em laço. Antes de religar "
@@ -71,7 +71,7 @@ def test_a_tela_nao_diz_mais_pelo_radio() -> None:
 
 
 def test_a_ponte_continua_existindo_inteira() -> None:
-    """Saiu o botão, não a ponte — ela publicou o source no PipeWire em 16/08."""
+    """Saiu o botão, não a ponte — a ponte publicou o source no PipeWire em 16/08."""
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 
     assert hasattr(bt, "GerenciadorMicBluetooth")

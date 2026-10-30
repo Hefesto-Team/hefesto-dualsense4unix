@@ -54,7 +54,7 @@ def test_aba_sem_a_chave_nao_ganha_chave_nova() -> None:
 
 
 def test_a_frase_e_a_mesma_do_desenho() -> None:
-    """A palavra tem UM dono — senão a casa fica com duas versões dela."""
+    """A palavra tem UM dono — senão a casa fica com duas versões da palavra."""
     from pathlib import Path
     raiz = Path(__file__).resolve().parents[2]
     fonte = (raiz / "src/hefesto_dualsense4unix/interface/aba05.py").read_text(

@@ -6,9 +6,9 @@ de espera; quem volta e cujo nó de LED aparece depois do primeiro ciclo acende 
 quando o nó aparece, uma vez; o `disable()` e a camada do co-op esvaziam os avisos ditos,
 e religado o co-op o nó que falta se avisa de novo. E o gesto do mapa não manda devolver
 a cor clicando na do número: a cor de antes pode ser a do plástico; nem a réplica da luz
-parte dela (O-GESTO-DA-REPLICA-DA-LUZ-DIZ-A-COR-DO-PLASTICO-01).
+parte dali (O-GESTO-DA-REPLICA-DA-LUZ-DIZ-A-COR-DO-PLASTICO-01).
 
-MORDIDAS: cada cura arrancada reprova o caso dela (o relato do conjunto as lista).
+MORDIDAS: cada cura arrancada reprova o próprio caso (o relato do conjunto as lista).
 """
 from __future__ import annotations
 

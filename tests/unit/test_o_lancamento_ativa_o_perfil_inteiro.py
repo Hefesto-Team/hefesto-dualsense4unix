@@ -3,7 +3,7 @@
 O DEFEITO, MEDIDO EM 22/08/2026 com o jogo do usuário aberto. O daemon sabia o nome
 do jogo, resolvia o perfil por appid, e aplicava **duas seções de oito**: a
 supressão e — só fora da allowlist — o `mode`. Gatilho, luz, vibração, som e
-microfone esperavam o autoswitch, que espera a CLASSE DA JANELA. Ela respondeu
+microfone esperavam o autoswitch, que espera a CLASSE DA JANELA. A classe respondeu
 `unknown` por 21 minutos seguidos (`reason="sem_foco_x"`, `useful_age_sec=1276`)
 com o jogo aberto, o perfil certo no disco e o `match` casando.
 
@@ -13,16 +13,16 @@ gatilhos e deve ter outras"*. Nenhum elo estava quebrado — ninguém chamava a
 ativação.
 
 E o caminho da ALLOWLIST era ainda mais curto: `return` antes de tudo. Isso
-contraria a decisão registrada dela — *"a allowlist do Steam Input NÃO é 'o
+contraria a decisão registrada — *"a allowlist do Steam Input NÃO é 'o
 Hefesto sai da frente'. É o contrário: permitir a allowlist faz o Hefesto
-continuar funcionando, com a saída sendo xbox ou DualSense e as features que ela
+continuar funcionando, com a saída sendo xbox ou DualSense e as features que quem usa
 marcou."* O que a allowlist pula é a **disputa pelo controle** — máscara, grab,
 vpad, que é o `mode`. Não a cor, o gatilho, o volume nem a vibração.
 
 O que este portão cobra:
 
 1. o lançamento chama a ATIVAÇÃO, e não só os dois appliers;
-2. chama **também na allowlist**, e nela a MÁSCARA do perfil chega enquanto o
+2. chama **também na allowlist**, e na allowlist a MÁSCARA do perfil chega enquanto o
    `kind` continua pulado (ALLOWLIST-SO-A-MASCARA-01 — o comportamento do
    embrulho está no par deste arquivo,
    `test_a_mascara_atravessa_a_allowlist.py`; aqui mede-se a fiação);
@@ -33,7 +33,7 @@ O que este portão cobra:
    pedido e cala sobre as outras sete seções;
 5. ativação que falha **não derruba o arming** — o modo é o que põe o controle
    na mão do usuário;
-6. e ela roda **uma vez por lançamento**, não a 1 Hz enquanto o jogo carrega.
+6. e a ativação roda **uma vez por lançamento**, não a 1 Hz enquanto o jogo carrega.
 """
 from __future__ import annotations
 
@@ -217,7 +217,7 @@ def test_na_allowlist_o_perfil_e_ativado_do_mesmo_jeito(
     assert resultado is not None
     assert resultado["motivo"] == "allowlist_steam_input"
     assert espiao.chamadas == [("Sackboy", "launch")], (
-        "a allowlist voltou a tirar o Hefesto da frente. A decisão dela é a "
+        "a allowlist voltou a tirar o Hefesto da frente. A decisão registrada é a "
         "oposta: o que a allowlist pula é a disputa pelo controle (máscara, "
         "grab, vpad), não a cor, o gatilho, o volume nem a vibração"
     )
@@ -346,12 +346,12 @@ def test_a_fabrica_cobre_todo_applier_que_o_gerente_aceita() -> None:
         "a fábrica e o gerente discordam. Faltando na fábrica: "
         f"{sorted(do_gerente - da_fabrica)}; sobrando: "
         f"{sorted(da_fabrica - do_gerente)}. Applier ausente NÃO levanta — a "
-        "seção é ignorada em silêncio, e o defeito só aparece no aparelho dela."
+        "seção é ignorada em silêncio, e o defeito só aparece no aparelho de quem usa."
     )
 
 
 def test_a_fabrica_injeta_o_que_o_daemon_tem() -> None:
-    """E o que ela promete injetar, ela injeta mesmo."""
+    """E o que a fábrica promete injetar, injeta mesmo."""
     from hefesto_dualsense4unix.profiles.manager import (
         APPLIERS_DO_DAEMON,
         gerente_do_daemon,

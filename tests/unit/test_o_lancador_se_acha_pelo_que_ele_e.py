@@ -76,14 +76,14 @@ def test_um_terminal_ao_lado_de_um_lancador_nao_contamina(
 
 def test_a_primeira_pasta_vence(tmp_path: pathlib.Path) -> None:
     """`~/.local/share` sobrepõe `/usr/share` — é o que a spec XDG manda."""
-    do_usuario, sistema = tmp_path / "dela", tmp_path / "sistema"
-    _desktop(do_usuario, "org.libretro.RetroArch", Name="O dela",
+    do_usuario, sistema = tmp_path / "casa", tmp_path / "sistema"
+    _desktop(do_usuario, "org.libretro.RetroArch", Name="O do usuário",
              Categories="Game;Emulator;")
     _desktop(sistema, "org.libretro.RetroArch", Name="O do sistema",
              Categories="Game;Emulator;")
 
     assert jl.lancadores_por_conteudo([do_usuario, sistema]) == {
-        "org.libretro.RetroArch": "O dela"}
+        "org.libretro.RetroArch": "O do usuário"}
 
 
 def test_sem_nome_o_stem_serve(tmp_path: pathlib.Path) -> None:

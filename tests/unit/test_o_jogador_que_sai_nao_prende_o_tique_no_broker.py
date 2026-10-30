@@ -7,7 +7,7 @@ na saída do jogador (``_teardown_player``) e na troca de roupa
 (``_derrubar_para_renascer``), e os dois rodam no ``sync`` do laço do tique: um
 controle que saía segurava a entrada de todos os outros.
 
-Os pads são os de VERDADE, no gadget da bancada; o cliente da descida é o
+Os pads são os de VERDADE, no gadget do ensaio; o cliente da descida é o
 ``HidrawBrokerClient`` de verdade contra o socket que aceita e não responde.
 """
 
