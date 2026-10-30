@@ -43,10 +43,15 @@ def _runtime_desviado() -> Path:
 
 
 def _servidor(caminho: Path) -> socket.socket:
-    if not caminho.parent.is_dir():
-        caminho.parent.mkdir(parents=True)
-    servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    servidor.bind(str(caminho))
+    guardas = list(casa._GUARDAS)
+    casa._GUARDAS.clear()
+    try:
+        if not caminho.parent.is_dir():
+            caminho.parent.mkdir(parents=True)
+        servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        servidor.bind(str(caminho))
+    finally:
+        casa._GUARDAS.extend(guardas)
     servidor.listen(4)
     servidor.setblocking(False)
     return servidor
@@ -156,6 +161,18 @@ def test_a_guarda_recusa_a_conexao_ao_socket_real(dela: _Dela) -> None:
         assert dela.guarda.recusas and dela.guarda.recusas[0].startswith("socket.connect ")
     finally:
         servidor.close()
+
+
+def test_a_guarda_recusa_o_servidor_que_nasce_no_socket_real(dela: _Dela) -> None:
+    caminho = dela.runtime / "hefesto-dualsense4unix" / "h.sock"
+    servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        with pytest.raises(PermissionError):
+            servidor.bind(str(caminho))
+    finally:
+        servidor.close()
+    assert not caminho.exists()
+    assert dela.guarda.recusas and dela.guarda.recusas[0].startswith("socket.bind ")
 
 
 def test_sem_a_guarda_a_mesma_escrita_e_a_mesma_conexao_passam(
