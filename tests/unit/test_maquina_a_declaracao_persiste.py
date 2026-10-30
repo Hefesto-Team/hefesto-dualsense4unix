@@ -40,14 +40,14 @@ CHAVE_VOLATIL = "dev:0003:057E:2009.0001"
 
 @pytest.fixture
 def arquivo(tmp_path: Path) -> Path:
-    """O ``maquina.json`` desta bancada — e a prova de que ele não é o dela.
+    """O ``maquina.json`` deste ensaio — e a prova de que ele não é o de quem roda.
 
     CANÁRIO: se algum dia o módulo resolver ``config_dir`` no topo (o defeito de
     ``app/gui_prefs.py:13``), o caminho deixa de cair no ``tmp_path`` e esta
     asserção é a única coisa entre a suíte e o ``~/.config`` da mantenedora.
     """
     caminho = caminho_da_maquina()
-    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp da bancada"
+    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp do ensaio"
     return caminho
 
 

@@ -194,7 +194,7 @@ def _sem_conhecimento_de_usb(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _esperar_capturas(abertos: list[str], quantas: int, limite_s: float = 5.0) -> None:
-    """Espera as capturas NASCEREM — elas abrem em thread, não no `reconciliar`."""
+    """Espera as capturas NASCEREM — abrem em thread, não no `reconciliar`."""
     limite = time.monotonic() + limite_s
     while len(abertos) < quantas and time.monotonic() < limite:
         time.sleep(0.002)

@@ -1,6 +1,6 @@
 """Nenhum arquivo de teste passa da parte ideal (A-JANELA-ABERTA-CABE-NA-PARTE-01).
 
-Uma parte da suíte nunca fica abaixo do maior arquivo que cai nela: o arquivo único da janela
+Uma parte da suíte nunca fica abaixo do maior arquivo que cai na parte: o arquivo único da janela
 aberta levava 217 s sozinho contra ~133 s de parte ideal (a soma de
 `docs/data/tempos-da-suite.csv` dividida por 24), e a parte 00 ficava com ele só. A régua lê as
 linhas `medido` do CSV e reprova o arquivo que EXISTE em `tests/unit/` acima de soma/24. A linha

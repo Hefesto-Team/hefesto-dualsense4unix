@@ -145,7 +145,7 @@ class TestOQueNasceNoEsquemaNaoNasceMudo:
             return
         assert nasce != mudo, (
             f"{endereco} nasce {nasce!r}, que é exatamente o silêncio deste "
-            f"campo. A ordem dela de 17/09 é que nenhuma feature nasça sem "
+            f"campo. A ordem de 17/09 é que nenhuma feature nasça sem "
             "opinião; se o valor mudou por decisão, mude também a linha deste "
             "campo em `O_QUE_E_MUDO` e escreva a razão no esquema."
         )
@@ -159,8 +159,8 @@ class TestOGatilhoNasceRigidoDeVerdade:
         for lado in ("left", "right"):
             modo = getattr(nascido, lado).mode
             assert modo != "Off", (
-                f"o gatilho {lado} voltou a nascer 'Off'. A decisão dela de "
-                "16/09 é gatilho RÍGIDO em todo perfil sem configuração "
+                f"o gatilho {lado} voltou a nascer 'Off'. O produto decidiu em "
+                "16/09: gatilho RÍGIDO em todo perfil sem configuração "
                 "alterada, e esta é a única das catorze features que nascia "
                 "muda de verdade."
             )
@@ -204,19 +204,19 @@ class TestOGatilhoNasceRigidoDeVerdade:
             assert build_from_name(cfg.mode, cfg.params) != desligado, (
                 f"o perfil de jogo recém-criado chega com o gatilho {lado} "
                 "sem resistência nenhuma — é o caminho que a pessoa percorre "
-                "sem tocar em nada, e é dele que a ordem dela fala."
+                "sem tocar em nada, e é dele que a ordem de 17/09 fala."
             )
 
     def test_o_perfil_que_o_usuario_configurou_continua_mandando(self) -> None:
         """A trava do alcance: nascimento não pisa em escolha gravada."""
         perfil = esquema.Profile(
-            name="o que ela deixou solto",
+            name="o que ficou solto",
             match=esquema.MatchAny(),
             triggers=esquema.TriggersConfig(left=esquema.TriggerConfig(mode="Off")),
         )
         assert perfil.triggers.left.mode == "Off", (
             "o nascimento pisou no `Off` que o perfil declarou. Um default "
-            "que vence o disco apaga trabalho dela."
+            "que vence o disco apaga trabalho do usuário."
         )
         direito = perfil.triggers.right
         assert build_from_name(direito.mode, direito.params) != off(), (
@@ -258,9 +258,9 @@ class TestOsDonosRespondemLigado:
         assert DaemonConfig().rumble_policy == "balanceado"
         assert esquema.RumbleConfig().policy is None, (
             "encher este default faria TODA ativação de perfil IMPOR "
-            "balanceado, e a escolha manual dela seria desfeita na primeira "
+            "balanceado, e a escolha manual do usuário seria desfeita na primeira "
             "troca de janela depois da trava de 30 s. Se isto mudar, é "
-            "decisão dela — e a linha do campo tem de mudar junto."
+            "decisão de produto — e a linha do campo tem de mudar junto."
         )
 
     def test_os_dois_sensores_nascem_de_pe(self) -> None:
@@ -308,18 +308,18 @@ class TestAFilaDoUsuario:
             if v.onde == esquema.AGUARDA_A_PALAVRA_DO_USUARIO
         )
         assert do_esquema == A_FILA_DO_USUARIO, (
-            "a fila dela mudou sem ninguém declarar nos dois lugares. "
+            "a fila do usuário mudou sem ninguém declarar nos dois lugares. "
             f"no esquema: {sorted(do_esquema)}; neste arquivo: "
             f"{sorted(A_FILA_DO_USUARIO)}. Estacionar uma feature em "
             "`AGUARDA_A_PALAVRA_DO_USUARIO` é a única saída que esta régua deixa — "
-            "e ela custa uma linha aqui de propósito."
+            "e essa saída custa uma linha aqui de propósito."
         )
 
     @pytest.mark.parametrize("endereco", sorted(A_FILA_DO_USUARIO))
     def test_cada_espera_diz_o_que_falta(self, endereco: str) -> None:
         linha = esquema.NASCIMENTO_DOS_CAMPOS[endereco]
         assert linha.falta.strip(), (
-            f"{endereco} espera a palavra dela e não diz O QUE perguntar. Uma "
+            f"{endereco} espera a palavra do usuário e não diz O QUE perguntar. Uma "
             "fila sem a pergunta escrita é uma feature esquecida com nome bonito."
         )
 

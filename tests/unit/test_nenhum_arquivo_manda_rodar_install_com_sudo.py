@@ -79,12 +79,12 @@ def test_nenhum_arquivo_versionado_manda_instalar_com_sudo() -> None:
         "`install.sh` NUNCA com sudo — com sudo o HOME vira /root e a instalação "
         "não existe para o usuário. A forma certa é `./install.sh` (ou "
         "`./install.sh --yes` sem terminal interativo): o script pede a senha "
-        "sozinho no passo que precisa dela.\n  " + "\n  ".join(violacoes)
+        "sozinho no passo que precisa da raiz.\n  " + "\n  ".join(violacoes)
     )
 
 
 def test_toda_dispensa_e_um_arquivo_que_de_fato_cita_a_forma_proibida() -> None:
-    """A dispensa vale por ARQUIVO INTEIRO — então ela não pode ser barata."""
+    """A dispensa vale por ARQUIVO INTEIRO — então não pode ser barata."""
     rastreados = {
         c.relative_to(REPO_ROOT).as_posix() for c in _arquivos_rastreados()
     }
@@ -96,7 +96,7 @@ def test_toda_dispensa_e_um_arquivo_que_de_fato_cita_a_forma_proibida() -> None:
         texto = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="ignore")
         assert SUDO_INSTALL_RE.search(texto), (
             f"dispensa RANÇOSA: {rel} já não cita a forma proibida ({razao!r}). "
-            "Apague a linha — enquanto ela existir, o portão está desligado "
+            "Apague a linha — enquanto existir, o portão está desligado "
             "para esse arquivo inteiro sem que nada o justifique"
         )
 

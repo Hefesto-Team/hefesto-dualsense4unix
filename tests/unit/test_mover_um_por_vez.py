@@ -24,7 +24,7 @@ PONTE = RAIZ / "scripts" / "bt_ponte_privilegiada.sh"
 
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A trava e o diário numa pasta de teste — nunca os dela, em ``/run``."""
+    """A trava e o diário numa pasta de teste — nunca os reais, em ``/run``."""
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     caminho = tmp_path / "radio-diario.jsonl"
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(caminho))
@@ -71,13 +71,13 @@ def _central(
 def _o_usuario_segura_ps_create(
     mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho: str,
 ) -> None:
-    """Dois segundos depois de a janela abrir, ela segura PS + Create."""
+    """Dois segundos depois de a janela abrir, quem usa segura PS + Create."""
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(aparelho))
 
 
 def _o_usuario_pareia(mundo: rm.RadioDeMentira, relogio: rm.Relogio, central: cr.CentralDoRadio,
                 aparelho: str) -> None:
-    """O «Conectar»: ela segura PS + Create e clica em «Parear» na linha dele"""
+    """O «Conectar»: quem usa segura PS + Create e clica em «Parear» na linha dele"""
     rm.o_usuario_pareia(relogio, mundo, central, aparelho)
 
 
@@ -127,7 +127,7 @@ def test_a_ordem_e_desligar_esquecer_a_origem_e_so_entao_parear(
     janela = linha.index(("StartDiscovery", QUARTO, ""))
     parear = linha.index(("Pair", QUARTO, VERMELHO))
     assert desligar < esquecer < janela < parear
-    assert mundo.gestos_perdidos == [], "o gesto dela caiu com o controle ligado"
+    assert mundo.gestos_perdidos == [], "o gesto de quem usa caiu com o controle ligado"
 
 
 def test_o_parear_que_falha_deixa_o_controle_sem_casa_e_o_conectar_o_traz(
@@ -307,7 +307,7 @@ def test_o_fone_ja_conectado_no_destino_nao_se_move_de_novo(
 def test_a_trava_fica_na_mao_durante_o_gesto_inteiro(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """Enquanto ela segura PS + Create, nenhum outro motor escreve no rádio."""
+    """Enquanto quem usa segura PS + Create, nenhum outro motor escreve no rádio."""
     central = _central(dono, mundo, relogio)
     _o_usuario_segura_ps_create(mundo, relogio, VERMELHO)
     tentativas: list[str] = []
@@ -442,7 +442,7 @@ def test_a_d8_nunca_escolhe_o_adaptador_em_que_ele_ja_esta(
 def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O «Conectar» sem destino: a D8 escolhe, e o controle que ela escolhe chega."""
+    """O «Conectar» sem destino: a D8 escolhe, e o controle escolhido chega."""
     mundo.pareado(VARANDA, rm.ROXO)
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
     mundo.fisicos[rm.FONE] = rm.Fisico(rm.FONE, rm.CLASSE_DE_FONE, pareando=True)
@@ -468,7 +468,7 @@ def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
 def test_o_conectar_de_quem_morava_em_outro_adaptador_e_um_mover(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """Ela desliga o vermelho (ligado, o PS + Create não faz nada — passo c1 da"""
+    """Quem usa desliga o vermelho (ligado, o PS + Create não faz nada — passo c1 da"""
     central = _central(dono, mundo, relogio)
     mundo.desligar(VERMELHO)
     _o_usuario_pareia(mundo, relogio, central, VERMELHO)
@@ -484,7 +484,7 @@ def test_o_conectar_de_quem_morava_em_outro_adaptador_e_um_mover(
 def test_o_conectar_ignora_o_que_o_destino_ja_conhecia(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """Uma sobra de busca antiga no quarto não é quem ela está segurando: ela"""
+    """Uma sobra de busca antiga no quarto não é o controle segurado agora:"""
     sobra = rm.Fisico("aa:bb:cc:00:00:5a", rm.CLASSE_DE_CONTROLE)
     mundo.fisicos[sobra.endereco] = sobra
     mundo._achar(QUARTO, sobra)

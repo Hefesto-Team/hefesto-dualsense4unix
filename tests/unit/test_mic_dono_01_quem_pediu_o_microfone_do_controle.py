@@ -106,7 +106,7 @@ class TestOAvisoNaoMandaDesfazerAEscolhaDoUsuario:
     def test_com_a_marca_o_daemon_cala_sobre_o_microfone(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A PONTA QUE CHEGA NA PESSOA — e é ela que importa.
+        """A PONTA QUE CHEGA NA PESSOA — e é essa que importa.
 
         O degrau certo não vale nada se o aviso sair assim mesmo. Aqui o
         WirePlumber ESTÁ com o DualSense fixado (é o que o usuário pediu) e o produto

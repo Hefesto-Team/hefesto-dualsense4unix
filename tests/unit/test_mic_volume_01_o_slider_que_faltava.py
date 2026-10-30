@@ -31,7 +31,7 @@ transportes é uma FONTE no sistema — no cabo o source ALSA do controle, no
 rádio o source que a ponte de áudio publica. Quem chama não escolhe caminho.
 O ganho do aparelho (`common[6]`) é o segundo degrau, medido só no cabo. Fato
 substituído em 29/09/2026: esta linha dizia que o DualSense não expõe
-registrador de ganho de microfone; a bancada o mediu em 09/09/2026.
+registrador de ganho de microfone; o ensaio no aparelho o mediu em 09/09/2026.
 
 **E `sem_fonte` é resposta, não falha.** Por Bluetooth, sem a ponte de pé, não
 existe fonte de captura (medido em 16/08: `pactl list cards` traz só as duas

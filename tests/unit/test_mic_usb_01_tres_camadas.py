@@ -27,7 +27,7 @@ Cobertura, toda pelo caminho PÚBLICO:
 - o CLI `mic mute|unmute|release` ligado ao daemon de verdade por um socket de
   teste — a prova de que o método novo tem chamador vivo;
 - as funções de parsing do `doctor.sh` para as camadas 1 e 2, com amostras
-  copiadas da saída REAL desta máquina, e a fiação delas no `main`.
+  copiadas da saída REAL desta máquina, e a sua fiação no `main`.
 
 MACs fake (regra da casa).
 """

@@ -118,7 +118,7 @@ class _Fabrica:
 
 
 def _fala(padrao: str) -> list[float]:
-    """Uma frase em passos de 40 ms: ``#`` é sílaba, ``.`` é a pausa entre elas."""
+    """Uma frase em passos de 40 ms: ``#`` é sílaba, ``.`` é a pausa entre as sílabas."""
     return [0.20 if ch == "#" else PISO_MEDIDO_P50 for ch in padrao]
 
 
@@ -185,7 +185,7 @@ def test_a_histerese_nao_pisca_entre_as_silabas() -> None:
 
 
 def test_a_histerese_ignora_o_piso_de_silencio_medido() -> None:
-    """A sala quieta dela NÃO acende a luz — o piso PROPRIAMENTE DITO."""
+    """A sala quieta NÃO acende a luz — o piso PROPRIAMENTE DITO."""
     relogio = _Relogio()
     hist = Histerese()
     for _ in range(200):
@@ -193,7 +193,7 @@ def test_a_histerese_ignora_o_piso_de_silencio_medido() -> None:
         relogio.anda(PASSO_S)
     assert estado is False
     assert PISO_MEDIDO_P99 < LIMIAR_SAI, (
-        "o p99 do piso medido sustenta a luz acesa: ela nunca apagaria"
+        "o p99 do piso medido sustenta a luz acesa: a luz nunca apagaria"
     )
 
 
@@ -216,7 +216,7 @@ def test_a_sala_vazia_do_usuario_nao_acende_a_luz_nenhuma_vez() -> None:
 
     assert acendeu == 0, (
         f"a luz acendeu {acendeu} vez(es) numa sala onde ninguém falou — "
-        "os impulsos do piso dela passaram pela régua"
+        "os impulsos do piso medido passaram pela régua"
     )
 
 
@@ -278,7 +278,7 @@ def test_a_histerese_tem_dois_degraus_e_o_de_baixo_e_mais_baixo() -> None:
 
 
 def test_a_histerese_apaga_quando_o_silencio_passa_de_segura_s() -> None:
-    """Acesa, ela apaga — e apaga dentro do tempo escrito, não muito depois."""
+    """Acesa, a luz apaga — e apaga dentro do tempo escrito, não muito depois."""
     relogio = _Relogio()
     hist = Histerese()
     assert _acender(hist, relogio) is True
@@ -422,7 +422,7 @@ def test_o_parec_nasce_com_cano_na_saida_e_isso_e_a_trava_de_morte(
 
     assert vistos["stdout"] is sp.PIPE, (
         "o `parec` nasceu SEM cano na saída: quando o daemon morrer ele fica "
-        "órfão com o microfone dela aberto"
+        "órfão com o microfone de quem usa aberto"
     )
     assert "start_new_session" not in vistos or not vistos["start_new_session"]
 
@@ -535,7 +535,7 @@ def test_ninguem_ouvindo_nao_abre_processo_nenhum() -> None:
 
 
 def test_quem_sai_da_lista_e_fechado_na_mesma_volta() -> None:
-    """A captura não pode sobreviver ao ouvinte: ela segura o isócrono USB e o"""
+    """A captura não pode sobreviver ao ouvinte: segura o isócrono USB e o"""
     fabrica, relogio = _Fabrica(), _Relogio()
     with _medidor(fabrica, relogio) as medidor:
         medidor.seguir({"aaa": "alsa_input.exemplo"})
@@ -628,7 +628,7 @@ def test_o_fluxo_que_emudece_e_fechado_e_solta_o_microfone_do_usuario() -> None:
         relogio.anda(MUDEZ_S + 0.5)
         medidor.bombear(timeout_s=0.0)
         assert fabrica.abertos[0].parado, (
-            "o `parec` mudo ficou de pé com o microfone dela aberto"
+            "o `parec` mudo ficou de pé com o microfone de quem usa aberto"
         )
         assert medidor.captando() == {"aaa": None}
 
@@ -719,7 +719,7 @@ def test_parar_e_idempotente_e_fecha_tudo() -> None:
 def test_os_numeros_medidos_estao_na_faixa_que_a_medicao_deixou(
     nome: str, valor: float
 ) -> None:
-    """Guarda de faixa, não de valor: quem ajustar na bancada com ela tem"""
+    """Guarda de faixa, não de valor: quem ajustar no ensaio no aparelho tem"""
     faixas = {
         "TAXA_HZ": (10, 50),
         "LIMIAR_ENTRA": (PISO_MEDIDO_P99 * 2.0, 0.2),

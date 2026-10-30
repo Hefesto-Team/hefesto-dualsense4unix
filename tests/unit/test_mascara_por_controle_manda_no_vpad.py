@@ -58,13 +58,13 @@ O QUE ESTA BATERIA MEDE, e por que cada peça existe
    divergentes do P1. Trocar um defeito por outro não é cura.
 
 5. **A MÁSCARA DA SESSÃO NÃO É CONTAMINADA** pela escolha de um aparelho. São
-   duas máscaras e confundi-las destrói dado dela: ``config.gamepad_flavor`` e
+   duas máscaras e confundi-las destrói dado do usuário: ``config.gamepad_flavor`` e
    o ``save_gamepad_emulation`` são a máscara do JOGO; a escolha do aparelho
    mora no arquivo próprio. Carimbar uma como a outra apagaria a escolha do usuário
    do disco — o defeito do Sackboy (22/08) pelo avesso — e ainda contaminaria
    todo secundário, que herda ``config.gamepad_flavor`` no ``_flavor()``.
 
-Bancada hermética, no mesmo padrão de ``test_mascara_por_jogador_01.py``: faixa
+Ensaio hermético, no mesmo padrão de ``test_mascara_por_jogador_01.py``: faixa
 forjada ``aa:bb:cc:00:00:*`` (regra da casa — nada de MAC real em arquivo
 versionado), ``config_dir`` em ``tmp_path``, **nenhum** ``/dev/uinput``,
 **nenhum** ``/dev/uhid``, nenhum aparelho, nenhum GTK.
@@ -246,7 +246,7 @@ def test_duzentos_tiques_do_coop_nao_recriam_o_vpad_de_quem_escolheu(
     assert flavors == ["xbox", "xbox"], "os dois secundários nascem no modo único"
     assert not any(v.stopped for v in criados), (
         "nenhum vpad podia ter sido parado: parar é a primeira metade da "
-        "recriação, e ela não pode acontecer fora do Aplicar"
+        "recriação, e a recriação não pode acontecer fora do Aplicar"
     )
 
 
@@ -311,7 +311,7 @@ def _daemon_do_p1(uniq: str | None, flavor: str) -> Any:
 
 @pytest.fixture()
 def p1(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Bancada do `start_gamepad_emulation_desfecho` sem tocar em disco nem kernel."""
+    """Ensaio do `start_gamepad_emulation_desfecho` sem tocar em disco nem kernel."""
     _VpadDeMentira.criados = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
@@ -396,7 +396,7 @@ def test_o_que_o_disco_recebe_e_a_mascara_do_jogo(
 
     assert gravado == [(True, "xbox")], (
         f"o disco recebeu {gravado!r} — se for 'dualsense', a escolha de "
-        "máscara dela some no boot seguinte"
+        "máscara de quem usa some no boot seguinte"
     )
 
 

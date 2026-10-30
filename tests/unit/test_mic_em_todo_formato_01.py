@@ -68,12 +68,12 @@ def test_o_mic_e_curado_antes_do_exit_dos_formatos_nao_nativos() -> None:
     assert chamadas, "ninguém chama mais o dono dos drop-ins do WirePlumber"
     assert any(linha < exit_linha for linha in chamadas), (
         f"o mic só é curado depois do `exit 0` da linha {exit_linha} — "
-        "flatpak/appimage/deb saem sem o promotor, e o monitor vence a voz dela"
+        "flatpak/appimage/deb saem sem o promotor, e o monitor vence a voz de quem fala"
     )
 
 
 def test_o_ramo_nao_nativo_respeita_as_flags_do_usuario() -> None:
-    """A cura não pode decidir no lugar dela."""
+    """A cura não pode decidir no lugar do usuário."""
     linhas = _texto().splitlines()
     exit_linha = _linha_do_exit_da_bifurcacao()
     trecho = "\n".join(linhas[:exit_linha])
@@ -94,7 +94,7 @@ def test_o_ramo_nao_nativo_respeita_as_flags_do_usuario() -> None:
             continue
         antes = "\n".join(linhas[max(0, linha - 6) : linha])
         assert re.search(r"WITH_WIREPLUMBER_(FIX|DISABLE_MIC)", antes), (
-            f"a chamada da linha {linha} ({modo}) não está sob a flag dela"
+            f"a chamada da linha {linha} ({modo}) não está sob a flag do usuário"
         )
         conferidas += 1
     assert conferidas, (
@@ -149,7 +149,7 @@ PROMOTOR = "51-hefesto-dualsense-no-default-source.conf"
 
 
 def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
-    """A PREMISSA da cura, travada — se ela cair, a cura vira ruído."""
+    """A PREMISSA da cura, travada — se a premissa cair, a cura vira ruído."""
     receitas = [
         RAIZ / "packaging" / "debian" / "control",
         RAIZ / "packaging" / "fedora" / "hefesto-dualsense4unix.spec",

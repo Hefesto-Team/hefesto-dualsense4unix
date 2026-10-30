@@ -63,7 +63,7 @@ def test_as_duas_entradas_da_frente_sao_vizinhas_e_o_sysfs_nao_sabe() -> None:
     pares = vizinhas_de_verdade(mapa_do_usuario(), ensaio.censo())
 
     assert pares == (("1", "2"), ), (
-        f"a vizinhança pelo desenho dela mudou: {pares}"
+        f"a vizinhança pelo desenho de quem usa mudou: {pares}"
     )
     assert vizinhancas_apertadas([*mesa.adaptadores, *mesa.radios]) == [], (
         "a vizinhança pelo sysfs passou a ver o par da frente; se isso mudou, "

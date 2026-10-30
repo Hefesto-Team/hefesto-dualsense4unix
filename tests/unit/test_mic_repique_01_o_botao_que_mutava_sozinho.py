@@ -1,6 +1,6 @@
 """MIC-REPIQUE-01 e MIC-DOIS-DONOS-01 — o microfone mudo dentro do jogo.
 
-Noite de 18→19/08/2026. Ela não conseguia jogar, e quando o controle enfim
+Noite de 18→19/08/2026. Não dava para jogar, e quando o controle enfim
 funcionou o microfone estava mudo DENTRO do jogo. O que foi medido por fora:
 
 * a fonte padrão do sistema É o microfone do DualSense, ``Mute: não``,
@@ -24,7 +24,7 @@ escrito em ``core/backend_pydualsense.py:233``, em ``set_microphone_mute`` e
 em ``docs/protocol/ipc-unix-socket.md``), e o ``mic_button_loop`` alterna o
 mudo do SISTEMA na MESMA borda. Dois mudos em série: o som só passa com os
 dois abertos. Um número ÍMPAR de bordas — três, como no journal — deixa os
-dois em fase oposta, e é exatamente esse o retrato que ela mediu: ``pactl``
+dois em fase oposta, e é exatamente esse o retrato medido: ``pactl``
 respondendo ``Mute: não`` com o microfone morto no jogo.
 
 Hipótese vs. medição, para quem vier depois: que houve três toggles é
@@ -212,7 +212,7 @@ class TestARajadaDeBordas:
 
     @pytest.mark.asyncio
     async def test_a_borda_dentro_da_carencia_nao_vira_gesto(self) -> None:
-        """A CARÊNCIA PÓS-CONEXÃO, medida — e ela não tinha régua nenhuma."""
+        """A CARÊNCIA PÓS-CONEXÃO, medida — e não tinha régua nenhuma."""
         backend = _BackendComBordas((_P1,))
         daemon = _Daemon(controller=backend, config=_Config())
         fila = daemon.bus.subscribe(EventTopic.MIC_DA_MESA)

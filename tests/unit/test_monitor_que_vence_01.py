@@ -1,6 +1,6 @@
 """Um microfone de verdade nunca perde para um monitor.
 
-MONITOR-QUE-VENCE-01 (08/08/2026). MEDIDO na bancada, com o drop-in
+MONITOR-QUE-VENCE-01 (08/08/2026). MEDIDO na máquina de teste, com o drop-in
 instalado pelo `install.sh`:
 
     alsa_output…DualSense…analog-surround-40.monitor   priority.session = 1109
@@ -70,7 +70,7 @@ def test_a_entrada_do_controle_vence_qualquer_monitor() -> None:
         assert valor > MONITOR_MAIS_ALTO_MEDIDO, (
             f"a entrada do controle está em {valor}, e o monitor do próprio "
             f"controle foi MEDIDO em {MONITOR_MAIS_ALTO_MEDIDO}. Um monitor "
-            "vencendo um microfone significa que a gravação dela captura o áudio "
+            "vencendo um microfone significa que a gravação de quem usa captura o áudio "
             "de SAÍDA, não a voz. Ver "
             "docs/process/sprints/2026-08-08-MONITOR-QUE-VENCE-01-*.md"
         )
@@ -93,7 +93,7 @@ def test_a_placa_e_o_monitor_continuam_rebaixados() -> None:
     corpo = "\n".join(linhas)
     assert "alsa_card" in corpo, "sumiu a regra que cobre a placa do controle"
     assert "[Mm]onitor" in corpo, (
-        "sumiu a regra do monitor. Ela não dispara hoje (o `.monitor` não é nó do "
+        "sumiu a regra do monitor. Não dispara hoje (o `.monitor` não é nó do "
         "monitor de ALSA), mas fica porque a intenção está certa e custa zero — e "
         "passa a valer sozinha se a camada estender o alcance."
     )
@@ -106,5 +106,5 @@ def test_o_porque_esta_no_arquivo() -> None:
     for numero in (str(MONITOR_MAIS_ALTO_MEDIDO), str(CAPTURA_REAL_MEDIDA)):
         assert numero in texto, (
             f"o valor medido {numero} sumiu do arquivo — sem ele a faixa vira "
-            "opinião, e a próxima pessoa não sabe contra o que ela foi calibrada."
+            "opinião, e a próxima pessoa não sabe contra o que a faixa foi calibrada."
         )

@@ -12,7 +12,7 @@ TODOS os controles assim que havia dois. O medidor de cada card casa certo desde
 então; só o controle deslizante de volume não casava, e o gesto ia para a
 primeira placa que a lista devolvesse.
 
-Na mesa cheia isso quer dizer: ela mexe no controle deslizante do card do
+Na mesa cheia isso quer dizer: quem usa mexe no controle deslizante do card do
 Jogador 2 e abaixa o microfone do Jogador 1.
 
 **Por que o nome do nó não serve de identidade, e por isso o casamento é por USB:**

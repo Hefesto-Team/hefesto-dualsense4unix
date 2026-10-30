@@ -615,7 +615,7 @@ def test_o_tocador_sai_antes_do_endpoint_do_aparelho(
     """Sem DualSense e sem jogo, os endpoints caem — e o tocador sai antes do endpoint.
 
     MORDIDA: tire o ``self._parar_o_tocador(marca)`` do laço que derruba os
-    endpoints — o fluxo fica sem nó, e o recuo manda o zumbido à saída dela.
+    endpoints — o fluxo fica sem nó, e o recuo manda o zumbido à saída de som.
     """
     controles = _no_radio_os_quatro(mundo)
     mundo.mesa.volta(*controles)

@@ -112,7 +112,7 @@ def test_sem_o_script_a_eleicao_recusa_em_vez_de_inventar_criterio(
     r = eleitor._eleger_nome(_ALVO)
 
     assert r.ok is False
-    assert pactl.escritas == [], "nada foi escrito no áudio dela"
+    assert pactl.escritas == [], "nada foi escrito no áudio de quem usa"
     assert "segundo critério" in r.motivo
 
 
@@ -138,7 +138,7 @@ def test_flag_que_o_script_do_disco_nao_conhece_nao_e_chamada(
 
 
 def test_alvo_que_nao_se_sustenta_nao_e_escrito(pactl: Any) -> None:
-    """Eleger nó sem porta usável sobrescreve a preferência dela por lixo."""
+    """Eleger nó sem porta usável sobrescreve a preferência do usuário por lixo."""
     pactl.sustenta = False
     eleitor = elm.EleitorDeMicrofone()
 

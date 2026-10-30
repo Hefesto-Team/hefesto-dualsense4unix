@@ -1,4 +1,4 @@
-"""NATIVO-RUMBLE-01, a metade da GUI: a recusa do daemon chega aos olhos dela."""
+"""NATIVO-RUMBLE-01, a metade da GUI: a recusa do daemon chega aos olhos de quem usa."""
 
 from __future__ import annotations
 

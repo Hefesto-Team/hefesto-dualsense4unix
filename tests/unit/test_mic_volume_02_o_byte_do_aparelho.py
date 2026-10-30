@@ -1,11 +1,11 @@
-"""MIC-VOLUME-02 — o `common[6]` do aparelho, medido na bancada e LIGADO.
+"""MIC-VOLUME-02 — o `common[6]` do aparelho, medido no ensaio e LIGADO.
 
 **Decisão, 09/09/2026** (`D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-
 APARELHO`): *"3-c"* — ligar o byte do aparelho, revogando neste ponto a
 decisão de 06/09 que o mantinha fora da chamada.
 
-O QUE DECIDIU FOI A BANCADA, e não uma leitura de código
--------------------------------------------------------
+O QUE DECIDIU FOI O ENSAIO NO APARELHO, e não uma leitura de código
+-------------------------------------------------------------------
 Duas afirmações desta casa se contradiziam, e nenhuma podia desempatar a outra:
 
 * a docstring do `mic.volume.set` dizia que *"o DualSense não expõe registrador
@@ -30,7 +30,7 @@ devolvida)
 3. a vizinhança: escrever o microfone NÃO pode mexer em fone, alto-falante nem
    rota — cada byte daquele bloco tem dono próprio;
 4. `microfone=False` na devolução do alto-falante: sem ele, um "Devolver" do som
-   apaga em silêncio o ganho de captura que ela ajustou;
+   apaga em silêncio o ganho de captura que o usuário ajustou;
 5. a chamada no `mic.volume.set`: arrancá-la faz o gesto do usuário mexer só na fonte
    do sistema, que é o mundo de antes desta sprint;
 6. a chamada no applier de perfil: arrancá-la faz o gesto do usuário valer e o PERFIL

@@ -26,7 +26,7 @@ def test_a_regua_volta_vazia_hoje() -> None:
 
 
 def test_a_regua_sabe_acusar_quando_o_fato_errado_volta() -> None:
-    """A mordida: sem esta régua saber ACUSAR, ela não prova nada — só que"""
+    """A mordida: sem esta régua saber ACUSAR, não prova nada — só que"""
     caminho = REPO_ROOT / "src" / "hefesto_dualsense4unix" / "utils" / "session.py"
     original = caminho.read_text(encoding="utf-8")
     contaminado = original + "\n# profile current — reintroduzido para a mordida\n"

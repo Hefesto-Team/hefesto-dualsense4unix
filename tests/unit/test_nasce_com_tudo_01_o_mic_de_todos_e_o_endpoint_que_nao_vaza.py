@@ -11,7 +11,7 @@ giroscopio e afins"*, *"alem de som"*.
 Os dois sem microfone nunca haviam sido DECLARADOS no `maquina.json`, e a aba
 respondia *"o sistema não vê um microfone neste controle"* — uma recusa que a
 pessoa não tinha como resolver, porque o botão que a resolveria estava atrás de
-uma declaração que ninguém sabia existir. Vinte e sete dessas no diário dela.
+uma declaração que ninguém sabia existir. Vinte e sete dessas no diário medido.
 
 E a varredura do mesmo dia achou o segundo: **vinte e dois `module-null-sink`
 de háptica onde deviam existir quatro**, porque a idempotência olhava a memória
@@ -159,7 +159,7 @@ def test_o_endpoint_de_pe_com_a_mesma_ancora_e_adotado() -> None:
 
 
 def test_os_duplicados_da_mesma_ancora_caem_na_adocao() -> None:
-    """Cinco do mesmo controle era o estado REAL da bancada."""
+    """Cinco do mesmo controle era o estado REAL da máquina de teste."""
     nome = nome_do_endpoint(_L1)
     pactl = _Pactl([(str(70 + i), nome, _ANCORA.declarado) for i in range(5)])
     EndpointDeHaptica(uniq=_L1, ancora=_ANCORA, runner=pactl).iniciar()

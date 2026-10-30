@@ -1,10 +1,9 @@
 """MULTITOQUE-01 — os DOIS dedos do touchpad, do kernel até a bolinha.
 
-**A QUEIXA É DO USUÁRIO, com os quatro DualSense na mesa, 18/09/2026:** *"NA
-INTERFACE NA ABA CONTROLES SÓ MOSTRA UM TOQUE NO DESENHO DO SVG APESAR DO
-TOUCH SER MULTITOQUE"* — e ela provou no mesmo minuto: *"SE EU USAR 3 DEDOS
-DOU ZOOM E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE. COMO NUM
-NOTEBOOK."*  <!-- noqa-acento: citação literal -->
+**O DEFEITO DE USO, com os quatro DualSense na mesa, 18/09/2026:** a aba
+Controles mostrava um toque só no desenho do SVG, apesar de o touchpad ser
+multitoque — e o próprio uso provou no mesmo minuto: três dedos dão zoom e dois
+rolam a tela, como num notebook.
 
 **O QUE A MEDIÇÃO DEVOLVEU, com os dedos do usuário no controle azul:**
 

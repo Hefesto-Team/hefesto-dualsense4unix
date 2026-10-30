@@ -165,8 +165,8 @@ def test_sysfs_ilegivel_devolve_ausencia_e_nao_levanta() -> None:
 def test_controle_no_cabo_nao_ocupa_radio_de_ninguem() -> None:
     """O cabo não toca no rádio, e o vpad não tem rádio para tocar.
 
-    Mordida: arrancar a exclusão de `transport != "bt"`. Sem ela os dois
-    DualSense do cabo desta bancada apareceriam como 520,8 fatias ocupadas — o
+    Mordida: arrancar a exclusão de `transport != "bt"`. Sem a exclusão os dois
+    DualSense do cabo desta máquina de teste apareceriam como 520,8 fatias ocupadas — o
     produto acusando os próprios controles de encher um rádio que eles nem
     usam.
     """

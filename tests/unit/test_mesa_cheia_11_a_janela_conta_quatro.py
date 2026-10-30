@@ -105,7 +105,7 @@ class TestAudioSeConta:
         assert sd.contar_placas_dualsense("") == 0
 
     def test_o_denominador_e_quem_esta_no_cabo(self) -> None:
-        """Dois USB e dois BT: só o cabo cria placa ALSA (medido na bancada)."""
+        """Dois USB e dois BT: só o cabo cria placa ALSA (medido na máquina de teste)."""
         assert sd.controles_no_cabo(mesa_cheia()) == 2
         assert sd.controles_no_cabo(None) is None
         assert sd.controles_no_cabo({}) is None
@@ -382,11 +382,11 @@ SINGULAR_LEGITIMO: dict[str, str] = {
         "termina antes da vírgula de propósito: com o corte por ORAÇÃO, uma marca "
         "que atravessa o corte não casa com nada",
     "Como o jogo vê o controle":
-        "ADIADO: é léxico DELA — 'O jogo vê o controle como:' está em quatro "
+        "ADIADO: é léxico do produto — 'O jogo vê o controle como:' está em quatro "
         "módulos (home_actions, profiles_actions, painel_no_jogo, relancar), "
         "nos testes e em docs/usage/{interface,modos}.md. A máscara é da SESSÃO "
         "(D-6) e vira do JOGADOR na D-5, que ainda não foi medida com a mesa "
-        "cheia; pluralizar antes é responder por ela",
+        "cheia; pluralizar antes é responder no lugar do produto",
     "escolha um botão do controle": "VERDADE: o atalho é do PERFIL, não de uma peça",
 }
 
@@ -406,7 +406,7 @@ from hefesto_dualsense4unix.daemon import ipc_handlers as ih
 
 
 def regra_velha(state: dict[str, Any]) -> bool:
-    """A flag como ela era até 14/08: o Modo Nativo e o transporte do PRIMÁRIO."""
+    """A flag como era até 14/08: o Modo Nativo e o transporte do PRIMÁRIO."""
     return bool(state["native_mode"] and state["transport"] == "bt")
 
 

@@ -1,6 +1,6 @@
 """Nenhuma pasta versionada é só casca: pacote vazio, `.gitkeep` e README de uma linha saem.
 
-O git não guarda pasta vazia; guarda a casca que sobra dela: um `__init__.py` de 0 bytes, um
+O git não guarda pasta vazia; guarda a casca que sobra: um `__init__.py` de 0 bytes, um
 `.gitkeep` ou um README de uma linha sozinhos numa pasta sem mais nada. Foi assim que
 `tui/screens/` ficou, sem que ninguém o importasse (nasceu esboço em 20/04/2026 e nunca
 ganhou um módulo). A

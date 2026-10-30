@@ -8,7 +8,7 @@ desta máquina e um guardava o `~/.config` pelo nome literal, o que em outra má
 nada.
 
 A régua lê os arquivos versionados de `scripts/`, `tests/` e `src/` e reprova o ponto de montagem
-desta bancada e o `/home/<usuário que roda>/`. Dado de processo forjado usa um `HOME` forjado
+desta máquina e o `/home/<usuário que roda>/`. Dado de processo forjado usa um `HOME` forjado
 (`/home/usuario/...`); o `HOME` real se pergunta à tabela de usuários. Os registros brutos de
 `docs/data/ensaios-brutos/` ficam fora: são a saída de um ensaio como ele rodou.
 """
@@ -26,8 +26,8 @@ PASTAS = ("scripts", "tests", "src")
 
 ISENTOS: dict[str, str] = {
     "tests/unit/test_as_abas_vivas_falam_com_o_daemon_certo.py": (
-        "10/10/2026: é a régua que proíbe a árvore dela nas abas vivas; o caminho literal é o "
-        "que ela procura."),
+        "10/10/2026: é a régua que proíbe a árvore de quem usa nas abas vivas; o caminho "
+        "literal é o que a régua procura."),
 }
 
 

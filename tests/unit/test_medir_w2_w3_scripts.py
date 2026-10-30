@@ -222,7 +222,7 @@ class TestAssetPowersavePadrao:
     def test_asset_diz_que_e_o_padrao_do_install(self) -> None:
         assert "PADRÃO do install.sh numa máquina sem bateria com esse adaptador" in NM_CONF
         assert "GATEADO" not in NM_CONF and "SÓ É INSTALADO APÓS" not in NM_CONF, (
-            "a premissa do gate por evidência caiu (decisão dela, 23/10/2026)"
+            "a premissa do gate por evidência caiu (decisão de 23/10/2026)"
         )
         assert "medir_w2_lps.sh" in NM_CONF, (
             "o cabeçalho ainda aponta a medição A/B para quem quiser conferir"

@@ -4,7 +4,7 @@ Três réguas, três defeitos diferentes:
 
 * **`mic.led.set`** é a porta de emergência da inversão. A devolução de posse
   por-byte já existia, já era testada e **não tinha um único chamador de
-  produção** — tomada a posse do LED numa sessão, ela só caía quando o handle
+  produção** — tomada a posse do LED numa sessão, a posse só caía quando o handle
   morresse. Confundir `false` com `null` foi o defeito do `3d9bb7e`, no byte
   vizinho; por isso a chave é obrigatória.
 
@@ -310,7 +310,7 @@ class _Resultado:
 
 
 class _EleitorDublado:
-    """`EleitorDeMicrofone` de bancada: guarda o que lhe pediram."""
+    """`EleitorDeMicrofone` de ensaio: guarda o que lhe pediram."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, Any]] = []
@@ -456,7 +456,7 @@ async def test_o_mudo_de_quem_nao_elegeu_nao_tira_o_microfone_de_quem_elegeu() -
     )
     assert eleitor.eleito == _J1, "e a J1 continua sendo quem está com o mic"
     assert backend.leds[_J1] is True, (
-        "o LED da J1 tem de continuar aceso — ela continua no ar"
+        "o LED da J1 tem de continuar aceso — a J1 continua no ar"
     )
     assert backend.leds[_J2] is False, (
         "e o do J2 apaga: o mudo do firmware é dele, a luz é dele"
@@ -480,7 +480,7 @@ async def test_o_eleito_que_vai_a_mudo_devolve_de_verdade() -> None:
     eleitor = daemon._eleitor_de_microfone
     assert eleitor.chamadas == [("eleger", _J1), ("devolver", None)]
     assert eleitor.eleito is None, "a posse cai quando o eleito devolve"
-    assert backend.leds[_J1] is False, "e o plástico dela apaga junto"
+    assert backend.leds[_J1] is False, "e o plástico apaga junto"
 
 
 @pytest.mark.asyncio
@@ -494,7 +494,7 @@ async def test_sem_ninguem_eleito_o_mudo_nao_reelege_a_melhor_fonte() -> None:
     cegas = [c for c in daemon._eleitor_de_microfone.chamadas if c[0] == "devolver"]
     assert cegas == [], (
         "um mudo sem eleição prévia caiu em `devolver_o_microfone()`, que "
-        f"escolhe a melhor fonte sozinho e troca o padrão dela: {cegas}"
+        f"escolhe a melhor fonte sozinho e troca o padrão do usuário: {cegas}"
     )
     escolhidos = {c[1] for c in daemon._eleitor_de_microfone.chamadas if c[0] == "eleger"}
     assert escolhidos <= {_J2}, (

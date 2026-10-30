@@ -1,6 +1,6 @@
 """MESA-CHEIA-05 (E0) — o rumble FIXADO não migra de dono.
 
-O defeito, medido em 13/08/2026 e nunca escrito antes: ela fixa 160/220 no
+O defeito, medido em 13/08/2026 e nunca escrito antes: quem usa fixa 160/220 no
 Controle 2, troca o seletor para o Controle 3 por outro motivo qualquer, e
 200 ms depois o 3 leva o valor do 2. A cadeia é curta e temporal:
 
@@ -164,7 +164,7 @@ class TestOParFixadoNaoMigra:
         mesa.ticks()
 
         assert mesa.motores_de(tres) == [], (
-            "o Controle 3 recebeu o valor que ela fixou no 2 — o par MIGROU de "
+            "o Controle 3 recebeu o valor fixado no 2 — o par MIGROU de "
             "dono por um gesto que não fala de vibração"
         )
         assert mesa.motores_de(dois) == [("left", 220), ("right", 160)] * 3, (
@@ -437,7 +437,7 @@ class TestOResgateNaoPiscaQuemNaoFoiAbandonado:
         mesa.ticks(5)
         assert mesa.motores_de(dois) == [("left", 220), ("right", 160)] * 5, (
             "o resgate disparou sem ninguém ter sido abandonado — cada zero "
-            "aqui é uma falha de vibração no meio da partida dela"
+            "aqui é uma falha de vibração no meio da partida"
         )
 
     @pytest.mark.asyncio

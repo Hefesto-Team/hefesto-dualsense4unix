@@ -19,7 +19,7 @@ def _le(caminho: Path) -> dict:
 
 
 def test_preset_de_jogo_sem_modo_recebe_o_modo_jogo(tmp_path: Path) -> None:
-    """O caso dela: preset de gênero instalado antes da sprint, com `mode` nulo."""
+    """O caso medido: preset de gênero instalado antes da sprint, com `mode` nulo."""
     fps = _escreve(tmp_path, "fps", {"name": "FPS", "priority": 60, "mode": None})
 
     migrados = loader.migrate_modo_jogo_nos_presets(dest_dir=tmp_path)
@@ -76,7 +76,7 @@ def test_prioridade_ajustada_pelo_usuario_e_preservada(tmp_path: Path) -> None:
 
 
 def test_migracao_e_one_shot(tmp_path: Path) -> None:
-    """Rodou uma vez, não roda de novo — nem desfaz o que ela mudar depois."""
+    """Rodou uma vez, não roda de novo — nem desfaz o que o usuário mudar depois."""
     fps = _escreve(tmp_path, "fps", {"name": "FPS", "priority": 60, "mode": None})
     assert loader.migrate_modo_jogo_nos_presets(dest_dir=tmp_path) != []
 

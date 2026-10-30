@@ -1,7 +1,7 @@
 """MÁSCARA-POR-JOGADOR-01 — a máscara de cada jogador é o modo único.
 
 NOTA DATADA, 27/10/2026: a máscara era do JOGADOR (15/08, D-5), com o jogo como padrão
-herdado. Desde a D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES ela é o modo único, igual
+herdado. Desde a D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES é o modo único, igual
 para os quatro: a identidade continua chegando à fábrica (para o pad saber de quem é), e
 não muda mais a máscara de ninguém.
 

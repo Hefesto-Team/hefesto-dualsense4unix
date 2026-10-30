@@ -186,7 +186,7 @@ def test_o_contador_sobrevive_a_uma_sessao_inteira(apertos: int) -> None:
         dedo = max(0, dedo - 1)
 
     assert backend.bordas_do_mic()[_MAC_A][0] == apertos, (
-        "os apertos dela estão espalhados em 200 s de reports, e a conta tem "
+        "os apertos estão espalhados em 200 s de reports, e a conta tem "
         "de fechar um a um"
     )
 
@@ -203,5 +203,5 @@ def test_o_bit_que_oscila_com_o_botao_parado_nao_e_aperto() -> None:
 
     assert backend.bordas_do_mic()[_MAC_A][0] == partida, (
         "o gating do firmware virou aperto — é o defeito que corta o "
-        "microfone dela aos 1,1 s"
+        "microfone de quem usa aos 1,1 s"
     )

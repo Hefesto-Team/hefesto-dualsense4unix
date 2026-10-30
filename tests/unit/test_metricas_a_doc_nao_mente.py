@@ -63,7 +63,7 @@ def test_a_contagem_de_ocorrencias_em_src_e_medida_e_nao_copiada() -> None:
         r"devolve \*\*(\w+)\*\* linhas", adr
     ) or re.search(r"devolve \*\*(\w+)\*\*", adr)
     assert escrito is not None, (
-        "a ADR deixou de declarar a contagem medida. Ela é o único número "
+        "a ADR deixou de declarar a contagem medida. É o único número "
         "desta página que já mentiu por um mês — não pode voltar a ser implícito"
     )
     por_extenso = {

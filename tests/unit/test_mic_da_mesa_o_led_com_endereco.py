@@ -78,7 +78,7 @@ def test_o_led_com_uniq_escreve_so_no_handle_daquele_controle(mesa_de_quatro: An
 
 
 def test_o_led_com_uniq_nao_apaga_o_estado_dos_outros_tres(mesa_de_quatro: Any) -> None:
-    """A segunda metade, e ela é a que mais dói."""
+    """A segunda metade, e é a que mais dói."""
     mesa_de_quatro.set_mic_led(True, uniq=_B)
 
     assert mesa_de_quatro._desired_by_uniq[_B].mic_led is True

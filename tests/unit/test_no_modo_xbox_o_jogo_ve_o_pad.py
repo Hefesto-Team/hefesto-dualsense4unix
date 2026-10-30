@@ -1,7 +1,6 @@
 """NO-MODO-XBOX-TUDO-FUNCIONA-01 — no modo Xbox, o jogo vê o pad.
 
-A ordem, 27/09 à noite: *«tá errado se tiver no modo xbox é pra
-literalmente tudo isso funcionar.»* <!-- noqa-acento: citação literal -->
+A ordem de 27/09, à noite: no modo Xbox, tudo isso tem de funcionar.
 
 O QUE SE MEDIU NA SESSÃO DO USUÁRIO (27/09, `medidas/sessao/G1-…` e `G3-…`): o modo
 Xbox com a máscara DualSense fazia o pad «Sony … DualSense Edge» no `uinput`,

@@ -6,7 +6,7 @@ em 08/10 (`test_o_analogico_virtual_e_um_so.py`), e o «Cursor | Botões» saiu 
 do todo de 15/10/2026, que pôs no lugar o interruptor «Ligado | Desligado» do touchpad
 (`test_o_touchpad_liga_e_desliga_na_aba_controles.py`). O gesto `toque` saiu com ele.
 
-Fica a ponte (`ipc_bridge.mira_set_detalhado`): ela leva os dois campos ao daemon, e os
+Fica a ponte (`ipc_bridge.mira_set_detalhado`): leva os dois campos ao daemon, e os
 chamadores de hoje (o Analógico Virtual e a Calibrar) mandam o mesmo corpo de antes.
 
 Endereços de rádio: a faixa SINTÉTICA da casa (``aa:bb:cc``), nunca um OUI real.

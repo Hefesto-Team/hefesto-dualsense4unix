@@ -132,7 +132,7 @@ def _opcoes_do_estilo(pagina: pathlib.Path) -> set[str] | None:
 
 
 def _a_10_esta_em_trabalho() -> bool:
-    """A aba Perfis está declarada em trabalho na bancada (`mockup/DIVERGENCIAS.md`)?"""
+    """A aba Perfis está declarada em trabalho no mockup (`mockup/DIVERGENCIAS.md`)?"""
     from hefesto_dualsense4unix.interface import onde
 
     arquivo = onde.ENSAIO / "DIVERGENCIAS.md"

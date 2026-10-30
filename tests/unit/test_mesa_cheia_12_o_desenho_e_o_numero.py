@@ -4,7 +4,7 @@ A medição de **15/08/2026, 01h00**, com os QUATRO DualSense do usuário no rá
 um lado o `daemon.state_full` pelo socket, do outro o `/sys/class/leds` da
 máquina, lidos no mesmo minuto:
 
-Os controles vão pelo LUGAR NA FILA (o `rank` do `controllers.json` dela) —
+Os controles vão pelo LUGAR NA FILA (o `rank` do `controllers.json` medido) —
 nenhum endereço real entra em arquivo versionado:
 
 | controle   | `player` publicado | `player_slot` | LEDs acesos  | = jogador |
@@ -30,7 +30,7 @@ daemon reescrevia ativamente o desenho, e o desenho batia 4/4 com o
   (`_next_player_index`, menor livre ≥2), que é a ordem em que o EVIOCGRAB de
   cada secundário confirmou nesta sessão.
 
-Duas ordens diferentes do mesmo MAC. Na bancada elas estavam separadas nos
+Duas ordens diferentes do mesmo MAC. Na máquina de teste estavam separadas nos
 três secundários porque o co-op os promoveu na ordem 4º/2º/3º da fila
 (journal: `coop_player_added player=2/3/4`), enquanto a fila da casa punha o
 quarto em 4 e o segundo em 2.
@@ -49,7 +49,7 @@ decodificada em número. Se o desenho voltar a divergir do número publicado em
 QUALQUER um dos quatro jogadores, o teste cai.
 
 Nenhum endereço real: os quatro usam a faixa forjada `aa:bb:cc:…`, a mesma
-allowlist de `test_anonimato_de_fixtures.py`. A ORDEM dos MACs reproduz a bancada; os bytes, não.
+allowlist de `test_anonimato_de_fixtures.py`. A ORDEM dos MACs reproduz o ensaio; os bytes, não.
 """
 from __future__ import annotations
 
@@ -159,7 +159,7 @@ class TestODesenhoEONumeroSaoOMesmo:
     """O invariante inteiro, varrendo os QUATRO jogadores — não só um."""
 
     def test_o_retrato_de_01h00_esta_montado(self) -> None:
-        """Ancoragem: se a mesa não for a dela, o resto não prova nada."""
+        """Ancoragem: se a mesa não for a medida, o resto não prova nada."""
         coop = montar_a_mesa_de_15_08()
         assert {
             mac: p.player_index for mac, p in coop._players.items()

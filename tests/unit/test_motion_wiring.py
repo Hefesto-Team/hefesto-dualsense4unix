@@ -238,7 +238,7 @@ class TestCoop:
 
         A decisão da mantenedora (estudo 2026-07-19) não mudou: 8BitDo/Nintendo
         passam direto ao jogo com o gyro NATIVO deles, sem espelho. O que mudou
-        em 15/08/2026 é onde ela é garantida. Antes, `_start_player_motion_reader`
+        em 15/08/2026 é onde é garantida. Antes, `_start_player_motion_reader`
         a inferia de `hidraw_path(uniq) is None` — sinal que um DualSense
         legítimo também emite enquanto o backend não abriu o handle dele
         (ESPELHO-QUE-NAO-NASCEU-01). A garantia real é estrutural e anterior:

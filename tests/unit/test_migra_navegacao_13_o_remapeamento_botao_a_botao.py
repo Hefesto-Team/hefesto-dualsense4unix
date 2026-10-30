@@ -7,7 +7,7 @@ quando vazio, o depósito na ativação, a tradução logo antes dos DOIS
 `forward_buttons` (o do primário e o do co-op). A tela "Trocar os botões" mora no mapa do
 controle desde 15/10/2026 (`test_a_aba_mapa_do_controle_do_todo.py`).
 
-**ELA LÊ, NÃO DIGITA** o que tem dono: os botões saem de `core.acoes_de_botao.BOTOES` e o
+**A RÉGUA LÊ, NÃO DIGITA** o que tem dono: os botões saem de `core.acoes_de_botao.BOTOES` e o
 vocabulário do jogo de `core.evdev_reader.EvdevReader.BUTTON_MAP`.
 
 A MORDIDA, e cada uma foi rodada na entrega desta sprint:

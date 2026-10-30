@@ -13,7 +13,7 @@ keepalive **perpétuo** acabou em 11/08/2026 (`RUMBLE-SEM-DONO-01`): ele passou 
 valer só na janela de confirmação que segue cada mudança real
 (``OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC``, em `core/backend_pydualsense.py`).
 
-**A recusa continua certa, e é ela que estes testes protegem.** O que mudou foi
+**A recusa continua certa, e é a recusa que estes testes protegem.** O que mudou foi
 o prazo, não o veredito: o report OUT do DualSense é atômico, então o primeiro
 write do daemon depois do seu leva o efeito cru junto. As três saídas
 continuam as mesmas três.
@@ -75,7 +75,7 @@ def test_a_mensagem_nao_afirma_o_keepalive_perpetuo_no_presente() -> None:
 def test_a_correcao_e_datada_e_diz_o_que_caducou() -> None:
     assert "11/08/2026" in MSG, (
         "a correção do mecanismo tem de trazer a data — nesta casa fato "
-        "substituído ganha data, e sem ela a próxima pessoa não sabe o que caducou"
+        "substituído ganha data, e sem a data a próxima pessoa não sabe o que caducou"
     )
     assert re.search(r"keepalive\s+PERPÉTUO", MSG), (
         "a correção precisa nomear o que caiu: o keepalive PERPÉTUO"
@@ -91,7 +91,7 @@ def test_a_recusa_continua_e_o_motivo_e_a_disputa_pelo_hidraw() -> None:
     assert "/dev/hidraw" in MSG
     assert "ATÔMICO" in MSG, (
         "é a atomicidade do report OUT que sustenta a recusa depois de o "
-        "keepalive perpétuo sair — sem ela a mensagem fica sem mecanismo"
+        "keepalive perpétuo sair — sem a nota a mensagem fica sem mecanismo"
     )
 
 

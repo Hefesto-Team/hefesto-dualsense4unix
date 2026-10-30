@@ -42,11 +42,11 @@ from tests.unit.test_steam_input_01_o_chip_que_acende_por_jogo import (  # noqa:
 
 
 def _secao(corpo: str, classe: str) -> str:
-    """O miolo do `<div class="hef-modo {classe}">` da bancada."""
+    """O miolo do `<div class="hef-modo {classe}">` do mockup."""
     achado = re.search(
         rf'<div class="hef-modo {classe}">\s*<div class="escada">(.*?)</div>',
         corpo, re.S)
-    assert achado, f"a seção `{classe}` sumiu da bancada da 01"
+    assert achado, f"a seção `{classe}` sumiu do mockup da 01"
     return achado.group(1)
 
 

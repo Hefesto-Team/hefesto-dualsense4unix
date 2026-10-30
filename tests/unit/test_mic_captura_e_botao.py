@@ -1,4 +1,4 @@
-"""MIC-CAPTURA-01 — o microfone que grava ela, e não o jogo.
+"""MIC-CAPTURA-01 — o microfone que grava quem fala, e não o jogo.
 
 Quatro defeitos medidos em 28/07 na máquina da mantenedora, um teste por
 defeito. O que liga os quatro: **saída não é entrada**, e o produto estava

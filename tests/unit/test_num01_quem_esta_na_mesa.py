@@ -140,7 +140,7 @@ class TestOsSeisCenariosDaSprint:
     def test_6_reboot_da_maquina_mantem_a_ordem(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Âncora diferente = outro boot. Ela ANOTA, nunca decide (R-23)."""
+        """Âncora diferente = outro boot. ANOTA, nunca decide (R-23)."""
         reg = _registro()
         _mesa(reg, UNIQ_B, UNIQ_A)
 
@@ -214,7 +214,7 @@ class TestNuncaJogador2SemJogador1:
 
         Falha-sem: com o registro antigo, desligar o DualSense do lugar 1
         deixava a mesa exibindo 2 e 3 — "não existe Controle 1", medido ao
-        vivo no arquivo dela.
+        vivo no arquivo da máquina de teste.
         """
         ds = _registro()
         ext = _registro_externo()
