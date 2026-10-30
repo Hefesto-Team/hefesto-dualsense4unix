@@ -8,7 +8,7 @@ uma env ESTÁTICA colada por jogo e vira o wrapper `hefesto-launch %command%`
 Este módulo concentra:
 
 1. A string constante do wrapper (`WRAPPER_LAUNCH`) — consumida pelo botão
-   "Copiar opções para os jogos" da GUI (`compose_launch`) e pela migração. Ela
+   "Copiar opções para os jogos" da GUI (`compose_launch`) e pela migração. A constante
    degrada sozinha: se o wrapper não existir no caminho, o `sh -c` cai em
    `exec env "$@"` e o jogo abre do mesmo jeito (pior caso: controle
    duplicado, nunca zero controles nem launch quebrado).
@@ -29,7 +29,7 @@ Este módulo concentra:
 Decisões herdadas da revisão adversarial (não relaxar):
 
 - "Nunca clobberar" vale só para opções genuinamente do usuário (MANGOHUD
-  etc.): elas são preservadas e continuam funcionando porque o wrapper
+  etc.): essas são preservadas e continuam funcionando porque o wrapper
   termina em `exec env "$@"` — `VAR=VAL` pré-existente vira argumento do
   env(1), nunca um comando a executar.
 - O strip NUNCA caça `SDL_JOYSTICK_HIDAPI=0`/`PROTON_ENABLE_HIDRAW=1`
@@ -163,8 +163,8 @@ def _tirar_vizinhos_legados(value: str, tokens: Sequence[str]) -> str:
     """Tira de ``value`` os ``tokens`` colados ao NOSSO par de IGNORE, e só esses.
 
     O veneno legado foi escrito como um bloco contíguo (a atribuição de IGNORE ao lado
-    dos co-ocorrentes). O mesmo token em outra posição da linha é dela e fica: arrancar
-    ``SDL_JOYSTICK_HIDAPI=0`` ou ``__GL_SHADER_DISK_CACHE=1`` de onde ela os pôs, só porque a
+    dos co-ocorrentes). O mesmo token em outra posição da linha é do usuário e fica: arrancar
+    ``SDL_JOYSTICK_HIDAPI=0`` ou ``__GL_SHADER_DISK_CACHE=1`` do lugar deles, só porque a
     linha também tem o nosso par, era apagar o que o usuário escreveu.
     """
     out = value
@@ -215,7 +215,7 @@ def _vizinho_legado(
 
 
 def subtrair_nosso_ignore(value: str) -> str:
-    """Tira o NOSSO par de dentro da lista de IGNORE, deixando a dela intacta."""
+    """Tira o NOSSO par de dentro da lista de IGNORE, deixando a do usuário intacta."""
     out = value
     for m in reversed(list(_IGNORE_ASSIGN_RE.finditer(value))):
         itens = m.group("lista").split(",")
@@ -240,7 +240,7 @@ def has_poison(value: str) -> bool:
     """A linha carrega a NOSSA variável de IGNORE e o NOSSO par?
 
     **A PERGUNTA ERA ESTREITA E FICOU LARGA — 06/09/2026, ONDA5-07-01.** Até
-    aqui ela cobrava a `IGNORE_SIGNATURE` como TOKEN COMPLETO, o que na prática
+    aqui a pergunta cobrava a `IGNORE_SIGNATURE` como TOKEN COMPLETO, o que na prática
     quer dizer *"a atribuição tem o nosso par SOZINHO na lista"*. A assinatura
     cola `VAR=` ao par, e daí saía um ponto cego estrutural: numa linha
     `VAR=0x057e/0x2009,0x054c/0x0ce6` — o nosso par em SEGUNDO — a substring
@@ -253,11 +253,11 @@ def has_poison(value: str) -> bool:
     o controle, com a tela dizendo que o atalho de inicialização estava no
     lugar.
 
-    A largura é de propósito, e ela é a rede: pega inclusive a forma que a
+    A largura é de propósito, e é a rede: pega inclusive a forma que a
     subtração não sabe desmontar (uma lista entre aspas, por exemplo), e é
     `has_extended_ignore` quem separa essa do resto. **Quem AGE é
     `subtrair_nosso_ignore`**, que nunca remove substring — a proteção contra o
-    fragmento-comando mora nela, não mais nesta pergunta.
+    fragmento-comando mora ali, não mais nesta pergunta.
 
     `IGNORE_SIGNATURE` continua existindo: é o texto que a documentação, o
     `launch_env` e o `doctor.sh` citam.
@@ -291,9 +291,9 @@ def strip_value(value: str) -> str:
 
     A LISTA ESTENDIDA TAMBÉM, E A RAZÃO É A DESINSTALAÇÃO — ONDA5-07-01,
     06/09/2026. Enquanto a `has_poison` era o portão, numa linha estendida este
-    caminho não tirava nada: o nosso par ficava na lista dela **para sempre
+    caminho não tirava nada: o nosso par ficava na lista do usuário **para sempre
     depois de desinstalar** — e sem o wrapper, aquele par manda o jogo ignorar o
-    DualSense FÍSICO dela. Deixar sujeira nossa numa máquina de onde fomos
+    DualSense FÍSICO do usuário. Deixar sujeira nossa numa máquina de onde fomos
     embora é o oposto de desinstalar.
     """
     out = value
@@ -413,7 +413,7 @@ _CAMINHO_CANONICO = ("apps", "steam", "valve", "software")
 def e_a_arvore_canonica(pilha: Sequence[str]) -> bool:
     """A posição atual do parser é ``…/Software/Valve/Steam/apps/<appid>``?
 
-    ARVORE-ERRADA-01 (16/08/2026). O `localconfig.vdf` dela tem **três** blocos
+    ARVORE-ERRADA-01 (16/08/2026). O `localconfig.vdf` do usuário tem **três** blocos
     chamados `apps`, e só um deles é o que a Steam consulta::
 
         UserLocalConfigStore/Software/Valve/Steam/apps   63 jogos  <- este
@@ -431,7 +431,7 @@ def e_a_arvore_canonica(pilha: Sequence[str]) -> bool:
     2. **O leitor MENTIU, e essa é a cara.** Um appid presente nas duas árvores
        era lido duas vezes, e o dicionário guardava o ÚLTIMO — a árvore errada,
        que vem depois no arquivo. O PRAGMATA estava assim: sem o wrapper na
-       árvore canônica (o ``VKD3D_CONFIG=no_upload_hvv`` dela o havia comido de
+       árvore canônica (o ``VKD3D_CONFIG=no_upload_hvv`` do usuário o havia comido de
        novo) e com o wrapper na outra. O `censo_do_wrapper` respondeu
        **"faltantes: 0"** com o defeito vivo, e o jogo do usuário sem reconhecer o
        controle no rádio.
@@ -497,11 +497,11 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
 def garantir_blocos_no_texto(
     text: str, appids: Sequence[str]
 ) -> tuple[str, list[str]]:
-    """Cria, na árvore canônica, o bloco vazio dos jogos que ela ainda não tem. Puro.
+    """Cria, na árvore canônica, o bloco vazio dos jogos que a árvore ainda não tem. Puro.
 
     A Steam só escreve o bloco de um jogo na primeira abertura dele; antes disso,
     wrapper, opções e Steam Input recusavam o jogo como desconhecido. Este é o
-    bloco mínimo que ela mesma cria, no fim do ``…/Software/Valve/Steam/apps``.
+    bloco mínimo que a Steam mesma cria, no fim do ``…/Software/Valve/Steam/apps``.
     Árvore canônica ausente ou duplicada: nada é criado (escrever no escuro é o
     que o ``e_a_arvore_canonica`` existe para não deixar). Devolve
     ``(texto_novo, appids_criados)``.
@@ -560,7 +560,7 @@ def apply_wrapper_vdf_text(
     "Canônica" é literal e é âncora de caminho: só
     ``…/Software/Valve/Steam/apps/<appid>``. As outras árvores `apps` do mesmo
     arquivo pertencem à Steam e não são lidas para `LaunchOptions` — escrever
-    nelas é sujar arquivo de outro dono à toa. Ver `e_a_arvore_canonica`.
+    nessas chaves é sujar arquivo de outro dono à toa. Ver `e_a_arvore_canonica`.
 
     PATH-06 item 2: a via em-massa consentida. Diferente de ``transform_vdf_text``
     (que só toca linhas já NOSSAS), aqui todo app do vdf entra:
@@ -807,7 +807,7 @@ def tirar_o_atalho_dos_jogos(
     Hefesto tem de tirar o que ele já tem.
 
     Tira o que o ``strip`` tira — o wrapper e o veneno legado —, preserva as
-    opções dela na mesma linha byte a byte (``strip_value``) e só toca o bloco
+    opções do usuário na mesma linha byte a byte (``strip_value``) e só toca o bloco
     destes appids, em todas as árvores. Os portões são os do
     ``apply_wrapper_to_all_games``, na mesma ordem: jogo aberto, depois Steam
     aberta — a Steam viva regrava o vdf ao sair e engoliria a edição.
@@ -1124,7 +1124,7 @@ def _steam_launch_cmdline(
 
     1. **Marker do wrapper** — o `hefesto-launch` já grava `appid` e `pid` em
        `launch_env/last_run` justamente para isto. Confirmamos lendo a cmdline
-       DESSE pid: se ela casa a agulha E o appid, acabou em 3 `open` (dois do
+       DESSE pid: se a cmdline casa a agulha E o appid, acabou em 3 `open` (dois do
        marker, um da cmdline). A confirmação é o que elimina o "pid reuse" que o
        NUMA-01 documenta — aqui não precisamos do `last_exit`, porque não
        confiamos no pid sozinho.
@@ -1277,7 +1277,7 @@ def stop_steam(
     dormir: Callable[[float], None] | None = None,
     sinalizar: Callable[[int, int], None] | None = None,
 ) -> bool:
-    """Fecha a Steam DESTE lar. True = nenhum processo dela de pé."""
+    """Fecha a Steam DESTE lar. True = nenhum processo da Steam de pé."""
     pasta = PROC if proc is None else proc
     esperar = time.sleep if dormir is None else dormir
     tiro = os.kill if sinalizar is None else sinalizar
@@ -1338,20 +1338,20 @@ def reopen_steam(
     dormir: Callable[[float], None] | None = None,
     espera_s: float = ESPERA_DA_STEAM_S,
 ) -> bool:
-    """Reabre a Steam desanexada e CONFERE que ela voltou. True = a Steam está de pé.
+    """Reabre a Steam desanexada e CONFERE que voltou. True = a Steam está de pé.
 
     CONVERGE PELO ESTADO LIDO (07/10/2026, A-STEAM-E-OS-LANCADORES-SEM-ARQUIVO-INTERNO-01).
     Até aqui o retorno dizia só que o PEDIDO saiu: o ``Popen`` do ``steam`` ou do ``xdg-open``
     voltava ``True`` e ninguém olhava se a Steam subiu. Agora cada porta é seguida da pergunta
     que o ``stop_steam`` já faz (a Steam deste lar está de pé?), e a porta seguinte só é
     tentada quando a anterior não levantou a Steam dentro de ``espera_s``. Com a Steam já de
-    pé o pedido é repassado a ela e a conferência responde na hora.
+    pé o pedido é repassado à Steam e a conferência responde na hora.
 
     AMBIENTE-PRESUMIDO-01 (23/08/2026): isto exigia o binário ``steam`` no
     PATH e, quando não achava, voltava MUDO. Quem instalou a Steam pela
     Flatpak ou pela Snap não tem esse binário — então `with_steam_closed`
     fechava a Steam do usuário, fazia o trabalho, e a deixava fechada sem uma
-    palavra. O fallback é a URL `steam://` pelo `xdg-open`, que é ela que o
+    palavra. O fallback é a URL `steam://` pelo `xdg-open`, e é a URL que o
     `.desktop` da Flatpak/Snap registra.
 
     Sobra um caso sem voz — nem ``steam`` nem ``xdg-open`` no PATH —, e é por
@@ -1363,16 +1363,16 @@ def reopen_steam(
     AMBIENTE-DO-JOGO-01 (18/09/2026): o install chama isto de dentro do
     terminal da pessoa (`--migrate/--apply --stop-steam`), e a Steam reaberta
     herdava daquele terminal a venv, o conda ou o pyenv ativo — e todo jogo da
-    sessão com ela. Ela nasce agora com `ambiente_limpo`, que tira só essa
+    sessão com essa venv. A Steam nasce agora com `ambiente_limpo`, que tira só essa
     classe e deixa a tela e o barramento de sessão como estão.
 
     STEAM-FORA-DO-SERVICO-01 (26/09/2026): e nasce por
     `fora_do_servico.abrir` — de dentro de um serviço (a bandeja do autostart
     é um), numa unidade própria; do terminal ou do painel, pelo `Popen`.
 
-    COM A STEAM DESTE LAR DE PÉ, O PEDIDO VAI A ELA (01/10/2026): o `steam`
+    COM A STEAM DESTE LAR DE PÉ, O PEDIDO VAI A ESSA STEAM (01/10/2026): o `steam`
     repassa à instância viva, que se mostra, e sai sem abrir outra. É o
-    «Abrir o lançador» do cartão da Steam com ela na bandeja, e é a mesma
+    «Abrir o lançador» do cartão da Steam com a Steam na bandeja, e é a mesma
     decisão do PS da bandeja (`steam_launcher.open_or_focus_steam`). Quem
     decide SE reabre é quem fechou (`with_steam_closed`, pelo `steam_running`).
     """
@@ -1579,7 +1579,7 @@ def add_appid_to_steam_input_allowlist(
       escrito do zero apenas quando o arquivo não existe. O parâmetro
       `cabecalho` troca o texto desse cabeçalho — é o que deixa o
       `jogos_sem_wrapper.txt` (SENTINELA-WRAPPER-01) reusar esta escrita, que
-      já tem as três armadilhas resolvidas, em vez de clonar o corpo dela.
+      já tem as três armadilhas resolvidas, em vez de clonar o corpo da escrita.
     """
     alvo = str(appid).strip()
     if not alvo.isdigit():
@@ -1620,7 +1620,7 @@ def remove_appid_from_steam_input_allowlist(
     ``"erro"``. Nunca levanta — quem chama é um clique de botão.
 
     JOGO-01 (Entrega 3): a allowlist tinha escritor só para um lado. Pôr um jogo
-    nela é um clique ("Este jogo não funciona"); tirar exigia abrir
+    nessa lista é um clique ("Este jogo não funciona"); tirar exigia abrir
     `~/.config/hefesto-dualsense4unix/steam_input_apps.txt` num editor de texto —
     ou seja, na prática o opt-in era irreversível para quem não mexe em arquivo
     de configuração. E ele PRECISA ser reversível: entrar na allowlist mudou de
@@ -1634,12 +1634,12 @@ def remove_appid_from_steam_input_allowlist(
       comentado devolve ``"nao_estava"`` (idêntico ao critério de duplicata do
       `add`, que re-adiciona um appid comentado);
     - **comentário inline sai junto**: `620 # marcado pela GUI` é UMA linha cujo
-      appid é 620; remover metade dela deixaria lixo sintático;
+      appid é 620; remover metade da linha deixaria lixo sintático;
     - **comentários NÃO são adivinhados**: o `add` escreve a nota como linha `#`
-      logo acima do appid, mas o arquivo é dela e pode ter anotações próprias
+      logo acima do appid, mas o arquivo é do usuário e pode ter anotações próprias
       (a instalação nasce com um cabeçalho de sete linhas de comentário coladas
       no primeiro appid). Apagar "o comentário de cima" acertaria a nota nossa
-      e o cabeçalho dela com a mesma facilidade, então preservamos TUDO: o preço
+      e o cabeçalho do usuário com a mesma facilidade, então preservamos TUDO: o preço
       é uma nota órfã, que não muda o comportamento de leitor nenhum;
     - **arquivo ausente** é allowlist vazia ⇒ ``"nao_estava"``, sem criar nada
       (criar um arquivo para dizer que ele não tem o appid seria absurdo).
@@ -1708,7 +1708,7 @@ def sem_wrapper_path(config_home: Path | None = None) -> Path:
 
 
 def ler_jogos_sem_wrapper(path: Path | None = None) -> list[str]:
-    """AppIDs que ela marcou como "não quero o wrapper aqui". Nunca levanta."""
+    """AppIDs que o usuário marcou como "não quero o wrapper aqui". Nunca levanta."""
     destino = path if path is not None else sem_wrapper_path()
     try:
         return parse_steam_input_allowlist(destino.read_text(encoding="utf-8"))
@@ -1895,11 +1895,11 @@ def _fechar_a_steam_uma_vez() -> int:
     """A janela de Steam fechada do install, aberta UMA vez para todos os passos.
 
     d172d9fb8, item (c) da conferência (18/09/2026). O install fechava e reabria a
-    Steam em cada passo que edita os arquivos dela (11, 11b, 11b-bis) — e a
+    Steam em cada passo que edita os arquivos da Steam (11, 11b, 11b-bis) — e a
     reabria ANTES do 11b-ter e do 11c. Resultado medido no código: numa máquina
     em que a Steam estava aberta, a sentinela e a trava `--todos` do Proton
     ADIAVAM sempre (rc 3), e nada tentava de novo. Com a janela única, os
-    passos rodam com a Steam fechada e ela reabre uma vez, no fim.
+    passos rodam com a Steam fechada e a Steam reabre uma vez, no fim.
 
     Mesma ordem do `main` e do `with_steam_closed`: o jogo aberto vem ANTES de
     qualquer decisão — fechar a Steam com um jogo aberto o mataria.
@@ -1908,7 +1908,7 @@ def _fechar_a_steam_uma_vez() -> int:
     if steam_game_running():
         print(
             "[launch-options] há um JOGO da Steam aberto — não fecho a Steam "
-            "(o jogo morreria com ela); os passos que editam os arquivos dela "
+            "(o jogo morreria junto); os passos que editam os arquivos da Steam "
             "vão adiar, cada um com o comando para depois."
         )
         return RC_STEAM_NAO_FECHOU
@@ -1918,10 +1918,10 @@ def _fechar_a_steam_uma_vez() -> int:
     if not stop_steam():
         print(
             "[launch-options] a Steam não fechou — os passos que editam os "
-            "arquivos dela vão adiar (editar com ela viva seria edição perdida)."
+            "arquivos da Steam vão adiar (editar com a Steam viva seria edição perdida)."
         )
         return RC_STEAM_NAO_FECHOU
-    print("[launch-options] Steam fechada — ela reabre no fim do install")
+    print("[launch-options] Steam fechada — reabre no fim do install")
     return RC_STEAM_FECHADA_AGORA
 
 
@@ -1972,8 +1972,8 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=(
             "fecha a Steam UMA vez para os passos do install que editam os "
-            "arquivos dela (rc 0 = fechei, reabra no fim; 4 = já estava "
-            "fechada; 3 = jogo aberto ou ela não fechou, nada foi fechado)"
+            "arquivos da Steam (rc 0 = fechei, reabra no fim; 4 = já estava "
+            "fechada; 3 = jogo aberto ou a Steam não fechou, nada foi fechado)"
         ),
     )
     group.add_argument(
@@ -2037,7 +2037,7 @@ def main(argv: list[str] | None = None) -> int:
             if was_running and not stop_steam():
                 print(
                     "[launch-options] ERRO: a Steam não fechou — não vou editar "
-                    "o vdf com ela viva (ela regravaria o arquivo por cima)."
+                    "o vdf com a Steam viva (que regravaria o arquivo por cima)."
                 )
                 return 3
         elif steam_running():
@@ -2052,7 +2052,7 @@ def main(argv: list[str] | None = None) -> int:
         recusados = ler_jogos_sem_wrapper()
         if recusados:
             print(
-                "[launch-options] fora do wrapper por escolha dela "
+                "[launch-options] fora do wrapper por escolha do usuário "
                 f"(jogos_sem_wrapper.txt): {', '.join(recusados)}"
             )
         try:

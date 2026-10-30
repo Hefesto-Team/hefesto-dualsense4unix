@@ -1,4 +1,4 @@
-"""Proton PINADO: instala a versão validada e trava os jogos nela (PLAT-01).
+"""Proton PINADO: instala a versão validada e trava os jogos nessa versão (PLAT-01).
 
 Sprint 2026-07-18 (plataforma): a v1 de produção não pode depender da versão
 de Proton do dia — a semântica do winebus MUDOU entre Proton 9→10
@@ -21,7 +21,7 @@ Desenho (decisões que não relaxam):
   (`~/.local/state/hefesto-dualsense4unix/proton-pin-lock.json`) — marcador
   DENTRO do vdf não sobrevive à Steam, que regrava o arquivo ao sair.
 - Unlock simétrico: reverte SÓ o que o registro diz que é nosso; entrada que
-  a usuária mudou depois do lock fica intacta (ela assumiu o controle).
+  o usuário mudou depois do lock fica intacta (ele assumiu o controle).
 - O tarball extraído em compatibilitytools.d NÃO é removido pelo uninstall
   (dado do usuário; o registro/lock sim).
 
@@ -356,7 +356,7 @@ def _read_manifest_sha256(name: str, compat_dir: Path) -> str | None:
 
 
 def _escapa_da_raiz(caminho: str) -> bool:
-    """True se `caminho`, relativo à raiz da extração, sai dela (ou é absoluto)."""
+    """True se `caminho`, relativo à raiz da extração, sai da raiz (ou é absoluto)."""
     if caminho.startswith("/"):
         return True
     normal = os.path.normpath(caminho)
@@ -898,13 +898,13 @@ def lock_games_to_pinned_proton(
     ``todos=True`` alcança TODO jogo, inclusive o que aponta para uma
     ferramenta que o Hefesto nunca escreveu — ordem de 17/09/2026:
     *"ele e todo o resto de agora em diante."* Sem ele, a guarda `preservado`
-    continua valendo, e ela é o padrão da função de propósito: quem chamar sem
+    continua valendo, e é o padrão da função de propósito: quem chamar sem
     pedir não atropela ninguém.
 
     E ele alcança a entrada ÓRFÃ: a escolha que ficou no `CompatToolMapping`
     de um jogo que não está mais instalado. `appids` vem de
     `list_installed_appids`, então a primeira corrida de `--todos` deixou três
-    de fora — e são justamente as que a Steam vai ler quando ela reinstalar.
+    de fora — e são justamente as que a Steam vai ler quando o usuário reinstalar.
 
     Retorna ``{"status": "locked"|"noop"|"recusado"|"erro", "reason": …,
     "vdf": …, "changes": {...}, "backup": …}``. O registro (estado local em
@@ -1426,7 +1426,7 @@ def list_installed_appids(home: Path | None = None) -> list[str]:
 
 
 def _pastas_de_biblioteca(home: Path | None = None) -> list[Path]:
-    """As `steamapps` de cada Steam e das bibliotecas dela: UMA leitura, a do irmão.
+    """As `steamapps` de cada Steam e das suas bibliotecas: UMA leitura, a do irmão.
 
     O `libraryfolders.vdf` é arquivo interno da Steam, sem formato prometido. Quem o lê é só o
     `steam_launch_options.pastas_steamapps`; este módulo pergunta a ele, em vez de manter uma
@@ -1633,7 +1633,7 @@ def pino_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> str:
 
     22/10/2026, escolha do usuário: «é sempre a versão mais recente do próton desde que ele tenha
     os pré-requisitos e usaremos apenas a nova». Os pré-requisitos são a ficha de qualificação
-    (:func:`qualificar_proton.ficha`, contra a do `proton-pin.conf` quando ela está no disco). Só
+    (:func:`qualificar_proton.ficha`, contra a do `proton-pin.conf` quando está no disco). Só
     conta versão do GE-Proton que está em ``compat_dir`` e é mais nova que a do conf; nada vem
     da rede. Sem candidata, ou na dúvida (pasta que não se lê), vale a do conf. Nunca levanta.
     """
@@ -1663,8 +1663,8 @@ def pino_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> str:
 def conf_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> dict[str, str]:
     """O ``conf`` com o ``name`` do pino que vale (:func:`pino_que_vale`); o mesmo se for o do conf.
 
-    A versão instalada à mão não tem o ``url`` do conf: ela leva ``instalada`` e o sha256 do
-    manifesto que houver (a que o Hefesto extraiu), senão o do conf, que não vale para ela.
+    A versão instalada à mão não tem o ``url`` do conf: leva ``instalada`` e o sha256 do
+    manifesto que houver (a que o Hefesto extraiu), senão o do conf, que não vale ali.
     """
     compat = compat_dir if compat_dir is not None else default_compat_dir()
     vale = pino_que_vale(conf, compat)
@@ -1711,7 +1711,7 @@ def quem_usa_o_proton(home: Path | None = None) -> tuple[str, ...]:
 
     A Steam nativa, cada casa do Heroic, cada extensão de lançador que diz como fixar o Proton e
     cada lançador que virou extensão pelo Proton e tem pasta aqui. A Steam do Flatpak ou do Snap
-    não entra: o Proton de fora não serve dentro da caixa dela.
+    não entra: o Proton de fora não serve dentro da caixa.
     """
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
@@ -1749,7 +1749,7 @@ def apontar_os_lancadores_para_o_pino(
     O dono da ordem «o pin vale para qualquer usuário e todo jogo»
     (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO). A Steam é do lock
     (:func:`lock_proton_for_all_games`); aqui entram cada casa do Heroic
-    (:func:`censo_dos_lancadores.fixar_o_heroic`, com o pino onde ela o enxerga) e cada extensão
+    (:func:`censo_dos_lancadores.fixar_o_heroic`, com o pino visível) e cada extensão
     de lançador ligada, pelo ``fixador`` que o manifesto declara. O que não se fixa vem em
     ``fora``, com o porquê, para a aba Lançadores dizer. ``escrever=False`` só mede (é o que a aba
     lê). Nunca levanta.
@@ -1906,7 +1906,7 @@ def desinstalar_as_que_sobram(
 ) -> tuple[list[VersaoQueSobra], dict[str, str]]:
     """Apaga de vez cada sobra, com a Steam fechada. Devolve as que saíram e as recusadas.
 
-    A Steam lê `compatibilitytools.d` ao abrir e regrava o que viu ao sair: com ela aberta nada
+    A Steam lê `compatibilitytools.d` ao abrir e regrava o que viu ao sair: se aberta, nada
     sai. Nem a pasta de um processo vivo, nem uma que deixou de ser filha de `compatibilitytools.d`.
     """
     saiu: list[VersaoQueSobra] = []
@@ -2025,7 +2025,7 @@ def _avisar_da_raiz_envenenada() -> None:
     if sobra is not None:
         print(
             f"[proton-pin] AVISO: {sobra} é sobra de um instalador antigo do "
-            "Hefesto (só tem o Proton pinado dentro), e com ela no caminho a "
+            "Hefesto (só tem o Proton pinado dentro), e com essa sobra no caminho a "
             f"Steam adota {sobra.parent} como casa. Com a Steam FECHADA: "
             f'mv "{sobra}" "{sobra}.sobra-do-hefesto"'
         )
@@ -2250,13 +2250,13 @@ def _travar_e_contar(
         else:
             print(
                 "[proton-pin] feche a Steam (e o jogo) e rode de novo — editar o "
-                "config.vdf com ela viva perderia a edição."
+                "config.vdf com a Steam viva perderia a edição."
             )
         return 3
     if result["reason"] == "config_vdf_ausente":
         print(
             "[proton-pin] a Steam ainda não tem config.vdf (nunca entrou numa "
-            "conta) — a trava espera; o vigia da Steam trava quando ela sair."
+            "conta) — a trava espera; o vigia da Steam trava quando a Steam sair."
         )
         return RC_ADIADO
     return 0 if result["status"] in ("locked", "noop") else 1
@@ -2271,7 +2271,7 @@ def nomear_fora_do_pino(appid: int | str, *, nota: str = "") -> str:
 
     NASCEU EM 21/09/2026 (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01): até
     aqui só a linha de comando sabia escrever esta lista, com o cabeçalho
-    privado deste módulo. A lista de exclusão precisa escrever nela também, e
+    privado deste módulo. A lista de exclusão precisa escrever na lista também, e
     importar o cabeçalho privado seria um segundo dono do formato.
 
     NÃO DESPINA NA HORA: escreve a lista e só. A entrada que o jogo já tem no
@@ -2361,7 +2361,7 @@ def main(argv: list[str] | None = None) -> int:
         prog="proton_pin",
         description=(
             "Proton pinado (PLAT-01): instala a versão validada do "
-            "proton-pin.conf e trava/destrava os jogos nela."
+            "proton-pin.conf e trava/destrava os jogos nessa versão."
         ),
     )
     group = parser.add_mutually_exclusive_group(required=True)

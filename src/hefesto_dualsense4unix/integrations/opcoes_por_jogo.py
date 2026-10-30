@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AS OPÇÕES DE INICIALIZAÇÃO QUE ELA DECLARA — uma tabela, um dono.
+"""AS OPÇÕES DE INICIALIZAÇÃO QUE O USUÁRIO DECLARA — uma tabela, um dono.
 
 POR QUE ISTO EXISTE, e a medição é de 21/09/2026
 ------------------------------------------------
@@ -8,7 +8,7 @@ estar ali disputa a mesma linha. Na máquina do usuário havia DOIS donos:
 
 * o Hefesto, que põe o atalho ``hefesto-launch`` (sem ele, no rádio o jogo
   tende a não enxergar controle nenhum);
-* uma tabela declarativa dela, fora deste produto, que reescrevia a linha com
+* uma tabela declarativa do usuário, fora deste produto, que reescrevia a linha com
   as variáveis de vídeo do jogo — e apagava o atalho ao fazê-lo.
 
 O resultado foi medido no diário de um dia inteiro: **de hora em hora** o
@@ -16,16 +16,16 @@ PRAGMATA perdia o atalho e o vigia o repunha, das 04:31 às 22:00. Quem abrisse
 o jogo na janela errada jogava sem controle. *Duas ferramentas escrevendo a
 mesma linha não é configuração; é sorteio.*
 
-A DECISÃO É `D-2109-AS-OPCOES-POR-JOGO-TEM-UM-DONO-SO`, e a ordem, de
-21/09/2026, é esta: *"PODE CORRIGIR E INTEGRAR ELE AO NOSSO APP.
-DESATIVA O ORIGINAL ENTÃAO."*  <!-- noqa-acento: citação literal, a
-digitação é a dela -->
+A DECISÃO É `D-2109-AS-OPCOES-POR-JOGO-TEM-UM-DONO-SO`, de 21/09/2026:
+a tabela de fora é corrigida e integrada ao produto,
+e a original fica desativada.
+O produto passa a ser o único dono da linha.
 
 O QUE ESTE MÓDULO FAZ
 ---------------------
 Guarda a tabela — ``appid<TAB>opções`` — em
 ``~/.config/hefesto-dualsense4unix/opcoes_por_jogo.txt``, e a aplica
-compondo UMA linha só: **o atalho do Hefesto na frente, as opções dela
+compondo UMA linha só: **o atalho do Hefesto na frente, as opções do usuário
 atrás**. É o mesmo arranjo que o reparo do wrapper já produzia quando
 preservava o que estava escrito; a diferença é que agora existe uma FONTE, e
 o que a Steam apagar volta inteiro — não só o atalho.
@@ -34,7 +34,7 @@ o que a Steam apagar volta inteiro — não só o atalho.
     no disco: <atalho do hefesto-launch> VKD3D_CONFIG=no_upload_hvv %command%
 
 O JOGO QUE O USUÁRIO TIROU DO ATALHO continua fora dele: o appid que está no
-``jogos_sem_wrapper.txt`` recebe as opções dela SEM o atalho. O produto não
+``jogos_sem_wrapper.txt`` recebe as opções do usuário SEM o atalho. O produto não
 briga com a dona da máquina — é a mesma regra do
 ``apply_wrapper_vdf_text(excluir=…)``.
 
@@ -298,7 +298,7 @@ def gravar_registro(
 
 
 def linha_desejada(opcoes: str, *, com_atalho: bool) -> str:
-    """A linha final do vdf: o atalho na frente, as opções dela atrás."""
+    """A linha final do vdf: o atalho na frente, as opções do usuário atrás."""
     limpo = opcoes.strip()
     return f"{WRAPPER_PREFIX} {limpo}" if com_atalho else limpo
 
@@ -380,7 +380,7 @@ def _opcoes_da_linha(linha: str) -> tuple[list[str], list[str]] | None:
 
 
 def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
-    """A linha viva do jogo com o NOSSO trecho trocado pela ``desejada`` e o resto dela intacto.
+    """A linha viva do jogo com o NOSSO trecho trocado pela ``desejada`` e o resto intacto.
 
     O nosso trecho é o atalho do Hefesto e o que a tabela escreveu da última vez
     (``anterior``, do registro do ``aplicar``). Tudo o mais na linha é do usuário e
@@ -800,7 +800,7 @@ def conferir(
     Um jogo da tabela que não está no vdf da conta logada não entra (a conta não o
     tem). A opção que não está lá nem foi escrita pelo Hefesto nesta conta é ``novo``: o
     ``aplicar`` ainda vai pô-la, não é defeito. É defeito: a releitura do
-    ``aplicar`` a desmentiu (``desfeito_na_escrita``), ela foi escrita e conferida
+    ``aplicar`` a desmentiu (``desfeito_na_escrita``), a linha foi escrita e conferida
     e sumiu depois (``desfeito``), ou mora só num bloco filho (``fora_do_lugar``).
     """
     resultado: dict[str, Any] = {"jogos": [], "defeitos": []}
@@ -870,7 +870,7 @@ def _imprimir(relato: Relato) -> int:
         if item["reason"] == LINHA_DO_USUARIO_DIVERGE:
             print(
                 f"[opcoes-por-jogo] {item['appid']}: {LINHA_DO_USUARIO_DIVERGE} — a linha que "
-                "você escreveu não cabe com a da tabela sem perder parte dela; ficou como estava",
+                "você escreveu não cabe com a da tabela sem perder uma parte; ficou como estava",
                 file=sys.stderr,
             )
     for item in relato["erros"]:

@@ -268,7 +268,7 @@ def _capacidades_padrao(*, with_ff: bool) -> dict[int, Any]:
 
 
 def _capacidades_procon(*, with_ff: bool) -> dict[int, Any]:
-    """Capabilities da máscara `nintendo` — e ela NÃO é a de cima.
+    """Capabilities da máscara `nintendo` — e NÃO é a de cima.
 
     O TERCEIRO SABOR NÃO CABE NO CONJUNTO FIXO, e a prova é uma medição, não
     uma leitura. Com um nó `057e:2009` de pé usando as capabilities do
@@ -279,9 +279,9 @@ def _capacidades_procon(*, with_ff: bool) -> dict[int, Any]:
         rightshoulder:b6,rightstick:b13,righttrigger:b8,rightx:a2,righty:a3,
         start:b10,x:b2,y:b3
 
-    A SDL casa a tabela dela pelo par VID/PID e **ignora os bytes de versão**
+    A SDL casa a própria tabela pelo par VID/PID e **ignora os bytes de versão**
     do GUID — a hipótese de que a versão `0x3` do nosso nó nos deixaria fora do
-    catálogo dela é FALSA, e foi medida como falsa. Com onze botões e seis
+    catálogo da SDL é FALSA, e foi medida como falsa. Com onze botões e seis
     eixos, aquela tabela lê o nó errado inteiro: `b11`, `b12` e `b13` não
     existem, `lefttrigger:b7` cai no `BTN_START`, e `rightx:a2` cai no
     **gatilho esquerdo**. O analógico direito ficaria colado no dedo do L2.

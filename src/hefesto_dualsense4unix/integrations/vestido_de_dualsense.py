@@ -9,7 +9,7 @@ num nó de áudio — e são duas metades, com riscos diferentes:
   ``DualSense`` ou ``Wireless Controller``, as strings USB da Sony
   (``/sys/bus/usb/devices/*/product``, medido em 21/09/2026). A decisão de
   23/09/2026 é a FORMA A: *«Alto-falante do Controle N (DualSense Wireless
-  Controller)»* — o nome dela na frente, igual para o microfone, os quatro
+  Controller)»* — o nome do controle na frente, igual para o microfone, os quatro
   controles, o cabo e o BT. Quem monta é :func:`com_o_nome_da_sony`, e os
   campos que acompanham o nome no nó do alto-falante são :func:`campos_do_nome`;
 * **a IDENTIDADE** — ``device.bus``, VID, PID e ``sysfs.path``: o que o
@@ -19,7 +19,7 @@ num nó de áudio — e são duas metades, com riscos diferentes:
   18/09, e ele a lê daqui (:func:`campos_da_identidade`).
 
 **POR QUE O NÓ DO ALTO-FALANTE VESTE SÓ O NOME** (decisão desta frente, pelo
-padrão de produto — o caminho mais reversível): o GE-Proton pinado dela chama de
+padrão de produto — o caminho mais reversível): o GE-Proton pinado chama de
 «aparelho de áudio DualSense» todo nó com ``usb`` + ``054c`` + ``0ce6`` no
 proplist (``proton-ds5-haptic``, patch 0013, ``is_dualsense_audio_device``), e
 cada nó assim que entra ou sai soma um ``g_haptic_hotplug_generation`` (patch
@@ -53,7 +53,7 @@ def com_o_nome_da_sony(rotulo: str) -> str:
     **O número vale mais que o sufixo.** Se o rótulo com o sufixo passar do
     :data:`TETO_DO_NOME_NO_WINE`, o Wine jogaria fora a frase inteira e o jogo
     mostraria só «DualSense Wireless Controller» — quatro controles com o mesmo
-    nome. Nesse caso o rótulo dela sai sem o sufixo. Os rótulos desta casa
+    nome. Nesse caso o rótulo sai sem o sufixo. Os rótulos desta casa
     («Alto-falante do Controle 4», «Microfone do Controle 4») cabem com folga;
     a guarda é para quem mudar a frase depois.
     """
@@ -65,7 +65,7 @@ def com_o_nome_da_sony(rotulo: str) -> str:
 
 
 def sem_o_nome_da_sony(rotulo: str) -> str:
-    """O rótulo dela, sem o sufixo da Sony — a leitura inversa da forma A."""
+    """O rótulo, sem o sufixo da Sony — a leitura inversa da forma A."""
     texto = str(rotulo or "").strip()
     if texto.endswith(_SUFIXO):
         return texto[: -len(_SUFIXO)].rstrip()

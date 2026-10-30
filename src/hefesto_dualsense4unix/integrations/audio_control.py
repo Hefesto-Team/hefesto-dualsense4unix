@@ -72,7 +72,7 @@ class AudioControl:
 
         Sem esta pergunta, o botão do microfone do controle alternava o mudo
         da FONTE PADRÃO, que no Bluetooth é outra coisa: nesta máquina, o
-        microfone da placa-mãe. O log de três toques dela mostra a assinatura
+        microfone da placa-mãe. O log de três toques mostra a assinatura
         do defeito — sempre o mesmo resultado, porque não era o microfone do
         controle que estava sendo alternado:
 
@@ -224,7 +224,7 @@ def fonte_de_captura_do_uniq(
 
     ESTA FUNÇÃO ERA UMA SEGUNDA RÉGUA, E SÓ ENXERGAVA O CABO (03/09/2026)
     ---------------------------------------------------------------------
-    Ela resolvia por UMA regra — o dispositivo USB em que a placa pendura — e
+    A função resolvia por UMA regra — o dispositivo USB em que a placa pendura — e
     saía com `None` logo na primeira linha quando o controle não tinha
     dispositivo USB nenhum. **Um controle no RÁDIO nunca tem** (medido em
     15/08/2026: a placa segue o transporte), então a resposta por rádio era
@@ -283,7 +283,7 @@ def fonte_de_captura_do_uniq(
     pior que não mexer em nenhum. **E desde 06/09/2026 quem chama NÃO cai mais
     para a rota global quando há endereço** (`daemon/ipc_handlers.py`, o
     `mic.volume.set`): cair para a primeira da lista era, palavra por palavra, o
-    defeito que ela chamou de bug.
+    defeito relatado como bug.
     """
     from hefesto_dualsense4unix.integrations import porta_do_som
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
@@ -328,7 +328,7 @@ def definir_volume_da_captura(volume_pct: int, *, fonte: str | None) -> bool:
     `fonte_de_captura_do_controle` quando não há.
 
     **`fonte` NÃO TEM PADRÃO, e a porta se fechou em 06/09/2026 (ONDA5-02-01).**
-    Ela tinha: sem `fonte`, esta função chamava `fonte_de_captura_do_controle()`
+    Havia: sem `fonte`, esta função chamava `fonte_de_captura_do_controle()`
     sozinha e escrevia na PRIMEIRA placa de DualSense da lista. Nenhum chamador
     de `src/` usava esse caminho — os cinco já passavam `fonte=` —, e era isso
     que o tornava perigoso: uma porta fechada com a chave na fechadura, que

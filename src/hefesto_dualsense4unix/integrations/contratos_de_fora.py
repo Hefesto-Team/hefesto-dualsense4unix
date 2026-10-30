@@ -39,7 +39,7 @@ class Falta:
     """A ferramenta não respondeu. ``ausente`` separa as duas causas, que não são a mesma coisa.
 
     ``ausente=True``: a ferramenta não existe nesta máquina (o dono não está aqui, ``[INFO]``).
-    ``ausente=False``: ela existe e não respondeu (o tempo esgotou, a permissão faltou): o
+    ``ausente=False``: existe e não respondeu (o tempo esgotou, a permissão faltou): o
     contrato quebrou, e isso nunca se lê como ausência.
     """
 
@@ -211,7 +211,7 @@ def _pasta_xdg(amb: Ambiente, variavel: str, padrao: str) -> Path:
 def _perderam_o_wrapper(amb: Ambiente, conf: Path) -> list[str]:
     """Os jogos que o Hefesto JÁ viu com o wrapper e que a Steam devolveu sem ele.
 
-    A pergunta é a da sentinela (``censo_do_wrapper``, a ``regressao`` dela), e não uma segunda
+    A pergunta é a da sentinela (``censo_do_wrapper``, a ``regressao`` do censo), e não uma segunda
     cópia da regra: a Steam é a dona do arquivo e já apagou o ``hefesto-launch`` de um jogo sem
     aviso (17/09/2026). Jogo recusado, arquivo da Steam Flatpak/Snap (onde o wrapper não se
     escreve) e linha com o par estendido ficam de fora como lá; leitura sem nenhum app (a Steam no
@@ -366,7 +366,7 @@ def _fala_da_versao_do_ge(nome: str, versao: tuple[int, int]) -> str | None:
     if versao > GE_ULTIMO_MEDIDO:
         return (
             f"{nome} é posterior ao último GE que o Hefesto mediu (11-{GE_ULTIMO_MEDIDO[1]}): o "
-            "que ela liga por padrão para o controle não foi lido"
+            "que essa versão liga por padrão para o controle não foi lido"
         )
     if versao > GE_ULTIMO_COM_LISTA_POR_APPID:
         return (
@@ -398,7 +398,7 @@ def _nome_do_jogo(appid: str, amb: Ambiente) -> str:
 
 
 def _jogos_na_ferramenta(nomes: set[str], mapa: dict[str, str], amb: Ambiente) -> set[str]:
-    """Os appids que rodam na ferramenta: os mapeados nela e, se ela é o padrão, os sem escolha."""
+    """Os appids que rodam na ferramenta: os mapeados e, se é o padrão, os sem escolha."""
     jogos = {a for a, f in mapa.items() if f in nomes and a != "0"}
     if mapa.get("0") in nomes:
         from .proton_pin import list_installed_appids

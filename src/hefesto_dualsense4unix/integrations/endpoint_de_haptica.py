@@ -41,11 +41,11 @@ traz ``sysfs.path`` e que sobe ao **pai** ``usb_device`` desse caminho.
   **hub raiz**, e o device KS nunca casou.
 
 Por isso o nó declara a INTERFACE da âncora (``<bus>-<porta>:1.0``), que é a
-forma de uma placa de som de verdade — o caminho dela é o do ``sound/card``,
+forma de uma placa de som de verdade — o caminho da âncora é o do ``sound/card``,
 cujo pai é o aparelho. Com isso, às 03h54, os dois lados deram o mesmo GUID e o
 jogo abriu o stream de quatro canais.
 
-**Nada é escrito na âncora.** Ela é só um endereço de onde o Wine tira quatro
+**Nada é escrito na âncora.** A âncora é só um endereço de onde o Wine tira quatro
 números.
 
 O RÓTULO DIZ O CONTROLE, E NÃO O ENDEREÇO — 24/09/2026
@@ -59,7 +59,7 @@ Controller)», com o número do jogador, que se renova quando o número anda
 **O que o jogo lê não mudou, e isso foi medido no código** — o GE-Proton11-7
 com os 182 patches ``proton-ds5-haptic`` aplicados em ordem. A descrição vira
 o ``drv_id`` do endpoint no ``mmdevapi`` (``get_device_name``), e é só ali que
-ela pesa: os casamentos sobre ele dão o MESMO resultado para o rótulo velho e
+o rótulo pesa: os casamentos sobre ele dão o MESMO resultado para o rótulo velho e
 para o novo — «DualSense» presente (``is_dualsense_endpoint_name``, o 0187
 inclusive), «… Speaker» e «Internal Mono Speaker» ausentes
 (``is_dualsense_audioendpoint_name``, o mono), «Direct Wireless Controller»
@@ -74,7 +74,7 @@ depois desta cura. O id do endpoint sai do NOME, e a âncora do
 UM ENDPOINT POR APARELHO — 02/10/2026
 -------------------------------------
 A-HAPTICA-E-POR-APARELHO-01, pela palavra de 29/09, à pergunta da háptica
-de P1 a P4: *«todas as features são um por aparelho. sempre.»* Ela REVOGA a
+de P1 a P4: toda feature é uma por aparelho, sempre. A decisão REVOGA a
 ``D-2909-A-HAPTICA-TEM-UM-ENDPOINT-POR-LUGAR``: de 28/09 a 02/10 eram QUATRO
 nós, um por lugar, de pé desde o primeiro DualSense
 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01), e o número que andava trocava a
@@ -207,7 +207,7 @@ def ancora_do_gadget(uniq: str) -> Ancora | None:
 
 
 def ancora_da_interface(interface: str | None) -> Ancora | None:
-    """A âncora de uma interface de gadget (o ``usb_device`` é o pai dela)."""
+    """A âncora de uma interface de gadget (o ``usb_device`` é o pai da interface)."""
     if not interface:
         return None
     return Ancora(syspath=os.path.dirname(interface), declarado=interface)
@@ -277,7 +277,7 @@ def plano_da_ordem(
 
 
 def nome_da_marca(marca: str) -> str:
-    """O nome do nó do aparelho desta marca, ou "" quando ela não tem a forma de uma."""
+    """O nome do nó do aparelho desta marca, ou "" quando a marca não tem essa forma."""
     if not isinstance(marca, str) or not marca.startswith(PREFIXO_DA_MARCA_DO_APARELHO):
         return ""
     letras = marca[len(PREFIXO_DA_MARCA_DO_APARELHO) :]
@@ -299,9 +299,9 @@ def rotulo_da_haptica(numero: int | None) -> str:
 
     **Decidido em 24/09/2026**, pelo padrão de produto fixado
     para o alto-falante e o microfone em 23/09 (A-FORJA-VALIDA-O-SOM-01, E6): o
-    nome dela na frente, o ``iProduct`` da Sony atrás, e nada de endereço. O
+    nome do controle na frente, o ``iProduct`` da Sony atrás, e nada de endereço. O
     rótulo de antes, «DualSense <hex6> (háptica)», punha o rabo do endereço do
-    controle na lista de som da máquina — e fazia a bancada contar quatro placas
+    controle na lista de som da máquina — e fazia a máquina de teste contar quatro placas
     DualSense onde há duas.
 
     ``None``, ``bool`` e número que não seja positivo valem como *"não sei o
@@ -445,7 +445,7 @@ def varrer_endpoints_orfaos(
 
     ``de_pe`` é a resposta de :func:`endpoints_de_pe` que quem chama já tem:
     fazê-la duas vezes por volta seria um ``pactl`` a mais a cada
-    reconciliação. Sem ela, pergunta.
+    reconciliação. Sem a memória, pergunta.
 
     Devolve os ``module_id`` derrubados, para o log e para a régua.
     """
@@ -1358,7 +1358,7 @@ class TocadorDoRumble:
         return not vista
 
     def _conferir_o_destino(self, proc: Any, sink: str) -> None:
-        """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV da bancada."""
+        """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV da máquina."""
         for espera in ESPERAS_DA_CONFERENCIA_S:
             if self._fim.wait(espera) or proc.poll() is not None:
                 return

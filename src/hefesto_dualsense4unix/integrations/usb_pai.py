@@ -4,7 +4,7 @@ O PROBLEMA QUE ESTE MÓDULO RESOLVE
 -----------------------------------
 
 O PipeWire publica o áudio do DualSense com um nome que **não carrega
-identidade**. Medido nesta bancada em 15/08/2026, com dois controles no cabo::
+identidade**. Medido nesta máquina de teste em 15/08/2026, com dois controles no cabo::
 
     alsa_output.usb-Sony_..._DualSense_Wireless_Controller-00.analog-surround-40
     alsa_output.usb-Sony_..._DualSense_Wireless_Controller-00.2.analog-surround-40
@@ -18,7 +18,7 @@ controle errado é pior que não exibir nenhuma.
 Mas existe um casamento que não depende de nome nenhum: **a placa de som e o
 HID do mesmo controle penduram no MESMO dispositivo USB**. No cabo, a interface
 ``:1.0`` é o áudio e a ``:1.3`` é o HID, e as duas são filhas do nó que tem
-``busnum``/``devnum``. Medido na mesma bancada::
+``busnum``/``devnum``. Medido na mesma máquina de teste::
 
     hidraw8  -> .../usb3/3-2/3-2:1.3/...   card3 -> .../usb3/3-2/3-2:1.0
     hidraw10 -> .../usb3/3-3/3-3:1.3/...   card2 -> .../usb3/3-3/3-3:1.0
@@ -28,9 +28,9 @@ que é exatamente por que adivinhar por posição erraria — e erraria de forma
 convincente, com metade dos casos certos.
 
 A lógica vem do ``scripts/ensaios/audio_por_transporte.py`` (``_dispositivo_usb_pai``),
-que a mediu primeiro. Aqui ela é PORTADA para o produto, não importada: o
+que a mediu primeiro. Aqui a função é PORTADA para o produto, não importada: o
 ``scripts/`` não é pacote instalado, e a janela não pode depender de um
-instrumento de bancada.
+instrumento de ensaio.
 
 O QUE ELE NÃO É
 ----------------
@@ -45,7 +45,7 @@ UNIVERSALIDADE (o que o usuário pediu em 15/08/2026)
 
 Nada aqui olha MAC, ordem de conexão, número de controles ou nome de máquina.
 A pergunta é sempre a mesma para 1, 2, 4 ou 7 controles: *este nó de áudio e
-este HID penduram no mesmo dispositivo USB?* — e ela se responde igual em
+este HID penduram no mesmo dispositivo USB?* — e se responde igual em
 qualquer PC, porque quem responde é o sysfs do kernel.
 """
 

@@ -170,7 +170,7 @@ def nos_dualsense_bluetooth(raiz: str | None = None) -> list[NoDualSenseBT]:
     disso — a fixture `_nenhum_hidraw_vivo_na_varredura_de_som` do
     `tests/conftest.py`, por exemplo — não alcançava esta função, que continuava
     lendo `/sys/class/hidraw` de verdade. É a *régua que mede o mundo de
-    ontem*, e nesta casa ela já tem nome e reincidência.
+    ontem*, e nesta casa essa régua já tem nome e reincidência.
     """
     raiz = raiz or _SYSFS_HIDRAW
     achados: list[NoDualSenseBT] = []
@@ -303,7 +303,7 @@ def _carregar_libopus() -> ctypes.CDLL:
 
 
 def versao_libopus() -> str | None:
-    """Versão da libopus, ou None se ela não estiver no sistema (p/ o doctor)."""
+    """Versão da libopus, ou None se não estiver no sistema (p/ o doctor)."""
     try:
         bruto = _carregar_libopus().opus_get_version_string()
         return str(bytes(bruto).decode("utf-8", "replace"))
@@ -383,7 +383,7 @@ def chave_da_marca() -> bytes:
     era um SHA-256 dos 12 dígitos, e quem tinha a marca e a lista dos prefixos
     da Sony tinha o endereço em 27 s (medido). Com a chave por aplicativo do
     machine-id, a mesma máquina dá a mesma marca em toda volta, todo transporte
-    e todo reinstalar, e a marca não volta ao endereço fora dela.
+    e todo reinstalar, e a marca não volta ao endereço fora da máquina.
     """
     global _CHAVE_DA_MARCA
     with _TRAVA_DA_CHAVE:
@@ -434,12 +434,12 @@ def campo_do_controle(uniq: str | None) -> tuple[str, ...]:
 def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
     """O argumento `source_properties=` do `load-module` — ENTRE ASPAS DUPLAS.
 
-    **AS ASPAS SÃO A CURA, e sem elas a ponte perdia DOIS fatos em silêncio.**
+    **AS ASPAS SÃO A CURA, e sem as aspas a ponte perdia DOIS fatos em silêncio.**
     O parser do `pipewire-pulse` corta o valor no primeiro ESPAÇO quando ele não
     vem entre aspas duplas — e este argumento tem três propriedades separadas
     por espaço, então só a primeira chegava, pela metade.
 
-    MEDIDO na bancada em 06/09/2026 (PipeWire 1.6.8), carregando os dois
+    MEDIDO no ensaio em 06/09/2026 (PipeWire 1.6.8), carregando os dois
     nós lado a lado e LENDO O NÓ com `pactl list sources`::
 
         A) como a ponte montava até hoje (sem aspas):
@@ -457,7 +457,7 @@ def propriedades_da_source(descricao: str, controle: str | None = None) -> str:
     MONITOR-QUE-VENCE-01 fixou, acima do monitor mais alto medido (1109). A
     constante estava certa desde 03/09; o que não viajava era o valor.
 
-    **E A RÉGUA QUE VIGIAVA ISSO DAVA VERDE**, porque ela lia o ARGV e não o nó:
+    **E A RÉGUA QUE VIGIAVA ISSO DAVA VERDE**, porque a régua lia o ARGV e não o nó:
     ``test_o_canal_do_radio_nao_perde_para_um_monitor.py::test_a_prioridade_
     viaja_de_verdade_no_load_module`` afirma ``"priority.session=1500" in
     props[0]`` — e a string ESTÁ no argv, dentro do pedaço que o servidor
@@ -531,7 +531,7 @@ class SourceVirtualPipeWire:
         ficou no SERVIDOR quando o processo anterior morreu (ou quando quem
         subiu foi outro: o daemon e o `mic bt` do CLI publicam o mesmo nome).
 
-        **Medido na bancada em 07/09/2026, com um DualSense no rádio**, e o
+        **Medido no ensaio em 07/09/2026, com um DualSense no rádio**, e o
         modo de falha é o pior que existe — silêncio sem uma linha de log::
 
             módulo órfão de pé  →  escritas ok: 8 · descartes: 1342 · 100,00% de zeros
@@ -1335,10 +1335,10 @@ def numero_do_assento(uniq: str) -> int | None:
 
 
 def descricao_do_microfone(uniq: str) -> str:
-    """«Microfone do Controle N (DualSense Wireless Controller)», sem o endereço dela.
+    """«Microfone do Controle N (DualSense Wireless Controller)», sem o endereço do controle.
 
     **A FORMA A, decisão de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01): o
-    nome dela na frente e o ``iProduct`` da Sony atrás — a string que um jogo
+    nome do controle na frente e o ``iProduct`` da Sony atrás — a string que um jogo
     procura quando pede o microfone do controle por nome. Igual ao
     alto-falante (``alto_falante_bt.rotulo_do_alto_falante``), os quatro
     controles, o cabo e o BT; quem monta o sufixo é
@@ -1352,7 +1352,7 @@ def descricao_do_microfone(uniq: str) -> str:
       que a pessoa vê, que é o defeito inteiro que o canal por controle existe
       para matar (`integrations/canal_do_microfone`, "o defeito é de NOME").
       O nome INTERNO já tinha sido curado em 06/09; o rótulo LEGÍVEL, que é o
-      que ela lê no seletor de entrada de qualquer aplicativo, não veio junto;
+      que quem usa lê no seletor de entrada de qualquer aplicativo, não veio junto;
     * e ele publicava **o MAC do controle do usuário** na lista de dispositivos de
       áudio da máquina — visível em todo aplicativo que abra um seletor de
       microfone. A máscara da casa cobre arquivo versionado; esta linha
@@ -1365,7 +1365,7 @@ def descricao_do_microfone(uniq: str) -> str:
 
     **ISTO RESPONDE «AGORA», E O NÓ GUARDA «QUANDO NASCEU»** — e o gêmeo desta
     função mentia PIOR que o do alto-falante em 20/09/2026: três dos quatro
-    rótulos dela estavam errados, um deles sem número nenhum. Quem mantém o
+    rótulos estavam errados, um deles sem número nenhum. Quem mantém o
     rótulo do nó vivo igual ao que esta função responde são os DONOS do canal —
     :func:`~integrations.canal_do_microfone.renomear` para o cabo e
     :meth:`PonteMicBluetooth.renomear_a_source` para o rádio —, chamados pelo
@@ -1468,7 +1468,7 @@ class RecuoDoPactl:
     def perguntar(
         self, runner: Callable[[list[str]], str | None], argv: list[str]
     ) -> str | None:
-        """Uma pergunta ao servidor, contando a ESTE recuo o que houve com ela."""
+        """Uma pergunta ao servidor, contando a ESTE recuo o que houve com a pergunta."""
         try:
             saida = runner(argv)
         except subprocess.TimeoutExpired:
@@ -1636,7 +1636,7 @@ def _pelo_retrato(argv: list[str]) -> object:
 
 
 def _escreveu_no_retrato(argv: list[str]) -> None:
-    """Uma escrita marca no retrato os tipos que ela mexe; a leitura seguinte relê."""
+    """Uma escrita marca no retrato os tipos que mexe; a leitura seguinte relê."""
     from hefesto_dualsense4unix.integrations import retrato_do_som
 
     retrato_do_som.escreveu(argv)

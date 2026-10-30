@@ -102,11 +102,11 @@ RADIO_DE_VERDADE_NA_SUITE = "HEFESTO_RADIO_DE_VERDADE"
 
 
 def a_suite_esta_rodando() -> bool:
-    """A suíte está no ar? Então nada daqui escreve no BlueZ dela, nem o lê.
+    """A suíte está no ar? Então nada daqui escreve no BlueZ da máquina, nem o lê.
 
     É o sinal que ``gesto_de_reconexao`` usava sozinho desde 22/09/2026, quando
     a primeira corrida de 457 testes chamou ``Disconnect`` e ``Connect`` nos
-    quatro DualSense da bancada, ao vivo. Agora ele guarda a BORDA: toda
+    quatro DualSense da máquina de teste, ao vivo. Agora ele guarda a BORDA: toda
     escrita passa por :meth:`LeitorDoBluez.chamar` ou
     :meth:`LeitorDoBluez.escrever_propriedade`, e as duas perguntam aqui.
     """
@@ -544,7 +544,7 @@ class LeitorDoBluez:
         raise NotImplementedError
 
     def responde(self, *, espera: float | None = None) -> bool:
-        """O ``org.bluez`` responde: a árvore traz a raiz dele ou um filho dela, nunca um ``in``."""
+        """O ``org.bluez`` responde: a árvore traz a raiz dele ou um filho, nunca um ``in``."""
         caminhos = self.caminhos(espera=espera)
         if caminhos is None:
             return False
@@ -1412,7 +1412,7 @@ def observar_o_gesto_da_vaga(maos: Mapping[str | None, object]) -> None:
 
 
 def a_saida(razao: str, *, gesto_da_vaga: bool) -> str:
-    """Como o controle saiu, pela razão do BlueZ e pelo gesto segurado antes dela."""
+    """Como o controle saiu, pela razão do BlueZ e pelo gesto segurado antes."""
     if razao in (RAZAO_DAQUI, RAZAO_SUSPENSAO):
         return SAIDA_DAQUI
     if gesto_da_vaga:
@@ -1689,7 +1689,7 @@ class DonoVivo(LeitorDoBluez):
         return self._barramento.escrever(caminho, interface, nome, assinatura, valor, espera=espera)
 
     def comecar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:
-        """``StartDiscovery`` pela NOSSA conexão — a busca vive enquanto ela viver."""
+        """``StartDiscovery`` pela NOSSA conexão — a busca vive enquanto a conexão viver."""
         return self.chamar(caminho_do_adaptador, ADAPTADOR, "StartDiscovery", quem=quem)
 
     def parar_busca(self, caminho_do_adaptador: str, *, quem: str = QUEM_PADRAO) -> Escrita:

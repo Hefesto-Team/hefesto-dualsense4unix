@@ -24,7 +24,7 @@ em `integrations/ponte_escada.py`, na justificativa do primeiro degrau:
     *"Errar aqui custa um aperto de botão; errar para Xbox custa as dez, e
     custa em silêncio."*
 
-Estava num COMENTÁRIO. Aviso em comentário ninguém lê, e um mês depois ela
+Estava num COMENTÁRIO. Aviso em comentário ninguém lê, e um mês depois quem usa
 jogou um jogo de movimento e o controle não respondeu. Um canal que alguém lê
 — o journal do launch e o ``daemon.state_full`` — é a diferença entre o produto
 saber e o produto contar.
@@ -44,7 +44,7 @@ O QUE ESTE MÓDULO NÃO É, e as duas recusas são decisão de produto
    (`scripts/check_a_tela_nao_confessa.py`): a tela nunca confessa dívida
    nossa. Aqui não é dívida nossa — é o PREÇO de uma escolha do usuário —, e por
    isso a redação de qualquer frase é DO USUÁRIO. Este módulo entrega o DADO; quem
-   escreve a frase é ela.
+   escreve a frase é a tela.
 
 NÃO EXISTE "XBOX COM GIROSCÓPIO", e ninguém deve gastar trabalho ali
 --------------------------------------------------------------------
@@ -96,7 +96,7 @@ def linhas_do_mapa() -> tuple[str, ...]:
     LÊ a coluna `ponte_alcanca`, que nasceu em 20/08/2026 exatamente para
     guardar esta afirmação no dado em vez de na prosa (PONTE-NO-MAPA-01). Não
     há lista digitada aqui: no dia em que uma feature nova nascer `uhid` no
-    DualSense e declarar a ponte, ela entra nesta conta sozinha.
+    DualSense e declarar a ponte, a feature entra nesta conta sozinha.
 
     Tupla VAZIA quando o mapa não está no disco — é o caso do produto
     instalado, e quem trata é :func:`chaves_fora_do_ar`.
@@ -118,7 +118,7 @@ def linhas_do_mapa() -> tuple[str, ...]:
 def chaves_fora_do_ar() -> tuple[str, ...]:
     """As linhas que o caminho Xbox tira do ar — do mapa, ou da cópia congelada.
 
-    Ordem estável (alfabética pela chave) porque ela vai para o journal e para
+    Ordem estável (alfabética pela chave) porque a lista vai para o journal e para
     o `state_full`: uma lista que muda de ordem a cada leitura faz duas linhas
     iguais parecerem diferentes para quem estiver comparando.
     """
@@ -140,7 +140,7 @@ def canal_sem_imu(*, mascara: object, caminho: object, backend: object) -> bool:
       linhas `uhid`"*) — é escolha coerente, não silêncio, e não é este evento;
     - **caminho resolvido `== "xbox"`** — o canal escolhido é o comum. É a
       metade que a herança de `config.gamepad_caminho` liga sem ninguém pedir
-      NAQUELE jogo, e é por ela que o PRAGMATA caiu;
+      NAQUELE jogo, e é por essa metade que o PRAGMATA caiu;
     - **`backend == "uinput"`** — o vpad de pé é mesmo o evdev. Sem esta, um
       vpad `uhid` que ainda não sabe dizer o caminho responderia "sem IMU" com
       a IMU no ar, que é a mentira cara num painel de diagnóstico.

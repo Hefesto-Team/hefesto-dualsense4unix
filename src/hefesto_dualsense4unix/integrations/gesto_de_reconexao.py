@@ -12,13 +12,13 @@ Faz UMA coisa: pede ao ``bluetoothd`` que derrube a conexão de um endereço, e
 diz o que aconteceu numa frase em português. Não reconecta, não sonda o
 aparelho, não escreve em LED nenhum.
 
-**A REGRA DE NÃO RECONECTAR FOI REVOGADA POR ELA — 22/09/2026.** Aqui estava
-escrito: *"Não reconectar é decisão de produto, e é o contrato deste módulo. O botão
-PS é do usuário; `reconectar` não existe aqui de propósito."* A palavra de produto, no dia:
-*"pera o reconectar deveria sim tocar no radio. não faz sentido ele ficar de
-fora."* <!-- noqa-acento: citação literal -->
+**A REGRA DE NÃO RECONECTAR FOI REVOGADA EM 22/09/2026.** Aqui estava
+escrito que não reconectar era decisão do produto e o contrato deste módulo, com o
+botão PS do usuário e `reconectar` ausente de propósito. A decisão do dia:
+o reconectar toca no rádio, porque não faz sentido ele ficar de
+fora.
 
-E O DIA MEDIU POR QUÊ. A bancada caiu num estado que o botão PS **não**
+E O DIA MEDIU POR QUÊ. A máquina de teste caiu num estado que o botão PS **não**
 resolve: o BlueZ dizendo ``Connected: true`` para quatro controles com o kernel
 sem HID nenhum deles — elo de pé, sessão de entrada morta. Para o rádio já
 estava tudo certo, então apertar PS não fazia nada; o que destrava é derrubar o
@@ -36,7 +36,7 @@ está no ar e nada se mexe; sem leitura do kernel, na dúvida, ele fica.
 **O ``Connect`` NÃO ACORDA CONTROLE DORMINDO, e isso foi medido no mesmo dia:**
 depois do ``Disconnect`` os três responderam ``br-connection-create-socket``,
 porque um DualSense desligado não atende chamado. Por isso o estado
-:data:`ESTADO_SO_O_PS` existe: ele é a metade que continua sendo dela.
+:data:`ESTADO_SO_O_PS` existe: ele é a metade que continua sendo do usuário.
 
 ENDEREÇAMENTO POR MAC, NUNCA POR ``hciN``
 ==========================================
@@ -53,7 +53,7 @@ SEM SUDO, E ISSO É MEDIDO
 ``Disconnect`` em ``org.bluez.Device1`` responde para o uid 1000 nesta mesa
 (medido em 22/08/2026, com o ``busctl introspect`` respondendo e a propriedade
 ``Connected`` legível). Este gesto **não** passa pelo helper privilegiado do
-install — pedir senha para algo que não precisa dela ensina a pessoa a digitar
+install — pedir senha para algo que não precisa de senha ensina a pessoa a digitar
 senha sem motivo.
 
 PELO DONO DO BLUEZ, E NA TRAVA DO RÁDIO (BLUEZ-UM-DONO-01, 23/09/2026)
@@ -61,7 +61,7 @@ PELO DONO DO BLUEZ, E NA TRAVA DO RÁDIO (BLUEZ-UM-DONO-01, 23/09/2026)
 Ler e escrever passam por ``integrations/bluez_dbus.py``: a guarda contra a
 suíte, que nasceu AQUI em 22/09, subiu para a borda de lá e vale para toda
 escrita do produto. O ``Disconnect`` e o ``Connect`` de :func:`reconectar` vão
-JUNTOS dentro da trava comum do rádio: sem ela, o watchdog podia dar o
+JUNTOS dentro da trava comum do rádio: sem a trava, o watchdog podia dar o
 ``Connect`` dele no meio do nosso gesto.
 
 TRÊS DISCIPLINAS, HERDADAS DE ``integrations/exame_da_mesa.py``
@@ -74,7 +74,7 @@ TRÊS DISCIPLINAS, HERDADAS DE ``integrations/exame_da_mesa.py``
   como sucesso;
 * **Nenhum endereço inteiro sai numa frase.** :func:`mascarar` zera os octetos 4
   e 5 antes de o texto chegar à tela, porque o retrato das abas versiona PNG do
-  que aparece nela e há portão que reprova MAC real em arquivo do repositório.
+  que aparece na tela e há portão que reprova MAC real em arquivo do repositório.
 """
 
 from __future__ import annotations
@@ -216,7 +216,7 @@ def _modalias_dos_dualsense() -> tuple[str, ...]:
 
     Os números SÃO os do broker (`broker/hidraw_broker.PHYS_VENDOR` e
     `PHYS_PRODUCTS`), lidos de lá, e a pergunta é por PROPRIEDADE, nunca pelo
-    `Alias`: o nome é editável e a bancada tem quatro aparelhos com o mesmo,
+    `Alias`: o nome é editável e a máquina de teste tem quatro aparelhos com o mesmo,
     que é a doença que esta casa já pagou casando nó de som por rótulo.
 
     **O EDGE ENTROU EM 25/09/2026** (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01).

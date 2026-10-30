@@ -96,7 +96,7 @@ class Lacos:
         return True
 
     def desligar(self, chave: str) -> bool:
-        """Fecha a laçada. `True` = havia uma e ela morreu."""
+        """Fecha a laçada. `True` = havia uma e a laçada morreu."""
         with self._trava:
             proc = self._vivos.pop(chave, None)
         if proc is None:

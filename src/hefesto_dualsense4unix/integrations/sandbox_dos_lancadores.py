@@ -67,7 +67,7 @@ def _raizes(lar: Path, raiz_sistema: Path | None) -> tuple[Path, Path]:
 
 def permissao_de(app_id: str, lar: Path | None = None,
                  raiz_sistema: Path | None = None) -> Permissao:
-    """A caixa deste aplicativo: o que o pacote pede **mais** o que ela mudou."""
+    """A caixa deste aplicativo: o que o pacote pede **mais** o que o usuário mudou."""
     lar = Path.home() if lar is None else lar
     usuario, sistema = _raizes(lar, raiz_sistema)
     meta = None
@@ -155,7 +155,7 @@ class RespostaDoFlatpak:
 
 def resposta_do_flatpak(app_ids: tuple[str, ...], lar: Path | None = None,
                         raiz_sistema: Path | None = None) -> RespostaDoFlatpak:
-    """As caixas dos lançadores que a aba ACHOU, na ordem em que ela os achou."""
+    """As caixas dos lançadores que a aba ACHOU, na ordem em que os achou."""
     vistos: list[str] = []
     for a in app_ids:
         if a and a not in vistos:

@@ -5,15 +5,15 @@ adaptador para os controles e deixar outro para o resto do mundo. A medição de
 20/09 derrubou a premissa: não existe *"o adaptador onde o COSMIC varre"*.
 
     **A varredura é do adaptador que a PESSOA ABRE. Um só, o que o usuário escolheu,
-    e nenhum enquanto ela não escolhe.**
+    e nenhum enquanto o usuário não escolhe.**
 
 Quatro corridas com a mão do usuário, a última conferida por foto da tela no instante
 da medição. A tela de Bluetooth do ``cosmic-settings`` **lista** os adaptadores
-sem varrer nenhum; a busca mora um nível abaixo, dentro do adaptador em que ela
+sem varrer nenhum; a busca mora um nível abaixo, dentro do adaptador em que o usuário
 entra, e a lista "Dispositivos próximos" **é** a busca.
 
-Uma reserva estática teria de adivinhar em qual adaptador ela vai clicar — e
-erraria. No dia da medição o arranjo dela estava certo **por acaso**: ela entrou
+Uma reserva estática teria de adivinhar em qual adaptador o usuário vai clicar — e
+erraria. No dia da medição o arranjo estava certo **por acaso**: o usuário entrou
 no único adaptador vazio. Bastava ter clicado no primeiro da lista pelo nome,
 que hospeda um DualSense, para a perda ser real e silenciosa.
 
@@ -22,8 +22,8 @@ pública do ``org.bluez.Adapter1``, não custa privilégio nenhum, responde pelo
 estado de agora e cobre de graça a **cauda** — na corrida 3 o adaptador varreu
 por mais 21 segundos depois de a janela fechar.
 
-E ele não pressupõe bancada nenhuma. A ordem de 11/09 é que o produto é
-para qualquer usuário; uma reserva que pressupõe três adaptadores é a bancada escrita no código, e
+E ele não pressupõe máquina nenhuma. A ordem de 11/09 é que o produto é
+para qualquer usuário; uma reserva que pressupõe três adaptadores é a máquina de teste no código, e
 é por isso que a reserva morreu e esta leitura ficou.
 
 AUSÊNCIA É RESPOSTA, E É O CONTRATO INTEIRO DESTE MÓDULO
@@ -34,14 +34,14 @@ defeito que esta casa persegue há um mês — *o instrumento respondia sobre ou
 coisa que não o produto*.
 
 Por isso a resposta é a :class:`Varredura`, e não um ``set``: sem ``busctl``,
-sem ``bluetoothd`` ou sem permissão ela vem com :attr:`Varredura.motivo`
+sem ``bluetoothd`` ou sem permissão a resposta vem com :attr:`Varredura.motivo`
 preenchido e :attr:`Varredura.sei` em ``False``. Quem lê **tem de** olhar o
 ``sei`` antes de escrever "nenhum" em qualquer lugar.
 
 O DONO DO NÚMERO MORA AQUI
 ===========================
 :data:`QUEDA_MINIMA_MEDIDA` e :data:`QUEDA_MAXIMA_MEDIDA` são as duas corridas
-em que a varredura correu **no mesmo adaptador do controle**. Elas são o único
+em que a varredura correu **no mesmo adaptador do controle**. As duas são o único
 lugar do produto onde esse par de números é dado, e não prosa: o aviso do
 ``scripts/doctor.sh`` cita os dois, e
 ``tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`` reprova se os dois

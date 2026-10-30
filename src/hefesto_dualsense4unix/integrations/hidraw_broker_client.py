@@ -181,7 +181,7 @@ class HidrawBrokerClient:
         lista fechada dele, e recusa com ``reject_bad_product`` se não.
 
         O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01 (07/10/2026). A lease
-        é esta conexão: se ela cai, o broker desmonta o gadget. ``None`` no fd é
+        é esta conexão: se a conexão cai, o broker desmonta o gadget. ``None`` no fd é
         o pad que fica no uhid; a resposta diz por quê (``contrato`` quando o
         kernel não cumpre um).
         """

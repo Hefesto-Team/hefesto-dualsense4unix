@@ -381,15 +381,15 @@ class UinputMouseDevice:
         nos dois faria o botão emitir duas vezes.
 
         `calados` É A SEGUNDA SACOLA QUE FALTAVA — 06/09/2026, ONDA3-MOTOR-01, e
-        ela nasce de um defeito medido: `do_mouse` **não distingue "não é do
-        mouse" de "foi calado"**. Um botão que ela pôs em `— Nada —` não entra
+        a sacola nasce de um defeito medido: `do_mouse` **não distingue "não é do
+        mouse" de "foi calado"**. Um botão posto em `— Nada —` não entra
         em `do_mouse` (o `resolver()` o pula de propósito), logo a subtração
         acima não o alcançava e ele **voltava ao valor de fábrica**. Escapavam
         SEIS dos vinte e dois — as quatro direções do d-pad, o Círculo e o
         Quadrado —, e os outros dezesseis calavam porque os mapas que os
         atendem são SUBSTITUÍDOS inteiros.
 
-        Ela escolhia `— Nada —`, a tela confirmava, e o botão continuava fazendo
+        O usuário escolhia `— Nada —`, a tela confirmava, e o botão continuava fazendo
         o que fazia: perda silenciosa de escolha do usuário. Quem monta a sacola é
         `core/acoes_de_botao.botoes_calados()`; `None` aqui quer dizer "ninguém
         informou", e é o contrato de antes byte a byte.
@@ -419,7 +419,7 @@ class UinputMouseDevice:
                           if b not in do_mouse and b not in mudos}
 
     def _soltar_o_que_segura(self) -> None:
-        """Solta os cliques e as setas que a tabela ANTERIOR mantinha: ela deixou de valer."""
+        """Solta os cliques e as setas que a tabela ANTERIOR mantinha, que deixou de valer."""
         segurados = self._codigos_apertados | self._setas_apertadas
         self._codigos_apertados = frozenset()
         self._codigos_reais = frozenset()
@@ -834,7 +834,7 @@ class CursorDoToque:
     ) -> None:
         """Anda o cursor em pixels float, guardando o resto sub-pixel.
 
-        A precisão da `peca` (o botão dela apertado) reduz o passo; a permanência conta daqui.
+        A precisão da `peca` (o botão da peça apertado) reduz o passo; a permanência conta daqui.
         """
         if self._device is None or self._uinput_mod is None:
             return

@@ -9,7 +9,7 @@ passasse o mouse por cima da palavra certa nunca descobria o que fazer. É a
 ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`` na forma mais barata de consertar: o dado
 está pronto, falta a tela pronunciá-lo.
 
-Uma **ordem de serviço** é o formato que pronuncia. Ela tem quatro partes, e
+Uma **ordem de serviço** é o formato que pronuncia. A ordem tem quatro partes, e
 nenhuma é opcional:
 
 * o **imperativo** — "Mova o aparelho de 5 Gbps para uma entrada do computador";
@@ -21,7 +21,7 @@ A TERCEIRA LINHA É SEMPRE VISÍVEL — ``D-LINHA-DO-GANHO-NAO-MEDIDO``
 --------------------------------------------------------------------
 
 A linha que confessa que o ganho não foi medido **nunca** mora só no tooltip.
-Ela é o que impede raciocínio de se vestir de medição: uma ordem que manda mover
+Essa frase é o que impede raciocínio de se vestir de medição: uma ordem que manda mover
 um aparelho sem dizer quanto se ganha é uma ordem honesta; a mesma ordem com o
 ganho escondido é um palpite com cara de laudo.
 
@@ -32,12 +32,12 @@ ganho escondido é um palpite com cara de laudo.
 desta casa — o estado vazio se disfarçando de resposta. :data:`NAO_MEDI` é
 "olhei e não sei quanto"; :data:`NAO_DECLARADO` é "só você sabe, e você ainda
 não me disse". As duas constantes existem para que a diferença seja testável, e
-há teste que reprova se elas colapsarem numa frase só.
+há teste que reprova se as duas colapsarem numa frase só.
 
 O SELO DE PROCEDÊNCIA
 ----------------------
 
-Toda :class:`Linha` carrega de onde ela veio, e o selo é DADO, nunca string de
+Toda :class:`Linha` carrega de onde veio, e o selo é DADO, nunca string de
 tela: ``medido-aqui``, ``derivado-da-conta``, ``especificacao-de-terceiro``. O
 terceiro **exige nomear o terceiro** — autoridade anônima é exatamente como
 raciocínio se veste de medição, e é o motivo de o selo existir. Há portão que
@@ -47,7 +47,7 @@ terceiro sem ``fonte``.
 Por que vocabulário novo em vez de reusar o ``de_onde_sei`` do mapa de canais:
 as duas respondem perguntas diferentes. O CSV responde *"como sei que este canal
 funciona"*; a ordem responde *"como sei que este conselho vale"*. Onde há
-correspondência ela existe (``medido-aqui`` ↔ ``medido``,
+correspondência, a ligação existe (``medido-aqui`` ↔ ``medido``,
 ``especificacao-de-terceiro`` ↔ ``afirmado-no-doc``); ``derivado-da-conta`` não
 tem par lá, porque o CSV não faz aritmética.
 
@@ -58,7 +58,7 @@ A DISCIPLINA — a mesma de ``exame_da_mesa.py`` e ``censo_do_barramento.py``
   e o exame passa a carregar este arquivo: uma dependência de terceiros aqui
   viraria uma linha muda na conferência. É por isso que este módulo **não**
   importa ``mapa_das_portas`` nem ``utils/maquina`` — os dois trazem pydantic
-  junto. A vizinhança pelo desenho dela entra por ARGUMENTO, já calculada por
+  junto. A vizinhança pelo desenho do usuário entra por ARGUMENTO, já calculada por
   quem chama (``mapa_das_portas.vizinhas_de_verdade``).
 * **Funções puras.** Nada aqui abre ``/dev``, fala com o daemon, escreve em
   disco ou toca no rádio. O catálogo inteiro sai do censo do barramento e da
@@ -70,14 +70,14 @@ A DISCIPLINA — a mesma de ``exame_da_mesa.py`` e ``censo_do_barramento.py``
   (``interface/olhar.py --todas --publicado --doc``; era
   ``scripts/gui-captura/retratar_abas.py`` até 06/09/2026, apagado com a janela
   GTK), e ``scripts/check_anonymity.sh`` diz por escrito que o serial
-  identifica a unidade dela tão bem quanto o MAC.
+  identifica a unidade tão bem quanto o MAC.
 
 O QUE NENHUMA ORDEM PODE DIZER
 -------------------------------
 
 1. que o aparelho de 5 Gbps está derrubando o Bluetooth do usuário — é hipótese, e a
    medição que a fecharia não foi feita;
-2. **"Wi-Fi"**, enquanto a classe do aparelho for ``ff`` e ela não tiver
+2. **"Wi-Fi"**, enquanto a classe do aparelho for ``ff`` e o aparelho não tiver
    declarado o que é. O kernel não classifica, e o ``product`` dizer
    "802.11ac NIC" não o torna Wi-Fi para o produto — adivinhar por texto é como
    se erra com confiança (``censo_do_barramento.py``, cabeçalho);
@@ -85,7 +85,7 @@ O QUE NENHUMA ORDEM PODE DIZER
    arranjo que o próprio ``docs/usage/bluetooth-varios-adaptadores.md`` §3.4
    sugere;
 4. qualquer número de milímetros, altura ou linha de visada — o guia é
-   raciocínio, e ela já disse que não sabe o que essas palavras querem dizer;
+   raciocínio, e quem usa já disse que não sabe o que essas palavras querem dizer;
 5. o serial ou o endereço de aparelho nenhum.
 """
 from __future__ import annotations
@@ -149,7 +149,7 @@ R6_ENTRADA_RECLAMOU_DE_CORRENTE = "entrada_reclamou_de_corrente"
 
 @dataclass(frozen=True)
 class Linha:
-    """Uma das três frases de uma ordem, com de onde ela veio."""
+    """Uma das três frases de uma ordem, com de onde veio."""
 
     texto: str
     selo: str
@@ -558,11 +558,11 @@ def catalogo(leitura: Leitura) -> tuple[Ordem, ...]:
 def ordens_novas(
     ordens: Sequence[Ordem], dispensadas: Mapping[str, str]
 ) -> tuple[Ordem, ...]:
-    """As ordens que ela ainda não dispensou **neste arranjo**.
+    """As ordens que o usuário ainda não dispensou **neste arranjo**.
 
     ``dispensadas`` é ``{chave da regra: arranjo dispensado}``. A chave do
     dispensado é o ARRANJO, e não a recomendação: a dispensa vale para o que o usuário
-    viu, e se ela mudar os cabos e a mesma regra disparar com um arranjo novo, é
+    viu, e se o usuário mudar os cabos e a mesma regra disparar com um arranjo novo, é
     fato novo e a ordem volta. Chavear só pelo slug faria a decisão de ontem
     calar uma medição de hoje.
 
@@ -571,7 +571,7 @@ def ordens_novas(
     ensinou o desfazer a gravar `arranjo=""` na dispensa. As duas pontas vazias
     casavam: uma ordem VIVA que chegasse sem arranjo — o padrão do campo — batia
     com o vazio guardado e nascia CALADA para os dois consumidores deste módulo,
-    a janela GTK inclusive. Uma ordem que ninguém dispensou sumia da tela, e ela
+    a janela GTK inclusive. Uma ordem que ninguém dispensou sumia da tela, e quem usa
     deixaria de saber que existe uma medição ali.
 
     Relatado por TRÊS frentes seguidas (08-01, 08-02 e CONEXOES-LIGAR-TUDO-01)
@@ -589,10 +589,10 @@ def ordens_novas(
 def ordens_caladas(
     ordens: Sequence[Ordem], dispensadas: Mapping[str, str]
 ) -> tuple[Ordem, ...]:
-    """As ordens que a dispensa dela está segurando — e que a tela CONTA.
+    """As ordens que a dispensa do usuário está segurando — e que a tela CONTA.
 
     Dispensa que some sem deixar marca é a mesma classe de defeito do card que
-    some: ela deixaria de saber que existe uma decisão de produto ali.
+    some: quem usa deixaria de saber que existe uma decisão de produto ali.
 
     O `ordem.arranjo and` é a outra metade da cura de 06/09/2026 — ver
     :func:`ordens_novas`. Sem ele esta contagem incluiria as ordens vivas de
@@ -782,7 +782,7 @@ def _livres_fora_da_controladora(
 
 
 def _destino_declarado(leitura: Leitura, livres: Sequence[Furo]) -> str:
-    """A primeira entrada livre, pelo NÚMERO dela, que é um dos ``livres``."""
+    """A primeira entrada livre, pelo NÚMERO, que é um dos ``livres``."""
     caminhos = {caminho_do_no(no) for furo in livres for no in furo.nos} - {""}
     sem_lugar = ""
     for numero in leitura.entradas_livres_declaradas:

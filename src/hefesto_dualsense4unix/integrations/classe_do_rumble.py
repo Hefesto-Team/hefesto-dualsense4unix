@@ -4,7 +4,7 @@ O ``replay.length`` não diz a duração: o SDL2 manda sempre ``SDL_MAX_RUMBLE_D
 com um rumble ``(0, 0)`` depois; o Wine manda o menor ``cutoff_time_ms`` (1000 ms de partida).
 A classe sai do que se vê: quanto subiu, quanto durou, qual motor domina. O ``FF_PERIODIC`` traz
 a onda do jogo, a única pista de timbre que ele dá. Os limites são valores de partida, a validar
-na bancada (O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01).
+no ensaio (O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01).
 """
 from __future__ import annotations
 

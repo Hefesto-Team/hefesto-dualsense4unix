@@ -9,7 +9,7 @@ frases (CERTO/AJUSTAR) e o quadro «Sugestão de Conexão» viram uma fileira de
 * **um botão de ação** por cartão, e só um;
 * **o porquê numa frase só**, atrás do ⓘ;
 * os **quatro que mais pesam** aparecem, numa fileira de cartões da mesma altura; o próximo entra
-  quando ela ignora ou resolve um (sem «mais N», desenho aprovado de 05/10/2026). O que está certo
+  quando se ignora ou resolve um (sem «mais N», desenho aprovado de 05/10/2026). O que está certo
   não ganha linha: sem dica nenhuma, a aba diz só «Tudo certo».
 
 Este módulo é puro: entram fatos já lidos (as ordens do exame, a proposta da central, as quedas do
@@ -174,7 +174,7 @@ def dica_da_ordem(
     dica_de_ignorar: str = "",
     dica_de_voltar: str = "",
 ) -> Dica:
-    """O cartão de uma ordem do catálogo, com o destino quando ela o tem.
+    """O cartão de uma ordem do catálogo, com o destino quando a ordem o tem.
 
     ``slot`` é a linha do exame onde a ordem mora: o ``ignorar`` a chama por ele.
     """

@@ -370,7 +370,7 @@ def _completo(o: Mapping[str, Any], nos: NosDoGrafo) -> dict[str, Any]:
     """O objeto com o texto perdido devolvido pelo grafo, e marcado como conferido.
 
     O monitor de uma saída (``device.class=monitor``) é o MESMO nó do grafo, com o
-    serial dela, mas o nome e a descrição dele são do ``pipewire-pulse``
+    serial da saída, mas o nome e a descrição dele são do ``pipewire-pulse``
     («….monitor», «Monitor of …»): dele só as propriedades vêm do nó, e o nome e a
     descrição perdidos seguem perdidos, nunca os da saída.
     """

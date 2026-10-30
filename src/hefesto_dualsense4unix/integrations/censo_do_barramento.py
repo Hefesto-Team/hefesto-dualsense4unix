@@ -16,9 +16,9 @@ Ele não filtra nada; quem filtra é quem chama.
 O QUE O KERNEL CLASSIFICA SOZINHO
 ----------------------------------
 
-A espécie de cada aparelho não é palpite: ela sai de
+A espécie de cada aparelho não é palpite: sai de
 ``bInterfaceClass``/``SubClass``/``Protocol`` da **interface 0**, medido nesta
-bancada em 22/08/2026::
+máquina de teste em 22/08/2026::
 
     1-3        25a7:fa07   03/01/02   mouse
     1-4        3554:fa09   03/01/01   teclado
@@ -32,7 +32,7 @@ Por isso o grau. ``GRAU_LIDO`` é *"o kernel disse, e temos palavra para isso"*;
 ``GRAU_DESCONHECIDO`` é *"ninguém disse"* — a classe ``ff``, em que o fabricante
 declinou de classificar, e qualquer código que este módulo não saiba nomear. Os
 dois casos guardam o código cru em ``classe`` para a tela mostrar, e nos dois a
-tela deixa ela corrigir. **Não há heurística por nome de produto**: o ``4-1``
+tela deixa quem usa corrigir. **Não há heurística por nome de produto**: o ``4-1``
 diz "802.11ac NIC" no ``product`` e isso não o torna Wi-Fi para o produto — a
 palavra do fabricante não é classificação do kernel, e adivinhar por texto é
 como se erra com confiança.
@@ -41,7 +41,7 @@ A CLASSE SAI DA INTERFACE, NÃO DO APARELHO
 -------------------------------------------
 
 ``bDeviceClass`` vale ``00`` em todo aparelho composto — medido: o mouse, o
-teclado e o Wi-Fi desta bancada são todos ``00`` no descritor do aparelho e só
+teclado e o Wi-Fi desta máquina de teste são todos ``00`` no descritor do aparelho e só
 dizem o que são na interface. Ler o descritor do aparelho classificaria a mesa
 inteira como "não identificado", com exceção dos hubs.
 
@@ -57,14 +57,14 @@ TOPOLOGIA
 os três adaptadores Bluetooth desta casa NÃO têm o mesmo pai — ``3-3.1.1`` e
 ``3-3.1.4`` penduram no hub interno ``3-3.1``, e ``3-3.2`` pendura no ``3-3``.
 Comparar o pai responderia "estão em hubs diferentes", que é falso no metal: são
-o mesmo aparelho de bancada, com um hub encadeado dentro. Quem responde é
+o mesmo aparelho, com um hub encadeado dentro. Quem responde é
 ``hub_em_comum()``, que sobe a cadeia inteira.
 
 O hub-RAIZ é a exceção que torna a resposta útil: todo aparelho pendura sob um,
-sempre, em qualquer PC. ``mesa_de_radio.py`` chegou nela pelo nome
+sempre, em qualquer PC. ``mesa_de_radio.py`` chegou ao hub raiz pelo nome
 (``^usb[0-9]+$``); aqui a régua é ``devpath == "0"``, que é a mesma medição por
 outro lado — porta 0 não existe no barramento, e os quatro ``usbN`` desta
-bancada são os únicos nós com ``devpath`` ``0``.
+máquina de teste são os únicos nós com ``devpath`` ``0``.
 
 ENERGIA — E O QUE NÃO DÁ PARA SABER
 ------------------------------------
@@ -84,7 +84,7 @@ Sem root o ``/sys`` dá três números e nenhuma medição de corrente:
 1. ``bMaxPower`` não distingue — o hub USB 3.1 alimentado reporta ``0mA`` e o
    USB 2.1 alimentado reporta ``100mA`` (já era a nota de ``mesa_de_radio.py``);
 2. o bit de autoalimentado de ``bmAttributes`` é **declaração, não medição** —
-   os três adaptadores TP-Link desta bancada declaram ``e0`` (bit ``0x40``
+   os três adaptadores TP-Link desta máquina de teste declaram ``e0`` (bit ``0x40``
    ligado) e no mesmo descritor pedem ``bMaxPower=500mA`` da porta. Um aparelho
    com fonte própria pode tirar do barramento no máximo uma carga unitária, 100
    mA; pedir 500 e dizer que não depende da porta é o descritor se contradizendo.
@@ -99,7 +99,7 @@ UNIVERSALIDADE
 Nada aqui olha nome de máquina, quantidade de aparelhos ou ordem de conexão. A
 raiz e os quatro leitores entram por argumento com default do sistema real —
 nunca por constante de módulo, que o ``CANARIO-FS-01`` (``tests/conftest.py``)
-pega e que impediria fotografar a aba com uma bancada de mentira.
+pega e que impediria fotografar a aba com uma máquina de mentira.
 """
 
 from __future__ import annotations
@@ -290,7 +290,7 @@ def ler_o_barramento(
     ler_bytes: Callable[[str], bytes] | None = None,
     base: Callable[[str, str], str | None] | None = None,
 ) -> Censo:
-    """Uma varredura de ``/sys``, e o barramento inteiro sai dela.
+    """Uma varredura de ``/sys``, e o barramento inteiro sai da varredura.
 
     ``ler_bytes`` lê o ``bos_descriptors`` (binário); ``base`` é a base do sistema,
     ``(syspath, propriedade) -> valor`` (a libudev por padrão).
@@ -862,7 +862,7 @@ def _o_que_o_kernel_ligou(
 
 
 def _nos_de_input(pasta: str, listar: Callable[[str], list[str]]) -> list[str]:
-    """Os ``inputN`` de uma interface USB: direto nela (``xpad``) ou sob o filho HID.
+    """Os ``inputN`` de uma interface USB: direto na interface (``xpad``) ou sob o filho HID.
 
     Medido em 05/10/2026: num aparelho HID o kernel pendura o filho
     ``0003:VVVV:PPPP.NNNN`` na interface e o ``input/inputN`` mora DENTRO dele; só o driver que
@@ -887,7 +887,7 @@ def _interfaces_e_eventos(
     real: Callable[[str], str],
     listar: Callable[[str], list[str]],
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """``(triplas, eventos)``: a tripla de CADA interface e os ``eventN`` que elas criaram."""
+    """``(triplas, eventos)``: a tripla de CADA interface e os ``eventN`` criados."""
     prefixo = f"{busnum}-{devpath}:" if busnum and devpath else f"{nome}:"
     triplas: list[str] = []
     eventos: list[str] = []
@@ -905,7 +905,7 @@ def _interfaces_e_eventos(
 
 
 def _listar_sem_erro(listar: Callable[[str], list[str]], pasta: str) -> list[str]:
-    """O que há numa pasta do ``/sys``; vazio quando ela não existe (nem todo nó tem tudo)."""
+    """O que há numa pasta do ``/sys``; vazio se não existe (nem todo nó tem tudo)."""
     try:
         return list(listar(pasta))
     except (OSError, KeyError):

@@ -1,10 +1,10 @@
 """Fechar e reabrir o lançador que estava aberto — REPOR-O-LANCADOR-01.
 
-**Por que isto existe, e o pedido é de produto (21/09/2026):** *"tenho pensando sobre
-o botão de reiniciar daemon. Acho que além do que ele já faz seria importante
-ele fechar e reabrir o launcher, seja steam, epic, heroic ou qualquer outro."*
-<!-- noqa-acento: citação literal -->
-E, quando lhe foram postas três formas: *"Faz automático mesmo"*.
+**Por que isto existe (pedido do produto, 21/09/2026):** além do que já faz,
+o botão de reiniciar o daemon fecha e reabre o lançador que estava aberto,
+seja a Steam, a Epic, o Heroic ou qualquer outro.
+Das três formas postas na mesa, a escolhida foi a automática.
+
 
 **O QUE O REINÍCIO DEIXA PARA TRÁS, medido quatro vezes** (`STEAM-NO-FISICO-01`):
 o lançador que subiu ANTES do daemon segura o controle físico — a barra de luz
@@ -21,7 +21,7 @@ caso em que "automático" não fecha nada: o recibo diz por quê, e o reinício
 vale a partir do próximo lançamento.
 
 **O AMBIENTE É LIMPO EM TODA ABERTURA**, e é lição paga: um lançador aberto de
-um terminal herda o ambiente do terminal que o abriu (a venv e o `PATH` dela),
+um terminal herda o ambiente do terminal que o abriu (a venv e o `PATH` do terminal),
 e contamina TODO jogo que ele abrir depois. `ambiente_do_jogo.ambiente_limpo` é o
 dono disso.
 

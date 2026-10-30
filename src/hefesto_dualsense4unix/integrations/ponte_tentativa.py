@@ -6,12 +6,12 @@ nenhum chamador em produção — o defeito-mãe desta casa, *"a casa sabe e o
 produto não faz"*, que o portão `portao_a_casa_sabe_e_o_produto_nao_faz.py`
 acusava textualmente. Este módulo é o LAÇO, e só ele.
 
-A divisão continua a mesma, e é ela que mantém as duas coisas separáveis:
+A divisão continua a mesma, e é a divisão que mantém as duas coisas separáveis:
 
 - `ponte_escada` DECIDE (função pura: qual é o próximo degrau, quanto custa,
   quando o silêncio confirma);
 - este módulo GUARDA A TENTATIVA EM CURSO e chama aquelas decisões nos três
-  momentos em que o produto encosta nelas;
+  momentos em que o produto encosta nessas decisões;
 - quem AGE continua sendo `daemon/launch_env.py` (no lançamento) e
   `daemon/subsystems/hotkey.py` (no gesto do usuário). Nenhum dos dois ganhou
   decisão nova: os dois passaram a perguntar.
@@ -24,7 +24,7 @@ OS TRÊS MOMENTOS
    tentativa. Jogo SEM carimbo mas COM `mode`: o perfil manda, e a tentativa
    abre PARADA no degrau do perfil, sem armar nada.
 2. **No gesto `PS + R3`** (`hotkey.build_next_bridge_callback` →
-   `avancar_por_gesto`). O gesto é a vontade explícita dela e sempre obedece;
+   `avancar_por_gesto`). O gesto é a vontade explícita do usuário e sempre obedece;
    para o laço, ele é o sinal de que o degrau de pé NÃO funcionou.
 3. **No silêncio** (`launch_env.tique_da_escada` → `silencio_confirma`).
    Passado o silêncio com o jogo VIVO, o produto carimba com
@@ -40,10 +40,10 @@ esta" — e a distância entre "estou tentando" e "esta funciona" é exatamente 
 que a disciplina do balde `sem_impedimento_conhecido` do prontuário proíbe
 apagar. Carimbar antes da confirmação é o defeito, não o atalho.
 
-**Consequência declarada, com o preço na mesa:** se ela fechar o jogo no meio
+**Consequência declarada, com o preço na mesa:** se o usuário fechar o jogo no meio
 da escada, NADA é carimbado (ninguém confirmou nada) e a tentativa morre. O
 próximo lançamento recomeça do degrau que o PERFIL entrega — que, no jogo sem
-`mode`, é o primeiro. Ela paga os mesmos gestos de novo. O preço é real e é o
+`mode`, é o primeiro. O usuário paga os mesmos gestos de novo. O preço é real e é o
 barato: a alternativa é um arquivo dizendo "já tentei estas", que envelhece
 sozinho e que ninguém sabe quando apagar.
 
@@ -54,12 +54,12 @@ Os dois últimos degraus da `ESCADA` não alcançam um processo já rodando —
 controles, `launch_env._nativos_fora_da_antecipacao`), `steam_input` porque o
 `localconfig.vdf` só sobrevive com a Steam fechada. Quando a escada chega
 neles com o jogo aberto, este laço **avisa, guarda e pula**; não finge, e não
-come o aperto dela.
+come o aperto do usuário.
 
 - **Não finge** porque subir ali ao vivo é o degrau que MENTE — é o que o
   cabeçalho de `ponte_escada` já dizia com todas as letras.
 - **Avisa** no journal (`ponte_escada_pulou_o_degrau_caro`) e na lightbar, que
-  é o único canal que ela enxerga sem sair do jogo: o `hotkey` pisca a cor do
+  é o único canal que o usuário enxerga sem sair do jogo: o `hotkey` pisca a cor do
   modo pulado (`CORES_DO_MODO`) antes de aplicar a troca. Um degrau que some
   em silêncio é o defeito com outro nome.
 - **Pula** porque o gesto serve para uma coisa só, e o usuário disse qual. Um degrau que exige
@@ -83,14 +83,14 @@ perfil tem `mode`.
     perfil mode=native -> motivo=perfil_manda   armar=None
 
 Ou seja: **"parar" não adiava o degrau, só cobrava um aperto por ele.** É o
-mesmo achado que `50f2c9c6` registrou sem consertar — *"a escada nunca ARMA o
-Nativo nem o Steam Input... fechá-lo mexe no ramo 'o perfil manda', que é
-decisão de produto"* — e ele continua aberto, e continua sendo dela.
+mesmo achado que `50f2c9c6` registrou sem consertar: a escada nunca ARMA o
+Nativo nem o Steam Input, e fechá-lo mexe no ramo «o perfil manda», que é
+decisão do produto. O achado continua aberto, e a decisão continua sendo do usuário.
 
 O que o pulo GARANTE, e é o que `50f2c9c6` acrescentou: a ponte de pé é
 guardada (`_anotar_o_gesto(a_registrar=True)`) e o tique a grava no `mode` do
-perfil sem carimbar, então o próximo lançamento abre a tentativa PARADA nela.
-Ela não repaga os gestos que já gastou.
+perfil sem carimbar, então o próximo lançamento abre a tentativa PARADA nessa ponte.
+O usuário não repaga os gestos que já gastou.
 
 E o que "parar" custava foi MEDIDO, com os quatro jogos do usuário e quatro apertos
 cada (`D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`): o jogo SEM
@@ -102,16 +102,16 @@ carimbo em jogo nenhum, tinha o comportamento pior em TODOS eles.
 DOIS APERTOS NÃO PODEM CUSTAR A PARTIDA (29/08/2026)
 ----------------------------------------------------
 O parar acima custava DUAS coisas, e as duas foram medidas três vezes no
-journal da bancada (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
+journal da máquina de teste (Sackboy 26/08 03:40:45, Mullet 29/08 00:26:17, Touhou 29/08
 03:19:14), sempre na mesma sequência de quatro linhas:
 
     ponte_escada_parou_no_degrau_caro  de=gamepad/xbox proximo=native/- ...
     ponte_escada_encerrada             degrau=gamepad/xbox gestos=2 ...
     ponte_troca_pedida_por_gesto       de=xbox escada=parou para=mouse_teclado
 
-1. **o degrau em que ela estava EVAPORAVA.** `encerrar` não grava nada, e o
-   `xbox` a que ela chegou com dois gestos sumia com a tentativa: o próximo
-   lançamento armava o `mode` de antes e ela pagava os mesmos gestos. Agora o
+1. **o degrau em que o usuário estava EVAPORAVA.** `encerrar` não grava nada, e o
+   `xbox` a que o usuário chegou com dois gestos sumia com a tentativa: o próximo
+   lançamento armava o `mode` de antes e o usuário pagava os mesmos gestos. Agora o
    laço GUARDA a ponte de pé (`ponte_a_registrar`), e o tique a grava no `mode`
    do perfil — **sem carimbar**. Carimbar ali mataria o caminho para o Nativo
    (`proximo_degrau` recusa rodar havendo carimbo); alinhando só o `mode`, o
@@ -136,7 +136,7 @@ lançamento (com o jogo ainda fora, onde recriar o vpad não custa nada a
 ninguém) e o gesto do usuário. Este é o desenho, não uma limitação temporária: cada
 degrau ao vivo recria o vpad, e recriar o vpad com o jogo aberto arranca o
 controle da mão do usuário (R-04, medido em 23/07/2026 e de novo em 19/08). Um laço
-que subisse sozinho pagaria esse preço sem ela pedir.
+que subisse sozinho pagaria esse preço sem o usuário pedir.
 
 É `como_subir` que sustenta isso mecanicamente, e por isso ele é chamado nos
 DOIS pontos: com o jogo vivo ele nunca responde `SUBIR_AGORA`, e este módulo
@@ -153,21 +153,21 @@ uma confirmação: é o sinal de que a ponte de pé NÃO pegou. O que confirma �
 gesto SEGUIDO DE SILÊNCIO com o jogo vivo — o usuário mexeu, parou de mexer, e
 continuou jogando. Nesse caso o carimbo sai `POR_GESTO` (e não `POR_SILENCIO`),
 porque foi a mão do usuário que pôs aquela ponte de pé; a distinção é a do esquema,
-e `ponte_escada.por_que_confirmou` é a dona dela.
+e `ponte_escada.por_que_confirmou` é a dona dessa distinção.
 
 A MÁSCARA DO GESTO VOLTA PARA O PERFIL (29/08/2026)
 ---------------------------------------------------
 O gesto tem um SEGUNDO registro vivo além da tentativa, e ele existe porque a
-tentativa não cobre o caso que mais custa a ela: **o jogo com carimbo**. Ali a
+tentativa não cobre o caso que mais custa ao usuário: **o jogo com carimbo**. Ali a
 escada não roda (e não deve rodar), `avancar_por_gesto` devolve `None`, e o
 gesto do usuário trocava a ponte viva sem que nada no disco aprendesse. Medido no
 journal: 24 apertos em 7 dias, porque os 23 perfis de jogo do usuário pedem
-`dualsense` e ela joga em `xbox`.
+`dualsense` e o usuário joga em `xbox`.
 
 `ponte_do_gesto` (a `GestoDoUsuario`) é esse registro: a ponte que o gesto deixou de
 pé, o appid do jogo, e o relógio do silêncio. Ele vive no daemon como a
-tentativa, morre com o jogo como ela, e o tique de 1 Hz é quem o colhe. Não é
-uma segunda escada: é a mesma pergunta (*"que ponte ficou de pé, e ela parou de
+tentativa, morre com o jogo como a tentativa, e o tique de 1 Hz é quem o colhe. Não é
+uma segunda escada: é a mesma pergunta (*"que ponte ficou de pé, e o usuário parou de
 reclamar?"*) para o caminho em que a escada, corretamente, não corre.
 """
 from __future__ import annotations
@@ -352,13 +352,13 @@ def gesto_deixou_de_pe(
 
     Quatro recusas, e cada uma tem um porquê que não é conveniência:
 
-    - **sem jogo vivo**: fora de uma partida o gesto é ela mexendo na mesa, e o
+    - **sem jogo vivo**: fora de uma partida o gesto é o usuário mexendo na mesa, e o
       perfil de jogo nenhum tem o que aprender com isso;
     - **sem appid**: o jogo não veio pelo wrapper, então não há perfil de jogo
       para receber a máscara. Escrever no perfil errado é pior que não escrever;
     - **caminho fora dos dois** (`mouse_teclado`, e o que mais o ciclo ganhar):
       não é degrau da `ESCADA` e não é ponte de gamepad. Gravar
-      `mode.kind="desktop"` no perfil de um jogo porque ela passou por ali
+      `mode.kind="desktop"` no perfil de um jogo porque o usuário passou por ali
       seria uma decisão de produto que ninguém pediu;
     - **há tentativa em curso**: aquele caminho já tem dono
       (`avancar_por_gesto` + `tique`), e dois donos para a mesma pergunta é
@@ -598,7 +598,7 @@ def ver_o_jogo(
 def silencio_confirma(
     daemon: Any, *, jogo_vivo: bool, agora: float | None = None
 ) -> ponte_escada.Ponte | None:
-    """Momento 3: a ponte que o silêncio dela confirma, ou None."""
+    """Momento 3: a ponte que o silêncio do usuário confirma, ou None."""
     tentativa = em_curso(daemon)
     if tentativa is None:
         return None

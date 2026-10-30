@@ -1,11 +1,11 @@
 """A lista de exclusão do Hefesto — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01.
 
-**O QUE ELA É, em uma frase (a do §3 da sprint):** o jogo que está aqui vê o
+**O QUE A LISTA É, em uma frase (a do §3 da sprint):** o jogo que está aqui vê o
 controle como se o Hefesto não estivesse instalado.
 
-O pedido é de produto, 21/09/2026, olhando a aba Lançadores: *"(...) Adicionar jogo a
-lista de exclusão do Hefesto (cujo objetivo é garantir que tal jogo não use
-nenhuma feature do hefesto)"*. <!-- noqa-acento: citação literal -->
+O pedido do produto, de 21/09/2026, olhando a aba Lançadores: adicionar o jogo à
+lista de exclusão do Hefesto, cujo objetivo é garantir que tal jogo não use
+nenhuma feature do Hefesto.
 
 ESTA LISTA É UM GUARDA-CHUVA, e não um nono leitor
 --------------------------------------------------
@@ -16,23 +16,23 @@ na E0, §10.1 da sprint):
 - ``atalho`` — o atalho de inicialização; dono:
   ``steam_launch_options.marcar_jogo_sem_wrapper``.
 
-**A LISTA DO STEAM INPUT NÃO ENTRA, e ela chegou a entrar.** A primeira redação
+**A LISTA DO STEAM INPUT NÃO ENTRA, e chegou a entrar.** A primeira redação
 deste módulo punha o jogo excluído também no ``steam_input_apps.txt``, lendo o
 rótulo ``launch_env.ESTADO_ALLOWLIST_STEAM_INPUT`` («físico é o único
 dispositivo»). O rótulo é anterior à decisão de 09/08/2026
 (ESCONDER-EM-VEZ-DE-SAIR-01): desde então a marca **esconde o físico e mantém os
 virtuais de pé** — *"a allowlist do Steam Input NÃO tira o Hefesto da frente"*
-(`gamepad.set_steam_input_exception`). Escrever nela deixaria o Hefesto NA
-FRENTE do jogo que ela excluiu. Esta lista não toca na do Steam Input, em
+(`gamepad.set_steam_input_exception`). Escrever na allowlist deixaria o Hefesto NA
+FRENTE do jogo que o usuário excluiu. Esta lista não toca na do Steam Input, em
 nenhum sentido.
 
-Desde 19/10/2026 ninguém escreve nela: o «Excluir» saiu com a aba antiga
+Desde 19/10/2026 ninguém escreve na lista: o «Excluir» saiu com a aba antiga
 (O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01). Os leitores seguem lendo a
 lista do disco, e o ``tirar`` sai das listas em que a entrada escreveu.
 
 FORA DA STEAM, O AMBIENTE (01/10/2026). O jogo do Heroic com a mesma janela
 ganha a lista própria de ambiente sem o que é nosso (o Heroic monta
-`{...globais, ...do jogo}`), e a entrada guarda o «antes» dela em ``heroic``;
+`{...globais, ...do jogo}`), e a entrada guarda o «antes» do jogo em ``heroic``;
 a caixa do Flatpak de um emulador excluído perde o ambiente inteiro. A carona
 de cada transição (`cura_por_estrada.curar_todas_as_estradas`) pergunta a esta
 lista o que pular (:func:`o_que_a_carona_pula`), e a do device KS também
@@ -43,7 +43,7 @@ o jogo do Lutris Flatpak com a mesma janela ganha a camada dele (o
 que é nosso (:func:`prefixos_excluidos`). Os donos dos arquivos continuam sendo os de
 sempre; esta lista só diz QUAIS jogos. A alternativa (cada feature aprender a
 perguntar a esta lista) faria oito donos lerem um arquivo novo, e o primeiro que
-esquecesse deixaria uma feature viva num jogo que ela excluiu.
+esquecesse deixaria uma feature viva num jogo que o usuário excluiu.
 
 TIRAR DEVOLVE SÓ O QUE ESTA LISTA ESCREVEU
 ------------------------------------------
@@ -51,8 +51,8 @@ Se o jogo já estava numa das duas por escolha do usuário antes de ser excluíd
 continua lá depois do «Tirar». Quem diz de quem era a linha é o próprio dono:
 ``"adicionado"`` quer dizer que a escrita foi nossa; ``"ja_estava"`` quer dizer
 que era do usuário. A entrada guarda só as listas em que NÓS escrevemos
-(``escritas``), e o «Tirar» só sai delas. Sem isso, excluir e tirar apagaria uma
-escolha anterior dela, calado — a exclusão viraria borracha.
+(``escritas``), e o «Tirar» só sai dessas. Sem isso, excluir e tirar apagaria uma
+escolha anterior do usuário, calado — a exclusão viraria borracha.
 
 A CHAVE É A IDENTIDADE DA JANELA
 --------------------------------
@@ -402,7 +402,7 @@ def tirar(chave: str, *, config_home: Path | None = None, lar: Path | None = Non
 
 
 def _tirar_na_trava(alvo: str, destino: Path, lar: Path | None) -> str:
-    """O corpo de :func:`tirar`, com a trava na mão (a carona entra nela)."""
+    """O corpo de :func:`tirar`, com a trava na mão (a carona entra na trava)."""
     try:
         atuais = _ler_cru(destino)
     except _ArquivoTortoError:

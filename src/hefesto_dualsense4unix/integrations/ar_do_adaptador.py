@@ -1,6 +1,6 @@
 """ar_do_adaptador.py — o ar de cada adaptador Bluetooth, lido do kernel, sem root.
 
-AR-MEDIDO-01 (23/09/2026), decisões R10 e R11 dela: *«Hz reais + pontes»* e a
+AR-MEDIDO-01 (23/09/2026), decisões R10 e R11: os Hz reais, as pontes e a
 régua de 79 canais com o que cada adaptador DE FATO evita. Nada estimado.
 
 O QUE ESTE MÓDULO LÊ, e por que nada disto pede root
@@ -19,7 +19,7 @@ Três leituras, as três como uid 1000, sem subprocesso:
   hci_sock.c``: a linha ``OGF_STATUS_PARAM`` é ``0x000000ea``, e o bit 6 (OCF
   0x0006) está ligado. O mesmo filtro deixa o evento ``Command Complete``
   (0x0E) chegar ao socket sem privilégio (``event_mask[0]`` = ``0x1000d9fe``,
-  bit 14). Conferido no fonte em 23/09/2026 e MEDIDO na bancada no mesmo
+  bit 14). Conferido no fonte em 23/09/2026 e MEDIDO no ensaio no mesmo
   dia — ver ``docs/data/orcamento-de-ar.csv``.
 
 AUSÊNCIA É RESPOSTA — o contrato do ``varredura_do_radio.py``
@@ -34,7 +34,7 @@ AUSÊNCIA É RESPOSTA — o contrato do ``varredura_do_radio.py``
   «0 Hz» ali seria o medidor respondendo sobre outra coisa que não o ar;
 * adaptador SEM conexão e contador parado → ``0.0``. Isso é «ninguém no
   rádio», que é verdade, e não «rádio ruim». Mas só quando a lista de
-  conexões VEIO: sem ela, contador parado é «não sei» (``CONEXOES_ILEGIVEIS``).
+  conexões VEIO: sem a lista, contador parado é «não sei» (``CONEXOES_ILEGIVEIS``).
 
 O contador é de 32 bits e dá a volta. Um salto negativo é VOLTA quando a taxa
 que ele implica é possível (:data:`TETO_DE_PACOTES_POR_S` para pacotes,
@@ -656,7 +656,7 @@ def _mascarar(endereco: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Bancada, só leitura: ``python -m …ar_do_adaptador [segundos]``."""
+    """Ensaio, só leitura: ``python -m …ar_do_adaptador [segundos]``."""
     import sys
 
     args = list(sys.argv[1:] if argv is None else argv)

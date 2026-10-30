@@ -4,13 +4,13 @@ O PROBLEMA QUE ESTE MÓDULO RESOLVE
 -----------------------------------
 
 A janela sabe dizer QUANTOS controles estão no rádio, e sabe dizer quais
-adaptadores existem no barramento. O que ela nunca soube dizer é a única coisa
+adaptadores existem no barramento. O que a janela nunca soube dizer é a única coisa
 que a pessoa precisa saber antes de plugar o quinto controle no mesmo dongle:
 **quanto do rádio daquele adaptador já foi comprometido.** Sem essa conta, o
 sintoma de rádio cheio chega como "o controle está estranho" e a pessoa procura
 defeito no controle.
 
-A conta tem duas metades, e elas têm procedências DIFERENTES — misturá-las é o
+A conta tem duas metades, e as duas têm procedências DIFERENTES — misturá-las é o
 erro que este cabeçalho existe para impedir.
 
 **A primeira metade é ESPECIFICAÇÃO, não medição desta máquina.** O Bluetooth
@@ -84,7 +84,7 @@ Duas consequências de projeto saem daí, e as duas estão no código:
 
 1. o medidor usa o **nominal do A/B**, nunca uma medição ao vivo. Uma barra
    alimentada pelo envelope de 157,8 a 402,9 Hz oscilaria 2,5 vezes sem ninguém
-   ter mexido em nada, e ensinaria a desconfiar dela;
+   ter mexido em nada, e ensinaria a desconfiar da conta;
 2. o rótulo é **uma de três palavras sobre ocupação** e não aceita frase de
    causa. A tela pode dizer *"a mesa está cheia"*, que é aritmética de
    especificação. Não pode dizer *"por isso seu controle está ruim"*, porque a
@@ -275,7 +275,7 @@ def adaptador_por_uniq(
     MAC do adaptador"*, e o belt de ``:395-397`` só confirma quando o sysfs de
     Bluetooth está legível.
 
-    **A regra de honestidade, e ela tem controle negativo medido nesta bancada
+    **A regra de honestidade, com controle negativo medido nesta máquina de teste
     em 22/08/2026:** controle no CABO traz ``HID_PHYS`` de barramento USB
     (``usb-0000:0c:00.3-1/input3``), não MAC. Ele devolve ``""``, porque
     controle no fio não ocupa fatia de rádio nenhuma. O mesmo vale para o nosso
@@ -635,7 +635,7 @@ def n_max_pela_capacidade(
     """Quantas pontes ainda deixam todo controle do adaptador em ``piso_hz`` ou mais.
 
     ``piso((C_eff - 2 x piso_hz x controles) / custo da ponte)``, nunca abaixo de zero e nunca
-    acima de ``teto`` (o que sobreviveu na bancada). ``ar`` e ``custo`` em ``None`` são lidos na
+    acima de ``teto`` (o que sobreviveu no ensaio). ``ar`` e ``custo`` em ``None`` são lidos na
     hora (``AR_DO_ADAPTADOR_PORTA_DIRETA`` e ``custo_da_ponte()``): trocar a constante vale já.
     """
     preco = custo_da_ponte() if custo is None else custo

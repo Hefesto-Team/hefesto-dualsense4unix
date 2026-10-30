@@ -21,7 +21,7 @@ O QUE ESTE MÓDULO NÃO FAZ, e cada linha é uma medição:
 * **Não toca em drop-in, não chama `doctor --fix-mic`, não reinicia o
   WirePlumber.** Isso é `--promote-source`, que é um gesto HUMANO explícito e
   muda a política da máquina inteira. Um toque de botão não pode fazer isso a
-  cada vez, com ela usando o computador.
+  cada vez, com o usuário usando o computador.
 * **Não inventa critério de "fonte que se sustenta".** O dono é
   `scripts/fix_wireplumber_default_source.sh` (que por sua vez chama o
   `doctor.sh:_sources_com_porta_usavel`). Do lado Python não existe UMA linha
@@ -38,7 +38,7 @@ que ele tem aqui: o LED do controle passaria a mentir sobre o microfone do usuá
 
 E **guardar o anterior é obrigatório**, porque eleger PERSISTE: o valor de
 antes é empurrado pilha abaixo, e numa mesa em turnos quatro eleições empurram
-o microfone real dela quatro degraus para baixo, caladas.
+o microfone real do usuário quatro degraus para baixo, caladas.
 
 A ELEIÇÃO ENCOLHEU — CANAL-POR-CONTROLE-01, 03/09/2026
 -------------------------------------------------------
@@ -51,7 +51,7 @@ Duas coisas que este módulo tratava como uma passam a ser duas:
   DELE, e ninguém precisa tirá-lo de ninguém;
 * **SER O PADRÃO DO SISTEMA** é o único recurso genuinamente único, porque
   `pactl get-default-source` devolve UM nome. **É só isto que a eleição
-  decide**, e é o que ela sempre fez de fato.
+  decide**, e é o que a eleição sempre fez de fato.
 
 O que muda no código: quando o canal do controle não está no ar, este módulo
 para de recusar de saída e **PEDE o canal** pelo gancho
@@ -62,7 +62,7 @@ conhece um chamável.
 
 **Nenhuma frase nova.** As recusas continuam sendo as que já existiam, palavra
 por palavra: quando o pedido não é atendido no orçamento, a resposta é a mesma
-de antes. Ela recusou a PREMISSA de um recado de tela sobre "perder o
+de antes. A decisão recusou a PREMISSA de um recado de tela sobre "perder o
 microfone", e nenhuma foi escrita.
 """
 
@@ -176,7 +176,7 @@ def dizer_no_ar(uniq: str, ligado: bool) -> bool:
 
 
 def esquecer_a_palavra(uniq: str) -> bool:
-    """Ela deixa de ter dito qualquer coisa sobre este microfone."""
+    """Quem usa deixa de ter dito qualquer coisa sobre este microfone."""
     esquecedor = _ESQUECEDOR_DA_PALAVRA
     if esquecedor is None:
         return False
@@ -236,7 +236,7 @@ def uma_leitura_por_volta() -> Iterator[None]:
 
 
 def _ler(argv: list[str]) -> tuple[int, str]:
-    """O `_rodar`, com a memória da volta quando ela está ligada neste fio."""
+    """O `_rodar`, com a memória da volta quando está ligada neste fio."""
     lidos: dict[tuple[str, ...], tuple[int, str]] | None = getattr(
         _MEMORIA_DO_FIO, "lidos", None)
     if lidos is None:
@@ -393,12 +393,12 @@ class EleitorDeMicrofone:
         2. GUARDA o anterior (só na primeira vez da sessão, em `_eleger_nome`);
         3. pergunta ao dono do critério se o alvo SE SUSTENTA — **antes** de
            escrever, porque eleger um nó que não para de pé sobrescreve a
-           preferência dela por lixo que o WirePlumber desfaz sozinho;
+           preferência do usuário por lixo que o WirePlumber desfaz sozinho;
         4. escreve com `pactl set-default-source`;
         5. ESPERA o grafo assentar e **relê o ATIVO**;
         6. só devolve `ok=True` se o ativo relido for o alvo;
         7. e o passo que faltava: **a eleição que FRACASSA também é uma
-           medição do ativo**, e ela pode provar que o canal de quem estava
+           medição do ativo**, e pode provar que o canal de quem estava
            com o microfone deixou de ser o padrão. Aí a posse DELE cai.
 
         **O PASSO 7 É O ACHADO DA AUDITORIA DE 02/09/2026**, e ele é o mesmo
@@ -411,11 +411,11 @@ class EleitorDeMicrofone:
             J1 elege  → eleito=…011, fonte_do_eleito=bluez_input.…_11, ativo=…_11
             J2 aperta → set-default-source …_22 ACEITO (rc=0), ativo relido =
                         alsa_input.pci-0000_00_1f.3.analog-stereo (um TERCEIRO)
-            depois    → eleito=…011 e o ativo do sistema NÃO é mais o canal dela
+            depois    → eleito=…011 e o ativo do sistema NÃO é mais o canal do controle
 
         O `state_full` publicava `eleito: …011` com o canal em um terceiro, e o
         plástico da J1 seguia ACESO afirmando *"estou no ar"*. A escrita passou
-        — o padrão do sistema saiu do canal dela — e ninguém tinha o que ela
+        — o padrão do sistema saiu do canal do controle — e ninguém tinha o que o usuário
         perdeu. É a mentira de segunda geração no caminho de IDA, com o
         agravante de que a J1 não tocou em nada.
         """
@@ -553,7 +553,7 @@ class EleitorDeMicrofone:
         """Para onde vai a fonte padrão quando quem falava saiu do ar.
 
         A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01 (29/09/2026). É UMA pergunta
-        só, e este método é o dono dela. As duas portas que a fazem o chamam: o
+        só, e este método é o dono da pergunta. As duas portas que a fazem o chamam: o
         botão do microfone do eleito
         (`daemon/subsystems/hotkey._passar_o_padrao_ou_devolver`, o plástico e
         o 🎙 da tela) e o nó que morre
@@ -562,7 +562,7 @@ class EleitorDeMicrofone:
 
         (a) **quem está no ar**, na ordem que `no_ar` traz (do mais novo ao
             mais velho, só quem está na mesa), pela `eleger_o_controle` de
-            sempre, com a releitura do ativo e as recusas dela;
+            sempre, com a releitura do ativo e as recusas da eleição;
         (b) **sem ninguém no ar, a volta à máquina**, por
             :meth:`devolver_o_microfone`, que pergunta
             :func:`outra_captura_elegivel`;
@@ -573,11 +573,11 @@ class EleitorDeMicrofone:
         por quem chama, no laço do daemon: aqui chega uma lista, e o
         `MicrofonesNoAr` segue no `hotkey.py`.
 
-        **O «FICA» É UM SÓ, E CADA PORTA O LÊ PELO QUE ELA É.** `calou` é o
+        **O «FICA» É UM SÓ, E CADA PORTA O LÊ PELO QUE A PORTA É.** `calou` é o
         `uniq` de quem apertou para se calar, e só o botão o passa:
 
         * no botão, o ato é de calar e a palavra de produto já foi dita. O padrão
-          fica no canal que ela calou, que grava silêncio por escolha do usuário; a
+          fica no canal que o usuário calou, que grava silêncio por escolha do usuário; a
           posse do eleito cai aqui, e o ato está FEITO (``ok=True``, sem
           frase, com o ativo relido). É a decisão de 19/09
           (A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01): a luz é o estado do microfone
@@ -588,7 +588,7 @@ class EleitorDeMicrofone:
 
         **O QUE A CURA NÃO PROMETE:** com todos os controles calados e nenhum
         outro microfone, o único padrão que não é monitor é um canal calado. O
-        que se garante é que é o que ela calou, e nunca um que ninguém escolheu.
+        que se garante é que é o que o usuário calou, e nunca um que ninguém escolheu.
         """
         for candidato in no_ar:
             passado = self.eleger_o_controle(candidato, list(conectados))
@@ -716,18 +716,18 @@ def canal_publicado(uniq: str, conectados: list[str]) -> bool | None:
 def fonte_nativa_do_controle(uniq: str, conectados: list[str]) -> str | None:
     """O NOME do nó de captura nativo deste controle agora. TRÊS respostas.
 
-    O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026 — e ela nasce porque perguntar
+    O-GANHO-DO-MIC-TEM-DONO-01, 20/09/2026 — e a função nasce porque perguntar
     *"qual nó é o microfone deste controle"* ao daemon dá a resposta ERRADA
     para esta pergunta: o ``canal_fonte`` do ``state_full`` é o nó que o
     produto ELEGEU, e a regra 0 de :func:`escolher_fonte` faz dele o nosso
-    ``hefesto_mic_<hex6>`` — **inclusive no cabo**. Medido na bancada em
+    ``hefesto_mic_<hex6>`` — **inclusive no cabo**. Medido no ensaio em
     20/09, com um DualSense no fio e três no ar: os QUATRO responderam
     ``hefesto_mic_…``, e nenhum deles tem placa ALSA.
 
-    Quem tem placa ALSA é a fonte NATIVA, e é ela que este nome devolve.
+    Quem tem placa ALSA é a fonte NATIVA, e é essa fonte que este nome devolve.
 
     **AS TRÊS SÃO TRÊS COISAS**, com a mesma disciplina da irmã acima — e
-    colapsar as duas primeiras é o defeito que ela existe para não cometer:
+    colapsar as duas primeiras é o defeito que a função existe para não cometer:
 
     * o NOME — há nó nativo, e é este;
     * ``""`` — o ``pactl`` respondeu e não há nó nativo para este controle (o
@@ -802,14 +802,14 @@ def passar_a_escolha_gravada_ao_nome_novo(
     ler: Callable[[str], str | None] | None = None,
     rodar: Callable[[list[str]], tuple[int, str]] | None = None,
 ) -> bool:
-    """A escolha que ela gravou no nome VELHO deste controle passa ao nome novo. Uma vez.
+    """A escolha que o usuário gravou no nome VELHO deste controle passa ao nome novo. Uma vez.
 
     OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 (02/10/2026): os nós do controle
     trocaram o rabo do endereço pela marca do aparelho, e o WirePlumber lembra
     a escolha pelo nome. Na primeira subida do nó novo (``novo``, de
     ``prefixo``), se a fonte padrão gravada (ou a saída, com ``saida=True``) é
     o nome velho DAQUELE controle (``prefixo`` + os seis últimos hex do
-    ``uniq``), ela passa ao nome novo, com uma linha no diário. A de outro
+    ``uniq``), a escolha passa ao nome novo, com uma linha no diário. A de outro
     controle não se toca, e a escolha que não é de controle nenhum também não.
     Devolve se passou. Nunca levanta.
     """

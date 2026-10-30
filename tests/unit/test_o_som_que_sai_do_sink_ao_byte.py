@@ -145,7 +145,7 @@ class TestOsDoisArranjosVaoJuntosENenhumEhEscolhido:
         assert len(af.ARRANJOS) == 2
         assert {a.nome for a in af.ARRANJOS} == {"ds5dongle", "senshi"}
         for arranjo in af.ARRANJOS:
-            assert "NÃO medido nesta bancada" in arranjo.de_onde_sei
+            assert "NÃO medido nesta máquina de teste" in arranjo.de_onde_sei
             assert "@" in arranjo.fonte
 
     def test_o_mesmo_pcm_produz_corpos_diferentes(self) -> None:

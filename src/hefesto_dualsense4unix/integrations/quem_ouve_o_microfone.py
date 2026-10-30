@@ -9,7 +9,7 @@ app está com o microfone deste controle aberto**.
 A casa já sabia listar as FONTES de DualSense
 (:func:`~hefesto_dualsense4unix.integrations.eleicao_de_microfone.fontes_de_captura_agora`)
 e já sabia casar controle com dispositivo USB (``casamento_usb_agora``). O que
-ela nunca perguntou é **quem está lendo uma fonte** — medido em 03/09/2026,
+o produto nunca perguntou é **quem está lendo uma fonte** — medido em 03/09/2026,
 ``grep`` por ``source-outputs`` em ``src/`` devolvia zero. É o que nasce aqui.
 
 O QUE ISTO NÃO FAZ, e cada linha é uma decisão:
@@ -22,7 +22,7 @@ O QUE ISTO NÃO FAZ, e cada linha é uma decisão:
   stream prenderia o nó em ``RUNNING`` e faria a própria régua mentir.
 
 AS TRÊS ARMADILHAS QUE ESTE MÓDULO EXISTE PARA NÃO CAIR — as três medidas em
-03/09/2026, nesta máquina, e nenhuma delas dá erro quando se cai nela:
+03/09/2026, nesta máquina, e nenhuma dá erro quando se cai:
 
 1. **``target.object`` NÃO diz de que fonte o stream lê.** Ele só existe quando
    o cliente pediu um device explícito, e SOME quando o app grava da fonte
@@ -44,8 +44,8 @@ AS TRÊS ARMADILHAS QUE ESTE MÓDULO EXISTE PARA NÃO CAIR — as três medidas 
 **A JUNTA COM A PEÇA B NÃO É UM NOME COMBINADO — É UM ESPAÇO DE NOME.** O
 stream do medidor foi visto em DUAS formas no mesmo dia (``parec`` pulse, com
 ``application.process.id``; ``pw-cat`` nativo, sem PID nenhum), e a PEÇA B
-nasceu na mesma leva que esta: o nome exato pelo qual ela se anuncia não estava
-fixado quando este arquivo foi escrito. Combinar uma string literal com ela
+nasceu na mesma leva que esta: o nome exato pelo qual a peça se anuncia não estava
+fixado quando este arquivo foi escrito. Combinar uma string literal com esse nome
 criaria DOIS donos do mesmo nome, que é como esta casa fabrica divergência
 silenciosa — e o sintoma aqui seria a luz acesa para sempre.
 
@@ -53,9 +53,9 @@ Então aqui não se combina nome: reconhece-se o **espaço de nome**
 (:data:`PREFIXO_PROPRIEDADE_HEFESTO`, :data:`MARCA_HEFESTO`) e o **modo de
 pico**, que são propriedades da forma do stream e não de um acordo. Quem
 declara continua sendo a PEÇA B (``nivel_do_microfone.propriedades_do_medidor``,
-que este módulo NÃO importa, para não morrer se ela faltar); quem reconhece é
+que este módulo NÃO importa, para não morrer se a peça faltar); quem reconhece é
 esta. O teste ``test_quem_ouve_o_microfone.py`` faz o encontro das duas e é o
-que reprova se elas se afastarem.
+que reprova se as duas se afastarem.
 
 **A JUNTA COM A PEÇA C É O TIPO DE RETORNO.** O laço da luz aceita o retorno
 só quando ele é um ``dict`` (``daemon/subsystems/luz_do_mic.py``, ``_perguntar``:
@@ -126,7 +126,7 @@ class StreamDeCaptura:
 
 @dataclass(frozen=True)
 class LeituraDeOuvintes:
-    """A resposta inteira de um ciclo — e ela distingue três coisas."""
+    """A resposta inteira de um ciclo — e distingue três coisas."""
 
     por_uniq: dict[str, list[str]] = field(default_factory=dict)
     pausados_por_uniq: dict[str, list[str]] = field(default_factory=dict)
@@ -274,7 +274,7 @@ def _os_nos_que_carregam_a_voz(
     escolhido pelo nome da placa a ouve sem passar pelo canal. A segunda
     pergunta é a do `bt_mic` ao erguer o canal (`escolher_fonte` sobre
     `sem_os_nos_nossos`): a lista INTEIRA, para o veto do USB e o um-para-um
-    valerem. No rádio não há nó do kernel e ela devolve `None`; no «Nativo» e
+    valerem. No rádio não há nó do kernel e a função devolve `None`; no «Nativo» e
     antes do canal subir os dois nós são o mesmo, e entra uma vez só.
     """
     nos = [no_do_controle]

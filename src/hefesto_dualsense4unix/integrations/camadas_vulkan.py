@@ -86,7 +86,7 @@ def _nome_do_arquivo(caminho_windows: str) -> str:
 
 
 def dono_preservado(caminho_windows: str) -> str | None:
-    """Quem é o dono desta camada, se ela está entre as preservadas."""
+    """Quem é o dono desta camada, se está entre as preservadas."""
     nome = _nome_do_arquivo(caminho_windows)
     for pedaco, dono in CAMADAS_PRESERVADAS:
         if pedaco in nome:
@@ -427,7 +427,7 @@ def gravar_camadas_da_steam_fora(fora: bool, config_home: Path | None = None) ->
 
 
 def a_steam_instalou_as_camadas(home: Path | None = None) -> bool:
-    """A Steam pôs as camadas dela neste computador? Read-only, nunca levanta."""
+    """A Steam pôs as camadas neste computador? Read-only, nunca levanta."""
     lar = Path.home() if home is None else home
     pastas = [lar / ".local" / "share"]
     xdg = os.environ.get("XDG_DATA_HOME", "").strip()
@@ -566,7 +566,7 @@ class Resultado:
 
 
 def _reescrever(registro: Path, alvos: dict[tuple[str, str], str]) -> None:
-    """Troca o dword das entradas nomeadas em `alvos`, e só delas."""
+    """Troca o dword das entradas nomeadas em `alvos`, e em nenhuma outra."""
     texto = registro.read_text(encoding="utf-8", errors="replace")
     saida: list[str] = []
     chave_atual: str | None = None
@@ -757,7 +757,7 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PASTA",
         default="",
         help="a pasta do jogo (STEAM_COMPAT_INSTALL_PATH); sem o vulkan-1.dll "
-        "da Khronos nela, o --prefixo não mexe no registro",
+        "da Khronos na pasta, o --prefixo não mexe no registro",
     )
     args = parser.parse_args(argv)
 

@@ -3,7 +3,7 @@
 O `scripts/doctor.sh` sabe responder isso desde sempre, em milhares de linhas
 de diagnóstico (o número medido está no documento da sprint, que envelhece
 sozinho e não obriga esta página a envelhecer junto). O
-problema nunca foi a medição: é que ela só existe para quem abre terminal, que
+problema nunca foi a medição: é que só existe para quem abre terminal, que
 é a minoria de quem usa o produto. Esta é a mesma leitura, num formato que a
 aba Conexões mostra na seção Check-up — uma linha por achado, sem teto.
 
@@ -77,7 +77,7 @@ class Item:
     que a pessoa pode fazer sem terminal e sem senha — ``None`` quando não há
     nada a fazer, que é o caso normal do estado ``certo``.
 
-    ``ordem`` é a ORDEM DE SERVIÇO desta linha, quando ela tem uma
+    ``ordem`` é a ORDEM DE SERVIÇO desta linha, quando tem uma
     (`integrations/ordens_da_mesa.Ordem`): o imperativo, as três linhas de
     porquê e o selo de procedência de cada uma. É por este campo que a cura
     deixa de morar só no ``set_tooltip_text`` — a tela desenha um card com o
@@ -485,15 +485,15 @@ def exame(
 
     Todo caminho é ``None`` por default e cai no default da checagem — assim
     esta assinatura não repete cinco caminhos do sistema real, e o retrato das
-    abas continua conseguindo injetar uma bancada falsa em UMA chamada.
+    abas continua conseguindo injetar uma máquina falsa em UMA chamada.
 
     `altura_da_antena` e `linha_de_visada` só alimentam
     :func:`vizinhanca_das_portas` — ver o parágrafo sobre CONFIG-09 lá.
 
     `leitura_das_ordens` É O ÚNICO ARGUMENTO CUJO DEFAULT NÃO É O SISTEMA REAL,
     e a exceção é a proteção da foto. Os cinco caminhos acima apontam para
-    arquivos fixos, e uma bancada os substitui um a um; o catálogo de ordens
-    varre o barramento INTEIRO, e quem monta uma bancada para os cinco não tem
+    arquivos fixos, e uma máquina falsa os substitui um a um; o catálogo de ordens
+    varre o barramento INTEIRO, e quem monta uma máquina falsa para os cinco não tem
     como adivinhar que precisa de um sexto substituto. Pior: o
     `test_com_as_raizes_injetadas_nada_do_sistema_real_e_lido` vigia
     ``pathlib``, e as duas varreduras do catálogo usam ``os.listdir`` e
@@ -502,7 +502,7 @@ def exame(
     `app/actions/config/secao_exame.py` pede.
 
     O terceiro nome desta lista era `scripts/gui-captura/retratar_abas.py`,
-    citado como quem NÃO pedia — o retratista da JANELA GTK, apagado com ela em
+    citado como quem NÃO pedia — o retratista da JANELA GTK, apagado com a janela em
     06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`). O retratista de hoje
     (`interface/olhar.py`) não pede porque não chega aqui: ele fotografa página
     HTML já gravada, sem executar este módulo.
@@ -759,7 +759,7 @@ def aparelho_da_porta(porta: str, *, raiz_usb: Path = RAIZ_USB) -> Aparelho:
 
 @dataclass(frozen=True)
 class PortaDoStorm:
-    """Uma entrada que deu -71 na janela: quantos, quando, o que há nela e o que parou."""
+    """Uma entrada que deu -71 na janela: quantos, quando, o que há ali e o que parou."""
 
     porta: str
     quantos: int
@@ -772,9 +772,9 @@ class PortaDoStorm:
     def parada(self) -> str:
         """O que ficou parado NESTA entrada, lido AGORA — ``""`` quando nada ficou."""
         if self.aparelho.hid_sem_driver:
-            return "o controle está nela sem o HID, e o jogo não o vê"
+            return "o controle está ali sem o HID, e o jogo não o vê"
         if self.desfecho == DESFECHO_ENTRADA_LARGADA and not self.aparelho.presente:
-            return "o kernel desistiu dela no -71, e ela segue vazia"
+            return "o kernel desistiu da entrada no -71, que segue vazia"
         return ""
 
     @property
@@ -792,7 +792,7 @@ class PortaDoStorm:
             onde = "direto numa entrada do próprio computador, sem hub no caminho"
         papel = f" — {self.aparelho.papel}" if self.aparelho.papel else ""
         return (
-            f"{self.aparelho.onde} — {eventos}, o último em {quando}; nela "
+            f"{self.aparelho.onde} — {eventos}, o último em {quando}; ali "
             f"AGORA: {self.aparelho.identidade}{papel}; {onde}"
         )
 
@@ -825,7 +825,7 @@ class HubEmComum:
             f"o hub em {self.hub.onde} está no caminho de "
             f"{len(self.portas)} entradas que deram -71 "
             f"({', '.join(abaixo)}) — é o fator comum que a topologia "
-            f"aponta; nela AGORA: {self.hub.identidade}"
+            f"aponta; ali AGORA: {self.hub.identidade}"
         )
 
     def como_dicionario(self) -> dict[str, object]:
@@ -917,7 +917,7 @@ def _porta_de_hoje(
 
     O caminho do kernel (``3-4.4``) carrega o número do barramento, e o número
     é a ORDEM em que os controladores xHCI subiram naquele boot. Nos 12 boots
-    medidos na bancada a ordem não mudou; num computador em que mude, o
+    medidos no ensaio a ordem não mudou; num computador em que mude, o
     caminho de um -71 de ontem nomeia OUTRA entrada hoje. O ``lugar`` que o
     kernel-watch grava na linha (o controlador PCI e a cadeia de portas) é o
     que diz qual é a certa, e esta função o traduz pelos barramentos da raiz.
@@ -1141,7 +1141,7 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "onde o /sys lista os nós USB. Trocá-lo permite endereçar o -71 "
             "contra um retrato de /sys de OUTRA máquina — é por aqui que a "
-            "régua injeta uma bancada e o suporte lê a topologia de quem pediu "
+            "régua injeta uma máquina falsa e o suporte lê a topologia de quem pediu "
             "ajuda, sem ter a máquina na mão"
         ),
     )

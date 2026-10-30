@@ -2,11 +2,11 @@
 
 O QUE ESTE MÓDULO NÃO FAZ, e é a primeira linha de propósito: **ele não lê a
 lâmpada.** Não existe leitura da lâmpada. Isso está medido três vezes nesta casa
-e nenhuma delas foi derrubada:
+e nenhuma foi derrubada:
 
 1. ``multi_intensity`` é a memória da última escrita que passou pela classe LED,
    nunca o aparelho — leu ``[0 255 0]`` com a barra APAGADA e ``[0 255 0]`` com
-   ela VERDE (ensaio ``lightbar-sysfs-nao-sabe``, 16/08/2026);
+   a barra VERDE (ensaio ``lightbar-sysfs-nao-sabe``, 16/08/2026);
 2. o report de ENTRADA do DualSense não carrega estado de LED em campo nenhum —
    provado no fonte C, ``dualsense_parse_report`` toca sticks, botões, mudo do
    mic, jack, IMU, touchpad e bateria, e nada mais
@@ -17,7 +17,7 @@ e nenhuma delas foi derrubada:
 E a bateria não salva: o ``ps-controller-battery`` do ``hid-playstation``
 registra ``capacity``, ``present``, ``scope`` e ``status``, e **mais nada** —
 não há ``current_now`` nem ``voltage_now`` para inferir consumo de barra acesa
-(MEDIDO 22/08/2026 nos quatro nós da bancada). Quem for tentar "medir a
+(MEDIDO 22/08/2026 nos quatro nós da máquina de teste). Quem for tentar "medir a
 corrente" está tentando ler um arquivo que o driver não cria.
 
 O QUE ESTE MÓDULO FAZ ENTÃO
@@ -25,14 +25,14 @@ O QUE ESTE MÓDULO FAZ ENTÃO
 Ele responde a pergunta que TEM resposta, e que prevê a lâmpada:
 
     **esta instância de conexão nasceu com outro processo segurando o hidraw
-    dela?**
+    da instância?**
 
-MEDIDO EM 22/08/2026, na bancada, seis instâncias contra o olho de quem confere, e a
+MEDIDO EM 22/08/2026, no ensaio, seis instâncias contra o olho de quem confere, e a
 concordância foi 6/6:
 
 ===========================  ===================  ==================
 instância (nasceu)           escritor cru ao      barra, pelo olho
-                             nascer                dela
+                             nascer
 ===========================  ===================  ==================
 .0028 / .0029 / .002A /      **SIM** (a Steam,    **APAGADA**, e não
 .002B  (18:05-18:06)         pid morto desde)     obedece a escrita
@@ -40,22 +40,22 @@ instância (nasceu)           escritor cru ao      barra, pelo olho
                                                   ciano e a volta à cor
 ===========================  ===================  ==================
 
-As duas que ela reconectou (PS depois de um ``Disconnect`` pelo D-Bus) voltaram
+As duas reconectadas (PS depois de um ``Disconnect`` pelo D-Bus) voltaram
 como instâncias NOVAS, nascidas com a mesa limpa, e acenderam. As duas que
 ficaram continuam com o nascimento sujo de 18:06 — e continuam travadas AGORA,
 com a Steam morta e o daemon parado. **O defeito mora na instância, não no
-processo que o causou:** matar a Steam não cura, porque o que ela fez foi feito
+processo que o causou:** matar a Steam não cura, porque o que a Steam fez foi feito
 no nascimento e persiste até a reconexão (ou o power-off físico).
 
 POR QUE ISSO EXPLICA O "FALSO POSITIVO RECORRENTE" DO USUÁRIO
 =======================================================
-O alerta dela, 12/08/2026 (``docs/data/mapa-controles.csv``,
+O alerta de 12/08/2026 (``docs/data/mapa-controles.csv``,
 ``luz.lightbar.cor@dualsense``, ``radio_ressalva``):
 
     *"não é só instância de conexão, se escavar o projeto vai ver que isso é um
     falso positivo recorrente"*
 
-Ela está certa, e agora dá para dizer POR QUÊ "reconectar cura" já foi concluído
+O alerta está certo, e agora dá para dizer POR QUÊ "reconectar cura" já foi concluído
 antes e caiu depois: **reconectar só cura se a mesa estiver limpa na hora.** Com
 a Steam aberta, a instância NOVA nasce suja igual à velha, e a cura parece ter
 parado de funcionar. É a mesma cura e é a mesma doença — o que muda é uma
@@ -69,7 +69,7 @@ mesma função:
   e o diário do daemon ainda guarda. Sem um dos dois, ``CONFIANCA_NAO_SEI`` — jamais
   ``limpa``.
 
-  **Ela se chamava ``ler_a_mesa`` até 25/08/2026, e o nome saiu porque custou.**
+  **A função se chamava ``ler_a_mesa`` até 25/08/2026, e o nome saiu porque custou.**
   ``integrations/mesa_de_radio`` tem uma ``ler_a_mesa`` também, e aquela LÊ a
   mesa de verdade (ocupação de adaptador, para a seção "A mesa"); esta lê o
   NASCIMENTO e dá um veredito. A homonímia fez a primeira varredura da
@@ -150,7 +150,7 @@ def endereco_normalizado(valor: object) -> str:
     """O endereço numa grafia SÓ — os hexa, minúsculos. ``""`` quando não há.
 
     As duas metades desta casa escrevem o mesmo MAC de jeitos diferentes, e a
-    diferença está MEDIDA na bancada em 25/08/2026:
+    diferença está MEDIDA no ensaio em 25/08/2026:
 
     * o sysfs devolve ``HID_UNIQ=a0:fa:9c:…`` — COM os dois-pontos (lido no
       ``uevent`` do DualSense que está no cabo desta máquina), e é daí que sai
@@ -223,7 +223,7 @@ class Nascimento:
 
 @dataclass(frozen=True)
 class Carimbo:
-    """O veredito de nascimento de UMA instância, guardado na hora em que ela nasceu."""
+    """O veredito de nascimento de UMA instância, guardado na hora em que nasceu."""
 
     leitura: Leitura
     visto_em: float
@@ -421,7 +421,7 @@ def casar_escritores(
     deteccoes: Iterable[tuple[float, frozenset[str], tuple[int, ...]]],
     janela_s: float = JANELA_DE_NASCIMENTO_S,
 ) -> dict[str, Nascimento]:
-    """Casa cada detecção de escritor com o nascimento a que ela pertence."""
+    """Casa cada detecção de escritor com o nascimento a que pertence."""
     casados = dict(nascimentos)
     for quando, nos, pids in deteccoes:
         for chave, nasc in list(casados.items()):
@@ -507,7 +507,7 @@ def _veredito(
             confianca=CONFIANCA_NAO_SEI,
             porque=(
                 "o sistema não disse quando esta conexão nasceu — sem isso "
-                "não dá para saber como ela nasceu"
+                "não dá para saber como nasceu"
             ),
         )
     nasc = nascimentos.get(alvo.instancia.lower())
@@ -517,7 +517,7 @@ def _veredito(
             confianca=CONFIANCA_NAO_SEI,
             porque=(
                 "esta conexão é mais velha que o diário desta sessão — "
-                "não dá para saber como ela nasceu"
+                "não dá para saber como nasceu"
             ),
         )
     if nasc.sujo:
@@ -664,7 +664,7 @@ def limpo_para_conectar(
     """PROGNÓSTICO: se um controle conectar AGORA, ele nasce limpo?
 
     É esta — e não :func:`veredito_do_nascimento` — que tem de guardar o botão de
-    reconectar. Oferecer a cura com a mesa suja gasta o gesto do botão PS dela
+    reconectar. Oferecer a cura com a mesa suja gasta o gesto do botão PS do usuário
     para produzir outra instância travada, que é a forma exata do "falso
     positivo recorrente" que o usuário nomeou em 12/08/2026.
 

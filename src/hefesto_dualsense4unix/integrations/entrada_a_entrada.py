@@ -9,7 +9,7 @@ ENTRADA-A-ENTRADA-01 (23/09/2026), a R9 das doze decisões de produto do rádio:
                                                   — citação literal
 
 A cerimônia da aba 08 era eco: três telas por âncora, zero gesto, zero campo.
-Este módulo é o motor por trás delas. A fiação na página é da
+Este módulo é o motor por trás das telas. A fiação na página é da
 TRANSPLANTE-DA-SECAO-01.
 
 O MOTOR SERVE AS TRÊS TELAS APROVADAS (ENTRADA-A-ENTRADA-02)
@@ -20,19 +20,19 @@ A conferência da 01 achou que as três telas da âncora
 (``interface/calibracao_das_entradas``), e o motor da 01 perguntava a face a cada
 plug. Decisão registrada: **o motor serve as telas aprovadas** — a regra
 da casa, implemente a imagem aprovada e não o arranjo mais barato. As telas não
-mudam, e cada fase abaixo diz qual delas pinta (:data:`TELAS`):
+mudam, e cada fase abaixo diz qual tela pinta (:data:`TELAS`):
 
 1. **SENTADA** (``#mapear-entrada-a-entrada``) — sobre os aparelhos JÁ
    plugados que não têm lugar: «Onde fica esta entrada?», o aparelho como
    «espécie · caminho», as QUATRO respostas (:data:`FACES`), e «entrada N de
    M · sem sair da cadeira». A resposta de um HUB vale para tudo o que pende
-   dele: na bancada, quatro toques cobriam sete aparelhos. «Não sei onde
+   dele: no ensaio, quatro toques cobriam sete aparelhos. «Não sei onde
    fica» pula sem gravar e sem perguntar de novo.
 2. **FIM** (``#mapear-entrada-a-entrada-fim``) — «Acabou a parte sem
    levantar.», sem contador. Quem já tem lugar para tudo abre a janela direto
    aqui. «Vou mostrar agora» é a única porta para a fase em pé.
 3. **EM PÉ** (``#mapear-entrada-a-entrada-em-pe``) — sobre as entradas VAZIAS:
-   ela encaixa o DualSense numa, o motor acha. A face NÃO se pergunta: toda
+   quem usa encaixa o DualSense numa, o motor acha. A face NÃO se pergunta: toda
    entrada aprendida de pé é gravada em «Atrás do gabinete»
    (:data:`FACE_EM_PE`). O contador «entrada N de M» é refeito pela leitura de
    AGORA, e «Não alcanço» tira uma vaga da conta DE VEZ.
@@ -43,9 +43,9 @@ foi ao disco.
 SÓ O DUALSENSE MARCA UMA PORTA
 ------------------------------
 
-Palavra de produto na R9: *«usarmos um dualsense e o USB pra sairmos de porta em
-porta»*. Aceitar qualquer aparelho deixava uma re-enumeração espontânea — o
-``-71``, o reset de porta da ponte root — virar «a porta que ela plugou». Na
+A R9 do produto: usar um DualSense no USB para ir de porta em
+porta. Aceitar qualquer aparelho deixava uma re-enumeração espontânea — o
+``-71``, o reset de porta da ponte root — virar «a porta plugada». Na
 fase em pé só um aparelho ``054c`` (:data:`_VID_DA_SONY`) confirma a entrada;
 o dongle que re-enumera numa vaga não marca nada.
 
@@ -71,16 +71,16 @@ O número do barramento é ordem de subida dos xHCI e muda entre boots.
 O projeto não tem ``pyudev``. O motor relê ``/sys/bus/usb/devices`` a cada
 tique (``censo_do_barramento`` e ``entradas_do_gabinete``, os donos dessa
 leitura), e SÓ enquanto a cerimônia está aberta: a regra de «nunca em tique» é
-da aba montada, não da janela que ela abriu de propósito.
+da aba montada, não da janela aberta de propósito.
 
 E A LEITURA NUNCA É NO FIO DA JANELA (O-MAPEAR-NAO-CONGELA-A-JANELA-01,
 26/09/2026). O censo lê ``product`` e ``bMaxPower``, e o kernel serve os dois
 sob o lock do aparelho — o mesmo que ele segura enquanto enumera o DualSense
-que ela acabou de encaixar. A leitura de 8 ms virava 5, 10 e 15 s, a janela
-congelava e o COSMIC a derrubava: *«dá um crash feio»*. O tique pinta a última
+que acabou de ser encaixado. A leitura de 8 ms virava 5, 10 e 15 s, a janela
+congelava e o COSMIC a derrubava. O tique pinta a última
 foto (``foto_sem_esperar``) e a próxima leitura sai num fio próprio
 (:class:`_VooDaLeitura`); a trava de cada dono guarda só a troca de estado,
-nunca uma leitura. <!-- noqa-acento: citação literal -->
+nunca uma leitura.
 
 ONDE GRAVA — UM DONO, E ELE JÁ EXISTIA
 ---------------------------------------
@@ -99,11 +99,11 @@ O QUE ELE NÃO FAZ
 
 * **Não escreve frase de tela.** A única palavra dele é o nome da porta —
   «Entrada 3», a palavra do produto (``D-A-PALAVRA-ENTRADA``) —, e o nome que
-  ela der vence sempre.
+  quem usa der vence sempre.
 * **Não fala com o daemon, nem com o rádio, nem com o BlueZ.** O ``Alias`` tem
   UM escritor, o ``bt_active_mode.sh``, que lê o nome do lugar deste mesmo
   ``maquina.json`` no tique do watchdog (ENTRADA-A-ENTRADA-02; a
-  ``D-COSTURA-BLUEZ`` dela em ``docs/data/decisoes-de-produto.csv``).
+  ``D-COSTURA-BLUEZ`` em ``docs/data/decisoes-de-produto.csv``).
 * **O laço não inventa quinta resposta**: ele fica nas quatro; o fluxo único
   (``MapearAsPortas``) pergunta com os sete de :data:`LUGARES_DA_PORTA`.
 """
@@ -552,7 +552,7 @@ class LacoDaEntrada:
         Hefesto não volta a perguntar"* — e diminui o TOTAL do contador, não o
         feito. A vaga tirada é a que o kernel menos diz ser de fora
         (``connect_type``), porque a tela não aponta uma: as que sobram são
-        conectores internos que ninguém alcança. Se ela encaixar o DualSense
+        conectores internos que ninguém alcança. Se quem usa encaixar o DualSense
         numa vaga tirada, a leitura vence e a entrada é aprendida.
         """
         with self._trava:
@@ -770,7 +770,7 @@ def _o_dualsense_no_furo(furo: Furo, censo: Censo) -> Aparelho | None:
 
     SÓ O DUALSENSE MARCA UMA PORTA (ENTRADA-A-ENTRADA-02): o dongle que
     re-enumera numa vaga (o ``-71``, o reset de porta da ponte root) não é «a
-    porta que ela plugou».
+    porta plugada».
     """
     nomes = {entrada.aparelho for entrada in furo.entradas if entrada.aparelho}
     for aparelho in censo.conectados():
@@ -788,7 +788,7 @@ def _lugar_do_furo(furo: Furo, controladores: Mapping[int, str]) -> str:
     """O lugar de um buraco: o do lado 2.0, onde o DualSense enumera.
 
     Os dois nós de um buraco USB 3 NÃO dão o mesmo lugar quando o controlador
-    numera as duas raízes de jeitos diferentes. Medido na bancada em 23/09:
+    numera as duas raízes de jeitos diferentes. Medido no ensaio em 23/09:
     no ``0000:02:00.0``, ``usb1-port6`` é o par de ``usb2-port2``, e os dois
     lados são ``…-usb-0:6`` e ``…-usb-0:2`` (o udev publica o mesmo ``ID_PATH``
     para ``usb1-port2`` e ``usb2-port2`` — por isso existe o
@@ -810,7 +810,7 @@ def _lugar_do_furo(furo: Furo, controladores: Mapping[int, str]) -> str:
 def _o_furo_e_conhecido(
     furo: Furo, maquina: MaquinaConfig, controladores: Mapping[int, str]
 ) -> bool:
-    """Este buraco já é uma entrada dela? Pelo lugar, ou pelos nós."""
+    """Este buraco já é uma entrada do mapa? Pelo lugar, ou pelos nós."""
     lugar = _lugar_do_furo(furo, controladores)
     if lugar and _numero_conhecido(maquina, lugar, "", controladores) is not None:
         return True
@@ -835,7 +835,7 @@ def _porta_vista(
     *,
     e_hub: bool | None = None,
 ) -> PortaVista:
-    """O aparelho, com o que ela já disse sobre aquele lugar."""
+    """O aparelho, com o que o usuário já disse sobre aquele lugar."""
     lugar = lugar_de(aparelho.controlador_pci, aparelho.devpath)
     entrada = _numero_conhecido(maquina, lugar, aparelho.nome_do_kernel, controladores)
     return PortaVista(
@@ -954,7 +954,7 @@ def _gravar_as_portas(
 
 
 def _face_aceita(face: str, maquina: MaquinaConfig) -> bool:
-    """A face é uma das respostas do produto, uma que ela JÁ tem no mapa, ou"""
+    """A face é uma das respostas do produto, uma que o usuário JÁ tem no mapa, ou"""
     if face in FACES or face in LUGARES_DA_PORTA:
         return True
     if face in faces_dos_hubs(maquina.mapa).values():
@@ -1079,7 +1079,7 @@ def nome_da_entrada(numero: str, *, maquina: MaquinaConfig) -> str | None:
 
 
 def rotulo_do_numero(numero: str, *, maquina: MaquinaConfig | None = None) -> str | None:
-    """«Meio» quando ela deu nome à entrada; «Entrada 3» quando não deu — ou"""
+    """«Meio» quando quem usa deu nome à entrada; «Entrada 3» quando não deu — ou"""
     if not numero:
         return None
     nome = nome_da_entrada(numero, maquina=maquina) if maquina is not None else None
@@ -1103,7 +1103,7 @@ def _rotulo_de_reserva(
     O rótulo de reserva é o ``devpath``, como o desenho aprovado mostra
     («Entrada 4.1.4», TRANSPLANTE-DA-SECAO-01). Mas a entrada do PRÓPRIO
     computador — o ``devpath`` de um número só — se repete em todo controlador
-    USB: cada hub-raiz numera as entradas dele a partir de 1. Na bancada, com
+    USB: cada hub-raiz numera as entradas dele a partir de 1. No ensaio, com
     dois controladores, o ``1-4`` (o adaptador do rádio) e o ``3-4`` (o hub)
     saíam os dois «Entrada 4», no doctor e na seção do rádio.
 
@@ -1193,11 +1193,11 @@ def declarar_o_extensor(
     maquina: MaquinaConfig | None = None,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> Recibo:
-    """A chave «Extensor» da entrada ``numero``: separada do que está ligado nela.
+    """A chave «Extensor» da entrada ``numero``: separada do que está ligado na entrada.
 
     O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026): *«marcar Extensor impede dizer que há
     um dispositivo BT ali»*. O extensor é da porta (há um cabo entre o buraco e o aparelho) e o
-    kernel não o vê; quem sabe é ela. Ligado, pesa no arranjo (a entrada vira esticada para o
+    kernel não o vê; quem sabe é o usuário. Ligado, pesa no arranjo (a entrada vira esticada para o
     motor); desligado, apaga a chave e a ponta que o desenho antigo guardava.
     """
     return _declarar_na_entrada(
@@ -1212,9 +1212,9 @@ def declarar_o_aparelho(
     maquina: MaquinaConfig | None = None,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> Recibo:
-    """O tipo e o nome que ela dá a um aparelho — pelo ``vid:pid``, o que sobrevive a replugar.
+    """O tipo e o nome dados a um aparelho — pelo ``vid:pid``, o que sobrevive a replugar.
 
-    O que a máquina mede (hub, velocidade, chip) não se edita; o que ela não vê é da pessoa
+    O que a máquina mede (hub, velocidade, chip) não se edita; o que a máquina não vê é da pessoa
     (D-0410-QUEM-VENCE). ``None`` não diz nada; para apagar, :func:`voltar_ao_automatico`.
     """
     _ = maquina
@@ -1248,7 +1248,7 @@ def voltar_ao_automatico(
 
     Do aparelho: o tipo e o nome (``mesa.radios``). Da entrada: a chave do extensor e o nome
     da entrada. A ligação (hub) e a velocidade ficam: são da porta, não do aparelho, e têm o
-    botão delas.
+    botão próprio.
     """
     declaracao: dict[str, Any] = {}
     if modelo:
@@ -1279,7 +1279,7 @@ def declarar_o_lugar_da_entrada(
     """O «Lugar» de uma entrada que já existe: o número sai de toda outra face e entra nesta.
 
     A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01 (absorvida em 04/10/2026): o mesmo campo do Mapear,
-    pelo mesmo dono (``_por_na_face``). Uma face fora das respostas do produto e das que ela
+    pelo mesmo dono (``_por_na_face``). Uma face fora das respostas do produto e das que o mapa
     já tem recusa, como no Mapear.
     """
     documento = maquina if maquina is not None else carregar_maquina()
@@ -1376,7 +1376,7 @@ def ensinar_a_entrada(
 ) -> Recibo:
     """ENSINAR: o nó em que o aparelho ``caminho`` está agora passa a ser da ``numero``.
 
-    O-MAPA-QUE-O-USUARIO-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO). Ela pega o aparelho
+    O-MAPA-QUE-O-USUARIO-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO). A função pega o aparelho
     que o mapa vê «fora do mapa» e clica a entrada em que ele está. Até aqui a
     página guardava isso só na memória, e a releitura o mostrava pendente de
     novo. É a cura universal da pista que o firmware não liga: os nós vêm da
@@ -1385,7 +1385,7 @@ def ensinar_a_entrada(
     quem o grava é o Mapear, com o DualSense no buraco.
 
     Vale só para o aparelho que não está em entrada nenhuma — o que já está
-    abre o editor dela, e quem corrige ali é o «Trocar com…». Recusa com
+    abre o editor da entrada, e quem corrige ali é o «Trocar com…». Recusa com
     ``ValueError`` e a frase do dono: :data:`RECUSA_FORA_DO_MAPA`,
     :data:`RECUSA_O_APARELHO_SAIU`, :data:`RECUSA_O_APARELHO_JA_TEM_ENTRADA`,
     :data:`RECUSA_A_ENTRADA_OCUPADA` e :data:`RECUSA_LIGACOES_DEMAIS` (o teto de
@@ -1452,7 +1452,7 @@ def dar_nome_a_entrada(
     maquina: MaquinaConfig | None = None,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> Recibo:
-    """O nome que ela dá à entrada ``numero`` — O-MAPA-QUE-O-USUARIO-CORRIGE-01."""
+    """O nome dado à entrada ``numero`` — O-MAPA-QUE-O-USUARIO-CORRIGE-01."""
     vale = _o_nome_que_grava(numero, nome or "")
     return _declarar_na_entrada(numero, {"nome": vale}, maquina=maquina, gravar=gravar)
 
@@ -1464,7 +1464,7 @@ def _declarar_na_entrada(
     maquina: MaquinaConfig | None,
     gravar: Callable[[Mapping[str, Any]], Recibo],
 ) -> Recibo:
-    """Os campos na ``mapa.portas[numero]``, se a entrada é do mapa dela — ou é"""
+    """Os campos na ``mapa.portas[numero]``, se a entrada é do mapa do usuário — ou é"""
     documento = maquina if maquina is not None else carregar_maquina()
     mapa = documento.mapa
     if numero in entradas_do_mapa(mapa):
@@ -1520,10 +1520,10 @@ def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
 
     O-MAPA-QUE-O-USUARIO-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA): identificar onde fica o hub.
     Uma função pura sobre o ``mapa`` do disco: lê o que o Mapear gravou (os caminhos e os nós), e
-    por isso vale com o hub desplugado e em qualquer máquina. <!-- noqa-acento: citação literal -->
+    por isso vale com o hub desplugado e em qualquer máquina.
 
     PELO BARRAMENTO, a face F pende da entrada E quando E não está em F, toda
-    entrada de F que tem pontos DESCE de E (um ponto dela é um caminho de E, ou
+    entrada de F que tem pontos DESCE de E (um ponto da entrada é um caminho de E, ou
     começa por ele e um ponto), pelo menos uma tem pontos, e E é a mais funda
     das que servem — com empate, de ninguém. Os caminhos de E são o
     ``caminho`` e o de cada nó; os pontos de X são o ``caminho`` e o hub de
@@ -1534,9 +1534,9 @@ def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
     1. a face com o nome :data:`FACE_DO_HUB_DECLARADO` de D pende de D (e a
        ``lida`` é a do barramento, se diverge);
     2. senão, a face que pende de E pelo barramento pende de E — a menos que
-       ela tenha declarado UM hub D livre (sem face pelo nome e sem ser lido
+       o usuário tenha declarado UM hub D livre (sem face pelo nome e sem ser lido
        por face nenhuma) e só haja UMA face lida sem hub declarado: aí vale a
-       dela, D, com a ``lida`` E;
+       do usuário, D, com a ``lida`` E;
     3. o hub declarado sem face ligada fica de fora daqui: é o desenho de
        quatro buracos (o hub desplugado, ou que o Mapear não viu).
     """
@@ -1874,18 +1874,18 @@ class MapearAsPortas:
     Sem GTK e sem IPC, como o laço: tudo o que lê entra por argumento, com o
     default do sistema, e a gravação é :func:`_gravar_no_mapa`.
 
-    O GESTO DO USUÁRIO: ``abrir`` → ela encaixa o DualSense numa porta → o tique
+    O GESTO DO USUÁRIO: ``abrir`` → quem usa encaixa o DualSense numa porta → o tique
     (``foto_sem_esperar``, que pede o ``olhar`` num fio próprio) acha a porta
-    que ele acabou de mostrar e ela vira a PORTA DA VEZ, com o medido e o que
-    já se sabe dela → ``gravar(nome=…, lugar=…)`` → ela leva o controle para
+    que ele acabou de mostrar e essa porta vira a PORTA DA VEZ, com o medido e o que
+    já se sabe da porta → ``gravar(nome=…, lugar=…)`` → quem usa leva o controle para
     a próxima. ``gravar(chave=…)`` é o mesmo gesto para uma porta da lista
     (renomear e reposicionar sem encaixar nada). ``comecar`` é o ``abrir`` com
     a primeira leitura na hora, para quem pode esperar o ``/sys``.
 
     SÓ O DUALSENSE MOSTRA UMA PORTA, pela mesma razão do laço: um dongle que
-    re-enumera (o -71) não é «a porta que ela plugou». E a porta da vez é a
+    re-enumera (o -71) não é «a porta plugada». E a porta da vez é a
     que APARECEU: com dois controles já no cabo (a mesa de quatro), o que
-    estava encaixado antes de ela começar não conta — só se for o único.
+    estava encaixado antes de o fluxo começar não conta — só se for o único.
 
     O TIQUE NÃO ESPERA O ``/sys`` (O-MAPEAR-NAO-CONGELA-A-JANELA-01, queixa de 26/09: o Mapear
     entradas fechava o app). Trocar
@@ -1893,7 +1893,7 @@ class MapearAsPortas:
     aparelho enquanto enumerava, o censo esperava o lock no ``bMaxPower``, e a
     janela esperava o censo: 5, 10 e 15 s. Agora a leitura é de um fio próprio
     e a trava guarda só a troca de estado — um «Terminar» nunca espera o
-    ``/sys``. <!-- noqa-acento: citação literal -->
+    ``/sys``.
     """
 
     def __init__(
@@ -1942,7 +1942,7 @@ class MapearAsPortas:
             self._pintada = None
 
     def comecar(self) -> dict[str, Any]:
-        """Abre o fluxo e lê na hora. Se UM DualSense já está numa porta, ela é
+        """Abre o fluxo e lê na hora. Se UM DualSense já está numa porta, essa é
         a da vez. Quem chama espera o ``/sys``; a tela usa :meth:`abrir`."""
         self.abrir()
         return self.olhar()
@@ -1952,7 +1952,7 @@ class MapearAsPortas:
 
         Parado, não lê nada. A leitura que não respondeu não anda o fluxo —
         "não sei" não é "o controle saiu". A leitura é FORA da trava, e a que
-        voltar de outra sessão (ela fechou ou reabriu no meio) não anda nada.
+        voltar de outra sessão (a janela fechou ou reabriu no meio) não anda nada.
         """
         with self._trava:
             if self._fase == PARADO:
@@ -1982,11 +1982,11 @@ class MapearAsPortas:
         ou o lugar) de uma porta de :func:`ler_o_mapa`. ``nome`` ``None`` não
         mexe no nome, ``""`` apaga; ``lugar`` ``None`` mantém o lugar que a
         porta já tinha. Só o nome, numa porta sem lugar no gabinete, grava só
-        o nome: o número e a face nascem quando ela disser onde fica.
+        o nome: o número e a face nascem quando quem usa disser onde fica.
 
         A PORTA DA VEZ É A DA LEITURA DESTE GESTO, e não a da última foto: com
-        o ``/sys`` lento (o kernel enumerando o controle que ela acabou de
-        mudar de porta), a tela pode ainda mostrar a porta de antes quando ela
+        o ``/sys`` lento (o kernel enumerando o controle que acabou de
+        mudar de porta), a tela pode ainda mostrar a porta de antes quando quem usa
         salva. O gesto lê de novo e anda o fluxo antes de escolher — o nome vai
         para onde o DualSense está. E o «Terminar» que chegar durante essa
         leitura não apaga o Salvar que o usuário clicou antes: vale a porta da vez do
@@ -1998,8 +1998,8 @@ class MapearAsPortas:
         existe): o tratador da aba devolve os dois como recusa.
 
         SEM NOME E SEM LUGAR NÃO É RECUSA (29/09/2026,
-        O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): é o «deixe vazia para ela ser
-        enumerada» da frase de produto. A porta sem número nasce numerada, fora de
+        O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): é o «deixe vazia para ser
+        enumerada» da frase do produto. A porta sem número nasce numerada, fora de
         toda face; a que já tem número não muda (:func:`_gravar_a_porta`).
         """
         with self._trava:
@@ -2049,7 +2049,7 @@ class MapearAsPortas:
             return gravacao
 
     def parar(self) -> None:
-        """Fecha. Nada se perde: cada porta já foi ao disco quando ela gravou."""
+        """Fecha. Nada se perde: cada porta já foi ao disco quando foi gravada."""
         with self._trava:
             self._fase = PARADO
             self._da_vez = ()
@@ -2199,12 +2199,12 @@ def _gravar_a_porta(
     :func:`_gravar_as_portas` de sempre: o número que o lugar já tem (ou o
     menor livre), a face, o lugar, os nós e o nome, juntos. A porta numerada
     tocada PELA LISTA é revisita pura: a face e o nome, e nada do buraco muda
-    — o aparelho que estiver nela agora (um pendrive no lado 3.x) não é quem
-    diz onde ela está.
+    — o aparelho que estiver ali agora (um pendrive no lado 3.x) não é quem
+    diz onde a entrada está.
 
     SÓ O NOME, NUMA PORTA SEM NÚMERO (``face`` ``None``), faz a entrada nascer
     com o número e o nome, fora de toda face: o produto não inventa face por
-    ela. Até 28/09/2026 esse nome ia para ``lugares[L].nome``, um segundo
+    quem usa. Até 28/09/2026 esse nome ia para ``lugares[L].nome``, um segundo
     registro (A-ENTRADA-TEM-UM-REGISTRO-SO-01).
 
     NEM NOME NEM FACE (29/09/2026, O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): a

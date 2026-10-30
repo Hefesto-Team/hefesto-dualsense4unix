@@ -518,7 +518,7 @@ def controles_do_registro(
     usec_do: LeitorDoUsec | None = None,
     runner: Callable[[list[str]], str | None] = _pactl,
 ) -> list[Controle]:
-    """A lista que o registro grava — o DONO dela, desde 28/09/2026."""
+    """A lista que o registro grava — o DONO da lista, desde 28/09/2026."""
     perguntar = _lembrando(runner)
     endpoints = controles_no_radio(sysfs, usec_do, perguntar)
     cabo = controles_no_cabo(sysfs, usec_do)

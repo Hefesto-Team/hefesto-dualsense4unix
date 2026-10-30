@@ -17,7 +17,7 @@ A pergunta de produto foi:
     conexão por lá e controlar a conexão melhor que o gerenciador padrão que
     temos no cosmic?"*
 
-Se ela parear um controle **por aqui**, ela nunca abre a tela de Bluetooth do
+Quem pareia um controle **por aqui** nunca abre a tela de Bluetooth do
 COSMIC para um controle — e a varredura de terceiro, que custa de 32% a 43% dos
 pacotes do adaptador que a hospeda, simplesmente não acontece. A posse do rádio
 começa neste arquivo, não numa reserva contra a varredura alheia.
@@ -27,7 +27,7 @@ O QUE ESTE MÓDULO FAZ, E O QUE ELE NÃO FAZ
 Faz duas coisas: abre uma janela de busca no adaptador escolhido e devolve os
 candidatos conforme eles aparecem; e pareia UM endereço, quando alguém pedir.
 
-**Não escolhe por ela, e não pareia sozinho.** O gesto físico do controle —
+**Não escolhe pelo usuário, e não pareia sozinho.** O gesto físico do controle —
 segurar PS + Create até a barra piscar — não se automatiza, e um módulo que
 pareasse o primeiro candidato que visse poderia casar o fone da vizinha com o
 adaptador do usuário. Quem escolhe é quem está olhando; este arquivo só sabe abrir a
@@ -37,7 +37,7 @@ A JANELA É PROCESSO, E A LEITURA É FIO PRÓPRIO
 ===============================================
 ``descobrir`` **bloqueia** pelos segundos que recebe. Chamá-lo no tique da aba
 congelaria a janela inteira — é a família do defeito de 15/09/2026 (*"as DUAS
-VIAGENS de IPC são SÍNCRONAS — elas seguram o laço do GTK inteiro"*), e a cura
+VIAGENS de IPC são SÍNCRONAS — as duas seguram o laço do GTK inteiro"*), e a cura
 já está escrita na mesma aba, em ``_pedir_o_exame_de_entrada``. Por isso
 :class:`JanelaDeBusca` põe a ponte num subprocesso e a leitura num fio
 ``daemon``: o laço do GTK nunca espera por rádio.
@@ -45,7 +45,7 @@ já está escrita na mesma aba, em ``_pedir_o_exame_de_entrada``. Por isso
 E O ``parear`` TEM DE CORRER DENTRO DA JANELA
 ==============================================
 O ``Pair()`` do BlueZ precisa de um objeto ``org.bluez.Device1``, e o BlueZ
-recolhe os dispositivos que a varredura achou quando ela termina. Parear depois
+recolhe os dispositivos que a varredura achou quando a varredura termina. Parear depois
 de a janela fechar é chamar um caminho D-Bus que pode já não existir. Por isso
 :meth:`JanelaDeBusca.parear` **recusa com motivo** quando a janela fechou, em
 vez de tentar e falhar com a mensagem do BlueZ — e por isso a ponte devolve os
@@ -69,7 +69,7 @@ Com o dono do D-Bus vivo (``bluez_dbus.DonoVivo``), a janela é NOSSA: o
 ``StartDiscovery`` sai da conexão do dono — a busca é POR CLIENTE e morre com
 quem a abriu —, os candidatos saem da foto do ``ObjectManager``, e o ``Pair``
 sai pela mesma conexão, onde mora o ``Agent1`` próprio (R5): o pareamento que
-ELA inicia é atendido por nós, sem virar o agente padrão. A ponte root
+O USUÁRIO inicia é atendido por nós, sem virar o agente padrão. A ponte root
 (``descobrir``/``parear``) fica de PISO, para quando o dono não está vivo — e
 o ``hefesto-bt-agent`` atende o que chega sozinho.
 
@@ -83,7 +83,7 @@ Antes de parear, um candidato não tem ``hidraw``, não tem ``HID_UNIQ`` e não 
 nó de som — não há propriedade de posse a consultar, que é o que esta casa
 prefere desde a decisão de produto sobre os nós de áudio. O que existe é a *class of
 device* do Bluetooth, que o próprio aparelho anuncia e o BlueZ publica em
-``org.bluez.Device1.Class``. **Medido na bancada em 20/09/2026**: os seis
+``org.bluez.Device1.Class``. **Medido no ensaio em 20/09/2026**: os seis
 objetos de DualSense do BlueZ respondem ``u 9480`` (0x2508) — periférico
 (classe maior 0x05), gamepad (classe menor 0x02). Casar pelo nome faria o
 produto depender do rótulo que o firmware escreve, e o rótulo é de terceiro.
@@ -519,7 +519,7 @@ class JanelaDeBusca:
         """O ``Paired`` de AGORA, pelo dono; sem dono, o que a colheita viu.
 
         A colheita é uma foto do começo da janela: o controle que pediu um par novo tem o par
-        velho tirado no meio dela (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01) e volta como novo.
+        velho tirado no meio da janela (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01) e volta como novo.
         """
         dono = self._dono
         if dono is None:
@@ -616,7 +616,7 @@ def procurar(
     conferir_a_porta: bool = True,
     dono: bluez_dbus.LeitorDoBluez | None = None,
 ) -> Resultado:
-    """Abre a janela, espera ela fechar e devolve os candidatos."""
+    """Abre a janela, espera a janela fechar e devolve os candidatos."""
     janela = JanelaDeBusca(
         adaptador, segundos, caminho=caminho, abrir=abrir, correr=correr, dono=dono
     )

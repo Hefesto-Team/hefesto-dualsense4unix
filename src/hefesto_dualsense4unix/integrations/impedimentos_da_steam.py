@@ -116,10 +116,10 @@ def sondar(home: Path | None = None) -> tuple[Impedimento, ...]:
 
 def _recusa_da_steam(motivo: str) -> str:
     return {
-        "jogo_da_steam_aberto": "Feche o jogo e a Steam antes: com ela aberta a edição se perde.",
-        "adiado_jogo_aberto": "Feche o jogo e a Steam antes: com ela aberta a edição se perde.",
-        "steam_aberta": "Feche a Steam antes: com ela aberta a edição se perde.",
-        "adiado_steam_aberta": "Feche a Steam antes: com ela aberta a edição se perde.",
+        "jogo_da_steam_aberto": "Feche o jogo e a Steam antes, ou a edição se perde.",
+        "adiado_jogo_aberto": "Feche o jogo e a Steam antes, ou a edição se perde.",
+        "steam_aberta": "Feche a Steam antes, ou a edição se perde.",
+        "adiado_steam_aberta": "Feche a Steam antes, ou a edição se perde.",
     }.get(motivo, "")
 
 

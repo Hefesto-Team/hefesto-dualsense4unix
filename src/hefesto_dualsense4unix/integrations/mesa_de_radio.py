@@ -9,7 +9,7 @@ cada um está, se há um hub no meio, e o que mais divide a faixa de 2,4 GHz com
 os controles — tudo isso o kernel publica em ``/sys``, de graça, sem root, sem
 subprocesso e sem IPC. Ninguém lia.
 
-As três perguntas que ele responde, e nada além delas:
+As três perguntas que ele responde, e nada além disso:
 
 1. **quais adaptadores Bluetooth existem e ONDE estão** (VID:PID, barramento,
    porta, painel do gabinete, atrás-de-hub);
@@ -21,7 +21,7 @@ As três perguntas que ele responde, e nada além delas:
 O QUE ELE NÃO É
 ----------------
 
-Não entrega o **endereço** (MAC) do adaptador. Medido nesta bancada em
+Não entrega o **endereço** (MAC) do adaptador. Medido nesta máquina de teste em
 22/08/2026, kernel 7.0.11-76070011-generic: ``/sys/class/bluetooth/hci0/`` não
 tem arquivo ``address`` — o ``_adapter_addresses`` do próprio projeto
 (``broker/hidraw_broker.py:224``) devolve ``set()`` sobre ``/sys``. O endereço
@@ -49,15 +49,15 @@ adaptadores — quem responde é o sysfs do kernel. Lista vazia e ``""`` são
 respostas legítimas, e **zero adaptadores é o caso mais comum lá fora**: a
 máquina sem Bluetooth nenhum.
 
-Esta bancada NÃO é esse caso — ela tem TRÊS (``hci0``, ``hci1``, ``hci2``,
+Esta máquina de teste NÃO é esse caso: tem TRÊS (``hci0``, ``hci1``, ``hci2``,
 medido em 22/08/2026). A frase anterior aqui dizia o contrário, e um fato
-errado sobre a bancada é justamente o tipo de linha que a próxima pessoa cita
+errado sobre a máquina de teste é justamente o tipo de linha que a próxima pessoa cita
 como prova (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01, A6).
 
 Todas as raízes e todos os leitores entram por argumento com default do sistema
 real — nunca por constante de módulo, que o ``CANARIO-FS-01``
 (``tests/conftest.py:1087``) pega e que impediria o retrato de fotografar a aba
-com uma bancada de mentira.
+com uma máquina de mentira.
 """
 
 from __future__ import annotations
@@ -321,7 +321,7 @@ def controladores_dos_barramentos(
 
 
 def _lugar(controlador_pci: str, devpath: str) -> str:
-    """A grafia do lugar, perguntada ao dono dela (``utils/lugar``)."""
+    """A grafia do lugar, perguntada ao dono da grafia (``utils/lugar``)."""
     from hefesto_dualsense4unix.utils.lugar import lugar_de
 
     return lugar_de(controlador_pci, devpath)

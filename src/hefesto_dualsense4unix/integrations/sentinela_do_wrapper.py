@@ -4,10 +4,10 @@ SENTINELA-WRAPPER-01 — 16/08/2026, defeito pego AO VIVO.
 
 O QUE ACONTECEU
 ---------------
-Ela jogou Pragmata (appid 3357650) no CABO e funcionou. Passou para o
-Bluetooth e, nas palavras do usuário: *"no inicio travou alguns inputs mas logo em
-sequencia ele parou de ser reconhecido no jogo, mas o perfil de pragmata segue
-ativo no controle com tudo funcionando só não sendo reconhecido"*.
+O Pragmata (appid 3357650) funcionou no CABO. No Bluetooth, no início
+travou alguns inputs e logo em seguida o controle deixou de ser reconhecido
+no jogo, enquanto o perfil do Pragmata seguia ativo no controle, com tudo
+funcionando fora do jogo.
 
 O daemon estava SAUDÁVEL o tempo todo — vpad P1 com os quatro nós, grab retido
 (`grab=True ok=True state=held`), `launch_env/steam_app_3357650.env`
@@ -29,7 +29,7 @@ A cadeia do estrago, medida no `/proc` do jogo rodando:
    (só o Hefesto escreve essa variável);
 2. o `SDL_GAMECONTROLLER_IGNORE_DEVICES` que chegou ao jogo não era o nosso —
    era a lista gigante da própria Steam;
-3. e dentro dela está `0x054c/0x0df2`, o PID do NOSSO vpad, ao lado do
+3. e dentro da lista está `0x054c/0x0df2`, o PID do NOSSO vpad, ao lado do
    `0x054c/0x0ce6`, o do físico: o jogo foi instruído a ignorar OS DOIS;
 4. resultado: `event21` (o vpad) — ninguém abriu; `event25` (o físico) — a
    Steam abriu. O jogo ficou sem nenhum. No cabo funcionava porque ali ele
@@ -37,7 +37,7 @@ A cadeia do estrago, medida no `/proc` do jogo rodando:
 
 O modo de falha é o mais confuso que existe: o controle continua vivo, a luz
 acesa, o perfil aplicado — e só o JOGO não enxerga. Sem esta sentinela, o
-único jeito de descobrir é o que ela fez: perder uma noite de jogo.
+único jeito de descobrir é perder uma noite de jogo.
 
 O QUE ESTE MÓDULO FAZ, em três camadas independentes
 ----------------------------------------------------
@@ -46,7 +46,7 @@ O QUE ESTE MÓDULO FAZ, em três camadas independentes
    legível com a Steam aberta; só a ESCRITA é que não pode.
 2. **AVISAR** (`frase_do_aviso`) — a frase pronta, com o NOME do jogo, para a
    GUI e para o doctor. Diagnóstico que não chega na tela não existe.
-   **E EM DUAS FORMAS desde 06/09/2026** (decisão 10-Q5 dela): a inteira, que vai
+   **E EM DUAS FORMAS desde 06/09/2026** (decisão 10-Q5): a inteira, que vai
    ao toast da GTK e ao corpo do cartão da Steam, e a `frase_do_aviso_curta`,
    sem o `AVISO_DA_REGRESSAO`, para a tira de duas linhas da aba Perfis. As duas
    saem de `_frase_do_aviso` — uma redação só, e a diferença numa constante.
@@ -62,7 +62,7 @@ faz exatamente isso::
     sh -c 'W="$HOME/…/hefesto-launch"; [ -x "$W" ] && exec "$W" "$@";
         exec env "$@"' hefesto-launch VKD3D_CONFIG=no_upload_hvv %command%
 
-e ela funciona porque o wrapper termina em ``exec env "$@"``: o
+e funciona porque o wrapper termina em ``exec env "$@"``: o
 `VKD3D_CONFIG=no_upload_hvv` chega como argumento do `env(1)`, que o trata
 como assignment. Executado de verdade em 16/08/2026, com wrapper de mentira e
 jogo de mentira, o jogo recebeu as três variáveis (`VKD3D_CONFIG`,
@@ -72,11 +72,11 @@ mesmo jeito. **Não é preciso — nem se deve — intercalar um `env` extra ant
 do `VKD3D_CONFIG`**: a composição de duas camadas já é a certa, e é a mesma
 que os outros 60 jogos usam. Inventar uma segunda forma de escrever a linha
 quebraria a idempotência (o `WRAPPER_PREFIX in value` deixaria de casar) —
-e com ela, 60 jogos de uma vez.
+e com a idempotência, 60 jogos de uma vez.
 
 AS QUATRO PERGUNTAS DO DESENHO, e a resposta de cada uma
 --------------------------------------------------------
-- **"E se ela tirar o wrapper DE PROPÓSITO?"** — Intenção nunca é inferida. A
+- **"E se o usuário tirar o wrapper DE PROPÓSITO?"** — Intenção nunca é inferida. A
   única voz que conta é o `jogos_sem_wrapper.txt` (`marcar_jogo_sem_wrapper`,
   um clique na GUI): esses jogos somem do aviso E do reparo, inclusive do
   passo sem flag do install. Uma linha que sumiu sozinha é sempre tratada como
@@ -86,13 +86,13 @@ AS QUATRO PERGUNTAS DO DESENHO, e a resposta de cada uma
   Jogo que nunca esteve lá é ``novo``; jogo que estava e sumiu é
   ``regressao``. Os dois são reparados (é o que o install já faz com todo
   mundo), mas só a regressão ganha a frase *"parou de funcionar"* — que é a
-  informação que ela não tinha.
+  informação que o usuário não tinha.
 - **"O reparo é idempotente?"** — Sim, e não por promessa: ele delega ao
   `apply_wrapper_to_all_games`, cujo gate `WRAPPER_PREFIX in value` pula quem
   já tem. Rodar dez vezes é igual a rodar uma.
 - **"Há backup?"** — Sim, o mesmo do caminho em massa: um
   `.bak.hefesto-launch-<ts>` ao lado de cada vdf tocado, antes de escrever,
-  com `tmp` + `replace`. O `localconfig.vdf` guarda a biblioteca inteira dela.
+  com `tmp` + `replace`. O `localconfig.vdf` guarda a biblioteca inteira do usuário.
 
 A STEAM ABERTA
 --------------
@@ -373,7 +373,7 @@ def censo_do_wrapper(
 
 
 AVISO_DA_REGRESSAO = (
-    "Sem elas, no Bluetooth o jogo tende a não enxergar controle nenhum — "
+    "Sem essas opções, no Bluetooth o jogo tende a não enxergar controle nenhum — "
     "mesmo com o controle vivo, a luz acesa e o perfil aplicado. "
 )
 
@@ -384,7 +384,7 @@ def frase_do_aviso(censo: Censo) -> str:
 
 
 def frase_do_aviso_curta(censo: Censo) -> str:
-    """A MESMA notícia sem o aviso — decisão 10-Q5 dela, 06/09/2026."""
+    """A MESMA notícia sem o aviso — decisão 10-Q5, 06/09/2026."""
     if not censo.regressoes:
         return ""
     return _frase_do_aviso(censo, com_o_aviso=False)
@@ -414,7 +414,7 @@ def _frase_do_aviso(censo: Censo, *, com_o_aviso: bool) -> str:
         nomes = juntar_rotulos([j.rotulo for j in censo.intocaveis])
         return (
             f"Opções de Inicialização com a lista de IGNORE estendida à mão em "
-            f"{nomes} — não vou tocar nelas (remover só o trecho do Hefesto "
+            f"{nomes} — não vou tocar nessas opções (remover só o trecho do Hefesto "
             "deixaria um fragmento que impede o jogo de abrir). Reparo manual."
         )
     return ""
@@ -429,7 +429,7 @@ def _como_reparar(censo: Censo) -> str:
         )
     if censo.steam_aberta:
         return (
-            "Preciso da Steam FECHADA para repor (ela regrava o arquivo ao "
+            "Preciso da Steam FECHADA para repor (a Steam regrava o arquivo ao "
             "sair e engoliria a correção). Feche a Steam e eu reponho."
         )
     return "Posso repor agora, preservando as opções que você já tinha na linha."
@@ -450,17 +450,17 @@ def reparar_ou_adiar(
     A ordem dos portões é a mesma do `main` do `steam_launch_options`, e não é
     negociável: **jogo aberto antes de tudo** (fechar a Steam ali mataria o
     jogo e o progresso não salvo), depois Steam aberta (a edição seria
-    engolida na saída dela), e só então a escrita.
+    engolida na saída da Steam), e só então a escrita.
 
     O que a escrita preserva, e por quê importa aqui mais que em qualquer
     outro lugar: o Pragmata precisa do wrapper **e** do `VKD3D_CONFIG` que
-    cura o crash de 14/08. Repor o wrapper jogando fora a linha dela trocaria
+    cura o crash de 14/08. Repor o wrapper jogando fora a linha do usuário trocaria
     "o jogo não vê o controle" por "o jogo fecha sozinho", que não é conserto
     nenhum. Quem garante isso é o `migrate_value`, que PREPENDE.
 
     A LISTA DE IGNORE ESTENDIDA À MÃO ENTRA NO REPARO desde 06/09/2026
     (ONDA5-07-01): o `migrate_value` SUBTRAI o nosso par de dentro da lista
-    dela, e a atribuição sai inteira e volta inteira — nunca há um instante em
+    do usuário, e a atribuição sai inteira e volta inteira — nunca há um instante em
     que a vírgula fique órfã. Fica de fora só o que a subtração não alcança,
     que o censo continua reportando como intocável.
     """
@@ -510,7 +510,7 @@ def _imprimir_relatorio(censo: Censo) -> int:
         print(f"[sentinela-wrapper] ERRO: {erro}")
     if censo.recusados:
         print(
-            "[sentinela-wrapper] fora por escolha dela: "
+            "[sentinela-wrapper] fora por escolha do usuário: "
             + ", ".join(censo.recusados)
         )
     for jogo in censo.faltantes:

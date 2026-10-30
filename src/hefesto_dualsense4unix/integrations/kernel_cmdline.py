@@ -324,7 +324,7 @@ def _tokens_do_kernelstub(conf: Path) -> list[str]:
 
 
 def _valor_do_grub(texto: str) -> str:
-    """O valor da ÚLTIMA ``GRUB_CMDLINE_LINUX_DEFAULT=`` (é a que o grub usa); ``""`` sem ela."""
+    """O valor da ÚLTIMA ``GRUB_CMDLINE_LINUX_DEFAULT=`` (é a que o grub usa); ``""`` senão."""
     valor = ""
     for linha in texto.splitlines():
         crua = linha.strip()

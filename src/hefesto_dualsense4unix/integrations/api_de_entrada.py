@@ -12,7 +12,7 @@ arquivo existir com esta forma e não com outra.
 O CENSO DE 16/08/2026 DERRUBOU A HEURÍSTICA QUE ESTE MÓDULO IA TER
 -------------------------------------------------------------------
 O desenho pedido era: *detectar o jogo que só fala XInput e trocar a máscara
-para Xbox sozinho*. O censo dos 24 jogos instalados dela (instrumento
+para Xbox sozinho*. O censo dos 24 jogos instalados na máquina de teste (instrumento
 `scripts/ensaios/api_de_entrada_dos_jogos.py`) mostrou que **a assinatura de
 disco não separa**:
 
@@ -32,7 +32,7 @@ Duskfade e DON'T SCREAM têm a **mesma** assinatura na forma que importa:
 nenhum import de entrada, `XINPUT1_4.dll` carregado por `LoadLibrary`, zero
 SDL na pasta. Um está quebrado, o outro funciona.
 
-**O número que fecha a discussão: a heurística erraria em 13 dos 14.** Ela
+**O número que fecha a discussão: a heurística erraria em 13 dos 14.** A heurística
 marcaria como Xbox um balde onde o defeito é UM jogo, e cada um dos outros
 treze perderia as cinco features que a máscara Xbox não tem onde pôr
 (giroscópio, touchpad, lightbar, gatilhos adaptativos, bateria;
@@ -63,7 +63,7 @@ AS QUATRO FONTES QUE FORAM PESADAS, E POR QUE TRÊS PERDERAM
    segunda execução e cobre 4% da biblioteca não sustenta decisão de produto.
 3. **`ControllerTypesUsed` do `localconfig.vdf`.** PERDEU por escopo: medido em
    16/08/2026, a chave é **uma só, global da conta** (`localconfig.vdf:1346`),
-   listando todo tipo de controle que ela já usou na vida. Não é por jogo, e
+   listando todo tipo de controle que a conta já usou na vida. Não é por jogo, e
    portanto não distingue jogo nenhum.
 4. **Arquivos-marca na pasta** (`Engine/`, `*_Data/`, `SDL2.dll`). PERDEU
    sozinha: dá a ENGINE, não a API de entrada. Os cinco Unreal da tabela acima
@@ -73,7 +73,7 @@ O QUE ESTE MÓDULO NÃO FAZ, DE PROPÓSITO
 -----------------------------------------
 Ele **não** troca a máscara de ninguém. Nada em `daemon/launch_env.py` nem em
 `profiles/schema.py` consulta este arquivo. Ligar o veredito à máscara é
-precisamente a mudança que o censo reprova, e ela não foi feita.
+precisamente a mudança que o censo reprova, e não foi feita.
 """
 from __future__ import annotations
 

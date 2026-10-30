@@ -1,6 +1,6 @@
 """conexao_zumbi.py — o controle que conecta e NÃO vira controle.
 
-CONEXAO-ZUMBI-01 (18/09/2026). Ela abriu o produto com dois DualSense ligados e
+CONEXAO-ZUMBI-01 (18/09/2026). O produto foi aberto com dois DualSense ligados e
 disse quatro coisas: *"com dois ou mais controles conectados a interface do app
 para de funcionar"*, *"o lightbar tá sem a solução"*, *"a mudança dos leds e
 afins não foram aplicadas pros demais controles"*, *"ambos conectados, ambos
@@ -15,7 +15,7 @@ As quatro são UMA causa só, medida às 11h55::
 O segundo controle tinha **conexão de rádio de pé e nenhum registro no
 BlueZ**: sem device, sem HID, sem ``hidraw``, sem nó de LED, sem bateria, sem
 microfone, sem placa de som. O controle fica no padrão de fábrica — barra azul
-e jogador 1 —, que é exatamente o que ela descreveu. E a interface estava viva
+e jogador 1 —, que é exatamente o que foi relatado. E a interface estava viva
 (250 voltas em 25 s): o que morreu foi o CONTROLE.
 
 A ordem de produto é o que este módulo existe para cumprir:
@@ -35,13 +35,13 @@ Um link só é ZUMBI quando, ao mesmo tempo:
 3. **o BlueZ não tem objeto ``org.bluez.Device1``** para esse endereço naquele
    adaptador (:func:`enderecos_que_o_bluez_conhece`).
 
-A TERCEIRA É A TRAVA DE SEGURANÇA, e é ela que torna a cura barata. Um ACL sem
+A TERCEIRA É A TRAVA DE SEGURANÇA, e é a trava que torna a cura barata. Um ACL sem
 objeto no BlueZ **não serve a ninguém**: não há perfil, não há áudio, não há
 entrada, não há bateria — nenhum consumidor da máquina alcança aquele link.
 Derrubá-lo não pode interromper nada que esteja funcionando, porque nada está
 funcionando por ele. O fone, o mouse, o celular e o teclado do usuário têm objeto no
 BlueZ enquanto conectados, e por isso ficam FORA por construção — sem lista de
-OUI, sem casar por nome, sem depender da bancada.
+OUI, sem casar por nome, sem depender da máquina de teste.
 
 A terceira é também o que separa este defeito do **"conectado sem hidraw"** que
 o ``scripts/doctor.sh`` já pega (``check_bt_connected_sem_hidraw``): lá o BlueZ
@@ -147,7 +147,7 @@ def pedido_a_ponte(
     nome: str | None = None,
     caminho: str = PONTE_INSTALADA,
 ) -> PedidoAPonte:
-    """O pedido à ponte root — o ÚNICO lugar do ``src/`` que escreve ``sudo`` para ela."""
+    """O pedido à ponte root — o ÚNICO lugar do ``src/`` que escreve ``sudo`` para a ponte."""
     esperados = _ENDERECOS_DO_VERBO.get(verbo)
     if esperados is None:
         raise ValueError(f"a ponte não tem o verbo {verbo!r} com dado pelo stdin")

@@ -69,10 +69,10 @@ class _Barramento(Protocol):
 
 @dataclass(frozen=True)
 class RedeSemFio:
-    """Uma rede ativa: onde ela mora (``""`` = dentro da máquina) e o que ela anuncia.
+    """Uma rede ativa: onde mora (``""`` = dentro da máquina) e o que anuncia.
 
     ``chave`` é a identidade ESTÁVEL do aparelho (``usb:vid:pid`` ou ``pci:endereço``): nem o nó
-    USB nem o nome da interface servem, os dois mudam quando a placa cai e volta. Ela só
+    USB nem o nome da interface servem, os dois mudam quando a placa cai e volta. A rede só
     serve de memória dentro deste módulo e nunca sai dele (o ``wlx…`` carrega o endereço).
     """
 
@@ -93,7 +93,7 @@ class FaixaNoBluetooth:
 
 
 def faixa_no_bluetooth(rede: RedeSemFio) -> FaixaNoBluetooth:
-    """Os canais Bluetooth que a rede cobre; acima de 2,5 GHz ela está ``fora``."""
+    """Os canais Bluetooth que a rede cobre; acima de 2,5 GHz a rede está ``fora``."""
     informada = rede.largura_mhz is not None and rede.largura_mhz > 0
     largura = rede.largura_mhz if informada and rede.largura_mhz else LARGURA_MINIMA_EM_2_4_GHZ_MHZ
     if rede.frequencia_mhz >= FIM_DA_BANDA_DE_2_4_GHZ_MHZ:
@@ -220,7 +220,7 @@ def ler_as_redes(
 
     **O último valor bom se segura por alguns segundos** (:data:`SEGURA_O_ULTIMO_VALOR_S`): a
     placa que cai do barramento e volta some do NetworkManager ou fica sem ponto ativo por
-    instantes, e a linha dela na tela não pode sumir e voltar por isso.
+    instantes, e a linha da rede na tela não pode sumir e voltar por isso.
     """
     guarda = memoria if memoria is not None else _ULTIMAS if barramento is None else {}
     agora_s = agora()

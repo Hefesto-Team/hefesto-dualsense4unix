@@ -137,7 +137,7 @@ class TestONomeDoNumeroEhARessalva:
         linhas = "\n".join(af.ContagemDaBomba().linhas())
         assert "ACEITAS PELO KERNEL" in linhas
         assert "NÃO é 'o firmware obedeceu'" in linhas
-        assert "orelha dela" in linhas
+        assert "Quem mede som é a orelha" in linhas
 
     def test_o_campo_se_chama_pelo_que_ele_mede(self) -> None:
         """O nome do atributo carrega a ressalva — renomear para "entregues"
@@ -268,7 +268,7 @@ class TestABombaNaoEscolheOArranjo:
     def test_os_dois_continuam_registrados_sem_escolha(self) -> None:
         assert {a.nome for a in af.ARRANJOS} == {"ds5dongle", "senshi"}
         for arr in af.ARRANJOS:
-            assert "NÃO medido nesta bancada" in arr.de_onde_sei
+            assert "NÃO medido nesta máquina de teste" in arr.de_onde_sei
 
 
 def _carregar(nome: str) -> Any:

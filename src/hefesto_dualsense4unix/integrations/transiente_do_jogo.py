@@ -453,7 +453,7 @@ class OuvidoDoJogo:
         self.contadores = {"gravacoes": 0, "transientes": 0, "alvo_errado": 0}
 
     def comecar(self) -> None:
-        """Sobe a volta de procura (idempotente). Ela dorme enquanto ninguém quer."""
+        """Sobe a volta de procura (idempotente). A volta dorme enquanto ninguém quer."""
         if self._volta is not None and self._volta.is_alive():
             return
         self._parar.clear()

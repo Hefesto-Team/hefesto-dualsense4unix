@@ -8,7 +8,7 @@ Existem dois backends de vpad, e os call sites (`subsystems/gamepad.py` para o P
   - `UhidDualSense` (/dev/uhid): device **HID** de verdade. O `hid_playstation`
     faz bind nele e o vpad ganha hidraw + lightbar + player-LED + motion sensors
     + touchpad. É o que faz a máscara **DualSense finalmente vibrar** no jogo (com
-    uinput ela é evdev-only, o SDL usa o driver PS5, procura o hidraw, não acha, e
+    uinput a máscara é evdev-only, o SDL usa o driver PS5, procura o hidraw, não acha, e
     o rumble morre — a razão de a máscara Xbox ter virado obrigatória).
 
 `VirtualPad` é a interface que os dois cumprem; `make_virtual_pad` decide qual usar
@@ -404,16 +404,16 @@ def make_virtual_pad(
     `dualsense` numa sessão `xbox` teria o uhid vetado e cairia no uinput com
     máscara DualSense — o par degradado em que a vibração do jogo morre
     (VPAD-05/SPRINT-GAME-RUMBLE-01). Por isso `key` já é a máscara EFETIVA daqui
-    para baixo, e os backends recebem só ela: uma leitura do registro por vpad,
+    para baixo, e os backends recebem só a efetiva: uma leitura do registro por vpad,
     e nenhuma janela entre a decisão da factory e a do backend em que o registro
     possa mudar e os dois discordarem sobre quem é este controle
-    (`mascara_efetiva` é idempotente — de uma máscara já efetiva devolve ela
+    (`mascara_efetiva` é idempotente — de uma máscara já efetiva devolve a mesma
     mesma).
 
     **E `identity` PASSA adiante desde COOP-QUE-NÃO-DESMONTA-01/E3
     (06/09/2026).** O parágrafo acima terminava dizendo que não passá-la não
-    perdia nada, e era verdade enquanto ela só decidia máscara. Deixou de ser:
-    o MAC do vpad uhid agora é ancorado nela (`uhid_gamepad.vpad_mac`), para o
+    perdia nada, e era verdade enquanto só decidia máscara. Deixou de ser:
+    o MAC do vpad uhid agora é ancorado na identidade (`uhid_gamepad.vpad_mac`), para o
     controle físico não trocar de MAC quando o número do jogador é reciclado.
     Sem o repasse, a cura parava aqui — na factory — e não chegava ao produto.
     """
@@ -484,7 +484,7 @@ def _try_uhid(
     factory o pendura no vpad uinput degradado para o `state_full` expor.
     ``(None, None)`` só no flavor xbox — uinput por design, não degradação.
 
-    `identity` (E3) chega já resolvida em máscara pelo chamador, então aqui ela
+    `identity` (E3) chega já resolvida em máscara pelo chamador, então aqui a identidade
     tem UM papel só: ancorar o MAC do vpad no controle físico. `None` = o
     chamador não sabe de quem é o vpad, e o MAC cai no número do jogador.
     """

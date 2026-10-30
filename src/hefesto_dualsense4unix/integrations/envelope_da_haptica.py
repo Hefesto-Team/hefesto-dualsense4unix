@@ -204,7 +204,7 @@ def espiar_a_haptica(
     ganho: Callable[[], float] | None = None,
     vai: Callable[[], bool] | None = None,
 ) -> Callable[[int], bytes]:
-    """A mesma fonte de PCM, e cada bloco que ela entrega passa pelo envelope deste controle.
+    """A mesma fonte de PCM, e cada bloco entregue passa pelo envelope deste controle.
 
     ``ganho`` e ``vai`` são os da ponte do rádio, que lê o PCM antes deles: o envelope diz o
     que chega ao controle, como o do cabo. O bloco que não vai ao controle conta como zero, e

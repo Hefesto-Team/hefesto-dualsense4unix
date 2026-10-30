@@ -3,7 +3,7 @@
 O PROBLEMA QUE ESTE MÓDULO RESOLVE
 -----------------------------------
 
-Ela tem TRÊS adaptadores Bluetooth ``2357:0604``, todos atrás do mesmo hub.
+A máquina de teste tem TRÊS adaptadores Bluetooth ``2357:0604``, todos atrás do mesmo hub.
 Idênticos no barramento e no ``lsusb``. A única coisa que os separa é o BD
 Address, e endereço não é nome: ninguém olha para ``AC:A7:F1:...`` e sabe qual
 é o do sofá.
@@ -18,13 +18,13 @@ E **o modelo deles não é uma pergunta que o barramento responda** — MEDIDO e
 O ``vid:pid`` NÃO distingue: UB500, UB5A e UB500 Plus são os três
 ``2357:0604``, com o mesmo chip RTL8761BUV, e aqui nem o ``bcdDevice`` os
 separa. O único campo que varia é o ``product``, e ele é frágil: três unidades
-da mesma bancada devolvem DUAS strings diferentes, e há na natureza uma
+da mesma máquina de teste devolvem DUAS strings diferentes, e há na natureza uma
 terceira com erro de digitação de fábrica (``TP-Lifk UB5A Adapter``).
 
 **Consequência que precisa estar escrita:** nenhuma regra de udev, linha do
 mapa de canais ou caminho de decisão deste produto pode depender de distinguir
 modelo de dongle TP-Link. Não dá. O que identifica um adaptador aqui é o BD
-Address; o que ela lê na tela é o apelido que ela mesma escreveu. É a mesma
+Address; o que quem usa lê na tela é o apelido que escreveu. É a mesma
 recusa do ``censo_do_barramento`` a heurística por ``product`` — adivinhar por
 texto é como se erra com confiança.
 
@@ -32,7 +32,7 @@ O BlueZ já guarda um nome por adaptador — ``org.bluez.Adapter1.Alias`` — e 
 grava em ``/var/lib/bluetooth/<endereço>/settings``, então ele sobrevive a
 reboot. Faltava o produto deixá-la escrever ali.
 
-A ARMADILHA, E ELA É O CORAÇÃO DESTE MÓDULO
+A ARMADILHA, QUE É O CORAÇÃO DESTE MÓDULO
 --------------------------------------------
 
 O prefixo ``Nintendo`` nesse nome **não é enfeite**. O Pro Controller LÊ o nome
@@ -44,15 +44,15 @@ controle DESCONECTA. É a metade (1) do ``BT-NINTENDO-ACTIVE-01``, pesquisa de
 
 Renomear um adaptador que hospeda um Pro sem manter o prefixo derruba o Pro. Por
 isso a decisão (22/08/2026) é: *"você escreve, o produto protege o
-prefixo"*. O nome que a TELA mostra é o dela, limpo; o que vai ao BlueZ é o
-costurado. Ela nunca precisa saber que a costura existe.
+prefixo"*. O nome que a TELA mostra é o de quem usa, limpo; o que vai ao BlueZ é o
+costurado. Quem usa nunca precisa saber que a costura existe.
 
-POR QUE PREFIXO, E NÃO SUFIXO — três razões, nenhuma delas de gosto
+POR QUE PREFIXO, E NÃO SUFIXO — três razões, nenhuma de gosto
 --------------------------------------------------------------------
 
 1. **O firmware do Pro casa o COMEÇO do nome.** A verificação é ``Nintendo*``,
    literalmente o glob de ``bt_active_mode.sh:141``. Sufixo não satisfaz.
-2. **O BlueZ corta pela CAUDA.** Medido nesta bancada em 22/08/2026, BlueZ 5.86:
+2. **O BlueZ corta pela CAUDA.** Medido nesta máquina de teste em 22/08/2026, BlueZ 5.86:
    um alias de 300 caracteres ASCII volta com 247 — ele trunca, e o que
    desaparece é o fim. Um sufixo protetor sumiria calado justamente nos nomes
    longos; um prefixo sobrevive ao corte.
@@ -64,7 +64,7 @@ POR QUE PREFIXO, E NÃO SUFIXO — três razões, nenhuma delas de gosto
 O TETO DO ALIAS, MEDIDO — e por que o produto trunca antes do BlueZ
 --------------------------------------------------------------------
 
-Nesta bancada, em 22/08/2026, BlueZ 5.86, como uid 1000::
+Nesta máquina de teste, em 22/08/2026, BlueZ 5.86, como uid 1000::
 
     300 x "N"  (300 bytes)  -> aceito, volta com 247 caracteres
     123 x "á"  (246 bytes)  -> aceito inteiro
@@ -72,7 +72,7 @@ Nesta bancada, em 22/08/2026, BlueZ 5.86, como uid 1000::
 
 Uma regra só explica os três: **o teto é de 247 BYTES, o BlueZ trunca sozinho
 e, quando o corte cai no meio de um caractere multibyte, a chamada inteira é
-recusada.** Nome dela tem acento — "Sofá", "Salão" —, então deixar o BlueZ
+recusada.** Apelido tem acento — "Sofá", "Salão" —, então deixar o BlueZ
 truncar é deixar o salvamento falhar sem motivo visível. :func:`costurar_o_nome`
 corta antes, sempre em fronteira de caractere, e sempre pela cauda: o prefixo
 nunca é o sacrificado.
@@ -188,7 +188,7 @@ class Renomeacao:
 
 
 def costurar_o_nome(nome: str, *, hospeda_nintendo: bool) -> str:
-    """O nome dela vira o alias que vai ao BlueZ."""
+    """O nome de quem usa vira o alias que vai ao BlueZ."""
     bruto = _alias_sem_tesoura(nome, hospeda_nintendo=hospeda_nintendo)
     intocavel = len(PREFIXO_NINTENDO) if hospeda_nintendo else 0
     return _caber(bruto, intocavel=intocavel)
@@ -207,7 +207,7 @@ def _alias_sem_tesoura(nome: str, *, hospeda_nintendo: bool) -> str:
 
 
 def limpar_o_nome(alias: str, *, hospeda_nintendo: bool) -> str:
-    """O alias do BlueZ vira o nome dela — o que a tela mostra."""
+    """O alias do BlueZ vira o nome limpo — o que a tela mostra."""
     texto = alias.strip()
     if not hospeda_nintendo:
         return texto
@@ -309,7 +309,7 @@ def renomear_o_dongle(
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> Renomeacao:
-    """Grava o nome dela num dongle, com a costura do prefixo por cima."""
+    """Grava o nome escolhido num dongle, com a costura do prefixo por cima."""
     tabela = (
         tuple(dongles)
         if dongles is not None
@@ -399,7 +399,7 @@ def _leitor(
 
 
 def _texto(valor: object) -> str:
-    """O valor de uma propriedade de texto, ou ``""`` quando ela não respondeu."""
+    """O valor de uma propriedade de texto, ou ``""`` quando a propriedade não respondeu."""
     return valor if isinstance(valor, str) else ""
 
 

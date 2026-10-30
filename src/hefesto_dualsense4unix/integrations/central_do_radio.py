@@ -1,9 +1,9 @@
 """central_do_radio.py — mover, parear, equilibrar e conferir (MOVER-UM-POR-VEZ-01).
 
-A palavra, 23/09/2026, e é a especificação: *"moveriamos por exemplo 1
-controle por vez. Apagaria esse um controle, o user, aperta os botões do
-controle pra sincronizar aquele controle e ele estaria no novo dispositivo. E
-não apagar tudo."* <!-- noqa-acento: citação literal -->
+A especificação, de 23/09/2026 (MOVER-UM-POR-VEZ-01): move-se um controle por
+vez. O produto apaga esse controle no adaptador de origem, quem usa aperta os
+botões de parear, e o controle chega ao novo adaptador. Os outros controles
+ficam onde estão: nada se apaga em lote.
 
 O QUE O ESTUDO DE 23/09 DERRUBOU, e por isso o mover é este
 ===========================================================
@@ -27,23 +27,23 @@ LER → DECIDIR → APLICAR → CONFERIR
   autorestore de ressuscitá-lo); só então a janela de pareamento abre SÓ no
   destino, com ``Powered`` ligado se preciso e ``Pairable`` ligado SÓ durante a
   janela; o ``Pair`` é atendido pelo agente próprio (R5), e sem ele pelo piso;
-  depois o nome dela (o ``Alias``) vai junto, e ``Connect``.
+  depois o nome escolhido (o ``Alias``) vai junto, e ``Connect``.
 * **CONFERIR** — o coração: até :data:`CONFERIR_S` lendo o ``HID_PHYS`` no
   adaptador pretendido e o movimento chegando. Só com os dois o estado vira
   :data:`CHEGOU`.
 
-A ORDEM É DESLIGAR → ESQUECER A ORIGEM → PAREAR → CONFERIR, e é a R1 dela ao pé
-da letra: *«Apagar a conexão no adaptador antigo, pedir PS + Create, e parear
-só no destino.»* FATO SUBSTITUÍDO (A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01,
+A ORDEM É DESLIGAR → ESQUECER A ORIGEM → PAREAR → CONFERIR, e é a R1 ao pé
+da letra: apagar a conexão no adaptador antigo, pedir PS + Create, e parear
+só no destino. FATO SUBSTITUÍDO (A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01,
 25/09/2026): de 23/09 a 25/09 a ordem foi parear → conferir → esquecer, por
 decisão registrada, para que um parear que falhasse não perdesse a
-conexão velha. A lista dela de 25/09 mediu o preço (passos c1 e c2): com o
-controle LIGADO na origem, o DualSense não entra em modo de parear — *«a
-instrução "segure PS + Create" não faz sentido com ele ligado»* —, e o controle
+conexão velha. A lista de 25/09 mediu o preço (passos c1 e c2): com o
+controle LIGADO na origem, o DualSense não entra em modo de parear, e a
+instrução de segurar PS + Create não faz sentido com ele ligado; o controle
 que ainda tem a chave na origem volta para lá sozinho. O produto faz a parte
 dele antes de pedir o gesto: desliga o controle e esquece a origem. Um parear
 que falha deixa o controle sem casa, e o «Conectar» o traz de volta em qualquer
-adaptador, com o mesmo PS + Create. <!-- noqa-acento: citação literal -->
+adaptador, com o mesmo PS + Create.
 
 OS TRÊS ESTADOS que a tela lê
 =============================
@@ -54,7 +54,7 @@ confirma, fica em «esperando» — e é vigiado, sem a trava, até
 :data:`PRAZO_DO_PENDENTE_S`. Se o controle aparece no destino, vira «chegou»;
 se o prazo acaba, «não chegou» — e a MEIA CHAVE que o ``Pair`` deixou no
 destino sai antes do veredito (:meth:`CentralDoRadio._fechar_sem_chegar`), em
-TODA saída sem chegada; sem a trava, ela fica devida e sai na primeira vez em
+TODA saída sem chegada; sem a trava, a saída fica devida e sai na primeira vez em
 que a central a tem (:meth:`CentralDoRadio._pagar_as_meias_chaves`). O
 prazo é UM, o da tela também, e o pedido seguinte não espera a vigia para
 encontrá-lo vencido (:meth:`CentralDoRadio._vencer_os_prazos`).
@@ -75,9 +75,9 @@ conferência, já sem a trava —, nenhum outro começa: o pedido volta
 :data:`MOTIVO_OCUPADO`, e o botão treme. A conferida é feita duas vezes, antes
 e DEPOIS de pegar a trava, porque o outro pode nascer enquanto este espera.
 
-O DESTINO SEGUE A CAIXA QUE ELA ABRIU (O-CONECTAR-SEGUE-A-CAIXA-QUE-O-USUARIO-ABRIU-01):
+O DESTINO SEGUE A CAIXA QUE O USUÁRIO ABRIU (O-CONECTAR-SEGUE-A-CAIXA-QUE-O-USUARIO-ABRIU-01):
 o pedido para o MESMO movimento, ainda antes de o aparelho aparecer na janela
-(:data:`PASSOS_EM_QUE_O_DESTINO_MUDA`), não é outro movimento — é o chip dela
+(:data:`PASSOS_EM_QUE_O_DESTINO_MUDA`), não é outro movimento — é o chip escolhido
 levando a busca junto. A janela fecha onde estava e recomeça no destino novo
 (:meth:`CentralDoRadio._mudar_o_destino`), e um «Mover» segue «Mover» do
 mesmo controle.
@@ -87,14 +87,14 @@ mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e NADA PAREIA
 SEM O CLIQUE DO USUÁRIO (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DO-USUARIO,
 30/09/2026): a janela pareia o aparelho que
 o usuário escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_do_usuario`),
-e só um que a janela viu (o «Parear de Novo» escolhe antes). Até 30/09 ela pareava o primeiro
+e só um que a janela viu (o «Parear de Novo» escolhe antes). Até 30/09 a janela pareava o primeiro
 controle que aparecesse, em meio segundo, antes de a tela o mostrar. E O CONTROLE QUE VOLTA PELO
-PAREAMENTO ANTIGO também chega (a foto 2 da lista dela de 25/09: *«conectou com
-algum mas não apareceu na lista»*): quem ela liga só com o PS reconecta no
+PAREAMENTO ANTIGO também chega (a foto 2 da lista de 25/09: o controle conectou, mas
+não apareceu na lista): o controle ligado só com o PS reconecta no
 adaptador que já tinha a chave dele, sem passar pela janela. O controle que se
-conecta durante a janela e não estava conectado quando ela abriu é o dela; o
+conecta durante a janela e não estava conectado quando a janela se abriu é o escolhido; o
 «Conectar» acaba «chegou» ONDE ele chegou (:data:`MOTIVO_PELO_PAREAMENTO_ANTIGO`),
-e a tela o mostra chegando. <!-- noqa-acento: citação literal -->
+e a tela o mostra chegando.
 
 O «EQUILIBRAR» (R12) é :func:`plano_de_radio.ordem_de_redistribuicao` — dona
 desde 20/09. Esta central só a chama, e só quando nenhum movimento está
@@ -103,8 +103,8 @@ desde 20/09. Esta central só a chama, e só quando nenhum movimento está
 A FAXINA (A-SOBRA-DO-BOND-SAI-SOZINHA-01, 25/09/2026)
 ======================================================
 O mover desta central esquece a origem no fim. Um mover feito à mão, ou antes
-de ela existir, deixa a chave velha para trás: o controle fica com bond em dois
-adaptadores, e na bancada o P2 ficou assim de 19/09 a 25/09, com o ``doctor``
+de a central existir, deixa a chave velha para trás: o controle fica com bond em dois
+adaptadores, e no ensaio o P2 ficou assim de 19/09 a 25/09, com o ``doctor``
 acusando e ninguém arrumando. A pergunta, 25/09: *«A interface do app não
 deveria corrigir isso automaticamente?»* Deveria, e a decisão é de quem
 coordena: o controle guarda UM host, e quando o kernel o diz conectado num
@@ -268,7 +268,7 @@ class Movimento:
 
     @property
     def prazo_desde(self) -> float:
-        """O prazo da chave nova conta do ``Pair``, não da janela: no diário de 06/10 ela segurou
+        """O prazo da chave nova conta do ``Pair``, não da janela: no diário de 06/10 veio o
         PS + Create 16 s depois de a janela abrir, e a chave viveu só os 42 s que sobravam."""
         return self.pareou_em or self.comecou
 
@@ -311,7 +311,7 @@ class GuardaDosNomes(Protocol):
 
 
 class NomesNaMaquina:
-    """O nome dela no ``maquina.json`` (``ControleDeclarado.nome``) — o dono é"""
+    """O nome escolhido no ``maquina.json`` (``ControleDeclarado.nome``) — o dono é"""
 
     def __init__(self) -> None:
         self._lido: tuple[tuple[int, int] | None, dict[str, str]] | None = None
@@ -446,7 +446,7 @@ def _nao_correr_sob_a_suite(_pedido: PedidoAPonte) -> tuple[int, str]:
 
 
 def _o_bluez_diz_controle(objetos: Iterable[bluez_dbus.AparelhoDoBluez]) -> bool | None:
-    """A CLASSE decide quando algum objeto a tem; sem ela, o ``Icon`` que o"""
+    """A CLASSE decide quando algum objeto a tem; sem a classe, o ``Icon`` que o"""
     vistos = tuple(objetos)
     for objeto in vistos:
         if objeto.classe is not None:
@@ -496,7 +496,7 @@ def _o_nome_que_vale(
     vistos_antes: Mapping[str, str],
     guardado: str,
 ) -> tuple[str, bool]:
-    """``(o nome que vale depois desta volta, ela apagou?)`` — ver"""
+    """``(o nome que vale depois desta volta, a volta apagou?)`` — ver"""
     conhecidos = [o for o in objetos if o.caminho in vistos_antes]
     renomeados = [o for o in conhecidos
                   if dados[o.caminho] and vistos_antes[o.caminho] != _alias_de(o)]
@@ -522,7 +522,7 @@ def _alias_de(objeto: bluez_dbus.AparelhoDoBluez) -> str:
 class PedidoDePareamento:
     """Um controle CONHECIDO que pede um par novo (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01).
 
-    Medido em 05/10/2026: ela segurou PS + Create no «vermelho», e o BlueZ o tinha no ar no
+    Medido em 05/10/2026: quem testa segurou PS + Create no «vermelho», e o BlueZ o tinha no ar no
     adaptador da Esquerda (RSSI de -56 a -62) com ``Paired``/``Bonded`` verdadeiros e
     ``Connected`` falso. O controle em modo de parear perdeu a chave; o BlueZ guarda a dele;
     nenhum dos dois conecta. O sinal é esse: conhecido + desconectado + ouvido na varredura.
@@ -873,7 +873,7 @@ class CentralDoRadio:
             self._dormir(PASSO_S)
 
     def _busca_publicada(self) -> dict[str, Any] | None:
-        """A busca do «Procurar» como a tela a lê, ou ``None``: com o chip dela"""
+        """A busca do «Procurar» como a tela a lê, ou ``None``: com o chip escolhido"""
         with self._tranca:
             conectando = self._movimentos.get(CONECTANDO)
             if self._busca is None or (conectando is not None and not conectando.em_curso):
@@ -970,8 +970,8 @@ class CentralDoRadio:
         """Os adaptadores do dono, numa foto que vale :data:`VALIDADE_DOS_ADAPTADORES_S`.
 
         ``esperar=False`` é o caminho do ``state_full``: com o dono vivo a foto
-        é memória e sai na hora; pelo caminho de reserva (``busctl``) ela custa
-        subprocessos, e sem dono vivo abri-lo custa o Gio — nos dois casos ela
+        é memória e sai na hora; pelo caminho de reserva (``busctl``) a foto custa
+        subprocessos, e sem dono vivo abri-lo custa o Gio — nos dois casos a foto
         se refaz num fio e o tique leva a última que havia.
         """
         agora = self._relogio()
@@ -1152,11 +1152,11 @@ class CentralDoRadio:
         return self._com_o_destino_pedido(agora, novo)
 
     def _a_escolha_do_usuario(self, alvo: str, destino: str | None) -> Movimento | None:
-        """O «Parear» dela na lista do «Conectar»: a escolha, e não outro movimento.
+        """O «Parear» do usuário na lista do «Conectar»: a escolha, e não outro movimento.
 
         O aparelho que a janela ainda não viu também se escolhe, para o «Parear de
         Novo» ser UM clique (esquece o par velho, abre a busca e escolhe o mesmo
-        aparelho): com a janela aberta no destino dela e o aparelho fora do ar em
+        aparelho): com a janela aberta no destino escolhido e o aparelho fora do ar em
         TODO adaptador. O ``Pair`` continua esperando a janela ver o endereço
         escolhido, nenhum outro: o controle de outra pessoa, ou o que já está
         no ar noutro adaptador (esse é um «Mover», e segue recusado), não entra.
@@ -1429,7 +1429,7 @@ class CentralDoRadio:
     def _quem_e(
         self, foto: _Foto, dono: bluez_dbus.LeitorDoBluez, *, exceto: str = ""
     ) -> dict[str, Any]:
-        """A classe, o ``Modalias``, o ``Icon`` e o nome dela, lidos ANTES de a origem sair."""
+        """A classe, o ``Modalias``, o ``Icon`` e o nome, lidos ANTES de a origem sair."""
         pares = sorted(foto.do_aparelho.items(), key=lambda par: par[1].conectado is not True)
         objetos = [o for _e, o in pares]
         classe = next((o.classe for o in objetos if o.classe is not None), None)
@@ -1463,7 +1463,7 @@ class CentralDoRadio:
     def _desligar_e_esquecer_a_origem(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez, foto: _Foto
     ) -> Movimento:
-        """A PARTE DO PRODUTO, antes de pedir o gesto — a R1 dela ao pé da letra."""
+        """A PARTE DO PRODUTO, antes de pedir o gesto — a R1 ao pé da letra."""
         movimento = self._guardar(replace(movimento, passo=PASSO_DESLIGANDO))
         alvo = movimento.aparelho
         for endereco in sorted(foto.do_aparelho):
@@ -1545,7 +1545,7 @@ class CentralDoRadio:
         conectar: bool,
         ligados_antes: frozenset[str],
     ) -> Movimento | None:
-        """A janela num destino: o gesto, o ``Pair``, o nome dela e o ``Connect``."""
+        """A janela num destino: o gesto, o ``Pair``, o nome escolhido e o ``Connect``."""
         restaurar = self._preparar_o_adaptador(dono, adaptador)
         with self._tranca:
             self._escolha, self._vistos_na_janela = None, frozenset()
@@ -1678,14 +1678,14 @@ class CentralDoRadio:
                     adaptador=mascarar(feito.destino))
         self._no_diario(
             VOLTOU_PELO_PAREAMENTO_ANTIGO,
-            "ela ligou o controle e ele voltou para o adaptador que tinha a chave dele",
+            "o controle ligou e voltou para o adaptador que tinha a chave dele",
             feito,
             depois={"adaptador": feito.destino},
         )
         return feito
 
     def _dar_o_nome(self, dono: bluez_dbus.LeitorDoBluez, movimento: Movimento) -> None:
-        """O nome dela vai junto: o ``Alias`` do objeto NOVO no destino."""
+        """O nome escolhido vai junto: o ``Alias`` do objeto NOVO no destino."""
         if not movimento.nome:
             return
         no = dono.caminho_do_aparelho(movimento.aparelho, adaptador=movimento.destino)
@@ -1704,7 +1704,7 @@ class CentralDoRadio:
         25/09/2026): sem classe, a pergunta ia ao kernel — *«o aparelho que tem
         hidraw no rádio é controle»*. Todo aparelho HID pelo rádio tem hidraw, e
         o ``HID_PHYS`` dele é o adaptador: o teclado de baixo consumo, que não
-        publica ``Class`` (o «BT5.0 Keyboard» da lista dela, passos b7 e c3),
+        publica ``Class`` (o «BT5.0 Keyboard» da lista de conferência, passos b7 e c3),
         virava controle. A tela o vestia de DualSense com «Segure PS + Create»,
         e o CONFERIR esperava um movimento que teclado não tem até o prazo — com
         a origem já esquecida e a central ocupada por dois minutos.
@@ -1758,7 +1758,7 @@ class CentralDoRadio:
         return devolver
 
     def _esperar_o_gesto(self, janela: Janela, alvo: str, *, comeco: float) -> bool:
-        """Espera o aparelho aparecer na janela — ela segurando PS + Create."""
+        """Espera o aparelho aparecer na janela — com PS + Create segurado."""
         fim = comeco + self._segundos
         while True:
             if any(getattr(c, "endereco", "") == alvo for c in janela.candidatos()):
@@ -1939,7 +1939,7 @@ class CentralDoRadio:
         feito = self._guardar(replace(movimento, estado=CHEGOU, passo=PASSO_FIM, motivo=""))
         self._no_diario(
             MOVEU_O_APARELHO,
-            "ela moveu com PS + Create, e o HID_PHYS confirmou",
+            "movido com PS + Create, e o HID_PHYS confirmou",
             feito,
             depois={"adaptador": feito.destino, "sem_lapide": sem_lapide or None},
         )
@@ -2243,7 +2243,7 @@ class CentralDoRadio:
         onde_tem: Mapping[str, bluez_dbus.AparelhoDoBluez],
         dono: bluez_dbus.LeitorDoBluez,
     ) -> tuple[str, frozenset[tuple[str, int]]] | None:
-        """A lembrança de onde ``aparelho`` estava no ar — se ela ainda vale."""
+        """A lembrança de onde ``aparelho`` estava no ar — se ainda vale."""
         with self._tranca:
             lembrada = self._lembrancas.get(aparelho)
         if lembrada is None:

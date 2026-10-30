@@ -115,7 +115,7 @@ class HapticaDoCabo:
         """Os laços ficam os de ``rotas``, e os motores de cada um vão no ganho da marca.
 
         ``ganhos`` é o fator linear da háptica de cada marca (o ``GANHO`` do dono
-        dela); sem ele, os motores vão a 1,0.
+        da marca); sem ele, os motores vão a 1,0.
         """
         ganho_de = dict(ganhos or {})
         for marca in [n for n in self._rotas if n not in rotas]:

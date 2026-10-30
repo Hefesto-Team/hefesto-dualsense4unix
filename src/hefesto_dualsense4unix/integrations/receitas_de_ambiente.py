@@ -1,7 +1,7 @@
 """As receitas de ambiente por sinal: o jogo que só abre com uma variável a recebe pelo wrapper.
 
 A tabela `docs/data/receitas-de-ambiente.csv` diz, por sinal no disco do jogo, qual variável vale
-e que peça ela exige: sem appid embarcado, só com a peça no lugar (sem ela o prontuário diz «falta a
+e que peça exige: sem appid embarcado, só com a peça no lugar (sem a peça o prontuário diz «falta a
 peça») e só o que o wrapper aceita. O sinal pode ter curinga (`*_Data/Plugins/x86_64/X.dll`). A peça
 é um arquivo ao lado do executável, o próprio sinal (`@sinal`), a peça do Hefesto (`@hefesto`, a
 `xgameruntime.dll` no sha256 do `assets/gdk-runtime/pino.txt`) ou o GameInput do Hefesto
@@ -86,7 +86,7 @@ def _sha256_do_pino(pino: Path | None = None, chave: str = "sha256") -> str | No
 
 
 def peca_do_hefesto_instalada(home: Path | None = None, pino: Path | None = None) -> bool:
-    """A `xgameruntime.dll` da pasta da peça existe e o sha256 dela é o do pino."""
+    """A `xgameruntime.dll` da pasta da peça existe e o sha256 do arquivo é o do pino."""
     esperado = _sha256_do_pino(pino)
     if esperado is None:
         return False
@@ -317,7 +317,7 @@ def jogo_gdk_sem_ajudante(
 ) -> bool:
     """O jogo recebe a peça GDK do Hefesto (no lugar, no sha do pino) e falta o ajudante de login.
 
-    Sem o ajudante a peça grava «sem conta, o jogo segue local» no log dela e o jogo abre sem conta,
+    Sem o ajudante a peça grava «sem conta, o jogo segue local» no log e o jogo abre sem conta,
     amigos nem online. Jogo que não recebe a peça (sem o sinal, ou com a peça faltando, que o
     prontuário já diz em ``falta_a_peca``) nunca cai aqui.
     """

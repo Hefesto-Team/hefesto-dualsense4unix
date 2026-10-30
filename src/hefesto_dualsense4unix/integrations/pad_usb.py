@@ -557,14 +557,14 @@ _FALHAS_DA_PORTA: dict[int, int] = {}
 
 
 def anotar_falha_da_porta(porta: int) -> int:
-    """O gadget da ``porta`` não enumerou; devolve as falhas seguidas dela."""
+    """O gadget da ``porta`` não enumerou; devolve as falhas seguidas da porta."""
     with _TRAVA:
         _FALHAS_DA_PORTA[porta] = _FALHAS_DA_PORTA.get(porta, 0) + 1
         return _FALHAS_DA_PORTA[porta]
 
 
 def porta_enumerou(porta: int) -> None:
-    """O gadget da ``porta`` enumerou: as falhas dela deixam de ser seguidas."""
+    """O gadget da ``porta`` enumerou: as falhas da porta deixam de ser seguidas."""
     with _TRAVA:
         _FALHAS_DA_PORTA.pop(porta, None)
 
@@ -591,7 +591,7 @@ _JOGADOR = re.compile(r"\bplayer=(\d+)\b")
 def quem_ficou_no_uhid(linhas: Iterable[str]) -> dict[int, str] | None:
     """``{jogador: motivo}`` dos pads no uhid desde o último ``daemon_starting``.
 
-    O diário do daemon é a única testemunha da enumeração (ela só se mede
+    O diário do daemon é a única testemunha da enumeração (a enumeração só se mede
     montando). None = o diário não tem a subida do daemon, e isso é «não sei»,
     nunca «todos em USB». Duas linhas não dizem o jogador: o
     ``pad_usb_sem_contrato_fica_o_uhid`` sai uma vez e vale para todo

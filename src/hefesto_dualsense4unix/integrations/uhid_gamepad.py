@@ -623,7 +623,7 @@ class UhidDualSense:
 
         No uhid a máscara é sempre DualSense — é a graça do backend: o device tem
         hidraw de verdade, então o SDL usa o driver PS5 e a vibração funciona
-        (com uinput+máscara DualSense ela é impossível). Forjar um Xbox 360 aqui
+        (com uinput+máscara DualSense a vibração é impossível). Forjar um Xbox 360 aqui
         seria pior que o uinput: o `hid_playstation` só faz bind em VID/PID da
         Sony (0ce6, 0df2...), e sem driver o device HID não vira gamepad nenhum.
         Por isso `xbox` devolve None e o chamador segue no `UinputGamepad`, que
@@ -671,8 +671,8 @@ class UhidDualSense:
         acerta (`Sony Interactive Entertainment DualSense Edge Wireless
         Controller`) e o uhid, que é o caminho bom, não.
 
-        A distinção humana fica — ela é o que separa este device do físico na
-        lista do sistema, e é o que ela vê. E nada quebra: o discriminador
+        A distinção humana fica — é o que separa este device do físico na
+        lista do sistema, e é o que o usuário vê. E nada quebra: o discriminador
         real do daemon nunca foi o nome, é o `phys` (`hefesto-vpad`) e o
         `uniq` (o MAC forjado por jogador).
         """
@@ -771,7 +771,7 @@ class UhidDualSense:
         QUEM ESCREVEU-01. Cada item é
         ``(ha_s, flag0, flag1, flag2, weak, strong, ramo)``. A idade vem
         resolvida (e não o instante cru) pela mesma razão do `visto_ha_s`:
-        quem lê é a janela, noutro processo, e ela não tem este relógio.
+        quem lê é a janela, noutro processo, e a janela não tem este relógio.
 
         Cópia a cada leitura, e não a lista viva: o anel é escrito na thread do
         poll loop e lido pelo `state_full`.
@@ -1530,7 +1530,7 @@ class UhidDualSense:
         return blocos
 
     def _guardar_na_graca(self, body: bytes) -> None:
-        """Na graça, o ÚLTIMO gatilho do jogo fica pendente até ela vencer.
+        """Na graça, o ÚLTIMO gatilho do jogo fica pendente até a graça vencer.
 
         A luz e o player-LED continuam descartados: são o que o kernel escreve na
         sonda, o defeito que a graça cura (`f95107f9d`).
@@ -1791,7 +1791,7 @@ class UhidDualSense:
         identidade sem os 12 hex é «não sei», e não apaga o dono que havia.
 
         O registro acontece sob a trava do pad, a mesma em que o
-        ``_destruir_o_device`` solta o gadget: fora dela, o gadget lido aqui
+        ``_destruir_o_device`` solta o gadget: fora da trava, o gadget lido aqui
         podia descer no meio, e a âncora ficava registrada numa interface morta.
         """
         if len(pad_usb._so_hex(identidade or "")) != 12:
@@ -1996,7 +1996,7 @@ class UhidDualSense:
     def _as_janelas_do_eco(self) -> collections.deque[float]:
         """As janelas do eco, garantidas pelo dono (o molde de `_a_trava_da_saida`).
 
-        As bancadas da suíte que montam o pad sem o `__init__` do dataclass não
+        Os dublês da suíte que montam o pad sem o `__init__` do dataclass não
         têm o campo; o `setdefault` é atômico sob o GIL.
         """
         janelas: collections.deque[float] | None = self.__dict__.get("_janelas_do_eco")
@@ -2045,7 +2045,7 @@ class UhidDualSense:
             self._mic_mudo_do_jogo += 1
 
     def _soltar_a_luz_do_microfone(self) -> None:
-        """Fim da sessão: se ela entregou alguma luz, o jogo a solta."""
+        """Fim da sessão: se a sessão entregou alguma luz, o jogo a solta."""
         if not self._mic_luz_entregue:
             return
         self._mic_luz_entregue = False
@@ -2671,7 +2671,7 @@ def _ancorar_o_gadget(gadget: _GadgetDoPad, identidade: str) -> bool:
     A identidade que chega depois da montagem (o P1 que subiu com o
     ``primary_uniq`` vazio) ou que muda (o posto de P1 passou a outro controle)
     leva a âncora junto: o registro velho sai só se ainda for deste gadget, e o
-    novo entra já, ou na enumeração, se ela ainda não veio.
+    novo entra já, ou na enumeração, se ainda não veio.
     """
     with _TRAVA_DA_ANCORA:
         antiga = gadget.identidade
@@ -2870,7 +2870,7 @@ def _o_gadget_caiu(
     pad ficaria mudo para sempre. Pergunta na primeira falha e a cada
     ``_GADGET_PERGUNTA_A_CADA`` seguidas; sumido o ``hidraw``, o bombeio do
     tique desmonta e o pad renasce no uhid (o contrato não faltou: não se anota).
-    ``falhas`` é a contagem de quem pergunta (a leitura tem a dela); sem ela,
+    ``falhas`` é a contagem de quem pergunta (a leitura tem a própria); sem essa contagem,
     vale a da escrita.
     """
     if falhas is None:
@@ -2948,7 +2948,7 @@ class _PedidoAoBroker:
     dele, 2 s; dentro do `pump_ff`, eram 2 s de tique preso a cada varredura, por
     pad. O fio pergunta; o tique só lê a resposta (:attr:`pronto`, :meth:`tomar`).
     O pedido que o `stop` larga em voo é promessa do pad na fila da descida
-    (:meth:`_DescidaAoBroker.prometer`), e o gadget tardio desce por ela; o que chega
+    (:meth:`_DescidaAoBroker.prometer`), e o gadget tardio desce por essa fila; o que chega
     com um jogo aberto desce no fio (:attr:`jogo_abriu`).
     """
 
@@ -3022,7 +3022,7 @@ class _PedidoAoBroker:
 
         O que já chegou desce pela fila da descida, com o pad por dono: o `stop`
         que espera o desce ele mesmo, e o que para no tique não fala com o broker.
-        O que ainda não chegou é promessa do pad na fila: desce por ela quando chegar.
+        O que ainda não chegou é promessa do pad na fila: desce pela fila quando chegar.
         """
         with self._trava:
             ja_largado, self._largado = self._largado, True
@@ -3259,7 +3259,7 @@ def parar_fora_do_tique(pad: Any) -> None:
     termina a descida do gadget no próprio fio, e o co-op o chamava no `sync`
     do laço; com o broker preso, o jogador que saía segurava a entrada de todos
     por ~4 s. Aqui a casa desce na hora, a devolução ao broker fica na fila da
-    descida (:class:`_DescidaAoBroker`), e o MAC só volta quando ela termina. O
+    descida (:class:`_DescidaAoBroker`), e o MAC só volta quando a descida termina. O
     `stop` do daemon que para espera a fila (:func:`esperar_as_descidas`). O pad
     que não é do uhid não fala com o broker e para como sempre.
     """

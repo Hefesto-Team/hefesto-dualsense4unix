@@ -1,4 +1,4 @@
-"""censo_do_gabinete.py — o que o firmware e o kernel sabem do GABINETE dela."""
+"""censo_do_gabinete.py — o que o firmware e o kernel sabem do GABINETE."""
 
 from __future__ import annotations
 
@@ -243,7 +243,7 @@ def ler_maxchild(
 def censo_do_kernel(
     entradas: Sequence[NoDeEntrada], maxchild: dict[str, int]
 ) -> dict[str, object]:
-    """As contagens que o kernel dá de graça, cada uma com o que ela significa."""
+    """As contagens que o kernel dá de graça, cada uma com o que significa."""
     raiz = soquetes_de_raiz(entradas)
     buracos = furos(raiz) if raiz else ()
     de_encaixe = sum(1 for buraco in buracos if buraco.tipo_de_encaixe == "hotplug")
@@ -276,12 +276,12 @@ def declarar_divergencia(
 
 
 def _pergunta(*, firmware: int | None, buracos: int | None, divergem: bool) -> str:
-    """A frase que a aba mostra. **Provisória, e o dono dela é o léxico.**"""
+    """A frase que a aba mostra. **Provisória, e o dono da frase é o léxico.**"""
     if divergem and firmware is not None and buracos is not None:
         return (
             f"A BIOS desta placa diz {firmware} conectores USB, e no barramento "
             f"eu vejo {buracos} buracos. As duas contas discordam, e nenhuma "
-            "delas viu o seu gabinete. Quantos buracos a sua traseira tem?"
+            "das duas viu o seu gabinete. Quantos buracos a sua traseira tem?"
         )
     if firmware is None and buracos is None:
         return (
@@ -289,7 +289,7 @@ def _pergunta(*, firmware: int | None, buracos: int | None, divergem: bool) -> s
             "respondeu, nem o barramento. Quantos buracos a sua traseira tem?"
         )
     return (
-        "Contei as entradas USB por uma fonte só, e ela não viu o seu gabinete "
+        "Contei as entradas USB por uma fonte só, e essa fonte não viu o seu gabinete "
         "por fora. Quantos buracos a sua traseira tem?"
     )
 
@@ -317,7 +317,7 @@ def montar_censo(
         "por_que_faces_vazias": (
             "O firmware dá o inventário de conectores, não a face em que cada um "
             "está — e o kernel também não: medido em 25/08/2026, o teclado e o "
-            "mouse desta bancada têm physical_location idêntico. Quem sabe qual "
+            "mouse desta máquina de teste têm physical_location idêntico. Quem sabe qual "
             "buraco é da frente é você."
         ),
         "placa": placa if placa is not None else {},
@@ -375,7 +375,7 @@ def ler_do_disco(caminho: str = "") -> dict[str, object]:
 def preservar_o_que_o_usuario_disse(
     novo: dict[str, object], antigo: dict[str, object], placa: dict[str, object]
 ) -> dict[str, object]:
-    """**A CURA.** Reinstalar não pode apagar o que ela ensinou ao produto."""
+    """**A CURA.** Reinstalar não pode apagar o que quem usa ensinou ao produto."""
     if not antigo:
         return novo
     if not serve_para_esta_placa(antigo, placa):
@@ -443,7 +443,7 @@ def contagens_declaradas(censo: dict[str, object]) -> dict[str, int]:
 
 
 def pergunta_pendente(censo: dict[str, object]) -> str:
-    """A pergunta que a aba tem de fazer — ``""`` quando ela já respondeu."""
+    """A pergunta que a aba tem de fazer — ``""`` quando já houve resposta."""
     contagens = censo.get("contagens")
     if not isinstance(contagens, dict) or not contagens.get("precisa_da_palavra_dela"):
         return ""

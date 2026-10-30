@@ -98,7 +98,7 @@ class PlanoDoAdaptador:
 
     @property
     def declarado_que_nao_subiu(self) -> frozenset[str]:
-        """Os ``uniq`` que ela marcou e cuja ponte não está de pé."""
+        """Os ``uniq`` que o usuário marcou e cuja ponte não está de pé."""
         return frozenset(self.com_mic_declarado - self.com_mic_de_pe)
 
 
@@ -164,7 +164,7 @@ POR_QUE_IMPORTA = (
 
 
 def _numero(valor: float) -> str:
-    """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa."""
+    """Uma casa decimal, com vírgula — é assim que se lê número nesta casa."""
     return formata_pt_br(valor)
 
 
@@ -211,7 +211,7 @@ def plano_por_adaptador(
 
     ``controles`` é ``state["controllers"]`` como já chega. ``com_ponte_de_mic``
     é ``bt_mic.uniqs`` — a ponte que SUBIU; ``mic_declarado`` são as chaves de
-    ``maquina.json`` que ELA marcou. As duas alimentam contas diferentes, e é
+    ``maquina.json`` que O USUÁRIO marcou. As duas alimentam contas diferentes, e é
     a regra 1 do cabeçalho.
 
     As três regras de descarte: quem
@@ -224,12 +224,12 @@ def plano_por_adaptador(
     existir: todo endereço que o ``ar`` mede ou que vem em ``adaptadores`` (o
     que o BlueZ conhece) ganha plano, com zero controles. Era o ACHADO 2 da
     medição das duas réguas (``test_as_duas_reguas_do_arranjo_divergem_onde``):
-    o dongle livre não existia para a régua, e ela mandava a frase do adaptador
+    o dongle livre não existia para a régua, e a régua mandava a frase do adaptador
     único com um adaptador vazio na mesa.
 
     O ``adaptador`` que o daemon já publica por controle (``_merge_radio``, do
     ``HID_PHYS``) vale sem reler o sysfs; só quem chega sem ele é resolvido aqui
-    — a mesma regra do ``orcamento_por_adaptador``, e é ela que deixa esta conta
+    — a mesma regra do ``orcamento_por_adaptador``, e é essa regra que deixa esta conta
     rodar no tique do ``state_full`` sem varrer ``/sys`` a cada volta.
     """
     conectados = [
@@ -314,7 +314,7 @@ def ordem_dos_destinos(
     varrendo: Iterable[str] | None = None,
     exceto: str = "",
 ) -> list[PlanoDoAdaptador]:
-    """A ordem dos destinos — a D8 dela, em UMA função."""
+    """A ordem dos destinos — a D8, em UMA função."""
     em_busca = {_hex(e) for e in (varrendo or ()) if _hex(e)}
     alvo_fora = _hex(exceto)
     candidatos = [

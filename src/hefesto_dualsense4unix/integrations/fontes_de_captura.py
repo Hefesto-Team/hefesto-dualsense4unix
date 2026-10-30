@@ -171,7 +171,7 @@ def escolher_fonte(
        (:func:`identidade_e_do_controle`) — a identidade DO CONTROLE, que não
        muda quando ele troca de transporte e não volta ao endereço. Quando
        ele está no ar, a pergunta *"qual nó é o microfone deste controle"* tem
-       resposta exata e ela não custa
+       resposta exata e não custa
        censo de USB nenhum.
 
        **AS QUATRO ABAIXO FICAM, e a razão é medida:** o nó com identidade só
@@ -180,7 +180,7 @@ def escolher_fonte(
        abre esta mesma função. Uma regra 0 que substituísse as quatro apagaria o
        microfone de todo controle que ninguém pediu ainda.
 
-       **E ela cobre os quatro chamadores de uma vez**, porque a cura está
+       **E a regra cobre os quatro chamadores de uma vez**, porque a cura está
        DENTRO da função que os quatro chamam: a eleição, a luz, o áudio da
        janela e o ``escolher_sink``. Curar um só deixaria a próxima pessoa
        remedindo o mesmo defeito, e foi o que aconteceu duas vezes em 05/09.
@@ -321,7 +321,7 @@ def identidade_depois_do_prefixo(nome: str, prefixo: str) -> str:
 
     OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01 (02/10/2026): o nome leva a marca
     do aparelho. A forma velha (o rabo hexadecimal do endereço) segue lida por
-    uma versão, para a escolha que ela gravou no nome velho.
+    uma versão, para a escolha que o usuário gravou no nome velho.
     """
     if not nome.lower().startswith(prefixo):
         return ""

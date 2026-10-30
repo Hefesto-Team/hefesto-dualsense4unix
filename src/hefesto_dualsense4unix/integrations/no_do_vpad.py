@@ -3,11 +3,11 @@
 POR QUE ESTE MÓDULO EXISTE (QUEM-SEGURA-O-NOSSO-NO-01, 20/08/2026)
 ------------------------------------------------------------------
 O `daemon.state_full` publica ~20 contadores por vpad e **não diz qual nó do
-kernel aquele vpad é**. Consequência medida: todo instrumento de bancada que
+kernel aquele vpad é**. Consequência medida: todo instrumento de ensaio que
 precisa da resposta a reimplementa — `scripts/ensaios/quem_o_jogo_abre.py`
 casa por *regex de caminho*, o `emulation_actions` da janela casa por prefixo
 de nome, e o `identidade_do_vpad.py` de `scripts/` casa pelo `uevent` do pai.
-São três réguas para o mesmo fato, e a lição desta casa é que uma delas
+São três réguas para o mesmo fato, e a lição desta casa é que uma das três
 envelhece calada.
 
 Aqui a resposta sai **do produto**, que é o único que sabe sem adivinhar: ele
@@ -52,7 +52,7 @@ DE ONDE SAI CADA NÚMERO (a procedência, declarada)
   `hid_playstation` copia `hdev->uniq` para o `input_dev` —
   `assets/dkms/hid-playstation/hid-playstation.c:704`). Sem `uniq` (caminho
   uinput, que é evdev puro e não tem `uniq`), a varredura casa pelo `name`
-  exato — e, se mais de um nó carregar esse mesmo nome, ela RECUSA em vez de
+  exato — e, se mais de um nó carregar esse mesmo nome, a varredura RECUSA em vez de
   escolher: no co-op de uinput os vpads são homônimos, e apontar um deles
   seria publicar o nó de P1 dentro do bloco de P2.
 - `hidraw`: do nó de entrada escolhido, sobe dois níveis de sysfs

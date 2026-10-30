@@ -1,10 +1,10 @@
 """PONTE-ESCADA-01 — tenta em ordem, para quando acerta, nunca mais pergunta.
 
-A decisão, 19/08/2026: *"o produto tenta as pontes em ordem; ela confirma
-UMA vez qual pegou; o produto grava para sempre"* — mais o atalho de escolher
+A decisão, 19/08/2026: o produto tenta as pontes em ordem, o usuário confirma
+UMA vez qual pegou, e o produto grava para sempre — mais o atalho de escolher
 direto na aba de perfil quando já souber.
 
-Este módulo é a DECISÃO, e só ela: qual é a próxima ponte a tentar, quanto
+Este módulo é a DECISÃO, e só isso: qual é a próxima ponte a tentar, quanto
 custa subir esse degrau, e quando é honesto gravar que a ponte pegou. Ele não
 cria vpad, não escreve `.env`, não mexe na Steam. Quem age é `launch_env` (no
 lançamento) e o gesto do usuário (ao vivo).
@@ -19,7 +19,7 @@ três peças já têm dono.
       mascara     = `mode.gamepad_flavor`        (profiles/schema.py)
                     — desde 13/09/2026 é o CAMINHO: `mode.caminho`, e sem
                     ele o `gamepad_flavor` (MODO-DE-CONEXAO-01, nota na `Ponte`)
-      steam_input = está no `steam_input_apps.txt`?  (a allowlist dela)
+      steam_input = está no `steam_input_apps.txt`?  (a allowlist do usuário)
 
 O que faltava não era vocabulário: era o registro de que **esta** tupla foi
 CONFIRMADA para **aquele** jogo. É só isso que este módulo acrescenta.
@@ -27,7 +27,7 @@ CONFIRMADA para **aquele** jogo. É só isso que este módulo acrescenta.
 A ORDEM, E O DADO QUE A SUSTENTA
 --------------------------------
 O censo de 19/08 propôs ``DualSense/uhid -> Xbox -> Nativo``. A ordem foi
-conferida contra `docs/data/mapa-controles.csv`, e ela se sustenta — com uma
+conferida contra `docs/data/mapa-controles.csv`, e se sustenta — com uma
 correção de forma, não de conteúdo (§ *OS DOIS TRAMOS*).
 
 **A assimetria, contada no mapa (19/08/2026).** Das linhas do DualSense no
@@ -44,7 +44,7 @@ existe quando a máscara é a nossa DualSense (`054c:0df2`):
 feature — fica fora da conta.)
 
 A máscara Xbox é `uinput` (`045e:028e`, `integrations/uinput_gamepad.py`), e
-`docs/protocol/pilha-steam-input-xpad-sdl.md` §1.5 explica POR QUE ela não tem
+`docs/protocol/pilha-steam-input-xpad-sdl.md` §1.5 explica POR QUE a máscara não tem
 onde pôr nenhuma das dez: o pacote do Xbox 360 é fixo desde 2005, o `xpad`
 declara sete eixos e um único nó de entrada, e o `hid-playstation` declara
 quatro. *"Quem escolhe a máscara Xbox escolhe rumble por evdev que funciona em
@@ -71,7 +71,7 @@ quando o jogo abre. Isso parte a escada em dois tramos, e o corte é medido, nã
 estético:
 
 **Tramo AO VIVO — as duas máscaras.** Nenhuma das duas (`054c:0df2` e
-`045e:028e`) está na lista de ignorados, então trocar entre elas alcança um
+`045e:028e`) está na lista de ignorados, então trocar entre as duas alcança um
 processo que já está rodando. Preço: recriar o vpad, que é o R-04.
 
 **Tramo ENTRE LANÇAMENTOS — nativo e Steam Input.**
@@ -92,9 +92,9 @@ No fim, e não por ser pior — por ser o mais caro de tentar.
 
 Ele **não é uma máscara nossa**: é a Steam entregando a ENTRADA e o Hefesto
 mantendo a SAÍDA. Medido em `CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*: com
-o jogo na allowlist, os ajustes dela (lightbar, gatilhos, LED de jogador)
-VENCEM o jogo; fora dela, o jogo vence. É a única ponte que inverte essa
-disputa a favor dela — e é a única que funciona para a classe *"só aceita Steam
+o jogo na allowlist, os ajustes do usuário (lightbar, gatilhos, LED de jogador)
+VENCEM o jogo; fora da allowlist, o jogo vence. É a única ponte que inverte essa
+disputa a favor do usuário — e é a única que funciona para a classe *"só aceita Steam
 Input"*, medida na noite de 18→19/08 com DON'T SCREAM: sem Steam Input o jogo
 não via controle nenhum.
 
@@ -104,7 +104,7 @@ de um reinício é mais barato, para a biblioteca inteira, do que pagar um
 reinício antes de três gestos.
 
 A máscara que viaja debaixo dele é a `dualsense`, e isso tem medição: o
-`virtualgamepadinfo.txt` dela (16/08) registra o nosso vpad no slot 0 como
+`virtualgamepadinfo.txt` da máquina de teste (16/08) registra o nosso vpad no slot 0 como
 `054c:0df2`, **type `ps5`** — é o que deixa os pedidos DualSense da própria
 Steam (Steamworks) terem por onde chegar.
 
@@ -112,7 +112,7 @@ UMA CONTRADIÇÃO VIVA, REGISTRADA E NÃO ESCONDIDA
 ------------------------------------------------
 DON'T SCREAM (2497900) aparece nas duas medições desta casa com desfechos
 opostos: a tabela de 16/08 o lista como *"SIM (perfil do usuário, dualsense)"*, e a
-bancada de 18→19/08 mediu que **sem Steam Input ele não via controle nenhum**.
+rodada de 18→19/08 mediu que **sem Steam Input ele não via controle nenhum**.
 As duas não podem estar certas ao mesmo tempo sobre o mesmo estado da máquina.
 
 Não se resolve aqui, e não precisa: **é o argumento mais forte a favor de esta
@@ -123,7 +123,7 @@ O QUE ESTE MÓDULO NUNCA FAZ
 ---------------------------
 **Gravar "funciona" sobre algo que ninguém confirmou.** É a disciplina do balde
 `sem_impedimento_conhecido` do `prontuario_dos_jogos`: uma ponte só vira
-CONFIRMADA por gesto do usuário, por silêncio dela com o jogo VIVO, ou por escolha
+CONFIRMADA por gesto do usuário, por silêncio do usuário com o jogo VIVO, ou por escolha
 do usuário na aba de perfil. Jogo fechado no meio da escada não confirma nada.
 
 **Guardar o que já tem dono.** A confirmação mora no PERFIL, no campo
@@ -135,15 +135,15 @@ origem (`POR_GESTO`, `POR_SILENCIO`, `POR_ESCOLHA_DO_USUARIO`) são byte a byte 
 `CONFIRMADA_POR_*` do esquema, de propósito — dois vocabulários para a mesma
 pergunta é como esta casa cria uma discordância que ninguém vê.
 
-**Guardar posição.** A escada não tem memória própria: o degrau em que ela está
-é a ponte que está DE PÉ agora (`ponte_atual`). Se ela fechar o jogo no meio da
+**Guardar posição.** A escada não tem memória própria: o degrau em que a escada está
+é a ponte que está DE PÉ agora (`ponte_atual`). Se o usuário fechar o jogo no meio da
 escada, a ponte de pé continua sendo a última tentada, e o próximo lançamento
 retoma dali em vez de reviver os degraus de baixo — sem nenhum arquivo novo
 para isso ficar velho.
 
 **Subir um degrau sozinho com o jogo aberto.** Cada degrau ao vivo recria o
 vpad, e recriar o vpad com o jogo aberto arranca o controle da mão do usuário (R-04,
-medido em 23/07/2026; medido DE NOVO em 19/08 no journal da bancada). O gate
+medido em 23/07/2026; medido DE NOVO em 19/08 no journal da máquina de teste). O gate
 `_recriacao_bloqueada_por_jogo` já implementa a metade defensiva disto: origem
 automática é barrada, origem que é gesto do usuário nunca é. Este módulo declara a
 outra metade — `como_subir` NUNCA responde "agora" com o jogo vivo.
@@ -209,7 +209,7 @@ class Ponte:
 
 @dataclass(frozen=True)
 class Degrau:
-    """Um degrau da escada: a ponte, o porquê dela, e o preço de subir nele."""
+    """Um degrau da escada: a ponte, o porquê, e o preço de subir nele."""
 
     ponte: Ponte
     porque: str
@@ -243,7 +243,7 @@ ESCADA: tuple[Degrau, ...] = (
             "A máscara `045e:028e` é o piso mais largo que existe: sete eixos, "
             "um nó de entrada, rumble por evdev que funciona em tudo "
             "(pilha-steam-input-xpad-sdl.md §1.5). Não carrega nenhuma das dez "
-            "linhas `uhid`, e é por isso que ela é o segundo degrau e não o "
+            "linhas `uhid`, e é por isso que essa ponte é o segundo degrau e não o "
             "primeiro."
         ),
         recria_vpad=True,
@@ -268,7 +268,7 @@ ESCADA: tuple[Degrau, ...] = (
         ponte=Ponte(KIND_GAMEPAD, MASCARA_DUALSENSE, steam_input=True),
         porque=(
             "A Steam entrega a ENTRADA e o Hefesto fica inteiro na SAÍDA — os "
-            "ajustes dela vencem o jogo (CONTROLE-SONY-MEDIDO-01, A INVERSÃO). "
+            "ajustes do usuário vencem o jogo (CONTROLE-SONY-MEDIDO-01, A INVERSÃO). "
             "É a única ponte da classe 'só aceita Steam Input', medida em "
             "18→19/08 com DON'T SCREAM. Fica por último por ser a mais cara de "
             "tentar: exige fechar a Steam, reabrir a Steam e reabrir o jogo."
@@ -281,7 +281,7 @@ ESCADA: tuple[Degrau, ...] = (
 
 
 def indice_do_degrau(ponte: Ponte) -> int:
-    """Posição da ponte na `ESCADA`, ou -1 quando ela não é um degrau."""
+    """Posição da ponte na `ESCADA`, ou -1 quando não é um degrau."""
     for indice, degrau in enumerate(ESCADA):
         if degrau.ponte == ponte:
             return indice
@@ -340,7 +340,7 @@ def divergencia_com_o_carimbo(
     ``None`` quando não discordam, **ou quando não há o que comparar**, que é o
     caso que esta função nasceu para separar.
 
-    O DEFEITO QUE ELA CURA, medido no journal da bancada em 17/09/2026 às 10:45:02:
+    O DEFEITO CURADO, medido no journal da máquina de teste em 17/09/2026 às 10:45:02:
 
         ``ponte_confirmada_diverge_do_perfil ponte_do_perfil=gamepad/xbox
         ponte_gravada=gamepad/dualsense``
@@ -358,7 +358,7 @@ def divergencia_com_o_carimbo(
     sobre uma discordância que não existia. Pior: ele soava como o aviso mais
     grave da casa e mandava quem lesse procurar defeito em lugar nenhum.
 
-    A REGRA, e ela é uma só: **só se compara termo com termo.** `kind` e
+    A REGRA, que é uma só: **só se compara termo com termo.** `kind` e
     `steam_input` existem dos dois lados e são comparados como sempre. O termo
     do meio só é comparado quando OS DOIS lados o declaram — perfil sem
     `caminho` é silêncio sobre o canal, e silêncio não diverge de nada.
@@ -419,7 +419,7 @@ def confirmacao_por_silencio(
     confirmada: Ponte | None = None,
     gestos: int = 0,
 ) -> Ponte | None:
-    """A ponte que o SILÊNCIO dela confirma, ou None quando nada é confirmado."""
+    """A ponte que o SILÊNCIO do usuário confirma, ou None quando nada é confirmado."""
     if ponte_atual is None:
         return None
     if confirmada is not None and not (gestos > 0 and ponte_atual != confirmada):

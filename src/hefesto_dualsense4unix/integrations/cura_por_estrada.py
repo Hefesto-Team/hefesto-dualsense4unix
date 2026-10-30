@@ -14,7 +14,7 @@ Heroic, do Lutris, do RetroArch, do Dolphin ou do mGBA tem um.
 
 Então «chegar» a um jogo de outro lançador é entregar as MESMAS variáveis por
 outra estrada. A conta é a mesma (`daemon/launch_env.py` já a fez e já a
-escreveu no disco); o que muda é o arquivo em que ela é escrita.
+escreveu no disco); o que muda é o arquivo em que a conta é escrita.
 
 AS DUAS ESTRADAS, e por que são duas
 -------------------------------------
@@ -32,7 +32,7 @@ os demais               `<lar>/.local/share/flatpak/overrides/<app-id>`,
                         --env=NOME=VALOR <app-id>` escreve
 ======================  ====================================================
 
-**O QUE CAIU DA SPRINT, e a razão é medida.** A §4 dela previa o Lutris por
+**O QUE CAIU DA SPRINT, e a razão é medida.** A §4 da sprint previa o Lutris por
 jogo (`system: env:` no `.yml` de cada jogo). Duas coisas derrubaram esse
 caminho no dia:
 
@@ -58,7 +58,7 @@ da carona; o `system.env` do `.yml` do jogo passou a ser a camada da EXCLUSÃO
 («A CAMADA DO JOGO DO LUTRIS», mais abaixo). O motivo 1 caiu: o PyYAML passou a
 dependência de execução, o mesmo leitor do
 Lutris, e nenhum YAML se escreve à mão. O motivo 2 continua medido: o Lutris
-dela segue sem jogo.
+da máquina de teste segue sem jogo.
 
 O QUE ESTE MÓDULO NUNCA FAZ
 ----------------------------
@@ -68,7 +68,7 @@ O QUE ESTE MÓDULO NUNCA FAZ
   `SDL_GAMECONTROLLER_IGNORE_DEVICES` deduzido aqui seria uma segunda conta ao
   lado da do daemon, e a segunda conta envelhece calada;
 * **nunca apaga o que é do usuário.** As duas estradas leem, fundem e regravam: um
-  `MANGOHUD=1` que ela pôs no Heroic continua lá depois da cura — e a
+  `MANGOHUD=1` que o usuário pôs no Heroic continua lá depois da cura — e a
   PERMISSÃO do arquivo volta como estava, que é parte do que estava lá (ver
   :func:`_escrever_atomico`);
 * **nunca escreve fora da allowlist** (`daemon.launch_env.ENV_ALLOWLIST`) e
@@ -88,39 +88,39 @@ ficavam sem o DualSense físico e sem o Hefesto para servi-lo.
 Quem escreve é quem sabe o que escreveu. A cada escrita, o **registro das
 estradas** (`estradas.json`, ao lado do `default.env`, dentro do
 `launch_env/` que o daemon materializa) anota, por arquivo: cada chave nossa,
-os valores que já pusemos nela, o valor que estava lá ANTES da primeira vez, e
+os valores que já pusemos no arquivo, o valor que estava lá ANTES da primeira vez, e
 o que o arquivo não tinha (o próprio arquivo, a seção `[Environment]`, a lista
 `enviromentOptions`). O desfazer (:func:`desfazer_as_estradas`, que o
 `uninstall.sh` roda por `--desfazer`) lê esse registro e tira exatamente isso:
 
-* uma chave nossa sai só se o valor ainda for um dos NOSSOS — se ela o mudou
-  depois, ele é dela e fica;
-* o valor que ela tinha antes volta; o que não existia volta a não existir;
-* o que é dela e nunca foi nosso (`MANGOHUD`, a `[Context]`) não é tocado.
+* uma chave nossa sai só se o valor ainda for um dos NOSSOS — se o usuário o mudou
+  depois, ele é do usuário e fica;
+* o valor que o usuário tinha antes volta; o que não existia volta a não existir;
+* o que é do usuário e nunca foi nosso (`MANGOHUD`, a `[Context]`) não é tocado.
 
 **A MESMA CONTA SERVE A ESCRITA.** Uma chave nossa que saiu do ambiente (o
 Modo Nativo não tem `IGNORE` nem `DISABLE_HIDRAW`) sai do arquivo na escrita
-seguinte, pela mesma regra — antes ela ficava lá, congelada, e o jogo do
+seguinte, pela mesma regra — antes a chave ficava lá, congelada, e o jogo do
 Heroic no Modo Nativo abria sem o controle que o Modo Nativo existe para
 mostrar.
 
 **O HEROIC COPIA A LISTA GLOBAL PARA DENTRO DE CADA JOGO** (conferência de
-25/09/2026, medido no fonte dele e no disco do usuário): quando ela muda qualquer
+25/09/2026, medido no fonte dele e no disco do usuário): quando o usuário muda qualquer
 opção de um jogo, o `GamesConfig/<jogo>.json` ganha uma cópia inteira do
-`enviromentOptions` global, e dali em diante é ELA que vale para aquele jogo.
+`enviromentOptions` global, e dali em diante é A CÓPIA que vale para aquele jogo.
 O desfazer passa por essas cópias com o registro do `config.json` da mesma
-casa (:func:`copias_por_jogo_do_heroic`), e tira delas só o valor nosso. A
+casa (:func:`copias_por_jogo_do_heroic`), e tira das cópias só o valor nosso. A
 ESCRITA não entra nas cópias — um jogo com cópia fica com o ambiente do dia em
-que ela foi tirada enquanto o Hefesto está instalado; é dívida aberta, não
+que a cópia foi tirada enquanto o Hefesto está instalado; é dívida aberta, não
 desta leva.
 
 **O NOME DO PRODUTO, quando o registro não sabe.** Uma instalação anterior a
-este registro escreveu sem anotar. Para ela vale a regra do espaço de nomes: as
+este registro escreveu sem anotar. Ali vale a regra do espaço de nomes: as
 variáveis que só o produto usa (:data:`_DO_PRODUTO_SEM_REGISTRO`) são
 presumidas nossas; as duas que uma pessoa costuma pôr sozinha
 (:data:`PODEM_SER_DO_USUARIO`) não são. O erro mais barato para quem joga é esse: um
 `IGNORE` esquecido deixa o jogo com ZERO controles; um `PROTON_DISABLE_HIDRAW`
-que ela mesma tivesse posto já tinha sido sobrescrito pelo produto enquanto ele
+que o usuário tivesse posto já tinha sido sobrescrito pelo produto enquanto ele
 estava instalado.
 
 **SÓ BIBLIOTECA PADRÃO NO CAMINHO DO DESFAZER, e é estrutural:** o
@@ -294,7 +294,7 @@ def planejar(chave: str, atalhos: tuple[str, ...], lar: Path | None = None,
 
 
 def _modo_de_nascimento(pasta: Path) -> int:
-    """O modo de um arquivo que NASCE nesta pasta — herdado dela."""
+    """O modo de um arquivo que NASCE nesta pasta — herdado da pasta."""
     try:
         return stat.S_IMODE(pasta.stat().st_mode) & 0o666
     except OSError:  # pragma: no cover
@@ -343,7 +343,7 @@ def _ler_heroic(alvo: Path) -> dict[str, object] | None:
 
 @dataclass
 class Marca:
-    """Uma chave nossa num arquivo dela."""
+    """Uma chave nossa num arquivo do usuário."""
 
     valores: list[str]
     antes: str | None = None
@@ -486,7 +486,7 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
 
 def _as_que_o_usuario_pos(pares: Pares, ambiente: dict[str, str],
                     entrada: Entrada) -> frozenset[str]:
-    """As :data:`DO_USUARIO_MANDA` do ambiente que ela já pôs neste arquivo."""
+    """As :data:`DO_USUARIO_MANDA` do ambiente que o usuário já pôs neste arquivo."""
     do_usuario: set[str] = set()
     for chave in DO_USUARIO_MANDA & ambiente.keys():
         marca = entrada.chaves.get(chave)
@@ -586,7 +586,7 @@ def _ler_override(alvo: Path) -> configparser.ConfigParser | None:
 
 
 def _repor_secao(cfg: configparser.ConfigParser, secao: str, pares: Pares) -> None:
-    """A seção com estes pares, nesta ordem — sem mudar o lugar dela no arquivo."""
+    """A seção com estes pares, nesta ordem — sem mudar o lugar da seção no arquivo."""
     for chave in list(cfg.options(secao)):
         cfg.remove_option(secao, chave)
     for chave, valor in pares:
@@ -659,7 +659,7 @@ def escrever_a_estrada(plano: Plano) -> str:
 def _extensoes_com_caixa() -> tuple[tuple[str, str, tuple[str, ...]], ...]:
     """``[(chave, rótulo, app ids)]`` dos lançadores das extensões ligadas que têm Flatpak.
 
-    O app id é o atalho com ponto (``net.lutris.Lutris``): é o nome da caixa, e o override dela
+    O app id é o atalho com ponto (``net.lutris.Lutris``): é o nome da caixa, e o seu override
     é a estrada. A extensão declara; a carona escreve, como no lançador de fábrica. Nunca levanta.
     """
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
@@ -691,7 +691,7 @@ def cartoes_com_estrada() -> tuple[tuple[str, tuple[str, ...]], ...]:
 
 def caixas_que_viraram_extensao() -> frozenset[str]:
     """Os app ids (em minúsculas) das caixas dos lançadores que eram de fábrica e viraram
-    extensão (``mods/viraram_extensao.json``): a carona de antes escreveu nelas."""
+    extensão (``mods/viraram_extensao.json``): a carona de antes escreveu nessas caixas."""
     return frozenset(a.casefold() for a in _app_ids_que_viraram_extensao())
 
 
@@ -763,7 +763,7 @@ def curar_todas_as_estradas(
 ) -> EstradasEscritas:
     """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu.
 
-    `espera=None` é o prazo do SERVIÇO (1 s); a janela passa o dela
+    `espera=None` é o prazo do SERVIÇO (1 s); a janela passa o próprio
     (`ESPERA_DA_JANELA_S`). Sem a trava no prazo nada se escreve e o retorno traz
     `sem_a_trava`; o diário diz quem desistiu (`quem=servico` ou `quem=janela`).
     """
@@ -1006,7 +1006,7 @@ def copias_por_jogo_do_heroic(lar: Path) -> list[tuple[Path, Path]]:
     25/09/2026, medido no fonte dele e no disco do usuário.** O `GameConfigV0` monta
     as opções de um jogo como `{...globais, ...do jogo}`, com
     `enviromentOptions: [...enviromentOptions]` — uma CÓPIA da lista global —,
-    e grava tudo em `GamesConfig/<jogo>.json` na primeira vez que ela muda
+    e grava tudo em `GamesConfig/<jogo>.json` na primeira vez que o usuário muda
     qualquer opção daquele jogo (o `setSetting` chama o `flush`). Dali em
     diante a lista do jogo vale SOZINHA: a global não entra mais nele. No disco
     do usuário, em 25/09, um dos três jogos com configuração própria carregava o
@@ -1260,7 +1260,7 @@ def _soltar(fd: int) -> None:
 @contextlib.contextmanager
 def trava_da_lista(lista: Path | None = None, *, espera: float | None = None,
                    criar: bool = True) -> Iterator[bool]:
-    """Um escritor por vez na lista de exclusão e no que ela anota."""
+    """Um escritor por vez na lista de exclusão e no que a lista anota."""
     alvo = (caminho_da_lista() if lista is None else lista).parent / NOME_DA_TRAVA
     chave = os.path.realpath(alvo)
     with _TRAVAS_DO_PROCESSO:
@@ -1372,7 +1372,7 @@ def _devolver_os_excluidos(listas: Iterable[Path],
             feito = Desfeito(Path(yml.arquivo))
             status = devolver_ao_jogo_do_lutris([yml])
             if status == "ficou":
-                feito.erro = ("ela mexeu nele depois da exclusão, e sem o PyYAML eu não "
+                feito.erro = ("o usuário mexeu nele depois da exclusão, e sem o PyYAML eu não "
                               "escrevo YAML à mão — fica para o desfazer de depois")
             elif status == "erro":
                 feito.erro = ("não consegui devolver o jogo excluído — fica para o "
@@ -1781,7 +1781,7 @@ def _com_o_nosso_no_yml(
     texto: str, pares: dict[str, str], moldura: tuple[str, ...] = (),
     ja_nossos: tuple[tuple[str, str], ...] = (),
 ) -> tuple[str, tuple[tuple[str, str], ...], tuple[str, ...]] | None:
-    """O `.yml` com os pares em `system.env`, sem passar por cima de chave dela."""
+    """O `.yml` com os pares em `system.env`, sem passar por cima de chave do usuário."""
     yaml = _yaml()
     if yaml is None:
         return None
@@ -1852,7 +1852,7 @@ def _o_registro_velho_provado(
 
     O texto do disco é exatamente o que a carona escreveria sobre o `antes` do
     registro com os pares de agora (mesmo `sha`): o par é nosso, e o registro é
-    reanotado. Qualquer diferença deixa o par como dela, e a volta não o toca.
+    reanotado. Qualquer diferença deixa o par como do usuário, e a volta não o toca.
     """
     if yml.antes is None:
         return None
@@ -1900,7 +1900,7 @@ def _planejar_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> _PlanoDoYml | None
 
 
 def _sem_os_pares_no_yml(texto: str, yml: YmlDoJogo) -> str | None:
-    """O `.yml` sem os pares da exclusão que ainda estão lá com o valor dela."""
+    """O `.yml` sem os pares da exclusão que ainda estão lá com o valor do usuário."""
     yaml = _yaml()
     if yaml is None:
         return None

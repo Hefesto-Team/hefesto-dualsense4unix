@@ -266,7 +266,7 @@ def test_o_controle_sem_hid_fica_parado(tmp_path: Path) -> None:
     )
     porta = laudo.portas[0]
     assert porta.desfecho == DESFECHO_SEM_HID
-    assert porta.parada == "o controle está nela sem o HID, e o jogo não o vê"
+    assert porta.parada == "o controle está ali sem o HID, e o jogo não o vê"
 
 
 def test_o_controle_que_voltou_com_hid_nao_fica_parado(tmp_path: Path) -> None:
@@ -303,7 +303,7 @@ def test_a_entrada_largada_vazia_fica_parada(tmp_path: Path) -> None:
     porta = laudo.portas[0]
     assert porta.porta == "3-4.4"
     assert porta.desfecho == DESFECHO_ENTRADA_LARGADA
-    assert porta.parada == "o kernel desistiu dela no -71, e ela segue vazia"
+    assert porta.parada == "o kernel desistiu da entrada no -71, que segue vazia"
 
 
 def test_a_entrada_largada_que_voltou_a_ter_aparelho_nao_fica_parada(tmp_path: Path) -> None:
@@ -391,6 +391,6 @@ def test_o_json_leva_a_entrada_o_papel_e_a_parada(tmp_path: Path) -> None:
     porta = forma["portas"][0]
     assert porta["entrada"] == "Entrada 7 (3-4.4)"
     assert porta["desfecho"] == DESFECHO_SEM_HID
-    assert porta["parada"].startswith("o controle está nela sem o HID")
+    assert porta["parada"].startswith("o controle está ali sem o HID")
     assert porta["aparelho"]["hid_sem_driver"] is True
     assert porta["aparelho"]["papel"] == "um controle, pelo USB"

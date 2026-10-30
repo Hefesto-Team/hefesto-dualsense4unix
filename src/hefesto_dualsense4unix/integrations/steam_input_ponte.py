@@ -4,8 +4,8 @@ O DEFEITO, nomeado pelo próprio produto
 ---------------------------------------
 O `prontuario_dos_jogos` já dizia, no estorvo `excecao_inerte`: *"Este jogo
 está na sua lista de exceções do Steam Input, mas o Steam Input está DESLIGADO
-para ele. A lista só preserva o que já estava ligado — ela nunca liga."* E a
-cura escrita ao lado mandava ELA abrir a Steam e clicar. Um diagnóstico
+para ele. A lista só preserva o que já estava ligado — nunca liga."* E a
+cura escrita ao lado mandava O USUÁRIO abrir a Steam e clicar. Um diagnóstico
 perfeito e uma cura que o produto não aplicava: o defeito mais caro desta casa.
 
 O PREÇO, medido na noite de 18→19/08/2026
@@ -24,11 +24,11 @@ gesto não liga a ponte, ele é decoração.
 ONDE A CHAVE MORA DE VERDADE (medido em 19/08/2026, e é o contrário do que se
 supunha)
 ------------------------------------------------------------------------------
-`ARVORE-ERRADA-01` (16/08) já havia medido que o `localconfig.vdf` dela tem
+`ARVORE-ERRADA-01` (16/08) já havia medido que o `localconfig.vdf` do usuário tem
 TRÊS blocos chamados `apps`, e fixou que o das `LaunchOptions` é
 ``UserLocalConfigStore/Software/Valve/Steam/apps``. É tentador aplicar a mesma
 âncora aqui. **Seria escrever num lugar que a Steam não lê.** A contagem no
-arquivo vivo dela, hoje::
+arquivo vivo do usuário, hoje::
 
     árvore `apps`                                    apps  LaunchOptions  a CHAVE
     .../Software/Valve/Steam/apps                      63       63           0
@@ -45,10 +45,10 @@ não consegue prová-la.
 AS DUAS RÉGUAS
 --------------
 A lição do `O PORTÃO PODE OLHAR PARA O LUGAR ERRADO` é que uma régua sozinha
-mente com convicção. Aqui são duas, e elas medem coisas diferentes:
+mente com convicção. Aqui são duas, e as duas medem coisas diferentes:
 
 1. **estrutural** (`ler_arvores`) — navega os blocos e atribui cada chave ao
-   appid e à árvore a que ela pertence;
+   appid e à árvore a que pertence;
 2. **bruta** (`contar_chave_cru`) — conta as linhas da chave no arquivo inteiro
    com um regex que não sabe nada de aninhamento.
 
@@ -78,10 +78,10 @@ novo desprotegido. O que entra aqui é o MECANISMO; quais jogos entram na lista
 
 O OUTRO SENTIDO — JOGO-SEM-EXCLUSIVIDADE-01 (13/09/2026)
 --------------------------------------------------------
-A lista passou a valer nos dois sentidos: dentro dela, ligado (`--ligar`);
-fora dela, desligado (`--desligar-fora-da-lista`). O que se mediu em 13/09: a
+A lista passou a valer nos dois sentidos: dentro da lista, ligado (`--ligar`);
+fora da lista, desligado (`--desligar-fora-da-lista`). O que se mediu em 13/09: a
 própria Steam liga o Steam Input POR JOGO sem escrever
-`UseSteamControllerConfig` — ela guarda a configuração do jogo em
+`UseSteamControllerConfig` — a Steam guarda a configuração do jogo em
 ``<raiz>/steamapps/common/Steam Controller Configs/<conta>/config/``
 (entradas com `autosave` nos `configset_*.vdf` e pastas `<appid>/`), cria o
 controle virtual ao abrir o jogo, e o jogo passa a ver o espelho do Steam
@@ -322,7 +322,7 @@ def ligar_no_texto(
     """Garante `UseSteamControllerConfig = 2` para `appids`. Função PURA.
 
     Três casos, e o produto cobre os três — a lista tem de valer para o jogo
-    que a Steam nunca tocou tanto quanto para o que ela já desligou:
+    que a Steam nunca tocou tanto quanto para o que a Steam já desligou:
 
     - a chave existe e está em `"0"`: troca o valor, preservando a linha;
     - o bloco do app existe sem a chave: insere a linha antes do `}` do bloco;
@@ -462,7 +462,7 @@ class Pendencia:
 
 @dataclass(frozen=True)
 class Estado:
-    """Fotografia read-only: a lista dela contra o que o vdf realmente diz."""
+    """Fotografia read-only: a lista do usuário contra o que o vdf realmente diz."""
 
     lista: list[str] = field(default_factory=list)
     ligados: list[str] = field(default_factory=list)
@@ -493,8 +493,8 @@ class Estado:
             )
         elif self.steam_aberta:
             quando = (
-                " Ligo assim que a Steam fechar (com ela viva a edição é "
-                "engolida na saída dela)."
+                " Ligo assim que a Steam fechar (com a Steam viva a edição é "
+                "engolida na saída da Steam)."
             )
         else:
             quando = " Posso ligar agora."
@@ -526,7 +526,7 @@ class Estado:
 
 
 def ler_allowlist(config_home: Path | None = None) -> list[str]:
-    """Os appids da lista de exceções dela. Lista vazia se o arquivo não existe."""
+    """Os appids da lista de exceções do usuário. Lista vazia se o arquivo não existe."""
     try:
         return parse_steam_input_allowlist(
             steam_input_allowlist_path(config_home).read_text(encoding="utf-8")
@@ -621,7 +621,7 @@ def garantir_ponte(
     A ordem dos portões não é negociável, e é a mesma do
     `apply_wrapper_to_all_games`: **jogo aberto antes de tudo** (fechar a Steam
     ali mataria o jogo e o progresso não salvo), depois Steam aberta (a edição
-    seria engolida quando ela sair), e só então a escrita — com backup
+    seria engolida quando a Steam sair), e só então a escrita — com backup
     `.bak.steam-input-ponte-<ts>` ao lado, `tmp` + `replace`, e a conferência
     da segunda régua antes de trocar o arquivo.
     """
@@ -771,7 +771,7 @@ def configuracao_por_jogo(pasta: Path) -> set[str] | None:
 
 
 def _ler_allowlist_estrita(config_home: Path | None = None) -> list[str] | None:
-    """A lista de exceções, ou None quando ela EXISTE e não se deixa ler."""
+    """A lista de exceções, ou None quando EXISTE e não se deixa ler."""
     caminho = steam_input_allowlist_path(config_home)
     try:
         if not caminho.exists():

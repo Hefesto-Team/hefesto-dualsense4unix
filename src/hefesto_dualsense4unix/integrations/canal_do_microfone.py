@@ -222,7 +222,7 @@ def desmutar(nome: str, *, rodar: Any = None) -> bool:
 
 
 def calar(nome: str, *, rodar: Any = None) -> bool:
-    """Cala o nó: `set-source-mute <nó> 1`. O desligado dela chega aqui."""
+    """Cala o nó: `set-source-mute <nó> 1`. O desligado da tela chega aqui."""
     return _escrever_o_mudo(nome, "1", rodar)
 
 
@@ -267,7 +267,7 @@ def escrever_o_mudo(uniq: str, mudo: bool, *, rodar: Any = None) -> bool:
 
     `True` = escreveu. Escrever a cada volta desfaria um mudo posto de fora
     (a tecla de mudo do sistema, o `pavucontrol`); a memória por canal é o que
-    separa o ato dela do gesto de terceiros.
+    separa o ato do usuário do gesto de terceiros.
     """
     with _TRANCA:
         source = _DE_PE.get(uniq)
@@ -341,7 +341,7 @@ def renomear(
 
     Devolve o canal que está DE PÉ agora — `None` = não há canal de pé.
 
-    **O GÊMEO DO ALTO-FALANTE, e ele mentia PIOR** — medido na bancada em
+    **O GÊMEO DO ALTO-FALANTE, e ele mentia PIOR** — medido no ensaio em
     20/09/2026, com os quatro DualSense de pé e o daemon respondendo
     ``2, 4, 3, 1``::
 
@@ -360,11 +360,11 @@ def renomear(
     **QUEM CHAMA É O DONO DO CANAL, e nunca um terceiro.** A tabela ``_DE_PE``
     é a única memória de quem abriu o quê; um canal republicado por quem não o
     abriu deixaria o dono anunciando de pé um objeto morto — é a mesma razão
-    pela qual :meth:`PonteMicBluetooth._fechar_a_source` só fecha o que ela
+    pela qual :meth:`PonteMicBluetooth._fechar_a_source` só fecha o que a ponte
     abriu. Por isso isto **devolve a source que ficou de pé**: quem guardava a
     velha troca a referência na mesma linha.
 
-    **O ALIMENTADOR VOLTA PELA MESMA FONTE.** Ela é lida de
+    **O ALIMENTADOR VOLTA PELA MESMA FONTE.** A fonte é lida de
     :data:`_FONTE_PEDIDA`, não perguntada de novo a ``escolher_fonte`` — depois
     que o canal está no ar aquela função responde o PRÓPRIO canal (a regra 0),
     e reabrir por essa resposta poria o ``parec`` a ler o nó que ele mesmo
@@ -379,7 +379,7 @@ def renomear(
     nem a volta subiu.
 
     A regra anterior — ``None`` = *"nada feito"* — foi medida pelo conferente
-    em 20/09/2026 e é um defeito silencioso: ela obriga o dono a ficar com a
+    em 20/09/2026 e é um defeito silencioso: a regra obriga o dono a ficar com a
     referência que tinha, e a referência que ele tinha estava PARADA (o
     ``fechar`` abaixo já aconteceu). A ponte seguiria escrevendo PCM num nó
     morto — *"o microfone mudo com tudo aparentemente de pé"*.

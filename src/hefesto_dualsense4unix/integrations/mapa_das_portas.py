@@ -183,7 +183,7 @@ class Ensaio:
 def mesa_do_motor(
     mapa: MapaDaMesa, censo: Censo, tipos: Mapping[str, str] | None = None
 ) -> Ensaio:
-    """O desenho dela mais a leitura de agora, na forma que o motor entende.
+    """O desenho do usuário mais a leitura de agora, na forma que o motor entende.
 
     ``tipos`` é o que o usuário declarou de cada modelo (``vid:pid`` → tipo, o ``mesa.radios`` do
     ``maquina.json``): pesa quando a máquina não mede a classe do aparelho
@@ -319,7 +319,7 @@ def leitura_da_maquina(mapa: MapaDaMesa, censo: Censo) -> list[str]:
     """O que a máquina vê do gabinete, em palavras curtas — as frases embaixo do hub.
 
     «5 rádios colados nas entradas 9 a 13», «Wi-Fi em USB 3.0 encostado na entrada 13». Só o que
-    se mede: quem está em qual entrada (o mapa dela e o censo), a classe e a velocidade de cada
+    se mede: quem está em qual entrada (o mapa e o censo), a classe e a velocidade de cada
     aparelho. Posição física entre entradas não se lê, então nada aqui diz «longe um do outro».
     """
     controladores = controladores_do_censo(censo)
@@ -595,7 +595,7 @@ def _entradas_da_fileira(mapa: MapaDaMesa) -> tuple[str, ...]:
 
 
 def _entradas_da_face(mapa: MapaDaMesa, numeros: Sequence[str]) -> tuple[str, ...]:
-    """As entradas de uma face MAIS as que nascem de extensão nelas."""
+    """As entradas de uma face MAIS as que nascem de extensão."""
     achadas: list[str] = []
     for numero in numeros:
         achadas.append(numero)

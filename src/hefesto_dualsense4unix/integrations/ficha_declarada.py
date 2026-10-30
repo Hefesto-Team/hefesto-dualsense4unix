@@ -162,7 +162,7 @@ class FichaDeclarada:
 
 
 def caminho_do_cache_da_steam(home: Path | None = None) -> Path:
-    """Onde a Steam guarda o cache binário de cada app (arquivo interno dela)."""
+    """Onde a Steam guarda o cache binário de cada app (arquivo interno da Steam)."""
     return default_steam_root(home) / "appcache" / "appinfo.vdf"
 
 
@@ -263,10 +263,10 @@ def _bibliotecas_e_manifesto(
 ) -> tuple[list[Path], bool]:
     """As `libScePad*` e o `MicrosoftGame.config` da pasta, com teto de profundidade.
 
-    Com `roupa`, junta nela os arquivos da roupa (`_ARQUIVOS_DA_ROUPA` e os
+    Com `roupa`, junta também os arquivos da roupa (`_ARQUIVOS_DA_ROUPA` e os
     primeiros `sharedassets<N>.assets`, com o `resources.assets`), na mesma volta.
-    Com `pastas`, junta nela as subpastas por onde a varredura andou (a raiz não entra):
-    arquivo que nasce ou some numa delas muda o `mtime` dela, e é o que o cache vigia.
+    Com `pastas`, junta também as subpastas por onde a varredura andou (a raiz não entra):
+    arquivo que nasce ou some numa subpasta muda o próprio `mtime`, e é o que o cache vigia.
     """
     bibliotecas: list[Path] = []
     assets: list[Path] = []
@@ -468,7 +468,7 @@ def explicar_a_capa(
 
     A capa só conhece dois caminhos, «o jogo declarou» ou «a Steam traduz»: mede o
     questionário que o desenvolvedor preencheu e se o Steam Input está ligado para o
-    controle. Com 57/58 ou 59 declarados, ou com o Steam Input ligado, ela não diz nada
+    controle. Com 57/58 ou 59 declarados, ou com o Steam Input ligado, a ficha não diz nada
     de errado e não há o que explicar.
     """
     decl = ficha.declaracao

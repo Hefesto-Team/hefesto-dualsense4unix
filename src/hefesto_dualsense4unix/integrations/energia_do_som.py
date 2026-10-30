@@ -3,7 +3,7 @@
 Lê SÓ o monitor da saída padrão (``@DEFAULT_MONITOR@``): o que a máquina toca, nunca um microfone
 (o único microfone de quem usa o Hefesto pode ser o do DualSense). ``abrir_fluxo`` recusa fonte que
 não seja monitor. Cada bloco de 40 ms vira ``(nivel, agudos)``, de 0 a 1: a energia contra o pico
-recente e a fração dela acima de ~2 kHz. A leitura só vive entre ``abrir`` e ``fechar``, e o
+recente e a fração da energia acima de ~2 kHz. A leitura só vive entre ``abrir`` e ``fechar``, e o
 ``parec`` morre com o pai.
 """
 

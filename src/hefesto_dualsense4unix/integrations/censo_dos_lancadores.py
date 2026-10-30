@@ -55,7 +55,7 @@ class JogoDoLancador:
         responde é `integrations/identidade_de_janela.classe_de_janela`, e a
         razão inteira — com a medição que a derrubou — está escrita lá.
 
-        O QUE ESTA PROPRIEDADE DIZIA, e por quê. Ela devolvia o basename do
+        O QUE ESTA PROPRIEDADE DIZIA, e por quê. A propriedade devolvia o basename do
         `install.executable`: `retail/gotg.exe` virava `gotg.exe`. A nota de
         11/09/2026 que morava aqui declarava que isso **nunca fora medido** —
         *"ninguém abriu Guardiões da Galáxia e leu a classe da janela viva"* —
@@ -66,7 +66,7 @@ class JogoDoLancador:
             janela pode anunciar o wrapper) → o `executavel` **deixa de ser a
             chave**."*
 
-        **EM 21/09/2026 ELA ABRIU O JOGO E A RESPOSTA FOI A SEGUNDA:**
+        **EM 21/09/2026 O JOGO FOI ABERTO E A RESPOSTA FOI A SEGUNDA:**
         ``WM_CLASS = "steam_app_1088850"``. O Heroic lança por `umu`, que monta
         a pilha da Steam e exporta `SteamAppId`; o Proton batiza a janela por
         ele. O `executavel` deixou de ser a chave no mesmo minuto.
@@ -324,7 +324,7 @@ def _itens_do_registro(arq: str, rel: str, dado: object) -> dict[str, dict[str, 
 
 def _registro_do_heroic(pasta: Path, arq: str
                         ) -> tuple[dict[str, dict[str, object]], bool, list[str]]:
-    """``(os instalados desta loja, o registro dela existe, erros)``."""
+    """``(os instalados desta loja, o registro da loja existe, erros)``."""
     instalados: dict[str, dict[str, object]] = {}
     erros: list[str] = []
     principal, *outros = _REGISTROS_DO_HEROIC[arq]
@@ -416,7 +416,7 @@ class ProtonEmUso:
 
     O campo das versões traz os nomes como o lançador os grava (a pasta de
     ``compatibilitytools.d`` ou o nome da ferramenta). ``duvida`` lista o que existe e não se lê:
-    com ela, quem decide apagar uma versão NÃO apaga (a pasta a mais custa disco; a que saiu a
+    com dúvida, quem decide apagar uma versão NÃO apaga (a pasta a mais custa disco; a que saiu a
     menos custa um jogo).
     """
 
@@ -514,7 +514,7 @@ PORQUE_HEROIC_ABERTO = "o Heroic está aberto: o Proton fixado entra quando ele 
 PORQUE_SEM_O_PINO = "o Proton fixado ainda não chegou onde este lançador o enxerga"
 PORQUE_AINDA_NAO = "ainda em outra versão: o Proton fixado entra na próxima volta"
 PORQUE_ILEGIVEL = "a configuração do jogo não se lê"
-PORQUE_SEM_FIXADOR = "a extensão não diz como fixar o Proton dos jogos dela"
+PORQUE_SEM_FIXADOR = "a extensão não diz como fixar o Proton dos jogos"
 PORQUE_SEM_A_EXTENSAO = "sem a extensão ligada, o Hefesto não fixa o Proton dos jogos dele"
 
 
@@ -684,7 +684,7 @@ def proton_em_uso(lar: Path | None = None, *, xdg_config: Path | None = None,
 
     O dono do saber de onde cada lançador guarda isso. O Heroic é de fábrica: olha toda pasta de
     configuração que EXISTE, instalado ou não (um lançador que sobrou no disco ainda aponta para o
-    Proton). O lançador de extensão responde pelo leitor dela (o ``proton`` de cada jogo); o que
+    Proton). O lançador de extensão responde pelo próprio leitor (o ``proton`` de cada jogo); o que
     virou extensão e está no disco SEM a extensão ligada é dúvida, porque ninguém o lê
     (:func:`lancadores_que_viraram_extensao`). Nunca levanta; o que existe e não se lê entra em
     ``duvida``.
@@ -826,7 +826,7 @@ class LeitorPorProcesso:
     A saída é uma lista de objetos com ``chave``, ``nome``, ``caminho`` e
     ``titulo_do_jogo``, ou o objeto ``{"jogos": [...], "pastas": [...]}``, com as pastas
     que o leitor percorreu (:func:`pastas_da_ultima_leitura`). O comando é relativo à
-    pasta da modificação (ou um nome do ``PATH``, como ``python3``), e roda nela.
+    pasta da modificação (ou um nome do ``PATH``, como ``python3``), e roda ali.
     """
 
     modificacao: str
@@ -843,7 +843,7 @@ class FixadorPorProcesso:
     """O comando que aponta os jogos de um lançador de extensão para o Proton fixado (30/10/2026).
 
     Roda na caixa do leitor, com as ``fontes`` (caminhos da ``HOME``) graváveis e o resto só de
-    leitura. Recebe o pino em ``HEFESTO_PROTON_PINO`` (a pasta, quando ela está no disco),
+    leitura. Recebe o pino em ``HEFESTO_PROTON_PINO`` (a pasta, quando está no disco),
     ``HEFESTO_PROTON_NOME`` e ``HEFESTO_PROTON_TARBALL`` (o arquivo conferido, quando há), e
     devolve ``{"fixados": N, "fora": [{"nome": …, "porque": …}]}``.
     """
@@ -980,7 +980,7 @@ def linha_do_leitor(leitor: LeitorPorProcesso, comando: list[str],
     A caixa do leitor NÃO é a do processo da modificação
     (``mods/supervisor.comando_na_caixa``), e a diferença é o trabalho dele: a
     do processo esconde a ``HOME``, e o leitor existe para ler a configuração
-    do emulador que mora nela (``~/.config/Emulador/emulador.ini``). Esta deixa a raiz
+    do emulador que mora na HOME (``~/.config/Emulador/emulador.ini``). Esta deixa a raiz
     inteira visível e SÓ DE LEITURA, sem rede, sem o barramento do sistema,
     sem a execução da sessão (o socket do serviço, o do som, o do Wayland) e
     num espaço de PID próprio, que morre com quem o abriu. Sem ``bwrap``, roda
@@ -1024,7 +1024,7 @@ def _parar(processo: subprocess.Popen[bytes], prazo_s: float) -> None:
     """Para o leitor e o que ele abriu: o grupo é dele (``start_new_session``).
 
     O ``SIGKILL`` não se recusa, e a espera que recolhe o processo volta logo.
-    Ela tem teto só pelo leitor preso no disco (uma pasta de rede morta), e o
+    A espera tem teto só pelo leitor preso no disco (uma pasta de rede morta), e o
     teto é o prazo que a modificação declarou: quem chama nunca espera mais
     que duas vezes o que aceitou esperar.
     """
@@ -1076,7 +1076,7 @@ def _texto_curto(valor: object, teto: int) -> str:
 
 def _jogo_do_leitor(linha: object, molde: str,
                     forma_da_chave: re.Pattern[str] = _CHAVE_DO_JOGO) -> JogoDoLancador | None:
-    """Uma linha da saída do leitor, conferida; ``None`` quando ela não serve.
+    """Uma linha da saída do leitor, conferida; ``None`` quando não serve.
 
     ``chave`` e ``nome`` são exigidos; ``caminho``, ``titulo_do_jogo``, ``janela``, ``proton`` e
     ``instalado`` (verdadeiro quando falta) são opcionais, e o opcional torto fica vazio sem
@@ -1143,7 +1143,7 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
     comando = _comando_do_leitor(leitor)
     if comando is None:
         return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
-                                    ["o leitor da modificação não está na pasta dela"])
+                                    ["o leitor da modificação não está na pasta da modificação"])
     caixa = shutil.which("bwrap") if bwrap is True else (bwrap or None)
     try:
         processo = subprocess.Popen(
@@ -1327,8 +1327,8 @@ def assinatura_das_bibliotecas(
 
     As de fábrica pelas pastas e pelo :data:`_FONTES`; as das extensões ligadas pelas ``fontes``
     que o leitor de cada uma declara, relativas ao lar, e pelas pastas de jogos que a última
-    leitura dela percorreu (:func:`pastas_da_ultima_leitura`): a pasta que a pessoa escolheu no
-    emulador mora em qualquer disco, e o ``.ini`` que a aponta não muda quando um jogo entra nela
+    leitura percorreu (:func:`pastas_da_ultima_leitura`): a pasta que a pessoa escolheu no
+    emulador mora em qualquer disco, e o ``.ini`` que a aponta não muda quando um jogo entra ali
     (O-JOGO-NOVO-NA-PASTA-DO-EMULADOR-MUDA-A-ASSINATURA-01). O registro das extensões entra
     também: ligar ou desligar uma muda a lista de bibliotecas.
     """
@@ -1373,7 +1373,7 @@ def _impressoes_do_padrao(base: Path, padrao: str) -> list[tuple[str, int, int]]
 
 
 def _impressoes_da_pasta(nome: str, pasta: Path) -> list[tuple[str, int, int]]:
-    """A impressão de UMA pasta que o censo lê: ela e o que :data:`_FONTES` diz."""
+    """A impressão de UMA pasta que o censo lê: a pasta e o que :data:`_FONTES` diz."""
     linhas = [_impressao(pasta)]
     for padrao in _FONTES.get(nome, ()):
         linhas.extend(_impressoes_do_padrao(pasta, padrao))
@@ -1540,7 +1540,7 @@ def lancador_do_jogo(fonte: str, appid: str = "") -> str:
     """O cartão de quem entregou o jogo, ou ``""`` no atalho direto (que não é de lançador).
 
     O atalho ``.desktop`` com o número da Steam é da Steam; os outros vêm pelo programa de
-    fábrica ou pela extensão ligada que o leu (a ``fonte`` é o rótulo dela, em minúsculas, como
+    fábrica ou pela extensão ligada que o leu (a ``fonte`` é o rótulo, em minúsculas, como
     `jogos_locais.jogos_dos_lancadores` o grava).
     """
     if fonte == _SERVICO_DA_STEAM or (fonte == "desktop" and appid.isdigit()):

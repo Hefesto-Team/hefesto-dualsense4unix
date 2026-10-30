@@ -61,7 +61,7 @@ conhecida tocado num sink de teste: pedido 0,500 → lido 0,499969; pedido 0,120
 lido 0,119995. O medidor devolve a amplitude que entrou, não uma aproximação.
 
 **E ABRIR O MONITOR NÃO ACORDA O APARELHO.** Era a objeção séria — segurar o
-isócrono USB da saída do DualSense o dia inteiro custaria bateria dela. Medido
+isócrono USB da saída do DualSense o dia inteiro custaria bateria do controle. Medido
 no mesmo dia, lendo ``pactl list sinks short`` antes, durante (duas vezes) e
 depois de um fluxo de monitor no sink do DualSense do usuário: ``IDLE`` nas quatro
 leituras. O fluxo de monitor não muda o estado do sink.
@@ -79,7 +79,7 @@ pelo servidor. As catorze barras são 560 ms de história.
 ## ELE NASCE DESLIGADO, e isso é a trava da suíte
 
 :func:`ligar` é chamada pelo piloto (``hefesto_vivo.main``), e por mais ninguém.
-Sem ela, :meth:`OndasDeSom.seguir` não abre processo nenhum e
+Sem a chamada, :meth:`OndasDeSom.seguir` não abre processo nenhum e
 :meth:`OndasDeSom.alturas` responde ``None`` — *não sei*.
 
 A razão é medida e é da casa: a suíte chama ``a02_controles.pacote()`` centenas

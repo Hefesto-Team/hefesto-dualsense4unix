@@ -296,7 +296,7 @@ def ordem_da_versao(versao: str) -> tuple[int, int]:
 
 
 def a_mais_recente_que_passa(recibo: Sequence[dict[str, str]]) -> str | None:
-    """Entre as versões que passaram, a mais recente: é ela que se fixa (22/10/2026)."""
+    """Entre as versões que passaram, a mais recente: é essa que se fixa (22/10/2026)."""
     passaram = [
         linha["versão"] for linha in recibo
         if linha["veredito"] == VEREDITO_PASSOU and ordem_da_versao(linha["versão"]) > (-1, -1)

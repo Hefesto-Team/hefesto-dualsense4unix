@@ -142,7 +142,7 @@ def impedimentos_da_troca(regras: Iterable[str] | None = None) -> list[str]:
     from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
     return [
-        f"a regra que religa o cabo ({NOME_DA_REGRA}) não está instalada — sem ela "
+        f"a regra que religa o cabo ({NOME_DA_REGRA}) não está instalada — sem a regra "
         f"o controle ficaria sem rádio e sem cabo; {como_atualizar_esta_instalacao()}"
     ]
 
@@ -246,7 +246,7 @@ class VigiaDoCabo:
         no_radio: Mapping[str, str | None],
         agora: float,
     ) -> Decisao:
-        """O par do cabo no rádio. Função do estado; não escreve em nada fora dela."""
+        """O par do cabo no rádio. Função do estado; não escreve em nada fora da função."""
         maduro = agora - self.visto_em.get(cabo.instancia, agora) >= ESPERA_PARA_SER_ORFAO_S
         if cabo.uniq is not None:
             endereco = mac_de_12(cabo.uniq)

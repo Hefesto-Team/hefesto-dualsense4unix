@@ -80,7 +80,7 @@ def _rotulo_na_tela_viva(widget_id: str) -> str | None:
 
 
 def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
-    """O rótulo VIVO daquele botão — na TELA QUE ELA USA, pelo id dele."""
+    """O rótulo VIVO daquele botão — na TELA DE QUEM USA, pelo id dele."""
     if widget_id in _ROTULOS_EM_CACHE:
         return _ROTULOS_EM_CACHE[widget_id]
     da_tela = _rotulo_na_tela_viva(widget_id)
@@ -111,7 +111,7 @@ def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
         warnings.warn(
             f"storm_doctor: o rótulo do botão {widget_id!r} não foi lido de "
             f"lugar nenhum e saiu da RESERVA ({se_faltar!r}). A frase de tela "
-            "continua de pé, mas ela manda clicar num nome que ninguém "
+            "continua de pé, mas manda clicar num nome que ninguém "
             "conferiu — dê um dono ao rótulo (D-0609-GTK-LEVA-INTEIRA).",
             stacklevel=2,
         )
@@ -239,7 +239,7 @@ def gesto_de_instalar(
     raiz_do_codigo: Path | None = None,
     consultar_dono: Callable[[str], str | None] | None = None,
 ) -> str:
-    """O gesto de INSTALAR esta biblioteca, com o nome que ela tem AQUI."""
+    """O gesto de INSTALAR esta biblioteca, com o nome que tem AQUI."""
     formato = formato_desta_instalacao(
         e_checkout=e_checkout,
         marca_flatpak=marca_flatpak,
@@ -296,8 +296,8 @@ def steam_input_fora_da_allowlist(text: str, allow: set[str]) -> tuple[list[str]
     `UseSteamControllerConfig` dentro de `apps/<appid>` da allowlist é opt-in
     deliberado e não conta; qualquer outro `UseSteamControllerConfig` é um
     JOGO, e o appid dele volta na lista. As chaves GLOBAIS
-    (PSSupport/SwitchSupport) não pertencem a jogo nenhum — elas voltam no
-    segundo termo, e por isso a mensagem pode falar delas sem inventar jogo.
+    (PSSupport/SwitchSupport) não pertencem a jogo nenhum — essas voltam no
+    segundo termo, e por isso a mensagem pode falar dessas chaves sem inventar jogo.
 
     D-33 (05/08/2026): quem chamava sabia só que "havia algo ligado"; a
     mensagem então contava ARQUIVOS `vdf`. Aqui nasce o dado que faltava para
@@ -358,7 +358,7 @@ def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
     return WARN, (
         "o cinto extra do áudio USB não está posto (sob carga o travamento "
         f"pode voltar). {PREFIXO_DA_CURA}nada, enquanto a linha da cura do "
-        "travamento do USB, logo acima, estiver verde — é ela que resolve na "
+        "travamento do USB, logo acima, estiver verde — é essa linha que resolve na "
         "raiz."
     )
 
@@ -496,12 +496,12 @@ def check_snd_quirk(
     if persisted:
         return INFO, (
             "a cura do travamento está agendada. "
-            f"{PREFIXO_DA_CURA}desconecte e reconecte os controles para ela "
+            f"{PREFIXO_DA_CURA}desconecte e reconecte os controles para a cura "
             "valer agora."
         )
     return (
         WARN,
-        f"cura do travamento do USB AUSENTE — sem ela os controles podem "
+        f"cura do travamento do USB AUSENTE — sem a cura os controles podem "
         f"desconectar no meio do jogo. {PREFIXO_DA_CURA}{gesto_de_atualizar()} "
         f"e reconecte os controles (o interruptor "
         f"'{rotulo_do_botao('btn_storm_fix_safe', 'Permitir correções automáticas')}' "
@@ -515,7 +515,7 @@ def contar_placas_dualsense(cards_text: str | None) -> int:
     MESA-CHEIA-11/E3 (14/08/2026). A régua vem antes do veredito, e esta erra
     fácil: cada placa ocupa DUAS linhas no arquivo, e o nome "DualSense" aparece
     nas duas — contar ocorrências da palavra dá o DOBRO das placas. O que
-    identifica uma placa é a linha de cabeçalho, que começa com o índice dela::
+    identifica uma placa é a linha de cabeçalho, que começa com o índice da placa::
 
          1 [Controller     ]: USB-Audio - DualSense Wireless Controller
                               Sony ... DualSense Wireless Controller at usb-...
@@ -533,7 +533,7 @@ def controles_no_cabo(state: object) -> int | None:
     """Quantos controles do `state_full` estão no CABO; ``None`` = não dá pra saber.
 
     MESA-CHEIA-11/E3 — este é o denominador honesto, e ele NÃO é "quantos
-    controles há". Medido na bancada em 14/08/2026 com quatro controles (dois
+    controles há". Medido no ensaio em 14/08/2026 com quatro controles (dois
     USB e dois BT): o `/proc/asound/cards` trazia DUAS placas DualSense. A
     PLACA de áudio USB do controle só existe no cabo — por rádio o aparelho não
     anuncia A2DP/HFP/HSP e não há placa ALSA nenhuma a contar. Cobrar quatro
@@ -663,8 +663,8 @@ def storm_report(
     **A LINHA DA RESERVA — 06/09/2026, GTK-2.** Se algum dos checks acima citou
     um botão cujo nome saiu da RESERVA (:func:`rotulos_de_reserva`), o laudo
     diz isso em vez de calar: as linhas acima estão mandando clicar num nome que
-    o produto não conseguiu conferir. Ela é CONDICIONAL e hoje nunca aparece —
-    e é assim que se pretende. Ela nasce no dia em que o XML da janela sair
+    o produto não conseguiu conferir. A linha é CONDICIONAL e hoje nunca aparece —
+    e é assim que se pretende. A linha nasce no dia em que o XML da janela sair
     sem que ninguém tenha dado dono ao rótulo, e some no dia em que o dono
     aparecer.
     """

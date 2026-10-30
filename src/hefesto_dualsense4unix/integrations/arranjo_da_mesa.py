@@ -29,7 +29,7 @@ como argumento e devolve estrutura. É isso que o torna testável sem hardware �
 e é a única razão de a equivalência com o mockup ser demonstrável.
 
 A única coisa que ele importa do produto são as **constantes medidas do rádio**,
-de ``integrations/radio_da_mesa.py`` (§10). Elas moravam aqui copiadas e
+de ``integrations/radio_da_mesa.py`` (§10). As constantes moravam aqui copiadas e
 arredondadas, e essa cópia era a segunda verdade que a casa mais paga para
 matar; ver a nota da D-OS-NUMEROS-DO-RADIO-TEM-UM-DONO-SO no §10.
 
@@ -42,7 +42,7 @@ AS DUAS REGRAS QUE SALVAM A CREDIBILIDADE
    mesmo modelo não trocam de lugar entre si — o conjunto de entradas é o mesmo
    e cada troca evitada é um movimento a menos.
 
-Sem as duas, o plano mandava movimentos inúteis. A mordida delas está em
+Sem as duas, o plano mandava movimentos inúteis. A mordida das duas está em
 ``tests/unit/test_arranjo_invariantes.py``, que arranca uma de cada vez e conta.
 
 O QUE SE PERDE SAI EM PALAVRA, NUNCA EM PONTOS
@@ -106,7 +106,7 @@ class Aparelho:
 
 @dataclass(frozen=True)
 class Entrada:
-    """Uma entrada USB do gabinete ou do hub, como ela a numerou na foto."""
+    """Uma entrada USB do gabinete ou do hub, como quem usa a numerou na foto."""
 
     n: str
     usb: int
@@ -307,7 +307,7 @@ def todas_as_entradas(faces: Iterable[Face]) -> list[Entrada]:
 
 
 def por_num(faces: Iterable[Face], n: str | None) -> Entrada | None:
-    """A entrada de número ``n``, ou ``None`` se ela não existe em face nenhuma."""
+    """A entrada de número ``n``, ou ``None`` se não existe em face nenhuma."""
     if n is None:
         return None
     for entrada in todas_as_entradas(faces):
@@ -359,7 +359,7 @@ def entrada_de_em(plano: Mapping[str, str], ident: str) -> str | None:
 
 
 def ocupada(faces: Iterable[Face], plano: Mapping[str, str], entrada: Entrada) -> bool:
-    """Um dongle na entrada-filha ocupa também a entrada-mãe: o extensor está nela."""
+    """Um dongle na entrada-filha ocupa também a entrada-mãe: o extensor fica ali."""
     if entrada.n in plano:
         return True
     if entrada.filho is not None and entrada.filho.n in plano:
@@ -554,7 +554,7 @@ def _sem_proibicao(_entrada: Entrada) -> bool:
 
 
 def _receita_manda_mover(de: str | None, para: str | None, motivo: Motivo | None) -> bool:
-    """A ÚNICA regra de *"isto vira ordem de serviço"* — e ela tem um dono só."""
+    """A ÚNICA regra de *"isto vira ordem de serviço"* — e tem um dono só."""
     if not para or de == para:
         return False
     return not de or (motivo is not None and motivo.ganho > 0)
@@ -1031,7 +1031,7 @@ SLOTS = SLOTS_POR_SEGUNDO
 
 
 def adaptadores_da_mesa(mesa: Mesa) -> tuple[Adaptador, ...]:
-    """Os adaptadores Bluetooth e a entrada de cada um, quando ela é sabida."""
+    """Os adaptadores Bluetooth e a entrada de cada um, quando é sabida."""
     aloc = alocacao(mesa.mapa, mesa.leitura)
     fora: list[Adaptador] = []
     for aparelho in mesa.aparelhos:

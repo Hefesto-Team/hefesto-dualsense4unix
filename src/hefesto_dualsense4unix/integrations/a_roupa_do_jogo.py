@@ -204,10 +204,10 @@ def _agora_ns() -> int:
 
 
 def _a_releitura_venceu(chave: _Chave, comecou: int | None) -> bool:
-    """A leitura é suspeita (um `mtime` a menos de uma margem do começo dela) e a margem já passou?
+    """A leitura é suspeita (um `mtime` a menos de uma margem do início) e a margem já passou?
 
     Num disco de tempo grosso, o arquivo que muda no mesmo tique deixa a chave igual. Enquanto a
-    margem corre, a leitura guardada serve (é o melhor que se sabe); passada ela, vale UMA nova.
+    margem corre, a leitura guardada serve (é o melhor que se sabe); depois, vale UMA nova.
     """
     if comecou is None:
         return False
@@ -216,9 +216,9 @@ def _a_releitura_venceu(chave: _Chave, comecou: int | None) -> bool:
 
 
 def _do_cache(raiz: Path) -> tuple[_Declarado | None, bool]:
-    """A leitura guardada, se nada mudou desde então, e se ela pede uma releitura.
+    """A leitura guardada, se nada mudou desde então, e se pede uma releitura.
 
-    Sem leitura útil: `(None, False)`. Com ela: `(declarado, a_reler)`, e quem não pode esperar
+    Sem leitura útil: `(None, False)`. Com leitura: `(declarado, a_reler)`, e quem não pode esperar
     o disco usa o `declarado` assim mesmo.
     """
     with _TRAVA_DO_CACHE:

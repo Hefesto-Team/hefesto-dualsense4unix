@@ -4,7 +4,7 @@ Até 22/08/2026 esta leitura vivia só em ``scripts/ensaios/cor_do_plastico.py``
 fora do aplicativo: ``grep -rn 'cor_do_plastico|plastic|nome_da_cor' src`` devolvia
 ZERO, e o ``state_full`` só publica ``lightbar_rgb`` — que é a LUZ, não o plástico.
 A decisão **T6** do registro «DECISOES-DA-EXECUCAO» da aba Configurações
-trouxe a leitura para cá: sem ela, toda linha "Cor:" da aba Configurações nasceria
+trouxe a leitura para cá: sem a leitura, toda linha "Cor:" da aba Configurações nasceria
 em "Não sei", inclusive nos controles no cabo, que o desenho mostra com a cor lida.
 
 Isto é um PORTE, não uma reescrita. O ensaio segue sendo o instrumento (rodada
@@ -18,7 +18,7 @@ O serial de fábrica de 17 caracteres carrega a cor nos caracteres 5 e 6, e ele
 não está em report nenhum de graça: é preciso PEDIR, e pedir é escrever. O
 comando é a família ``SET_FEATURE 0x80``, a mesma em que ``[1, 1]`` RESETA o
 controle e ``[12, 1, ...]`` grava calibração na memória não-volátil. Não há
-desfazer, e ela tem quatro controles sem reposição.
+desfazer, e a máquina de teste tem quatro controles sem reposição.
 
 Por isso o payload é montado por uma função **sem parâmetro** e conferido byte a
 byte por outra imediatamente antes de sair. Uma função que aceitasse ``base`` e
@@ -56,7 +56,7 @@ para DUAS unidades** (``hidraw8``, código ``02``, em 27/08/2026; ``hidraw5``,
 código ``04``, hoje). Duas unidades não são universalidade, e este arquivo não
 escreve que são.
 
-UMA TABELA SÓ, E ELA É O MAPA DO USUÁRIO
+UMA TABELA SÓ, QUE É O MAPA DO USUÁRIO
 ----------------------------------
 
 O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026. A tradução código → nome
@@ -66,7 +66,7 @@ existindo com o mesmo nome e passam a ser LIDOS dali.
 
 **FATO SUBSTITUÍDO.** Aqui estavam duas tabelas DIGITADAS, de 21 códigos cada:
 os nomes e os tons, este aproximado de ``docs/data/cores-do-plastico.md``. O
-mapa dela tem 28. Os sete que faltavam (``13``, ``14``, ``15``, ``ZC``, ``ZD``,
+mapa do usuário tem 28. Os sete que faltavam (``13``, ``14``, ``15``, ``ZC``, ``ZD``,
 ``ZE`` e ``ZF``, a linha HyperPop e as edições de jogo de 2025) saíam «Não sei»,
 sem cor, no cabo e no rádio: a pessoa que plugasse um deles via o produto
 dizer que não sabia que controle era. E três nomes divergiam do mapa
@@ -84,7 +84,7 @@ A procedência dos códigos continua sendo a de três fontes independentes
 coluna ``grau`` do CSV.
 
 Nada aqui toca a lightbar. Plástico é propriedade do aparelho, imutável, e serve
-para saber qual controle é qual; a cor da lightbar continua sendo dela e mora em
+para saber qual controle é qual; a cor da lightbar continua sendo de quem usa e mora em
 ``core/led_control.py``.
 """
 from __future__ import annotations
@@ -333,13 +333,13 @@ def nome_do_aparelho(cor: CorDoPlastico | None, modelo: str | None = None) -> st
     """O nome que a tela escreve para um controle: o do mapa, ou o do modelo.
 
     O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01, 25/09/2026. Com a cor achada no
-    mapa, o nome é o dela (``Cosmic Red``, ``Ghost of Yōtei Limited Edition``) —
-    no DualSense e no Edge, que tem a cor perguntada do mesmo jeito. Sem ela
+    mapa, o nome é o do mapa (``Cosmic Red``, ``Ghost of Yōtei Limited Edition``) —
+    no DualSense e no Edge, que tem a cor perguntada do mesmo jeito. Sem a cor
     (código fora do mapa, pergunta que ainda não voltou, aparelho que não pode
     responder), o nome é o do MODELO pelo PID, e sem PID o da família.
 
     **NUNCA «Não sei».** Todo controle da mesa é um DualSense que funciona; o
-    que não se sabe é a edição, e o nome do modelo é verdade sem ela.
+    que não se sabe é a edição, e o nome do modelo é verdade sem a edição.
     """
     if cor is not None and cor.nome:
         return cor.nome
@@ -555,7 +555,7 @@ def _transporte_do_dualsense(hid_id: str) -> str | None:
 
 
 def _e_o_nosso_vpad(campos: dict[str, str], pai: str, barramento: int) -> bool:
-    """O nó é o NOSSO vpad? A pergunta é do broker, e ele é o dono dela."""
+    """O nó é o NOSSO vpad? A pergunta é do broker, e ele é o dono da pergunta."""
     from hefesto_dualsense4unix.broker.hidraw_broker import (
         _e_o_nosso_vpad as regra_do_broker,
     )
@@ -575,14 +575,14 @@ def alvo_do_controle(
 
     ``raiz``, ``listar`` e ``ler`` entram por argumento com o default do sistema
     real (regra F4 de ``DECISOES-DA-EXECUCAO.md``, e o ``CANARIO-FS-01`` pega
-    constante de módulo): é o que permite ao teste montar uma bancada falsa sem
+    constante de módulo): é o que permite ao teste montar uma máquina falsa sem
     encostar em ``/sys``.
 
     ``resolver`` é o ``realpath`` do pai HID, de onde sai a TOPOLOGIA do filtro
     do vpad. **A árvore é uma só**: quem injeta o ``uevent`` (``ler``) injeta o
     sysfs inteiro, e o default dele passa a ser o caminho como veio — senão a
-    régua de uma bancada falsa perguntaria a topologia ao ``/sys`` da máquina em
-    que roda, e o resultado mudaria com o que estivesse plugado nela.
+    régua de uma máquina falsa perguntaria a topologia ao ``/sys`` da máquina em
+    que roda, e o resultado mudaria com o que estivesse plugado na máquina.
 
     ``None`` — que é a resposta comum — quando não há aparelho com aquele
     endereço, quando ele não é um DualSense, ou quando o que casou é o nosso
@@ -817,7 +817,7 @@ class AgendaDaPergunta:
     (``interface/mesa_viva.LeitorDeCor``) e o daemon
     (``daemon/ipc_handlers._identidade_de_fabrica``) guardavam a primeira
     resposta PARA SEMPRE, e a falha de um instante virava «este controle não
-    tem cor». Medido no ``interface.log`` e no journal da bancada: a janela das 23:36
+    tem cor». Medido no ``interface.log`` e no journal da máquina de teste: a janela das 23:36
     abriu 28 s depois do segundo controle entrar pelo rádio, no meio de um
     engasgo de 5 s em que o daemon perdia um terceiro nó (``ENODEV``). O broker
     serviu um descritor na hora, e a pergunta por ele não trouxe cor; serviu o

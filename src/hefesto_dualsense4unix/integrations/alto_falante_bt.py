@@ -2,7 +2,7 @@
 
 SOM-QUE-SAI-01, rota corrigida em 06/09/2026. Espelho de saída do
 :mod:`integrations.dualsense_bt_audio`, que é a metade de ENTRADA e **não é
-tocada por este módulo** — ele importa dela, nunca a edita.
+tocada por este módulo** — ele importa dessa metade, nunca a edita.
 
 O SOM SAI PELO RÁDIO DESDE 10/09/2026, E A LIÇÃO FICA
 ------------------------------------------------------
@@ -10,15 +10,15 @@ Pelo ``0x35`` de 334 B, com UM quadro Opus por report (:data:`ARRANJO_035`):
 70 s contínuos pelo alto-falante, com a orelha do usuário, e o som CALA com o CRC
 invertido. Desde 03/10/2026 o produto escreve o ``0x36`` combinado
 (:func:`montar_relatorio_combinado`): o mesmo quadro Opus, o bloco da háptica e
-o ``0x10``, num relatório só, provado na bancada. Quem escreve no
+o ``0x10``, num relatório só, provado no ensaio. Quem escreve no
 controle é a :class:`PonteDeSomPorRadio`, uma por controle no rádio, e quem a
 sobe é o subsystem (``daemon/subsystems/alto_falante._casar_as_pontes``).
 
 A lição que o mapa guarda tem nome (``audio.saida_dedicada@dualsense``):
 a FALÁCIA DO CANAL QUE RESPONDE — concluir que, porque um canal responde, ele
-FAZ o que se esperava dele. Ela segurou o som em ``não`` até a orelha do usuário
+FAZ o que se esperava dele. A lição segurou o som em ``não`` até a orelha do usuário
 ouvir o CONTEÚDO, em 10/09, e segura o degrau do produto em ``MONTOU`` até a
-bancada ouvir o caminho inteiro: o nó, a ponte e o controle. Quem conta o som
+orelha ouvir o caminho inteiro: o nó, a ponte e o controle. Quem conta o som
 pelo rádio conta pelo degrau e pela data, que estão no :data:`ARRANJO_035`.
 
 O QUE FALTAVA, E ERA NOMEADO PELO PRÓPRIO MAPA
@@ -73,7 +73,7 @@ Do mapa, ``audio.alto_falante@dualsense``.radio_ressalva, e nenhuma é enfeite:
     ``0x11|0x80`` (= 0x91), e ``plataforma.escada_de_output@dualsense`` mediu
     o ``common`` de 47 B obedecendo em [3..49] com ``report[2] = 0x10``, SEM
     o bit 7. No ``0x35`` a disputa ficou respondida em 10/09: o ``[2]`` é a
-    tag ``0x91``. Fora dele ela continua aberta, e o ``common`` fica fora;
+    tag ``0x91``. Fora dele a disputa continua aberta, e o ``common`` fica fora;
 (c) **o DS5Dongle é um DONGLE** — fala L2CAP direto e nunca toca
     ``/dev/hidraw``. Ele prova "report HID de saída", não "hidraw".
 
@@ -337,7 +337,7 @@ class Arranjo:
     pos_tag_haptico: int
     len_haptico: int
     pos_haptico: int
-    de_onde_sei: str = "leitura de fonte externa — NÃO medido nesta bancada"
+    de_onde_sei: str = "leitura de fonte externa — NÃO medido nesta máquina de teste"
     intervalo_de_envio_s: float | None = None
     controle_conta_quadros: bool = False
     haptico_duplo: bool = True
@@ -449,9 +449,9 @@ ARRANJOS: tuple[Arranjo, ...] = (ARRANJO_DS5DONGLE, ARRANJO_SENSHI)
 ARRANJO_COMMON_PRIMEIRO = Arranjo(
     nome="common-preservado",
     fonte=(
-        "esta bancada — plataforma.escada_de_output@dualsense, 15/08/2026: o "
+        "esta máquina de teste — plataforma.escada_de_output@dualsense, 15/08/2026: o "
         "`common` de 47 B por 0x32 e 0x39 acendeu a cor na lightbar por rádio, "
-        "com o olho dela. NÃO é leitura de fonte externa."
+        "a olho. NÃO é leitura de fonte externa."
     ),
     degrau=0x39,
     pos_tag_controle=2,
@@ -464,7 +464,7 @@ ARRANJO_COMMON_PRIMEIRO = Arranjo(
     len_haptico=0,
     pos_haptico=0,
     de_onde_sei=(
-        "MEDIDO nesta bancada quanto ao envelope ([2]=0x10 e o common em "
+        "MEDIDO nesta máquina de teste quanto ao envelope ([2]=0x10 e o common em "
         "[3..49]); a POSIÇÃO DO OPUS depois dele é hipótese não medida"
     ),
     common_preservado=True,
@@ -516,8 +516,8 @@ def controle_de_audio_035(
 ARRANJO_035 = Arranjo(
     nome="0x35",
     fonte=(
-        "ESTA BANCADA, 10/09/2026 — o alto-falante tocou por rádio, 70 s "
-        "contínuos, com a orelha dela e a mordida do CRC. O layout é o do "
+        "ESTA MÁQUINA DE TESTE, 10/09/2026 — o alto-falante tocou por rádio, 70 s "
+        "contínuos, com a orelha e a mordida do CRC. O layout é o do "
         "`HeadsetPlayMusic` de awalol/dualsense-bt-haptics, e o achado [8.19] "
         "da pesquisa de 31/08 já trazia o tamanho: «0x35 com 334 (CRC em "
         "330..333)»."
@@ -533,7 +533,7 @@ ARRANJO_035 = Arranjo(
     len_haptico=0,
     pos_haptico=0,
     de_onde_sei=(
-        "MEDIDO NESTA BANCADA, 10/09/2026, com som audível: 70 s contínuos "
+        "MEDIDO NESTA MÁQUINA DE TESTE, 10/09/2026, com som audível: 70 s contínuos "
         "pelo alto-falante, alcance testado, e o som CALA com o CRC invertido"
     ),
     intervalo_de_envio_s=INTERVALO_DE_ENVIO_035,
@@ -1117,7 +1117,7 @@ class SinkVirtualPipeWire:
 
         Compara os ``module-loopback`` que :func:`argv_das_rotas` pede com os
         que estão DE PÉ (o segundo parâmetro é a leitura do servidor que a volta já fez;
-        sem ela, a memória do que este processo subiu): desce o que sobra, sobe o
+        sem a leitura, a memória do que este processo subiu): desce o que sobra, sobe o
         que falta, e o ``module-null-sink`` fica com o mesmo id. Loopback recusado,
         cortado pelo recuo ou descarregado por fora sobe na volta seguinte; o mix
         segue a saída padrão de agora. Com ``monitor_do_mix=None`` (a saída padrão
@@ -1446,11 +1446,11 @@ class ContagemDaBomba:
 
     @property
     def bytes_por_segundo(self) -> float:
-        """A banda que este arranjo pede do rádio. É o número do D5 dela."""
+        """A banda que este arranjo pede do rádio. É o número do D5."""
         return (self.bytes_escritos / self.segundos) if self.segundos > 0 else 0.0
 
     def linhas(self) -> list[str]:
-        """O relatório, com a ressalva colada no número que ela protege."""
+        """O relatório, com a ressalva colada no número que protege."""
         return [
             f"  PCM lido do nó ............. {self.pcm_lido} B",
             f"  leituras curtas (completadas com silêncio) {self.pcm_curto}",
@@ -1468,7 +1468,7 @@ class ContagemDaBomba:
             f"  bytes no fio ............... {self.bytes_escritos} B"
             f"  ({self.bytes_por_segundo / 1024:.1f} KiB/s)",
             "  ATENÇÃO: 'aceitas pelo kernel' NÃO é 'o firmware obedeceu', e",
-            "  nada aqui é medição de som. Quem mede som é a orelha dela.",
+            "  nada aqui é medição de som. Quem mede som é a orelha.",
         ]
 
 
@@ -1480,9 +1480,9 @@ class BombaDeSomPeloRadio:
     quadro lê o PCM do nó de som (:attr:`fonte`) e, quando há endpoint, o bloco
     da háptica (:attr:`fonte_haptica`), e monta o relatório com o som e a
     háptica que existirem nele e SEMPRE o ``0x10`` (:attr:`common`, o neutro
-    quando ninguém pede estado): na bancada de 03/10, sem o ``0x10`` a háptica
+    quando ninguém pede estado): no ensaio de 03/10, sem o ``0x10`` a háptica
     não tocou. ``leva_a_haptica`` diz se o bloco da háptica vai ao fio (o
-    portão do jogo e o ganho dela); a fonte da háptica é lida mesmo quando ele
+    portão do jogo e o ganho da háptica); a fonte da háptica é lida mesmo quando ele
     não vai, para o :data:`OUVIDO` saber se há sinal.
     """
 
@@ -1637,8 +1637,8 @@ class BombaDeSomPeloRadio:
         manda o som do controle pelos canais 1-2 do endpoint de quatro canais
         (o Wine abre o sink do Hefesto e toca ali), e antes só os 3-4, os
         motores, chegavam ao rádio. A frente é som, não vibração: **não passa
-        pelo ganho nem pelo portão da vibração** (com a vibração em 0 ela
-        toca), e o volume e o mudo dela são os do próprio alto-falante, que
+        pelo ganho nem pelo portão da vibração** (com a vibração em 0 a frente
+        toca), e o volume e o mudo são os do próprio alto-falante, que
         valem no aparelho.
         """
         frente, self._frente_do_quadro = self._frente_do_quadro, b""
@@ -1675,7 +1675,7 @@ class BombaDeSomPeloRadio:
         último sinal vai o :func:`haptica_bt.bloco_de_silencio`, para o motor
         parar no zero em vez de ficar no último valor. O mesmo silêncio vai
         quando ``leva_a_haptica`` cai com o motor ainda andando (o jogo largou
-        este controle, ou ela pôs a háptica em 0).
+        este controle, ou quem usa pôs a háptica em 0).
         """
         if haptico is None:
             return None
@@ -1835,7 +1835,7 @@ def fonte_com_ritmo(
     agora: Callable[[], float] | None = None,
     dormir: Callable[[float], None] | None = None,
 ) -> Callable[[int], bytes]:
-    """Dá RITMO a uma fonte que não tem — e sem ela o ensaio vira uma inundação."""
+    """Dá RITMO a uma fonte que não tem — e sem ritmo o ensaio vira uma inundação."""
     relogio = agora or time.monotonic
     esperar = dormir or time.sleep
     intervalo = max(0.0, ms_por_report / 1000.0)
@@ -1920,7 +1920,7 @@ def _tem_so_pipewire(arquivo: str) -> bool:
 
 
 def versao_libopus() -> str | None:
-    """Versão da libopus, ou None se ela não estiver no sistema."""
+    """Versão da libopus, ou None se não estiver no sistema."""
     try:
         lib = _carregar_libopus_encoder()
         lib.opus_get_version_string.restype = ctypes.c_char_p
@@ -1966,7 +1966,7 @@ def fonte_publicada(uniq: str) -> str:
 
     `""` não é `sfx`: é *"não perguntei a ninguém"*, e a tela o traduz em
     "nenhum botão aceso" em vez de acender o padrão. Acender `sfx` sem saber
-    seria a tela afirmando uma escolha que ela não fez.
+    seria a tela afirmando uma escolha que o usuário não fez.
 
     Nunca levanta: quem chama é o `state_full`.
     """
@@ -2126,7 +2126,7 @@ def no_da_frente(no: str) -> str:
 def fonte_que_ouve(
     fonte: Callable[[int], bytes], no: str, *, canais: int = CANAIS_DO_ENCODER
 ) -> Callable[[int], bytes]:
-    """A mesma fonte, e cada bloco que ela entrega passa pelo :data:`OUVIDO`."""
+    """A mesma fonte, e cada bloco que a fonte entrega passa pelo :data:`OUVIDO`."""
     if not no:
         return fonte
 
@@ -2554,7 +2554,7 @@ class PonteDeSomPorRadio:
         if self._corrida_viva():
             self.motivo = (
                 "a ponte anterior deste controle ainda está descendo; "
-                "não subo por cima dela"
+                "não subo enquanto isso"
             )
             logger.info("som_radio_ponte_anterior_viva", uniq=self.uniq)
             return False
@@ -2706,8 +2706,8 @@ class PonteDeSomPorRadio:
     def descer(self, *, esperar_s: float = 1.0) -> bool:
         """Para o laço, colhe os dois gravadores e espera a thread juntar. Idempotente.
 
-        Os dois pipes são lidos pela MESMA thread: cada gravador morre com ela
-        como leitora, e o seu ``stdout`` só se fecha depois que ela saiu (o
+        Os dois pipes são lidos pela MESMA thread: cada gravador morre com a thread
+        como leitora, e o seu ``stdout`` só se fecha depois que a thread saiu (o
         gravador morto dá fim de arquivo, e o laço sai na leitura seguinte).
         """
         from hefesto_dualsense4unix.integrations.filho_de_som import (
@@ -2751,7 +2751,7 @@ class PonteDeSomPorRadio:
 
     @property
     def contagem(self) -> ContagemDaBomba | None:
-        """A contagem da bomba — `None` se ela nunca subiu."""
+        """A contagem da bomba — `None` se a bomba nunca subiu."""
         return self._bomba.contagem if self._bomba is not None else None
 
 
@@ -2768,7 +2768,7 @@ MOTIVO_NO_SEM_SABER_MONTAR = (
 )
 
 MOTIVO_NO_SEM_PLACA_NO_CABO = (
-    "o sistema ainda não publicou a placa de som deste controle, e sem ela não "
+    "o sistema ainda não publicou a placa de som deste controle, e sem a placa não "
     "há por onde o som entrar. Reconecte o cabo do controle."
 )
 
@@ -2893,7 +2893,7 @@ def o_mix_fecha_laco(id_do_no: str, sink: str, monitor: str | None) -> bool:
     Recusar ``hefesto_som_*`` ou qualquer placa de DualSense tiraria o mix de
     quem joga com a saída num controle e o som no outro.
 
-    Inferido da leitura do código, não medido na orelha — a bancada não
+    Inferido da leitura do código, não medido na orelha — o ensaio não
     reproduz o caso, porque a saída padrão lá é o HDMI.
     """
     if not monitor:
@@ -3002,7 +3002,7 @@ def argv_das_rotas(id_do_no: str, rota: RotaDoNo) -> tuple[tuple[str, ...], ...]
 
 
 def descricao_do_alto_falante(uniq: str) -> str:
-    """«Alto-falante do Controle N (DualSense Wireless Controller)», sem o endereço dela.
+    """«Alto-falante do Controle N (DualSense Wireless Controller)», sem o endereço do controle.
 
     A forma — com o sufixo da Sony desde 23/09/2026 — é de
     :func:`rotulo_do_alto_falante`; aqui só se resolve o assento.
@@ -3018,7 +3018,7 @@ def descricao_do_alto_falante(uniq: str) -> str:
     Controle» só diz que o assento ainda não é sabido.
 
     **ISTO RESPONDE «AGORA», E O NÓ GUARDA «QUANDO NASCEU»** — e confundir as
-    duas coisas foi o defeito que ela ouviu em 20/09/2026, em teste cego: o
+    duas coisas foi o defeito ouvido em 20/09/2026, em teste cego: o
     «Alto-falante do Controle 3» saía no Player 1. O ``device.description`` de
     um ``module-null-sink`` é fixado no ``load-module`` e **não se reescreve**
     (não há ``update-sink-proplist`` no ``pactl`` do PipeWire — medido). Quem
@@ -3038,7 +3038,7 @@ def descricao_do_alto_falante(uniq: str) -> str:
 def rotulo_do_alto_falante(numero: int | None) -> str:
     """A FORMA A — «Alto-falante do Controle N (DualSense Wireless Controller)».
 
-    **Decisão de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01, E6): o nome dela
+    **Decisão de 23/09/2026** (A-FORJA-VALIDA-O-SOM-01, E6): o nome do nó
     fica na frente, e o sufixo é o ``iProduct`` da Sony, a string que um jogo
     procura. Sob Proton esta string É o nome do endpoint
     (``winepulse.drv/pulse.c``, ``get_device_name``); sem o sufixo o nó existe e

@@ -6,7 +6,7 @@ genéricos, que espera 150 ms e dispara uma vez: aqui o gesto sai na BORDA do ga
 ``nivel_ao_vivo`` e ``camada`` por ``emitir(de, gesto, valor)``, nunca um botão cru. Enquanto o
 gesto de um membro vale, o botão dele e o EIXO do gatilho ficam calados ao jogo, por controle.
 Só vale com uma modificação de acessórios que devolveu o estado com algum aparelho (``valem``);
-sem ela, PS + R2 é o que sempre foi. O contrato: docs/protocol/porta-das-modificacoes.md.
+sem essa porta, PS + R2 é o que sempre foi. O contrato: docs/protocol/porta-das-modificacoes.md.
 """
 from __future__ import annotations
 

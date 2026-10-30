@@ -91,7 +91,7 @@ class JogoLocal:
 
     @property
     def valor(self) -> str:
-        """O que o CAMPO grava quando ela escolhe esta linha."""
+        """O que o CAMPO grava quando o usuário escolhe esta linha."""
         return self.chave or self.appid
 
     @property
@@ -370,7 +370,7 @@ def jogos_diretos_dos_atalhos(
 ) -> list[JogoLocal]:
     """A TERCEIRA ORIGEM — o jogo que não é de lançador nenhum, pelo `.desktop`.
 
-    O atalho que declara `StartupWMClass` entra com ela. O que não declara (o
+    O atalho que declara `StartupWMClass` entra com essa classe. O que não declara (o
     jogo nativo comum) entra com o id do atalho como chave
     (:func:`_chave_do_atalho_sem_classe`).
     """

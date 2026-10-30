@@ -32,7 +32,7 @@ def ligar(uniq: str, fonte: str, *, destino: str = "") -> bool:
 
     :param fonte: o nó de captura daquele controle (`hefesto_mic_<marca>`).
     :param destino: o sink de saída; vazio manda para a saída padrão, que é
-        onde ela ouve o jogo — e é a única resposta útil a *"como eu soo"*.
+        onde o usuário ouve o jogo — e é a única resposta útil a *"como eu soo"*.
 
     **MONO, e o mapa vai escrito**: o microfone do DualSense é um canal só, e
     deixar o PipeWire adivinhar o mapa produz um laço estéreo com metade muda.

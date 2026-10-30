@@ -137,7 +137,7 @@ class Ocupante:
     ``banda`` é ``None`` quando não se sabe onde ele mora; ``sem_faixa`` diz por quê, e
     ``selo`` é o estado de saúde que outra leitura (as quedas do Wi-Fi, o receptor) já mediu;
     ``nota`` é a palavra curta que fica ao lado do selo («USB 3.0 + 2.4 GHz») e ``dica`` a
-    explicação de uma frase que a tela dá ao passar o mouse nela.
+    explicação de uma frase que a tela dá ao passar o mouse no selo.
     """
 
     id: str

@@ -52,7 +52,7 @@ def _lar_de_estado() -> Path:
 
 
 def caminho_do_diario() -> Path:
-    """O diário de quem roda como ela."""
+    """O diário do usuário que roda o produto."""
     desvio = os.environ.get(ENV_DIARIO, "").strip()
     if desvio:
         return Path(desvio)
@@ -243,7 +243,7 @@ class TravaOcupadaError(RuntimeError):
 
 
 def dono_da_trava(caminho: Path) -> str:
-    """Quem pegou a trava por último, como ele se escreveu nela. ``""`` = não sei."""
+    """Quem pegou a trava por último, como ele se escreveu na trava. ``""`` = não sei."""
     try:
         texto = caminho.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -311,7 +311,7 @@ def trava_do_radio(
             registrar(
                 quem,
                 ESPEROU_A_TRAVA,
-                f"{dono or 'outro motor'} estava com ela",
+                f"{dono or 'outro motor'} estava com a trava",
                 antes={"dono": dono},
                 depois={"espera_s": round(espera, 3)},
                 caminho=diario,

@@ -32,7 +32,7 @@ inicialização (`sentinela_do_wrapper`), a API de entrada do executável
 (`api_de_entrada`), o Steam Input e a allowlist (`steam_launch_options`) — e
 ninguém as tinha posto lado a lado por jogo. Posto lado a lado, o censo da
 máquina do usuário (24 jogos instalados, 16/08/2026) mostra o número que decide o
-alvo dela:
+alvo do módulo:
 
     entende_dualsense   7 jogos   SDL ou o plugin DualShock no binário
     indeciso           15 jogos   XInput e mais nada — o vpad só chega por espelho
@@ -44,7 +44,7 @@ vpad `054c:0df2`. Isso não é detalhe de um jogo: é a maioria da biblioteca.
 QUEM O CHAMA, E O QUE ELE ESCREVE
 ---------------------------------
 100% stdlib, para rodar no `python3` do sistema sem venv. Mas ele é módulo de
-BANCADA: medido em 21/08/2026, NENHUM chamador em produção o invoca — nem o
+ENSAIO: medido em 21/08/2026, NENHUM chamador em produção o invoca — nem o
 `doctor.sh`, nem a janela. `grep -rn prontuario_dos_jogos src scripts
 install.sh uninstall.sh assets` devolve só menções em prosa (`schema.py:999`,
 `ponte_escada.py:125`, `steam_input_ponte.py:5`, `hotkey.py:481`). Quem o roda
@@ -148,7 +148,7 @@ _ESTORVOS: dict[str, tuple[str, str, bool, bool]] = {
         "ignorar o nosso controle virtual.",
         "O Hefesto repõe sozinho: ao salvar ou aplicar um perfil, e também "
         "assim que a Steam fechar (é o único instante em que a reposição "
-        "sobrevive — com ela viva, regrava o arquivo ao sair e engole).",
+        "sobrevive — com a Steam viva, regrava o arquivo ao sair e engole).",
         True,
         True,
     ),
@@ -157,7 +157,7 @@ _ESTORVOS: dict[str, tuple[str, str, bool, bool]] = {
         "sei desmontar sem risco de quebrar o que está lá.",
         "O Hefesto repõe sozinho: ao salvar ou aplicar um perfil, e também "
         "assim que a Steam fechar (é o único instante em que a reposição "
-        "sobrevive — com ela viva, regrava o arquivo ao sair e engole).",
+        "sobrevive — com a Steam viva, regrava o arquivo ao sair e engole).",
         True,
         True,
     ),
@@ -173,14 +173,14 @@ _ESTORVOS: dict[str, tuple[str, str, bool, bool]] = {
         "Input está DESLIGADO para ele — a exceção não está fazendo nada.",
         "O Hefesto liga sozinho: escreve o UseSteamControllerConfig do jogo "
         "assim que a Steam fechar (é o único instante em que a escrita "
-        "sobrevive — com ela viva, a Steam regrava o arquivo ao sair e "
+        "sobrevive — aberta, a Steam regrava o arquivo ao sair e "
         "engole).",
         True,
         True,
     ),
     FALTA_A_PECA: (
         "O jogo traz no disco o sinal de que precisa de uma variável de ambiente para "
-        "abrir, mas a peça que ela exige não está no lugar. Sem a peça, passar a "
+        "abrir, mas a peça que a variável exige não está no lugar. Sem a peça, passar a "
         "variável quebraria o jogo, e o Hefesto não a passa.",
         "Se a peça é a do Hefesto (a peça GDK), rode o instalador do Hefesto de novo: "
         "ele a baixa ou a compila, e só a aceita se bate com a versão conferida. Se é "
@@ -205,9 +205,9 @@ _ESTORVOS: dict[str, tuple[str, str, bool, bool]] = {
         "uma das duas usa o Steam Input e a outra não. O jogo está recebendo o "
         "controle por um caminho diferente do que funcionou.",
         "A decisão é sua, e são duas: repor a ponte confirmada (devolver o jogo "
-        "à sua lista de exceções, ou tirá-lo dela), ou confirmar a ponte de "
+        "à sua lista de exceções, ou tirá-lo da lista), ou confirmar a ponte de "
         "hoje, se foi você que mudou de ideia. O Hefesto NÃO desfaz gesto seu "
-        "na lista — foi você que mexeu nela por último.",
+        "na lista — foi você que mexeu na lista por último.",
         False,
         True,
     ),
@@ -373,7 +373,7 @@ class Estorvo:
 
     @property
     def automatica(self) -> bool:
-        """O produto conserta sozinho, sem ela clicar em nada?"""
+        """O produto conserta sozinho, sem o usuário clicar em nada?"""
         return _ESTORVOS[self.chave][2]
 
     @property
@@ -498,7 +498,7 @@ class Prontuario:
         jogo com ponte confirmada e sem wrapper continua `IMPEDIDO`, porque a
         ponte que funcionou não está de pé.
 
-        A ORDEM entre o carimbo e o `NAO_SEI` tem razão, e ela é a varredura
+        A ORDEM entre o carimbo e o `NAO_SEI` tem razão, e a razão é a varredura
         rápida: com `examinar=False` (o censo que a cura e o portão usam) a
         `evidencia` é `None` para TODOS os jogos, e todo jogo cairia em
         `NAO_SEI` — o carimbo sumiria justo no caminho mais rodado. O carimbo
@@ -556,7 +556,7 @@ class Censo:
 
     @property
     def curaveis_sozinho(self) -> list[Prontuario]:
-        """Impedidos cuja cura o produto aplica sem ela clicar em nada."""
+        """Impedidos cuja cura o produto aplica sem o usuário clicar em nada."""
         return [j for j in self.impedidos if all(e.automatica for e in j.impedimentos)]
 
     @property
@@ -665,8 +665,8 @@ def _steam_input_do_vdf(texto: str) -> tuple[dict[str, str], str | None]:
     das `LaunchOptions`, e que aqui devolvia o valor da ÚLTIMA árvore em que o
     appid aparecesse. Quem sabe onde esta chave mora é o `steam_input_ponte`, e
     ele **procura** a árvore viva em vez de a supor: a medição de 19/08 mostrou
-    que ela NÃO é a árvore canônica das `LaunchOptions` (as onze ocorrências da
-    chave, no arquivo dela, estão em `UserLocalConfigStore/apps`).
+    que a árvore viva NÃO é a árvore canônica das `LaunchOptions` (as onze ocorrências da
+    chave, no arquivo do usuário, estão em `UserLocalConfigStore/apps`).
 
     Um arquivo em que as duas réguas discordam, ou em que a árvore viva não se
     prova, devolve dicionário VAZIO: o prontuário passa a dizer "herdado" em vez
@@ -813,7 +813,7 @@ class Cura:
         if self.status == CURA_ADIADA:
             return (
                 "Tenho conserto para fazer, mas a Steam (ou um jogo) está "
-                "aberta — faço assim que ela fechar."
+                "aberta — faço assim que fechar."
             )
         if self.status == CURA_SO_MANUAL:
             return "O que sobrou só se conserta à mão — está descrito por jogo."
@@ -839,7 +839,7 @@ def _curar_excecao_inerte(
 def _curar_sem_wrapper(home: Path | None, *, dry_run: bool) -> tuple[str, list[str]]:
     """A reposição do `hefesto-launch`, que a sentinela já sabia fazer.
 
-    Ela roda no gesto de salvar/aplicar um perfil e no guarda; entra aqui para
+    A função roda no gesto de salvar/aplicar um perfil e no guarda; entra aqui para
     que a tabela `_CURAS` seja a lista COMPLETA do que o produto conserta
     sozinho, e não uma amostra. Rodar duas vezes no mesmo ciclo é inócuo: o
     reparo delega ao `apply_wrapper_to_all_games`, que pula quem já tem.
@@ -988,7 +988,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument(
         "--curar",
         action="store_true",
-        help="conserta o que o prontuário declara automático (sem clique dela)",
+        help="conserta o que o prontuário declara automático (sem clique do usuário)",
     )
     ap.add_argument(
         "--dry-run", action="store_true", help="não escreve nada (com --curar)"

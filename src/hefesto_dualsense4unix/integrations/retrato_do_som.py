@@ -29,8 +29,8 @@ produto: fora do daemon (a janela, o `hefesto doctor`, a suíte) não há dono, 
 o executor roda como sempre rodou.
 
 **AS ESCRITAS continuam pelo `pactl`** (``set-*``, ``load-module``…), e o
-evento que elas geram atualiza o retrato. O executor avisa a escrita
-(:func:`escreveu`) e o tipo que ela toca fica PENDENTE: a próxima leitura dele
+evento que geram atualiza o retrato. O executor avisa a escrita
+(:func:`escreveu`) e o tipo tocado fica PENDENTE: a próxima leitura dele
 relê o servidor antes de responder, para que o «escrevi, confiro» de quem
 elege um microfone não leia a foto de antes da escrita. Não há segundo
 caminho: a foto nunca é escrita com o valor pedido, só com o valor lido.
@@ -49,8 +49,8 @@ servidor, e não do controle.
 **O RETRATO GUARDA O JSON** (`pactl --format=json list`, a porta que o servidor
 promete; ver `porta_do_som`), e o formato CURTO sai dele: os `printf` do `pactl`
 16.1 (lidos no binário) usam os mesmos campos nas duas formas, e a síntese a
-partir do longo deu o curto byte a byte, nas saídas e nas entradas da máquina da
-bancada, em 28/09/2026. Um tipo relido custa UM `pactl`. O texto LONGO deixou de
+partir do longo deu o curto byte a byte, nas saídas e nas entradas da máquina de
+teste, em 28/09/2026. Um tipo relido custa UM `pactl`. O texto LONGO deixou de
 ser fotografado em 08/10/2026: era lido pelo rótulo, e o rótulo é traduzido.
 Sem a porta (`pactl` anterior ao 16) o retrato guarda o curto, e os campos que só
 o JSON traz (descrição, volume, propriedades) ficam em branco: «não sei».
@@ -683,7 +683,7 @@ class RetratoDoSom:
         return None
 
     def escreveu(self, argv: Sequence[object]) -> None:
-        """Uma escrita saiu: o que ela tocou é relido antes da próxima resposta."""
+        """Uma escrita saiu: o que a escrita tocou é relido antes da próxima resposta."""
         tipos = tipos_da_escrita(argv)
         if not tipos or not self.dono:
             return

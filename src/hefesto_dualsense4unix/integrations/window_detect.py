@@ -426,11 +426,11 @@ class WindowReaderDiag:
 
         D-TROCA-DE-PERFIL-CEGA (25/08/2026): o segundo caso é o XWayland
         MORTO numa sessão Wayland (ver `_xwayland_morto_com_wayland_vivo`).
-        Aqui NÃO se chama `detect_window_backend()` — ela devolveria `xlib` de
+        Aqui NÃO se chama `detect_window_backend()` — a função devolveria `xlib` de
         novo se o env ainda não tiver o `WAYLAND_DISPLAY` que este método
         acabou de ver; o resgate monta o composto direto.
 
-        **A troca DEIXOU de ser de mão única — 02/09/2026.** Ela trocava o
+        **A troca DEIXOU de ser de mão única — 02/09/2026.** A detecção trocava o
         `xlib` pela cascata Wayland e pronto: quem casava perfil por
         `process_name` perdia o casamento até o próximo start do daemon, mesmo
         que o XWayland ressuscitasse no minuto seguinte. Agora o resgate

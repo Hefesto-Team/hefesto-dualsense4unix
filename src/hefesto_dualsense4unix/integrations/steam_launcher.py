@@ -3,7 +3,7 @@
 A porta é fina, sem pergunta própria. Quem sabe se a Steam está de pé, e de que lar,
 é o ``steam_launch_options`` (``processos_da_steam``, ``steam_running``); quem sabe
 reabri-la, pelo ``steam`` ou pela ``steam://open/main`` que a Flatpak e a Snap
-registram, e conferir que ela subiu, é o ``reopen_steam``. Com a Steam de pé, o pedido
+registram, e conferir que subiu, é o ``reopen_steam``. Com a Steam de pé, o pedido
 é repassado à instância viva, que se mostra: é o «focar» que vale em X11 e em Wayland.
 """
 from __future__ import annotations

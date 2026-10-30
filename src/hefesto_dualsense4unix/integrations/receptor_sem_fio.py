@@ -20,7 +20,7 @@ documentação, e escrever neles às cegas é risco. Por isso há três coisas, 
   Bluetooth evitam os canais em que ele fala. Com ele fora e depois dentro, a diferença dos canais
   evitados é a banda dele. Medida, nunca causa confirmada.
 
-Nada aqui conhece a bancada de ninguém: o ``vid:pid`` entra por argumento.
+Nada aqui conhece a máquina de ninguém: o ``vid:pid`` entra por argumento.
 """
 
 from __future__ import annotations
@@ -117,7 +117,7 @@ class ContadorDaSaude:
     """Conta teclas presas e buracos de movimento de UM receptor; nunca guarda tecla.
 
     A identidade de uma tecla é um token de ``hash((sal, código))`` com sal sorteado por processo:
-    serve para casar o «solta» com o «aperta» enquanto ela está apertada, e não devolve o código
+    serve para casar o «solta» com o «aperta» enquanto está apertada, e não devolve o código
     nem a ordem em que se digitou. O que sai (:meth:`saude`) são duas contagens.
     """
 
@@ -431,7 +431,7 @@ def classificar(
     """A resposta da procura: a faixa, o salto de canal, a falta de mapa ou o mapa parado.
 
     ``minimos`` e ``salto`` trocam :data:`CANAIS_MINIMOS_DA_BANDA` e
-    :data:`CANAIS_QUE_PROVAM_O_SALTO` (o ensaio da bancada).
+    :data:`CANAIS_QUE_PROVAM_O_SALTO` (o ensaio na máquina de teste).
     """
     novos = _canais_novos(sem, com)
     if novos is None:
