@@ -268,9 +268,13 @@ def _moldes_a_vista() -> tuple[Any, ...]:
     from hefesto_dualsense4unix.mods.manifesto import estilos_pedidos
 
     loader = perfil._com_o_src()
-    editando = str(_EDITANDO.get("chave") or "")
-    guardado = editando.removeprefix(MOLDE) if editando.startswith(MOLDE) else None
-    return tuple(loader.moldes_a_vista(estilos_pedidos(), guardado))
+    pedidos = estilos_pedidos()
+    guardados = {chave.removeprefix(MOLDE) for chave in (
+        str(_EDITANDO.get("chave") or ""), a06._o_point_and_click_de_hoje())
+        if chave.startswith(MOLDE)}
+    vistos = {m.chave for guardado in (guardados or {None})
+              for m in loader.moldes_a_vista(pedidos, guardado)}
+    return tuple(m for m in loader.MOLDES_DE_PERFIL if m.chave in vistos)
 
 
 def _base(ctx: Contexto, chave: str) -> dict[str, tuple[str, str]]:
