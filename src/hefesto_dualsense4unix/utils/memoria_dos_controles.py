@@ -495,7 +495,6 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "meu_perfil.json": (CASA, "um perfil semeado"),
     "personalizado.json": (CASA, "um perfil semeado"),
     "camadas-vulkan.json": (CASA, "camadas-vulkan: guardado, não devolvido"),
-    "kernel.log": (CASA, "historico-do-kernel: guardado, não devolvido"),
     "gabinete.json": ("install", "o censo do gabinete: o install o grava lendo o SMBIOS"),
     "proton-pin-lock.json": ("install", "o registro do pino: o install novo grava o dele"),
     "wrapper-visto.json": ("install", "o registro da sentinela do atalho"),
