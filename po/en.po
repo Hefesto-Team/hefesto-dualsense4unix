@@ -34,7 +34,7 @@ msgstr ""
 #, python-brace-format
 msgid ""
 "A entrada {no} registrou excesso de corrente {n} vez(es) — é o sintoma de "
-"aparelho pedindo mais do que ela entrega."
+"aparelho pedindo mais do que a entrada entrega."
 msgstr ""
 
 #: src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py:649
@@ -663,7 +663,7 @@ msgid "Ouvir no controle"
 msgstr "Apply to controller"
 
 #. A dica INICIAL, antes da primeira leitura do
-#. `pactl`. Ela e' copia fiel de
+#. `pactl`. A dica e' copia fiel de
 #. `audio_saida.DICA_ROTA_INICIAL`, e um teste
 #. trava as duas juntas para nao derivarem. O
 #. texto vale nos QUATRO estados do botao de
@@ -1041,10 +1041,10 @@ msgstr "Apply to controller"
 
 #. BOTÃO-QUE-NÃO-MENTE-01 (entrega 4): o
 #. tooltip anterior contava um refactor
-#. interno para ela ("o texto antigo falava
+#. interno ao usuário ("o texto antigo falava
 #. de 5 checkboxes que estão ocultos desde a
 #. LEDS-SO-PLAYER-01"), citando um código de
-#. sprint e caixas que ela nunca viu na tela.
+#. sprint e caixas que o usuário nunca viu na tela.
 #. O texto novo fala do que está à vista: os
 #. botões de desenho logo acima e o momento
 #. em que reenviar é útil.
@@ -1174,7 +1174,7 @@ msgstr ""
 #. 150%, chamar o degrau de cima de "Máximo" e o do
 #. meio de "Balanceado" virou mentira, e é o que
 #. este texto dizia. "Debounce" também saiu: é
-#. jargão, e ela nunca vê jargão. A escada viva está
+#. jargão, e o usuário nunca vê jargão. A escada viva está
 #. em `core.rumble._effective_mult`.
 #: src/hefesto_dualsense4unix/gui/main.glade:1883
 msgid ""
@@ -1649,7 +1649,7 @@ msgstr ""
 #: src/hefesto_dualsense4unix/gui/main.glade:3001
 msgid ""
 "Não pede senha e NUNCA fecha a Steam: ajusta o áudio do controle e, só se a "
-"Steam estiver fechada, desliga o Steam Input — com ela aberta eu aviso que "
+"Steam estiver fechada, desliga o Steam Input — com a Steam aberta eu aviso que "
 "adiei, não finjo que apliquei."
 msgstr ""
 
@@ -2148,8 +2148,8 @@ msgstr "Browser"
 msgid "Configurações"
 msgstr ""
 
-#. PROVISÓRIO — decisão dela (T4, CONFIGURAÇÕES-FECHA-01):
-#. redação exata da sprint, para ela aprovar ou reescrever.
+#. PROVISÓRIO — decisão do produto (T4, CONFIGURAÇÕES-FECHA-01):
+#. redação exata da sprint, para aprovar ou reescrever.
 #: src/hefesto_dualsense4unix/gui/main.glade:4255
 msgid ""
 "Envia a configuração aos controles e grava o que você declarou na aba "
