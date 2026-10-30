@@ -878,12 +878,12 @@ def monta() -> str:
        <em>afirmado-no-doc</em> · <em>incerto</em>.</p>
     <p><strong>E <em>inferido-do-codigo</em> não é um grau só.</strong> A coluna
        <code>codigo_ref</code> diz <em>qual</em> fonte foi lida, e o censo abaixo
-       é contado dela agora, não digitado aqui:
+       é contado da coluna agora, não digitado aqui:
        <strong>{inf_driver}</strong> células apontam para o
        <strong>driver do kernel ou um repositório externo</strong>
        (<code>hid-playstation</code>, <code>hid-nintendo</code>,
        <code>xpadneo</code>) — e o driver <em>é</em> a especificação do aparelho,
-       decisão dela em 05/09/2026;
+       decisão de 05/09/2026;
        <strong>{inf_os_dois}</strong> apontam para o driver <em>e</em> para o
        nosso código; <strong>{inf_nosso}</strong> só para o nosso;
        <strong>{inf_sem_ref}</strong> não citam arquivo nenhum — e são
@@ -893,7 +893,7 @@ def monta() -> str:
     <p>E a volta, do aparelho para o JOGO — os dois degraus que entraram em
        19/08/2026, porque até então a escada cobria só a ida e o mapa podia
        ficar todo verde sem ninguém conseguir jogar. {escada_de_entrada}.</p>
-    <p>Duas perguntas diferentes, e por isso duas colunas. Até 15/08/2026 elas se
+    <p>Duas perguntas diferentes, e por isso duas colunas. Até 15/08/2026 as colunas se
        chamavam <em>confianca</em> e <em>grau</em> — nomes que não diziam o que
        mediam, e que por isso se confundiam. A troca de nome não mexeu nos
        domínios; quem mexeu foi a escada de 19/08/2026, que ganhou dois degraus
@@ -936,15 +936,15 @@ def monta() -> str:
        Ele existe porque features consolidadas no cabo quebravam no rádio sem ninguém
        perceber.</p>
     <p>São <strong>{chaves}</strong> chaves nos três controles, <strong>{len(linhas)}</strong>
-       linhas. A chave é o que ela pediu: <em>"se eu mapear no 8BitDo o funcionamento de
-       um pro outro será coisa de eu mover o nome de uma variável"</em>. Em
+       linhas. A chave existe para que levar o funcionamento de um controle ao
+       outro, como o 8BitDo, seja só mover o nome de uma variável. Em
        <strong>{buracos}</strong> dessas linhas o mapa nunca teve resposta para aquele
        controle, e em <strong>{mudos}</strong> células de transporte ninguém respondeu:
        vazio aqui é <em>pergunta aberta</em>, nunca <em>não</em>.</p>
     <p>Das <strong>{len(linhas)}</strong> linhas, <strong>{sem_teste}</strong> não têm
        teste que morda: se aquela feature quebrar naquele transporte, a suíte inteira
        continua verde. Enquanto essa coluna estiver vazia, o mapa mede o que a casa
-       <em>acredita</em>, não o que ela <em>garante</em>.</p>
+       <em>acredita</em>, não o que <em>garante</em>.</p>
     <p>No caderno de eliminação: <strong>{culpados}</strong> lado(s) com culpado
        isolado, <strong>{abertas}</strong> com investigação aberta, e
        <strong>{nunca}</strong> linha(s) onde ninguém ensaiou nada dos dois lados. O
@@ -962,7 +962,7 @@ def monta() -> str:
   </footer>
 
   <footer>
-    <h2>A fila da bancada</h2>
+    <h2>A fila do ensaio</h2>
     <p>Cada <code>Fala</code> declarada em <code>app/</code> com
        <code>pendente=</code> aberta — a interface pedindo a medição de que
        precisa, gerada direto de <code>scripts/validar-fala-de-tela.py --fila</code>
