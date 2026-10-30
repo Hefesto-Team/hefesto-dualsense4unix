@@ -41,7 +41,7 @@ def _vdf(linha_direta: str | None, linha_filha: str | None = None, appid: str = 
 
 
 class Lar:
-    """Um lar de mentira: Steam com uma conta, a tabela dela e o state do produto."""
+    """Um lar de mentira: Steam com uma conta, a tabela da conta e o state do produto."""
 
     def __init__(self, raiz: Path) -> None:
         self.raiz = raiz
@@ -133,7 +133,7 @@ def test_a_opcao_que_o_usuario_ainda_nao_aplicou_nao_e_defeito(lar: Lar) -> None
 
 
 def test_a_opcao_so_no_bloco_filho_esta_fora_do_lugar(lar: Lar) -> None:
-    """A Steam lê a linha FILHA DIRETA do jogo; a do `cloud` ela não lê (defeito de 06/10)."""
+    """A Steam lê a linha FILHA DIRETA do jogo; a do `cloud` a Steam não lê (defeito de 06/10)."""
     querida = opj._valor_do_vdf(opj.linha_desejada(OPCOES, com_atalho=True))
     lar.steam_escreve(_vdf(None, linha_filha=querida))
 
@@ -261,7 +261,7 @@ def test_o_json_continua_sendo_a_tabela(
         lar: Lar, capsys: pytest.CaptureFixture[str],
         monkeypatch: pytest.MonkeyPatch) -> None:
     """O `ensaio-do-engasgo.sh` lê a TABELA pelo `--json` (`opcao_de`): o relato e o
-    `--conferir` não tomam o lugar dela. TROQUE o `--json` pelo `conferir` e este teste reprova.
+    `--conferir` não tomam o lugar da tabela. TROQUE o `--json` pelo `conferir` e o teste reprova.
     """
     monkeypatch.setenv("XDG_CONFIG_HOME", str(lar.config))
     monkeypatch.setenv("XDG_STATE_HOME", str(lar.estado))

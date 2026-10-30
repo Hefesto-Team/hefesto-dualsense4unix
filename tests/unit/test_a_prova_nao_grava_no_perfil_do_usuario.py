@@ -35,7 +35,7 @@ def test_o_salvar_fica_de_fora_em_toda_aba(pagina: str) -> None:
         pagina, hefesto_vivo.PERIGOSOS)
     assert "salvar" in pulados, (
         f"a prova clicaria `salvar` na {pagina} — e esse clique grava no "
-        "perfil dela, sem diálogo e sem perguntar")
+        "perfil do usuário, sem diálogo e sem perguntar")
     assert "salvar" not in vistos
 
 
@@ -58,7 +58,7 @@ def test_a_isencao_por_pagina_continua_valendo() -> None:
         [_Gesto("editor.estilo")], {"editor.estilo"}, "01-jogar.html",
         hefesto_vivo.PERIGOSOS)
     assert pulados_perfis == ["editor.estilo"], (
-        "o `editor.estilo` dos Perfis deixou de ser isento — ele grava no perfil dela")
+        "o `editor.estilo` dos Perfis deixou de ser isento — ele grava no perfil do usuário")
     assert vistos_lanc == ["editor.estilo"], (
         "o mesmo nome noutra aba deixou de ser provado: a qualificação por "
         "página parou de valer e o coringa passou a tratar os dois igual")
@@ -103,6 +103,6 @@ def test_a_prova_clique_deixa_passar_o_inocuo() -> None:
 
 
 def test_a_prova_clique_abre_com_incluir_perigosos() -> None:
-    """A escolha continua sendo de quem roda, e ela é explícita."""
+    """A escolha continua sendo de quem roda, e é explícita."""
     piloto = _PilotoDeMentira("10-perfis.html", "remover", incluir=True)
     assert hefesto_vivo.Piloto._provar_cliques(piloto) is False

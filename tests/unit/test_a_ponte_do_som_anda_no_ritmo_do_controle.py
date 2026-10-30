@@ -435,7 +435,7 @@ def test_4b_o_diario_diz_o_que_a_ponte_fez_e_nao_a_constante(
 
 
 class _VagaDeMentira:
-    """A vaga do governador, com o que a bomba e a ponte perguntam a ela."""
+    """A vaga do governador, com o que a bomba e a ponte perguntam à vaga."""
 
     derrubar = False
     cedendo = False
@@ -605,7 +605,7 @@ def test_5_o_ensaio_toca_no_ritmo_e_no_tom_do_aparelho(
 
 
 def test_5b_a_regua_da_frequencia_morde() -> None:
-    """A régua de cima distingue o tom certo do grave: sem isto ela mediria nada."""
+    """A régua de cima distingue o tom certo do grave: sem isto a régua mediria nada."""
     def _tom(taxa: float, quadros: int) -> list[bytes]:
         saida = []
         fase = 0

@@ -1,7 +1,7 @@
 """A porta 2: os jogos da extensão de lançador, a vibração que se solta e o aviso do manifesto.
 
 O contrato está em ``docs/protocol/porta-das-modificacoes.md``. Tudo roda num lar de mentira, com
-porta e supervisor próprios: nenhuma prova fala com o serviço dela nem com um controle.
+porta e supervisor próprios: nenhuma prova fala com o serviço da porta nem com um controle.
 
 MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
 

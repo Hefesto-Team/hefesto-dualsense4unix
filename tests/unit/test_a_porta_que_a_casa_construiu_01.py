@@ -4,7 +4,7 @@ O DEFEITO QUE ESTES TESTES IMPEDEM DE VOLTAR
 --------------------------------------------
 Medido em 15/08/2026, com a mesa 2+2 montada (dois DualSense no cabo, dois no
 rádio): **nenhum dos quatro controles físicos podia ser aberto por um processo
-dela**. Os quatro gamepads virtuais podiam. `scripts/capture_blueprint.py`
+do usuário**. Os quatro gamepads virtuais podiam. `scripts/capture_blueprint.py`
 falhava com `'/dev/hidraw8' inacessível ([Errno 13] Permission denied)`, o
 censo dos dezessete feature reports não pôde ser feito, e a leitura da cor
 esbarrava na mesma porta.

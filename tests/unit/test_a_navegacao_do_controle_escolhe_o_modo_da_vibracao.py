@@ -4,11 +4,11 @@ A-NAVEGACAO-DO-CONTROLE-ESCOLHE-O-MODO-DA-VIBRACAO-01.
 
 A queixa (22/10/2026): «o modo de vibração eu não consigo selecionar usando a navegação interna
 do controle». Medido no piloto, em lar de mentira, com os quatro controles: sentado na lista, o X,
-o ↓ e o X trocam a opção e ela fica depois dos tiques (o gesto chega ao daemon e a pintura não a
+o ↓ e o X trocam a opção e a opção fica depois dos tiques (o gesto chega ao daemon e a pintura não a
 devolve). O que falhava era CHEGAR à lista: descendo a coluna dos interruptores, o ↓ do interruptor
 da háptica ia ao do motor esquerdo, e o do motor direito ia ao «Testar», pulando as duas listas
 que moram logo abaixo deles. A lista começa na mesma borda que o interruptor e é larga; o centro
-dela fica longe do dele, e o `vizinho` contava o desvio de centro a centro.
+da lista fica longe do centro do interruptor, e o `vizinho` contava o desvio de centro a centro.
 
 Dois contratos, medidos no Chrome sobre os DESENHOS (`mockup/`):
 

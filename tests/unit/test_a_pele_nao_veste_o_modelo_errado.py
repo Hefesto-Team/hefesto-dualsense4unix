@@ -31,7 +31,7 @@ TODOS = tuple(monta.DS_SLUGS) if hasattr(monta, "DS_SLUGS") else ()
 
 
 def _todos_os_modelos() -> list[str]:
-    """Os slugs que a folha publica, lidos dela."""
+    """Os slugs que a folha publica, lidos da folha."""
     import re
 
     return sorted(set(re.findall(r'svg\[data-colorway="([^"]+)"\]', monta.DS)))
@@ -68,7 +68,7 @@ def test_quem_tem_hexa_continua_vestindo(aba: str) -> None:
     assert len(com_hexa) >= 20, f"só {len(com_hexa)} modelos com hexa"
     for modelo in com_hexa:
         assert QUEM_PINTA[aba](modelo) == monta.cor_da_zona(modelo), (
-            f"{aba} deixou de vestir {modelo}, que TEM hexa no mapa dela")
+            f"{aba} deixou de vestir {modelo}, que TEM hexa no mapa da aba")
 
 
 def test_as_quatro_abas_respondem_igual() -> None:

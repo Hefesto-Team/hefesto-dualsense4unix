@@ -7,9 +7,9 @@ A cicatriz que o justifica é desta casa e é de hoje: uma régua que roda o tiq
 uma vez mede um INSTANTE; uma que confere presença mede a PALAVRA. Quatro das
 provas da §7 da especificação — *nada acontece antes do INICIAR*, *o timer
 conta antes de aplicar*, *a resposta sobrevive*, *o índice tem seções* —
-passariam sobre uma página que não renderizasse coisa alguma, porque todas elas
+passariam sobre uma página que não renderizasse coisa alguma, porque todas
 conferem AUSÊNCIA ou um punhado de elementos. Por isso a primeira régua deste
-arquivo é o PISO DE CONTEÚDO, e ela tem mordida própria.
+arquivo é o PISO DE CONTEÚDO, com mordida própria.
 
 O QUE ELE MEDE E O OUTRO NÃO:
 
@@ -238,14 +238,14 @@ def test_a_pagina_tem_conteudo_real_e_a_regua_morde_a_pagina_vazia(
         nada = pg.evaluate(_MEDIR)
         reprovou = [k for k, v in PISO.items() if nada[k] < v]
         assert set(reprovou) == set(PISO), (
-            "a régua do piso não morde a página vazia — ela passaria em "
+            "a régua do piso não morde a página vazia — passaria em "
             f"{sorted(set(PISO) - set(reprovou))}")
         pg.close()
 
 
 def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
         pw, lar, mentira) -> None:
-    """A inércia do TEMPO 1 — e o que ela alcança NÃO é o desenho."""
+    """A inércia do TEMPO 1 — e o que a inércia alcança NÃO é o desenho."""
     with _Servidor(lar, mentira) as s:
         pg = pw.new_page(viewport={"width": 1280, "height": 1000})
         pedidos: list[str] = []
@@ -256,11 +256,11 @@ def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
         pg.wait_for_selector("#iniciar")
 
         assert pg.is_visible("#antes")
-        assert not pg.is_visible("#contagem"), "o timer correu sem ela clicar"
+        assert not pg.is_visible("#contagem"), "o timer correu sem clique"
         assert not pg.is_visible("#depois"), "o TEMPO 3 apareceu sozinho"
         pg.wait_for_selector(".ctl svg")
         assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4, (
-            "os quatro desenhos NÃO estão na tela antes do INICIAR — ela vai "
+            "os quatro desenhos NÃO estão na tela antes do INICIAR — quem mede vai "
             "mexer no aparelho sem ter visto onde olhar")
         assert pg.eval_on_selector_all(".ctl g.marcada", "e=>e.length") > 0, (
             "nenhuma peça acesa no TEMPO 1: o desenho está lá e não diz nada")
@@ -269,7 +269,7 @@ def test_nada_acontece_antes_do_iniciar_nem_na_tela_nem_na_rede_nem_no_disco(
             "as respostas por controle estão CLICÁVEIS antes do INICIAR")
         assert [p for p in pedidos if "/registro" in p] == []
         assert not s.registro.exists() or not list(s.registro.iterdir()), (
-            "a página encostou no disco antes de ela clicar em INICIAR")
+            "a página encostou no disco antes do clique em INICIAR")
 
         for t in (todos[0], todos[len(todos) // 2], todos[-1]):
             pg.goto(s.url + "#" + t["id"])
@@ -301,11 +301,11 @@ def test_o_timer_desce_e_nada_e_aplicado_enquanto_ele_corre(
             f"o relógio não desceu: {primeiro} -> {segundo} em 2,4 s")
         assert [p for p in pedidos if "/desenhos" in p] == [], (
             "os desenhos foram REMONTADOS durante a contagem — a peça acesa "
-            "pisca na cara dela no pior momento, que é justamente quando ela "
-            "está olhando os controles. Eles já estavam na tela desde o TEMPO 1")
+            "pisca na cara de quem mede no pior momento, que é justamente quando "
+            "se está olhando os controles. Eles já estavam na tela desde o TEMPO 1")
         assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4, (
             "os desenhos SUMIRAM quando o timer começou — é durante a contagem "
-            "que ela mais precisa deles")
+            "que mais se precisa deles")
         pg.close()
 
 
@@ -531,7 +531,7 @@ def test_o_verificar_diz_certo_ou_errado_por_controle(pw, lar, mentira) -> None:
 
         assert pg.eval_on_selector_all(
             ".laudo", "e=>e.filter(x=>x.offsetParent!==null).length") == 0, (
-            "o laudo apareceu antes de ela clicar em verificar")
+            "o laudo apareceu antes do clique em verificar")
 
         reage = next(p for p, v in alvo["papeis"].items() if v == med.PAPEL_REAGE)
         calado = next(p for p, v in alvo["papeis"].items() if v == med.PAPEL_CALADO)
@@ -591,7 +591,7 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     tudo — como se não houvesse controle nenhum, tendo QUATRO. Tudo isto o
     `hid_playstation` publica de graça no `sysfs`, sem escrever um byte.
 
-    A RÉGUA RODA NA MÁQUINA REAL e pula quando não há DualSense — ela mede o
+    A RÉGUA RODA NA MÁQUINA REAL e pula quando não há DualSense — mede o
     que o kernel publica, e um dublê de `sysfs` mediria o dublê.
     """
     def _e_dualsense(no: pathlib.Path) -> bool:
@@ -653,7 +653,7 @@ def test_um_controle_de_cada_vez_quando_e_de_maos_e_ouvidos() -> None:
         [t.id for t in audio if not t.um_por_vez])
     luz = [t for t in ts if "luz" in t.secao]
     assert luz and not any(t.um_por_vez for t in luz), (
-        "a luz virou um-por-vez, e ela se lê com os olhos nos quatro de uma vez")
+        "a luz virou um-por-vez, e a luz se lê com os olhos nos quatro de uma vez")
 
 
 def test_o_como_vem_pronto_e_nao_e_cobrado_do_usuario(pw, lar, mentira) -> None:
@@ -670,7 +670,7 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_do_usuario(pw, lar, mentira) -> None:
 
         _abre_o_como(pg)
         gesto = pg.input_value("#gesto")
-        assert gesto.strip(), "o COMO chegou vazio — ela teria de digitar"
+        assert gesto.strip(), "o COMO chegou vazio — quem mede teria de digitar"
         passos = dict(alvo["como"]).get("os passos", "")
         primeiro = next((x.strip() for x in passos.split("\n") if x.strip()), "")
         assert primeiro, f"o teste {alvo['id']} não publica passos"
@@ -680,7 +680,7 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_do_usuario(pw, lar, mentira) -> None:
         _salvar(pg, "#so-salvar")
         assert not pg.inner_text("#aviso").strip(), pg.inner_text("#aviso")
         fita = (s.registro / f"registro-{med._agora()[:10]}.jsonl")
-        assert fita.exists(), "não gravou sem ela digitar o COMO"
+        assert fita.exists(), "não gravou sem digitar o COMO"
         pg.close()
 
 
@@ -713,7 +713,7 @@ def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
             "input[type=radio]:checked", "e=>e.length") == 4, (
             "a resposta do mapa não foi pré-marcada nos quatro")
         assert pg.eval_on_selector_all(".vindo-do-mapa", "e=>e.length") == 4, (
-            "a pré-marca não está declarada como vinda do mapa — ela "
+            "a pré-marca não está declarada como vinda do mapa — quem mede "
             "confundiria o que o arquivo afirma com o que viu")
         pg.close()
 
@@ -732,7 +732,7 @@ def _so_o_codigo(fonte: str) -> str:
 
 
 def test_as_21_estao_nas_seis_secoes_do_roteiro() -> None:
-    """*"cadê as seções das 21?"* — 07/09/2026, ela olhando o seletor."""
+    """*"cadê as seções das 21?"* — 07/09/2026, olhando o seletor."""
     secoes = med.secoes_do_roteiro()
     assert len(secoes) == 21, secoes
     assert len(set(secoes.values())) == 6, sorted(set(secoes.values()))
@@ -753,13 +753,13 @@ def test_a_cor_se_le_do_aparelho_sob_o_comando_do_usuario() -> None:
     for proibido in ("montar_pedido", "0x80", "SET_FEATURE", "ioctl",
                      "HIDIOCSFEATURE"):
         assert proibido not in codigo, (
-            f"a mesa passou a montar o pedido ela mesma (`{proibido}`) — a "
+            f"a mesa passou a montar o pedido por conta própria (`{proibido}`) — a "
             f"trava do byte tem UM dono, e não é esta página")
     corpo = fonte.split("def ler_a_cor_no_aparelho", 1)[1]
     chamadas = corpo.count("ler_a_cor_no_aparelho()")
     assert chamadas == 1, (
-        f"`ler_a_cor_no_aparelho` é chamada {chamadas} vezes — ela escreve no "
-        f"aparelho, e escrever tem de ser ato dela, uma vez por clique")
+        f"`ler_a_cor_no_aparelho` é chamada {chamadas} vezes — a função escreve no "
+        f"aparelho, e escrever tem de ser ato de quem mede, uma vez por clique")
     assert 'caminho == "/ler-cor"' in fonte
 
 
@@ -892,7 +892,7 @@ def test_o_ps_nao_acende_o_circulo_que_o_usuario_mandou_tirar(pw, lar, mentira) 
         }""")
         assert medido, "o PS sumiu do desenho"
         assert medido["fill"] == "none" and medido["stroke"] == "none", (
-            f"o círculo do PS acendeu: {medido} — ela mandou tirá-lo em 27/08")
+            f"o círculo do PS acendeu: {medido} — tirado por decisão de 27/08")
         assert medido["cor_do_grupo"] != "none", medido
 
 
@@ -924,7 +924,7 @@ def test_as_21_do_ensaio_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
             "        so_roteiro: TESTES.every(t => t.secao.startsWith('O roteiro'))})")
         assert depois["n"] == quantas, (
             f"o corte das {quantas} deixou {depois['n']} na tela")
-        assert depois["so_roteiro"], "entrou célula do acervo no corte da bancada"
+        assert depois["so_roteiro"], "entrou célula do acervo no corte do ensaio"
         assert f"1 de {quantas}" in pg.inner_text("header, main").replace(
             "\n", " ") or f"1 DE {quantas}" in pg.inner_text("body").upper(), (
             "a página não diz que agora são as do roteiro")
@@ -964,15 +964,15 @@ def test_a_espera_longa_nao_prende_o_usuario_na_tela(pw, lar, mentira) -> None:
         assert "volte" in longa["titulo"].lower(), longa
         assert str(round(longa["segundos"] / 60)) in longa["titulo"], longa
         assert not longa["recado_escondido"], (
-            "a espera longa não explica que ela pode sair — e é justamente o "
-            "que ela precisa saber")
+            "a espera longa não explica que quem mede pode sair — e é justamente o "
+            "que se precisa saber")
         assert "olhos" in curta["titulo"].lower(), curta
         assert curta["recado_escondido"], (
             "a espera curta ganhou o recado da longa — mandar sair da tela por "
             "dez segundos é perder o gesto")
         assert longa["relogio"] < curta["relogio"] / 2, (
             f"o relógio da espera longa continua grande ({longa['relogio']}px "
-            f"contra {curta['relogio']}px) — ele volta a ser a coisa que ela "
+            f"contra {curta['relogio']}px) — ele volta a ser a coisa que se "
             f"olha por vinte minutos")
         pg.close()
 
@@ -995,7 +995,7 @@ def test_as_21_trazem_o_gesto_e_ele_vem_do_arquivo_dono() -> None:
         passos = dict(teste.como)["os passos"]
         quantos = len([x for x in passos.split("\n") if x.strip()])
         assert quantos >= 3, (
-            f"{teste.id} tem {quantos} passos — um teste de bancada "
+            f"{teste.id} tem {quantos} passos — um teste de ensaio "
             f"com menos de três passos é um título, não um gesto")
 
     fonte = pathlib.Path(med.__file__).read_text(encoding="utf-8")
@@ -1033,14 +1033,14 @@ def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
         assert visto, "o bloco do gesto sumiu da página"
         assert visto["visivel"], "o gesto voltou a nascer escondido"
         assert not visto["dentro_de_gaveta"], (
-            "o gesto voltou para dentro de um `details` — o que ela precisa "
+            "o gesto voltou para dentro de um `details` — o que se precisa "
             "para executar não pode custar um clique")
         assert visto["antes_dos_desenhos"], (
             "o gesto ficou DEPOIS dos desenhos; a instrução precede o ato")
         assert "onde olhar" in visto["rotulos"], visto["rotulos"]
         assert visto["itens_de_lista"] >= 5, (
             f"os passos não viraram lista ({visto['itens_de_lista']} itens) — "
-            f"uma parede de texto é o que ela não conseguiu executar")
+            f"uma parede de texto é o que não se conseguiu executar")
         assert visto["texto"] > 500, (
             f"o gesto tem {visto['texto']} caracteres; a linha 10 sozinha tem "
             f"mais que isso no arquivo — a leitura não chegou à tela")
@@ -1061,8 +1061,8 @@ def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
            if not any(r == "os passos" for r, _ in x.como)]
     assert not sem, (
         f"{len(sem)} células do mapa chegaram sem gesto: {sem[:5]} — e sem ele "
-        f"o COMO volta a ser a procedência repetida, que é o defeito que ela "
-        f"apontou na linha 10 do roteiro")
+        f"o COMO volta a ser a procedência repetida, que é o defeito "
+        f"apontado na linha 10 do roteiro")
 
     assert med._O_COMO_DAS_21 != med._O_COMO_DO_MAPA
     for caminho in (med._O_COMO_DAS_21, med._O_COMO_DO_MAPA):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A prova botão a botão não cala um achado da máquina do usuário.
 
-**03/09/2026.** Medido com o journal do daemon dos dois lados, na bancada:
+**03/09/2026.** Medido com o journal do daemon dos dois lados, no ensaio:
 
     16:11:53  (antes)  MesaDeclarada(altura_da_antena='acima',
                                      linha_de_visada='com_gente',
@@ -12,7 +12,7 @@
                   "dongle_atras_de_hub": {"arranjo": "3-1.2 3-1.4",
                                           "quando": "2026-09-03"}}
 
-E o Check-up dela perdeu a linha *"2 de 3 adaptadores Bluetooth chegam ao
+E o Check-up perdeu a linha *"2 de 3 adaptadores Bluetooth chegam ao
 computador por dentro de um hub"* — uma das DUAS únicas que acusam nesta
 máquina. O ⊘ é o gesto `ignorar`, e ele grava
 `MesaDeclarada.ordens_dispensadas` (`a08_conexoes.ignorar`).
@@ -52,7 +52,7 @@ def test_o_gesto_ignorar_da_conexoes_esta_isento() -> None:
     """O ⊘ da aba Conexões não entra na volta automática."""
     assert (PAGINA, "ignorar") in _perigosos(), (
         "o ⊘ da Conexões saiu de `PERIGOSOS` — a próxima `--prova-no-aparelho` "
-        "volta a dispensar uma ordem de serviço da máquina dela, e a linha não "
+        "volta a dispensar uma ordem de serviço da máquina, e a linha não "
         "reaparece enquanto os cabos não mudarem")
 
 

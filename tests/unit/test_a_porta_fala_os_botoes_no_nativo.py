@@ -259,7 +259,7 @@ def test_o_dedo_que_o_hub_ja_le_pela_tela_chega_sem_segurar_nada(
 ) -> None:
     """A tela aberta pede o P2: o dedo dele chega à extensão, e o leitor vive pela tela."""
     hub, dados = _vivos(curto, {"topicos": ["entradas"]}, tela=P2, tocar=True)
-    assert set(hub._touch) == {P2}, "o leitor de toque vive pela tela, e só o dela"
+    assert set(hub._touch) == {P2}, "o leitor de toque vive pela tela, e só o da tela"
     assert {d["uniq"] for d in dados if d["dedos"]} == {P2}
     assert all(not leitor.grabs or not any(leitor.grabs) for leitor in hub._touch.values())
 

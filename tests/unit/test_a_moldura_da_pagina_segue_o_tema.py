@@ -6,7 +6,7 @@ nenhum o alcançava: com o tema claro, a janela clara ficava num fundo quase pre
 token `--fundo-da-pagina` do `:root`, e o `#11121a` só mora ali.
 
 As publicadas e as três páginas avulsas recebem a cura pelo `--publicar` da costura; até lá,
-`test_a_publicada_nao_pinta_a_cor_fora_do_root` reprova nelas.
+`test_a_publicada_nao_pinta_a_cor_fora_do_root` reprova nessas páginas.
 
 MORDIDA (executada em 21/10/2026): com o `background:#11121a` de volta no `body` do `topo.html` e as
 dez geradas de novo, `test_o_desenho_nao_pinta_a_cor_fora_do_root` reprova nas dez.

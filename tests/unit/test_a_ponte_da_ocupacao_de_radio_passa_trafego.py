@@ -1,4 +1,4 @@
-"""A aba Conexões não faz mais a conta de ocupação do rádio — ela a LÊ do daemon.
+"""A aba Conexões não faz mais a conta de ocupação do rádio — a aba a LÊ do daemon.
 
 **NASCEU EM 05/09/2026** cobrando a ponte `a08._adaptadores`, que perguntava a
 ocupação ao dono (`radio_da_mesa.ocupacao_por_adaptador`) com uma lista de
@@ -11,11 +11,11 @@ de produto, no dia em que isso foi medido:
 **23/09/2026 — A PONTE SAIU, E A RAZÃO É A MESMA DA CURA DE 05/09**
 (TRANSPLANTE-DA-SECAO-01). A seção «Rádio e Adaptadores» virou o desenho
 aprovado, e a decisão de quem coordenou a leva foi que a tela não conta
-ocupação nenhuma: ela LÊ o que o daemon publica no `state_full` —
+ocupação nenhuma: a tela LÊ o que o daemon publica no `state_full` —
 `radio_ar`, `radio_governador` e `radio_central` —, e o `Ocupacao`, o
 `palavra_da_ocupacao` e o `SLOTS_POR_RELATORIO` saem da aba 08. Uma conta
 feita pela tela é a segunda grafia do que o governador decide, e a primeira
-coisa que uma segunda grafia perde é a revisão dela.
+coisa que uma segunda grafia perde é a revisão.
 
 A MORDIDA: devolva ao pacote uma importação de `Ocupacao` ou uma chamada a
 `ocupacao_por_adaptador` e o primeiro caso reprova com a linha.

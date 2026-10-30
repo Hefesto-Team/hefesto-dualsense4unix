@@ -8,8 +8,8 @@ Palavra, 26/08/2026, sobre as features do DualSense pelo cabo:
      integramos ao projeto lá, usamos a tentativa e erro pra eliminação e
      equiparar as features do cabo com os canais do bt."
 
-O conhecimento existe. Está em teste, em sprint, em commit e na cabeça dela. O
-que faltava era **o ponteiro de cada linha para a prova dela** — e o mapa não
+O conhecimento existe. Está em teste, em sprint, em commit e na memória do projeto. O
+que faltava era **o ponteiro de cada linha para a sua prova** — e o mapa não
 tinha régua nenhuma cobrando isso.
 
 O ESTADO MEDIDO, E ELE MUDOU DUAS VEZES
@@ -19,7 +19,7 @@ sim` com `ponte_de_onde_sei` vazio). Em 06/09/2026, com o mapa em 308 linhas e
 616 células, o número que sobrava era outro e menor: **30 células diziam de onde
 sabem e não diziam ONDE isso está escrito**.
 
-Dessas 30, **SETE eram piores que vazias**: o `radio_codigo_ref` delas dizia
+Dessas 30, **SETE eram piores que vazias**: o `radio_codigo_ref` dessas dizia
 `idem`. `idem` ocupa a coluna do ponteiro sem apontar — é legível por gente e
 ilegível por régua, o `validar-citacoes-de-linha.py` não o confere, e o
 `specs.html` publica a palavra no lugar do endereço. Quem abre só a metade do
@@ -58,11 +58,11 @@ vez de reimplementar. O que a quinta guarda mede é a metade que a mesa NÃO pod
 importar hoje sem ser editada — os dois campos que as duas leituras partilham
 (`código` e `mordida`) têm de sair idênticos, célula por célula.
 
-O QUE ELA NÃO PROVA, dito na cara
+O QUE A RÉGUA NÃO PROVA, dito na cara
 ----------------------------------
 Nada aqui põe o dedo no aparelho, e nada aqui confere se o ponteiro diz a
-VERDADE. Ela cobra que o ponteiro EXISTA e que se possa segui-lo. Que o byte
-seja 11 e não 47 continua sendo bancada — é o limite honesto que a docstring do
+VERDADE. A régua cobra que o ponteiro EXISTA e que se possa segui-lo. Que o byte
+seja 11 e não 47 continua sendo ensaio — é o limite honesto que a docstring do
 `check_paridade_transporte.py` já declara para a regra 19, e esta régua fica do
 mesmo lado dele.
 """

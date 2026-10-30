@@ -101,7 +101,7 @@ def test_quem_importa_do_dono_nao_crava_a_raiz_em_texto_nenhum() -> None:
 
 def test_o_texto_com_a_raiz_nao_cresce_em_modulo_nenhum() -> None:
     """A constante é uma forma; o padrão de um parâmetro e a f-string são outras, e a mesma raiz
-    cravada por elas é um segundo dono do mesmo jeito."""
+    cravada por essas formas é um segundo dono do mesmo jeito."""
     modulos = _modulos()
     assert len(textos_com_a_raiz(modulos[DONO])) == 1, "o dono crava a raiz uma vez só"
     contagem = {nome: len(linhas) for nome, fonte in modulos.items()

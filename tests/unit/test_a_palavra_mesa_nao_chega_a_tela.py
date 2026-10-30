@@ -1,8 +1,7 @@
 """A PALAVRA "mesa" não chega à tela — e a régua tem de impedir a volta.
 
-Ela, 06/09/2026: *"Falei do termo mesa que é horrível. Mas as levas anteriores
-entraram na pira de usar isso em tudo no layout. O termo sai e coloca-se termos
-simples pro user comum. feature fica."*
+Decisão de 06/09/2026: o termo «mesa» sai da tela, que usa termos simples para
+quem usa; a feature fica.
 
 **PALAVRA, NÃO FEATURE.** Nenhuma tabela, contagem ou aviso saiu por causa
 desta régua; o que mudou é como a tela os chama. O vocabulário que entra no
@@ -10,24 +9,24 @@ lugar está em `docs/A-LINGUA-DESTA-CASA…`, §1: *os controles*, *todos*,
 *P1 e P2*, *quem está ligado*.
 
 O NÚMERO MEDIDO EM 06/09, e ele explica por que uma régua por substring não
-serve: `grep -oiE "\\bmesa\\b" mockup/??-*.html` devolvia **194**, e delas
+serve: `grep -oiE "\\bmesa\\b" mockup/??-*.html` devolvia **194**, e dessas
 
 * **121** estavam em comentário de CSS e **14** em comentário de HTML — prosa
   da casa, que ninguém lê na tela;
 * **16** eram nome de classe ou de campo (`mesa-notas`, `radio-mesa`,
   `name="mesa"`, `nav-mesa`, `perfil-da-mesa`) — endereço vivo, que o glossário
   manda ficar;
-* **43** eram texto que a pessoa LÊ, e delas 9 estavam dentro de `<code>`,
+* **43** eram texto que a pessoa LÊ, e dessas 9 estavam dentro de `<code>`,
   escritas de propósito como identificador (`monta.MESA`).
 
 Sobram **34**, e essas são o trabalho. Uma régua que reprovasse as 194 mandaria
 a próxima pessoa renomear `mesa_viva.py` — que é estrago, não cura.
 
-AS DUAS RÉGUAS, e elas têm pontos cegos diferentes de propósito:
+AS DUAS RÉGUAS, com pontos cegos diferentes de propósito:
 
-1. **as dez páginas da bancada** — o que está escrito no desenho de hoje;
+1. **as dez páginas do ensaio** — o que está escrito no desenho de hoje;
 2. **os dez pacotes** — o que o piloto ESCREVE por tique. A página estática não
-   mostra nenhuma delas, e são justamente as que chegam ao cartão dela como
+   mostra nenhuma dessas frases, e são justamente as que chegam ao cartão como
    recado: *"este controle saiu da mesa"* estava em cinco lugares de
    `a02_controles.py` com a primeira régua verde.
 
@@ -35,16 +34,16 @@ O TERCEIRO ALCANCE — `interface/paginas/`, 06/09/2026,
 A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01:
 
 Até esta data o que o produto RENDERIZA era ponto cego declarado, com a razão
-"só muda quando ELA publica". A razão continua verdadeira e **não bastava**: o
+"só muda no PUBLICAR". A razão continua verdadeira e **não bastava**: o
 instrumento irmão (`olhar.py --palavra mesa --publicado`) acusava 34
 ocorrências "em o produto" sobre uma tela que não mostrava nenhuma, porque a
 página publicada carrega a `.nota` e o produto a APAGA
 (`interface/folha_da_casa.FOLHA_DA_CASA`). Régua que responde sobre o arquivo e diz
 "o produto" é pior que régua ausente.
 
-Agora as páginas do produto têm régua própria, e ela lê por
+Agora as páginas do produto têm régua própria, que lê por
 `texto_visivel_no_produto` — a leitura com a folha do piloto aplicada. As duas
-leituras são diferentes de propósito: a bancada ela abre no navegador crua, e
+leituras são diferentes de propósito: o ensaio se abre no navegador cru, e
 ali o bilhete de projeto é texto de verdade.
 
 O QUE ESTA RÉGUA AINDA NÃO ALCANÇA, e está dito porque instrumento que não
@@ -85,7 +84,7 @@ PACOTES = INTERFACE / "pacotes"
 
 
 def _paginas() -> list[Path]:
-    """As abas do produto (`monta.ABAS`) na bancada — e RECUSA achar menos."""
+    """As abas do produto (`monta.ABAS`) no ensaio — e RECUSA achar menos."""
     achadas = sorted(ENSAIO / nome for nome in monta.as_abas_do_produto()
                      if (ENSAIO / nome).is_file())
     assert len(achadas) == len(monta.ABAS), (
@@ -177,18 +176,18 @@ def test_a_palavra_nao_e_lida_em_nenhuma_das_dez_paginas_do_produto() -> None:
 
 
 def test_a_palavra_nao_nasce_em_nenhum_dos_dez_pacotes() -> None:
-    """A página estática não mostra recado nenhum — e é lá que ela morava."""
+    """A página estática não mostra recado nenhum — e é nos pacotes que a palavra morava."""
     sujos: list[str] = []
     for arquivo, linha, texto in _literais_dos_pacotes():
         if palavra_banida_em(texto) is None:
             continue
         sujos.append(f"{arquivo.name}:{linha}: {' '.join(texto.split())[:220]}")
     assert not sujos, (
-        "palavra banida num literal de pacote — ela chega à tela pelo tique:\n  "
+        "palavra banida num literal de pacote — chega à tela pelo tique:\n  "
         + "\n  ".join(sujos)
         + "\n\nA chave do pacote (`{\"mesa\": {campo: valor}}`) NÃO cai aqui: a "
         "régua deixa passar o texto que É a palavra e nada mais. Se a sua "
-        "linha caiu, ela é frase."
+        "linha caiu, é frase."
     )
 
 
@@ -209,7 +208,7 @@ def test_a_borda_de_palavra_deixa_o_nome_interno_em_paz() -> None:
         "uma remessa nova",
     ):
         assert palavra_banida_em(nome) is None, (
-            f"{nome!r} é NOME INTERNO e a régua o reprovou — ela mandaria "
+            f"{nome!r} é NOME INTERNO e a régua o reprovou — a régua mandaria "
             "renomear `mesa_viva.py`, que a sprint proíbe com todas as letras."
         )
     for frase in (
@@ -299,7 +298,7 @@ def _do_glossario() -> tuple[str, ...]:
     inicio = texto.find(ABRE)
     assert inicio >= 0, (
         f"não achei {ABRE!r} em {GLOSSARIO.name} — a lista mudou de lugar, e "
-        "uma régua que não acha o dono mede a cópia contra ela mesma")
+        "uma régua que não acha o dono mede a cópia contra a própria cópia")
     fim = texto.find(FECHA, inicio)
     assert fim > inicio, (
         f"não achei o fim da lista ({FECHA!r}) — sem ele esta régua leria o "

@@ -32,7 +32,7 @@ def _roteiro() -> tuple[tuple[int, str], ...]:
     raise AssertionError(
         "o `ROTEIRO_DA_PROVA_DE_GESTO` sumiu do fonte — se ele voltou a ser uma "
         "lista embutida no meio do método, esta régua deixou de alcançá-lo, e "
-        "com ela o portão que impede a prova de clicar no vazio"
+        "com a régua o portão que impede a prova de clicar no vazio"
     )
 
 

@@ -85,7 +85,7 @@ def test_o_mapa_que_sustenta_os_dois_transportes_nao_cobra_nada(regua) -> None:
 
 
 def test_a_causa_nao_medido_avisa_e_nao_reprova(regua) -> None:
-    """`D-0609-O-MAPA-INFORMA-NUNCA-VETA`, e é o teste que segura a decisão de produto."""
+    """`D-0609-O-MAPA-INFORMA-NUNCA-VETA`, e é o teste que segura a decisão do produto."""
     falhas, avisos = _cruza(
         regua,
         mapa=_celula(radio_aciona="não", radio_por_que_nao_aciona="nao-medido"),
@@ -261,7 +261,7 @@ def test_a_ponte_esta_no_piso_e_o_piso_e_o_tamanho_do_usuario(regua) -> None:
 
 
 def test_o_cruzamento_roda_verde_nesta_arvore(regua, linhas_reais) -> None:
-    """Verde AQUI, hoje. Os avisos NÃO entram nesta conta — é a decisão de produto."""
+    """Verde AQUI, hoje. Os avisos NÃO entram nesta conta — é a decisão do produto."""
     mapa, falhas_do_mapa = regua.ler_mapa()
     falhas, _ = regua.cruzar_com_o_mapa(linhas_reais, mapa)
     assert falhas_do_mapa == []

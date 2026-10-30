@@ -10,7 +10,7 @@ mesma forma que a casa já tinha medido e curado no microfone em 06/09
 desta tabela.
 
 A tabela é dona única: a ponte do alto-falante e a da vibração por áudio
-passam por ela, e os dois gravadores (``pw-record`` e ``parec``) levam o
+passam pela tabela, e os dois gravadores (``pw-record`` e ``parec``) levam o
 número explícito, para que o caminho escolhido não mude o atraso.
 """
 

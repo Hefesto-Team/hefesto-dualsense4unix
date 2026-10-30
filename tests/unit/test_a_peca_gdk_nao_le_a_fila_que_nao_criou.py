@@ -1,4 +1,4 @@
-"""A peça GDK não lê a fila que ela não criou: a alça vale pela presença na tabela das filas vivas.
+"""A peça GDK não lê a fila que não criou: a alça vale pela presença na tabela das filas vivas.
 
 Às 22h46 de 17/10/2026 o Minecraft Dungeons II entregou ao `XTaskQueueDuplicateHandle` a alça
 0xcf15dc7ed8420217 (um valor que nem é endereço canônico), e a peça caiu no `cmpl $QUEUE_MAGIC`
@@ -269,7 +269,7 @@ static void vaivem(void)
     VT(Close_t, 17)(g_self, base);
 }
 
-/* A fila que a peça criou continua valendo: Duplicate, Submit e o composto sobre ela. */
+/* A fila que a peça criou continua valendo: Duplicate, Submit e o composto sobre a fila. */
 static void a_fila_do_usuario_vale(void)
 {
     queue_obj *q = NULL, *d = NULL, *c = NULL;

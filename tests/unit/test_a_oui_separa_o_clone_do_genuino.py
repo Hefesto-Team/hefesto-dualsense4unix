@@ -60,7 +60,7 @@ def test_as_tres_reguas_da_casa_apontam_para_a_mesma_oui_do_genuino() -> None:
 
 
 def test_os_dois_scripts_de_no_sniff_concordam_sobre_quem_e_o_clone() -> None:
-    """Quem recusa o no-sniff é a faixa do CLONE, e ela é a mesma nos dois."""
+    """Quem recusa o no-sniff é a faixa do CLONE, e a faixa é a mesma nos dois."""
     for script in (SCRIPT_MODO_ATIVO, SCRIPT_BORDA):
         texto = script.read_text(encoding="utf-8")
         achado = re.search(r"^OUIS_CLONE=\(([^)]*)\)", texto, re.MULTILINE)

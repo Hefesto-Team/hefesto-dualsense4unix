@@ -129,7 +129,7 @@ def test_todo_simbolo_podado_tinha_zero_chamadores(
             rel = caminho.relative_to(_RAIZ)
             achados.append(f"{rel}:{linha}")
     assert not achados, (
-        f"a poda de `{modulo}::{nome}` comeu rota viva — ela TEM chamador em: "
+        f"a poda de `{modulo}::{nome}` comeu rota viva — a rota TEM chamador em: "
         + ", ".join(achados)
         + ". Devolva o símbolo (a lápide dele, no lugar onde morava, diz o que "
         "ele fazia) ou tire o chamador antes de podar."
@@ -162,7 +162,7 @@ def test_a_lista_de_podados_nao_e_vazia() -> None:
 
 def test_a_varredura_enxerga_o_python_dentro_do_heredoc(
         fontes: list[tuple[Path, str, bool]]) -> None:
-    """A régua tem de saber ACHAR chamador, senão o verde dela não vale nada."""
+    """A régua tem de saber ACHAR chamador, senão o verde da régua não vale nada."""
     achados = [
         f"{caminho.name}:{linha}"
         for caminho, codigo, e_producao in fontes

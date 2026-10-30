@@ -17,7 +17,7 @@ A CURA: casar placa e controle pelo **dispositivo USB em que os dois penduram**
 
 O QUE ESTE ARQUIVO TRAVA, e o que cada teste arranca para ver vermelho:
 
-* **Casa certo, e casa CRUZADO.** Na bancada de 15/08 o ``-00`` é o card 3 e o
+* **Casa certo, e casa CRUZADO.** No ensaio de 15/08 o ``-00`` é o card 3 e o
   ``-00.2`` é o card 2 — a ordem do nome é o INVERSO da ordem do card. Um teste
   que só exigisse "cada um com um sink diferente" passaria com os dois
   trocados; este exige o par certo. Arranque o ``usb=`` da chamada e os dois
@@ -30,13 +30,13 @@ O QUE ESTE ARQUIVO TRAVA, e o que cada teste arranca para ver vermelho:
 * **Sem número mágico.** Os mesmos dados com 1, 2 e 4 controles dão a mesma
   resposta por controle. Nada aqui olha MAC, ordem de conexão nem quantidade.
 
-UNIVERSALIDADE (o que ela fixou em 15/08/2026): *"a ideia é fazermos algo
-UNIVERSAL e USÁVEL EM QUALQUER PC COM QUALQUER DUALSENSE"*. Por isso o
+UNIVERSALIDADE (decisão de 15/08/2026): o produto é UNIVERSAL e USÁVEL EM QUALQUER PC
+COM QUALQUER DUALSENSE. Por isso o
 casamento é pelo sysfs do kernel, que responde igual em qualquer máquina, e por
 isso os testes montam um sysfs de MENTIRA — eles não podem depender de haver
-controle plugado nesta bancada.
+controle plugado neste ensaio.
 
-CONFUNDIMENTO: nenhum. A prova de que o par está certo não vem do produto: ela
+CONFUNDIMENTO: nenhum. A prova de que o par está certo não vem do produto:
 vem do ``readlink -f /sys/class/sound/cardN/device`` e do
 ``readlink -f /sys/class/hidraw/hidrawN/device``, duas leituras independentes
 do kernel, conferidas à mão antes de este arquivo existir.
@@ -172,7 +172,7 @@ def test_o_nome_nao_serve_de_prova_o_par_e_cruzado() -> None:
 
 
 def test_um_controle_no_radio_sozinho_nao_herda_a_placa_de_outro_aparelho() -> None:
-    """A guarda do "um para um" — e ela é o que separa cura de coincidência.
+    """A guarda do "um para um" — que é o que separa cura de coincidência.
 
     Um controle só, uma placa USB de DualSense só (deixada por um controle que
     acabou de ser desplugado, ou por um segundo aparelho). A aritmética diz
@@ -306,7 +306,7 @@ def _monitor_do_ensaio(
     *,
     com_json: bool = True,
 ) -> mm.MicMonitor:
-    """Um `MicMonitor` com o `pactl` e o sysfs da bancada de 15/08, dublados."""
+    """Um `MicMonitor` com o `pactl` e o sysfs do ensaio de 15/08, dublados."""
 
     def _runner(cmd: list[str]) -> str:
         if registro is not None:

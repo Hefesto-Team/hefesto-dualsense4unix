@@ -18,7 +18,7 @@ DOC = RAIZ / "docs" / "method" / "2026-09-03-O-TERCEIRO-NUMERO-a-paridade-com-a-
 
 
 def _modulo():
-    """A régua, importada do caminho — ela mora em ``scripts/``, não no pacote."""
+    """A régua, importada do caminho — mora em ``scripts/``, não no pacote."""
     espec = importlib.util.spec_from_file_location("check_paridade_gtk_html_sob_ensaio", REGUA)
     assert espec is not None and espec.loader is not None
     modulo = importlib.util.module_from_spec(espec)

@@ -11,16 +11,16 @@ DualSense no primeiro degrau de `integrations/ponte_escada.py`: *"errar para
 Xbox custa dez linhas do mapa, e custa em silêncio"*.
 
 Logo, uma célula que diz `aciona = sim` com `de_onde_sei = medido` num canal
-`uhid` e deixa `ponte_alcanca` VAZIA não é uma célula incompleta: ela afirma
+`uhid` e deixa `ponte_alcanca` VAZIA não é uma célula incompleta: a célula afirma
 duas coisas contraditórias ao mesmo tempo — que a feature funciona, e nada sobre
-a única condição que faz ela funcionar — e fica verde nas duas.
+a única condição que a faz funcionar — e fica verde nas duas.
 
 A regressão que a regra nomeia é reproduzível numa linha só: marcar
-`luz.replica_output_jogo@pro` como forte e medida. Ela é `uhid` nos dois
+`luz.replica_output_jogo@pro` como forte e medida. A célula é `uhid` nos dois
 transportes, tem `ponte_alcanca` vazia, e antes da regra o portão devolvia
 `exit 0` com a mentira inteira dentro.
 
-POR QUE ELA SÓ COBRA ONDE A PROMESSA É MÁXIMA
+POR QUE A REGRA SÓ COBRA ONDE A PROMESSA É MÁXIMA
 ---------------------------------------------
 Das 16 linhas `uhid` do mapa, quatro afirmam forte e as doze restantes calam.
 `◌ ninguém respondeu` é verdade, e preencher por analogia é o que destruiria o
@@ -147,7 +147,7 @@ def test_o_portao_reprova_uhid_forte_que_nao_diz_a_ponte(arvore: Path) -> None:
         "o portão aceitou `aciona = sim` + `de_onde_sei = medido` num canal "
         "`uhid` sem dizer por qual ponte. `uhid` só existe sob a máscara "
         "DualSense: essa célula afirma que a feature funciona E nada sobre a "
-        "única condição de ela funcionar.\n" + saida.stdout[-1500:]
+        "única condição de a feature funcionar.\n" + saida.stdout[-1500:]
     )
     assert "ponte-nao-declarada" in saida.stdout, (
         "reprovou, mas por outra regra — a mensagem tem de dizer que a ponte "
@@ -257,7 +257,7 @@ def test_o_mapa_tem_a_coluna_que_a_regra_le(arvore: Path) -> None:
 
     saida = _rodar(arvore)
     assert saida.returncode != 0, (
-        "a coluna `ponte_alcanca` sumiu e o portão passou. Sem ela "
+        "a coluna `ponte_alcanca` sumiu e o portão passou. Sem a coluna "
         "`linha.get(...)` devolve None em toda linha e a regra aprova o mapa "
         f"inteiro sem dizer uma palavra:\n{saida.stdout[-1500:]}"
     )

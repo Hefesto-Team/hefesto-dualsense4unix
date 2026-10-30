@@ -5,16 +5,16 @@ régua para cada um:
 
 1. a caixa da ponte do controle longe dizia «94 Hz», a constante de projeto, com a ponte
    pausada: o campo ao vivo `hz-ponte` diz a taxa que a ponte escreve de verdade (vazio quando
-   ela cede);
+   a ponte cede);
 2. o governador contava a ponte `longe` (muda, não escreve) na vez da fila, e as vizinhas
-   cediam por ela: `_a_vez` exclui a vaga longe da conta e do rodízio;
+   cediam pela longe: `_a_vez` exclui a vaga longe da conta e do rodízio;
 3. a proposta do Equilibrar não dizia que veio do sinal: a proposta leva `pelo_sinal` e os dois
    dBm, e o cartão e o balão dizem «sinal fraco».
 
-A BANCADA do furo 2 é o governador real com o relógio e o diário de mentira, e o adaptador
+O ENSAIO do furo 2 é o governador real com o relógio e o diário de mentira, e o adaptador
 de mentira que escoa até a capacidade de cada janela (o dublê das réguas da O-GOVERNADOR-NAO-
 FAZ-UMA-PONTE-SO-CEDER-01), com o sinal na mão da régua. A MORDIDA de cada régua está no
-docstring dela.
+docstring de cada uma.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ JANELAS_DEPOIS = 300
 
 
 class _Sinal:
-    """O leitor do sinal na mão da régua: o que ela põe em `dbm` é o que o governador lê."""
+    """O leitor do sinal na mão da régua: o que a régua põe em `dbm` é o que o governador lê."""
 
     def __init__(self) -> None:
         self.dbm: dict[str, int] = {}
@@ -135,13 +135,13 @@ def test_a_ponte_longe_nao_gasta_a_vez_das_vizinhas(capacidade: int) -> None:
 
     O controle é a corrida de B e C sozinhas no mesmo adaptador (nunca um número tirado da
     saída), medida depois de `ASSENTA` janelas, quando a fila que a A deixou já escoou. A A
-    está pausada pelo sinal: não escreve, e a fila não tem o que cobrar dela. MEDIDO em
+    está pausada pelo sinal: não escreve, e a fila não tem o que cobrar da A. MEDIDO em
     08/10/2026: a diferença da conta errada é de uma ou duas janelas (o flag some quando o
     rodízio solta a A), e não as dezenas que o dossiê da sprint contava; por isso a régua
     também pega o instante em que a A vira longe, no teste do flag logo abaixo.
 
     Esta régua não morde sozinha (a conta errada some em duas janelas): quem morde é a do flag,
-    logo abaixo. Ela guarda o desfecho, a taxa das vizinhas, contra uma regressão maior.
+    logo abaixo. Esta guarda o desfecho, a taxa das vizinhas, contra uma regressão maior.
     """
     com_a = _correr((CONTROLE_1, CONTROLE_2, CONTROLE_3), capacidade, longe=CONTROLE_1)
     controle = _correr((CONTROLE_2, CONTROLE_3), capacidade)

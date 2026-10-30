@@ -1,8 +1,8 @@
 """Uma ordem que ninguém dispensou não pode sumir da tela.
 
-`ordens_novas` e `ordens_caladas` comparam a dispensa dela com o ARRANJO — e não
+`ordens_novas` e `ordens_caladas` comparam a dispensa do usuário com o ARRANJO — e não
 com o slug da regra —, e isso é decisão medida: a dispensa vale para o que o usuário
-VIU, e se ela mudar os cabos e a mesma regra disparar com um arranjo novo, é
+VIU, e se o usuário mudar os cabos e a mesma regra disparar com um arranjo novo, é
 fato novo e a ordem volta.
 
 **O QUE ESTAVA QUEBRADO, medido em 06/09/2026:** `Ordem.arranjo` tem `""` por
@@ -64,14 +64,14 @@ def test_a_dispensa_de_verdade_continua_calando() -> None:
 
 
 def test_arranjo_novo_e_fato_novo() -> None:
-    """Ela mudou os cabos: a mesma regra volta, e não conta como dispensada."""
+    """Os cabos mudaram: a mesma regra volta, e não conta como dispensada."""
     hoje = _ordem("p1:usb|p2:bt")
     assert ordens_novas((hoje,), {CHAVE: "p1:usb|p2:usb"}) == (hoje,)
     assert ordens_caladas((hoje,), {CHAVE: "p1:usb|p2:usb"}) == ()
 
 
 def test_sem_dispensa_nenhuma_tudo_aparece() -> None:
-    """O caso trivial, que é o da primeira vez que ela abre a aba."""
+    """O caso trivial, que é o da primeira vez que a aba se abre."""
     com = _ordem("p1:usb")
     sem = _ordem()
     assert set(ordens_novas((com, sem), {})) == {com, sem}

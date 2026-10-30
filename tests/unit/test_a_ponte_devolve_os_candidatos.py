@@ -12,7 +12,7 @@ A única forma honesta de medir a lista de candidatos é abrindo uma varredura, 
 abrir varredura na máquina do usuário custa de 32% a 43% dos pacotes do adaptador que
 a hospeda, com quatro DualSense de pé. Por isso o script ganhou o quarto gancho
 de teste, `HEFESTO_BT_BIN`: uma pasta posta na frente do `PATH`, de onde saem o
-`busctl` e o `bluetoothctl` que ele chama. Com ela, o barramento que responde é
+`busctl` e o `bluetoothctl` que ele chama. Com a pasta, o barramento que responde é
 o desta fixture — e nenhum rádio desta casa é tocado.
 
 O gancho é inerte sob sudo, como os outros três (contenção 3 do cabeçalho do
@@ -31,7 +31,7 @@ PROVA DE MORDIDA (20/09/2026), cada arrancada devolvida em seguida. Controle:
      primeiro plano) — **reprovou
      `test_o_candidato_sai_enquanto_a_janela_ainda_esta_aberta`**. Esta
      arrancada achou um defeito NA PRÓPRIA RÉGUA, e é a lição do dia: escrita
-     contra `processo.poll() is None`, ela passava VERDE sobre o defeito, porque
+     contra `processo.poll() is None`, a régua passava VERDE sobre o defeito, porque
      a ponte ainda corre `wait`, `wc` e o diário depois de despejar a lista.
      Trocada para olhar o marcador da VARREDURA, morde;
   c) o `_higienizar` tirado da coluna do nome — **4 reprovações**, porque o
@@ -66,7 +66,7 @@ CLASSE_NA_COLUNA = str(CLASSE_DO_DUALSENSE)
 
 @pytest.fixture()
 def barramento(tmp_path: Path) -> Path:
-    """O BlueZ de mentira da bancada — ver `tests/unit/barramento_de_mentira.py`."""
+    """O BlueZ de mentira do ensaio — ver `tests/unit/barramento_de_mentira.py`."""
     return montar(tmp_path)
 
 

@@ -1,7 +1,7 @@
 """A-NAVEGACAO-NAO-E-DEFEITO-NA-VIBRACAO-01 — na Navegação a aba Vibração não acusa defeito.
 
-``D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO`` (dela, 29/09/2026 ~21h45, *«1, ok
-pode ser.»*): na Navegação nenhum jogo recebe gamepad (``D-1409``) e a
+``D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO`` (29/09/2026 ~21h45): na Navegação nenhum
+jogo recebe gamepad (``D-1409``) e a
 intensidade escolhida fica guardada e vale no primeiro pedido de um jogo com
 gamepad. A faixa laranja e o ``rumble_sem_dono`` do diário ficam só para a
 FALHA do sistema: emulação ligada e nenhum gamepad virtual.

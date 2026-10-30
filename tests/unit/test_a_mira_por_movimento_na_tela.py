@@ -1,4 +1,4 @@
-"""A-MIRA-POR-MOVIMENTO-NA-TELA-01 — a mira que nunca andou, e o chip dela."""
+"""A-MIRA-POR-MOVIMENTO-NA-TELA-01 — a mira que nunca andou, e o chip da mira."""
 
 from __future__ import annotations
 
@@ -463,7 +463,7 @@ def _quem_mirou(vpads: dict[str, _Vpad]) -> list[str]:
 def test_so_o_p3_acendeu_o_chip_e_so_o_p3_mira(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str
 ) -> None:
-    """O chip de UMA peça, num perfil sem mira: só ela mira, nos dois transportes."""
+    """O chip de UMA peça, num perfil sem mira: só essa peça mira, nos dois transportes."""
     perfil = _perfil_com_miras(aabbcc000003={"destino": "analogico_direito"})
     vpads = _mesa_de_quatro_de_verdade(monkeypatch, tmp_path, transporte, perfil)
     assert _quem_mirou(vpads) == [_P3], (
@@ -576,7 +576,7 @@ def _servidor_com_perfil(tmp_path: Path, perfil: Profile | None = None) -> IpcSe
     """O `IpcServer` real sobre o `Daemon` real, com um perfil ATIVO no disco."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
-    perfil = perfil or Profile(name="Bancada", match=MatchAny(type="any"))
+    perfil = perfil or Profile(name="Ensaio", match=MatchAny(type="any"))
     save_profile(perfil)
     _daemon, servidor = _mesa_de_verdade(tmp_path, "usb", _hub({}))
     servidor.profile_manager.apply_movimento(perfil)
@@ -598,14 +598,14 @@ def test_o_que_o_usuario_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) ->
     servidor = _servidor_com_perfil(tmp_path)
     corpo = _mira_set(servidor, uniq=_P3, ligada=True)
     assert corpo["status"] == "ok" and corpo["gravado"] is True and corpo["ligada"]
-    dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
+    dele = load_profile("Ensaio").controllers["aabbcc000003"].movimento
     assert dele is not None and dele.destino == "analogico_direito"
     assert dele.acelerometro == "analogico_direito" and dele.lado == "analogico_direito"
     assert dele.model_fields_set == {"destino", "acelerometro", "lado"}, (
-        "o chip gravou campos que ela não mexeu — a peça deixaria de herdar do "
+        "o chip gravou campos que ninguém mexeu — a peça deixaria de herdar do "
         "perfil")
     corpo = _mira_set(servidor, uniq=_P3, zona_morta_graus_s=22.0)
-    dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
+    dele = load_profile("Ensaio").controllers["aabbcc000003"].movimento
     assert dele.destino == "analogico_direito" and dele.zona_morta_graus_s == 22.0
     store = servidor.store
     assert rot.da_peca(store, _P3, rot.ativo(store)).zona_morta_graus_s == 22.0
@@ -622,26 +622,26 @@ def test_a_tela_nao_liga_a_mira_sozinha(perfis: Path, tmp_path: Path) -> None:
     servidor._merge_mira(entradas)
     assert [e["mira"]["ligada"] for e in entradas] == [False, False]
     assert entradas[1]["mira"]["sensibilidade"] == 9, (
-        "o número que ela ajustou com a mira apagada sumiu da leitura de volta")
+        "o número ajustado com a mira apagada sumiu da leitura de volta")
 
 
 def test_o_ps_nunca_vira_gatilho_pela_tela(perfis: Path, tmp_path: Path) -> None:
-    """O PS é a saída de emergência dela, e nenhum pedido da tela o torna"""
+    """O PS é a saída de emergência de quem usa, e nenhum pedido da tela o torna"""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     servidor = _servidor_com_perfil(tmp_path)
     with pytest.raises(ValueError, match="gatilho"):
         _mira_set(servidor, uniq=_P3, ligada=True, gatilho="ps")
-    assert not load_profile("Bancada").controllers, "a recusa gravou alguma coisa"
+    assert not load_profile("Ensaio").controllers, "a recusa gravou alguma coisa"
 
 
 def test_o_chip_apagado_vence_a_mira_do_perfil_e_a_tela_ve(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """Perfil com mira na mesa, e ela apaga o chip do P4: o P4 não mira, e o
+    """Perfil com mira na mesa, e quem usa apaga o chip do P4: o P4 não mira, e o
     `state_full` diz isso pela mesma pergunta que o tique faz."""
     perfil = Profile(
-        name="Bancada",
+        name="Ensaio",
         match=MatchAny(type="any"),
         movimento=ProfileMovimentoConfig(destino="analogico_direito"),
     )
@@ -657,12 +657,12 @@ def test_o_chip_apagado_vence_a_mira_do_perfil_e_a_tela_ve(
 def test_o_deslizante_da_peca_calada_segue_a_mira_do_perfil(
     perfis: Path, tmp_path: Path
 ) -> None:
-    """O perfil tem a mira na mesa, com a sensibilidade 9; ela mexe só no"""
+    """O perfil tem a mira na mesa, com a sensibilidade 9; quem usa mexe só no"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     perfil = Profile(
-        name="Bancada",
+        name="Ensaio",
         match=MatchAny(type="any"),
         movimento=ProfileMovimentoConfig(destino="analogico_direito", sensibilidade=9),
     )
@@ -673,7 +673,7 @@ def test_o_deslizante_da_peca_calada_segue_a_mira_do_perfil(
     vivo = rot.da_peca(store, _P2, rot.ativo(store))
     assert vivo is not None and (vivo.sensibilidade, vivo.zona_morta_graus_s) == (9, 20.0), (
         f"mexer no tremor do P2 mudou a mira dele para {vivo}")
-    servidor.profile_manager.apply_movimento(load_profile("Bancada"))
+    servidor.profile_manager.apply_movimento(load_profile("Ensaio"))
     assert rot.da_peca(store, _P2, rot.ativo(store)) == vivo, (
         "a próxima ativação, lendo o disco, dá outra mira ao P2 que a do vivo")
 
@@ -705,18 +705,18 @@ _RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_RAIZ / "src" / "hefesto_dualsense4unix" / "interface"))
 
 def _cartoes_do_ensaio() -> list[tuple[str, str]]:
-    """`(abertura, miolo)` de cada cartão da aba Controles, na bancada."""
+    """`(abertura, miolo)` de cada cartão da aba Controles, no ensaio."""
     doc = (_RAIZ / "mockup/02-controles.html").read_text(encoding="utf-8")
     doc = doc.split('<div class="nota">', 1)[0]
     partes = re.split(r'(?=<div class="ctl card)', doc)[1:]
-    assert partes, "a bancada não tem cartão de controle — régua cega"
+    assert partes, "o ensaio não tem cartão de controle — régua cega"
     return [(parte.split(">", 1)[0], parte) for parte in partes]
 
 
 def test_a_mira_mora_embaixo_do_analogico_e_nao_no_cabecalho() -> None:
     """O DESENHO DO TODO (15/10/2026): o botão da mira saiu do cabeçalho do cartão.
 
-    Ela mora embaixo de cada analógico, numa linha só, «Mira virtual». MORDIDA: ponha o
+    A linha mora embaixo de cada analógico, numa linha só, «Mira virtual». MORDIDA: ponha o
     `chip-da-mira` de volta no grupo dos sensores e isto reprova.
     """
     for abertura, miolo in _cartoes_do_ensaio():
@@ -859,7 +859,7 @@ def test_os_deslizantes_mandam_um_campo_so() -> None:
 def test_a_calibrar_so_pinta_a_mira_quando_a_pagina_publicada_tem(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Antes de ela publicar, o produto não remonta nem pinta o bloco novo."""
+    """Antes de o pacote publicar, o produto não remonta nem pinta o bloco novo."""
     import pacotes
     from pacotes import a11_calibrar_sensores as a11
 

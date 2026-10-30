@@ -4,17 +4,17 @@ O QUE ESTE ARQUIVO GUARDA
 ------------------------
 Desde 19/08/2026 o `integrations/ponte_escada.py` afirma, POR ESCRITO, que dez
 linhas do `mapa-controles.csv` só chegam ao JOGO pela máscara DualSense — é a
-afirmação que põe a DualSense no primeiro degrau da escada, e ela vale dinheiro:
+afirmação que põe a DualSense no primeiro degrau da escada, e a afirmação vale dinheiro:
 *"errar para Xbox custa dez linhas do mapa, e custa em silêncio"*.
 
 Até 20/08/2026 essa afirmação vivia só na prosa de um módulo Python. O mapa —
 que é a memória externa desta casa, e o portão que reprova regressão de canal —
 não tinha onde guardá-la: `transporte` diz por qual FIO a feature chega ao
-Hefesto, e não existia coluna para dizer por qual PONTE ela chega ao jogo.
+Hefesto, e não existia coluna para dizer por qual PONTE a feature chega ao jogo.
 
-As colunas `ponte_alcanca` e `ponte_de_onde_sei` são essa gaveta. Elas nasceram
+As colunas `ponte_alcanca` e `ponte_de_onde_sei` são essa gaveta. As duas nasceram
 com DEZ células preenchidas e nenhuma medição nova: mover uma afirmação já
-escrita e já testada para o lugar onde ela é conferível não é medir.
+escrita e já testada para o lugar onde é conferível não é medir.
 
 POR QUE AS DUAS COLUNAS SÃO GLOBAIS, E NÃO UM PAR `cabo_`/`radio_`
 ------------------------------------------------------------------
@@ -73,8 +73,8 @@ def _as_dez(linhas: list[dict[str, str]]) -> list[dict[str, str]]:
     """As features do DualSense que só chegam ao jogo por `uhid`.
 
     Derivadas do DADO, nunca de uma lista copiada: no dia em que uma feature
-    nova nascer `uhid` no DualSense, ela entra nesta conta sozinha — e o teste
-    passa a cobrar dela a declaração da ponte, que é exatamente o que se quer.
+    nova nascer `uhid` no DualSense, a feature entra nesta conta sozinha — e o teste
+    passa a cobrar a declaração da ponte, que é exatamente o que se quer.
     """
     return [
         lin
@@ -141,7 +141,7 @@ class TestAPonteNaoEPerguntaDeTransporte:
         """Nenhuma das duas pode virar par `cabo_`/`radio_`."""
         cabecalho = _cabecalho()
         assert "ponte_alcanca" in cabecalho and "ponte_de_onde_sei" in cabecalho, (
-            "o mapa perdeu a gaveta da ponte; sem ela a afirmação do primeiro "
+            "o mapa perdeu a gaveta da ponte; sem a gaveta a afirmação do primeiro "
             "degrau volta a viver só na prosa de `ponte_escada.py`"
         )
         sufixos = pares_de_transporte(cabecalho)

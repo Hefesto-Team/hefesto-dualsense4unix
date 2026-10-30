@@ -279,7 +279,7 @@ def test_nome_novo_sujo_e_recusado(arvore: Path, sujo: str) -> None:
 
 
 def test_nome_com_acento_e_aceito(arvore: Path) -> None:
-    """A régua não pode ser xenófoba: ela escreve em português."""
+    """A régua não pode ser xenófoba: o nome se escreve em português."""
     resultado = _rodar(arvore, "renomear", entrada=_linhas(ADAPTADOR, "Sótão — rack (nº 1)"))
     assert resultado.returncode != RECUSA, resultado.stderr
 
@@ -299,7 +299,7 @@ def test_segundos_sujo_e_recusado(arvore: Path, sujo: str) -> None:
 
 
 def test_nao_existe_verbo_que_execute_comando_arbitrario(arvore: Path) -> None:
-    """A lista de verbos é fechada, e o que não está nela sai com 2."""
+    """A lista de verbos é fechada, e o que não está na lista sai com 2."""
     for tentativa in (
         ("executar", "id"),
         ("exec", "id"),
@@ -314,7 +314,7 @@ def test_nao_existe_verbo_que_execute_comando_arbitrario(arvore: Path) -> None:
 
 
 def test_argumento_a_mais_e_recusado(arvore: Path) -> None:
-    """Contagem exata de argumentos — sem ela, o `[0-9]` do sudoers não basta."""
+    """Contagem exata de argumentos — sem a contagem, o `[0-9]` do sudoers não basta."""
     for tentativa in (
         ("adaptadores", "extra"),
         ("bonds", "extra"),
@@ -366,7 +366,7 @@ def test_a_raiz_de_teste_nao_fala_com_o_barramento_real(arvore: Path) -> None:
     A suíte roda estes scripts de verdade, na máquina do usuário, com quatro DualSense
     e um Pro no rádio. `renomear`, `descobrir`, `parear` e `desconectar` mexem
     no adaptador — bastaria um MAC de teste coincidir com um adaptador vivo
-    para um portão derrubar a bancada no meio de uma partida. E o
+    para um portão derrubar o ensaio no meio de uma partida. E o
     `desconectar` (CONEXAO-ZUMBI-01) é o que mais dói: ele CORTA um link.
     """
     for verbo, argv, dados in (

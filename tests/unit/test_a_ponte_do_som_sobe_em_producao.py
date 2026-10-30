@@ -61,7 +61,7 @@ class _GerenciadorDeMentira:
 
 @pytest.fixture
 def ensaio(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """A mesa de quatro: três no rádio, um no cabo. É a cena dela."""
+    """A mesa de quatro: três no rádio, um no cabo. É a cena de uso."""
     from hefesto_dualsense4unix.integrations import alto_falante_bt as af
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
 
@@ -161,7 +161,7 @@ def test_cada_ponte_leva_o_hidraw_e_o_monitor_DAQUELE_controle(  # noqa: N802
 
 
 def test_a_ponte_sobe_antes_do_no(ensaio: dict) -> None:
-    """A ORDEM, e ela é medida."""
+    """A ORDEM, e a ordem é medida."""
     sub = ensaio["sub"]
     ordem = ensaio["ordem"]
     ger = ensaio["ger"]
@@ -229,7 +229,7 @@ def test_o_stop_derruba_todas_as_pontes(ensaio: dict) -> None:
 
 
 def test_o_gerenciador_de_producao_recebe_o_callable_da_ponte() -> None:
-    """O ``start()`` real injeta a resposta — e ela é POR CONTROLE."""
+    """O ``start()`` real injeta a resposta — e a resposta é POR CONTROLE."""
     sub = mod.AltoFalanteSubsystem(fonte_de_controles=lambda: [])
 
     class _Ctx:

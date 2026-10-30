@@ -211,14 +211,14 @@ class TestOLacoDoNoQueNaoNasce:
     ) -> None:
         """MORDIDA: devolva `None` quando `self._pontes.get(uniq)` for `None` —"""
         sub = self._sub(ensaio)
-        assert sub._pontes == {}, "a bancada precisa começar SEM ponte"
+        assert sub._pontes == {}, "o ensaio precisa começar SEM ponte"
         caminho = sub._ponte_do_radio_de(MESA[0])
         assert caminho is not None and caminho() is True
 
     def test_a_ponte_de_pe_continua_respondendo_por_si(
         self, ensaio: _Ensaio
     ) -> None:
-        """Quando há ponte, quem responde é ela — não uma promessa."""
+        """Quando há ponte, quem responde é a ponte — não uma promessa."""
         ensaio.toca(MESA[0])
         sub = self._sub(ensaio)
         caminho = sub._ponte_do_radio_de(MESA[0])

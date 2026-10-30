@@ -1,7 +1,7 @@
 """A Mira da Calibrar é a mesma da aba Perfis (a Conexões saiu em 13/10/2026, a Navegação em 15/10).
 
-A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01 (29/09/2026, ela: *«isso aqui tem que tá
-sincronizado com a aba Conexões, Navegação. e Perfis»*; a Navegação do todo não a diz mais).
+A-MIRA-DA-CALIBRAR-E-A-MESMA-DAS-OUTRAS-ABAS-01 (29/09/2026: a Mira tinha de estar sincronizada
+com as abas Conexões, Navegação e Perfis; a Navegação do todo não a diz mais).
 Os quatro ajustes da Mira de cada controle têm UM dono (o `mira.set` e o `_merge_mira` do daemon)
 e UM leitor
 (`a11.resumo_da_mira`); a Calibrar é o único lugar de MUDAR, e a Perfis diz os números. O
@@ -106,7 +106,7 @@ def _ctx(state: dict[str, Any]) -> Contexto:
 
 @pytest.fixture(autouse=True)
 def _a_pagina_publicada_tem_a_mira(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A Calibrar publicada ainda não tem o bloco novo; a bancada tem (o publicar é da costura)"""
+    """A Calibrar publicada ainda não tem o bloco novo; o ensaio tem (o publicar é da costura)"""
     monkeypatch.setattr(a11_calibrar_sensores, "_TEM_A_MIRA", True)
 
 
@@ -234,7 +234,7 @@ def _enderecos(pagina: str) -> set[str]:
 
 
 def test_o_endereco_existe_dos_dois_lados(perfis: Path, tmp_path: Path) -> None:  # noqa: F811
-    """Régua 5. Todo endereço novo que um pacote emite existe na bancada da página dele, e o
+    """Régua 5. Todo endereço novo que um pacote emite existe no ensaio da página dele, e o
     inverso."""
     servidor = _servidor_com_perfil(tmp_path)
     _mira_set(servidor, uniq=_P3, ligada=True)
@@ -300,17 +300,17 @@ def test_o_nome_do_perfil_na_calibrar_e_o_perfil_que_gravou(
     ctx = _ctx(_estado(servidor))
     a11_calibrar_sensores.mira_sensibilidade(ctx, {"uniq": _P3, "valor": "9"}, ponte)
     gravou_em = ponte.respostas[-1]["perfil"]
-    assert gravou_em == "Bancada"
+    assert gravou_em == "Ensaio"
     assert pacotes.topo(ctx)["perfil"] == gravou_em
     assert load_profile(gravou_em).controllers[CHAVE[_P3]].movimento.sensibilidade == 9
 
     servidor.store.set_active_profile(None)
-    monkeypatch.setattr(session, "resolve_boot_profile", lambda: "Bancada")
+    monkeypatch.setattr(session, "resolve_boot_profile", lambda: "Ensaio")
     calado = _ctx(_estado(servidor))
     assert calado.state["active_profile"] is None
     a11_calibrar_sensores.mira_sensibilidade(calado, {"uniq": _P3, "valor": "5"}, ponte)
     gravou_em = ponte.respostas[-1]["perfil"]
-    assert gravou_em == "Bancada", "o marcador valia e o `mira.set` não gravou nele"
+    assert gravou_em == "Ensaio", "o marcador valia e o `mira.set` não gravou nele"
     assert pacotes.topo(calado)["perfil"] == gravou_em, (
         "o chip da Calibrar não diz o perfil em que a Mira acabou de gravar")
     assert load_profile(gravou_em).controllers[CHAVE[_P3]].movimento.sensibilidade == 5

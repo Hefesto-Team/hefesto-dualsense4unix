@@ -215,7 +215,7 @@ def _navegacao(
                          socket_path=tmp_path / "navegacao.sock", daemon=daemon)
     servidor._sensor_hub = mesa.hub
     daemon._ipc_server = servidor
-    perfil = perfil or Profile(name="Bancada", match=MatchAny(type="any"))
+    perfil = perfil or Profile(name="Ensaio", match=MatchAny(type="any"))
     save_profile(perfil)
     gerente.apply_movimento(perfil)
     daemon.store.set_active_profile(perfil.name)
@@ -351,7 +351,7 @@ def test_so_enquanto_eu_segurar_vale_no_primario_e_nos_outros(
 def test_o_giroscopio_desligado_nao_move_o_cursor(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O interruptor do Giroscópio dela vale na Navegação: desligado, nada anda."""
+    """O interruptor do Giroscópio de cada controle vale na Navegação: desligado, nada anda."""
     nav = _navegacao(tmp_path, monkeypatch, "usb")
     _mira_set(nav.servidor, uniq=_P[2], ligada=True)
     REGISTRO.definir(_P[2], giroscopio=False)
@@ -588,7 +588,7 @@ def test_a_dica_segue_o_destino_que_o_daemon_publica(
 
 
 def _dica_do_jogador() -> str:
-    """O texto da dica do rótulo «Jogador» na bancada da 04, sem comentário."""
+    """O texto da dica do rótulo «Jogador» no ensaio da 04, sem comentário."""
     import re
 
     pagina = (_RAIZ / "mockup" / "04-iluminacao.html").read_text(encoding="utf-8")

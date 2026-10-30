@@ -6,7 +6,7 @@ até a conexão fechar, e a extensão que tira «Sacudir» não tinha como larg�
 
 1. ``eventos.desassinar`` do ``movimento`` faz os tiques seguintes pararem de pedir o leitor, e
    a reconciliação o fecha nos quatro controles, em toda mesa;
-2. com duas extensões, a que desassina larga só o dela: a outra segue recebendo, e o leitor vive;
+2. com duas extensões, a que desassina larga só o próprio: a outra segue recebendo, e o leitor vive;
 3. ``botoes``, ``entradas`` (com e sem ``dedos``) e um tópico do barramento desassinam igual;
 4. tópico não assinado ou desconhecido é recusa sem efeito.
 

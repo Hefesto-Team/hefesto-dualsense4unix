@@ -7,13 +7,13 @@ em ``app/actions/home_actions.py:868``; esta régua mede que a interface nova a
 CHAMA em vez de reescrever a tradução, e — o que é mais caro — que **nenhuma
 conta desta casa depende da palavra**.
 
-O DEFEITO QUE ELA EXISTE PARA IMPEDIR não é a palavra errada: é o NÚMERO errado
+O DEFEITO QUE A RÉGUA EXISTE PARA IMPEDIR não é a palavra errada: é o NÚMERO errado
 em silêncio. Até 06/09 duas somas comparavam o texto da tela:
 
     interface/mesa_viva.py          o cabeçalho: `X USB · Y BT`
     interface/pacotes/a07_…         o "?" da Lançadores: `(1 no cabo, 0 no rádio)`
 
-Trocar a palavra sem tocar nelas faria a tela dizer ``● 2 controles: 0 USB ·
+Trocar a palavra sem tocar nas somas faria a tela dizer ``● 2 controles: 0 USB ·
 2 BT`` com os dois no cabo — o número errado, sem erro, sem log e sem uma linha
 vermelha. É a família de defeito que esta casa persegue: *o mesmo fato com dois
 donos, e o segundo envelhece calado.*
@@ -22,7 +22,7 @@ donos, e o segundo envelhece calado.*
 ``transporte`` (a chave CRUA do daemon, ``usb``/``bt``) ao lado da palavra.
 Quem conta lê ``transporte``; quem escreve na tela pergunta à dona.
 
-O QUE A CONTAGEM DO CABEÇALHO **NÃO** FAZ: ela não muda de língua. ``X USB ·
+O QUE A CONTAGEM DO CABEÇALHO **NÃO** FAZ: não muda de língua. ``X USB ·
 Y BT`` fica, por decisão de 06/09 e por gramática — *"2 cabo · 0 rádio"*
 não é português. É a única exceção declarada em
 ``docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`` §1.
@@ -30,7 +30,7 @@ não é português. É a única exceção declarada em
 COMO CADA RÉGUA MORDE, e as mordidas foram feitas:
 
 * **1 e 2** — troque a tabela da sigla (``pacotes.VIA_DO_TRANSPORTE``) e as duas
-  contagens continuam certas. Antes da cura elas viravam ``0 USB · 2 BT`` e
+  contagens continuam certas. Antes da cura as contagens viravam ``0 USB · 2 BT`` e
   ``0 no cabo, 2 no rádio`` com os dois controles no cabo;
 * **3** — troque a palavra NA DONA e as quatro superfícies da tela acompanham.
   Com qualquer cópia viva (o ``.upper()`` da 01, o ``"cabo" if …`` da 09, a
@@ -91,7 +91,7 @@ def _estado(*transportes: str) -> dict[str, Any]:
 
 
 def _mesa(*transportes: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """`(estado, mesa)` — a mesa sai do DONO dela, nunca montada à mão aqui."""
+    """`(estado, mesa)` — a mesa sai do DONO da mesa, nunca montada à mão aqui."""
     estado = _estado(*transportes)
     return estado, mesa_viva.mesa_do_estado(estado, {})
 
@@ -107,8 +107,8 @@ def test_a_contagem_do_cabecalho_nao_se_mexe_quando_a_palavra_muda(monkeypatch) 
     assert [c["via"] for c in mesa_depois] == [SENTINELA, SENTINELA], (
         "a troca não chegou à mesa — a mordida não estaria mordendo nada")
     assert mesa_viva.texto_da_contagem(mesa_depois) == ("● 2 controles: ", "2 USB"), (
-        "a contagem do cabeçalho seguiu a PALAVRA da tela. Ela tem de somar "
-        "`transporte`, a chave crua do daemon: a palavra é decisão dela e pode "
+        "a contagem do cabeçalho seguiu a PALAVRA da tela. A contagem tem de somar "
+        "`transporte`, a chave crua do daemon: a palavra é decisão do produto e pode "
         "mudar de novo — a conta, não")
 
 
@@ -131,10 +131,10 @@ def test_a_mesa_do_desenho_tambem_publica_a_chave_crua() -> None:
 
     Não apareceu na hora porque ninguém rodou um gerador entre a costura e o
     fecho. Apareceu quando o `pytest` **coletou** um teste que importava
-    `aba05` e o arquivo dela mudou no disco.
+    `aba05` e o arquivo da aba mudou no disco.
 
     A MORDIDA: tire `"transporte"` de qualquer linha de `monta.MESA` e esta
-    régua reprova nomeando a linha. Antes da cura ela reprovava nas quatro.
+    régua reprova nomeando a linha. Antes da cura a régua reprovava nas quatro.
     """
     import monta
 
@@ -159,7 +159,7 @@ def test_a_mesa_do_desenho_tambem_publica_a_chave_crua() -> None:
 
 
 def test_o_gerador_nao_escreve_o_ensaio_como_efeito_de_import() -> None:
-    """Importar um gerador NÃO pode reescrever o desenho dela no disco."""
+    """Importar um gerador NÃO pode reescrever o desenho no disco."""
     import pathlib as _pl
     import re as _re
 
@@ -171,7 +171,7 @@ def test_o_gerador_nao_escreve_o_ensaio_como_efeito_de_import() -> None:
         if not _re.search(r'^if __name__ == "__main__":$', texto, _re.M):
             faltam.append(arq.name)
     assert not faltam, (
-        f"{faltam} escrevem a bancada dela no nível do módulo: qualquer "
+        f"{faltam} escrevem o ensaio no nível do módulo: qualquer "
         "`import` — inclusive a COLETA do pytest — reescreve o desenho "
         "aprovado no disco, com o estado vivo da mesa dentro")
 
@@ -206,17 +206,17 @@ def test_as_quatro_superficies_seguem_a_dona(monkeypatch) -> None:
 
 
 def test_as_quatro_superficies_dizem_a_palavra_do_usuario_hoje() -> None:
-    """E o que elas dizem HOJE é `USB` e `BT` — palavra, 21/09/2026."""
+    """E o que as superfícies dizem HOJE é `USB` e `BT` — palavra, 21/09/2026."""
     for cru in ("usb", "bt"):
         do_usuario = home_actions.palavra_do_transporte(cru)
         estado, mesa = _mesa(cru, cru)
         for onde, texto in _superficies(estado, mesa).items():
             assert do_usuario in texto, (
-                f"{onde} não diz a palavra dela para {cru!r}: {texto!r}")
+                f"{onde} não diz a palavra do usuário para {cru!r}: {texto!r}")
 
 
 def test_a_tela_e_o_desenho_falam_a_mesma_palavra() -> None:
-    """A DIVERGÊNCIA DE UM MÊS FECHOU — 21/09/2026, por decisão de produto."""
+    """A DIVERGÊNCIA DE UM MÊS FECHOU — 21/09/2026, a regra é do produto."""
     from hefesto_dualsense4unix.interface import monta
 
     for controle in monta.MESA:
@@ -252,7 +252,7 @@ def test_um_transporte_que_o_mapa_nao_conhece_aparece_cru() -> None:
     assert home_actions.PALAVRA_DE_TRANSPORTE_DESCONHECIDO not in cartao, (
         "um transporte que o mapa não conhece virou 'não sei por onde'. Ele "
         "existe, o daemon o publicou, e esconder isso é a tela encolhendo os "
-        "ombros sobre um fato que ela leu")
+        "ombros sobre um fato que a tela leu")
 
 
 def test_o_descarte_da_09_segue_o_ultimo_degrau_de_identidade(monkeypatch) -> None:
@@ -289,7 +289,7 @@ DONOS_DA_PALAVRA = (
 
 @pytest.mark.parametrize("caminho", DONOS_DA_PALAVRA)
 def test_nenhuma_aba_desta_posse_escreve_a_traducao(caminho: str) -> None:
-    """A palavra não se digita em CÓDIGO — ela se pergunta."""
+    """A palavra não se digita em CÓDIGO — se pergunta."""
     fonte = (RAIZ / caminho).read_text(encoding="utf-8")
     dentro_de_prosa = False
     acusados: list[str] = []
@@ -308,5 +308,5 @@ def test_nenhuma_aba_desta_posse_escreve_a_traducao(caminho: str) -> None:
         "a tradução do transporte foi redigitada em código:\n  "
         + "\n  ".join(acusados)
         + "\nA palavra vem da dona (`app/actions/home_actions.py:868`) e de "
-          "mais lugar nenhum — foi a QUARTA cópia dela que esta sprint matou"
+          "mais lugar nenhum — foi a QUARTA cópia da palavra que esta sprint matou"
     )

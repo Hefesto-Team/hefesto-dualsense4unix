@@ -1,6 +1,6 @@
 """O tópico ``entradas``: os analógicos, os gatilhos e o touchpad de CADA controle (24/10/2026).
 
-A sprint A-PORTA-ENTREGA-OS-EIXOS-OS-GATILHOS-E-O-TOUCHPAD-DE-CADA-CONTROLE-01. Antes dela a
+A sprint A-PORTA-ENTREGA-OS-EIXOS-OS-GATILHOS-E-O-TOUCHPAD-DE-CADA-CONTROLE-01. Antes da sprint a
 extensão só recebia botão: o gatilho chegava como o ``l2``/``r2`` digital, o touchpad como as
 três regiões de clique, e o ``estado`` era o do controle do posto só. Aqui:
 

@@ -34,7 +34,7 @@ def _manifesto(*permissoes: str) -> Manifesto:
 
 @pytest.fixture
 def casa(tmp_path: Path) -> tuple[Path, Path, Path]:
-    """Uma casa com a Steam e uma segunda biblioteca fora dela, no ``libraryfolders.vdf``."""
+    """Uma casa com a Steam e uma segunda biblioteca fora da Steam, no ``libraryfolders.vdf``."""
     casa = tmp_path / "casa"
     principal = casa / ".local" / "share" / "Steam" / "steamapps"
     outra = tmp_path / "outra" / "steamapps"

@@ -10,7 +10,7 @@ MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas):
 - a janela sem o filtro do ``aparece_com`` reprova os testes da janela e o do WebKit;
 - o ``_vale`` que aceita todo valor reprova a janela e o ``aparecem``;
 - o ``aparecem`` que não olha se a outra também aparece reprova a escondida em cadeia;
-- cada recusa do manifesto arrancada reprova o caso dela em ``test_o_manifesto_recusa``.
+- cada recusa do manifesto arrancada reprova o caso próprio em ``test_o_manifesto_recusa``.
 - o campo sem a conferência do valor cru aceita o ``1`` como ``true`` e reprova ``ligado-com-1``.
 """
 

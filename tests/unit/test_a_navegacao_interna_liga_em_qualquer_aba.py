@@ -1,6 +1,6 @@
 """A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01 — as réguas.
 
-Com o desenho dela de 03/10/2026: a Interna liga em qualquer Modo, R1 e L1 de
+Com o desenho de 03/10/2026: a Interna liga em qualquer Modo, R1 e L1 de
 qualquer controle dão a volta entre as abas 01 a 05, cada controle anda a SUA
 seleção e o X dele grava no dele, o Start guarda, e enquanto a janela está na
 frente os botões que navegam não chegam ao jogo nem saem como Alt+Tab.
@@ -269,7 +269,7 @@ def test_11_a_selecao_anda_para_o_vizinho_da_direcao() -> None:
 
 def test_11_o_baixo_da_coluna_nao_pula_a_lista_larga() -> None:
     """A coluna da 05 medida no piloto (22/10/2026): a lista começa na borda do interruptor e é
-    larga; o centro dela fica longe do dele, e o ↓ ia ao interruptor seguinte, pulando-a."""
+    larga; o centro da lista fica longe do centro do interruptor, e o ↓ ia ao seguinte."""
     caixas = [
         nav.Caixa("interruptor-h", 218, 402, 36, 36),
         nav.Caixa("lista-haptico", 218, 450, 215, 26, tipo="lista"),

@@ -12,7 +12,7 @@ AS MORDIDAS (09/10/2026, uma por vez, md5 conferido na volta):
 2. a recusa das três pontes arrancada: a régua da recusa reprova (e o tocador é chamado).
 3. o ``uniq`` no rótulo do controle: a régua do endereço reprova.
 4. ``conferir_a_constante`` sem comparar o ``k`` medido com a constante: a régua do 3 reprova.
-5. uma `bancada.json` que mede 5 na fixture, com o 3 na constante: `test_o_orcamento_conta_a_ponte`
+5. uma `ensaio.json` que mede 5 na fixture, com o 3 na constante: `test_o_orcamento_conta_a_ponte`
    reprova.
 """
 from __future__ import annotations
@@ -232,7 +232,7 @@ def test_3_nenhum_endereco_nem_no_de_som_na_saida(inst: Any, tmp_path: Path) -> 
 
 
 def test_4_a_constante_segue_a_tabela_gravada(inst: Any) -> None:
-    """Sem tabela gravada, o k é provisório; com ela, constante, CSV e desenho dizem o k dela."""
+    """Sem tabela gravada, o k é provisório; gravada, constante, CSV e desenho dizem o mesmo k."""
     gravada = inst.gravada()
     procedencia = inst.procedencia_do_k()
     assert inst.conferir_a_constante(
@@ -273,7 +273,7 @@ def test_4d_medida_fora_dos_pacotes_nao_escolhe_constante(inst: Any) -> None:
 def test_4e_gravar_leva_a_sessao_para_a_tabela_versionada(inst: Any, tmp_path: Path) -> None:
     sessao = tmp_path / "sessao.jsonl"
     sessao.write_text("\n".join(json.dumps(j.linha()) for j in _janelas_do_hub(inst)) + "\n")
-    alvo = inst.gravar(sessao, tmp_path / "bancada.json")
+    alvo = inst.gravar(sessao, tmp_path / "ensaio.json")
     relida = inst.gravada(alvo)
     assert relida is not None and [j.linha() for j in relida] == [
         j.linha() for j in _janelas_do_hub(inst)]

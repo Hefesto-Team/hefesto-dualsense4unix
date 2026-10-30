@@ -144,7 +144,7 @@ CENAS = {
 
 def _pintar(monkeypatch: pytest.MonkeyPatch, cena: str
             ) -> tuple[Any, dict[str, dict[str, Any]]]:
-    """O contexto da cena e as colunas que o pacote da aba emite para ela."""
+    """O contexto da cena e as colunas que o pacote da aba emite para a cena."""
     pecas, perfil = CENAS[cena]()
     return _pintar_as_pecas(monkeypatch, pecas, perfil)
 
@@ -166,7 +166,7 @@ _TITULO = re.compile(r'data-dica="([^"]*)"')
 
 
 def _casas(html: str) -> dict[str, dict[str, Any]]:
-    """A fileira lida casa a casa, pela ordem da guia: `{hex: o que ela diz}`."""
+    """A fileira lida casa a casa, pela ordem da guia: `{hex: o que a casa diz}`."""
     from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
     botoes = [linha for linha in html.splitlines() if "<button" in linha]
@@ -243,7 +243,7 @@ class TestACasaDeCadaCor:
             f"{len(erradas)} cores acesas na casa errada; as primeiras: {erradas[:5]}")
 
     def test_o_violeta_a_99_por_cento_e_a_casa_do_violeta(self) -> None:
-        """O `#7E00FC` do P4 da bancada de 29/09."""
+        """O `#7E00FC` do P4 do ensaio de 29/09."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
         assert a04.a_casa_da_cor((126, 0, 252)) == VIOLETA
@@ -255,7 +255,7 @@ class TestACasaDeCadaCor:
             assert a04.a_casa_da_cor(tom) == _hexa(tom)
 
     @pytest.mark.parametrize("cor", [(0x28, 0x50, 0xB4), (0, 0, 0), (1, 0, 0)],
-                             ids=["o global dela", "o preto", "o ambíguo"])
+                             ids=["o global do perfil", "o preto", "o ambíguo"])
     def test_sem_casa(self, cor: tuple[int, int, int]) -> None:
         """Fora da guia, apagada, ou acesa igual por mais de um tom: sem casa."""
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
@@ -264,7 +264,7 @@ class TestACasaDeCadaCor:
 
 
 class TestAFotoDoEnsaio:
-    """A cena das ~01h57, com o esperado escrito a partir dela."""
+    """A cena das ~01h57, com o esperado escrito a partir da cena."""
 
     def test_cada_coluna_tem_tres_x_e_a_propria_cor(
         self, monkeypatch: pytest.MonkeyPatch
@@ -503,7 +503,7 @@ def _carga_da_tela(cena: str) -> dict[str, Any]:
 
 
 def _medir_a_linha(tamanho: tuple[int, int], pintar: str) -> dict[str, Any]:
-    """Abre a 04 da bancada num WebKit offscreen, pinta, mede e fotografa."""
+    """Abre a 04 do ensaio num WebKit offscreen, pinta, mede e fotografa."""
     import json
 
     from gi.repository import GLib, Gtk, WebKit2
@@ -594,7 +594,7 @@ def _vistas() -> dict[str, tuple[int, int]]:
     from hefesto_dualsense4unix.interface.janela import TAMANHO_OCULTA
     from hefesto_dualsense4unix.interface.olhar import VISTA_DO_USUARIO
 
-    return {"janela": TAMANHO_OCULTA, "dela": VISTA_DO_USUARIO}
+    return {"janela": TAMANHO_OCULTA, "do_usuario": VISTA_DO_USUARIO}
 
 
 @pytest.fixture(scope="module")
@@ -641,7 +641,7 @@ def _as_casas_na_tela(medido: dict[str, Any]) -> dict[int, dict[str, dict[str, A
     return saida
 
 
-@pytest.mark.parametrize("vista", ["janela", "dela"])
+@pytest.mark.parametrize("vista", ["janela", "do_usuario"])
 def test_a_linha_tem_a_cor_do_plastico_do_dono(na_tela, vista: str) -> None:
     """Toda casa com dono, nas quatro colunas: a linha na tinta do plástico."""
     medido = na_tela[("a foto", vista)]
@@ -667,7 +667,7 @@ def test_a_linha_tem_a_cor_do_plastico_do_dono(na_tela, vista: str) -> None:
     assert not erradas, "\n".join(erradas)
 
 
-@pytest.mark.parametrize("vista", ["janela", "dela"])
+@pytest.mark.parametrize("vista", ["janela", "do_usuario"])
 def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None:
     """2 px abaixo da casa, 6 px de altura, a largura da casa, e dentro da linha Cor.
 
@@ -678,7 +678,7 @@ def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None
     (A-LINHA-DA-COR-ESCOLHIDA-TEM-A-COR-DO-CONTROLE-01): o vão da `.cel-cor` vai a
     8 px e a linha Cor a 46. A casa e a caixa ficam dentro da faixa da linha Cor
     mais o `--r-ar`, sem chegar ao nome acima nem ao brilho abaixo.
-    A MORDIDA: a linha a 6 px com o vão de volta a 4, e ela cruza a caixa.
+    A MORDIDA: a linha a 6 px com o vão de volta a 4, e a linha cruza a caixa.
     """
     medido = na_tela[("a foto", vista)]
     erradas = []
@@ -716,7 +716,7 @@ def _fileiras_na_tinta(foto: Any, linha: list[float], tinta: str) -> int:
                if _perto(_pixel(foto, meio, yi), _rgb(tinta)))
 
 
-@pytest.mark.parametrize("vista", ["janela", "dela"])
+@pytest.mark.parametrize("vista", ["janela", "do_usuario"])
 def test_a_linha_do_p2_tem_area(na_tela, vista: str) -> None:
     """A cena da fala: a linha roxa do P2 e a branca do P1 com seis fileiras na tinta.
 
@@ -747,7 +747,7 @@ def test_a_linha_do_p2_tem_area(na_tela, vista: str) -> None:
     assert not erradas, "\n".join(erradas)
 
 
-@pytest.mark.parametrize("vista", ["janela", "dela"])
+@pytest.mark.parametrize("vista", ["janela", "do_usuario"])
 def test_a_casa_de_todos_tem_as_quatro_tintas_em_partes_iguais(na_tela, vista: str) -> None:
     """O «Todos»: a linha da casa verde é dos quatro, um quarto cada, na ordem."""
     medido = na_tela[("o Todos", vista)]
@@ -763,7 +763,7 @@ def test_a_casa_de_todos_tem_as_quatro_tintas_em_partes_iguais(na_tela, vista: s
             f"P{n}: os quartos da linha verde são {vistos}, os donos {quer}")
 
 
-@pytest.mark.parametrize("vista", ["janela", "dela"])
+@pytest.mark.parametrize("vista", ["janela", "do_usuario"])
 def test_o_plastico_que_nao_chegou_e_tracejado(na_tela, vista: str) -> None:
     """A gramática do anel incerto: tracejada em `--comment`, nunca cor inventada."""
     medido = na_tela[("o plástico que não chegou", vista)]
@@ -780,7 +780,7 @@ def test_o_plastico_que_nao_chegou_e_tracejado(na_tela, vista: str) -> None:
             f"P{n}: a linha do P2 é cheia, não tracejada: {vistos}")
 
 
-@pytest.mark.parametrize("vista", ["janela", "dela"])
+@pytest.mark.parametrize("vista", ["janela", "do_usuario"])
 def test_a_casa_propria_nao_tem_mais_borda(na_tela, vista: str) -> None:
     """A escolha (a) da D-2909-A-LINHA-DA-COR-DO-DONO: a borda da escolhida saiu."""
     medido = na_tela[("a foto", vista)]
@@ -791,7 +791,7 @@ def test_a_casa_propria_nao_tem_mais_borda(na_tela, vista: str) -> None:
             f"P{n}: a casa própria ainda tem borda {proprias[0]['borda']}")
 
 
-@pytest.mark.parametrize("vista", ["janela", "dela"])
+@pytest.mark.parametrize("vista", ["janela", "do_usuario"])
 def test_so_a_casa_com_gesto_tem_a_mao_de_clique(na_tela, vista: str) -> None:
     """O cursor diz o que o gesto faz: a mão só onde há `data-gesto`."""
     erradas = []

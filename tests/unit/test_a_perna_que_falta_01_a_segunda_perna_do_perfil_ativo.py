@@ -13,7 +13,7 @@ erravam:
  #   onde                                    o que custava a quem usa
 ===  ======================================  =====================================
  1   ``rodape.aplicar``                      ``ValueError`` barulhento sobre um
- 2   ``rodape.salvar``                       perfil que ESTAVA escolhido — ela vê
+ 2   ``rodape.salvar``                       perfil que ESTAVA escolhido — quem usa vê
  3   ``rodape.exportar``                     e reclama
  4   ``ipc_handlers._mascara_no_perfil``     **a máscara não ia para o perfil, e
                                              a tela dizia que foi.** CALADO
@@ -44,7 +44,7 @@ AS QUATRO MORDIDAS (§5 da sprint), e cada uma tem o seu bloco abaixo:
 
 O QUE ESTE ARQUIVO NÃO MEDE, e está dito na entrega: nenhum byte sai no fio.
 ``gamepad.mask.set`` atravessando o socket de verdade, e o vpad nascendo com a
-máscara que o perfil guarda, é degrau de bancada.
+máscara que o perfil guarda, é degrau de ensaio.
 
 Endereços de rádio: faixa SINTÉTICA da casa, nunca o OUI de um aparelho real.
 """
@@ -83,7 +83,7 @@ from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 P1 = "aa:bb:cc:00:00:01"
 P1_CHAVE = "aabbcc000001"
 
-NO_DISCO = "bancada"
+NO_DISCO = "ensaio"
 
 
 @pytest.fixture
@@ -92,15 +92,15 @@ def lar_de_mentira() -> pathlib.Path:
     lar_real = pathlib.Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
     alvo = profiles_dir(ensure=True).resolve()
     assert not alvo.is_relative_to(lar_real), (
-        f"profiles_dir() caiu DENTRO do lar real dela: {alvo}. Esta régua "
+        f"profiles_dir() caiu DENTRO do lar real: {alvo}. Esta régua "
         "escreve perfil, session.json e marcador — sem o desvio do `conftest` "
-        "ela escreveria no ~/.config que o daemon vivo está usando agora.")
+        "a régua escreveria no ~/.config que o daemon vivo está usando agora.")
     yield alvo
 
 
 @pytest.fixture
 def a_maquina_do_usuario(lar_de_mentira: pathlib.Path) -> pathlib.Path:
-    """A COMBINAÇÃO DA MÁQUINA DO USUÁRIO — a quarta mordida, e ela é a fixture."""
+    """A COMBINAÇÃO DA MÁQUINA DO USUÁRIO — a quarta mordida, que é a fixture."""
     save_profile(Profile(name=NO_DISCO, match=MatchManual()), origem="regua")
     sessao.save_last_profile(NO_DISCO)
     sessao.save_active_marker(NO_DISCO)
@@ -175,7 +175,7 @@ def test_o_modo_entra_no_perfil_com_o_daemon_calado(
     """
     antes = _no_disco(a_maquina_do_usuario)
     assert not antes.get("mode"), (
-        "o perfil já nasceu com opinião de modo; a régua mediria o que ela mesma plantou")
+        "o perfil já nasceu com opinião de modo; a régua mediria o que a própria régua plantou")
 
     assert _gravar_o_modo() == NO_DISCO
 
@@ -198,7 +198,7 @@ def test_com_a_cura_arrancada_o_json_fica_byte_identico(
     assert _gravar_o_modo() is None
     assert a_maquina_do_usuario.read_bytes() == bytes_antes, (
         "com a cura arrancada o arquivo MUDOU — então esta régua não estava "
-        "medindo o byte que ela promete medir")
+        "medindo o byte que promete medir")
 
 
 def test_sem_daemon_o_mask_set_recusa_e_nao_diz_ok(
@@ -340,7 +340,7 @@ def test_o_salvar_grava_com_o_daemon_calado(a_maquina_do_usuario: pathlib.Path) 
 def test_com_a_cura_arrancada_os_tres_do_rodape_recusam(
     a_maquina_do_usuario: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA 1, e ela vale para os TRÊS — porque a cura foi a mesma."""
+    """A MORDIDA 1, que vale para os TRÊS — porque a cura foi a mesma."""
     monkeypatch.setattr(
         pac_perfil,
         "nome_do_ativo",

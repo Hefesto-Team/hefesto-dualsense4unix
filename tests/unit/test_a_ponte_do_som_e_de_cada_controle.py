@@ -91,7 +91,7 @@ def test_a_ponte_identifica_pelo_uniq_e_nao_pelo_hidraw() -> None:
 
 
 def test_a_ponte_que_nao_abre_o_hidraw_diz_por_que() -> None:
-    """Ela recusa com razão escrita, em vez de subir muda."""
+    """A ponte recusa com razão escrita, em vez de subir muda."""
     ponte = PonteDeSomPorRadio(
         uniq=P1, abrir_hidraw=lambda: None, fonte_de_pcm=lambda n: b"\x00" * n
     )
@@ -141,7 +141,7 @@ def _um_fd_de_mentira() -> int:
 
 
 def test_descendo_nao_e_de_pe_e_a_thread_viva_nao_e_ignorada() -> None:
-    """As DUAS perguntas do ciclo de vida, e elas têm respostas diferentes."""
+    """As DUAS perguntas do ciclo de vida, com respostas diferentes."""
     fonte = _FonteQueTrava()
     ponte = PonteDeSomPorRadio(
         uniq=P1, abrir_hidraw=_um_fd_de_mentira, fonte_de_pcm=fonte, seco=True
@@ -198,7 +198,7 @@ def test_subir_recusa_enquanto_a_corrida_anterior_vive() -> None:
 
 
 def test_a_thread_fecha_o_PROPRIO_fd_e_nao_o_da_ponte_nova() -> None:  # noqa: N802
-    """Cada corrida tem o seu descritor, e o `finally` fecha só o dela."""
+    """Cada corrida tem o seu descritor, e o `finally` fecha só o próprio."""
     fonte = _FonteQueTrava()
     fd = _um_fd_de_mentira()
     ponte = PonteDeSomPorRadio(
