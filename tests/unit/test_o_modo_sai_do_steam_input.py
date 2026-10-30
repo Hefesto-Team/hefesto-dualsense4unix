@@ -2,12 +2,12 @@
 """O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01 — a fileira do Modo é um grupo de rádio.
 
 A QUEIXA, 22/09/2026:
-*"pq eu nao posso trocar os modos de conexão pela interface?"*  # noqa-acento: citação
-*"eu saio clicando mas não muda de fato."* A foto: dois DualSense no
-rádio, ninguém jogando, «Steam Input» aceso; ela clica «Sony DualSense» e
+os modos de conexão não se trocavam pela interface: o clique não mudava nada.
+A foto: dois DualSense no
+rádio, ninguém jogando, «Steam Input» aceso; quem usa clica «Sony DualSense» e
 «Xbox», e o «Steam Input» continua aceso.
 
-A REGRA, 23/09/2026, e é ela que decide o que esta régua cobra: qualquer modo se escolhe a
+A REGRA, 23/09/2026, e é a regra que decide o que esta régua cobra: qualquer modo se escolhe a
 qualquer momento, sem ordem. A primeira cura desta sprint consertou a foto e deixou a fileira
 DEPENDENTE DA ORDEM — o «Steam Input» clicado vindo do «Xbox» só mexia na lista,
 o «Xbox» só tirava o jogo da lista se o Steam Input estava aceso, o jogo da
@@ -23,7 +23,7 @@ O QUE ESTA RÉGUA MEDE, em cinco seções:
    Depois de cada um o tique acende o chip CLICADO, a lista diz o que a tabela
    diz, o `localconfig.vdf` concorda ou espera, e o clique não recusou.
 3. O QUE FICA: a escada do jogo, a única recusa (`sem_jogo`), a mesa vazia, e
-   o «Sony DualSense» que tira o jogo da foto dela.
+   o «Sony DualSense» que tira o jogo da foto.
 4. O PRAZO ESTOURADO, que diz a falha em vez de piscar verde.
 5. A VIGIA com geração: o tique logo depois do clique pinta o disco novo.
 
@@ -143,7 +143,7 @@ def _servico_de_mentira(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _sem_pendencia():
-    """A pendência é de MÓDULO: cada régua começa e termina sem ela."""
+    """A pendência é de MÓDULO: cada régua começa e termina sem a pendência."""
     aba._ESCOLHA.clear()
     aba._ROTULO.clear()
     yield
@@ -189,7 +189,7 @@ def _a_maquina(monkeypatch, *, jogo_aberto: bool, steam_aberta: bool) -> None:
 
 
 def _ponte_de_pe() -> None:
-    """O jogo na lista dela E o vdf dizendo Steam Input — o chip pode acender."""
+    """O jogo na lista do Steam Input E o vdf dizendo Steam Input — o chip pode acender."""
     slo.add_appid_to_steam_input_allowlist(APPID)
     ponte.garantir_ponte(allowlist=[APPID])
     aba.VIGIA_DO_STEAM_INPUT.esquecer()
@@ -228,7 +228,7 @@ def _clicar(chave: str, ctx: Contexto, daemon: DaemonDeMentira) -> Any:
     O CAMINHO É O DA TELA, e no Desligado os chips do Ligado nem aparecem (a seção
     `so-ligado` some, e a camada recusa o clique no Nativo): quem está no Nativo e
     quer um chip do Ligado passa primeiro pelo interruptor, o gesto `hefesto` na
-    posição «Ligado», como ela faria.
+    posição «Ligado», como quem usa faria.
     """
     gesto = pacotes.gesto_da_pagina(aba.PAGINA, f"modo-{chave}")
     assert gesto is not None, f"o chip «{chave}» não tem gesto registrado"
@@ -255,7 +255,7 @@ CHIPS = tuple(TABELA_DA_SPRINT)
 
 
 def test_a_tabela_e_a_da_sprint() -> None:
-    """Uma tabela, um dono — e os quatro chips dela são os quatro da fileira."""
+    """Uma tabela, um dono — e os quatro chips da tabela são os quatro da fileira."""
     lida = {c: tuple(aba.o_que_o_chip_faz(c)) for c in CHIPS}
     assert lida == TABELA_DA_SPRINT, (
         f"a tabela da fileira divergiu da sprint:\n  lida     {lida}\n"
@@ -309,7 +309,7 @@ def test_o_chip_clicado_e_o_que_acende(vdf, monkeypatch, de, para, jogo_aberto,
     if steam_aberta:
         assert _valor(vdf, APPID) == antes, (
             f"houve escrita no vdf com a Steam VIVA ({antes!r} -> "
-            f"{_valor(vdf, APPID)!r}), e ela regrava o arquivo ao sair")
+            f"{_valor(vdf, APPID)!r}), e a Steam regrava o arquivo ao sair")
     else:
         esperado = ponte.LIGADO if quer else ponte.DESLIGADO
         assert _valor(vdf, APPID) == esperado, (
@@ -488,7 +488,7 @@ def test_a_escada_do_jogo_continua_devolvendo_o_fechado(jogo_fechado) -> None:
 def test_a_unica_recusa_e_o_steam_input_sem_jogo(vdf, monkeypatch) -> None:
     """Sem jogo NENHUM conhecido, só o «Steam Input» recusa — e nada muda.
 
-    A frase é a do dono (`format_game_broken_result(status="sem_jogo")`), e ela
+    A frase é a do dono (`format_game_broken_result(status="sem_jogo")`), e a frase
     vem ANTES do plano: nem a lista, nem o vdf, nem o caminho são tocados. Os
     outros três trocam o caminho do mesmo jeito, porque não há jogo a tirar.
 
@@ -548,7 +548,7 @@ def test_a_pendencia_do_steam_input_nomeia_o_chip_clicado() -> None:
 def test_o_sony_dualsense_tira_o_jogo_do_steam_input(vdf) -> None:
     """Steam Input aceso, clique no «Sony DualSense»: o tique seguinte acende ele.
 
-    É o caso da foto dela. O RAMO É O MESMO do «Steam Input»: a mesma recarga
+    É o caso da foto. O RAMO É O MESMO do «Steam Input»: a mesma recarga
     (`METODO_DA_RECARGA`) e o mesmo veredito relido do vdf. O Steam Input mora no
     Desligado, então o caminho é o da tela: o interruptor em «Ligado» e o chip.
     """
@@ -572,7 +572,7 @@ def test_o_sony_dualsense_tira_o_jogo_do_steam_input(vdf) -> None:
 def test_o_sony_dualsense_alcanca_o_jogo_fechado(vdf, jogo_fechado) -> None:
     """Com o jogo fechado o clique tira o jogo da vez — o mesmo alvo que acende.
 
-    Sem isto ela clicaria no «Sony DualSense» com o jogo fechado, e o «Steam
+    Sem isto quem usa clicaria no «Sony DualSense» com o jogo fechado, e o «Steam
     Input» voltaria na próxima partida.
     """
     _ponte_de_pe()
@@ -580,13 +580,13 @@ def test_o_sony_dualsense_alcanca_o_jogo_fechado(vdf, jogo_fechado) -> None:
     aba.modo_dualsense(ctx, {"texto": "Sony DualSense"}, DaemonDeMentira(ctx.state))
     assert APPID not in ponte.ler_allowlist(), (
         "o «Sony DualSense» com o jogo fechado deixou o jogo na lista — ele "
-        "volta a acender o «Steam Input» quando ela abrir o jogo")
+        "volta a acender o «Steam Input» quando quem usa abrir o jogo")
 
 
 def test_o_xbox_sem_resposta_do_daemon_diz_a_falha(vdf) -> None:
     """`[daemon mudo] timed out` não pisca mais verde.
 
-    A pendência é anotada ANTES da recusa — ela some sozinha se o daemon
+    A pendência é anotada ANTES da recusa — a pendência some sozinha se o daemon
     alcançar tarde. O perfil não é da janela: quem grava o modo é o daemon,
     que o aplicou (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026).
 

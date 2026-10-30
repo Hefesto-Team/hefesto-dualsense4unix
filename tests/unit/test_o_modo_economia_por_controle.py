@@ -72,7 +72,7 @@ AMOSTRAS: dict[str, list[Any]] = {
 
 @pytest.fixture(autouse=True)
 def _mesa_sem_registro() -> Iterator[None]:
-    """A fonte da mesa é estado de módulo: cada teste começa e termina sem ela."""
+    """A fonte da mesa é estado de módulo: cada teste começa e termina sem a fonte."""
     registrar_declaracao_da_mesa(None)
     yield
     registrar_declaracao_da_mesa(None)
@@ -353,7 +353,7 @@ def test_desligar_a_economia_devolve_o_aparelho_ao_de_antes(alvo: int, transport
 
 
 def test_as_luzes_de_numero_do_controle_vao_ao_fraco() -> None:
-    """O degrau das luzes de número sai no `OutputSpec` da peça, e só dela."""
+    """O degrau das luzes de número sai no `OutputSpec` da peça, e só nele."""
     perfil = _perfil()
     perfil = perfil.model_copy(
         update={"leds": perfil.leds.model_copy(update={"player_led_brightness": "forte"})}
@@ -427,7 +427,7 @@ def test_fonte_da_mesa_que_levanta_nao_derruba_a_ativacao() -> None:
 
 
 def test_a_economia_do_controle_atravessa_a_troca_de_perfil() -> None:
-    """Ligada no P2, ela vale no perfil do jogo que abrir depois."""
+    """Ligada no P2, a economia vale no perfil do jogo que abrir depois."""
     _declarar(economia=(UNIQS[1],))
     outro = Profile(name="um_jogo", match=MatchAny(),
                     leds=LedsConfig(lightbar=(255, 0, 0), lightbar_brightness=1.0))

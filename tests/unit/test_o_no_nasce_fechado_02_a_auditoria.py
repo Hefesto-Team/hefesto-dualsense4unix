@@ -1,6 +1,6 @@
 """O-NO-NASCE-FECHADO-01 — os quatro achados da AUDITORIA de 20/09/2026.
 
-A construção da cura existia e estava boa; ela só não sobrevivia ao mundo
+A construção da cura existia e estava boa; só não sobrevivia ao mundo
 real. O auditor reprovou com quatro achados, três deles bloqueantes, e este
 arquivo é a régua de cada um.
 
@@ -90,7 +90,7 @@ class TestSobreviveAReiniciar:
     def test_o_modo_lido_do_disco_expoe_sem_ninguem_chamar_set_native_mode(
         self, ensaio: Any
     ) -> None:
-        """A MORDIDA do bloqueante 1, e ela reproduz o boot LITERALMENTE."""
+        """A MORDIDA do bloqueante 1, e reproduz o boot LITERALMENTE."""
         daemon, atos, _mod = ensaio
         daemon.controller = ControllerDeMentira(
             {"aabbcc000001": "/dev/hidraw3", "aabbcc000002": "/dev/hidraw7"}
@@ -188,7 +188,7 @@ class TestSobreviveAReplug:
     def test_o_abridor_do_handle_nao_fecha_o_no_do_modo_nativo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A lease do broker é por CONEXÃO, e o handle não toca nela: ele pede só o fd.
+        """A lease do broker é por CONEXÃO, e o handle não toca na lease: ele pede só o fd.
 
         O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01: o `with` transitório saiu, e com
         ele o `desexpor` que decrementaria a lease do Modo Nativo.
@@ -293,7 +293,7 @@ class TestOsPacotesNaoFechamSemPorta:
         um uid que o pacote não conhecia. A unit do broker agora não tem uid
         (atende quem está na frente do seat), e as quatro receitas levam a regra
         FECHADA e o broker juntos. Apague a chamada ao `broker_do_pacote.sh` de
-        qualquer uma e ela volta a fechar o nó sem pôr ninguém para abri-lo: o
+        qualquer uma e a peça volta a fechar o nó sem pôr ninguém para abri-lo: o
         DualSense nasce `0600 root` e ninguém o abre.
         """
         texto = receita.read_text(encoding="utf-8")

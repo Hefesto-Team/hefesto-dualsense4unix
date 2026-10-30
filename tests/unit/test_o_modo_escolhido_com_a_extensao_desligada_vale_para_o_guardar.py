@@ -2,7 +2,7 @@
 
 O-MODO-ESCOLHIDO-COM-A-EXTENSAO-DESLIGADA-VALE-PARA-O-GUARDAR-01 (25/10/2026). Depois de um
 arrastar, trocar «Soltar», «Segurar» ou «Repetir» manda à extensão o soltar com o modo novo. Fora
-da porta ela não segura modo nenhum (volta lendo o guardado): a troca vale na barra, sem acusar
+da porta a extensão não segura modo nenhum (relê o guardado): a troca vale na barra, sem acusar
 recusa, pelo dono ``_Viva.sem_a_extensao``. Desde 28/10/2026
 (D-2810-TODA-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA) a troca grava no clique, e a janela
 não tem mais Guardar. Na porta, a recusa de verdade continua voltando o modo e piscando, e nada se

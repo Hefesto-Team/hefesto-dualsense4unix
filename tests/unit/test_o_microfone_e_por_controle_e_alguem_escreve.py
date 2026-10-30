@@ -23,7 +23,7 @@ nada — foi assim que o campo ficou órfão por um mês:
 1. o `maquina.json` guarda `microfone: true` por controle (`uniqs_declarados`);
 2. o `run()` fia a FONTE no `DaemonConfig` (`bt_mic_uniqs`);
 3. o subsystem sobe quando ao menos um pediu (`is_enabled`);
-4. o laço entrega ao gerenciador **só os nós que ela ligou** (`alvos`) — é aqui
+4. o laço entrega ao gerenciador **só os nós que quem usa ligou** (`alvos`) — é aqui
    que o "por controle" acontece de verdade;
 5. o `state_full` relata de quais controles a ponte SUBIU (`bt_mic.uniqs`), que
    é o que o medidor de rádio consome.
@@ -165,15 +165,15 @@ class TestOGate:
     microfone caía no vazio. Agora `is_enabled` é sempre `True` — o supervisor
     tem de estar de pé para atender o pedido.
 
-    **E O GATE VIROU DE LADO EM 18/09/2026**, por ordem de produto: *"todos os
-    controles tem que nascer com tudo mic, giroscopio e afins"*. Até aqui
+    **E O GATE VIROU DE LADO EM 18/09/2026**, por decisão do produto: todo
+    controle nasce com tudo ligado (microfone, giroscópio e afins). Até aqui
     `alvos()` respondia `[]` para quem não tinha declaração, e era ele que
-    guardava a privacidade. MEDIDO na bancada no mesmo dia: dos quatro
+    guardava a privacidade. MEDIDO no aparelho no mesmo dia: dos quatro
     DualSense ligados, DOIS tinham microfone — os outros dois nunca haviam sido
     declarados, e a aba respondia *"o sistema não vê um microfone neste
     controle"*, recusa que a pessoa não tinha como resolver.
 
-    O que guarda a escolha do usuário agora é a RECUSA (`uniqs_recusados`), e ela é
+    O que guarda a escolha do usuário agora é a RECUSA (`uniqs_recusados`), e a recusa é
     mais forte do que a ausência era: `false` no disco é um registro do que o usuário
     disse, e sobrevive ao boot. Antes só havia "não pedi".
     """
@@ -209,7 +209,7 @@ class TestPorControle:
         mediu a mesma coisa: que o interruptor é POR CONTROLE e não uma chave
         de mesa inteira. O que mudou é qual gesto é o singular — era "ligar um",
         passou a ser "desligar um". Quatro DualSense no rádio, UM desligado: o
-        gerenciador recebe TRÊS, e o que ficou de fora é o dela.
+        gerenciador recebe TRÊS, e o que ficou de fora é o desligado.
         """
         subsystem = BtMicSubsystem()
         subsystem._config = _config(bt_mic_recusados=lambda: frozenset({TRES}))
@@ -220,7 +220,7 @@ class TestPorControle:
         assert sorted(no.uniq for no in escolhidos) == sorted([UM, DOIS, QUATRO])
 
     def test_dois_desligados_ficam_no_chao_e_os_outros_dois_sobem(self) -> None:
-        """O caso do adaptador de DOIS controles da bancada."""
+        """O caso do adaptador de DOIS controles do ensaio."""
         subsystem = BtMicSubsystem()
         subsystem._config = _config(bt_mic_recusados=lambda: frozenset({DOIS, TRES}))
 
@@ -340,7 +340,7 @@ class TestAlguemEscreve:
         )
         assert config.bt_mic_uniqs() == frozenset({DOIS})
         assert config.bt_mic_recusados is not None, (
-            "`bt_mic_recusados` continua `None` depois do boot: ela não teria "
+            "`bt_mic_recusados` continua `None` depois do boot: quem usa não teria "
             "como desligar microfone nenhum"
         )
         assert config.bt_mic_recusados() == frozenset()
@@ -392,11 +392,11 @@ class TestOAplicarValeAgora:
         Este método cobrava *"sobe no primeiro, desce no último"*, e o "desce" só
         existia porque `is_enabled` era a declaração. Com o canal subindo por
         PROCURA, o supervisor fica de pé para atender o próximo pedido e quem
-        derruba o microfone de quem ela desmarcou é `alvos()`, na varredura
+        derruba o microfone de quem foi desmarcado é `alvos()`, na varredura
         seguinte — o que DESLIGA o microfone do mesmo jeito, porque
         `PonteMicBluetooth.parar()` sempre escreve o `0x32` de desligar.
 
-        **A garantia não se perdeu, ela mudou de dono**, e o dono novo é medido
+        **A garantia não se perdeu, mudou de dono**, e o dono novo é medido
         em `TestOPedidoDeCanal.test_desmarcar_no_aplicar_vence_o_pedido`.
         """
         ligados: set[str] = set()

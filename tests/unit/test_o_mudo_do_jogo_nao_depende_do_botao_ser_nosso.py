@@ -5,7 +5,7 @@ A causa, medida no `79fdccbbd`: o `lifecycle.py` só chamava o
 quem subia o `mic_do_jogo_loop` (o mudo que o jogo pede no `common[9]` do
 vpad) e o `mic_da_mesa_loop` (as bordas do plástico com endereço). Com o
 interruptor desligado no boot, o mudo do jogo não chegava ao controle do
-jogador, e o aperto dela não derrubava a luz que o jogo pediu: a borda nunca
+jogador, e o aperto de quem joga não derrubava a luz que o jogo pediu: a borda nunca
 era publicada, e o laço da luz (que chama o `a_pessoa_mandou` em toda borda)
 não tinha o que ler.
 
@@ -14,7 +14,7 @@ interruptor segura só a eleição (o `mic_button_loop`, que o consulta a cada
 borda). Quem chama o `a_pessoa_mandou` com o interruptor desligado é o laço
 da luz, pela mesma borda: nenhuma segunda leitura do botão.
 
-A BANCADA: o `Daemon` de verdade com o `FakeController`, o laço de poll
+O ENSAIO: o `Daemon` de verdade com o `FakeController`, o laço de poll
 trocado por um que publica no barramento o que o vpad e o plástico publicam.
 Endereços da faixa forjada.
 """
@@ -116,9 +116,9 @@ class _BordasDoPlastico:
 async def test_com_o_interruptor_desligado_o_aperto_derruba_a_luz_do_jogo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O jogo acendeu a luz do P2; ela aperta depois: vale o último que mandou.
+    """O jogo acendeu a luz do P2; quem joga aperta depois: vale o último que mandou.
 
-    A borda nasce no backend (o contador do plástico), como na bancada, e o
+    A borda nasce no backend (o contador do plástico), como no aparelho, e o
     laço das bordas a publica; o laço da luz a lê e chama o `a_pessoa_mandou`.
 
     MORDIDA: as bordas fora do `start_mic_do_jogo` (de volta só com o

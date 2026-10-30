@@ -2,7 +2,7 @@
 
 **O defeito, e ele é de POSSE, não de áudio.** `_mic_mute_desejado` era
 atributo de instância do `_PinnedPyDualSense`, e o handle é RECRIADO a cada
-reconexão. Um `mic unmute` dela evaporava no próximo handle novo, em silêncio,
+reconexão. Um `mic unmute` de quem usa evaporava no próximo handle novo, em silêncio,
 e o firmware — que retém o mudo — voltava a mudo. O mapa de canais registra
 exatamente isso em `audio.microfone.mudo@dualsense`, `radio_ressalva`:
 *"um `mic unmute` evapora no próximo handle novo, em silêncio, e o firmware
@@ -89,7 +89,7 @@ def _reconectar(ctl: bp.PyDualSenseController, *, radio: bool, key: str = KEY_1)
 
 class TestOMudoSobreviveAoHandleNovo:
     def test_o_desmutar_do_usuario_sobrevive_no_radio(self) -> None:
-        """O caso da queixa: ela desmuta, o rádio cai e volta, e o mic segue vivo."""
+        """O caso da queixa: quem usa desmuta, o rádio cai e volta, e o mic segue vivo."""
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         assert ctl.set_microphone_mute(False, uniq=KEY_1) is True
 
@@ -112,7 +112,7 @@ class TestOMudoSobreviveAoHandleNovo:
         assert report[MUDO_NO_RADIO] == rep.POWER_SAVE_MIC_MUTE
 
     def test_no_cabo_o_mesmo_byte_sobrevive(self) -> None:
-        """`cabo E rádio` é o ponto 4 dela, então o cabo tem régua própria —"""
+        """`cabo E rádio` é o ponto 4 da queixa, então o cabo tem régua própria —"""
         ctl = _ctl_com(_handle_recem_nascido(radio=False))
         assert ctl.set_microphone_mute(False, uniq=KEY_1) is True
 
@@ -133,7 +133,7 @@ class TestOMudoSobreviveAoHandleNovo:
         assert not report[FLAG1_NO_RADIO] & rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
 
     def test_devolver_a_posse_nao_rependura_nada(self) -> None:
-        """`None` é a ORDEM *"devolvo ao kernel"* — e ela também tem de"""
+        """`None` é a ORDEM *"devolvo ao kernel"* — e a ordem também tem de"""
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         ctl.set_microphone_mute(True, uniq=KEY_1)
         ctl.set_microphone_mute(None, uniq=KEY_1)
@@ -167,9 +167,9 @@ class TestAQuemPerguntar:
 
         A janela existe de verdade: entre o handle novo entrar em `_handles` e
         o `_reapply_desired` correr, o atributo é `None`. Quem responde ali é
-        `microphone_mute_for`, e ela alimenta o `state_full` e o rótulo da
+        `microphone_mute_for`, e a função alimenta o `state_full` e o rótulo da
         tela — dizer "o kernel é o dono" sobre um controle nosso é a tela
-        mentindo para ela.
+        mentindo para quem usa.
         """
         ctl = _ctl_com(_handle_recem_nascido(radio=True))
         ctl.set_microphone_mute(False, uniq=KEY_1)

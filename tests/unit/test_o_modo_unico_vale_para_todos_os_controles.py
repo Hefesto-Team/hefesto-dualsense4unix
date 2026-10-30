@@ -1,7 +1,7 @@
 """O-MODO-UNICO-VALE-PARA-TODOS-OS-CONTROLES-01 — DualSense, Xbox ou Nintendo Pro, para todos.
 
 D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES (27/10/2026, a validar pelo usuário): o modo é o
-par (caminho, máscara) do ``mode`` do perfil, e vale para todo controle. A bancada é a do
+par (caminho, máscara) do ``mode`` do perfil, e vale para todo controle. O ensaio é o do
 `test_a_mascara_do_cartao_vale_com_o_vpad_de_pe.py`: os métodos REAIS do `Daemon`, um
 `CoopManager` REAL com o P2 e o P3, e o jogo aberto.
 

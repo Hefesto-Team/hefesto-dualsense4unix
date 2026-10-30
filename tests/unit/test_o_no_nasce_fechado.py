@@ -1,6 +1,6 @@
 """O-NO-NASCE-FECHADO-01 — o nó nasce `0600 root` e o Hefesto abre sob pedido.
 
-Decisão, 20/09/2026, e ela tem três partes:
+Decisão, 20/09/2026, e tem três partes:
 
     «Nossa udev não deveria garantir isso? Por mim caminho um e lembrando que
      o Hefesto tem que ter prioridade em tudo e isso deveria estar no install
@@ -284,7 +284,7 @@ def pedir(st: BrokerState, conn: int, payload: Any, uid: int = UID) -> dict[str,
 
 class TestOBrokerAbreSobPedido:
     def test_expose_poe_a_acl_num_no_fechado(self) -> None:
-        """O `cmd expose` é a porta — e ela abre um nó que nasceu fechado."""
+        """O `cmd expose` é a porta — e a porta abre um nó que nasceu fechado."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         resposta = pedir(st, 1, {"cmd": "expose", "node": "/dev/hidraw3"})
         assert resposta["ok"] is True
@@ -348,7 +348,7 @@ class TestOBrokerAbreSobPedido:
 
 class TestORepousoSegueARegra:
     def test_restore_de_no_nao_rastreado_fecha_com_a_cura(self) -> None:
-        """A MORDIDA mais fina da leva, e ela pega a cura pela metade."""
+        """A MORDIDA mais fina da leva, e pega a cura pela metade."""
         st, ops = estado(no_nasce_fechado=True, ops=OpsDeMentira(fechados={"/dev/hidraw3"}))
         resposta = pedir(st, 1, {"cmd": "restore", "node": "/dev/hidraw3"})
         assert resposta["state"] == "fechado"
@@ -535,7 +535,7 @@ class TestNoInstallPorDefault:
         assert re.search(r"^ExecStopPost=.*--restore-all-and-exit$", texto, re.MULTILINE)
 
     def test_o_install_nasce_com_a_cura_ligada(self) -> None:
-        """A MORDIDA da ordem de produto: «no install por default»."""
+        """A MORDIDA da decisão do produto: a cura vem ligada no install por padrão."""
         texto = INSTALL.read_text(encoding="utf-8")
         assert re.search(r"^ABRIR_O_NO=0$", texto, re.MULTILINE)
         assert re.search(r"^\s*--no-fechar-o-no\)\s+ABRIR_O_NO=1 ;;$", texto, re.MULTILINE)

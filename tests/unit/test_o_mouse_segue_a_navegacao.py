@@ -202,12 +202,12 @@ def _perfil(
 
 def _pad_de_pe(d: _DaemonDaNavegacao) -> None:
     desfecho = gp.start_gamepad_emulation_desfecho(d, None, origin="profile", caminho="dualsense")
-    assert desfecho == gp.EMU_APLICADO, f"premissa da bancada: {desfecho}"
+    assert desfecho == gp.EMU_APLICADO, f"premissa do ensaio: {desfecho}"
 
 
 def _mouse_de_pe(d: _DaemonDaNavegacao) -> None:
     """A Navegação de pé: o pad caiu e o mouse está ligado (a premissa)."""
-    assert d.set_mouse_emulation(True, origin="profile") is True, "premissa da bancada"
+    assert d.set_mouse_emulation(True, origin="profile") is True, "premissa do ensaio"
     d.recebeu.clear()
 
 
@@ -306,7 +306,7 @@ def _flag_do_mouse(corpo: dict[str, Any] | None) -> None:
 
 
 class _Handlers:
-    """O mixin de IPC de verdade, com o daemon e o gerente da bancada."""
+    """O mixin de IPC de verdade, com o daemon e o gerente do ensaio."""
 
     def __new__(cls, daemon: _DaemonDaNavegacao) -> Any:
         from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -422,7 +422,7 @@ def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(ensaio: _Ensaio) -> Non
 
 
 def test_a_segunda_entrada_nao_grava_de_novo(ensaio: _Ensaio) -> None:
-    """Entrar na Navegação já estando nela: nada mudou, nada se grava."""
+    """Entrar na Navegação já estando na Navegação: nada mudou, nada se grava."""
     d = _daemon()
     _flag_do_mouse(FLAG_DA_SESSAO)
     _perfil(PERFIL, mode={"kind": "gamepad", "caminho": "dualsense"},
@@ -525,7 +525,7 @@ def _o_status(d: _DaemonDaNavegacao, **params: Any) -> dict[str, Any]:
 
 def _navegacao_de_pe_com_o_teclado(d: _DaemonDaNavegacao) -> None:
     _mouse_de_pe(d)
-    assert d.set_keyboard_emulation(True, persist=False) is True, "premissa da bancada"
+    assert d.set_keyboard_emulation(True, persist=False) is True, "premissa do ensaio"
     d.recebeu.clear()
 
 

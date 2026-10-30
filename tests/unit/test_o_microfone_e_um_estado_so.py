@@ -7,7 +7,7 @@ oferecia três arranjos que GUARDAVAM a contradição; os três foram recusados.
 Ao meio-dia vieram as duas regras que faltavam: o botão físico do microfone, se ligado,
 liga também o microfone da tela, independente de modo nativo ou virtual.
 
-A CONTRADIÇÃO ERA MEDÍVEL, E FOI MEDIDA NA BANCADA
+A CONTRADIÇÃO ERA MEDÍVEL, E FOI MEDIDA NO APARELHO
 ---------------------------------------------------
 Com um DualSense no cabo, em 04/09/2026, pelo daemon vivo:
 
@@ -140,7 +140,7 @@ class DaemonDeMentira:
         os 17 testes passavam, e contra o daemon real aquilo levantava
         `TypeError` dentro de um `suppress` — a metade do firmware nunca
         escrevia um byte e o produto respondia uma frase educada. Quem revelou
-        foi o APARELHO, na bancada, com a cura intacta.
+        foi o APARELHO, no ensaio, com a cura intacta.
 
         É a mesma família da máscara de 04/09 (`p.chamar("gamepad.mask.set",
         {…})`, o dicionário virando o `timeout` posicional): **o dublê era
@@ -217,7 +217,7 @@ def test_o_ato_e_identico_nos_dois_modos() -> None:
             (d._eleitor_de_microfone.chamadas, d.controller.escritas, ato.feito)
         )
     assert passos[0] == passos[1], (
-        "o ato fez coisas diferentes em Virtual e em Nativo — a regra dela é "
+        "o ato fez coisas diferentes em Virtual e em Nativo — a regra é "
         "que ele não muda de caminho com o modo"
     )
 
@@ -230,7 +230,7 @@ def test_o_botao_do_plastico_nao_toma_a_posse_do_byte() -> None:
     assert ato.firmware.feita, "a metade do firmware devia contar como feita"
     assert d.controller.escritas == [], (
         "o ato escreveu o byte que o kernel já tinha posto no valor certo — "
-        "isso toma a posse e mata o botão do plástico dela"
+        "isso toma a posse e mata o botão do plástico"
     )
 
 
@@ -307,7 +307,7 @@ def test_o_duble_confere_a_assinatura_que_o_produto_chama() -> None:
 
 
 def test_o_run_blocking_do_duble_e_tao_estrito_quanto_o_do_daemon() -> None:
-    """A régua que faltava, e ela nasce de um defeito que o APARELHO achou."""
+    """A régua que faltava, e nasce de um defeito que o APARELHO achou."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
     real = inspect.signature(Daemon._run_blocking)
@@ -332,9 +332,9 @@ def test_o_run_blocking_do_duble_e_tao_estrito_quanto_o_do_daemon() -> None:
 
 
 def test_o_recado_do_represamento_usa_um_gesto_que_a_tela_conhece() -> None:
-    """`recado_do_microfone.GESTOS` é FECHADA, e `anotar` LEVANTA fora dela.
+    """`recado_do_microfone.GESTOS` é FECHADA, e `anotar` LEVANTA fora da lista.
 
-    Medido na bancada em 04/09: a primeira redação do represamento mandava
+    Medido no aparelho em 04/09: a primeira redação do represamento mandava
     `gesto="firmware-represado"`, o `ValueError` subiu dentro da task de
     confirmação e o recado NUNCA chegou ao `state_full` — o log do daemon
     dizia `mic_ato_represado` e a tela não recebia uma palavra. O verde do
@@ -354,7 +354,7 @@ def test_o_recado_do_represamento_usa_um_gesto_que_a_tela_conhece() -> None:
     for gesto in usados:
         assert gesto in recado_do_microfone.GESTOS, (
             f"o gesto {gesto!r} não está em `GESTOS` — `anotar` levanta, a "
-            "task morre calada e a frase nunca chega ao cartão dela"
+            "task morre calada e a frase nunca chega ao cartão da tela"
         )
 
 

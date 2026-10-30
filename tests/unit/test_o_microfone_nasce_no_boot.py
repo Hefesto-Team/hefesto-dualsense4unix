@@ -48,7 +48,7 @@ class _ControleNaMesa(FakeController):
 
 
 class _EleitorDublado:
-    """O eleitor de bancada: só vira dono na eleição CONFERIDA, como o real."""
+    """O eleitor de ensaio: só vira dono na eleição CONFERIDA, como o real."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []
@@ -165,7 +165,7 @@ async def test_o_controle_plugado_na_partida_nasce_no_ar(mesa: _Mesa) -> None:
 async def test_a_partida_nao_toma_o_microfone_de_quem_tem_headset(
     mesa: _Mesa,
 ) -> None:
-    """A metade que tem de entrar JUNTO: sem ela, curar a partida piora a máquina."""
+    """A metade que tem de entrar JUNTO: sem a metade, curar a partida piora a máquina."""
     mesa.outro_microfone = HEADSET
 
     daemon = await _subir_e_esperar_a_partida(mesa, _config())
@@ -182,13 +182,13 @@ async def test_a_partida_nao_toma_o_microfone_de_quem_tem_headset(
 
 @pytest.mark.asyncio
 async def test_a_recusa_do_usuario_vale_na_partida(mesa: _Mesa) -> None:
-    """`microfone: false` no `maquina.json`: a partida não liga o que ela desligou."""
+    """`microfone: false` no `maquina.json`: a partida não liga o que quem usa desligou."""
     daemon = await _subir_e_esperar_a_partida(
         mesa, _config(bt_mic_recusados=lambda: frozenset({P1}))
     )
 
     assert not hotkey._no_ar_da_sessao(daemon).esta(P1)
-    assert mesa.registro.no_ar() == {P1: False}, "a palavra dita a quem ela calou é «calado»"
+    assert mesa.registro.no_ar() == {P1: False}, "a palavra dita a quem foi calado é «calado»"
     assert mesa.registro.abertos() == frozenset(), "o canal foi pedido mesmo assim"
     assert mesa.eleitor.chamadas == []
 
@@ -214,11 +214,11 @@ async def test_a_partida_nao_passa_por_cima_do_controle_que_o_usuario_escolheu(
 
     assert mesa.eleitor.chamadas == [P2], (
         "a partida do daemon elegeu outro controle por cima da escolha gravada "
-        f"dela: {mesa.eleitor.chamadas}"
+        f"de quem usa: {mesa.eleitor.chamadas}"
     )
     no_ar = hotkey._no_ar_da_sessao(daemon)
     assert no_ar.esta(P1) and no_ar.esta(P2), (
-        "respeitar a escolha dela custou o AR de um dos dois"
+        "respeitar a escolha de quem usa custou o AR de um dos dois"
     )
 
 

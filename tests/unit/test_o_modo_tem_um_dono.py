@@ -179,14 +179,14 @@ def _ensaio(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 def _mesa_no_modo_xbox(mascara: str | None = None) -> _Daemon:
     """O perfil pôs o modo Xbox de pé: o pad do P1 no caminho Xbox, o dono em Xbox.
 
-    A máscara do P1 é a DualSense da sessão (ou a `mascara` dada): é com ela que
+    A máscara do P1 é a DualSense da sessão (ou a `mascara` dada): é com a máscara que
     um start sem opinião volta ao DualSense, e é o caso que morde.
     """
     d = _Daemon()
     if mascara is not None:
         d.config.gamepad_flavor = mascara
     desfecho = gp.start_gamepad_emulation_desfecho(d, None, origin="profile", caminho="xbox")
-    assert desfecho == gp.EMU_APLICADO, "premissa da bancada"
+    assert desfecho == gp.EMU_APLICADO, "premissa do ensaio"
     assert vp.caminho_do_vpad(d._gamepad_device) == "xbox"
     assert gp.caminho_da_sessao(d) == "xbox"
     return d
@@ -329,7 +329,7 @@ def test_a_escolha_do_usuario_com_origem_sobrevive_aos_boots(_arquivo_do_caminho
         lido = lifecycle._a_escolha_do_usuario_sem_o_vazamento(
             *session.load_gamepad_caminho_com_origem()
         )
-        assert lido == "xbox", "o boot desfez o Xbox que ela escolheu"
+        assert lido == "xbox", "o boot desfez o Xbox que quem usa escolheu"
     assert session.load_gamepad_caminho_com_origem() == ("xbox", "gesto_fora_do_jogo")
 
 
@@ -366,7 +366,7 @@ def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     return casa
 
 
-DE_FORA = "Desktop Dela"
+DE_FORA = "Desktop do Usuário"
 
 
 @pytest.fixture
@@ -420,7 +420,7 @@ async def _o_boot(
             if store.active_profile == nome and store.counter("poll.tick"):
                 break
             await asyncio.sleep(0.01)
-        assert store.active_profile == nome, f"o boot não restaurou a escolha dela ({nome!r})"
+        assert store.active_profile == nome, f"o boot não restaurou a escolha feita ({nome!r})"
         if com_foco:
             from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
@@ -531,7 +531,7 @@ def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_do_usuario(
     loader.save_profile(Profile(name="Outro", match=MatchAny()), origem="teste")
     session.save_last_profile("Jogo de janela")
     session.save_active_marker("Outro")
-    assert session.resolve_boot_profile() == "Jogo de janela", "premissa: a escolha dela"
+    assert session.resolve_boot_profile() == "Jogo de janela", "premissa: a escolha de quem usa"
     with structlog.testing.capture_logs() as diario:
         daemon = asyncio.run(_o_boot(com_foco=False, nome="Jogo de janela"))
 
@@ -608,7 +608,7 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
 
     Sem opinião de caminho vale o de fábrica, e nunca o do perfil anterior
     (CAMINHO-CONTAGIO-01, a ordem de 19/09 em `gamepad._caminho_a_herdar`:
-    *«tudo ligado mascara dualsense por default»*).  <!-- noqa-acento: citação literal -->
+    tudo ligado, com a máscara DualSense por padrão).
     As réguas daquela sprint chamavam o start direto; a ativação de verdade
     tinha um atalho: com a máscara igual, o `apply_profile_mode` não pedia
     nada, e o pad seguia no
@@ -783,7 +783,7 @@ def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
 def test_o_numero_que_o_usuario_troca_na_tela_leva_o_posto(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
-    """Ela dá o «1» ao vermelho na aba Controles: o posto vai com a lâmpada."""
+    """Quem usa dá o «1» ao vermelho na aba Controles: o posto vai com a lâmpada."""
     ensaio = _a_mesa_do_boot(monkeypatch, (BRANCO, VERMELHO, ROXO, AZUL), jogo=jogo)
     for _ in range(3):
         ensaio.tique()
@@ -902,7 +902,7 @@ def test_quem_esta_fora_na_troca_nao_toma_o_numero_de_quem_esta_na_mesa() -> Non
 def test_o_numero_novo_repinta_a_lampada_sem_hotplug(
     monkeypatch: pytest.MonkeyPatch, jogo: bool
 ) -> None:
-    """Ela troca o 2 e o 3 na tela: as lâmpadas se repintam sem ninguém mexer em /dev/input."""
+    """Trocam-se o 2 e o 3 na tela: as lâmpadas se repintam sem ninguém mexer em /dev/input."""
     ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=jogo)
     for _ in range(3):
         ensaio.tique()

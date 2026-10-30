@@ -100,7 +100,7 @@ def _primeira_porta_e_ativa(texto: str) -> tuple[str, str]:
 
 
 def _porta_desconhecida_gravada() -> tuple[str, str]:
-    """A dupla lida da gravação de 20/09/2026, ou dois vazios se ela sumiu."""
+    """A dupla lida da gravação de 20/09/2026, ou dois vazios se a gravação sumiu."""
     if not _SOURCES_GRAVADA.is_file():
         return ("", "")
     return _primeira_porta_e_ativa(
@@ -298,7 +298,7 @@ _roteiro() {   # R1, R2 e R6: a fonte padrão sai de uma lista, uma linha por le
 }
 
 # O servidor responde em JSON (`--format=json`): o dublê escreve o estado no
-# texto longo que a bancada gravou e o converte, para o formato não divergir.
+# texto longo que o aparelho gravou e o converte, para o formato não divergir.
 _json() {
     PYTHONPATH="${HEFESTO_RAIZ}" python3 -c 'import sys
 from tests.unit import pactl_json_de_mentira as pj
@@ -672,7 +672,7 @@ def test_r4_no_radio_o_passo_elege_o_microfone_virtual(tmp_path: Path) -> None:
 
 
 def test_r5_o_duble_recusa_no_ausente(tmp_path: Path) -> None:
-    """O contraste da R5: o detector de recusa funciona, então o zero dela vale."""
+    """O contraste da R5: o detector de recusa funciona, então o zero da R5 vale."""
     ensaio = montar_ensaio(tmp_path, aparelhos=("cabo",))
     res = _rodar(ensaio, f'pactl set-default-source "{MIC}" || true\n')
     assert f"RECUSADO: {MIC}" in ensaio.argv(), (res.stdout, res.stderr)
@@ -727,14 +727,14 @@ def test_r7_a_pilha_sai_do_passo_como_entrou(tmp_path: Path, cenario: str) -> No
 def test_a_fixture_da_porta_desconhecida_e_gravada() -> None:
     """A porta do cenário «desconhecida» tem de vir do disco e valer o cenário."""
     assert _SOURCES_GRAVADA.is_file(), (
-        f"a gravação de 20/09/2026 sumiu de {_SOURCES_GRAVADA} — sem ela o "
+        f"a gravação de 20/09/2026 sumiu de {_SOURCES_GRAVADA} — sem a gravação o "
         "dublê imprime porta vazia e o cenário troca de significado"
     )
     assert PORTA_DESCONHECIDA, "a gravação não tem linha de porta"
     assert ATIVA_DESCONHECIDA, "a gravação não tem `Active Port:`"
     assert "availability unknown" in PORTA_DESCONHECIDA, (
         "o cenário se chama «desconhecida»: a porta gravada precisa dizer "
-        f"`availability unknown`. Ela diz: {PORTA_DESCONHECIDA!r}"
+        f"`availability unknown`. A porta diz: {PORTA_DESCONHECIDA!r}"
     )
     assert ATIVA_DESCONHECIDA in PORTA_DESCONHECIDA, (
         "a porta ATIVA tem de ser a porta listada — se divergirem, o dublê "

@@ -1,6 +1,6 @@
 """DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, item 3 — o Nativo não toca no que é do jogo.
 
-**O que se mediu** (a bancada de 03/10/2026, 20h30 a 20h31, PRAGMATA com os quatro
+**O que se mediu** (o ensaio de 03/10/2026, 20h30 a 20h31, PRAGMATA com os quatro
 pelo rádio, ao trocar para o Nativo): as pontes ``0x32`` do vermelho e do branco
 subiram VAZIAS (``escritas_aceitas=0`` por 32 a 47 s, ocupando a vaga do rádio sem
 tocar) e o Hefesto reescreveu a barra contra o jogo (``sequestro_segue

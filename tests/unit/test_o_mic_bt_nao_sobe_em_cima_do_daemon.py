@@ -13,7 +13,7 @@ exatamente o quadro que o estudo `2026-08-16-O-PS-PRESO-*.md` nomeou como causa
 provável de um DualSense travado: **dois donos da sequência do 0x32** — e desta
 vez sem kernel nenhum no meio, feito pelo próprio produto.
 
-A CURA é a arbitragem NA PORTA, e ela não inventa dado nenhum: usa o que o
+A CURA é a arbitragem NA PORTA, e não inventa dado nenhum: usa o que o
 `daemon.state_full` já publica desde 23/08 (`bt_mic.uniqs`, os `uniq` cuja
 ponte SUBIU — a entrega E2 desta mesma sprint). `mic bt` lê essa lista e não
 sobe ponte em cima de quem já tem uma.
@@ -34,7 +34,7 @@ Reprovam:
 * `test_sobe_so_no_controle_que_o_daemon_nao_segura`
 
 Endereços sintéticos da faixa `e8:47:3a` com a máscara da casa (octetos 4 e 5
-zerados) — fora da faixa `aabbcc`, que é a que já vazou para a bancada.
+zerados) — fora da faixa `aabbcc`, que é a que já vazou para a máquina de teste.
 """
 from __future__ import annotations
 

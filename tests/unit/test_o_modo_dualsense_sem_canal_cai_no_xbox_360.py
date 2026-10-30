@@ -121,7 +121,7 @@ def test_o_p1_que_caiu_fica_de_pe_e_volta_ao_uhid_quando_o_canal_volta(
 ) -> None:
     """O P1 pelo daemon: sem `uhid`, Xbox 360 sem laço; com ele de volta, o Edge.
 
-    A volta é a promoção que já existia (a re-seleção da máscara, VPAD-02): ela
+    A volta é a promoção que já existia (a re-seleção da máscara, VPAD-02): a promoção
     olha o `flavor` e o `backend`, que o pad vestido guarda.
     """
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)

@@ -20,7 +20,7 @@ AS SETE ENTREGAS, e cada bloco abaixo morde uma:
 | E7 | `profiles/manager.py`                  | o depósito na ativação |
 
 **E TRÊS DESTAS RÉGUAS NASCERAM DE UMA AUDITORIA ADVERSARIAL** feita ANTES de
-a primeira linha da E5 entrar (§9 da sprint). Elas estão marcadas com o número
+a primeira linha da E5 entrar (§9 da sprint). As réguas estão marcadas com o número
 do achado, e a do 9.3 é a mais importante de ler: a régua que a sprint trazia
 escrita **daria verde sobre o defeito 9.1**, porque montava os botões à mão no
 vocabulário da TELA em vez do vocabulário do LEITOR, que é o que o produto
@@ -58,7 +58,7 @@ DERIVA_MEDIDA_GRAUS_S = 0.85
 def test_a_deriva_do_controle_do_usuario_nao_move_a_mira() -> None:
     """O giroscópio do DualSense NÃO marca zero parado: ele deriva.
 
-    Sem corte, a câmera dela passearia sozinha com o controle na mesa — que é
+    Sem corte, a câmera de quem joga passearia sozinha com o controle na mesa — que é
     a queixa mais comum de mira por giroscópio em qualquer produto. Este teste
     usa a deriva MEDIDA no aparelho do usuário, não um número inventado.
     """
@@ -331,7 +331,7 @@ def test_uma_mira_quebrada_nao_leva_o_controle_junto(
                      arranjo=_arranjo(destino=rot.DESTINO_MOUSE),
                      hub=_Hub(levanta=True), estado=estado)
     assert dev.analog and dev.analog[0]["lx"] == 200, (
-        "o controle dela não chegou ao jogo porque a mira caiu")
+        "o controle de quem joga não chegou ao jogo porque a mira caiu")
     assert dev.buttons, "o `forward_buttons` nem aconteceu"
 
 
@@ -396,7 +396,7 @@ def test_o_gatilho_le_o_botao_original(monkeypatch: pytest.MonkeyPatch) -> None:
         _ESTADO, frozenset({remap.GATILHOS["l2"]}))
     assert dev.analog[0]["rx"] != 128, (
         "com o remapeamento ativo a mira deixou de ligar pelo botão que a mão "
-        "dela apertou")
+        "de quem joga apertou")
 
 
 def test_o_gatilho_solto_nao_deixa_o_angulo_acumular(
@@ -408,7 +408,7 @@ def test_o_gatilho_solto_nao_deixa_o_angulo_acumular(
                      hub=hub, botoes=frozenset(), mouse=_Mouse())
     assert hub.drenagens == 1, (
         "o tique com o gatilho solto NÃO drenou o acumulador — o ângulo vai "
-        "crescendo e vira um salto quando ela apertar (achado 9.2)")
+        "crescendo e vira um salto quando quem joga apertar (achado 9.2)")
     assert dev.analog[0]["rx"] == 128
 
 
@@ -634,7 +634,7 @@ def test_a_porta_do_angulo_drena_e_a_da_velocidade_nao() -> None:
     hub._motion[_UNIQ].definir_angulo((0.0, 5.0, 0.0))
     assert hub.velocidade_do_movimento(_UNIQ) == (0.0, 42.0, 0.0)
     assert hub.velocidade_do_movimento(_UNIQ) == (0.0, 42.0, 0.0), (
-        "a porta da velocidade DRENOU — ela não pode roubar de ninguém")
+        "a porta da velocidade DRENOU — a porta não pode roubar de ninguém")
     assert hub.angulo_do_movimento(_UNIQ) == (0.0, 5.0, 0.0)
     assert hub.angulo_do_movimento(_UNIQ) == (0.0, 0.0, 0.0)
 
@@ -749,7 +749,7 @@ def test_o_interruptor_de_sensor_e_por_controle_tambem_no_coop(
         giro_ligado={_P3: False})
     assert vpads[_P2].analog[0]["rx"] != 128, "o P2 tinha o giro LIGADO"
     assert vpads[_P3].analog[0]["rx"] == 128, (
-        "o P3 tinha o giro DESLIGADO por ela e mirou assim mesmo")
+        "o P3 tinha o giro DESLIGADO por quem joga e mirou assim mesmo")
 
 
 def test_o_gatilho_e_por_controle_no_coop(monkeypatch: pytest.MonkeyPatch) -> None:

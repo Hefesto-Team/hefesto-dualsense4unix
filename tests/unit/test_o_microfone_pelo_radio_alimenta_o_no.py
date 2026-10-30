@@ -204,7 +204,7 @@ def test_o_radio_publica_o_no_com_nome_de_controle(pactl, par) -> None:  # type:
         assert ponte.nome_source == canal.nome_do_canal(P1) == NO_DO_P1, (
             f"o rádio publicou {ponte.nome_source!r}. O nome com IDENTIDADE é o "
             "que faz o microfone daquele controle ser o mesmo nos dois "
-            "transportes — que é o 'Mic virtual' que ela pediu."
+            "transportes — que é o 'Mic virtual' que quem usa pediu."
         )
         assert not ponte.nome_source.startswith(fc.PREFIXO_SOURCE_PONTE_BT), (
             "o nome do TRANSPORTE voltou ao nó do rádio"
@@ -273,7 +273,7 @@ def test_a_ponte_nao_derruba_o_canal_de_quem_o_usuario_nao_abriu(pactl, par) -> 
     assert ponte.nome_source == NO_DO_P1
     ponte.parar()
     assert canal.de_pe() == {P1: NO_DO_P1}, (
-        "a ponte derrubou um canal que não era dela — o microfone de quem "
+        "a ponte derrubou um canal que não era da ponte — o microfone de quem "
         "chegou antes sumiu no `parar()` de outro controle"
     )
 
@@ -387,8 +387,8 @@ def test_sem_ouvinte_o_ato_do_usuario_liga_o_microfone(pactl, par) -> None:  # t
         assert _esperar(
             lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON]
         ), (
-            "ela pediu o microfone e a ponte continuou com ele desligado — o "
-            f"gesto dela não alcança o 0x32: {par.pedidos_de_mic()}"
+            "quem usa pediu o microfone e a ponte continuou com ele desligado — o "
+            f"gesto de quem usa não alcança o 0x32: {par.pedidos_de_mic()}"
         )
     finally:
         ponte.parar()
@@ -405,7 +405,7 @@ def test_o_mudo_do_usuario_vence_o_gravador(pactl, par) -> None:  # type: ignore
         assert _esperar(
             lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF]
         ), (
-            "ela mandou calar e o microfone continuou no ar porque um "
+            "quem usa mandou calar e o microfone continuou no ar porque um "
             f"aplicativo estava gravando: {par.pedidos_de_mic()}"
         )
     finally:
@@ -424,7 +424,7 @@ def test_sem_a_palavra_do_usuario_o_ouvinte_continua_dono(pactl, par) -> None:  
         assert _esperar(
             lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_OFF]
         ), (
-            "a palavra dela foi esquecida e o microfone ficou no ar assim "
+            "a palavra de quem usa foi esquecida e o microfone ficou no ar assim "
             f"mesmo — o latch não tem porta de saída: {par.pedidos_de_mic()}"
         )
     finally:
@@ -440,16 +440,16 @@ def test_o_parar_esquece_a_palavra_do_usuario(pactl, par) -> None:  # type: igno
     assert _esperar(lambda: par.pedidos_de_mic()[-1:] == [bt.AUDIO_CONTROL_MIC_ON])
     ponte.parar()
     assert ponte._pedido_do_usuario is None, (
-        "o `parar()` deixou a palavra dela de pé; a ponte seguinte nasceria "
+        "o `parar()` deixou a palavra de quem usa de pé; a ponte seguinte nasceria "
         "com o microfone no ar sem ninguém ter pedido"
     )
 
 
 def test_quatro_controles_no_radio_tem_quatro_canais(pactl) -> None:  # type: ignore[no-untyped-def]
-    """Quatro DualSense, quatro canais com nome próprio — o foco dela.
+    """Quatro DualSense, quatro canais com nome próprio — o foco da sprint.
 
-    *"4 controles os 4 tem que ter canais de entrada unico pra cada qual."*  (noqa-acento)
-    Uma tela que conta um está descrevendo a bancada de ontem.
+    Quatro controles, quatro canais de entrada, um próprio para cada um.
+    Uma tela que conta um está descrevendo a máquina de ontem.
     """
     for uniq in OS_QUATRO:
         assert canal.abrir(uniq, f"Microfone de {uniq}") is not None
@@ -509,7 +509,7 @@ def test_a_eleicao_nao_muda_quem_e_ouvido_no_canal_de_cada_um(pactl, monkeypatch
         f"a eleição não elegeu o canal do P2: {resultado}"
     )
     assert any("set-default-source" in a for argv in escritas for a in argv), (
-        "a eleição não escreveu o padrão do sistema — ela deixou de fazer a "
+        "a eleição não escreveu o padrão do sistema — a eleição deixou de fazer a "
         "única coisa que lhe cabe"
     )
     assert canal.de_pe() == antes, (
@@ -712,7 +712,7 @@ def test_a_regra_0_e_recusada_no_supervisor_do_cabo(pactl, monkeypatch) -> None:
     assert pedidos, "o supervisor do cabo não pediu canal nenhum"
     assert pedidos[0][2] == alsa, (
         "o supervisor mandou o canal se alimentar de SI MESMO: a regra 0 "
-        f"venceu onde ela tinha de ser recusada — fonte={pedidos[0][2]!r}"
+        f"venceu onde a regra tinha de ser recusada — fonte={pedidos[0][2]!r}"
     )
 
 
@@ -815,7 +815,7 @@ def test_a_regra_0_alcanca_a_escolha_gravada_do_nascimento(pactl) -> None:  # ty
 
     assert hotkey._a_escolha_gravada_e_de_outro_controle(P1, [P1, P2]) == o_do_p2, (
         "o nascimento do P1 não reconheceu o canal do P2 como a escolha gravada "
-        "de outro controle — a partida passaria por cima dela"
+        "de outro controle — a partida passaria por cima da escolha"
     )
     assert hotkey._a_escolha_gravada_e_de_outro_controle(P2, [P1, P2]) is None
 
@@ -864,10 +864,10 @@ def test_a_prioridade_chega_ao_no_e_nao_so_ao_argv(pactl) -> None:  # type: igno
     ``test_o_canal_do_radio_nao_perde_para_um_monitor.py::
     test_a_prioridade_viaja_de_verdade_no_load_module`` afirma
     ``"priority.session=1500" in props[0]`` — e a string ESTÁ no argv, dentro do
-    pedaço que o servidor joga fora. Ela mede o TEXTO do comando; o nó nascia
+    pedaço que o servidor joga fora. A régua mede o TEXTO do comando; o nó nascia
     com o 2000 padrão do `pipewire-pulse`.
 
-    MEDIDO na bancada em 06/09/2026, carregando os dois lado a lado e
+    MEDIDO no aparelho em 06/09/2026, carregando os dois lado a lado e
     LENDO O NÓ com `pactl list sources`::
 
         sem aspas  ->  description = Microfone          priority.session = 2000
@@ -889,7 +889,7 @@ def test_a_prioridade_chega_ao_no_e_nao_so_ao_argv(pactl) -> None:  # type: igno
         )
         assert props.get("device.description", "").count(" ") >= 1, (
             "a descrição chegou cortada no primeiro espaço — é o mesmo defeito, "
-            "e é o que a bandeja de som dela mostra"
+            "e é o que a bandeja de som de quem usa mostra"
         )
     finally:
         fonte.parar()
@@ -923,6 +923,6 @@ def test_o_audio_control_le_o_mudo_em_lingua_que_ele_entende(monkeypatch) -> Non
     AudioControl()._query_pactl_muted()
     assert vistos, "a leitura não chegou a rodar `pactl`"
     assert vistos[0].get("LC_ALL") == "C", (
-        "a leitura do mudo roda no idioma da sessão dela, e o `pactl` TRADUZ: "
+        "a leitura do mudo roda no idioma da sessão de quem usa, e o `pactl` TRADUZ: "
         "a resposta passa a ser sobre o idioma do shell, não sobre o aparelho"
     )

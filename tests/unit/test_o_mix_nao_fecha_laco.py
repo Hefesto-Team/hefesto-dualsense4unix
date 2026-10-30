@@ -1,24 +1,24 @@
 """O «No controle e na TV» não pode realimentar o próprio controle.
 
-A LACUNA, e ela só não aparece na máquina do usuário
+A LACUNA, e só não aparece na máquina do usuário
 ------------------------------------------------------------------------------
 A SOM-JUNTO-01 (17/09/2026) fez a fonte ``mix`` chegar ao nó que já está de pé:
 um ``module-loopback`` do monitor da SAÍDA PADRÃO do sistema para o nó do
-controle. Na bancada a saída padrão é o HDMI e o fio é inofensivo. Numa
+controle. Na máquina de teste a saída padrão é o HDMI e o fio é inofensivo. Numa
 máquina em que a saída padrão é o PRÓPRIO controle, o fio fecha um laço:
 
 * no rádio, ``hefesto_som_X.monitor → hefesto_som_X`` — a pessoa escolheu
   «Alto-falante do Controle N» nas configurações de som;
 * no cabo, ``D.monitor → hefesto_som_X → D`` — a placa USB do DualSense tem
   ``priority.session`` 1109, acima do HDMI (696) e da placa-mãe (736), e
-  nenhum drop-in do produto a rebaixa; com o fone plugado no controle ela é a
+  nenhum drop-in do produto a rebaixa; com o fone plugado no controle a placa é a
   saída de quem joga.
 
 Não havia trava em lugar nenhum. A lacuna foi INFERIDA da leitura do código,
 não medida na orelha: o que esta régua prova é o fio que o produto pede ao
 ``pactl``.
 
-O QUE ELA TRAVA
+O QUE A RÉGUA TRAVA
 ------------------------------------------------------------------------------
 1. ``argv_das_rotas`` — o dono PURO que os dois chamadores usam (o daemon e o
    plano da janela) — não sobe o mix que fecha laço, nos dois transportes;
@@ -27,7 +27,7 @@ O QUE ELA TRAVA
 3. o monitor de OUTRO controle continua valendo: ele termina no alto-falante
    deste e não volta, e recusá-lo tiraria o mix de quem joga com a saída num
    controle e o som no outro;
-4. a cena inteira, pelo gerenciador de produção, com o ``pactl`` de bancada.
+4. a cena inteira, pelo gerenciador de produção, com o ``pactl`` de ensaio.
 
 A MORDIDA
 ------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ def test_no_cabo_o_mix_da_propria_placa_nao_sobe_e_a_saida_fica() -> None:
     argvs = af.argv_das_rotas(NO_P1, rota)
 
     assert _mixes(argvs, NO_P1) == [], (
-        "o mix ligou a placa do controle ao nó que toca nela — "
+        "o mix ligou a placa do controle ao nó que toca na placa — "
         "D.monitor → nó → D, realimentação"
     )
     assert af.argv_para_ligar_o_no(NO_P1, SINK_P1) in argvs, (

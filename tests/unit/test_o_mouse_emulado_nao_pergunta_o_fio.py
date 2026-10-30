@@ -20,13 +20,13 @@ os defender.
    barramento), nem na descoberta do nó, nem no `read_state`, nem no despacho,
    nem no portão do laço.
 
-2. **A premissa da `nota` das duas linhas é FALSA.** Ela dizia: *"as três
+2. **A premissa da `nota` das duas linhas é FALSA.** A nota dizia: *"as três
    emulações passam pelo mesmo leitor de evdev, então uma diferença só no rádio
    precisa de explicação"*. São DOIS donos, não um: desde a
    TOUCHPAD-DO-SISTEMA-01 (09/08/2026) quem move o cursor com o touchpad FÍSICO
    é o **libinput**, e o `TouchpadReader` se recusa a acumular movimento nesse
    caso (`_acumula_agora`). O gatilho e o analógico, esses, só chegam ao cursor
-   pela emulação do daemon. Logo a observação dela compara duas coisas que o
+   pela emulação do daemon. Logo a observação da nota compara duas coisas que o
    Hefesto faz com UMA que ele não faz — não existe a simetria de três que
    pediria uma explicação de transporte.
 
@@ -38,7 +38,7 @@ os defender.
 O QUE ELE NÃO PROVA, dito na cara
 ----------------------------------
 Nada aqui põe o dedo no aparelho. Esta régua lê CÓDIGO e lê o MAPA; quem põe o
-dedo no controle é ela, na bancada.
+dedo no controle é quem usa, no ensaio no aparelho.
 
 O LADO DO RÁDIO FOI MEDIDO — 05/09/2026
 ---------------------------------------
@@ -47,12 +47,10 @@ Até 05/09 este bloco dizia: *"o lado RÁDIO das duas linhas continua
 DualSense na mesa e ele estava no CABO (`/sys/bus/hid/devices` listava apenas
 `0003:054C:0CE6`, e `0003` é `BUS_USB`). Sem nó de rádio não há o que ler."*
 
-**A razão caducou, e ela mesma a derrubou**, com estas palavras:
+**A razão caducou**: com as máscaras funcionando em tudo, o R2 analógico e o
+cursor foram medidos.
 
-    "hj as máscaras funcionam super legal em tudo o lance do R2 analógico e
-     cursor tão medidos já viu"
-
-Medido com ela na bancada, nos DOIS transportes. E o código já dizia o mesmo
+Medido no aparelho, nos DOIS transportes. E o código já dizia o mesmo
 pela outra ponta: `daemon/subsystems/mouse.py` e `integrations/uinput_mouse.py`
 recebem o eixo já normalizado pelo daemon e escrevem no uinput — não há uma
 linha que pergunte o barramento, que é justamente o que o teste
@@ -66,16 +64,16 @@ existe neste arquivo**. Os donos reais são os dois módulos varridos por
 `ESCOPOS`, logo abaixo, e o teste real é o de nome inteiro acima. O mesmo
 endereço morto estava na `radio_evidencia` das duas linhas do mapa
 (`entrada.emulacao_mouse.gatilhos@dualsense` e `.analogico@dualsense`), na
-evidência mais NOVA que elas tinham — achado da A-RECUSA-QUE-CITOU-O-MAPA-01
+evidência mais NOVA que as linhas tinham — achado da A-RECUSA-QUE-CITOU-O-MAPA-01
 §4.6, e as duas foram reapontadas no mesmo gesto que esta.
 
-*A régua sabia o caminho certo em `ESCOPOS` e a prosa dela apontava para outro
+*A régua sabia o caminho certo em `ESCOPOS` e a prosa da régua apontava para outro
 lugar* — que é a forma exata do defeito que a
 `tests/unit/test_a_procedencia_da_linha_nao_e_vazia.py` passou a cobrar do mapa.
 
 Então as células passaram de `desconhecido`/`incerto` para `sim`/`medido`, e
-esta régua acompanhou. **Ela não foi afrouxada — foi invertida**: continua
-reprovando qualquer mudança silenciosa das seis células, só que agora o que ela
+esta régua acompanhou. **A régua não foi afrouxada — foi invertida**: continua
+reprovando qualquer mudança silenciosa das seis células, só que agora o que a régua
 protege é a medição, não a ignorância que a antecedeu.
 """
 

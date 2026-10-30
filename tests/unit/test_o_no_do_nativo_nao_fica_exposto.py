@@ -152,7 +152,7 @@ def _montar(raiz: Path) -> Mesa:
 
 
 def _aberto_para_o_usuario(caminho: str | Path) -> bool:
-    """O estado canônico exposto, lido do fs: `0660` + ACL do uid dela."""
+    """O estado canônico exposto, lido do fs: `0660` + ACL do uid de quem usa."""
     try:
         modo = stat.S_IMODE(os.stat(caminho).st_mode)
         acl = decode_acl_user_uids(os.getxattr(caminho, "system.posix_acl_access"))

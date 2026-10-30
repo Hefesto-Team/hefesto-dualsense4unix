@@ -110,7 +110,7 @@ def test_a_frase_da_entrada_encontrada_e_a_do_usuario() -> None:
     assert pac.MAPEAR_DIZ["porta"] == FRASE_DO_USUARIO
     assert pac.campos_do_mapear({"estado": "porta", "portas": []})["mapear-diz"] == FRASE_DO_USUARIO
     ensaio = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
-    assert FRASE_DO_USUARIO in ensaio, "a cena do desenho não traz a frase — regere a bancada"
+    assert FRASE_DO_USUARIO in ensaio, "a cena do desenho não traz a frase — regere o desenho"
     assert not hasattr(pac, "MAPEAR_DICA_DA_PORTA"), "o «?» saiu (13/10): a explicação não tem dono"
 
 
@@ -174,7 +174,7 @@ def test_o_salvar_vazio_na_numerada_nao_muda_o_que_o_usuario_disse(
     tmp_path: pathlib.Path, disco: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
     nome: str | None,
 ) -> None:
-    """A entrada numerada, com face, com o cabo nela: o Salvar vazio é a"""
+    """A entrada numerada, com face, com o cabo na entrada: o Salvar vazio é a"""
     entrada: dict[str, Any] = {"lugar": lugar_de(PCI_A, "5"), "nos": ["usb1-port5"]}
     if nome:
         entrada["nome"] = nome
@@ -189,7 +189,7 @@ def test_o_salvar_vazio_na_numerada_nao_muda_o_que_o_usuario_disse(
     _salvar_vazio(fluxo, monkeypatch)
 
     depois = json.loads(disco.read_text(encoding="utf-8"))["mapa"]
-    assert depois["portas"]["1"].get("nome") == nome, "o Salvar vazio mexeu no nome dela"
+    assert depois["portas"]["1"].get("nome") == nome, "o Salvar vazio mexeu no nome da porta"
     assert [(f["nome"], f["portas"]) for f in depois["faces"]] == [
         (f["nome"], f["portas"]) for f in antes["faces"]], "o Salvar vazio mexeu na face"
     assert set(depois["portas"]) == {"1"}, "o Salvar vazio criou outra entrada"
@@ -232,12 +232,12 @@ def _campos(quantas: int) -> dict[str, str]:
 
 @pytest.fixture(scope="module")
 def no_webkit() -> dict[str, Any]:
-    """A bancada da 08 aberta no «Mapear Entradas», num WebKit offscreen."""
+    """O desenho da 08 aberta no «Mapear Entradas», num WebKit offscreen."""
     from hefesto_dualsense4unix.interface import onde
 
     pagina = onde.pagina("08-conexoes.html")
     if not pagina.is_file():
-        pytest.skip("a bancada da 08 não está no disco — rode o gerador")
+        pytest.skip("o desenho da 08 não está no disco — rode o gerador")
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -281,7 +281,7 @@ def no_webkit() -> dict[str, Any]:
 def test_a_lista_rola_e_nao_empurra_o_dialogo(no_webkit: dict[str, Any]) -> None:
     """MORDIDA: tire as duas metades da folha (ver o cabeçalho) e regere → com as"""
     uma, quinze = no_webkit["uma"], no_webkit["quinze"]
-    assert "falta" not in no_webkit, f"a bancada não tem onde pintar {no_webkit.get('falta')}"
+    assert "falta" not in no_webkit, f"o desenho não tem onde pintar {no_webkit.get('falta')}"
     assert uma["visivel"] != "none", "o «Mapear Entradas» não abriu pela âncora"
     assert quinze["cx"] - uma["cx"] < 2, (
         f"a lista empurrou o diálogo: {uma['cx']:.0f} px com uma, {quinze['cx']:.0f} com 15")

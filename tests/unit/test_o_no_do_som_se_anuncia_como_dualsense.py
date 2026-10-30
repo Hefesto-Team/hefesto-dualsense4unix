@@ -8,7 +8,7 @@ e um jogo que procura o alto-falante do controle procura ``DualSense`` ou
 «Alto-falante do Controle 1».
 
 A DECISÃO, 23/09/2026, é a FORMA A: «Alto-falante do Controle N (DualSense
-Wireless Controller)» — o nome dela na frente, igual para o microfone, os
+Wireless Controller)» — o nome do Hefesto na frente, igual para o microfone, os
 quatro controles, o USB e o BT. A decisão está DIGITADA aqui de propósito: a
 régua lê a decisão, não o dono (``vestido_de_dualsense.com_o_nome_da_sony``).
 Mude o dono sem mudar a decisão e esta régua reprova.
@@ -104,7 +104,7 @@ def _props_do_no_publicado(descricao: str) -> dict[str, str]:
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, None])
 def test_o_nome_que_o_jogo_le_e_a_forma_a(assento, numero: int | None) -> None:
-    """Os dois nós de cada controle levam o nome da Sony atrás do nome dela."""
+    """Os dois nós de cada controle levam o nome da Sony atrás do nome do Hefesto."""
     assento(numero)
     sufixo = "" if numero is None else f" {numero}"
 
@@ -123,7 +123,7 @@ def test_um_jogo_que_casa_por_substring_acha_os_dois(assento, numero: int) -> No
 
 @pytest.mark.parametrize("numero", [1, 2, 3, 4, None])
 def test_o_nome_cabe_no_teto_do_wine(assento, numero: int | None) -> None:
-    """Acima de 62 o Wine joga a frase fora — e com ela o «Controle N»."""
+    """Acima de 62 o Wine joga a frase fora — e com a frase o «Controle N»."""
     assento(numero)
     for rotulo in (som.descricao_do_alto_falante(_UNIQ), mic.descricao_do_microfone(_UNIQ)):
         assert len(rotulo) <= _TETO_DO_WINE, (len(rotulo), rotulo)

@@ -1,6 +1,6 @@
 """A fita apagada diz por quê — no hover, e nunca pintada (24/08/2026).
 
-A DECISÃO, e ela tem duas metades que brigam
+A DECISÃO, e tem duas metades que brigam
 --------------------------------------------
 
 A Z2-8 fez SEIS abas esmaecerem a fita "Ajustes vão para:" (Início, No jogo,
@@ -79,7 +79,7 @@ def test_a_moldura_do_hover_nao_pinta_nada() -> None:
     host = _HostDaFita()
     assert host._target_strip_hover.get_visible_window() is False, (
         "o EventBox está pintando: o cabeçalho ganharia um retângulo que não "
-        "tinha, que é exatamente o defeito do rótulo que ela mandou tirar"
+        "tinha, que é exatamente o defeito do rótulo que quem usa mandou tirar"
     )
 
 

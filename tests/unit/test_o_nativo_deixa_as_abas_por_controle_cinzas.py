@@ -8,7 +8,7 @@ Hefesto não aplica.
 DUAS METADES, e nenhuma prova a outra:
 
 1. **A recusa (sem navegador).** Todo gesto registrado nas quatro abas, e o rodapé
-   (Aplicar, Salvar, Importar) despachado por elas, recusa no Nativo sem uma só chamada ao
+   (Aplicar, Salvar, Importar) despachado pelas abas, recusa no Nativo sem uma só chamada ao
    daemon, e a recusa vem do decorador `@gesto` (`pacotes.camada`), não de um `if` na tela.
    Ficam vivos só os de `VIVOS_NO_NATIVO` e o Exportar, que só grava um arquivo.
 2. **A tela (Chrome de verdade).** Com `body.nativo`, o motor responde por `elementFromPoint`:
@@ -247,7 +247,7 @@ O_QUE_O_MOTOR_DESENHA = r"""
 
 @pytest.fixture(scope="module")
 def paginas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
-    """As quatro páginas montadas pelo gerador de verdade, numa bancada de mentira."""
+    """As quatro páginas montadas pelo gerador de verdade, num lar de mentira."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     if not GI_REAL_DISPONIVEL:

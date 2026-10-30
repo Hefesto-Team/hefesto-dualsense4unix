@@ -2,13 +2,11 @@
 
 **A DECISÃO** (D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que
 revoga a D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO). O princípio é do usuário,
-de 29/09, ~21h20: *«Garantir que o inpút do joogo  # (noqa-acento: citação literal)
-chegue ao controle do jogador. Aí se o jogo (…) desliga e liga o  # (noqa-acento: citação literal)
-microfone do user (…) aí o
-controle obedece»*.
+de 29/09: o que o jogo manda chega ao controle do jogador, e se o jogo desliga
+e liga o microfone, o controle obedece.
 Com pad virtual DualSense, P1 a P4, cabo e rádio: a luz (`common[8]`) vai ao
 plástico literal; o mudo (`common[9]` 0x10) cala ou abre o microfone do
-jogador; o eco do driver do pad não conta; o botão e o 🎙 dela valem na hora
+jogador; o eco do driver do pad não conta; o botão e o 🎙 da tela valem na hora
 (vale o último que mandou, e o instante do botão é o do aperto).
 
 AS RÉGUAS, na ordem da sprint
@@ -740,7 +738,7 @@ class TestOBotaoFisicoSempreVale:
                     await _drenar(0.4)
                 assert _atos(registros)[0]["ligado"] is False, "o aperto não calou"
                 assert kernel.mudo_no_firmware(P1) is True, (
-                    "o jogo que só reafirma o «aberto» desfez o mudo que ela pediu"
+                    "o jogo que só reafirma o «aberto» desfez o mudo que quem usa pediu"
                 )
                 assert luz.luz_do_mic_do_jogo(P1) is None
                 assert luz.estado_da_luz_do_mic(P1) == luz.APAGADA
@@ -758,7 +756,7 @@ class TestOBotaoFisicoSempreVale:
     async def test_o_aperto_devolve_a_luz_ao_usuario_mesmo_sem_o_ato(
         self, casa: Any, uhid: _UhidPorFd  # noqa: F811
     ) -> None:
-        """Cena 1b: com o botão fora do sistema, a borda ainda é ordem de produto."""
+        """Cena 1b: com o botão fora do sistema, a borda ainda vale como ordem."""
         casa.perfil(FREESTYLE)
         kernel = _KernelComLuz((P1,))
         daemon, pad, relogio = await self._cena(casa, kernel)
@@ -775,7 +773,7 @@ class TestOBotaoFisicoSempreVale:
             pad.stop()
 
     async def _cena_calada(self, casa: Any) -> tuple[Any, UhidDualSense, _Relogio, _KernelComLuz]:  # noqa: F811
-        """P1 calado pelo dono e fora do ar: o aperto dela pede LIGAR."""
+        """P1 calado pelo dono e fora do ar: o aperto de quem usa pede LIGAR."""
         casa.perfil(FREESTYLE)
         casa.calar_no_dono(P1)
         kernel = _KernelComLuz((P1,), transportes=("usb",))
@@ -879,7 +877,7 @@ async def test_o_clique_da_tela_derruba_o_pedido_do_jogo(
         )
         await _ate(lambda: kernel.luzes_de(P1)[-1:] == [2])
         await hotkey.ligar_o_microfone(daemon, _com_dois_pontos(P1), ligado=True)
-        assert luz.luz_do_mic_do_jogo(P1) is None, "o clique dela não derrubou o pedido"
+        assert luz.luz_do_mic_do_jogo(P1) is None, "o clique de quem usa não derrubou o pedido"
         await _ate(lambda: kernel.luzes_de(P1)[-1] == luz.ACESA)
 
 

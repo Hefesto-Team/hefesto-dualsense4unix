@@ -2,7 +2,7 @@
 
 **A DECISÃO É DE PRODUTO** (resposta 9 da noite de 27/09,
 o estudo «as-respostas-do-usuario-da-noite» de 27/09/2026). O relatório
-04 da auditoria (A2) mediu o defeito que ela cura: o mudo tinha TRÊS cópias — o
+04 da auditoria (A2) mediu o defeito que a sprint cura: o mudo tinha TRÊS cópias — o
 perfil (``controllers[k].mic.muted``), a sessão do daemon (a memória do último
 ato, que vencia um perfil «mais velho» na reconexão) e o aparelho —, e DOIS
 escritores no mesmo clique (o daemon e o ``_lembrar_do_som`` da aba 02, que
@@ -32,7 +32,7 @@ laços do botão, o ato, o ``ProfileManager``, o gancho de conexão e o applier
 do daemon são os REAIS, e os dublês do aparelho e do PipeWire são os da régua
 irmã (``test_o_botao_do_mic_grava_no_perfil.py``), que têm a posse do backend.
 
-Os endereços são da faixa FORJADA de fixture (``aa:bb:cc``), nunca da bancada.
+Os endereços são da faixa FORJADA de fixture (``aa:bb:cc``), nunca da máquina de teste.
 """
 
 from __future__ import annotations
@@ -81,7 +81,7 @@ class TestATrocaDePerfilNaoMexeNoMudo:
     async def test_o_controle_calado_segue_calado_depois_da_troca(
         self, casa: Any, origem: str, calado: str  # noqa: F811
     ) -> None:
-        """Ela cala UM pelo botão; o perfil do jogo diz «no ar» para todos."""
+        """Quem usa cala UM pelo botão; o perfil do jogo diz «no ar» para todos."""
         casa.perfil(FREESTYLE)
         casa.perfil(JOGO, mic={"muted": False},
                     por_peca={u: {"mic": {"muted": False}} for u in OS_QUATRO})
@@ -99,7 +99,7 @@ class TestATrocaDePerfilNaoMexeNoMudo:
             f"{daemon.controller.escritas_do_mudo}"
         )
         assert daemon.controller.mudo_no_firmware(calado) is True, (
-            f"a troca {origem} abriu o microfone que ela calou"
+            f"a troca {origem} abriu o microfone que quem usa calou"
         )
         for u in OS_QUATRO:
             no_ar = await _reconectar(daemon, u)
@@ -113,7 +113,7 @@ class TestATrocaDePerfilNaoMexeNoMudo:
     async def test_o_controle_no_ar_segue_no_ar_diante_do_perfil_que_cala(
         self, casa: Any, origem: str  # noqa: F811
     ) -> None:
-        """O contrário: ela liga pelo botão; o perfil do jogo diz calado."""
+        """O contrário: quem usa liga pelo botão; o perfil do jogo diz calado."""
         casa.perfil(FREESTYLE)
         casa.perfil(JOGO, mic={"muted": True},
                     por_peca={P2: {"mic": {"muted": True}}})
@@ -126,7 +126,7 @@ class TestATrocaDePerfilNaoMexeNoMudo:
 
         _ativar(daemon, JOGO, origin=origem)
         assert await _reconectar(daemon, P2) is True, (
-            f"a troca {origem} para o perfil que cala desfez o ato dela"
+            f"a troca {origem} para o perfil que cala desfez o ato de quem usa"
         )
         assert True not in daemon.controller.mudos_escritos(P2)
 
@@ -141,13 +141,13 @@ class TestORestartDevolveODono:
         transportes = TRANSPORTES[arranjo]
         casa.perfil(FREESTYLE)
         casa.perfil(JOGO, por_peca={P3: {"mic": {"muted": False}}})
-        casa.perfil("Desktop Dela")
+        casa.perfil("Desktop do Usuário")
         daemon = casa.daemon(OS_QUATRO, transportes=transportes)
         for u in OS_QUATRO:
             assert await hotkey.nascer_no_ar(daemon, u) is True
         await _apertar(daemon, P3)
         _ativar(daemon, JOGO, origin="autoswitch")
-        _ativar(daemon, "Desktop Dela", origin="autoswitch")
+        _ativar(daemon, "Desktop do Usuário", origin="autoswitch")
         await _derrubar(daemon)
 
         novo = casa.daemon(OS_QUATRO, ativo=JOGO, transportes=transportes)
@@ -155,11 +155,11 @@ class TestORestartDevolveODono:
             no_ar = await _reconectar(novo, u)
             assert no_ar is (u != P3), f"o restart mudou o microfone do {u}"
         assert novo.controller.mudos_escritos(P3) == [True], (
-            "o restart não devolveu ao firmware do P3 o silêncio que ela pediu"
+            "o restart não devolveu ao firmware do P3 o silêncio que quem usa pediu"
         )
         for u in (P1, P2, P4):
             assert novo.controller.mudos_escritos(u) == [], (
-                f"o restart escreveu o mudo no {u}, que ela não calou"
+                f"o restart escreveu o mudo no {u}, que quem usa não calou"
             )
 
 
@@ -198,8 +198,8 @@ class TestUmEscritor:
         """
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
         profiles_dir(ensure=True)
-        loader.save_profile(Profile(name="Bancada", match=MatchManual()), origem="regua")
-        antes = (profiles_dir() / "bancada.json").read_bytes()
+        loader.save_profile(Profile(name="Ensaio", match=MatchManual()), origem="regua")
+        antes = (profiles_dir() / "ensaio.json").read_bytes()
         leituras: list[str] = []
         gravacoes: list[str] = []
         real_load, real_gravar = loader.load_profile, maquina.gravar_maquina
@@ -210,7 +210,7 @@ class TestUmEscritor:
         pacotes = _pacotes()
         dele = {"uniq": uniq, "transport": transporte, "connected": True, "inputs": {},
                 "audio": {"mic_mudo": False}, "speaker": {"volume": 100, "muted": False}}
-        ctx = pacotes.Contexto(state={"active_profile": "Bancada"}, mesa=[],
+        ctx = pacotes.Contexto(state={"active_profile": "Ensaio"}, mesa=[],
                                conectados=[dele], estados={})
         ponte = _PonteQueGravaComoODaemon()
 
@@ -223,7 +223,7 @@ class TestUmEscritor:
             "o 🎙 leu o perfil ativo para gravar o mudo — o segundo escritor "
             "do mesmo clique voltou"
         )
-        assert (profiles_dir() / "bancada.json").read_bytes() == antes
+        assert (profiles_dir() / "ensaio.json").read_bytes() == antes
         assert maquina.mudo_do_microfone(uniq) is True
 
 
@@ -460,5 +460,5 @@ class TestAPosseVelha:
 
         assert daemon.controller.escritas_do_mudo == [], (
             "o ato escreveu o bit que o kernel já tinha posto — e tomou do "
-            "botão dela a posse"
+            "botão de quem usa a posse"
         )

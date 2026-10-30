@@ -4,7 +4,7 @@ O QUE ESTA RÉGUA EXISTE PARA IMPEDIR
 -------------------------------------
 O `AltoFalanteSubsystem` (`daemon/subsystems/alto_falante.py`) está órfão: não
 consta de `SUBSYSTEM_REGISTRY` nem do `run()` de `daemon/lifecycle.py`. A
-leitura fácil — e ela foi escrita num despacho — é *"então é só ligar as duas
+leitura fácil — e foi escrita num despacho — é *"então é só ligar as duas
 metades, como o `BtMicSubsystem`"*.
 
 **A METADE DE CIMA FOI CURADA EM 09/09/2026 (SOM-POR-CONTROLE-01), e o texto
@@ -19,20 +19,20 @@ e **mais nada**. Nenhum `module-loopback`, e os quatro com o MESMO rótulo. Hoje
 quando há rota, e o `GerenciadorDeNosDeSom` batiza cada um «Alto-falante do
 Controle N». **O que continua faltando para ligá-lo são as TRÊS linhas do
 registro** — `daemon/subsystems/__init__.py`, `daemon/lifecycle.py` e
-`daemon/connection.py` —, e nenhuma delas estava na posse daquela sprint.
+`daemon/connection.py` —, e nenhuma das três estava na posse daquela sprint.
 
-Com os quatro DualSense na bancada (medido em 07/09/2026: dois no cabo, dois
+Com os quatro DualSense no ensaio (medido em 07/09/2026: dois no cabo, dois
 no rádio), `AltoFalanteSubsystem.alvos()` devolve **os quatro**, e os quatro
 nasceriam com o MESMO rótulo genérico — porque
 `GerenciadorDeNosDeSom._construir` chama `SinkVirtualPipeWire(uniq=uniq)` sem
 rótulo próprio, e o default era uma constante de rótulo genérico. Quatro entradas
 idênticas e mudas na lista de som do usuário, ao lado das DUAS placas reais que hoje
-FUNCIONAM pelo cabo. Ela escolhe uma das quatro e o som some.
+FUNCIONAM pelo cabo. Quem usa escolhe uma das quatro e o som some.
 
 QUEM JÁ TINHA ESCRITO ISTO, E COM ESTAS PALAVRAS
 -------------------------------------------------
 `app/audio_saida.py` é a segunda implementação do mesmo nó, mais nova e mais
-cuidadosa, e ela nomeia o defeito na invariante 4 do `PlanoDoNo`:
+cuidadosa, e nomeia o defeito na invariante 4 do `PlanoDoNo`:
 
     *"sem rota não se carrega módulo nenhum. Um `module-null-sink` sozinho
     seria exatamente o sink que aceita o áudio e o joga fora."*
@@ -45,19 +45,19 @@ importa `app/`, e por isso a resposta mudou de endereço em vez de ganhar uma
 segunda cópia.
 
 E a invariante 4 mudou de forma: `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`
-(decisão de produto) diz que o nó é publicado mesmo sem rota — *"nó que some quebra o
-jogo que o escolheu"*. O que sobra dela, e é o que este arquivo trava, é que
+(decisão do produto) diz que o nó é publicado mesmo sem rota — *"nó que some quebra o
+jogo que o escolheu"*. O que sobra da invariante, e é o que este arquivo trava, é que
 **um `module-null-sink` publicado pelo DAEMON tenha o `module-loopback` ao
 lado**: o daemon só publica quem tem rota; quem não tem, ele nem constrói.
 
 O QUE ESTA RÉGUA PERMITE — e é metade do desenho
 -------------------------------------------------
-Ela **não** proíbe ligar o subsystem. Ela trava o PAR: *se ele subir, o nó tem
+A régua **não** proíbe ligar o subsystem. Trava o PAR: *se ele subir, o nó tem
 de ter rota*. A cura correta — dar ao gerenciador o portão de rota e o
 `module-loopback`, com UM dono para a pergunta "onde este nó entrega?" — passa
 nesta régua. Só a fiação crua reprova.
 
-Régua de PRODUTO, não de texto: ela sobe um `Daemon` de verdade e olha o que
+Régua de PRODUTO, não de texto: a régua sobe um `Daemon` de verdade e olha o que
 foi mandado ao `pactl`, em vez de ler o fonte do `run()`. Ler o fonte é como
 esta casa já fabricou verde sobre nada.
 """
@@ -169,7 +169,7 @@ async def test_o_boot_nao_publica_no_de_som_sem_rota(
         "`module-loopback` ao lado é um sink que aceita o áudio e o joga fora "
         "(a invariante 4 de `app/audio_saida.py`). Com os quatro DualSense na "
         "mesa isso põe quatro entradas mudas e de nome igual na lista de som "
-        f"dela. Publicados: {sinks}"
+        f"de quem usa. Publicados: {sinks}"
     )
 
 
@@ -204,7 +204,7 @@ def test_a_suite_nao_carrega_modulo_de_som_no_pipewire_do_usuario(
     solto = alto_falante_bt.SinkVirtualPipeWire(uniq=_UNIQ)
     assert solto.iniciar() is True, (
         "sem a guarda o nó sobe — é exatamente por aqui que os 52 fantasmas "
-        "entraram no PipeWire dela"
+        "entraram no PipeWire de quem usa"
     )
     assert solto.module_id == "123"
 
@@ -228,6 +228,6 @@ def test_a_guarda_recusa_a_escrita_e_deixa_a_leitura_passar() -> None:
     assert vistos == [], f"a escrita chegou a quem está por baixo da guarda: {vistos}"
 
     leitura = guarda(["pactl", "list", "sinks", "short"])
-    assert leitura is not None, "a guarda comeu a LEITURA — ela só pode comer escrita"
+    assert leitura is not None, "a guarda comeu a LEITURA — a guarda só pode comer escrita"
     assert "hefesto_som_0000ab" in leitura
     assert vistos == [["pactl", "list", "sinks", "short"]], vistos

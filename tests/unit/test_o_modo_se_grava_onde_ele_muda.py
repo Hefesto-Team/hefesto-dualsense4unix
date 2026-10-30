@@ -1,6 +1,6 @@
 """O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 — quem troca o modo grava o modo.
 
-A bancada da demo de 29/09 (achado 2, 01h43): com o Modo Freestyle ligado e os
+O ensaio da demo de 29/09 (achado 2, 01h43): com o Modo Freestyle ligado e os
 quatro DualSense no rádio, o usuário clicou no «Sony DualSense» da aba Jogar. Os
 quatro pads trocaram, e o `freestyle.json` seguiu dizendo `caminho: xbox`. Quem
 gravava o modo do chip era a JANELA, depois da resposta do
@@ -11,7 +11,7 @@ A cura: um escritor só, no daemon (`Daemon.gravar_o_modo_escolhido`), que os
 três setters do modo chamam DEPOIS do aparelho, e só quando a porta diz que é
 escolha do usuário (`grava_o_modo`). A janela deixou de gravar o modo.
 
-A BANCADA é um lar de mentira: o `Daemon` é SUBCLASSE do real (herda as
+O ENSAIO é um lar de mentira: o `Daemon` é SUBCLASSE do real (herda as
 assinaturas, e o dublê não pode ser mais frouxo que o produto), o
 `ProfileManager` é o real, os perfis moram no `XDG_CONFIG_HOME` do teste, e só
 a borda é dublada — a fábrica do pad (nenhum `/dev/uinput`, nenhum `/dev/uhid`),
@@ -19,7 +19,7 @@ o grab, o co-op, o mouse e o teclado virtuais, o launch env e a exposição do
 Modo Nativo. O disco é lido pelo `loader`, antes e depois, e nunca pelo retorno
 do escritor. Os endereços são da faixa forjada da casa.
 
-A MORDIDA de cada régua está no docstring dela.
+A MORDIDA de cada régua está no próprio docstring.
 """
 from __future__ import annotations
 
@@ -142,7 +142,7 @@ class _DaemonDaCasa(Daemon):
 
 
 class _Handlers(IpcHandlersMixin):
-    """O mixin de IPC de verdade, com o daemon e o gerente da bancada."""
+    """O mixin de IPC de verdade, com o daemon e o gerente do ensaio."""
 
     def __init__(self, daemon: _DaemonDaCasa, gerente: ProfileManager) -> None:
         self.daemon = daemon
@@ -224,7 +224,7 @@ def _pad_de_pe(d: _DaemonDaCasa, caminho: str | None) -> None:
     desfecho = gp.start_gamepad_emulation_desfecho(
         d, None, origin="profile", caminho=caminho
     )
-    assert desfecho == gp.EMU_APLICADO, f"premissa da bancada: {desfecho}"
+    assert desfecho == gp.EMU_APLICADO, f"premissa do ensaio: {desfecho}"
 
 
 def _freestyle_ligado_em(d: _DaemonDaCasa, caminho: str) -> None:
@@ -244,8 +244,8 @@ def _chip(h: _Handlers, caminho: str) -> dict[str, Any]:
 def test_o_chip_grava_no_freestyle_sem_depender_da_janela(ensaio: _Ensaio) -> None:
     """O Freestyle ligado em Xbox: o «Sony DualSense» vai ao disco pelo daemon.
 
-    A janela não está nesta régua de propósito: é ela que desiste aos 2,0 s, e
-    o que se mede é que a escolha chega ao perfil sem ela.
+    A janela não está nesta régua de propósito: é a janela que desiste aos 2,0 s, e
+    o que se mede é que a escolha chega ao perfil sem a janela.
 
     MORDIDA: tire a chamada de `gravar_o_modo_escolhido` de
     `Daemon.set_gamepad_emulation_desfecho` e o disco segue `xbox`.
@@ -255,7 +255,7 @@ def test_o_chip_grava_no_freestyle_sem_depender_da_janela(ensaio: _Ensaio) -> No
     h = _Handlers(d, _gerente(d))
     antes = _modo_no_disco(FREESTYLE)
     versoes = _versoes(FREESTYLE)
-    assert antes is not None and antes.caminho == "xbox", "premissa da bancada"
+    assert antes is not None and antes.caminho == "xbox", "premissa do ensaio"
 
     resposta = _chip(h, "dualsense")
 
@@ -263,7 +263,7 @@ def test_o_chip_grava_no_freestyle_sem_depender_da_janela(ensaio: _Ensaio) -> No
     depois = _modo_no_disco(FREESTYLE)
     assert depois is not None and (depois.kind, depois.caminho) == ("gamepad", "dualsense"), (
         f"o «Sony DualSense» trocou o pad e o Freestyle seguiu {depois!r} no disco — "
-        "o achado 2 da bancada de 29/09")
+        "o achado 2 do ensaio de 29/09")
     assert _versoes(FREESTYLE) == versoes + 1, (
         "a gravação não deixou a versão de antes no `.historico`")
 
@@ -582,7 +582,7 @@ def test_o_salvar_logo_depois_do_chip_nao_devolve_o_modo_velho(
 def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
     ensaio: _Ensaio, pad_da_maquina: bool
 ) -> None:
-    """O Freestyle (gamepad) valendo, e ela ativa à mão um jogo sem `mode`."""
+    """O Freestyle (gamepad) valendo, e quem usa ativa à mão um jogo sem `mode`."""
     from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
     save_gamepad_emulation(pad_da_maquina, "dualsense")
@@ -598,7 +598,7 @@ def test_o_perfil_sem_modo_nao_derruba_o_pad_que_a_maquina_deixa_ligado(
 
     if pad_da_maquina:
         assert ensaio.paradas == paradas and d._gamepad_device is not None, (
-            "o perfil sem `mode` derrubou o pad que a preferência dela deixa ligado: "
+            "o perfil sem `mode` derrubou o pad que a preferência de quem usa deixa ligado: "
             "o controle caiu no mouse e teclado (22:40:34 de 01/10)")
         assert d.config.gamepad_emulation_enabled is True
     else:

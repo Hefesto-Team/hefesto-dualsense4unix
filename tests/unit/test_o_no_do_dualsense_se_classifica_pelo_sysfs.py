@@ -107,7 +107,7 @@ def _todos_os_chamadores() -> dict[str, Any]:
 def test_quatro_dualsense_saem_e_voltam_sem_um_pedido_ao_broker(
     montar: Any, tmp_path: Path, escondidos: bool
 ) -> None:
-    """A prova da bancada, na mesa de mentira: os quatro na mesa, o P2 sai
+    """A prova do aparelho, na mesa de mentira: os quatro na mesa, o P2 sai
     pelo rádio e volta. Em cada passo, todas as portas da descoberta acham
     quem está e não acham quem saiu, com ZERO pedidos no socket, zero linhas
     `hidraw_broker_fd_recebido state=entrada` e zero `InputDevice` em nó de

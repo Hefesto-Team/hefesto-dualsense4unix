@@ -309,7 +309,7 @@ def test_a_volta_sem_controle_nao_escreve_nada_no_servidor(
 def test_o_controle_cai_do_radio_e_volta_pelo_radio_no_mesmo_no(
     servidor: ServidorComFluxos,
 ) -> None:
-    """O gesto da bancada: desligar pelo PS e religar, só no rádio, em «mix»."""
+    """O gesto do ensaio: desligar pelo PS e religar, só no rádio, em «mix»."""
     ger = _gerenciador(af.FONTE_MIX)
     ger.reconciliar([_radio(_UNIQ_P3)])
     nome = af.nome_do_sink(_UNIQ_P3)

@@ -1,4 +1,4 @@
-"""O no-sniff da BORDA do connect alcança todo Pro, não só o desta bancada."""
+"""O no-sniff da BORDA do connect alcança todo Pro, não só o desta máquina de teste."""
 
 from __future__ import annotations
 
@@ -133,12 +133,12 @@ class TestACopiaEmShellNaoSeSeparaDoDono:
     def test_a_faixa_de_outra_safra_deste_teste_nao_e_conhecida_pelo_produto(
         self,
     ) -> None:
-        """A régua tem de continuar apontando para fora da bancada."""
+        """A régua tem de continuar apontando para fora da máquina de teste."""
         colada = OUI_DE_OUTRA_SAFRA.replace(":", "")
         assert colada not in OUIS_NINTENDO_VISTAS, (
-            f"`{OUI_DE_OUTRA_SAFRA}` entrou em OUIS_NINTENDO_VISTAS. Ela existe "
+            f"`{OUI_DE_OUTRA_SAFRA}` entrou em OUIS_NINTENDO_VISTAS. A faixa existe "
             "neste arquivo para representar as 81 faixas Nintendo que esta "
-            "bancada NUNCA viu — conhecê-la desarma todo teste abaixo"
+            "máquina NUNCA viu — conhecê-la desarma todo teste abaixo"
         )
         assert colada not in OUIS_CLONE
 
@@ -148,7 +148,7 @@ class TestQuemRecebeONoSniff:
         """O DEFEITO DA SPRINT, em um teste."""
         desfecho = rodar(MAC_DE_OUTRA_SAFRA, NOME_PRO)
         assert desfecho.aplicou, (
-            "um Pro Controller numa faixa Nintendo que esta bancada nunca viu "
+            "um Pro Controller numa faixa Nintendo que esta máquina nunca viu "
             "NÃO recebeu o no-sniff da borda. É o link caindo sob carga na "
             f"máquina de outra pessoa.\nDiário: {desfecho.diario}"
         )
@@ -175,7 +175,7 @@ class TestQuemRecebeONoSniff:
         )
 
     def test_o_nome_pode_vir_do_ambiente_como_o_udev_o_entrega(self, rodar) -> None:
-        """O udev exporta as propriedades do device; `HID_NAME` é uma delas."""
+        """O udev exporta as propriedades do device; `HID_NAME` é uma das propriedades."""
         desfecho = rodar(MAC_DE_OUTRA_SAFRA, None, nome_no_ambiente=NOME_PRO_PELO_CABO)
         assert desfecho.aplicou, (
             "o helper ignorou o `HID_NAME` do ambiente. Em produção quem o chama "
@@ -440,7 +440,7 @@ class TestAVigiaDeDoisMinutosTambemAlcancaTodoPro:
         tirados = mesa.rodar()
         assert MAC_DE_OUTRA_SAFRA in tirados, (
             "a vigia não tirou do sniff um Pro Controller de faixa Nintendo que "
-            f"esta bancada nunca viu. Recebeu `lp RSWITCH`: {sorted(tirados)}"
+            f"esta máquina nunca viu. Recebeu `lp RSWITCH`: {sorted(tirados)}"
         )
 
     def test_o_clone_continua_com_o_sniff_que_a_probe_dele_precisa(
@@ -570,9 +570,9 @@ exit 0
                 return linha
         raise AssertionError(
             "o exame não disse NADA sobre o modo ativo p/ Nintendo — não é "
-            "aprovação nem reclamação, é o bloco inteiro pulado. Confira se a "
-            "bancada está escondendo o rádio físico (`HEFESTO_BT_SYSFS_ROOT`) "
-            "e se há `systemctl` no `PATH` dela.\n"
+            "aprovação nem reclamação, é o bloco inteiro pulado. Confira se o "
+            "ensaio está escondendo o rádio físico (`HEFESTO_BT_SYSFS_ROOT`) "
+            "e se há `systemctl` no `PATH` do ensaio.\n"
             f"--- rc={proc.returncode}\n--- stdout:\n{proc.stdout}\n"
             f"--- stderr:\n{proc.stderr}"
         )

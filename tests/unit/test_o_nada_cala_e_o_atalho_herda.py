@@ -1,8 +1,8 @@
-"""O `— Nada —` cala as VINTE E DUAS, e o atalho dela sobrevive ao Guardar.
+"""O `— Nada —` cala as VINTE E DUAS, e o atalho de quem usa sobrevive ao Guardar.
 
 ONDA3-MOTOR-01, 06/09/2026. Os dois defeitos são de MOTOR, foram medidos pela
 frente da aba 06 em 04/09 e relatados em vez de curados — os arquivos estavam no
-`nao_toca` dela, e ela fez certo.
+`nao_toca` da frente, e a frente fez certo.
 
 **O QUE ESTA RÉGUA MEDE É O APARELHO, NÃO A TELA.** A tela já dizia a verdade
 sobre os dois: a tira da aba 06 nomeia as seis linhas que o `— Nada —` não cala,
@@ -87,7 +87,7 @@ def _apertar(d: UinputMouseDevice, botao: str) -> None:
 
 @pytest.mark.parametrize("botao", sorted(AS_SEIS))
 def test_o_nada_cala_as_seis_que_escapavam(botao: str) -> None:
-    """Ela põe `— Nada —`, e o botão para de emitir. Medido no evento.
+    """Quem usa põe `— Nada —`, e o botão para de emitir. Medido no evento.
 
     A MORDIDA: tire o `and b not in mudos` das duas compreensões de
     `uinput_mouse.set_button_actions` — este caso reprova nomeando o botão e a
@@ -103,7 +103,7 @@ def test_o_nada_cala_as_seis_que_escapavam(botao: str) -> None:
 
     assert fake.saiu == [], (
         f"{botao} está em “— Nada —” e o device emitiu {fake.saiu}: a escolha "
-        f"dela foi confirmada na tela e o botão continuou fazendo o que fazia")
+        f"de quem usa foi confirmada na tela e o botão continuou fazendo o que fazia")
 
 
 def test_as_vinte_e_duas_calam_e_nenhuma_sobra() -> None:
@@ -156,7 +156,7 @@ def test_sem_a_sacola_o_device_e_o_de_antes_byte_a_byte() -> None:
     assert velho._mapa_botoes == novo._mapa_botoes
     assert "dpad_up" not in velho._mapa_dpad, (
         "o botão que virou `BTN_LEFT` tem de sair do d-pad — é a subtração "
-        "que já existia, e ela não pode ter sido perdida na cura")
+        "que já existia, e a subtração não pode ter sido perdida na cura")
 
 
 def test_o_de_fabrica_nao_cala_ninguem() -> None:
@@ -179,14 +179,14 @@ def test_o_resolver_herda_os_atalhos_do_usuario() -> None:
     assert sem_herdar["options"] == ("KEY_LEFTMETA",), (
         "a linha de base mudou: sem herdar, o `options` tem de ser o de fábrica")
     assert com_herdar["options"] == ("KEY_F1",), (
-        f"o atalho que ela escreveu à mão não chegou ao device: "
+        f"o atalho que quem usa escreveu à mão não chegou ao device: "
         f"{com_herdar.get('options')}")
     assert com_herdar["l1"] == ("KEY_F2", "KEY_LEFTCTRL"), (
-        "o combo dela chegou partido ou não chegou")
+        "o combo de quem usa chegou partido ou não chegou")
 
 
 def test_a_escolha_da_tela_nova_vence_o_atalho_antigo() -> None:
-    """A precedência é a das três camadas, e a última é a que ela acabou de ver."""
+    """A precedência é a das três camadas, e a última é a que quem usa acabou de ver."""
     do_usuario = {"options": ["KEY_F1"]}
     _m, do_teclado, _s = acoes.resolver({"options": "KEY_ESC"}, do_usuario)
     assert do_teclado["options"] == ("KEY_ESC",), (
@@ -200,7 +200,7 @@ def test_o_r3_fica_fora_da_camada_e_continua_botao_do_meio() -> None:
     O `r3` está nos DOIS lados (`BUTTON_TO_UINPUT` diz `BTN_MIDDLE`,
     `DEFAULT_BUTTON_BINDINGS` diz "fechar o teclado na tela") e o produto faz os
     dois. Uma camada que digitasse a lista em vez de perguntar ao de fábrica
-    apagaria o Botão do meio dele — regressão em botão que ela usa.
+    apagaria o Botão do meio dele — regressão em botão em uso.
     """
     assert "r3" not in acoes.DOMINIO_DO_TECLADO
     assert frozenset(DEFAULT_BUTTON_BINDINGS) - {"r3"} == acoes.DOMINIO_DO_TECLADO
@@ -215,20 +215,20 @@ def test_o_dict_vazio_e_o_none_sao_coisas_diferentes() -> None:
     assert herdando["options"] == ("KEY_LEFTMETA",)
     _m, esvaziado, _s = acoes.resolver({"cross": "KEY_ENTER"}, {})
     assert not (set(esvaziado) & acoes.DOMINIO_DO_TECLADO), (
-        f"ela esvaziou o teclado na janela antiga e o `button_actions` "
+        f"quem usa esvaziou o teclado na janela antiga e o `button_actions` "
         f"ressuscitou {sorted(set(esvaziado) & acoes.DOMINIO_DO_TECLADO)}")
 
 
 def test_a_ativacao_inteira_nao_apaga_mais_o_atalho_do_usuario() -> None:
     """O CAMINHO DE VERDADE: `apply_keyboard` escreve, `apply_button_actions` NÃO apaga.
 
-    É a forma em que o defeito se manifestava para ela: os dois campos no
+    É a forma em que o defeito se manifestava para quem usa: os dois campos no
     arquivo, o perfil ativando, e o atalho morrendo em silêncio no segundo
     applier.
 
     A MORDIDA: tire o `profile.key_bindings` da chamada a `resolver()` em
     `apply_button_actions` — este caso reprova mostrando o de fábrica onde
-    estava o atalho dela.
+    estava o atalho de quem usa.
     """
     class _Teclado:
         def __init__(self) -> None:
@@ -265,10 +265,10 @@ def test_a_ativacao_inteira_nao_apaga_mais_o_atalho_do_usuario() -> None:
     m.apply_button_actions(perfil)
 
     assert teclado.tem.get("options") == ("KEY_F1",), (
-        f"o `apply_button_actions` apagou o atalho que ela escreveu à mão: "
+        f"o `apply_button_actions` apagou o atalho que quem usa escreveu à mão: "
         f"options virou {teclado.tem.get('options')}")
     assert teclado.tem.get("l1") == ("KEY_F2",), (
-        f"o combo dela não sobreviveu: l1 virou {teclado.tem.get('l1')}")
+        f"o combo de quem usa não sobreviveu: l1 virou {teclado.tem.get('l1')}")
     assert mouse.calados is not None and "dpad_up" in mouse.calados, (
         "o device de mouse não soube que o `dpad_up` foi calado — a sacola não "
         "chegou pelo caminho de verdade")

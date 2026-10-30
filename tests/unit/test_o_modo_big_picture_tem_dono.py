@@ -430,7 +430,7 @@ def test_10_o_laco_do_mouse_passa_os_botoes_pelo_dono_antes_do_despacho() -> Non
     levar = fonte.find("levar_o_big_picture(self, None, emu_buttons)")
     despacho = fonte.find("_dispatch_mouse_emulation(state, emu_buttons)")
     assert levar != -1 and despacho != -1 and levar < despacho, (
-        "o mouse virtual (Navegação) recebe a seta antes de o Big Picture ficar com ela")
+        "o mouse virtual (Navegação) recebe a seta antes de o Big Picture ficar com a seta")
     assert "levar_o_big_picture(self, None, frozenset())" in fonte, (
         "o controle que cai com a seta apertada deixa a tecla presa")
 

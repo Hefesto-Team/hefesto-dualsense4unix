@@ -54,7 +54,7 @@ def test_o_filho_morre_quando_o_pai_leva_sigkill() -> None:
 
         assert not _vivo(neto), (
             f"o parec (pid {neto}) SOBREVIVEU ao SIGKILL do pai — é o órfão que "
-            f"segura o microfone dela aberto. O `preexec_fn=_morrer_com_o_pai` "
+            f"segura o microfone de quem usa aberto. O `preexec_fn=_morrer_com_o_pai` "
             f"caiu do `Popen` de `integrations/nivel_do_microfone.py`?"
         )
     finally:

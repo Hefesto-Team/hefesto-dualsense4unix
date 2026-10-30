@@ -4,7 +4,7 @@ Sprint O-MICROFONE-DO-RADIO-DESLIGA-NO-STOP-MESMO-COM-A-VOLTA-EM-CURSO-01. A
 promessa é do dono (`PonteMicBluetooth`): deixar o microfone de alguém ligado
 depois de fechar o programa não é opção. Quem cria (a volta do supervisor) e
 quem derruba (o stop) partilham uma porta, e as três réguas abaixo prendem a
-volta num `Event` para o stop cair exatamente no meio dela. Nada de aparelho,
+volta num `Event` para o stop cair exatamente no meio da volta. Nada de aparelho,
 servidor de som ou sysfs: a ponte e o canal são dublês que contam o que
 ligaram e o que desligaram.
 """
@@ -98,7 +98,7 @@ def test_a_ponte_que_a_volta_ergueria_depois_do_stop_nao_sobe(
     """A reprodução de 09/10: o stop passa enquanto a volta está no cabo.
 
     A volta segue para `gerenciador.reconciliar` depois do `parar()` do
-    gerenciador, e sem a porta ela sobe a ponte do P1 (o 0x32 de LIGAR) que
+    gerenciador, e sem a porta a volta sobe a ponte do P1 (o 0x32 de LIGAR) que
     ninguém mais derruba. MORDIDA: tirar o teste da porta em `reconciliar`.
     """
     criadas: list[_PonteDeMentira] = []
@@ -147,7 +147,7 @@ def test_a_ponte_cujo_iniciar_termina_depois_do_parar_desce(sem_sistema: None) -
     """O `iniciar` ainda corre quando o `parar()` do gerenciador passa.
 
     A ponte só entraria no dicionário depois, e o `parar()` já o tinha
-    esvaziado: ela ficava ligada e fora do alcance de qualquer stop. MORDIDA:
+    esvaziado: a ponte ficava ligada e fora do alcance de qualquer stop. MORDIDA:
     tirar a descida da ponte tardia.
     """
     entrou, segurar = threading.Event(), threading.Event()

@@ -52,7 +52,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.utils import session, xdg_paths
 
 P1 = "aabbcc000001"
-PERFIL = "Bancada"
+PERFIL = "Ensaio"
 
 
 class _Vpad:
@@ -233,7 +233,7 @@ def test_o_chip_xbox_leva_o_modo_inteiro() -> None:
     """
     d = _preparar("dualsense")
     antes = d._gamepad_device
-    assert (antes.backend, antes.flavor) == ("uhid", "dualsense"), "premissa da bancada"
+    assert (antes.backend, antes.flavor) == ("uhid", "dualsense"), "premissa do ensaio"
     assert aba._estado_da_tela(_estado(d))["modo-aceso"] == "dualsense", "premissa"
 
     ponte = _Ponte(d)
@@ -408,12 +408,12 @@ def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
         gp._guardar_o_caminho(d, "xbox", origin="profile")  # type: ignore[arg-type]
         assert d.config.gamepad_caminho == "xbox"
         assert session.load_gamepad_caminho_com_origem()[0] is None, (
-            "um perfil persistiu o caminho dela"
+            "um perfil persistiu o caminho de quem usa"
         )
 
         gp._guardar_o_caminho(d, "xbox", origin="manual")  # type: ignore[arg-type]
         assert session.load_gamepad_caminho_com_origem()[0] == "xbox", (
-            "o gesto dela não persistiu"
+            "o gesto de quem usa não persistiu"
         )
         assert velha.read_bytes() == bytes_da_velha, "a flag velha mudou de formato"
         assert session.load_gamepad_emulation() == (True, "dualsense")
@@ -432,11 +432,11 @@ def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
                 if pool is not None:
                     pool.shutdown(wait=False)
         assert daemon.config.gamepad_caminho_global == "xbox", (
-            "o boot não leu o caminho dela, ou desfez a escolha com origem"
+            "o boot não leu o caminho de quem usa, ou desfez a escolha com origem"
         )
         assert session.load_gamepad_caminho_com_origem() == (
             "xbox", session.ORIGEM_DO_GESTO_FORA_DO_JOGO
-        ), "o boot mexeu no arquivo da escolha dela"
+        ), "o boot mexeu no arquivo da escolha de quem usa"
         assert daemon.config.gamepad_caminho is None, (
             "o slot da sessão nasceu do arquivo global — CAMINHO-CONTAGIO-01"
         )

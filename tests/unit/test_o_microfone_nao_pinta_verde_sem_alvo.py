@@ -11,7 +11,7 @@ e o caso mais comum dele não é exótico: **é o controle no rádio**, onde nã
 existe placa ALSA nenhuma (medido 15/08/2026, ``audio.microfone@dualsense``,
 ``assimetria_declarada``).
 
-A RÉGUA DO ALVO, E O QUE ELA NÃO PROVA
+A RÉGUA DO ALVO, E O QUE A RÉGUA NÃO PROVA
 =======================================
 A régua é a presença de placa ALSA do DualSense em ``/proc/asound/cards``,
 contada pela função pura ``storm_doctor.contar_placas_dualsense``. A sprint
@@ -76,7 +76,7 @@ def _tela(
     """A aba com um `wireplumber.conf.d` de mentira e um `cards` declarado.
 
     O `cards` é parâmetro, e é assim de propósito: um teste cujo resultado
-    depende de haver um DualSense no cabo desta bancada é o vício de bancada
+    depende de haver um DualSense no cabo desta máquina é o vício de máquina de teste
     que a NO-MEU-FUNCIONA-01 nomeia.
     """
     dropins = tmp_path / "wireplumber.conf.d"

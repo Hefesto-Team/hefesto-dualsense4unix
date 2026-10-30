@@ -170,7 +170,7 @@ class TestOCoopEOEstadoPerguntamAoDono:
         try:
             assert (vpad.backend, vpad.flavor) == ("uinput", "dualsense")
             assert publicados == [], (
-                "o modo Xbox que ela escolheu foi anunciado como queda "
+                "o modo Xbox que quem usa escolheu foi anunciado como queda "
                 "(`vpad_degradado`): foi o diário da noite de 27/09"
             )
             assert IpcHandlersMixin._vpad_backend_motivo(vpad) == ("uinput", None)
@@ -236,7 +236,7 @@ class TestAPromocaoDoConnectPerguntaAoDono:
             promoveu, partidas = _connect(pad, monkeypatch)
             assert (promoveu, partidas) == (False, []), (
                 "o connect promoveu o pad do modo Xbox para o uhid e desfez a "
-                "escolha dela: foi o Freestyle no install de 27/09"
+                "escolha de quem usa: foi o Freestyle no install de 27/09"
             )
         finally:
             pad.stop()
@@ -299,5 +299,5 @@ def test_a_devolucao_do_xbox_roda_uma_vez_e_a_escolha_seguinte_fica(
 
     assert funcao("xbox") == "dualsense"
     assert len(escritos) == 1
-    assert funcao("xbox") == "xbox", "o segundo boot desfez o Xbox que ela escolheu"
+    assert funcao("xbox") == "xbox", "o segundo boot desfez o Xbox que quem usa escolheu"
     assert len(escritos) == 1

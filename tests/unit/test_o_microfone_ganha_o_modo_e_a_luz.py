@@ -12,7 +12,7 @@ Duas metades, e cada uma tem a sua mordida:
    todos do adaptador: o rádio segue medido só quando alguém já ouve). Mordida: devolver o ramo
    «sem ouvinte acende fixo» ou medir só quem tem ouvinte reprova.
 2. No Modo Nativo o laço de escrita do controle cala (o jogo é dono da saída), e a luz decidida
-   ficava na memória. Ela sai no report mínimo (só o bit ``0x01`` do flag1 e o ``common[8]``), com o
+   ficava na memória. A luz sai no report mínimo (o bit ``0x01`` do flag1 e o ``common[8]``), com o
    ``seq`` e o CRC do handle no rádio. Mordida: tirar a escrita mínima do
    ``PyDualSenseController.set_microphone_led`` reprova.
 """
@@ -126,7 +126,7 @@ def _plantar(
 async def test_no_cabo_a_luz_pisca_com_som_sem_app_nenhum_ouvindo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O arranjo da bancada: microfone ligado, ninguém gravando, ela fala; a luz pisca."""
+    """O arranjo do ensaio: microfone ligado, ninguém gravando, quem usa fala; a luz pisca."""
     controle = _ControleComTransporte(
         uniqs=[STARLIGHT], mudo={STARLIGHT: False}, transportes={STARLIGHT: "usb"}
     )
@@ -140,7 +140,7 @@ async def test_no_cabo_a_luz_pisca_com_som_sem_app_nenhum_ouvindo(
 
     assert any(STARLIGHT in alvos for alvos in medidor.seguidos), (
         "o microfone ligado no cabo não foi medido: sem medida não há som captado, e a luz "
-        "ficaria acesa parada enquanto ela fala"
+        "ficaria acesa parada enquanto quem usa fala"
     )
     escritos = [v for u, v in em_voo if u == STARLIGHT]
     assert escritos and escritos[-1] == mod.PISCANDO, escritos
@@ -295,7 +295,7 @@ def _common(relatorio: bytes, transporte: str) -> bytes:
 def test_no_nativo_a_luz_decidida_chega_ao_fio_no_report_minimo(
     transporte: str, nivel: int
 ) -> None:
-    """No Nativo o laço do controle cala; a luz sai sozinha, e só ela."""
+    """No Nativo o laço do controle cala; a luz sai sozinha, e só a luz."""
     handle = _handle(mudo=False, transporte=transporte, nativo=True)
     backend = _backend({STARLIGHT: handle}, nativo=True)
 
