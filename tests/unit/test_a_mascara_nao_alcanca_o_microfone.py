@@ -1,4 +1,4 @@
-"""A máscara não custa feature: o caminho do microfone é CEGO a ela."""
+"""A máscara não custa feature: o caminho do microfone é CEGO à máscara."""
 
 from __future__ import annotations
 
@@ -76,9 +76,9 @@ def test_a_mascara_nao_aparece_no_caminho_do_microfone(arquivo: str) -> None:
     assert not achadas, (
         f"a máscara chegou ao caminho do microfone, em {arquivo}:\n  "
         + "\n  ".join(f"{n}: {texto}" for n, texto in achadas)
-        + "\n\nA decisão dela (05/09/2026) é que a máscara NÃO custa feature: "
-        "'Usaríamos essa feature do controle mesmo no Xbox'. Um gate aqui faz o "
-        "microfone sumir quando ela liga a máscara, e o sintoma se lê como "
+        + "\n\nA decisão de 05/09/2026 é que a máscara NÃO custa feature: o "
+        "microfone do controle vale também no Xbox. Um gate aqui faz o "
+        "microfone sumir quando a máscara liga, e o sintoma se lê como "
         "'este controle não tem microfone'."
     )
 

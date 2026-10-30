@@ -2,7 +2,7 @@
 
 A-LISTA-DA-JANELA-CONFIGURAR-NAO-ROLA-ALEM-DO-FIM-01 (26/10/2026). As telas das abas moram
 empilhadas na mesma célula (a janela não muda de tamanho ao trocar de aba), e a rolagem da lista
-herdava a altura da MAIOR delas: numa aba curta, a barra descia por um vazio depois do último
+herdava a altura da MAIOR das abas: numa aba curta, a barra descia por um vazio depois do último
 controle. A régua rola cada aba até o fim e mede a folga que sobra embaixo.
 
 Medido antes: a lista tinha 605 px para toda aba (a da Força tem 176) e rolava 198 px em todas.

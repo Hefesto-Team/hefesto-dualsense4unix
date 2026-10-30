@@ -32,7 +32,7 @@ _SUFIXO_DE_FIXTURE = ("c3", "1a", "f7")
 
 
 def _endereco_sem_mascara(ultimo: str = "f7") -> str:
-    """Um endereço com OUI real desta bancada, montado na hora."""
+    """Um endereço com OUI real deste ensaio, montado na hora."""
     from tests.unit.test_docs_mac_anonimato import _OUIS_REAIS_OCTETOS
 
     return ":".join([*_OUIS_REAIS_OCTETOS[0], _SUFIXO_DE_FIXTURE[0],
@@ -55,7 +55,7 @@ def test_as_vinte_e_uma_linhas_do_roteiro_estao_todas() -> None:
 
 
 def test_o_roteiro_vem_primeiro() -> None:
-    """A hora dela com os quatro controles é a aceitação, e ela tem 60 min."""
+    """A hora de ensaio com os quatro controles é a aceitação, e tem 60 min."""
     testes = med.todos_os_testes()
     assert all(t.id.startswith("roteiro-") for t in testes[:21])
 
@@ -443,9 +443,9 @@ def test_o_validar_sh_existe_e_tem_o_sem_abrir() -> None:
     for verbo in ("restart", "stop", "kill-unit", "disable"):
         assert f"systemctl --user {verbo}" not in codigo, (
             f"o lançador não pode `systemctl --user {verbo}` — isso derruba o "
-            f"daemon vivo no meio de uma medição dela")
+            f"daemon vivo no meio de uma medição")
     assert "systemctl --user start" in codigo, (
-        "o lançador deixou de ligar o daemon; ela pediu que ligasse sozinho")
+        "o lançador deixou de ligar o daemon; o pedido era que ligasse sozinho")
     assert "is-active" in codigo, (
         "o lançador tem de perguntar antes de ligar — chamar `start` cego "
         "esconde da tela se o daemon já estava de pé")
@@ -668,9 +668,9 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                 "salvar não avançou para o teste seguinte")
             agora = pg.input_value("#gesto")
             seguinte = pg.evaluate("() => TESTES[atual].id")
-            assert agora, "o COMO chegou vazio — ela teria de digitar de novo"
+            assert agora, "o COMO chegou vazio — quem mede teria de digitar de novo"
             assert alvo.passa_quando not in agora, (
-                "o COMO do teste anterior ficou na tela — ela salvaria o COMO "
+                "o COMO do teste anterior ficou na tela — quem mede salvaria o COMO "
                 "errado sem perceber")
             do_novo = next(x for x in med.todos_os_testes() if x.id == seguinte)
             passos = dict(do_novo.como).get("os passos", "")

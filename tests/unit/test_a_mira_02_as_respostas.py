@@ -70,7 +70,7 @@ def test_no_nativo_o_mira_set_recusa_o_chip_sem_escrever_nada(
     corpo = _mira_set(servidor, uniq=_P3, ligada=ligada)
     assert corpo["status"] == "nativo", corpo
     assert corpo["uniq"] == _P3 and corpo["motivo"]
-    assert not load_profile("Bancada").controllers, "a recusa gravou no perfil"
+    assert not load_profile("Ensaio").controllers, "a recusa gravou no perfil"
     assert not rot.por_peca(servidor.store), "a recusa mexeu no vivo"
     assert not REGISTRO.roteado(_P3)
 
@@ -83,7 +83,7 @@ def test_no_nativo_a_recusa_leva_o_pedido_inteiro(perfis: Path, tmp_path: Path) 
     servidor.daemon._native_mode = True
     corpo = _mira_set(servidor, uniq=_P2, ligada=True, sensibilidade=9)
     assert corpo["status"] == "nativo"
-    assert not load_profile("Bancada").controllers
+    assert not load_profile("Ensaio").controllers
 
 
 def test_no_nativo_os_ajustes_da_calibrar_continuam_gravando(
@@ -98,7 +98,7 @@ def test_no_nativo_os_ajustes_da_calibrar_continuam_gravando(
                       inverter_vertical=True, gatilho="l2")
     assert corpo["status"] == "ok" and corpo["ligada"] is False, corpo
     assert corpo["alcance"] == {"tique": "nao_se_aplica"}
-    dele = load_profile("Bancada").controllers["aabbcc000002"].movimento
+    dele = load_profile("Ensaio").controllers["aabbcc000002"].movimento
     assert (dele.zona_morta_graus_s, dele.inverter_vertical, dele.gatilho) == (
         24.0, True, "l2")
     assert "destino" not in dele.model_fields_set, (
@@ -126,7 +126,7 @@ def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
     assert corpo["status"] == "ok" and corpo["gatilho"] == "l2"
     corpo = _mira_set(servidor, uniq=_P4, inverter_horizontal=True)
     assert corpo["inverter_horizontal"] is True and corpo["inverter_vertical"] is False
-    dele = load_profile("Bancada").controllers["aabbcc000004"].movimento
+    dele = load_profile("Ensaio").controllers["aabbcc000004"].movimento
     assert dele.model_fields_set == {"destino", "acelerometro", "lado", "gatilho",
                                      "inverter_horizontal"}
     vivo = rot.da_peca(servidor.store, _P4, rot.ativo(servidor.store))
@@ -138,7 +138,7 @@ def test_sempre_devolve_a_mira_sem_botao(perfis: Path, tmp_path: Path) -> None:
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
     perfil = Profile(
-        name="Bancada", match=MatchAny(type="any"),
+        name="Ensaio", match=MatchAny(type="any"),
         movimento=ProfileMovimentoConfig(destino="analogico_direito", gatilho="r1"),
     )
     servidor = _servidor_com_perfil(tmp_path, perfil)
@@ -153,13 +153,13 @@ def test_sempre_devolve_a_mira_sem_botao(perfis: Path, tmp_path: Path) -> None:
 def test_o_ps_e_o_que_nao_e_botao_sao_recusados(
     perfis: Path, tmp_path: Path, torto: Any
 ) -> None:
-    """O PS é a saída de emergência dela e nunca vira gatilho; o que não chega"""
+    """O PS é a saída de emergência de quem usa e nunca vira gatilho; o que não chega"""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     servidor = _servidor_com_perfil(tmp_path)
     with pytest.raises(ValueError, match="gatilho"):
         _mira_set(servidor, uniq=_P3, gatilho=torto)
-    assert not load_profile("Bancada").controllers, "a recusa gravou alguma coisa"
+    assert not load_profile("Ensaio").controllers, "a recusa gravou alguma coisa"
 
 
 @pytest.mark.parametrize("torto", ["sim", 1, None])
@@ -386,7 +386,7 @@ def test_a_lista_do_segurar_e_a_do_esquema_e_nasce_sempre() -> None:
     assert [b for b, _ in _BOTOES_DA_LISTA] == list(REMAPEAVEIS), (
         "o esquema mudou a lista — releia a decisão antes de corrigir a régua")
     colunas = _colunas_da_mira()
-    assert len(colunas) == 2, "a bancada do desenho tem dois controles"
+    assert len(colunas) == 2, "o ensaio do desenho tem dois controles"
     for coluna in colunas:
         lista = re.findall(r'<label class="desl"><span class="r">Só enquanto eu segurar'
                            r'</span><select class="lista" data-gesto="mira-segurar" '
@@ -512,7 +512,7 @@ def test_escolher_o_botao_manda_um_campo_so() -> None:
 
 @pytest.mark.parametrize("torto", ["ps", "", "touchpad"])
 def test_o_ps_nao_passa_pela_lista(torto: str) -> None:
-    """O PS é a saída de emergência dela: nem chega ao daemon."""
+    """O PS é a saída de emergência de quem usa: nem chega ao daemon."""
     p = _PonteDaMira(_OK)
     with pytest.raises(ValueError):
         _o_gesto("calibrar-sensores.html", "mira-segurar")(
@@ -625,7 +625,7 @@ def _servidor_da_matriz(tmp_path: Path, transporte: str, hub: Any) -> Any:
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from tests.unit.test_a_mira_por_movimento_na_tela import _mesa_de_verdade
 
-    perfil = Profile(name="Bancada", match=MatchAny(type="any"))
+    perfil = Profile(name="Ensaio", match=MatchAny(type="any"))
     save_profile(perfil)
     daemon, servidor = _mesa_de_verdade(tmp_path, transporte, hub)
     servidor.profile_manager.apply_movimento(perfil)
@@ -699,7 +699,7 @@ def test_fora_do_nativo_a_mira_do_chip_anda_do_p1_ao_p4(
 def test_no_nativo_o_chip_nao_acende_ninguem(
     perfis: Path, tmp_path: Path, transporte: str
 ) -> None:
-    """A exceção dela, nos quatro jogadores e nos dois transportes: no Nativo"""
+    """A exceção, nos quatro jogadores e nos dois transportes: no Nativo"""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from tests.unit.test_a_mira_por_movimento_na_tela import _P1, _hub
 

@@ -326,7 +326,7 @@ def test_a_barra_das_estrelas_fica_baixa_nunca_preta_e_anda_sem_salto() -> None:
     quadros = _estrelas(5)
     barra = [q.cor for q in quadros]
     assert all(max(c) > 0 for c in barra)
-    assert max(max(c) for c in barra) < 200, "ela acompanha baixinho, a estrela é a luzinha"
+    assert max(max(c) for c in barra) < 200, "a barra acompanha baixinho, a estrela é a luzinha"
     saltos = [max(abs(a[k] - b[k]) for k in range(3)) for a, b in pairwise(barra)]
     assert max(saltos) <= 20, max(saltos)
 

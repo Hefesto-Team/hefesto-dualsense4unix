@@ -1,4 +1,4 @@
-"""A seção "A mesa" leva a declaração dela ao disco — e a relê ao voltar."""
+"""A seção "A mesa" leva a declaração do usuário ao disco — e a relê ao voltar."""
 from __future__ import annotations
 
 from typing import Any

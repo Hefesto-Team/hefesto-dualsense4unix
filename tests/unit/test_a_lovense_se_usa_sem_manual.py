@@ -1,12 +1,12 @@
 """A 07 recebe a extensão que se usa sem manual: o que a porta mostra, recusa e pede.
 
 Com uma extensão de mentira (só declaração, nenhum processo), o que a 07 faz por qualquer
-extensão de processo que ela instale:
+extensão de processo que a 07 instale:
 
 - ligada no registro e calada no supervisor, a chave diz «Caiu», «Voltando» ou «Recusada» na cor
   do estado, com o motivo e a última linha do diário na dica (antes, verde «Ligada» sobre nada);
 - o canto do «Agora» da janela diz o mesmo quando a conexão não respondeu;
-- o «Parar tudo» com ela fora da porta (``{parado: false}``) recusa dizendo, em vez de piscar verde;
+- o «Parar tudo» com a extensão fora (``{parado: false}``) recusa dizendo, em vez de piscar verde;
 - o «Atualizar» que traz permissão ou aviso novo deixa o ⋮ aberto já com a lista, e um clique na
   chave é o «sim».
 
@@ -40,7 +40,7 @@ from tests.unit.test_a_aba_lancadores_ganha_as_modificacoes import (  # noqa: F4
 )
 
 GESTO = "ler:acessorios.gesto"
-AVISO = "Ela fala com um aparelho de fora."
+AVISO = "Fala com um aparelho de fora."
 
 
 def _instalada_e_ligada(a07: Any, ctx: Any, tmp_path: Any, *,  # noqa: F811

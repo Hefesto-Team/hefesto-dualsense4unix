@@ -11,7 +11,7 @@ O que a régua prova:
   qualquer mistura de cabo e rádio, e a silhueta fica na cor (sem o esmaecido do «desligado»);
 * a palavra da faixa segue «USB» (a regra «a tela diz USB e BT»);
 * o controle que está mesmo desligado segue cinza e sem jogador;
-* a cor, o nome dela e o jogador saem de UM dono (``_a_cara_do_controle``), o mesmo do rádio, e o
+* a cor, o nome da cor e o jogador saem de UM dono (``_a_cara_do_controle``), o mesmo do rádio, e o
   mockup da 08 desenha a linha do cabo.
 
 MORDIDAS: tire o ``**cara`` do ``_os_desligados`` e a cor some da linha do cabo; devolva a condição

@@ -4,21 +4,21 @@
 **04/10/2026:** a linha do exame saiu da aba Conexões (cada achado virou um cartão de dica,
 AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01). O que fica aqui é o dado da linha (`_linha`, o selo e a dica
 do dono), que a aba Jogar ainda lê pelo `_exame()`; as réguas dos endereços da página
-saíram com ela.
+saíram com o selo.
 
 **02/09/2026.** As cinco linhas do Check-up da aba Conexões têm três partes: o
-selo, a frase e o `?`. A frase e o selo já vinham do exame da bancada; as
+selo, a frase e o `?`. A frase e o selo já vinham do exame do ensaio; as
 TRÊS estavam erradas, cada uma de um jeito, e as três têm dono no produto.
 
 **A FRASE MOSTRAVA O RÓTULO.** O pacote emitia ``[i["titulo"] for i in itens]``
-— o ``Item.rotulo``, que é o NOME da conferência. Fotografado nesta bancada,
+— o ``Item.rotulo``, que é o NOME da conferência. Fotografado neste ensaio,
 com dois controles na mesa::
 
     CERTO  Economia de energia desligada        ← o nome do exame
     CERTO  Energia das portas                   ← o nome do exame
     CERTO  Suporte ao controle                  ← o nome do exame
 
-onde o desenho dela promete um achado. A regra é do produto e está escrita no
+onde o desenho aprovado promete um achado. A regra é do produto e está escrita no
 pacote da aba (``interface/pacotes/a08_conexoes.py``, na chave ``achado``):
 *"O texto é o ``porque`` — a MEDIÇÃO em uma frase —, nunca o rótulo: a tela
 aprovada mostra o que se achou, não o nome do que se conferiu."* Os mesmos três
@@ -31,11 +31,11 @@ itens, pelo ``porque``::
 **O SELO PERDIA UMA PALAVRA.** Ele saía de ``"AJUSTAR" if grave else "CERTO"``,
 e o ``Item`` tem QUATRO estados. ``interface.conexoes.SELO_DO_ESTADO`` os mapeia
 em TRÊS palavras, e a que sumia era a **NOTA** do ``nao_sei`` — a mesma que o
-desenho dela crava na quarta linha. Um "não deu para olhar" chegava à tela como
+desenho aprovado crava na quarta linha. Um "não deu para olhar" chegava à tela como
 "AJUSTAR": a tela afirmando um problema que ninguém mediu.
 
 **O `?` NÃO TINHA ENDEREÇO.** Ele continuava sendo o do MOCKUP enquanto o selo
-e a frase ao lado já eram os dela — a linha 1 dizia "Economia de energia
+e a frase ao lado já eram os do produto — a linha 1 dizia "Economia de energia
 desligada" e o `?` explicava *"as entradas em uso entregam 500 mA ou mais"*, que
 é a medição de OUTRO achado.
 
@@ -59,7 +59,7 @@ decidiu que *"o que está quebrado agora não pode parecer igual ao que só podi
 estar melhor"*. Esta leva entrega a **cor**: a pílula ganhou o endereço
 ``selo-estado`` (alvo ``classe``), o pacote emite o ESTADO cru e o desenho traz
 ``.selo.grave`` em ``var(--red)``. **A PALAVRA continua sendo "AJUSTAR" e é
-espera dela** — trocá-la seria escolher no lugar dela.
+decisão do produto** — trocá-la seria escolher no lugar do produto.
 
 **A MORDIDA:** troque ``i["porque"]`` por ``i["titulo"]`` na chave ``achado`` do
 pacote, devolva o selo binário, tire o ``data-campo="achado-explica"`` do
@@ -119,7 +119,7 @@ def test_a_frase_da_linha_e_a_medicao_e_nao_o_rotulo():
     ],
 )
 def test_o_selo_sai_do_mapa_do_produto(estado, palavra, classe):
-    """Os quatro estados do `Item` viram as três palavras do desenho dela."""
+    """Os quatro estados do `Item` viram as três palavras do desenho aprovado."""
     linha = a08._linha(_item(estado=estado))
     assert linha["selo"] == palavra
     assert linha["classe"] == classe
@@ -173,7 +173,7 @@ def test_a_dica_nao_repete_a_medicao_que_a_linha_ja_mostra():
     assert linha["porque"] == it.porque, "a linha continua mostrando a medição"
     assert it.porque not in linha["dica"], (
         "o `?` da linha voltou a repetir a medição que a linha ao lado já "
-        "mostra — decisão dela de 02/09/2026"
+        "mostra — decisão de 02/09/2026"
     )
 
 

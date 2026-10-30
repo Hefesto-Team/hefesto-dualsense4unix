@@ -136,12 +136,12 @@ class TestOEndereco:
 class TestOGesto:
     def test_o_arraste_grava_no_perfil(self, perfis: Path) -> None:
         """Régua 2: o trilho a 90 → o disco lido pelo esquema diz 90."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        ponte = _PonteQueGrava(_Handlers(ativo="Ensaio", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "haptica")
         assert gesto is not None
         gesto(_ctx(haptica=HAPTICA_PCT_PADRAO), {"uniq": BRANCO, "valor": "90"}, ponte)
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[BRANCO]
         assert dele.rumble is not None and dele.rumble.haptica == 90
 
     @pytest.mark.parametrize(("antes", "grava"), [(75, 0), (90, 0), (0, HAPTICA_PCT_PADRAO)])

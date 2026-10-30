@@ -30,7 +30,7 @@ from tests.unit import a_exclusao_de_antes as antiga
 
 @pytest.fixture(autouse=True)
 def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui as quatro estão ligadas."""
     from tests.unit.as_caixas_das_extensoes import ligar
 
     ligar(monkeypatch)

@@ -10,7 +10,7 @@ from hefesto_dualsense4unix.daemon import launch_env as le
 
 
 class _DaemonDeMesa:
-    """A bancada: emulação ligada, quatro vpads uinput, máscara `xbox`."""
+    """O ensaio: emulação ligada, quatro vpads uinput, máscara `xbox`."""
 
     def __init__(
         self,
@@ -104,7 +104,7 @@ def test_na_allowlist_o_kind_que_e_pura_disputa_nao_passa(kind: str | None) -> N
     assert devolvido == le.IGNORADO_DISPUTA_DA_ALLOWLIST
     assert daemon.chamadas == [], (
         f"`kind={kind}` atravessou a allowlist. Isso é largar o físico, soltar "
-        "o grab ou desligar o vpad — a disputa pelo controle que ela decidiu pular"
+        "o grab ou desligar o vpad — a disputa pelo controle que se decidiu pular"
     )
 
 

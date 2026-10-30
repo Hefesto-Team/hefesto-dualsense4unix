@@ -14,21 +14,21 @@ memória, entregue pelos mesmos argumentos injetáveis que o produto expõe
 `test_a_placa_e_o_controle_pelo_usb_pai.py:212-286`. Duas razões, e a segunda é
 a que importa:
 
-1. a bancada de quem roda não é a bancada de quem escreveu. Esta máquina, em
+1. o ensaio de quem roda não é o ensaio de quem escreveu. Esta máquina, em
    22/08/2026, tem ZERO adaptadores Bluetooth (`/sys/class/bluetooth` vazio) e
    nenhum hub — um teste contra o `/sys` real aqui não testaria nada e, na
    máquina seguinte, testaria outra coisa;
 2. **o mesmo ponto de injeção é o que protege a foto.** O retratista da JANELA
    montava a aba de verdade para fotografá-la, e a foto entra em
    `docs/usage/assets` sem revisão humana. Sem raízes injetáveis, o PNG
-   versionado carregaria o barramento dela. O teste
+   versionado carregaria o barramento da máquina de teste. O teste
    `test_nenhum_caminho_do_sys_real_e_tocado` é o que segura essa porta.
    (Aquele retratista — `scripts/gui-captura/retratar_abas.py` — saiu com a
-   janela em 06/09/2026. **A razão não caducou, e a injeção fica**: ela é
+   janela em 06/09/2026. **A razão não caducou, e a injeção fica**: é
    também como a suíte lê uma mesa de mentira. Ver a nota gêmea em
    `integrations/mesa_de_radio.py`, na classe `Mesa`.)
 
-A BANCADA DE MENTIRA
+O ENSAIO DE MENTIRA
 ---------------------
 
 Sete aparelhos, escolhidos para cobrir cada estado que a seção sabe desenhar::
@@ -234,12 +234,12 @@ class Ensaio:
 
 
 def _so_um_adaptador() -> Ensaio:
-    """A mesma bancada, com `hci1` fora — uma mesa de UM adaptador."""
+    """A mesmo ensaio, com `hci1` fora — uma mesa de UM adaptador."""
     return Ensaio(interfaces_bt={"hci0": INTERFACES_BT["hci0"]})
 
 
 def test_uma_mesa_de_um_adaptador_lista_um() -> None:
-    """O aceite escrito da sprint, na única forma em que esta bancada o prova."""
+    """O aceite escrito da sprint, na única forma em que este ensaio o prova."""
     ensaio = Ensaio(
         interfaces_bt={
             "hci0": INTERFACES_BT["hci0"],
@@ -276,7 +276,7 @@ def test_o_hub_nao_entra_na_lista_de_radios() -> None:
 def test_um_dualsense_no_cabo_nao_e_outro_radio_que_divide_a_faixa() -> None:
     """A regra crua do roteiro faz o produto acusar os próprios controles.
 
-    "Dispositivo USB que não é hub e não é o adaptador" inclui, nesta bancada
+    "Dispositivo USB que não é hub e não é o adaptador" inclui, neste ensaio
     real, os DOIS DualSense do cabo (`054c:0ce6` em `3-1` e `3-4`). A tela diria
     que os controles do usuário atrapalham os controles do usuário. Decisão M4.
 
@@ -357,7 +357,7 @@ def test_controladores_pci_diferentes_nunca_estao_colados() -> None:
 
 
 def test_sysfs_vazio_ou_ilegivel_devolve_lista_vazia_sem_levantar() -> None:
-    """O estado REAL desta bancada, e o de qualquer PC sem dongle."""
+    """O estado REAL deste ensaio, e o de qualquer PC sem dongle."""
     vazia = Ensaio(aparelhos={}, interfaces_bt={})
     mesa = ler_a_mesa(**vazia.fontes())
     assert mesa.adaptadores == ()
@@ -380,9 +380,9 @@ def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
 
     escapados = [c for c in ensaio.tocados if not c.startswith("/mentira")]
     assert not escapados, (
-        "a leitura tocou caminhos fora da bancada injetada — "
+        "a leitura tocou caminhos fora do ensaio injetado — "
         f"o primeiro é {escapados[0]!r}"
     )
-    assert ensaio.tocados, "nenhum leitor foi chamado: a bancada não provou nada"
+    assert ensaio.tocados, "nenhum leitor foi chamado: o ensaio não provou nada"
 
 

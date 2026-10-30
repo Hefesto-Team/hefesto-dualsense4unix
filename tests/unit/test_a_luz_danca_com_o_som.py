@@ -94,7 +94,7 @@ def test_um_som_em_pulsos_da_brilho_que_sobe_e_desce_e_nunca_preto() -> None:
     quadros = _tocar(estado, pulsos)
     brilho = [max(q) / 255 for q in quadros]
     assert max(brilho) > 0.95, "o pulso leva a barra à cor cheia"
-    assert min(brilho) < 0.4, "e entre pulsos ela volta para perto do piso"
+    assert min(brilho) < 0.4, "e entre pulsos a barra volta para perto do piso"
     assert min(brilho) >= fx.PISO_DO_ACENDE - 0.01, "mas nunca preta"
     assert all(q != (0, 0, 0) for q in quadros)
     assert len(_subidas(brilho)) == 3, "uma subida por pulso"

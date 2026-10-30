@@ -160,11 +160,11 @@ def test_o_degrau_fora_da_escada_nao_entra_calado(mi, tmp_path):
     assert ruins, "o estado inventado passou sem uma palavra"
     assert any("quase-feita" in p for p in ruins)
     assert not any("implementada," in p or p.endswith("implementada") for p in ruins), (
-        "o degrau que ela aceitou em 23/09 não pode ser acusado como estranho")
+        "o degrau aceito em 23/09 não pode ser acusado como estranho")
 
 
 def test_decisao_do_piso_que_perde_a_regua_sai_nominal(mi, tmp_path, capsys):
-    """A regressão que o piso existe para pegar, e ela sai com nome."""
+    """A regressão que o piso existe para pegar, e a regressão sai com nome."""
     base = _arvore_de_mentira(tmp_path, {
         "test_mede_uma.py": '''
             def test_a_primeira():
@@ -189,7 +189,7 @@ def test_decisao_do_piso_que_perde_a_regua_sai_nominal(mi, tmp_path, capsys):
         assert "D-SUMIU" in saida, "a regressão sai nominal, nunca em silêncio"
         assert "D-NOVINHA" not in saida, (
             "decisão NOVA sem régua não é regressão — a catraca não pode "
-            "barrá-la, ou ela deixa de poder registrar o que decidiu")
+            "barrá-la, ou o produto deixa de poder registrar o que decidiu")
         assert "REGRESSÃO" in saida
     finally:
         mi.COM_REGUA_EM_20260920 = guarda
@@ -397,7 +397,7 @@ def test_o_piso_nao_pode_ser_esvaziado_em_silencio(mi):
     piso = mi.COM_REGUA_EM_20260920
     assert piso, (
         "a catraca foi esvaziada: com o piso vazio, apagar a régua de "
-        "qualquer decisão dela volta a ser VERDE")
+        "qualquer decisão volta a ser VERDE")
 
     assert len(set(piso)) == len(piso), (
         f"o piso tem nome repetido: {sorted(n for n in set(piso) if piso.count(n) > 1)}"
@@ -408,7 +408,7 @@ def test_o_piso_nao_pode_ser_esvaziado_em_silencio(mi):
         f"catraca: ele isenta a próxima régua apagada")
 
     assert "D-AUDIO-E-GIRO-NASCEM-LIGADOS" in piso, (
-        "a decisão que ORIGINOU esta sprint saiu do piso — ela ficou 23 dias "
+        "a decisão que ORIGINOU esta sprint saiu do piso — a decisão ficou 23 dias "
         "«decidida» com o microfone mudo, e é a última que pode perder a "
         "catraca")
 
@@ -433,7 +433,7 @@ def test_o_instrumento_tambem_nao_se_conta_fora_de_tests(mi, tmp_path):
     assert "D-DO-INSTRUMENTO" not in fora, (
         "o arquivo que fala do instrumento contou como citação de uma decisão")
     assert "D-DE-VERDADE" in fora, (
-        "a exclusão engoliu script de verdade junto — ela é derivada do NOME "
+        "a exclusão engoliu script de verdade junto — a exclusão é derivada do NOME "
         "do módulo, e não pode virar uma peneira")
 
     linhas = mi._linhas()

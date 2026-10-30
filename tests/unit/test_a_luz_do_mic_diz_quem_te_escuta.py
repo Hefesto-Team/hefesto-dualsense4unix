@@ -105,7 +105,7 @@ def _ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class _MedidorFalso:
-    """Dublê da PEÇA B **com a forma real dela**: `seguir` + `captando` + `parar`."""
+    """Dublê da PEÇA B **com a forma real**: `seguir` + `captando` + `parar`."""
 
     def __init__(self, responder: Any) -> None:
         self._responder = responder
@@ -201,7 +201,7 @@ def test_nao_sei_nao_e_zero(captando: bool | None) -> None:
 
 
 def test_o_produto_nao_inventa_um_quinto_estado() -> None:
-    """A faixa é `0..3` e `decidir` nunca sai dela (§4 da sprint)."""
+    """A faixa é `0..3` e `decidir` nunca sai da faixa (§4 da sprint)."""
     saidas = {
         mod.decidir(mudo=m, captando=c, bateria_pct=b)
         for m in (True, False, None)
@@ -235,7 +235,7 @@ def test_so_o_mudo_apaga_a_luz() -> None:
 async def test_o_laco_acende_na_mesa_do_usuario_e_publica_a_sala_vazia(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O laço inteiro, no arranjo dela — e o journal tinha `estado=0`."""
+    """O laço inteiro, no arranjo de uso — e o journal tinha `estado=0`."""
     mod._OUVINTES.clear()
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 100})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: []}, captando=lambda _u: {UM: False})
@@ -244,7 +244,7 @@ async def test_o_laco_acende_na_mesa_do_usuario_e_publica_a_sala_vazia(
 
     escritas = [v for u, v in em_voo if u == UM and v is not None]
     assert escritas == [mod.ACESA], (
-        f"a luz do microfone dela devia ACENDER e ficar; o laço escreveu "
+        f"a luz do microfone devia ACENDER e ficar; o laço escreveu "
         f"{escritas}"
     )
     assert mod.estado_da_luz_do_mic(UM) == mod.ACESA
@@ -273,7 +273,7 @@ async def test_escreve_so_na_mudanca_ao_longo_de_centenas_de_tiques(
 async def test_o_pisca_nao_vira_martelo_quando_o_usuario_fala_sem_parar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ela fala por centenas de tiques seguidos: `2` é escrito UMA vez."""
+    """Quem usa fala por centenas de tiques seguidos: `2` é escrito UMA vez."""
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(
         monkeypatch,
@@ -367,7 +367,7 @@ async def test_o_laco_nunca_toca_o_mudo(monkeypatch: pytest.MonkeyPatch) -> None
 async def test_o_desligamento_repinta_na_lingua_do_kernel_e_so_entao_solta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ela está MUDA: a posse volta com a luz ACESA — o contrário do que pintamos."""
+    """O microfone está MUDO: a posse volta com a luz ACESA — o contrário do que pintamos."""
     controle = _Controle(uniqs=[UM], mudo={UM: True}, bateria={UM: 90})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: ["chrome"]}, captando=lambda _u: {UM: True})
     daemon = _Daemon(controle)
@@ -641,7 +641,7 @@ def test_a_junta_com_as_pecas_irmas_existe_de_verdade() -> None:
     peca_b = importlib.import_module(mod.MODULO_DO_NIVEL)
     classe = getattr(peca_b, mod.NOME_DO_MEDIDOR, None)
     assert callable(classe), (
-        f"a PEÇA B não publica `{mod.NOME_DO_MEDIDOR}` — sem ela os estados "
+        f"a PEÇA B não publica `{mod.NOME_DO_MEDIDOR}` — sem a peça os estados "
         f"`2` e `3` são inalcançáveis"
     )
     for metodo in ("seguir", "captando", "parar"):
@@ -657,7 +657,7 @@ async def test_o_medidor_e_parado_no_desligamento(
 ) -> None:
     """O medidor segura `parec` VIVO: não pará-lo prende o microfone do usuário.
 
-    Medido nesta bancada em 03/09/2026: um `parec` órfão ficou 25 minutos
+    Medido neste ensaio em 03/09/2026: um `parec` órfão ficou 25 minutos
     segurando a fonte de captura do DualSense em RUNNING. Ele tem o stdout em
     `/dev/null`, logo nunca toma `SIGPIPE`, e nasce num cgroup que não é unit
     do Hefesto — um `systemctl --user stop` do daemon não o recolhe.
@@ -678,7 +678,7 @@ async def test_o_medidor_e_parado_no_desligamento(
 
     assert medidor.parado, (
         "o laço morreu sem parar o medidor — os `parec` ficam vivos segurando "
-        "a fonte de captura dela aberta, e ninguém os recolhe"
+        "a fonte de captura aberta, e ninguém os recolhe"
     )
 
 

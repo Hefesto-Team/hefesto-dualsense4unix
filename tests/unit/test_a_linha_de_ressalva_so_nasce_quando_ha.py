@@ -54,8 +54,8 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
   // A ALTURA DA CENA, e não a da linha. Uma `.ressalva` vazia mede ZERO de
   // altura com ou sem a cura — e mesmo assim cobra o `gap` da coluna e a
   // própria margem. Quem paga o pixel é o PAI, e é ele que a régua mede; assim
-  // ela continua certa se alguém trocar o mecanismo (`height:0`, `hidden`, um
-  // `:has()` no pai), porque o que ela lê é o espaço.
+  // a régua continua certa se alguém trocar o mecanismo (`height:0`, `hidden`, um
+  // `:has()` no pai), porque o que a régua lê é o espaço.
   const cena = id => {
     const e = document.getElementById(id);
     if (!e) return {ausente: id};
@@ -108,9 +108,9 @@ def test_a_peca_da_ressalva_entra_nas_dez_paginas_do_ensaio() -> None:
         if metades:
             faltando.append(f"{p.name}: sem {', '.join(metades)}")
     assert not faltando, (
-        "estas páginas da bancada não têm as duas metades da peça:\n  "
+        "estas páginas do ensaio não têm as duas metades da peça:\n  "
         + "\n  ".join(faltando)
-        + "\nRODE os geradores: `monta.CSS_FOLHA` mudou e a bancada ficou para "
+        + "\nRODE os geradores: `monta.CSS_FOLHA` mudou e o ensaio ficou para "
           "trás.")
 
 
@@ -137,13 +137,13 @@ def test_a_ressalva_sem_endereco_para_a_geracao() -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_com_ressalva_a_linha_ocupa_a_tela(medido: dict) -> None:
-    """No estado estranho ela nasce, e diz o que quem chamou mandou dizer."""
+    """No estado estranho a linha nasce, e diz o que quem chamou mandou dizer."""
     assert medido["cheia"]["altura_da_linha"] > 0, (
         f"a linha COM ressalva não ocupa altura: {medido['cheia']}")
     assert medido["cheia"]["altura_da_cena"] > medido["sem_linha"]["altura_da_cena"], (
         f"a cena com ressalva mede {medido['cheia']['altura_da_cena']}px e a "
         f"cena sem linha nenhuma mede {medido['sem_linha']['altura_da_cena']}px "
-        f"— a linha não cresceu a tela, então ela não está lá.")
+        f"— a linha não cresceu a tela, então não está lá.")
     assert medido["cheia"]["texto"] == DIZ, (
         f"a linha diz {medido['cheia']['texto']!r} e o texto passado foi "
         f"{DIZ!r} — a ressalva não atravessa de quem chama até a tela.")
@@ -152,7 +152,7 @@ def test_com_ressalva_a_linha_ocupa_a_tela(medido: dict) -> None:
 @pytest.mark.skipif(not CHROME.exists(),
                     reason="sem o Chrome do sistema — a régua não tem motor")
 def test_sem_ressalva_a_linha_nao_ocupa_nada(medido: dict) -> None:
-    """No repouso ela custa ZERO pixel — as duas metades, medidas."""
+    """No repouso a linha custa ZERO pixel — as duas metades, medidas."""
     sem_linha = medido["sem_linha"]["altura_da_cena"]
     assert sem_linha > 0, (
         "a cena de referência mede zero — a página não desenhou nada, e as "

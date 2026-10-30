@@ -1,6 +1,6 @@
 """A mesa vazia não para o laço do serviço — o achado de 02/10/2026.
 
-**O DEFEITO, no diário dela:** em 30/09 às 01h13 e em 01/10 às 13h28 e às
+**O DEFEITO, no diário do serviço:** em 30/09 às 01h13 e em 01/10 às 13h28 e às
 19h05, logo depois do ``controller_disconnected reason=probe_offline`` do
 último controle, o serviço parou de responder: a janela travou, o controle
 que voltou não foi aceito (nenhum ``controller_connected`` até o reinício) e o
@@ -13,9 +13,9 @@ emudeceu um segundo depois do ``probe_offline`` do último controle e não
 voltou mais, nem com os dois controles de volta; o SIGTERM não foi atendido em
 10 s; e a pilha do fio do laço estava no ``canal_do_microfone_loop``. A espera
 do canal (``_esperar_o_som_mudar``) não passa da hora da próxima conferência,
-a hora só anda na volta COM controle, e com a mesa vazia ela ficava no
+a hora só anda na volta COM controle, e com a mesa vazia a hora ficava no
 passado: prazo zero, e o ``esperar_async`` de prazo zero volta sem ceder o
-laço. A corrotina girava sem suspender, e o laço inteiro parava com ela.
+laço. A corrotina girava sem suspender, e o laço inteiro parava junto.
 
 **A RÉGUA** roda o laço do canal de produção num fio próprio, com uma batida
 de 10 ms ao lado, e mede a batida enquanto a mesa está vazia. Laço parado é

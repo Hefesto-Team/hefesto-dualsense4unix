@@ -1,12 +1,12 @@
 """A máscara Nintendo Pro existe e ATRAVESSA a casa inteira (07/09/2026).
 
-Ordem de produto: *"tem que mandar um agente construir só o do pro controller da
-Nintendo"*. A máscara é de EMULAÇÃO — o Hefesto faz o DualSense do usuário se
+Decisão do produto (07/09/2026): construir a máscara do Pro Controller da
+Nintendo, e nenhuma outra. A máscara é de EMULAÇÃO — o Hefesto faz o DualSense do usuário se
 apresentar ao jogo como um Pro; não é suporte a aparelho Nintendo físico.
 
 O QUE ESTE PORTÃO EXISTE PARA IMPEDIR, e é o defeito que a sprint nomeou:
 *um sabor que só existe no catálogo é um chip que continua cinza*. Um sabor
-novo tem SEIS pernas fora do `FLAVORS`, e cada uma delas já foi, em algum
+novo tem SEIS pernas fora do `FLAVORS`, e cada uma das seis já foi, em algum
 momento desta casa, uma lista digitada que divergiu do catálogo em silêncio.
 Cada teste abaixo arranca uma perna.
 

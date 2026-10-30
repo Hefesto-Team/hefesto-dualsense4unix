@@ -65,7 +65,7 @@ def _numero_do_report(report: bytes) -> int | None:
 
 
 class _HandleQueGuarda(_FakeHandle):
-    """O handle da bancada de queda que guarda cada report escrito, e em que fio."""
+    """O handle do ensaio de queda que guarda cada report escrito, e em que fio."""
 
     def __init__(self, transporte: str) -> None:
         super().__init__(transporte)
@@ -100,7 +100,7 @@ class _NoQueGuarda(SysfsLedNode):
 
 
 class MesaDaLuz(MesaDoJogo):
-    """A bancada de jogo aberto com o que escreve a luz: handles e nós que guardam."""
+    """O ensaio de jogo aberto com o que escreve a luz: handles e nós que guardam."""
 
     def __init__(
         self, monkeypatch: pytest.MonkeyPatch, tmp: Path, *, jogo: bool
@@ -205,7 +205,7 @@ def mesa_da_luz(
 
 
 def _a_volta_e_o_disparo(ensaio: MesaDaLuz) -> None:
-    """A volta do laço confere a numeração, e o gatilho dispara se ela armou."""
+    """A volta do laço confere a numeração, e o gatilho dispara se a volta armou."""
     if cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon):
         ensaio.relogio.avancar(ATRASO_APOS_A_ULTIMA_CONEXAO_S + 0.1)
         ensaio.disparar()
@@ -478,7 +478,7 @@ class TestOCaboSemONo:
         ensaio.tique()
         assert P4 not in {
             ensaio.inst._key_to_uniq(k) for k in ensaio.inst._sysfs
-        }, "a bancada não tirou o nó do P4"
+        }, "o ensaio não tirou o nó do P4"
         esperado = _sai_e_o_prazo_passa(ensaio, sai)
         assert esperado[P4] == 3, esperado
         ensaio.disparar()

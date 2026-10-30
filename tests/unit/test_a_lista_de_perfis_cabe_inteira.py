@@ -12,8 +12,8 @@ A CURA é o ``blocos`` — o mesmo degrau da fita de chips e do mapa do gabinete
 um bloco cujo NÚMERO DE FILHOS muda com o dado não tem endereço para o filho
 que ainda não existe, então ele se troca inteiro.
 
-**A RÉGUA DO MOCKUP NÃO ENXERGA ESTA ENTREGA, e é limite dela, não desta cura.**
-Ela compara o que a tela mostra com o que o ARQUIVO crava, endereço a endereço:
+**A RÉGUA DO MOCKUP NÃO ENXERGA ESTA ENTREGA, e é limite daquela régua, não desta cura.**
+A régua do mockup compara o que a tela mostra com o que o ARQUIVO crava, endereço a endereço:
 um endereço que NASCE na tela não tem par no arquivo e sai só como nota
 ("3 endereço(s) NASCERAM na tela"). Dezenove linhas novas não mudam nenhuma das
 três contagens. Por isso este arquivo existe.
@@ -21,7 +21,7 @@ três contagens. Por isso este arquivo existe.
 AS TRÊS COISAS QUE SÓ CHEGAM À TELA POR AQUI:
 
 1. as 19 linhas que faltavam;
-2. a classe ``ativo`` na linha CERTA — o desenho a crava na primeira, e ela
+2. a classe ``ativo`` na linha CERTA — o desenho a crava na primeira, e a classe
    ficava lá. Acertava por acidente (``ordem_de_exibicao`` põe o ativo em
    primeiro) e mentia inteiro quando não há perfil ativo nenhum;
 3. o ``title`` da disputa. ``explicacao_da_disputa`` existe em
@@ -131,8 +131,8 @@ def test_a_lista_vazia_diz_o_que_fazer_em_vez_de_ficar_em_branco() -> None:
     """Sem perfil no disco, a tabela explica como nasce o primeiro.
 
     A frase é ``perfis_web.LISTA_VAZIA`` e já estava escrita — nunca tinha
-    chegado à tela, porque não há ``data-hef`` para ela na página. Sem esta
-    linha o ``<tbody>`` ficaria em branco: a tela calada sobre um estado que ela
+    chegado à tela, porque não há ``data-hef`` para a frase na página. Sem esta
+    linha o ``<tbody>`` ficaria em branco: a tela calada sobre um estado que
     sabe explicar.
 
     MORDIDA: troque o ramo ``if not lista`` de ``_html_da_lista`` por ``""`` e
@@ -150,8 +150,8 @@ def test_o_realce_acompanha_o_perfil_ativo_e_nao_a_primeira_linha() -> None:
     """``class="ativo"`` no perfil que está valendo, e em mais nenhum.
 
     O desenho crava a classe na PRIMEIRA linha. Nenhum dos cinco alvos do pintor
-    (texto·largura·fundo·valor·html) liga uma CLASSE, então até hoje ela ficava
-    onde o mockup a pôs. Aqui a linha chega pronta, com a classe dentro dela.
+    (texto·largura·fundo·valor·html) liga uma CLASSE, então até hoje a classe ficava
+    onde o mockup a pôs. Aqui a linha chega pronta, com a classe dentro.
 
     MORDIDA: troque ``bool(x.get("ativo"))`` por ``False`` em ``_html_da_lista``
     e nenhuma linha fica realçada; troque por ``True`` e todas ficam.
@@ -225,7 +225,7 @@ def test_um_nome_de_perfil_com_aspas_nao_derrama_marcacao() -> None:
     linhas = _linhas(_pacote(['Elden Ring "GOTY"']))
     assert "&quot;GOTY&quot;" in linhas[0]
     assert '"GOTY"' not in linhas[0].split(">", 1)[0], (
-        "o nome saiu com a aspa CRUA na abertura da `<tr>` — ela fecha o "
+        "o nome saiu com a aspa CRUA na abertura da `<tr>` — a aspa fecha o "
         "atributo e o resto do nome vira marcação")
     assert linhas[0].count("<tr") == 1
     assert linhas[0].count("<td") == 3, (

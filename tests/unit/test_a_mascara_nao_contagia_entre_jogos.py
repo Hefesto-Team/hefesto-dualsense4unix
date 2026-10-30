@@ -7,7 +7,7 @@ A queixa de uso, em caixa alta:
     INICIO. OU O PERFIL NAO TA SALVANDO OU TEMOS ALGUM TESTE OU ALGO ALÉM QUE
     TÁ ZUANDO ISSO."*
 
-O perfil ESTAVA salvando. Medido na bancada naquele dia, com os arquivos
+O perfil ESTAVA salvando. Medido no ensaio naquele dia, com os arquivos
 na mão:
 
     gamepad_emulation.flag ......... xbox   (o padrão da MÁQUINA)
@@ -85,13 +85,13 @@ class TestPonto2OGestoQueNaoFalaDeMascaraNaoEscreveMascara:
         bloco = corpo[i : i + 2200]
         assert "load_gamepad_preference" in bloco, (
             "o ramo sem máscara não relê o disco — ou inventa, ou perde o "
-            "ligado dela")
+            "ligado do usuário")
         assert "save_gamepad_emulation(True, gravada)" in bloco
 
 
 class TestPonto3ODevolvedorDoXboxDoVazamento:
     def test_o_xbox_volta_ao_default_uma_vez(self, tmp_path, monkeypatch):
-        """MORDIDA: faça a função devolver `lido` sempre. O flag dela continua"""
+        """MORDIDA: faça a função devolver `lido` sempre. O flag do usuário continua"""
         from hefesto_dualsense4unix.daemon import lifecycle
 
         escritos: list[tuple[bool, str | None]] = []

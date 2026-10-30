@@ -1,14 +1,14 @@
-"""MASCARA-PERSISTE-01 — a máscara fica, até ELA mudar na interface.
+"""MASCARA-PERSISTE-01 — a máscara fica, até QUEM USA mudar na interface.
 
 Decisão, 22/08/2026: *"a máscara deveria ficar independente do jogo, até
 que eu mude na interface novamente."*
 
-**E «ELA MUDAR» NÃO É «UM PERFIL PASSAR» — corrigido em 21/09/2026.** A leitura
+**E «QUEM USA MUDAR» NÃO É «UM PERFIL PASSAR» — corrigido em 21/09/2026.** A leitura
 de 22/08 fez o perfil de um jogo escrever o padrão da MÁQUINA, e o preço está
 no §1 de `test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina`: um perfil
-entre 29 levou a máquina inteira para Xbox, e ela perdeu giroscópio,
-acelerômetro e touchpad em todos os jogos. A decisão de produto não mudou; o que
-mudou foi quem conta como «ela».
+entre 29 levou a máquina inteira para Xbox, e quem usa perdeu giroscópio,
+acelerômetro e touchpad em todos os jogos. A decisão do produto não mudou; o que
+mudou foi quem conta como «quem usa».
 
 Medido no journal da máquina do usuário no mesmo dia, e o que foi medido derruba a
 hipótese óbvia: **não é fechar o jogo que reverte a máscara**. A máscara viva
@@ -79,7 +79,7 @@ class _Vpad:
 
 
 def _perfil_de_jogo(flavor: str | None) -> Profile:
-    """Perfil COM opinião (criteria), como o Sackboy dela."""
+    """Perfil COM opinião (criteria), como o do Sackboy."""
     mode: dict[str, Any] = {"kind": "gamepad"}
     if flavor is not None:
         mode["gamepad_flavor"] = flavor
@@ -150,13 +150,13 @@ def test_a_mascara_do_perfil_nao_vira_o_padrao_da_maquina(
     assert daemon._gamepad_device.flavor == "dualsense"
     assert flag.read_text(encoding="utf-8").strip() == "xbox", (
         "o perfil de um jogo voltou a promover a máscara dele a padrão da "
-        "máquina — é o contágio que tirou o giroscópio do PRAGMATA dela")
+        "máquina — é o contágio que tirou o giroscópio do PRAGMATA")
 
 
 def test_o_boot_devolve_o_xbox_que_o_vazamento_deixou(
     daemon: Daemon, flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A outra metade: o arquivo dela JÁ está com o `xbox` do contágio."""
+    """A outra metade: o arquivo do usuário JÁ está com o `xbox` do contágio."""
     from hefesto_dualsense4unix.daemon.lifecycle import (
         _a_mascara_do_usuario_sem_o_vazamento,
     )
@@ -209,7 +209,7 @@ def test_o_desligado_de_proposito_do_usuario_nao_e_ressuscitado(
     daemon.apply_profile_mode(perfil.mode, profile=perfil)
 
     assert not flag.exists(), (
-        "um perfil ressuscitou o vpad que ela desligou de propósito"
+        "um perfil ressuscitou o vpad que o usuário desligou de propósito"
     )
     assert (tmp_path / _GAMEPAD_DISABLED_FLAG_FILE).exists()
 

@@ -31,7 +31,7 @@ EPOCH = 1000
 
 
 def _perfil_do_usuario() -> Profile:
-    """O perfil do usuário, da CÓPIA. Nunca do diretório em que ela joga."""
+    """O perfil do usuário, da CÓPIA. Nunca do diretório em que se joga."""
     return Profile.model_validate(json.loads(FIXTURE.read_text(encoding="utf-8")))
 
 
@@ -144,7 +144,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
     async def test_o_perfil_do_usuario_vira_xbox_depois_do_silencio(
         self, jogo_do_usuario: int
     ) -> None:
-        """A sequência inteira, do arquivo dela até o arquivo dela."""
+        """A sequência inteira, do arquivo do usuário até o arquivo do usuário."""
         save_profile(_perfil_do_usuario(), origem="teste")
         antes = _no_disco()
         assert antes.mode is not None and antes.mode.gamepad_flavor == "dualsense"
@@ -155,7 +155,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
         assert d.pedidos == [(True, "xbox", "manual", "xbox")], "o gesto tem de obedecer"
 
         gesto = pt.gesto_em_curso(d)
-        assert gesto is not None, "o gesto dela não deixou rastro"
+        assert gesto is not None, "o gesto não deixou rastro"
         assert gesto.appid == APPID
         assert gesto.ponte == pe.ESCADA[1].ponte
 
@@ -178,7 +178,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
 
     @pytest.mark.asyncio
     async def test_o_resto_do_perfil_do_usuario_nao_e_tocado(self, jogo_do_usuario: int) -> None:
-        """Alinhar a máscara não pode reescrever o perfil ao redor dela."""
+        """Alinhar a máscara não pode reescrever o perfil ao redor da máscara."""
         save_profile(_perfil_do_usuario(), origem="teste")
         antes = _no_disco()
 
@@ -201,7 +201,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
     async def test_o_lancamento_seguinte_arma_xbox_e_para_de_perguntar(
         self, jogo_do_usuario: int, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A entrega vista do lado dela: o aperto seguinte não acontece."""
+        """A entrega vista do lado de quem usa: o aperto seguinte não acontece."""
         save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
@@ -226,7 +226,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
     async def test_sem_jogo_do_wrapper_o_gesto_nao_escreve_em_perfil_nenhum(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ela mexendo na mesa, fora de uma partida, não é opinião sobre jogo."""
+        """Quem usa mexendo na mesa, fora de uma partida, não é opinião sobre jogo."""
         monkeypatch.setattr(le, "launch_session_appid", lambda **kw: None)
         save_profile(_perfil_do_usuario(), origem="teste")
 
@@ -243,7 +243,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
     async def test_jogo_fechado_no_meio_nao_carimba_nada(
         self, jogo_do_usuario: int
     ) -> None:
-        """Silêncio com o jogo fechado é ela tendo ido embora, não aprovação."""
+        """Silêncio com o jogo fechado é quem usa tendo ido embora, não aprovação."""
         save_profile(_perfil_do_usuario(), origem="teste")
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
@@ -277,7 +277,7 @@ class TestOGestoDoUsuarioChegaAoPerfil:
 
 
 def _perfil_antes_do_gesto() -> Profile:
-    """O estado dos três casos do journal, e é o dela: o ARQUIVO diz"""
+    """O estado dos três casos do journal, e é o do usuário: o ARQUIVO diz"""
     return Profile(
         name="Jogo Fictício Carimbado",
         match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
@@ -305,7 +305,7 @@ class TestODegrauCaroNaoCustaAPartida:
 
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
 
-        assert d.pedidos == [(False, None, "manual", None)], "o aperto dela foi comido"
+        assert d.pedidos == [(False, None, "manual", None)], "o aperto foi comido"
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
 
         le.tique_da_escada(d)
@@ -333,14 +333,14 @@ class TestODegrauCaroNaoCustaAPartida:
         le.tique_da_escada(d)
 
         gravado = _no_disco()
-        assert gravado.ponte is None, "carimbou o degrau que ela acabou de recusar"
+        assert gravado.ponte is None, "carimbou o degrau que o usuário acabou de recusar"
 
         for adiante in (60.0, 120.0, 181.0):
             le.tique_da_escada(d, agora=EPOCH + adiante)
             depois = _no_disco()
             assert depois.ponte is None, (
                 f"{adiante:.0f}s depois do degrau caro, o produto carimbou "
-                f"sozinho o degrau que ela recusou: {depois.ponte}"
+                f"sozinho o degrau que o usuário recusou: {depois.ponte}"
             )
             assert depois.mode is not None and depois.mode.caminho == "xbox", (
                 "o alinhamento do mode não sobreviveu ao tique seguinte — "
@@ -356,7 +356,7 @@ class TestODegrauCaroNaoCustaAPartida:
 
         assert resultado is not None
         assert pe.ESCADA[2].ponte.kind == pe.KIND_NATIVE, "premissa do teste"
-        assert resultado["ponte"] == "gamepad/xbox", "o degrau dela não voltou"
+        assert resultado["ponte"] == "gamepad/xbox", "o degrau escolhido não voltou"
         assert outro.config.gamepad_caminho == "xbox"
         assert resultado["escada"] == pt.COMECO_PERFIL_MANDA
         tentativa = pt.em_curso(outro)
@@ -397,7 +397,7 @@ class TestOQueNenhumaDasDuasFaz:
     async def test_jogo_sem_perfil_nao_ganha_arquivo(
         self, jogo_do_usuario: int
     ) -> None:
-        """Criar perfil nas costas dela tem uma porta só, e é o editor."""
+        """Criar perfil nas costas do usuário tem uma porta só, e é o editor."""
         d = _Daemon(flavor="dualsense")
         await hotkey_sub.build_next_bridge_callback(d)()  # type: ignore[arg-type]
         gesto = pt.gesto_em_curso(d)

@@ -3,7 +3,7 @@
 Sprint A-LUZ-DO-MIC-SEGUE-O-BOTAO-QUANDO-NAO-SABE-QUEM-OUVE-01. O contrato de
 19/09 (D-O-BOTAO-DO-MIC-MANDA-NA-LUZ): aceso é o microfone LIGADO, haja ou não
 app ouvindo. O piscar é o som captado (O-MICROFONE-GANHA-O-MODO-E-A-LUZ-QUE-PULSA-01); não saber
-quem ouve não pode virar a luz do kernel (apagada, que ela lê «desligado»).
+quem ouve não pode virar a luz do kernel (apagada, que se lê «desligado»).
 
 Quatro controles, P1 e P2 no cabo e P3 e P4 no rádio, com o laço de verdade e
 dublês do backend e das peças irmãs.

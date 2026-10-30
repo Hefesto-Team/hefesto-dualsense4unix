@@ -33,7 +33,7 @@ BRILHOS = (0.01, 0.08, 0.5, 0.99, 1.0)
 
 @dataclass(frozen=True)
 class Escolha:
-    """Uma peça da mesa como ela está no disco: a cor antes do brilho."""
+    """Uma peça da mesa como está no disco: a cor antes do brilho."""
 
     uniq: str
     numero: int

@@ -8,7 +8,7 @@ toque, a que aceita o giro em movimento, a que devolve zero no lugar de «nenhum
 e a que deixa o desvio de um toque valer para o anterior.
 
 Nada aqui toca o aparelho, o daemon do usuário ou o ``~/.config``: o ``rodar_no_aparelho`` é da
-bancada, e o ``ha_daemon`` real é trocado por um dublê nos testes da linha de comando.
+ensaio, e o ``ha_daemon`` real é trocado por um dublê nos testes da linha de comando.
 """
 
 from __future__ import annotations
@@ -88,7 +88,7 @@ def test_um_quadro_isolado_acima_do_limiar_nao_e_toque() -> None:
 
 
 def test_cada_toque_e_medido_da_sua_escrita_e_nao_da_anterior() -> None:
-    """Duas escritas a 300 ms (o motor já parou); o degrau de cada uma a 14 ms dela."""
+    """Duas escritas a 300 ms (o motor já parou); o degrau de cada uma a 14 ms da escrita."""
     quadros = giro(500, [(107, 130), (257, 280)])
     segunda = _t(250)
     medidas = ens.medir_toques(quadros, [ESCRITA, segunda])

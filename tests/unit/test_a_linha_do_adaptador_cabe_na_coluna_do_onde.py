@@ -4,9 +4,9 @@ Sprint: A-LINHA-DO-ADAPTADOR-NAO-CABE-NA-COLUNA-DO-ONDE-01.
 
 Medido em 24/10/2026, no lar de mentira (P1 no cabo, os outros três no rádio): a coluna do «onde» da
 linha do adaptador tinha 116 px fixos, e a marca da USB 3.0, a espera «Segure PS + Create» e o
-«Onde fica?» passavam dela; a espera ficava sob o sino, o «Onde fica?» quebrava em duas linhas e o
+«Onde fica?» passavam da coluna; a espera ficava sob o sino, o «Onde fica?» quebrava em duas e o
 «Dentro da máquina» em três. A cura é a grade UMA, a da sala, herdada por cada caixa (`subgrid`): a
-coluna do «onde» cresce até o que ela leva, para todos os adaptadores, e as barras continuam na
+coluna do «onde» cresce até o que leva, para todos os adaptadores, e as barras continuam na
 mesma reta. Em 29/10/2026, a pedido, o «Onde fica?» e o sino (o triângulo ao lado do adaptador)
 saíram da linha, e a régua reprova se um dos dois voltar.
 
@@ -91,7 +91,7 @@ def _cena_de_dois_esperando() -> dict[str, Any]:
 
 
 def _cena_de_um_so() -> dict[str, Any]:
-    """Um adaptador só: a linha não tem a seta, e a coluna dela fica vazia."""
+    """Um adaptador só: a linha não tem a seta, e a coluna da seta fica vazia."""
     cena = _com_a_foto_do_usuario(_cena_base(), "L1", ("P2",))
     cena["lugares"] = cena["lugares"][:1]
     cena["aparelhos"] = [a for a in cena["aparelhos"] if a["lugar"] == "L1"]

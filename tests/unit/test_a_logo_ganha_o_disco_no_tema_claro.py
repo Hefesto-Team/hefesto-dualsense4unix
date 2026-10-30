@@ -6,7 +6,7 @@ claro religa o disco `radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%)` co
 (`--logo-fundo`, `none` na casa; `--logo-aro`, transparente), e `mods.tema.validar` aceita os dois.
 
 A régua lê o fundo do `.logo` pelo que a página pinta: a última regra `.logo{…}` com
-`background`, e o `var()` dela resolvido pelo `:root` da página, com o tema por cima ou sem ele.
+`background`, e o `var()` da regra resolvido pelo `:root` da página, com o tema por cima ou sem ele.
 
 MORDIDA (executada em 21/10/2026): com o `background:none` fixo de volta no `.logo` do
 `topo.html` e as dez geradas de novo, `test_com_o_tema_a_logo_pinta_o_disco` reprova nas dez.

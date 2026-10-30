@@ -1,4 +1,4 @@
-"""A cena dela, medida no daemon: 3 no rádio + 1 no cabo, cada um com o SEU som.
+"""A cena de quatro jogadores, medida no daemon: 3 no rádio + 1 no cabo, cada um com o SEU som.
 
 A CENA, com as palavras (10/09/2026)
 ------------------------------------------
@@ -9,11 +9,11 @@ A CENA, com as palavras (10/09/2026)
 
 Esta régua mede a metade de SAÍDA dessa cena no produto: sobe um `Daemon` de
 verdade com quatro DualSense no sysfs, e olha o que chegou ao `pactl` e às
-pontes de rádio. Não é bancada — nenhum byte vai a aparelho nenhum — mas é o
+pontes de rádio. Não é ensaio — nenhum byte vai a aparelho nenhum — mas é o
 degrau que faltava depois de `MONTOU`: **existe linha de produção que constrói
 uma ponte por controle.**
 
-O QUE ELA TRAVA, e cada item já foi um defeito nesta casa
+O QUE A RÉGUA TRAVA, e cada item já foi um defeito nesta casa
 ----------------------------------------------------------
 1. **os QUATRO ganham nó** — não o primário, não "o que estiver no cabo";
 2. **cada nó tem nome próprio** (`hefesto_som_<hex6>` do `uniq`): quatro
@@ -268,7 +268,7 @@ async def test_o_shutdown_leva_no_e_ponte_junto(mesa: dict[str, Any]) -> None:
     descarregados = [
         " ".join(a) for a in mesa["mandados"] if "unload-module" in " ".join(a)
     ]
-    assert descarregados, "nenhum módulo foi descarregado — os nós ficaram nela"
+    assert descarregados, "nenhum módulo foi descarregado — os nós ficaram na máquina"
 
 
 @pytest.mark.asyncio
@@ -287,7 +287,7 @@ async def test_quem_nao_tem_ponte_nao_ganha_no_mudo(
     try:
         sub = daemon._alto_falante_subsystem
         assert sub._pontes == {}, (
-            "subiu ponte sem fonte de PCM — ela entregaria silêncio para sempre"
+            "subiu ponte sem fonte de PCM — a ponte entregaria silêncio para sempre"
         )
         nos = sub._gerenciador.nos
         assert sorted(nos) == ["aa:bb:cc:00:00:a4"], (

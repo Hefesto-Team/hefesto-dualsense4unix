@@ -3,7 +3,7 @@
 Decisão, 07/09/2026, em cinco palavras: *"precisamos que falem a mesma
 língua."*
 
-O DEFEITO, medido na bancada no mesmo dia com os QUATRO DualSense na mesa
+O DEFEITO, medido no ensaio no mesmo dia com os QUATRO DualSense na mesa
 (`daemon.state_full`, os quatro itens de `coop.mesa`) — e era **4 de 4**,
 nenhum acerto por sorte:
 
@@ -17,7 +17,7 @@ nenhum acerto por sorte:
 O `state_full` publicava o alarme nos quatro desde a QUEM-É-QUEM-01/E3: a casa
 SABIA e o produto não fazia.
 
-A MORDIDA GERAL, e ela é a de todo teste daqui: **devolver o `player_index` ao
+A MORDIDA GERAL, e é a de todo teste daqui: **devolver o `player_index` ao
 lugar do número da carta reprova**. Cada teste diz a sua na docstring.
 
 O QUE ESTE ARQUIVO NÃO PROMETE, e está escrito para ninguém concluir demais:
@@ -86,7 +86,7 @@ def _daemon_dublado(vpad_p1: Any = None, *, fila: dict[str, int] | None = None) 
 
 
 def _mesa_de_quatro(*, fila: dict[str, int] | None = FILA) -> CoopManager:
-    """A bancada: o primário + três secundários já sentados, com o"""
+    """O ensaio: o primário + três secundários já sentados, com o"""
     mgr = CoopManager(_daemon_dublado(_VpadDublado(1, P1), fila=fila))  # type: ignore[arg-type]
     for indice, mac in enumerate((P2, P3, P4), start=2):
         mgr._players[mac] = _jogador(mac, indice)
@@ -95,7 +95,7 @@ def _mesa_de_quatro(*, fila: dict[str, int] | None = FILA) -> CoopManager:
 
 class TestONomeDoVpadPerguntaAFila:
     def test_o_numero_do_nome_e_o_da_carta_nos_quatro(self) -> None:
-        """A MORDIDA CENTRAL, e ela é a bancada inteira."""
+        """A MORDIDA CENTRAL, e é o ensaio inteiro."""
         mgr = _mesa_de_quatro()
 
         nomes = {
@@ -185,7 +185,7 @@ class TestAPromocaoNasceComONomeCerto:
 
 
 class TestOPrimarioTambemFalaALingua:
-    """*"Quando a cura conhece a causa, ela cobre TODOS os chamadores."*"""
+    """*"Quando a cura conhece a causa, cobre TODOS os chamadores."*"""
 
     def test_o_numero_do_primario_e_o_da_carta(self) -> None:
         """A fila desta mesa põe o primário em 2 — ser primário é função da"""
@@ -199,7 +199,7 @@ class TestOPrimarioTambemFalaALingua:
         assert numero_do_nome_do_primario(mgr._daemon) == 2
 
     def test_o_inteiro_chega_a_factory_do_p1(self, monkeypatch: Any) -> None:
-        """A MORDIDA DO CALL SITE, e ela existe porque a primeira versão deste"""
+        """A MORDIDA DO CALL SITE, e existe porque a primeira versão deste"""
         from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_mod
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             start_gamepad_emulation,

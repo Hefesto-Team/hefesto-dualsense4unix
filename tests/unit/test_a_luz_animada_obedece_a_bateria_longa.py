@@ -87,7 +87,7 @@ def test_sair_da_economia_devolve_o_efeito(economia: dict[str, Any]) -> None:
 
 
 def test_a_vista_injetada_vale_sem_declaracao_viva() -> None:
-    """Quem já tem a economia na mão a passa: o plano não vai ao disco por ela."""
+    """Quem já tem a economia na mão a passa: o plano não vai ao disco por isso."""
     assert luz.plano_do_perfil(_perfil(), JOGADORES, mesa_em_economia=True) == {}
     so_um = luz.plano_do_perfil(
         _perfil(), JOGADORES, em_economia=frozenset({JOGADORES[0].replace(":", "")}))

@@ -1,8 +1,7 @@
 """A MARCA DA COR NÃO SOME — a borda e o X de cada controle vêm da cor DELE.
 
-**A QUEIXA, 24/09/2026:** *"quando eu abaixo o volume do lightbar,. o X
-não permanece no seletor dos demais controles. isso é um erro que me
-incomoda."*   # noqa-acento: citação literal
+**A QUEIXA, 24/09/2026:** ao abaixar o brilho da lightbar, o X não permanecia no
+seletor dos demais controles.
 
 «Volume do lightbar» é o trilho «Brilho» da aba Iluminação; «o X» é a casa
 `tomado` da fileira de tons, que marca a cor que OUTRO controle tem. A borda
@@ -37,7 +36,7 @@ sai do `_lightbar_for_uniq`. A tela é o `pacote` da 04 e os gestos `brilho` e
 `cor`. O disco é o do `conftest` (HOME e XDG desviados).
 
 **ARRASTAR NÃO CHEGA AQUI, e é de propósito:** o `input` do trilho só move o
-rótulo pela página (`data-hef-vivo`); o gesto nasce no `change`, quando ela
+rótulo pela página (`data-hef-vivo`); o gesto nasce no `change`, quando o dedo
 solta. O que o arraste pode fazer à marca é o que a luz atrasada faz — medido
 no piloto, 0 leituras fora do lugar durante os arrastes. Aqui, «soltar duas
 vezes antes de a luz assentar» é o arraste que chega ao Python.
@@ -329,7 +328,7 @@ class Mesa:
 
     def soltar(self, n: int, pct: int,
                tique: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
-        """Ela solta o trilho do P<n> em `pct` — o `change`, que é o gesto."""
+        """Quem usa solta o trilho do P<n> em `pct` — o `change`, que é o gesto."""
         antes = self.publicado() if tique is None else tique
         self.a04.brilho(self.ctx(antes), {"uniq": UNIQS[n - 1], "valor": str(pct),
                                           "tipo": "input", "evento": "change"},
@@ -418,7 +417,7 @@ def test_a_zero_a_marca_fica_onde_estava(mesa_de, n):
 
     Brilho não é cor: o controle apagado pelo trilho continua sendo o laranja,
     o branco, o do número. A leitura velha devolvia o PRIMEIRO tom que casava,
-    o da primeira casa — a borda pulava para ela e o dono dela ganhava um X na própria cor.
+    o da primeira casa — a borda pulava para essa casa e o dono da casa ganhava um X na própria cor.
 
     **A MORDIDA:** arranque as DUAS guardas de `_o_tom_que_acende` — o
     `if alvo == (0, 0, 0)` e o `len(casados) == 1` — e esta reprova do P2 ao
@@ -447,7 +446,7 @@ def test_subir_do_zero_acende_a_cor_dele(mesa_de, n):
 
 
 def test_abaixo_de_um_por_cento_a_luz_nao_escolhe_o_primeiro_tom(mesa_de):
-    """Abaixo de 1% a luz não é mais ambígua: o piso a deixa no tom dela."""
+    """Abaixo de 1% a luz não é mais ambígua: o piso a deixa no tom certo."""
     from hefesto_dualsense4unix.core.led_control import LedSettings
 
     mesa = mesa_de()
@@ -513,7 +512,7 @@ def test_o_brilho_nao_ressuscita_a_cor_fossil(mesa_de, n, para):
 
 
 def test_a_barra_apagada_segue_a_regra_do_fossil(mesa_de):
-    """Quem ela apagou pelo «Desligar» e trocou de número sobe na cor do número de hoje."""
+    """Quem foi apagado pelo «Desligar» e trocou de número sobe na cor do número de hoje."""
     mesa = mesa_de()
     mesa.a04.apagar(mesa.ctx(), {"uniq": UNIQS[1], "tipo": "button", "evento": "click"},
                     mesa.ponte)
@@ -571,7 +570,7 @@ def test_sem_a_paleta_a_marca_de_quem_nao_escolheu_e_o_global(mesa_de, pct):
 
 
 def test_sem_a_paleta_o_trilho_nao_escurece_o_global_fora_da_guia(mesa_de):
-    """O `#2850B4` dela, sem a paleta: arrastar três vezes não escurece a barra."""
+    """O `#2850B4` do perfil, sem a paleta: arrastar três vezes não escurece a barra."""
     mesa = mesa_de()
     mesa.clicar_no_tom(1, COR_DELE[1])
     mesa.desligar_a_paleta(GLOBAL)
@@ -591,7 +590,7 @@ def test_sem_a_paleta_o_global_preto_nao_e_cor(mesa_de):
     O preto é banido como cor (ordem de 22/09, `led_control.cor_escolhida`):
     o `apply` não manda cor nenhuma ao default, e o degrau 3 não tem global a
     afirmar. Lido como cor, ele faria o trilho reenviar o preto — e a barra que
-    ela acabou de subir ficaria apagada.
+    acabou de subir ficaria apagada.
 
     **A MORDIDA:** tire o `cor_escolhida` do fim de `_a_cor_do_global` e esta
     reprova com o `(0, 0, 0)` enviado.
@@ -627,7 +626,7 @@ _CASA_DA_GUIA = re.compile(r'<button class="(tom(?: [^"]*)?)"[^>]*?data-dica="([
 
 
 def test_o_desenho_mostra_o_x_do_vizinho_nas_fileiras_ligadas() -> None:
-    """A foto da documentação é a página publicada, e ela tem de dizer a regra."""
+    """A foto da documentação é a página publicada, e a página tem de dizer a regra."""
     from hefesto_dualsense4unix.interface import aba04
 
     ligados = {c["jogador"] for c in aba04.MESA if c.get("conectado", True)}

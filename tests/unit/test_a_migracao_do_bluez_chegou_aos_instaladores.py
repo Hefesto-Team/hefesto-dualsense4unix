@@ -141,7 +141,7 @@ class TestOUninstallAchaOAdaptadorSemAsVelhas:
 
         assert "SUDO: busctl set-property" in r.stdout, (
             "sem hciconfig o uninstall NÃO achou o adaptador e pulou o bloco em "
-            "silêncio: o adaptador dela fica chamado 'Nintendo ...' para sempre "
+            "silêncio: o adaptador fica chamado 'Nintendo ...' para sempre "
             "depois de desinstalar o Hefesto.\n" + r.stdout + r.stderr
         )
         assert "nome do adaptador revertido para 'meowsystem'" in r.stdout

@@ -39,7 +39,7 @@ def test_o_unmask_vem_antes_do_cp_da_unit() -> None:
 
 
 def test_o_instalador_le_a_chave_em_disco() -> None:
-    """A máscara é metade da chave; a outra metade é o arquivo, e ela morde mais."""
+    """A máscara é metade da chave; a outra metade é o arquivo, e o arquivo morde mais."""
     fonte = _fonte()
     assert _nome_da_chave() in fonte, (
         f"`install.sh` não olha o {_nome_da_chave()!r} — ele vai dizer que o "
@@ -56,12 +56,12 @@ def test_o_instalador_nao_apaga_a_chave() -> None:
             continue
         assert not nua.startswith(("rm ", "rm -")), (
             f"o instalador APAGA a chave: {nua!r}\n"
-            "Quem desliga é ela, e quem religa é o `hefesto-chave on`."
+            "Quem desliga é quem usa, e quem religa é o `hefesto-chave on`."
         )
 
 
 def test_o_cp_de_verdade_nao_atravessa_a_mascara(tmp_path) -> None:
-    """A prova de COMPORTAMENTO, e é ela que fecha o buraco de verdade."""
+    """A prova de COMPORTAMENTO, e é a que fecha o buraco de verdade."""
     alvo = tmp_path / "hefesto-dualsense4unix.service"
     fonte = tmp_path / "fonte.service"
     fonte.write_text("[Unit]\nDescription=a unit de verdade\n", encoding="utf-8")

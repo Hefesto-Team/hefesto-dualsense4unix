@@ -107,7 +107,7 @@ def test_a_marca_da_aba_esta_no_nome_que_o_vpad_publica_hoje() -> None:
 
 
 def test_a_marca_e_a_mesma_da_regua_unica_da_casa() -> None:
-    """Duas redações da mesma marca é uma delas envelhecendo calada."""
+    """Duas redações da mesma marca é uma das duas envelhecendo calada."""
     do_script = _constante_do_script("VPAD_MARCA_NO_NOME")
     assert do_script == ea._VPAD_MARCA_NO_NOME
 

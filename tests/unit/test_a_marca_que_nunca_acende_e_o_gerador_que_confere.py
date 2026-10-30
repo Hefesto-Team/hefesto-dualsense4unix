@@ -8,18 +8,18 @@ pela validação da RESTOS-DA-ONDA-DOIS-01:
    a máscara da 02 (`mascara-degradou`) tinham um `<sup>*</sup>` que a folha só
    mostrava por `.degradou[title]`. A camada de dicas do piloto leva o `title`
    para `data-hef-dica` e o tira do elemento, então no WebKit o asterisco nunca
-   acendeu; e aceso seria frase de aviso numa dica, que a terceira lista dela
+   acendeu; e aceso seria frase de aviso numa dica, que a terceira lista
    tira da tela. As réguas cobram a ausência nos DOIS lados — o pacote e a
    página —, e que nenhuma folha das dez decida pintura por `[title]`.
 
 2. **O GERADOR CONFERE ANTES DE ESCREVER.** Com a autoconferência do `aba06.py`
    reprovando, o `mockup/06` já estava escrito, e o `--publicar` seguinte
    publicou a página recusada. Os dez geradores passaram a escrever numa
-   bancada provisória e só copiar para a de verdade depois de conferir. A régua
-   sabota a primeira escrita de cada um e exige a bancada com o mesmo md5.
+   ensaio provisório e só copiar para a de verdade depois de conferir. A régua
+   sabota a primeira escrita de cada um e exige o ensaio com o mesmo md5.
 
-ONDE ELA ESCREVE: numa cópia do `mockup/` em `tmp_path`, pelo desvio
-`HEFESTO_ENSAIO` que `interface/onde.py` documenta. A bancada não é tocada.
+ONDE A RÉGUA ESCREVE: numa cópia do `mockup/` em `tmp_path`, pelo desvio
+`HEFESTO_ENSAIO` que `interface/onde.py` documenta. O ensaio não é tocado.
 """
 from __future__ import annotations
 
@@ -94,7 +94,7 @@ def test_o_card_da_02_nao_emite_a_marca() -> None:
         "o card da 02 voltou a emitir a marca da emulação degradada")
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicado"])
 @pytest.mark.parametrize("nome", sorted(MARCADAS))
 def test_a_pagina_nao_tem_a_marca(nome: str, publicado: bool) -> None:
     """MORDE: devolva o `<sup>` ou a regra `.degradou` ao gerador, regere e publique.
@@ -110,7 +110,7 @@ def test_a_pagina_nao_tem_a_marca(nome: str, publicado: bool) -> None:
     assert ".degradou" not in _folhas(doc), f"{nome}: a regra `.degradou` voltou"
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicado"])
 def test_nenhuma_folha_das_dez_decide_pintura_por_title(publicado: bool) -> None:
     """Seletor `[title]` numa folha é pintura que nunca acontece no WebKit.
 
@@ -149,8 +149,8 @@ runpy.run_path(str(gerador), run_name="__main__")
 
 
 def _ensaio(tmp_path: pathlib.Path) -> tuple[pathlib.Path, pathlib.Path]:
-    """Uma bancada de mentira com as páginas de hoje, e um TMPDIR só dela."""
-    ensaio = tmp_path / "bancada"
+    """Um ensaio de mentira com as páginas de hoje, e um TMPDIR só do ensaio."""
+    ensaio = tmp_path / "ensaio"
     ensaio.mkdir()
     for p in (RAIZ / "mockup").glob("*.html"):
         shutil.copy2(p, ensaio / p.name)
@@ -180,10 +180,10 @@ def _pagina_do(gerador: str) -> str:
 
 @pytest.mark.parametrize("gerador", GERADORES)
 def test_a_recusa_nao_chega_o_ensaio(gerador: str, tmp_path: pathlib.Path) -> None:
-    """A escrita sabotada recusa, e a bancada sai com o mesmo md5 de antes.
+    """A escrita sabotada recusa, e o ensaio sai com o mesmo md5 de antes.
 
     MORDE: devolva a forma antiga ao `__main__` de qualquer gerador (`monta()`
-    direto na bancada, `_conferir()` depois) e o caso dele reprova no md5.
+    direto no ensaio, `_conferir()` depois) e o caso dele reprova no md5.
     """
     ensaio, provisorio = _ensaio(tmp_path)
     antes = _md5(ensaio)
@@ -195,7 +195,7 @@ def test_a_recusa_nao_chega_o_ensaio(gerador: str, tmp_path: pathlib.Path) -> No
         f"`{gerador}` não passou pela escrita sabotada (rc={r.returncode}) — a "
         f"régua não mediu nada:\n{r.stderr.strip()[-800:]}")
     assert _md5(ensaio) == antes, (
-        f"`{gerador}` recusou a página e a bancada MUDOU: a escrita veio antes "
+        f"`{gerador}` recusou a página e o ensaio MUDOU: a escrita veio antes "
         "da conferência, e o `--publicar` seguinte levaria a página recusada")
     recusadas = list(provisorio.glob(f"hefesto-prova-*/{_pagina_do(gerador)}"))
     assert any("escrita sabotada" in p.read_text(encoding="utf-8") for p in recusadas), (
@@ -204,9 +204,9 @@ def test_a_recusa_nao_chega_o_ensaio(gerador: str, tmp_path: pathlib.Path) -> No
 
 @pytest.mark.parametrize("gerador", GERADORES)
 def test_o_gerador_que_passa_escreve_o_ensaio(gerador: str, tmp_path: pathlib.Path) -> None:
-    """Sem sabotagem, a página chega à bancada e o provisório é apagado.
+    """Sem sabotagem, a página chega ao ensaio e o provisório é apagado.
 
-    A BANCADA COMEÇA ENVENENADA, e é de propósito: uma cópia do `mockup/` já é
+    O ENSAIO COMEÇA ENVENENADO, e é de propósito: uma cópia do `mockup/` já é
     igual ao que o gerador produz, e um gerador que parasse de copiar passaria
     por ausência.
     """
@@ -220,6 +220,6 @@ def test_o_gerador_que_passa_escreve_o_ensaio(gerador: str, tmp_path: pathlib.Pa
         env=_ambiente(ensaio, provisorio), cwd=str(RAIZ))
     assert r.returncode == 0, f"`{gerador}` não roda:\n{r.stderr.strip()[-1200:]}"
     assert pagina.read_bytes() == (RAIZ / "mockup" / pagina.name).read_bytes(), (
-        f"`{gerador}` conferiu e não copiou a página para a bancada")
+        f"`{gerador}` conferiu e não copiou a página para o ensaio")
     assert not list(provisorio.glob("hefesto-prova-*")), (
-        f"`{gerador}` deixou a bancada provisória para trás depois de passar")
+        f"`{gerador}` deixou o ensaio provisório para trás depois de passar")

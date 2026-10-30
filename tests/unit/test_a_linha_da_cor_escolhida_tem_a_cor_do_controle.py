@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """A-LINHA-DA-COR-ESCOLHIDA-TEM-A-COR-DO-CONTROLE-01 — a linha e a 02 têm um dono só.
 
-A fala do usuário, 29/09 (~18h50): *«essa linha abaixo da cor selecionada tem que ter a
-cor de cada controle no caso ali tá certo no p1, por ser branca, mas o do p2 não
-tem a cor dele roxo.»* <!-- noqa-acento: citação literal -->
-O pixel da foto dela era o roxo certo: o defeito era de tamanho, e a cura (a (b)
+A queixa de 29/09 (~18h50): a linha abaixo da cor selecionada tem de ter a cor de
+cada controle; estava certa no P1, por ser branca, mas a do P2 não tinha o roxo
+dele.
+O pixel da foto era o roxo certo: o defeito era de tamanho, e a cura (a (b)
 das ESCOLHAS de 08/10/2026, a linha a 6 px) mora na folha do `aba04.py`, medida
 no WebKit pela `test_a_paleta_marca_a_cor_de_cada_controle.py`. Aqui, sem
 janela, o esperado sai do dono que a 02 usa (`cor_da_borda`), e nunca da linha.
@@ -95,7 +95,7 @@ def test_a_cena_da_fala_da_a_linha_roxa_ao_p2(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_a_cena_da_fala_tem_as_duas_vias() -> None:
-    """A cena é a da foto dela: o P1 no rádio, o P2 no cabo."""
+    """A cena é a da foto: o P1 no rádio, o P2 no cabo."""
     pecas, _perfil = _a_cena_da_fala()
     assert [(p["n"], p["modelo"], p["via"], _hexa(p["luz"])) for p in pecas] == [
         (1, "white", "bt", "#FFFF00"), (2, "galactic-purple", "usb", "#8000FF")]

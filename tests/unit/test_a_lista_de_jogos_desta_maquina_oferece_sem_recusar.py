@@ -41,18 +41,18 @@ def test_o_campo_do_jogo_consulta_a_lista_e_continua_livre() -> None:
         "ninguém o lê")
     assert 'type="text"' in campo.group(0), (
         "o campo do jogo deixou de ser texto livre — uma lista que RECUSA o que "
-        "ela sabe que existe é pior que campo livre (o enunciado é dela)")
+        "quem usa sabe que existe é pior que campo livre (o enunciado é do usuário)")
     assert '<datalist id="jogos-desta-maquina"' in html
     assert '<datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista">' \
            '</datalist>' in html, (
         "a lista não nasce VAZIA no desenho — um exemplo cravado aqui é a tela "
-        "afirmando um jogo que ela talvez não tenha")
+        "afirmando um jogo que talvez não esteja instalado")
 
 
 def test_a_lista_traz_o_appid_no_value_e_o_nome_no_rotulo() -> None:
     """A MESMA divisão das duas colunas do `Gtk.EntryCompletion` da janela GTK.
 
-    *"Coluna 0 = o rótulo que ela lê, Coluna 1 = o appid, que é o que o campo
+    *"Coluna 0 = o rótulo que se lê, Coluna 1 = o appid, que é o que o campo
     grava"* — e o comentário de lá diz o preço de trocar: o perfil nasceria com
     um `steam_app_Sea of Stars`, que nunca casa com janela nenhuma.
 
@@ -65,7 +65,7 @@ def test_a_lista_traz_o_appid_no_value_e_o_nome_no_rotulo() -> None:
     assert '<option value="851100" label="Sea of Stars · 851100">' in html
     assert '<option value="1245620" label="ELDEN RING · 1245620">' in html
     assert html.index("1245620") < html.index("851100"), (
-        "a lista saiu na ordem do appid — ela procura pelo NOME do jogo")
+        "a lista saiu na ordem do appid — a busca é pelo NOME do jogo")
 
 
 def test_o_nome_do_jogo_do_usuario_nunca_vira_marcacao() -> None:
@@ -87,7 +87,7 @@ def test_o_nome_do_jogo_do_usuario_nunca_vira_marcacao() -> None:
     leitor = Leitor()
     leitor.feed(a10_perfis._html_dos_jogos())
     assert not leitor.outros, (
-        f"o nome de um jogo dela virou {leitor.outros} no `<datalist>` — o "
+        f"o nome de um jogo de quem usa virou {leitor.outros} no `<datalist>` — o "
         f"atributo foi fechado por um caractere que veio do disco")
     por_appid = {o["value"]: o["label"] for o in leitor.opcoes}
     for jogo in CATALOGO:
@@ -102,7 +102,7 @@ def test_o_bloco_da_lista_sai_no_pacote() -> None:
         'datalist[data-hef="editor.jogo.lista"]'
     html = onde.pagina(PAGINA, publicado=False).read_text(encoding="utf-8")
     assert 'data-hef="editor.jogo.lista"' in html, (
-        "o seletor do `blocos` aponta para um endereço que a bancada não tem — "
+        "o seletor do `blocos` aponta para um endereço que o ensaio não tem — "
         "o `document.querySelector` não acha, e a lista some sem erro")
 
 
@@ -136,5 +136,5 @@ def test_a_lista_tem_teto(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_teto_e_folgado_para_a_maquina_do_usuario() -> None:
-    """Um teto apertado seria a lista RECUSANDO o que ela tem."""
+    """Um teto apertado seria a lista RECUSANDO o que a máquina tem."""
     assert a10_perfis.TETO_DA_LISTA_DE_JOGOS >= 500

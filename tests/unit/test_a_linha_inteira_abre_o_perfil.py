@@ -62,7 +62,7 @@ def test_a_leitura_do_closest_anda_uma_vez_so() -> None:
 
 
 class _Visivel(HTMLParser):
-    """O texto e as dicas de um pedaço de HTML: o que chega aos olhos dela."""
+    """O texto e as dicas de um pedaço de HTML: o que chega aos olhos de quem usa."""
 
     ATRIBUTOS = ("title", "aria-label", "placeholder", "data-hef-dica")
 
@@ -130,7 +130,7 @@ def test_o_gesto_escolhe_pelo_nome_da_linha(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_o_texto_segue_valendo_sem_o_atributo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """As réguas antigas chamam o gesto com `{"texto": nome}`: elas seguem valendo."""
+    """As réguas antigas chamam o gesto com `{"texto": nome}`: seguem valendo."""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
     a10_perfis.selecionar(_ctx(freestyle_ligado=True), {"texto": "Mortal Kombat"}, None)
     assert a10_perfis._ESCOLHIDO == "Mortal Kombat"
@@ -173,7 +173,7 @@ def test_o_relatorio_da_sanidade_diz_preferencia(tmp_path: Path) -> None:
     from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria
 
     perfis = [
-        Profile(name="vitoria", match=MatchAny(), priority=100),
+        Profile(name="sala", match=MatchAny(), priority=100),
         Profile(name="pragmata", match=MatchCriteria(window_class=["p"]), priority=100),
         Profile(name="outro", match=MatchCriteria(window_class=["p"]), priority=100),
         Profile(name="fora", match=MatchCriteria(window_class=["f"]), priority=250),
@@ -263,7 +263,7 @@ def _quebradas(celulas: list[dict[str, Any]]) -> list[str]:
 
 @skip_sem_gi_real
 def test_toda_celula_do_desenho_leva_ao_perfil_da_linha(tela: Any) -> None:
-    """A página do gerador, como ela abre: cada célula sobe até a linha."""
+    """A página do gerador, como abre: cada célula sobe até a linha."""
     celulas = _celulas(tela)
     assert len(celulas) >= 9, f"a lista do desenho tem {len(celulas)} células"
     assert not _quebradas(celulas), "\n".join(_quebradas(celulas))

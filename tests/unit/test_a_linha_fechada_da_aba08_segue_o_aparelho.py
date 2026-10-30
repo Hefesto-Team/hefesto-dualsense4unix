@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""A LINHA FECHADA DA ABA 08 SEGUE O APARELHO — e a confissão segue a bancada.
+"""A LINHA FECHADA DA ABA 08 SEGUE O APARELHO — e a confissão segue o ensaio.
 
 **03/09/2026.** Três coisas desta aba decidiam o que mostrar pela POSIÇÃO NO
-DESENHO, e não pelo que o daemon disse. As três foram medidas na bancada no
+DESENHO, e não pelo que o daemon disse. As três foram medidas no ensaio no
 mesmo dia, com **um** controle na mesa, no cabo, com a ponte de microfone
 DESLIGADA no `maquina.json`:
 
@@ -12,8 +12,8 @@ o que a tela dizia           o que a máquina dizia               quem mandava
 "Microfone **Ligado**"       `microfone` não declarado           o mockup
 "pelo cabo · Placa…" no P1   certo por coincidência: o P2 do     o mockup
 e "pelo rádio · Pela         desenho dizia rádio, e a mesa
-ponte" no P2                 dela não tem P2
-"…não consegui conferir:     a bancada tem **UMA**          o mockup
+ponte" no P2                 de teste não tem P2
+"…não consegui conferir:     o ensaio tem **UMA**          o mockup
 **três coisas**"             lacuna (`especie`)
 ===========================  ==================================  ==============
 
@@ -37,7 +37,7 @@ A MORDIDA — medida, e cada uma reprova SÓ o seu:
   `test_os_enderecos_novos_existem_no_ensaio` reprova (1);
 * devolva `"mic-caminho"` à coluna do pacote  →
   `test_toda_chave_da_coluna_tem_endereco_na_08` reprova (2, as duas páginas);
-* faça `_confissao_do_mapa` devolver a conta da CENA em vez da bancada  →
+* faça `_confissao_do_mapa` devolver a conta da CENA em vez do ensaio  →
   `test_a_confissao_conta_as_lacunas_do_ensaio` reprova (1).
 """
 from __future__ import annotations
@@ -99,19 +99,19 @@ def test_os_enderecos_novos_existem_no_ensaio() -> None:
     )
     for endereco in esperados:
         assert endereco in html, (
-            f"o endereço `{endereco}` não está na bancada da 08 — sem ele o "
+            f"o endereço `{endereco}` não está no ensaio da 08 — sem ele o "
             f"produto não tem onde escrever, e a tela volta ao desenho")
     assert 'data-campo="confissao-dica"' not in html, (
-        "a dica da confissão voltou à bancada da 08")
+        "a dica da confissão voltou ao ensaio da 08")
 
 
 def test_o_pacote_emite_o_que_o_ensaio_enderecou() -> None:
-    """Todo `data-campo` POR CONTROLE da bancada tem quem o escreva."""
+    """Todo `data-campo` POR CONTROLE do ensaio tem quem o escreva."""
     html = ENSAIO.read_text(encoding="utf-8")
     linhas = re.findall(
         r'<div class="gc-item gc-p\d"(?! [^>]*\bfora\b)[^>]*>.*?(?=<div class="gc-item)',
         html, flags=re.S)
-    assert linhas, "não achei uma linha de controle conectado na bancada da 08"
+    assert linhas, "não achei uma linha de controle conectado no ensaio da 08"
     na_tela = {c for bloco in linhas
                for c in re.findall(r'data-campo="([^"]+)"', bloco)}
     pac = _pacote().pacote(_ctx())
@@ -120,7 +120,7 @@ def test_o_pacote_emite_o_que_o_ensaio_enderecou() -> None:
                  if not isinstance(v, (dict, list))}
     sem_dono = na_tela - emitidos
     assert not sem_dono, (
-        f"a linha do controle na bancada da 08 tem endereço sem ninguém que o "
+        f"a linha do controle no ensaio da 08 tem endereço sem ninguém que o "
         f"escreva: {sorted(sem_dono)} — endereço mudo é congelado com outro nome")
 
 
@@ -154,7 +154,7 @@ def test_toda_chave_da_coluna_tem_endereco_na_08(qual: str) -> None:
 
 
 def _com_lacunas(monkeypatch: Any, quantas: int) -> dict[str, str]:
-    """O que o pacote emite quando a bancada tem `quantas` lacunas."""
+    """O que o pacote emite quando o ensaio tem `quantas` lacunas."""
     from hefesto_dualsense4unix.interface import logica_do_mapa as mapa_da_mesa
 
     pac = _pacote()
@@ -168,8 +168,8 @@ def _com_lacunas(monkeypatch: Any, quantas: int) -> dict[str, str]:
 def test_a_confissao_conta_as_lacunas_do_ensaio(monkeypatch: Any) -> None:
     """A conta por extenso é a de `confissao_do_desenho`, e não a da cena.
 
-    A CENA TEM TRÊS. Se a régua desse verde com a bancada em uma lacuna
-    dizendo "três coisas", ela estaria medindo o mockup — que é exatamente o
+    A CENA TEM TRÊS. Se a régua desse verde com o ensaio em uma lacuna
+    dizendo "três coisas", a régua estaria medindo o mockup — que é exatamente o
     defeito que esta leva fechou.
     """
     pac = _pacote()

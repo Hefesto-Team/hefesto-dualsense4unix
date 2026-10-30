@@ -179,7 +179,7 @@ def _faixas_de_coop_no_mapa() -> list[tuple[str, int, int, str]]:
 
 
 def test_toda_faixa_de_coop_no_mapa_abre_dentro_da_funcao_prometida() -> None:
-    """Cada faixa de ``coop.py`` que o mapa cita fica DENTRO da função que ela nomeia."""
+    """Cada faixa de ``coop.py`` que o mapa cita fica DENTRO da função que o mapa nomeia."""
     faixas = _faixas_de_coop_no_mapa()
     assert len(faixas) >= 10, (
         f"o mapa tem só {len(faixas)} faixa(s) de coop.py com símbolo — a régua ficaria vazia"
@@ -197,6 +197,6 @@ def test_toda_faixa_de_coop_no_mapa_abre_dentro_da_funcao_prometida() -> None:
         if inicio < de or fim > ate + 1:
             fora.append(f"{ident}: coop.py:{inicio}-{fim} (`{simbolo}`), e ele mora em {de}-{ate}")
     assert not fora, (
-        "faixa de coop.py fora da função que ela promete — rode "
+        "faixa de coop.py fora da função que o mapa promete — rode "
         "`python3 scripts/reapontar-citacoes.py --escrever`:\n  " + "\n  ".join(fora)
     )

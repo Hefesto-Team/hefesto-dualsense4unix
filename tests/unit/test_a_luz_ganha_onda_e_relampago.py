@@ -3,7 +3,7 @@
 Duas bases novas, como funções puras do tempo, ao lado das seis que existem: a Onda corre a crista
 pelos cinco LEDs do jogador (a barra acompanha o do meio) e o Relâmpago é o estrobo dentro da regra
 da casa (WCAG 2.3.1): no máximo 3 subidas por segundo em qualquer ritmo, borda suave, piso de
-brilho, e nunca o vermelho saturado alternando com o apagado. O pulso de batimento que ela citou já
+brilho, e nunca o vermelho saturado alternando com o apagado. O pulso de batimento do pedido já
 é a Batida e não se duplica.
 
 O desenho de cada LED do jogador é o ``brilhos_da_onda``; desde a
@@ -94,7 +94,7 @@ def test_as_duas_bases_estao_na_tupla_e_o_perfil_as_le_com_cor_e_ritmo() -> None
 
 
 def test_o_batimento_continua_um_so_e_nao_ganhou_irmao() -> None:
-    """O pulso de batimento que ela citou já é a Batida: ninguém o duplica."""
+    """O pulso de batimento citado no pedido já é a Batida: ninguém o duplica."""
     assert BASES_DA_LUZ.count("batimento") == 1
     assert not {"pulso", "estrobo", "batida"} & set(BASES_DA_LUZ)
 

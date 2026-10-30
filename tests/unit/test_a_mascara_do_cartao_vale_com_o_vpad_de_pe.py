@@ -8,7 +8,7 @@ depois de gravar, o daemon recria o vpad DAQUELE controle com origem manual — 
 P1 por `start_gamepad_emulation_desfecho`, os outros pelo ciclo forçado do
 co-op. O ato mora em `Daemon.vestir_a_mascara_do_aparelho`; o handler só o chama.
 
-A bancada junta as duas de antes: os métodos REAIS do `lifecycle.Daemon` (a do
+O ensaio junta as duas de antes: os métodos REAIS do `lifecycle.Daemon` (a do
 `test_o_modo_nao_escreve_a_mascara.py`) e um `CoopManager` REAL com o P2 e o P3
 na mesa (a do `test_mascara_por_controle_manda_no_vpad.py`). Dublados só o vpad,
 o reader evdev, a descoberta de `/dev/input`, o sysfs de LED, o grab, o launch
@@ -48,7 +48,7 @@ from hefesto_dualsense4unix.utils import session, xdg_paths
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
-PERFIL = "Bancada"
+PERFIL = "Ensaio"
 
 
 class _Vpad:

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A linha «Modelo» diz o nome do jogador — A-LINHA-MODELO-DIZ-O-NOME-DO-JOGADOR-01.
 
-Pedido de 06/10/2026: *«em qualquer aba onde tivermos modelo tem que aparecer o nome do
-jogador também.»* A linha existe na Iluminação (04) e na Vibração (05): «P1 • Vitória • Cosmic Red
+Pedido de 06/10/2026: em qualquer aba onde houver modelo, aparece também o nome do
+jogador. A linha existe na Iluminação (04) e na Vibração (05): «P1 • Sala • Cosmic Red
 • USB», e sem nome «P2 • Starlight Blue • BT». O nome tem UM dono (o `Alias` do BlueZ, lido por
 `nome_do_jogador` com o filtro dele), e a 08 e as duas abas o dizem igual.
 
@@ -18,7 +18,7 @@ fábrica
 * o `e_nome_do_usuario` aceitando o `Alias` que é o endereço → idem (o endereço iria para a tela);
 * a 05 sem passar pelo `_identidade_do_modelo` → a 05 perde o nome e reprova;
 * o gerador sem o `html.escape` no nome → a régua do escape reprova;
-* a 04 sem o nome dela no pacote (`"dono": ""`) → a régua do nome e a dos quatro jogadores reprovam.
+* a 04 sem o nome no pacote (`"dono": ""`) → a régua do nome e a dos quatro jogadores reprovam.
 """
 from __future__ import annotations
 
@@ -109,9 +109,9 @@ PAGINAS = [("04-iluminacao.html", SEP), ("05-vibracao.html", " · ")]
 def test_com_nome_a_linha_diz_o_nome_antes_do_modelo(
         monkeypatch: pytest.MonkeyPatch, página: str, sep: str) -> None:
     """MORDIDAS: o `partes_do_modelo` sem o `dono`; a 05 sem o `_identidade_do_modelo`."""
-    _com_aliases({UNIQS[0]: "Vitória", UNIQS[1]: "Amiga"})
+    _com_aliases({UNIQS[0]: "Sala", UNIQS[1]: "Amiga"})
     linhas = _linhas(monkeypatch, página, _contexto(2))
-    assert linhas[UNIQS[0]] == _esperada(1, "Vitória", sep), linhas
+    assert linhas[UNIQS[0]] == _esperada(1, "Sala", sep), linhas
     assert linhas[UNIQS[1]] == _esperada(2, "Amiga", sep), linhas
 
 
@@ -130,10 +130,10 @@ def test_os_quatro_jogadores_cada_um_com_o_proprio_nome_e_o_cabo_pareado_antes(
         monkeypatch: pytest.MonkeyPatch, página: str, sep: str) -> None:
     """P1 a P4, em cabo e rádio: o `Alias` é do ENDEREÇO. O P4 (cabo, nunca pareou) não tem nome;
     o P1 (cabo, pareou antes e hoje está desconectado do rádio) tem."""
-    _com_aliases({UNIQS[0]: "Vitória", UNIQS[1]: "Amiga", UNIQS[2]: "Primo"},
+    _com_aliases({UNIQS[0]: "Sala", UNIQS[1]: "Amiga", UNIQS[2]: "Primo"},
                  no_cabo=frozenset({UNIQS[0]}))
     linhas = _linhas(monkeypatch, página, _contexto(4))
-    for n, quem in ((1, "Vitória"), (2, "Amiga"), (3, "Primo"), (4, "")):
+    for n, quem in ((1, "Sala"), (2, "Amiga"), (3, "Primo"), (4, "")):
         assert linhas[UNIQS[n - 1]] == _esperada(n, quem, sep), (n, linhas)
 
 
@@ -153,7 +153,7 @@ def test_o_alias_de_fabrica_ou_o_endereco_nao_vira_nome(
 
 def test_a_08_e_as_duas_abas_dizem_o_mesmo_nome(monkeypatch: pytest.MonkeyPatch) -> None:
     """O dono é um: o nome do campo «dono» da Conexões é o que entra na linha da 04 e da 05."""
-    _com_aliases({UNIQS[0]: "vitória", UNIQS[1]: "Amiga"})
+    _com_aliases({UNIQS[0]: "sala", UNIQS[1]: "Amiga"})
     ctx = _contexto(2)
     nomes_da_08 = nome_do_jogador.nomes_dos_donos()
     da_08 = {u: monta.dono_na_linha(nomes_da_08, u, n) for n, u in enumerate(UNIQS[:2], start=1)}
@@ -161,14 +161,14 @@ def test_a_08_e_as_duas_abas_dizem_o_mesmo_nome(monkeypatch: pytest.MonkeyPatch)
         linhas = _linhas(monkeypatch, página, ctx)
         for u in UNIQS[:2]:
             assert da_08[u] and da_08[u] in linhas[u].split(sep), (página, da_08[u], linhas[u])
-    assert da_08[UNIQS[0]] == "Vitória", "a primeira letra maiúscula é regra dela"
+    assert da_08[UNIQS[0]] == "Sala", "a primeira letra maiúscula é regra do produto"
 
 
 def test_o_leitor_filtra_o_alias_de_fabrica_e_o_endereco() -> None:
-    """O leitor é UM (`nome_do_jogador`): só o nome dela passa, com a primeira maiúscula."""
-    aparelhos = (_aparelho(UNIQS[0], "vitória"), _aparelho(UNIQS[1], "DualSense Wireless"),
+    """O leitor é UM (`nome_do_jogador`): só o nome dado passa, com a primeira maiúscula."""
+    aparelhos = (_aparelho(UNIQS[0], "sala"), _aparelho(UNIQS[1], "DualSense Wireless"),
                  _aparelho(UNIQS[2], "AA:BB:CC:00:00:03"))
-    esperado = {nome_do_jogador.mac(UNIQS[0]): "Vitória"}
+    esperado = {nome_do_jogador.mac(UNIQS[0]): "Sala"}
     assert nome_do_jogador.nomes_por_endereco(aparelhos) == esperado
 
 
@@ -204,7 +204,7 @@ def _nomes_que_o_modulo_define(arvore: Any) -> set[str]:
 
 
 def test_a_08_nao_define_nenhum_simbolo_do_que_saiu_do_usuario() -> None:
-    """A 08 chama o dono de cada um, sem alias nem cópia: nenhum nome do conjunto é ligado nela.
+    """A 08 chama o dono de cada um, sem alias nem cópia: nenhum nome do conjunto é ligado na 08.
 
     MORDIDA: devolva `_mac = nome_do_jogador.mac` (ou qualquer `def _esquecer`) à 08 → reprova.
     """
@@ -293,7 +293,7 @@ def test_nenhum_teste_remenda_na_08_um_nome_que_saiu_do_usuario() -> None:
 
 
 def test_o_gerador_escapa_o_nome_do_usuario_e_o_pacote_nao_o_transforma() -> None:
-    """O nome é texto dela: no HTML do gerador sai escapado; no que o piloto pinta, o texto cru."""
+    """O nome é texto livre: sai escapado no HTML do gerador e cru no que o piloto pinta."""
     c = {"jogador": 1, "nome": "Cosmic Red", "via": "USB", "dono": "<b>Vi</b> & Cia"}
     html = monta.rotulo(c, "modelo")
     assert "<b>" not in html and "&lt;b&gt;Vi&lt;/b&gt; &amp; Cia" in html, html
@@ -301,7 +301,7 @@ def test_o_gerador_escapa_o_nome_do_usuario_e_o_pacote_nao_o_transforma() -> Non
 
 
 def test_o_desenho_aprovado_nao_da_nome_de_pessoa_ao_p1_na_04_e_na_05() -> None:
-    """A BANCADA (o que o `--publicar` copia): nenhum controle do desenho tem nome de pessoa (o
+    """O ENSAIO (o que o `--publicar` copia): nenhum controle do desenho tem nome de pessoa (o
     Cosmic Red sem nome, OS-RESTOS-DO-DESENHO-VELHO-SAEM-DAS-ABAS-03-05-08-01); o vazio não."""
     for página, rotulo in (("04-iluminacao.html", r'data-campo="identidade"'),
                            ("05-vibracao.html", r'data-hef="identidade"')):
