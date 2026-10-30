@@ -280,18 +280,27 @@ def test_quem_chega_ganha_aba_e_o_escolhido_que_sai_passa_ao_seguinte(tela: Any)
 
 
 @skip_sem_gi_real
-def test_sem_controle_nenhum_a_secao_diz_player_1_desconectado(tela: Any) -> None:
-    """Sem controle nenhum, as quatro abas ficam vazias, e o lugar aberto é a linha fechada
-    do vazio, com o texto dela.
+def test_sem_controle_nenhum_o_lugar_aberto_e_o_cartao_sem_palavra(tela: Any) -> None:
+    """Sem controle nenhum, as quatro abas ficam vazias, e o lugar aberto tem a altura do cartão,
+    sem «Desconectado» e com o disco do número no meio.
 
-    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR e D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR.
+    D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR, D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR e
+    D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO.
     """
     lido = _pintar(tela, [], "")
     assert [p for p, *_ in lido["vazias"]] == list(PLASTICOS), lido
-    texto = tela.executar(
+    medido = json.loads(tela.executar(
         "(function(){var c=document.querySelector('.quadro-corpo > .ctl:has(> input:checked)');"
-        "return c ? c.innerText.replace(/\\s+/g,' ').trim() : '';})()")
-    assert texto == "Player 1 • Desconectado"
+        "var a=document.querySelector('.aba-ctl[data-controle=\"p1\"]');"
+        "var o=document.querySelector('.aba-ctl[data-controle=\"p2\"]');"
+        "return JSON.stringify({texto:c.innerText.replace(/\\s+/g,' ').trim(),"
+        "alto:c.getBoundingClientRect().height,"
+        "disco:getComputedStyle(c,'::after').content,"
+        "aba:a.getBoundingClientRect().height,outra:o.getBoundingClientRect().height});})()"))
+    assert medido["texto"] == "", medido
+    assert medido["alto"] >= 200, medido
+    assert medido["disco"] == '"1"', medido
+    assert medido["aba"] > medido["outra"], medido
 
 
 @skip_sem_gi_real

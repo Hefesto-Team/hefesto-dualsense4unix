@@ -956,6 +956,20 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
   body.nativo.por-controle:has(#c-p3:checked) .abas-ctl .aba-ctl[for="c-p3"],
   body.nativo.por-controle:has(#c-p4:checked) .abas-ctl .aba-ctl[for="c-p4"]{color:var(--fg)!important;
     font-weight:600!important;cursor:default;background:color-mix(in srgb,var(--plastico) 9%,var(--panel))!important}
+  body .quadro.estica > .quadro-corpo > .ctl.off:has(> input:checked){height:264px !important;padding:0 !important;flex:0 0 auto;
+    align-items:center;justify-content:center;border:2px dashed var(--border-forte);border-radius:9px;
+    background:transparent}
+  body .quadro.estica > .quadro-corpo > .ctl.off:has(> input:checked) > .faixa{display:none !important}
+  body .quadro.estica > .quadro-corpo > .ctl.off:has(> input:checked)::after{width:72px;height:72px;border-radius:50%;background:var(--border-forte);
+    color:var(--fg);opacity:.6;font:700 36px/72px 'JetBrains Mono',ui-monospace,monospace;text-align:center}
+  body .quadro.estica > .quadro-corpo > .ctl.off[data-controle="p1"]:has(> input:checked)::after{content:"1"}
+  body:has(#c-p1:checked) .aba-ctl.off[data-controle="p1"]{height:var(--alt-aba)}
+  body .quadro.estica > .quadro-corpo > .ctl.off[data-controle="p2"]:has(> input:checked)::after{content:"2"}
+  body:has(#c-p2:checked) .aba-ctl.off[data-controle="p2"]{height:var(--alt-aba)}
+  body .quadro.estica > .quadro-corpo > .ctl.off[data-controle="p3"]:has(> input:checked)::after{content:"3"}
+  body:has(#c-p3:checked) .aba-ctl.off[data-controle="p3"]{height:var(--alt-aba)}
+  body .quadro.estica > .quadro-corpo > .ctl.off[data-controle="p4"]:has(> input:checked)::after{content:"4"}
+  body:has(#c-p4:checked) .aba-ctl.off[data-controle="p4"]{height:var(--alt-aba)}
 </style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">

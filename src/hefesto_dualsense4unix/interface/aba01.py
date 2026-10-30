@@ -221,6 +221,23 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
     font-weight:600!important;cursor:default;background:color-mix(in srgb,var(--plastico) 9%,var(--panel))!important}
 """
 
+ALTURA_DO_LUGAR_VAZIO = 264
+LUGAR_VAZIO = "body .quadro.estica > .quadro-corpo > .ctl.off"
+LUGAR_VAZIO_ABERTO = f"{LUGAR_VAZIO}:has(> input:checked)"
+
+CSS_DAS_ABAS += f"""  {LUGAR_VAZIO_ABERTO}{{height:{ALTURA_DO_LUGAR_VAZIO}px !important;padding:0 !important;flex:0 0 auto;
+    align-items:center;justify-content:center;border:2px dashed var(--border-forte);border-radius:9px;
+    background:transparent}}
+  {LUGAR_VAZIO_ABERTO} > .faixa{{display:none !important}}
+  {LUGAR_VAZIO_ABERTO}::after{{width:72px;height:72px;border-radius:50%;background:var(--border-forte);
+    color:var(--fg);opacity:.6;font:700 36px/72px 'JetBrains Mono',ui-monospace,monospace;text-align:center}}
+""" + "".join(
+    f'  {LUGAR_VAZIO}[data-controle="{c["pref"]}"]:has(> input:checked)::after'
+    f'{{content:"{c["pref"][1:]}"}}\n'
+    f'  body:has(#c-{c["pref"]}:checked) .aba-ctl.off[data-controle="{c["pref"]}"]'
+    f'{{height:var(--alt-aba)}}\n'
+    for c in MESA)
+
 
 def _tabela_das_cores():
     """As 28 cores dela, publicadas UMA vez — 03/09/2026, e é a lei de produto."""
