@@ -223,7 +223,7 @@ class TestSemSteamOEnsureNaoEnvenena:
     def test_a_steam_que_chega_depois_ganha_o_pino_pelo_vigia_sem_rede(
         self, lar: Path, download_local: dict
     ) -> None:
-        """A Steam instalada um mês depois: o `--manter` do vigia extrai do cache e trava.
+        """D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO: a Steam que chega depois ganha o pino.
 
         MORDIDA: com o `--ensure` sem lançador de volta ao «não baixa», o cache fica vazio
         e o `--manter --offline` não tem de onde extrair.
