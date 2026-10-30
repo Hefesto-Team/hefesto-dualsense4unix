@@ -73,7 +73,7 @@ def familias_sem_prova(no_indice: Iterable[str]) -> list[str]:
 
 def comando_da_familia(familia: str) -> str:
     """O gesto EXATO que refaz aquela pasta — sem ele o bloqueio não é acionável."""
-    sufixo = " --vista dela" if familia == FOTOS_DA_VISTA else ""
+    sufixo = " --vista maximizada" if familia == FOTOS_DA_VISTA else ""
     return (
         f"    src/hefesto_dualsense4unix/interface/olhar.py "
         f"--todas --publicado --doc{sufixo}\n    git add {familia}"

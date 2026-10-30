@@ -26,7 +26,7 @@ CONFERIDO = f"{FOTOS}/CONFERIDO-EM.txt"
 RETRATISTA = "src/hefesto_dualsense4unix/interface/olhar.py"
 COMANDOS_DE_CURA = (
     f"    {RETRATISTA} --todas --publicado --doc                 # {FOTOS}\n"
-    f"    {RETRATISTA} --todas --publicado --doc --vista dela    # {FOTOS_DA_VISTA}"
+    f"    {RETRATISTA} --todas --publicado --doc --vista maximizada    # {FOTOS_DA_VISTA}"
 )
 
 

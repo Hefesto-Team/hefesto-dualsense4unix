@@ -261,13 +261,13 @@ def _palavra(alvo: str, publicado: bool) -> int:
 
 def _vista_pedida(texto: str) -> tuple[int, int]:
     """`1918x840` -> `(1918, 840)`, e recusa qualquer outra forma."""
-    if texto.strip().lower() == "dela":
+    if texto.strip().lower() == "maximizada":
         return VISTA_DO_USUARIO
     m = re.fullmatch(r"\s*(\d{3,5})\s*[xX×]\s*(\d{3,5})\s*", texto)
     if not m:
         raise argparse.ArgumentTypeError(
             f"vista {texto!r} não tem a forma LARGURAxALTURA (ex.: 1918x840), "
-            "nem é a palavra 'dela'"
+            "nem é a palavra 'maximizada'"
         )
     return int(m.group(1)), int(m.group(2))
 
@@ -295,8 +295,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--palavra", metavar="PALAVRA",
                    help="lista onde esta palavra é LIDA nas abas, com a origem")
     p.add_argument("--vista", metavar="LARGxALT", type=_vista_pedida,
-                   help="a vista em que fotografar — 'dela' é a janela do usuário "
-                        "maximizada. Com essa vista a foto é a VISTA INTEIRA, não o "
+                   help="a vista em que fotografar — 'maximizada' é a janela do usuário "
+                        "no tamanho da tela. Com essa vista a foto é a VISTA INTEIRA, não o "
                         "recorte da .janela")
     p.add_argument("--tema", metavar="ARQUIVO",
                    help="fotografa com este tema de cores (um :root{…}), conferido pela "

@@ -3726,7 +3726,7 @@ def nome_do_grupo(viz: dict[str, Any]) -> tuple[str, str, str]:
     tipo = str(viz.get("tipo") or "")
     sugestao = str(viz.get("sugestao") or "")
     if tipo:
-        return (str(viz.get("nome") or _maiuscula(tipo.replace("_", " "))), "dela",
+        return (str(viz.get("nome") or _maiuscula(tipo.replace("_", " "))), "do_usuario",
                 glifo_do_tipo(tipo))
     glifo = glifo_do_tipo(viz.get("sugestao_tipo"))
     if sugestao and sugestao == str(viz.get("lido") or ""):
@@ -4012,7 +4012,7 @@ def _rotulo_do_ocupante(nome: str, tipo: str, sub: str) -> str:
 def _rotulo_do_vizinho(viz: dict[str, Any], nome: str, procedencia: str, glifo: str) -> str:
     """Só o ícone, que é o botão do «O que é?»; o nome mora no tooltip e no `aria-label`."""
     dica = _x({
-        "dela": f"{nome}: canal que o sistema não diz. Toque para trocar.",
+        "do_usuario": f"{nome}: canal que o sistema não diz. Toque para trocar.",
         "lido": f"{nome}, lido pelo computador. Toque para trocar.",
         "equivale": f"{nome} Toque para dizer o que é.",
         "produto": f"{nome}. Toque para dizer o que é.",

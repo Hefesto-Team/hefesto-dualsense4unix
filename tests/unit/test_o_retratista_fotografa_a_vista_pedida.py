@@ -30,11 +30,11 @@ def _retrato() -> Any:
     return modulo
 
 
-def test_a_palavra_do_usuario_resolve_para_a_vista_medida() -> None:
-    """`--vista dela` não redigita número nenhum: ele tem dono em `VISTA_DO_USUARIO`."""
+def test_a_palavra_maximizada_resolve_para_a_vista_medida() -> None:
+    """`--vista maximizada` não redigita número nenhum: ele tem dono em `VISTA_DO_USUARIO`."""
     retrato = _retrato()
-    assert retrato._vista_pedida("dela") == retrato.VISTA_DO_USUARIO
-    assert retrato._vista_pedida("  DELA  ") == retrato.VISTA_DO_USUARIO
+    assert retrato._vista_pedida("maximizada") == retrato.VISTA_DO_USUARIO
+    assert retrato._vista_pedida("  MAXIMIZADA  ") == retrato.VISTA_DO_USUARIO
 
 
 @pytest.mark.parametrize(
@@ -108,7 +108,7 @@ def test_as_dez_fotos_da_vista_nasceram_na_vista_do_usuario() -> None:
         "ficaram para trás, ou as fotos saíram de outra vista — e nos dois "
         "casos a pasta afirma uma tela que ninguém tirou.\n\n"
         "    src/hefesto_dualsense4unix/interface/olhar.py "
-        "--todas --publicado --doc --vista dela\n\n"
+        "--todas --publicado --doc --vista maximizada\n\n"
         f"Recibo lido:\n{texto}"
     )
 
