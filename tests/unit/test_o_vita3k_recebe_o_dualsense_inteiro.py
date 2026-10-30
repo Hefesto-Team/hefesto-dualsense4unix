@@ -344,7 +344,7 @@ def test_a_sonda_recusa_o_que_nao_vale(
     monkeypatch.setattr(ensaio.subprocess, "run", run)
     assert roda("--lib", str(lib3)) == 2
     assert len(lancados) == 1 and lancados[0][-1] == "exigir"
-    assert "bancada" in capsys.readouterr().out
+    assert "o aparelho está tomado" in capsys.readouterr().out
 
 
 def test_a_saida_leva_o_serial_mascarado_e_sem_chaves_de_juncao(
