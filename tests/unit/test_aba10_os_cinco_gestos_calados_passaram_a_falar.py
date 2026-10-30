@@ -6,7 +6,7 @@ conta é a do próprio CSV de paridade (``docs/data/paridade-gtk-html.csv``, aba
 ``10-perfis``, "O desfecho na tela: o que aconteceu depois do clique"):
 
     A metade que fala foi curada em 02/09 e é boa (…). A metade que falta é o
-    SUCESSO: na GTK ela sabe que renomeou ("Salvo como X"); no HTML o campo só
+    SUCESSO: na GTK quem usa sabe que renomeou ("Salvo como X"); no HTML o campo só
     volta ao normal e a lista muda no tique seguinte. Para gestos que ESCREVEM
     NO DISCO, silêncio no sucesso é a mesma classe de defeito que o toast
     existe para curar.
@@ -24,17 +24,17 @@ O ``remover`` é o caso mais fino e o mais caro: ele **anotava** a frase, então
 uma régua que só olhasse ``_DESFECHO`` daria verde. O que faltava era o
 ``_dizer`` — o retorno que o ``_deu_certo`` do piloto pinta NO ATO
 (``hefesto_vivo.py``). No gesto mais destrutivo da aba, meio segundo de silêncio
-é o intervalo em que ela clica de novo achando que o primeiro não pegou — e o
+é o intervalo em que quem usa clica de novo achando que o primeiro não pegou — e o
 segundo clique acerta a linha seguinte.
 
-**O QUE ESTA RÉGUA NÃO MEDE**, e dizer isso é o contrato: ela não abre janela.
+**O QUE ESTA RÉGUA NÃO MEDE**, e dizer isso é o contrato: a régua não abre janela.
 Que o endereço ``perfis.desfecho`` EXISTE na página e que a tira acende com ele
 é trabalho do ``aba10.py`` (que o exige no gerador) e do
 ``test_aba10_os_gestos_dizem_o_que_fizeram`` (que confere o embrulho ``mesa``).
 Aqui se mede uma coisa só: **os quatro gestos devolvem a notícia, no vocabulário
 do produto.**
 
-A MORDIDA, e ela é por gesto: troque qualquer um dos quatro ``return _dizer(…)``
+A MORDIDA é por gesto: troque qualquer um dos quatro ``return _dizer(…)``
 por um ``return None`` (que é como eles eram) e o teste daquele gesto reprova
 dizendo qual ficou mudo. Trocar o ``_dizer`` do ``remover`` de volta por
 ``_anotar`` reprova em ``test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte``.
@@ -166,7 +166,7 @@ def test_o_renomear_diz_de_onde_para_onde(monkeypatch: pytest.MonkeyPatch) -> No
         "DELE (`mensagem_do_salvar`), não uma segunda escrita à mão aqui")
     assert "Pragmata" in _frase(fora) and "Pragmata BR" in _frase(fora), (
         "a frase precisa nomear os DOIS lados: um renomear que só diz o nome "
-        "novo não deixa ela desfazer pelo `profile restore <nome-antigo>`")
+        "novo não deixa quem usa desfazer pelo `profile restore <nome-antigo>`")
 
 
 def test_o_renomear_que_nao_mudou_nada_continua_mudo(
@@ -199,14 +199,14 @@ def test_o_campo_do_jogo_diz_em_que_o_perfil_passou_a_valer(
 
     assert _frase(fora), "o campo do jogo gravou a regra e ficou mudo"
     assert _match_label(todos[0].match) in _frase(fora), (
-        f"o desfecho não fala o mesmo idioma da coluna 'Quando usar' — ela diz "
+        f"o desfecho não fala o mesmo idioma da coluna 'Quando usar' — a coluna diz "
         f"{_match_label(todos[0].match)!r} e a tira diz {_frase(fora)!r}")
 
 
 def test_o_campo_do_jogo_traduz_o_numero_no_nome_do_jogo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`1599660` sozinho não diz a ela que aquele é o Mortal Kombat 1."""
+    """`1599660` sozinho não diz a quem usa que aquele é o Mortal Kombat 1."""
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     _o_disco_tem(monkeypatch, "Pragmata")
@@ -223,7 +223,7 @@ def test_o_campo_do_jogo_traduz_o_numero_no_nome_do_jogo(
 
     assert "Mortal Kombat 1" in _frase(fora), (
         f"o número entrou e o nome não voltou: {_frase(fora)!r}. O desfecho é "
-        f"o único lugar desta aba onde ela confere o que digitou")
+        f"o único lugar desta aba onde quem usa confere o que digitou")
 
 
 def test_a_biblioteca_ilegivel_nao_vira_recusa(
@@ -240,7 +240,7 @@ def test_a_biblioteca_ilegivel_nao_vira_recusa(
     from hefesto_dualsense4unix.integrations import jogos_locais
 
     def _explode(*a: Any, **k: Any) -> Any:
-        raise OSError("a biblioteca dela não abriu")
+        raise OSError("a biblioteca do usuário não abriu")
 
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, "Pragmata")
@@ -271,7 +271,7 @@ def test_o_voltar_a_de_ontem_diz_qual_versao_voltou(
         f"o desfazer não nomeia o perfil restaurado: {_frase(fora)!r}")
     assert "2026-09-03T04-00-00" in _frase(fora), (
         "o carimbo da versão não chegou à tira — sem ele a frase não diz de "
-        "onde veio, e ela não tem como pedir outra pelo `profile restore --em`")
+        "onde veio, e quem usa não tem como pedir outra pelo `profile restore --em`")
     assert ".json" not in _frase(fora), (
         "o carimbo saiu com a extensão; a forma copiável para o `--em` é o "
         "nome sem `.json`")
@@ -314,5 +314,5 @@ def test_todo_gesto_que_grava_devolve_o_embrulho_que_a_pintura_le() -> None:
         if "dict" not in retorno:
             mudos.append(f"{nome} → {retorno}")
     assert not mudos, (
-        "estes gestos gravam no disco dela e não têm caminho de volta para a "
+        "estes gestos gravam no disco do usuário e não têm caminho de volta para a "
         f"tira: {', '.join(mudos)}")

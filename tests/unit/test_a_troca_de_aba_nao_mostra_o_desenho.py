@@ -206,7 +206,7 @@ class _Lenta:
 @pytest.mark.usefixtures("_tela_de_teste")
 def test_a_carga_lenta_nao_gasta_o_prazo(tmp_path: pathlib.Path) -> None:
     """O prazo conta do `load`, não do início do documento: a carga que passa do prazo não
-    devolve o desenho antes de o piloto poder pintar, e a rede ainda vale depois dela.
+    devolve o desenho antes de o piloto poder pintar, e a rede ainda vale depois da carga.
 
     Prova da D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD.
     """

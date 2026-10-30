@@ -14,7 +14,7 @@ PARIDADE: a janela estável faz as duas coisas há meses.
 2. **O "Recarregar" ERA UM BOTÃO MORTO COM APARÊNCIA DE VIVO.** O
    ``data-hef-gesto="recarregar"`` está na página desde 31/08 e não havia
    ``@gesto``: o piloto caía no ramo do gesto SEM DONO e imprimia
-   ``[gesto sem dono]`` **no stdout de quem lançou a janela**. Ela clicava,
+   ``[gesto sem dono]`` **no stdout de quem lançou a janela**. Quem usa clicava,
    nada acontecia, e nada dizia por quê — nem a tarja, porque
    ``_recusou_dizendo`` só pinta para exceção de HANDLER.
 
@@ -111,7 +111,7 @@ def _o_marcador_diz(monkeypatch: pytest.MonkeyPatch, nome: str | None) -> None:
 def test_a_tira_recebe_vazio_e_a_frase_vai_no_relato() -> None:
     """A TIRA NÃO FALA MAIS — 13/09/2026, pedido.
 
-    O gesto continua montando a frase (é o relato do que ele fez), mas ela viaja
+    O gesto continua montando a frase (é o relato do que ele fez), mas a frase viaja
     em ``relato``, que o ``pintar`` não lê — ele só lê ``p.blocos``, ``p.mesa``,
     ``p.colunas`` e ``p.vazios`` —, e o endereço da tira recebe vazio.
 
@@ -159,7 +159,7 @@ def test_o_ativar_diz_o_que_o_lock_manual_comeu(
 
     A frase é a do produto — ``mensagem_de_ativacao`` reusa
     ``footer_actions._mensagem_de_aplicacao`` para a metade que nomeia o que
-    ficou de fora. Esta régua não digita a frase: ela pergunta à função.
+    ficou de fora. Esta régua não digita a frase: pergunta à função.
 
     MORDIDA: troque a chamada por ``p.profile_switch(nome)`` (que é como o gesto
     era até 03/09) e este teste reprova — a frase volta a ser só

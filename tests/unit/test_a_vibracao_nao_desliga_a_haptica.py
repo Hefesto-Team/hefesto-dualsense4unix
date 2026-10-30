@@ -1,6 +1,6 @@
 """A-VIBRACAO-NAO-DESLIGA-A-HAPTICA-01, o passo 1: o bit do rumble.
 
-Medido com ela em 03/10 (quatro controles num adaptador, e de novo dois por
+Medido no ensaio no aparelho em 03/10 (quatro controles num adaptador, e de novo dois por
 adaptador, com `cedidos=0`): a vibração pelo nó do jogo e a háptica de teste ao
 mesmo tempo ALTERNAVAM no mesmo controle. O report do rumble saía com
 `HAPTICS_SELECT` (`flag0` bit 1), que no `hid-playstation`, no SDL e no
@@ -15,11 +15,11 @@ A-VIBRACAO-DO-CABO-ACORDA-O-MOTOR-E-DEVOLVE-A-HAPTICA-01.) Quem diz que a hápti
 toca é o dono das pontes, o `AltoFalanteSubsystem`, pelo `set_haptica_de_audio_for`
 do controlador.
 
-A BANCADA: o handle é o `_PinnedPyDualSense` real, sem device (o mesmo molde
+O ENSAIO: o handle é o `_PinnedPyDualSense` real, sem device (o mesmo molde
 das réguas da AUDIO-OWNER-01), e o report de rádio sai do montador real
 (`build_bt_report`). O controlador é o real, com quatro handles nas chaves de
 MAC da faixa forjada. O subsystem é o real, com o servidor de som dublado na
-borda (`sinks_que_tocam`). A MORDIDA de cada régua está no docstring dela.
+borda (`sinks_que_tocam`). A MORDIDA de cada régua está no próprio docstring.
 """
 from __future__ import annotations
 

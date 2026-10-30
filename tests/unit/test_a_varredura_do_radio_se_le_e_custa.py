@@ -2,7 +2,7 @@
 
 RESERVA-DO-RADIO-01, 20/09/2026. A sprint queria RESERVAR um adaptador para os
 controles. A medição de 20/09 derrubou a premissa — *"a varredura é do adaptador
-que a PESSOA ABRE"* — e a cura que sobrou não adivinha: ela pergunta o
+que a PESSOA ABRE"* — e a cura que sobrou não adivinha: pergunta o
 `Discovering` ao `org.bluez.Adapter1`.
 
 Este arquivo prende as três peças da cura, e o barramento é de MENTIRA de
@@ -63,7 +63,7 @@ E AS TRÊS QUE SOBRAM
 
 AS DUAS QUE A CONFERÊNCIA ADVERSARIAL ACRESCENTOU (20/09/2026)
 ---------------------------------------------------------------
-As nove acima foram arrancadas uma a uma e as nove reprovaram. O que elas não
+As nove acima foram arrancadas uma a uma e as nove reprovaram. O que as nove não
 cobriam apareceu ao pôr um `busctl` que NÃO RESPONDE na frente do `PATH` — o
 barramento travado, que é o caso que a lembrança de 3 s não alcança:
 
@@ -115,7 +115,7 @@ def _ligar_o_barramento(
     tmp_path: Path,
     adaptadores: dict[str, tuple[str | None, str | None]],
 ) -> None:
-    """Põe o `busctl` de mentira na frente do `PATH` desta corrida, e só dela."""
+    """Põe o `busctl` de mentira na frente do `PATH` desta corrida, e só desta."""
     raiz = bm.montar_adaptadores(tmp_path, adaptadores)
     for chave, valor in bm.ambiente_de_leitura(raiz).items():
         monkeypatch.setenv(chave, valor)
@@ -129,8 +129,8 @@ def _sem_dois_pontos(mac: str) -> str:
 def _ensaio(mapa: dict[str, str]) -> dict[str, Any]:
     """Um `/sys/class/hidraw` de mentira: `{uniq do controle: MAC do adaptador}`.
 
-    Mesma forma de `test_a_conta_de_slots_por_adaptador._ensaio`. Sem ela o
-    teste mediria a bancada de quem o roda — e quem o roda é a bancada, com
+    Mesma forma de `test_a_conta_de_slots_por_adaptador._ensaio`. Sem essa forma o
+    teste mediria o ensaio de quem o roda — e quem o roda é o ensaio, com
     quatro DualSense de pé.
     """
     nos = {f"hidraw{i}": (uniq, phys) for i, (uniq, phys) in enumerate(mapa.items())}
@@ -373,7 +373,7 @@ def test_sem_leitura_o_motor_escolhe_exatamente_como_escolhia() -> None:
 
 
 def test_a_mesa_folgada_nao_vira_ordem_so_porque_alguem_varre() -> None:
-    """Varredura não cria ordem de serviço — ela só reordena os destinos."""
+    """Varredura não cria ordem de serviço — só reordena os destinos."""
     planos = plano_de_radio.plano_por_adaptador(
         [_controle(P1, 1), _controle(P2, 2)],
         apelidos={bm.ADAPTADOR_QUE_VARRE: "Dongle de trás"},
@@ -450,7 +450,7 @@ def test_o_aviso_do_doctor_diz_o_custo_e_nao_so_o_estado() -> None:
 
 
 def test_o_aviso_do_doctor_nao_culpa_ninguem() -> None:
-    """Nenhuma palavra de culpa no texto que CHEGA a ela."""
+    """Nenhuma palavra de culpa no texto que CHEGA a quem usa."""
     bloco = DOCTOR.split("Discovering: yes")[1][:900].lower()
     for palavra in PALAVRAS_DE_CULPA:
         assert palavra not in bloco, f"«{palavra}» culpa alguém pelo rádio ocupado"
@@ -595,10 +595,10 @@ def test_o_barramento_travado_nao_segura_a_thread_do_desenho(
     padrão de 5,0 s por pergunta: **15,1 s de janela presa**, três adaptadores,
     uma pergunta travada em cada.
 
-    A lembrança de 3 s não alcança isso: ela segura quantas vezes se pergunta,
+    A lembrança de 3 s não alcança isso: segura quantas vezes se pergunta,
     não quanto tempo cada pergunta dura.
 
-    TRÊS adaptadores de propósito — é a bancada, e é onde o defeito é maior.
+    TRÊS adaptadores de propósito — é o ensaio, e é onde o defeito é maior.
     Com um só, um padrão de 5 s daria 5 s e o mesmo limite pegaria; com três,
     o arranjo difícil mostra que o corte é do ORÇAMENTO INTEIRO e não de uma
     pergunta.

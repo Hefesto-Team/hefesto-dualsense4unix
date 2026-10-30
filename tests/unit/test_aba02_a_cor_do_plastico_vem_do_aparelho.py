@@ -17,8 +17,8 @@ A CURA DE 01h31 pôs DUAS folhas no fim do `<head>`: a do desenho, com os dois
 assentos que o usuário aprovou, e uma vazia por cima, endereçada, onde o produto
 escrevia o que leu. Duas folhas só se sobrepõem no assento que a SEGUNDA nomeia.
 
-MEDIDO NO WEBKITGTK DESTA MÁQUINA — o motor da janela dela —, com a página da
-bancada carregada numa ``Gtk.OffscreenWindow`` e a folha endereçada recebendo o
+MEDIDO NO WEBKITGTK DESTA MÁQUINA — o motor da janela do produto —, com a página do
+ensaio carregada numa ``Gtk.OffscreenWindow`` e a folha endereçada recebendo o
 que ``folha_do_plastico`` monta para **um** controle na mesa (P1 White):
 
     assento   antes da cura desta sprint     depois
@@ -29,10 +29,10 @@ que ``folha_do_plastico`` monta para **um** controle na mesa (P1 White):
 
 O p2 ficava **Starlight Blue** — a cor do desenho, num lugar vazio. Com um
 controle no cabo e o outro desligado, é exatamente a mentira que a lei de produto veio
-matar, e ela sobrevivia a `check_identidade_vem_de_cima` (que não olha dentro de
+matar, e a mentira sobrevivia a `check_identidade_vem_de_cima` (que não olha dentro de
 `<style>`) e à régua do mockup (que não enumera folha de estilo).
 
-A CURA É ESTRUTURAL, e é por isso que ela se testa sem abrir navegador: **uma
+A CURA É ESTRUTURAL, e é por isso que se testa sem abrir navegador: **uma
 folha só**, endereçada, com `data-hef-alvo="html"`, que o produto TROCA INTEIRA.
 O que a troca não escreve deixa de existir — não sobra para o desenho. E o
 :data:`PISO` é a primeira regra de produto, porque `.ctl{border:2px solid
@@ -45,30 +45,30 @@ data ``cor_da_borda`` recebia o NOME de tela e o procurava em
 ``integrations/cor_do_plastico.NOMES_DE_FABRICA`` (21 linhas) para chegar a
 ``TONS`` (21 hexas, **vinte deles aproximados**). Duas coisas caíram com isso:
 
-* **o chip da fita e a borda do card discordavam nos 28 de 28 modelos dela** — o
+* **o chip da fita e a borda do card discordavam nos 28 de 28 modelos do mapa** — o
   chip lê o mapa (``monta.cor_da_zona``, que sai do CSV) e a borda lia ``TONS``:
   White ``#e4e0d8`` contra ``#edeef0``, Cosmic Red ``#ae335a`` contra ``#da244b``,
   três centímetros um do outro na tela;
 * **três modelos não ganhavam borda nenhuma**, e a causa é a grafia. O
-  ``nome`` que ``mesa_viva.mesa_do_estado`` entrega sai do **CSV dela**
+  ``nome`` que ``mesa_viva.mesa_do_estado`` entrega sai do **CSV de cores**
   (``mesa_viva.CORES``), não de ``NOMES_DE_FABRICA``.
 
 **FATO SUBSTITUÍDO:** o comentário de ``GRAFIA_DIVERGENTE``, mais abaixo, dizia
 *"A TELA NÃO SOFRE COM ISSO HOJE (…) o nome vivo sai de NOMES_DE_FABRICA pelo
-CÓDIGO que o aparelho publica, então a borda sai certa"*. **Ela sofria.** Medido
+CÓDIGO que o aparelho publica, então a borda sai certa"*. **A tela sofria.** Medido
 nesta árvore rodando ``mesa_do_estado`` + ``folha_do_plastico`` com um controle
 de cada código no cabo::
 
-    código  mesa['nome'] (do CSV dela)      borda ANTES          borda DEPOIS
+    código  mesa['nome'] (do CSV de cores)  borda ANTES          borda DEPOIS
     Z1      God of War Ragnarök             var(--border-forte)  #56618b
     Z2      Marvel's Spider-Man 2           var(--border-forte)  #5f5f60
     ZB      Icon Blue Special Edition       var(--border-forte)  #40659d
 
-Agora a folha casa por ``cor`` — o ``id`` da linha dela —, e nome de tela deixou
+Agora a folha casa por ``cor`` — o ``id`` da linha do modelo —, e nome de tela deixou
 de decidir cor.
 
 O RESOLVEDOR ABAIXO É HONESTO PORQUE A PÁGINA É SIMPLES: depois da cura há **uma
-única** fonte de `--plastico` no documento, e dentro dela todas as regras têm a
+única** fonte de `--plastico` no documento, e dentro dessa fonte todas as regras têm a
 mesma especificidade — `.ctl[data-controle]` e `.ctl[data-controle="p1"]` valem
 as duas (0,2,0). Logo quem decide é a ORDEM, e "a última que casa" é a resposta
 certa. `test_a_pagina_tem_uma_unica_fonte_de_plastico` é o que mantém essa
@@ -122,7 +122,7 @@ def _folhas_com_plastico(doc: str) -> list[tuple[str, str]]:
     """As folhas que DECLARAM `--plastico`, em ordem de documento: (atributos, css).
 
     DECLARAR, e não usar: a folha principal desta página está cheia de
-    `var(--plastico)` — é ela que pinta a borda, o círculo do analógico e os
+    `var(--plastico)` — é a folha principal que pinta a borda, o círculo do analógico e os
     glifos —, e contá-la aqui faria esta régua acusar a página curada. Comentário
     também sai: as duas folhas falam de `--plastico` em prosa.
     """
@@ -182,12 +182,12 @@ def test_o_piso_nao_nomeia_assento(aba02):
 
 
 def test_os_dois_pisos_gemeos_nao_divergiram(aba02, a02):
-    """O gerador é dono da BANCADA e o pacote é dono do PRODUTO, e eles não se"""
+    """O gerador é dono do ENSAIO e o pacote é dono do PRODUTO, e eles não se"""
     assert aba02.PISO_DO_PLASTICO == a02.PISO_DA_FOLHA
 
 
 def test_o_seletor_do_assento_e_o_mesmo_dos_dois_lados(aba02, a02):
-    """Bancada e produto escrevem o MESMO seletor, pela regra de um dono só."""
+    """Ensaio e produto escrevem o MESMO seletor, pela regra de um dono só."""
     do_produto = a02.folha_do_plastico([{"pref": "p1", "cor": "white"}])
     seletor = do_produto.splitlines()[1].split("{", 1)[0]
     assert aba02.regra_do_plastico is a02.regra_do_plastico
@@ -196,7 +196,7 @@ def test_o_seletor_do_assento_e_o_mesmo_dos_dois_lados(aba02, a02):
 
 
 def test_o_ensaio_mostra_o_desenho_que_o_usuario_aprovou(doc):
-    """Sem daemon, a página é a bancada: a folha nasce com o que o usuário aprovou."""
+    """Sem daemon, a página é o ensaio: a folha nasce com o que o usuário aprovou."""
     assert _cor_do_assento(doc, "p1") == DO_DESENHO[0]
     assert _cor_do_assento(doc, "p2") == DO_DESENHO[1]
 
@@ -209,7 +209,7 @@ def test_com_um_controle_so_o_assento_vazio_perde_a_cor_do_desenho(doc, a02):
 
 
 def test_nenhum_assento_fica_sem_cor_definida(doc, a02):
-    """`var()` sem valor não deixa a borda cinza — ela SOME. Por isso o piso."""
+    """`var()` sem valor não deixa a borda cinza — a borda SOME. Por isso o piso."""
     troca = a02.folha_do_plastico([{"pref": "p1", "cor": "white"}])
     for pref in ("p1", "p2", "p3", "p4"):
         assert _cor_do_assento(doc, pref, troca) is not None, (
@@ -229,7 +229,7 @@ def test_a_mesa_do_usuario_de_hoje_chega_inteira_a_tela(doc, a02):
 
 
 def test_nenhum_hexa_do_desenho_sobrevive_a_troca(doc, a02):
-    """A varredura final, e ela é sobre a TELA: em nenhum dos quatro assentos, em"""
+    """A varredura final, e é sobre a TELA: em nenhum dos quatro assentos, em"""
     mesas = [
         [],
         [{"pref": "p1", "cor": "white"}],
@@ -262,7 +262,7 @@ def _modelos_do_mapa() -> dict[str, str]:
 
 
 def _casca_do_mapa() -> dict[str, str]:
-    """`slug -> hexa da casca esquerda`, ou `""` quando ela não amostrou o modelo."""
+    """`slug -> hexa da casca esquerda`, ou `""` quando o mapa não amostrou o modelo."""
     fora: dict[str, str] = {}
     for x in _linhas_do_mapa():
         if x.get("zona") == "casca_esq":
@@ -279,12 +279,12 @@ def test_o_mapa_do_usuario_tem_vinte_e_oito_modelos():
 def test_todo_modelo_do_mapa_do_usuario_vira_borda(a02, slug):
     """A LEI DE PRODUTO, medida modelo a modelo: *"nada hardcoded"*.
 
-    A pergunta é feita com o SLUG — o `id` da linha dela, que é o que
+    A pergunta é feita com o SLUG — o `id` da linha do modelo, que é o que
     `mesa_viva.mesa_do_estado` põe em `cor` —, e não com o nome de tela. Perguntar
     por nome era o defeito: a grafia do CSV e a de `NOMES_DE_FABRICA` divergem em
     três modelos, e os três saíam sem borda nenhuma.
 
-    OS OITO SEM AMOSTRA NÃO SÃO FALHA: ela não mediu a casca de Grey Camouflage,
+    OS OITO SEM AMOSTRA NÃO SÃO FALHA: o mapa não mediu a casca de Grey Camouflage,
     dos três Chroma, de Ghost of Yōtei, Marathon, Genshin Impact e 007 First
     Light. A folha os pinta com `url(#hachura-sem-hex)`, que numa **borda** não é
     hachura — é declaração inválida, e a borda SOME. O neutro é o que a regra
@@ -294,7 +294,7 @@ def test_todo_modelo_do_mapa_do_usuario_vira_borda(a02, slug):
     borda = a02.cor_da_borda(slug)
     if medida:
         assert re.fullmatch(r"#[0-9a-fA-F]{6}", borda), (
-            f"`{slug}` tem casca medida (`{medida}`) no mapa dela e não virou hexa")
+            f"`{slug}` tem casca medida (`{medida}`) no mapa de cores e não virou hexa")
     else:
         assert borda == a02.BORDA_SEM_COR, (
             f"`{slug}` não tem casca amostrada e mesmo assim saiu `{borda}` — "
@@ -324,16 +324,16 @@ def test_o_produto_escreve_cada_modelo_como_o_mapa_do_usuario():
     }
     assert achadas == {}, (
         "a grafia dos modelos divergiu entre `cores-do-dualsense.csv` (o mapa "
-        f"dela) e `cor_do_plastico.NOMES_DE_FABRICA` (o que o produto sabe): {achadas}")
+        f"de cores) e `cor_do_plastico.NOMES_DE_FABRICA` (o que o produto sabe): {achadas}")
 
 
 def test_nenhum_modelo_do_mapa_do_usuario_falta_no_produto():
-    """A régua não acha zero por cegueira: ela exige os 28 do lado do produto."""
+    """A régua não acha zero por cegueira: exige os 28 do lado do produto."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 
     faltam = {c: n for c, n in _modelos_do_mapa().items() if c not in NOMES_DE_FABRICA}
     assert faltam == {}, (
-        "o mapa dela tem modelos que `cor_do_plastico.NOMES_DE_FABRICA` não "
+        "o mapa de cores tem modelos que `cor_do_plastico.NOMES_DE_FABRICA` não "
         f"sabe nomear: {sorted(faltam)}")
     assert set(NOMES_DE_FABRICA) == set(_modelos_do_mapa())
     assert len(NOMES_DE_FABRICA) == 28

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A ABA VIBRAÇÃO DIZ O QUE ESTÁ ACONTECENDO — a linha do estado.
 
-POR QUE ELA EXISTE, e o número foi medido em 02/09/2026 contra o daemon do usuário: a
+POR QUE A FAIXA EXISTE, e o número foi medido em 02/09/2026 contra o daemon do usuário: a
 janela estável mostra QUATRO avisos nesta aba e a interface nova mostrava
 **zero**. A tela nova tinha os dois motores, os quatro degraus e o "Testar", e
 nenhuma palavra sobre o que acontece com eles.
@@ -14,8 +14,8 @@ janela estável diz isso desde 11/08/2026
 calada e a pessoa continuava clicando em "Máximo".
 
 **ERAM QUATRO ATÉ 07/09/2026, E HOJE SÃO TRÊS.** A primeira — a contagem de
-pedidos do jogo — saiu por ordem de produto: *"Vibração remove essa última frase
-também."* Ver ``app/telas/vibracao.py`` (as três frases que ficam) e
+pedidos do jogo — saiu por decisão do produto, que tirou também essa última frase da
+Vibração. Ver ``app/telas/vibracao.py`` (as três frases que ficam) e
 ``test_as_frases_sao_as_do_produto``, que segura a lista fora (uma frase a mais
 reprova). **A função do produto NÃO morreu** — a janela estável continua a chamar;
 o que esta aba deixou de fazer é perguntar.
@@ -55,7 +55,7 @@ AS MORDIDAS, e cada uma reprova um teste diferente:
 AS TRÊS MORDIDAS EM NEGRITO SÃO DE 02/09/2026, e as três primeiras existem
 porque a régua NÃO MORDIA. Reproduzido antes de curar: com o aviso do teto
 arrancado, **17 testes passavam**; com uma frase inventada no fim da lista, os
-mesmos **17 passavam** e a prosa chegava ao ``mockup/05-vibracao.html`` que ela
+mesmos **17 passavam** e a prosa chegava ao ``mockup/05-vibracao.html`` que se
 olha, com o ``_conferir`` do gerador dizendo OK.
 """
 from __future__ import annotations
@@ -110,7 +110,7 @@ def test_as_frases_sao_as_do_produto(estado, orcamento, monkeypatch):
         f"  o produto diz: {do_produto}\n"
         f"  a aba diz:     {ditas}\n"
         "Falta = frase do produto que ninguém chama; sobra = prosa que motor "
-        "nenhum assina, e ela vai para o desenho que ELA olha.")
+        "nenhum assina, e a prosa vai para o desenho que se aprova.")
 
 
 def test_o_alerta_de_alcance_e_alerta():
@@ -190,9 +190,9 @@ def test_o_teto_e_a_mesma_frase_que_a_janela_estavel_escreve(orcamento):
 def test_a_confissao_de_onde_grava_sai_no_tom_de_info():
     """A quarta frase é INFO, como na estável — explica, não alarma.
 
-    Lá ela é pintada com ``#8be9fd`` (``rumble_actions.py:483``), e o comentário
+    Lá a frase é pintada com ``#8be9fd`` (``rumble_actions.py:483``), e o comentário
     ao lado diz por quê: *"a frase explica, não alarma — quem alarma é o aviso
-    de alcance, em laranja"*. Ela saía daqui como ``diz``, o cinza do rótulo
+    de alcance, em laranja"*. A frase saía daqui como ``diz``, o cinza do rótulo
     comum, e o tom só aparece no dia em que a ``MIGRA-VIBRACAO-04`` ligar o
     alvo por controle — tarde demais para alguém notar.
     """
@@ -265,7 +265,7 @@ def test_o_pacote_emite_o_bloco_do_estado():
 
 
 def test_o_ensaio_tem_o_bloco():
-    """A página que ELA olha tem o endereço do bloco e a frase do produto."""
+    """A página que se olha tem o endereço do bloco e a frase do produto."""
     import onde
 
     doc = onde.pagina(PAGINA).read_text(encoding="utf-8")
@@ -279,7 +279,7 @@ def test_o_ensaio_tem_o_bloco():
         f"a faixa voltou a acender linha permanente no desenho: {cena}")
     assert 'id="vib-estado"></div>' in doc, (
         "a faixa não nasce vazia no desenho — o que estiver ali é prosa "
-        "cravada, e ela chega à página que ELA olha")
+        "cravada, e chega à página que se aprova")
 
 
 CHAVES_DAS_DUAS_ABAS = (
@@ -299,17 +299,17 @@ def test_as_duas_abas_nao_tem_o_que_apagar_por_transporte(chave):
     para a Vibração e os Gatilhos apagarem o que o transporte de agora não
     aciona, e nenhuma aba o chamou. Medido no mapa: para o DualSense, que é o
     único controle que estas duas abas mostram (o daemon numera os externos e
-    não os adota), cada peça que elas acionam responde `sim` no cabo e no rádio.
+    não os adota), cada peça que as abas acionam responde `sim` no cabo e no rádio.
     Apagar por transporte não mudaria um pixel, e o módulo saiu.
 
     ESTA RÉGUA GUARDA A PREMISSA, e pergunta ao leitor que o produto usa
     (`mesa_viva.aciona`). No dia em que o mapa disser que um transporte não
-    aciona uma destas peças, ela reprova nomeando a peça: é a hora de a aba
+    aciona uma destas peças, a régua reprova nomeando a peça: é a hora de a aba
     perguntar a `mesa_viva.aciona` por coluna, como a cor e o giroscópio já
     perguntam.
 
     A MORDIDA: troque o `radio_aciona` da linha `vibracao.rumble.esquerdo` do
-    DualSense por `não` no CSV, e ela reprova.
+    DualSense por `não` no CSV, e a régua reprova.
     """
     import mesa_viva
 
@@ -317,6 +317,6 @@ def test_as_duas_abas_nao_tem_o_que_apagar_por_transporte(chave):
     no_radio = mesa_viva.aciona(chave, "bt")
     assert no_cabo == no_radio == "sim", (
         f"o mapa diz que `{chave}` aciona {no_cabo!r} no cabo e {no_radio!r} no "
-        "rádio. A coluna da aba mostra a peça igual nos dois transportes: ela "
+        "rádio. A coluna da aba mostra a peça igual nos dois transportes: a aba "
         "tem de perguntar a `mesa_viva.aciona` por coluna e apagar o que o "
         "transporte de agora não aciona.")

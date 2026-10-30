@@ -97,10 +97,10 @@ def test_a_arvore_inteira_da_o_mesmo_resultado() -> None:
 def test_o_achado_nunca_sai_truncado_pelo_prefixo() -> None:
     """A trava que impede o achado truncado, medida no COMPORTAMENTO.
 
-    Até 06/10/2026 ela lia o fonte atrás de ``key=len`` e ``reverse=True``; a
+    Até 06/10/2026 a trava lia o fonte atrás de ``key=len`` e ``reverse=True``; a
     alternância passou a ser árvore de prefixos, que também prefere a palavra
     mais longa, e a trava passou a perguntar o que importa: com uma palavra e o
-    prefixo dela no dicionário, o achado é a palavra inteira, nunca o prefixo.
+    prefixo da palavra no dicionário, o achado é a palavra inteira, nunca o prefixo.
     """
     mod = _modulo()
     mod._CORRECOES["zzpalx"] = "zzpalx-certa"

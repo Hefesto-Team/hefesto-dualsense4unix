@@ -105,7 +105,7 @@ def test_a_prioridade_saiu_da_pagina_e_a_faixa_segue_do_esquema() -> None:
 
 
 def test_so_os_campos_de_texto_ficam_fora_do_tique() -> None:
-    """O que ela DIGITA não se repinta a cada 500 ms (apagaria a frase no meio da escrita).
+    """O texto DIGITADO não se repinta a cada 500 ms (apagaria a frase no meio da escrita).
 
     Com o trilho da Prioridade fora da página restam os dois campos de texto e o select do estilo,
     que se pinta só quando outro perfil abre (pintar a cada tique reaplicaria a receita).
@@ -118,7 +118,7 @@ def test_so_os_campos_de_texto_ficam_fora_do_tique() -> None:
 def test_o_select_oferece_o_que_o_motor_sabe_aplicar() -> None:
     """O CONJUNTO, e não uma contagem: uma receita nova não pode ficar fora.
 
-    O estilo que só uma extensão pede fica fora do desenho; o pacote o acrescenta com ela.
+    O estilo que só uma extensão pede fica fora do desenho; o pacote o acrescenta com a extensão.
     """
     html = _ensaio()
     fora = [e.rotulo for e in estilos_de_jogo.estilos_a_vista()
@@ -144,7 +144,7 @@ def test_o_estilo_grava_gatilho_vibracao_e_uma_cor_por_unidade(
     assert set(prof.controllers or {}) == {c["uniq"] for c in MESA}
     assert prof.leds.lightbar == (0, 0, 0), (
         "o estilo escreveu uma cor na seção GLOBAL — é a cor que os quatro "
-        "herdariam, e a regra dela é que nenhum controle repete a cor de outro")
+        "herdariam, e a regra é que nenhum controle repete a cor de outro")
     assert resposta is not None and "FPS" in resposta["relato"]
     assert resposta["mesa"]["perfis.desfecho"] == "", "a tira voltou a falar"
 

@@ -2,9 +2,9 @@
 
 `scripts/wiki/gerar.py` lê o README, `docs/usage`, `docs/protocol` e o mapa dos controles NA HORA.
 A régua: toda fonte declarada existe, todo link interno da Wiki gerada resolve, toda página abre com o
-cabeçalho da fonte, o mesmo commit gera os mesmos bytes, e uma linha do CSV muda só a página dela. As
+cabeçalho da fonte, o mesmo commit gera os mesmos bytes, e uma linha do CSV muda só a própria página. As
 mordidas: um endereço real, um termo da lista ou o vocabulário de dentro seguram a página (e o link dos
-outros para ela volta ao arquivo no repositório); um link quebrado reprova a régua.
+outros para a página volta ao arquivo no repositório); um link quebrado reprova a régua.
 """
 # ruff: noqa: E501
 from __future__ import annotations
@@ -214,10 +214,10 @@ def test_o_mapa_traz_cabo_e_bluetooth_lado_a_lado_com_a_prova(tmp_path: Path) ->
 
 def test_a_pagina_com_vocabulario_de_dentro_e_segurada_e_o_link_volta_ao_repositorio(tmp_path: Path) -> None:
     raiz = _arvore(tmp_path)
-    _escreve(raiz, "docs/usage/b.md", "# Usar B\n\nA régua dela mediu.\n")
+    _escreve(raiz, "docs/usage/b.md", "# Usar B\n\nA conta desta casa mediu.\n")
     r = _gera(raiz)
     assert "Usar-b" in r.seguradas and "Usar-b" not in r.wiki.paginas
-    assert any("[dela]" in m for m in r.seguradas["Usar-b"])
+    assert any("[desta casa]" in m for m in r.seguradas["Usar-b"])
     assert "[b](Usar-b" not in r.wiki.paginas["Usar-a"].corpo
     assert "[b](https://" in r.wiki.paginas["Usar-a"].corpo and "docs/usage/b.md#parte" in r.wiki.paginas["Usar-a"].corpo
     assert "(Usar-b)" not in r.wiki.paginas["_Sidebar"].corpo
@@ -330,7 +330,7 @@ def test_o_pedaco_escondido_do_endereco_da_maquina_segura_a_pagina(tmp_path: Pat
 
 
 def test_o_workflow_dispara_com_toda_fonte_que_o_gerador_le(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Fonte lida e fora dos `paths` é página que envelhece calada: a Wiki não regera quando ela muda."""
+    """Fonte lida e fora dos `paths` é página que envelhece calada: a Wiki não regera quando a fonte muda."""
     import fnmatch
 
     lidos: set[str] = set()

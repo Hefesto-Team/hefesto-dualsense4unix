@@ -37,7 +37,7 @@ UNIQS = ["02fe00000001", "02fe00000002", "02fe00000003", "02fe00000004"]
 
 
 class _Relogio:
-    """O tempo da bancada: o sono e a espera o fazem andar; as ações agendadas disparam nele."""
+    """O tempo do ensaio: o sono e a espera o fazem andar; as ações agendadas disparam nele."""
 
     def __init__(self) -> None:
         self.t = 100.0
@@ -334,7 +334,7 @@ def test_o_gatilho_aplicado_acorda_a_volta() -> None:
 
 
 def test_handle_sem_a_api_de_acordar_nao_quebra() -> None:
-    """Um dublê sem `acordar_a_volta` fica como estava: a volta acorda no prazo dela.
+    """Um dublê sem `acordar_a_volta` fica como estava: a volta acorda no próprio prazo.
 
     E o handle de verdade não tem o que engolir: sem o evento (nascido por
     `__new__`) o acordar não faz nada, e com a volta já fechada o `Event.set`

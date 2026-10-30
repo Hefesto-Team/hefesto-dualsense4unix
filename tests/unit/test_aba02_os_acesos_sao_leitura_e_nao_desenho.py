@@ -17,7 +17,7 @@ O QUE ESTAVA NA TELA DO USUÁRIO, medido com o daemon vivo em 03/09/2026:
     card 1: "Virtual" aceso            maquina.json sem `microfone` (= Nativo)
 
 E O PRIMEIRO NÃO É UM ENGANO NEUTRO: aquele botão aceso AFIRMA que o som
-inteiro do PC está saindo naquele controle. Se ela olhar a tela para responder
+inteiro do PC está saindo naquele controle. Se quem usa olhar a tela para responder
 *"por que o som não vem pelo controle?"*, a tela responde errado.
 
 OS DOIS PARES SÃO O MESMO DEFEITO COM DONOS DIFERENTES, e é por isso que as
@@ -25,7 +25,7 @@ curas não se parecem:
 
     alto-rota        o dono é o APARELHO — `speaker.rota`, publicado a cada
                      tique no `daemon.state_full`.
-    mic-modo-aceso   o dono é o DISCO — a declaração dela no `maquina.json`. O
+    mic-modo-aceso   o dono é o DISCO — a declaração do usuário no `maquina.json`. O
                      `machine.declare` fica FORA do `state_full` de propósito
                      (`a02_controles.SEM_ECO`), então não há eco a esperar.
 
@@ -38,7 +38,7 @@ AFIRMA sem ter lido.
 
 A MORDIDA (arranque a cura, veja reprovar, devolva):
 
-  * troque `rota_na_tela` por `return "jogo"` (o valor que a bancada dá hoje,
+  * troque `rota_na_tela` por `return "jogo"` (o valor que o ensaio dá hoje,
     e por isso o mais convincente): reprova em `test_a_rota_vem_do_byte_do_
     aparelho` e em `test_a_rota_desconhecida_nao_acende_botao_nenhum`;
   * tire o `data-hef-quando` de um dos quatro botões no gerador: reprova em
@@ -150,7 +150,7 @@ def _a_jogar_esta_em_trabalho() -> bool:
     return "01-jogar.html" in mod.declaradas()
 
 
-@pytest.mark.parametrize("onde", [ENSAIO, PUBLICADO], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("onde", [ENSAIO, PUBLICADO], ids=["ensaio", "publicado"])
 def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
     """Cada botão do par: o mesmo `data-campo`, o alvo `classe`, e o SEU `quando`.
 
@@ -178,7 +178,7 @@ def test_o_endereco_do_aceso_nao_mora_no_container(a02):
     caiu de 4 para 0. O `escrever` do piloto faz `el.textContent = t` no alvo
     padrão, e o container inteiro vira uma palavra.
 
-    **ELA MEDIA A FORMA E NÃO O ATO — corrigida em 20/09/2026.** A redação
+    **A RÉGUA MEDIA A FORMA E NÃO O ATO — corrigida em 20/09/2026.** A redação
     anterior proibia QUALQUER `data-campo` no container, e reprovou a decisão
     de produto do mesmo dia (*"Fica os dois botões. Mas no rádio o botão fica cinza
     sem ser ativado"*), que endereça o container com
@@ -227,7 +227,7 @@ def test_o_pacote_emite_o_aceso_da_rota_e_nao_o_do_modo_do_mic(a02, monkeypatch)
                                  estados={}))["cards"][UNIQ_CABO]
     assert campos["alto-rota"] == "pc"
     assert "mic-modo-aceso" not in campos, (
-        "o par «Virtual | Nativo» saiu da aba 02 (decisão dela de 02/10/2026)")
+        "o par «Virtual | Nativo» saiu da aba 02 (decisão de 02/10/2026)")
 
 
 def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
@@ -256,6 +256,6 @@ def test_a_carga_desconhecida_e_a_da_janela_antiga(a02, monkeypatch):
     campos = a02.pacote(Contexto(state={}, mesa=[], conectados=[controle],
                                  estados={}))["cards"][UNIQ_CABO]
     assert campos["bateria"] == StatusActionsMixin._bateria_da_mesa({})[1], (
-        "a carga desconhecida saiu da grafia da janela antiga — ela pediu "
+        "a carga desconhecida saiu da grafia da janela antiga — o pedido é "
         "paridade literal"
     )

@@ -13,7 +13,7 @@ voltou sozinha, o que escondia o defeito.
 A origem é a FORMA, e não o watchdog: o bash só mata quando o `&&` vira o
 retorno de uma função (direto, ou pelo laço, `if` ou `case` que fecha a função)
 ou a saída do script. Laço ou `if` solto no meio do script sobrevive. As três
-réguas abaixo são a forma medida no bash, nenhum script da casa com ela, e o
+réguas abaixo são a forma medida no bash, nenhum script da casa com essa forma, e o
 watchdog em toda mesa: os três modos, cabo e BT, de zero a quatro controles.
 """
 

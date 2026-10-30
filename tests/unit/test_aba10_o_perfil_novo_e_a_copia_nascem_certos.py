@@ -7,9 +7,9 @@ que ficou no disco do usuário.
 1. **O perfil novo nascia em prioridade ZERO** — PERFIL-NASCE-CERTO-01. A
    janela estável calcula ``max(prioridade dos catch-all) + 10``
    (``_prioridade_acima_dos_catch_all``, ``profiles_actions.py:2590``); esta aba
-   não calculava nada. O defeito tem caso medido, com ela jogando, em 26/07: o
-   perfil que ela criou para o Pragmata nasceu em 0 e NUNCA valia no jogo,
-   porque o catch-all dela (100) vencia em todo o resto. **Ela não errou a
+   não calculava nada. O defeito tem caso medido, num jogo de verdade, em 26/07: o
+   perfil criado para o Pragmata nasceu em 0 e NUNCA valia no jogo,
+   porque o catch-all do usuário (100) vencia em todo o resto. **Quem usa não errou a
    configuração — a janela não tinha saída.**
 
    O motivo que estava escrito no produto para não fazer a conta — *"essa conta
@@ -153,7 +153,7 @@ def test_a_conta_e_a_do_produto_e_nao_uma_copia(
 ) -> None:
     """O valor gravado é o que a função da janela estável devolve, sempre.
 
-    É a régua contra a REESCRITA, não contra o número: ela compara o que o gesto
+    É a régua contra a REESCRITA, não contra o número: compara o que o gesto
     gravou com o que ``_prioridade_acima_dos_catch_all`` responde para a MESMA
     lista. Uma segunda conta que hoje concorda e amanhã divirja reprova aqui.
     """
@@ -219,7 +219,7 @@ def test_a_copia_nao_leva_o_carimbo_de_ponte(
 def test_a_copia_continua_levando_o_perfil_inteiro(
     monkeypatch: pytest.MonkeyPatch, gravados: list[Any],
 ) -> None:
-    """A outra ponta, e ela é a cura que NÃO pode ser desfeita por esta."""
+    """A outra ponta, e é a cura que NÃO pode ser desfeita por esta."""
     original = _com_carimbo("Pragmata")
     original.priority = 77
     _o_disco_tem(monkeypatch, original)

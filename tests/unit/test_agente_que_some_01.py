@@ -18,7 +18,7 @@ def test_o_agente_sempre_volta() -> None:
     assert re.search(r"^Restart=always$", _texto(), re.M), (
         "o `Restart` do agente de pareamento não é `always`. Com "
         "`SuccessExitStatus=SIGKILL` presente, `on-failure` NÃO religa a unit "
-        "depois do SIGKILL — as duas linhas se anulam e ela fica sem agente. "
+        "depois do SIGKILL — as duas linhas se anulam e a máquina fica sem agente. "
         "Ver docs/process/sprints/2026-08-08-BLUETOOTHD-MORTO-POR-NOS-01-*.md"
     )
 

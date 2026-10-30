@@ -1,11 +1,10 @@
 """ABA-DO-JOGO-01 — a aba "No jogo" só existe com jogo da Steam aberto.
 
-O PEDIDO, LITERAL (10/08/2026)
-===================================
-    *"essa aba no jogo só deveria aparecer quando efetivamente eu tivesse com
-    um jogo steam aberto"*
+O PEDIDO (10/08/2026)
+=====================
+    a aba "No jogo" só aparece com um jogo da Steam aberto.
 
-Hoje ela aparece sempre.
+Hoje a aba aparece sempre.
 
 A CAUSA, MEDIDA
 ===============
@@ -13,7 +12,7 @@ A aba nunca teve condição de visibilidade nenhuma. É página FIXA do Glade
 (`main.glade`, `tab_no_jogo_box`), montada sem portão (`install_no_jogo_tab`,
 chamada direto pelo `install_status_polling`). O único portão que existia era o
 de PINTURA — o `id_da_pagina_corrente(notebook) != ABA_NO_JOGO` de
-`_sync_paineis_no_jogo`, que decide se REPINTA quando ela já está à vista —, e
+`_sync_paineis_no_jogo`, que decide se REPINTA quando a aba já está à vista —, e
 ele foi confundido com portão de existência.
 
 Nenhuma capacidade nova entrou: quem responde *"há jogo da Steam aberto?"* é a

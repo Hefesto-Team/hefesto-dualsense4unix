@@ -8,7 +8,7 @@ daemon do usuário vivo e um DualSense White no cabo.
 (``interface/paginas/10-perfis.html:1216``) num ``<select>`` de dezesseis
 opções, com a classe ``destaque`` — o campo mais aceso do painel. Não havia
 ``@gesto``: o piloto caía no ramo do gesto sem dono e imprimia ``[gesto sem
-dono]`` no stdout de quem lançou a janela. Dirigindo a aba como ela dirige
+dono]`` no stdout de quem lançou a janela. Dirigindo a aba como quem usa dirige
 (``change`` de verdade, escolhendo "Terror" em ``meu_perfil``):
 
     estilo_na_tela: "Terror"   ← a tela AFIRMA, e continua afirmando
@@ -23,13 +23,13 @@ saídas"*. A aba entregava exatamente a pior das saídas.
 **2. Nove recusas desta aba nunca chegavam à tela.** ``_recusou_dizendo``
 (``hefesto_vivo.py``) pinta tarja **só para ``RuntimeError``** — um
 ``ValueError`` sai no ``stderr`` do processo que lançou a janela. As frases
-desta aba são escritas para ELA (*"Escolha outro na lista da esquerda e clique
+desta aba são escritas para QUEM USA (*"Escolha outro na lista da esquerda e clique
 em Ativar"*, *"gravar este por cima apagaria o dele"*) e levantavam
 ``ValueError``. Medido: clicar "Ativar" no perfil que já vale imprime a recusa
 no terminal e deixa ``document.querySelectorAll('.hef-recado')`` com **zero**
 elementos.
 
-A régua não roda o WebKit: ela cobra os DOIS degraus que decidem, no Python —
+A régua não roda o WebKit: cobra os DOIS degraus que decidem, no Python —
 que o gesto exista com dono, e que a exceção seja da classe que a tarja pinta.
 Quem prova o degrau de cima (a tarja aparecendo no DOM) é
 ``test_a_frase_pousa_no_cartao_de_quem_foi_clicado``.
@@ -107,13 +107,13 @@ def test_o_estilo_de_jogo_tem_dono() -> None:
     """MORDIDA: tire o ``@gesto`` de ``editor_estilo`` e isto reprova."""
     assert pacotes.gesto_da_pagina(PAGINA, "editor.estilo") is not None, (
         "o `<select>` Estilo de Jogo voltou a ser um gesto SEM DONO: a escolha "
-        "dela some no stdout de quem lançou a janela")
+        "do usuário some no stdout de quem lançou a janela")
 
 
 def test_o_estilo_recusa_ate_sem_valor_no_clique(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem ``valor`` a recusa continua — e sem ``KeyError`` na cara dela."""
+    """Sem ``valor`` a recusa continua — e sem ``KeyError`` na cara do usuário."""
     _o_disco_tem(monkeypatch, "Pragmata")
     with pytest.raises(RuntimeError, match="escolha um estilo de jogo na lista"):
         a10_perfis.editor_estilo(_ctx("Pragmata"), {}, PonteDeMentira())
@@ -135,7 +135,7 @@ def test_o_estilo_entrou_em_sem_eco_quando_ganhou_motor() -> None:
 
     ELE ESTAVA FORA por outra razão, e a razão caducou em 03/09/2026: até a
     tarde ele SEMPRE levantava, e recusa é ``!`` na prova no aparelho, não
-    ``—``. Com o motor, ele grava três coisas no ``.json`` dela — deixá-lo de
+    ``—``. Com o motor, ele grava três coisas no ``.json`` do usuário — deixá-lo de
     fora faria a régua acusar de mudo um gesto que trabalhou.
 
     MORDIDA: tire ``editor.estilo`` de ``SEM_ECO`` e isto reprova.
@@ -148,7 +148,7 @@ def test_o_estilo_entrou_em_sem_eco_quando_ganhou_motor() -> None:
 def test_o_ativar_recusa_com_a_classe_que_a_tarja_pinta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O caso medido: ela clica "Ativar" no perfil que já vale."""
+    """O caso medido: quem usa clica "Ativar" no perfil que já vale."""
     _o_disco_tem(monkeypatch, "meu_perfil")
     a10_perfis._ESCOLHIDO = "meu_perfil"
     ponte = PonteDeMentira()
@@ -169,9 +169,9 @@ def test_renomear_por_cima_de_outro_perfil_recusa_na_tela(
 
 
 def test_nenhuma_frase_do_usuario_sai_como_valueerror() -> None:
-    """A régua de FORMA sobre o arquivo inteiro, e ela é a que segura a regra.
+    """A régua de FORMA sobre o arquivo inteiro, e é a que segura a regra.
 
-    As frases de :data:`DO USUÁRIO` são as que ela lê. A régua exige que cada
+    As frases de :data:`DO USUÁRIO` são as que quem usa lê. A régua exige que cada
     uma esteja num ``raise RuntimeError`` — e não num ``ValueError``, que
     ``_recusou_dizendo`` descarta antes de tocar o DOM.
 
@@ -179,7 +179,7 @@ def test_nenhuma_frase_do_usuario_sai_como_valueerror() -> None:
     guardas que dependem de estado de disco, de daemon e de relógio (o Remover
     ARMA por oito segundos), e exercitá-las todas custaria um dublê por frase para
     medir uma coisa só — a palavra ``RuntimeError`` antes da frase. Os testes
-    acima cobrem o ATO nos dois casos que ela clica mais.
+    acima cobrem o ATO nos dois casos que quem usa clica mais.
 
     MORDIDA: troque qualquer ``raise RuntimeError`` deste arquivo por
     ``raise ValueError`` e a linha da frase aparece na falha.
@@ -194,7 +194,7 @@ def test_nenhuma_frase_do_usuario_sai_como_valueerror() -> None:
              if any(classe == "ValueError" and pedaco in corpo
                     for classe, corpo in blocos)]
     assert not mudas, (
-        f"{len(mudas)} recusa(s) escrita(s) para ELA voltaram a ser "
+        f"{len(mudas)} recusa(s) escrita(s) para QUEM USA voltaram a ser "
         f"`ValueError`, e `_recusou_dizendo` só pinta `RuntimeError`: {mudas}")
     achadas = [pedaco for pedaco in DO_USUARIO if pedaco in fonte]
     assert achadas == list(DO_USUARIO), (

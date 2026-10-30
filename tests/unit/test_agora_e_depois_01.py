@@ -155,7 +155,7 @@ class TestALinhaDoPendente:
 
 
 class _Dialogo:
-    """Captura o diálogo em vez de abri-lo, e deixa o teste responder por ela."""
+    """Captura o diálogo em vez de abri-lo, e deixa o teste responder no lugar de quem usa."""
 
     def __init__(self) -> None:
         self.aberto = False

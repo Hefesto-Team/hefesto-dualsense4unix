@@ -62,7 +62,7 @@ def a02():
 
 @pytest.fixture()
 def ctx(a02):
-    """O `Contexto` da mesa acima, com a página da BANCADA como endereço válido."""
+    """O `Contexto` da mesa acima, com a página do ENSAIO como endereço válido."""
     from pacotes import Contexto
 
     a02._ENDERECOS = frozenset(
@@ -75,23 +75,23 @@ def test_o_ensaio_tem_os_quatro_enderecos_da_identidade():
     """Sem eles o pacote não tem onde pousar, e a pintura escreve zero, calada.
 
     A CONTA DO CARD PASSOU DE 2 PARA 4 — 07/09/2026,
-    CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01, e ela não afrouxou: ficou maior.
+    CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01, e a conta não afrouxou: ficou maior.
 
     Até 07/09 o lugar vazio era um cartão à parte, sem UM `data-campo` por
     dentro — e `== 2` era o número que o DEFEITO produzia. Com os quatro
     DualSense do usuário na mesa, o daemon publicava quatro e a tela mostrava dois:
     o `peca` e o `via` do p3 e do p4 não existiam para o piloto pousar. Uma
-    régua que confere com a metade errada da mesa dá verde sobre ela.
+    régua que confere com a metade errada da mesa dá verde sobre essa metade.
 
     O CHIP CONTINUA EM DOIS, e é a outra metade da correção: `monta.fita()` só
     desenha chip de quem ESTÁ na mesa. Cobrar quatro ali faria a régua reprovar
-    no dia em que ela desligar um controle — o defeito irmão deste.
+    no dia em que quem usa desligar um controle — o defeito irmão deste.
     """
     doc = ENSAIO.read_text(encoding="utf-8")
     for campo in ("peca", "via"):
         assert doc.count(f'data-campo="{campo}"') == LUGARES, (
-            f"`{campo}` não está nos {LUGARES} LUGARES da bancada — um lugar "
-            f"vazio sem endereço é dado dela chegando e não tendo onde pousar")
+            f"`{campo}` não está nos {LUGARES} LUGARES do ensaio — um lugar "
+            f"vazio sem endereço é dado chegando e não tendo onde pousar")
     for campo in ("fita-peca", "fita-via"):
         assert doc.count(f'data-campo="{campo}"') == CHIPS, (
             f"`{campo}` não está nos {CHIPS} chips da fita do desenho")
@@ -110,7 +110,7 @@ def test_o_ensaio_nao_traz_cor_de_plastico_no_estilo_de_linha():
 
 
 def test_o_ensaio_tem_a_folha_enderecada_do_plastico():
-    """E o produto a TROCA INTEIRA — por isso ela nasce com o desenho dentro."""
+    """E o produto a TROCA INTEIRA — por isso a folha nasce com o desenho dentro."""
     doc = ENSAIO.read_text(encoding="utf-8")
     assert '<style data-campo="plastico-css" data-hef-alvo="html">' in doc
     assert "plastico-do-desenho" not in doc
@@ -144,7 +144,7 @@ def test_o_pacote_escreve_a_cor_do_plastico_como_folha(a02, ctx):
 
 
 def test_o_pacote_escreve_os_chips_da_fita(a02, ctx):
-    """A fita se troca inteira — MENOS quando ela não pode se trocar."""
+    """A fita se troca inteira — MENOS quando não pode se trocar."""
     mesa = a02.pacote(ctx)["mesa"]
     assert mesa["fita-peca"] == ["White", ""]
     assert mesa["fita-via"] == ["USB", "BT"]

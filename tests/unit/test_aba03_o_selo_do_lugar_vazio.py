@@ -10,13 +10,13 @@ na mesa (um no cabo, um por rádio)::
         p4·chip.plastico    = 'P4 • Desconectado'
 
 Os quatro estavam sendo ESCRITOS pelo produto. O que faltava não era escrita —
-era **prova**, e ela tem uma forma só nesta casa: o SELO da visita
+era **prova**, e a prova tem uma forma só nesta casa: o SELO da visita
 (`data-hef-visto`), que o `escrever()` do piloto carimba no elemento em que
 esteve. Sem selo, a régua do mockup só consegue dar por PRODUTO um campo cujo
 valor MUDE; e o do lugar vazio não muda nunca — `P3 • Desconectado` é o mesmo
 no desenho e no produto, porque os dois saem da MESMA função.
 
-AS DUAS METADES DA CURA, e elas são de naturezas diferentes:
+AS DUAS METADES DA CURA são de naturezas diferentes:
 
 1. **O EMBRULHO VIRA CAMPO.** Ele saía por `blocos`, que pousa por seletor CSS
    e não carimba selo nenhum. Onde a página já marca a coluna
@@ -25,14 +25,14 @@ AS DUAS METADES DA CURA, e elas são de naturezas diferentes:
    conectado (o P2 com um controle só na mesa), onde emitir coluna custaria o
    `data-conectado="nao"` que segura o `pointer-events:none`.
 
-2. **A COR SAI DE DENTRO DO CHIP.** Ela morava no `style` do `<span>`, isto é,
+2. **A COR SAI DE DENTRO DO CHIP.** A cor morava no `style` do `<span>`, isto é,
    DENTRO do `innerHTML` que o alvo `html` compara — e ali o `<span>` **nunca
    pode receber selo**: carimbá-lo poria `data-hef-visto="1"` dentro do HTML
    comparado, e a coluna repintaria a cada tique, para sempre (medido: 17
    tiques, 17 pinturas). Em 03/09/2026 o `--plastico` subiu para o EMBRULHO,
    com endereço (`a03_gatilhos.CAMPO_DO_PLASTICO`) e o alvo que o alcança —
    ele fica fora do HTML comparado, ganha selo, e a cor passa a vir do aparelho
-   nos 28 modelos que ela mapeou. O `<span>` do chip ficou sem endereço nenhum:
+   nos 28 modelos do mapa. O `<span>` do chip ficou sem endereço nenhum:
    quem o reescreve é o pai.
 
 O QUE ESTA RÉGUA MORDE:
@@ -140,7 +140,7 @@ def test_o_lugar_vazio_sai_por_campo(a03):
             f"{pref} recebeu {col[a03.CAMPO_DO_CHIP]!r} e não há controle nele")
         assert _chip_de_bloco(a03, r, pref) is None, (
             f"o cabeçalho de {pref} sai pelos DOIS caminhos. Duas escritas para "
-            f"o mesmo elemento é o defeito de origem desta aba: elas divergem no "
+            f"o mesmo elemento é o defeito de origem desta aba: as duas divergem no "
             f"primeiro dia em que alguém mexer numa só.")
 
 
@@ -241,9 +241,8 @@ def test_o_pacote_nao_emite_o_selo(a03):
 def test_o_p2_sem_aparelho_diz_desconectado_na_tela(a03):
     """Com UM controle na mesa, o P2 chega à tela dizendo, não com um traço.
 
-    A QUEIXA, 11/09/2026 — a digitação é dela e não se limpa:
-    *"o p2 tá com - ao invés de P2 - Desconectado  # noqa-acento: citação
-    como os demais."*
+    A QUEIXA, 11/09/2026: o P2 mostrava «-» em vez de «P2 - Desconectado», como
+    os demais.
 
     MEDIDO NO DOM VIVO no mesmo dia, um DualSense por rádio no P1, aba 03
     aberta no `WebKit2.WebView` com `--oculta`::
@@ -280,7 +279,7 @@ def test_o_p2_sem_aparelho_diz_desconectado_na_tela(a03):
             f"a coluna de {pref} chega à tela com {pacotes.TRAVESSAO!r} no "
             f"cabeçalho. O bloco já escrevera {por_bloco!r} ali, e o molde "
             f"passou por cima — duas escritas no mesmo elemento, e a última "
-            f"vence. É a queixa dela de 11/09/2026, palavra por palavra.")
+            f"vence. É a queixa de 11/09/2026, palavra por palavra.")
         escrito = str(por_campo if por_campo is not None else por_bloco)
         assert pacotes.SEM_NINGUEM_AQUI in escrito, (
             f"{pref} está sem aparelho e a tela recebe {escrito!r} — os outros "
@@ -293,7 +292,7 @@ def test_o_lugar_sem_dono_continua_com_a_moldura_de_vazio(a03):
 
     É a metade que a cura fácil quebraria. Emitir uma `colunas` para o P2 — o
     caminho óbvio para o cabeçalho parar de levar travessão — o tiraria da
-    conta `TODOS_OS_LUGARES - colunas`, e com ela iriam embora o
+    conta `TODOS_OS_LUGARES - colunas`, e com a conta iriam embora o
     `data-conectado="nao"` e a classe `off` que o piloto escreve a partir de
     `vazios`. A página publicada crava `data-conectado="sim"` no P2 (é o
     segundo controle do desenho), então o lugar ficaria com os `<select>` e os
@@ -305,7 +304,7 @@ def test_o_lugar_sem_dono_continua_com_a_moldura_de_vazio(a03):
     """
     carga = _o_que_a_tela_recebe(a03, MESA_DE_UM, [NO_CABO])
     assert "p2" in (carga.get("vazios") or []), (
-        f"o P2 saiu da lista de vazios: {carga.get('vazios')!r}. Sem ela o "
+        f"o P2 saiu da lista de vazios: {carga.get('vazios')!r}. Sem a lista o "
         f"piloto não marca a coluna como desconectada, e um lugar sem aparelho "
         f"volta a parecer — e a responder — como um lugar vivo.")
     assert "p2" not in (carga.get("ocupados") or []), (

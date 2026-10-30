@@ -98,7 +98,7 @@ def test_nenhuma_chave_do_pacote_escreve_num_botao(arvore, emitidos):
     """Escrever um valor num `<button>` pelo alvo `texto` APAGA o rótulo dele.
 
     Foi assim que "Economia", "Balanceado", "Máximo" e "Auto" viraram os quatro
-    a palavra "balanceado", e ela deixou de poder escolher o degrau.
+    a palavra "balanceado", e quem usa deixou de poder escolher o degrau.
 
     A RÉGUA PASSOU A PERGUNTAR PELO ALVO — 03/09/2026, e a distinção é o ponto
     inteiro: quem destrói o rótulo é o `el.textContent = t` do ramo PADRÃO
@@ -227,7 +227,7 @@ def test_o_multiplicador_e_o_numero_e_nao_o_degrau(emitidos):
         f"o cursor da barra saiu {col['mult-pos']!r}, e o número ao lado diz "
         f"{col['mult']!r} — a mesma linha contando duas histórias")
     assert "forca" not in col, (
-        "a chave `forca` voltou ao pacote: ela é `data-papel` dos quatro degraus")
+        "a chave `forca` voltou ao pacote: `forca` é `data-papel` dos quatro degraus")
 
 
 def test_a_identidade_sai_com_um_ponto_so():
@@ -241,7 +241,7 @@ def test_a_identidade_sai_com_um_ponto_so():
 
 
 def test_a_mesa_desta_aba_so_emite_o_degrau_geral(emitidos):
-    """A MESA emite UM campo, e ele tem endereço — 04/09/2026, decisão [05] dela."""
+    """A MESA emite UM campo, e ele tem endereço — 04/09/2026, decisão [05]."""
     import onde
 
     pacote, _ = emitidos
@@ -251,7 +251,7 @@ def test_a_mesa_desta_aba_so_emite_o_degrau_geral(emitidos):
     ensaio = onde.pagina(PAGINA).read_text(encoding="utf-8")
     assert 'data-campo="degrau-mesa"' not in ensaio, (
         "o `degrau-mesa` voltou ao desenho — campo sem endereço é "
-        "pintura que não acontece, e ela é silenciosa dos dois lados")
+        "pintura que não acontece, e é silenciosa dos dois lados")
     assert not pacote["mesa"], (
         "o degrau da mesa saiu vazio com o daemon dizendo a política")
 
@@ -287,8 +287,8 @@ def test_o_que_falta_esta_declarado(emitidos):
     **E AS DUAS ÚLTIMAS SAÍRAM EM 04/09/2026, pela mesma regra e no mesmo dia
     em que o usuário decidiu as duas:**
 
-    * `barra:motor` esperava *a palavra de produto* sobre o par `weak`/`strong`. Ela
-      veio, e desfez a premissa: a barra **não manda o par** — ela é POLÍTICA
+    * `barra:motor` esperava *a palavra de produto* sobre o par `weak`/`strong`. A palavra
+      veio, e desfez a premissa: a barra **não manda o par** — a barra é POLÍTICA
       que MULTIPLICA o degrau, e as duas são independentes. O método existe
       (`rumble.motores.set`), o gesto é `a05_vibracao.motor`;
     * `forca:auto-da-mesa` dizia que pôr a MESA em `Auto` perdera o botão e que
@@ -312,9 +312,9 @@ def test_o_que_falta_esta_declarado(emitidos):
     col = next(iter(pacote["colunas"].values()))
     assert "mult-teto" not in col, "o `Máx` saiu da tela em 19/10/2026, e o pacote ainda o pinta"
     assert pacote["mesa"].get("degrau-mesa") is None, (
-        "a linha de mesa não pinta o degrau geral — e era ela que a "
+        "a linha de mesa não pinta o degrau geral — e era essa a pintura que a "
         "`forca:auto-da-mesa` esperava")
     for lado in ("e", "d"):
         assert f"barra-{lado}" in col, (
-            f"a barra do motor {lado!r} não é pintada — era ela que a "
+            f"a barra do motor {lado!r} não é pintada — era essa a pintura que a "
             f"`barra:motor` esperava")

@@ -18,22 +18,22 @@ cor é a CASCATA, e a cascata é do motor. A página tem uma folha principal che
 de `var(--plastico)` e a folha viva endereçada logo depois; reimplementar a
 resolução em Python seria testar a reimplementação — *"medir contra a biblioteca
 errada produz alarme convincente e falso"*. Aqui a pergunta é feita ao
-`getComputedStyle` do mesmo WebKitGTK que a janela dela usa.
+`getComputedStyle` do mesmo WebKitGTK que a janela do produto usa.
 
 A JANELA É `Gtk.OffscreenWindow` por duas razões, e as duas estão escritas nesta
 casa: sob Xvfb não há gerenciador de janelas e uma `Gtk.Window` fica 1x1 para
-sempre; e ela tem UMA tela — janela de teste não nasce na frente do usuário.
+sempre; e quem usa tem UMA tela — janela de teste não nasce na frente do usuário.
 
 O QUE MUDOU DO LADO DO PRODUTO, e é o que este arquivo guarda: até 03/09/2026
 `a02_controles.cor_da_borda` recebia o NOME de tela e o procurava em
 `integrations/cor_do_plastico.NOMES_DE_FABRICA` (21 linhas) para chegar a `TONS`
-(21 hexas, **vinte deles aproximados**). Agora ela recebe o SLUG — o `id` da
-linha dela em `docs/data/cores-do-dualsense.csv` — e pergunta ao mesmo dono que
+(21 hexas, **vinte deles aproximados**). Agora a folha recebe o SLUG — o `id` da
+linha do modelo em `docs/data/cores-do-dualsense.csv` — e pergunta ao mesmo dono que
 pinta o chip da fita, `monta.cor_da_zona`.
 
 E A MORDIDA RODA — :func:`test_a_mordida_com_a_tabela_velha_a_tela_erra_a_cor`
 monta a folha pela regra ANTIGA e mede a mesma tela: o Nova Pink sai
-`rgb(238, 126, 166)` em vez do `rgb(227, 91, 140)` do mapa dela, e o
+`rgb(238, 126, 166)` em vez do `rgb(227, 91, 140)` do mapa de cores, e o
 Marvel's Spider-Man 2 perde a borda inteira. Régua que passa com a cura arrancada
 não mede nada.
 """
@@ -94,7 +94,7 @@ def _bootstrap() -> str:
 
 
 def _rodar_no_webkit(folhas: dict[str, str]) -> dict:
-    """Abre a bancada num WebKit offscreen, instala o pintor e mede a borda."""
+    """Abre o ensaio num WebKit offscreen, instala o pintor e mede a borda."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -181,7 +181,7 @@ def medido() -> dict:
 def test_a_pagina_virgem_mostra_o_desenho_que_o_usuario_aprovou(medido: dict) -> None:
     """Se a página já nascesse neutra, qualquer cor depois pareceria cura."""
     assert medido["virgem_p1"] == DO_DESENHO[0], (
-        f"o `p1` da bancada devia nascer Cosmic Red e nasceu {medido['virgem_p1']}")
+        f"o `p1` do ensaio devia nascer Cosmic Red e nasceu {medido['virgem_p1']}")
     assert medido["virgem_p2"] == DO_DESENHO[1]
 
 
@@ -191,7 +191,7 @@ def test_um_modelo_fora_do_desenho_pinta_a_borda(medido: dict, slug: str) -> Non
     _hexa, esperado = FORA_DO_DESENHO[slug]
     visto = medido["medidas"][slug]["p1"]
     assert visto == esperado, (
-        f"com um {slug} na mesa a borda do card ficou {visto}, e o mapa dela diz "
+        f"com um {slug} na mesa a borda do card ficou {visto}, e o mapa de cores diz "
         f"{esperado}. Se veio um dos do desenho, a cor não é do aparelho")
     assert visto not in DO_DESENHO
 
@@ -205,7 +205,7 @@ def test_o_assento_sem_controle_nao_fica_com_a_cor_do_desenho(medido: dict) -> N
 
 
 def test_a_mesa_do_usuario_de_hoje_chega_certa_aos_dois_assentos(medido: dict) -> None:
-    """P1 White (`#e4e0d8`) e P2 Galactic Purple (`#74588e`), do mapa dela."""
+    """P1 White (`#e4e0d8`) e P2 Galactic Purple (`#74588e`), do mapa de cores."""
     assert medido["medidas"]["mesa-do-usuario"]["p1"] == "rgb(228, 224, 216)"
     assert medido["medidas"]["mesa-do-usuario"]["p2"] == "rgb(116, 88, 142)"
 
@@ -223,12 +223,12 @@ def test_a_mordida_com_a_tabela_velha_a_tela_erra_a_cor(medido: dict) -> None:
 
 
 def test_a_mordida_da_grafia_a_borda_some_no_spider_man(medido: dict) -> None:
-    """`Marvel's Spider-Man 2` é o nome que a MESA entrega, do CSV dela."""
+    """`Marvel's Spider-Man 2` é o nome que a MESA entrega, do CSV de cores."""
     from pacotes import a02_controles as a02
 
     velho = medido["medidas"]["mordida-spider"]["p1"]
     assert velho == "rgb(68, 71, 90)", (
-        f"a mordida da grafia mudou de resposta: {velho}. Ela existia para "
+        f"a mordida da grafia mudou de resposta: {velho}. A mordida existia para "
         "mostrar a borda SUMINDO no neutro `--border-forte`")
     assert a02.cor_da_borda("spider-man-2") == "#5f5f60", (
-        "e pelo slug ela tem cor — que é a cura desta sprint")
+        "e pelo slug a borda tem cor — que é a cura desta sprint")

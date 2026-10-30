@@ -36,7 +36,7 @@ def _portao_com_promocao(
     }
     for antigo, novo in trocas.items():
         assert fonte.count(antigo) == 1, (
-            f"a linha {antigo!r} mudou de forma em {SCRIPT_REAL.name}: sem ela "
+            f"a linha {antigo!r} mudou de forma em {SCRIPT_REAL.name}: sem a linha "
             "esta mordida rodaria com o conjunto VAZIO e passaria sempre"
         )
         fonte = fonte.replace(antigo, novo)
@@ -112,7 +112,7 @@ def test_o_conjunto_de_abas_promovidas_so_cresce() -> None:
     assert not perdidas, (
         f"as abas {sorted(perdidas)} estavam promovidas e saíram de "
         "`ABAS_COM_FALA_DECLARADA`. Despromover apaga cobertura em silêncio: "
-        "se a decisão foi mesmo essa, ela tem de sair TAMBÉM da lista literal "
+        "se a decisão foi mesmo essa, a aba tem de sair TAMBÉM da lista literal "
         "deste arquivo, com nota datada de por quê"
     )
 

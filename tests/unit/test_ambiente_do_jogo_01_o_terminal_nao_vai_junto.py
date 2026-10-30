@@ -550,8 +550,8 @@ class TestOGanchoDoJogo:
         self, tmp_path: Path
     ) -> None:
         """A Opção de Inicialização vem em "$@", DEPOIS da limpeza."""
-        jogo, _ = self._roda(tmp_path, "PYTHONPATH=/escolha/dela", "env")
-        assert jogo["PYTHONPATH"] == "/escolha/dela"
+        jogo, _ = self._roda(tmp_path, "PYTHONPATH=/escolha/do-usuario", "env")
+        assert jogo["PYTHONPATH"] == "/escolha/do-usuario"
         assert "VIRTUAL_ENV" not in jogo
 
 

@@ -16,7 +16,7 @@ O QUE ESTA ABA JÁ TINHA, e não se repete aqui:
 `tests/unit/test_a_aba_07_usa_o_controle_da_fita.py` cobrem DUAS formas de
 cravar — o NOME do modelo no texto (`Cosmic Red`) e o `--plastico:` no `style`.
 
-O QUE ELAS NÃO ENXERGAM. Medido nesta árvore em 03/09/2026, envenenando a
+O QUE AS RÉGUAS VELHAS NÃO ENXERGAM. Medido nesta árvore em 03/09/2026, envenenando a
 `mockup/07-lancadores.html` com uma forma de cada vez e rodando as duas réguas
 sobre a página envenenada — a tabela abaixo é a saída daquela corrida::
 
@@ -32,19 +32,19 @@ sobre a página envenenada — a tabela abaixo é a saída daquela corrida::
 As três primeiras cegueiras são exatamente as formas que a frase de produto nomeia: o
 apelido é o que vai num `data-colorway` e o hexadecimal solto é o que pinta uma borda (*"a borda de
 tudo é
-cosmic red"*). Nenhuma delas escreve "Cosmic Red" em lugar nenhum.
+cosmic red"*). Nenhuma das três escreve "Cosmic Red" em lugar nenhum.
 
 **Esta tabela é uma MEDIÇÃO daquele dia, não um requisito.** Se alguém ampliar
 `check_identidade_vem_de_cima.py` para cobrir as quatro, ótimo — este arquivo
 não reprova por isso. Reprovar a melhora em vez do defeito é o defeito que esta
 casa mais pagou.
 
-A RÉGUA NOVA MORA NO GERADOR, em `interface/aba07.identidade_congelada`, e ela
+A RÉGUA NOVA MORA NO GERADOR, em `interface/aba07.identidade_congelada`, e
 roda a cada `python3 aba07.py`. O teste a morde pela porta `--conferir`, que lê
 um HTML qualquer e não gera nada — assim a regra tem UMA escrita só. Duas
 escritas da mesma regra é como o `novo-layout/` divergiu 25 KB calado.
 
-A MORDIDA, e ela é de seis formas — uma por `test_a_regua_morde_*`:
+A MORDIDA é de seis formas — uma por `test_a_regua_morde_*`:
 cada `test_a_regua_morde_*` abaixo envenena a página com uma forma e exige
 `rc=1`; `test_a_pagina_de_hoje_esta_limpa` exige `rc=0` sobre a página real, e
 `test_a_regua_nao_acusa_o_svg_ja_endereçado` exige `rc=0` sobre um SVG ligado
@@ -69,7 +69,7 @@ ANCORA = '<label class="chip on">Todos</label>'
 
 
 def _ensaio() -> pathlib.Path:
-    """A página da BANCADA — o desenho de HOJE, não o publicado."""
+    """A página do ENSAIO — o desenho de HOJE, não o publicado."""
     sys.path.insert(0, str(INTERFACE))
     from hefesto_dualsense4unix.interface import onde
 
@@ -101,7 +101,7 @@ def envenenar(tmp_path):
 
     def _por(veneno: str, nome: str) -> pathlib.Path:
         assert ANCORA in limpa, (
-            f"a âncora {ANCORA!r} sumiu da página — sem ela o veneno não entra "
+            f"a âncora {ANCORA!r} sumiu da página — sem a âncora o veneno não entra "
             f"e todo caso abaixo passaria sobre a página LIMPA, que é verde "
             f"sobre nada.")
         alvo = tmp_path / f"{nome}.html"
@@ -120,11 +120,11 @@ def test_a_pagina_de_hoje_esta_limpa() -> None:
     """
     r = _conferir(_ensaio())
     assert r.returncode == 0, (
-        f"a página da bancada tem cor de aparelho cravada:\n{r.stderr}")
+        f"a página do ensaio tem cor de aparelho cravada:\n{r.stderr}")
 
 
 def test_a_pagina_publicada_tambem_esta_limpa() -> None:
-    """O que ela VÊ hoje, e não só o que está na bancada."""
+    """O que quem usa VÊ hoje, e não só o que está no ensaio."""
     r = _conferir(INTERFACE / "paginas" / PAGINA)  # (noqa-acento)
     assert r.returncode == 0, (
         f"a página PUBLICADA tem cor de aparelho cravada:\n{r.stderr}")
@@ -160,7 +160,7 @@ def test_a_regua_morde_o_hexadecimal_do_mapa(envenenar) -> None:
     """`border-color:#A51C48` — CEGA nas duas réguas velhas.
 
     É a forma de *"a borda de tudo é cosmic red"*: um hexadecimal que o mapa
-    dela cataloga, sem nome e sem `--plastico:` para denunciá-lo.
+    de cores cataloga, sem nome e sem `--plastico:` para denunciá-lo.
     """
     alvo = envenenar('<label class="chip on" style="border-color:#A51C48">Todos</label>',
                      "hex")
@@ -196,7 +196,7 @@ def test_a_regua_morde_o_plastico_do_esqueleto_que_diverge_do_mapa(tmp_path) -> 
 
     r = _conferir(alvo)
     assert r.returncode == 1, (
-        "a régua aceitou um plástico do esqueleto que o mapa dela contradiz")
+        "a régua aceitou um plástico do esqueleto que o mapa de cores contradiz")
     assert "nova-pink" in r.stderr and "#ff0000" in r.stderr, r.stderr
 
 
@@ -208,18 +208,18 @@ def test_a_regua_nao_acusa_o_svg_ja_enderecado(envenenar) -> None:
         "endereçado")
     r = _conferir(alvo)
     assert r.returncode == 0, (
-        f"a régua acusou um SVG ligado como manda o contrato — ela mandaria "
+        f"a régua acusou um SVG ligado como manda o contrato — a régua mandaria "
         f"desfazer o conserto:\n{r.stderr}")
 
 
 def test_o_chip_da_fita_nomeia_os_vinte_e_oito_modelos() -> None:
-    """Ela mapeou 28; o desenho usa 4. O chip tem de servir aos 28."""
+    """O mapa tem 28; o desenho usa 4. O chip tem de servir aos 28."""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     nomes = sorted({(ln.get("nome") or "").strip() for ln in _mapa()} - {""})
     assert len(nomes) == 28, (
-        f"o mapa dela tem {len(nomes)} modelos e este caso esperava 28. Se ela "
-        f"mapeou mais um, o número sobe — o que não pode é o chip parar nos "
+        f"o mapa de cores tem {len(nomes)} modelos e este caso esperava 28. Se o mapa "
+        f"ganhou mais um, o número sobe — o que não pode é o chip parar nos "
         f"quatro do desenho.")
 
     ids = {(ln.get("nome") or "").strip(): ln["id"] for ln in _mapa()}

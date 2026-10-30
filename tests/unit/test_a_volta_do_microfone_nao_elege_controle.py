@@ -1,9 +1,9 @@
 """A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01 — calar não elege um controle calado.
 
-O QUE O USUÁRIO VIU NA BANCADA DE 29/09/2026 (B1.3)
+O QUE O USUÁRIO VIU NO ENSAIO DE 29/09/2026 (B1.3)
 ---------------------------------------------
 Os quatro DualSense pelo rádio, só o roxo no ar e a fonte padrão da máquina;
-o vermelho, o branco e o azul calados. Ela calou o roxo pelo botão, e 166 ms
+o vermelho, o branco e o azul calados. Quem usa calou o roxo pelo botão, e 166 ms
 depois o diário tinha ``eleicao_mic_ok alvo=<o canal do vermelho>``. Três
 calas, três vezes o vermelho: o padrão da máquina foi para um microfone que
 ninguém ligou, e o rádio do vermelho acordou para entregar silêncio. Em 28/09
@@ -302,7 +302,7 @@ def _script_de_verdade(tmp_path: Path, fontes: list[_Fonte], flag: str) -> str:
 
     O `pactl` é de mentira, num PATH temporário (o molde de `_dubla_pactl`,
     `test_o_instalador_que_aprovou_o_monitor.py`), e o `HOME` também: as duas
-    perguntas são consulta, e mesmo assim nada aqui toca o `~` dela.
+    perguntas são consulta, e mesmo assim nada aqui toca o `~` do usuário.
     """
     binario = tmp_path / "bin"
     binario.mkdir(exist_ok=True)
@@ -437,7 +437,7 @@ async def test_calar_o_unico_no_ar_nao_escreve_padrao_nenhum(
 
     assert ato.feito, ato.motivo
     assert m.pw.escritas == [], f"calar escreveu a fonte padrão: {m.pw.escritas}"
-    assert m.pw.ativo == _canal(quem), "o padrão fica no canal que ela calou"
+    assert m.pw.ativo == _canal(quem), "o padrão fica no canal que foi calado"
     assert _eleitor(m).eleito is None, "o ato de calar sem destino solta a posse"
     assert m.backend.leds[_n(quem)] is False, "mudo é luz apagada (decisão de 19/09)"
     assert _no_ar(m) == []
@@ -600,7 +600,7 @@ async def test_so_com_o_roxo_no_ar_nenhum_canal_de_controle_e_escrito(
 async def test_o_herdeiro_que_esta_no_ar_fica_como_esta(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O WirePlumber deu o padrão ao azul, que está no ar: foi ela quem o ligou."""
+    """O WirePlumber deu o padrão ao azul, que está no ar: quem o ligou foi quem usa."""
     cena = await _cena_do_no(mesa, monkeypatch, no_ar=(AZUL, VERMELHO, ROXO))
     _o_roxo_morre(cena, _canal(AZUL))
 
@@ -694,14 +694,14 @@ async def test_no_cabo_o_no_do_kernel_herdeiro_segue_a_mesma_regra(
 ) -> None:
     """O herdeiro é a fonte que o KERNEL publica para o DualSense no cabo.
 
-    Ela não traz identidade no nome, e quem diz de que controle ela é é o
+    O nó não traz identidade no nome, e quem diz a que controle o nó pertence é o
     casamento pelo dispositivo USB. O roxo (padrão, no ar) morre com o azul no
     ar, e o WirePlumber põe o padrão no nó do kernel:
 
     - o-calado-no-cabo: o nó é do vermelho, calado no fio. A porta abre e o
       padrão passa ao azul, como no rádio;
     - o-que-esta-no-ar-no-cabo: o nó é do azul, que está no ar pelo fio. Foi
-      ela quem o ligou, e o padrão fica;
+      quem usa que o ligou, e o padrão fica;
     - sem-casamento: não dá para saber de quem é o nó. O «não sei» nunca
       escreve, e o padrão fica.
 

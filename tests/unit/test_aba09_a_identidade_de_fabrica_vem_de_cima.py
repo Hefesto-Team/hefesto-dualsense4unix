@@ -1,13 +1,11 @@
 """A "Identidade de fábrica" da aba 09 nomeia o controle DA FITA, não o do serial.
 
-A LEI É DO USUÁRIO, 03/09/2026:
+A REGRA, 03/09/2026: a identidade de cada aba vem da fita do topo. Se o topo mostra o
+White como P1, cada aba usa os controles lá de cima, sem misturar com a informação dos
+mockups; cada feature faz referência ao controle conectado, e o mapa de cores serve de
+variável de identificação.
 
-    "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
-    faz referencia ao controle conectado. Por isso temos o mapa pra  # noqa-acento: ela
-    servir como variável de identificação"
-
-O QUE FOI MEDIDO, e é o que estes testes trancam. Bancada em 03/09/2026, com
+O QUE FOI MEDIDO, e é o que estes testes trancam. Ensaio em 03/09/2026, com
 um `White` no cabo e um `Galactic Purple` no rádio — os dois lidos, os dois
 sabidos pela mesa:
 
@@ -26,14 +24,14 @@ Sondado no daemon do usuário no mesmo dia:
     bt   state_full.serial  None               modelo None
 
 A cor, porém, CHEGA: `mesa_viva.LeitorDeCor` a lê pelo broker e traduz o código
-de fábrica pelo mapa dela (`docs/data/cores-do-dualsense.csv`, 28 modelos). O
+de fábrica pelo mapa de cores (`docs/data/cores-do-dualsense.csv`, 28 modelos). O
 painel tinha ao lado, na mesma função, a mesa que já sabia — e não a lia.
 
 E O APARELHO DO RÁDIO RESPONDE O SERIAL INTEIRO — `ler_identidade_pelo_cabo`
 devolveu 17 caracteres nos DOIS, medido no mesmo dia; a cor é a fatia `[4:6]`
 deles. Quem cala é o publicador do daemon, não o transporte. A frase que a tela
 escreve neste caso está imprecisa, e a nota de `a09_sistema.SEM_SERIAL_LIDO`
-guarda a medição e as duas rotas de cura — nenhuma delas nesta aba.
+guarda a medição e as duas rotas de cura — nenhuma nesta aba.
 
 A CURA NÃO É CÓDIGO NOVO: é chamar `pacotes.identidade_de`, o dono da ordem das
 quatro fontes desde a ROTA-A, que as abas 02 e 06 já chamam com `ctx.mesa`.
@@ -100,7 +98,7 @@ def test_o_controle_do_cabo_continua_nomeado() -> None:
 
     O do cabo tem `modelo` publicado, e `identidade_de` o prefere — a mesa é o
     terceiro degrau, não o primeiro. As duas portas dizem `White` aqui, e é
-    isso que faz esta linha valer alguma coisa: ela reprovaria se a cura
+    isso que faz esta linha valer alguma coisa: a linha reprovaria se a cura
     tivesse trocado uma fonte pela outra em vez de somá-las.
     """
     linha = a09_sistema._linha_de_identidade(NO_CABO, MESA_DO_USUARIO)
@@ -194,7 +192,7 @@ def test_sem_numero_a_linha_nao_inventa_um() -> None:
 
 
 def test_a_mesa_atravessa_a_faixa_lenta_ate_o_painel(a09) -> None:
-    """O painel é montado na faixa lenta, e ela tinha de aprender a mesa."""
+    """O painel é montado na faixa lenta, e a faixa tinha de aprender a mesa."""
     estado = {"controllers": [NO_CABO, NO_RADIO]}
     painel = a09._repouso_do_painel(estado, MESA_DO_USUARIO)
     assert a09.ROTULO_DA_IDENTIDADE in painel
@@ -234,7 +232,7 @@ def _textos_de_codigo(fonte: pathlib.Path) -> list[tuple[int, str]]:
 
 
 def test_o_pacote_nao_guarda_uma_segunda_tabela_de_nomes() -> None:
-    """Ela mapeou 28 modelos em CSV; um nome digitado aqui seria o de número 29."""
+    """O mapa tem 28 modelos em CSV; um nome digitado aqui seria o de número 29."""
     fonte = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py"
     culpadas = [f"{linha}: {texto!r}" for linha, texto in _textos_de_codigo(fonte)
                 for nome in ("Cosmic Red", "Starlight Blue", "Galactic Purple",

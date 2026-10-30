@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """O EXAME DA ABA SISTEMA CORTA A FRASE — e agora guarda o inteiro. 03/09/2026.
 
-MEDIDO NO PRODUTO INSTALADO, na bancada, com um DualSense White no cabo. A
+MEDIDO NO PRODUTO INSTALADO, no ensaio, com um DualSense White no cabo. A
 foto do `hefesto_vivo --oculta --abre 09-sistema.html` mostrou CINCO das SEIS
 linhas do exame cortadas em reticências, e sem `title` não havia como ler o
 resto — nem passando o rato, nem rolando, nem alargando a janela:
@@ -22,7 +22,7 @@ O CORTE É DO DESENHO E FICA: `paginas/09-sistema.html:825` diz
 desenho, e desenho é decisão de produto. O que NÃO é decisão de produto é a frase ficar
 inalcançável.
 
-A ÚLTIMA LINHA É A QUE OBRIGOU A CURA, e ela não perde informação: INVERTE. O
+A ÚLTIMA LINHA É A QUE OBRIGOU A CURA, e a linha não perde informação: INVERTE. O
 que sobra na tela, ao lado de um selo `NOTA`, é *"regra áudio-off inativa — o
 mic e o fone do controle…"*, que se lê como problema com o microfone do usuário. As
 duas metades escondidas são **"estão liberados"** e **"O que fazer: nada"** — a
@@ -71,7 +71,7 @@ def a09():
 
 
 def test_o_corte_do_desenho_continua_existindo() -> None:
-    """A régua mede uma tela que CORTA. Se o corte sumir, ela para de fazer sentido."""
+    """A régua mede uma tela que CORTA. Se o corte sumir, a régua para de fazer sentido."""
     css = PAGINA.read_text(encoding="utf-8")
     regra = re.search(r"\.saude \.txt span:last-child\{([^}]*)\}", css)
 
@@ -115,7 +115,7 @@ def test_a_metade_que_a_tela_esconde_e_a_resposta(a09) -> None:
 
 
 def test_o_title_e_escapado_como_o_resto(a09) -> None:
-    """A frase vem do `doctor`, não daqui — e ela entra num ATRIBUTO agora."""
+    """A frase vem do `doctor`, não daqui — e a frase entra num ATRIBUTO agora."""
     saiu = a09._linha_do_exame(
         {"selo": "NOTA", "cls": "nt", "g": GLIFO_INFO,
          "txt": 'o perfil "meu_perfil" & o <script> do jogo'})

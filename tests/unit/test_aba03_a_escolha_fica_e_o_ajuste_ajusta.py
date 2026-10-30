@@ -2,7 +2,7 @@
 
 DUAS DÍVIDAS MEDIDAS CONTRA A GTK, e as duas nesta régua:
 
-1. **A escolha não ficava na tela.** Clicar `Rígido` aplicava no aparelho — ela
+1. **A escolha não ficava na tela.** Clicar `Rígido` aplicava no aparelho — quem usa
    sente na mão — e, em no máximo meio segundo, o tique repintava o campo com o
    modo do PERFIL NO DISCO. Aplicar não grava, e a pintura não conhecia o que
    foi aplicado. Isso não é tela vazia: é **tela que mente**.
@@ -133,7 +133,7 @@ def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
     depois = _modo(a03, ctx)
     assert depois == "Resistance", (
         f"o campo voltou para {depois!r} meio segundo depois do clique. É a "
-        f"queixa dela: a escolha não fica.")
+        f"queixa registrada: a escolha não fica.")
 
 
 def test_trocar_de_perfil_esquece_o_que_foi_aplicado(a03):
@@ -214,8 +214,8 @@ def test_o_que_nao_chegou_ao_gatilho_e_dito(a03, corpo, pedaco):
         f"a frase não diz o que aconteceu: {erro.value!r}")
     assert a03.NOME_DO_LADO["left"] in str(erro.value), (
         f"a frase não nomeia o gatilho com a palavra da GTK — a barra de "
-        f"status dela diz {a03.NOME_DO_LADO['left']!r}, e a cura TRG-01 existe "
-        f"porque um dia ela dizia `LEFT`: {erro.value!r}")
+        f"status diz {a03.NOME_DO_LADO['left']!r}, e a cura TRG-01 existe "
+        f"porque um dia a barra dizia `LEFT`: {erro.value!r}")
 
 
 def test_o_que_chegou_ao_gatilho_nao_vira_recusa(a03):

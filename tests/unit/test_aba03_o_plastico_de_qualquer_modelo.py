@@ -1,4 +1,4 @@
-"""A régua da aba 03: a cor do plástico vem do APARELHO, nos 28 modelos dela.
+"""A régua da aba 03: a cor do plástico vem do APARELHO, nos 28 modelos do mapa.
 
 A LEI, de 03/09/2026::
 
@@ -22,7 +22,7 @@ A CURA tem duas metades, e as duas estão aqui:
 
 **O QUE SEPARA A CURA DA MAQUIAGEM, e é o que esta régua mede:** trocar o Cosmic
 Red por outro hexadecimal escrito à mão seria trocar um cravado por outro. Por
-isso o laço abaixo passa pelos **28 modelos do CSV dela**, um a um, e exige que
+isso o laço abaixo passa pelos **28 modelos do CSV de cores**, um a um, e exige que
 a coluna vista EXATAMENTE o que o mapa responde — inclusive os três que o
 desenho da aba nunca mostrou: **Nova Pink, Astro Bot e Sterling Silver**.
 
@@ -106,14 +106,14 @@ def _cor_da_coluna(a03, slug: str, nome: str) -> str:
 def test_o_mapa_do_usuario_continua_com_os_28(mapa):
     """A régua declara o tamanho do mapa em vez de presumi-lo."""
     assert len(mapa) == 28, (
-        f"o mapa dela tem {len(mapa)} modelos, e esta régua foi escrita sobre "
-        f"28. Se ela mapeou mais, o número acompanha; se caiu, alguém apagou "
-        f"trabalho dela.")
+        f"o mapa de cores tem {len(mapa)} modelos, e esta régua foi escrita sobre "
+        f"28. Se o mapa cresceu, o número acompanha; se caiu, alguém apagou "
+        f"trabalho do mapa.")
     ids = {slug for slug, _n, _t in mapa}
     for slug in DE_FORA + DO_DESENHO:
         assert slug in ids, (
-            f"`{slug}` saiu do CSV dela. Esta régua o nomeia de propósito — sem "
-            f"ele, ela passa calada exatamente sobre o caso que existe para "
+            f"`{slug}` saiu do CSV de cores. Esta régua o nomeia de propósito — sem "
+            f"ele, a régua passa calada exatamente sobre o caso que existe para "
             f"medir.")
 
 
@@ -123,8 +123,8 @@ def test_a_cor_sai_do_mapa_do_usuario_nos_28(a03, mapa):
         escrito = _cor_da_coluna(a03, slug, nome)
         esperado = tinta if tinta.startswith("#") else ""
         assert escrito == esperado, (
-            f"{nome} ({slug}): o mapa dela responde {tinta!r} e a coluna "
-            f"recebeu {escrito!r}. A cor tem de sair do CSV dela, não de uma "
+            f"{nome} ({slug}): o mapa de cores responde {tinta!r} e a coluna "
+            f"recebeu {escrito!r}. A cor tem de sair do CSV de cores, não de uma "
             f"tabela deste código.")
 
 
@@ -138,7 +138,7 @@ def test_o_modelo_que_o_desenho_nao_tem(a03, mapa):
 
     for slug, cor in vistas.items():
         assert cor.startswith("#"), (
-            f"quem tem um {slug} não recebe cor nenhuma: {cor!r}. O mapa dela "
+            f"quem tem um {slug} não recebe cor nenhuma: {cor!r}. O mapa de cores "
             f"responde um hexadecimal para este modelo.")
         assert cor not in do_desenho, (
             f"a coluna de um {slug} recebeu {cor!r}, que é uma cor do DESENHO. "
@@ -178,7 +178,7 @@ def test_o_ensaio_nao_crava_cor_que_o_produto_nao_alcance(a03):
 
     É a mesma pergunta que `scripts/check_a_cor_vem_do_aparelho.py` faz sobre as
     dez páginas, feita aqui sobre a desta aba — para que a resposta apareça no
-    `pytest` e não só no portão. A fita do topo fica de fora: ela é do
+    `pytest` e não só no portão. A fita do topo fica de fora: é do
     `monta.fita()`, o esqueleto das DEZ páginas, e o piloto a troca INTEIRA.
     """
     import re
@@ -194,5 +194,5 @@ def test_o_ensaio_nao_crava_cor_que_o_produto_nao_alcance(a03):
         posicao = casa.start() + depois
         tag = doc[doc.rfind("<", 0, posicao):doc.find(">", posicao) + 1]
         assert f'data-hef-alvo="{a03.ALVO_DO_PLASTICO}"' in tag, (
-            f"a bancada crava uma cor que o produto não alcança: {tag[:140]!r}. "
+            f"o ensaio crava uma cor que o produto não alcança: {tag[:140]!r}. "
             f"Quem tiver outro modelo continua vendo este.")

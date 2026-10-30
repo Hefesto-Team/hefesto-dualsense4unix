@@ -7,22 +7,22 @@ número é quem diz se a largura pode ser afirmada. Um ``—`` ao lado de um tri
 cheio não é meia informação: é informação errada, porque quem olha lê o
 comprimento primeiro.
 
-**MEDIDO NO DOM VIVO em 03/09/2026**, com a bancada (um DualSense White no
+**MEDIDO NO DOM VIVO em 03/09/2026**, com o ensaio (um DualSense White no
 cabo), pela ``scripts/ensaios/a_coluna_sem_controle_da_vibracao.py``::
 
     lugar  identidade          mult/mult-pos    motor-e/motor-e-pct  motor-d/…
     p1     P1 · White · USB      100%/100            —/0%                —/0%
     p2     —                       —/                —/47.1%             —/47.1%
 
-**A COLUNA DO MEIO MUDOU DE CONTRATO EM 03/09/2026**, decisão de produto: a linha do
-multiplicador virou um ``<input type=range>``, e o que o pintor escreve nela
+**A COLUNA DO MEIO MUDOU DE CONTRATO EM 03/09/2026**, decisão do produto: a linha do
+multiplicador virou um ``<input type=range>``, e o que o pintor escreve na linha
 deixou de ser a LARGURA (``forca-pct``, uma fração de 0 a 100) e passou a ser a
 POSIÇÃO (``mult-pos``, o número de 0 ao teto). A medição acima está reescrita
-com os nomes de hoje; o que ela mediu — o par número/trilho contando a mesma
+com os nomes de hoje; o que a medição mediu — o par número/trilho contando a mesma
 história — não mudou.
 
 A coluna do controle do usuário está honesta: os motores não sabem, e os trilhos vão
-a zero. É essa metade que este arquivo guarda, e ela é do pacote desta aba —
+a zero. É essa metade que este arquivo guarda, e a metade é do pacote desta aba —
 ``_barra`` devolve ``w = "0%"`` junto com ``n = "—"``, e o pacote repassa os
 dois.
 
@@ -110,7 +110,7 @@ def _colunas(policy: str = "balanceado", *, per_vpad: list | None = None) -> dic
 
 @pytest.fixture(scope="module")
 def publicado() -> str:
-    """A página que o produto RENDERIZA. Não a bancada: a pergunta aqui é se a"""
+    """A página que o produto RENDERIZA. Não o ensaio: a pergunta aqui é se a"""
     import onde
 
     arq = onde.PUBLICADO / PAGINA
@@ -160,15 +160,15 @@ def test_a_posicao_do_multiplicador_cabe_na_barra(policy: str) -> None:
 def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
     """Número ``—`` e trilho a zero andam JUNTOS, ou a tela mente.
 
-    A mesa parada é o caso mais comum na bancada: ninguém pediu vibração,
+    A mesa parada é o caso mais comum no ensaio: ninguém pediu vibração,
     ``per_vpad`` está vazio e ``motores_do_controle`` responde ``None`` nos dois
     lados — *"nada a dizer"*, que nunca é zero. O número vira travessão; a
     largura tem de ir a zero, porque uma barra é uma AFIRMAÇÃO de quantidade e
     "não sei" não afirma nenhuma.
 
-    O MULTIPLICADOR SEGUE OUTRA REGRA desde 03/09/2026, e ela é do elemento: a
+    O MULTIPLICADOR SEGUE OUTRA REGRA desde 03/09/2026, e a regra é do elemento: a
     linha dele virou um ``<input type=range>``, e ``0`` ali não é "não sei" — é
-    *"nenhuma vibração"*, uma escolha que ela pode ter feito. Um zero escrito no
+    *"nenhuma vibração"*, uma escolha que quem usa pode ter feito. Um zero escrito no
     desconhecido seria a barra afirmando silêncio. O pacote manda ``""``, o
     pintor o troca por travessão, o navegador recusa e o cursor fica onde
     estava — e o número ao lado diz ``—`` no mesmo tique.
@@ -185,7 +185,7 @@ def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
                 f"{col[larg]!r} — o olho lê a barra, não o travessão")
     assert vistos == len(PARES) * len(colunas), (
         f"a régua só encontrou {vistos} pares desconhecidos, e esperava "
-        f"{len(PARES) * len(colunas)}: sem eles ela ficaria verde por vacuidade")
+        f"{len(PARES) * len(colunas)}: sem eles a régua ficaria verde por vacuidade")
 
     num, pos = PAR_DO_MULTIPLICADOR
     for uniq, col in colunas.items():
@@ -198,7 +198,7 @@ def test_o_que_nao_se_sabe_manda_o_trilho_a_zero() -> None:
 
 
 def test_a_linha_do_estado_chegou_ao_produto(publicado: str) -> None:
-    """O bloco ``#vib-estado`` está na página que ela abre, não só na bancada."""
+    """O bloco ``#vib-estado`` está na página que o produto abre, não só no ensaio."""
     assert 'id="vib-estado"' in publicado, (
         "o bloco da linha de estado não está na página publicada — a aba voltou "
         "a não ter uma palavra sobre o que acontece com a vibração")

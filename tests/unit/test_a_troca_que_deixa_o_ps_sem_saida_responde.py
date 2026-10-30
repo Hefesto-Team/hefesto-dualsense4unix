@@ -75,7 +75,7 @@ def test_tirar_a_ultima_saida_responde_e_a_penultima_nao(primeiro: str, restante
     assert frase.startswith("guardei, e "), frase
     assert "saída de emergência" in frase, frase
     assert SUSPENDER in frase and MODO in frase, f"a frase não diz quais são: {frase}"
-    assert _guardado(ponte, restante) == ag.NADA, "respondeu sem ter guardado o que ela escolheu"
+    assert _guardado(ponte, restante) == ag.NADA, "respondeu sem ter guardado o que se escolheu"
 
 
 def test_deixar_uma_das_duas_nao_responde() -> None:

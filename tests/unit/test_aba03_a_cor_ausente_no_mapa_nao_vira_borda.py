@@ -1,4 +1,4 @@
-"""A régua da aba 03: o que o mapa dela NÃO diz em hexadecimal não vira borda.
+"""A régua da aba 03: o que o mapa de cores NÃO diz em hexadecimal não vira borda.
 
 A LEI, e é do usuário (03/09/2026)::
 
@@ -8,7 +8,7 @@ A LEI, e é do usuário (03/09/2026)::
 O DEFEITO QUE ESTA RÉGUA MORDE, e ele estava vivo até hoje: o chip da coluna
 escrevia no `--plastico` **o que quer que `monta.cor_da_zona` devolvesse**. Em
 vinte dos vinte e oito modelos isso é um hexadecimal e está certo. Nos outros
-OITO o mapa dela responde a HACHURA DO SEM-HEX — `url(#hachura-sem-hex)` —, que
+OITO o mapa responde a HACHURA DO SEM-HEX — `url(#hachura-sem-hex)` —, que
 é a ausência declarada: *"o acabamento não cabe num hexadecimal (iridescente,
 metálico, camuflado, arte)"*.
 
@@ -34,7 +34,7 @@ AS DUAS AUSÊNCIAS SÃO DIFERENTES, e a tela tem de saber dizer qual é qual —
 porque uma se conserta lendo o aparelho e a outra não se conserta::
 
     o mapa RESPONDEU e não é cor    o acabamento não cabe num hexadecimal
-    ninguém leu a cor               pelo rádio ela pode não chegar nunca, hoje
+    ninguém leu a cor               pelo rádio a cor pode não chegar nunca, hoje
 
 A segunda já tem régua (`test_sem_cor_lida_o_chip_nao_veste_plastico`, no
 `test_aba03_a_identidade_vem_de_cima.py`). Esta é a primeira — e a frase que
@@ -67,7 +67,7 @@ def a03():
 
 @pytest.fixture(scope="module")
 def mapa_das_cores() -> list[tuple[str, str, str]]:
-    """`(slug, nome, tinta)` dos VINTE E OITO modelos que ela mapeou."""
+    """`(slug, nome, tinta)` dos VINTE E OITO modelos do mapa."""
     import monta
 
     from hefesto_dualsense4unix.interface import mesa_viva
@@ -81,9 +81,9 @@ def test_o_mapa_tem_os_dois_casos(mapa_das_cores):
     com_hex = [n for _s, n, t in mapa_das_cores if t.startswith("#")]
     sem_hex = [n for _s, n, t in mapa_das_cores if not t.startswith("#")]
     assert len(mapa_das_cores) == 28, (
-        f"o mapa dela tem {len(mapa_das_cores)} modelos, e esta régua foi "
-        f"escrita sobre 28. Se ela mapeou mais, o número aqui acompanha; se "
-        f"caiu, alguém apagou trabalho dela.")
+        f"o mapa de cores tem {len(mapa_das_cores)} modelos, e esta régua foi "
+        f"escrita sobre 28. Se o mapa cresceu, o número aqui acompanha; se "
+        f"caiu, alguém apagou trabalho do mapa.")
     assert com_hex, "nenhum modelo tem hex — não há o que pintar, e a régua cega"
     assert sem_hex, (
         "nenhum modelo responde a hachura do SEM-HEX. Ou o mapa ganhou "
@@ -94,7 +94,7 @@ def test_o_mapa_tem_os_dois_casos(mapa_das_cores):
 def test_so_o_hexadecimal_vira_borda(a03, mapa_das_cores):
     """O cabeçalho veste `--plastico` EXATAMENTE nos modelos que têm hex.
 
-    Nos dois sentidos, e isso importa: um a menos e um controle que ela mapeou
+    Nos dois sentidos, e isso importa: um a menos e um controle mapeado
     perde a identidade na tela; um a mais e a borda diz uma cor que ninguém
     mediu.
 

@@ -18,13 +18,13 @@ O QUE O USUÁRIO VIU, e é o que originou a lei: a fita do topo dizendo
 
 O QUE ESTA RÉGUA COBRA, e cada item é uma metade do conserto:
 
-1. a bancada dá ENDEREÇO à barra, e não sobrou ``--plastico`` cravado no miolo;
+1. o ensaio dá ENDEREÇO à barra, e não sobrou ``--plastico`` cravado no miolo;
 2. o pacote ESCREVE aquele endereço com o que leu da mesa — endereço sem
    escritor troca um valor congelado por um vazio, e a tela mente igual;
 3. sem cor lida, o valor é VAZIO — nunca a do mockup, nunca um cinza inventado
    (*campo sem informação não mostra nada*);
 4. ``ESPERANDO_A_PUBLICACAO`` não vira ponto cego: o nome tem de estar na
-   bancada e **não** na publicada.
+   ensaio e **não** na publicada.
 """
 from __future__ import annotations
 
@@ -116,9 +116,9 @@ def test_nenhum_plastico_congelado_sobrou_no_miolo_do_ensaio() -> None:
     MORDIDA: devolva ``style="--plastico:{plastico}"`` ao ``<tr>`` e regere.
 
     O MIOLO, E NÃO A PÁGINA INTEIRA: a fita de chips vem do ``monta.fita()``,
-    que é das DEZ abas e não é território desta. Ela é trocada inteira pelo
+    que é das DEZ abas e não é território desta. A fita é trocada inteira pelo
     piloto (``hefesto_vivo.pintar``, ``p.fita``) com a mesa VIVA; o conserto do
-    endereço dela é um só, compartilhado, e está no relato desta frente.
+    endereço da fita é um só, compartilhado, e está no relato desta frente.
     """
     miolo = _ensaio().split('class="miolo"')[-1]
     assert "--plastico:" not in miolo, (
@@ -138,7 +138,7 @@ def test_o_pacote_manda_a_cor_do_plastico_de_cada_controle(disco: list[Any]) -> 
                            monta.cor_da_zona("galactic-purple"),
                            monta.cor_da_zona("cosmic-red"),
                            monta.cor_da_zona("starlight-blue")], (
-        "a cor da barra não é a do mapa. Ela tem de sair de "
+        "a cor da barra não é a do mapa. A cor tem de sair de "
         "`cor_da_zona()` — o mesmo `<style>` de onde a fita tira a do chip")
     assert fora["guarda.nome"][2:] == ["Cosmic Red", "Starlight Blue"]
     assert fora["guarda.vazio"][2:] == ["sim", "sim"]
@@ -168,12 +168,12 @@ def test_um_colorway_que_o_mapa_nao_tem_nao_derruba_a_aba() -> None:
 
 
 def test_o_que_espera_publicacao_ja_esta_no_ensaio() -> None:
-    """Declarar "espera a publicação" sobre um endereço que nem a bancada tem é"""
+    """Declarar "espera a publicação" sobre um endereço que nem o ensaio tem é"""
     tem = _enderecos(_ensaio())
     faltando = set(a10_perfis.ESPERANDO_A_PUBLICACAO) - tem
     assert not faltando, (
         f"{sorted(faltando)} está declarado como 'esperando a publicação' e a "
-        f"BANCADA não tem o endereço. Não está esperando: está faltando.")
+        f"ENSAIO não tem o endereço. Não está esperando: está faltando.")
 
 
 def test_o_que_espera_publicacao_sai_da_lista_quando_o_usuario_publicar() -> None:

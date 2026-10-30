@@ -106,14 +106,14 @@ def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
 
 
 def test_todo_modo_do_produto_tem_opcao_no_pacote(a03, presets):
-    """Nenhum acionamento do perfil antigo fica sem opção: sem ela o campo abriria vazio."""
+    """Nenhum acionamento do perfil antigo fica sem opção: sem a opção o campo abriria vazio."""
     sem = [p.name for p in _oferecidos(a03, presets)
            if f'value="{a03.PREFIXO_DO_ACIONAMENTO}{p.name}"' not in _opcao_do_perfil(a03, p.name)]
     assert not sem, f"acionamentos do produto sem opção no campo: {sem}"
 
 
 def test_o_desenho_nao_tem_mais_a_lista_de_acionamento():
-    """A bancada não digita rótulo de modo: o campo que os carregava saiu do desenho."""
+    """O ensaio não digita rótulo de modo: o campo que os carregava saiu do desenho."""
     doc = _ensaio()
     assert not _selects(doc, "modo") and not _selects(doc, "g2-acion")
     assert "g2-acion" not in doc.split("</style>", 1)[-1]
@@ -149,12 +149,12 @@ def test_a_lista_do_efeito_sai_como_o_dom_a_escreve(a03):
     """Nem `selected`, nem `disabled` cru — senão o piloto repinta para sempre."""
     html = a03.html_das_opcoes_de_imersao()
     assert " selected" not in html, (
-        "o bloco emitido carrega a escolha do desenho para a mesa dela")
+        "o bloco emitido carrega a escolha do desenho para a mesa do usuário")
     assert re.search(r"\sdisabled(?=[\s>])", html) is None, (
         "o `disabled` saiu cru: o navegador devolve `disabled=\"\"` e o piloto "
         "reescreveria os oito campos a cada tique, para sempre")
     assert 'disabled=""' in html, (
-        "o travessão da decisão 13 dela perdeu o `disabled` — o lugar vazio "
+        "o travessão da decisão 13 perdeu o `disabled` — o lugar vazio "
         "passaria a ser escolhível com o rato")
 
 

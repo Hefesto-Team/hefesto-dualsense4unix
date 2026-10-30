@@ -82,7 +82,7 @@ def _selos(doc: str) -> list[str]:
 def test_o_selo_tem_tres_alvos() -> None:
     """A cor, o risco e a palavra são TRÊS alvos, e um elemento aceita UM."""
     selos = _selos(_ensaio())
-    assert selos, "não achei um `.selo-ativo` na bancada da aba Controles"
+    assert selos, "não achei um `.selo-ativo` no ensaio da aba Controles"
 
     for selo in selos:
         campo = re.search(r'data-campo="([^"]+)"', selo)
@@ -97,7 +97,7 @@ def test_o_selo_tem_tres_alvos() -> None:
             "e o fundo fica no que o gerador desenhou — o defeito de 03/09."
         )
         assert 'data-hef-alvo="classe" data-hef-classe="cortado"' in selo, (
-            "o selo perdeu o alvo do RISCO. Ela escolheu 'Cor + ícone' de "
+            "o selo perdeu o alvo do RISCO. A escolha foi 'Cor + ícone' de "
             "propósito, para quem não distingue cor."
         )
         palavra = re.search(r'<span class="selo-palavra"([^>]*)>', selo)
@@ -155,7 +155,7 @@ def test_a_folha_pinta_as_duas_classes() -> None:
     )
     assert ".mic-glifo.cortado::after{" in doc, (
         "a regra do RISCO sumiu — o glifo ganharia a classe e nada cruzaria o "
-        "microfone, que é a metade da escolha dela para quem não distingue cor"
+        "microfone, que é a metade da escolha para quem não distingue cor"
     )
     assert ".mic-glifo{" in doc and "position:relative" in doc, (
         "o glifo perdeu o `position:relative` — o `::after` do risco é absoluto "
@@ -191,7 +191,7 @@ def test_a_bateria_pergunta_a_grafia_a_gtk() -> None:
 
     MORDE: faça `texto_da_bateria` redigitar a `f-string` em vez de chamar o
     dono — esta régua reprova no dia em que a GTK mudar a grafia, que é
-    exatamente quando ela tem de reprovar.
+    exatamente quando a régua tem de reprovar.
     """
     from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
     from pacotes.a02_controles import texto_da_bateria
@@ -208,7 +208,7 @@ def test_a_bateria_desconhecida_e_travessao_com_porcento() -> None:
 
     seco = str(mesa_viva.SEM_LEITOR)
     assert texto_da_bateria(None) != seco, (
-        "a bateria desconhecida voltou ao travessão seco — ela pediu `— %`"
+        "a bateria desconhecida voltou ao travessão seco — o pedido é `— %`"
     )
     assert texto_da_bateria(None).startswith(seco), (
         "a frase do desconhecido deixou de começar pelo travessão"
@@ -217,7 +217,7 @@ def test_a_bateria_desconhecida_e_travessao_com_porcento() -> None:
 
 
 def test_o_card_emite_a_carga_desconhecida_com_porcento() -> None:
-    """E ela chega ao CARD, não só à função — o valor que o tique pinta."""
+    """E a carga chega ao CARD, não só à função — o valor que o tique pinta."""
     from pacotes import Contexto
     from pacotes import a02_controles as mod
 

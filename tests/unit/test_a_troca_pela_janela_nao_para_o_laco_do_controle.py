@@ -1,7 +1,7 @@
 """A troca pela janela não para o laço do controle.
 
 A-TROCA-PELA-JANELA-NAO-PARA-O-LACO-DO-CONTROLE-01 (09/10/2026). A troca automática roda no laço
-asyncio do serviço, o mesmo que leva o pad virtual de P1 a P4 a 60 Hz. Ela lia a janela ali
+asyncio do serviço, o mesmo que leva o pad virtual de P1 a P4 a 60 Hz. A troca lia a janela ali
 (``wlrctl`` é um processo por leitura), copiava fundo cada perfil a cada tique para só ler o
 ``match`` e a ``priority``, e disparava a semeadura dos jogos no mesmo fio. A cura: a leitura da
 janela, a semeadura e a leitura dos perfis mudados vão a um executor de uma vaga do
@@ -66,8 +66,8 @@ def dono_armado(monkeypatch: pytest.MonkeyPatch):
 def test_o_leitor_lento_nao_para_o_relogio_de_60_hz(dono_armado: None) -> None:
     """Leitor de 200 ms, 40 perfis e um relógio a 60 Hz no mesmo laço: nenhum quadro passa de 40 ms.
 
-    Os perfis entram frios: a primeira leitura decodifica os 40, e ela também anda fora do laço.
-    A ativação do perfil da janela segue no laço; ela é aquecida antes, porque no serviço os
+    Os perfis entram frios: a primeira leitura decodifica os 40, e também anda fora do laço.
+    A ativação do perfil da janela segue no laço; é aquecida antes, porque no serviço os
     módulos que a primeira ativação importa (o backend, a identidade) já estão carregados, e a
     importação fria de um processo de teste não é o custo do serviço.
     """

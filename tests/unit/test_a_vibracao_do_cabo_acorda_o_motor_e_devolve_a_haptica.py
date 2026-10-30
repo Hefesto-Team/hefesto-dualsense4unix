@@ -7,9 +7,9 @@ report sem ``0x01``/``0x02``. Os dois não andam juntos pelo report. A cura: com
 SEM os dois bits; sem a háptica, o motor vai pelo report, como sempre; ao abrir o hidraw do
 cabo, uma soltura desfaz o bit que outro processo deixou.
 
-A BANCADA: o handle é o ``_PinnedPyDualSense`` real, sem device, e os reports saem do montador
+O ENSAIO: o handle é o ``_PinnedPyDualSense`` real, sem device, e os reports saem do montador
 real (cabo ``0x02``, rádio ``0x31``). O subsystem é o real, no mundo dublado do Xbox (quatro
-controles, de P1 a P4, no cabo e no rádio). A MORDIDA de cada régua está no docstring dela.
+controles, de P1 a P4, no cabo e no rádio). A MORDIDA de cada régua está no próprio docstring.
 """
 
 from __future__ import annotations
@@ -201,7 +201,7 @@ def _montar(mundo: _Mundo, transporte: str) -> list[Any]:
 def test_o_pad_uhid_com_a_haptica_do_jogo_tocando_vibra_como_audio(
     mundo: _Mundo, transporte: str, uniq: str
 ) -> None:
-    """O jogo toca a háptica no endpoint do controle: o rumble do pad ``uhid`` soma nela.
+    """O jogo toca a háptica no endpoint do controle: o rumble do pad ``uhid`` soma na háptica.
 
     O motor do HID fica em zero (o bit do report calaria a háptica), e o tocador leva o par.
     MORDIDA: em ``_levar_a_haptica_fina`` volte ``converte = e_xbox`` e o rumble do pad

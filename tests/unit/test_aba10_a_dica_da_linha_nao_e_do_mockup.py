@@ -1,12 +1,8 @@
 """ABA 10 — a DICA da linha por controle não pode nomear o aparelho.
 
-A LEI, e é do usuário (03/09/2026):
-
-    *"imagina que cada pessoa tenha um dualsense diferente. eu mapeei as cores,
-    glifos, controles, id e tudo mais. é pro projeto usar esse meu trabalho
-    entende? nada hardcoded. trazer tudo que eu já mapeei. eu quero que cada
-    user ao usar seu controle se toque disso que o app se adaptou ao controle
-    dele"*  (noqa-acento: citação literal)
+A REGRA (03/09/2026): cada pessoa tem um DualSense diferente, e as cores, os glifos, os
+controles e os ids já estão mapeados. O projeto usa esse mapa, nada cravado no código,
+e quem usa o controle percebe que o app se adaptou ao controle dele.
 
 O IRMÃO DESTA RÉGUA é ``test_aba10_a_identidade_vem_de_cima.py``, que cobra a
 BARRA de 3px. Ele fechou o lugar onde a cor do mockup sobrevivia; este fecha o
@@ -34,7 +30,7 @@ caía fora por construção.
 aceitar ``title``, nomeado na lista curta e com a razão escrita no piloto: o
 ``fim.html`` pedia ``data-hef-atributo="title"`` nas vinte páginas e era
 recusado CALADO. **A remoção desta dica deixa de ser a melhor resposta**: com um
-canal, ela pode voltar VIVA, com o modelo e a conta do aparelho, em vez de ficar
+canal, a dica pode voltar VIVA, com o modelo e a conta do aparelho, em vez de ficar
 fora por inércia. As três primeiras seções deste arquivo continuam valendo — o
 que mudou é que a quarta virou trabalho, e não mais um bilhete.
 
@@ -42,11 +38,11 @@ TIRAR FOI A CURA, E NÃO PERDEU NADA: o modelo está na PRÓPRIA célula que o
 cursor toca (``guarda.nome``, vivo) e a conta está na coluna ao lado
 (``guarda.proprio``, o ponto embaixo de cada glifo, alvo ``classe``, vivo; até
 02/10/2026 era o próprio glifo, ``guarda.secao``, que desde então diz o
-controle agora). É a decisão nº4 dela deste mesmo dia, sobre esta mesma
-tabela: *"Meu Deus melhor nenhuma assim. Auto falante é auto falante, gatilho é
-gatilho."*
+controle agora). É a decisão nº4 deste mesmo dia, sobre esta mesma
+tabela: nenhuma dica é melhor que essa; alto-falante é alto-falante, gatilho é
+gatilho.
 
-A CÉLULA GANHOU DICA EM 02/10/2026, e não é a volta das oito: ela só existe
+A CÉLULA GANHOU DICA EM 02/10/2026, e não é a volta das oito: a dica só existe
 onde há o que dizer (*"O controle não diz."* e a máscara que não é a
 DualSense, decisão de 29/09: «a dica diz qual»), vem do pacote
 (``guarda.dica``) e não nomeia aparelho. A régua de baixo, que olha TODA dica
@@ -62,7 +58,7 @@ AS QUATRO MORDIDAS, e cada uma acusa uma metade diferente:
            decisão, não sobra de uma deleção.
     ponha `title="Nova Pink"` numa célula da tabela por controle
         -> `test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa` reprova, e
-           ela pega os 28 do CSV, não os 4 do desenho.
+           a régua pega os 28 do CSV, não os 4 do desenho.
     ensine o piloto a escrever `title` POR FORA da guarda (`el.title = t`)
         -> `test_alvo_nenhum_do_piloto_escreve_title` reprova. O canal
            legítimo — o alvo `atributo` com o nome na lista curta — já
@@ -92,7 +88,7 @@ def _publicada() -> str:
 
 
 def _tabela(html: str) -> str:
-    """O trecho entre a abertura da tabela por controle e o `</table>` dela."""
+    """O trecho entre a abertura da tabela por controle e o `</table>` da tabela."""
     achou = ABRE.search(html)
     assert achou, f"a tabela por controle sumiu de {PAGINA}"
     return html[achou.end():].split("</table>", 1)[0]
@@ -120,14 +116,14 @@ ESPERA_A_PUBLICACAO = False
 
 
 def test_a_publicada_nao_fica_curada_em_silencio() -> None:
-    """Curar a bancada e deixar a publicada é a correção pela metade que esta"""
+    """Curar o ensaio e deixar a publicada é a correção pela metade que esta"""
     ainda = [t for c, t in zip(monta.MESA, _linhas(_publicada()), strict=True)
              if c.get("conectado", True) and "data-dica=" in t]
     assert bool(ainda) == ESPERA_A_PUBLICACAO, (
         f"a publicada tem {len(ainda)} linha(s) com a dica do desenho e a "
         f"declaração diz `ESPERA_A_PUBLICACAO = {ESPERA_A_PUBLICACAO}`. As duas "
         f"discordam: ou a publicação aconteceu e a declaração ficou para trás, "
-        f"ou ela foi apagada antes da hora.")
+        f"ou a declaração foi apagada antes da hora.")
 
 
 def test_o_lugar_vazio_continua_com_a_dica() -> None:
@@ -137,7 +133,7 @@ def test_o_lugar_vazio_continua_com_a_dica() -> None:
                 if not c.get("conectado", True) and "data-dica=" not in t]
     assert not sem_dica, (
         f"o lugar vazio {sem_dica} perdeu a dica que explica por que ele "
-        f"continua na tabela. Ela não fala de aparelho nenhum: não envelhece.")
+        f"continua na tabela. A dica não fala de aparelho nenhum: não envelhece.")
 
 
 def test_nenhuma_dica_da_tabela_nomeia_um_modelo_do_mapa() -> None:
@@ -164,7 +160,7 @@ def test_o_nome_do_modelo_so_vive_em_elemento_enderecado() -> None:
     assert not achados, (
         f"{achados} aparece(m) na tabela por controle FORA do único elemento "
         f"que o produto reescreve (`guarda.nome`). Quem lê a tela vê o modelo "
-        f"do mockup sobre o aparelho dela.")
+        f"do mockup sobre o aparelho do usuário.")
 
 
 def test_alvo_nenhum_do_piloto_escreve_title() -> None:

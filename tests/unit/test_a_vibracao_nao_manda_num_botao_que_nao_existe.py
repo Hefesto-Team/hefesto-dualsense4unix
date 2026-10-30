@@ -50,8 +50,8 @@ DUAS LEITURAS INDEPENDENTES, e a segunda alcança o que a primeira não vê
    frase. É o que a tela mostraria.
 2. **O FONTE** (:func:`test_nenhuma_frase_do_fonte_manda_a_botao_inexistente`) —
    uma varredura AST dos dois arquivos, com as constantes de módulo resolvidas.
-   Ela alcança as frases que hoje nenhuma superfície renderiza (os toasts dos
-   `on_rumble_*`, que eram da janela aposentada) — e é por isso que ela existe:
+   A varredura alcança as frases que hoje nenhuma superfície renderiza (os toasts dos
+   `on_rumble_*`, que eram da janela aposentada) — e é por isso que existe:
    uma frase que ninguém renderiza **hoje** é exatamente a que apodrece até
    alguém religá-la. Foi assim que *"Alguns jogos derrubam o controle no meio
    da partida"* sobreviveu uma semana com as duas guardas de saída verdes.
@@ -60,7 +60,7 @@ DUAS LEITURAS INDEPENDENTES, e a segunda alcança o que a primeira não vê
 mede citam os rótulos MORTOS de propósito, como lápide do que custou; uma régua
 que reprovasse a própria lápide obrigaria a apagar a história para ficar verde.
 
-A SEGUNDA METADE DESTE ARQUIVO É OUTRA LINHA — e ela fechou por MEDIÇÃO
+A SEGUNDA METADE DESTE ARQUIVO É OUTRA LINHA — e fechou por MEDIÇÃO
 =======================================================================
 
 A linha 182 do CSV da paridade dizia que, *"com ``rumble.weak/strong`` não-zero
@@ -68,7 +68,7 @@ no perfil em disco, o «Aplicar» do rodapé ainda re-manda os dois"* e re-trava
 vibração que o "Parar" soltou (o sintoma que a ABAS-04 curou na janela GTK).
 **Medido em 06/09/2026, a premissa não se sustenta em nenhum dos três degraus**
 — e :func:`test_o_aplicar_do_rodape_nao_retrava_a_vibracao` é a régua que
-impede os três de se desfazerem em silêncio. O laudo está no docstring dela.
+impede os três de se desfazerem em silêncio. O laudo está no docstring da régua.
 """
 
 from __future__ import annotations

@@ -5,8 +5,8 @@ A FORÇA SAIU DOS DEGRAUS EM 20/10/2026 (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-
 NO-PS5-01): a «Força da vibração» é um trilho de 0 a 200%, de 5 em 5, por controle, sem os botões
 Economia, Padrão e Máximo. O pacote deixou de pintar `degrau` e `degrau-herdado`, e as réguas que
 mediam os quatro botões na página publicada saíram com eles (o `--publicar 05` da costura os tira
-da página). Fica o que o trilho herdou delas: o número vem do daemon (a política e o multiplicador
-aplicado que o tique publica), e campo sem informação não mostra nada.
+da página). Fica o que o trilho herdou das réguas: o número vem do daemon (a política e o
+multiplicador aplicado que o tique publica), e campo sem informação não mostra nada.
 
 **``motor-e-pct`` NÃO É ENDEREÇO MORTO** (02/09/2026): o alvo ``largura`` do ``escrever()`` faz
 ``el.style.width = valor + '%'``, e quem emite escreve o número PELADO. Hoje as três barras são
@@ -115,7 +115,7 @@ def test_a_largura_sai_sem_o_por_cento(pacote, ensaio) -> None:
                if c.alvo == "largura"}
     assert not largura, (
         f"voltou alvo `largura` a esta aba: {sorted(largura)} — as três barras "
-        f"são `<input type=range>`, e o que o pintor escreve nelas é o `value`")
+        f"são `<input type=range>`, e o que o pintor escreve nas barras é o `value`")
     for uniq, col in pacote["colunas"].items():
         for chave in ("motor-e-pct", "motor-d-pct", "forca-pct"):
             assert "%" not in str(col.get(chave, "")), (
@@ -144,7 +144,7 @@ def test_o_testar_de_cada_lugar_tem_endereco_de_estado(ensaio) -> None:
     lugares = ensaio.count('data-controle="p')
     tags = re.findall(r'<button class="btn" data-papel="testar"[^>]*>', ensaio)
     assert len(tags) == lugares, (
-        f"a bancada tem {len(tags)} botões Testar para {lugares} lugares")
+        f"o ensaio tem {len(tags)} botões Testar para {lugares} lugares")
     for tag in tags:
         assert 'data-campo="em-teste"' in tag, tag
         assert 'data-hef-alvo="classe"' in tag, tag
@@ -157,7 +157,7 @@ def test_o_testar_de_cada_lugar_tem_endereco_de_estado(ensaio) -> None:
 
 
 def test_o_testar_acende_so_na_coluna_em_teste() -> None:
-    """O campo `em-teste` vale `"1"` na coluna do teste ligado, e só nela."""
+    """O campo `em-teste` vale `"1"` na coluna do teste ligado, e só nessa."""
     import pacotes
     from pacotes import a05_vibracao as a05
 

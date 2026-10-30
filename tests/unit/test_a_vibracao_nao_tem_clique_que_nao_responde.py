@@ -44,7 +44,7 @@ DESENHO DO CONTROLE. É a forma que o `_gesto` do piloto nomeia por escrito:
 ouvinte de clique só lê o do meio. Trocar ``data-papel`` por ``data-hef`` deixa
 o endereço EXATAMENTE onde estava — o pintor continua achando por
 ``[data-hef=X]``, a régua do mockup continua contando o campo — e tira o clique
-fantasma. **Nem um pixel muda**: a regeração da bancada dá 10 linhas de diff, e
+fantasma. **Nem um pixel muda**: a regeração do ensaio dá 10 linhas de diff, e
 as dez trocam só o nome do atributo.
 
 A MORDIDA — as duas, e cada uma pega uma metade:
@@ -58,7 +58,7 @@ A MORDIDA — as duas, e cada uma pega uma metade:
   resolvesse o clique morto SUMINDO com o endereço deixaria a régua do mockup
   cega para quatro campos, que é comprar silêncio com cegueira.
 
-ONDE ELA MEDE: na **BANCADA**, que é onde o gerador escreve. A publicação é ato
+ONDE A RÉGUA MEDE: no **ENSAIO**, que é onde o gerador escreve. A publicação é ato
 DO USUÁRIO (``--publicar 05``), e até lá a página que o produto renderiza continua com
 os quatro cliques mortos — está em ``mockup/DIVERGENCIAS.md``.
 """
@@ -85,7 +85,7 @@ def ensaio() -> str:
     import onde
 
     arq = onde.pagina(PAGINA)
-    assert arq.exists(), f"a bancada não tem {PAGINA} — rode `python3 aba05.py`"
+    assert arq.exists(), f"o ensaio não tem {PAGINA} — rode `python3 aba05.py`"
     return arq.read_text(encoding="utf-8")
 
 
@@ -116,9 +116,9 @@ def _gestos_registrados() -> set[str]:
 
 
 def test_nenhum_papel_desta_aba_fica_sem_gesto(ensaio: str) -> None:
-    """Todo `data-papel` da bancada é um gesto que o pacote atende."""
+    """Todo `data-papel` do ensaio é um gesto que o pacote atende."""
     papeis = {g.nome for g in _regua._papeis_cravados(ensaio)}
-    assert papeis, ("a bancada não tem `data-papel` nenhum — ou o desenho mudou "
+    assert papeis, ("o ensaio não tem `data-papel` nenhum — ou o desenho mudou "
                     "de vocabulário, ou esta régua virou vácuo")
     orfaos = papeis - _gestos_registrados()
     assert not orfaos, (
@@ -188,7 +188,7 @@ def test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique(ensaio: str) -> None:
 def test_os_dois_botoes_de_verdade_continuam_clicaveis(ensaio: str) -> None:
     """"Testar" e "Parar" NÃO podem perder o `data-papel`; e a Força não tem mais botão.
 
-    Os degraus de Força saíram da BANCADA em 18/10/2026 (r3b-05-12) e do pacote em 20/10/2026
+    Os degraus de Força saíram do ENSAIO em 18/10/2026 (r3b-05-12) e do pacote em 20/10/2026
     (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01): a «Força» é o
     trilho de 0 a 200%. O `--publicar 05` da costura os tirou do publicado, e o gesto `forca`
     saiu com eles (O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01).
@@ -199,11 +199,11 @@ def test_os_dois_botoes_de_verdade_continuam_clicaveis(ensaio: str) -> None:
     assert 'data-papel="forca"' not in publicado, (
         "os botões da Força voltaram ao publicado, e o gesto deles saiu")
     assert 'data-papel="forca"' not in ensaio, (
-        "os botões da Força voltaram à bancada — o desenho de 18/10 os tirou")
+        "os botões da Força voltaram ao ensaio — o desenho de 18/10 os tirou")
     for nome in ("testar", "parar"):
         assert f'data-papel="{nome}"' in ensaio, (
             f"`{nome}` perdeu o `data-papel` — ele TEM gesto, e sem o atributo o "
-            f"clique dela para de chegar ao daemon")
+            f"clique para de chegar ao daemon")
         assert nome in _gestos_registrados(), (
             f"`{nome}` está no desenho como clique e o pacote não o registra — "
             f"esta régua acabou de virar do avesso")

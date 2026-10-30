@@ -27,7 +27,7 @@ DO_MOCKUP = ("Cosmic Red", "Starlight Blue", "#ae335a", "#7eb8d4")
 
 
 def _regua():
-    """A régua da identidade, carregada do script que é dona dela."""
+    """A régua da identidade, carregada do script que a define."""
     caminho = RAIZ / "scripts/check_identidade_vem_de_cima.py"
     if not caminho.exists():
         pytest.skip("`scripts/check_identidade_vem_de_cima.py` não está nesta árvore")
@@ -60,14 +60,14 @@ def test_o_endereco_nao_pousou_no_involucro() -> None:
     linha = linha[:linha.index('<div class="fita ')]
     assert "data-campo" not in linha, (
         "o endereço do conjunto pousou na `.fita-linha` — o produto passaria a "
-        "reescrever o miolo dela e o `data-campo=\"perfil\"` do cabeçalho morreria")
+        "reescrever o miolo da linha e o `data-campo=\"perfil\"` do cabeçalho morreria")
     assert 'data-campo="perfil"' in x, "o Perfil ativo perdeu o endereço"
 
 
 def test_cada_chip_de_controle_tem_o_seu_endereco() -> None:
     """A régua julga o `--plastico` pelo endereço do PRÓPRIO elemento.
 
-    E ela está certa em julgar assim: um pai endereçado para TEXTO não daria ao
+    E a régua está certa em julgar assim: um pai endereçado para TEXTO não daria ao
     filho o direito de trazer cor congelada. Aqui o pai é endereçado para HTML —
     o produto reescreve o chip inteiro —, e o `data-campo` do chip é o que
     registra isso no arquivo.
@@ -88,7 +88,7 @@ def test_o_chip_todos_nao_ganhou_endereco() -> None:
 
 
 def test_a_regua_da_identidade_nao_acha_nada_na_09() -> None:
-    """Zero congelados de identidade na bancada da 09. É o `PRONTO É` da spec."""
+    """Zero congelados de identidade no ensaio da 09. É o `PRONTO É` da spec."""
     regua = _regua()
     achados = regua.congelados_de(ENSAIO, regua.nomes_de_colorway())
     assert achados == [], "\n".join(f"{ln}: {oq} -> {tr}" for ln, oq, tr in achados)
@@ -106,7 +106,7 @@ def test_o_gerador_e_o_pacote_escrevem_o_mesmo_nome() -> None:
 
 
 def test_a_fita_viva_nomeia_o_controle_da_mesa() -> None:
-    """Com a bancada, o chip do cabo diz `White` e traz a cor do plástico."""
+    """Com o ensaio, o chip do cabo diz `White` e traz a cor do plástico."""
     saida = a09_sistema._html_da_fita(MESA_DO_USUARIO)
     assert "White" in saida
     assert "--plastico:" in saida
@@ -151,7 +151,7 @@ def test_mesa_vazia_nao_apaga_a_fita() -> None:
 
 
 def test_o_pacote_emite_o_endereco_da_fita(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `pacote()` da aba 09 devolve a chave, e ela não vem vazia."""
+    """O `pacote()` da aba 09 devolve a chave, e a chave não vem vazia."""
     monkeypatch.setattr(a09_sistema, "_leitura", lambda ctx: None)
     monkeypatch.setattr(a09_sistema._tela, "pacote", lambda leitura: {"valores": {}})
     ctx = pacotes.Contexto(state={}, mesa=MESA_DO_USUARIO, conectados=[], estados={})

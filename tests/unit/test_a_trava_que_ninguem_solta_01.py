@@ -91,8 +91,8 @@ def test_o_perfil_aplica_gatilho_e_luz_em_toda_origem(origem: str) -> None:
     spec = fc.specs[-1]
     assert spec.trigger_left is not None and spec.trigger_right is not None, (
         f"a seção `triggers` do perfil não chegou ao controle na origem {origem!r}: "
-        f"é o `ignorado_trava_manual` de volta, e é a queixa dela de 14/09 — "
-        f"*«os gatilhos tambem nao tao aplicando»*"  # (noqa-acento)
+        f"é o `ignorado_trava_manual` de volta, e é a queixa de 14/09: os gatilhos "
+        "não estavam aplicando"
     )
     assert spec.led is not None, (
         f"a seção `leds` do perfil não chegou ao controle na origem {origem!r}"
@@ -104,7 +104,7 @@ def test_o_perfil_aplica_gatilho_e_luz_em_toda_origem(origem: str) -> None:
     for secao in ("trigger", "led"):
         assert relatorio.get(secao) not in (None, "ignorado_trava_manual"), (
             f"a seção {secao!r} sumiu do relatório da ativação — a ausência de "
-            f"notícia lida como 'não entrou' é o ELO-MUDO-01, e ela custou uma sprint"
+            f"notícia lida como 'não entrou' é o ELO-MUDO-01, que custou uma sprint"
         )
 
 
@@ -114,11 +114,11 @@ def test_o_store_nao_sabe_mais_travar() -> None:
     for morto in MORTOS:
         assert not hasattr(store, morto), (
             f"`StateStore.{morto}` voltou. A trava manual saiu inteira em "
-            f"14/09/2026 por decisão dela — ver o topo deste arquivo"
+            f"14/09/2026 por decisão do produto — ver o topo deste arquivo"
         )
     assert hasattr(store, VIVO), (
         f"`StateStore.{VIVO}` sumiu. Ele NÃO é a trava manual: é o lock de 30 s "
-        f"da escolha manual de perfil, e a decisão dela não o alcança"
+        f"da escolha manual de perfil, e a decisão do produto não o alcança"
     )
 
 
@@ -134,10 +134,10 @@ def test_nenhuma_linha_de_producao_arma_a_trava() -> None:
     assert not achados, (
         "a trava manual voltou ao código de produção:\n"
         + "\n".join(achados)
-        + "\n\nOUsuario saiu inteira em 14/09/2026 por decisão dela — *«e pra qualquer "
-          "outro jogo»*, *«isso nao faz sentido mais»*. "  # (noqa-acento)
+        + "\n\nA trava manual saiu inteira em 14/09/2026, por decisão que vale para qualquer "
+          "jogo. "
           "Se um caminho novo precisa "
-          "proteger um ajuste dela contra o perfil, a pergunta a fazer é outra: "
+          "proteger um ajuste de quem usa contra o perfil, a pergunta a fazer é outra: "
           "por que o ajuste não está NO perfil?"
     )
 
@@ -171,7 +171,7 @@ def test_as_constantes_da_trava_nao_voltaram() -> None:
     for numero, linha in _linhas_de_codigo(texto):
         for constante in ("MANUAL_OVERRIDE_CATEGORIES", "MANUAL_OVERRIDE_STALE_AFTER_SEC"):
             assert not re.match(rf"\s*{constante}\s*[:=]", linha), (
-                f"`{constante}` voltou a `state_store.py:{numero}`. Ela declarava "
+                f"`{constante}` voltou a `state_store.py:{numero}`. A constante declarava "
                 f"as categorias da trava e o teto de seis horas que era a única "
                 f"porta de saída de `led` e `audio` — as duas saíram com o "
                 f"mecanismo em 14/09/2026"

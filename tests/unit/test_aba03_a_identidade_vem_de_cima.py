@@ -47,7 +47,7 @@ def ensaio() -> str:
     from hefesto_dualsense4unix.interface import onde
 
     caminho = onde.pagina(PAGINA)
-    assert caminho.exists(), f"{PAGINA} sumiu da bancada — não há o que medir"
+    assert caminho.exists(), f"{PAGINA} sumiu do ensaio — não há o que medir"
     return caminho.read_text(encoding="utf-8")
 
 
@@ -96,10 +96,10 @@ def _chips(a03, r, mesa) -> dict[str, str]:
 def _cores(a03, r, mesa) -> dict[str, str]:
     """A COR que o pacote escreve em cada coluna, por `pref`.
 
-    Ela saiu do HTML do chip em 03/09/2026 e passou a ter endereço próprio no
+    A identidade saiu do HTML do chip em 03/09/2026 e passou a ter endereço próprio no
     EMBRULHO — o único elemento que o produto pode pintar com o alvo `plastico`
     sem carimbar o selo dentro do HTML que ele mesmo compara. Uma régua que
-    continuasse procurando `--plastico` no chip daria verde sobre a bancada e
+    continuasse procurando `--plastico` no chip daria verde sobre o ensaio e
     vermelho sobre a cura, que é o pior defeito que uma régua pode ter.
 
     O LUGAR SEM COLUNA NÃO APARECE AQUI, e é fato e não omissão: o `blocos`
@@ -186,16 +186,16 @@ def test_o_chip_vivo_e_o_controle_da_mesa(a03):
     from monta import cor_da_zona
 
     assert _cores(a03, r, MESA_DO_USUARIO)["p1"] == cor_da_zona("white"), (
-        "a borda da coluna do White não recebeu a cor do MAPA dela — ela é "
+        "a borda da coluna do White não recebeu a cor do MAPA — a borda é "
         "como se sabe de quem é a coluna (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`), "
         "e o hexadecimal tem de sair do CSV, não de uma tabela deste código")
 
     inteiro = "".join(chips.values()) + str(r["colunas"])
     for cor in DO_MOCKUP:
         assert cor not in inteiro, (
-            f"o produto ainda escreve {cor!r} — é a cor do DESENHO, e ela não é "
+            f"o produto ainda escreve {cor!r} — é a cor do DESENHO, e não é "
             f"de nenhum controle desta mesa. A fita do topo lê do aparelho; a "
-            f"aba abaixo dela tem de usar AQUELE controle.")
+            f"aba abaixo da fita tem de usar AQUELE controle.")
 
 
 def test_o_chip_nao_repinta_a_cada_tique(a03):
@@ -235,11 +235,11 @@ def test_sem_cor_lida_o_chip_nao_veste_plastico(a03):
     chip = _chips(a03, r, MESA_DO_USUARIO)["p2"]
     assert _cores(a03, r, MESA_DO_USUARIO)["p2"] == "", (
         f"a coluna do controle por rádio recebeu cor de plástico: "
-        f"{_cores(a03, r, MESA_DO_USUARIO)['p2']!r}. Ninguém leu essa cor — ela viria "
+        f"{_cores(a03, r, MESA_DO_USUARIO)['p2']!r}. Ninguém leu essa cor — viria "
         f"do desenho. O vazio APAGA o `--plastico`, e a queda do `topo.html` "
         f"deixa a borda neutra.")
     assert "Não sei" not in chip, (
-        f"`Não sei` é a AUSÊNCIA de leitura, não um nome, e ela não vai para a "
+        f"`Não sei` é a AUSÊNCIA de leitura, não um nome, e não vai para a "
         f"tela: {chip!r}")
     assert "P2" in chip and "BT" in chip, (
         f"sobrou menos do que a tela pode afirmar: {chip!r}. A posição e o "
@@ -274,7 +274,7 @@ def test_o_numero_do_jogador_fica(a03):
 
 
 def test_o_desenho_e_o_produto_tem_um_dono_so(a03, ensaio):
-    """O chip que o pacote emite para a MESA do desenho é o que está na bancada."""
+    """O chip que o pacote emite para a MESA do desenho é o que está no ensaio."""
     import monta
 
     for c in monta.MESA:
@@ -286,7 +286,7 @@ def test_o_desenho_e_o_produto_tem_um_dono_so(a03, ensaio):
             monta.cor_da_zona(c["cor"]) if conectado else "",
             conectado=conectado)
         assert esperado in ensaio, (
-            f"o chip do {c['pref'].upper()} da bancada não é o que a função "
+            f"o chip do {c['pref'].upper()} do ensaio não é o que a função "
             f"emite. Esperado:\n  {esperado}\nO desenho e o produto voltaram a "
             f"ter duas marcações para a mesma coisa.")
 
