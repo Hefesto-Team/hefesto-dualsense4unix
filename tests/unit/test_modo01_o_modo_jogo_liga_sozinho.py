@@ -182,7 +182,7 @@ class TestMotivoDoVeto:
     def test_jogo_so_com_catch_all_diz_o_motivo(
         self, isolated_profiles_dir: Path
     ) -> None:
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
         save_profile(Profile(name="fallback", match=MatchAny(), priority=0))
 
         perfil, motivo = self._manager().select_for_window_ex({"wm_class": WM_MMJ})
@@ -211,7 +211,7 @@ class TestMotivoDoVeto:
         self, isolated_profiles_dir: Path
     ) -> None:
         save_profile(_perfil_do_jogo())
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
 
         perfil, motivo = self._manager().select_for_window_ex({"wm_class": WM_MMJ})
 
@@ -220,7 +220,7 @@ class TestMotivoDoVeto:
 
     def test_assinatura_antiga_preservada(self, isolated_profiles_dir: Path) -> None:
         """Quem só quer o perfil (CLI, lifecycle, dublês) não muda de chamada."""
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
         save_profile(Profile(
             name="leitura", match=MatchCriteria(window_class=["zathura"]), priority=5))
         manager = self._manager()
@@ -262,7 +262,7 @@ class TestModoJogoPadrao:
     def test_modo_nativo_manual_vence_o_default(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Conexão Nativa (Sony)" já É a resposta de produto para "como quero jogar" —"""
+        """A "Conexão Nativa (Sony)" já responde, no produto, como se quer jogar —"""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         daemon.store.set_native_mode_active(True, origin="manual")
@@ -441,7 +441,7 @@ class TestSoltarOModoJogoPadrao:
     def test_perfil_com_opiniao_toma_a_posse(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ela cria o perfil do jogo no meio da sessão: dali em diante quem manda"""
+        """Quem usa cria o perfil do jogo no meio da sessão: dali em diante quem manda"""
         setters = _Setters(daemon)
         setters.bind(monkeypatch)
         daemon.aplicar_modo_jogo_padrao(wm_class=WM_MMJ)
@@ -494,7 +494,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
         self, isolated_profiles_dir: Path
     ) -> None:
         """O cenário da validação: nenhum perfil para o jogo. O modo jogo liga;"""
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
         store = StateStore()
         espiao = _DaemonEspiao()
         sw = _switcher(store, espiao)
@@ -544,7 +544,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
     def test_janela_fora_do_jogo_solta_o_modo(
         self, isolated_profiles_dir: Path
     ) -> None:
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
         store = StateStore()
         espiao = _DaemonEspiao()
         sw = _switcher(store, espiao)
@@ -580,7 +580,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
         self, isolated_profiles_dir: Path
     ) -> None:
         """A histerese UX-01 pula o tick INTEIRO: leitura cega não é evidência de"""
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
         store = StateStore()
         espiao = _DaemonEspiao()
         sw = _switcher(store, espiao)
@@ -593,7 +593,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
 
     def test_sem_daemon_o_tick_segue_igual(self, isolated_profiles_dir: Path) -> None:
         """Sem os callables (CLI/testes legados) nada muda no autoswitch."""
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
         store = StateStore()
         sw = _switcher(store, None)
 
@@ -625,7 +625,7 @@ class TestAutoswitchPedeOModoJogoPadrao:
     def test_falha_do_daemon_nao_derruba_o_tick(
         self, isolated_profiles_dir: Path
     ) -> None:
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
         store = StateStore()
 
         def _explode(*, wm_class: str = "") -> str:
@@ -718,7 +718,7 @@ class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
         """Um catch-all chegou por acidente (nenhuma regra casou) — declarar"""
         catch_all = Profile.model_validate(
             {
-                "name": "vitoria",
+                "name": "viajante",
                 "match": {"type": "any"},
                 "mode": {"kind": "gamepad", "gamepad_flavor": "xbox"},
             }
@@ -771,7 +771,7 @@ class TestManagerDeSelecaoCacheado:
 
         spy = MagicMock()
         monkeypatch.setattr(manager_mod, "logger", spy)
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="viajante", match=MatchAny(), priority=5))
 
         for _ in range(12):
             daemon._profile_rule_matches_game(WM_MMJ)

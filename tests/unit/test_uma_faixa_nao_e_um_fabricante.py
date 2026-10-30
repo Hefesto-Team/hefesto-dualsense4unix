@@ -1,4 +1,4 @@
-"""UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 — o Pro dela parou de ser a definição de Pro."""
+"""UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 — um Pro só deixou de ser a definição de Pro."""
 from __future__ import annotations
 
 import ast
@@ -52,7 +52,7 @@ class TestPredicadoDaLinhagem:
             assert e_pro_genuino(uniq=mac, nome=_NOME_PRO, vid="057e", pid="2009"), mac
 
     def test_o_clone_nunca_e_genuino(self) -> None:
-        """Mesmo nome, mesmo VID:PID — só a OUI o denuncia, e ela basta."""
+        """Mesmo nome, mesmo VID:PID — só a OUI o denuncia, e basta."""
         assert not e_pro_genuino(
             uniq=MAC_CLONE, nome=_NOME_PRO, vid="057e", pid="2009"
         )
@@ -130,14 +130,14 @@ def escritas(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 class TestEnableImuNaMaquinaDeOutraPessoa:
     def test_pro_de_outra_safra_recebe_o_enable(self, escritas: list[str]) -> None:
-        """O giroscópio de quem não tem o Pro DESTA bancada deixa de ficar mudo."""
+        """O giroscópio de quem não tem o Pro DESTA máquina de teste deixa de ficar mudo."""
         ExternalImuEnabler().tick([_entrada(MAC_PRO_DE_OUTRA_SAFRA)], now=0.0)
         assert escritas == ["/dev/hidraw5"]
 
     def test_clone_com_o_mesmo_nome_e_o_mesmo_vidpid_nao_recebe(
         self, escritas: list[str]
     ) -> None:
-        """A contraprova obrigatória — sem ela a cura vira regressão do clone."""
+        """A contraprova obrigatória — sem isto a cura vira regressão do clone."""
         ExternalImuEnabler().tick([_entrada(MAC_CLONE)], now=0.0)
         assert escritas == []
 
@@ -371,7 +371,7 @@ class TestNenhumCaminhoDeCasaNaArvore:
             assert alvo.is_file(), (
                 f"{alvo.relative_to(RAIZ)} sumiu. Se o retratista mudou de casa "
                 "de novo, este teste muda com ele — apagá-lo devolve o defeito "
-                "de 22/08/2026, em que só a máquina dela rodava o script."
+                "de 22/08/2026, em que só uma máquina rodava o script."
             )
             for linha, valor in _literais_executaveis(alvo):
                 assert not valor.startswith("/home/"), (
@@ -382,7 +382,7 @@ class TestNenhumCaminhoDeCasaNaArvore:
         assert "parents[3]" in codigo, (
             "o `onde.py` deixou de deduzir a raiz de `__file__`. Ele é o único "
             "lugar onde as duas pastas de página têm endereço; uma raiz cravada "
-            "aqui reescreveria o mockup DELA a partir de qualquer cópia — foi o "
+            "aqui reescreveria o mockup de verdade a partir de qualquer cópia — foi o "
             "que se mediu em 28/08/2026, em oito arquivos."
         )
         assert dono_da_raiz.resolve().parents[3] == RAIZ.resolve()
@@ -392,9 +392,9 @@ class TestNenhumCaminhoDeCasaNaArvore:
         """A varredura inteira, para o defeito não voltar por outro arquivo.
 
         **A VARREDURA CRESCEU DUAS VEZES EM 08/09/2026, e a segunda é a que
-        importa.** Ela olhava `scripts/` e mais nada — desenhada quando todo
+        importa.** A régua olhava `scripts/` e mais nada — desenhada quando todo
         instrumento desta casa morava lá. A interface mudou para dentro do
-        `src/` em 01/09, e com ela o retratista, os dez geradores e o dono das
+        `src/` em 01/09, e com isso o retratista, os dez geradores e o dono das
         duas pastas de página; a primeira volta de hoje acrescentou
         `interface/` para alcançá-los.
 
@@ -424,17 +424,17 @@ class TestNenhumCaminhoDeCasaNaArvore:
         `src/` inteiro acusa **0 ocorrências** hoje — inclusive com um padrão
         mais largo que este (sem exigir barra final e casando em qualquer ponto
         da string). Não há uma única ocorrência legítima a declarar, e portanto
-        nenhuma isenção foi aberta: se aparecer uma amanhã, ela se declara
+        nenhuma isenção foi aberta: se aparecer uma amanhã, se declara
         sozinha, com a razão, nunca em bloco.
 
-        **O QUE ESTA RÉGUA NÃO É:** a companheira dela em
+        **O QUE ESTA RÉGUA NÃO É:** a sua companheira em
         `test_luz_cega_e8_o_berco_nao_vaza.py` (RÉGUA 1) varre o `src/` inteiro
         desde sempre, mas só enxerga `Path.home()` / `expanduser()` chamados no
-        NÍVEL DO MÓDULO — e isso está certo, é a definição do defeito dela
+        NÍVEL DO MÓDULO — e isso está certo, é a definição do defeito que mede
         (constante avaliada na importação, fora do alcance das fixtures). As
         duas passavam verdes sobre o mesmo literal, cada uma por metade: aquela
         vê a chamada e não o literal, esta via o literal e não a pasta. Só esta
-        se alarga; alargar aquela seria trocar o defeito que ela mede.
+        se alarga; alargar aquela seria trocar o defeito que a outra mede.
         """
         culpados = []
         pastas = (RAIZ / "scripts", RAIZ / "src" / "hefesto_dualsense4unix")

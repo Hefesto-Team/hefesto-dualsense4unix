@@ -79,7 +79,7 @@ def _no(hub, numero, *, par="", encaixe="hotplug", aparelho=""):
 
 
 def entradas_deste_ensaio():
-    """Os 22 nós de raiz TRANSCRITOS da bancada em 25/08/2026, 21h18."""
+    """Os 22 nós de raiz TRANSCRITOS da máquina de teste em 25/08/2026, 21h18."""
     nos = []
     for n in range(1, 11):
         par = f"usb2-port{n - 4}" if 5 <= n <= 7 else ""
@@ -178,7 +178,7 @@ def test_tabela_8_que_contradiz_o_kernel_nao_vence_sozinha():
 
 
 def test_quando_as_contas_batem_nao_ha_divergencia_a_declarar():
-    """A outra metade da régua: ela precisa saber ficar CALADA."""
+    """A outra metade da régua: precisa saber ficar CALADA."""
     contagens = cg.declarar_divergencia(firmware=15, soquetes=22, buracos=15)
     assert contagens["divergem"] is False
     assert contagens["precisa_da_palavra_dela"] is True
@@ -222,7 +222,7 @@ def test_placa_que_nao_sabe_quem_e_tambem_e_recusa():
 
 
 def _censo_com_a_palavra_do_usuario():
-    """O arquivo depois de ela responder na aba: faces declaradas e a contagem."""
+    """O arquivo depois de quem usa responder na aba: faces declaradas e a contagem."""
     antigo = censo_deste_ensaio()
     antigo["faces"] = [
         {"nome": "traseira", "entradas": 6, "de_onde_sei": cg.DECLARADO_PELO_USUARIO},
@@ -236,7 +236,7 @@ def _censo_com_a_palavra_do_usuario():
 
 
 def test_o_install_nao_apaga_o_que_o_usuario_ensinou():
-    """**A MORDIDA.** A segunda instalação não pode zerar a resposta de produto."""
+    """**A MORDIDA.** A segunda instalação não pode zerar a contagem declarada."""
     antigo = _censo_com_a_palavra_do_usuario()
     novo = censo_deste_ensaio(dmidecode="")
     herdado = cg.preservar_o_que_o_usuario_disse(novo, antigo, dict(PLACA_DESTE_ENSAIO))
@@ -298,7 +298,7 @@ def test_o_selo_de_o_usuario_existe_e_o_censo_nunca_o_grava():
 
 
 def test_o_hub_da_mesa_nao_entra_no_gabinete():
-    """O gabinete é o CHASSI. O hub que ela pendurou não muda o metal."""
+    """O gabinete é o CHASSI. O hub pendurado por quem usa não muda o metal."""
     do_hub = tuple(_no("3-1", n) for n in range(1, 5)) + tuple(_no("3-1.1", n) for n in range(1, 5))
     com_hub = entradas_deste_ensaio() + do_hub
     assert len(com_hub) == 30
@@ -350,7 +350,7 @@ def test_usb_sai_do_tipo_e_nunca_da_designacao():
 
 
 def test_conector_interno_nao_vira_buraco_do_gabinete():
-    """Cabeçote de placa-mãe é fato, e não é buraco que ela alcança."""
+    """Cabeçote de placa-mãe é fato, e não é buraco que quem usa alcança."""
     interno = _bloco(0x30, interna="F_USB1", tipo_interno="Access Bus (USB)", porta="USB")
     censo = censo_deste_ensaio(dmidecode=TABELA_8_DESTA_PLACA + "\n" + interno)
     conectores = censo["firmware"]["conectores"]
@@ -431,7 +431,7 @@ def test_gravar_e_atomico_e_nao_deixa_sobra(tmp_path):
 
 
 def test_o_caminho_padrao_le_o_home_na_chamada(tmp_path):
-    """CANARIO-FS-01: constante de módulo apontaria para a pasta REAL dela."""
+    """CANARIO-FS-01: constante de módulo apontaria para a pasta REAL de quem roda."""
     caminho = cg.caminho_padrao(home=str(tmp_path))
     assert caminho.startswith(str(tmp_path))
     assert caminho.endswith("/.local/state/hefesto-dualsense4unix/gabinete.json")

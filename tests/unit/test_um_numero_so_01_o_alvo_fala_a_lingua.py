@@ -1,18 +1,18 @@
 """UM-NUMERO-SO-01 — o daemon e as lâmpadas param de discordar sobre quem é quem.
 
-**A MEDIÇÃO QUE ORIGINOU ISTO, 18/09/2026, na bancada com os quatro
+**A MEDIÇÃO QUE ORIGINOU ISTO, 18/09/2026, na máquina de teste com os quatro
 DualSense ligados pelo rádio.** Pintei um controle de cada cor pelo
-``controller.target.set {index}`` e pedi a ela o que via. A resposta de produto, e
+``controller.target.set {index}`` e perguntei o que se via. A resposta de quem olhou, e
 o instrumento que lê ``/sys/class/leds/*:white:player-N`` depois, concordaram::
 
     índice do daemon   0=vermelho  1=azul   2=roxo   3=branco
     lâmpada acesa      2=vermelho  1=azul   3=roxo   4=branco
 
-Duas listas sobre a mesma mesa. Quem traduzisse "o Controle 1 dela" para
+Duas listas sobre a mesma mesa. Quem traduzisse "o Controle 1" de quem usa para
 ``index=0`` mandaria a cor para o controle que acende **jogador 2**.
 
 As três réguas deste arquivo travam as três pontas da cura, e cada uma MORDE:
-a faixa sintética que morava na fila dela desde 22/08, o número que o
+a faixa sintética que morava na fila de quem usa desde 22/08, o número que o
 ``controller.list`` não publicava, e a língua que o ``target.set`` não falava.
 """
 
@@ -108,7 +108,7 @@ def test_o_produto_nao_expurga_a_faixa_na_leitura_da_fila() -> None:
 
 
 def test_o_gesto_do_portao_tira_a_fixture_e_preserva_o_resto(tmp_path) -> None:
-    """A CURA, onde ela ficou: um gesto explícito, com dono."""
+    """A CURA, onde ficou: um gesto explícito, com dono."""
     import json as _json
     import sys
 
@@ -151,7 +151,7 @@ def test_o_gesto_nao_toca_arquivo_limpo(tmp_path) -> None:
 
 
 def test_mordida_da_ponta_1_sem_o_gesto_a_fila_podre_fica(tmp_path) -> None:
-    """Arranca o gesto: o arquivo continua com os oito, como estava na bancada."""
+    """Arranca o gesto: o arquivo continua com os oito, como estava na máquina de teste."""
     import json as _json
 
     alvo = tmp_path / "controllers.json"
@@ -194,7 +194,7 @@ class _RegistroDaFila:
 
 @pytest.fixture
 def handlers():
-    """Os handlers com a bancada, sem daemon nem aparelho."""
+    """Os handlers com o dublê, sem daemon nem aparelho."""
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 
     class _Daemon:
@@ -213,7 +213,7 @@ async def test_o_list_publica_o_mesmo_numero_que_a_lampada(handlers) -> None:
     """A PONTA 2: quem lê a lista vê o número, não só o índice."""
     r = await handlers._handle_controller_list({})
     por_indice = {c["index"]: c for c in r["controllers"]}
-    assert por_indice[0]["numero"] == 2, "o índice 0 acende jogador 2 na mesa dela"
+    assert por_indice[0]["numero"] == 2, "o índice 0 acende jogador 2 na mesa"
     assert por_indice[1]["numero"] == 1
     assert por_indice[2]["numero"] == 3
     assert por_indice[3]["numero"] == 4
@@ -278,12 +278,12 @@ async def test_endereco_fora_da_mesa_recusa(handlers) -> None:
 
 
 def test_a_fila_podre_desta_regua_e_a_fila_medida() -> None:
-    """Guarda de anonimato: a prova usa a faixa sintética, nunca o MAC dela."""
+    """Guarda de anonimato: a prova usa a faixa sintética, nunca o MAC real."""
     from tests.unit.test_docs_mac_anonimato import _OUIS_COLADOS
 
     bruto = json.dumps(_FILA_PODRE).lower()
     for oui in _OUIS_COLADOS:
-        assert oui not in bruto, f"OUI desta bancada na prova: {oui}"
+        assert oui not in bruto, f"OUI desta máquina de teste na prova: {oui}"
     assert bruto.count("aabbcc") == 4, "os quatro fantasmas medidos, e só eles"
     assert bruto.count(_REAL) == 4, "os quatro reais, na faixa que não identifica"
 
@@ -340,7 +340,7 @@ def test_alvo_que_saiu_da_mesa_cai_no_primario_em_vez_de_sumir() -> None:
 
 
 def test_mordida_da_ponta_4_sem_o_alvo_o_ato_vai_para_o_primario() -> None:
-    """Arranca a consulta ao alvo: volta o defeito medido na bancada."""
+    """Arranca a consulta ao alvo: volta o defeito medido no aparelho."""
     b = _backend()
     b._output_target_key = "k2"
     antigo = b._handles.get(b._primary_key)

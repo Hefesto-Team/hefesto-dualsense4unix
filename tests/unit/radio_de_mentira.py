@@ -1,6 +1,6 @@
 """Um rádio de mentira com FÍSICA, para as réguas da central — MOVER-UM-POR-VEZ-01.
 
-**Este módulo não é um arquivo de teste** — é a bancada que
+**Este módulo não é um arquivo de teste** — é o ensaio que
 ``test_mover_um_por_vez.py`` e ``test_a_central_confere_o_que_aplicou.py``
 usam, como o ``bluez_de_mentira.py`` é a do dono.
 
@@ -26,24 +26,23 @@ O ``HID_PHYS`` é :meth:`RadioDeMentira.onde_esta`: o adaptador em que o
 controle está CONECTADO agora; o movimento é :meth:`RadioDeMentira.hz`.
 
 A FÍSICA QUE A LISTA DO USUÁRIO DE 25/09 MEDIU (A-CONEXOES-O-QUE-A-LISTA-DO-USUARIO-ACHOU-01),
-e até ela este dublê era MAIS FROUXO que o controle de verdade:
+e até a lista este dublê era MAIS FROUXO que o controle de verdade:
 
-* **ligado, o PS + Create não faz nada** (passo c1: *«o controle nunca entra em
-  modo de parear»*). O controle só entra em modo de pareamento DESLIGADO — e
+* **ligado, o PS + Create não faz nada** (passo c1: o controle nunca entra em
+  modo de parear). O controle só entra em modo de pareamento DESLIGADO — e
   este dublê o deixava pareando conectado, o que escondia o mover que nunca
   desligava o controle;
-* **o host que solta o enlace tira o controle do ar** (``Disconnect``), e ela
+* **o host que solta o enlace tira o controle do ar** (``Disconnect``), e quem usa
   desliga na mão segurando o PS (:meth:`RadioDeMentira.desligar`). Se ele
   APAGA ou fica procurando o host ninguém mediu (``energia.desligar@dualsense``
   no mapa): para o dublê, os dois são «fora do ar»;
 * **o controle volta sozinho ao pareamento antigo quando ele existe** (passo
-  c2: *«muda de adaptador, fica um tempo, e volta para o anterior»*): ele
+  c2: muda de adaptador, fica um tempo e volta para o anterior): ele
   lembra os hosts de antes (``Fisico.antigos``), e
   :meth:`RadioDeMentira.voltar_sozinho` o leva de volta ao primeiro que ainda
   tem a chave dele. Sem a chave lá, não há para onde voltar.
-  <!-- noqa-acento: citação literal -->
 
-O ``Alias`` nasce igual ao ``Name`` de fábrica, como no BlueZ; o nome que ela
+O ``Alias`` nasce igual ao ``Name`` de fábrica, como no BlueZ; o nome que quem usa
 dá é o ``Alias`` diferente dele.
 
 E A FÍSICA DO KERNEL E DO DAEMON, que o conferente da mesma sprint mediu (este
@@ -217,9 +216,9 @@ class RadioDeMentira:
 
 
     def segurar_ps_create(self, aparelho: str) -> None:
-        """Ela segura PS + Create: DESLIGADO, o controle anuncia que pareia.
+        """Quem usa segura PS + Create: DESLIGADO, o controle anuncia que pareia.
 
-        LIGADO, NADA ACONTECE — a lista dela de 25/09, passo c1: o DualSense
+        LIGADO, NADA ACONTECE — a lista do usuário de 25/09, passo c1: o DualSense
         conectado não entra em modo de parear. O gesto fica anotado em
         ``gestos_perdidos`` para a régua ver que o usuário apertou e nada veio.
         """
@@ -235,7 +234,7 @@ class RadioDeMentira:
                     self._achar(endereco, fisico)
 
     def desligar(self, aparelho: str) -> None:
-        """Ela segura o PS até a luz apagar: o controle desliga, e o host fica."""
+        """Quem usa segura o PS até a luz apagar: o controle desliga, e o host fica."""
         with self.tranca:
             fisico = self.fisicos[aparelho]
             antes, fisico.conectado_em, fisico.pareando = fisico.conectado_em, "", False
@@ -263,7 +262,7 @@ class RadioDeMentira:
         return ""
 
     def apertar_ps(self, aparelho: str) -> None:
-        """Ela aperta PS: o controle volta para o host que ELE guarda."""
+        """Quem usa aperta PS: o controle volta para o host que ELE guarda."""
         with self.tranca:
             fisico = self.fisicos[aparelho]
             fisico.pareando = False
@@ -273,7 +272,7 @@ class RadioDeMentira:
                 self._mudar(caminho, bd.APARELHO, "Connected", True)
 
     def chamar_o_host(self, aparelho: str, *, rssi: int | None = None) -> None:
-        """Ela liga só com o PS um controle cujo host ESQUECEU a chave dele."""
+        """Quem usa liga só com o PS um controle cujo host ESQUECEU a chave dele."""
         with self.tranca:
             fisico = self.fisicos[aparelho]
             if not fisico.host or fisico.conectado_em:
@@ -333,7 +332,7 @@ class RadioDeMentira:
             self._entrar_pareado(adaptador, aparelho, conectado=False)
 
     def parear_por_fora(self, adaptador: str, aparelho: str) -> None:
-        """Outro programa pareia ``aparelho`` em ``adaptador`` (ela segurou PS +"""
+        """Outro programa pareia ``aparelho`` em ``adaptador`` (quem usa segurou PS +"""
         with self.tranca:
             fisico = self.fisicos.setdefault(aparelho, Fisico(aparelho, CLASSE_DE_CONTROLE))
             antes = fisico.conectado_em
@@ -348,7 +347,7 @@ class RadioDeMentira:
             self._entrar_pareado(adaptador, aparelho, conectado=True)
 
     def para_o_cabo(self, aparelho: str) -> None:
-        """Ela liga o controle no cabo: sai do rádio (o ``Connected`` cai e o"""
+        """Quem usa liga o controle no cabo: sai do rádio (o ``Connected`` cai e o"""
         self.desligar(aparelho)
 
     def desplugar(self, adaptador: str) -> None:
@@ -614,13 +613,13 @@ def o_clique_no_parear(central: Any, aparelho: str) -> Callable[[], None]:
 
 def o_usuario_pareia(relogio: Relogio, mundo: RadioDeMentira, central: Any, aparelho: str,
                depois_de: float = 2.0) -> None:
-    """Ela segura PS + Create aos ``depois_de`` segundos e, um segundo depois —"""
+    """Quem usa segura PS + Create aos ``depois_de`` segundos e, um segundo depois —"""
     relogio.agendar(depois_de, lambda: mundo.segurar_ps_create(aparelho))
     relogio.agendar(depois_de + 1.0, o_clique_no_parear(central, aparelho))
 
 
 class Relogio:
-    """O relógio da central: ``dormir`` anda o tempo e roda o que ela agendou."""
+    """O relógio da central: ``dormir`` anda o tempo e roda o que foi agendado."""
 
     def __init__(self) -> None:
         self.agora = 1000.0

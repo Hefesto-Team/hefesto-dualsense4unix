@@ -19,8 +19,8 @@ instrumento de script, na MESMA mesa forjada.
     separa do ESPELHO?    | sim (1)        | sim, mas (2)   | sim (3)
     recusa quando não sabe| sim (4)        | sim            | sim
 
-A MESA DE TRÊS, e por que ela tem TRÊS aparelhos e não dois
-------------------------------------------------------------
+A MESA DE TRÊS, e por que tem TRÊS aparelhos e não dois
+------------------------------------------------------
 A mesa real desta casa nunca teve dois aparelhos. Está MEDIDO na
 TRES-CONTROLES-01 (10/08/2026), com o jogo aberto e um controle na mão:
 
@@ -31,14 +31,14 @@ TRES-CONTROLES-01 (10/08/2026), com o jogo aberto e um controle na mão:
 
 **O Steam Input faz um espelho Xbox de CADA controle que enxerga — inclusive
 do nosso vpad** (`docs/protocol/pilha-steam-input-xpad-sdl.md` §2.1-2.2, com o
-mecanismo fechado por `strings(1)` no `steamclient.so` dela: `Microsoft X-Box
+mecanismo fechado por `strings(1)` no `steamclient.so` da máquina: `Microsoft X-Box
 360 pad %u` escrito em `/dev/uinput`, com VID/PID da **Valve**). Dois controles
 vistos, dois espelhos criados. Uma régua testada só contra o físico passa e
 continua cega para metade da mesa.
 
 AS DUAS FALHAS DE DISCRIMINAÇÃO QUE ESTA PROVA ACHOU — e que foram curadas
 --------------------------------------------------------------------------
-Elas não são hipóteses: as duas foram medidas com árvore forjada, e as duas
+Não são hipóteses: as duas foram medidas com árvore forjada, e as duas
 faziam a régua AFIRMAR sobre o aparelho errado, sem `None` e sem aviso.
 
 **(a) A régua 1 dava a P2 o nó de P1, no backend uinput.** `XBOX360_NAME` é
@@ -52,12 +52,12 @@ bloco de P2. O backend uinput é o que está VIVO na máquina do usuário hoje. 
 
 **(b) A régua 3 deixava o espelho HERDAR o nosso carimbo.** O parser tinha UM
 slot de "nó aberto" e atribuía as linhas de `uevent` a quem abrira por último,
-sem olhar de qual thread do Wine elas vinham — embora já extraísse a thread. Um
+sem olhar de qual thread do Wine as linhas vinham — embora já extraísse a thread. Um
 espelho abrindo na thread vizinha ficava com `HID_PHYS=hefesto-vpad` e entrava
 como nosso vpad, com reports e tudo. Cura: o slot passou a ser por thread.
 Guardado por `test_r3_o_espelho_nao_herda_o_nosso_carimbo_da_thread_vizinha`.
 
-RESSALVA HONESTA sobre (b), porque ela muda o tamanho do achado: no único log
+RESSALVA HONESTA sobre (b), porque muda o tamanho do achado: no único log
 real desta casa (`steam-2497900.log`, 72956 linhas) as 67 linhas de
 `udev_add_device` e as 524 de `get_device_subsystem_info` saem TODAS da thread
 `00b4` — a contaminação era latente, não manifesta. E aquele log **não tinha
@@ -67,14 +67,14 @@ log real é o MESMO antes e depois da cura: `RECEBEU DO NOSSO NÓ`, 9914 reports
 
 O LIMITE QUE **NÃO** FOI CURADO, e que é decisão de produto — (2) na matriz
 ---------------------------------------------------------------------
-A régua 2 não CONFUNDE o espelho com o nosso vpad: ela o deixa de fora, e há
-teste que morde. Mas ela também não tem NOME para ele. Um jogo que segure só o
+A régua 2 não CONFUNDE o espelho com o nosso vpad: deixa-o de fora, e há
+teste que morde. Mas também não tem NOME para ele. Um jogo que segure só o
 espelho do nosso vpad — que é o caminho normal quando o Steam Input está
 ligado, e a entrada DELE somos nós, lavada pela Steam — cai no veredito
 `NENHUM`, cujo texto é *"o censo FECHOU (...) e nenhum deles segura o nosso nó
 nem o do físico. Isto é uma afirmação, não uma ausência de dado."*
 
-**É uma afirmação, e ela lê como "a nossa entrada não chegou ao jogo" quando a
+**É uma afirmação, e se lê como "a nossa entrada não chegou ao jogo" quando a
 entrada chegou, um andar acima.** Curar isso é acrescentar uma classe de alvo e
 um sexto veredito ao léxico de cinco — e léxico de veredito é do usuário. Fica
 DECLARADO aqui e no relato, com teste que prende o comportamento de hoje para
@@ -87,7 +87,7 @@ Todas as árvores são forjadas em `tmp_path` e os "nós de /dev" são arquivos
 comuns. Nada é aberto, nada é criado em `/dev/input`, nenhum aparelho é
 tocado — disciplina da TEMPESTADE-DE-TECLADOS-01 aplicada ao lado dos scripts.
 E nenhum teste daqui escreve em `docs/data/`: esta prova constrói a régua, e
-quem preenche o mapa é ela, com o controle na mão.
+quem preenche o mapa é o ensaio no aparelho, com o controle na mão.
 """
 from __future__ import annotations
 
@@ -191,7 +191,7 @@ class Mesa:
         """O nosso vpad no backend uhid: os TRÊS nós que um DualSense publica.
 
         A ordem é a que o kernel produz: o touchpad fica com o menor `eventN`.
-        É ela que dá a mordida do desempate — quem escolhe "o primeiro que
+        É o fixture que dá a mordida do desempate — quem escolhe "o primeiro que
         achou" leva o touchpad e mede o aparelho certo pelo nó errado.
         """
         uniq = uniq or f"02:fe:00:00:00:0{jogador}"
@@ -542,7 +542,7 @@ def test_r2_o_censo_separa_quem_segura_o_nosso_de_quem_segura_o_fisico(
 def test_r2_o_jogo_que_so_segura_o_espelho_cai_em_nenhum_e_esse_e_o_limite(
     tmp_path: Path,
 ) -> None:
-    """O LIMITE DECLARADO — não é defeito curado, é decisão de produto."""
+    """O LIMITE DECLARADO — não é defeito curado, é escolha do produto, declarada."""
     nosso = tmp_path / "dev" / "input" / "event8"
     espelho = tmp_path / "dev" / "input" / "event21"
     for caminho in (nosso, espelho):
@@ -772,7 +772,7 @@ def test_r3_o_espelho_nao_herda_o_nosso_carimbo_da_thread_vizinha(
 def test_r3_o_uevent_continua_grudando_no_no_certo_da_mesma_thread(
     tmp_path: Path,
 ) -> None:
-    """Irmão obrigatório da cura (b): ela separa threads, não desliga o parser."""
+    """Irmão obrigatório da cura (b): separa threads, não desliga o parser."""
     linhas = _cabecalho()
     linhas += _bloco_hid(
         "/dev/input/event30", phys="hefesto-vpad", uniq=UNIQ_P1, destino=ADIADO

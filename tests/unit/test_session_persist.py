@@ -178,9 +178,9 @@ def test_o_marcador_e_espelho_e_nao_vence_o_session_json(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
     """O marcador divergente não decide: vale o `session.json`."""
-    _perfis("Navegação", "vitoria")
+    _perfis("Navegação", "viajante")
     save_last_profile("Navegação")
-    save_active_marker("vitoria")
+    save_active_marker("viajante")
     assert resolve_boot_profile() == "Navegação"
 
 
@@ -188,8 +188,8 @@ def test_so_o_marcador_e_sem_escolha(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
     """Sem `session.json`, o marcador sozinho não vira escolha."""
-    _perfis("vitoria")
-    save_active_marker("vitoria")
+    _perfis("viajante")
+    save_active_marker("viajante")
     assert resolve_boot_profile() is None
 
 
@@ -218,7 +218,7 @@ async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
     from hefesto_dualsense4unix.testing import FakeController
 
-    for name in ("vitoria", "navegacao", "steamjogo"):
+    for name in ("viajante", "navegacao", "steamjogo"):
         save_profile(Profile(name=name, match=MatchAny(), priority=5))
 
     fc = FakeController()
@@ -226,21 +226,21 @@ async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
     store = StateStore()
     mgr = ProfileManager(controller=fc, store=store)
 
-    mgr.activate("vitoria")
-    save_active_marker("vitoria")
+    mgr.activate("viajante")
+    save_active_marker("viajante")
     mgr.activate("navegacao", origin="autoswitch")
     mgr.activate("steamjogo", origin="autoswitch")
     mgr.activate("navegacao", origin="autoswitch")
 
-    assert load_last_profile() == "vitoria"
-    assert read_active_marker() == "vitoria"
+    assert load_last_profile() == "viajante"
+    assert read_active_marker() == "viajante"
     assert store.active_profile == "navegacao"
 
     store2 = StateStore()
     daemon = _BootDaemon(controller=fc, store=store2)
     await restore_last_profile(daemon)  # type: ignore[arg-type]
-    assert store2.active_profile == "vitoria"
-    assert load_last_profile() == "vitoria"
+    assert store2.active_profile == "viajante"
+    assert load_last_profile() == "viajante"
 
 
 @pytest.mark.asyncio
@@ -302,8 +302,8 @@ async def test_o_marcador_divergente_nao_desvia_o_boot(
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing import FakeController
 
-    _perfis("vitoria", "navegacao")
-    for marcador in ("vitoria", "sumiu"):
+    _perfis("viajante", "navegacao")
+    for marcador in ("viajante", "sumiu"):
         save_last_profile("navegacao")
         save_active_marker(marcador)
         fc = FakeController()

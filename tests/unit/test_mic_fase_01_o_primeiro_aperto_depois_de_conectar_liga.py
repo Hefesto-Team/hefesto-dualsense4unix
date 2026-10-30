@@ -37,7 +37,7 @@ class _Resultado:
 
 
 class _EleitorDublado:
-    """`EleitorDeMicrofone` de bancada, com o MESMO contrato do campo `eleito`."""
+    """`EleitorDeMicrofone` de ensaio, com o MESMO contrato do campo `eleito`."""
 
     def __init__(self, *, elege_ok: bool = True, devolve_ok: bool = True) -> None:
         self.chamadas: list[tuple[str, Any]] = []
@@ -49,7 +49,7 @@ class _EleitorDublado:
         del conectados
         self.chamadas.append(("eleger", uniq))
         if not self._elege_ok:
-            return _Resultado(ok=False, motivo="a bancada recusou de propósito")
+            return _Resultado(ok=False, motivo="o dublê recusou de propósito")
         self.eleito = uniq
         return _Resultado(ok=True, ativo=f"hefesto_mic_{uniq[-6:]}")
 
@@ -63,7 +63,7 @@ class _EleitorDublado:
     def passar_o_padrao(
         self, no_ar: list[str], conectados: list[str], calou: str | None = None
     ) -> _Resultado:
-        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`, com o contrato dela."""
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`, com o seu contrato."""
         for candidato in no_ar:
             passado = self.eleger_o_controle(candidato, conectados)
             if passado.ok:
@@ -236,7 +236,7 @@ class TestOPrimeiroAperto:
 
     @pytest.mark.asyncio
     async def test_o_primeiro_aperto_nao_recebe_a_frase_de_recusa(self) -> None:
-        """A frase que ela leu no cartão não pode mais nascer deste gesto."""
+        """A frase que quem usa leu no cartão não pode mais nascer deste gesto."""
         daemon, backend, _eleitor = _a_mesa()
 
         async def corpo() -> None:
@@ -247,7 +247,7 @@ class TestOPrimeiroAperto:
         await _com_os_dois_lacos(daemon, corpo)
 
         recado = _recado(daemon, P1)
-        assert recado is not None, "o gesto dela não deixou recado nenhum"
+        assert recado is not None, "o gesto de quem usa não deixou recado nenhum"
         assert recado.motivo != A_FRASE_DO_JOURNAL, (
             "o aperto para LIGAR voltou com a recusa de quem nunca elegeu — é "
             f"a frase de 01:47:13, palavra por palavra: {recado.motivo!r}"
@@ -298,12 +298,12 @@ class TestOBitDoFirmware:
         )
         assert backend.mudo_no_firmware(P1) is False, (
             "o bit `STATUS_MIC_MUDO` ficou LIGADO com o canal no ar: a voz "
-            "dela não sai, e o ato responde «feito»"
+            "de quem usa não sai, e o ato responde «feito»"
         )
 
     @pytest.mark.asyncio
     async def test_a_posse_do_mudo_volta_ao_kernel(self) -> None:
-        """Escrever o byte toma a posse; não devolvê-la mata o botão dela."""
+        """Escrever o byte toma a posse; não devolvê-la mata o botão do plástico."""
         daemon, backend, _eleitor = _a_mesa()
 
         async def corpo() -> None:
@@ -315,7 +315,7 @@ class TestOBitDoFirmware:
 
         assert (None, P1) in backend.escritas_do_mudo, (
             "a posse do `common[9]` ficou NOSSA depois do gesto — o botão "
-            f"físico dela morre no toque seguinte. Escritas: "
+            f"físico de quem usa morre no toque seguinte. Escritas: "
             f"{backend.escritas_do_mudo!r}"
         )
 
@@ -323,7 +323,7 @@ class TestOBitDoFirmware:
 class TestQuemEstaNoArContinuaPodendoSair:
     @pytest.mark.asyncio
     async def test_quem_esta_no_ar_sai_do_ar_ao_apertar(self) -> None:
-        """A segunda linha da tabela NÃO muda, e é ela que protege o silêncio."""
+        """A segunda linha da tabela NÃO muda, e é essa linha que protege o silêncio."""
         daemon, backend, eleitor = _a_mesa()
 
         async def corpo() -> None:
@@ -340,7 +340,7 @@ class TestQuemEstaNoArContinuaPodendoSair:
             f"o gesto de calar virou um gesto de ligar: {eleitor.chamadas}"
         )
         assert not hotkey._no_ar_da_sessao(daemon).esta(P1), (
-            "o microfone continuou no ar depois de ela mandar calar"
+            "o microfone continuou no ar depois de quem usa mandar calar"
         )
         assert backend.leds.get(P1) is False, (
             "a luz ficou acesa sobre um microfone que saiu do ar"
@@ -362,7 +362,7 @@ class TestQuemEstaNoArContinuaPodendoSair:
         assert ato.ligado is False
         assert ato.canal_no_sistema.feita is False
         assert ato.canal_no_sistema.motivo == A_FRASE_DO_JOURNAL, (
-            "a frase de recusa dela sumiu do caminho da tela — ou a "
+            "a frase de recusa sumiu do caminho da tela — ou a "
             f"reancoragem da fase vazou para dentro do ato: {ato.motivo!r}"
         )
         assert ("eleger", P2) not in eleitor.chamadas, (

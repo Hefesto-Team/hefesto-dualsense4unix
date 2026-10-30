@@ -116,7 +116,7 @@ def test_diretorio_sem_marcador_nem_e_mencionado(raiz: Path) -> None:
     """Um `tmp<8>` que não tem NENHUMA prova de origem some do radar — não é"""
     d = raiz / "tmpzzzzzzzz"
     d.mkdir()
-    (d / "coisa-do-usuario.json").write_text('{"name": "vitoria"}', encoding="utf-8")
+    (d / "coisa-do-usuario.json").write_text('{"name": "pessoal"}', encoding="utf-8")
 
     alvos, recusas, _ = FAXINA.recolher(raiz, UMA_HORA, AGORA)
 
@@ -163,20 +163,20 @@ def test_copia_congelada_recente_e_recusada(raiz: Path) -> None:
 def test_registro_do_pactl_com_outro_conteudo_e_recusado(raiz: Path) -> None:
     """Nome bate, conteúdo não. Alguém pode ter reaproveitado o nome."""
     f = raiz / FAXINA.REGISTRO_DO_PACTL
-    f.write_text("anotacao dela\n", encoding="utf-8")
+    f.write_text("anotação de quem usa\n", encoding="utf-8")
 
     alvos, recusas, _ = FAXINA.recolher(raiz, UMA_HORA, AGORA)
 
     assert alvos == []
     assert [r.caminho for r in recusas] == [f]
-    assert f.read_text(encoding="utf-8") == "anotacao dela\n"
+    assert f.read_text(encoding="utf-8") == "anotação de quem usa\n"
 
 
 def test_link_simbolico_nunca_e_alvo(raiz: Path, tmp_path: Path) -> None:
-    """Um link com nome de alvo apontando para a config dela é o pior acidente"""
+    """Um link com nome de alvo apontando para a config do usuário é o pior acidente"""
     config_do_usuario = tmp_path / "config-do-usuario"
     config_do_usuario.mkdir()
-    (config_do_usuario / "vitoria.json").write_text('{"name": "vitoria"}', encoding="utf-8")
+    (config_do_usuario / "pessoal.json").write_text('{"name": "pessoal"}', encoding="utf-8")
     morto = _pid_morto()
     (raiz / f"hefesto-berco-{morto}").symlink_to(config_do_usuario)
     (raiz / "tmpabcdefgh").symlink_to(config_do_usuario)
@@ -185,7 +185,7 @@ def test_link_simbolico_nunca_e_alvo(raiz: Path, tmp_path: Path) -> None:
 
     assert alvos == []
     assert recusas == []
-    assert (config_do_usuario / "vitoria.json").exists()
+    assert (config_do_usuario / "pessoal.json").exists()
 
 
 def test_entrada_de_outro_dono_nao_e_alvo(
@@ -220,7 +220,7 @@ def test_o_home_do_usuario_nunca_pode_ser_raiz() -> None:
 
 def test_pytest_of_e_pulse_so_entram_no_relato(raiz: Path) -> None:
     """Quem cria não é esta suíte (o pytest tem retenção própria; a libpulse"""
-    (raiz / "pytest-of-vitoriamaria").mkdir()
+    (raiz / "pytest-of-fulano").mkdir()
     (raiz / "pulse-abcdefghijkl").mkdir()
 
     alvos, recusas, relato = FAXINA.recolher(raiz, UMA_HORA, AGORA)
@@ -228,7 +228,7 @@ def test_pytest_of_e_pulse_so_entram_no_relato(raiz: Path) -> None:
     assert alvos == []
     assert recusas == []
     assert dict(relato) == {"pytest-of-": 1, "pulse-": 1}
-    assert (raiz / "pytest-of-vitoriamaria").exists()
+    assert (raiz / "pytest-of-fulano").exists()
 
 
 def test_o_padrao_e_relatar_sem_apagar_nada(
@@ -248,7 +248,7 @@ def test_o_padrao_e_relatar_sem_apagar_nada(
 def test_com_apagar_leva_o_alvo_e_deixa_o_resto(
     raiz: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """A MORDIDA do conjunto: o lixo sai, o arquivo dela FICA — no mesmo `/tmp`,"""
+    """A MORDIDA do conjunto: o lixo sai, o arquivo do usuário FICA — no mesmo `/tmp`,"""
     lixo = _dir_de_migracao(raiz, "tmpabcdefgh")
     quase = _dir_de_migracao(raiz, "tmpbbbbbbbb", {"perfil-do-usuario.json": "{}"})
     do_usuario = raiz / "Screenshot_2026-08-07_15-49-08.png"
@@ -290,8 +290,8 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
     ]
     for arquivo in arquivos:
         assert arquivo.exists(), (
-            f"bancada de migração declarada e AUSENTE do disco: {arquivo.name}. "
-            "Se ela foi renomeada ou substituída, reponte esta lista no mesmo "
+            f"ensaio de migração declarado e AUSENTE do disco: {arquivo.name}. "
+            "Se foi renomeado ou substituído, reponte esta lista no mesmo "
             "commit — foi essa meia-correção que deixou o portão vermelho em 22/08"
         )
 
@@ -302,7 +302,7 @@ def test_o_conjunto_fechado_bate_com_os_testes_de_migracao() -> None:
         escritos |= set(re.findall(r'\(d / "([^"]+\.json)"\)', texto))
         escritos |= set(re.findall(r'^\s*"([a-z_]+\.json)":', texto, re.MULTILINE))
 
-    assert escritos, "a bancada de migração mudou de forma"
+    assert escritos, "o ensaio de migração mudou de forma"
     faltando = sorted(escritos - set(FAXINA.NOMES_DA_MIGRACAO))
     assert faltando == [], (
         "nomes escritos pelos testes de migração e AUSENTES do conjunto "

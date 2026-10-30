@@ -1,4 +1,4 @@
-"""O retratista das abas não pode fotografar dado REAL dela."""
+"""O retratista das abas não pode fotografar dado REAL de quem usa."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ _ESQUEMA_PERMITIDO = "file://"
 def _fonte() -> str:
     assert SCRIPT.is_file(), (
         f"{SCRIPT} sumiu. Se o retratista mudou de casa de novo, este portão "
-        "muda com ele — apagá-lo é deixar a próxima foto publicar o MAC dela."
+        "muda com ele — apagá-lo é deixar a próxima foto publicar o MAC de quem usa."
     )
     return SCRIPT.read_text(encoding="utf-8")
 
@@ -149,7 +149,7 @@ def _navegacoes(arvore: ast.Module) -> list[ast.Call]:
 
 
 def test_o_script_nao_fala_com_o_daemon() -> None:
-    """A foto não pode nascer de estado real: ela vai direto para `docs/`.
+    """A foto não pode nascer de estado real: vai direto para `docs/`.
 
     A verificação é sobre o CÓDIGO, não sobre os comentários — a nota de
     privacidade do cabeçalho cita `daemon.state_full` de propósito, para
@@ -167,9 +167,9 @@ def test_o_script_nao_fala_com_o_daemon() -> None:
 
     assert not achados, (
         f"o retratista das abas passou a falar com o daemon ({', '.join(achados)}). "
-        "O estado real carrega o MAC dos controles dela, e estas fotos vão "
+        "O estado real carrega o MAC dos controles de quem usa, e estas fotos vão "
         "DIRETO para docs/usage/assets/, que é o README — sem revisão humana e "
-        "sem portão que varra imagens. Se a foto precisa de dado real, ela "
+        "sem portão que varra imagens. Se a foto precisa de dado real, "
         "precisa de revisão antes de ser publicada, e o script não pode mais "
         "gravar em docs/."
     )
@@ -181,7 +181,7 @@ def test_a_foto_so_nasce_de_pagina_do_repositorio() -> None:
     assert navegacoes, (
         "não achei nenhuma chamada `.goto(...)` no retratista. Régua que não "
         "encontra o que vigiar não é régua verde — é régua cega. Se a "
-        "navegação mudou de nome, esta régua muda com ela."
+        "navegação mudou de nome, esta régua muda junto."
     )
 
     fora_de_forma: list[str] = []
@@ -196,7 +196,7 @@ def test_a_foto_so_nasce_de_pagina_do_repositorio() -> None:
         "\n  "
         + "\n  ".join(fora_de_forma)
         + "\n\nA foto vai direto para docs/usage/assets/ sem revisão humana. "
-        "A forma cobrada é uma só — `pg.goto(f\"file://{alvo}\")` — e ela "
+        "A forma cobrada é uma só — `pg.goto(f\"file://{alvo}\")` — e "
         "existe para que a régua não dependa de alguém ter previsto o atalho: "
         "concatenação, caminho digitado e endereço de rede reprovam por não "
         "TEREM a forma, não por estarem numa lista."
@@ -219,7 +219,7 @@ def _interpolacao_unica(alvo: ast.expr) -> ast.expr | None:
 
 
 def test_a_pagina_fotografada_tem_um_dono_so() -> None:
-    """O nome que o `goto` abre nasce numa pergunta ao `onde`, e só nela."""
+    """O nome que o `goto` abre nasce numa pergunta ao `onde`, e só nessa."""
     arvore = _arvore()
     sem_procedencia: list[str] = []
     conferidas = 0
@@ -249,7 +249,7 @@ def test_a_pagina_fotografada_tem_um_dono_so() -> None:
         "o retratista fotografa um caminho cuja procedência não chega ao "
         "`onde`:\n  "
         + "\n  ".join(sem_procedencia)
-        + "\n\n`onde.py` é o dono único das duas pastas de página (a bancada e "
+        + "\n\n`onde.py` é o dono único das duas pastas de página (a do ensaio e "
         "o publicado), e é ele que torna a origem da foto uma página do "
         "repositório POR CONSTRUÇÃO. Só a página versionada passa pelos "
         "portões de anonimato desta casa (test_docs_mac_anonimato, por OUI; "
@@ -262,7 +262,7 @@ _FONTES_PROIBIDAS = ("/home/", "~/", "http://", "https://", "/proc/", "/sys/", "
 
 
 def test_nenhum_literal_do_retratista_aponta_para_fora() -> None:
-    """A TERCEIRA METADE, e ela é a rede que as outras duas não alcançam."""
+    """A TERCEIRA METADE, e é a rede que as outras duas não alcançam."""
     achados: list[str] = []
     for no in ast.walk(_arvore()):
         if not isinstance(no, ast.Constant) or not isinstance(no.value, str):
@@ -278,6 +278,6 @@ def test_nenhum_literal_do_retratista_aponta_para_fora() -> None:
         "o retratista tem literal apontando para fora do repositório — o lar de "
         "quem roda, a rede, ou o `/proc`:\n  " + "\n  ".join(achados) + "\n"
         "Uma foto que nasce de qualquer uma dessas fontes pode carregar dado "
-        "dela para dentro de `docs/usage/assets/`, que é versionado. Se o "
+        "de quem usa para dentro de `docs/usage/assets/`, que é versionado. Se o "
         "literal é legítimo (uma mensagem que CITA um caminho, por exemplo), "
         "declare-o com a razão — nunca afrouxe a lista.")

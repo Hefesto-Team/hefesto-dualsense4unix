@@ -12,9 +12,9 @@ O MECANISMO que o forense nomeou:
   1. `identity._path()` resolve o caminho na hora do SAVE, não no import;
   2. o isolamento de `XDG_CONFIG_HOME`/`HOME` é `monkeypatch` de escopo de
      FUNÇÃO (`_hefesto_fake_env`), e o teardown dele DEVOLVE o valor de antes
-     do teste — que é o `~/.config` dela;
+     do teste — que é o `~/.config` de quem roda;
   3. logo, qualquer escrita DEPOIS do teardown (finalizador, `atexit`, thread,
-     subprocesso, singleton que atravessa os casos) cai na bancada.
+     subprocesso, singleton que atravessa os casos) cai no lar de verdade.
 
 A CURA, no `tests/conftest.py`: o `pytest_sessionstart` desvia `HOME` e os
 quatro `XDG_*` para um lar de MENTIRA da sessão inteira, ANTES da coleta. O
@@ -26,7 +26,7 @@ AS TRÊS RÉGUAS DESTE ARQUIVO, e cada uma pega uma coisa diferente:
   dublê. É a cura em uma asserção, e custa zero.
 
   RÉGUA 2 (`TestAEscritaTardiaNaoAlcancaAMesa`) — o fim a fim, num pytest
-  ANINHADO com um `$HOME` de mentira no lugar da bancada. Ela roda a MORDIDA
+  ANINHADO com um `$HOME` de mentira no lugar do lar de verdade. A régua roda a MORDIDA
   nos dois sentidos dentro do próprio caso: com `HEFESTO_SEM_LAR_DE_SESSAO=1`
   o vazamento VOLTA a acontecer (e o teste exige que volte — régua que só sabe
   passar não é régua), e sem a escotilha ele não acontece.
@@ -67,7 +67,7 @@ def repo() -> Path:
 
 @pytest.fixture(scope="session")
 def ambiente_de_fora_do_caso() -> dict[str, str | None]:
-    """As cinco variáveis COMO ELAS ESTÃO fora de todo patch de função."""
+    """As cinco variáveis COMO ESTÃO fora de todo patch de função."""
     return {var: os.environ.get(var) for var, _sub in berco._VARS_DO_LAR}
 
 
@@ -79,7 +79,7 @@ class TestOAmbienteDeForaDoCaso:
             "LAR-DE-SESSAO-01 não armou. Sem ele, o teardown do "
             "`_hefesto_fake_env` devolve `HOME`/`XDG_CONFIG_HOME` para o "
             "`~/.config` REAL de quem roda a suíte, e toda escrita tardia cai "
-            "na mesa dela. Escotilha: " + berco._LAR_DESLIGADO_ENV + "=1."
+            "na máquina de quem roda. Escotilha: " + berco._LAR_DESLIGADO_ENV + "=1."
         )
 
     def test_o_valor_que_o_teardown_repoe_e_o_duble(
@@ -128,13 +128,13 @@ class TestOEspelhoNaoEUmDiretorioVazio:
             alvo = duble.joinpath(*folha)
             assert alvo.is_dir(), f"{folha} não nasceu no dublê"
             assert not alvo.is_symlink(), (
-                f"{'/'.join(folha)} virou SYMLINK para a casa dela — toda "
+                f"{'/'.join(folha)} virou SYMLINK para a casa de quem roda — toda "
                 "escrita tardia do produto atravessa o link e chega ao disco "
                 "de verdade. É o vazamento inteiro, por outra porta."
             )
             assert list(alvo.iterdir()) == [], (
                 f"{'/'.join(folha)} nasceu com conteúdo; o dublê tem de ser "
-                "uma mesa limpa, senão a suíte lê a fila REAL dela."
+                "uma mesa limpa, senão a suíte lê a fila REAL de quem roda."
             )
 
     def test_o_que_nao_e_do_produto_entra_por_symlink(self, tmp_path: Path) -> None:
@@ -149,7 +149,7 @@ class TestOEspelhoNaoEUmDiretorioVazio:
 
         assert (duble / ".gitconfig").is_symlink()
         assert (duble / ".config" / "gtk-3.0").is_symlink(), (
-            "o `gtk-3.0` dela deixou de ser espelhado — o `Gtk.init()` da "
+            "o `gtk-3.0` de quem roda deixou de ser espelhado — o `Gtk.init()` da "
             "coleta perde os ajustes de fonte e as medidas em pixel dos testes "
             "de layout mudam debaixo de quem não mexeu em nada."
         )
@@ -158,7 +158,7 @@ class TestOEspelhoNaoEUmDiretorioVazio:
         ) == "[Settings]\n"
         assert not (duble / ".config").is_symlink(), (
             "`.config` inteiro virou link: o `hefesto-dualsense4unix` de "
-            "dentro dele passou a ser o dela."
+            "dentro dele passou a ser o de quem roda."
         )
 
 
@@ -274,7 +274,7 @@ def test_semeia_a_fila_e_agenda_a_escrita_tardia():
 def _rodar_o_ninho(
     tmp_path: Path, repo: Path, *, com_a_cura: bool
 ) -> tuple[Path, subprocess.CompletedProcess[str]]:
-    """Um pytest ANINHADO com um `$HOME` de mentira no lugar da bancada."""
+    """Um pytest ANINHADO com um `$HOME` de mentira no lugar do lar de verdade."""
     quintal = tmp_path / ("com-a-cura" if com_a_cura else "sem-a-cura")
     quintal.mkdir()
     (quintal / "conftest.py").symlink_to(repo / "tests" / "conftest.py")
@@ -351,7 +351,7 @@ class TestAEscritaTardiaNaoAlcancaAMesa:
         assert rastros == [], (
             "a suíte gravou no `~/.config` de quem a roda DEPOIS do teardown: "
             f"{rastros}. É o defeito de 21/08 inteiro — quatro endereços de "
-            "fixture na fila dela, os DualSense reais empurrados para os "
+            "fixture na fila de quem roda, os DualSense reais empurrados para os "
             "postos 6, 7 e 8, e dois deles sem cor de jogador."
         )
 

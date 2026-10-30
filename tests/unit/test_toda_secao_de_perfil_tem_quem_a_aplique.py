@@ -9,7 +9,7 @@ família ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`` casada com a ``ELO-MUDO-01``: o
 produto responde pelo TRANSPORTE ("o perfil foi reaplicado") e nunca pelo
 EFEITO.
 
-O caso que pagou por este arquivo: ela desliga o Modo Nativo e a vibração não
+O caso que pagou por este arquivo: quem usa desliga o Modo Nativo e a vibração não
 volta ao que o perfil manda. A rota da volta monta o gerente com 6 dos 7
 appliers, e o que falta é o de ``rumble.passthrough``.
 
@@ -22,11 +22,11 @@ a igualdade entre ``APPLIERS_DO_DAEMON`` e os parâmetros do construtor.
 
 O buraco que sobra é o de **fora para dentro**: as duas réguas de lá são
 internas ao par contrato/construtor. Apagar o ``rumble_passthrough_applier``
-dos DOIS ao mesmo tempo deixa as duas verdes — elas voltam a bater — e a seção
+dos DOIS ao mesmo tempo deixa as duas verdes — voltam a bater — e a seção
 ``rumble.passthrough`` do arquivo de perfil do usuário simplesmente deixa de ter
 dono, sem uma linha vermelha em lugar nenhum. **MEDIDO em 25/08/2026**, é o
 segundo caso do mesmo formato que este dia mede: *régua que se confere contra
-ela mesma não é régua*.
+si mesma não é régua*.
 
 A contagem independente aqui é o **esquema do perfil** — ``Profile``, o que é
 gravado no disco do usuário. Cada campo é classificado em :data:`_CLASSIFICACAO`
@@ -52,7 +52,7 @@ O QUE CADA TESTE VIGIA
    sobre o corpo da classe, para que um applier novo no ``apply_emulation``
    sem entrada aqui reprove.
 
-PREÇO DECLARADO DESTA RÉGUA, e ele é real: ela mede a FÁBRICA, não as rotas.
+PREÇO DECLARADO DESTA RÉGUA, e ele é real: mede a FÁBRICA, não as rotas.
 Uma rota que monte o ``ProfileManager`` à mão sem passar por
 ``gerente_do_daemon`` continua invisível daqui — quem a pega é o portão da
 classe do arquivo vizinho, e é por isso que os dois existem. Portão que finge
@@ -258,7 +258,7 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "por applier injetado no `ProfileManager` — ele não é aplicado a "
             "CADA ativação de perfil, e sim ao ENTRAR no modo, que é o único "
             "ponto em que o teclado emulado tem contexto. Injetá-lo na fábrica "
-            "faria toda troca de perfil mexer no teclado dela."
+            "faria toda troca de perfil mexer no teclado de quem usa."
         )
     ),
     "teclado_so_no_jogo": SecaoDireta(
@@ -299,7 +299,7 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
     ),
     "receita_do_tato": SecaoDireta(
         razao=(
-            "O desvio da bancada sobre a receita do estilo: mesma rota do "
+            "O desvio do ensaio sobre a receita do estilo: mesma rota do "
             "`estilo`, lido pelo motor do tato vivo, não pela ativação."
         )
     ),
@@ -318,7 +318,7 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
     ),
     "modificado_em": SecaoDireta(
         razao=(
-            "Ver `criado_em`: a data da última mudança dela, lida pela lista. "
+            "Ver `criado_em`: a data da sua última mudança, lida pela lista. "
             "Nada chega ao controle."
         )
     ),
@@ -433,7 +433,7 @@ def test_todo_campo_do_perfil_esta_classificado() -> None:
         f"SEM CLASSIFICAÇÃO (campo novo em `Profile`): {sem_classificacao} — "
         "diga quem aplica cada um: um applier injetado (`SecaoPorApplier`) ou "
         "escrita direta no controle (`SecaoDireta`, com a razão). Enquanto "
-        "não estiver aqui, uma seção do arquivo dela pode ficar sem dono e "
+        "não estiver aqui, uma seção do arquivo de quem usa pode ficar sem dono e "
         "ninguém vê.\n"
         f"SOBRANDO (não existe mais em `Profile`): {sobrando} — apague a "
         "entrada."
@@ -449,7 +449,7 @@ def test_toda_razao_de_secao_direta_e_razao() -> None:
     )
     assert not curtas, (
         f"estas seções foram declaradas SEM applier sem dizer por quê: {curtas}. "
-        "Escreva por onde a seção chega ao controle (ou por que ela não chega)."
+        "Escreva por onde a seção chega ao controle (ou por que não chega)."
     )
 
 
@@ -507,7 +507,7 @@ def test_a_fabrica_entrega_dono_para_toda_secao_do_perfil() -> None:
     assert not orfas, (
         f"a fábrica montou um gerente com seções SEM QUEM AS APLIQUE: {orfas}.\n"
         "Applier ausente NÃO levanta — a seção é ignorada em silêncio, a "
-        "ativação responde sucesso, e a parte do perfil dela fica como o jogo "
+        "ativação responde sucesso, e a parte do perfil de quem usa fica como o jogo "
         "a deixou. Acrescente o par que falta a `APPLIERS_DO_DAEMON` "
         "(profiles/manager.py) ou, se a seção deixou de ter applier, mude a "
         "entrada da classificação deste portão para `SecaoDireta` com a razão."
@@ -521,7 +521,7 @@ def test_a_regua_sabe_recusar_um_daemon_pela_metade() -> None:
     gerente = gerente_do_daemon(daemon)
     assert _secoes_orfas(gerente) == ["rumble.passthrough"], (
         "a régua não viu a seção órfã de um daemon a que falta o método — "
-        "ela estaria medindo a si mesma."
+        "estaria medindo a si mesma."
     )
 
 

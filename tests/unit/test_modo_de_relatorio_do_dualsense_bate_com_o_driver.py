@@ -3,7 +3,7 @@
 O DEFEITO QUE ESTE ARQUIVO EXISTE PARA NÃO DEIXAR VOLTAR
 --------------------------------------------------------
 Em 03/09/2026 uma leva peneirou repositório público e trouxe FATO para cinco
-linhas de `plataforma.*` do DualSense — a maior delas sendo que **não existe
+linhas de `plataforma.*` do DualSense — a maior sendo que **não existe
 `SET_REPORT_MODE` no DualSense**: por rádio o aparelho nasce mandando o `0x01`
 de 10 bytes e só passa ao `0x31` de 78 depois que o host faz um `GET_REPORT`
 num feature report. Quem trouxe isso trouxe números: `0x09`, `0x20`, `0x05`,
@@ -13,7 +13,7 @@ num feature report. Quem trouxe isso trouxe números: `0x09`, `0x20`, `0x05`,
 casa sabe conferir.** A docstring do `check_paridade_transporte.py` mediu essa
 cegueira e a escreveu com todas as letras: o byte do LED de jogador trocado de
 11 para 47 passou com `rc=0`. A régua daquele portão cobra a PROVENIÊNCIA de
-quem escreveu, não o conteúdo — de propósito, porque sem hardware e sem rede ela
+quem escreveu, não o conteúdo — de propósito, porque sem hardware e sem rede a régua
 não pode cobrar mais.
 
 Só que **destes** números uma boa parte NÃO precisa de hardware nem de rede para
@@ -32,7 +32,7 @@ O QUE ELE MORDE
    nunca vê o modo básico morre, e a célula passa a mentir.
 3. **A assimetria estrutural entre os dois parsers** — o do DualShock 4 tem
    ramo para o report mínimo por rádio, o do DualSense não tem. É a
-   confirmação mais forte que dá para ter sem tocar no aparelho, e ela é
+   confirmação mais forte que dá para ter sem tocar no aparelho, e é
    frágil: um patch futuro que acrescente o ramo ao DualSense derruba o
    argumento, e é bom que derrube ruidosamente.
 4. **A honestidade de grau.** Nada foi ao aparelho nesta leva. Toda célula que
@@ -40,7 +40,7 @@ O QUE ELE MORDE
    `ate_onde_foi`. Um `medido` aqui seria mentira que o portão de paridade não
    pega — ele confere a FORMA (quem afirma diz de onde sabe), nunca a origem.
 5. **As duas linhas classificadas como NÃO-CANAL** — `handshake_usb` e
-   `taxa_relatorios.botao` — não podem ganhar `report_id` de aparelho. Elas
+   `taxa_relatorios.botao` — não podem ganhar `report_id` de aparelho. As duas
    foram decididas: uma é vocabulário de outro controle, a outra é feature
    nossa de medição. Escrever um `0x..` ali é a próxima pessoa caçando o
    fantasma que esta leva foi mandada matar.
@@ -143,7 +143,7 @@ def test_o_numero_que_o_mapa_cita_e_o_numero_do_driver(
     assert achado is not None, (
         f"`#define {nome}` sumiu do driver desta máquina. As células de "
         "`plataforma.modo_relatorio@dualsense` e a leitura em "
-        f"{LEITURA.name} citam esse nome; se ele mudou, elas envelheceram junto."
+        f"{LEITURA.name} citam esse nome; se ele mudou, as células envelheceram junto."
     )
     assert achado.group(1) == valor, (
         f"`{nome}` vale {achado.group(1)!r} no driver e o mapa cita {valor!r}. "
@@ -249,7 +249,7 @@ def test_a_linha_que_nao_e_canal_do_aparelho_nao_ganha_report_id(
         achados = re.findall(r"0x[0-9A-Fa-f]{2}", celula)
         assert not achados, (
             f"{chave}@dualsense ganhou {achados} em `{lado}_report_id`. Esta linha "
-            "foi DECIDIDA como não sendo canal do aparelho — se a decisão caiu, ela "
+            "foi DECIDIDA como não sendo canal do aparelho — se a decisão caiu, a "
             "cai com medição e com nota datada, não escrevendo um id por cima."
         )
         assert linha[f"{lado}_de_onde_sei"].strip(), (
@@ -258,15 +258,15 @@ def test_a_linha_que_nao_e_canal_do_aparelho_nao_ganha_report_id(
 
 
 def test_a_leitura_da_leva_continua_na_arvore() -> None:
-    """As células apontam a leitura completa; ela não pode sumir sem aviso."""
+    """As células apontam a leitura completa; a leitura não pode sumir sem aviso."""
     assert LEITURA.is_file(), (
-        f"{LEITURA} sumiu, e cinco linhas do mapa apontam para ela — inclusive a "
-        "lista do que a internet NÃO sabe, que é o que a bancada vai ensaiar"
+        f"{LEITURA} sumiu, e cinco linhas do mapa apontam para o arquivo — inclusive a "
+        "lista do que a internet NÃO sabe, que é o que o ensaio no aparelho vai medir"
     )
     texto = LEITURA.read_text(encoding="utf-8")
     assert "O QUE A INTERNET NÃO SABE" in texto, (
-        "a seção do que NÃO se achou saiu da leitura. Ela é entrega tanto quanto o "
-        "que se achou: é ela que diz onde só o aparelho responde"
+        "a seção do que NÃO se achou saiu da leitura. A seção é entrega tanto quanto o "
+        "que se achou: é a seção que diz onde só o aparelho responde"
     )
 
 
@@ -289,9 +289,9 @@ def test_os_ids_que_a_celula_do_gatilho_nomeia_sao_os_do_driver(
     assert citados == set(IDS_DO_GATILHO), (
         "`plataforma.modo_relatorio@dualsense.radio_comando` nomeia "
         f"{sorted(citados)} e o argumento da célula precisa de exatamente "
-        f"{sorted(IDS_DO_GATILHO)}: os dois reports de entrada que ela contrasta "
+        f"{sorted(IDS_DO_GATILHO)}: os dois reports de entrada que a leitura contrasta "
         "e os três features cuja leitura dispara a troca. Um id a mais ou a "
-        "menos é outra afirmação, e ela precisa de outra fonte."
+        "menos é outra afirmação, e precisa de outra fonte."
     )
 
     for id_citado, define in sorted(IDS_DO_GATILHO.items()):

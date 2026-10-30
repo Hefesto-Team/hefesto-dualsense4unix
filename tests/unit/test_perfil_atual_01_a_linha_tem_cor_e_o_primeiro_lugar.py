@@ -1,9 +1,9 @@
-"""PERFIL-ATUAL-01 — o perfil que ELA ativou tem cor e é o primeiro da lista."""
+"""PERFIL-ATUAL-01 — o perfil ativado por quem usa tem cor e é o primeiro da lista."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("PERFIL-ATUAL-01 (a linha dela tem cor e o primeiro lugar)")
+exigir_gi_real("PERFIL-ATUAL-01 (a linha ativa tem cor e o primeiro lugar)")
 
 from pathlib import Path
 from typing import Any
@@ -46,7 +46,7 @@ def _mesa_do_usuario() -> list[Profile]:
     return [
         _catch_all("Ação", 5),
         _do_jogo("Pragmata", 85),
-        _catch_all("vitoria", 5),
+        _catch_all("viajante", 5),
     ]
 
 
@@ -99,13 +99,13 @@ class TestOFatoDoGestoDoUsuario:
         """O `active_profile.txt` não decide nada: vale o `session.json`."""
         from hefesto_dualsense4unix.profiles.loader import save_profile
 
-        for nome in ("Navegação", "vitoria"):
+        for nome in ("Navegação", "viajante"):
             save_profile(Profile(name=nome, match=MatchAny()), origem="regua")
         cfg = config_dir(ensure=True)
         (cfg / "session.json").write_text(
             '{"last_profile": "Navegação"}', encoding="utf-8"
         )
-        (cfg / "active_profile.txt").write_text("vitoria\n", encoding="utf-8")
+        (cfg / "active_profile.txt").write_text("viajante\n", encoding="utf-8")
         assert perfil_que_o_usuario_ativou() == "Navegação"
 
     def test_disco_ilegivel_nao_derruba_a_aba(self, monkeypatch) -> None:
@@ -124,20 +124,20 @@ class TestOrdemDeExibicao:
 
     def test_o_ativo_vai_para_a_frente(self) -> None:
         perfis = _mesa_do_usuario()
-        nomes = [p.name for p in ordem_de_exibicao(perfis, "vitoria")]
-        assert nomes == ["vitoria", "Ação", "Pragmata"]
+        nomes = [p.name for p in ordem_de_exibicao(perfis, "viajante")]
+        assert nomes == ["viajante", "Ação", "Pragmata"]
 
     def test_o_resto_nao_e_reembaralhado(self) -> None:
         perfis = _mesa_do_usuario()
         nomes = [p.name for p in ordem_de_exibicao(perfis, "Ação")]
-        assert nomes == ["Ação", "Pragmata", "vitoria"]
+        assert nomes == ["Ação", "Pragmata", "viajante"]
 
     def test_sem_ativo_a_ordem_de_carga_fica_intacta(self) -> None:
         perfis = _mesa_do_usuario()
         assert [p.name for p in ordem_de_exibicao(perfis, None)] == [
             "Ação",
             "Pragmata",
-            "vitoria",
+            "viajante",
         ]
 
     def test_nome_que_nao_existe_na_lista_nao_muda_nada(self) -> None:
@@ -146,14 +146,14 @@ class TestOrdemDeExibicao:
         assert [p.name for p in ordem_de_exibicao(perfis, "apagado")] == [
             "Ação",
             "Pragmata",
-            "vitoria",
+            "viajante",
         ]
 
     def test_nao_devolve_a_lista_de_entrada(self) -> None:
         """Quem chama continua com a ordem de CARGA na mão — ver EMPATE-01/E2."""
         perfis = _mesa_do_usuario()
-        saida = ordem_de_exibicao(perfis, "vitoria")
+        saida = ordem_de_exibicao(perfis, "viajante")
         assert saida is not perfis
-        assert [p.name for p in perfis] == ["Ação", "Pragmata", "vitoria"]
+        assert [p.name for p in perfis] == ["Ação", "Pragmata", "viajante"]
 
 

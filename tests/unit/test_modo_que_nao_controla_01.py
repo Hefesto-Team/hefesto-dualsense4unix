@@ -1,31 +1,31 @@
 """MODO-QUE-NAO-CONTROLA-01 — "Controlar o PC" que entra sem controlar o PC.
 
-Medido com ela ao vivo em 09/08/2026, às 23h50. O usuário escolheu "Controlar o PC",
-clicou no "Aplicar" e relatou: *"cliquei em aplicar e nada"*.
+Medido ao vivo em 09/08/2026, às 23h50. O usuário escolheu "Controlar o PC",
+clicou no "Aplicar" e relatou que nada aconteceu.
 
 O modo ENTROU — o journal prova (`native_mode_changed native=False`,
 `gamepad_controller_grab state=off`, `mouse_preference_restored enabled=False
 ok=True`) — e o controle não movia o cursor, porque a preferência de mouse
-persistida dela estava desligada.
+persistida do usuário estava desligada.
 
 **O daemon fez o certo, e continua fazendo:** `mouse.emulation.restore` restaura
-a preferência dela (HARM-06), nunca impõe uma. O defeito era o SILÊNCIO: nenhuma
-superfície dizia por que o modo entrou sem fazer nada, e ela só descobriu quando
-alguém leu o journal por ela.
+a preferência do usuário (HARM-06), nunca impõe uma. O defeito era o SILÊNCIO: nenhuma
+superfície dizia por que o modo entrou sem fazer nada, e o usuário só descobriu quando
+alguém leu o journal.
 
 A cura é a tela dizer. Estes testes trancam as duas metades:
 
-1. a frase certa nos casos certos, e **nenhuma frase** nos casos em que ela
+1. a frase certa nos casos certos, e **nenhuma frase** nos casos em que a frase
    seria alarme falso (fora do desktop, payload incompleto, transição em voo);
 2. o plano do modo desktop passa pela porta do arranjo, e é o DAEMON quem
    decide o mouse ali.
 
 NOTA DATADA — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01). A segunda metade
-dizia *"se alguém trocar a cura pela outra saída (o modo LIGAR o mouse), este
-teste reprova e a decisão volta para ela"*. A pergunta foi à sessão dos desenhos
-com a letra dela de 09/08 junto, e foi decidida em 29/09 pelo padrão de produto, com
-ela dormindo: D-2909-A-NAVEGACAO-LIGA-O-MOUSE — entrar na Navegação liga o
-mouse, pelo chip e pelo PS + R3. Ela pode desfazer. A razão está na classe
+dizia que, se alguém trocasse a cura pela outra saída (o modo LIGAR o mouse), este
+teste reprovaria e a decisão voltaria ao produto. A pergunta foi à sessão dos desenhos
+com o relato de 09/08 junto, e foi decidida em 29/09 pelo padrão de produto:
+D-2909-A-NAVEGACAO-LIGA-O-MOUSE — entrar na Navegação liga o
+mouse, pelo chip e pelo PS + R3. Quem usa pode desfazer. A razão está na classe
 `TestAEntradaLigaOMouse`.
 """
 from __future__ import annotations
@@ -83,7 +83,7 @@ def _estado(
 
 
 class TestAFraseCerta:
-    """O caso dela, e os dois irmãos que o mesmo silêncio cobria."""
+    """O caso medido, e os dois irmãos que o mesmo silêncio cobria."""
 
     def test_o_caso_do_usuario_mouse_desligado_no_desktop(self) -> None:
         """23h50 de 09/08: modo de pé, mouse desligado, tela calada."""
@@ -204,7 +204,7 @@ class TestAEntradaLigaOMouse:
         O `mouse.emulation.restore` NÃO levava `origin`, e era certo: restaurar
         preferência persistida é reconciliação por definição. O arranjo é outra
         coisa — ele é o clique do usuário, e o `origin="manual"` é o que FURA o lock
-        de 30 s de `apply_profile_mouse` para que o modo que ela acabou de pedir
+        de 30 s de `apply_profile_mouse` para que o modo que quem usa acabou de pedir
         não seja adiado por um toggle de segundos antes.
 
         NOTA DATADA — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01): a entrada

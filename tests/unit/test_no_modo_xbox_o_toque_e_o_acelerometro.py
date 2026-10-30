@@ -108,7 +108,7 @@ class TestOPerfil:
         assert volta == mira
 
     def test_quem_escreveu_leva_a_chave_inclusive_o_nenhum(self) -> None:
-        """A peça que APAGOU o toque por cima do perfil tem opinião, e ela vai."""
+        """A peça que APAGOU o toque por cima do perfil tem opinião, e a opinião vai."""
         dump = ProfileMovimentoConfig(
             toque="nenhum", acelerometro="analogico_esquerdo").model_dump()
         assert dump["toque"] == "nenhum"
@@ -121,7 +121,7 @@ class TestOPerfil:
             ProfileMovimentoConfig(acelerometro="mouse")
 
     def test_a_peca_sobrepoe_so_o_que_escreveu(self) -> None:
-        """O chip do toque da peça não apaga a mira que ela herda do perfil."""
+        """O chip do toque da peça não apaga a mira que a peça herda do perfil."""
         mesa = ProfileMovimentoConfig(destino="analogico_direito", sensibilidade=8)
         peca = ProfileMovimentoConfig(toque="zonas")
         arranjo = rot.arranjo_da_peca(mesa, peca)
@@ -757,14 +757,14 @@ class TestOsJogadores2a4:
         vpads = _mesa_dos_secundarios(monkeypatch, arranjo, _HubDaInclinacao())
         assert vpads[_P2].analog[0]["lx"] > 128, "o P2 inclinou e não andou"
         assert vpads[_P3].analog[0]["lx"] == 128, (
-            "o P3 tinha o acelerômetro DESLIGADO por ela e andou assim mesmo")
+            "o P3 tinha o acelerômetro DESLIGADO por quem usa e andou assim mesmo")
         assert vpads[_P4].analog[0]["lx"] == 128, "o P4 estava na mesa e andou"
 
 
 def test_o_l2_da_zona_liga_a_mira_de_quem_nao_alcanca_o_l2(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O toque entra na MÃO antes da Mira: a zona do L2 é o L2 do gatilho dela."""
+    """O toque entra na MÃO antes da Mira: a zona do L2 é o L2 do gatilho da peça."""
 
     class _Hub:
         def velocidade_do_movimento(self, uniq: str) -> Any:
@@ -853,7 +853,7 @@ def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def _servidor(tmp_path: Path) -> IpcServer:
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
-    perfil = Profile(name="Bancada", match=MatchAny(type="any"))
+    perfil = Profile(name="Ensaio", match=MatchAny(type="any"))
     save_profile(perfil)
     _daemon, servidor = _mesa_de_verdade(tmp_path, _hub({}, {}), perfil)
     servidor.store.set_active_profile(perfil.name)
@@ -876,10 +876,10 @@ class TestOIpc:
         assert corpo["ligada"] is False, "a inclinação acendeu a Mira"
         corpo = _mira_set(servidor, uniq=_P3, toque="zonas")
         assert corpo["toque"] == "zonas"
-        dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
+        dele = load_profile("Ensaio").controllers["aabbcc000003"].movimento
         assert dele is not None
         assert dele.model_fields_set == {"acelerometro", "toque"}, (
-            "o chip gravou campos que ela não mexeu")
+            "o chip gravou campos que quem usa não mexeu")
         assert dele.acelerometro == "analogico_esquerdo" and dele.toque == "zonas"
         entradas: list[dict[str, Any]] = [{"uniq": _P2}, {"uniq": _P3}]
         servidor._merge_mira(entradas)
@@ -903,7 +903,7 @@ class TestOIpc:
         servidor = _servidor(tmp_path)
         corpo = _mira_set(servidor, uniq=_P2, inclinacao="analogico_direito")
         assert corpo["inclinacao"] == "analogico_direito"
-        dele = load_profile("Bancada").controllers["aabbcc000002"].movimento
+        dele = load_profile("Ensaio").controllers["aabbcc000002"].movimento
         assert dele is not None and dele.acelerometro == "analogico_direito"
         entradas: list[dict[str, Any]] = [{"uniq": _P2}]
         servidor._merge_mira(entradas)
@@ -913,7 +913,7 @@ class TestOIpc:
         assert corpo["inclinacao"] == "nenhum"
         servidor._merge_mira(entradas)
         assert entradas[0]["mira"]["inclinacao"] == "nenhum"
-        dele = load_profile("Bancada").controllers["aabbcc000002"].movimento
+        dele = load_profile("Ensaio").controllers["aabbcc000002"].movimento
         assert dele is not None and "acelerometro" in dele.model_fields_set, (
             "a peça que apagou a inclinação perdeu a opinião no disco")
 
@@ -936,11 +936,11 @@ class TestOIpc:
         for pedido in ({"toque": "cursor"}, {"inclinacao": "analogico_direito"}):
             corpo = _mira_set(servidor, uniq=_P3, **pedido)
             assert corpo["status"] == "nativo"
-        assert not (load_profile("Bancada").controllers or {})
+        assert not (load_profile("Ensaio").controllers or {})
 
 
 def test_um_perfil_com_o_toque_por_peca_chega_ao_tique() -> None:
-    """O perfil do jogo diz o toque de UMA peça, e só ela o leva."""
+    """O perfil do jogo diz o toque de UMA peça, e só essa peça o leva."""
     store = SimpleNamespace()
     gerente = ProfileManager.__new__(ProfileManager)
     gerente.store = store  # type: ignore[attr-defined]
