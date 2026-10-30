@@ -32,7 +32,7 @@ A linha existia; o efeito, não.
 SÃO DUAS TRANCAS, E ISSO SE DESCOBRIU MORDENDO. Passar ``include_auto=True``
 sozinho **não** reprova nada: o filtro ``only_fields`` derruba o campo depois,
 porque ``campos`` só ganha ``lightbar``/``lightbar_brightness``/``player_leds``.
-A régua não é redundante por isso — ela mede o EFEITO, e o efeito só muda quando
+A régua não é redundante por isso — mede o EFEITO, e o efeito só muda quando
 as duas caem.
 
 A MORDIDA, então, é a regressão plausível — a que alguém escreveria querendo
@@ -60,7 +60,7 @@ P2 = "aa:bb:cc:00:00:02"
 
 
 def _draft_de_mentira() -> DraftConfig:
-    """Um draft com a cor global e o automático LIGADO — o estado dela."""
+    """Um draft com a cor global e o automático LIGADO — o estado de quem usa."""
     molde = Profile(name="duble-da-paleta", match=MatchAny())
     molde.leds.lightbar = COR_GLOBAL
     molde.leds.auto_player_colors = True

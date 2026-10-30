@@ -10,18 +10,18 @@ vezes na mesma noite::
 O handler devolvia ``asdict(new_cfg)``, e o ``DaemonConfig`` carrega
 ``orcamento_da_mesa`` — que **nasce `None`** (serializável, e por isso nenhum
 teste de esquema pegava) e em RUNTIME recebe uma ``lambda`` que o daemon injeta.
-``json.dumps`` explode em cima dela.
+``json.dumps`` explode em cima da lambda.
 
 **O PIOR DESFECHO NÃO É O ERRO — É O TRABALHO FEITO SEM RESPOSTA.**
 ``reload_config`` roda antes do ``return``: a config nova PASSA A VALER, e o
 cliente fica pendurado até o timeout sem saber disso. Quem tentar de novo
-recarrega duas vezes. Medido na bancada: `daemon.reload` por socket dá
+recarrega duas vezes. Medido no ensaio: `daemon.reload` por socket dá
 `TimeoutError`, e o daemon cospe um traceback de quarenta linhas.
 
 POR QUE A RÉGUA NÃO LISTA O CAMPO
 ----------------------------------
 Cobrar ``orcamento_da_mesa`` pelo nome envelheceria no dia do oitavo applier — e
-envelheceria em SILÊNCIO, porque só o journal acusa. Ela pergunta ao ``json``, e
+envelheceria em SILÊNCIO, porque só o journal acusa. A régua pergunta ao ``json``, e
 por isso pega qualquer campo novo que não atravesse, sem ninguém vir aqui.
 
 A MORDIDA: devolva ``asdict(new_cfg)`` cru no handler e

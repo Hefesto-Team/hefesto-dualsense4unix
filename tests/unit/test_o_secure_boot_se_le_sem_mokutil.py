@@ -10,7 +10,7 @@ driver. As frases falavam de «um controle Nintendo».
 
 A cura: a efivars diz o Secure Boot (o último byte da ``SecureBoot-*``); a
 chave (a que o ``dkms`` usa para assinar, resolvida como ele resolve) se
-confere pelo ``mokutil`` quando ele existe e, sem ele, pelos bytes dela na
+confere pelo ``mokutil`` quando ele existe e, sem ele, pelos bytes da chave na
 lista que o shim expõe; e sem a chave o
 ``dkms_install_patched_module`` NÃO instala — o de fábrica fica, e o aviso diz
 o passo da MOK com o DualSense no nome.

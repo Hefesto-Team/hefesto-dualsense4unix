@@ -36,7 +36,7 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileMod
 from hefesto_dualsense4unix.utils import session
 
 P1 = "aabbcc000001"
-PERFIL = "Bancada"
+PERFIL = "Ensaio"
 
 
 class _Vpad:

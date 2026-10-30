@@ -1,4 +1,4 @@
-"""Nenhuma linha de ordem existe sem dizer de onde ela veio."""
+"""Nenhuma linha de ordem existe sem dizer de onde veio."""
 from __future__ import annotations
 
 import ast
@@ -14,7 +14,7 @@ FONTE = Path(ordens_da_mesa.__file__)
 
 
 def _construcoes_de_linha() -> list[ast.Call]:
-    """Toda chamada `Linha(...)` do módulo, ache ela um caminho de execução ou não."""
+    """Toda chamada `Linha(...)` do módulo, ache um caminho de execução ou não."""
     arvore = ast.parse(FONTE.read_text(encoding="utf-8"))
     return [
         no

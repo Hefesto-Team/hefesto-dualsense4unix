@@ -45,7 +45,7 @@ class PonteDeMentira:
 
 @pytest.fixture
 def casa(tmp_path, monkeypatch):
-    """Uma pasta de perfis de mentira, e o leitor apontado para ela."""
+    """Uma pasta de perfis de mentira, e o leitor apontado para a pasta."""
     from pacotes import perfil
 
     pasta = tmp_path / "profiles"
@@ -78,7 +78,7 @@ def test_os_quatro_do_rodape_valem_em_qualquer_aba():
             assert pacotes.gesto_da_pagina(pagina, nome) is not None, (
                 f"{nome} não foi achado a partir de {pagina} — o rodapé é o "
                 f"mesmo nas dez, e um `('*', …)` que não resolve deixa quatro "
-                f"botões mudos em todas elas.")
+                f"botões mudos em todas as abas.")
 
 
 def test_importar_nao_sobrescreve_perfil_do_usuario(casa, ctx, tmp_path):
@@ -104,7 +104,7 @@ def test_importar_recusa_o_que_nao_e_perfil(casa, ctx, tmp_path):
     with pytest.raises(ValueError, match="não é um perfil"):
         _g("importar")(ctx, {}, p)
     assert list(casa.glob("*.json")) == [], (
-        "recusou e escreveu na pasta dela assim mesmo — a validação tem de vir "
+        "recusou e escreveu na pasta de quem usa assim mesmo — a validação tem de vir "
         "ANTES de qualquer escrita")
 
 

@@ -177,7 +177,7 @@ class TestOPsL3DeQualquerControleAndaOModoDeTodos:
 
 
 class _LeitorPassivoDaMesa:
-    """O leitor PASSIVO do ``SensorHub`` (STATUS-04), sem grab, sobre a mesa da bancada."""
+    """O leitor PASSIVO do ``SensorHub`` (STATUS-04), sem grab, sobre a mesa do ensaio."""
 
     def __init__(self, mesa: Any, uniq: str, node: Any) -> None:
         self._mesa = mesa
@@ -201,7 +201,7 @@ class _LeitorPassivoDaMesa:
 
 
 class MesaSemCoop(MesaDosAtalhos):
-    """A bancada dos atalhos com o ``SensorHub`` real no daemon, movido a cada tique."""
+    """O ensaio dos atalhos com o ``SensorHub`` real no daemon, movido a cada tique."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, **kw: Any) -> None:
         super().__init__(monkeypatch, **kw)

@@ -67,7 +67,7 @@ def _sob(conta: list[tuple[str, str]], raiz: Path | str, *eventos: str) -> list[
 
 @pytest.fixture
 def raizes(tmp_path: Path) -> Iterator[tuple[Path, Path]]:
-    """``(entradas, nós)`` de mentira, com o dono do processo armado nelas."""
+    """``(entradas, nós)`` de mentira, com o dono do processo armado nas entradas."""
     nos = tmp_path / "dev"
     entradas = nos / "input"
     entradas.mkdir(parents=True)
@@ -1468,7 +1468,7 @@ class _SoOCache(IpcHandlersMixin):
 def mesa_do_vpad(
     tmp_path: Path, raizes: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
 ) -> _MesaDoVpad:
-    """A mesa de 29/09 (quatro vpads, 54 nós), com o produto apontado para ela."""
+    """A mesa de 29/09 (quatro vpads, 54 nós), com o produto apontado para a mesa."""
     entradas, nos = raizes
     mesa = _MesaDoVpad(tmp_path, entradas, nos)
     for jogador in range(1, 5):

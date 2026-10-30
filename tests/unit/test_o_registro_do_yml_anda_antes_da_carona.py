@@ -2,7 +2,7 @@
 
 A carona só toca o `.yml` de um jogo excluído do Lutris depois de o registro da volta
 acompanhar; o registro já velho se cura só com prova byte a byte; e a recusa calada
-(a ordem de 13/09) tem a linha dela no CSV, com uma régua que a sustenta.
+(a ordem de 13/09) tem a linha própria no CSV, com uma régua que a sustenta.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from tests.unit import a_exclusao_de_antes as antiga
 
 @pytest.fixture(autouse=True)
 def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui as quatro estão ligadas."""
     from tests.unit.as_caixas_das_extensoes import ligar
 
     ligar(monkeypatch)
@@ -203,7 +203,7 @@ def test_o_registro_velho_sem_o_xalia_se_cura_pela_prova_byte_a_byte(
 
 def test_o_xalia_posto_pelo_usuario_com_outro_valor_nao_vira_nosso(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem a prova byte a byte o par segue como dela: ninguém reanota, a volta o deixa."""
+    """Sem a prova byte a byte o par segue como do usuário: ninguém reanota, a volta o deixa."""
     yml, _ = _excluido_sem_o_xalia(_lar, monkeypatch)
     _com_o_xalia_no_disco(yml, valor="0")
     escrito = yml.read_text()
@@ -213,7 +213,7 @@ def test_o_xalia_posto_pelo_usuario_com_outro_valor_nao_vira_nosso(
     assert _o_registro() == registro_antes
     assert lx.tirar(_JANELA, lar=_lar) == "removido"
     env = _env_do_yml(yml)
-    assert env.get(_XALIA) == "0", f"a volta apagou o valor dela:\n{yml.read_text()}"
+    assert env.get(_XALIA) == "0", f"a volta apagou o valor do usuário:\n{yml.read_text()}"
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in env
 
 

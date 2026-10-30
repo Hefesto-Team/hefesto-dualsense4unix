@@ -26,8 +26,8 @@ def test_a_coluna_quem_decidiu_existe() -> None:
     assert linhas, "o registro está vazio"
     for coluna in ("quem_decidiu", "revoga"):
         assert coluna in linhas[0], (
-            f"a coluna `{coluna}` sumiu de {CSV_.name}. Sem ela o registro "
-            "volta a guardar 'decisão dela' e 'decisão em nome dela' na mesma "
+            f"a coluna `{coluna}` sumiu de {CSV_.name}. Sem a coluna o registro "
+            "volta a guardar 'decisão de quem usa' e 'decisão por delegação' na mesma "
             "coluna, que é o defeito medido em 05/09/2026"
         )
 
@@ -125,7 +125,7 @@ def test_o_lote_de_04_09_so_vira_do_usuario_com_a_prova() -> None:
     ]
     assert not sem_prova, (
         "estas linhas do lote de 04/09 dizem `ela` sem o carimbo "
-        f"`{MARCA_O_USUARIO}` com a palavra dela na `escolha`: {sem_prova}"
+        f"`{MARCA_O_USUARIO}` com a palavra de quem usa na `escolha`: {sem_prova}"
     )
 
 
@@ -153,9 +153,9 @@ def test_o_registro_tem_as_colunas_que_mordem() -> None:
 def test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado() -> None:
     """Uma decisão sem preço é uma pergunta sem contexto.
 
-    `decidida` (e os degraus acima dela na escada: `implementada`, `feita`, `no ar`)
-    e `caduca` já foram respondidas por ela (a caduca, substituída por outra fala
-    do usuário); cobrar o preço delas castiga quem fez a correção certa.
+    `decidida` (e os degraus acima da decidida na escada: `implementada`, `feita`, `no ar`)
+    e `caduca` já foram respondidas por quem usa (a caduca, substituída por outra fala
+    do usuário); cobrar o preço das duas castiga quem fez a correção certa.
     MORDE: esvaziar o `preco_do_outro_lado` de uma linha que espera a palavra de produto.
     """
     import sys
@@ -169,7 +169,7 @@ def test_toda_decisao_aberta_traz_a_pergunta_e_o_preco_do_outro_lado() -> None:
             continue
         assert (d.get("preco_do_outro_lado") or "").strip(), (
             f"a decisão {d.get('id')} não diz o preço de decidir para o outro "
-            "lado: ela chegaria como pendência, não como escolha informada"
+            "lado: a decisão chegaria como pendência, não como escolha informada"
         )
         assert (d.get("a_pergunta") or "").strip(), (
             f"a decisão {d.get('id')} não faz pergunta nenhuma"

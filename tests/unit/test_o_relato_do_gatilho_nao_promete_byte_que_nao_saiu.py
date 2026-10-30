@@ -5,7 +5,7 @@ O DEFEITO, MEDIDO EM 23/08/2026
 A ELO-MUDO-01 (22/08) fechou o silêncio: gatilho e luz passaram a aparecer no
 relatório de ativação em vez de sumir quando davam certo. O que o usuário escreveu
 foi ``relatorio.setdefault(categoria, "aplicado")`` — a palavra FIXA. Com o
-perfil ``Sackboy`` dela e a mesa vazia, o relatório saía assim::
+perfil ``Sackboy`` real e a mesa vazia, o relatório saía assim::
 
     bytes escritos no aparelho: 0
     relatorio: {'led': 'aplicado', 'trigger': 'aplicado'}
@@ -121,7 +121,7 @@ class _ControllerQueNaoSabeDizer(_MesaDeControles):
 
 
 def _perfil_com_gatilho() -> Profile:
-    """Perfil com a MESMA seção de gatilho do `Sackboy` dela."""
+    """Perfil com a MESMA seção de gatilho do `Sackboy` real."""
     return Profile(
         name="Perfil de teste",
         match=MatchManual(),

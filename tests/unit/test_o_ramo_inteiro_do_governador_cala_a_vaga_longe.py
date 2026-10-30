@@ -4,7 +4,7 @@ AS-REGUAS-DO-RAMO-INTEIRO-E-DAS-QUATRO-RESPOSTAS-MORDEM-01.
 
 Em `_a_vez`, o ramo `if cabem <= 0 or not na_vez:` cede o adaptador inteiro com
 `vaga.cedendo = not vaga.longe`. A vaga longe (pausada pelo sinal) já está muda: a fila não tem o
-que cobrar dela. Sem o `not vaga.longe`, o adaptador cuja única ponte está longe, com a fila acima
+que cobrar. Sem o `not vaga.longe`, o adaptador cuja única ponte está longe, com a fila acima
 do limiar, abriria um episódio `governador_cedeu` (diário `CEDEU_NA_FONTE`) por uma ponte que não
 escreve. A régua vizinha (`test_o_flag_da_fila_nao_fica_na_vaga_longe`) não alcança este ramo: lá,
 o zerar do flag no sinal e o `not v.longe` da conta da vez se cobrem, e o do `inteiro` fica sem quem
@@ -47,7 +47,7 @@ FOLGA_DO_B = 4 * POR_JANELA
 
 
 class _Sinal(rm.LeitorDoSinal):
-    """O leitor do sinal na mão da régua: o que ela põe em `dbm` é o que o governador lê."""
+    """O leitor do sinal na mão da régua: o que a régua põe em `dbm` é o que o governador lê."""
 
     def __init__(self) -> None:
         self.dbm: dict[str, int] = {}

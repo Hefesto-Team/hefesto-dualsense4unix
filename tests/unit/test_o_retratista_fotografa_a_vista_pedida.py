@@ -75,7 +75,7 @@ def test_o_main_recusa_a_vista_torta_em_vez_de_fotografar() -> None:
 
 
 def test_a_vista_do_usuario_fecha_a_conta_das_parcelas() -> None:
-    """1918x840 não é número escolhido: é a TV da bancada menos o que o compositor come."""
+    """1918x840 não é número escolhido: é a TV da máquina de teste menos o que o compositor come."""
     retrato = _retrato()
     tv_larg, tv_alt = 1920, 1080
     painel, doca, borda, barra = 82, 110, 1, 46
@@ -88,7 +88,7 @@ def test_a_vista_do_usuario_fecha_a_conta_das_parcelas() -> None:
     assert medida == da_conta, (
         f"`VISTA_DO_USUARIO` é {medida} e a conta das parcelas dá {da_conta}. Cada "
         "parcela tem origem declarada no fonte do retratista; um total que não "
-        "bate com elas é um número que perdeu o dono."
+        "bate com as parcelas é um número que perdeu o dono."
     )
 
 
@@ -104,7 +104,7 @@ def test_as_dez_fotos_da_vista_nasceram_na_vista_do_usuario() -> None:
     texto = recibo.read_text(encoding="utf-8")
     assert f"vista:   {larg}x{alt}" in texto, (
         f"o recibo de `{pasta.name}/` não declara a vista `{larg}x{alt}` que "
-        "`VISTA_DO_USUARIO` diz ser a dela. Ou a constante mudou e as dez fotos "
+        "`VISTA_DO_USUARIO` diz ser a do usuário. Ou a constante mudou e as dez fotos "
         "ficaram para trás, ou as fotos saíram de outra vista — e nos dois "
         "casos a pasta afirma uma tela que ninguém tirou.\n\n"
         "    src/hefesto_dualsense4unix/interface/olhar.py "

@@ -4,7 +4,7 @@ Medido em 30/09: o «Reiniciar» da aba Sistema com o Future Knight aberto
 (perfil em Xbox) subiu o pad do P1 às 03:06:47 no modo de fora do jogo
 (DualSense), o sinal de jogo só foi fiado às 03:06:50 e subiu às 03:06:51, e
 às 03:06:59 o autoswitch ativou o Future Knight e a trava recusou a troca:
-ela passou a proteger um modo que ninguém escolheu para aquele jogo. Ela
+a trava passou a proteger um modo que ninguém escolheu para aquele jogo. Quem usa
 resolveu na mão às 03:07:09, com o PS + R3.
 
 A cura (`D-3009-O-REINICIO-COM-O-JOGO-ABERTO-NASCE-NO-PERFIL-DO-JOGO`, a
@@ -50,7 +50,7 @@ _PREFERENCIA_REAL = session.load_gamepad_preference
 
 APPID = 4235410
 JOGO = "Future Knight"
-DO_USUARIO = "Desktop Dela"
+DO_USUARIO = "Desktop do Usuário"
 FREESTYLE = loader.NOME_DO_PADRAO
 
 

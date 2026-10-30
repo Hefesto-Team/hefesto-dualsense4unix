@@ -140,7 +140,7 @@ def test_mordida_1_a_catraca_compara_com_o_piso_do_disco_e_nao_consigo_mesma(
     )
     assert (
         arrancada.comparar(["prosa-publicada"])[0].estado == catraca.VERDE
-    ), "com a cura arrancada a régua tinha de PASSAR — se não passa, ela não é a cura"
+    ), "com a cura arrancada a régua tinha de PASSAR — se não passa, não é a cura"
 
 
 def test_mordida_2_arquivo_que_nenhuma_regra_alcanca_reprova(tmp_path: Path) -> None:

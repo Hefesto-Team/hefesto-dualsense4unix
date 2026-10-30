@@ -82,7 +82,7 @@ def _ctx(state: dict[str, Any]) -> Contexto:
     return Contexto(state=state, mesa=[], conectados=[], estados={})
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["mockup", "publicado"])
 def test_a_faixa_final_nao_declara_lugar_de_recado(publicado: bool) -> None:
     """O nó que empurrava o botão, nos DOIS lados."""
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
@@ -238,7 +238,7 @@ def test_o_botao_nao_muda_de_lugar_quando_o_estado_apaga_os_lugares(largura: int
 @pytest.mark.parametrize("estado", [VIVO_NATIVO, VIVO_NAVEGACAO, VIVO_DUALSENSE, {}],
                          ids=["nativo", "navegacao", "jogo", "sem-daemon"])
 def test_a_ressalva_da_mascara_nao_chega_a_tela(estado: dict[str, Any]) -> None:
-    """§3.1: em modo nenhum — e era no Nativo e na Navegação que ela era pintada."""
+    """§3.1: em modo nenhum — e era no Nativo e na Navegação que a ressalva era pintada."""
     assert "mascara-ressalva" not in aba.pacote(_ctx(estado))
 
 
@@ -485,7 +485,7 @@ def tique_mudo() -> dict[str, Any]:
 
 
 def test_no_webkit_o_tique_mudo_repinta_o_ultimo_estado_bom(tique_mudo: dict[str, Any]) -> None:
-    """Dentro da folga os lugares continuam cheios — no motor dela."""
+    """Dentro da folga os lugares continuam cheios — no motor do WebKit."""
     folga = tique_mudo["folga"]
     dentro = [a for a in tique_mudo["amostras"]
               if a["fase"] == "mudo" and 1 <= a["mudos"] <= folga]
@@ -498,7 +498,7 @@ def test_no_webkit_o_tique_mudo_repinta_o_ultimo_estado_bom(tique_mudo: dict[str
 
 def test_no_webkit_depois_da_folga_a_tela_diz_que_o_servico_calou(
         tique_mudo: dict[str, Any]) -> None:
-    """E a folga ACABA: passado o último mudo que ela segura, o P1 apaga."""
+    """E a folga ACABA: passado o último mudo que a folga segura, o P1 apaga."""
     folga = tique_mudo["folga"]
     depois = [a for a in tique_mudo["amostras"]
               if a["fase"] == "mudo" and a["mudos"] >= folga + 2]

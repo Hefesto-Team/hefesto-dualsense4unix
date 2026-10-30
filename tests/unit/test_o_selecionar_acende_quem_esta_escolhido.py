@@ -5,7 +5,7 @@ escolhido; o «Todos» escolhe os quatro e acende os quatro com ele; nas abas qu
 todos, os quatro nascem acesos, cada um com a borda do plástico; o balão da fita sai das sete.
 
 QUEM RESPONDE É UMA FUNÇÃO SÓ, `monta.acesos_da_fita(ativo, mesa, escolhe=…)`, e quatro
-escritores perguntam a ela (`monta.fita`, `a06_navegacao.chips_da_fita`,
+escritores perguntam a essa função (`monta.fita`, `a06_navegacao.chips_da_fita`,
 `a09_sistema._html_da_fita` e o `CHIP_ACESO` da `aba02`). A folha não tem mais opinião
 própria sobre a fita inerte.
 

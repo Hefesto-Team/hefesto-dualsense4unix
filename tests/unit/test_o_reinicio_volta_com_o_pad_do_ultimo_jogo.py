@@ -129,7 +129,7 @@ def test_o_tique_que_chega_antes_do_restauro_tambem_sobe_o_pad_do_ultimo_jogo(
     autoswitch, com o applier do modo), logo antes do restauro de verdade.
 
     MORDIDA: faça o ``AutoSwitcher._o_ultimo_jogo_que_vale`` devolver ``None`` e o
-    boot abre na escolha (``DO USUÁRIO``), com o disco regravado nela.
+    boot abre na escolha (``DO USUÁRIO``), com o disco regravado na escolha.
     """
     from hefesto_dualsense4unix.daemon import connection
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher

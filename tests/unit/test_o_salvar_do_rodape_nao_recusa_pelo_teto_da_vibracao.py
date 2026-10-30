@@ -16,7 +16,7 @@ daemon"*), e o perfil do usuário não era gravado.
 
 DESDE 27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar não lê a vibração do
 aparelho: o teto lembrado não tem como chegar ao rascunho (§1). O teto É
-escolha do usuário quando ela arrasta a barra «Personalizado» da coluna de um
+escolha do usuário quando arrasta a barra «Personalizado» da coluna de um
 controle, e quem o grava, junto com o degrau, é o gesto da aba Vibração
 (`a05_vibracao._gravar_a_forca`), no clique (§2).
 
@@ -92,7 +92,7 @@ def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
     prof = _salvar(ESTADO_DO_USUARIO)
     assert prof.rumble.policy is None, (
         f"o Salvar gravou a política do aparelho ({prof.rumble.policy!r}) num "
-        "perfil sem opinião sobre ela")
+        "perfil sem opinião sobre a política")
     assert prof.rumble.custom_mult is None
 
 

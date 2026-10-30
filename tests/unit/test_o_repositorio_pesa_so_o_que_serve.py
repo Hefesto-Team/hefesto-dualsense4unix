@@ -98,7 +98,7 @@ def test_a_variante_escolhida_nao_fica_no_repositorio() -> None:
     sobra = variantes_paradas(_versionados())
     assert not sobra, (
         "o desenho escolhido mora em mockup/ e a escolha no CSV; só a variante que espera a "
-        "escolha dela fica, declarada em ESPERAM_A_ESCOLHA:\n" + "\n".join(sobra)
+        "escolha de quem usa fica, declarada em ESPERAM_A_ESCOLHA:\n" + "\n".join(sobra)
     )
 
 

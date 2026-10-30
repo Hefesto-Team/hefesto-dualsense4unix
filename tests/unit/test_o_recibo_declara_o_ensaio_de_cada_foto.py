@@ -1,4 +1,4 @@
-"""O recibo do ensaio diz DE QUE BANCADA cada foto saiu — Z0-5.
+"""O recibo do ensaio diz DE QUE ORIGEM cada foto saiu — Z0-5.
 
 O DEFEITO ORIGINAL, medido em 24/08/2026 (§2.2/M5 da sprint Z0-01). O
 `PROVA-DA-FOTO.txt` já registrava `ensaio` e a soma sha256 de cada PNG, mas
@@ -24,17 +24,17 @@ essa distinção é o trabalho inteiro deste arquivo:
 | | a pergunta que o recibo respondia |
 | --- | --- |
 | janela GTK | *esta foto é medição ou dublê?* — as onze abas aceitavam IPC vivo ou fixture |
-| interface HTML | *esta foto é do PRODUTO ou da BANCADA?* |
+| interface HTML | *esta foto é do PRODUTO ou do DESENHO?* |
 
 Na tela de hoje a primeira pergunta não tem como existir: a foto é sempre de
 uma página do repositório, e quem trava isso é
 `test_retrato_das_abas_nao_vaza_dado_real`. A segunda é a armadilha mais cara
 do `COMO-OLHAR-A-TELA.md`, e reincidiu quatro vezes só em 31/08:
 
-    interface/olhar.py --todas               # a BANCADA (mockup/)
+    interface/olhar.py --todas               # o DESENHO (mockup/)
     interface/olhar.py --todas --publicado   # o PRODUTO (interface/paginas/)
 
-As duas gravam PNG com o MESMO NOME. Uma foto da bancada em
+As duas gravam PNG com o MESMO NOME. Uma foto do desenho em
 `docs/usage/assets/` documenta uma tela que o produto não renderiza, e nada na
 imagem denuncia isso — só o recibo.
 
@@ -53,17 +53,17 @@ A MORDIDA
 Aplicadas em 08/09/2026, as três, e as três reprovaram:
 
 * `test_o_recibo_do_publicado_declara_o_produto` — chame
-  `_gravar_prova_da_foto` com `modo="--todas --doc"` (a bancada) e o teste
+  `_gravar_prova_da_foto` com `modo="--todas --doc"` (o desenho) e o teste
   reprova, porque o recibo deixaria de dizer que a foto é do produto. É a
   mordida literal do aceite: o dublê sabe RECUSAR, não só aprovar.
 * `test_o_recibo_nomeia_quem_o_escreveu_sem_digitar_o_nome` — ponha o literal
   `scripts/gui-captura/retratar_abas.py` no lugar do autor e ele reprova.
   **ESTA LINHA JÁ FOI FALSA:** até 08/09/2026 a régua dava VERDE nessa mordida
   — a única forma que o defeito de fato teve —, porque conferia
-  `_meu_endereco()` isolada em vez de ler o recibo gravado. O docstring dela
+  `_meu_endereco()` isolada em vez de ler o recibo gravado. O docstring da régua
   tem as quatro medições e a causa.
 * `test_o_modo_doc_grava_recibo` — arranque o `if para_a_doc:` que chama
-  `_gravar_prova_da_foto` e ele reprova. Sem ela as duas de cima poderiam estar
+  `_gravar_prova_da_foto` e ele reprova. Sem a chamada as duas de cima poderiam estar
   certas sobre uma função que ninguém chama — foi assim que
   `_fotografar_o_cabecalho` viveu dez dias escrita e nunca ligada.
 """
@@ -86,7 +86,7 @@ def _retrato() -> Any:
     """Importa o retratista como módulo, sem rodar o `main`."""
     assert SCRIPT.is_file(), (
         f"{SCRIPT} sumiu. Se o retratista mudou de casa, este portão muda com "
-        "ele — sem recibo ninguém separa a foto do produto da foto da bancada."
+        "ele — sem recibo ninguém separa a foto do produto da foto do desenho."
     )
     spec = importlib.util.spec_from_file_location("_retrato_do_recibo", SCRIPT)
     assert spec is not None and spec.loader is not None
@@ -98,7 +98,7 @@ def _retrato() -> Any:
 
 def _ensaio_com_fotos(tmp_path: Path, retrato: Any) -> Path:
     """Uma pasta com dois PNGs de mentira — o suficiente para gravar recibo."""
-    saida = tmp_path / "bancada"
+    saida = tmp_path / "desenho"
     saida.mkdir()
     (saida / f"{retrato.PREFIXO_NOVO}01-jogar.png").write_bytes(b"\x89PNG-de-mentira-1")
     (saida / f"{retrato.PREFIXO_NOVO}02-controles.png").write_bytes(b"\x89PNG-de-mentira-2")
@@ -120,8 +120,8 @@ def test_o_recibo_do_publicado_declara_o_produto(tmp_path: Path) -> None:
     texto = (saida / retrato.NOME_DA_PROVA).read_text(encoding="utf-8")
     assert "modo:    --todas --publicado --doc" in texto, texto
     assert "origem:  src/hefesto_dualsense4unix/interface/paginas" in texto, (
-        "o recibo não nomeia a pasta de onde as páginas foram lidas. Sem ela, "
-        "uma foto da bancada em docs/usage/assets/ é indistinguível de uma foto "
+        "o recibo não nomeia a pasta de onde as páginas foram lidas. Sem a pasta, "
+        "uma foto do desenho em docs/usage/assets/ é indistinguível de uma foto "
         f"do produto. Texto gravado:\n{texto}"
     )
     assert "PÁGINA DO REPOSITÓRIO" in texto, (

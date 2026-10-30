@@ -1,4 +1,4 @@
-"""O que é da bancada fica na bancada (O-QUE-E-DO-ENSAIO-FICA-NO-ENSAIO-01).
+"""O que é do ensaio fica no ensaio (O-QUE-E-DO-ENSAIO-FICA-NO-ENSAIO-01).
 
 Curas medidas num desktop com um adaptador Wi-Fi Realtek USB não são padrão de
 toda máquina. Cada uma continua valendo onde a causa existe; nas outras, o
@@ -615,7 +615,7 @@ class TestODoctorSabeDaBateria:
         """O install curou o bootloader; o boot de agora ainda traz o 0df2:gn.
 
         MORDIDA: com o conselho único de antes, a linha deste boot sozinha dava
-        DEFEITO com «rode ./install.sh», que ela já rodou.
+        DEFEITO com «rode ./install.sh», que quem usa já rodou.
         """
         boot = tmp_path / "cmdline"
         boot.write_text("quiet usbcore.quirks=054c:0ce6:gn,054c:0df2:gn\n", encoding="utf-8")

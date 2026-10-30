@@ -77,7 +77,7 @@ def _do_perfil(nome: str) -> str | None:
 
 
 def _lembrar_tudo(nome: str) -> None:
-    """O Point and click antes da escolha: com ela gravada, o gesto sem jogo iria a ela."""
+    """O Point and click antes da escolha; com a escolha gravada, sem jogo iria ao perfil."""
     _escolher_no_point_and_click(f"perfil:{nome}")
     _escolher_no_point_and_click(f"perfil:{nome}", ativo="Pragmata")
     session.gravar_a_escolha(nome)
@@ -150,7 +150,7 @@ def test_trocar_so_a_caixa_do_nome_tambem_leva_as_lembrancas() -> None:
 
 def test_a_lembranca_escrita_pelo_slug_tambem_segue_o_nome_novo() -> None:
     """A lembrança que diz «sackboy» aponta o mesmo arquivo que «Sackboy» (`load_profile` acha
-    pelo slug), então ela também vai ao nome novo: o dono casa pelo slug, como o apagado."""
+    pelo slug), então a lembrança também vai ao nome novo: o dono casa pelo slug, como o apagado."""
     from hefesto_dualsense4unix.utils import maquina
 
     _no_disco("Pragmata", "Sackboy")

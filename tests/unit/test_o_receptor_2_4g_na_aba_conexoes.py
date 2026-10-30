@@ -352,7 +352,7 @@ def test_a_faixa_medida_vai_ao_maquina_json_e_volta_pintada_na_linha_do_receptor
         monkeypatch: pytest.MonkeyPatch) -> None:
     """De ponta a ponta, com o `maquina.json` de verdade (no lar isolado da suíte): o «Descobrir»
     mede a faixa por eliminação, grava, e a cena seguinte pinta a linha do receptor com os canais
-    medidos, no mesmo trilho dos controles (o acréscimo dela de 06/10/2026)."""
+    medidos, no mesmo trilho dos controles (o acréscimo de 06/10/2026)."""
     import json
 
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa, RadioUsb

@@ -30,7 +30,7 @@ def _pagina(publicado: bool) -> str:
     return onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["mockup", "publicada"])
 @pytest.mark.parametrize("marca,o_que_e", _MARCAS_DO_QUADRO,
                          ids=[m for m, _ in _MARCAS_DO_QUADRO])
 def test_o_quadro_do_modo_nao_esta_na_aba_perfis(
@@ -38,10 +38,10 @@ def test_o_quadro_do_modo_nao_esta_na_aba_perfis(
 ) -> None:
     """Ordem, 11/09/2026 — e as duas páginas respondem igual."""
     assert marca not in _pagina(publicado), (
-        f"{o_que_e} voltou à aba Perfis ({'publicada' if publicado else 'bancada'}) "
-        f"— {marca!r}. O quadro «Modo» saiu do editor por ordem dela em "
-        f"11/09/2026: *\"em perfis ainda aparece modo. Isso deve aparecer só na "
-        f"aba jogar.\"* Se a decisão mudou, ela muda aqui primeiro."
+        f"{o_que_e} voltou à aba Perfis ({'publicada' if publicado else 'mockup'}) "
+        f"— {marca!r}. O quadro «Modo» saiu do editor por decisão do produto em "
+        f"11/09/2026: o modo aparece só na aba Jogar, nunca em Perfis. "
+        f"Se a decisão mudar, a régua muda aqui primeiro."
     )
 
 

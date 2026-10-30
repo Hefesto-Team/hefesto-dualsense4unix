@@ -153,7 +153,7 @@ def test_a_mudanca_de_antes_da_abertura_desfeita_no_meio_nao_deixa_recibo(repo: 
 
 
 def test_a_corrida_aberta_numa_arvore_nao_fecha_em_outra(repo: Path, tmp_path: Path) -> None:
-    """Outra árvore com o MESMO conteúdo: o que foi medido não foi ela."""
+    """Outra árvore com o MESMO conteúdo: o que foi medido não foi a árvore."""
     outra = tmp_path / "outra"
     _git(tmp_path, "clone", "-q", str(repo), str(outra))
     assert _arvore_do_indice(outra) == _arvore_do_indice(repo)
@@ -179,7 +179,7 @@ def test_o_arquivo_ignorado_nao_impede_o_recibo(repo: Path) -> None:
 
 
 def test_o_arquivo_fora_do_git_no_comeco_impede_o_recibo(repo: Path) -> None:
-    """A medida lê o disco: o arquivo esquecido fora do ``git add`` entra nela e não na árvore."""
+    """A medida lê o disco: o arquivo fora do ``git add`` entra na medida e não na árvore."""
     (repo / "tests_novos.py").write_text("x = 1\n", encoding="utf-8")
     abertura = _recibo(repo, "abrir", "portoes-completo")
     assert "tests_novos.py" in abertura.stdout, (
@@ -340,7 +340,7 @@ def test_o_portoes_com_nao_medido_deixa_recibo_que_o_nomeia(repo: Path) -> None:
 def test_o_portao_pytest_que_pulou_teste_sai_nomeado_no_recibo(repo: Path) -> None:
     """Pulo não é verde: o pytest devolve 0 com teste pulado, e o portão sai `ok`.
 
-    O recibo da suíte já nomeia os pulados dela; o dos portões nomeia os de
+    O recibo da suíte já nomeia os pulados da suíte; o dos portões nomeia os de
     cada portão de runner ``pytest``, pelo mesmo motivo (sem tela, os testes
     de tela pulam calados).
     """
@@ -374,7 +374,7 @@ def _casa_com_suite(repo: Path, testes: dict[str, str]) -> None:
 
 
 def _suite(repo: Path, *args: str, **env: str) -> subprocess.CompletedProcess[str]:
-    """A suíte de brinquedo, com a saída FORA da árvore (dentro, ela seria arquivo fora do git)."""
+    """A suíte de brinquedo, com a saída FORA da árvore (dentro, seria arquivo fora do git)."""
     ambiente = _ambiente()
     ambiente.pop("SUITE_PYTEST_ARGS", None)
     ambiente.update({"PY": sys.executable, "PARTES": "1",

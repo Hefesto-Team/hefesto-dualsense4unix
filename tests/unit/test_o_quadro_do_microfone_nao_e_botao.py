@@ -21,12 +21,12 @@ hid-playstation.c`, lido no fonte desta árvore):
 * os eixos e os botões recebem valores de áudio, e o cursor e o teclado do usuário se
   mexem sozinhos.
 
-**A segunda consequência é a entrada fantasma que ela relatou duas vezes**
+**A segunda consequência é a entrada fantasma relatada duas vezes**
 (*"o teclado fica se mexendo quando vc dá o comando"*). E a medição de 10/09
 que deu ZERO em 120 s não a derruba: naquela corrida **o microfone não estava
 no ar**, logo não havia quadro de áudio a ser lido como botão.
 
-E ela explica o `BT-MIC-GATING-01`, aberto no cabeçalho de
+E explica o `BT-MIC-GATING-01`, aberto no cabeçalho de
 `integrations/dualsense_bt_audio.py` desde agosto: o bit `MicMuted` oscilando a
 ~16,7 Hz com o mic ligado, e estável com ele desligado. **É o kernel
 oscilando** — muta na borda falsa, o firmware obedece, a próxima borda falsa
@@ -84,7 +84,7 @@ def test_as_duas_metades_usam_o_mesmo_bit(fonte_do_driver: str) -> None:
 
 
 def test_o_driver_descarta_o_report_de_audio(fonte_do_driver: str) -> None:
-    """A guarda existe, e ela está NO CAMINHO DO PARSE por Bluetooth."""
+    """A guarda existe, e está NO CAMINHO DO PARSE por Bluetooth."""
     assert "DS_INPUT_BT_FLAG_AUDIO" in fonte_do_driver
 
     corpo = fonte_do_driver[fonte_do_driver.index("DS_INPUT_REPORT_BT_SIZE) {") :]

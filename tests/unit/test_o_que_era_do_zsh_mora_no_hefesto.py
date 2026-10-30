@@ -416,7 +416,7 @@ def test_o_script_nao_carrega_o_nome_da_maquina_do_usuario() -> None:
     for proibido in ("aurora", "AURORA_", "/run/aurora", "wlx"):
         assert proibido not in texto.replace("aurora-wifi-usb.sh`", ""), proibido
     assert "switch_usb_mode" not in texto, (
-        "o modo USB2 não entra (recusado por ela)"
+        "o modo USB2 não entra (recusado na decisão)"
     )
 
 
@@ -870,7 +870,7 @@ def test_o_doctor_acusa_o_timer_parado_e_o_dispatcher_que_o_networkmanager_recus
     amb = _mesa(tmp_path)
     saida = _doctor_wifi(tmp_path, amb, instalado=True, timer="inactive")
     assert "[WARN] o vigia do Wi-Fi USB está instalado e o timer não está ativo (inactive)" in saida
-    saida = _doctor_wifi(tmp_path, amb, instalado=True, dispatcher="vitoria 775")
+    saida = _doctor_wifi(tmp_path, amb, instalado=True, dispatcher="outro 775")
     assert "NetworkManager só roda script de root, 755" in saida
     saida = _doctor_wifi(tmp_path, amb, instalado=True, dispatcher=None)
     assert "não existe — cada associação nova nasce com o scan de fundo ligado" in saida

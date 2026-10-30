@@ -37,16 +37,16 @@ def _tokens_do_usuario(rng: random.Random) -> list[str]:
 
 
 def _linha_do_usuario(rng: random.Random) -> str:
-    """Uma linha sem a nossa assinatura, com `%command%` no meio de pedaços dela."""
+    """Uma linha sem a nossa assinatura, com `%command%` no meio de pedaços do usuário."""
     antes, depois = _tokens_do_usuario(rng), _tokens_do_usuario(rng)
     return " ".join([*antes, "%command%", *depois])
 
 
 def test_o_migrate_e_o_strip_se_desfazem_em_toda_linha_sem_a_nossa_assinatura() -> None:
-    """Régua de propriedade: nenhum token dela some, e `strip(migrate(v)) == v`.
+    """Régua de propriedade: nenhum token do usuário some, e `strip(migrate(v)) == v`.
 
     ARRANQUE o `_tirar_vizinhos_legados` (volte o `_remove_token` em qualquer posição)
-    e este teste reprova: a linha dela com `SDL_JOYSTICK_HIDAPI=0` solto perde o token.
+    e este teste reprova: a linha do usuário com `SDL_JOYSTICK_HIDAPI=0` solto perde o token.
     """
     rng = random.Random(20261013)
     vistos = 0
@@ -62,7 +62,7 @@ def test_o_migrate_e_o_strip_se_desfazem_em_toda_linha_sem_a_nossa_assinatura() 
 
 
 def test_o_veneno_legado_sai_inteiro_e_o_que_e_do_usuario_fica_na_conta_exata() -> None:
-    """O bloco contíguo é nosso; o mesmo token separado dele por algo dela é do usuário."""
+    """O bloco contíguo é nosso; o mesmo token separado dele por algo do usuário é do usuário."""
     rng = random.Random(7)
     for _ in range(300):
         antes, depois = _tokens_do_usuario(rng), _tokens_do_usuario(rng)
@@ -77,7 +77,7 @@ def test_o_veneno_legado_sai_inteiro_e_o_que_e_do_usuario_fica_na_conta_exata() 
 
 @pytest.mark.parametrize("posicao", ["antes", "meio", "depois"])
 def test_o_co_ocorrente_do_usuario_longe_do_nosso_par_nao_some(posicao: str) -> None:
-    """Medido: com o par legado na linha, o `HIDAPI=0` que ela pôs à mão ia junto."""
+    """Medido: com o par legado na linha, o `HIDAPI=0` que o usuário pôs à mão ia junto."""
     do_usuario = COOCORRENTES[1]
     pedacos = {
         "antes": f"{do_usuario} MANGOHUD=1 {BLOCO_LEGADO} %command%",
@@ -235,8 +235,8 @@ def test_compor_linha_nas_bordas() -> None:
 
 
 def test_o_atalho_entra_no_trecho_que_roda_o_jogo_e_nunca_antes_do_e_comercial_do_usuario() -> None:
-    """Sem o atalho na linha, ele vai depois do `&&` dela: antes, o `env` do wrapper
-    receberia a variável dela como comando e o jogo abriria sem o Hefesto."""
+    """Sem o atalho na linha, ele vai depois do `&&` do usuário: antes, o `env` do wrapper
+    receberia a variável do usuário como comando e o jogo abriria sem o Hefesto."""
     desejada = opj.linha_desejada(OPCOES, com_atalho=True)
     composta = opj.compor_linha(f"{DO_USUARIO} %command%", desejada)
     assert composta == f"{DO_USUARIO} {desejada}"

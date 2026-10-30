@@ -1,6 +1,6 @@
 """DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 — «Sair» do tray para o serviço.
 
-A irmã dela estranhou (03/10/2026): o item «Sair do Hefesto - DualSense4Unix»
+Achado de 03/10/2026: o item «Sair do Hefesto - DualSense4Unix»
 só chamava o ``on_quit`` (``Gtk.main_quit``). O ícone sumia e o daemon seguia
 de pé com o controle na mão. Agora o item faz o mesmo ato do «Parar o serviço»
 (``on_servico("stop")``) e só fecha o ícone se o serviço parou.

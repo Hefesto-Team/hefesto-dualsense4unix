@@ -404,7 +404,7 @@ def _constante_ou_import(caminho: Path, nome: str) -> object:
     ],
 )
 def test_o_serial_tem_um_dono_e_as_copias_nao_divergem(caminho: str, nome: str) -> None:
-    """Até a onda 2 trocar as cópias por import, elas têm de dizer o mesmo que o dono."""
+    """Até a onda 2 trocar as cópias por import, as cópias têm de dizer o mesmo que o dono."""
     valor = _constante_ou_import(RAIZ / caminho, nome)
     assert valor in ("dono", getattr(dono, nome)), (caminho, nome)
 
@@ -482,7 +482,7 @@ def test_mordida_sem_a_ordem_invertida_o_despejo_vaza(monkeypatch: pytest.Monkey
 def test_mordida_zerar_uma_janela_antes_de_achar_a_outra_deixa_o_quinto(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A primeira versão da máscara da bancada zerava janela a janela e o quinto sobrava."""
+    """A primeira versão da máscara do ensaio zerava janela a janela e o quinto sobrava."""
     original = dono._pelos_conhecidos
 
     def janela_a_janela(texto: str, conhecidos: Any) -> str:
@@ -952,7 +952,7 @@ def test_o_copiar_leva_o_painel_sem_janela_e_o_serial_mascarado(
 
 
 def test_a_tela_guarda_o_serial_inteiro(a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Resposta 13 dela: a tela mostra inteiro; o «Copiar» leva mascarado."""
+    """Resposta 13: a tela mostra inteiro; o «Copiar» leva mascarado."""
     serial = _serial_forjado_na_forma_real()
     monkeypatch.setattr(a09, "_diario", lambda: "linha do diário")
     tela = a09._repouso_do_painel(_estado(serial))

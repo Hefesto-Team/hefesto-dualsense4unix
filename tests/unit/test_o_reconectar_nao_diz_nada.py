@@ -85,7 +85,7 @@ def test_a_numeracao_que_deu_certo_nao_vira_recado(renumber: dict[str, Any]) -> 
     fora = aba.reconectar(_ctx(), {}, p)
     assert p.chamadas == ["coop.sync", "identity.renumber"], p.chamadas
     assert fora is None, (
-        f"o «Reconectar» renumerou e devolveu {fora!r}. A decisão dela "
+        f"o «Reconectar» renumerou e devolveu {fora!r}. A decisão "
         f"(D-2409-O-RECONECTAR-NAO-DIZ-NADA) é «Nada: o número novo aparece no "
         f"próprio cartão».")
 
@@ -147,7 +147,7 @@ def _radio_com_um_que_volta_e_um_que_dorme(monkeypatch: pytest.MonkeyPatch) -> l
 def test_o_radio_continua_falando_quando_a_numeracao_muda(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """As duas frases do rádio pedem coisas diferentes dela, e as duas ficam."""
+    """As duas frases do rádio pedem coisas diferentes de quem usa, e as duas ficam."""
     tocados = _radio_com_um_que_volta_e_um_que_dorme(monkeypatch)
     fora = aba.reconectar(_ctx(), {}, _ponte(MUDOU))
     assert tocados == [RADIO_VOLTA, RADIO_DORME], tocados
@@ -157,7 +157,7 @@ def test_o_radio_continua_falando_quando_a_numeracao_muda(
 
 
 def test_o_radio_e_a_falha_saem_juntos_e_na_ordem(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O rádio vem na frente — é o que pede alguma coisa dela —, e a falha depois."""
+    """O rádio vem na frente — é o que pede alguma coisa de quem usa —, e a falha depois."""
     _radio_com_um_que_volta_e_um_que_dorme(monkeypatch)
     fora = aba.reconectar(
         _ctx(), {}, _ponte(RuntimeError("o daemon não respondeu a identity.renumber")))
@@ -165,7 +165,7 @@ def test_o_radio_e_a_falha_saem_juntos_e_na_ordem(monkeypatch: pytest.MonkeyPatc
 
 
 def test_a_frase_que_saiu_esta_na_lista_das_banidas() -> None:
-    """O trecho pega a frase como ela era, e com outros assentos também."""
+    """O trecho pega a frase como era, e com outros assentos também."""
     assert "foram renumerados" in FRASES_BANIDAS, (
         "a frase do «Reconectar» saiu da lista das banidas — nada mais a "
         "impede de voltar por este gesto ou por outro (D-2409-O-RECONECTAR-NAO-DIZ-NADA)")

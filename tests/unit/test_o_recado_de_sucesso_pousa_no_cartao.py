@@ -18,27 +18,27 @@ segundo clique parecia o primeiro.
 **UM FATO, UM SINAL** — e é a razão inteira de o canal do cartão não se
 duplicar. Esta metade continua valendo.
 
-A OUTRA METADE CADUCOU EM 05/09/2026. Este parágrafo dizia que ELA recusara
+A OUTRA METADE CADUCOU EM 05/09/2026. Este parágrafo dizia que a decisão recusara
 *o campo que pisca* (aba 03) e *a faixa embaixo da grade* (aba 05), e que esta
 régua existia também para que ninguém os construísse. Quem recusou foi o PO,
-lendo a D-01 como se ela fechasse a forma — os conflitos C-3 e C-6 são dele. Em
-05/09 ela respondeu a `03-Q4` vendo as quatro formas lado a lado e escolheu o
+lendo a D-01 como se fechasse a forma — os conflitos C-3 e C-6 são dele. Em
+05/09 a resposta a `03-Q4` veio vendo as quatro formas lado a lado e escolheu o
 campo que pisca. **A palavra de produto vence a leitura que o PO fez da palavra
 de produto.**
 
 E a piscada não é um segundo canal para o mesmo fato: é o mesmo fato num sinal
 mais barato. Desde então o cartão diz só o que tem NOTÍCIA, e o gesto que só
-repete o que ela acabou de fazer responde piscando. As duas peças deixaram de
+repete o que quem usa acabou de fazer responde piscando. As duas peças deixaram de
 disputar, e esta régua mede as duas.
 
-POR QUE ELA ABRE UM WebKit DE VERDADE, com o piloto do produto: porque a forma
+POR QUE A RÉGUA ABRE UM WebKit DE VERDADE, com o piloto do produto: porque a forma
 de defeito mais cara desta casa é *alguém curar o caminho e provar a cura num
-caminho que ela não usa*. Foi assim com a recusa em 02/09 — dois cliques deram
+caminho que o produto não usa*. Foi assim com a recusa em 02/09 — dois cliques deram
 duas linhas no terminal, o ``desfechos`` guardou a frase certa e o DOM não tinha
-uma letra dela. Aqui o clique é no botão do produto, com o ``data-mudo`` que a
+uma letra da frase. Aqui o clique é no botão do produto, com o ``data-mudo`` que a
 página publicada traz, e a leitura é do DOM.
 
-A JANELA É OCULTA. Ela tem UMA tela.
+A JANELA É OCULTA. A máquina tem UMA tela.
 
 O TEMPO É CONDIÇÃO, NÃO RELÓGIO — FLAKE-DO-PISCA, 13/09/2026. Os marcos do
 roteiro eram ``GLib.timeout_add`` de tempo FIXO (700 ms, 2200 ms, o prazo mais
@@ -61,13 +61,13 @@ AS SETE COISAS QUE ESTA RÉGUA COBRAVA — E AS CINCO PRIMEIRAS MUDARAM DE CONTR
 EM 13/09/2026 (TELA-CALADA-01). Pela palavra de produto, *"essas frases de status que
 aparecem no rodapé isso não deveria estar aparecendo"*, *"em todas as abas da
 interface"*, o gesto que deu certo não põe frase na tela — nem a do dono do
-assunto: ela vai ao diário da janela. A régua do contrato novo é
+assunto: a frase vai ao diário da janela. A régua do contrato novo é
 ``test_a_tela_nao_narra_o_gesto_que_deu_certo``; aqui os itens 1 a 5 viraram o
 avesso, e as esperas por condição da FLAKE-DO-PISCA continuam as mesmas:
 
 1. **a frase de sucesso NÃO chega ao DOM** (até 13/09 chegava);
-2. **ela não pousa em cartão nenhum** (até 13/09 pousava no do controle);
-3. **não há nó verde** — a recusa continua no tom dela, com um tom só;
+2. **a frase não pousa em cartão nenhum** (até 13/09 pousava no do controle);
+3. **não há nó verde** — a recusa continua no tom próprio, com um tom só;
 4. **a frase do DONO DO ASSUNTO também não entra**, e o ``recado`` continua
    sem vazar para a pintura como se fosse endereço de página;
 5. **não há recibo a vencer** — nem no pouso, nem depois do prazo;
@@ -148,7 +148,7 @@ function(){
       dentro_de: cartao ? (cartao.dataset.controle || cartao.dataset.uniq || '') : '',
       tom: el.dataset.hefTom || '',
       // A COR VEM DO CSSOM, e não do `cssText`: é o que a tela MOSTRA. Ler o
-      // texto do atributo diria que a regra foi escrita, não que ela pegou.
+      // texto do atributo diria que a regra foi escrita, não que a regra pegou.
       cor: cs.color,
       borda: cs.borderTopColor,
     });
@@ -156,7 +156,7 @@ function(){
   const b = document.querySelector('[data-controle="p1"] [data-mudo="alto-falante"]');
   return {
     // O RELÓGIO DA PÁGINA, o mesmo do `setTimeout` que apaga a piscada. É ele
-    // que mede quanto ela durou: o do Python somaria o atraso da pergunta.
+    // que mede quanto a piscada durou: o do Python somaria o atraso da pergunta.
     t: performance.now(),
     recados: recados,
     // A CONTA DA RÉGUA DO MOCKUP, no mesmo instante: o aviso não pode mexer no
@@ -171,7 +171,7 @@ function(){
       // cartão e passou a responder no botão.
       recusou: b.classList.contains('hef-recusou'),
       // A COR VEM DO CSSOM, e não da classe — mesma razão do `cor` dos recados
-      // acima: a classe diz que a regra foi ESCRITA, o CSSOM diz que ela PEGOU.
+      // acima: a classe diz que a regra foi ESCRITA, o CSSOM diz que a regra PEGOU.
       // Sem isto, arrancar o `!important` da folha deixa a régua verde e o olho
       // sem ver nada, que é o defeito que o `cursor:pointer` já produziu em
       // 04/09 um degrau antes.
@@ -278,7 +278,7 @@ def _pouso(trilha: object) -> dict | None:
 
 
 def _apagou(trilha: object) -> dict | None:
-    """A foto em que a piscada do pouso apagou, com quanto ela durou."""
+    """A foto em que a piscada do pouso apagou, com quanto a piscada durou."""
     fotos = trilha if isinstance(trilha, list) else []
     pouso = _pouso(fotos)
     if pouso is None or not pouso["botao"]["deu_certo"]:
@@ -544,7 +544,7 @@ def test_o_gesto_aplicou(medido: dict) -> None:
 
 
 def test_a_tela_estava_muda_antes(medido: dict) -> None:
-    """A LINHA DE BASE. Sem ela, uma página que já tivesse um aviso passaria."""
+    """A LINHA DE BASE. Sem a base, uma página que já tivesse um aviso passaria."""
     antes = _leitura(medido, "antes")
     assert _frases(antes) == [], (
         f"a página já tinha aviso antes do clique: {_frases(antes)}")
@@ -555,7 +555,7 @@ def test_o_sucesso_calado_pisca_e_nao_fala(medido: dict) -> None:
     botao = _leitura(medido, "depois-do-sucesso")["botao"]
     assert botao and botao["deu_certo"], (
         "o gesto deu certo e o campo não piscou — é o defeito que a D-01 fecha, "
-        f"na forma que ela escolheu na 03-Q4: {botao}")
+        f"na forma escolhida na 03-Q4: {botao}")
     antes = _leitura(medido, "antes")["botao"]
     assert botao["borda"] != antes["borda"] or botao["contorno_larg"] != antes["contorno_larg"], (
         "a classe entrou e a tela não mudou de cor — o `!important` da folha "
@@ -568,7 +568,7 @@ def test_o_sucesso_calado_pisca_e_nao_fala(medido: dict) -> None:
         frases = _frases(_leitura(medido, marco))
         assert frases == [], (
             "o gesto não trouxe notícia e a tela falou mesmo assim — a palavra "
-            f"nova é o que a decisão dela tirou ({marco}): {frases}")
+            f"nova é o que a decisão tirou ({marco}): {frases}")
 
 
 def test_a_piscada_apaga_sozinha(medido: dict) -> None:
@@ -610,7 +610,7 @@ def test_o_pisca_nao_move_a_tela(medido: dict) -> None:
 def test_a_frase_do_dono_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
     """A PERGUNTA FOI INVERTIDA EM 13/09/2026 — TELA-CALADA-01.
 
-    Ela era `test_a_frase_pousa_no_cartao_de_quem_foi_clicado` e exigia a frase
+    A régua era `test_a_frase_pousa_no_cartao_de_quem_foi_clicado` e exigia a frase
     de sucesso no cartão do p1. A palavra de produto, com a foto do rodapé: *"essas
     frases de status que aparecem no rodapé isso não deveria estar
     aparecendo"*, *"em todas as abas da interface"*. O gesto que devolve
@@ -618,7 +618,7 @@ def test_a_frase_do_dono_nao_pousa_em_cartao_nenhum(medido: dict) -> None:
     diário da janela, e o cartão fica como estava.
 
     A FOTO É A DO POUSO (o vigia da FLAKE-DO-PISCA), e é por isso que a primeira
-    asserção vale: a piscada acesa nela prova que o gesto DEU CERTO, e o zero de
+    asserção vale: a piscada acesa na foto prova que o gesto DEU CERTO, e o zero de
     recados que vem depois não é o de um clique que não chegou.
 
     O endereço por `uniq` que esta régua guardava continua medido — do lado da
@@ -740,7 +740,7 @@ def test_o_numero_da_piscada_e_o_mesmo_nos_dois_lados() -> None:
     assert achados, "o `setTimeout` da piscada sumiu do BOOTSTRAP"
     assert str(hv.MS_DA_PISCADA) in achados, (
         f"o Python diz {hv.MS_DA_PISCADA} ms e o JavaScript diz {achados} — "
-        "a piscada duraria o que a tela mandasse, não o que ela decidiu")
+        "a piscada duraria o que a tela mandasse, não o que a constante decidiu")
 
 
 def test_o_bootstrap_e_a_primeira_ocorrencia_de_si_mesmo() -> None:

@@ -26,7 +26,7 @@ _PELO_PERFIL = (
     "o efeito mora no perfil, e `profile apply --file` o leva inteiro "
     "(triggers, leds, rumble, controllers[uniq].sensores)"
 )
-_GESTO_DA_TELA = "gesto da tela, sem sentido fora dela"
+_GESTO_DA_TELA = "gesto da tela, sem sentido fora da janela"
 
 ISENTOS: dict[str, str] = {
     "trigger.set": _PELO_PERFIL + "; o instrumento é `test trigger`",
@@ -60,16 +60,16 @@ ISENTOS: dict[str, str] = {
     "mods.agora": _GESTO_DA_TELA + " (a coluna «Agora» da janela da extensão); no terminal, "
                   "`mod listar` diz se cada uma está ligada",
     "mods.parar_tudo": _GESTO_DA_TELA + " (o «Parar tudo» da janela da extensão); no terminal, "
-                       "`mod desligar <id>` para o processo dela",
+                       "`mod desligar <id>` para o processo da extensão",
     "mods.jogos": _GESTO_DA_TELA + " (os jogos da extensão na aba Lançadores)",
     "mods.acao": _GESTO_DA_TELA + " (um botão de ação da janela da extensão, ou a chave e as "
-                 "ações de um aparelho que ela gere); no terminal, a extensão tem os verbos dela",
+                 "ações de um aparelho geridos); no terminal, a extensão tem os próprios verbos",
     "mods.livre": _GESTO_DA_TELA + " (o arrastar do controle livre da janela da extensão, a 20 "
                   "por segundo)",
     "mods.opcao": _GESTO_DA_TELA + " (o arrastar de um deslizante da janela da extensão, a 20 "
                   "por segundo; o valor gravado mora no `opcoes.json` da extensão)",
     "sequencia.gravar": _GESTO_DA_TELA + " (a gravação segue os toques com a aba Sequência "
-                        "aberta, e o controle fica com ela enquanto grava)",
+                        "aberta, e o controle fica com a aba enquanto grava)",
     "sequencia.tocar": _GESTO_DA_TELA + " (o «Tocar para ouvir» do editor da sequência)",
 }
 

@@ -1,6 +1,6 @@
 """O que se muda vale para o perfil ativo (O-ESCOPO-SAI-DAS-ABAS-01, D-0610-O-ESCOPO-SAI-DAS-ABAS).
 
-O «Só neste jogo / Voltar ao do PC» saiu das abas: o que ela muda vale para o
+O «Só neste jogo / Voltar ao do PC» saiu das abas: o que quem usa muda vale para o
 perfil ativo, o do jogo aberto, ou o do computador sem jogo. O jogo guarda só o
 campo que mudou; o resto do cartão segue vindo do computador.
 """

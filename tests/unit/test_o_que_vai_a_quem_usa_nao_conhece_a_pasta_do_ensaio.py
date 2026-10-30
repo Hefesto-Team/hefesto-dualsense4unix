@@ -1,7 +1,7 @@
 """O-PROCEDIMENTO-DO-HID-NINTENDO-NAO-CONHECE-A-PASTA-DE-NINGUEM-01 (20/10/2026).
 
 O que chega a quem usa (o produto, os scripts, o install e as páginas de uso e de
-protocolo) não traz caminho da bancada: um `cd` para uma pasta que só existe num
+protocolo) não traz caminho da máquina de teste: um `cd` para uma pasta que só existe num
 computador quebra o procedimento em todos os outros. Os registros de medida
 (`docs/process`, `docs/research`, `docs/data`) e os testes ficam fora: lá o caminho
 é história.
@@ -51,4 +51,4 @@ def test_nada_que_vai_a_quem_usa_aponta_a_pasta_do_ensaio() -> None:
         for numero, linha in enumerate(texto.splitlines(), 1):
             if CAMINHO_DO_ENSAIO.search(linha):
                 achados.append(f"{arquivo.relative_to(RAIZ)}:{numero}: {linha.strip()[:120]}")
-    assert not achados, "caminho da bancada no que vai a quem usa:\n" + "\n".join(achados)
+    assert not achados, "caminho da máquina de teste no que vai a quem usa:\n" + "\n".join(achados)

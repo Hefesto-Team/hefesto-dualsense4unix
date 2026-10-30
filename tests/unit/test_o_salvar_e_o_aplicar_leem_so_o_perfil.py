@@ -187,9 +187,9 @@ def test_as_tres_fontes_que_nao_sao_do_usuario_ficam_fora_do_disco(aba: str) -> 
     dele = depois["controllers"]
     assert dele[P3]["mic"]["muted"] is True and dele[P4]["mic"]["muted"] is True, (
         f"o «Salvar» da {aba} gravou o microfone aberto do aparelho como escolha "
-        "dela (P3 e P4)")
+        "de quem usa (P3 e P4)")
     assert dele[P2]["leds"]["lightbar_brightness"] == pytest.approx(0.7), (
-        f"o «Salvar» da {aba} gravou o teto da economia do P2 como o brilho dela")
+        f"o «Salvar» da {aba} gravou o teto da economia do P2 como o brilho de quem usa")
     assert depois["rumble"]["policy"] == "balanceado", (
         f"o «Salvar» da {aba} gravou a política viva `max` no perfil")
     assert dele[P3]["speaker"].get("fonte") == "sfx", (

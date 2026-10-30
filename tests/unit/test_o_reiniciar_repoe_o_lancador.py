@@ -38,7 +38,7 @@ def test_ninguem_pergunta_por_pgrep_dash_f(monkeypatch: pytest.MonkeyPatch) -> N
 
     for args in vistos:
         assert not (args[:1] == ["pgrep"] and "-f" in args), (
-            f"{args!r} pergunta por LINHA DE COMANDO — ela casa quem pergunta")
+            f"{args!r} pergunta por LINHA DE COMANDO — a pergunta casa quem pergunta")
 
 
 def test_o_flatpak_e_lido_por_instancia_e_nao_por_texto(
@@ -166,7 +166,7 @@ def test_a_steam_fecha_pelo_dono_do_usuario(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_a_steam_abre_pelo_dono_do_usuario(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`open_or_focus_steam` ainda FOCA a janela quando ela já está de pé."""
+    """`open_or_focus_steam` ainda FOCA a janela quando a janela já está de pé."""
     from hefesto_dualsense4unix.integrations import steam_launcher
 
     chamou: list[str] = []

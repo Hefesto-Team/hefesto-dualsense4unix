@@ -52,7 +52,7 @@ def test_o_computador_recusa_o_que_e_do_jogo() -> None:
 
 
 def test_o_resgate_salva_o_resto_do_computador() -> None:
-    """Uma seção torta sai sozinha; a luz que ela ajustou continua."""
+    """Uma seção torta sai sozinha; a luz que quem usa ajustou continua."""
     _computador({"global": {"leds": {"lightbar": [1, 2, 3]}}})
     bruto = json.loads(m.caminho_da_maquina().read_text(encoding="utf-8"))
     bruto["computador"]["global"]["mouse"] = {"speed": 999}

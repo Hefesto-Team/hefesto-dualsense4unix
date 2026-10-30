@@ -7,12 +7,12 @@ série?"*, e a resposta foi **sim, faz o portão pro número de série**.
 **A CASA JÁ SABIA QUE FALTAVA, e pagou por isso.** A docstring de
 ``cor_do_plastico.mascarar_serial`` registra, com data:
 
-    *"Ele já foi escrito com o serial VERDADEIRO de um dos controles da bancada
-    — a docstring da função que mascara serial era, ela mesma, o vazamento, e o
+    *"Ele já foi escrito com o serial VERDADEIRO de um dos controles da máquina de teste
+    — a docstring da função que mascara serial era, por si, o vazamento, e o
     `check_anonymity.sh` passava verde porque varre a forma de um MAC, não a de
     um serial (15/08/2026)."*
 
-O serial de fábrica identifica a unidade dela **tão bem quanto o MAC**, e a
+O serial de fábrica identifica a unidade de quem usa **tão bem quanto o MAC**, e a
 regra desta casa é sobre ARQUIVO VERSIONADO — não sobre a palavra "MAC".
 
 **POR FORMA, E NUNCA POR LISTA.** Listar os seriais reais seria exatamente o
@@ -26,12 +26,12 @@ E HÁ DUAS RÉGUAS DE SERIAL, o que é regra desta casa e não redundância — 
 razão que sustenta as duas de MAC. A distinção, medida em 03/09/2026:
 
 * ``test_docs_mac_anonimato.py::test_nenhum_serial_de_fabrica_real_no_repo`` é a
-  AUTORITATIVA. Ela existe desde 15/08, mede a forma EXATA de um DualSense
+  AUTORITATIVA. Existe desde 15/08, mede a forma EXATA de um DualSense
   (``[A-Z][A-Z0-9]{16}``, com dígito nas posições que a fábrica usa) e alcança
   três formas de escrita: texto, hexdump com o serial atravessando a quebra de
-  linha, e corrida hexadecimal colada. É ela que acusou o forjado deste arquivo
+  linha, e corrida hexadecimal colada. É a que acusou o forjado deste arquivo
   quando ele nasceu com um valor próprio.
-* ``scripts/check_numero_de_serie.py`` é a RÁPIDA e a LARGA. Ela mede só texto,
+* ``scripts/check_numero_de_serie.py`` é a RÁPIDA e a LARGA. Mede só texto,
   mas de 15 a 20 caracteres — o que alcança serial de aparelho que NÃO é
   DualSense (8BitDo, Pro Controller) —, e custa 1,2 s contra os 12 s da outra.
 
@@ -108,7 +108,7 @@ def test_a_marca_de_mentira_isenta_a_linha(tmp_path: pathlib.Path) -> None:
 
 
 def test_a_marca_na_linha_de_baixo_nao_isenta(tmp_path: pathlib.Path) -> None:
-    """A varredura é por LINHA, e a marca fora dela não alcança nada."""
+    """A varredura é por LINHA, e a marca fora da linha não alcança nada."""
     texto = (f'S = "{FORJADO_COM_A_FORMA}"\n'
              "# serial-de-mentira: escrito no lugar errado\n")
     assert _acusa(texto, tmp_path), (

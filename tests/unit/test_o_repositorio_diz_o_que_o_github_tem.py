@@ -429,7 +429,7 @@ def gh_aplicado(gh: Mentira) -> Mentira:
     """O repositório de mentira depois do `--aplicar` inteiro.
 
     A primeira aplicação da corrida é feita de verdade (e conferida); os testes de deriva partem
-    de uma cópia dela em vez de repeti-la."""
+    de uma cópia da aplicação em vez de repeti-la."""
     if not _APLICADO:
         assert rodar("--aplicar") == 0
         _APLICADO.update(gh.estado)
@@ -1205,12 +1205,12 @@ def test_o_arquivo_de_um_repositorio_so_com_o_minimo_continua_valendo() -> None:
 
 
 def assinatura_anulada_por_excecao(dados: dict[str, Any]) -> list[str]:
-    """Os rulesets do `dev` que exigem assinatura e deixam alguém de fora dela.
+    """Os rulesets do `dev` que exigem assinatura e deixam alguém de fora da assinatura.
 
     A exceção de administrador anula a regra para quem mais empurra commit direto no `dev`: a
     assinatura exigida morreria no primeiro push de quem mantém. No `main` a exceção é da decisão
     D-0610-ASSINATURA-E-O-MAIN: o `main` está milhares de commits atrás do `dev`, nenhum assinado, e
-    sem ela o primeiro avanço dele na release seria recusado pelos commits antigos.
+    sem a exceção o primeiro avanço dele na release seria recusado pelos commits antigos.
     """
     return [
         r["nome"]

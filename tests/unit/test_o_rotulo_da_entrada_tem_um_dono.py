@@ -122,7 +122,7 @@ def test_o_ja_mapeadas_diz_o_nome_e_a_face(documento: MaquinaConfig) -> None:
 def test_o_cartao_diz_as_duas_pontas_pelo_nome(
     documento: MaquinaConfig, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O de→para do cartão: «Meio → Entrada 2», pela declaração dela."""
+    """O de→para do cartão: «Meio → Entrada 2», pela declaração da entrada."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -185,7 +185,7 @@ def test_a_leitura_das_ordens_leva_o_nome_das_entradas(
 def test_o_nome_dado_no_mapa_chega_ao_cartao_e_a_ordem(
     tmp_path: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """De ponta a ponta: o nome que ela dá no editor do mapa (``dar_nome_a_entrada``,"""
+    """De ponta a ponta: o nome que quem usa dá no editor do mapa (``dar_nome_a_entrada``,"""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")

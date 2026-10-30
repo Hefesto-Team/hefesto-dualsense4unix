@@ -6,10 +6,10 @@ declara um custo:
     *"O PS ganha a mesma lista das outras 21 linhas; se você der uma tecla a ele,
     ele passa a digitar SEM parar de abrir a Steam, e a tabela não avisa isso."*
 
-As duas metades são requisito, e a ORDEM entre elas também: *digita* **e** *sem
+As duas metades são requisito, e a ORDEM entre as duas também: *digita* **e** *sem
 parar de abrir a Steam*. Esta régua mede as duas, e mede a ordem.
 
-O QUE ELA COBRE, e por que num arquivo só: as quatro peças respondem à mesma
+O QUE A RÉGUA COBRE, e por que num arquivo só: as quatro peças respondem à mesma
 pergunta — *este toque no PS vira o quê?* — e separá-las faria a próxima pessoa
 curar uma e esquecer as outras.
 
@@ -99,7 +99,7 @@ def _daemon(
 
 @pytest.fixture
 def steam(monkeypatch) -> list[str]:
-    """A Steam de mentira — e ela anota NA MESMA LISTA que as teclas."""
+    """A Steam de mentira — e anota NA MESMA LISTA que as teclas."""
     abriu: list[str] = []
     monkeypatch.setattr(
         steam_launcher, "open_or_focus_steam", lambda: abriu.append("steam") or True
@@ -129,7 +129,7 @@ def test_o_ps_entrou_na_lista_do_produto_no_lugar_do_aparelho():
     reprovam os cinco casos seguintes.
     """
     assert acoes.BOTAO_PS in acoes.BOTOES, (
-        "o `ps` saiu da lista do produto: a decisão dela na 06-Q3 é que ele "
+        "o `ps` saiu da lista do produto: a decisão da 06-Q3 é que ele "
         "ganha a mesma lista das outras 21 linhas.")
     assert len(acoes.BOTOES) == 22, (
         f"a lista tem {len(acoes.BOTOES)} linhas e devia ter 22 — as 21 de "
@@ -144,7 +144,7 @@ def test_o_perfil_aceita_o_ps_sem_ninguem_editar_o_validador():
 
     É o que prova que o validador é DERIVADO: ele lê
     `core/acoes_de_botao.BOTOES` em vez de guardar uma quarta cópia da lista.
-    Se alguém digitar uma lista lá, esta sprint fracassou no que ela tem de
+    Se alguém digitar uma lista lá, esta sprint fracassou no que tem de
     mais barato.
 
     A MORDIDA: tire o `ps` de `BOTOES` — o `Profile` volta a recusar, com a
@@ -160,10 +160,10 @@ def test_o_perfil_aceita_o_ps_sem_ninguem_editar_o_validador():
 
 
 def test_o_de_fabrica_da_linha_do_ps_e_nenhuma_tecla():
-    """A linha do PS só digita (01/10/2026): o de fábrica dela é «— Sem tecla —».
+    """A linha do PS só digita (01/10/2026): o de fábrica da linha é «— Sem tecla —».
 
     O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, `D-0110-A-LINHA-DO-PS-SO-DIGITA`
-    (01/10/2026). Até ali o de fábrica dela era o degrau
+    (01/10/2026). Até ali o de fábrica da linha era o degrau
     da máquina (`DaemonConfig.ps_button_action`, «Abrir a Steam»), e o PS tinha
     dois donos para o mesmo ato. O que o toque no PS faz no computador é o ⑥ da
     tabela dos gestos; a linha não lê mais o degrau.
@@ -304,7 +304,7 @@ def test_o_ps_digita_de_verdade_pelo_teclado_virtual(steam):
     assert dev.emitidos == [("KEY_F11", 1), ("KEY_F11", 0)], (
         f"o device recebeu {dev.emitidos!r} — o toque no PS tinha de emitir "
         f"F11 e soltá-lo.")
-    assert steam == ["steam"], "e sem parar de abrir a Steam — a palavra dela."
+    assert steam == ["steam"], "e sem parar de abrir a Steam, como o produto decide."
 
 
 def test_o_ps_digita_combo(steam):
@@ -319,7 +319,7 @@ def test_o_ps_digita_combo(steam):
 
 
 def test_o_perfil_vence_a_maquina_calada(steam):
-    """A ARMADILHA QUE A SPRINT NOMEIA, e ela é a razão da ordem do código."""
+    """A ARMADILHA QUE A SPRINT NOMEIA, e é a razão da ordem do código."""
     teclado, dev = _teclado()
     daemon = _daemon(
         acao_da_maquina="none", teclado=teclado, escolha_do_perfil="KEY_F11")
@@ -327,7 +327,7 @@ def test_o_perfil_vence_a_maquina_calada(steam):
     gesto()
     assert gesto.esperar(5.0)
     assert dev.emitidos == [("KEY_F11", 1), ("KEY_F11", 0)], (
-        "a máquina calada calou o perfil: a escolha dela na linha do PS não "
+        "a máquina calada calou o perfil: a escolha de quem usa na linha do PS não "
         "chegou ao teclado.")
     assert steam == [], "e a máquina em `none` continua sem abrir a Steam."
 
@@ -472,7 +472,7 @@ def test_a_tecla_sai_antes_da_steam(steam, monkeypatch):
     assert ordem == ["tecla", "steam"], (
         f"a ordem medida foi {ordem!r}: a Steam roubou o foco antes de a tecla "
         f"sair, e a tecla chegou à Steam em vez de chegar ao que estava na "
-        f"frente dela.")
+        f"frente de quem joga.")
 
 
 def test_o_toque_nao_solta_o_que_estava_segurado(steam):

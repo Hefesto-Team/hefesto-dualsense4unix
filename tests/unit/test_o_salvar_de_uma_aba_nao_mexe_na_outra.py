@@ -1,4 +1,4 @@
-"""O Salvar de uma aba não mexe no perfil, e o gesto de uma seção só mexe nela.
+"""O Salvar de uma aba não mexe no perfil, e o gesto de uma seção só mexe na seção.
 
 MEDIDO NO DISCO DO USUÁRIO em 26/09/2026. Às 18:38:37 o usuário clicou em «Salvar Perfil»
 na aba Vibração com o PRAGMATA aberto, e o backup de antes e o de depois
@@ -211,7 +211,7 @@ def _fora_da_secao(mudou: dict[str, Any], secoes: frozenset[str]) -> dict[str, A
 
 
 def test_o_caso_das_18h38_da_vibracao() -> None:
-    """O clique do usuário, com o estado dela: o microfone e a fonte do …:03 ficam."""
+    """O clique do usuário, com o estado dele: o microfone e a fonte do …:03 ficam."""
     antes = _o_disco()
     rodape.salvar(_ctx(VIVO_DAS_18H38, MESA_DAS_18H38),
                   _clique_do_salvar("05-vibracao.html"), PonteDeMentira())
@@ -236,7 +236,7 @@ def test_o_volume_da_02_guarda_a_fonte_e_a_rota() -> None:
     assert depois[f"controllers.{P3}.speaker.volume"] == 60
     assert depois.get(f"controllers.{P3}.speaker.fonte") == "sfx", (
         "o volume da 02 apagou a fonte do alto-falante — o `SpeakerDraft` foi "
-        "remontado sem ela")
+        "remontado sem a fonte")
     assert depois.get(f"controllers.{P3}.speaker.rota") == 2
 
 
@@ -253,7 +253,7 @@ def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
                   _clique_do_salvar("02-controles.html"), PonteDeMentira())
     depois = _o_disco()
     assert depois.get(f"controllers.{P3}.mic.muted") is True, (
-        "o Salvar da 02 gravou o microfone aberto do aparelho como escolha dela")
+        "o Salvar da 02 gravou o microfone aberto do aparelho como escolha de quem usa")
     assert depois.get(f"controllers.{P3}.mic.gain") == 40, (
         "o Salvar da 02 apagou o ganho do microfone do …:03 — o `MicDraft` "
         "foi remontado sem ele")

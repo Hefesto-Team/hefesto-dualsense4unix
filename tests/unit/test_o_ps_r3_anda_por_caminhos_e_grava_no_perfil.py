@@ -11,7 +11,7 @@ O que o estudo mediu antes da cura: com a máscara do P1 no cartão, o ciclo era
 de MÁSCARAS (`ponte_atual` lia `device.flavor`), todo aperto pedia uma máscara
 que o cartão vencia, e a luz dava cinco pulsos vermelhos com o ciclo parado.
 
-A bancada é a da `test_o_modo_nao_escreve_a_mascara.py`: o callback REAL do
+O ensaio é o da `test_o_modo_nao_escreve_a_mascara.py`: o callback REAL do
 gesto (`hotkey.build_next_bridge_callback`) e os métodos REAIS do
 `lifecycle.Daemon`; dublados só o vpad, o grab, o launch env, as flags de sessão,
 o co-op e a lightbar. O perfil ativo é achado pela perna do disco
@@ -33,7 +33,7 @@ MORDE, e são duas curas independentes:
 O ESCRITOR MUDOU DE LUGAR em 29/09/2026 (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01): o
 `_gravar_o_modo_do_gesto` do callback saiu, e quem grava é o setter do daemon,
 com a porta que o gesto lhe diz (`grava_o_modo="controle"`). Por isso o daemon
-desta bancada ganhou os três métodos REAIS do caminho da gravação
+deste ensaio ganhou os três métodos REAIS do caminho da gravação
 (`gravar_o_modo_escolhido`, `aplicar_o_arranjo_do_desktop` e
 `_perfil_do_arranjo`): a régua segue lendo o disco, e não um dublê do escritor.
 """
@@ -62,7 +62,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.utils import session
 
 P1 = "aabbcc000001"
-PERFIL = "Bancada"
+PERFIL = "Ensaio"
 
 
 class _Vpad:
@@ -217,8 +217,8 @@ async def test_tres_apertos_andam_pelos_caminhos_e_cada_um_fica_no_perfil(
     luzes: list[list[Any]],
 ) -> None:
     d = _preparar_cartao_dualsense()
-    assert hotkey.ponte_atual(d) == hotkey.PONTE_DUALSENSE, "premissa da bancada"
-    assert d._gamepad_device.backend == "uhid", "premissa da bancada"
+    assert hotkey.ponte_atual(d) == hotkey.PONTE_DUALSENSE, "premissa do ensaio"
+    assert d._gamepad_device.backend == "uhid", "premissa do ensaio"
 
     gesto = hotkey.build_next_bridge_callback(d)  # type: ignore[arg-type]
     esperado = [

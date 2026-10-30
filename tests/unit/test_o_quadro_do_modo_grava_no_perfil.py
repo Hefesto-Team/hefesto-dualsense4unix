@@ -4,7 +4,7 @@
 
     "em perfis ainda aparece modo. Isso deve aparecer só na aba jogar."
 
-O QUE ELA COBRAVA ANTES, e cobrava certo: o gesto `a10_perfis.editor_modo`
+O QUE A RÉGUA COBRAVA ANTES, e cobrava certo: o gesto `a10_perfis.editor_modo`
 nasceu em 06/09 (`PERFIL-MODO-01`) porque a linha 384 do CSV da paridade tinha o
 veredito mais duro da aba — *"NÃO EXISTE — nem na página, nem no pacote"* —, e
 esta régua provava que os quatro botões gravavam o que prometiam.
@@ -16,15 +16,15 @@ inteiro deste arquivo:
   e gesto sem clique é o "campo morto com nome de promessa";
 * `Profile.mode` **fica**: no esquema, no disco e no `ativar`. Um perfil que já
   diz «Jogar pelo Hefesto» continua dizendo;
-* quem EDITA passa a ser só a aba Jogar, e quem GRAVA o que ela escolhe lá é
+* quem EDITA passa a ser só a aba Jogar, e quem GRAVA o que quem usa escolhe lá é
   o daemon, depois do aparelho (`Daemon.gravar_o_modo_escolhido`, desde a
   O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026), pela regra do dono
   (`manager.secao_do_modo_com_o_caminho`), que nunca foi da aba 10.
 
 **O RISCO REAL DE UMA RETIRADA DE TELA É O DADO MORRER JUNTO**, em silêncio: os
 gestos que sobraram no editor gravam o perfil **INTEIRO**, e um deles que
-reconstruísse o `Profile` sem a seção apagaria o modo dela na primeira vez que
-ela renomeasse um perfil. Não haveria tela para mostrar isso — o campo é
+reconstruísse o `Profile` sem a seção apagaria o modo escolhido na primeira vez que
+quem usa renomeasse um perfil. Não haveria tela para mostrar isso — o campo é
 invisível nesta aba agora. É o que a §2 mede, gesto por gesto.
 
 **E O PERFIL NOVO PRECISAVA DE UMA DECISÃO**, porque a tela deixou de ter onde
@@ -136,7 +136,7 @@ def test_a_aba_perfis_nao_tem_mais_gesto_de_modo() -> None:
     """Ordem, 11/09/2026 — e a queda se mede nos DOIS lugares."""
     assert not hasattr(a10_perfis, "editor_modo"), (
         "`a10_perfis.editor_modo` voltou — o quadro «Modo» saiu do editor de "
-        "Perfis por ordem dela em 11/09/2026, e um gesto que nenhum clique "
+        "Perfis por decisão do produto em 11/09/2026, e um gesto que nenhum clique "
         "alcança é o campo morto com nome de promessa")
     inscritos = {nome for (pagina, nome) in pacotes.GESTOS if pagina == PAGINA}
     assert "editor.modo" not in inscritos, (
@@ -224,17 +224,17 @@ def test_o_perfil_novo_nasce_sem_opiniao_de_modo(disco: dict[str, Any]) -> None:
     assert criado.name != "Pragmata", "o perfil novo não nasceu"
     assert criado.mode is None, (
         f"o perfil novo nasceu com modo {criado.mode!r} — sem o quadro na tela, "
-        f"ela não teria como ver nem desfazer isso")
+        f"quem usa não teria como ver nem desfazer isso")
 
 
 def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
     """`manager.secao_do_modo_com_o_caminho` é quem aplica, e nunca foi da aba 10.
 
-    É o dono da seção `mode` que o daemon grava quando ela escolhe o modo
+    É o dono da seção `mode` que o daemon grava quando quem usa escolhe o modo
     (`Daemon.gravar_o_modo_escolhido`, O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01,
     29/09/2026). Até ali quem a aplicava pela janela era
     `interface/pacotes/perfil.secao_do_modo`, que saiu com o escritor da
-    janela; as duas regras que ela cobrava passam a ser cobradas do dono: a
+    janela; as duas regras que a régua cobrava passam a ser cobradas do dono: a
     máscara não é do modo, e nada de máscara inventada
     (ESCOLHA-DO-USUARIO-VENCE-01/E1).
 

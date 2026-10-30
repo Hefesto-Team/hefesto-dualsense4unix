@@ -213,4 +213,4 @@ def test_a_fabrica_do_daemon_injeta_o_provider() -> None:
     fonte = inspect.getsource(mod)
     assert '"mouse_device_provider": lambda: getattr(daemon, "_mouse_device", None)' in fonte, (
         "a fábrica `manager_do_daemon` parou de injetar o `mouse_device_provider`. "
-        "Com ela fora, `button_actions` grava no disco e não acende nada.")
+        "Com a linha fora, `button_actions` grava no disco e não acende nada.")

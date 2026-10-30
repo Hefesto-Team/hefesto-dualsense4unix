@@ -18,7 +18,7 @@ Com `null`, `ativo_agora` ficava vazio, o `if` era falso, e o `profile.switch`
 anterior — enquanto a MESMA aba realçava a linha, porque o realce
 (`a10_perfis._valendo`) já usava o dono certo.
 
-É o sintoma que ela leu como *"não está salvando"*, e a própria docstring da
+É o sintoma que quem usa leu como *"não está salvando"*, e a própria docstring da
 função o anunciava duas linhas acima: *"Gravar sem reaplicar deixa a tela
 dizendo uma coisa e o aparelho fazendo outra"*.
 
@@ -140,5 +140,5 @@ def test_o_dono_tem_a_perna_de_disco_que_o_campo_cru_nao_tem():
     vale = perfil_que_esta_valendo(estado)
     assert vale.fonte != "daemon", (
         "o dono devolveu 'daemon' sobre uma resposta nula: a perna de disco "
-        "sumiu, e com ela a cura deste arquivo"
+        "sumiu, e com a perna a cura deste arquivo"
     )

@@ -6,7 +6,7 @@ e um mapa de bits que vieram de CINCO fontes concordantes. Cinco fontes que
 concordam ainda são prosa: nada impede que a próxima pessoa digite `9` onde
 está `8`, e nenhum portão desta casa enxergaria.
 
-**A régua não digita número nenhum: ela LÊ.** Os offsets são recalculados do
+**A régua não digita número nenhum: a régua LÊ.** Os offsets são recalculados do
 `struct dualsense_input_report` do driver COMPILADO nesta máquina, somando o
 tamanho de cada campo; as máscaras de botão são lidas dos `#define
 DS_BUTTONS*`. Se a página e o driver divergirem em um byte ou em um bit, isto
@@ -15,8 +15,8 @@ promete descrever aquele fonte.
 
 O QUE ESTE TESTE **NÃO** MEDE, e é preciso dizer: ele não toca aparelho nenhum.
 Ele prova concordância entre três textos desta árvore. Que o APARELHO publique
-esses bytes é outra afirmação, e o grau dela está escrito nas células do mapa —
-`afirmado-no-doc` para o mapa de bits, `medido` só para o que a bancada mediu
+esses bytes é outra afirmação, e o grau dessa afirmação está escrito nas células do mapa —
+`afirmado-no-doc` para o mapa de bits, `medido` só para o que o aparelho mediu
 em 15/08/2026.
 
 A MORDIDA, provada em 03/09/2026 (ver a docstring de cada teste): trocar UM
@@ -281,7 +281,7 @@ def test_a_calibracao_de_stick_deixou_de_ser_desconhecida_e_nao_mentiu_o_grau() 
     for lado in ("cabo", "radio"):
         assert linha[f"{lado}_de_onde_sei"] == "afirmado-no-doc", (
             f"o grau de {lado} da calibração de stick não é mais `afirmado-no-doc`; "
-            "só sobe com bancada, e a página diz que ninguém desta casa leu um byte"
+            "só sobe com ensaio no aparelho, e a página diz que ninguém desta casa leu um byte"
         )
         assert not (linha[f"{lado}_ate_onde_foi"] or "").strip(), (
             f"`{lado}_ate_onde_foi` da calibração de stick foi preenchido, e nada "

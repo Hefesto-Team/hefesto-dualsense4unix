@@ -82,7 +82,7 @@ def test_a_faixa_de_cada_sensor_casa_com_a_do_vpad() -> None:
 
 
 def test_sem_entrada_os_dois_nascem_ligados() -> None:
-    """`D-AUDIO-E-GIRO-NASCEM-LIGADOS`: ausência é o default dela, não "não sei"."""
+    """`D-AUDIO-E-GIRO-NASCEM-LIGADOS`: ausência é o default da decisão, não "não sei"."""
     assert RegistroDeSensores().estado(PECA) == EstadoDosSensores(True, True)
 
 
@@ -168,7 +168,7 @@ def test_o_cache_do_reader_guarda_o_que_o_fisico_mandou() -> None:
 
 
 def test_o_filtro_e_a_ultima_coisa_antes_do_vpad() -> None:
-    """A ordem no `_emit` é o contrato, e ela é legível na fonte."""
+    """A ordem no `_emit` é o contrato, e é legível na fonte."""
     fonte = inspect.getsource(prr.PhysicalReportReader._emit)
     assert "REGISTRO.filtrar(self._uniq_aberto, window)" in fonte
     assert fonte.index("self._last_window = window") < fonte.index("REGISTRO.filtrar")
@@ -243,7 +243,7 @@ def test_o_no_de_movimento_fica_exclusivo_quando_o_usuario_desliga() -> None:
     hub, criados = _hub_com_dublês(lambda: agora[0])
     hub.leitura(PECA)
     hub.reconciliar()
-    assert criados[PECA].grab_state == "off", "grab sem ela pedir nada"
+    assert criados[PECA].grab_state == "off", "grab sem quem usa pedir nada"
 
     REGISTRO.definir(PECA, giroscopio=False)
     hub.reconciliar()
@@ -465,8 +465,8 @@ def test_o_metodo_desliga_grava_e_diz_o_alcance(perfis: Any) -> None:
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
-    save_profile(Profile(name="Bancada", match=MatchAny()))
-    h = _handlers(ativo="Bancada", primario=PECA)
+    save_profile(Profile(name="Ensaio", match=MatchAny()))
+    h = _handlers(ativo="Ensaio", primario=PECA)
 
     corpo = _chamar(h, uniq=PECA, giroscopio=False)
 
@@ -476,7 +476,7 @@ def test_o_metodo_desliga_grava_e_diz_o_alcance(perfis: Any) -> None:
     assert corpo["alcance"] == {"report": "aplicado", "evdev": "held"}
     assert corpo["ressalva"] is None
     assert REGISTRO.estado(PECA).giroscopio is False
-    dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[
+    dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[
         chave_de_sensor(PECA)
     ]
     assert dele.sensores is not None and dele.sensores.giroscopio is False
@@ -486,8 +486,8 @@ def test_em_modo_nativo_a_resposta_diz_o_que_nao_alcanca(perfis: Any) -> None:
     """A entrega mais importante desta frente, e é uma FRASE."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
-    save_profile(Profile(name="Bancada", match=MatchAny()))
-    h = _handlers(ativo="Bancada", primario=PECA, nativo=True)
+    save_profile(Profile(name="Ensaio", match=MatchAny()))
+    h = _handlers(ativo="Ensaio", primario=PECA, nativo=True)
 
     corpo = _chamar(h, uniq=PECA, giroscopio=False)
 
@@ -500,8 +500,8 @@ def test_ligar_de_volta_nao_tem_ressalva(perfis: Any) -> None:
     """Ligar nunca é parcial — o dado volta por todos os caminhos de uma vez."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
 
-    save_profile(Profile(name="Bancada", match=MatchAny()))
-    h = _handlers(ativo="Bancada", primario=PECA, nativo=True)
+    save_profile(Profile(name="Ensaio", match=MatchAny()))
+    h = _handlers(ativo="Ensaio", primario=PECA, nativo=True)
     _chamar(h, uniq=PECA, giroscopio=False)
 
     corpo = _chamar(h, uniq=PECA, giroscopio=True)
@@ -527,7 +527,7 @@ def test_sem_perfil_ativo_o_interruptor_vale_e_vai_ao_computador(perfis: Any) ->
 
 def test_a_mesa_vazia_recusa_dizendo(perfis: Any) -> None:
     """Cair no primeiro da lista é o que faria a mesa cheia desligar o mesmo."""
-    h = _handlers(ativo="Bancada", primario=None)
+    h = _handlers(ativo="Ensaio", primario=None)
 
     corpo = _chamar(h, giroscopio=False)
 
@@ -537,7 +537,7 @@ def test_a_mesa_vazia_recusa_dizendo(perfis: Any) -> None:
 
 def test_endereco_que_nao_e_mac_recusa_antes_do_disco(perfis: Any) -> None:
     """`norm_mac` de um path devolve chave plausível — e gravar ali some calada."""
-    h = _handlers(ativo="Bancada", primario=None)
+    h = _handlers(ativo="Ensaio", primario=None)
 
     corpo = _chamar(h, uniq="path:/dev/input/event9", giroscopio=False)
 
@@ -545,14 +545,14 @@ def test_endereco_que_nao_e_mac_recusa_antes_do_disco(perfis: Any) -> None:
 
 
 def test_sem_nenhum_dos_dois_campos_levanta(perfis: Any) -> None:
-    h = _handlers(ativo="Bancada", primario=PECA)
+    h = _handlers(ativo="Ensaio", primario=PECA)
     with pytest.raises(ValueError, match="ao menos um"):
         _chamar(h, uniq=PECA)
 
 
 @pytest.mark.parametrize("valor", [1, "true", None, 0.0])
 def test_tipo_errado_levanta_antes_do_disco(perfis: Any, valor: Any) -> None:
-    h = _handlers(ativo="Bancada", primario=PECA)
+    h = _handlers(ativo="Ensaio", primario=PECA)
     with pytest.raises(ValueError, match="boolean"):
         _chamar(h, uniq=PECA, giroscopio=valor)
 

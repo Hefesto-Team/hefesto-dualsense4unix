@@ -12,7 +12,7 @@ faltava e lhe custou semanas"* — e era exatamente essa informação que a dica
 estava errando.
 
 **Por que isto é grave e não cosmético:** a dica aparece sobre o botão que
-GRAVA NO DISCO, e nomeia com confiança um perfil que não é o dela. Quem lê a
+GRAVA NO DISCO, e nomeia com confiança um perfil que não é o ativo. Quem lê a
 dica antes de clicar decide com base numa afirmação falsa.
 
 AS DUAS METADES SÃO UMA CURA SÓ:
@@ -66,7 +66,7 @@ def test_sem_perfil_ativo_nao_se_inventa_nome() -> None:
 
 
 def test_a_dica_continua_dizendo_o_que_o_botao_faz() -> None:
-    """A cura não pode ter encurtado a frase até tirar o que ela ensina."""
+    """A cura não pode ter encurtado a frase até tirar o que a frase ensina."""
     campos = pacotes.topo(_Ctx("meu_perfil"))
     assert campos["rodape.salvar"].startswith(
         "Grava no perfil meu_perfil. É onde a mudança vai cair"), campos["rodape.salvar"]
@@ -85,12 +85,12 @@ def test_o_desenho_congelado_nao_nomeia_perfil() -> None:
 
 @pytest.mark.parametrize("pagina", PAGINAS)  # (noqa-acento)
 def test_nenhuma_pagina_do_ensaio_promete_o_perfil_errado(pagina: str) -> None:
-    """A régua olha a BANCADA — o desenho de HOJE, que é o que tem dono aqui."""
+    """A régua olha o DESENHO — o desenho de HOJE, que é o que tem dono aqui."""
     caminhos = sorted(onde.saida().glob(f"{pagina}*.html"))
     if not caminhos:
-        pytest.skip(f"não há página na bancada para {pagina}")
+        pytest.skip(f"não há página no desenho para {pagina}")
     dicas = re.findall(r'title="([^"]*)"', caminhos[0].read_text(encoding="utf-8"))
     culpadas = [d for d in dicas if "perfil Mortal Kombat" in d]
     assert not culpadas, (
-        f"{caminhos[0].name} promete gravar num perfil que não é o dela: "
+        f"{caminhos[0].name} promete gravar num perfil que não é o ativo: "
         f"{culpadas}. Rode o gerador daquela aba.")

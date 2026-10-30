@@ -2,7 +2,7 @@
 
 MEDIDO EM 05/09/2026, atrás do pedido: *"aplicar aplica todas as configs
 naquele perfil e salvar se lembra disso quando eu for jogar o jogo e no dia
-seguinte e por diante"*. Um ciclo inteiro — perfil no disco, ela configura nas
+seguinte e por diante"*. Um ciclo inteiro — perfil no disco, quem usa configura nas
 abas 02, 04, 05 e 06, volta e clica **Salvar** no rodapé — mostrou que **5 de
 11 campos sobreviviam**, e que três deles não se perdiam por esquecimento: o
 produto já tinha gravado o valor certo no disco e o Salvar o **desfazia**.
@@ -142,7 +142,7 @@ def test_a_cor_acesa_nao_vence_o_disco(perfil_configurado: str) -> None:
     """
     salvo = _salvar(perfil_configurado, _Ctx([_controle_aceso()]))
     assert tuple(_leds_gravados(salvo).lightbar) == COR_DO_USUARIO, (
-        f"o Salvar gravou a cor acesa {COR_ACESA} como a escolha dela")
+        f"o Salvar gravou a cor acesa {COR_ACESA} como a escolha de quem usa")
 
 
 def _round_trip(nome_de_saida: str, perfil: str) -> Any:
@@ -161,10 +161,10 @@ def test_as_acoes_de_botao_sobrevivem_ao_salvar(perfil_configurado: str) -> None
 
 
 def test_o_teclado_emulado_sobrevive_ao_salvar(perfil_configurado: str) -> None:
-    """`teclado_emulado` atravessa o round-trip — e ela nem precisa tocá-lo."""
+    """`teclado_emulado` atravessa o round-trip — e quem usa nem precisa tocá-lo."""
     saiu = _round_trip(perfil_configurado, perfil_configurado)
     assert saiu.teclado_emulado is True, (
-        "o Salvar zerou o `teclado_emulado`, que ela nem tinha tocado")
+        "o Salvar zerou o `teclado_emulado`, que quem usa nem tinha tocado")
 
 
 def test_os_dois_viajam_com_nome_novo(perfil_configurado: str) -> None:

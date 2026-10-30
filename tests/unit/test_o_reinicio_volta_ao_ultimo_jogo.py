@@ -4,7 +4,7 @@ A regra (14/10/2026): *«Ele deveria ficar sempre com o perfil do último jogo
 aberto ou ativado. Até que eu mude ou outro jogo inicie»*. Medido no mesmo dia:
 depois do reinício, o daemon subiu na escolha à mão («Lure Of Passion»), com o
 gamepad desligado, por cima do perfil do jogo que valia. O reinício não é
-mudança dela nem jogo novo.
+mudança de quem usa nem jogo novo.
 """
 
 from __future__ import annotations
@@ -90,7 +90,7 @@ def test_depois_do_boot_a_janela_sem_perfil_nao_devolve_a_escolha() -> None:
 
 @pytest.mark.usefixtures("perfis_isolados")
 def test_o_gesto_do_usuario_depois_do_jogo_e_o_que_o_boot_restaura() -> None:
-    """Ela ativa outro perfil à mão depois do jogo: o boot abre na escolha do usuário.
+    """Quem usa ativa outro perfil à mão depois do jogo: o boot abre na escolha do usuário.
 
     MORDIDA: tire o ``esquecer_o_ultimo_jogo()`` do ``gravar_a_escolha`` e volta o «sackboy».
     """
@@ -277,7 +277,7 @@ def test_o_jogo_que_o_lancamento_pos_fica_mesmo_sem_a_janela_dele() -> None:
 
 @pytest.mark.usefixtures("perfis_isolados")
 def test_o_gesto_do_usuario_depois_do_boot_fica_com_a_janela_sem_perfil() -> None:
-    """O boot volta ao último jogo, ela ativa outro perfil à mão, e o terminal não devolve o jogo.
+    """O boot volta ao último jogo, quem usa ativa outro perfil, e o terminal não devolve o jogo.
 
     O gesto do usuário é o que tira o último jogo (D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO):
     o ``gravar_a_escolha`` apaga o disco, e a memória do autoswitch se relê vazia.
@@ -298,6 +298,6 @@ def test_o_gesto_do_usuario_depois_do_boot_fica_com_a_janela_sem_perfil() -> Non
     manager.activate("okular", origin="manual")
     for i in range(60):
         sw._tick(dict(JANELA_DO_TERMINAL), 10.0 + 0.5 * i)
-    assert store.active_profile == "okular", "o último jogo voltou por cima do gesto dela"
+    assert store.active_profile == "okular", "o último jogo voltou por cima do gesto de quem usa"
     assert session._ultimo_jogo_cru() is None
     assert _o_nome_que_o_boot_restaura(None) == "okular"

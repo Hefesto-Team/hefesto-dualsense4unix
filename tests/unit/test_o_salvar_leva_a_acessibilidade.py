@@ -8,7 +8,7 @@ um perfil com o clique travado apagava o clique travado do disco. A cura é a me
 passagem do ``movimento``: o rascunho não as edita, só as leva de volta, com o mesmo
 nome ou com um nome novo.
 
-A MORDIDA: apague de ``to_profile`` a linha que passa uma das três seções e o caso dela
+A MORDIDA: apague de ``to_profile`` a linha que passa uma das três seções e o caso da seção
 reprova.
 """
 

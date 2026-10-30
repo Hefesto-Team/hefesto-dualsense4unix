@@ -27,7 +27,7 @@ O OPT-IN QUE EXISTIA NÃO ERA DO USUÁRIO
 Havia um opt-in: a variável de ambiente
 `HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1`. Pela regra desta casa — *"tudo
 tem que focar em funcionar na interface do app e no install"* — opt-in que só se
-alcança exportando env não é opt-in dela; é opt-in de quem lê o código. O usuário
+alcança exportando env não é opt-in de quem usa; é opt-in de quem lê o código. O usuário
 disse, com todas as letras, que quer o microfone do controle: *"sobre o microfone
 tem que gravar minha voz"*.
 
@@ -79,11 +79,11 @@ def test_a_guarda_por_variavel_de_ambiente_continua_valendo() -> None:
 
 
 def test_sem_o_promotor_o_alarme_continua() -> None:
-    """O contraponto — a cura não pode calar o check que ela veio ajustar.
+    """O contraponto — a cura não pode calar o check que veio ajustar.
 
     O caso que o `fail` existe para pegar é outro: o DualSense virando microfone
     padrão **sozinho**, sem promotor nenhum, com um microfone melhor disponível.
-    Isso é o mic dela sequestrado sem ninguém pedir, e continua sendo falha.
+    Isso é o mic de quem usa sequestrado sem ninguém pedir, e continua sendo falha.
 
     Morde ao trocar a guarda por um `return` incondicional.
     """

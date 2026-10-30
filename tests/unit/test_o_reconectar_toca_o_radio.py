@@ -1,10 +1,9 @@
 """O «Reconectar controles» mexe no RÁDIO — ordem, 22/09/2026.
 
-**A PALAVRA DE PRODUTO:** *"pera o reconectar deveria sim tocar no radio. não faz
-sentido ele ficar de fora."* <!-- noqa-acento: citação literal -->
+**A DECISÃO DO PRODUTO:** o reconectar toca o rádio também; não faz sentido ele ficar de fora.
 
-Ela revoga a regra de 12/08 que o módulo carregava — *"Não reconectar é decisão
-de produto; o botão PS é do usuário"* —, e o dia mediu por quê: a bancada caiu num estado
+A decisão revoga a regra de 12/08 que o módulo carregava — *"Não reconectar é decisão
+de produto; o botão PS é do usuário"* —, e o dia mediu por quê: a máquina de teste caiu num estado
 em que o BlueZ dizia `Connected: true` para os quatro controles com o kernel
 **sem HID nenhum deles**. O botão PS não resolve esse estado, porque para o
 rádio já está tudo certo; quem destrava é derrubar o elo morto.
@@ -19,7 +18,7 @@ O QUE ESTA RÉGUA COBRA:
    seria trocar um problema que não existe por três segundos sem controle;
 4. **A SUÍTE NÃO FALA COM O RÁDIO DO USUÁRIO.** Esta é a régua do estrago do dia: o
    passo nasceu sem guarda e a primeira corrida de 457 testes derrubou os
-   QUATRO DualSense da bancada, ao vivo.
+   QUATRO DualSense da máquina de teste, ao vivo.
 """
 
 from __future__ import annotations
@@ -85,7 +84,7 @@ def test_o_connect_recusado_devolve_o_ps_para_o_usuario() -> None:
     """Um DualSense dormindo não atende chamado — medido em 22/09/2026.
 
     MORDIDA: faça o `Connect` recusado devolver `ESTADO_NAO_DEU` e a tela volta
-    a dizer *"não sei se caiu"* sobre um elo que ela acabou de ver cair.
+    a dizer *"não sei se caiu"* sobre um elo que quem usa acabou de ver cair.
     """
     bus = _Bus(conectado="true", connect_ok=False)
     desfecho = radio.reconectar(P2, executar=bus)
@@ -96,7 +95,7 @@ def test_o_connect_recusado_devolve_o_ps_para_o_usuario() -> None:
 
 
 def test_a_lista_do_radio_so_traz_dualsense() -> None:
-    """Pelo `Modalias`, nunca pelo nome: a bancada tem quatro com o mesmo."""
+    """Pelo `Modalias`, nunca pelo nome: a máquina de teste tem quatro com o mesmo."""
     bus = _Bus()
     achados = radio.dualsenses_do_radio(executar=bus)
 
@@ -134,17 +133,17 @@ def test_quem_esta_na_mesa_nao_e_tocado(monkeypatch: Any) -> None:
 
 
 def test_a_suite_nunca_alcanca_o_bus_de_verdade() -> None:
-    """O `busctl` do dono recusa o barramento dela enquanto a suíte estiver no ar.
+    """O `busctl` do dono recusa o barramento real enquanto a suíte estiver no ar.
 
     **O ESTRAGO QUE A PRODUZIU:** a primeira corrida que alcançou o passo do
-    rádio chamou `Disconnect` e `Connect` nos quatro DualSense da bancada, ao
+    rádio chamou `Disconnect` e `Connect` nos quatro DualSense da máquina de teste, ao
     vivo. O recado saiu no relatório do teste: *"Aperte PS em 4 controle(s)"*.
 
     A guarda nasceu neste módulo e subiu para a borda do dono do BlueZ
     (BLUEZ-UM-DONO-01), que é por onde o gesto lê e escreve agora.
 
     MORDIDA: tire a guarda da suíte de `bluez_dbus.busctl` e esta régua
-    reprova — e a próxima corrida derruba a bancada de novo.
+    reprova — e a próxima corrida derruba a máquina de teste de novo.
     """
     assert bluez_dbus.a_suite_esta_rodando() is True
     assert bluez_dbus.busctl(["tree", bluez_dbus.SERVICO, "--list"]) is None

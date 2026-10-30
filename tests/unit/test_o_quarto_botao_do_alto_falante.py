@@ -330,7 +330,7 @@ def test_no_cabo_o_quarto_escolhe_a_placa_e_a_volta_pergunta_ao_dono() -> None:
     desfecho = audio_saida.devolver_o_som_do_pc(
         de=P1, uniqs_na_mesa=(P1,), rota=Motor(), runner=servidor)
     assert not desfecho.ok and Motor.voltas == 1, (
-        "o botão de cima devolveu uma saída que o quarto não levou — ela a "
+        "o botão de cima devolveu uma saída que o quarto não levou — quem usa a "
         "escolheu pela lista")
 
 

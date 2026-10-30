@@ -107,7 +107,7 @@ def test_com_a_steam_de_outro_lar_nada_se_abre(
 
 
 def test_o_reiniciar_repoe_a_steam_da_flatpak(monkeypatch: pytest.MonkeyPatch) -> None:
-    """4. O «repor o lançador» do Reiniciar com a Steam da Flatpak: ela entra em ``repostos``."""
+    """4. O «repor o lançador» do Reiniciar com a Steam da Flatpak: entra em ``repostos``."""
     maquina = _a_maquina(monkeypatch, {"xdg-open", "flatpak"})
     steam = next(x for x in rl.LANCADORES if x.chave == "steam")
     monkeypatch.setattr(rl, "jogo_aberto", lambda: False)
