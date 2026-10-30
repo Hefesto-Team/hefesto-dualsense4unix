@@ -956,14 +956,13 @@ class CoopManager:
         hidraw = self._hidraw_dos_externos.pop(chave, None)
         if not escondido or not hidraw:
             return
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-                broker_call_nonblocking,
-                broker_client_for,
-            )
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            broker_call_nonblocking,
+            broker_client_for,
+        )
 
-            client = broker_client_for(self._daemon)
-            broker_call_nonblocking(self._daemon, lambda: client.restore(hidraw))
+        client = broker_client_for(self._daemon)
+        broker_call_nonblocking(self._daemon, lambda: client.restore(hidraw))
 
     def _e_externo(self, identity: str) -> bool:
         return bool(getattr(self._players.get(identity), "externo", False))
