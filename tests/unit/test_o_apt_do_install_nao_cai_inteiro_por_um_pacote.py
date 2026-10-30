@@ -14,8 +14,10 @@ from pathlib import Path
 
 from tests.unit.test_install_garante_deps_em_qualquer_familia import (
     INSTALL,
+    PRELUDO_DRIVER,
     _extrai_funcao,
 )
+from tests.unit.test_install_garante_deps_em_qualquer_familia import _roda as _roda_driver
 from tests.unit.test_o_install_nao_tropeca_no_pacote_quebrado import PRELUDO, _roda
 
 PRELUDO_DKMS = "\n".join([PRELUDO, _extrai_funcao("_pedir_o_que_o_dkms_compila")])
@@ -66,3 +68,59 @@ def test_o_passo_do_dkms_pede_pela_funcao_e_nao_numa_linha_so() -> None:
     trecho = INSTALL[INSTALL.index('_dkms_faltando=()'):INSTALL.index('unset _dkms_faltando')]
     assert '_pedir_o_que_o_dkms_compila "${_dkms_faltando[@]}"' in trecho
     assert 'run_pkg "${_dkms_faltando[@]}"' not in trecho
+
+
+def _apt_sem_um_pacote(tmp_path: Path, ausente: str) -> dict[str, str]:
+    binario = tmp_path / "bin"
+    binario.mkdir()
+    (tmp_path / "instalados").write_text("", encoding="utf-8")
+    for nome, corpo in (
+        ("sudo", 'exec "$@"\n'),
+        ("dpkg-query", "printf 'ii  bash\\n'\n"),
+        ("apt-get", 'printf "%s\\n" "$*" >> "${LOG_PKG}"\n'
+                    f'case " $* " in *" {ausente} "*) exit 100 ;; esac\n'
+                    'for a in "$@"; do [[ "$a" == -* || "$a" == install || "$a" == *=* ]] '
+                    '|| printf "%s\\n" "$a" >> "${INST}"; done\n'),
+    ):
+        alvo = binario / nome
+        alvo.write_text("#!/usr/bin/env bash\n" + corpo, encoding="utf-8")
+        alvo.chmod(0o755)
+    return {"HEFESTO_FAMILIA_PACOTES": "apt", "LOG_PKG": str(tmp_path / "pkg.log"),
+            "INST": str(tmp_path / "instalados"),
+            "HEFESTO_TRAVA_DPKG": str(tmp_path / "lock-frontend"),
+            "PATH": f"{binario}:{os.environ['PATH']}"}
+
+
+DEP_PELO_QUE_ENTROU = (
+    '_dep_presente() { case "$1" in '
+    'cmd:lsusb) grep -qx usbutils "${INST}" ;; '
+    'cmd:convert) grep -qx imagemagick "${INST}" ;; '
+    '*) return 0 ;; esac; }'
+)
+
+
+def test_o_pacote_que_a_distro_nao_tem_nao_derruba_os_outros(tmp_path: Path) -> None:
+    env = _apt_sem_um_pacote(tmp_path, "usbutils")
+    proc = _roda_driver("\n".join([DEP_PELO_QUE_ENTROU, "_garantir_deps_de_sistema"]),
+                        preludo=PRELUDO_DRIVER, env=env)
+    saida = proc.stdout + proc.stderr
+
+    assert proc.returncode == 0, saida
+    instalados = (tmp_path / "instalados").read_text(encoding="utf-8").split()
+    assert instalados == ["imagemagick"], instalados
+    assert "o apt não instalou usbutils" in saida, saida
+    assert "usbutils não entrou — sem ele, o diagnóstico perde a leitura do barramento USB" in saida
+    assert "imagemagick não entrou" not in saida, saida
+    assert "sudo apt install usbutils" in saida, saida
+    assert "imagemagick usbutils —" not in saida, saida
+
+
+def test_com_todo_pacote_no_repositorio_um_pedido_so(tmp_path: Path) -> None:
+    env = _apt_sem_um_pacote(tmp_path, "pacote-que-nenhum-pedido-traz")
+    proc = _roda_driver("\n".join([DEP_PELO_QUE_ENTROU, "_garantir_deps_de_sistema"]),
+                        preludo=PRELUDO_DRIVER, env=env)
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert len((tmp_path / "pkg.log").read_text(encoding="utf-8").splitlines()) == 1
+    assert "importantes ok" in proc.stdout, proc.stdout
+    assert "não entrou" not in proc.stdout + proc.stderr

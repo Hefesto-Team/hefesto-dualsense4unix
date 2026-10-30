@@ -12,6 +12,7 @@ SCRIPTS_DO_INSTALL = (
     RAIZ / "scripts" / "lib" / "camada_de_maquina.sh",
     RAIZ / "scripts" / "lib" / "som_da_sessao.sh",
     RAIZ / "scripts" / "desempenho.sh",
+    RAIZ / "scripts" / "doctor.sh",
 )
 PYTHON_QUE_O_INSTALL_MOSTRA = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "proton_pin.py",
@@ -20,7 +21,7 @@ PYTHON_QUE_O_INSTALL_MOSTRA = (
 PALAVRAS_DA_CASA = re.compile(r"(?<!\w)(bancada|dela|a provar)(?!\w)", re.IGNORECASE)
 QUEM_FALA = (
     "printf", "echo", "warn", "info", "ok", "die", "step", "ask_yn", "_faria", "_faria_root",
-    "_nao_faria", "_dizer", "diga", "anotar_reinicio_pendente",
+    "_nao_faria", "_dizer", "diga", "anotar_reinicio_pendente", "pass", "fail", "hdr",
 )
 FALA = re.compile(
     r"(?:^|;|\|\||&&|\bthen\b|\belse\b|\bdo\b)\s*(?:" + "|".join(map(re.escape, QUEM_FALA))
@@ -59,8 +60,8 @@ def palavras_da_casa(frases: list[tuple[int, str]]) -> list[tuple[int, str]]:
     return [(n, f) for n, f in frases if PALAVRAS_DA_CASA.search(f)]
 
 
-def test_nenhuma_frase_do_install_fala_a_lingua_da_casa() -> None:
-    """Mordida: devolva «o PipeWire dela» ao install.sh e a régua o aponta pela linha."""
+def test_nenhuma_frase_do_install_nem_do_doctor_fala_a_lingua_da_casa() -> None:
+    """Mordida: devolva «a provar» ao doctor.sh e a régua o aponta pela linha."""
     achados = []
     for caminho in SCRIPTS_DO_INSTALL:
         texto = caminho.read_text(encoding="utf-8")
@@ -82,9 +83,11 @@ def test_a_regua_le_cada_forma_de_falar_e_deixa_o_comentario() -> None:
         '# warn "comentário da bancada não conta"',
         'warn "o vidro de uma janela fica"',
         'warn "o Proton dele fica"',
+        '    fail "o alvo do RUN+= dela falta"',
+        '        pass "é escolha dela"',
     ))
     linhas = sorted({n for n, _ in palavras_da_casa(frases_do_shell(script))})
-    assert linhas == [1, 2, 3, 4], linhas
+    assert linhas == [1, 2, 3, 4, 8, 9], linhas
     python = 'print("trava pela bancada")\nx = "dela"\nprint(f"a provar {x}")\n'
     assert sorted({n for n, _ in palavras_da_casa(frases_do_python(python))}) == [1, 3]
 
@@ -102,6 +105,7 @@ def _roda_o_case(rc: int) -> str:
         f"_pp_rc={rc}",
         '_pp_saida=""',
         "PROTON_PIN_PY=/opt/hefesto/proton_pin.py",
+        "PYTHON_DO_PINO=/opt/hefesto/.venv/bin/python",
         _o_case_do_11a(),
     ))
     rodou = subprocess.run(
@@ -111,13 +115,18 @@ def _roda_o_case(rc: int) -> str:
     return rodou.stdout
 
 
-def test_sem_lancador_o_install_diz_que_nao_baixou_e_por_que() -> None:
-    """Mordida: sem o ramo `8)`, o rc do --ensure sem lançador cai em «falhou»."""
-    saida = _roda_o_case(8)
-    assert "nada foi baixado" in saida, saida
-    assert "nenhum lançador de jogos" in saida, saida
-    assert "falhou" not in saida, saida
-    assert "--ensure" in saida, saida
+def test_sem_steam_o_install_diz_que_guardou_e_quem_fixa_depois() -> None:
+    """D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO, nota de 30/10: o download não espera lançador.
+
+    Mordida: devolva ao `case` do 11a um ramo que diga «nada foi baixado» e a régua reprova.
+    """
+    saida = _roda_o_case(4)
+    assert "guardado no cache" in saida, saida
+    assert "sem rodar o install de novo" in saida, saida
+    assert "/opt/hefesto/.venv/bin/python /opt/hefesto/proton_pin.py --manter" in saida, saida
+    caso = _o_case_do_11a()
+    assert "nada foi baixado" not in caso, caso
+    assert not re.search(r"^\s+8\)\s*$", caso, re.M), "voltou o ramo do rc 8, o que não baixa"
 
 
 def test_os_ramos_adiados_dizem_o_que_aconteceu_sem_jargao() -> None:

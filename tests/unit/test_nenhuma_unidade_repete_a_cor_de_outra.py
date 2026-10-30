@@ -143,10 +143,10 @@ def _a_10_esta_em_trabalho() -> bool:
 
 
 def test_a_lista_da_tela_e_a_das_receitas_batem() -> None:
-    """Os rótulos das receitas são os que o `<select>` da aba Perfis oferece."""
+    """Os rótulos das receitas à vista sem extensão são os do `<select>` da aba Perfis."""
     from hefesto_dualsense4unix.interface import onde
 
-    das_receitas = {e.rotulo for e in estilos.ESTILOS}
+    das_receitas = {e.rotulo for e in estilos.estilos_a_vista()}
     alvos = [onde.pagina("10-perfis.html")]
     if not _a_10_esta_em_trabalho():
         alvos.append(onde.pagina("10-perfis.html", publicado=True))

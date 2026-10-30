@@ -1168,7 +1168,7 @@ class GuardaDoReal:
             if len(args) < 3 or not isinstance(args[2], int) or not args[2] & _FLAGS_DE_ESCRITA:
                 return
             alvos = args[:1]
-        elif evento == "socket.connect":
+        elif evento in ("socket.connect", "socket.bind"):
             alvos = args[1:2]
         elif evento == "os.rename":
             alvos = args[:2]

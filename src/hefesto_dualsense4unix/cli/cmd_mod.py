@@ -112,6 +112,25 @@ def cmd_instalar(
     _dizer_o_resultado(resultado, "instalada", nomes)
 
 
+@app.command("de-fabrica")
+def cmd_de_fabrica() -> None:
+    """Traz as extensões que o install traz de um endereço; o que já está fica como está."""
+    from hefesto_dualsense4unix.mods.de_fabrica_por_endereco import trazer
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError
+
+    try:
+        feitos = trazer()
+    except InstalacaoRecusadaError as exc:
+        raise _recusar(exc) from exc
+    falhou = False
+    for feito in feitos:
+        console.print(f"{feito.id}: {feito.o_que.replace('_', ' ')}. {feito.frase}".rstrip(),
+                      markup=False)
+        falhou = falhou or feito.o_que == "recusada"
+    if falhou:
+        raise typer.Exit(code=1)
+
+
 @app.command("atualizar")
 def cmd_atualizar(
     mod_id: str = typer.Argument(..., help="O id da modificação."),

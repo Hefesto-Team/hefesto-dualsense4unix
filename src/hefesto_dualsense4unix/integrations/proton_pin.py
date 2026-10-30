@@ -106,7 +106,6 @@ RC_ADIADO = 4
 RC_EXTRACAO_FALHOU = 5
 RC_CONF_ILEGIVEL = 6
 RC_STEAM_NA_CAIXA = 7
-RC_SEM_LANCADOR = 8
 
 FORA_DO_PINO_RELPATH = "hefesto-dualsense4unix/jogos_fora_do_pino.txt"
 
@@ -236,7 +235,7 @@ def steam_root_ou_recusa(home: Path | None = None) -> RaizDaSteamOuRecusa:
         return RaizDaSteamOuRecusa(
             None,
             f"a sua Steam está instalada pela {caixa}, e o Proton que o "
-            "Hefesto extrai fica fora da caixa dela",
+            f"Hefesto extrai fica fora da caixa do {caixa}",
         )
     return RaizDaSteamOuRecusa(None, "nenhuma Steam encontrada nesta máquina")
 
@@ -2003,8 +2002,9 @@ def _rc_do_ensure(result: EnsureResult) -> int:
         return RC_CHECKSUM
     if result.state == "unavailable":
         print(
-            "[proton-pin] AVISO: sem cache local e sem rede — o pin fica "
-            "pendente; rode o install de novo com internet."
+            "[proton-pin] AVISO: sem cache local e sem rede — o Proton fixado "
+            "não foi baixado; o vigia da Steam baixa quando houver rede e um "
+            "lançador que o use."
         )
         return RC_SEM_REDE_E_SEM_CACHE
     if result.state == "adiado":
@@ -2043,15 +2043,6 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
         raiz, motivo = steam_root_ou_recusa()
         if raiz is None:
             _avisar_da_raiz_envenenada()
-            quem = quem_usa_o_proton()
-            if not quem:
-                print(
-                    f"[proton-pin] {conf['name']}: não baixado — nenhum lançador "
-                    "desta máquina roda jogo pelo Proton (a Steam, o Heroic ou uma "
-                    f"extensão de lançador; {motivo}). Quando um aparecer, o vigia "
-                    "da Steam baixa e fixa sozinho."
-                )
-                return RC_STEAM_NA_CAIXA if steam_em_caixa() is not None else RC_SEM_LANCADOR
             result = adiantar_para_o_cache(
                 conf, cache_dir=cache, downloader=downloader
             )
@@ -2059,10 +2050,18 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
                   + (f" ({result.detail})" if result.detail else ""))
             if result.state != "em_cache":
                 return _rc_do_ensure(result)
+            if steam_em_caixa() is not None:
+                print(
+                    f"[proton-pin] {conf['name']} guardado no cache. A Steam desta máquina "
+                    f"fica de fora ({motivo}); o vigia da Steam o fixa no Heroic e nos "
+                    "outros lançadores a cada volta."
+                )
+                return RC_STEAM_NA_CAIXA
             print(
-                f"[proton-pin] baixado para {', '.join(quem)}. A Steam fica de "
-                f"fora ({motivo}): nada foi criado na pasta da Steam, e quando a "
-                "Steam existir o vigia extrai e trava, sem rede."
+                f"[proton-pin] {conf['name']} guardado no cache. A Steam fica de fora "
+                f"({motivo}): nada foi criado na pasta da Steam. Quando a Steam nativa "
+                "existir, o vigia da Steam extrai e trava sem rede, e a cada volta fixa "
+                "o Heroic e os outros lançadores."
             )
             return RC_ADIADO
         compat = raiz / "compatibilitytools.d"
@@ -2428,7 +2427,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--todos", action="store_true",
         help="--lock alcança TODO jogo que roda por Proton, inclusive os que "
-             "apontam para outro Proton (ordem dela, 17/09/2026). Sem isto, "
+             "apontam para outro Proton (ordem de 17/09/2026). Sem isto, "
              "entrada de jogo que aponta para fora do pino é preservada. "
              "Ferramenta que não é Proton (rodar nativo) fica sempre.")
     parser.add_argument("--offline", action="store_true",

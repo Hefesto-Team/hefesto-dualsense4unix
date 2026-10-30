@@ -612,6 +612,14 @@ def _fixar_um_jogo(arquivo: Path, pino_dir: Path, nativos: frozenset[str], escre
     return trocadas, fora
 
 
+def _titulos_do_heroic(pasta: Path) -> dict[str, str]:
+    """O título de cada jogo da biblioteca desta casa, pela chave; sem biblioteca, vazio."""
+    try:
+        return {jogo.chave: jogo.nome for jogo in _heroic(pasta).jogos}
+    except OSError:
+        return {}
+
+
 def casas_do_heroic(lar: Path | None = None) -> tuple[tuple[Path, ...], tuple[ForaDoPino, ...]]:
     """Toda pasta do Heroic que existe; a que não se lê vira um ``fora`` dito, nunca exceção."""
     try:
@@ -645,6 +653,7 @@ def fixar_o_heroic(pasta: Path, pino_dir: Path | None, *, escrever: bool = True,
         except (OSError, ValueError):
             fora.append(ForaDoPino("heroic", "", PORQUE_ILEGIVEL))
     nativos = nativos_do_heroic(pasta)
+    titulos = _titulos_do_heroic(pasta)
     arquivos: list[Path] = []
     with contextlib.suppress(OSError):
         arquivos = sorted((pasta / "GamesConfig").glob("*.json"))
@@ -652,10 +661,12 @@ def fixar_o_heroic(pasta: Path, pino_dir: Path | None, *, escrever: bool = True,
         try:
             trocadas, dele = _fixar_um_jogo(arquivo, pino_dir, nativos, escrever)
         except (OSError, ValueError):
-            fora.append(ForaDoPino("heroic", arquivo.stem, PORQUE_ILEGIVEL))
+            fora.append(ForaDoPino("heroic", titulos.get(arquivo.stem, arquivo.stem),
+                                   PORQUE_ILEGIVEL))
             continue
         total += trocadas
-        fora.extend(ForaDoPino("heroic", jogo, porque) for jogo, porque in dele)
+        fora.extend(ForaDoPino("heroic", titulos.get(jogo, jogo), porque)
+                    for jogo, porque in dele)
     return FixadoNoLancador(total if escrever else 0, tuple(fora))
 
 

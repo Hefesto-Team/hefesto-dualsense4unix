@@ -411,6 +411,8 @@ SEM_LETRA: dict[str, str] = {
         "a frase do `ImpedimentoNaoCuradoError` (`integrations/impedimentos_da_steam`), inteira",
     "a07_lancadores.py:_dizendo_a_recusa ← exc.frase":
         "a frase da `InstalacaoRecusadaError` (`mods/instalador.py`), inteira",
+    "a07_lancadores.py:_exportar_o_tema ← exc.frase":
+        "a frase da `TemaRecusadoError` (`mods/retrato_do_tema.py`, `mods/tema.py`), inteira",
     "__init__.py:guardado ← recusa":
         "a recusa da camada (`pacotes/camada.py:recusa_no_nativo`), levantada inteira "
         "antes de o gesto existir",

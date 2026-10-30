@@ -26,13 +26,7 @@ from pydantic import (
 
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
-from hefesto_dualsense4unix.mods.tema import (
-    CHAVE_DA_OPCAO_DA_COR,
-    CHAVE_DA_OPCAO_DO_LADO,
-    CHAVE_DO_LADO,
-    CHAVES_DA_COR,
-    LADOS_DOS_BOTOES,
-)
+from hefesto_dualsense4unix.mods.tema import conferir_o_bloco_e_as_opcoes
 from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
 
 NOME_DO_MANIFESTO = "hefesto-mod.json"
@@ -273,7 +267,7 @@ class Opcao(BaseModel):
     rotulo: str = Field(min_length=1, max_length=60)
     tipo: Literal[
         "escolha", "ligado", "numero", "cor", "deslizante", "jogos", "css", "endereco", "por_botao",
-        "livre",
+        "livre", "importar",
     ]
     escolhas: list[str] = Field(default_factory=list)
     padrao: (str | bool | float | list[str] | dict[str, str] | dict[str, list[list[float]]]
@@ -290,12 +284,24 @@ class Opcao(BaseModel):
     unidade: str | None = Field(default=None, min_length=1, max_length=4)
     zero: str | None = Field(default=None, min_length=1, max_length=24)
     degraus: int | None = Field(default=None, ge=1, le=1000)
+    formato: Literal["tema", "logo"] | None = None
+    herda: dict[str, dict[str, str | bool]] | None = None
 
     @field_validator("id")
     @classmethod
     def _chave(cls, valor: str) -> str:
         if not _CHAVE_DE_LANCADOR.match(valor):
             raise ValueError("id da opção fora da forma de chave")
+        return valor
+
+    @field_validator("herda")
+    @classmethod
+    def _herda_de_outra_extensao(cls, valor: dict[str, dict[str, str | bool]] | None
+                                 ) -> dict[str, dict[str, str | bool]] | None:
+        """``{opção da antiga: {valor dela em JSON: valor daqui}}``, lido só pelo ``substitui``."""
+        for antiga, mapa in (valor or {}).items():
+            if not _CHAVE_DE_LANCADOR.match(antiga) or not mapa:
+                raise ValueError(f"herda: «{antiga}» precisa de um id e de ao menos um valor")
         return valor
 
     @field_validator("aparece_com", mode="before")
@@ -325,6 +331,9 @@ class Opcao(BaseModel):
             raise ValueError(f"a opção {self.id} não é deslizante e declara unidade ou zero")
         elif self.degraus is not None:
             raise ValueError(f"a opção {self.id} não é deslizante e declara degraus")
+        if (self.tipo == "importar") != (self.formato is not None) or (
+                self.tipo == "importar" and self.padrao not in (None, "")):
+            raise ValueError(f"a opção {self.id}: importar e formato andam juntos, sem padrão")
         if self.tipo == "jogos":
             self._conferir_os_jogos()
         elif isinstance(self.padrao, list):
@@ -669,27 +678,8 @@ class Manifesto(BaseModel):
             raise ValueError("mais de uma opção de css")
 
     def _conferir_o_lado_e_as_opcoes_do_tema(self) -> None:
-        """O lado dos botões do bloco ``tema`` e a opção que liga a cor ou o lado: só a forma e o
-        vínculo. A folha em si é da régua de ``mods/tema.py``, que roda ao ligar."""
-        bloco = self.tema
-        if not bloco:
-            return
-        lado = bloco.get(CHAVE_DO_LADO)
-        if CHAVE_DO_LADO in bloco and lado not in LADOS_DOS_BOTOES:
-            raise ValueError(f"tema.botoes é {' ou '.join(LADOS_DOS_BOTOES)}")
-        ligadas = {o.id for o in self.opcoes if o.tipo == "ligado"}
-        todas = {o.id for o in self.opcoes}
-        for chave, existe in ((CHAVE_DA_OPCAO_DA_COR, any(c in bloco for c in CHAVES_DA_COR)),
-                              (CHAVE_DA_OPCAO_DO_LADO, CHAVE_DO_LADO in bloco)):
-            if chave not in bloco:
-                continue
-            if not existe:
-                raise ValueError(f"tema.{chave} liga uma escolha que o bloco tema não faz")
-            alvo = bloco[chave]
-            if not isinstance(alvo, str) or alvo not in todas:
-                raise ValueError(f"tema.{chave} aponta para a opção {alvo!r}, que não existe")
-            if alvo not in ligadas:
-                raise ValueError(f"tema.{chave}: a opção {alvo!r} precisa ser do tipo ligado")
+        """O bloco ``tema`` e as opções que ele lê: só a forma e o vínculo (``mods/tema.py``)."""
+        conferir_o_bloco_e_as_opcoes(self.tema, self.opcoes, self.tipos)
 
     @property
     def opcao_do_css(self) -> Opcao | None:

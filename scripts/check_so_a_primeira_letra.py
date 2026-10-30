@@ -111,7 +111,7 @@ ROTULOS_CITADOS: tuple[str, ...] = (
     "Padrão", "Sensor háptico",
     "Interna", "Trocar os botões",
     "Atrás do gabinete", "Gestão de controles", "Rádio e adaptadores", "Mapa das conexões",
-    "Personalizado", "Universal", "Adulto",
+    "Personalizado", "Universal",
 )
 
 _INICIO = re.compile(r"(?:^|[.!?…:;]\s+|[«“\"(\[]\s*|\s[—–·•●|→+]\s+|/)$")

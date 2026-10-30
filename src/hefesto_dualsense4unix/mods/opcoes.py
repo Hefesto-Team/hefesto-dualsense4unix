@@ -50,7 +50,7 @@ def padrao_de(opcao: Opcao) -> Valor:
         if opcao.tipo == "endereco" and isinstance(opcao.padrao, str):
             return opcao.padrao.strip()
         return list(opcao.padrao) if isinstance(opcao.padrao, list) else opcao.padrao
-    if opcao.tipo == "endereco":
+    if opcao.tipo in ("endereco", "importar"):
         return ""
     if opcao.tipo == "escolha":
         return opcao.escolhas[0]
@@ -87,6 +87,8 @@ def validar(opcao: Opcao, valor: Any, *, formas_extras: Sequence[str] = ()) -> V
         return _jogos_validos(opcao, valor)
     if opcao.tipo == "endereco":
         return _endereco_valido(opcao, valor)
+    if opcao.tipo == "importar":
+        return _nome_importado(opcao, valor)
     if opcao.tipo == "por_botao":
         return _por_botao_valido(opcao, valor, formas_extras)
     if opcao.tipo == "livre":
@@ -137,6 +139,14 @@ def _endereco_valido(opcao: Opcao, valor: Any) -> str:
         raise InstalacaoRecusadaError(
             f"«{opcao.rotulo}» pede o IP e a porta, como 192.168.0.10:8080.")
     return texto
+
+
+def _nome_importado(opcao: Opcao, valor: Any) -> str:
+    """O nome do arquivo importado, só para a tela; o vazio é «nada importado». O arquivo em si
+    entra pelo ``importados.importar``, nunca por aqui."""
+    if not isinstance(valor, str) or len(valor) > 60 or not all(c.isprintable() for c in valor):
+        raise InstalacaoRecusadaError(f"«{opcao.rotulo}» guarda o nome do arquivo importado.")
+    return valor.strip()
 
 
 def _por_botao_inteiro(opcao: Opcao, escolhidas: dict[str, Any]) -> dict[str, str]:
@@ -256,12 +266,15 @@ def _gravar(mod_id: str, valores: dict[str, Any], lugares: Lugares) -> None:
         raise
 
 
-def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> dict[str, Valor]:
+def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
+           ligadas: Sequence[str] = ()) -> dict[str, Valor]:
     """As escolhas das extensões ``antigas`` que ``manifesto`` aceita, gravadas nas dele.
 
     Passa a escolha de id igual cujo valor a opção da nova valida. A que já foi feita na nova
     vale mais (fica); o que a nova não tem ou não aceita fica no padrão de produto, e nada se grava.
-    Entre duas antigas, a primeira da lista vale. Devolve o que foi herdado.
+    Entre duas antigas, a primeira da lista vale. O ``herda`` de uma opção traduz a escolha de
+    outra opção da antiga, só das ``ligadas`` (as que estavam ligadas antes da troca). Devolve o
+    que foi herdado.
     """
     feitas = _guardados(manifesto.id, lugares)
     herdadas: dict[str, Valor] = {}
@@ -270,11 +283,11 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
         if _escolhida(opcao, feitas, extras):
             continue
         for mod_id in antigas:
-            bruto = _guardados(mod_id, lugares)
-            if opcao.id not in bruto:
-                continue
-            with contextlib.suppress(InstalacaoRecusadaError):
-                herdadas[opcao.id] = validar(opcao, bruto[opcao.id], formas_extras=extras)
+            for bruto in _o_que_a_antiga_passa(opcao, mod_id, lugares, mod_id in ligadas):
+                with contextlib.suppress(InstalacaoRecusadaError):
+                    herdadas[opcao.id] = validar(opcao, bruto, formas_extras=extras)
+                    break
+            if opcao.id in herdadas:
                 break
     chave = chave_do_modo(manifesto)
     if chave is not None and feitas.get(chave) not in MODOS_DO_LIVRE[1:]:
@@ -285,6 +298,28 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
     if herdadas:
         _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
     return herdadas
+
+
+def _o_que_a_antiga_passa(opcao: Opcao, mod_id: str, lugares: Lugares,
+                          ligada: bool) -> list[Any]:
+    """Os valores que a antiga oferece à opção: o guardado de id igual e, pelo ``herda``, o
+    valor de outra opção traduzido pelo mapa (a chave é o valor dela em JSON). O ``herda`` lê o
+    valor que valia na antiga ligada, padrão incluído; da desligada não lê nada, porque o que
+    ela guardava não era o que quem usa via."""
+    bruto = _guardados(mod_id, lugares)
+    valores = [bruto[opcao.id]] if opcao.id in bruto else []
+    if not opcao.herda or not ligada:
+        return valores
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
+
+    try:
+        antigo = ler(ler_manifesto(lugares.codigo / mod_id, exigir_api=False), lugares)
+    except ManifestoRecusadoError:
+        antigo = dict(bruto)
+    for outra, mapa in opcao.herda.items():
+        if outra in antigo and (traduzido := json.dumps(antigo[outra])) in mapa:
+            valores.append(mapa[traduzido])
+    return valores
 
 
 def aparecem(manifesto: Manifesto, valores: dict[str, Any]) -> frozenset[str]:

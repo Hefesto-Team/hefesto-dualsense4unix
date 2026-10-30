@@ -330,7 +330,12 @@ class OpcaoDaJanela(NamedTuple):
 
 
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
-ROTULO_DO_CSS = "Editar o meu CSS"
+ROTULO_DO_CSS = "Editar"
+GESTO_DE_IMPORTAR = "importar-na-modificacao"
+GESTO_DE_TIRAR = "tirar-da-modificacao"
+ROTULO_DE_IMPORTAR = "Importar"
+ROTULO_DE_TROCAR = "Trocar"
+ROTULO_DE_TIRAR = "Tirar"
 
 
 OPCOES_DO_DESENHO = (
@@ -400,9 +405,12 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
                  f'<span class="txt">{texto}</span></span>')
         if o.tipo == "ligado":
             return chave
+        importar = _botao_de_importar(o, ROTULO_DE_IMPORTAR)
         editar = (f'<button class="btn mini" data-gesto="{GESTO_DO_CSS}" '
                   f'data-v="{_a(o.mod)}:{_a(o.id)}">{ROTULO_DO_CSS}</button>')
-        return f"{editar}{chave}"
+        return f"{importar}{editar}{chave}"
+    if o.tipo == "importar":
+        return _controle_de_importar(o)
     if o.tipo == "cor":
         return (f'<input class="ext-cor-in" type="color" {alvo} '
                 f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
@@ -425,6 +433,22 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
                 f'aria-label="{_a(o.rotulo)}">')
     return (f'<input class="ext-num" type="text" inputmode="decimal" {alvo} '
             f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
+
+
+def _botao_de_importar(o: OpcaoDaJanela, rotulo: str, dica: str = "") -> str:
+    dica_ = f' data-dica="{_a(dica)}"' if dica else ""
+    return (f'<button class="btn mini" data-gesto="{GESTO_DE_IMPORTAR}" '
+            f'data-v="{_a(o.mod)}:{_a(o.id)}"{dica_}>{rotulo}</button>')
+
+
+def _controle_de_importar(o: OpcaoDaJanela) -> str:
+    """«Importar» sem arquivo; com ele, «Trocar» e «Tirar», e o nome do arquivo na dica."""
+    nome = o.valor if isinstance(o.valor, str) else ""
+    if not nome:
+        return _botao_de_importar(o, ROTULO_DE_IMPORTAR)
+    return (f"{_botao_de_importar(o, ROTULO_DE_TROCAR, nome)}"
+            f'<button class="btn mini" data-gesto="{GESTO_DE_TIRAR}" '
+            f'data-v="{_a(o.mod)}:{_a(o.id)}" data-dica="{_a(nome)}">{ROTULO_DE_TIRAR}</button>')
 
 
 def _jogos_da_opcao(o: OpcaoDaJanela) -> str:
@@ -936,18 +960,23 @@ def chave_da_extensao_html(mod: str, ligada: bool) -> str:
 
 def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
                estado: Mapping[str, Any] | None, parar: str, processo: str = "",
-               porque: str = "", faixa: str = "", gestao: Gestao | None = None) -> str:
+               porque: str = "", faixa: str = "", gestao: Gestao | None = None,
+               coluna: str = "", corpo: str = "") -> str:
     """A janela do arranjo C: a chave (ou o «Parar tudo») e o X no topo, a coluna «Agora» e os
     ajustes. Toda escolha grava no clique: não há rodapé.
 
-    ``faixa`` é a do controle livre, fixa embaixo das duas colunas; sem ``agora``, os ajustes
-    ocupam a largura inteira.
+    ``faixa`` é a fixa embaixo das duas colunas; sem ``agora`` nem ``coluna`` (o miolo pronto da
+    coluna, quando a extensão não é de aparelhos), os ajustes ocupam a largura inteira. ``corpo``
+    é a classe a mais do corpo.
     """
-    coluna = (f'<div class="ja-agora" id="mod-agora">{agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao)}</div>'
-              if agora else "")
+    tem_coluna = bool(agora or coluna)
+    miolo = coluna or (agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao)
+                       if agora else "")
+    coluna = f'<div class="ja-agora" id="mod-agora">{miolo}</div>' if tem_coluna else ""
     opcoes = f'<div class="ja-opcoes">{ajustes}</div>' if ajustes else ""
-    classe = ("ja-corpo" + ("" if agora else " sem-agora")
-              + (" com-faixa" if faixa and (agora or ajustes) else ""))
+    classe = ("ja-corpo" + ("" if tem_coluna else " sem-agora")
+              + (" com-faixa" if faixa and (tem_coluna or ajustes) else "")
+              + (f" {corpo}" if corpo else ""))
     return f'''    <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
       {_o_x(mod)}
@@ -1113,16 +1142,16 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            livre: LivreAoVivo | None = None, controles: str = "",
-                           armada: Sequence[str] = ()) -> str:
-    """O conteúdo da janela de uma extensão: um cartão por grupo e «Para» no topo; toda escolha
-    grava no clique, sem rodapé.
+                           armada: Sequence[str] = (), em_abas: bool = False) -> str:
+    """O conteúdo da janela de uma extensão: um cartão por grupo (em abas com ``em_abas``, a que
+    pinta o tema) e «Para» no topo; toda escolha grava no clique, sem rodapé.
 
-    Cada opção vira uma linha do cartão do grupo dela. ``agora`` (com ``estado``) é a coluna
-    «Agora»; ``parar_tudo`` põe o «Parar tudo» no topo, e ``chave`` (o valor guardado da opção
-    ``chave`` do manifesto) a chave Ligado/Desligado, que desligada apaga as ações. Com ``agora``,
-    as ações, os ``aparelhos`` ou o ``livre``, é o arranjo C: a coluna à esquerda e os grupos em
-    abas (``aba`` é a aberta); ``em_curso`` e ``armada`` são as ações que esperam, ``livre`` a
-    faixa de baixo e ``controles`` a aba dos controles.
+    ``agora`` (com ``estado``) é a coluna «Agora»; ``parar_tudo`` põe o «Parar tudo» no topo, e
+    ``chave`` (o valor guardado da opção ``chave`` do manifesto) a chave Ligado/Desligado, que
+    desligada apaga as ações. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é o
+    arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` e
+    ``armada`` são as ações que esperam, ``livre`` a faixa de baixo e ``controles`` a aba dos
+    controles.
     """
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
@@ -1149,7 +1178,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
                           processo=processo, porque=porque, faixa=faixa, gestao=gestao)
-    corpo = _cartoes_das_opcoes(opcoes) if opcoes else vazio
+    corpo = ((_abas_das_opcoes(opcoes, aba, mod) if em_abas else _cartoes_das_opcoes(opcoes))
+             if opcoes else vazio)
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}

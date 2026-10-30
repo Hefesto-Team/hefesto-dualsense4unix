@@ -3,7 +3,8 @@
 Absorve A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01. A página não
 diz «sem efeito hoje», não tem número de passo sem gesto fora da Acessibilidade, e os dois donos do
 R3 (o clique e a direção) são duas linhas do mesmo desenho. O «Perfil de point and click» lista os
-moldes do produto e guarda a escolha no perfil ativo (sem jogo, o `maquina.json`). A barra
+moldes que a tela oferece (o do estilo pedido por extensão fica na régua do estilo Adulto) e guarda
+a escolha no perfil ativo (sem jogo, o `maquina.json`). A barra
 do cursor e a da rolagem gravam o valor absoluto em `mouse.speed` e `mouse.scroll_speed`,
 lido de volta do disco.
 
@@ -65,7 +66,7 @@ def test_o_select_do_point_and_click_traz_os_moldes_do_produto() -> None:
     seletor = re.search(r'data-gesto="point-and-click-perfil".*?</select>', doc, flags=re.S)
     assert seletor
     moldes = re.findall(r'<option value="molde:([a-z_]+)"[^>]*>([^<]+)</option>', seletor.group(0))
-    assert moldes == [(x.chave, x.nome) for x in loader.MOLDES_DE_PERFIL], moldes
+    assert moldes == [(x.chave, x.nome) for x in loader.moldes_a_vista()], moldes
 
 
 def _pacote() -> Any:
@@ -95,7 +96,7 @@ class _Ponte:
         return registrar
 
 
-@pytest.mark.parametrize("molde", loader.MOLDES_DE_PERFIL, ids=lambda x: x.chave)
+@pytest.mark.parametrize("molde", loader.moldes_a_vista(), ids=lambda x: x.chave)
 def test_escolher_um_molde_grava_no_computador_e_a_tela_le_de_volta(molde: Any) -> None:
     pacotes, a06 = _pacote()
     ctx = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})

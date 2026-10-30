@@ -1,0 +1,11 @@
+{
+  "formato": 1,
+  "extensoes": [
+    {
+      "id": "gerenciador-de-tema",
+      "endereco": "https://github.com/Hefesto-Team/hefesto-mod-tema",
+      "enderecos_antigos": ["https://github.com/Hefesto-Team/hefesto-mod-tema-claro"],
+      "ligar": true
+    }
+  ]
+}

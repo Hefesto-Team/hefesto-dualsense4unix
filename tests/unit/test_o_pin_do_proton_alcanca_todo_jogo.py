@@ -23,6 +23,7 @@ from tests.unit.test_o_pino_chega_a_qualquer_computador import (
     _pino_na,
     _steam_de_verdade,
     _tarball,
+    trava_da_rede,  # noqa: F401
 )
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -163,6 +164,22 @@ def test_o_jogo_pelo_wine_fica_e_e_dito(lar: Path, conf: dict[str, str]) -> None
 
     assert jogo.read_bytes() == antes
     assert feito.fora == (censo.ForaDoPino("heroic", "w", censo.PORQUE_PELO_WINE),)
+
+
+def test_a_dica_diz_o_titulo_do_jogo_e_nao_a_chave(lar: Path, conf: dict[str, str]) -> None:
+    """MORDIDA: devolva a chave crua ao ``ForaDoPino`` do ``fixar_o_heroic``."""
+    _pino_na(_steam_de_verdade(lar))
+    heroic = lar / NATIVO
+    _jogo_do_heroic(heroic, "k9f2", {"bin": "/opt/wine/bin/wine", "name": "W", "type": "wine"})
+    _jogo_do_heroic(heroic, "semtitulo", {"bin": "/opt/wine/bin/wine", "name": "W", "type": "wine"})
+    _escrever(heroic / "store_cache/legendary_library.json", {"library": [
+        {"app_name": "k9f2", "title": "Corrida de Inverno", "is_installed": True}]})
+    _escrever(heroic / "legendaryConfig/legendary/installed.json",
+              {"k9f2": {"app_name": "k9f2", "install_path": "/j", "platform": "Windows"}})
+
+    feito = _apontar(lar, conf)
+
+    assert sorted(f.jogo for f in feito.fora) == ["Corrida de Inverno", "semtitulo"], feito.fora
 
 
 def test_o_jogo_nativo_do_linux_nao_conta(lar: Path, conf: dict[str, str]) -> None:

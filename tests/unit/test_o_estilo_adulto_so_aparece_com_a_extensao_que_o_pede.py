@@ -17,6 +17,7 @@ MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
 - cada recusa do manifesto arrancada reprova o caso dela;
 - o ``moldes_a_vista`` que devolve todos reprova o molde do Mapa e o da Navegação;
 - o gesto da Navegação sem a recusa grava o molde sem a extensão;
+- o gesto da Navegação que ignora o pedido recusa o molde com a extensão ligada;
 - o Mapa sem o molde que a Navegação guarda abre em «Navegar» e recusa o molde dela;
 - o ``estilos_a_vista`` que esconde só o Adulto pelo nome reprova o outro estilo pedido;
 - a marca dos pedidos fixa (a lista que não muda com a janela aberta) reprova oito casos;
@@ -244,6 +245,10 @@ def test_o_molde_da_navegacao_so_aparece_com_a_extensao_ou_escolhido(
                                              {"valor": molde}, PonteDeMentira())
     _instalada(lg)
     assert ROTULO in _moldes(a06_navegacao._opcoes_dos_moldes(outro))
+    a06_navegacao.point_and_click_perfil(Contexto(state={}, mesa=[], conectados=[], estados={}),
+                                         {"valor": molde}, PonteDeMentira())
+    a06_navegacao._A_MAQUINA = None
+    assert a06_navegacao._o_point_and_click_de_hoje() == molde
 
 
 def test_o_mapa_abre_no_molde_que_a_navegacao_guarda_sem_a_extensao(

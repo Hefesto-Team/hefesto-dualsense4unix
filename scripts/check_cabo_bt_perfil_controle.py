@@ -277,6 +277,11 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "modo-do-livre-da-modificacao": "Soltar, Segurar ou Repetir do controle livre, no rascunho "
                                     "da janela até o «Guardar» — é da tela e do serviço da "
                                     "extensão, não de um controle",
+    "importar-na-modificacao": "copia um arquivo da pessoa (tema, logo, CSS) para a pasta de "
+                               "dados da extensão, pela régua do formato — é da máquina",
+    "tirar-da-modificacao": "apaga a cópia importada e esvazia a opção — é da máquina",
+    "exportar-o-tema-da-modificacao": "salva as cores do tema em uso num arquivo que a pessoa "
+                                      "escolhe — é da máquina, não de um controle",
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
