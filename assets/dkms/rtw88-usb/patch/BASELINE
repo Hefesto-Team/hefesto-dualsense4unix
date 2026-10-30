@@ -11,7 +11,7 @@
 # aditivas (um `enum rtw_quirk_dis_caps` e um `bool bt_ctr_ok` dentro de
 # `struct rtw_coex_stat`). As duas linhas bastam: a struct é membro de
 # `struct rtw_dev`, e o `priv` — que `rtw_get_usb_priv()` devolve — é o ÚLTIMO
-# membro dela. Layout maior no kernel em execução = `priv` mais adiante =
+# membro da struct. Layout maior no kernel em execução = `priv` mais adiante =
 # escrita dentro do coex.
 #
 # POR ISSO O `main.h` NÃO É VERSIONADO: ele vive em
@@ -46,7 +46,7 @@
 # 7.1.5 (mesmo assim ganha o seu `main-por-kernel/main-7.2.6-76070206.h`: um
 # por build, ABI que alguém mediu). A lista dos builds que a raiz serve mora em
 # `fonte-por-kernel/raiz.txt` (o `dkms_lib.sh` apaga o `patch/` do /usr/src, e
-# a BASELINE não chega ao `escolher-o-main.sh`), e uma régua cobra que ela, as
+# a BASELINE não chega ao `escolher-o-main.sh`), e uma régua cobra que a BASELINE, as
 # pastas, o `main-por-kernel/`, o `KERNELS_VALIDADOS` e a regex digam o mesmo.
 # Compilado em 17/10/2026 com os headers reais (`linux-headers-7.2.6-76070206`,
 # gcc-13 13.3.0): rc=0, vermagic 7.2.6-76070206-generic, `parm: hang_reset` e

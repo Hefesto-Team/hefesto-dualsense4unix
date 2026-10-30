@@ -10,7 +10,7 @@ on:
   push:
     branches:
       - main
-      # FLUXO-DEV-01 (21/08/2026, decisão dela): a partir da 0.9.4.5 o trabalho
+      # FLUXO-DEV-01 (21/08/2026): a partir da 0.9.4.5 o trabalho
       # do dia a dia vai para `dev`, e `main` só recebe no lançamento de uma
       # release nova. Sem esta linha o CI passaria a rodar SÓ no lançamento —
       # que é exatamente o defeito medido em 27/07 e curado pelo PORTÃO-VIVO-01
@@ -65,14 +65,14 @@ jobs:
       # `pyproject.toml`), e o GTK vem pelo mesmo caminho do job `gtk-real`: o
       # Python DO SISTEMA com um venv que enxerga o `dist-packages`. O venv mora
       # FORA do checkout de propósito: vários portões daqui varrem o disco da
-      # árvore, e milhares de arquivos de biblioteca dentro dela seriam lidos
+      # árvore, e milhares de arquivos de biblioteca dentro do checkout seriam lidos
       # como se fossem da casa. As fontes são as que o desenho pede, pela mesma
       # razão escrita no `gtk-real` — a altura do cartão é medida em texto.
       #
       # E a `libhidapi-hidraw0`, que o runner NÃO traz (os outros jobs a
       # baixam pelo apt, corrida 36119169814): o mesmo `app.actions` puxa o
       # `pydualsense`, e o `hidapi.py` dele abre a biblioteca no import —
-      # sem ela, o `check_a_altura_do_cartao` morre com «Could not find any
+      # sem a biblioteca, o `check_a_altura_do_cartao` morre com «Could not find any
       # hidapi library». Medido escondendo a biblioteca com `bwrap`.
       - name: Instalar o que os portões importam
         run: |
@@ -98,7 +98,7 @@ jobs:
     # bug. A partir do Python 3.12 o `tokenize` quebra f-string em
     # FSTRING_START/MIDDLE/END, tokens que o validador não olhava — então o
     # mesmo erro de acentuação REPROVAVA no 3.11 do CI e PASSAVA no 3.12 da
-    # máquina dela. Verde na mesa, vermelho na main: foi essa assimetria que
+    # máquina de casa. Verde na mesa, vermelho na main: foi essa assimetria que
     # produziu seis commits corretivos em 29 minutos no dia 25/07.
     #
     # A mesma matriz do job `lint-test` é o ponto: as três versões têm de ver
@@ -146,7 +146,7 @@ jobs:
     # Ele nasce VERDE e com a dívida ESCRITA: os quatro rótulos que ainda
     # carregam jargão da tabela E3 estão declarados um a um dentro do script,
     # com o que cada um vira. Isso não é perdão — é o que permite o portão
-    # entrar hoje, sem que a redação da tela (que é decisão dela) vire
+    # entrar hoje, sem que a redação da tela (que é decisão de produto) vire
     # pré-requisito de um portão de CI. Rótulo NOVO com jargão reprova, que é
     # literalmente o que a E5 pede: "reintroduzir `daemon offline` num rótulo
     # tem de reprovar de novo".
@@ -164,7 +164,7 @@ jobs:
     timeout-minutes: 10
     # PORTÃO-VIVO-01 bloco F. Nasceu informativo (continue-on-error) porque
     # reprovava de propósito: a sprint exigiu que ele mordesse na árvore como
-    # ela estava, e ele achou 25 referências mortas — entre elas o
+    # estava, e ele achou 25 referências mortas — entre as quais o
     # `docs/adr/011-glyphs-vs-emojis.md`, que apoiava uma decisão arquitetural
     # inteira num hook que nunca existiu, e três sprints linkadas no índice de
     # 26/07 sem arquivo correspondente.
@@ -182,7 +182,7 @@ jobs:
     # (`docs/usage/`, `docs/adr/`, `docs/protocol/`, `README.md`) e medidas
     # contra a árvore ANTES de propostas: zero falso positivo. `docs/process/`
     # fica fora por escrito — sprint propõe o que ainda não existe, e isso é o
-    # trabalho dela. O `README.md` passou a ser varrido: ficava de fora só por
+    # trabalho da sprint. O `README.md` passou a ser varrido: ficava de fora só por
     # morar na raiz, sendo a página que mais gente copia e cola.
     steps:
       # o `citacoes-novas` pergunta pelo pé comum com o `origin/dev`, que o checkout raso não traz
@@ -277,7 +277,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # PORTÃO-VIVO-01 bloco E: cerca de 40 scripts rodam com `sudo` na máquina
-    # dela — o `doctor.sh` sozinho tem 150 KB — e NENHUM linter passava por
+    # de quem instala — o `doctor.sh` sozinho tem 150 KB — e NENHUM linter passava por
     # eles. É a classe de furo do `uninstall.sh --help` que desinstalava tudo.
     #
     # Piso deliberado em `-S error` para não afogar em aviso de estilo. Quando
@@ -309,7 +309,7 @@ jobs:
     # SÓ EM `workflow_dispatch`, de propósito: cria aparelho no kernel e roda o `install.sh` com
     # `sudo`, o que não se faz a cada push. A decisão por perna é a última linha de `sonda.txt`
     # (`casa_radio` e `casa_cabo`), e a saída inteira sobe como artefato mesmo se a sonda reprovar.
-    # Detalhe e a lista do que ela mede: o cabeçalho de `scripts/banco_de_prova/sonda.sh`.
+    # Detalhe e a lista do que a sonda mede: o cabeçalho de `scripts/banco_de_prova/sonda.sh`.
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -497,7 +497,7 @@ jobs:
           # a coisa medida. As guardas do teste agora PULAM nesses casos, e é
           # justamente por isso que estes dois pacotes têm de estar aqui: portão
           # que só pula é portão que não existe.
-          # `libopus0` (27/09/2026): sem ela o codec do som pelo rádio levanta
+          # `libopus0` (27/09/2026): sem a biblioteca o codec do som pelo rádio levanta
           # `OpusIndisponivelError` e seis arquivos reprovavam por ambiente.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
             bubblewrap librsvg2-common libopus0
@@ -525,7 +525,7 @@ jobs:
         run: bash scripts/portoes.sh --so ruff curvas
       # O CENSO DE COLETA (O-CENSO-DE-COLETA-SEGUE-A-ARVORE-01, 06/10/2026). Um módulo que some da coleta
       # some CALADO (GUARDA-GI-REAL-01). O passo comparava a coleta com um número escrito num dia (o `PISO`,
-      # 8100 em 15/08); a árvore foi de 472 a 1.668 módulos e o número ficou 65% abaixo dela, sem guardar
+      # 8100 em 15/08); a árvore foi de 472 a 1.668 módulos e o número ficou 65% abaixo da coleta, sem guardar
       # nada. Quem julga agora é `scripts/check_a_coleta_sem_gtk.py`, módulo a módulo: todo `test_*.py`
       # versionado dá ao menos um nó ou aparece pulado com motivo. O mesmo julgamento roda em casa, no
       # portão `coleta-sem-gtk`, com o `gi` e o `cairo` bloqueados.
@@ -546,7 +546,7 @@ jobs:
       # O run continua vermelho — só para de ser cego.
       # Sem o GTK real, o teste que precisa dele PULA com o motivo (a regra do
       # `tests/conftest.py`, 27/09/2026) e roda no `gtk-real`, que mede a suíte
-      # inteira e a cobertura dela. Aqui fica a pergunta das três versões.
+      # inteira e a cobertura da suíte. Aqui fica a pergunta das três versões.
       #
       # O TETO (O-CI-DA-DEV-VOLTA-A-VERDE-01, 28/09/2026). Sem ele valia o do
       # GitHub, 360 minutos, e um teste preso segurava o runner seis horas e
@@ -637,10 +637,10 @@ jobs:
     # O QUE ELE COBRE AGORA (21/10/2026, O-GTK-FICA-SO-NA-MOLDURA-E-NA-BANDEJA-01): o GTK mora só
     # na moldura (a janela do WebKit e os pilotos) e na bandeja, e quem prova isso é o portão
     # `o-gtk-fica-na-moldura`, no `lint-test`. Este job prova o que PRECISA do `gi` real: o
-    # WebKitGTK que ela usa, a janela, os pilotos e a bandeja. A lógica de `app/actions/` roda sem o
+    # WebKitGTK do produto, a janela, os pilotos e a bandeja. A lógica de `app/actions/` roda sem o
     # `gi`, e os 195 arquivos de teste que só pediam o GTK por importá-la perderam o
     # `exigir_gi_real` e rodam também no `lint-test`, que não tem `gi`. A suíte abaixo segue inteira
-    # aqui, e o que nela é só lógica passa nos dois lugares.
+    # aqui, e o que nesta suíte é só lógica passa nos dois lugares.
     #
     # Ele NÃO é `needs:` do `lint-test`, do `mypy` nem do `runtime-smoke`, de propósito: a
     # falha deste job não pode cancelar nem mascarar os que respondem perguntas diferentes.
@@ -687,7 +687,7 @@ jobs:
             # available` e `libopus não encontrada`. O `install.sh` instala os
             # dois na máquina de quem usa; este job monta a sua à mão.
             # AS FONTES NÃO SÃO ENFEITE — são a régua. Mesma classe de armadilha
-            # do librsvg logo acima, e ela custou uma leva inteira em 19/08: os
+            # do librsvg logo acima, e custou uma leva inteira em 19/08: os
             # testes de PIXEL (test_layout_orcamento_altura,
             # test_status_faixa_blocos) reprovavam SÓ aqui, e passavam em qualquer
             # máquina de quem desenvolve. Medido: a interface pede "Space Grotesk"
@@ -696,7 +696,7 @@ jobs:
             # as dependências à mão e nunca roda o install — não as tinha. O
             # fontconfig substitui EM SILÊNCIO, o texto mede diferente, e os pisos
             # de largura e altura mudam: "o card pediu 1043px de MÍNIMO, o piso é
-            # 1040px" foi só isto. Sem elas o job mede uma tela que nenhuma
+            # 1040px" foi só isto. Sem as fontes o job mede uma tela que nenhuma
             # instalação real produz.
           # SVG NÃO é opcional aqui: os glifos dos botões (ButtonGlyph) são SVG
           # carregados por `GdkPixbuf.new_from_file_at_scale`, e sem o loader do
@@ -772,7 +772,7 @@ jobs:
       # HEFESTO_EXIGE_GTK_REAL=1 vira a chave da guarda: aqui, "pulei porque
       # não tenho GTK" não é sucesso, é REPROVAÇÃO. Se o ambiente degradar, o
       # job fala; não fica verde por omissão.
-      # A SUÍTE INTEIRA, como na máquina dela (27/09/2026). Este passo rodava
+      # A SUÍTE INTEIRA, como na máquina de casa (27/09/2026). Este passo rodava
       # só os arquivos marcados com `exigir_gi_real`, sete de cento e cinquenta;
       # o resto da interface pulava no `lint-test` e não rodava em lugar nenhum.
       # Em 24 partes, pelo `scripts/rodar-a-suite.sh` (um processo só morre no
@@ -808,7 +808,7 @@ jobs:
       # O vermelho traz a pilha (07/10/2026): a seção FAILURES de cada parte
       # que reprovou vai ao log, e os logs inteiros sobem como artefato. A parte
       # que MORREU (sem sumário, ou por sinal depois dele) não tem FAILURES: a
-      # pilha dela é o fim do log, e é o fim que sai.
+      # pilha do processo é o fim do log, e é o fim que sai.
       - name: A pilha de quem reprovou na suíte
         if: failure()
         run: |
@@ -1202,7 +1202,7 @@ jobs:
   #   3. o único portão que olhava para o `install.sh` era o `shellcheck` —
   #      análise estática, que não executa uma linha.
   #
-  # Medido na bancada em 19/08/2026, com o `ldconfig` devolvido numa cópia
+  # Medido no ensaio em 19/08/2026, com o `ldconfig` devolvido numa cópia
   # isolada e este mesmo passo rodando: o job REPROVA com
   #     falta hidapi — sem ele, o backend do controle não abre NENHUM aparelho
   #     ERRO: faltam dependências obrigatórias (hidapi)

@@ -35,10 +35,10 @@
  * hid_hw_output_report(). E' uma mudanca de semantica VISIVEL para TODO
  * userspace que escreve report de saida num HID por Bluetooth (o Steam Input
  * inclusive), e quem trata falha de escrita como "o aparelho sumiu" passaria a
- * largar o controle no primeiro engasgo do radio. Por isso ela nao se impoe a
+ * largar o controle no primeiro engasgo do radio. Por isso a opcao nao se impoe a
  * ninguem: quem quiser o sinal liga com uhid.backpressure=1.
  *
- * O QUE ELA CURA, medido em 22/09/2026 numa mesa de quatro DualSense por
+ * O QUE A OPCAO CURA, medido em 22/09/2026 numa mesa de quatro DualSense por
  * radio: a ponte de audio escrevia 93,75 reports de 334 B por segundo por
  * controle; o kernel descartava o excedente CALADO (3807 "Output queue is
  * full" em um minuto) e o produtor, sem sinal nenhum, seguia inundando ate o

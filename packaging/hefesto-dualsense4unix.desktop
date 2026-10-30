@@ -1,10 +1,9 @@
 [Desktop Entry]
-# O .desktop do Hefesto — o do PRODUTO, e o único. Decisão dela, 01/09/2026:
+# O .desktop do Hefesto — o do PRODUTO, e o único. Decisão de 01/09/2026:
 # A versão antiga não segue disponível: só a nova está disponível e deve ser integrada.
 #
-# ELE ABRE A INTERFACE HTML, e é isso que ela pediu com todas as letras: *"tipo
-# tudo tem que apontar pro nosso lancher html e tudo tem que apontar pros
-# arquivos na nossa pasta"*. O `run.sh --gui` da raiz é esse lançador: ele veste
+# ELE ABRE A INTERFACE HTML, como pedido com todas as letras: tudo aponta para o
+# lançador HTML e para os arquivos da pasta do projeto. O `run.sh --gui` da raiz é esse lançador: ele veste
 # a identidade no processo (`scripts/abrir_interface.py`) e abre as dez abas
 # vivas no `WebKit2.WebView`. O `HEFESTO_NA_TELA=1` do `Exec=` é o escape da
 # guarda TELA-DO-USUARIO-02, e mora AQUI porque o atalho é o que se clica: o `run.sh`
@@ -13,7 +12,7 @@
 # @RAIZ@ é substituído pelo caminho da árvore por quem instala (`install.sh`).
 # O arquivo versionado NÃO carrega caminho de máquina.
 #
-# O QUE JÁ DEU ERRADO AQUI, e ela viu no menu: o `Icon=` apontava para um nome
+# O QUE JÁ DEU ERRADO AQUI, e apareceu no menu: o `Icon=` apontava para um nome
 # que não existe. Ícone que não resolve some do menu, e o que sobra parece outro
 # app. Os PNG instalados chamam-se `hefesto-dualsense4unix.png` —
 # `check_packaging_parity.sh` compara este arquivo com `utils/identidade.py`.
@@ -27,19 +26,19 @@
 # em `scripts/abrir_interface.py` (06/09/2026: `app/main.py` fazia o mesmo
 # e saiu com a janela GTK — `D-0609-GTK-LEVA-INTEIRA`).
 Type=Application
-# O NOME NA DOCK É CURTO, e ele veio da MÁQUINA dela, não deste arquivo: o
+# O NOME NA DOCK É CURTO, e ele veio da MÁQUINA de quem usa, não deste arquivo: o
 # atalho instalado dizia `Name=Hefesto` desde antes de 01/09/2026, reescrito por
 # um editor de `.desktop` (comentários preservados, `Name=` trocado, quebra
 # final some — a assinatura do `GKeyFile`). Alinhar aqui é o que impede o
-# instalador de desfazer a escolha dela a cada execução.
+# instalador de desfazer a escolha de quem usa a cada execução.
 #
 # O nome POR EXTENSO continua existindo, no lugar dele: `identidade.nome_longo`
 # é o título da janela e o do `--version`.
 Name=Hefesto
 GenericName=DualSense Controller
-# A SEGUNDA FRASE SAIU — 08/09/2026. Ela era *"As dez abas, com o dado do
-# aparelho."*: o apelido que ESTA CASA deu ao piloto único, na dica que a dock e
-# o menu do sistema mostram ANTES de a janela existir. É o mesmo defeito que ela
+# A SEGUNDA FRASE SAIU — 08/09/2026. Era «As dez abas, com o dado do
+# aparelho.»: o apelido que ESTA CASA deu ao piloto único, na dica que a dock e
+# o menu do sistema mostram ANTES de a janela existir. É o mesmo defeito que se
 # leu na barra de título no mesmo dia, e ninguém o tinha visto porque as duas
 # réguas de tela param na borda da `<body>`. Achado por
 # `scripts/check_a_janela_nao_confessa.py`, na primeira corrida dele.
@@ -58,7 +57,7 @@ StartupWMClass=Hefesto-Dualsense4Unix
 # Um pacote instala em `/usr`, e um `Exec=` que aponta para a pasta de
 # desenvolvimento quebraria na máquina de qualquer outra pessoa. A chave abaixo
 # é a declaração que dispensa o `check_packaging_parity.sh` de cobrar o PNG nos
-# quatro empacotadores — sem ela, o portão cobra, e está certo em cobrar.
-# É DECISÃO DELA quando isto muda: empacotar exige o `Exec=` virar o console
+# quatro empacotadores — sem a chave, o portão cobra, e está certo em cobrar.
+# É DECISÃO DE PRODUTO quando isto muda: empacotar exige o `Exec=` virar o console
 # script `hefesto-dualsense4unix-gui`, que já abre a mesma interface HTML.
 X-HefestoNaoEmpacotado=true

@@ -77,7 +77,7 @@ Flags:
                         garante a versão de Proton VALIDADA (assets/
                         proton-pin.conf, SHA256 obrigatório, cache offline em
                         ~/.cache/hefesto-dualsense4unix/proton) e TRAVA o
-                        default global + os jogos instalados nela
+                        default global + os jogos instalados nessa versão
                         (CompatToolMapping; exige Steam fechada, com backup).
                         Sem o pin, um upgrade de Proton pode reintroduzir o
                         controle duplicado (semântica winebus mudou no 10).
@@ -188,10 +188,10 @@ Flags:
                         para não quebrar quem a tenha num script.
   --no-fonts            pula as fontes da identidade visual (Space Grotesk +
                         JetBrains Mono, que a interface pede). Por DEFAULT
-                        elas são instaladas em best-effort pelo
+                        as fontes são instaladas em best-effort pelo
                         scripts/install_fonts.sh — pacote da distro primeiro,
                         download PINADO + SHA-256 só se não houver pacote.
-                        Nada quebra sem elas (o CSS tem fallback); o que muda é
+                        Nada quebra sem as fontes (o CSS tem fallback); o que muda é
                         a interface ser a do design e as medidas de texto
                         baterem com as do mockup.
   (DEFAULT) teclado na tela — o que o L3 do controle abre. Instalado em TODO
@@ -206,7 +206,7 @@ Flags:
                         digita" é literalmente verdade. Best-effort (o install
                         nunca aborta por causa dele) e o passo GRAVA o que fez
                         em ~/.local/state/hefesto-dualsense4unix/
-                        teclado-na-tela.conf, para o doctor distinguir "ela não
+                        teclado-na-tela.conf, para o doctor distinguir "o teclado não
                         quis" de "o install não instalou". Opt-out: --no-osk.
   --no-osk              pula o teclado na tela. O L3 do controle passa a só
                         avisar na tela que não tem o que abrir.
@@ -237,7 +237,7 @@ SOBE na hora. Quem manda é a sua resposta ao passo 6 ("habilitar auto-start do
 daemon no boot?", default sim): responder "não" copia a unit e NÃO habilita
 nem sobe o daemon; --no-systemd pula os dois passos (6 e 7a) por inteiro.
 Hotplug-GUI continua opt-in (prompt com default NÃO).
-udev rules SÃO aplicadas (incondicional desde v3.3.1 — sem elas o controle
+udev rules SÃO aplicadas (incondicional desde v3.3.1 — sem as regras o controle
 não funciona em nenhum formato).
 
 Reexecutável (idempotente).
@@ -375,7 +375,7 @@ _ensaio_resumo() {
     printf '═════════════════════════════════════════════════════════════════\n'
     printf ' FIM DO ENSAIO — NADA foi escrito, instalado, habilitado ou reiniciado\n'
     printf '═════════════════════════════════════════════════════════════════\n'
-    printf ' %d mudanças planejadas, %d delas com root.\n' \
+    printf ' %d mudanças planejadas, %d com root.\n' \
         "${_ENSAIO_MUDANCAS}" "${_ENSAIO_ROOT}"
     printf ' Para fazer de verdade, é a MESMA linha de comando sem o --dry-run.\n'
     printf ' Para desfazer depois:  ./uninstall.sh\n'
@@ -849,7 +849,7 @@ _garantir_deps_de_sistema() {
     fi
 
     if (( ${#_obrig[@]} )); then
-        printf '\n      Obrigatórias — sem elas o produto não funciona: %s\n' "${_obrig[*]}"
+        printf '\n      Obrigatórias — sem essas o produto não funciona: %s\n' "${_obrig[*]}"
         ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
         if [[ "${REPLY,,}" =~ ^y ]]; then
             run_pkg ${_obrig[@]+"${_obrig[@]}"} || true
@@ -1875,7 +1875,7 @@ _wifi_powersave_motivo_de_pular() {
     _rtw88_adaptadores_presentes >/dev/null || rc=$?
     case "${rc}" in
         0) ;;
-        1) printf 'nenhum adaptador Wi-Fi USB Realtek (rtw88) nesta máquina: a economia de energia do Wi-Fi fica como está (só esse adaptador cai com ela); se plugar um, rode ./install.sh de novo' ;;
+        1) printf 'nenhum adaptador Wi-Fi USB Realtek (rtw88) nesta máquina: a economia de energia do Wi-Fi fica como está (só esse adaptador cai com a economia ligada); se plugar um, rode ./install.sh de novo' ;;
         *) printf 'não consegui perguntar ao kernel se há um adaptador Wi-Fi USB Realtek (rtw88): a economia de energia do Wi-Fi fica como está' ;;
     esac
 }
@@ -1945,7 +1945,7 @@ aplicar_wifi_powersave_off() {
     fi
     if [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
         if [[ -n "${ferramenta}" ]]; then
-            printf '      economia de energia do Wi-Fi já desligada (conf igual, nenhuma interface com ela ligada)\n'
+            printf '      economia de energia do Wi-Fi já desligada (conf igual, nenhuma interface com a economia ligada)\n'
         else
             printf '      conf igual; %s\n' "${sem_ferramenta}"
         fi
@@ -2939,7 +2939,7 @@ elif ! command -v systemctl >/dev/null 2>&1; then
 elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     if [[ -L "${DAEMON_UNIT_TARGET}" ]] \
        && [[ "$(readlink -f "${DAEMON_UNIT_TARGET}" 2>/dev/null)" == "/dev/null" ]]; then
-        _faria "tirar a MÁSCARA da unit do daemon (ela está mascarada por 'hefesto-chave off') antes de gravá-la — sem isto o cp escreveria dentro de /dev/null e a unit sumiria no próximo 'hefesto-chave on'"
+        _faria "tirar a MÁSCARA da unit do daemon (a unit está mascarada por 'hefesto-chave off') antes de gravá-la — sem isto o cp escreveria dentro de /dev/null e a unit sumiria no próximo 'hefesto-chave on'"
     fi
     _faria "copiar ${DAEMON_UNIT_TARGET} e recarregar o systemd do usuário"
     _CHAVE_POSTA="${XDG_CONFIG_HOME:-${HOME}/.config}/${APP_ID}/DESLIGADO-pela-chave.flag"
@@ -3116,10 +3116,10 @@ else
         warn "extension ${_ext_id} não instalada — instale via GNOME Extensions (https://extensions.gnome.org)"
     else
         printf '      extension %s está instalada mas desabilitada\n' "${_ext_id}"
-        printf '      sem ela o ícone do Hefesto não aparece na barra superior do GNOME\n'
+        printf '      sem a extensão o ícone do Hefesto não aparece na barra superior do GNOME\n'
         ask_yn "habilitar agora?" "${AUTO_YES}"
         if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-            _faria "habilitar a extensão do GNOME ${_ext_id} (sem ela o ícone do Hefesto não aparece na barra)"
+            _faria "habilitar a extensão do GNOME ${_ext_id} (sem a extensão o ícone do Hefesto não aparece na barra)"
         elif [[ "${REPLY,,}" =~ ^y ]]; then
             if gnome-extensions enable "${_ext_id}" 2>/dev/null; then
                 printf '      habilitada (pode exigir log out/in se for a primeira ativação)\n'
@@ -3331,9 +3331,9 @@ if [[ "${DRY_RUN:-0}" -ne 1 ]]; then
 fi
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "parar o vigia da Steam durante os passos 11 a 11c (ele escreve os mesmos arquivos) e religá-lo no fim"
-    _faria "FECHAR a Steam, se ela estiver aberta, UMA vez para os passos 11 a 11c (ela regrava os arquivos ao sair, e com ela viva as edições seriam engolidas), e reabri-la no fim. Com um JOGO aberto, nada é fechado e esses passos adiam."
+    _faria "FECHAR a Steam, se estiver aberta, UMA vez para os passos 11 a 11c (a Steam regrava os arquivos ao sair, e com a Steam viva as edições seriam engolidas), e reabri-la no fim. Com um JOGO aberto, nada é fechado e esses passos adiam."
 elif [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
-    printf '      se a Steam estiver aberta, ela fecha agora UMA vez e reabre no fim\n'
+    printf '      se a Steam estiver aberta, a Steam fecha agora UMA vez e reabre no fim\n'
     printf '      dos passos da Steam — pause downloads antes de seguir.\n'
     printf '      (com um jogo aberto, nada é fechado e esses passos adiam.)\n'
     _fs_rc=0
@@ -3346,7 +3346,7 @@ elif [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
             :
             ;;
         *)
-            warn "a Steam segue aberta (jogo aberto, ou ela não fechou) — os passos 11 a 11c adiam o que precisar da Steam fechada, cada um com o comando"
+            warn "a Steam segue aberta (jogo aberto, ou a Steam não fechou) — os passos 11 a 11c adiam o que precisar da Steam fechada, cada um com o comando"
             ;;
     esac
     unset _fs_rc
@@ -3429,7 +3429,7 @@ if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         _faria "trocar as Opções de Inicialização antigas que escondiam o controle com um IGNORE_DEVICES fixo (e deixavam o jogo sem controle nenhum quando o virtual caía) pela chamada do wrapper, jogo por jogo — o que VOCÊ escreveu na linha é preservado"
         _faria "guardar um backup .bak.hefesto-launch-<carimbo> ao lado de cada vdf tocado"
-        _faria "FECHAR a Steam, se ela estiver aberta, e reabri-la ao terminar (ela regrava o vdf ao sair, e sem isso a edição seria engolida). Com um JOGO aberto, nada é fechado e a migração é adiada."
+        _faria "FECHAR a Steam, se estiver aberta, e reabri-la ao terminar (a Steam regrava o vdf ao sair, e sem isso a edição seria engolida). Com um JOGO aberto, nada é fechado e a migração é adiada."
     elif python3 "${LAUNCH_MIGRATE_PY}" --migrate --stop-steam; then
         printf '      Launch Options antigas do Hefesto migradas para o wrapper hefesto-launch\n'
     else
@@ -3497,9 +3497,9 @@ else
     if [[ "${_pl_rc}" -eq 0 ]]; then
         printf '      jogos travados na versão pinada (backup do config.vdf ao lado; reverter: uninstall)\n'
     elif [[ "${_pl_rc}" -eq 3 ]]; then
-        warn "Steam (ou um jogo) aberta — trava ADIADA; o vigia da Steam trava sozinho quando ela fechar, ou rode: ${PYTHON_DO_PINO} ${PROTON_PIN_PY} --lock --todos"
+        warn "Steam (ou um jogo) aberta — trava ADIADA; o vigia da Steam trava sozinho quando a Steam fechar, ou rode: ${PYTHON_DO_PINO} ${PROTON_PIN_PY} --lock --todos"
     elif [[ "${_pl_rc}" -eq 4 ]]; then
-        printf '      trava adiada — a Steam ainda não entrou numa conta; o vigia da Steam trava quando ela sair pela primeira vez\n'
+        printf '      trava adiada — a Steam ainda não entrou numa conta; o vigia da Steam trava quando a Steam sair pela primeira vez\n'
     else
         warn "trava do Proton falhou — rode manualmente: ${PYTHON_DO_PINO} ${PROTON_PIN_PY} --lock --todos"
     fi
@@ -3514,7 +3514,7 @@ elif [[ "${DRY_RUN:-0}" -eq 1 && "${NO_PROTON_PIN}" -eq 0 ]]; then
 fi
 
 if [[ "${_steam_fechada_pelo_install}" -eq 1 ]]; then
-    step "11d" "Steam: reabrir (ela estava aberta quando o install começou)"
+    step "11d" "Steam: reabrir (a Steam estava aberta quando o install começou)"
     _reabrir_a_steam_se_o_install_fechou
 fi
 _religar_o_vigia_se_o_install_parou

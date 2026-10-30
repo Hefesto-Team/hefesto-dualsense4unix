@@ -17,7 +17,7 @@ Bluetooth ele sobe, no cabo ele morre.
 > ##  Leia primeiro: contra a contenção BT, este DKMS é a cura de SEGUNDA linha
 >
 > Existem **duas** curas para o mesmo problema, com **níveis de confiança
-> diferentes**. Elas não se misturam:
+> diferentes**. As duas não se misturam:
 >
 > | | cura | estado |
 > |---|---|---|
@@ -25,7 +25,7 @@ Bluetooth ele sobe, no cabo ele morre.
 > | **2ª linha** | este DKMS (`feature_retries`) — retry dentro da probe |  **REPROVADA em 08/08** na forma antiga (backoff de 100/200 ms, 6 de 6 abortos, nenhum salvo); **reescrita em 09/08** com o espaçamento em unidades dos 3 s do BlueZ, e **ainda não validada** nessa forma |
 >
 > **A de primeira linha basta na maioria dos casos e é a que está provada.**
-> Ela não exige patch de kernel, não exige reboot, não recarrega módulo e não
+> A cura de primeira linha não exige patch de kernel, não exige reboot, não recarrega módulo e não
 > toca em controle que está funcionando. Detalhes na seção
 > [A cura de primeira linha](#a-cura-de-primeira-linha-rebind-validada-ao-vivo).
 >
@@ -52,7 +52,7 @@ Bluetooth ele sobe, no cabo ele morre.
   do DualShock 4 que o stable acrescentou; a conta está no `patch/BASELINE`.
 - **Só nos kernels conferidos, cada um com o seu fonte.** O `dkms.conf` tem
   `BUILD_EXCLUSIVE_KERNEL`, e a lista é a mesma do `KERNELS_VALIDADOS` do
-  `patch/BASELINE`. Fora dela o DKMS pula e o de fábrica assume. O `.c` da raiz
+  `patch/BASELINE`. Fora da lista o DKMS pula e o de fábrica assume. O `.c` da raiz
   serve os builds de `fonte-por-kernel/raiz.txt` (o 7.1.5-76070105); o
   7.2.6-76070206 tem outro de fábrica (`48a08ddd…`, com os botões de trás e o
   Fn do DualSense Edge no evdev) e o seu fonte em
@@ -188,7 +188,7 @@ scripts/bt_rebind_orphans.sh --dry-run                                  # só re
 ```
 
 **Limite conhecido:** sem a regra do sudo do verbo, a cura fica só no tique de
-2 min, e o controle fica órfão por até 2 min. Com ela, vem 3, 10 e 20 s depois
+2 min, e o controle fica órfão por até 2 min. Com a regra, vem 3, 10 e 20 s depois
 da linha do kernel (24/09/2026: o degrau que esta nota pedia, uma regra udev no
 `add` do HID, saiu pelo aviso do kernel, que já diz QUEM perdeu a probe).
 
@@ -202,9 +202,9 @@ da linha do kernel (24/09/2026: o degrau que esta nota pedia, uma regra udev no
 
 O relógio que manda aqui não é nosso: é o `REPORT_REQ_TIMEOUT` do BlueZ,
 **3000 ms**, em `profiles/input/device.c`. Uma tentativa que falhou por
-Bluetooth **já gastou essa janela inteira**, e a única coisa que ela provou é
-que o canal de controle esteve disputado durante ela. Logo, dormir **menos** do
-que essa janela é fazer a mesma pergunta dentro dela.
+Bluetooth **já gastou essa janela inteira**, e a única coisa que a tentativa provou é
+que o canal de controle esteve disputado durante a tentativa. Logo, dormir **menos** do
+que essa janela é fazer a mesma pergunta dentro da janela.
 
 Por isso as constantes do módulo são múltiplos declarados do teto, e não
 números soltos:
@@ -248,13 +248,13 @@ em `assets/modprobe.d/hefesto-hid-playstation.conf`):
 **Por que 12 s valem a pena.** Quando a probe aborta, o controle não fica lento
 — fica **morto**: sem `hidraw`, sem `input`, sem LED, sem bateria. O que o
 resgata é o watchdog de rebind, que passa a cada **2 min**, ou a própria
-reconexão dela (medida em 08/08: de 2 a 20 min). Doze segundos de probe é uma
+reconexão do controle (medida em 08/08: de 2 a 20 min). Doze segundos de probe é uma
 ordem de grandeza mais barato do que qualquer uma dessas saídas, e é pago
 **apenas** quando algo já falhou. Os 75 s da coluna do meio, não: ali o retry
 já compete com o próprio watchdog que ele deveria dispensar — e é por isso que
-a 3ª tentativa saiu. Ela custaria os 12 s mais caros da série sem uma única
+a 3ª tentativa saiu. A 3ª custaria os 12 s mais caros da série sem uma única
 medição a favor: o que 08/08 mostra é que a janela de contenção **passa de
-10 s** e que a recuperação levou de 2 a 20 min, não que ela termina entre o
+10 s** e que a recuperação levou de 2 a 20 min, não que a janela termina entre o
 9º e o 21º segundo.
 
 A probe roda em workqueue (`uhid` agenda o `hid_add_device()` justamente para
@@ -310,9 +310,9 @@ Separando o que é **fato medido** do que é **hipótese fundamentada**:
 > fica onde está, com a data em que valia — esta casa não apaga decisão medida.
 >
 > **A conta que faltava fazer era aritmética.** Cada tentativa já custa os
-> **3 s inteiros** do BlueZ; o backoff entre elas era de **100 ms e 200 ms**;
+> **3 s inteiros** do BlueZ; o backoff entre as tentativas era de **100 ms e 200 ms**;
 > logo as três tentativas caíam **dentro da mesma janela de contenção** — no
-> journal dela, `00:17:04 → :07 → :10 → aborto`. O espaçamento era ~30× pequeno
+> journal do ensaio, `00:17:04 → :07 → :10 → aborto`. O espaçamento era ~30× pequeno
 > demais para o problema que se propunha a atravessar. Único efeito medido:
 > **encarecer a falha de ~3,3 s para ~10 s**.
 >
@@ -330,7 +330,7 @@ Separando o que é **fato medido** do que é **hipótese fundamentada**:
 > gastaram) e que a recuperação por reconexão levou **de 2 a 20 min**. Ou seja:
 > o espaçamento novo compra a **ponta curta** de uma distribuição que ninguém
 > mediu. **Grau da cura: SUSPEITA COM MECANISMO** — o mecanismo é medido, o
-> efeito só se prova no próximo par de conexões simultâneas dela. A cura de
+> efeito só se prova no próximo par de conexões simultâneas no ensaio. A cura de
 > raiz continua sendo **serializar a subida** dos controles (F-2), nomeada
 > neste mesmo README há 14 dias e ainda sem código.
 
@@ -398,11 +398,11 @@ Três leituras que fecham o diagnóstico:
 
 | param | o que faz | default |
 |---|---|---|
-| `ds4_short_pairing_info` | aceita a resposta curta **quando ela traz o endereço** (report ID certo + campo não-zerado) | `N` (exige os 16 bytes, == vanilla) |
+| `ds4_short_pairing_info` | aceita a resposta curta **quando a resposta traz o endereço** (report ID certo + campo não-zerado) | `N` (exige os 16 bytes, == vanilla) |
 | `ds4_synthetic_mac` | quando não traz nada aproveitável, fabrica `02:VID:PID:bus` | `N` (falha a probe, == vanilla) |
 
 **Por que o report ID tem que bater.** Aplicações `hidraw` (a Steam, entre
-elas) emitem feature request próprios — é exatamente por isso que o
+outras) emitem feature request próprios — é exatamente por isso que o
 `dualshock4_get_calibration_data()` do vanilla já retenta. Endereço tirado da
 resposta de **outro** report seria pior do que endereço nenhum.
 

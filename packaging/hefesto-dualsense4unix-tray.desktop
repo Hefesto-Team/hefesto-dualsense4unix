@@ -1,15 +1,15 @@
 [Desktop Entry]
 # O ÍCONE DA BANDEJA — e, desde 19/09/2026, o ÚNICO caminho de barra do
-# produto. Decisão dela: *"desabilitamos o applet pela complexidade. o tray faz
-# o mesmo mas melhor."*
+# produto. Decisão: o applet saiu pela complexidade, e o tray faz o mesmo,
+# melhor.
 #
 # POR QUE ELE PRECISA DESTE ARQUIVO: o applet COSMIC era carregado pelo
 # `cosmic-panel` como plugin, e subia (quando subia) junto com a sessão. O tray
 # não tem esse carona — ele é um processo comum. Sem um autostart, tirar o
-# applet deixaria a barra dela VAZIA, que é o oposto do que ela pediu.
+# applet deixaria a barra VAZIA, que é o oposto do pedido.
 #
 # O `.desktop` do MENU (`hefesto-dualsense4unix.desktop`) abre a JANELA; este
-# abre o ÍCONE. São dois arquivos porque são duas coisas: o primeiro ela clica,
+# abre o ÍCONE. São dois arquivos porque são duas coisas: o primeiro se clica,
 # o segundo a sessão sobe sozinha.
 #
 # @RAIZ@ é substituído pelo caminho da árvore por quem instala (`install.sh`).

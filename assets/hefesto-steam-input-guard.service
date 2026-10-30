@@ -7,29 +7,29 @@ Type=oneshot
 # __SCRIPT__, __SENTINELA__ e __PROTON_PIN__ são substituídos pelo install.sh com o
 # caminho absoluto do repo; cada opt-out do install apaga só a SUA linha.
 #
-# 1) Steam Input: --apply-quiet NUNCA fecha a Steam: se ela estiver viva, adia.
-#    A reescrita só acontece quando a Steam já saiu (que é quando ela grava o
+# 1) Steam Input: --apply-quiet NUNCA fecha a Steam: se a Steam estiver viva, adia.
+#    A reescrita só acontece quando a Steam já saiu (que é quando a Steam grava o
 #    vdf). Com `--keep-steam-input` o install apaga esta linha (18/09/2026).
 ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet
 #
 # 2) O wrapper hefesto-launch, na carona do MESMO gatilho (CARONA-NO-GUARD-01,
 #    16/08/2026). A Steam guarda UMA linha de LaunchOptions por jogo, e
-#    qualquer coisa escrita nela SUBSTITUI o wrapper em silêncio — medido duas
+#    qualquer coisa escrita ali SUBSTITUI o wrapper em silêncio — medido duas
 #    vezes no PRAGMATA, e o sintoma é traiçoeiro: funciona no cabo, quebra no
 #    rádio, o controle continua vivo e SÓ o jogo não enxerga.
 #
 #    Este é o instante certo para repor, e ele já existia: o momento em que a
-#    Steam reescreve o vdf é o momento em que ela ACABOU DE SAIR. Reparar com a
-#    Steam viva não adianta — ela regrava o arquivo ao fechar e engole a edição.
+#    Steam reescreve o vdf é o momento em que a Steam ACABOU DE SAIR. Reparar com a
+#    Steam viva não adianta — a Steam regrava o arquivo ao fechar e engole a edição.
 #
 #    O `-` na frente é deliberado: `--reparar` devolve 3 quando ADIA (Steam ou
 #    jogo abertos), que é o caso comum e não é falha. Sem ele o guard inteiro
-#    entraria em `failed` toda vez que ela estivesse jogando.
+#    entraria em `failed` toda vez que o usuário estivesse jogando.
 ExecStart=-/usr/bin/env python3 __SENTINELA__ --reparar
 #
 # 3) O Proton pinado, na mesma carona (18/09/2026, INSTALL-UNIVERSAL). A trava
 #    `--lock --todos` só acontecia no passo 11c do install, e só com a Steam
-#    fechada: numa máquina em que a Steam estava aberta ela ADIAVA, e nada
+#    fechada: numa máquina em que a Steam estava aberta o passo ADIAVA, e nada
 #    tentava de novo — nem jogo instalado depois ganhava a entrada. O
 #    `--manter` repõe o pino do cache (baixa uma vez quando um lançador o
 #    pede e o cache não o tem), trava todo jogo da Steam e fixa os jogos do
@@ -40,9 +40,9 @@ ExecStart=-/usr/bin/env python3 __SENTINELA__ --reparar
 #    esta linha da unidade.
 ExecStart=-__PYTHON_DO_PINO__ __PROTON_PIN__ --manter
 #
-# 4) As opções de inicialização que ELA declarou, na mesma carona (21/09/2026,
+# 4) As opções de inicialização que o usuário declarou, na mesma carona (21/09/2026,
 #    OPCOES-POR-JOGO-01). A Steam guarda UMA linha de LaunchOptions por jogo, e
-#    a tabela declarativa que ela mantinha fora do produto reescrevia essa
+#    a tabela declarativa que o usuário mantinha fora do produto reescrevia essa
 #    linha sem o atalho — medido no diário de um dia inteiro: o PRAGMATA
 #    perdia o atalho de hora em hora e o passo 2 o repunha, das 04:31 às 22:00.
 #    Agora a tabela é do Hefesto (`opcoes_por_jogo.txt`) e a linha sai COMPOSTA:

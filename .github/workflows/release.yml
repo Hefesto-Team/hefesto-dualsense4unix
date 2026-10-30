@@ -56,7 +56,7 @@ jobs:
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
             bubblewrap librsvg2-common libopus0
           # Os mesmos pacotes e a mesma chave do lint-test do ci.yml
-          # (RELEASE-NO-CLONE-LIMPO-01): o teste do doctor no bwrap pula sem ela.
+          # (RELEASE-NO-CLONE-LIMPO-01): o teste do doctor no bwrap pula sem a chave.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       # PORTÃO-VIVO-01 bloco D: "o workflow que produz o artefato é o que
       # verifica menos". Até aqui a release rodava TRÊS gates —
@@ -79,7 +79,7 @@ jobs:
       # o pyproject.toml e tentar publicar tem de REPROVAR aqui.
       - name: Consistência de versão entre os alvos versionados
         run: python3 scripts/check_version_consistency.py
-      # A tag é a que dispara a release: se ela não diz a versão que o pacote tem, o que sai é um arquivo
+      # A tag é a que dispara a release: se a tag não diz a versão que o pacote tem, o que sai é um arquivo
       # com um número e uma tag com outro. O dono da versão é `scripts/release/versao.py`.
       - name: A tag diz a versão do pacote
         env:
@@ -266,7 +266,7 @@ jobs:
       # --runtime-repo, --gpg-keys, --gpg-homedir, --from-commit, --oci e os
       # verbosos) e morreria com "Unknown option" na primeira tag — levando o
       # `github-release`, que depende deste job, junto. No bundle a branch é o
-      # ÚLTIMO ARGUMENTO POSICIONAL, e é assim que ela viaja abaixo.
+      # ÚLTIMO ARGUMENTO POSICIONAL, e é assim que a branch viaja abaixo.
       - name: Construir Flatpak
         run: |
           flatpak-builder \
@@ -388,7 +388,7 @@ jobs:
   # que não o tem, o passo é pulado e o resto roda de verdade, sobre os arquivos que o `act` consegue montar.
   # O atestado de repositório público vai para o registro público de transparência (Sigstore) e não se
   # apaga: ele espera o `guarda-ci` como todo job que entrega para fora.
-  # A peça GDK (xgameruntime.dll) e a sonda dela, do fonte em assets/gdk-runtime/. O Ubuntu é o 24.04 fixo:
+  # A peça GDK (xgameruntime.dll) e a sonda da peça, do fonte em assets/gdk-runtime/. O Ubuntu é o 24.04 fixo:
   # o pino.txt grava o sha256 do binário, e só o mesmo compilador dá o mesmo binário. O `--conferir` reprova a
   # release se o fonte mudou sem o pino acompanhar.
   peca-gdk:
@@ -450,7 +450,7 @@ jobs:
           if-no-files-found: error
 
   # A release nasce como rascunho, recebe os arquivos e só então é publicada: a release imutável trava a versão
-  # no instante em que ela é pública, e apagar e recriar a versão (o que este job fazia a cada re-execução) o
+  # no instante em que a versão é pública, e apagar e recriar a versão (o que este job fazia a cada re-execução) o
   # GitHub recusa. `scripts/release/publicar.py` faz os passos e recusa o que não confere.
   github-release:
     needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci, integridade, peca-gdk]
@@ -525,7 +525,7 @@ jobs:
         run: python3 scripts/release/pacotes.py abrir-pr --numero "${VERSION}" --pasta dist/pacotes --repos "${PACOTES_REPOS}"
 
   # O `if` deixa este job inerte enquanto a variável não existir, mas inerte não
-  # é guardado: no dia em que ela existir, sem o `guarda-ci` aqui o wheel sobe
+  # é guardado: no dia em que a variável existir, sem o `guarda-ci` aqui o wheel sobe
   # ao PyPI — que é irreversível, o índice não aceita reenvio da mesma versão —
   # com os portões do ci.yml vermelhos. Todo job que entrega para fora depende
   # do guarda; quem cobra isso é `tests/unit/test_release_workflow_nomes_e_portoes.py`.

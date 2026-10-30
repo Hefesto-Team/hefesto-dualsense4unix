@@ -1,6 +1,6 @@
 [Unit]
 # O dongle Wi-Fi USB: o reforço do scan de fundo e o travamento mudo
-# (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026 — veio do self-heal do zsh dela,
+# (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01, 23/09/2026 — veio do self-heal do zsh de casa,
 # onde se chamava aurora-wifi-usb-vigia). O porquê inteiro está no cabeçalho do
 # scripts/wifi_usb.sh. Sem Wi-Fi USB na máquina, cada tique sai sem fazer nada.
 Description=Hefesto — vigia do dongle Wi-Fi USB (scan de fundo desligado e reinício da porta quando ele trava mudo)

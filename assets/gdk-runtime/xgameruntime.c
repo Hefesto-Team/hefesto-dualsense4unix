@@ -246,7 +246,7 @@ static void title_read(void)
          g_title_msa[0] ? g_title_msa : "-", g_title_nome[0] ? g_title_nome : "-");
 }
 
-/* O nome da pasta do título no LOCALAPPDATA: a Identity do config; sem ela, o nome do exe. */
+/* O nome da pasta do título no LOCALAPPDATA: a Identity do config; sem a Identity, o nome do exe. */
 static const char *title_pasta(void)
 {
     static char exe[MAX_PATH];
@@ -454,7 +454,7 @@ static int read_done(XAsyncBlock *b, HRESULT *hr, SIZE_T *required)
 
 /* As filas vivas: toda fila que a peça criou e ainda não destruiu, num conjunto aberto por
  * endereço, sob g_lock. A alça que chega do jogo vale pela presença aqui, nunca pelo que se lê no
- * endereço dela: em 17/10/2026 o Minecraft Dungeons II entregou ao XTaskQueueDuplicateHandle um
+ * endereço da alça: em 17/10/2026 o Minecraft Dungeons II entregou ao XTaskQueueDuplicateHandle um
  * valor que nem é endereço canônico, e ler o magic ali derrubou o jogo. */
 static queue_obj **g_vivas;
 static size_t g_vivas_cap;   /* potência de dois, ou zero */
@@ -548,7 +548,7 @@ static int queue_live(queue_obj *q)
     return viva;
 }
 
-/* A recusa de uma alça que a peça não tem viva vai ao log, com teto: a bancada conta quantas. */
+/* A recusa de uma alça que a peça não tem viva vai ao log, com teto: o ensaio conta quantas. */
 static void fila_recusada(const char *api, const void *q)
 {
     static LONG vezes;
@@ -624,7 +624,7 @@ static int queue_chain(queue_obj *q, queue_obj **out, int cap)
     return n;
 }
 
-/* A operação segura a fila até a conclusão ser entregue: uma referência na alça (ela não morre
+/* A operação segura a fila até a conclusão ser entregue: uma referência na alça (a alça não morre
  * no meio) e uma suspensão do término em cada fila do caminho (o XTaskQueueTerminate espera). */
 static int queue_hold_locked(async_state *st, queue_obj *q)
 {
@@ -1416,7 +1416,7 @@ static void term_wait_ops(queue_obj *q)
 static void term_signal(struct term_note *n)
 {
     task_item *it = calloc(1, sizeof(*it));
-    /* A marca entra na porta de término: quem dorme num Dispatch dela vê o término. */
+    /* A marca entra na porta de término: quem dorme num Dispatch da fila vê o término. */
     if (it) {
         it->kind = 0;
         it->callback = term_marker;
@@ -2985,7 +2985,7 @@ __declspec(dllexport) HRESULT WINAPI InitializeApiImplEx2(UINT64 gdk, UINT64 gs,
     return S_OK;
 }
 
-/* A identidade da peça: a prova do módulo (e a bancada) confere que o processo carregou esta,
+/* A identidade da peça: a prova do módulo (e o ensaio) confere que o processo carregou esta,
  * e não uma DLL ao lado do exe. */
 __declspec(dllexport) const char *WINAPI HefestoPecaGdk(void)
 {

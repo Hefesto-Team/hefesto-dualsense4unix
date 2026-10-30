@@ -12,12 +12,12 @@
 ## caminhos das regras (e o `systemctl`) para o store. Este módulo só liga o que o
 ## NixOS precisa para o pacote valer na máquina:
 ##
-##   * `services.udev.packages`: as regras (e o `TEST==` delas acha o alvo);
-##   * `systemd.packages`: a unidade do snapshot dos bonds e o timer dela;
+##   * `services.udev.packages`: as regras (e o `TEST==` das regras acha o alvo);
+##   * `systemd.packages`: a unidade do snapshot dos bonds e o timer da unidade;
 ##   * `boot.kernelModules`: `uinput` e `uhid`, o que o `modules-load.d` do
 ##     pacote pede nos outros formatos;
 ##   * o diretório de estado do snapshot, que a unidade declara em
-##     `ReadWritePaths=` e sem o qual ela não sobe.
+##     `ReadWritePaths=` e sem o qual a unidade não sobe.
 ##
 ## Uso:
 ##
@@ -35,7 +35,7 @@ in
 {
   options.services.hefesto-dualsense4unix = {
     enable = lib.mkEnableOption ''
-      as regras udev do Hefesto - DualSense4Unix, os alvos delas no host e o
+      as regras udev do Hefesto - DualSense4Unix, os alvos das regras no host e o
       snapshot dos bonds do Bluetooth
     '';
 
@@ -44,7 +44,7 @@ in
       default = pkgs.callPackage ./package.nix { };
       defaultText = lib.literalExpression "pkgs.callPackage ./package.nix { }";
       description = ''
-        O pacote que leva as regras udev, os alvos delas e a unidade do snapshot.
+        O pacote que leva as regras udev, os alvos das regras e a unidade do snapshot.
       '';
     };
   };

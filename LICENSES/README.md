@@ -61,7 +61,7 @@ regra da casa aqui é "não se inventa texto de licença".
 | SHA-256 do texto extraído | `89ab950bb21ce83f5ec42ea3d44e1fdc2d61db642c8d6f23e10995c33528adcf` |
 | SHA-256 do arquivo de origem | `4d0df00a62374f3992ad0f2ec566838cafb406d11bef776d2667d3aabaa4b430` |
 
-Uma ressalva que precisa estar escrita, porque um leitor apressado tropeça nela:
+Uma ressalva que precisa estar escrita, porque um leitor apressado tropeça nisto:
 o texto começa em *"Redistribution and use..."* e **não** traz a linha
 `Copyright (c) <ano> <titular>`. Isso não é omissão — o titular do direito é
 declarado no cabeçalho de cada arquivo coberto
@@ -72,14 +72,14 @@ e nos demais), e é lá que ele tem de estar. O que este arquivo carrega são as
 ## O que este diretório NÃO é
 
 Não é a licença do Hefesto. O código próprio do projeto é **MIT**, e o texto
-está no `LICENSE` da raiz — sozinho, sem nada antes dele, por decisão dela de
+está no `LICENSE` da raiz — sozinho, sem nada antes dele, por decisão de
 07/08/2026 (ver `NOTICE`, seção "ESCOPO DESTE ARQUIVO").
 
-Não é a lista das dependências Python. Elas não são vendorizadas: quem as
+Não é a lista das dependências Python. Essas dependências não são vendorizadas: quem as
 instala é o pip ou o gerenciador de pacotes da distribuição, e cada uma chega
 com o seu próprio `dist-info` e o seu próprio texto de licença. Estão
 **declaradas** no `NOTICE`, com a licença lida dos metadados instalados, mas os
-textos delas não moram aqui porque não somos nós que as redistribuímos — com uma
+textos dessas licenças não moram aqui porque não somos nós que as redistribuímos — com uma
 exceção nomeada no `NOTICE`: o bundle Flatpak embute as dependências dentro de
 `/app`, e nesse caso é o pip que leva o texto de cada uma junto.
 
@@ -103,7 +103,7 @@ diretório sem linha correspondente nos alvos reprova a suíte.
 
 ### Nota datada — 07/08/2026: as duas últimas linhas entraram depois
 
-Esta tabela nasceu com **seis** linhas, e elas estavam certas para a pergunta
+Esta tabela nasceu com **seis** linhas, e estavam certas para a pergunta
 que a CR-05 fazia: *quais artefatos PUBLICADOS carregam os fontes GPL*. As duas
 últimas respondem outra pergunta, que ficou sem dono no mesmo dia: **quais
 caminhos põem os fontes GPL no disco de uma máquina.** São os dois

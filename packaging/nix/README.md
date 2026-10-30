@@ -81,7 +81,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
 }
 ```
 
-## NixOS — o módulo (regras udev, alvos delas e snapshot dos bonds)
+## NixOS — o módulo (regras udev, alvos das regras e snapshot dos bonds)
 
 As regras udev 82 e 83 chamam alvos no host (`/usr/local/lib/hefesto-dualsense4unix/…`
 e `/usr/bin/systemctl`) que o Nix não tem. O pacote leva os alvos dentro do
@@ -105,7 +105,7 @@ precisa para valer na máquina:
 ```
 
 O módulo registra as regras (`services.udev.packages`), a unidade do snapshot dos
-bonds e o timer dela (`systemd.packages`), os módulos `uinput` e `uhid` e o
+bonds e o timer da unidade (`systemd.packages`), os módulos `uinput` e `uhid` e o
 diretório `/var/lib/hefesto-dualsense4unix`. O daemon e a interface seguem sendo
 do perfil de quem usa.
 

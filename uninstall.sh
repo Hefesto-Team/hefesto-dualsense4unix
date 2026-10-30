@@ -604,12 +604,12 @@ else
         _abrir_a_regra_do_no_que_fica
     elif [[ -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules \
             || -f /etc/udev/rules.d/70-ps5-controller.rules ]]; then
-        log "sudo indisponível — a regra do nó ficou como estava, e sem o broker ela não pode ficar fechada:"
+        log "sudo indisponível — a regra do nó ficou como estava, e sem o broker a regra não pode ficar fechada:"
         log "  sudo rm -f /etc/udev/rules.d/73-hefesto-ps5-controller.rules /etc/udev/rules.d/70-ps5-controller.rules"
     fi
     log "udev rules preservadas (--keep-udev). Para remover depois:"
     log "  sudo rm /etc/udev/rules.d/73-hefesto-ps5-controller.rules /etc/udev/rules.d/70-ps5-controller.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/udev/rules.d/72-ps5-controller-autosuspend.rules /etc/udev/rules.d/72-hefesto-touchpad-motion-uaccess.rules /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules /etc/udev/rules.d/77-dualsense-leds.rules /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/82-nintendo-pro-nosniff.rules /etc/udev/rules.d/83-hefesto-bond-snapshot.rules /etc/udev/rules.d/84-nintendo-pro-variant.rules /etc/udev/rules.d/85-hefesto-o-cabo-assume.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
-    log "  as 82 e 83 chamam alvos por RUN+= — os alvos ficaram junto com elas."
+    log "  as 82 e 83 chamam alvos por RUN+= — os alvos ficaram junto com essas regras."
     log "  Ao remover as regras, remova também:"
     log "  sudo rm /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh /etc/systemd/system/hefesto-bt-bonds-snapshot.service"
 fi
@@ -725,7 +725,7 @@ if sudo -n true 2>/dev/null; then
     else
         log "alvos das regras 82/83 preservados (--keep-udev): bt_nosniff_now.sh,"
         log "  bt_bonds_snapshot.sh e hefesto-bt-bonds-snapshot.service — sem eles as"
-        log "  regras que ficaram virariam enfeite (o TEST== delas não acharia o alvo)."
+        log "  regras que ficaram virariam enfeite (o TEST== dessas regras não acharia o alvo)."
     fi
     _hcis=()
     for _hci_p in "${HEFESTO_SYSFS_BLUETOOTH:-/sys/class/bluetooth}"/hci*; do
@@ -844,7 +844,7 @@ for dele in registros:
             [[ -e "${_copia_antiga}" || -L "${_copia_antiga}" ]] || continue
             log "removendo a cópia de pareamento de um uninstall anterior (--purge-config): ${_copia_antiga}"
             sudo rm -rf -- "${_copia_antiga}" 2>/dev/null \
-                || log "  ela FICOU — apague à mão: sudo rm -rf ${_copia_antiga}"
+                || log "  a cópia FICOU — apague à mão: sudo rm -rf ${_copia_antiga}"
         done
     fi
     if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
@@ -1247,7 +1247,7 @@ devolver_o_pipewire() {
         if sudo -n true 2>/dev/null && sudo rm -f "${PIPEWIRE_PREF}"; then
             log "removida a trava do apt do PipeWire (${PIPEWIRE_PREF})"
             if [[ "${#pkgs[@]}" -gt 0 && "${devolver}" -eq 0 ]]; then
-                log "  sem ela, no Pop!_OS o próximo apt upgrade volta o PipeWire para o da distro"
+                log "  sem a fixação, no Pop!_OS o próximo apt upgrade volta o PipeWire para o da distro"
             fi
         else
             log "sudo indisponível — a trava do apt NÃO foi removida"
@@ -1570,7 +1570,7 @@ if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
         if cp -a "${_de}" "${_para}"; then
             log "a lista de exclusão fica em ${_para} até o desfazer dos lançadores"
         else
-            log "não consegui guardar a lista de exclusão em ${_para} — ela está no backup da config"
+            log "não consegui guardar a lista de exclusão em ${_para} — a lista está no backup da config"
         fi
     done
     for path in \

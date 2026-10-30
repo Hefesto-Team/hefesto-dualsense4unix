@@ -355,7 +355,7 @@ if [ -e /etc/udev/rules.d/70-ps5-controller.rules ]; then
     fi
 fi
 # BROKER-01: a unit que o helper renderizava antes, com o uid GRAVADO, ficou em
-# /etc e vence a do rpm: sai, porque o broker novo nao precisa dela.
+# /etc e vence a do rpm: sai, porque o broker novo nao precisa dessa unit.
 for _u in service socket; do
     if grep -qs '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
             "/etc/systemd/system/hefesto-hidraw-broker.${_u}"; then
@@ -396,7 +396,7 @@ if [ $1 -eq 0 ]; then
     # rpm (/usr/local/lib + /etc/systemd/system). Sem este bloco eles
     # sobrevivem ao dnf remove — e como o helper tambem copia as regras para
     # /etc/udev/rules.d, a cura continuaria armada sem o pacote. Os snapshots
-    # de bonds em /var/lib NAO sao apagados: sao o salva-vidas dela.
+    # de bonds em /var/lib NAO sao apagados: sao o salva-vidas dos pareamentos.
     rm -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh \
           /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
           /etc/systemd/system/hefesto-bt-bonds-snapshot.service
@@ -620,7 +620,7 @@ fi
 - Microfone e alto-falante de cada controle por cabo e por Bluetooth, com os quatro microfones ligados ao mesmo tempo.
 - A vibração fina do DualSense, que o jogo manda como áudio, chega ao controle em jogos pelo Proton, no cabo e no Bluetooth.
 * Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.5-1
-- Lightbar: o controle pisca na cor do modo ao trocar de ponte, e volta a cor dela
+- Lightbar: o controle pisca na cor do modo ao trocar de ponte, e volta a cor do jogador
 - Gesto: PS + R3 troca de ponte sem sair do jogo
 - Ponte: o perfil carimba qual ponte funcionou, e o lancamento a arma
 - Install: garante libhidapi, loader SVG, gettext e libudev em apt/dnf/pacman
@@ -638,7 +638,7 @@ fi
 - Tema: as cinco classes de cor voltaram a pintar (disputa de especificidade)
 * Thu Aug 13 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.3-1
 - Instrumentos: a guarda de arvore congelada parou de confundir bytecode com produto
-- Instrumentos: a bancada voltou a abrir (colunas cabo_/radio_ da migracao v2)
+- Instrumentos: o ensaio voltou a abrir (colunas cabo_/radio_ da migracao v2)
 - Mapa: o --check compara CONTEUDO, nao mtime; e grau forte passou a exigir ensaio
 - Portoes: quatro novos (portoes ligados no CI, artefato sem dono, os dois lados
   do install, e promessa sem caminho de producao)

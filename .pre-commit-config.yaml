@@ -71,7 +71,7 @@ repos:
       # hooks acima: o portão também confere que a lista de exceções e a de
       # dívida não envelheceram — e essa pergunta é sobre o arquivo INTEIRO,
       # não sobre o que está staged. Filtrar por arquivo deixaria a lista
-      # apodrecer calada, que é o defeito que ela existe para não ter.
+      # apodrecer calada, que é o defeito que a lista existe para não ter.
       - id: palavra-de-tela
         name: Palavra de tela (maiúscula no rótulo, jargão aposentado fora)
         entry: python3 scripts/validar-palavra-de-tela.py --all
@@ -139,9 +139,9 @@ repos:
       # registrado no dispatcher sem uma linha de contrato.
       #
       # A tabela de curvas próprias (`scripts/gerar-tabela-de-curvas.py`) NÃO
-      # está aqui, e é decisão, não esquecimento: ela importa um módulo pydantic
+      # está aqui, e é decisão, não esquecimento: a tabela importa um módulo pydantic
       # e o `language: system` roda o Python pelado de quem commita. Um hook que
-      # explode no import é um hook desligado na semana seguinte. Ela vive no job
+      # explode no import é um hook desligado na semana seguinte. A tabela vive no job
       # `lint-test` do CI, que instala as dependências, e no teste que a suíte
       # roda sempre.
       - id: contrato-ipc-publicado
@@ -160,8 +160,7 @@ repos:
         pass_filenames: false
         always_run: true
       # A CATRACA DA TRADUÇÃO — TRADUZIR-O-PROJETO-01 (20/09/2026). A ordem
-      # dela: *"Um Hook que vá facilitando isso seria maravilhoso. Pois   # noqa-acento: citação literal
-      # organicamente deixaríamos fácil pra gente e pro outro"*.   # noqa-acento: citação literal
+      # pede um gancho que vá facilitando a tradução, para quem mantém e para quem contribui.
       #
       # `pass_filenames: false` e `always_run: true` pela mesma razão dos
       # outros três: a pergunta é sobre a ÁRVORE INTEIRA — quantos arquivos
@@ -176,14 +175,14 @@ repos:
         always_run: true
       # O-TEXTO-ENXUTO-SE-CORRIGE-NO-ATO-01 (13/10/2026): UM gancho, a mesma
       # definição em casa e no GitHub. `--aplicar` corrige o que é mecânico (o
-      # «dela» de pessoa) e `--restagear` devolve ao índice o que ele mexeu;
+      # pronome de pessoa) e `--restagear` devolve ao índice o que ele mexeu;
       # o resto (comentário no código, docstring longa, citação de linha nova)
       # reprova com arquivo, linha e conserto. No CI, onde nada está
       # no índice, um arquivo que ele corrigiria reprova: é o comportamento
       # padrão do pre-commit para gancho que modifica. A lógica mora nas réguas
       # dos donos; o script as importa (scripts/o-texto-enxuto.py).
       - id: texto-enxuto
-        name: o texto enxuto (o «dela» de pessoa se corrige; comentário, docstring e citação nova reprovam)
+        name: o texto enxuto (o pronome de pessoa se corrige; comentário, docstring e citação nova reprovam)
         entry: python3 scripts/o-texto-enxuto.py --aplicar --restagear
         language: system
         files: '\.(py|md|csv)$'

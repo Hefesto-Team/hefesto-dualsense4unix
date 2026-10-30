@@ -220,7 +220,7 @@ projetos:
 # A história do `dev` e a do `main` não se apagam nem se reescrevem, sem exceção para ninguém.
 # A assinatura (SSH, o selo «Verified») mora num ruleset por ramo: no `dev` sem exceção, porque uma
 # exceção anularia a regra para quem mais empurra commit; no `main` com a exceção de quem administra,
-# porque o `main` está milhares de commits atrás do `dev`, nenhum deles assinado, e sem ela o primeiro
+# porque o `main` está milhares de commits atrás do `dev`, nenhum deles assinado, e sem a exceção o primeiro
 # avanço dele na release seria recusado pelos commits antigos. A exceção vale para todas as regras do
 # ruleset em que está, por isso esse ruleset só tem a assinatura. O histórico linear mora na porta, e não
 # na história, pelo mesmo motivo (o `dev` traz centenas de merges que o `main` ainda não tem).

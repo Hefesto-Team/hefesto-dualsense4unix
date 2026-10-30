@@ -1,4 +1,4 @@
-# hefesto-dualsense4unix — o pino da peça GDK (xgameruntime.dll), da sonda dela e do
+# hefesto-dualsense4unix — o pino da peça GDK (xgameruntime.dll), da sonda da peça e do
 # GameInput da casa (gameinput.dll).
 #
 # As fontes são assets/gdk-runtime/xgameruntime.c e gameinput.c; o construir.sh as compila de forma

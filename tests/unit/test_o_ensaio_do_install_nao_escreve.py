@@ -496,7 +496,7 @@ class TestOPlanoNaoEnvelhece:
         """Quem rola oitenta linhas de plano não se lembra do cabeçalho."""
         resultado, _lar, _diario = _roda_ensaio(tmp_path)
         assert "NADA foi escrito" in resultado.stdout
-        assert re.search(r"\d+ mudanças planejadas, \d+ delas com root", resultado.stdout), (
+        assert re.search(r"\d+ mudanças planejadas, \d+ com root", resultado.stdout), (
             "o fecho do ensaio não conta quantas mudanças o plano tem — o "
             "número é o que diz se ela está olhando um install inteiro ou um "
             "plano que morreu no meio"

@@ -51,7 +51,7 @@ buffer zerado).
 **A marca:** `get_report_sized` (0444, sempre Y), em
 `/sys/module/usb_f_hid/parameters/get_report_sized`. Nada mais no sysfs separa
 este módulo do de fábrica. O daemon a guarda no `daemon.state_full`
-(`gamepad_emulation.get_report_sized`), e o doctor reprova sem ela
+(`gamepad_emulation.get_report_sized`), e o doctor reprova sem a marca
 (`check_hefesto_usb_f_hid_dkms`).
 
 ## A troca a quente

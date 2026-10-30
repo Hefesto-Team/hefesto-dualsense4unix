@@ -12,13 +12,13 @@
 # ESCOPO — E POR QUE ELE DEIXOU DE SER UMA FAIXA (UMA-FAIXA-NÃO-É-UM-FABRICANTE-01
 # / E1, 25/08/2026).
 #
-# Até 25/08 esta regra casava SÓ `e0:f6:b5:*`, a faixa do Pro desta bancada. A
+# Até 25/08 esta regra casava SÓ `e0:f6:b5:*`, a faixa do Pro da máquina de teste. A
 # Nintendo tem OITENTA E DUAS faixas MA-L registradas e a 8BitDo tem UMA (medido
 # contra `/usr/share/ieee-data/oui.csv` em 22/08/2026): uma amostra de tamanho um
 # tinha virado a definição de "Pro", e quem tem um Pro de outra safra não recebia
 # a cura — o link caindo sob carga, sem uma linha de journal dizendo por quê.
 #
-# A sprint pôs a decisão em duas opções, e ela tinha um preço em cada: gerar 82
+# A sprint pôs a decisão em duas opções, e cada uma tinha um preço em cada: gerar 82
 # linhas (uma lista que envelhece calada) ou tirar o filtro (um `RUN+=` em TODO
 # device HID por Bluetooth). Existe uma terceira, e é a que está escrita aqui:
 # **casar por NOME**. O conjunto "device HID cujo `HID_NAME` diz Pro Controller"
@@ -40,25 +40,25 @@
 # repete a guarda do seu lado; duas réguas, de propósito.
 #
 # O NOME NÃO VAI NO `RUN+=`, vai no AMBIENTE. O udev exporta as propriedades do
-# device para o programa do `RUN+=`, e `HID_NAME` é uma delas — o helper a lê de
+# device para o programa do `RUN+=`, e `HID_NAME` é uma dessas — o helper a lê de
 # lá. Pôr `$env{HID_NAME}` na linha de comando quebraria o nome em cinco
 # argumentos, porque o udev separa o argv por espaço DEPOIS de substituir.
 #
 # AS DUAS LINHAS DE FAIXA CONTINUAM, e continuam ANTES da linha do nome: quem já
-# recebia a cura não passa a depender de um dado novo. Elas existem também para
+# recebia a cura não passa a depender de um dado novo. Essas linhas existem também para
 # o caso de o nome não ter sido resolvido no instante do `add`. O `GOTO` é o que
-# impede o Pro desta bancada de casar as duas rotas e chamar o helper duas vezes.
+# impede o Pro da máquina de teste de casar as duas rotas e chamar o helper duas vezes.
 #
 # Reverter: remover este arquivo, `udevadm control --reload`, e devolver o link
 # com `hcitool lp <MAC> RSWITCH,HOLD,SNIFF,PARK`.
 #
 # O `TEST==` É METADE DA CURA, NÃO ENFEITE (22/08/2026). Esta é uma regra-cola:
-# ela não faz nada sozinha, só chama o alvo do `RUN+=`. O arquivo de regra viaja
+# não faz nada sozinha, só chama o alvo do `RUN+=`. O arquivo de regra viaja
 # nos CINCO instaladores (install_udev.sh, install-host-udev.sh, build_deb.sh,
 # PKGBUILD, spec) e o alvo não viajava em nenhum — só o passo 3e-bis do
 # `install.sh` o gravava, e até 22/08 esse passo ficava DEPOIS do `exit 0` do
 # ramo dos formatos. Medido em 07/08 (estudo da cobertura do install, item 9): o
-# portão de paridade imprimia `[OK]` para esta regra enquanto o alvo dela não
+# portão de paridade imprimia `[OK]` para esta regra enquanto o alvo da regra não
 # existia em empacotamento nenhum.
 #
 # Sem o `TEST==`, regra sem alvo não fica quieta: o udev EXECUTA o `RUN+=` e
@@ -75,7 +75,7 @@
 #
 # Simetria do par: o alvo ENTRA quando a regra entra (`scripts/install_udev.sh`,
 # `scripts/install-host-udev.sh` e o `install_bt_resilience_host` do
-# `install.sh`, chamado nos dois lados da bifurcação de formato) e SAI quando ela
+# `install.sh`, chamado nos dois lados da bifurcação de formato) e SAI quando a regra
 # sai (`uninstall.sh`, BUG-UNINSTALL-KEEP-UDEV-ALVO-ORFAO-01). Portão:
 # `tests/unit/test_regra_udev_nao_fica_orfa_do_alvo_do_run.py`.
 ACTION!="add", GOTO="hefesto_nosniff_fim"

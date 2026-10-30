@@ -1,6 +1,6 @@
 -- Hefesto - DualSense4Unix — FEAT-WIREPLUMBER-DISABLE-OUTPUT
 --
--- DESABILITA (node.disabled) a SAÍDA do controle. Sem ela o monitor do sink não
+-- DESABILITA (node.disabled) a SAÍDA do controle. Sem isso o monitor do sink não
 -- reaparece como fonte padrão depois do boot; o alto-falante e o fone do
 -- controle ficam mudos (a vibração dos jogos vai por HID e continua).
 --

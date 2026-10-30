@@ -1,10 +1,10 @@
 # O-CABO-ASSUME-DO-RADIO-01 (25/09/2026) — o controle que espera o gêmeo sair.
 #
-# A decisão dela: o controle do rádio que ganha cabo passa para o cabo (no cabo
+# A decisão: o controle do rádio que ganha cabo passa para o cabo (no cabo
 # há a vibração por áudio, o som e menos atraso), com o mesmo número; tirou o
 # cabo, volta pelo rádio.
 #
-# O MEDIDO (mesa dela, 25/09/2026, 19:42): o `hid-playstation` não deixa o mesmo
+# O MEDIDO (ensaio de 25/09/2026, 19:42): o `hid-playstation` não deixa o mesmo
 # endereço existir nos dois barramentos. O HID que chega depois é recusado:
 #
 #   playstation 0003:054C:0CE6.001B: Duplicate device found for MAC address …
@@ -16,8 +16,8 @@
 # controle fica em lugar nenhum até alguém tirar e pôr o cabo.
 #
 # O QUE ESTA REGRA FAZ: quando um DualSense físico SAI do barramento HID (o
-# rádio que o daemon derrubou para o cabo assumir, ou o cabo que ela tirou),
-# ela pede a probe de todo DualSense que ficou esperando sem driver. É o
+# rádio que o daemon derrubou para o cabo assumir, ou o cabo que se tirou),
+# a regra pede a probe de todo DualSense que ficou esperando sem driver. É o
 # `drivers_probe` do barramento HID: num aparelho que já tem driver ele não faz
 # nada, e no que esperava ele refaz a probe agora que o endereço está livre.
 #
@@ -37,7 +37,7 @@
 # continua sendo o `bt_rebind_orphans.sh`, com o orçamento dele.
 #
 # O daemon só derruba o rádio de um controle quando esta regra está instalada
-# (`integrations/o_cabo_em_espera.impedimentos_da_troca`): sem ela o controle
+# (`integrations/o_cabo_em_espera.impedimentos_da_troca`): sem a regra o controle
 # ficaria sem rádio e sem cabo.
 #
 # Reverter: remover este arquivo e `udevadm control --reload`.

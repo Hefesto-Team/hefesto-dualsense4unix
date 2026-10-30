@@ -17,7 +17,7 @@
 # A resposta de então foi um curinga (`*DualSense*Touchpad`) que cobria USB, BT,
 # Edge e os vpads numa linha só.
 #
-# TOUCHPAD-DO-SISTEMA-01 (2026-08-09) — O CURINGA CADUCOU, e o pedido dela é o
+# TOUCHPAD-DO-SISTEMA-01 (2026-08-09) — O CURINGA CADUCOU, e o pedido é o
 # que o derruba: *"quando eu conecto o controle DualSense no PC via BT ou cabo,
 # ANTES do Hefesto, o touchpad funciona como mouse. No Hefesto impedimos isso de
 # funcionar em todos os modos. A ideia do touchpad é ele voltar a funcionar
@@ -26,9 +26,9 @@
 # O curinga apagava o touchpad FÍSICO em TODOS os modos e em TODOS os aparelhos
 # — inclusive onde não havia emulação nenhuma com que brigar (Conexão Nativa não
 # tem mouse do hefesto; "Jogar pelo Hefesto" não faz do analógico um mouse;
-# "Controlar o PC" pode ter a emulação de mouse DESLIGADA, e ela estava, medido
+# "Controlar o PC" pode ter a emulação de mouse DESLIGADA, e estava, medido
 # em 09/08/2026: `mouse_emulation.enabled=False` com o modo ativo). Confirmado no
-# nó vivo dela (`/run/udev/data/c13:68`): `ID_INPUT_TOUCHPAD=1` E
+# nó vivo do ensaio (`/run/udev/data/c13:68`): `ID_INPUT_TOUCHPAD=1` E
 # `LIBINPUT_IGNORE_DEVICE=1` — o dedo andava e o cursor não.
 #
 # AS DUAS BRIGAS MEDIDAS CONTINUAM CURADAS, cada uma pelo lado certo da cerca:
@@ -52,7 +52,7 @@
 #
 # POR QUE NÃO REAVALIAR ESTA REGRA NA TROCA DE MODO: `LIBINPUT_IGNORE_DEVICE` só
 # é lida pelo libinput no (re)add do device, e reavaliá-la exigiria
-# `udevadm trigger` — que pede root. O daemon é de SESSÃO, roda como ela, e a
+# `udevadm trigger` — que pede root. O daemon é de SESSÃO, roda como o usuário, e a
 # troca de modo é um clique. Uma cura que precisa de root a cada clique não é
 # produto. O gate de runtime acima não precisa de nada: é uma leitura de arquivo
 # quando o nó abre.
@@ -73,7 +73,7 @@
 #
 # `ATTRS{phys}` NÃO serve de âncora aqui: o `ps_allocate_input_dev` não copia o
 # `phys` do hid_device para o input_dev, e o atributo sai VAZIO nos quatro nós —
-# medido em 09/08/2026 em `/sys/class/input/input*/phys` com o controle dela
+# medido em 09/08/2026 em `/sys/class/input/input*/phys` com o controle do ensaio
 # plugado. Quem discrimina no evdev (`core/evdev_reader.py: _is_virtual_evdev`)
 # lê o `phys` do hidraw, que é outro nó.
 #

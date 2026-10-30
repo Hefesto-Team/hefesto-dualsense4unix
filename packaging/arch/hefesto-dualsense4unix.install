@@ -25,7 +25,7 @@ post_install() {
     # pacote (/usr/lib/systemd/system, sem uid nem grupo por maquina: ele atende
     # quem esta na frente do seat, perguntando ao logind), e a regra do no vai
     # FECHADA. A unit que o helper renderizava antes, com o uid GRAVADO, ficou
-    # em /etc e vence a do pacote: sai, porque o broker novo nao precisa dela.
+    # em /etc e vence a do pacote: sai, porque o broker novo nao precisa dessa unit.
     for _u in service socket; do
         if grep -qs '^Environment=HEFESTO_BROKER_ALLOWED_UID=' \
                 "/etc/systemd/system/hefesto-hidraw-broker.${_u}"; then
@@ -89,7 +89,7 @@ pre_remove() {
     # do pacman (/usr/local/lib + /etc/systemd/system). Sem este bloco eles
     # sobrevivem ao pacman -R — e como o helper tambem copia as regras para
     # /etc/udev/rules.d, a cura continuaria armada sem o pacote. Os snapshots
-    # de bonds em /var/lib NAO sao apagados: sao o salva-vidas dela.
+    # de bonds em /var/lib NAO sao apagados: sao o salva-vidas dos pareamentos.
     rm -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh \
           /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
           /etc/systemd/system/hefesto-bt-bonds-snapshot.service

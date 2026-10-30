@@ -5,7 +5,7 @@
 # A receita: upstream 5.87 (kernel.org) + o empacotamento do resolute
 # 5.85-4ubuntu0.1, com três ajustes de empacotamento (ver o script) e os
 # patches hefesto-NNNN da revisão pedida. A revisão 4 e as anteriores
-# nasceram sobre a 5.86: o que muda nelas vem nas chaves com o sufixo
+# nasceram sobre a 5.86: o que muda nessas revisões vem nas chaves com o sufixo
 # _R<n>, que o script lê antes da chave comum.
 #
 # O 5.85-4ubuntu0.1 SAIU do pool do archive.ubuntu.com (hoje há o 0.3); o

@@ -5,7 +5,7 @@
 #   patch -R -p0 uhid.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
 #
-# A FONTE do de fábrica, e ela é conferível sem baixar o tarball de 234 MB. É
+# A FONTE do de fábrica, e é conferível sem baixar o tarball de 234 MB. É
 # a árvore STABLE, e o tag é o da versão EXATA do kernel — nunca o do mainline:
 #   curl -fsSL 'https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/hid/uhid.c?h=v7.1.5'
 #

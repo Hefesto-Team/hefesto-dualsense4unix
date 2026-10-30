@@ -48,7 +48,7 @@ Módulo `hid-nintendo` patchado para curar duas mortes de probe distintas:
 
 ## [E] O clone USB `057E:2009` — o que morre e por quê
 
-**Leia esta seção como o estado SEM o patch `0003`.** Ela descreve o que foi
+**Leia esta seção como o estado SEM o patch `0003`.** A seção descreve o que foi
 medido em 25/07, com o módulo vanilla, e é o que a cura veio curar. **Com o
 patch no ar — o caso desta máquina desde então — nada disto acontece:** o clone
 proba inteiro pelo cabo, medido em 11/08. Ver a seção de instalação, abaixo.
@@ -157,7 +157,7 @@ usa isso para marcar `HEFESTO_CONTROLLER_VARIANT` nos devices USB/hid/hidraw/
 input e criar `/dev/hefesto/nintendo-pro` e `/dev/hefesto/8bitdo-pro-clone`.
 A marca funciona **mesmo com a probe quebrada** (o nível USB/hid existe sem
 driver), então serve para diagnosticar o estado ruim, não só o curado.
-Caminho USB (`3-1`, `1-4`) **não** serve de chave: ela troca de porta.
+Caminho USB (`3-1`, `1-4`) **não** serve de chave: o controle troca de porta.
 
 ## Build / instalação
 
@@ -202,7 +202,7 @@ B=$(mktemp -d) && cp assets/dkms/hid-nintendo/{hid-nintendo.c,hid-ids.h,Makefile
 make -C /lib/modules/$(uname -r)/build M="$B" modules && rm -rf "$B"
 
 # 2) instalar de fato: source novo p/ DKMS + modprobe.d novo
-#    SEM sudo — o install.sh pede a senha sozinho no passo que precisa dela.
+#    SEM sudo — o install.sh pede a senha sozinho no passo que precisa da senha.
 #    Rodado com sudo, o HOME vira /root: o .venv nasce root-owned, os symlinks
 #    vão para /root/.local/bin e as units de usuário para
 #    /root/.config/systemd/user — instalação que "deu certo" e não existe para

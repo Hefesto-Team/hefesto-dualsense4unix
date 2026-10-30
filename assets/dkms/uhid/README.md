@@ -9,8 +9,8 @@ por sua vez só é instalado com `./install.sh --uhid-contrapressao`.
 
 ## O defeito, medido
 
-A queixa dela, em 22/09/2026: *«4 controles conectados só um aparece na
-interface agora»*. <!-- noqa-acento: citação literal -->
+A queixa, em 22/09/2026: quatro controles conectados e só um aparecia na
+interface.
 
 A ponte de áudio por rádio do Hefesto escrevia **100 reports de 334 B por
 segundo, por controle** — ~271 kbit/s de payload ACL cada, e com quatro
@@ -61,7 +61,7 @@ escreve 80 reports de saída no `hidrawN` que nasce:
 | patchado, `Y` | 29 | **51** | escrita #29, `EAGAIN` |
 
 29 ≈ os 31 lugares da fila menos os eventos de `START`/`OPEN` que já estavam
-nela. O kernel registrou **53** descartes na corrida de fábrica — o outro lado
+na fila. O kernel registrou **53** descartes na corrida de fábrica — o outro lado
 do livro-razão.
 
 ## Por que é opt-in, e não default como os vizinhos
@@ -72,7 +72,7 @@ trata falha de escrita como *«o aparelho sumiu»* passa a largar o controle no
 primeiro engasgo do rádio; e esse era exatamente o defeito que a
 `RADIO-AFOGADO-02` curou do NOSSO lado
 (`integrations/alto_falante_bt.FILA_CHEIA_DO_KERNEL`), o que mostra como ele é
-fácil de ter. Enquanto não for medido com os jogos dela abertos, ninguém leva
+fácil de ter. Enquanto não for medido com jogos abertos, ninguém leva
 a mudança sem pedir.
 
 **O produto está correto sem este módulo.** A cura de primeira ordem é a

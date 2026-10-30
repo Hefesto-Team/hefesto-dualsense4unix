@@ -9,7 +9,7 @@
 #   patch -R -p3 hid-playstation.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
 #
-# Proveniência do de fábrica, e ela é conferível pelos dois lados:
+# Proveniência do de fábrica, e é conferível pelos dois lados:
 #   raw.githubusercontent.com/pop-os/linux/<POP_LINUX_COMMIT>/drivers/hid/hid-playstation.c
 #   git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/hid/hid-playstation.c?h=v7.1.5
 # Os dois dão o mesmo SHA256_VANILLA_C (medido em 28/09/2026). O commit do Pop
@@ -77,7 +77,7 @@
 #      pacote dele nomeia) se mede pelo sha256. Se for o SHA256_VANILLA_C da
 #      raiz, o build entra em `fonte-por-kernel/raiz.txt`. Se for outro, a
 #      série é refeita sobre ele numa pasta `fonte-por-kernel/<build>/` nova,
-#      com a linha POR_KERNEL dela aqui. Nunca se acrescenta o kernel com o
+#      com a linha POR_KERNEL do kernel aqui. Nunca se acrescenta o kernel com o
 #      arquivo de outro;
 #   2. o patchado compila contra os headers dele, com o `parm:
 #      mic_frames_ignored` no `.ko`;

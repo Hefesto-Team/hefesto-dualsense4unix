@@ -2,10 +2,9 @@
 <!--
   Ícone SIMBÓLICO do painel — o ARO ABERTO DA LOGO com o MARTELO ao centro.
 
-  Redesenho de 07/08/2026, pela DECISÃO 14 dela: "redesenhar o símbolo mais
-  parecido com a logo, mantendo a grade pequena"
-  (`docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md`).
-  Antes dela, duas propostas foram renderizadas e mostradas, e as duas caíram
+  Redesenho de 07/08/2026, pela DECISÃO 14: o símbolo fica mais parecido com a
+  logo, mantendo a grade pequena.
+  Antes da decisão, duas propostas foram renderizadas e mostradas, e as duas caíram
   por motivo medido: "preto com borda branca" deixa de acompanhar o tema, e a
   logo da dock a 20 px vira borrão. O que sobrou é o meio-termo: aproximar o
   desenho da logo o máximo que a legibilidade a 16 e 20 px permitir.
@@ -30,9 +29,9 @@
   2. A CABEÇA DO MARTELO É CHEIA, com canto arredondado de 25% da espessura, e o
      cabo é uma cápsula. É como a logo desenha (`rect rx="6"` numa espessura 24,
      e `rect rx="5"` numa largura 10). O desenho anterior tinha a cabeça VAZADA,
-     que era a proposta dela de 07/08 pela manhã ("a borda do martelo ao
-     centro"); o vazado saiu porque a logo não tem vazado e porque o furo pesava
-     contra a regra 4 abaixo. Se ela quiser o vazado de volta, é uma troca de
+     que era a proposta de 07/08 pela manhã (a borda do martelo ao centro);
+     o vazado saiu porque a logo não tem vazado e porque o furo pesava
+     contra a regra 4 abaixo. Se o vazado voltar, é uma troca de
      caminho: está renderizado na foto da decisão.
 
   3. A PROPORÇÃO CABEÇA/CABO É A DA LOGO, aproximada pelo que a grade aguenta:
@@ -41,16 +40,16 @@
      cabo cairia abaixo de 1,4 px e viraria fiapo.
 
   4. O TRAÇO TEM O PESO DOS VIZINHOS. Medido em 07/08 com `rsvg-convert` a 320
-     px e varredura de alfa: o traço mínimo dos applets do COSMIC na barra dela
+     px e varredura de alfa: o traço mínimo dos applets do COSMIC na barra do COSMIC
      é 2,0 unidades da grade de 16 (energia 2,05; som 2,00), e o aro anterior
      tinha 1,15. Era metade do peso da barra, e por isso o ícone parecia magro
-     ao lado dos outros. O aro agora tem 1,70. O critério dela é comparativo
-     ("no cosmic todos os applet são assim"), então o peso é requisito, não
+     ao lado dos outros. O aro agora tem 1,70. O critério é comparativo
+     (no COSMIC todos os applets têm esse peso), então o peso é requisito, não
      gosto. E 1,70 não é 2,00 de propósito: com 2,00 o furo do aro cai para
      raio 5,4, o canto da cabeça do martelo fica a 0,70 dele, e a 20 px essa
      folga some no antisserrilhado. 1,70 é o mais grosso que ainda deixa o
      martelo respirar. Na logo o aro é proporcionalmente muito mais fino
-     (equivalente a 0,47 nesta grade), então 1,70 já é 3,6 vezes ela: aqui a
+     (equivalente a 0,47 nesta grade), então 1,70 já é 3,6 vezes o da logo: aqui a
      barra ganhou da fidelidade, e está dito.
 
   5. A BIGORNA E O MARTELO JUNTOS NÃO CABEM. Foram TRÊS tentativas medidas em
@@ -60,25 +59,25 @@
      COR (cinza contra branco). Em monocromia não há cor para separar, e o vão
      precisaria de 1 px que não existe. A medição de 27/06 dizia o mesmo por
      outro caminho, e continua valendo. A bigorna sozinha, dentro deste mesmo
-     aro, ficou como opção dela em `opcao-c-bigorna-no-aro-symbolic.svg`, e a
-     medição de cobertura da mancha clara da logo a 20 px favorece ELA por pouco
+     aro, ficou como opção em `opcao-c-bigorna-no-aro-symbolic.svg`, e a
+     medição de cobertura da mancha clara da logo a 20 px favorece A BIGORNA por pouco
      (0,211 contra 0,205 de interseção sobre união, medido nestes dois arquivos):
-     quem decide é ela, não a medição sozinha.
+     a escolha é de produto, não da medição sozinha.
 
   AS QUATRO REGRAS QUE ESTE ARQUIVO OBEDECE, e o que cada uma custou.
 
   1. UMA COR SÓ, ACROMÁTICA E CLARA (#bebebe), cravada — a escola do vizinho
      Flatpak (`com.spotify.Client-symbolic.svg`), que é o único ícone de origem
-     colorida da barra dela que aparece branco. `currentColor` NÃO serve:
+     colorida da barra que aparece branco. `currentColor` NÃO serve:
      renderizado sem contexto de cor (rsvg-convert, resvg) ele cai para PRETO.
      Medido em 07/08: o simbólico antigo, que usava `currentColor`, sai
-     `srgb(0,0,0)` — 1,59:1 sobre o `#2F2F3A` do painel dela. Some.
+     `srgb(0,0,0)` — 1,59:1 sobre o `#2F2F3A` do painel escuro. Some.
      Dentro do painel a cor deste arquivo é irrelevante: medido em 07/08, o
      `cosmic-applet-status-area` RECOLORE tudo que tem nome `-symbolic`. A cor
      clara é o seguro para FORA do painel.
 
   2. CONTORNO FEITO DE PREENCHIMENTO, NUNCA DE `stroke` + `fill="none"`.
-     Esta é a armadilha que quase estragou o pedido dela, e ela foi REPRODUZIDA
+     Esta é a armadilha que quase estragou o pedido, e foi REPRODUZIDA
      em 07/08. O GTK recolore símbolo injetando CSS
      `rect,circle,path {fill: <cor> !important;}` — o `!important` atropela
      `fill="none"`, e o mesmo aro desenhado com `stroke` virou um DISCO CHAPADO,
@@ -99,15 +98,15 @@
 
   Grade 16x16 (padrão simbólico), mas o alvo real é 20 px: é o que o
   `cosmic-panel` dá a um ícone simbólico com o painel no tamanho `S`, que é o
-  dela (`get_applet_icon_size(is_symbolic=true)` → S=20; sem simbólico, S=32).
+  do painel (`get_applet_icon_size(is_symbolic=true)` → S=20; sem simbólico, S=32).
   As contas do aro são o ponto mais externo do desenho e alcançam 7,80 de 8,00
-  a partir do centro; maiores que 1,25 elas encostariam na borda do `viewBox`.
+  a partir do centro; maiores que 1,25 as contas encostariam na borda do `viewBox`.
 
   Validado com `rsvg-convert -w N -h N` em 16, 20, 24 e 48 px sobre o `#2F2F3A`
-  medido do painel dela e sobre o claro, e comparado lado a lado com os
+  medido do painel e sobre o claro, e comparado lado a lado com os
   vizinhos reais da barra (Spotify, Bluetooth, som, rede, energia).
 
-  AS OUTRAS DUAS OPÇÕES, que são dela para escolher:
+  AS OUTRAS DUAS OPÇÕES, que ficam para escolher:
   `assets/simbolico/opcao-b-bigorna-symbolic.svg` (a bigorna em silhueta de
   27/06, sem aro) e `assets/simbolico/opcao-c-bigorna-no-aro-symbolic.svg` (a
   bigorna dentro deste mesmo aro aberto). Ver a sprint

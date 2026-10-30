@@ -1,6 +1,6 @@
 /*
  * A sonda do Proton candidato: o .exe que a rodada lança sob a versão que se
- * qualifica (scripts/ensaios/a_rodada_do_proton_candidato.py). Ela faz o que
+ * qualifica (scripts/ensaios/a_rodada_do_proton_candidato.py). A sonda faz o que
  * um jogo faz, e diz em JSON, uma linha por prova, o que achou:
  *
  *   contagem  quantos HID Sony, quantas vagas XInput e quantos devices

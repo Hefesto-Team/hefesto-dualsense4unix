@@ -93,7 +93,7 @@ python3Packages.buildPythonApplication rec {
   '';
 
   # O `hidapiUsb` mora AQUI e não num `let` no topo: o `check_version_consistency.py` lê a
-  # primeira `version = "...";` do arquivo, e ela tem de ser a do próprio pacote.
+  # primeira `version = "...";` do arquivo, e essa tem de ser a do próprio pacote.
   dependencies =
     let
     # O módulo `hidapi` do PyPI `hidapi-usb` 0.3.3 (CFFI sobre a libhidapi), que o
@@ -314,12 +314,12 @@ python3Packages.buildPythonApplication rec {
     # A METADE QUE ESTA AQUI E A METADE QUE FALTA, dito de frente: o Nix nao
     # tem /usr/share, e $out/share/hefesto-dualsense4unix/scripts NAO e uma das
     # bases que BASES_DE_INSTALACAO (app/actions/daemon_actions.py) procura
-    # hoje — ela conhece a raiz do checkout, /app/share (Flatpak), /usr/share e
+    # hoje — a lista conhece a raiz do checkout, /app/share (Flatpak), /usr/share e
     # /usr/local/share. Levar os arquivos e condicao NECESSARIA e nao
     # suficiente: enquanto o consumidor nao olhar para `sys.prefix/share/
     # hefesto-dualsense4unix`, o botao continua sem achar. A lacuna esta
     # DECLARADA em _PRODSCRIPT_LACUNAS_HOJE, em
-    # scripts/check_packaging_parity.sh, e o portao reprova quando ela caducar.
+    # scripts/check_packaging_parity.sh, e o portao reprova quando a lacuna caducar.
     #
     # Sem patchShebangs: o fixup do nixpkgs so o roda em bin/sbin/libexec, e
     # $out/share fica de fora. Os cinco comecam com `#!/usr/bin/env bash`, que

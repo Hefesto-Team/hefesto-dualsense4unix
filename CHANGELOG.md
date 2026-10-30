@@ -14,7 +14,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - O Hefesto passa a servir o giroscópio, o acelerômetro e o touchpad de cada controle pelo protocolo DSU (cemuhook), e emuladores como Cemu, Dolphin e Azahar os recebem em qualquer máscara, inclusive a Xbox, pelo cabo e pelo rádio.
 - A lista de navegação interna na aba Navegação não fazia nada. Agora o interruptor liga o tipo escolhido, interno ou do computador. Na interna, R1 e L1 trocam de aba em círculo, cada controle tem a sua seleção com moldura na cor do plástico, o direcional move, o X aciona e o Start salva no perfil.
 - O círculo do L3 e do R3 no cartão do controle mostrava só a posição da mão, mas com o analógico virtual ligado o jogo recebe outra coisa. Agora um anel verde marca o que o jogo vê, ao lado do ponto da mão, em cada controle.
-- O Hefesto depende de ferramentas externas, como o Bluetooth, a Steam e o PipeWire, e uma atualização delas podia quebrar algo sem explicação. O diagnóstico agora tem um bloco de nove contratos de fora, só de leitura, que nomeia o que falhou e o comando que o confere.
+- O Hefesto depende de ferramentas externas, como o Bluetooth, a Steam e o PipeWire, e uma atualização dessas ferramentas podia quebrar algo sem explicação. O diagnóstico agora tem um bloco de nove contratos de fora, só de leitura, que nomeia o que falhou e o comando que o confere.
 - O botão Modo Steam da aba Navegação não fazia nada. Agora o Modo Big Picture na Steam, em qualquer modo de conexão, faz o direcional, a Cruz e o Círculo virarem setas, Enter e Esc quando a janela da Steam está na frente, por cabo ou rádio, nos quatro controles.
 - Os números da faixa de rádio não diziam se um controle com poucos pacotes estava longe ou sofria interferência. Agora o Hefesto lê o sinal de cada controle no rádio e dá uma frase: longe, interferência ou adaptador cheio. Sem o sinal, a linha fica neutra e diz que não sabe.
 - Para um controle externo, a cor e a família de botões declaradas não apareciam no cartão, e só se gravavam editando um arquivo à mão. Agora o cartão em Jogar e Conexões mostra a cor na borda e as letras da face, e a Conexões ganha três listas para declarar modo, botões e cor.
@@ -34,7 +34,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Uma modificação com permissão pode acompanhar a vibração que o jogo manda a cada controle, com o número do jogador, e sabe quando o jogo fecha.
 - Cada gesto dos acessórios dá um toque curto no controle e acende as luzinhas no nível escolhido; num jogo marcado «Adulto», a barra pode pulsar na cor escolhida, mais rápido conforme o nível, nunca mais que uma vez por segundo.
 - Um perfil pode levar as marcas Visual novel e Adulto, além do estilo; o campo do estilo mostra o estilo escolhido em vez do travessão.
-- Dá para instalar uma modificação a partir de um endereço git ou de uma pasta. Ela roda separada do serviço, só faz o que as permissões mostradas permitem e pode ser desligada ou removida sem deixar resto.
+- Dá para instalar uma modificação a partir de um endereço git ou de uma pasta. A modificação roda separada do serviço, só faz o que as permissões mostradas permitem e pode ser desligada ou removida sem deixar resto.
 - Cada botão pode passar a alternar em vez de segurar, repetir enquanto segurado, ou dar outra ação no toque longo e no toque duplo, por jogador e em todo jogo.
 - O cursor do controle pode ir devagar enquanto um botão está apertado, clicar sozinho quando para, e prender o clique para arrastar sem segurar; a zona morta e a curva passam a se ajustar.
 - A aba Vibração mostra a vibração pelos seus toques e pelo touchpad em cada perfil. A engrenagem de cada extensão abre as opções por cliques, e a janela dos acessórios mantém à vista o nível e o botão «Parar tudo».
@@ -46,8 +46,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Com a modificação dos acessórios ligada, segurar o PS e tocar o R2 liga e sobe a intensidade, o L2 desce e, até o fundo, para tudo; o R1 e o L1 trocam o perfil de vibração. O jogo não recebe esses toques.
 - Na aba Vibração, cada perfil escolhe se o controle vibra só pelo jogo, pelo jogo e pelos seus toques, ou só pelos seus toques; o analógico, os botões, os gatilhos e o chacoalhar ganham uma vibração fina, e o jogo nunca fica mais fraco.
 - Cada aparelho USB ganha tipo e nome (o que ele diz de si e o que o sistema sabe dele); um hub de dois lados conta como um só; um aparelho que sabe 5 Gb/s e ficou a 480 Mb/s é apontado; e o que entra, sai, volta ou muda de velocidade fica registrado com a hora.
-- O registro da janela passa a dizer por que ela fechou, o tamanho e o monitor a cada mudança, e quando a tela está mostrando o último estado conhecido porque o serviço não respondeu. Isso ajuda a achar a causa de uma janela que some ou que mostra dado velho.
-- O diagnóstico agora mostra a versão do firmware de cada controle e avisa quando ela é antiga, dizendo onde atualizar com segurança. O Hefesto não atualiza firmware.
+- O registro da janela passa a dizer por que a janela fechou, o tamanho e o monitor a cada mudança, e quando a tela está mostrando o último estado conhecido porque o serviço não respondeu. Isso ajuda a achar a causa de uma janela que some ou que mostra dado velho.
+- O diagnóstico agora mostra a versão do firmware de cada controle e avisa quando a versão é antiga, dizendo onde atualizar com segurança. O Hefesto não atualiza firmware.
 - Um aparelho Bluetooth sem tipo conhecido ficava com «?» para sempre. Agora clicar no «?» abre uma grade com nove tipos (Controle, Fone, Caixa de som, Teclado, Mouse, Celular, Relógio, Acessório e Outro), e a sua escolha vale mesmo depois de reabrir.
 - O mapa do controle ganha a aba Sequência: um botão pode tocar uma sequência gravada de botões, com os tempos que você fez, uma vez, repetindo ou alternando, em ritmo gravado, rápido ou devagar. O jogo vê só os passos da sequência.
 - Para desligar um controle sem tirar o Bluetooth do computador, basta segurar o botão PS por 10 segundos: só aquele controle desliga, e os outros do mesmo adaptador seguem. Vale no rádio; no cabo o Hefesto recusa o desligar.
@@ -78,7 +78,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Um perfil com «Aplicar em: Eventos» passa a entrar ao conectar um controle, ao abrir o programa ou quando o seu comando dá certo
 - O `hefesto doctor` lê o Proton fixado de cada jogo e diz quando ele sumiu do disco.
 - Um jogo GDK sem o ajudante de login aparece no prontuário com o aviso de que abre só local, sem conta nem amigos, e com o que instalar para entrar na conta.
-- A janela de uma extensão não mostrava o que ela estava fazendo. Agora a coluna «Agora» mostra nível, perfil e aparelhos que a extensão declara, atualizados com a janela aberta, e o botão «Parar tudo» aparece no topo nas extensões que o oferecem.
+- A janela de uma extensão não mostrava o que a extensão estava fazendo. Agora a coluna «Agora» mostra nível, perfil e aparelhos que a extensão declara, atualizados com a janela aberta, e o botão «Parar tudo» aparece no topo nas extensões que o oferecem.
 - Uma extensão instalada pelo endereço do repositório recebe a versão nova sem precisar clicar em Atualizar; a que pede permissão nova espera você aceitar.
 - As extensões do Hefesto ficam em repositórios próprios, com o aviso de uso e o endereço para instalar.
 - Ao conectar, o controle acende a barra na cor dele, dá um toque e clica o gatilho uma vez. O toque de cada um tem uma nota diferente, e no escuro a mão sabe qual controle é qual.
@@ -126,7 +126,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Nas abas Iluminação e Vibração, a linha Modelo mostrava só o número, o modelo e a conexão. Agora o nome que você deu ao controle vem antes do modelo, como número, nome, modelo e USB. Sem nome, a linha continua como era.
 - Na aba Vibração, os três degraus da Força e os três do Testar agora ficavam em duas linhas, com larguras diferentes, e o Parar tinha só a letra vermelha. Agora cada trio fica lado a lado, com a mesma largura, e o Parar tem fundo vermelho e letra branca.
 - A Mira Virtual e a Inclinação eram dois interruptores para a mesma ideia, e a tela só permitia o analógico direito. Agora o interruptor se chama Analógico Virtual, e o chip Usar como analógico virtual deixa escolher o lado esquerdo ou o direito, por controle.
-- Em Outros dispositivos sem fio, a procura da faixa de um teclado ou mouse sem fio só respondia «Faixa não encontrada». Agora ela diz o que viu: a faixa, que o receptor salta de canal, que falta um aparelho no Bluetooth para medir, ou que o mapa de canais não mudou com ele.
+- Em Outros dispositivos sem fio, a procura da faixa de um teclado ou mouse sem fio só respondia «Faixa não encontrada». Agora a procura diz o que viu: a faixa, que o receptor salta de canal, que falta um aparelho no Bluetooth para medir, ou que o mapa de canais não mudou com ele.
 - Em jogos pelo Wine ou Proton com vários DualSense, o jogo varria todos os áudios para achar o de cada controle e engasgava. Agora cada controle virtual nasce como um DualSense USB de verdade e o som dele aponta para esse mesmo aparelho, então o jogo o acha de primeira.
 - Quando o adaptador aperta, o Hefesto reduz a vibração e o som de quem está parado em vez de calá-los, e a tela de Conexões mostra quantas pontes cabem em cada entrada.
 - Com o Hefesto em Desligado, ele garante que a Steam Input da própria Steam fica desligada nos jogos com perfil, e a aba Jogar mostra isso travado, sem opção de ligar. O jogo fala direto com o controle, como no PS5.
@@ -149,14 +149,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - A janela diz o que calibra, sem botões de interrogação; a ajuda aparece ao passar o mouse no título.
 - Visual novel e Adulto aparecem na lista de estilos da aba Perfis, como FPS ou Corrida, em vez de marcas à parte.
 - Cada ajuste se muda num lugar só; as outras abas só mostram o estado dele.
-- A prova das versões novas do Proton passa a exigir a peça do GE-Proton que esconde o controle Sony do caminho do SDL; sem ela, a versão não entra no lugar da fixada, e o jogo segue vendo só o controle do Hefesto, também com o Proton em Wayland.
+- A prova das versões novas do Proton passa a exigir a peça do GE-Proton que esconde o controle Sony do caminho do SDL; sem a peça, a versão não entra no lugar da fixada, e o jogo segue vendo só o controle do Hefesto, também com o Proton em Wayland.
 - O Piscar passa a subir e descer suave em vez de acender e apagar de uma vez, e o Arco-íris gira com uma cor diferente em cada controle, para você reconhecer o seu. Entram a Batida do coração, a Chama e a Maré. Nenhum efeito passa de três trocas por segundo.
 - As imersões de gatilho já existentes passam a usar as batidas limpas da Metralhadora e o Disparo oficial. A Rajada sobe de verdade em três degraus, a Batida do coração para de repetir sem fim, dois nomes mudam para dizer o que se sente (Corda que estica e Pedal duro) e a Porta emperrada para de repetir.
 - O estilo do jogo passa a escolher o gatilho, a imersão da frente, o efeito da luz e o efeito háptico. A luz da Corrida acende conforme o gatilho e a do Ritmo sobe na batida da música. Com o Sem piscar, tudo isso vira transição lenta.
 - A lista de gatilhos cai de dezenove para onze. Rígido, Rígido simples e Ponto duro viram Resistência; os dois disparos viram Disparo; a arma automática vira Metralhadora. Perfis antigos continuam abrindo e a Vibração passa a tremer no gatilho. Alguns nomes de curva mudam para dizer o que se sente.
 - A aba Sistema deixa de sugerir um perfil de bateria por controle em outra aba; o perfil de bateria vale para todos os controles
 - Configurar um lançador volta a escolher onde ele está e a ligar o perfil por jogo, e só grava no Guardar
-- Cada jogador pode configurar o próprio bloco pelo próprio controle, com R1 e L1 dando a volta nas abas, mas a Navegação Interna nascia desligada. Agora ela nasce ligada, as listas dão a volta ao chegar ao fim, e quem escolhe ganha um anel na cor oposta à do plástico.
+- Cada jogador pode configurar o próprio bloco pelo próprio controle, com R1 e L1 dando a volta nas abas, mas a Navegação Interna nascia desligada. Agora a Navegação Interna nasce ligada, as listas dão a volta ao chegar ao fim, e quem escolhe ganha um anel na cor oposta à do plástico.
 - O Hefesto passa a ser para qualquer idade; o suporte aos acessórios Lovense e ao servidor Buttplug se instala à parte, como extensão.
 - O estilo escolhe o R2 e o L2 separados, o toque, os motores e a luz da barra. A Luta separa o golpe forte do fraco, o FPS separa o tiro da mira, o Terror tem o coração na luz e nos motores, a Corrida tem o motor no acelerador e a Simulação sente o chão no L2. Nascem os estilos Souls/RPG e Furtivo, e o Arco vira uma escolha dentro de Ação e Aventura.
 - O Hefesto traz a Steam, o Heroic e o Flatpak; o Lutris, o RetroArch, o Dolphin, o mGBA, o Azahar e o Kyty se instalam como extensões, cada uma do seu repositório.
@@ -167,9 +167,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Ligar ou desligar uma extensão de tema muda as cores da interface na hora, sem fechar e abrir a janela, e as listas que abrem seguem o tema claro ou escuro.
 - Fechar, minimizar e maximizar a janela do Hefesto passam para o canto esquerdo da barra.
 - Nas abas de gatilhos, luz e vibração, cada efeito tem o nome pelo que acontece (Golpe · forte, Carga · estica), agrupado por família, com a explicação na dica. Os acionamentos técnicos ficam atrás da chave Avançado, e o «Efeito imersão» da vibração passa a se chamar «Padrão dos motores».
-- No modo Padrão, a háptica por áudio do DualSense passa a chegar em 150%, como nos outros modos; antes ela chegava em 100%, do jeito que o jogo mandou.
+- No modo Padrão, a háptica por áudio do DualSense passa a chegar em 150%, como nos outros modos; antes a háptica chegava em 100%, do jeito que o jogo mandou.
 - Em jogos que não mandam vibração, o controle ficava mudo. Agora o Hefesto ouve o som do próprio jogo e transforma estalos em toques e o grave em um corpo leve nos estilos de golpe (Ação, Souls, Aventura e Terror). Se o jogo passar a vibrar, o toque do som cede a ele.
-- O Proton fixado passa a ser sempre a versão mais recente que passa na ficha de qualificação; todo jogo vai para ela, e as outras versões saem do disco.
+- O Proton fixado passa a ser sempre a versão mais recente que passa na ficha de qualificação; todo jogo vai para essa versão, e as outras versões saem do disco.
 - No jogo Xbox, todo rumble virava dois senos fixos, igual em qualquer estilo, e só o golpe ganhava a forma do estilo. Agora o rumble médio e o contínuo também ganham o timbre do estilo, sem perder energia. Sem estilo, no Nativo e no Personalizado segue o seno de antes.
 - Com a Navegação Interna, o Options salva e aplica o perfil mesmo quando o mouse do controle está ligado; antes, com o mouse ligado, ele era só a tecla do teclado.
 - A extensão da Lovense mostra na hora o que está ligado, o brinquedo e cada controle, e cada escolha responde na tela.
@@ -188,7 +188,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ### Removido
 
-- Várias abas tinham a escolha Só neste jogo ou PC, que confundia onde a alteração era gravada. Ela saiu das abas Controles, Iluminação, Vibração e Navegação: o que você muda vale para o perfil ativo, o do jogo aberto ou o do computador quando não há jogo.
+- Várias abas tinham a escolha Só neste jogo ou PC, que confundia onde a alteração era gravada. A escolha saiu das abas Controles, Iluminação, Vibração e Navegação: o que você muda vale para o perfil ativo, o do jogo aberto ou o do computador quando não há jogo.
 - O daemon sempre reconecta o controle que cai; a opção que dizia desligar isso não desligava, e sai da linha de comando
 - O jogo já excluído e o lembrete já dispensado continuam valendo; não se exclui nem se dispensa jogo novo
 - Identificar e Criar perfis de cada lançador ficam no lugar de Procurar e Detectar
@@ -212,7 +212,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Um controle largado sobre uma superfície, com a inclinação ligada, empurrava o analógico do jogo para um lado, e o personagem andava sozinho. Agora o analógico do jogo volta ao centro quando o controle está parado, e o neutro ajustado na mão fica como estava.
 - Na fita de seleção dos controles, só o primeiro ficava com a fonte destacada, e escolher Todos não acendia cada um. Agora escolher um controle acende só ele, Todos acende o Todos e os quatro, e nas abas que não escolhem, todos nascem acesos.
 - Quando um controle saía no meio do jogo, o número das luzes e o dos controles virtuais ficavam fora de sincronia, e os controles se comportavam de forma estranha. Agora o número que se solta é o mesmo que acende na luz do controle, e com o jogo aberto o lugar guardado espera, em vez de renumerar.
-- Ao tocar em Aplicar soluções nos lançadores enquanto a lista de exclusão estava sendo gravada, a janela dizia que nenhum lançador precisava de nada. Agora ela espera até 5 s pela lista e, se não conseguir, avisa que a lista estava sendo gravada e que os outros lançadores ficaram como estavam.
+- Ao tocar em Aplicar soluções nos lançadores enquanto a lista de exclusão estava sendo gravada, a janela dizia que nenhum lançador precisava de nada. Agora a janela espera até 5 s pela lista e, se não conseguir, avisa que a lista estava sendo gravada e que os outros lançadores ficaram como estavam.
 - Quando o controle virtual DualSense nascia sem o canal próprio, o quadrado e o triângulo chegavam trocados ao jogo. Agora a tabela de botões segue a identidade que o jogo vê, e as máscaras DualSense e Nintendo usam a mesma tabela.
 - Quando um lançamento acabava sem o jogo assumir o controle, por exemplo um jogo que fecha antes da janela, o controle virtual ficava travado e o Hefesto recusava recriá-lo. Agora a trava solta quando o lançamento termina.
 - Quando o controle virtual do primeiro jogador caía para um modo mais simples, o aviso e o diário podiam dizer jogador 1 enquanto o controle se chamava com outro número. Agora o aviso, o nome e o número de série do controle virtual dizem o mesmo número.
@@ -232,7 +232,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Com dois controles externos na Conexões, a lista deixa de ganhar barra de rolagem, e a cor do plástico que não está na lista de fábrica passa a poder ser escolhida de novo.
 - Os efeitos Metralhadora, Arma automática e Vibração do gatilho passam a bater sem parar enquanto você aperta, como no PS5, em vez de dar um toque só.
 - Se a Steam reescrever a linha de inicialização de um jogo que você configurou no Hefesto, ou se a opção ficar fora do lugar onde a Steam lê, o doctor diz qual jogo e o que fazer.
-- Com o controle longe ou esperando a vez, a caixa da ponte para de dizer 94 Hz e mostra o que ela entrega agora, e a proposta de mudar de adaptador diz quando veio do sinal fraco.
+- Com o controle longe ou esperando a vez, a caixa da ponte para de dizer 94 Hz e mostra o que a ponte entrega agora, e a proposta de mudar de adaptador diz quando veio do sinal fraco.
 - A Rampa de força passa a manter a firmeza até o fim do curso, e um perfil antigo de Vibração por posição volta a vibrar como a aba mostra.
 - Os efeitos Arco de flecha e Galope passam a usar o ajuste próprio do controle, com a tensão do arco e a cadência do galope no lugar certo, quando você aprovar a sensação nova.
 - Com o Hefesto desligado do início do sistema, o controle fica livre para o Linux e para outros programas, sem esperar você abrir o Hefesto.
@@ -265,18 +265,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - O jogo que toca sons no alto-falante do DualSense passa a ser ouvido no controle sem fio, como já era no cabo.
 - O serviço que cuida dos pareamentos passa a agir só em controles de jogo. Fones, teclados e outros aparelhos Bluetooth deixam de receber pedidos de pareamento repetidos e deixam de encher o registro do sistema com avisos a cada dois minutos.
 - As páginas do Hefesto mantêm a altura e a largura quando a tela dorme e volta, quando a janela é maximizada ou quando o serviço demora a responder.
-- Quando o Hefesto está configurado para abrir a janela no início da sessão, ela abre e fica aberta. Antes, o serviço que a abria a fechava logo em seguida.
-- A página do mapa das portas dizia que a vibração não pesava no rádio. Agora ela mostra quanto o som e a vibração de cada controle sem fio ocupam e quantos controles ainda cabem com eles ligados.
+- Quando o Hefesto está configurado para abrir a janela no início da sessão, a janela abre e fica aberta. Antes, o serviço que a abria a fechava logo em seguida.
+- A página do mapa das portas dizia que a vibração não pesava no rádio. Agora a página mostra quanto o som e a vibração de cada controle sem fio ocupam e quantos controles ainda cabem com eles ligados.
 - Uma extensão só troca de versão depois que a anterior parou, só liga com as permissões que você viu, e o desinstalador do Hefesto para as extensões que estão rodando. Com --purge-config, ele remove também as extensões instaladas, com backup.
 - Com o Modo automático ligado, um perfil Ritmo/Música mantém a música só no PC, sem a cópia atrasada no alto-falante do controle; os outros estilos deixam o alto-falante com o jogo.
 - Se o arquivo que guarda o número de cada controle estiver corrompido, o Hefesto guarda uma cópia dele ao lado, avisa no registro e recomeça, em vez de gravar por cima calado.
 - Um jogo do Windows rodando com o driver Wayland do Wine, fora da Steam, agora troca para o perfil dele como os outros.
-- A luz do botão de mudo acende fixa com o microfone ligado, pisca enquanto entra som e apaga no mudo, em qualquer modo. No cabo ela pisca sem precisar de app de fora; no rádio, só com app ouvindo. No Modo Nativo, a luz antes não chegava ao controle.
+- A luz do botão de mudo acende fixa com o microfone ligado, pisca enquanto entra som e apaga no mudo, em qualquer modo. No cabo a luz pisca sem precisar de app de fora; no rádio, só com app ouvindo. No Modo Nativo, a luz antes não chegava ao controle.
 - Ao aplicar as soluções nos lançadores, o Hefesto troca só o trecho que ele mesmo escreveu na opção de lançamento de cada jogo. O que você escreveu à mão fica no lugar, mesmo quando o jogo tem opções na tabela do Hefesto.
 - A cada lançamento pela Steam, o Hefesto tira do prefixo do jogo as saídas e entradas de som que sumiram, inclusive as dos controles de sessões antigas. Menos dispositivos para o jogo varrer é menos memória gasta.
 - Um teclado ou um mouse Bluetooth de baixa energia que não se anunciava pelo ícone aparecia com um ponto de interrogação nas Conexões. Agora ele aparece como teclado ou mouse.
 - Quando um controle virtual demora a aparecer no sistema, só ele volta ao modo de reserva, e os seguintes continuam nascendo completos. O diagnóstico diz qual controle está no modo de reserva e por quê.
-- a versão do Bluetooth que o Hefesto instala passa a trazer as correções de segurança que a distribuição publicou, e o diagnóstico avisa quando aparecer uma correção nova que ela ainda não tem
+- a versão do Bluetooth que o Hefesto instala passa a trazer as correções de segurança que a distribuição publicou, e o diagnóstico avisa quando aparecer uma correção nova que a versão instalada ainda não tem
 - Com um GE-Proton que já cria sozinho o dispositivo de áudio do controle, o Hefesto deixa de criar o dele, e o jogo acha um alvo só para a vibração de cada controle.
 - O driver do Pro Controller e do 8BitDo que o Hefesto instala só entra no kernel em que foi conferido; num kernel mais novo, o do sistema assume com as correções dele, e o diagnóstico avisa.
 - quando o Bluetooth do sistema demora a confirmar o pareamento, o Hefesto confere se o controle ficou pareado e o marca como confiável, para ele voltar sozinho da próxima vez
@@ -289,7 +289,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - o Hefesto traz uma receita do PipeWire 1.6.9 e do WirePlumber 0.5.18, as versões mais novas do upstream, com a correção para o caso em que a Steam ficava presa ao fechar depois de um reinício do serviço de som, e o diagnóstico avisa quando o PipeWire instalado não tem a correção
 - Quando o instalador troca o servidor de som, o painel do COSMIC volta a mostrar a saída e a entrada de som na hora, sem precisar sair da sessão. O diagnóstico avisa se o painel perdeu o som e diz como trazê-lo de volta.
 - A dica de um título do mapa das portas e dos cartões da aba Conexões passa a abrir quando o foco chega a ele, e não só quando o mouse passa por cima.
-- A webcam deixa de aparecer em laranja no mapa das portas, porque ela roda a 480 Mb/s em qualquer porta e não perde nada
+- A webcam deixa de aparecer em laranja no mapa das portas, porque a webcam roda a 480 Mb/s em qualquer porta e não perde nada
 - Se o controle perdia a conexão, a leitura falhava ou você saía do jogo com um clique segurado pelo controle, o clique ficava preso. Agora o Hefesto solta o clique, a ativação e o controle virtual nesses casos, e também na pausa.
 - Ao abrir um perfil, o seletor de estilo mostra o estilo guardado nele, e o Nome do jogo não aceita mais o nome do Freestyle, que é o botão do controle.
 - O serviço só se diz ligado quando já atende a interface, então o botão Ligado e o menu da bandeja deixam de mostrar uma recusa logo depois de ligar
@@ -325,7 +325,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Ligar o cabo num controle que está no Bluetooth, ou tirar o cabo e ele seguir no Bluetooth, não faz mais a barra subir de novo, o controle vibrar e o gatilho clicar no meio do jogo.
 - Acrescentar um jogo a uma lista do RetroArch, ou mudar um jogo no Lutris, já atualiza os perfis dos jogos
 - Na aba Sistema, os avisos sobre o modo falam «Point and click», «Navegação», «Xbox», «Sony DualSense» e a «Função do teclado», no lugar dos nomes da janela antiga.
-- O `diario.log` de cada extensão fica em até 1 MiB também enquanto ela está ligada; antes, o limite só valia quando ela abria de novo, e uma extensão que escreve muito podia encher o disco.
+- O `diario.log` de cada extensão fica em até 1 MiB também enquanto a extensão está ligada; antes, o limite só valia quando a extensão abria de novo, e uma extensão que escreve muito podia encher o disco.
 - Quando um controle externo fica sem número de jogador (por exemplo, com quatro DualSense ligados), o cartão dele diz «Controle — Nintendo», com um travessão só.
 - A barra Criar efeitos novos da aba Iluminação mostra quantos efeitos você criou num chip só, com os nomes na dica, e a aba deixa de rolar na janela estreita.
 - Copiar um jogo para a pasta do Dolphin, do Azahar ou do KytyPS5 já cria o perfil dele, sem esperar outra mudança
@@ -335,7 +335,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Um tema de cores que deixaria os nomes dos campos ou as cores de destaque ilegíveis sobre o fundo dele não liga mais, e a recusa diz qual cor e qual fundo.
 - Com o tamanho da interface em 150 %, as abas cabem na janela sem rolar nem cortar
 - Ligar uma extensão de tema com texto ilegível mostra o motivo na hora e a deixa desligada, em vez de acender a chave e não mudar cor nenhuma.
-- O README e o guia de problemas diziam que janelas Wayland nativas não eram reconhecidas; no COSMIC e nos compositores wlroots elas são, e a janela abre em Wayland nativo.
+- O README e o guia de problemas diziam que janelas Wayland nativas não eram reconhecidas; no COSMIC e nos compositores wlroots essas janelas são reconhecidas, e a janela abre em Wayland nativo.
 - Depois de escolher um controle só na aba Conexões, o «Todos» do alto devolve as ações a todos os controles
 - O tempo do passo «Medindo» sai do mesmo lugar que o Hefesto usa para medir o repouso
 - «Ligado» e «OK» aparecem em verde, os avisos ficam em laranja, e saíram os avisos que não pediam nada de você.
@@ -353,9 +353,9 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Ao abrir ou trocar de aba, o miolo ficava visível por um instante com os dados de exemplo antes de mostrar os seus. Agora ele aparece já com os seus.
 - Quando um jogo instalado ganha um arquivo numa subpasta, por atualização ou por mod, o controle virtual passa a vestir o modelo que ele pede já no lançamento seguinte.
 - As fontes da interface vêm instaladas com o Hefesto, e a janela não espera mais a internet para terminar de abrir.
-- Com a Steam aberta, desligar o Hefesto devolvia o controle ao sistema, mas a Steam não o via até ser reaberta. Agora ela o encontra em poucos segundos.
-- Com um Pro Controller ou um 8BitDo como destino, a janela desenha esse controle. Sem permissão de ler o teclado ou o pedal, ela diz como liberar.
-- No primeiro jogo depois de abrir a Steam, o Hefesto podia tomar as luzes do controle por dois segundos logo na abertura. Agora o jogo que está abrindo fica com elas desde o começo.
+- Com a Steam aberta, desligar o Hefesto devolvia o controle ao sistema, mas a Steam não o via até ser reaberta. Agora a Steam o encontra em poucos segundos.
+- Com um Pro Controller ou um 8BitDo como destino, a janela desenha esse controle. Sem permissão de ler o teclado ou o pedal, a janela diz como liberar.
+- No primeiro jogo depois de abrir a Steam, o Hefesto podia tomar as luzes do controle por dois segundos logo na abertura. Agora o jogo que está abrindo fica com as luzes desde o começo.
 - A dica do botão «Mapa do controle» e a do ícone do mapa das entradas passam a dizer que abrem na própria janela, e não no navegador.
 - O Hefesto não deixa mais a roupa de um jogo desatualizada quando um arquivo dele chega no mesmo instante da leitura anterior, em discos de relógio grosso como FAT e exFAT.
 - O meu.css aceita @container e @layer. Remover a extensão de tema não apaga o CSS que você escreveu, e a recusa aparece uma vez no diário, não a cada gravação.
@@ -365,14 +365,14 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 - Digitar o nome de um lançador que já tem cartão, como a Steam, manda você ao «Configurar» do cartão dele, e não a um botão que a aba não tem mais.
 - A Iluminação, a Vibração e a Conexões nasciam com um nome de pessoa no controle 1, antes de ler o seu. Agora o lugar fica com «P1» até você dar um nome.
 - Ao conectar, a extensão recebia um aviso sem dizer de qual controle era, com o transporte do controle 1 valendo para todos. Agora cada controle avisa por si, com o cabo ou o Bluetooth dele.
-- Depois de atualizar a extensão Lovense pelo Hefesto, faltava o programa que ela usa para falar com o brinquedo, e era preciso instalar de novo à mão. Agora o Hefesto prepara a extensão ao instalar e ao atualizar.
+- Depois de atualizar a extensão Lovense pelo Hefesto, faltava o programa que a extensão usa para falar com o brinquedo, e era preciso instalar de novo à mão. Agora o Hefesto prepara a extensão ao instalar e ao atualizar.
 - Em «Rádio e adaptadores», o «Segure PS + Create» ficava apagado atrás do «Onde fica?», o aviso ficava por cima dos dois e o «Onde fica?» quebrava em duas linhas. Agora cada um tem o seu lugar.
 - Com «Sacudir» e «Inclinar» de volta a «Nenhum», a extensão da Lovense para de pedir o movimento do controle.
 - Uma extensão que deixa de usar o movimento ou o touchpad do controle avisa o Hefesto, que para de lê-los.
 - Três linhas do mapa dos controles não diziam como se confere cada uma no aparelho. Agora dizem, no cabo e no rádio.
 - Com o adaptador USB da Lovense mais novo, a extensão subia o servidor e nenhum brinquedo aparecia. Agora o adaptador conecta o brinquedo, ou a janela diz que ele não tem suporte.
 - ao parar, o serviço não registra mais um erro de escrita sem sentido
-- Atualizar, ver as permissões e remover ficam só no menu dos três pontinhos, que flutua sem esticar os cartões; ligar uma extensão que pede permissão mostra «Aceitar e ligar» na própria chave, com o que ela pede na dica
+- Atualizar, ver as permissões e remover ficam só no menu dos três pontinhos, que flutua sem esticar os cartões; ligar uma extensão que pede permissão mostra «Aceitar e ligar» na própria chave, com o que a extensão pede na dica
 - Com o DualSense no cabo, o som da vibração andava no ritmo da placa de som do controle, e o jogo podia congelar quando reabria a vibração. Agora ele anda no ritmo próprio, como no Bluetooth.
 - Enquanto um controle caído esperava para voltar ao mesmo lugar, o diário do Hefesto repetia um aviso de LED várias vezes por segundo. Agora o aviso sai uma vez.
 - quem cai e volta reacende o número mesmo quando o sistema demora a achar a luz dele, e o diário não repete aviso
@@ -582,7 +582,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 
 ### Corrigido
 
-- Sete predefinições de gatilho não faziam nada; três delas mandavam o modo desligado.
+- Sete predefinições de gatilho não faziam nada; três mandavam o modo desligado.
 - O controle tremia sem parar quando o jogo mandava a parada com todos os campos zerados.
 - Os 60% de cima do controle deslizante do alto-falante não faziam nada; o alto-falante ganhou o pré-amplificador e a rota de saída.
 - Por Bluetooth, o botão do microfone mutava o microfone de outro aparelho.
@@ -597,7 +597,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). 
 ### Mudado
 
 - A aba Status reorganizada: o botão do alto-falante foi para o bloco Alto-falante do cartão, e os botões dizem o que o clique faz.
-- A máscara Xbox avisa o que o jogo deixa de receber nela.
+- A máscara Xbox avisa o que o jogo deixa de receber com a máscara.
 
 ### Corrigido
 

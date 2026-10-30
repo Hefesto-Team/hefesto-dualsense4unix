@@ -4,7 +4,7 @@
 #   repositório vivia numa conta pessoal. A forma nova é a que o Flathub exige
 #   para projeto hospedado no GitHub — prefixo `io.github.`, ao menos quatro
 #   componentes, porção de domínio em minúsculas e hífen convertido em `_` — e
-#   ela MAPEIA para `github.com/hefesto-team/hefesto-dualsense4unix`, que é o
+#   o ID MAPEIA para `github.com/hefesto-team/hefesto-dualsense4unix`, que é o
 #   repositório que existe. O Flatpak NÃO migra id sozinho: quem tinha o antigo
 #   instalado tem outro aplicativo, e o `install.sh` avisa.
 # Runtime: org.gnome.Platform//47 (GTK3, PyGObject, python3 3.12, gi-repository)
@@ -83,7 +83,7 @@ finish-args:
   # O AR MEDIDO (AR-MEDIDO-01; decisão de produto, INSTALL-E-UNINSTALL-
   # DO-RADIO-01, 23/09/2026). No Flatpak o daemon roda DENTRO do sandbox, e o
   # medidor do rádio — os Hz de cada controle e os canais que o adaptador usa,
-  # que a seção aprovada por ela mostra — abre um socket HCI cru e faz ioctls
+  # que a seção aprovada mostra — abre um socket HCI cru e faz ioctls
   # de LEITURA. Sem as duas linhas ele responde «não sei» em todo adaptador:
   #   - `--allow=bluetooth` libera o AF_BLUETOOTH no seccomp do sandbox;
   #   - `--share=network` mantém o sandbox no netns inicial, fora do qual o
@@ -106,12 +106,12 @@ finish-args:
   #     1000). É a PASTA, e não o arquivo, porque o socket renasce a cada
   #     restart da socket unit e só a pasta acompanha.
   #   - A trava comum do rádio, SEM `:ro`. O daemon abre o `radio.lock` com
-  #     O_RDWR para escrever quem está com ela, e em montagem só de leitura isso
+  #     O_RDWR para escrever quem está com a trava, e em montagem só de leitura isso
   #     volta EROFS (medido), que o recuo de `_abrir_a_trava` (só
-  #     PermissionError) não pega. A pasta é do root e não gravável por ela; o
+  #     PermissionError) não pega. A pasta é do root e não gravável pelo app; o
   #     que se escreve é só o arquivo, 0660 do grupo `hefesto` (medido: o grupo
   #     vale dentro do sandbox).
-  #   - A base do udev, `:ro`. O `evdev_reader` pergunta a ela quem é o dono do
+  #   - A base do udev, `:ro`. O `evdev_reader` pergunta à base quem é o dono do
   #     cursor, e o `audio_ks_dualsense` lê o USEC_INITIALIZED do ContainerId da
   #     háptica nos jogos da RE Engine.
   # Caminho que não existe (broker não instalado, trava sem o install.sh) é
@@ -324,10 +324,10 @@ modules:
           assets/profiles_default/*.json
 
       # PERFIS-SAO-PERFIS-01 (06/09): os oito gêneros saíram de profiles_default
-      # para cá — eles não são perfil, são Estilo de Jogo (decisão dela). O
+      # para cá — eles não são perfil, são Estilo de Jogo (decisão de produto). O
       # loader lê esta pasta em UM caminho: a migração one-shot que tira os
       # gêneros JÁ SEMEADOS da lista compara cada arquivo com o de fábrica
-      # antes de mexer. Sem esta linha ela não acha com o que comparar dentro
+      # antes de mexer. Sem esta linha a semeadura não acha com o que comparar dentro
       # do sandbox, recua por segurança, e quem instalou pelo Flatpak fica com
       # as oito linhas na aba Perfis para sempre.
       - install -Dm644 -t /app/share/hefesto-dualsense4unix/assets/estilos_de_jogo/
@@ -349,7 +349,7 @@ modules:
       # A 75 é opt-in e não entra no bundle auto-instalado.
       # FIX-FLATPAK-UDEV-PARITY-01: 76/77/78 SÃO obrigatórias para o
       # install-host-udev.sh (pre-flight aborta se qualquer uma faltar no
-      # bundle) — sem elas o setup de udev do Flatpak falhava inteiro.
+      # bundle) — sem esses arquivos o setup de udev do Flatpak falhava inteiro.
       - install -Dm644 assets/73-hefesto-ps5-controller.rules
           /app/share/hefesto-dualsense4unix/udev-rules/73-hefesto-ps5-controller.rules
       - install -Dm644 assets/71-uhid.rules
@@ -441,7 +441,7 @@ modules:
       # desde sempre (acima) e os alvos não viajavam em formato nenhum: o
       # install-host-udev.sh caía em BTRES_INSTALL_OK=0 e só avisava, então o
       # Pro genuíno não perdia o sniff na borda e o salva-vidas de bonds — a
-      # cura do crash que comeu 2 dos 3 pareamentos dela em 24/07 — nunca
+      # cura do crash que comeu 2 dos 3 pareamentos do ensaio em 24/07 — nunca
       # gravava uma linha para quem instalou por aqui. Estes são os dois
       # diretórios que o helper procura PRIMEIRO (/app/share/...), a mesma rota
       # que já entrega as units do broker e as fontes DKMS: o sandbox não grava
@@ -481,7 +481,7 @@ modules:
       #
       # O DESTINO NÃO É ESCOLHA LIVRE: é o que `BASES_DE_INSTALACAO`
       # (`app/actions/daemon_actions.py`) procura, e `/app/share/…` entrou lá
-      # em 25/08 justamente para este dia — a nota de lá diz que sem ela os
+      # em 25/08 justamente para este dia — a nota de lá diz que sem esse caminho os
       # botões continuariam sem achar os scripts "mesmo depois de o manifesto
       # passar a levá-los". Este é o depois.
       #

@@ -38,6 +38,6 @@ jobs:
           fi
           gh issue comment "${NUMERO}" --repo "${REPO}" --body-file - <<'AVISO'
           <!-- aceito -->
-          Quem mantém o Hefesto aceitou esta issue: ela entra na fila de trabalho. O andamento aparece aqui e no
+          Quem mantém o Hefesto aceitou esta issue, que entra na fila de trabalho. O andamento aparece aqui e no
           quadro Roteiro, e esta conversa diz em que versão a mudança sai.
           AVISO

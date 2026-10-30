@@ -33,9 +33,9 @@ Type=notify
 NotifyAccess=main
 ExecStart=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
 # SEM uid na unit (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): o broker atende a
-# conta que está na frente do seat — `ActiveSession` do seat0 e o `User` dela,
-# no logind — a cada pedido, e devolve o nó a ela. O broker RECUSA uid 0.
-# O-NO-NASCE-FECHADO-01 (decisão dela, 20/09/2026): "1" quando o
+# conta que está na frente do seat — `ActiveSession` do seat0 e o `User` dessa sessão,
+# no logind — a cada pedido, e devolve o nó a essa conta. O broker RECUSA uid 0.
+# O-NO-NASCE-FECHADO-01 (decisão de 20/09/2026): "1" quando o
 # 73-hefesto-ps5-controller.rules instalado FECHA o nó do DualSense físico
 # (TAG-="uaccess", 0600 root) e o broker é quem o abre sob pedido. Renderizado
 # pelo install; `--no-fechar-o-no` instala a regra aberta e renderiza 0.
