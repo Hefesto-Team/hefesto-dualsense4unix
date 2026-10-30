@@ -245,7 +245,7 @@ CSS += _barras_que_a_base_usa()
 def _op_vazio(escolhido):
     """O `—` do lugar vazio: oferecido ao `escrever()` do piloto, e NÃO à lista.
 
-    `hidden` o tira do menu que ela abre. Ele fica no `<select>` porque o piloto só escreve `—`
+    `hidden` o tira do menu que abre. Ele fica no `<select>` porque o piloto só escreve `—`
     onde ele existe: sem ele o lugar que esvazia guarda o efeito de quem saiu.
     """
     return (f'<option value="{TRAVESSAO}"'
@@ -253,7 +253,7 @@ def _op_vazio(escolhido):
 
 
 def _grupo_dos_seus(itens):
-    """O grupo «Seus efeitos» do desenho: o que ela criou e o acionamento que ela guardou antes."""
+    """O grupo «Seus efeitos» do desenho: o que foi criado e o acionamento guardado antes."""
     dentro = "".join(f'<option value="{_escapar(valor)}">{_escapar(nome)}</option>'
                      for valor, nome in itens)
     return f'<optgroup label="{SEUS_EFEITOS}">{dentro}</optgroup>'
@@ -301,7 +301,7 @@ def _marca(vazio):
 
 
 def _off(vazio):
-    """A classe que o piloto põe no lugar que esvazia (passo `1b`): nascer com ela deixa o P2 que sai
+    """A classe que o piloto põe no lugar que esvazia (passo `1b`): nascer com a classe deixa o P2 que sai
     e o P3 que nasce vazio com a mesma classe. A folha lê só o `data-conectado`."""
     return " off" if vazio else ""
 
@@ -309,7 +309,7 @@ def _off(vazio):
 def _chip(c):
     """O cabeçalho da coluna. A borda de cor só sai para quem está na mesa.
 
-    A marcação tem um dono só, o pacote: o produto escreve nos dois endereços que ela deixa.
+    A marcação tem um dono só, o pacote: o produto escreve nos dois endereços que a marcação deixa.
     A cor se resolve aqui, com a régua estrita: `cor_da_zona` levanta num colorway que o
     desenho não tem. Num lugar vazio o chip diz «Px · Desconectado», apagado.
     """
@@ -591,7 +591,7 @@ def _conferir(doc):
         exigir(corpo.count(f'data-campo="{PREFIXO_DA_FAMILIA_DA_IMERSAO}{_sig}"') == n,
                f"a etiqueta de família do gatilho {_sig} não está em todos os lugares")
     exigir("g2-frase" not in corpo and "g2-frase" not in doc,
-           "a frase do efeito voltou a ser texto embaixo da caixa: ela mora só na dica")
+           "a frase do efeito voltou a ser texto embaixo da caixa: a frase mora só na dica")
     exigir(corpo.count('<optgroup label="Golpe">') == 2 * n,
            "a lista do efeito do gatilho não abre em grupos por família")
     for _lista in re.findall(r'<select class="g2-imersao".*?</select>', corpo, re.S):
@@ -632,10 +632,10 @@ def _conferir(doc):
     exigir("Como o gatilho faz" not in corpo and "g2-av" not in corpo,
            "a linha «Como o gatilho faz» voltou: o acionamento vem dentro do efeito")
     exigir("tipo-criar" not in corpo and 'data-linha="tipo"' not in corpo,
-           "o tipo Acionamento voltou ao «Criar efeitos novos»: tudo o que ela cria é um efeito")
+           "o tipo Acionamento voltou ao «Criar efeitos novos»: tudo o que se cria é um efeito")
     exigir(f'value="{PREFIXO_DO_SEU_ACIONAMENTO}{MEU_ACIONAMENTO}"' in corpo
            and corpo.count('<optgroup label="Seus efeitos">') == 2 * n,
-           "o acionamento que ela guardou saiu do grupo «Seus efeitos» da lista do efeito")
+           "o acionamento guardado saiu do grupo «Seus efeitos» da lista do efeito")
     for _campo in CAMPO_DA_FORCA.values():
         exigir(corpo.count(f'data-campo="{_campo}"') == n,
                f"a escada {_campo!r} não está em todos os {n} lugares")
@@ -693,7 +693,7 @@ def _conferir(doc):
     exigir(SEPARADOR_DOS_MEUS not in corpo, "o separador antigo da lista de «Meus efeitos» voltou")
 
     if falhas:
-        raise SystemExit("ERRO em 03-gatilhos — decisão dela desfeita:\n  "
+        raise SystemExit("ERRO em 03-gatilhos — decisão desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas if f))
 
 

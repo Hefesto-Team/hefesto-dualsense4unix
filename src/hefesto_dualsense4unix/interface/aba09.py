@@ -298,7 +298,7 @@ def item_cinza(rotulo, diz, gesto, cls=""):
     """Um botão que sabe ficar cinza, com a razão no `?` (decisão [02] do PO).
 
     A razão não se digita aqui: quem a conhece é `aba_sistema.travas()`, no
-    produto, e ela muda a cada tique.
+    produto, e a razão muda a cada tique.
     """
     return ('            <div class="acao">'
             + botao_cinza(rotulo, _razao(gesto), tom=cls,
@@ -455,7 +455,7 @@ def _medida(texto, regra, prop):
     bloco = re.search(re.escape(regra) + r"\{([^}]*)\}", texto)
     if not bloco:
         raise SystemExit(f"ERRO: a regra CSS `{regra}` sumiu — a régua das "
-                         "colunas mede por ela.")
+                         "colunas mede por essa regra.")
     px = re.search(prop + r":(\d+(?:\.\d+)?)px", bloco.group(1))
     if not px:
         raise SystemExit(f"ERRO: `{regra}` não declara mais `{prop}` em px.")
@@ -485,24 +485,24 @@ _COLUNAS = re.findall(r'<div class="coluna[^"]*">(.*?)\n          </div>\n',
                       _entre(MIOLO, '<div class="avancadas">', '<div class="sec-rot sr-log'), re.S)
 if len(_COLUNAS) != 4:
     raise SystemExit(f"ERRO: a seção configurações avançadas tem {len(_COLUNAS)} "
-                     "colunas e ela pediu quatro — ou a régua deixou de achá-las.")
+                     "colunas e o pedido foi de quatro — ou a régua deixou de achá-las.")
 _ITENS = []
 for _col in _COLUNAS:
     _n = _col.count("<button")
     _fora = _col.count("so-avulso")
     if _fora and not _ESCONDE_O_AVULSO:
         raise SystemExit("ERRO: há botão `so-avulso` e a folha não o esconde mais — "
-                         "ele passaria a ocupar linha na cena que ela aprovou.")
+                         "ele passaria a ocupar linha na cena aprovada.")
     _ITENS.append(_n - _fora)
 if len(set(_ITENS)) != 1:
     raise SystemExit(f"ERRO: as quatro colunas das configurações avançadas têm "
-                     f"{_ITENS} itens à vista — elas deixam de acabar no mesmo y. "
-                     "Ela pediu três em cada, na vertical.")
+                     f"{_ITENS} itens à vista — as colunas deixam de acabar no mesmo y. "
+                     "O pedido é de três em cada, na vertical.")
 for _regra in (".seg.bat-perfis button", ".cadeado"):
     _alt = re.search(re.escape(_regra) + r"\{[^}]*height:var\(--h-acao\)", CSS)
     if not _alt:
         raise SystemExit(f"ERRO: `{_regra}` deixou de medir `--h-acao` — a coluna "
-                         "dela deixa de acabar no mesmo y das vizinhas.")
+                         "deixa de acabar no mesmo y das vizinhas.")
 if max(map(len, COLUNAS_DAS_NOTAS)) - min(map(len, COLUNAS_DAS_NOTAS)) > 1:
     raise SystemExit(f"ERRO: as notas saíram {[len(c) for c in COLUNAS_DAS_NOTAS]} — as três "
                      "colunas da seção 1 deixam de ser por igual.")
@@ -525,7 +525,7 @@ if _RECAIDA:
     raise SystemExit(
         "ERRO: " + " · ".join(f"{onde} diz {t!r}" for onde, t in _RECAIDA.items())
         + " — e nesta aba o rótulo nomeia o SERVIÇO, não o Hefesto. A palavra "
-        '"Hefesto" ficou com a aba Jogar por decisão dela (31/08/2026). O `title` '
+        '"Hefesto" ficou com a aba Jogar por decisão de 31/08/2026. O `title` '
         "do botão PODE dizer Hefesto — é lá que a diferença se explica.")
 
 _SEM_GLIFO = re.findall(r'<span class="selo [a-z]+"><span class="sg">\s*</span>([^<]*)',
@@ -566,8 +566,8 @@ for _on, _p, _rot in _BOTOES_BAT:
         raise SystemExit(f"ERRO: o botão de {_p!r} diz {_rot!r} e o produto o chama de "
                          f"{ROT_PERFIL[_p]!r} — nome de perfil não se digita nesta tela.")
 if sum(1 for on, _, _ in _BOTOES_BAT if on) != 1:
-    raise SystemExit("ERRO: a escolha do perfil de bateria não é única — ela pediu "
-                     '"três botões lado a lado com escolha única".')
+    raise SystemExit("ERRO: a escolha do perfil de bateria não é única — o pedido foi de "
+                     "três botões lado a lado com escolha única.")
 _BOTOES_TAMANHO = re.findall(
     r'<button class="(on)?"[^>]*data-v="([^"]+)"[^>]*>([^<]+)</button>',
     _entre(MIOLO, f'<div class="seg bat-perfis" data-id="{CAMPO_DO_TAMANHO}"', "</div>"))
@@ -577,7 +577,7 @@ if [(int(v), r) for _o, v, r in _BOTOES_TAMANHO] != [(v, r) for v, r, _d in TAMA
 if sum(1 for on, _, _ in _BOTOES_TAMANHO if on) != 1:
     raise SystemExit("ERRO: a escolha do tamanho da interface não é única.")
 if '<span class="rot">O perfil da mesa' in MIOLO:
-    raise SystemExit('ERRO: o rótulo "O perfil da mesa" voltou (ponto 7.1 dela).')
+    raise SystemExit('ERRO: o rótulo "O perfil da mesa" voltou (ponto 7.1 da lista).')
 
 
 for _faixa in (".status3", ".avancadas"):
@@ -630,7 +630,7 @@ _ATRS, _ROT_RELOAD = _RELOAD.group(1), _RELOAD.group(2)
 _PALAVRA_DOUSUARIO_09Q1 = "Atualizar"
 if ROTULO_ATUALIZAR != _PALAVRA_DOUSUARIO_09Q1 or _ROT_RELOAD != _PALAVRA_DOUSUARIO_09Q1:
     raise SystemExit(
-        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e ela mandou manter "
+        f"ERRO: o botão do `daemon.reload` diz {_ROT_RELOAD!r} e a ordem foi manter "
         f"{_PALAVRA_DOUSUARIO_09Q1!r} (09-Q1, 05/09/2026).")
 if f'data-hef-em-voo="{EM_VOO_ATUALIZAR}"' not in _ATRS:
     raise SystemExit(f"ERRO: o botão {ROTULO_ATUALIZAR!r} perdeu o `data-hef-em-voo` (09-Q3).")
@@ -651,8 +651,8 @@ for _exigido in (f'data-campo="{CAMPO_DO_VERDE}"', 'data-hef-alvo="classe"',
 if ".btn.vermelho.verde{" not in CSS:
     raise SystemExit("ERRO: a regra que deixa o verde vencer o vermelho sumiu.")
 if 'data-gesto="ver-detalhes"' in MIOLO or 'data-gesto="retomar"' in MIOLO:
-    raise SystemExit("ERRO: o «Ver detalhes» ou o «Retomar» separado voltaram — ela "
-                     "pediu o registro sempre à vista e um botão só para parar e retomar.")
+    raise SystemExit("ERRO: o «Ver detalhes» ou o «Retomar» separado voltaram — o pedido "
+                     "foi o registro sempre à vista e um botão só para parar e retomar.")
 
 
 CAMPO_DA_FITA = "fita-chips"

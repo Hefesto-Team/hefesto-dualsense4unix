@@ -21,4 +21,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho. -->
+## 04-iluminacao.html
+- **30/10/2026** — texto sem pessoa (leva do texto neutro): um docstring do gerador que o desenho carrega e a dica do número no lugar sem plástico. Até publicar, o produto mostra o texto antigo do publicado; nenhum pixel muda.
+
+## 08-conexoes.html
+- **30/10/2026** — texto sem pessoa (leva do texto neutro): as dicas do mapa das conexões, da extensão nova, da fase em pé e do «não alcanço», a pergunta do Mover («Só este sai daqui») e a dica do acionador. Até publicar, o produto mostra as dicas antigas do publicado; nenhum pixel muda.

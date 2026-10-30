@@ -109,7 +109,7 @@ def _estado_da_aba_controles(campos):
                 raise SystemExit(
                     f"ERRO: o ESTADO da aba02 não tem mais {sorted(faltam)} em "
                     f"{chave.value!r}. A linha fechada desta aba mostra a máscara e a "
-                    f"bateria de lá — se elas mudaram de nome, mude aqui também.")
+                    f"bateria de lá — se as duas mudaram de nome, mude aqui também.")
             fora[chave.value] = {c: ast.literal_eval(kw[c]) for c in campos}
         return fora
     raise SystemExit("ERRO: `ESTADO` sumiu de aba02.py — o resumo da linha fechada "
@@ -196,7 +196,7 @@ PEDIDO_DO_DESENHO = {"aparelho": "AABBCC0000F7", "lugar": "L1", "nome": "Galacti
 
 
 def _dicas_da_cena():
-    """As dicas da bancada, pelas MESMAS funções do produto (`a08_conexoes._html_das_dicas`).
+    """As dicas do mockup, pelas MESMAS funções do produto (`a08_conexoes._html_das_dicas`).
 
     Os fatos são de mentira e dizem o que o desenho 4 mostra: um adaptador sufocado com o controle
     que a central manda para outro, o Wi-Fi colado nos rádios, o teclado só no hub (com o de→para)
@@ -629,7 +629,7 @@ _ABRE_O_DESENHO = '<svg data-colorway="'
 
 
 def _a_tabela_dos_28() -> str:
-    """As 28 cores dela, lidas do desenho — a TABELA, publicada uma vez."""
+    """As 28 cores do DualSense, lidas do desenho — a TABELA, publicada uma vez."""
     achado = _CORES_NO_DESENHO.search(DS)
     if not achado:
         raise SystemExit(
@@ -701,7 +701,7 @@ _MODO_DA_CENA = _modo_da_cena()
 
 
 def linha_do_controle(c):
-    """Um controle do acordeão: a linha fechada e o corpo que ela abre.
+    """Um controle do acordeão: a linha fechada e o corpo que a linha abre.
 
     Nada aqui é digitado por controle: a cor da borda sai do desenho, a cor da
     luz sai do produto, o rótulo sai da ordem de produto, a máscara e a bateria saem
@@ -709,7 +709,7 @@ def linha_do_controle(c):
 
     UMA FUNÇÃO SÓ PARA OS QUATRO LUGARES — 07/09/2026, e os dois ramos que
     havia aqui eram o defeito. O lugar VAZIO tinha marcação própria, sem um
-    `data-campo` por dentro; `conectado` agora decide DUAS coisas, e só elas:
+    `data-campo` por dentro; `conectado` agora decide DUAS coisas, e só as duas:
 
       a) a classe e o atributo do cartão (`off` + `data-conectado="nao"`);
       b) o TEXTO INICIAL de cada campo — o travessão no lugar do valor.
@@ -719,7 +719,7 @@ def linha_do_controle(c):
     a carga chegava com `colunas = ['p1','p2','p3','p4']` e os quatro em
     `ocupados`, e a tela mostrava DOIS. O passo 2 do piloto
     (`hefesto_vivo.pintar`) procura `data-campo="k"` DENTRO do bloco
-    `[data-controle="pN"]`; sem endereço, o dado dela chega e não tem onde
+    `[data-controle="pN"]`; sem endereço, o dado chega e não tem onde
     pousar. O `data-controle` do lugar vazio nasceu em 03/09 — decisão de produto,
     *"tem que aparecer desligado enquanto não tem nenhum controle; a partir do
     momento que tiver, ele aparece o controle devidamente conectado"* — e essa
@@ -880,7 +880,7 @@ QUEM_ESTA = {em: (esp, no) for esp, no, em, _ in CENSO if em}
 
 
 def _irmas():
-    """As entradas de duas em duas, na ordem em que ela desenhou a face."""
+    """As entradas de duas em duas, na ordem em que a face foi desenhada."""
     par = {}
     for _, numeros in FACES:
         for i in range(0, len(numeros) - 1, 2):
@@ -967,7 +967,7 @@ def quadrado(n, esticada=False):
 
 
 def celula(n):
-    """Uma entrada do gabinete, e só ela."""
+    """Uma entrada do gabinete, e mais nada."""
     return '<div class="mm-cel">' + quadrado(n) + "</div>"
 
 
@@ -1000,7 +1000,7 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
     clique, cosmic-epoch#2497) — no produto é um `SegmentedSelector`, e aqui é
     o `.seg`, que é o mesmo desenho.
 
-    A DICA É HOVER DO RÓTULO, e não um `?`: no produto ela é
+    A DICA É HOVER DO RÓTULO, e não um `?`: no produto a dica é
     `texto.set_tooltip_text(...)` sobre o próprio `Gtk.Label` da pergunta
     (`secao_mesa.py`). E tem de ser — ver o comentário do `.mm-sala` no CSS:
     dica dentro da `.moldura` é dica recortada.
@@ -1009,11 +1009,11 @@ def pergunta_da_sala(texto, dica, respostas, marcada, gesto):
     desta dica, porque a seção dele não tem onde mais dizê-la. A frase
     (`GRAVA_NO_CLIQUE`) tem dono em `logica_do_mapa` e não mora mais na tela do
     desenho: o título da janela leva só o hover curto do todo (13/10/2026). **NÃO É `ESPERA_O_APLICAR`**, que este docstring
-    nomeava até 06/09/2026: aquela é a irmã dela, a da janela GTK que espera o
+    nomeava até 06/09/2026: aquela é a irmã, a da janela GTK que espera o
     "Aplicar", e esta tela grava no clique desde 01/09.
 
     O ENDEREÇO DA PINTURA CHEGOU EM 03/09/2026 (`MIGRA-08-01`), e ele cura uma
-    tela que MENTIA: o `maquina.json` desta bancada diz
+    tela que MENTIA: o `maquina.json` deste ensaio diz
     `linha_de_visada='com_gente'`, e os TRÊS botões da visada estavam apagados —
     a tela dizendo que ninguém respondeu uma pergunta respondida. O "Sim" da
     ALTURA acertava por coincidência do mockup, que é pior: um acerto que não
@@ -1066,7 +1066,7 @@ TELA_MAPEAR = f'''
 
       <div class="acoes mm-acoes">
         <button class="btn apagado" data-gesto="tirar-daqui" title="Acende quando você clica numa entrada que tem aparelho. Ele escreve “sem aparelho” nessa entrada — a entrada continua no desenho, só fica vazia.">{MAPA["ROTULO_TIRAR"]}</button>
-        <button class="btn apagado" data-gesto="nova-extensao" title="Acende quando você clica numa entrada cujo número é só dígito. Cria a filha dela — a 10 vira 10a, depois 10b. Não há neta.">{MAPA["ROTULO_EXTENSAO"]}</button>
+        <button class="btn apagado" data-gesto="nova-extensao" title="Acende quando você clica numa entrada cujo número é só dígito. Cria a filha da entrada — a 10 vira 10a, depois 10b. Não há neta.">{MAPA["ROTULO_EXTENSAO"]}</button>
         <span class="mm-nova"><input class="mm-campo" placeholder="{MAPA["NOME_DA_FACE_EM_BRANCO"]}" maxlength="16">
           <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">{MAPA["ROTULO_NOVA_FACE"]}</button></span>
       </div>
@@ -1513,7 +1513,7 @@ def _desenho_do_acionador() -> str:
         raise SystemExit(
             f"ERRO em 08-conexoes: o `dualsense.svg` trouxe {tabelas} tabela(s) de cor (com a "
             "folha dentro) onde a janela do acionador espera uma — a segunda ficaria na página "
-            "vencendo a dela.")
+            "vencendo a da janela.")
     cor = _pacote08.campos_do_acionador(CENA_DO_RADIO)["acionador-desenho"]
     cru = re.sub(r'<svg data-colorway="[^"]*"',
                  '<svg data-campo="acionador-desenho" data-hef-alvo="atributo" '
@@ -1539,7 +1539,7 @@ def _desenho_do_acionador() -> str:
 def _cena_do_desenho() -> dict:
     """A cena do desenho aprovado, na forma que o pacote pinta.
 
-    OS HZ SÃO A CONTA DO DESENHO, e só do desenho: a bancada não tem daemon, e o
+    OS HZ SÃO A CONTA DO DESENHO, e só do desenho: o mockup não tem daemon, e o
     desenho aprovado mostra números na forma. No produto os Hz vêm do contador
     (`state_full`) e nada é estimado (R10) — o pacote nunca faz esta conta.
     """
@@ -2404,7 +2404,7 @@ TELA_FIM = cerimonia(
     "",
     "",
     f'<button class="btn foco" data-gesto="entrada-levantar" title="Guarda a leitura '
-    f'de agora como referência e entra na fase em pé. É a única porta para ela.">'
+    f'de agora como referência e entra na fase em pé. É a única porta para a fase em pé.">'
     f'{CALIB["ROTULO_VOU_MOSTRAR"]}</button>'
     f'<a class="btn" href="#" data-gesto="entrada-parar" title="Fecha a janela. Mesmo destino do “{CALIB["ROTULO_JA_CHEGA"]}”.">'
     f'{CALIB["ROTULO_DEIXAR_PARA_DEPOIS"]}</a>',
@@ -2417,7 +2417,7 @@ TELA_EM_PE = cerimonia(
     _pacote08.contador_da_cerimonia(1, EM_PE_TOTAL),
     CALIB["PROCURANDO"],
     f'<button class="btn foco" data-gesto="entrada-nao-alcanco" title="Tira esta entrada da '
-    f'conta de vez: não vira dívida, não vira aviso, e o Hefesto não volta a perguntar. Ela '
+    f'conta de vez: não vira dívida, não vira aviso, e o Hefesto não volta a perguntar. Isso '
     f'diminui o total do contador, não o feito.">{CALIB["ROTULO_NAO_ALCANCO"]}</button>',
     "Encaixe o DualSense com o cabo numa entrada vazia",
     JA_CHEGA)
@@ -2454,7 +2454,7 @@ MIOLO = f'''{TABELA_DAS_CORES}
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
           <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre aqui, na janela">
             <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do controle</a>
-          <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
+          <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está ligado ali e o que mudar">
             <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das conexões</a>
         </div>
       </div>
@@ -2591,7 +2591,7 @@ if __name__ == "__main__":
     _exigir(len(_ABRE) == 2, f"não são 2 seções que expandem, e sim {len(_ABRE)}")
     _exigir(all(t == "radio" for t, _ in _ABRE),
             "uma seção voltou a ser `checkbox` — duas abertas ao mesmo tempo é o que "
-            "ela mandou desfazer: *abrir uma expansão minimiza a outra*")
+            "a ordem mandou desfazer: abrir uma expansão minimiza a outra")
     _exigir(len({n for _, n in _ABRE}) == 1 and _ABRE[0][1],
             "os rádios das seções não dividem o mesmo `name` — sem isso o navegador "
             "não tem como fechar a outra")
@@ -2625,8 +2625,8 @@ if __name__ == "__main__":
             "duas irmãs) e a tela volta a não ter onde escrevê-la")
     _exigir('data-campo="externos-lista"' in _dentro_do_acordeao(_HTML),
             "o bloco dos externos saiu de dentro do acordeão dos controles — "
-            "ela escolheu o MESMO frame em 06/09/2026, e a ressalva à parte é "
-            "a maquete que ela recusou")
+            "a escolha foi o MESMO frame em 06/09/2026, e a ressalva à parte é "
+            "a maquete recusada")
     _exigir(".gc .ext-vaga{display:contents}" in _HTML,
             "a vaga dos externos deixou de ser `display:contents` — as linhas "
             "voltam a empilhar dentro de um item só do acordeão")
@@ -2643,7 +2643,7 @@ if __name__ == "__main__":
 
     _exigir(".quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}" in _HTML,
             "o rótulo das seções que expandem perdeu o respiro de baixo — volta a "
-            "1px contra os 12 de cima, que é o que ela viu nas duas fotos")
+            "1px contra os 12 de cima, que é o que as duas fotos mostraram")
 
     _exigir("class=\"" + "ajuda" not in _HTML and "cd-" + "info" not in _HTML,
             "a aba Conexões voltou a ter um «?» ou um «i»: a dica mora no hover do título")
@@ -2694,7 +2694,7 @@ if __name__ == "__main__":
         _exigir(not _falta,
                 f"o cartão do {_p} não tem os campos {', '.join(_falta)} que o "
                 f"{_LUGARES[0]} tem. Quando esse controle chegar, o piloto vai "
-                "escrever no vazio — foi o que ela viu em 07/09 com quatro "
+                "escrever no vazio — foi o que se viu em 07/09 com quatro "
                 "DualSense na mesa e dois na tela")
         _exigir(not _sobra,
                 f"o cartão do {_p} tem os campos {', '.join(_sobra)} que o "
@@ -2727,7 +2727,7 @@ if __name__ == "__main__":
             "a seção ou o sprite do rádio saiu repetido")
 
     if _falhas:
-        raise SystemExit("ERRO em 08-conexoes — decisão dela desfeita:\n  "
+        raise SystemExit("ERRO em 08-conexoes — decisão desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in _falhas))
 
     print(f"08-conexoes: OK, {n} divs · 5 telas novas "
