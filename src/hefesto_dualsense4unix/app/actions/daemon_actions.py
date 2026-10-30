@@ -91,7 +91,7 @@ def descrever_deteccao_de_janela(state: object) -> str:
     Pura de propósito. Lê os campos `window_detect_*` do `daemon.state_full`
     (publicados por `daemon/ipc_handlers.py:_window_detect_payload`) e responde,
     em linguagem de quem usa, à única pergunta que importa: **o perfil troca
-    sozinho quando ela abre o jogo, agora?**
+    sozinho quando o jogo abre, agora?**
 
     Por que não basta ler `window_detect_healthy`: ele é um trinco de mão única
     (nunca cai depois de subir) e `window_detect_last_class` é sticky. Medido ao
@@ -178,7 +178,7 @@ def format_steam_janela_recusa(janela: object) -> str | None:
         )
     if janela == "nao_fechou":
         return (
-            "A Steam não fechou — não mexi em nada. Com ela viva a mudança "
+            "A Steam não fechou — não mexi em nada. Com a Steam viva a mudança "
             "seria perdida, porque a Steam regrava o arquivo ao sair. "
             "Feche-a pela própria Steam e clique de novo."
         )
@@ -244,7 +244,7 @@ def como_atualizar_esta_instalacao() -> str:
 
     BG-06b (26/08/2026): antes desta linha a resposta parava em dois casos —
     "rode ./install.sh" para quem clonou, e a genérica *"pelo mesmo caminho por
-    onde você o instalou"* para todo o resto. Honesta e universal, ela não
+    onde você o instalou"* para todo o resto. Honesta e universal, a frase não
     dizia o GESTO; agora o formato é medido e o gesto tem nome
     (`flatpak update`, `pacman -Syu`, …), com a genérica de último degrau para
     o formato que ninguém assume.
@@ -390,7 +390,7 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
     exatamente o tipo de coisa que ninguém descobre sem ser avisado.
 
     **Nomeia, nunca só conta.** É a regra do WRAPPER-EM-TODOS-01, e a razão de
-    ela existir tem nome próprio: *"3 jogos com pendência"* é o texto que
+    a regra existir tem nome próprio: *"3 jogos com pendência"* é o texto que
     deixou o Pragmata quebrado a noite inteira.
 
     Pura de propósito (recebe o censo pronto): a leitura do disco é lenta o
@@ -444,7 +444,7 @@ def format_fix_safe_result(relatorio: object) -> str:
             partes.append("Steam Input: " + _frase_steam_input(int(rc), tag, jogos))
     partes.append(
         "A cura anti-storm do áudio já é persistente (install) — reconecte o "
-        "controle para ela pegar nesta sessão."
+        "controle para a cura pegar nesta sessão."
     )
     return " ".join(partes)
 
@@ -457,10 +457,10 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     jogo o controle FÍSICO fica escondido, e some o controle dobrado).
 
     NOTA DATADA — 07/08/2026. Este toast dizia *"o Hefesto sai da frente
-    dele"*, e a frase está **refutada** pela medição dela de 06/08
+    dele"*, e a frase está **refutada** pela medição de 06/08
     (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, grau MEDIDO): com o jogo
-    marcado o Hefesto **mantém a saída inteira** — os gatilhos dela seguraram
-    duros e o vermelho dela ficou na lightbar, com o Mullet Mad Jack aberto.
+    marcado o Hefesto **mantém a saída inteira** — os gatilhos seguraram
+    duros e o vermelho do perfil ficou na lightbar, com o Mullet Mad Jack aberto.
     Quem lia "sai da frente" esperava perder cor e gatilho, que é o contrário
     do que acontece.
 
@@ -545,7 +545,7 @@ def _frase_de_recusa_do_proton(result: dict[str, object]) -> str | None:
     estava tudo certo" é justamente o raciocínio errado.
 
     Compatível com quem ainda não manda `status` (a chave é opcional): sem
-    ela, devolve ``None`` e o comportamento é o de antes.
+    a chave, devolve ``None`` e o comportamento é o de antes.
     """
     if result.get("status") != "recusado":
         return None
@@ -626,7 +626,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         "Eu ajusto de uma vez as duas coisas que costumam brigar com o "
         "controle: quem entrega o controle para o jogo e como cada jogo é "
         "aberto.\n\n"
-        "Para isso a Steam precisa estar fechada — se ela estiver aberta eu "
+        "Para isso a Steam precisa estar fechada — se estiver aberta eu "
         "fecho por uns 20 segundos e abro de novo. Pause os downloads antes.\n\n"
         "Se algum jogo estiver aberto eu não faço NADA (fechar a Steam mataria "
         "o jogo). Fica um backup ao lado de cada arquivo da Steam."

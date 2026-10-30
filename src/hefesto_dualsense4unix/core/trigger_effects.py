@@ -308,7 +308,7 @@ def galloping(
     Os bytes de 01/08 (a mão do usuário aprovou), mantidos até a sessão às cegas de
     `O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01`. Neste layout a
     frequência cai nos bytes de amplitude do `0x26`, e o byte de frequência
-    do modo fica em zero: ela é inerte.
+    do modo fica em zero: é inerte.
     """
     _byte(start, name="start", lo=0, hi=8)
     _byte(end, name="end", lo=1, hi=9)
@@ -351,7 +351,7 @@ def auto_gun(start: int, strength: int, frequency: int) -> TriggerEffect:
 
 
 def _encostar(valor: int, lo: int, hi: int) -> int:
-    """O valor dentro da faixa: o que passa dela encosta no limite mais perto."""
+    """O valor dentro da faixa: o que passa da faixa encosta no limite mais perto."""
     return max(lo, min(hi, int(valor)))
 
 
@@ -456,7 +456,7 @@ def multi_position_vibration(frequency: int, strengths: list[int]) -> TriggerEff
     """Amplitude por posição (array de 10) + frequência.
 
     Frequência 0 com alguma amplitude maior que zero recusa: o controle lê o
-    bloco como desligado, e quem pediu a vibração ficaria sem ela calado.
+    bloco como desligado, e quem pediu a vibração ficaria sem a vibração, calado.
     """
     if len(strengths) != 10:
         raise ValueError(
@@ -730,7 +730,7 @@ def traduzir_chave_velha(
     """A linha nova de uma chave velha: `(chave, ajustes posicionais)`, ou `None`.
 
     `None` quando a chave não saiu da lista, ou quando os ajustes não são os
-    dela (a quantidade errada segue recusada pela fábrica velha, como sempre).
+    da lista (a quantidade errada segue recusada pela fábrica velha, como sempre).
     Os ajustes nomeados (`dict`) entram na ordem do perfil antigo. Com
     `para_a_tela`, o `PulseA` também sobe para o Arco, só para a tela o mostrar;
     o bloco que sai dele não muda.
@@ -767,7 +767,7 @@ def build_from_name(
     Ver `_flatten_multi_position` para a expansão.
 
     Para `MultiPositionVibration`, o formato aninhado não tem onde guardar a
-    `frequency`: ela sai como `FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO`
+    `frequency`: a frequência sai como `FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO`
     (40, o padrão da tela). Frequência própria exige o formato dict
     (`{"frequency": N, "strengths": [...]}`) ou o posicional.
     """

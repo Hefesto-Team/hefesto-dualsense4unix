@@ -1,7 +1,7 @@
 """Os atos da bandeja que o controle também faz: abrir o painel e o serviço.
 
 E o dono da própria bandeja (AS-TELAS-QUE-O-USUARIO-PEDIU-EM-16-10-01, S3 e S4): a escolha de ter o
-ícone mora no autostart da sessão (`X-GNOME-Autostart-enabled`), a bandeja viva é o PID que ela
+ícone mora no autostart da sessão (`X-GNOME-Autostart-enabled`), a bandeja viva é o PID que se anota
 grava em `$XDG_RUNTIME_DIR` mais `kill -0`, e `garantir_a_bandeja` a sobe quando a escolha está
 ligada e não há nenhuma viva.
 """
@@ -82,7 +82,7 @@ def caminho_do_autostart() -> Path:
 
 
 def caminho_do_pid() -> Path:
-    """Onde a bandeja viva deixa o PID dela: some com a sessão, como ela."""
+    """Onde a bandeja viva deixa o PID: some com a sessão, como a bandeja."""
     base = os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/{identidade.atual().app_id}-{os.getuid()}"
     return Path(base) / f"{identidade.atual().app_id}-tray.pid"
 
@@ -113,14 +113,14 @@ def bandeja_viva() -> int | None:
 
 
 def anotar_a_bandeja_viva() -> None:
-    """Chamado pela bandeja ao subir: o PID dela vira o endereço que os outros conferem."""
+    """Chamado pela bandeja ao subir: o PID vira o endereço que os outros conferem."""
     alvo = caminho_do_pid()
     alvo.parent.mkdir(parents=True, exist_ok=True)
     alvo.write_text(f"{os.getpid()}\n", encoding="ascii")
 
 
 def esquecer_a_bandeja() -> None:
-    """Chamado pela bandeja ao sair, só se o PID anotado ainda for o dela."""
+    """Chamado pela bandeja ao sair, só se o PID anotado ainda for o da bandeja."""
     if _pid_anotado() == os.getpid():
         caminho_do_pid().unlink(missing_ok=True)
 
@@ -143,7 +143,7 @@ def garantir_a_bandeja(abrir: Callable[..., Any] | None = None) -> bool:
     """Sobe a bandeja, fora da unidade de quem chama, se a escolha está ligada e nenhuma está viva.
 
     Pelo `fora_do_servico`, como a janela da recarga: de dentro de uma unidade que termina, um
-    filho por `Popen` morre com ela. Diz se subiu."""
+    filho por `Popen` morre com a unidade. Diz se subiu."""
     if not bandeja_ligada() or bandeja_viva() is not None:
         return False
     from hefesto_dualsense4unix.integrations import fora_do_servico

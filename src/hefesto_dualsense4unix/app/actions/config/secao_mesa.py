@@ -2,11 +2,11 @@
 
 O que a máquina responde sozinha (adaptadores, rádios vizinhos, hub, topologia
 USB) é LIDO; o que nenhum barramento sabe (altura da antena, linha de visada) é
-declarado. A ordem importa: onde a leitura acerta, ela pré-preenche.
+declarado. A ordem importa: onde a leitura acerta, a leitura pré-preenche.
 
 TERRITÓRIO DE CONFIG-02, e do medidor de rádio de CONFIG-04. Quem trabalha
 nesta seção escreve AQUI — o título, a
-dica e todo widget dela. O montador da aba (`mixin.py`) só cria a moldura e
+dica e todo widget da seção. O montador da aba (`mixin.py`) só cria a moldura e
 chama `montar`; ele não sabe o que há dentro, e é assim que cinco seções
 crescem sem se pisarem.
 
@@ -24,8 +24,8 @@ Uma coluna do desenho não está aqui, e o motivo é que não há fonte (F3 de
 CONFIG-09. Coluna que só sabe dizer "Não sei" em toda linha ocupa largura — o
 recurso escasso desta janela — e ensina a ignorar a tabela.
 
-A coluna **"Em uso"** também saiu da tabela, mas por outro motivo: ela virou o
-MEDIDOR, mais abaixo nesta mesma seção, que é onde ela tem procedência.
+A coluna **"Em uso"** também saiu da tabela, mas por outro motivo: a coluna virou o
+MEDIDOR, mais abaixo nesta mesma seção, que é onde o dado tem procedência.
 
 O MEDIDOR DE RÁDIO (CONFIG-04)
 -------------------------------
@@ -42,10 +42,10 @@ A conta, a procedência de cada número e a fronteira que a tela NÃO atravessa
 `integrations/radio_da_mesa.py`. Aqui em cima ficam só as três coisas que são
 de tela: o rótulo, a cor da palavra e o selo de procedência.
 
-A COLUNA "O QUE É" É LIDA, E ELA SÓ CORRIGE (22/08/2026)
+A COLUNA "O QUE É" É LIDA, E QUEM USA SÓ CORRIGE (22/08/2026)
 ---------------------------------------------------------
 
-Decisão de produto: *"classifica sozinho, você só corrige"*. Até aqui a coluna
+Decisão de produto: o produto classifica sozinho, quem usa só corrige. Até aqui a coluna
 oferecia SETE botões por linha e perguntava à mão o que o kernel já responde:
 `bInterfaceClass/SubClass/Protocol` da interface 0 distingue mouse de teclado
 (`03/01/02` contra `03/01/01`) e Bluetooth de "sem fio" (`e0/01/01`). Quem lê
@@ -53,13 +53,13 @@ oferecia SETE botões por linha e perguntava à mão o que o kernel já responde
 consumidor em `app/` — a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` nascendo na mesma
 sessão que a documentou.
 
-A ordem de precedência tem três degraus, e ela é o desenho:
+A ordem de precedência tem três degraus, e essa é o desenho:
 
-1. **a correção dela vence tudo** — `RadioDeclarado.tipo`, no `maquina.json`;
+1. **a correção de quem usa vence tudo** — `RadioDeclarado.tipo`, no `maquina.json`;
 2. **o que o kernel leu vence o botão vazio** — a linha nasce preenchida, com
-   o selo `(lido)`, e o seletor só aparece se ela clicar em "Corrigir";
+   o selo `(lido)`, e o seletor só aparece se quem usa clicar em "Corrigir";
 3. **quando ninguém sabe** — classe `ff`, em que o fabricante declinou de
-   classificar — a linha nasce com o seletor aberto e o `▲`. Na bancada,
+   classificar — a linha nasce com o seletor aberto e o `▲`. Na máquina de teste,
    das quatro linhas de rádio vizinho, só UMA cai aqui.
 
 A junção entre as duas leituras é o `no` — o caminho real no sysfs, a mesma
@@ -69,7 +69,7 @@ o usuário declarou e que se repete quando há duas unidades do mesmo aparelho.
 O NOME DE CADA ADAPTADOR (22/08/2026)
 --------------------------------------
 
-Decisão de produto: *"você escreve, o produto protege o prefixo"*. Três adaptadores
+Decisão de produto: quem usa escreve, o produto protege o prefixo. Três adaptadores
 `2357:0604` idênticos no barramento, e a única coisa que os separa é o BD
 Address — que não é nome. Quem lê e escreve o `org.bluez.Adapter1.Alias` é
 `integrations/apelido_do_dongle`, o segundo módulo que estava sem consumidor.
@@ -79,13 +79,13 @@ lido aqui e não em outro lugar:
 
 * a coluna **"Nome"** da tabela de adaptadores, que é um campo livre. O que a
   tela mostra é o nome DO USUÁRIO, limpo: o prefixo `Nintendo` que segura o Pro
-  Controller fora do sniff frágil é costurado por baixo, e ela nunca precisa
+  Controller fora do sniff frágil é costurado por baixo, e quem usa nunca precisa
   saber que existe;
 * o **rótulo do medidor**, que passa a dizer `Rádio em uso · Sala` em vez de um
   endereço hexa. Essa junção é por ENDEREÇO dos dois lados (o `HID_PHYS` do
   controle contra o `Address` do BlueZ) e não tem chute nenhum dentro.
 
-A junção da TABELA é outra, e ela é a única coisa aqui que usa `hciN`: o
+A junção da TABELA é outra, e é a única coisa aqui que usa `hciN`: o
 `Adaptador.interface` do sysfs contra o `/org/bluez/hciN` do BlueZ. O índice
 inverte entre boots e por isso ele nunca é guardado — a correspondência é
 refeita a cada leitura, e as duas leituras acontecem no mesmo gesto. O que vai
@@ -100,14 +100,14 @@ cada uma tem o "porquê" inteiro junto da constante que a carrega:
 1. **o gabinete que o install já contou.** O ``install.sh`` grava o
    ``gabinete.json`` em toda instalação desde 25/08/2026 e nenhuma linha de
    ``app/`` o abria. Agora a seção o publica — **as duas contagens lado a lado
-   quando elas divergem, e nunca uma escolha** (:func:`_linhas_do_gabinete`);
+   quando divergem, e nunca uma escolha** (:func:`_linhas_do_gabinete`);
 2. **o hub em comum.** A coluna "Onde está" escrevia ``Em hub`` linha a linha e
    nunca comparava as linhas entre si; ``censo_do_barramento.hub_em_comum``
    respondia desde 22/08 e não tinha chamador (:func:`_frase_do_hub_em_comum`);
 3. **a porta da calibração.** ``interface/calibracao_das_entradas.py`` nasceu
    inteira na leva 1 e nada a abria (:meth:`_PainelDaMesa._abrir_a_calibracao`).
 
-Todo texto novo delas está marcado ``PROVISÓRIO — decisão de produto``, e a prova de
+Todo texto novo dessas linhas está marcado ``PROVISÓRIO — decisão de produto``, e a prova de
 tela não fechou: a palavra final é do usuário.
 
 **O nome grava NA HORA**, e a frase ao lado do campo diz isso. As três

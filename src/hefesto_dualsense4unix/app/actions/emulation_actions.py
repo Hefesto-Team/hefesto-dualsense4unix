@@ -120,7 +120,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         """Quantas placas ALSA de DualSense este computador tem AGORA.
 
         Zero também quando `/proc/asound/cards` não dá para ler — e é honesto
-        chamar isso de zero na frase que a tela mostra, porque ela diz que o
+        chamar isso de zero na frase que a tela mostra, porque a frase diz que o
         Hefesto **não encontrou** placa nenhuma, não que não exista nenhuma.
         """
         from hefesto_dualsense4unix.integrations.storm_doctor import (

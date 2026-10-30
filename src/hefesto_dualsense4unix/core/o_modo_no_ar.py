@@ -4,9 +4,9 @@ O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 (27/09/2026). Duas perguntas que o
 `doctor` faz depois do install, e que o fecho de 27/09 não fazia:
 
 * **O modo.** Às 16h16 o fecho foi «pads no `uhid` e nenhum `vpad_degradado`»,
-  com o Freestyle dela no modo Xbox: os pads deviam estar no `uinput`. O
+  com o Freestyle no modo Xbox: os pads deviam estar no `uinput`. O
   `degraded` e o `dedup_ok` diziam íntegro, porque respondem outra pergunta
-  («o canal caiu sem ela pedir?»). :func:`modo_contra_o_ar` compara, por
+  («o canal caiu sem quem usa pedir?»). :func:`modo_contra_o_ar` compara, por
   jogador, o canal que o modo pedido dá com o backend do pad no ar.
 * **A hora.** Na noite de 27/09 os pads `uinput` levaram de 28,7 a 30,3 s entre
   o kernel criar o nó e o daemon registrar (`uinput_device_created`), com o
@@ -17,7 +17,7 @@ O CANAL QUE O MODO PEDE TEM UM DONO, e ele é perguntado, não reescrito:
 `virtual_pad.quer_uhid(caminho, máscara)`. A máscara entra só como a segunda
 metade dessa pergunta, porque com uma máscara que o `uhid` não veste os dois
 modos dão o mesmo aparelho no `uinput` (é a mesma regra de
-`external_mask.vpad_ficou_para_tras`). Sem ela, o modo DualSense com o cartão
+`external_mask.vpad_ficou_para_tras`). Sem a regra, o modo DualSense com o cartão
 em Xbox 360 sairia FALHA, e o PRAGMATA de 27/09 (a sessão em DualSense, o pad
 renascido no Xbox com a máscara DualSense) sairia OK.
 
@@ -172,7 +172,7 @@ def modo_contra_o_ar(estado: Mapping[str, Any]) -> list[ModoDoJogador]:
 
     ``estado`` é o `daemon.state_full`. Divergência sem motivo de queda é
     FALHA; com motivo, AVISO com o motivo; a Conexão Nativa (ou a emulação
-    desligada) sem pad é OK. A máscara não é comparada com nada: ela só entra
+    desligada) sem pad é OK. A máscara não é comparada com nada: só entra
     como a metade da pergunta ao dono do canal (`quer_uhid`).
     """
     emulacao = _dict(estado.get("gamepad_emulation"))

@@ -37,7 +37,7 @@ def ambiente_normalizado(bruto: str | None) -> str:
 
 
 def ambiente_efetivo(*, variaveis: Mapping[str, str] | None = None) -> str:
-    """O ambiente que vale para a tela: a correção dela vence a detecção."""
+    """O ambiente que vale para a tela: a correção de quem usa vence a detecção."""
     escolha = load_gui_prefs().get(CHAVE_AMBIENTE)
     if isinstance(escolha, str) and escolha in NOMES_DE_TELA:
         return escolha

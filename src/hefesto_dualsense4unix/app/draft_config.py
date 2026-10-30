@@ -27,7 +27,7 @@ class TriggerDraft(BaseModel):
     ``_triggers_config_to_draft``). Ele existe só para uma coisa: quando o
     perfil é salvo SEM que este trigger tenha sido tocado, ``to_profile``
     devolve o arquivo com a MESMA forma aninhada que tinha — nada muda por
-    baixo dela. Qualquer edição pela tela cria um ``TriggerDraft`` novo sem
+    baixo do arquivo. Qualquer edição pela tela cria um ``TriggerDraft`` novo sem
     este campo (`TriggerDraft(mode=..., params=...)`, sem ``model_copy``), e
     a partir daí o arquivo passa a guardar plano — que é forma válida e é o
     formato que a PRÓPRIA edição produz. Não é lido pelos widgets.
@@ -87,7 +87,7 @@ class RumbleDraft(BaseModel):
     (FEAT-RUMBLE-POLICY-PROFILE-01). ``policy=None`` = perfil sem opinião
     (ativar não mexe na política global do daemon). A aba Rumble grava aqui
     cada escolha da usuária, para o "Salvar Perfil" do rodapé persistir o que
-    ela vê; ``custom_mult`` só acompanha ``policy="custom"``, e a faixa dele é
+    o usuário vê; ``custom_mult`` só acompanha ``policy="custom"``, e a faixa dele é
     a do esquema do perfil (``RUMBLE_CUSTOM_MULT_MAX``), nunca um número
     escrito aqui.
 
@@ -149,14 +149,14 @@ class MicDraft(BaseModel):
     a mesma disciplina do alto-falante.
 
     ``dirty``/``in_profile`` seguem a mesma disciplina do ``MouseDraft``:
-    ``to_ipc_dict`` só emite a seção quando a usuária mexeu nela (dirty), e
-    ``to_profile`` só a persiste quando ela foi mexida OU o perfil de origem
+    ``to_ipc_dict`` só emite a seção quando a usuária mexeu na seção (dirty), e
+    ``to_profile`` só a persiste quando foi mexida OU o perfil de origem
     já a tinha — perfis legados fazem round-trip sem ganhar seção fantasma.
 
     ``volume=None``/``muted=None`` = o gesto que passou por aqui não tinha
     opinião sobre AQUELE campo, e a ausência é preservada (mesma razão do
     ``rota`` do ``SpeakerDraft``): mexer no volume não pode apagar o mudo que
-    ela acabou de escolher, nem o contrário.
+    o usuário acabou de escolher, nem o contrário.
 
     **O GATE É POR CAMPO, e desde 22/08/2026 vale também para o booleano.**
     Ele era por SEÇÃO: qualquer gesto de microfone (arrastar o volume, clicar
@@ -314,7 +314,7 @@ def _trigger_params_para_disco(trigger: TriggerDraft) -> list[int] | list[list[i
     Se este trigger não foi tocado desde que veio do arquivo (o achatado
     ainda bate com o aninhado original — ver ``params_aninhado_original`` em
     ``TriggerDraft``), devolve a forma aninhada intacta: salvar sem editar o
-    gatilho não pode mudar a forma do arquivo dela (Z4/T4). Se foi editado —
+    gatilho não pode mudar a forma do arquivo do usuário (Z4/T4). Se foi editado —
     ou nunca teve forma aninhada — devolve o achatado, que é forma válida
     para ``TriggerConfig.params`` (``profiles/schema.py``) e é o que a
     própria edição produziu.
@@ -521,7 +521,7 @@ class DraftConfig(BaseModel):
         PONTE-CONFIRMADA-01: o carimbo ``ponte`` é reemitido pelo mesmo
         passthrough, gateado pelo ``mesmo_perfil`` — sem escritor na janela.
         PERFIL-SALVA-TUDO-01: ``mode`` e ``suppress_desktop_emulation`` também
-        saem daqui quando ELA os editou nesta sessão (``mode_dirty`` /
+        saem daqui quando o usuário os editou nesta sessão (``mode_dirty`` /
         ``suppress_dirty``) — nesse caso o valor vale mesmo com nome NOVO,
         porque é gesto do usuário e não a regra herdada de outro perfil.
 
@@ -530,7 +530,7 @@ class DraftConfig(BaseModel):
         do DEFAULT DO ESQUEMA. Nunca de um literal inventado aqui: o antigo
         default 5 desta assinatura era a assinatura digital dos perfis do usuário
         salvos pelo rodapé (``pragmata.json`` e ``pragmata2.json``, prioridade 5
-        sem ela ter tocado no slider, empatados entre si e com os outros
+        sem o usuário ter tocado no slider, empatados entre si e com os outros
         catch-all). Um portão de busca em
         ``tests/unit/test_perfil_salva_tudo_rascunho.py`` impede a volta dele.
 

@@ -1,4 +1,4 @@
-"""A ORDEM das cinco seções da aba — a única lista, e ela mora aqui."""
+"""A ORDEM das cinco seções da aba — a única lista, e mora aqui."""
 from __future__ import annotations
 
 from types import ModuleType

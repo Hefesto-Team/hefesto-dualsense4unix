@@ -1,14 +1,14 @@
 """O mecanismo: reafirmar o que o produto quer **no fim de uma sequência**.
 
-- **Decisão, 12/08/2026**, e é ela quem generalizou: *"reafirmar o que o
-  produto quer no fim da sequência, seja cor, número ou o IGNORE do ambiente"*.
+- **Decisão, 12/08/2026**, que generalizou: reafirmar o que o produto quer no
+  fim da sequência, seja cor, número ou o IGNORE do ambiente.
 - **Este módulo é só o MECANISMO.** O conteúdo — que cor, que número, que
   ambiente — é de quem registra a ação. Ele não sabe o que é lightbar.
 
 A CLASSE DE DEFEITO, com três casos medidos
 ===========================================
 Os três têm a mesma forma: **o produto decide DURANTE uma sequência de
-eventos, em vez de esperar ela sossegar.** Não é coincidência de sintoma, é o
+eventos, em vez de esperar a sequência sossegar.** Não é coincidência de sintoma, é o
 mesmo erro de tempo.
 
 1. **Rumble** — o keepalive escrevia dentro da janela em que outro dono acabara
@@ -19,7 +19,7 @@ mesmo erro de tempo.
    palavra (`GATILHO-DA-COR-01`, 12/08). É o primeiro usuário deste módulo;
 3. **Co-op / `IGNORE` do ambiente** — a cura que esconde os DualSense físicos
    do jogo exige um vpad por físico, e foi avaliada TRÊS vezes durante a subida
-   dos vpads, sempre com cobertura incompleta, e nunca depois que ela ficou
+   dos vpads, sempre com cobertura incompleta, e nunca depois que a cobertura ficou
    completa. O quarto vpad ficou pronto ONZE SEGUNDOS depois do primeiro
    (ensaio `coop-ignore-avaliado-cedo` em `docs/data/ensaios.csv`).
 
@@ -169,7 +169,7 @@ class RegistroDeGatilhos:
         return any(g.armado for g in self._gatilhos.values())
 
     def devidos(self, agora: float) -> list[tuple[GatilhoDeFimDeSequencia, int]]:
-        """Os gatilhos cuja sequência acabou, já consumidos, com o tamanho dela."""
+        """Os gatilhos cuja sequência acabou, já consumidos, com o tamanho da sequência."""
         prontos: list[tuple[GatilhoDeFimDeSequencia, int]] = []
         for gatilho in list(self._gatilhos.values()):
             eventos = gatilho.consumir_se_a_sequencia_acabou(agora)

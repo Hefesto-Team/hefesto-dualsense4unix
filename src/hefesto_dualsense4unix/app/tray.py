@@ -360,7 +360,7 @@ class AppTray:
         """`restart`, `start` e `stop` fora do fio da janela, como o «Sair» (`_ao_sair`).
 
         A unit é `Type=notify`: o `start` e o `restart` só voltam com o IPC de pé (até o
-        `TimeoutStartSec` dela), e chamar na thread do GTK congelaria a bandeja nesse tempo.
+        `TimeoutStartSec` da unit), e chamar na thread do GTK congelaria a bandeja nesse tempo.
         """
         servico = self.on_servico
         if servico is None:

@@ -260,7 +260,7 @@ def test_o_aviso_diz_onde_a_thread_estava(ensaio: _Ensaio) -> None:
     assert aviso["path"] == b"/dev/hidraw9"
     assert aviso["segundos"] >= TETO - 0.05
     assert "hid_read_timeout" in (aviso["onde"] or ""), aviso["onde"]
-    assert "ficou com ela" in aviso["detalhe"]
+    assert "segurando o handle" in aviso["detalhe"]
 
 
 def test_depois_do_sinal_o_report_que_chega_e_jogado_fora(ensaio: _Ensaio) -> None:

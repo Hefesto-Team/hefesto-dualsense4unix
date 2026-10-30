@@ -42,10 +42,10 @@ def frase_do_envio(
 
     **Quem decide é ``textos_de_aplicacao.frase_do_desfecho``, e só ele.** Esta
     função não lê ``aplicado_em``, não conhece a ordem das razões e não tem
-    opinião sobre ramo nenhum: ela chama o dono da decisão e, no ramo do
+    opinião sobre ramo nenhum: chama o dono da decisão e, no ramo do
     APLICADO — e só nele —, devolve a frase que esta aba já tinha.
 
-    **Por que a troca de palavra, e por que ela não é preferência.** O ramo do
+    **Por que a troca de palavra, e por que não é preferência.** O ramo do
     aplicado sai de lá como *"<assunto> aplicado"*, e "aplicada" é uma
     afirmação que esta aba MEDIU como falsa: LIGHTBAR-BT-RESET-01 (17-18/07,
     ainda em vigor em 09/08) — por Bluetooth, depois que o daemon adota o

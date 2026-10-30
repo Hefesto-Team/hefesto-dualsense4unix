@@ -21,7 +21,7 @@ card de CURA traz o que fazer e o que se mediu, sem selo, porque uma cura de
 conferência não tem medição por trás dizendo de onde vem o conselho.
 
 **A terceira linha é sempre visível**, inclusive quando confessa que o ganho não
-foi medido. É ela que impede raciocínio de se vestir de medição: uma ordem que
+foi medido. É essa linha que impede raciocínio de se vestir de medição: uma ordem que
 manda mover sem dizer quanto se ganha é honesta; a mesma com o ganho escondido é
 palpite com cara de laudo.
 
@@ -73,7 +73,7 @@ GRAVE entre os dois, e quem for mais grave também é quem dá a frase. Escalar
 nunca inventa um verde; só o apaga.
 
 TERRITÓRIO DE CONFIG-09. Quem trabalha nesta seção escreve AQUI — o título, a
-dica e todo widget dela. O montador da aba (`mixin.py`) só cria a moldura e
+dica e todo widget da seção. O montador da aba (`mixin.py`) só cria a moldura e
 chama `montar`; ele não sabe o que há dentro, e é assim que cinco seções
 crescem sem se pisarem.
 """
@@ -171,7 +171,7 @@ def contagens_do_cabecalho(itens: Sequence[Item]) -> tuple[int, int]:
 
 
 def leitura_das_ordens(maquina: Any) -> Any:
-    """O que o catálogo de ordens lê — o barramento MAIS o desenho dela."""
+    """O que o catálogo de ordens lê — o barramento MAIS o desenho da máquina."""
     from hefesto_dualsense4unix.integrations import (
         censo_do_barramento,
         entrada_a_entrada,

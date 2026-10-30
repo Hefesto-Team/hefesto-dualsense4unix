@@ -20,7 +20,7 @@ def vale_o_padrao(politica: str | None) -> bool:
     """``True`` quando o degrau que vale é o Padrão.
 
     **É A ÚNICA PERGUNTA** que as barras por canal (os dois motores e o ganho da
-    háptica) fazem antes de se aplicar: em Padrão elas ficam guardadas, os
+    háptica) fazem antes de se aplicar: em Padrão as barras ficam guardadas, os
     motores chegam como o jogo mandou e a háptica vai ao ganho de fábrica
     (``HAPTICA_PCT_PADRAO``, 75, o fator 1,5); em Economia, Máximo ou Personalizado voltam.
     """
@@ -129,7 +129,7 @@ def _effective_mult(
 
     **Por que o teto do auto é 1.0 e não o do "Máximo"** (11/08/2026): o auto
     existe para POUPAR bateria — amplificar seria fazer o oposto do que ele
-    promete, e ainda por cima sozinho, sem ela ter pedido. Os três degraus
+    promete, e ainda por cima sozinho, sem quem usa ter pedido. Os três degraus
     acima não são os de `RUMBLE_POLICY_MULT`: desde que "Máximo" subiu acima do
     "Balanceado", o degrau de cima do auto empatou com o balanceado, e é isso
     mesmo. Quem mexer nesta escada mexe no texto que a promete na tela.
@@ -150,9 +150,9 @@ def _effective_mult(
     Esta função segue como a conta da política global, para quem pergunta sem
     controle (a tela, o resumo).
 
-    **Teto, não troca**: o ``config.rumble_policy`` dela não é reescrito em
+    **Teto, não troca**: o ``config.rumble_policy`` do usuário não é reescrito em
     lugar nenhum. Voltar o orçamento para Balanceado devolve o mult inteiro sem
-    ela reclicar coisa alguma — é essa a invariante, e ela tem teste
+    reclicar coisa alguma — é essa a invariante, e tem teste
     (``tests/unit/test_orcamento_e_teto_nao_troca.py``).
     """
     return _degrau_da_politica(

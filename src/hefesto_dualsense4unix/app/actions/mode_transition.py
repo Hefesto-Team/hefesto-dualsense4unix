@@ -44,7 +44,7 @@ def plan_mode_transition(
     decide se o jogo reconhece o controle — o `DEFAULT_FLAVOR` da GUI era um
     segundo dono do valor, dentro do módulo criado para acabar com eles. A CLI
     já fazia certo desde o HARM-08 (`test_cli_gamepad`); agora as duas portas
-    dizem a mesma coisa. Escolha explícita dela (o seletor de máscara) continua
+    dizem a mesma coisa. Escolha explícita de quem usa (o seletor de máscara) continua
     indo no campo, intacta.
 
     Levanta ``ValueError`` em modo desconhecido — um modo novo tem que passar
@@ -56,7 +56,7 @@ def plan_mode_transition(
     significa "automático", e automático NÃO fura o portão da allowlist do
     Steam Input.
 
-    MEDIDO na bancada, e o custo foi imediato: com o Sackboy marcado, o
+    MEDIDO no ensaio, e o custo foi imediato: com o Sackboy marcado, o
     botão "Jogar pelo Hefesto" parou de funcionar — o clique chegava sem
     ``origin``, era lido como reconciliação e o daemon o recusava com
     ``gamepad_start_recusado_steam_input``. A cura tinha um contrapeso escrito

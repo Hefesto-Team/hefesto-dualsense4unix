@@ -3,7 +3,7 @@
 O banco do udev (`/run/udev/data/c<maj>:<min>`) é interno do systemd: ele o
 declara assim e muda o formato quando quer. Ler o arquivo à mão é ler o que
 ninguém prometeu, e o sintoma de uma mudança seria silêncio (a propriedade some
-e o nó é tratado como "sem marca"). Quem tem o contrato é a `libudev`, e é ela
+e o nó é tratado como "sem marca"). Quem tem o contrato é a `libudev`, e é a biblioteca
 que este módulo chama, por `ctypes` (stdlib): nenhuma dependência nova no
 pacote, e o mesmo caminho serve ao daemon, ao Flatpak e ao `python3` do sistema.
 

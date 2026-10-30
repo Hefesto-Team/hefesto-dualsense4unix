@@ -93,7 +93,7 @@ class IpcClient:
         """Envia RPC e aguarda a resposta.
 
         ``timeout=None`` vale o prazo do método (a tabela da ponte; padrão curto
-        para o que não está nela): esperar para sempre não existe.
+        para o que não está na tabela): esperar para sempre não existe.
         """
         self._next_id += 1
         request = {

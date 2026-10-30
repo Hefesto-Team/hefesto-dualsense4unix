@@ -176,7 +176,7 @@ def _mic_canal_ou_volume(action: str, valor: str | None, uniq: str | None) -> in
         if corpo.get("status") == "sem_fonte":
             console.print(
                 "  [dim]não há fonte de captura deste controle no sistema "
-                "(no rádio, ela só existe com a ponte `mic bt` de pé).[/dim]"
+                "(no rádio, a fonte só existe com a ponte `mic bt` de pé).[/dim]"
             )
         return 1
     if action == "canal":

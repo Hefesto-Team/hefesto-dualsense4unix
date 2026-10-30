@@ -66,7 +66,7 @@ def esquecer_cmd(*, restaurar: bool, pasta: str | None, seco: bool) -> None:
         else:
             if pasta:
                 raise memoria.RecusaError(
-                    "a pasta só vale com --restaurar; para esquecer, rode sem ela"
+                    "a pasta só vale com --restaurar; para esquecer, rode sem a pasta"
                 )
             relato = memoria.guardar(raizes, memoria.CONTROLES, sistema, seco=seco)
     except memoria.RecusaError as erro:

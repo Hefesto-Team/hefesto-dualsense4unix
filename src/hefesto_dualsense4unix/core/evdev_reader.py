@@ -64,7 +64,7 @@ class EixoAbsoluto:
     `flat` (zona morta declarada pelo aparelho; 0 no DualSense, 500 no Pro) e
     `fuzz` viajam junto porque quem for tratá-los depois precisa do número do
     APARELHO, não de uma tabela de "controles conhecidos" — que é a versão que
-    só funciona nesta bancada. **Nenhum dos dois é aplicado hoje**, e isso é
+    só funciona nesta máquina de teste. **Nenhum dos dois é aplicado hoje**, e isso é
     escolha declarada: aplicar zona morta é decisão de produto, não de leitura.
     """
 
@@ -206,7 +206,7 @@ def _is_virtual_evdev(event_path: str) -> bool:
     BLUEZ-UHID-01 (2026-07-19): a subárvore `/devices/virtual/misc/uhid/` deixou
     de implicar "nosso vpad" — com BlueZ ≥5.73 (UserspaceHID default) o
     bluetoothd cria os HIDs dos controles BT FÍSICOS via /dev/uhid, no mesmo
-    lugar. Nela, quem decide é a IDENTIDADE do vpad: uniq com o prefixo do MAC
+    lugar. Nesse lugar, quem decide é a IDENTIDADE do vpad: uniq com o prefixo do MAC
     forjado 02:fe. Atributos ilegíveis → True (na dúvida, o risco maior é o
     feedback loop de auto-adoção).
 
@@ -228,7 +228,7 @@ def _is_virtual_evdev(event_path: str) -> bool:
     dois DualSense de rádio viram "virtual" e somem do daemon — a regressão
     BLUEZ-UHID-01 de volta). A linha fica de propósito, e por uma razão que não
     é hid_playstation: sem o driver DKMS carregado, o vpad cai no `hid-generic`,
-    que preenche `phys` — e aí ela volta a valer. Ela é rede de outro cenário,
+    que preenche `phys` — e aí a regra volta a valer. É rede de outro cenário,
     não a segunda perna deste.
 
     **O que isto custa, e é do usuário decidir:** a redundância que o texto prometia
@@ -273,7 +273,7 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
     ficar fora, senão o mesmo dedo move o cursor duas vezes (o "engasgo" medido
     em 26/06 em `assets/76-dualsense-touchpad-libinput-ignore.rules`).
 
-    Medido no nó vivo dela em 09/08/2026 (o touchpad do DualSense por USB): a
+    Medido no nó vivo do ensaio em 09/08/2026 (o touchpad do DualSense por USB): a
     propriedade ``LIBINPUT_IGNORE_DEVICE`` vale ``1``. Desde 08/10/2026 a
     pergunta vai à `libudev` (`core/banco_do_udev.py`), e não ao arquivo interno
     do udev, cujo formato o systemd não promete.
@@ -282,7 +282,7 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
     caminho) devolve **False**, e isso não é um chute: sem base do udev nenhuma
     regra foi aplicada ao nó, então o libinput o está enxergando — "o sistema é
     o dono" é a resposta FISICAMENTE correta, e é também a conservadora, porque
-    o pior caso dela é o hefesto não mover o cursor, nunca movê-lo em dobro.
+    o pior caso dessa resposta é o hefesto não mover o cursor, nunca movê-lo em dobro.
     """
     if event_path is None:
         return False
@@ -870,14 +870,14 @@ def discover_gamepads(
     `ESPECIE_EXTERNAL`, o nó que o sysfs diz ser de DualSense
     (`_no_de_dualsense_no_sysfs`) sai da volta ANTES de abrir, esteja ele
     aberto ou fechado (O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01,
-    25/09/2026). Medido na bancada com os quatro controles: o inventário
+    25/09/2026). Medido no ensaio com os quatro controles: o inventário
     dos externos abria pelo broker o nó de gamepad de cada DualSense a cada
     1,3 s (o tique de 2 s e a janela, a cada 4 s), só para ler a identidade e
     descartar — duas linhas por nó, uma em cada diário. Na dúvida (sysfs
     ilegível) o nó é aberto e descartado pela classificação, como antes. Quem
     quer o DualSense não passa espécie e continua abrindo o nó.
 
-    **O que ela NÃO faz: adotar ninguém.** Devolver um externo aqui é dizer que
+    **O que a função NÃO faz: adotar ninguém.** Devolver um externo aqui é dizer que
     ele existe e qual a forma dos eixos dele — não é dar-lhe vpad nem lugar na
     partida. O veto de 19/07 (*"externo não ganha controle virtual"*) segue de
     pé; quem o derruba é a `E3`, e é do usuário.
@@ -1262,7 +1262,7 @@ class _EvdevReconnectLoop:
         HANG-01: NÃO fecha mais o fd de fora (era o `dev.close()` cross-thread
         do HEAD) — zera o path em cache (próximo ciclo re-localiza o node
         certo) e só SINALIZA (`_reopen_flag` + wake do self-pipe); é a própria
-        thread do `_run` que larga o device, no `finally` dela. Best-effort.
+        thread do `_run` que larga o device, no `finally` do `_run`. Best-effort.
         """
         logger.info(f"{self._log_prefix()}_reopen_requested", reason=reason)
         self._device_path = None
@@ -1591,7 +1591,7 @@ class EvdevReader(_EvdevReconnectLoop):
         `EVIOCGABS` lê o estado que o `input_dev` guarda, não a nossa fila de
         eventos. A distinção é o ensaio inteiro: quando a fila para de chegar —
         nó obsoleto que não deu `ENODEV`, ou grab tomado por outro processo — o
-        `absinfo` **continua andando**. Medido na bancada em 17/08, com o daemon
+        `absinfo` **continua andando**. Medido no ensaio em 17/08, com o daemon
         segurando o grab do `event25`: um segundo leitor sem grab recebe zero
         eventos e mesmo assim vê o `absinfo` acompanhar o kernel.
 
@@ -1825,7 +1825,7 @@ def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
     `uniq` legível cai em "path:<caminho>", que nunca colide com MAC.
 
     **Decide tudo pelo sysfs e não abre nó nenhum**
-    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Até aqui ela
+    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Até aqui a função
     abria cada nó auxiliar de cada controle — pelo broker, porque o do físico
     nasce fechado — só para ler os quatro campos que o sysfs já publica. No
     diário de 26/09, com um controle fora da mesa, o leitor dele repetia esta
@@ -1922,9 +1922,9 @@ class TouchState:
 
     **MULTITOQUE-01 (18/09/2026) — `pontos` é a verdade, `x`/`y` é o resumo.**
     O usuário perguntou por que o desenho mostra UM dedo num touchpad que faz
-    rolagem de dois e pinça: *"NA INTERFACE NA ABA CONTROLES SÓ MOSTRA UM
-    TOQUE NO DESENHO DO SVG APESAR DO TOUCH SER MULTITOQUE"*.
-    <!-- noqa-acento: citação literal -->
+    rolagem de dois e pinça: a aba Controles mostrava um toque só no desenho
+    do SVG, embora o touchpad seja multitoque e o kernel entregue os dois
+    dedos.
     Medido no mesmo dia com os dedos do usuário no controle azul: o nó do kernel
     declara `ABS_MT_SLOT 0..1` — DOIS dedos, e o libinput emitiu 8 pinças e
     922 eventos de rolagem, todos com `2`. O terceiro dedo não existe para o
@@ -2269,7 +2269,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
 
     ONDA-CONTROLES-04 (29/08/2026): o acelerômetro passou a ser LIDO. Esta
     docstring dizia que `ABS_X/Y/Z` "não entram aqui", e era descrição do que
-    faltava, não do aparelho — o node já os entregava. Medido nesta bancada,
+    faltava, não do aparelho — o node já os entregava. Medido nesta máquina de teste,
     dois DualSense no cabo, `EVIOCGABS` fora deste código: `res=8192` nos três
     eixos, e o módulo do vetor em repouso deu 0,996 g e 0,992 g.
     """

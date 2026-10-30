@@ -15,14 +15,14 @@ já existe.
 O DEFEITO QUE ISTO CURA (SENTINELA-WRAPPER-01, medido ao vivo em 16/08 02h30)
 -----------------------------------------------------------------------------
 A Steam guarda **uma** linha de `LaunchOptions` por jogo. Qualquer coisa
-escrita nela — uma variável de vídeo, um mod, a própria pessoa — SUBSTITUI a
+escrita ali — uma variável de vídeo, um mod, a própria pessoa — SUBSTITUI a
 chamada do `hefesto-launch`, em silêncio. Sem o wrapper, o `launch_env` que o
 daemon materializa nunca é lido, e vence a lista de IGNORE da própria Steam —
 que contém ``0x054c/0x0df2``, o PID do NOSSO vpad. O jogo é instruído a ignorar
 o controle que nós criamos para ele.
 
-O sintoma, nas palavras do usuário: *"parou de ser reconhecido no jogo, mas o perfil
-segue ativo no controle com tudo funcionando só não sendo reconhecido"*.
+O sintoma: o jogo deixa de reconhecer o controle, mas o perfil
+segue ativo no controle, com tudo funcionando.
 Funciona no cabo, quebra no rádio, e SÓ o jogo não enxerga.
 
 A cura (`integrations/sentinela_do_wrapper`) foi entregue às 04h com 19 testes
@@ -93,7 +93,7 @@ opções estavam na mesa e a escolhida é a terceira:
     (regra de janela, `MatchAny`, "só manual"), então na maior parte dos
     gestos não haveria jogo a reparar. A segunda: consertar um jogo e deixar os
     outros cinquenta e nove quebrados, sem dizer nada, é pior que não
-    consertar — ela sairia da janela achando que está tudo bem. A terceira: não
+    consertar — quem usa sairia da janela achando que está tudo bem. A terceira: não
     existe hoje um reparo cirúrgico por appid, e inventar um segundo caminho de
     escrita no vdf quebraria a idempotência que segura os 60 jogos.
 (b) **reparar a biblioteca inteira, sempre** — é o alvo certo, mas "sempre"
@@ -115,12 +115,12 @@ A STEAM ABERTA, que é a restrição dura
 Reparar com a Steam viva é jogar fora o reparo. `reparar_ou_adiar` já sabe
 adiar (``adiado_steam_aberta`` / ``adiado_jogo_aberto``). A pergunta que sobra
 é o que fazer com o adiamento, e a resposta tem de valer para o pedido:
-**ela não pode precisar lembrar de nada.** Então são as duas coisas:
+**quem usa não pode precisar lembrar de nada.** Então são as duas coisas:
 
 1. **avisa na hora**, uma vez (a frase da sentinela já nomeia o jogo e já diz
    o que vai acontecer: *"Vou repor assim que o jogo e a Steam fecharem"*);
 2. **arma uma vigia** — um tique de :data:`INTERVALO_DA_VIGIA_S` segundos que
-   refaz a passada até ela deixar de ser adiada. Quando ela fecha a Steam, o
+   refaz a passada até a passada deixar de ser adiada. Quando a Steam fecha, o
    reparo simplesmente ACONTECE.
 
 A vigia guarda a intenção **em memória, nunca em disco** — e isso é a decisão
@@ -133,9 +133,9 @@ A vigia é barata de propósito. O tique NÃO relê o vdf: ele só pergunta se a
 Steam ainda está viva (:func:`passada` com ``completa=False``) e volta a
 dormir. A leitura completa só acontece quando há chance real de escrever.
 
-O QUE ELA VÊ
+O QUE QUEM USA VÊ
 ------------
-Silêncio total é ruim — ela não saberia que foi consertada. Diálogo a cada
+Silêncio total é ruim — quem usa não saberia que foi consertada. Diálogo a cada
 Salvar é pior — vira ruído no gesto mais comum da janela, e o pedido
 começa justamente recusando mais um clique. O meio é **uma linha no rodapé, e
 só quando há notícia**:
@@ -231,7 +231,7 @@ def passada(*, completa: bool = True) -> ResultadoDaCarona:
             f"{plural} da Steam: {slo.lista_de_jogos(appids)}."
         )
         frase = (
-            f"{curta} Sem ela, no "
+            f"{curta} Sem a opção, no "
             "Bluetooth o jogo tende a não enxergar controle nenhum. As opções "
             "que você já tinha na linha foram preservadas."
         )

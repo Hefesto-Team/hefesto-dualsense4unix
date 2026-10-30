@@ -41,7 +41,7 @@ Regras de ouro (invariante "duplicado > zero controles"):
     físico deixado escondido por uma vida anterior do broker.
   - Um nó NUNCA é "esquecido" com o fs em 0600: só sai do rastreio DEPOIS do
     restore de fs verificado (lição 2 da auditoria que parkou a 1ª versão).
-  - A lease é do APARELHO, e não do nome (29/09/2026): ela guarda o pai HID
+  - A lease é do APARELHO, e não do nome (29/09/2026): a lease guarda o pai HID
     do nó no pedido, e o nome cujo pai mudou ou sumiu sai do rastreio sem
     tocar no fs (`_podar_o_que_saiu`). O `0600` do aparelho que saiu não
     existe mais, e o aparelho que herdou o nome não é do usuário.
@@ -148,7 +148,7 @@ def _hidraw_devinfo_identity_ok(vendor: int, product: int) -> bool:
 
     A família que `validate_physical_node` aceita — nunca device alheio. O
     devinfo não separa o Edge físico do nosso vpad (os dois são 0003:054c:0df2
-    pelo cabo); quem separa é a topologia, e ela já foi julgada no
+    pelo cabo); quem separa é a topologia, e já foi julgada no
     `validate_physical_node` antes do open. O pior caso de uma corrida aqui é
     servir o vpad, que já é `0660` da sessão — nenhum acesso novo.
     vendor/product vêm do kernel como __s16 assinado; a máscara 0xFFFF
@@ -606,7 +606,7 @@ def _mesmo_no(a: os.stat_result, b: os.stat_result) -> bool:
 
 
 def _syscall(numero: int | None, *argumentos: int) -> int:
-    """Uma syscall sem embrulho no Python; ``numero`` ``None`` é a arquitetura sem ela."""
+    """Uma syscall sem embrulho no Python; ``numero`` ``None`` é a arquitetura sem essa syscall."""
     if numero is None:
         raise OSError(errno.ENOSYS, os.strerror(errno.ENOSYS))
     import ctypes
@@ -1418,7 +1418,7 @@ class PadUsbOps:
         """O gadget com UMA função ``hid``, sem OUT, preso ao ``udc``, vestindo ``par``.
 
         ``par`` já foi conferido contra :data:`PAD_USB_VESTIDOS` (um par fora
-        dela levanta ``KeyError`` antes de nascer qualquer grupo).
+        da lista levanta ``KeyError`` antes de nascer qualquer grupo).
         """
         vendor, product = par
         produto_usb = PAD_USB_VESTIDOS[par]
@@ -1615,7 +1615,7 @@ def _pergunta_ao_logind(loginctl: str, *args: str) -> str | None:
 def uid_da_sessao_ativa(seat: str = SEAT_PADRAO) -> int | None:
     """O uid de quem está na frente do seat, perguntado ao logind (``loginctl``).
 
-    A ``ActiveSession`` do seat e o ``User`` dela, as duas propriedades que o
+    A ``ActiveSession`` do seat e o ``User`` dessa sessão, as duas propriedades que o
     ``org.freedesktop.login1`` publica. ``None`` = ninguém na frente, logind
     ausente ou resposta que não é um uid. Root não é «quem está na frente»: o
     broker nunca atende uid 0 (lição 6 da auditoria).
@@ -1902,7 +1902,7 @@ class BrokerState:
 
 
     def _pai_hid(self, base: str) -> str | None:
-        """A pergunta do `FsAclOps`; ops sem ela (dublê antigo) não sabe."""
+        """A pergunta do `FsAclOps`; ops sem essa pergunta (dublê antigo) não sabe."""
         pergunta = getattr(self._ops, "pai_hid_do_no", None)
         if not callable(pergunta):
             return None
@@ -2532,7 +2532,7 @@ class BrokerState:
         Steam exatamente no instante em que o daemon morreu.
 
         O-BROKER-ESQUECE-O-CONTROLE-QUE-SAIU-01: a poda roda ANTES de tudo.
-        Sem ela, o `_repouso` e o `_aplicar_entradas` pediriam ao fs por um
+        Sem a poda, o `_repouso` e o `_aplicar_entradas` pediriam ao fs por um
         nome que já é de outro aparelho: o pad, que o `_pin` recusa, ou um
         físico que ninguém pediu para esconder.
         """
@@ -2706,7 +2706,7 @@ class BrokerState:
 
         A Steam aberta enumerou o físico com o nó fechado e não o reabre nem com
         a ACL nova nem com evento do udev; o nó que NASCE de novo volta à lista
-        dela, e quem o recria é o ``unbind``/``bind`` (rodadas A8 a A11 de
+        do broker, e quem o recria é o ``unbind``/``bind`` (rodadas A8 a A11 de
         23/10/2026). Só na transição da entrega, nunca na varredura. Falha é
         log, e a entrega segue: o nó com a ACL vale mais que o nó fechado.
         """

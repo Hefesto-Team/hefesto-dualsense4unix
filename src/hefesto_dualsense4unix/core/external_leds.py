@@ -170,7 +170,7 @@ def read_player_pattern(
 
        **NOTA DATADA — 07/08/2026 21h04: esta função NÃO enxerga lâmpada
        nenhuma, e a redação anterior ("o padrão ACESO na barra") é o que
-       enganou a casa.** O que ela lê é o ``brightness`` da classe LED do
+       enganou a casa.** O que a função lê é o ``brightness`` da classe LED do
        kernel, que guarda o valor **PEDIDO** — o kernel o grava ANTES de tentar
        o hardware e **nunca o reverte** quando a escrita falha.
 
@@ -184,7 +184,7 @@ def read_player_pattern(
 
        - **o leitor é cego à falha de escrita.** Escrita que morreu no rádio é
          invisível aqui **para sempre**, e não há outro caminho na árvore que
-         saiba dela (83 falhas no kernel contra ZERO avisos do daemon na mesma
+         saiba da falha (83 falhas no kernel contra ZERO avisos do daemon na mesma
          janela);
        - **o ``-1`` NÃO distingue firmware de terceiro.** Ele só separa
          "padrão não-canônico neste ``sysfs``" de "padrão canônico" — e quem

@@ -34,7 +34,7 @@ e que nunca teve ensaio:
    estado de LED** (o ``0x22`` nunca foi lido por este projeto, o ``0xf6`` tem
    546 bytes e não é nomeado em documento nenhum). Além disso, ``GET_FEATURE``
    por Bluetooth exige retry contra o ``REPORT_REQ_TIMEOUT`` de 3 s do BlueZ.
-   Isso é **ensaio de bancada**, não detector de regime;
+   Isso é **ensaio no aparelho**, não detector de regime;
 2. **Comparar o pedido com o que o aparelho reporta.** O report de INPUT do
    DualSense não carrega a cor da barra. Não há o que comparar;
 3. **Ver quem SEGURA o nó** — ``/proc/<pid>/fd``. Foi o que a madrugada
@@ -49,9 +49,9 @@ isso o veredito daqui **nunca** licencia repintura em regime: ele licencia
 UMA reafirmação no fim da sequência (``GATILHO-DA-COR-01``) e, na aba Status,
 a frase honesta de que a cor mostrada é a PEDIDA.
 
-**NOTA DATADA — 23/09/2026, e a regra acima mudou por decisão de produto.** *"Hefesto
-manda e controla sempre, steam sequestrou hefesto corrigiu ao no segundo após"*
-(STEAM-NO-FISICO-01). O SENTINELA continua licenciando uma reafirmação só; a
+**NOTA DATADA — 23/09/2026, e a regra acima mudou por decisão de produto.** O Hefesto
+manda sempre: se a Steam sequestra o controle, o Hefesto corrige no segundo
+seguinte (STEAM-NO-FISICO-01). O SENTINELA continua licenciando uma reafirmação só; a
 :class:`VigiaDoSequestro`, no fim deste módulo, licencia a reescrita da barra e
 do número a cada segundo ENQUANTO um processo alheio segurar o nó — e só a barra
 e o número, nunca vibração, gatilho ou áudio (o que zerou motor alheio no
@@ -59,12 +59,12 @@ RUMBLE-SEM-DONO-01 era um report que levava os motores).
 
 O QUE ELE NÃO VÊ, dito antes que alguém descubra do jeito caro
 ==============================================================
-- **Só reconhece a Steam.** A varredura é restrita aos PIDs dela (o ``comm``
+- **Só reconhece a Steam.** A varredura é restrita aos PIDs da Steam (o ``comm``
   e a cmdline de :func:`pids_da_steam`). Um segundo escritor cru — um jogo
   fora do Steam, outro daemon de controle — passa despercebido. Varrer
   ``/proc/*/fd`` inteiro seria caro e indiscreto, e a Steam é o escritor que
-  a bancada mediu;
-- **Não sabe QUANDO a Steam escreveu**, só que ela pode. Daí a rate-limit não vir
+  o ensaio mediu;
+- **Não sabe QUANDO a Steam escreveu**, só que pode. Daí a rate-limit não vir
   daqui: quem decide a frequência é o gatilho;
 - **Degrada em silêncio.** Sem ``/proc``, sem permissão, orçamento estourado —
   devolve o que juntou. Ausência de veredito é "não sondado", **nunca**
@@ -136,7 +136,7 @@ def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[i
     DAEMON-ACORDADO-01/E2 (06/09/2026). A PERF-PROC-SCAN-01 já tinha trocado um
     ``pgrep -f`` por varredura nativa em ``integrations/steam_launch_options``
     (12/08/2026), medindo este mesmo defeito e escrevendo esta mesma conta —
-    **e esta função era a cópia que ficou de fora daquela troca.** Por isso ela
+    **e esta função era a cópia que ficou de fora daquela troca.** Por isso a função
     não ganha varredura própria: importa :func:`cmdline_de_pid` de lá. Duas
     varreduras de ``/proc`` no mesmo daemon seriam duas verdades sobre o mesmo
     ``/proc``, que é a família de defeito que a casa acabou de pagar.
@@ -386,8 +386,8 @@ class Veredito:
         ESCRITOR-CRU-03 (19/09/2026) — a diferença entre LEMBRAR e MEDIR.
 
         `segurado` acima responde sobre a FOTO, e a foto é tirada no tique de
-        30 s do `reconnect_loop`. Entre dois tiques ela é a única coisa que a
-        aba Status tem — e ela conta o passado no presente. Medido em 19/09: a
+        30 s do `reconnect_loop`. Entre dois tiques a foto é a única coisa que a
+        aba Status tem — e conta o passado no presente. Medido em 19/09: a
         Steam levou SIGTERM, `pgrep` devolveu zero, e sete segundos depois o
         `daemon.state_full` ainda publicava ``lightbar_disputada: True``. O
         aviso na tela do usuário nomeia um processo que não existe mais.
@@ -395,7 +395,7 @@ class Veredito:
         E há um caminho em que a foto **nunca** é corrigida: o
         `vigiar_escritor_cru` é no-op TOTAL em Modo Nativo (nem sonda) e
         desiste quando nenhum nó está mapeado. Nesses estados ninguém zera o
-        que a última foto disse — ela vale para sempre.
+        que a última foto disse — vale para sempre.
 
         A cura não é sondar mais: um `pgrep` por segundo é justamente o preço
         que o `_lightbar_disputada` se recusa a pagar. É conferir o que a foto

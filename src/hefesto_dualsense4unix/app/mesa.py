@@ -5,7 +5,7 @@ função canônica que já existia para "quantos controles" (`ContagemDeControle
 e `texto_de_contagem`, nascidas na CONTAGEM-E-COOP-01 de 29/07) morava
 *dentro do mixin da aba Status* (`app/actions/status_actions.py`). Nove abas
 precisam da resposta; só uma é dona do arquivo. É a mesma doença que a F3 já
-tinha causado noutro fato — e essa já custou perda de dado dela em 23/08.
+tinha causado noutro fato — e essa já custou perda de dado do usuário em 23/08.
 
 Este módulo não importa GTK nem IPC — é estado puro, migrado sem mudar
 comportamento (mesmo corpo, mesmos testes). O molde é

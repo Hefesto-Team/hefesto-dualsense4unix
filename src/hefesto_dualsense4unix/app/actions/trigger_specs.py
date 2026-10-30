@@ -220,7 +220,7 @@ def get_spec(name: str) -> TriggerPresetSpec | None:
 
 
 def na_lista_de_onze(name: str, params: list[int]) -> tuple[str, list[int]]:
-    """O gatilho de um perfil como a tela o mostra: a chave da lista de onze e os ajustes dela.
+    """O gatilho de um perfil como a tela o mostra: a chave da lista de onze e os ajustes.
 
     Perfil antigo abre com o acionamento certo selecionado: `Rigid` aparece como Resistência,
     `AutoGun` como Metralhadora, `PulseA` como Arco. Chave que já é da lista volta como veio.

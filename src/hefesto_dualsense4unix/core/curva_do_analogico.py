@@ -77,7 +77,7 @@ def recusar(trocar: object, mao: object) -> str:
 
 
 def escritos(secao: object) -> dict[str, Any]:
-    """Só o que a seção DIZ (quando ela sabe distinguir o escrito do default)."""
+    """Só o que a seção DIZ (quando a seção sabe distinguir o escrito do default)."""
     if secao is None:
         return {}
     dito = getattr(secao, "model_fields_set", None)

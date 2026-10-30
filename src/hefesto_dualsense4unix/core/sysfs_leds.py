@@ -15,7 +15,7 @@ BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01 (lightbar-bt). FEAT-DSX-LIGHTBAR-SYSFS
 Mapeamento controle→nó: a ``key`` estável do backend (``serial`` == MAC, ou
 ``path``) é casada com o ``uniq`` (MAC) do input device do gamepad, que é o pai
 dos nós LED no sysfs. A escrita só é considerada "disponível" quando o atributo é
-GRAVÁVEL pelo usuário do daemon (regra udev `77-dualsense-leds.rules`); sem ela, o
+GRAVÁVEL pelo usuário do daemon (regra udev `77-dualsense-leds.rules`); sem a regra, o
 backend cai no caminho pydualsense (sem regressão).
 """
 from __future__ import annotations

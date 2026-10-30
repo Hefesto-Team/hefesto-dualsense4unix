@@ -291,7 +291,7 @@ def _call_checked_detalhado(
     a forma de hoje tem chamadores vivos em arquivos que outras frentes estão editando, e uma
     3-tupla desempacotada num ``ok, motivo = …`` levanta ``ValueError`` em
     tempo de execução, não em tempo de revisão. Aditivo: ninguém quebra, e quem
-    precisa da verdade inteira pede por ela.
+    precisa da verdade inteira pede pela verdade.
 
     O que se perdia aqui era LITERAL: a linha do RPC era
     ``_run_call(method, params, timeout=timeout)`` **sem atribuição** — o corpo
@@ -369,13 +369,13 @@ def trigger_set_detalhado(
     :func:`destinos_da_aplicacao` para lê-las sem repetir a regra.
 
     Por que a existência desta função é uma dívida paga, e não um recurso novo:
-    medido na bancada viva em 23/08, com a mesa VAZIA, o daemon respondeu
+    medido no ensaio vivo em 23/08, com a mesa VAZIA, o daemon respondeu
     ``{"status": "ok", "aplicado_em": [], "guardado_em": []}`` — ZERO destino,
     nenhum byte no fio, nada guardado — e a aba Gatilhos disse *"SimpleRigid
     aplicado"*, porque a ponte entregava ``(True, None)`` e a janela
-    re-DEDUZIA o destino do próprio estado dela. A heurística da janela cobre
+    re-DEDUZIA o destino do próprio estado da janela. A heurística da janela cobre
     duas das três razões que o daemon conhece; a rota clássica de mesa vazia
-    não é uma delas.
+    não é uma dessas.
 
     ``motivo`` junta as DUAS formas de o daemon dizer não: o erro JSON-RPC de
     parâmetro inválido (Fim <= Início, HARM-19) e a frase no corpo de uma
@@ -643,7 +643,7 @@ def rumble_policy_custom(mult: float) -> bool:
     """Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01).
 
     ``mult`` deve ser float em ``[0.0, RUMBLE_CUSTOM_MULT_MAX]`` — a faixa mora
-    em ``profiles.schema`` e o handler do daemon recusa fora dela (HARM-19).
+    em ``profiles.schema`` e o handler do daemon recusa fora da faixa (HARM-19).
     Este texto dizia ``[0.0, 1.0]`` à mão e ficou mentindo de 11/08/2026, quando
     o teto voltou a 2.0 por decisão de produto: acima de 1.0 o multiplicador
     AMPLIFICA o que o jogo pediu.
@@ -749,7 +749,7 @@ def machine_declare(maquina: dict[str, Any]) -> tuple[bool, str | None]:
 
     **Não diz o que foi DESCARTADO** — para isso existe
     :func:`machine_declare_detalhado`, e este invólucro estreita o resultado
-    dela para a dupla de sempre.
+    da função para a dupla de sempre.
     """
     ok, motivo, _descartados = machine_declare_detalhado(maquina)
     return ok, motivo
@@ -777,7 +777,7 @@ def machine_declare_detalhado(
     Duas funções em vez de trocar o tipo de retorno da :func:`machine_declare`:
     a ``machine_declare`` está no ``__all__`` e a dupla ``(ok, motivo)`` é o
     contrato de quem já a chama. Aditivo — ninguém quebra, e quem precisa da
-    verdade inteira pede por ela.
+    verdade inteira pede pela verdade.
 
     ``_safe_call`` e não ``_call_checked`` pela razão de sempre nesta fronteira:
     a recusa vem no CORPO, não como ``CODE_INVALID_PARAMS`` — ver
@@ -848,7 +848,7 @@ def destinos_da_aplicacao(resposta: Any) -> tuple[list[str], list[str]]:
     * ``guardado_em`` — os MACs em que a intenção ficou GUARDADA sem sair
       (alvo desconectado, alvo sem MAC estável, Modo Nativo com output mutado).
 
-    **As duas vazias significam que nada aconteceu**, e é o caso que a bancada
+    **As duas vazias significam que nada aconteceu**, e é o caso que o ensaio
     mediu em 23/08 com a mesa vazia — aquele em que a tela dizia "aplicado".
     Resposta ausente ou sem os campos volta como duas listas vazias: quem não
     respondeu não aplicou.
@@ -888,7 +888,7 @@ def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
     ``muted=True`` muta, ``muted=False`` DESMUTA e ``muted=None`` devolve a
     posse do registrador ao `hid-playstation` (o botão físico do controle volta
     a mandar). Os três são pedidos EXPLÍCITOS e diferentes: ``False`` não é "não
-    mexer" — é a ordem "desmuta", e enquanto ela vigorar o botão físico deixa de
+    mexer" — é a ordem "desmuta", e enquanto a ordem vigorar o botão físico deixa de
     valer. Confundir os dois foi o defeito dos dois escritores do byte de mute
     (`3d9bb7e`), então o parâmetro não tem default: quem chama declara.
 
@@ -897,7 +897,7 @@ def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
     perfil da placa preso em ``input:iec958-stereo``, que capta: o «sem sinal» de
     25/07 era o mudo do firmware) são do WirePlumber, não do controle, e se curam pelo
     ``scripts/doctor.sh --fix``. Nenhum ``mic_set`` do mundo as alcança — se o
-    medidor continuar parado depois de desmutar aqui, é uma delas.
+    medidor continuar parado depois de desmutar aqui, é uma dessas.
 
     PONTO EXATO DE FIAÇÃO (deixado pronto, não fiado — a GUI está sendo mexida
     por outra frente): o botão de microfone da aba Status, ao lado do medidor
@@ -906,7 +906,7 @@ def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
     ``daemon.state_full`` e pintar o selo a partir de ``audio.mic_mudo``
     (leitura do firmware) + ``audio.mic_mudo_desejado`` (quem manda) — jamais
     guardar o valor mandado como se fosse leitura, que é justamente o hábito que
-    fez a tela parecer mentirosa quando ela nunca mentiu.
+    fez a tela parecer mentirosa quando nunca mentiu.
 
     Retorna True se o daemon confirmou; False se offline ou sem controle.
     **Os dois casos voltam False** — quem precisa separá-los chama
@@ -951,12 +951,12 @@ def mic_canal_set_detalhado(
     ``firmware_motivo``, ``ativo`` (a fonte que ficou valendo) e ``motivo`` —
     a junção das frases que faltaram. ``None`` = daemon não respondeu.
 
-    **Por que as duas metades viajam separadas.** Elas falham por razões
+    **Por que as duas metades viajam separadas.** As metades falham por razões
     diferentes e em transportes diferentes: no rádio o DualSense não publica
     fonte de captura sem a ponte de microfone de pé (`mapa-controles.csv`,
     `audio.microfone.mudo` do dualsense: cabo=sim, rádio=parcial), e em Modo
     Nativo o hidraw é do jogo e o mudo do firmware fica represado (medido na
-    bancada em 04/09: o `mic.set` respondia ``ok`` com o aparelho parado).
+    ensaio de 04/09: o `mic.set` respondia ``ok`` com o aparelho parado).
     Um ``False`` só diria "não deu"; a pessoa precisa saber qual metade.
     """
     payload: dict[str, Any] = {"ligado": bool(ligado)}
@@ -1029,22 +1029,22 @@ def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
     ===============  ====================================================
 
     **Por que ele é universal.** O que existe nos dois transportes é uma FONTE
-    de captura no sistema, e é nela que este pedido mexe primeiro. Por isso o
-    mesmo controle deslizante vale nos dois transportes sem que ela precise
+    de captura no sistema, e é nessa fonte que este pedido mexe primeiro. Por isso o
+    mesmo controle deslizante vale nos dois transportes sem que o usuário precise
     saber qual está valendo, que era exatamente o pedido.
 
     **FATO SUBSTITUÍDO EM 09/09/2026 (MIC-VOLUME-02).** Esta linha dizia que *"o
     DualSense não expõe registrador de ganho de microfone — nem no cabo nem no
     rádio"*. **Expõe**: é o `common[6]`, nomeado pelo `hid-playstation`
-    (`mic_volume`, `0x0 - 0x40`), e a bancada mediu a captura mudando com
+    (`mic_volume`, `0x0 - 0x40`), e o ensaio mediu a captura mudando com
     ele no cabo. O daemon passou a escrevê-lo no mesmo pedido, por `uniq`, logo
     depois da fonte — quem chama daqui continua não escolhendo caminho, e ganhou
     o segundo degrau de graça.
 
-    **A ressalva honesta, e ela é do rádio.** Por Bluetooth o DualSense não
+    **A ressalva honesta, e é do rádio.** Por Bluetooth o DualSense não
     expõe placa de áudio (medido em 16/08: `pactl list cards` traz só as duas
     placas da máquina). A fonte de captura no rádio só existe com a ponte de
-    `integrations/dualsense_bt_audio.py` de pé — e em 16/08 ela ainda **não é
+    `integrations/dualsense_bt_audio.py` de pé — e em 16/08 a ponte ainda **não é
     segura** (ver o estudo `2026-08-16-O-PS-PRESO-*`). Sem fonte, o daemon
     responde `sem_fonte` e o controle deslizante fica insensível com a dica
     dizendo por quê. Um controle cinza não promete nada; um controle que aceita

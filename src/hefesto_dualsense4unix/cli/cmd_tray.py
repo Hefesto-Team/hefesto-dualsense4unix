@@ -68,7 +68,7 @@ def _estado() -> dict[str, Any] | None:
 
 
 def _definir_o_modo(ligado: bool) -> bool:
-    """O interruptor da aba Jogar, pelo mesmo plano de IPC que ela despacha."""
+    """O interruptor da aba Jogar, pelo mesmo plano de IPC que a aba despacha."""
     from hefesto_dualsense4unix.app.actions.jogar.painel import plano_do_modo
     from hefesto_dualsense4unix.app.actions.mode_transition import (
         MODE_GAMEPAD,

@@ -11,17 +11,17 @@ diagnosticou o vazamento em 25/08 e fechou a porta (o lar de mentira de
 sessão, LAR-DE-SESSAO-01); ``scripts/check_faixa_sintetica.py`` nasceu para
 ACUSAR. Nenhum dos dois LIMPA — e o script diz por quê, com todas as letras:
 *"a decisão sobre o que já está no disco é de quem é dono da máquina"*. A
-decisão veio em 18/09/2026, dela: *"corrige essa paridade sobrescrevendo a
-info errada"*.
+decisão veio em 18/09/2026: a paridade se corrige sobrescrevendo a informação
+errada.
 
 **POR QUE O DONO É AQUI e não o script.** A lista das três faixas morava
 dentro de ``scripts/``, que não é pacote — o daemon não tem como importá-la, e
-quem precisasse dela do lado do produto teria de DIGITAR os seis dígitos de
+quem precisasse da lista do lado do produto teria de DIGITAR os seis dígitos de
 novo. Uma quarta grafia da mesma verdade é como esta casa perde um dia: a
 régua e o produto discordando sobre o que é lixo. O script agora pergunta
 aqui.
 
-**O QUE NÃO ENTRA NESTA LISTA:** endereço real que ela não usa mais. Um
+**O QUE NÃO ENTRA NESTA LISTA:** endereço real que o usuário não usa mais. Um
 DualSense que dormiu seis meses continua tendo lugar na fila — é isso que faz
 o Hefesto lembrar dele. Aqui só entram faixas que esta casa usa como
 fixture ou forja: as duas de teste e a do vpad forjado. Só as de endereço

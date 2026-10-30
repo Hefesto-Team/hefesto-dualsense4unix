@@ -27,7 +27,7 @@ o alvo. A regra da casa aplicada literalmente: **ausência de informação se
 declara, nunca vira ação padrão silenciosa** — a mesma decisão que a
 ``alvo_fora_da_mesa`` já tinha tomado para os toasts.
 
-**A ponte com o atributo antigo, e por que ela ainda existe.** Os sete
+**A ponte com o atributo antigo, e por que ainda existe.** Os sete
 leitores migraram todos para ``alvo_de_edicao()``/``AlvoDeEdicao`` **nesta
 mesma leva** (ONDA0-Z2, 24/08/2026 — a frase *"migrá-los é de outra leva"* de
 versões anteriores desta docstring caducou: a leva foi esta). A ponte

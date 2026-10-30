@@ -2,7 +2,7 @@
 
 O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01 (28/09/2026). A máscara da casa
 zera os octetos 4 e 5 de um endereço e deixa o fabricante (1 a 3) e o último
-octeto à mostra. Até aqui ela morava em seis cópias no produto, e as seis
+octeto à mostra. Até aqui a máscara morava em seis cópias no produto, e as seis
 divergiam: três devolviam o valor cru quando não o reconheciam, uma peneirava
 os dígitos hex de qualquer texto, e a do diário conhecia três formas de
 endereço — o «Copiar» da aba Sistema levava o endereço inteiro reconstruído de

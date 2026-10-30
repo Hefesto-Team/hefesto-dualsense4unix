@@ -77,7 +77,7 @@ def _dizer_o_resultado(resultado: Resultado, verbo: str, nomes: dict[str, str]) 
     if resultado.substituidas:
         console.print(frase_das_substituidas(resultado.substituidas, nomes), markup=False)
     if resultado.permissoes_novas:
-        console.print("Ela pede:")
+        console.print("A extensão pede:")
         _mostrar_permissoes(resultado.permissoes_novas)
         console.print(f"Para ligar: [bold]hefesto-dualsense4unix mod ligar {entrada.id}[/bold]")
     elif not entrada.ligada:
@@ -136,7 +136,7 @@ def cmd_atualizar(
     mod_id: str = typer.Argument(..., help="O id da modificação."),
     ref: str | None = typer.Option(None, "--ref", help="A tag nova."),
 ) -> None:
-    """Baixa de novo; se a versão nova pede permissão nova, ela desliga até o «sim»."""
+    """Baixa de novo; se a versão nova pede permissão nova, a extensão desliga até o «sim»."""
     from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, atualizar
 
     nomes = _nomes_das_instaladas()
@@ -221,7 +221,7 @@ def cmd_ligar(
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
     if manifesto.processo is not None and shutil.which("bwrap") is None:
-        console.print("Sem o bwrap, ela roda sem caixa e pode mais do que estas permissões.")
+        console.print("Sem o bwrap, a extensão roda sem caixa e pode mais do que estas permissões.")
     if not sim and not typer.confirm("Ligar com estas permissões?", default=False):
         console.print("Não liguei.")
         raise typer.Exit(code=1)
@@ -232,14 +232,14 @@ def cmd_ligar(
     if manifesto.processo is not None:
         console.print(f"«{manifesto.nome}» ligada; o serviço abre em um segundo.")
     elif manifesto.lancador is not None:
-        console.print(f"«{manifesto.nome}» ligada; os jogos dela aparecem na aba Experimental.")
+        console.print(f"«{manifesto.nome}» ligada; os jogos aparecem na aba Experimental.")
     else:
         console.print(f"«{manifesto.nome}» ligada.")
 
 
 @app.command("desligar")
 def cmd_desligar(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
-    """Desliga; o serviço para o processo dela."""
+    """Desliga; o serviço para o processo da modificação."""
     from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, desligar
 
     try:

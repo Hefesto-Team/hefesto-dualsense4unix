@@ -225,7 +225,7 @@ def padrao() -> dict[str, str]:
     """O que cada um dos 22 botões faz DE FÁBRICA, lido dos mapas do produto.
 
     O PS é o único cujo de fábrica NÃO sai dos quatro mapas: a linha dele só
-    digita, e o de fábrica dela é :data:`TOKEN_SEM_TECLA`. O que o toque nele
+    digita, e o de fábrica da linha é :data:`TOKEN_SEM_TECLA`. O que o toque nele
     faz no computador é o ⑥ da tabela dos gestos, e não esta tabela.
 
     A ORDEM DE PRECEDÊNCIA É A DO PRODUTO, e não uma escolha deste módulo: o
@@ -238,7 +238,7 @@ def padrao() -> dict[str, str]:
     O CASO QUE TORNA ISSO VISÍVEL É O `r3`: o mouse o quer como Botão do meio e
     o teclado como "Fechar o teclado na tela", e o produto faz **os dois**. O
     comentário de `keyboard_mappings.py:36-40` já registrava a colisão e dizia
-    que ela é resolvida "por quem habilita mouse+teclado juntos". A tela mostra
+    que a colisão é resolvida "por quem habilita mouse+teclado juntos". A tela mostra
     o do mouse; a colisão continua no produto, e continua escrita lá.
     """
     fora: dict[str, str] = {}
@@ -272,7 +272,7 @@ def _dominio_do_teclado() -> frozenset[str]:
     diz "fechar o teclado na tela") e o produto faz **os dois** — é a colisão
     que `keyboard_mappings.py:46-52` registra. Digitar a lista aqui faria a
     camada de atalhos apagar o Botão do meio dele, que é regressão em botão que
-    ela usa.
+    o usuário usa.
     """
     base = padrao()
     return frozenset(
@@ -296,11 +296,11 @@ def tabela_efetiva(
         2. `key_bindings`      o que o usuário escreveu na janela ANTIGA
         3. `button_actions`    o que o usuário escolheu na tela NOVA
 
-    A CAMADA DO MEIO NASCEU EM 06/09/2026 (ONDA3-MOTOR-01) e ela cura uma perda
+    A CAMADA DO MEIO NASCEU EM 06/09/2026 (ONDA3-MOTOR-01) e cura uma perda
     silenciosa de escolha do usuário: `apply_button_actions` roda DEPOIS do
     `apply_keyboard` e reescreve o conjunto INTEIRO do teclado virtual com o que
     sai daqui. Sem esta camada, um perfil com `button_actions` preenchido
-    apagava, a cada ativação, todo atalho que ela tivesse escrito à mão — sem
+    apagava, a cada ativação, todo atalho que o usuário tivesse escrito à mão — sem
     uma palavra, e com os dois campos continuando a aparecer no arquivo.
 
     O `None` É "NÃO OPINOU" E O `{}` É "ESVAZIEI", e a diferença é a mesma do
@@ -308,13 +308,13 @@ def tabela_efetiva(
     `profiles/manager.resolve_key_bindings` aplica ao device: `None` herda
     `DEFAULT_BUTTON_BINDINGS` inteiro — que é exatamente o que o de fábrica já
     deriva, logo não há nada a fazer —, e um dict, mesmo vazio, é a lista
-    COMPLETA dela: botão do domínio que não está lá foi REMOVIDO, e vira
+    COMPLETA do perfil: botão do domínio que não está lá foi REMOVIDO, e vira
     `— Nada —`.
 
-    ELA NÃO MESCLA COM O DE FÁBRICA, e isso é medido, não escolhido:
+    A CAMADA NÃO MESCLA COM O DE FÁBRICA, e isso é medido, não escolhido:
     `resolve_key_bindings` (`profiles/manager.py:2165`) devolve só as chaves do
     dict, e é ele quem alimenta o device no `apply_keyboard`. Mesclar aqui faria
-    esta tabela discordar do device que ela mesma vai reescrever um método
+    esta tabela discordar do device que a própria camada vai reescrever um método
     depois — que é o defeito que esta camada existe para fechar.
     """
     tabela = padrao()
@@ -331,7 +331,7 @@ def botoes_calados(
     escolhas: dict[str, str] | None,
     key_bindings: dict[str, list[str]] | None = None,
 ) -> frozenset[str]:
-    """Os botões que o usuário mandou CALAR — a quinta porta, e ela existe por medida.
+    """Os botões que o usuário mandou CALAR — a quinta porta, e existe por medida.
 
     `do_mouse` NÃO DISTINGUE "não é do mouse" de "foi calado", e é dessa
     indistinção que saía o defeito medido pela frente da aba 06 em 04/09/2026:
@@ -349,7 +349,7 @@ def botoes_calados(
     PORTA PRÓPRIA, e não uma quarta posição na tupla do :func:`resolver`, pela
     mesma razão medida da :func:`acao_do_ps`: três chamadores desempacotam três
     sacolas, e devolver quatro viraria `ValueError: too many values to unpack`
-    na aba que ela abre hoje.
+    na aba que se abre hoje.
 
     `__NADA__` E SÓ ELE. Um botão do d-pad posto em "Abrir a Steam" cai em
     `SEM_ATENDENTE`, vai para a terceira sacola do `resolver()` e **continua

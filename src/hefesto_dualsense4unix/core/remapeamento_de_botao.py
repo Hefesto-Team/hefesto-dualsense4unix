@@ -43,7 +43,7 @@ _ATRIBUTO_POR_PECA: Final = "_remapeamento_de_botao_por_peca"
 
 
 class RemapeamentoRecusadoError(ValueError):
-    """A recusa, com o motivo e os botões que ela nomeia."""
+    """A recusa, com o motivo e os botões que a recusa nomeia."""
 
     def __init__(self, motivo: str, botoes: tuple[str, ...]) -> None:
         self.motivo = motivo
@@ -52,7 +52,7 @@ class RemapeamentoRecusadoError(ValueError):
 
 
 def _ordem(botao: str) -> int:
-    """A posição da linha na tela, para a recusa nomear na ordem que ela lê."""
+    """A posição da linha na tela, para a recusa nomear na ordem que a tela mostra."""
     try:
         return REMAPEAVEIS.index(botao)
     except ValueError:
@@ -114,7 +114,7 @@ def juntar(
 ) -> dict[str, str]:
     """A troca que vale para o controle: a do perfil, com a da peça por cima, botão a botão.
 
-    O botão que a peça troca vale o que ela diz; o que a peça deixa igual (``botão: botão``)
+    O botão que a peça troca vale o que a peça diz; o que a peça deixa igual (``botão: botão``)
     volta a passar intacto. Se a soma recusa (dois botões no mesmo destino, por exemplo), vale só
     a da peça: o que o usuário escolheu nunca depende do que o perfil já tinha.
     """

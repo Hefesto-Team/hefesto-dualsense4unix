@@ -184,7 +184,7 @@ def montar(secao: object, secao_da_peca: object = None) -> Ativacao | None:
 
 
 def escritos(secao: object, campos: tuple[str, ...] = CAMPOS) -> dict[str, Any]:
-    """Só o que a seção DIZ (quando ela sabe distinguir o escrito do default)."""
+    """Só o que a seção DIZ (quando a seção sabe distinguir o escrito do default)."""
     if secao is None:
         return {}
     dito = getattr(secao, "model_fields_set", None)

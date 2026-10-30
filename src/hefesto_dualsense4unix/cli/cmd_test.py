@@ -42,7 +42,7 @@ MSG_RAW_COM_DAEMON = (
     "Saídas, em ordem de preferência:\n"
     "  1. use a aba Gatilhos da janela, que passa pelo daemon;\n"
     "  2. use --mode com NOME de preset (sem --raw), que também passa;\n"
-    "  3. para bancada crua: systemctl --user stop hefesto-dualsense4unix, "
+    "  3. para ensaio cru: systemctl --user stop hefesto-dualsense4unix, "
     "rode o --raw, e religue depois."
 )
 

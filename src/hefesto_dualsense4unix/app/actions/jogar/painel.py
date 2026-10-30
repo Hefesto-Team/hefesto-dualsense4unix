@@ -1,14 +1,14 @@
 """O que a aba **Jogar** pode dizer hoje — e, com o mesmo peso, o que não pode.
 
 29/08/2026, refeito em 31/08. A aba Jogar é a que ABRE o aplicativo, e no
-desenho aprovado (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``) ela tem quatro
+desenho aprovado (``src/hefesto_dualsense4unix/interface/paginas/01-jogar.html``) a aba tem quatro
 grupos de valor: o
 **interruptor do Hefesto** com os cinco modos que ele abre, os **cartões da
 mesa** e a coluna **Atenção**. Desde 31/08 o produto responde pelos quatro — o
 que sobra em aberto está no fim deste cabeçalho, e é pouco.
 
 **A REGRA QUE ESTE ARQUIVO EXISTE PARA CUMPRIR:** um número plausível e falso é
-pior que um traço honesto, porque ela confia nele. Toda linha de tela desta aba
+pior que um traço honesto, porque quem usa confia nele. Toda linha de tela desta aba
 que não tem leitor no produto sai daqui com :data:`SEM_LEITOR` no lugar do
 valor, e o motivo junto — nunca apagada, nunca inventada.
 
@@ -17,7 +17,7 @@ O que NÃO mora aqui, de propósito
 
 * **A montagem da mesa** (um item por controle, com cor, transporte e número do
   jogador) é de ``src/hefesto_dualsense4unix/interface/mesa_viva.mesa_do_estado``, que já é
-  o dono dela para a aba Controles e para a fita. Reescrevê-la aqui criaria o
+  o dono desse estado para a aba Controles e para a fita. Reescrevê-la aqui criaria o
   segundo dono do mesmo valor — o defeito que a fita viva de 27/08 pagou.
 * **A janela e as duas pontes** são de
   :mod:`hefesto_dualsense4unix.interface.janela`, e são de todas as dez abas.
@@ -27,7 +27,7 @@ O que NÃO mora aqui, de propósito
 Os três buracos de 29/08/2026 — e o que os fechou em 31/08/2026
 ---------------------------------------------------------------
 
-Os três eram perguntas para ELA, e ela as respondeu de uma vez ao redesenhar o
+Os três eram perguntas de produto, respondidas de uma vez ao redesenhar o
 **Modo de conexão** em 31/08/2026, depois de perguntar a diferença entre o Nativo e o
 DualSense. A forma aprovada é o interruptor **HEFESTO
 Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
@@ -67,16 +67,16 @@ O QUE CONTINUA EM ABERTO, e é honesto dizer
   usar e configurar na aba navegação. Ele ativa o modo configurado lá."* Ele
   nunca foi um botão órfão: é o ``kind="desktop"`` do perfil, com chip na tela
   chamado **Navegação**, gesto no terceiro degrau do PS + R3 e uma aba inteira
-  configurando-o. **O que faltava era o fio** entre o que ela configura e o que
+  configurando-o. **O que faltava era o fio** entre o que se configura e o que
   o chip ativa, e no lugar dele havia uma flag global de sessão. A linha
   fantasma da tabela saiu, e nenhum chip ficou sem quem o atenda (a régua é
   ``tests/unit/test_a_fileira_nao_tem_linha_fantasma.py``).
 * **Navegação tem escritor e não é degrau** — ``apply_mode('desktop')``
   funciona hoje, e desde 17/09 ele CARREGA O PERFIL
-  (``Daemon.aplicar_o_arranjo_do_desktop``). O que ela não tem é degrau na
+  (``Daemon.aplicar_o_arranjo_do_desktop``). O que não tem é degrau na
   ``ESCADA`` automática: "não é degrau" e "não tem dono" são perguntas
   diferentes, e a Navegação responde sim à primeira e não à segunda.
-  O **PS + R3** para nela desde 13/09 (``hotkey.CICLO_DE_PONTES``), que é outro
+  O **PS + R3** para na Navegação desde 13/09 (``hotkey.CICLO_DE_PONTES``), que é outro
   objeto e não a ``ESCADA``.
 * **Steam Input não se fixa pela tela**: não há método de IPC que o ligue, e o
   degrau só sobrevive com a Steam fechada. **Sony DualSense** e **Xbox** se
@@ -201,7 +201,7 @@ ESCRITOR_DOS_MODOS: dict[str, str] = {
     "(`native.mode.set` off, `gamepad.emulation.set` off, "
     "`desktop.arranjo.apply`), todos com `origin='manual'`. O desligar do "
     "gamepad com origem manual é o que GRAVA o `gamepad_disabled.flag` "
-    "(`utils/session.save_gamepad_emulation`), e é por isso que a escolha dela "
+    "(`utils/session.save_gamepad_emulation`), e é por isso que a escolha de quem usa "
     "sobrevive a reiniciar o daemon e a máquina.",
     MODE_GAMEPAD: "`mode_transition.apply_mode('gamepad')` — sai do Modo Nativo "
     "e liga o gamepad virtual com `origin='manual'`. O ligar APAGA o "
@@ -260,7 +260,7 @@ class Lembranca(NamedTuple):
 
     É a metade que o daemon calado não responde. ``modo_vivo`` pergunta ao
     ``state_full``: com o daemon fora do ar ele devolve ``None``, e a tela
-    ficaria sem ter o que dizer justamente na hora em que a pergunta de produto — *"não
+    ficaria sem ter o que dizer justamente na hora em que a dúvida (o modo segue desativado?)
     sei se segue desativado"* — é mais aflita.
     """
 
@@ -378,9 +378,9 @@ def aviso_do_modo_nativo(state: dict[str, Any] | None) -> str | None:
     quando dói.
 
     **É A ÚNICA DAS SETE QUE NÃO MORA EM ``home_actions``**, e é escolha, não
-    descuido. A frase nasceu nesta leva e o dono dela é esta aba; pô-la lá
+    descuido. A frase nasceu nesta leva e o dono da frase é esta aba; pô-la lá
     criaria um segundo dono para um assunto que a janela GTK não tem mais —
-    ela saiu inteira em 06/09 (``D-0609-GTK-LEVA-INTEIRA``). O contrato é o
+    a janela saiu inteira em 06/09 (``D-0609-GTK-LEVA-INTEIRA``). O contrato é o
     mesmo das outras seis: função PURA de ``state``, ``None`` = sem aviso.
 
     A CONTAGEM É DE CONECTADOS, não do tamanho da lista: o ``state_full``
@@ -403,11 +403,11 @@ def aviso_do_modo_nativo(state: dict[str, Any] | None) -> str | None:
 def aviso_do_grab_dobrado(state: dict[str, Any] | None) -> str | None:
     """O jogo pode estar recebendo cada botão duas vezes; ``None`` quando não.
 
-    **A CONDIÇÃO NÃO SE REESCREVE:** ela é de `home_actions.aviso_de_grab`, que
+    **A CONDIÇÃO NÃO SE REESCREVE:** é de `home_actions.aviso_de_grab`, que
     a I9 já tirou do meio do montador de widgets exatamente para ser chamada de
     fora da GTK — ``is_primary and gamepad_on and grab_state == "failed"``. O
     que esta função faz é o que faltava: **ler do ``state`` os três termos** que
-    a janela antiga lia dos widgets dela (`home_actions.py` passa
+    a janela antiga lia dos widgets da janela (`home_actions.py` passa
     ``state.get("primary_grab_state")`` e o ``is_primary`` de cada cartão).
 
     ``aviso_de_grab`` devolve ``(linha, porquê)`` — a linha era o rótulo e o
@@ -456,7 +456,7 @@ def _rotulo_do_gamepad(state: dict[str, Any]) -> str:
 
 
 def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
-    """O modo em vigor foi ligado pelo PERFIL, e não por ela; ``None`` se não.
+    """O modo em vigor foi ligado pelo PERFIL, e não por quem usa; ``None`` se não.
 
     Diz o nome que a fileira da aba Jogar mostra, e não o rótulo da janela antiga
     («Conexão Nativa (Sony)», «Jogar pelo Hefesto»), que nenhuma tela de hoje tem.
@@ -497,8 +497,8 @@ def recado_do_radio(voltaram: int, esperam_o_ps: int) -> str:
     """O que o passo do rádio conseguiu, em palavras da tela. `""` = nada a dizer.
 
     **SEM NOTÍCIA, SEM FRASE** — a mesma regra do `recibo_do_reconectar` acima,
-    e pela razão dela de 09/09, na grafia dela: *"remover essa frase que
-    aparece tambem ao clciar em reconectar controles"*.  # (noqa-acento: citação literal)
+    e pela razão de 09/09: a frase também aparecia ao clicar em reconectar
+    controles, onde não havia notícia nenhuma a dar.
     """
     partes = []
     if voltaram > 0:

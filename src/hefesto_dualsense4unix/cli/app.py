@@ -185,7 +185,7 @@ def lightbar_reset(
 
     Ele existe para tornar falsificável o que sobrou de pé sobre o 0x08: dentro
     da janela de ~3,4 s pós-conexão ele travou a barra (7/7 em 03/08), e FORA
-    dela não travou (controle negativo da mesma sprint). A hipótese que as
+    da janela não travou (controle negativo da mesma sprint). A hipótese que as
     concilia — ele cura FORA da janela — se testa aqui, com o olho de quem está
     com o controle na mão.
 

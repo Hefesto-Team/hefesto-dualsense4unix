@@ -27,7 +27,7 @@ FORMA_DA_ABA = re.compile(r"[0-9a-z-]+\.html")
 
 
 def arquivo_da_aba(pid: int) -> Path:
-    """Onde a janela `pid` anota a aba à vista, para o install a reabrir nela."""
+    """Onde a janela `pid` anota a aba à vista, para o install a reabrir nessa aba."""
     return runtime_dir() / f"aba-{pid}"
 
 
@@ -53,7 +53,7 @@ def janelas_abertas() -> list[int]:
 
 
 def a_tela_de(pid: int) -> dict[str, str]:
-    """As variáveis da tela em que a janela `pid` está, para ela voltar no mesmo lugar."""
+    """As variáveis da tela em que a janela `pid` está, para a janela voltar no mesmo lugar."""
     try:
         bruto = Path(f"/proc/{pid}/environ").read_bytes()
     except OSError:
@@ -85,10 +85,10 @@ def terminar(pid: int, prazo: float) -> bool:
 
 def abrir_a_janela(tela: dict[str, str], aba: str = "", *,
                    abrir: Callable[..., Any] = fora_do_servico.abrir) -> bool:
-    """Abre a janela pelo lançador, na tela e na aba que ela ocupava, fora da unidade de quem chama.
+    """Abre a janela pelo lançador, na tela e na aba que ocupava, fora da unidade de quem chama.
 
     Com um jogo aberto, a recarga roda dentro da unidade `hefesto-troca-no-fim-do-jogo`, e um filho
-    por `Popen` morre com ela dois segundos depois. Diz se abriu."""
+    por `Popen` morre com a unidade dois segundos depois. Diz se abriu."""
     lancador = shutil.which(bandeja.LANCADOR_DO_PAINEL) or str(
         Path.home() / ".local" / "bin" / bandeja.LANCADOR_DO_PAINEL)
     if not Path(lancador).is_file():

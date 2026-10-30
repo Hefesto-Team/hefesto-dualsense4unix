@@ -1,7 +1,7 @@
 """Seção 3 da aba Configurações — o PERFIL de desempenho e a conta do rádio.
 
 TERRITÓRIO DE CONFIG-05. Quem trabalha nesta seção escreve AQUI — o título, a
-dica e todo widget dela. O montador da aba (`mixin.py`) só cria a moldura e
+dica e todo widget da seção. O montador da aba (`mixin.py`) só cria a moldura e
 chama `montar`; ele não sabe o que há dentro, e é assim que cinco seções
 crescem sem se pisarem.
 
@@ -35,14 +35,14 @@ de bateria numa escolha de privacidade feita pelas costas. A decisão é de prod
 Ele nasce LIGADO desde 17/09: a chegada do controle põe o microfone no ar
 (`daemon/subsystems/hotkey.nascer_no_ar`), que é a `D-O-MIC-LIGADO-VALE-NO-RADIO`
 (decisoes-de-produto.csv id 38) finalmente implementada. **A decisão de 24/08 não
-depende disso** — ela é sobre o perfil não ser o dono do microfone, e isso vale
-igual com o microfone nascendo ligado. A condição que ela mesma pôs, sobre o
+depende disso** — a decisão é sobre o perfil não ser o dono do microfone, e isso vale
+igual com o microfone nascendo ligado. A condição que a própria decisão pôs, sobre o
 preço que o `plano_de_radio` conta, foi: *"LIGADO SEMPRE… COM A TELA DIZENDO O PREÇO"*.
 
 **3. A tabela tem UMA linha com ponto de aplicação, e diz as outras quatro.**
 :data:`LINHAS_DO_TETO` é o dono único da lista, e :func:`alcance_de_hoje`
 DERIVA a frase de produto em vez de repeti-la. Antes eram duas coisas — uma frase
-digitada ao lado de uma tabela — e elas podiam divergir sem ninguém notar.
+digitada ao lado de uma tabela — e as duas podiam divergir sem ninguém notar.
 
 **4. Esta seção NÃO grava.** O dono da escolha é o `machine.declare`, e o
 gesto de gravar é o "Aplicar" do rodapé. O clique aqui só acumula em
@@ -54,7 +54,7 @@ gesto de gravar é o "Aplicar" do rodapé. O clique aqui só acumula em
 `core.rumble.teto_do_orcamento`, que por sua vez o deriva de
 `RUMBLE_POLICY_MULT` — o dono único do degrau. Escrever "30%" à mão nesta tela
 é o HARM-19 de novo: a faixa valeu 2.0 no schema, 1.0 no handler e 200% no
-deslizador ao mesmo tempo, e quem pagou foi ela.
+deslizador ao mesmo tempo, e quem pagou foi quem usa.
 """
 from __future__ import annotations
 
@@ -113,7 +113,7 @@ PERFIL_POR_TETO: dict[str, str] = {
 
 @dataclass(frozen=True)
 class LinhaDoTeto:
-    """Uma coisa que o perfil deveria alcançar, e se ela tem por onde."""
+    """Uma coisa que o perfil deveria alcançar, e se tem por onde."""
 
     nome: str
     vem_de: str
@@ -210,7 +210,7 @@ def orcamento_em_vigor(host: Any = None) -> str | None:
 def orcamento_na_tela(host: Any = None) -> str | None:
     """A chave que o BOTÃO desta aba mostra — o gravado, ou o que espera o Aplicar.
 
-    **Por que ela existe ao lado de `orcamento_em_vigor`, e não no lugar dela**
+    **Por que existe ao lado de `orcamento_em_vigor`, e não no lugar**
     (achado da conferência de 23/08/2026). As duas respondem perguntas
     diferentes, e cada consumidor precisa de uma:
 
@@ -219,7 +219,7 @@ def orcamento_na_tela(host: Any = None) -> str | None:
       Mostrar ali a escolha ainda não aplicada faria aquela linha afirmar um
       limite que ninguém está impondo;
     * o botão DESTA aba pergunta *"o que a pessoa escolheu?"* — e a resposta tem
-      de incluir o que ela acabou de declarar. Sem isso a tela se contradiz: o
+      de incluir o que acabou de declarar. Sem isso a tela se contradiz: o
       rodapé diz "há escolhas por aplicar" e o botão mostra o valor do disco.
 
     É o mesmo contrato que as seções irmãs já usam (`secao_mesa`,

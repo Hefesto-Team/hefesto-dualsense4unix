@@ -2,7 +2,7 @@
 
 Layout validado contra o `hid-playstation` do kernel (structs
 `dualsense_output_report_usb`/`_bt`/`_common`), NUNCA contra a pydualsense —
-o 0x31 que ela monta é MALFORMADO (off-by-one: `[1]=0x02` fixo em vez de
+o 0x31 que a pydualsense monta é MALFORMADO (off-by-one: `[1]=0x02` fixo em vez de
 `seq<<4`, `0xFF` onde o firmware espera o tag obrigatório `0x10`), e o
 firmware o descarta (era o "cor nunca funcionou por BT" e o rumble BT no-op).
 

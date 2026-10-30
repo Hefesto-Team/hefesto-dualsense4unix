@@ -1,9 +1,9 @@
 """O roteador de movimento — o giroscópio vira algo que TODO jogo já lê.
 
 MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026), primeira entrega da camada 2 da
-`ROTEADOR-DE-ENTRADA-01`. A tese é do usuário: *"universalizar todas as features do
-dualsense independente do modo escolhido (…) a máscara é só pra enganar o
-jogo"*.  <!-- noqa-acento: citação literal -->
+`ROTEADOR-DE-ENTRADA-01`. A tese: toda feature do DualSense vale em qualquer
+modo escolhido, e a máscara só serve para o jogo reconhecer o controle,
+sem tirar nada do que o aparelho faz.
 
 O QUE ESTE ARQUIVO É: a regra inteira, pura. Recebe número, devolve número.
 Sem I/O, sem thread, sem device. É o que deixa a régua exercitar a mira por
@@ -333,7 +333,7 @@ def _roteia(valor: object) -> bool:
 
 
 def _campos_escritos(secao: object) -> dict[str, object]:
-    """Os campos que a seção DIZ — só os escritos, quando ela sabe distinguir."""
+    """Os campos que a seção DIZ — só os escritos, quando a seção sabe distinguir."""
     if secao is None:
         return {}
     escritos = getattr(secao, "model_fields_set", None)
@@ -349,7 +349,7 @@ class _Secao:
 
 
 def arranjo_da_peca(secao_da_mesa: object, secao_da_peca: object) -> ArranjoDeMovimento:
-    """O arranjo de UMA peça: a seção dela campo a campo por cima da do perfil."""
+    """O arranjo de UMA peça: a seção da peça campo a campo por cima da do perfil."""
     campos = _campos_escritos(secao_da_mesa)
     campos.update(_campos_escritos(secao_da_peca))
     return montar(_Secao(campos))
@@ -374,7 +374,7 @@ def definir_por_peca(
 def definir_da_peca(
     dono: object, uniq: str, arranjo: ArranjoDeMovimento | None, *, tem_opiniao: bool = True
 ) -> None:
-    """Troca a opinião de UMA peça, e só dela — o gesto do chip, ao vivo."""
+    """Troca a opinião de UMA peça, e só dessa peça — o gesto do chip, ao vivo."""
     chave = chave_de_sensor(uniq)
     if dono is None or not chave:
         return
@@ -413,7 +413,7 @@ def parametros_da_peca(dono: object, uniq: str | None) -> ArranjoDeMovimento:
 
 
 def sincronizar_o_filtro(dono: object) -> None:
-    """Diz ao braço do REPORT quais peças estão mirando — o giro nativo sai delas."""
+    """Diz ao braço do REPORT quais peças estão mirando — o giro nativo sai dessas peças."""
     if dono is None:
         return
     mesa = getattr(dono, _ATRIBUTO_DO_ATIVO, None)
@@ -636,7 +636,7 @@ def _o_tique_do_assento(
     estado: _Repouso, giro: tuple[float, float, float], acel: tuple[float, float, float],
     agora: float,
 ) -> None:
-    """O neutro provisório espera a mão assentar, e ali vira a leitura dela."""
+    """O neutro provisório espera a mão assentar, e ali vira a leitura da peça."""
     calmo = math.sqrt(sum(float(v) * float(v) for v in giro)) < LIMIAR_DO_ASSENTO_GRAUS_S
     base = estado.gravidade_do_assento
     if not calmo or base is None or _graus_entre(acel, base) >= SAIDA_DO_PARADO_GRAUS:
@@ -658,12 +658,12 @@ def neutro_da_inclinacao(
     *,
     mesmo_parado: bool = False,
 ) -> tuple[float, float, float]:
-    """O NEUTRO desta peça: como ela estava na primeira leitura depois de um silêncio.
+    """O NEUTRO desta peça: como estava na primeira leitura depois de um silêncio.
 
     Com o `giro` (a velocidade angular do mesmo tique), a regra também sabe se a peça
     está PARADA: o giro variando menos de `VARIACAO_DO_PARADO_GRAUS_S` de pico a pico
     em cada eixo e a gravidade andando menos de `GRAVIDADE_DO_PARADO_GRAUS`, por
-    `TEMPO_DO_PARADO_S`. Parada, a inclinação dela sai do analógico
+    `TEMPO_DO_PARADO_S`. Parada, a inclinação da peça sai do analógico
     (`inclina_agora` responde falso) e o neutro da mão fica guardado: não se recentra
     na mesa, porque pegar de volta andaria sozinho. Sai do parado quando a gravidade
     anda `SAIDA_DO_PARADO_GRAUS`, e a inclinação volta na hora contra o neutro antigo.

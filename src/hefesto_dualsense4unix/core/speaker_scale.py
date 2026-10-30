@@ -1,9 +1,9 @@
-"""A régua de volume do alto-falante do DualSense — a conta, e só ela.
+"""A régua de volume do alto-falante do DualSense — a conta, e só a conta.
 
 Este módulo existe porque a mesma grandeza é falada por TRÊS superfícies: a
 barra de leitura e o controle deslizante da aba Status, e o comando
 `speaker volume` da linha de comando. Enquanto a conta viveu junto dos widgets,
-a linha de comando tinha uma cópia linear dela — e `speaker volume 60` mandava
+a linha de comando tinha uma cópia linear da conta — e `speaker volume 60` mandava
 para o registrador um valor diferente dos 60 % do controle deslizante, no mesmo
 hardware, com resultado audível diferente. Duas contas para a mesma grandeza é
 a classe de defeito que esta casa mais paga.

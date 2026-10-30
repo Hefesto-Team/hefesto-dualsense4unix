@@ -160,7 +160,7 @@ _PLAYER_SLOT_COLORS: dict[int, RGB] = {
 
 
 def cor_automatica(numero: int | None, tom_do_plastico: RGB | None) -> RGB:
-    """A cor AUTOMÁTICA de um controle: a do plástico, e a do número sem ela."""
+    """A cor AUTOMÁTICA de um controle: a do plástico, e a do número sem o plástico."""
     if tom_do_plastico is not None:
         return tom_do_plastico
     return player_slot_color(numero if numero is not None else 0)
@@ -185,7 +185,7 @@ class PecaDaMesa:
     """Uma peça na mesa da regra de cor única.
 
     `procedencia` diz de onde veio a cor pedida. Um inteiro é a cor ESCOLHIDA À MÃO (o
-    número para o qual foi escolhida): ela acompanha o controle em qualquer número
+    número para o qual foi escolhida): acompanha o controle em qualquer número
     (`D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`; a regra de 08/09, da cor presa ao
     número, caiu). `numero` é o de hoje, e já não decide o fóssil.
     """
@@ -200,7 +200,7 @@ class PecaDaMesa:
 
     @property
     def automatica(self) -> RGB | None:
-        """A cor automática desta peça: a do plástico, e a do número sem ela."""
+        """A cor automática desta peça: a do plástico, e a do número sem o plástico."""
         return self.do_plastico if self.do_plastico is not None else self.do_numero
 
 
@@ -208,9 +208,9 @@ def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
     """A cor desta peça é o número de ontem congelado, e não uma escolha?
 
     **A procedência inteira NUNCA faz fóssil** — `D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`,
-    dela, 29/09/2026 (~21h40): *«Acompanha o controle»*. A regra de 08/09 dizia que a cor
+    29/09/2026 (~21h40): a cor acompanha o controle. A regra de 08/09 dizia que a cor
     escolhida para um número era fóssil e saía sozinha quando o número do aparelho mudava
-    (`procedencia != numero`); foi ela que apagou o laranja e o verde-água às 02:51 de
+    (`procedencia != numero`); foi essa regra que apagou o laranja e o verde-água às 02:51 de
     29/09, quando a mesa se renumerou. O inteiro agora diz só «escolhida à mão», e a
     escolha de um controle não muda com a mesa. Quem cede é a cor automática do outro
     (`cores_sem_colisao`). Só o LEGADO, sem carimbo, ainda prova fóssil, pela forma.
@@ -335,7 +335,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     fóssil, do legado e da cor repetida ao primeiro tom livre não tem decisão
     de pé: é o que evita duas luzes iguais sem apagar nenhuma, e a
     A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01 o registra como o que é
-    (29/09/2026). A barra é como ela sabe de quem é o controle — na bancada
+    (29/09/2026). A barra é como quem usa sabe de quem é o controle — na máquina de teste
     quatro DualSense são do MESMO modelo, e a luz os separa.
 
     AS PERGUNTAS DE COR SÃO PELO TOM, e não pelo byte (29/09/2026): o fóssil
@@ -343,23 +343,23 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     resposta não depende do brilho de outra peça.
 
     **`mesa` já vem NA ORDEM que decide** (o número do controle, quando há
-    um), e a ordem é o contrato: *"o segundo desloca para o tom vizinho"* são
-    as palavras de produto, e "primeiro" só tem definição estável se for o número.
+    um), e a ordem é o contrato: o segundo desloca para o tom vizinho, e
+    «primeiro» só tem definição estável se for o número.
     Quem chama ordena; aqui a regra é cega e determinista — a MESMA mesa
     devolve SEMPRE a mesma resposta, que é o que impede a barra de piscar
     (medido em 05/09/2026: um endereço com dois donos repintou a tela 80
     vezes em 80 tiques).
 
-    ELA LÊ A PROCEDÊNCIA, E NÃO ADIVINHA. A primeira volta desta regra
+    A REGRA LÊ A PROCEDÊNCIA, E NÃO ADIVINHA. A primeira volta desta regra
     deslocava toda cor que fosse o número de outro, e isso **matou o
-    broadcast dela**: `led.set {rgb:[0,255,0]}` sem `uniq` saía
+    broadcast**: `led.set {rgb:[0,255,0]}` sem `uniq` saía
     `[verde, vermelho, azul, rosa]`. Com a procedência gravada, o "Todos" é
     LIDO como "Todos" (`DO_BROADCAST`) e nunca se desloca — ver `_e_fossil`.
 
     AS DUAS VOLTAS, e a segunda é o que faltava na primeira versão:
 
     1. **quem tem identidade** — paleta, broadcast, escolha viva, legado
-       honesto. O primeiro a pedir uma cor fica com ela; o fóssil vai para a
+       honesto. O primeiro a pedir uma cor fica com a cor; o fóssil vai para a
        cor do próprio número, e quem chega numa cor já tomada vai para o
        primeiro tom livre da paleta;
     2. **quem está no GLOBAL do perfil** — cor sem dono. Cede a quem tem
@@ -490,7 +490,7 @@ def cor_escolhida(rgb: RGB | None) -> RGB | None:
     **O PRETO É BANIDO COMO COR — 22/09/2026, ordem de produto:** o preto não aparece em
     nenhum controle.
 
-    A QUEIXA QUE O REVELOU, e ela é de um controle só: a barra de luz do Starlight Blue apagava
+    A QUEIXA QUE O REVELOU, e é de um controle só: a barra de luz do Starlight Blue apagava
     ao conectar, e o perfil parecia não mandar. O perfil MANDAVA: a peça daquele controle tinha
     `leds.lightbar: [0,0,0]`, escrita por um "Salvar Perfil" das 13:53 daquele
     dia, quando a cor lida veio vazia. Medido no mesmo disco: **sete dos 29
@@ -506,7 +506,7 @@ def cor_escolhida(rgb: RGB | None) -> RGB | None:
     **APAGAR A BARRA CONTINUA POSSÍVEL, e por outro caminho:** o brilho. O
     `lightbar_brightness` em 0.0 zera os três canais DEPOIS desta função
     (`LedSettings.apply_brightness`), e esse é um campo que só a mão do usuário move.
-    Banir a cor preta não tira dela o apagar; tira do produto o direito de
+    Banir a cor preta não tira do usuário o apagar; tira do produto o direito de
     apagar sozinho.
     """
     if rgb is None:

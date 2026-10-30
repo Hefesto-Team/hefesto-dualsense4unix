@@ -5,7 +5,7 @@ controle não-Sony foi ligado, o rótulo dos botões, e a cor do plástico quand
 leitura falha. Todo campo nasce em "não sei", e "não sei" é resposta válida.
 
 TERRITÓRIO DE CONFIG-06. Quem trabalha nesta seção escreve AQUI — o título, a
-dica e todo widget dela. O montador da aba (`mixin.py`) só cria a moldura e
+dica e todo widget da seção. O montador da aba (`mixin.py`) só cria a moldura e
 chama `montar`; ele não sabe o que há dentro, e é assim que cinco seções
 crescem sem se pisarem.
 
@@ -24,7 +24,7 @@ DE ONDE VEM CADA COISA NA TELA
   lida. **Quem decide se um nó pode responder é `cor_do_plastico`**, dono único
   do envelope de cada transporte — aqui não há `if` de barramento nenhum, e a
   razão está em :meth:`_PainelDosControles._perguntar_as_cores`;
-* **o resto** — declaração dela, acumulada em `_maquina_pendente` e gravada
+* **o resto** — declaração de quem usa, acumulada em `_maquina_pendente` e gravada
   pelo "Aplicar" do rodapé (`D-A4`: a aba é diferida, o clique só marca).
 
 DUAS CHAMADAS, E NUNCA NUM TIQUE

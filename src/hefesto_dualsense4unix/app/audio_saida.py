@@ -17,7 +17,7 @@ hoje não: o som do sistema vai para o HDMI e o controle deslizante ajusta um
 alto-falante que não está recebendo áudio nenhum. A rota manda a saída padrão
 do sistema para o sink do controle, e desfaz.
 
-O FATO QUE ORGANIZA ESTE MÓDULO INTEIRO, medido nesta bancada em 01/08/2026::
+O FATO QUE ORGANIZA ESTE MÓDULO INTEIRO, medido nesta máquina de teste em 01/08/2026::
 
     $ paplay --device=nao_existe_mesmo bell.oga ; echo $?
     0
@@ -28,7 +28,7 @@ O FATO QUE ORGANIZA ESTE MÓDULO INTEIRO, medido nesta bancada em 01/08/2026::
 
 **Os dois tocadores aceitam um sink inexistente, saem com zero e tocam no sink
 PADRÃO.** Não há mensagem de erro, não há código de saída. Com o padrão de produto no
-HDMI, um som "de confirmação do controle" sairia pela televisão e ela concluiria
+HDMI, um som "de confirmação do controle" sairia pela televisão e quem usa concluiria
 que o alto-falante quebrou. Por isso a regra desta casa aqui é dura e vale para
 todo caminho de código: **o sink é resolvido na lista viva de sinks antes de
 tocar, e sem casamento não se toca.** Ver :func:`tocar_confirmacao`, que recusa
@@ -44,7 +44,7 @@ janela e que este módulo REUSA em vez de duplicar:
   o mudo persistido é escolha do usuário e o `doctor` o trata como legítimo. O
   caminho é `pactl`, que é o que a própria dona usaria.
 
-Sobre a CHAVE de desligar o som (SOM-04, entrega 1, regra 6). Ela existe e
+Sobre a CHAVE de desligar o som (SOM-04, entrega 1, regra 6). A chave existe e
 mora em ``gui_preferences.json``, na chave :data:`CHAVE_PREF_SOM`, ligada por
 padrão. As duas metades da decisão:
 
@@ -55,7 +55,7 @@ padrão. As duas metades da decisão:
   o card montado e alocado. Um interruptor pertence à aba de preferências, que
   hoje não existe como superfície de opções da janela, e abri-la é uma leva
   própria. A chave no arquivo dá a saída a quem quer silêncio sem esperar
-  release nenhuma, e o dia em que a aba existir ela ganha o widget sem tocar
+  release nenhuma, e o dia em que a aba existir a chave ganha o widget sem tocar
   aqui.
 """
 from __future__ import annotations
@@ -161,7 +161,7 @@ def nomes_de_sinks(saida_pactl: str) -> list[str]:
     """Todos os nomes de `pactl list sinks short`, na ordem em que vieram.
 
     A contraparte com filtro de DualSense é ``mic_monitor.sinks_dualsense``, e
-    ela continua sendo a dona de "qual sink é do controle" — aqui a lista é
+    essa continua sendo a dona de "qual sink é do controle" — aqui a lista é
     INTEIRA porque as duas perguntas deste módulo são sobre o sistema: "este
     nome existe mesmo?" (a guarda do tocador) e "o sink que eu guardei ainda
     está lá?" (a guarda do desfazer).
@@ -241,7 +241,7 @@ def acordar_sink(sink: str, *, runner: Callable[[list[str]], str] | None = None)
     pede som NAQUELE controle — e a suspensão não é opinião sobre esse pedido,
     é ociosidade.
 
-    **Por que ela é a cura certa para o bipe curto.** O som de confirmação
+    **Por que é a cura certa para o bipe curto.** O som de confirmação
     desta janela tem **67 ms** (`audio-volume-change.oga`, o mais curto dos
     candidatos, escolhido de propósito para não atrapalhar quem ajusta o
     volume). Num nó suspenso, "o começo do som" é o som inteiro.
@@ -301,7 +301,7 @@ def garantir_saida_audivel(
 ) -> bool:
     """Tira o mute do sink do controle. Devolve True se havia o que tirar.
 
-    SOM-SAIDA-MUDA-01, 04/08/2026 — MEDIDO com ela. O usuário clicou nos dois
+    SOM-SAIDA-MUDA-01, 04/08/2026 — MEDIDO no ensaio. O usuário clicou nos dois
     estados do seletor, o `pactl` obedeceu, e não saiu som nenhum: o sink do
     DualSense estava `MUTED` no PipeWire, por estado que o WirePlumber
     PERSISTE por rota (``~/.local/state/wireplumber/default-routes``) e
@@ -358,7 +358,7 @@ def tocar_confirmacao(
     A ordem das recusas não é arbitrária — cada degrau é mais barato que o
     seguinte, e o mais caro (abrir um fluxo de áudio) é o último:
 
-    1. **desligado** pela chave dela: sai sem dizer nada;
+    1. **desligado** pela chave do usuário: sai sem dizer nada;
     2. **ocupado**: já há um som tocando; o antirrajada;
     3. **sem sink**: nome vazio. É o que chega quando o
        ``mic_monitor.escolher_sink`` não fecha o casamento — pelo RÁDIO o
@@ -366,11 +366,11 @@ def tocar_confirmacao(
        segue o transporte). No cabo ele fecha, mesmo com quatro controles, pelo
        dispositivo USB em que a placa e o HID penduram juntos;
     4. **saída muda** (a camada 1): tocar aqui gastaria um processo para
-       produzir silêncio e ela leria o silêncio como defeito do controle;
+       produzir silêncio e o usuário leria o silêncio como defeito do controle;
     5. **o sink não está na lista viva** — a guarda que o cabeçalho deste
        módulo explica. Medido: `paplay --device=<inexistente>` sai com ZERO e
        toca no sink PADRÃO. Sem esta linha, a confirmação do alto-falante do
-       controle sairia pela televisão dela;
+       controle sairia pela televisão;
     6. **sem arquivo** e **sem tocador**: nada instalado;
     7. o tocador rodou e devolveu erro.
 
@@ -393,7 +393,7 @@ def tocar_confirmacao(
       com ele acordado (ver :func:`estados_dos_sinks`).
 
     Num som de 67 ms, "o começo" é o som inteiro. E a suspensão é o estado
-    NORMAL entre dois gestos do usuário: os dois sinks de DualSense desta bancada
+    NORMAL entre dois gestos do usuário: os dois sinks de DualSense desta máquina de teste
     estavam `SUSPENDED` na leitura desta data, com os controles ligados no
     cabo. Nada disto aparecia como falha — o `paplay` abria o fluxo, saía com
     zero, e o tocador devolvia :data:`MOTIVO_TOCOU`.
@@ -599,8 +599,8 @@ def devolver_o_som_do_pc(
 
     Recusa em vez de chutar um destino — ver :data:`MOTIVO_ROTA_SEM_VOLTA`.
 
-    **SÓ DEVOLVE QUEM ESTÁ COM ELA — 24/09/2026, O-TERCEIRO-NOME-DO-USUARIO-01.**
-    Com ``de`` (o `uniq` de quem clicou), a saída só volta se ela estiver NESTE
+    **SÓ DEVOLVE QUEM ESTÁ COM A SAÍDA — 24/09/2026, O-TERCEIRO-NOME-DO-USUARIO-01.**
+    Com ``de`` (o `uniq` de quem clicou), a saída só volta se estiver NESTE
     controle agora. O quarto botão da fileira do som («Tudo no Controle e Nada
     no PC») voltou por decisão de 23/09, e com ele uma mesa de quatro pode
     ter um controle segurando a saída do PC enquanto outro troca de botão.
@@ -640,7 +640,7 @@ def botao_da_rota_aceso(
 ) -> str:
     """Qual dos dois botões acende: ``"jogo"``, ``"pc"`` ou ``""``. Função PURA.
 
-    **ELA LÊ AS DUAS CAMADAS, e é essa a entrega.** Até 04/09/2026 a tela
+    **A FUNÇÃO LÊ AS DUAS CAMADAS, e é essa a entrega.** Até 04/09/2026 a tela
     acendia "Todo o som do PC" pelo FIRMWARE e mais nada
     (`a02_controles.rota_na_tela`), e o resultado foi medido em 03/09: o card 2
     com o botão aceso e o som saindo na TV. O byte é a camada 2; quem decide
@@ -664,8 +664,8 @@ def botao_da_rota_aceso(
     o firmware quer uma coisa e o sistema faz outra. Quem diz isso em palavras
     é :func:`recado_da_rota`.
 
-    **A ROTA 0 GANHOU BOTÃO EM 21/09/2026** e deixou esta lista: ela é «Tudo
-    na TV e Nada no Controle», o terceiro nome dela. A rota 1 (mono no fone)
+    **A ROTA 0 GANHOU BOTÃO EM 21/09/2026** e deixou esta lista: é «Tudo
+    na TV e Nada no Controle», o terceiro nome da rota. A rota 1 (mono no fone)
     continua apagando os três de propósito — é rota legítima do protocolo que
     a fileira não representa, e acender a mais parecida seria arredondar.
 
@@ -727,7 +727,7 @@ class RotaDasDuasCamadas:
 
     @property
     def recado(self) -> str:
-        """A frase do cartão quando elas discordam; ``""`` quando concordam."""
+        """A frase do cartão quando as camadas discordam; ``""`` quando concordam."""
         return recado_da_rota(self.byte, self.sink_do_controle, self.sink_padrao)
 
 
@@ -742,7 +742,7 @@ def ler_as_duas_camadas(
 
     O byte vem do `state_full` e NÃO se relê aqui: quem o publica é o daemon,
     e uma segunda leitura seria a segunda verdade. O que falta é a camada 1, e
-    ela sai dos dois donos que já existem — `sink_do_controle` (o mesmo
+    a camada sai dos dois donos que já existem — `sink_do_controle` (o mesmo
     casamento por dispositivo USB que o `MicMonitor` faz) e a saída padrão do
     sistema, pela mesma leitura de `pactl` que `RotaDeSaida` usa.
 
@@ -847,7 +847,7 @@ def e_saida_de_controle(sink: str, saida_pactl: str) -> bool:
 
     Os dois donos que já respondem isso, juntos: a placa de um DualSense no
     cabo (``mic_monitor.sinks_dualsense``) e o nó que esta casa publica por
-    controle (``hefesto_som_<hex6>``, a saída no rádio). Quem precisa dela é a
+    controle (``hefesto_som_<hex6>``, a saída no rádio). Quem precisa dessa lista é a
     memória da :class:`RotaDeSaida` — ver `mandar_para_o_controle`.
 
     **O NOME DO NÓ SE LÊ PELO DONO DELE** (28/09/2026):

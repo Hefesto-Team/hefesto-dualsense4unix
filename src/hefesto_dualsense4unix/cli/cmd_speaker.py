@@ -98,7 +98,7 @@ def _bloco_speaker(payload: Any, uniq: str | None) -> dict[str, Any] | None:
 
     `uniq` ausente = o PRIMÁRIO, exatamente como o `speaker.set` roteia. Ausência
     da chave é resposta: significa que ninguém tomou a posse do volume ainda (ou
-    que ela foi devolvida), e é o que a janela pinta como "não ajustado".
+    que a posse foi devolvida), e é o que a janela pinta como "não ajustado".
     """
     if not isinstance(payload, dict):
         return None

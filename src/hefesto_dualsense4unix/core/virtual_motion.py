@@ -3,8 +3,8 @@
 SENSOR-DE-VERDADE-01 / ONDA1-D3. Decisão, 04/09/2026, depois de se
 recomendar a saída barata (virar leitura, um selo "no ar / parado"):
 
-    *"ele tem que funcionar de verdade. ambos independente do modo e da
-    mascara."* <!-- noqa-acento: citação literal -->
+    o sensor funciona de verdade, os dois, independente do modo e da
+    máscara.
 
 **Interruptor de verdade. Cada sensor por si. Em Nativo e em Virtual. Com ou
 sem máscara.** Este módulo é a metade que faz o JOGO parar de receber — a
@@ -77,7 +77,7 @@ peça de plástico; o vpad nasce e morre por baixo dele.
 O CUSTO NO CAMINHO QUENTE, medido pelo desenho e não pela esperança
 --------------------------------------------------------------------
 :func:`janela_com_sensores` roda a cada janela entregue (~250 Hz no cabo).
-Com os dois sensores ligados — o caso normal, e o de sempre — ela devolve **o
+Com os dois sensores ligados — o caso normal, e o de sempre — a função devolve **o
 mesmo objeto**, sem copiar um byte: um `and` e um retorno. Só quando há
 sensor desligado se paga o `bytearray` de 25 bytes.
 """
@@ -186,7 +186,7 @@ class RegistroDeSensores:
             return self._estado.get(chave_de_sensor(uniq), EstadoDosSensores())
 
     def filtrar(self, uniq: str | None, janela: bytes) -> bytes:
-        """A janela como ela deve SAIR para a peça `uniq`."""
+        """A janela como deve SAIR para a peça `uniq`."""
         estado = self.estado(uniq)
         giro = estado.giroscopio and not self.roteado(uniq)
         toque = not (self.toque_roteado(uniq) or self.toque_calado(uniq))
@@ -270,7 +270,7 @@ class RegistroDeSensores:
             return self._toque_roteado.get(chave_de_sensor(uniq), self._toque_roteado_sem_chip)
 
     def roteado(self, uniq: str | None) -> bool:
-        """Esta peça está mirando — o giro dela vai ao analógico, não ao jogo?"""
+        """Esta peça está mirando — o giro da peça vai ao analógico, não ao jogo?"""
         if not uniq:
             return False
         with self._lock:

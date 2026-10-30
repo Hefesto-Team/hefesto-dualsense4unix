@@ -149,7 +149,7 @@ class DonoDoEvento:
 
 
     def olha(self, raiz: str) -> bool:
-        """Esta raiz está sob o olhar agora? (armado, e o olhar dela vivo)."""
+        """Esta raiz está sob o olhar agora? (armado, e o olhar da raiz vivo)."""
         with self._trava:
             if self._armes == 0:
                 return False

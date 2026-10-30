@@ -73,7 +73,7 @@ def explicacao_da_disputa(
 def perfil_que_o_usuario_ativou() -> str | None:
     """A escolha do usuário, lida do disco pelo dono (`utils.session.a_escolha_do_usuario`).
 
-    O Freestyle quando o botão está ligado; desligado, o último perfil que ela
+    O Freestyle quando o botão está ligado; desligado, o último perfil que quem usa
     ativou; «sem escolha», `None`. Sobrevive ao daemon responder
     `active_profile: null` e a fechar e reabrir a janela. Best-effort:
     qualquer falha de I/O vira `None`, e a lista simplesmente não destaca
@@ -307,7 +307,7 @@ def mensagem_do_salvar(
     - **nada a reaplicar** (o perfil salvo não era o ativo) → "Perfil salvo",
       sem uma palavra sobre o controle;
     - **reaplicado sem relatório ou com tudo dentro** → a frase de sempre, que
-      ela já aprovou;
+      já aprovada;
     - **reaplicado com seção de fora** → "Perfil salvo: X — Aplicado, menos:
       …", no vocabulário do rodapé.
 

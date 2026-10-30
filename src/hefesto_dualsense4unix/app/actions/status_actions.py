@@ -35,7 +35,7 @@ MINUTOS_ENTRE_TENTATIVAS = 2
 def texto_de_controle_nao_adotado(state: dict[str, Any] | None) -> str:
     """Aviso de que há controle LIGADO que o sistema não entregou ao Hefesto.
 
-    CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026). Medido na bancada: dois
+    CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026). Medido no ensaio: dois
     DualSense ligados e pareados, e a janela mostrava UM — sem, em lugar
     nenhum do produto, uma pista do porquê. O driver do kernel havia abortado
     o segundo na probe; ele conecta no rádio, acende a luz do próprio firmware
@@ -45,14 +45,14 @@ def texto_de_controle_nao_adotado(state: dict[str, Any] | None) -> str:
     O texto tem três partes obrigatórias, e cada uma desfaz uma leitura errada
     que a tela de hoje produz:
 
-    - **o que está acontecendo, na língua dela** — "está ligado, mas não
+    - **o que está acontecendo, na língua de quem usa** — "está ligado, mas não
       chegou até aqui". As palavras do defeito (probe, hidraw, driver, órfão)
-      não aparecem: elas descrevem o mecanismo, e o mecanismo não é o que ela
-      vê. O que ela vê é um controle aceso que a janela não conta;
+      não aparecem: descrevem o mecanismo, e o mecanismo não é o que quem usa
+      vê. O que se vê é um controle aceso que a janela não conta;
     - **que o produto tenta sozinho, e em quanto tempo** — a cura existe e é
       automática (`bt_rebind_orphans.sh`, chamado pela vigia
       `bt_health_watchdog.sh` a cada ``MINUTOS_ENTRE_TENTATIVAS`` minutos).
-      Sem esta parte o aviso seria só um susto: ela desligaria o controle bom
+      Sem esta parte o aviso seria só um susto: quem usa desligaria o controle bom
       para "resolver";
     - **a saída, se a tentativa não pegar** — desligar o controle no botão PS
       e ligar de novo. É a mesma cura manual que o script loga quando desiste,
@@ -169,7 +169,7 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         A régua de "quem está na mesa" é a da Z5 (`app/mesa.py`, dono único),
         e esta função a CONSOME: quando o daemon publica a lista de
-        controles, é ela que manda. Quando não publica — daemon antigo, ou
+        controles, é a lista que manda. Quando não publica — daemon antigo, ou
         payload parcial —, o topo continua valendo: recusar o número aí seria
         trocar um erro por outro, e a ausência de lista não é evidência de
         mesa vazia.

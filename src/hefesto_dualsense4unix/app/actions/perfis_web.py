@@ -40,8 +40,8 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "`manager._chave_de_selecao`.",
     "novo": "profiles_actions.on_profile_new:3025 → _aplicar_nascimento_com_jogo:3097.",
     "remover": "profiles_actions.on_profile_remove:3162 — PERGUNTA ANTES, e a "
-    "caixa é GTK. Ela continua GTK até ela dizer o contrário: caixa em HTML é "
-    "desenho novo, e desenho novo é dela.",
+    "caixa é GTK. Continua GTK até decisão em contrário: caixa em HTML é "
+    "desenho novo, e desenho novo pede aprovação.",
     "duplicar": "profiles_actions.on_profile_duplicate:3144.",
     "recarregar": "profiles_actions.on_profile_reload:3319 → "
     "_reload_profiles_store:3772 (o disco em thread, a pintura pela idle_add).",
@@ -51,7 +51,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "editor.jogo": "o campo livre do editor simples; o texto sai de "
     "profiles/simple_match.jogo_do_perfil:301 e volta por from_simple_choice.",
     "salvar": "footer_actions.on_save_profile:838 — O ÚNICO Salvar, por ordem "
-    "dela (\"Salvar este perfil\" saiu da tela, CORRECOES.md). E ele NÃO "
+    "de produto (\"Salvar este perfil\" saiu da tela, CORRECOES.md). E ele NÃO "
     "está ligado aqui: os dois Salvar miram alvos diferentes hoje (o do rodapé "
     "grava footer_actions._perfil_que_as_abas_editam:884; o do editor gravava o "
     "alvo memorizado), e fundir sem fechar a divergência é o caminho mais curto "
@@ -61,7 +61,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "HISTORICO_MAX_VERSOES = 10 (loader.py:2776). Os únicos chamadores estão na "
     "CLI (cli/cmd_profile.py). Quem lhe dá tela é a ONDA-PERFIS-05.",
     "editor.estilo": "SÓ NO HTML: `profiles/estilos_de_jogo.py` traz as "
-    "receitas que ela aprovou (gatilho + vibração + luz por unidade), e "
+    "receitas aprovadas (gatilho + vibração + luz por unidade), e "
     "`a10_perfis.editor_estilo` as aplica no perfil e guarda a chave em "
     "profiles/schema.Profile.estilo, que o motor do tato lê. O «Personalizado» "
     "guarda a chave dele e desliga a receita do estilo anterior. A GTK não tem "
@@ -92,9 +92,9 @@ AMBIENTE_DO_PRESET: dict[str, str] = {
 MODO_SEM_OPINIAO = "none"
 
 FORA_DO_DESENHO: dict[str, str] = {
-    "browser": "o preset “Navegador” existe no produto e não no desenho dela",
-    "terminal": "o preset “Terminal” existe no produto e não no desenho dela",
-    "editor": "o preset “Editor” existe no produto e não no desenho dela",
+    "browser": "o preset “Navegador” existe no produto e não no desenho",
+    "terminal": "o preset “Terminal” existe no produto e não no desenho",
+    "editor": "o preset “Editor” existe no produto e não no desenho",
 }
 
 AMBIENTE_QUE_A_TELA_NAO_MOSTRA = (
@@ -144,11 +144,11 @@ def _ambiente_do_perfil(profile: Any) -> tuple[str | None, str]:
 
 
 def _como_e_a_regra(match: Any, preset: str | None) -> str:
-    """Em UMA linha, o que a regra é — para ela saber o que a tela não mostra.
+    """Em UMA linha, o que a regra é — para quem usa saber o que a tela não mostra.
 
-    Nada aqui vem de texto dela: são nomes de CAMPO do esquema e o nome do
+    Nada aqui vem de texto de quem usa: são nomes de CAMPO do esquema e o nome do
     preset. O conteúdo (o regex, as classes) fica de fora de propósito — ele é
-    dado dela, e esta frase vai para um ``title``, não para uma célula.
+    dado de quem usa, e esta frase vai para um ``title``, não para uma célula.
     """
     if preset in FORA_DO_DESENHO:
         return FORA_DO_DESENHO[str(preset)]
@@ -195,7 +195,7 @@ def _ordem_do_jogo(
     """Os perfis do MESMO jogo, do que vale primeiro ao que vale por último.
 
     A ordem é a do manager: prioridade maior primeiro, e em empate o perfil automático (o que
-    ela não editou). Menos de dois perfis não têm o que ordenar, e a lista vem vazia.
+    quem usa não editou). Menos de dois perfis não têm o que ordenar, e a lista vem vazia.
     """
     assinatura = _assinatura_do_jogo(profile)
     if not assinatura:

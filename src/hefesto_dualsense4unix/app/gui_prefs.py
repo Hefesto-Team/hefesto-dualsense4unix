@@ -95,7 +95,7 @@ def _tabelas() -> dict[str, Any]:
 
 
 def larguras_da_tabela(tabela: str) -> dict[str, int]:
-    """As larguras que ela deixou naquela tabela — `{coluna: px}`."""
+    """As larguras que o usuário deixou naquela tabela — `{coluna: px}`."""
     bruto = _tabelas().get(tabela) or {}
     larguras = bruto.get("larguras") if isinstance(bruto, dict) else None
     if not isinstance(larguras, dict):
@@ -155,7 +155,7 @@ _ADAPTADORES_DE_ANTES = "adaptadores"
 
 
 def a_ordem_dos_adaptadores_de_antes() -> list[str]:
-    """A lista que ela deixou aqui antes de 28/09 — chaves de lugar (ou o"""
+    """A lista que o usuário deixou aqui antes de 28/09 — chaves de lugar (ou o"""
     bruto = load_gui_prefs().get(_ADAPTADORES_DE_ANTES)
     if not isinstance(bruto, list):
         return []

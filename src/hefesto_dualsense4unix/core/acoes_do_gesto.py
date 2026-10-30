@@ -6,8 +6,8 @@ do controle» da aba Navegação oferecia trocar o que cada gesto faz, e o daemo
 tinha um ato cravado por gesto e nenhum lugar de onde ler outro: a lista
 aceitava o clique, mostrava a escolha e não mudava o controle. A pergunta de produto teve a
 resposta medida: os
-seis gestos funcionavam, e a lista ao lado de cada um era desenho sem dono.
-<!-- noqa-acento: citação literal -->
+seis gestos funcionavam, e a lista ao lado de cada um era desenho sem dono,
+porque nenhum ato lia a escolha.
 
 Aqui mora o que os três lados usam, e só isto:
 
@@ -17,7 +17,7 @@ Aqui mora o que os três lados usam, e só isto:
 * :data:`PADRAO` — o que cada gesto faz de fábrica, que é o que o daemon fazia
   antes de a tabela existir;
 * :func:`tabela` — o de fábrica com a declaração do ``maquina.json`` por cima.
-  **É a única leitura**: a tela pinta por ela e o daemon despacha por ela;
+  **É a única leitura**: a tela pinta por essa leitura e o daemon despacha pela mesma;
 * :func:`conferir_o_script` — as guardas do arquivo escolhido, que a tela
   confere ao escolher e o daemon confere de novo ao rodar.
 
@@ -28,7 +28,7 @@ um perfil importado de outra pessoa não pode trazer um script para rodar.
 
 O «— NADA —» VOLTOU NOS SEIS GESTOS (resposta de 01/10, ~23h55, a §14 da
 sprint): com visitas, o PS sozinho abria a Steam por cima do jogo, e calar o
-gesto era o que ela tentou fazer duas vezes. No PS + L3 e no PS + R3 ele tira
+gesto era o que o usuário tentou fazer duas vezes. No PS + L3 e no PS + R3 ele tira
 a reescrita do perfil do jogo por um combo errado.
 
 Puro como o ``acoes_de_botao``: sem daemon, sem GTK, sem disco (a não ser o

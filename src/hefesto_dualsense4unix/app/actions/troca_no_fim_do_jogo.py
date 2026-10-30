@@ -210,7 +210,7 @@ def esperar(
     """A vigia que o install sobe: espera o jogo fechar de vez, troca e sai.
 
     Sai sem pendência, quando outra vigia já está de pé, ou no prazo (a pendência fica para
-    o daemon e para o próximo install). O jogo que abre no meio devolve o resto, e ela segue.
+    o daemon e para o próximo install). O jogo que abre no meio devolve o resto, e a vigia segue.
     """
     trava = _a_trava_da_vigia()
     if trava is None:

@@ -10,7 +10,7 @@ antiga espalhava por quatro lugares:
 2. "Quais controles estão conectados?" — um card por controle físico, com
    transporte, jogador (P1/P2…, o número que o JOGO vê — LEIGO-01b), bateria e o
    aviso de grab degradado (input dobrado). LEIGO-02: o fim do MAC saiu do card
-   — ela distingue os controles pela COR da luz e pelo LED de jogador, não por
+   — quem usa distingue os controles pela COR da luz e pelo LED de jogador, não por
    um hash que não está escrito em lugar nenhum do aparelho.
 2b. "Por onde o jogo está recebendo o controle, e a minha escolha chegou?" —
    PONTE-NA-TELA-01, a linha "Ponte com o jogo" e o aviso de divergência de
@@ -265,7 +265,7 @@ def o_usuario_ja_respondeu_sobre(appid: str) -> bool:
     dúvida, o aviso aparece. Esconder um aviso por causa de um erro de leitura
     é pior que mostrá-lo duas vezes.
 
-    ELA TOCA O DISCO, E O CUSTO ESTÁ MEDIDO — 06/09/2026, ONDA5-07-03. Duas
+    A FUNÇÃO TOCA O DISCO, E O CUSTO ESTÁ MEDIDO — 06/09/2026, ONDA5-07-03. Duas
     leituras de arquivo por chamada, e quem chama é a pintura da aba Jogar, dez
     vezes por segundo (`jogar/painel.AVISOS_DA_TELA`). O
     `calados` da 07 antiga avisava, por escrito, que reler duas listas a cada
@@ -294,9 +294,9 @@ def o_usuario_ja_respondeu_sobre(appid: str) -> bool:
 
 
 def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
-    """O banner "jogo sem wrapper", CALADO quando ela já respondeu. **UM dono.**
+    """O banner "jogo sem wrapper", CALADO quando quem usa já respondeu. **UM dono.**
 
-    Nasceu em 05/09/2026, e a razão é um defeito medido: ela dispensava o aviso
+    Nasceu em 05/09/2026, e a razão é um defeito medido: quem usa dispensava o aviso
     na aba Lançadores e **três outras telas continuavam acusando** — a Início, a
     Status e a coluna Atenção da aba Jogar
     (`app/actions/jogar/painel.py:533`), porque as três chamavam
@@ -308,18 +308,18 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
 
     `wrapper_banner_text` continua puro e continua existindo: ele responde
     *"há jogo sem wrapper agora?"*. Esta função responde a pergunta que as telas
-    de fato fazem — *"há algo a dizer a ela sobre isso?"* — e é ela que as
+    de fato fazem — *"há algo a dizer sobre isso?"* — e é a função que as
     telas chamam.
 
     O SILÊNCIO MORA AQUI, E NÃO NO PACOTE DA ABA — ONDA5-07-03, 06/09/2026. A
     sprint desenhava a cura como um parâmetro nomeado em
     `jogar/painel.avisos_do_estado`, com a aba Jogar entregando a lista lida
     pela vigia da aba Lançadores. **O caminho que ficou é melhor por uma razão
-    medida:** com a conta dentro da função dona, a BANCADA
+    medida:** com a conta dentro da função dona, o ENSAIO
     (`scripts/tela/jogar_vivo.py`, que chama `avisos_do_estado` em dois pontos)
     mede exatamente o que o produto mostra, sem ninguém ter de lembrar de
     passar a lista. Um dublê mais frouxo que a função real já envenenou outro
-    arquivo por ordem de teste, em 04/09; um parâmetro que a bancada esquece de
+    arquivo por ordem de teste, em 04/09; um parâmetro que o ensaio esquece de
     passar seria a mesma família de defeito.
     """
     texto = wrapper_banner_text(state)
@@ -410,7 +410,7 @@ def jogo_com_autoridade(state: dict[str, Any] | None) -> bool:
     """O jogo está com a autoridade de exibição AGORA? — função pura.
 
     Uma fonte só (``state_full.game_signal.authority == "game"``) para as três
-    coisas desta aba que dependem dela: o aviso do "Reconciliar jogadores", o
+    coisas desta aba que dependem dessa fonte: o aviso do "Reconciliar jogadores", o
     motivo da divergência de máscara (PONTE-NA-TELA-01) e o ``_jogo_aberto``
     que a aba Perfis lê. É o MESMO critério que o daemon usa no gate R-04
     (`subsystems/gamepad._recriacao_bloqueada_por_jogo` → `_autoridade_do_jogo`)
@@ -469,7 +469,7 @@ def texto_do_desktop_sem_emulacao(
 
     MODO-QUE-NAO-CONTROLA-01. Mesmo desenho de `vpad_degradation_text` e
     `wrapper_banner_text`: quem decide é uma função sem GTK e sem daemon, e a
-    aba só escreve o que ela devolve.
+    aba só escreve o que a função devolve.
 
     As três condições, e cada uma existe para não acender alarme falso:
 
@@ -477,7 +477,7 @@ def texto_do_desktop_sem_emulacao(
        e no Modo Nativo o mouse está desligado pela exclusão mútua do daemon, o
        que é o desenho normal e não tem nada de errado;
     2. **o modo EXIBIDO também é desktop** — com uma escolha pendente de SAIR do
-       desktop, avisar sobre o modo que ela está deixando responderia a pergunta
+       desktop, avisar sobre o modo que se está deixando responderia a pergunta
        errada (a caixa mostra a escolha do usuário, não o vigente: AGORA-E-DEPOIS-01);
     3. **o modo não mudou NESTE tique** — a transição para desktop dispara três
        IPCs e o `desktop.arranjo.apply`, que liga o mouse, é o ÚLTIMO deles. Julgar a emulação no
@@ -494,7 +494,7 @@ def texto_do_desktop_sem_emulacao(
     interruptor próprio na mesma aba Navegação desde a EMULACAO-NO-JOGO-01. A
     diferença é que o "off" do teclado é SEMPRE gesto do usuário — nenhum caminho
     automático escreve `keyboard_emulation_enabled` (só o boot, lendo o flag
-    dela, e o `keyboard.emulation.set`) —, então aqui não há nem a dúvida que o
+    do teclado, e o `keyboard.emulation.set`) —, então aqui não há nem a dúvida que o
     mouse tem.
     """
     if not isinstance(state, dict):
@@ -680,7 +680,7 @@ def aviso_de_grab(
     """A linha e o porquê do aviso de duplicação — função pura (I9).
 
     Devolve ``(linha, porquê)`` ou ``None`` quando não há o que avisar. A
-    CONDIÇÃO mora aqui junto do texto de propósito: ela é a parte que já estava
+    CONDIÇÃO mora aqui junto do texto de propósito: é a parte que já estava
     certa (`is_primary and gamepad_on and grab_state == "failed"`) e tirá-la do
     meio do montador de widgets é o que torna a frase testável sem GTK.
 

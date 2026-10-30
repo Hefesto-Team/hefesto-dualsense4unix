@@ -5,7 +5,7 @@ Fonte: docs/data/mapa-controles.csv. Regenerar: python3 scripts/gerar-fatos-de-t
 
 Só as colunas DERIVÁVEIS entram aqui (existe, aceita, aciona, de_onde_sei,
 ate_onde_foi, por_que_nao_aciona, canal) — a fronteira DERIVA x NAO DERIVA da
-PAREAMENTO-01. Prosa de bancada (rotulo, *_detalhe, *_ressalva, nota,
+PAREAMENTO-01. Prosa de ensaio (rotulo, *_detalhe, *_ressalva, nota,
 estado_hoje, *_feature_v1, *_evidencia) fica no CSV, de propósito: NAO vira
 frase de tela por geração automática.
 

@@ -28,7 +28,7 @@ def frase_da_recusa_do_mouse(resposta: object) -> str:
     [ELO-MUDO-01](2026-08-22-ELO-MUDO-01-o-ok-que-nao-sabe-dizer-nao.md) ao
     contrário: em vez de comemorar o que não fez, culpar a rede.
 
-    Pura de propósito — é o miolo do que ela lê, e precisa de teste sem montar
+    Pura de propósito — é o miolo do que a tela lê, e precisa de teste sem montar
     janela (mesma disciplina de `descrever_teclado_emulado`).
     """
     bloqueio = resposta.get("bloqueio") if isinstance(resposta, dict) else None

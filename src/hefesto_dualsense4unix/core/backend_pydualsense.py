@@ -453,7 +453,7 @@ def _resolver_escopo(
 
 
 def _casar_key(handles: dict[str, Any], uniq: str) -> str | None:
-    """Key do handle por `uniq`: o MAC 12-hex (do IPC) OU a própria key (da bancada). P4."""
+    """Key do handle por `uniq`: o MAC 12-hex (do IPC) OU a própria key (do ensaio). P4."""
     if uniq in handles:
         return uniq
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
@@ -860,7 +860,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         """Lê TODO report pendente no fd deste handle, do mais velho ao mais novo, até
         `LEITURAS_POR_VOLTA`.
 
-        A fila do hidraw é por fd e o kernel descarta o report novo com ela cheia: um por volta
+        A fila do hidraw é por fd e o kernel descarta o report novo com a fila cheia: um por volta
         deixava cada um com 63 voltas de idade (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01). A leitura viva
         conta antes da guarda de «entrada muda».
         """
@@ -885,7 +885,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
         Cada report de estado conta o botão do mic e o `status[1]` em ordem
         (`_captura_status_audio`, a própria guarda); a pydualsense recebe só o mais novo, uma vez
-        por volta. O `readInput` dela não confere id, tamanho, CRC nem o bit de áudio: Opus no
+        por volta. O `readInput` da lib não confere id, tamanho, CRC nem o bit de áudio: Opus no
         `0x31` virava bateria e `micBtn` falsos (BATERIA-QUE-PULA-01); `readInput` tem UM chamador
         no `src/`.
         """
@@ -989,7 +989,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 segundos=self._segundos_desde_o_sinal(),
                 onde=_onde_a_thread_esta(thread),
                 detalhe=(
-                    "a thread segue dentro do C e o handle ficou com ela: "
+                    "a thread segue dentro do C, segurando o handle: "
                     "quem sair por último fecha o hid_device"
                 ),
             )
@@ -1109,7 +1109,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
         O motor só obedece ao report com o `HAPTICS_SELECT`, que cala o PCM (medido 26/10/2026).
         Com a háptica tocando, a vibração do jogo vira áudio no endpoint e o report sai SEM os
-        dois bits; sem ela, o motor vai pelo report. Quem diz é o `AltoFalanteSubsystem`.
+        dois bits; sem a háptica, o motor vai pelo report. Quem diz é o `AltoFalanteSubsystem`.
         """
         self._haptica_de_audio = bool(ativa)
 
@@ -2336,7 +2336,7 @@ class PyDualSenseController(IController):
         """A key do primário deposto, se ele VOLTOU dentro da janela. Senão None.
 
         Aqui a reserva CADUCA (passou de `PRIMARIO_RESERVA_SEC`, é esquecida); a caducidade é `info`
-        para o journal medir o desfecho alternativo. A constante só se decide depois da bancada.
+        para o journal medir o desfecho alternativo. A constante só se decide depois do ensaio.
         """
         reserva = self._primario_deposto
         if reserva is None:
@@ -2688,7 +2688,7 @@ class PyDualSenseController(IController):
         Escreve pelo handle que o daemon já tem aberto, sem disputar o hidraw. `uniq` restringe a um
         controle; devolve `{key: enviou?}` (vazio = nenhum handle). Fora do caminho automático
         desde 04/08 (LIGHTBAR-BT-CULPADO-01: 7/7 travas dentro da janela de ~3,4 s pós-conexão;
-        fora dela não trava); a hipótese aberta é que o 0x08 devolve o claim se não vier em cima
+        depois não não trava); a hipótese aberta é que o 0x08 devolve o claim se não vier em cima
         da conexão. Nenhum caminho automático o chama.
         """
         from hefesto_dualsense4unix.core.lightbar_reset import send_release_leds
@@ -3062,7 +3062,7 @@ class PyDualSenseController(IController):
         aceso_s: float = AVISO_ACESO_S,
         apagado_s: float = AVISO_APAGADO_S,
     ) -> int:
-        """Pisca `vezes` rápido na cor do modo novo e DEVOLVE a cor dela."""
+        """Pisca `vezes` rápido na cor do modo novo e DEVOLVE a cor anterior."""
         alcancados = 0
         try:
             for volta in range(max(1, vezes)):
@@ -3567,7 +3567,7 @@ class PyDualSenseController(IController):
 
         O DualSense não devolve o volume: só se sabe o que NÓS mandamos. Sem `set_speaker_volume`,
         None e a chave `speaker` nem entra. `muted` = volume efetivo 0. A chave `rota` (SOM-ROTA-01)
-        é opcional pelo mesmo motivo: só existe quando somos donos do `common[7]`; sem ela quem lê
+        é opcional pelo mesmo motivo: só existe quando somos donos do `common[7]`; sem isso quem lê
         diz «não dá para saber».
         """
         handle = self._handle_for(uniq)
@@ -3749,7 +3749,7 @@ class PyDualSenseController(IController):
         """Assume a posse do `common[6]` — o GANHO DE CAPTURA do aparelho (MIC-VOLUME-02); True se o
         handle de `uniq` recebeu.
 
-        `D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`: a bancada provou que o byte age (cabo,
+        `D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO`: o ensaio provou que o byte age (cabo,
         09/09/2026), e ele é o SEGUNDO degrau (o primeiro é o ganho da FONTE no PipeWire). Não
         medido: onde fica mudo/satura (ver :func:`byte_do_volume_do_microfone`) e o rádio (sem
         microfone publicado, MIC-OS-QUATRO-01). Irreversível até `release_microphone_volume` ou
@@ -5109,7 +5109,7 @@ class PyDualSenseController(IController):
         return False
 
     def _a_troca_espera_locked(self, key: str) -> bool:
-        """O posto de `key` espera por ela porque ela está trocando de transporte?"""
+        """O posto de `key` espera pela peça porque a peça está trocando de transporte?"""
         return key not in self._handles and self._troca_valida_locked(self._key_to_uniq(key))
 
     def _o_no_mudou_locked(self, key: str, pedido: bytes) -> bool:
@@ -5235,9 +5235,9 @@ class PyDualSenseController(IController):
         """Os campos de saída que a usuária fixou em `uniq` e que ainda valem (leitura pura).
 
         A camada da usuária sobrevive a hotplug e vence todo perfil automático, e o `led.set`, o
-        `trigger.*` e o `led.player_set` com `uniq` entram nela. É a memória que o estado completo
-        publica por controle (`controllers[].camada_da_usuaria`): sem ela a volta de um ajuste
-        pelo IPC seria invisível. Lista vazia = o controle não tem ajuste dela; os nomes são os
+        `trigger.*` e o `led.player_set` com `uniq` entram ali. É a memória que o estado completo
+        publica por controle (`controllers[].camada_da_usuaria`): sem a lista a volta de um ajuste
+        pelo IPC seria invisível. Lista vazia = o controle não tem ajuste próprio; os nomes são os
         campos de `_OUTPUT_FIELDS`, em ordem.
         """
         alvo = self._key_to_uniq(uniq)
@@ -5256,7 +5256,7 @@ class PyDualSenseController(IController):
     def _cartas_locked(self, chaves: list[str]) -> dict[str, int]:
         """A carta de cada key de `chaves` — vazio quando a mesa não tem carta.
 
-        Com lâmpada acesa para todos, a lâmpada é a carta. Sem ela para todos,
+        Com lâmpada acesa para todos, a lâmpada é a carta. Sem lâmpada para todos,
         a carta de TODOS é a mesa que vai sentar (``numeros_ao_sentar`` do
         registro, o dono do número que a lâmpada acende no tique seguinte);
         sem a resposta dele, quem não tem lâmpada fica DEPOIS de quem tem, na
@@ -5357,7 +5357,7 @@ class PyDualSenseController(IController):
 
         `firmware` é o `update_version` que a conexão leu (None antes disso). Lê um dict que só a
         conexão escreve, sem o `_io_lock` que a leitura da feature segura: o tique de estado não
-        espera por ela.
+        espera pela leitura.
         """
         uniq = self._key_to_uniq(key)
         return {
@@ -5528,7 +5528,7 @@ class PyDualSenseController(IController):
 
         A da vibração é a força ABSOLUTA da peça: o fator do mapa de :meth:`set_rumble_scales`
         vezes a base do global (:meth:`set_rumble_base`), a MESMA conta do funil que já pôs a força
-        no byte do motor. Com ela o firmware só tira o que o software já tirou, e o resto nunca
+        no byte do motor. Com a conta o firmware só tira o que o software já tirou, e o resto nunca
         satura; com o fator relativo sozinho, um global acima de 100% fazia o firmware tirar mais
         que o funil. A volta lê as duas no `_build_common`, nos dois transportes e nos quatro
         controles.

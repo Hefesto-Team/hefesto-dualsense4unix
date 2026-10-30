@@ -111,7 +111,7 @@ def _dualsense_mic_intended() -> bool:
     """True quando o mic do DualSense ser a fonte padrão é o que a pessoa PEDIU.
 
     **O DEFEITO, medido em 16/09/2026 na máquina do usuário.** Esta função perguntava
-    a UMA variável de ambiente, e só a ela — enquanto o `doctor.sh` responde à
+    a UMA variável de ambiente, e só a essa — enquanto o `doctor.sh` responde à
     MESMA pergunta com CINCO degraus (`_prefere_mic_do_dualsense`). Duas fontes
     de verdade para a mesma decisão, e esta lia a mais fraca: o daemon sobe pelo
     systemd com `Environment=PYTHONUNBUFFERED=1` e mais nada, então a variável

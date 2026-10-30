@@ -1,7 +1,7 @@
-"""Aba 05 · Vibração — o adaptador: o que a tela recebe e o que ela manda.
+"""Aba 05 · Vibração — o adaptador: o que a tela recebe e o que a tela manda.
 
 A página é ``src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html``, aprovada pelo usuário
-com elogio literal (``_ferramentas/CORRECOES.md:39``). Este módulo é o outro lado dela: pega o
+com elogio literal (``_ferramentas/CORRECOES.md:39``). Este módulo é o outro lado da página: pega o
 ``daemon.state_full`` e devolve **um pacote por tique** — nunca uma chamada por
 valor. O gesto que a página manda é do pacote da aba
 (``interface/pacotes/a05_vibracao``), que usa as duas traduções daqui
@@ -14,7 +14,7 @@ O QUE ESTA ABA TEM DE FONTE, E O QUE NÃO TEM
 --------------------------------------------
 Medido em 29/08/2026 contra o ``state_full`` e contra o ``src/``. A regra é
 uma: **o que não tem fonte fica declarado, nunca inventado.** Um número
-plausível e falso é pior que um traço honesto, porque ela confia nele.
+plausível e falso é pior que um traço honesto, porque o usuário confia nele.
 
 * **tem fonte, e é da MESA (um valor para os quatro):** o degrau de força
   (``rumble_policy``), o multiplicador aplicado (``rumble_mult_applied``) e o
@@ -26,7 +26,7 @@ plausível e falso é pior que um traço honesto, porque ela confia nele.
   velho demais para ser dito;
 * **OS OITO INTERRUPTORES DE LADO GANHARAM FONTE — 14/09/2026.** Eles estavam
   em :data:`SEM_FONTE` desde que esta tela nasceu, com a razão certa: *não há
-  campo de habilitar motor por lado*. A cura de 14/09 não criou o campo — ela
+  campo de habilitar motor por lado*. A cura de 14/09 não criou o campo — a cura
   leu o que já existia. Ordem de produto, com o controle na mão: *"ele deveria ligar se
   > 0 no slicer dele"*. Aceso passou a ser a LEITURA da barra daquele motor, e o
   clique, o par que a escreve (`interface/pacotes/a05_vibracao`, chave
@@ -36,7 +36,7 @@ plausível e falso é pior que um traço honesto, porque ela confia nele.
 A tela mostra QUATRO colunas com quatro forças; o produto tem UMA. Pintar o
 valor global nas quatro é a verdade de hoje, e a coluna que mostra o mesmo
 número quatro vezes é a tela dizendo isso — a força com endereço é a
-``MIGRA-VIBRACAO-04``, e ela muda o daemon, não esta conta.
+``MIGRA-VIBRACAO-04``, e muda o daemon, não esta conta.
 """
 from __future__ import annotations
 
@@ -159,7 +159,7 @@ def pacote_da_coluna(
     identidade, que é da mesa, e a vibração, que é do estado.
 
     ``controle["plastico"]`` é a cor JÁ RESOLVIDA (``monta.cor_da_zona`` sobre o
-    colorway que o aparelho respondeu). Ela vem pronta, e não se resolve aqui,
+    colorway que o aparelho respondeu). A cor vem pronta, e não se resolve aqui,
     porque quem sabe traduzir colorway em cor é o gerador do desenho — este
     módulo é ``src/`` e não importa ``novo-layout/``, que é ``.gitignore:108``.
     """
@@ -215,7 +215,7 @@ def _pedido_da_politica(state: dict[str, Any]) -> float | None:
     É a MESMA conta da janela estável, e agora é verdade: a linha de
     ``rumble_actions._pintar_a_linha_do_teto:537`` é
     ``custom_mult if policy == "custom" else _POLICY_MULT.get(policy)``, e esta
-    é ela com o ``custom_mult`` vindo do ``state``. A escada sai da
+    é essa conta com o ``custom_mult`` vindo do ``state``. A escada sai da
     :func:`_escada`, que é a cópia autorizada — não uma segunda tabela.
 
     **O ``auto`` DIZ 100%, e o número é fixo.** O docstring anterior afirmava
@@ -239,7 +239,7 @@ def _pedido_da_politica(state: dict[str, Any]) -> float | None:
 
 
 def _orcamento_da_maquina() -> str | None:
-    """A chave do orçamento GRAVADO, pelo dono dela; ``None`` = não sei.
+    """A chave do orçamento GRAVADO, pelo dono do orçamento; ``None`` = não sei.
 
     ``secao_orcamento.orcamento_em_vigor`` aceita ``host=None`` e cai no
     ``carregar_maquina()`` — é função de módulo, atravessa sem ``Gtk.Window``, e
@@ -267,7 +267,7 @@ def textos_do_estado(
 ) -> list[tuple[str, str]]:
     """A LINHA DE ESTADO da vibração: ``[(tom, frase), …]``, só o que tem a dizer.
 
-    **O buraco que ela fecha, medido em 02/09/2026.** A janela estável mostra
+    **O buraco que a função fecha, medido em 02/09/2026.** A janela estável mostra
     quatro avisos nesta aba e a interface nova mostrava ZERO — a tela nova tinha
     os dois motores, os quatro degraus e o "Testar", e nenhuma palavra sobre o
     que acontece com eles. As frases já existiam, prontas, e ninguém as
@@ -293,7 +293,7 @@ def textos_do_estado(
     vazio por ``—`` (``hefesto_vivo.py:55``), e um travessão numa linha de
     alerta afirmaria "não sei" onde a resposta é "não há o que avisar". Por isso
     esta função devolve uma LISTA do que existe, e não um dicionário de campos
-    fixos: a linha que não se aplica não é apagada — ela **não é montada**.
+    fixos: a linha que não se aplica não é apagada — **não é montada**.
 
     :param alvo: o :class:`~app.alvo_de_edicao.AlvoDeEdicao` desta tela. O padrão
         é ``TODOS``, e **é medição, não conveniência**: nesta aba a fita do topo
@@ -309,7 +309,7 @@ def textos_do_estado(
         novo. Uma linha de tela que a aba deveria ter e não tem é exatamente o
         buraco que esta função fecha do outro lado.
 
-    **O QUE ELA NÃO COBRE**, e fica dito: a tela nova afirma QUATRO forças, uma
+    **O QUE A FUNÇÃO NÃO COBRE**, e fica dito: a tela nova afirma QUATRO forças, uma
     por coluna, e o produto tem UMA. Essa mentira é de outra natureza e já está
     declarada em :data:`SEM_FONTE` (``forca:por-controle``); nenhuma das quatro
     frases fala do usuário.
@@ -338,7 +338,7 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     """O miolo da linha de estado, em HTML. Lista vazia → string vazia.
 
     **UM SÓ EMISSOR PARA OS DOIS LADOS**, e é por isso que ele mora aqui e não
-    no gerador nem no pacote: o desenho da bancada (``interface/aba05.py``) e a
+    no gerador nem no pacote: o desenho do mockup (``interface/aba05.py``) e a
     tela viva (``pacotes/a05_vibracao.py``) montam estas linhas do MESMO lugar.
     Dois emissores divergem no primeiro ajuste de classe, e aí o produto deixa
     de parecer o desenho — que é o defeito que a pasta ``novo-layout/`` custou.
@@ -347,7 +347,7 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     modo que "não há o que avisar" some da tela em vez de virar travessão.
 
     O ``escape`` não é cerimônia: as frases vêm de ``rumble_actions`` e hoje
-    nenhuma leva ``<`` ou ``&``, mas elas são texto de tela e mudam sem passar
+    nenhuma leva ``<`` ou ``&``, mas são texto de tela e mudam sem passar
     por aqui — o dia em que uma ganhar um ``&`` é o dia em que a linha some da
     tela sem uma palavra de erro.
 

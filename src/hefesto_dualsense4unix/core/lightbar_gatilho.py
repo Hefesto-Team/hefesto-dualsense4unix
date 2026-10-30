@@ -1,6 +1,6 @@
 """GATILHO-DA-COR-01: repintar a lightbar DEPOIS que a rajada da Steam passa.
 
-- **Medido em:** bancada de 11-12/08/2026, com o olho de quem confere, quatro DualSense na
+- **Medido em:** ensaio de 11-12/08/2026, com o olho de quem confere, quatro DualSense na
   mesa. As linhas estão em ``docs/data/ensaios.csv`` (``linha_id =
   luz.lightbar.cor@dualsense``), e as três que sustentam este arquivo são
   ``btmon-a-rajada-tem-hora``, ``gatilho-1500ms-por-controle`` e
@@ -18,9 +18,9 @@ A CAUSA, contada no fio com ``btmon``
 =====================================
 A Steam mantém ``/dev/hidraw*`` de cada DualSense aberto em LEITURA+ESCRITA e
 **repinta a lightbar em rajada a cada conexão nova**: 98 reports de saída numa
-probe com ela viva, contra 6 sem ela (e os 6 são o próprio kernel). A rajada
+probe com a Steam viva, contra 6 sem a Steam (e os 6 são o próprio kernel). A rajada
 dura ~4 s, e **não é por controle** — cada conexão nova faz a Steam repintar
-TODOS os controles que ela enxerga.
+TODOS os controles que a Steam enxerga.
 
 O produto perde porque pinta a cor no *priming*, na descoberta do controle —
 ou seja, dentro da rajada. Chega junto, e a última palavra é da Steam.
@@ -29,7 +29,7 @@ SÃO DUAS LUZES, NÃO UMA
 =======================
 Pergunta, 12/08: *"isso vai servir pro player e pro lightbar, certo?"* —
 e a resposta tem de ser sim, porque **a Steam repinta as duas**. Medido no
-mesmo dia: ao abrir a Steam com as barras acesas, elas migraram para as cores
+mesmo dia: ao abrir a Steam com as barras acesas, as barras migraram para as cores
 de jogador do usuário, e o número de jogador acompanhou. Um gatilho que reescrevesse
 só a cor deixaria o produto dizendo uma coisa na luz e outra na tela.
 
@@ -88,14 +88,14 @@ def mascara_de_player_leds(padrao: tuple[bool, bool, bool, bool, bool]) -> int:
 
     Bit ``i`` = a ``i``-ésima lâmpada, da esquerda para a direita — a MESMA
     conta do ``_write_partial_output`` do backend (``sum(1 << i ...)``), e é
-    ela que faz os padrões baterem com a tabela do driver desta máquina
+    essa conta que faz os padrões baterem com a tabela do driver desta máquina
     (``assets/dkms/hid-playstation/hid-playstation.c:1836-1842``:
     ``BIT(2)``, ``BIT(3)|BIT(1)``, ``BIT(4)|BIT(2)|BIT(0)``,
     ``BIT(4)|BIT(3)|BIT(1)|BIT(0)``, todos) — os palíndromos ``--x--``,
     ``-x-x-``, ``x-x-x``, ``xx-xx``, ``xxxxx``.
 
     A CONTA TEM UM DONO, e é ``core.led_control.player_bitmask`` — 28/09/2026,
-    A-TELA-PERGUNTA-AO-DONO-01. Ela morava aqui escrita de novo (``sum(1 << i
+    A-TELA-PERGUNTA-AO-DONO-01. A conta morava aqui escrita de novo (``sum(1 << i
     ...)``), ao lado do dono que ninguém chamava; o nome desta função fica
     porque é o vocabulário do report (``common[43]``) que as réguas do
     STEAM-NO-FISICO leem.
@@ -147,7 +147,7 @@ def build_bt_lightbar_report(
 ) -> bytes:
     """Report ``0x31`` MÍNIMO que pinta a lightbar e o número do jogador.
 
-    É o report exato que venceu a Steam na bancada (ensaio
+    É o report exato que venceu a Steam no aparelho (ensaio
     ``cor-rota-hidraw-com-steam``, 12/08), acrescido do bit do número — que a
     Steam também repinta.
 

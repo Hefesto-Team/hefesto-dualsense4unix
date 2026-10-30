@@ -38,7 +38,7 @@ custava 36% das amostras NO CABO — cada entrega carimbava o instante REAL da
 chegada, empurrando a referência à frente, e o report seguinte chegava cedo por
 essa mesma diferença. Basta a fonte estar um pelo ACIMA do teto (o cabo entrega
 250,88 Hz contra 250,0 de cap) para meia amostra cair fora, e a taxa colapsar
-para perto da metade. Ela sentiu isso como giroscópio aos saltos, com os valores
+para perto da metade. Quem usa sentiu isso como giroscópio aos saltos, com os valores
 todos certos. Jogos integram gyro bem em
 250 Hz; o timestamp do sensor segue exato em cada janela entregue.
 
@@ -65,7 +65,7 @@ e longe de 1000 Hz" (:740-761 e :902):
 
 Isto NÃO é licença para afrouxar o teto de emissão — veja a nota do
 `MOTION_EMIT_MAX_HZ`, mais abaixo. Nenhuma constante mudou por causa desta
-remedição: o que estava errado era o número que as justificava, não elas.
+remedição: o que estava errado era o número que as justificava, não as constantes.
 
 Leitura NÃO reabre a guerra de escritores: a guerra (2026-07-18) é sobre
 WRITERS no hidraw; o kernel replica cada input report para TODOS os fds
@@ -280,8 +280,8 @@ def _struct_base(report: bytes) -> int | None:
     Medido ao vivo na máquina do usuário: 3 minutos depois de a ponte do mic subir, os
     botões **MIC e PS** (que moram no mesmo `buttons[2]`) ficaram presos, e cada
     leitura disparava `ps_button_action_steam` — o daemon tentando abrir a Steam
-    dezenas de vezes por segundo. Ela descreveu como *"o teclado e o mouse com
-    vida própria"* e desligou o controle. Três segundos depois o controle caiu
+    dezenas de vezes por segundo. Na tela, o teclado e o mouse ganharam
+    vida própria, e o controle foi desligado. Três segundos depois o controle caiu
     inteiro.
 
     O CRC **não** protegia disso: o report de áudio é legítimo e tem CRC válido.
@@ -422,7 +422,7 @@ def decodificar_bateria(status0: int) -> tuple[int | None, bool]:
     """``(percentual, carregando)`` do byte de bateria; ``None`` = não sei.
 
     BATERIA-QUE-NAO-CHEGOU-01. A conta é a do `dualsense_parse_report` do
-    kernel 6.18, e ela vale nos DOIS sentidos: é a mesma tabela que o
+    kernel 6.18, e vale nos DOIS sentidos: é a mesma tabela que o
     `hid-playstation` vai aplicar ao byte que o nosso vpad escrever. Este é o
     ponto em que "não converta no chute" foi cobrado — a escala não é uma
     porcentagem, são **11 níveis** (5, 15, ..., 95, 100) num nibble.
@@ -445,7 +445,7 @@ def decodificar_bateria(status0: int) -> tuple[int | None, bool]:
       `forward_battery` escrever `_STATUS_DESCONHECIDO`. O kernel devolve
       capacidade **0** nesses casos, e repassar zero seria acender alerta de
       bateria crítica por causa de um controle quente. "Não sei" é a resposta
-      que a casa já escolheu para esse byte, e ela não dispara alerta nenhum.
+      que a casa já escolheu para esse byte, e não dispara alerta nenhum.
     """
     nivel = status0 & 0x0F
     carga = (status0 & 0xF0) >> 4
@@ -628,7 +628,7 @@ class PhysicalReportReader:
         no /dev/uhid via `forward_motion` e não pode sobreviver ao fd do device.
 
         GYRO-FD-01: NÃO fecha o fd do hidraw — só sinaliza (flag + wake) e a
-        própria thread fecha o fd dela no finally. O wake acorda o select na
+        própria thread fecha o próprio fd no finally. O wake acorda o select na
         hora (sem esperar o timeout da iteração).
         """
         self._stop_flag.set()
@@ -837,7 +837,7 @@ class PhysicalReportReader:
         `base` é a saída de `_struct_base` para ESTE report, quando quem chama
         já a tem (DAEMON-ACORDADO-01: o laço quente resolve uma vez e passa
         para os quatro consumidores). Omitir é a forma de quem só tem o report
-        na mão — e ela resolve a base aqui, como sempre fez.
+        na mão — e a função resolve a base aqui, como sempre fez.
         """
         pressed = (
             _clique_com_base(report, base)

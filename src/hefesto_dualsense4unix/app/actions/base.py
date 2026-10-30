@@ -18,7 +18,7 @@ def numero_do_controle(entry: dict[str, Any]) -> int:
     na posição 1-based da lista.
 
     Existia uma cópia dessa regra em cada tela, e a aba Início usava a POSIÇÃO no
-    loop em vez do slot: com um controle só, ela dizia "Controle 1" enquanto o
+    loop em vez do slot: com um controle só, a aba dizia "Controle 1" enquanto o
     cabeçalho, olhando o mesmo controle, dizia "Sony 3". Duas verdades na mesma
     janela sobre qual é o "Controle 1".
 

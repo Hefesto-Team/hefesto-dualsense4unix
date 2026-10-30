@@ -79,7 +79,7 @@ class Pendencia:
 
 @dataclass(frozen=True)
 class Fala:
-    """Uma frase de tela declarando de que célula do mapa ela fala."""
+    """Uma frase de tela declarando de que célula do mapa fala."""
 
     chave: str
     lado: str

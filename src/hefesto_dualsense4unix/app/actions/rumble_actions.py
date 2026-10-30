@@ -52,7 +52,7 @@ ROTULOS_DO_ORCAMENTO: dict[str, str] = dict(_POLICY_LABEL)
 
 _ALCANCE_O_QUE_ACONTECE = "A intensidade não está chegando a jogo nenhum: "
 
-_ALCANCE_O_QUE_SOBRA = " Aqui embaixo ela ainda vale."
+_ALCANCE_O_QUE_SOBRA = " Aqui embaixo a intensidade ainda vale."
 
 _CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU = (
     "o Status já está em “Ligado”, e o sistema não deixou o Hefesto criar o "
@@ -75,7 +75,7 @@ def _emulacao_ligada(state: dict[str, Any]) -> bool | None:
 def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     """O aviso de que a intensidade escolhida NÃO chega à vibração dos jogos.
 
-    ``None`` = ela chega, ou não se sabe, ou não há o que ajustar — e nos três
+    ``None`` = a intensidade chega, ou não se sabe, ou não há o que ajustar — e nos três
     casos a linha não aparece.
 
     **Quem decide o quadrante não é esta função**, é
@@ -103,7 +103,7 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     A frase do defeito termina dizendo o que a intensidade AINDA faz: vale para
     a vibração fixada em «Testar agora», pelo ``reassert_rumble``. Sem essa
     metade, o aviso viraria «esta parte da tela não serve para nada», que é
-    falso. Ela cabe em UMA sublinha da ``.vib-estado`` (961 px de 1119 em
+    falso. A frase cabe em UMA sublinha da ``.vib-estado`` (961 px de 1119 em
     17/09): uma segunda sublinha faz o quadro rolar e CORTA o fim do aviso, que
     foi o defeito de 02/09 que a fez mandar encurtar.
     """
@@ -132,9 +132,9 @@ def texto_do_teto_do_orcamento(
 ) -> str | None:
     """A linha *"150% · limitado a 30% pelo orçamento"*, ou ``None``.
 
-    CONFIG-05 (22/08/2026), e ela é a metade visível da invariante **teto, não
+    CONFIG-05 (22/08/2026), e é a metade visível da invariante **teto, não
     troca**: o orçamento CALCULA, a aba de origem só EXIBE. Nada aqui reescreve
-    a escolha do usuário — os quatro botões seguem afundando onde ela os pôs, o
+    a escolha do usuário — os quatro botões seguem afundando onde quem usa os pôs, o
     deslizador segue mostrando o número que o usuário escolheu, e voltar o orçamento
     para Balanceado devolve tudo sem um clique a mais. Espelhar estado entre
     abas é a classe de defeito que a `ABAS-01` curou, e esta linha é o formato
