@@ -161,7 +161,7 @@ def quem_joga_com_o_numero(nomes: dict[str, str], uniq: str, jogador: Any) -> st
     Sai da MESMA regra de `dono_na_linha`; aqui o número fica ao lado do nome, e não no lugar dele.
     O nome e o número vão em dois `span` colados (`quem-nome` e `quem-num`): o cartão da Calibrar
     é de uma linha só, e quem ganha a reticência é o NOME, com ele inteiro no `title`; o «• P<n>»
-    não encolhe. Num texto só, o corte comia o número já com «Vitória Maria» (13 letras).
+    não encolhe. Num texto só, o corte comia o número já com um nome de 13 letras.
     """
     quem = dono_na_linha(nomes, uniq, jogador, em_html=True)
     numero = dono_na_linha({}, uniq, jogador, em_html=True)

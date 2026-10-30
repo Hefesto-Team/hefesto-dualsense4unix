@@ -295,14 +295,14 @@ def icone_do_rotulo(gesto: str, desenho: str, dica: str, aria: str = "") -> str:
 
 
 def icone_da_lupa() -> str:
-    """A lupa do título da tabela dos perfis. Ela ABRE o campo, e nada mais."""
+    """A lupa do título da tabela dos perfis. A lupa ABRE o campo, e nada mais."""
     return ('<button type="button" class="icone-rot lupa" '
             'data-dica="Procura pelo nome ou pelo jogo" '
             f'aria-label="Procurar um perfil">{LUPA}</button>')
 
 
 def campo_da_lupa() -> str:
-    """O campo que a lupa abre — fechado no desenho, e é decisão de produto."""
+    """O campo que a lupa abre — fechado no desenho, e é decisão do produto."""
     return ('<input type="text" class="procura" data-hef="perfis.procura" '
             'data-hef-alvo="valor" data-hef-vivo="procurar" '
             'placeholder="procurar" aria-label="Procurar um perfil" value="">')
@@ -881,7 +881,7 @@ LEGENDA = '''<div class="nota">
     <li><b>"◆ este jogo já sabe por onde entra"</b> — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.</li>
     <li><b>O quadro "Modo"</b>, com os quatro botões — fora: <span class="marca">isso está na aba Jogar</span>, palavra sua.
       O que este perfil já guarda continua guardado — nenhum botão desta aba mexe nisso.
-      <span class="marca">Quem escreve o modo é a Jogar, e ela escreve no perfil que está valendo</span>.</li>
+      <span class="marca">Quem escreve o modo é a Jogar, no perfil que está valendo</span>.</li>
   </ul>
 
   <h2>O que estava no código e nunca teve tela</h2>
@@ -911,7 +911,7 @@ LEGENDA = '''<div class="nota">
 '''
 
 def _conferir(html: str) -> None:
-    """Lê o HTML que acabou de sair e reprova se uma decisão de produto cair."""
+    """Lê o HTML que acabou de sair e reprova se uma decisão do produto cair."""
     falhas = []
 
     def exigir(cond, queixa):
@@ -945,7 +945,7 @@ def _conferir(html: str) -> None:
     exigir(r is not None, "a regra do título de bloco sumiu do CSS")
     if r:
         exigir("color:var(--rot-campo)" in r.group(0),
-               "o título de bloco perdeu o verde que ela pediu")
+               "o título de bloco perdeu o verde pedido")
     for titulo in ("Perfis salvos", "Editar"):
         exigir(f'class="sec-rot">{titulo}<' in html,
                f"o título de bloco '{titulo}' não está na tela")
@@ -997,13 +997,13 @@ def _conferir(html: str) -> None:
                         if c.get("conectado", True) and "data-dica=" in t]
     exigir(not na_mesa_com_dica,
            f"{len(na_mesa_com_dica)} linha(s) de controle NA MESA voltaram a ter "
-           f"dica — ela congela o nome do modelo do desenho por cima de um "
+           f"dica — a dica congela o nome do modelo do desenho por cima de um "
            f"aparelho que é outro")
     fora_sem_dica = [c["pref"] for c, t in zip(MESA, linhas, strict=True)
                      if not c.get("conectado", True) and "data-dica=" not in t]
     exigir(not fora_sem_dica,
            f"o lugar vazio {fora_sem_dica} perdeu a dica que explica por que ele "
-           f"continua na tabela — ela não fala de aparelho nenhum")
+           f"continua na tabela — a linha não fala de aparelho nenhum")
 
     blocos_por_lugar = {
         m.group(1): re.findall(r'data-(?:campo|papel|hef)="([^"]+)"', m.group(0))
@@ -1020,7 +1020,7 @@ def _conferir(html: str) -> None:
         exigir(not divergentes,
                f"os lugares {divergentes} não têm os MESMOS endereços do "
                f"{MESA[0]['pref']} — um lugar com endereço a menos come a carga "
-               f"dela em silêncio, e um com contagem diferente desloca as "
+               f"do lugar em silêncio, e um com contagem diferente desloca as "
                f"células de `guarda.secao` de todos os lugares seguintes. "
                f"Endereços por lugar: "
                f"{ {p: sum(c for _k, c in a) for p, a in assinaturas.items()} }")
@@ -1035,7 +1035,7 @@ def _conferir(html: str) -> None:
     com_dica = [c for c in celulas if "data-dica=" in c]
     exigir(not com_dica,
            f"{len(com_dica)} célula(s) de `Ajuste próprio` voltaram a ter dica — "
-           f'ela mandou as oito saírem: "Auto falante é auto falante, gatilho é gatilho"')
+           f"a ordem foi tirar as oito, porque alto-falante é alto-falante e gatilho é gatilho")
 
     for endereco in ("guarda.dica", "guarda.incerto", "guarda.proprio"):
         quantas = html.count(f'data-hef="{endereco}"')
@@ -1064,11 +1064,11 @@ def _conferir(html: str) -> None:
 
     exigir(html.count('data-hef="perfis.desfecho"') == 2,
            "a tira do desfecho perdeu um dos dois endereços — sem o `classe` "
-           "ela fica acesa com um travessão; sem o `<span>` ela nunca escreve")
+           "a tira fica acesa com um travessão; sem o `<span>` nunca escreve")
     exigir('class="desfecho" data-hef="perfis.desfecho" data-hef-alvo="classe"' in html,
-           "a tira do desfecho perdeu o alvo `classe` — ela acenderia sempre")
+           "a tira do desfecho perdeu o alvo `classe` — a tira acenderia sempre")
     exigir("visibility:hidden" in html,
-           "a tira do desfecho perdeu o `visibility:hidden` — ela apareceria "
+           "a tira do desfecho perdeu o `visibility:hidden` — a tira apareceria "
            "vazia em toda tela sem recado")
 
     regra = re.search(r"\.desfecho\{[^}]*\}", html)
@@ -1079,7 +1079,7 @@ def _conferir(html: str) -> None:
         corpo = regra.group(0)
         exigir("height:0" in corpo and "margin-top:0" in corpo,
                "a tira do desfecho voltou a reservar espaço em REPOUSO — são "
-               "37px de banda morta debaixo do título, e ela os chamou de "
+               "37px de banda morta debaixo do título, chamados de "
                "bizarros em 05/09")
         exigir("height:30px" in acesa.group(0),
                "a tira do desfecho voltou a UMA linha — o fim da frase, que é "
@@ -1103,13 +1103,13 @@ def _conferir(html: str) -> None:
             exigir(f'data-hef="{estado}"' in marca.group(0)
                    and 'data-hef-alvo="classe"' in marca.group(0),
                    f"a marca `{classe}` perdeu o endereço que a acende "
-                   f"(`{estado}`, alvo `classe`) — ela ficaria escondida para "
+                   f"(`{estado}`, alvo `classe`) — a tira ficaria escondida para "
                    f"sempre, ou visível para sempre")
         exigir(f'<span class="dica" data-hef="{frase}" data-hef-alvo="html">'
                f'</span>' in html,
                f"a dica de `{classe}` não é um `{frase}` VAZIO no desenho — ou "
                f"o endereço sumiu, ou o mockup passou a cravar uma frase que é "
-               f"dado do perfil dela")
+               f"dado do perfil do usuário")
 
     exigir('data-hef="editor.jogo.rotulo"' not in html and "gesto=\"detectar\"" not in html,
            "o rótulo do jogo ou o Detectar voltou ao editor — o campo «Nome do jogo» é o único "
@@ -1119,7 +1119,7 @@ def _conferir(html: str) -> None:
            "MIN-CONTENT e estoura a página")
 
     exigir('<div class="campo modo">' not in html,
-           "o quadro Modo voltou ao editor de Perfis — ele sai por ordem dela "
+           "o quadro Modo voltou ao editor de Perfis — ele sai por ordem "
            "de 11/09/2026, e a aba onde o modo se escolhe é a Jogar")
     exigir('data-modo="' not in html,
            "um botão desta aba voltou a carregar `data-modo` — o atributo é do "
@@ -1130,7 +1130,7 @@ def _conferir(html: str) -> None:
            "saiu de `a10_perfis` junto com o quadro, e um endereço sem gesto é "
            "um botão que responde calado")
     exigir(".campo.modo" not in html,
-           "a regra `.campo.modo` voltou ao CSS — ela reservava a altura solta "
+           "a regra `.campo.modo` voltou ao CSS — a regra reservava a altura solta "
            "da fileira de quatro botões, e era essa fileira (36px) que deixava "
            "a linha do P4 fora do quadro sempre que a tira do desfecho acendia")
 
@@ -1145,7 +1145,7 @@ def _conferir(html: str) -> None:
            "escritor (`Daemon.gravar_o_modo_escolhido`) só alcança o perfil "
            "ativo")
     exigir("quem o escolhe é a Jogar" not in LEGENDA,
-           "a frase larga voltou à legenda — ela afirma que a Jogar escolhe o "
+           "a frase larga voltou à legenda — a frase afirma que a Jogar escolhe o "
            "modo de qualquer perfil, e a Jogar grava só no que está valendo")
 
     regra_nome = re.search(r"\.gd-nome\{[^}]*\}", html)
@@ -1154,7 +1154,7 @@ def _conferir(html: str) -> None:
         exigir("display:flex" not in regra_nome.group(0),
                "o `<td>` do nome voltou a `display:flex` — ele deixa de ser "
                "célula de tabela e o nome desalinha do glifo e do ID em 8px, "
-               "que é a linha «quebrada» que ela fotografou")
+               "que é a linha «quebrada» que foi fotografada")
         exigir("vertical-align:middle" in regra_nome.group(0),
                "o `<td>` do nome perdeu o `vertical-align:middle` — sem ele o "
                "texto pousa no topo da linha e as três colunas deixam de "
@@ -1163,7 +1163,7 @@ def _conferir(html: str) -> None:
     exigir('<datalist id="jogos-desta-maquina" data-hef="editor.jogo.lista">'
            '</datalist>' in html,
            "a lista dos jogos desta máquina sumiu, ou deixou de nascer VAZIA — "
-           "um exemplo cravado aqui é a tela afirmando um jogo que ela talvez "
+           "um exemplo cravado aqui é a tela afirmando um jogo que o usuário talvez "
            "não tenha")
     campo_do_jogo = re.search(r'<input[^>]*data-hef="editor\.jogo"[^>]*>', html)
     exigir(campo_do_jogo is not None, "o campo do jogo sumiu do editor")
@@ -1188,12 +1188,12 @@ def _conferir(html: str) -> None:
             continue
         exigir(f">{e.rotulo}</option>" in html,
                f"o estilo '{e.rotulo}' está no motor e não está no `<select>` "
-               f"— o gesto saberia aplicá-lo e ela não teria como pedir")
+               f"— o gesto saberia aplicá-lo e o usuário não teria como pedir")
     exigir('<option value="" disabled selected>—</option>' in html,
            "a opção vazia do estilo de jogo saiu — o campo voltaria a abrir "
            "afirmando um estilo que perfil nenhum guarda")
     exigir('data-dica="O estilo decide o automático: gatilho, vibração e luz">Estilo de jogo:' in html,
-           "a dica do estilo de jogo mudou — ela é a frase curta do desenho")
+           "a dica do estilo de jogo mudou — é a frase curta do desenho")
     opcoes = re.search(r'<select class="destaque estreito"[^>]*>(.*?)</select>', html, re.S)
     exigir(opcoes is not None, "o select do estilo sumiu")
     if opcoes:
@@ -1235,11 +1235,11 @@ def _conferir(html: str) -> None:
 
 
     exigir('class="icone-rot lupa"' in html,
-           "a lupa sumiu do título da tabela dos perfis — ela é ordem dela de "
+           "a lupa sumiu do título da tabela dos perfis — é a ordem de "
            "11/09/2026 e é por onde o campo de busca aparece")
     exigir('data-papel="abrir-a-lupa"' not in html,
            "a lupa voltou a endereçar por `data-papel` — o ouvinte do piloto "
-           "casa esse atributo, e cada clique nela chegaria ao Python como um "
+           "casa esse atributo, e cada clique ali chegaria ao Python como um "
            "gesto SEM DONO, imprimindo no stdout de quem lançou a janela")
     campo = re.search(r'<input[^>]*class="procura"[^>]*>', html)
     exigir(campo is not None, "o campo da lupa sumiu da página")
@@ -1253,26 +1253,26 @@ def _conferir(html: str) -> None:
                "termo como TEXTO dentro de um `<input>`, que não aparece")
         exigir('value=""' in campo.group(0),
                "o campo da lupa nasce com termo dentro — o desenho passaria a "
-               "afirmar uma busca que ela não fez")
+               "afirmar uma busca que não foi feita")
     exigir('class="procura on"' not in html,
            "o campo da lupa nasce ABERTO — um campo de busca sempre visível "
-           "acrescenta uma linha ao bloco em vez de tirar, e a ordem dela era "
+           "acrescenta uma linha ao bloco em vez de tirar, e a ordem era "
            "de limpeza")
 
     regra_seta = re.search(r"\.ordena\{[^}]*\}", html)
     exigir(regra_seta is not None, "a regra da seta da ordem sumiu do CSS")
     if regra_seta:
         exigir("pointer-events:none" in regra_seta.group(0),
-               "a seta da ordem perdeu o `pointer-events:none` — ela carrega o "
+               "a seta da ordem perdeu o `pointer-events:none` — a seta carrega o "
                "gesto `ordenar`, e sem esta linha um clique "
-               "SIMPLES no cabeçalho passa a ordenar. Ela pediu DUPLO clique, "
+               "SIMPLES no cabeçalho passa a ordenar. O pedido foi DUPLO clique, "
                "e a razão está na regra: o cabeçalho é `sticky` a um pixel da "
                "célula que troca o perfil aberto no editor")
     for coluna in ("nome", "criado", "modificado"):
         seta = re.search(rf'<span class="ordena" data-hef="perfis\.ordem\.{coluna}"[^>]*>',
                          html)
         exigir(seta is not None,
-               f"a coluna `{coluna}` não tem seta de ordem — ela é o que diz "
+               f"a coluna `{coluna}` não tem seta de ordem — a seta é o que diz "
                f"qual coluna ordena e para onde, sem texto novo")
         if seta:
             exigir('data-hef-gesto="ordenar"' in seta.group(0)
@@ -1294,7 +1294,7 @@ def _conferir(html: str) -> None:
            "com margem empurra o rótulo e abrevia o cabeçalho na tela, com a "
            "palavra inteira no HTML. A margem mora em `.ordena[data-ordem]`")
     exigir(re.search(r"\.ordena\[data-ordem\]\{[^}]*margin-left", html) is not None,
-           "a seta ORDENADA perdeu a margem — ela encosta no rótulo da coluna")
+           "a seta ORDENADA perdeu a margem — a seta encosta no rótulo da coluna")
     exigir('.tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}' in html,
            "as colunas de data perderam a largura que cabe «dd/mm/aaaa» com a seta da ordem")
 
@@ -1311,7 +1311,7 @@ def _conferir(html: str) -> None:
                           rf'data-hef-gesto="{gesto_}"[^>]*>', html)
         exigir(icone is not None,
                f"o gesto `{gesto_}` não é um ícone do rótulo — ele virou ícone "
-               f"por ordem dela em 11/09/2026, e o nome do gesto não muda por "
+               f"por ordem de 11/09/2026, e o nome do gesto não muda por "
                f"troca de invólucro")
         if icone:
             exigir(f'data-dica="{dica_}"' in icone.group(0),
@@ -1320,7 +1320,7 @@ def _conferir(html: str) -> None:
                    f"custo inteiro de trocar palavra por desenho")
         bloco = html.split(f'class="sec-rot">{canto}')
         exigir(len(bloco) == 2 and f'data-hef-gesto="{gesto_}"' in bloco[1][:700],
-               f"o ícone de `{gesto_}` não está no rótulo `{canto}` — ela disse "
+               f"o ícone de `{gesto_}` não está no rótulo `{canto}` — o pedido disse "
                f"onde cada um vai, e são cantos diferentes de propósito")
     exigir(html.count('class="btn" data-hef-gesto="voltar-a-de-ontem"') == 0
            and html.count('class="btn" data-hef-gesto="recarregar"') == 0,
@@ -1328,7 +1328,7 @@ def _conferir(html: str) -> None:
            "TRÊS virou UM, e é isso que faz o layout ficar mais limpo sem "
            "acrescentar altura nenhuma")
     exigir('data-hef-gesto="voltar-a-de-ontem"' not in html,
-           "o `voltar-a-de-ontem` voltou à tela — a ordem dela de 11/09 foi "
+           "o `voltar-a-de-ontem` voltou à tela — a ordem de 11/09 foi "
            "removê-lo, e o ícone dele ao lado de «Editar» era lido como o "
            "recarregar duplicado")
     regra_icone = re.search(r"\.icone-rot\{[^}]*\}", html)
@@ -1344,11 +1344,11 @@ def _conferir(html: str) -> None:
     if th_status:
         exigir(th_status.group(1).strip() == "Status",
                f"o rótulo da coluna não é `Status`: {th_status.group(1)!r}. "
-               f"Ela mandou trocar o nome em 11/09/2026, e SÓ o nome")
+               f"A ordem foi trocar o nome em 11/09/2026, e SÓ o nome")
     exigir("controles com ajuste próprio" not in html,
            "o contador «controles com ajuste próprio» voltou ao título — a Perfis do todo não o tem")
     exigir(DICA_DO_STATUS in html,
-           "a dica do `<th>` não diz as duas camadas — ela é quem explica o que "
+           "a dica do `<th>` não diz as duas camadas — é a dica quem explica o que "
            "o glifo aceso e o ponto embaixo querem dizer, e encurtar o rótulo só "
            "funciona porque a explicação tem outro dono")
     exigir("guarda um ajuste só deste controle" not in html,
@@ -1359,7 +1359,7 @@ def _conferir(html: str) -> None:
     exigir(regra_tab is not None, "a regra da tabela sumiu do CSS")
     exigir("table-layout:fixed" in html,
            "a tabela voltou a `table-layout:auto` — nele a `width` é SUGESTÃO, "
-           "e a largura que ela arrastar é reescrita pelo navegador no próximo "
+           "e a largura que o usuário arrastar é reescrita pelo navegador no próximo "
            "repinte. Está medido neste arquivo desde 31/08: `.tab .pri` dizia "
            "46px e o Chrome media 86px")  # (noqa-acento)
     exigir(html.count('<col data-coluna=') == 5,
@@ -1381,7 +1381,7 @@ def _conferir(html: str) -> None:
     if regra_pux:
         exigir("cursor:col-resize" in regra_pux.group(0),
                "a divisa perdeu o `cursor:col-resize` — «quando o cursor muda "
-               "e permite alterar a largura da coluna» é a descrição dela do "
+               "e permite alterar a largura da coluna» é a descrição do "
                "gesto, e sem o cursor não há gesto a achar")
 
     from hefesto_dualsense4unix.interface.frases_banidas import roteiros_de
@@ -1404,7 +1404,7 @@ def _conferir(html: str) -> None:
             exigir(peca in corpo, queixa)
 
     if falhas:
-        raise SystemExit("ERRO em 10-perfis — decisão dela desfeita:\n  "
+        raise SystemExit("ERRO em 10-perfis — decisão desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 

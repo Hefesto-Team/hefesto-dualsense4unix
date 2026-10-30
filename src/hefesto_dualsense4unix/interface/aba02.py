@@ -464,11 +464,11 @@ def sensores_da_peca(c):
 
 
 def identidade(c, *, bat, carga=None, meio="", com_mascara=True):
-    """A LINHA DE IDENTIDADE, e ela é UMA SÓ.
+    """A LINHA DE IDENTIDADE, e é UMA SÓ.
 
     Sai daqui a linha das quatro caixas — a do controle aberto e a dos fechados,
     que agora são o MESMO elemento. `meio` é o que só a linha fechada mostra: o
-    estado que ela resume porque o card aberto mostra por extenso.
+    estado que a linha resume porque o card aberto mostra por extenso.
 
     O RÓTULO SAI DE `monta.rotulo(c)`, e a MÁSCARA de `c["mascara"]`. Os dois
     eram montados/digitados aqui, e os dois já tinham divergido:
@@ -478,11 +478,11 @@ def identidade(c, *, bat, carga=None, meio="", com_mascara=True):
         da que a Jogar mostra. Medido em 28/08: a Jogar dizia que o P2 era
         DualSense e o P3 Xbox 360, e esta aba dizia o contrário, **na mesma
         sessão**. Não é o valor que se corrige — é o segundo lugar que some.
-    A caixa alta, se um dia ela a quiser, é `text-transform` no `.card-nome`:
+    A caixa alta, se um dia for pedida, é `text-transform` no `.card-nome`:
     escrever em maiúscula no HTML tira de quem lê a chance de copiar o nome do
     plástico.
 
-    O QUE SAIU DAQUI EM 28/08, E POR QUE SÓ DUAS DAS TRÊS QUE ELA CITOU.
+    O QUE SAIU DAQUI EM 28/08, E POR QUE SÓ DUAS DAS TRÊS CITADAS.
     Palavra de produto: *"se der problema de espaço remover Giroscópio, Hefesto e vê
     como (na real remove eles)"* — e o espaço apertou mesmo, porque os dois
     interruptores de sensor desceram para esta linha. Saíram as duas LEITURAS:
@@ -497,13 +497,13 @@ def identidade(c, *, bat, carga=None, meio="", com_mascara=True):
     botões couberam com folga em todas as linhas, com o número na legenda.
     E o que ENTROU não é o que o usuário mandou tirar: o que sai é a LEITURA
     `Giroscópio 250 Hz`, o que entra é o INTERRUPTOR de giroscópio. São coisas
-    diferentes com a mesma palavra, e confundi-las apaga o que ela acabou de
+    diferentes com a mesma palavra, e confundi-las apaga o que o usuário acabou de
     pedir.
 
     E A FORMA É A `curta`, não a `completa`, por duas razões que apontam para o
     mesmo lado:
       1) É A DECISÃO DE PRODUTO. O `topo.html` a registra: a ordem nasceu em 26/08 com
-         a marca na frente e ela a tirou em 27/08 — *"tira o Sony das outras
+         a marca na frente e saiu em 27/08 — *"tira o Sony das outras
          abas também"* —, porque a marca se repetia em cada card e em cada chip
          sem separar um controle do outro. `player • plástico • transporte` é o
          que resta, e é o mesmo texto do chip da fita.
@@ -650,7 +650,7 @@ def linha_de_volume(campo, razao=""):
     único par alvo/campo para dizer em QUAL dos dois estados o alto-falante está
     (`alto-mudo`, decisão [09] e 02-Q9), e um elemento aceita UM alvo — não há como o
     mesmo botão receber também a classe `apagado`. Então quem recebe o endereço
-    é a LINHA: o alvo `atributo` põe `data-porque` nela quando há razão e o
+    é a LINHA: o alvo `atributo` põe `data-porque` ali quando há razão e o
     REMOVE quando não há (o ramo `vazio || t === '—'` do piloto), e o CSS
     apaga o botão de dentro. É a mesma forma do `data-apagado` das molduras de
     som desta aba, e existe pelo mesmo motivo: um campo que diz duas coisas.
@@ -712,22 +712,22 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     """Uma caixa de controle, a partir do ITEM DA MESA — nunca de um nome digitado.
 
     É UMA função para as duas formas, porque agora é uma caixa só: o rádio diz
-    se ela está aberta (card) ou fechada (linha), e o CSS faz o resto. Do `c`
+    se a linha está aberta (card) ou fechada (linha), e o CSS faz o resto. Do `c`
     saem a identidade inteira: o plástico (`cor_da_zona`, lido do desenho), o
     número do jogador, o transporte e o rótulo. O que entra por argumento é só o
     ESTADO — o que este controle está fazendo agora.
 
-    E ELA É UMA SÓ PARA O LUGAR CHEIO E PARA O VAZIO — 07/09/2026,
+    E É UMA SÓ PARA O LUGAR CHEIO E PARA O VAZIO — 07/09/2026,
     CONTROLES-O-LUGAR-VAZIO-TEM-ENDERECO-01.
 
-    O QUE ELA VEIO CURAR, medido na bancada com os QUATRO DualSense ligados:
+    O QUE VEIO CURAR, medido no ensaio com os QUATRO DualSense ligados:
     o daemon publicava quatro controles, a carga chegava com
     `colunas = ['p1','p2','p3','p4']` e a tela mostrava DOIS. Os outros dois
     diziam `P3 · Desconectado` com travessão em tudo, para sempre. A causa era
     estrutural: havia um `lugar_vazio()` à parte que emitia um cartão **sem um
     único `data-campo` por dentro**, e o passo 2 do piloto
     (`hefesto_vivo.py`) procura `data-campo` DENTRO do bloco daquele
-    `data-controle` — sem endereço, o dado dela chegava e não tinha onde pousar.
+    `data-controle` — sem endereço, o dado chegava e não tinha onde pousar.
     O passo `1c` tirava o `off` do lugar que ganhava dono, e o que aparecia
     embaixo era um cartão oco.
 
@@ -748,7 +748,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     exigir dos quatro lugares.
 
     O QUE O LUGAR VAZIO NÃO LEVA são as duas coisas que ele não TEM: a cor do
-    plástico lida do aparelho e a posição do dedo. Sem elas o `--plastico` cai
+    plástico lida do aparelho e a posição do dedo. Sem as duas o `--plastico` cai
     no PISO da folha (`PISO_DO_PLASTICO`) e o pontinho no REPOUSO da regra da
     posição (`REGRA_DAS_POSICOES`), e a âncora de `cor_do_plastico_por_regra`
     continua contando exatamente os conectados.
@@ -944,7 +944,7 @@ def _so_o_travessao(html_do_card: str) -> str:
     É A MESMA CONTA QUE O PRODUTO FAZ, e não uma segunda:
     `pacotes.apagar_os_lugares_sem_dono` escreve `TRAVESSAO` em toda chave de um
     lugar sem dono, e o `escrever()` do piloto leva isso ao texto de cada
-    elemento. Aqui ela roda uma vez, no gerador, para que a página PARADA nasça
+    elemento. Aqui a função roda uma vez, no gerador, para que a página PARADA nasça
     dizendo o mesmo que a página viva diz no primeiro tique — que é a diferença
     entre o desenho e o produto se conferirem ou divergirem calados.
 
@@ -1300,7 +1300,7 @@ LEGENDA = f'''<div class="nota">
   </ul>
   <h2>O que mudou em 07/10</h2>
   <ul>
-    <li><b>O título do cartão aberto diz quem joga</b>, como você escolheu: o <b>nome</b> que você deu ao controle na aba Conexões, e o <b>«P1»</b> só quando ele não tem nome (por exemplo, «Vitória • Galactic Purple • BT»). No «Todos», cada cartão diz o seu, na ordem dos jogadores. A tira fechada continua com o «P1 •» dela. O número, onde aparece, agora segue o do jogo: o cabeçalho, as lâmpadas e a fita dizem o mesmo.</li>
+    <li><b>O título do cartão aberto diz quem joga</b>, como você escolheu: o <b>nome</b> que você deu ao controle na aba Conexões, e o <b>«P1»</b> só quando ele não tem nome (por exemplo, «Sala • Galactic Purple • BT»). No «Todos», cada cartão diz o seu, na ordem dos jogadores. A tira fechada continua com o próprio «P1 •». O número, onde aparece, agora segue o do jogo: o cabeçalho, as lâmpadas e a fita dizem o mesmo.</li>
   </ul>
   <h2>O que mudou em 03/10</h2>
   <ul>
@@ -1309,7 +1309,7 @@ LEGENDA = f'''<div class="nota">
   <h2>O que mudou em 24/09</h2>
   <ul>
     <li class="foi"><b>Cada controle ganhou o botão «{ROTULO_DA_MIRA_VIRTUAL}»</b>, ao lado de <b>Giroscópio</b> e <b>Acelerômetro</b>, como você pediu: <i>"Cria um botão virtual ao lado de giroscopio e acelerometro chamado Mira Virtual"</i>. Aceso, virar aquele controle move o <b>analógico direito</b> dele — e só dele. Ele nasce <b>apagado</b>, a dica era a sua frase, e o <b>Giroscópio</b> não mudou. Uma coisa muda com a mira acesa no modo <b>Virtual</b>: o jogo deixa de receber o giro daquele controle como giroscópio e passa a recebê-lo só pelo analógico direito, para a câmera não andar em dobro. O quanto um gesto anda e o «Ignorar tremor até» ficam na tela <b>Calibrar sensores de movimento</b>.</li>
-    <li class="foi"><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com ela apagada, continua a de sempre, e cada controle diz a sua.</li>
+    <li class="foi"><b>A dica do Giroscópio muda quando a {ROTULO_DA_MIRA_VIRTUAL} está acesa</b> naquele controle, como você escolheu: passa a dizer <i>«{DICA_DO_GIRO_COM_A_MIRA}»</i> Com a Mira apagada, continua a de sempre, e cada controle diz a sua.</li>
     <li class="foi"><b>No modo nativo o botão «{ROTULO_DA_MIRA_VIRTUAL}» fica cinza e não grava</b>, como você escreveu: <i>"A exceção do nativo todo o resto deve ter mira Virtual"</i>. Com o <b>Sony DualSense</b> e o <b>Xbox</b> ele funciona, no USB e no BT, nos quatro controles. O «Só enquanto eu segurar» e o «Inverter» entraram na tela <b>Calibrar sensores de movimento</b>.</li>
     <li class="foi"><b>Na Navegação, a {ROTULO_DA_MIRA_VIRTUAL} acesa move o cursor.</b> Virar aquele controle anda o ponteiro, com a mesma sensibilidade, o mesmo «Ignorar tremor até», o «Só enquanto eu segurar» e o «Inverter». Vale nos quatro controles, no USB e no BT, e dois controles com a mira acesa somam o movimento. A dica do <b>Giroscópio</b> passa a dizer <i>«{DICA_DO_GIRO_NO_CURSOR}»</i></li>
     <li class="foi"><b>Com o Giroscópio desligado, o cartão não diz mais que o giro está indo para o jogo.</b> E no <b>Modo nativo</b> a <b>Barra de luz</b> mostra a cor que está no controle, e não mais «Jogo»: quem pinta a barra continua sendo o Hefesto.</li>
@@ -1322,7 +1322,7 @@ LEGENDA = f'''<div class="nota">
   <h2>O que mudou em 20/09</h2>
   <ul>
     <li class="foi"><b>Os dois primeiros botões do alto-falante ganharam os nomes que você escreveu</b> — <b>Efeitos do Jogo no Controle, Áudio da TV na TV</b> e <b>Efeitos do Jogo e Áudio da TV no Controle</b>. Em 24/09 «TV» virou «PC» nos dois, por decisão sua. Você derrubou o enunciado anterior e o que você derrubou era conceito, não palavra: <i>"não gosto do termo jogo pra se referir ao canal especifico pro sfx do controle, pq hdmi tecnicamente é jogo que manda pra lá também"</i>. Os dois não são duas fontes — são dois modos do <b>mesmo</b> alto-falante: um deixa entrar só o que o jogo endereçar a este controle, o outro derrama tudo o que a máquina toca, sem tirar o som do PC.</li>
-    <li class="foi"><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde ela vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer. Em 24/09, com o quarto botão, os dois de baixo passaram a dividir uma linha.</li>
+    <li class="foi"><b>A fileira empilhou, e o cartão não cresceu por isso.</b> Os nomes não cabem lado a lado na coluna onde a fileira vive, então os três botões passaram a ficar um sobre o outro — e os pixels que isso custaria voltaram das alturas vizinhas (o par do microfone, o botão de calar, os dois dos sensores e o respiro das molduras). O cartão ficou <b>mais baixo</b> do que era, e agora existe uma régua que reprova qualquer mudança futura que o faça crescer. Em 24/09, com o quarto botão, os dois de baixo passaram a dividir uma linha.</li>
     <li class="foi"><b>O terceiro botão ganhou o nome que você escreveu</b> — <b>Tudo na TV e Nada no Controle</b> —, e ganhou porque o <b>ato</b> mudou primeiro. Ele esperou dois dias: o nome descrevia o oposto do que o botão fazia, e pôr o nome novo sem trocar o ato seria a mentira que esta tela existe para não contar. Ele faz os dois lados do próprio nome: devolve todo o som ao PC <b>e</b> tira o alto-falante deste controle do caminho. Em 24/09 ele passou a se chamar <b>{ROTULO_NADA_NO_CONTROLE}</b>.</li>
   </ul>
 
@@ -1333,25 +1333,25 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que mudou em 31/08</h2>
   <ul>
-    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo dela caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o daemon aceita <code>mic.set {{muted: null}}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
+    <li class="foi"><b>O <code>Liberar</code> do microfone saiu desta tela — decisão sua, mantida depois que o motivo da decisão caiu.</b> Ele estava aqui e devolvia ao <b>botão físico do controle</b> o comando do mudo. Você olhou a tela e disse: <i>"esse botão liberar no microfone não existe."</i> A RETOMADA de 30/08 anotou isso como <i>"não existe em lugar nenhum"</i> e mandou tirá-lo — e essa generalização é <b>falsa</b>: o daemon aceita <code>mic.set {{muted: null}}</code> (<code>daemon/ipc_server.py:32</code>), que é a devolução. O fato foi medido e levado a você em 31/08 e <b>você manteve a decisão</b>: ele fica fora da tela nova, mesmo existindo no produto. <b>O preço, dito inteiro:</b> quem clicar no <b>🎙</b> daqui <b>assume</b> o mudo, e o botão do controle para de valer; a volta não existe por esta tela — o botão do plástico volta a valer reiniciando o Hefesto — e é isso que a dica do 🎙 passou a dizer, no lugar de mandar clicar num botão ausente. Os três testes que mediam este botão viraram <b>lápide</b> em <code>tests/unit/test_regua_de_tela_a_aba_controles.py</code>; se ele voltar, eles voltam inteiros do <code>git log</code>.</li>
     <li><b>Esta legenda anunciava o botão de cima como novidade — dois dias depois de ele sair da tela.</b> É o defeito que esta aba existe para não cometer, virado para dentro: <i>a prosa afirmando o que o produto não faz</i>. Agora o gerador <b>para</b> se a legenda citar um rótulo que o desenho não escreve, e só um <code>&lt;li class="foi"&gt;</code> — a lápide, o item recuado aqui em cima — tem licença de nomear o que saiu. A mesma régua recusa título com data relativa: foi um <i>"hoje"</i> num <code>&lt;h2&gt;</code> que envelheceu calado.</li>
   </ul>
 
   <h2>O que mudou em 30/08</h2>
   <ul>
     <li><b>O modo do microfone são DOIS, e eles desceram para baixo do slider</b> — suas duas ordens de 31/08: <i>"remove o desligado (fica desligado com slicer no zero)"</i> e <i>"os botões Virtual e Nativo ficam na parte de baixo do slider, igual o Sons do Jogo e Todo o som do PC"</i>. Agora são a <b>mesma fileira</b> que o alto-falante usa — mesma classe, mesma altura, mesmo gesto.<br><b>Em 30/08 eles eram TRÊS e moravam na linha do rótulo</b>, e o motivo era orçamento: como fileira embaixo custariam 42 px e o card estouraria a caixa. Com o "Desativado" fora sobraram dois, e o preço ficou pagável — mas ele existiu: a coluna do som foi de 236 para 269 px, e as duas fileiras de escolha passaram de 36 para <b>30 px</b> de altura para o card caber. É a mesma faixa do chip da fita, e as duas continuam iguais entre si.</li>
-    <li><b>O acelerômetro passou a aparecer na tela</b>, com os três eixos e a unidade em <b>g</b>, embaixo do giroscópio e na <b>mesma moldura</b> — que por isso passou a se chamar <b>Sensores</b>. <b>Em 31/08 ela virou DUAS</b>, por ordem sua — <i>"é pra ser 3: um Giroscópio, outra Acelerômetro e outra gatilhos"</i> —, e as unidades (<i>°/s</i> e <i>g</i>) saíram dos rótulos junto. Coube sem custo: a coluna continua nos mesmos px. É a resposta à pergunta que a legenda de 29/08 deixou aberta (<i>vale ler?</i>): vale, e os números do P1 no desenho são <b>medidos</b> no daemon vivo — X +0,105 · Y +0,976 · Z +0,170, que dão <b>0,996 g</b>, a gravidade.</li>
+    <li><b>O acelerômetro passou a aparecer na tela</b>, com os três eixos e a unidade em <b>g</b>, embaixo do giroscópio e na <b>mesma moldura</b> — que por isso passou a se chamar <b>Sensores</b>. <b>Em 31/08 a moldura virou DUAS</b>, por ordem sua — <i>"é pra ser 3: um Giroscópio, outra Acelerômetro e outra gatilhos"</i> —, e as unidades (<i>°/s</i> e <i>g</i>) saíram dos rótulos junto. Coube sem custo: a coluna continua nos mesmos px. É a resposta à pergunta que a legenda de 29/08 deixou aberta (<i>vale ler?</i>): vale, e os números do P1 no desenho são <b>medidos</b> no daemon vivo — X +0,105 · Y +0,976 · Z +0,170, que dão <b>0,996 g</b>, a gravidade.</li>
   </ul>
 
   <h2>O que mudou em 29/08</h2>
   <ul>
     <li><b>Os botões do som passaram a existir.</b> O <b>🎙</b> e o <b>♪</b> tinham cara de botão — o cursor virava mãozinha — e <b>não tinham nada atrás</b>: nenhum clique chegava ao programa. Medido: dois cliques neles produziram <b>zero</b>, enquanto os de rota, ao lado, respondiam. Naquele dia passaram a responder <b>três</b>; hoje são <b>dois</b>, porque o terceiro saiu em 31/08 (acima). E o <b>♪</b> acende quando o alto-falante está mudo — o dado sempre esteve chegando e a tela não o lia.</li>
-    <li><b>A dica do 🎙 estava errada, e a correção ficou.</b> Ela dizia que o 🎙 <i>"é o mesmo que apertar o botão do controle"</i>, e não é: clicar ali faz o Hefesto <b>tomar</b> o comando do mudo, e o botão do aparelho para de valer. A dica de hoje diz esse preço — é a informação que a antiga escondia.</li>
-    <li><b>Os analógicos estavam mentindo de dois jeitos.</b> (1) No fim do curso — analógico todo à esquerda ou todo para cima — o valor <b>0</b> era trocado por <b>128</b>, o centro: a bolinha <b>pulava de volta ao meio</b> no talo. (2) A bolinha era posicionada pelo <b>canto</b> e não pelo <b>centro</b>, então em repouso ela nascia <b>4,7 px</b> abaixo e à direita da cruz — como se cada eixo tivesse 12,5 unidades presas. Agora o desvio em repouso é <b>0,19 px</b> e os dois extremos são simétricos.</li>
+    <li><b>A dica do 🎙 estava errada, e a correção ficou.</b> A dica dizia que o 🎙 <i>"é o mesmo que apertar o botão do controle"</i>, e não é: clicar ali faz o Hefesto <b>tomar</b> o comando do mudo, e o botão do aparelho para de valer. A dica de hoje diz esse preço — é a informação que a antiga escondia.</li>
+    <li><b>Os analógicos estavam mentindo de dois jeitos.</b> (1) No fim do curso — analógico todo à esquerda ou todo para cima — o valor <b>0</b> era trocado por <b>128</b>, o centro: a bolinha <b>pulava de volta ao meio</b> no talo. (2) A bolinha era posicionada pelo <b>canto</b> e não pelo <b>centro</b>, então em repouso a bolinha nascia <b>4,7 px</b> abaixo e à direita da cruz — como se cada eixo tivesse 12,5 unidades presas. Agora o desvio em repouso é <b>0,19 px</b> e os dois extremos são simétricos.</li>
     <li><b>O motivo que eu te dei para o acelerômetro não estar na tela era falso.</b> Eu escrevi aqui que <b>"o aparelho não entrega esse dado"</b>. Ele entrega. Medido nos seus dois controles: o mesmo nó de sensor publica os três eixos do acelerômetro a <b>250 leituras por segundo</b>, calibrados, e a conta fecha na gravidade — <b>0,996 g</b> num controle e <b>0,993 g</b> no outro, contra 1 g de referência. Os dois estavam em <b>poses diferentes</b> (25° de diferença), então não é número decorado, é leitura. Quem não lia era o <b>Hefesto</b>: o dado chegava até a linha que o descarta. A pergunta que ficou — <i>vale ler?</i> — foi respondida no dia seguinte, e o campo está na tela desde 30/08.</li>
-    <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> delas. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>1 toque</b> — a palavra do produto, a mesma que a janela de hoje escreve (<code>sensor_widgets.texto_toques</code>), por decisão sua de 02/09. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): ela estava 41% esticada na vertical, e com ela a posição do dedo.</li>
+    <li><b>O touchpad passou a dizer alguma coisa.</b> Ele é um retângulo que só mostra um ponto <b>enquanto o dedo está lá</b> — e medindo 238 leituras dos seus dois controles, o dedo estava lá em <b>zero</b> das leituras. Ele nunca mostrava nada. Agora o canto diz <b>Sem toque</b> ou <b>1 toque</b> — a palavra do produto, a mesma que a janela de hoje escreve (<code>sensor_widgets.texto_toques</code>), por decisão sua de 02/09. E a superfície ganhou a <b>proporção do sensor de verdade</b> (16:9, que é o 1920×1080 do touchpad): a superfície estava 41% esticada na vertical, e com isso a posição do dedo.</li>
     <li><b>O LED do jogador virou campo</b>, com rótulo e moldura próprios, embaixo da Barra de luz — as cinco lâmpadas no padrão do controle. Ele nasceu ontem como uma <b>linha espremida</b> dentro da moldura da Barra de luz (13 px num campo de 75) e agora é o <b>terceiro campo</b> da coluna. Com ele ali, <b>o número do jogador saiu do título do card</b>, como você pediu. Ele <b>continua nas linhas fechadas</b>, e isso é de propósito: linha fechada não tem lâmpada, e sem o número não sobraria quem aquele controle é. <i>(Nota de 07/10: o título aberto voltou a dizer quem joga, pelo nome; o «P1» só aparece nele sem nome.)</i></li>
-    <li><b>O touchpad tinha voltado a esticar, e agora ele não estica mais.</b> Ontem a superfície ganhou a proporção do sensor como <b>piso</b>, não como regra — e com um piso ela virou a esponja da coluna: medido hoje com os seus controles, <b>148 × 203</b>, que são <b>2,4 vezes</b> a altura que 148 px de largura pedem num sensor 16:9. A correção de anteontem tinha derrubado 41% de esticada e o piso devolveu 145%. Agora a superfície é <b>148 × 83</b> com quantos controles houver, e quem cresce são a <b>cor</b> da barra e o <b>campo</b> do LED, que não têm proporção a respeitar.</li>
+    <li><b>O touchpad tinha voltado a esticar, e agora ele não estica mais.</b> Ontem a superfície ganhou a proporção do sensor como <b>piso</b>, não como regra — e com um piso a superfície virou a esponja da coluna: medido hoje com os seus controles, <b>148 × 203</b>, que são <b>2,4 vezes</b> a altura que 148 px de largura pedem num sensor 16:9. A correção de anteontem tinha derrubado 41% de esticada e o piso devolveu 145%. Agora a superfície é <b>148 × 83</b> com quantos controles houver, e quem cresce são a <b>cor</b> da barra e o <b>campo</b> do LED, que não têm proporção a respeitar.</li>
     <li><b>O maior buraco da tela fechou: eram 181 px.</b> Entre o eixo Z do giroscópio e o L2 havia um vazio do tamanho de meio card, e ele não era desenho — era <b>resto</b>: o L2/R2 morava dentro da moldura do giroscópio, colado no pé, e a sobra da coluna inteira empoçava no meio. Ele até mudava de tamanho com o número de controles (181 px com os seus dois, 95 com quatro). Agora a coluna são <b>dois campos</b>, cada um com rótulo — <b>Sensores</b> e <b>Gatilhos</b> —, e a sobra entra por dentro dos dois abrindo as linhas. Maior vão da coluna: <b>5 px</b>. As cinco colunas continuam terminando na mesma linha.</li>
   </ul>
 
@@ -1359,7 +1359,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Clicar num abre e fecha os outros</b> — na <b>linha do controle</b> ou no <b>chip da fita</b>, indiferente: é o mesmo gesto. O <b>Todos</b> abre os {len(MESA)}.</li>
     <li><b>Sem uma linha de JavaScript</b>, como você pediu. São {len(MESA) + 1} rádios com o mesmo <code>name</code> — um por controle, mais o do <b>Todos</b> — o navegador já garante que ligar um desliga os outros, que é a regra do acordeão inteira. A linha e o chip são <code>&lt;label for&gt;</code> do <b>mesmo</b> rádio, e é por isso que fita e card não têm como divergir: não há dois estados para manter de acordo, há <b>um</b>, e ele mora no rádio.</li>
-    <li><b>A linha fechada mantém o resumo de hoje</b> — máscara, microfone e bateria, mais quem é o controle. O microfone some quando o card abre: ali ele aparece por extenso, com o medidor e o volume, e repetir seria dizer a mesma coisa duas vezes, uma delas pior.</li>
+    <li><b>A linha fechada mantém o resumo de hoje</b> — máscara, microfone e bateria, mais quem é o controle. O microfone some quando o card abre: ali ele aparece por extenso, com o medidor e o volume, e repetir seria dizer a mesma coisa duas vezes, uma das duas pior.</li>
     <li><b>Card e tira viraram um elemento só.</b> Eram duas caixas escritas por duas funções, e o que as impedia de discordar era a linha compartilhada; agora são <b>o mesmo</b> <code>&lt;label&gt;</code> mudando de roupa. A prova de que o texto não anda um pixel na troca é a conta do recuo: fechado, ele começa em 2 (borda) + 26 (padding) = <b>28</b>; aberto, em 2 + 14 (margem) + 1 (borda) + 11 (padding) = <b>28</b>. E a largura útil é <b>1096 px</b> nas duas.</li>
   </ul>
 
@@ -1368,8 +1368,8 @@ LEGENDA = f'''<div class="nota">
     <li><b>O giroscópio e o acelerômetro são estado de cada peça</b>, e por isso o interruptor de cada um está agora na <b>linha do controle</b>, nas {len(MESA)}. Eles estavam no topo do quadro, valendo para todos — e um interruptor global com {len(MESA)} controles ligados <b>mente sobre {len(MESA) - 1} deles</b>.</li>
     <li><b>O Calibrar ficou onde estava, e passou a valer para todos os controles</b> — sua decisão de 29/08: <i>"se conseguirmos fazer funcionar poderíamos deixar ele lá e ele mapearia os {len(MESA)} controles ao mesmo tempo"</i>. <b>Em 31/08 ele mudou de nome</b>: <span class="marca">Calibrar sensores de movimento</span> diz <b>o que se calibra</b> (a maiúscula decorativa caiu em <b>11/09</b>, por sua aprovação — o título da página que ele abre já era assim) — o escopo continua no ponteiro. Ele <b>chegou a ir para o fim do quadro</b> e você o mandou voltar: <i>"a posição deles volta pro canto superior direito"</i>. E ele abre uma <b>página nova</b> (<code>calibrar-sensores.html</code>) com o procedimento em três passos e os controles conectados lado a lado.</li>
     <li class="foi"><b>O Mapa do controle saiu desta aba em 29/09</b>, por ordem sua: <i>"mapa do controle deveria ter saído da guia de Controles e ter ficado só na guia conexões."</i> Ele tinha chegado aqui em 31/08, ao lado do Calibrar, e ganhou a casa na aba <b>Conexões</b> em 25/09, junto das ferramentas do Check-up. O botão dele mora só lá.</li>
-    <li><b>O par custa {num(LARG_PAR_SENSORES)} px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo dos quatro: ela tinha <b>{num(VAO_ANTES_P3)} px</b> livres, e o par pede {num(LARG_PAR_SENSORES)} mais o vão. Saíram <span class="marca">Hefesto on</span> ({num(CUSTO_HEFESTO_ON)} px, e dizia a mesma coisa nas {len(MESA)} linhas) e <span class="marca">Giroscópio em rajadas</span> ({num(CUSTO_GIRO_RAJADAS)} px), que juntas devolvem {num(CUSTO_HEFESTO_ON + CUSTO_GIRO_RAJADAS)} — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>{num(VAO_DEPOIS_P3)} px</b> livres ({num(VAO_DEPOIS_P3 - VAO_ANTES_P3)} a mais do que antes) e a do card aberto, {num(VAO_DEPOIS_P1)}.</li>
-    <li><b>Você desempatou o "vê como", em 31/08 — e em duas frases.</b> A legenda de 30/08 deixou a contradição aberta: você tinha escrito <i>"remover Giroscópio, Hefesto e vê como"</i> e, no dia anterior, que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>. Agora: <i>"remover o vê como de todos os controles"</i> e, logo depois, <i>"era o texto Vê como mas o nome da máscara fica"</i>. <b>Sai o rótulo, fica o dado.</b> A primeira volta tirou o span inteiro e levou a máscara junto — era ler o pedido pela metade. De onde ela vem continua no ponteiro, para quem passar o mouse.</li>
+    <li><b>O par custa {num(LARG_PAR_SENSORES)} px, e só coube porque duas leituras saíram.</b> A linha mais apertada é a do <b>P3</b>, o nome mais longo dos quatro: a linha tinha <b>{num(VAO_ANTES_P3)} px</b> livres, e o par pede {num(LARG_PAR_SENSORES)} mais o vão. Saíram <span class="marca">Hefesto on</span> ({num(CUSTO_HEFESTO_ON)} px, e dizia a mesma coisa nas {len(MESA)} linhas) e <span class="marca">Giroscópio em rajadas</span> ({num(CUSTO_GIRO_RAJADAS)} px), que juntas devolvem {num(CUSTO_HEFESTO_ON + CUSTO_GIRO_RAJADAS)} — <b>mais</b> do que o par ocupa. Depois da troca a mesma linha do P3 tem <b>{num(VAO_DEPOIS_P3)} px</b> livres ({num(VAO_DEPOIS_P3 - VAO_ANTES_P3)} a mais do que antes) e a do card aberto, {num(VAO_DEPOIS_P1)}.</li>
+    <li><b>Você desempatou o "vê como", em 31/08 — e em duas frases.</b> A legenda de 30/08 deixou a contradição aberta: você tinha escrito <i>"remover Giroscópio, Hefesto e vê como"</i> e, no dia anterior, que <i>"a linha fechada mantém o resumo de hoje — máscara, microfone, bateria"</i>. Agora: <i>"remover o vê como de todos os controles"</i> e, logo depois, <i>"era o texto Vê como mas o nome da máscara fica"</i>. <b>Sai o rótulo, fica o dado.</b> A primeira volta tirou o span inteiro e levou a máscara junto — era ler o pedido pela metade. De onde a máscara vem continua no ponteiro, para quem passar o mouse.</li>
     <li><b>E o que saiu não é o que entrou, embora tenham a mesma palavra.</b> Saiu a <b>leitura</b> <span class="marca">Giroscópio 250 Hz</span>; entrou o <b>interruptor</b> de giroscópio. O número medido não virou lápide: ele está no ponteiro do interruptor, e responde por transporte — <b>250,0 Hz exatos</b> no cabo, <b>em rajadas</b> no rádio.</li>
     <li><b>Os {len(MESA) * 2} botões nascem nos mesmos dois x</b> ({num(X_PAR_SENSORES[0])} e {num(X_PAR_SENSORES[1])}), com <b>{num(LARG_SW)} px</b> cada. Quem iguala é a <b>grade</b>, não o comprimento do rótulo, e quem os prende ali é o <code>margin-left:auto</code>, que saiu da bateria e passou ao par: com os dois pedindo o vão, o flex partiria a sobra ao meio e o grupo flutuaria em {len(MESA)} lugares diferentes.</li>
     <li><b>{ALT_SW} px de altura, e não os {ALTURA_FECHADA} de <code>--h-acao</code>.</b> A linha fechada tem {ALTURA_FECHADA} px por fora e <b>30 por dentro</b> — um botão de {ALTURA_FECHADA} não cabe em 30. Crescer a linha também não era saída: a conta ali embaixo fecha com {PARA_O_CARD - ALTURA_DO_CARD} px de sobra, e {FECHADOS} linhas 6 px mais altas roubariam 18 do card. Não é uma altura inventada: é a mesma pastilha da <b>fita</b> lá em cima (o chip mede 28 a 30 px) e do <b>Perfil ativo</b> (29 px) — que é o que estes botões são, e não botão de decidir.</li>
@@ -1380,7 +1380,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>O aviso de máscara saiu.</b> Ele estava no P2 e dizia que sob Xbox 360 "o giroscópio, o acelerômetro e o touchpad <b>não chegam</b> ao jogo". Você decidiu: <b>nenhum aviso, em máscara nenhuma</b> — e a decisão está certa por um motivo mais forte do que o que eu tinha escrito: a máscara limita o que o <b>jogo</b> recebe, não o que o <b>controle</b> faz. O Hefesto continua acendendo a barra de luz, lendo o giro e capturando o microfone deste DualSense em qualquer máscara.</li>
     <li><b>E o microfone não se perde em máscara nenhuma</b> — é o estado <b>Emulado</b> da ONDA-CONEXOES-06: o Hefesto publica uma fonte de captura virtual, e o jogo a enxerga independentemente da máscara. No rádio isso já existe hoje com outro nome (o DualSense não fala A2DP; o áudio vem dentro do HID e o Hefesto publica a fonte). Nada aqui promete o que não há: esta aba só <b>lê</b> o microfone.</li>
-    <li><b>A linha da máscara ganhou o endereço de onde ela se muda</b> — passe o ponteiro: <span class="marca">a escolha é por controle e mora na aba Jogar</span>. Era a única coisa que faltava a quem chegava aqui procurando o seletor.</li>
+    <li><b>A linha da máscara ganhou o endereço de onde se muda</b> — passe o ponteiro: <span class="marca">a escolha é por controle e mora na aba Jogar</span>. Era a única coisa que faltava a quem chegava aqui procurando o seletor.</li>
     <li><b>As três máscaras estão na tela ao mesmo tempo</b>, uma por controle: <b>DualSense</b> (P1 e P3), <b>Xbox 360</b> (P2) e <b>Nintendo Pro</b> (P4). É assim que se aprende que a linha muda de controle para controle. <b>A Nintendo Pro deixou de ser sprint em 07/09/2026</b>: o catálogo do produto (<code>uinput_gamepad.FLAVORS</code>) tem <code>dualsense</code>, <code>xbox</code> e <code>nintendo</code>. E o PID forjado <b>é 0x2009 porque tem de ser</b> — esta legenda dizia o contrário, e a medição derrubou: dirigindo a SDL desta máquina, <code>057e:2009</code> é o único par que devolve <code>NINTENDO_SWITCH_PRO</code>; qualquer PID "seguro" entrega uma máscara que não mostra prompt de Nintendo nenhum, que é a máscara inteira. O que aquela ressalva acertava fica declarado no código: se um Pro de verdade estiver ligado <b>e</b> a lista de exclusão da Steam citar <code>057e/2009</code>, o jogo perde os dois juntos — mas essa lista o produto nunca escreve.</li>
     <li><b>Máscara Nintendo Pro não é adotar um Pro.</b> São duas coisas, e confundi-las é o erro clássico daqui: a máscara faz o <i>seu DualSense</i> aparecer como Pro para o jogo. O <b>aparelho</b> Nintendo e o 8BitDo estão <b>fora de escopo agora</b>, por decisão sua — viram sprint própria, e é por isso que nada nesta aba fala de controle externo.</li>
     <li><b>O hexadecimal voltou.</b> Eu o tinha tirado em 27/08 ("cru é para quem programa"); você decidiu que ele <b>fica nas duas</b>, aqui e na Iluminação. Ele está ao lado da barra de luz e <b>não é digitado</b>: sai de <code>core/led_control.py::player_slot_color</code>, a mesma tabela que acende as cinco lâmpadas. O que sobrou da minha razão está no ponteiro: o número é a cor do <b>jogador</b>, não a do plástico.</li>
@@ -1390,19 +1390,19 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>O estado em que a aba abre não rola, e nada some.</b> A conta fecha sem sobra: {VISIVEL} px da caixa menos {PAD_DO_CORPO} de padding são {VISIVEL - PAD_DO_CORPO}; as {FECHADOS} linhas fechadas de {ALTURA_FECHADA} px com {GAP_ENTRE} px entre cada duas caixas somam {FECHADOS * ALTURA_FECHADA + (len(MESA) - 1) * GAP_ENTRE}; sobram <b>{PARA_O_CARD} px</b> para o card, que são os {ALTURA_DO_CARD} dele mais os {PARA_O_CARD - ALTURA_DO_CARD} que ele cresce para não deixar vão.</li>
     <li><b>O passo entre irmãos virou um só.</b> Eram dois — 14 px entre o card e o grupo das tiras, 9 px entre tiras —, porque eram dois containers. Agora as {len(MESA)} caixas são irmãs no mesmo lugar, e o passo é <b>{GAP_ENTRE} px</b> em todos os vãos.</li>
-    <li><b>"Todos" abre os {len(MESA)}, e aí a caixa rola {ROLA_EM_TODOS} px.</b> É o único estado desta aba que rola, e é o preço do gesto: {len(MESA)} cards de {ALTURA_DO_CARD} px somam {ALTURA_EM_TODOS} px numa caixa de {VISIVEL - PAD_DO_CORPO}. Não dá para encolher o card — as cinco colunas param todas em <b>236 px</b> de conteúdo natural, e quem manda são duas: a do som (microfone 96 + 9 + alto-falante 131) e a do touchpad (118 + 9 + barra 55 + 9 + LED 45). A dos sensores não manda: com os dois numa moldura só ela pede 228 px, e sobra.</li>
+    <li><b>"Todos" abre os {len(MESA)}, e aí a caixa rola {ROLA_EM_TODOS} px.</b> É o único estado desta aba que rola, e é o preço do gesto: {len(MESA)} cards de {ALTURA_DO_CARD} px somam {ALTURA_EM_TODOS} px numa caixa de {VISIVEL - PAD_DO_CORPO}. Não dá para encolher o card — as cinco colunas param todas em <b>236 px</b> de conteúdo natural, e quem manda são duas: a do som (microfone 96 + 9 + alto-falante 131) e a do touchpad (118 + 9 + barra 55 + 9 + LED 45). A dos sensores não manda: com os dois numa moldura só a coluna pede 228 px, e sobra.</li>
     <li><b>E o preço, dito inteiro:</b> nesse estado o P1 aparece todo, o P2 aparece pela metade (141 px dos 301) e o <b>P3 e o P4 começam com zero pixel à mostra</b>. O que diz que eles estão ali são três coisas, e as três estão na tela: o chip <b>Todos</b> aceso, o <span class="marca">{len(MESA)} controles</span> do cabeçalho e a <b>barra de rolagem</b>, que nasce junto com a rolagem e ocupa 10 px. Foi por isso que a barra precisou de regra própria — a do Chrome é sobreposta e some quando ninguém está rolando, e aí seria o defeito de 27/08 de volta com outra roupa.</li>
     <li><b>2×2 foi medido e é pior.</b> Meio card tem 515 px de largura útil para cinco colunas que pedem 884; viraria três fileiras e cada card passaria a ~545 px de altura — aí só <b>um</b> aparece de cada vez.</li>
-    <li><b>O corpo fechado não pode ser <code>display:none</code>, e o motivo é a régua.</b> Ela lê a altura de todo botão e reprova família com alturas divergentes; com <code>display:none</code> os dois botões de rota de cada card fechado medem <b>0</b>, e ela acusa <span class="marca">altura divergente em button.-: 0 / 36</span> — um defeito que só existiria porque o elemento sumiu. Com <code>height:0;overflow:hidden</code> o corpo continua <b>desenhado</b> no tamanho natural e só recortado: a régua segue medindo os <b>{len(MESA)}</b> cards por dentro, não só o que está à mostra. Ela ficou mais severa, não menos.</li>
+    <li><b>O corpo fechado não pode ser <code>display:none</code>, e o motivo é a régua.</b> A régua lê a altura de todo botão e reprova família com alturas divergentes; com <code>display:none</code> os dois botões de rota de cada card fechado medem <b>0</b>, e a régua acusa <span class="marca">altura divergente em button.-: 0 / 36</span> — um defeito que só existiria porque o elemento sumiu. Com <code>height:0;overflow:hidden</code> o corpo continua <b>desenhado</b> no tamanho natural e só recortado: a régua segue medindo os <b>{len(MESA)}</b> cards por dentro, não só o que está à mostra. A régua ficou mais severa, não menos.</li>
     <li><b>O estado de carga virou ícone, e o ícone não pergunta por onde o controle fala.</b> Você decidiu assim: <i>"{FRASE_DO_USUARIO}"</i>. O <b>P2 está no rádio e aparece carregando</b> — porque o transporte diz por onde o controle <i>conversa</i> e a carga diz por onde entra <i>energia</i>, e um DualSense no rádio pode estar num cabo de energia. <b>Descarregando não ganha ícone</b>: o número ao lado já diz. O vão do ícone fica reservado mesmo vazio, senão as {len(MESA)} barras voltariam a ter larguras diferentes. Passe o mouse: o nome do estado está no ponteiro, para quem não reconhecer o desenho.</li>
-    <li><b>As {len(MESA)} barras de bateria têm a mesma largura, e isso é leitura e não capricho.</b> Elas <i>esticavam</i> para ocupar o vão de cada linha, e os trilhos mediram <b>312, 60, 35 e 139 px</b>. O preenchimento é uma porcentagem do trilho: o <b>31%</b> do P3 num trilho de 35 px desenhava uma barra <b>menor</b> que o <b>64%</b> do P2 num de 60 — quatro réguas de tamanhos diferentes que o olho compara e lê errado. Agora são <b>{LARG_BATERIA} px</b> nas {len(MESA)}, e a mais apertada (a do P3) tem 13,7 px de folga.</li>
+    <li><b>As {len(MESA)} barras de bateria têm a mesma largura, e isso é leitura e não capricho.</b> As barras <i>esticavam</i> para ocupar o vão de cada linha, e os trilhos mediram <b>312, 60, 35 e 139 px</b>. O preenchimento é uma porcentagem do trilho: o <b>31%</b> do P3 num trilho de 35 px desenhava uma barra <b>menor</b> que o <b>64%</b> do P2 num de 60 — quatro réguas de tamanhos diferentes que o olho compara e lê errado. Agora são <b>{LARG_BATERIA} px</b> nas {len(MESA)}, e a mais apertada (a do P3) tem 13,7 px de folga.</li>
     <li><b>A conta é um portão.</b> Se um dia entrar mais controle a ponto de o card aberto não caber, o gerador <b>para</b> com o número na mão, em vez de entregar de novo uma tela que esconde controle calada.</li>
     <li><b>Cicatriz: a classe não pode se chamar <code>tira</code>.</b> <code>.tira</code> é a <b>fila de abas</b> do esqueleto (<code>topo.html:109</code>). Com a regra deste arquivo batizada assim, <code>height:34px</code> e <code>text-transform:uppercase</code> caíam na fila de abas lá em cima: o cabeçalho encolheu 8 px e o miolo desta aba mediu <b>550 px contra os 542 de todas as outras nove</b> — e a régua de alinhamento passou <b>verde</b>. A classe se chama <code>.ctl</code>.</li>
   </ul>
 
   <h2>O que vem do mapa, em vez de digitado</h2>
   <ul>
-    <li><b>A cor do plástico é variável, não classe.</b> Eram duas classes com o hexadecimal escrito no CSS — com os 28 modelos do <code>docs/data/cores-do-dualsense.csv</code> seriam vinte e oito. Cada caixa nasce com <code>--plastico</code>, lido do <b>desenho</b> por <code>monta.cor_da_zona()</code>: a borda, o círculo dos analógicos, a cruz de eixos, o rótulo L3/R3 e os glifos ✕ · L2 · R2 vêm todos dela. O vermelho digitado era <code>#b11f54</code>; a amostragem do seu aparelho devolveu <code>#A51C48</code>, distância 17.</li>
+    <li><b>A cor do plástico é variável, não classe.</b> Eram duas classes com o hexadecimal escrito no CSS — com os 28 modelos do <code>docs/data/cores-do-dualsense.csv</code> seriam vinte e oito. Cada caixa nasce com <code>--plastico</code>, lido do <b>desenho</b> por <code>monta.cor_da_zona()</code>: a borda, o círculo dos analógicos, a cruz de eixos, o rótulo L3/R3 e os glifos ✕ · L2 · R2 vêm todos daí. O vermelho digitado era <code>#b11f54</code>; a amostragem do seu aparelho devolveu <code>#A51C48</code>, distância 17.</li>
     <li><b>A taxa do giroscópio responde por transporte.</b> Estava <span class="marca">~194 Hz</span> nos dois cards, e o 194 não aparece em nenhuma linha da referência canônica. No cabo são <b>250,0 Hz exatos</b>, com três fontes concordando; no rádio a leitura chega <b>em rajadas</b>, de 38 a 392 Hz de média entre janelas seguidas do mesmo controle. Passe o ponteiro na linha.</li>
     <li><b>Uma regra de cor para os {len(MESA)}.</b> O par <code>.card.c-blue .gb.on</code> pintava o botão <i>aceso</i> do controle azul da mesma cor do plástico dele — as duas informações ficavam indistinguíveis. Agora <span class="marca">plástico</span> e <span class="marca">acendeu agora</span> são sempre duas cores diferentes, em qualquer modelo.</li>
     <li><b>Os dois interruptores de sensor têm a mesma largura.</b> Soltos, o rótulo mandaria: <b>Giroscópio</b> e <b>Acelerômetro</b> mediam <b>100</b> e <b>115,8 px</b> em fila. Agora é a <b>grade</b> que manda — os dois em {num(LARG_SW)} px —, e como o par é o mesmo nas {len(MESA)} linhas, os {len(MESA) * 2} botões caem nos mesmos dois x. Nenhum número de controles está escrito no gerador.</li>
@@ -1415,7 +1415,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>O botão de mic do controle muda o mudo do PC inteiro?</b> O campo existe no perfil e o daemon já o aplica, sem nenhuma tela que o escreva (<code>profiles/schema.py:708</code>).</li>
     <li><b>Histórico de bateria.</b> O diário grava por controle desde sempre e ninguém lê (<code>daemon/battery_journal.py:153</code>). Com {len(MESA)} ligados o P3 já aparece em 31%.</li>
     <li><b>Fechou:</b> o acelerômetro <b>é</b> pintado ao vivo. Os três eixos em <b>g</b> saem do mesmo caminho do giroscópio, escritos a cada tique pelo pacote desta aba. Esta linha dizia o contrário desde 30/08 — que a ponte procurava <code>acel-x</code> e a tela escrevia <code>accel-x</code> —, e a varredura de 10/09 mediu os três elos e desmentiu os três: o pacote escreve, a página tem os endereços, e o piloto que a frase citava já registrava, em comentário, que aquele nome não existia mais. <b>A tela estava confessando uma dívida que o produto não tinha</b> — o oposto exato do defeito que esta aba persegue, e igualmente caro.</li>
-    <li><b>A régua não vê o "Todos".</b> Ela mede a página como ela abre, e a página abre com um card e {FECHADOS} linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que ela não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que ela ocupa no "Todos" inclusive.</li>
+    <li><b>A régua não vê o "Todos".</b> A régua mede a página como abre, e a página abre com um card e {FECHADOS} linhas — nenhum quadro escondido, nenhuma rolagem. O estado que rola só existe depois de um clique, e a régua de arranjo não clica. Medi-o à mão, clicando, e os números estão acima; fica dito, porque a régua não é minha para mexer.<br><br><b>Fechou:</b> esta legenda avisava que o <code>olhar.py</code> escondia a barra de rolagem e que a barra não sairia na foto. Não é mais verdade — a ferramenta foi curada em 30/08 e hoje fotografa a barra, os <b>10 px</b> que a barra ocupa no "Todos" inclusive.</li>
   </ul>
 </div>
 
@@ -1454,7 +1454,7 @@ def a_legenda_nao_promete_o_que_a_tela_nao_tem(legenda, miolo):
         for termo in TERMOS_DA_TELA:
             if termo.casefold() in corpo.casefold() and termo.casefold() not in miolo.casefold():
                 raise SystemExit(
-                    f'ERRO na legenda: ela cita "{termo}" e o desenho não escreve\n'
+                    f'ERRO na legenda: a legenda cita "{termo}" e o desenho não escreve\n'
                     "  esse rótulo em lugar nenhum. Ou o termo volta à tela, ou o\n"
                     '  item vira lápide (<li class="foi">) dizendo que ele SAIU.\n'
                     f"  O item: {re.sub(r'<[^>]+>', '', corpo)[:110]}…"
@@ -1602,7 +1602,7 @@ def _conferir(doc, aba="02-controles"):
             exigir(not faltando,
                    f"o lugar `{pref}` não carrega {len(faltando)} endereço(s) "
                    f"que os outros carregam: {faltando[:6]}{'…' if len(faltando) > 6 else ''} "
-                   f"— o dado dela chega e não tem onde pousar")
+                   f"— o dado chega e não tem onde pousar")
 
     exigir('.ctl[data-conectado="nao"] .bat .cheio' in folha
            and "width:0 !important" in folha,
@@ -1646,7 +1646,7 @@ def _conferir(doc, aba="02-controles"):
     exigir(bool(no_radio) and all(
         ESTADO[c["pref"]].get("carga") == "carregando" for c in no_radio),
         "nenhum controle no RÁDIO aparece carregando: a cena voltou a ensinar "
-        "que carregar é coisa do cabo, que é a premissa que ela corrigiu")
+        "que carregar é coisa do cabo, que é a premissa corrigida")
     exigir(f'title="{carga_na_tela("carregando")}"' in corpo,
            "o ícone de carregando ficou sem nome acessível — quem não "
            "reconhece o desenho fica sem o dado")
@@ -1686,7 +1686,7 @@ def _conferir(doc, aba="02-controles"):
     exigir(sorted(dica for dica, _ in dicas_do_giro if dica)
            == [DICA_DO_GIRO] * len(CONECTADOS),
            "a dica do Giroscópio no desenho não é a de hoje nos controles "
-           "conectados — ela só muda com a Mira acesa, e o desenho nasce com a "
+           "conectados — a dica só muda com a Mira acesa, e o desenho nasce com a "
            "Mira apagada")
     exigir(not any("title=" in botao for _, botao in dicas_do_giro),
            "o botão do Giroscópio ganhou `title` próprio — ele calaria a dica do "
@@ -1732,7 +1732,7 @@ def _conferir(doc, aba="02-controles"):
         exigir(vistos == quantos * len(MESA),
                f"o deslizante `{gesto_do_trilho}` está em {vistos} lugar(es) e "
                f"devia estar em {quantos * len(MESA)} — sem o `data-gesto` o "
-               f"arrasto morre no stderr que ela nunca lê")
+               f"arrasto morre no stderr que ninguém lê")
     for qual in ("microfone", "alto-falante"):
         exigir(corpo.count(f'data-volume="{qual}"') == len(MESA),
                f"o deslizante de {qual} não está nos {len(MESA)} lugares")
@@ -1773,7 +1773,7 @@ def _conferir(doc, aba="02-controles"):
         exigir(not re.search(r"\d", visivel),
                f"um número voltou ao rótulo do alto-falante ({visivel.strip()!r}): "
                f"a linha de baixo já mostra o volume no `alto-num`, e o item 2.3 "
-               f"da lista dela tirou a segunda cópia")
+               f"da lista de uso tirou a segunda cópia")
 
     for b in ("giroscopio", "acelerometro"):
         exigir(f'data-bloco="{b}"' in corpo, f"a moldura {b} sumiu")
@@ -1786,7 +1786,7 @@ def _conferir(doc, aba="02-controles"):
            f"os lugares vazios não são {VAZIOS}")
     exigir(corpo.count(f'title="{LUGAR_VAZIO_AQUI}"') == VAZIOS,
            f"a tira do lugar vazio não diz que é lugar vazio em {VAZIOS} assento(s) "
-           f"— ela voltou a prometer que abre o card, e a folha recusa")
+           f"— a dica voltou a prometer que abre o card, e a folha recusa")
     exigir(corpo.count(f'title="{ABRE_O_CARD}"') == len(CONECTADOS),
            f"a promessa de abrir o card não está nos {len(CONECTADOS)} conectados")
     for sufixo, oque in ((" ", "a altura do cartão"), (" > .faixa", "a moldura da faixa"),
@@ -1801,7 +1801,7 @@ def _conferir(doc, aba="02-controles"):
     destino, rot = "calibrar-sensores.html", ROTULO_DO_CALIBRAR
     exigir(f'href="{destino}"' in corpo, f"o botão {rot!r} sumiu")
     exigir(onde.pagina(destino).exists(),
-           f"o botão {rot!r} aponta para {destino}, que NÃO existe na bancada")
+           f"o botão {rot!r} aponta para {destino}, que NÃO existe no mockup")
     exigir('href="mapa-do-controle.html"' not in corpo,
            "o Mapa do controle mora na aba Conexões (29/09)")
     exigir("Calibrar sensores da mesa" not in corpo, "o nome antigo do Calibrar voltou")
@@ -1820,13 +1820,13 @@ def _conferir(doc, aba="02-controles"):
     exigir("vê como" not in corpo and re.search(r'<svg class="gl"[^>]*>(?:(?!</svg>).)*</svg>' + re.escape(ROTULO_DO_CALIBRAR), corpo, re.S) is not None, "o texto 'vê como' voltou, ou o Calibrar giroscópio perdeu o glifo do giroscópio")
     if aba == "02-controles":
         exigir(corpo.count('data-campo="mascara"') == len(MESA),
-               "a máscara sumiu com o texto — ela FICA, e é o dado")
+               "a máscara sumiu com o texto — a máscara FICA, e é o dado")
     else:
         exigir('data-campo="mascara"' not in corpo,
                "a linha do controle voltou a dizer como o jogo o vê: o modo vale para todos")
 
     exigir(corpo.count('data-campo="quem-joga"') == len(MESA),
-           "o «quem joga» do título aberto perdeu o endereço — o nome dela não chega ao cartão")
+           "o «quem joga» do título aberto perdeu o endereço — o nome não chega ao cartão")
     na_aba = len(MESA) if aba == "01-jogar" else 0
     exigir(corpo.count('data-campo="jogador" data-hef-alvo="html"') == 3 * len(MESA) + na_aba,
            "o número do jogador do cabeçalho perdeu o endereço: ele voltou a ser o assento "
@@ -1859,7 +1859,7 @@ def _conferir(doc, aba="02-controles"):
            "a folha `posicao-css` voltou — o produto a trocaria inteira a cada "
            "tique, e cada troca repinta a janela toda")
     exigir(doc.count(REGRA_DAS_POSICOES) == 1,
-           "a regra única da posição sumiu (ou se repetiu) — sem ela o pontinho "
+           "a regra única da posição sumiu (ou se repetiu) — sem a regra o pontinho "
            "não lê `--hef-x`/`--hef-y` e fica parado no canto")
     lugares = len(CONECTADOS) + VAZIOS
     exigir(doc.count('data-campo="botoes" data-hef-alvo="atributo" '
@@ -1899,7 +1899,7 @@ def _conferir(doc, aba="02-controles"):
                f"o nome de plástico `{nome}` aparece no miolo sem endereço")
 
     exigir('class="degradou"' not in corpo and "mascara-degradou" not in corpo,
-           "a marca da emulação degradada voltou ao lado da máscara — ela nunca "
+           "a marca da emulação degradada voltou ao lado da máscara — a marca nunca "
            "acende no WebKit, e acesa seria frase de aviso numa dica")
     _folhas = re.sub(r"/\*.*?\*/", "",
                      "".join(re.findall(r"<style[^>]*>(.*?)</style>", doc, re.S)),
@@ -1910,7 +1910,7 @@ def _conferir(doc, aba="02-controles"):
            "seletor nunca casa")
 
     if falhas:
-        raise SystemExit(f"ERRO em {aba} — decisão dela desfeita:\n  "
+        raise SystemExit(f"ERRO em {aba} — decisão desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
