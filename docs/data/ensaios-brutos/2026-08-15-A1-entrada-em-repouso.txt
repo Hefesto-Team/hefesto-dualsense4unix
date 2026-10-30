@@ -329,4 +329,4 @@ que a derrubou. Tudo abaixo é `journalctl`, leitura pura.
   este bruto não a nomeia porque não a mediu.
 
   CUSTO: os dois DualSense do rádio precisam de um APERTO NO BOTÃO PS para
-  voltar. Isso é mão dela, e é por isso que está escrito aqui.
+  voltar. Isso é mão do usuário, e é por isso que está escrito aqui.

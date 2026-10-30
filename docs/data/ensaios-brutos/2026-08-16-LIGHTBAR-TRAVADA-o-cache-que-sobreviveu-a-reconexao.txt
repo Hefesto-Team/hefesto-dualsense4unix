@@ -16,7 +16,7 @@ A LINHA DO TEMPO, do vigia da lightbar
     00:30:29   7                    voltou, 1m45 depois (duas tentativas dela)
     00:30:29   8                    e o vpad voltou
 
-O QUE ELA VIU, E É O QUE O INSTRUMENTO NÃO VÊ
+O QUE O USUÁRIO VIU, E É O QUE O INSTRUMENTO NÃO VÊ
 ----------------------------------------------
 Primeira tentativa: "ele conectou, ligou a lightbar e DESLIGOU O CONTROLE".
 Segunda: "demorou mais pra conectar mas conectou e ligou com o lightbar correto".
@@ -57,7 +57,7 @@ seja com a steam ou seja com os perfis do hefesto". Não é a Steam nem o perfil
 ESTADO DO DAEMON que não é invalidado quando o aparelho reconecta. Mas a intuição
 estava certa no essencial — é configuração viva, não hardware.
 
-O QUE NÃO SE FAZ, e ela perguntou
+O QUE NÃO SE FAZ, e o usuário perguntou
 ----------------------------------
 "então temos que remover o cache?" NÃO. A docstring do próprio método diz que o
 cache existe porque o reassert estava *"martelando o firmware com a mesma cor"*.
@@ -67,7 +67,7 @@ existe: `invalidate_cache()`, hoje chamado só quando terceiros retomam a posse.
 
 O QUE ESTE BRUTO NÃO RESOLVE
 -----------------------------
-Por que o controle SE DESLIGOU na primeira tentativa. Está relatado por ela e não
+Por que o controle SE DESLIGOU na primeira tentativa. Está relatado pelo usuário e não
 foi capturado por instrumento nenhum — fica aberto.
 
 PROCEDÊNCIA

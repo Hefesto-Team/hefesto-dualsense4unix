@@ -1,7 +1,7 @@
 # LEIA PRIMEIRO — a porta de entrada das specs
 
-Escrito em 16/08/2026, a pedido dela (a frase é dela; uma palavra foi ajustada
-em 15/09/2026, por ordem dela, para não nomear ferramenta): *"pensa em quem vai
+Escrito em 16/08/2026, a pedido (a frase é do usuário; uma palavra foi ajustada
+em 15/09/2026, por ordem de produto, para não nomear ferramenta): *"pensa em quem vai
 precisar pegar do zero o negócio, como economizar tokens nesse sentido mantendo
 o máximo de qualidade de informação?"*
 
@@ -306,10 +306,10 @@ esteja o documento onde ele aparece.
 | **rádio** (prosa) · `radio_` (coluna) · `radio` (valor no caderno) | os três coexistem por construção | `Bluetooth`, `BT`. **Ao buscar por texto, procure sem acento** — `grep 'rádio'` não acha uma linha sequer do caderno |
 | `nao-tem` | `DOMINIO_EXISTE`, sem acento | `não-tem` aparece acentuado na prosa das notas; o portão rejeita o acentuado |
 | **mapa** = `docs/data/mapa-controles.csv` (fonte) | — | "specs", "mapa de canais", "CSV". **`specs.html` é o derivado** — editá-lo à mão é o defeito que o `--check` existe para pegar |
-| **caderno** = `docs/data/ensaios.csv` | — | "caderno de ensaios", "caderno de eliminação", "bancada" — mas *bancada* também designa `scripts/ensaio_do_mapa.py` e a sessão de medição com hardware na mesa |
-| **alto-falante** | correção dela, 15/08 | "placa de som" foi usado por engano e ela mandou desfazer; "speaker" só no nome de constante |
+| **caderno** = `docs/data/ensaios.csv` | — | "caderno de ensaios", "caderno de eliminação", "ensaio" — mas *ensaio* também designa `scripts/ensaio_do_mapa.py` e a sessão de medição com hardware na mesa |
+| **alto-falante** | correção dela, 15/08 | "placa de som" foi usado por engano e o usuário mandou desfazer; "speaker" só no nome de constante |
 
-**Termos que ainda colidem — não invente a resposta, é decisão dela:**
+**Termos que ainda colidem — não invente a resposta, é decisão de produto:**
 
 - `transporte` = `ambos` **ou** `cabo+rádio` (<!--@mapa-transporte-ambos-->45<!--/--> e <!--@mapa-transporte-cabo-radio-->77<!--/--> linhas, mesmo sentido). A
   coluna não tem domínio declarado, então o portão não vê. Não filtre por ela.
@@ -319,8 +319,8 @@ esteja o documento onde ele aparece.
   <!--@mapa-provado-olho-dela-->12<!--/-->, `descritor`
   <!--@mapa-provado-descritor-->3<!--/-->) e `observado_por` (caderno,
   <!--@caderno-com-observado-por-->251<!--/--> linhas: `olho-do-usuario`
-  <!--@caderno-observado-olho-dela-->144<!--/-->, `bancada`
-  <!--@caderno-observado-bancada-->69<!--/-->, `aparelho`
+  <!--@caderno-observado-olho-dela-->144<!--/-->, `ensaio`
+  <!--@caderno-observado-ensaio-->69<!--/-->, `aparelho`
   <!--@caderno-observado-aparelho-->25<!--/-->) fazem a mesma pergunta com
   vocabulários diferentes. **Quem sustenta o degrau mais alto é o
   `observado_por` do caderno** — é lá que a regra 10 do portão foi cobrar.
@@ -378,7 +378,7 @@ repetição do CSV se concentra (seção 8).
 ## 8. O que falta: `mapa-resumo.csv` — PROPOSTA, não implementado
 
 Nada foi criado nem alterado por este documento além dele mesmo. Isto é uma
-proposta com número medido, para decisão dela.
+proposta com número medido, para decisão de produto.
 
 **O artefato.** Um `docs/data/mapa-resumo.csv` de 10 colunas — as 8 do esqueleto
 mais dois **ponteiros para a prosa**:
@@ -415,8 +415,8 @@ CSV, com o caderno de ensaios e com os três desenhos)"*. Quem implementar
 consegue provar verde no mesmo minuto.
 
 **O que segura o derivado não é impedimento técnico — são duas coisas.** A
-primeira é a palavra dela: isto é proposta, e arquivo novo em `docs/data/` que
-ela não pediu é mudança que ela não pediu. A segunda é a regra da casa de que
+primeira é a palavra de produto: isto é proposta, e arquivo novo em `docs/data/` que
+o usuário não pediu é mudança que o usuário não pediu. A segunda é a regra da casa de que
 derivado nasce **com** portão: o `monta_resumo()` e o `--check` que o cobre
 entram na mesma leva do arquivo, nunca depois — um `mapa-resumo.csv` sem portão
 envelhece calado e vira a segunda fonte que contradiz a primeira. Quem for
@@ -466,7 +466,7 @@ divergem ali são exatamente as assimetrias que este mapa existe para não deixa
 escapar; achatar aquele campo faria uma prova de cabo passar por prova de rádio,
 que é a mentira mais cara daqui.
 
-O pedido dela que originou o formato, nas palavras dela: *"cada feature de cada
+O pedido que originou o formato, nas palavras de produto: *"cada feature de cada
 um deles deve ter o canal via bt ou cabo NA MESMA LINHA e todos os 3 controles
 devem ser possíveis de serem comparados."*
 

@@ -32,7 +32,7 @@ QUEM É QUEM (não pelo LED — pelo `HID_UNIQ` cruzado com o journal)
 
   RESSALVA HONESTA sobre a rotulagem de COR: o par MAC->cor vem da tabela do
   estudo `2026-08-15-A-ESCADA-QUE-RESPONDE...md:28-29`, que foi conferida com o
-  olho dela naquele ensaio. O firmware NÃO foi perguntado aqui (o `E7` fez a
+  olho de quem confere naquele ensaio. O firmware NÃO foi perguntado aqui (o `E7` fez a
   rodada de rádio SECA). Se a cor do plástico for lida do aparelho, confira
   contra esta tabela antes de acreditar em qualquer conclusão que dependa dela.
 

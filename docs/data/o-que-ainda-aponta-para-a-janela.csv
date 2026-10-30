@@ -1,11 +1,11 @@
 # O QUE AINDA APONTA PARA A JANELA GTK — inventário da sprint GTK-1 (06/09/2026)
 #
-# Decisão dela (D-0609-GTK-LEVA-INTEIRA): "a ideia sempre foi reaproveitar o que
+# Decisão de produto (D-0609-GTK-LEVA-INTEIRA): "a ideia sempre foi reaproveitar o que
 # fiz no gtk e não apontar nada mais pra lá mas pro html". A frase inteira está
 # em docs/process/sprints/arquivados/2026-09-06-GTK-1-o-inventario-e-o-portao-que-impede-a-janela-de-crescer.md
 #
 # O QUE SAI É A JANELA. O QUE FICA É O MOTOR (app/actions/, app/telas/,
-# daemon/) — é o reuso que ela pediu. Em 02/10/2026 `gui/` e `app/widgets/`
+# daemon/) — é o reuso que o usuário pediu. Em 02/10/2026 `gui/` e `app/widgets/`
 # saíram do pacote: o que a interface usava deles mora em `interface/`.
 #
 # UMA LINHA POR (arquivo, alvo). `linhas` e `ocorrencias` são o que a varredura

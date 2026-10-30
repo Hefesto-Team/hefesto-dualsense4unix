@@ -1,12 +1,12 @@
 # FONTE DA VERDADE DAS PEÇAS DO DUALSENSE — 27/08/2026
 #
-# Pedido dela, com todas as letras: "isso sempre vai dar problema vamos criar uma
+# Pedido, com todas as letras: "isso sempre vai dar problema vamos criar uma
 # fonte da verdade universal. e funcional dos dualsense."
 #
 # O QUE ELA RESOLVE. O SVG do controle nomeava como `l2` e `r2` duas peças que,
 # GEOMETRICAMENTE, são o Share e o Options — ficam ao lado do touchpad, em x 36–39
 # e 89–92. Ninguém percebeu por dois meses porque nenhuma régua comparava o NOME
-# da peça com o LUGAR dela. Ela viu passando o mouse: "agora que eu vi tá como
+# da peça com o LUGAR dela. O usuário viu passando o mouse: "agora que eu vi tá como
 # gatilho adaptativo r2 e o l2 esses são os options e select."
 #
 # COMO SE USA. Este arquivo é o dono. Dele saem: o mapa em
@@ -60,14 +60,14 @@ stick_r,Analógico direito,R3,eixo,analogicos,stick_r,stick_r,72.62,55.67,88.62,
 share,Share,Create|Select,botao,centro,share,share,37.48,33.86,39.89,37.8,ALTA,"CORRIGIDO 27/08: era o id `l2` no SVG. Fica à esquerda do touchpad, colado nele.",-14.04,-,painel
 options,Options,Start|Menu,botao,centro,options,options,87.86,33.86,90.27,37.8,ALTA,"CORRIGIDO 27/08: era o id `r2` no SVG. Fica à direita do touchpad, colado nele.",14.04,-,painel
 touchpad,Touchpad,-,superficie,centro,touchpad,touchpad,40.66,26.94,87.1,53.08,ALTA,"1920x1080, DOIS pontos de toque, cada um com id e flag de contato. Clique esquerdo, direito e central.",0,-,touch
-ps,PS,botão home,botao,centro,ps,ps,60.54,59.56,67.59,66.3,ALTA,"O glifo É o botão: sem anel em volta, decisão dela em 27/08.",0,-,painel
-mic,Microfone,-,entrada,audio,mic,mic,62.15,68.03,66.7,68.78,ALTA,"O botão de MUDO, e ele é pequeno: a barra de 7x1 que estava aqui virava um risco atravessado no corpo, e ela viu — 'essa linha não existe no controle da vida real'.",0,-,painel
+ps,PS,botão home,botao,centro,ps,ps,60.54,59.56,67.59,66.3,ALTA,"O glifo É o botão: sem anel em volta, decisão de produto em 27/08.",0,-,painel
+mic,Microfone,-,entrada,audio,mic,mic,62.15,68.03,66.7,68.78,ALTA,"O botão de MUDO, e ele é pequeno: a barra de 7x1 que estava aqui virava um risco atravessado no corpo, e o usuário viu — 'essa linha não existe no controle da vida real'.",0,-,painel
 alto-falante,Alto-falante,-,saida,audio,alto-falante,alto-falante,60.1,55.38,68.74,58.22,ALTA,Duas linhas de furos: 5 em cima e 4 embaixo.,0,-,painel
 lightbar,Lightbar,barra de luz|iluminação,luz,luzes,lightbar,lightbar,41.13,30.93,87.07,50.31,ALTA,"Duas tiras que LADEIAM o touchpad e acompanham a borda dele. Uma feature, duas peças: o firmware não as endereça em separado.",0,-,luz
 led-jogador,Indicador de jogador,cinco lâmpadas|posto|assento,luz,luzes,led-jogador,led-jogador,56.71,52.23,72.13,52.9,ALTA,"As cinco lâmpadas montam sobre a BASE do touchpad, como o lightbar monta sobre as laterais — ela, 27/08. É o PADRÃO que diz o número: 1 | vão | 3 | vão | 1.",0,-,luz
 feat-giroscopio,Giroscópio,gyro,sensor,sensores,giroscopio,feat-giroscopio,7.5,29.46,120.5,101.51,ALTA,"Mede a rotação do CONTROLE INTEIRO — por isso a peça dele é o corpo, e não uma caixa no meio da placa; ela contornou a região na tela, 27/08. 1024 LSB/(graus/s), mais ou menos 2048 graus/s. 250,0 Hz exatos no cabo, medido nesta casa.",0,-,-
 feat-acelerometro,Acelerômetro,accel,sensor,sensores,acelerometro,feat-acelerometro,7.5,29.46,120.5,101.51,ALTA,"Mede a aceleração do CONTROLE INTEIRO, como o giroscópio. 8192 LSB/g, mais ou menos 4 g.",0,-,-
-feat-bateria,Bateria,-,sensor,energia,bateria,feat-bateria,40.86,31.04,87.28,50.4,ALTA,"As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão dela, 27/08.",0,-,-
+feat-bateria,Bateria,-,sensor,energia,bateria,feat-bateria,40.86,31.04,87.28,50.4,ALTA,"As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão de produto, 27/08.",0,-,-
 corpo,Corpo,casco|chassi,superficie,chassi,-,corpo,7.5,29.46,120.5,101.51,ALTA,"O casco. As DUAS empunhaduras são paths próprios dentro dele, e são elas que os motores destacam.",0,-,casca
 feat-haptica,Háptica,sensor háptico,saida,vibracao,haptica,falta,-,-,-,-,ALTA,"A vibração fina que o jogo manda como som, tocada pelos dois motores.",0,-,-
 feat-rumble-esquerdo,Motor de vibração esquerdo,motor forte,saida,vibracao,rumble_esquerdo,feat-rumble-esquerdo,7.44,29.46,44.08,101.17,ALTA,Contrapeso maior — soa grosso.,0,-,-

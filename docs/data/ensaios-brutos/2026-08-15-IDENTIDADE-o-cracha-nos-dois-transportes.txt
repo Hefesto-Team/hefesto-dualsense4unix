@@ -118,7 +118,7 @@ d4:2f:4b:00:00:d8  rádio       0x00001111  0x22    64B    IGUAL       sim, INVE
 44:46:48:00:00:03  cabo        0x00000811  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 33 38 3a 34 30 03 00 0b 00…
 44:46:48:00:00:03  cabo        0x00000811  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 03 00 11 08 00 00 2a 00 10 01 00 00 00 00 00 00 03 00 00 48 46 44 10…
 
-  O JULGAMENTO — os três critérios da pergunta dela
+  O JULGAMENTO — os três critérios da pergunta de produto
 
 report  (a) distingue   (b) nos dois transportes  (c) sem escrita    estável  veredito
 ------  --------------  ------------------------  -----------------  -------  ---------------------------
@@ -191,7 +191,7 @@ nada sobre o aparelho, ele não está mais lá" —, e é por isso que os veredi
 deste arquivo saem da rodada das 22h12 e nenhum sai desta.
 
 O QUE ISSO CUSTA, e é honesto dizer: a mesa 2+2 não pode ser remontada sem
-ela. Religar controle de rádio é o botão PS, e isso é a mão dela.
+ela. Religar controle de rádio é o botão PS, e isso é a mão do usuário.
 
 ==============================================================================
   identidade_nos_dois_transportes.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
@@ -237,7 +237,7 @@ a0:fa:9c:00:00:f0  rádio       0x00000710  0x22    -      não medida  —     
 44:46:48:00:00:03  cabo        0x00000811  0x20    64B    IGUAL       —                           20 4a 75 6c 20 20 34 20 32 30 32 35 31 30 3a 33 38 3a 34 30 03 00 0b 00…
 44:46:48:00:00:03  cabo        0x00000811  0x22    64B    IGUAL       sim, INVERTIDO, no byte 17  22 03 00 11 08 00 00 2a 00 10 01 00 00 00 00 00 00 03 00 00 48 46 44 10…
 
-  O JULGAMENTO — os três critérios da pergunta dela
+  O JULGAMENTO — os três critérios da pergunta de produto
 
 report  (a) distingue   (b) nos dois transportes  (c) sem escrita    estável  veredito
 ------  --------------  ------------------------  -----------------  -------  ----------------------------------------
@@ -268,7 +268,7 @@ OS CINCO PASSAM NOS TRÊS CRITÉRIOS. ISSO NÃO SIGNIFICA CINCO CRACHÁS.
 Os cinco candidatos saem nos dois transportes, sem escrita, estáveis entre
 duas leituras, e assumem 4 valores em 4 unidades. Mas "distingue 4 em 4 NESTA
 MESA" e "é um identificador de unidade" são coisas diferentes, e a diferença é
-o coração da universalidade que ela pediu. Olhando o CONTEÚDO, e não só a
+o coração da universalidade que o usuário pediu. Olhando o CONTEÚDO, e não só a
 contagem:
 
   0x09  (20 B)  É o MAC. buf[1..6] = MAC do controle INVERTIDO; buf[7..9] =
@@ -321,13 +321,13 @@ confirmação, agora, está feita nos dois braços.
 
 A ARMADILHA QUE ESTA MESA ESCONDE, E ELA É EXATAMENTE A DA UNIVERSALIDADE
 --------------------------------------------------------------------------
-Os quatro controles dela são de QUATRO revisões de placa diferentes (0x0710,
+Os quatro controles do usuário são de QUATRO revisões de placa diferentes (0x0710,
 0x0711, 0x0811, 0x1111) e de QUATRO cores diferentes. É a amostra mais
 favorável possível — e é justamente por isso que ela esconde a colisão: nesta
 mesa, `hardware_version` "distingue 4 em 4", e a cor também. Num PC qualquer,
 com dois DualSense brancos comprados no mesmo dia, os dois colidem no mesmo
 instante. A única coluna que continua distinguindo é o MAC.
 
-Este parágrafo é a resposta à regra dela: "n=4 é AMOSTRA". A contagem de 4-em-4
+Este parágrafo é a resposta à regra de produto: "n=4 é AMOSTRA". A contagem de 4-em-4
 não promove candidato nenhum a universal; o que promove é o MECANISMO — e o
 mecanismo do MAC é a fabricação, não o lote.

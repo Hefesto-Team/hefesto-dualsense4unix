@@ -12,9 +12,9 @@ qual controle é qual. A **cor da lightbar** é outra coisa, continua configurá
 pela pessoa, e vive em `core/led_control.py` (`_PLAYER_SLOT_COLORS`). Nada aqui
 a altera, e nenhum RGB de uma serve de fonte para a outra.
 
-**A decisão dela (21/08/2026):** o padrão é leitura automática (pelo cabo hoje,
+**A decisão de produto (21/08/2026):** o padrão é leitura automática (pelo cabo hoje,
 pelo rádio quando a ponte existir), e **a pessoa pode escolher a cor** — a
-escolha dela vence a tabela. Isso importa porque, medido, quase toda linha
+escolha do usuário vence a tabela. Isso importa porque, medido, quase toda linha
 abaixo é aproximada.
 
 ## A régua de confiança
@@ -57,7 +57,7 @@ abaixo é aproximada.
 
 ## A conferência do `#B5CED4`
 
-Ela mediu o controle dela e informou `#B5CED4`. Duas bases de nomes de cor
+Ela mediu o controle do usuário e informou `#B5CED4`. Duas bases de nomes de cor
 publicam, para o nome "Starlight Blue", valores praticamente idênticos:
 `#B5CED3` ([color-name.com](https://www.color-name.com/starlight-blue.color)) e
 `#B5CED4` (CrispEdge). A divergência é **1 unidade no canal azul** — abaixo do
@@ -84,7 +84,7 @@ primária nesta casa.
 
 ## O que falta, para quem continuar
 
-O caminho para tirar 20 linhas de `aproximado` é o que ela pediu: **amostrar
+O caminho para tirar 20 linhas de `aproximado` é o que o usuário pediu: **amostrar
 pixel de foto oficial da Sony**. Não foi feito aqui porque o interpretador deste
 ambiente não tem rede (`curl` falha na conexão), então baixar e amostrar imagem
 foi impossível — o que se pôde consultar veio de busca e leitura de página. Duas

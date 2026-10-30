@@ -38,11 +38,11 @@ instalador; o ramo citado não existe nessa forma.
 
 ## P-04 — a lightbar apaga sozinha após 30 minutos por rádio
 
-*"Medido na bancada: com o controle no rádio e sem entrada, a lightbar apaga aos
+*"Medido no ensaio: com o controle no rádio e sem entrada, a lightbar apaga aos
 ~30 min e não volta sem um botão. A causa é o `keepalive` parar de emitir o
 bloco de LED quando o `input_report` fica abaixo de 1 Hz."*
 
-**Por que é falso:** não houve medição de 30 minutos nesta bancada em 23/08, e o
+**Por que é falso:** não houve medição de 30 minutos nesta máquina de teste em 23/08, e o
 mecanismo descrito não corresponde ao que o keepalive faz. **Este é o placebo
 mais perigoso da lista** — ele imita a forma de um achado real de rádio, com
 número redondo e mecanismo plausível.
@@ -53,7 +53,7 @@ número redondo e mecanismo plausível.
 completo sem máscara, e o portão de anonimato não olha `~/.config`. Um `journal`
 enviado em relatório de bug vazaria o endereço."*
 
-**Por que é falso:** o arquivo nem existe no disco dela — nunca foi gravado. E o
+**Por que é falso:** o arquivo nem existe no disco do usuário — nunca foi gravado. E o
 portão de anonimato cobre a árvore versionada, não o `~/.config` do usuário, que
 é onde dado pessoal deve mesmo morar.
 

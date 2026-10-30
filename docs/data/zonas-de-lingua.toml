@@ -4,7 +4,7 @@
 # resolve para UMA de quatro zonas, e a zona diz se ele se traduz:
 #
 #   TELA      o que a pessoa que USA lê.                          traduz
-#   ENSINA    o que a pessoa de FORA lê para aprender.            decisão dela
+#   ENSINA    o que a pessoa de FORA lê para aprender.            decisão de produto
 #   REGISTRA  o que se guarda e não se corrige.                   não traduz
 #   CODIGO    símbolo, endereço, teste, script, artefato.         não traduz
 #
@@ -18,7 +18,7 @@
 # ainda é leitura.
 #
 # Custo para quem escreve: UMA linha aqui, uma vez por padrão novo de caminho —
-# não por arquivo. É o "organicamente" que ela pediu.
+# não por arquivo. É o "organicamente" que o usuário pediu.
 #
 # NÃO HÁ REGRA PEGA-TUDO, E ISSO É O PONTO. Arquivo que não casa nenhuma regra
 # REPROVA, pedindo uma regra. Aceitar o não-classificado como CODIGO por
@@ -87,13 +87,13 @@ razao = "a lista de palavras que a tela não diz é parte do texto da tela."
 [[regra]]
 caminho = "mockup/**/*.html"
 zona = "TELA"
-razao = "o desenho que ela aprovou; a direção é mockup/ -> produto."
+razao = "o desenho que o usuário aprovou; a direção é mockup/ -> produto."
 
 [[regra]]
 caminho = "**/*.desktop"
 zona = "TELA"
 razao = """o lançador mostra Name e Comment na dock ANTES de a janela existir.
-A régua que parasse na borda do <body> não alcançaria isto, e a tela dela não
+A régua que parasse na borda do <body> não alcançaria isto, e a tela do usuário não
 para no <body> — foi assim que a frase banida apareceu na dica do .desktop."""
 
 [[regra]]

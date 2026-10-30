@@ -3,7 +3,7 @@
 Data ............. 15/08/2026
 Instrumento ...... scripts/ensaios/cor_do_plastico.py
 Decisão que manda  D-15 (a cor do PLÁSTICO, lida do aparelho) e D-16 (a cor
-                   mora no APARELHO), respondidas por ela em 15/08/2026.
+                   mora no APARELHO), respondidas pelo usuário em 15/08/2026.
 Sprint ........... docs/process/sprints/2026-08-15-UNIDADE-COR-01-o-controle-sabe-de-que-cor-ele-e.md
 
 A PROCEDÊNCIA DECLARADA (regra da casa)
@@ -80,7 +80,7 @@ OS CONTROLES CONTINUAM SÃOS
 
 O RÁDIO: EXERCIDO, E RECUSADO — O RESULTADO NEGATIVO
 ----------------------------------------------------
-  Ela AUTORIZOU a estreia do envelope de feature por Bluetooth, com o risco na
+  O USUÁRIO AUTORIZOU a estreia do envelope de feature por Bluetooth, com o risco na
   mesa. Alvo: o VERMELHO (hidraw8), escolhido por ser o são - o outro de rádio
   está com a lightbar travada e é objeto de outra investigação ao vivo.
 
@@ -878,7 +878,7 @@ O FECHAMENTO — 4 DE 4, E OS QUATRO CONCORDAM COM O NOME QUE ELA USA
   d4:2f:4b:00:00:d8     0x00001111    05      Starlight Blue     (azul)
 
 Quatro unidades, quatro códigos DISTINTOS, e ZERO discordância com o nome que
-ela usa na bancada. A identificação por cor está fechada em 4 de 4 no CABO.
+ela usa no ensaio. A identificação por cor está fechada em 4 de 4 no CABO.
 
 O QUE ISTO **NÃO** AUTORIZA A DIZER, e é o cuidado que a universalidade pede
 -----------------------------------------------------------------------------

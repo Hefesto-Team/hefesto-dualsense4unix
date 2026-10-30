@@ -29,7 +29,7 @@
 #
 # COMO A COR CHEGA. O serial de fábrica de 17 caracteres carrega o código nos
 # caracteres 5 e 6 (`serial[4:6]`). Ele sai por `SET_FEATURE 0x80` com payload
-# `[0x01, 0x13]`, e a resposta vem no `GET_FEATURE 0x81`. Medido nesta bancada
+# `[0x01, 0x13]`, e a resposta vem no `GET_FEATURE 0x81`. Medido nesta máquina de teste
 # em 27/08/2026 nos DOIS transportes — ver `scripts/ensaios/cor_do_plastico.py`
 # e a canônica, seção "O caminho da cor do plástico".
 #
@@ -49,7 +49,7 @@
 # Nos modelos "split" (Spider-Man 2, God of War 20th) `casca_esq` e `casca_dir`
 # são cores DIFERENTES — é por isso que não existe uma coluna `casca` só.
 #
-# grau : MEDIDO   = o serial saiu de um aparelho DESTA bancada (código), ou o
+# grau : MEDIDO   = o serial saiu de um aparelho DESTA máquina de teste (código), ou o
 #                   hex foi amostrado de peça física sob luz controlada
 #        ALTA     = o código está no `colorMap` do dualshock-tools (engenharia
 #                   reversa consolidada, com dumps de serial reais)
