@@ -2311,7 +2311,7 @@ def numeros_do_leia_primeiro(raiz: Path) -> dict[str, str]:
         "mapa-provado-descritor": _milhar(provado.get("descritor", 0)),
         "caderno-com-observado-por": _milhar(sum(observado.values())),
         "caderno-observado-olho-do-usuario": _milhar(observado.get("olho-do-usuario", 0)),
-        "caderno-observado-ensaio": _milhar(observado.get("bancada", 0)),
+        "caderno-observado-ensaio": _milhar(observado.get("ensaio", 0)),
         "caderno-observado-aparelho": _milhar(observado.get("aparelho", 0)),
         "linhas-do-mapa": _milhar(linhas),
         "colunas-do-mapa": _milhar(len(cabecalho)),

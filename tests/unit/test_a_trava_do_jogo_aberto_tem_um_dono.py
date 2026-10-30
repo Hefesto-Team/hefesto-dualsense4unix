@@ -412,7 +412,7 @@ def test_toda_origem_que_passa_aponta_uma_decisao_do_usuario() -> None:
     for origem, decisao in gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.items():
         linha = decisoes.get(decisao)
         assert linha is not None, f"{origem}: {decisao} não está no CSV"
-        assert linha["estado"] in _respondidas() and linha["quem_decidiu"] == "ela", (
+        assert linha["estado"] in _respondidas() and linha["quem_decidiu"] == "usuário", (
             f"{origem}: {decisao} não é aceita ({linha['estado']}, {linha['quem_decidiu']})")
     assert set(gp.ORIGENS_QUE_PASSAM_COM_O_JOGO) == {"manual", "gesto_de_perfil", "ordem_do_coop"}
     assert set(gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.values()) == {DO_GESTO, DA_ORDEM}

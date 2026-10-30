@@ -252,7 +252,7 @@ def main() -> int:
             suspeito="o common[6] (mic_volume, teto 0x40) é ganho de hardware da captura",
             presente="sim" if com_bit else "não",
             resultado="obedece" if frase.startswith("OBEDECE") else ("não obedece" if frase.startswith("NÃO OBEDECE") else ""),
-            observado_por="bancada",
+            observado_por="ensaio",
             fonte="scripts/ensaios/o_byte_do_microfone_muda_a_captura.py",
             nota=f"byte {nivel:#04x}, pico {captura.pico}, rms {captura.rms:.1f}, {captura.veredito}; {frase}",
         ))

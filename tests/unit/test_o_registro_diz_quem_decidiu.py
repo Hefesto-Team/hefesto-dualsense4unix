@@ -7,10 +7,10 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 CSV_ = RAIZ / "docs" / "data" / "decisoes-de-produto.csv"
 
-VALORES = {"ela", "delegacao", "indeterminado"}
+VALORES = {"usuário", "delegacao", "indeterminado"}
 
 MARCA_INDETERMINADO = "QUEM DECIDIU: INDETERMINADO"
-MARCA_O_USUARIO = "QUEM DECIDIU: ELA"
+MARCA_O_USUARIO = "QUEM DECIDIU: USUÁRIO"
 
 LOTE_DE_04_09 = "as 54 levantadas em 04/09"
 
@@ -121,7 +121,7 @@ def test_o_lote_de_04_09_so_vira_do_usuario_com_a_prova() -> None:
     sem_prova = [
         d["id"]
         for d in lote
-        if d["quem_decidiu"] == "ela" and MARCA_O_USUARIO not in d["escolha"]
+        if d["quem_decidiu"] == "usuário" and MARCA_O_USUARIO not in d["escolha"]
     ]
     assert not sem_prova, (
         "estas linhas do lote de 04/09 dizem `ela` sem o carimbo "

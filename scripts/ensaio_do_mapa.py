@@ -39,7 +39,7 @@ GRAUS = ["", *VALORES_DA_ESCADA]
 from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA
 
 PONTES = ["", *[degrau.ponte.chave for degrau in ESCADA]]
-QUEM = ["", "ci", "bancada", "olho-do-usuario",
+QUEM = ["", "ci", "ensaio", "olho-do-usuario",
         "aparelho", "fonte-do-driver", "descritor", "instrumento"]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
 
@@ -204,7 +204,7 @@ else:
         )
         c3, c4 = st.columns(2)
         resultado = c3.text_input("Resultado", placeholder="obedece / não obedece / acendeu / mudo")
-        quem = c4.selectbox("Observado por", ["olho-do-usuario", "bancada", "ci"])
+        quem = c4.selectbox("Observado por", ["olho-do-usuario", "ensaio", "ci"])
         degrau_medido = st.selectbox(
             "Até onde este ensaio mediu?",
             GRAUS,
