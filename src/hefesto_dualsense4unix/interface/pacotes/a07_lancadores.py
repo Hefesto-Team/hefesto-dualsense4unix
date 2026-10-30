@@ -164,6 +164,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.integrations import lista_de_exclusao
 from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+from hefesto_dualsense4unix.interface import desenho_da_janela_do_tema as dtema
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
 from . import Contexto, fios, perfil, registrar
@@ -1562,14 +1563,25 @@ def _notas_do_tema(manifesto: Any, mod_id: str) -> dict[str, str]:
     return {str(opcao): frase for opcao, frase in pares if opcao and frase}
 
 
+def _retrato_do_tema(manifesto: Any) -> Any:
+    """O tema da extensão para a janela dela, ou ``None`` quando ela não pinta tema."""
+    from hefesto_dualsense4unix.mods import retrato_do_tema
+
+    if "tema" not in manifesto.tipos or not manifesto.tema:
+        return None
+    return retrato_do_tema.retratar(manifesto, _lugares())
+
+
 def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) -> None:
-    """O miolo da janela de opções: o valor guardado de cada opção."""
+    """O miolo da janela de opções: o valor guardado de cada opção. A extensão de tema ganha a
+    janela do tema (``desenho_da_janela_do_tema``), com toda opção que tem papel no bloco."""
     from hefesto_dualsense4unix.mods import opcoes
 
     item = item or _a_instalada(mod_id)
     manifesto = item.manifesto
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
+    retrato = _retrato_do_tema(manifesto)
     valores = guardados = opcoes.ler(manifesto, _lugares())
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
@@ -1586,12 +1598,18 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "",
         dica=x.dica or "", unidade=x.unidade or "", zero=x.zero or "",
         degraus=x.degraus or 0)
-        for x in manifesto.opcoes if x.id in aparecem and x.id != manifesto.chave]
+        for x in manifesto.opcoes
+        if (x.id in aparecem or retrato is not None) and x.id != manifesto.chave]
     chave = bool(guardados[manifesto.chave]) if manifesto.chave else None
     _MEXIDA.desligada = chave is False
     _MEXIDA.mod = mod_id
     _VIVA.com_o_modo(mod_id, _o_modo_de(manifesto, valores) or None)
     _MEXIDA.agora = tuple(manifesto.agora)
+    if retrato is not None:
+        _MEXIDA.html_mod = dtema.janela_do_tema_html(
+            manifesto.nome, linhas, retrato, mod=mod_id, aba=_MEXIDA.aba, aparecem=aparecem,
+            parar=exp.chave_da_extensao_html(mod_id, chave) if chave is not None else "")
+        return
     estado = _estado_da_janela(manifesto)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
@@ -1766,9 +1784,20 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     _MEXIDA.aba = opcao.grupo or ""
     if opcao.tipo == "deslizante":
         _OPCOES_VIVAS.soltou(mod_id, opcao_id, _numero(o.get("carimbo")))
-    _guardar_a_opcao_da_modificacao(item, {opcao_id: _validada(opcao, valor, item)})
+    _guardar_a_opcao_da_modificacao(
+        item, {opcao_id: _validada(opcao, valor, item), **_o_destaque_que_liga(item, opcao_id)})
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
+
+
+def _o_destaque_que_liga(item: _Instalada, opcao_id: str) -> dict[str, bool]:
+    """Escolher a cor do destaque é querer vê-lo: a chave dele liga junto, se estava desligada."""
+    from hefesto_dualsense4unix.mods import opcoes, retrato_do_tema
+
+    chave = retrato_do_tema.ligar_o_destaque(item.manifesto, opcao_id)
+    if chave is None or opcoes.ler(item.manifesto, _lugares()).get(chave) is True:
+        return {}
+    return {chave: True}
 
 
 def _abrir_no_editor(alvo: pathlib.Path) -> None:
@@ -1844,9 +1873,50 @@ def importar_na_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[st
     if not caminho:
         return None
     nome = _importar_na_modificacao(item, opcao.id, str(caminho))
+    _escolher_o_importado(item, opcao.id)
     _MEXIDA.aba = opcao.grupo or ""
     _montar_a_janela_da_extensao(item.entrada.id)
     return {**_a_pintura_agora(ctx), "recado": f"Importado: {nome}."}
+
+
+def _escolher_o_importado(item: _Instalada, opcao_id: str) -> None:
+    """O tema importado passa a valer: importar é escolhê-lo."""
+    from hefesto_dualsense4unix.mods import retrato_do_tema
+
+    escolha = retrato_do_tema.escolha_do_importado(item.manifesto, opcao_id)
+    if escolha is not None:
+        _guardar_a_opcao_da_modificacao(item, {escolha[0]: escolha[1]})
+
+
+def _exportar_o_tema(retrato: Any, destino: str) -> None:
+    from hefesto_dualsense4unix.mods import retrato_do_tema, tema
+
+    try:
+        texto = retrato_do_tema.exportar(retrato)
+    except tema.TemaRecusadoError as exc:
+        raise RuntimeError(exc.frase) from exc
+    try:
+        pathlib.Path(destino).write_text(texto, encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"O tema não foi salvo: {exc.strerror or exc}.") from exc
+
+
+@gesto("07-lancadores.html", dtema.GESTO_DE_EXPORTAR, grava="_exportar_o_tema")
+def exportar_o_tema_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any
+                                   ) -> dict[str, Any] | None:
+    """«Exportar»: o tema que a extensão pinta agora vira um ``.css`` que o «Importar» aceita
+    de volta. Cancelar não é erro: o seletor devolve vazio e a tela não fala."""
+    _MEXIDA.armada = ()
+    item = _a_instalada(_id_do_clique(o, dtema.GESTO_DE_EXPORTAR))
+    retrato = _retrato_do_tema(item.manifesto) if item.manifesto else None
+    if retrato is None:
+        raise RuntimeError("Esta extensão não tem tema para exportar. Nada foi salvo.")
+    nome = re.sub(r"[^\w-]+", "-", retrato.escolhida or "tema").strip("-").lower() or "tema"
+    destino = p.salvar_arquivo("Onde salvar o tema", sugestao=f"{nome}.css")
+    if not destino:
+        return None
+    _exportar_o_tema(retrato, str(destino))
+    return {**_a_pintura_agora(ctx), "recado": f"Exportado: {pathlib.Path(destino).name}."}
 
 
 @gesto("07-lancadores.html", exp.GESTO_DE_TIRAR, grava="_tirar_da_modificacao")
@@ -2317,7 +2387,7 @@ SEM_ECO: tuple[str, ...] = (
            desenho.ADICIONAR, desenho.PROCURAR_O_ARQUIVO,
            "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",
            "mais-da-modificacao", "instalar-modificacao", "escolher-arquivo-da-modificacao",
-           exp.GESTO_DE_IMPORTAR, exp.GESTO_DE_TIRAR,
+           exp.GESTO_DE_IMPORTAR, exp.GESTO_DE_TIRAR, dtema.GESTO_DE_EXPORTAR,
            exp.GESTO_DO_PARAR, exp.GESTO_DA_CHAVE_DA_EXTENSAO,
            exp.GESTO_DE_ESCOLHER,
            exp.GESTO_DO_GUARDAR_LANCADOR,

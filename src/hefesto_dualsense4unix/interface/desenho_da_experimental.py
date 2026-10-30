@@ -960,18 +960,23 @@ def chave_da_extensao_html(mod: str, ligada: bool) -> str:
 
 def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
                estado: Mapping[str, Any] | None, parar: str, processo: str = "",
-               porque: str = "", faixa: str = "", gestao: Gestao | None = None) -> str:
+               porque: str = "", faixa: str = "", gestao: Gestao | None = None,
+               coluna: str = "", corpo: str = "") -> str:
     """A janela do arranjo C: a chave (ou o «Parar tudo») e o X no topo, a coluna «Agora» e os
     ajustes. Toda escolha grava no clique: não há rodapé.
 
-    ``faixa`` é a do controle livre, fixa embaixo das duas colunas; sem ``agora``, os ajustes
-    ocupam a largura inteira.
+    ``faixa`` é a fixa embaixo das duas colunas; sem ``agora`` nem ``coluna`` (o miolo pronto da
+    coluna, quando a extensão não é de aparelhos), os ajustes ocupam a largura inteira. ``corpo``
+    é a classe a mais do corpo.
     """
-    coluna = (f'<div class="ja-agora" id="mod-agora">{agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao)}</div>'
-              if agora else "")
+    tem_coluna = bool(agora or coluna)
+    miolo = coluna or (agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao)
+                       if agora else "")
+    coluna = f'<div class="ja-agora" id="mod-agora">{miolo}</div>' if tem_coluna else ""
     opcoes = f'<div class="ja-opcoes">{ajustes}</div>' if ajustes else ""
-    classe = ("ja-corpo" + ("" if agora else " sem-agora")
-              + (" com-faixa" if faixa and (agora or ajustes) else ""))
+    classe = ("ja-corpo" + ("" if tem_coluna else " sem-agora")
+              + (" com-faixa" if faixa and (tem_coluna or ajustes) else "")
+              + (f" {corpo}" if corpo else ""))
     return f'''    <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
       {_o_x(mod)}
