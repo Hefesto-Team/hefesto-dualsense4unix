@@ -80,7 +80,7 @@ def _com(opcao_id: str, aparece_com: Any) -> list[dict[str, Any]]:
 @pytest.mark.parametrize(("declaradas", "frase"), [
     (_com("servidor", {"inventada": REDE}),
      "a opção servidor aparece com 'inventada', que não existe"),
-    (_com("servidor", {"servidor": REDE}), "a opção servidor aparece com ela mesma"),
+    (_com("servidor", {"servidor": REDE}), "a opção servidor aparece consigo mesma"),
     (_com("ligacao", {"seguro": True}), "a opção ligacao fecha um ciclo de aparece_com"),
     (_com("servidor", {"ligacao": "Bluetooth"}),
      "a opção servidor aparece com 'ligacao' valendo 'Bluetooth', que não é escolha"),

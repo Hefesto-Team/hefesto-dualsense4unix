@@ -107,7 +107,7 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Receber os gestos do botão PS que comandam os acessórios, sem receber botão nenhum."
     ),
     "publicar:acessorios.estado": (
-        "Mostrar na janela dela e na aba Conexões as conexões e os aparelhos que ela liga."
+        "Mostrar na janela da extensão e na aba Conexões as conexões e os aparelhos ligados."
     ),
     "pedir:luz.pulso": (
         "Pedir que a barra de luz de um controle pulse na cor escolhida, nos perfis «Adulto»."
@@ -122,7 +122,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     "lancador": "Acrescentar um lançador de jogos e abrir os jogos que ele lista.",
     "tema": "Trocar as cores da interface e o lado dos botões da janela.",
     "aparelhos": "Abrir aparelhos ligados ao computador.",
-    "jogos": "Ler as pastas dos jogos instalados na Steam, sem mudar nada nelas.",
+    "jogos": "Ler as pastas dos jogos instalados na Steam, sem mudar nada.",
 }
 
 BOTOES_DO_POR_BOTAO = (
@@ -298,7 +298,7 @@ class Opcao(BaseModel):
     @classmethod
     def _herda_de_outra_extensao(cls, valor: dict[str, dict[str, str | bool]] | None
                                  ) -> dict[str, dict[str, str | bool]] | None:
-        """``{opção da antiga: {valor dela em JSON: valor daqui}}``, lido só pelo ``substitui``."""
+        """``{opção da antiga: {valor antigo em JSON: valor daqui}}``, lido pelo ``substitui``."""
         for antiga, mapa in (valor or {}).items():
             if not _CHAVE_DE_LANCADOR.match(antiga) or not mapa:
                 raise ValueError(f"herda: «{antiga}» precisa de um id e de ao menos um valor")
@@ -377,7 +377,7 @@ class Opcao(BaseModel):
         if not self.aparece_com:
             raise ValueError(f"o aparece_com de {self.id} está vazio")
         if self.id in self.aparece_com:
-            raise ValueError(f"a opção {self.id} aparece com ela mesma")
+            raise ValueError(f"a opção {self.id} aparece consigo mesma")
         if self.tipo == "livre":
             raise ValueError(f"o livre {self.id} mora na faixa de baixo e não declara aparece_com")
 
@@ -631,7 +631,7 @@ class Manifesto(BaseModel):
 
     def _conferir_o_aparece_com(self) -> None:
         """Cada ``aparece_com`` aponta para outra ``escolha`` ou ``ligado`` daqui, com um valor que
-        ela tem, e nenhuma cadeia volta à opção de onde saiu."""
+        a opção tem, e nenhuma cadeia volta à opção de onde saiu."""
         por_id = {o.id: o for o in self.opcoes}
         for opcao in self.opcoes:
             for alvo, valor in (opcao.aparece_com or {}).items():

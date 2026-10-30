@@ -3,8 +3,8 @@
 
 A DECISÃO DE CONSTRUIR É DO USUÁRIO, 03/09/2026: o `<select>` de quinze opções estava
 desenhado na aba Perfis — *o campo mais aceso do painel* — e não tinha nada
-atrás. Perguntada se o motor devia existir, ela respondeu **"Construir o
-motor"**, e escolheu o alcance: **gatilho + vibração + luz**.
+atrás. À pergunta se o motor devia existir, a resposta foi **construir o
+motor**, com o alcance o alcance: **gatilho + vibração + luz**.
 
 A REGRA QUE MANDA NA COR, e é do usuário, verbatim
 =================================================
@@ -15,7 +15,7 @@ A REGRA QUE MANDA NA COR, e é do usuário, verbatim
 
 **Isso não é preferência estética — é ENDEREÇO.** A barra de luz é a única
 maneira de saber, olhando para a mesa, qual controle é qual. Duas unidades com a
-mesma cor apagam essa informação, e apagam-na justamente quando ela mais importa:
+mesma cor apagam essa informação, e apagam-na justamente quando mais importa:
 com quatro controles ligados.
 
 E A REGRA PEGA UM DEFEITO VIVO. Medido no perfil do usuário em 03/09/2026: a seção
@@ -25,13 +25,13 @@ iguais. O `auto_player_colors` é o que a impede hoje, e ele é um interruptor q
 alguém pode desligar sem perceber o que perde.
 
 **Então o estilo nunca escolhe UMA cor: escolhe uma FAMÍLIA**, e cada unidade
-recebe uma variação dela. É a leitura literal do que o usuário pediu — *"dentro da
+recebe uma variação da família. É a leitura literal do que o usuário pediu — *"dentro da
 paleta de fps tem que ter variações pra cada unidade"*.
 
 COMO AS QUATRO VARIAÇÕES NASCEM, e por que não são digitadas
 --------------------------------------------------------------
 Quatro cores por estilo, escritas à mão, seriam dezenas de lugares
-para envelhecer, e ninguém conferiria se duas colidem. Elas são DERIVADAS de uma
+para envelhecer, e ninguém conferiria se duas colidem. As cores são DERIVADAS de uma
 cor-família por rotação de matiz e passo de luminância — e :func:`as_quatro`
 garante, medindo, que as quatro saem distinguíveis.
 
@@ -43,10 +43,10 @@ não entrega.
 
 A MARATONA É A ÚNICA EXCEÇÃO À COR, E NÃO À REGRA
 --------------------------------------------------
-Ela pede economia de bateria, e a proposta original era a luz APAGADA. Apagada,
+O estilo pede economia de bateria, e a proposta original era a luz APAGADA. Apagada,
 os quatro ficam iguais — o que a regra de produto proíbe. A leitura que fica: brilho
 MÍNIMO com as quatro cores distintas. Gasta quase nada e a mesa continua
-legível. **Se ela preferir apagada mesmo, é uma palavra e uma linha.**
+legível. **Se o usuário preferir apagada mesmo, é uma palavra e uma linha.**
 
 O «CO-OP LOCAL» SAIU — 25/09/2026, O-CO-OP-LOCAL-SAI-01
 --------------------------------------------------------
@@ -63,10 +63,10 @@ os três ajustes como valores. A régua que impede a volta é
 A RECEITA INVISÍVEL — 08/10/2026, O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA-EM-TODO-MODO-01
 ------------------------------------------------------------------------------------------
 A escolha do usuário (ESCOLHAS de 08/10): nenhum cartão novo, o «Estilo de Jogo» é o
-veículo, e cada estilo leva as variáveis que a tela não mostra. Exemplo dela:
-*«É terror. (...) A cor do lightbar fica piscando a vibrção fina funciona se
-apertar o botão da arma de fogo (...) o dualsense vibra mais alto por default e
-por tempo x.»* <!-- noqa-acento: citação literal -->
+veículo, e cada estilo leva as variáveis que a tela não mostra. Exemplo: no
+terror, a cor da barra fica piscando, a vibração fina funciona ao
+apertar o botão da arma de fogo, e o DualSense vibra mais alto por padrão e
+por um tempo x.
 Duas variáveis o gesto aplica no perfil (:data:`APLICADAS`): o ritmo e a
 frequência do gatilho (os parâmetros de `trigger_specs.PRESETS`) e o modo (o
 Point and click liga a Navegação, pela seção `mode` do perfil). As outras
@@ -188,7 +188,7 @@ def _respira(
 class Lado:
     """O que um gatilho faz no estilo: o acionamento e a imersão dele (ou `None`).
 
-    A imersão é uma chave de `efeitos_de_imersao.IMERSOES`; sem ela valem os padrões do acionamento
+    A imersão é chave de `efeitos_de_imersao.IMERSOES`; sem imersão valem os padrões do acionamento
     mais os `ajustes_do_gatilho` da receita. Os números que o perfil guarda são os de
     `ajustes_da_imersao(imersao, modo, estilo)`, os mesmos que a aba Gatilhos reconhece.
     """
@@ -338,7 +338,7 @@ DE_FABRICA: tuple[Estilo, ...] = tuple(e for e in ESTILOS if e.chave != "persona
 
 
 def _distancia(a: RGB, b: RGB) -> int:
-    """|ΔR| + |ΔG| + |ΔB| — a conta grosseira, e ela é a honesta aqui."""
+    """|ΔR| + |ΔG| + |ΔB| — a conta grosseira, e é a honesta aqui."""
     return sum(abs(x - y) for x, y in zip(a, b, strict=True))
 
 
@@ -400,12 +400,12 @@ def estilo_que_pinta(chave: object) -> Estilo | None:
 
 def luz_automatica(estilo: object, jogador: int | None,
                    tom_do_plastico: RGB | None) -> tuple[RGB, float]:
-    """A cor automática de um controle e o fator de brilho dela: ``(cor, fator)``.
+    """A cor automática de um controle e o fator de brilho da cor: ``(cor, fator)``.
 
     É a resposta única a «que cor acende o controle sem cor escolhida à mão», para o daemon e
     para a tela. Com um estilo que pinta e o controle num lugar de 1 a 4, a cor da unidade dele
     na família do estilo (:func:`cor_da_unidade`) e o brilho do estilo; sem isso, a do plástico,
-    e a do número sem ela (``led_control.cor_automatica``), com fator 1,0. Assim o controle que
+    e a do número sem o estilo (``led_control.cor_automatica``), com fator 1,0. Assim o controle que
     chega depois do gesto da aba Perfis, e o Modo automático da Iluminação, acendem o estilo.
     """
     from hefesto_dualsense4unix.core.led_control import cor_automatica

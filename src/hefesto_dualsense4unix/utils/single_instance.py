@@ -345,7 +345,7 @@ def porta_de_frente(name: str) -> socket.socket | None:
 
 
 def pedir_a_frente(name: str, pid: int) -> bool:
-    """Pede ao dono da janela (``pid``) que a traga para a frente; ``True`` se ela atendeu."""
+    """Pede ao dono da janela (``pid``) que a traga para a frente; ``True`` se o dono atendeu."""
     token = next(
         (os.environ[v] for v in _VARIAVEIS_DO_TOKEN if os.environ.get(v)), ""
     )

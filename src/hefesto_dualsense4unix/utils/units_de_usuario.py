@@ -6,7 +6,7 @@ por `__PYTHON__`. Cada formato (`.deb`, Arch, Fedora, Nix, `daemon install-servi
 tem o seu próprio lugar para os binários, e cada um vestia o modelo à sua maneira:
 a lista fechada com `sed` do `.deb`, a cópia às cegas do Fedora e do Nix (a unit
 chegava com um caminho que não existe), a lista curta do Arch (sem a presença, que
-a unit do daemon chama no `OnFailure`). Aqui a vestimenta é uma só, e ela RECUSA
+a unit do daemon chama no `OnFailure`). Aqui a vestimenta é uma só, e RECUSA
 entregar uma unit com marcador sobrando.
 
 Só biblioteca padrão: os empacotadores o rodam como arquivo

@@ -474,7 +474,7 @@ def _controles_do_aparelho(bruto: Any, tem_id: bool,
 
 def _controle(bruto: Any) -> dict[str, Any]:
     """Um controle do aparelho: a chave leva o valor verdadeiro ou falso; a paleta e a escolha levam
-    as opções e, no valor, o ``id`` de uma delas (ou nulo). O rótulo, a dica e o ícone (um de
+    as opções e, no valor, o ``id`` de uma das opções (ou nulo). O rótulo, a dica e o ícone (um de
     ``ICONES_DO_CONTROLE``, o glifo do que a chave controla) são opcionais."""
     if not isinstance(bruto, dict):
         raise _recusa_do_estado(
@@ -491,7 +491,7 @@ def _controle(bruto: Any) -> dict[str, Any]:
         saida["opcoes"] = _opcoes_do_controle(bruto.get("opcoes"), tipo)  # (noqa-acento)
         if valor is not None and valor not in {
             o["id"] for o in saida["opcoes"]}:  # (noqa-acento)
-            raise _recusa_do_estado(f"o valor da {tipo} é o id de uma das opções dela, ou nulo.")
+            raise _recusa_do_estado(f"o valor da {tipo} é o id de uma das opções, ou nulo.")
     saida["valor"] = valor
     if bruto.get("rotulo") is not None:
         saida["rotulo"] = _curto(bruto["rotulo"],
@@ -531,12 +531,12 @@ def _opcoes_do_controle(bruto: Any, tipo: str) -> list[dict[str, Any]]:
 
 
 def _cor_do_ponto(cor: Any) -> str | list[str]:
-    """A cor de um ponto da paleta: ``#rrggbb``, ou uma lista de até ``CORES_DO_PONTO`` delas."""
+    """A cor de um ponto da paleta: ``#rrggbb``, ou uma lista de até ``CORES_DO_PONTO`` cores."""
     cores = cor if isinstance(cor, list) else [cor]
     if not 1 <= len(cores) <= CORES_DO_PONTO or not all(
             isinstance(c, str) and _COR_DO_PONTO.fullmatch(c) for c in cores):
         raise _recusa_do_estado(
-            f"a cor de uma paleta é #rrggbb, ou uma lista de até {CORES_DO_PONTO} delas.")
+            f"a cor de uma paleta é #rrggbb, ou uma lista de até {CORES_DO_PONTO} cores.")
     return [c.lower() for c in cores] if isinstance(cor, list) else str(cor).lower()
 
 
@@ -1026,7 +1026,7 @@ class Porta:
         })
 
     def _estado_dos_acessorios(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
-        """O estado que a extensão devolve: a janela dela e a aba Conexões o mostram.
+        """O estado que a extensão devolve: a janela da extensão e a aba Conexões o mostram.
 
         Só com ``ler:acessorios.gesto`` ele vai ao barramento e liga os gestos do PS; com
         ``publicar:acessorios.estado`` ele só se mostra, e os gestos ficam os de sempre.
@@ -1097,7 +1097,7 @@ class Porta:
         A conexão que não lê o gesto recebe o evento ``extensao.parar`` pelo próprio socket, sem
         assinatura. O gesto ``para`` sai sempre no tópico do gesto do PS (``acessorios.gesto``),
         com ``mod`` dizendo a quem ele vai e sem controle (``uniq`` nulo): a extensão que o lê o
-        recebe por ali, o supervisor confere o parar dela, e a outra extensão não o recebe.
+        recebe por ali, o supervisor confere o parar da extensão, e a outra extensão não o recebe.
         ``False`` quando a extensão não está conectada à porta (nada a parar).
         """
         conexoes_do_mod = [con for con in self._conexoes
@@ -1203,7 +1203,7 @@ class Porta:
         return True
 
     def le_os_botoes(self) -> bool:
-        """Alguma extensão assinou o tópico ``botoes``? Sem ela, o tique não lê controle nenhum."""
+        """Alguma extensão assinou o tópico ``botoes``? Sem assinante, o tique não lê controle."""
         return any(con.filas_dos_botoes for con in self._conexoes)
 
     def botoes_do_tique(
@@ -1238,7 +1238,7 @@ class Porta:
                             _por_na_fila(fila, carga)
 
     def le_as_entradas(self) -> bool:
-        """Alguma extensão assinou o tópico ``entradas``? Sem ela, o tique não lê controle."""
+        """Alguma extensão assinou o tópico ``entradas``? Sem assinante, o tique não lê controle."""
         return any(con.filas_das_entradas for con in self._conexoes)
 
     def pede_os_dedos(self) -> bool:
@@ -1294,7 +1294,7 @@ class Porta:
             self._repouso_de(uniq if isinstance(uniq, str) and uniq else None)
 
     def le_o_movimento(self) -> bool:
-        """Alguma extensão assinou o tópico ``movimento``? Sem ela, ninguém pede o leitor."""
+        """Alguma extensão assinou o tópico ``movimento``? Sem assinante, ninguém pede o leitor."""
         return any(con.filas_do_movimento for con in self._conexoes)
 
     def _assinar_o_movimento(self, con: _Conexao, feito: _Assinatura) -> asyncio.Queue[Any]:

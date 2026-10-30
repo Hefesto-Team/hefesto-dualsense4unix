@@ -411,12 +411,12 @@ class ProfileMovimentoConfig(BaseModel):
     `remapeamento`: perfil sem a seção não tem opinião, e ativá-lo NÃO liga
     mira nenhuma.
 
-    POR QUE ELA NÃO NASCE LIGADA, e a NASCE-LIGADO-01 exige a justificativa
+    POR QUE A TRADUÇÃO NÃO NASCE LIGADA, e a NASCE-LIGADO-01 exige a justificativa
     escrita: a tradução é um ARRANJO, não uma feature do aparelho. A regra
     *"nasce ligado"* vale para o que o plástico já faz — o microfone, o giro, a
-    vibração. Ligar a tradução sem pedido moveria a câmera de todo jogo que ela
+    vibração. Ligar a tradução sem pedido moveria a câmera de todo jogo que o usuário
     já joga quando o controle se mexesse na mesa; e no caminho `uhid`, onde a
-    IMU nativa já chega ao jogo, ela criaria DOIS giros e a câmera andaria em
+    IMU nativa já chega ao jogo, a tradução criaria DOIS giros e a câmera andaria em
     dobro. O arranjo é de quem usa.
 
     NO PERFIL E POR CONTROLE — A-MIRA-POR-MOVIMENTO-NA-TELA-01 (23/09/2026).
@@ -504,7 +504,7 @@ class SequenciaDeBotao(BaseModel):
     """O que um botão toca no pad virtual (O-BOTAO-GRAVA-E-TOCA-UMA-SEQUENCIA-01).
 
     ``jeito`` diz como o aperto a toca (uma vez, repetida enquanto segura, ou ligada e desligada)
-    e ``ritmo`` a pressa dela em cima dos tempos gravados (``core/ativacao_de_botao``).
+    e ``ritmo`` a pressa da ativação em cima dos tempos gravados (``core/ativacao_de_botao``).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -576,7 +576,7 @@ class ProfileAnalogicosConfig(BaseModel):
 
     @model_validator(mode="after")
     def _a_mao_decide_a_troca(self) -> ProfileAnalogicosConfig:
-        """A mão é predefinição: pedir a troca por cima dela é pedir duas coisas."""
+        """A mão é predefinição: pedir a troca por cima da mão é pedir duas coisas."""
         from hefesto_dualsense4unix.core.curva_do_analogico import recusar
 
         motivo = recusar(self.trocar, self.mao)
@@ -764,7 +764,7 @@ class ProfileMicConfig(BaseModel):
 
     A faixa é 0-100 (por cento), diferente do `volume` do alto-falante, que é
     0-255 porque escreve um byte do report. Aqui o número é de sistema, e usar a
-    escala do report seria pedir que ela pensasse em bytes.
+    escala do report seria pedir que o usuário pensasse em bytes.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -826,7 +826,7 @@ class ProfileSpeakerConfig(BaseModel):
     **"SEM OPINIÃO CONTINUA SENDO SILÊNCIO" CAIU EM 16/09/2026 — SOM-ROTA-02.**
     Esta linha dizia isso, e a premissa era que não escrever fosse o lado
     neutro. Não é: o default do FIRMWARE é ``SAIDA_ESTEREO_NO_FONE``, e o
-    conector está vazio. Medido com ela do lado do controle — sem rota, nada;
+    conector está vazio. Medido com a rota do lado do controle — sem rota, nada;
     com a rota escrita, *"Saiu som"*.
 
     O que mudou não é este campo, é quem responde quando ele cala: o controle
@@ -947,7 +947,7 @@ def _agora_em_iso() -> str:
 class PonteConfirmada(BaseModel):
     """O CARIMBO: esta ponte foi confirmada NESTE jogo, e quando.
 
-    PONTE-CONFIRMADA-01 (19/08/2026). O perfil já guardava a ponte — ela é a
+    PONTE-CONFIRMADA-01 (19/08/2026). O perfil já guardava a ponte — a ponte é a
     tupla ``(mode.kind, mode.gamepad_flavor, está na allowlist do Steam
     Input)``, com as duas primeiras em ``mode`` e a terceira no
     ``steam_input_apps.txt``. O que faltava não é vocabulário novo: é a resposta
@@ -955,20 +955,20 @@ class PonteConfirmada(BaseModel):
     só o que estava no arquivo quando ninguém sabia?"**.
 
     Sem essa distinção o produto não separa "nunca tentei" de "tentei e
-    funciona", e uma escada que tenta as pontes em ordem **nunca para**: ela
+    funciona", e uma escada que tenta as pontes em ordem **nunca para**: a escada
     rodaria de novo em todo jogo, a cada abertura, arrancando o controle da mão
     do usuário a cada degrau (R-04, medido em 23/07 — recriar o vpad com o jogo aberto
     tira o controle do jogo).
 
     POR QUE A TUPLA SE REPETE AQUI, em vez de o carimbo ser um simples
     ``confirmado: true`` sobre o ``mode``. Porque as duas coisas divergem, e a
-    divergência é o fato mais útil que este campo produz: ela troca a máscara
+    divergência é o fato mais útil que este campo produz: o campo troca a máscara
     na aba Início, ou tira o jogo da lista de exceções, e o ``mode`` do arquivo
     passa a ser OUTRA ponte — a que foi confirmada continua sendo a de antes.
     Um booleano em cima do ``mode`` seria apagado por essa troca sem que
     ninguém notasse, e o produto voltaria a "não sei" logo depois de saber.
     Guardando a tupla inteira, o produto sabe as duas coisas e pode dizer qual
-    é qual (é o que o ``prontuario_dos_jogos`` faz com ela).
+    é qual (é o que o ``prontuario_dos_jogos`` faz com a tupla).
 
     ADITIVO, sem bump de versão — mesmo caminho do ``mouse``, do ``mic``, do
     ``speaker`` e do ``mode``: perfil antigo, SEM o campo, carrega e vale.
@@ -998,7 +998,7 @@ class PonteConfirmada(BaseModel):
     @field_validator("confirmada_em")
     @classmethod
     def _e_uma_data_de_verdade(cls, value: str) -> str:
-        """Data ilegível é pior que data ausente: ela PARECE conhecimento."""
+        """Data ilegível é pior que data ausente, porque PARECE conhecimento."""
         from datetime import datetime
 
         try:
@@ -1186,7 +1186,7 @@ class ControllerRumbleOverride(BaseModel):
                 raise ValueError(
                     f"controllers[...].rumble.{nome} fora de [0, "
                     f"{MOTOR_PCT_MAX}]: {valor}. A barra é o SEGUNDO fator — "
-                    f"ela multiplica o degrau da coluna (Máximo = 150%, "
+                    f"multiplica o degrau da coluna (Máximo = 150%, "
                     f"'custom' até {int(RUMBLE_CUSTOM_MULT_MAX * 100)}%), e "
                     f"quem amplifica é o degrau. Uma barra acima de "
                     f"{MOTOR_PCT_MAX} daria à mesma peça duas portas para o "
@@ -1213,8 +1213,8 @@ class ControllerMicOverride(BaseModel):
     Decisão, 03/09/2026 — o microfone vira o QUINTO ajuste por controle:
     é o `Virtual` que faz o mic soar igual no cabo e no rádio, ou seja, é o
     ajuste que faz o CANAL daquele controle funcionar; e com
-    ``CANAL-POR-CONTROLE-01`` — *"4 controles os 4 tem que ter canais de
-    entrada unico pra cada qual"* (noqa-acento: citação literal) —
+    ``CANAL-POR-CONTROLE-01``, em que cada um dos quatro controles tem
+    canal de entrada próprio,
     um controle no cabo e outro no rádio precisam poder ter tratamentos
     diferentes.
 
@@ -1260,7 +1260,7 @@ class ControllerMicOverride(BaseModel):
     E desde 09/09/2026 o campo chega ao APARELHO, não só à fonte do sistema:
     ``set_microphone_volume`` escreve o ``common[6]`` daquele controle
     (MIC-VOLUME-02, decisão de produto ``D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-
-    APARELHO``, depois de a bancada medir o byte obedecendo no cabo —
+    APARELHO``, depois de o ensaio medir o byte obedecendo no cabo —
     ``docs/data/ensaios.csv``, ``folha-mic-volume-o-byte-age-cabo-0909``). Um
     campo, dois degraus, e os dois por ``uniq``.
 
@@ -1316,8 +1316,8 @@ class ControllerSensoresOverride(BaseModel):
     SENSOR-DE-VERDADE-01 (04/09/2026). Decisão de produto, depois de se recomendar a
     saída barata (virar leitura, um selo "no ar / parado", zero linha nova):
 
-        *"ele tem que funcionar de verdade. ambos independente do modo e da
-        mascara."* <!-- noqa-acento: citação literal -->
+        o sensor funciona de verdade, os dois, independentes do modo e da
+        máscara.
 
     **DOIS campos e não um**, porque o usuário disse *"ambos"* e cada um por si —
     e porque o caminho do report sabe separá-los: giroscópio e acelerômetro
@@ -1327,7 +1327,7 @@ class ControllerSensoresOverride(BaseModel):
 
     ``None`` = sem opinião, e sem opinião é LIGADO — ``D-AUDIO-E-GIRO-NASCEM-
     LIGADOS`` (25/08/2026) diz que giroscópio nasce ligado em todo jogo. Um
-    perfil que não pediu nada não pode desligar o sensor dela por omissão.
+    perfil que não pediu nada não pode desligar o sensor do usuário por omissão.
 
     POR QUE O CAMPO PODE EXISTIR AGORA, e não podia até ontem
     ---------------------------------------------------------
@@ -1586,7 +1586,7 @@ class Profile(BaseModel):
         essa; misturadas, a que casa com o caminho escrito, senão a mais frequente, e no
         empate a do primeiro controle. No ``gamepad`` o caminho se alinha ao modo
         (:func:`~hefesto_dualsense4unix.integrations.virtual_pad.par_do_modo`); sem ``mode``,
-        ganha o ``gamepad``. A chave sai na próxima gravação; perfil sem ela não muda. O diário
+        ganha o ``gamepad``. A chave sai na próxima gravação; perfil sem a chave não muda. O diário
         conta a migração uma vez por processo, e de novo só se o resultado mudar.
         """
         if not isinstance(data, dict):
@@ -1946,7 +1946,7 @@ MODOS_DE_GATILHO_SEM_FORCA: frozenset[str] = frozenset(
 
 
 class PecaDaEconomia(NamedTuple):
-    """Uma coisa que gasta bateria, e o que a economia faz com ela."""
+    """Uma coisa que gasta bateria, e o que a economia faz com essa peça."""
 
     nome: str
     o_que_faz: str
@@ -2341,7 +2341,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "TriggersConfig.left": Nascimento(
         NASCE_NO_ESQUEMA,
-        "NASCE RÍGIDO desde 20/09/2026 — a decisão dela de 16/09 e a única "
+        "NASCE RÍGIDO desde 20/09/2026 — a decisão de 16/09 e a única "
         "das catorze que nascia muda de verdade. A razão da camada está em "
         "`MODO_DE_NASCIMENTO_DO_GATILHO`.",
     ),
@@ -2350,7 +2350,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "LedsConfig.lightbar": Nascimento(
         NASCE_NO_LEITOR,
-        "`(0, 0, 0)` é a cor do BROADCAST, e ela só vale com "
+        "`(0, 0, 0)` é a cor do BROADCAST, e só vale com "
         "`auto_player_colors=False`. De fábrica a cor de cada peça sai da "
         "paleta por slot, então a barra nasce ACESA.",
         dono="hefesto_dualsense4unix.core.led_control:cores_sem_colisao",
@@ -2366,7 +2366,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "LedsConfig.player_led_brightness": Nascimento(
         NASCE_NO_ESQUEMA,
-        "`\"fraco\"` é a decisão dela de 24/09 "
+        "`\"fraco\"` é a decisão de 24/09 "
         "(`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`): as luzes de número "
         "nascem no Fraco, e o produto MANDA esse degrau. O silêncio seria não "
         "mandar — o firmware no último degrau que alguém autorizou.",
@@ -2403,7 +2403,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "LedsConfig.lightbar_para_o_numero": Nascimento(
         E_CONTRATO,
-        "É a PROCEDÊNCIA de uma cor gravada (para qual número ela foi "
+        "É a PROCEDÊNCIA de uma cor gravada (para qual número a cor foi "
         "escolhida), não uma feature. `None` = sem procedência, tratado como "
         "LEGADO pelo resolvedor.",
     ),
@@ -2422,7 +2422,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`DaemonConfig.rumble_policy` nasce `\"balanceado\"`, e `policy=None` "
         "é o perfil dizendo 'não mexo' — a política global segue valendo. "
         "ENCHER este default teria PREÇO medido: `apply_profile_rumble_policy` "
-        "passaria a IMPOR balanceado em toda ativação, e a escolha manual dela "
+        "passaria a IMPOR balanceado em toda ativação, e a escolha manual do usuário "
         "(`rumble.policy_set`) seria desfeita na primeira troca de janela "
         "depois dos 30 s da trava. O que falta é a TELA mostrar o herdado, e "
         "isso é a VIBRA-ACESA-01.",
@@ -2447,7 +2447,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ProfileMouseConfig.point_and_click": Nascimento(
         E_CONTRATO,
-        "Escolha dela na Navegação, e nada nasce nela: `None` é o molde Point and click. "
+        "Escolha do usuário na Navegação, e nada nasce ali: `None` é o molde Point and click. "
         "Não liga nem desliga nada, só nomeia o perfil.",
     ),
     "ProfileMicConfig.button_toggles_system": Nascimento(
@@ -2467,14 +2467,14 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "da placa, que já tem um valor. Escrever um default aqui poria o "
         "perfil mandando na amplificação de um aparelho que ele não conhece: "
         "a mesma placa responde 0-101 no DualSense e outra coisa em qualquer "
-        "outro microfone. Só o número que ELA arrastou vai ao disco.",
+        "outro microfone. Só o número que o USUÁRIO arrastou vai ao disco.",
         dono="hefesto_dualsense4unix.integrations.ganho_do_microfone:definir",
     ),
     "ProfileMicConfig.muted": Nascimento(
         NASCE_NO_LEITOR,
         "O microfone NASCE NO AR desde 17/09/2026, e `None` herda isso — só "
-        "`true` gravado no disco cala. A inversão é ordem dela (18/09): todo "
-        "controle nasce com tudo, e o silêncio dela vence porque é explícito.",
+        "`true` gravado no disco cala. A inversão é decisão de 18/09: todo "
+        "controle nasce com tudo, e o silêncio do usuário vence porque é explícito.",
         dono="hefesto_dualsense4unix.integrations.plano_de_radio:microfone_nasce_ligado",
     ),
     "ProfileSpeakerConfig.volume": Nascimento(
@@ -2496,13 +2496,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         NASCE_NA_ADOCAO,
         "O botão «Padrão» do volume (04/10/2026): ausente, vale o volume que o perfil escolheu, "
         "como antes; o perfil sem a seção também é Padrão, e o controle nasce nos 100% de "
-        "sempre na adoção. Ligado, o perfil aplica esses 100% e guarda o `volume` dela.",
+        "sempre na adoção. Ligado, o perfil aplica esses 100% e guarda o `volume` do usuário.",
         dono="hefesto_dualsense4unix.core.backend_pydualsense:VOLUME_PADRAO_DO_SOM",
     ),
     "ProfileSpeakerConfig.fonte": Nascimento(
         NASCE_NO_LEITOR,
         "O MODELO DESTA TABELA: `None` cai no padrão da casa, `sfx`, por "
-        "decisão dela de 08/09 (D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX). Com "
+        "decisão de 08/09 (D-0809-NO-CABO-O-PADRAO-DO-SOM-E-SFX). Com "
         "`mix` de fábrica o controle viraria a saída de todo o som do PC "
         "sozinho — a justificativa está escrita ao lado do campo.",
         dono="hefesto_dualsense4unix.integrations.alto_falante_bt:FONTE_SFX",
@@ -2543,7 +2543,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO, "Carimbo de tempo da confirmação."
     ),
     "PonteConfirmada.confirmada_por": Nascimento(
-        E_CONTRATO, "Procedência da confirmação (gesto, silêncio, escolha dela)."
+        E_CONTRATO, "Procedência da confirmação (gesto, silêncio, escolha do usuário)."
     ),
     "ControllerRumbleOverride.policy": Nascimento(
         E_CONTRATO, "Override por peça: `None` = esta peça usa a seção global do perfil."
@@ -2560,7 +2560,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "ControllerRumbleOverride.haptica": Nascimento(
         NASCE_NO_LEITOR,
         "`None` vale `HAPTICA_PCT_PADRAO` (75, o fator 1,5): a háptica por áudio nasce "
-        "ligada, pela palavra dela de 17/09.",
+        "ligada, pela decisão de 17/09.",
         dono="hefesto_dualsense4unix.profiles.schema:pct_da_haptica",
     ),
     "ControllerRumbleOverride.efeito_haptico": Nascimento(
@@ -2595,7 +2595,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ControllerSensoresOverride.acelerometro": Nascimento(
         NASCE_NO_LEITOR,
-        "Ver `ControllerSensoresOverride.giroscopio` — o *'ambos'* dela, cada "
+        "Ver `ControllerSensoresOverride.giroscopio` — os dois sensores, cada "
         "um por si.",
         dono="hefesto_dualsense4unix.core.virtual_motion:EstadoDosSensores",
     ),
@@ -2624,7 +2624,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "Seção ausente = esta peça segue a mira do perfil, e a do perfil não "
         "existe por padrão. É ARRANJO, como o `Profile.movimento`: ligada sem o "
-        "gesto dela no chip «Mira Virtual», a câmera andaria com o controle na "
+        "gesto do usuário no chip «Mira Virtual», a câmera andaria com o controle na "
         "mesa.",
     ),
     "Profile.name": Nascimento(E_OBRIGATORIO, "Não há perfil sem nome."),
@@ -2635,7 +2635,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "Profile.priority": Nascimento(
         E_CONTRATO,
         "`0` é o piso da faixa e significa 'não disputa'. Um número de fábrica "
-        "faria todo perfil novo ganhar de um dela sem ela ter pedido.",
+        "faria todo perfil novo ganhar de um do usuário sem ele ter pedido.",
     ),
     "Profile.triggers": Nascimento(
         E_SECAO, "A seção nasce inteira; quem decide os dois lados é `TriggersConfig`."
@@ -2661,7 +2661,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "Profile.remapeamento": Nascimento(
         NASCE_NO_LEITOR,
         "`None` = todos os botões passam intactos, que é o estado ÍNTEGRO da "
-        "feature. Trocar botão de fábrica seria o oposto do pedido dela.",
+        "feature. Trocar botão de fábrica seria o oposto do que o usuário pediu.",
         dono="hefesto_dualsense4unix.core.remapeamento_de_botao:resolver",
     ),
     "Profile.ativacao": Nascimento(
@@ -2815,31 +2815,31 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "A ÚNICA assimetria que sobra depois da triagem: o teclado emulado "
         "nasce LIGADO no daemon e o mouse nasce DESLIGADO "
         "(`mouse_emulation_enabled=False`), os dois interruptores vizinhos na "
-        "mesma aba. Ligar o ponteiro por padrão muda o desktop dela.",
-        falta="se a emulação de mouse entra no 'tudo ativado' ou fica no gesto dela",
+        "mesma aba. Ligar o ponteiro por padrão muda o desktop do usuário.",
+        falta="se a emulação de mouse entra no 'tudo ativado' ou fica no gesto do usuário",
     ),
     "Profile.teclado_emulado": Nascimento(
         NASCE_NO_LEITOR,
-        "`None` = a flag global manda, e ela nasce `True`. O teclado emulado "
+        "`None` = a flag global manda, e a flag nasce `True`. O teclado emulado "
         "já nasce ligado.",
         dono="hefesto_dualsense4unix.daemon.lifecycle:DaemonConfig",
     ),
     "Profile.teclado_so_no_jogo": Nascimento(
         NASCE_NO_LEITOR,
         "`None` = o teclado digita fora do jogo, como sempre. «Só dentro do jogo» "
-        "é escolha dela na Função do teclado, e nada nasce nele.",
+        "é escolha do usuário na Função do teclado, e nada nasce nele.",
         dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
     ),
     "Profile.teclado_sempre": Nascimento(
         NASCE_NO_LEITOR,
         "`None` = vale o par `teclado_emulado`/`teclado_so_no_jogo`, como antes do «Sempre». "
-        "«Sempre» é escolha dela na Função do teclado, e nada nasce nele.",
+        "«Sempre» é escolha do usuário na Função do teclado, e nada nasce nele.",
         dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
     ),
     "Profile.meus_toques": Nascimento(
         NASCE_NO_LEITOR,
         "`None` = o controle vibra só pelo que o jogo pede, como sempre. Toque a cada entrada de "
-        "quem joga é escolha dela, por perfil: ligado sem pedido, todo jogo vibraria a mais.",
+        "quem joga é escolha do usuário, por perfil: ligado sem pedido, todo jogo vibraria a mais.",
         dono="hefesto_dualsense4unix.daemon.subsystems.meus_toques:ajuste_do_perfil",
     ),
     "ProfileMeusToquesConfig.modo": Nascimento(
@@ -2873,7 +2873,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO, "«desligado»: o touchpad só faz o que sempre fez, nenhum dedo vibra o controle."
     ),
     "ProfileMeusToquesTouchpadConfig.altura": Nascimento(
-        E_CONTRATO, "Em cima é forte, como no desenho dela; vale só com a leitura ligada."
+        E_CONTRATO, "Em cima é forte, como no desenho; vale só com a leitura ligada."
     ),
     "ProfileMeusToquesTouchpadConfig.dedo_parado": Nascimento(
         E_CONTRATO, "O dedo parado segue vibrando; vale só com a leitura ligada."
@@ -2888,7 +2888,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         NASCE_NO_LEITOR,
         "`None` = a tabela só age fora do jogo, como sempre. Ligada por padrão, "
         "a Cruz e o Triângulo clicariam o mouse dentro de todo jogo: a chave é "
-        "escolha dela, e nada nasce ligado.",
+        "escolha do usuário, e nada nasce ligado.",
         dono="hefesto_dualsense4unix.daemon.subsystems.mouse:trocar_a_tabela_no_jogo",
     ),
     "Profile.mic": Nascimento(
@@ -2928,7 +2928,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "Profile.estilo": Nascimento(
         E_CONTRATO,
         "`None` = nenhum estilo aplicado pelo gesto da aba Perfis. O estilo é "
-        "escolha dela por perfil, e o motor do tato fica desligado no perfil sem "
+        "escolha do usuário por perfil, e o motor do tato fica desligado no perfil sem "
         "estilo, como antes de o estilo existir "
         "(O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01, 09/10/2026). "
         "Semear um estilo poria o tato de um gênero em todo jogo.",
@@ -2936,7 +2936,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "Profile.receita_do_tato": Nascimento(
         E_CONTRATO,
         "`None` = a receita do estilo inteira. É o desvio campo a campo da "
-        "bancada sobre a receita do estilo, e não há desvio a semear.",
+        "perfil sobre a receita do estilo, e não há desvio a semear.",
     ),
     "Profile.criado_em": Nascimento(
         E_CONTRATO,
@@ -2946,13 +2946,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "Profile.modificado_em": Nascimento(
         E_CONTRATO,
-        "`None` = nenhuma mudança dela desde que as datas existem. Só o gesto dela a põe; o "
+        "`None` = nenhuma mudança do usuário desde que as datas existem. Só o gesto a põe; o "
         "salvar automático e a semeadura não mexem.",
     ),
     "Profile.alvo": Nascimento(
         E_CONTRATO,
-        "`None` = vale o que o `match` já dizia. O alvo é escolha dela por perfil, e semear um "
-        "mandaria o perfil antigo para um lugar que ela não escolheu "
+        "`None` = vale o que o `match` já dizia. O alvo é escolha por perfil, e semear um "
+        "mandaria o perfil antigo para um lugar que o usuário não escolheu "
         "(A-ABA-PERFIS-DO-TODO-01).",
     ),
     "Profile.evento": Nascimento(
@@ -2962,27 +2962,27 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "Profile.evento_comando": Nascimento(
         E_CONTRATO,
-        "`None` = nenhum comando. É o texto que ela digita para o «Meu comando»; semear um "
-        "comando seria mandar rodar algo que ela não escreveu.",
+        "`None` = nenhum comando. É o texto que o usuário digita para o «Meu comando»; semear um "
+        "comando seria mandar rodar algo que o usuário não escreveu.",
     ),
     "Profile.nome_do_jogo": Nascimento(
         E_CONTRATO,
         "`None` = o campo «Nome do jogo» mostra o que a regra de janela já diz. É o nome que a "
         "aba Lançadores passou na criação; semear um nome no perfil antigo inventaria um jogo "
-        "que ela não escolheu.",
+        "que o usuário não escolheu.",
     ),
     "Profile.movimento": Nascimento(
         E_CONTRATO,
         "`None` = nenhuma tradução do giro. É ARRANJO, não feature: ligada sem "
-        "pedido ela moveria a câmera de todo jogo quando o controle se mexe na "
+        "pedido, a tradução moveria a câmera de todo jogo quando o controle se mexe na "
         "mesa, e no caminho `uhid` — onde o giro nativo já chega — daria DOIS "
         "giros. Ver `ProfileMovimentoConfig`.",
     ),
     "ProfileMovimentoConfig.destino": Nascimento(
         E_CONTRATO,
-        "`nenhum` guarda o arranjo e desliga a mira: é o estado que ela ESCOLHE "
+        "`nenhum` guarda o arranjo e desliga a mira: é o estado que o usuário ESCOLHE "
         "para experimentar sem perder a calibração. A seção só existe por gesto "
-        "dela; ver `Profile.movimento`.",
+        "do usuário; ver `Profile.movimento`.",
     ),
     "ProfileMovimentoConfig.sensibilidade": Nascimento(
         E_CONTRATO,
@@ -3024,13 +3024,13 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     "ProfileMovimentoConfig.toque": Nascimento(
         E_CONTRATO,
         "`nenhum` = o touchpad é o do computador, como sempre foi "
-        "(TOUCHPAD-DO-SISTEMA-01). Nascer em `zonas` tiraria o ponteiro dela; "
+        "(TOUCHPAD-DO-SISTEMA-01). Nascer em `zonas` tiraria o ponteiro do usuário; "
         "em `cursor`, trocaria o dono do cursor sem pedido.",
     ),
     "ProfileMovimentoConfig.acelerometro": Nascimento(
         E_CONTRATO,
         "`nenhum` = a inclinação não move analógico nenhum. Ligada sem o gesto "
-        "dela, o personagem andaria sozinho com o controle torto na mão.",
+        "do usuário, o personagem andaria sozinho com o controle torto na mão.",
     ),
     "ProfileMovimentoConfig.mesmo_parado": Nascimento(
         E_CONTRATO,

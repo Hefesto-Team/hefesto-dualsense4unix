@@ -48,7 +48,7 @@ def caminhos_do_lugar(lugar: str, controladores: Mapping[int, str]) -> tuple[str
 
     Um controlador xHCI publica dois barramentos, o lado 2.0 e o 3.x, e o
     ``ID_PATH`` é o mesmo nos dois lados de um buraco (medido em 23/09: o hub
-    ``05e3`` desta bancada é ``3-4`` e ``4-4``). O DualSense e os dongles são
+    ``05e3`` desta máquina de teste é ``3-4`` e ``4-4``). O DualSense e os dongles são
     2.0 e enumeram sempre do lado 2.0; quem precisa de UM caminho olha qual
     dos candidatos está no barramento agora.
     """

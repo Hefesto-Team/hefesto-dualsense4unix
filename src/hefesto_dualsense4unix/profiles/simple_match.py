@@ -156,7 +156,7 @@ def from_simple_choice(
 
     ``regra_do_disco`` é a regra que este Salvar vai sobrescrever, e existe só
     para o "steam_game": a página simples tem um campo (o número do jogo) e o
-    perfil no disco pode ter também um ``process_name`` do MESMO jogo, que ela
+    perfil no disco pode ter também um ``process_name`` do MESMO jogo, que a página
     nunca viu na tela e portanto nunca pediu para tirar
     (ESCONDER-EM-VEZ-DE-SAIR-01; ver `_process_name_a_preservar`). Omitir o
     parâmetro é o comportamento histórico — nada a preservar.
@@ -173,7 +173,7 @@ def from_simple_choice(
 
     A SEXTA FORMA — "janela", ONDA5-10-01 (06/09/2026). O detector de janela do
     daemon entrega uma ``wm_class`` (``window_detect_last_class``), e até aqui o
-    produto só sabia guardá-la quando ela era um ``steam_app_<id>``. Para jogo
+    produto só sabia guardá-la quando era um ``steam_app_<id>``. Para jogo
     de fora da Steam o botão "Detectar" RECUSAVA — e mandava a pessoa para a
     linha de comando, que é o defeito que esta sprint fechou. **Se gravar a
     regra empurra o perfil para fora da tela, o conserto é a tela aprender a
@@ -317,7 +317,7 @@ def _detect_steam_appid(match: Match) -> str | None:
     traduzido). O editor simples não tem como exprimir esse recorte, e mostrar
     o perfil como "Jogo da Steam <id>" seria mentir sobre o que ele faz.
 
-    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado na bancada). A regra estrita
+    NOTA DATADA — 10/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, relatado no ensaio). A regra estrita
     também recusava
     ``process_name``, e ESSA metade caducou. O parágrafo acima continua
     valendo inteiro para ``window_title_regex``.
@@ -328,7 +328,7 @@ def _detect_steam_appid(match: Match) -> str | None:
        Trocar "3357650 E PRAGMATA.exe" por "Jogo da Steam 3357650" na tela não
        muda a resposta a *de qual jogo é este perfil*, que é a única pergunta
        que o seletor "Aplica a" faz.
-    2. A precisão que a recusa dizia proteger não existia. No journal da bancada de
+    2. A precisão que a recusa dizia proteger não existia. No journal da máquina de teste de
        10/08, com a janela ``steam_app_3357650`` em foco, o daemon registrou
        ``profile_select_catch_all_sem_autoridade_em_jogo candidatos=['fallback']``
        — o perfil ``Pragmata`` NÃO era candidato ao próprio jogo. Sob Proton o
@@ -340,11 +340,11 @@ def _detect_steam_appid(match: Match) -> str | None:
        "Vale sempre", e a caixinha "Esconder o controle físico neste jogo" só
        nasce com "Jogo da Steam" escolhido
        (``profiles_actions._mostrar_caixa_do_steam_input``). O único gesto que
-       ela tinha para desfazer a duplicação de controle sumia da tela.
+       o usuário tinha para desfazer a duplicação de controle sumia da tela.
 
     Reconhecer NÃO é apagar: ``from_simple_choice`` preserva o ``process_name``
     do disco quando o appid não mudou (ver ``_process_name_a_preservar``). Sem
-    isso, reabrir e salvar tiraria da regra de produto um campo que ela não pediu
+    isso, reabrir e salvar tiraria da regra de produto um campo que o usuário não pediu
     para tirar — que é exatamente o round-trip quebrado de onde o R-12 nasceu.
 
     UNIFICA-PREDICADO-01: o reconhecimento vem da fonte única
@@ -396,28 +396,28 @@ CAMINHO_DA_JANELA_GTK = "Ligue o Modo avançado para ver e mudar."
 def exigencia_invisivel(match: Match) -> str:
     """O que o perfil exige e a página SIMPLES não mostra. "" = nada escondido.
 
-    A-REGRA-QUE-A-TELA-NAO-MOSTRA-01 (10/08/2026), e nasceu de uma foto dela.
+    A-REGRA-QUE-A-TELA-NAO-MOSTRA-01 (10/08/2026), e nasceu de uma foto do editor.
 
     O editor simples do "Jogo da Steam" tem um campo só — o número. O
     `from_simple_choice` PRESERVA um `process_name` que já esteja no disco, e
     isso é certo: salvar pela janela não pode apagar o que a tela não mostra
     (ESCONDER-EM-VEZ-DE-SAIR-01). O que estava errado era o silêncio em volta.
 
-    Na foto do editor dela, o perfil "Pragmata" aparecia assim:
+    Na foto do editor, o perfil "Pragmata" aparecia assim:
 
         Aplica a: [Jogo da Steam]   Nome do jogo: 3357650
 
     e no arquivo estava `process_name: ["PRAGMATA.exe"]`. O `matches` é AND, e o
     campo invisível é o que decidia — o perfil não entrava sozinho, medido seis
-    vezes num intervalo de dois minutos com ela jogando. A tela mostrava uma
+    vezes num intervalo de dois minutos com o usuário jogando. A tela mostrava uma
     regra que não era a regra.
 
     Preservar o invisível continua certo. Esconder que ele EXISTE é que não.
 
-    A frase é factual e não manda apagar nada: quem escreveu o critério foi ela,
+    A frase é factual e não manda apagar nada: quem escreveu o critério foi o usuário,
     e a decisão de mudá-lo é do usuário. Diz o que há.
 
-    **ELA DIZIA "ONDE MEXER", E ISSO SAIU EM 05/09/2026.** O fim da frase era
+    **A FRASE DIZIA "ONDE MEXER", E ISSO SAIU EM 05/09/2026.** O fim da frase era
     *"Ligue o Modo avançado para ver e mudar."* — e o "Modo avançado" é uma
     peça da JANELA GTK, um interruptor do `main.glade`. Um matcher de
     `profiles/` não pode nomear um botão de uma tela: quando nasceu a interface
@@ -426,7 +426,7 @@ def exigencia_invisivel(match: Match) -> str:
     fim exato por outro, com uma régua guardando a troca.
 
     A REPARTIÇÃO É A ÓBVIA, e é a que o relatório daquela frente pediu: o FATO
-    mora aqui, porque é do critério; o CAMINHO mora em cada tela, porque só ela
+    mora aqui, porque é do critério; o CAMINHO mora em cada tela, porque só a tela
     sabe que botões desenhou. Ver
     :data:`CAMINHO_DA_JANELA_GTK`, e o `FIM_DA_EXIGENCIA_AQUI` da aba 10.
     """

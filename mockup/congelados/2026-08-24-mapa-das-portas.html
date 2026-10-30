@@ -486,7 +486,7 @@
     ],
     webcam: [
       { n: 12, quando: function (p) { return p.usb === 2; }, selo: "derivado",
-        txt: "entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa" },
+        txt: "entrada preta: ela não usa a velocidade da azul, e a azul faz falta a quem usa" },
       { n: 6, quando: function (p) { return p.onde === "pc"; }, selo: "derivado",
         txt: "direta do PC, sem gastar entrada do hub" }
     ],
@@ -701,7 +701,7 @@
   function julgar(porta) {
     var oc = alocacao[porta.n];
     if (oc) { var a = acha(oc); return { v: "cheia", txt: "ocupada", porque: a.tipo + " — clique para tirar" }; }
-    if (ocupada(alocacao, porta)) return { v: "cheia", txt: "indisponível", porque: porta.filho ? "o extensor está nesta entrada" : "a entrada-mãe está em uso" };
+    if (ocupada(alocacao, porta)) return { v: "cheia", txt: "indisponível", porque: porta.filho ? "o extensor está nela" : "a entrada-mãe está em uso" };
     if (segurando) {
       var reg = regiaoDoCaminho(leitura()[segurando]);
       var mesmaRegiao = reg === null || (reg === "hub" ? porta.onde === "hub" : porta.onde === "pc");
@@ -739,8 +739,8 @@
       return { v: "melhor", txt: "melhor lugar", porque: "entrada preta, longe de outro rádio" };
     }
     if (naMao === "webcam") {
-      if (porta.usb === 3) return { v: "serve", txt: "serve", porque: "gasta uma entrada azul de que a webcam não precisa" };
-      return { v: "melhor", txt: "melhor lugar", porque: "entrada preta, que é o que a webcam pede" };
+      if (porta.usb === 3) return { v: "serve", txt: "serve", porque: "gasta uma entrada azul que ela não precisa" };
+      return { v: "melhor", txt: "melhor lugar", porque: "entrada preta, que é o que ela pede" };
     }
     return null;
   }

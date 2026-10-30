@@ -24,7 +24,7 @@ def _aparado(texto: str | None) -> str:
 
 
 def nome_que_vale(numero: str | None, nome: str | None) -> str | None:
-    """O nome dela, ou ``None`` quando ele não é nome."""
+    """O nome da entrada, ou ``None`` quando ele não é nome."""
     limpo = _aparado(nome)
     if not limpo:
         return None
@@ -40,7 +40,7 @@ def nome_que_vale(numero: str | None, nome: str | None) -> str | None:
 
 
 def rotulo(numero: str | None, nome: str | None = None) -> str:
-    """«Meio» quando ela deu nome; «Entrada 3» quando não deu."""
+    """«Meio» quando o usuário deu nome; «Entrada 3» quando não deu."""
     vale = nome_que_vale(numero, nome)
     if vale:
         return vale

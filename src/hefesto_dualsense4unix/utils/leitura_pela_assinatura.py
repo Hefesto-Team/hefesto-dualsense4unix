@@ -67,7 +67,7 @@ class LeituraPelaAssinatura(Generic[T]):
         """O valor do arquivo: o guardado se a assinatura é a mesma, senão lê.
 
         ``copiar=False`` devolve o próprio guardado, para quem só consulta e nunca o edita:
-        a cópia protege o guardado de quem muda o valor, e quem só lê não precisa pagar por ela.
+        a cópia protege o guardado de quem muda o valor, e quem só lê não precisa pagar pela cópia.
         """
         entregar = self._copiar if copiar else (lambda v: v)
         chave = os.fspath(caminho)

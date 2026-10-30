@@ -23,7 +23,7 @@ def e_janela_de_lancador(wm_class: str | None) -> bool:
     """True se `wm_class` é a janela de um LANÇADOR (Steam, Heroic, Lutris…), não de um jogo.
 
     OS-QUATRO-EM-HARMONIA-01, item 4: nenhuma janela de lançador ativa perfil de
-    jogo, e o perfil fica no último jogo enquanto ela está em foco.
+    jogo, e o perfil fica no último jogo enquanto o jogo está em foco.
     """
     if not isinstance(wm_class, str):
         return False

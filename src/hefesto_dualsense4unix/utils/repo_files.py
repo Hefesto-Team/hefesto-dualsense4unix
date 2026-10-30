@@ -5,7 +5,7 @@ BG-05 (25/08/2026) — *o Python procura onde o pacote põe*.
 O produto roda os scripts de `scripts/` a partir do Python: o `doctor` chama
 `scripts/doctor.sh`, o `--fix-safe` chama mais três, e a aba Sistema chama
 outros dois. Achar esses arquivos é uma pergunta só — **em que diretório esta
-instalação pôs o `share/` do Hefesto?** — e ela tinha DUAS respostas no
+instalação pôs o `share/` do Hefesto?** — e a pergunta tinha DUAS respostas no
 código, que já haviam divergido:
 
 - `app/actions/daemon_actions.py:354` (`BASES_DE_INSTALACAO`) — ganhou
@@ -35,8 +35,8 @@ Cada base abaixo é um destino MEDIDO de instalação, não uma suposição.
 **O conselho de atualizar mora aqui pelo mesmo motivo** (BG-INSTALL-01):
 `esta_instalacao_e_um_checkout()` e `como_atualizar_esta_instalacao()`
 nasceram na T-03 dentro de `app/actions/daemon_actions.py`, e três frases de
-tela que precisavam delas vivem FORA do `app/` — `integrations/storm_doctor.py`
-é uma delas, e fazer `integrations/` importar de `app/` inverteria a camada.
+tela que precisavam desses arquivos vivem FORA do `app/` — `integrations/storm_doctor.py`
+é uma dessas frases, e fazer `integrations/` importar de `app/` inverteria a camada.
 A pergunta é a mesma deste módulo (*"o que esta instalação tem ao lado do
 código?"*), então a resposta fica no mesmo lugar.
 """

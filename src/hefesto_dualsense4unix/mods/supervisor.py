@@ -8,7 +8,7 @@ modificação ligada do tipo ``processo`` vira um processo filho do serviço:
 * com caixa quando o ``bwrap`` existe: raiz só de leitura, ``HOME`` vazia,
   código só de leitura, dados graváveis, o diretório de execução da sessão
   escondido (só a porta das modificações aparece), os processos num espaço de
-  PID próprio (o que a modificação abrir morre com ela) e ``--unshare-net``
+  PID próprio (o que a modificação abrir morre junto) e ``--unshare-net``
   quando a rede é ``nenhuma``. Sem ``bwrap``, roda sem caixa, e o estado diz
   isso numa linha;
 * reaberto com espera crescente (:data:`ESPERAS_PARA_VOLTAR`) nas três
@@ -207,7 +207,7 @@ def _aparar_o_diario(caminho: Path, chegando: int = 0) -> None:
 class _AHoraDeCadaLinha:
     """Põe ``AAAA-MM-DD HH:MM:SS`` no começo de cada linha.
 
-    A data vai em toda linha: com ela só na primeira e na troca do dia, a poda do teto levava a
+    A data vai em toda linha: com a data só na primeira e na troca do dia, a poda do teto levava a
     linha da data, e o resto do diário ficava sem dia (medido em 28/10/2026).
     Só a linha inteira sai; o pedaço sem quebra espera a quebra, até ``teto`` bytes ou o fim.
     As linhas de um mesmo pedaço do cano chegaram juntas e levam a mesma hora, lida uma vez.
@@ -841,7 +841,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
     """O supervisor ligado ao serviço vivo (barramento, IPC e estado do jogo).
 
     ``None`` na instância isolada (o ``--fake`` e todo socket de nome próprio):
-    ela divide a casa com o serviço de verdade, e abrir as modificações dali
+    a instância divide a casa com o serviço de verdade, e abrir as modificações dali
     trocaria a porta dele pela sua e abriria cada modificação duas vezes. É a
     mesma regra que já isola o socket e a trava de instância do ``--fake``.
     """

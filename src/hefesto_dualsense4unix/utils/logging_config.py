@@ -198,7 +198,7 @@ class AgregadoDoDiario:
     A primeira ocorrência de cada (evento, campos da chave) sai na hora. As seguintes,
     dentro da janela, não escrevem: contam. No fim sai uma linha com ``vezes=<as
     contadas>``, ``janela_s=`` e os campos da última; a ocorrência que chega com a janela
-    vencida e a conta ainda aberta é ela mesma essa linha. A janela começa em ``janela_s``
+    vencida e a conta ainda aberta é essa mesma linha. A janela começa em ``janela_s``
     e dobra enquanto o evento volta antes de duas janelas, até ``janela_max_s``. O que
     ficou contado quando o processo sai se escreve no ``atexit``, e se perde calado
     quando o destino do diário já fechou.

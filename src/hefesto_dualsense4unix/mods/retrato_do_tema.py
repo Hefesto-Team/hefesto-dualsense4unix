@@ -1,5 +1,5 @@
-"""O retrato de uma extensão de tema para a janela dela: cada tema que ela escolhe, já pintado, o
-papel de cada opção, a paleta que ela pinta e o que se exporta.
+"""O retrato de uma extensão de tema para a janela da extensão: cada tema escolhível, já pintado, o
+papel de cada opção, a paleta que o tema pinta e o que se exporta.
 
 Tudo sai do bloco ``tema`` do manifesto e das escolhas guardadas: o produto não conhece o nome de
 extensão nenhuma. Nada aqui escreve, salvo :func:`exportar`, que só devolve o texto.

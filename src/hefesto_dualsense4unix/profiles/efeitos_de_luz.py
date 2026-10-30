@@ -445,7 +445,7 @@ class Entrada:
     ``apertos`` é o contador de bordas de cada botão (``EvdevSnapshot.apertos``); ``gravidade``
     é o acelerômetro em g; ``dedo`` é ``(x, y)`` de 0 a 1 no touchpad, ``None`` sem dedo. Cada
     campo é ``None`` quando o dado não veio: o efeito segura o que tinha. ``som`` é
-    ``(nivel, agudos)`` de 0 a 1 do monitor da saída padrão: a energia relativa e a fração dela
+    ``(nivel, agudos)`` de 0 a 1 do monitor da saída padrão: a energia relativa e a fração
     que é aguda. ``carga`` é ``(porcentagem, estado)`` DESTE controle; ``calor`` é a fração de
     0 a 1 do caminho entre o frio e o limite do sensor mais quente da máquina.
     """
@@ -479,7 +479,7 @@ def _matiz_na_cor(matiz: float) -> RGB:
 
 
 class ReageAoBotao:
-    """O «Reage ao botão» de UM controle: o aperto acende a barra, e ela apaga devagar.
+    """O «Reage ao botão» de UM controle: o aperto acende a barra, e a barra apaga devagar.
 
     O símbolo apertado dá a cor (△ verde, ○ vermelho, ✕ azul, □ rosa) e qualquer outro botão
     acende na cor escolhida do efeito. O primeiro tique só aprende os contadores (o que já foi
@@ -679,7 +679,7 @@ class AoSom:
     """O «Ao som» de UM controle: o brilho segue a energia do som da saída padrão.
 
     ``Entrada.som`` traz ``(nivel, agudos)``: o nível de 0 a 1 é a energia do som contra o pico
-    recente dele (o volume da máquina não muda o desenho), e ``agudos`` é a fração dela acima da
+    recente dele (o volume da máquina não muda o desenho), e ``agudos`` é a fração acima da
     faixa dos graves. O nível sobe em ``SUBIDA_DO_SOM_S`` e desce na cauda do ritmo; os graves
     deixam a cor escolhida, os agudos a puxam para o branco (até ``BRANCO_DOS_AGUDOS``). O brilho
     sai pelo ``BrilhoDoAcende``: piso de 0,25 (nunca preto, mesmo no silêncio) e no máximo três
@@ -819,7 +819,7 @@ class CorDaTemperatura:
     ``Entrada.calor`` já é a fração do caminho entre o frio e o limite do sensor mais quente, com
     o limite descoberto do ``hwmon`` (``integrations/temperatura_da_maquina``). O calor é alisado
     (``TEMPO_DO_CALOR_S``), então a cor nunca pisca. Sem sensor lido, ``sem_leitura`` é verdade e a
-    barra fica em ``COR_SEM_LEITURA``: ela não inventa uma temperatura.
+    barra fica em ``COR_SEM_LEITURA``: a barra não inventa uma temperatura.
     """
 
     def __init__(self) -> None:

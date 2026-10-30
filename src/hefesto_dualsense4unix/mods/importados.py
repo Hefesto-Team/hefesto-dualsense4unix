@@ -2,7 +2,7 @@
 
 O arquivo é dado da pessoa: entra só depois da régua, e a cópia mora em
 ``<dados>/<id>/<opção>.importado``. O tema importado passa pela mesma régua do tema do pacote
-(:func:`tema.validar`, só cores e com contraste) e se grava já reescrito por ela. A logo é PNG, JPEG
+(:func:`tema.validar`, só cores e com contraste) e se grava já reescrito. A logo é PNG, JPEG
 ou WebP, conferida pelos bytes, até 256 KB e até 1024 px de lado; SVG nunca, porque roda código.
 O valor da opção é o nome do arquivo de origem, só para a tela; vazio é «nada importado».
 """

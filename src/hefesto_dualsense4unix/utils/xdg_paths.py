@@ -184,7 +184,7 @@ def wireplumber_config_dir(ensure: bool = False) -> Path:
     (`scripts/disable_steam_input.sh:257`, `scripts/doctor.sh`).
 
     A pasta é ``wireplumber.conf.d`` (0.5 em diante) ou ``main.lua.d`` (0.4):
-    ver :func:`wireplumber_forma`. O nome do arquivo nela é o de
+    ver :func:`wireplumber_forma`. O nome do arquivo na pasta é o de
     :func:`wireplumber_nome_do_dropin`.
     """
     p = wireplumber_pasta_da_forma(wireplumber_forma())

@@ -296,7 +296,7 @@ def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str],
             raise TemaRecusadoError(f"Não sei a cor de «{nome}» na casa: o tema não liga.")
         if c[3] < 1:
             raise TemaRecusadoError(f"«{nome}» precisa ser uma cor opaca: o contraste do texto "
-                                    "se mede sobre ela.")
+                                    "se mede sobre essa cor.")
     for nomes, limiar in ((TEXTOS, LIMIAR_DO_CONTRASTE), (ACENTOS, LIMIAR_DO_ACENTO)):
         razao, texto, fundo = min((contraste(valores[t], valores[f]), t, f)
                                   for t in nomes for f in FUNDOS)
@@ -385,7 +385,7 @@ def _mapa_de_escolhas(bloco: dict[str, Any], chave: str, opcao: Any) -> dict[str
 
 def conferir_o_bloco_e_as_opcoes(bloco: dict[str, Any] | None, opcoes: Sequence[Any],
                                  tipos: Sequence[str]) -> None:
-    """A forma do bloco ``tema`` e o vínculo de cada chave com a opção que ela lê.
+    """A forma do bloco ``tema`` e o vínculo de cada chave com a opção que a chave lê.
 
     A cor e o lado se ligam a uma ``ligado`` (vale ou não vale) ou, com ``folhas_por_escolha``,
     ``importados_por_escolha`` e ``lados_por_escolha``, a uma ``escolha`` (cada escolha mapeada
@@ -442,7 +442,7 @@ def conferir_o_bloco_e_as_opcoes(bloco: dict[str, Any] | None, opcoes: Sequence[
 
 
 def _ligada(opcao_id: object, valores: dict[str, Any]) -> bool:
-    """O bloco que não liga a escolha a opção nenhuma vale sempre; ligada a uma, vale o que ela diz
+    """O bloco que não liga a escolha a opção nenhuma vale sempre; ligada a uma, vale o que diz
     agora (a escolha guardada, senão o padrão do manifesto)."""
     return not isinstance(opcao_id, str) or valores.get(opcao_id) is True
 
@@ -499,8 +499,8 @@ def folha_de_tokens(tokens: dict[str, str]) -> str:
 
 
 def css_da_extensao(manifesto: Any, lugares: Any) -> meu_css.FolhaDeQuemUsa:
-    """O CSS de quem usa da extensão: vazio sem a opção ``css`` ou com ela desligada; senão, o
-    ``meu.css`` dela (a folha, ou a recusa com a linha). A aba lê o mesmo que a janela aplica."""
+    """O CSS de quem usa da extensão: vazio sem a opção ``css`` ou desligada; senão, o
+    ``meu.css`` (a folha, ou a recusa com a linha). A aba lê o mesmo que a janela aplica."""
     from hefesto_dualsense4unix.mods import opcoes
 
     opcao = manifesto.opcao_do_css
@@ -590,7 +590,7 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
 
 
 def _a_logo(com_logo: list[tuple[str, str, Any, str]], lugares: Any) -> tuple[str, str]:
-    """A folha da logo importada pela ligada por último que a tem, com o id dela."""
+    """A folha da logo importada pela ligada por último que a tem, com o id da extensão."""
     from hefesto_dualsense4unix.mods import importados
 
     for _quando, mod_id, _manifesto, opcao_id in sorted(com_logo, key=lambda c: c[:2],
@@ -603,8 +603,8 @@ def _a_logo(com_logo: list[tuple[str, str, Any, str]], lugares: Any) -> tuple[st
 
 def _o_css_de_quem_usa(com_css: list[tuple[str, str, Any]], lugares: Any,
                       logo: tuple[str, str] = ("", "")) -> dict[str, str]:
-    """O CSS da ligada por último que o tem ligado; a recusa dela, se o arquivo dela não serve. A
-    folha da logo importada vai antes, e o CSS de quem usa ainda pode passar por cima dela."""
+    """O CSS da ligada por último que o tem ligado; a recusa, se o arquivo não serve. A
+    folha da logo importada vai antes, e o CSS de quem usa ainda pode passar por cima."""
     folha_da_logo, logo_de = logo
     for _quando, mod_id, manifesto in sorted(com_css, key=lambda c: c[:2], reverse=True):
         dele = css_da_extensao(manifesto, lugares)
@@ -615,7 +615,7 @@ def _o_css_de_quem_usa(com_css: list[tuple[str, str, Any]], lugares: Any,
 
 
 def _arquivos_da_pessoa(mod_id: str, lugares: Any) -> list[Path]:
-    """O ``meu.css`` da extensão que o aceita e o arquivo de cada opção ``importar`` dela
+    """O ``meu.css`` da extensão que o aceita e o arquivo de cada opção ``importar`` da extensão
     (manifesto que não se lê: nenhum)."""
     from hefesto_dualsense4unix.mods import importados
     from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto

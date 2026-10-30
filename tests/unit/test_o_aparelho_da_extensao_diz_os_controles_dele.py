@@ -281,7 +281,7 @@ def _com(mexer: Callable[[list[dict[str, Any]]], Any]) -> dict[str, Any]:
         cor=["#000000", "#111111", "#222222", "#333333"]),
         "lista de até 3", id="quatro-cores"),
     pytest.param(lambda a: a[0]["controles"][1].update(valor="roxo"),
-                 "o valor da paleta é o id de uma das opções dela", id="valor-fora"),
+                 "o valor da paleta é o id de uma das opções, ou nulo", id="valor-fora"),
     pytest.param(lambda a: a[1]["controles"][0].update(valor="sim"),
                  "o valor da chave é verdadeiro ou falso", id="chave-sem-bool"),
     pytest.param(lambda a: a[1].pop("id"), "o aparelho com controles tem id", id="sem-id"),

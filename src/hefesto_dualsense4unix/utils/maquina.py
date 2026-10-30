@@ -140,7 +140,7 @@ class RadioDeclarado(BaseModel):
 
 
 class OrdemDispensada(BaseModel):
-    """Uma recomendação que o usuário mandou calar — e o arranjo em que ela calou."""
+    """Uma recomendação que o usuário mandou calar — e o arranjo em que a recomendação calou."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -150,7 +150,7 @@ class OrdemDispensada(BaseModel):
     @field_validator("quando")
     @classmethod
     def _so_a_data(cls, valor: str) -> str:
-        """Só a data, em ISO. Hora não acrescenta nada e é um dado a mais dela."""
+        """Só a data, em ISO. Hora não acrescenta nada e é um dado a mais."""
         if valor and not _DATA_ISO.match(valor):
             raise ValueError(f"data {valor!r} não é AAAA-MM-DD")
         return valor
@@ -239,7 +239,7 @@ class FaceDeclarada(BaseModel):
 
 
 class PortaDeclarada(BaseModel):
-    """Uma entrada do gabinete, pelo número DO USUÁRIO — e tudo o que se sabe dela.
+    """Uma entrada do gabinete, pelo número DO USUÁRIO — e tudo o que se sabe da entrada.
 
     UM REGISTRO SÓ (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026). A entrada
     morava em dois: aqui (o ``caminho`` de barramento deste boot, os nós, o
@@ -269,7 +269,7 @@ class PortaDeclarada(BaseModel):
     ``filha_de`` é o número da entrada que hospeda a EXTENSÃO. Cabo de extensão
     passivo não tem descritor USB — o dongle na ponta enumera como se estivesse
     na entrada do hub, e nenhuma leitura de ``/sys``, hoje ou nunca, distingue
-    os dois casos. Quem sabe é ela, porque o usuário disse; não há detecção e não há
+    os dois casos. Quem sabe é o usuário, porque o usuário disse; não há detecção e não há
     palpite.
 
     O nome é ``filha_de`` e não "mãe" por construção: "mãe" escrito sem acento
@@ -281,7 +281,7 @@ class PortaDeclarada(BaseModel):
 
     ``nos`` nomeia o BURACO (``usb1-port5``), e o nó do buraco responde
     ``state=not attached`` com o buraco vazio — MEDIDO em 25/08/2026: 38 nós de
-    entrada nesta bancada, todos respondendo ``state`` e ``connect_type``, com e
+    entrada nesta máquina de teste, todos respondendo ``state`` e ``connect_type``, com e
     sem aparelho. Os nós carregam o número do barramento do boot em que foram
     lidos: com o ``lugar`` na mão, é ele que responde onde a entrada está.
 
@@ -419,7 +419,7 @@ _SEM_OS_CALCULADOS: dict[str, Any] = {
 
 
 class MapaDaMesa(BaseModel):
-    """O gabinete dela, desenhado por ela — o que ``/sys`` não tem como saber."""
+    """O gabinete do usuário, desenhado por ele — o que ``/sys`` não tem como saber."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -490,7 +490,7 @@ class AdaptadorDeclarado(BaseModel):
     ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026), pedido: *«temos
     o nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
     Revoga a herança da D3: com o adaptador levando o nome da porta, as
-    entradas que ela numerou no Mapear viraram adaptadores «15» e «13». O
+    entradas que o usuário numerou no Mapear viraram adaptadores «15» e «13». O
     nome é do APARELHO e vai com ele de porta em porta; o da entrada fica em
     :class:`PortaDeclarada`. O ``Alias`` do BlueZ é a projeção deste campo, e
     quem a escreve é o ``bt_active_mode.sh`` — o escritor único do ``Alias``.
@@ -501,11 +501,11 @@ class AdaptadorDeclarado(BaseModel):
     daqui), e saíram na migração (:func:`migrar_o_documento`).
 
     E A ORDEM DA CAIXA DELE também mora aqui desde então: a posição em que
-    ela o arrastou na Conexões (25/09/2026, *«segurar a área do conector e
-    arrastar ela pra mudar de ordem entre eles»*). Ela morava no
+    o usuário o arrastou na Conexões (25/09/2026: segurar a área do conector e
+    arrastar para mudar a ordem entre eles). A ordem morava no
     ``gui_preferences.json``, pela chave do LUGAR (a D3): o terceiro registro
     do mesmo adaptador, e uma chave que mudava quando ele mudava de porta.
-    <!-- noqa-acento: citação literal -->
+
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -740,13 +740,13 @@ class ControleDeclarado(BaseModel):
     devia ao mapa (``ONDA-CONEXOES-12``) chegaram com a
     O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01.
 
-    ``cor`` guarda a DECLARAÇÃO dela, e só ela. A cor LIDA do aparelho nunca
-    chega aqui: em 29/08/2026 mediu-se que ela não é persistida em lugar nenhum
+    ``cor`` guarda a DECLARAÇÃO do usuário, e só essa. A cor LIDA do aparelho nunca
+    chega aqui: em 29/08/2026 mediu-se que a cor lida não é persistida em lugar nenhum
     — ``_chegou_a_cor`` a guarda em memória de sessão e a janela reaprende do
     zero a cada abertura.
 
     ``microfone`` é a ponte de mic por Bluetooth DAQUELE controle
-    (``QUATRO-MICROFONES-01``, 22/08/2026, decisão de produto: *"por controle"*). Mora
+    (``QUATRO-MICROFONES-01``, 22/08/2026, decisão do produto: por controle). Mora
     aqui, e não no perfil, pela razão do cabeçalho de
     ``daemon/subsystems/bt_mic.py``: um microfone que liga ao trocar de jogo é
     exatamente a surpresa que aquele módulo recusa.
@@ -757,7 +757,7 @@ class ControleDeclarado(BaseModel):
     ==========  =====================================================
     ``None``    ninguém disse nada → **o microfone LIGA**. É um
                 DualSense; ter microfone é fato do aparelho.
-    ``False``   ela desligou. É o ÚNICO registro de que disse não, e
+    ``False``   o usuário desligou. É o ÚNICO registro de que disse não, e
                 é o que impede o produto de religar no próximo boot.
     ``True``    ligado — como sempre foi, para quem já declarou.
     ==========  =====================================================
@@ -770,7 +770,7 @@ class ControleDeclarado(BaseModel):
     de ser um jeito de desligar: seria o botão que não desliga. O medo que a
     regra velha protegia — o default entrando disfarçado de escolha do usuário — hoje
     se protege pelo outro lado: é o ``false`` no disco que impede o produto de
-    decidir sozinho por cima dela.
+    decidir sozinho por cima do usuário.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -786,7 +786,7 @@ class ControleDeclarado(BaseModel):
     @field_validator("nome")
     @classmethod
     def _nome_aparado_e_do_tamanho_do_alias(cls, valor: str | None) -> str | None:
-        """Espaço em volta sai; nome vazio é ``None`` — "ela não deu nome"."""
+        """Espaço em volta sai; nome vazio é ``None`` — "o usuário não deu nome"."""
         if valor is None:
             return None
         limpo = valor.strip()
@@ -809,7 +809,7 @@ _MAXIMO_DE_LANCADORES = 32
 
 
 class LancadorDeclarado(BaseModel):
-    """Um lançador ou emulador que ELA acrescentou — ou onde um de fábrica está."""
+    """Um lançador ou emulador que o USUÁRIO acrescentou — ou onde um de fábrica está."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -965,7 +965,7 @@ class ComputadorGlobal(BaseModel):
 
     @model_validator(mode="after")
     def _botoes_e_teclas_pelo_dono(self) -> ComputadorGlobal:
-        """Os botões e as teclas passam pelas regras do perfil, que é o dono delas."""
+        """Os botões e as teclas passam pelas regras do perfil, que é o dono de ambos."""
         if self.button_actions is None and self.key_bindings is None:
             return self
         Profile.model_validate({
@@ -1108,7 +1108,7 @@ class MaquinaConfig(BaseModel):
                 raise ValueError(
                     f"chave de lançador {chave!r} não serve como endereço de "
                     "tela — o cartão a usa em `data-lancador` e no prefixo de "
-                    "cada `data-campo`, então ela é minúscula, sem espaço e sem "
+                    "cada `data-campo`, então a chave é minúscula, sem espaço e sem "
                     "aspas (a-z, 0-9, `-` e `_`, até 32)"
                 )
         return vivos
@@ -1248,17 +1248,17 @@ def migrar_o_documento(bruto: Mapping[str, Any]) -> dict[str, Any]:
     de cada entrada para os ``nos``:
 
     1. A AMARRA QUE VALE: ``lugares[L].entrada = N`` vira
-       ``mapa.portas[N].lugar = L`` quando o ``mapa`` concorda com ela — as
+       ``mapa.portas[N].lugar = L`` quando o ``mapa`` concorda com a amarra — as
        conferências que a leitura sem controladores fazia a cada pergunta
        (``entrada_do_lugar`` até 28/09), feitas uma vez: a entrada está no
-       desenho, nenhum outro lugar diz ser ela, e a entrada não tem caminho ou
+       desenho, nenhum outro lugar diz ser essa entrada, e a entrada não tem caminho ou
        tem o da testemunha (``lugares[L].caminho``). Sem testemunha e com
        caminho, "não sei": a cadeia de portas sozinha confunde duas
        portas-raiz de mesmo número em controladores diferentes
        (ENTRADA-A-ENTRADA-02), e o Mapear reaprende o lugar.
     2. A AMARRA QUE ANDOU: a testemunha que o ``mapa`` pôs noutra entrada (o
        buraco andou sem a amarra, como na troca feita fora do produto em
-       26/09) leva a amarra para ELA, que é o que o reparo à mão fez.
+       26/09) leva a amarra para a ENTRADA, que é o que o reparo à mão fez.
     3. O NOME de verdade da amarra que vale vai para ``portas[N].nome``, se a
        posição ainda não tem nome próprio (o nome é da posição,
        D-2609-O-NOME-E-DA-POSICAO) — a mesma relação que a reserva da leitura
@@ -1298,10 +1298,10 @@ def _o_extensor_vira_a_chave(portas: dict[str, Any]) -> None:
     """``liga: extensor`` vira ``extensor: true``, e a ponta antiga se funde na entrada.
 
     O extensor deixou de ser «o que tem na entrada» (04/10/2026): é uma chave da porta, e o
-    aparelho que está nela continua dito nela. A entrada-filha que o desenho antigo criava
+    aparelho que está ali continua dito ali. A entrada-filha que o desenho antigo criava
     para a ponta (``Na``, ``filha_de = N``) não tem mais o que guardar: o aparelho enumera no
     buraco da ``N``, então os nós, o lugar, a velocidade, o hub e o nome que só a ponta tinha
-    passam para a ``N`` quando ela não os tem, quem pendia da ponta passa a pender da ``N``, e
+    passam para a ``N`` quando a ``N`` não os tem, quem pendia da ponta passa a pender da ``N``, e
     a ponta sai. Nada fica só na cópia de antes, que não se refaz se outra migração já a
     escreveu. Idempotente.
     """
@@ -1458,7 +1458,7 @@ def caminho_da_maquina() -> Path:
     """Path do ``maquina.json`` — import LAZY de ``config_dir``.
 
     Lazy porque resolver ``config_dir()`` no topo do módulo mata o monkeypatch da
-    bateria: ``app/gui_prefs.py:13`` é a cicatriz exata dessa escolha, e é por ela
+    bateria: ``app/gui_prefs.py:13`` é a cicatriz exata dessa escolha, e é por essa escolha
     que aquele módulo é inisolável em teste.
     """
     from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -1546,7 +1546,7 @@ def servidor_dsu_declarado() -> ServidorDsuDeclarado:
 
 
 class ResultadoDaGravacao(NamedTuple):
-    """O que a gravação fez — ``gravou`` e o que ela teve de deixar para trás."""
+    """O que a gravação fez — ``gravou`` e o que a gravação teve de deixar para trás."""
 
     gravou: bool
     descartados: tuple[str, ...]
@@ -1670,7 +1670,7 @@ def nome_dado_ao_adaptador(maquina: MaquinaConfig | None, endereco: object) -> s
 
 
 def ordem_dos_adaptadores(maquina: MaquinaConfig | None) -> list[str]:
-    """As chaves dos adaptadores na ordem que ela arrastou, de cima para baixo."""
+    """As chaves dos adaptadores na ordem que o usuário arrastou, de cima para baixo."""
     if maquina is None:
         return []
     postos = [
@@ -1682,7 +1682,7 @@ def ordem_dos_adaptadores(maquina: MaquinaConfig | None) -> list[str]:
 
 
 def guardar_ordem_dos_adaptadores(enderecos: Sequence[str]) -> list[str]:
-    """Grava a ordem que ela arrastou, pelo ENDEREÇO de cada adaptador."""
+    """Grava a ordem que o usuário arrastou, pelo ENDEREÇO de cada adaptador."""
     novas: list[str] = []
     for endereco in enderecos:
         chave = chave_do_adaptador(endereco)
@@ -1728,7 +1728,7 @@ def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
 def mudo_do_microfone(
     endereco: object, maquina: MaquinaConfig | None = None
 ) -> bool | None:
-    """O mudo que ela deixou no microfone DESTE controle. **Nunca levanta.**"""
+    """O mudo que o usuário deixou no microfone DESTE controle. **Nunca levanta.**"""
     chave = chave_do_controle(endereco)
     if chave is None:
         return None
@@ -1820,7 +1820,7 @@ def _so_os_campos_que_passam(
 
 
 def _a_entrada_que_ainda_vale(porta: Any) -> Any:
-    """A entrada sem o campo torto; ``None`` quando nada dela sobra de pé."""
+    """A entrada sem o campo torto; ``None`` quando nada da entrada sobra de pé."""
     if _passa(PortaDeclarada, porta):
         return porta
     if not isinstance(porta, Mapping):
@@ -1928,7 +1928,7 @@ def _raiz_do_sys() -> str:
 def placa_daqui() -> dict[str, Any] | None:
     """O fabricante e o modelo da placa-mãe, lidos uma vez por processo; ``None`` se não se leem.
 
-    Sem ``HEFESTO_RAIZ_DO_SYS``, a raiz do DMI é a do ``ler_a_placa``, o dono dela.
+    Sem ``HEFESTO_RAIZ_DO_SYS``, a raiz do DMI é a do ``ler_a_placa``, o dono da raiz.
     """
     raiz = os.environ.get(RAIZ_DO_SYS_ENV) or ""
     if raiz in _PLACAS_LIDAS:

@@ -1,4 +1,4 @@
-"""A memória dos controles: onde ela mora, e como se guarda e se devolve."""
+"""A memória dos controles: onde a memória mora, e como se guarda e se devolve."""
 from __future__ import annotations
 
 import configparser
@@ -249,7 +249,7 @@ INVENTARIO: tuple[Lugar, ...] = (
         "declaracao-da-mesa", "config", f"{_C}/maquina.json",
         "utils/maquina.py:_MAQUINA_FILE",
         USUARIO, CONTROLES, MOVER,
-        "o que ela declarou: a cor e a chave de cada controle (por endereço), "
+        "o que o usuário declarou: a cor e a chave de cada controle (por endereço), "
         "os nomes das portas, os rádios vizinhos, a antena",
     ),
     Lugar(
@@ -356,20 +356,20 @@ INVENTARIO: tuple[Lugar, ...] = (
         "codigo-das-modificacoes", "dados", f"{_C}/mods",
         "utils/xdg_paths.py:mods_codigo_dir",
         USUARIO, CASA, COPIAR,
-        "o código de cada modificação instalada (ADR-021); a linha dela no "
+        "o código de cada modificação instalada (ADR-021); a linha da modificação no "
         "registro mora no mods.json, dentro da configuração",
     ),
     Lugar(
         "dados-das-modificacoes", "estado", f"{_C}/mods",
         "utils/xdg_paths.py:mods_dados_dir",
         USUARIO, CASA, COPIAR,
-        "os dados que cada modificação grava e o diário dela",
+        "os dados que cada modificação grava e o próprio diário",
     ),
     Lugar(
         "camadas-vulkan", "estado", f"{_C}/camadas-vulkan.json",
         "integrations/camadas_vulkan.py:ESTADO_BASENAME",
         USUARIO, CASA, COPIAR,
-        "o que o produto desligou nos prefixos, e o que ela mandou manter",
+        "o que o produto desligou nos prefixos, e o que o usuário mandou manter",
         devolve=False,
     ),
     Lugar(
@@ -466,7 +466,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "paused.flag": (CASA, "o daemon pausado"),
     "freestyle_ligado.flag": (CASA, "o Modo Freestyle ligado"),
     "session-antes-da-escolha.json": (
-        CASA, "a cópia do session.json de antes da migração da escolha dela",
+        CASA, "a cópia do session.json de antes da migração da escolha do usuário",
     ),
     "autoswitch_locked.flag": (CASA, "o cadeado de 23/07; a migração o lê e o apaga"),
     "native_mode.flag": (CASA, "o modo nativo"),
@@ -489,7 +489,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "hefesto-dualsense4unix/jogos_sem_wrapper.txt": (CASA, "os jogos sem o atalho"),
     "hefesto-dualsense4unix/lista_de_exclusao.json": (CASA, "a lista de exclusão"),
     "hefesto-dualsense4unix/camadas_da_steam_fora.env": (CASA, "a escolha do «Corrigir Vulkan»"),
-    "hefesto-dualsense4unix/opcoes_por_jogo.txt": (CASA, "as opções por jogo dela"),
+    "hefesto-dualsense4unix/opcoes_por_jogo.txt": (CASA, "as opções por jogo do usuário"),
     _ALLOWLIST_DA_STEAM: (CASA, "os jogos com o Steam Input"),
     "freestyle.json": (CASA, "um perfil semeado"),
     "meu_perfil.json": (CASA, "um perfil semeado"),
@@ -518,13 +518,13 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "mods-de-fabrica.json": (CASA, "as extensões de fábrica já trazidas uma vez: a removida "
                                    "não volta"),
     "opcoes.json": (CASA, "os valores das opções de uma modificação; não identifica controle"),
-    "diario.log": (CASA, "o diário de cada modificação, na pasta de dados dela"),
-    "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta de dados dela"),
+    "diario.log": (CASA, "o diário de cada modificação, na pasta de dados da modificação"),
+    "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta de dados"),
     "mods.sock": ("install", "a porta das modificações (pasta de execução)"),
     "mods-estado.json": ("install", "o estado vivo das modificações (pasta de execução)"),
     "hefesto-mod.json": ("fora", "o manifesto que vem dentro de cada modificação"),
     "winevulkan.json": ("fora", "o driver Vulkan do Wine, lido no prefixo"),
-    "PROVA-DA-FOTO.txt": ("fora", "saída da bancada de fotos (olhar.py)"),
+    "PROVA-DA-FOTO.txt": ("fora", "saída do instrumento de fotos (olhar.py)"),
     "USB-Audio/Sony/DualSense-PS5-HiFi.conf": ("fora", "o UCM do alsa-ucm-conf; o doctor só lê"),
     "USB-Audio/Hefesto/DualSense-HiFi.conf": ("install", "o verbo UCM do install; o doctor só lê"),
 }
@@ -836,7 +836,7 @@ class Sistema:
     def rodar_parte_do_root(
         self, raizes: Raizes, verbo: str, pasta_root: Path | None, seco: bool
     ) -> dict[str, Any]:
-        """Roda a parte do root; devolve o que ela relatou."""
+        """Roda a parte do root; devolve o que a parte relatou."""
         if raizes.raizes_do_root_desviadas:
             return executar_parte_do_root(raizes, verbo, pasta_root, seco=seco)
         if self.ensaio:
@@ -861,7 +861,7 @@ class Sistema:
         if r.returncode != 0:
             raise RecusaError(
                 "a parte do root não rodou (" + (r.stderr.strip() or f"rc={r.returncode}")
-                + "). Ela precisa de privilégio sem pedir senha no meio: exporte "
+                + "). A parte precisa de privilégio sem pedir senha no meio: exporte "
                 "SUDO_ASKPASS, ou rode `sudo -v` antes neste terminal, e repita."
             )
         try:
@@ -974,7 +974,7 @@ def _achar_overrides(raizes: Raizes) -> list[Path]:
 
 
 def achar(raizes: Raizes, lugar: Lugar) -> list[Path]:
-    """Os caminhos que EXISTEM agora para um lugar do lado dela."""
+    """Os caminhos que EXISTEM agora para um lugar do lado do usuário."""
     if lugar.raiz == "lar" and lugar.caminho.startswith("<steam>"):
         return _achar_steam(raizes, lugar)
     if lugar.raiz == "lar" and lugar.caminho.startswith("<heroic>"):
@@ -1031,7 +1031,7 @@ class Passo:
 
 
 def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
-    """O que o guardar faria do lado dela, sem tocar em nada."""
+    """O que o guardar faria do lado do usuário, sem tocar em nada."""
     plano: list[Passo] = []
     vistos: set[Path] = set()
     for lugar in lugares(alcance, USUARIO):
@@ -1059,7 +1059,7 @@ def montar_plano(raizes: Raizes, alcance: str) -> list[Passo]:
 def o_que_nao_existia(
     raizes: Raizes, alcance: str
 ) -> tuple[list[str], list[dict[str, Any]]]:
-    """Os lugares do lado dela que o devolver tem de deixar como NÃO estavam."""
+    """Os lugares do lado do usuário que o devolver tem de deixar como NÃO estavam."""
     cfg = raizes.config / SLUG
     ausentes: list[str] = []
     curingas: list[dict[str, Any]] = []
@@ -1110,7 +1110,7 @@ def guardar(
     plano = montar_plano(raizes, alcance)
     ausentes, curingas = o_que_nao_existia(raizes, alcance)
     if alcance == CASA and sistema.steam_aberta():
-        raise RecusaError("a Steam está aberta: feche-a antes de guardar (ela regrava "
+        raise RecusaError("a Steam está aberta: feche-a antes de guardar (a Steam regrava "
                      "o localconfig.vdf ao sair, e a cópia sairia velha)")
     carimbo = f"{carimbo_agora(agora)}-{alcance}"
     pasta = raizes.guardado / carimbo
@@ -1202,8 +1202,8 @@ def devolver(
     relato = Relato(pasta=pasta)
     tem_steam = any(i.chave.startswith("steam-") for i in manifesto.itens if i.devolve)
     if tem_steam and sistema.steam_aberta():
-        raise RecusaError("a Steam está aberta: feche-a antes de devolver (ela regrava "
-                     "os arquivos dela ao sair, por cima do que eu devolver)")
+        raise RecusaError("a Steam está aberta: feche-a antes de devolver (a Steam regrava "
+                     "os próprios arquivos ao sair, por cima do que eu devolver)")
     depois_do_teste = pasta / "depois-do-teste" / carimbo_agora(agora)
     pasta_root = Path(manifesto.root) if manifesto.root else None
 
@@ -1779,7 +1779,7 @@ def chaves_nossas_do_wireplumber(pasta: Path) -> dict[str, list[str]]:
 def tirar_as_chaves_nossas_do_wireplumber(pasta: Path) -> int:
     """Reescreve o estado do WirePlumber sem as linhas nossas. Devolve quantas saíram.
 
-    As linhas dela ficam byte a byte, na ordem. Quem chama para o WirePlumber
+    As linhas do arquivo ficam byte a byte, na ordem. Quem chama para o WirePlumber
     antes (ele grava o estado ao sair, e regravaria as nossas) e o religa depois.
     """
     tiradas = 0

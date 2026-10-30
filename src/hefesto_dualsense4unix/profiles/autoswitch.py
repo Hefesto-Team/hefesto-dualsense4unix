@@ -242,12 +242,12 @@ class AutoSwitcher:
         PERFIL-REESCRITO-NA-PARTIDA-01, item 1 (o de maior alcance da leva).
         `_current_profile` era escrito num único lugar — o commit do próprio
         `_activate` — e NADA o sincronizava com `store.active_profile`. Um
-        `profile.switch` dela (janela, CLI, PS+D-pad) trocava o perfil de
+        `profile.switch` do usuário (janela, CLI, PS+D-pad) trocava o perfil de
         verdade e o autoswitch seguia acreditando no que ELE tinha ativado por
-        último. A prova está no journal da bancada: `profile_autoswitch from_=None
+        último. A prova está no journal da máquina de teste: `profile_autoswitch from_=None
         to=sackboy_nativo` com outro perfil ativo havia horas — o autoswitch
         "entrando" num perfil que já era o ativo, reescrevendo gatilhos, LEDs,
-        modo e política de rumble por cima do que ela tinha escolhido na mão.
+        modo e política de rumble por cima do que o usuário tinha escolhido na mão.
 
         A decisão passa a ser tomada contra o estado REAL: `ProfileManager
         .activate` publica `store.set_active_profile(...)` em TODA ativação, de
@@ -260,7 +260,7 @@ class AutoSwitcher:
         especificidade do perfil ANTIGO seria uma terceira crença errada.
         `True` é o palpite seguro e o único gratuito: ele apenas torna mais
         CARO sair do perfil rumo a um genérico (12 s em vez de 0,5 s), e depois
-        de um gesto explícito dela ficar tem custo zero, enquanto sair rápido
+        de um gesto explícito do usuário ficar tem custo zero, enquanto sair rápido
         reabre o flap que a UX-04 fechou. Nada de reler o disco aqui: o
         `ProfileManager.get` varre o diretório de perfis, e a docstring do
         `_current_especifico` já proíbe I/O nesta decisão. O palpite é
@@ -479,7 +479,7 @@ class AutoSwitcher:
         """O perfil do último jogo, que é o que vale, FICA com a janela sem perfil próprio.
 
         OS-QUATRO-EM-HARMONIA-01, item 4 (14/10/2026): o perfil fica no último
-        jogo até ela mudar ou outro jogo iniciar. Quem o tira é ela (a crença
+        jogo até o usuário mudar ou outro jogo iniciar. Quem o tira é o usuário (a crença
         sincroniza pelo store), outro jogo (a regra dele ou o jogo em cena) ou a
         janela com perfil próprio que não é de jogo nem de lançador.
         """
@@ -497,7 +497,7 @@ class AutoSwitcher:
         D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o reinício do serviço volta a ele
         (`utils.session.o_ultimo_jogo`); sem a gravação, o boot subia na escolha
         à mão. Perfil que não é de jogo, posto por regra de janela, tira a memória,
-        também a que o boot restaurou sem a crença do autoswitch saber dela.
+        também a que o boot restaurou sem a crença do autoswitch saber da restauração.
         """
         anterior = self._perfil_do_ultimo_jogo if self._ultimo_jogo_lido else None
         self._ultimo_jogo_lido = True
@@ -520,7 +520,7 @@ class AutoSwitcher:
         D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO (14/10/2026): a janela da Steam, do
         Heroic, do Lutris… não ativa perfil nenhum, nem o Navegação, nem a volta
         à escolha do usuário, e não solta o modo jogo padrão. Fica o que vale agora: o
-        do último jogo, o que ela ativou à mão ou o do boot. O jogo em cena
+        do último jogo, o que o usuário ativou à mão ou o do boot. O jogo em cena
         (``veio_do_jogo``) não passa por aqui: outro jogo que inicia leva o perfil.
         """
         wm_class = str(info.get("wm_class") or "")

@@ -641,7 +641,7 @@ def _com_a_lapide_do_que_se_apagou(globais: dict[str, Any], computador: Any) -> 
     """As teclas que o jogo APAGOU e o computador define, com a lápide ``[]`` no lugar.
 
     O perfil do jogo só diz o que difere, e a chave ausente quer dizer «herde».
-    Apagar uma tecla que o computador define grava o dicionário SEM ela, e a
+    Apagar uma tecla que o computador define grava o dicionário SEM essa tecla, e a
     junção (``{**computador, **jogo}``) a devolve: o gesto «apagar» valia só
     quando o computador não tinha aquela tecla. A lápide é o «nada» que já
     existe — a lista vazia, que o schema aceita e a resolução lê como
@@ -1125,7 +1125,7 @@ def voltar_o_computador_ao_de_fabrica(cartao: str, uniq: object = None) -> None:
 
 
 def restaurar_o_computador() -> bool:
-    """Esvazia o padrão do computador. A marca da migração fica: ela não volta."""
+    """Esvazia o padrão do computador. A marca da migração fica, e a migração não volta."""
     from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
 
     migrado = o_computador().migrado

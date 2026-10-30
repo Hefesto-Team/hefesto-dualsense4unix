@@ -1,4 +1,4 @@
-"""A marca do Parar da aba Sistema: o serviço que ela parou segue parado quando a janela reabre.
+"""A marca do Parar da aba Sistema: o serviço que o Parar parou segue parado quando a janela reabre.
 
 Dono único da marca. Quem a grava ou apaga é a lógica (a aba Sistema e a bandeja); quem a lê é a
 entrada que abre a janela (`interface/abrir.trazer_o_servico`). Mora aqui, e não na entrada da

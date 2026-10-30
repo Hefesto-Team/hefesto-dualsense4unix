@@ -326,7 +326,7 @@ class ProfileManager:
 
         R-03 (auditoria 23/07): o `origin` também SEGUE até os appliers de
         emulação — é lá que ele decide se o lock de gesto manual (30 s) é
-        furado (ativação manual dela) ou vira pendência de retry (autoswitch).
+        furado (ativação manual do usuário) ou vira pendência de retry (autoswitch).
         `relatorio`, quando passado, é preenchido com `seção → estado`
         (`"aplicado"`, `"adiado_lock_manual"`, `"ignorado_*"`, `"falhou"`) para
         quem precisa contar a verdade — hoje o `profile.switch` do IPC. É um
@@ -489,17 +489,17 @@ class ProfileManager:
         R-20 (auditoria 23/07) — por que CAMADA e não substituição do mapa:
         `reset_output_overrides` trocava o mapa por-uniq INTEIRO, e o
         autoswitch ativa perfil a CADA troca de janela. Resultado medido no
-        achado C5: o ajuste por-controle que ela acabava de fazer na GUI era
+        achado C5: o ajuste por-controle que o usuário acabava de fazer na GUI era
         apagado segundos depois (a configuração por controle não valia
         controle a controle). Agora a ativação substitui só o que é do perfil
         e cede o campo que a usuária ajustou na mão.
 
         O `origin` é o botão de soltar dessa precedência: ativação MANUAL
-        (ela escolhendo o perfil na GUI/CLI) é gesto mais novo que o slider
-        que ela arrastou antes, então limpa a camada da usuária; ativação
-        automática (autoswitch, restore de boot) nunca limpa — é dela que a
+        (o usuário escolhendo o perfil na GUI/CLI) é gesto mais novo que o slider
+        que o usuário arrastou antes, então limpa a camada da usuária; ativação
+        automática (autoswitch, restore de boot) nunca limpa — é da automática que a
         camada precisa se defender. Default `"auto"` de propósito: caller
-        novo que esqueça o parâmetro PRESERVA o ajuste dela (o erro seguro).
+        novo que esqueça o parâmetro PRESERVA o ajuste do usuário (o erro seguro).
 
         Backends sem a API de camadas (FakeController e dublês de teste) caem
         no caminho histórico (`reset_output_overrides` + `apply_output_for`),
@@ -652,7 +652,7 @@ class ProfileManager:
     def _empurrar_o_ps(self, profile: Profile) -> None:
         """A escolha do PS, entregue a quem a atende — o callback do `ps_solo`.
 
-        A QUARTA SAÍDA de `core/acoes_de_botao` (:func:`acao_do_ps`), e ela não
+        A QUARTA SAÍDA de `core/acoes_de_botao` (:func:`acao_do_ps`), e não
         vai a device nenhum: o PS nunca chega à emulação, porque o latch do
         combo (`integrations/hotkey_daemon.py`) o subtrai de `emu_buttons`
         enquanto estiver pressionado. Quem o atende é o `ps_solo`, no release.
@@ -691,7 +691,7 @@ class ProfileManager:
         para o subsistema de hotkey, pelo `ps_action_sink`, porque quem a atende
         é o callback do `ps_solo` — ver :meth:`_empurrar_o_ps`.
 
-        A ORDEM IMPORTA, e ela é: este método roda DEPOIS do `apply_keyboard`.
+        A ORDEM IMPORTA, e é esta: este método roda DEPOIS do `apply_keyboard`.
         Sem `button_actions` no perfil ele não toca em nada — o `None` do campo
         significa "herda o de fábrica", e o de fábrica já é o que os dois
         devices fazem. Com o campo preenchido, ele escreve por cima, e o que
@@ -717,7 +717,7 @@ class ProfileManager:
         `profile.key_bindings`, todo atalho que o usuário escreveu na janela antiga
         morria na ativação seguinte de qualquer perfil que tivesse
         `button_actions` — sem uma palavra, e com os dois campos continuando a
-        aparecer no arquivo dela. Passar o campo é o elo; as três camadas e a
+        aparecer no arquivo do usuário. Passar o campo é o elo; as três camadas e a
         precedência estão em `core/acoes_de_botao._tabela_efetiva`.
 
         E ELE DIZ AO DEVICE O QUE FOI CALADO, pela mesma data e pelo mesmo
@@ -1362,21 +1362,21 @@ class ProfileManager:
         perfis do usuário: `global_speaker: null`, e este gancho devolvendo `None`
         para todos os uniqs. Efeito: **a escolha do usuário nunca voltava depois de
         um replug** — a última palavra ficava sendo a da adoção
-        (`ROTA_PADRAO_DO_SOM`), e o `rota 3 + mudo` que ela gravou para uma
+        (`ROTA_PADRAO_DO_SOM`), e o `rota 3 + mudo` que o usuário gravou para uma
         peça sumia em silêncio ao trocar o cabo.
 
         E havia o mesmo defeito com o sinal trocado: quando a global existia,
         este gancho mandava a GLOBAL para o `uniq` que voltou, ignorando o
-        override daquela peça — o replug pisava o ajuste dela.
+        override daquela peça — o replug pisava o ajuste do usuário.
 
         A cura reusa o que já existia e mantém a ordem que `apply` respeita
         (global na `:992`, peça na `:994`): o override da peça, quando há,
         entra por último e vence, pela mesma vista `model_copy` que
         `apply_controller_speakers` monta. Mesma família do PERFIL-MANDA-01 e
-        do SOM-ROTA-02: o desejo dela existia e morria antes do aparelho.
+        do SOM-ROTA-02: o desejo do usuário existia e morria antes do aparelho.
 
         `origin="system"` de propósito: reconexão é o sistema reaplicando o
-        que já estava configurado, nunca um gesto novo dela (mesma leitura do
+        que já estava configurado, nunca um gesto novo do usuário (mesma leitura do
         restore de boot).
         """
         nome = getattr(getattr(self, "store", None), "active_profile", None)
@@ -1446,7 +1446,7 @@ class ProfileManager:
         return estado
 
     def _mudo_do_controle(self, uniq: str | None) -> bool | None:
-        """O mudo que ela deixou no microfone DESTE controle, lido do dono."""
+        """O mudo que o usuário deixou no microfone DESTE controle, lido do dono."""
         if not uniq:
             return None
         from hefesto_dualsense4unix.utils.maquina import mudo_do_microfone
@@ -1490,7 +1490,7 @@ class ProfileManager:
         return profile, global_, override
 
     def o_controle_pede_silencio(self, uniq: str | None = None) -> bool:
-        """Ela calou o microfone DESTE controle? (NASCE-LIGADO-MIC-01)"""
+        """O usuário calou o microfone DESTE controle? (NASCE-LIGADO-MIC-01)"""
         return self._mudo_do_controle(uniq) is True
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
@@ -1798,7 +1798,7 @@ def _a_escolha_do_usuario_ja_carimbou(
     O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01: a escada pede o carimbo da
     ponte de pé depois do silêncio, `por=silencio` ou `por=gesto`. Quando a
     escolha do usuário já carimbou a MESMA ponte (o PS + R3 carimba na hora e deixa o
-    gesto anotado, que o tique colhe 180 s depois), o carimbo dela fica: a
+    gesto anotado, que o tique colhe 180 s depois), o carimbo do usuário fica: a
     escada não rebaixa a escolha. Outra ponte de pé, a escada carimba como
     sempre.
     """
@@ -1936,7 +1936,7 @@ def secao_do_mouse_da_navegacao(
     muda; as velocidades que a seção já tinha FICAM (quem as escreve são as
     duas barras da aba). O perfil sem a seção ganha uma com as velocidades
     VIVAS (``velocidades``), que são as que o mouse está usando: a mesma
-    leitura que a janela fazia (`a06_navegacao._secao_do_mouse`). Sem elas,
+    leitura que a janela fazia (`a06_navegacao._secao_do_mouse`). Sem as velocidades,
     as do esquema.
 
     RECONSTRUÍDA, e não `model_copy`ada, pela razão de
@@ -2000,7 +2000,7 @@ def gravar_o_modo_no_perfil_ativo(
     `modo_escolhido_gravado_no_perfil`.
 
     `mouse_ligado` (O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026): a entrada à mão
-    na Navegação grava, NA MESMA GRAVAÇÃO, o ``mouse.enabled`` que ela deixou
+    na Navegação grava, NA MESMA GRAVAÇÃO, o ``mouse.enabled`` que o usuário deixou
     de pé (:func:`secao_do_mouse_da_navegacao`); ``None`` não toca a seção.
 
     `appid_do_jogo` e `steam_input` (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01,
@@ -2013,7 +2013,7 @@ def gravar_o_modo_no_perfil_ativo(
     (Pro Jank Footy, 01/10, 19h17). Fora de jogo, ou com o Freestyle valendo,
     nada de carimbo: ele é «confirmada NESTE jogo».
 
-    NADA MUDOU, NADA SE GRAVA: o `.json` dela não ganha uma versão idêntica a
+    NADA MUDOU, NADA SE GRAVA: o `.json` do usuário não ganha uma versão idêntica a
     cada aperto repetido.
 
     `mascara` (D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES): o modo único que o
@@ -2281,7 +2281,7 @@ def _controllers_na_economia(
     mesa: bool,
     em_economia: frozenset[str] = frozenset(),
 ) -> dict[str, ControllerOverrides]:
-    """O mapa por controle com a economia posta em quem ela vale."""
+    """O mapa por controle com a economia posta em quem a economia vale."""
     herdar = not mesa
     rumble = getattr(profile, "rumble", None)
     politica = getattr(rumble, "policy", None)
@@ -2348,7 +2348,7 @@ def _publicar_camada(
     overrides: dict[str, OutputSpec],
     procedencias: dict[str, object],
 ) -> None:
-    """Publica a camada de overrides levando a procedência, quando ela cabe."""
+    """Publica a camada de overrides levando a procedência, quando cabe."""
     try:
         publicar(overrides or None, procedencias=procedencias or None)
     except TypeError:
@@ -2398,7 +2398,7 @@ def _controllers_to_led_scales(
     isso o override que também escreveu a COR entra aqui desde 25/09/2026
     (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01): a cor dele já saiu escalada da
     borda e o fator não a toca, mas a base dele é a cor do número, e é para
-    ela que o controle volta quando a cor gravada é fóssil ou é o preto, que
+    essa cor que o controle volta quando a cor gravada é fóssil ou é o preto, que
     não é cor. Sem o fator, o fóssil do P2 a 50% voltava à cor do número no
     brilho do perfil, e o preto gravado com 30% acendia a paleta a 82%.
 
@@ -2770,7 +2770,7 @@ def _avisa_secoes_sem_applier(
       suíte sobem sem daemon (`daemon=None`, `controller`/`store` por fora),
       e ali "seção ignorada" é o comportamento histórico e desejado;
     - o daemon entregou ALGUNS → **é este o formato do defeito**, e o aviso
-      nomeia as SEÇÕES órfãs, não os parâmetros: o que ela sente é
+      nomeia as SEÇÕES órfãs, não os parâmetros: o que o usuário sente é
       `rumble.passthrough`, não `rumble_passthrough_applier`.
 
     ``declarados`` é a lista dos appliers que o CHAMADOR informou de propósito

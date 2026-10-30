@@ -4,7 +4,7 @@ Os três lugares de uma modificação (``utils/xdg_paths.py``):
 
 * o código, em ``~/.local/share/hefesto-dualsense4unix/mods/<id>/``;
 * os dados, em ``~/.local/state/hefesto-dualsense4unix/mods/<id>/``;
-* a linha dela no registro, ``~/.config/hefesto-dualsense4unix/mods.json``.
+* a linha da extensão no registro, ``~/.config/hefesto-dualsense4unix/mods.json``.
 
 O registro é a única fonte do que está instalado e ligado: a linha de comando
 o escreve, e o supervisor do serviço o lê e obedece (abre o que está ligado,
@@ -575,7 +575,7 @@ def _parar_as_substituidas(lg: Lugares, ids: Sequence[str]) -> list[str]:
     """Desliga e espera parar cada extensão que o ``substitui`` manda embora.
 
     Devolve as que estavam ligadas. A que não para recusa a troca inteira: as que já foram
-    desligadas voltam a seguir ligadas, e nada se troca (a nova dividiria a porta com ela).
+    desligadas voltam a seguir ligadas, e nada se troca (a nova dividiria a porta com a antiga).
     """
     ligadas: list[str] = []
     for mod_id in ids:
@@ -625,7 +625,7 @@ def _o_que_segura_a_atualizacao(
     """Por que a atualização sozinha não troca o código; vazio quando troca.
 
     A permissão nova é a que nem o «sim» dado nem a versão instalada pedem: a extensão que
-    nunca foi ligada não espera por uma permissão que o «ligar» dela ainda vai mostrar.
+    nunca foi ligada não espera por uma permissão que o «ligar» ainda vai mostrar.
     """
     ja_pedidas = list(anterior.permissoes_aceitas)
     with contextlib.suppress(ManifestoRecusadoError):

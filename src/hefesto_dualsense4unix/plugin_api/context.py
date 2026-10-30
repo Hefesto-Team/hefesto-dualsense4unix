@@ -62,7 +62,7 @@ class ControllerProxy:
         return self._ctrl.get_transport()
 
     def transporte_de(self, uniq: str) -> str | None:
-        """O transporte do controle `uniq` na mesa ("usb" ou "bt"), ou None se ele não está nela."""
+        """O transporte do controle `uniq` na mesa ("usb" ou "bt"), ou None fora da mesa."""
         from types import SimpleNamespace
 
         from hefesto_dualsense4unix.daemon.connection import (

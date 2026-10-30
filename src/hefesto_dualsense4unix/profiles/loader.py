@@ -133,8 +133,8 @@ class MoldeDePerfil:
     """Um molde de fábrica da tela «Mapa do controle»: o ponto de partida de um perfil de botões.
 
     O molde NÃO é arquivo: não semeia nada em `~/.config`, não aparece na aba Perfis e não casa
-    com janela. Escolhê-lo na tela e guardar cria um perfil de verdade (`perfil_do_molde`), dela,
-    com o nome que ela der. Os nomes são os MESMOS da lista «Perfil jogo - navegação» da
+    com janela. Escolhê-lo na tela e guardar cria um perfil de verdade (`perfil_do_molde`), seu,
+    com o nome que o usuário der. Os nomes são os MESMOS da lista «Perfil jogo - navegação» da
     aba Navegação (a régua `test_a_aba_mapa_do_controle_do_todo` confere os dois lados).
     """
 
@@ -178,7 +178,7 @@ def moldes_a_vista(pedidos: frozenset[str] | set[str] = frozenset(),
 
 
 def perfil_do_molde(chave: str, nome: str, *, prioridade: int = 0) -> Profile:
-    """O perfil novo que o molde ``chave`` faz nascer, só-manual até ela dar um jogo a ele."""
+    """O perfil novo que o molde ``chave`` faz nascer, só-manual até o usuário dar um jogo a ele."""
     from hefesto_dualsense4unix.profiles.schema import MatchManual, ProfileMouseConfig
 
     molde = MOLDE_POR_CHAVE[chave]
@@ -397,7 +397,7 @@ _FABRICAS_ANTERIORES_DO_FREESTYLE: tuple[dict[str, object], ...] = (
 
 
 def _e_o_de_fabrica_intocado(path: Path) -> bool:
-    """`freestyle.json` é UMA cópia de fábrica, sem nenhum ajuste dela?"""
+    """`freestyle.json` é UMA cópia de fábrica, sem nenhum ajuste do usuário?"""
     try:
         dados = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -744,7 +744,7 @@ class ResultadoDosEstilos:
 
 
 def _e_o_estilo_de_fabrica(local: Path, fabrica: Path) -> bool:
-    """True quando o arquivo local ainda é o de fábrica — ela não o editou."""
+    """True quando o arquivo local ainda é o de fábrica — o usuário não o editou."""
     try:
         if local.read_bytes() == fabrica.read_bytes():
             return True
@@ -877,7 +877,7 @@ def _e_perfil_de_jogo_intocado(dados: dict[str, object]) -> bool:
 
 
 def e_perfil_de_jogo_automatico(profile: Profile) -> bool:
-    """True para o perfil de jogo que a semeadura fez e ela nunca mexeu; a prioridade não conta."""
+    """True para o perfil de jogo que a semeadura fez e ninguém mexeu; a prioridade não conta."""
     return _e_perfil_de_jogo_intocado(_payload_do_perfil(profile))
 
 
@@ -945,7 +945,7 @@ def _mudos_do_perfil(dados: dict[str, object], conhecidos: set[str]) -> dict[str
 
 
 def _e_copia_de_fabrica(path: Path, dados: dict[str, object]) -> bool:
-    """O perfil cru é o asset do mesmo nome, sem nenhum ajuste dela?"""
+    """O perfil cru é o asset do mesmo nome, sem nenhum ajuste do usuário?"""
     asset = _seed_source_file(path.name)
     if asset is None:
         return False
@@ -1611,7 +1611,7 @@ def reapontar_perfis_com_chave_de_executavel(
 
     **AS TRÊS GUARDAS, e todas são de não-atropelar:**
 
-    1. **Só uma entrada, e ela termina em `.exe`.** Um `.exe` vai por
+    1. **Só uma entrada, e termina em `.exe`.** Um `.exe` vai por
        Proton/wine em qualquer lançador, e nesse caminho quem nomeia a janela é
        o Proton — a única forma que a derivação produzia. Regra com duas
        entradas, ou com uma que não seja `.exe`, é escolha de alguém.
@@ -2026,7 +2026,7 @@ def _podar_historico(
 ) -> list[Path]:
     """Apaga as versões fora de: as `manter` mais novas, a primeira de cada dia, a semana.
 
-    A semana inteira entra até o `teto` por perfil (as mais velhas dela saem
+    A semana inteira entra até o `teto` por perfil (as mais velhas do perfil saem
     primeiro); as `manter` mais novas e as primeiras do dia nunca saem.
     """
     versoes = sorted(destino.glob("*.json"))
@@ -2245,7 +2245,7 @@ def save_profile(
 ) -> Path:
     """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
 
-    Não arquiva a versão de antes quando ela é BYTE A BYTE a que vai para o
+    Não arquiva a versão de antes quando é BYTE A BYTE a que vai para o
     disco: a gravação que não mudou nada não gasta as vagas do histórico.
 
     ``enxuto=True`` grava só nome, alvo e prioridade (a forma do perfil de jogo

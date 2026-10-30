@@ -353,7 +353,7 @@ def familia_da_pagina(imersao: Imersao) -> str:
 
 
 def variante_da_pagina(imersao: Imersao) -> str:
-    """O que vem depois da família no nome: o texto da opção dentro do grupo dela."""
+    """O que vem depois da família no nome: o texto da opção dentro do grupo da imersão."""
     _, separador, variante = imersao.rotulo.partition(SEPARADOR_DO_NOME)
     return variante if separador else imersao.rotulo
 
@@ -374,7 +374,7 @@ def imersoes_por_familia(estilo: str = "") -> tuple[tuple[str, tuple[Imersao, ..
 
 
 def modo_que_a_imersao_pede(imersao: Imersao, modo: str) -> str:
-    """O modo em que ela toca: o de agora quando ela vale nele, senão o de nascença dela."""
+    """O modo em que a imersão toca: o de agora quando vale nele, senão o de nascença."""
     return modo if modo in imersao.ajustes else next(iter(imersao.ajustes))
 
 
@@ -389,7 +389,7 @@ def imersoes_do_acionamento(modo: str, estilo: str = "") -> tuple[Imersao, ...]:
 
 
 def ajustes_da_imersao(imersao: Imersao, modo: str, estilo: str = "") -> dict[str, int] | None:
-    """Os ajustes dela naquele modo (a variante do estilo sobreposta), ou `None`."""
+    """Os ajustes da imersão naquele modo (a variante do estilo sobreposta), ou `None`."""
     base = imersao.ajustes.get(modo)
     if base is None:
         return None
@@ -409,7 +409,7 @@ def todos_os_ajustes() -> Iterator[tuple[Imersao, str, str, dict[str, int]]]:
 
 
 def momentos_no_modo(imersao: Imersao, modo: str) -> tuple[Momento, ...]:
-    """Os momentos dela que valem com o acionamento em `modo` (o `valem_em` de cada um)."""
+    """Os momentos da imersão que valem com o acionamento em `modo` (o `valem_em` de cada um)."""
     return tuple(m for m in imersao.momentos if not m.valem_em or modo in m.valem_em)
 
 

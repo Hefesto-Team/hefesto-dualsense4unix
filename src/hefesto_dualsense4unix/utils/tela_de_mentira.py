@@ -37,8 +37,8 @@ def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
     if xvfb is None:
         raise SystemExit(
             "Este instrumento abre uma janela GTK de verdade e NÃO há `Xvfb` "
-            "para segurá-la: ela nasceria na sessão gráfica viva — a tela "
-            "dela, que é uma só. Instale `xvfb`, ou assuma a tela com "
+            "para segurá-la: a janela nasceria na sessão gráfica viva — a tela "
+            "de quem usa, que é uma só. Instale `xvfb`, ou assuma a tela com "
             "`HEFESTO_NA_TELA=1`."
         )
 
@@ -66,7 +66,7 @@ def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
         _JA_FEITO = True
         if anunciar:
             print(
-                f"[tela] janela desviada para o Xvfb :{numero} — a tela dela "
+                f"[tela] janela desviada para o Xvfb :{numero} — a tela de quem usa "
                 "não recebe nada. Sem gerenciador de janelas aqui: uma "
                 "`Gtk.Window` pode medir 1x1. Para a sessão real: "
                 "HEFESTO_NA_TELA=1",
@@ -76,7 +76,7 @@ def garantir_tela_de_mentira(*, anunciar: bool = True) -> str | None:
 
     raise SystemExit(
         "Nenhuma tela Xvfb livre entre :80 e :129 — este instrumento não vai "
-        "abrir janela na sessão dela para contornar isso."
+        "abrir janela na sessão de quem usa para contornar isso."
     )
 
 

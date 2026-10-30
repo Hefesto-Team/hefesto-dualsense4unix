@@ -3,7 +3,7 @@
 A ESCOLHA DO USUÁRIO TEM DOIS CAMPOS E UM DONO (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`,
 O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01, 01/10/2026). O
 `freestyle_ligado.flag` diz se o Freestyle manda; o `session.json` guarda o
-último perfil que ELA ativou, fora o Freestyle. Quem responde «qual é a escolha
+último perfil que o USUÁRIO ativou, fora o Freestyle. Quem responde «qual é a escolha
 do usuário» é :func:`a_escolha_do_usuario`, e quem a grava é :func:`gravar_a_escolha` — só
 o gesto do usuário (`ProfileManager.activate(origin="manual")`) chega lá; o
 autoswitch, o lançamento, o restauro e o «Aplicar» não tocam em nenhum dos dois.
@@ -15,7 +15,7 @@ divergência: era o seed de migração de julho, cuja convergência já acontece
 
 O `store.active_profile` do daemon (publicado por `daemon.status`/`state_full`)
 é o perfil que VALE agora — outra pergunta: o jogo aberto entra por cima da
-escolha e FICA, até no reinício (:func:`lembrar_o_ultimo_jogo`), até ela mudar ou outro jogo entrar.
+escolha e FICA, até no reinício (:func:`lembrar_o_ultimo_jogo`), até outra escolha ou outro jogo.
 
 Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 """
@@ -120,7 +120,7 @@ def _o_perfil_carrega(nome: str) -> bool:
 
 
 def a_escolha_do_usuario(*, freestyle_ligado: bool | None = None) -> str | None:
-    """A escolha do usuário: o Freestyle ligado, ou o último perfil que ela ativou."""
+    """A escolha do usuário: o Freestyle ligado, ou o último perfil que o usuário ativou."""
     from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
 
     try:
@@ -148,7 +148,7 @@ def _apagar_o_espelho() -> None:
 
 
 def espelhar_a_escolha() -> None:
-    """O `active_profile.txt` passa a dizer a escolha de agora; sem ela, sai."""
+    """O `active_profile.txt` passa a dizer a escolha de agora; sem escolha, sai."""
     nome = a_escolha_do_usuario()
     if nome:
         save_active_marker(nome)
@@ -179,9 +179,9 @@ def _ultimo_jogo_path() -> Path:
 def lembrar_o_ultimo_jogo(nome: str) -> None:
     """Grava o perfil do último jogo, o que o boot restaura antes da escolha.
 
-    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO (14/10/2026): *«Ele deveria ficar
-    sempre com o perfil do último jogo aberto ou ativado. Até que eu mude ou
-    outro jogo inicie»*, e o reinício do serviço não é mudança dela. Medido no
+    D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO (14/10/2026): o controle fica
+    sempre com o perfil do último jogo aberto ou ativado, até o usuário mudar ou
+    outro jogo iniciar, e o reinício do serviço não é mudança do usuário. Medido no
     mesmo dia: o daemon reiniciou e subiu na escolha à mão («Lure Of Passion»),
     com o gamepad desligado, por cima do perfil do jogo que valia. Quem grava é
     o autoswitch e o lançamento; quem apaga é o gesto do usuário
@@ -223,7 +223,7 @@ def o_ultimo_jogo() -> str | None:
 
 
 def esquecer_o_ultimo_jogo(nome: str | None = None) -> None:
-    """Apaga a memória do último jogo — toda, ou só se ela aponta `nome` (pelo slug)."""
+    """Apaga a memória do último jogo — toda, ou só se a memória aponta `nome` (pelo slug)."""
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
     atual = _ultimo_jogo_cru()
@@ -567,7 +567,7 @@ def load_navegacao_interna() -> tuple[bool, str]:
     """``(ligada, tipo)`` guardados; sem arquivo, nasce ligada no tipo Interna.
 
     Nasce LIGADA (ordem de 19/10/2026: a Interna só age com a janela na
-    frente, e fora dela os botões voltam ao jogo). Caducou nesse dia o «nasce
+    frente, e fora da janela os botões voltam ao jogo). Caducou nesse dia o «nasce
     desligada na primeira vez» (*«possa Ligar o modo e mandar ver»*). A escolha
     gravada continua valendo; conteúdo malformado conta como nunca escolhido.
     """

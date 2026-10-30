@@ -303,9 +303,9 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares, *,
 def _o_que_a_antiga_passa(opcao: Opcao, mod_id: str, lugares: Lugares,
                           ligada: bool) -> list[Any]:
     """Os valores que a antiga oferece à opção: o guardado de id igual e, pelo ``herda``, o
-    valor de outra opção traduzido pelo mapa (a chave é o valor dela em JSON). O ``herda`` lê o
+    valor de outra opção traduzido pelo mapa (a chave é o valor da antiga em JSON). O ``herda`` lê o
     valor que valia na antiga ligada, padrão incluído; da desligada não lê nada, porque o que
-    ela guardava não era o que quem usa via."""
+    a desligada guardava não era o que quem usa via."""
     bruto = _guardados(mod_id, lugares)
     valores = [bruto[opcao.id]] if opcao.id in bruto else []
     if not opcao.herda or not ligada:
