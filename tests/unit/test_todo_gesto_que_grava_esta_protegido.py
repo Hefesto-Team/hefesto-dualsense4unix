@@ -8,8 +8,8 @@ três primeiras:
    desta leva que escreve"*, e a frase era falsa: `a03_gatilhos.guardar` também
    gravava. A régua anunciou `pulados: salvar` e deixou para trás um
    `profile_salvo arquivo=meu_perfil.json`;
-2. `08-conexoes.ignorar` — o ⊘ dispensava uma ORDEM DE SERVIÇO dela a cada
-   volta, e o Check-up dela perdia uma das duas linhas que acusam nesta máquina;
+2. `08-conexoes.ignorar` — o ⊘ dispensava uma ORDEM DE SERVIÇO de quem usa a cada
+   volta, e o Check-up perdia uma das duas linhas que acusam nesta máquina;
 3. `editor.estilo` — ensinado a gravar na leva das nove
    pendências, e não acrescentado aqui no mesmo commit;
 4. **a ABA 07 INTEIRA** — achado pela `STEAM-INPUT-01` em 06/09/2026. Não era
@@ -32,19 +32,19 @@ próprio decorador o que muda — `@gesto(…, grava="save_profile")` — e a li
 contrato, que era a raiz das quatro repetições: as duas linhas moravam em
 arquivos que a sprint da aba tinha no `nao_toca`.
 
-**E ESTA RÉGUA MUDOU DE PAPEL.** Ela não é mais a lista — é o CONFERENTE, e
+**E ESTA RÉGUA MUDOU DE PAPEL.** Não é mais a lista — é o CONFERENTE, e
 cobra as DUAS direções:
 
 * **grava e não declarou** → reprova nomeando. É o buraco que a derivação
   sozinha NÃO fecha: quem esquece a linha também esquece o `grava=`. A árvore é
-  a segunda fonte, e ela é independente de propósito;
+  a segunda fonte, e é independente de propósito;
 * **declarou e a árvore não acha** → reprova também. Sem isso a declaração vira
   ruído e a régua de clique perde cobertura de graça — um botão protegido é um
   botão que ninguém prova.
 
-O QUE ELA MEDE, e por que a lista de PORTAS continua escrita à mão
+O QUE A RÉGUA MEDE, e por que a lista de PORTAS continua escrita à mão
 ------------------------------------------------------------------
-Ela LÊ o fonte de cada gesto registrado e pergunta se ele chama alguma coisa
+A régua LÊ o fonte de cada gesto registrado e pergunta se ele chama alguma coisa
 que grava (``save_profile``, ``gravar_e_reaplicar``, ``machine.declare``…).
 
 **A conta é por ÁRVORE, não por texto:** procurar `save_profile` no fonte
@@ -171,13 +171,13 @@ ISENTOS: dict[tuple[str, str], str] = {
 
 FORA_DA_ARVORE: dict[tuple[str, str], str] = {
     ("08-conexoes.html", "mapear-gravar"):
-        "grava o nome e o lugar da porta da vez no `maquina.json` dela pelo "
+        "grava o nome e o lugar da porta da vez no `maquina.json` de quem usa pelo "
         "`MapearAsPortas.gravar` do dono do mapa (`entrada_a_entrada.o_mapa()`, "
         "A-08-UM-MAPEAR-SO-01): é método de um objeto devolvido por função, e a "
         "árvore só desce por ajudante chamado pelo nome",
     ("01-jogar.html", "modo-navegacao"):
         "liga o mouse emulado pelo arranjo do perfil ativo (`desktop.arranjo."
-        "apply`); o perigo é o CURSOR andando na tela dela, e cursor não é "
+        "apply`); o perigo é o CURSOR andando na tela de quem usa, e cursor não é "
         "chamada de função. E ele GRAVA a seção `mode` do perfil ativo: desde "
         "29/09/2026 (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01) quem grava é o daemon, "
         "pelo `desktop.arranjo.apply` à mão, e o método sai da tabela do plano "
@@ -205,18 +205,18 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "escreve o arquivo do interruptor do guarda do jogo novo (`_guardar_o_interruptor`, "
         "`Path.write_text` sobre o caminho de `vigia_do_jogo_novo`) e, no duplo clique, "
         "reaplica o Steam Input, os lançadores, o Vulkan e o Proton fixado por ajudantes que "
-        "a árvore não desce pelo nome; o perigo é o arquivo de configuração dela",
+        "a árvore não desce pelo nome; o perigo é o arquivo de configuração de quem usa",
     ("09-sistema.html", "tamanho-da-interface"):
-        "grava `interface_escala` na pasta de configuração dela por "
+        "grava `interface_escala` na pasta de configuração de quem usa por "
         "`guardar_o_tamanho` (`Path.replace` de um temporário); o escritor é do próprio "
         "pacote e a árvore só nomeia as portas do daemon e do perfil",
     ("09-sistema.html", "salvar-registro"):
-        "grava o texto do painel, mascarado, no arquivo que ela escolhe pelo seletor "
-        "(`Path.write_text` sobre o caminho devolvido pela ponte); o destino é dela",
+        "grava o texto do painel, mascarado, no arquivo que quem usa escolhe pelo seletor "
+        "(`Path.write_text` sobre o caminho devolvido pela ponte); o destino é de quem usa",
     ("09-sistema.html", "copiar-registro"):
-        "põe o texto na área de transferência DELA pelo `Gtk.Clipboard`, dentro "
+        "põe o texto na área de transferência de quem usa pelo `Gtk.Clipboard`, dentro "
         "de um `GLib.idle_add` — a chamada mora numa função aninhada, e o perigo "
-        "é apagar o que ela tinha copiado, que nenhuma porta de disco nomeia",
+        "é apagar o que quem usa tinha copiado, que nenhuma porta de disco nomeia",
     ("*", "menu-desligar"):
         "chama o `parar-ou-retomar` da aba Sistema procurado na hora em "
         "`pacotes.GESTOS` (`hefesto_vivo._gesto_do_menu`); o `_systemctl` dele "
@@ -329,7 +329,7 @@ def test_todo_gesto_que_escreve_declara_grava() -> None:
         + "\n  ".join(desprotegidos)
         + "\n\nDeclare a porta no PRÓPRIO decorador — `@gesto(…, "
           'grava="save_profile")` —, NO MESMO COMMIT que o ensinou a gravar. '
-          "Sem isso, a próxima volta da régua escreve no perfil dela para "
+          "Sem isso, a próxima volta da régua escreve no perfil de quem usa para "
           "provar que sabe clicar.")
 
 
@@ -364,7 +364,7 @@ def test_toda_declaracao_a_arvore_confirma() -> None:
 
 
 def test_a_regua_acha_alguma_escrita() -> None:
-    """Guarda de vacuidade: se ela não achar NENHUM gesto que escreve, morreu."""
+    """Guarda de vacuidade: se a régua não achar NENHUM gesto que escreve, morreu."""
     achados = {f"{p}·{n}": sorted(_portas(fn))
                for (p, n), fn in _gestos_registrados().items() if _portas(fn)}
     assert len(achados) >= 3, (
@@ -424,7 +424,7 @@ def test_o_da_leva_das_nove_esta_protegido(nome: str) -> None:
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
     assert ("10-perfis.html", nome) in set(PERIGOSOS), (
-        f"`{nome}` saiu de PERIGOSOS. Ele grava no perfil dela desde a leva "
+        f"`{nome}` saiu de PERIGOSOS. Ele grava no perfil de quem usa desde a leva "
         "das nove pendências de 03/09/2026.")
 
 
@@ -437,7 +437,7 @@ def test_as_portas_da_aba_07_estao_protegidas(nome: str) -> None:
     A `STEAM-INPUT-01` mediu que a régua era cega para a aba INTEIRA. Estas
     escrevem em arquivos DO USUÁRIO: o lançador declarado no `maquina.json` e o
     perfil novo. As seis da aba antiga (a lista de exclusão, o atalho por jogo e o
-    perfil pela escolha) saíram com ela em 18/10/2026.
+    perfil pela escolha) saíram com a janela em 18/10/2026.
     """
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
@@ -473,7 +473,7 @@ def test_a_isencao_nao_alcanca_o_que_grava_valor_novo() -> None:
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
     assert ("08-conexoes.html", "ignorar") not in ISENTOS, (
-        "o ⊘ da Conexões foi isentado: ele dispensa uma ORDEM DE SERVIÇO dela, "
+        "o ⊘ da Conexões foi isentado: ele dispensa uma ORDEM DE SERVIÇO de quem usa, "
         "e o Check-up perde a linha para sempre — `ordens_da_mesa.ordens_novas` "
         "só a devolve se os cabos mudarem")
     assert ("08-conexoes.html", "ignorar") in set(PERIGOSOS), (
@@ -481,7 +481,7 @@ def test_a_isencao_nao_alcanca_o_que_grava_valor_novo() -> None:
 
 
 def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
-    """A MORDIDA QUE FALTAVA — e ela existe porque a outra não pegou.
+    """A MORDIDA QUE FALTAVA — e existe porque a outra não pegou.
 
     Arrancar a descida (fazer `_portas` ler UM nível só, como era antes de
     04/09/2026) não derrubava régua nenhuma: as entradas a mais em `PERIGOSOS`
@@ -499,7 +499,7 @@ def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
     fn = gestos[("08-conexoes.html", "adaptador-renomear")]
 
     assert "dar_nome_ao_adaptador" in _portas(fn), (
-        "a régua parou de descer pelos ajudantes do módulo: ela voltou a ler "
+        "a régua parou de descer pelos ajudantes do módulo: voltou a ler "
         "só o corpo do gesto, e é assim que o nome do adaptador ficou "
         "desprotegido até 04/09/2026."
     )

@@ -41,7 +41,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         subcampo=None,
         sem_opiniao="esta peça não escolheu cor nem brilho",
         quem_responde=(
-            "a seção global `Profile.leds`, e abaixo dela a cor automática do "
+            "a seção global `Profile.leds`, e abaixo a cor automática do "
             "slot (`led_control.player_slot_color`)"
         ),
         dono="PERFIL-02",
@@ -91,7 +91,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         subcampo=None,
         sem_opiniao="esta peça não opina sobre o mudo",
         quem_responde=(
-            "a seção global `Profile.mic`, e abaixo dela a máquina "
+            "a seção global `Profile.mic`, e abaixo a máquina "
             "(`ControleDeclarado.microfone`, em `utils/maquina.py`)"
         ),
         dono="MIC-QUINTO-AJUSTE-01",
@@ -107,7 +107,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         quem_responde=(
             "`D-AUDIO-E-GIRO-NASCEM-LIGADOS` (25/08/2026): o giroscópio nasce "
             "ligado em todo jogo — um perfil que não pediu nada não desliga o "
-            "sensor dela por omissão"
+            "sensor da peça por omissão"
         ),
         dono="SENSOR-DE-VERDADE-01",
         chave_do_mapa="movimento.giroscopio",
@@ -121,7 +121,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         sem_opiniao="esta peça não opina, e sem opinião é LIGADO",
         quem_responde=(
             "o mesmo default do irmão acima, e independente dele de propósito — "
-            'é o *"ambos"* dela, cada um por si'
+            'é o *"ambos"* da peça, cada um por si'
         ),
         dono="SENSOR-DE-VERDADE-01",
         chave_do_mapa="movimento.acelerometro",
@@ -135,7 +135,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         sem_opiniao="esta peça segue a mira do perfil, que por padrão não existe",
         quem_responde=(
             "a seção global `Profile.movimento`, campo a campo "
-            "(`roteador_de_movimento.arranjo_da_peca`); sem ela a mira fica "
+            "(`roteador_de_movimento.arranjo_da_peca`); sem isso a mira fica "
             "DESLIGADA — é arranjo, e arranjo nasce desligado"
         ),
         dono="A-MIRA-POR-MOVIMENTO-NA-TELA-01",
@@ -150,7 +150,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         sem_opiniao="esta peça segue a ativação do perfil, que por padrão não existe",
         quem_responde=(
             "a seção global `Profile.ativacao`, campo a campo "
-            "(`ativacao_de_botao.montar`); sem ela todo botão passa como o "
+            "(`ativacao_de_botao.montar`); sem isso todo botão passa como o "
             "controle o aperta — alternar, repetir e esperar o toque longo são "
             "arranjo de quem joga, e arranjo nasce desligado"
         ),
@@ -166,7 +166,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         sem_opiniao="esta peça segue os analógicos do perfil, que por padrão não existem",
         quem_responde=(
             "a seção global `Profile.analogicos`, campo a campo "
-            "(`curva_do_analogico.montar`); sem ela o jogo recebe o curso do controle "
+            "(`curva_do_analogico.montar`); sem isso o jogo recebe o curso do controle "
             "byte a byte — zona morta, curva, inversão, troca e a mão são arranjo de "
             "quem joga, e arranjo nasce desligado"
         ),
@@ -183,7 +183,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         quem_responde=(
             "a seção global `Profile.remapeamento`, somada botão a botão à da peça "
             "(`remapeamento_de_botao.juntar`: a peça vence, e `botão: botão` cancela a do perfil "
-            "só nela); sem ela o botão passa como o controle o aperta — a disposição de quem "
+            "só na peça); sem isso o botão passa como o controle o aperta — a disposição de quem "
             "joga é arranjo, e arranjo nasce desligado"
         ),
         dono="O-REMAPEAMENTO-VALE-POR-JOGADOR-01",
@@ -204,7 +204,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
             "interruptor (na aba Controles ele é leitura viva), e o mapa fecha "
             "o outro lado: `toque.touchpad.escrita` tem `existe=nao-tem` — o "
             "aparelho não tem por onde receber escrita de touchpad. É pergunta "
-            "aberta para ELA, não dívida com dono"
+            "aberta para quem decide o produto, não dívida com dono"
         ),
     ),
 )
@@ -346,7 +346,7 @@ def _contas_da_docstring() -> list[tuple[str, str]]:
     """As contas escritas à mão na docstring de `ControllerOverrides`.
 
     O código versionado não tem comentário: a conta que morava no corpo da classe passou à
-    docstring dela, e a régua lê o ``__doc__``.
+    docstring da função, e a régua lê o ``__doc__``.
     """
     razao = ControllerOverrides.__doc__ or ""
     return [(a.upper(), b.upper()) for a, b in _FORMA_DA_CONTA.findall(razao)]
@@ -357,7 +357,7 @@ def test_a_conta_escrita_no_esquema_acompanha_os_campos() -> None:
     contas = _contas_da_docstring()
     assert len(contas) == 1, (
         f"esperava UMA conta na docstring de ControllerOverrides e achei "
-        f"{len(contas)}: {contas}. Duas ocorrências tornam ambíguo qual delas é "
+        f"{len(contas)}: {contas}. Duas ocorrências tornam ambíguo qual das duas é "
         "a conta — se você escreveu uma frase que CITA a forma da conta, "
         "reescreva-a sem citá-la."
     )
@@ -394,13 +394,13 @@ def test_a_conta_escrita_no_esquema_acompanha_os_campos() -> None:
 def test_sem_opiniao_e_declarado_em_toda_feature_presente(linha: LinhaDoCenso) -> None:
     """Campo que existe diz o que `None` significa NELE, e quem responde."""
     assert linha.quem_responde.strip(), (
-        f"{linha.feature}: ninguém foi declarado para responder no lugar dela"
+        f"{linha.feature}: ninguém foi declarado para responder no seu lugar"
     )
 
     if linha.nivel == "ausente":
         assert not linha.sem_opiniao, (
             f"{linha.feature}: está `ausente` do perfil, então não há `None` a "
-            "explicar — o que ela precisa declarar é `mora_em`"
+            "explicar — o que a linha precisa declarar é `mora_em`"
         )
         assert linha.mora_em.strip(), (
             f"{linha.feature}: está fora do perfil e não diz ONDE mora nem por "
@@ -460,21 +460,21 @@ def test_existe_exatamente_uma_feature_sem_dono_e_o_usuario_e_o_touchpad(
     sem_dono = features_sem_dono(CENSO)
     assert sem_dono == [FEATURE_SEM_DONO], (
         f"esperava exatamente uma feature sem dono ({FEATURE_SEM_DONO!r}) e "
-        f"encontrei {sem_dono}. Se o touchpad ganhou dono, a pergunta dela foi "
+        f"encontrei {sem_dono}. Se o touchpad ganhou dono, a sua pergunta foi "
         "respondida — e então FEATURE_SEM_DONO e a docstring deste arquivo "
-        "mudam junto. Se apareceu OUTRA sem dono, ela precisa de linha própria "
+        "mudam junto. Se apareceu OUTRA sem dono, precisa de linha própria "
         "no censo, com o motivo escrito"
     )
 
     linha = next(item for item in CENSO if item.feature == FEATURE_SEM_DONO)
     assert linha.nivel == "ausente" and linha.campo is None, (
-        "o touchpad ganhou campo no perfil sem ninguém decidir por ela — "
+        "o touchpad ganhou campo no perfil sem ninguém decidir — "
         "inventá-lo aqui seria feature nova"
     )
 
     print(
         f"[censo] SEM DONO: {linha.feature} — {linha.mora_em}\n"
-        "[censo] a pergunta que espera a palavra dela: o touchpad de cada "
+        "[censo] a pergunta que espera decisão de produto: o touchpad de cada "
         "controle guarda alguma coisa no perfil do jogo (ligado/desligado, ou "
         "sensibilidade), ou é só leitura?"
     )

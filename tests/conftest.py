@@ -437,7 +437,7 @@ def _faixa_no_fim_da_sessao(session: Any) -> None:
         "  `HOME`/`XDG_*`: procure caminho ABSOLUTO escrito à mão, `pwd`/",
         "  `getpwuid` (que ignoram o HOME) e `sudo`/`systemd-run`, que trocam de",
         "  usuário e de ambiente.",
-        f"  Escotilha: {_FAIXA_DESLIGADA_ENV}=1 (e ela NÃO é a do canário).",
+        f"  Escotilha: {_FAIXA_DESLIGADA_ENV}=1 (e NÃO é a do canário).",
     ])
     session.exitstatus = 1
 
@@ -557,7 +557,7 @@ def _fotografar_arvore(raiz: Path, pesados: frozenset[str] | None = None) -> _Fo
     """{caminho: (mtime_ns, tamanho, resumo)} sob `raiz`. Ausente = dict vazio.
 
     O primeiro nível entra inteiro. Cada pasta de primeiro nível é andada até
-    o teto (`_CANARIO_TETO_ENTRADAS` / `_CANARIO_TETO_BYTES`); estourado, ela
+    o teto (`_CANARIO_TETO_ENTRADAS` / `_CANARIO_TETO_BYTES`); estourado, a vigia
     vira UMA entrada `_CANARIO_PESADO`. `pesados` é a lista da foto do começo:
     esses não são andados de novo, e um pesado que encolhe não vira chuva de
     CRIADO. Link é entrada, nunca caminho.
@@ -651,7 +651,7 @@ def _deltas_do_canario(
 ) -> list[str]:
     """Lista legível do que mudou entre as duas fotos (vazia = nada mudou).
 
-    A pasta que passou do teto durante a sessão é UMA linha: o que mora nela
+    A pasta que passou do teto durante a sessão é UMA linha: o que mora dentro
     não foi apagado, só deixou de ser fotografado.
     """
     novos_pesados = [
@@ -854,7 +854,7 @@ def _varrer_berco(session: Any, exitstatus: int) -> None:
             f"BERCO-DE-TMP-01 (aviso, não é portão): apareceram em "
             f"{_TMP_REAL[0]} durante a sessão, FORA do berço: "
             f"{', '.join(mostrados)}{cauda}",
-            "  A máquina dela também escreve em /tmp — mas se algum destes tem "
+            "  A máquina de quem roda também escreve em /tmp — mas se algum destes tem "
             "cara de teste,",
             "  é caminho FIXO escrito à mão num teste, e caminho fixo ignora o "
             "TMPDIR do berço.",
@@ -1063,7 +1063,7 @@ _CASOS_DO_RUNTIME = itertools.count()
 
 
 def runtime_real() -> Path:
-    """O `XDG_RUNTIME_DIR` de verdade, o de antes do desvio, onde mora o socket do daemon dela."""
+    """O `XDG_RUNTIME_DIR` de verdade, o de antes do desvio, onde mora o socket do daemon vivo."""
     if _RUNTIME_REAL:
         return _RUNTIME_REAL[0]
     bruto = (os.environ.get("XDG_RUNTIME_DIR") or "").strip()
@@ -1263,7 +1263,7 @@ def _marcar_o_diario_da_janela() -> None:
 
 
 def _gestos_da_janela_do_usuario() -> list[str]:
-    """Os `[gesto]` que a janela DELA anotou desde o começo da sessão."""
+    """Os `[gesto]` que a janela de verdade anotou desde o começo da sessão."""
     if not _INTERFACE_LOG_INICIO:
         return []
     caminho, inicio = _INTERFACE_LOG_INICIO[0]
@@ -1361,7 +1361,7 @@ def _vigia_no_fim_da_sessao(session: Any) -> None:
             *([f"  ... e mais {restam}"] if restam > 0 else []),
             "  Um teste que precisa de aparelho de entrada precisa de um DUBLÊ:",
             "  veja `_nenhum_uinput_de_verdade` neste conftest. Em 20/08/2026",
-            "  isto custou 1289 nós num dia e a tela cheia dela no meio do jogo.",
+            "  isto custou 1289 nós num dia e a tela cheia de quem usa no meio do jogo.",
         ])
         session.exitstatus = 1
 
@@ -1382,7 +1382,7 @@ def _vigia_no_fim_da_sessao(session: Any) -> None:
         f"{len(nossos)} nó(s) com nome do produto durante esta sessão:",
         *[f"  - {n} x{q}" for n, q in contados[:_VIGIA_LIMITE_RELATO]],
         "  Se nenhum teste apareceu no livro acima, quase sempre é o daemon "
-        "VIVO dela criando vpad (ela joga enquanto a suíte roda).",
+        "VIVO da máquina criando vpad (há quem jogue enquanto a suíte roda).",
         "  Vale investigar quando a suíte tiver subido um processo FILHO do "
         "produto: é o único caminho que a vigia da porta não enxerga.",
     ])
@@ -1403,7 +1403,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             f"({len(deltas_produto)} arquivo(s)):",
             *[f"  - {d}" for d in mostrados],
             *([f"  ... e mais {restam}"] if restam > 0 else []),
-            "  A bancada mediu a foto do início; a árvore de hoje é outra. Este",
+            "  A vigia mediu a foto do início; a árvore de hoje é outra. Este",
             "  run NÃO decide nada — nem o verde, nem o vermelho. Rode de novo",
             "  com a árvore parada (um mutador por vez, ou um git worktree por",
             "  frente) antes de gravar qualquer nota que dependa dele.",
@@ -1431,11 +1431,11 @@ def _sessionfinish_das_guardas(session: Any) -> None:
             f"árvore que a suíte não devia provocar ({len(deltas_aviso)}):",
             *[f"  - {d}" for d in mostrados],
             *([f"  ... e mais {restam}"] if restam > 0 else []),
-            "  Quase sempre isto NÃO é a suíte escrevendo: é o daemon VIVO dela",
+            "  Quase sempre isto NÃO é a suíte escrevendo: é o daemon VIVO da máquina",
             "  reagindo ao que a suíte faz em /dev/input (procure no journal por",
             "  `backend_hotplug_reconcile trigger=input_dir_change`). Ver a",
             "  SUITE-QUE-SUJA-O-JORNAL-01. Nada aqui é restaurado: escrita da",
-            "  daemon dela é trabalho real, e desfazê-la seria o dano maior.",
+            "  daemon vivo é trabalho real, e desfazê-la seria o dano maior.",
         ])
 
     foto_fim = _fotografar_tudo(_CANARIO_FOTO_INICIAL)
@@ -1466,7 +1466,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
         _escrever_no_terminal(session, [
             "",
             "CANARIO-FS-01 (aviso, não é portão): o ~/.config do produto mudou com a janela "
-            f"de quem roda aberta, e ela anotou {len(gestos)} gesto(s) no mesmo intervalo:",
+            f"de quem roda aberta, e a janela anotou {len(gestos)} gesto(s) no mesmo intervalo:",
             *[f"  - {d}" for d in no_config],
             *[f"  gesto: {g}" for g in gestos[-_CANARIO_LIMITE_AVISO:]],
         ])
@@ -1478,7 +1478,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
         "CANARIO-FS-01: a suíte ESCREVEU nos diretórios reais da usuária "
         f"({len(deltas)} mudança(s)):",
         *([
-            f"{_GUARDA_PORTAO}: escrita no ~/.config do produto sem gesto da janela dela "
+            f"{_GUARDA_PORTAO}: escrita no ~/.config do produto sem gesto da janela de verdade "
             "no intervalo"
         ] if any(d in no_config for d in deltas) else []),
         *[f"  - {d}" for d in deltas],
@@ -1603,7 +1603,7 @@ class NascimentoDeAparelho:
 
 
 class AparelhoRecusadoError(PermissionError):
-    """A porta fechada, e ela é ``OSError`` de propósito."""
+    """A porta fechada, e é ``OSError`` de propósito."""
 
 
 class VigiaDeAparelho:
@@ -1698,7 +1698,7 @@ def _vigia_ligada() -> bool:
 
 
 def vigia_da_sessao() -> VigiaDeAparelho | None:
-    """A vigia desta sessão, ou None quando ela não está armada."""
+    """A vigia desta sessão, ou None quando não está armada."""
     return _VIGIA[0] if _VIGIA else None
 
 
@@ -1864,10 +1864,10 @@ def _hefesto_fake_env(
 def _nenhum_controle_de_fora_da_mesa_do_usuario_entra_no_coop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O co-op de um caso não adota o Pro Controller nem o 8BitDo que estiverem plugados nela.
+    """O co-op de um caso não adota o Pro Controller nem o 8BitDo plugados na máquina.
 
     D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL: sem isto, o ``sync`` de qualquer caso de co-op
-    varria o ``/dev/input`` de verdade, pedia ao broker o esconderijo do hidraw do controle dela
+    varria o ``/dev/input`` de verdade, pedia ao broker o esconderijo do hidraw do controle real
     e o agarrava. O caso que mede o externo devolve a lista dele por cima desta.
     """
     try:
@@ -1930,7 +1930,7 @@ def _nenhum_gadget_a_caminho_atravessa() -> Iterator[None]:
     O-PAR-DO-PAD (12/10/2026): o som não cria o endpoint de háptica enquanto
     houver gadget a caminho (``pad_usb.a_ancora_ou_a_espera``), e o pad sem dono
     vale para todo aparelho até o prazo dele vencer. A porta registrada e o
-    motivo de quem ficou sem ela (TODO-PAD-TEM-PORTA-PROPRIA-01) também não
+    motivo de quem ficou sem a porta (TODO-PAD-TEM-PORTA-PROPRIA-01) também não
     atravessam de um caso ao outro.
     """
     try:
@@ -2016,7 +2016,7 @@ def _nenhum_hub_de_sensores_atravessa() -> Iterator[None]:
     OS-TRES-VERMELHOS-DE-TEMPO-DO-LINT-TEST-NO-CI-01 (20/10/2026): o caso que pede o
     `_garantir_sensor_hub` a um servidor que nunca sobe (o handler chamado direto) não passa
     pelo `IpcServer.stop`. A manutenção dele seguia viva no processo, com o jogo do daemon de
-    mentira ligado, e no segundo ciclo dela (1 s cada) dentro de um caso SEGUINTE abria o
+    mentira ligado, e no segundo ciclo (1 s cada) dentro de um caso SEGUINTE abria o
     touchpad da mesa de mentira dele.
     """
     antes = set(_hubs_de_sensores_vivos())
@@ -2268,7 +2268,7 @@ def fabrica_de_ensaio(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
 
     A ARMADILHA Nº 1 DESTA CASA FICA FECHADA AQUI: `prepareReport` tem um
     `except Exception` que cai no report do UPSTREAM (cujo 0x31 é malformado).
-    Um atributo faltando na bancada faria o teste medir a pydualsense e chamar
+    Um atributo faltando no dublê faria o teste medir a pydualsense e chamar
     isso de produto — instrumento brigando com o produto, medição inventada.
     Com este monkeypatch, o fallback EXPLODE em vez de mentir.
 
@@ -2282,7 +2282,7 @@ def fabrica_de_ensaio(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
 
     def _fallback_proibido(self: Any) -> list[int]:
         raise AssertionError(
-            "prepareReport caiu no fallback do upstream: a bancada está "
+            "prepareReport caiu no fallback do upstream: o dublê está "
             "incompleta e o teste mediria a pydualsense, não o hefesto"
         )
 
@@ -2306,7 +2306,7 @@ def fabrica_de_ensaio(monkeypatch: pytest.MonkeyPatch) -> Callable[..., Any]:
 def ds5_de_ensaio(
     transporte: EnvelopeDeTransporte, fabrica_de_ensaio: Callable[..., Any]
 ) -> Any:
-    """O handle de bancada do transporte DESTE caso (ver `fabrica_de_ensaio`)."""
+    """O handle de ensaio do transporte DESTE caso (ver `fabrica_de_ensaio`)."""
     return fabrica_de_ensaio(transporte)
 
 
@@ -2392,18 +2392,18 @@ def _nenhum_sysfs_vivo_na_varredura_de_vpad(
     """A varredura de `/sys/class/input` do `state_full` aponta para o VAZIO.
 
     Irmã da `_nenhum_uinput_de_verdade` logo acima, e pela mesma razão: a
-    máquina de desenvolvimento é a máquina dela, e ali há vpads de VERDADE em
+    máquina de desenvolvimento é a de quem usa, e ali há vpads de VERDADE em
     `/sys/class/input`. A `integrations/no_do_vpad.resolver_no_do_vpad` roda
     dentro do `_handle_daemon_state_full`, que dezenas de testes chamam — sem
     esta fixture, cada um deles leria o sysfs vivo e o payload sob teste
     passaria a depender de quantos controles estavam ligados no momento.
 
-    Não é só hermetismo: um teste que casasse com o `event22` de verdade dela
-    estaria afirmando sobre o aparelho dela, e afirmação sobre aparelho nesta
-    casa se mede na bancada, nunca na suíte.
+    Não é só hermetismo: um teste que casasse com um `event22` de verdade
+    estaria afirmando sobre o aparelho da máquina, e afirmação sobre aparelho nesta
+    casa se mede no ensaio no aparelho, nunca na suíte.
 
     Vazio, e não um dublê: quem PRECISA de uma árvore forjada a monta e
-    aponta as constantes para ela com `monkeypatch` (escopo de função, que
+    aponta as constantes para a árvore com `monkeypatch` (escopo de função, que
     desfaz por cima desta). O default da suíte é "não achei nó nenhum", que é
     a resposta honesta de uma máquina sem vpad.
     """
@@ -2446,30 +2446,30 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
     (SOM-FIADO-01). Na primeira corrida depois disso,
     `test_o_no_de_som_nao_nasce_sumidouro` imprimiu isto::
 
-        som_radio_ponte_de_pe   arranjo=0x35  uniq=<o DualSense dela>
+        som_radio_ponte_de_pe   arranjo=0x35  uniq=<o DualSense da máquina>
 
-    **Aquele `uniq` era o controle DELA, na mesa, ligado** — o endereço real
+    **Aquele `uniq` era um controle de verdade, ligado** — o endereço real
     saiu daqui de propósito (`scripts/check_endereco_de_radio.py` pega por
     FORMA, e está certo). A suíte tinha aberto
-    o hidraw do aparelho dela e subido uma ponte de som — porque
+    o hidraw do aparelho real e subido uma ponte de som — porque
     `controles_na_lista()` varre `/sys/class/hidraw` de verdade, e agora há
     linha de produção chamando isso dentro de todo teste que sobe um `Daemon`.
 
     Não é só hermetismo. Esta casa tem regra: *afirmação sobre aparelho se mede
-    na bancada, nunca na suíte* — e um teste que fala com o DualSense dela
+    no ensaio no aparelho, nunca na suíte* — e um teste que fala com um DualSense real
     disputa o hidraw com o daemon vivo, que é exatamente a armadilha nº 3 de
     `COMO-OLHAR-A-TELA.md`.
 
     Vazio, e não um dublê, pelo mesmo motivo da irmã: o default é *"não achei
     controle nenhum"*, que é a resposta honesta de uma máquina sem DualSense.
-    Quem precisa de uma árvore forjada a monta e aponta a constante para ela
+    Quem precisa de uma árvore forjada a monta e aponta a constante para a árvore
     com `monkeypatch` de escopo de função, que desfaz por cima desta.
 
     O BACKEND É O TERCEIRO LEITOR (O-BACKEND-NAO-LE-O-HIDRAW-DA-MAQUINA-NA-SUITE-01,
     28/09/2026): o dedupe do `_enumerate_device_keys` perguntava o barramento de
     cada nó ao `/sys/class/hidraw` da máquina, e o «1º vence» do
     `test_enumerate_device_keys_dedupe_e_filtra` caía conforme a ordem em que os
-    aparelhos dela nasceram no boot. A `backend_pydualsense.RAIZ_CLASS_HIDRAW`
+    aparelhos da máquina nasceram no boot. A `backend_pydualsense.RAIZ_CLASS_HIDRAW`
     aponta para a mesma pasta vazia.
     """
     vazio = tmp_path_factory.mktemp("sysfs-sem-hidraw")
@@ -2847,7 +2847,7 @@ _VERBOS_QUE_ESCREVEM_NO_SOM = ("load-module", "unload-module")
 
 @pytest.fixture(autouse=True, scope="session")
 def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
-    """`pactl load-module`/`unload-module` da suíte não chega ao PipeWire dela."""
+    """`pactl load-module`/`unload-module` da suíte não chega ao PipeWire de verdade."""
     try:
         from hefesto_dualsense4unix.integrations import (
             alto_falante_bt,
@@ -3000,7 +3000,7 @@ def motivo_do_pulo(*relativos: str, raiz: Path | None = None) -> str | None:
     if any(insumo.regra is None for insumo in ausentes):
         return None
     return (
-        "INSUMO-FORA-DO-GIT-01: esta régua é versionada e o insumo dela não é. "
+        "INSUMO-FORA-DO-GIT-01: esta régua é versionada e o seu insumo não é. "
         "Não veio para esta árvore: "
         + "; ".join(insumo.razao for insumo in ausentes)
         + " — num clone limpo (o `release.yml`) a ausência é esperada; numa "
@@ -3620,7 +3620,7 @@ def _pai_de(pid: int, raiz_proc: str = "/proc") -> int | None:
 
 
 def descende_da_sessao(pid: Any, sessao: int | None = None) -> bool:
-    """`pid` é esta sessão de pytest ou um processo que ela nasceu?"""
+    """`pid` é esta sessão de pytest ou um processo que a sessão fez nascer?"""
     try:
         atual: int | None = int(pid)
     except (TypeError, ValueError):

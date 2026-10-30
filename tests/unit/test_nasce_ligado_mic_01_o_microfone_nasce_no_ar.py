@@ -1,4 +1,4 @@
-"""NASCE-LIGADO-MIC-01 — o microfone nasce NO AR, sem gesto nenhum dela."""
+"""NASCE-LIGADO-MIC-01 — o microfone nasce NO AR, sem gesto nenhum de quem usa."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class _Resultado:
 
 
 class _EleitorDublado:
-    """`EleitorDeMicrofone` de bancada, com o MESMO contrato do campo `eleito`."""
+    """`EleitorDeMicrofone` de ensaio, com o MESMO contrato do campo `eleito`."""
 
     def __init__(self, *, elege_ok: bool = True) -> None:
         self.chamadas: list[tuple[str, Any]] = []
@@ -47,7 +47,7 @@ class _EleitorDublado:
         del conectados
         self.chamadas.append(("eleger", uniq))
         if not self._elege_ok:
-            return _Resultado(ok=False, motivo="a bancada recusou de propósito")
+            return _Resultado(ok=False, motivo="o dublê recusou de propósito")
         self.eleito = uniq
         self.fonte_do_eleito = f"hefesto_mic_{uniq[-6:]}"
         return _Resultado(ok=True, ativo=self.fonte_do_eleito)
@@ -152,7 +152,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch):
 
     O `BtMicSubsystem` nasce sem `start()`, então `_aplicar_a_palavra_do_usuario`
     sai pela porta (`_gerenciador is None`): a ponte de rádio não é desta
-    régua, e ela já tem dono em `test_o_microfone_pelo_radio_alimenta_o_no`.
+    régua, e essa já tem dono em `test_o_microfone_pelo_radio_alimenta_o_no`.
     """
 
     class Mesa:
@@ -247,7 +247,7 @@ class TestONascimentoComAMesaSemDono:
         await hotkey.nascer_no_ar(daemon, P1)
 
         assert mesa.registro.no_ar().get(P1) is True, (
-            "a palavra dela não foi dita no nascimento — o nó sobe e o "
+            "a palavra de quem usa não foi dita no nascimento — o nó sobe e o "
             "aparelho fica mudo, que é a queixa inteira"
         )
 
@@ -265,7 +265,7 @@ class TestONascimentoComAMesaSemDono:
 
     @pytest.mark.asyncio
     async def test_o_selo_le_ativo(self, mesa) -> None:
-        """A face que ELA vê, lida pelo caminho do produto.
+        """A face que quem usa vê, lida pelo caminho do produto.
 
         `_ler_o_canal_deste` é o que alimenta o `canal_ativo` do `state_full`,
         e `_faces_do_microfone` pinta o chip a partir dele. Com a fonte
@@ -289,13 +289,13 @@ class TestONascimentoComAMesaSemDono:
         await hotkey.nascer_no_ar(daemon, P1)
 
         assert mesa.eleitor.eleito == P1, (
-            "o primeiro controle da mesa não virou a fonte padrão — ela "
+            "o primeiro controle da mesa não virou a fonte padrão — quem usa "
             "continua tendo de clicar no 🎙 para ser ouvida"
         )
 
     @pytest.mark.asyncio
     async def test_nao_escreve_o_bit_do_mudo_no_firmware(self, mesa) -> None:
-        """A TRAVA MEDIDA: tomar a posse do `common[9]` mata o botão dela."""
+        """A TRAVA MEDIDA: tomar a posse do `common[9]` mata o botão do plástico."""
         daemon = mesa.daemon()
         escritas: list[Any] = []
         mesa.backend.set_microphone_mute = (  # type: ignore[method-assign]
@@ -306,7 +306,7 @@ class TestONascimentoComAMesaSemDono:
 
         assert not [e for e in escritas if e[0] is not None], (
             f"o nascimento escreveu o bit do mudo no firmware ({escritas}) — "
-            "a posse fica nossa e o botão do plástico dela para de valer"
+            "a posse fica nossa e o botão do plástico para de valer"
         )
 
     @pytest.mark.asyncio
@@ -333,11 +333,11 @@ class TestAMesaComDono:
 
         assert mesa.eleitor.eleito == P1, (
             "o segundo controle a nascer tomou a fonte padrão do primeiro — "
-            "com quatro na mesa, o microfone dela sai do caminho sozinho"
+            "com quatro na mesa, o microfone de quem usa sai do caminho sozinho"
         )
         assert [c for c in mesa.eleitor.chamadas if c[1] == P2] == [], (
-            "o nascimento do segundo chamou a eleição — ela escreve "
-            "`set-default-source` na máquina dela"
+            "o nascimento do segundo chamou a eleição — que escreve "
+            "`set-default-source` na máquina de quem usa"
         )
 
     @pytest.mark.asyncio
@@ -393,7 +393,7 @@ class TestAMesaComDono:
         elegeram = [c[1] for c in mesa.eleitor.chamadas if c[0] == "eleger"]
         assert elegeram == [P1], (
             f"mais de um nascimento elegeu ao mesmo tempo: {elegeram} — o "
-            "último a responder fica com a fonte padrão da máquina dela"
+            "último a responder fica com a fonte padrão da máquina"
         )
         assert mesa.eleitor.eleito == P1
 
@@ -419,7 +419,7 @@ class TestOSilencioDoUsuarioVence:
 
     @pytest.mark.asyncio
     async def test_o_controle_calado_impede_o_nascimento(self, mesa) -> None:
-        """Ela calou este controle: o mudo mora no dono (`maquina.json`)."""
+        """Quem usa calou este controle: o mudo mora no dono (`maquina.json`)."""
         assert maquina.gravar_o_mudo_do_microfone(P1, True)
         daemon = mesa.daemon(perfil_ativo="o-perfil-do-usuario")
 
@@ -434,7 +434,7 @@ class TestOSilencioDoUsuarioVence:
     async def test_o_mudo_de_um_perfil_nao_cala_o_nascimento(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O `mic.muted: true` que um perfil ainda carregue não é o mudo dela."""
+        """O `mic.muted: true` que um perfil ainda carregue não é o mudo de quem usa."""
         monkeypatch.setattr(
             mgr,
             "load_profile",
@@ -492,7 +492,7 @@ class TestAConexaoChamaONascimento:
 
         no_ar = hotkey._no_ar_da_sessao(daemon)
         assert no_ar.esta(P1) and no_ar.esta(P2), (
-            "a conexão não fez os microfones nascerem — ela continua tendo de "
+            "a conexão não fez os microfones nascerem — quem usa continua tendo de "
             f"clicar no 🎙 toda vez ({no_ar.todos()})"
         )
         assert mesa.registro.no_ar() == {P1: True, P2: True}
@@ -565,7 +565,7 @@ HEADSET = "alsa_input.usb-Fabricante_Headset_USB-00.mono-fallback"
 
 
 class TestAMaquinaComOutroMicrofone:
-    """O produto é para qualquer computador, não só o dela (ordem de 18/09)."""
+    """O produto é para qualquer computador, não só um (decisão de produto de 18/09)."""
 
     @pytest.mark.asyncio
     async def test_o_controle_nasce_no_ar_sem_tomar_o_padrao(self, mesa) -> None:
@@ -575,7 +575,7 @@ class TestAMaquinaComOutroMicrofone:
         assert await hotkey.nascer_no_ar(daemon, P1) is True
 
         assert mesa.eleitor.chamadas == [], (
-            "o nascimento chamou a eleição numa máquina com headset — ela "
+            "o nascimento chamou a eleição numa máquina com headset — a eleição "
             f"escreve `set-default-source` e o WirePlumber grava ({mesa.eleitor.chamadas})"
         )
         assert mesa.eleitor.eleito is None
@@ -646,7 +646,7 @@ class TestAMaquinaComOutroMicrofone:
 
         assert mesa.eleitor.eleito == P1, (
             "o canal de outro controle foi lido como microfone da máquina, e o "
-            "único microfone dela deixou de ser eleito"
+            "único microfone da máquina deixou de ser eleito"
         )
 
     @pytest.mark.asyncio
@@ -750,7 +750,7 @@ class TestAEscolhaGravadaDoUsuario:
 
         assert mesa.eleitor.chamadas == [("eleger", P2)], (
             f"com {gravada} gravado, quem elegeu foi {mesa.eleitor.chamadas} — o "
-            "Controle 1 passou por cima da escolha dela"
+            "Controle 1 passou por cima da escolha de quem usa"
         )
         assert mesa.eleitor.eleito == P2
         no_ar = hotkey._no_ar_da_sessao(daemon)
@@ -765,7 +765,7 @@ class TestAEscolhaGravadaDoUsuario:
         """O nó do cabo não diz de quem é; o dispositivo USB diz.
 
         É o nó que a eleição grava no cabo quando o canal por controle ainda não
-        subiu, e o que as configurações de som gravam quando ela escolhe o
+        subiu, e o que as configurações de som gravam quando quem usa escolhe o
         "DualSense" na lista. Um teste de prefixo pegaria o canal e deixaria
         este de fora.
         """
@@ -843,7 +843,7 @@ class TestAEscolhaGravadaDoUsuario:
     ) -> None:
         """Headset gravado e fora da tomada: esta pergunta não o segura.
 
-        Quem responde por outro microfone é `outra_captura_elegivel` (e ela diz
+        Quem responde por outro microfone é `outra_captura_elegivel` (e a função diz
         que ele não está aqui). E o nome sem cara de DualSense não custa um
         `pactl` ao nascimento.
         """
@@ -869,13 +869,13 @@ class TestARecusaDoUsuarioVenceONascimento:
 
         assert await hotkey.nascer_no_ar(daemon, P1) is False
 
-        assert mesa.registro.no_ar() == {P1: False}, "a palavra dita a quem ela calou é «calado»"
+        assert mesa.registro.no_ar() == {P1: False}, "a palavra dita a quem usa ao calar é «calado»"
         assert mesa.registro.abertos() == frozenset(), (
-            "o canal foi pedido para o controle que ela desligou — no cabo ele "
+            "o canal foi pedido para o controle que quem usa desligou — no cabo ele "
             "reabre o `hefesto_mic_<hex6>` dele"
         )
         assert not hotkey._no_ar_da_sessao(daemon).esta(P1)
-        assert mesa.eleitor.chamadas == [], "a eleição correu para quem ela calou"
+        assert mesa.eleitor.chamadas == [], "a eleição correu para o controle calado"
         assert mesa.eleitor.eleito is None
 
     @pytest.mark.asyncio
@@ -907,7 +907,7 @@ class TestARecusaDoUsuarioVenceONascimento:
 
         assert abertos == [[P2]], (
             f"o supervisor do cabo quis abrir {abertos} — o canal do controle "
-            "que ela desligou subiria com o nome dele"
+            "que quem usa desligou subiria com o nome dele"
         )
 
     def test_o_canal_do_cabo_de_pe_cai_quando_o_usuario_desliga(
@@ -928,5 +928,5 @@ class TestARecusaDoUsuarioVenceONascimento:
         mesa.subsystem._reconciliar_o_cabo([])
 
         assert fechados == [P1], (
-            "o canal do cabo continuou de pé depois de ela desligar o microfone"
+            "o canal do cabo continuou de pé depois de quem usa desligar o microfone"
         )

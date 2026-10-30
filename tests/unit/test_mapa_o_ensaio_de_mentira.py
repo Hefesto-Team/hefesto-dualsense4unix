@@ -1,16 +1,16 @@
-"""A bancada de mentira do mapa 2D — e a régua que confere a própria régua.
+"""O ensaio de mentira do mapa 2D — e a régua que confere a própria régua.
 
 CONEXÕES · MAPA 2D 01 (25/08/2026). Todos os testes desta frente medem contra
 UM sysfs em memória, e ele mora aqui. Nenhum arquivo é criado, nenhum caminho
 de ``/sys`` desta máquina é tocado: os leitores entram por argumento, que é o
-mesmo ponto de injeção que protege a foto da aba de publicar o barramento dela
+mesmo ponto de injeção que protege a foto da aba de publicar o barramento real
 num PNG versionado.
 
-DE ONDE SAI ESTA BANCADA
--------------------------
+DE ONDE SAI ESTE ENSAIO
+-----------------------
 
 Da leitura de **25/08/2026 às 02h30**, uid 1000, sem root, feita por quem
-coordena a leva. Ela substitui a tabela de 24/08 às 21h que a sprint carrega:
+coordena a leva. A leitura substitui a tabela de 24/08 às 21h que a sprint carrega:
 entre as duas, a mantenedora moveu três aparelhos, tirou a webcam e tirou o
 Wi-Fi do hub. Um teste escrito contra a tabela velha mediria uma mesa que não
 existe mais::
@@ -26,18 +26,18 @@ existe mais::
     4-1.1    05e3:0626   segundo chip, lado 3.0
     4-4      2357:012d   Archer T3U (Wi-Fi), numa traseira 3.0
 
-O QUE AQUI É MEDIDO E O QUE É DA BANCADA
------------------------------------------
+O QUE AQUI É MEDIDO E O QUE É DO ENSAIO
+---------------------------------------
 
 **Medido:** os dez caminhos acima, os ``vid:pid``, as classes que o kernel
 publica, o ``bMaxPower`` de cada um, o controlador ``0000:0c:00.3`` dos
 barramentos 3 e 4, e o serial ``123456`` do Archer T3U — o contraexemplo que
 prova que serial-é-endereço **não** é regra universal.
 
-**Da bancada, não medido:** o endereço PCI do controlador dos barramentos 1 e
+**Do ensaio, não medido:** o endereço PCI do controlador dos barramentos 1 e
 2 (aqui ``0000:0a:00.0``, um segundo controlador qualquer), e os dois seriais
 dos adaptadores Bluetooth, forjados na faixa ``aa:bb:cc`` que esta casa usa
-para dado de teste. Serial de verdade identifica a unidade dela tão bem quanto
+para dado de teste. Serial de verdade identifica a unidade tão bem quanto
 o MAC, e não entra em arquivo versionado.
 
 O DOIS ESTADOS, E OS DOIS SÃO REAIS
@@ -396,7 +396,7 @@ def ensaio_com_o_wifi_no_hub() -> Ensaio:
 
 
 def mapa_do_usuario() -> MapaDaMesa:
-    """O gabinete dela: três faces, quinze entradas, e uma por extensão."""
+    """O gabinete de teste: três faces, quinze entradas, e uma por extensão."""
     return MapaDaMesa.model_validate(
         {
             "faces": [
@@ -422,7 +422,7 @@ def mapa_do_usuario() -> MapaDaMesa:
 
 
 def test_o_ensaio_devolve_os_dez_aparelhos_da_leitura_de_agora() -> None:
-    """O censo desta bancada é a leitura de 02h30, aparelho por aparelho."""
+    """O censo deste ensaio é a leitura de 02h30, aparelho por aparelho."""
     censo = ensaio_de_agora().censo()
     nomes = sorted(a.nome_do_kernel for a in censo.conectados())
 
@@ -437,11 +437,11 @@ def test_o_ensaio_devolve_os_dez_aparelhos_da_leitura_de_agora() -> None:
         "4-1",
         "4-1.1",
         "4-4",
-    ], f"a bancada deixou de ser a leitura de 25/08 às 02h30: {nomes}"
+    ], f"o ensaio deixou de ser a leitura de 25/08 às 02h30: {nomes}"
 
 
 def test_as_duas_entradas_da_frente_sao_indistinguiveis_para_a_maquina() -> None:
-    """O fato que obriga o mapa a ser declarado, na bancada."""
+    """O fato que obriga o mapa a ser declarado, no ensaio."""
     censo = ensaio_de_agora().censo()
     paineis = {
         a.nome_do_kernel: a.painel
@@ -451,7 +451,7 @@ def test_as_duas_entradas_da_frente_sao_indistinguiveis_para_a_maquina() -> None
 
     assert paineis == {"1-3": "right", "1-6": "right"}, (
         "as duas entradas da frente deixaram de responder a mesma coisa; sem "
-        f"isso a bancada não exercita o motivo do mapa existir: {paineis}"
+        f"isso o ensaio não exercita o motivo do mapa existir: {paineis}"
     )
 
 
@@ -472,10 +472,10 @@ def test_o_hub_de_dois_chips_enumera_em_dois_barramentos() -> None:
 
 
 def test_o_ensaio_nao_toca_um_caminho_do_sys_real() -> None:
-    """Nenhum leitor desta bancada chega perto do `/sys` desta máquina."""
+    """Nenhum leitor deste ensaio chega perto do `/sys` desta máquina."""
     ensaio = ensaio_de_agora()
     ensaio.censo()
     ensaio.mesa()
 
     vazados = [caminho for caminho in ensaio.tocados if caminho.startswith("/sys")]
-    assert not vazados, f"a bancada tocou o /sys real: {vazados[:5]}"
+    assert not vazados, f"o ensaio tocou o /sys real: {vazados[:5]}"

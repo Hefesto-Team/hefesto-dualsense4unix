@@ -23,13 +23,13 @@ GRAVAM_SEM_DECLARAR: dict[Chave, str] = {
         "que vale (`_handle_sensor_set` → `save_profile`); a outra ponta é "
         "conferida em `test_o_sensor_grava_pelo_daemon`",
     ("*", "importar"):
-        "o perfil que ela escolhe no seletor do sistema entra na pasta de "
-        "perfis dela (`write_text`), sem sobrescrever nenhum",
+        "o perfil que quem usa escolhe no seletor do sistema entra na pasta de "
+        "perfis (`write_text`), sem sobrescrever nenhum",
     ("10-perfis.html", "ordenar"):
-        "a ordem da lista vai ao `gui_preferences.json` dela, o arquivo da "
+        "a ordem da lista vai ao `gui_preferences.json` de quem usa, o arquivo da "
         "janela (`_prefs`); nenhum perfil nem aparelho muda",
     ("10-perfis.html", "largura-da-coluna"):
-        "a largura da coluna vai ao `gui_preferences.json` dela, o arquivo da "
+        "a largura da coluna vai ao `gui_preferences.json` de quem usa, o arquivo da "
         "janela (`_prefs`); nenhum perfil nem aparelho muda",
 }
 
@@ -38,27 +38,27 @@ _RASCUNHO_DO_MAPA = (
     "declara `grava=`; gravar a cada clique salvaria meia escolha")
 _LACO_DO_MAPEAR = (
     "tela do «Mapear entrada a entrada»: as fases do laço; cada resposta "
-    "grava no gesto dela (`responder`, `nao_alcanco`, que declaram `grava=`)")
+    "grava no gesto de quem usa (`responder`, `nao_alcanco`, que declaram `grava=`)")
 _PERGUNTA_DO_HUB = (
     "tela: abre ou fecha a pergunta do hub (`perguntando_o_hub`); quem liga "
-    "o hub e grava o mapa é o «Gravar» dela (`novo-hub-gravar`), que declara `grava=`")
+    "o hub e grava o mapa é o «Gravar» de quem usa (`novo-hub-gravar`), que declara `grava=`")
 _PERGUNTA_DO_RADIO = (
-    "abre a pergunta do rádio; quem muda o pareamento é a confirmação dela, "
+    "abre a pergunta do rádio; quem muda o pareamento é a confirmação de quem usa, "
     "que declara `grava=`")
 
 ATOS: dict[Chave, str] = {
     ("03-gatilhos.html", "sentir"):
         "ato: toca o efeito da área de criar nos gatilhos do controle e devolve o que ele "
-        "recebia antes; nenhuma escolha dela muda (A-ABA-GATILHOS-DO-TODO-01)",
+        "recebia antes; nenhuma escolha de quem usa muda (A-ABA-GATILHOS-DO-TODO-01)",
     ("*", "aplicar"):
         "ato: manda o perfil do disco aos controles e não muda escolha "
         "nenhuma (`D-2709-O-SALVAR-LE-O-PERFIL`)",
     ("*", "exportar"):
-        "ato: copia o arquivo do perfil para FORA, onde ela escolhe; nenhum "
-        "perfil nem aparelho dela muda",
+        "ato: copia o arquivo do perfil para FORA, onde quem usa escolhe; nenhum "
+        "perfil nem aparelho de quem usa muda",
     ("*", "menu-atualizar"):
         "ato: o botão direito manda reler o que o Hefesto lê (`daemon.reload`); "
-        "nenhuma escolha dela muda (A-BASE-COMUM-DAS-ABAS-01)",
+        "nenhuma escolha de quem usa muda (A-BASE-COMUM-DAS-ABAS-01)",
     ("*", "menu-reconectar"):
         "ato: o botão direito chama o «Reconectar» da aba Jogar (`coop.sync` e "
         "`identity.renumber`); nenhuma escolha muda (19/10/2026)",
@@ -77,11 +77,11 @@ ATOS: dict[Chave, str] = {
         "sessão da mesa: o número do jogador é de quem segura qual lugar, e o "
         "registro de identidade do daemon é o dono dele — não é campo do perfil",
     ("05-vibracao.html", "testar"):
-        "sessão: o teste segura os motores enquanto ela olha (o coração da "
-        "janela), e nada vai ao perfil — ordem dela de 15/09",
+        "sessão: o teste segura os motores enquanto quem usa olha (o coração da "
+        "janela), e nada vai ao perfil — decisão de 15/09",
     ("05-vibracao.html", "parar"):
         "sessão: corta o teste daquele controle e devolve os motores ao jogo; "
-        "parar não muda a vibração no jogo — ordem dela de 15/09",
+        "parar não muda a vibração no jogo — decisão de 15/09",
     ("05-vibracao.html", "testar-haptica"):
         "sessão: o teste «Háptica» toca a vibração fina daquele controle até o "
         "«Parar» (o coração da janela o rebate), e nada vai ao perfil",
@@ -110,10 +110,10 @@ ATOS: dict[Chave, str] = {
         "impedimentos lidos agora); quem muda algo é o gesto de lá, que declara `grava=`",
     ("07-lancadores.html", "configurar-modificacao"):
         "tela: abre a janela de opções da extensão com o valor de agora; quem grava cada opção "
-        "é o gesto dela (`guardar-opcao-da-modificacao`), que declara `grava=`",
+        "é o gesto de quem usa (`guardar-opcao-da-modificacao`), que declara `grava=`",
     ("07-lancadores.html", "cancelar-modificacao"):
         "tela: o X da janela da extensão fecha e devolve à extensão o modo guardado do "
-        "controle livre; nada se grava, porque cada escolha já gravou no gesto dela",
+        "controle livre; nada se grava, porque cada escolha já gravou no seu gesto",
     ("07-lancadores.html", "escolher-o-lancador"):
         "rascunho da janela «Configurar»: o atalho apontado espera o Guardar "
         "(`guardar-lancador`), que declara `grava=`",
@@ -121,10 +121,10 @@ ATOS: dict[Chave, str] = {
         "leitura: esquece o cache, procura o lançador no disco de novo e diz onde ele está",
     ("07-lancadores.html", "parar-tudo-da-modificacao"):
         "ato: o serviço publica o gesto «para» só àquela extensão (`mods.parar_tudo`), e os "
-        "aparelhos dela vão a zero; o nível e o perfil guardados não mudam",
+        "aparelhos de quem usa vão a zero; o nível e o perfil guardados não mudam",
     ("07-lancadores.html", "acao-da-modificacao"):
         "ato: o serviço leva o clique só àquela extensão (`mods.acao`), e quem age no aparelho é "
-        "ela; nenhuma escolha guardada muda no Hefesto",
+        "a extensão; nenhuma escolha guardada muda no Hefesto",
     ("07-lancadores.html", "aba-da-modificacao"):
         "tela: a aba trocada na janela da extensão fica a aberta ao redesenhar e desarma o "
         "Esquecer que esperava o segundo clique; nada se grava",
@@ -132,8 +132,8 @@ ATOS: dict[Chave, str] = {
         "ato: o arrastar do controle livre vai à extensão (`mods.livre`, 20 por segundo); nada "
         "fica guardado",
     ("07-lancadores.html", "arrastar-a-opcao-da-modificacao"):
-        "ato: o arrastar de um deslizante vai à extensão (`mods.opcao`, 20 por segundo) e ela "
-        "aplica na hora; quem grava é o soltar, no `guardar-opcao-da-modificacao`",
+        "ato: o arrastar de um deslizante vai à extensão (`mods.opcao`, 20 por segundo) "
+        "e a extensão aplica na hora; quem grava é o soltar, no `guardar-opcao-da-modificacao`",
     ("07-lancadores.html", "soltar-o-livre-da-modificacao"):
         "ato: o soltar da barra do controle livre vai à extensão com o valor final; nada fica "
         "guardado",
@@ -157,7 +157,7 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "entrada-pular"): _LACO_DO_MAPEAR,
     ("08-conexoes.html", "equilibrar-radio"): _PERGUNTA_DO_RADIO,
     ("08-conexoes.html", "escolher-aparelho"):
-        "tela: o primeiro tempo do mover, o aparelho na mão dela",
+        "tela: o primeiro tempo do mover, o aparelho na mão de quem usa",
     ("08-conexoes.html", "esquecer-aparelho"): _PERGUNTA_DO_RADIO,
     ("08-conexoes.html", "examinar-portas"):
         "leitura: refaz o exame das portas e a leitura do barramento",
@@ -165,7 +165,7 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "novo-hub-cancelar"): _PERGUNTA_DO_HUB,
     ("08-conexoes.html", "receptor-descobrir"):
         "ato: começa e anda o «Descobrir a faixa» (tirar, medir, pôr, medir); a banda achada "
-        "só vai ao `maquina.json` no tique que fecha a medida, e não é escolha dela",
+        "só vai ao `maquina.json` no tique que fecha a medida, e não é escolha de quem usa",
     ("08-conexoes.html", "mapear-comecar"): _LACO_DO_MAPEAR,
     ("08-conexoes.html", "mapear-parar"): _LACO_DO_MAPEAR,
     ("08-conexoes.html", "sugerir-alocacao"):
@@ -184,8 +184,8 @@ ATOS: dict[Chave, str] = {
         "ato: ativa o perfil escolhido (`profile.switch`); o perfil que vale é "
         "da sessão do daemon, e os campos do perfil já estão no disco",
     ("10-perfis.html", "procurar"):
-        "memória da janela: o filtro que ela digitou; um filtro que voltasse "
-        "do disco esconderia perfis dela na próxima abertura",
+        "memória da janela: o filtro que quem usa digitou; um filtro que voltasse "
+        "do disco esconderia perfis na próxima abertura",
     ("10-perfis.html", "recarregar"):
         "leitura: relê a lista de perfis do disco agora",
     ("10-perfis.html", "selecionar"):
@@ -217,7 +217,7 @@ def test_todo_gesto_tem_um_veredito() -> None:
     classificados = set().union(*_categorias().values())
     sem = sorted(f"{p}·{n}" for p, n in set(pacotes.GESTOS) - classificados)
     assert not sem, (
-        "gesto(s) sem veredito — ele muda uma escolha dela e não grava, ou não "
+        "gesto(s) sem veredito — ele muda uma escolha de quem usa e não grava, ou não "
         "é escolha e ninguém disse por quê:\n  " + "\n  ".join(sem)
         + "\n\nSe o gesto muda uma escolha, ele grava no clique e declara "
           "`grava=`; se não é escolha, entra em `ATOS` com a razão.")
@@ -276,7 +276,7 @@ def test_o_sensor_grava_pelo_daemon() -> None:
     grava = {getattr(no.func, "id", getattr(no.func, "attr", ""))
              for no in ast.walk(handler) if isinstance(no, ast.Call)}
     assert grava & {"save_profile", "gravar_pelo_gesto"}, (
-        "o `sensor.set` do daemon deixou de gravar: o sensor que ela "
+        "o `sensor.set` do daemon deixou de gravar: o sensor que quem usa "
         "desliga voltaria ligado no próximo Salvar ou na próxima troca")
 
 

@@ -2,7 +2,7 @@
 
 O DEFEITO, MEDIDO: **existe quem retoma e não existe quem suspende.** A flag
 ``daemon._steam_input_vpad_suspenso`` só pode andar para ``False`` desde
-``08e4633`` (09/08/2026), e o produto continua LENDO os dois valores dela. Uma
+``08e4633`` (09/08/2026), e o produto continua LENDO os seus dois valores. Uma
 das duas respostas é impossível, e nada no produto diz isso: **é pior que
 ausência de dado, é dado que mente sempre para o mesmo lado.**
 
@@ -11,7 +11,7 @@ O RAIO DO ESTRAGO — cinco leitores em produção, e DOIS estão na tela
 Censo de 25/08/2026. Nenhum destes cinco pode responder ``True``:
 
 1. ``daemon/lifecycle.py:1272`` — ``CALADA_VPAD_SUSPENSO`` é a razão de calada
-   do gate do desktop, e ela **nunca é devolvida**;
+   do gate do desktop, e **nunca é devolvida**;
 2. ``daemon/subsystems/hotkey.py:153`` — ramo de modo, num ``or`` cujo outro
    lado (``steam_input_excecao_ativa``) carrega a decisão sozinho;
 3. ``daemon/ipc_handlers.py:1680`` — publica ``vpad_suspenso`` no ``state_full``
@@ -23,7 +23,7 @@ Censo de 25/08/2026. Nenhum destes cinco pode responder ``True``:
 5. ``app/actions/emulation_actions.py:300`` (**Onda 5 · Emulação**) — a frase
    *"Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, e o
    controle virtual foi recolhido"* está escrita, revisada, e é **inalcançável**:
-   a chave dela É a constante do item 1.
+   a sua chave É a constante do item 1.
 
 Os três primeiros este portão nomeia sozinho (ver ``_leituras``). Os dois da
 tela atravessam o dicionário do IPC, e a fronteira está declarada lá.
@@ -33,10 +33,10 @@ O QUE ESTE PORTÃO PERGUNTA, e por que não é a pergunta do irmão
 ``portao_a_casa_sabe_e_o_produto_nao_faz.py`` mede ALCANCE POR SÍMBOLO: *esta
 função tem chamador em produção?* Ele **não pega** este caso, e não por
 descuido — ele o classificou, em 12/08/2026, como LÁPIDE COM NOTA DATADA em
-``_NAO_E_PROMESSA``, com a razão escrita: *"Não deve chamador: ela deve
+``_NAO_E_PROMESSA``, com a razão escrita: *"Não deve chamador: a função deve
 continuar não sendo chamada."* Aquela classificação está CERTA sobre a função e
 é CEGA sobre a consequência: a lápide deixou uma FLAG viva, lida em produção, e
-metade dos valores dela virou inalcançável.
+metade dos seus valores virou inalcançável.
 
 A pergunta daqui é outra, e é sobre o ESTADO, não sobre o símbolo:
 
@@ -56,19 +56,19 @@ O defeito é **assimetria de par**: uma metade ligada, a outra não. A varredura
 não procura nome de par (``armar``/``desarmar``, ``suspend``/``resume``,
 ``enable``/``disable``) porque convenção de nome é CITAÇÃO, não DECLARAÇÃO — o
 irmão já mediu e reprovou essa via em 12/08/2026, com 525 apelidos únicos em
-``src/``. Ela procura o FATO: quem escreve ``True`` neste atributo, quem
+``src/``. A régua procura o FATO: quem escreve ``True`` neste atributo, quem
 escreve ``False``, e qual dos dois lados tem chamador em produção.
 
 MEDIDO em 25/08/2026 na árvore inteira: 17 flags booleanas de ``daemon/`` têm
 escritor dos dois lados; **uma** é assimétrica, e é a da sprint. Um portão que
 acusa dezessete não é portão, é ruído; um que acusa zero é decoração. Este
-acusa uma, e ela é a certa — a régua foi conferida contra resposta já
+acusa uma, e é a certa — a régua foi conferida contra resposta já
 conhecida antes de valer (armadilha A5).
 
 O QUE ESTE PORTÃO **NÃO** VIGIA, e o preço de cada escolha
 -----------------------------------------------------------
 - **Flag assimétrica que NINGUÉM lê.** Fica de fora de propósito: sem leitor
-  ela é código morto, e código morto é assunto do irmão. O defeito daqui é o
+  é código morto, e código morto é assunto do irmão. O defeito daqui é o
   produto RELATAR um estado que não consegue produzir; sem leitor não há
   relato. O preço: uma flag assimétrica e muda passa por aqui em silêncio.
 - **Duas classes que usam o MESMO nome de atributo** são medidas como uma flag
@@ -83,7 +83,7 @@ O QUE ESTE PORTÃO **NÃO** VIGIA, e o preço de cada escolha
   adivinhar seria inventar medição.
 - **Alcance é a RÉGUA PLANA** (existe chamada deste nome em ``src/``, fora do
   próprio corpo), não o fecho de import do irmão. Basta para a pergunta daqui:
-  ela é "existe caminho", e um armador com zero chamadas em ``src/`` não tem
+  é "existe caminho", e um armador com zero chamadas em ``src/`` não tem
   caminho nenhum, alcançado ou não. O preço: um armador chamado só por um
   módulo que ninguém importa passa por aqui e é acusado lá.
 
@@ -235,7 +235,7 @@ def _arvore_do_texto(texto: str) -> ast.Module:
     As quatro varreduras desta régua (e as mordidas, que repetem cada uma sobre
     uma cópia que difere em um arquivo) liam e parseavam os mesmos módulos. A
     chave é o texto: o arquivo mordido tem outro texto e, logo, outra árvore.
-    Quem pede a árvore não a altera (todos só caminham por ela).
+    Quem pede a árvore não a altera (todos só caminham por cima).
     """
     return ast.parse(texto)
 
@@ -251,7 +251,7 @@ def _fatos_do_texto(
     """Corpos de função, chamadas e palavras de um texto — só dependem do TEXTO.
 
     ``None`` é o módulo que não parseia. O índice de ``src/`` inteiro refazia
-    esta caminhada por todos os nós a cada varredura; aqui ela é feita uma vez
+    esta caminhada por todos os nós a cada varredura; aqui é feita uma vez
     por conteúdo e o caminho do arquivo só entra na hora de montar o índice.
     """
     try:
@@ -460,7 +460,7 @@ class TestTodoParTemAsDuasMetadesLigadas:
             + "\n\n".join(par.descreva() for par in sem_declaracao.values())
             + "\n\nOU a metade que falta ganha chamador em produção, OU as leituras "
             "saem junto com a flag. Declarar em `_PAR_ACEITO` é a terceira saída, e "
-            "ela exige razão datada com o endereço de onde a metade se perdeu — "
+            "a régua exige razão datada com o endereço de onde a metade se perdeu — "
             "não é onde se guarda dívida por preguiça de decidir."
         )
 
@@ -560,7 +560,7 @@ class TestOPortaoMorde:
         assert par.metade_morta == "True", par
         assert par.armadores == {"armar_o_plantio": False}, par.armadores
         assert par.desarmadores.get("desarmar_o_plantio") is True, (
-            "a régua não vê o chamador direto do desarmador — sem isso ela acusaria "
+            "a régua não vê o chamador direto do desarmador — sem isso acusaria "
             "as duas metades e mediria ausência, não assimetria"
         )
 
@@ -623,7 +623,7 @@ class TestOPortaoMorde:
         acusados = pares_com_metade_ligada(copia)
         assert "_plantio_da_mordida" not in acusados, (
             "a régua acusou um par cujas DUAS metades têm chamador em produção — "
-            "ela não sabe recusar, e acusaria a árvore inteira"
+            "não sabe recusar, e acusaria a árvore inteira"
         )
 
     def test_a_regua_ve_um_par_novo_plantado(self, tmp_path: Path) -> None:
@@ -631,7 +631,7 @@ class TestOPortaoMorde:
         (copia / _PLANTIO).write_text(_ARMADOR_SEM_CHAMADOR, encoding="utf-8")
         acusados = pares_com_metade_ligada(copia)
         assert "_plantio_da_mordida" in acusados, (
-            "a régua não viu um par plantado com o armador sem chamador — ela "
+            "a régua não viu um par plantado com o armador sem chamador — "
             f"acusou {sorted(acusados)}"
         )
         assert acusados["_plantio_da_mordida"].metade_morta == "True"
@@ -650,7 +650,7 @@ class TestOPortaoMorde:
         (copia / _PLANTIO).write_text(com_frase, encoding="utf-8")
         assert "_plantio_da_mordida" in pares_com_metade_ligada(copia), (
             "uma frase de tela citando o símbolo DESLIGOU o portão — a régua "
-            "voltou a contar prosa como despacho, e ela para de medir "
+            "voltou a contar prosa como despacho, e para de medir "
             "exatamente quando alguém escreve uma mensagem boa"
         )
 
@@ -892,7 +892,7 @@ class TestTodaCitacaoDeLinhaConfere:
         )
 
     def test_a_lista_de_pendentes_nao_vira_paisagem(self) -> None:
-        """Pendência consertada TEM de sair da lista — senão ela vira ruído."""
+        """Pendência consertada TEM de sair da lista — senão vira ruído."""
         queixas = enderecos_envelhecidos()
         curadas = sorted(_CITACOES_PENDENTES - set(queixas))
         assert not curadas, (
@@ -946,7 +946,7 @@ class TestTodaCitacaoDeLinhaConfere:
         chave = "utils/_citante_da_mordida.py::utils/_alvo_da_mordida.py:2"
         assert chave in queixas, (
             "a régua não viu um endereço envelhecido escrito dentro de uma "
-            f"f-string. Ela achou: {sorted(k for k in queixas if '_da_mordida' in k)}"
+            f"f-string. A régua achou: {sorted(k for k in queixas if '_da_mordida' in k)}"
         )
 
     def test_a_regua_nao_acusa_o_endereco_certo(self, tmp_path: Path) -> None:
@@ -974,7 +974,7 @@ class TestTodaCitacaoDeLinhaConfere:
         chave = "utils/_citante_da_mordida.py::utils/_alvo_da_mordida.py:2"
         assert chave in queixas, (
             "a régua não viu um endereço plantado fora do símbolo que ele "
-            f"promete. Ela achou: {sorted(queixas)}"
+            f"promete. A régua achou: {sorted(queixas)}"
         )
         queixa = queixas[chave]
         assert "linha 2" in queixa and "linha 4" in queixa, (

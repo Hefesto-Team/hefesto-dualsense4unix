@@ -104,7 +104,7 @@ def _daemon(
 
 
 def _grava(nome: str, **barras: int | None) -> None:
-    """Grava no disco um perfil com as barras do BRANCO, e só elas."""
+    """Grava no disco um perfil com as barras do BRANCO, e só essas."""
     save_profile(
         Profile(
             name=nome,
@@ -123,16 +123,16 @@ def _grava(nome: str, **barras: int | None) -> None:
 class TestAContaDoUsuario:
     def test_degrau_150_fraca_100_forte_50_sai_150_e_75(self, perfis: Path) -> None:
         """O CASO EXATO DA FRASE DE PRODUTO, do disco ao par escrito no controle."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
-        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Ensaio", controller=backend)
 
         efetivo = gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
         degrau = _degrau("max")
         esperado = (round(100 * degrau), round(100 * degrau * 0.5))
         assert efetivo == esperado, (
-            f"o par efetivo saiu {efetivo}, e a conta dela pede {esperado}: "
+            f"o par efetivo saiu {efetivo}, e a conta da barra pede {esperado}: "
             f"degrau {degrau:.0%} x barra fraca 100% no `weak`, e o MESMO "
             f"degrau x barra forte 50% no `strong`. Se os dois vieram iguais, "
             f"a barra não entrou na conta."
@@ -141,9 +141,9 @@ class TestAContaDoUsuario:
 
     def test_a_outra_peca_da_mesa_nao_e_tocada(self, perfis: Path) -> None:
         """A barra do BRANCO não escala o PRETO — é por peça, não por mesa."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
-        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Ensaio", controller=backend)
 
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=PRETO)
 
@@ -155,9 +155,9 @@ class TestAContaDoUsuario:
 
     def test_zero_cala_um_motor_e_o_outro_continua(self, perfis: Path) -> None:
         """`0` é escolha, não ausência: um motor mudo e o outro inteiro."""
-        _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=0)
+        _grava("Ensaio", motor_forte_pct=100, motor_fraco_pct=0)
         backend = _Backend()
-        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Ensaio", controller=backend)
 
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
@@ -173,9 +173,9 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
     """
 
     def test_padrao_com_50_guardado_chega_ao_fator_um(self, perfis: Path) -> None:
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=20)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=20)
         backend = _Backend()
-        d = _daemon(policy="balanceado", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="balanceado", perfil_ativo="Ensaio", controller=backend)
 
         efetivo = gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
@@ -183,9 +183,9 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
         assert backend.rumbles == [(BRANCO, 100, 100)]
 
     def test_voltar_a_maximo_restaura_os_50_que_ficaram_guardados(self, perfis: Path) -> None:
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
-        d = _daemon(policy="balanceado", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="balanceado", perfil_ativo="Ensaio", controller=backend)
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
         d.config.rumble_policy = "max"
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
@@ -200,11 +200,11 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
             ("balanceado", "max", (150, 150)), ("max", "balanceado", (100, 50))
         ):
             save_profile(Profile(
-                name="Bancada", match=MatchAny(),
+                name="Ensaio", match=MatchAny(),
                 controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                     policy=degrau_do_usuario, motor_forte_pct=50))}))
             backend = _Backend()
-            d = _daemon(policy=global_, perfil_ativo="Bancada", controller=backend)
+            d = _daemon(policy=global_, perfil_ativo="Ensaio", controller=backend)
             gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
             assert backend.rumbles == [(BRANCO, *esperado)], (degrau_do_usuario, global_)
 
@@ -224,13 +224,13 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
 
         def _degrau_do_usuario(degrau: str) -> None:
             save_profile(Profile(
-                name="Bancada", match=MatchAny(),
+                name="Ensaio", match=MatchAny(),
                 controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                     policy=degrau, motor_forte_pct=50))}))
 
         _degrau_do_usuario("balanceado")
         backend = _Backend()
-        d = _daemon(policy="balanceado", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="balanceado", perfil_ativo="Ensaio", controller=backend)
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
         _degrau_do_usuario("max")
         relogio[0] += 2.0
@@ -244,13 +244,13 @@ class TestOPadraoNaoMultiplicaEAsBarrasVoltam:
 
     def test_esquecer_os_motores_derruba_tambem_o_degrau_memoizado(self, perfis: Path) -> None:
         save_profile(Profile(
-            name="Bancada", match=MatchAny(),
+            name="Ensaio", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                 policy="balanceado", motor_forte_pct=50))}))
-        d = _daemon(policy="max", perfil_ativo="Bancada")
+        d = _daemon(policy="max", perfil_ativo="Ensaio")
         assert gp_mod._degrau_da_peca(d, BRANCO) == "balanceado"
         save_profile(Profile(
-            name="Bancada", match=MatchAny(),
+            name="Ensaio", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                 policy="max", motor_forte_pct=50))}))
         gp_mod.esquecer_motores_do_perfil(d)
@@ -270,9 +270,9 @@ class TestOQueNaoMuda:
 
     def test_as_duas_em_cem_entregam_o_degrau_inteiro(self, perfis: Path) -> None:
         """A outra metade da frase de produto: `150 · 100 · 100 → 150 e 150`."""
-        _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=100, motor_fraco_pct=100)
         backend = _Backend()
-        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Ensaio", controller=backend)
 
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
@@ -281,12 +281,12 @@ class TestOQueNaoMuda:
 
     def test_sem_endereco_pedido_nao_ha_peca(self, perfis: Path) -> None:
         """`target_uniq is None` = ninguém nomeou peça → par neutro."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=50)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=50)
         registrados: list[tuple[int, int]] = []
         controller = SimpleNamespace(
             set_rumble=lambda weak, strong: registrados.append((weak, strong))
         )
-        d = _daemon(perfil_ativo="Bancada", controller=controller)
+        d = _daemon(perfil_ativo="Ensaio", controller=controller)
 
         gp_mod.apply_game_rumble(d, 80, 90, target_uniq=None)
 
@@ -302,7 +302,7 @@ class TestOQueNaoMuda:
 
         monkeypatch.setattr(loader_module, "load_profile", _explode)
         backend = _Backend()
-        d = _daemon(perfil_ativo="Bancada", controller=backend)
+        d = _daemon(perfil_ativo="Ensaio", controller=backend)
 
         gp_mod.apply_game_rumble(d, 111, 222, target_uniq=BRANCO)
 
@@ -327,7 +327,7 @@ class TestCompoeComOTeto:
         }
         save_profile(
             Profile(
-                name="Bancada",
+                name="Ensaio",
                 match=MatchAny(),
                 rumble=RumbleConfig(policy="balanceado"),
                 controllers=overrides,
@@ -335,7 +335,7 @@ class TestCompoeComOTeto:
         )
 
         backend_falso = _Backend()
-        d = _daemon(perfil_ativo="Bancada", controller=backend_falso)
+        d = _daemon(perfil_ativo="Ensaio", controller=backend_falso)
         gp_mod.apply_game_rumble(d, 200, 200, target_uniq=BRANCO)
         _, weak_pos_barra, strong_pos_barra = backend_falso.rumbles[0]
         assert (weak_pos_barra, strong_pos_barra) == (200, 100), (
@@ -355,7 +355,7 @@ class TestCompoeComOTeto:
         real._primary_key = KEY_1
         real.set_rumble_scales(escalas)
         gp_mod.apply_game_rumble(
-            _daemon(perfil_ativo="Bancada", controller=real), 200, 200, target_uniq=BRANCO
+            _daemon(perfil_ativo="Ensaio", controller=real), 200, 200, target_uniq=BRANCO
         )
 
         fator = escalas[BRANCO]
@@ -412,7 +412,7 @@ class TestOCacheDoMapa:
         self, perfis: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O FF do jogo chega a centenas de Hz — o disco não pode ir junto."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
         leituras: list[str] = []
         original = loader_module.load_profile
 
@@ -421,7 +421,7 @@ class TestOCacheDoMapa:
             return original(nome)
 
         monkeypatch.setattr(loader_module, "load_profile", _contando)
-        d = _daemon(perfil_ativo="Bancada")
+        d = _daemon(perfil_ativo="Ensaio")
         for _ in range(10):
             gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
@@ -429,10 +429,10 @@ class TestOCacheDoMapa:
 
     def test_trocar_de_perfil_troca_o_mapa(self, perfis: Path) -> None:
         """O cache é chaveado pelo NOME do perfil ativo."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
         save_profile(Profile(name="Limpo", match=MatchAny()))
         backend = _Backend()
-        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Ensaio", controller=backend)
 
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
         d.store.active_profile = "Limpo"
@@ -442,12 +442,12 @@ class TestOCacheDoMapa:
 
     def test_invalidar_o_cache_e_uma_linha(self, perfis: Path) -> None:
         """`daemon._rumble_motores_pct = None` faz a barra nova valer AGORA."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend()
-        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Ensaio", controller=backend)
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
-        _grava("Bancada", motor_forte_pct=100, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=100, motor_fraco_pct=100)
         d._rumble_motores_pct = None
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=BRANCO)
 
@@ -455,9 +455,9 @@ class TestOCacheDoMapa:
 
     def test_o_endereco_com_dois_pontos_casa_a_peca(self, perfis: Path) -> None:
         """`AA:BB:...` e `aabbcc...` são a MESMA peça — normalizar é a cura."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
         backend = _Backend(uniqs=(KEY_1,))
-        d = _daemon(policy="max", perfil_ativo="Bancada", controller=backend)
+        d = _daemon(policy="max", perfil_ativo="Ensaio", controller=backend)
 
         gp_mod.apply_game_rumble(d, 100, 100, target_uniq=KEY_1)
 
@@ -519,14 +519,14 @@ class TestODegrauNaoEscapaSozinho:
         )
         assert "_game_rumble_mult" not in chamadas, (
             "`apply_game_rumble` voltou a chamar o DEGRAU direto — o degrau vai "
-            "ao motor sem a barra dela, e é o defeito que esta régua existe "
+            "ao motor sem a barra do controle, e é o defeito que esta régua existe "
             "para não deixar voltar"
         )
 
     def test_o_par_e_o_degrau_vezes_a_barra(self, perfis: Path) -> None:
         """A conta, isolada da escrita: `_mults_por_motor` sozinho."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
-        d = _daemon(policy="max", perfil_ativo="Bancada")
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
+        d = _daemon(policy="max", perfil_ativo="Ensaio")
 
         fraco, forte = gp_mod._mults_por_motor(d, 0.0, BRANCO)
 
@@ -568,15 +568,15 @@ def _grava_ipc(h: _Handlers, **params: Any) -> dict[str, Any]:
 
 class TestOMetodoQueGrava:
     def test_grava_a_barra_no_perfil_da_peca(self, perfis: Path) -> None:
-        """Do IPC ao disco: o par dela cai no `controllers[chave].rumble`."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        """Do IPC ao disco: o par do controle cai no `controllers[chave].rumble`."""
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
 
         corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=50, fraco_pct=100)
 
         assert corpo["status"] == "ok" and corpo["gravado"] is True
         assert (corpo["forte_pct"], corpo["fraco_pct"]) == (50, 100)
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[BRANCO]
         assert dele.rumble is not None
         assert dele.rumble.motor_forte_pct == 50
         assert "motor_fraco_pct" not in dele.rumble.model_fields_set, (
@@ -585,9 +585,9 @@ class TestOMetodoQueGrava:
 
     def test_a_gravacao_derruba_o_cache_no_mesmo_ato(self, perfis: Path) -> None:
         """A LINHA QUE FAZ A BARRA VALER AGORA, medida por dentro."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
         backend = _Backend()
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         h.daemon.controller = backend
 
         gp_mod.apply_game_rumble(h.daemon, 100, 100, target_uniq=BRANCO)
@@ -603,7 +603,7 @@ class TestOMetodoQueGrava:
         """Voltar as duas a 100 limpa as barras e PRESERVA o teto da peça."""
         save_profile(
             Profile(
-                name="Bancada",
+                name="Ensaio",
                 match=MatchAny(),
                 controllers={
                     BRANCO: ControllerOverrides(
@@ -614,30 +614,30 @@ class TestOMetodoQueGrava:
                 },
             )
         )
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
 
         corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=100, fraco_pct=100)
 
         assert corpo["gravado"] is True
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
+        dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[BRANCO]
         assert dele.rumble is not None, "a seção morreu e levou o teto junto"
         assert dele.rumble.policy == "economia", "o degrau da peça foi apagado"
         assert dele.rumble.motor_forte_pct is None
 
     def test_secao_vazia_vira_none(self, perfis: Path) -> None:
         """Sem degrau e sem barras, a seção `rumble` inteira sai do disco."""
-        _grava("Bancada", motor_forte_pct=50)
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        _grava("Ensaio", motor_forte_pct=50)
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
 
         _grava_ipc(h, uniq=BRANCO, forte_pct=100)
 
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}).get(BRANCO)
+        dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {}).get(BRANCO)
         assert dele is None or dele.rumble is None
 
     def test_nada_mudou_nao_regrava(self, perfis: Path) -> None:
         """Regravar perfil idêntico troca a data do arquivo e o daemon reaplica."""
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=100)
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=100)
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
 
         corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=50)
 
@@ -646,26 +646,26 @@ class TestOMetodoQueGrava:
         assert (corpo["forte_pct"], corpo["fraco_pct"]) == (50, 100)
 
     def test_campo_omitido_nao_mexe_na_outra_barra(self, perfis: Path) -> None:
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=20)
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=20)
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
 
         corpo = _grava_ipc(h, uniq=BRANCO, forte_pct=70)
 
         assert (corpo["forte_pct"], corpo["fraco_pct"]) == (70, 20)
 
     def test_uniq_omitido_cai_no_primario(self, perfis: Path) -> None:
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
 
         corpo = _grava_ipc(h, forte_pct=40)
 
         assert corpo["uniq"] == BRANCO
-        assert BRANCO in (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
+        assert BRANCO in (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})
 
 
     def test_mesa_vazia_recusa_com_razao(self, perfis: Path) -> None:
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=None)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=None)
         corpo = _grava_ipc(h, forte_pct=50)
         assert corpo["status"] == "sem_controle"
         assert "POR PEÇA" in corpo["motivo"]
@@ -684,11 +684,11 @@ class TestOMetodoQueGrava:
         self, perfis: Path
     ) -> None:
         """Gravar sob uma chave que o motor nunca casa faz a escolha sumir calada."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario="path:/dev/input/event9")
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario="path:/dev/input/event9")
         corpo = _grava_ipc(h, forte_pct=50)
         assert corpo["status"] == "sem_endereco"
-        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}), (
+        assert not (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {}), (
             "gravou um override sob uma chave que o motor nunca casa"
         )
 
@@ -696,29 +696,29 @@ class TestOMetodoQueGrava:
         """`02fe…` é o gamepad VIRTUAL — não é peça de plástico, não tem motor."""
         from hefesto_dualsense4unix.broker.hidraw_broker import VPAD_UNIQ_PREFIX
 
-        save_profile(Profile(name="Bancada", match=MatchAny()))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
         vpad = f"{VPAD_UNIQ_PREFIX}00000001"
-        h = _Handlers(ativo="Bancada", primario=vpad)
+        h = _Handlers(ativo="Ensaio", primario=vpad)
         corpo = _grava_ipc(h, forte_pct=50)
         assert corpo["status"] == "sem_endereco"
-        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
+        assert not (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})
 
     def test_sem_nenhum_dos_dois_campos_levanta(self, perfis: Path) -> None:
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         with pytest.raises(ValueError, match="ao menos um"):
             _grava_ipc(h, uniq=BRANCO)
 
     def test_a_faixa_e_a_do_esquema_e_nada_e_gravado(self, perfis: Path) -> None:
         """O 101 morre com a FRASE do esquema, e o disco não é tocado."""
-        save_profile(Profile(name="Bancada", match=MatchAny()))
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         with pytest.raises(ValueError, match="SEGUNDO fator"):
             _grava_ipc(h, uniq=BRANCO, forte_pct=101)
-        assert not (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})
+        assert not (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})
 
     @pytest.mark.parametrize("valor", ["50", 50.0, True, None])
     def test_tipo_errado_levanta_antes_do_disco(self, perfis: Path, valor: Any) -> None:
-        h = _Handlers(ativo="Bancada", primario=BRANCO)
+        h = _Handlers(ativo="Ensaio", primario=BRANCO)
         with pytest.raises(ValueError, match="inteiro 0-100"):
             _grava_ipc(h, uniq=BRANCO, forte_pct=valor)
 
@@ -732,13 +732,13 @@ class TestOMetodoQueGrava:
 
 class TestOEstadoDevolveAsBarras:
     def test_o_state_full_publica_as_barras_da_peca(self, perfis: Path) -> None:
-        """Sem isto a aba 05 desenha a barra onde ela ESTAVA.
+        """Sem isto a aba 05 desenha a barra onde ESTAVA.
 
         MORDIDA: apagar o bloco `result["rumble_motores"]` do `state_full`. A
         chave some e o assert nomeia o que a tela deixaria de ler.
         """
-        _grava("Bancada", motor_forte_pct=50, motor_fraco_pct=20)
-        d = _daemon(perfil_ativo="Bancada")
+        _grava("Ensaio", motor_forte_pct=50, motor_fraco_pct=20)
+        d = _daemon(perfil_ativo="Ensaio")
 
         mapa = gp_mod._motores_do_perfil_ativo(d)
         publicado = {
@@ -847,7 +847,7 @@ class TestATelaDizOProduto:
         assert "75%" in frase, f"o produto não saiu na frase: {frase}"
 
     def test_o_caso_do_usuario_barra_zero_confessa_o_zero(self) -> None:
-        """O P2 da bancada: força 200%, motores em 0%."""
+        """O P2 do ensaio: força 200%, motores em 0%."""
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
         frase = a05._quanto_multiplica({"sabe": True, "n": "200%"}, 0)
@@ -862,7 +862,7 @@ class TestATelaDizOProduto:
         assert a05._quanto_multiplica({"sabe": True, "n": "150%"}, None) == ""
 
     def test_o_pedido_do_jogo_ainda_ganha_a_dica(self) -> None:
-        """Quando o jogo TREME, o que ela precisa ver é o pedido dele."""
+        """Quando o jogo TREME, o que quem usa precisa ver é o pedido dele."""
         import inspect
 
         from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05

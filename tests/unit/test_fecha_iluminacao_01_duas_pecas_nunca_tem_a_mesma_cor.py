@@ -1,24 +1,24 @@
 """FECHA-ILUMINACAO — a cor única, e a PROCEDÊNCIA que a fez parar de adivinhar.
 
 `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (`docs/data/decisoes-de-produto.csv:56`) é
-**regra do produto, sempre**, e até 08/09/2026 não existia uma linha dela em
-`src/`. A bancada provava: dois dos quatro DualSense guardavam no perfil as
+**regra do produto, sempre**, e até 08/09/2026 não existia uma linha da regra em
+`src/`. O ensaio no aparelho provava: dois dos quatro DualSense guardavam no perfil as
 cores dos slots **1 e 2**, e hoje eles são o **2 e o 4** — o número de outro dia
 fossilizado no arquivo, com o rank 1 e o rank 2 acendendo o MESMO `#0000FF`.
 
-**A PRIMEIRA VOLTA DESTA RÉGUA MENTIU, E ESTA NASCE DISSO.** Ela tinha um
+**A PRIMEIRA VOLTA DESTA RÉGUA MENTIU, E ESTA NASCE DISSO.** A régua tinha um
 `test_o_broadcast_do_usuario_sobrevive` que punha **DOIS** controles e escolhia o
 VERDE — que numa mesa de dois não é a cor do número de ninguém. *O nome do
-teste prometia a bancada; o corpo mede o único arranjo em que o defeito não
-aparece.* Na mesa de QUATRO, com os overrides dela, o mesmo broadcast saía
+teste prometia o ensaio; o corpo mede o único arranjo em que o defeito não
+aparece.* Na mesa de QUATRO, com os overrides reais, o mesmo broadcast saía
 `[verde, vermelho, azul, rosa]`, com o P1 acendendo a cor do número do 3.
 
 **ENTÃO TODA RÉGUA DESTE ARQUIVO EXERCITA QUATRO CONTROLES**, com os overrides
-reais dela, e as três primeiras medem no PRODUTO: backend real
+reais da máquina de teste, e as três primeiras medem no PRODUTO: backend real
 (`PyDualSenseController`), handler IPC real (`IpcServer._handle_led_set`) e
 `reassert_resolved_outputs` real, com nós sysfs falsos para se poder LER o que
 saiu no fio. É a mesma disciplina de `test_led_set_broadcast.py`, e é a única
-que responde a pergunta *"que cor o plástico dela fica"*.
+que responde a pergunta *"que cor o plástico fica"*.
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ VERDE = (0, 255, 0)
 
 
 class _NoDeLed:
-    """Nó sysfs falso: guarda o que SAIU no fio, que é o que ela vê no plástico."""
+    """Nó sysfs falso: guarda o que SAIU no fio, que é o que se vê no plástico."""
 
     def __init__(self) -> None:
         self.rgb: list[tuple[int, int, int]] = []
@@ -172,7 +172,7 @@ class TestAMesaDeQuatroNoProdutoReal:
         await server._handle_led_set({"rgb": list(VERDE)})
 
         assert _no_fio(nos) == [VERDE] * 4, (
-            f"o broadcast dela morreu na mesa de quatro: "
+            f"o broadcast de quem usa morreu na mesa de quatro: "
             f"{[_hexa(c) for c in _no_fio(nos)]}")
 
     @pytest.mark.asyncio
@@ -211,7 +211,7 @@ class TestAMesaDeQuatroNoProdutoReal:
 
         **A MORDIDA:** arranque `_com_cor_unica_locked` (devolva `r.saida`) e
         esta linha reprova com `3 de 4` — dois `#0000FF`, o rank 1 e o rank 2.
-        É o número que ela mediu no daemon vivo em 08/09/2026.
+        É o número medido no daemon vivo em 08/09/2026.
         """
         _server, ctl, nos = _mesa_de_quatro(tmp_path)
 
@@ -282,7 +282,7 @@ class TestAProcedenciaEOQueOUsuarioLe:
         self, tmp_path: Path
     ) -> None:
         """A regra de 08/09 (*"quando o número daquele aparelho muda, a cor gravada é
-        FÓSSIL"*) foi REVOGADA por ela em 29/09/2026, ~21h40 (*«Acompanha o controle»*,
+        FÓSSIL"*) foi REVOGADA em 29/09/2026, ~21h40 (a cor acompanha o controle,
         `D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`): a cor escolhida para o número 1
         e hoje no controle do número 2 segue acesa nele. Quem separa a escolha do
         fóssil é o carimbo, e só o LEGADO (sem carimbo) ainda prova fóssil, pela forma
@@ -418,7 +418,7 @@ class TestOsBuracosDaPrimeiraVolta:
         assert cores[1] != cores[0], f"os dois ficaram {_hexa(cores[0])}"
 
     def test_o_todos_global_do_perfil_nao_e_colisao(self) -> None:
-        """D4: pintar os quatro com a cor GLOBAL é um ato dela, não um defeito."""
+        """D4: pintar os quatro com a cor GLOBAL é um ato de quem usa, não um defeito."""
         mesa = [
             PecaDaMesa(uniq=u, pedida=GLOBAL_DO_USUARIO, do_numero=None,
                        procedencia=DO_GLOBAL, numero=n)
@@ -434,7 +434,7 @@ class TestOsBuracosDaPrimeiraVolta:
 
         O irmão `player_led_pattern` tem `_PLAYER_LED_OVERFLOW` documentado
         como *"só colide consigo mesmo"*; a cor não tinha essa garantia, e a
-        docstring dela não a reivindicava.
+        docstring da função não a reivindicava.
         """
         branco = player_slot_color(9)
         mesa = [
@@ -453,7 +453,7 @@ class TestOsBuracosDaPrimeiraVolta:
 
         `AttributeError: 'PyDualSenseController' object has no attribute
         '_handles'` dentro do `_mesa_de_cores_locked`: a regra de cor única é
-        a ÚNICA parte do merge que olha para fora da chave que resolve, e ela
+        a ÚNICA parte do merge que olha para fora da chave que resolve, e
         transformou um merge que respondia numa exceção. Quem sabe quem está
         na mesa é a IDENTIDADE, e é de lá que a lista vem agora.
 
@@ -561,7 +561,7 @@ def _backend_cru(
 
 
 class _CtxDeMentira:
-    """A mesa DE QUATRO dela, do lado da tela."""
+    """A mesa DE QUATRO da máquina de teste, do lado da tela."""
 
     def __init__(self) -> None:
         self.state: dict[str, Any] = {"active_profile": ""}
@@ -626,7 +626,7 @@ class TestOGestoDaAba:
             "a casa tomada ainda carrega o endereço do gesto")
         assert 'data-gesto' not in do_vizinho[0], (
             "a casa com X continua clicável — o clique vira aviso, e o aviso é "
-            "o que ela mandou sair")
+            "o que quem usa mandou sair")
         assert 'aria-disabled="true"' in do_vizinho[0], (
             "quem usa leitor de tela não é avisado de que a casa está travada")
         assert "P2 (DualSense)" in do_vizinho[0], (
@@ -724,12 +724,12 @@ def _comentarios_aninhados(html: str) -> list[int]:
 class TestAProsaQueVaiPararNaTela:
     """Palavra de produto, na frase de produto.
 
-    *"Ainda temos 3 cantos falando sobre o automatico"* (noqa-acento: citação literal)
+    Três cantos ainda falavam do automático.
     """
 
     @pytest.mark.parametrize("pasta", [PAGINAS, ENSAIO])
     def test_a_pagina_04_nao_fala_do_botao_que_saiu(self, pasta: Path) -> None:
-        """NAS DUAS LEITURAS, e a diferença entre elas é o ponto."""
+        """NAS DUAS LEITURAS, e a diferença entre as duas é o ponto."""
         from hefesto_dualsense4unix.interface.frases_banidas import (
             texto_visivel,
             texto_visivel_no_produto,
@@ -748,7 +748,7 @@ class TestAProsaQueVaiPararNaTela:
     def test_nenhuma_pagina_tem_comentario_html_aninhado(
         self, pasta: Path
     ) -> None:
-        """A régua ESTRUTURAL da armadilha da prosa, e ela é nova."""
+        """A régua ESTRUTURAL da armadilha da prosa, e é nova."""
         vazamentos = {
             html.name: _comentarios_aninhados(html.read_text(encoding="utf-8"))
             for html in sorted(pasta.glob("*.html"))
@@ -786,4 +786,4 @@ class TestORecadoQueMentia:
             "a frase voltou a prometer a cor do número para TODO controle")
         assert "duas nunca ficam iguais" in frase
         assert "volta no modo personalizado" in frase, (
-            "a frase calou o que acontece com a cor que ela escolheu")
+            "a frase calou o que acontece com a cor que quem usa escolheu")

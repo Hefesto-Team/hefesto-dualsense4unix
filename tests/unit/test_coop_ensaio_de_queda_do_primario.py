@@ -1,6 +1,6 @@
-"""COOP-QUE-NÃO-DESMONTA-01 / E4 — a bancada de queda programável.
+"""COOP-QUE-NÃO-DESMONTA-01 / E4 — o ensaio de queda programável.
 
-**A noite dela, encenada.** Dois DualSense no rádio; o Jogador 2 entra e sai em
+**A noite ruim de 02/08/2026, encenada.** Dois DualSense no rádio; o Jogador 2 entra e sai em
 dois segundos, quatro vezes em 22 minutos. O journal de 02/08/2026 mostrou o
 instante da morte, e o `EBUSY` não veio da Steam nem do jogo — veio de DENTRO
 do daemon::
@@ -15,15 +15,15 @@ do daemon::
 O co-op pegou o `event30` como Jogador 2, e 1,9 s depois o leitor do primário
 foi apontado para o MESMO node.
 
-**Por que uma BANCADA e não mais um teste.** Cada subsistema desta casa já
-tinha teste, e todos passavam durante a noite ruim dela: o defeito não mora
+**Por que um ENSAIO e não mais um teste.** Cada subsistema desta casa já
+tinha teste, e todos passavam durante a noite ruim: o defeito não mora
 dentro de nenhum deles, mora na ORDEM em que eles se cruzam. Não existia lugar
 onde o `connect()` do `reconnect_loop`, o `sync()` do poll loop e o
 `CoopManager` corressem contra o mesmo relógio — e sem esse lugar o defeito
 volta e ninguém nota. É a entrega mais valiosa da sprint por isso.
 
-O que a bancada monta, e o que ela NÃO promete
-==============================================
+O que o ensaio monta, e o que NÃO promete
+==========================================
 
 MONTA (é código de produto de verdade rodando):
 
@@ -34,7 +34,7 @@ MONTA (é código de produto de verdade rodando):
   teardown, o spawn, a promoção e a numeração de jogador;
 - **um enumerador só** alimentando os DOIS lados — ``_enumerate_device_keys``
   (o que o backend vê) e ``discover_dualsense_evdevs`` (o que o co-op vê) saem
-  da MESMA :class:`_Mesa`. Duas listas independentes fariam a bancada medir
+  da MESMA :class:`_Mesa`. Duas listas independentes fariam o ensaio medir
   uma mesa que não existe, e a armadilha nº 1 desta casa é justamente medir
   contra a régua errada;
 - **node renumerado a cada volta**, que é o que o replug por Bluetooth faz de
@@ -48,14 +48,14 @@ NÃO promete (declarado, para ninguém ler mais do que está escrito):
 
 - **não modela a latência do self-pipe.** No produto o ``retarget`` só SINALIZA
   a thread do leitor, que fecha o fd antigo microssegundos depois; aqui o node
-  antigo é solto no mesmo instante do ``retarget``. O que a bancada modela é a
+  antigo é solto no mesmo instante do ``retarget``. O que o ensaio modela é a
   ORDEM — e a ORDEM é o defeito;
-- **não é hardware.** Não há DualSense nesta bancada nem no repositório; toda
+- **não é hardware.** Não há DualSense neste ensaio nem no repositório; toda
   afirmação sobre o aparelho é inferência declarada e mora na sprint;
 - **não mede tempo de parede.** O relógio é virtual (:class:`_Relogio`), e é
   ele que envelhece a reserva do posto de primário sem ninguém dormir.
 
-O roteiro (o mínimo que reproduz a noite dela)
+O roteiro (o mínimo que reproduz a noite ruim)
 ==============================================
 
 ``t=0: A,B`` → ``t=5: B`` (o primário A cai) → ``t=8: B,A`` (A volta com node
@@ -96,7 +96,7 @@ UNIQ_B = "aabbcc00000b"
 
 
 class _Relogio:
-    """Relógio virtual. Nada nesta bancada dorme."""
+    """Relógio virtual. Nada neste ensaio dorme."""
 
     def __init__(self) -> None:
         self.t = 100.0
@@ -191,7 +191,7 @@ class _LeitorDoPrimario:
         self._alvo = uniq
 
     def a_thread_do_leitor_acorda(self) -> None:
-        """O self-pipe acordou a thread dona: ela fecha o fd antigo, enfim."""
+        """O self-pipe acordou a thread dona: a thread fecha o fd antigo, enfim."""
         if self._a_soltar is not None:
             self._mesa.ungrab(self._a_soltar, self.NOME)
             self._a_soltar = None
@@ -218,7 +218,7 @@ class _LeitorDoPrimario:
         self.refresh_device()
 
     def snapshot(self) -> Any:  # pragma: no cover
-        raise AssertionError("a bancada não usa o input do primário")
+        raise AssertionError("o ensaio não usa o input do primário")
 
 
 class _LeitorDeSecundario:
@@ -501,7 +501,7 @@ class TestAPiscadaDoPrimario:
 
 
 class TestOQueOInstrumentoPrecisaSaberRecusar:
-    """Régua que só sabe passar não é régua — estes provam que ela RECUSA."""
+    """Régua que só sabe passar não é régua — estes provam que o ensaio RECUSA."""
 
     def test_a_mesa_recusa_o_segundo_grab_do_mesmo_node(self) -> None:
         mesa = _Mesa()
@@ -519,7 +519,7 @@ class TestOQueOInstrumentoPrecisaSaberRecusar:
         assert mesa.ebusy == []
 
     def test_o_node_e_renumerado_a_cada_volta(self) -> None:
-        """Se a bancada devolvesse o mesmo node, ela não seria um replug BT."""
+        """Se o ensaio devolvesse o mesmo node, não seria um replug BT."""
         mesa = _Mesa()
         primeiro = mesa.sentar(UNIQ_A)
         mesa.levantar(UNIQ_A)
@@ -652,7 +652,7 @@ class TestAReservaDoPostoDePrimario:
     def test_a_reserva_caduca_e_o_posto_nao_fica_pendurado(
         self, ensaio: Ensaio
     ) -> None:
-        """Ela desligou o controle e continuou jogando com o outro: passados 30 s"""
+        """Quem usa desligou o controle e continuou jogando com o outro: passados 30 s"""
         from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
 
         ensaio.sentar(UNIQ_A)

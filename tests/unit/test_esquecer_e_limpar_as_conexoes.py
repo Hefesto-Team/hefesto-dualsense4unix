@@ -1,16 +1,13 @@
 """Esquecer e limpar as conexões — ESQUECER-E-LIMPAR-AS-CONEXOES-01.
 
-O que o usuário disse em 30/09/2026, ~01h30, com os quatro DualSense no rádio:
-*«opção esquecer ali. Esse dualsense fantasma ali não faz sentido.»*
-<!-- noqa-acento: citação literal -->
-E às ~03h, sobre o «Limpar Conexões»:
-*«limpar com frequencia a cada troca <!-- noqa-acento: citação literal -->
-ou ao desligar os controles, algo nessa linha»*.
+Decisões de produto de 30/09/2026, com os quatro DualSense no rádio: por volta de 01h30, o
+DualSense fantasma da lista ganha a opção de esquecer; às ~03h, o «Limpar Conexões» limpa
+com frequência, a cada troca ou ao desligar os controles.
 
 MEDIDO antes da cura (02/10, sobre ``3f2efdaf4``, o mesmo instrumento antes e
 depois): o «Conectar» anônimo que acabou fazia a linha «DualSense · Não
 Conectou» sem aparelho, com a caixa laranja; a linha de quem não chegou ficava
-com ele já no ar noutro adaptador; o X que a tirava morava na janela e ela
+com ele já no ar noutro adaptador; o X que a tirava morava na janela e a linha
 voltava ao reabrir; o teclado no ar não tinha como ser esquecido e o fone fora
 do ar nem aparecia; a dobra do controle que desligou ficava; e a chave tirada
 por outro programa, com o serviço vivo, ficava sem lápide.
@@ -24,7 +21,7 @@ A central é a ``CentralDoRadio`` de verdade, com o ``DonoVivo`` de verdade por
 cima do rádio de mentira com física, e todo pedido da tela atravessa o
 tratador real do daemon. **A pergunta é sempre ao mundo e à central** — as
 chamadas ao BlueZ, as lápides da ponte de mentira, os movimentos publicados —;
-quando uma régua precisa de um botão, ela o acha no HTML da cena e o clica.
+quando uma régua precisa de um botão, acha-o no HTML da cena e o clica.
 
 Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 """
@@ -91,7 +88,7 @@ class PonteDeTudo:
 
 
 class Casa(Ensaio):
-    """A bancada da 08 com a ponte inteira, o cabo, e só CONTROLE na lista do"""
+    """O ensaio da 08 com a ponte inteira, o cabo, e só CONTROLE na lista do"""
 
     def __init__(self, a08: Any, monkeypatch: pytest.MonkeyPatch, mundo: rm.RadioDeMentira,
                  relogio: rm.Relogio | None = None) -> None:
@@ -114,7 +111,7 @@ class Casa(Ensaio):
         return {"controllers": controles, "radio_central": self.central.publicar(controles)}
 
     def janela_nova(self) -> Any:
-        """Ela fecha e abre o Hefesto: o módulo da 08 é RECARREGADO (tudo o que a"""
+        """Quem usa fecha e abre o Hefesto: o módulo da 08 é RECARREGADO (tudo o que a"""
         from hefesto_dualsense4unix.interface.pacotes import em_fundo
         from hefesto_dualsense4unix.interface import pacotes
 
@@ -169,12 +166,12 @@ def remocoes(mundo: rm.RadioDeMentira) -> list[tuple[str, str]]:
 
 
 def os_quatro_no_ar() -> rm.RadioDeMentira:
-    """João e Johnathan na Direita (sala), André no Meio (quarto), Vitória na"""
+    """João e Johnathan na Direita (sala), André no Meio (quarto), Lia na"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, JOHNATHAN, nome="Johnathan")
     mundo.pareado(SALA, VERDE, nome="João")
     mundo.pareado(QUARTO, ANDRE, nome="André")
-    mundo.pareado(VARANDA, ROXO, nome="Vitória")
+    mundo.pareado(VARANDA, ROXO, nome="Lia")
     return mundo
 
 
@@ -322,7 +319,7 @@ def _a_caixa_cheia() -> rm.RadioDeMentira:
     """Na sala: um controle no ar, um «Desligado», um no cabo com a chave BT"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, VERMELHO, nome="Johnathan")
-    mundo.pareado(SALA, ROXO, conectado=False, nome="Vitória")
+    mundo.pareado(SALA, ROXO, conectado=False, nome="Lia")
     mundo.pareado(SALA, AZUL, conectado=False, nome="André")
     mundo.pareado(SALA, TECLADO, classe=rm.CLASSE_DE_TECLADO)
     mundo.pareado(SALA, FONE, classe=rm.CLASSE_DE_FONE, conectado=False)
@@ -370,7 +367,7 @@ def test_todo_pareado_tem_o_esquecer_e_ele_tira_aquele_par(
         assert (f'data-gesto="esquecer-aparelho" data-alvo="{alvo}" '
                 f'data-lugar="{lugar}"') in painel.group(1)
         assert casa.gesto("esquecer-aparelho", alvo=alvo, lugar=lugar) == {"armou": True}
-        assert remocoes(casa.mundo) == [] and casa.mundo.lapides == [], "esqueceu sem ela"
+        assert remocoes(casa.mundo) == [] and casa.mundo.lapides == [], "esqueceu sem pedido"
         assert (f'data-esquecer="1" data-alvo="{alvo}" data-destino="{lugar}" '
                 f'data-sim="Esquecer" data-gesto="confirmar-esquecer"') in campos["radio-moldes"]
 
@@ -622,7 +619,7 @@ def test_a_limpeza_tira_da_publicacao_o_que_nao_diz_mais_nada(
 def test_a_chave_morta_da_origem_sai_so_quando_o_pair_deu(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, pair: str,
 ) -> None:
-    """O verde guarda o Meio (desligado, com a chave lá). Ela liga o"""
+    """O verde guarda o Meio (desligado, com a chave lá). Quem usa liga o"""
     mundo = rm.RadioDeMentira()
     mundo.pareado(SALA, VERMELHO)
     mundo.pareado(QUARTO, VERDE, conectado=False)
@@ -651,14 +648,14 @@ def test_a_chave_morta_da_origem_sai_so_quando_o_pair_deu(
 
 
 def _desligado_na_varanda(casa: Casa) -> None:
-    """Vitória desligada, com a chave na Esquerda."""
+    """Lia desligada, com a chave na Esquerda."""
     casa.mundo.desligar(ROXO)
 
 
 def test_a_chave_tirada_por_fora_ganha_lapide_depois_de_sessenta_segundos(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Outro programa tira a chave da Vitória na Esquerda, com o serviço vivo."""
+    """Outro programa tira a chave da Lia na Esquerda, com o serviço vivo."""
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     central, mundo = casa.central, casa.mundo
     try:
@@ -723,7 +720,7 @@ def test_as_contraprovas_da_lapide_de_fora(
 def test_o_dono_da_janela_nunca_grava_lapide(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A janela tem o dono dela, sem central: o mesmo sinal, visto por ele, não"""
+    """A janela tem o seu dono, sem central: o mesmo sinal, visto por ele, não"""
     from hefesto_dualsense4unix.interface.pacotes import em_fundo
     mundo, relogio = os_quatro_no_ar(), rm.Relogio()
     dono = bd.DonoVivo(mundo)

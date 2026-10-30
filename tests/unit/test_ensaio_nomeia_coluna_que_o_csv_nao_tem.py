@@ -1,4 +1,4 @@
-"""A bancada só pode nomear coluna que o CSV realmente tem."""
+"""O ensaio só pode nomear coluna que o CSV realmente tem."""
 
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def _lista_literal(nome: str) -> list[str]:
 
 
 def _atributos_por_quadro() -> dict[str, set[str]]:
-    """Para cada nome de quadro, os atributos lidos dele na bancada."""
+    """Para cada nome de quadro, os atributos lidos dele no ensaio."""
     achados: dict[str, set[str]] = {nome: set() for nome in NOMES_DE_QUADRO}
     for no in ast.walk(_arvore()):
         if (
@@ -155,7 +155,7 @@ def _options_por_coluna() -> dict[str, str]:
             pytest.fail(
                 f"o `SelectboxColumn` de `{chave.value}` não recebe `options` como o "
                 "nome de uma lista do módulo; esta régua deixaria de conferi-lo em "
-                "silêncio, que é exatamente o defeito que ela guarda"
+                "silêncio, que é exatamente o defeito que a régua guarda"
             )
         achados[chave.value] = nomes[0]
     return achados
@@ -193,21 +193,21 @@ def _campos_do_ensaio() -> list[str]:
 
 
 def test_o_que_o_ensaio_edita_existe_no_mapa_de_canais() -> None:
-    """`EDITAVEIS` é o que a bancada ESCREVE de volta — errar aqui é gravar no vazio."""
+    """`EDITAVEIS` é o que o ensaio ESCREVE de volta — errar aqui é gravar no vazio."""
     cabecalho = set(_cabecalho(MAPA))
     faltando = [c for c in _lista_literal("EDITAVEIS") if c not in cabecalho]
     assert not faltando, (
-        f"a bancada quer editar {faltando}, e o mapa de canais não tem essas "
+        f"o ensaio quer editar {faltando}, e o mapa de canais não tem essas "
         f"colunas ({MAPA.relative_to(RAIZ)})"
     )
 
 
 def test_o_que_a_grade_mostra_existe_no_mapa_de_canais() -> None:
-    """A lista `vis` é o `df[vis]` que derrubava a bancada na primeira renderização."""
+    """A lista `vis` é o `df[vis]` que derrubava o ensaio na primeira renderização."""
     cabecalho = set(_cabecalho(MAPA))
     faltando = [c for c in _lista_literal("vis") if c not in cabecalho]
     assert not faltando, (
-        f"a grade pede {faltando}; `df[vis]` levanta KeyError e a bancada não "
+        f"a grade pede {faltando}; `df[vis]` levanta KeyError e o ensaio não "
         "abre — foi assim que a migração v2 a derrubou"
     )
 
@@ -217,16 +217,16 @@ def test_o_que_o_ensaio_le_por_atributo_existe_no_mapa_de_canais() -> None:
     cabecalho = set(_cabecalho(MAPA))
     faltando = sorted(c for c in _colunas_por_atributo() if c not in cabecalho)
     assert not faltando, (
-        f"a bancada lê {faltando} de um quadro do mapa, e o cabeçalho não tem "
+        f"o ensaio lê {faltando} de um quadro do mapa, e o cabeçalho não tem "
         "essas colunas (se for método novo do pandas, declare-o em API_DO_PANDAS)"
     )
 
 
 def test_os_nomes_de_quadro_declarados_ainda_existem_no_ensaio() -> None:
-    """A régua acima só morde os nomes que ela conhece; um rename não pode emudecê-la."""
+    """A régua acima só morde os nomes que conhece; um rename não pode emudecê-la."""
     vazios = sorted(n for n, atrs in _atributos_por_quadro().items() if not atrs)
     assert not vazios, (
-        f"NOMES_DE_QUADRO cita {vazios}, que a bancada não usa mais: as colunas "
+        f"NOMES_DE_QUADRO cita {vazios}, que o ensaio não usa mais: as colunas "
         "lidas por esse nome deixaram de ser conferidas em silêncio"
     )
 
@@ -236,7 +236,7 @@ def test_o_grau_e_a_ressalva_sao_editados_nos_dois_transportes() -> None:
     editaveis = _lista_literal("EDITAVEIS")
     for sufixo in ("ate_onde_foi", "ressalva"):
         assert f"cabo_{sufixo}" in editaveis and f"radio_{sufixo}" in editaveis, (
-            f"a bancada edita só um lado de `{sufixo}`: um lado editável e o "
+            f"o ensaio edita só um lado de `{sufixo}`: um lado editável e o "
             "outro não é a assimetria que a v2 existe para não deixar acontecer"
         )
 
@@ -252,7 +252,7 @@ def test_o_column_config_so_configura_coluna_que_a_grade_mostra() -> None:
 
 
 def _funcao_do_ensaio(nome: str) -> Callable[..., list[str]]:
-    """A função pura `nome` do módulo da bancada, compilada SEM importar o módulo (que exige o
+    """A função pura `nome` do módulo do ensaio, compilada SEM importar o módulo (que exige o
     streamlit, fora do produto)."""
     for no in _arvore().body:
         if isinstance(no, ast.FunctionDef) and no.name == nome:
@@ -286,7 +286,7 @@ def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
             if valor not in oferecidos:
                 orfaos.append(f"  · `{coluna}` (options=`{lista}`): {_curto(valor)}")
     assert not orfaos, (
-        "o mapa de canais tem valores que o seletor da bancada não oferece, e a "
+        "o mapa de canais tem valores que o seletor do ensaio não oferece, e a "
         "gravação regrava a coluna com o que voltou da grade — o que não está em "
         "`options` não tem como voltar:\n"
         + "\n".join(orfaos)
@@ -298,7 +298,7 @@ def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
 def test_a_regua_dos_selectbox_ainda_alcanca_a_grade() -> None:
     """Régua que se desliga sozinha é pior que régua nenhuma — como a de quadros."""
     assert _options_por_coluna(), (
-        "nenhuma coluna da grade usa `SelectboxColumn` com `options`: ou a bancada "
+        "nenhuma coluna da grade usa `SelectboxColumn` com `options`: ou o ensaio "
         "trocou de mecanismo, e então o teste acima virou decoração, ou a régua "
         "deixou de enxergar o `column_config`"
     )
@@ -307,20 +307,20 @@ def test_a_regua_dos_selectbox_ainda_alcanca_a_grade() -> None:
 def test_o_formulario_de_ensaio_escreve_o_cabecalho_de_ensaios_em_ordem() -> None:
     """O `DictWriter` anexa por POSIÇÃO — ordem trocada desalinha o caderno calado."""
     assert _campos_do_ensaio() == _cabecalho(ENSAIOS), (
-        "o formulário de ensaio da bancada não grava exatamente o cabeçalho de "
+        "o formulário de ensaio não grava exatamente o cabeçalho de "
         f"{ENSAIOS.relative_to(RAIZ)}, na mesma ordem"
     )
 
 
 def test_as_opcoes_do_estado_hoje_saem_do_csv_e_nao_de_uma_copia() -> None:
     """O texto longo do `estado_hoje` tem UM dono, o CSV: com um CSV de mentira cuja célula cita
-    `x.py:7`, o seletor oferece essa célula — e nenhuma cópia no fonte da bancada precisa
+    `x.py:7`, o seletor oferece essa célula — e nenhuma cópia no fonte do ensaio precisa
     acompanhar o código (era o `_ESTADO_RUMBLE_FF`, que ficou com o endereço velho)."""
     celula = "MEDIDO em 11/08/2026: a cura está em `x.py:7`, consumida no laço vivo."
     opcoes = _opcoes_da_lista_de_mentira(celula)
     assert celula in opcoes, (
-        "a célula do `estado_hoje` do CSV não chegou às opções do seletor: a bancada "
-        "voltou a oferecer só o que está escrito no fonte dela"
+        "a célula do `estado_hoje` do CSV não chegou às opções do seletor: o ensaio "
+        "voltou a oferecer só o que está escrito no seu fonte"
     )
     assert opcoes[0] == "" and "funciona" in opcoes
     assert len(opcoes) == len(set(opcoes)), "opção repetida no seletor"
@@ -335,7 +335,7 @@ def _opcoes_da_lista_de_mentira(celula: str) -> list[str]:
                 "`ESTADOS` deixou de ser montada por uma função a partir do CSV"
             )
             assert len(no.value.args) == 2 and "estado_hoje" in ast.unparse(no.value.args[1]), (
-                "`ESTADOS` não recebe a coluna `estado_hoje` do CSV que a bancada carrega"
+                "`ESTADOS` não recebe a coluna `estado_hoje` do CSV que o ensaio carrega"
             )
             fixos = _lista_literal(no.value.args[0].id)  # type: ignore[attr-defined]
             return _funcao_do_ensaio(no.value.func.id)(fixos, ["", "funciona", celula, celula])
@@ -346,9 +346,9 @@ _ENDERECO_DE_LINHA = re.compile(r"[A-Za-z0-9_/-]+\.(?:py|c|h|md|csv|html|sh):\d+
 
 
 def test_o_fonte_do_ensaio_nao_traz_endereco_arquivo_linha() -> None:
-    """Endereço `arquivo:linha` escrito na bancada é cópia que ninguém reaponta."""
+    """Endereço `arquivo:linha` escrito no ensaio é cópia que ninguém reaponta."""
     achados = sorted(set(_ENDERECO_DE_LINHA.findall(ENSAIO.read_text(encoding="utf-8"))))
     assert not achados, (
-        f"a bancada traz {achados} no fonte: o texto que cita linha mora no CSV, e a bancada "
+        f"o ensaio traz {achados} no fonte: o texto que cita linha mora no CSV, e o ensaio "
         "só o oferece (`estados_do_mapa`)"
     )

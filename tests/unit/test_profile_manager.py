@@ -114,7 +114,7 @@ def test_criteria_vence_catch_all_de_prioridade_maior(isolated_profiles_dir: Pat
             match=MatchCriteria(window_class=["steam_app_2111190"]),
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
@@ -176,7 +176,7 @@ def test_janela_de_jogo_sem_regra_propria_nao_cai_no_catch_all(
     isolated_profiles_dir: Path,
 ):
     """O caso medido: nenhum perfil opina sobre este jogo ⇒ None (e o"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
     save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=1))
 
     fc = FakeController()
@@ -193,7 +193,7 @@ def test_veto_r21_vale_com_wm_class_em_caixa_alta(
     isolated_profiles_dir: Path, wm_class: str
 ):
     """UNIFICA-PREDICADO-01: o veto R-21 não pode depender da CAIXA da janela."""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
     save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=1))
 
     fc = FakeController()
@@ -226,7 +226,7 @@ def test_regra_propria_do_jogo_continua_vencendo(isolated_profiles_dir: Path):
             match=MatchCriteria(window_class=["steam_app_2111190"]),
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
@@ -246,7 +246,7 @@ def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
             match=MatchCriteria(window_title_regex=r"(Doom|Control)"),
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
@@ -259,7 +259,7 @@ def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
 
 def test_catch_all_nao_entra_nem_em_janela_comum(isolated_profiles_dir: Path):
     """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`): o"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
@@ -270,7 +270,7 @@ def test_catch_all_nao_entra_nem_em_janela_comum(isolated_profiles_dir: Path):
 
 def test_wm_class_parecida_com_steam_app_nao_e_vetada(isolated_profiles_dir: Path):
     """`steam_app_` sem número, ou com sufixo, NÃO é janela de jogo da Steam —"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
@@ -290,7 +290,7 @@ def test_veto_loga_uma_vez_por_jogo(
 
     spy = MagicMock()
     monkeypatch.setattr(manager_mod, "logger", spy)
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
@@ -608,7 +608,7 @@ def test_perfil_sem_secao_mic_nao_chama_o_applier(isolated_profiles_dir: Path):
 
 
 def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path):
-    """MIC-GRAVACAO-01 — a exceção nomeada, e a razão de ela existir."""
+    """MIC-GRAVACAO-01 — a exceção nomeada, e a razão de existir."""
     save_profile(_mk_profile_com_mic("jogo", volume=70, muted=False))
     espiao = _MicEspiao()
     manager = ProfileManager(
@@ -618,7 +618,7 @@ def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path)
     manager.activate("jogo", origin="autoswitch")
     assert espiao.chamadas == [(70, None, "autoswitch")], (
         "o mudo do perfil atravessou uma troca AUTOMÁTICA de perfil — abrir um "
-        f"jogo no meio da gravação dela desfaria o mudo: {espiao.chamadas!r}"
+        f"jogo no meio da gravação desfaria o mudo: {espiao.chamadas!r}"
     )
 
     manager.activate("jogo", origin="system")
@@ -633,7 +633,7 @@ def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path)
     )
 
 
-def _mk_profile_com_override(name: str = "vitoria") -> Profile:
+def _mk_profile_com_override(name: str = "pessoal") -> Profile:
     """Perfil com seção global + override de lightbar SÓ para o segundo MAC."""
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
     from tests.unit.test_backend_multi_controller import UNIQ_2
@@ -655,11 +655,11 @@ def test_activate_aplica_override_so_no_alvo(isolated_profiles_dir: Path):
     """O pedido aplicado: ativar o perfil pinta SÓ o controle do"""
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
-    save_profile(_mk_profile_com_override("vitoria"))
+    save_profile(_mk_profile_com_override("pessoal"))
     backend, h1, h2 = _backend_com_dois_controles()
 
     manager = ProfileManager(controller=backend, store=StateStore())
-    manager.activate("vitoria")
+    manager.activate("pessoal")
 
     assert h1.light.colors[-1] == (10, 20, 30)
     assert h2.light.colors[-1] == (0, 0, 255)
@@ -680,14 +680,14 @@ def test_activate_registra_override_de_desconectado(isolated_profiles_dir: Path)
         _null_evdev,
     )
 
-    save_profile(_mk_profile_com_override("vitoria"))
+    save_profile(_mk_profile_com_override("pessoal"))
     backend = PyDualSenseController(evdev_reader=_null_evdev())
     h1 = _FakeHandle()
     backend._handles = {KEY_1: h1}
     backend._primary_key = KEY_1
 
     manager = ProfileManager(controller=backend, store=StateStore())
-    manager.activate("vitoria")
+    manager.activate("pessoal")
 
     assert h1.light.colors[-1] == (10, 20, 30)
     assert backend._desired_by_uniq[UNIQ_2].led == (0, 0, 255)
@@ -702,7 +702,7 @@ def test_activate_override_escala_brilho_no_mesmo_caminho(
 
     save_profile(
         _mk_profile(
-            "vitoria",
+            "pessoal",
             controllers={
                 UNIQ_2: ControllerOverrides(
                     leds=LedsConfig(
@@ -714,7 +714,7 @@ def test_activate_override_escala_brilho_no_mesmo_caminho(
     )
     backend, _h1, h2 = _backend_com_dois_controles()
     manager = ProfileManager(controller=backend, store=StateStore())
-    manager.activate("vitoria")
+    manager.activate("pessoal")
 
     assert h2.light.colors[-1] == (60, 120, 30)
     assert backend._desired_by_uniq[UNIQ_2].led == (60, 120, 30)
@@ -727,7 +727,7 @@ def test_activate_override_parcial_herda_player_e_brilho_do_global(
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
     raw = _mk_profile(
-        "vitoria",
+        "pessoal",
         leds=LedsConfig(
             lightbar=(129, 61, 156),
             player_leds=[True, False, False, False, False],
@@ -739,7 +739,7 @@ def test_activate_override_parcial_herda_player_e_brilho_do_global(
 
     backend, _h1, h2 = _backend_com_dois_controles()
     manager = ProfileManager(controller=backend, store=StateStore())
-    manager.activate("vitoria")
+    manager.activate("pessoal")
 
     assert h2.light.colors[-1] == (0, 153, 0)
     assert backend._desired_by_uniq[UNIQ_2].led == (0, 153, 0)
@@ -753,7 +753,7 @@ def test_activate_override_parcial_de_gatilho_nao_desliga_o_outro_lado(
     """Override só de `left`: o `right` daquele controle segue o GLOBAL —"""
     from tests.unit.test_backend_multi_controller import UNIQ_2
 
-    raw = _mk_profile("vitoria").model_dump(mode="json")
+    raw = _mk_profile("pessoal").model_dump(mode="json")
     raw["controllers"] = {
         UNIQ_2: {"triggers": {"left": {"mode": "Rigid", "params": [1, 100]}}}
     }
@@ -761,7 +761,7 @@ def test_activate_override_parcial_de_gatilho_nao_desliga_o_outro_lado(
 
     backend, _h1, h2 = _backend_com_dois_controles()
     manager = ProfileManager(controller=backend, store=StateStore())
-    manager.activate("vitoria")
+    manager.activate("pessoal")
 
     assert h2.triggerL.forces == list(rigid(1, 100).forces)
     assert h2.triggerR.forces == list(rigid(5, 200).forces)

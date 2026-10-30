@@ -17,7 +17,7 @@ isso: os portões que existiam (``test_radio_aberto_01.py``,
 ``install.sh``/``uninstall.sh`` como TEXTO. Um ``awk`` quebrado, um ``cmp``
 invertido ou um caminho que nunca abre o ``main.conf`` passavam verdes.
 
-Esta bancada existe para fechar exatamente esse buraco. Ela roda o mecanismo
+Este ensaio existe para fechar exatamente esse buraco. Roda o mecanismo
 de verdade — ``scripts/bluez_config.sh`` — contra uma **raiz falsa** em
 ``tmp_path`` (``HEFESTO_BT_ETC``), com ``HEFESTO_BT_SUDO`` vazio. Nada em
 ``/etc`` é lido nem escrito, e a suíte não precisa de root. Precedente da casa:
@@ -55,7 +55,7 @@ AS MORDIDAS DA SEGUNDA LEVA (06/08/2026, os achados da verificação adversarial
   ``test_podar_nunca_faz_um_estado_sumir_do_disco`` ficam vermelhos;
 - volte ``_gravar_se_mudou`` para ``install -m644 tmp main.conf`` →
   ``test_escrita_interrompida_nao_trunca_o_main_conf`` fica vermelho (o arquivo
-  dela fica cortado NO MEIO DO BLOCO) e
+  do usuário fica cortado NO MEIO DO BLOCO) e
   ``test_falha_na_troca_atomica_devolve_o_arquivo_intacto`` também;
 - apague o aviso do ``remover`` → ``test_remover_grita_o_always_que_devolve``
   fica vermelho;
@@ -116,7 +116,7 @@ SÉRIE, sozinhas na árvore, com restauração conferida por md5:
 - devolva a proteção por ARQUIVO no ``_podar`` ("nenhum OUTRO backup tem os
   mesmos bytes") → ``test_podar_nunca_faz_um_estado_sumir_do_disco`` fica
   vermelho: com vários estados de poucas cópias, todas fora da retenção, um
-  estado inteiro do ``main.conf`` dela some do disco;
+  estado inteiro do ``main.conf`` do usuário some do disco;
 - devolva ``install -Dm644`` / ``rm -f`` ao caminho dos drop-ins →
   ``test_aplicar_nao_destroi_dropin_editado_a_mao`` e
   ``test_remover_nao_apaga_dropin_editado_a_mao_sem_copia`` ficam vermelhos;
@@ -131,9 +131,9 @@ SÉRIE, sozinhas na árvore, com restauração conferida por md5:
   ``test_backup_parcial_e_apagado_e_o_main_conf_nao_e_tocado`` vermelho. NÃO
   DEIXA, e foi medido por terceiro e reproduzido aqui: o shim daquele teste faz
   o ``cp`` sair 1, o ``||`` curto-circuita e o ``cmp`` nunca chega a ser
-  avaliado — com o ``cmp`` arrancado a bancada inteira segue VERDE. Mordida
+  avaliado — com o ``cmp`` arrancado o ensaio inteiro segue VERDE. Mordida
   afirmada e não reproduzida é exatamente o defeito que a regra da casa proíbe,
-  e a cura foi escrever a bancada que faltava (um ``cp`` que corta o arquivo e
+  e a cura foi escrever o ensaio que faltava (um ``cp`` que corta o arquivo e
   MENTE saindo 0), não apagar a frase.
 
 A REVALIDAÇÃO DE 06/08/2026 — por que estas linhas foram reconferidas
@@ -156,9 +156,9 @@ ARVORE-CONGELADA-01, em ``tests/conftest.py``.
 
 O ORÁCULO É OBRIGATÓRIO. Toda afirmação sobre "qual valor o BlueZ lê" passa
 pelo ``_oraculo``, que roda o GLib GKeyFile — o parser REAL do ``bluetoothd`` —
-num SUBPROCESSO. A bancada tinha um TERCEIRO parser em Python (o antigo helper
+num SUBPROCESSO. O ensaio tinha um TERCEIRO parser em Python (o antigo helper
 ``_valor``), e foi exatamente por ali que a classe de defeito do GRUPO passou
-batida: o dono e a bancada erravam do MESMO jeito, então concordavam.
+batida: o dono e o ensaio erravam do MESMO jeito, então concordavam.
 """
 
 from __future__ import annotations
@@ -433,7 +433,7 @@ def test_dropin_e_bloco_declaram_o_mesmo_valor(tmp_path: Path) -> None:
 
 
 _DROPIN_DO_USUARIO = (
-    "# escrito à mão por ela em 03/08\n"
+    "# escrito à mão pelo usuário em 03/08\n"
     "[General]\n"
     "JustWorksRepairing=never\n"
     "FastConnectable=false\n"
@@ -460,7 +460,7 @@ def test_aplicar_nao_destroi_dropin_editado_a_mao(tmp_path: Path) -> None:
     )
     assert "hefesto-justworks.conf" in proc.stdout
     assert "conteúdo DIFERENTE do nosso" in proc.stdout, (
-        "o arquivo dela foi reescrito em silêncio"
+        "o arquivo do usuário foi reescrito em silêncio"
     )
     assert _oraculo(alvo) == "confirm"
 
@@ -683,7 +683,7 @@ def test_podar_nunca_apaga_backup_de_conteudo_unico(tmp_path: Path) -> None:
 
     assert (etc / _POS_COLAPSO).exists(), (
         "a poda apagou o backup de 3 linhas — o instante do estrago, e a única "
-        "cópia daquele estado do main.conf dela"
+        "cópia daquele estado do main.conf do usuário"
     )
     assert "ÚNICA cópia deste conteúdo" in proc.stdout
     assert len(_backups(etc)) < 37
@@ -716,7 +716,7 @@ def test_podar_nunca_faz_um_estado_sumir_do_disco(tmp_path: Path) -> None:
     depois = {b.read_bytes() for b in _backups(etc)}
     sumidos = antes - depois
     assert sumidos == set(), (
-        "a poda fez um ESTADO do main.conf dela desaparecer inteiro do disco "
+        "a poda fez um ESTADO do main.conf do usuário desaparecer inteiro do disco "
         f"({len(sumidos)} de {len(antes)}): "
         f"{[c.decode('utf-8').splitlines()[1] for c in sorted(sumidos)]}. "
         "A proteção era por ARQUIVO ('nenhum outro tem os mesmos bytes') e a "
@@ -803,7 +803,7 @@ def test_verificar_nao_escreve_nada(tmp_path: Path) -> None:
 
 
 def test_verificar_aprova_depois_do_aplicar(tmp_path: Path) -> None:
-    """Linha de base — sem ela, um verificador que reprova tudo 'passaria'."""
+    """Linha de base — sem isto, um verificador que reprova tudo 'passaria'."""
     etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     _rodar(etc, "aplicar")
     proc = _rodar(etc, "verificar")
@@ -841,7 +841,7 @@ def test_modo_desconhecido_nao_faz_nada(tmp_path: Path) -> None:
 
 
 def test_install_chama_o_aplicar_e_uninstall_chama_o_remover() -> None:
-    """A bancada só vale se o install/uninstall usarem MESMO este mecanismo."""
+    """O ensaio só vale se o install/uninstall usarem MESMO este mecanismo."""
     assert "scripts/bluez_config.sh\" aplicar" in INSTALL.read_text(encoding="utf-8")
     assert "scripts/bluez_config.sh\" remover" in UNINSTALL.read_text(encoding="utf-8")
 
@@ -854,7 +854,7 @@ def test_o_script_nunca_reinicia_o_bluetoothd() -> None:
 
 
 def test_o_script_diz_com_todas_as_letras_quando_a_mudanca_vale(tmp_path: Path) -> None:
-    """Ela precisa saber que o `confirm` só vale no próximo boot."""
+    """Quem usa precisa saber que o `confirm` só vale no próximo boot."""
     etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     proc = _rodar(etc, "aplicar")
 
@@ -863,7 +863,7 @@ def test_o_script_diz_com_todas_as_letras_quando_a_mudanca_vale(tmp_path: Path) 
 
 
 def test_todo_caminho_deriva_da_raiz_configuravel() -> None:
-    """A bancada é segura porque NENHUM caminho é literal."""
+    """O ensaio é seguro porque NENHUM caminho é literal."""
     fonte = SCRIPT.read_text(encoding="utf-8")
     codigo = [
         ln for ln in fonte.splitlines()
@@ -905,7 +905,7 @@ def test_escrita_interrompida_nao_trunca_o_main_conf(tmp_path: Path) -> None:
     proc = _rodar(etc, "aplicar", path_extra=pasta)
     texto = (etc / "main.conf").read_text(encoding="utf-8")
 
-    assert texto != original[:60], "o main.conf dela ficou TRUNCADO no meio do bloco"
+    assert texto != original[:60], "o main.conf do usuário ficou TRUNCADO no meio do bloco"
     assert proc.returncode == 0, proc.stderr
     assert texto.count("# >>> hefesto bluetooth >>>") == 1
     assert "# <<< hefesto bluetooth <<<" in texto, (
@@ -916,7 +916,7 @@ def test_escrita_interrompida_nao_trunca_o_main_conf(tmp_path: Path) -> None:
 
 
 def test_falha_na_troca_atomica_devolve_o_arquivo_intacto(tmp_path: Path) -> None:
-    """Falha no `mv` = nada aconteceu. O arquivo dela sobrevive BYTE A BYTE."""
+    """Falha no `mv` = nada aconteceu. O arquivo do usuário sobrevive BYTE A BYTE."""
     etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     original = (etc / "main.conf").read_bytes()
     pasta = _shim(tmp_path, etc / "main.conf", ("mv",), corta=False)
@@ -1009,7 +1009,7 @@ def test_backup_de_zero_byte_nao_conta_como_backup(tmp_path: Path) -> None:
     proc = _rodar(etc, "verificar")
 
     assert "backups-hefesto: 1" in proc.stdout, (
-        "o backup de ZERO byte foi contado como backup — ela lê 2 e tem 1"
+        "o backup de ZERO byte foi contado como backup — o usuário lê 2 e tem 1"
     )
     assert "backups-suspeitos: 1" in proc.stdout, "o vazio sumiu da conta e da vista"
     assert f"backup-suspeito: {morto}" in proc.stdout, "não nomeia o suspeito"
@@ -1017,7 +1017,7 @@ def test_backup_de_zero_byte_nao_conta_como_backup(tmp_path: Path) -> None:
 
 
 def test_o_resumo_do_aplicar_nao_soma_backup_vazio(tmp_path: Path) -> None:
-    """A mesma conta na frase que o `aplicar` imprime, que é a que ela lê."""
+    """A mesma conta na frase que o `aplicar` imprime, que é a que o usuário lê."""
     etc = _etc(tmp_path, MAIN_CONF_DO_USUARIO)
     (etc / "main.conf.bak.hefesto-1786000001").write_text("[General]\n", encoding="utf-8")
     (etc / "main.conf.bak.hefesto-1786000002").touch()
@@ -1043,7 +1043,7 @@ def test_a_poda_nao_alcanca_backup_vazio(tmp_path: Path) -> None:
 
     _rodar(etc, "podar", manter="1", arg="--aplicar")
 
-    assert morto.exists(), "a poda apagou um arquivo que ela nem contava"
+    assert morto.exists(), "a poda apagou um arquivo que nem contava"
 
 
 def test_o_temporario_do_remover_sai_de_mktemp(tmp_path: Path) -> None:
@@ -1099,11 +1099,11 @@ def test_remover_grita_o_always_que_devolve(tmp_path: Path) -> None:
     assert "always" in proc.stdout
     assert "INJEÇÃO DE TECLAS" in proc.stdout
     assert "RADIO-ABERTO-01" in proc.stdout
-    assert _valor(etc) == "always", "a linha dela não voltou (o remover apagou config alheia)"
+    assert _valor(etc) == "always", "a linha do usuário não voltou (o remover apagou config alheia)"
 
 
 def test_remover_diz_quando_a_chave_deixa_de_existir(tmp_path: Path) -> None:
-    """Sem bloco nosso e sem linha dela, quem manda é o default da distro."""
+    """Sem bloco nosso e sem linha do usuário, quem manda é o default da distro."""
     etc = _etc(tmp_path, "[General]\nName = BlueZ\n")
     _rodar(etc, "aplicar")
 
@@ -1289,7 +1289,7 @@ def test_aplicar_e_remover_seguidos_nao_colidem(tmp_path: Path) -> None:
     )
     assert any(
         "ESTADO-ORIGINAL" in b.read_text(encoding="utf-8") for b in _backups(etc)
-    ), "o estado ORIGINAL dela não sobreviveu ao ciclo"
+    ), "o estado ORIGINAL do usuário não sobreviveu ao ciclo"
 
 
 def test_a_frase_do_resumo_deixou_de_ser_mentira(tmp_path: Path) -> None:
@@ -1364,14 +1364,14 @@ def test_backup_que_mente_ter_copiado_e_pego_pelo_cmp(tmp_path: Path) -> None:
 
     assert proc.returncode != 0, (
         "o `cp` mentiu ter copiado, o `cmp` não conferiu, e o aplicar seguiu "
-        "adiante para reescrever o conffile dela"
+        "adiante para reescrever o conffile do usuário"
     )
     assert _backups(etc) == [], (
         "sobrou um 'backup' de 118 bytes que passa por cópia fiel: "
         f"{[(b.name, b.stat().st_size) for b in _backups(etc)]}"
     )
     assert (etc / "main.conf").read_bytes() == original, (
-        "o main.conf dela foi reescrito com um backup cortado por trás"
+        "o main.conf do usuário foi reescrito com um backup cortado por trás"
     )
     assert "INCOMPLETO" in proc.stderr
 
@@ -1576,14 +1576,14 @@ def test_never_dentro_do_bloco_nao_ganha_promessa_que_nao_se_cumpre(
 
 
 def test_o_doctor_nao_promete_devolucao_sem_ressalva() -> None:
-    """O mesmo texto vivia no doctor, e é lá que ela lê primeiro."""
+    """O mesmo texto vivia no doctor, e é lá que o usuário lê primeiro."""
     doctor = (RAIZ / "scripts" / "doctor.sh").read_text(encoding="utf-8")
     aviso = next(
         ln for ln in doctor.splitlines()
         if "JustWorksRepairing=never no main.conf" in ln
     )
     assert "FORA das sentinelas" in aviso and "DENTRO do bloco" in aviso, (
-        "o doctor voltou a prometer a devolução da linha sem dizer que ela só "
+        "o doctor voltou a prometer a devolução da linha sem dizer que só "
         "vale FORA do bloco hefesto"
     )
 

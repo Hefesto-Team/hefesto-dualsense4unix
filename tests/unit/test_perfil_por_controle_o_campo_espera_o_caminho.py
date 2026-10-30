@@ -71,7 +71,7 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
         funcao="apply_controller_sensores",
         chega_em=(
             "REGISTRO.definir(uniq) → a janela de motion daquela peça sai do "
-            "vpad com os 6 bytes do sensor zerados, e o nó evdev dela fica "
+            "vpad com os 6 bytes do sensor zerados, e o seu nó evdev fica "
             "grabado"
         ),
     ),
@@ -271,7 +271,7 @@ def _prova_sensores(uniq: str) -> object:
 
 
 def _prova_movimento(uniq: str) -> object:
-    """A mira escrita para UMA peça vale só nela (A-MIRA-POR-MOVIMENTO-NA-TELA-01)."""
+    """A mira escrita para UMA peça vale só na peça (A-MIRA-POR-MOVIMENTO-NA-TELA-01)."""
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
     from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
     from hefesto_dualsense4unix.profiles.schema import ProfileMovimentoConfig
@@ -302,7 +302,7 @@ def _prova_movimento(uniq: str) -> object:
 
 
 def _prova_remapeamento(uniq: str) -> object:
-    """A troca escrita para UMA peça vale só nela (O-REMAPEAMENTO-VALE-POR-JOGADOR-01)."""
+    """A troca escrita para UMA peça vale só na peça (O-REMAPEAMENTO-VALE-POR-JOGADOR-01)."""
     from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 
     store = _StoreSemTrava()
@@ -323,7 +323,7 @@ def _prova_remapeamento(uniq: str) -> object:
 
 
 def _prova_ativacao(uniq: str) -> object:
-    """O modo escrito para UMA peça vale só nela (O-BOTAO-ALTERNA-REPETE-...-01)."""
+    """O modo escrito para UMA peça vale só na peça (O-BOTAO-ALTERNA-REPETE-...-01)."""
     from hefesto_dualsense4unix.core import ativacao_de_botao as ativacao
     from hefesto_dualsense4unix.profiles.schema import ProfileAtivacaoConfig
 
@@ -345,7 +345,7 @@ def _prova_ativacao(uniq: str) -> object:
 
 
 def _prova_analogicos(uniq: str) -> object:
-    """A curva escrita para UMA peça vale só nela (OS-ANALOGICOS-DO-JOGO-...-01)."""
+    """A curva escrita para UMA peça vale só na peça (OS-ANALOGICOS-DO-JOGO-...-01)."""
     from hefesto_dualsense4unix.core import curva_do_analogico as curva
     from hefesto_dualsense4unix.profiles.schema import ProfileAnalogicosConfig
 
@@ -382,7 +382,7 @@ _PROVAS = {
 
 
 def test_toda_entrada_da_classificacao_tem_prova() -> None:
-    """A tabela de provas acompanha a classificação — senão ela envelhece calada."""
+    """A tabela de provas acompanha a classificação — senão envelhece calada."""
     assert sorted(_PROVAS) == sorted(_CONSUMIDOR)
 
 
@@ -391,7 +391,7 @@ def test_o_valor_da_peca_sai_com_o_endereco_do_usuario(campo: str) -> None:
     """Escrito para UM ``uniq``, o valor sai endereçado àquele ``uniq``."""
     resultado = _PROVAS[campo](BRANCO)
     assert resultado, (
-        f"o override de {campo!r} de uma peça não saiu endereçado a ela "
+        f"o override de {campo!r} de uma peça não saiu endereçado à peça "
         f"({_CONSUMIDOR[campo].chega_em})"
     )
 
@@ -399,7 +399,7 @@ def test_o_valor_da_peca_sai_com_o_endereco_do_usuario(campo: str) -> None:
 def test_o_microfone_ja_tem_endereco_por_peca() -> None:
     """As três primitivas do mic por unidade existem — e o ``muted`` já entrou."""
     assert hasattr(EventTopic, "MIC_DA_MESA"), (
-        "a borda do botão de mic COM endereço sumiu — sem ela o mic volta a "
+        "a borda do botão de mic COM endereço sumiu — sem a borda o mic volta a "
         "não saber de qual peça veio o toque"
     )
     assert "uniq" in inspect.signature(audio_control.fonte_de_captura_do_uniq).parameters
@@ -409,29 +409,28 @@ def test_o_microfone_ja_tem_endereco_por_peca() -> None:
 
 
 def test_o_volume_do_mic_vale_por_peca_e_a_fiacao_continua_inteira() -> None:
-    """O USUÁRIO DISSE A PALAVRA — 03/09/2026 — e este fio trocou de lado.
+    """A DECISÃO VEIO — 03/09/2026 — e este fio trocou de lado.
 
-    Ele nasceu vigiando uma PORTA FECHADA: *"o campo não entra por decurso de
-    prazo: entra quando ela disser"*, e a instrução no corpo era literal —
-    *"se foi a palavra de produto, apague este teste"*. O usuário disse: *"manda a ver em
-    tudo que falta por favor"*, depois de ter posto o alvo do produto em uma
-    frase no mesmo dia: *"4 controles funcionarem no mesmo modo com configs
-    diferentes"*. Com dois DualSense no cabo há DUAS placas de som
+    Ele nasceu vigiando uma PORTA FECHADA: o campo só entraria por decisão de
+    produto, e a instrução no corpo mandava apagar este teste quando a decisão
+    viesse. Veio em 03/09/2026 (fazer tudo o que faltava), junto com o alvo do
+    produto: quatro controles no mesmo modo com configs diferentes.
+    Com dois DualSense no cabo há DUAS placas de som
     (MIC-DA-MESA-CHEIA-01), e o ganho de captura é exatamente uma config que
     difere por peça.
 
     **APAGAR SERIA PERDER A METADE QUE AINDA IMPORTA.** A porta abriu; a FIAÇÃO
-    que a abertura pressupõe continua tendo de estar de pé, e ela é frágil de um
+    que a abertura pressupõe continua tendo de estar de pé, e é frágil de um
     jeito específico: `apply_profile_mic` não pode CAIR para a rota global
     quando o `uniq` não resolve. A rota global devolve a PRIMEIRA fonte de
-    captura da lista — escrever nela seria mexer no microfone do vizinho, com o
+    captura da lista — escrever na primeira seria mexer no microfone do vizinho, com o
     agravante de parecer curado. É o erro fácil de cometer escrevendo um `or`.
 
     Então o teste guarda hoje as TRÊS coisas de uma vez: o campo existe, o
     applier chama a rota por unidade, e não há queda para a global.
     """
     assert "volume" in ControllerMicOverride.model_fields, (
-        "o `volume` saiu do override por peça — ela mandou abri-lo em "
+        "o `volume` saiu do override por peça — a decisão de produto o abriu em "
         "03/09/2026, e sem ele o ganho de captura volta a ser um só para a "
         "mesa inteira")
     assert ControllerMicOverride.model_validate({"volume": 50}).volume == 50
@@ -559,8 +558,8 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
     corpo = inspect.getsource(ipc_handlers.IpcHandlersMixin._handle_sensor_set)
     for chave in ("alcance", "ressalva", "giroscopio", "acelerometro"):
         assert f'"{chave}"' in corpo, (
-            f"a resposta do sensor.set deixou de trazer {chave!r} — e é por "
-            "ela que a tela sabe QUAL metade do interruptor pegou"
+            f"a resposta do sensor.set deixou de trazer {chave!r} — e é "
+            "a resposta que diz à tela QUAL metade do interruptor pegou"
         )
 
 
@@ -569,7 +568,7 @@ def test_a_entrada_continua_de_um_controle_so() -> None:
 
     ``read_state`` lê o PRIMÁRIO e o ``Daemon`` tem UM device de cada. Guardar
     por controle é fácil; fazer valer exige ler cada peça e despachar para o
-    device dela — é o item mais caro da fila, e destrava cinco campos de uma
+    device de cada uma — é o item mais caro da fila, e destrava cinco campos de uma
     vez (``mouse``, ``key_bindings``, ``button_actions``, ``teclado_emulado``,
     ``suppress_desktop_emulation``).
 

@@ -4,7 +4,7 @@ O DEFEITO, e ele é medido duas vezes:
 
 1. **`scripts/check_faixa_sintetica.py` ficou verde por AUSÊNCIA.** Ele existia
    e não tinha chamador nenhum — nem CI, nem gancho, nem checklist. Foi assim
-   que quatro MACs de fixture moraram no `controllers.json` **vivo** dela desde
+   que quatro MACs de fixture moraram no `controllers.json` **vivo** da máquina de teste desde
    22/08/2026, empurrando os DualSense reais para os postos 6, 7 e 8. O portão
    existia o tempo todo. Ninguém o chamava. Curado em 25/08/2026.
 2. **`scripts/check_broadcast_proibido.py` esteve no MESMO estado**
@@ -28,7 +28,7 @@ QUEM CONTA COMO CHAMADOR — só quem RODA sozinho, sem alguém lembrar:
   - o gancho `scripts/hooks/pre-commit`;
   - o `.pre-commit-config.yaml`.
 
-**As linhas `FORA-DO-LOCAL` / `FORA-DO-CI` do `portoes.sh` NÃO contam.** Elas
+**As linhas `FORA-DO-LOCAL` / `FORA-DO-CI` do `portoes.sh` NÃO contam.** Essas
 declaram uma divergência ENTRE as duas listas, não uma execução — e aceitar uma
 declaração como prova de execução seria trocar a pergunta deste portão pela
 pergunta do outro.
@@ -66,26 +66,25 @@ _CAMADAS = ("rapido|", "completo|", "suite|")
 
 
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
-    # fica: é o portão do MERGE, por desenho: pergunta ao daemon vivo da bancada
     "scripts/check_a_conferencia.py": (
         "MEDIDO em 08/09/2026, e ele fica fora das duas listas POR DESENHO, não "
-        "por esquecimento. Ele é a tabela que ELA escreveu — a coluna «✓ na "
-        "árvore» contra a coluna «falta» — com a ordem dela junto: *\"se alguma "
-        "[ficar n]a direita, ela não passa para o dev\"*. Logo ele é o portão do "
-        "MERGE, e quem o roda é quem mergeia, na árvore dela, antes do `git "
+        "por esquecimento. Ele é a tabela da conferência de quem usa — a coluna «✓ na "
+        "árvore» contra a coluna «falta» — com a regra junto: o que "
+        "ficar na direita não passa para o dev. Logo ele é o portão do "
+        "MERGE, e quem o roda é quem mergeia, na árvore de uso, antes do `git "
         "merge`.\n"
         "POR QUE NÃO PENDURAR NO `portoes.sh`: a linha da cor única PERGUNTA AO "
-        "DONO — ela abre o socket do daemon vivo e lê o `lightbar_rgb` de cada "
-        "controle da mesa, porque foi assim que ela viu o defeito (dois azuis "
+        "DONO — abre o socket do daemon vivo e lê o `lightbar_rgb` de cada "
+        "controle da mesa, porque foi assim que o defeito se viu (dois azuis "
         "lado a lado) e é a única leitura que não mente sobre o plástico. Nem o "
         "CI nem uma worktree de trabalho têm quatro DualSense conectados; "
         "pendurá-lo ali daria um vermelho que ninguém pode fechar, e a casa já "
         "mediu o que isso custa — agente caçando régua quebrada em vez de "
         "defeito.\n"
-        "A LINHA QUE O LIGARIA, se um dia a bancada virar CI: "
+        "A LINHA QUE O LIGARIA, se um dia o ensaio no aparelho virar CI: "
         "`rapido|conferencia-do-usuario|py|scripts/check_a_conferencia.py` em "
         "`scripts/portoes.sh`, mais o passo gêmeo em `.github/workflows/ci.yml`. "
-        "Ele fecha quando as três linhas da direita fecharem E existir bancada "
+        "Ele fecha quando as três linhas da direita fecharem E existir ensaio "
         "automatizada — a segunda condição é que não existe hoje."
     ),
     # fica: liga-se na fase 3 da sprint, quando as quatro áreas zerarem
@@ -102,7 +101,7 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
     "scripts/check_ensaio_de_bt.py": (
         "MEDIDO em 01/09/2026, e ele NASCEU sem chamador de propósito. A escada "
         "de releases (`docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md`, degrau "
-        "0.9.5) o nomeia como o que mede a bancada de BT dela, e o arquivo não "
+        "0.9.5) o nomeia como o que mede o ensaio de BT, e o arquivo não "
         "existia — o degrau só era descrito, nunca conferido. Ele lê os dois "
         "CSV (`mapa-controles.csv`, `ensaios.csv`) e roda no CI sem hardware. "
         "RODA VERMELHO hoje, de propósito: `python scripts/check_ensaio_de_bt.py`"
@@ -120,11 +119,11 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "REMEDIDO em 01/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01): exit=1, "
         "R1=18, R2=27, R3=7, R4=114 — 166 pendências (eram 183). As quatro "
         "não zeraram, e a decisão de 01/09 fica: ele mede o DEGRAU, e entra "
-        "na camada `completo` no commit em que elas zerarem.\n"
+        "na camada `completo` no commit em que as réguas zerarem.\n"
         "REMEDIDO em 06/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01): exit=1, os "
         "mesmos R1=18, R2=27, R3=7, R4=114 — 166 pendências. Ele fica fora por "
         "honestidade: ligá-lo agora reprovaria toda leva por pendência de rádio "
-        "que ela não criou."
+        "que a leva não criou."
     ),
 }
 
@@ -221,7 +220,7 @@ class TestTodoPortaoTemChamador:
             f"roda:\n" + "\n".join(f"  - {o}" for o in orfaos) + "\n"
             "É o defeito do `check_faixa_sintetica.py`, que ficou verde por "
             "AUSÊNCIA enquanto quatro MACs de fixture moravam no "
-            "`controllers.json` vivo dela.\n"
+            "`controllers.json` vivo da máquina de teste.\n"
             "FAÇA UMA DAS DUAS:\n"
             "  1. LIGUE — uma linha na tabela de `scripts/portoes.sh` e o "
             "passo correspondente em `.github/workflows/ci.yml` (as duas, "
@@ -301,11 +300,11 @@ class TestOPortaoMorde:
 
         soltos = portoes_sem_chamador(casa)
         assert "scripts/check_inventado.py" in soltos, (
-            "a régua NÃO acusou o portão fabricado — ela não pega o próximo, "
+            "a régua NÃO acusou o portão fabricado — não pega o próximo, "
             f"só cataloga os de hoje. Acusados: {sorted(soltos)}"
         )
         assert "scripts/validar-acentuacao.py" not in soltos, (
-            "a régua acusou um portão que a tabela CHAMA — ela grita sempre, e "
+            "a régua acusou um portão que a tabela CHAMA — grita sempre, e "
             "um portão que grita sempre é desligado na primeira semana"
         )
         assert "scripts/check_inventado.py" not in portoes_sem_chamador(), (
@@ -350,7 +349,7 @@ class TestOPortaoMorde:
         )
         assert "scripts/check_inventado.py" in portoes_sem_chamador(casa), (
             "a régua aceitou uma linha de DIVERGÊNCIA como prova de execução — "
-            "ela passou a responder a pergunta do outro portão"
+            "passou a responder a pergunta do outro portão"
         )
 
     def test_a_mencao_em_comentario_nao_conta_como_chamador(
