@@ -612,6 +612,14 @@ def _fixar_um_jogo(arquivo: Path, pino_dir: Path, nativos: frozenset[str], escre
     return trocadas, fora
 
 
+def casas_do_heroic(lar: Path | None = None) -> tuple[tuple[Path, ...], tuple[ForaDoPino, ...]]:
+    """Toda pasta do Heroic que existe; a que não se lê vira um ``fora`` dito, nunca exceção."""
+    try:
+        return pastas_que_existem("Heroic", lar), ()
+    except OSError:
+        return (), (ForaDoPino("heroic", "", PORQUE_ILEGIVEL),)
+
+
 def fixar_o_heroic(pasta: Path, pino_dir: Path | None, *, escrever: bool = True,
                    aberto: Callable[[], bool] | None = None) -> FixadoNoLancador:
     """Aponta para ``pino_dir`` o padrão e todo jogo pelo Proton de UMA casa do Heroic (30/10/2026).

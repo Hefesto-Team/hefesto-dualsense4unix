@@ -1767,11 +1767,8 @@ def apontar_os_lancadores_para_o_pino(
         return censo.FixadoNoLancador()
     total = 0
     fora: list[censo.ForaDoPino] = []
-    try:
-        pastas = censo.pastas_que_existem("Heroic", home)
-    except OSError:
-        pastas = ()
-        fora.append(censo.ForaDoPino("heroic", "", censo.PORQUE_ILEGIVEL))
+    pastas, ilegiveis = censo.casas_do_heroic(home)
+    fora.extend(ilegiveis)
     for pasta in pastas:
         try:
             pino_dir = onde_o_heroic_ve_o_pino(pasta, pino, conf=conf, compat=compat,
