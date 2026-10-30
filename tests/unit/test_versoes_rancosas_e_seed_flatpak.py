@@ -15,19 +15,12 @@ REPO = Path(__file__).resolve().parents[2]
 GATE_REL = "scripts/check_version_consistency.py"
 ENTRYPOINT_REL = "assets/appimage/entrypoint.sh"
 METAINFO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"
-CARGO_REL = "packaging/cosmic-applet/Cargo.toml"
-CARGO_LOCK_REL = "packaging/cosmic-applet/Cargo.lock"
 MANIFESTO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml"
 BUILD_GUI_REL = "scripts/build_appimage_gui.sh"
 
 _ALVOS_NOVOS: tuple[tuple[str, str], ...] = (
     (ENTRYPOINT_REL, 'HEFESTO_VERSION_FALLBACK="{v}"\n'),
     (METAINFO_REL, '<releases>\n  <release version="{v}" date="2026-07-28"/>\n</releases>\n'),
-    (CARGO_REL, '[package]\nname = "x"\nversion = "{v}"\n\n'
-                '[dependencies]\ntokio = {{ version = "1" }}\n'),
-    (CARGO_LOCK_REL,
-     '[[package]]\nname = "libcosmic"\nversion = "0.1.0"\n\n'
-     '[[package]]\nname = "hefesto-dualsense4unix-applet"\nversion = "{v}"\n'),
 )
 
 
@@ -64,10 +57,10 @@ def _esperado_no_alvo(relpath: str) -> str:
 
 
 @pytest.mark.parametrize(
-    "relpath", [ENTRYPOINT_REL, METAINFO_REL, CARGO_REL, CARGO_LOCK_REL]
+    "relpath", [ENTRYPOINT_REL, METAINFO_REL]
 )
 def test_alvo_novo_esta_no_portao(relpath: str) -> None:
-    """O portão de release precisa VER os três artefatos."""
+    """O portão de release precisa VER cada artefato."""
     caminhos = {alvo[1] for alvo in _targets_do_portao()}
     assert relpath in caminhos, (
         f"{relpath} não é alvo de {GATE_REL} — voltou a poder envelhecer em "
@@ -76,7 +69,7 @@ def test_alvo_novo_esta_no_portao(relpath: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "relpath", [ENTRYPOINT_REL, METAINFO_REL, CARGO_REL, CARGO_LOCK_REL]
+    "relpath", [ENTRYPOINT_REL, METAINFO_REL]
 )
 def test_regex_do_alvo_extrai_a_versao_canonica_do_arquivo_real(relpath: str) -> None:
     """Cada sintaxe é diferente (shell, XML, semver) — o regex tem que pegar."""
@@ -133,100 +126,6 @@ def test_portao_aprova_alvo_novo_em_dia(tmp_path: Path, relpath: str) -> None:
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "1 alvo" in proc.stdout
-
-
-@pytest.mark.parametrize(
-    ("canonica", "esperada"),
-    [
-        ("0.9.4.2", "0.9.4+2"),
-        ("0.9.4", "0.9.4"),
-        ("1.0.0.10", "1.0.0+10"),
-    ],
-)
-def test_versao_para_cargo_traduz_a_quarta_casa(canonica: str, esperada: str) -> None:
-    """`X.Y.Z.W` vira `X.Y.Z+W`; `X.Y.Z` não é tocada."""
-    assert _portao().versao_para_cargo(canonica) == esperada
-
-
-def test_a_traducao_nao_usa_pre_release() -> None:
-    """`-W` também compila e está ERRADO: inverteria a ordem da história."""
-    assert "-" not in _portao().versao_para_cargo("0.9.4.2")
-
-
-@pytest.mark.parametrize("relpath", [CARGO_REL, CARGO_LOCK_REL])
-def test_portao_reprova_o_cargo_com_a_canonica_literal(
-    tmp_path: Path, relpath: str
-) -> None:
-    """MORDE: escrever `9.9.9.9` no Cargo é exatamente o que quebrou o build."""
-    repo = _repo_fake(
-        tmp_path, versao="9.9.9.9", relpath=relpath, versao_alvo="9.9.9.9"
-    )
-    proc = subprocess.run(
-        [sys.executable, GATE_REL], cwd=repo, capture_output=True, text=True
-    )
-    assert proc.returncode == 1, (
-        f"o portão APROVOU {relpath} com a canônica literal de quatro "
-        "componentes, que o Cargo rejeita: " + proc.stdout + proc.stderr
-    )
-    assert "9.9.9+9" in proc.stdout, "a mensagem não diz a forma que ele espera"
-
-
-@pytest.mark.parametrize("relpath", [CARGO_REL, CARGO_LOCK_REL])
-def test_portao_aprova_o_cargo_traduzido(tmp_path: Path, relpath: str) -> None:
-    """E o outro lado: com `9.9.9+9` no arquivo, passa."""
-    repo = _repo_fake(
-        tmp_path, versao="9.9.9.9", relpath=relpath, versao_alvo="9.9.9+9"
-    )
-    proc = subprocess.run(
-        [sys.executable, GATE_REL], cwd=repo, capture_output=True, text=True
-    )
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-
-
-@pytest.mark.skipif(
-    shutil.which("cargo") is None, reason="cargo ausente (CI sem toolchain Rust)"
-)
-def test_o_cargo_de_verdade_aceita_o_manifesto_real() -> None:
-    """A prova final: quem julga o Cargo.toml é o Cargo, não o nosso regex."""
-    proc = subprocess.run(
-        ["cargo", "verify-project", "--manifest-path", CARGO_REL],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-    )
-    assert proc.returncode == 0, (
-        "o Cargo REJEITA o manifesto do applet: " + proc.stdout + proc.stderr
-    )
-
-
-def test_cargo_toml_e_lock_declaram_a_mesma_versao() -> None:
-    """O lock ficou em `9.3.2` sem ninguém ver — o comentário pedia, e pedir"""
-    def _versao(rel: str, padrao: str) -> str | None:
-        achado = re.search(
-            padrao, (REPO / rel).read_text(encoding="utf-8"), re.MULTILINE
-        )
-        return achado.group(1) if achado else None
-
-    do_toml = _versao(CARGO_REL, r'^version\s*=\s*"([^"]+)"')
-    do_lock = _versao(
-        CARGO_LOCK_REL,
-        r'^name = "hefesto-dualsense4unix-applet"\nversion = "([^"]+)"',
-    )
-    assert do_toml == do_lock, (
-        f"Cargo.toml diz {do_toml!r} e Cargo.lock diz {do_lock!r} — o "
-        "`cargo build` corrigiria sozinho, sujando a árvore no meio do release"
-    )
-
-
-def test_regex_do_cargo_ignora_a_versao_das_dependencias(tmp_path: Path) -> None:
-    """Sem a âncora `^`, o regex casaria o `version = "1"` do tokio dentro de"""
-    repo = _repo_fake(tmp_path, versao="9.9.9", relpath=CARGO_REL, versao_alvo="9.9.9")
-    conteudo = (repo / CARGO_REL).read_text(encoding="utf-8")
-    assert 'version = "1"' in conteudo, "o molde perdeu a linha de dependência"
-    proc = subprocess.run(
-        [sys.executable, GATE_REL], cwd=repo, capture_output=True, text=True
-    )
-    assert proc.returncode == 0, proc.stdout + proc.stderr
 
 
 def test_banner_do_appimage_deriva_a_versao() -> None:
@@ -334,23 +233,6 @@ def test_metainfo_e_xml_valido_e_cada_release_tem_descricao() -> None:
             f"release {rel.get('version')} sem <description> — o AppStream "
             "mostra entrada vazia na loja"
         )
-
-
-def test_cargo_do_applet_nao_expoe_email_pessoal() -> None:
-    """Nem o check_anonymity.sh (não procura e-mail) nem o check_test_data.sh"""
-    texto = (REPO / CARGO_REL).read_text(encoding="utf-8")
-    achados = re.findall(r"[\w.+-]+@[\w-]+\.[\w.]+", texto)
-    assert achados == [], f"e-mail pessoal de volta em {CARGO_REL}: {achados}"
-    assert "[REDACTED]" in texto, (
-        "o campo authors perdeu a redação no padrão do PKGBUILD"
-    )
-
-
-def test_pkgbuild_e_cargo_usam_o_mesmo_padrao_de_redacao() -> None:
-    pkgbuild = (REPO / "packaging/arch/PKGBUILD").read_text(encoding="utf-8")
-    assert "[REDACTED]" in pkgbuild, "o PKGBUILD deixou de ser a referência"
-    cargo = (REPO / CARGO_REL).read_text(encoding="utf-8")
-    assert re.search(r'authors\s*=\s*\["Vitoria Maria <\[REDACTED\]>"\]', cargo)
 
 
 def _comandos_do_modulo_hefesto() -> list[str]:

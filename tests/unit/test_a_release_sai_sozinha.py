@@ -49,8 +49,6 @@ ALVOS_DE_VERSAO = (
     "packaging/debian/control",
     "assets/appimage/entrypoint.sh",
     "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml",
-    "packaging/cosmic-applet/Cargo.toml",
-    "packaging/cosmic-applet/Cargo.lock",
     "scripts/check_version_consistency.py",
     "scripts/check_texto_publico.py",
 )
@@ -304,10 +302,6 @@ def test_gravar_poe_a_mesma_versao_em_todos_os_alvos_e_a_regua_do_repositorio_co
     assert 'version = "0.9.5"' in textos["pyproject.toml"]
     assert "pkgver=0.9.5" in textos["packaging/arch/PKGBUILD"]
     assert re.search(r"^Version:\s*0\.9\.5\s*$", textos["packaging/debian/control"], re.M)
-    assert (
-        'name = "hefesto-dualsense4unix-applet"\nversion = "0.9.5"'
-        in textos["packaging/cosmic-applet/Cargo.lock"]
-    )
     metainfo = textos["flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"]
     assert re.search(
         r'<releases>\s*<release version="0\.9\.5" date="2026-10-07">'

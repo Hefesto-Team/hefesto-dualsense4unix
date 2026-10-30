@@ -41,10 +41,9 @@
      é substituída de qualquer forma, e fora dele ela é a diferença entre ver e
      não ver. Os `path` são os mesmos, ponto por ponto.
 
-  3. O local mudou: era
-     `packaging/cosmic-applet/data/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg`,
-     instalado sob um nome que o código não pedia desde 27/06 — ícone sem
-     dono. Agora os dois desenhos moram juntos, em `assets/simbolico/`, e o
+  3. O local mudou: era a pasta de ícones do applet COSMIC (que saiu do
+     projeto), instalado sob um nome que o código não pedia desde 27/06 — ícone
+     sem dono. Agora os dois desenhos moram juntos, em `assets/simbolico/`, e o
      instalado é escolha explícita.
 
   Sprint: `docs/process/sprints/2026-08-07-APPLET-MONOCROMATICO-01-o-icone-que-destoa-do-painel.md`

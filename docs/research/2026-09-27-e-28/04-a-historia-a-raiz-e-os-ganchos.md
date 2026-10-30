@@ -371,8 +371,8 @@ daí em diante, mudar trava é gesto dela. Fora das ondas:
 - **`packaging/debian/control`** não declara `gir1.2-webkit2-4.1`, que a interface
   exige. Hipótese: a janela não abre num `.deb` em sistema limpo; falta instalar
   num contêiner e medir.
-- **`packaging/cosmic-applet`**, aposentado em 19/09 com o código mantido, ainda
-  usa um app-id pessoal. Tirar ou não é pergunta.
+- **`packaging/cosmic-applet`**, aposentado em 19/09 com o código mantido, usava
+  um app-id pessoal. Saiu do repositório em 30/10/2026.
 - **O sha256 do «Source code»** das releases muda com a reescrita (o cabeçalho pax
   grava o commit): hipótese, não medida.
 - **A pré-condição de fora:** uma linha de `tests/conftest.py` pertence a sprints

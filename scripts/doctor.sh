@@ -5,7 +5,7 @@ set -uo pipefail
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly APP_ID="hefesto-dualsense4unix"
 readonly HOTPLUG_UNIT="hefesto-dualsense4unix-gui-hotplug.service"
-readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
+readonly APPLET_DESKTOP_GLOB="/usr/share/applications/com.*.HefestoDualsense4Unix.desktop"
 
 DO_FIX=0
 QUIET=0
@@ -847,7 +847,7 @@ check_bandeja() {
         info "tray não está rodando — ele sobe no próximo login, ou agora com: ./run.sh --tray"
     fi
 
-    if [[ -e "${APPLET_DESKTOP}" || -e "/usr/local/bin/hefesto-dualsense4unix-applet" ]]; then
+    if compgen -G "${APPLET_DESKTOP_GLOB}" >/dev/null || [[ -e "/usr/local/bin/hefesto-dualsense4unix-applet" ]]; then
         info "há um applet COSMIC instalado de antes — ele foi APOSENTADO em 19/09/2026 e o tray o substitui. Para removê-lo sem tocar em mais nada: ./uninstall.sh --so-o-applet"
     fi
 }

@@ -12,11 +12,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 SVG = RAIZ / "assets" / "hefesto-logo.svg"
 GERADOR = RAIZ / "scripts" / "gerar_icones.sh"
 
-DERIVADOS = (
-    "packaging/cosmic-applet/data/icons/hicolor/256x256/apps/"
-    "com.vitoriamaria.HefestoDualsense4Unix.png",
-    "assets/appimage/Hefesto-Dualsense4Unix.png",
-)
+DERIVADOS = ("assets/appimage/Hefesto-Dualsense4Unix.png",)
 
 
 def test_a_fonte_canonica_existe() -> None:

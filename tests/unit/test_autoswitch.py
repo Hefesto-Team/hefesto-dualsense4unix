@@ -481,7 +481,6 @@ def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
         (1.5, "Hefesto-Dualsense4Unix"),
         (30.0, "hefesto-dualsense4unix"),
         (60.0, "hefesto-dualsense4unix-gui"),
-        (120.0, "com.vitoriamaria.HefestoDualsense4Unix"),
     ):
         sw._tick({"wm_class": wm, "wm_name": "Hefesto DualSense4Unix"}, t)
 
@@ -570,7 +569,6 @@ def test_janela_propria_matcher():
         "Hefesto-Dualsense4Unix",
         "hefesto-dualsense4unix",
         "  hefesto-dualsense4unix-gui ",
-        "com.vitoriamaria.HefestoDualsense4Unix",
     ]
     for wm in proprias:
         assert AutoSwitcher._janela_propria({"wm_class": wm}), wm

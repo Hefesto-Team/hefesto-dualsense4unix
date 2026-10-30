@@ -11,27 +11,8 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 
 SIMBOLICO = RAIZ / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg"
-SIMBOLICO_APPLET = (
-    RAIZ
-    / "packaging"
-    / "cosmic-applet"
-    / "data"
-    / "icons"
-    / "hicolor"
-    / "symbolic"
-    / "apps"
-    / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
-)
 OPCOES = sorted((RAIZ / "assets" / "simbolico").glob("opcao-*-symbolic.svg"))
 TRAY_PY = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "tray.py"
-APPLET_RS = RAIZ / "packaging" / "cosmic-applet" / "src" / "app.rs"
-APPLET_DESKTOP = (
-    RAIZ
-    / "packaging"
-    / "cosmic-applet"
-    / "data"
-    / "com.vitoriamaria.HefestoDualsense4Unix.desktop"
-)
 INSTALL_SH = RAIZ / "install.sh"
 UNINSTALL_SH = RAIZ / "uninstall.sh"
 
@@ -58,7 +39,7 @@ def test_o_simbolico_e_xml_valido():
     import xml.etree.ElementTree as ET
 
     assert OPCOES, "as opções de desenho sumiram de assets/simbolico/"
-    for arq in (SIMBOLICO, SIMBOLICO_APPLET, *OPCOES):
+    for arq in (SIMBOLICO, *OPCOES):
         try:
             ET.parse(arq)
         except ET.ParseError as erro:  # pragma: no cover
@@ -134,14 +115,6 @@ def test_sem_fundo_opaco_e_sem_transform(svg: str):
     )
 
 
-def test_bandeja_e_applet_servem_o_mesmo_desenho():
-    assert SIMBOLICO_APPLET.is_file()
-    assert SIMBOLICO.read_bytes() == SIMBOLICO_APPLET.read_bytes(), (
-        "dois nomes, um desenho só — se divergirem, a mesma aplicação aparece "
-        "com ícones diferentes conforme a superfície"
-    )
-
-
 def test_tray_pede_nome_simbolico():
     from hefesto_dualsense4unix.app.tray import (
         TRAY_ICON_FALLBACK,
@@ -153,24 +126,6 @@ def test_tray_pede_nome_simbolico():
     assert SIMBOLICO.stem == TRAY_ICON_NAME
     assert TRAY_ICON_NAME_LEGADO == "hefesto-dualsense4unix"
     assert TRAY_ICON_FALLBACK == "input-gaming"
-
-
-def test_applet_rust_pede_nome_simbolico():
-    fonte = APPLET_RS.read_text(encoding="utf-8")
-    achado = re.search(r'const ICON_APP: &str = "([^"]+)"', fonte)
-    assert achado is not None, "ICON_APP sumiu de app.rs"
-    assert achado.group(1).endswith("-symbolic")
-    assert achado.group(1) == SIMBOLICO_APPLET.stem
-
-
-def test_desktop_do_applet_pede_nome_simbolico():
-    linha = [
-        ln
-        for ln in APPLET_DESKTOP.read_text(encoding="utf-8").splitlines()
-        if ln.startswith("Icon=")
-    ]
-    assert linha, "o .desktop do applet perdeu a linha Icon="
-    assert linha[0].removeprefix("Icon=").endswith("-symbolic")
 
 
 def test_instaladores_levam_e_removem_o_simbolico():

@@ -33,7 +33,6 @@ if ! command -v rsvg-convert >/dev/null 2>&1; then
 fi
 
 DESTINOS=(
-    "packaging/cosmic-applet/data/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png:256"
     "assets/appimage/Hefesto-Dualsense4Unix.png:256"
 )
 

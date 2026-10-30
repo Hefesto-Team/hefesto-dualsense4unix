@@ -93,27 +93,17 @@ def test_o_run_sh_entende_tray() -> None:
     )
 
 
-def test_o_applet_so_entra_quando_pedido() -> None:
+def test_o_install_nao_compila_nem_instala_applet() -> None:
     texto = INSTALL.read_text(encoding="utf-8")
-    condicao = re.search(
-        r"^if \[\[ \"\$\{ENABLE_COSMIC_APPLET\}\".*?^fi$",
-        texto,
-        re.M | re.S,
+    assert not (RAIZ / "packaging" / "cosmic-applet").exists(), (
+        "o applet COSMIC voltou para o repositório; o tray o substitui."
     )
-    assert condicao, (
-        "não achei a condição do passo 9 começando por ENABLE_COSMIC_APPLET. "
-        "Ela é o que aposenta o applet: antes de 19/09 ela começava por "
-        "DISABLE_ e tinha DESKTOP_IS_COSMIC no meio."
-    )
-    corpo = condicao.group(0)
-    assert "DESKTOP_IS_COSMIC" not in corpo, (
-        "DESKTOP_IS_COSMIC voltou à condição do applet — com ele, a máquina "
-        "DELA instala o applet de novo a cada install, que é exatamente o que "
-        "ela mandou parar."
-    )
-    assert "_applet_installed" not in corpo, (
-        "o braço `_applet_installed` voltou: uma vez instalado, o applet se "
-        "reinstalaria para sempre, inclusive depois de ela mandar parar."
+    for agulha in ("cosmic-applet/justfile", "just ", "cargo build", "install_cosmic_applet"):
+        assert agulha not in texto, (
+            f"o install voltou a construir o applet ({agulha!r})."
+        )
+    assert "--enable-cosmic-applet) ENABLE_COSMIC_APPLET=1 ;;" in texto, (
+        "a flag velha sumiu do parser: quem a tem num script quebraria."
     )
 
 

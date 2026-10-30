@@ -17,19 +17,10 @@ REPO_RAIZ = Path(__file__).resolve().parents[2]
 
 
 def _semeia_simbolico(raiz: Path) -> None:
-    """O par de simbólicos que a seção do applet exige (APPLET-MONOCROMÁTICO-01)."""
+    """O simbólico que a seção da bandeja exige."""
     desenho = '<svg viewBox="0 0 16 16"><title>fake</title></svg>\n'
     alvos = (
         raiz / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg",
-        raiz
-        / "packaging"
-        / "cosmic-applet"
-        / "data"
-        / "icons"
-        / "hicolor"
-        / "symbolic"
-        / "apps"
-        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg",
     )
     for alvo in alvos:
         alvo.parent.mkdir(parents=True, exist_ok=True)

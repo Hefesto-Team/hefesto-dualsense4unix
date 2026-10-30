@@ -33,10 +33,8 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("ATIVAR-NAO-MENTE-01 (o botão Ativar)")
 
-import re
 import sys
 import types
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -91,8 +89,6 @@ from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions import footer_actions as fa
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 
-RAIZ = Path(__file__).resolve().parents[2]
-IPC_RS = RAIZ / "packaging" / "cosmic-applet" / "src" / "ipc.rs"
 
 RESPOSTA_COM_MODO_ADIADO: dict[str, Any] = {
     "active_profile": "vitoria",
@@ -174,36 +170,6 @@ class TestOTimeoutDaAtivacao:
         assert vistos == [
             ("profile.switch", ipc_bridge.PROFILE_SWITCH_TIMEOUT_S)
         ]
-
-
-class TestOAppletEspelhaAJanela:
-    """Os dois falam com o MESMO daemon — divergir cura um lado só."""
-
-    def test_o_applet_tem_folga_propria_para_trocar_de_perfil(self) -> None:
-        fonte = IPC_RS.read_text(encoding="utf-8")
-        achado = re.search(
-            r"const SWITCH_IPC_TIMEOUT: Duration = Duration::from_secs\((\d+)\)",
-            fonte,
-        )
-        assert achado is not None, (
-            "o applet voltou a mandar `profile.switch` no timeout de leitura"
-        )
-        assert float(achado.group(1)) == ipc_bridge.PROFILE_SWITCH_TIMEOUT_S
-
-    def test_o_switch_do_applet_usa_a_folga(self) -> None:
-        """Morde a FIAÇÃO: a constante certa e a chamada errada não curam nada."""
-        fonte = IPC_RS.read_text(encoding="utf-8")
-        corpo = fonte.split("pub async fn switch_profile", 1)[1].split("\n}\n", 1)[0]
-        assert "SWITCH_IPC_TIMEOUT" in corpo
-
-    def test_a_leitura_do_applet_continua_curta(self) -> None:
-        """O painel não pode pendurar 3 s num daemon morto — por isso a folga"""
-        fonte = IPC_RS.read_text(encoding="utf-8")
-        achado = re.search(
-            r"const IPC_TIMEOUT: Duration = Duration::from_millis\((\d+)\)", fonte
-        )
-        assert achado is not None
-        assert int(achado.group(1)) <= 250
 
 
 class TestAJanelaLeORelatorio:

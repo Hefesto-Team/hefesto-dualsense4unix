@@ -247,7 +247,7 @@ def test_a_pendencia_do_sanitizador_nao_cresce() -> None:
 
 def test_a_mordida_da_url_nao_alcanca_o_campo_de_email() -> None:
     """Contraprova obrigatória: o marcador protege o e-mail pessoal, e essa"""
-    for relpath in ("packaging/arch/PKGBUILD", "packaging/cosmic-applet/Cargo.toml"):
+    for relpath in ("packaging/arch/PKGBUILD",):
         texto = (REPO / relpath).read_text(encoding="utf-8")
         assert "<[REDACTED]>" in texto, (
             f"{relpath} perdeu a redação do e-mail — a política de referência"

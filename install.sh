@@ -176,14 +176,10 @@ Flags:
   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
   --enable-hotplug-gui  abre a janela no início da sessão gráfica (pula prompt).
-  --enable-cosmic-applet  compila+instala o applet COSMIC nativo (Rust).
-                        APOSENTADO: o ícone da bandeja faz
-                        o mesmo, aparece sozinho e tem menu mais rico. Sem
-                        esta flag o applet NÃO é instalado em máquina alguma.
-                        (a 1a build do libcosmic e longa, >10 min; requer
-                        cargo+just — se ausentes, o install NÃO falha.)
-  --no-cosmic-applet    aceita e não faz nada: o default já é não instalar.
-                        Fica para não quebrar quem a tenha num script.
+  --enable-cosmic-applet, --no-cosmic-applet
+                        aceitas e sem efeito: o applet COSMIC saiu do projeto
+                        (o ícone da bandeja faz o mesmo). Ficam para não
+                        quebrar quem as tenha num script.
   --dev                 cria o venv COM o extra [dev] (ruff/mypy/pytest), para
                         quem vai mexer no código. Por DEFAULT o venv vem só
                         com o que o produto usa: a primeira instalação de
@@ -264,7 +260,6 @@ SKIP_HOTPLUG_GUI=0
 ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
-DISABLE_COSMIC_APPLET=0
 WITH_DEV=0
 NO_FONTS=0
 NO_OSK=0
@@ -295,8 +290,8 @@ for arg in "$@"; do
         --no-hotplug-gui)     SKIP_HOTPLUG_GUI=1 ;;
         --enable-autostart)   ENABLE_AUTOSTART=1 ;;
         --enable-hotplug-gui) ENABLE_HOTPLUG_GUI=1 ;;
-        --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1; DISABLE_COSMIC_APPLET=0 ;;
-        --no-cosmic-applet|--disable-cosmic-applet) DISABLE_COSMIC_APPLET=1 ;;
+        --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1 ;;
+        --no-cosmic-applet|--disable-cosmic-applet) ;;
         --dev)                WITH_DEV=1 ;;
         --no-dev)             WITH_DEV=0 ;;
         --no-fonts)           NO_FONTS=1 ;;
@@ -934,7 +929,7 @@ acquire_sudo() {
         _start_sudo_keepalive
         return 0
     fi
-    printf '\n>>> Alguns passos precisam de sudo (udev, cura do storm, applet COSMIC).\n'
+    printf '\n>>> Alguns passos precisam de sudo (udev, cura do storm).\n'
     printf '    Vou pedir sua senha UMA vez; os passos seguintes reusam a credencial.\n'
     if sudo -v; then
         _start_sudo_keepalive
@@ -986,8 +981,7 @@ fi
 printf '\n>>> Formato escolhido: %s\n' "${FORMAT}"
 
 _NEEDS_SUDO=1
-if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" \
-        && "${ENABLE_COSMIC_APPLET}" -eq 0 && "${NO_DKMS}" -eq 1 ]]; then
+if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" && "${NO_DKMS}" -eq 1 ]]; then
     _NEEDS_SUDO=0
 fi
 acquire_sudo
@@ -3105,47 +3099,15 @@ else
 fi
 
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
-step "9/11" "applet COSMIC (APOSENTADO — o tray o substitui; --enable-cosmic-applet força)"
-install_cosmic_applet() {
-    local applet_dir="${ROOT_DIR}/packaging/cosmic-applet"
-    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        if ! command -v cargo >/dev/null 2>&1 || ! command -v just >/dev/null 2>&1; then
-            _nao_faria "compilar o applet COSMIC: faltam cargo e/ou just nesta máquina (o install segue normal sem ele)"
-        else
-            _faria "COMPILAR o applet COSMIC em Rust — a primeira build do libcosmic passa de 10 minutos"
-            _faria_root "instalar o applet em ${APPLET_BIN} e o .desktop dele (o 'just install' usa sudo)"
-        fi
-        return 0
-    fi
-    if ! command -v cargo >/dev/null 2>&1 || ! command -v just >/dev/null 2>&1; then
-        warn "cargo/just ausentes — applet COSMIC pulado (o install segue normal)"
-        printf '        instale rustup (https://rustup.rs) + just e os -dev, depois:\n'
-        printf '        sudo apt install just libxkbcommon-dev libwayland-dev libgbm-dev \\\n'
-        printf '             libegl-dev libinput-dev libudev-dev pkg-config\n'
-        printf '        e rode: ./install.sh --enable-cosmic-applet\n'
-        return 0
-    fi
-    printf '      compilando + instalando (1a build do libcosmic e LONGA, >10 min)\n'
-    local _applet_sudo=()
-    [[ -n "${SUDO_ASKPASS:-}" ]] && _applet_sudo=(--set sudo "sudo -A")
-    if just "${_applet_sudo[@]}" -f "${applet_dir}/justfile" -d "${applet_dir}" install; then
-        printf '      applet instalado — adicione em Config. > Paineis > Miniaplicativos\n'
-    else
-        warn "build/instalacao do applet falhou — veja o log acima"
-    fi
-}
-_applet_installed=0
-[[ -e "${APPLET_BIN}" ]] && _applet_installed=1
+step "9/11" "applet COSMIC (saiu do projeto — o tray o substitui)"
 if [[ "${ENABLE_COSMIC_APPLET}" -eq 1 ]]; then
-    install_cosmic_applet
-elif [[ "${DISABLE_COSMIC_APPLET}" -eq 1 ]]; then
-    printf '      pulado (--no-cosmic-applet — e o default já é este)\n'
-else
-    printf '      aposentado — o tray faz o mesmo (force: ./install.sh --enable-cosmic-applet)\n'
+    warn "--enable-cosmic-applet não instala mais nada: o applet COSMIC saiu do projeto, e o tray faz o mesmo"
 fi
-if [[ "${_applet_installed}" -eq 1 && "${ENABLE_COSMIC_APPLET}" -eq 0 ]]; then
+if [[ -e "${APPLET_BIN}" ]]; then
     printf '      há um applet instalado de antes (%s)\n' "${APPLET_BIN}"
     printf '      para removê-lo SEM tocar em mais nada: ./uninstall.sh --so-o-applet\n'
+else
+    printf '      nada a fazer\n'
 fi
 
 step "som" "áudio: o alto-falante do controle nunca dorme"

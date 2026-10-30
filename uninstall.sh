@@ -12,10 +12,7 @@ readonly CHAVE_BIN="${HOME}/.local/bin/hefesto-chave"
 readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-gui-hotplug.service"
 
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
-readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
-readonly APPLET_ICON="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
-readonly APPLET_ICON_SYMB="/usr/share/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
-readonly APPLET_ICON_PNG="/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png"
+readonly APPLET_ID_RE='com\.[^.]+\.HefestoDualsense4Unix'
 readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf"
 readonly WIREPLUMBER_DROPIN_DISABLE="${HOME}/.config/wireplumber/wireplumber.conf.d/52-hefesto-dualsense-disable-source.conf"
 readonly WIREPLUMBER_DROPIN_OUTPUT="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
@@ -209,7 +206,9 @@ grep -qsE '^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>' \
     /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 grep -qsF '#hefesto-desativou# ' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf" ]] && _NEEDS_SUDO=1
-[[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_SYMB}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
+[[ -e "${APPLET_BIN}" ]] && _NEEDS_SUDO=1
+compgen -G "/usr/share/applications/com.*.HefestoDualsense4Unix.desktop" >/dev/null && _NEEDS_SUDO=1
+compgen -G "/usr/share/icons/hicolor/*/apps/com.*.HefestoDualsense4Unix*" >/dev/null && _NEEDS_SUDO=1
 dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
 [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] && _NEEDS_SUDO=1
 grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
@@ -254,20 +253,27 @@ command -v dkms >/dev/null 2>&1 \
 [[ -e /usr/local/lib/hefesto-dualsense4unix/wifi_usb.sh ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-bt-health-watchdog.service.d/10-hefesto-maquina.conf ]] && _NEEDS_SUDO=1
 remover_o_applet() {
-    if [[ ! -e "${APPLET_BIN}" && ! -e "${APPLET_DESKTOP}" && ! -e "${APPLET_ICON}" \
-          && ! -e "${APPLET_ICON_SYMB}" && ! -e "${APPLET_ICON_PNG}" ]]; then
-        log "applet COSMIC: nada a remover (nenhum dos cinco arquivos existe)"
+    local restos=()
+    [[ -e "${APPLET_BIN}" ]] && restos+=("${APPLET_BIN}")
+    local resto
+    for resto in /usr/share/applications/com.*.HefestoDualsense4Unix.desktop \
+                 /usr/share/icons/hicolor/{scalable,symbolic}/apps/com.*.HefestoDualsense4Unix-symbolic.svg \
+                 /usr/share/icons/hicolor/256x256/apps/com.*.HefestoDualsense4Unix.png; do
+        [[ -e "${resto}" ]] && restos+=("${resto}")
+    done
+    if (( ${#restos[@]} == 0 )); then
+        log "applet COSMIC: nada a remover (nem binário, nem .desktop, nem ícone)"
         return 0
     fi
     log "removendo applet COSMIC (sudo): binário + .desktop + ícones"
-    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_SYMB}" "${APPLET_ICON_PNG}" 2>/dev/null || true
+    sudo rm -f "${restos[@]}" 2>/dev/null || true
     sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
     sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
     local esta_na_lista=0
     local lista
     for lista in "${HOME}"/.config/cosmic/com.system76.CosmicPanel.*/v1/plugins_*; do
         [[ -r "${lista}" ]] || continue
-        grep -qF 'com.vitoriamaria.HefestoDualsense4Unix' "${lista}" && esta_na_lista=1
+        grep -qE "${APPLET_ID_RE}" "${lista}" && esta_na_lista=1
     done
     if [[ "${esta_na_lista}" -eq 1 ]]; then
         log "o applet estava na lista de Miniaplicativos — recarregando o painel"

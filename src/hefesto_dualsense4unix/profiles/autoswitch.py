@@ -49,7 +49,6 @@ DEFAULT_DEBOUNCE_SAIDA_SEC = 12.0
 OWN_GUI_WM_CLASSES: frozenset[str] = frozenset(
     {
         "main.py",
-        "com.vitoriamaria.hefestodualsense4unix",
     }
     | {
         nome.casefold()
@@ -783,7 +782,7 @@ class AutoSwitcher:
 
     @staticmethod
     def _janela_propria(info: dict[str, Any]) -> bool:
-        """True quando a janela em foco é a própria GUI/applet do hefesto."""
+        """True quando a janela em foco é a própria interface do hefesto."""
         wm_class = str(info.get("wm_class") or "").strip().casefold()
         return wm_class in OWN_GUI_WM_CLASSES
 

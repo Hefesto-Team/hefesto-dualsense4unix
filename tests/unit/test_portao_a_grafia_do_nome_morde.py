@@ -15,7 +15,6 @@ CURA = RAIZ / "scripts" / "aplicar_a_grafia_do_nome.sh"
 OS_TECNICOS = (
     'wm_class="Hefesto-Dualsense4Unix",',
     "StartupWMClass=Hefesto-Dualsense4Unix",
-    "com.vitoriamaria.HefestoDualsense4Unix.desktop",
     'XBOX360_NAME = "Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"',
     'DEVICE_NAME = "Hefesto - Dualsense4Unix Virtual Keyboard"',
     'DEVICE_NAME = "Hefesto - Dualsense4Unix Virtual Mouse+Keyboard"',

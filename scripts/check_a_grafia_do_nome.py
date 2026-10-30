@@ -41,10 +41,6 @@ mais paga.
   **O que quebraria:** o ícone some da dock (o ``StartupWMClass`` deixa de casar
   o que a janela publica), o perfil por janela para de trocar sozinho, e o
   ``park`` de janela do compositor erra o alvo. Tudo calado.
-* ``com.vitoriamaria.HefestoDualsense4Unix`` — o app-id do Flatpak, o nome-base
-  do ``.desktop`` e do ícone no tema ``hicolor``.
-  **O que quebraria:** a atualização do Flatpak instalado (id novo = outro app,
-  com outra pasta de perfis dentro do sandbox) e a resolução do ícone.
 * ``… pad (Hefesto - Dualsense4Unix virtual)`` e o Pro Controller — o nome que o
   nó **uinput** publica no kernel. **Jogos sob Proton casam por SUBSTRING do
   nome** (é a razão escrita em ``test_a_marca_do_vpad_no_nome_e_a_de_hoje.py``).

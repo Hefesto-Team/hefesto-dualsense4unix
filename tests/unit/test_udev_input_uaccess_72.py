@@ -317,15 +317,6 @@ def _semeia_simbolico(raiz: Path) -> None:
     desenho = '<svg viewBox="0 0 16 16"><title>fake</title></svg>\n'
     for alvo in (
         raiz / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg",
-        raiz
-        / "packaging"
-        / "cosmic-applet"
-        / "data"
-        / "icons"
-        / "hicolor"
-        / "symbolic"
-        / "apps"
-        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg",
     ):
         alvo.parent.mkdir(parents=True, exist_ok=True)
         alvo.write_text(desenho, encoding="utf-8")

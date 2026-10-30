@@ -157,23 +157,13 @@ else
     fi
 fi
 
-echo "== simbólico da bandeja × simbólico do applet (mesmo desenho) =="
+echo "== simbólico da bandeja =="
 SIMB_CANONICO="assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
-SIMB_APPLET="packaging/cosmic-applet/data/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
 if [[ ! -f "${SIMB_CANONICO}" ]]; then
     echo "[FAIL] ${SIMB_CANONICO} não existe — a bandeja cai no ícone colorido"
     rc=1
-elif [[ ! -f "${SIMB_APPLET}" ]]; then
-    echo "[FAIL] ${SIMB_APPLET} não existe — o applet fica sem glifo simbólico"
-    rc=1
-elif cmp -s "${SIMB_CANONICO}" "${SIMB_APPLET}"; then
-    echo "[ OK ] bandeja e applet servem o mesmo desenho simbólico"
 else
-    echo "[FAIL] o simbólico da bandeja e o do applet DIVERGIRAM"
-    echo "       ${SIMB_CANONICO}"
-    echo "       ${SIMB_APPLET}"
-    echo "       copie um sobre o outro — o desenho é um só."
-    rc=1
+    echo "[ OK ] a bandeja tem o desenho simbólico"
 fi
 
 echo "== X-HostWaylandDisplay nos .desktop de applet COSMIC (packaging/) =="

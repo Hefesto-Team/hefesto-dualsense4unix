@@ -34,24 +34,9 @@ _TARGETS: list[tuple[str, str, str]] = [
     ("metainfo Flatpak (release mais recente)",
      "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml",
      r'<release\s+version="([^"]+)"'),
-    ("Cargo applet COSMIC", "packaging/cosmic-applet/Cargo.toml",
-     r'^version\s*=\s*"([^"]+)"'),
-    ("Cargo.lock do applet", "packaging/cosmic-applet/Cargo.lock",
-     r'^name = "hefesto-dualsense4unix-applet"\nversion = "([^"]+)"'),
 ]
 
-def versao_para_cargo(canonica: str) -> str:
-    """A canônica na forma que o Cargo aceita — `X.Y.Z.W` vira `X.Y.Z+W`."""
-    partes = canonica.split(".")
-    if len(partes) <= 3:
-        return canonica
-    return ".".join(partes[:3]) + "+" + ".".join(partes[3:])
-
-
-_TRADUTORES: dict[str, Callable[[str], str]] = {
-    "packaging/cosmic-applet/Cargo.toml": versao_para_cargo,
-    "packaging/cosmic-applet/Cargo.lock": versao_para_cargo,
-}
+_TRADUTORES: dict[str, Callable[[str], str]] = {}
 
 
 _METAINFO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"

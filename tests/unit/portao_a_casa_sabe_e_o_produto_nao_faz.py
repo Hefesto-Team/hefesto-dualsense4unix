@@ -35,7 +35,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "própria régua: a fonte era `install.sh` e o commit 304b5f39 do mesmo "
         "dia (*a camada de máquina ganha casa própria*) mudou a boca de lugar "
         "— as dez curas de HOST saíram do instalador e viraram "
-        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:996` (`camada_de_maquina`) passa a "
+        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:990` (`camada_de_maquina`) passa a "
         "carregar com `source`. O `install_broker_host` de lá "
         "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:194`) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
@@ -48,7 +48,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "`install.sh:3408` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "`install.sh:3370` (`SENTINELA_PY`) substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
         "(`__SENTINELA__` em `assets/hefesto-steam-input-guard.service:28`); o "
         "`scripts/doctor.sh:1656` (`check_sentinela_wrapper`, --censo) também o roda",
@@ -61,26 +61,26 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "`scripts/disable_steam_input.sh:193` (`desligar`), e esse roteiro é "
         "o ExecStart "
         "de `assets/hefesto-steam-input-guard.service:13` (`__SCRIPT__`), que o "
-        "`install.sh:3407` (`__SCRIPT__`) troca pelo caminho dele",
+        "`install.sh:3369` (`__SCRIPT__`) troca pelo caminho dele",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "`install.sh:3440` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
-        "`uninstall.sh:1601` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
+        "`install.sh:3402` (`LAUNCH_MIGRATE_PY`) o roda com `--migrate`; "
+        "`uninstall.sh:1607` (`LAUNCH_STRIP_PY`) o roda para tirar o wrapper; "
         "`scripts/doctor.sh:1853` (`steam_launch_options`) o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "`install.sh:3282` (`PROTON_PIN_PY`, com `--ensure`) e "
-        "`uninstall.sh:1530` (`PROTON_PIN_PY`) o rodam; "
+        "`install.sh:3244` (`PROTON_PIN_PY`, com `--ensure`) e "
+        "`uninstall.sh:1536` (`PROTON_PIN_PY`) o rodam; "
         "`scripts/doctor.sh:3860` (`check_proton_pin`, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "`install.sh:3397` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
+        "`install.sh:3359` (`OPCOES_POR_JOGO_PY`) substitui __OPCOES_POR_JOGO__ na unit, cujo "
         "ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
         "(`__OPCOES_POR_JOGO__` em `assets/hefesto-steam-input-guard.service:53`) — o mesmo "
@@ -90,17 +90,17 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
     "integrations/audio_ks_dualsense.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
-        "`install.sh:2708` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
+        "`install.sh:2702` (`AUDIO_KS_TARGET`) o copia para ~/.local/share/hefesto-dualsense4unix/"
         "bin/hefesto-audio-ks, e o "
         "`assets/hefesto-launch.sh:409` (`curar_audio_ks`) o roda a cada jogo lançado; "
-        "`uninstall.sh:1635-1636` (`AUDIO_KS_PY`) o "
+        "`uninstall.sh:1641-1642` (`AUDIO_KS_PY`) o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
         "`scripts/doctor.sh:3801` (`check_exame_da_mesa`) o roda — e o "
-        "`install.sh:3540` (`doctor`) roda o doctor",
+        "`install.sh:3502` (`doctor`) roda o doctor",
     ),
 }
 
@@ -306,8 +306,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "Nome do socket de IPC (`IPC_SOCKET_ENV_VAR` em "
         "`src/hefesto_dualsense4unix/utils/xdg_paths.py:20`). Isola "
         "instâncias "
-        "paralelas em teste; o applet do COSMIC apenas LÊ a chave "
-        "(`SOCKET_ENV_VAR` em `packaging/cosmic-applet/src/ipc.rs:54`) para achar o mesmo socket. "
+        "paralelas em teste. "
         "Ninguém a liga como feature. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LEDS_ROOT": (
@@ -351,7 +350,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "Desliga a detecção de janela em foco (`HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT` em "
         "`src/hefesto_dualsense4unix/cli/app.py:354`, "
         "`HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT` em "
-        "`src/hefesto_dualsense4unix/profiles/autoswitch.py:190`). Existe para o teste do "
+        "`src/hefesto_dualsense4unix/profiles/autoswitch.py:189`). Existe para o teste do "
         "autoswitch "
         "não "
         "depender de um compositor vivo, e para a CLI poder rodar num shell sem "
@@ -652,7 +651,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
         "doctor. É "
         "escolha dela por definição. REMEDIDO em 03/10/2026: a mão existe e não "
         "é a env — é a marca do gesto, que `install.sh --keep-dualsense-mic` "
-        "grava (`fix_wireplumber_default_source` em `install.sh:3199`). Ver "
+        "grava (`fix_wireplumber_default_source` em `install.sh:3161`). Ver "
         "`_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
@@ -786,7 +785,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "REMEDIDO em 03/10/2026, e a lacuna de 12/08 já estava curada desde "
         "26/08 (DROPIN-AMBIGUO-01): `install.sh --keep-dualsense-mic` grava a "
         "MARCA DO GESTO (`fix_wireplumber_default_source.sh --marcar-gesto-do-mic`, "
-        "`fix_wireplumber_default_source` em `install.sh:3199`), e as duas perguntas leem o mesmo "
+        "`fix_wireplumber_default_source` em `install.sh:3161`), e as duas perguntas leem o mesmo "
         "dono em cinco "
         "degraus — `system_warnings` pelo "
         "`_dualsense_mic_intended` em `src/hefesto_dualsense4unix/core/system_check.py:110` "
@@ -2987,15 +2986,13 @@ class TestOPortaoMorde:
             "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED"
         ), (
             "o detector aceitou o COMENTÁRIO de "
-            "`install.sh:271-271` (`WITH_WIREPLUMBER_FIX`) como escrita"
+            "`install.sh:266-266` (`WITH_WIREPLUMBER_FIX`) como escrita"
         )
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_BT_MIC"), (
             "o detector aceitou o TEXTO DE AJUDA do controller_card como escrita"
         )
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME"), (
-            "o detector aceitou a LEITURA do applet (`SOCKET_ENV_VAR` em "
-            "`packaging/cosmic-applet/src/ipc.rs:54`) como "
-            "escrita"
+            "o detector aceitou a LEITURA do socket como escrita"
         )
 
     def test_uma_promessa_fabricada_e_acusada_sem_estar_na_lista(
@@ -3377,11 +3374,11 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "`uninstall.sh:1291` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
+            "`uninstall.sh:1297` (`_cmdline_plan`) — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
             "o extrator engoliu o COMENTÁRIO de "
-            "`uninstall.sh:1276-1276` (`CMDLINE_OWNERS_FILE`) junto com o "
+            "`uninstall.sh:1282-1282` (`CMDLINE_OWNERS_FILE`) junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 
@@ -3392,7 +3389,7 @@ class TestOPortaoMorde:
     def test_o_que_o_build_deixou_nao_e_porta(self, tmp_path: Path) -> None:
         """Um `.rlib` não liga interruptor nenhum — e reprova nos dois sentidos."""
         env = "HEFESTO_DUALSENSE4UNIX_CHAVE_QUE_NAO_EXISTE"
-        applet = tmp_path / "packaging" / "cosmic-applet"
+        applet = tmp_path / "packaging" / "um-pacote-em-rust"
         artefato = applet / "target" / "debug"
         artefato.mkdir(parents=True)
         (artefato / "libhefesto_applet.rlib").write_text(

@@ -159,15 +159,6 @@ Fontes tipográficas e glifos
 
 ---
 
-Applet COSMIC
--------------
-
-packaging/cosmic-applet/ é um crate Rust do próprio projeto, sob a licença
-MIT. Ele depende de libcosmic (pop-os/libcosmic) por referência git, resolvida
-no build: o crate não vendoriza aquele código.
-
----
-
 MATERIAL DE TERCEIROS QUE O PROJETO NÃO INCORPOROU
 ==================================================
 

@@ -16,9 +16,9 @@ aparecer, confira em Configurações, Painel, se o miniaplicativo da área de
 status está no painel. O menu dele abre a janela, troca de perfil e mostra o
 estado.
 
-O antigo miniaplicativo próprio do COSMIC foi aposentado: o ícone da bandeja faz
-o mesmo e funciona fora do COSMIC. Quem ainda o quiser pode compilá-lo com
-`./install.sh --enable-cosmic-applet`.
+O antigo miniaplicativo próprio do COSMIC saiu do projeto: o ícone da bandeja faz
+o mesmo e funciona fora do COSMIC. Um miniaplicativo instalado de antes sai com
+`./uninstall.sh --so-o-applet`.
 
 ## A troca automática de perfil
 

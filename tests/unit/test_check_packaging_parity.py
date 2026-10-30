@@ -26,19 +26,10 @@ done
 
 
 def _semeia_simbolico(raiz: Path) -> None:
-    """Põe no repo fake o simbólico da bandeja e a cópia do applet."""
+    """Põe no repo fake o simbólico da bandeja."""
     desenho = '<svg viewBox="0 0 16 16"><title>fake</title></svg>\n'
     alvos = (
         raiz / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg",
-        raiz
-        / "packaging"
-        / "cosmic-applet"
-        / "data"
-        / "icons"
-        / "hicolor"
-        / "symbolic"
-        / "apps"
-        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg",
     )
     for alvo in alvos:
         alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -871,25 +862,6 @@ def test_simbolico_ausente_falha(fake_repo: Path) -> None:
     assert result.returncode == 1
     assert "não existe" in result.stdout
     assert "assets/simbolico/hefesto-dualsense4unix-symbolic.svg" in result.stdout
-
-
-def test_simbolico_do_applet_divergente_falha(fake_repo: Path) -> None:
-    """Dois nomes, um desenho só: se divergirem, a mesma aplicação aparece com"""
-    alvo = (
-        fake_repo
-        / "packaging"
-        / "cosmic-applet"
-        / "data"
-        / "icons"
-        / "hicolor"
-        / "symbolic"
-        / "apps"
-        / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
-    )
-    alvo.write_text('<svg viewBox="0 0 16 16"><title>outro</title></svg>\n', encoding="utf-8")
-    result = run_check(fake_repo)
-    assert result.returncode == 1
-    assert "DIVERGIRAM" in result.stdout
 
 
 _PRODUTOR_LONGO = 4000

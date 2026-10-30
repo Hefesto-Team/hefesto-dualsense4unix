@@ -185,12 +185,11 @@ _SUPERFICIES_DO_PROMOTOR = (
     ("scripts/doctor.sh", "confere"),
     ("src/hefesto_dualsense4unix/app/actions/emulation_actions.py", "a janela lê"),
     ("src/hefesto_dualsense4unix/integrations/storm_doctor.py", "o diagnóstico lê"),
-    ("packaging/cosmic-applet/src/app.rs", "o applet lê"),
 )
 
 
-def test_as_cinco_superficies_falam_do_mesmo_drop_in_promotor() -> None:
-    """O nome do promotor é literal em cinco lugares e ninguém os amarrava."""
+def test_as_superficies_falam_do_mesmo_drop_in_promotor() -> None:
+    """O nome do promotor é literal em quatro lugares e ninguém os amarrava."""
     faltando = [
         f"{caminho} ({papel})"
         for caminho, papel in _SUPERFICIES_DO_PROMOTOR
@@ -198,16 +197,5 @@ def test_as_cinco_superficies_falam_do_mesmo_drop_in_promotor() -> None:
     ]
     assert not faltando, (
         f"estas superfícies não citam o promotor {PROMOTOR!r}: {faltando}. "
-        "Se ele foi renomeado, as cinco têm de mudar juntas."
-    )
-
-
-def test_o_applet_nao_chama_de_ligado_um_mic_sem_o_promotor() -> None:
-    """O applet do COSMIC tinha o mesmo furo da janela, e foi curado junto."""
-    fonte = (RAIZ / "packaging/cosmic-applet/src/app.rs").read_text(encoding="utf-8")
-    corpo = fonte[fonte.index("fn mic_is_on()") :]
-    corpo = corpo[: corpo.index("\n}\n") + 2]
-    assert PROMOTOR in corpo, "o applet decide sem olhar o promotor"
-    assert "!suppressed && promoted" in corpo, (
-        "o applet voltou a chamar de 'ligado' um microfone que perde para o eco"
+        "Se ele foi renomeado, as quatro têm de mudar juntas."
     )
