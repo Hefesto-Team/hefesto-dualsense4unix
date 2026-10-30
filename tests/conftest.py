@@ -15,7 +15,7 @@ import sys
 import tempfile
 import threading
 import types
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -1123,15 +1123,27 @@ _ESCRITAS_PELO_PRIMEIRO = frozenset({
 _ESCRITAS_PELO_SEGUNDO = frozenset({"os.symlink", "os.link"})
 
 
+def _as_duas_formas(caminhos: Iterable[str]) -> tuple[str, ...]:
+    """Cada caminho como foi escrito e como o disco o resolve, sem repetir."""
+    formas: dict[str, None] = {}
+    for caminho in caminhos:
+        formas[os.path.normpath(caminho)] = None
+        formas[os.path.realpath(caminho)] = None
+    return tuple(formas)
+
+
 class GuardaDoReal:
     """Recusa, e anota, o teste que conecta ao serviço real ou escreve no lar real de quem roda."""
 
     def __init__(self, pastas: list[Path], prefixos: list[str]) -> None:
-        self.pastas = tuple(os.path.normpath(str(p)) for p in pastas)
-        self.prefixos = tuple(os.path.normpath(p) for p in prefixos)
+        self.pastas = _as_duas_formas(str(p) for p in pastas)
+        self.prefixos = _as_duas_formas(prefixos)
         self.recusas: list[str] = []
 
     def protege(self, caminho: str) -> bool:
+        return any(self._cobre(forma) for forma in (caminho, os.path.realpath(caminho)))
+
+    def _cobre(self, caminho: str) -> bool:
         if any(caminho == p or caminho.startswith(p + os.sep) for p in self.pastas):
             return True
         return any(caminho.startswith(p) for p in self.prefixos)

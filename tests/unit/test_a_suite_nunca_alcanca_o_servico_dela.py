@@ -129,6 +129,22 @@ def test_a_guarda_recusa_a_escrita_no_config_real_e_deixa_ler(dela: _Dela) -> No
     assert len(dela.guarda.recusas) >= 4 and all("lar-dela" in r for r in dela.guarda.recusas)
 
 
+def test_a_guarda_recusa_a_escrita_que_chega_por_um_link(dela: _Dela, tmp_path: Path) -> None:
+    espelho = tmp_path / "runtime-quebrado"
+    espelho.mkdir()
+    (espelho / "hefesto-dualsense4unix").symlink_to(dela.runtime / "hefesto-dualsense4unix")
+    (espelho / "hefesto-de-config").symlink_to(dela.config)
+    marca = "servico-parado-pela-aba-sistema"
+    with pytest.raises(PermissionError):
+        (espelho / "hefesto-dualsense4unix" / marca).touch()
+    with pytest.raises(PermissionError):
+        (espelho / "hefesto-de-config" / "perfil.json").write_text("native")
+    assert not (dela.runtime / "hefesto-dualsense4unix" / marca).exists()
+    assert (dela.config / "perfil.json").read_text() == '{"kind": "gamepad"}\n'
+    recusas = dela.guarda.recusas
+    assert len(recusas) >= 2 and all("runtime-quebrado" in r for r in recusas)
+
+
 def test_a_guarda_recusa_a_conexao_ao_socket_real(dela: _Dela) -> None:
     servidor = _servidor(dela.runtime / "hefesto-dualsense4unix" / "h.sock")
     try:
