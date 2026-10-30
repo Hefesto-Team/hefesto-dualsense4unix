@@ -21,7 +21,7 @@ TRÊS DISCIPLINAS, e as três nasceram de defeito medido nesta casa:
 
 3. **O MAPA DE CANAIS É PORTÃO, E ELE RESPONDE POR TRANSPORTE.**
    `docs/data/mapa-controles.csv` é lido aqui, não decorado: nenhuma linha deste
-   arquivo escreve "no rádio não tem cor" — ela é perguntada ao mapa. A tela não
+   arquivo escreve "no rádio não tem cor" — a resposta vem do mapa. A tela não
    pode mostrar como ativo o que aquele transporte não entrega.
 
 NADA AQUI ESCREVE. O único método de IPC que este módulo conhece é
@@ -198,7 +198,7 @@ class LeitorDeCor:
     def conhecidos(self) -> dict[str, Any]:
         """`{uniq: cor}` do que a tela sabe — a cor lida, ou só o nome do modelo.
 
-        A cor lida vence. Sem ela, quem tem o modelo guardado recebe
+        A cor lida vence. Sem cor lida, quem tem o modelo guardado recebe
         `CorDoPlastico(codigo="", nome=<modelo>)`: sem `id`, o desenho fica no
         neutro, e o nome é o do aparelho. Quem não tem nem uma coisa nem outra
         segue `None` (ou ausente), e `mesa_do_estado` escreve o nome da família.
@@ -312,7 +312,7 @@ def _declaracao_do_disco() -> Any:
 
 
 def _declarado(uniq: str, declaracao: Any = None) -> Any:
-    """O `ControleDeclarado` deste controle, ou `None` quando ela não disse nada."""
+    """O `ControleDeclarado` deste controle, ou `None` quando nada foi declarado."""
     from hefesto_dualsense4unix.utils.maquina import chave_do_controle
 
     chave = chave_do_controle(uniq)
@@ -376,7 +376,7 @@ def _lugares_da_mesa(numeros: list[int]) -> list[str]:
     **«Curar — renomear junto com mover»**.
 
     **O QUE FOI MEDIDO**, lido pela ponte JS no WebKit vivo, a 400 ms, com o
-    daemon e os quatro controles na bancada:
+    daemon e os quatro controles no ensaio:
 
     ======================  =================================  ================
     ..                      ``23:56:17.998``                   ``23:56:19.604``
@@ -387,10 +387,10 @@ def _lugares_da_mesa(numeros: list[int]) -> list[str]:
 
     Por **1,6 segundo** o endereço do cartão e o texto dentro dele se
     contradiziam — medido duas vezes na mesma noite, 1,60 s e 1,61 s. A tela
-    REPOSICIONAVA antes de RENOMEAR, e o vão era interno a ela: a mesma
+    REPOSICIONAVA antes de RENOMEAR, e o vão era interno à tela: a mesma
     leitura do daemon dava as duas respostas.
 
-    **A CAUSA, e ela é de forma.** O ``pref`` era a POSIÇÃO na lista — ela
+    **A CAUSA é de forma.** O ``pref`` era a POSIÇÃO na lista — que
     compacta no instante em que alguém sai — e o ``jogador`` é o
     ``player_slot``, que é do daemon e leva um batimento para se refazer. Dois
     donos para o mesmo fato, em cadências diferentes.
@@ -425,7 +425,7 @@ def mesa_do_estado(
 ) -> list[dict[str, Any]]:
     """Os itens de mesa que `monta`/`aba02` sabem desenhar, na ordem da tela.
 
-    `declaracao` é o `maquina.json` já lido (os testes); sem ela, o disco, relido
+    `declaracao` é o `maquina.json` já lido (os testes); sem o documento, o disco, relido
     só quando o arquivo muda. A cor e a família dos botões que o usuário declarou saem
     daqui para as dez abas de uma vez: é a mesa que todas leem.
     """
@@ -484,7 +484,7 @@ def texto_da_contagem(mesa: list[dict[str, Any]]) -> tuple[str, str]:
     palavra: o dia em que a `via` passasse a dizer `cabo`, a tela mostraria
     `● 2 controles: 0 USB · 2 BT` com os dois no cabo — o número errado, sem
     erro, sem log e sem uma linha vermelha. `transporte` é a chave CRUA do
-    daemon que `mesa_do_estado` já publica ao lado da palavra; contar por ela
+    daemon que `mesa_do_estado` já publica ao lado da palavra; contar pela chave
     é o que faz a palavra poder mudar sem que uma única conta se mexa.
     """
     n = len(mesa)
@@ -550,11 +550,11 @@ def _eixo_do_analogico(inputs: dict[str, Any], nome: str) -> int:
 
     Medido antes da cura, alimentando esta função pela faixa inteira:
     `0 → 128` (MENTIU), `1 → 1`, `64 → 64`, `128 → 128`, `255 → 255`. Só o zero
-    mentia, e mentia sozinho. O zero é alcançável na bancada: o `absinfo` dos
+    mentia, e mentia sozinho. O zero é alcançável no ensaio: o `absinfo` dos
     dois DualSense dá `ABS_X/ABS_Y/ABS_RX/ABS_RY min=0 max=255`, e
     `core/evdev_reader.py` já escreve que "num stick o mínimo é um EXTREMO".
 
-    É REGRESSÃO SÓ DAQUI: o produto que ela usa há meses faz
+    É REGRESSÃO SÓ DAQUI: o produto em uso há meses faz
     `int(inputs.get("lx", 128))` (`interface/cartao_do_controle.py`), a forma com
     default, imune ao falsy. Os outros `or` deste arquivo NÃO têm o defeito —
     `l2_raw`/`r2_raw` caem em `or 0`, e ali o zero É o repouso.

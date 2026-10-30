@@ -15,7 +15,7 @@ POR QUE ELE É PURO, E ISSO NÃO É PREFERÊNCIA
 Nada aqui roda ``systemctl``, abre soquete ou lê disco: quem faz isso é o
 chamador, e entrega o resultado no :class:`Leitura`. É o que deixa a régua medir
 **este** código — o mesmo que a interface roda — sem daemon, sem rede e sem
-tocar a bancada. O piloto ``scripts/tela/sistema_viva.py`` é quem
+tocar a máquina. O piloto ``scripts/tela/sistema_viva.py`` é quem
 faz as chamadas de verdade.
 
 A REGRA QUE MAIS PESA AQUI: A AUSÊNCIA DE DADO É UM VALOR
@@ -29,7 +29,7 @@ aba. Toda função deste módulo devolve, no lugar do branco, **o que faltou**:
 
 E o que não tem fonte de dado nenhuma no produto de hoje está em
 :data:`SEM_FONTE`, com o endereço e o porquê — **um número plausível e falso é
-pior que um traço honesto**, porque ela confia nele.
+pior que um traço honesto**, porque quem usa confia nele.
 """
 from __future__ import annotations
 
@@ -78,14 +78,14 @@ GESTOS: dict[str, str] = {
     "painel na área de transferência (`Gtk.Clipboard`, o mesmo caminho de "
     "`daemon_actions.on_storm_copy_launch`).",
     "salvar-registro": "`a09_sistema.salvar_registro` — o mesmo texto do painel, mascarado, "
-    "num arquivo que ela escolhe (`pacotes/ponte.salvar_arquivo`).",
+    "num arquivo escolhido pelo usuário (`pacotes/ponte.salvar_arquivo`).",
     "correcoes-automaticas": "`a09_sistema.correcoes_automaticas` — o interruptor que junta "
     "o Doctor, os lançadores, o Proton fixado e a escolha do Vulkan: alterna o arquivo do "
     "`vigia_do_jogo_novo`; o duplo clique liga e reaplica agora.",
     "tamanho-da-interface": "`a09_sistema.tamanho_da_interface_gesto` — grava a escolha em "
     "`interface_escala`; quem aplica o zoom nas abas é a janela.",
     "bandeja": "`a09_sistema.bandeja` — `atos_da_bandeja.escolher_a_bandeja`: grava a escolha "
-    "no autostart e sobe a bandeja (`garantir_a_bandeja`) ou a encerra pelo PID dela.",
+    "no autostart e sobe a bandeja (`garantir_a_bandeja`) ou a encerra pelo PID da bandeja.",
 }
 
 SEM_FONTE: dict[str, str] = {
@@ -93,7 +93,7 @@ SEM_FONTE: dict[str, str] = {
     "('Joga as últimas 80 linhas do registro técnico no painel ao lado'). NÃO "
     "HÁ MÉTODO DE IPC que as devolva: o que existe é `on_daemon_view_logs`, "
     "que mostra `systemctl status` da unidade. Ou o painel passa a dizer que é "
-    "o `systemctl status`, ou nasce um método de log — é decisão dela "
+    "o `systemctl status`, ou nasce um método de log — é decisão do produto "
     "(MIGRA-SISTEMA-10).",
 }
 
@@ -221,7 +221,7 @@ def linha_da_pausa(state: object) -> Linha:
     "Pausado: Sim" lê como estado do momento, e a pessoa desliga o computador
     esperando que passe. Até esta data quem carregava o recado era a DICA, com
     144 caracteres sobre disco e desligamento; dito no VALOR, a dica encolheu
-    para o que ela não diz — onde fica a saída.
+    para o que o valor não diz — onde fica a saída.
     """
     if not isinstance(state, dict) or "paused" not in state:
         return Linha(
@@ -258,7 +258,7 @@ def linha_do_ambiente(frase: str | None) -> Linha:
     A frase inteira é de ``ambiente_na_tela.descrever_display_grafico``, que até
     hoje tem **zero chamadores** no produto: é a cura escrita e nunca ligada que
     esta casa nomeou de ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ``. O que sai aqui é o
-    predicado dela, depois dos dois-pontos — o rótulo da linha já diz o sujeito.
+    predicado, depois dos dois-pontos — o rótulo da linha já diz o sujeito.
     """
     if not frase:
         return Linha(
@@ -464,7 +464,7 @@ ENDERECO_DO_RADIO = "08-conexoes.html#rd-secao"
 
 
 def status_do_bluetooth(adaptadores: int | None, state: object) -> dict[str, str]:
-    """Quantos adaptadores e quantos controles no rádio — a linha que ela sentiu falta."""
+    """Quantos adaptadores e quantos controles no rádio — a linha que faltava."""
     no_radio = controles_no_radio(state)
     if adaptadores is None:
         return _linha_de_status("status-bluetooth", NAO_DEU, PILULA_NOTA, "i",

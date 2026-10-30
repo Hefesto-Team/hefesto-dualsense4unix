@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A caixa da janela das abas e o «Voltar», para as páginas que abrem POR FORA delas."""
+"""A caixa da janela das abas e o «Voltar», para as páginas que abrem POR FORA das abas."""
 from __future__ import annotations
 
 import pathlib
@@ -68,7 +68,7 @@ def moldura(topo: str | None = None, caixa: str = ".cx") -> str:
 
 
 def voltar(reserva: str) -> str:
-    """O «← Voltar» das páginas avulsas: volta para a aba de onde ela veio."""
+    """O «← Voltar» das páginas avulsas: volta para a aba de origem."""
     return (f'<a class="voltar" href="{reserva}"'
             ' onclick="if (history.length > 1) { history.back(); return false }"'
             ' title="Volta para a aba anterior.">← Voltar</a>')

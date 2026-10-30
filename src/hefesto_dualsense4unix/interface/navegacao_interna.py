@@ -1,6 +1,6 @@
 """A Navegação Interna na janela: dos toques de cada controle aos atos da tela.
 
-A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01, com o desenho dela
+A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01, com o desenho
 de 03/10/2026: com a Interna ligada e a janela na frente, cada controle anda as
 abas com R1 e L1, anda a SUA seleção com o direcional, o analógico esquerdo ou o
 touchpad, aciona com X, sai com O e guarda o perfil de todos com Start.
@@ -386,7 +386,7 @@ class Selecoes:
 def caixas_do_leiaute(leiaute: Mapping[str, Any], pref: str) -> list[Caixa]:
     """As caixas que o controle de assento ``pref`` seleciona.
 
-    O desenho dela de 03/10: cada um ajusta o seu. Entram o que mora no bloco
+    O desenho de 03/10: cada um ajusta o seu. Entram o que mora no bloco
     dele e o que não mora no bloco de controle nenhum; o do vizinho, não.
     O ponto do dedo vem de 0 a 1, e a caixa em pixels: quem chama converte.
     """

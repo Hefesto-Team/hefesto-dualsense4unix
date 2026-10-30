@@ -1,8 +1,8 @@
-"""A INTERFACE — as dez abas do desenho dela, vivas, dentro de uma janela GTK.
+"""A INTERFACE — as dez abas do desenho, vivas, dentro de uma janela GTK.
 
 Mora no pacote porque o wheel só empacota `src/hefesto_dualsense4unix` (01/09/2026).
 Produto: `paginas/`, `hefesto_vivo.py`, `pacotes/`, `monta.py`, `mesa_viva.py`, `onde.py`.
-Bancada que fica ao lado do que gera, para o desenho e o gerador não divergirem calados (o
+Mockup que fica ao lado do que gera, para o desenho e o gerador não divergirem calados (o
 defeito que matou `novo-layout/` em 31/08): os geradores `abaNN.py`, `olhar.py` e `ver.py`;
 as outras réguas e os pilotos de uma aba só moram em `scripts/tela/` (22/10/2026).
 Os gestos falam com o daemon por `app/ipc_bridge.py`; a pintura de três abas delega para

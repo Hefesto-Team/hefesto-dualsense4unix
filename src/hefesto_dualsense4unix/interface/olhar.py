@@ -41,7 +41,7 @@ MEDIDA_NA_VISTA = """() => {
 
 def _gravar_prova_da_foto(destino: pathlib.Path, modo: str, origem: str,
                           vista: str = "") -> pathlib.Path:
-    """O recibo do ensaio: quando, quantas, de que bancada, e a soma de cada PNG."""
+    """O recibo do ensaio: quando, quantas, de que pasta, e a soma de cada PNG."""
     import datetime
     import hashlib
 
@@ -61,7 +61,7 @@ def _gravar_prova_da_foto(destino: pathlib.Path, modo: str, origem: str,
         f"vista:   {vista or 'recorte da .janela'}",
         "",
         "# Toda linha destas imagens é PÁGINA DO REPOSITÓRIO fotografada num",
-        "# Chrome headless — nenhuma delas é medição desta ou de qualquer",
+        "# Chrome headless — nenhuma é medição desta ou de qualquer",
         "# máquina, e o retratista não fala com o daemon (portão:",
         "# tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).",
         "",
@@ -157,7 +157,7 @@ def _todas(publicado: bool, para_a_doc: bool,
     do_produto = set(monta.as_abas_do_produto())
     paginas = [p for p in onde.paginas(publicado=publicado) if p.name in do_produto]
     if len(paginas) < len(monta.ABAS):
-        sys.exit(f"achei {len(paginas)} abas em {'publicado' if publicado else 'bancada'} — o caminho mudou?")
+        sys.exit(f"achei {len(paginas)} abas em {'publicado' if publicado else 'mockup'} — o caminho mudou?")
 
     destino = destino_das_fotos(para_a_doc, vista)
     from playwright.sync_api import sync_playwright
@@ -255,7 +255,7 @@ def _palavra(alvo: str, publicado: bool) -> int:
             print(f"  linha {linha}: …{contexto}…")
             print(f"      vem de: {_de_onde(' '.join(cru[m.start():b].split()))}")
     print(f"\n{alvo!r}: {total} ocorrência(s) visível(eis) em "
-          f"{'o produto' if publicado else 'a bancada'}")
+          f"{'o produto' if publicado else 'o mockup'}")
     return 1 if total else 0
 
 
@@ -295,8 +295,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--palavra", metavar="PALAVRA",
                    help="lista onde esta palavra é LIDA nas abas, com a origem")
     p.add_argument("--vista", metavar="LARGxALT", type=_vista_pedida,
-                   help="a vista em que fotografar — 'dela' é a janela dela "
-                        "maximizada. Com ela a foto é a VISTA INTEIRA, não o "
+                   help="a vista em que fotografar — 'dela' é a janela do usuário "
+                        "maximizada. Com essa vista a foto é a VISTA INTEIRA, não o "
                         "recorte da .janela")
     p.add_argument("--tema", metavar="ARQUIVO",
                    help="fotografa com este tema de cores (um :root{…}), conferido pela "

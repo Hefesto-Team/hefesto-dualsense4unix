@@ -7,7 +7,7 @@ O DEFEITO, EM UMA FRASE
 
 Uma entrada USB vazia não tem aparelho, logo não tem nó de dispositivo — e o
 desenho à mão da ``MAPA-4`` nunca a alcança, porque não há o que arrastar.
-Metade do mapa dela fica sem número, e o motor do arranjo
+Metade do mapa fica sem número, e o motor do arranjo
 (``integrations/arranjo_da_mesa``) publica juízo otimista onde deveria dizer
 "aqui não".
 
@@ -19,7 +19,7 @@ AS DUAS FASES TÊM PREÇOS MUITO DIFERENTES, E POR ISSO SÃO DUAS
 ---------------------------------------------------------------
 
 * a **fase sentada** paga primeiro e ninguém levanta: um toque por aparelho,
-  e o toque no HUB resolve tudo o que pende dele. Na bancada, quatro toques
+  e o toque no HUB resolve tudo o que pende dele. No ensaio, quatro toques
   cobriam sete aparelhos;
 * a **fase em pé** é opcional e visita **só as vazias** (o F-2 da sprint):
   mandar alguém ao fundo do gabinete para ensinar uma entrada que o computador
@@ -27,8 +27,8 @@ AS DUAS FASES TÊM PREÇOS MUITO DIFERENTES, E POR ISSO SÃO DUAS
 
 A fase sentada tem **fim próprio** — não é preâmbulo da outra (R31).
 
-O QUE ESTA JANELA APROVOU E O QUE ELA NÃO APROVOU
---------------------------------------------------
+O QUE ESTA JANELA APROVOU E O QUE NÃO APROVOU
+---------------------------------------------
 
 ``docs/data/decisoes-de-produto.csv``, ``D-CALIBRAR-AS-ENTRADAS``: *"APROVADO PELO USUÁRIO
 em 25/08/2026, às ~03h55, VENDO o mockup"*. O carimbo cobre nominalmente as
@@ -44,7 +44,7 @@ O VEREDITO SAI DO ``sysfs``, NUNCA DA MÃO (o F-1)
 --------------------------------------------------
 
 *"o controle vibrou, logo a entrada é boa"* é **falso** sempre que o mesmo
-controle também está pareado por Bluetooth — que é o caso normal dela. Com dois
+controle também está pareado por Bluetooth — que é o caso normal. Com dois
 nós do mesmo aparelho, o pulso sai pelo **rádio** e chega à mão mesmo que o cabo
 não tenha feito nada. Aqui, o pulso quer dizer **"senti você"**; quem confirma é
 :meth:`LogicaDaCalibracao.confirmar_entrada_nova`, comparando a leitura de antes
@@ -60,7 +60,7 @@ hora (R28), por ``integrations/lugar_declarado.declarar_a_maquina`` — que não
 passa por IPC nenhum e por isso grava com o Hefesto DESLIGADO.
 
 É a porta LARGA de propósito. ``declarar_a_mesa`` é escopada à seção ``mesa`` do
-documento, e o mapa não mora lá: mandar o mapa por ela gravaria a mesa e
+documento, e o mapa não mora lá: mandar o mapa por essa porta gravaria a mesa e
 perderia calado o resto.
 
 POR QUE ESTA JANELA NÃO REUSA A ``LogicaDoMapa``
@@ -70,9 +70,9 @@ POR QUE ESTA JANELA NÃO REUSA A ``LogicaDoMapa``
 ``portas`` de cada face, e **só**. Os campos ``perto`` e ``alto``, que a frente
 G3 acrescentou à ``FaceDeclarada`` em 25/08/2026 e que o motor do arranjo lê,
 não sobrevivem à volta — e ``faces`` é uma LISTA, que ``fundir_declaracao``
-substitui inteira. Passar por lá apagaria o único fato que só ela tem. Aqui a
-face viaja como dicionário completo, e o que esta janela não conhece ela
-preserva.
+substitui inteira. Passar por lá apagaria o único fato que só a lista tem. Aqui a
+face viaja como dicionário completo, e esta janela preserva o que não
+conhece.
 
 **O defeito daquela janela fica relatado, não consertado:** ``mapa_da_mesa.py``
 não é posse desta frente (R-A).
@@ -81,14 +81,14 @@ O QUE ESTA JANELA NÃO FAZ
 --------------------------
 
 **Não cria face nenhuma sozinha.** As quatro palavras são as respostas
-possíveis; a face só nasce quando ela toca uma delas.
+possíveis; a face só nasce com o toque numa das quatro.
 
 **Não conserta a HARM-16** (o F-4: ``rumble_active=(0,0)`` desarma a
 ``zero_motors_on_mode_exit``). É da Onda 9 · Rumble, e o pulso desta tela sai
 por quem já tem a posse do rumble — esta janela não escreve no aparelho.
 
 **Não decide a redação final** de frase nenhuma: a dona única do texto da aba é
-a ``CONFIGURACOES-O-LEXICO-01``. Todo texto sem carimbo dela vai marcado
+a ``CONFIGURACOES-O-LEXICO-01``. Todo texto sem carimbo do léxico vai marcado
 ``PROVISÓRIO``.
 """
 from __future__ import annotations

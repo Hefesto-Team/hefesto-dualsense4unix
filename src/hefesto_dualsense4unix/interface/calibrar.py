@@ -9,9 +9,9 @@ PEDIDO, 31/08/2026, e é o segundo botão que o usuário mandou nascer na Contro
 
 OS TRÊS ESTADOS SÃO CLICÁVEIS, e isso é decisão de instrumento. Um mockup é
 estático: ele desenha UM estado. Um procedimento tem TRÊS (parado, medindo,
-pronto), e desenhar só um esconde dois terços do que ela precisa julgar. A saída
+pronto), e desenhar só um esconde dois terços do que há para julgar. A saída
 é a mesma gramática que a Jogar já usa no interruptor e a Controles no cartão que
-abre — `<input type=radio>` escondido mais `:checked` no CSS. Ela clica e vê o
+abre — `<input type=radio>` escondido mais `:checked` no CSS. Um clique mostra o
 procedimento inteiro, sem uma linha de JavaScript.
 
 O QUE "OS 4 AO MESMO TEMPO" QUER DIZER, e vale escrever porque é o ponto do
@@ -39,7 +39,7 @@ OS CONTROLES SÃO DE QUEM ABRE A PÁGINA — 11/09/2026, F3-CALIBRAR
 
 Até hoje esta página desenhava `monta.CONECTADOS` (o desenho, sempre dois) com
 números de uma constante deste arquivo (`REPOUSO`, seis por controle). Medido no
-daemon do usuário em 11/09, com os dois DualSense na bancada:
+daemon do usuário em 11/09, com os dois DualSense no ensaio:
 
     a tela dizia            o aparelho respondia
     P1 · Cosmic Red · USB   P1 · Starlight Blue · USB
@@ -47,13 +47,13 @@ daemon do usuário em 11/09, com os dois DualSense na bancada:
     giro +0.2 -0.1 +0.0     `inputs` sem chave `gyro` nenhuma
 
 Ou seja: **os dois controles trocados e as doze leituras inventadas** — e com
-quatro na bancada ela veria dois. `REPOUSO` MORREU: os seis eixos de cada
+quatro no ensaio, a tela mostraria dois. `REPOUSO` MORREU: os seis eixos de cada
 controle nascem no travessão, que é como esta casa escreve *"ninguém leu"*
 (`mesa_viva.SEM_LEITOR`), e quem os preenche é o tique, por
 `pacotes/a11_calibrar_sensores.py`.
 
 **POR QUE O TRAVESSÃO E NÃO UM NÚMERO DE EXEMPLO**, que é o que a aba Controles
-faz na cena fixa dela: aquela página tem pacote desde 01/09 e o número do
+faz na cena fixa: aquela página tem pacote desde 01/09 e o número do
 desenho vive um tique. Esta ficou eloquente por ONZE DIAS sem ninguém a pintar,
 e o que estava na tela era afirmação. Um arquivo que nasce com número é um
 arquivo que mente quando o tique não vem.
@@ -156,7 +156,7 @@ def plural(quantos: int, um: str, muitos: str) -> str:
     traduzido: em inglês são duas formas, em russo são três.
 
     A PROIBIÇÃO NÃO SE ESCREVE COM O PADRÃO PROIBIDO, e a armadilha é desta
-    casa: um comentário que CITA a forma banida vira a primeira ocorrência dela
+    casa: um comentário que CITA a forma banida vira a primeira ocorrência da forma
     — aconteceu três vezes em três dias, e aconteceu aqui, no primeiro rascunho
     desta docstring.
 
@@ -440,7 +440,7 @@ def lugar(n):
 
 
 def _numero(c):
-    """O número do jogador, ou `None` quando a bancada não o leu (`mesa_viva` o dá inteiro)."""
+    """O número do jogador, ou `None` quando não foi lido (`mesa_viva` o dá inteiro)."""
     n = c.get("jogador")
     return n if isinstance(n, int) else None
 

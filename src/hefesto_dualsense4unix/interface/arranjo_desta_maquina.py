@@ -397,7 +397,7 @@ def _aparelho(
 ) -> dict[str, Any]:
     """Um aparelho do motor nos campos que a página LÊ, com o que o painel dele diz.
 
-    ``modelo`` é o ``vid:pid`` (a chave do que ela declara do aparelho) e ``etiquetas`` é «o que
+    ``modelo`` é o ``vid:pid`` (a chave do que se declara do aparelho) e ``etiquetas`` é «o que
     a máquina vê», em palavras, sem botão. ``da_cadeia`` é o que :func:`_a_cadeia_usb` diz dele
     (o hub físico, o enlace abaixo, onde ele pende).
     """
@@ -432,7 +432,7 @@ def _aparelho(
 
 
 def _apelidos(documento: Any) -> dict[str, str]:
-    """``{vid:pid: apelido}`` do que ela chamou cada aparelho."""
+    """``{vid:pid: apelido}`` de como o usuário chamou cada aparelho."""
     radios = getattr(getattr(documento, "mesa", None), "radios", None) or {}
     return {chave: radio.apelido for chave, radio in radios.items() if radio.apelido}
 
@@ -724,7 +724,7 @@ def _a_fileira_sem_lugar(mapa: Any, censo: Any, mapa_das_portas: Any) -> dict[st
     """A fileira das entradas numeradas que nenhuma face tem — fora do plano.
 
     A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01 (absorvida em 04/10/2026): o «Salvar» do Mapear com o
-    lugar vazio numera a entrada e ela nasce fora de toda face. O motor não a vê (ela não é face:
+    lugar vazio numera a entrada, que nasce fora de toda face. O motor não a vê (não é face:
     as sugestões nunca mandam ninguém para lá); a página a desenha depois das faces.
     """
     numeros = _numeradas(mapa)
@@ -785,7 +785,7 @@ def _forma(face: Any) -> str:
 
 
 def _entrada(entrada: Any) -> dict[str, Any]:
-    """Uma entrada do motor, sem os campos que ela não tem."""
+    """Uma entrada do motor, sem os campos que lhe faltam."""
     corpo: dict[str, Any] = {"n": entrada.n, "usb": entrada.usb, "onde": entrada.onde}
     if entrada.par:
         corpo["par"] = entrada.par

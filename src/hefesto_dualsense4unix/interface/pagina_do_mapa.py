@@ -14,14 +14,14 @@ não só para a máquina de quem desenvolve.
 E a página não tinha gerador: era o único HTML desta casa escrito à mão, e já
 tinha divergido da origem congelada em treze pedaços sem ninguém ver.
 
-DE ONDE ELA NASCE, e a escolha é o ponto inteiro
--------------------------------------------------
+DE ONDE A PÁGINA NASCE, e a escolha é o ponto inteiro
+-----------------------------------------------------
 
 Este gerador **não escreve a página do zero**: ele LÊ a origem congelada
 (:data:`ORIGEM`) e aplica as :data:`EDICOES`, uma a uma, cada uma com data e
 motivo. A razão é que aquela origem não é um rascunho velho — é a
 **especificação executável do motor**: `tests/fixtures/motor_do_arranjo_do_mockup.js`
-extrai o `<script>` dela, roda 120 cenários em `node`, e o JSON que sai é o ouro
+extrai o `<script>` da página, roda 120 cenários em `node`, e o JSON que sai é o ouro
 contra o qual o porte em Python é medido
 (`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`).
 
@@ -36,7 +36,7 @@ QUEM ESCREVE ONDE
     mockup/congelados/2026-08-24-mapa-das-portas.html
               │   congelada: o motor de 24/08, que produz o ouro
               │   `pagina_do_mapa.py`
-    mockup/mapa-das-portas.html            ← a BANCADA, o que ela olha
+    mockup/mapa-das-portas.html            ← o MOCKUP, o que se olha
               │   `check_o_desenho_aprovado.py --publicar mapa-das-portas.html`
     src/.../interface/paginas/mapa-das-portas.html   ← o que o produto renderiza
 
@@ -195,9 +195,9 @@ def _exemplo_em_js(recuo: str = "  ") -> str:
 
 
 def _bloco_do_censo(nome: str) -> str:
-    """A declaração `var NOME = …;` inteira, como ela está na origem.
+    """A declaração `var NOME = …;` inteira, como está na origem.
 
-    Ela é LIDA da origem, nunca digitada aqui: uma segunda cópia do literal
+    A declaração é LIDA da origem, nunca digitada aqui: uma segunda cópia do literal
     envelheceria no dia em que alguém mexesse num byte do mockup congelado, e a
     troca passaria a errar o alvo — calada, porque `str.replace` de um pedaço
     que não existe não levanta nada. É esta função que transforma o silêncio em
@@ -372,8 +372,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             "11/09/2026 — `folha_da_casa.FOLHA_DA_CASA` abre com "
-            "`.nota{display:none !important}`. No Chrome o aviso aparecia; na tela "
-            "dela, não — e a página ficava afirmando «o arranjo de agora» sobre uma "
+            "`.nota{display:none !important}`. No Chrome o aviso aparecia; no WebKit "
+            "do produto, não — e a página ficava afirmando «o arranjo de agora» sobre uma "
             "leitura congelada, sem a única defesa que tinha."
         ),
     ),
@@ -398,10 +398,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             "TRÊS COISAS NO MESMO CABEÇALHO, e as três têm de sair juntas porque são "
-            "as mesmas três linhas. (1) o botão de voltar, 30/08/2026, pedido dela; "
+            "as mesmas três linhas. (1) o botão de voltar, 30/08/2026, pedido do produto; "
             "ele NÃO pode ir para a origem congelada, cuja pasta não tem "
             "`08-conexoes.html` — seria um botão que não vai a lugar nenhum. "
-            "(2) a palavra «mesa» saiu da tela em 05/09/2026, ordem dela. "
+            "(2) a palavra «mesa» saiu da tela em 05/09/2026, por decisão do produto. "
             "(3) a linha da data virou `.quando` com `id`, 11/09/2026: a folha do "
             "produto apaga `.nota`, e o `id` é por onde o censo vivo reescreve o "
             "rótulo quando o produto entrega a leitura desta máquina."
@@ -420,7 +420,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "todos funcionam ao mesmo tempo.</p>"
         ),
         porque=(
-            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela: a frase encolheu "
+            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, aprovada: a frase encolheu "
             "e a palavra «mesa» saiu junto."
         ),
     ),
@@ -431,7 +431,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois="        <span>medido aqui em 25/07/2026</span>",
         porque=(
-            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela: o caminho de um "
+            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, aprovada: o caminho de um "
             "arquivo do nosso código não é recado de tela. Onde o A/B foi medido "
             "continua escrito na docstring do `radio_da_mesa`, que é onde quem for "
             "conferir procura."
@@ -440,7 +440,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     Edicao(
         antes='porque: "entrada direta, mas na altura da mesa" };',
         depois='porque: "entrada direta, mas na altura da escrivaninha" };',
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -451,7 +451,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "      desc: \"Aceita um lugar pior para você mexer em menos coisas. "
             'Bom quando desmontar o arranjo custa caro." },'
         ),
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -462,7 +462,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    if (bts.length && noAlto === 0) out.push("os dongles ficam na altura '
             'da escrivaninha, não no alto do rack");'
         ),
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -486,7 +486,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'style="margin-left:auto">Examinar de novo</button>\';'
         ),
         porque=(
-            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela: os quatro "
+            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, aprovada: os quatro "
             "botões dizem o que fazem em duas ou três palavras, e a palavra «mesa» "
             "sai dos dois que a carregavam. O `data-modo` NÃO muda: "
             "\"mao\" é endereço, e trocá-lo quebra o "  # (noqa-acento)
@@ -502,7 +502,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "      html += '<p class=\"chamada\">Quatro arranjos possíveis. O melhor "
             "no papel pode não caber na sua escrivaninha — escolha o que cabe.</p>'"
         ),
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -515,7 +515,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '" movimento" + (reais.length > 1 ? "s" : "") + "</span> e o seu arranjo fica '
             'no melhor que este hardware permite.</p>"'
         ),
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -526,7 +526,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        + \'<button class="btn" id="ver-antes">Ver como o arranjo estava \' + '
             '(leituraAtual === "agora" ? "antes" : "agora") + "</button></div>";'
         ),
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -540,7 +540,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '        : "Este arranjo é o melhor que eu conheço.") + "</p>"'
         ),
         porque=(
-            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela, e a palavra "
+            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, aprovada, e a palavra "
             "«mesa» sai junto (05/09/2026)."
         ),
     ),
@@ -570,7 +570,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "'<b style=\"color:var(--color-lacuna)\">Você está vendo uma leitura "
             "ANTIGA</b> — ')"
         ),
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -581,7 +581,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '      + \'<span class="ctl-rot" style="margin-left:auto">Controles '
             "ligados:</span>'"
         ),
-        porque="05/09/2026 — a palavra «mesa» saiu da tela, ordem dela.",
+        porque="05/09/2026 — a palavra «mesa» saiu da tela, por decisão do produto.",
     ),
     Edicao(
         antes=(
@@ -597,7 +597,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "pacote. O que eles gastam é bateria.</p>'"
         ),
         porque=(
-            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela — e é também a "
+            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, aprovada — e é também a "
             "regra de 07/09: a tela nunca confessa dívida nossa. Quantos ensaios esta "
             "casa cronometrou é assunto do mapa, não da tela de quem usa."
         ),
@@ -618,7 +618,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "envios por segundo em vez de 260,4. Nasce desligado; só você o liga.</span>'"
         ),
         porque=(
-            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela — e a regra de "
+            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, aprovada — e a regra de "
             "07/09: a tela nunca confessa dívida nossa."
         ),
     ),
@@ -634,7 +634,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "por controle. Com quatro no rádio, o número é estimado.'"
         ),
         porque=(
-            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, por aprovação dela — e a regra de "
+            "11/09/2026, `PAGINAS-ESPECIAIS-B1`, aprovada — e a regra de "
             "07/09: a tela nunca confessa dívida nossa. O selo «derivado» fica: ele "
             "diz à pessoa o que o número é, sem contar o que falta à casa."
         ),
@@ -701,7 +701,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         depois=ABRE_A_PORTA + "  pintar();\n})();\n",
         porque=(
             "11/09/2026 — a porta pela qual o produto entrega o arranjo de quem abre. "
-            "Ela fica no fim porque chama `pintar`, que só existe depois de o motor "
+            "A porta fica no fim porque chama `pintar`, que só existe depois de o motor "
             "inteiro estar declarado."
         ),
     ),
@@ -744,9 +744,9 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "      identidade.</p>"
         ),
         porque=(
-            "11/09/2026, ordem dela: *\"a ideia é que todas as features mesmo "
-            "do app funcionem nao so pra mim mas "  # (noqa-acento)
-            "pra qualquer outro user\"*. O rodapé listava "
+            "11/09/2026, decisão do produto: toda feature do app funciona para "
+            "qualquer usuário, não só para a máquina em que "
+            "nasceu. O rodapé listava "
             "os caminhos de barramento de UM gabinete — `3-1.2`, `4-1`, `1-3` — como "
             "se fossem os de quem abre. O que ele explica (o que se mede e o que se "
             "declara) vale para qualquer máquina; os números não."
@@ -769,7 +769,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "verdade.</p>"
         ),
         porque=(
-            "11/09/2026 — mesma ordem dela: «a 15» é uma entrada de um gabinete só. "
+            "11/09/2026 — mesma decisão: «a 15» é uma entrada de um gabinete só. "
             "O fato do cabo passivo vale para qualquer um."
         ),
     ),
@@ -803,7 +803,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "`integrations/gesto_de_pareamento.py` chama `descobrir` e `parear` desde "
             "20/09. O QUE NÃO MUDOU, e é o que sustenta esta edição: nenhum BOTÃO da "
             "tela pareia, porque a PONTE-SEM-CHAMADOR-01 deixou os dois botões para "
-            "depois do OK dela — parear escreve no rádio dela com quatro controles "
+            "depois de um OK explícito — parear escreve no rádio com quatro controles "
             "vivos em cima."
         ),
     ),
@@ -820,10 +820,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois=CAIXA_DA_JANELA,
         porque=(
-            "AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01, 24/09/2026, a palavra "
-            "dela: «Vira caixa da janela, rolando por dentro». A página tinha a "
+            "AS-PAGINAS-AVULSAS-TEM-A-CAIXA-DA-JANELA-01, 24/09/2026: a página "
+            "vira caixa da janela, rolando por dentro. A página tinha a "
             "largura das abas de antes de 08/09 e rolava inteira (1180 x 2195 na "
-            "TV dela, contra a janela de 1600 x 808)."
+            "TV do ensaio, contra a janela de 1600 x 808)."
         ),
     ),
     Edicao(
@@ -936,10 +936,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '="true">⟳</span> Examinar</button>\n'
         ),
         porque=(
-            '26/09/2026, pedidos dela: *«Mapa das Entradas Muda pra Mapa das '
-            'Conexões»*, *«leitura deste computador · 26/09/2026 03h13 essa i'
-            'nfo some»* e *«botão examinar de novo tá desconexo do resto dos '
-            'elementos»*. O «Examinar» ocupa o lugar da data, com o ícone, e '
+            '26/09/2026, três pedidos: «Mapa das Entradas» passa a «Mapa das '
+            'Conexões»; a linha «leitura deste computador · <data>» some; e o '
+            'botão «Examinar de novo», desconexo do resto dos elementos, se '
+            'integra. O «Examinar» ocupa o lugar da data, com o ícone, e '
             'sai da fileira dos modos, onde parecia um quarto modo. O `dizerD'
             'eQuando` já aceita a data ausente.'
         ),
@@ -1005,13 +1005,13 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         depois="",
         porque=(
-            '26/09/2026, pedido dela: *«tudo do Os controles — onde cada um r'
-            'ende 100% deixa de existir tudo isso aí até O extensor não apare'
-            'ce sozinho»*. O Perfil de Desempenho desceu para cada cartão da '
-            'aba (*«deveria aparecer por controle»*), os controles ligados e '
-            'o microfone saíram (*«Controles Ligados por default no software '
-            'é 4, isso não deve aparecer pro user. Quem usa o microfone també'
-            'm não»*), e os controles no adaptador errado viraram a Sugestão '
+            '26/09/2026: todo o bloco «Os controles — onde cada um rende 100%»'
+            ' deixa de existir, até «O extensor não aparece sozinho». O Perf'
+            'il de Desempenho desceu para cada cartão da aba (aparece por co'
+            'ntrole), os controles ligados e o microfone saíram (os controle'
+            's ligados por padrão são 4, e isso não aparece para o usuário; q'
+            'uem usa o microfone também '
+            'não), e os controles no adaptador errado viraram a Sugestão '
             'de Conexão da aba. O rodapé saiu junto.'
         ),
     ),
@@ -1035,9 +1035,9 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '(modo === "mao") + \'">Adicionar</button>\';\n'
         ),
         porque=(
-            '26/09/2026, pedido dela: *«muda os nomes dos botões pra algo fác'
-            'il de entender. No máximo 1 palavra.»* Os nomes são dela: *«Atua'
-            'l, Sugestões, Adicionar»*. O `data-modo` não muda: é endereço.'
+            '26/09/2026: os nomes dos botões mudam para algo fácil de enten'
+            'der, com no máximo 1 palavra. Os nomes escolhidos: «Atua'
+            'l, Sugestões, Adicionar». O `data-modo` não muda: é endereço.'
         ),
     ),
     Edicao(
@@ -1114,7 +1114,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    if (porta.filho) h +='
         ),
         porque=(
-            '26/09/2026 — a entrada em que ela declarou um hub mostra o selo.'
+            '26/09/2026 — a entrada em que o usuário declarou um hub mostra o selo.'
         ),
     ),
     Edicao(
@@ -1422,9 +1422,9 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             'cor = "#f8f8f2"; });'
         ),
         porque=(
-            '26/09/2026, pedidos dela: *«ao clicar em um desses usb mapeados '
-            'eu pudesse setar que tem tal coisa lá»* e *«Todas as palavras In'
-            'iciam com a letra maíscula»*.'
+            '26/09/2026, dois pedidos: ao clicar numa entrada USB mapeada, '
+            'declarar o que está ligado ali; e todas as palavras in'
+            'iciam com letra maiúscula.'
         ),
     ),
     Edicao(
@@ -1437,10 +1437,10 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '": 3, "onde": "pc", "par": "1"}]'
         ),
         porque=(
-            '26/09/2026, resposta dela: as duas entradas da frente são AZUIS '
+            '26/09/2026, resposta do ensaio: as duas entradas da frente são AZUIS '
             '(USB 3.0), e as 7 e 8 da traseira são pretas ou brancas (USB 2.0'
             '). O firmware dizia o contrário da frente; o desenho mostra o qu'
-            'e ela declarou.'
+            'e foi declarado.'
         ),
     ),
     Edicao(
@@ -1459,7 +1459,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '  }\n'
         ),
         porque=(
-            '26/09/2026 — o que ela declara numa entrada do mapa dela vai ao `m'
+            '26/09/2026 — o que o usuário declara numa entrada do mapa vai ao `m'
             'aquina.json` (`pacotes/a12_mapa_das_portas.py`), e volta na próxi'
             'ma leitura pelo `f.declarado`.'
         ),
@@ -1493,7 +1493,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         porque=(
             '26/09/2026 — o exemplo se diz exemplo no cabeçalho (a defesa de '
             '11/09), ao lado do «Examinar»; a leitura desta máquina não mostra '
-            'a linha, que é o pedido dela.'
+            'a linha, que é o pedido.'
         ),
     ),
     Edicao(
@@ -1521,7 +1521,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026 — o «Examinar» do produto espera a leitura nova: pintar o '
-            'reexame no clique compararia a leitura da tela com ela mesma, e diria '
+            'reexame no clique compararia a leitura da tela consigo mesma, e diria '
             '«Nada Mudou de Lugar» de quem mudou.'
         ),
     ),
@@ -1650,7 +1650,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '(liga === o[0]) + \'">\' + o[1] + "</button>";\n'
         ),
         porque=(
-            '26/09/2026 — medido: o dongle Bluetooth direto na 5, ela declara Hub '
+            '26/09/2026 — medido: o dongle Bluetooth direto na 5, o usuário declara Hub '
             'na 5, e a página desenha um hub que não pode estar ali.'
         ),
     ),
@@ -1687,7 +1687,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '    if (!podeGravar(n)) return "";\n'
         ),
         porque=(
-            '26/09/2026 — o que ela declara na ponta do extensor vai ao disco, e '
+            '26/09/2026 — o que se declara na ponta do extensor vai ao disco, e '
             'volta ao reler.'
         ),
     ),
@@ -1715,7 +1715,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '</span><div class="seg">\'\n'
         ),
         porque=(
-            '26/09/2026 — as entradas desenhadas editavam sem gravar: o que ela '
+            '26/09/2026 — as entradas desenhadas editavam sem gravar: o que se '
             'declarava ali sumia ao reabrir.'
         ),
     ),
@@ -1729,7 +1729,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026 — medido na régua que clica: com o editor escondido, o '
-            'botão da entrada 5 continuava no DOM com o `data-entrada` dela.'
+            'botão da entrada 5 continuava no DOM com o próprio `data-entrada`.'
         ),
     ),
     Edicao(
@@ -1798,7 +1798,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 0) — medido no diário '
-            'dela: dois cliques no plugue e nenhuma escolha; a dica não dizia que '
+            'do ensaio: dois cliques no plugue e nenhuma escolha; a dica não dizia que '
             'ali há um editor.'
         ),
     ),
@@ -1879,7 +1879,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 2) — o cabeçalho do '
-            'editor diz o nome dela, e o campo «Nome» vem antes do resto.'
+            'editor diz o nome da entrada, e o campo «Nome» vem antes do resto.'
         ),
     ),
     Edicao(
@@ -1935,7 +1935,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a razão da'
-            ' entrada tomada diz o nome dela.'
+            ' entrada tomada diz o nome da ocupante.'
         ),
     ),
     Edicao(
@@ -1953,7 +1953,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a razão da'
-            ' entrada tomada diz o nome dela (a variante).'
+            ' entrada tomada diz o nome da ocupante (a variante).'
         ),
     ),
     Edicao(
@@ -1969,7 +1969,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — a razão da'
-            ' entrada tomada diz o nome dela (a receita).'
+            ' entrada tomada diz o nome da ocupante (a receita).'
         ),
     ),
     Edicao(
@@ -2127,7 +2127,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 3) — o plugue m'
-            'ostra o nome que ela deu à entrada.'
+            'ostra o nome dado à entrada.'
         ),
     ),
     Edicao(
@@ -2248,7 +2248,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 4) — o chip do aparel'
-            'ho que já está numa entrada abre o editor dela.'
+            'ho que já está numa entrada abre o editor da entrada.'
         ),
     ),
     Edicao(
@@ -2444,7 +2444,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '26/09/2026, O-MAPA-QUE-O-USUARIO-CORRIGE-01 (passo 6) — a linha de baixo'
-            ' de «Velocidade» diz de onde ela veio.'
+            ' de «Velocidade» diz de onde a velocidade veio.'
         ),
     ),
     Edicao(
@@ -2675,7 +2675,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o título d'
-            'a bandeja é o que ela pediu (pedido a).'
+            'a bandeja é o pedido a.'
         ),
     ),
     Edicao(
@@ -2687,7 +2687,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — a pergunta'
-            ' do Adicionar é a que ela ditou (pedido g).'
+            ' do Adicionar é a do pedido g.'
         ),
     ),
     Edicao(
@@ -3043,7 +3043,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — sai o'
             ' «Clique numa Entrada…»: o clique se mostra pela forma (o '
             'aparelho tem cara de botão), não por instrução (decisão 10'
-            ' dela).'
+            ').'
         ),
     ),
     Edicao(
@@ -3096,8 +3096,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o car'
-            'tão da lista diz o nome que ela deu (ou o tipo que ela dis'
-            'se) antes do que a máquina leu.'
+            'tão da lista diz o nome dado (ou o tipo declara'
+            'do) antes do que a máquina leu.'
         ),
     ),
     Edicao(
@@ -3608,7 +3608,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         porque=(
             '04/10/2026, O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 — o ext'
             'ensor deixa de ser «o que tem aqui»: é a chave da porta, s'
-            'eparada do que está ligado nela.'
+            'eparada do que está ligado ali.'
         ),
     ),
     Edicao(
@@ -3957,7 +3957,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         porque=(
             '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
             ' Mapa) — a página deixa de pôr maiúscula em toda palavra'
-            ': a regra dela de 05/10 é a primeira letra da linha, e c'
+            ': a regra de 05/10 é a primeira letra da linha, e c'
             'ada frase nasce assim'
         ),
     ),
@@ -4466,8 +4466,8 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
-            ' Mapa) — a entrada de outra região só apaga: a palavra e'
-            'mbaixo dela sai'
+            ' Mapa) — a entrada de outra região só apaga: a palavra d'
+            'e baixo sai'
         ),
     ),
     Edicao(
@@ -5522,7 +5522,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
         ),
         porque=(
             '05/10/2026, conjunto «Conexões 3» (o desenho aprovado do'
-            ' Mapa) — marcada a entrada, o painel passa a ser dela'
+            ' Mapa) — marcada a entrada, o painel passa a ser da entrada'
         ),
     ),
     Edicao(
@@ -6022,7 +6022,7 @@ EDICOES_DOS_MAPAS_DO_TODO: tuple[Edicao, ...] = (
     Edicao(
         antes="</body>",
         depois=f'<script id="base-comum">\n{_BASE_JS}</script>\n</body>',
-        porque="15/10/2026, mesma sprint — a base comum: o `script` dela, uma vez, no fim",
+        porque="15/10/2026, mesma sprint — a base comum: o `script` da base, uma vez, no fim",
     ),
 )
 
@@ -6304,7 +6304,7 @@ EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO: tuple[Edicao, ...] = ()
 def pagina(com_as_que_esperam: bool = True) -> str:
     """A página: a origem congelada mais as :data:`EDICOES`.
 
-    Com ``com_as_que_esperam`` (o padrão, e é a BANCADA), vêm também as
+    Com ``com_as_que_esperam`` (o padrão, e é o MOCKUP), vêm também as
     :data:`EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO`; sem ele, sai a cópia que o produto
     tem hoje.
 
@@ -6334,7 +6334,7 @@ def main(argv: list[str] | None = None) -> int:
     antes = DESTINO.read_text(encoding="utf-8") if DESTINO.exists() else ""
     DESTINO.write_text(novo, encoding="utf-8")
     print(f"mapa-das-portas: {len(_as_edicoes())} edições sobre a origem congelada"
-          f" + {len(EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO)} esperando a sessão dela · "
+          f" + {len(EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO)} esperando a sessão · "
           f"{len(novo.splitlines())} linhas · "
           f"{'mudou' if novo != antes else 'já estava igual'}")
     print(f"  escrito em {DESTINO}")

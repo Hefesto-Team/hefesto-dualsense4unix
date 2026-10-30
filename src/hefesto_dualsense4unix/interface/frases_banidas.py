@@ -113,7 +113,7 @@ class _Roteiros(HTMLParser):
 
 
 def roteiros_de(pagina: str) -> list[tuple[dict[str, str | None], str]]:
-    """`[(atributos, corpo)]` de cada `<script>` da página, na ordem em que ela os traz."""
+    """`[(atributos, corpo)]` de cada `<script>` da página, na ordem em que aparecem."""
     leitor = _Roteiros()
     leitor.feed(pagina)
     leitor.close()
@@ -215,7 +215,7 @@ def _apagar_o_escondido(
 
 
 def _ler(pagina: str, escondidos: tuple[str, ...] = ()) -> str:
-    """O motor das duas leituras — a da bancada e a do produto."""
+    """O motor das duas leituras — a do mockup e a do produto."""
     letras = list(sem_o_mudo(pagina))
     limpo = "".join(letras)
     _apagar_o_escondido(letras, limpo, escondidos)
@@ -233,7 +233,7 @@ def _ler(pagina: str, escondidos: tuple[str, ...] = ()) -> str:
 
 
 def texto_visivel(pagina: str) -> str:
-    """O que uma pessoa LÊ nesta página NO NAVEGADOR — a leitura da BANCADA."""
+    """O que uma pessoa LÊ nesta página NO NAVEGADOR — a leitura do MOCKUP."""
     return _ler(pagina)
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ver.py — a interface nova, para ela clicar."""
+"""ver.py — a interface nova, para clicar."""
 from __future__ import annotations
 
 import pathlib
@@ -96,7 +96,7 @@ def main() -> int:
     if janela_proibida_na_tela():
         print(
             f"recusado: {SEM_JANELA_NA_TELA} está no ambiente, e este visor só "
-            "serve aberto na tela dela.\n"
+            "serve aberto na tela.\n"
             "Para OLHAR sem aparecer, use o piloto com `--oculta --foto`:\n"
             "  src/hefesto_dualsense4unix/interface/hefesto_vivo.py "
             f"--oculta --abre {inicial} --segundos 8 --foto /tmp/aba.png",

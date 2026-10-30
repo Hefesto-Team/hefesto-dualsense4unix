@@ -1,4 +1,4 @@
-"""A janela onde ela desenha o gabinete — clique no aparelho, clique na entrada."""
+"""A janela onde o usuário desenha o gabinete — clique no aparelho, clique na entrada."""
 from __future__ import annotations
 
 from typing import Any
@@ -79,7 +79,7 @@ CONFISSAO: dict[str, str] = {
         "\"Mapear entrada a entrada\", eu trato todas como pretas."
     ),
     mapa_das_portas.LACUNA_REGIAO: (
-        "se alguma face é do gabinete ou de um hub — nenhuma entrada dela tem "
+        "se alguma face é do gabinete ou de um hub — nenhuma das entradas tem "
         "aparelho declarado."
     ),
     mapa_das_portas.LACUNA_ESPECIE: (
@@ -198,7 +198,7 @@ class LogicaDoMapa:
         self.perguntando_o_hub = False
 
     def acrescentar_hub(self, numero: str, nome: str = "") -> str:
-        """Liga um hub nesta entrada: a filha dela (`15` vira `15a`), com o nome, se houver.
+        """Liga um hub nesta entrada: a filha da entrada (`15` vira `15a`), com o nome, se houver.
 
         Nome acima do limite recusa e a pergunta continua aberta. O nome que é só o
         número da entrada não vale e não é gravado (`nome_que_vale`).
@@ -267,7 +267,7 @@ def ensaio_do_rascunho(logica: LogicaDoMapa, censo: Censo) -> mapa_das_portas.En
 def classe_do_escolhido(ensaio: mapa_das_portas.Ensaio, caminho: str) -> str:
     """A classe que o motor julga para o aparelho na mão — ``""`` se ele não a tem.
 
-    ``""`` acontece de verdade e não é borda: o Archer T3U desta bancada
+    ``""`` acontece de verdade e não é borda: o Archer T3U da máquina de teste
     declina de se classificar e o DualSense por cabo é HID sem protocolo de
     arranque. Para eles não há regra no motor, e o quadrado cala em vez de
     julgar pelo aparelho errado.

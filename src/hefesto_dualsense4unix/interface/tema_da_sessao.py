@@ -52,7 +52,7 @@ def lado_dos_botoes_na_sessao() -> str:
 def lado_do_sistema() -> str:
     """De que lado o sistema põe os botões das janelas: ``esquerda`` ou ``direita``.
 
-    No COSMIC é a direita, e a sessão não é consultada (o ``button-layout`` dela mente, como o
+    No COSMIC é a direita, e a sessão não é consultada (o ``button-layout`` da sessão mente, como o
     teste de 21/10 mede). Fora dele vale o que o ``button-layout`` diz antes dos dois pontos; sem
     resposta legível, ou sem os dois pontos, a direita.
     """

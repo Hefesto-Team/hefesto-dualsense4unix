@@ -1,4 +1,4 @@
-# As ferramentas do mockup — por que elas existem
+# As ferramentas do mockup — por que existem
 
 **27/08/2026.** Os dez arquivos `NN-*.html` desta pasta NÃO se editam à mão: eles
 são **gerados** por `aba0N.py`, e conferidos por `scripts/tela/regua.py`.
@@ -25,7 +25,7 @@ ser acreditada.**
 e os botões de 37 e 38 px continuaram 37 e 38 com a régua verde em tudo o mais.
 É `height`, e é por isso.
 
-## A escala, e por que ela existe
+## A escala, e por que existe
 
 Havia **quatro** alturas de botão na mesma janela (31 / 35 / 37 / 38 px). Nenhuma
 errada sozinha; juntas, é o que fazia a janela parecer montada por pessoas
@@ -34,6 +34,6 @@ diferentes. Os tokens estão no `<style>` do esqueleto: `--h-escolha` 36px,
 
 ## O rótulo de um controle
 
-Sempre nesta ordem, decisão dela de 26/08: **marca • player • plástico • transporte**.
+Sempre nesta ordem, decisão de 26/08: **marca • player • plástico • transporte**.
 Completa (`Sony • Player 1 • Cosmic Red • USB`) onde há espaço; encurtada
 (`P1 • Cosmic Red • USB`) nos chips da fita e na Vibração.

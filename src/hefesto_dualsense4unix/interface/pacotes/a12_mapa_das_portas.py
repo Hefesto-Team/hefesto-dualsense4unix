@@ -7,7 +7,7 @@ página não tinha pacote, e o que o usuário declarava numa entrada sumia ao re
 
 Os dois pedidos que isto atende:
 
-* ao clicar numa dessas entradas USB mapeadas, dizer o que está nela,
+* ao clicar numa dessas entradas USB mapeadas, dizer o que há ali,
   como um hub ou afins — «O que tem aqui»: Direto, Hub ou Extensor;
 * a velocidade da entrada, porque o par SuperSpeed que o firmware da placa
   publica (``peer``) não prova o conector: na mesa em que isto nasceu, as duas

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """A RÉGUA QUE FALTAVA: o que a tela mostra é DADO, ou é o desenho congelado?
 
-PEDIDO, e foi ELA quem viu o buraco (02/09/2026):
+PEDIDO de 02/09/2026, que apontou o buraco:
 
-    *"um portão que, com o daemon vivo e a mesa real, reprove quando um campo
-    continua exibindo o valor do mockup. Hoje nada acusa isso."*
+    um portão que, com o daemon vivo e a mesa real, reprove quando um campo
+    continua exibindo o valor do mockup; até então, nada acusava isso.
 
 O CASO QUE NOMEIA O DEFEITO, e está no HTML publicado de hoje: a aba Gatilhos
 mostra ``Força 7 · Frequência 4 · Início do curso 25 · Fim do curso 230`` — com
@@ -21,7 +21,7 @@ campo, montar o valor e escrevê-lo num endereço que não existe na página —
 tela continua mostrando o mockup, calada. Foi o que a `06-navegacao` fez: sete
 campos MENCIONADOS, três PINTADOS.
 
-O QUE ESTA RÉGUA MEDE, e a diferença é o ponto inteiro: ela lê o valor que está
+O QUE ESTA RÉGUA MEDE, e a diferença é o ponto inteiro: a régua lê o valor que está
 NA TELA, com o daemon vivo, e compara com o valor CRAVADO no arquivo publicado.
 
     PRODUTO      o valor mudou — alguém pintou; ou é igual ao cravado E o
@@ -35,9 +35,9 @@ A TERCEIRA CLASSE ERA 74 CAMPOS EM 330, e hoje é ZERO — **medido em 02/09/202
 com DOIS controles na mesa, um no USB e um no BT**. O número depende da mesa, e
 dizer qual mesa é obrigatório: o mesmo instrumento, no mesmo dia e sem uma linha
 de código mudar, deu ``114 PRODUTO · 179 MOCKUP · 37 INDECIDÍVEL`` com a mesa
-VAZIA e ``262 · 68 · 0`` com ela cheia. Esta seção dizia: *"separá-las exigiria
+VAZIA e ``262 · 68 · 0`` com a mesa cheia. Esta seção dizia: *"separá-las exigiria
 marcar cada elemento no momento da escrita — uma marca no caminho quente da
-pintura, paga por toda volta do tique, para responder uma pergunta de bancada"*,
+pintura, paga por toda volta do tique, para responder uma pergunta de ensaio"*,
 e concluía que a régua preferia dizer quantos eram.
 **A conta estava errada, e foi medida em 02/09/2026:** a marca é um
 ``el.dataset.hefVisto = '1'`` no ``escrever()``, e o custo do tique não se mexeu
@@ -46,7 +46,7 @@ dois controles). Os 74 viraram PRODUTO, e o número de MOCKUP não mudou uma
 unidade.
 
 E A MARCA NÃO É "LER O CÓDIGO", que é o erro que esta régua existe para não
-repetir: ela não pergunta se o nome do campo aparece no pacote — ela registra,
+repetir: a régua não pergunta se o nome do campo aparece no pacote — registra,
 em tempo de execução, que o valor emitido CHEGOU a um elemento desta página.
 Endereço morto continua sem selo, e continua acusado. A mordida que prova que o
 selo decide alguma coisa é ``--sem-selo``: os 74 voltam.
@@ -66,7 +66,7 @@ para cá.
 
 POR QUE TODO NOME AQUI COMEÇA COM ``_``, e não é estilo — é o contrato do
 ``portao_a_casa_sabe_e_o_produto_nao_faz``. Ele mede *promessa ao produto* por
-NOME PÚBLICO de módulo, e ele **poda a bancada** antes de medir: tudo o que só
+NOME PÚBLICO de módulo, e ele **poda o código de régua** antes de medir: tudo o que só
 roda sob uma flag de régua do piloto (``--prova-de-mockup``,
 ``--prova-no-aparelho``, ``--sem-cor``) sai da conta. Um nome público alcançado
 só por aí cai no caso mais fino do defeito-mãe daquele portão — *cura escrita,
@@ -76,7 +76,7 @@ palavras: **"A régua não é caminho."**
 Este módulo É régua, e assume isso: nenhum nome dele promete nada ao produto.
 Quem quiser fiar uma destas funções à espinha viva do piloto — o tique, a
 pintura, o gesto do usuário — tira o ``_`` NA HORA de fiar, e aí o portão volta a
-cobrar dela o que cobra de toda promessa.
+cobrar desse nome o que cobra de toda promessa.
 """
 from __future__ import annotations
 
@@ -396,7 +396,7 @@ def _cor_css(valor: str) -> str:
     navegador, um campo de cor teria de ser lido pelo TEXTO — e pintar uma cor
     não mexe numa letra, logo o campo seria INDECIDÍVEL para sempre.
 
-    O QUE ELA COBRE, e cada linha é uma sonda no WebKit desta máquina, não uma
+    O QUE A FORMA COBRE, e cada linha é uma sonda no WebKit desta máquina, não uma
     suposição (``test_a_cor_e_medida_no_webkit_e_nao_transcrita`` refaz a sonda
     a cada execução e reprova se as duas se separarem)::
 
@@ -407,7 +407,7 @@ def _cor_css(valor: str) -> str:
         var(--plastico) · color-mix(…)        → intactas
         hexadecimal e função INVÁLIDOS        → '' , que é o que o CSSOM recusa
 
-    **A AFIRMAÇÃO ANTERIOR CAIU, e ela estava escrita aqui e no ``LER_CAMPOS``
+    **A AFIRMAÇÃO ANTERIOR CAIU; estava escrita aqui e no ``LER_CAMPOS``
     do piloto:** *"a normalização é FECHADA e pequena — hexadecimal e ``rgb()``
     viram uma só forma, e todo o resto volta como foi escrito"*. Não é fechada.
     Medido em 02/09/2026 com uma sonda de 51 formas: o ``hsl()`` também vira
@@ -416,7 +416,7 @@ def _cor_css(valor: str) -> str:
     dá ``rgb(…)``), o arredondamento é meio-para-cima e não bancário, e todo CSS
     inválido volta ``''`` em vez de voltar como foi escrito.
 
-    O QUE ELA AINDA NÃO SABE, e é o único buraco que sobra: uma PALAVRA de uma
+    O QUE A FORMA AINDA NÃO SABE, e é o único buraco que sobra: uma PALAVRA de uma
     só peça que não seja cor de verdade (``vermelho``, ``azull``) passa por aqui
     e o CSSOM devolveria ``''``. Separar as duas exigiria a lista das 148 cores
     nomeadas do CSS, e o erro é barulhento: a guarda do DOM virgem do

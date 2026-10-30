@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""controles_vivos.py — a seção Controles VIVA, na página da Jogar, com a bancada.
+"""controles_vivos.py — a seção Controles VIVA, na página da Jogar, com o daemon vivo.
 
 O mockup aprovado rodando num `WebKit2.WebView` dentro de uma janela GTK3
 (`D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`), e o `daemon.state_full`
 pintando-o dez vezes por segundo. Um cartão por controle PRESENTE, na ordem dos
-jogadores, com a cor do plástico de cada um — e a mesa muda sozinha quando ela
+jogadores, com a cor do plástico de cada um — e a mesa muda sozinha quando alguém
 pluga ou tira um controle, **sem recarregar a página**.
 
     controles_vivos.py                     # a janela, na tela
@@ -15,7 +15,7 @@ AS DUAS MORDIDAS, e as duas foram medidas:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
                           mockup (quatro controles, Mortal Kombat, o P1 com o
-                          gatilho em 200/255). Se ela mostrar a bancada, o
+                          gatilho em 200/255). Se mostrar o mockup, o
                           dado não está vindo do daemon.
     --arranca-enderecos   apaga os `data-*` que o `aba02.py` escreve: a pintura
                           tem de DESABAR. Se não desabar, os endereços não
@@ -57,7 +57,7 @@ dono da resposta.
 
 POR QUE O INTERRUPTOR MORA NESTE ARQUIVO, e não no piloto da aba Jogar
 ----------------------------------------------------------------------
-Porque é **este** que ela abre: `./interface` → `scripts/abrir_interface.py` →
+Porque é **este** que o usuário abre: `./interface` → `scripts/abrir_interface.py` →
 este piloto. A tira de cima navega de verdade (`<a href="01-jogar.html">`), e a
 ponte da janela sobrevive à navegação — o que não sobrevivia era a PONTE DE
 GESTO, que só existia na página da aba Controles.
@@ -73,7 +73,7 @@ interruptor sai daqui **sem reescrever regra nenhuma**: a regra já está em
 `app/actions/jogar/painel` (leitor, escritor, trava e lembrança) e em
 `mode_transition` (a sequência). O que fica aqui é DOM.
 
-A JANELA, AS DUAS PONTES E A GUARDA DE CARGA SAÍRAM DAQUI em 29/08/2026: elas
+A JANELA, AS DUAS PONTES E A GUARDA DE CARGA SAÍRAM DAQUI em 29/08/2026: as três
 são de todas as abas, não desta, e agora moram em
 `hefesto_dualsense4unix.interface.janela` — com **as quatro armadilhas do
 WebKit2 4.1** que este arquivo pagou, escritas lá em
@@ -167,7 +167,7 @@ DONOS_DOS_GESTOS = {
     },
     "sensor:giroscopio": "NÃO TEM DONO. Não há campo de sensor em "
     "profiles/schema.py nem método de sensor em daemon/ipc_server.py. "
-    "A decisão dela de 18/08 (guardar giro e acelerômetro no perfil) "
+    "A decisão de 18/08 (guardar giro e acelerômetro no perfil) "
     "está registrada e não foi construída.",
     "sensor:acelerometro": "NÃO TEM DONO, e o dado também não existe: "
     "daemon/sensor_hub.leitura() publica gyro e touchpad, e o mapa de canais "
@@ -177,7 +177,7 @@ DONOS_DOS_GESTOS = {
     " devolvendo a saída padrão do sistema (camada 1).",
     "rota:nada": "pacotes/a02_controles.rota — o MESMO dono: rota 0 (o "
     "alto-falante fora do caminho) mais a saída padrão devolvida ao sistema. "
-    "É o ato que ela decidiu em 20/09, com o nome que ela já tinha escrito.",
+    "É o ato decidido em 20/09, com o nome já escrito antes.",
     "rota:pc": "pacotes/a02_controles.rota — continua rota válida pelo perfil, "
     "pelo IPC e pela CLI, mas SAIU DA FILEIRA em 20/09; por ser global, dois "
     "controles com rotas diferentes é pergunta que o produto ainda não responde.",
@@ -633,7 +633,7 @@ class Janela:
         GLib.timeout_add(80, self._talvez_ligar_o_interruptor)
 
     def _talvez_ligar_o_interruptor(self) -> bool:
-        """A página à vista tem a fileira de modos? Então ela ganha a ponte."""
+        """A página à vista tem a fileira de modos? Então a página ganha a ponte."""
 
         def respondeu(valor: str | None, erro: Exception | None) -> None:
             if erro is not None:
@@ -820,7 +820,7 @@ class Janela:
         """O `state_full` de agora — do daemon do usuário, ou do dublê.
 
         O DUBLÊ ACEITA UM ROTEIRO, e é assim que a chegada e a saída de controle
-        se provam sem plugar nada na bancada: uma lista de
+        se provam sem plugar nada na máquina: uma lista de
         ``{"aos": segundos, "state": …}`` (``state: null`` = daemon calado), e o
         tique escolhe a cena pelo relógio. Sem roteiro, o arquivo é um
         `state_full` só.

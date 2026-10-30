@@ -18,6 +18,6 @@ acad6de1fc93436f5c0f1f4137751ef04f1aea3063e7036535970ffcfbd79f72  SpaceGrotesk-w
 ```
 
 O `@font-face` declara os pesos que o antigo `<link>` do Google pedia: 400–700 da Space Grotesk e
-400–500 da JetBrains Mono. A mono não declara 600 e 700 de propósito: o negrito dela continua o
+400–500 da JetBrains Mono. A mono não declara 600 e 700 de propósito: o negrito da mono continua o
 sintetizado de antes, e a letra das abas não muda (com o eixo inteiro, 100–800, quatro abas mudavam
 de peso).

@@ -1,4 +1,4 @@
-"""A entrada do produto que abre a janela: a identidade veste o processo ANTES de ela nascer.
+"""A entrada do produto que abre a janela: a identidade veste o processo ANTES de a janela nascer.
 
 Dois chamadores: o console script (`entrada`) e o calço `scripts/abrir_interface.py` (`abrir`).
 Nada roda no import; o piloto roda por `runpy.run_module`, depois da identidade e da guarda da
@@ -171,7 +171,7 @@ TETO_DO_DIARIO = 1 << 20
 
 
 def diario_da_janela() -> TextIO | None:
-    """O arquivo onde a janela dela deixa rastro, ou ``None`` se há terminal."""
+    """O arquivo onde a janela deixa rastro, ou ``None`` se há terminal."""
     fluxo = sys.stderr
     aberto = fluxo is not None and not getattr(fluxo, "closed", False)
     if aberto and hasattr(fluxo, "isatty") and fluxo.isatty():
@@ -226,7 +226,7 @@ def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) ->
 
     vez = tomar_a_vez(args)
     if vez is None:
-        print("  já havia uma janela aberta nesta tela: ela veio para a frente")
+        print("  já havia uma janela aberta nesta tela: veio para a frente")
         return 0
 
     for linha in vestir_a_identidade(identidade.atual()):

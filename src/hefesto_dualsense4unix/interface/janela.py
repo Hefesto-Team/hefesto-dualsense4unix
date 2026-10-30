@@ -157,7 +157,7 @@ button:active {
 def css_da_cor_da_barra(folha_do_tema: str) -> str:
     """A barra da janela nas cores do tema ligado: o fundo é o ``--panel`` e a letra o ``--fg``.
 
-    Sem tema, vazio: a barra fica com a cor da sessão (no COSMIC, o ``gtk.css`` que ela gera).
+    Sem tema, vazio: a barra fica com a cor da sessão (no COSMIC, o ``gtk.css`` que a sessão gera).
     Decisão de 20/10/2026, a validar pelo usuário
     (O-TEMA-LIGA-SEM-REABRIR-A-JANELA-E-O-GTK-SEGUE-O-TEMA-01).
     """
@@ -732,7 +732,7 @@ class JanelaDaAba:
         if not oculta and janela_proibida_na_tela():
             print(
                 f"[janela] {SEM_JANELA_NA_TELA} está no ambiente: abrindo "
-                f"OCULTA em vez de na tela dela ({titulo}).",
+                f"OCULTA em vez de na tela ({titulo}).",
                 file=sys.stderr,
             )
             oculta = True
@@ -872,7 +872,7 @@ class JanelaDaAba:
         escolhem à parte, e a escolha vale na hora, sem reabrir. A gravação é atômica (`rename`).
 
         O GIO só vigia o arquivo se a pasta dele existe (medido em 22/10/2026: pasta ausente,
-        silêncio). A pasta nasce com a primeira escolha, então, enquanto ela não existe, vigia-se a
+        silêncio). A pasta nasce com a primeira escolha, então, enquanto não existe, vigia-se a
         mais próxima que existe, e o nascimento do nível de baixo refaz a vigia."""
         for antigo in self._vigias_das_opcoes:
             antigo.cancel()
@@ -900,7 +900,7 @@ class JanelaDaAba:
     def _o_nivel_de_baixo_nasceu(self, _monitor: Any, _arquivo: Any, _outro: Any,
                                  evento: Any) -> None:
         """A pasta que faltava nasceu: vigia o arquivo de perto e relê, que a escolha pode ter
-        entrado junto com ela."""
+        entrado junto com a pasta."""
         nasceu = (Gio.FileMonitorEvent.CREATED, Gio.FileMonitorEvent.MOVED_IN,
                   Gio.FileMonitorEvent.RENAMED)
         if evento not in nasceu:
@@ -995,14 +995,14 @@ class JanelaDaAba:
 
         A fonte fica ligada até o fim do processo, e o segundo sinal só não fecha de novo: sem
         fonte, a GLib devolve o sinal ao `SIG_DFL`, e a 2.88 relança o que ficou pendente por uma
-        thread dela, que mata com 143 o processo cujo `abrir` já tinha voltado 0."""
+        thread própria, que mata com 143 o processo cujo `abrir` já tinha voltado 0."""
         if not self._sinal_recebido:
             self._sinal_recebido = True
             self.fechar(f"sinal {signal.Signals(numero).name}")
         return True
 
     def _o_tamanho_mudou(self, *_args: Any) -> bool:
-        """`configure-event` e `window-state-event`: lê a janela como ela está agora."""
+        """`configure-event` e `window-state-event`: lê a janela como está agora."""
         largura, altura = self.janela.get_size()
         self.anotar_o_tamanho(largura, altura)
         return False
@@ -1088,7 +1088,7 @@ class JanelaDaAba:
                 self.janela.maximize()
 
     def _repintar_a_decoracao(self) -> bool:
-        """O gesto que o screenshot dela fazia de graça."""
+        """O gesto que um screenshot fazia de graça."""
         self.janela.queue_resize()
         barra = self.janela.get_titlebar()
         if barra is not None:

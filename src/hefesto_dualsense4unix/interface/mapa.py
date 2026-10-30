@@ -236,7 +236,7 @@ def sobe_a_letra(svg_txt):
 
 
 def controle(pecas):
-    """O desenho — que É o arquivo dela — com os alvos do ponteiro por cima."""
+    """O desenho — que É o próprio SVG — com os alvos do ponteiro por cima."""
     x = sobe_a_letra(SVG.read_text())
     x = re.sub(r'\s*<g id="grupo-chassi">\s*<title>[^<]*</title>\s*</g>', "", x)
     for i in sorted(set(re.findall(r'id="([^"]+)"', x)), key=len, reverse=True):

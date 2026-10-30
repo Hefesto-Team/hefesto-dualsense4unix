@@ -34,11 +34,11 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
         "controle.*.mic.escopo",
         "A tela oferece a escolha por controle. O produto guarda um valor por "
         "máquina, em `state['mic_button_toggles_system']`.",
-        "MIGRA-CONEXOES-06 — §0.7 do índice, e é palavra dela.",
+        "MIGRA-CONEXOES-06 — §0.7 do índice, e é decisão do produto.",
     ),
     (
         "vizinho.*.qual",
-        "O que cada rádio vizinho É ('Wi-Fi', 'Teclado'...) é declaração dela, "
+        "O que cada rádio vizinho É ('Wi-Fi', 'Teclado'...) é declaração do usuário, "
         "guardada em `maquina.json`. Sem declaração o produto sabe o "
         "vid:pid e mais nada — e adivinhar pelo vid:pid seria inventar.",
         "Já responde: `ordens_da_mesa.Leitura.nomes_declarados` quando existe.",
@@ -156,7 +156,7 @@ SEGUE_O_GLOBAL = "Segue o global"
 def por_cento(fracao: float) -> str:
     """`0.3` → `"30% da força"`. A ÚNICA grafia desta frase nesta casa.
 
-    Ela existia em QUATRO — `secao_orcamento.celula_do_teto:379`,
+    A frase existia em QUATRO — `secao_orcamento.celula_do_teto:379`,
     `secao_orcamento._dica_da_bateria_longa:240`, `interface.sistema
     .forca_do_perfil:417` e a que este arquivo digitou em 01/09/2026 —, e a
     quarta era a única que não passava pelo dono do NÚMERO. Aqui só a FORMA é
@@ -229,7 +229,7 @@ def html_das_dicas(painel: Any, icone: Callable[[str], str] = lambda _nome: "") 
     """As dicas da aba Conexões: os cartões que pesam, numa fileira só; sem dica, «Tudo certo».
 
     Sem «mais N» e sem a linha dos ✓ (desenho aprovado de 05/10/2026): o próximo cartão entra
-    quando ela ignora ou resolve um. ``icone`` desenha o símbolo de um cartão (o sprite é da
+    quando o usuário ignora ou resolve um. ``icone`` desenha o símbolo de um cartão (o sprite é da
     página; este módulo não o conhece).
     """
     if not painel.visiveis:
@@ -277,8 +277,8 @@ def html_do_mapa(
 ) -> str:
     """As faces do gabinete, com um quadrado por entrada.
 
-    `nomes` é `filha -> nome` do hub, se ela deu; `nomes_das_entradas`, `entrada -> nome` dado a
-    ela; `pergunta` é a do «Acrescentar hub» (`{"aberta", "entradas"}`), estado de tela.
+    `nomes` é `filha -> nome` do hub, se houver; `nomes_das_entradas`, `entrada -> nome` dado a
+    cada entrada; `pergunta` é a do «Acrescentar hub» (`{"aberta", "entradas"}`), estado de tela.
 
     `faces` é `[{"nome": …, "portas": [numero, …]}, …]` — a forma do
     `MapaDaMesa`, para que o chamador não precise traduzir nada.
