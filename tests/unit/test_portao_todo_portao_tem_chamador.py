@@ -88,6 +88,16 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "Ele fecha quando as três linhas da direita fecharem E existir bancada "
         "automatizada — a segunda condição é que não existe hoje."
     ),
+    # fica: liga-se na fase 3 da sprint, quando as quatro áreas zerarem
+    "scripts/check_texto_sem_pessoa.py": (
+        "MEDIDO em 30/10/2026: o portão nasceu na fase 1 da "
+        "O-PROJETO-NAO-FALA-DE-PESSOA-NEM-DE-BANCADA-01, e a fase 2 zera cada área numa "
+        "árvore própria. Ligado antes de as quatro áreas fecharem, ele reprovaria o "
+        "`dev` por texto que outra árvore já curou e ainda não costurou. "
+        "A LINHA QUE O LIGARIA, na fase 3: "
+        "`completo|texto-sem-pessoa|py|scripts/check_texto_sem_pessoa.py` em "
+        "`scripts/portoes.sh`, mais o passo gêmeo em `.github/workflows/ci.yml`."
+    ),
     # fica: mede o degrau, não o commit; entra na camada `completo` quando as quatro zerarem
     "scripts/check_ensaio_de_bt.py": (
         "MEDIDO em 01/09/2026, e ele NASCEU sem chamador de propósito. A escada "

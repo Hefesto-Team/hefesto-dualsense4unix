@@ -222,7 +222,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_os_donos_de_fato.py::EXCECOES_DATADAS": 2,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_CITACOES_PENDENTES": 0,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_PAR_ACEITO": 0,
-    "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 2,
+    "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 3,
     "tests/unit/test_toda_fala_declarada_chega_a_tela.py::_FALA_SEM_TELA_HOJE": 0,
     "tests/unit/test_todo_campo_do_caderno_tem_consumidor.py::ISENTOS": 0,
     "tests/unit/test_todo_deslizante_aplica_ao_soltar.py::EXCECOES": 1,
@@ -264,6 +264,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "os endereços da mesa, lidos quando o ensaio roda, para o dono da máscara "
         "pegar toda forma deles; nasce vazia e não isenta nada"),
     "scripts/check_a_grafia_do_nome.py::ISENTOS": _A_PROPRIA_REGUA,
+    "scripts/check_texto_sem_pessoa.py::ISENTOS": _A_PROPRIA_REGUA,
     "scripts/check_broadcast_proibido.py::_EXCECOES_DELIBERADAS": (
         "o broadcast deliberado, com a frase de verdade no docstring da função"),
     "scripts/check_faixa_sintetica.py::_ARVORE_IGNORADA": (
