@@ -1,6 +1,6 @@
 # O TERCEIRO NÚMERO — a paridade com a GTK
 
-> ## ATENÇÃO — ESTE NÚMERO MEDE A BANCADA, NÃO O QUE ELA ABRE
+> ## ATENÇÃO — ESTE NÚMERO MEDE O ENSAIO, NÃO O QUE ELA ABRE
 >
 > **Medido em 04/09/2026, e é o achado maior da leva daquele dia.** As dez
 > frentes de aba entregaram, e **nenhuma publicou** — `git diff` em
@@ -8,10 +8,10 @@
 > mudança. O produto que ela abre continua o de antes.
 >
 > ```
-> cadeado         bancada=2  publicado=0
-> reenviar        bancada=2  publicado=0
-> auto-cores      bancada=1  publicado=0
-> forca-mesa      bancada=1  publicado=0
+> cadeado         ensaio=2  publicado=0
+> reenviar        ensaio=2  publicado=0
+> auto-cores      ensaio=1  publicado=0
+> forca-mesa      ensaio=1  publicado=0
 > ```
 >
 > **E isso está CERTO**, não é falha: a direção é `mockup/` → produto, nunca o
@@ -64,7 +64,7 @@ refazer a leitura.
 | `DIFERENTE` | os dois fazem, e não a mesma coisa |
 | `FALTA_NO_HTML` | a GTK faz, o HTML não |
 | `SO_NO_HTML` | o HTML faz, e a GTK nunca fez |
-| `NAO_DA_PARA_SABER` | não se decide lendo — precisa de bancada |
+| `NAO_DA_PARA_SABER` | não se decide lendo — precisa de ensaio |
 
 **A paridade é `IGUAL / total`.** É a régua mais dura de propósito: `DIFERENTE`
 não conta como paridade, porque a queixa de uso que originou tudo foi exatamente
@@ -164,8 +164,8 @@ por controle.
 caminho. O `a09_sistema` lê o autostart na faixa lenta e o achatamento joga
 fora; as `travas` da aba Sistema (quais gestos estão cinza, e por quê) são
 calculadas em `interface/sistema.py` e não são reencaminhadas; `AVISOS_DA_TELA`
-tem as seis fontes puras da coluna Atenção da aba Início e quem as chama é a
-bancada, não o produto. **Boa parte da dívida é ponte entre dois arquivos que já
+tem as seis fontes puras da coluna Atenção da aba Início e quem as chama é o
+ensaio, não o produto. **Boa parte da dívida é ponte entre dois arquivos que já
 existem, não código novo.**
 
 ---
@@ -252,7 +252,7 @@ neste jogo" (o HTML passa `excluir=`). **Três linhas a NÃO copiar de volta.**
 
 **Quantas são hoje: a coluna `?` da tabela da §2.**
 
-Elas precisam de bancada: se a lista de 11 modos abre no compositor dela, se o
+Elas precisam de ensaio: se a lista de 11 modos abre no compositor dela, se o
 `Automático` de fato larga a luz para o jogo, se o reparo do HTML repõe a linha
 no `.vdf` dela, e se o nome do plástico chega ao cartão. **Ficam registradas como indecidíveis em vez de chutadas** — é a mesma
 disciplina do `de_onde_sei` do mapa de canais.
@@ -360,7 +360,7 @@ mesmos, e ninguém perguntava ao outro.
 06/09/2026: *"Esse mapa é funcional e real. tá desatualizado no sentido de não
 ter sido medido. foi e tudo funciona."* <!-- noqa-acento: citação literal -->
 Uma célula `nao-medido` vira **AVISO impresso**, e o `rc` continua ZERO. Quem a
-remede é a bancada, com o relatório de quem passou por ela
+remede é o ensaio, com o relatório de quem passou por ela
 (SPECS-A-PROCEDENCIA-01).
 
 **A ponte é declarada, e o veredito NÃO.** As duas planilhas não têm uma palavra
@@ -382,7 +382,7 @@ por `>=`, a forma provada do `PISO_DA_REGUA`).
 | restringe um lado, com causa | 7 | a linha tem de dizer `cabo` ou `rádio` |
 | `nao-medido` nos dois lados | 3 | **AVISO**, nunca `rc=1` |
 
-**O achado que sai daqui, e é para a bancada:** as três linhas do BRILHO da barra
+**O achado que sai daqui, e é para o ensaio:** as três linhas do BRILHO da barra
 (`04-iluminacao`) afirmam paridade sobre `luz.lightbar.brilho@dualsense`, e a
 célula diz `aciona=não` nos **dois** transportes com causa `nao-medido`. A tela
 tem um trilho de 0 a 100 que grava e reenvia a cor; o mapa nunca foi marcado.
@@ -463,13 +463,13 @@ Régua: `tests/unit/test_a_tela_nao_inventa_o_transporte.py`, com mordida.
 `PARIDADE-REMEDIR-01`. As **57** linhas `FALTA_NO_HTML` foram relidas uma a uma
 contra o fonte de hoje, depois de dez sprints fecharem. O número foi de
 **137 IGUAL · 139 DIFERENTE · 57 FALTA · 35 %** para
-**144 · 150 · 39 · 36 %** — e o que ele mede continua sendo a bancada, não o
+**144 · 150 · 39 · 36 %** — e o que ele mede continua sendo o ensaio, não o
 publicado (a caixa no topo desta página).
 
 **DEZOITO linhas mudaram de veredito, todas com o endereço lido no código** —
 sete viraram `IGUAL` e onze `DIFERENTE`. A maior parte é a aba **02-controles**,
 que foi de **24 % para 32 %**: os dois deslizantes de volume (do microfone e do
-alto-falante) existem na bancada **e na página publicada**, o número e a barra
+alto-falante) existem no ensaio **e na página publicada**, o número e a barra
 do alto-falante saem da curva medida no aparelho, e o hertz do giroscópio
 deixou de ser número de catálogo. As duas abas que **zeraram** os `FALTA` são a
 `06-navegacao` (o botão PS voltou à tabela, reversão dela na 06-Q3) e a

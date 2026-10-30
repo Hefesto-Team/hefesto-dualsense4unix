@@ -1493,7 +1493,7 @@ led então sabemos quando sobrescrever o input da steam não?"* — e os
 | limpo | os 6, todos nos primeiros **3,9 s**; depois, silêncio |
 | sujo | **duas rajadas**: `t+0` a `t+3 s` (58 pacotes) e `t+15` a `t+18 s` (40), com silêncio total entre `t+4` e `t+14` |
 
-As rajadas casam com as probes dos controles, que ela acordou um a um. **A Steam
+As rajadas casam com as probes dos controles, que o usuário acordou um a um. **A Steam
 bombardeia durante a probe e depois cala.** Não é disputa permanente: é uma
 janela.
 

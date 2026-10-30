@@ -136,7 +136,7 @@ Pro 2 for Xbox — que têm **menos** modos e outros IDs.
 modo por combo**, e sim por uma **chave física de quatro posições** (S/X/D/A) na
 traseira. **[FABRICANTE]**, grau **ALTA**. Como este projeto mediu com ela, em
 03/08/2026, que o modo troca com `Start + A`, **o controle do usuário não é um Pro 2**.
-É SN30 Pro ou SN30 Pro+ — e essa distinção continua aberta, porque ela decide
+É SN30 Pro ou SN30 Pro+ — e essa distinção continua aberta, porque o usuário decide
 qual índice de firmware vale (seção 4).
 
 ### 2.2 A tabela dos modos, e a correção de vocabulário que ela traz
@@ -835,7 +835,7 @@ morte por Bluetooth em modo Switch** — o defeito mais antigo desta mesa. Mas
 handshake USB nem o rate limiter de subcomando, que são as duas causas medidas
 aqui.
 
-**E o preço, porque ela pede o preço na mesa:**
+**E o preço, porque o usuário pede o preço na mesa:**
 
 - o atualizador oficial **não declara Linux**; o caminho realista para
   **gravar** é Windows ou macOS emprestado, ou o atualizador web, que pode não
@@ -1058,7 +1058,7 @@ isto entendeu errado na primeira leitura e chegou a anotar "não há o que
 corrigir": não há **defeito**, e há um **pedido**, que são coisas diferentes.
 
 **No Switch: não dá.** O mapeamento vive no firmware, e o SN30 Pro de 2018 não
-tem remapeamento persistente — medido por ela: *"8bitdo ultimate software não
+tem remapeamento persistente — medido pelo usuário: *"8bitdo ultimate software não
 funciona nem a pau no meu controle"*. O Ultimate Software atende os aparelhos
 novos (Ultimate, Pro 2, parte dos Pro+); este modelo era servido pela ferramenta
 antiga, que **atualiza firmware e não remapeia**. Some-se a isso que o `fwupd`

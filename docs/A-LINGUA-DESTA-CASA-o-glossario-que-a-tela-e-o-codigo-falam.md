@@ -1,11 +1,11 @@
 # A língua desta casa — o glossário que a tela e o código falam
 
-**06/09/2026.** Pedido dela: *"pode cuidar da documentação completa do projeto
+**06/09/2026.** Pedido: *"pode cuidar da documentação completa do projeto
 também? pra sempre falarmos a mesma língua?"* — e, no mesmo dia, o motivo:
 *"Falei do termo mesa que é horrível. Mas as levas anteriores entraram na pira
 de usar isso em tudo no layout. O termo sai e coloca-se termos simples pro user
 comum. feature fica."* <!-- noqa-acento: citação literal; a palavra que nomeava a
-ferramenta saiu em 15/09/2026, por ordem dela -->
+ferramenta saiu em 15/09/2026, por ordem de produto -->
 
 **Uma palavra, um significado, e dois registros:** o que a TELA diz (para ela
 e para qualquer usuária) e o que a CASA diz (código, sprints, commits). Quando
@@ -19,15 +19,15 @@ se acrescenta aqui antes de entrar na tela.
 | na tela | na casa | o que é |
 | --- | --- | --- |
 | **controle** · **P1…P4** (jogador) | `controle`, `assento` (`p1`..`p4`), `uniq` (o endereço, nunca na tela) | um DualSense na mão de alguém; o número é o assento, não o aparelho |
-| **USB** · **BT** | `usb` · `bt` (chave crua); a palavra vem de `home_actions.palavra_do_transporte` | por onde o controle fala com a máquina. **A palavra é dela, 21/09/2026**, com a janela aberta na frente dela: primeiro a caixa (*"cabo e bt escrito em minúsculo"*), depois a palavra (*"USB e BT é muito bom"*, *"Melhor que cabo e bt"*). <!-- noqa-acento: citação literal --> Isso REVOGA a I9 de 25/08, que trocara `USB`/`BT` por `cabo`/`rádio` — o que a I9 mediu (quatro dialetos na mesma janela) continua valendo, e o dono segue sendo um só. **O ganho: a tela e o DESENHO passaram a dizer a mesma palavra** — `interface/monta.MESA` sempre disse `USB`/`BT`. **`cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS** (`docs/data/mapa-controles.csv`), que é dado e não tela. A contagem do topo (`2 USB · 0 BT`) deixou de ser exceção: ela é a regra agora |
-| **os controles** · **todos** · **P1 e P2** | `mesa` (só como nome interno: `mesa_viva.py`, `app/mesa.py`) | **"mesa" não entra em texto de tela.** Decisão dela, 05/09 e 06/09: a palavra sai, a feature fica |
+| **USB** · **BT** | `usb` · `bt` (chave crua); a palavra vem de `home_actions.palavra_do_transporte` | por onde o controle fala com a máquina. **A palavra é de produto, 21/09/2026**, com a janela aberta na frente do usuário: primeiro a caixa (*"cabo e bt escrito em minúsculo"*), depois a palavra (*"USB e BT é muito bom"*, *"Melhor que cabo e bt"*). <!-- noqa-acento: citação literal --> Isso REVOGA a I9 de 25/08, que trocara `USB`/`BT` por `cabo`/`rádio` — o que a I9 mediu (quatro dialetos na mesma janela) continua valendo, e o dono segue sendo um só. **O ganho: a tela e o DESENHO passaram a dizer a mesma palavra** — `interface/monta.MESA` sempre disse `USB`/`BT`. **`cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS** (`docs/data/mapa-controles.csv`), que é dado e não tela. A contagem do topo (`2 USB · 0 BT`) deixou de ser exceção: ela é a regra agora |
+| **os controles** · **todos** · **P1 e P2** | `mesa` (só como nome interno: `mesa_viva.py`, `app/mesa.py`) | **"mesa" não entra em texto de tela.** Decisão de produto, 05/09 e 06/09: a palavra sai, a feature fica |
 | **serviço** | `daemon`, `hefesto-dualsense4unix.service` | o que roda por trás, fala com o aparelho e responde à janela |
 | **barra de luz** · **luzes de jogador** · **luz do microfone** | `lightbar`, `player_leds`, `mute_led` | as três luzes do DualSense |
 | **gatilho** (L2/R2) · **efeito** | `trigger`, `TriggerEffect` | o gatilho adaptativo e o que ele faz na mão |
 | **vibração** · **motor forte / fraco** · **degrau** (Economia · Balanceado · Máximo) | `rumble`, `weak`/`strong`, `orcamento` | a força; o degrau multiplica a barra de cada motor |
 | **microfone** · **alto-falante** · **fone** | `mic`, `speaker`, `jack` | o áudio do controle; o mic tem UM ato: ligar e ser ouvido no canal dele |
-| **Alto-falante do Controle N** · **Microfone do Controle N** | `alto_falante_bt.nome_do_sink` (`hefesto_som_<hex6>`) · `canal_do_microfone.nome_do_canal` (`hefesto_mic_<hex6>`) | **o rótulo do nó na lista de som do SISTEMA**, um par por controle. Decisão dela, 09/09 (*"4a"*): o número é o **assento** (P1…P4), como na tela — não o aparelho. O nome interno segue o aparelho e não muda de transporte; o rótulo segue o assento — e **acompanha a renumeração**, republicando o nó quando o assento anda (`dualsense_bt_audio.rotulo_envelheceu`, 20/09/2026; antes disso ele era a fotografia do assento de quando o nó nasceu, e ela ouviu dois deles trocados entre si). O rótulo espera o nó ficar em silêncio **e a rota de agora resolver** para mudar — republicar é derrubar e erguer, e derrubar sem saber se o nó volta tiraria o dispositivo debaixo do jogo —, então ele pode estar uma partida atrasado. **O endereço nunca entra no rótulo.** **E o rótulo leva o nome da Sony atrás — a FORMA A, decisão dela de 23/09/2026:** «Alto-falante do Controle N (DualSense Wireless Controller)», igual para o microfone, os quatro controles, o USB e o BT. É o que um jogo procura: sob Proton o rótulo É o nome do alto-falante que o jogo lista. Quem monta é `vestido_de_dualsense.com_o_nome_da_sony` |
-| **Háptica do Controle N** | `endpoint_de_haptica.nome_do_endpoint` (`alsa_output.usb-Sony_…_HEFESTOLUGAR<N>-00.HiFi__Speaker__sink`) | **o rótulo do endpoint de vibração na lista de som do SISTEMA**, um por LUGAR (P1 a P4), nos dois transportes: os quatro sobem com o primeiro DualSense da mesa. No BT a ponte lê o endpoint do lugar do controle; no USB um laço leva o endpoint do lugar à placa do próprio controle. É o nó que o JOGO acha sozinho para vibrar, e não a pessoa: não vira saída padrão. A forma A, igual aos dois de cima, decidida por delegação dela em 24/09/2026: «Háptica do Controle N (DualSense Wireless Controller)». **Desde 28/09/2026 o nome e o rótulo são do LUGAR, e fixos** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): quem anda é o controle, e o número que muda troca o laço ou a ponte, nunca o endpoint — por isso o controle que chega com o jogo aberto cai num endpoint que o lançamento já registrou. Até 24/09 ele dizia `DualSense <hex6> (háptica)`, e até 28/09 o nome seguia o aparelho (`HEFESTO<hex6>`) e o rótulo renascia com o assento, só sem jogo aberto |
+| **Alto-falante do Controle N** · **Microfone do Controle N** | `alto_falante_bt.nome_do_sink` (`hefesto_som_<hex6>`) · `canal_do_microfone.nome_do_canal` (`hefesto_mic_<hex6>`) | **o rótulo do nó na lista de som do SISTEMA**, um par por controle. Decisão de produto, 09/09 (*"4a"*): o número é o **assento** (P1…P4), como na tela — não o aparelho. O nome interno segue o aparelho e não muda de transporte; o rótulo segue o assento — e **acompanha a renumeração**, republicando o nó quando o assento anda (`dualsense_bt_audio.rotulo_envelheceu`, 20/09/2026; antes disso ele era a fotografia do assento de quando o nó nasceu, e o usuário ouviu dois deles trocados entre si). O rótulo espera o nó ficar em silêncio **e a rota de agora resolver** para mudar — republicar é derrubar e erguer, e derrubar sem saber se o nó volta tiraria o dispositivo debaixo do jogo —, então ele pode estar uma partida atrasado. **O endereço nunca entra no rótulo.** **E o rótulo leva o nome da Sony atrás — a FORMA A, decisão de produto de 23/09/2026:** «Alto-falante do Controle N (DualSense Wireless Controller)», igual para o microfone, os quatro controles, o USB e o BT. É o que um jogo procura: sob Proton o rótulo É o nome do alto-falante que o jogo lista. Quem monta é `vestido_de_dualsense.com_o_nome_da_sony` |
+| **Háptica do Controle N** | `endpoint_de_haptica.nome_do_endpoint` (`alsa_output.usb-Sony_…_HEFESTOLUGAR<N>-00.HiFi__Speaker__sink`) | **o rótulo do endpoint de vibração na lista de som do SISTEMA**, um por LUGAR (P1 a P4), nos dois transportes: os quatro sobem com o primeiro DualSense da mesa. No BT a ponte lê o endpoint do lugar do controle; no USB um laço leva o endpoint do lugar à placa do próprio controle. É o nó que o JOGO acha sozinho para vibrar, e não a pessoa: não vira saída padrão. A forma A, igual aos dois de cima, decidida por delegação de produto em 24/09/2026: «Háptica do Controle N (DualSense Wireless Controller)». **Desde 28/09/2026 o nome e o rótulo são do LUGAR, e fixos** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): quem anda é o controle, e o número que muda troca o laço ou a ponte, nunca o endpoint — por isso o controle que chega com o jogo aberto cai num endpoint que o lançamento já registrou. Até 24/09 ele dizia `DualSense <hex6> (háptica)`, e até 28/09 o nome seguia o aparelho (`HEFESTO<hex6>`) e o rótulo renascia com o assento, só sem jogo aberto |
 | **giroscópio** · **acelerômetro** · **touchpad** | `gyro`, `accel`, `touchpad`, `sensor_hub` | o movimento e o toque |
 | **Mira Virtual** | `movimento`, `roteador_de_movimento`, o chip `mira` | o giro do controle vira o analógico direito do jogo; na Navegação, o cursor do computador. Por controle, nos quatro; no Modo Nativo o chip fica cinza |
 | **Navega o PC** · **Move o cursor** · **Só a janela** (o cartão da aba Navegação) | `a06_navegacao.linha_do_cartao`, `is_primary`, `move_o_cursor` | o que cada controle faz no computador. **Navega o PC** é o controle que o Hefesto lê para o mouse, o teclado e os gestos — um só. **Move o cursor** é quem não navega, com a Mira Virtual e o Giroscópio acesos na Navegação e o mouse movendo o cursor (`mouse_emulation.despachando`): o giro dele soma no mesmo cursor (A-MIRA-NA-NAVEGACAO-02, 25/09/2026). **Só a janela** é o resto: os analógicos andam só na janela do Hefesto |
@@ -57,7 +57,7 @@ se acrescenta aqui antes de entrar na tela.
 | **?** (a dica) | `title`, `data-hef-atributo="title"` | a explicação mora aqui; a tela não explica em linha |
 | **dizer as duas metades** | `AS-DUAS-ABAS-FALAM-01` | quando meio ato deu certo, a frase diz o que deu e o que não deu |
 | **chip** (a pílula de fundo cheio no rótulo) | `.selo-ativo`, `.rot .canal`, `.rot .selo-som` da `aba02` | um fato de UMA palavra que se lê de relance; a geometria é UMA declaração para os três, nunca cópia |
-| **ATIVO** · **DESLIGADO** (a pílula do alto-falante) | `mesa_viva.selo_do_alto_falante`, o mudo que o `♪` lê | DESLIGADO só quando ela calou o `♪`; canal parado é ATIVO, no cabo e no rádio. O sono do canal (`audio_saida.CANAL_ACORDADO` / `CANAL_DORMINDO`) é palavra da CASA e não vai à tela — ordem dela, 23/09/2026 (O-ALTO-FALANTE-DIZ-ATIVO-01) |
+| **ATIVO** · **DESLIGADO** (a pílula do alto-falante) | `mesa_viva.selo_do_alto_falante`, o mudo que o `♪` lê | DESLIGADO só quando ela calou o `♪`; canal parado é ATIVO, no cabo e no rádio. O sono do canal (`audio_saida.CANAL_ACORDADO` / `CANAL_DORMINDO`) é palavra da CASA e não vai à tela — ordem de produto, 23/09/2026 (O-ALTO-FALANTE-DIZ-ATIVO-01) |
 
 **Proibido em texto de tela:** `env`, `vdf`, `uinput`, `hidraw`, `MAC`, `uniq`,
 `wrapper_used`, `dedup`, "mesa", "janela do aplicativo", "linha de comando",
@@ -74,7 +74,7 @@ outra, **nos dois sentidos**, em
 primeiro; a tupla do módulo é a cópia que o produto instalado carrega, porque o
 pacote não leva `docs/` junto. As duas últimas são raiz e não palavra inteira —
 `reconciliad` cobre *reconciliados* e *reconciliadas* sem tocar o verbo
-`reconciliar`, que é português vivo em código e em prosa (decisão dela, 09/09,
+`reconciliar`, que é português vivo em código e em prosa (decisão de produto, 09/09,
 JOGAR-02 §5). Os dois trechos de FRASE proibida continuam sem forma de palavra,
 e por isso ficam de fora da conta.
 
@@ -84,7 +84,7 @@ e por isso ficam de fora da conta.
 | --- | --- |
 | **piloto** | `interface/hefesto_vivo.py`: a janela GTK com o `WebKit2.WebView` que pinta o HTML dez vezes por segundo (**tique** = 100 ms) |
 | **pacote** | `interface/pacotes/aNN_*.py`: o que cada aba manda ao piloto por tique, e os **gestos** que ela responde |
-| **gerador** · **bancada** · **publicado** | os geradores `aba01.py`…`aba10.py` de `interface/` escrevem `mockup/` (a bancada, o que ela olha); `scripts/check_o_desenho_aprovado.py --publicar NN` leva a `interface/paginas/` (o produto). **Publicar é ato dela** |
+| **gerador** · **ensaio** · **publicado** | os geradores `aba01.py`…`aba10.py` de `interface/` escrevem `mockup/` (o ensaio, o que ela olha); `scripts/check_o_desenho_aprovado.py --publicar NN` leva a `interface/paginas/` (o produto). **Publicar é ato dela** |
 | **campo** · **gesto** · **alvo** | `data-campo` (onde o piloto escreve), `data-gesto` (o que o clique chama), `data-hef-alvo` (como escreve: texto, classe, atributo, marcado…) |
 | **dono** | o único lugar que sabe um fato ou uma frase; a tela LÊ do dono, nunca redigita |
 | **motor** | `app/actions/*`, `daemon/` e os donos em `interface/` (`janela`, `cartao_do_controle`, `logica_do_mapa`): o que a tela lê e chama. A janela GTK saiu inteira em 02/10/2026 |
@@ -97,7 +97,7 @@ e por isso ficam de fora da conta.
 ## 5. Como este arquivo se mantém
 
 * termo novo na tela → linha aqui antes, com o dono;
-* termo que ela recusou → some da tela em TODOS os lugares no mesmo dia
+* termo que o usuário recusou → some da tela em TODOS os lugares no mesmo dia
   (`scripts/check_regua_de_tela.py` e `frases_banidas.py` são os portões
   que já existem). **A palavra "mesa" ENTROU em 06/09/2026**
   (A-PALAVRA-MESA-SAI-01): ela mora em `frases_banidas.PALAVRAS_BANIDAS`,

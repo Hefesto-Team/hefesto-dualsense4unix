@@ -140,7 +140,7 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `id` da extensão que publicou (o serviço o põe; o que a extensão mandar em `origem` ou `t` cai) e `t` é o
   `time.monotonic()` do serviço. Quem publica nunca recebe o próprio evento. Quando a extensão que publicou sai
   (parada, morta ou desligada) com alguma função acima de zero, o serviço publica em nome da extensão um
-  `jogo.acessorio` com cada função que ela usou em 0, e quem assina nunca fica com a última força presa. Só existe
+  `jogo.acessorio` com cada função que o usuário usou em 0, e quem assina nunca fica com a última força presa. Só existe
   publicado por extensão: o serviço não o origina;
 - `acessorios.gesto` (`ler:acessorios.gesto`) entrega `nome: "acessorios.gesto"`: o gesto do PS que comanda os
   acessórios, `{uniq, jogador, gesto, valor}`. `gesto` é `sobe`, `desce`, `para`, `perfil_seguinte`,

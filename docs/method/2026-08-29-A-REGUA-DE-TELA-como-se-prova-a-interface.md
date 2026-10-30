@@ -136,7 +136,7 @@ o "Liberar" nasce travado e não responde — provado o silêncio
    ausência olhando por um instante.
 
 Régua de verdade mora em `tests/unit/test_*.py`, e o modelo pronto é
-`tests/unit/test_regua_de_tela_a_aba_controles.py`: 17 casos, uma `bancada` de
+`tests/unit/test_regua_de_tela_a_aba_controles.py`: 17 casos, uma `ensaio` de
 módulo (abrir um `WebView` por teste custaria 1,5 s cada) e uma `CabecaDeMentira`
 que **herda o piloto** em vez de copiá-lo — `_remontar`, `_pintar`,
 `_pacote_do_card` e `_da_tela` rodam verbatim, então quem quebrar qualquer um
@@ -422,7 +422,7 @@ reação seria `--no-verify`.
   worktree ligada o `.git` é um **arquivo** (`gitdir: …`), esse caminho não pode
   existir, o teste `[ -x ]` é falso e a delegação não acontece — **em silêncio**.
   Cai fora o gancho inteiro, não só este portão. O conserto é de uma linha e é
-  **dela**, porque o arquivo é global e vale para todo repositório dela;
+  **dela**, porque o arquivo é global e vale para todo repositório do usuário;
   `check_regua_de_tela.py --diagnostico` imprime o estado da árvore e o patch.
 
   **E o patch sozinho não fecha a história — medido ao integrar.** O

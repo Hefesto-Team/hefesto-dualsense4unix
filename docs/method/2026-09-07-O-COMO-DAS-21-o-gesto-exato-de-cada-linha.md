@@ -4,10 +4,10 @@ estado: feita
 posse:
   O-COMO-DAS-21:
     - docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md
-bancada: true
+ensaio: true
 ---
 
-# O COMO das 21 — o gesto exato de cada linha da bancada
+# O COMO das 21 — o gesto exato de cada linha do ensaio
 
 **Encomenda dela, 07/09/2026, verbatim:**
 
@@ -21,7 +21,7 @@ bancada: true
      fornecedor em arquivo rastreado, e a regra de produto sobre isso é
      absoluta. Nenhuma outra palavra da frase foi tocada. -->
 
-E o defeito que fez este arquivo nascer, apontado por ela olhando a linha 10 na
+E o defeito que fez este arquivo nascer, apontado pelo usuário olhando a linha 10 na
 tela:
 
 > *"sinceramente não entendi o que diabos é pra fazer aqui."*
@@ -43,7 +43,7 @@ aqui e não lá: se estivesse na mesma tabela, mexer no gesto pareceria mexer na
 decisão.
 
 **A página de medição LÊ deste arquivo.** Nada do que está aqui é digitado lá.
-Mudou uma linha aqui, o próximo `F5` da bancada mostra o gesto novo.
+Mudou uma linha aqui, o próximo `F5` do ensaio mostra o gesto novo.
 
 ## Como isto foi escrito, e o que confere
 
@@ -439,11 +439,11 @@ roteiro.
 
 ---
 
-## Linha 11 — Som pelo rádio: o ensaio 1 da bancada, com a orelha do usuário
+## Linha 11 — Som pelo rádio: o ensaio 1 do ensaio, com a orelha do usuário
 
 **O que isto prova.** O som já saiu pelo rádio com a orelha do usuário, em 10/09. O que esta linha prova agora é o resto: que o som mirado no P3 sai SÓ no P3 — não no P4, que está no mesmo rádio, nem na TV —, que mirado na TV ele sai da TV e o P3 cala, e que ela acerta de onde o som sai sem saber para onde ele foi mandado.
 
-**Onde olhar.** O instrumento é o ouvido dela, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, no meio da frente do DualSense, logo abaixo e entre os dois analógicos. O volante do teste é a lista de saídas de som — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto, aba Controles, o cartão do P3: o bloco Alto-falante, com o selo ATIVO, o número do volume e quatro botões — «Efeitos do jogo no controle, áudio do PC no PC» e «Efeitos do jogo e áudio do PC no controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e nada no controle» e «Tudo no controle e nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV.
+**Onde olhar.** O instrumento é o ouvido de quem confere, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, no meio da frente do DualSense, logo abaixo e entre os dois analógicos. O volante do teste é a lista de saídas de som — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto, aba Controles, o cartão do P3: o bloco Alto-falante, com o selo ATIVO, o número do volume e quatro botões — «Efeitos do jogo no controle, áudio do PC no PC» e «Efeitos do jogo e áudio do PC no controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e nada no controle» e «Tudo no controle e nada no PC». «PC», nos botões, é a saída do computador — no ensaio, a TV.
 
 **Os passos.**
 
@@ -558,7 +558,7 @@ roteiro.
 * **P3** — Ninguém toca, é a testemunha, fora o «Desligado» do começo e a devolução do fim. Está no rádio, e serve para provar que nenhuma das três mudanças vazou para ele: a barra de luz e os gatilhos dele têm de terminar como começaram.
 * **P4** — Muda a COR, na aba Iluminação: um tom novo na barra. Está no rádio: a cor tem de acender no clique e continuar depois de fechar e reabrir. Os gatilhos dele vão para «Desligado» no começo, como os dos outros, e têm de continuar leves.
 
-**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. A bancada roda com a Steam fechada; mesmo aberta, ela não apaga mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo. Os oito gatilhos começam em «Desligado», e não só os do P2, porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: num gatilho que já está duro, nem o «Rígido» do P2 se sente chegar, nem um que vazasse para os outros. E é por isso que, depois de reabrir, você aperta os quatro: se a escolha por controle se perdesse ao fechar, os quatro voltariam juntos ao gatilho do perfil inteiro — duros com o Freestyle de fábrica, leves com um perfil em «Desligado» —, e só o par «o P2 duro, os outros três leves» prova que cada um guardou o seu.
+**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. O ensaio roda com a Steam fechada; mesmo aberta, ela não apaga mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo. Os oito gatilhos começam em «Desligado», e não só os do P2, porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: num gatilho que já está duro, nem o «Rígido» do P2 se sente chegar, nem um que vazasse para os outros. E é por isso que, depois de reabrir, você aperta os quatro: se a escolha por controle se perdesse ao fechar, os quatro voltariam juntos ao gatilho do perfil inteiro — duros com o Freestyle de fábrica, leves com um perfil em «Desligado» —, e só o par «o P2 duro, os outros três leves» prova que cada um guardou o seu.
 
 ---
 
@@ -758,7 +758,7 @@ roteiro.
 
 **O que isto prova.** Prova que dá para escolher o alto-falante do controle 2 como a saída de um tocador, que o som sai só nesse controle, que a lista de som do sistema tem um alto-falante para cada controle, e que o «Tudo no controle e nada no PC» do cartão do P2 faz o mesmo com um clique.
 
-**Onde olhar.** Fora do Hefesto: a lista de saídas de áudio — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto: aba Controles, cartão do P2, bloco Alto-falante — o selo ATIVO, o número do volume, o ♪ ao lado dele e os quatro botões: «Efeitos do jogo no controle, áudio do PC no PC» e «Efeitos do jogo e áudio do PC no controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e nada no controle» e «Tudo no controle e nada no PC». «PC», nos botões, é a saída do computador — na bancada, a TV. No aparelho: a grade de furinhos do alto-falante, na frente do controle, entre o touchpad e o botão PS.
+**Onde olhar.** Fora do Hefesto: a lista de saídas de áudio — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto: aba Controles, cartão do P2, bloco Alto-falante — o selo ATIVO, o número do volume, o ♪ ao lado dele e os quatro botões: «Efeitos do jogo no controle, áudio do PC no PC» e «Efeitos do jogo e áudio do PC no controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e nada no controle» e «Tudo no controle e nada no PC». «PC», nos botões, é a saída do computador — no ensaio, a TV. No aparelho: a grade de furinhos do alto-falante, na frente do controle, entre o touchpad e o botão PS.
 
 **Os passos.**
 

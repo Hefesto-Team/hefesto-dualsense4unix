@@ -302,7 +302,7 @@ copiada para esta árvore.**
 | `pydualsense`, instalada na venv desta máquina | o que o nosso próprio caminho lê e o que ele não lê |
 
 A wiki `controllers.fandom.com/wiki/Sony_DualSense/Data_Structures` é a origem
-provável de boa parte dessa linhagem. Ela recusou leitura automática nesta
+provável de boa parte dessa linhagem. O usuário recusou leitura automática nesta
 sessão (HTTP 402), e por isso **não é citada como fonte** — o que está aqui foi
 lido nos repositórios acima.
 

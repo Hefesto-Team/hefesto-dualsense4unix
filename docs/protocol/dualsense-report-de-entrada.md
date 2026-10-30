@@ -163,7 +163,7 @@ cru pode ancorar os sticks primeiro e decidir o resto pelo tamanho do quadro.
 
 A canônica já dizia, em *«Leitura de estado — recurso que ninguém usa aqui»*,
 que o **nibble alto** de um byte de status por gatilho conta o que o gatilho
-está sentindo. Ela nunca disse **onde**.
+está sentindo. O usuário nunca disse **onde**.
 
 Uma fonte, e uma só, dá o offset: `DualSense-Windows` `.../DS5_Input.cpp:79-80`
 põe o feedback do gatilho **esquerdo** no corpo **42** (`0x2A`) e o do

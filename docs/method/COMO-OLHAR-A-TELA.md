@@ -79,7 +79,7 @@ src/hefesto_dualsense4unix/interface/olhar.py 05-vibracao.html --publicado
 ```
 
 `--publicado` fotografa `interface/paginas/`, **o que o produto renderiza**. Sem
-ele, o alvo é a bancada, que é onde o desenho é concluído — e a diferença entre
+ele, o alvo é o ensaio, que é onde o desenho é concluído — e a diferença entre
 os dois é o assunto do `mockup/LEIA-PRIMEIRO.md`.
 
 ---
@@ -453,7 +453,7 @@ cauda (p99), por mais que a coluna exista.
 
 ### Endereço de rádio truncado FUNDE dois adaptadores num só
 
-**MEDIDO em 23/08/2026** na bancada, que tem dois adaptadores 5.4 do **mesmo
+**MEDIDO em 23/08/2026** no ensaio, que tem dois adaptadores 5.4 do **mesmo
 fabricante** — logo o mesmo OUI, os três primeiros octetos.
 
 Contando controles por adaptador na mesma leitura de `HID_PHYS`:
@@ -518,7 +518,7 @@ entregas provadas no meio. Ler `Status:` produz uma lista de "sprints abertas"
 que é quase toda tumba.
 
 **A régua que sobrevive:** cruzar cada pedido com a árvore de HOJE — *a entrega
-que ela pede existe em `src/`?* — e nunca com o cabeçalho.
+que o usuário pede existe em `src/`?* — e nunca com o cabeçalho.
 
 ---
 
@@ -547,7 +547,7 @@ lendo. Um mockup em HTML custa horas; uma aba refeita custa dias.
 **As cinco regras, e cada uma nasceu de um defeito da mesma noite:**
 
 1. **HTML standalone, aberto por duplo clique.** Sem rede, sem servidor, sem
-   fonte web. Ela recusou o artefato publicado com uma frase: *"html standalone
+   fonte web. O usuário recusou o artefato publicado com uma frase: *"html standalone
    por favor"*. É o mesmo motivo do `specs.html` e do `painel.html` — instrumento
    que só funciona com rede não serve para depurar rádio.
 2. **A paleta tem dono único: `scripts/paleta_da_casa.py`**, copiada byte a byte.

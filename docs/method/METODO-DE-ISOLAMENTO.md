@@ -1,8 +1,8 @@
 # O método de isolamento — a lista que nos impede de errar
 
-- **Escrito em:** 10/08/2026, depois do primeiro ensaio de bancada e minha
+- **Escrito em:** 10/08/2026, depois do primeiro ensaio de ensaio e minha
   (rumble do DualSense por Bluetooth).
-- **Revisto em:** 13/08/2026, depois das bancadas de 12 e 13/08. O que a revisão
+- **Revisto em:** 13/08/2026, depois dos ensaios de 12 e 13/08. O que a revisão
   trouxe tem um nome só: **o instrumento mentia, não o produto** — quatro formas
   do mesmo defeito, todas medidas, todas com hora e linha de código.
 - **Nasceu de:** *"a ideia é terminarmos aqui com uma to do list de método boa o
@@ -217,7 +217,7 @@ não registrado no mesmo dia vira lembrança.
 
 Todo suspeito que ficar `não é a causa` é candidato a **parar de ser acionado**.
 
-Foi o que ela descreveu: *"de 5 canais, um deles é o que realmente impactava;
+Foi o que o usuário descreveu: *"de 5 canais, um deles é o que realmente impactava;
 após isso passamos a usar somente ele, e deixamos o projeto menos complexo"*.
 
 A causa isolada responde **por onde acionar**. Os inocentados respondem **o que
@@ -320,7 +320,7 @@ chute contamina tudo o que vier depois.
       **Isto não foi medido para gatilho, LED nem áudio**, e os blocos deles
       também saem escritos em todo report.
 - [ ] **D4. A hipótese explica o que JÁ funcionava?** (pergunta 5). Se o
-      elemento funcionava em outro transporte, em outro dia, ou no relato dela,
+      elemento funcionava em outro transporte, em outro dia, ou no relato,
       a explicação tem de cobrir isso também.
 
 ### E — O desenho do ensaio, para não desperdiçar a mão do usuário
@@ -339,7 +339,7 @@ chute contamina tudo o que vier depois.
       em trinta segundos.
 - [ ] **E4. O desenho não pode ser AMBÍGUO** — regra, 12/08:
       *"nosso resultado não deve ser ambíguo"*. Eu propus *"deixe os quatro na
-      mesa e veja qual para antes"*; ela recusou. O desenho que ficou:
+      mesa e veja qual para antes"*; o usuário recusou. O desenho que ficou:
       **dois controles, um em cada mão**, e os outros dois recebendo a mesma
       carga como lastro. Comparar duas mãos é resposta que o corpo dá sem
       dúvida; olhar quatro na mesa não é. A carga fica igual, o que muda é
@@ -393,13 +393,13 @@ chute contamina tudo o que vier depois.
 
 ## O INSTRUMENTO MENTE MAIS QUE O PRODUTO — as quatro formas
 
-- **Acrescentado em:** 13/08/2026, depois das bancadas de 12 e 13/08.
+- **Acrescentado em:** 13/08/2026, depois dos ensaios de 12 e 13/08.
 
 Foi o padrão que dominou a sessão inteira: **em quatro investigações seguidas o
 defeito estava na régua, não no aparelho.** Elas parecem diferentes e são a mesma
 coisa — algo entre você e o fato responde por ele.
 
-Rode isto **antes** de acreditar em qualquer leitura de bancada — é o único
+Rode isto **antes** de acreditar em qualquer leitura de ensaio — é o único
 comando que vem antes de tudo, porque as outras três formas só se diagnosticam
 **depois** que um verde e um vermelho discordam:
 
@@ -540,7 +540,7 @@ python3 scripts/gerar-mapa.py --check   # a página publicada é a que as fontes
 (linha 969, na mesma função), que traduz `\r\n` em `\n` por
 newline universal, **um arquivo CRLF volta LF depois de uma única substituição**,
 sem uma palavra. Importa para o `ensaios.csv`: o `csv.writer` do Python termina
-linha em `\r\n` por padrão, então o caderno recém-escrito pela bancada é CRLF, e
+linha em `\r\n` por padrão, então o caderno recém-escrito pelo ensaio é CRLF, e
 o `--fix` o converte calado. Se você usa `--fix`, **olhe o `git diff` inteiro**,
 não só as linhas que pediu:
 
@@ -572,7 +572,7 @@ não fechavam, e todas custam pouco.
 
 ### 1. O controle negativo DENTRO do mesmo ensaio
 
-**É a melhoria mais barata e mais forte da bancada.** Não é uma rodada a mais: é
+**É a melhoria mais barata e mais forte do ensaio.** Não é uma rodada a mais: é
 a mesma rodada, lida melhor.
 
 ```bash
@@ -689,7 +689,7 @@ em silêncio nas duas janelas — ninguém caiu, ninguém foi removido"*.
 
 ### 4. O instrumento que se recusa a mentir
 
-O padrão está na **pergunta 1**. O exemplo mais limpo é um script de bancada
+O padrão está na **pergunta 1**. O exemplo mais limpo é um script de ensaio
 **não versionado** (`pintar_por_rota.py`, da noite de 12/08) <!-- ref-externa: arquivo de scratchpad, não versionado — a ausência dele é o assunto da frase -->, que abre com a
 regra e a faz valer: *"não se mede cor com o daemon vivo — ele desfaz em ≤30 s e
 você mede a defesa, não o firmware"*, e **recusa rodar** se achar o socket.
@@ -702,7 +702,7 @@ perda: o instrumento que acertou o desenho é o que menos sobrevive.
 A régua `grau-sem-ensaio` (em `scripts/check_paridade_transporte.py`) foi
 escrita em 12/08 e **reprovou três afirmações nossas na mesma sessão**: as três
 linhas de gatilho declaravam `O APARELHO OBEDECEU` **por rádio** sem um único
-ensaio de rádio no caderno. As três foram medidas na bancada daquela noite,
+ensaio de rádio no caderno. As três foram medidas no ensaio daquela noite,
 entre **22:16 e 22:21 de 12/08** (`gatilho-esq-radio-1216`,
 `gatilho-resumo-radio-1216`, `gatilho-dir-radio-isolado-2221`) — o próprio
 `gatilho-esq-radio-1216` registra que *"foi o portao grau-sem-ensaio (12/08) que
@@ -713,7 +713,7 @@ flagrou"*. O commit que trouxe a régua para a árvore é o `0b010bd`, carimbado
 .venv/bin/python scripts/check_paridade_transporte.py
 ```
 
-**O que isto decide:** se o mapa está afirmando mais do que a bancada sustenta.
+**O que isto decide:** se o mapa está afirmando mais do que o ensaio sustenta.
 **É a prova de que a régua vale a pena** — ela cobra de quem a escreveu primeiro.
 
 ---
@@ -771,7 +771,7 @@ Ver **F6**. O caderno registra fato; o julgamento é o que envelhece mal.
 a prova. Em `94d72aa` (12/08 00:38) ele dizia *"As **sete** armadilhas"* sobre
 uma tabela de **doze** linhas; em `0b010bd` (13/08 00:41) foi corrigido para
 *"As **doze**"* — e teria caducado de novo na mesma semana, porque a lista
-cresce toda bancada.
+cresce todo ensaio.
 
 Então o número não mora mais aqui: **quantas são hoje se lê no último ID da
 tabela abaixo**, que é a contagem por construção. Um número no cabeçalho é uma
@@ -866,7 +866,7 @@ As `A-13` a `A-25` são de 12 e 13/08, e a maioria também é erro meu:
 |---|---|
 | `ate_onde_foi` | **a escada**, definida na seção seguinte. Cinco degraus, duas direções |
 | `por_que_nao_aciona` | **por que o produto não faz**, quando ele não faz. Seção logo abaixo |
-| `provado_por` | `ci` / `bancada` / `olho-do-usuario` — só `olho-do-usuario` sustenta *O APARELHO OBEDECEU* e *O JOGO REAGIU* |
+| `provado_por` | `ci` / `ensaio` / `olho-do-usuario` — só `olho-do-usuario` sustenta *O APARELHO OBEDECEU* e *O JOGO REAGIU* |
 | `provado_em` | a data. Sem ela a prova não vence nunca, e prova que não vence vira mito |
 | `teste_que_morde` | o nó do pytest que reprova se aquilo quebrar |
 | `mordida_provada_em` | quando alguém **de fato** arrancou a cura e viu reprovar |
@@ -950,7 +950,7 @@ MONTOU  →  SAIU NO FIO  →  O APARELHO OBEDECEU
 | degrau | o critério, e é isto que se tem de OBSERVAR | quem fecha |
 |---|---|---|
 | `MONTOU` | o byte existe na memória do produto e a suíte o lê. **Nada saiu do processo.** | a suíte, sem aparelho |
-| `SAIU NO FIO` | a escrita no nó do transporte não errou e houve resposta do outro lado. Diz que o canal está aberto — **não** diz que o aparelho fez coisa alguma com o que recebeu | a bancada, com o aparelho na mão |
+| `SAIU NO FIO` | a escrita no nó do transporte não errou e houve resposta do outro lado. Diz que o canal está aberto — **não** diz que o aparelho fez coisa alguma com o que recebeu | o ensaio, com o aparelho na mão |
 | `O APARELHO OBEDECEU` | alguém **viu** o aparelho fazer o que foi pedido, e gravou o ensaio no caderno com `observado_por = olho-do-usuario` | a mão do usuário |
 
 ### Os dois degraus da VOLTA — aparelho → vpad → JOGO (19/08/2026)

@@ -680,7 +680,7 @@ HIDP, e **por USB pode ser o endereço sintético** que o `degrade` fabrica.
 esperar relatório de entrada, sem intervalo mínimo, sem contagem de tentativas.
 GRAU: ALTA (`:2461-2540`, `:2826-2832`).
 
-**É a diferença estrutural entre os dois drivers, e ela decide o alvo:** o storm
+**É a diferença estrutural entre os dois drivers, e o usuário decide o alvo:** o storm
 de subcomando do `hid-nintendo` **não pode alcançar** o 8BitDo em modo PS4. E é
 a razão pela qual `write_lightbar_slot` é barata e `write_player_number` é cara,
 mesmo as duas parecendo "escrever um arquivo".
@@ -747,7 +747,7 @@ como prova.
 história termina, e onde está o defeito de watchdog que ela abre.
 
 **A cadência da queda, MEDIDA nas dez subidas deste boot:** intervalos de 41,9 /
-74,8 / 17,9 / 26,6 / 24,0 / **905,4** (a noite inteira, ela dormindo) / 47,6 /
+74,8 / 17,9 / 26,6 / 24,0 / **905,4** (a noite inteira, o usuário dormindo) / 47,6 /
 198,0 / 25,4 minutos. Tirando a noite, a mediana é cerca de **26 minutos**. E
 todas as voltas, até 19h05, foram por link **entrante** — o aparelho é que
 pageia. GRAU: MEDIDO AQUI.

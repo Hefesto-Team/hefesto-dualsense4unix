@@ -718,7 +718,7 @@ manda por cima da rota (`sfx-o-fone-manda-por-cima`), e as rotas 2 e 3 foram
 exercidas as duas (`sfx-rota2-sem-fone`, `sfx-canal1-e-o-alto-falante`).
 
 ATENÇÃO: **o `front-left` é perdido quando não há headset.** Com um arquivo de
-quatro canais NATIVOS, grave só no `front-left`, ela ouviu só o `front-right`
+quatro canais NATIVOS, grave só no `front-left`, o usuário ouviu só o `front-right`
 (`sfx-so-o-R-chega`). Quem mandar uma mistura estéreo para o sink do controle
 esperando que o alto-falante toque os dois canais está mandando metade para o
 pino do fone. O que acontece com um arquivo de DOIS canais no mesmo sink de
@@ -989,7 +989,7 @@ isso **caducou**.
 primer passou por engano — ela tocou sem primer logo depois de uma corrida COM
 primer. **A rota persiste no firmware entre corridas**, então a mordida MEDIA a
 memória do aparelho, não o primer. Refeita com `--desarmar` (um `0x31` pedindo
-rota=fone, o padrão de fábrica), ela ouviu igual, e só então a hipótese caiu.
+rota=fone, o padrão de fábrica), o usuário ouviu igual, e só então a hipótese caiu.
 
 > **Mordida que não desfaz o estado da corrida anterior não mede o que promete.
 > O aparelho tem memória, e ela sobrevive ao processo que a escreveu.**
@@ -1373,7 +1373,7 @@ SÃO expressáveis.
 > modos **não oficiais e legados NÃO validam parâmetros** — foi por isso que
 > os cinco presets de `0x26` produziram sensações diferentes por acidente. Um
 > `0x22` com os parâmetros de uma vibração pode muito bem estar entregando
-> algo que ela aprova. **Nada aqui autoriza trocar os bytes sem a mão do usuário no
+> algo que o usuário aprova. **Nada aqui autoriza trocar os bytes sem a mão do usuário no
 > gatilho.**
 >
 > **O ensaio que resolve, e ele é o mesmo de 01/08:** aplicar os dois pela aba

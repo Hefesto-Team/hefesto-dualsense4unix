@@ -4,7 +4,7 @@ Nasceu em 20/09/2026, por ordem de produto, escolhida entre três opções:
 
 > *"Mover o que as réguas precisam"*
 
-Ela recusou as outras duas com todas as letras, e as razões ficam aqui porque
+O usuário recusou as outras duas com todas as letras, e as razões ficam aqui porque
 elas são o contrato desta pasta:
 
 | recusada | por quê |
