@@ -767,6 +767,14 @@ def _marca_dos_pedidos(lg: Any, registro: dict[str, Any]) -> tuple[Any, ...]:
         if e.ligada))
 
 
+def _o_que_a_extensao_pede(pasta: Path) -> list[str]:
+    """Os estilos do manifesto; o que não abre não roda (o supervisor a impede) e não pede nada."""
+    try:
+        return ler_manifesto(pasta).estilos
+    except ManifestoRecusadoError:
+        return []
+
+
 def estilos_pedidos(lugares: Any = None) -> frozenset[str]:
     """Os estilos que as extensões instaladas e ligadas pedem; a desligada não pede nada."""
     from hefesto_dualsense4unix.mods import instalador
@@ -779,16 +787,10 @@ def estilos_pedidos(lugares: Any = None) -> frozenset[str]:
     marca = _marca_dos_pedidos(lg, registro)
     if _PEDIDOS["marca"] == marca:
         return frozenset(_PEDIDOS["estilos"])
-    pedidos: set[str] = set()
-    for entrada in registro.values():
-        if not entrada.ligada:
-            continue
-        try:
-            pedidos.update(ler_manifesto(lg.codigo / entrada.id).estilos)
-        except ManifestoRecusadoError:
-            continue
-    _PEDIDOS.update(marca=marca, estilos=frozenset(pedidos))
-    return frozenset(pedidos)
+    pedidos = frozenset(chave for entrada in registro.values() if entrada.ligada
+                        for chave in _o_que_a_extensao_pede(lg.codigo / entrada.id))
+    _PEDIDOS.update(marca=marca, estilos=pedidos)
+    return pedidos
 
 
 __all__ = [

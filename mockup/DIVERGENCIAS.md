@@ -21,4 +21,11 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 06-navegacao.html
+- **30/10/2026** — o molde «Adulto» sai da lista do point and click sem a extensão que o pede (D-3010-O-ESTILO-PEDIDO-SO-APARECE-COM-A-EXTENSAO-LIGADA); até publicar, a página publicada traz o «Adulto» estático e o bloco do tique reescreve a lista ao vivo sem ele; o `--publicar 06` é de quem coordena.
+
+## 10-perfis.html
+- **30/10/2026** — o «Adulto» sai da lista do «Estilo de jogo» sem a extensão que o pede (D-3010-O-ESTILO-PEDIDO-SO-APARECE-COM-A-EXTENSAO-LIGADA); até publicar, a página publicada traz o «Adulto» estático e o bloco do tique reescreve a lista ao vivo sem ele; o `--publicar 10` é de quem coordena.
+
+## mapa-do-controle.html
+- **30/10/2026** — o molde «Adulto» sai da lista do perfil sem a extensão que o pede (D-3010-O-ESTILO-PEDIDO-SO-APARECE-COM-A-EXTENSAO-LIGADA); até publicar, a página publicada traz o «Adulto» estático e a lista que o tique pinta já sai sem ele; o `--publicar` é de quem coordena.
