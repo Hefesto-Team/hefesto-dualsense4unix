@@ -4,10 +4,10 @@ A sprint é a A-SUITE-NUNCA-ESCREVE-NO-CONFIG-DO-USUARIO-01. Medido em 30/10/202
 desviava o
 HOME e os quatro XDG_* e deixava o XDG_RUNTIME_DIR real, onde mora o socket do daemon do usuário.
 O `test_o_clique_2_limpa_o_painel_antes_de_agir` deixou a marca do Parar da aba Sistema no
-runtime real (13h14), e a janela dela, reaberta, não traria o serviço.
+runtime real (13h14), e a janela do usuário, reaberta, não traria o serviço.
 
 As réguas: o caso roda num runtime de mentira; a guarda do conftest recusa e anota a conexão ao
-socket real e a escrita no lar real; a recusa e a escrita no ~/.config sem gesto da janela dela
+socket real e a escrita no lar real; a recusa e a escrita no ~/.config sem gesto da janela
 reprovam a sessão com a linha `CANARIO-FS-01 PORTÃO`, e o `rodar-a-suite.sh` reprova a parte que
 a traz. A mordida de cada uma está no próprio caso, ou na cópia do script sem a cura.
 """

@@ -1,4 +1,4 @@
-"""TELA-DO-USUARIO-01 — a suíte não abre janela na sessão gráfica dela. NUNCA."""
+"""TELA-DO-USUARIO-01 — a suíte não abre janela na sessão gráfica do usuário. NUNCA."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 
 def test_a_suite_nao_enxerga_o_wayland_do_usuario() -> None:
-    """Dentro de um teste, o compositor dela não existe."""
+    """Dentro de um teste, o compositor do usuário não existe."""
     assert os.environ.get("WAYLAND_DISPLAY") is None, (
         "a suíte está enxergando o compositor VIVO — toda `Gtk.Window` daqui "
-        "nasce na tela dela. É o defeito de 04/09/2026."
+        "nasce na tela do usuário. É o defeito de 04/09/2026."
     )
     if os.environ.get("DISPLAY") is None:
         pytest.skip("sem sessão gráfica: não há tela para desviar")
@@ -73,12 +73,12 @@ def test_sem_o_escape_a_guarda_age_mesmo_com_sessao_viva() -> None:
     wayland, display = r.stdout.strip().splitlines()[-1].split()
     assert wayland == "None" and display != ":1", (
         "a guarda deixou a sessão viva de pé — a próxima suíte vai abrir "
-        "janela na tela dela.\n" + r.stdout
+        "janela na tela do usuário.\n" + r.stdout
     )
 
 
 def test_o_xvfb_morre_com_a_sessao_e_e_morto_pelo_pid() -> None:
-    """Nada de processo órfão, e nada de `pkill -f` (que já derrubou o dela)."""
+    """Nada de processo órfão, e nada de `pkill -f` (que já derrubou o compositor)."""
     from hefesto_dualsense4unix.utils import tela_de_mentira as tm
 
     assert "garantir_tela_de_mentira" in (
@@ -89,6 +89,6 @@ def test_o_xvfb_morre_com_a_sessao_e_e_morto_pelo_pid() -> None:
     for forma in ('"pkill"', "'pkill'", "pkill -"):
         assert forma not in fonte.replace("um `pkill -f` já derrubou", ""), (
             f"o conftest chama {forma} — matar por padrão é proibido nesta "
-            "casa: um `pkill -f` derrubou o compositor dela em 04/09/2026."
+            "casa: um `pkill -f` derrubou o compositor do usuário em 04/09/2026."
         )
     assert "proc.terminate()" in fonte and "proc.kill()" in fonte

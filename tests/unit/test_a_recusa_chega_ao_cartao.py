@@ -27,31 +27,31 @@ humanizada existia, estava testada — e saía no `stderr` do processo:
     microfone — ou o Hefesto está parado, ou este controle saiu da mesa
 
 Quem clica na janela não lê o terminal de quem a lançou. **É a forma de defeito
-mais cara desta casa: alguém curou o caminho e provou a cura num caminho que ela
-não usa.** Medido pelo caminho DO USUÁRIO — dois cliques no 🎙 da `02-controles`, com
+mais cara desta casa: alguém curou o caminho e provou a cura num caminho que
+o usuário não usa.** Medido pelo caminho DO USUÁRIO — dois cliques no 🎙 da `02-controles`, com
 um dublê que faz o `mic.set` recusar: os dois recusaram com a frase certa, o
-`desfechos` do piloto a guardou, e o DOM não tinha uma letra dela. O segundo
+`desfechos` do piloto a guardou, e o DOM não tinha uma letra da frase. O segundo
 clique parecia o primeiro.
 
 AS OITO COISAS QUE ESTA RÉGUA COBRA, e cada uma é um jeito diferente de o
 canal mentir:
 
 1. **A FRASE CHEGA AO DOM.** Não ao `desfechos`, não ao `stderr` — ao documento
-   que ela está olhando.
-2. **ELA CHEGA AO CARTÃO DAQUELE CONTROLE.** Na mesa de quatro, a recusa de um
+   que o usuário está olhando.
+2. **A FRASE CHEGA AO CARTÃO DAQUELE CONTROLE.** Na mesa de quatro, a recusa de um
    no cartão do vizinho é pior que recusa nenhuma.
-3. **ELA SOBREVIVE À REPINTURA.** A tela repinta a cada 500 ms e troca blocos
+3. **A FRASE SOBREVIVE À REPINTURA.** A tela repinta a cada 500 ms e troca blocos
    inteiros. Uma frase que só existe no instante do clique não é vista por
    ninguém — é a mesma razão pela qual
    `daemon/subsystems/recado_do_microfone.py` é um DEPÓSITO e não um evento.
 4. **O SEGUNDO CLIQUE TAMBÉM RESPONDE**, que é o enunciado desta frente em uma
    linha.
-5. **ELA APARECE NO CLIQUE, e não no próximo tique.** Meio segundo de silêncio
-   basta para ela clicar de novo achando que o primeiro não pegou.
-6. **ELA É DO CONTROLE, E NÃO DA COLUNA** — o item de 02/09/2026, e o único que
+5. **A FRASE APARECE NO CLIQUE, e não no próximo tique.** Meio segundo de silêncio
+   basta para o usuário clicar de novo achando que o primeiro não pegou.
+6. **A FRASE É DO CONTROLE, E NÃO DA COLUNA** — o item de 02/09/2026, e o único que
    só existe no TEMPO. Ver abaixo.
-7. **ELA VENCE**, e vence no prazo QUE O USUÁRIO DECIDIU: *"a frase de recusa SOME
-   depois de um tempo — ~30 s e desaparece. É aviso, não estado."*
+7. **A FRASE VENCE**, e vence no prazo decidido: a frase de recusa SOME depois de
+   ~30 s, porque é aviso, não estado.
 
 E A OITAVA, que é sobre o instrumento e não sobre o produto: **o aviso não pode
 entrar na conta da régua do mockup.** Ele é um nó que o piloto desenha, e se
@@ -83,7 +83,7 @@ números são os MEDIDOS em 02/09/2026, com o arquivo de DOZE testes:
   sobrevive à saída de um controle, e não vence nunca);
 * troque `alvo = norm_mac(…)` por `alvo = pref` em `_gesto` **e** `"cartao":
   onde_esta.get(chave, "")` por `"cartao": chave` — que é a base de 02/09 de
-  volta → **3 reprovam**, e uma delas é o item 6;
+  volta → **3 reprovam**, e uma das três é o item 6;
 * apague o `self._js(…)` de `_recusou_dizendo` (a pintura na hora)
   → **1 reprova**;
 * troque `SEGUNDOS_DO_RECADO = 30.0` por `3.0` → **1 reprova**;
@@ -95,7 +95,7 @@ que já tinha OITO testes. Os números tinham sido medidos numa versão de sete 
 não foram remedidos quando o oitavo nasceu. Quem conferisse a mordida no dia
 seguinte concluiria que introduziu um teste a mais reprovando.
 
-POR QUE ELA ABRE UM WEBKIT DE VERDADE: porque foi a leitura do fonte que se
+POR QUE A RÉGUA ABRE UM WEBKIT DE VERDADE: porque foi a leitura do fonte que se
 enganou da primeira vez. `Gtk.OffscreenWindow` — sob Xvfb não há gerenciador de
 janelas e uma `Gtk.Window` fica 1x1 para sempre.
 """
@@ -152,7 +152,7 @@ LER_A_TELA = r"""
   }
   return JSON.stringify({
     recados: recados,
-    // A FRASE NO TEXTO VISÍVEL — 13/09/2026: sem recado, a pergunta é se ela
+    // A FRASE NO TEXTO VISÍVEL — 13/09/2026: sem recado, a pergunta é se a frase
     // chegou à tela por qualquer outro caminho.
     frase_na_tela: (document.body ? (document.body.innerText || '') : '')
       .indexOf(__FRASE__) >= 0,
@@ -331,7 +331,7 @@ def _muda(medido: dict, rotulo: str) -> None:
     assert isinstance(leitura, dict), f"{rotulo}: {leitura!r}"
     assert _frases(leitura) == [], (
         f"{rotulo}: a tela tem recado {_frases(leitura)!r} — a recusa voltou a "
-        f"pousar no cartão, que é a caixa que ela mandou parar de aparecer")
+        f"pousar no cartão, que é a caixa que se decidiu parar de mostrar")
     assert not leitura["frase_na_tela"], (
         f"{rotulo}: a frase da recusa está no texto visível por outro caminho")
 

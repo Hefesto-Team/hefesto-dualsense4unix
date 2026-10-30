@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A seção «Rádio e Adaptadores» é o desenho aprovado — e cada fio dela tem dono.
+"""A seção «Rádio e Adaptadores» é o desenho aprovado — e cada fio da seção tem dono.
 
 **23/09/2026 — TRANSPLANTE-DA-SECAO-01.** O `mockup/mapa-do-radio.html` que o usuário
 aprovou virou a seção `cx8-3` da aba Conexões. A regra da casa vale inteira: o
@@ -8,9 +8,9 @@ veio pintado. Esta régua cobra o que costuma se perder numa transplantação �
 e cada caso diz a mordida que o derruba.
 
 1. **§P4 — âncora não é gesto.** `#mapear-entradas` e `#mapear-entrada-a-entrada`
-   abrem por `:target`; um `data-gesto` nelas seria um segundo nome para o
+   abrem por `:target`; um `data-gesto` nessas âncoras seria um segundo nome para o
    mesmo ato, e um gesto com o nome de uma âncora confunde os dois.
-2. **Todo campo tem dono, e todo dono tem campo** — na página da bancada
+2. **Todo campo tem dono, e todo dono tem campo** — na página do ensaio
    (`onde.pagina`, o `mockup/`; o portão `desenho-aprovado` a mantém igual à
    publicada), contra o que o pacote emite. Campo sem dono é pintura que cai
    no vazio; dono sem campo escreve para ninguém. Os dois dão verde calado.
@@ -130,7 +130,7 @@ def _pagina() -> str:
 
 def _secao_da_pagina() -> _Arvore:
     arvore = _ler(_pagina(), "rd-secao")
-    assert arvore.elementos, "a página da bancada perdeu o `#rd-secao`"
+    assert arvore.elementos, "a página do ensaio perdeu o `#rd-secao`"
     return arvore
 
 
@@ -156,7 +156,7 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(a08, "_ABERTO", {})
     monkeypatch.setattr(a08, "_CENA_NA_TELA", {})
     monkeypatch.setattr(a08, "_NIVEL_NA_TELA", {})
-    vizinho = RadioUsb(no="/bancada/usb/3-5", vid="046d", pid="08e5", busnum=3,
+    vizinho = RadioUsb(no="/ensaio/usb/3-5", vid="046d", pid="08e5", busnum=3,
                        devpath="5", controlador_pci=PCI)
     monkeypatch.setattr(a08, "_mesa_do_radio",
                         lambda recarregar=False: Mesa(radios=(vizinho,)))
@@ -223,7 +223,7 @@ def test_as_ancoras_da_secao_nao_carregam_gesto() -> None:
     assert set(achadas) == set(ANCORAS), f"a página perdeu uma porta: {sorted(achadas)}"
     for alvo, a in achadas.items():
         assert "data-gesto" not in a, (
-            f"a âncora #{alvo} ganhou gesto ({a[:80]}) — ela abre "
+            f"a âncora #{alvo} ganhou gesto ({a[:80]}) — a âncora abre "
             f"por `:target`, e o gesto seria um segundo nome para o mesmo ato")
 
 
@@ -257,7 +257,7 @@ def _gestos_de(html: str) -> set[str]:
 
 
 def test_todo_gesto_da_secao_tem_dono(mesa: Any) -> None:
-    """Na página da bancada E no que o produto pinta (sala, janelas, balão)."""
+    """Na página do ensaio E no que o produto pinta (sala, janelas, balão)."""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     campos = _campos(mesa)
@@ -316,7 +316,7 @@ def test_fatia_nao_chega_a_tela(mesa: Any) -> None:
 
 
 def test_a_sala_nao_muda_quando_so_os_hz_mudam(mesa: Any) -> None:
-    """O piloto troca a sala inteira quando o texto muda: com os Hz dentro, ela"""
+    """O piloto troca a sala inteira quando o texto muda: com os Hz dentro, a sala"""
     antes = _campos(mesa, hz=(250.0, 98.0, 200.0))
     depois = _campos(mesa, hz=(249.1, 97.3, 201.8))
     assert antes["radio-sala"] == depois["radio-sala"]
@@ -324,7 +324,7 @@ def test_a_sala_nao_muda_quando_so_os_hz_mudam(mesa: Any) -> None:
 
 
 def test_as_listas_de_hz_caem_nos_elementos_certos(mesa: Any) -> None:
-    """A lista vai pela ordem do DOM: ela tem de ser a ordem das linhas na sala."""
+    """A lista vai pela ordem do DOM: a lista tem de ser a ordem das linhas na sala."""
     campos = _campos(mesa, hz=(250.0, 98.0, 200.0))
     ordem = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
              if a.get("data-campo") == "hz-movimento"]
@@ -554,7 +554,7 @@ def test_sem_o_bluez_nenhum_adaptador_mora_dentro_da_maquina(
     monkeypatch.setattr(mesa, "_ler_a_maquina", no_fio)
     em_fundo._FUNDO.clear()
     assert "data-pedido" not in _campos(mesa)["radio-moldes"], (
-        "a janela do pedido abriria sem o nome que ela deu ao adaptador")
+        "a janela do pedido abriria sem o nome dado ao adaptador")
     monkeypatch.setattr(mesa, "_ler_a_maquina", lido)
 
     placa = AdaptadorDoBluez("/org/bluez/hci2", "hci2", "AA:BB:CC:00:00:21", lugar="",
@@ -684,7 +684,7 @@ def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
 
 def test_a_leitura_em_voo_durante_o_gesto_nasce_vencida(
         mesa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A leitura que começou ANTES de o gesto gravar leu o disco de antes: ela"""
+    """A leitura que começou ANTES de o gesto gravar leu o disco de antes: a leitura"""
     from hefesto_dualsense4unix.interface.pacotes import em_fundo
     import threading
 

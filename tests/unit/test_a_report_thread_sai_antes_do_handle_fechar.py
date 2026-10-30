@@ -226,7 +226,7 @@ def _cronometrar(fn: Any) -> float:
 
 
 def test_o_handle_so_fecha_depois_que_a_thread_sai(ensaio: _Ensaio) -> None:
-    """A thread presa no `read`; `close()` volta no teto e NÃO fecha por cima dela."""
+    """A thread presa no `read`; `close()` volta no teto e NÃO fecha por cima da thread."""
     no = _No()
     h, t = _preso_no_read(ensaio, no)
 
@@ -248,7 +248,7 @@ def test_o_handle_so_fecha_depois_que_a_thread_sai(ensaio: _Ensaio) -> None:
 
 
 def test_o_aviso_diz_onde_a_thread_estava(ensaio: _Ensaio) -> None:
-    """O `report_thread_nao_encerrou` traz o nó, os segundos e ONDE ela está."""
+    """O `report_thread_nao_encerrou` traz o nó, os segundos e ONDE a thread está."""
     no = _No()
     h, _t = _preso_no_read(ensaio, no)
 

@@ -11,7 +11,7 @@ A cura é de lugar: `fechar` é o ÚNICO método que encerra o laço (e o `_ao_d
 `destroy` do `fechar` dispara). Duas réguas, de gentes diferentes:
 
 1. a ESTRUTURA, sem GTK: nenhum outro método da `JanelaDaAba` chama `Gtk.main_quit`, e nenhum
-   módulo de `interface/` o chama fora dela (o laço aninhado da espera do WebKit não é saída);
+   módulo de `interface/` o chama fora da janela (o laço aninhado da espera do WebKit não é saída);
 2. o COMPORTAMENTO, num filho sob `xvfb-run` e num lar de mentira: o prazo e a carga morta
    chegam ao `destroy` com o laço girando, a linha do fim sai uma vez, o processo sai com rc 0.
 
@@ -21,7 +21,7 @@ MORDIDAS (a régua reprova sem a cura): (a) o `Gtk.main_quit` solto de volta no 
 `sair` do `agendar_saida`, ou no `_sair` do piloto das dez abas, reprova a régua de estrutura;
 (b) um `fechar` que só anota e sai (o comportamento antigo desses dois caminhos) reprova a régua
 de comportamento nos dois casos.
-O que a placa NVIDIA faz com o processo é a conferência dela, na máquina do usuário.
+O que a placa NVIDIA faz com o processo se confere na máquina do usuário.
 """
 from __future__ import annotations
 

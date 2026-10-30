@@ -1,7 +1,7 @@
 """A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 — a trava do jogo aberto tem um dono.
 
 O que se mediu em 30/09 (o Future Knight, das 03:02 às 03:24, quatro DualSense no
-rádio): a trava R-04 funciona — às 03:06:59 ela segurou a única troca
+rádio): a trava R-04 funciona — às 03:06:59 a trava segurou a única troca
 automática do P1 —, mas a pergunta «posso recriar o pad com o jogo aberto?» se
 fazia em cinco lugares, de três jeitos, e um deles (o juiz da máscara do co-op,
 `CoopManager.sync`) não perguntava: o perfil automático escrevia a máscara por
@@ -14,10 +14,10 @@ tabela das origens que passam com o jogo aberto, cada uma com a decisão de prod
 linha `pad_recriado_com_o_jogo_aberto` de quem passa; o aviso de espera UMA vez
 por origem por episódio; e todos os juízes perguntando a ele.
 
-Nenhuma régua confere a saída contra ela mesma: o sinal de jogo é dado, e o
+Nenhuma régua confere a saída contra a própria saída: o sinal de jogo é dado, e o
 esperado sai da entrada (a origem de quem pede, a máscara do registro). Os ids
-das decisões estão escritos aqui, e conferidos contra o CSV dela — nunca lidos
-da tabela do dono. A mordida de cada uma está no docstring dela.
+das decisões estão escritos aqui, e conferidos contra o CSV das decisões — nunca lidos
+da tabela do dono. A mordida de cada uma está no próprio docstring.
 
 Os endereços são da faixa forjada da casa.
 """
@@ -392,7 +392,7 @@ def test_o_ciclo_forcado_do_co_op_tem_os_chamadores_de_hoje() -> None:
 
 
 def _respondidas() -> tuple[str, ...]:
-    """Os degraus da escada em que ela já respondeu (o dono é o portão das decisões)."""
+    """Os degraus da escada em que a decisão já tem resposta (o dono é o portão das decisões)."""
     import sys
 
     sys.path.insert(0, str(RAIZ / "scripts"))
@@ -413,7 +413,7 @@ def test_toda_origem_que_passa_aponta_uma_decisao_do_usuario() -> None:
         linha = decisoes.get(decisao)
         assert linha is not None, f"{origem}: {decisao} não está no CSV"
         assert linha["estado"] in _respondidas() and linha["quem_decidiu"] == "ela", (
-            f"{origem}: {decisao} não é decisão dela ({linha['estado']}, {linha['quem_decidiu']})")
+            f"{origem}: {decisao} não é aceita ({linha['estado']}, {linha['quem_decidiu']})")
     assert set(gp.ORIGENS_QUE_PASSAM_COM_O_JOGO) == {"manual", "gesto_de_perfil", "ordem_do_coop"}
     assert set(gp.ORIGENS_QUE_PASSAM_COM_O_JOGO.values()) == {DO_GESTO, DA_ORDEM}
 

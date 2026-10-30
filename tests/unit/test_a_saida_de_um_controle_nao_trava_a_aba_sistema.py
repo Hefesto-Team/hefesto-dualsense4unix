@@ -47,7 +47,7 @@ def _ctx(*controles: dict[str, Any]) -> pacotes.Contexto:
 
 
 class _JanelaDeMentira:
-    """Sem ela, o painel técnico perguntaria ao systemd de quem roda a régua."""
+    """Sem a janela de mentira, o painel técnico perguntaria ao systemd de quem roda a régua."""
 
     def _systemctl_status_text(self, unit: str) -> str:
         return "● unidade ativa"

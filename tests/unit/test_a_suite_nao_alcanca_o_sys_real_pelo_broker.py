@@ -42,7 +42,7 @@ def _chr(_caminho: str) -> Any:
 
 
 class _Cena:
-    """As raízes desviadas e o que a função tocou com elas."""
+    """As raízes desviadas e o que a função tocou com essas raízes."""
 
     def __init__(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         self.raiz = {nome: str(tmp_path / nome.lower()) for nome in RAIZES_DE_PARAMETRO}

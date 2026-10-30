@@ -11,7 +11,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 
 def test_o_produto_importado_e_o_desta_arvore() -> None:
-    """A METADE QUE IMPORTA — e ela vale mesmo chamada pela venv de outra árvore."""
+    """A METADE QUE IMPORTA — e vale mesmo chamada pela venv de outra árvore."""
     import hefesto_dualsense4unix as produto
 
     achado = Path(produto.__file__ or "").resolve()

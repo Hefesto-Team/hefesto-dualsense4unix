@@ -17,8 +17,8 @@ estava lá, um `innerHTML` que difere só na indentação.
 **O FATO QUE ORGANIZA TUDO:** *escrever o mesmo valor É uma mutação de DOM*. A
 especificação manda enfileirar um `MutationRecord` em toda troca de atributo,
 não só quando o valor difere. E a DICA NATIVA do WebKit fecha quando o `title`
-do elemento sob o cursor muda — a dez tiques por segundo, ela abria e morria
-antes de ela conseguir ler. É o item *"algo ativa o tooltip mas ele se
+do elemento sob o cursor muda — a dez tiques por segundo, a dica abria e morria
+antes de dar para ler. É o item *"algo ativa o tooltip mas ele se
 desativa"*, medido.
 
 O QUE ESTA RÉGUA COBRA, e cada item é um passo da A-TELA-SAMBA-01:
@@ -37,11 +37,11 @@ O QUE ESTA RÉGUA COBRA, e cada item é um passo da A-TELA-SAMBA-01:
 4. **um bloco não é trocado com um botão EM VOO dentro** — quem clicou não pode
    ter o nó arrancado debaixo do dedo entre o `mousedown` e o `click`;
 5. **A PÁGINA INTEIRA, COM A MESA PARADA, MUTA ZERO** — é a régua de produto, e
-   ela roda o piloto de verdade sobre a página publicada;
+   roda o piloto de verdade sobre a página publicada;
 6. **o tique não enfileira** — com a ponte lenta, o piloto pula em vez de
    empilhar pintura sobre pintura.
 
-A MORDIDA de cada uma está no docstring dela. A janela é OCULTA: ela tem UMA
+A MORDIDA de cada uma está no próprio docstring. A janela é OCULTA: quem usa tem UMA
 tela.
 """
 from __future__ import annotations
@@ -86,7 +86,7 @@ ROTEIRO = r"""
   document.body.appendChild(alvo);
   alvo.innerHTML = MONTAGEM;
   // O PREPARO roda ANTES do observador: é onde a régua veste um elemento da
-  // PÁGINA (a fita, que é da página e não da montagem) com o que ela quer medir.
+  // PÁGINA (a fita, que é da página e não da montagem) com o que a régua quer medir.
   PREPARO;
   // A RAIZ OBSERVADA é a montagem por omissão, e não o documento: os nomes de
   // `data-campo` desta régua (`plastico`, por exemplo) também existem na página
@@ -191,7 +191,7 @@ def test_atributo_igual_nao_muta() -> None:
         "a primeira pintura tinha de escrever o selo e o `title` — "
         f"contou {fora['contas'][0]}")
     assert fora["contas"][1:] == [0, 0], (
-        "reescrever o MESMO `title` mutou o DOM: a dica dela morre a cada "
+        "reescrever o MESMO `title` mutou o DOM: a dica morre a cada "
         f"tique — {fora['contas']}, detalhe {fora.get('detalhe')}")
     assert fora["pintou"][1:] == [0, 0], (
         "o contador de pinturas mentiu: valor igual não é pintura")
@@ -274,7 +274,7 @@ def test_o_bloco_nao_destroi_um_botao_em_voo() -> None:
         [{"blocos": {"#regua-bloco": "<i>outro miolo</i>"}}] * 3,
     )
     assert "hef-em-voo" in fora["html"], (
-        "o bloco engoliu o botão em voo — o clique dela morre no meio")
+        "o bloco engoliu o botão em voo — o clique morre no meio")
     assert "outro miolo" not in fora["html"], (
         "o miolo novo entrou com o botão ainda em voo")
     assert fora["pintou"] == [0, 0, 0], (
@@ -422,7 +422,7 @@ def test_o_tique_nao_enfileira_com_a_ponte_lenta() -> None:
 
 
 def test_a_fita_nao_e_trocada_com_um_chip_em_voo() -> None:
-    """A fita é o caso EXTREMO do bloco: ela troca o próprio nó, não o miolo.
+    """A fita é o caso EXTREMO do bloco: a fita troca o próprio nó, não o miolo.
 
     Medida na 03: a Jogar não tem fita (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR).
     """

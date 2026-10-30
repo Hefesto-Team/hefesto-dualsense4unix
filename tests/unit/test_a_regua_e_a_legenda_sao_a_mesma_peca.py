@@ -5,7 +5,7 @@ importa ``DOMINIO_POR_SUFIXO`` e ``ESCADA`` do portão que já é dono deles, em
 vez de redigitar, porque *"régua e legenda divergirem quer dizer publicar uma
 página que descreve um domínio diferente do que o portão aceita"*.
 
-Este arquivo prova que ela vale igual para o **FORMATO**. Até 25/08/2026
+Este arquivo prova que a regra vale igual para o **FORMATO**. Até 25/08/2026
 ``valida_numeros`` (``scripts/validar-fala-de-tela.py``) trazia a própria
 cópia de ``f"{v:.1f}".replace(".", ",")``, e era a QUARTA da árvore. Com a
 cópia, mudar ``app/fala_do_mapa.formata_pt_br`` para duas casas deixava o
@@ -53,7 +53,7 @@ def _com_formato(casas: int) -> str:
     fonte = FALA_DO_MAPA_REAL.read_text(encoding="utf-8")
     assert fonte.count(_FORMATO_DE_UMA_CASA) == 1, (
         f"{_FORMATO_DE_UMA_CASA!r} não está mais em fala_do_mapa.py como uma "
-        "linha só: sem ela esta mordida rodaria sem trocar nada e passaria "
+        "linha só: sem a linha esta mordida rodaria sem trocar nada e passaria "
         "sempre"
     )
     novo = f'return f"{{valor:.{casas}f}}".replace(".", ",")'

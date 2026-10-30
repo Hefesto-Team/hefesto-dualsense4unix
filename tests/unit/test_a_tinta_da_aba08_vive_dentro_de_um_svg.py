@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A TABELA DOS 28 DA ABA 08 SÓ PINTA SE ELA VIVER DENTRO DE UM `<svg>`."""
+"""A TABELA DOS 28 DA ABA 08 SÓ PINTA SE VIVER DENTRO DE UM `<svg>`."""
 from __future__ import annotations
 
 import pathlib
@@ -53,7 +53,7 @@ def _html() -> str:
 def _folha() -> str:
     achado = FOLHA.search(_html())
     assert achado, (
-        "a `08-conexoes` não publica folha de cores nenhuma — sem ela o alvo de "
+        "a `08-conexoes` não publica folha de cores nenhuma — sem a folha o alvo de "
         "atributo escreve um colorway que nada casa, e os 28 viram um cinza só")
     return achado.group(2)
 
@@ -68,7 +68,7 @@ def test_a_folha_pede_tinta_por_referencia() -> None:
     """A régua tem sujeito: a folha da 08 cita `url(#…)`."""
     citados = set(TINTA_POR_REFERENCIA.findall(_folha()))
     assert citados, (
-        "a folha da 08 não pinta nenhum modelo com `url(#…)`. Se o mapa dela "
+        "a folha da 08 não pinta nenhum modelo com `url(#…)`. Se o mapa da folha "
         "deixou de usar hachura e gradiente, esta régua perdeu o alvo e as duas "
         "abaixo passaram a não medir nada — apague-as ou dê-lhes o alvo novo.")
 
@@ -91,13 +91,13 @@ def test_toda_tinta_citada_pela_folha_nasce_dentro_de_um_svg() -> None:
 
 
 def test_nenhum_modelo_do_mapa_do_usuario_pede_tinta_que_a_pagina_nao_resolve() -> None:
-    """A conta que ela lê: QUAIS dos 28 a página sabe pintar de verdade."""
+    """A conta que se lê: QUAIS dos 28 a página sabe pintar de verdade."""
     folha = _folha()
     nasceram = _onde_nasceram()
     modelos = REGRA_DE_COLORWAY.findall(folha)
     assert len(set(modelos)) >= 28, (
-        f"a folha da 08 traz {len(set(modelos))} modelos — ela mapeou 28, e uma "
-        f"folha curta é a escolha cravada que a lei dela proíbe")
+        f"a folha da 08 traz {len(set(modelos))} modelos — o mapa tem 28, e uma "
+        f"folha curta é a escolha cravada que a regra do produto proíbe")
     perdidos = []
     for modelo in sorted(set(modelos)):
         bloco = "\n".join(
@@ -107,6 +107,6 @@ def test_nenhum_modelo_do_mapa_do_usuario_pede_tinta_que_a_pagina_nao_resolve() 
             if not nasceram.get(ident, False):
                 perdidos.append(f"{modelo} (url(#{ident}))")
     assert not perdidos, (
-        f"{len(perdidos)} modelos do mapa dela pedem tinta que a `08` não "
+        f"{len(perdidos)} modelos do mapa pedem tinta que a `08` não "
         f"resolve: {perdidos}. Quem tiver um deles vê o controle cru, que na "
         f"tela é indistinguível de 'não li a cor'.")

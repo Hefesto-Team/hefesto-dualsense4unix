@@ -41,7 +41,7 @@ LISTA_DE_MOVER = "no adaptador errado"
 
 
 def test_o_texto_novo_diz_o_que_ha_hoje() -> None:
-    """Onde a página propõe mover um controle, ela diz o caminho de hoje."""
+    """Onde a página propõe mover um controle, a página diz o caminho de hoje."""
     assert LISTA_DE_MOVER in CONGELADO.read_text(encoding="utf-8")
     for arquivo in (ENSAIO, PUBLICADO):
         texto = re.sub(r"\s+", " ", arquivo.read_text(encoding="utf-8"))

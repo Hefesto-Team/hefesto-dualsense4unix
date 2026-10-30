@@ -52,7 +52,7 @@ def test_a_tabela_nao_nomeia_caminho_que_nao_existe() -> None:
         f"a tabela de `docs/method/COMO-OLHAR-A-TELA.md` cita {', '.join(fantasmas)}, "
         "que não existe nesta árvore. Este é o arquivo que se lê PRIMEIRO "
         "quando o trabalho toca a tela: um caminho morto ali manda "
-        "a próxima pessoa rodar um comando que não roda, e ela conclui que a "
+        "a próxima pessoa rodar um comando que não roda, e a pessoa conclui que a "
         "casa não tem a ferramenta."
     )
 

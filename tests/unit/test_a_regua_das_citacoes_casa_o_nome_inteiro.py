@@ -148,7 +148,7 @@ def test_o_reapontar_ancora_a_faixa_no_nome_fora_do_comentario(tmp_path: Path) -
     """A âncora do `_mapear` é a linha do código, não o comentário que cita o nome.
 
     A linha `:2` (o comentário) mudou e caiu dentro do pedaço alterado; a `:4` (o código) só andou.
-    Ancorada no comentário, a faixa se perde; ancorada no código, ela anda junto.
+    Ancorada no comentário, a faixa se perde; ancorada no código, a faixa anda junto.
     """
     raiz = tmp_path / "repo"
     pacote = raiz / "src" / "hefesto_dualsense4unix"

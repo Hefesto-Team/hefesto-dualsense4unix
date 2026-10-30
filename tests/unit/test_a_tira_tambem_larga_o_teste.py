@@ -127,7 +127,7 @@ def test_o_clique_na_tira_cala_o_teste_da_haptica(ponte: _PonteQueAnota) -> None
     _carregar(piloto)
     assert ("haptica_testar", (UNIQ, False)) in ponte.chamadas, (
         "a página trocou pela tira e o teste da háptica seguiu ligado: o coração "
-        "rebate na aba nova, e o controle vibra até ela voltar à Vibração")
+        "rebate na aba nova, e o controle vibra até a página voltar à Vibração")
     assert a05.em_teste_da_haptica() == frozenset()
     assert piloto.instalou == 1 and piloto.pagina == "03-gatilhos.html"
 

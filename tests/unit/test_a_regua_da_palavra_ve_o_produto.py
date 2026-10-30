@@ -1,4 +1,4 @@
-"""A régua da palavra passou a ver O PRODUTO — e a bancada continua vendo tudo."""
+"""A régua da palavra passou a ver O PRODUTO — e o ensaio continua vendo tudo."""
 
 from __future__ import annotations
 
@@ -95,7 +95,7 @@ def test_a_folha_diz_o_que_esconde_e_a_regua_le_do_usuario() -> None:
 
     assert "appearance" in FOLHA_DA_CASA, (
         "a folha perdeu a cura do `<select>` — esta régua mede a lista de "
-        "esconder e a armadilha dela é justamente o `appearance:none`."
+        "esconder e a armadilha da lista é justamente o `appearance:none`."
     )
 
 
@@ -130,7 +130,7 @@ def test_a_folha_tem_um_dono_so_em_src_inteiro() -> None:
 
 
 def test_uma_segunda_regra_de_esconder_vale_para_a_regua_sozinha() -> None:
-    """O que a cura promete ao futuro: a régua acompanha a folha sem tocar nela."""
+    """O que a cura promete ao futuro: a régua acompanha a folha sem tocar na folha."""
     folha = (
         ".nota{display:none !important}"
         "#rodape{display : NONE}"
@@ -154,7 +154,7 @@ def test_o_produto_esconde_o_bilhete_e_o_ensaio_o_conta() -> None:
     produto = texto_visivel_no_produto(PAGINA)
 
     assert palavra_banida_em(ensaio) == "mesa", (
-        "a BANCADA deixou de contar o bilhete. Ela é o desenho que ela abre "
+        "o ENSAIO deixou de contar o bilhete. O ensaio é o desenho que se abre "
         "CRU no navegador — ali a `.nota` é texto de verdade, e uma régua que "
         "a ignore deixa a palavra voltar pelo desenho."
     )
@@ -164,7 +164,7 @@ def test_o_produto_esconde_o_bilhete_e_o_ensaio_o_conta() -> None:
     )
     assert "o texto do produto" in produto, "sumiu o texto que fica AO LADO"
     assert "a dica fica" in produto, (
-        "a dica do `title` some com o bilhete — e ela é onde o glossário diz "
+        "a dica do `title` some com o bilhete — e a dica é onde o glossário diz "
         "que a explicação mora."
     )
 
@@ -197,9 +197,9 @@ def test_a_leitura_do_produto_nao_apaga_a_tela() -> None:
 
 
 def test_o_ensaio_continua_lendo_o_que_o_produto_esconde() -> None:
-    """Uma `.nota` na página tem de contar na leitura da bancada e sumir na do produto.
+    """Uma `.nota` na página tem de contar na leitura do ensaio e sumir na do produto.
 
-    As páginas deixaram de trazer a legenda do desenho (ela vai para a sessão
+    As páginas deixaram de trazer a legenda do desenho (a legenda vai para a sessão
     dos desenhos), então a prova põe uma `.nota` sintética no fim de cada uma.
     """
     iguais: list[str] = []
@@ -212,7 +212,7 @@ def test_o_ensaio_continua_lendo_o_que_o_produto_esconde() -> None:
         if so_no_desenho < 100:
             iguais.append(f"{pagina.name}: só {so_no_desenho} palavras a mais")
     assert not iguais, (
-        "a leitura da BANCADA deixou de ver o bilhete de projeto — as duas "
+        "a leitura do ENSAIO deixou de ver o bilhete de projeto — as duas "
         "leituras viraram uma só, e o desenho ficou sem régua:\n  "
         + "\n  ".join(iguais)
     )

@@ -49,7 +49,7 @@ def test_a_vigia_esta_armada_nas_portas_que_este_ambiente_tem() -> None:
     """Portão desarmado é portão que ninguém vê cair. Este teste é o alarme."""
     vigia = vigia_mod.vigia_da_sessao()
     assert vigia is not None, (
-        "a VIGIA-DE-APARELHO-01 não está armada — sem ela nada impede um teste "
+        "a VIGIA-DE-APARELHO-01 não está armada — sem a vigia nada impede um teste "
         "de criar aparelho de entrada no kernel de quem roda a suíte"
     )
     assert "os.open" in vigia.originais
@@ -112,7 +112,7 @@ def _journal_viu(nome: str, desde: str, teto: float = 5.0) -> bool:
 
 @sem_uinput
 def test_a_regua_pega_o_no_de_verdade_que_a_contagem_nao_ve() -> None:
-    """A mordida, e ela é UMA só: um nó de verdade, criado e morto aqui dentro."""
+    """A mordida, e é UMA só: um nó de verdade, criado e morto aqui dentro."""
     import uinput
 
     fabrica = _uinput_de_verdade()
@@ -141,7 +141,7 @@ def test_a_regua_pega_o_no_de_verdade_que_a_contagem_nao_ve() -> None:
         numero = _no_do_aparelho(NOME_DA_MORDIDA)
         assert numero is not None and numero > maior_vivo_antes, (
             "o kernel reciclou um número de aparelho — a régua (b) mudaria de "
-            "forma, e a nota sobre ela neste arquivo teria de ser refeita"
+            "forma, e a nota sobre a régua neste arquivo teria de ser refeita"
         )
     finally:
         aparelho.destroy()

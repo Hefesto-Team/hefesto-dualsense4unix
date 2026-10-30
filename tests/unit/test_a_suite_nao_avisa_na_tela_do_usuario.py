@@ -78,7 +78,7 @@ def test_com_a_suite_no_ar_nenhum_aviso_de_gesto_abre_o_barramento(
         assert aviso(*argumentos) is False, f"o aviso «{nome}» saiu com a suíte no ar"
     assert aberturas_do_barramento == [], (
         "com a suíte no ar o `notify` abriu o barramento da sessão — na máquina "
-        "dela é o aviso na tela dela, o defeito de 25/09/2026 às 20h18"
+        "do usuário é o aviso na tela, o defeito de 25/09/2026 às 20h18"
     )
 
 
@@ -105,7 +105,7 @@ def test_o_escape_herdado_nao_atravessa_para_o_teste() -> None:
     """O escape que viesse do terminal de quem roda a suíte não chega aqui."""
     assert avisos.AVISO_DE_VERDADE_NA_SUITE not in os.environ, (
         "o escape do aviso chegou a um teste que não o declarou: cada L3 da "
-        "suíte voltaria a aparecer na tela dela"
+        "suíte voltaria a aparecer na tela do usuário"
     )
 
 
@@ -288,8 +288,8 @@ def test_o_l3_da_suite_nao_chega_ao_servidor_de_avisos(
     assert abertos, "o L3 não abriu o teclado de mentira — o caso não mediu nada"
     time.sleep(0.2)
     assert barramento_de_mentira.notify == [], (
-        "o L3 de um teste chegou ao servidor de avisos: na máquina dela, é o "
-        "aviso na tela dela"
+        "o L3 de um teste chegou ao servidor de avisos: na máquina do usuário, é o "
+        "aviso na tela"
     )
 
 

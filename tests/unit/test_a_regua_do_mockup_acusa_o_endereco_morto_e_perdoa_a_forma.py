@@ -3,7 +3,7 @@
 
 Nasceu com a pílula do Check-up (a cor é do achado, não da posição no desenho; 03/09/2026). A
 pílula e as linhas do exame saíram em 04/10/2026 (AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01), mas a
-régua de campos (`regua_do_mockup`) é de todas as abas: o que ela precisa fazer continua aqui,
+régua de campos (`regua_do_mockup`) é de todas as abas: o que a régua precisa fazer continua aqui,
 sobre campos de mentira.
 """
 from __future__ import annotations
@@ -35,7 +35,7 @@ def test_o_estado_cru_num_elemento_de_um_estado_so_e_endereco_morto() -> None:
     cru = r._classificar([campo], [""], {("", "selo-x"): ["certo"]}, [True])
     assert cru[0].classe == r.MOCKUP, (
         "emitir `certo` num elemento que só sabe dizer `problema` TEM de ser "
-        "acusado — é a régua fazendo o trabalho dela")
+        "acusado — é a régua fazendo o próprio trabalho")
     assert "ENDEREÇO MORTO" in cru[0].nota
 
     curado = r._classificar([campo], [""], {("", "selo-x"): [""]}, [True])
@@ -60,7 +60,7 @@ def test_a_regua_le_o_html_declarado_como_a_tela_o_mostra() -> None:
     assert r._declarado_neste_elemento(campo, "hoje <b>segue o global</b>") == (
         "hoje segue o global"), (
         "a régua lê o alvo `html` pelo TEXTO (ver `_campo` e o `LER_CAMPOS` do "
-        "piloto). Comparar a declaração COM as tags contra a tela SEM elas "
+        "piloto). Comparar a declaração COM as tags contra a tela SEM as tags "
         "acusa endereço morto sobre a pintura que acertou.")
 
 

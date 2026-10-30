@@ -46,7 +46,7 @@ def test_a_frase_que_o_usuario_marcou_saiu_dos_dois_lados(pagina: str, frase: st
     for caminho in (onde.pagina(pagina), onde.PUBLICADO / pagina):
         texto = caminho.read_text(encoding="utf-8")
         assert frase not in texto, (
-            f"{caminho.name} ainda diz {frase!r} — ela marcou esta frase em "
+            f"{caminho.name} ainda diz {frase!r} — esta frase foi marcada em "
             f"07/09/2026, e a ordem é que o layout não informe os nossos "
             f"defeitos")
 
@@ -96,7 +96,7 @@ LEGITIMAS = (
 def test_morde_a_peneira_acusa_a_confissao(portao, frase: str) -> None:
     """MORDE: tire a alternativa do `ainda` da FORMA e estas seis passam calado."""
     assert portao._forma(frase), (
-        f"a peneira deixou passar {frase!r} — é a família que a ordem dela de "
+        f"a peneira deixou passar {frase!r} — é a família que a decisão de "
         f"07/09/2026 manda tirar da tela")
 
 
@@ -114,7 +114,7 @@ def test_a_afirmacao_positiva_e_pega_pela_forma_e_so_a_tabela_a_absolve(portao) 
     frase = "O Hefesto não é só para a Steam."
     assert portao._forma(frase), "a peneira deixou de casar por forma"
     assert not any(k.lower() in frase.lower() for k in portao.FATOS), (
-        "a frase saiu da tela em 11/09/2026 e a declaração dela tinha de sair "
+        "a frase saiu da tela em 11/09/2026 e a declaração da frase tinha de sair "
         "junto — uma linha em FATOS sobre uma frase que a tela não tem mais é "
         "a declaração que envelhece calada, e o portão reprova por isso")
 
@@ -144,7 +144,7 @@ def test_morde_a_legenda_do_mockup_fica_de_fora_e_a_janela_nao(portao) -> None:
     assert portao._forma(dentro), "a régua deixou de olhar dentro da janela"
     assert len(portao._forma(dentro)) == 1, (
         "a régua entrou na legenda do mockup — ali a dívida é para ser "
-        "nomeada, e é o que ela lê para aprovar o desenho")
+        "nomeada, e é o que se lê para aprovar o desenho")
 
 
 def test_morde_a_tabela_nao_pode_ficar_orfa(portao) -> None:
@@ -170,11 +170,11 @@ def test_o_canal_do_recado_continua_sendo_o_raise(portao) -> None:
         "o piloto deixou de mandar `str(erro)` ao diário — o canal que este "
         "portão lê mudou de forma de novo, e a leitura tem de mudar junto")
     assert "self._depositar(" not in fonte, (
-        "o piloto voltou a depositar a frase da recusa — ela voltaria à tela")
+        "o piloto voltou a depositar a frase da recusa — a frase voltaria à tela")
 
 
 def test_a_regua_le_os_recados_da_arvore_de_hoje(portao) -> None:
-    """Ela lê o canal inteiro, e RECUSA achar pouco."""
+    """A régua lê o canal inteiro, e RECUSA achar pouco."""
     lidos, mudos = portao._recados()
     assert len(lidos) > 150, (
         f"li {len(lidos)} recados de gesto nos pacotes e eles são quase "
@@ -227,7 +227,7 @@ def test_morde_a_frase_do_raise_e_montada_do_fonte(portao, tmp_path) -> None:
 
 
 def test_morde_o_buraco_nao_deixa_a_peneira_atravessar(portao, tmp_path) -> None:
-    """**A ARMADILHA QUE O BURACO EVITA, e ela é sutil.**"""
+    """**A ARMADILHA QUE O BURACO EVITA, e é sutil.**"""
     import ast
 
     alvo = tmp_path / "a98_dublê.py"
@@ -264,13 +264,13 @@ def test_morde_main_reprova_o_recado_que_confessa(portao, so_o_terceiro_canal) -
         portao, "_recados",
         lambda: ([("dublê/a99.py:7", "Ainda não sei fazer isto por aqui")], []))
     assert portao.main() == 1, (
-        "o `main` não leu o recado do gesto — o canal que pousa no cartão dela "
+        "o `main` não leu o recado do gesto — o canal que pousa no cartão "
         "continua fora da peneira")
 
 
 def test_morde_main_cobra_o_recado_que_nao_conseguiu_ler(
         portao, so_o_terceiro_canal) -> None:
-    """O que a régua não alcança NÃO passa calado — ela diz que não conseguiu."""
+    """O que a régua não alcança NÃO passa calado — a régua diz que não conseguiu."""
     muda = ("a99_dublê.py:gesto ← motivo", "dublê/a99.py:9")
     so_o_terceiro_canal.setattr(portao, "_recados", lambda: ([], [muda]))
     assert portao.main() == 1, (
@@ -280,7 +280,7 @@ def test_morde_main_cobra_o_recado_que_nao_conseguiu_ler(
         portao, "SEM_LETRA", {muda[0]: "a recusa do daemon, palavra por palavra"})
     assert portao.main() == 0, (
         "declarar o dono não bastou — a tabela não está sendo consultada, e "
-        "então ela é enfeite")
+        "então a tabela é enfeite")
 
 
 def test_morde_a_tabela_sem_letra_nao_pode_ficar_orfa(
@@ -312,6 +312,6 @@ def test_a_chave_sem_letra_e_o_trecho_do_fonte_em_qualquer_python(portao) -> Non
         arquivo = RAIZ / onde.rsplit(":", 1)[0]
         fonte = " ".join(arquivo.read_text(encoding="utf-8").split())
         assert expressao and expressao in fonte, (
-            f"a chave {chave!r} não é o que o fonte escreve em {onde} — ela "
+            f"a chave {chave!r} não é o que o fonte escreve em {onde} — a chave "
             "depende do interpretador que a montou, e a mesma declaração "
             "passaria num job do CI e reprovaria no outro")

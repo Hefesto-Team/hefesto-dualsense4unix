@@ -1,7 +1,7 @@
 """"Todo o som do PC" só acende quando as DUAS camadas concordam.
 
-ALTO-FALANTE-DOIS-CANAIS-01 (04/09/2026). Decisão de produto, meio-dia: *"sons do pc
-e sons do jogo. veja como fizemo no gtk."*  # noqa-acento: citação literal
+ALTO-FALANTE-DOIS-CANAIS-01 (04/09/2026). Decisão do produto, meio-dia: os sons do PC e
+os sons do jogo, como a janela GTK já fazia.
 
 São dois caminhos independentes, e a janela antiga já sabia
 (`interface/cartao_do_controle.CANAIS_DO_SPEAKER`):
@@ -158,7 +158,7 @@ def test_o_ensaio_devolve_a_saida_e_a_devolucao_esta_no_finally() -> None:
     assert len(depois_do_finally) == 2, "a devolução não está num `finally`"
     assert "devolver_o_som_do_pc()" in depois_do_finally[1], (
         "a devolução está fora do `finally` — uma exceção no meio da medição "
-        "deixaria o som dela no controle"
+        "deixaria o som do usuário no controle"
     )
 
 
@@ -174,13 +174,13 @@ def test_o_ensaio_le_de_volta_as_duas_camadas() -> None:
     assert "get-default-sink" in fonte
     assert "daemon.state_full" in fonte, (
         "o ensaio lê o byte da resposta do `speaker.set` em vez do `state_full`"
-        " — a resposta do `set` é o eco do que mandamos, e em Modo Nativo ela "
+        " — a resposta do `set` é o eco do que mandamos, e em Modo Nativo a resposta "
         "volta idêntica com o aparelho parado"
     )
 
 
 def test_a_funcao_do_botao_e_pura() -> None:
-    """Nada de subprocesso na decisão: ela roda no tique da tela."""
+    """Nada de subprocesso na decisão: a decisão roda no tique da tela."""
     fonte = inspect.getsource(botao_da_rota_aceso)
     for proibido in ("subprocess", "pactl", "run(", "popen"):
         assert proibido not in fonte.lower(), (

@@ -1,9 +1,9 @@
 """A seção Rádio cabe o painel aberto — desenho de Conexões de 06/10/2026, item 2.
 
-O painel do «Conectar» é absoluto e seguia a altura da seção: com as entradas fechadas ela tinha
+O painel do «Conectar» é absoluto e seguia a altura da seção: com as entradas fechadas a seção tinha
 169 px, o painel pedia 488 com oito aparelhos perto, e a lista rolava por dentro com o miolo vazio
-embaixo (fotos 3 e 4 dela). A régua abre o mockup no WebKit, na janela do piloto (1212 por 809), com
-as entradas fechadas e oito, três e vinte aparelhos perto, e mede o painel e a seção.
+embaixo (fotos 3 e 4 do relato). A régua abre o mockup no WebKit, na janela do piloto (1212 x 809),
+com as entradas fechadas e oito, três e vinte aparelhos perto, e mede o painel e a seção.
 
 MORDIDA: a MESMA página com a conta da seção desligada (`return` no topo de
 `aSecaoCabeOPainel`) volta a cortar a lista.
@@ -162,7 +162,7 @@ def test_com_o_painel_aberto_a_secao_cresce_e_a_lista_inteira_aparece(achados: i
     assert f["painel_rola"] <= 1 and f["ultimo_visivel"] is True, f
     assert f["secao"] > f["natural"], "a seção não cresceu para o painel"
     assert f["secao_fim"] <= f["miolo_fim"] and f["pagina_rola"] <= 0, f
-    assert abs(f["fechado"] - f["natural"]) <= 1, "fechado, a seção não voltou à altura dela"
+    assert abs(f["fechado"] - f["natural"]) <= 1, "fechado, a seção não voltou à própria altura"
 
 
 def test_com_vinte_aparelhos_a_secao_para_no_fim_do_miolo_e_a_pagina_nao_rola() -> None:

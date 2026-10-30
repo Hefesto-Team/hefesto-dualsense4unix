@@ -224,7 +224,7 @@ def _divisao(saida: Path) -> dict[str, list[str]]:
 def test_a_parte_avulsa_com_o_auto_tem_a_divisao_da_corrida_inteira(tmp_path: Path) -> None:
     """A triagem roda os MESMOS arquivos da parte que reprovou na corrida com a chave.
 
-    Com a chave, as que tocam a máquina ficam juntas nas últimas partes; sem ela, não. Se a parte
+    Com a chave, as que tocam a máquina ficam juntas nas últimas partes; sem, não. Se a parte
     avulsa caísse na divisão sem a chave, `rodar-a-suite.sh NN` rodaria outros arquivos que os da
     `parte-NN` da corrida inteira, e o vermelho de ordem não se reproduziria."""
     _precisa_de_oito_nucleos()

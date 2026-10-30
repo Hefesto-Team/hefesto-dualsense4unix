@@ -1,12 +1,12 @@
 """A Steam e os lançadores sem arquivo interno: grava, RELÊ e só então dá por feito.
 
-A-STEAM-E-OS-LANCADORES-SEM-ARQUIVO-INTERNO-01, 07/10/2026. O `localconfig.vdf` é da Steam, e ela
+A-STEAM-E-OS-LANCADORES-SEM-ARQUIVO-INTERNO-01, 07/10/2026. O `localconfig.vdf` é da Steam, que
 já apagou o wrapper de um jogo sem aviso (17/09). Gravar com `tmp.replace` e declarar o jogo
 aplicado era dar por feito o que ninguém leu de volta; reabrir a Steam e dizer «reabriu» porque o
 pedido saiu, o mesmo. Aqui a Steam é um dublê que DESFAZ o que o Hefesto grava (reescreve o arquivo
 na troca), e o estado lido de volta é que decide.
 
-Tudo em `tmp_path`: nenhum arquivo da Steam, nenhum processo dela, nenhum comando de verdade.
+Tudo em `tmp_path`: nenhum arquivo da Steam, nenhum processo da Steam, nenhum comando de verdade.
 """
 from __future__ import annotations
 

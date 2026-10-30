@@ -84,8 +84,7 @@ def _textos(valor: Any) -> list[str]:
     return []
 
 
-FRASES_QUE_SAIRAM = ("O Hefesto está desligado", "Esta tela parou de ler o serviço",
-                     "Ela volta sozinha quando ele responder")
+FRASES_QUE_SAIRAM = ("O Hefesto está desligado", "Esta tela parou de ler o serviço")
 
 
 def test_com_o_servico_parado_nenhuma_frase_e_escrita() -> None:
@@ -114,8 +113,7 @@ def test_o_simbolo_das_duas_frases_saiu_do_gerador() -> None:
     for caminho in (INTERFACE / "aba01.py", RAIZ / "mockup" / "01-jogar.html",
                     INTERFACE / "pacotes" / "a01_jogar.py", INTERFACE / "pacotes" / "__init__.py"):
         corpo = caminho.read_text(encoding="utf-8")
-        for frase in ("O Hefesto está desligado.\"", "Esta tela parou de ler o serviço",
-                      "Ela volta sozinha quando ele responder"):
+        for frase in ("O Hefesto está desligado.\"", "Esta tela parou de ler o serviço"):
             assert frase not in corpo, f"{caminho.name} ainda escreve {frase!r}"
 
 
@@ -222,7 +220,7 @@ def test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir(unit_instalada: A
 
 
 def test_o_ligado_nao_tem_espera_propria() -> None:
-    """A espera de 10 s era o remendo de um chamador só; a cura é a unit, e ela não volta."""
+    """A espera de 10 s era o remendo de um chamador só; a cura é a unit, e a espera não volta."""
     assert not hasattr(aba, "SEGUNDOS_ATE_O_SERVICO_RESPONDER")
     assert not hasattr(aba, "_esperar_o_servico_responder")
 
@@ -392,7 +390,7 @@ def _no_webkit(roteiro: str, arquivo: str = "01-jogar.html") -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def na_tela() -> dict[str, Any]:
-    """O desenho da Jogar no motor dela: parado, de pé com dois no rádio, e parado de novo."""
+    """O desenho da Jogar no motor da janela: parado, de pé com dois no rádio, e parado de novo."""
     import json
 
     cargas = [["parado", _carga(_parado())], ["no_radio", _carga(_no_radio())],
@@ -449,7 +447,7 @@ LER_O_TOPO = r"""
 
 @pytest.fixture(scope="module")
 def o_topo_das_dez() -> dict[str, dict[str, Any]]:
-    """O topo de cada aba no motor dela: parado, de pé com dois no rádio, e parado de novo."""
+    """O topo de cada aba no motor da janela: parado, de pé com dois no rádio, e parado de novo."""
     import json
 
     def so_o_topo(ctx: Contexto) -> dict[str, Any]:
@@ -481,7 +479,7 @@ def test_no_webkit_o_perfil_ativo_fica_a_direita_com_o_servico_parado(
         o_topo_das_dez: dict[str, dict[str, Any]], aba_html: str) -> None:
     """Com o topo fora, o «Perfil ativo» continua encostado na direita, onde ele mora de pé.
 
-    Quem empurrava era a `.conectado`; com ela em `display:none` o chip caía ao lado da marca.
+    Quem empurrava era a `.conectado`; com a `.conectado` em `display:none` o chip caía ao lado.
     A MORDIDA: tire a regra `.fita-linha:has(i[data-servico="parado"]) .perfil-ativo` do
     `topo.html`, rode o `regerar.py`, e a folga do chip vira a largura da faixa inteira.
 

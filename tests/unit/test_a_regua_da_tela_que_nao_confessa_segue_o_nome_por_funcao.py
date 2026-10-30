@@ -3,7 +3,7 @@
 A-REGUA-DA-TELA-QUE-NAO-CONFESSA-SEGUE-O-NOME-POR-FUNCAO-01 (25/10/2026). O
 ``scripts/check_a_tela_nao_confessa.py`` segue a frase de um ``raise`` pelas atribuições e marcava o
 nome já visto pelo par (arquivo, nome): a local ``recusa`` do gesto e a ``recusa`` da função chamada
-eram o mesmo nome para ela, e a régua parava na segunda sem ler a frase. Medido em 25/10 numa cópia
+eram o mesmo nome para a régua, que parava na segunda sem ler a frase. Medido em 25/10 numa cópia
 da árvore com o ``porque`` de ``a07_lancadores._o_modo_na_extensao`` de volta a ``recusa``: dois
 recados «que a régua NÃO CONSEGUIU LER» (:2722 e :2872), com a frase escrita no fonte.
 

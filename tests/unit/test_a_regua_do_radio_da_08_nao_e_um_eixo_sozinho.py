@@ -5,11 +5,11 @@
 produto com **um DualSense White no cabo e nada no rádio**: a seção mostrava a
 escala `0 400 800 1.200 1.600` e a legenda `+16,3 / +276,7` — dois números com
 cara de medição, sem uma barra a que pertencer. A cura de 03/09 deu uma pista
-por grupo; a de 04/09, uma pista por ADAPTADOR, com o nome que ela deu, e sem
+por grupo; a de 04/09, uma pista por ADAPTADOR, com o nome dado pelo usuário, e sem
 inventar adaptador quando a varredura falha.
 
 **23/09/2026 — A RÉGUA DE DESEMPENHO SAIU** (TRANSPLANTE-DA-SECAO-01). A seção
-«Rádio e Adaptadores» virou o desenho aprovado dela, e o que a régua dizia em
+«Rádio e Adaptadores» virou o desenho aprovado, e o que a régua dizia em
 pistas a sala diz em cartões: um cartão por adaptador. As três perguntas deste
 arquivo sobreviveram inteiras, só mudou onde a resposta mora —
 
@@ -87,7 +87,7 @@ def ensaio(monkeypatch: Any) -> Any:
 
 
 def _ctx(*, com_radio: bool) -> Any:
-    """A bancada de hoje: um White no cabo. Com `com_radio`, mais um no rádio."""
+    """O ensaio de hoje: um White no cabo. Com `com_radio`, mais um no rádio."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     mesa: list[dict[str, Any]] = [
@@ -139,7 +139,7 @@ def test_um_cartao_por_adaptador_mesmo_com_a_mesa_no_cabo(ensaio: Any) -> None:
     assert len(re.findall(r'<div class="lugar[ "]', sala)) == 3, sala[:600]
     for nome in ("Sala", "Extra", "Terceiro"):
         assert f'value="{nome}"' in sala, (
-            f"o cartão de {nome!r} saiu sem o nome que ela deu ao adaptador")
+            f"o cartão de {nome!r} saiu sem o nome dado ao adaptador")
     assert 'class="linha' not in sala, (
         "um cartão ganhou a linha de um controle que está no CABO")
 

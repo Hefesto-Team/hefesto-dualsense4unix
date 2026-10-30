@@ -14,10 +14,10 @@ Esta régua cobra as três, no piloto do produto, com a janela OCULTA:
    `.hef-recado` em lugar nenhum — nem na faixa da 01 (o recibo do
    «Reconectar»), nem no cartão da 02 — e a frase vai ao diário da janela como
    `[relato] <página> · <gesto>: <frase>`;
-2. **a recusa também não fica — 13/09/2026, FRASES-E-DICAS-01.** Até ali ela
+2. **a recusa também não fica — 13/09/2026, FRASES-E-DICAS-01.** Até ali a recusa
    ficava 30 s no cartão, e só na página em que nascera. A caixa laranja da foto
-   dela no índice da leva (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha
-   19) era essa recusa, e ela saiu: recusa no 🎙 do p1 da 02, navega para a 03,
+   no índice da leva (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha
+   19) era essa recusa, e a recusa saiu: recusa no 🎙 do p1 da 02, navega para a 03,
    volta à 02 — zero recado nas três leituras, e o piloto sem depósito;
 3. **o rodapé não devolve recado.** `rodape._recado` relata e devolve `None`;
    quem repõe o atalho da Steam é a carona, não a frase.
@@ -322,7 +322,7 @@ def test_o_recibo_do_reconectar_nao_escreve_na_faixa_da_01(medido: dict) -> None
         "tirou porque o recibo empurrava o «Reconectar»")
     assert depois["recados"] == [], (
         f"o «Reconectar» deu certo e a tela ganhou recado: {depois['recados']!r}. "
-        f"É a frase de status que ela mandou tirar, *em todas as abas*.")
+        f"É a frase de status que se decidiu tirar, *em todas as abas*.")
     assert not depois["vistas"]["reconectar"], (
         "a frase do gesto que deu certo chegou ao texto da 01 por outro caminho")
     assert medido["01-deposito"] == [], (
@@ -364,7 +364,7 @@ def test_a_recusa_nao_segue_para_a_aba_seguinte(medido: dict) -> None:
     assert leitura["aba"] == PAGINA_03, leitura["aba"]
     assert leitura["tem_p1"], "a 03 sem o cartão do p1 — a régua passaria sobre nada"
     assert medido["03-deposito"] == [], (
-        f"a recusa foi depositada ({medido['03-deposito']!r}) — ela voltaria à "
+        f"a recusa foi depositada ({medido['03-deposito']!r}) — a recusa voltaria à "
         f"tela no tique seguinte")
     assert leitura["recados"] == [], (
         f"a recusa nascida na 02 reapareceu na 03: {leitura['recados']!r}")
@@ -404,7 +404,7 @@ def test_o_gesto_que_deu_certo_nao_deposita_e_relata(capsys) -> None:
     assert volta is False
     assert anotador.depositos == [], (
         f"o sucesso foi depositado: {anotador.depositos!r} — é a porta do cartão e "
-        f"da faixa que ela mandou fechar")
+        f"da faixa que se decidiu fechar")
     assert anotador.respostas == [{"colunas": {"p1": {"x": "1"}}}], anotador.respostas
     assert f"[relato] {PAGINA_02} · mudo: a frase do dono" in capsys.readouterr().err
 

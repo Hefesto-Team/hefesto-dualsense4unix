@@ -44,7 +44,7 @@ def test_o_arquivo_novo_na_subpasta_muda_a_roupa_sem_limpar_o_cache(tmp_path: Pa
     """Um jogo que ganha, numa subpasta, o arquivo que o declara `0ce6` veste o `0ce6`.
 
     MORDIDA: tirar as subpastas da chave (`_bibliotecas_e_manifesto` sem `pastas`, ou
-    `_ler_o_disco` sem elas em `lidos`) devolve `0df2` na segunda pergunta.
+    `_ler_o_disco` sem as subpastas em `lidos`) devolve `0df2` na segunda pergunta.
     """
     raiz = _jogo_sem_declaracao(tmp_path / "Jogo")
 
@@ -124,7 +124,7 @@ def test_o_aquecimento_segue_quando_uma_raiz_levanta(
 def test_a_raiz_que_levanta_e_registrada_com_o_caminho(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A falha de UMA raiz sai no registro com o caminho dela (e só dela)."""
+    """A falha de UMA raiz sai no registro com o caminho da raiz (e só dessa)."""
     ruim, boa = tmp_path / "ruim", tmp_path / "boa"
 
     def _roupa(raiz: Path, **_kw: Any) -> tuple[str, str]:

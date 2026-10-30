@@ -63,7 +63,7 @@ def _bloco_do_estado(estado: dict[str, Any] | None) -> dict[str, Any]:
 def test_a_rota_entra_no_bloco_quando_o_controle_a_diz():
     bloco = _bloco_do_estado({"volume": 102, "muted": False, "rota": 0})["speaker"]
     assert bloco["rota"] == 0, (
-        "a rota 0 sumiu do estado. Ela é uma saída de VERDADE — fone à esquerda, "
+        "a rota 0 sumiu do estado. A rota 0 é uma saída de VERDADE — fone à esquerda, "
         "alto-falante à direita — e um `if rota:` a trataria como ausente.")
 
 
@@ -90,4 +90,4 @@ def test_o_handler_de_verdade_carrega_a_cura():
              / "src/hefesto_dualsense4unix/daemon/ipc_handlers.py").read_text()
     assert 'bloco["rota"] = rota' in fonte, (
         "o `ipc_handlers.py` não publica mais a rota no estado — a assimetria "
-        "voltou: o `speaker.set` responde com ela e o `state_full` a esconde.")
+        "voltou: o `speaker.set` responde com a rota e o `state_full` a esconde.")

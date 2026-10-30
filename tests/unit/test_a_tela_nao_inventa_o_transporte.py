@@ -14,7 +14,7 @@ dicionários para o mesmo fato: `pacotes.VIA_DO_TRANSPORTE` (a SIGLA de máquina
 e `home_actions._PALAVRA_DO_TRANSPORTE` (a palavra da tela). A decisão de produto
 (D-05, e o glossário desta casa) é *cabo* e *rádio*, e a sigla sobrou num lugar
 só — a contagem do topo, `2 USB · 0 BT`. Hoje o `mesa_viva` lê
-`home_actions.palavra_do_transporte`, e esta régua confere contra ELE: o que ela
+`home_actions.palavra_do_transporte`, e esta régua confere contra ELE: o que a régua
 protege não é a palavra, é o ato de **não afirmar o que ninguém leu**.
 
 **E A AUSÊNCIA CONFESSA, EM VEZ DE CALAR.** Esta régua exigia `""` (o travessão
@@ -51,7 +51,7 @@ def test_a_ausencia_confessa_com_a_frase_do_dono():
 
 
 def test_os_dois_transportes_conhecidos_continuam_certos():
-    """As palavras não se digitam aqui: elas vêm do dono, chave por chave."""
+    """As palavras não se digitam aqui: vêm do dono, chave por chave."""
     for chave, palavra in home_actions._PALAVRA_DO_TRANSPORTE.items():
         assert mesa_viva._via_do_transporte(chave) == palavra
     assert (mesa_viva._via_do_transporte("BT")
@@ -75,7 +75,7 @@ def test_um_transporte_novo_aparece_cru_em_vez_de_sumir():
 
 
 def test_a_mesa_montada_nao_afirma_via_sem_leitura():
-    """A ponta que ela vê: o dicionário que vai para a aba 01."""
+    """A ponta que quem usa vê: o dicionário que vai para a aba 01."""
     estado = {"controllers": [{"uniq": "aabbcc000011", "connected": True}]}
     mesa = mesa_viva.mesa_do_estado(estado, {})
     assert mesa, "a mesa veio vazia — esta régua perdeu o objeto"

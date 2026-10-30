@@ -103,7 +103,7 @@ def cenas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
 def test_toda_frase_de_alarme_tem_o_que_fazer(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A mordida, na forma mais curta: devolva uma frase antiga e ela cai."""
+    """A mordida, na forma mais curta: devolva uma frase antiga e a régua cai."""
     mudas = {
         nome: msg for nome, msg in cenas(tmp_path, monkeypatch).items()
         if PREFIXO not in msg
@@ -126,7 +126,7 @@ def test_nenhuma_frase_manda_para_o_terminal_quando_ha_botao(
     "Aplicar correções" (`btn_storm_fix_safe` → `on_storm_fix_safe`) roda o
     `scripts/fix_wireplumber_default_source.sh --install`, que é EXATAMENTE o
     que aquele comando faria. Mandar a pessoa ao terminal com o botão à vista
-    é pedir que ela faça à mão o que um clique faz.
+    é pedir à pessoa que faça à mão o que um clique faz.
     """
     culpadas = {
         nome: msg for nome, msg in cenas(tmp_path, monkeypatch).items()
@@ -179,7 +179,7 @@ def test_todo_ramo_de_alarme_tem_uma_cena(
 
     assert len(ramos) == 13, (
         f"o `storm_doctor` passou a ter {len(ramos)} ramos de alarme, e esta "
-        "bancada cobre 13 (em 14 cenas). Acrescente a cena do ramo novo em "
+        "ensaio cobre 13 (em 14 cenas). Acrescente a cena do ramo novo em "
         "`cenas()` e ajuste este número no mesmo commit — senão a frase nova "
         "nasce sem o 'o que fazer' e ninguém vê.\n"
         f"Linhas: {ramos}"

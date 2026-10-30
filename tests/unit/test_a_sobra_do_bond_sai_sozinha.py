@@ -25,7 +25,7 @@ CLASSE_DE_TECLADO = 0x002540
 
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A trava e o diário numa pasta de teste — nunca os dela, em ``/run``."""
+    """A trava e o diário numa pasta de teste — nunca os reais, em ``/run``."""
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     caminho = tmp_path / "radio-diario.jsonl"
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(caminho))
@@ -84,7 +84,7 @@ def _dobrado(
 def test_conectado_na_sala_a_chave_do_quarto_sai(
     diario: Path, mundo: rm.RadioDeMentira, ligar: Callable[[], bd.DonoVivo]
 ) -> None:
-    """O caso da bancada, com as três metades: o esquecer, a lápide, o diário."""
+    """O caso do ensaio, com as três metades: o esquecer, a lápide, o diário."""
     _dobrado(mundo, VERMELHO, SALA, QUARTO)
     dono = ligar()
     central = _central(dono, mundo)

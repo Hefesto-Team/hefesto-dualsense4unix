@@ -89,7 +89,7 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(arquivo: pathlib.P
                             rotulo: (b.textContent || '').trim()}}""")
 
             assert olhar()["tag"] == "BUTTON", (
-                "a trava voltou a ser `<input>`/`<label>` — ela pediu o botão "
+                "a trava voltou a ser `<input>`/`<label>` — o pedido era o botão "
                 "do Giroscópio")
 
             pg.evaluate("v => window.__hef.pintar({mesa:{cadeado:v}})", p.CADEADO_LIGADO)
@@ -105,7 +105,7 @@ def test_a_pilula_acende_apaga_e_nao_afirma_sobre_o_travessao(arquivo: pathlib.P
             assert not mudo["acesa"] and not mudo["brilho"], (
                 f"SEM DAEMON a pílula ficou acesa: {mudo}. Com `off` no "
                 f"`DESLIGADO` (a polaridade do `.sw`) é exatamente isto que "
-                f"acontece — a tela afirma uma escolha dela sobre um estado que "
+                f"acontece — a tela afirma uma escolha de quem usa sobre um estado que "
                 f"ninguém leu.")
 
             assert mudo["alt"] == _altura_esperada(mudo["rotulo"]), (

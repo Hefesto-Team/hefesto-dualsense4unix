@@ -152,7 +152,7 @@ def test_o_fio_nao_sobe_duas_vezes() -> None:
         assert leitor._fio is primeiro, (
             "um segundo `comecar()` subiu outro fio — o `_instalado` roda a "
             "cada carga de página, e em dez abas seriam dez fios perguntando "
-            "ao daemon dela")
+            "ao daemon")
     finally:
         leitor.parar()
 
@@ -200,7 +200,7 @@ def test_a_folga_nao_queima_em_tiques_sem_resposta_nova() -> None:
     assert piloto._folga.seguidos == 1, (
         f"dez tiques sobre UMA leitura muda gastaram "
         f"{piloto._folga.seguidos} mudos da folga. A folga conta RESPOSTAS — "
-        f"se ela contar tiques, os três de "
+        f"se a folga contar tiques, os três de "
         f"`MUDOS_SEGUIDOS_QUE_VOLTARAM` acabam em "
         f"{hv.MUDOS_SEGUIDOS_QUE_VOLTARAM * hv.TIQUE_MS} ms")
 
@@ -219,7 +219,7 @@ def test_depois_da_folga_a_tela_diz_a_verdade() -> None:
             f"{hv.MUDOS_SEGUIDOS_QUE_VOLTARAM}")
     leitor._geracao += 1
     assert _um_tique(piloto) == {}, (
-        "passada a folga, a tela tem de parar de afirmar um estado que ela não "
+        "passada a folga, a tela tem de parar de afirmar um estado que não "
         "tem como confirmar — é a metade construída pela JOGAR-O-QUE-FALTA-01")
 
 
@@ -245,7 +245,7 @@ def test_o_tique_nao_chama_o_daemon_de_dentro_do_laco() -> None:
         "o `_tique` voltou a chamar o daemon de dentro do laço do GTK:\n  "
         + "\n  ".join(ln.strip() for ln in linhas)
         + "\nEnquanto essa chamada não volta, a janela inteira fica parada — "
-          "612 tiques lentos no diário dela de 14/09, o pior de 6 segundos. "
+          "612 tiques lentos no diário de 14/09, o pior de 6 segundos. "
           "Quem lê é o `LeitorDoEstado`, num fio próprio.")
 
 
@@ -257,4 +257,4 @@ def test_o_piloto_sobe_o_fio_junto_com_o_timer() -> None:
         "um escaninho que ninguém enche, e a tela nasceria e morreria com `{}`")
     assert "_estado_vivo.parar()" in inspect.getsource(hv.Piloto._relatar), (
         "o relato não para mais o fio — a janela iria embora perguntando ao "
-        "daemon dela")
+        "daemon")

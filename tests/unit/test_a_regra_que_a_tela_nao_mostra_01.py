@@ -24,7 +24,7 @@ def test_o_caso_do_usuario_e_declarado_com_o_campo_e_o_valor() -> None:
     """A cura. Morde ao fazer `exigencia_invisivel` devolver "" sempre."""
     texto = exigencia_invisivel(PRAGMATA)
     assert "nome do processo" in texto, "o rótulo tem de ser o do editor avançado"
-    assert '"PRAGMATA.exe"' in texto, "o valor exato, para ela reconhecer"
+    assert '"PRAGMATA.exe"' in texto, "o valor exato, para quem usa reconhecer"
     assert "Modo avançado" not in texto, (
         "o matcher voltou a nomear um botão da janela GTK")
     assert CAMINHO_DA_JANELA_GTK, "o caminho da janela GTK perdeu o dono"
@@ -32,7 +32,7 @@ def test_o_caso_do_usuario_e_declarado_com_o_campo_e_o_valor() -> None:
 
 
 def test_a_frase_nao_manda_apagar_nada() -> None:
-    """Quem escreveu o critério foi ela; a decisão de mudá-lo é do usuário."""
+    """Quem escreveu o critério foi o usuário; a decisão de mudá-lo também é do usuário."""
     texto = exigencia_invisivel(PRAGMATA).lower()
     for proibido in ("apague", "remova", "errado", "incorreto", "proton", "wine"):
         assert proibido not in texto
@@ -52,7 +52,7 @@ def test_fora_do_jogo_da_steam_a_pagina_simples_nao_esconde_nada() -> None:
 
 
 def test_com_regex_de_titulo_o_editor_nao_abre_como_jogo_da_steam() -> None:
-    """A fronteira exata do aviso, e ela foi MEDIDA, não suposta."""
+    """A fronteira exata do aviso, e a fronteira foi MEDIDA, não suposta."""
     match = MatchCriteria(
         window_class=["steam_app_3357650"], window_title_regex="PRAGMATA"
     )
@@ -73,7 +73,7 @@ def test_o_appid_com_process_name_e_o_unico_caso_de_hoje() -> None:
 
 @pytest.mark.parametrize("nomes", [["a.exe"], ["a.exe", "b.exe", "c.exe"]])
 def test_todos_os_valores_aparecem_nunca_um_resumo(nomes: list[str]) -> None:
-    """"e mais 2" faria ela procurar no editor avançado o que já cabia aqui."""
+    """"e mais 2" faria o usuário procurar no editor avançado o que já cabia aqui."""
     texto = exigencia_invisivel(
         MatchCriteria(window_class=["steam_app_1"], process_name=nomes)
     )
@@ -95,6 +95,6 @@ def test_salvar_pela_pagina_simples_continua_preservando_o_invisivel() -> None:
     assert isinstance(novo, MatchCriteria)
     assert novo.window_class == ["steam_app_3357650"]
     assert novo.process_name == ["PRAGMATA.exe"], (
-        "salvar pela página simples apagou o campo que ela não vê"
+        "salvar pela página simples apagou o campo que o usuário não vê"
     )
     assert "PRAGMATA.exe" in exigencia_invisivel(novo)

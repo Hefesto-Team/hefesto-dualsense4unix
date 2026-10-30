@@ -80,7 +80,7 @@ class TestOCartaoNaoSeContradiz:
         assert cartoes[P4] == ("p3", 3)
 
     def test_nenhuma_leitura_tem_texto_de_um_jogador_em_lugar_de_outro(self) -> None:
-        """A régua da sprint, dita como ela pede: em NENHUMA leitura."""
+        """A régua da sprint, dita como a sprint pede: em NENHUMA leitura."""
         for mesa in (
             ((P1, 1), (P2, 2), (P3, 3), (P4, 4)),
             ((P1, 1), (P2, 2), (P4, 4)),

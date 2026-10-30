@@ -6,7 +6,7 @@ A regra ``divida-fechada`` do ``scripts/check_paridade_gtk_html.py`` vigia as
 linhas ``FALTA_NO_HTML``: se o símbolo da janela antiga aparecer no lado HTML, a
 dívida fechou e o CSV tem de ser reescrito. É o caso BOM — alguém trabalhou.
 
-Só que ela media a PALAVRA e não o ATO — noqa-acento: verbo MEDIR no pretérito
+Só que a régua media a PALAVRA e não o ATO — noqa-acento: verbo MEDIR no pretérito
 imperfeito, não o substantivo "média" —, com ``alvo in texto`` sobre o arquivo
 inteiro:
 
@@ -29,7 +29,7 @@ defeito que o código tinha.**
 
 A CURA, E O ALCANCE DO USUÁRIO (que é a parte difícil)
 ------------------------------------------------
-Duas funções, e a assimetria entre elas é o ponto:
+Duas funções, e a assimetria entre as duas é o ponto:
 
 ``Arvore.ocorre``
     o símbolo APARECE, prosa incluída. Continua servindo às regras de

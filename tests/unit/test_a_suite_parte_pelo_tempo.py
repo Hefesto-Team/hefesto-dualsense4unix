@@ -8,7 +8,7 @@ mais leve.
 A prova é feita numa árvore de mentira (dez arquivos de tempo conhecido), com o `A_SECO=1` do
 próprio script (diz as partes e o tempo previsto sem rodar nada) e, na árvore de verdade, com a
 mesma contagem de arquivos que o `ls` dá. A massa de teste é feita para o `split` por linha
-REPROVAR nela: sem isso a régua passaria com a cura arrancada.
+REPROVAR na massa: sem isso a régua passaria com a cura arrancada.
 """
 
 from __future__ import annotations

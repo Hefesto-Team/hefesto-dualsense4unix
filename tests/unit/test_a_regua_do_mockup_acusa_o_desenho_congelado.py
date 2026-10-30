@@ -96,7 +96,7 @@ def test_a_gatilhos_congelada_e_acusada():
     assert contas[regua.PRODUTO] == 0, (
         "com a tela idêntica ao arquivo e pacote nenhum declarando, NADA pode "
         "aparecer como PRODUTO. Se aparece, a régua não está comparando com o "
-        "arquivo — e é exatamente esse o defeito que ela existe para pegar.")
+        "arquivo — e é exatamente esse o defeito que a régua existe para pegar.")
     assert contas[regua.MOCKUP] == len(cravados)
 
     presos = {v.campo.endereco for v in vereditos if v.classe == regua.MOCKUP}
@@ -104,7 +104,7 @@ def test_a_gatilhos_congelada_e_acusada():
                      if e.endswith(("-0", "-1", "-2", "-3")) or "imersao" in e):
         assert endereco in presos, (
             f"{endereco} tinha de ser acusado: é um dos números ou das escolhas que a aba "
-            f"Gatilhos mostra com o perfil dela dizendo modo='Off' params=[].")
+            f"Gatilhos mostra com o perfil dizendo modo='Off' params=[].")
 
 
 def test_um_campo_que_a_tela_mudou_e_produto():
@@ -172,7 +172,7 @@ def test_a_lista_de_cliques_alcanca_o_botao_que_ninguem_ligou():
 
 
 def test_a_lista_de_cliques_alcanca_o_gesto_que_a_pagina_enderecou_por_papel():
-    """A outra metade da união, e sem ela a aba Vibração fica sem um clique."""
+    """A outra metade da união, e sem essa metade a aba Vibração fica sem um clique."""
     registrados = {"intensidade", "testar", "parar"}
     alvos, pulados = regua._alvos_a_clicar([], registrados, "05-vibracao.html", set())
     assert sorted(alvos) == ["intensidade", "parar", "testar"]

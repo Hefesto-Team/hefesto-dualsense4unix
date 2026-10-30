@@ -1,7 +1,7 @@
 """O recibo do gesto ganha régua, e ganha português (BG-TOAST-02 + BG-07c).
 
 O QUE É O RECIBO. É a frase que a pessoa lê DEPOIS de clicar — o toast na
-statusbar. Ela é a única resposta que o produto dá a um gesto, e era o único
+statusbar. O recibo é a única resposta que o produto dá a um gesto, e era o único
 pedaço da tela sem régua nenhuma.
 
 OS DOIS DEFEITOS QUE ESTE ARQUIVO FECHA, medidos em 26/08/2026.
@@ -15,9 +15,9 @@ OS DOIS DEFEITOS QUE ESTE ARQUIVO FECHA, medidos em 26/08/2026.
    offline` está literalmente em `JARGAO_BANIDO`, com a troca escrita, desde a
    E3 da PALAVRA-01.
 
-2. **Seção de perfil chegava CRUA, em inglês, ao rodapé.** Ela salva um perfil,
-   uma seção não entra, e a linha que ela lê é "Aplicado, menos: <chave>." —
-   a única linha que ela leria quando o que ela sente falhasse.
+2. **Seção de perfil chegava CRUA, em inglês, ao rodapé.** Quem usa salva um perfil,
+   uma seção não entra, e a linha que se lê é "Aplicado, menos: <chave>." —
+   a única linha que se leria quando o que se sente falhasse.
 
 3. **A COSTURA não tinha régua** — e é por isso que a suíte inteira deixou
    passar duas regressões em 26/08 (a entrega voltou da conferência). Nenhum
@@ -26,7 +26,7 @@ OS DOIS DEFEITOS QUE ESTE ARQUIVO FECHA, medidos em 26/08/2026.
    `apply_emulation`. Os dois últimos testes deste arquivo percorrem o caminho
    inteiro — applier real do daemon incluído — e é o que faltava.
 
-A RÉGUA, declarada, e ela é diferente em cada metade:
+A RÉGUA, declarada, e diferente em cada metade:
 
 * a primeira metade chama o PRÓPRIO validador, carregado do arquivo em
   `scripts/`, e planta um módulo de mentira numa raiz descartável. Nada é
@@ -102,7 +102,7 @@ def recibo_plantado(tmp_path: Path) -> Path:
 
 
 def _acusacoes_do_arquivo(validador: Any, raiz: Path, alvo: Path) -> list[str]:
-    """As reprovações que apontam para ESTE arquivo, e só elas."""
+    """As reprovações que apontam para ESTE arquivo, e só essas."""
     return [
         achado
         for achado in validador.conferir_app(raiz=raiz)
@@ -140,7 +140,7 @@ def test_o_toast_passa_pela_regua(
 def test_o_funil_do_toast_nao_arrasta_o_id_de_contexto(
     validador: Any, tmp_path: Path
 ) -> None:
-    """`_status_toast(context, msg)` tem texto de tela na posição 1, só nela."""
+    """`_status_toast(context, msg)` tem texto de tela na posição 1, só nessa."""
     alvo = tmp_path / "_contexto_plantado_pelo_teste.py"
     alvo.write_text(_MODULO_DO_CONTEXTO, encoding="utf-8")
 
@@ -189,7 +189,7 @@ def _frase_do_rodape(chave: str) -> str:
 
 
 def test_nenhuma_secao_chega_crua_ao_rodape() -> None:
-    """Cada seção com applier tem palavra de tela, e ela chega inteira à frase.
+    """Cada seção com applier tem palavra de tela, e a palavra chega inteira à frase.
 
     A MORDIDA: arrancada uma entrada de `_NOMES_DAS_SECOES_DA_ATIVACAO`, a
     frase sai com a chave EM INGLÊS dentro de uma sentença em português —
@@ -241,7 +241,7 @@ def test_a_vibracao_do_jogo_entra_no_relatorio() -> None:
     jogo caída. Ausência de notícia lida como sucesso, que é o padrão que esta
     casa já nomeou.
 
-    A TERCEIRA metade, e ela é de 26/08/2026, na volta da conferência: applier
+    A TERCEIRA metade, de 26/08/2026, na volta da conferência: applier
     que devolve `None` NÃO entra no relatório. É o oposto do `_estado_da_secao`
     das seis irmãs, e a razão está medida em `apply_emulation` — o applier real
     desta seção devolve `None` em todos os caminhos, e carimbar "aplicado" por
@@ -278,7 +278,7 @@ def test_a_vibracao_do_jogo_entra_no_relatorio() -> None:
 
 
 def test_a_vibracao_do_jogo_caida_aparece_na_frase() -> None:
-    """E o relatório vira a linha que ela lê — o caminho inteiro, ponta a ponta."""
+    """E o relatório vira a linha que se lê — o caminho inteiro, ponta a ponta."""
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing.fake_controller import FakeController
 

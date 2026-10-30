@@ -23,7 +23,7 @@ na mesa dublê:
 4. **o número fora diz só o número**: o `#hef-dica` do `.fora` diz «Player 2»;
 5. **o clique que só arma não pisca**: um gesto que devolve `{"armou": True}`
    pousa sem `hef-deu-certo` e sem `hef-recusou`;
-6. **a aba 05 não declara lugar de recado**, na bancada e no publicado;
+6. **a aba 05 não declara lugar de recado**, no ensaio e no publicado;
 7. **o clique sem dono também pisca a recusa** (sem janela, no `Piloto._gesto`);
 8. **a casa tomada da 04 diz de quem é, sem a regra colada** (sem janela);
 9. **a recusa do «Na Steam» padrão da 06** (A-ABA-NAVEGACAO-DO-TODO-01): o modo padrão da
@@ -47,7 +47,7 @@ AS MORDIDAS, medidas e coladas na entrega da sprint:
 * tire o `so_armou` do pouso em `Piloto._gesto` → reprova o caso 5;
 * devolva a frase à dica do `.fora` em `a04_iluminacao.um_botao_de_player` →
   reprovam os casos 1 (na 04) e 4;
-* faça `Piloto._recusou_dizendo` pousar a frase na página quando ela for a 06
+* faça `Piloto._recusou_dizendo` pousar a frase na página quando a página for a 06
   → reprova o caso 1 na 06;
 * faça `copiar_registro` engolir a falha da área (devolver sem levantar) → reprovam o
   desfecho e os casos 2 e 3 na 09 da área;
@@ -206,7 +206,7 @@ def _piscada(trilha: list[dict], classe: str) -> dict | None:
 
 
 def _a_recusa_assentou(leitura: dict) -> dict | None:
-    """O pouso chegou — e, se ele acendeu a recusa, ela já apagou."""
+    """O pouso chegou — e, se o pouso acendeu a recusa, a recusa já apagou."""
     trilha = leitura.get("trilha")
     if not isinstance(trilha, list):
         return None
@@ -341,7 +341,7 @@ def medido() -> dict:
         perguntar()
 
     def abrir(pagina: str, seletor: str, depois) -> None:
-        """Navega, e só segue com a página NOVA de pé e o botão nela."""
+        """Navega, e só segue com a página NOVA de pé e o botão na página."""
         piloto._ir(pagina)
         comeco = _time.monotonic()
 
@@ -492,13 +492,13 @@ def test_o_botao_recusou_dizendo(medido: dict, caso: str) -> None:
 
 @pytest.mark.parametrize("caso", CASOS)
 def test_a_recusa_nao_poe_frase_na_tela(medido: dict, caso: str) -> None:
-    """A caixa da foto dela, e as outras três portas por onde a frase chegava."""
+    """A caixa da foto, e as outras três portas por onde a frase chegava."""
     tela = _marco(medido, f"{caso}-tela")
     assert isinstance(tela, dict), tela
     assert tela["aba"] == BOTOES[caso][0], tela
     assert tela["recados"] == 0, (
         f"{tela['aba']}: a recusa pousou {tela['recados']} recado(s) na tela — é a "
-        f"caixa laranja que ela mandou parar de aparecer")
+        f"caixa laranja que se decidiu parar de mostrar")
     assert not tela["visivel"], (
         f"{tela['aba']}: a frase da recusa está no texto visível da página")
     assert tela["dica"] == 0 and tela["dica_do_botao"] == 0 and tela["title"] == 0, (
@@ -535,12 +535,12 @@ def test_a_frase_da_recusa_vai_ao_diario(medido: dict, caso: str) -> None:
     linhas = [linha for linha in str(medido["diario"]).splitlines()
               if linha.startswith(prefixo)]
     assert any(medido["frases"][caso] in linha for linha in linhas), (
-        f"a frase da recusa de {pagina} · {gesto} não chegou ao diário — ela saiu "
+        f"a frase da recusa de {pagina} · {gesto} não chegou ao diário — a frase saiu "
         f"da tela, e não pode sumir inteira. Linhas: {linhas!r}")
 
 
 def test_o_copiar_da_09_pediu_a_area_so_com_o_painel_cheio(medido: dict) -> None:
-    """A recusa da área é a da área: o painel cheio chegou a ela, mascarado, e o vazio
+    """A recusa da área é a da área: o painel cheio chegou à área, mascarado, e o vazio
     recusou antes de pedir."""
     assert medido["pediu_a_area"] == [NO_PAINEL], medido["pediu_a_area"]
 
@@ -567,14 +567,14 @@ def test_o_clique_que_so_arma_nao_pisca(medido: dict) -> None:
         f"pouso não pode afirmar nem que aplicou nem que recusou")
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicado"])
 def test_a_aba_05_nao_declara_lugar_de_recado(publicado: bool) -> None:
     """A faixa `#vib-estado` era o terceiro lugar do recado; o recado saiu da tela."""
     import onde
 
     corpo = onde.pagina("05-vibracao.html", publicado=publicado).read_text(encoding="utf-8")
     assert 'class="vib-estado" id="vib-estado"' in corpo, (
-        "a faixa de estado da 05 sumiu — sem ela a régua passaria sobre nada")
+        "a faixa de estado da 05 sumiu — sem a faixa a régua passaria sobre nada")
     assert "data-hef-recado" not in corpo, (
         "a 05 voltou a declarar lugar de recado — o piloto não põe frase na tela, "
         "e um endereço que ninguém lê é dado morto")
@@ -597,7 +597,7 @@ def test_a_folha_veste_a_recusa_sem_esconder_nada() -> None:
 
     assert seletores_escondidos(FOLHA_DA_CASA) == (".nota", ".hef-sem-item"), (
         "a folha da casa mudou o que APAGA da tela. Se a regra nova é cura, "
-        "escreva a razão aqui e acrescente o seletor; se ela entrou de carona, "
+        "escreva a razão aqui e acrescente o seletor; se a regra entrou de carona, "
         "a régua da palavra vai parar de contar texto que a pessoa não lê.")
 
 

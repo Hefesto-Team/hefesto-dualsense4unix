@@ -141,7 +141,7 @@ def _steam_aberta_ate_o_shutdown() -> bool:
     """`steam_running` de uma Steam que atende o `-shutdown` e o reabrir.
 
     De pé até o `steam -shutdown` chegar ao livro, e de novo quando o `steam` do reabrir chega:
-    o `reopen_steam` confere que ela subiu antes de dar a porta por boa.
+    o `reopen_steam` confere que a Steam subiu antes de dar a porta por boa.
     """
     linhas, _ = conftest._ler_o_livro(conftest._LIVRO_LIDO[0])
     da_steam = [linha for _, linha in linhas if linha.split()[:1] == ["steam"]]
@@ -639,7 +639,7 @@ def test_os_dubles_dos_lancadores_moram_fora_do_som() -> None:
 
 @pytest.fixture(autouse=True)
 def _sem_fio_pendurado() -> Iterator[None]:
-    """Nenhum fio desta régua sobrevive a ela."""
+    """Nenhum fio desta régua sobrevive à régua."""
     antes = set(threading.enumerate())
     yield
     for fio in set(threading.enumerate()) - antes:

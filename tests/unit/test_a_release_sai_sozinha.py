@@ -538,7 +538,7 @@ def test_o_marco_da_issue_nasce_do_estado_da_sprint_e_o_que_sai_nao_vale(
 def test_o_publico_passa_pela_regua_de_autoria_quando_o_usuario_existe(
     brinquedo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A régua é o `check_autoria.py texto` da árvore: se ela recusa, o bloco não vai a quem usa."""
+    """A régua é o `check_autoria.py texto` da árvore: se recusa, o bloco não vai a quem usa."""
     monkeypatch.syspath_prepend(str(RELEASE))
     import publico as modulo
 
@@ -646,7 +646,7 @@ def test_so_entra_sprint_fechada_depois_da_ultima_tag(brinquedo: Path) -> None:
 
 
 def test_bloco_com_palavra_da_casa_nao_entra_no_changelog(brinquedo: Path, tmp_path: Path) -> None:
-    sprint(brinquedo, "CASEIRA-01", muda="A mesa dela mostra o resultado do agente.")
+    sprint(brinquedo, "CASEIRA-01", muda="A mesa mostra o resultado do agente.")
     detalhe = tmp_path / "detalhe.txt"
     rodar(
         CHANGELOG,
@@ -1176,7 +1176,7 @@ def test_as_notas_automaticas_agrupam_pelos_rotulos_de_area_do_repositorio() -> 
     assert [r for r in usados if r not in existentes] == [], "rótulo que não existe no repositório"
     areas = [r for r in existentes if r.startswith("área: ")]
     assert sorted(a for a in usados if a.startswith("área: ")) == sorted(areas), (
-        "uma categoria por área, e só elas"
+        "uma categoria por área, e só essas"
     )
     assert notas["categories"][-1]["labels"] == ["*"], "o que não casa cai na última"
     assert all(r in existentes for r in notas["exclude"]["labels"])
