@@ -159,7 +159,7 @@ o modelo de PR e um bloco do `.gitignore` com o nome da tecnologia no título.
 | --- | --- | --- |
 | tirar `scripts/carimbo_da_casa.py` com os painéis | `scripts/gerar-mapa.py:72-73` o importa, e o portão `mapa-de-canais` morreria em `ImportError` | fica, ou o `scripts/gerar-mapa.py` absorve no mesmo commit |
 | tirar `scripts/check_a_conferencia.py` | é o portão do merge, por desenho (`tests/unit/test_portao_todo_portao_tem_chamador.py:68-70`) | trocar o nome, ou ir para os scripts ignorados que se copiam à integração |
-| mover para `scripts/` as duas bancadas da raiz (a do mapa, em Streamlit, e o lançador da mesa de medição) | as duas acham a raiz pela própria pasta; movidas, apontam para `scripts/docs`, e os testes, que só leem o texto, ficam verdes | mudar a linha da raiz junto e abrir as duas depois do `git mv` |
+| mover para `scripts/` os dois ensaios da raiz (a do mapa, em Streamlit, e o lançador da mesa de medição) | as duas acham a raiz pela própria pasta; movidas, apontam para `scripts/docs`, e os testes, que só leem o texto, ficam verdes | mudar a linha da raiz junto e abrir as duas depois do `git mv` |
 | mover `run.sh` | o autostart da bandeja e o `./run.sh --smoke` do CI o chamam | fica na raiz |
 | tirar `docs/data` do git | o produto lê em execução (`src/hefesto_dualsense4unix/integrations/canal_sem_imu.py:78`, `src/hefesto_dualsense4unix/integrations/cor_do_plastico.py:140`) | fica; só o nome `docs/data/decisoes-de-produto.csv` muda |
 | mandar os padrões do `.gitignore` para `info/exclude` ou para o ignore global | o hatchling não lê nenhum dos dois: num ensaio o sdist empacotou o arquivo de instruções e a pasta de processo | `[tool.hatch.build.targets.sdist] only-include` no mesmo commit; as linhas só saem depois de o outro mantenedor ter os padrões no ignore global dele |
@@ -351,7 +351,7 @@ e `OS-GANCHOS-DO-GIT-NAO-ENSINAM-O-CONTORNO-01` → em paralelo
 `A-SENHA-SO-PASSA-PELO-ASKPASS-01`, `O-ENDERECO-NUNCA-CHEGA-A-CONVERSA-01` e
 `A-ARVORE-TEM-UMA-SESSAO-SO-01` → `O-FEITO-SO-COM-A-PROVA-01` (uma semana em
 registro) → `A-GUARDA-FECHA-A-PORTA-01`, armada pela mantenedora no terminal dela;
-daí em diante, mudar trava é gesto dela. Fora das ondas:
+daí em diante, mudar trava é gesto do usuário. Fora das ondas:
 `O-PUSH-SO-COM-O-RECIBO-DOS-PORTOES-01` (depois da autoria) e
 `O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01` (depois da
 `O-MODO-XBOX-NAO-E-QUEDA-02`).

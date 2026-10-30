@@ -46,7 +46,7 @@ A contraprova antiga, «em 20/09 o PRAGMATA tinha `event21/264/265` do vpad», t
 | report de saída no vpad («o ato do jogo») | não | em 21/09 o jogo escreveu gatilho em três vpads; a Steam escreve LED nos vpads antes de o jogo abrir; o uhid não diz quem escreveu |
 | stream no endpoint | não | em 21/09 havia stream nos quatro |
 
-Contar o `hidraw` curaria o caso de um controle e **devolveria o espelhado** com dois ou mais. A régua proposta na primeira síntese («um jogador, quatro vpads, o jogo escreve em um») mediria um mundo que a bancada não tem.
+Contar o `hidraw` curaria o caso de um controle e **devolveria o espelhado** com dois ou mais. A régua proposta na primeira síntese («um jogador, quatro vpads, o jogo escreve em um») mediria um mundo que o ensaio não tem.
 
 ## A cura: quem joga é quem mexeu desde que o jogo abriu
 

@@ -127,7 +127,7 @@ Três defeitos concretos foram isolados:
 3. **`uhid_replica_ativa` é emitido antes do gate.** "A réplica ativou" **não**
    significa "escreveu no controle". Foi o que confundiu a leitura ao vivo.
 
-E o sintoma que ela descreveu é um **flip-flop**: quando o sinal sobe, vale o
+E o sintoma que o usuário descreveu é um **flip-flop**: quando o sinal sobe, vale o
 número do jogo; quando cai, a repintura restaura o nosso. A medição das 21:31
 pegou a fase "nossa".
 

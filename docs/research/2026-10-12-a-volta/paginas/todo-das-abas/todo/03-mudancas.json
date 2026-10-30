@@ -147,7 +147,7 @@
       "sprint": "A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01",
       "o_que_muda": "Nova linha «Força do gatilho», um seletor por controle com os quatro passos do firmware: Forte, Média, Fraca e Desligada, como no PS5",
       "resposta": "todo-03-r3-15",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".g2-rot-forca",
       "conflito": "",
       "rodada": 3,
@@ -217,15 +217,15 @@
     },
     {
       "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-      "motivo": "Código feito na 1.5; falta a bancada dela. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
+      "motivo": "Código feito na 1.5; falta a máquina de teste. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
     },
     {
       "sprint": "OS-TRES-CONTROLES-DE-FREQUENCIA-DA-ABA-GATILHOS-NO-DESENHO-01",
-      "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): as barras viram receita invisível do estilo e não entram na tela."
+      "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha do usuário de 08/10): as barras viram receita invisível do estilo e não entram na tela."
     },
     {
       "sprint": "A-ILUMINACAO-GANHA-A-REACAO-AO-TIRO-NO-DESENHO-01",
-      "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): as barras viram receita invisível do estilo e não entram na tela."
+      "motivo": "Absorvidas pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha do usuário de 08/10): as barras viram receita invisível do estilo e não entram na tela."
     },
     {
       "sprint": "O-TEXTO-DO-GATILHO-DIZ-O-QUE-O-CODIGO-FAZ-HOJE-01",
@@ -309,19 +309,19 @@
     },
     {
       "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
-      "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é dela. A tela não muda."
+      "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é do usuário. A tela não muda."
     },
     {
       "sprint": "I18N-DA-TELA-NOVA-01",
-      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+      "motivo": "Por ordem de produto, a tradução é a última coisa, depois do release 1."
     },
     {
       "sprint": "TRADUZIR-O-PROJETO-01",
-      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+      "motivo": "Por ordem de produto, a tradução é a última coisa, depois do release 1."
     },
     {
       "sprint": "MESA-DE-QUATRO-01",
-      "motivo": "Bancada com os quatro controles; não muda a tela."
+      "motivo": "Ensaio com os quatro controles; não muda a tela."
     }
   ],
   "altura_px": 809,

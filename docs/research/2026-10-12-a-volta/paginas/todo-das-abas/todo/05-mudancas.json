@@ -110,7 +110,7 @@
       "sprint": "A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01",
       "o_que_muda": "A força da vibração vira os quatro passos do firmware, por controle: Forte, Média, Fraca e Desligada, como no PS5. O Máximo de 150% e os três botões Economia, Padrão e Máximo saem",
       "resposta": "todo-05-r3-12",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".vib .seg.passos",
       "conflito": "",
       "rodada": 3,
@@ -194,11 +194,11 @@
   "fora": [
     {
       "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-      "motivo": "Código feito na 1.5; falta a bancada dela. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
+      "motivo": "Código feito na 1.5; falta a máquina de teste. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
     },
     {
       "sprint": "A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01",
-      "motivo": "O código já está no publicado (o sensor háptico na 05); falta o olho dela."
+      "motivo": "O código já está no publicado (o sensor háptico na 05); falta o olho de quem confere."
     },
     {
       "sprint": "O-ESTILO-NATIVO-DEIXA-O-JOGO-DECIDIR-01",
@@ -206,7 +206,7 @@
     },
     {
       "sprint": "OS-TRES-CONTROLES-DE-FREQUENCIA-DA-ABA-GATILHOS-NO-DESENHO-01",
-      "motivo": "Absorvida pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10)."
+      "motivo": "Absorvida pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha do usuário de 08/10)."
     },
     {
       "sprint": "O-SHADPS4-QUE-JA-MORA-AQUI-01",
@@ -270,19 +270,19 @@
     },
     {
       "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
-      "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é dela. A tela não muda."
+      "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é do usuário. A tela não muda."
     },
     {
       "sprint": "I18N-DA-TELA-NOVA-01",
-      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+      "motivo": "Por ordem de produto, a tradução é a última coisa, depois do release 1."
     },
     {
       "sprint": "TRADUZIR-O-PROJETO-01",
-      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+      "motivo": "Por ordem de produto, a tradução é a última coisa, depois do release 1."
     },
     {
       "sprint": "MESA-DE-QUATRO-01",
-      "motivo": "Bancada com os quatro controles; não muda a tela."
+      "motivo": "Ensaio com os quatro controles; não muda a tela."
     }
   ],
   "altura_px": 809,

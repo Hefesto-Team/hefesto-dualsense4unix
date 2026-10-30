@@ -101,7 +101,7 @@
       "sprint": "A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01",
       "o_que_muda": "O «Sem piscar» deixa de ser ajuste global: entra na lista de efeitos de cada controle, ao lado de «Sem efeito»; luz que nunca troca mais de três vezes por segundo, o piscar vira transição lenta",
       "resposta": "todo-04-r3-11",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".g4-efeito",
       "conflito": "",
       "rodada": 3,
@@ -141,15 +141,15 @@
   "fora": [
     {
       "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-      "motivo": "Código feito na 1.5; falta a bancada dela. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
+      "motivo": "Código feito na 1.5; falta a máquina de teste. O desenho de 04/10 («O jogo decide» no gatilho, a frase «O jogo pinta por cima» na 04) foi trocado em 06/10 pelo par Modo automático | Modo personalizado (O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, já no publicado): vale o mais novo, e a tela não muda."
     },
     {
       "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-      "motivo": "Respostas dela de 29/09 (cor do plástico, piso com escala) já no código e no publicado; falta a prova dela com a luz na mão."
+      "motivo": "Respostas de produto de 29/09 (cor do plástico, piso com escala) já no código e no publicado; falta a prova com a luz na mão."
     },
     {
       "sprint": "A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01",
-      "motivo": "A linha do dono (D-2909-A-LINHA-DA-COR-DO-DONO) já no publicado; falta o olho dela na aba 04."
+      "motivo": "A linha do dono (D-2909-A-LINHA-DA-COR-DO-DONO) já no publicado; falta o olho de quem confere na aba 04."
     },
     {
       "sprint": "A-MIRA-NA-NAVEGACAO-01",
@@ -169,7 +169,7 @@
     },
     {
       "sprint": "A-ILUMINACAO-GANHA-A-REACAO-AO-TIRO-NO-DESENHO-01",
-      "motivo": "Absorvida pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha dela de 08/10): a reação ao tiro é receita invisível do estilo."
+      "motivo": "Absorvida pela O-ESTILO-DO-JOGO-LIGA-A-IMERSAO-INTEIRA (escolha do usuário de 08/10): a reação ao tiro é receita invisível do estilo."
     },
     {
       "sprint": "O-TEXTO-DO-GATILHO-DIZ-O-QUE-O-CODIGO-FAZ-HOJE-01",
@@ -257,19 +257,19 @@
     },
     {
       "sprint": "O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01",
-      "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é dela. A tela não muda."
+      "motivo": "Código na base desde a5da60f3d; falta só a prova no aparelho, que é do usuário. A tela não muda."
     },
     {
       "sprint": "I18N-DA-TELA-NOVA-01",
-      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+      "motivo": "Por ordem de produto, a tradução é a última coisa, depois do release 1."
     },
     {
       "sprint": "TRADUZIR-O-PROJETO-01",
-      "motivo": "Por ordem dela, a tradução é a última coisa, depois do release 1."
+      "motivo": "Por ordem de produto, a tradução é a última coisa, depois do release 1."
     },
     {
       "sprint": "MESA-DE-QUATRO-01",
-      "motivo": "Bancada com os quatro controles; não muda a tela."
+      "motivo": "Ensaio com os quatro controles; não muda a tela."
     }
   ],
   "altura_px": 809,

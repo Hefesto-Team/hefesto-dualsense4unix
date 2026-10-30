@@ -98,7 +98,7 @@ nascer duas vezes.
 
 - **No versionado, em ordem invertida.**
   `docs/data/ensaios-brutos/2026-08-15-TROCA-DE-BRACOS-os-mesmos-quatro-nos-dois-transportes.txt:348-349`
-  (dumps 0x09 e 0x0b) trazem os seis octetos de um controle da bancada, de trás
+  (dumps 0x09 e 0x0b) trazem os seis octetos de um controle do ensaio, de trás
   para a frente e separados por espaço, desde 16/08 e já empurrados; e
   `docs/data/ensaios-brutos/2026-08-15-IDENTIDADE-o-cracha-nos-dois-transportes.csv:4,14`
   expõe um terceiro endereço no byte 25 do 0x0b. Nenhum dos portões vê essa
@@ -139,7 +139,7 @@ de história.
 - **A sprint do Salvar parte de premissa caducada.** Desde `42ae38857` (25/09,
   `O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01`) o botão do microfone grava no perfil, e
   o mudo mora em três lugares (perfil, sessão, aparelho), com dois escritores
-  no mesmo clique. A favor da cura: os 29 perfis da bancada passados por
+  no mesmo clique. A favor da cura: os 29 perfis do ensaio passados por
   `DraftConfig.from_profile` e `to_profile` num lar de mentira saíram sem
   nenhuma diferença.
 - **O «Aplicar» e a ativação são duas máquinas.** O `to_ipc_dict`
@@ -271,7 +271,7 @@ endereçam o índice 0 (`daemon/udp_server.py:327-344`).
   12h52 — a terceira, com a assinatura da noite (registro 29,8 s depois de o
   pad nascer) — não estava escrita. A favor da cura: desde 13h07, 16 pads
   criados, zero pânico.
-- **O pedido de 60 s da mão dela já estava respondido**: o PRAGMATA espelha a
+- **O pedido de 60 s da mão do usuário já estava respondido**: o PRAGMATA espelha a
   vibração nos quatro (163 × 156, 73 × 71 e 39 × 39 segundos com vibração em
   algum × nos quatro). Regra que sai: relato que mede o que a sprint pede
   reescreve a sprint no mesmo dia.
@@ -282,7 +282,7 @@ endereçam o índice 0 (`daemon/udp_server.py:327-344`).
   só três por controle. Proposta: `O-BASICO-MEDIDO-01`, uma conferência do
   aparelho (um `o_basico.py --veredito`, a criar em `scripts/`) e um
   `scripts/doctor.sh --basico` só de leitura.
-- **As sondas mexem no que medem.** Com a palavra dela em `None`,
+- **As sondas mexem no que medem.** Com a palavra de produto em `None`,
   `dualsense_bt_audio.py:1060` deixa um gravador ligar o microfone pelo rádio
   (~106 quadros/s no link) — e o microfone aberto nos quatro derruba a entrada
   de 260,4 para 170,5 Hz (`:76-77`). Toda sonda passa a declarar o que mexe.
@@ -332,7 +332,7 @@ síntese ficou com o eixo 08 contra o 09).
   `require_version('WebKit2','4.1')` (`hefesto_vivo.py:26`), o `install.sh:795`
   a chama de «importante» com razão falsa, e nenhum dos pacotes (Debian, Arch,
   Fedora, Nix) a lista. O AppImage publicado é só a linha de comando.
-- **O que é da bancada vai para toda máquina**: o DKMS rtw88 (com
+- **O que é do ensaio vai para toda máquina**: o DKMS rtw88 (com
   `BUILD_EXCLUSIVE_KERNEL` pinado em dois kernels), o vigia do Wi-Fi USB e o
   `usbcore.autosuspend=-1` global (`install.sh:2476-2488`), sem detectar
   hardware.
@@ -376,7 +376,7 @@ apontam para uma pasta fora do git.
 - **A partida da háptica zera marcas no meio do jogo** (o `isdisjoint` de
   `quem_mexe.py:122`): às 05h07 de 27/09, as quatro marcas do Sackboy foram
   zeradas sem fechamento.
-- **Fato errado em quatro lugares.** A frente USB da placa da bancada é 2.0
+- **Fato errado em quatro lugares.** A frente USB da placa do ensaio é 2.0
   elétrica; quem engana é o *peer* das duas pretas de trás. A razão «a frente
   é USB 3.0 e a placa erra» está em `integrations/mapa_das_portas.py:527-533`,
   `interface/pacotes/a12_mapa_das_portas.py:12-13`,
@@ -395,12 +395,12 @@ apontam para uma pasta fora do git.
 
 ## O que ficou aberto
 
-- **Da palavra dela:** se o Xbox das 01h34 foi de propósito; a escolha (a) ou
+- **Da palavra de produto:** se o Xbox das 01h34 foi de propósito; a escolha (a) ou
   (b) da háptica pelo rádio; o que o «Perfil Máximo» faz; se a economia vale
   no USB (a recomendação é que não); onde mora o mudo do microfone; o caminho
   de volta do «Remover» na tela; PS + R3 e o PS sozinho nos quatro controles;
   o preço de fidelidade do giroscópio se a taxa do virtual cair.
-- **Da palavra dela e do mantenedor, numa pergunta só:** H0, H1 ou H3 para a
+- **Da palavra de produto e do mantenedor, numa pergunta só:** H0, H1 ou H3 para a
   história publicada, juntando a narrativa e o endereço. O pedido de expurgo
   ao suporte do GitHub é do mantenedor no repositório original, e dela no
   fork.

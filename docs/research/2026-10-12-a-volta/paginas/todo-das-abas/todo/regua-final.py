@@ -7,7 +7,7 @@ de 14/10), e acrescenta duas, em todas as páginas: nenhuma diz «Player N» nem
 se leem: title, aria-label, value, placeholder, alt, data-dica e data-titulo; comentário não conta), e nenhuma rola.
 
 Uso: regua-final.py [--mordida <nome|js>] ; sai 0 se tudo passa. As mordidas nomeadas estão em MORDIDAS: cada uma
-devolve de propósito algo que saiu, e a régua tem de reprovar. Chrome sem janela (headless); nenhum clique no mouse dela.
+devolve de propósito algo que saiu, e a régua tem de reprovar. Chrome sem janela (headless); nenhum clique no mouse do usuário.
 """
 import json
 import sys
@@ -664,7 +664,7 @@ def medir_r4(nav, mordida: str) -> int:
 VAGAS = {"01": 2, "02": 2, "03": 0, "04": 2, "05": 2, "06": 0, "08": 2, "calibrar": 2}
 JS_GERAL = r"""
 (function(){
-  // a letra conta: a citação dela na nota da 04 («o meu controle azul é o player 2») fica, como toda citação dela
+  // a letra conta: a citação na nota da 04 («o meu controle azul é o player 2») fica, como toda citação
   var re=/Player\s*[0-9]|Vitória/,ATR=['title','aria-label','value','placeholder','alt','data-dica','data-titulo'],ditos=[];
   function nome(e){var c=(typeof e.className==='string'?e.className:'').trim().split(/\s+/).slice(0,2).join('.');return e.tagName.toLowerCase()+(c?'.'+c:'')+(e.id?'#'+e.id:'');}
   if(re.test(document.title))ditos.push(['title',document.title]);

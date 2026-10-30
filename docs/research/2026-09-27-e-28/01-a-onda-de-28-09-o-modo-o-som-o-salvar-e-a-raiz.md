@@ -50,7 +50,7 @@ cuja lâmpada acende 1.
   `posto_na_fila`). O posto ocupado só troca por carta estritamente menor
   (`core/backend_pydualsense.py:5640`), e o tique lento chama `seguir_a_carta`
   (`backend_pydualsense.py:5669`; `daemon/lifecycle.py:3250`). Controle novo
-  entra no fim da fila e não rouba o posto. A sprint cita a frase dela de 27/09,
+  entra no fim da fila e não rouba o posto. A sprint cita a frase de produto de 27/09,
   23h40: «o led do player 1 não é simbólico».
 - **O número não pula.** `daemon/subsystems/coop.py:1850`
   (`_numeros_em_duas_passadas`): quem tem carta fica com ela; quem está fora
@@ -79,7 +79,7 @@ cuja lâmpada acende 1.
   `origem=`): levantava `TypeError` a cada gesto, e o `suppress` do produto
   engolia.
 
-**Escolha registrada, não decisão dela.** Dentro do prazo do lugar guardado
+**Escolha registrada, não decisão de produto.** Dentro do prazo do lugar guardado
 (30 s), quem sai não renumera os outros; depois dele, a `NUM-01` continua
 valendo (`D-2409-O-ASSENTO-GUARDADO-NAO-ANDA`). A leitura literal da sprint
 («desligado não renumera os outros», também depois do prazo) revogaria essa decisão, custaria 21 arquivos
@@ -110,7 +110,7 @@ o cartão DualSense perde os botões de PlayStation; eles voltam no modo
 DualSense, pelo uhid. A linha da aba Controles («O que o jogo vê deste
 controle») continua mostrando a máscara do cartão, enquanto o jogo passa a ver
 o Xbox 360. Por isso a escolha só pode entrar no registro de decisões **como
-escolha pendente da pergunta 4**, nunca como decisão dela; se ela escolher a
+escolha pendente da pergunta 4**, nunca como decisão de produto; se ela escolher a
 opção (a), a D-1309 ganha nota datada.
 
 **A dívida que ficou em régua.** Se o modo muda com um pad Nintendo de pé, o
@@ -185,7 +185,7 @@ fazer o ouvinte reler ~15 a 20 vezes por segundo. A prova 1 no aparelho decide.
 **O defeito.** O Salvar de cada aba montava o rascunho sobrepondo o estado
 vivo do aparelho (luz acesa, economia, microfone, sensores, teto de força,
 mouse da mesa inteira). Gravava no perfil o que o aparelho estava fazendo, e
-não o que ela escolheu.
+não o que o usuário escolheu.
 
 **A cura.** Em toda aba, o Salvar e o Aplicar leem só o disco:
 `DraftConfig.from_profile(load_profile(nome))`, por
@@ -227,7 +227,7 @@ por `docs/data/paridade-gtk-html.csv`, mas ainda não está em
 
 ## 5. A raiz só com o produto (`A-RAIZ-SO-COM-O-PRODUTO-01`)
 
-Pela frase dela de 27/09, «a raiz do repo tem que ser limpa», a raiz foi de 35
+Pela frase de produto de 27/09, «a raiz do repo tem que ser limpa», a raiz foi de 35
 para 27 entradas:
 
 - o código aposentado (`arquivados/`) sai e fica no histórico;
@@ -237,10 +237,10 @@ para 27 entradas:
   passa a exigir a pasta (antes passava vazia);
 - `interface.sh` sai. O `Exec=` do atalho e o `_EXEC_LINE` do `install.sh`
   (linhas 3209 e 3212) viram `env HEFESTO_NA_TELA=1 … run.sh --gui`; o
-  lançador da bandeja usa `${HEFESTO_NA_TELA:-1}`, para a bancada poder
+  lançador da bandeja usa `${HEFESTO_NA_TELA:-1}`, para o ensaio poder
   desligar com `=0`. O `run.sh` não declara a variável (há régua que reprova);
-- a bancada do mapa vai para `scripts/ensaio_do_mapa.py`, com as dependências
-  num extra `bancada` (`pyproject.toml:68`), fora do `[dev]` e do CI;
+- o ensaio do mapa vai para `scripts/ensaio_do_mapa.py`, com as dependências
+  num extra `ensaio` (`pyproject.toml:68`), fora do `[dev]` e do CI;
 - o lançador da mesa de medição vai para `scripts/mesa-de-medicao.sh`, e não
   `validar-mesa.sh`: o prefixo `validar-` é forma de portão, e o portão
   «todo portão tem chamador» o acusou;
@@ -258,7 +258,7 @@ carga: `select()` no descritor seguido de `readline()` no fluxo com buffer
 puxava o endereço para o buffer, e o laço esperava 60 s por uma linha já lida
 (`tests/unit/test_a_mesa_de_medicao.py`, agora lê em bytes pelo descritor).
 
-**Aviso que a sprint deve a ela.** O `interface.sh` foi pedido por ela em
+**Aviso que a sprint deve a ela.** O `interface.sh` foi pedido pelo usuário em
 29/08, para clicar na raiz; a frase de 27/09 não o nomeia. Depois do merge,
 quem abre na tela é o menu, a dock ou `HEFESTO_NA_TELA=1 ./run.sh --gui`; o
 `./run.sh` sozinho abre numa tela invisível, pela guarda `TELA-DO-USUARIO-02`. Entre
@@ -342,7 +342,7 @@ com oito conhecidos, ~10 ms.
   (`interface/pacotes/a06_navegacao.py:1453`) faz nascer `mouse.enabled` do
   estado vivo quando o perfil não tem a seção.
 - **Raiz:** encolher o `.gitignore` espera a confirmação de um dos
-  mantenedores; o `traduzivel.json` a regerar; nomes velhos (`bancada.py`,
+  mantenedores; o `traduzivel.json` a regerar; nomes velhos (`ensaio.py`,
   `GUIA-RADIO-DA-SALA`, `interface.sh`) em notas de `docs/data/`, em
   `scripts/doctor.sh` e na guarda de
   `tests/unit/test_o_tray_e_o_rico_e_abre_o_painel.py`, que ainda procura

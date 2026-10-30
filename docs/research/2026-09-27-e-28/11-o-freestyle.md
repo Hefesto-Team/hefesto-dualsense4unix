@@ -4,7 +4,7 @@ O que se mediu e se desenhou na madrugada de 27/09/2026 para o Freestyle ficar �
 
 ## O pedido
 
-Duas falas dela, de 27/09, puxaram as duas rodadas:
+Duas falas do usuário, de 27/09, puxaram as duas rodadas:
 
 - «no freestyle a ideia é tudo estar no ultra até vibração e afins.» <!-- noqa-acento: citação literal -->
 - «no freestyle tem um problema que é. ao jogar qualquer que seja o jogo mesmo o botão ativado ele nunca tem prioridade. ter criado um perfil pra ele não foi a solução que eu havia pedido. a ideia é ele andar por cima do sistema de perfis. pq ao jogar qualquer jogo ele nunca fica ativado e sempre perde prioridade pra algum jogo (o que estpa certo.)» <!-- noqa-acento: citação literal -->
@@ -39,10 +39,10 @@ Varreu-se o esquema inteiro do perfil: **83 campos**, dos quais 24 têm ultra, 1
 
 Duas escolhas foram feitas na rodada:
 
-- **A vibração no ultra é `max` (1.5), e não `custom` 200%.** Com 200%, metade da faixa satura e a vibração parece constante, que é a queixa dela de 10/08.
+- **A vibração no ultra é `max` (1.5), e não `custom` 200%.** Com 200%, metade da faixa satura e a vibração parece constante, que é a queixa de uso de 10/08.
 - **O som ficou fora do asset.** A seção global de alto-falante e microfone, na troca de perfil, só alcança um controle (`_handle_for`, `src/hefesto_dualsense4unix/core/backend_pydualsense.py`). Na chegada do controle, o alto-falante já vai a 102 nos quatro, o microfone nasce aberto e o ganho nasce no topo do firmware.
 
-**O perfil dela abaixo do ultra:** na parte global, gatilhos `Off`, luzes do número fracas e vibração `balanceado`. Por controle, o volume do microfone está abaixo do topo nos quatro (de 23 a 64), o brilho da barra em dois, a força do gatilho em dois, e num deles as luzes do número estão fracas e o alto-falante em 101. Os mudos dela (microfone em dois controles, alto-falante em um) ficam, a não ser que ela peça outra coisa. Levar o perfil dela ao ultra ficou para um passo à parte, com cópia antes, escrita pelo `save_profile`, modo seco e guarda de `HOME`. No lar de mentira, o modo seco mostrou 18 campos subindo, e o disco dela não foi tocado.
+**O perfil do usuário abaixo do ultra:** na parte global, gatilhos `Off`, luzes do número fracas e vibração `balanceado`. Por controle, o volume do microfone está abaixo do topo nos quatro (de 23 a 64), o brilho da barra em dois, a força do gatilho em dois, e num deles as luzes do número estão fracas e o alto-falante em 101. Os mudos dela (microfone em dois controles, alto-falante em um) ficam, a não ser que ela peça outra coisa. Levar o perfil do usuário ao ultra ficou para um passo à parte, com cópia antes, escrita pelo `save_profile`, modo seco e guarda de `HOME`. No lar de mentira, o modo seco mostrou 18 campos subindo, e o disco do usuário não foi tocado.
 
 **As réguas** (num teste novo, `test_o_freestyle_nasce_no_ultra`, que não entrou), com 14 mordidas de 14:
 
@@ -69,9 +69,9 @@ Com isso, o asset no ultra e a decisão `D-2709-O-FREESTYLE-NASCE-NO-ULTRA` pass
 ## O que ficou aberto
 
 - **Nada destas duas rodadas está no `dev`.** As duas foram interrompidas: a da tabela durante a conferência, que não devolveu nada, e a da camada ainda no estudo, sem sprint devolvida. Nem o módulo da tabela (`o_ultra`), nem o teste das réguas, nem as decisões `D-2709-O-FREESTYLE-NASCE-NO-ULTRA` e `D-2709-O-FREESTYLE-ANDA-POR-CIMA` existem na árvore.
-- O desenho da camada também não durou. Na tarde de 27/09, `docs/data/decisoes-de-produto.csv` passou a trazer a `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` (sprint `O-FREESTYLE-E-UMA-CAMADA-SO-01`), decidida por ela contra a camada fixa: o Freestyle é um perfil que ela ajusta nas abas, nasce com tudo no ultra e, ligado, o autoswitch não o troca por perfil de jogo nenhum. A decisão também revoga a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`.
+- O desenho da camada também não durou. Na tarde de 27/09, `docs/data/decisoes-de-produto.csv` passou a trazer a `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` (sprint `O-FREESTYLE-E-UMA-CAMADA-SO-01`), decidida pelo usuário contra a camada fixa: o Freestyle é um perfil que ela ajusta nas abas, nasce com tudo no ultra e, ligado, o autoswitch não o troca por perfil de jogo nenhum. A decisão também revoga a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`.
 - O volume de captura do microfone não tem valor por controle no nascimento.
 - A seção global de som não alcança os quatro controles na troca de perfil.
 - A háptica não tem campo de força no perfil.
-- A vibração no ultra (`max` contra 200%) é escolha dela a confirmar ou derrubar.
-- O perfil «Freestyle» que ela já tem no disco continua abaixo do ultra: nestas rodadas, o disco dela não foi tocado.
+- A vibração no ultra (`max` contra 200%) é escolha do usuário a confirmar ou derrubar.
+- O perfil «Freestyle» que ela já tem no disco continua abaixo do ultra: nestas rodadas, o disco do usuário não foi tocado.

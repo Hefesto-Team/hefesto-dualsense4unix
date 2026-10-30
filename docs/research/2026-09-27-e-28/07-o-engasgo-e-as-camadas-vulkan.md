@@ -311,7 +311,7 @@ produto em uso repinta o exame com a linha própria.
   26/09 teve só ~4 min de foco no jogo.
 - **Qual ID a biblioteca de áudio do jogo compara** (o HID `0DF2` ou o áudio `0CE6`
   do device KS), e se os `ContainerId` dos dois casam.
-- **Por que o intervalo cai de 1,02 s para 0,5 s** quando ela joga, e por que o
+- **Por que o intervalo cai de 1,02 s para 0,5 s** quando o usuário joga, e por que o
   segundo tranco cai de 30 s para 14,8 s.
 - **Se o overlay da Epic entra pelo gancho DX12** e se o gancho `WH_GETMESSAGE`
   dele processa cada `WM_INPUT` dos quatro vpads.

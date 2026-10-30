@@ -107,7 +107,7 @@ Update version: 0630
 >
 > **Como o layout correto foi conferido, em 15/08/2026:** contra o driver **e**
 > contra **quatro capturas independentes** do report `0x20`, uma de cada
-> DualSense da bancada, lidas por Bluetooth com retry e com validação de
+> DualSense do ensaio, lidas por Bluetooth com retry e com validação de
 > `buf[0] == report_id`. Os offsets fecham 64 bytes exatos, sem buraco e sem
 > sobreposição, e o CRC-32 de semente `0xA3` bate nas quatro capturas. A
 > conferência inteira, com a tabela de offsets e o que cada campo trouxe nos
@@ -146,7 +146,7 @@ _Static_assert(sizeof(struct dualsense_feature_report_firmware) == 64);
 ```
 
 **Sobre `device_info[12]` (offsets 32 a 43):** difere de unidade para unidade —
-medido nos quatro aparelhos da bancada em 15/08/2026 — e **ninguém no mundo
+medido nos quatro aparelhos do ensaio em 15/08/2026 — e **ninguém no mundo
 decifrou o conteúdo**. O `dualsensectl` traz o `printf` desses bytes
 **comentado desde 2023**, pelo mesmo motivo. Registrado aqui como candidato para
 quem for atrás de identidade de unidade; **não é resposta**.

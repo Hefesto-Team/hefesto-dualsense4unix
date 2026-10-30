@@ -146,7 +146,7 @@
       "sprint": "OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01",
       "o_que_muda": "Sai a seção «Criar efeitos novos»: a aba fica só com «Dispositivos conectados», os quatro controles, e o espaço que sobra é dos alvos maiores",
       "resposta": "todo-02-r3-16",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": "[data-r3=\"16\"]",
       "conflito": "",
       "rodada": 3,
@@ -238,31 +238,31 @@
   "fora": [
     {
       "sprint": "STEAM-INPUT-01",
-      "motivo": "Já no antes (código no dev); espera a bancada."
+      "motivo": "Já no antes (código no dev); espera o ensaio."
     },
     {
       "sprint": "O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01",
-      "motivo": "Já no antes (código no dev); espera a bancada."
+      "motivo": "Já no antes (código no dev); espera o ensaio."
     },
     {
       "sprint": "A-MIRA-NA-NAVEGACAO-01",
-      "motivo": "Já no antes (código no dev); espera a bancada."
+      "motivo": "Já no antes (código no dev); espera o ensaio."
     },
     {
       "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-      "motivo": "Já no antes (código no dev); espera a bancada."
+      "motivo": "Já no antes (código no dev); espera o ensaio."
     },
     {
       "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-      "motivo": "Já no antes (código no dev); espera a bancada."
+      "motivo": "Já no antes (código no dev); espera o ensaio."
     },
     {
       "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-      "motivo": "Já no antes (código no dev); espera a bancada."
+      "motivo": "Já no antes (código no dev); espera o ensaio."
     },
     {
       "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",
-      "motivo": "Já no antes (b3222fa9f); o selo ATIVO/DESLIGADO fica em caixa alta por ordem dela de 21/09."
+      "motivo": "Já no antes (b3222fa9f); o selo ATIVO/DESLIGADO fica em caixa alta por ordem de produto de 21/09."
     },
     {
       "sprint": "O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01",

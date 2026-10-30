@@ -126,11 +126,11 @@
  "fora": [
   {
    "sprint": "O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01",
-   "motivo": "Já no antes (o painel com voltar ao automático); espera só a bancada."
+   "motivo": "Já no antes (o painel com voltar ao automático); espera só o ensaio."
   },
   {
    "sprint": "O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01",
-   "motivo": "Já no antes; espera só a bancada."
+   "motivo": "Já no antes; espera só o ensaio."
   },
   {
    "sprint": "O-BLUEZ-TEM-UM-DONO-ATE-NA-SONDA-01",

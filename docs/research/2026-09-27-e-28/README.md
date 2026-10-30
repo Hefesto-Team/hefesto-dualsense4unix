@@ -12,7 +12,7 @@ cada medida está no próprio texto, e os de 07 a 10 registram medidas de 26/09.
 | 02 | [O plano das ondas](02-o-plano-das-ondas.md) | as sprints abertas de 26 a 28/09 postas em sete ondas por posse de arquivo e por dependência lógica, e o que a conferência derrubou no plano |
 | 03 | [A auditoria para terminar o produto](03-a-auditoria-para-terminar-o-produto.md) | nove auditorias só de leitura sobre as sprints de 26 e 27/09 e o produto inteiro, e a síntese que as põe numa ordem de trabalho |
 | 04 | [A história, a raiz e os ganchos](04-a-historia-a-raiz-e-os-ganchos.md) | o rastro de ferramenta de automação no GitHub, na história, na raiz e no pacote, e as travas de máquina e de git que deveriam segurá-lo |
-| 05 | [O básico, os jogos e a memória](05-o-basico-os-jogos-e-a-memoria.md) | o protocolo do básico, a bancada de jogos da noite de 27/09, o que falta para outra máquina reproduzir o produto e o ensaio da memória do engasgo |
+| 05 | [O básico, os jogos e a memória](05-o-basico-os-jogos-e-a-memoria.md) | o protocolo do básico, o ensaio de jogos da noite de 27/09, o que falta para outra máquina reproduzir o produto e o ensaio da memória do engasgo |
 | 06 | [A triagem do CI](06-a-triagem-do-ci.md) | os vermelhos do CI do `dev` reproduzidos num clone limpo: a causa de cada um, a cura, a mordida |
 | 07 | [O engasgo e as camadas Vulkan](07-o-engasgo-e-as-camadas-vulkan.md) | o engasgo periódico do Sackboy e a «cura» por camada Vulkan, que nunca teve medição de cura |
 | 08 | [A háptica pelo rádio](08-a-haptica-pelo-radio.md) | por que a vibração do PRAGMATA não chegou ao controle pelo Bluetooth, e a cura do portão «quem joga» |

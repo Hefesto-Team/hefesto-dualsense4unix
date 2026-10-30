@@ -1,6 +1,6 @@
 # O básico medido nos jogos e o ensaio da memória
 
-O que se mediu em 27 e 28/09/2026 para escrever o protocolo do básico, rodar a bancada de jogos da noite, saber o que falta para outra máquina reproduzir o produto e preparar o ensaio da memória do engasgo.
+O que se mediu em 27 e 28/09/2026 para escrever o protocolo do básico, rodar o ensaio de jogos da noite, saber o que falta para outra máquina reproduzir o produto e preparar o ensaio da memória do engasgo.
 
 > **Por que este documento existe.** A noite de 27/09 queria provar o produto
 > dentro de jogos de verdade, com os quatro controles no rádio e sem a mão de
@@ -21,7 +21,7 @@ Entre 19h50 e 20h20 de 27/09:
 
 ## 2. O protocolo do básico
 
-O protocolo `o_basico` (sprint `O-BASICO-MEDIDO-01`) pode nascer dos ensaios que já existem. Dos 76 `.py` de `scripts/ensaios/`, 72 são instrumentos: 14 servem ao básico (5 pedem extensão), 5 à fase dos jogos, 11 dependem da mão dela, 10 são históricos, 5 ficam fora e 23 são de tela. Seis têm defeito: quatro obsoletos e dois que mentem na mesa de hoje.
+O protocolo `o_basico` (sprint `O-BASICO-MEDIDO-01`) pode nascer dos ensaios que já existem. Dos 76 `.py` de `scripts/ensaios/`, 72 são instrumentos: 14 servem ao básico (5 pedem extensão), 5 à fase dos jogos, 11 dependem da mão do usuário, 10 são históricos, 5 ficam fora e 23 são de tela. Seis têm defeito: quatro obsoletos e dois que mentem na mesa de hoje.
 
 O que o protocolo tem de resolver, medido:
 
@@ -36,7 +36,7 @@ O que o protocolo tem de resolver, medido:
 - **O contador de vibração está contaminado pelo teclado na tela:** `ff_play_count` ≈ 53 mil por pad com `ff_nao_nulo_count = 0` nos quatro. O critério da vibração pedida pelo jogo é o delta de `ff_nao_nulo_count`.
 - **O microfone pelo rádio se mede sem ligá-lo:** `controllers[].hz_voz` (100,0 no P3) e o bit de áudio do relatório de entrada. Gravar da fonte do microfone liga o microfone pelo rádio.
 
-## 3. A bancada de jogos da noite
+## 3. O ensaio de jogos da noite
 
 O roteiro: PRAGMATA (3357650) no modo DualSense, Future Knight (4235410) no Xbox com máscaras divididas, Sackboy (1599660) com os quatro, DON'T SCREAM (2497900) com o microfone, e o PRAGMATA com as features somadas. A Steam sobe por `systemd-run --user` e o jogo abre por `steam://rungameid`.
 
@@ -56,9 +56,9 @@ O roteiro: PRAGMATA (3357650) no modo DualSense, Future Knight (4235410) no Xbox
 - o `o_jogo_para_de_ver_o_giro --so-medir` força `SDL_JOYSTICK_HIDAPI=0` e mede o SDL pelo evdev, não o hidraw que o Proton usa;
 - o resumo lia só a primeira e a última amostra, e cruzava pads recriados no delta de `per_vpad`.
 
-**O que a bancada sem ela não prova:** o sinal (tiro, mira, voz). Não há IPC de entrada no pad e a Forja não estava compilada. A noite prova a corrente: fluxos, contadores, nós seguros, o silêncio pelo rádio.
+**O que o ensaio sem ela não prova:** o sinal (tiro, mira, voz). Não há IPC de entrada no pad e a Forja não estava compilada. A noite prova a corrente: fluxos, contadores, nós seguros, o silêncio pelo rádio.
 
-**O que se descartou:** comparar o PRAGMATA (DualSense) com o Future Knight (Xbox) muda jogo, engine, modo, máscaras e perfil de uma vez. Mede-se cada modo, não a diferença; a comparação no mesmo jogo é o PS + R3 dela, por último, porque cada aperto recria os pads com o jogo aberto (o gesto dela fura o R-04: `ORIGENS_GESTO_DO_USUARIO`, `src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:94`).
+**O que se descartou:** comparar o PRAGMATA (DualSense) com o Future Knight (Xbox) muda jogo, engine, modo, máscaras e perfil de uma vez. Mede-se cada modo, não a diferença; a comparação no mesmo jogo é o PS + R3 dela, por último, porque cada aperto recria os pads com o jogo aberto (o gesto do usuário fura o R-04: `ORIGENS_GESTO_DO_USUARIO`, `src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:94`).
 
 **Anonimato.** O `state_full` expõe o serial de fábrica inteiro (17 caracteres), que o mascarador da noite não cobria; o diário do jogo trouxe 7 linhas com o nome da ponte de som com os octetos 4 e 5 à mostra, e os perfis copiados crus traziam 4 identidades cada. Regra que fica: a cópia byte a byte de restauração vai para pasta privada 0700; na medida, só o sha256 e a cópia mascarada.
 
@@ -74,10 +74,10 @@ Sprint `O-PRODUTO-EM-QUALQUER-MAQUINA-01`: treze lacunas e uma escada de prova s
 
 As médias, em uma linha cada:
 
-- a `.venv` da bancada vê o `evdev` 1.7.0 do apt (veio com o input-remapper); quem instala recebe o 2.0.0, que nenhum aparelho rodou (`pyproject.toml:30` pede `evdev>=1.6`, sem trava). Proposta: um `constraints.txt` (`AS-VERSOES-QUE-A-CASA-MEDIU-01`, proposta);
+- a `.venv` do ensaio vê o `evdev` 1.7.0 do apt (veio com o input-remapper); quem instala recebe o 2.0.0, que nenhum aparelho rodou (`pyproject.toml:30` pede `evdev>=1.6`, sem trava). Proposta: um `constraints.txt` (`AS-VERSOES-QUE-A-CASA-MEDIU-01`, proposta);
 - o `hid-playstation` do Hefesto é o fonte 7.0.11 e roda no 7.1.5 sem `BUILD_EXCLUSIVE_KERNEL` (o do `uhid` tem); perde a rejeição de `num_touch_reports` inválido do DS4;
 - Secure Boot sem MOK pode deixar o DualSense sem driver, e as mensagens do install falam só do Nintendo (hipótese: aqui o Secure Boot está desligado e o aviso nunca rodou);
-- a bancada esconde variáveis: o compositor recompilado (`dpkg -V` acusa o binário), o grupo `input` (quem chega usa só o uaccess), a GPU NVIDIA, o input-remapper e o teclado na tela, que é de toda sessão COSMIC;
+- o ensaio esconde variáveis: o compositor recompilado (`dpkg -V` acusa o binário), o grupo `input` (quem chega usa só o uaccess), a GPU NVIDIA, o input-remapper e o teclado na tela, que é de toda sessão COSMIC;
 - o install termina sem dizer «reinicie», embora «vale no próximo boot» apareça em 26 lugares;
 - o Freestyle de fábrica (`assets/profiles_default/freestyle.json`) não tem `policy`, microfone, brilho no teto nem modo, e a `O-FREESTYLE-E-UMA-CAMADA-SO-01` não tem o asset na posse;
 - a Steam do Flathub fica sem wrapper e com o pino adiado, e a Steam instalada depois do Hefesto nunca foi medida (`A-MAQUINA-LIMPA-01`, proposta);
@@ -88,9 +88,9 @@ As médias, em uma linha cada:
 
 ## 5. O ensaio da memória (ensaio 5 do engasgo)
 
-O ensaio 5 da `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01` mede a memória com o PRAGMATA no menu em três voltas: com a afinação de memória da máquina, sem ela, e sem ela e sem o daemon. A ordem dela para o ensaio: «usa o mango hud na steam», e «cuidado pra algo não encerrar o terminal nem interface gráfica».
+O ensaio 5 da `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01` mede a memória com o PRAGMATA no menu em três voltas: com a afinação de memória da máquina, sem ela, e sem ela e sem o daemon. A ordem de produto para o ensaio: «usa o mango hud na steam», e «cuidado pra algo não encerrar o terminal nem interface gráfica».
 
-**A afinação da máquina não é do Hefesto, e «sem ela» não é o padrão do kernel.** A bancada tem um arquivo de sysctl próprio (swappiness 180, page-cluster 0, `watermark_scale_factor` 200, `watermark_boost_factor` 0, `vfs_cache_pressure` 200, `min_free_kbytes` 524288, `extfrag_threshold` 100), nascido do `NVRM: Out of memory` em memória de sistema. Sem ele, a máquina volta aos valores do Pop (swappiness 180 e page-cluster 0 do zram, `watermark_scale_factor` 125, `min_free_kbytes` ≈ 162885) e do kernel (`vfs_cache_pressure` 100, `extfrag_threshold` 500). Só quatro chaves mudam de fato. Um serviço de manutenção da máquina roda `sysctl --system` sem condição a cada hora (pula a rodada com jogo da Steam aberto), religa parte das unidades paradas e o próprio timer se o achar desabilitado; o gancho do apt roda o mesmo script mesmo com o timer parado. Nada do Hefesto reescreve `vm.*` sozinho.
+**A afinação da máquina não é do Hefesto, e «sem ela» não é o padrão do kernel.** O ensaio tem um arquivo de sysctl próprio (swappiness 180, page-cluster 0, `watermark_scale_factor` 200, `watermark_boost_factor` 0, `vfs_cache_pressure` 200, `min_free_kbytes` 524288, `extfrag_threshold` 100), nascido do `NVRM: Out of memory` em memória de sistema. Sem ele, a máquina volta aos valores do Pop (swappiness 180 e page-cluster 0 do zram, `watermark_scale_factor` 125, `min_free_kbytes` ≈ 162885) e do kernel (`vfs_cache_pressure` 100, `extfrag_threshold` 500). Só quatro chaves mudam de fato. Um serviço de manutenção da máquina roda `sysctl --system` sem condição a cada hora (pula a rodada com jogo da Steam aberto), religa parte das unidades paradas e o próprio timer se o achar desabilitado; o gancho do apt roda o mesmo script mesmo com o timer parado. Nada do Hefesto reescreve `vm.*` sozinho.
 
 **O MangoHud pela Launch Option, sem desenhar:**
 

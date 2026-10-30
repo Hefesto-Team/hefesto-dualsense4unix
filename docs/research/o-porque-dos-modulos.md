@@ -1,7 +1,7 @@
 # O porquê dos módulos
 
 A docstring de um módulo diz o CONTRATO: o que ele faz, por que, e para onde olhar. A história da
-decisão (a medição, a auditoria, o fato substituído, a citação dela) mora aqui e nos documentos de
+decisão (a medição, a auditoria, o fato substituído, a citação) mora aqui e nos documentos de
 tema. Cada seção abaixo guarda, sem corte, o que a docstring dizia antes de virar contrato em
 13/10/2026 (A-DOCSTRING-DIZ-O-CONTRATO-E-A-HISTORIA-MORA-NO-DOCUMENTO-01). O que lá se chama «aqui
 embaixo» ou «acima» fala do arquivo de origem.
@@ -49,7 +49,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   e MAC não muda no reboot: ele é IDENTIDADE, não sessão. A única
   renumeração automática que sobrou é a de SCHEMA (arquivo gravado por uma
   versão que numerava de outro jeito, ver Persistência); renumerar por
-  vontade dela continua sendo o GESTO explícito ("Renumerar agora" →
+  vontade do usuário continua sendo o GESTO explícito ("Renumerar agora" →
   ``compact``);
 - R-24 (auditoria 25/07): a atribuição deixou de ser SÓ lazy. ``slot_for``
   só é chamado pelo provider de cor (caminho de output); enquanto nenhum
@@ -140,7 +140,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   gatilhos, nem a vibração, nem o alto-falante voltam como ele deixou, em jogo
   nenhum, em sessão nenhuma. Não é degradação: é o recurso inteiro ausente, em
   silêncio, sem uma linha na tela dizendo por quê. Os cinco controles desta
-  bancada têm MAC de 12 hex, então **toda prova feita aqui passa** — é a
+  máquina de teste têm MAC de 12 hex, então **toda prova feita aqui passa** — é a
   amostra mais favorável possível, e é exatamente o que a
   ``D-A-REGUA-E-QUALQUER-MESA-NAO-A-DO-USUARIO`` (decisão, 29/08/2026) condena. Dono:
   ``O-CONTROLE-SEM-MAC-01``.
@@ -383,7 +383,7 @@ chamador (PEÇA C, ``luz_do_mic._a_medir``) escolhe por transporte: no CABO, tod
 microfone ligado (o canal já existe, e o fluxo de pico custa o 0,1 % medido
 acima); no RÁDIO, só quem a PEÇA A já disse ter ouvinte, porque o nosso
 ``parec`` deixaria a ponte ``RUNNING`` e o controle mandaria áudio pelo rádio o
-tempo todo. No mudo nada se mede. Na bancada, pelo rádio e com ninguém ouvindo,
+tempo todo. No mudo nada se mede. No ensaio, pelo rádio e com ninguém ouvindo,
 o custo desta peça é **zero processo e zero por cento** — nada é aberto.
 
 Amostrar por JANELAS curtas foi medido e REJEITADO: a partida é barata (45 a
@@ -464,7 +464,7 @@ um MODELO de fala (sílabas de 160/200/240 ms com pausas de 120 ms, caindo ao
 piso entre elas): a 200 ms de duração exigida, sílaba nenhuma de 160 ms acende
 a luz em amplitude nenhuma; a 120 ms, uma sílaba de 160 ms acende. O modelo é o
 pior caso — fala conectada não cai ao piso dentro de uma palavra —, mas modelo
-não é medida. **A palavra final é a bancada com ela**, e é por isso que os
+não é medida. **A palavra final é o ensaio com ela**, e é por isso que os
 QUATRO valores são parâmetros do construtor, não constantes cravadas no laço.
 
 ## A TRAVA DE MORTE — um ``parec`` vazado prende o microfone do usuário
@@ -903,7 +903,7 @@ a ordem de preferência, com versão de esquema nova"*. Isso **caducou em
 ``REGRA-NAO-REGISTRO-01``:
 
 1. ``identity.load`` (``identity.py:1639``) DESCARTA a fila inteira quando a
-   versão do arquivo difere — um bump renumeraria a bancada;
+   versão do arquivo difere — um bump renumeraria o ensaio;
 2. ``identity._save_locked`` só aproveita as entradas do outro lado quando
    ``bruto.get("version") == CONTROLLERS_SCHEMA_VERSION`` (``:2170-2174``): o
    primeiro save de DualSense depois de um bump APAGARIA a fila dos externos;
@@ -1005,7 +1005,7 @@ enquanto ninguém o abre. Ele não paga privacidade nem banda por existir.
 controle transmite áudio o tempo todo, ouvido ou não. Era verdade e deixou de
 ser: o pedido agora SEGUE o estado da source — `RUNNING` (tem app gravando)
 liga, qualquer outro desliga —, que é a mesma coisa que o cabo faz de graça.
-Medido na bancada no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
+Medido no ensaio no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
 gravando `RUNNING`, e `IDLE` depois que ele sai (`integrations/
 dualsense_bt_audio.ESTADO_COM_OUVINTE`).
 
@@ -1095,7 +1095,7 @@ por três lugares e escrito por nenhum. A decisão de produto é literal: *"por
 controle"*, um interruptor por card, quatro independentes ao mesmo tempo.
 
 **Um `bool` não sustenta quatro independentes** — ele só sabe dizer "todos" ou
-"nenhum", e a bancada tem quatro DualSense em três adaptadores. Somar um `bool`
+"nenhum", e o ensaio tem quatro DualSense em três adaptadores. Somar um `bool`
 por controle no `DaemonConfig` também não serve: o `DaemonConfig` é config de
 PROCESSO, e o número de controles muda por hotplug, no meio da sessão.
 
@@ -1167,7 +1167,7 @@ próprio que atravessava a troca. Ver o campo, lá embaixo, e
 O ALVO É TUDO — DECISÃO, 02/09/2026
 -----------------------------------------
 *"acelerômetro, giroscópio, e todas as demais features. **é tudo mesmo**"*
-— e ela marcou junto: teclas e ações de botão, mouse e teclado emulado,
+— e o usuário marcou junto: teclas e ações de botão, mouse e teclado emulado,
 modo (Hefesto/Xbox/Steam) e microfone.
 
 **O QUE ISSO DERRUBA:** esta docstring trazia uma lista de seções *"FORA
@@ -1279,7 +1279,7 @@ A FILA DO QUE FALTA, ORDENADA POR CUSTO — medida em 02/09/2026
    SUBSTITUÍDO:** esta entrada dizia *"a máscara não é campo daqui"* e que
    trazê-la *"exige antes uma troca de máscara que NÃO derrube o vpad"*. O
    campo é o ``mascara`` declarado abaixo, e a razão de a porta ter sido
-   aberta sem essa troca é a consequência que ela sentiu: **trocar de perfil
+   aberta sem essa troca é a consequência que o usuário sentiu: **trocar de perfil
    trocava o modo e não trocava a máscara de ninguém** — um perfil de jogo
    que precisa do P2 em Xbox não tinha como dizer isso.
 
@@ -1346,7 +1346,7 @@ porque a memória dele era só do processo (`AutoSwitcher._perfil_do_ultimo_jogo
 A cura: o autoswitch e o lançamento (`origin="launch"`) gravam o perfil em
 `ultimo_jogo.json` só na troca; o `_o_nome_que_o_boot_restaura` o põe depois do
 Freestyle e do jogo em cena e antes da escolha, e o primeiro pad nasce no modo
-dele (`perfil_que_o_boot_restaura`). O gesto dela (`gravar_a_escolha`) e o perfil
+dele (`perfil_que_o_boot_restaura`). O gesto do usuário (`gravar_a_escolha`) e o perfil
 apagado (`ProfileManager.delete`) tiram a memória. O `resolve_boot_profile`
 continua sendo a escolha do usuário: a aba Perfis destaca o que ela ativou, não o
 do jogo.
@@ -1416,7 +1416,7 @@ ela tinha aplicado. Agora o `reaplicar` arma a trava com o mesmo dono do «Ativa
 dela, outro jogo com perfil em foco, o lançamento de um jogo com perfil
 (`_a_trava_da_mao_segura`, `origin="launch"`). Ele continua sem gravar a escolha
 nem o último jogo, que é a parte da D-0110 que fica: o boot não aprende um perfil
-que ela não escolheu. **Só o gesto prende** (parte 3, as respostas dela, 14/10/2026: *«Só o Aplicar prende»*). O funil dos
+que o usuário não escolheu. **Só o gesto prende** (parte 3, as respostas de produto, 14/10/2026: *«Só o Aplicar prende»*). O funil dos
 ajustes das abas (`interface/pacotes/perfil.gravar_e_reaplicar`) também passa pelo
 `profile.reaplicar`, mas sem o parâmetro `prender`: o ajuste numa aba não arma a trava, e o
 autoswitch segue trocando de perfil por janela depois dele (Kodi, Navegação). Quem pede `prender`
@@ -1572,7 +1572,7 @@ A cura pergunta ao registro a mesa que vai sentar (`numeros_ao_sentar`), com a m
 `sync_connected`: a onda de chegada que quem volta conserva (D-30), a onda nova para quem estreia na
 sessão, e os lugares guardados soltos por gente nova salvo com o jogo segurando os prazos (D-3009).
 Quem volta é o 1 já no hotplug, e a carta não troca quando a lâmpada acende; quem estreia continua
-depois de quem está, que é o caso de 14/10. A régua da bancada (`MesaDoJogo.conferir_invariantes`)
+depois de quem está, que é o caso de 14/10. A régua do ensaio (`MesaDoJogo.conferir_invariantes`)
 reprova um aparelho com dois pads vivos fora da autoridade do jogo.
 
 ## O AnunciadorDoJogo (autoswitch.py), 18/10/2026
@@ -1624,7 +1624,7 @@ Duas fontes, nesta ordem, e a primeira é a que a foto usa:
    publica essa chave** — ela existe só na resposta de ``controller.list
    {"external": true}``. Isto resolve a hipótese 3 do §2.5 da sprint ("o
    daemon publica `external` quando há um externo na mesa?"): **não
-   publica**, e o `external=null` medido na bancada não distinguia as duas
+   publica**, e o `external=null` medido no ensaio não distinguia as duas
    coisas porque a chave nunca existiu ali. O ramo fica porque é por ele
    que o dublê da foto alimenta a aba, e porque um daemon mais novo que
    passe a publicá-la é atendido sem uma linha a mais;
@@ -1646,7 +1646,7 @@ primeiro. O número é o de :func:`external_controllers.slot_of`, o mesmo do LED
 ## A variante escura do tema (`interface/tema_da_sessao.py`, `pedir_a_variante_escura`), 21/10/2026
 
 BUG-GUI-COSMIC-WIDGET-CONTRAST-01: em COSMIC a sessão **não** aplica a variante escura do tema
-GTK por padrão — medido na bancada em 04/09/2026, com a sessão inteira em escuro:
+GTK por padrão — medido no ensaio em 04/09/2026, com a sessão inteira em escuro:
 `gsettings org.gnome.desktop.interface color-scheme` = `'prefer-dark'` e, ao mesmo tempo,
 `Gtk.Settings gtk-application-prefer-dark-theme` = `False`.
 
@@ -1662,8 +1662,8 @@ nasceu sem ela. É o padrão que a casa persegue: a casa sabe e o produto não f
 
 ## abrir (`interface/abrir.py`), a entrada que abre a janela
 
-Pedido, 29/08/2026: *"o nosso lançador.sh precisa ter a logo do app na dock"*. Em 07/10/2026 a
-bancada achou a segunda porta: o console script `hefesto-dualsense4unix-gui` ia direto ao piloto, e
+Pedido, 29/08/2026: *"o nosso lançador.sh precisa ter a logo do app na dock"*. Em 07/10/2026 o
+ensaio achou a segunda porta: o console script `hefesto-dualsense4unix-gui` ia direto ao piloto, e
 a janela da bandeja se anunciava `hefesto-dualsense4unix-gui`, nome que nenhum `.desktop` casa (dock
 com a engrenagem). O corpo do antigo envoltório mora aqui, no pacote, porque o wheel não leva
 `scripts/`; dele saem dois chamadores e nenhum terceiro: o console script (`entrada`) e o calço
@@ -1840,14 +1840,14 @@ cujo endpoint tivesse stream**, e num jogo de um jogador isso não é ninguém
 além de quem segura o controle.
 
 E a colisão era, por acidente, o que segurava os outros dois: medido no journal
-da bancada, 1 controle entrou em háptica e 270 tentativas de cada um dos outros dois
+do ensaio, 1 controle entrou em háptica e 270 tentativas de cada um dos outros dois
 foram recusadas. *Curar a colisão sem este gate faria os três vibrarem.*
 
 A REGRA, decidida pelo usuário entre três opções:
 
     Só o controle que o JOGO está usando entra em modo háptica.
 
-Ela recusou «só o jogador 1» pensando no jogo de quatro do amigo dela: uma
+O usuário recusou «só o jogador 1» pensando no jogo de quatro do amigo dela: uma
 regra fixa no índice 1 quebraria o co-op. *A regra é uma só, e serve às duas
 mesas.*
 
@@ -1889,8 +1889,8 @@ A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01, 25/09/2026. A tradução derivava o
 MAC do vpad de cada físico (``vpad_mac``) e comparava — e isso responde de
 quem o vpad NASCEU. O posto nasce sem identidade no boot (o piso
 ``02:fe:00:00:00:01``, que não deriva de ninguém) ou com a do primário de
-quando renasceu, e o primário muda embaixo dele sem ele renascer. Medido na
-bancada de queda com os vpads reais, 174 casos (2, 3 e 4 controles; USB, BT
+quando renasceu, e o primário muda embaixo dele sem ele renascer. Medido no
+ensaio de queda com os vpads reais, 174 casos (2, 3 e 4 controles; USB, BT
 e mista; o posto com o P1, o P2 e o P3; um jogador e todos): a forja errava
 138, e em 15 fazia vibrar a mão do P1 que voltou tarde enquanto o P2 ou o P3
 dirigia o posto. Quem sabe quem alimenta cada vpad AGORA é o co-op
@@ -1908,7 +1908,7 @@ AUSÊNCIA É RESPOSTA, E AQUI ELA TEM LADO
 Sem ``/proc`` legível, sem jogo identificável ou sem vpad mapeável, a resposta
 é o conjunto VAZIO — ninguém entra em háptica. O lado seguro é o silêncio: um
 controle que não vibra é uma falta; um controle que vibra sozinho na mão de
-alguém é o defeito que ela reportou.
+alguém é o defeito que o usuário reportou.
 ~~~~
 
 ## O `-W interactive` do mawk (`scripts/storm_watch.sh`, `_escolher_awk`), 08/08/2026
@@ -2048,7 +2048,7 @@ DUAS LEITURAS, E A DIFERENÇA É O PRODUTO — 06/09/2026,
 A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01:
 
 `texto_visivel` lê a página CRUA, que é o que ela abre no navegador quando olha
-a bancada. O produto renderiza a mesma página com a folha de usuário do piloto
+o ensaio. O produto renderiza a mesma página com a folha de usuário do piloto
 por cima, e a primeira regra de produto apaga a `.nota` — o bilhete de projeto. Por
 isso há :func:`texto_visivel_no_produto`, que pergunta ao dono da folha o que
 ele esconde antes de contar. Sem essa separação a régua acusava **34

@@ -5,7 +5,7 @@ O que se mediu, a causa achada, o que se decidiu e o que ficou aberto em
 que voltava em todos os jogos e a cura dele, o par entre o pad virtual e a
 háptica; os dois fechos no `dev`; as quatro revisões dos desenhos de todas as
 abas; o que a pesquisa apontou para a próxima etapa; e a fila que ficou, com as
-medidas de bancada que essa fila pede.
+medidas de ensaio que essa fila pede.
 
 ## Como ler
 
@@ -150,7 +150,7 @@ quatro endpoints de háptica.
 
 - O registro do prefixo do Sackboy com o par certo e o `concorda=True` no diário,
   com jogo.
-- Os casos de bancada: a entrada tardia, dois controles no cabo e dois no rádio,
+- Os casos de ensaio: a entrada tardia, dois controles no cabo e dois no rádio,
   as máscaras Xbox e Nintendo, o Modo Nativo.
 - Os outros jogos da Sony: Minecraft Dungeons II, Wukong (um jogador numa partida
   longa: pela lei, de 15 a 20 min até o tranco), PRAGMATA (o device KS); o Pro Jank
@@ -300,7 +300,7 @@ controle que cai no rádio e volta.
 **O limite já medido:** o sinal do 0098 só dispara para nós cujo nome case com
 «DualSense» **e** «Internal Mono Speaker» (patch 0003), e os nossos nós não têm o
 segundo. Com `MI_03` e os nomes de hoje, cada chegada esperaria os 3 s e sairia
-por «Timed out». Por isso a sprint mede isso na bancada **antes** de escrever
+por «Timed out». Por isso a sprint mede isso no ensaio **antes** de escrever
 código.
 
 **A proposta:** `O-PAD-VIRTUAL-SE-APRESENTA-COMO-O-COMPOSTO-DA-SONY-01`. O gadget
@@ -402,7 +402,7 @@ do Ren'Py.
 os acessórios valem nos jogos escolhidos numa caixa de marcar na engrenagem da
 extensão, com um deslizante por canal por aparelho (Vibração, Gatilho e Háptica,
 de 0 a 20), e o aparelho recebe o maior dos três. FPS a 20 Hz, Luta sem
-resistência, Ritmo sem som em dobro. Ficaram como ponto de partida, até a bancada
+resistência, Ritmo sem som em dobro. Ficaram como ponto de partida, até o ensaio
 confirmar: os deslizantes começam em 50%, a lista de jogos nasce vazia, e no
 Terror com fone o som do jogo não se duplica (o microfone abre igual).
 
@@ -414,7 +414,7 @@ podem mudá-lo estão na seção 5.
 
 ---
 
-## 5. O que ficou aberto, com as medidas de bancada
+## 5. O que ficou aberto, com as medidas de ensaio
 
 ### 5.1 As medidas do estilo (L1 a L11)
 
@@ -436,7 +436,7 @@ podem mudá-lo estão na seção 5.
 
 A lista da seção 1.8, num roteiro só (`A-PROVA-DO-PAR-NOS-JOGOS-DA-SONY-01`).
 
-### 5.3 A bancada da volta (D1 a D8)
+### 5.3 O ensaio da volta (D1 a D8)
 
 - D2: o Pro Jank Footy. D3: o ambiente do processo do Minecraft Dungeons II.
 - D4: a máscara Nintendo Pro. D5: a velocidade 12 e a piscada.

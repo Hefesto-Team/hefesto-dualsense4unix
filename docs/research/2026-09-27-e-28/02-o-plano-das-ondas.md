@@ -15,7 +15,7 @@ A ordem tinha três pontos fixos. A `O-MODO-XBOX-NAO-E-QUEDA-02` vai na primeira
 
 ## O plano: sete ondas
 
-Cada sprint ganhou uma classe: **código** (código e régua, sem a mão dela), **código + prova no aparelho** (o código anda e a prova fica para a mão dela), **fora do repositório** (ganchos da máquina, escritos numa cópia de ensaio e instalados juntos no fim) ou **para antes do gesto dela** (prepara e para antes do que é dela: o push forçado da reescrita, a remoção do aplicativo instalado no GitHub). O tamanho vai de P (menos de 1 h) a GG (mais de 4 h).
+Cada sprint ganhou uma classe: **código** (código e régua, sem a mão do usuário), **código + prova no aparelho** (o código anda e a prova fica para a mão do usuário), **fora do repositório** (ganchos da máquina, escritos numa cópia de ensaio e instalados juntos no fim) ou **para antes do gesto do usuário** (prepara e para antes do que é do usuário: o push forçado da reescrita, a remoção do aplicativo instalado no GitHub). O tamanho vai de P (menos de 1 h) a GG (mais de 4 h).
 
 | onda | o que anda | a razão |
 |---|---|---|
@@ -24,7 +24,7 @@ Cada sprint ganhou uma classe: **código** (código e régua, sem a mão dela), 
 | 3 | `O-CODIGO-NAO-NOMEIA-A-FERRAMENTA-01`, `AS-PAGINAS-DE-USO-FALAM-COM-QUEM-USA-01`, os restos da O-BASICO e da O-PRODUTO, e, em cópia de ensaio, a `A-TRAVA-DA-MAQUINA-DO-USUARIO-01` (partes a e c) e a `A-VIGIA-DAS-TRAVAS-01` | o código de produto parou na onda 2 |
 | 4 | `A-AUTORIA-SE-MEDE-PELA-LISTA-DE-QUEM-PODE-01`, o resto da USO, e os ganchos `O-DESPACHANTE-DAS-REGRAS-DA-CASA-01`, `O-RASTRO-BARRADO-NO-ATO-01`, `OS-GANCHOS-DO-GIT-NAO-ENSINAM-O-CONTORNO-01` | a régua da autoria só fica verde com o nível 1 da NAO-NOMEIA zerado na ponta |
 | 5 | `O-CODIGO-SEM-NARRADOR-01` (GG), sozinha no repositório; os ganchos `A-SENHA-SO-PASSA-PELO-ASKPASS-01`, `O-ENDERECO-NUNCA-CHEGA-A-CONVERSA-01` e `A-ARVORE-TEM-UMA-SESSAO-SO-01` | a varredura mede o texto final |
-| 6 | `AS-CITACOES-DE-COMMIT-SEGUEM-O-MAPA-01` (parte 1), `O-FEITO-SO-COM-A-PROVA-01` e `A-GUARDA-FECHA-A-PORTA-01` (esta para antes do gesto dela) | toda sprint anterior pode apagar texto que cita commit |
+| 6 | `AS-CITACOES-DE-COMMIT-SEGUEM-O-MAPA-01` (parte 1), `O-FEITO-SO-COM-A-PROVA-01` e `A-GUARDA-FECHA-A-PORTA-01` (esta para antes do gesto do usuário) | toda sprint anterior pode apagar texto que cita commit |
 | 7 | `AS-REFERENCIAS-DA-FERRAMENTA-SAEM-DA-MESA-01`, `A-HISTORIA-REESCRITA-UMA-VEZ-SO-01` e `O-GITHUB-SEM-RASTRO-FORA-DO-GIT-01` | refs limpas antes da reescrita; a reescrita para antes do push forçado, e os rulesets só depois dele |
 
 A `A-GUARDA-FECHA-A-PORTA-01` não se instala pela leva: quem arma a trava é ela, no terminal dela, porque uma trava armada por quem ela vigia é uma trava que esse mesmo processo desarma.
@@ -70,7 +70,7 @@ As dez correções:
    | O-CI | o resto e o `ci.yml` |
 
    Com isso, o CI verde só fecha no fim da onda 2.
-5. **A NO-MODO-XBOX e a `ROTEADOR-DE-ENTRADA-01` eram a mesma cura.** A ROTEADOR foi absorvida. O giroscópio em mira já existia; no Xbox só se confere que vale. O touchpad e o acelerômetro como fonte esperam o mapa de fontes e destinos, que é decisão dela, e viram entrada condicional na onda 3.
+5. **A NO-MODO-XBOX e a `ROTEADOR-DE-ENTRADA-01` eram a mesma cura.** A ROTEADOR foi absorvida. O giroscópio em mira já existia; no Xbox só se confere que vale. O touchpad e o acelerômetro como fonte esperam o mapa de fontes e destinos, que é decisão de produto, e viram entrada condicional na onda 3.
 6. **Faltava posse à FREESTYLE**: os leitores do `autoswitch_locked` que ela substitui, que são `state_store.py`, `lifecycle.py`, `ipc_bridge.py`, `home_actions.py`, `a10_perfis.py` e `connection.py`.
 7. **O mascarador que a O-BASICO exige não tinha sprint.** Sem ele, «nenhuma linha sai verde». Nasceu a `O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01`, na onda 2.
 8. **As cessões só existiam no plano.** Das 41 colisões, 13 eram cessões que o frontmatter não dizia, e quem implementa lê o frontmatter.
@@ -127,7 +127,7 @@ Três sprints paradas colidiram com a posse ampliada e ganharam `depois_de`. O v
 - **Corpos com texto antigo**: o B6 da O-PRODUTO e o item 1 da A-ENTRADA ainda descrevem o que foi cedido.
 - **Uma frase de mordida fica órfã**: a da régua do diário mascarado, em `tests/unit/test_a_09_sistema_em_tres_secoes.py`, passa a citar uma constante que deixa de existir no `a09_sistema.py`.
 - **A ROTEADOR pedia para vir depois da DSU**, e isso tem de ser conferido antes da onda 3.
-- **Sprints que a auditoria pede e ninguém escreveu**: o destino, as camadas e o aplicar, antes da FREESTYLE. O plano segue o arquivo da sprint, revisto pela palavra dela de 27/09.
+- **Sprints que a auditoria pede e ninguém escreveu**: o destino, as camadas e o aplicar, antes da FREESTYLE. O plano segue o arquivo da sprint, revisto pela palavra de produto de 27/09.
 - **O que depende de outros**:
   - de um mantenedor: o passo 10 da A-RAIZ, o secret da autoria, o escopo da reescrita e os rulesets;
   - dela: os gestos de prova, o diff dos dotfiles e do self-heal, a senha, a remoção do aplicativo instalado no GitHub e armar a guarda.

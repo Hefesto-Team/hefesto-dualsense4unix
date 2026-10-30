@@ -3,7 +3,7 @@
 """A régua dos ajustes da rodada 4: mede as quatro páginas tocadas em três tamanhos e a página de conferência, sem janela na tela.
 
 Uso: regua.py [--mordida <nome|js>] ; sai 0 se tudo passa. As mordidas nomeadas estão em MORDIDAS; cada uma devolve
-de propósito algo que ela mandou tirar, e a régua tem de reprovar. A página de conferência grava num servidor de
+de propósito algo que o usuário mandou tirar, e a régua tem de reprovar. A página de conferência grava num servidor de
 mentira (page.route): a régua nunca escreve no arquivo de respostas de verdade.
 """
 import json

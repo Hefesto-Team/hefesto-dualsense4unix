@@ -32,7 +32,7 @@
       "resposta": "todo-08-3",
       "ancora": "todo-08-3",
       "seletor": ".cd-x",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 4,
@@ -62,7 +62,7 @@
       "resposta": "todo-08",
       "ancora": "todo-08-6",
       "seletor": ".est",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 7,
@@ -129,7 +129,7 @@
       "sprint": "O-HEFESTO-SABE-EM-QUAL-VAGA-DE-PAREAMENTO-O-CONTROLE-ESTA-01",
       "o_que_muda": "Quando o controle está pareado com outro aparelho, a linha diz «O controle foi para outro aparelho», sem o selo vermelho de queda, e o botão vira «Trazer de volta»",
       "resposta": "todo-08-r3-13",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": "[data-r3=\"13\"]",
       "conflito": "",
       "rodada": 3,
@@ -142,7 +142,7 @@
       "sprint": "OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01",
       "o_que_muda": "Na linha do aparelho de entrada, «Usar como botões de…» abre a janela onde cada tecla dele cai num botão do controle, escolhido sobre o desenho real do DualSense",
       "resposta": "todo-08-r3-14",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": "[data-r3=\"14\"]",
       "conflito": "",
       "rodada": 3,
@@ -150,7 +150,7 @@
       "js": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
       "js_antes": "document.getElementById('cx8-3').click(); document.querySelector('.abre-lugar[data-alvo=L1]').click()",
       "ajuste_r3": {
-        "pedido": "(sem texto, voto «ajustar»: ela não disse o que faltou; valem os critérios das outras respostas: larguras iguais, sem aviso verde, respiro, nada sufocado)",
+        "pedido": "(sem texto, voto «ajustar»: o usuário não disse o que faltou; valem os critérios das outras respostas: larguras iguais, sem aviso verde, respiro, nada sufocado)",
         "feito": "Na linha do Acionador USB, «Usar como botões de…» e o «Trazer de volta» da linha de baixo ficaram com o mesmo tamanho (150 x 24 px) e na mesma coluna; o botão tinha 22 px de altura. Na janela do acionador, a lista das teclas ganhou respiro (linhas de 40 px, letra de 13 px, botões de 34 px) e a janela ficou um pouco mais larga. Você pediu ajuste sem texto: diga o que faltou."
       }
     },
@@ -159,7 +159,7 @@
       "sprint": "OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01",
       "o_que_muda": "A janela do acionador: as teclas à esquerda e o desenho real do controle à direita, com o controle escolhido pela cor",
       "resposta": "todo-08-r3-15",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".ac-cx",
       "conflito": "",
       "rodada": 3,
@@ -172,7 +172,7 @@
       "sprint": "O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01",
       "o_que_muda": "O aparelho do Bluetooth sem tipo ganha o «?» na linha; o clique abre a grade dos tipos, com ícones grandes",
       "resposta": "todo-08-r3-16",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".tipo-cx",
       "conflito": "",
       "rodada": 3,
@@ -185,7 +185,7 @@
       "sprint": "A-ABA-CONEXOES-DO-TODO-01",
       "o_que_muda": "O «Giroscópio como analógico» sai dos cartões dos controles: o ajuste mora na Navegação",
       "resposta": "todo-08-r3-17",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".gc-est[data-campo=\"est-visto\"]",
       "conflito": "",
       "rodada": 3,
@@ -266,47 +266,47 @@
   "fora": [
     {
       "sprint": "O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01",
-      "motivo": "Já no antes (integra/0410, na 1-11); espera só a bancada."
+      "motivo": "Já no antes (integra/0410, na 1-11); espera só o ensaio."
     },
     {
       "sprint": "AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01",
-      "motivo": "Já no antes (os quatro cartões de dica); espera só a bancada."
+      "motivo": "Já no antes (os quatro cartões de dica); espera só o ensaio."
     },
     {
       "sprint": "AS-FAIXAS-DIZEM-QUEM-BRIGA-COM-CADA-APARELHO-01",
-      "motivo": "Já no antes; espera só a bancada."
+      "motivo": "Já no antes; espera só o ensaio."
     },
     {
       "sprint": "O-RECEPTOR-2-4G-SE-RECONHECE-E-DIZ-QUANDO-SOFRE-01",
-      "motivo": "Já no antes; espera só a bancada."
+      "motivo": "Já no antes; espera só o ensaio."
     },
     {
       "sprint": "O-CONTROLE-JA-PAREADO-SE-PAREIA-DE-NOVO-NUM-CLIQUE-01",
-      "motivo": "Já no antes; espera só a bancada."
+      "motivo": "Já no antes; espera só o ensaio."
     },
     {
       "sprint": "O-CONTROLE-QUE-PEDE-PARA-PAREAR-APARECE-MESMO-JA-CONHECIDO-01",
-      "motivo": "Já no antes (o cartão «Roxo quer conectar»); espera só a bancada."
+      "motivo": "Já no antes (o cartão «Roxo quer conectar»); espera só o ensaio."
     },
     {
       "sprint": "O-WIFI-SE-LE-NAS-DUAS-BANDAS-E-TROCA-O-USB-PELA-BANDA-01",
-      "motivo": "Já no antes (o selo de quedas e a nota USB 3.0 + 2.4 GHz); espera só a bancada."
+      "motivo": "Já no antes (o selo de quedas e a nota USB 3.0 + 2.4 GHz); espera só o ensaio."
     },
     {
       "sprint": "O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01",
-      "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
+      "motivo": "Código costurado na integra/0410, já no antes; espera só o ensaio."
     },
     {
       "sprint": "A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01",
-      "motivo": "Código costurado na integra/0410, já no antes; espera só a bancada."
+      "motivo": "Código costurado na integra/0410, já no antes; espera só o ensaio."
     },
     {
       "sprint": "O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01",
-      "motivo": "Depende da bancada B9; a frase só aparece quando a procura da faixa termina sem faixa, estado que a cena não mostra."
+      "motivo": "Depende do ensaio B9; a frase só aparece quando a procura da faixa termina sem faixa, estado que a cena não mostra."
     },
     {
       "sprint": "MESA-DE-QUATRO-01",
-      "motivo": "Roteiro de bancada com quatro controles; não muda a tela."
+      "motivo": "Roteiro de ensaio com quatro controles; não muda a tela."
     },
     {
       "sprint": "I18N-DA-TELA-NOVA-01",

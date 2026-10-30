@@ -18,7 +18,7 @@ dividiu em quatro grupos por classe de causa. O critério: vermelho que passa em
 casa e cai no CI é **ambiente até prova em contrário**, e a diferença exata tem
 de ser reproduzida antes de qualquer cura.
 
-## A bancada que reproduz o runner
+## O ensaio que reproduz o runner
 
 - Um clone de um repositório local traz só o versionado: sem os documentos de
   processo e sem os scripts ignorados pelo git. É o que o runner vê.
@@ -36,7 +36,7 @@ de ser reproduzida antes de qualquer cura.
 - As versões importam: o lint-test instala o `platformdirs` 4.12.0 pelo pip, o
   gtk-real usa o 4.11.11, a máquina de desenvolvimento tem o 4.2.0.
 
-Com isso a bancada ficou **fiel ao CI**: no lint-test simulado (Python 3.12.14,
+Com isso o ensaio ficou **fiel ao CI**: no lint-test simulado (Python 3.12.14,
 sem `gi`, `platformdirs` 4.12.0, sem bluez, `env -i`, coleta inteira), o clone
 limpo deu 32 failed e 6 errors, o mesmo conjunto, nó a nó, dos 38 vermelhos do
 log da perna 3.12.
@@ -109,7 +109,7 @@ cache `_BARATO`.
   sete testes de `test_single_instance.py`. **Achado grave:** com
   `platformdirs` ≥ 4.12 e o daemon de pé, `test_acquire_retorna_pid_atual`
   leria o `daemon.pid` real e mandaria `SIGTERM` ao daemon (o mecanismo foi
-  reproduzido só na bancada isolada). **Cura:** o diretório nasce 0700
+  reproduzido só no ensaio isolado). **Cura:** o diretório nasce 0700
   (`tests/unit/test_single_instance.py:59`) e a fixture exige que o runtime
   resolvido fique dentro dele.
 
@@ -199,7 +199,7 @@ da máquina por um pulo calado, nenhum quebra na máquina de desenvolvimento. O
 | máquina de desenvolvimento (com os arquivos ignorados, bluez, sessão gráfica e daemon de pé) | 524 passed, 0 failed | 1460 passed |
 
 As duas falhas que sobraram no gtk-real e na máquina de desenvolvimento eram de
-`tests/unit/test_o_portao_declara_o_interpretador.py` e vinham da bancada sem
+`tests/unit/test_o_portao_declara_o_interpretador.py` e vinham do ensaio sem
 `.venv`; com a `.venv` ligada, 8 passed.
 
 **A ordem de aplicação importa.** A cura do `lifecycle.py` desloca quatro
@@ -227,7 +227,7 @@ da seção 7 e o fecho.
   reproduzir a suíte.
 - **F4 — o `FakeController` compartilhado é mais frouxo que o backend real.**
 - **F5 — falta teto de tempo por teste e por job no lint-test, e há testes de
-  sono fixo.** A bancada viu uma trava única no 3.10, em
+  sono fixo.** O ensaio viu uma trava única no 3.10, em
   `test_connected_event_publicado_no_start`, que não voltou em 23 corridas; sem
   teto, uma trava dessas seguraria o job até o limite de 6 h do GitHub sem dizer
   onde. Dois testes de sono fixo caíram sob carga, alheios às curas.

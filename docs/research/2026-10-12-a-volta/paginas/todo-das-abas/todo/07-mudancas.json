@@ -42,7 +42,7 @@
       "resposta": "todo-07-10",
       "ancora": "todo-07-4",
       "seletor": ".ext-nome",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 5,
@@ -102,7 +102,7 @@
       "resposta": "todo-07-6",
       "ancora": "todo-07-10",
       "seletor": "#escolher-jogo",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 11,
@@ -112,7 +112,7 @@
       "resposta": "todo-07-6",
       "ancora": "todo-07-11",
       "seletor": "#lanc-conf",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 12,
@@ -122,7 +122,7 @@
       "resposta": "todo-07-10",
       "ancora": "todo-07-12",
       "seletor": "#t3",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 13,
@@ -252,7 +252,7 @@
       "resposta": "todo-07-r4-25",
       "ancora": "todo-07-25",
       "seletor": ".ext-faz",
-      "conflito": "Substitui o item 3: a descrição tinha virado dica e volta à vista, por pedido dela."
+      "conflito": "Substitui o item 3: a descrição tinha virado dica e volta à vista, por pedido."
     },
     {
       "n": 26,
@@ -262,7 +262,7 @@
       "resposta": "todo-07-r4-26",
       "ancora": "todo-07-26",
       "seletor": ".lanc-fila",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 27,
@@ -272,7 +272,7 @@
       "resposta": "todo-07-r4-27",
       "ancora": "todo-07-27",
       "seletor": ".lf-novo",
-      "conflito": "A validar por ela."
+      "conflito": "A validar."
     },
     {
       "n": 28,
@@ -283,7 +283,7 @@
       "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
       "o_que_muda": "As três Lovense viram uma extensão só, «Lovense», com as três formas dentro e uma chave para cada; sem selo verde nem «ok», só os três botões",
       "resposta": "todo-07-r3-29",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": "[data-r3=\"29\"]",
       "conflito": "",
       "rodada": 3,
@@ -307,7 +307,7 @@
       "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
       "o_que_muda": "«Pelo celular»: o app da Lovense no celular, pelo Game Mode na rede de casa, como forma dentro da extensão Lovense",
       "resposta": "todo-07-r3-30",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": "[data-r3=\"30\"]",
       "conflito": "",
       "rodada": 3,
@@ -326,7 +326,7 @@
       "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
       "o_que_muda": "«DualSense como brinquedo»: a terceira forma da extensão Lovense, que nasce desligada",
       "resposta": "todo-07-r3-31",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": "[data-r3=\"31\"]",
       "conflito": "",
       "rodada": 3,
@@ -345,7 +345,7 @@
       "sprint": "O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01",
       "o_que_muda": "A janela de configurações da extensão, nova: as quatro etapas (servidor, controles com teto e força de cada um, o que vibra, parar)",
       "resposta": "todo-07-r3-32",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".bp-cx",
       "conflito": "",
       "rodada": 3,
@@ -357,7 +357,7 @@
       "sprint": "A-ABA-EXPERIMENTAL-DO-TODO-01",
       "o_que_muda": "Saem «Detectar o jogo aberto», «Procurar de novo» e a contagem verde ao lado do título «Lançadores»",
       "resposta": "todo-07-r3-33",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".quadro.estica > .quadro-topo",
       "conflito": "",
       "rodada": 3,
@@ -376,7 +376,7 @@
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
       "o_que_muda": "A aba fica como o Experimental (a B foi recusada em 14/10): extensões em cima, lançadores embaixo, com os impedimentos da Steam numa linha e a engrenagem ao lado de cada chave",
       "resposta": "todo-07-r3-34",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".miolo",
       "conflito": "",
       "rodada": 3,
@@ -406,7 +406,7 @@
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
       "o_que_muda": "A lista das extensões cabe sem rolar nos três tamanhos, até seis linhas (a foto põe uma linha de exemplo)",
       "resposta": "todo-07-r3-35",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".ext-lista",
       "conflito": "",
       "rodada": 3,
@@ -414,7 +414,7 @@
       "pagina": "07-lancadores.html",
       "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
       "ajuste_r3": {
-        "pedido": "(sem texto, voto «ajustar»; vale o que ela pediu na 36: botões de largura igual, sem verde)",
+        "pedido": "(sem texto, voto «ajustar»; vale o que o usuário pediu na 36: botões de largura igual, sem verde)",
         "feito": "A lista das extensões cabe sem rolar nos três tamanhos, com até seis linhas: a frase de cada forma vira só a dica quando a janela é baixa (menos de 780 px). A foto põe uma linha de exemplo da comunidade. Em 1212x809 o espaço entre as linhas também diminui um pouco, para a sexta linha caber, e os cartões dos lançadores ficam um pouco mais baixos para a última fileira não sair da moldura."
       },
       "js": "(function(){var l=document.querySelector('.ext-lista');var k=l.querySelector('[data-modificacao=kyty]');for(var i=1;i<=1;i++){var c=k.cloneNode(true);c.removeAttribute('data-modificacao');c.querySelector('.ext-nome').textContent='Exemplo da comunidade '+i;var o=c.querySelector('.lanc-selo');o.textContent='Comunidade';o.className='lanc-selo comunidade';c.querySelector('.ext-faz').textContent='Uma linha de exemplo, só para medir a lista';c.querySelector('.nj-tog').className='nj-tog';c.querySelector('.nj-tog .txt').textContent='Desligada';l.appendChild(c);}})()",
@@ -428,7 +428,7 @@
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
       "o_que_muda": "Os impedimentos da Steam numa linha do cartão, «2 com impedimento»; o clique abre a lista, com os botões da mesma largura",
       "resposta": "todo-07-r3-36",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".imp-cx",
       "conflito": "",
       "rodada": 3,
@@ -446,7 +446,7 @@
       "sprint": "A-ABA-LANCADORES-GANHA-AS-MODIFICACOES-01",
       "o_que_muda": "A engrenagem de cada extensão e de cada forma fica ao lado da chave, do mesmo tamanho",
       "resposta": "todo-07-r3-37",
-      "origem": "escolha dela de 13/10",
+      "origem": "escolha do usuário de 13/10",
       "ancora": ".ext-conf",
       "conflito": "",
       "rodada": 3,
@@ -454,7 +454,7 @@
       "pagina": "07-lancadores.html",
       "antes_pagina": "opcao-b-07.html (desenho B de 09/10)",
       "ajuste_r3": {
-        "pedido": "(sem texto, voto «ajustar»; vale o que ela pediu na 36: botões de largura igual, sem verde)",
+        "pedido": "(sem texto, voto «ajustar»; vale o que o usuário pediu na 36: botões de largura igual, sem verde)",
         "feito": "A engrenagem de configurações fica ao lado da chave em todas as linhas (30 px de largura, a mesma em Kyty, Pelo Intiface, Pelo celular e DualSense como brinquedo), sem texto e sem aviso verde."
       }
     },

@@ -9,11 +9,11 @@ Das 223 que faltam:
 
 | onde está | quantas | o que falta |
 | --- | --- | --- |
-| código já no `dev` | 29 | só o carimbo (19 agora, 10 depois do olho dela na foto) |
+| código já no `dev` | 29 | só o carimbo (19 agora, 10 depois do olho de quem confere na foto) |
 | costuradas na fds-1, fora do `dev` | 16 | entrar na fds-2 e no fecho A |
 | cortadas na metade (12 conjuntos) | 43 | retomar pelo diff, conferir, costurar |
 | por fazer, em conjunto (args prontos ou a montar) | 86 | ondas 4 a 15 |
-| esperam ela (palavra, bancada, gesto) | 49 | a bancada e as perguntas dela (39), as 5 da casa (gesto), a aprovação das instruções da casa (1) e 4 de bancada sem agente |
+| esperam ela (palavra, ensaio, gesto) | 49 | o ensaio e as perguntas de produto (39), as 5 da casa (gesto), a aprovação das instruções da casa (1) e 4 de ensaio sem agente |
 | novas, ainda sem ficha | ~10 | a onda 0 escreve (a cura do Sackboy primeiro) |
 
 **O que muda no caminho:** a `integra/fds-1` não entra mais no `dev` por avanço simples. O push de 12/10 reescreveu
@@ -47,10 +47,10 @@ no `dev`) e **39 são só da fds**. A integração nova, `integra/fds-2`, nasce 
     mensagem, e o patch é o mesmo. Rodar com `LEVA` apontando para uma integração que já tem o código (a fds-2).
     **A exceção é a A-SUITE-NAO-ACORDA-A-PLACA:** a ficha diz `aberta`, não `costurada`, e o `fechar` recusa
     (rc=4). O código está no `dev` (`bdd548da0` é ancestral). Ela fecha à mão, com a linha datada.
-  - **Carimbo depois do olho dela** (10, são de tela; a página de fotos da conferência já está no `dev`):
+  - **Carimbo depois do olho de quem confere** (10, são de tela; a página de fotos da conferência já está no `dev`):
     A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX, AS-QUATRO-LINHAS-DA-08, O-NOME-DO-JOGADOR, O-PADRAO-DO-ALTO-FALANTE,
     A-TELA-PERGUNTA-AO-DONO, A-TELA-SEM-O-QUE-A-REGUA-ACEITA, O-PERFIL-ANTIGO-DE-VIBRACAO, TODO-TEXTO-QUE-ABRE,
-    SO-A-PRIMEIRA-LETRA, e O-SELECIONAR-ACENDE (item T4 da bancada).
+    SO-A-PRIMEIRA-LETRA, e O-SELECIONAR-ACENDE (item T4 do ensaio).
   - **Fora da conta, também só carimbo:** A-FORJA-NAO-TRAVA-NO-APT (forja-fds) já subiu no `origin/main` da
     Forja (`c2644c4`). O ciclo da ficha ainda diz `em-voo`: falta o `sprint.py costurar` com `--integra-repo`
     apontando para a Forja (o ramo não mora aqui), e só então o `fechar`.
@@ -128,41 +128,41 @@ genéricos (O-CODIGO-SEM-NARRADOR-02 e AS-CITACOES-DE-COMMIT-SEGUEM-O-MAPA) entr
 
 **Falsos «em-voo», sem nada no disco desde 06/10:** A-ARVORE-TEM-UMA-SESSAO-SO, A-GUARDA-FECHA-A-PORTA,
 A-SENHA-SO-PASSA-PELO-ASKPASS, O-DESPACHANTE-DAS-REGRAS-DA-CASA, O-ENDERECO-NUNCA-CHEGA-A-CONVERSA. São da casa (os
-ganchos do zsh, fora do repo) e dependem do gesto dela pelo `promover-travas.sh`. Voltam a `espera-ela` na onda 0.
+ganchos do zsh, fora do repo) e dependem do gesto do usuário pelo `promover-travas.sh`. Voltam a `espera-ela` na onda 0.
 **O-REPOSITORIO-NASCE-VIVO** (github-completo) está pela metade e tem «O que foi feito»; entra na onda 15.
 
 ## 4. Por fazer: todas as 223, por setor
 
-Cada linha diz o que passa a funcionar. **[tela]** espera o mockup escolhido; **[bancada]** pede a mão dela. Entre
+Cada linha diz o que passa a funcionar. **[tela]** espera o mockup escolhido; **[ensaio]** pede a mão do usuário. Entre
 parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 
 ### Controle, entrada e pad virtual (34)
 
-- `A-INTERFACE-INTEIRA-SE-ALCANCA-PELO…` — A interface inteira se alcança pelo controle e pelo teclado. [bancada] *(conjunto F2-acessibilidade)*
-- `O-BOTAO-ALTERNA-REPETE-E-ENTENDE…` — O botão alterna, repete e entende toque longo e duplo. [bancada] *(conjunto F2-acessibilidade)*
-- `O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E…` — O cursor ganha precisão, permanência e clique travado. [bancada] *(conjunto F2-acessibilidade)*
-- `O-ESTILO-NATIVO-DEIXA-O-JOGO…` — O estilo Nativo deixa o jogo decidir. [bancada] *(conjunto F2-acessibilidade)*
+- `A-INTERFACE-INTEIRA-SE-ALCANCA-PELO…` — A interface inteira se alcança pelo controle e pelo teclado. [ensaio] *(conjunto F2-acessibilidade)*
+- `O-BOTAO-ALTERNA-REPETE-E-ENTENDE…` — O botão alterna, repete e entende toque longo e duplo. [ensaio] *(conjunto F2-acessibilidade)*
+- `O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E…` — O cursor ganha precisão, permanência e clique travado. [ensaio] *(conjunto F2-acessibilidade)*
+- `O-ESTILO-NATIVO-DEIXA-O-JOGO…` — O estilo Nativo deixa o jogo decidir. [ensaio] *(conjunto F2-acessibilidade)*
 - `O-MOUSE-EMULADO-TEM-UM-DONO…` — O mouse emulado tem um dono só. *(conjunto F2-acessibilidade)*
-- `O-POINT-AND-CLICK-SERVE-A…` — O point-and-click serve a visual novel. [bancada] *(conjunto F2-acessibilidade)*
+- `O-POINT-AND-CLICK-SERVE-A…` — O point-and-click serve a visual novel. [ensaio] *(conjunto F2-acessibilidade)*
 - `O-SUBSYSTEM-SOBE-E-DESCE-POR…` — O subsystem sobe e desce por uma lista só. *(conjunto subsystem, onda 9: defeito de produto, não espera desenho)*
-- `O-TREMOR-E-O-APERTO-JUNTO…` — O tremor e o aperto junto não decidem o botão. [bancada] *(conjunto F2-acessibilidade)*
-- `OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA…` — Os analógicos do jogo ganham zona morta, curva e uma mão. [bancada] *(conjunto F2-acessibilidade)*
-- `O-ANALOGICO-CHEGA-AO-JOGO-NO…` — O analógico chega ao jogo no ritmo do controle. [bancada] *(conjunto F2-controle)*
-- `O-CURSOR-DA-MIRA-ANDA-DEVAGAR…` — O cursor da Mira anda devagar logo acima da zona morta. [bancada] *(conjunto F2-controle)*
-- `O-PAD-QUE-NASCE-NAO-PARA…` — O pad que nasce não para o tique dos outros. [bancada] *(conjunto F2-controle)*
-- `O-TIQUE-DE-30-S-SO…` — O tique de 30 s só repinta a luz que o kernel perdeu. [bancada] *(conjunto F2-controle)*
+- `O-TREMOR-E-O-APERTO-JUNTO…` — O tremor e o aperto junto não decidem o botão. [ensaio] *(conjunto F2-acessibilidade)*
+- `OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA…` — Os analógicos do jogo ganham zona morta, curva e uma mão. [ensaio] *(conjunto F2-acessibilidade)*
+- `O-ANALOGICO-CHEGA-AO-JOGO-NO…` — O analógico chega ao jogo no ritmo do controle. [ensaio] *(conjunto F2-controle)*
+- `O-CURSOR-DA-MIRA-ANDA-DEVAGAR…` — O cursor da Mira anda devagar logo acima da zona morta. [ensaio] *(conjunto F2-controle)*
+- `O-PAD-QUE-NASCE-NAO-PARA…` — O pad que nasce não para o tique dos outros. [ensaio] *(conjunto F2-controle)*
+- `O-TIQUE-DE-30-S-SO…` — O tique de 30 s só repinta a luz que o kernel perdeu. [ensaio] *(conjunto F2-controle)*
 - `A-TROCA-PELA-JANELA-NAO-PARA…` — A troca pela janela não para o laço do controle. *(conjunto carga)*
 - `O-APARELHO-QUE-VIRA-P1-SEGUE…` — O aparelho que vira P1 segue escondido do jogo. *(conjunto dsx)*
 - `A-FAIXA-NA-MESA-FORA-DE…` — A faixa da O-ASSENTO-04 também na mesa fora de ordem. *(espera ela)*
-- `A-LUZ-DO-CONTROLE-NUNCA-SAI…` — A luz do controle nunca sai preta. [bancada] *(espera ela)*
+- `A-LUZ-DO-CONTROLE-NUNCA-SAI…` — A luz do controle nunca sai preta. [ensaio] *(espera ela)*
 - `A-MIRA-NA-NAVEGACAO` — Na Navegação, o giro move o cursor. *(espera ela)*
 - `HIDE-SO-O-HIDRAW-02` — O físico segue alcançável por quatro nós de entrada. *(espera ela)*
-- `NO-MODO-XBOX-TUDO-FUNCIONA` — No modo Xbox, tudo funciona. [bancada] *(espera ela)*
+- `NO-MODO-XBOX-TUDO-FUNCIONA` — No modo Xbox, tudo funciona. [ensaio] *(espera ela)*
 - `O-ASSENTO-GUARDADO-NAO-ANDA` — Enquanto o lugar está guardado, ninguém troca de número. *(espera ela)*
 - `O-ASSENTO-GUARDADO-NAO-ANDA-02` — O jogo também espera, e o prazo sobrevive à suspensão. *(espera ela)*
 - `O-ASSENTO-GUARDADO-NAO-ANDA-03` — Passado o prazo, o jogo fecha o buraco junto com a tela. *(espera ela)*
-- `O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER…` — A regra do Hefesto é a última a falar do hidraw físico. [bancada] *(espera ela)*
-- `O-MODO-QUE-NAO-SAI-DO…` — Ela clica no Modo e a tela não muda. [bancada] *(espera ela)*
+- `O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER…` — A regra do Hefesto é a última a falar do hidraw físico. [ensaio] *(espera ela)*
+- `O-MODO-QUE-NAO-SAI-DO…` — Ela clica no Modo e a tela não muda. [ensaio] *(espera ela)*
 - `A-PERDA-DE-AMOSTRAS-DO-MOVIMENTO…` — A perda de amostras do movimento se conta pelo contador do report. *(conjunto ipc)*
 - `O-CONTROLE-E-O-VPAD-DELE…` — O controle e o vpad dele se casam pelo endereço. *(conjunto ipc)*
 - `O-TIQUE-TEM-ORCAMENTO-E-A…` — O tique tem orçamento e a manutenção não para a entrada. *(conjunto legado)*
@@ -171,44 +171,44 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `O-ARQUIVO-DE-MASCARAS-ILEGIVEL-NAO…` — O arquivo de máscaras ilegível não se sobrescreve calado. *(conjunto pad)*
 - `A-SETA-SEGURADA-SE-SOLTA-QUANDO…` — A seta segurada se solta quando o perfil troca. *(conjunto solta)*
 - `O-MODIFICADOR-SEGURADO-POR-OUTRO-BOTAO…` — O modificador segurado por outro botão não se solta. *(conjunto solta)*
-- `O-TOQUE-LIGADO-OU-DESLIGADO-POR…` — O toque é Ligado ou Desligado em cada controle, e o Desligado cala o touchpad dentro do jogo. [bancada] *(conjunto v-toque)*
+- `O-TOQUE-LIGADO-OU-DESLIGADO-POR…` — O toque é Ligado ou Desligado em cada controle, e o Desligado cala o touchpad dentro do jogo. [ensaio] *(conjunto v-toque)*
 
 ### Vibração, gatilho e tato (23)
 
 - `O-ESTILO-DO-PERFIL-LIGA-O…` — O estilo do perfil liga o motor do tato. *(no dev: falta o carimbo)*
 - `O-PAD-CEDIDO-CALA-O-GATILHO…` — O pad cedido cala o gatilho e a luz também. *(no dev: falta o carimbo)*
-- `O-PERFIL-ANTIGO-DE-VIBRACAO-POR…` — O perfil antigo de vibração por posição carrega no piso. *(no dev: fecha com o olho dela na foto)*
-- `A-VOLTA-DOS-ACESSORIOS-SE-SENTE…` — A volta dos acessórios se sente no controle e na luz. [bancada] *(conjunto F2-acessorios)*
+- `O-PERFIL-ANTIGO-DE-VIBRACAO-POR…` — O perfil antigo de vibração por posição carrega no piso. *(no dev: fecha com o olho de quem confere na foto)*
+- `A-VOLTA-DOS-ACESSORIOS-SE-SENTE…` — A volta dos acessórios se sente no controle e na luz. [ensaio] *(conjunto F2-acessorios)*
 - `O-JOGO-DOS-ACESSORIOS-CHEGA-A…` — O jogo dos acessórios chega à aba Vibração e às janelas. *(conjunto F2-acessorios)*
-- `O-TOUCHPAD-VIRA-FONTE-DE-VIBRACAO` — O touchpad vira fonte de vibração. [bancada] *(conjunto F2-acessorios)*
-- `OS-GESTOS-DO-PS-COMANDAM-OS…` — Os gestos do PS comandam os acessórios. [bancada] *(conjunto F2-acessorios)*
-- `OS-MEUS-TOQUES-VIBRAM-O-CONTROLE…` — Os meus toques vibram o controle a cada entrada. [bancada] *(conjunto F2-acessorios)*
-- `QUEM-SOLTA-O-CONTROLE-SOLTA-O…` — Quem solta o controle solta o gatilho de todos. [bancada] *(conjunto F2-controle)*
+- `O-TOUCHPAD-VIRA-FONTE-DE-VIBRACAO` — O touchpad vira fonte de vibração. [ensaio] *(conjunto F2-acessorios)*
+- `OS-GESTOS-DO-PS-COMANDAM-OS…` — Os gestos do PS comandam os acessórios. [ensaio] *(conjunto F2-acessorios)*
+- `OS-MEUS-TOQUES-VIBRAM-O-CONTROLE…` — Os meus toques vibram o controle a cada entrada. [ensaio] *(conjunto F2-acessorios)*
+- `QUEM-SOLTA-O-CONTROLE-SOLTA-O…` — Quem solta o controle solta o gatilho de todos. [ensaio] *(conjunto F2-controle)*
 - `A-FORCA-DA-VIBRACAO-DE-CADA…` — A força da vibração de cada controle sai de um funil só, com a bateria dele e o teto. *(costurada na fds-1: entra na fds-2)*
 - `A-RECEITA-DO-TATO-SE-LE…` — A receita do tato se lê sem semear nem varrer. *(costurada na fds-1: entra na fds-2)*
 - `O-EM-TODOS-DO-GATILHO-CHEGA…` — O «Em todos» do gatilho chega a cada controle da mesa. *(costurada na fds-1: entra na fds-2)*
 - `O-GATILHO-QUE-O-CONTROLE-NAO…` — O gatilho que o controle não aceita não derruba o perfil. *(conjunto carga)*
-- `O-DESLIGADO-DEIXA-O-JOGO-DECIDIR` — O «Desligado» deixa o jogo decidir. [bancada] *(espera ela)*
-- `A-VIBRACAO-DO-CONTROLE-CHEGA-AOS…` — A vibração do controle chega aos acessórios pelo Buttplug. [bancada] *(conjunto evento)*
-- `O-GATILHO-E-A-HAPTICA-DO…` — O gatilho e a háptica do jogo viram eventos para as extensões. [bancada] *(conjunto evento)*
+- `O-DESLIGADO-DEIXA-O-JOGO-DECIDIR` — O «Desligado» deixa o jogo decidir. [ensaio] *(espera ela)*
+- `A-VIBRACAO-DO-CONTROLE-CHEGA-AOS…` — A vibração do controle chega aos acessórios pelo Buttplug. [ensaio] *(conjunto evento)*
+- `O-GATILHO-E-A-HAPTICA-DO…` — O gatilho e a háptica do jogo viram eventos para as extensões. [ensaio] *(conjunto evento)*
 - `O-TEXTO-DO-GATILHO-DIZ-O…` — O texto do gatilho diz o que o código faz hoje. *(conjunto ipc)*
 - `O-TOQUE-CURTO-DO-JOGO-CHEGA…` — O toque curto do jogo chega ao controle mesmo entre dois tiques. *(conjunto pad)*
 - `O-PARAR-CALA-O-TESTE-QUE…` — O «Parar» cala o teste que ainda estava no ar. *(conjunto parar)*
 - `A-HAPTICA-DO-RADIO-SE-CONVERTE…` — A háptica do rádio se converte sem pesar na ponte. *(conjunto radio)*
 - `O-MAPA-DA-VIBRACAO-DIZ-O…` — O mapa da vibração diz o que o código faz. *(conjunto radio)*
-- `A-VIBRACAO-DO-JOGO-NAO-ESPERA…` — A vibração do jogo não espera o sono da volta. [bancada] *(conjunto tato)*
-- `O-CONTROLE-VIBRA-NO-MODO-DO…` — O controle vibra no modo do firmware dele. [bancada] *(conjunto tato)*
+- `A-VIBRACAO-DO-JOGO-NAO-ESPERA…` — A vibração do jogo não espera o sono da volta. [ensaio] *(conjunto tato)*
+- `O-CONTROLE-VIBRA-NO-MODO-DO…` — O controle vibra no modo do firmware dele. [ensaio] *(conjunto tato)*
 
 ### Som e microfone (8)
 
-- `O-PADRAO-DO-ALTO-FALANTE-DESLIGA…` — O «Padrão» do alto-falante desliga sem perfil ativo. *(no dev: fecha com o olho dela na foto)*
-- `O-NO-DE-SOM-FICA-QUANDO…` — O nó de som fica quando o controle sai. [bancada] *(conjunto F2-no-de-som)*
+- `O-PADRAO-DO-ALTO-FALANTE-DESLIGA…` — O «Padrão» do alto-falante desliga sem perfil ativo. *(no dev: fecha com o olho de quem confere na foto)*
+- `O-NO-DE-SOM-FICA-QUANDO…` — O nó de som fica quando o controle sai. [ensaio] *(conjunto F2-no-de-som)*
 - `SOM-CABO-QUALIDADE` — A queixa que o codec não explica. *(espera ela)*
 - `A-LUZ-DO-MIC-SEGUE-O…` — A luz do mic segue o botão quando não sabe quem ouve. *(conjunto som)*
 - `O-MICROFONE-DO-RADIO-DESLIGA-NO…` — O microfone do rádio desliga no stop, mesmo com a volta em curso. *(conjunto som)*
 - `O-NO-E-A-PONTE-DO…` — O nó e a ponte do som não nascem depois do stop. *(conjunto som)*
 - `O-NO-LIGA-A-ROTA-INTEIRA…` — O nó liga a rota inteira e segue a saída padrão. *(conjunto som)*
-- `O-SOM-QUE-O-JOGO-MANDA…` — O som que o jogo manda ao controle toca também pelo rádio. [bancada] *(conjunto tato)*
+- `O-SOM-QUE-O-JOGO-MANDA…` — O som que o jogo manda ao controle toca também pelo rádio. [ensaio] *(conjunto tato)*
 
 ### Rádio, conexões e USB (18)
 
@@ -216,20 +216,20 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `A-SONDA-DO-BLUEZ-PERGUNTA-SO…` — A sonda do BlueZ pergunta só ao dono, e o ensaio do rádio passa no tipo. *(no dev: falta o carimbo)*
 - `O-CAMINHO-DO-BLUEZ-SO-NO…` — O caminho do BlueZ só no dono. *(no dev: falta o carimbo)*
 - `O-CARTAO-DO-EXTERNO-MOSTRA-O…` — O cartão do controle externo mostra a cor e os glifos que ela declarou. *(no dev: falta o carimbo)*
-- `O-DEGRAU-DO-MEIO-E-A…` — O degrau do meio e a frase da faixa se ligam depois da B9. [bancada] *(conjunto F2-degrau)*
-- `O-ENSAIO-QUE-O-RADIO-PEDE…` — A BANCADA QUE O RÁDIO PEDE — o índice. [bancada] *(espera ela)*
-- `A-REPORT-THREAD-SAI-ANTES-DO…` — A report_thread sai antes de o handle fechar. [bancada] *(espera ela)*
-- `AS-FAIXAS-DIZEM-QUEM-BRIGA-COM…` — As faixas dizem quem briga com cada aparelho. [bancada] *(espera ela)*
-- `O-CONTROLE-JA-PAREADO-SE-PAREIA…` — O controle já pareado se pareia de novo num clique. [bancada] *(espera ela)*
-- `O-CONTROLE-QUE-PEDE-PARA-PAREAR…` — O controle que pede para parear aparece, mesmo já conhecido. [bancada] *(espera ela)*
-- `O-RECEPTOR-2-4G-SE-RECONHECE…` — O receptor 2.4G se reconhece e diz quando sofre. [bancada] *(espera ela)*
-- `O-WIFI-SE-LE-NAS-DUAS…` — O Wi-Fi se lê nas duas bandas e troca o USB pela banda. [bancada] *(espera ela)*
+- `O-DEGRAU-DO-MEIO-E-A…` — O degrau do meio e a frase da faixa se ligam depois da B9. [ensaio] *(conjunto F2-degrau)*
+- `O-ENSAIO-QUE-O-RADIO-PEDE…` — O ENSAIO QUE O RÁDIO PEDE — o índice. [ensaio] *(espera ela)*
+- `A-REPORT-THREAD-SAI-ANTES-DO…` — A report_thread sai antes de o handle fechar. [ensaio] *(espera ela)*
+- `AS-FAIXAS-DIZEM-QUEM-BRIGA-COM…` — As faixas dizem quem briga com cada aparelho. [ensaio] *(espera ela)*
+- `O-CONTROLE-JA-PAREADO-SE-PAREIA…` — O controle já pareado se pareia de novo num clique. [ensaio] *(espera ela)*
+- `O-CONTROLE-QUE-PEDE-PARA-PAREAR…` — O controle que pede para parear aparece, mesmo já conhecido. [ensaio] *(espera ela)*
+- `O-RECEPTOR-2-4G-SE-RECONHECE…` — O receptor 2.4G se reconhece e diz quando sofre. [ensaio] *(espera ela)*
+- `O-WIFI-SE-LE-NAS-DUAS…` — O Wi-Fi se lê nas duas bandas e troca o USB pela banda. [ensaio] *(espera ela)*
 - `STORM-USB` — O storm de USB que o doctor conta e ninguém cura. *(espera ela)*
 - `O-VIGIA-DO-RADIO-SO-TOCA…` — O vigia do rádio só toca os controles do Hefesto. *(conjunto github)*
-- `O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA…` — O acessório sem tipo ganha categoria e sinal na Conexões. [bancada] *(conjunto lancadores)*
+- `O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA…` — O acessório sem tipo ganha categoria e sinal na Conexões. [ensaio] *(conjunto lancadores)*
 - `O-VIGIA-DE-ZUMBI-PERGUNTA-E…` — O vigia de zumbi pergunta e avisa uma vez por episódio. *(conjunto radio)*
-- `O-DUALSENSE-PELO-RADIO-NO-WINE…` — O DualSense pelo rádio no Wine se explica, sem o Hefesto no caminho. [bancada] *(só bancada, sem agente)*
-- `A-CADEIA-USB-SE-RECONHECE-EM…` — A cadeia USB se reconhece em qualquer PC, e cada mudança vai ao registro. [bancada] *(conjunto v-usb)*
+- `O-DUALSENSE-PELO-RADIO-NO-WINE…` — O DualSense pelo rádio no Wine se explica, sem o Hefesto no caminho. [ensaio] *(só ensaio, sem agente)*
+- `A-CADEIA-USB-SE-RECONHECE-EM…` — A cadeia USB se reconhece em qualquer PC, e cada mudança vai ao registro. [ensaio] *(conjunto v-usb)*
 
 ### Perfis e modificações (17)
 
@@ -240,7 +240,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `O-ESTILO-CHEGA-AO-GATILHO-E…` — O estilo chega ao gatilho e à vibração de cada controle. *(costurada na fds-1: entra na fds-2)*
 - `O-PERSONALIZADO-DESLIGA-A-RECEITA-DO…` — O Personalizado desliga a receita do estilo anterior. *(costurada na fds-1: entra na fds-2)*
 - `A-FABRICA-NOVA-DO-FREESTYLE-ALCANCA…` — A fábrica nova do Freestyle alcança a cópia de fábrica de ontem. *(conjunto carga)*
-- `O-SALVAR-E-O-APLICAR-LEEM…` — O Salvar e o Aplicar leem o perfil, e só ele (item 1 da auditoria de 26/09). [bancada] *(espera ela)*
+- `O-SALVAR-E-O-APLICAR-LEEM…` — O Salvar e o Aplicar leem o perfil, e só ele (item 1 da auditoria de 26/09). [ensaio] *(espera ela)*
 - `O-PLUGIN-RECARREGA-SEM-PERDER-OS…` — O plugin recarrega sem perder os plugins. *(conjunto ipc)*
 - `O-RECARREGAR-DOS-PLUGINS-NAO-APAGA…` — O recarregar dos plugins não apaga os plugins. *(conjunto ipc)*
 - `O-BRANCO-DA-TROCA-DE-PERFIL…` — O branco da troca de perfil pisca sem gravar. *(conjunto solta)*
@@ -255,45 +255,45 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 
 - `A-GRAVACAO-DO-YML-QUE-FALHA…` — A gravação do `.yml` que falha depois da anotação vai ao diário. *(no dev: falta o carimbo)*
 - `O-REGISTRO-DO-YML-ANDA-ANTES…` — O registro do `.yml` anda antes da carona, e a recusa calada ganha a linha no CSV. *(no dev: falta o carimbo)*
-- `O-SHADPS4-QUE-JA-MORA-AQUI` — O jogo de PS4 que ela já tem instalado recebe touchpad, giroscópio e vibração pelo controle virtual. [bancada] *(conjunto F2-emuladores)*
-- `O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO` — O jogo de Vita recebe o toque na frente e atrás, e o giroscópio, pelo controle virtual. [bancada] *(conjunto F2-emuladores)*
-- `O-SERVIDOR-DSU-LEVA-O-TOQUE…` — O touchpad vira a tela de baixo do 3DS, e o giro chega por um caminho que não depende do SDL. [bancada] *(conjunto dsu)*
+- `O-SHADPS4-QUE-JA-MORA-AQUI` — O jogo de PS4 que ela já tem instalado recebe touchpad, giroscópio e vibração pelo controle virtual. [ensaio] *(conjunto F2-emuladores)*
+- `O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO` — O jogo de Vita recebe o toque na frente e atrás, e o giroscópio, pelo controle virtual. [ensaio] *(conjunto F2-emuladores)*
+- `O-SERVIDOR-DSU-LEVA-O-TOQUE…` — O touchpad vira a tela de baixo do 3DS, e o giro chega por um caminho que não depende do SDL. [ensaio] *(conjunto dsu)*
 - `O-DSX-PINTA-COMO-JOGO-E…` — O DSX pinta como jogo, e o reset devolve o perfil. *(conjunto dsx)*
 - `O-LIMIAR-DO-GATILHO-DO-DSX…` — O limiar do gatilho do DSX vale para cada jogador. *(conjunto dsx)*
 - `O-PAR-DO-GESTO-DO-PS…` — O par do gesto do PS não chega ao jogo. *(conjunto dsx)*
-- `A-ABA-LANCADORES-GANHA-AS-MODIFICACOES` — A aba Lançadores ganha as Modificações. [bancada] *(espera ela)*
-- `O-ENGASGO-DO-JOGO-LEVE-SE…` — O engasgo do jogo leve se separa em ABBA. [bancada] *(espera ela)*
-- `O-FIXAR-PROTON-DESINSTALA-AS-VERSOES…` — O «Fixar Proton» desinstala as versões que sobram. [bancada] *(espera ela)*
-- `O-JOGO-LEVE-ACORDA-A-PLACA` — O jogo leve acorda a placa. [bancada] *(espera ela)*
+- `A-ABA-LANCADORES-GANHA-AS-MODIFICACOES` — A aba Lançadores ganha as Modificações. [ensaio] *(espera ela)*
+- `O-ENGASGO-DO-JOGO-LEVE-SE…` — O engasgo do jogo leve se separa em ABBA. [ensaio] *(espera ela)*
+- `O-FIXAR-PROTON-DESINSTALA-AS-VERSOES…` — O «Fixar Proton» desinstala as versões que sobram. [ensaio] *(espera ela)*
+- `O-JOGO-LEVE-ACORDA-A-PLACA` — O jogo leve acorda a placa. [ensaio] *(espera ela)*
 - `STEAM-INPUT` — O chip que nunca acende, e a escrita que já estava pronta. *(espera ela)*
 - `O-PS-ABRE-A-STEAM-PELO…` — O PS abre a Steam pelo dono que já sabe reabrir. *(conjunto fora)*
-- `O-LANCADOR-DO-KYTYPS5-VEM-DA…` — O lançador do KytyPS5 vem da modificação. [bancada] *(conjunto kyty)*
+- `O-LANCADOR-DO-KYTYPS5-VEM-DA…` — O lançador do KytyPS5 vem da modificação. [ensaio] *(conjunto kyty)*
 - `O-DSX-ACENDE-O-JOGADOR-QUE…` — O DSX acende o jogador que o mod pede. *(conjunto laco)*
-- `O-BIG-PICTURE-SE-PROVA-NA…` — O Big Picture se prova na Steam, e o mapa de canais ganha as linhas dele e dos dois modos. [bancada] *(só bancada, sem agente)*
-- `AS-CONFIGURACOES-CHEGAM-AO-JOGO-NOVO…` — As configurações chegam sozinhas a cada jogo novo, no instante em que a Steam fecha. [bancada] *(conjunto v-jogos)*
-- `O-JOGO-QUE-PEDE-RECEITA-DE…` — O jogo que só abre com uma receita de ambiente a recebe pelo wrapper, para toda a família dele. [bancada] *(conjunto v-jogos)*
+- `O-BIG-PICTURE-SE-PROVA-NA…` — O Big Picture se prova na Steam, e o mapa de canais ganha as linhas dele e dos dois modos. [ensaio] *(só ensaio, sem agente)*
+- `AS-CONFIGURACOES-CHEGAM-AO-JOGO-NOVO…` — As configurações chegam sozinhas a cada jogo novo, no instante em que a Steam fecha. [ensaio] *(conjunto v-jogos)*
+- `O-JOGO-QUE-PEDE-RECEITA-DE…` — O jogo que só abre com uma receita de ambiente a recebe pelo wrapper, para toda a família dele. [ensaio] *(conjunto v-jogos)*
 - `O-JOGO-SE-DECLARA-NO-PRONTUARIO…` — O prontuário diz o que cada jogo declara sobre controle, e explica a capa da Steam. *(conjunto v-jogos)*
 - `O-REAPLICAR-NUNCA-APAGA-O-QUE…` — Reaplicar nos lançadores nunca apaga o que o usuário escreveu na opção de lançamento. *(conjunto v-jogos)*
 
 ### Janela e interface (37)
 
-- `A-LINHA-DO-EXTERNO-VOLTA-AOS…` — A linha do externo volta aos 30 px, e a cor fora da lista se escolhe. *(no dev: fecha com o olho dela na foto)*
-- `A-TELA-PERGUNTA-AO-DONO` — A tela pergunta ao dono. *(no dev: fecha com o olho dela na foto)*
-- `A-TELA-SEM-O-QUE-A…` — A tela sem o que a régua aceita. *(no dev: fecha com o olho dela na foto)*
-- `AS-QUATRO-LINHAS-DA-08-SEM…` — As quatro linhas da 08 sem dono ganham dono ou saem do desenho. *(no dev: fecha com o olho dela na foto)*
-- `O-NOME-DO-JOGADOR-TEM-UM…` — O nome do jogador tem um dono só. *(no dev: fecha com o olho dela na foto)*
-- `O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO` — O Selecionar acende quem está escolhido. [bancada] *(no dev: fecha com o olho dela na foto)*
-- `SO-A-PRIMEIRA-LETRA-E-MAIUSCULA…` — Só a primeira letra é maiúscula em toda aba. *(no dev: fecha com o olho dela na foto)*
-- `TODO-TEXTO-QUE-ABRE-UMA-LINHA…` — Todo texto que abre uma linha começa com maiúscula. *(no dev: fecha com o olho dela na foto)*
-- `O-POINT-AND-CLICK-E-A…` — O point-and-click e a acessibilidade se definem na Navegação. [tela] [bancada] *(conjunto F2-acessibilidade; a ficha diz `espera-ela`: só voa com a palavra dela)*
-- `OS-ALVOS-E-A-LETRA-CRESCEM…` — Os alvos e a letra crescem, e a interface ganha tamanho. [tela] [bancada] *(conjunto F2-acessibilidade; a ficha diz `espera-ela`: só voa com a palavra dela)*
+- `A-LINHA-DO-EXTERNO-VOLTA-AOS…` — A linha do externo volta aos 30 px, e a cor fora da lista se escolhe. *(no dev: fecha com o olho de quem confere na foto)*
+- `A-TELA-PERGUNTA-AO-DONO` — A tela pergunta ao dono. *(no dev: fecha com o olho de quem confere na foto)*
+- `A-TELA-SEM-O-QUE-A…` — A tela sem o que a régua aceita. *(no dev: fecha com o olho de quem confere na foto)*
+- `AS-QUATRO-LINHAS-DA-08-SEM…` — As quatro linhas da 08 sem dono ganham dono ou saem do desenho. *(no dev: fecha com o olho de quem confere na foto)*
+- `O-NOME-DO-JOGADOR-TEM-UM…` — O nome do jogador tem um dono só. *(no dev: fecha com o olho de quem confere na foto)*
+- `O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO` — O Selecionar acende quem está escolhido. [ensaio] *(no dev: fecha com o olho de quem confere na foto)*
+- `SO-A-PRIMEIRA-LETRA-E-MAIUSCULA…` — Só a primeira letra é maiúscula em toda aba. *(no dev: fecha com o olho de quem confere na foto)*
+- `TODO-TEXTO-QUE-ABRE-UMA-LINHA…` — Todo texto que abre uma linha começa com maiúscula. *(no dev: fecha com o olho de quem confere na foto)*
+- `O-POINT-AND-CLICK-E-A…` — O point-and-click e a acessibilidade se definem na Navegação. [tela] [ensaio] *(conjunto F2-acessibilidade; a ficha diz `espera-ela`: só voa com a palavra de produto)*
+- `OS-ALVOS-E-A-LETRA-CRESCEM…` — Os alvos e a letra crescem, e a interface ganha tamanho. [tela] [ensaio] *(conjunto F2-acessibilidade; a ficha diz `espera-ela`: só voa com a palavra de produto)*
 - `O-NUMERO-DA-BARRA-NAO-CONGELA…` — O número da barra não congela no valor velho. *(costurada na fds-1: entra na fds-2)*
 - `A-HAPTICA-MORA-EM-VIBRACAO-E…` — A háptica mora em Vibração, e o ícone do app volta. *(espera ela)*
-- `A-PALETA-MARCA-A-COR-DE…` — A paleta marca a cor de cada controle. [bancada] *(espera ela)*
+- `A-PALETA-MARCA-A-COR-DE…` — A paleta marca a cor de cada controle. [ensaio] *(espera ela)*
 - `AS-DICAS-SAO-CARTOES-COM-UM…` — As dicas são cartões com um gesto. *(espera ela)*
 - `I18N-DA-TELA-NOVA` — As strings da tela nova não têm endereço. *(espera ela)*
 - `O-APARELHO-SE-CORRIGE-ONDE-SE…` — O aparelho se corrige onde se clica. *(espera ela)*
-- `O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE…` — O touchpad mostra as zonas que ele aperta. [bancada] *(espera ela)*
+- `O-TOUCHPAD-MOSTRA-AS-ZONAS-QUE…` — O touchpad mostra as zonas que ele aperta. [ensaio] *(espera ela)*
 - `A-BANDEJA-TEM-UM-DONO-SO` — A bandeja tem um dono só. *(conjunto fora)*
 - `A-CASCATA-DO-WAYLAND-SO-PERGUNTA…` — A cascata do Wayland só pergunta a quem responde. *(conjunto fora)*
 - `O-TEMA-DE-CORES-ENTRA-PELA…` — O tema de cores entra pela folha de usuário. *(conjunto lancadores)*
@@ -301,7 +301,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `OS-CORACOES-DA-VIBRACAO-NAO-SEGURAM…` — Os corações da vibração não seguram a janela. *(conjunto parar)*
 - `A-SAIDA-DE-UM-CONTROLE-NAO…` — A saída de um controle não trava a aba Sistema. *(conjunto radio)*
 - `A-ABA-NAVEGACAO-TEM-OS-DOIS…` — A aba Navegação tem os dois point and click e a velocidade que funciona. [tela] *(conjunto tela-a)*
-- `A-CAPTURA-DE-TECLA-SE-FAZ…` — A captura de tecla se faz sobre o mapa do controle. [tela] [bancada] *(conjunto tela-a)*
+- `A-CAPTURA-DE-TECLA-SE-FAZ…` — A captura de tecla se faz sobre o mapa do controle. [tela] [ensaio] *(conjunto tela-a)*
 - `A-FUNCAO-DO-TECLADO-GANHA-O…` — A Função do teclado ganha o «Sempre». [tela] *(conjunto tela-a)*
 - `O-POINT-AND-CLICK-FICA-NO…` — O point and click fica no Ligado e a navegação no Desligado. [tela] *(conjunto tela-a)*
 - `O-TOUCHPAD-LIGA-E-DESLIGA-NA…` — O touchpad liga e desliga na aba Controles. [tela] *(conjunto tela-a)*
@@ -311,23 +311,23 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `O-PERFIL-SE-ACHA-PELO-NOME…` — O perfil se acha pelo nome do jogo e se aplica em quatro alvos. [tela] *(conjunto tela-b)*
 - `CADA-FEATURE-TEM-UM-DONO-SO…` — Cada feature tem um dono só na interface. [tela] *(conjunto tela-c)*
 - `O-MAPA-DAS-CONEXOES-MOSTRA-A…` — O Mapa das Conexões mostra a cadeia USB e o registro dela. [tela] *(conjunto tela-c)*
-- `A-ALTURA-E-A-LARGURA-DA…` — A altura e a largura da janela não pulsam. [bancada] *(conjunto v-janela)*
-- `A-JANELA-DO-INICIO-DA-SESSAO…` — A janela que abre no início da sessão não morre junto com o serviço que a abriu. [bancada] *(conjunto v-janela)*
-- `A-JANELA-REGISTRA-O-PROPRIO-TAMANHO…` — A janela registra o próprio tamanho, o monitor e o motivo de fechar. [bancada] *(conjunto v-janela)*
+- `A-ALTURA-E-A-LARGURA-DA…` — A altura e a largura da janela não pulsam. [ensaio] *(conjunto v-janela)*
+- `A-JANELA-DO-INICIO-DA-SESSAO…` — A janela que abre no início da sessão não morre junto com o serviço que a abriu. [ensaio] *(conjunto v-janela)*
+- `A-JANELA-REGISTRA-O-PROPRIO-TAMANHO…` — A janela registra o próprio tamanho, o monitor e o motivo de fechar. [ensaio] *(conjunto v-janela)*
 
 ### Serviço, linha de comando e install (17)
 
 - `A-CHAVE-E-A-PERMISSAO-DIZEM…` — A chave e a permissão dizem o que são. *(conjunto diario)*
 - `O-DIARIO-AVISA-UMA-VEZ-E…` — O diário avisa uma vez, e a configuração ilegível não se perde. *(conjunto diario)*
 - `O-NIX-LEVA-AS-REGRAS-DO…` — O Nix leva as regras do host. *(espera ela)*
-- `O-PRODUTO-EM-QUALQUER-MAQUINA` — O produto em qualquer máquina: as lacunas e a prova em máquina limpa. [bancada] *(espera ela)*
+- `O-PRODUTO-EM-QUALQUER-MAQUINA` — O produto em qualquer máquina: as lacunas e a prova em máquina limpa. [ensaio] *(espera ela)*
 - `A-TELA-E-DEPENDENCIA-DURA` — A interface declara o WebKit em todo lugar onde o produto se instala. *(conjunto install)*
 - `AS-REGRAS-DO-SOM-VALEM-NO…` — As regras do som valem no WirePlumber que a distro traz. *(conjunto install)*
 - `O-BLUEZ-DA-CASA-NAO-CONGELA…` — O BlueZ da distro ganha recado, e o da casa não congela a segurança. *(conjunto install)*
-- `O-BROKER-SERVE-QUEM-ESTA-NA…` — O broker serve quem está na frente da máquina. [bancada] *(conjunto install)*
+- `O-BROKER-SERVE-QUEM-ESTA-NA…` — O broker serve quem está na frente da máquina. [ensaio] *(conjunto install)*
 - `O-INSTALL-EM-QUALQUER-DISTRO` — O install reconhece a distro somente leitura. *(conjunto install)*
 - `O-PERFIL-DE-FABRICA-E-O…` — O perfil de fábrica e o serviço chegam em todo formato. *(conjunto install)*
-- `O-QUE-E-DO-ENSAIO-FICA…` — O que é da bancada fica na bancada. *(conjunto install)*
+- `O-QUE-E-DO-ENSAIO-FICA…` — O que é do ensaio fica no ensaio. *(conjunto install)*
 - `A-LINHA-DE-COMANDO-ESPERA-O…` — A linha de comando espera o que o serviço precisa. *(conjunto ipc)*
 - `A-TROCA-DE-DAEMON-ESPERA-O…` — A troca de daemon espera o desligamento inteiro. *(conjunto laco)*
 - `AS-METRICAS-CONTAM-O-QUE-A…` — As métricas contam o que a página promete. *(conjunto laco)*
@@ -337,7 +337,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 
 ### Ferramentas da leva, portões e CI (24)
 
-- `O-ENSAIO-DE-MENTIRA-TEM-EXTERNO…` — A bancada de mentira tem externo, e a sonda lê a dica. *(no dev: falta o carimbo)*
+- `O-ENSAIO-DE-MENTIRA-TEM-EXTERNO…` — O ensaio de mentira tem externo, e a sonda lê a dica. *(no dev: falta o carimbo)*
 - `A-CASA-NAO-DEIXA-PASSAR-COMENTARIO…` — A casa não deixa passar comentário cortado, import relativo nem posse de arquivo que não existe. *(no dev: falta o carimbo)*
 - `A-CRUA-SO-ANDA-COM-PROVA…` — A crua só anda com prova de verdade, e o rc do reapontar diz o que falta. *(no dev: falta o carimbo)*
 - `A-JANELA-ABERTA-CABE-NA-PARTE` — Um arquivo de teste não passa da parte ideal. *(no dev: falta o carimbo)*
@@ -378,22 +378,22 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `A-CANONICA-RECEBE-O-QUE-AS…` — A canônica recebe o que as reimplementações abertas dizem do som e do toque. *(conjunto papeis)*
 - `A-PAGINA-DAS-PORTAS-CONTA-A…` — A página das portas conta a ponte do som e da vibração. *(conjunto papeis)*
 
-### Bancada e medição (5)
+### Ensaio e medição (5)
 
-- `O-ENSAIO-DOS-EXTERNOS` — A bancada dos controles EXTERNOS — adiada pela D-0609-EXTERNOS-DEPOIS. [bancada] *(espera ela)*
-- `MESA-DE-QUATRO` — Quatro DualSense, por cabo e por rádio, com ela. [bancada] *(espera ela)*
-- `OS-GESTOS-QUE-SO-O-USUARIO-PODE…` — OS GESTOS QUE SÓ ELA PODE FAZER — a fila da bancada, 10/09/2026. [bancada] *(espera ela)*
-- `O-BASICO-MEDIDO` — O básico se mede por um instrumento que diz o que mexe e devolve o que mexeu. [bancada] *(só bancada, sem agente)*
-- `O-FORJA-E-O-BANCO-DE…` — O Forja é o banco de prova do Hefesto. [bancada] *(só bancada, sem agente)*
+- `O-ENSAIO-DOS-EXTERNOS` — O ensaio dos controles EXTERNOS — adiada pela D-0609-EXTERNOS-DEPOIS. [ensaio] *(espera ela)*
+- `MESA-DE-QUATRO` — Quatro DualSense, por cabo e por rádio, com ela. [ensaio] *(espera ela)*
+- `OS-GESTOS-QUE-SO-O-USUARIO-PODE…` — OS GESTOS QUE SÓ ELA PODE FAZER — a fila do ensaio, 10/09/2026. [ensaio] *(espera ela)*
+- `O-BASICO-MEDIDO` — O básico se mede por um instrumento que diz o que mexe e devolve o que mexeu. [ensaio] *(só ensaio, sem agente)*
+- `O-FORJA-E-O-BANCO-DE…` — O Forja é o banco de prova do Hefesto. [ensaio] *(só ensaio, sem agente)*
 
 ### A casa (o assistente) (6)
 
 - `O-CONTEXTO-CHEGA-CERTO-A-QUEM-ABRE…` — O contexto chega certo a quem abre a sessão, parte 2: a lei estável nas instruções da casa e a memória auditada. *(espera a aprovação dela)*
-- `A-ARVORE-TEM-UMA-SESSAO-SO` — A árvore tem uma sessão só, e o /tmp também. *(falso em voo: gesto dela)*
-- `A-GUARDA-FECHA-A-PORTA` — A guarda fecha a porta: o assistente não desliga a trava que o segura. *(falso em voo: gesto dela)*
-- `A-SENHA-SO-PASSA-PELO-ASKPASS` — A senha só passa pelo askpass, e nunca pela conversa. *(falso em voo: gesto dela)*
-- `O-DESPACHANTE-DAS-REGRAS-DA-CASA` — O despachante das regras da casa: o que a memória só lembrava passa a barrar. *(falso em voo: gesto dela)*
-- `O-ENDERECO-NUNCA-CHEGA-A-CONVERSA` — O endereço do controle nunca chega à conversa nem à tela dela. *(falso em voo: gesto dela)*
+- `A-ARVORE-TEM-UMA-SESSAO-SO` — A árvore tem uma sessão só, e o /tmp também. *(falso em voo: gesto do usuário)*
+- `A-GUARDA-FECHA-A-PORTA` — A guarda fecha a porta: o assistente não desliga a trava que o segura. *(falso em voo: gesto do usuário)*
+- `A-SENHA-SO-PASSA-PELO-ASKPASS` — A senha só passa pelo askpass, e nunca pela conversa. *(falso em voo: gesto do usuário)*
+- `O-DESPACHANTE-DAS-REGRAS-DA-CASA` — O despachante das regras da casa: o que a memória só lembrava passa a barrar. *(falso em voo: gesto do usuário)*
+- `O-ENDERECO-NUNCA-CHEGA-A-CONVERSA` — O endereço do controle nunca chega à conversa nem à tela do usuário. *(falso em voo: gesto do usuário)*
 
 ## 5. As levas até o fim
 
@@ -431,11 +431,11 @@ não podem voar juntos, então pedem cinco ondas, uma para cada. Os outros se en
 | **7** | dsu (2; curar o frontmatter antes), evento (2: a do Buttplug e a P10 dos eventos), v-jogos (2: P2–P5) | dsu × diario; evento × terminal; v-jogos × legado e terminal (`launch_env.py`) | idem | 6 |
 | **8** | v-usb (2: a cadeia USB), v-toque (2: P1) | v-usb × dsu (`lifecycle.py`); v-toque depende de v-jogos (dado, não posse: não se inverte) | idem | 4 |
 | **FECHO B** | `integra/volta-1` → `dev` | ondas 4–8 | suíte 24, install, push, CI | — |
-| **9** subsystem e o que pede bancada | **subsystem (2, Opus: O-SUBSYSTEM-SOBE-E-DESCE, defeito de produto, sai sem esperar desenho nem ela)**, F2-no-de-som (2; resposta 0.1), F2-degrau (2; respostas A3, C1, N2), F2-emuladores (2), tela-b (2: T4, T5, T6). Mais 4 só de bancada, sem agente (rádio no Wine, Big Picture, básico medido, Forja) | `integra/volta-2`; o subsystem toca os mesmos arquivos do clique de cinco (vem depois dele) e tem de vir antes da F2-controle, que o espera; tela-b só com os mockups do todo escolhidos | cada F2 fecha no item dela da bancada; tela com foto, clique e mordida em lar de mentira | 10 |
+| **9** subsystem e o que pede ensaio | **subsystem (2, Opus: O-SUBSYSTEM-SOBE-E-DESCE, defeito de produto, sai sem esperar desenho nem ela)**, F2-no-de-som (2; resposta 0.1), F2-degrau (2; respostas A3, C1, N2), F2-emuladores (2), tela-b (2: T4, T5, T6). Mais 4 só de ensaio, sem agente (rádio no Wine, Big Picture, básico medido, Forja) | `integra/volta-2`; o subsystem toca os mesmos arquivos do clique de cinco (vem depois dele) e tem de vir antes da F2-controle, que o espera; tela-b só com os mockups do todo escolhidos | cada F2 fecha no item dela do ensaio; tela com foto, clique e mordida em lar de mentira | 10 |
 | **10** | tela-a (3, com final: T1, T2, T3, a captura, a Função do teclado e a ordem das 14h40) | tela-a × tela-b (`profiles/schema.py`) e tela-a × subsystem (`lifecycle.py`, `mouse.py`) | idem; `--publicar` no fecho | 3 |
 | **11** | F2-controle-com-oUsuario (2), tela-c (2: T7, T8 tela) | F2-controle × subsystem; tela-c depende de tela-a, tela-b (dado) e v-usb | idem | 4 |
 | **FECHO C** | `integra/volta-2` → `dev` | ondas 9–11 | idem | — |
-| **12** | F2-acessibilidade (3, com final; 10 fichas, a O-MOUSE-EMULADO sai como `absorvida`; as duas de tela esperam a palavra dela) | `integra/volta-3`; colide com F2-controle, tela-a, tela-b e tela-c | idem | 3 |
+| **12** | F2-acessibilidade (3, com final; 10 fichas, a O-MOUSE-EMULADO sai como `absorvida`; as duas de tela esperam a palavra de produto) | `integra/volta-3`; colide com F2-controle, tela-a, tela-b e tela-c | idem | 3 |
 | **13** | narrador (3, com final: O-CODIGO-SEM-NARRADOR-02), sozinho | toca quase todo arquivo | idem | 3 |
 | **14** | F2-jogo-dos-acessorios (3, com final) | F2-acessibilidade e narrador | idem | 3 |
 | **FECHO D** | `integra/volta-3` → `dev` | ondas 12–14 | idem | — |
@@ -446,8 +446,8 @@ não podem voar juntos, então pedem cinco ondas, uma para cada. Os outros se en
 fds-2 pedir cura). Perto de metade em Sonnet. A fds gastou 68 Opus em 31 conjuntos.
 
 **Tempo:** as ondas 0 a 8 e os fechos A e B andam sozinhas. Com a saída por conjunto, são ~34 h corridas (as ondas
-5 a 8 são menores, de 4 a 6 agentes). As ondas 9 a 11 dependem da bancada e da escolha dos mockups por ela (só o
-subsystem não espera). As ondas 12 a 15, mais os fechos C a E, somam ~20 h. Com a mão dela em dia, são **4 dias
+5 a 8 são menores, de 4 a 6 agentes). As ondas 9 a 11 dependem do ensaio e da escolha dos mockups por ela (só o
+subsystem não espera). As ondas 12 a 15, mais os fechos C a E, somam ~20 h. Com a mão do usuário em dia, são **4 dias
 corridos**.
 
 ## 6. Como se controla
@@ -480,9 +480,9 @@ corridos**.
 
 - **A3 (as 7 curas na fds-1):** caducou. As 7 já estão no `dev`, e a fds-1 não fecha mais. Vira a onda 0: a
   fds-2 nasce do `dev` e recebe os 39 da fds.
-- **A folha da bancada D2 a D8:** a folha se monta, sem agente, a partir da tabela de `SPRINTS-DA-VOLTA.md`
+- **A folha do ensaio D2 a D8:** a folha se monta, sem agente, a partir da tabela de `SPRINTS-DA-VOLTA.md`
   (D2–D8 mais D-toque, D-jogo-novo, D-login, D-envelope, D-touch-tela, D-registro, D-captura, D-usb). Vai na aba
-  Bancada da página em 127.0.0.1:8766. As respostas dela gravam em `bancada/respostas.json`. Cada resposta fecha
+  Ensaio da página em 127.0.0.1:8766. As respostas de produto gravam em `ensaio/respostas.json`. Cada resposta fecha
   uma ficha ou vira correção na onda seguinte. A fila antiga da fds (`leva-fds/ENSAIO-PLANO.md`) segue valendo
   para as 39 que esperam ela.
 - **O HANDOFF:** reescrever em `docs/process/estudos/2026-10-12-a-volta/HANDOFF.md`, apontando para este plano e
@@ -505,7 +505,7 @@ corridos**.
     a que a rodada provar. A cura corta só o que é órfão ou duplicado, sem perder nada, no cabo e nos três
     adaptadores BT, em todo modo e máscara, com os quatro controles. A posse dele cruza com pad e som (onda 1), tato
     (onda 5), legado, terminal e v-jogos (`launch_env.py`).
-  - **A medida do engasgo roda sozinha, e o P2 entra pelo pad virtual. O clique dela no jogo fica só para o
+  - **A medida do engasgo roda sozinha, e o P2 entra pelo pad virtual. O clique do usuário no jogo fica só para o
     veredito final: sente ou não sente.**
 - **As 12 «esquecidas»** que o `sprint.py validar --todas` acusa: 10 já estão `absorvida` mas seguem na fila do
   `SPRINT_ORDER` (PODA-DO-DATADO, PARIDADE-NO-JOGO-ENSAIO, TESTAR-O-MICROFONE, O-REPO-QUE-SE-LE, O-ENGASGO-SE-CURA,
@@ -513,7 +513,7 @@ corridos**.
   OS-TRES-CONTROLES-DE-FREQUENCIA). Saem da fila na onda 0. As outras duas: A-SUITE-NAO-ACORDA-A-PLACA (o `cria` já
   existe, porque o código está no `dev`: fecha à mão) e A-FORJA-SEM-RASTRO (o `cria` já existe: o conjunto github
   confere a posse antes de voar).
-- **O-BASICO-MEDIDO segura 17 fichas.** Ela é «só bancada, sem agente», mas 17 sprints têm `depois_de` nela
+- **O-BASICO-MEDIDO segura 17 fichas.** Ela é «só ensaio, sem agente», mas 17 sprints têm `depois_de` nela
   (5 do ipc, 3 do install, 2 do tato, 2 da F2-controle e outras). Entra na inversão de cada despacho.
 - **Ainda sem ficha (a onda 0 escreve):** a cura do Sackboy; o pad USB (os gadgets enumeram em série a ~5,5 s, o
   terceiro e o quarto passam dos 15 s e caem no uhid; todos saem com o mesmo endereço; 22.155 `ENOMEM`); o

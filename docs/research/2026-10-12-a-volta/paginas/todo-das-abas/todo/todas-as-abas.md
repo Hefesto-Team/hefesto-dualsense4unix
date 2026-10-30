@@ -21,13 +21,13 @@ O trecho exato que pus nas minhas abas (menu e alvos) está em
   como selo com dica. Vai em `por_baixo` nas duas.
 - **Maiúscula, `SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01`.** Já está na 1-11 (costurada `b3222fa9f`):
   nada a refazer. O texto novo que escrevi segue a regra. Ficam como estão os nomes próprios («Sony DualSense»,
-  «Steam Input», «Nintendo Pro», «Cosmic Red») e o selo em caixa alta «ATIVO»/«DESLIGADO» (ordem dela de 21/09,
+  «Steam Input», «Nintendo Pro», «Cosmic Red») e o selo em caixa alta «ATIVO»/«DESLIGADO» (ordem de produto de 21/09,
   citada na `TESTAR-O-MICROFONE-01`).
 - **Tema, `O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01`** (em voo na `voo/lancadores-fds`). Sem tema de
   modificação ligado nada muda na tela; nas abas 01 e 02 vai em `por_baixo`. Os tokens `--c-<tipo>` são da 08.
 - **Alvos, `OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01`.** Alinhado às 03-05: a opção 1 da sprint
   (alvo de 24 px, a letra fica), `recomendada-a-escolher` (a sprint não recomenda; é a menor mudança, e o item B0.T2
-  da bancada segue sem resposta). Forma: `<style id="todo-alvos">` no fim do `head`; o `?` passa a 24x24 e todo
+  do ensaio segue sem resposta). Forma: `<style id="todo-alvos">` no fim do `head`; o `?` passa a 24x24 e todo
   `[data-gesto]` ganha `min-height:24px`. O «Tamanho da interface» é da 09.
 - **Comportamento sem desenho** (`A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01`,
   `O-NUMERO-DA-BARRA-NAO-CONGELA-NO-VALOR-VELHO-01`, `FECHAR-A-JANELA-DEVOLVE-O-QUE-AS-ABAS-SEGURAVAM-01`,
@@ -82,7 +82,7 @@ Base: o publicado da `integra/1-11` (`29d620816`), medido com a `FOLHA_DA_CASA` 
 
 - Origem: `recomendada-a-escolher`. A sprint ainda não tem desenho nem recomendação; apliquei a opção 1 dela
   (alvos de 24 px, a mesma letra), a menor mudança que cumpre o WCAG 2.5.8. A letra mínima de 12 px e o «Tamanho da
-  interface» do Sistema ficam para a escolha dela.
+  interface» do Sistema ficam para a escolha do usuário.
 - Forma: um bloco só `<style data-todo="N" id="todo-alvos">` no fim do `<head>`, sem mexer nas regras da página:
   `.ajuda` (o `?`) passa de 17x17 a 24x24 (a letra fica); os botões do par «Modo automático | Modo personalizado»
   ganham `min-height:24px`; os trilhos (`input[type=range]`) ganham 24 px de área de toque com o trilho desenhado
@@ -159,7 +159,7 @@ rolagem vertical (também em 1918x840; a 09 também em 1212x700, com o registro 
 - **Por baixo, sem tela.** As sprints de comportamento da 09 (status fora do fio, Parar cala o teste, janela que
   não pulsa) e da 10 (o editor só grava no perfil que mostra, o Ativar, o Salvar) estão em `por_baixo` dos JSON.
 - **Conflitos.** O Eventos apagado com «Chega com as extensões» confessa dívida; fica a recomendada do BRIEF-T4,
-  a decisão é dela. A «opção A escolhida em 09/10» das marcas só aparece nos briefs.
+  a decisão é de produto. A «opção A escolhida em 09/10» das marcas só aparece nos briefs.
 
 ## Abas 06 Navegação e 07 Lançadores (montadas em 12/10/2026)
 
@@ -199,6 +199,6 @@ impedimentos, novo lançador) sem rolagem vertical.
 
 - O menu do botão direito é um só em todas as páginas: o bloco `menu-do-botao-direito` da 01. Ele some quando uma janela está aberta (`.tela-nova:target ~ .todo-menu`).
 - Alvos: `[data-gesto]{min-height:24px}` em toda página.
-- Só a primeira letra maiúscula conta como desenho escolhido (regra dela de 05/10): «modo nativo», «point and click».
+- Só a primeira letra maiúscula conta como desenho escolhido (regra de produto de 05/10): «modo nativo», «point and click».
 - Um dono por feature (BRIEF-T7): a 05 grava os meus toques e a janela Acessórios da 07 só lê (mudança 10 da 07).
 - O detalhe, aba por aba, está no [CONFERENCIA.md](CONFERENCIA.md).

@@ -3,7 +3,7 @@
 """A régua dos ajustes da rodada 3 (com a volta 2): mede as sete páginas tocadas em três tamanhos, e os diálogos abertos, sem janela na tela.
 
 Uso: regua.py [--mordida <nome|js>] ; sai 0 se tudo passa. As mordidas nomeadas estão em MORDIDAS. Cada falha vem com o seletor e o número.
-Chrome sem janela (headless); nenhum clique no mouse dela.
+Chrome sem janela (headless); nenhum clique no mouse do usuário.
 """
 import json
 import sys
