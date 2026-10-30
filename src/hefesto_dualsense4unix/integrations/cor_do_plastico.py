@@ -101,6 +101,7 @@ from typing import Any, Protocol
 
 from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 logger = get_logger(__name__)
@@ -130,9 +131,11 @@ PARES_QUE_DESTROEM: dict[tuple[int, int], str] = {
 
 FAMILIA_DO_FIRMWARE = range(0xF0, 0xF8)
 
-_RAIZ = pathlib.Path(__file__).resolve().parents[3]
+CAMINHO_DA_TABELA = "docs/data/cores-do-dualsense.csv"
 
-TABELA_DAS_CORES = _RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
+TABELA_DAS_CORES = encontrar_arquivo_do_repo(CAMINHO_DA_TABELA) or (
+    pathlib.Path(__file__).resolve().parents[3] / CAMINHO_DA_TABELA
+)
 
 _ZONAS_DO_TOM = ("casca_esq", "casca_dir")
 
