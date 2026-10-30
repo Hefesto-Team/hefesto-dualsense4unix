@@ -11,7 +11,12 @@ MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
   ``test_a_que_quem_usa_desligou_fica_desligada``;
 - a troca do endereço antigo arrancada reprova ``test_o_endereco_antigo_passa_a_ser_o_novo``;
 - o ``aviso_visto`` do ligar trocado pelo aviso do manifesto reprova
-  ``test_o_aviso_nunca_se_aceita_por_quem_usa``.
+  ``test_o_aviso_nunca_se_aceita_por_quem_usa``;
+- o ``desligadas`` arrancado do ``_trazer_uma`` reprova
+  ``test_a_que_substitui_uma_desligada_nasce_desligada``, e o ``ligadas_antes`` vazio reprova
+  ``test_a_que_substitui_manda_a_antiga_embora``;
+- a consulta às trazidas arrancada reprova ``test_a_que_quem_usa_removeu_nao_volta``;
+- a anotação feita também na recusa reprova ``test_a_que_nao_chegou_tenta_de_novo_no_install``.
 """
 from __future__ import annotations
 
@@ -141,11 +146,41 @@ def test_o_aviso_nunca_se_aceita_por_quem_usa(lg: Lugares, tmp_path: Path) -> No
 
 
 def test_a_que_substitui_manda_a_antiga_embora(lg: Lugares, tmp_path: Path) -> None:
-    instalador.instalar(_repo(tmp_path, ANTIGA), lugares=lg)
+    antiga = instalador.instalar(_repo(tmp_path, ANTIGA), lugares=lg)
+    instalador.ligar(ANTIGA, permissoes_vistas=antiga.manifesto.permissoes, lugares=lg)
     endereco = _repo(tmp_path, NOVA, substitui=[ANTIGA])
-    fabrica.trazer(lugares=lg, arquivo=_lista(tmp_path, {"id": NOVA, "endereco": endereco}))
+    feitos = fabrica.trazer(lugares=lg, arquivo=_lista(tmp_path, {"id": NOVA,
+                                                                  "endereco": endereco}))
     registro = ler_registro(lg.registro)
     assert ANTIGA not in registro and registro[NOVA].ligada
+    assert [f.o_que for f in feitos] == ["ligada"]
+
+
+def test_a_que_substitui_uma_desligada_nasce_desligada(lg: Lugares, tmp_path: Path) -> None:
+    instalador.instalar(_repo(tmp_path, ANTIGA), lugares=lg)
+    endereco = _repo(tmp_path, NOVA, substitui=[ANTIGA])
+    feitos = fabrica.trazer(lugares=lg, arquivo=_lista(tmp_path, {"id": NOVA,
+                                                                  "endereco": endereco}))
+    registro = ler_registro(lg.registro)
+    assert ANTIGA not in registro and not registro[NOVA].ligada
+    assert [f.o_que for f in feitos] == ["instalada"]
+
+
+def test_a_que_quem_usa_removeu_nao_volta(lg: Lugares, tmp_path: Path) -> None:
+    lista = _lista(tmp_path, {"id": NOVA, "endereco": _repo(tmp_path, NOVA)})
+    fabrica.trazer(lugares=lg, arquivo=lista)
+    instalador.remover(NOVA, lugares=lg)
+    feitos = fabrica.trazer(lugares=lg, arquivo=lista)
+    assert [(f.o_que, f.frase) for f in feitos] == [("removida", fabrica.FRASE_DA_REMOVIDA)]
+    assert NOVA not in ler_registro(lg.registro)
+
+
+def test_a_que_nao_chegou_tenta_de_novo_no_install(lg: Lugares, tmp_path: Path) -> None:
+    endereco = f"file://{tmp_path}/repos/{NOVA}"
+    lista = _lista(tmp_path, {"id": NOVA, "endereco": endereco})
+    assert [f.o_que for f in fabrica.trazer(lugares=lg, arquivo=lista)] == ["recusada"]
+    _repo(tmp_path, NOVA)
+    assert [f.o_que for f in fabrica.trazer(lugares=lg, arquivo=lista)] == ["ligada"]
 
 
 def test_a_que_falha_nao_segura_as_outras_e_a_cli_sai_com_erro(

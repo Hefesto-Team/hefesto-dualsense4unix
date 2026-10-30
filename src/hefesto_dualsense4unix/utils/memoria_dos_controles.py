@@ -515,6 +515,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "mods": (CASA, "o código e os dados das modificações (codigo-das-modificacoes e "
              "dados-das-modificacoes); não identificam controle"),
     "mods.json": (CASA, "o registro das modificações instaladas e ligadas"),
+    "mods-de-fabrica.json": (CASA, "as extensões de fábrica já trazidas uma vez: a removida "
+                                   "não volta"),
     "opcoes.json": (CASA, "os valores das opções de uma modificação; não identifica controle"),
     "diario.log": (CASA, "o diário de cada modificação, na pasta de dados dela"),
     "preparo.log": (CASA, "a saída do último preparo de cada modificação, na pasta de dados dela"),
