@@ -1039,7 +1039,7 @@ def test_a_troca_de_modo_reserva_o_ensaio_antes_de_escrever(
     """A troca escreve na sessão do daemon e recria os pads: é escrita (01 §3.2)."""
     rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "tomada", ensaio=None)
     assert rc == ob.RC_RECUSADO
-    assert any("bancada" in r for r in resumo(saida)["recusas"])
+    assert any("aparelho" in r for r in resumo(saida)["recusas"])
     assert [m for m, _p in maquina.chamados if m == "gamepad.emulation.set"] == []
 
     _rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "livre", ensaio="")

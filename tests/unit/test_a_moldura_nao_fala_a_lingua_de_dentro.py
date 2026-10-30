@@ -68,7 +68,7 @@ def test_a_moldura_de_hoje_passa(arvore: pathlib.Path) -> None:
         ("a onda 5 fechou", "a língua da obra"),
         ("as dez abas, vivas", "o apelido que esta casa deu ao piloto"),
         ("montado em 39fa440d", "um hash de commit"),
-        ("a mesa de verdade", "palavra que ela baniu da tela"),
+        ("a mesa de verdade", "palavra banida da tela"),
         ("o Hefesto ainda não lê tudo", "forma de confissão"),
     ],
 )

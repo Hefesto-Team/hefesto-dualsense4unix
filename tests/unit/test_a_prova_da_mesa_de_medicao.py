@@ -911,8 +911,8 @@ def test_as_21_do_ensaio_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
                   valor_do_corte: sel.options[1] && sel.options[1].value};
         }""")
         assert len(visto["grupos"]) == 2, (
-            f"o seletor não separa a bancada do acervo: {visto}")
-        assert any("BANCADA" in g for g in visto["grupos"]), visto["grupos"]
+            f"o seletor não separa o ensaio do acervo: {visto}")
+        assert any("ENSAIO" in g for g in visto["grupos"]), visto["grupos"]
         assert any("ACERVO" in g for g in visto["grupos"]), visto["grupos"]
         assert str(quantas) in visto["primeiras"][1], (
             f"a linha do roteiro inteiro não diz quantas são: {visto}")
