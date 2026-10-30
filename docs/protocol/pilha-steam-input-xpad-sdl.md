@@ -421,9 +421,9 @@ jogadores estava de pé, num jogo com exceção de Steam Input ativa — que é
 exatamente o que `docs/usage/jogos-e-mascaras.md` afirmava ser impossível até
 ser corrigido no mesmo dia.
 
-**5. O ACEITE DE PRODUTO, no mesmo jogo, e é o que decide.** Palavras de produto: *"na hora
-do vamos ver os 4 conectaram certinho. cada qual com seu player rumble e
-afins"*. Quatro controles, cada um com o seu número, a sua vibração e o resto —
+**5. O ACEITE DE PRODUTO, no mesmo jogo, e é o que decide.** Na hora da prova,
+os 4 controles conectaram certo, cada um com o seu jogador e a sua
+vibração. Quatro controles, cada um com o seu número, a sua vibração e o resto —
 com a exceção de Steam Input ativa naquele appid.
 
 Isso fecha o par que este documento vinha perseguindo. A leitura do fonte
@@ -961,9 +961,9 @@ touchpad.
 
 ## 5-ter. O caminho do PROTON para a IMU — medido com o jogo do usuário (17/09/2026)
 
-**Acrescentada em 17/09/2026**, depois da queixa de uso: *"joguei um jogo com
-controle por movimento e na hora do vamos ver o controle não deu resposta
-(pragmata)"*.
+**Acrescentada em 17/09/2026**, depois da queixa de uso de que, num
+jogo com controle por movimento (PRAGMATA), o controle não respondeu na hora
+da prova.
 
 A 5-bis mede o **SDL do host**. O PRAGMATA não carrega SDL nenhum — não há
 `SDL2.dll` nem `SDL3.dll` na pasta do jogo e nenhuma cadeia `SDL_Joystick` no
@@ -1541,7 +1541,7 @@ pra sempre que a steam aloprar em sequência algo ativa a sobrescrição
 automática?"* — e ele **arma a cada conexão e só dispara quando o rádio
 sossega**, escrevendo então em **todos** os controles pela rota `hidraw`. Com a
 sequência de conexões encerrada havia cerca de um minuto, uma escrita em cada um
-pintou os três, e o aceite de produto foi *"perfeito"*.
+pintou os três, e o aceite de produto veio sem ressalva.
 
 **A ressalva é do usuário, e fica escrita porque é a que impede a reincidência:** esta
 é a **segunda** vez que a rota de escrita é apontada como causa neste projeto, não

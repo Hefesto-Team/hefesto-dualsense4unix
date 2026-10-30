@@ -466,9 +466,9 @@ divergem ali são exatamente as assimetrias que este mapa existe para não deixa
 escapar; achatar aquele campo faria uma prova de cabo passar por prova de rádio,
 que é a mentira mais cara daqui.
 
-O pedido que originou o formato, nas palavras de produto: *"cada feature de cada
-um deles deve ter o canal via bt ou cabo NA MESMA LINHA e todos os 3 controles
-devem ser possíveis de serem comparados."*
+O pedido que originou o formato: cada feature de cada
+controle tem o canal pelo BT ou pelo cabo NA MESMA LINHA, e os três controles
+podem ser comparados.
 
 <!-- O script que fez a migração (`scripts/migrar-mapa-v2.py`) e os retratos  <!-- ref-externa: `scripts/migrar-mapa-v2.py` foi APAGADO em 05/09/2026 (commit f12978c2). A migração que ele fez já está no mapa; a menção é histórica e o portão a cobrava desde ontem, sem ninguém ver. -->
      congelados (`mapa-controles-v1.csv`, `ensaios-v1.csv`) foram APAGADOS em

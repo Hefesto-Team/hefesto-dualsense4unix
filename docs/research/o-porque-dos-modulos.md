@@ -790,9 +790,9 @@ LUGAR-À-MESA-01, que o usuário autorizou **depois** desta.
 O DONO DA MÁSCARA É O PERFIL — DESDE 08/09/2026
 ------------------------------------------------
 
-**NOTA DATADA — 08/09/2026 (MASCARA-NO-PERFIL-01).** A pergunta foi *"a máscara
-por controle deve entrar no perfil, junto com luz, gatilho, vibração, som, mic e
-sensores — ou fica da máquina?"*; a resposta de produto foi *"pode entrar sim"*. O
+**NOTA DATADA — 08/09/2026 (MASCARA-NO-PERFIL-01).** A pergunta foi se a máscara
+por controle entra no perfil, junto com luz, gatilho, vibração, som, mic e
+sensores, ou fica da máquina; a resposta de produto foi sim. O
 campo é ``profiles.schema.ControllerOverrides.mascara``, e quem o escreve aqui é
 ``profiles.manager.apply_controller_mascaras``, a cada ativação de perfil.
 
@@ -824,9 +824,9 @@ defender. Apagar o arquivo com o daemon parado também não muda máscara nenhum
 de quem o perfil declara: a próxima ativação o reescreve.
 
 **PERFIL CALADO DEVOLVE AO PADRÃO — DECISÃO, 09/09/2026.** A pergunta
-aberta na entrega de 08/09 era *"um perfil que não fala de máscara devolve todo
-mundo ao padrão, ou deixa cada um como está?"*; a resposta de produto foi *"Default é
-Hefesto dualsense padrão"*. Nesta seção — e só nesta — ``None`` no perfil não é
+aberta na entrega de 08/09 era se um perfil que não fala de máscara devolve todo
+mundo ao padrão ou deixa cada um como está; a resposta de produto: o padrão é o
+DualSense padrão do Hefesto. Nesta seção — e só nesta — ``None`` no perfil não é
 *"sem opinião"*: é *"volte ao padrão"*. O padrão é o degrau de baixo desta
 ordem, ou seja o ``mode.gamepad_flavor`` do perfil e, na falta dele, o
 ``DaemonConfig.gamepad_flavor``, que de fábrica é ``dualsense``.
@@ -982,10 +982,10 @@ e a leitura é esta:
 trava                  de onde veio               o que protegia
 =====================  =========================  =============================
 `habilitado_por_env`   `42213029`, 25/07/2026     privacidade + banda do rádio
-`uniqs_declarados`     `598aa5a3`, 23/08/2026,    a mesma razão, mais o *"por
-                       QUATRO-MICROFONES-01/E1    controle"* que o usuário pediu. Não
-                       (decisão de produto: *"por       é precaução nossa: é o
-                       controle"*)                INTERRUPTOR dela
+`uniqs_declarados`     `598aa5a3`, 23/08/2026,    a mesma razão, mais o «por
+                       QUATRO-MICROFONES-01/E1    controle» do pedido. Não é
+                       (pedido de produto: um     precaução nossa: é o
+                       mic por controle)          INTERRUPTOR do usuário
 =====================  =========================  =============================
 
 **As duas são a MESMA razão em duas roupas**, e ela está escrita abaixo: a
@@ -1033,8 +1033,8 @@ estava escrito, no presente, *"por que ele não sobe SOZINHO, e a razão continu
 de pé"* — privacidade e banda, as duas abaixo. **Ela revogou as duas em
 25/08/2026, por escrito**, em `docs/data/decisoes-de-produto.csv`: a id 37
 (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), esta
-com as palavras do usuário — *"LIGADO SEMPRE, NOS DOIS TRANSPORTES, COM A TELA DIZENDO
-O PREÇO… o que caduca é o padrão desligado"*. A decisão nunca foi implementada,
+com o pedido do usuário: ligado sempre, nos dois transportes, com a tela dizendo
+o preço; o que caduca é o padrão desligado. A decisão nunca foi implementada,
 e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez:
 
     *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
@@ -1110,9 +1110,9 @@ Três razões, e a terceira é a que fecha a escolha:
   desligou). Até aqui havia um só, e o comentário nesta linha dizia que um
   `false` gravado *"é um valor de catálogo para o silêncio, e é por essa porta
   que o default entra disfarçado de escolha do usuário"*. Isso valia com o default
-  sendo o silêncio; com a ordem de produto — *"todos os controles tem que nascer com
-  tudo mic, giroscopio e afins"* — o `false` virou a ÚNICA forma de ela dizer
-  não, e não gravá-lo é que deixaria o produto decidir por cima dela;
+  sendo o silêncio; com a ordem de produto, todos os controles nascem com
+  tudo ligado (microfone, giroscópio e o resto), e o `false` virou a ÚNICA forma de o usuário dizer
+  não, e não gravá-lo é que deixaria o produto decidir por cima do usuário;
 * a fonte é **chamável**, nunca uma cópia: o `machine.declare` relê o
   `maquina.json` e REBINDA `daemon._maquina` no "Aplicar" (`ipc_handlers.py`),
   então uma cópia tirada no boot ficaria velha no instante exato em que ela
@@ -1425,7 +1425,7 @@ o padrão do IPC é sem trava, e `tests/unit/test_o_aplicar_segura.py` nomeia os
 
 ## O sensor.set (`daemon/ipc_handlers.py`, `_handle_sensor_set`)
 
-Decisão de 04/09/2026: *«ele tem que funcionar de verdade. ambos independente do modo e da mascara.»* <!-- noqa-acento: citação literal -->
+Decisão de 04/09/2026: o sensor.set funciona de verdade, para os dois sensores, independente do modo e da máscara.
 
 TRÊS ESCRITAS, a ordem é o contrato:
 

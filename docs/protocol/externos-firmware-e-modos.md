@@ -2,9 +2,9 @@
 
 - **Levantado em:** 11/08/2026, com os dois aparelhos ligados ao mesmo tempo —
   o 8BitDo no **cabo**, em modo Switch, e o Pro Controller genuíno no **rádio**
-- **Por que existe:** a pergunta de produto foi *"se o módulo DKMS importa para o Pro,
-  não importaria também para o 8BitDo? e se houver firmware ou driver que o
-  projeto deixou passar?"*. A metade do **driver** já estava respondida antes
+- **Por que existe:** a pergunta de produto foi se o módulo DKMS, que importa para o Pro,
+  importaria também para o 8BitDo, e se haveria firmware ou driver que o
+  projeto deixou passar. A metade do **driver** já estava respondida antes
   desta página começar — os dois caem no mesmo `hid_nintendo`, e **não falta
   driver**. O que faltava era a outra metade: os **modos** e o **firmware**
 - **Limite de escopo, declarado antes de qualquer afirmação:** **nada foi

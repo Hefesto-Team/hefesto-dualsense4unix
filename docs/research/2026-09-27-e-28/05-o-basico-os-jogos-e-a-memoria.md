@@ -88,7 +88,7 @@ As médias, em uma linha cada:
 
 ## 5. O ensaio da memória (ensaio 5 do engasgo)
 
-O ensaio 5 da `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01` mede a memória com o PRAGMATA no menu em três voltas: com a afinação de memória da máquina, sem ela, e sem ela e sem o daemon. A ordem de produto para o ensaio: «usa o mango hud na steam», e «cuidado pra algo não encerrar o terminal nem interface gráfica».
+O ensaio 5 da `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01` mede a memória com o PRAGMATA no menu em três voltas: com a afinação de memória da máquina, sem ela, e sem ela e sem o daemon. A ordem de produto para o ensaio: usar o MangoHud na Steam, sem deixar nada encerrar o terminal nem a interface gráfica.
 
 **A afinação da máquina não é do Hefesto, e «sem ela» não é o padrão do kernel.** O ensaio tem um arquivo de sysctl próprio (swappiness 180, page-cluster 0, `watermark_scale_factor` 200, `watermark_boost_factor` 0, `vfs_cache_pressure` 200, `min_free_kbytes` 524288, `extfrag_threshold` 100), nascido do `NVRM: Out of memory` em memória de sistema. Sem ele, a máquina volta aos valores do Pop (swappiness 180 e page-cluster 0 do zram, `watermark_scale_factor` 125, `min_free_kbytes` ≈ 162885) e do kernel (`vfs_cache_pressure` 100, `extfrag_threshold` 500). Só quatro chaves mudam de fato. Um serviço de manutenção da máquina roda `sysctl --system` sem condição a cada hora (pula a rodada com jogo da Steam aberto), religa parte das unidades paradas e o próprio timer se o achar desabilitado; o gancho do apt roda o mesmo script mesmo com o timer parado. Nada do Hefesto reescreve `vm.*` sozinho.
 

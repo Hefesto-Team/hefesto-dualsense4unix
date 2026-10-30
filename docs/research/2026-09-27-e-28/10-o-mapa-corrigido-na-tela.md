@@ -6,7 +6,7 @@ Legenda: **MEDIDO** (rodou-se e viu-se), **LIDO** (código ou disco), **INFERIDO
 
 ## O pedido
 
-*«me referi as portas renomear, trocar elas de lugar no meapemento identificar onde fica o hub e afins. corrigir quando for 2.0 e tal. até agora não entendi pq identificou errado.»* <!-- noqa-acento: citação literal -->
+Renomear as portas e trocá-las de lugar no mapeamento, identificar onde fica o hub, corrigir quando a porta for 2.0, e entender por que a identificação saiu errada.
 
 Quatro atos numa entrada do mapa (renomear, trocar de lugar, dizer onde fica o hub, corrigir a velocidade) e uma explicação.
 

@@ -1667,8 +1667,8 @@ declara. E o libinput vê o mesmo nó como touchpad de notebook —
 `Capabilities: pointer gesture`, `Size: 71x51mm`.
 
 **O GESTO DE TRÊS DEDOS NÃO EXISTE, e o de dois faz o trabalho dos dois.**
-Ela levantou a pergunta com a mão no aparelho — *"SE EU USAR 3 DEDOS DOU ZOOM
-E 2 DEDOS USO O SCROLL ENTÃO ELE LÊ MUITITOQUE"* <!-- noqa-acento: citação literal --> —
+O usuário levantou a pergunta com a mão no aparelho — três dedos dariam zoom e
+dois rolariam a tela, então o touchpad leria multitoque —
 e 45 s de gesto contra `libinput debug-events` devolveram:
 
 | evento do libinput | quantos | dedos |

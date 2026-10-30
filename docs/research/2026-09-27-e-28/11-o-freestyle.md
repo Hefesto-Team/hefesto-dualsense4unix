@@ -4,10 +4,10 @@ O que se mediu e se desenhou na madrugada de 27/09/2026 para o Freestyle ficar �
 
 ## O pedido
 
-Duas falas do usuário, de 27/09, puxaram as duas rodadas:
+Dois pedidos de 27/09 puxaram as duas rodadas:
 
-- «no freestyle a ideia é tudo estar no ultra até vibração e afins.» <!-- noqa-acento: citação literal -->
-- «no freestyle tem um problema que é. ao jogar qualquer que seja o jogo mesmo o botão ativado ele nunca tem prioridade. ter criado um perfil pra ele não foi a solução que eu havia pedido. a ideia é ele andar por cima do sistema de perfis. pq ao jogar qualquer jogo ele nunca fica ativado e sempre perde prioridade pra algum jogo (o que estpa certo.)» <!-- noqa-acento: citação literal -->
+- no Freestyle, tudo fica no Ultra, inclusive a vibração;
+- no Freestyle, com o botão ativado, qualquer jogo tirava a prioridade dele (o que é certo para o jogo); criar um perfil para o Freestyle não era a solução pedida, e a ideia é ele andar por cima do sistema de perfis.
 
 A segunda bate de frente com a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (o perfil próprio de um jogo entra por cima do Modo Freestyle, pela `LOCK-CEDE-01`, em `src/hefesto_dualsense4unix/profiles/autoswitch.py`).
 

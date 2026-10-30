@@ -1,11 +1,11 @@
 # A língua desta casa — o glossário que a tela e o código falam
 
-**06/09/2026.** Pedido: *"pode cuidar da documentação completa do projeto
-também? pra sempre falarmos a mesma língua?"* — e, no mesmo dia, o motivo:
-*"Falei do termo mesa que é horrível. Mas as levas anteriores entraram na pira
-de usar isso em tudo no layout. O termo sai e coloca-se termos simples pro user
-comum. feature fica."* <!-- noqa-acento: citação literal; a palavra que nomeava a
-ferramenta saiu em 15/09/2026, por ordem de produto -->
+**06/09/2026.** Pedido: cuidar da documentação completa do projeto, para que todos falem sempre
+a mesma língua.
+No mesmo dia veio o motivo: o termo antigo da ferramenta
+tinha se espalhado pelo layout nas levas anteriores; ele sai, trocado por
+termos simples para o usuário comum, e «feature» fica. A palavra que nomeava
+a ferramenta saiu em 15/09/2026, por ordem de produto.
 
 **Uma palavra, um significado, e dois registros:** o que a TELA diz (para ela
 e para qualquer usuária) e o que a CASA diz (código, sprints, commits). Quando
@@ -19,7 +19,7 @@ se acrescenta aqui antes de entrar na tela.
 | na tela | na casa | o que é |
 | --- | --- | --- |
 | **controle** · **P1…P4** (jogador) | `controle`, `assento` (`p1`..`p4`), `uniq` (o endereço, nunca na tela) | um DualSense na mão de alguém; o número é o assento, não o aparelho |
-| **USB** · **BT** | `usb` · `bt` (chave crua); a palavra vem de `home_actions.palavra_do_transporte` | por onde o controle fala com a máquina. **A palavra é de produto, 21/09/2026**, com a janela aberta na frente do usuário: primeiro a caixa (*"cabo e bt escrito em minúsculo"*), depois a palavra (*"USB e BT é muito bom"*, *"Melhor que cabo e bt"*). <!-- noqa-acento: citação literal --> Isso REVOGA a I9 de 25/08, que trocara `USB`/`BT` por `cabo`/`rádio` — o que a I9 mediu (quatro dialetos na mesma janela) continua valendo, e o dono segue sendo um só. **O ganho: a tela e o DESENHO passaram a dizer a mesma palavra** — `interface/monta.MESA` sempre disse `USB`/`BT`. **`cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS** (`docs/data/mapa-controles.csv`), que é dado e não tela. A contagem do topo (`2 USB · 0 BT`) deixou de ser exceção: ela é a regra agora |
+| **USB** · **BT** | `usb` · `bt` (chave crua); a palavra vem de `home_actions.palavra_do_transporte` | por onde o controle fala com a máquina. **A palavra é de produto, 21/09/2026**, com a janela aberta na frente do usuário: primeiro a caixa («cabo» e «bt» estavam em minúsculas), depois a palavra («USB» e «BT» ficam, por serem melhores que «cabo» e «bt»). Isso REVOGA a I9 de 25/08, que trocara `USB`/`BT` por `cabo`/`rádio` — o que a I9 mediu (quatro dialetos na mesma janela) continua valendo, e o dono segue sendo um só. **O ganho: a tela e o DESENHO passaram a dizer a mesma palavra** — `interface/monta.MESA` sempre disse `USB`/`BT`. **`cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS** (`docs/data/mapa-controles.csv`), que é dado e não tela. A contagem do topo (`2 USB · 0 BT`) deixou de ser exceção: ela é a regra agora |
 | **os controles** · **todos** · **P1 e P2** | `mesa` (só como nome interno: `mesa_viva.py`, `app/mesa.py`) | **"mesa" não entra em texto de tela.** Decisão de produto, 05/09 e 06/09: a palavra sai, a feature fica |
 | **serviço** | `daemon`, `hefesto-dualsense4unix.service` | o que roda por trás, fala com o aparelho e responde à janela |
 | **barra de luz** · **luzes de jogador** · **luz do microfone** | `lightbar`, `player_leds`, `mute_led` | as três luzes do DualSense |

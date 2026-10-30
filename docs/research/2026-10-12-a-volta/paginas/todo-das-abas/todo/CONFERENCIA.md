@@ -68,7 +68,7 @@ Seis mudanças novas, com a origem «ordem de produto de 12/10» na página (eti
 - **Um botão só, «Modo automático», de 01 a 05** (01-7, 02-7, 03-3, 04-3, 05-4). Um interruptor no topo do quadro, à direita, 28 px de altura, com o ponto que acende. Desligado: borda e texto neutros. Ligado: borda, fundo e ponto em ciano, com brilho fraco (a cor do «ligado» da casa; o roxo já é a seleção e o rosa é a aba ativa). Ligado, os ajustes que o jogo passa a decidir ficam apagados (opacidade .45, sem clique): 01, a escada de modos; 02, os ajustes dos cartões; 03, as colunas dos gatilhos menos a cabeça; 04, as colunas da luz menos o desenho e o nome; 05, a força, o sensor háptico e os motores (o Testar agora segue à mão). Some no `body.nativo.por-controle`, como o par que ele substitui. Na 01 ele toma o lugar do cadeado «Modo Freestyle».
 - **A Vibração preenche o quadro** (05-5): o quadro cresce até o rodapé e as linhas se repartem (força 2, cada motor 1, Testar agora 1); medido em 1212x809 e 1680x840 (o tamanho da foto do usuário de 14h49), sem rolagem.
 - **O Desligar do menu diz o que faz** (a frase nova nos itens do menu de todas as páginas com menu; o Mapa do rádio não tem menu): é o mesmo ato do «Desligado» da bandeja (`app/tray.py` → `cmd_tray._definir_o_modo` → `plano_do_modo(MODE_NATIVE)`), o mesmo plano da aba Jogar; o serviço segue de pé. O Ligar liga o serviço se estiver parado e volta ao modo do Hefesto. Vai no `title` do item e o `rotulo()` troca o texto da dica junto com a palavra.
-- **A leitura de «Vibração tá faltando guia controles»**: lida como «a Vibração é a aba das cinco que não tem o controle de modo» (03 e 04 tinham o par, a 05 não), e a cura é o 05-4. A outra leitura, «falta a Vibração na aba Controles» (a 02 tem mini painéis de Gatilhos, Barra de luz e LED, e nenhum de vibração), não foi feita: fica para o usuário dizer.
+- **A leitura de «Vibração está faltando, guia Controles»**: lida como «a Vibração é a aba das cinco que não tem o controle de modo» (03 e 04 tinham o par, a 05 não), e a cura é o 05-4. A outra leitura, «falta a Vibração na aba Controles» (a 02 tem mini painéis de Gatilhos, Barra de luz e LED, e nenhum de vibração), não foi feita: fica para o usuário dizer.
 - **Uma foto por mudança que a foto da aba não mostra** (`pagina/fotografar-estados.py`, 27 fotos `fotos/<aba>-m<n>.png` e `fotos/estados.json`): a janela aberta (06), a sub-aba (07 Meus toques), a lista aberta (10), a seção expandida (08, Mapa do rádio), o Status em Desligado (01), o cartão do P2 (02), a dica do Desligar (01-6) e o Modo automático ligado. A página põe a foto dentro do item, com o estado na legenda; não sobra nenhum «Não aparece na foto».
 - Ficou de fora: o Mapa do rádio tem uma `.ajuda` de 20 px (as outras páginas têm 24); a régua `[data-gesto]{min-height:24px}` segue em todas as que tinham.
 
@@ -90,7 +90,7 @@ Conferente que corrige. Medido em Chrome sem janela, em 1212x809 e 1680x840 (o t
    - desligado: contorno e anel em ciano, letra clara;
    - ligado: fundo cheio de ciano e a bolinha acesa.
    Continua do tipo do Freestyle (pílula com bolinha), só que em outra cor. Vale nas cinco abas, e o texto dos cinco itens foi atualizado.
-2. **«Vibração tá faltando guia controles» (ordem 3).** Li a 02, a 03, a 04 e a 05.
+2. **«Vibração está faltando, guia Controles» (ordem 3).** Li a 02, a 03, a 04 e a 05.
    - Nas abas por controle, a 05 já tinha a linha «Controle» com o desenho e a linha «Modelo», iguais às da 04; a 03 tem os nomes coloridos. Nessa leitura, a 05 só não tinha o controle de modo, e isso o 05-4 já resolve.
    - «Guia» é a palavra comum para «aba». Na **guia Controles**, o cartão de cada controle mostra ao vivo tudo o que as outras abas ajustam (touchpad, barra de luz, LED, gatilhos, microfone, alto-falante), menos a vibração.
    - Por isso entrou o **02-8**: um quadro «Vibração» abaixo do Gatilhos, nos quatro cartões. Ele mostra o que o jogo manda agora a cada motor, em laranja como na 05. Só leitura: a força se ajusta na 05.
@@ -109,10 +109,10 @@ Anotado para o próximo bloco, fora destas ordens:
 
 **As dúvidas que são do usuário**
 
-1. **«não pra continuar».** Esta volta seguiu a leitura «não, é para continuar».
+1. **«não, para continuar».** Esta volta seguiu a leitura «não, é para continuar».
    - A) Era para continuar: fica tudo como está.
    - B) Era para parar: volto a página e os mockups para `todo-antes-da-volta2/`, ou para antes das ordens de 14h40.
-2. **«Vibração tá faltando guia controles».**
+2. **«Vibração está faltando, guia Controles».**
    - A) A vibração faltava na aba Controles: fica o quadro novo (02-8) e também o botão da 05.
    - B) Faltava o controle de modo na 05: fica só o 05-4 e o 02-8 sai.
    - C) Era outra coisa: ela diz qual.

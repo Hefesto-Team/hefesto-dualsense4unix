@@ -331,8 +331,8 @@ O §6.2 fecha dizendo que o EAGAIN dos relatores é *pista para um ensaio de
 `btmon`, não fato*. **Nos aparelhos do projeto o ensaio aconteceu, e o culpado era o
 Hefesto.**
 
-A queixa de uso foi *"4 controles conectados só um aparece na interface agora"*.
-<!-- noqa-acento: citação literal --> O que os diários disseram:
+A queixa de uso: com 4 controles conectados, só um aparecia na
+interface. O que os diários disseram:
 
 | o que | quanto |
 | --- | --- |

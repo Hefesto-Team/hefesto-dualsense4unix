@@ -407,10 +407,10 @@ foi número, offset, ordem e endereço — que é informação, não obra.
 
 ## O método, para a próxima leva repetir
 
-O usuário pediu um jeito de preencher a lacuna da Sony sem o aparelho:
-*"lançar novo workflow pra agentes procurarem no Github tais canais ou tais id.
-(…) como é só informação eles trouxeram e me ajudaram no mapa do controle."*
-<!-- noqa-acento: citação literal -->
+O usuário pediu um jeito de preencher a lacuna da Sony sem o aparelho: um
+workflow novo de agentes que procurassem no GitHub esses canais e IDs; como é
+só informação, o que eles trouxeram ajudou no mapa do controle.
+
 
 O que funcionou, na ordem:
 
