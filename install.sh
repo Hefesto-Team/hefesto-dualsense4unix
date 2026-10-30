@@ -649,13 +649,26 @@ _esperar_trava() {
 }
 
 run_apt() {
-    local _quem
-    if ! _run_pkg_quieto sudo apt-get install -y -qq \
+    local _quem _nome
+    local _recusados=()
+    if _run_pkg_quieto sudo apt-get install -y -qq \
             -o "DPkg::Lock::Timeout=${HEFESTO_TRAVA_TETO:-120}" "$@"; then
-        _quem="$(_quem_segura_a_trava "${HEFESTO_TRAVA_DPKG:-/var/lib/dpkg/lock-frontend}")"
-        [[ -z "${_quem}" ]] || warn "o dpkg está ocupado por ${_quem}"
+        return 0
+    fi
+    _quem="$(_quem_segura_a_trava "${HEFESTO_TRAVA_DPKG:-/var/lib/dpkg/lock-frontend}")"
+    if [[ -n "${_quem}" ]]; then
+        warn "o dpkg está ocupado por ${_quem}"
         return 1
     fi
+    (( $# > 1 )) || return 1
+    for _nome in "$@"; do
+        _run_pkg_quieto sudo apt-get install -y -qq \
+            -o "DPkg::Lock::Timeout=${HEFESTO_TRAVA_TETO:-120}" "${_nome}" 2>/dev/null \
+            || _recusados+=("${_nome}")
+    done
+    (( ${#_recusados[@]} )) || return 0
+    warn "o apt não instalou ${_recusados[*]} (fora do repositório desta distro, ou com dependência que não se resolve); os outros pacotes do pedido entraram"
+    return 1
 }
 
 run_pkg() {
@@ -867,11 +880,23 @@ _garantir_deps_de_sistema() {
     if (( ${#_import[@]} )); then
         printf '\n      Importantes — cada uma custa uma função: %s\n' "${_import[*]}"
         ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
-        if [[ "${REPLY,,}" =~ ^y ]] && run_pkg ${_import[@]+"${_import[@]}"}; then
+        if [[ "${REPLY,,}" =~ ^y ]] && run_pkg ${_import[@]+"${_import[@]}"} \
+                && [[ "${DRY_RUN:-0}" -eq 1 ]]; then
             printf '      importantes ok\n'
+            return 0
+        fi
+        local _sem_import=()
+        for _linha in "${_DEPS_DE_SISTEMA[@]}"; do
+            IFS='|' read -r _canon _crit _checagem _razao <<< "${_linha}"
+            [[ " ${_import[*]} " == *" ${_canon} "* ]] || continue
+            _dep_presente "${_checagem}" && continue
+            _sem_import+=("${_canon}")
+            warn "${_canon} não entrou — sem ele, ${_razao}"
+        done
+        if (( ${#_sem_import[@]} )); then
+            printf '      quando quiser: %s\n' "$(comando_manual_pkg "${_sem_import[@]}")"
         else
-            warn "sem ${_import[*]} — as funções acima ficam indisponíveis"
-            printf '      quando quiser: %s\n' "$(comando_manual_pkg ${_import[@]+"${_import[@]}"})"
+            printf '      importantes ok\n'
         fi
     fi
 }
