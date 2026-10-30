@@ -133,5 +133,5 @@ def test_o_grace_e_recalculado_depois_da_borda_de_reconexao() -> None:
     assert arma, "ninguém arma mais o grace na borda de reconexão?"
     assert graces[0] < arma[0] < graces[1], (
         "a borda que arma o grace tem de ficar ENTRE as duas atribuições — "
-        "senão uma delas é mesmo redundante e a outra lê o valor errado"
+        "senão uma das duas é mesmo redundante e a outra lê o valor errado"
     )

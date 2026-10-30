@@ -20,7 +20,7 @@ def test_o_caminho_do_adaptador_bate_com_o_do_censo() -> None:
         f"  do censo:     {sorted(do_censo)}"
     )
     assert dos_adaptadores == {"3-1.1.1", "3-1.1.4"}, (
-        f"os adaptadores desta bancada mudaram de lugar: {sorted(dos_adaptadores)}"
+        f"os adaptadores desta máquina de teste mudaram de lugar: {sorted(dos_adaptadores)}"
     )
 
 

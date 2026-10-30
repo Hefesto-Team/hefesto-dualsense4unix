@@ -81,7 +81,7 @@ def test_a_dispensa_e_por_appid_e_nao_global(monkeypatch: pytest.MonkeyPatch) ->
     )
 
     assert gp.sync_steam_input_exception(d) is True, (
-        "a dispensa de um appid vazou para outro — a marca do outro jogo dela "
+        "a dispensa de um appid vazou para outro — a marca do outro jogo "
         "parou de valer sem ninguém pedir."
     )
 

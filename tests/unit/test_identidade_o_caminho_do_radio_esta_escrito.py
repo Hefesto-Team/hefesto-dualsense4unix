@@ -140,7 +140,7 @@ def test_o_mapa_guarda_o_caminho_do_radio(
     assert pedaco in linha["radio_comando"]
     assert linha["radio_de_onde_sei"] == "inferido-do-codigo", (
         "quem escreve um lado declara de onde sabe — é a regra 19 do portão de "
-        "paridade, e é ela que separa 'medi' de 'li no fonte'"
+        "paridade, e é essa coluna que separa 'medi' de 'li no fonte'"
     )
     assert linha["radio_codigo_ref"].strip(), "caminho sem endereço não é caminho"
 
@@ -151,7 +151,7 @@ def test_o_mapa_nao_chama_mais_o_radio_do_imu_de_nao_medido() -> None:
     assimetria = linha["assimetria_declarada"]
     assert "SUBSTITU" in assimetria, (
         "a frase antiga só pode aparecer DEPOIS da marca que a enterra — sem a "
-        "marca ela está viva, que é o defeito que o mapa existe para pegar"
+        "marca a frase está viva, que é o defeito que o mapa existe para pegar"
     )
     assert assimetria.index("SUBSTITU") < assimetria.index("kernel-watch"), (
         "quem enterra anuncia primeiro e cita depois; quem afirma primeiro "
@@ -178,10 +178,10 @@ def test_o_caderno_nao_culpa_mais_o_transporte_pela_cor() -> None:
         "02/09, duas unidades"
     )
     marca = linha.find("SUBSTITUÍDO")
-    assert marca >= 0, "a lápide sumiu: sem ela, a frase citada está VIVA"
+    assert marca >= 0, "a lápide sumiu: sem a lápide, a frase citada está VIVA"
     for morta in ("medido-negativo", "é o TRANSPORTE"):
         onde = linha.find(morta)
         assert onde < 0 or marca < onde, (
             f"{morta!r} só pode aparecer DEPOIS da marca que o enterra; na "
-            "frente dela, ele é uma afirmação viva"
+            "frente da frase, ele é uma afirmação viva"
         )

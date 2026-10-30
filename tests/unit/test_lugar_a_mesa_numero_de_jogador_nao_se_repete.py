@@ -1,6 +1,6 @@
 """LUGAR-À-MESA-01 — dois aparelhos NUNCA exibem o mesmo número de jogador.
 
-O teste que a medição dela de **06/08/2026, 22h40** exigiu, e que não existia:
+O teste que a medição de **06/08/2026, 22h40** exigiu, e que não existia:
 
 > *"a `E0` ganha um critério a mais: não basta parar de afirmar o que não se
 > entrega — é preciso garantir que **dois aparelhos nunca acendam o mesmo
@@ -23,12 +23,12 @@ FALSO, com os escritores de produção, e depois **lê de volta e conta quantos
 aparelhos ficaram em cada número** — é a última polegada, e é onde a numeração
 única já morreu antes (R-25: o slot 7 acendia o mesmo padrão do 4).
 
-## A única partilha PERMITIDA, e ela é declarada
+## A única partilha PERMITIDA, e é declarada
 
 O vpad de um jogador e o controle físico que ele espelha são **o mesmo
 jogador** — o vpad existe para ser o aparelho daquela pessoa dentro do jogo
 (VPAD-03). Esses dois não só PODEM exibir o mesmo número: eles TÊM de exibir,
-senão a luz no plástico contradiz o nome que o jogo mostra, que é o par que ela
+senão a luz no plástico contradiz o nome que o jogo mostra, que é o par que quem usa
 usa para saber quem é quem.
 
 Logo o invariante tem duas metades, e as duas estão aqui:
@@ -297,7 +297,7 @@ def conferir_sem_repetir(mesa: Mesa) -> None:
 
 
 def _mesa_de_06_08(raiz: Path, *, com_vpad: bool) -> Mesa:
-    """A mesa medida em 06/08/2026, 22h40 — a fila do `controllers.json` dela.
+    """A mesa medida em 06/08/2026, 22h40 — a fila do `controllers.json` da máquina de teste.
 
     `rank` 1 e 2 são os dois DualSense (o 1 estava DESLIGADO), 3 é o Pro
     Controller e 4 é o 8BitDo em modo PS4. Presentes: um DualSense e os dois
@@ -375,7 +375,7 @@ class TestAMesaMedidaEm0608:
         conferir_sem_repetir(_mesa_de_06_08(raiz_leds, com_vpad=True))
 
     def test_a_lampada_do_p1_casa_com_o_nome_do_vpad(self, raiz_leds: Path) -> None:
-        """O par que ela usa para saber quem é quem: a luz e o nome."""
+        """O par que quem usa usa para saber quem é quem: a luz e o nome."""
         mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
         numeros = mesa.numeros_exibidos()
         assert numeros["vpad Hefesto P1"] == numeros["DualSense físico"]
@@ -396,7 +396,7 @@ class TestOVpadEntraNaConta:
 RAZAO_XFAIL = (
     "LUGAR-À-MESA-01: o NOME do vpad é congelado na criação e a colocação na "
     "fila é dinâmica — casá-los exigiria recriar o vpad no meio da sessão. "
-    "Cura NÃO autorizada aqui (decisão dela de 07/08: os externos só ganham "
+    "Cura NÃO autorizada aqui (decisão de produto de 07/08: os externos só ganham "
     "lugar próprio depois da máscara por controle)."
 )
 
@@ -406,10 +406,10 @@ class TestExternoNaFrenteNaFila:
     """O Pro chega ao PC antes de qualquer DualSense — e fica com o lugar 1.
 
     Rota medida uma vez e registrada no próprio código
-    (`ExternalLedSync._ds_reserve`, R-24: *"o Pro Nintendo USB abocanhava o
-    slot 1 e os dois DualSense nasciam 2 e 3 — medido no `controllers.json`
-    dela"*). A cura daquela vez foi de ORDEM (o `sync_connected` do lado
-    DualSense passou a atribuir antes do tick dos externos), e ela não alcança
+    (`ExternalLedSync._ds_reserve`, R-24: o Pro Nintendo USB abocanhava o
+    slot 1 e os dois DualSense nasciam 2 e 3, medido no `controllers.json`).
+    A cura daquela vez foi de ORDEM (o `sync_connected` do lado
+    DualSense passou a atribuir antes do tick dos externos), e não alcança
     quem liga o PC com só o Pro plugado: o externo recebe o lugar 1 sem
     ninguém para disputá-lo, e o lugar na fila é PERMANENTE por promessa (D2).
 

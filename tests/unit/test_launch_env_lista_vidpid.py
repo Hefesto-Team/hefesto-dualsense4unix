@@ -5,7 +5,7 @@ O `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW` carregavam
 `:91`). Agora eles são COMPOSTOS a partir de uma lista, e a lista de hoje tem
 um item só: o DualSense físico. A função nasce testada e **não ligada** — quem
 a alimentaria com mais pares é a `E4` da LUGAR-À-MESA-01 (cobertura POR PAR),
-que vem depois da adoção dos externos, que ela adiou.
+que vem depois da adoção dos externos, que foi adiada.
 
 Esta bateria vigia o que quebraria em silêncio:
 
@@ -160,7 +160,7 @@ def test_compose_env_nao_esconde_controle_fisico_sem_cobertura_por_par():
     assert _IGNORE_DE_HOJE in pares
     assert set(pares) == {_IGNORE_DE_HOJE, "0x28de/0x11ff"}, (
         "entrou um par novo no IGNORE. Se for de um controle FÍSICO, ele "
-        "precisa da cobertura POR PAR da E4 antes — senão some do jogo dela."
+        "precisa da cobertura POR PAR da E4 antes — senão some do jogo de quem usa."
     )
     assert env[_DISABLE] == _DISABLE_DE_HOJE
     assert "," not in env[_DISABLE]

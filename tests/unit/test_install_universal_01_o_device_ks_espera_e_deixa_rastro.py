@@ -418,7 +418,7 @@ def test_doctor_acusa_o_curador_ausente(tmp_path: Path) -> None:
 
 
 def test_o_doctor_roda_as_duas_checagens() -> None:
-    """A função existir não basta: ela tem de estar no `main()` do doctor."""
+    """A função existir não basta: tem de estar no `main()` do doctor."""
     texto = DOCTOR.read_text(encoding="utf-8")
     corpo = texto[texto.index("\nmain() {") :]
     corpo = corpo[: corpo.index("\n}\n")]

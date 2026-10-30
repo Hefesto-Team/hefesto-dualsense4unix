@@ -2,7 +2,7 @@
 
 FEAT-DSX-DEFINITIVE-FIX-01 §7.5. O quirk `usbcore.quirks=054c:0ce6:gn`
 (g=DELAY_INIT, n=DELAY_CTRL_MSG) ESPAÇA a rajada de control-transfers do probe do
-`snd-usb-audio` para ela não tombar o link — mitiga o storm -71 PRESERVANDO o mic e
+`snd-usb-audio` para a placa não tombar o link — mitiga o storm -71 PRESERVANDO o mic e
 o fone do jack do DualSense. É a ALTERNATIVA à regra 75 (áudio-off).
 
 IMPORTANTE: é um PARÂMETRO DE CMDLINE do kernel, NÃO uma regra udev — uma regra udev

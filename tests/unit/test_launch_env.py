@@ -46,9 +46,9 @@ def test_uinput_degradado_nunca_esconde_o_fisico():
 
     NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026: a régua conferia a regra de
     quando o uinput DualSense era 0ce6. Desde a VPAD-06 ele é o Edge 0df2, que o
-    IGNORE do 0ce6 não alcança, e desde 13/09 ele é o caminho Xbox que ela
+    IGNORE do 0ce6 não alcança, e desde 13/09 ele é o caminho Xbox que quem usa
     escolhe; medido na libSDL2 2.30 em 14/09, ele chega como `ps5` com o mapa
-    certo. O nome fica, e o que ela confere agora é o físico escondido."""
+    certo. O nome fica, e o que se confere agora é o físico escondido."""
     env = compose_env(
         native_mode=False, emulation_enabled=True,
         flavor="dualsense", backends=["uinput"],
@@ -98,7 +98,7 @@ def test_emulacao_desligada_ou_sem_vpad_vivo_nao_esconde():
 
 
 def test_compose_env_so_emite_vars_da_allowlist():
-    """O wrapper filtra por allowlist — emitir var fora dela = env que nunca"""
+    """O wrapper filtra por allowlist — emitir var fora da lista = env que nunca"""
     estados = [
         dict(native_mode=True, emulation_enabled=False, flavor="dualsense", backends=[]),
         dict(native_mode=False, emulation_enabled=True, flavor="xbox", backends=["uinput"]),

@@ -1,6 +1,6 @@
 """LUGAR-À-MESA-01/E0a — o `coop status` diz os DOIS números, nomeados.
 
-A queixa medida em 06/08/2026, com três controles ligados na bancada:
+O defeito medido em 06/08/2026, com três controles ligados na máquina de teste:
 
     $ hefesto-dualsense4unix coop status
     co-op local: ligado
@@ -9,7 +9,7 @@ A queixa medida em 06/08/2026, com três controles ligados na bancada:
 Um. Com um DualSense, um Pro Controller e um 8BitDo conectados — e os dois
 externos já numerados e com o LED aceso pelo próprio daemon. A frase não era
 falsa (o co-op conta quem tem controle virtual do Hefesto, e era mesmo um só);
-ela era **verdadeira e enganosa**, que é pior, porque não dá à pessoa nenhuma
+a frase era **verdadeira e enganosa**, que é pior, porque não dá à pessoa nenhuma
 pista de que existe outra contagem.
 
 O dado certo já estava no fio: `coop.externals` é publicado desde 25/07
@@ -50,7 +50,7 @@ def _texto(players: Any, externals: Any) -> str:
 
 
 class TestOsDoisNumerosNomeados:
-    """A função pura — é ela que decide o que a boca pode dizer."""
+    """A função pura — é a função que decide o que a boca pode dizer."""
 
     def test_a_mesa_do_usuario_de_06_08_diz_um_e_tres(self) -> None:
         """1 DualSense adotado + 2 externos = 1 jogador, 3 controles."""

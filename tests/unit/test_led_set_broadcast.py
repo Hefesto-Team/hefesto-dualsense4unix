@@ -1,6 +1,6 @@
 """BROADCAST-QUE-NAO-MENTE-01 (02/08) — `led.set` sem `uniq` APLICAVA NADA.
 
-Defeito medido na bancada, com dois DualSense na mesa e a paleta
+Defeito medido na máquina de teste, com dois DualSense na mesa e a paleta
 automática ligada: um ``led.set`` com ``rgb=[0,255,0]`` e SEM ``uniq``
 respondia ``{"status": "ok"}`` e o sysfs não mudava — os controles seguiam
 azul (slot 1) e vermelho (slot 2). O MESMO pedido COM ``uniq`` nos dois MACs
@@ -198,7 +198,7 @@ async def test_o_broadcast_do_usuario_vence_o_jogo(tmp_path: Path) -> None:
 
     A regra de 16/09 («meu perfil manda») caiu em 03/10/2026: o jogo manda, e na
     ausência dele o perfil ganha. O gesto do usuário na interface é a ordem mais nova
-    (decisão de produto), e o «Todos» é gesto como o clique num
+    (por escolha do produto), e o «Todos» é gesto como o clique num
     controle.
     """
     server, ctl, no_1, no_2 = _mesa_com_dois_controles(tmp_path)
@@ -209,8 +209,8 @@ async def test_o_broadcast_do_usuario_vence_o_jogo(tmp_path: Path) -> None:
 
     await server._handle_led_set({"rgb": list(VERDE)})
 
-    assert no_1.rgb_calls[-1] == VERDE, "a cor que ela acabou de pedir cedeu ao jogo"
-    assert no_2.rgb_calls[-1] == VERDE, "quem o jogo não usa ficou sem a cor dela"
+    assert no_1.rgb_calls[-1] == VERDE, "a cor que quem usa acabou de pedir cedeu ao jogo"
+    assert no_2.rgb_calls[-1] == VERDE, "quem o jogo não usa ficou sem a cor pedida"
 
 
 @pytest.mark.asyncio

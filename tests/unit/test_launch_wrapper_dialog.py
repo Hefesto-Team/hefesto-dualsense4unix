@@ -147,7 +147,7 @@ class TestLeituraDoVdfPorAppid:
         }
 
     def test_desfaz_o_escaping_da_string_do_wrapper(self) -> None:
-        """A string do wrapper tem aspas duplas — no vdf ela vive escapada e a"""
+        """A string do wrapper tem aspas duplas — no vdf vive escapada e a"""
         texto = _vdf({APPID: slo.WRAPPER_LAUNCH})
         mapa = slo.read_launch_options_by_appid(texto)
         assert mapa[APPID] == slo.WRAPPER_LAUNCH

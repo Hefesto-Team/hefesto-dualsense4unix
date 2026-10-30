@@ -1,7 +1,7 @@
 """LUZ-CEGA-01/E8 — o berço da suíte não vaza para o `config_dir()` real.
 
-O DEFEITO, medido em 25/08/2026 no journal da bancada. Quatro endereços da faixa de
-fixture `aa:bb:cc:*` moram no `controllers.json` de produção dela e empurram os
+O DEFEITO, medido em 25/08/2026 no journal da máquina de teste. Quatro endereços da faixa de
+fixture `aa:bb:cc:*` moram no `controllers.json` de produção e empurram os
 DualSense REAIS para os postos 6, 7 e 8. A escrita foi datada: até
 `2026-08-11T23:50` a fila gravada tinha os quatro DualSense do usuário; em
 `2026-08-22T02:13:43` o daemon a restaurou como **só** os quatro forjados
@@ -105,7 +105,7 @@ class TestNenhumaConstanteCongelaOLar:
         assert not culpados, (
             "Constante de MÓDULO congelando um caminho do `$HOME`:\n  "
             + "\n  ".join(culpados)
-            + "\n  Ela é avaliada na IMPORTAÇÃO — que na suíte acontece na"
+            + "\n  É avaliada na IMPORTAÇÃO — que na suíte acontece na"
             "\n  COLETA, antes de qualquer fixture. O isolamento de"
             "\n  XDG_CONFIG_HOME do conftest (escopo de FUNÇÃO) não a alcança,"
             "\n  e o que o produto gravar sob teste vai para o disco de quem"
@@ -116,7 +116,7 @@ class TestNenhumaConstanteCongelaOLar:
     def test_gui_prefs_le_o_config_dir_do_momento(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A prova de comportamento da cura, e ela NÃO grava em disco nenhum.
+        """A prova de comportamento da cura, e NÃO grava em disco nenhum.
 
         Só LEITURA de propósito: com a constante congelada de volta, um
         `save_gui_prefs` aqui escreveria no `~/.config` de quem rodasse o

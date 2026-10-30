@@ -254,7 +254,7 @@ def test_e_idempotente(tmp_path, monkeypatch) -> None:
 
 
 def test_o_uninstall_desinstala_os_dois_ids() -> None:
-    """Conhecer só o id de hoje deixaria o aplicativo antigo no menu dela."""
+    """Conhecer só o id de hoje deixaria o aplicativo antigo no menu de quem usa."""
     texto = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
     assert "HEFESTO_FLATPAK_APP_IDS=(" in texto
     bloco = texto.split("HEFESTO_FLATPAK_APP_IDS=(", 1)[1].split(")", 1)[0]
@@ -280,7 +280,7 @@ def test_o_purge_descontamina_os_dois_ids() -> None:
 
 
 def test_o_install_avisa_quem_tem_o_flatpak_antigo() -> None:
-    """O Flatpak não migra id: sem aviso, ficam dois Hefestos no menu dela."""
+    """O Flatpak não migra id: sem aviso, ficam dois Hefestos no menu de quem usa."""
     texto = (RAIZ / "install.sh").read_text(encoding="utf-8")
     assert f'APP_ID_FLATPAK_ANTIGO="{APP_ID_ANTIGO}"' in texto
     assert 'flatpak info "${APP_ID_FLATPAK_ANTIGO}"' in texto

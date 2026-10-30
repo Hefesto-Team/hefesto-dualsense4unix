@@ -128,7 +128,7 @@ def test_o_mostrador_do_numero_de_jogador_esta_no_lugar() -> None:
         texto = (linha[f"{lado}_offset"] or "")
         assert trecho in texto, (
             f"a linha do número de jogador tem de dizer `{trecho}` no lado "
-            f"{lado}; ela diz {texto!r}"
+            f"{lado}; diz {texto!r}"
         )
 
 
@@ -154,7 +154,7 @@ def test_os_cinco_desenhos_do_led_de_jogador() -> None:
 
 
 def test_o_dualsense_nao_tem_canal_de_taxa_e_o_mapa_diz_isso() -> None:
-    """A ausência é ACHADO, e ela precisa de rede."""
+    """A ausência é ACHADO, e precisa de rede."""
     linha = MAPA_DA_FRENTE["combinacao.cabo_e_radio.taxa"]
     for lado in BASE_POR_LADO:
         texto = (linha[f"{lado}_offset"] or "") + (linha[f"{lado}_comando"] or "")

@@ -3,7 +3,7 @@
 Nascido em 03/09/2026, na leva de levantamento em fonte externa. O mapa ganhou
 `report_id` e `offset` para as linhas de `luz.led_jogador.*` do DualSense, e a
 régua que faltava é justamente a que a regra 19 do `check_paridade_transporte`
-declara IMPOSSÍVEL para ela: *"nenhum portão sem hardware e sem rede consegue
+declara IMPOSSÍVEL: *"nenhum portão sem hardware e sem rede consegue
 dizer que o byte é 11 e não 47"*.
 
 Esta régua consegue — porque o fonte do driver está VERSIONADO nesta árvore

@@ -1,6 +1,6 @@
 """LIGHTBAR-O-CABO-FICOU-DE-FORA-01 — a barra do cabo, e o sinal certo.
 
-Achado por ela na bancada de 07/09/2026, com os quatro DualSense na mesa:
+Achado no ensaio de 07/09/2026, com os quatro DualSense na mesa:
 *"o lightbar azul tá nos dois controles. p1 e p2. cada controle deve ter um
 lightbar da sua cor apenas"*.
 
@@ -24,7 +24,7 @@ o controle DEVE ter mudou sem que a cor que ele TEM mudasse — o cache acerta a
 pergunta errada. Por isso o repintar do cabo invalida antes de reafirmar.
 
 Herméticos: nenhum aparelho, nenhum `/sys`. Dublês com a forma medida no
-socket dela.
+socket real.
 """
 from __future__ import annotations
 

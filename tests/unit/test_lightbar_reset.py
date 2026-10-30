@@ -220,7 +220,7 @@ class TestReset01AdocaoSobModoNativo:
         handle = self._connect_um_bt_novo(mute=False)
         assert build_bt_release_leds_report() not in handle.device.reports, (
             "o 0x08 voltou à adoção — ele TRAVA a lightbar dentro da janela de "
-            "3,4 s e apaga os player-LEDs fora dela "
+            "3,4 s e apaga os player-LEDs fora da janela "
             "(ver LIGHTBAR-BT-CULPADO-01)"
         )
 

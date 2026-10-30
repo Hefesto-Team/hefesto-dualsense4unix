@@ -4,13 +4,13 @@ Medido ao vivo em 25/07 com o Mullet Mad Jack (`steam_app_2111190`, o único
 appid da allowlist do Steam Input desta máquina) e UM DualSense no cabo:
 
     /dev/input/js0  ->  Hefesto Virtual DualSense P1   (o nosso gamepad virtual)
-    /dev/input/js2  ->  DualSense Wireless Controller  (o controle físico dela)
+    /dev/input/js2  ->  DualSense Wireless Controller  (o controle físico)
     /dev/input/js4  ->  Microsoft X-Box 360 pad 0      (Steam Input)
     /dev/input/js5  ->  Microsoft X-Box 360 pad 1      (Steam Input)
 
 O jogo dava jogador 1 ao primeiro que enumerou e jogador 2 ao seguinte, e o
-relato dela descreve isso por fora: "ele muda a cor e vai pro player 2 e não
-funciona". A causa não era a allowlist estar errada — era ela estar pela
+relato de uso descreve isso por fora: a cor muda, o controle vai para o jogador 2 e não
+funciona. A causa não era a allowlist estar errada — era a allowlist estar pela
 metade: o ramo do `launch_env` omitia `SDL_GAMECONTROLLER_IGNORE_DEVICES` e
 `PROTON_DISABLE_HIDRAW` (rótulo literal no código: "allowlist Steam Input (sem
 dedup)") e o gamepad virtual CONTINUAVA DE PÉ. Cada metade estava certa
@@ -21,7 +21,7 @@ A allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS. Desde 09/08/2026
 esconde-se o FÍSICO e o Hefesto fica, porque o jogador 2 é um gamepad virtual e
 derrubar os virtuais o derrubava junto. A suspensão do vpad, que era a cura
 antiga, saiu em 02/10/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01): a borda da
-marca não a chamava mais, e o flag que ela armava nunca podia ser verdade.
+marca não a chamava mais, e o flag que a função armava nunca podia ser verdade.
 
 A borda de hoje está em `test_esconder_em_vez_de_sair_01.py`. Aqui ficam o
 revive dentro do jogo marcado e a env da allowlist (`TestEnvDaAllowlist`).

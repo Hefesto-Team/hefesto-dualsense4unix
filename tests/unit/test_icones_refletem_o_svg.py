@@ -16,7 +16,7 @@ DERIVADOS = ("assets/appimage/Hefesto-Dualsense4Unix.png",)
 
 
 def test_a_fonte_canonica_existe() -> None:
-    """Sem ela, todo o resto é órfão."""
+    """Sem isto, todo o resto é órfão."""
     assert SVG.is_file(), (
         f"{SVG.relative_to(RAIZ)} sumiu — é a fonte canônica de todos os "
         "ícones do projeto."

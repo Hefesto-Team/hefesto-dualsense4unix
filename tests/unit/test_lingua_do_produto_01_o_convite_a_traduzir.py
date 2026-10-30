@@ -197,14 +197,14 @@ def test_os_modulos_que_ja_traduzem_continuam_traduzindo() -> None:
 
     A decisão de produto diz explicitamente que o i18n **não** é removido. Estes
     módulos são a prova viva de que ele funciona; perdê-los seria arrancar
-    trabalho bom para provar um ponto, que é o que ela recusou.
+    trabalho bom para provar um ponto, que é o que a decisão recusou.
 
     Eram três até 21/08/2026, quando a aba Configurações entrou já traduzindo.
     O nome do teste dizia "os três" e passou a mentir — por isso mudou. Em
     22/08/2026 viraram cinco, e depois nove: as cinco seções do pacote `config/`
     também põem texto na tela e também traduzem.
 
-    **A ASSERÇÃO É DE PISO, E NÃO DE IGUALDADE, DESDE 22/08/2026.** Ela era um
+    **A ASSERÇÃO É DE PISO, E NÃO DE IGUALDADE, DESDE 22/08/2026.** Era um
     `==` contra uma lista congelada, e o `==` contradizia a própria mensagem de
     falha deste teste: *"ganhar módulo aqui é bom e esperado; PERDER é
     regressão"*. Com o `==`, ganhar reprovava igual a perder — e reprovou, na
@@ -279,7 +279,7 @@ def test_a_contributing_diz_o_que_o_convite_perdido_foi_substituido_por() -> Non
     ):
         assert esperado in texto, (
             f"`.github/CONTRIBUTING.md` não diz {esperado!r}. A seção de "
-            "traduções saiu da página, e o lugar dela é de quem explica a "
+            "traduções saiu da página, e o lugar dessa frase é de quem explica a "
             "decisão; senão a próxima pessoa reabre o convite."
         )
 

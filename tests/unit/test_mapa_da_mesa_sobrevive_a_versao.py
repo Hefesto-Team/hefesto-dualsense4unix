@@ -36,9 +36,9 @@ MAPA_DO_USUARIO: dict[str, Any] = {
 
 @pytest.fixture
 def arquivo(tmp_path: Path) -> Path:
-    """O ``maquina.json`` desta bancada — e a prova de que ele não é o dela."""
+    """O ``maquina.json`` deste ensaio — e a prova de que ele não é o de quem roda."""
     caminho = caminho_da_maquina()
-    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp da bancada"
+    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp do ensaio"
     return caminho
 
 
@@ -56,7 +56,7 @@ def test_o_mapa_vai_ao_disco_e_volta_igual(arquivo: Path) -> None:
     assert lido.faces[2].portas == ["9", "10", "11", "12", "13", "14", "15"]
     assert lido.portas["15a"].caminho == "3-1.1.4"
     assert lido.portas["15a"].filha_de == "15", (
-        "a entrada por extensão perdeu de quem ela é filha; sem isso o produto "
+        "a entrada por extensão perdeu de quem é filha; sem isso o produto "
         "volta a dizer que o dongle está na porta do hub, que é onde ele NÃO "
         "está — o defeito que a extensão inteira existe para curar"
     )
@@ -99,7 +99,7 @@ def test_o_codigo_antigo_preserva_o_mapa(
 
     documento = _documento(arquivo)
     assert "mapa" in documento, (
-        "a versão que não conhece o campo APAGOU o desenho dela na primeira "
+        "a versão que não conhece o campo APAGOU o desenho de quem usa na primeira "
         "gravação; um upgrade e um downgrade custariam o gabinete inteiro"
     )
     assert documento["mapa"] == antes, (
@@ -109,7 +109,7 @@ def test_o_codigo_antigo_preserva_o_mapa(
 
 
 def test_documento_da_v1_continua_sendo_lido(arquivo: Path) -> None:
-    """A mordida do "não subir a versão", e ela é a tarefa inteira."""
+    """A mordida do "não subir a versão", e é a tarefa inteira."""
     arquivo.write_text(
         json.dumps(
             {
@@ -184,7 +184,7 @@ def test_o_campo_desconhecido_numa_entrada_nao_leva_o_mapa_junto(arquivo: Path) 
     assert len(lido.mapa.portas) == 15, (
         f"o campo novo da entrada 3 levou o mapa junto: {sorted(lido.mapa.portas)}")
     assert [f.nome for f in lido.mapa.faces] == ["Frente", "Traseira", "Hub"]
-    assert lido.mapa.portas["3"].caminho == "9-3", "a entrada 3 perdeu o que era dela"
+    assert lido.mapa.portas["3"].caminho == "9-3", "a entrada 3 perdeu o que era seu"
     assert lido.mesa.altura_da_antena == "acima"
 
 
@@ -278,6 +278,6 @@ def test_o_modulo_nao_resolve_o_config_dir_no_topo(tmp_path: Path) -> None:
 
     É a mesma cicatriz de ``app/gui_prefs.py:13``. Se algum dia o módulo
     resolver o diretório no topo, esta bateria inteira passa a escrever no
-    ``~/.config`` dela e nenhum outro teste percebe.
+    ``~/.config`` de quem roda e nenhum outro teste percebe.
     """
     assert tmp_path in modulo.caminho_da_maquina().parents

@@ -167,7 +167,7 @@ def test_a_ancora_da_cerca_continua_de_pe() -> None:
         f"não achei a cerca do install.sh (`{ABERTURA_DA_CERCA}`, o `exit 0` "
         "do ramo dos formatos e o `fi` que o fecha).\n"
         "Se a bifurcação MUDOU DE FORMA, conserte `ABERTURA_DA_CERCA` e "
-        "`regioes()` neste arquivo — sem elas todos os testes daqui passam "
+        "`regioes()` neste arquivo — sem as regiões todos os testes daqui passam "
         "sem olhar nada."
     )
     assert all(achadas[regiao] for regiao in ("preambulo", "formatos", "native")), (
@@ -220,17 +220,17 @@ def test_toda_cura_de_host_alcanca_os_dois_lados() -> None:
         assert not faltando, (
             f"`{cura}` é cura de HOST e não chega a todos os formatos.\n"
             + "".join(f"  falta em {lado}\n" for lado in faltando)
-            + f"  helpers que ela executa: {sorted(proprios) or 'nenhum'}\n"
+            + f"  helpers que a função executa: {sorted(proprios) or 'nenhum'}\n"
             "FAÇA UMA das três:\n"
             f"  1. CHAME `{cura}` também do lado que falta — é o conserto do "
             "achado #7 da Onda S, do TECLADO-QUE-NAO-DIGITA-01 e do "
             "MIC-EM-TODO-FORMATO-01, todos o mesmo defeito;\n"
-            "  2. MOVA a chamada para o preâmbulo comum, antes da cerca, se ela "
+            "  2. MOVA a chamada para o preâmbulo comum, antes da cerca, se a função "
             "serve a todo formato de qualquer jeito — mas cuidado: chamada "
             "dentro de `format_flatpak`/`format_appimage` NÃO é preâmbulo, é o "
             "lado dos formatos;\n"
             "  3. DECLARE em `SERVE_UM_LADO_SO`, com data e com o motivo de o "
-            "outro lado não precisar dela.\n"
+            "outro lado não precisar.\n"
             "Quem instala pelo .deb tem o mesmo aparelho que quem instala do "
             "fonte."
         )
@@ -249,7 +249,7 @@ def test_a_lista_de_lacunas_nao_envelhece_calada() -> None:
             f"cura: {razao!r}"
         )
         assert re.search(r"\d{2}/\d{2}/\d{4}", razao), (
-            f"a lacuna {chave!r} não tem data. Sem data ninguém sabe se ela "
+            f"a lacuna {chave!r} não tem data. Sem data ninguém sabe se a lacuna "
             "envelheceu — e uma lacuna sem idade vira paisagem."
         )
 

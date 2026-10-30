@@ -287,7 +287,7 @@ VPAD_PATH = "/dev/input/event20"
 def _mesa_de_tres(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, aberturas: list[str] | None = None
 ) -> None:
-    """A bancada: um DualSense, um Pro, o nosso vpad e o IMU do Pro."""
+    """O ensaio: um DualSense, um Pro, o nosso vpad e o IMU do Pro."""
     ds_dir = _arvore_hid(
         tmp_path, "bt/hci0/hci0:20/0005:054C:0CE6.0004", "playstation", "hidraw6"
     )
@@ -378,7 +378,7 @@ def test_descoberta_unica_classifica_os_dois_lados_num_laco_so(
 def test_o_absinfo_de_cada_eixo_viaja_na_descoberta(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A forma do eixo é o que decide se o controle é jogável — ela sai da"""
+    """A forma do eixo é o que decide se o controle é jogável — sai da"""
     _mesa_de_tres(tmp_path, monkeypatch)
 
     por_especie = {gp.especie: gp for gp in discover_gamepads()}
@@ -486,7 +486,7 @@ def test_reencontro_do_dualsense_segue_igual_e_sem_alvo_nao_adota_ninguem(
 
     sem_alvo = EvdevReader(device_path=Path("/dev/input/event999"))
     assert sem_alvo._locate() is None, (
-        "sem alvo o reader adotou um externo — isso é a E3, e ela é dela"
+        "sem alvo o reader adotou um externo — isso é a E3, que tem vez própria"
     )
 
 
@@ -502,7 +502,7 @@ def test_o_coop_so_adota_externo_pela_porta_da_decisao() -> None:
     que filtra pela marca. A descoberta dos DualSense segue fechada neles.
 
     Portão de TEXTO de propósito: a recaída aqui não é um valor errado, é uma
-    linha nova no `want` — e ela passaria em qualquer teste de comportamento
+    linha nova no `want` — e passaria em qualquer teste de comportamento
     da E2.
     """
     coop = Path(er_mod.__file__).resolve().parents[1] / "daemon/subsystems/coop.py"

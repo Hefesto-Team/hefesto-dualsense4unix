@@ -9,11 +9,11 @@ devolvia `None` a 2 Hz, com `get_input_focus()` em `X.NONE` nas 10 amostras.
 **METADE DESSA MEDIÇÃO DEIXOU DE SER POSSÍVEL EM 21/09/2026, e levou 55 dias.**
 A frase acima descreve, desde 28/07, o sticky guardando a NOSSA janela — e
 ninguém ligou aquele fato ao «Detectar», que lê o sticky e grava a regra do
-perfil com ele. O `personalizado.json` dela mira `Hefesto-Dualsense4Unix` por
+perfil com ele. O `personalizado.json` medido mira `Hefesto-Dualsense4Unix` por
 causa disso. `StateStore.record_window_detect_read` passou a recusar a nossa
 própria classe no sticky (a leitura CRUA e a saúde continuam registrando-a),
 então as duas réguas que reproduziam o episódio trocaram a classe do cenário
-por `firefox`: **o que elas medem é a IDADE que cresce enquanto o sticky não
+por `firefox`: **o que as duas medem é a IDADE que cresce enquanto o sticky não
 decai, e essa propriedade não depende de QUAL classe está presa lá.** Cravar a
 classe literal faria a régua reprovar a cura em vez do defeito — a família
 *"a régua media o mundo de ontem"* — noqa-acento: frase desta casa —, que
@@ -27,10 +27,10 @@ O que este módulo mede:
 2. `window_detect_useful_age()` é a idade que denuncia a cegueira ao lado do
    sticky que nunca decai.
 3. `window_detect_healthy` continua NÃO decaindo — de propósito, com teste que
-   fixa a decisão: o consumidor dela é `game_signal.classify`, onde
+   fixa a decisão: o seu consumidor é `game_signal.classify`, onde
    `healthy=False` sem evidência de jogo vira autoridade `unknown`, e sob
    `unknown` o gate da camada GAME abre para a luz que o cliente Steam
-   escrever no vpad — a lightbar dela muda. Mudar isso é leva própria.
+   escrever no vpad — a lightbar de quem usa muda. Mudar isso é leva própria.
 4. As SEIS causas de `None` do `XlibBackend` viram seis motivos DISTINTOS em
    `last_failure_reason` — "sem foco X" (normal: app Wayland nativo em foco)
    deixa de ser indistinguível de "backend morto" (grave).
@@ -377,7 +377,7 @@ def test_reader_com_backend_sem_campo_ainda_diz_alguma_coisa() -> None:
 
 
 def test_cascata_wayland_nomeia_a_propria_cegueira() -> None:
-    """Os DOIS calados, e a cascata diz que foi ela quem não leu.
+    """Os DOIS calados, e a cascata diz que foi a janela quem não leu.
 
     O `cosmic` entra aqui desde 02/09/2026, e emudecê-lo não é formalidade:
     sem isso este teste falaria com o compositor de VERDADE da máquina onde

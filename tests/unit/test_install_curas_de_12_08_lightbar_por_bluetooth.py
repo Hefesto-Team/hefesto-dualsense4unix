@@ -1,6 +1,6 @@
 """GATILHO-DA-COR-INSTALA-01: o install tem de entregar hidraw GRAVÁVEL no rádio.
 
-- **Escrito em:** 12/08/2026, junto das três curas da bancada de 11-12/08.
+- **Escrito em:** 12/08/2026, junto das três curas do ensaio de 11-12/08.
 - **A regra da casa que este arquivo defende** (decisão, 08/08/2026): toda
   cura entra no `install.sh`, sem flag e sem opt-in — e a prova é por ciclo
   `uninstall` -> `install`.
@@ -23,7 +23,7 @@ sysattrs do PRÓPRIO nó, e um `hidraw` não tem `idVendor`: esse atributo mora 
 pai USB — e no Bluetooth não existe pai USB nenhum, porque o BlueZ cria o HID
 por `uhid` (`/sys/devices/virtual/misc/uhid/0005:054C:0CE6.*`).
 
-Medido na bancada em 12/08/2026, três DualSense no rádio e um no cabo:
+Medido na máquina de teste em 12/08/2026, três DualSense no rádio e um no cabo:
 
     udevadm trigger --dry-run --verbose --subsystem-match=hidraw       -> 8
     ... o mesmo + --attr-match=idVendor=054c                           -> 0
@@ -104,7 +104,7 @@ def test_o_trigger_de_hidraw_nao_usa_o_filtro_impossivel(script: Path) -> None:
         f"--attr-match: {culpadas}\n"
         "Um nó hidraw não tem sysattr próprio — idVendor mora no pai USB, e no "
         "Bluetooth não há pai USB (o BlueZ cria o HID por uhid). O filtro casa "
-        "ZERO dispositivos: medido 0 de 8 na máquina dela em 12/08/2026."
+        "ZERO dispositivos: medido 0 de 8 na máquina de teste em 12/08/2026."
     )
 
 

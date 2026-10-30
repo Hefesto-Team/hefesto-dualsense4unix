@@ -1,6 +1,6 @@
 """IGNORE-NO-FIM-DA-SEQUENCIA-01 (12/08/2026) — a decisão do IGNORE espera a mesa.
 
-O defeito, medido no journal da bancada com quatro DualSense e o Sackboy aberto: o
+O defeito, medido no journal da máquina de teste com quatro DualSense e o Sackboy aberto: o
 produto decidia o `SDL_GAMECONTROLLER_IGNORE_DEVICES` **durante** a subida dos
 gamepads virtuais, uma vez por borda, e nada reavaliava a decisão quando a
 subida terminava.
@@ -14,15 +14,15 @@ subida terminava.
     00:15:42.401  vpad P4   -> só AGORA a cobertura fica completa
 
 É o terceiro defeito de TEMPO do mesmo dia, e os três têm a mesma forma: o
-produto decide durante a sequência em vez de esperar ela sossegar. A cura
-desenhada por ela é sempre a mesma — **armar a cada evento, disparar quando
+produto decide durante a sequência em vez de esperar a sequência sossegar. A cura
+desenhada é sempre a mesma — **armar a cada evento, disparar quando
 sossega, agir sobre tudo**.
 
 Estes testes cobrem os três estados que a sprint exige, e cada um MORDE numa
 linha diferente do produto:
 
 1. **cobertura incompleta durante a subida** — o arquivo POR APPID, que é o que
-   um jogo com perfil realmente lê (o caso dela: `steam_app_1599660.env`), tem
+   um jogo com perfil realmente lê (o caso medido: `steam_app_1599660.env`), tem
    de obedecer à mesma cobertura por físico que o `default.env`. Mordida:
    `_env_for_profile` sem o `fisicos` (como estava até 12/08);
 2. **cobertura completa no fim** — nada disso pode virar "o dedup parou de
@@ -140,7 +140,7 @@ class TestCoberturaIncompletaDuranteASubida:
         número de físicos. O default 0 significa "NÃO SEI", e "não sei" AUTORIZA
         o IGNORE — logo o `steam_app_1599660.env`, o arquivo que o jogo COM
         perfil de fato lê, saía escondendo os quatro DualSense numa mesa com
-        dois vpads vivos. Dois jogadores dela ficariam com zero controle, que é
+        dois vpads vivos. Dois jogadores ficariam com zero controle, que é
         exatamente o desfecho que a doutrina desta casa proíbe por escrito.
 
         O `default.env` do MESMO instante já omitia (é o

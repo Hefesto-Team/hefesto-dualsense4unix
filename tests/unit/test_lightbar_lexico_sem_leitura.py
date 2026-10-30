@@ -2,13 +2,13 @@
 
 **O que foi medido (M4 da sprint LIGHTBAR-COR-DE-CADA-UM-01).** O rótulo das 5
 luzes dizia *"Aceso agora: …"*, e ``texto_do_desenho_aceso`` é função PURA do
-rascunho: **nada nela consulta o aparelho**. E o mapa de canais mede que
+rascunho: **nada ali consulta o aparelho**. E o mapa de canais mede que
 consultar não é possível — ``luz.led_jogador.leitura@dualsense`` tem
 ``cabo_aceita = não`` e ``radio_aceita = não``. A tela afirmava um estado do
 DualSense que nenhum caminho do produto pode conferir.
 
 Não é caso isolado: o ensaio ``lightbar-sysfs-nao-sabe`` (16/08/2026) leu
-``[0 255 0]`` no ``multi_intensity`` com a barra APAGADA e ``[0 255 0]`` com ela
+``[0 255 0]`` no ``multi_intensity`` com a barra APAGADA e ``[0 255 0]`` com a barra
 VERDE. O sysfs guarda o que foi PEDIDO, nunca o que a lâmpada faz.
 
 **A régua, em uma frase:** nenhum rótulo desta aba pode afirmar estado de barra
@@ -17,12 +17,12 @@ enquanto o mapa não registrar canal de leitura para a chave correspondente.
 **O ESCOPO, dito na cara.** Esta régua alcança (a) as quatro frases que
 ``texto_do_desenho_aceso`` produz e (b) a linha do ``main.glade`` que publica o
 texto de espera do mesmo rótulo — a Onda 7 é a dona única do XML nesta leva, e
-ler uma linha nomeada dele custa uma passada de ``ElementTree``. O que ela
+ler uma linha nomeada dele custa uma passada de ``ElementTree``. O que a régua
 **não** alcança é o resto da tela: o portão que varre TODOS os rótulos contra o
 mapa é da Z6/PAREAMENTO-01, e fingir que ele já existe seria trocar um defeito
 de tela por um defeito de portão.
 
-**O que ela também não alcança, e é do usuário:** ``docs/usage/interface.md`` ainda
+**O que a régua também não alcança, e é do usuário:** ``docs/usage/interface.md`` ainda
 diz que a linha mostra *"o que está aceso neste instante"*. O arquivo é de
 outra frente nesta leva; o conserto está nomeado no relatório A4.
 """

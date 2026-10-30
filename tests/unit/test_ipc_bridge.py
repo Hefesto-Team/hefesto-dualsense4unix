@@ -303,7 +303,7 @@ _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
     "alvo_honrado": (
         "MIC-DA-MESA-CHEIA-01: lê o `por_uniq` do daemon. Lápide em "
         "`_SEM_CAMINHO_HOJE`; fecha em interface/cartao_do_controle.py, e o "
-        "estado novo de tela que ela pede é DESENHO — a palavra é dela."
+        "estado novo de tela que a rota pede é DESENHO — a palavra é do produto."
     ),
     "led_set": (
         "BG-01 trocou os três chamadores por `led_set_detalhado`. Lápide em "
@@ -322,7 +322,7 @@ _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
         "`p.mic_set(...)` por `p.mic_canal_set(...)`, na ONDA 2."
     ),
     "frase_do_ato_do_microfone": (
-        "Irmã da de cima, pela mesma entrega: é ela que diz QUAL das duas "
+        "Irmã da de cima, pela mesma entrega: é essa que diz QUAL das duas "
         "metades faltou, e é o caso que o recado de sucesso da D-01 carrega ao "
         "cartão. Mesmo atravessador, mesma onda, mesmo commit quando cair."
     ),
@@ -400,7 +400,7 @@ def _travessias() -> dict[str, list[str]]:
 class TestOAllSoPublicaRotaAtravessada:
     """Nome no ``__all__`` é promessa de rota; rota sem travessia apodrece.
 
-    Régua da BG-07, e ela NÃO substitui
+    Régua da BG-07, e NÃO substitui
     `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`: aquele mede alcance
     a partir dos pontos de entrada do produto e é mais forte. Esta é mais
     estreita e mais barata, e responde a pergunta que é só deste arquivo — o
@@ -440,7 +440,7 @@ class TestOAllSoPublicaRotaAtravessada:
         assert not fantasmas, (
             "`_SEM_TRAVESSIA_DECLARADA` isenta nome que o `__all__` não "
             f"publica mais: {fantasmas}\n"
-            "Se a rota foi podada, apague a isenção junto — ela existe para "
+            "Se a rota foi podada, apague a isenção junto — a isenção existe para "
             "explicar uma dívida VIVA."
         )
 
@@ -463,11 +463,11 @@ class TestOAllSoPublicaRotaAtravessada:
             "citada_em_literal",
         ):
             assert texto not in citados, (
-                f"a varredura contou `{texto}` por chamador — ela está lendo "
+                f"a varredura contou `{texto}` por chamador — está lendo "
                 "TEXTO, e texto não atravessa ponte nenhuma"
             )
 
         assert _travessias()["call_async"], (
-            "a varredura não achou chamador de `call_async` em `src/` — ela "
+            "a varredura não achou chamador de `call_async` em `src/` — a varredura "
             "não está enxergando a árvore de verdade"
         )

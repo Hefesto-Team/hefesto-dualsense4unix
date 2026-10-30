@@ -90,7 +90,7 @@ def test_apply_poe_o_wrapper_em_todo_jogo_inclusive_no_que_nunca_teve_opcoes(
 def test_apply_e_idempotente_rodar_duas_vezes_nao_duplica(
     tmp_path: Path, steam_fechada, capsys
 ):
-    """Requisito dela, palavra por palavra: idempotente. O install roda sem"""
+    """Requisito de produto, palavra por palavra: idempotente. O install roda sem"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(
         _vdf({"620": "MANGOHUD=1 %command%"}, sem_launch_options=("1599660",)),
@@ -114,7 +114,7 @@ def test_apply_e_idempotente_rodar_duas_vezes_nao_duplica(
 
 
 def test_apply_remove_o_veneno_legado_no_mesmo_passo(tmp_path: Path, steam_fechada):
-    """Quem tinha a linha 914 sai dela DIRETO para o wrapper (o `--apply` usa o"""
+    """Quem tinha a linha 914 sai da linha DIRETO para o wrapper (o `--apply` usa o"""
     vdf = tmp_path / "localconfig.vdf"
     vdf.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
 
@@ -126,7 +126,7 @@ def test_apply_remove_o_veneno_legado_no_mesmo_passo(tmp_path: Path, steam_fecha
 
 
 def test_apply_recusa_com_a_steam_aberta(tmp_path: Path, monkeypatch, capsys):
-    """Editar com a Steam viva é edição PERDIDA: ela regrava o vdf ao sair."""
+    """Editar com a Steam viva é edição PERDIDA: a Steam regrava o vdf ao sair."""
     vdf = tmp_path / "localconfig.vdf"
     original = _vdf({"620": "MANGOHUD=1 %command%"})
     vdf.write_text(original, encoding="utf-8")

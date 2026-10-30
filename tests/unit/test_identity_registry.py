@@ -152,7 +152,7 @@ class TestAtribuicaoNoSync:
     rodava, `snapshot()` ficava vazio — e é esse snapshot que o registro dos
     EXTERNOS lê como piso (`_ds_reserve`). Piso 0 ⇒ o Pro Nintendo USB tomava
     o slot 1 e os dois DualSense herdavam 2 e 3, que é o "não existe Controle
-    1" medido no `controllers.json` dela.
+    1" medido no `controllers.json` da máquina de teste.
     """
 
     def test_sync_numera_quem_conectou(self, isolated_config: Path) -> None:

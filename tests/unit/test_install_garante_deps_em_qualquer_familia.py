@@ -492,7 +492,7 @@ class TestMaquinaSemBluetoothctl:
         )
 
     def test_o_pipeline_sem_guarda_realmente_mata(self) -> None:
-        """A prova de que a guarda não é decoração: sem ela, 127."""
+        """A prova de que a guarda não é decoração: sem a guarda, 127."""
         sem_guarda = (
             'set -euo pipefail\n'
             '_bz="$(bluetoothctl --version 2>/dev/null | awk "{print \\$NF}")"\n'

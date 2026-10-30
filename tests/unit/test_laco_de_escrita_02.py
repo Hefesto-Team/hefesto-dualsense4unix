@@ -152,7 +152,7 @@ class _DispositivoDoLaco:
 
     def _vazio(self) -> None:
         assert not self._device.bloqueante, (
-            "leitura vazia com o handle bloqueante: no aparelho ela não voltaria"
+            "leitura vazia com o handle bloqueante: no aparelho a leitura não voltaria"
         )
 
 
@@ -192,7 +192,7 @@ def _handle_do_laco() -> bp._PinnedPyDualSense:
 
 
 def _read_input_do_upstream(in_report: Any) -> None:
-    """A PRIMEIRA linha do `readInput` do upstream, e só ela."""
+    """A PRIMEIRA linha do `readInput` do upstream, e só essa."""
     list(in_report)[1:]
 
 

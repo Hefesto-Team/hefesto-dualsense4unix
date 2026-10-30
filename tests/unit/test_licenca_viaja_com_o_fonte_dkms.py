@@ -127,7 +127,7 @@ def test_licenca_chega_ao_usr_src_na_execucao(tmp_path: Path) -> None:
 def test_a_licenca_no_destino_nao_quebra_o_no_op_da_segunda_chamada(
     tmp_path: Path,
 ) -> None:
-    """A armadilha da entrega, e ela é maior que a entrega."""
+    """A armadilha da entrega, e é maior que a entrega."""
     saida, registro, _destino = _roda(tmp_path, chamadas=2)
     assert saida.count("RC=0") == 2, saida
     assert "já sincronizado" in saida, (

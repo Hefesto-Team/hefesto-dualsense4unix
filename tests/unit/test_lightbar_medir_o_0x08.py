@@ -15,7 +15,7 @@ TRÊS MEDIÇÕES QUE PRECISAM CABER JUNTAS
 CORREÇÃO DATADA (11/08/2026), porque o item 3 tinha uma cauda FALSA
 ==================================================================
 Colada ao item 3 lia-se aqui "e sem 0x08 nenhum a barra ficou morta por 5 dias
-e 20 adoções". Ela **nunca foi medição**: era uma frase que só existia em
+e 20 adoções". A frase **nunca foi medição**: só existia em
 docstring — a armadilha `A-12` de `docs/method/METODO-DE-ISOLAMENTO.md`, *"o
 caderno envelhecer sem que ninguém note"*. A escavação do journal, em 11/08,
 achou a barra **ACESA** no rádio dentro daqueles cinco dias, quatro vezes
@@ -29,7 +29,7 @@ em 13/08 e serviu de molde, e `core/backend_pydualsense.py`, `cli/app.py` e
 os endereços de ensaio, está no docstring de `core/backend_pydualsense.py`
 (`enviar_release_leds`).
 
-Do que a frase afirmava, o que sobra de pé é o oposto do que ela dizia: nesses
+Do que a frase afirmava, o que sobra de pé é o oposto do que dizia: nesses
 cinco dias sem 0x08 a barra **obedeceu**, o que mantém o 0x08 fora do banco dos
 réus — mas pela razão contrária. E a correlação de 03/08 (7/7 dentro da janela)
 segue de pé como correlação, tendo caído como causa SUFICIENTE no ensaio
@@ -38,7 +38,7 @@ segue de pé como correlação, tendo caído como causa SUFICIENTE no ensaio
 A hipótese que concilia o que restou, e que segue sem ensaio que a feche: **o
 0x08 devolve o claim, e só derruba quando é mandado em cima da conexão.** Este
 arquivo não prova a hipótese — hardware não cabe em teste unitário. Ele garante
-que o INSTRUMENTO usado para prová-la na bancada não minta, que é a armadilha
+que o INSTRUMENTO usado para prová-la no ensaio não minta, que é a armadilha
 nº 3 desta casa: *"o instrumento pode estar brigando com o produto"*.
 
 O QUE ESTES TESTES TRAVAM
@@ -166,7 +166,7 @@ def test_falha_de_um_handle_nao_derruba_o_outro() -> None:
 
 
 def test_o_instrumento_nao_virou_cura_por_acidente() -> None:
-    """O portão que impede o 0x08 de voltar à adoção sem decisão de produto."""
+    """O portão que impede o 0x08 de voltar à adoção sem que o produto decida."""
     arvore = ast.parse(BACKEND_PY.read_text(encoding="utf-8"))
     donos: list[str] = []
     for no in ast.walk(arvore):
@@ -182,7 +182,7 @@ def test_o_instrumento_nao_virou_cura_por_acidente() -> None:
 
     assert donos == ["enviar_release_leds"], (
         f"`send_release_leds` passou a ser chamado por {donos} — se a cura está "
-        "voltando ao caminho automático, isso é decisão dela (a remoção de "
+        "voltando ao caminho automático, isso é decisão de produto (a remoção de "
         "108b711 foi deliberada), e este teste tem de ser reescrito junto com a "
         "nota datada na LIGHTBAR-BT-CULPADO-01."
     )

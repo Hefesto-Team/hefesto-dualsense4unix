@@ -127,10 +127,10 @@ class TestPasso7aObedece:
         assert r.returncode == 0, r.stderr
         assert r.unit_target.exists(), "a unit precisa ser copiada mesmo sem auto-start"
         assert f"enable {UNIT}" not in r.log_systemctl, (
-            'ela respondeu "não" ao auto-start no boot e o passo 7a habilitou'
+            'quem usa respondeu "não" ao auto-start no boot e o passo 7a habilitou'
         )
         assert f"restart {UNIT}" not in r.log_systemctl, (
-            'ela respondeu "não" e o passo 7a subiu o daemon parado'
+            'quem usa respondeu "não" e o passo 7a subiu o daemon parado'
         )
         assert f"start {UNIT}" not in r.log_systemctl
         assert "auto-start NÃO habilitado" in r.stdout

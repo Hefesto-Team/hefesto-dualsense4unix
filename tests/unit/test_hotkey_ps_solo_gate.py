@@ -8,19 +8,19 @@ jogo/`_emulation_suppressed`), mas NÃO no desktop. O gate usa flags EM MEMÓRIA
 (REVIEW-M5-NONSTEAM-FOCUS-01).
 
 **Parte 2 — PS-TOQUE-CURTO-01 (E1/E2), 26/08/2026.** O outro gate, e ele é de
-DURAÇÃO. O controle cai no rádio; ela segura o botão PS por cinco segundos para
+DURAÇÃO. O controle cai no rádio; quem usa segura o botão PS por cinco segundos para
 religá-lo — que é como se liga um DualSense —, solta, e **a Steam abre**. Com a
 Steam já aberta, abre uma segunda. Aconteceu duas vezes em 45 segundos.
 
 Por que acontecia: `_observe_ps_solo` calculava `held_ms` no release, LOGAVA o
 valor e disparava `_fire_ps_solo()` sem comparar com teto nenhum. A única
-barreira era `_ps_long_press_fired`, e ela nunca arma — o long-press nasce
+barreira era `_ps_long_press_fired`, que nunca arma — o long-press nasce
 desligado (`ps_long_press_ms = 0`, por causa do modo-jogo acidental). As duas
 decisões estão certas isoladamente; o defeito é a COMPOSIÇÃO: desligar o
 long-press removeu, sem querer, o único teto que existia.
 
 A mordida: `test_segurar_para_religar_nao_abre_a_steam` põe os dois holds lado a
-lado — 5.038 ms (o religamento medido no journal da bancada) e 200 ms (um toque
+lado — 5.038 ms (o religamento medido no journal da máquina de teste) e 200 ms (um toque
 humano). Arrancado o teto de `_observe_ps_solo`, o caso longo dispara e o teste
 reprova imprimindo os dois `held_ms` juntos.
 
