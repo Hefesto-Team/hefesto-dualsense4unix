@@ -45,6 +45,7 @@ headerbar .title { font-weight: bold !important; }
     ("\nheaderbar { min-height: 200px; }", "Linha 2: grande demais"),
 ])
 def test_a_regua_nao_deixa_a_barra_sem_saida(css: str, curta: str) -> None:
+    """A prova da D-3010-O-CSS-DE-QUEM-USA-ALCANCA-A-JANELA-INTEIRA."""
     with pytest.raises(meu_css.CssRecusadoError) as recusa:
         meu_css.aplicar(css)
     assert recusa.value.curta == curta
@@ -93,6 +94,7 @@ def _fundo(botao: object) -> str:
 
 
 def test_o_css_pinta_o_botao_e_desligar_devolve_o_padrao(barra: tuple) -> None:
+    """A prova da D-3010-O-CSS-DE-QUEM-USA-ALCANCA-A-JANELA-INTEIRA."""
     _barra, botoes, provedor = barra
     fechar, minimizar = botoes["fechar"], botoes["minimizar"]
     assert fechar.get_style_context().has_class("fechar")

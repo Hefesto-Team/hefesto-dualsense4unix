@@ -2846,6 +2846,15 @@ fi
 fi
 ok
 
+step "5b" "as extensões de fábrica que vêm de um endereço (o Gerenciador de Tema)"
+if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    _faria "trazer e ligar as extensões de fábrica que moram num repositório próprio; a que já está fica como está, e a removida não volta"
+elif "${BIN_DIR}/hefesto-dualsense4unix" mod de-fabrica; then
+    ok
+else
+    warn "as extensões de fábrica de endereço não vieram (sem rede?) — o tema fica o Escuro de sempre; traga depois com: hefesto-dualsense4unix mod de-fabrica"
+fi
+
 step "6/11" "daemon systemd --user"
 
 enable_daemon=0
