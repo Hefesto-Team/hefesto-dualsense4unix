@@ -248,7 +248,7 @@ fonte; agora tem duas.
 | carpikes/ds4-tools, `ds5-calibration-tool.py:143,152` | corrobora o `0x80` sub-comando 3 (NVS lock/unlock) | <!-- ref-externa: arquivo do projeto carpikes/ds4-tools, lido pela web; não é, e não deve ser, versionado nesta árvore -->
 
 **O teste que sustenta o que entrou no mapa:**
-`tests/unit/test_luz_do_jogador_bate_com_o_fonte.py`. A régua não redigita o byte 43
+`tests/unit/test_luz_do_jogador_bate_com_o_fonte.py`. O teste não redigita o byte 43
 — **calcula** o offset somando os campos da `struct` do driver, e **lê** os
 report ids dos `#define`. Mordida provada em cinco arrancadas, uma das arrancadas no
 próprio fonte do driver (`reserved3[2]` → `[3]`), que é a que prova que o teste

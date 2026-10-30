@@ -554,7 +554,7 @@ A regra do topo cujo seletor começa por `headerbar` vale também na barra da ja
 (`regras_da_janela` em `meu_css.py`; `vestir_a_barra_de_quem_usa` em `interface/janela.py`, num provedor da tela na
 prioridade de usuário). Os botões têm as classes `fechar`, `minimizar` e `maximizar`; o título e o subtítulo, as do
 GTK (`.title`, `.subtitle`). `var(--token)` vira a cor do tema em uso. Na barra só entram cor, fundo, borda, cantos,
-sombra, espaço e letra, até 48px (3em), sem medida negativa e sem letra `transparent`: a régua recusa o resto com a
+sombra, espaço e letra, até 48px (3em), sem medida negativa e sem letra `transparent`: o Hefesto recusa o resto com a
 linha, como na página. A declaração que o GTK não entende fica de fora sozinha (a frase vai ao log), e desligar a
 opção devolve a barra do sistema na hora.
 

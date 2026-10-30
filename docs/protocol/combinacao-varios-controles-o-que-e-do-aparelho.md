@@ -429,4 +429,4 @@ aparelho nesta leva** —, e todo `de_onde_sei` que esta frente escreveu do zero
 
 Teste desta página: `tests/unit/test_mapa_combinacao_enderecos.py`, que
 recalcula os offsets a partir do layout declarado do `common` e os confere
-contra o CSV. Se alguém deslocar um byte no mapa, a régua reprova.
+contra o CSV. Se alguém deslocar um byte no mapa, o teste reprova.
