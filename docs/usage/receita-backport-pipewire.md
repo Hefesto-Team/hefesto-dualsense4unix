@@ -7,7 +7,7 @@ que faz bind num metadata enquanto o WirePlumber sai. A Steam roda
 na 1.6.9. O Hefesto oferece o PipeWire 1.6.9 e o WirePlumber 0.5.18, as
 estáveis mais novas, com o empacotamento do Pop. O `hefesto-dualsense4unix doctor`
 manda para cá quando o PipeWire de um Pop!_OS 24.04 está abaixo da 1.6.9; em
-outra distro, a cura vem dela.
+outra distro, a cura vem da própria distro.
 
 ## Em uma linha
 
