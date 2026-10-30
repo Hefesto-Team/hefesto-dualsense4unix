@@ -279,28 +279,55 @@ def test_quem_chega_ganha_aba_e_o_escolhido_que_sai_passa_ao_seguinte(tela: Any)
     assert lido["cartoes"] == ["p4"], "o escolhido saiu e nenhum cartão ficou à vista"
 
 
+MEDIR_O_ABERTO = r"""
+(function(){
+  function mede(){
+    var c=document.querySelector('.quadro-corpo > .ctl:has(> input:checked)');
+    var visiveis=[...c.querySelectorAll('*')].filter(function(e){
+      return getComputedStyle(e).visibility==='visible' && e.getClientRects().length;}).length;
+    return {pref:c.dataset.controle,off:c.classList.contains('off'),
+      alto:c.getBoundingClientRect().height,texto:c.innerText.replace(/\s+/g,' ').trim(),
+      disco:getComputedStyle(c,'::after').content,visiveis:visiveis};
+  }
+  var a=document.querySelector('.aba-ctl[data-controle="p1"]');
+  var o=document.querySelector('.aba-ctl[data-controle="p2"]');
+  var lido=mede();
+  document.body.classList.toggle('nativo');
+  lido.outro_status=mede();
+  document.body.classList.toggle('nativo');
+  lido.aba=a.getBoundingClientRect().height;
+  lido.outra=o.getBoundingClientRect().height;
+  return JSON.stringify(lido);
+})()
+"""
+
+
 @skip_sem_gi_real
 def test_sem_controle_nenhum_o_lugar_aberto_e_o_cartao_sem_palavra(tela: Any) -> None:
-    """Sem controle nenhum, as quatro abas ficam vazias, e o lugar aberto tem a altura do cartão,
-    sem «Desconectado» e com o disco do número no meio.
+    """Sem controle nenhum, as quatro abas ficam vazias, e o lugar aberto tem a altura do cartão
+    de um controle (a medida, nos dois Status), sem «Desconectado», sem nada à vista e com o
+    disco do número no meio; o primeiro que chega e o último que sai não mudam a altura.
 
     D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR, D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR e
     D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO.
     """
     lido = _pintar(tela, [], "")
     assert [p for p, *_ in lido["vazias"]] == list(PLASTICOS), lido
-    medido = json.loads(tela.executar(
-        "(function(){var c=document.querySelector('.quadro-corpo > .ctl:has(> input:checked)');"
-        "var a=document.querySelector('.aba-ctl[data-controle=\"p1\"]');"
-        "var o=document.querySelector('.aba-ctl[data-controle=\"p2\"]');"
-        "return JSON.stringify({texto:c.innerText.replace(/\\s+/g,' ').trim(),"
-        "alto:c.getBoundingClientRect().height,"
-        "disco:getComputedStyle(c,'::after').content,"
-        "aba:a.getBoundingClientRect().height,outra:o.getBoundingClientRect().height});})()"))
-    assert medido["texto"] == "", medido
-    assert medido["alto"] >= 200, medido
-    assert medido["disco"] == '"1"', medido
-    assert medido["aba"] > medido["outra"], medido
+    vazio = json.loads(tela.executar(MEDIR_O_ABERTO))
+    _pintar(tela, ["p1"], "p1")
+    cheio = json.loads(tela.executar(MEDIR_O_ABERTO))
+    _pintar(tela, [], "")
+    de_novo = json.loads(tela.executar(MEDIR_O_ABERTO))
+    assert not cheio["off"] and cheio["alto"] >= 200, cheio
+    for medido in (vazio, de_novo):
+        assert medido["pref"] == "p1" and medido["off"], medido
+        assert medido["aba"] > medido["outra"], medido
+        for status, contra in ((medido, cheio), (medido["outro_status"], cheio["outro_status"])):
+            assert status["texto"] == "" and status["visiveis"] == 0, status
+            assert status["disco"] == '"1"', status
+            assert abs(status["alto"] - contra["alto"]) < 0.5, (
+                f"o lugar vazio aberto mede {status['alto']} e o cartão de um controle "
+                f"{contra['alto']}")
 
 
 @skip_sem_gi_real

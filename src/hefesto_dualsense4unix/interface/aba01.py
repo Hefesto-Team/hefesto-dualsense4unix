@@ -221,16 +221,16 @@ CSS_DAS_ABAS = """  .quadro-corpo{--alt-aba:30px}
     font-weight:600!important;cursor:default;background:color-mix(in srgb,var(--plastico) 9%,var(--panel))!important}
 """
 
-ALTURA_DO_LUGAR_VAZIO = 264
 LUGAR_VAZIO = "body .quadro.estica > .quadro-corpo > .ctl.off"
 LUGAR_VAZIO_ABERTO = f"{LUGAR_VAZIO}:has(> input:checked)"
 
-CSS_DAS_ABAS += f"""  {LUGAR_VAZIO_ABERTO}{{height:{ALTURA_DO_LUGAR_VAZIO}px !important;padding:0 !important;flex:0 0 auto;
-    align-items:center;justify-content:center;border:2px dashed var(--border-forte);border-radius:9px;
-    background:transparent}}
+CSS_DAS_ABAS += f"""  {LUGAR_VAZIO_ABERTO}{{height:auto !important;padding:0 0 8px !important;flex:0 0 auto;
+    border:2px dashed var(--border-forte);border-radius:9px;background:transparent}}
   {LUGAR_VAZIO_ABERTO} > .faixa{{display:none !important}}
-  {LUGAR_VAZIO_ABERTO}::after{{width:72px;height:72px;border-radius:50%;background:var(--border-forte);
-    color:var(--fg);opacity:.6;font:700 36px/72px 'JetBrains Mono',ui-monospace,monospace;text-align:center}}
+  {LUGAR_VAZIO_ABERTO} > .corpo-cx{{flex:0 0 auto;height:auto;overflow:hidden;visibility:hidden;display:flex;flex-direction:column}}
+  {LUGAR_VAZIO_ABERTO} > .corpo-cx :is(button,input,select,textarea,[contenteditable]){{display:revert !important}}
+  {LUGAR_VAZIO_ABERTO}::after{{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:72px;height:72px;
+    border-radius:50%;background:var(--border-forte);color:var(--fg);opacity:.6;font:700 36px/72px 'JetBrains Mono',ui-monospace,monospace;text-align:center}}
 """ + "".join(
     f'  {LUGAR_VAZIO}[data-controle="{c["pref"]}"]:has(> input:checked)::after'
     f'{{content:"{c["pref"][1:]}"}}\n'

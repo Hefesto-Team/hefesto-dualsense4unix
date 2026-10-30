@@ -3,7 +3,8 @@
 Medido em 30/10/2026 nos prints dela: com a mesa vazia, o cartão do P1 aberto colapsava na faixa
 de 24 px com «Player 1 • Desconectado», e as quatro abas ficavam encostadas no alto. A cura
 (D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO) dá ao lugar vazio aberto a altura do cartão de um
-controle, tracejado, com o disco do número no meio e nenhuma palavra.
+controle, tracejado, com o disco do número no meio e nenhuma palavra. A altura é a do corpo do
+próprio cartão, montado e invisível: ela segue a largura da janela e o Status, como o cartão.
 """
 from __future__ import annotations
 
@@ -26,13 +27,22 @@ def _regra(folha: str, seletor: str) -> str:
 
 
 def test_o_lugar_vazio_aberto_tem_a_altura_do_cartao() -> None:
-    """A altura do cartão de um controle, tracejada (D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO)."""
+    """A altura vem do corpo do próprio cartão, montado e invisível, nunca de um número em px.
+
+    D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO.
+    """
     folha = _folha()
     corpo = _regra(folha, aba01.LUGAR_VAZIO_ABERTO)
-    altura = re.search(r"(?:^|;)height:(\d+)px !important", corpo)
-    assert altura and int(altura.group(1)) >= 200, (
-        f"o lugar vazio aberto voltou a colapsar na faixa: {corpo!r}")
+    assert "height:auto !important" in corpo and not re.search(r"(?:^|[;{\s])height:\d", corpo), (
+        f"o lugar vazio aberto voltou a ter altura cravada: {corpo!r}")
     assert "dashed" in corpo, "o lugar vazio aberto perdeu o traço do lugar vazio"
+    cx = _regra(folha, f"{aba01.LUGAR_VAZIO_ABERTO} > .corpo-cx")
+    assert "visibility:hidden" in cx and "height:auto" in cx, (
+        f"o corpo do lugar vazio aberto não ocupa o lugar do cartão: {cx!r}")
+    gestos = _regra(folha, f"{aba01.LUGAR_VAZIO_ABERTO} > .corpo-cx "
+                           ":is(button,input,select,textarea,[contenteditable])")
+    assert "display:revert !important" in gestos, (
+        "os botões do lugar vazio somem do corpo, e o lugar fica mais baixo que o cartão")
 
 
 def test_o_lugar_vazio_aberto_nao_diz_desconectado() -> None:
