@@ -495,7 +495,9 @@ def _linha(saida: str, rotulo: str) -> str:
 
 
 class TestODoctor:
-    def test_nada_instalado_diz_nao_pedido_e_a_provar_com_os_comandos(self, tmp_path: Path) -> None:
+    def test_nada_instalado_diz_nao_pedido_e_sem_medida_com_os_comandos(
+        self, tmp_path: Path
+    ) -> None:
         m = Maquina(tmp_path, nvidia=True, hda=True, aspm=True)
         saida = _doctor(m)
         assert "[WARN]" not in saida and "[FAIL]" not in saida
@@ -507,7 +509,7 @@ class TestODoctor:
             ("PCIe", "hefesto-desempenho-aspm.conf"),
         ):
             linha = _linha(saida, rotulo)
-            assert "não aplicado: a provar" in linha, linha
+            assert "não aplicado, ainda sem medida" in linha, linha
             assert f"sudo install -Dm644 {RAIZ}/assets/desempenho/{conf}" in linha, linha
             assert "sudo rm /etc/" in linha and conf in linha, linha
 
@@ -592,7 +594,7 @@ class TestOsQuatroLugaresFalamDoMesmo:
         no_install = self._provados(INSTALL, "DESEMPENHO_PROVADOS")
         no_doctor = self._provados(DOCTOR, "_DESEMPENHO_PROVADOS")
         assert no_install == no_doctor, (
-            f"o install liga [{no_install}]; o doctor diz «a provar» para o que "
+            f"o install liga [{no_install}]; o doctor diz «ainda sem medida» para o que "
             f"não está em [{no_doctor}]"
         )
 

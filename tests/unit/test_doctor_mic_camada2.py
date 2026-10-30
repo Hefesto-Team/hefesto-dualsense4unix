@@ -332,7 +332,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         )
         assert fora == "sim", (
             "a placa TEM `Headset Capture Volume` e a porta ativa não o liga — "
-            "o ganho está fora do alcance do PipeWire, da tela e dela"
+            "o ganho está fora do alcance do PipeWire e da tela"
         )
 
     def test_a_porta_de_17_09_reprovava_pelo_mesmo_motivo(self) -> None:

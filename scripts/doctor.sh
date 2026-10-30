@@ -142,7 +142,7 @@ for so in ('libhidapi-hidraw.so.0','libhidapi-libusb.so.0','libhidapi-hidraw.so'
 sys.exit(1)" 2>/dev/null; then
         pass "libhidapi presente (o backend do controle consegue abrir aparelho)"
     else
-        fail "libhidapi AUSENTE — sem ela o backend não abre NENHUM aparelho (o pydualsense faz dlopen dela; a wheel do pip não traz o .so); a libhidapi entra por default no instalador do Hefesto: $(conselho_de_instalacao)"
+        fail "libhidapi AUSENTE — sem a libhidapi o backend não abre NENHUM aparelho (o pydualsense a carrega por dlopen; a wheel do pip não traz o .so); a libhidapi entra por default no instalador do Hefesto: $(conselho_de_instalacao)"
     fi
 }
 
@@ -250,12 +250,12 @@ check_udev() {
     if { [[ -e /etc/udev/rules.d/82-nintendo-pro-nosniff.rules ]] \
          || [[ -e /usr/lib/udev/rules.d/82-nintendo-pro-nosniff.rules ]]; } \
        && [[ ! -f /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh ]]; then
-        warn "82-nintendo-pro-nosniff.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh) — a regra fica inerte (o TEST== dela não acha o alvo) e o Pro genuíno não perde o sniff na borda da conexão; traga o alvo: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")"
+        warn "82-nintendo-pro-nosniff.rules instalada e o alvo do RUN+= da regra NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh) — a regra fica inerte (o TEST== da regra não acha o alvo) e o Pro genuíno não perde o sniff na borda da conexão; traga o alvo: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")"
     fi
     if { [[ -e /etc/udev/rules.d/83-hefesto-bond-snapshot.rules ]] \
          || [[ -e /usr/lib/udev/rules.d/83-hefesto-bond-snapshot.rules ]]; } \
        && [[ ! -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh ]]; then
-        warn "83-hefesto-bond-snapshot.rules instalada e o alvo do RUN+= dela NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh, o ExecStart da unit de snapshot) — a regra fica inerte e o salva-vidas de bonds não grava nada quando um controle Bluetooth chega; traga o alvo: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")"
+        warn "83-hefesto-bond-snapshot.rules instalada e o alvo do RUN+= da regra NÃO (/usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh, o ExecStart da unit de snapshot) — a regra fica inerte e o salva-vidas de bonds não grava nada quando um controle Bluetooth chega; traga o alvo: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")"
     fi
 }
 
@@ -1034,7 +1034,7 @@ check_default_source_monitor() {
         local sources_txt
         sources_txt="$(_pactl_json sources)"
         if printf '%s\n' "${sources_txt}" | _source_porta_ativa_indisponivel "${cur}"; then
-            info "  mas a porta ativa dela está indisponível (nada plugado) — vai gravar silêncio"
+            info "  mas a porta ativa dessa fonte está indisponível (nada plugado) — vai gravar silêncio"
             local src_ds
             src_ds="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
             if [[ -n "${src_ds}" ]] \
@@ -1125,9 +1125,9 @@ check_dropin_do_mic_armado() {
         local quando=""
         [[ -r "${marca}" ]] && quando="$(sed -n 's/^data=//p' "${marca}" | head -n1)"
         if [[ -n "${quando}" ]]; then
-            pass "o mic do DualSense é escolha dela, de ${quando} (marca do gesto em ${marca})"
+            pass "o mic do DualSense é escolha sua, de ${quando} (marca do gesto em ${marca})"
         else
-            pass "o mic do DualSense é escolha dela (sinal explícito: DUALSENSE_MIC_INTENDED)"
+            pass "o mic do DualSense é escolha sua (sinal explícito: DUALSENSE_MIC_INTENDED)"
         fi
         return
     fi
@@ -1485,7 +1485,7 @@ check_mic_ganho_de_captura() {
     fi
     IFS=$'\t' read -r porta elemento fora <<< "${linha}"
     if [[ "${fora}" == "sim" ]]; then
-        warn "a porta de captura do DualSense (${porta}) não liga o elemento '${elemento}' — o ganho de captura fica fora do alcance do PipeWire, da tela e dela. Isto é sobre a CONFIGURAÇÃO do som, não sobre a qualidade do áudio"
+        warn "a porta de captura do DualSense (${porta}) não liga o elemento '${elemento}' — o ganho de captura fica fora do alcance do PipeWire e da tela, e não se ajusta por eles. Isto é sobre a CONFIGURAÇÃO do som, não sobre a qualidade do áudio"
         info "  quem define a porta hoje é o UCM do Hefesto (assets/ucm/DualSense-HiFi.conf); ligá-lo muda o SISTEMA de quem usa, e é escolha sua"
         info "  mede antes: scripts/ensaios/o_caminho_do_mic_no_cabo.py --ganho-plano"
         return
@@ -1702,7 +1702,7 @@ print("erros=" + str(len(d.get("erros") or [])))
         pass "nenhum jogo perdeu as Opções de Inicialização do Hefesto"
     fi
     [[ -n "${estendido}" ]] && warn "Opções com a lista de IGNORE ESTENDIDA à mão em ${estendido} — intocáveis de propósito (remover só o trecho do Hefesto deixaria um fragmento que impede o jogo de abrir); reparo manual"
-    [[ -n "${recusados}" ]] && info "fora do wrapper por escolha dela (jogos_sem_wrapper.txt): ${recusados}"
+    [[ -n "${recusados}" ]] && info "fora do wrapper por escolha sua (jogos_sem_wrapper.txt): ${recusados}"
     check_arvore_canonica_do_wrapper
     return 0
 }
@@ -1850,7 +1850,7 @@ PY
         pass "os ${total:-0} jogos da árvore viva (Software/Valve/Steam/apps) chamam o wrapper"
     fi
     if [[ -n "${orfaos_nossos}" ]]; then
-        warn "Opções de Inicialização NOSSAS (com a chamada do wrapper) numa árvore que a Steam não lê, para jogo(s) que nem existem na árvore viva: ${orfaos_nossos} — não quebram nada e não contam como cobertura, mas são lixo nosso no arquivo dela; recolha com a Steam fechada: python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --recolher-fora-da-arvore-viva"
+        warn "Opções de Inicialização NOSSAS (com a chamada do wrapper) numa árvore que a Steam não lê, para jogo(s) que nem existem na árvore viva: ${orfaos_nossos} — não quebram nada e não contam como cobertura, mas são lixo nosso no arquivo da Steam; recolha com a Steam fechada: python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --recolher-fora-da-arvore-viva"
     elif [[ -n "${orfaos_alheios}" ]]; then
         info "sobra inerte numa árvore que a Steam não lê, para jogo(s) fora da árvore viva: ${orfaos_alheios} — a linha NÃO carrega a nossa chamada do wrapper, e o censo não a conta (ele lê só Software/Valve/Steam/apps desde 16/08). Quem abriu esse buraco foi um escritor nosso sem âncora, em 21/07; para recolher, com a Steam fechada: python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --recolher-fora-da-arvore-viva"
     elif [[ "${poluidos_nossos:-0}" -gt 0 ]]; then
@@ -2722,7 +2722,7 @@ check_bluez_justworks_repairing() {
             warn "não consigo LER ${etc_bt}/main.conf — sem leitura não sei o valor de JustWorksRepairing; rode: sudo bash ${dono} verificar"
             ;;
         recusado)
-            fail "${etc_bt}/main.conf tem uma linha que o parser do bluetoothd (GKeyFile) RECUSA, e uma linha recusada invalida o ARQUIVO INTEIRO: o BlueZ fica sem config nenhuma — nem JustWorksRepairing, nem FastConnectable, nem o que já era dela. Veja qual linha é e conserte-a à mão: bash ${dono} verificar"
+            fail "${etc_bt}/main.conf tem uma linha que o parser do bluetoothd (GKeyFile) RECUSA, e uma linha recusada invalida o ARQUIVO INTEIRO: o BlueZ fica sem config nenhuma — nem JustWorksRepairing, nem FastConnectable, nem o que já estava configurado ali. Veja qual linha é e conserte-a à mão: bash ${dono} verificar"
             ;;
         never)
             warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' do Hefesto (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO deixe o Hefesto reescrever o valor: 'sudo bash ${dono} aplicar' rebaixa para 'confirm'$(so_no_checkout "— e o ./install.sh também"). E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
@@ -3402,9 +3402,9 @@ check_bluez_distro_depois_do_backport() {
         return 0
     fi
     if dpkg --compare-versions "${candidata}" gt "${base}" 2>/dev/null; then
-        warn "a distro publicou o bluez ${candidata} depois do backport, que cobre a segurança dela até o ${base}; o apt não aplica a correção dela por cima do ${pacote}. A receita do backport precisa de uma revisão nova que leve a correção da distro$(so_no_checkout "(docs/usage/receita-backport-bluez.md)")"
+        warn "a distro publicou o bluez ${candidata} depois do backport, que cobre a segurança da distro até o ${base}; o apt não aplica essa correção por cima do ${pacote}. A receita do backport precisa de uma revisão nova que leve a correção da distro$(so_no_checkout "(docs/usage/receita-backport-bluez.md)")"
     else
-        pass "o backport do bluez (${pacote}) está em dia com a distro (a candidata dela, ${candidata}, não passa da base ${base})"
+        pass "o backport do bluez (${pacote}) está em dia com a distro (a candidata da distro, ${candidata}, não passa da base ${base})"
     fi
 }
 
@@ -6029,13 +6029,13 @@ fix_proton_pinado() {
         return 0
     fi
     local rc=0
-    python3 "${py}" --manter --offline >/dev/null 2>&1 || rc=$?
+    "$(_python_do_produto)" "${py}" --manter --offline >/dev/null 2>&1 || rc=$?
     case "${rc}" in
         0) pass "Proton pinado conferido e jogos travados nele (--manter)" ;;
         2) warn "trava do Proton pinado ESPERA o pino: ele não está instalado e o tarball não está no cache (o --fix não baixa nada) — $(conselho_de_instalacao)" ;;
         3) warn "trava do Proton pinado ADIADA — a Steam (ou um jogo) está aberta; feche e rode de novo: scripts/doctor.sh --fix" ;;
         5) warn "o Proton pinado bateu com o SHA256 e a EXTRAÇÃO falhou — veja o espaço livre em disco e rode de novo: scripts/doctor.sh --fix" ;;
-        *) warn "trava do Proton pinado falhou (rc=${rc}) — rode: python3 ${py} --manter" ;;
+        *) warn "trava do Proton pinado falhou (rc=${rc}) — rode: $(_python_do_produto) ${py} --manter" ;;
     esac
 }
 
@@ -6142,7 +6142,7 @@ _desempenho_diz() {
             info "modo desempenho, ${rotulo}: não pedido (agora: ${agora:-?}). Para ligar: ${ligar}"
         fi
     else
-        info "modo desempenho, ${rotulo}: não aplicado: a provar (agora: ${agora:-?}) — só entra depois da medida no aparelho. À mão: ${ligar}; para desligar: ${desligar}"
+        info "modo desempenho, ${rotulo}: não aplicado, ainda sem medida que o garanta em toda máquina (agora: ${agora:-?}). À mão: ${ligar}; para desligar: ${desligar}"
     fi
 }
 

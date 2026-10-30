@@ -3279,7 +3279,8 @@ elif [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _nao_faria "sobrescrever um Proton pinado que VOCÊ já tenha instalado por fora (ProtonUp ou à mão): ele é mantido"
 else
     _pp_rc=0
-    _pp_saida="$(python3 "${PROTON_PIN_PY}" --ensure 2>&1)" || _pp_rc=$?
+    # shellcheck disable=SC2086
+    _pp_saida="$(${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --ensure 2>&1)" || _pp_rc=$?
     if [[ -n "${_pp_saida}" ]]; then printf '%s\n' "${_pp_saida}"; fi
     case "${_pp_rc}" in
         0)
@@ -3294,24 +3295,20 @@ else
             warn "checksum do Proton NÃO bateu — passo ABORTADO (nunca instalo binário não verificado)"
             ;;
         2)
-            warn "sem rede e sem cache — o pin fica PENDENTE (rode ./install.sh de novo com internet); trava adiada"
+            warn "sem rede agora, e o Proton fixado não está no cache: ele não foi baixado; o vigia da Steam baixa e trava sozinho quando houver rede e um lançador (Steam ou Heroic), sem rodar o install de novo"
             ;;
         4)
-            warn "o Proton fixado ficou guardado, sem instalar na Steam: esta máquina não tem a Steam nativa (o motivo está na linha acima) — nada foi criado na pasta da Steam"
-            warn "  quando a Steam nativa existir, o vigia da Steam extrai do cache e trava sozinho; ou rode: python3 ${PROTON_PIN_PY} --ensure && python3 ${PROTON_PIN_PY} --lock --todos"
+            printf '      o Proton fixado ficou guardado no cache, pronto para a Steam ou outro lançador que vier (esta máquina não tem a Steam nativa; nada foi criado na pasta da Steam)\n'
+            printf '      quando a Steam nativa for instalada, o vigia da Steam extrai do cache e trava os jogos sozinho, sem rodar o install de novo; ou rode: %s %s --manter\n' "${PYTHON_DO_PINO}" "${PROTON_PIN_PY}"
             ;;
         5)
-            warn "o Proton bateu com o SHA256 e a EXTRAÇÃO falhou — veja o espaço livre em disco e rode: python3 ${PROTON_PIN_PY} --ensure"
+            warn "o Proton bateu com o SHA256 e a EXTRAÇÃO falhou — veja o espaço livre em disco e rode: ${PYTHON_DO_PINO} ${PROTON_PIN_PY} --ensure"
             ;;
         7)
-            warn "o Proton fixado não foi instalado: a Steam desta máquina é Flatpak/Snap, e o Proton extraído aqui fora não serve dentro da caixa do Flatpak/Snap — nada foi baixado (o motivo está na linha acima)"
-            ;;
-        8)
-            printf '      nada foi baixado: nenhum lançador de jogos (Steam, Heroic ou outro) está instalado para usar o Proton fixado (~540 MB)\n'
-            printf '      quando um lançador for instalado, o vigia da Steam baixa e fixa sozinho; ou rode: python3 %s --ensure\n' "${PROTON_PIN_PY}"
+            warn "a Steam desta máquina é Flatpak/Snap e não enxerga o Proton de fora (o motivo está na linha acima): o Proton fixado ficou guardado no cache para o Heroic ou outro lançador, e o vigia da Steam o fixa neles"
             ;;
         *)
-            warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --ensure"
+            warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: ${PYTHON_DO_PINO} ${PROTON_PIN_PY} --ensure"
             ;;
     esac
     unset _pp_rc _pp_saida
@@ -3499,15 +3496,16 @@ elif [[ "${_pp_pronto}" -ne 1 ]]; then
     printf '      trava adiada — o Proton pinado não ficou pronto no passo 11a (ver acima)\n'
 else
     _pl_rc=0
-    python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?
+    # shellcheck disable=SC2086
+    ${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?
     if [[ "${_pl_rc}" -eq 0 ]]; then
         printf '      jogos travados na versão pinada (backup do config.vdf ao lado; reverter: uninstall)\n'
     elif [[ "${_pl_rc}" -eq 3 ]]; then
-        warn "Steam (ou um jogo) aberta — trava ADIADA; o vigia da Steam trava sozinho quando ela fechar, ou rode: python3 ${PROTON_PIN_PY} --lock --todos"
+        warn "Steam (ou um jogo) aberta — trava ADIADA; o vigia da Steam trava sozinho quando ela fechar, ou rode: ${PYTHON_DO_PINO} ${PROTON_PIN_PY} --lock --todos"
     elif [[ "${_pl_rc}" -eq 4 ]]; then
         printf '      trava adiada — a Steam ainda não entrou numa conta; o vigia da Steam trava quando ela sair pela primeira vez\n'
     else
-        warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock --todos"
+        warn "trava do Proton falhou — rode manualmente: ${PYTHON_DO_PINO} ${PROTON_PIN_PY} --lock --todos"
     fi
     unset _pl_rc
 fi

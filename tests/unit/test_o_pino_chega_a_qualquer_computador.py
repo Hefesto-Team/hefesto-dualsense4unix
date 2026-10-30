@@ -6,6 +6,7 @@ import fcntl
 import io
 import os
 import re
+import socket
 import struct
 import subprocess
 import sys
@@ -132,6 +133,28 @@ def _pino_na(raiz: Path, nome: str = PINO) -> Path:
     return pino
 
 
+@pytest.fixture(autouse=True)
+def trava_da_rede(monkeypatch: pytest.MonkeyPatch) -> list[object]:
+    """Teste do pino que pede rede reprova, mesmo que o código engula o erro."""
+    pedidos: list[object] = []
+    conectar = socket.socket.connect
+
+    def _conectar(sock: socket.socket, endereco: object) -> None:
+        if sock.family in (socket.AF_INET, socket.AF_INET6):
+            pedidos.append(endereco)
+            raise OSError(f"o teste do pino foi à rede: {endereco}")
+        conectar(sock, endereco)
+
+    def _resolver(host: object, *_a: object, **_k: object) -> list[object]:
+        pedidos.append(host)
+        raise OSError(f"o teste do pino foi à rede: {host}")
+
+    monkeypatch.setattr(socket.socket, "connect", _conectar)
+    monkeypatch.setattr(socket, "getaddrinfo", _resolver)
+    yield pedidos
+    assert not pedidos, f"o teste do pino pediu rede: {pedidos}"
+
+
 @pytest.fixture()
 def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """HOME e os XDG presos ao tmp; a Steam e o jogo, dublês fechados."""
@@ -176,37 +199,67 @@ class TestSemSteamOEnsureNaoEnvenena:
         assert (cache / f"{PINO}.tar.gz").is_file(), "o download não foi adiantado"
         assert download_local["baixou"] == 1
         assert f"{PINO}: em_cache" in saida, saida
-        assert "baixado para Heroic. A Steam fica de fora" in saida, saida
+        assert "guardado no cache. A Steam fica de fora" in saida, saida
 
-    def test_sem_lancador_nenhum_nao_baixa_e_diz_por_que(
+    def test_sem_lancador_nenhum_baixa_para_o_cache_mesmo_assim(
         self, lar: Path, download_local: dict, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """OS-AVISOS-DO-INSTALL-FALAM-COM-QUEM-INSTALA-01: 538 MB sem ninguém que os use.
+        """D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO, nota de 30/10: baixa sem lançador.
 
-        MORDIDA: com o `quem_usa_o_proton` fora do `--ensure`, o tarball desce à toa.
+        MORDIDA: devolva ao `--ensure` o ramo que desiste quando `quem_usa_o_proton` volta vazio.
         """
         cache = lar / ".cache/hefesto-dualsense4unix/proton"
         rc = pp.main(["--ensure", "--conf", str(download_local["conf"]),
                       "--cache-dir", str(cache)])
 
         saida = capsys.readouterr().out
-        assert rc == pp.RC_SEM_LANCADOR
-        assert download_local["baixou"] == 0 and not cache.exists()
-        assert "nenhum lançador desta máquina roda jogo pelo Proton" in saida, saida
-        assert "o vigia da Steam baixa e fixa sozinho" in saida, saida
+        assert rc == pp.RC_ADIADO, saida
+        assert download_local["baixou"] == 1
+        assert (cache / f"{PINO}.tar.gz").is_file(), "sem lançador, o Proton fixado não desceu"
+        assert not (lar / ".steam").exists(), "o ensure criou a casa da Steam"
+        assert "guardado no cache" in saida, saida
+        assert not hasattr(pp, "RC_SEM_LANCADOR")
 
-    def test_steam_na_caixa_nao_baixa_nada(
+    def test_a_steam_que_chega_depois_ganha_o_pino_pelo_vigia_sem_rede(
         self, lar: Path, download_local: dict
     ) -> None:
-        """Flatpak/Snap: o Proton do host nunca serve lá dentro — 563 MB à toa."""
-        (lar / ".var/app/com.valvesoftware.Steam/.steam/steam").mkdir(parents=True)
+        """A Steam instalada um mês depois: o `--manter` do vigia extrai do cache e trava.
+
+        MORDIDA: com o `--ensure` sem lançador de volta ao «não baixa», o cache fica vazio
+        e o `--manter --offline` não tem de onde extrair.
+        """
+        cache = lar / ".cache/hefesto-dualsense4unix/proton"
+        assert pp.main(["--ensure", "--conf", str(download_local["conf"]),
+                        "--cache-dir", str(cache)]) == pp.RC_ADIADO
+        raiz = _steam_de_verdade(lar)
+        (raiz / "userdata").mkdir()
+        _jogo(raiz, "4321")
+        (raiz / "steamapps" / "compatdata" / "4321").mkdir(parents=True)
+
+        rc = pp.main(["--manter", "--offline", "--conf", str(download_local["conf"]),
+                      "--cache-dir", str(cache)])
+
+        assert rc == 0
+        assert download_local["baixou"] == 1, "o vigia foi à rede com o cache cheio"
+        assert pp.pinned_proton_installed(PINO, raiz / "compatibilitytools.d")
+        vdf = (raiz / "config" / "config.vdf").read_text(encoding="utf-8")
+        assert vdf.count(PINO) == 2, vdf
+
+    def test_steam_na_caixa_baixa_para_o_cache_e_nao_toca_a_caixa(
+        self, lar: Path, download_local: dict
+    ) -> None:
+        """Flatpak/Snap: o Proton de fora não serve lá dentro, mas o Heroic e os outros o usam."""
+        caixa = lar / ".var/app/com.valvesoftware.Steam/.steam/steam"
+        caixa.mkdir(parents=True)
         cache = lar / "cache"
         rc = pp.main(["--ensure", "--conf", str(download_local["conf"]),
                       "--cache-dir", str(cache)])
 
         assert rc == pp.RC_STEAM_NA_CAIXA
-        assert download_local["baixou"] == 0
+        assert download_local["baixou"] == 1
+        assert (cache / f"{PINO}.tar.gz").is_file()
         assert not (lar / ".steam").exists()
+        assert not (caixa / "compatibilitytools.d").exists()
 
     def test_com_steam_nativa_extrai_como_sempre(
         self, lar: Path, download_local: dict
@@ -429,21 +482,22 @@ class TestOInstallLeCadaCodigo:
         ramo_1 = bloco[bloco.index("        1)"): bloco.index("        2)")]
         assert "checksum" in ramo_1
 
-    def test_o_rc_7_da_caixa_nao_promete_o_vigia(self) -> None:
-        """O `4` diz que o vigia extrai do cache; na caixa não há cache."""
+    def test_o_rc_7_da_caixa_diz_que_guardou_para_os_outros_lancadores(self) -> None:
+        """Na caixa, o Proton fica no cache para o Heroic e os outros; a Steam da caixa não o vê."""
         bloco = _bloco('step "11a"', 'step "11a-bis"')
         ramo_7 = bloco[bloco.index("        7)"):]
         ramo_7 = ramo_7[: ramo_7.index(";;")]
-        assert "nada foi baixado" in ramo_7, ramo_7
-        assert "vigia" not in ramo_7, ramo_7
+        assert "guardado no cache" in ramo_7, ramo_7
+        assert "nada foi baixado" not in bloco, bloco
         ramo_4 = bloco[bloco.index("        4)"): bloco.index("        5)")]
         assert "vigia da Steam extrai do cache" in ramo_4
+        assert "sem rodar o install de novo" in ramo_4
 
     def test_a_trava_do_11c_so_roda_com_o_pino_pronto(self) -> None:
         """A guarda do install (B9 do validador), com régua agora."""
         bloco = _bloco('step "11c"', 'step "11d"')
         guarda = bloco.index('elif [[ "${_pp_pronto}" -ne 1 ]]; then')
-        trava = bloco.index('python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?')
+        trava = bloco.index('${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?')
         assert guarda < trava
         bloco_a = _bloco('step "11a"', 'step "11a-bis"')
         assert bloco_a.count("_pp_pronto=1") == 1
@@ -478,12 +532,12 @@ class TestOInstallLeCadaCodigo:
         """d172d9fb8 (c): o download ANTES da janela, a trava DENTRO dela."""
         ordem = [
             'step "11a"',
-            '_pp_saida="$(python3 "${PROTON_PIN_PY}" --ensure 2>&1)"',
+            '_pp_saida="$(${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --ensure 2>&1)"',
             'step "11a-bis"',
             'python3 "${LAUNCH_MIGRATE_PY}" --fechar-steam',
             'step "11/11"', 'step "11b"', 'step "11b-bis"', 'step "11b-ter"',
             'step "11c"',
-            'python3 "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?',
+            '${PYTHON_DO_PINO} "${PROTON_PIN_PY}" --lock --todos || _pl_rc=$?',
             'step "11d"',
         ]
         posicoes = [INSTALL.index(marco) for marco in ordem]
@@ -509,6 +563,24 @@ def test_steam_que_nunca_entrou_numa_conta_adia_e_nao_falha(
                   "--appids", "42"])
     assert rc == pp.RC_ADIADO
     assert 'elif [[ "${_pl_rc}" -eq 4 ]]' in INSTALL
+
+
+class TestOPinoRodaPeloPythonDoProduto:
+    """O `python3` do sistema não tem o pydantic que o censo dos lançadores importa."""
+
+    def test_o_install_chama_o_pino_pelo_python_do_produto(self) -> None:
+        """MORDIDA: troque um `${PYTHON_DO_PINO}` do 11a ou do 11c por `python3`."""
+        assert not re.search(r'python3\s+"?\$\{PROTON_PIN_PY\}', INSTALL), (
+            "o install chama o proton_pin pelo python3 do sistema")
+        assert INSTALL.count('${PYTHON_DO_PINO} "${PROTON_PIN_PY}"') >= 3
+
+    def test_o_conserto_do_doctor_chama_o_pino_pelo_python_do_produto(self) -> None:
+        """MORDIDA: devolva o `python3 "${py}" --manter` ao `fix_proton_pinado`."""
+        texto = DOCTOR.read_text(encoding="utf-8")
+        inicio = texto.index("fix_proton_pinado() {")
+        corpo = texto[inicio: texto.index("\n}\n", inicio)]
+        assert '"$(_python_do_produto)" "${py}" --manter --offline' in corpo, corpo
+        assert not re.search(r"^\s*python3\s", corpo, re.M), corpo
 
 
 class TestOFecharSteamDizOQueFez:

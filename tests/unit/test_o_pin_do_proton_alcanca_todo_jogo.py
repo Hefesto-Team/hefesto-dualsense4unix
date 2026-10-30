@@ -23,6 +23,7 @@ from tests.unit.test_o_pino_chega_a_qualquer_computador import (
     _pino_na,
     _steam_de_verdade,
     _tarball,
+    trava_da_rede,  # noqa: F401
 )
 
 RAIZ = Path(__file__).resolve().parents[2]
