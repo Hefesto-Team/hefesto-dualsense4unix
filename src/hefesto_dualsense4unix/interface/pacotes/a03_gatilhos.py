@@ -25,7 +25,7 @@ MEDIDO NO DISCO DO USUÁRIO, perfil "Ação", em 01/09/2026::
     triggers.right = {"mode": "Vibration", "params": [3, 8, 20]}
 
 Cinco dos 33 perfis do usuário têm gatilho configurado. Mostrar `—` ali era apagar da
-tela uma escolha que ela salvou.
+tela uma escolha que o usuário salvou.
 
 O QUE AINDA NÃO TEM DONO, e agora a lista é honesta: nada desta aba. O que muda
 é a NATUREZA do valor — ele é o que o **perfil manda ao controle**, não o que
@@ -117,7 +117,7 @@ def _o_que_o_select_oferece() -> dict[str, frozenset[str]]:
 
 
 def _enderecos_da_pagina() -> frozenset[str]:
-    """Todo `data-campo` que a página publicada tem. Vazio se ela não abrir."""
+    """Todo `data-campo` que a página publicada tem. Vazio se não abrir."""
     global _ENDERECOS
     if _ENDERECOS is None:
         _ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', _pagina_publicada()))
@@ -145,7 +145,7 @@ def _lugares_que_o_desenho_da_por_vazios() -> frozenset[str]:
 
     POR QUE SÓ OS LUGARES QUE O DESENHO JÁ DÁ POR VAZIOS, e não todo lugar
     vazio: quem emite uma coluna SAI da conta `TODOS_OS_LUGARES - vivos` do
-    piloto, e com ela perde o `data-conectado="nao"` que o piloto escreveria —
+    piloto, e com isso perde o `data-conectado="nao"` que o piloto escreveria —
     que é o que segura o `pointer-events:none` do lugar vazio. Nas colunas que a
     página já dá por vazias isso não custa nada (a marca está no arquivo); numa
     que a página dá por conectada — o P2 com um controle só na mesa — custaria a
@@ -439,7 +439,7 @@ def _a_escolha_e_do_estilo(p: dict[str, Any] | None, uniq: str, disco: str) -> b
 
 
 def meus_efeitos() -> dict[str, Any]:
-    """Os efeitos dos gatilhos que ela guardou. O dono da biblioteca é `meus_efeitos.py`."""
+    """Os efeitos dos gatilhos que o usuário guardou. O dono da biblioteca é `meus_efeitos.py`."""
     return _meus_efeitos_da("gatilhos")
 
 
@@ -526,7 +526,7 @@ def _grupo_dos_seus(itens: list[tuple[str, str]]) -> str:
 
 
 def _seus_efeitos_do_gatilho(disco: str) -> list[tuple[str, str]]:
-    """O que ela guardou para o gatilho `disco`: a imersão criada e o acionamento de antes."""
+    """O que o usuário guardou para o gatilho `disco`: a imersão criada e o acionamento de antes."""
     seus = [(PREFIXO_DO_MEU + n, n) for n in _meus_efeitos_da("imersao")]
     if disco:
         seus += [(PREFIXO_DO_SEU_ACIONAMENTO + n, n) for n, e in meus_efeitos().items()
@@ -535,7 +535,7 @@ def _seus_efeitos_do_gatilho(disco: str) -> list[tuple[str, str]]:
 
 
 def _params_da_imersao(imersao: Any, modo: str, estilo: str) -> list[int] | None:
-    """Os ajustes dela, postos na ordem do modo; `None` se ela não vale nesse modo."""
+    """Os ajustes da imersão, postos na ordem do modo; `None` se não vale nesse modo."""
     imer, specs = _imersoes(), _specs()
     spec = specs.get_spec(modo) if specs else None
     if imer is None or spec is None:
@@ -661,7 +661,7 @@ def _efeito_da_lista(modo_: str, params: list[int], cru: tuple[str, list[int]] |
 
     Nunca «Sem efeito» se ele resiste.
 
-    A ordem: o efeito (do produto ou criado) cujos números são estes; o acionamento que ela guardou
+    A ordem: o efeito (do produto ou criado) cujos números são estes; o acionamento guardado
     (`meu-acionamento:<nome>`); o acionamento pelo nome dele (`acionamento:<modo>`, o perfil antigo
     que só tinha o acionamento). `Off` segue sendo «Sem efeito»: ali o gatilho está solto.
     """
@@ -684,7 +684,7 @@ def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str
 
     O texto da opção é a variante e o grupo é a família; a frase de cada efeito mora SÓ no
     `title`. Com um estilo no perfil, os efeitos dele vão na frente. O `—` é o do lugar sem
-    controle, escondido. `disco` (`left`/`right`) põe em «Seus efeitos» o acionamento que ela
+    controle, escondido. `disco` (`left`/`right`) põe em «Seus efeitos» o acionamento que o usuário
     guardou para aquele gatilho. `do_perfil` (`acionamento:<modo>`) abre o grupo «Do perfil» com
     o acionamento de um perfil antigo que nenhum efeito da lista descreve.
     """
@@ -720,7 +720,7 @@ PONTO = ' <span class="pt">•</span> '
 
 
 def cor_de_borda(tinta: str) -> str:
-    """A tinta da zona quando ela É cor, e `""` quando o mapa não tem hex.
+    """A tinta da zona quando É cor, e `""` quando o mapa não tem hex.
 
     O QUE O MAPA DO USUÁRIO RESPONDE, e são TRÊS formas — `gerar_cores_do_dualsense.
     _tinta` é quem as escreve, a partir de `docs/data/cores-do-dualsense.csv`:
@@ -755,7 +755,7 @@ def cor_de_borda(tinta: str) -> str:
 
     O TESTE DO `#` NÃO É NOVO: é o mesmo que `gerar_cores_do_dualsense.legivel`
     já usa, pela mesma razão — *"gradiente, hachura: não são cor"*. Não há
-    tabela de cor aqui; quem sabe a cor continua sendo o CSV dela.
+    tabela de cor aqui; quem sabe a cor continua sendo o CSV do mapa.
     """
     tinta = (tinta or "").strip()
     return tinta if tinta.startswith("#") else ""
@@ -783,7 +783,7 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     não tem (é portão, e está certo em levantar); o pacote resolve por
     `_cor_do_plastico`, que devolve `""` — derrubar a pintura da aba por causa
     de um modelo novo seria trocar uma borda que falta por uma tela congelada.
-    A política de resolução é de quem chama; a MARCAÇÃO é daqui, e é ela que não
+    A política de resolução é de quem chama; a MARCAÇÃO é daqui, e é a marcação que não
     pode divergir.
 
     A COR NÃO SAI DAQUI NO DESENHO — 03/09/2026, e é a mudança desta frente. O
@@ -791,20 +791,20 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     endereço e alvo próprios; este `<span>` é o miolo que o alvo `html` refaz.
     O parâmetro `plastico` fica porque é ele que decide A DICA, e a dica tem de
     saber separar as duas ausências. Quem julga o que é hex é
-    :func:`cor_de_borda`, que recusa o que o mapa dela responde quando não há
+    :func:`cor_de_borda`, que recusa o que o mapa responde quando não há
     hex. A borda não some: `topo.html` declara
     `.chip.plastico{border-color:var(--plastico, var(--border-forte))}`, com a
     queda já escrita.
 
-    **E A DICA ACOMPANHA A COR — 03/09/2026.** Ela dizia *"a borda é a cor do
-    plástico"* nos TRÊS casos, e nos dois últimos era mentira: sem hex a borda é
+    **E A DICA ACOMPANHA A COR — 03/09/2026.** A dica dizia «a borda é a cor do
+    plástico» nos TRÊS casos, e nos dois últimos era mentira: sem hex a borda é
     a neutra do tema, não o plástico de ninguém. São duas ausências diferentes, e
     a tela tem de saber dizer qual é qual — porque uma se conserta lendo o
     aparelho e a outra não se conserta:
 
         o mapa RESPONDEU e não é cor  o acabamento não cabe num hexadecimal
                                       (:func:`cor_de_borda`, oito dos 28 modelos)
-        ninguém leu a cor             pelo rádio ela pode não chegar nunca, hoje
+        ninguém leu a cor             pelo rádio a cor pode não chegar nunca, hoje
 
     É a metade que faltava da regra de produto: *sem cor lida, sem cor na tela* — e,
     quando não há, dizer POR QUE não há.
@@ -812,8 +812,8 @@ def chip_do_controle(jogador: int, nome: str, via: str, plastico: str,
     **A SEGUNDA AUSÊNCIA PAROU DE SE EXPLICAR — FRASES-E-DICAS-02, 13/09/2026.**
     A dica de quem ninguém leu confessava que a cor ainda não tinha sido lida:
     confissão sobre um estado nosso numa dica flutuante, e a ordem de 13/09
-    a tira da tela. Ela diz só o nome — e, sem nome, o `<span>` não tem dica.
-    A do acabamento fica: ela diz o que o modelo É, não o que nós não fizemos.
+    a tira da tela. A tira diz só o nome — e, sem nome, o `<span>` não tem dica.
+    A do acabamento fica: a dica diz o que o modelo É, não o que nós não fizemos.
     """
     cor = cor_de_borda(plastico)
     classe = "chip plastico" if conectado else "chip vazio"
@@ -842,7 +842,7 @@ def _cabeca_do_controle(jogador: int, nome: str, via: str, plastico: str,
     produto escreve nos dois endereços que ele deixa; nunca refaz a `.cabeca`.
     Público, ele seria uma promessa ao produto sem chamador em produção — e o
     `portao_a_casa_sabe_e_o_produto_nao_faz` acusa isso, com razão: os dez
-    `interface/abaNN.py` são BANCADA e saem da conta pela poda dele.
+    `interface/abaNN.py` são ENSAIO e saem da conta pela poda dele.
 
     MORA AQUI E NÃO NO GERADOR porque a MARCAÇÃO tem um dono só. Se o desenho a
     escrevesse por conta própria, a estrutura que ele emite e a que
@@ -855,7 +855,7 @@ def _cabeca_do_controle(jogador: int, nome: str, via: str, plastico: str,
           span    `data-campo="chip-do-controle"` alvo `html` → o CHIP inteiro
 
     Só o gerador emite esta função — o produto escreve nos dois endereços que
-    ela deixa. Aninhá-los é o que permite as duas escritas conviverem: o selo do
+    a outra deixa. Aninhá-los é o que permite as duas escritas conviverem: o selo do
     embrulho fica FORA do `innerHTML` que o miolo compara, e o selo do miolo fica
     no elemento que o escreve. Com a cor dentro do miolo (como era até hoje) uma
     das duas tinha de ser sacrificada, e a sacrificada era a cor.
@@ -876,7 +876,7 @@ def _cabeca_do_controle(jogador: int, nome: str, via: str, plastico: str,
 
 
 def _cor_do_plastico(slug: str) -> str:
-    """A TINTA da casca daquele modelo, como o mapa dela a escreve — ou `""`."""
+    """A TINTA da casca daquele modelo, como o mapa a escreve — ou `""`."""
     if not slug:
         return ""
     try:
@@ -932,7 +932,7 @@ def _cabecalho_vivo(ctx: Contexto, c: dict[str, Any]) -> tuple[str, str]:
     de defeito desta frente.
 
     A COR VAI PENEIRADA por :func:`cor_de_borda`, e não crua: em oito dos 28
-    modelos o mapa dela responde a hachura do SEM-HEX, que não é cor. Escrevê-la
+    modelos o mapa responde a hachura do SEM-HEX, que não é cor. Escrevê-la
     em `--plastico` deixa a `var()` inválida no tempo de valor computado, e a
     borda vira o `currentColor` — o chip vestindo a cor da LETRA com a dica ao
     lado dizendo que aquela é a cor do plástico. Vazio APAGA a variável, e a
@@ -1083,7 +1083,7 @@ def _exigir_controle(o: dict[str, Any], gesto_: str) -> str:
 
     Fotografado no mesmo dia: as colunas P3 e P4 dizem `Desconectado` no
     cabeçalho e mostram `Desligado` · `— Nenhum —` em campos que abrem. A cura
-    de forma é o `disabled` no gerador (`aba03.py`), e publicá-la é ato dela;
+    de forma é o `disabled` no gerador (`aba03.py`), e publicá-la é ato do usuário;
     a cura de FUNDO é esta — o gesto recusa, e a frase vai para a tela.
     """
     uniq = _uniq(o)
@@ -1126,8 +1126,8 @@ def _desfecho(resposta: Any) -> tuple[bool, str, dict[str, Any] | None]:
     desfechos diferentes chegavam à tela como o mesmo silêncio de sucesso:
 
     * `{status: ok, aplicado_em: [], guardado_em: []}` — **nada aconteceu**, e é
-      a rota que a bancada mediu em 23/08 com a aba dizendo "aplicado";
-    * `guardado_em` com alguém — a intenção ficou guardada e o gatilho dela
+      a rota que o ensaio mediu em 23/08 com a aba dizendo "aplicado";
+    * `guardado_em` com alguém — a intenção ficou guardada e o gatilho correspondente
       **não mudou**;
     * `status: ok` COM `motivo` — a recusa que vem dentro de uma resposta
       bem-sucedida (`ipc_bridge._recusa_no_corpo`), que `trigger_set_detalhado`
@@ -1150,7 +1150,7 @@ def _na_lingua_da_tela(motivo: str, modo: str) -> str:
     O TRADUTOR JÁ EXISTIA E NINGUÉM O CHAMAVA. `triggers_actions.
     humanizar_erro_gatilho` (`app/actions/triggers_actions.py`) é a HARM-19,
     escrita e testada para a aba Gatilhos da GUI estável: o daemon fala a língua
-    do `core/trigger_effects` — *"end (3) deve ser > start (5)"* — e ela devolve
+    do `core/trigger_effects` — *"end (3) deve ser > start (5)"* — e a função devolve
     *"Fim (3) precisa ser maior que Início (5)"*, com os MESMOS rótulos que o
     `<select>` desta tela mostra, porque tira os dois do mesmo `spec.params`.
     Conferido em 02/09/2026: zero pacotes da interface nova a chamavam, e a
@@ -1194,7 +1194,7 @@ def _padroes(nome: str) -> list[int]:
     `_apply_trigger`), e a mesma ordem que `_persist_params_to_draft` grava —
     *"usa SEMPRE a lista posicional plana na ordem do spec"*.
 
-    E ELA JÁ É O FORMATO DO FIO PARA OS TRÊS MODOS "ESPECIAIS", conferido contra
+    E A FUNÇÃO JÁ É O FORMATO DO FIO PARA OS TRÊS MODOS "ESPECIAIS", conferido contra
     `triggers_actions._send_trigger_named`: `MultiPositionFeedback` tem
     `pos_0..pos_9` (= `strengths`), `MultiPositionVibration` tem
     `frequency, pos_0..pos_9` (= `[freq, *strengths]`) e `Custom` tem
@@ -1227,7 +1227,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     A FUNÇÃO EXISTE PORQUE HÁ MAIS DE UM CHAMADOR — o `modo`, a `imersao` e a régua.
     Escrito em cada um, o `if chave == "Off"` some num deles no dia em que alguém mexer.
 
-    E ELA É O CHOKE POINT DO RASCUNHO — 03/09/2026. Toda escrita no gatilho
+    E A FUNÇÃO É O CHOKE POINT DO RASCUNHO — 03/09/2026. Toda escrita no gatilho
     passa por aqui, então é aqui que a tela aprende o que foi aplicado. É o
     lugar da GTK: `_persist_params_to_draft` é chamado ANTES de todo envio
     (`triggers_actions.py`), pela mesma razão — quatro chamadores gravando
@@ -1238,21 +1238,21 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     escolha some) por uma pior (a escolha fica, e é falsa).
 
     E ELE DEVOLVE O RECIBO — 04/09/2026, a D-01. A terceira casa é a frase de
-    SUCESSO daquele envio, e ela sai daqui porque é aqui que o CORPO do daemon
+    SUCESSO daquele envio, e o sucesso sai daqui porque é aqui que o CORPO do daemon
     existe: montá-la nos quatro chamadores seria o quarto que esquece, que é o
     mesmo argumento pelo qual o rascunho já mora nesta função.
 
     **A TERCEIRA CASA DEIXOU DE SER O RECIBO E PASSOU A SER A NOTÍCIA —
-    06/09/2026, a `03-Q4` dela.** Perguntada com as quatro formas lado a lado,
+    06/09/2026, a `03-Q4`.** Com as quatro formas lado a lado,
     o usuário escolheu *"O campo pisca em verde"*, e a opção que descrevia o que esta
     função fazia até aqui — a tarja verde no cartão com a frase do recibo — foi
-    a que ela recusou, com estas palavras: *"nenhuma palavra nova entra na
-    tela"*. A regra que isso escreve, e ela vale para a aba inteira:
+    a recusada, com a regra de que nenhuma palavra nova entra na
+    tela. A regra que isso escreve vale para a aba inteira:
 
-        *quando o gesto só repete o que ela acabou de fazer, a tela pisca;
+        *quando o gesto só repete o que o usuário acabou de fazer, a tela pisca;
         quando ele tem NOTÍCIA, a tela fala.*
 
-    Então a terceira casa passa a responder **"o que ela precisa saber e não
+    Então a terceira casa passa a responder **"o que o usuário precisa saber e não
     está vendo"**, e são dois casos só:
 
     * aparelho recebeu **e** perfil guardou → `""`. A piscada do campo
@@ -1262,7 +1262,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
       conferido no fonte do piloto, não suposto.
     * aparelho recebeu **e** o disco não guardou → as duas metades, somadas
       pelo :data:`_E_TAMBEM`, com o recibo NA FRENTE. É a `AS-DUAS-ABAS-FALAM-01`
-      inteira, e ela não se desfaz aqui: é justamente por ela existir que o
+      inteira, e não se desfaz aqui: é justamente por essa existir que o
       corte é entre *sucesso pleno* e *meio ato*, e não entre *sucesso* e
       *recusa*.
 
@@ -1280,7 +1280,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     pedia o recibo sempre e escolhia depois. Com o botão fora da tela por
     decisão de produto, o sinalizador ficou sem chamador — e um parâmetro que ninguém
     passa é um ramo que ninguém mede. Se a faixa de reenvio voltar, ele volta
-    com ela; a razão está guardada na lápide. **Sem aquela porta, a frase da
+    com essa porta; a razão está guardada na lápide. **Sem aquela porta, a frase da
     recusa perderia o nome do gatilho que
     FUNCIONOU** — medido: a régua `test_um_lado_que_recusa_nao_cala_o_outro`
     reprovou com a frase *"Gatilho esquerdo (L2): Rigid — end (3)… · "*, com o
@@ -1290,7 +1290,7 @@ def _aplicar(p: Any, lado: str, modo_: str, params: list[int],
     (a sprint `AS-DUAS-ABAS-FALAM-01`). Quando o
     efeito FOI para o aparelho e o DISCO não recebeu, a terceira casa sai como
     *«… aplicado · o efeito FOI para o aparelho, mas não consegui ABRIR o
-    perfil …»*, somada pelo :data:`_E_TAMBEM`. Ela continua sendo a frase de
+    perfil …»*, somada pelo :data:`_E_TAMBEM`. A frase continua sendo a frase de
     SUCESSO — o canal é o `{"recado": …}` do verde de 6 s, e não o `RuntimeError`
     do laranja de 30 s, porque um gesto que fez o que prometeu no aparelho **não
     é recusa**. É a mesma escolha que `a06_navegacao._guardar_no_perfil` já
@@ -1351,13 +1351,13 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
         `a06_navegacao._guardar_no_perfil`, e usar a mesma não é gosto: são os
         dois únicos escritores de perfil por clique que não podem levantar.
 
-    **SÓ O LADO QUE ELA TOCOU.** :func:`_com_os_gatilhos` recebe um dicionário
+    **SÓ O LADO TOCADO.** :func:`_com_os_gatilhos` recebe um dicionário
     de um item só, e o esquema faz o resto: `model_fields_set` decide o que é
     opinião do controle e o que herda a seção global do perfil
     (`profiles/manager._controllers_to_specs` lê os dois lados separados). Se
     este caminho escrevesse os DOIS, clicar `Rígido` no L2 gravaria um `Off`
     explícito no R2 e silenciaria o gatilho direito que o perfil dava a todo
-    mundo — um efeito dela apagado por um clique no outro lado.
+    mundo — um efeito do usuário apagado por um clique no outro lado.
 
     **NÃO ABRIU O PERFIL, NÃO GRAVA — E NÃO LEVANTA.** São dois casos: não há
     `active_profile`, ou o nome que
@@ -1366,34 +1366,34 @@ def _guardar_no_perfil(ctx: Contexto | None, p: Any, uniq: str, disco: str,
     daemon pode nomear um perfil que a pasta lida aqui não tem (apagado,
     renomeado, outra pasta). Nos dois, o gatilho FOI para o aparelho e o
     `_RASCUNHO` o segura na tela — levantar diria "não deu" sobre um efeito que
-    ela está sentindo na mão. **Esta metade vale, e é ela que escolhe o CANAL:**
+    o usuário está sentindo na mão. **Esta metade vale, e é essa que escolhe o CANAL:**
     o do `{"recado": …}` verde, nunca o do `RuntimeError` laranja.
 
     **NÃO ABRIU O PERFIL, NÃO FALA — CADUCOU EM 05/09/2026, decisão D-17**
-    (*"as duas abas falam"*, dela). Até aqui esta função sumia neste ramo, e o
+    (as duas abas falam). Até aqui esta função sumia neste ramo, e o
     argumento acima era usado para as duas coisas — mas ele é verdadeiro sobre
     o CANAL e falso sobre o SILÊNCIO. **A frase não diz "não deu": diz as duas
     metades** — *o aparelho recebeu · o perfil não guardou* —, e é o ramo irmão
     logo abaixo que já a escrevia. E o caso que justificava o silêncio é
-    justamente o caso em que ela precisa saber: perfil apagado, renomeado ou
+    justamente o caso em que o usuário precisa saber: perfil apagado, renomeado ou
     noutra pasta quer dizer que **cada gatilho ajustado a partir dali morre na
     próxima troca de perfil**, com o produto SABENDO e não dizendo.
 
     **MAS A GRAVAÇÃO QUE FALHA FALA.** Perfil aberto e escrita recusada é a
     promessa de amanhã que não se cumpre — o defeito exato que a decisão D2 veio
     matar. A frase diz as duas metades: o aparelho recebeu, o perfil não
-    guardou. Sem isso, ela descobriria a perda no dia seguinte, longe do clique.
+    guardou. Sem isso, o usuário descobriria a perda no dia seguinte, longe do clique.
 
-    **E ELA AINDA FALA PELO CANAL DA RECUSA — declarado, não esquecido.** Os
+    **E A FUNÇÃO AINDA FALA PELO CANAL DA RECUSA — declarado, não esquecido.** Os
     dois ramos desta função dizem as duas metades desde a D-17, mas por canais
     diferentes: o de ABRIR devolve frase (verde de 6 s) e o de GRAVAR levanta
-    `RuntimeError` (laranja de 30 s). Alinhá-los é outra sprint, e ela precisa
+    `RuntimeError` (laranja de 30 s). Alinhá-los é outra sprint, e precisa
     das réguas do outro ramo relidas uma a uma — a mesma divergência que a
     §5 da D-17 mede entre a aba 02 e a aba 06 e deixa declarada.
 
     O CAMINHO DE DISCO É :func:`_gravar_so_o_gatilho`, e não
     `perfil.gravar_e_reaplicar`. A razão está medida lá: reaplicar o perfil
-    inteiro acende de volta a barra de luz que ela desligou noutra aba.
+    inteiro acende de volta a barra de luz que o usuário desligou noutra aba.
     """
     nome = perfil.nome_do_ativo(getattr(ctx, "state", None)).strip()
     if not nome:
@@ -1440,7 +1440,7 @@ def _como_a_janela_pergunta(ctx: Contexto | None, uniq: str) -> Any:
 
     A GTK lê três coisas do objeto da janela para explicar um "guardado": o
     alvo de edição, o mapa de conectados e o modo nativo. Esta aba SABE as três,
-    e melhor do que a GTK — ela não tem alvo de edição, tem uma COLUNA POR
+    e melhor do que a GTK — não tem alvo de edição, tem uma COLUNA POR
     CONTROLE, e a coluna clicada é o alvo sem ambiguidade nenhuma.
 
     POR QUE UM DUBLÊ E NÃO UMA SEGUNDA FRASE: `app/textos_de_aplicacao.py` é o
@@ -1484,7 +1484,7 @@ def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
             ctx: Contexto | None, uniq: str) -> str:
     """A frase de SUCESSO que vai ao CARTÃO daquele controle — a D-01 em ato.
 
-    **O DEFEITO QUE ELA FECHA**, e ele é a queixa de origem desta casa: quando
+    **O DEFEITO FECHADO AQUI**, e ele é a queixa de origem desta casa: quando
     dava certo, a tela não dizia nada. O piloto imprimia `[gesto] … → aplicado`
     no terminal de quem lançou a janela, e quem clica não lê terminal. A decisão, 04/09/2026: *"No
     próprio cartão, como a recusa."*
@@ -1497,25 +1497,25 @@ def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
     **QUEM ESCOLHEU O CARTÃO FOI O PO, E A ESCOLHA CADUCOU — 06/09/2026.** Este
     parágrafo dizia *"o usuário escolheu o cartão"*, e a atribuição estava errada nas
     duas metades. Quem recusou o campo que pisca foi o PO, em 04/09, lendo a
-    D-01 (*"no próprio cartão, como a recusa"*) como se ela fechasse a FORMA —
+    D-01 (no próprio cartão, como a recusa) como se fechasse a FORMA —
     o conflito C-3 de `2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md` é
-    dele. Em 05/09 ELA respondeu a `03-Q4` vendo as quatro formas lado a lado e
+    dele. Em 05/09 a resposta à `03-Q4`, com as quatro formas lado a lado,
     escolheu **o campo que pisca**, com *"nenhuma palavra nova entra na tela"*.
     A palavra de produto vence a leitura que o PO fez da palavra de produto.
 
-    **O QUE ISSO FAZ COM ESTA FUNÇÃO: ela sai do caminho do sucesso pleno, e
+    **O QUE ISSO FAZ COM ESTA FUNÇÃO: sai do caminho do sucesso pleno, e
     não do produto.** O `_aplicar` só a chama quando há uma segunda metade a
-    prefixar (a `AS-DUAS-ABAS-FALAM-01`), e aí a frase abre pelo que ela fez.
+    prefixar (a `AS-DUAS-ABAS-FALAM-01`), e aí a frase abre pelo que o usuário fez.
     As três frases que contam esta história — esta, a do `_aplicar` e a do
     `hefesto_vivo._deu_certo_dizendo` — têm de dizer o mesmo, ou a próxima
     pessoa acredita na que ler primeiro.
 
     A FRASE É DO DONO DO ASSUNTO: `app/textos_de_aplicacao.frase_do_desfecho`,
     a mesma que a barra da GTK usa, com o CORPO do daemon como autoridade — é
-    ela que sabe dizer *"aplicado em 2 controles"* em vez de um "aplicado" que
+    é a função que sabe dizer *"aplicado em 2 controles"* em vez de um "aplicado" que
     não conta.
 
-    **O CORPO QUE NÃO FALA DE DESTINO NÃO PASSA POR ELA**, e essa guarda é a
+    **O CORPO QUE NÃO FALA DE DESTINO NÃO PASSA POR AQUI**, e essa guarda é a
     lição de 04/09: o dublê da régua devolve `{}`, e `frase_do_desfecho` leria
     as duas listas vazias como *"nenhum controle recebeu"* — um recibo de
     SUCESSO afirmando que nada aconteceu. É a mesma armadilha que
@@ -1537,9 +1537,9 @@ def _recibo(lado: str, modo_: str, corpo: dict[str, Any] | None,
 def _conferir_o_desfecho(lado: str, modo_: str, ok: bool, motivo: str,
                          corpo: dict[str, Any] | None,
                          ctx: Contexto | None, uniq: str) -> tuple[bool, str]:
-    """Levanta quando o gatilho dela NÃO mudou, com a frase do dono do assunto.
+    """Levanta quando o gatilho correspondente NÃO mudou, com a frase do dono do assunto.
 
-    A DÍVIDA QUE ISTO PAGA, e ela é a feature 19 da medição de 03/09: *"dizer
+    A DÍVIDA QUE ISTO PAGA é a feature 19 da medição de 03/09: *"dizer
     na tela o desfecho — aplicado, guardado para depois, nada aconteceu"*. A
     GTK escreve na barra de status a cada Aplicar, lendo o CORPO do daemon
     (`_toast_trigger` → `frase_do_desfecho`, ELO-MUDO-01/T3). O HTML jogava o
@@ -1617,7 +1617,7 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     Hefesto, e o jogo que mandar efeito depois vence.
 
     A PORTA É A `_detalhado`, e não a `_checked`, pela mesma razão que a GUI
-    estável migrou (ELO-MUDO-01/T3): só ela junta as DUAS formas de o daemon
+    estável migrou (ELO-MUDO-01/T3): só essa função junta as DUAS formas de o daemon
     dizer não — o erro JSON-RPC de parâmetro inválido e a recusa que vem DENTRO
     de uma resposta bem-sucedida (`_recusa_no_corpo`). Com a `_checked`, a
     segunda chegaria como sucesso.
@@ -1784,8 +1784,8 @@ def criar_efeito_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Criar um efeito: ele entra na lista «Efeito do gatilho», no grupo «Seus efeitos».
 
     Parte de um modo e das quatro barras (Início, Fim, Força, Frequência), postas na faixa
-    de cada parâmetro. Tudo o que ela cria é um efeito da biblioteca de imersões, com o modo de
-    onde partiu (22/10/2026: o tipo Acionamento saiu do «Criar efeitos novos»; os que ela já
+    de cada parâmetro. Tudo o que se cria é um efeito da biblioteca de imersões, com o modo de
+    onde partiu (22/10/2026: o tipo Acionamento saiu do «Criar efeitos novos»; os que o usuário já
     guardou nos gatilhos seguem na lista). Só a caixa de preferências da interface é gravada:
     nenhum perfil e nenhum aparelho.
     """
@@ -1876,10 +1876,10 @@ def _gravar_so_o_gatilho(novo: Any, p: Any) -> None:
         antes   lightbar_on: false · lightbar_rgb: [0, 0, 0]
         depois  lightbar_on: true  · lightbar_rgb: [0, 0, 255]
 
-    Ou seja: ela desliga a barra na aba Iluminação, vai aos Gatilhos, clica
+    Ou seja: o usuário desliga a barra na aba Iluminação, vai aos Gatilhos, clica
     "Guardar esse efeito" — e a barra ACENDE de novo, sem nada na tela dizendo
     que isso ia acontecer. É *a tela afirmando o que não é*, na forma mais cara:
-    um botão de escopo estreito ("esse efeito") desfazendo escolha viva dela em
+    um botão de escopo estreito ("esse efeito") desfazendo escolha viva do usuário em
     OUTRA aba.
 
     E A REAPLICAÇÃO NÃO ERA NECESSÁRIA PARA NADA. Esta aba aplica NA HORA — é a
@@ -1956,14 +1956,14 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
 
     LADO NÃO TOCADO NÃO VIRA OPINIÃO — 05/09/2026, e é o que faz a persistência
     no clique caber aqui. Antes desta linha, um `dos_lados` com uma metade só
-    densificava a outra: sem override anterior ela virava um `Off` EXPLÍCITO, e
+    densificava a outra: sem override anterior a metade virava um `Off` EXPLÍCITO, e
     `profiles/manager._controllers_to_specs` lê exatamente `model_fields_set`
     para decidir o que herda a seção global do perfil. Ou seja: clicar `Rígido`
     no L2 gravava um `Off` no R2 e silenciava, só naquele controle, o gatilho
     direito que o perfil dava a todos.
 
     Agora o lado ausente do pedido só entra se o override JÁ o tinha escrito —
-    a metade que ela nunca tocou continua herdando o global, que é o contrato do
+    a metade que o usuário nunca tocou continua herdando o global, que é o contrato do
     esquema (*"`None` = sem opinião"*).
     """
     from hefesto_dualsense4unix.profiles.schema import (
@@ -1996,7 +1996,7 @@ def _seguir_o_estilo(ctx: Contexto, p: Any, uniq: str, disco: str) -> dict[str, 
 
     O aparelho recebe o lado global do perfil (`_o_que_o_perfil_da`), que é a receita do estilo;
     só depois que o byte saiu o lado sai do `controllers[uniq].triggers` e do rascunho, como a
-    Vibração faz com a chave dela. É o mesmo gatilho que o perfil daria na próxima ativação.
+    Vibração faz com a própria chave. É o mesmo gatilho que o perfil daria na próxima ativação.
     """
     cfg = _o_que_o_perfil_da(perfil.ativo(ctx.state.get("active_profile")), disco)
     modo_, params = str(cfg.get("mode") or "Off"), _params_inteiros(cfg)
@@ -2149,7 +2149,7 @@ def intensidade_do_gatilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     Grava só `controllers[uniq].triggers.intensidade` (0 a 2) pelo `gravar_pelo_gesto`, como a
     «Força da vibração» da 05: com um jogo, no perfil dele; sem jogo, no padrão do computador.
     O `ProfileManager` a publica (`set_trigger_scales`) lida do perfil com o computador por baixo,
-    e ela multiplica também o efeito do Modo automático. O segundo evento do mesmo arrasto
+    e multiplica também o efeito do Modo automático. O segundo evento do mesmo arrasto
     (`change` e `click`) acha o número já gravado e não grava.
     """
     uniq = _exigir_controle(o, "intensidade do gatilho")

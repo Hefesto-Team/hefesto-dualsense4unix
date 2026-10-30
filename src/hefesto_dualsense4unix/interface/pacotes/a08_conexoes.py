@@ -9,7 +9,7 @@ resultado de um exame que alguém mandou rodar; pintá-las do `state_full` seria
 Esta aba tem três fontes, o que a faz diferente das outras nove:
 
     state_full          o daemon, a 500 ms — a mesa, o transporte, a bateria
-    maquina.json        a DECLARAÇÃO dela — o que barramento nenhum responde
+    maquina.json        a DECLARAÇÃO do usuário — o que barramento nenhum responde
     /sys + busctl       o exame e os rádios vizinhos — lidos SOB DEMANDA
 
 As duas últimas ficam fora do tique de propósito (ver "O QUE SE LÊ DA MÁQUINA, E QUANDO"), o que dá
@@ -227,7 +227,7 @@ def _sugestao_do_vizinho(no: str, rotulos: Any) -> str:
 
 
 def _moldura_da_pergunta(pergunta: str) -> tuple[str, str]:
-    """O «— … —» da pergunta, LIDO dela e não digitado."""
+    """O «— … —» da pergunta, LIDO da pergunta e não digitado."""
     inicio = 0
     while inicio < len(pergunta) and not pergunta[inicio].isalnum():
         inicio += 1
@@ -274,7 +274,7 @@ _ID_NAO_SEI = "nao_sei"
 
 
 def _sala_na_tela(declaracao: Any) -> dict[str, str]:
-    """O que ela JÁ RESPONDEU sobre a sala, na língua do `data-hef-quando`.
+    """O que o usuário JÁ RESPONDEU sobre a sala, na língua do `data-hef-quando`.
 
     A GTK mostra isso desde sempre (`secao_mesa._linha_declarada` lê `_mesa_em_vigor()` e
     pré-seleciona o botão gravado ANTES de ligar o sinal). Esta tela não mostrava (medido em
@@ -286,7 +286,7 @@ def _sala_na_tela(declaracao: Any) -> dict[str, str]:
     O `None` não acende nada (regra do dono: `secao_mesa` só chama `set_active_id` com `gravado is
     not None`): o produto **não distingue** "nunca respondeu" de "respondeu Não sei", as duas gravam
     `None` (`sala_altura`: `escolha or None`; `secao_mesa._valor_do_seletor` converte igual).
-    Acender "Não sei" no `None` poria na boca dela uma resposta que pode não ter dado.
+    Acender "Não sei" no `None` poria na boca do usuário uma resposta que pode não ter dado.
     :data:`_ID_NAO_SEI` existe no DESENHO e nunca é emitido aqui: só tira o terceiro botão do modo
     booleano do `escrever()`.
     """
@@ -302,7 +302,7 @@ def _sala_na_tela(declaracao: Any) -> dict[str, str]:
 
 
 def _radios_declarados(declaracao: Any) -> dict[str, str]:
-    """`{vid:pid: tipo}` — o que ela já respondeu sobre cada rádio vizinho."""
+    """`{vid:pid: tipo}` — o que o usuário já respondeu sobre cada rádio vizinho."""
     try:
         return {str(k): str(v.tipo or "")
                 for k, v in (declaracao.mesa.radios or {}).items()}
@@ -447,8 +447,8 @@ def _veredito_do_exame(vivos: list[Any]) -> dict[str, Any]:
     e contagens e **não** conhece. Escalar não inventa estado (é sempre um dos dois que entraram) e
     o empate devolve o do cabeçalho, que tem a frase.
 
-    O que ela calou não segura a cor (regra do `_escrever_o_cabecalho` da janela estável): o
-    veredito conta os itens que ela NÃO dispensou, senão uma ordem dispensada prenderia o topo em
+    O que o usuário calou não segura a cor (regra do `_escrever_o_cabecalho` da janela estável): o
+    veredito conta os itens NÃO dispensados, senão uma ordem dispensada prenderia o topo em
     laranja e o ⊘ seria botão morto.
 
     Devolve o dicionário para o :func:`pacote`: a frase em `veredito` e um interruptor por estado.
@@ -510,7 +510,7 @@ def _frase_do_selo(estado: str) -> str:
 def _selo_do_estado(estado: str) -> tuple[str, str]:
     """``(a classe CSS, a palavra)`` do selo — do dono, `interface.conexoes`.
 
-    O mapa já traduzia os quatro estados do `exame_da_mesa` para as três palavras do desenho dela;
+    O mapa já traduzia os quatro estados do `exame_da_mesa` para as três palavras do desenho;
     mora na camada de tela porque é vocabulário, não máquina (o módulo do exame "responde por
     máquina, não por vocabulário"). O import é tardio: `interface.conexoes` puxa a cadeia de tela e
     o topo deste módulo tem de seguir importável numa árvore sem `src/` no caminho.
@@ -519,7 +519,7 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
     por espera do usuário: o mapa manda os dois estados para **AJUSTAR** e ele decidiu que *"o que
     está quebrado agora não pode parecer igual ao que só podia estar melhor"*. A COR já saiu (o
     `nivel-grave` do cartão de dica, por `dicas_da_conexao._nivel_do_estado`); a PALAVRA é de
-    produto e trocá-la aqui seria escolher no lugar dela. Quando ela disser, muda
+    produto e trocá-la aqui seria escolher no lugar do usuário. Quando o usuário disser, muda
     `interface.conexoes.SELO_DO_ESTADO`, o mapa é um só.
     """
     perfil._com_o_src()
@@ -535,7 +535,7 @@ def _dica_da_linha(item: Any) -> str:
     linha mostra a MEDIÇÃO (`Item.porque`, chave `achado` do :func:`pacote`), então a dica traz o
     que a linha NÃO diz: **por que importa** (`DICAS_DAS_LINHAS`, por chave de regra) e **o que
     fazer** (`PREFIXO_DA_CURA` + `Item.cura`). As frases são do produto, as mesmas constantes de
-    `secao_exame._dica_do_item`; aqui só a ORDEM entre elas (uma frase reescrita aqui seria a quarta
+    `secao_exame._dica_do_item`; aqui só a ORDEM das dicas (uma frase reescrita aqui seria a quarta
     grafia).
 
     Por que o pacote pede a metade e o dono não muda: `_dica_do_item` é do GTK também
@@ -553,7 +553,7 @@ def _dica_da_linha(item: Any) -> str:
     sem cura abre uma caixa VAZIA de 330px"*): `DICAS_DAS_LINHAS` é indexada por chave de REGRA
     (`energia_do_radio`, `energia_das_portas`, `pareamentos`, `suporte_ao_controle`,
     `vizinhanca_das_portas`) e o item do catálogo de ORDENS traz `chave=ordem.chave` (o slug do
-    arranjo, nenhuma delas) e `cura=ordem.acao or None`, talvez vazio; `partes` ficava só com `""` e
+    arranjo, nenhuma parte) e `cura=ordem.acao or None`, talvez vazio; `partes` ficava só com `""` e
     o `?` mostrava o travessão (a decisão 9 tirou a metade do meio e quem não tinha as outras duas
     ficou sem nada).
 
@@ -567,7 +567,7 @@ def _dica_da_linha(item: Any) -> str:
     `[medido]` em cinza competiria com o texto (para quem desenhar a dica maior). O `except` largo é
     de propósito e devolve vazio (o `escrever()` põe o travessão, "não tenho o que dizer aqui"):
     levantar derrubaria a pintura da aba INTEIRA por uma dica, e não emitir a chave deixaria a dica
-    do MOCKUP ao lado do achado dela.
+    do MOCKUP ao lado do achado.
     """
     try:
         perfil._com_o_src()
@@ -739,7 +739,7 @@ def _o_painel_das_dicas(vivos: list[Any], cena: dict[str, Any] | None) -> Any:
     """As dicas da aba: o movimento da central, o Wi-Fi que cai e cada achado do exame.
 
     Cada ``Item`` do exame vira um cartão (ou, se deu certo, uma palavra da linha «✓ …»); a ordem
-    que ela calou continua, apagada e no fim, com o mesmo botão para voltar a mostrá-la.
+    que o usuário calou continua, apagada e no fim, com o mesmo botão para voltar a mostrá-la.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
@@ -774,7 +774,7 @@ def _o_painel_das_dicas(vivos: list[Any], cena: dict[str, Any] | None) -> Any:
 def _html_das_dicas(vivos: list[Any] | None = None, cena: dict[str, Any] | None = None) -> str:
     """As dicas inteiras, em HTML: o que o ``data-campo="dicas"`` repinta a cada tique.
 
-    Sem ``vivos`` (a bancada, os testes) saem as ordens que o tique pintou por último.
+    Sem ``vivos`` (o ensaio, os testes) saem as ordens que o tique pintou por último.
     """
     from hefesto_dualsense4unix.interface.conexoes import html_das_dicas
 
@@ -785,7 +785,7 @@ def _html_das_dicas(vivos: list[Any] | None = None, cena: dict[str, Any] | None 
 
 @_dataclasses.dataclass(frozen=True)
 class _ItemDeOrdem:
-    """Uma ordem sozinha na forma de ``Item`` — o que a bancada e as réguas entregam."""
+    """Uma ordem sozinha na forma de ``Item`` — o que o ensaio e as réguas entregam."""
 
     ordem: Any
     estado: str = "atencao"  # (noqa-acento)
@@ -856,7 +856,7 @@ def _linha(item: Any) -> dict[str, Any]:
 def _exame() -> list[dict[str, Any]]:
     """As linhas do Check-up, em dicionário, sem a ordem calada nem a leitura dos controles.
 
-    Ninguém o chama em produção desde 29/10/2026: a Jogar o chamava pelo `_do_exame` dela, que saiu
+    Ninguém o chama em produção desde 29/10/2026: a Jogar o chamava pelo `_do_exame`, que saiu
     sem chamador (A-PONTE-MORTA-E-O-CONTROLAR-O-PC-SAEM-01). A história do nome, da calada e da
     leitura está em `docs/research/o-porque-dos-modulos.md`, na seção do `_exame`.
     """
@@ -898,7 +898,7 @@ def _confissao_do_mapa() -> dict[str, str]:
 
     Medido em 03/09/2026: a `.mm-conf-linha` está FORA do bloco `.mm-faces` que o pacote troca,
     ninguém a repintava e dizia **"três coisas"** (a cena do mockup) com `title` listando três,
-    quando a bancada tem **UMA** lacuna (`especie`). Confissão a mais é tão falsa quanto a que cala.
+    quando o ensaio tem **UMA** lacuna (`especie`). Confissão a mais é tão falsa quanto a que cala.
 
     `confissao-nada` é o interruptor do sumiço (regra da GTK): a linha SOME quando o desenho
     responde por tudo; zero lacuna viraria *"O que eu não consegui conferir neste desenho: nada."*.
@@ -929,7 +929,7 @@ def _html_do_mapa() -> str:
     """As faces do gabinete DO USUÁRIO, desenhadas pelo produto.
 
     O desenho é um só (`interface/conexoes.html_do_mapa`), o do gerador do mockup também; muda o
-    dado (lá a cena de bancada, aqui o que o usuário declarou), e a extração se provou fiel: página
+    dado (lá a cena de ensaio, aqui o que o usuário declarou), e a extração se provou fiel: página
     regerada byte a byte igual à aprovada. O veredito vem do MOTOR: `veredito_do_quadrado` chama
     `arranjo_da_mesa.julgar` (entrada azul, folga na fileira, extensor; CONFESSA o que não sabe),
     não a reescrita à mão com cinco vereditos digitados que o gerador tinha.
@@ -1279,9 +1279,9 @@ def _html_dos_externos(ctx: Contexto) -> str:
     `hid-nintendo` não acusa o Hefesto nem promete cura: a morte é do driver do kernel com firmware
     clone em modo Switch, a saída estável é o cabo, e nasce só com VID Nintendo E rádio.
 
-    A lista mora dentro da moldura `.gc` (escolha de 06/09/2026, EXTERNOS-01): o CSS da bancada
+    A lista mora dentro da moldura `.gc` (escolha de 06/09/2026, EXTERNOS-01): o CSS do ensaio
     (`aba08.py`, `.gc .ext-vaga{display:contents}`) faz a linha virar item; este pacote só devolve
-    linhas. Mas ela NÃO é um `.gc-item`: cada um tem `data-controle="pN"`, um rádio de alvo de saída
+    linhas. Mas NÃO é um `.gc-item`: cada um tem `data-controle="pN"`, um rádio de alvo de saída
     e um corpo que se abre, e um externo não tem assento nem o que abrir; um sexto rádio apontaria
     para um aparelho em que o daemon não escreve. Mesma moldura é escolha de DESENHO; ser assento é
     afirmação sobre o aparelho, que esta função não faz. Quem a distingue é a MARCA (o assento diz o
@@ -1407,7 +1407,7 @@ def _hex_do_plastico(slug: str) -> str:
 
 
 def colorway_do_controle(m: Any) -> str:
-    """O modelo do mapa dela para aquele controle, ou `""` quando ninguém leu."""
+    """O modelo do mapa do usuário para aquele controle, ou `""` quando ninguém leu."""
     return str(m.get("cor") or "")
 
 
@@ -1501,7 +1501,7 @@ def _frase_do_radio_fragil(st: dict[str, Any]) -> str:
     a vira frase. *"lista vazia não quer dizer 'nenhum frágil' — quer dizer 'não sei quais'"*, por
     isso quem chama olha TAMBÉM o booleano `native_bt_fragil`, e o aviso acende sem nomes em vez de
     calar. O `fragil` por controle diria QUAL, não O QUE FAZER; a frase do dono diz quem é e a saída
-    (o cabo, ou voltar à emulação), e é ela que a aba Início acende.
+    (o cabo, ou voltar à emulação), e é essa que a aba Início acende.
     """
     with contextlib.suppress(Exception):
         perfil._com_o_src()
@@ -1931,7 +1931,7 @@ GESTO_DO_APELIDO = "adaptador-renomear"
 
 @gesto("08-conexoes.html", "vizinho-o-que-e", grava="machine_declare")
 def vizinho_o_que_e(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"— O que é? —": ela responde o que é aquele rádio vizinho."""
+    """"— O que é? —": responde o que é aquele rádio vizinho."""
     chave = str(o.get("alvo") or "")
     vizinhos = {v["id"] for v in _CENA_NA_TELA.get("vizinhos", ())}
     if chave not in vizinhos:
@@ -2182,7 +2182,7 @@ def _nos_dos_controles() -> dict[str, str]:
 
 
 def _abridor(porta: str) -> Callable[..., int]:
-    """Por onde o exame abre o nó do controle: a porta do broker, se ela"""
+    """Por onde o exame abre o nó do controle: a porta do broker, se houver"""
     import os
 
     perfil._com_o_src()
@@ -2283,8 +2283,8 @@ def _conferencia_da_leitura(state: dict[str, Any] | None, *,
 def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"⊘": cala ESTA ordem de serviço — e o MESMO botão a traz de volta.
 
-    Interruptor desde 06/09/2026 (decisão 08-Q5): *"A recomendação calada continua no lugar dela, em
-    cinza, e o mesmo botão desfaz."* Antes só calava: o único escritor de `ordens_dispensadas` era
+    Interruptor desde 06/09/2026 (decisão 08-Q5): a recomendação calada continua no mesmo lugar, em
+    cinza, e o mesmo botão desfaz. Antes só calava: o único escritor de `ordens_dispensadas` era
     este gesto (*"Hoje não há caminho de volta nenhum"*).
 
     | estado da linha | grava | memória |
@@ -2295,7 +2295,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     Desfazer é escrever `arranjo=""`, não remover a chave: `machine.declare` não tem verbo de
     remoção (nota de :data:`_DISPENSADAS`). O esquema aceita os dois vazios
     (`OrdemDispensada._so_a_data` só cobra a forma do que NÃO é vazio) e arranjo vazio não casa com
-    arranjo algum, logo a ordem volta a falar; a marca fica no registro e a REGRA decide se ela
+    arranjo algum, logo a ordem volta a falar; a marca fica no registro e a REGRA decide se a ordem
     cala. O "deu certo" é a própria linha mudando de cor, sem o pisca-verde de 1,5 s da 03-Q4
     (aquele é para gesto cuja resposta não se vê).
 
@@ -2306,14 +2306,14 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     que destravou o ⊘ da primeira leva foi existir `Item.ordem` na tela, pois o **Examinar Portas**
     traz o catálogo). Uma CONFERÊNCIA não se dispensa (`energia_do_radio`, `pareamentos`,
     `suporte_ao_controle`… respondem *"está certo?"*, só a ORDEM responde *"faça isto"* e tem
-    arranjo): o ⊘ nela recusa dizendo, pois gravaria chave que regra nenhuma consulta.
+    arranjo): o ⊘ ali recusa dizendo, pois gravaria chave que regra nenhuma consulta.
 
-    `quando` é só a data: a hora não decide nada e seria dado a mais sobre a rotina dela num arquivo
-    que ela cola em relato de defeito (`OrdemDispensada._so_a_data` reprova outra forma). A linha
+    `quando` é só a data: a hora não decide nada e seria dado a mais sobre a rotina num arquivo
+    colado em relato de defeito (`OrdemDispensada._so_a_data` reprova outra forma). A linha
     muda na hora: a decisão entra em `_DISPENSADAS` antes de o próximo tique montar a tira. **A
     ordem das duas escritas não se inverte**: `_declarar` LEVANTA quando o daemon recusa e a memória
     só muda depois; invertido, a tela ficaria num estado que o disco não tem e a linha cinza
-    voltaria sozinha no tique seguinte, sem uma palavra (perder trabalho dela em silêncio).
+    voltaria sozinha no tique seguinte, sem uma palavra (perder trabalho do usuário em silêncio).
     """
     from datetime import date
 
@@ -2348,7 +2348,7 @@ def escolher_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     tempo. Está no `SEM_ECO` por razão diferente dos outros cinco (que não ecoam porque o
     `state_full` não publica o `mapa`): este não chama a ponte (medido com dublê em 02/09/2026, o
     clique dirigido `caminho="3-1.1.4"` fez ZERO chamadas). O endereço é o CAMINHO do kernel
-    (`data-caminho`), não o rótulo: os dois adaptadores Bluetooth da bancada são o mesmo modelo e só
+    (`data-caminho`), não o rótulo: os dois adaptadores Bluetooth do ensaio são o mesmo modelo e só
     o caminho os distingue (`rotulo_do_aparelho`).
     """
     caminho = str(o.get("caminho") or "").strip()
@@ -2373,13 +2373,13 @@ def escolher_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not logica.colocar(numero):
         raise RuntimeError(
             f"não consegui pôr o aparelho {_a_entrada_na_frase(numero, em=True)} — "
-            "ela não está no desenho do gabinete.")
+            "a entrada não está no desenho do gabinete.")
     _gravar_o_mapa(p)
 
 
 @gesto("08-conexoes.html", "tirar-daqui", grava="machine_declare")
 def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Esvazia a entrada. Ela CONTINUA no desenho — só fica sem aparelho."""
+    """Esvazia a entrada. A entrada CONTINUA no desenho — só fica sem aparelho."""
     numero = str(o.get("entrada") or "").strip()
     if not numero:
         raise ValueError("o clique não disse de qual entrada tirar.")
@@ -2407,14 +2407,14 @@ def nova_extensao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError("o clique não disse em qual entrada há a extensão.")
     if not _logica_do_mapa().acrescentar_extensao(numero):
         raise RuntimeError(
-            f"não dá para pendurar uma extensão na {numero}: ou ela não está no "
+            f"não dá para pendurar uma extensão na {numero}: ou a entrada não está no "
             f"desenho, ou já é filha de outra — não há neta.")
     _gravar_o_mapa(p)
 
 
 @gesto("08-conexoes.html", "novo-hub")
 def novo_hub(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Abre a pergunta curta do hub: em qual entrada ele está, e o nome, se ela quiser.
+    """Abre a pergunta curta do hub: em qual entrada ele está, e o nome, se o usuário quiser.
 
     Não grava (abrir é estado de tela); o que vai ao disco é o `novo-hub-gravar`.
     """
@@ -2432,7 +2432,7 @@ def novo_hub_cancelar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "novo-hub-gravar", grava="machine_declare")
 def novo_hub_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Liga o hub na entrada escolhida: nasce a filha dela, com o nome, e vai ao disco."""
+    """Liga o hub na entrada escolhida: nasce a filha da entrada, com o nome, e vai ao disco."""
     from hefesto_dualsense4unix.utils.rotulo_da_entrada import MAXIMO_DO_NOME_DA_ENTRADA
 
     forma_lida = o.get("forma")
@@ -2446,7 +2446,7 @@ def novo_hub_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             f"O nome do hub tem até {MAXIMO_DO_NOME_DA_ENTRADA} letras.")
     if not _logica_do_mapa().acrescentar_hub(numero, nome):
         raise RuntimeError(
-            f"não dá para ligar um hub {_a_entrada_na_frase(numero, em=True)}: ou ela não "
+            f"não dá para ligar um hub {_a_entrada_na_frase(numero, em=True)}: ou a entrada não "
             f"está no desenho, ou já é filha de outra — não há neta.")
     _gravar_o_mapa(p)
 
@@ -2623,7 +2623,7 @@ USAR_COMO_BOTOES = "Usar como botões de…"
 DICA_DO_USAR_COMO = "As teclas dele viram botões de um controle"
 ACIONADOR_SEM_NOME = "Acionador USB"
 TITULO_DO_ACIONADOR = "{nome} · usar como botões de"
-DICA_DO_ACIONADOR = "Aperte uma tecla do acionador e clique no botão do controle onde ela cai"
+DICA_DO_ACIONADOR = "Aperte uma tecla do acionador e clique no botão do controle em que a tecla cai"
 ESPERAR_A_TECLA = "Esperar a próxima tecla"
 ROTULO_DA_TECLA = "Tecla {n}"
 ESPERA_DA_TECLA_S = 10.0
@@ -2693,7 +2693,7 @@ def _acionadores_da_cena(cena: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _rascunho_na_tela(cena: dict[str, Any]) -> _Rascunho | None:
-    """O rascunho armado, se o aparelho dele está na tela; senão, o primeiro acionador dela."""
+    """O rascunho armado, se o aparelho dele está na tela; senão, o primeiro acionador."""
     linhas = _acionadores_da_cena(cena)
     r = _RASCUNHO
     if r is not None and any(str(a["id"]) == r.alvo for a in linhas):
@@ -2795,7 +2795,7 @@ def _os_acionadores_declarados(declaracao: Any, lugares: list[dict[str, Any]]
 
 
 def _quem_recebe_da_mesa(ctx: Contexto, declaracao: Any) -> list[tuple[str, str]]:
-    """Os controles na mesa, pelo plástico; o que o acionador já declarou entra mesmo fora dela."""
+    """Os controles na mesa, pelo plástico; o que o acionador já declarou entra mesmo fora."""
     quem: list[tuple[str, str]] = []
     for m in ctx.mesa:
         chave = _so_hex(str(m.get("uniq") or "")).lower()
@@ -2819,7 +2819,7 @@ def _nome_de_quem_recebe(m: dict[str, Any]) -> str:
 
 
 def _colorways_da_mesa(ctx: Contexto) -> dict[str, str]:
-    """O modelo do mapa dela de cada controle na mesa (`""` quando ninguém leu)."""
+    """O modelo do mapa do usuário de cada controle na mesa (`""` quando ninguém leu)."""
     return {_so_hex(str(m.get("uniq") or "")).lower(): colorway_do_controle(m) for m in ctx.mesa}
 
 
@@ -2956,7 +2956,7 @@ SEPARADOR_DO_NOME = " \u25cf "
 
 
 def nome_na_conexoes(ap: dict[str, Any]) -> str:
-    """«Vitória ● Cosmic Red ● P1» — o formato do nome, SÓ na aba Conexões."""
+    """«Sala ● Cosmic Red ● P1» — o formato do nome, SÓ na aba Conexões."""
     nome = str(ap.get("nome") or "") or str(ap.get("rotulo") or "")
     if ap.get("tipo") != "controle":
         return nome
@@ -2968,7 +2968,7 @@ def nome_na_conexoes(ap: dict[str, Any]) -> str:
 
 
 def como_se_chama(ap: dict[str, Any]) -> str:
-    """«<b>Vitória ● Cosmic Red ● P1</b>» — o controle pelo nome da aba Conexões."""
+    """«<b>Sala ● Cosmic Red ● P1</b>» — o controle pelo nome da aba Conexões."""
     if ap.get("tipo") == "controle":
         return f"<b>{_x(nome_na_conexoes(ap))}</b>"
     nome = str(ap.get("nome") or "")
@@ -3012,7 +3012,7 @@ DENTRO_DA_MAQUINA = "Dentro da máquina"
 
 def como_se_chama_o_lugar(lug: dict[str, Any]) -> str:
     """«o <b>Sala</b>», «a <b>Entrada 4.4</b>» ou «o adaptador <b>dentro da
-    máquina</b>» — o nome dela primeiro."""
+    máquina</b>» — o nome do aparelho primeiro."""
     if lug.get("nome"):
         return f"o <b>{_x(lug['nome'])}</b>"
     entrada = str(lug.get("entrada") or "")
@@ -3066,7 +3066,7 @@ def _dica_do_movimento_da_linha(ap: dict[str, Any], cena: dict[str, Any], nivel:
 
 
 def _hz_da_ponte(ap: dict[str, Any]) -> str:
-    """A taxa que a ponte escreve AGORA: vazio quando ela cede (pela fila ou pelo sinal) ou
+    """A taxa que a ponte escreve AGORA: vazio quando a ponte cede (pela fila ou pelo sinal) ou
     sem medida (o piloto põe o travessão); `HZ_DA_PONTE` é só o alvo de projeto, do desenho."""
     if "hz_ponte" not in ap:
         return _hz(HZ_DA_PONTE)
@@ -3180,7 +3180,7 @@ def _pode_esquecer(ap: dict[str, Any]) -> bool:
 
 
 def _tem_x(ap: dict[str, Any]) -> bool:
-    """O X fica só onde fecha um aviso: a linha «Não Conectou» (item 2 dela, a"""
+    """O X fica só onde fecha um aviso: a linha «Não Conectou» (item 2 da lista, a"""
     return bool(ap.get("nao_conectou")) and not ap.get("esperando")
 
 
@@ -3461,7 +3461,7 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
 
 
 def _como_se_pareia(ap: dict[str, Any]) -> str:
-    """O que ela faz com a mão, pelo tipo — o gesto do modelo, ou o genérico."""
+    """O que o usuário faz com a mão, pelo tipo — o gesto do modelo, ou o genérico."""
     gesto = gesto_de_parear(ap)
     if gesto:
         return f"Depois, segure <b>{_x(gesto.removeprefix('Segure '))}</b> até a luz piscar."
@@ -3472,12 +3472,12 @@ def _como_se_pareia(ap: dict[str, Any]) -> str:
 
 
 def pergunta_de_mover(ap: dict[str, Any], destino: dict[str, Any], cena: dict[str, Any]) -> str:
-    """A pergunta ANTES de mover (R7): só ele sai, e o que ela faz com a mão."""
+    """A pergunta ANTES de mover (R7): só ele sai, e o que o usuário faz com a mão."""
     feminino = ARTIGO_DO_TIPO.get(str(ap.get("tipo"))) == "a"
     cheio = (ap.get("tipo") == "controle" and ap.get("ponte")
              and len(_pontes(cena, str(destino["id"]))) >= PONTES_POR_ADAPTADOR)
     return (f"Mover {como_se_chama(ap)} para {como_se_chama_o_lugar(destino)}?<br>"
-            f"Só {'ela' if feminino else 'ele'} sai daqui. {_como_se_pareia(ap)}"
+            f"Só {'esta' if feminino else 'este'} sai daqui. {_como_se_pareia(ap)}"
             + (" Lá o som pode engasgar." if cheio else ""))
 
 
@@ -3531,7 +3531,7 @@ def _moldes_de_esquecer(cena: dict[str, Any]) -> str:
     """O menu «⋮» de cada linha que tem pareamento ali, e a pergunta do «Esquecer» dele.
 
     O menu é um painel (``data-painel="menu"``, pelo par ``linha|adaptador``) com o «Esquecer», como
-    o «⋮» das Configurações do COSMIC (foto 8 dela), sem «Desconectar» (R7: o desconectar mora no
+    o «⋮» das Configurações do COSMIC (foto 8), sem «Desconectar» (R7: o desconectar mora no
     mover) e sem «Renomear» (é o campo do nome). O «sim» é ``confirmar-esquecer`` e o endereço é
     ``(linha, adaptador)``: ``data-esquecer`` separa estas das perguntas de mover, de mesma forma.
     """
@@ -3821,7 +3821,7 @@ def _usb_da_porta(cena: dict[str, Any], quem: str) -> str:
 
 
 def _vizinhos_sem_rede(cena: dict[str, Any]) -> list[dict[str, Any]]:
-    """Os rádios vizinhos que NÃO são uma rede Wi-Fi lida (essa tem a linha dela, sem botão)."""
+    """Os rádios vizinhos que NÃO são uma rede Wi-Fi lida (essa tem a própria linha, sem botão)."""
     vizinhos = list(cena.get("vizinhos") or ())
     das_redes = {str(v["id"]) for r in cena.get("wifi") or ()
                  if (v := _o_vizinho_da_rede(r, vizinhos)) is not None}
@@ -3831,7 +3831,7 @@ def _vizinhos_sem_rede(cena: dict[str, Any]) -> list[dict[str, Any]]:
 NOTA_DO_USB_3_NO_2_4 = "USB 3.0 + 2,4 GHz"
 DICA_DO_USB_3_NO_2_4 = (
     "USB 3.0 e 2,4 GHz juntos: o link USB 3.0 fica colado na antena e costuma derrubar a "
-    "placa. Em 5 GHz ou numa porta USB 2.0 ela não cai.")
+    "placa. Em 5 GHz ou numa porta USB 2.0 a placa não cai.")
 
 
 def _o_vizinho_da_rede(
@@ -4296,7 +4296,7 @@ def _sem_o_que_pisca(cena: dict[str, Any]) -> dict[str, Any]:
 
 
 def _sala_estavel(cena: dict[str, Any]) -> str:
-    """A sala, que SÓ MUDA quando mudam as caixas ou os aparelhos dentro delas."""
+    """A sala, que SÓ MUDA quando mudam as caixas ou os aparelhos dentro das caixas."""
     chave = html_da_sala(_sem_o_que_pisca(cena))
     if _SALA_NA_TELA.get("chave") != chave:
         _SALA_NA_TELA.update(chave=chave, html=html_da_sala(cena))
@@ -4420,7 +4420,7 @@ def _ler_as_quedas() -> dict[str, Any] | None:
 def _o_wifi_com_as_quedas(
     redes: list[dict[str, Any]], quedas: dict[str, Any] | None
 ) -> list[dict[str, Any]]:
-    """Cada rede lida, com o que o diário diz da placa dela (`quedas`: `{n, min}`)."""
+    """Cada rede lida, com o que o diário diz da placa de cada rede (`quedas`: `{n, min}`)."""
     saida = []
     for rede in redes:
         q = (quedas or {}).get(str(rede.get("chave") or ""))
@@ -4506,7 +4506,7 @@ def _com_a_categoria_do_enlace(aparelhos: list[dict[str, Any]],
     leitores (``Icon``, ``Class``, ``Appearance``) é «Acessório».
 
     A regra é por fato, nunca por nome ou marca: o enlace LE vem do rádio (``radio_ar``, a chave
-    ``enlaces``), e o tipo, do BlueZ. Ela mora aqui porque é o único lugar em que os dois se
+    ``enlaces``), e o tipo, do BlueZ. A junção mora aqui porque é o único lugar em que os dois se
     encontram (:func:`_tipo_do_aparelho` não vê o enlace).
     """
     for ap in aparelhos:
@@ -4534,7 +4534,7 @@ def _quem_pede_para_parear(central: dict[str, Any], lugares: list[dict[str, Any]
     """Os controles conhecidos que pedem para parear (``radio_central.pedindo``), na tela.
 
     O dono do sinal é a central (conhecido + desconectado + ouvido na varredura); aqui só se
-    dá o nome dela e o adaptador que o ouve. O nome de fábrica vira «Controle».
+    dá o nome do controle e o adaptador que o ouve. O nome de fábrica vira «Controle».
     """
     ids = {str(lug["id"]) for lug in lugares}
     nomes = nome_do_jogador.nomes_por_endereco(aparelhos_bz)
@@ -4770,13 +4770,13 @@ def _chave_da_ordem(endereco: object) -> str:
 
 
 def _na_ordem_do_usuario(lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Os adaptadores na ORDEM QUE ELA ARRASTOU, gravada no adaptador pelo endereço.
+    """Os adaptadores na ORDEM QUE O USUÁRIO ARRASTOU, gravada no adaptador pelo endereço.
 
     Decisão de 25/09/2026 (``utils/maquina.AdaptadorDeclarado.ordem``).
-    Quem ela nunca arrastou vem depois, na ordem de sempre.  <!-- noqa-acento: citação literal -->
+    O adaptador nunca arrastado vem depois, na ordem de sempre.
 
     A ordem anterior a 28/09/2026 morava no ``gui_prefs``, pela chave do lugar, e vale (traduzida
-    pelos adaptadores da tela) até ela arrastar de novo (:func:`_a_ordem_de_antes`).
+    pelos adaptadores da tela) até o usuário arrastar de novo (:func:`_a_ordem_de_antes`).
     """
     try:
         ordem = [_chave_da_ordem(chave) for chave in _ordem_gravada()]
@@ -4862,13 +4862,13 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     """A linha «Não Conectou» de cada APARELHO que não chegou e não está no ar.
 
     Não chegou é a central dizendo «não chegou» (qualquer motivo, menos a recusa do um-por-vez, que
-    não começou nada, e a busca que ela desligou), ou o «esperando» que passou de
+    não começou nada, e a busca que o usuário desligou), ou o «esperando» que passou de
     :data:`ESPERA_NA_TELA_S`.
 
     A linha tem aparelho (ESQUECER-E-LIMPAR-AS-CONEXOES-01, D-3009-A-LINHA-TEM-APARELHO,
     30/09/2026): a busca que ninguém respondeu (movimento sem endereço) virava «DualSense · Não
     Conectou», com o desenho do controle, a borda laranja e a caixa que abria:
-    o *«controle fantasma»* dela.  <!-- noqa-acento: citação literal -->
+    o «controle fantasma».
 
     Agora a linha só existe enquanto há aparelho de verdade que não chegou e não está no ar em
     adaptador nenhum, por transporte nenhum (``no_ar``: o ``Connected`` do BlueZ e o ``uniq`` do
@@ -4879,7 +4879,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     A meia chave é da central e a tela só mostra (achado 8 da auditoria de 26/09,
     A-CAIXA-FICA-ONDE-O-USUARIO-ABRIU-01): quem tira a chave do ``Pair`` que não conectou é a
     central, antes do «não chegou» (``central_do_radio._esquecer_a_meia_chave``), e quem tira a
-    linha é o X dela (``radio.dispensar``).
+    linha é o X da linha (``radio.dispensar``).
     """
     da_mesa = {_so_hex(str(e.get("uniq") or "")): e for e in ctx.mesa}
     linhas: list[dict[str, Any]] = []
@@ -4963,7 +4963,7 @@ def _os_que_nao_viraram_controle(diario: dict[str, Any] | None, enderecos: list[
 
 
 def _a_cara_do_controle(eu: dict[str, Any]) -> dict[str, Any]:
-    """A cor do plástico, o nome dela e o jogador do controle na mesa: a linha dele na sala os
+    """A cor do plástico, o nome e o jogador do controle na mesa: a linha dele na sala os
     leva igual, no rádio ou no cabo (a identidade é do controle, não do transporte)."""
     cor = _hex_do_plastico(str(eu.get("cor") or ""))
     nome_da_cor = str(eu.get("nome") or "")
@@ -5341,7 +5341,7 @@ def _aparelho_na_tela(alvo: str) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "abrir-adaptador")
 def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem de produto)."""
+    """Abre um adaptador e fecha os outros (acordeão exclusivo, ordem do produto)."""
     lug = _lugar_na_tela(o)
     if len(_CENA_NA_TELA.get("lugares") or ()) == 1:
         return {"armou": True}
@@ -5351,11 +5351,11 @@ def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "adaptador-reordenar", grava="guardar_ordem_dos_adaptadores")
 def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A ordem das caixas que ela arrastou — gravada, e a sala nasce nela.
+    """A ordem das caixas que o usuário arrastou — gravada, e a sala nasce nessa ordem.
 
     Decisão de 25/09/2026:
-    *«segurar a área do conector e arrastar ela pra mudar de ordem entre eles»*.
-    <!-- noqa-acento: citação literal -->
+    segurar a área do conector e arrastar para mudar a ordem entre eles.
+
 
     O roteiro da página solta a caixa no lugar e manda a ordem NOVA, de cima para baixo, pelos
     ``data-id`` (o endereço de cada adaptador), que vai para o adaptador pelo dono do nome dele
@@ -5397,7 +5397,7 @@ def _so_o_foco(o: dict[str, Any]) -> bool:
 
 @gesto("08-conexoes.html", GESTO_DO_APELIDO, grava="dar_nome_ao_adaptador")
 def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O nome que ela dá ao adaptador — dele, pelo endereço, e vai com ele."""
+    """O nome que o usuário dá ao adaptador — dele, pelo endereço, e vai com ele."""
     if _so_o_foco(o):
         return {"armou": True}
     lug = _lugar_na_tela(o)
@@ -5415,10 +5415,10 @@ def _alias_do_aparelho(endereco: str, nome: str) -> Any:
 
     O nome é do aparelho e o BlueZ o guarda por adaptador. A função escrevia no PRIMEIRO objeto da
     árvore: com o controle pareado em dois adaptadores o nome ia para o de onde ele não estava e a
-    tela lia o outro (lista dela de 25/09, passo a2: *«O nome renomeado não aparece»*). Agora vai
+    tela lia o outro (lista de 25/09, passo a2: o nome renomeado não aparecia). Agora vai
     para todos e vale onde ele reconectar. Nome vazio devolve o de fábrica (o BlueZ faz isso com o
     ``Alias`` em branco) e a tela volta
-    ao «Player N».  <!-- noqa-acento: citação literal -->
+    ao «Player N».
     Devolve a primeira escrita que deu, ou a primeira recusa quando nenhuma deu.
     """
     perfil._com_o_src()
@@ -5436,7 +5436,7 @@ def _alias_do_aparelho(endereco: str, nome: str) -> Any:
 
 @gesto("08-conexoes.html", "aparelho-renomear", grava="escrever_propriedade")
 def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O nome de um aparelho — Vitória, Caixa de som — no `Alias` do BlueZ."""
+    """O nome de um aparelho — Sala, Caixa de som — no `Alias` do BlueZ."""
     if _so_o_foco(o):
         return {"armou": True}
     ap = _aparelho_na_tela(str(o.get("alvo") or ""))
@@ -5643,7 +5643,7 @@ def _tirar_a_linha(p: Any, ap: dict[str, Any]) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "dispensar-linha", grava="radio.dispensar")
 def dispensar_linha(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O X da linha «Não Conectou»: tira a linha, e só ela — não esquece nada"""
+    """O X da linha «Não Conectou»: tira a linha, e só essa — não esquece nada"""
     ap = _linha_na_tela(o)
     if not _tem_x(ap):
         raise ValueError("só a linha «Não Conectou» tem o X")
@@ -5984,7 +5984,7 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
 
 
 def nome_com_a_bateria(rotulo: str, pct: object) -> str:
-    """«Cosmic Red • BT • 85%» — o rótulo curto e a carga, quando ela é lida."""
+    """«Cosmic Red • BT • 85%» — o rótulo curto e a carga, quando é lida."""
     bateria = _texto_da_bateria(pct)
     if not rotulo or not bateria or bateria == TRAVESSAO_DA_LINHA:
         return rotulo
@@ -6074,7 +6074,7 @@ def _mapeadas(portas: Any) -> list[dict[str, Any]]:
 
 
 def html_das_entradas_mapeadas(portas: Any) -> str:
-    """As entradas já mapeadas, uma por linha: o nome e onde ela fica."""
+    """As entradas já mapeadas, uma por linha: o nome e onde fica."""
     mapeadas = _mapeadas(portas)
     if not mapeadas:
         return '<li class="vazio">Nenhuma ainda.</li>'

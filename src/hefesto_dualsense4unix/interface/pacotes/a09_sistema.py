@@ -3,9 +3,9 @@
 
 O QUE TEM DONO: o serviço está de pé (o daemon respondeu — se ele calasse, não
 haveria pacote), o perfil ativo, a política de bateria (`rumble_policy`, que é o
-mesmo dado do perfil de bateria desta aba) e quantos controles ela alcança.
+mesmo dado do perfil de bateria desta aba) e quantos controles a mudança alcança.
 
-O ALCANCE É A LINHA QUE MAIS ERRA, e errou hoje: ela dizia *"Os 4 controles"*
+O ALCANCE É A LINHA QUE MAIS ERRA, e errou hoje: dizia «Os 4 controles»
 com dois na mesa. Aqui ele sai de `conectados`, e a régua da aba o cobra.
 
 O QUE NÃO TEM: as versões, os plugins (D-OS-PLUGINS-APARECEM-ONDE-AGEM) e os consertos —
@@ -16,8 +16,8 @@ A MEIA LIGAÇÃO DE 01/09, MEDIDA E FECHADA EM 02/09/2026
 O `pacote()` delegava para `interface/sistema.pacote` — mas o `_leitura()` que o
 alimentava preenchia TRÊS dos sete campos do `Leitura` (`status`, `autostart`,
 `state`). Os outros quatro chegavam `None`, e a camada do produto faz a coisa
-certa com `None`: devolve o traço. **Só que a página não é branca — ela é o
-desenho dela.** Onde o pacote não escreve, o que fica na tela é o literal do
+certa com `None`: devolve o traço. **Só que a página não é branca — é o
+desenho.** Onde o pacote não escreve, o que fica na tela é o literal do
 mockup, e ele é convincente:
 
     o que a tela mostrava          o que a máquina do usuário dizia (02/09, 04:23)
@@ -162,7 +162,7 @@ def _no_painel(repouso: Any) -> str:
     O QUE ISSO ARRANCA DA TELA, e é o ponto inteiro: enquanto ninguém escrevia
     neste endereço, o painel continuava com as quatro linhas do mockup —
     `[23:41:02] daemon pronto · 2 controles`, `perfil "Mortal Kombat" aplicado
-    aos 2`, `gatilho L2 escrito, sem leitura de volta`. Nenhuma delas aconteceu.
+    aos 2`, `gatilho L2 escrito, sem leitura de volta`. Nenhuma dessas aconteceu.
     Um registro técnico inventado é a pior espécie de mentira desta aba: ele
     parece a prova.
     """
@@ -266,7 +266,7 @@ def _versao() -> str:
 
 
 def _unidade() -> str:
-    """O nome da unit do daemon, do DONO dela — nunca digitado."""
+    """O nome da unit do daemon, do DONO da unit — nunca digitado."""
     from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL
 
     return str(SERVICE_NORMAL)
@@ -275,7 +275,7 @@ def _unidade() -> str:
 def _autostart() -> str | None:
     """A saída crua de `systemctl --user is-enabled`. `None` = nem deu para perguntar.
 
-    A UNIT NÃO SE DIGITA — ela tem dono, e digitá-la já mentiu. Medido em
+    A UNIT NÃO SE DIGITA — tem dono, e digitá-la já mentiu. Medido em
     01/09/2026: esta linha trazia a literal `hefesto-dev-dualsense4unix.service`,
     sobrevivente da purga do `-dev`. A unit com esse nome NÃO EXISTE mais;
     `systemctl --user is-enabled` devolvia `not-found` enquanto a verdade da
@@ -321,13 +321,13 @@ def _achados(state: dict[str, Any] | None,
 
     Medido por grep antes de ligar: as duas funções tinham UM chamador em toda a
     árvore, e era a GTK. São funções de MÓDULO — não pedem janela, não pedem
-    `self` — então isto é ponte, não código novo. Na bancada, agora, as duas
+    `self` — então isto é ponte, não código novo. No ensaio, agora, as duas
     devolvem `None`: o exame continua com seis linhas, e é assim que a GTK
     também se comporta hoje. A diferença aparece no dia do problema, que é
-    justamente o dia em que ela precisa ver.
+    justamente o dia em que o usuário precisa ver.
 
     E A COERÊNCIA DOS PERFIS, desde 28/09/2026 — ver :func:`linhas_dos_perfis`.
-    Ela também só fala quando há problema, e é o bloco que o `doctor` já tinha.
+    A caixa também só fala quando há problema, e é o bloco que o `doctor` já tinha.
     """
     try:
         linhas: list[tuple[str, ...]] = list(
@@ -362,17 +362,17 @@ def linha_do_som_do_sistema(
         state: dict[str, Any] | None) -> tuple[str, str] | None:
     """*"Som do sistema: sai em X, entra por Y"* — `None` quando não se sabe.
 
-    **O PEDIDO É DE PRODUTO, 21/09/2026:** *"outra coisa que precisamos ter é
-    sincronia com os canais de saida de som e entrada de som do sistema
-    operacional. isso é importante."*
-    <!-- noqa-acento: citação literal -->
+    **O PEDIDO DO PRODUTO, 21/09/2026:** sincronia com os canais de saída de
+    som e de entrada de som do sistema operacional, como coisa
+    importante.
+
 
     **OS NOMES SÃO OS DO PAINEL DO USUÁRIO, e é o ponto inteiro.** Eles vêm da
     `Description` que o próprio servidor de som publica — as mesmas palavras
     que o painel do COSMIC mostra («Microfone do Controle 1», «HDA NVidia
     Estéreo digital (HDMI)»). Ler o nome CRU aqui daria
     `alsa_output.pci-0000_0a_00.1.hdmi-stereo`, que não é palavra de quem quer
-    jogar — e, pior, não seria o mesmo texto que ela lê do outro lado da tela.
+    jogar — e, pior, não seria o mesmo texto que o usuário lê do outro lado da tela.
 
     **NÃO CUSTA UM SUBPROCESSO.** O valor foi lido pelo `ouvinte_do_som` quando
     MUDOU e viaja no `state_full`. Esta aba já paga 2,4 s de exame; mais dois
@@ -471,11 +471,11 @@ def _prontuario(pode_perguntar: bool = True) -> tuple[str, str] | None:
     `pode_perguntar=False` NA PRIMEIRA LEITURA DA FAIXA LENTA, e a razão é o
     relógio: aquela é a única que roda DENTRO do laço do GTK (ver
     `_faixa_lenta`), e disparar ali a varredura de 7 s faz as quatro leituras
-    seguintes disputarem o disco com ela. Medido em 03/09/2026: o primeiro tique
+    seguintes disputarem o disco com essa leitura. Medido em 03/09/2026: o primeiro tique
     da janela custou **1.271 ms** com a pergunta solta, e a mediana dos outros
     dezenove foi **4,7 ms**. Adiando-a para a primeira RELEITURA — que já é
     thread — o pico sai do caminho e a linha do prontuário chega dois segundos
-    depois, que é quando ela chegaria de qualquer jeito.
+    depois, que é quando chegaria de qualquer jeito.
     """
     agora = time.monotonic()
     venceu = (not _PRONTUARIO
@@ -490,7 +490,7 @@ def _prontuario(pode_perguntar: bool = True) -> tuple[str, str] | None:
 def _perguntar_o_prontuario() -> None:
     """O prontuário SEM a varredura dos executáveis. Guarda o resultado e sai.
 
-    ELA CUSTAVA 6,9 SEGUNDOS E ESTA TELA NÃO LIA UM BYTE DO USUÁRIO — medido em
+    A LEITURA CUSTAVA 6,9 SEGUNDOS E ESTA TELA NÃO LIA UM BYTE DO USUÁRIO — medido em
     06/09/2026, e é a cura do pior tique das dez abas.
 
     `medir_prontuario_dos_jogos()` (`daemon_actions.py:596`) é a composição de
@@ -516,7 +516,7 @@ def _perguntar_o_prontuario() -> None:
     receber o `examinar`, e `daemon_actions.py` está no `nao_toca` desta
     frente. Compor os dois donos aqui não é um segundo dono do fato — é o mesmo
     par, com o parâmetro que esta tela pode pagar. `interpretar_…` é PURA de
-    propósito, e o docstring dela diz por quê: *"recebe o censo pronto: a
+    propósito, e o docstring diz por quê: *"recebe o censo pronto: a
     leitura do disco é lenta o bastante para nunca rodar na linha do GTK"*. O
     diff de uma linha que devolveria o dono único está no relato desta frente.
 
@@ -580,7 +580,7 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     hoje NENHUMA tela do produto o mostrava — nem esta, nem a GTK.
 
     O LUGAR É O PAINEL "Detalhes técnicos", e a escolha é de sobriedade: é a
-    caixa de diagnóstico desta aba, ela já existe, já tem endereço
+    caixa de diagnóstico desta aba já existe, já tem endereço
     (`registro-texto`) e já está publicada. Uma linha de estado nova custaria
     30px numa coluna que o gerador engenha para acabar no mesmo y da irmã — e
     seria mudança de DESENHO, que é decisão de produto.
@@ -593,7 +593,7 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     ESTA LINHA LIA SÓ O `modelo` DO `state_full`, e o `modelo` sai do serial —
     que o daemon **não publica para quem está no rádio** (ver
     :data:`SEM_SERIAL_LIDO`: o aparelho responde, o publicador é que cala).
-    Fotografado na bancada em 03/09/2026, com o P1 no cabo e o P2 no rádio:
+    Fotografado no ensaio em 03/09/2026, com o P1 no cabo e o P2 no rádio:
 
         a fita, no topo      P1 · White · USB
                              P2 · Galactic Purple · BT
@@ -619,18 +619,18 @@ def _linha_de_identidade(c: dict[str, Any], mesa: list[dict[str, Any]]) -> str:
     apagou.
 
     NADA AQUI É INVENTADO: sem nome lido a linha não escreve nome nenhum, e sem
-    serial ela diz :data:`SEM_SERIAL_LIDO` em vez de um travessão que leria como
+    serial a linha diz :data:`SEM_SERIAL_LIDO` em vez de um travessão que leria como
     defeito. É a regra de produto — *campo sem informação não mostra nada*.
 
     A PALAVRA DO TRANSPORTE SAIU DAQUI — ONDA4-S10, 06/09/2026. Esta linha era
-    `"cabo" if transport == "usb" else "rádio"`, e ela **já estava certa** — o
+    `"cabo" if transport == "usb" else "rádio"`, e **já estava certa** — o
     que é exatamente o problema: era a QUARTA cópia de uma tradução que tem
-    dona, e a única que dizia a palavra de produto. Duas coisas ela não tinha, e a
+    dona, e a única que dizia a palavra do produto. Duas coisas a função não tinha, e a
     dona tem: o transporte que o mapa não conhece volta CRU, para alguém o ver,
     e o transporte AUSENTE diz *"não sei por onde"* em vez de afirmar rádio
     sobre um campo que ninguém leu — que é o que o `else` fazia.
 
-    **Este passo não muda um pixel na bancada**, e é o que impede a próxima
+    **Este passo não muda um pixel no ensaio**, e é o que impede a próxima
     pessoa de concluir que "a 09 já estava certa" e deixar a cópia viva.
     """
     numero = jogador_de(c)
@@ -645,7 +645,7 @@ def _repouso_do_painel(state: dict[str, Any] | None,
                        mesa: list[dict[str, Any]] | None = None) -> str:
     """O painel "Detalhes técnicos" SEM ninguém clicar — e ele deixa de ser um traço.
 
-    A GTK NUNCA TEVE UM TRAÇO AQUI: o `Gtk.TextView` dela fica sempre com a saída
+    A GTK NUNCA TEVE UM TRAÇO AQUI: o `Gtk.TextView` da GTK fica sempre com a saída
     de `systemctl status <unit>` (`daemon_actions.py` e `:2549`), reescrita
     a cada refresh — quem abre a aba já lê "está ativo? desde quando? falhou?".
     Esta tela mostrava `—` até alguém clicar em "Ver detalhes", e a nota de
@@ -654,9 +654,9 @@ def _repouso_do_painel(state: dict[str, Any] | None,
 
     O TEXTO DO `systemctl status` É DA JANELA ANTIGA, chamado e não copiado:
     `_matriz()._systemctl_status_text`. A unit vem de `_unidade()`, que a pede ao
-    dono dela — nunca digitada, pela razão que `_autostart()` já pagou.
+    dono da unit — nunca digitada, pela razão que `_autostart()` já pagou.
 
-    E A IDENTIDADE DE FÁBRICA VEM POR ÚLTIMO, que é a decisão 10 dela. As duas
+    E A IDENTIDADE DE FÁBRICA VEM POR ÚLTIMO, que é a decisão 10. As duas
     coisas cabem no mesmo painel porque as duas respondem à mesma pergunta —
     *"o que eu digo ao suporte?"*.
 
@@ -673,7 +673,7 @@ def _repouso_do_painel(state: dict[str, Any] | None,
     e o funil do piloto acusava `[texto banido] 'uniq'` a cada abertura da aba.
     `_systemctl_status_text` pede `-n 0`; o diário é do «Ver detalhes».
 
-    A `mesa` É A FITA DO TOPO, e ela entra por aqui só para atravessar até
+    A `mesa` É A FITA DO TOPO, e entra por aqui só para atravessar até
     :func:`_linha_de_identidade` — nada nesta função a lê. Tem valor padrão
     porque a faixa lenta a repassa e as réguas chamam as duas de um argumento
     só; sem mesa o painel escreve o que o `state_full` sozinho sabe, que é
@@ -812,7 +812,7 @@ def _faixa_lenta(state: dict[str, Any] | None,
                  ) -> tuple[Any, Any, Any, Any, Any]:
     """As leituras CARAS: SÍNCRONA na primeira, EM THREAD nas releituras.
 
-    Elas saem deste processo — subprocesso, disco — e nenhuma muda entre dois
+    As leituras saem deste processo — subprocesso, disco — e nenhuma muda entre dois
     piscares. O tique da pintura é de 100 ms; a faixa lenta é de 2 s, que é a
     mesma separação que `scripts/tela/sistema_viva.py` já tinha medido e escolhido.
 
@@ -824,10 +824,10 @@ def _faixa_lenta(state: dict[str, Any] | None,
     7 segundos. Enquanto ele varre, o disco fica disputado e as CINCO leituras
     daqui — que custam 18 ms com a máquina calma — passaram a custar **1.840 ms**
     e **302 ms** em duas voltas medidas em 03/09/2026. A faixa lenta roda dentro
-    do laço do GTK: isso é a janela dela travada por quase dois segundos, uma vez
+    do laço do GTK: isso é a janela do usuário travada por quase dois segundos, uma vez
     a cada cinco minutos, sem nada na tela dizendo por quê.
 
-    A JANELA ANTIGA JÁ FAZIA ASSIM, e é dela o molde: `_refresh_daemon_view_async`
+    A JANELA ANTIGA JÁ FAZIA ASSIM, e é de lá que vem o molde: `_refresh_daemon_view_async`
     e `_refresh_storm_diag` submetem tudo a um worker e devolvem por
     `GLib.idle_add`. O que faltava aqui era o mesmo cuidado.
 
@@ -841,7 +841,7 @@ def _faixa_lenta(state: dict[str, Any] | None,
       réguas o esvaziam para forçar a leitura; se esvaziar passasse a devolver
       `None` até uma thread voltar, toda régua desta aba viraria uma corrida.
 
-    A `mesa` ATRAVESSA POR AQUI, e ela é a única entrada que MUDA dentro da
+    A `mesa` ATRAVESSA POR AQUI, e é a única entrada que MUDA dentro da
     janela de 2 s: a cor do plástico é perguntada em thread e chega depois do
     primeiro tique. O painel técnico ganha o nome do controle na releitura
     seguinte, e é a mesma espera que a fita do topo já tem — não uma nova.
@@ -941,7 +941,7 @@ def _leitura(ctx: Contexto) -> Any:
     Cada campo dele nomeia quem o produz, e o docstring de lá lista todos. O
     que esta função faz é buscá-los; nenhum é calculado aqui.
 
-    ATÉ 02/09/2026 ELA PREENCHIA TRÊS, e os quatro que faltavam não davam erro:
+    ATÉ 02/09/2026 A FUNÇÃO PREENCHIA TRÊS, e os quatro que faltavam não davam erro:
     a camada do produto devolve o traço honesto para `None`. Só que o traço
     NUNCA CHEGAVA À TELA — o pacote não emitia aqueles endereços, e o que ficava
     à vista era o literal do mockup. Um `None` calado aqui virava, três camadas
@@ -965,7 +965,7 @@ def _leitura(ctx: Contexto) -> Any:
 
 
 def _frase(fn: Any, state: Any) -> str | None:
-    """A frase daquela função do produto, ou `None` quando ela levantou.
+    """A frase daquela função do produto, ou `None` quando a função levantou.
 
     `None` chega à camada de tela como *"ninguém respondeu"*, que é o que a
     pessoa precisa ler. Uma frase inventada aqui seria pior: a tela afirmaria
@@ -1028,7 +1028,7 @@ def _um_chip(c: dict[str, Any], acesos: frozenset[str] = frozenset()) -> str:
     """Um chip da fita, com o que se LEU daquele controle — e nada mais.
 
     A COR SÓ APARECE SE ALGUÉM A LEU. Sem leitura o chip perde a classe
-    `plastico` (e com ela a borda colorida), perde o `--plastico` e perde o nome:
+    `plastico` (e com isso a borda colorida), perde o `--plastico` e perde o nome:
     é a regra de produto, *campo sem informação não mostra nada*. Inventar um tom para
     preencher seria repetir o defeito que esta frente veio matar, só que com
     outra cor.
@@ -1106,9 +1106,9 @@ def _com_quem_esta_na_frente(valor: Any, state: Any) -> str | None:
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `interface/sistema.pacote` — a camada do PRODUTO.
 
-    ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA: dezoito nomes públicos em
+    A CAMADA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA: dezoito nomes públicos em
     `interface/sistema.py`, e o `casa-sabe` os listava como promessa sem caminho.
-    E ela foi escrita PARA ESTA PÁGINA — as chaves que devolve são os
+    E foi escrita PARA ESTA PÁGINA — as chaves que devolve são os
     `data-campo` daqui: `hefesto-estado`, `hefesto-pausa`,
     `hefesto-troca-de-perfil`, `hefesto-ambiente`.
 
@@ -1118,7 +1118,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     O QUE ELE EMITE É O ENDEREÇO DA PÁGINA, E NADA MAIS — 02/09/2026. Antes
     saíam quatro chaves com o nome que a CAMADA usa (`frase`, `autostart`,
-    `perfil`, `registro`), e nenhuma delas é endereço desta tela. Três eram
+    `perfil`, `registro`), e nenhuma dessas é endereço desta tela. Três eram
     órfãs inofensivas; a quarta era um estrago:
 
         `perfil` É O CABEÇALHO DAS DEZ ABAS — o perfil de JOGO, que
@@ -1192,9 +1192,9 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
     """As linhas que a coluna Atenção da Jogar publicava, já na forma do exame.
 
     A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. A coluna Atenção saiu da Jogar em
-    07/09, por ordem de produto, e as fontes que só ela publicava ficaram caladas no
+    07/09, por ordem do produto, e as fontes que só essa publicava ficaram caladas no
     produto: as de `painel.AVISOS_DA_TELA` e a que o pacote da Jogar junta a
-    elas (a divergência de máscara). Ficam fora a pausa, o detector cego e o
+    as duas (a divergência de máscara). Ficam fora a pausa, o detector cego e o
     Freestyle, que o Status desta aba e a Jogar já mostram
     (`a01_jogar.FONTES_DO_PAINEL_COM_OUTRA_CASA`).
 
@@ -1341,7 +1341,7 @@ def _pagina_da_aba(nome: str) -> str:
 
 
 def _cabeca_e_destino(achado: dict[str, Any]) -> tuple[str, str]:
-    """A frase curta da linha e o endereço do gesto que mora na cabeça dela."""
+    """A frase curta da linha e o endereço do gesto que mora na cabeça da linha."""
     txt = _sem_o_prefixo_da_cura(str(achado.get("txt") or ""))
     curta = str(achado.get("curta") or "") or frase_curta_do_exame(txt)
     casou = _GESTO_NA_ABA.match(curta)
@@ -1590,15 +1590,15 @@ def _trava(ctx: Contexto, nome: str,
 
     `travas` É A CONTA JÁ FEITA, e existe para o TIQUE: :func:`razoes_do_cinza`
     pergunta à camada uma vez e passa o resultado aos três, em vez de montar
-    três `Leitura` por volta. Sem ela, o comportamento é o de sempre.
+    três `Leitura` por volta. Sem a volta, o comportamento é o de sempre.
 
-    A CONTA É DA CAMADA DO PRODUTO — `aba_sistema.travas(leitura)` — e ela já
+    A CONTA É DA CAMADA DO PRODUTO — `aba_sistema.travas(leitura)` — e já
     estava escrita, medida e ligada até a penúltima camada quando esta frente
     começou: cobre `retomar`, `desligar`, `reiniciar` e `ver-detalhes`, com o
     motivo em português pronto para o tooltip. O que
     faltava era alguém chamá-la.
 
-    ELA NÃO PINTA O BOTÃO DE CINZA, E ISSO ESTÁ DECLARADO. O desenho não tem
+    A FUNÇÃO NÃO PINTA O BOTÃO DE CINZA, E ISSO ESTÁ DECLARADO. O desenho não tem
     estado apagado para `.btn` (medido: a folha desta página tem
     `.seg button:disabled`, e nada para `.btn`), e inventá-lo mudaria o que o usuário
     aprovou. O que esta função destrava é a metade que NÃO é desenho: o clique
@@ -1622,11 +1622,11 @@ def _trava(ctx: Contexto, nome: str,
 TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
     "parar-ou-retomar": "`travas()` o tranca com o serviço desligado, dizendo *'O "
                 "serviço já está desligado'* — e isso era verdade até 03/09/2026, "
-                "quando ele deixou de ser um botão só de parar. Ela mandou o "
+                "quando ele deixou de ser um botão só de parar. A decisão mandou o "
                 "mesmo botão LIGAR nesse estado (*'um específico pra parar o "
                 "Daemon E Ativar o Daemon'*), e obedecer à trava aqui recusaria "
-                "exatamente o clique que ela pediu que passasse a funcionar. A "
-                "cara de parar não precisa da trava: ela só aparece com o "
+                "exatamente o clique pedido para passar a funcionar. A "
+                "cara de parar não precisa da trava: só aparece com o "
                 "serviço de pé. Ver :func:`desligar`.",
 }
 
@@ -1636,11 +1636,11 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     ELE TINHA UM CHAMADOR EM TODO O `src/` — o terminal (`cli/app.py:373`), como
     a `interface/sistema.py:54` já tinha medido: *"a pausa fica gravada em disco e
-    sobrevive a desligar o computador; até hoje só o terminal saía dela."* Este
+    sobrevive a desligar o computador; até hoje só o terminal saía da pausa."* Este
     é o segundo, e é uma tela.
 
     A RECUSA ENTROU EM 03/09/2026, e o defeito estava na foto: com `paused:
-    False` — medido na bancada — o botão ficava verde e clicável, e o clique
+    False` — medido no ensaio — o botão ficava verde e clicável, e o clique
     mandava `daemon.resume` a um daemon que não está pausado. Um no-op que se
     apresenta como ação.
     """
@@ -1774,7 +1774,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `daemon._maquina`; o `_orcamento_declarado` (`core/rumble.py:95`) lê a
     fonte a cada pedido de vibração, e não uma cópia do boot. Está escrito lá
     com todas as letras: *"uma cópia feita no boot ficaria velha exatamente no
-    instante em que ela acabou de escolher"*.
+    instante em que o usuário acabou de escolher"*.
 
     A declaração é PARCIAL de propósito. O daemon funde contra o disco sob lock
     (`gravar_maquina_com_descartes:753`), então mandar só o orçamento não apaga
@@ -1834,7 +1834,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     ELE ESTÁ EM `hefesto_vivo.PERIGOSOS` — já estava, antes de ter dono — e por
     isso a prova automática desta casa NUNCA o clica. Ligar um gesto que mexe na
-    configuração de boot dela sem esse isento seria a régua estragando a máquina
+    configuração de boot do usuário sem esse isento seria a régua estragando a máquina
     para provar que sabe clicar.
     """
     ligado = _tela.autostart_ligado(_autostart())
@@ -1854,14 +1854,14 @@ def reiniciar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     frase que chega à tela, não uma deste pacote.
 
     ELE TAMBÉM JÁ ESTAVA EM `hefesto_vivo.PERIGOSOS`: reiniciar o daemon derruba
-    a sessão dele no meio do trabalho dela, e a régua não o clica.
+    a sessão dele no meio do trabalho do usuário, e a régua não o clica.
 
     **E ELE REPÕE O LANÇADOR — decisão, 21/09/2026.** A pergunta foi do usuário:
     *"seria importante ele fechar e reabrir o launcher, seja steam, epic,
     heroic ou qualquer outro"*; posta entre três formas (automático · oferecido
     num segundo clique · botão separado), o usuário escolheu a primeira com estas
-    palavras: *"Faz automático mesmo"*.
-    <!-- noqa-acento: citação literal -->
+    palavras: a forma automática.
+
 
     **O QUE ISSO CURA, e é medido:** o lançador que subiu ANTES do daemon
     segura o controle FÍSICO (`STEAM-NO-FISICO-01`, medido quatro vezes) —
@@ -1931,21 +1931,21 @@ def _rotulo_do_desenho(gesto: str) -> str:
     O dono do rótulo é o gerador (`interface/aba09.py`, o `item()`), e o que ele
     produziu está na página que o produto renderiza. Digitar "Parar o serviço"
     aqui seria o segundo dono de uma palavra que o usuário escolheu — e envelheceria
-    calado no dia em que ela trocasse o verbo, que é exatamente o que aconteceu
+    calado no dia em que o usuário trocasse o verbo, que é exatamente o que aconteceu
     em 31/08 ("encerrar" -> "parar").
 
     Devolve `""` quando não achou: quem chama trata como "não sei" e não escreve.
 
-    A BANCADA ENTRA COMO SEGUNDA FONTE — 06/09/2026, e não é preferência: um
+    O MOCKUP ENTRA COMO SEGUNDA FONTE — 06/09/2026, e não é preferência: um
     botão que NASCE nesta leva (o "Aplicar aos jogos da Steam") só existe no
-    desenho de hoje, porque **publicar é ato dela**. Sem a segunda fonte o
+    desenho de hoje, porque **publicar é ato do usuário**. Sem a segunda fonte o
     rótulo sairia vazio, `blocos_dos_botoes` pularia o botão, o "Confirma?"
     nunca chegaria à tela — e o segundo clique não teria como trazer o rótulo
     que **só existe no botão armado**. O consentimento em dois cliques ficaria
     impossível de dar justamente no botão mais destrutivo da leva.
 
-    A ORDEM É PUBLICADO PRIMEIRO, e ela importa: onde os dois têm o botão, quem
-    manda é o que o produto RENDERIZA — comparar contra a bancada faria o guarda
+    A ORDEM É PUBLICADO PRIMEIRO, e importa: onde os dois têm o botão, quem
+    manda é o que o produto RENDERIZA — comparar contra o mockup faria o guarda
     esperar uma palavra que a tela do usuário não mostra.
     """
     if not _ROTULOS:
@@ -2010,7 +2010,7 @@ def _de_pe(ctx: Contexto) -> bool:
     """O serviço está de pé? A lista dos estados "de pé" é da CAMADA DO PRODUTO.
 
     `aba_sistema.DE_PE` são os dois que contam como vivo (`online_systemd` e
-    `online_avulso`). Perguntar a ela, em vez de comparar com `"offline"`, é o
+    `online_avulso`). Perguntar ao estado, em vez de comparar com `"offline"`, é o
     que impede esta aba de voltar a colapsar os QUATRO estados em dois — que foi
     o defeito curado em 03/09 e está escrito em :func:`_status_do_daemon`.
     """
@@ -2197,7 +2197,7 @@ NADA_A_CORRIGIR = "O serviço já sobe pelo sistema — não há o que corrigir.
 def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Corrigir o serviço" — a saída de quem caiu no modo improvisado.
 
-    A LINHA **L315** DO CSV, e ela era a metade que faltava de um par. O HTML já
+    A LINHA **L315** DO CSV, e era a metade que faltava de um par. O HTML já
     RECONHECE `online_avulso` desde 03/09 — a linha "O serviço está" escreve
     *"Ligado, em modo improvisado"* em laranja —, e não oferecia saída nenhuma:
     **quem caía nesse estado era avisado e não tinha botão de conserto.** A
@@ -2231,10 +2231,10 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
     A PROVA AUTOMÁTICA NUNCA O CLICA: `grava="_systemctl"` o põe em
     `pacotes.perigosos()` pelo decorador, no mesmo commit que o ensinou a mexer
-    no serviço dela.
+    no próprio serviço.
 
     AS DUAS FRASES SÃO DO DONO, palavra por palavra
-    (`daemon_actions.MIGRAR_DEU_CERTO` e `MIGRAR_NAO_DEU`) — elas saíram de
+    (`daemon_actions.MIGRAR_DEU_CERTO` e `MIGRAR_NAO_DEU`) — essas saíram de
     dentro do `_on_migrate_done` hoje justamente para este gesto não redigitar
     o que a janela antiga já dizia.
     """
@@ -2256,17 +2256,17 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Restaurar de fábrica" — o último dos cinco sem motor, e o mais destrutivo.
 
-    A LINHA **L343** DO CSV. O botão estava na página desde que ela nasceu,
+    A LINHA **L343** DO CSV. O botão estava na página desde que nasceu,
     vermelho, prometendo *"Pergunta antes"* — e o clique caía em
     `gesto_da_pagina() -> None`, imprimindo `[gesto sem dono]` no terminal de
-    quem lançou a janela. Ela não tinha como saber que não pegou.
+    quem lançou a janela. O usuário não tinha como saber que não pegou.
 
     O QUE O SEGURAVA NÃO ERA O MOTOR, e isso estava medido desde 04/09: os três
     passos do ato têm dono FORA da janela — o localizador do preset
     (`footer_actions._meu_perfil_asset`, função de MÓDULO), o
     `Profile.model_validate` do JSON e os três tempos de
     `pacotes.perfil.gravar_e_reaplicar` (disco, reaplicar, `launch_env.refresh`).
-    O que era da janela é o diálogo — e a D-03 dela já o substituiu por dois
+    O que era da janela é o diálogo — e a D-03 já o substituiu por dois
     cliques — e o refresh das abas velhas, que esta interface não tem.
 
     O QUE O SEGURAVA ERA A REDE DE SEGURANÇA: um gesto que grava restauraria o
@@ -2287,7 +2287,7 @@ def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     aqui, passar o nome que está valendo AGORA faz a comparação casar e o
     `switch` sair — que é a mesma coisa dita no vocabulário deste lado. Sem
     ele, o `.json` mudaria no disco e o controle continuaria com o perfil
-    anterior, que é o sintoma que ela leu como *"não está salvando"*.
+    anterior, que é o sintoma que o usuário leu como «não está salvando».
 
     AS DUAS FRASES SÃO DO DONO (`footer_actions.frase_do_preset_ausente` e
     `frase_do_restauro`), e as duas nasceram hoje: a primeira era dev-fala num
@@ -2351,7 +2351,7 @@ def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
 
         steam_viva = slo.steam_running
     if steam_viva():
-        return ("A Steam está aberta — feche-a e clique de novo. Com ela aberta a "
+        return ("A Steam está aberta — feche-a e clique de novo. Com a Steam aberta a "
                 "mudança seria perdida ao sair.")
     return None
 
@@ -2465,7 +2465,7 @@ def _diario() -> str:
 def _por_na_area_de_transferencia(texto: str) -> bool:
     """O texto na área de transferência que a moldura entregou (`utils/area_de_transferencia`).
 
-    `False` = não há moldura, ou não deu. A lógica não importa a moldura: ela é quem dá.
+    `False` = não há moldura, ou não deu. A lógica não importa a moldura: é a moldura quem dá.
     """
     return _area.por(texto)
 
@@ -2490,7 +2490,7 @@ def _conhecidos_do_copiar(ctx: Contexto) -> list[str]:
 
 
 @gesto("09-sistema.html", "copiar-registro",
-       grava="põe o registro na área de transferência dela")
+       grava="põe o registro na área de transferência")
 def copiar_registro(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Copiar»: o painel INTEIRO na área de transferência, para colar num relato."""
     texto = _no_painel(_faixa_lenta(ctx.state or None, ctx.mesa)[4])
@@ -2550,7 +2550,7 @@ def _reaplicar_as_correcoes() -> str:
 
     O Steam Input (o conserto do `doctor`), os outros lançadores, a escolha do Vulkan e o Proton
     fixado com as versões que sobram. O que mexe na Steam inteira (o atalho de cada jogo da Steam) é
-    do guarda do jogo novo, que roda com ela fechada; aqui nada fecha nada.
+    do guarda do jogo novo, que roda com a Steam fechada; aqui nada fecha nada.
     """
     partes: list[str] = []
     try:
@@ -2621,7 +2621,7 @@ def bandeja(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A pílula «Ícone na bandeja»: inverte a escolha lida do autostart e a faz valer agora.
 
     Ligar grava `X-GNOME-Autostart-enabled=true` e sobe a bandeja se não há uma viva; desligar
-    grava `false` e encerra a viva pelo PID dela. O próximo login respeita a escolha.
+    grava `false` e encerra a viva pelo PID da instância. O próximo login respeita a escolha.
     """
     _ARMADO.clear()
     try:
@@ -2632,7 +2632,7 @@ def bandeja(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 @gesto("09-sistema.html", CAMPO_DO_TAMANHO,
-       grava="guarda o tamanho da interface na pasta de configuração dela")
+       grava="guarda o tamanho da interface na pasta de configuração")
 def tamanho_da_interface_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Os três botões do tamanho: grava 100, 125 ou 150 em `interface_escala`.
 
@@ -2649,7 +2649,7 @@ def tamanho_da_interface_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None
 
 
 @gesto("09-sistema.html", "salvar-registro",
-       grava="grava o registro num arquivo que ela escolhe")
+       grava="grava o registro num arquivo que o usuário escolhe")
 def salvar_registro(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Salvar»: o painel inteiro, com o endereço dos controles mascarado, num arquivo."""
     texto = _no_painel(_faixa_lenta(ctx.state or None, ctx.mesa)[4])
@@ -2697,7 +2697,7 @@ def _a_primeira_da_faixa_lenta(state: dict[str, Any] | None,
 
     Nota de 21/10/2026 (O-FIO-DA-JANELA-NUNCA-ESPERA-01): a primeira faixa lenta eram
     quatro `systemctl`, uma leitura do diário e o `/proc` e o `/sys` do exame da
-    tempestade no fio do GTK, com a janela parada. No fio da janela ela vai a um fio e o
+    tempestade no fio do GTK, com a janela parada. No fio da janela a leitura vai a um fio e o
     tique levanta :class:`fios.AindaNaoChegou`: nenhum travessão pintado, a primeira
     pintura continua verdadeira (um tique depois). Fora da janela (as réguas, o
     `olhar.py`), `_LENTO` vazio continua lendo na hora e esvaziá-lo força a leitura.
@@ -2711,7 +2711,7 @@ def _a_primeira_da_faixa_lenta(state: dict[str, Any] | None,
 
 
 def _as_baratas_sem_esperar() -> tuple[int | None, str | None, bool | None]:
-    """`(adaptadores, sessão, proton fixado)`: na hora fora da janela; no fio dela, ao fundo.
+    """`(adaptadores, sessão, proton fixado)`: na hora fora da janela; no fio da janela, ao fundo.
 
     As três leem o `/sys/class/bluetooth` e um arquivo do `HOME`: pouco, mas no fio da
     janela, e o disco disputado é o que faz o pouco virar muito (a faixa lenta, acima).
