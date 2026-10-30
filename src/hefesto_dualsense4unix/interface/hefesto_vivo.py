@@ -2168,7 +2168,14 @@ class Piloto:
 
         self.ponte.perguntar("String(!!window.__hef)", respondeu)
 
+    _ir_quando_confirmar = ""
+
     def _instalar(self) -> None:
+        """A página confirmou: a troca pedida durante a primeira carga sai agora, e a nova se instala."""
+        pendente, self._ir_quando_confirmar = self._ir_quando_confirmar, ""
+        if pendente:
+            self._ir(pendente)
+            return
         self._antes_de_instalar()
 
     def _antes_de_instalar(self) -> None:
@@ -3095,10 +3102,17 @@ class Piloto:
             GLib.idle_add(self._ir, ir)
 
     def _ir(self, pagina: str) -> bool:
-        """Abre uma aba. `False` para o GLib — ver `_proximo_da_fila`."""
+        """Abre uma aba. `False` para o GLib — ver `_proximo_da_fila`.
+
+        Antes de a primeira carga confirmar, a troca espera por ela: a carga cortada no meio
+        dá um FINISHED com a página em branco, que a guarda da janela lê como carga errada e
+        fecha a janela."""
         alvo = onde.pagina(_a_pagina_pedida(pagina), publicado=True)
         if not alvo.exists():
             self.tela._morrer(f"não existe a página pedida: {alvo.name}")
+            return False
+        if self.tela.primeira_carga:
+            self._ir_quando_confirmar = pagina
             return False
         pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
         _soltar_as_ondas()

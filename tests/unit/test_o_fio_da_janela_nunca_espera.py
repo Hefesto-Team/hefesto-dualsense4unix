@@ -107,11 +107,9 @@ def _vigiando() -> Iterator[list[str]]:
         _VIGIA.ligado = False
 
 
-def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """O piloto oculto passa pelas abas no relógio dele, com o gancho no fio da janela."""
+def _o_piloto_sem_servico(monkeypatch: pytest.MonkeyPatch) -> tuple[Any, Any, Any]:
+    """O GTK, o piloto e as ondas, com o serviço, o som e o microfone de mentira."""
     gtk = _gtk()
-    from gi.repository import GLib
-
     from hefesto_dualsense4unix.app import audio_saida
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as el
     from hefesto_dualsense4unix.integrations import ondas_de_som
@@ -123,9 +121,17 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.setattr(audio_saida, "rodar_leitura", lambda _argv: "")
     monkeypatch.setattr(el, "_rodar", lambda _argv: (1, ""))
     monkeypatch.setattr(ondas_de_som, "_LIGADO", [False])
+    return gtk, hv, ondas_de_som
+
+
+def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+    """O piloto oculto passa pelas abas no relógio dele, com o gancho no fio da janela."""
+    gtk, hv, ondas_de_som = _o_piloto_sem_servico(monkeypatch)
+    from gi.repository import GLib
+
     fora = SimpleNamespace(tiques={aba: [] for aba in ABAS}, achados=[], i=-1, acabou=False,
                            prazo=time.monotonic() + SEGUNDOS_POR_ABA * len(ABAS) + 60,
-                           antes=[], parada="", t0=time.monotonic())
+                           antes=[], parada="", t0=time.monotonic(), morreu=None)
     with hv._o_processo_da_janela():
         piloto = hv.Piloto(_args(sem_ondas=True))
         tique_original = piloto._tique
@@ -166,6 +172,7 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
                 gtk.main()
             fora.achados = list(achados)
         finally:
+            fora.morreu = piloto.tela.morreu
             fora.acabou = True
             piloto.pronto = False
             GLib.source_remove(guarda)
@@ -185,6 +192,7 @@ def test_tres_minutos_sem_o_fio_da_janela_esperar(
     """
     assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
     fora = _tres_minutos(monkeypatch)
+    assert fora.morreu is None, f"a janela fechou sozinha, antes da régua: {fora.morreu}"
     assert not fora.achados, (
         "o fio da janela esperou por fora do processo (subprocesso, IPC, `/sys`, `/proc`):\n  "
         + "\n  ".join(sorted(set(fora.achados))[:20]))
@@ -199,6 +207,54 @@ def test_tres_minutos_sem_o_fio_da_janela_esperar(
         f"{famintas} (o tique parou, ou o laço andou devagar); {fora.parada or 'sem parada'}; "
         f"tiques fora das abas: {len(fora.antes)}, o maior de "
         f"{max(fora.antes, default=0):.0f} ms")
+
+
+@pytest.mark.no_cover
+def test_a_troca_pedida_na_primeira_carga_espera_a_pagina_e_nao_fecha_a_janela(
+    casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """A troca de aba pedida na primeira carga sai depois que ela confirma, com a janela de pé.
+
+    Medido em 30/10/2026: a troca no STARTED da primeira carga a cortava, o FINISHED vinha com a
+    página em branco, a guarda da janela a lia como carga errada e fechava o laço em 1,5 s, sem
+    tique nenhum, que é a reprovação intermitente da régua dos três minutos.
+    """
+    gtk, hv, ondas_de_som = _o_piloto_sem_servico(monkeypatch)
+    from gi.repository import GLib, WebKit2
+
+    alvo = ABAS[1]
+    fora = SimpleNamespace(cortou=False, chegou=False)
+    with hv._o_processo_da_janela():
+        piloto = hv.Piloto(_args(sem_ondas=True))
+
+        def no_comeco(_view: Any, evento: Any) -> None:
+            if evento == WebKit2.LoadEvent.STARTED and not fora.cortou:
+                fora.cortou = True
+                piloto._ir(alvo)
+
+        def olhar() -> bool:
+            fora.chegou = piloto.pagina == alvo and piloto.pronto
+            if piloto.tela.morreu is not None or fora.chegou:
+                gtk.main_quit()
+                return False
+            return True
+
+        piloto.view.connect("load-changed", no_comeco)
+        vigia = GLib.timeout_add(50, olhar)
+        guarda = GLib.timeout_add(30000, gtk.main_quit)
+        try:
+            gtk.main()
+        finally:
+            piloto.pronto = False
+            GLib.source_remove(guarda)
+            if not fora.chegou and piloto.tela.morreu is None:
+                GLib.source_remove(vigia)
+            piloto._estado_vivo.parar()
+            piloto.tela.janela.destroy()
+            ondas_de_som.o_de_sempre().seguir({})
+    assert fora.cortou, "a primeira carga não começou: a troca não foi pedida no meio dela"
+    assert piloto.tela.morreu is None, f"a janela fechou sozinha: {piloto.tela.morreu}"
+    assert fora.chegou, f"a troca pedida na primeira carga não chegou: a aba é {piloto.pagina}"
 
 
 def test_os_fios_da_interface_nascem_por_um_dono_so() -> None:
