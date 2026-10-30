@@ -425,7 +425,7 @@ def test_net_active_ausente_retorna_none(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_subida_para_na_raiz(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A raiz não é janela de aplicação nenhuma: chegar nela é 'não sei',"""
+    """A raiz não é janela de aplicação nenhuma: chegar à raiz é 'não sei',"""
     monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
     filha = _FakeXWin(0x700001)
     display = _FakeArvoreDisplay(

@@ -89,7 +89,7 @@ def _rotulos_do_cartao() -> dict[str, str]:
 
 
 def _rotulos_de_botao() -> set[str]:
-    """O universo dos alvos válidos: a tela que o LANÇADOR abre, e só ela."""
+    """O universo dos alvos válidos: a tela que o LANÇADOR abre, e só essa."""
     achados = {
         _rotulo_do_botao(bruto)
         for _aba, html in _paginas()
@@ -211,13 +211,13 @@ def _nomes_de_modo() -> set[str]:
 
 
 def test_a_isencao_de_nome_de_modo_nao_passa_do_editor_de_modo() -> None:
-    """A isenção alcança só o que a razão dela sustenta: a aba Perfis."""
+    """A isenção alcança só o que a razão sustenta: a aba Perfis."""
     isentos = _nomes_de_modo()
     assert not isentos, (
         "`editor.modo` voltou a uma página publicada. A isenção de nome de modo "
         "foi escrita para o editor da aba Perfis, e o quadro saiu de lá por "
-        f"ordem dela em 11/09/2026: {isentos!r}. Se o endereço ressuscitou "
-        "noutra aba, a razão da isenção precisa ser reescrita para ELA — a "
+        f"decisão de 11/09/2026: {isentos!r}. Se o endereço ressuscitou "
+        "noutra aba, a razão da isenção precisa ser reescrita para AQUELA aba — a "
         "razão é semântica (nome de ESTADO, não de destino) e não viaja sozinha."
     )
 
@@ -229,7 +229,7 @@ def test_a_isencao_de_nome_de_modo_nao_passa_do_editor_de_modo() -> None:
     }
     assert not forasteiros, (
         "a isenção de nome de modo alcançou botão que não é do editor de modo: "
-        f"{forasteiros!r}. A razão dela é que os segmentos de `editor.modo` "
+        f"{forasteiros!r}. A razão da isenção é que os segmentos de `editor.modo` "
         "nomeiam um ESTADO do perfil e a prosa os cita como estado; um botão "
         "de outra aba citado no guia continua devendo o endereço dele."
     )

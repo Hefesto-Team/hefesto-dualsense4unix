@@ -1,4 +1,4 @@
-"""Z4/T15 — apagar perfil apaga o lock; a higiene do diretório dela."""
+"""Z4/T15 — apagar perfil apaga o lock; a higiene do diretório de perfis."""
 
 from __future__ import annotations
 

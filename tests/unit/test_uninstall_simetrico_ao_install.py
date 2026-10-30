@@ -42,7 +42,7 @@ def test_uninstall_remove_toda_regra_que_o_install_instala() -> None:
     faltando = _regras_do_repo() - _regras_removidas()
     assert not faltando, (
         "regras que o install instala e o uninstall NÃO remove: "
-        f"{sorted(faltando)}. Elas ficariam órfãs em /etc/udev/rules.d."
+        f"{sorted(faltando)}. Essas regras ficariam órfãs em /etc/udev/rules.d."
     )
 
 
@@ -106,7 +106,7 @@ def test_uninstall_remove_as_fontes_que_o_install_instala() -> None:
 
 
 def test_a_remocao_das_fontes_e_best_effort() -> None:
-    """Fonte é acabamento: derrubar o uninstall por causa dela seria trocar um"""
+    """Fonte é acabamento: derrubar o uninstall por causa da fonte seria trocar um"""
     for linha in _invocacoes_do_removedor_de_fontes():
         assert "|| true" in linha, (
             f"chamada do removedor de fontes sem proteção contra `set -e`: {linha}"
@@ -175,7 +175,7 @@ def _indices_de_remocao() -> dict[int, str]:
 
 
 def test_alvo_de_regra_preservada_sai_no_mesmo_gate_da_regra() -> None:
-    """`--keep-udev` preservava as regras 82/83 e apagava os alvos delas."""
+    """`--keep-udev` preservava as regras 82/83 e apagava os alvos dessas regras."""
     gate = _indices_no_gate_do_udev()
     remocoes = _indices_de_remocao()
     assert gate, "não achei o gate `if [[ \"${REMOVE_UDEV}\" -eq 1 ]]` no uninstall"

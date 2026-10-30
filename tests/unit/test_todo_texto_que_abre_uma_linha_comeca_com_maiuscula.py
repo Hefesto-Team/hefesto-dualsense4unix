@@ -1,7 +1,7 @@
-"""Todo texto que abre uma linha começa com maiúscula — e o nome que ela dá também.
+"""Todo texto que abre uma linha começa com maiúscula — e o nome que quem usa dá também.
 
 TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01 (05/10/2026). A régua da primeira letra
-(``test_todo_botao_da_tela_comeca_com_maiuscula.py``) só lia ``<button>``; a foto dela da aba 08
+(``test_todo_botao_da_tela_comeca_com_maiuscula.py``) só lia ``<button>``; a foto da aba 08
 trazia «nenhum aparelho no ar», «fora da faixa dos controles», «a faixa dele ainda não foi
 descoberta», «não se mede agora», «(lido)», «canal 161» e o nome «azul» do controle.
 
@@ -12,10 +12,9 @@ caixa por caixa aberta. Exceções, só estas e declaradas: o que não começa p
 unidade, «·», «—», aspas), a unidade e a marca escritas assim (``_MARCAS``) e o glifo de uma
 letra só (o «i» da informação no selo da aba Sistema).
 
-O NOME: ordem de 05/10/2026, 13h — *«Nome que o user colocar pra controle mesmo se ele
-colocar minúsculo o app corrige colocando a primeira letra maiúscula»*. Só a primeira letra; o
+O NOME: decisão de 05/10/2026, 13h — o nome que se dá ao controle, mesmo escrito em minúsculo,
+ganha a primeira letra maiúscula. Só a primeira letra; o
 resto como o usuário escreveu; ao gravar e ao ler o que já estava gravado.
-<!-- noqa-acento: citação literal -->
 
 TUDO É DE MENTIRA: as páginas num WebKit fora da tela, com o pintor do piloto; o BlueZ e o
 ``maquina.json`` são dublês; nada chega a daemon nem ao aparelho.
@@ -27,7 +26,7 @@ catraca); o ``nome_dado`` que devolve o nome como veio reprova as três réguas 
 
 A PENDÊNCIA DE FORA DA POSSE, numa catraca: a 06 tem UMA linha em minúscula (a dica da fita), e a
 cura é uma letra em ``pacotes/a06_navegacao.py``, que três sprints abertas da aba Navegação
-reivindicam. Ela fica em ``PENDENTES`` com a dona; a régua exige EXATAMENTE essa lista na página —
+reivindicam. Fica em ``PENDENTES`` com a dona; a régua exige EXATAMENTE essa lista na página —
 uma minúscula nova reprova, e a cura sem tirar a pendência também.
 """
 
@@ -138,7 +137,7 @@ def test_a_pagina_parada_abre_toda_linha_com_maiuscula(aba: str) -> None:
 
 
 def _cenas() -> list[dict[str, Any]]:
-    """A cena do desenho e uma com o que ela não mostra: quem espera, o receptor por descobrir,
+    """A cena do desenho e uma com o que ele não mostra: quem espera, o receptor por descobrir,
     o Wi-Fi em 2,4 GHz que cai e o adaptador que não mede a faixa."""
     from hefesto_dualsense4unix.interface import aba08
 
@@ -212,8 +211,8 @@ def test_a_tela_por_ancora_das_outras_abas_abre_toda_linha_com_maiuscula(
 
 def test_a_lista_das_telas_por_ancora_e_a_que_os_geradores_escrevem() -> None:
     """A régua abre as telas por âncora de uma lista escrita à mão: uma tela nova num gerador
-    (``class="tela-nova" id=…``) ficaria fora dela, calada. A lista tem de ser EXATAMENTE a que as
-    páginas da bancada trazem, em todas as abas e páginas soltas."""
+    (``class="tela-nova" id=…``) ficaria de fora, calada. A lista tem de ser EXATAMENTE a que as
+    páginas do mockup trazem, em todas as abas e páginas soltas."""
     declaradas = {("08-conexoes", a) for a in ANCORAS_DA_08} | set(ANCORAS_DAS_OUTRAS)
     nas_paginas = {
         (pag.stem, ident)

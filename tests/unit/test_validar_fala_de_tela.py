@@ -134,7 +134,7 @@ DICA_SOM_DEDICADO = Fala(
     pendente=Pendencia(
         aberta_em="2026-08-24",
         prazo_dias=30,
-        quem_fecha="a bancada",
+        quem_fecha="o ensaio",
         o_que_falta="o conteúdo do payload",
     ),
 )
@@ -168,7 +168,7 @@ DICA_SOM_DEDICADO = Fala(
     pendente=Pendencia(
         aberta_em="2026-08-24",
         prazo_dias=30,
-        quem_fecha="a bancada",
+        quem_fecha="o ensaio",
         o_que_falta="o conteúdo do payload",
     ),
 )
@@ -191,7 +191,7 @@ DICA = Fala(
     pendente=Pendencia(
         aberta_em="2026-01-01",
         prazo_dias=1,
-        quem_fecha="a bancada",
+        quem_fecha="o ensaio",
         o_que_falta="x",
     ),
 )
@@ -221,7 +221,7 @@ DICA = Fala(
     pendente=Pendencia(
         aberta_em="2026-08-24",
         prazo_dias=30,
-        quem_fecha="a bancada",
+        quem_fecha="o ensaio",
         o_que_falta="x",
     ),
 )
@@ -320,7 +320,7 @@ DICA = Fala(
     pendente=Pendencia(
         aberta_em="2026-08-24",
         prazo_dias=30,
-        quem_fecha="a bancada",
+        quem_fecha="o ensaio",
         o_que_falta="o conteúdo do payload",
     ),
 )

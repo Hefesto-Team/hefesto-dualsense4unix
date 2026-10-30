@@ -416,7 +416,7 @@ def test_documento_nao_alimenta_o_indice_de_variaveis(repo_falso: Path) -> None:
 
 
 def test_docs_process_fica_fora_da_regra_de_variavel(repo_falso: Path) -> None:
-    """Sprint PROPÕE — e propor o que não existe é o trabalho dela."""
+    """Sprint PROPÕE — e propor o que não existe é o trabalho da sprint."""
     pasta = repo_falso / "docs" / "process" / "sprints"
     pasta.mkdir(parents=True)
     (pasta / "2026-01-01-PROPOSTA-01.md").write_text(
@@ -452,7 +452,7 @@ def test_metodo_de_ipc_real_passa(repo_falso: Path) -> None:
 def test_renomear_metodo_no_codigo_sem_tocar_o_documento_reprova(
     repo_falso: Path,
 ) -> None:
-    """O cenário REAL da regra 3, e o motivo de ela existir."""
+    """O cenário REAL da regra 3, e o motivo de a regra existir."""
     escrever_doc(repo_falso, "protocolo.md", f"Chame `{METODO_REAL}`.\n")
     assert rodar("--root", str(repo_falso), "--all").returncode == 0
 
@@ -556,7 +556,7 @@ def test_a_nota_isenta_so_o_nome_que_o_usuario_cita(repo_falso: Path) -> None:
     assert proc.returncode == 1, proc.stdout
     assert "daemon.desligar" in proc.stdout
     assert ENV_FANTASMA not in proc.stdout, (
-        "a nota citou esta variável e ela ainda foi cobrada.\n" f"saída: {proc.stdout}"
+        "a nota citou esta variável e a variável ainda foi cobrada.\n" f"saída: {proc.stdout}"
     )
 
 

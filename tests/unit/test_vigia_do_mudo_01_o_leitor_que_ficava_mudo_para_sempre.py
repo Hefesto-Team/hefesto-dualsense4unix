@@ -20,7 +20,7 @@ _FAIXA_STICK = EixoAbsoluto(minimo=0, maximo=255, flat=0, fuzz=0, resolucao=0)
 
 
 class _DevFalso:
-    """Um `InputDevice` cujo `absinfo` responde o que a bancada mandar."""
+    """Um `InputDevice` cujo `absinfo` responde o que o teste mandar."""
 
     def __init__(self, valores: dict[int, int], *, ilegivel: bool = False) -> None:
         self.valores = valores

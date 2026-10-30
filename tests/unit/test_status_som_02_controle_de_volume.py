@@ -229,7 +229,7 @@ def test_o_curso_inteiro_do_controle_cabe_na_faixa_que_soa() -> None:
 
     Este teste cobra as três pontas do remapeamento de APRESENTAÇÃO:
 
-    1. o topo do curso é a saturação e não passa dela — nenhum pedaço do curso
+    1. o topo do curso é a saturação, sem passar disso — nenhum pedaço do curso
        cai na região em que o volume não muda mais;
     2. nenhuma porcentagem acima de zero cai na região MUDA — pedir 1 % e
        receber silêncio seria o mesmo defeito, do outro lado;

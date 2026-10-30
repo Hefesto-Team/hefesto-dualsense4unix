@@ -3,7 +3,7 @@
 A mordida da tarefa (a que prova a inversão): um corpo de mesa vazia
 (``aplicado_em: []``, ``guardado_em: []``) com um ``host`` que jura que o alvo
 está NA mesa. Antes desta função, a heurística de ``host`` venceria e a frase
-diria "aplicado" — é exatamente o que a bancada mediu em 23/08/2026. Depois da
+diria "aplicado" — é exatamente o que o ensaio mediu em 23/08/2026. Depois da
 cura, a frase tem de dizer que nada aconteceu, porque é isso que o CORPO diz.
 
 **Arranque o passo 2** (comente a leitura de ``destinos_da_aplicacao`` e volte

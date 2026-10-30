@@ -62,7 +62,7 @@ class TestUmTetoSo:
         """MORDIDA: devolva um `<input type="range" max="200">` ao gerador e isto reprova."""
         pagina = _PAGINA_PERFIS.read_text(encoding="utf-8")
         assert 'type="range"' not in pagina and "editor.prioridade" not in pagina, (
-            "a página voltou a ter um trilho de Prioridade com o teto escrito nela")
+            "a página voltou a ter um trilho de Prioridade com o teto escrito no HTML")
 
     def test_a_ordem_do_editor_usa_o_teto_do_schema(self) -> None:
         """O teto vem de `schema`, por nome, e o empate no topo não passa dele.

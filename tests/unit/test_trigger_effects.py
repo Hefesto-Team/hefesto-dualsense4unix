@@ -251,7 +251,7 @@ class TestFeedbackEVibration:
     def test_vibration(self):
         """A Vibração é a vibração oficial (`0x26`), a mesma da Metralhadora do início ao fim.
 
-        Ela mandava o `0x22` (o arco do firmware) com os bytes fora de ordem. Mordida: devolver
+        Antes mandava o `0x22` (o arco do firmware) com os bytes fora de ordem. Mordida: devolver
         a `vibration()` ao `PULSE_A`.
         """
         eff = tfx.vibration(3, 4, 40)

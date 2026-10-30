@@ -77,7 +77,7 @@ def test_remove_pela_cli_tira_o_appid_do_arquivo(steam_falsa: Path) -> None:
 
 
 def test_remove_preserva_o_arquivo_da_mantenedora(steam_falsa: Path) -> None:
-    """Só a linha do appid sai — cabeçalho e anotações dela ficam byte a byte."""
+    """Só a linha do appid sai — cabeçalho e anotações de quem usa ficam byte a byte."""
     runner.invoke(app, ["gamepad", "steam-input", "remove", "2111190"])
 
     texto = steam_falsa.read_text(encoding="utf-8")
@@ -105,7 +105,7 @@ def test_list_mostra_o_nome_e_nao_so_o_numero(steam_falsa: Path) -> None:
 
 
 def test_list_diz_como_desfazer(steam_falsa: Path) -> None:
-    """A listagem não pode ser um beco: ela ensina o gesto de saída."""
+    """A listagem não pode ser um beco: ensina o gesto de saída."""
     resultado = runner.invoke(app, ["gamepad", "steam-input", "list"])
 
     assert "remove" in resultado.output

@@ -1,11 +1,9 @@
 """TROCA-DENTRO-DO-JOGO-01 — a regra vale para TODO jogo, não só o que tem perfil.
 
-Ela leu a PS-L3-MASCARA-01 e cobrou, em 14/09/2026, com a grafia dela:
+Em 14/09/2026, lida a PS-L3-MASCARA-01, veio a cobrança: a regra não podia ter sido
+pensada só num dos jogos, e o defeito era o sintoma de algo maior.
 
-    *"inclusive nao pode ter sido feita pensando  (noqa-acento: citação literal)
-    so num dos jogos. ele é o sintoma de algo maior não?"*
-
-Estava certa. O conserto de 14/09 alcançava só o `steam_app_<appid>.env`, e na
+A cobrança procedia. O conserto de 14/09 alcançava só o `steam_app_<appid>.env`, e na
 máquina do usuário UM perfil tem `mode` (o do Future Knight): os outros 29 jogos leem o
 `default.env`, que copiava o estado VIVO e, sem vpad de pé, saía sem
 `SDL_GAMECONTROLLER_IGNORE_DEVICES`. O jogo aberto assim vê o DualSense de
@@ -14,8 +12,8 @@ grabado e o vpad chega como segundo controle. A env é lida UMA vez, no `exec`
 (`assets/hefesto-launch.sh`), e nada do que o daemon regrave depois a alcança.
 
 DECISÃO DE PRODUTO — D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL: fora do Modo Nativo
-o jogo vê só o controle virtual, com perfil ou sem perfil. O preço que ela leu
-antes de escolher: na Navegação o jogo fica sem gamepad até ela subir um modo.
+o jogo vê só o controle virtual, com perfil ou sem perfil. O preço, lido
+antes da escolha: na Navegação o jogo fica sem gamepad até quem usa subir um modo.
 
 MORDE, e são quatro curas independentes:
 
@@ -70,7 +68,7 @@ def _daemon(
     fisicos: int = 1,
     coop: bool = True,
 ) -> SimpleNamespace:
-    """A bancada sem perfil nenhum: o que o `default.env` descreve."""
+    """O ensaio sem perfil nenhum: o que o `default.env` descreve."""
     return SimpleNamespace(
         is_native_mode=lambda: native,
         config=SimpleNamespace(
@@ -102,13 +100,13 @@ def pasta(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_todo_jogo_abre_pronto_mesmo_sem_perfil(pasta: Path) -> None:
-    """O caso dela: Navegação, jogo sem perfil próprio, nenhum vpad de pé."""
+    """O caso medido: Navegação, jogo sem perfil próprio, nenhum vpad de pé."""
     le.materialize_launch_env(_daemon())
 
     env = _env(pasta / "default.env")
     assert _IGNORE in env, (
         "o jogo sem perfil abria vendo o DualSense de plástico, e o PS + R3 lá "
-        "dentro não alcança a env — ela é lida uma vez, no exec"
+        "dentro não alcança a env — a env é lida uma vez, no exec"
     )
     assert _DISABLE in env
     assert "pronto_para_troca=True" in _estado(pasta / "default.env")
@@ -182,7 +180,7 @@ def test_um_perfil_de_navegacao_nao_derruba_o_ignore_de_todo_jogo(
 @pytest.mark.parametrize(
     ("coop", "tem_ignore", "caso"),
     [
-        (True, True, "co-op ligado: um vpad por físico quando ela subir o modo"),
+        (True, True, "co-op ligado: um vpad por físico quando quem usa subir o modo"),
         (False, False, "co-op desligado: um vpad só, e o segundo físico ficaria escondido"),
     ],
 )

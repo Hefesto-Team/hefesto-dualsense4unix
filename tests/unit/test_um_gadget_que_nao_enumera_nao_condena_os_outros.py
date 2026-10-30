@@ -7,8 +7,8 @@ leitura do gadget que caiu girou 22.155 vezes em um segundo
 (``pad_usb_leitura_falhou err='[Errno 12]'``), uma linha por volta.
 
 A régua usa a pergunta de VERDADE do contrato (``pad_usb.contrato_que_falta``,
-com os módulos de mentira todos presentes), e não a lista fixa da bancada: é
-ela que lia a falha da enumeração e condenava os pads seguintes.
+com os módulos de mentira todos presentes), e não a lista fixa do ensaio: é
+essa lista que lia a falha da enumeração e condenava os pads seguintes.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ APP_ID = "hefesto-dualsense4unix"
 
 
 class Mesa:
-    """A bancada do gadget com a pergunta real do contrato e o hidraw por serial."""
+    """O ensaio do gadget com a pergunta real do contrato e o hidraw por serial."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         self.b = EnsaioDoGadget(monkeypatch, tmp_path)
@@ -269,7 +269,7 @@ class TestALeituraQueFalhaPerguntaEDorme:
 
         O ENOMEM da queda é o host que desligou a função do f_hid (medido em 22/10/2026:
         as 48 linhas de 18/10 a 21/10 caíram todas no `USB disconnect` do broker que
-        reinicia). A queda tem a linha dela; a da leitura, com `vezes=1`, repetia a mesma
+        reinicia). A queda tem a linha própria; a da leitura, com `vezes=1`, repetia a mesma
         notícia. Mordida: devolver o `_fechar_a_rajada` incondicional volta a linha. Um
         errno que a queda não explica (o EIO) continua escrevendo a dele: mordida, tirar
         o teste do errno cala o EIO.

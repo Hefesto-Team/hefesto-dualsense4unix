@@ -134,18 +134,18 @@ def test_a_continuacao_curta_ancorada_na_mesma_linha_e_conferida(
 def test_a_continuacao_curta_sem_ancora_na_linha_nao_e_adivinhada(
     arvore: Path,
 ) -> None:
-    """A conservadoria medida, e ela custou seis acusações falsas para nascer."""
+    """A conservadoria medida, que custou seis acusações falsas para nascer."""
     documento(arvore,
               "primeiro `core/exemplo.py:1`.\n\n"
               "muito depois, falando de outro arquivo, `:99999`.\n")
     saida = rodar(arvore)
     assert saida.returncode == 0, (
-        "o portão adivinhou a âncora de uma continuação solta e acusou por ela. "
+        "o portão adivinhou a âncora de uma continuação solta e acusou por essa âncora. "
         f"Disse: {saida.stdout!r}")
 
 
 def test_a_arvore_de_verdade_esta_limpa() -> None:
-    """Contra a árvore REAL: depois do reaponte de 13/08, ela abre inteira."""
+    """Contra a árvore REAL: depois do reaponte de 13/08, a árvore abre inteira."""
     saida = subprocess.run(
         [sys.executable, str(SCRIPT), "--all"],
         capture_output=True, text=True, cwd=RAIZ_REAL, check=False)

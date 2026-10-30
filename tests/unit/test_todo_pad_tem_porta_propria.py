@@ -1,9 +1,9 @@
 """Todo pad tem porta USB virtual própria (TODO-PAD-TEM-PORTA-PROPRIA-01, 14/10/2026).
 
-A decisão é a ``D-1410-TODO-PAD-TEM-PORTA-PROPRIA``, dela: o endpoint de háptica
+A decisão é a ``D-1410-TODO-PAD-TEM-PORTA-PROPRIA``: o endpoint de háptica
 com o nome da Sony só nasce, e só se adota, na interface do gadget do PRÓPRIO
 pad. A âncora emprestada (um hub, um receptor, a porta de outro aparelho) saiu
-do produto: com ela o jogo achava um áudio cujo ``ContainerId`` não casa com
+do produto: com a âncora o jogo achava um áudio cujo ``ContainerId`` não casa com
 HID nenhum, e a biblioteca da Sony o varria sem parar (o engasgo de 12/10 e de
 14/10).
 
@@ -71,7 +71,7 @@ def _ancoras_publicadas(mesa: Any) -> dict[str, str]:
 
 
 def _a_regra(mesa: Any, com_porta: set[str], na_mesa: list[str]) -> None:
-    """Quem tem porta tem o endpoint NELA; quem não tem, nenhum endpoint."""
+    """Quem tem porta tem o endpoint NA PORTA; quem não tem, nenhum endpoint."""
     publicadas = _ancoras_publicadas(mesa)
     assert set(publicadas) == com_porta & set(na_mesa), publicadas
     for uniq, ancora in publicadas.items():
@@ -178,7 +178,7 @@ def test_com_o_jogo_tocando_a_porta_que_desce_nao_derruba_o_endpoint(mesa: Any) 
 def test_o_endpoint_emprestado_que_o_daemon_anterior_deixou_cai(mesa: Any, dono: str) -> None:
     """O daemon de antes do install deixou o endpoint numa âncora emprestada.
 
-    Com a porta própria, ele cai e renasce nela; sem a porta, só cai.
+    Com a porta própria, ele cai e renasce na mesma porta; sem a porta, só cai.
     """
     herdado = mesa.servidor.modulo_herdado(eh.nome_do_endpoint(dono), _EMPRESTADA)
     com = dono == h._P1

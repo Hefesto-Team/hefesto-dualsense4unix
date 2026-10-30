@@ -21,7 +21,7 @@ def _raiz_do_repo() -> Path:
 def _pagina() -> str:
     caminho = _raiz_do_repo() / PAGINA
     assert caminho.is_file(), (
-        f"{PAGINA} sumiu. Ela é o único lugar onde a pessoa que instala descobre "
+        f"{PAGINA} sumiu. A página é o único lugar onde a pessoa que instala descobre "
         "em que versões isto funciona."
     )
     return caminho.read_text(encoding="utf-8")
@@ -99,7 +99,7 @@ def test_a_pagina_declara_o_que_nao_foi_testado(assunto):
     """A seção de honestidade não pode sumir."""
     pagina = _pagina()
     assert "não foi testado" in pagina.lower(), (
-        "a seção do que não foi testado sumiu; sem ela a página promete mais do "
+        "a seção do que não foi testado sumiu; sem essa seção a página promete mais do "
         "que a casa mediu"
     )
     assert assunto in pagina, f"a página deixou de mencionar {assunto!r} entre os limites"

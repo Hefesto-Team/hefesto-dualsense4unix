@@ -140,7 +140,7 @@ def test_o_applier_diz_adiado_e_nao_repete_o_pedido(
     )
     assert pedidos == ["xbox"], (
         "o pedido recusado foi repetido — é este o laço que matou o controle "
-        f"dela no meio da partida (pedidos={pedidos})"
+        f"de quem jogava no meio da partida (pedidos={pedidos})"
     )
     assert daemon._gamepad_device is device and device.stopped is False, (
         "o vpad do jogo foi destruído/recriado"
@@ -196,7 +196,7 @@ def test_o_journal_diz_uma_vez_por_episodio(
         )
 
     assert avisos.count("vpad_recriacao_bloqueada_por_jogo") == 1, (
-        "o gate gritou a cada volta — foi assim que o journal dela virou muro "
+        "o gate gritou a cada volta — foi assim que o journal virou muro "
         f"(avisos={avisos})"
     )
     _autoridade(daemon, "daemon")
@@ -279,7 +279,7 @@ def test_o_gesto_de_perfil_nao_grava_preferencia_nem_promove_backend(
 
     daemon.apply_profile_mode(perfil.mode, profile=perfil, origin="manual")
 
-    assert gravou == [], "a máscara do perfil não é a preferência dela"
+    assert gravou == [], "a máscara do perfil não é a preferência do usuário"
     assert "gesto_de_perfil" in gamepad_mod.ORIGENS_GESTO_DO_USUARIO
     assert gamepad_mod._deve_promover_backend(
         daemon, _FakePad("dualsense"), "dualsense", "gesto_de_perfil"

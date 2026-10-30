@@ -13,8 +13,8 @@ O ITEM JÁ TINHA NOME, e este módulo usa o nome que a casa deu, não um inventa
 - o registro «INDICE-a-madrugada-em-que-o-produto-era-o» de 08/08/2026
   reu.md:123`` — o mesmo item como **C-3**, grau MEDIDO;
 - a sprint `A-NOITE-DOS-QUATRO-INVENTARIOS-01`
-  casa-sabe-e-o-que-o-produto-faz.md:133`` — **F-8**, *"o touchpad e o
-  giroscópio dela funcionam por acidente"*.
+  casa-sabe-e-o-que-o-produto-faz.md:133`` — **F-8**, o touchpad e o
+  giroscópio funcionavam por acidente.
 
 O QUE FOI MEDIDO (``udevadm info -q property`` nos nós vivos, 09/08/2026)::
 
@@ -80,17 +80,17 @@ def _linhas_de_codigo(path: Path) -> list[str]:
 
 @pytest.fixture(scope="module")
 def linhas() -> list[str]:
-    """As linhas que DÃO acesso — as invariantes deste módulo são delas.
+    """As linhas que DÃO acesso — as invariantes deste módulo são dessas linhas.
 
     HIDE-SO-O-HIDRAW-02 (24/09/2026): o arquivo ganhou, no fim, duas linhas
     que FECHAM os nós de entrada do DualSense físico (`TAG-="uaccess"`,
-    `MODE="0600"`, `event*` e `js*`). Elas têm régua própria, em
+    `MODE="0600"`, `event*` e `js*`). Essas linhas têm régua própria, em
     `tests/unit/test_hide_so_o_hidraw_02_os_quatro_nos_de_entrada.py`; aqui
     ficam as de acesso, que continuam valendo linha a linha.
 
     O PAD EM USB (07/10/2026): antes da linha que fecha o cabo vem a linha
     que só MARCA o gadget (`ENV{HEFESTO_PAD_USB}="1"`), a mesma marca da
-    `73`; ela não dá nem tira acesso, e tem régua própria abaixo.
+    `73`; a 73 não dá nem tira acesso, e tem régua própria abaixo.
     """
     if not REGRA.is_file():
         pytest.fail(f"regra ausente: {REGRA}")
@@ -447,7 +447,7 @@ class TestOPortaoMorde:
             )
         r = _roda(repo_fake)
         assert r.returncode == 1, (
-            "regra numerada 79 passou verde — ela instala, o udevadm verify "
+            "regra numerada 79 passou verde — a regra instala, o udevadm verify "
             "aprova, e a TAG NUNCA vira ACL (a 73-seat-late já passou)"
         )
         assert "NUNCA vira ACL" in r.stdout

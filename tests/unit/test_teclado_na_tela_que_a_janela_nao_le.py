@@ -7,7 +7,7 @@ olharia dentro do sandbox. Nenhum atalho de fábrica digita letra, então o tecl
 
 A aba Navegação do todo tirou a linha que dizia se a máquina tem o teclado. A frase voltou ao
 desfecho da linha que o escolhe (O-QUE-A-NAVEGACAO-VELHA-DEIXOU-SEM-CHAMADOR-01): a escolha é
-guardada e a resposta diz que, neste computador, ela não abre nada.
+guardada e a resposta diz que, neste computador, o teclado não abre nada.
 
 O que se mede:
 

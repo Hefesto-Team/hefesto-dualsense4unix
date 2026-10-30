@@ -394,7 +394,7 @@ class TestBateria:
     def test_percentual_vira_o_nivel_representavel_mais_proximo(
         self, fake_uhid: _FakeFd, percent: int, esperado_kernel: int
     ) -> None:
-        """Confere pela CONTA DO KERNEL, não pelo byte cru — é ela que a pessoa vê."""
+        """Confere pela CONTA DO KERNEL, não pelo byte cru — é a conta que a pessoa vê."""
         pad = _pad_ligado(fake_uhid)
 
         pad.forward_battery(percent)

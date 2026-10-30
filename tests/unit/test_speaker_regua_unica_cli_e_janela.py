@@ -1,6 +1,6 @@
 """A linha de comando e a janela falam a MESMA régua de volume (SOM-02).
 
-Por que este arquivo existe, medido em 01/08/2026 no hardware dela:
+Por que este arquivo existe, medido em 01/08/2026 no aparelho:
 
 A resposta do registrador de volume do DualSense é fortemente NÃO-LINEAR. Curva
 medida com o microfone do próprio controle como instrumento (tom de 1 kHz no

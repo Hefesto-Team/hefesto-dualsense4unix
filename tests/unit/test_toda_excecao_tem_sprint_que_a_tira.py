@@ -229,7 +229,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula.py::PENDENTES": 0,
 }
 
-_A_PROPRIA_REGUA = "o próprio arquivo da régua, a cura ou a mordida: eles escrevem o que ela caça"
+_A_PROPRIA_REGUA = "o próprio arquivo da régua, a cura ou a mordida: escrevem o que a régua caça"
 _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira), não isenção"
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
@@ -259,7 +259,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "é a guarda contra escrever no repositório errado, não um caso isento"),
     "scripts/github/aplicar.py::EXCECOES": (
         "o nome do campo do repositorio.yml que declara quem passa pela porta do ruleset "
-        "(a resposta dela de 06/10: os administradores passam), não uma isenção da régua"),
+        "(a resposta de 06/10: os administradores passam), não uma isenção da régua"),
     "scripts/ensaios/quem_e_quem.py::CONHECIDOS": (
         "os endereços da mesa, lidos quando o ensaio roda, para o dono da máscara "
         "pegar toda forma deles; nasce vazia e não isenta nada"),
@@ -274,11 +274,11 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "o arquivo ignorado que mora no índice de propósito, com data e quem pediu; nasce vazia, "
         "e o teste da régua exige que continue assim até alguém escrever o porquê"),
     "scripts/check_paridade_gtk_html.py::APOSENTADOS": (
-        "os arquivos da janela GTK, aposentada por decisão dela (D-0609-GTK-LEVA-INTEIRA)"),
+        "os arquivos da janela GTK, aposentada pela decisão D-0609-GTK-LEVA-INTEIRA"),
     "scripts/medir_decisoes_sem_prova.py::ESTADOS_CONHECIDOS": (
         "o vocabulário do campo `estado` do CSV das decisões"),
     "scripts/validar-glifos.py::EXCECOES_DO_USUARIO": (
-        "os quatro glifos que ela nomeou em 20/09/2026, um a um"),
+        "os quatro glifos nomeados em 20/09/2026, um a um"),
     "scripts/validar-glifos.py::PADROES_IGNORADOS": _PASTAS_DE_MAQUINA,
     "scripts/validar-glifos.py::_IGNORADOS_RE": "a mesma lista de cima, compilada",
     "scripts/validar-referencias-docs.py::APOSENTADOS": (
@@ -286,7 +286,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "scripts/validar-referencias-docs.py::ARQUIVOS_FORA_DO_INDICE_DE_ENV": _A_PROPRIA_REGUA,
     "scripts/validar-referencias-docs.py::DIRS_IGNORADOS": _PASTAS_DE_MAQUINA,
     "scripts/validar-referencias-docs.py::FORA_DO_GIT": (
-        "o `docs/process/`, fora do git por ordem dela de 15/09/2026"),
+        "o `docs/process/`, fora do git pela decisão de 15/09/2026"),
     "scripts/validar-referencias-docs.py::PREFIXOS_IGNORADOS": (
         "arquivo morto por definição (história, pesquisa) e o que saiu do git"),
     "tests/conftest.py::_EXCECOES_DO_FILHO": (

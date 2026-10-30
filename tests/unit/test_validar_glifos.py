@@ -305,7 +305,7 @@ def _portao():
 
 
 class TestAsExcecoesDoUsuarioSaoUmaListaNaoUmaFaixa:
-    """Ela abriu o portão para a fileira de saída de som, e só para ela."""
+    """A exceção abriu o portão para a fileira de saída de som, e só para essa fileira."""
 
     def test_as_quatro_que_o_usuario_nomeou_passam(self) -> None:
         vg = _portao()
@@ -333,7 +333,7 @@ class TestAsExcecoesDoUsuarioSaoUmaListaNaoUmaFaixa:
         assert isinstance(vg.EXCECOES_DO_USUARIO, dict)
         assert all(isinstance(k, int) for k in vg.EXCECOES_DO_USUARIO)
         assert len(vg.EXCECOES_DO_USUARIO) < 24, (
-            "a lista passou de duas dezenas — se ela cresceu tanto, a pergunta "
+            "a lista passou de duas dezenas — se cresceu tanto, a pergunta "
             "não é qual acrescentar, é se o ADR-011 ainda descreve o produto")
 
     def test_a_preservacao_do_adr_011_continua_vencendo(self) -> None:

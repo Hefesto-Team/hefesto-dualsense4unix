@@ -5,7 +5,7 @@
 Nenhum dos três — Economia, Balanceado, Máximo — aceso, e a coluna ao lado
 marcando **150%**. A tela negando a força que a mão do usuário sentia.
 
-O PERFIL EM QUE ISSO ACONTECE é o que estas réguas montam, e ele é o dela:
+O PERFIL EM QUE ISSO ACONTECE é o que estas réguas montam, e é o do usuário:
 DON'T SCREAM, `rumble.policy = "max"` no global, e o bloco `controllers[uniq]`
 existindo **sem** a seção `rumble`. Medido no disco do usuário em 17/09: dos 29
 perfis, **6** têm política global escrita e só **5** (9 entradas) têm override
@@ -23,10 +23,10 @@ degrau quando aquele controle tinha política PRÓPRIA gravada no perfil; quando
 herdava, emitia vazio — e o alvo `classe` do pintor apaga os três quando o valor
 não casa com nenhum `data-hef-quando`.
 
-Era **meia decisão**. A [05] dela, de 04/09, mandava a coluna sem ajuste próprio
-não acender *"e passar a apontar para essa linha"* — a LINHA DE MESA, que diria
+Era **meia decisão**. A decisão [05], de 04/09, mandava a coluna sem ajuste próprio
+não acender e passar a apontar para essa linha — a LINHA DE MESA, que diria
 o degrau em vigor. A linha de mesa foi apagada **um dia depois**, em 05/09, por
-outra decisão de produto (*"não é pra ter mesa em nada da interface"*). O contrapeso
+outra decisão de produto, a de não haver mesa em nada da interface. O contrapeso
 saiu, o vazio ficou, e o estado herdado deixou de ter lugar na tela.
 
 A cura devolve a procedência ao lugar que sobrou — o próprio botão: ele acende
@@ -45,7 +45,7 @@ trilho só manda `custom`, e o arraste repetido não regrava nem fala
   (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), e a força herdada
   aparece no cursor: em ``a05_vibracao.pacote``, faça o ``mult-pos`` sair vazio quando a coluna
   herda e :func:`test_a_coluna_que_herda_poe_o_cursor_na_forca_em_vigor` reprova. A marca
-  ``degrau-herdado`` e a régua dela saíram com os botões.
+  ``degrau-herdado`` e a régua da marca saíram com os botões.
 """
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ GLOBAL = "max"
 
 
 class PonteDeMentira:
-    """Guarda o que foi pedido ao daemon. NUNCA fala com o dela."""
+    """Guarda o que foi pedido ao daemon. NUNCA fala com o daemon de quem usa."""
 
     def __init__(self) -> None:
         self.chamadas: list[str] = []
@@ -92,7 +92,7 @@ def _o_perfil_do_usuario(com_override: str | None = None) -> dict[str, Any]:
                             "speaker": {"volume": 102, "muted": False}}
     if com_override:
         dele["rumble"] = {"policy": com_override}
-    return {"name": "Bancada",
+    return {"name": "Ensaio",
             "rumble": {"policy": GLOBAL, "custom_mult": None},
             "controllers": {CHAVE: dele}}
 
@@ -113,7 +113,7 @@ def a05():
 
 @pytest.fixture
 def disco_do_usuario(monkeypatch, a05):
-    """Desvia o perfil ATIVO para o dela, e o disco para a memória."""
+    """Desvia o perfil ATIVO para o do ensaio, e o disco para a memória."""
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -124,7 +124,7 @@ def disco_do_usuario(monkeypatch, a05):
         return vivo["cru"]
 
     def _nome_do_ativo(_state: Any = None) -> str:
-        return "Bancada"
+        return "Ensaio"
 
     def _load(_nome: str) -> Any:
         cru = dict(vivo["cru"])
@@ -144,7 +144,7 @@ def disco_do_usuario(monkeypatch, a05):
 def _ctx(pac):
     """Um tique com UM controle na mesa e a força geral do perfil do usuário."""
     return pac.Contexto(
-        state={"active_profile": "Bancada", "rumble_policy": GLOBAL,
+        state={"active_profile": "Ensaio", "rumble_policy": GLOBAL,
                "rumble_mult_applied": 1.5},
         mesa=[{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
                "via": "USB", "cor": "starlight-blue", "plastico": "#123456",

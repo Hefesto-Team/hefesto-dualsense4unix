@@ -20,13 +20,13 @@ def test_existe_limiar_de_aparelhos_distintos() -> None:
     assert achado, (
         "sumiu o `LIMIAR_APARELHOS` de `scripts/bt_health_watchdog.sh`. Sem ele a "
         "vigia conta EVENTOS, e um aparelho sem bond insistindo nove vezes faz "
-        "ela reiniciar o Bluetooth — que foi como ela perdeu os quatro controles "
+        "a vigia reiniciar o Bluetooth — que foi como se perderam os quatro controles "
         "em 08/08. Ver "
         "docs/process/sprints/2026-08-08-BLUETOOTHD-MORTO-POR-NOS-01-*.md"
     )
     assert int(achado.group(1)) >= 2, (
         "o `LIMIAR_APARELHOS` precisa ser pelo menos 2: com 1 ele não distingue "
-        "nada, e a vigia volta ao comportamento que custou os controles dela."
+        "nada, e a vigia volta ao comportamento que custou os controles da máquina."
     )
 
 
@@ -69,7 +69,7 @@ def test_a_licao_de_2107_continua_coberta() -> None:
     texto = _texto()
     assert "systemctl restart bluetooth.service" in texto, (
         "o restart sumiu inteiro — a vigia deixou de curar a doença de 21/07, "
-        "que é o motivo de ela existir."
+        "que é o motivo de a vigia existir."
     )
     assert re.search(r"^LIMIAR_RECUSAS=\d+$", texto, re.M), (
         "sumiu o `LIMIAR_RECUSAS`: o limiar de eventos continua sendo a primeira "

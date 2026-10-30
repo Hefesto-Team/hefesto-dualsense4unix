@@ -17,7 +17,7 @@ class TestOGestoQueServeParaCadaInstalacao:
     def test_no_checkout_a_frase_nomeia_o_install_sh(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Para ela, que roda do clone, o gesto certo continua sendo esse."""
+        """Para quem roda do clone, o gesto certo continua sendo esse."""
         monkeypatch.setattr(da, "esta_instalacao_e_um_checkout", lambda: True)
 
         assert "./install.sh" in da.como_atualizar_esta_instalacao()

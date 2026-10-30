@@ -8,7 +8,7 @@ do usuário, com a máscara DualSense e o jogo aberto::
 
     plays: 4   nao_nulos: 0   descartados: 0   v2: 0   ff_maior_pedido: [0, 0]
 
-Lida ao pé da letra, ela diz "o jogo pediu vibração 4 vezes e todas com força
+Lida ao pé da letra, a linha diz "o jogo pediu vibração 4 vezes e todas com força
 zero". Só que **nenhum dos quatro números sabe responder o que perguntam
 dele**, e é isso que estes testes travam:
 
@@ -222,7 +222,7 @@ def test_a_parada_do_sdl_deixa_de_ser_invisivel(vpad_ds):
 
     assert vpad_ds.recebido == [(120, 90), (0, 0)]
     assert vpad_ds.ff_play_count == 1, "a parada NÃO é pedido"
-    assert vpad_ds.ff_parada_sdl_count == 1, "mas ela aconteceu, e tem de aparecer"
+    assert vpad_ds.ff_parada_sdl_count == 1, "mas a parada aconteceu, e tem de aparecer"
 
 
 def test_o_anel_diz_quem_escreveu_e_por_qual_ramo(vpad_ds):

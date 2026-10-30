@@ -2,17 +2,17 @@
 
 O DEFEITO
 =========
-Os 19 modos de gatilho **têm** descrição, e ela aparece — para **um** modo por
+Os 19 modos de gatilho **têm** descrição, e a descrição aparece — para **um** modo por
 vez, o selecionado (``_rebuild_params`` escreve em ``trigger_<side>_desc``).
 Para ler a de outro é preciso CLICAR nele, e clicar agenda um ``trigger.set``
 300 ms depois (``_schedule_live_preview``). São 38 botões na tela, uma frase
 visível, e comparar seis modos parecidos custava seis aplicações no controle de
-alguém — com a trava manual armada a cada uma delas
+alguém — com a trava manual armada a cada aplicação
 (``daemon/ipc_handlers._handle_trigger_set`` -> ``mark_manual_trigger_active``),
 o que pausa a troca automática de perfil.
 
-A CURA, E POR QUE ELA É UMA LINHA E MEIA
-========================================
+A CURA, E POR QUE É UMA LINHA E MEIA
+====================================
 O mecanismo de dica por botão já existia e já tinha quatro chamadores de
 produção (``app/widgets/segmented_selector.set_tooltips``, usado por
 ``secao_orcamento``, ``controller_card``, ``profiles_actions`` e
@@ -32,7 +32,7 @@ O TEXTO NÃO É NOVO
 É a mesma frase que a aba já mostra para o modo selecionado — é o que mantém a
 T8 na classe **cosmética pré-aprovada** ("tornar dica visível"). Reescrever
 qualquer uma das 19 a tornaria estrutural e faria esperar o olho de quem confere; por isso
-o teste também exige que nenhuma delas seja escrita à mão neste arquivo nem no
+o teste também exige que nenhuma das 19 seja escrita à mão neste arquivo nem no
 módulo da aba.
 
 GTK REAL, SEM JANELA NA TELA DO USUÁRIO
@@ -64,7 +64,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
 class TestAFonteEUmaSo:
 
     def test_nenhuma_das_dezenove_frases_esta_escrita_na_aba(self) -> None:
-        """Se uma delas aparecer como literal em `triggers_actions.py`, virou"""
+        """Se uma das frases aparecer como literal em `triggers_actions.py`, virou"""
         from pathlib import Path
 
         fonte = Path(triggers_actions.__file__).read_text(encoding="utf-8")
@@ -81,7 +81,7 @@ class TestOCampoMortoSaiu:
     def test_e_a_conta_que_o_motivou_continua_a_mesma(self) -> None:
         """71 parâmetros nas dezenove chaves (eram 73 até 08/10/2026, quando a Metralhadora
         passou de seis ajustes a quatro — não 38, o número que a medição da sprint corrigiu):
-        54 nos onze acionamentos da tela e 17 nas oito chaves que saíram dela."""
+        54 nos onze acionamentos da tela e 17 nas oito chaves que saíram da tela."""
         assert sum(len(spec.params) for spec in PRESETS) == 54
         assert sum(len(spec.params) for spec in PRESETS_ANTIGOS) == 17
 

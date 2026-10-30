@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
 @pytest.fixture
 def daemon() -> Daemon:
-    """O mesmo daemon de bancada do `test_profile_mode.py`."""
+    """O mesmo daemon de ensaio do `test_profile_mode.py`."""
     return Daemon(controller=FakeController(), config=DaemonConfig())
 
 

@@ -29,7 +29,7 @@ def _sem_comentarios(texto: str) -> str:
 
 
 class TestInstalaEmTodoFormato:
-    """O `exit 0` do bloco de formatos é uma cerca, e ela já mordeu esta casa."""
+    """O `exit 0` do bloco de formatos é uma cerca, e essa cerca já mordeu esta casa."""
 
     def _blocos(self) -> tuple[str, str]:
         codigo = _sem_comentarios(TEXTO_INSTALL)
@@ -55,7 +55,7 @@ class TestInstalaEmTodoFormato:
     def test_fluxo_native_instala_o_teclado_na_tela(self) -> None:
         _, native = self._blocos()
         assert re.search(r"^\s*install_osk_host\s*$", native, re.MULTILINE), (
-            "o fluxo native — o padrão, o que ela usa — ficou sem o passo"
+            "o fluxo native — o padrão, o de quem usa — ficou sem o passo"
         )
 
     def test_e_default_sem_flag_nenhuma(self) -> None:
@@ -65,7 +65,7 @@ class TestInstalaEmTodoFormato:
         assert "--no-osk)" in codigo, "o opt-out não está no parser"
         for opt_in in ("--with-osk", "--enable-osk", "--with-teclado"):
             assert opt_in not in TEXTO_INSTALL, (
-                f"{opt_in} transformaria a cura em opt-in — é o que ela recusou"
+                f"{opt_in} transformaria a cura em opt-in — é o que o produto recusou"
             )
 
     def test_o_no_osk_aparece_no_help(self) -> None:
@@ -128,7 +128,7 @@ class TestEscolhaPelaSessao:
         )
 
     def test_a_sentinela_grava_o_que_aconteceu(self, tmp_path: Path) -> None:
-        """Sem isto, "o install não instalou" e "ela removeu depois" são iguais."""
+        """Sem isto, "o install não instalou" e "quem usa removeu depois" são iguais."""
         sent = _roda_dono(tmp_path, "wayland")
         assert sent["resultado"] == "dry-run"
         assert sent["data"], "sem data a sentinela não conta história nenhuma"
@@ -170,7 +170,7 @@ class TestOrdemDosCandidatosNoDaemon:
     def test_o_daemon_publica_se_existe_teclado_na_tela(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A janela não pode perguntar sozinha: num Flatpak ela olha o sandbox."""
+        """A janela não pode perguntar sozinha: num Flatpak a janela olha o sandbox."""
         from hefesto_dualsense4unix.daemon.subsystems import keyboard
 
         keyboard._OSK_SONDA[0] = (float("-inf"), False)
@@ -268,7 +268,7 @@ class TestDoctorDistingueAsQuatroAusencias:
             tmp_path, "resultado=pulado\nmotivo=--no-osk\ndata=2026-08-10T00:00:00\n"
         )
         assert "[FAIL]" not in saida, (
-            "a escolha dela virou defeito — é o erro que o 108b711 registrou"
+            "a escolha de quem usa virou defeito — é o erro que o 108b711 registrou"
         )
         assert "PULADO a pedido" in saida
 

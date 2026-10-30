@@ -1,17 +1,14 @@
 """TROCA-DE-PLAYER-01 — a escolha à mão SOBREPÕE a fila de chegada (29/08/2026).
 
-Palavra de produto, hoje:
-
-> "o nosso layout é pra permitir a TROCA DO PLAYER de cada controle. Medimos
-> isso na época do lightbar e mapeamos isso. No novo layout temos uma seção pra
-> isso e ELA TEM QUE FUNCIONAR."
+Decisão de produto do dia: o layout existe para permitir a TROCA DO PLAYER de cada
+controle, medida e mapeada na época da lightbar, e a seção do layout novo tem de funcionar.
 
 **As duas regras convivem, e a distinção é o assunto deste arquivo.** A regra
 AUTOMÁTICA — quem vira jogador 1 quando os controles chegam — é a fila de
-chegada (D-30, ``_ordem_do_momento_locked``) e é decisão medida dela: com o
+chegada (D-30, ``_ordem_do_momento_locked``) e é decisão medida: com o
 número colado à identidade, o controle branco era sempre o player 3 mesmo
-SOZINHO na mesa. Ela não muda. O que este arquivo prova é a outra metade, na
-forma que ela já fixou para o microfone
+SOZINHO na mesa. Essa regra não muda. O que este arquivo prova é a outra metade, na
+forma já fixada para o microfone
 (``D-O-MICROFONE-A-MAQUINA-DA-O-PADRAO-O-PERFIL-SOBREPOE``): **a máquina dá o
 padrão, a escolha sobrepõe.**
 
@@ -21,7 +18,7 @@ POR QUE A SUÍTE DE 25/07 NÃO VIA NADA DISSO
 desta cura, e **nenhum injeta relógio** — as 12 chamadas de ``sync_connected``
 montam a mesa numa olhada só, então os três controles caem na MESMA onda de
 chegada e o lugar gravado volta a ser o desempate. A suíte provava o mecanismo
-exatamente no único caso em que ele já funcionava. A bancada — quatro
+exatamente no único caso em que ele já funcionava. O ensaio — quatro
 DualSense no rádio, ligados um a um — não é esse caso.
 
 **Toda régua daqui liga o relógio.** É a diferença entre medir um instante e
@@ -39,7 +36,7 @@ Três DualSense ligados um a um (ondas 1, 2, 3), pedindo o 1 para o último::
     NA TELA           : {A: 1, B: 2, C: 3}   <- não se mexeu
     rank 4,0 s depois : {A: 1, B: 2, C: 3}   <- o congelamento APAGOU
 
-E o falso sucesso puro, com o gravado dizendo ``A=1, B=2`` e ela ligando o B
+E o falso sucesso puro, com o gravado dizendo ``A=1, B=2`` e quem usa ligando o B
 primeiro (tela ``B=1, A=2``): pedir o 1 para o A devolvia
 ``{"ok": true, "changed": {}}`` e nada se movia.
 
@@ -275,7 +272,7 @@ class TestAEscolhaSobreviveAoTempo:
     async def test_a_escolha_sobrevive_ao_replug_do_controle_trocado(
         self, config_isolado: Path
     ) -> None:
-        """O controle escolhido cai e volta — e volta com o número dela."""
+        """O controle escolhido cai e volta — e volta com o número escolhido."""
         relogio = _Relogio()
         ds = ControllerIdentityRegistry(clock=relogio)
         _mesa_um_a_um(ds, relogio, [COSMIC, BLUE, PURPLE])
@@ -372,7 +369,7 @@ class TestACorSegueONumero:
     async def test_a_cor_acompanha_a_troca(self, config_isolado: Path) -> None:
         """Depois da troca, o Purple acende o azul do 1 e o Cosmic o verde do 3.
 
-        A cor não é copiada em lugar nenhum: ela é DERIVADA do número, por
+        A cor não é copiada em lugar nenhum: é DERIVADA do número, por
         ``player_slot_color`` dentro do provider automático. Provar isto aqui
         é provar que a barra não precisa de um segundo dono para acompanhar.
 
@@ -397,7 +394,7 @@ class TestACorSegueONumero:
     async def test_a_escolha_de_cor_a_mao_vence_a_cor_do_numero(
         self, config_isolado: Path
     ) -> None:
-        """O caderno do mockup: *"sem escolha à mão ela é a cor do número"*."""
+        """O caderno do mockup: sem escolha à mão, a cor é a do número."""
         from hefesto_dualsense4unix.core.backend_pydualsense import (
             PyDualSenseController,
             _DesiredOutput,

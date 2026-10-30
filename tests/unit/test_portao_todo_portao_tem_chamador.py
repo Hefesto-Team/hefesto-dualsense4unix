@@ -66,6 +66,7 @@ _CAMADAS = ("rapido|", "completo|", "suite|")
 
 
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
+    # fica: é o portão do MERGE, por desenho: pergunta ao daemon vivo da máquina de teste
     "scripts/check_a_conferencia.py": (
         "MEDIDO em 08/09/2026, e ele fica fora das duas listas POR DESENHO, não "
         "por esquecimento. Ele é a tabela da conferência de quem usa — a coluna «✓ na "
@@ -85,7 +86,7 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "`rapido|conferencia-do-usuario|py|scripts/check_a_conferencia.py` em "
         "`scripts/portoes.sh`, mais o passo gêmeo em `.github/workflows/ci.yml`. "
         "Ele fecha quando as três linhas da direita fecharem E existir ensaio "
-        "automatizada — a segunda condição é que não existe hoje."
+        "automatizado — a segunda condição é que não existe hoje."
     ),
     # fica: liga-se na fase 3 da sprint, quando as quatro áreas zerarem
     "scripts/check_texto_sem_pessoa.py": (

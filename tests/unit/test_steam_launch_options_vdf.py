@@ -102,7 +102,7 @@ def test_a_subtracao_tira_o_nosso_par_e_deixa_o_do_usuario():
 
 
 def test_a_subtracao_alcanca_o_nosso_par_em_qualquer_posicao():
-    """No fim da lista e no MEIO dela — a assinatura colada não via nenhum."""
+    """No fim da lista e no MEIO — a assinatura colada não via nenhum."""
     assert slo.subtrair_nosso_ignore(LINHA_NOSSO_PAR_EM_SEGUNDO) == (
         "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009 %command%"
     )
@@ -134,7 +134,7 @@ def test_migrate_subtrai_o_nosso_par_da_lista_estendida():
     """ERA `test_migrate_nao_toca_lista_ignore_estendida`, e ele assertava o"""
     migrado = slo.migrate_value(LINHA_ESTENDIDA)
     assert migrado.startswith(slo.WRAPPER_PREFIX + " ")
-    assert "0x057e/0x2009" in migrado, "o device que ELA escondeu foi jogado fora"
+    assert "0x057e/0x2009" in migrado, "o device que O USUÁRIO escondeu foi jogado fora"
     assert "0x054c/0x0ce6" not in migrado, "o nosso par continua envenenando a linha"
 
 
@@ -153,8 +153,8 @@ def test_migrate_ve_o_nosso_par_mesmo_quando_ele_nao_e_o_primeiro():
 
 def test_strip_subtrai_o_nosso_par_da_lista_estendida():
     """ERA `test_strip_nao_toca_lista_ignore_estendida`. A razão de virar é a
-    DESINSTALAÇÃO: o nosso par ficava na lista dela para sempre, e sem o
-    wrapper aquele par manda o jogo ignorar o DualSense FÍSICO dela."""
+    DESINSTALAÇÃO: o nosso par ficava na lista do usuário para sempre, e sem o
+    wrapper aquele par manda o jogo ignorar o DualSense FÍSICO do usuário."""
     assert slo.strip_value(LINHA_ESTENDIDA) == (
         "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009 %command%"
     )
@@ -229,7 +229,7 @@ def test_main_migra_a_linha_estendida_preservando_a_parte_do_usuario(
     assert rc == 0
     depois = vdf.read_text(encoding="utf-8")
     assert "hefesto-launch" in depois
-    assert "0x057e/0x2009" in depois, "o device que ELA escondeu foi jogado fora"
+    assert "0x057e/0x2009" in depois, "o device que O USUÁRIO escondeu foi jogado fora"
     assert "0x054c/0x0ce6" not in depois
     capsys.readouterr()
 
@@ -497,7 +497,7 @@ def test_apply_wrapper_migra_o_ignore_estendido():
     assert ("1599660", "ignore_estendido") not in pulados
     linha = slo.read_launch_options_by_appid(novo)["1599660"]
     assert linha.startswith(slo.WRAPPER_PREFIX + " ")
-    assert "0x057e/0x2009" in linha, "o device que ELA escondeu foi jogado fora"
+    assert "0x057e/0x2009" in linha, "o device que O USUÁRIO escondeu foi jogado fora"
     assert "0x054c/0x0ce6" not in linha
 
 

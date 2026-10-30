@@ -67,7 +67,7 @@ class TestPromocao:
 
         NOTA DATADA — 29/08/2026 (MÁSCARA-POR-JOGADOR-01). Esta linha exigia
         `start == ["dualsense"]`: a promoção CRAVAVA a máscara na chamada. Isso
-        contradizia o comentário ao lado dela em `gamepad.py`
+        contradizia o comentário ao lado da linha em `gamepad.py`
         (*"`persist=False`: a preferência não mudou, só o backend"*), e era
         inofensivo só enquanto a máscara era única — chegar aqui exigia
         `device.flavor == "dualsense"`, o que implicava a sessão já em
@@ -88,7 +88,7 @@ class TestPromocao:
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
         assert sem_efeitos["start"] == [None], (
-            "a promoção de BACKEND não pode carimbar máscara: o que ela recebe "
+            "a promoção de BACKEND não pode carimbar máscara: o que a máscara recebe "
             "vai parar em `config.gamepad_flavor`"
         )
         assert sem_efeitos["stop_kwargs"] == {"persist": False, "release_grab": False}

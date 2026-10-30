@@ -24,7 +24,7 @@ _MMJ = "2111190"
 
 
 def _vdf(appids_ligados: list[str], *, global_ligado: bool = False) -> str:
-    """`localconfig.vdf` de bancada no formato REAL (tabs literais)."""
+    """`localconfig.vdf` de ensaio no formato REAL (tabs literais)."""
     blocos = "".join(
         f'\t\t"{appid}"\n\t\t{{\n\t\t\t"UseSteamControllerConfig"\t\t"2"\n\t\t}}\n'
         for appid in appids_ligados
@@ -42,7 +42,7 @@ def _vdf(appids_ligados: list[str], *, global_ligado: bool = False) -> str:
 
 @pytest.fixture()
 def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """HOME de bancada com Steam nativa e a allowlist isolada."""
+    """HOME de ensaio com Steam nativa e a allowlist isolada."""
     (tmp_path / ".steam/steam/steamapps").mkdir(parents=True)
     (tmp_path / ".steam/steam/userdata/123/config").mkdir(parents=True)
     monkeypatch.setattr(sd, "_allowlist_path", lambda: tmp_path / "allowlist.txt")
@@ -79,7 +79,7 @@ class TestTraducaoDoAppid:
         assert rotulo_do_jogo(_SACKBOY, casa) == f"appid {_SACKBOY}"
 
     def test_o_appid_nunca_some_da_frase(self, casa: Path) -> None:
-        """É o número que ela confere na Steam, e o único identificador comum"""
+        """É o número que quem usa confere na Steam, e o único identificador comum"""
         _instalar(casa, _SACKBOY, "Sackboy: A Big Adventure")
         assert rotulo_do_jogo(_SACKBOY, casa) == "Sackboy: A Big Adventure (appid 1599660)"
 

@@ -5,11 +5,11 @@ Antes desta sprint, `daemon.status` e o topo de `daemon.state_full` liam a
 enquanto `controller.list` já lia certo, direto dos handles abertos do
 backend. Duas fontes para o mesmo fato — medido em 23/08/2026 (ONDA0-Z5
 §2.2): `connected: true, transport: "bt", battery_pct: 75` em `daemon.status`
-e no topo de `state_full`, com ZERO controles na bancada.
+e no topo de `state_full`, com ZERO controles na máquina.
 
 **Achado durante a execução, registrado por transparência**: o T2 original
 propunha uma função `mesa_do_daemon()`, dona única, lendo os handles abertos
-para os TRÊS handlers. Implementada e testada, ela reprovou TRÊS testes já
+para os TRÊS handlers. Implementada e testada, essa troca reprovou TRÊS testes já
 medidos: `test_conserto_1_7_o_ramo_sem_mesa_e_o_plural_do_doctor.py` (duas
 vezes) e `test_ipc_state_full_live.py::test_state_full_neutro_quando_ambos_none`.
 O motivo: o topo de `state_full` tem propósito PRÓPRIO, testado — é a leitura

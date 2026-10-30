@@ -235,7 +235,7 @@ def ensaio_allowlist(ambiente: dict[str, Any]) -> dict[str, Any]:
     )
     lista.parent.mkdir(parents=True, exist_ok=True)
     lista.write_text(
-        "# bancada — jogos cujo DualSense vem pela Steam\n2111190\n3357650\n",
+        "# ensaio — jogos cujo DualSense vem pela Steam\n2111190\n3357650\n",
         encoding="utf-8",
     )
     ambiente["allowlist"] = lista

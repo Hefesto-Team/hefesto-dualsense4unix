@@ -39,7 +39,7 @@ allowlist muda QUAL dispositivo o jogo vê, nunca QUANTOS"*.
 O QUE **NÃO** SE FEZ, E POR QUÊ
 ===============================
 A saída elegante seria ``SDL_GAMECONTROLLER_IGNORE_DEVICES_EXCEPT`` ("aceite só
-o nosso vpad"). Ela está ERRADA aqui, e o motivo é de produto: tem de ser universal, com quatro
+o nosso vpad"). Está ERRADA aqui, e o motivo é de produto: tem de ser universal, com quatro
 DualSense ou quatro controles de outra marca. Os externos são read-only por decisão de produto —
 numeramos e
 acendemos o LED, não os adotamos —, então eles chegam ao jogo POR SI, e um
@@ -77,7 +77,7 @@ def _env(**kw: object) -> dict[str, str]:
 
 @pytest.mark.parametrize("flavor", ["dualsense", "xbox"])
 def test_o_espelho_do_steam_input_e_escondido_do_jogo(flavor: str) -> None:
-    """O caso dela, nas DUAS máscaras. Morde em `PAR_STEAM_INPUT_VIRTUAL`."""
+    """O caso medido, nas DUAS máscaras. Morde em `PAR_STEAM_INPUT_VIRTUAL`."""
     backends = ["uhid"] if flavor == "dualsense" else ["uinput"]
     env = _env(flavor=flavor, backends=backends)
     assert _ESPELHO in env[_IGNORE].split(",")
@@ -107,7 +107,7 @@ def test_sem_cobertura_o_espelho_tambem_nao_e_escondido() -> None:
 
     Com dois DualSense físicos e um vpad vivo (o que o `EBUSY` de 02/08 produzia
     o tempo todo) o IGNORE inteiro é omitido — e tem de ser, senão um dos dois
-    controles do usuário some do jogo. O espelho da Valve sai junto: é melhor ela ver
+    controles do usuário some do jogo. O espelho da Valve sai junto: é melhor ver
     um controle a mais do que jogar com um a menos.
 
     Morde: dar ao espelho um ramo PRÓPRIO, fora do `cobertura_total`, faz este

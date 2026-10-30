@@ -24,8 +24,8 @@ escritas por segundo no ``/dev/uhid``.
 O que cada teste trava — e o que faz cada um reprovar:
 
 1. a constante EXISTE e está exportada — apagá-la reprova;
-2. ela é o DEFAULT do ``PhysicalReportReader`` — desamarrar reprova;
-3. ela não passa de 250 Hz — subir para 1000.0 reprova;
+2. a constante é o DEFAULT do ``PhysicalReportReader`` — desamarrar reprova;
+3. a constante não passa de 250 Hz — subir para 1000.0 reprova;
 4. quatro vpads em co-op cabem em 1000 escritas/s — subir reprova;
 5. COMPORTAMENTO, e é a mordida de verdade: um segundo da rajada MEDIDA
    (1255 us entre reports, ~797 Hz) contra um reader construído SEM passar
@@ -188,7 +188,7 @@ class TestAFonteDoCaboColadaNoTeto:
             f"teto de {MOTION_EMIT_MAX_HZ} Hz, e o throttle voltou a contar a "
             "partir da última ENTREGA em vez de uma grade de prazo: cada report "
             "chega microssegundos cedo, fica retido e é sobrescrito. É o "
-            "giroscópio aos saltos que ela sentiu em 19/08."
+            "giroscópio aos saltos sentidos na mão em 19/08."
         )
 
     def test_o_jitter_do_host_nao_derruba_a_grade(self) -> None:

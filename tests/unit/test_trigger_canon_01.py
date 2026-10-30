@@ -49,10 +49,10 @@ def test_a_sensacao_que_o_usuario_aprovou_nao_muda_um_byte(nome: str) -> None:
 
     assert int(efeito.mode) == esperado_modo, (
         f"{nome}: o modo mudou de 0x{esperado_modo:02X} para "
-        f"0x{int(efeito.mode):02X} — a sensação que ela aprovou mudou junto"
+        f"0x{int(efeito.mode):02X} — a sensação aprovada mudou junto"
     )
     assert tuple(int(f) for f in efeito.forces) == esperado_forces, (
-        f"{nome}: os parâmetros mudaram. Estes bytes são o que a mão dela "
+        f"{nome}: os parâmetros mudaram. Estes bytes são o que a mão "
         "aprovou em 01/08 — se a refatoração precisa mudá-los, é a "
         "refatoração que está errada"
     )
@@ -120,7 +120,7 @@ MODO_ESPERADO_DOS_MORTOS: dict[str, int] = {
 def test_os_sete_mortos_deixam_de_mandar_off_ou_lixo(nome: str) -> None:
     """Nenhum dos sete pode continuar mandando `0x05` (OFF) nem `0x22` (Bow).
 
-    O quadro que ela mediu:
+    O quadro medido:
 
     * `Rigid`, `SimpleRigid`, `Feedback` mandavam **`0x05`, que É o OFF**;
     * `Resistance`, `SlopeFeedback`, `MultiPositionFeedback` mandavam `0x25`
@@ -148,14 +148,14 @@ def test_os_sete_mortos_deixam_de_mandar_off_ou_lixo(nome: str) -> None:
 
 @pytest.mark.parametrize("nome", sorted(MODO_ESPERADO_DOS_MORTOS))
 def test_os_modos_oficiais_recebem_bitmask_de_zonas_nao_vazio(nome: str) -> None:
-    """O segundo erro, ORTOGONAL ao modo — e o que a medição dela provou."""
+    """O segundo erro, ORTOGONAL ao modo — e o que a medição no aparelho provou."""
     efeito = _efeito_com_os_padroes(nome)
     zonas = int(efeito.forces[0]) | (int(efeito.forces[1]) << 8)
 
     assert zonas != 0, (
         f"{nome}: o bitmask de zonas ativas saiu ZERADO. Com o modo oficial e "
         "nenhuma zona ativa, o firmware não faz nada — que é exatamente o que "
-        "ela sentiu"
+        "se sentiu"
     )
 
 
@@ -237,7 +237,7 @@ def test_o_raw_recusa_quando_o_daemon_esta_vivo(monkeypatch, capsys) -> None:
 
 
 def test_o_raw_funciona_com_o_daemon_parado(monkeypatch) -> None:
-    """E a bancada continua existindo — é para isso que ela serve."""
+    """E o ensaio cru continua existindo — é para isso que ele serve."""
     from hefesto_dualsense4unix.cli import cmd_test
 
     monkeypatch.setattr(

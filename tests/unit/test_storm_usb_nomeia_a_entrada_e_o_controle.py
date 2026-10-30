@@ -190,7 +190,7 @@ def test_os_fabricantes_de_controle_sao_os_da_secao_do_radio() -> None:
 
 
 def test_o_adaptador_que_se_declara_no_aparelho(tmp_path: Path) -> None:
-    """A tripla ``e0/01/01`` no descritor do aparelho — o UB500 da bancada."""
+    """A tripla ``e0/01/01`` no descritor do aparelho — o UB500 do ensaio."""
     raiz = tmp_path / "sys"
     _no(raiz, "1-4", vid="2357", pid="0604", nome="TP-Link UB500 Adapter",
         tripla=("e0", "01", "01"))
@@ -270,7 +270,7 @@ def test_o_controle_sem_hid_fica_parado(tmp_path: Path) -> None:
 
 
 def test_o_controle_que_voltou_com_hid_nao_fica_parado(tmp_path: Path) -> None:
-    """Mesmo log, mas a HID tem driver AGORA: voltou (ou ela repôs), e nada parou."""
+    """Mesmo log, mas a HID tem driver AGORA: voltou (ou alguém a repôs), e nada parou."""
     raiz = tmp_path / "sys"
     _dualsense(raiz, "3-4.4", hid="com-driver")
     laudo = storm_por_porta(
@@ -290,7 +290,7 @@ def test_a_interface_desligada_de_proposito_nao_e_o_71(tmp_path: Path) -> None:
 
 
 def test_a_entrada_largada_vazia_fica_parada(tmp_path: Path) -> None:
-    """``unable to enumerate``: o kernel largou a entrada, e ela segue vazia."""
+    """``unable to enumerate``: o kernel largou a entrada, que segue vazia."""
     laudo = storm_por_porta(
         linhas=[
             _linha("usb 3-4.4: device not accepting address 10, error -71"),
@@ -371,7 +371,7 @@ def test_o_log_fora_de_ordem_nao_engana_o_desfecho(tmp_path: Path) -> None:
     ],
 )
 def test_as_linhas_da_mesa_do_usuario_e_o_desfecho(mensagem: str, desfecho: str) -> None:
-    """As formas COPIADAS do `kernel.log` dela (24/09), e o desfecho de cada uma."""
+    """As formas COPIADAS do `kernel.log` do ensaio (24/09), e o desfecho de cada uma."""
     assert em._desfecho(mensagem) == desfecho
 
 

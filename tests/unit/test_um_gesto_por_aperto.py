@@ -40,7 +40,7 @@ def test_o_ps_mais_cima_mais_r3_tambem_dispara_uma_vez_so() -> None:
 
 
 def test_soltar_um_botao_destrava_o_gesto_seguinte() -> None:
-    """Ela solta o R3 e continua com PS + L3: a máscara anda UMA vez."""
+    """Quem usa solta o R3 e continua com PS + L3: a máscara anda UMA vez."""
     eventos: list[str] = []
     mgr = _gerente(eventos)
 

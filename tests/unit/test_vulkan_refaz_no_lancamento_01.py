@@ -89,8 +89,8 @@ def test_a_camada_que_reaparece_ligada_e_desligada_de_novo(
 
     segundo = cv.curar_um_prefixo(prefixo, appid="222", home=casa)
     assert segundo.desligadas == ("EOSOverlayVkLayer-Win64.json",), (
-        "o gancho aceitou a volta como escolha dela — é exatamente o defeito "
-        "que a decisão dela de 16/09/2026 mandou matar"
+        "o gancho aceitou a volta como escolha do usuário — é exatamente o defeito "
+        "que a decisão de 16/09/2026 mandou matar"
     )
     assert segundo.respeitadas == ()
     assert "dword:00000001" in _texto(prefixo)
@@ -111,7 +111,7 @@ def test_refazer_dez_vezes_nunca_grava_manter(prefixo: Path, casa: Path) -> None
     gravado = _estado_bruto(casa)["prefixos"]["222"][marca]
     assert gravado["feito"] == "desligada"
     assert "escolha" not in gravado, (
-        "o gancho gravou escolha dela sem ela ter tocado em botão nenhum"
+        "o gancho gravou escolha do usuário sem um único toque em botão"
     )
 
 
@@ -155,7 +155,7 @@ def test_o_botao_aguenta_lancamentos_seguidos(prefixo: Path, casa: Path) -> None
 
     for volta in range(5):
         resultado = cv.curar_um_prefixo(prefixo, appid="222", home=casa)
-        assert resultado.desligadas == (), f"a escolha dela caiu na volta {volta}"
+        assert resultado.desligadas == (), f"a escolha do usuário caiu na volta {volta}"
     assert "dword:00000000" in _texto(prefixo)
 
 
@@ -176,7 +176,7 @@ def test_o_botao_forcar_limpa_o_manter_e_desliga(prefixo: Path, casa: Path) -> N
     marca = cv.chave_de_estado(CHAVE64, EPIC)
     gravado = _estado_bruto(casa)["prefixos"]["222"][marca]
     assert gravado["feito"] == "desligada"
-    assert "escolha" not in gravado, "o `manter` sobreviveu ao gesto explícito dela"
+    assert "escolha" not in gravado, "o `manter` sobreviveu ao gesto explícito do usuário"
 
 
 def test_o_estado_antigo_com_religada_por_fora_deixa_de_travar(
@@ -195,12 +195,12 @@ def test_o_estado_antigo_com_religada_por_fora_deixa_de_travar(
 def test_o_estado_antigo_com_religada_do_botao_continua_valendo(
     prefixo: Path, casa: Path
 ) -> None:
-    """As DUAS camadas do Epic no estado real dela têm `feito: religada`."""
+    """As DUAS camadas do Epic no estado real medido têm `feito: religada`."""
     _plantar_estado(casa, feito="religada")
 
     resultado = cv.curar_um_prefixo(prefixo, appid="222", home=casa)
     assert resultado.desligadas == (), (
-        "a escolha dela, gravada pelo botão, foi desfeita pelo gancho"
+        "a escolha do usuário, gravada pelo botão, foi desfeita pelo gancho"
     )
     assert resultado.respeitadas == ("EOSOverlayVkLayer-Win64.json",)
     assert "dword:00000000" in _texto(prefixo)

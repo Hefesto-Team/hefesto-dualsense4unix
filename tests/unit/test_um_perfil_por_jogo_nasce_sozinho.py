@@ -24,7 +24,7 @@ TRES_JOGOS = (
 
 
 def _perfil_do_usuario(directory: Path, arquivo: str, dados: dict[str, object]) -> bytes:
-    """Escreve um perfil "dela" no diretório e devolve os bytes gravados."""
+    """Escreve um perfil do usuário no diretório e devolve os bytes gravados."""
     directory.mkdir(parents=True, exist_ok=True)
     bruto = (json.dumps(dados, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     (directory / arquivo).write_bytes(bruto)
@@ -128,7 +128,7 @@ def test_colisao_de_nome_e_recusa_e_o_arquivo_do_usuario_fica_intacto(
 
 
 def test_a_recusa_por_nome_nao_vira_marca_e_e_reavaliada(tmp_path: Path) -> None:
-    """Ela renomeia o perfil que ocupava o nome; a próxima varredura semeia."""
+    """Quem usa renomeia o perfil que ocupava o nome; a próxima varredura semeia."""
     destino = tmp_path / "perfis"
     _perfil_do_usuario(
         destino,
@@ -266,7 +266,7 @@ def test_a_marca_separa_o_que_o_produto_criou_do_que_e_do_usuario(tmp_path: Path
 
 
 def test_perfil_semeado_que_o_usuario_apagou_nao_ressuscita(tmp_path: Path) -> None:
-    """Mesmo contrato do `.seeded_presets`: deleção proposital é decisão de produto."""
+    """Mesmo contrato do `.seeded_presets`: deleção proposital é escolha, e fica."""
     destino = tmp_path / "perfis"
     loader.semear_perfis_dos_jogos(dest_dir=destino, jogos=TRES_JOGOS)
     (destino / "ilha_de_vidro.json").unlink()
@@ -521,7 +521,7 @@ def test_a_suite_e_a_maquina_do_usuario_ficam_de_fora_pelo_opt_out(
 
     loader._talvez_semear_jogos()
 
-    assert olhadas == [], "olhou a biblioteca dela com o opt-out ligado"
+    assert olhadas == [], "olhou a biblioteca do usuário com o opt-out ligado"
 
 
 def test_falha_na_varredura_nao_derruba_a_carga_de_perfis(
@@ -646,7 +646,7 @@ def test_as_tres_cargas_de_perfil_disparam_a_semeadura(monkeypatch, tmp_path):
         with contextlib.suppress(Exception):
             fn()
         assert chamadas, (
-            f"`{nome}` não dispara a semeadura. A decisão dela — o perfil nasce "
+            f"`{nome}` não dispara a semeadura. A decisão — o perfil nasce "
             "sozinho, sem clique — mora nesta chamada e em mais duas."
         )
 
@@ -683,6 +683,6 @@ def test_a_regua_da_fiacao_pega_a_chamada_arrancada(monkeypatch, tmp_path):
 
     assert not sem_gatilho, (
         f"estas portas de carga não chamam `_talvez_semear_jogos`: {sem_gatilho}. "
-        "Sem elas o perfil por jogo volta a ser um gesto, e a decisão dela era "
+        "Sem essas portas o perfil por jogo volta a ser um gesto, e a decisão era "
         "que ele NÃO fosse."
     )

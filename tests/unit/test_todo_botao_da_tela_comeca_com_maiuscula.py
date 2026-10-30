@@ -12,7 +12,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 
 def _declaradas() -> set[str]:
-    """As páginas em trabalho na bancada, perguntado ao portão `desenho-aprovado`."""
+    """As páginas em trabalho no mockup, perguntado ao portão `desenho-aprovado`."""
     alvo = RAIZ / "scripts/check_o_desenho_aprovado.py"
     spec = importlib.util.spec_from_file_location("check_desenho_da_maiuscula", alvo)
     assert spec is not None and spec.loader is not None
@@ -80,8 +80,8 @@ def test_todo_botao_comeca_com_maiuscula() -> None:
         for tag, classe, texto in leitor.rotulos:
             primeiro = texto[0]
             if primeiro.isalpha() and primeiro.islower():
-                origem = "bancada" if pagina.parent == onde.ENSAIO else "publicada"
+                origem = "mockup" if pagina.parent == onde.ENSAIO else "publicada"
                 minusculos.append(f"{pagina.name} ({origem}): <{tag} class={classe!r}> «{texto}»")
     assert not minusculos, (
-        "botão que começa com minúscula (a regra dela da primeira letra):\n  "
+        "botão que começa com minúscula (a regra da primeira letra):\n  "
         + "\n  ".join(minusculos))

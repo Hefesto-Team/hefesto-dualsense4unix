@@ -8,7 +8,7 @@ garantir que lá ele possa funcionar em ambos os modos"*.
 vibração e gatilhos do DualSense **não há filtro nosso** — nenhum `if` de
 transporte, nenhuma exigência de barramento, nenhuma variável de ambiente,
 nenhuma declaração no `maquina.json`. O único ponto do produto que sabe o
-transporte é a ESCOLHA DO ENVELOPE (`prepareReport`), e ela é uma linha. O
+transporte é a ESCOLHA DO ENVELOPE (`prepareReport`), e essa escolha é uma linha. O
 filtro que existia morreu na BTREPORT-02, e era o pior tipo: o 0x31 da
 pydualsense 0.7.5 é malformado, o firmware o descartava, e todo o nosso output
 por rádio — rumble, gatilhos, keepalive — era no-op **sem uma linha de erro**.
@@ -32,7 +32,7 @@ quatro primeiras réguas daqui são o que impede isso.
   colunas de transporte, com o caminho inteiro no fonte que esta árvore
   versiona (`assets/dkms/hid-nintendo/hid-nintendo.c`).
 
-**A MORDIDA de cada régua está escrita no docstring dela.** Nenhuma delas
+**A MORDIDA de cada régua está escrita no docstring da régua.** Nenhuma
 afirma que o aparelho obedeceu: o teto do que este levantamento pode dizer é
 MONTOU, e as réguas cobram exatamente isso — inclusive a que reprova se alguém
 promover o háptico a `medido` sem ensaio no caderno.
@@ -114,7 +114,7 @@ def test_o_payload_de_vibracao_e_gatilho_nao_pergunta_o_transporte() -> None:
     faltando = set(_FUNCOES_SEM_TRANSPORTE) - set(fontes)
     assert not faltando, (
         f"funções do caminho de vibração/gatilho sumiram do backend: {sorted(faltando)}"
-        " — se foram renomeadas, esta régua tem de acompanhar, senão ela deixa de medir"
+        " — se foram renomeadas, esta régua tem de acompanhar, senão deixa de medir"
     )
     culpadas: list[str] = []
     for nome, fonte in fontes.items():
@@ -226,7 +226,7 @@ def test_o_limitador_por_barramento_e_a_nossa_declaracao_continuam_de_pe() -> No
 def test_a_razao_do_custo_do_radio_esta_escrita_na_linha(
     mapa: dict[str, dict[str, str]], alvo: str
 ) -> None:
-    """A assimetria do Nintendo é declarada onde ela existe, com os dois números."""
+    """A assimetria do Nintendo é declarada onde existe, com os dois números."""
     texto = mapa[alvo]["assimetria_declarada"]
     for exigido in ("20 ms", "60 ms", "skip_tx_on_rate_exceeded"):
         assert exigido in texto, (

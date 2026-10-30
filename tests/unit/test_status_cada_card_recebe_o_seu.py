@@ -46,9 +46,9 @@ def test_nenhuma_grade_da_aba_casa_as_chaves_com_a_lista_crua() -> None:
 
     Varredura de FONTE, e não de comportamento: as duas grades vivem em
     funções que pedem GTK, IPC e um `state_full` inteiro para rodar, e um
-    teste de comportamento por grade nasceria caro e cobriria uma delas de
+    teste de comportamento por grade nasceria caro e cobriria uma grade de
     cada vez. A pergunta aqui é sintática e é a certa — *existe algum `zip`
-    que case `keys` com a lista crua?* — e ela vale para a grade que a Onda 4
+    que case `keys` com a lista crua?* — e vale também para a grade que a Onda 4
     ainda vai escrever.
 
     **A mordida:** devolva `zip(keys, conectados, strict=True)` a qualquer uma

@@ -149,7 +149,7 @@ def test_nenhum_escape_novo_sem_razao() -> None:
         "escape de acentuação SEM RAZÃO, e ele é novo:\n"
         + "\n".join(novos)
         + "\n\nEscreva por que a palavra está certa sem acento, na MESMA linha "
-        "da marca — antes ou depois dela:\n"
+        "da marca — antes ou depois:\n"
         '    manager.delete("acao")  # slug literal ASCII (noqa-acento)\n'
         '    <div data-v="acao">     # (noqa-acento): endereço\n'
         "\nA marca vai NA linha da palavra: o escape é por linha, e escrito na "
@@ -165,7 +165,7 @@ def test_a_lista_de_escapes_mudos_so_encolhe() -> None:
     teto = sum(SEM_RAZAO_PINADOS.values())
     assert len(sem) <= teto, (
         f"{len(sem)} escapes mudos contra um teto de {teto}. A lista "
-        "`SEM_RAZAO_PINADOS` é dívida do dia em que este arquivo nasceu, e ela "
+        "`SEM_RAZAO_PINADOS` é dívida do dia em que este arquivo nasceu, e a lista "
         "só encolhe."
     )
 
@@ -228,7 +228,7 @@ def _escapes_a_mais(texto: str, tipo: str, rel: str) -> int:
 
 
 def test_o_escape_no_codigo_e_so_o_que_o_validador_pede() -> None:
-    """No código a marca não tem razão: só fica onde, sem ela, o validador reprova a linha."""
+    """No código a marca não tem razão: só fica onde, sem a marca, o validador reprova a linha."""
     codigo = escapes_no_codigo()
     assert codigo, "nenhum arquivo de código com escape: o censo ficou cego"
     sobrando = [rel for rel, tipo in sorted(codigo.items())

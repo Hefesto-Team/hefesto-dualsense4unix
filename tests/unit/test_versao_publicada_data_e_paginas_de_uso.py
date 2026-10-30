@@ -96,7 +96,7 @@ def test_portao_aprova_quando_a_data_bate(tmp_path: Path) -> None:
     proc = _rodar_portao(repo)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "CHANGELOG" in proc.stdout, (
-        "a conferência de data passou calada — não dá para saber se ela rodou"
+        "a conferência de data passou calada — não dá para saber se rodou"
     )
 
 
@@ -213,7 +213,7 @@ def test_paginas_de_uso_nao_mandam_instalar_outra_versao(relpath: str) -> None:
 
 
 def test_prosa_da_pagina_de_instalacao_cita_a_versao_canonica() -> None:
-    """A frase de abertura é o que a pessoa lê antes de rodar o comando; ela"""
+    """A frase de abertura é o que a pessoa lê antes de rodar o comando; a frase"""
     texto = (REPO / INSTALACAO_REL).read_text(encoding="utf-8")
     achado = re.search(r"A versão corrente é a alfa \*\*([^*]+)\*\*", texto)
     assert achado is not None, "a frase da versão corrente saiu da página"

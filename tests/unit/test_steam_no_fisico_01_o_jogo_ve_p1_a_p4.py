@@ -142,7 +142,7 @@ class TestONascimentoSegueACarta:
         assert nascimentos == [P4, P2, P3]
 
     def test_a_carta_trocada_pela_aba_vale(self, nascimentos: list[str]) -> None:
-        """A aba Controles renumerou: o P4 do kernel é o jogador 2 dela."""
+        """A aba Controles renumerou: o P4 do kernel é o jogador 2 na tela."""
         mgr = CoopManager(_daemon(cartas={P1: 1, P4: 2, P3: 3, P2: 4}))
 
         mgr.sync()
@@ -567,7 +567,7 @@ class TestOP1RenasceNoMesmoCaminho:
     `_guardar_o_caminho` LIMPA o slot da sessão. Com a mesa no Modo Xbox — o
     chip da aba Jogar, que muda o CAMINHO e não a máscara —, a carta 1 que
     chegava depois do primário devolvia o P1 em DualSense/uhid, e a escolha
-    do usuário sumia da tela e dos secundários sem ela ter tocado em nada.
+    do usuário sumia da tela e dos secundários sem ninguém ter tocado em nada.
 
     Aqui o start e o stop são os DE VERDADE (`gamepad`), para a régua não ser
     mais frouxa que o produto: o dublê do `vpad_do_p1` não conhece caminho.
@@ -615,10 +615,10 @@ class TestOP1RenasceNoMesmoCaminho:
         assert nascimentos == [P2, P1, P3, P4], "o P1 tinha de renascer atrás da carta 1"
         assert daemon._gamepad_device.caminho == "xbox", (
             "o P1 renasceu em outro caminho — a recriação pela ordem desfez o "
-            "Modo Xbox que ela escolheu"
+            "Modo Xbox que quem usa escolheu"
         )
         assert daemon._gamepad_device.backend == "uinput"
         assert daemon.config.gamepad_caminho == "xbox", (
             "o slot da sessão foi limpo: a tela e os secundários passam a ver "
-            "DualSense sobre uma escolha dela de Xbox"
+            "DualSense sobre uma escolha de Xbox de quem usa"
         )

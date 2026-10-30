@@ -75,7 +75,7 @@ class TestDecisaoPura:
         assert wrapper_banner_text({"gamepad_emulation": "torto"}) is None
 
     def test_a_frase_diz_o_que_o_produto_faz_em_vez_de_mandar_copiar(self) -> None:
-        """07-Q2, palavra em 05/09/2026: *"O produto aplica ela"*."""
+        """07-Q2, decisão de 05/09/2026: o produto aplica a opção sozinho."""
         assert "atalho de inicialização" in WRAPPER_MISSING_TEXT
         assert "duplicar" in WRAPPER_MISSING_TEXT
         assert "aba Sistema" not in WRAPPER_MISSING_TEXT
@@ -87,7 +87,7 @@ class TestDecisaoPura:
             assert jargao not in WRAPPER_MISSING_TEXT
 
     def test_os_dois_botoes_que_a_frase_nomeia_existem_em_toda_aba(self) -> None:
-        """A frase só pode nomear botão que existe — foi por isso que ela mudou."""
+        """A frase só pode nomear botão que existe — foi por isso que mudou."""
         paginas = Path(__file__).resolve().parents[2] / (
             "src/hefesto_dualsense4unix/interface/paginas"
         )
@@ -109,7 +109,7 @@ class TestDecisaoPura:
         """Uma promessa sem dono é o defeito mais caro desta casa.
 
         A frase promete repor o atalho *"no próximo Aplicar ou Salvar perfil"*.
-        Quem cumpre é a carona (`carona_do_wrapper.passada`), e ela não tem
+        Quem cumpre é a carona (`carona_do_wrapper.passada`), e a carona não tem
         relógio próprio — pega carona no gesto. Este caso EXECUTA o caminho da
         interface nova (o rodapé das dez abas passa por `perfil.com_a_carona`)
         e observa a chamada por dublê, em vez de procurar o nome da função no

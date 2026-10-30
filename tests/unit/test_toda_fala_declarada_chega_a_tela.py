@@ -3,13 +3,13 @@
 O título da sprint é o contrato: *"a medição nova tem de chegar SOZINHA na
 tela"*. ``scripts/validar-fala-de-tela.py`` guarda uma das pontas — que a
 ``Fala`` declarada não afirme mais do que o mapa mede. **Este arquivo guarda a
-outra**, e ela é a que some calada: uma ``Fala`` DECLARADA que nenhuma tela
+outra**, a que some calada: uma ``Fala`` DECLARADA que nenhuma tela
 EXIBE.
 
 POR QUE ISSO NÃO É HIPÓTESE
 ----------------------------
 É a família ``A-CASA-SABE-E-O-PRODUTO-NAO-FAZ`` acontecendo DENTRO da cura que
-a combate, e ela já aconteceu duas vezes nesta mesma leva. Medido em
+a combate, e já aconteceu duas vezes nesta mesma leva. Medido em
 25/08/2026 na conferência: ``app/fala_do_mapa.py::formata_pt_br`` e
 ``::Numero`` nasceram na ONDA0-Z6 (``565e8ae``, 24/08) sob o título *"a
 medição chega à tela por portão, não por lembrança"* — e nenhuma tela os
@@ -218,7 +218,7 @@ def test_toda_checagem_do_portao_e_chamada_pelo_main() -> None:
     assert not soltas, (
         f"estas checagens de {PORTAO_REAL.name} não são chamadas por `main()`: "
         f"{soltas}. Ligue-as ou apague-as: uma checagem que ninguém roda deixa o "
-        "portão verde sobre exatamente o que ela media."  # (noqa-acento)
+        "portão verde sobre exatamente o que a checagem media."  # (noqa-acento)
     )
 
 
@@ -288,7 +288,7 @@ def desenha(rotulo: object) -> None:
 
 
 def test_mordida_ler_o_texto_cru_nao_satisfaz_o_portao(tmp_path: Path) -> None:
-    """A regra 2 existe para esta linha: ela "usa" a `Fala` e fura o sentinela."""
+    """A regra 2 existe para esta linha: a linha "usa" a `Fala` e fura o sentinela."""
     app = _monta(tmp_path, {"tela.py": _DECLARA + _LE_CRU})
     assert [fala.nome for fala in falas_orfas(app, tmp_path)] == ["DICA"]
     cruas = leituras_cruas_do_texto(app, tmp_path)

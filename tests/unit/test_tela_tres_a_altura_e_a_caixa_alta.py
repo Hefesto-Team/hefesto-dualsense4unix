@@ -43,7 +43,7 @@ def test_as_colunas_da_sistema_fecham_na_mesma_linha_e_o_registro_cresce():
       const corpo = document.querySelector('.quadro.estica');
       return {colunas: bases('.avancadas > .coluna'),
               // a linha que pede ação (`.longa`) cresce com a frase, de propósito (desenho de
-              // 21/10): o fundo da coluna desconta o que ela cresceu além dos 25,5 px das outras
+              // 21/10): o fundo da coluna desconta o que a frase cresceu além dos 25,5 px
               status: [...document.querySelectorAll('.status3 .col-lista')].map(c => Math.round(
                 c.getBoundingClientRect().bottom - [...c.querySelectorAll('.saude.longa')].reduce(
                   (s, l) => s + Math.max(0, l.getBoundingClientRect().height - 25.5), 0))),
@@ -85,7 +85,7 @@ def test_a_via_do_chip_nao_sobe_de_caixa_no_navegador():
     assert set(r["caixa"]) <= {"none"}, (
         f"a via do chip voltou a subir de caixa: {r['caixa']} — na tela viva "
         f"isso escreve «CABO» na fita com «cabo» no cartão logo abaixo, que é "
-        f"exatamente o que ela mandou não repetir em 11/09/2026")
+        f"exatamente o que a decisão de 11/09/2026 mandou não repetir")
     assert set(r["caixa_do_chip"]) <= {"none"}, (
         f"o chip INTEIRO subiu de caixa e o nome do plástico foi junto: "
         f"{r['caixa_do_chip']}")

@@ -248,7 +248,7 @@ def test_todo_processo_que_o_daemon_abre_tem_veredito() -> None:
         if k in VEREDITOS and VEREDITOS[k][1] != n
     }
     assert not sem_veredito, (
-        f"processo aberto sem veredito (programa dela vai pelo "
+        f"processo aberto sem veredito (programa de quem usa vai pelo "
         f"`fora_do_servico.abrir`; ajudante ganha linha em VEREDITOS): {sem_veredito}"
     )
     assert not sem_popen, f"veredito para quem não abre mais processo: {sem_popen}"
@@ -402,7 +402,7 @@ def gerenciador(
 def test_o_teclado_nasce_numa_unidade_e_o_pid_vem_do_usuario(
     gerenciador: _GerenciadorDeMentira,
 ) -> None:
-    """Prova 1 da sprint, em bancada: a linha é a do dono, e o PID é o da unidade."""
+    """Prova 1 da sprint, em ensaio: a linha é a do dono, e o PID é o da unidade."""
     ctrl = teclado._OSKController()
     ctrl.open()
     assert len(gerenciador.chamadas) == 1
@@ -466,7 +466,7 @@ def test_o_r3_fecha_o_teclado_e_nao_o_vizinho_da_unidade(
 def test_o_teclado_fechado_por_fora_faz_o_l3_abrir_de_novo(
     gerenciador: _GerenciadorDeMentira,
 ) -> None:
-    """Ela fechou o teclado; a unidade esvaziou; o L3 abre, e não «fecha» o morto."""
+    """Quem usa fechou o teclado; a unidade esvaziou; o L3 abre, e não «fecha» o morto."""
     ctrl = teclado._OSKController()
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     assert ctrl.esperar_os_toques(5.0)

@@ -1,6 +1,6 @@
 """A-SUITE-INTEIRA-CABE-EM-VINTE-MINUTOS-01: o arquivo de teste novo não entra com espera longa.
 
-A suíte soma 64 min porque os 100 arquivos mais lentos pesam 51% dela
+A suíte soma 64 min porque os 100 arquivos mais lentos pesam 51% do total
 (``docs/data/tempos-da-suite.csv``): cada um entrou barato e engordou sem que ninguém visse. O CSV
 mede o arquivo que JÁ tem linha; o arquivo que entra sem linha ainda não foi medido, e é nele que a
 espera longa passa. A régua lê o ``time.sleep`` e o ``asyncio.sleep`` de número literal (só o que o
@@ -10,7 +10,7 @@ dos tetos:
 - uma espera sozinha acima de ``TETO_DE_UMA_ESPERA`` (2 s): espere pelo evento, não pelo relógio;
 - a soma das esperas acima de ``TETO_DAS_ESPERAS`` (5 s): metade do p95 do arquivo da suíte (9,5 s).
 
-O que ela NÃO vê: a espera que não é ``sleep`` de número literal (subprocesso, Xvfb, Chrome, conta
+O que NÃO se vê: a espera que não é ``sleep`` de número literal (subprocesso, Xvfb, Chrome, conta
 de CPU, ``sleep`` de variável ou repetido num laço). Nenhum dos seis mais lentos de 21/10 tinha
 ``sleep`` literal no arquivo de teste: a espera morava no script que ele roda, no navegador ou no
 Xvfb. Esse tempo só o CSV mede, na corrida do fecho.

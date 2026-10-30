@@ -110,7 +110,7 @@ def test_todo_deslizante_e_toda_lista_tem_gesto_que_o_pacote_atende() -> None:
 
 
 def test_nenhuma_excecao_sobra() -> None:
-    """A exceção que não falta mais sai da tabela: senão ela esconde o próximo campo mudo."""
+    """A exceção que não falta mais sai da tabela: senão a exceção esconde o próximo campo mudo."""
     fora = _sem_quem_atenda()
     sobra = sorted(f"{k}: {m}" for k, m in EXCECOES.items() if k not in fora)
     assert not sobra, "a exceção não é mais preciso; tire-a de EXCECOES:\n  " + "\n  ".join(sobra)

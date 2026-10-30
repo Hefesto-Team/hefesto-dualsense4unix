@@ -109,7 +109,7 @@ class TestOPredicado:
 class TestONumeroDoJogoNaoChegaAoFisico:
     @pytest.mark.parametrize("autoridade", ["game", "unknown", "daemon", None])
     def test_nem_camada_nem_escrita_nem_retencao(self, autoridade: str | None) -> None:
-        """A MORDIDA da peneira da ENTRADA: sem ela, sob `game`/`unknown`/sem"""
+        """A MORDIDA da peneira da ENTRADA: sem a peneira, sob `game`/`unknown`/sem"""
         ctl, nos = _mesa(autoridade)
 
         assert ctl.set_game_output_for(MAC_1, player_leds=NUMERO_DO_SDL_2) is True

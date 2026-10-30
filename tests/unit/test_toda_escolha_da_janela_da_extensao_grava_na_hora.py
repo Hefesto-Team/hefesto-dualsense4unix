@@ -3,7 +3,7 @@
 A-ESCOLHA-DA-JANELA-DA-EXTENSAO-GRAVA-NA-HORA-01 (28/10/2026). Medido no ``interface.log``: a janela
 da Lovense mostrava o Touchpad, o Sacudir e o Inclinar em «Direto» e a barra «Força» dos toques
 mais baixa, e o ``opcoes.json`` seguia com «Nenhum» e 100: a escolha ia ao rascunho e esperava um
-Guardar que ela nunca apertou. Agora cada gesto de escolha grava na hora, e a régua percorre todo
+Guardar que ninguém apertava. Agora cada gesto de escolha grava na hora, e a régua percorre todo
 controle que a janela desenha, de todo tipo, nas abas todas, inclusive o que só aparece quando
 outro o pede.
 

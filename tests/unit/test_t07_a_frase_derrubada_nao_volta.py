@@ -1,9 +1,9 @@
 """T-07 (SISTEMA-O-VIGIA-VIVO-01) — a frase derrubada em 09/08, viva em 25/08.
 
-Em **09/08/2026** ela derrubou um enquadramento inteiro
+Em **09/08/2026** caiu um enquadramento inteiro
 (ESCONDER-EM-VEZ-DE-SAIR-01): *"o controle passa a ser entregue pela Steam"*
 **morreu**. A marca "Este jogo não funciona" inverteu de lado — em vez de
-tirar o Hefesto da frente, ela **esconde o controle físico** do jogo, e os
+tirar o Hefesto da frente, a marca **esconde o controle físico** do jogo, e os
 controles virtuais do Hefesto ficam de pé, um por jogador.
 
 O `main.glade` recebeu o recado naquele dia (a nota datada em volta do
@@ -18,7 +18,7 @@ Aqui a metade que faltava era a que a usuária realmente lê.
 
 **Alcance declarado:** `src/` inteiro, não só `app/`. A linha que sobreviveu
 morava em `integrations/`, fora do alcance dos dois corpos de texto que o
-`scripts/validar-palavra-de-tela.py` varre — e foi exatamente por isso que ela
+`scripts/validar-palavra-de-tela.py` varre — e foi exatamente por isso que a linha
 sobreviveu.
 """
 from __future__ import annotations
@@ -33,29 +33,29 @@ SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
 FRASES_DERRUBADAS: dict[str, tuple[str, str]] = {
     "entregue pela Steam": (
-        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
-        "A marca ESCONDE o controle físico do jogo — ela não entrega o "
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01",
+        "A marca ESCONDE o controle físico do jogo — não entrega o "
         "controle à Steam. Diga o que a caixinha da aba Perfis diz: "
         "'o controle físico fica escondido'.",
     ),
     "a Steam entrega o controle": (
-        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01",
         "Quem entrega o controle ao jogo continua sendo o Hefesto, marcado "
         "ou não. A allowlist só impede o guarda de desligar o Steam Input "
         "daquele jogo.",
     ),
     "entrada pela Steam": (
-        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01",
         "A entrada continua vindo do gamepad virtual do Hefesto — e por isso "
         "o co-op não cai mais. Não diga que a entrada vem da Steam.",
     ),
     "controle direto pela Steam": (
-        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01",
         "Diga o que acontece de verdade: 'o controle físico fica escondido e "
         "o jogo passa a ver só os do Hefesto'.",
     ),
     "enxergar o controle físico direto": (
-        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01 (decisão dela)",
+        "09/08/2026, ESCONDER-EM-VEZ-DE-SAIR-01",
         "É o INVERSO do que o produto faz: a marca ESCONDE o físico. Quem "
         "escreve isto está descrevendo a borda que morreu em 09/08.",
     ),

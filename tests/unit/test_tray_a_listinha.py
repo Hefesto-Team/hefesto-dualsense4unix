@@ -363,7 +363,7 @@ def test_ligar_sobe_o_servico_antes_de_falar_com_o_daemon(
 
 def test_desligar_nao_sobe_servico_nenhum(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """«Desligado» é o modo NATIVO, não "parar o Hefesto" — decisão de produto."""
+    """«Desligado» é o modo NATIVO, não "parar o Hefesto": o produto decidiu assim."""
     from hefesto_dualsense4unix.cli import cmd_tray
 
     passos: list[str] = []

@@ -129,7 +129,7 @@ def test_nenhum_job_nasce_sem_passo_e_sem_workflow_chamado(caminho: Path) -> Non
 
 
 def test_a_regua_ve_as_duas_formas_do_defeito_de_edc4dce(tmp_path: Path) -> None:
-    """A régua não pode nascer cega — ela é conferida contra o defeito real."""
+    """A régua não pode nascer cega — é conferida contra o defeito real."""
     duplicata = tmp_path / "duplicata.yml"
     duplicata.write_text(
         "jobs:\n"

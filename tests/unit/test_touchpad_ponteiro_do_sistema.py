@@ -30,7 +30,7 @@ AS MORDIDAS (cada uma foi arrancada e vista reprovar):
   ``test_o_touchpad_fisico_nao_e_mais_ignorado`` reprova nos quatro nomes
   físicos medidos (USB, BT, Edge, DualShock4);
 - apagar a linha do vpad da regra -> ``test_o_touchpad_do_vpad_continua_fora``
-  reprova, e com ela o toque em dobro estaria de volta;
+  reprova, e com a linha fora o toque em dobro estaria de volta;
 - renomear o vpad sem mexer na regra ->
   ``test_a_regra_casa_o_nome_que_o_vpad_publica_hoje`` reprova (foi exatamente
   uma renomeação que furou o match exato de 26/06);
@@ -121,7 +121,7 @@ def test_o_touchpad_fisico_nao_e_mais_ignorado(linhas: list[str]) -> None:
     for nome in NOMES_FISICOS:
         assert not _ignora(linhas, name=nome, uniq=MAC_FISICO), (
             f"a regra ainda apaga o touchpad FÍSICO '{nome}' do libinput — é "
-            "exatamente o defeito que ela relatou: o dedo anda e o cursor não."
+            "exatamente o defeito relatado: o dedo anda e o cursor não."
         )
 
 

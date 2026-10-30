@@ -1,7 +1,7 @@
 """O controle do cabo que perdeu a HID no -71 é RELIGADO — STORM-USB-01, 24/09/2026.
 
 A palavra de 23/09 é «nomear e religar»: *o controle que cai por -71 volta
-sozinho*. No cabo, a probe perdida tem uma forma que o journal da bancada
+sozinho*. No cabo, a probe perdida tem uma forma que o journal do ensaio
 guardou (16/09, a 3-4.4)::
 
     usbhid 3-4.4:1.3: can't add hid device: -71
@@ -20,10 +20,10 @@ script escreveu nele, e é isso que prova o gesto — o resto é do kernel.
 AS MORDIDAS (arranque a cura, veja reprovar, devolva):
 
 * :func:`test_religa_a_hid_do_controle_sony` — troque o nome escrito no
-  ``bind`` pela porta (sem o ``:1.3``) e ela reprova.
+  ``bind`` pela porta (sem o ``:1.3``) e a régua reprova.
 * :func:`test_a_interface_de_audio_sem_driver_nao_e_tocada` — tire a guarda da
-  classe ``03`` e ela reprova: a regra 75 desliga o áudio do DualSense de
-  propósito, e o religar brigaria com ela.
+  classe ``03`` e a régua reprova: a regra 75 desliga o áudio do DualSense de
+  propósito, e o religar brigaria com a regra.
 * :func:`test_interface_desligada_de_proposito_nao_e_tocada` — tire a guarda do
   ``authorized``.
 * :func:`test_orfa_que_nao_e_da_sony_e_ignorada` — tire a guarda do ``054c``.
@@ -32,17 +32,17 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   chave do contador.
 * :func:`test_a_arvore_de_25_07_nao_varre_o_cabo_de_quem_roda` — tire o ramo
   que zera a raiz do cabo quando só o HID foi desviado (morde pelo texto; o
-  porquê está nela).
+  porquê está no teste).
 * :func:`test_sem_radio_o_tique_ainda_religa_o_cabo` (conferência de 24/09) —
   tire o ``vigia_rebind_orfaos`` de uma das duas guardas do Bluetooth no
-  watchdog, ou devolva a definição dela para depois das guardas, e ela
+  watchdog, ou devolva a definição da vigia para depois das guardas, e a régua
   reprova: numa máquina sem adaptador o tique saía antes da vigia 4, e o cabo
   nunca era religado.
 * :func:`test_o_doctor_e_o_religar_leem_a_mesma_orfa` (conferência de 24/09)
   — a regra da HID órfã do cabo tem DOIS leitores (o ``exame_da_mesa``, que
   faz o doctor dizer «o Hefesto religa sozinho», e este script, que religa).
   Mude a regra de um lado só (tire a guarda do ``authorized`` do exame, ou a
-  do ``054c`` do script) e ela reprova: a linha prometeria um religar que não
+  do ``054c`` do script) e a régua reprova: a linha prometeria um religar que não
   vem, ou calaria sobre um que vem.
 """
 

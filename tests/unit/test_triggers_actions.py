@@ -305,7 +305,7 @@ def _espiar_ordem(
     """Registra a ORDEM real entre `trigger.set` e `trigger.reset`.
 
     As duas listas do `_build_mixin` são separadas, então "quem saiu antes"
-    não dá para ler nelas. Aqui embrulhamos os dois dublês já instalados —
+    não dá para ler neles. Aqui embrulhamos os dois dublês já instalados —
     o que se mede é a sequência que o daemon veria no socket.
     """
     ordem: list[str] = []

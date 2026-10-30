@@ -1,6 +1,6 @@
-"""Toda porta que abre a janela veste a identidade ANTES de ela nascer.
+"""Toda porta que abre a janela veste a identidade ANTES de a janela nascer.
 
-O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01 (07/10/2026, item B1.9 da bancada: «a logo some»). A janela abria
+O-ICONE-DO-DOCK-E-O-DO-HEFESTO-01 (07/10/2026, item B1.9 do ensaio: «a logo some»). A janela abria
 por duas portas e só uma vestia o nome: o `run.sh --gui` passava por `scripts/abrir_interface.py`
 (prgname, classe, ícone), e o console script `hefesto-dualsense4unix-gui` ia direto ao piloto, que
 se anunciava `hefesto-dualsense4unix-gui` — nome que nenhum `.desktop` casa. A bandeja, que herda o

@@ -33,7 +33,7 @@ def _bloco(fonte: Path, ancora: str) -> str:
     texto = fonte.read_text(encoding="utf-8")
     inicio = texto.find(ancora)
     assert inicio >= 0, (
-        f"a âncora {ancora!r} sumiu de {fonte.name} — se ela foi renomeada, "
+        f"a âncora {ancora!r} sumiu de {fonte.name} — se foi renomeada, "
         f"renomeie aqui também; se a lista sumiu, esta regra precisa de outro dono"
     )
     fim = texto.index("]", inicio + len(ancora))
