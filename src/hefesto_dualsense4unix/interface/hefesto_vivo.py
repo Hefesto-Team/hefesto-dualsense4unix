@@ -3319,7 +3319,7 @@ def _json(obj: Any, pagina: str = "") -> str:
     """Serializa para o WebView — e DENUNCIA o que o usuário mandou tirar da tela."""
     import json
 
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+    from hefesto_dualsense4unix.interface.frases_banidas import (
         FRASES_BANIDAS,
         PALAVRAS_BANIDAS,
         primeiro_trecho_banido,
@@ -3353,7 +3353,7 @@ def _json(obj: Any, pagina: str = "") -> str:
                 continue
             _BANIDAS_JA_DENUNCIADAS.add(dono)
             print(f"[texto banido] {banida!r} em {_onde_foi(pagina, campo)}. A frase "
-                  "é defeito do dono dela — ver `interface/frases_que_ela_baniu.py`.",
+                  "é defeito do dono dela — ver `interface/frases_banidas.py`.",
                   file=sys.stderr)
     return saida
 

@@ -278,7 +278,7 @@ def test_nao_sei_se_o_daemon_esta_no_ar_e_recusa(monkeypatch: pytest.MonkeyPatch
 def test_o_ensaio_recusa_com_a_bancada_tomada(
     ensaio: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`bancada.sh exigir` com rc≠0 (outra reserva viva): rc=2 e nada é aberto."""
+    """`ensaio.sh exigir` com rc≠0 (outra reserva viva): rc=2 e nada é aberto."""
     monkeypatch.setattr(ensaio, "_exigir_bancada", lambda: (False, "BANCADA OCUPADA"))
 
     assert ensaio.main(ESCREVER) == 2

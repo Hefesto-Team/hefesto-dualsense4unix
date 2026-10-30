@@ -40,7 +40,7 @@ vez do produto. É a armadilha nº 2 de `docs/method/COMO-OLHAR-A-TELA.md`.
 A BANCADA NÃO É ESTA MÁQUINA
 ------------------------------
 
-`bancada_das_ordens.py` monta o `Censo` e os `NoDeEntrada` à mão, com caminhos
+`ensaio_das_ordens.py` monta o `Censo` e os `NoDeEntrada` à mão, com caminhos
 ``/mentira`` e seriais sintéticos, e os cinco caminhos do exame apontam para uma
 raiz que não existe. Nada aqui abre ``/sys``, ``/proc`` ou o rádio.
 """
@@ -64,7 +64,7 @@ from gi.repository import Gtk
 from hefesto_dualsense4unix.app.actions.config import secao_exame as secao
 from hefesto_dualsense4unix.integrations import exame_da_mesa as exame_mod
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
-from tests.unit import bancada_das_ordens as bancada
+from tests.unit import ensaio_das_ordens as bancada
 
 SERIAL = re.compile(
     "(?<![0-9A-Fa-f])[0-9A-Fa-f]{"

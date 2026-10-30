@@ -1318,7 +1318,7 @@ def test_o_portao_de_oui_ve_o_despejo_invertido() -> None:
 
 
 _AS_DE_SCRIPTS: dict[str, tuple[str, str]] = {
-    "bancada_do_radio": ("scripts/bancada_do_radio.py", "_mascarar"),
+    "ensaio_do_radio": ("scripts/ensaio_do_radio.py", "_mascarar"),
     "mesa_de_medicao": ("scripts/mesa_de_medicao.py", "_mascarar"),
     "a_entrada_que_nasce_sozinha": (
         "scripts/ensaios/a_entrada_que_nasce_sozinha.py", "mascarar"),

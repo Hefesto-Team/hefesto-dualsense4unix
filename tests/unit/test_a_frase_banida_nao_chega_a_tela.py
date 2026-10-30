@@ -6,7 +6,7 @@ import ast
 import re
 from pathlib import Path
 
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+from hefesto_dualsense4unix.interface.frases_banidas import (
     FRASES_BANIDAS,
     frase_banida_em,
 )
@@ -21,7 +21,7 @@ PASTAS_DE_FONTE = (
 )
 
 ISENTOS_INTEIROS: dict[str, str] = {
-    "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py": (
+    "src/hefesto_dualsense4unix/interface/frases_banidas.py": (
         "é o dono da lista: os trechos são o dado, não a frase"
     ),
 }
@@ -166,7 +166,7 @@ def test_a_guarda_do_fonte_reprova_o_dono_da_lista_sem_a_isencao() -> None:
     """A MORDIDA da guarda nova, e ela é feita, não afirmada."""
     sem_isencao = _ocorrencias_no_fonte(isentos_inteiros={})
     dono = [a for a in sem_isencao if a.startswith(
-        "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py:")]
+        "src/hefesto_dualsense4unix/interface/frases_banidas.py:")]
     achadas = {a.split(" literal ")[1] for a in dono if " literal " in a}
     assert achadas == {repr(f) for f in FRASES_BANIDAS}, (
         f"sem a isenção a régua achou {sorted(achadas)} como literal no dono "

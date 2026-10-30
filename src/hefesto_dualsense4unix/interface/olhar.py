@@ -228,7 +228,7 @@ def _de_onde(trecho: str) -> str:
 
 def _palavra(alvo: str, publicado: bool) -> int:
     """A palavra que uma pessoa LÊ, página por página, com origem e contexto."""
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+    from hefesto_dualsense4unix.interface.frases_banidas import (
         _borda,
         texto_visivel,
         texto_visivel_no_produto,

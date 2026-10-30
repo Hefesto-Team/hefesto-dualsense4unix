@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
 )
-from tests.unit.test_mapa_a_bancada_de_mentira import mapa_dela
+from tests.unit.test_mapa_o_ensaio_de_mentira import mapa_dela
 
 
 class _Hospedeiro:

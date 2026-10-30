@@ -11,7 +11,7 @@ import monta
 import aba02
 from monta import MASCARAS, MESA, glifo, monta as montar, svg
 
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+from hefesto_dualsense4unix.interface.frases_banidas import (
     FRASES_BANIDAS,
 )
 from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
@@ -887,7 +887,7 @@ def _ancestrais(html: str, classe: str) -> set[str] | None:
 
     * **as tags SEM FECHO** (`<input>`, `<br>`, `<img>`) — quem as empilha nunca
       as desempilha, e a partir da primeira toda profundidade fica alta demais.
-      A lista é a mesma de `frases_que_ela_baniu._SEM_FECHO`, e a razão também.
+      A lista é a mesma de `frases_banidas._SEM_FECHO`, e a razão também.
     * **as tags AUTOFECHADAS** (`<path/>`, `<circle/>`) — esta página embute os
       SVGs dos quatro controles, e são centenas. O `HTMLParser` chama
       `handle_startendtag`, cujo padrão dispara `handle_starttag` **e**

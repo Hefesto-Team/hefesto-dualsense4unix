@@ -20,7 +20,7 @@ NADA SE DIGITA AQUI. Os testes SAEM DOS ARQUIVOS, e cada arquivo é o dono de
 uma coisa:
 
     docs/data/mapa-controles.csv    as células que faltam medir, e o COMO de cada uma
-    scripts/roteiro-da-bancada-de-quatro.md   as 21 linhas do roteiro, que são a aceitação
+    scripts/roteiro-do-ensaio-de-quatro.md   as 21 linhas do roteiro, que são a aceitação
     docs/data/pecas-do-dualsense.csv          o nome e o id de cada peça do desenho
     docs/data/cores-do-dualsense.csv          28 modelos × 10 zonas, a cor do plástico
     interface/ds_limpo.svg (via `monta`)      o desenho, e o realce por peça
@@ -81,7 +81,7 @@ PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
 ROTEIRO = RAIZ / "scripts"
 
-ROTEIRO_PADRAO = "roteiro-da-bancada-de-quatro.md"
+ROTEIRO_PADRAO = "roteiro-do-ensaio-de-quatro.md"
 
 CONTROLE = "dualsense"
 

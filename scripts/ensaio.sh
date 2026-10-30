@@ -2,15 +2,15 @@
 set -uo pipefail
 _ajuda() {
   cat <<'AJUDA'
-bancada.sh — o semáforo do recurso FÍSICO: 1 daemon, 1 broker de hidraw,
+ensaio.sh — o semáforo do recurso FÍSICO: 1 daemon, 1 broker de hidraw,
 1 controle na mesa, 3 adaptadores de rádio. Isolar árvore de git não divide
 aparelho, e é por isso que o worktree não basta.
 
 Uso:
-  scripts/bancada.sh reservar "medição de BT" [--horas 4]
-  scripts/bancada.sh status      uma linha, e é a que o despachante imprime
-  scripts/bancada.sh exigir      rc=1 com motivo e hora -> quem chamou NÃO passa
-  scripts/bancada.sh liberar
+  scripts/ensaio.sh reservar "medição de BT" [--horas 4]
+  scripts/ensaio.sh status      uma linha, e é a que o despachante imprime
+  scripts/ensaio.sh exigir      rc=1 com motivo e hora -> quem chamou NÃO passa
+  scripts/ensaio.sh liberar
 AJUDA
 }
 

@@ -3,7 +3,7 @@
 
 A escada de releases (o registro «A-ESCADA-DE-RELEASES» de 24/08/2026) declara
 o degrau **0.9.5 — o rádio para de mentir** e nomeia o arquivo que o mede:
-*"arquivo a nascer: `scripts/check_bancada_de_bt.py`"*. Ele não existia, e o
+*"arquivo a nascer: `scripts/check_ensaio_de_bt.py`"*. Ele não existia, e o
 degrau dela não tinha como ser conferido por ninguém — só descrito.
 
 O QUE ESTE TESTE COBRA, e é o mínimo para o portão não virar decoração:
@@ -31,7 +31,7 @@ import sys
 import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-SCRIPT = RAIZ / "scripts/check_bancada_de_bt.py"
+SCRIPT = RAIZ / "scripts/check_ensaio_de_bt.py"
 
 
 @pytest.fixture(scope="module")
@@ -45,7 +45,7 @@ def mod():
 def test_o_script_existe():
     """A escada o nomeava e ele não existia. Um degrau sem régua é uma descrição."""
     assert SCRIPT.exists(), (
-        "`scripts/check_bancada_de_bt.py` sumiu. A escada de releases o nomeia "
+        "`scripts/check_ensaio_de_bt.py` sumiu. A escada de releases o nomeia "
         "como o que mede o degrau 0.9.5 — sem ele, o degrau dela volta a ser "
         "uma frase.")
 

@@ -1,7 +1,7 @@
 """O ensaio do rádio passa no mypy.
 
 Sprint A-SONDA-DO-BLUEZ-PERGUNTA-SO-AO-DONO-E-O-ENSAIO-PASSA-NO-TIPO-01. O portão ``mypy`` do
-``portoes.sh`` mede só ``src/``; ``scripts/bancada_do_radio.py`` nunca foi medido.
+``portoes.sh`` mede só ``src/``; ``scripts/ensaio_do_radio.py`` nunca foi medido.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "scripts" / "bancada_do_radio.py"
+BANCADA = RAIZ / "scripts" / "ensaio_do_radio.py"
 
 
 def _mypy() -> list[str] | None:

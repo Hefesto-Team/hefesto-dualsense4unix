@@ -63,10 +63,10 @@ se acrescenta aqui antes de entrar na tela.
 `wrapper_used`, `dedup`, "mesa", "janela do aplicativo", "linha de comando",
 `reconciliad`, `compactada`,
 qualquer frase que mande a pessoa procurar um botão ou uma janela que não
-existe, e qualquer alarme sem medição (`frases_que_ela_baniu.py`).
+existe, e qualquer alarme sem medição (`frases_banidas.py`).
 
 **ESTA LINHA É O DONO DA LISTA — 11/09/2026, F5-A-REGUA-LE-O-GESTO.** Até esta
-data ela era prosa: `frases_que_ela_baniu.PALAVRAS_BANIDAS` tinha três palavras
+data ela era prosa: `frases_banidas.PALAVRAS_BANIDAS` tinha três palavras
 e o glossário tinha onze proibições, e foi por essa fresta que `uinput`
 sobreviveu na dica da Navegação. Agora as duas listas se medem uma contra a
 outra, **nos dois sentidos**, em
@@ -98,9 +98,9 @@ e por isso ficam de fora da conta.
 
 * termo novo na tela → linha aqui antes, com o dono;
 * termo que ela recusou → some da tela em TODOS os lugares no mesmo dia
-  (`scripts/check_regua_de_tela.py` e `frases_que_ela_baniu.py` são os portões
+  (`scripts/check_regua_de_tela.py` e `frases_banidas.py` são os portões
   que já existem). **A palavra "mesa" ENTROU em 06/09/2026**
-  (A-PALAVRA-MESA-SAI-01): ela mora em `frases_que_ela_baniu.PALAVRAS_BANIDAS`,
+  (A-PALAVRA-MESA-SAI-01): ela mora em `frases_banidas.PALAVRAS_BANIDAS`,
   numa tupla à parte porque palavra se casa por BORDA — `"mesa" in texto` casa
   com *remessa* e com todo nome que a carrega. A régua é
   `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py`, e o instrumento para
@@ -110,6 +110,6 @@ e por isso ficam de fora da conta.
 * o que a tela CITA de outro programa é identificador, como o `<code>`: o
   registro do serviço da aba Sistema traz as linhas do daemon com as chaves
   dele (`mac=`, `uniq=`), e quem o mostra o registra como citação
-  (`frases_que_ela_baniu.citar`), que o funil do piloto não lê (28/09/2026). A
+  (`frases_banidas.citar`), que o funil do piloto não lê (28/09/2026). A
   frase do produto no mesmo campo continua lida;
 * o portão `acentuacao` vale aqui como em todo lugar.

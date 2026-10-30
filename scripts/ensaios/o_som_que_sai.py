@@ -88,9 +88,9 @@ def pcm_pulsado(taxa: int = af.TAXA_DO_ENCODER) -> Callable[[int], bytes]:
 
 
 def _exigir_bancada() -> tuple[bool, str]:
-    """`scripts/bancada.sh exigir` — rc≠0 é ESPERAR, nunca contornar."""
+    """`scripts/ensaio.sh exigir` — rc≠0 é ESPERAR, nunca contornar."""
     proc = subprocess.run(
-        ["bash", os.path.join(_RAIZ, "scripts", "bancada.sh"), "exigir"],
+        ["bash", os.path.join(_RAIZ, "scripts", "ensaio.sh"), "exigir"],
         capture_output=True,
         text=True,
         check=False,
@@ -419,7 +419,7 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
             f"  degrau      0x{arranjo.degrau:02x} ({arranjo.tamanho} B)\n"
             f"{linha_do_common}"
             "  A escrita é o ensaio 1 da MESA-DE-QUATRO-01: ela precisa da bancada\n"
-            "  reservada (scripts/bancada.sh exigir) e da orelha dela do outro lado.\n"
+            "  reservada (scripts/ensaio.sh exigir) e da orelha dela do outro lado.\n"
             "  Acrescente --eu-estou-ouvindo quando as duas coisas forem verdade.\n"
             "  O retorno do os.write() NÃO é a medição — o kernel aceita entrega que\n"
             "  o firmware descarta calado."

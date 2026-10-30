@@ -102,7 +102,7 @@ A_DIVIDA: dict[str, str] = {}
 
 def _limpo(html: str) -> str:
     """A página SEM comentário, `<style>` e `<script>`, achados pelo `html.parser`, e antes de tudo."""
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+    from hefesto_dualsense4unix.interface.frases_banidas import sem_o_mudo
 
     return sem_o_mudo(html)
 

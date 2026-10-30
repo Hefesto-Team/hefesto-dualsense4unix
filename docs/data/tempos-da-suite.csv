@@ -36,7 +36,7 @@ tests/unit/test_a_04_o_brilho_viaja_com_a_cor.py,790,medido
 tests/unit/test_a_04_o_desenho_veste_o_aparelho.py,880,medido
 tests/unit/test_a_04_o_trilho_de_brilho_grava.py,1030,medido
 tests/unit/test_a_04_pergunta_ao_daemon_vivo.py,6670,medido
-tests/unit/test_a_05_vibracao_diz_a_forca_que_ela_escolheu.py,2540,medido
+tests/unit/test_a_05_vibracao_diz_a_forca_escolhida.py,2540,medido
 tests/unit/test_a_05_vibracao_sai_do_desenho.py,950,medido
 tests/unit/test_a_06_a_funcao_do_teclado_tem_tres.py,860,medido
 tests/unit/test_a_06_a_identidade_vem_de_cima.py,790,medido
@@ -59,7 +59,7 @@ tests/unit/test_a_aba05_desenha_o_modelo_do_aparelho.py,860,medido
 tests/unit/test_a_aba05_publica_os_hexes_do_mapa.py,610,medido
 tests/unit/test_a_aba05_veste_a_cor_do_controle_lido.py,930,medido
 tests/unit/test_a_aba07_le_o_que_o_daemon_ja_dizia.py,850,medido
-tests/unit/test_a_aba08_sugere_o_aparelho_e_ela_confirma.py,870,medido
+tests/unit/test_a_aba08_sugere_o_aparelho_e_o_usuario_confirma.py,870,medido
 tests/unit/test_a_aba08_veste_o_desenho_do_controle_lido.py,1010,medido
 tests/unit/test_a_aba10_a_lupa_a_ordem_e_a_largura.py,920,medido
 tests/unit/test_a_aba10_nao_reserva_banda_morta_no_titulo.py,9938,medido
@@ -94,7 +94,7 @@ tests/unit/test_a_aba_navegacao_tem_os_dois_point_and_click.py,830,medido
 tests/unit/test_a_aba_perfis_apaga_e_esquece_a_escolha.py,820,medido
 tests/unit/test_a_aba_perfis_do_todo.py,3630,medido
 tests/unit/test_a_aba_perfis_manda_para_um_endereco_que_existe.py,1090,medido
-tests/unit/test_a_aba_perfis_nomeia_o_alvo_que_ela_vai_apagar.py,1240,medido
+tests/unit/test_a_aba_perfis_nomeia_o_alvo_que_vai_apagar.py,1240,medido
 tests/unit/test_a_aba_perfis_pergunta_ao_dono_quem_esta_valendo.py,840,medido
 tests/unit/test_a_aba_perfis_segue_o_perfil_que_vale.py,920,medido
 tests/unit/test_a_aba_sistema_do_todo.py,3590,medido
@@ -105,11 +105,11 @@ tests/unit/test_a_aba_vibracao_ganha_os_botoes_de_efeito.py,2680,medido
 tests/unit/test_a_aba_vibracao_tem_o_sensor_haptico_e_dois_testes.py,3950,medido
 tests/unit/test_a_altura_e_a_largura_da_janela_nao_pulsam.py,17620,medido
 tests/unit/test_a_amostra_do_dsu_vem_do_hub.py,780,medido
-tests/unit/test_a_bancada_de_bt_tem_regua.py,351,medido
-tests/unit/test_a_bancada_do_radio_passa_no_tipo.py,1969,medido
-tests/unit/test_a_bancada_do_radio_recusa_a_mesa_vazia.py,611,medido
-tests/unit/test_a_bancada_fala_a_forma_a.py,311,medido
-tests/unit/test_a_bancada_fala_a_tela_da_onda_6a.py,1390,medido
+tests/unit/test_o_ensaio_de_bt_tem_regua.py,351,medido
+tests/unit/test_o_ensaio_do_radio_passa_no_tipo.py,1969,medido
+tests/unit/test_o_ensaio_do_radio_recusa_a_mesa_vazia.py,611,medido
+tests/unit/test_o_ensaio_fala_a_forma_a.py,311,medido
+tests/unit/test_o_ensaio_fala_a_tela_da_onda_6a.py,1390,medido
 tests/unit/test_a_bandeja_segue_a_escolha.py,950,medido
 tests/unit/test_a_barra_da_janela_segue_o_sistema.py,345,medido
 tests/unit/test_a_barra_de_baixo_e_a_fita_respondem_ao_mouse.py,379,medido
@@ -127,7 +127,7 @@ tests/unit/test_a_biblioteca_de_regua_acha_as_abas.py,810,medido
 tests/unit/test_a_bomba_cede_a_fila_cheia.py,600,medido
 tests/unit/test_a_bomba_do_som_no_radio.py,770,medido
 tests/unit/test_a_cadeia_usb_se_reconhece_pelo_tipo.py,900,medido
-tests/unit/test_a_caixa_fica_onde_ela_abriu.py,5490,medido
+tests/unit/test_a_caixa_fica_onde_foi_aberta.py,5490,medido
 tests/unit/test_a_caixinha_sumiu_do_perfil_do_pragmata.py,670,medido
 tests/unit/test_a_calibracao_grava_com_o_daemon_morto.py,780,medido
 tests/unit/test_a_calibracao_mostra_quem_esta_na_mao.py,990,medido
@@ -156,7 +156,7 @@ tests/unit/test_a_conta_de_slots_por_adaptador.py,630,medido
 tests/unit/test_a_cor_do_externo_fora_da_lista_se_escolhe.py,800,medido
 tests/unit/test_a_cor_do_plastico_entra_pela_porta_do_broker.py,570,medido
 tests/unit/test_a_cor_e_o_numero_do_perfil_chegam_por_toda_rota.py,2130,medido
-tests/unit/test_a_cor_e_os_botoes_que_ela_declarou_seguem_o_controle.py,3080,medido
+tests/unit/test_a_cor_e_os_botoes_declarados_seguem_o_controle.py,3080,medido
 tests/unit/test_a_cor_escolhida_acompanha_o_controle.py,790,medido
 tests/unit/test_a_cor_escolhida_vai_ao_disco_e_o_trilho_nao_reescala.py,800,medido
 tests/unit/test_a_cor_que_falhou_se_pergunta_de_novo.py,1210,medido
@@ -169,7 +169,7 @@ tests/unit/test_a_cura_do_engasgo_nunca_mira_o_driver_do_wine.py,560,medido
 tests/unit/test_a_cura_nao_mora_so_no_tooltip.py,630,medido
 tests/unit/test_a_cura_por_estrada_e_a_caixa_do_flatpak.py,377,medido
 tests/unit/test_a_cura_por_estrada_tem_chamador.py,760,medido
-tests/unit/test_a_cura_reconhece_o_prefixo_que_ela_desligou_a_mao.py,650,medido
+tests/unit/test_a_cura_reconhece_o_prefixo_desligado_a_mao.py,650,medido
 tests/unit/test_a_descoberta_le_o_sysfs_e_nao_abre_o_no.py,5080,medido
 tests/unit/test_a_devolucao_do_led_repinta_o_estado_real.py,700,medido
 tests/unit/test_a_dica_da_casa_abre_com_o_ponteiro.py,11770,medido
@@ -224,7 +224,7 @@ tests/unit/test_a_forca_da_vibracao_e_por_controle.py,980,medido
 tests/unit/test_a_forca_nao_apaga_o_efeito_escolhido.py,610,medido
 tests/unit/test_a_frase_de_agora_nao_usa_a_classe_grudenta.py,810,medido
 tests/unit/test_a_frase_do_teclado_fala_de_um_estado_que_existe.py,640,medido
-tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py,2440,medido
+tests/unit/test_a_frase_banida_nao_chega_a_tela.py,2440,medido
 tests/unit/test_a_frase_refutada_da_allowlist.py,1855,medido
 tests/unit/test_a_funcao_do_teclado_ganha_o_sempre.py,6140,medido
 tests/unit/test_a_gestao_segue_o_jogador.py,2830,medido
@@ -315,7 +315,7 @@ tests/unit/test_a_mascara_mora_no_perfil.py,730,medido
 tests/unit/test_a_mascara_nao_alcanca_o_microfone.py,384,medido
 tests/unit/test_a_mascara_nao_contagia_entre_jogos.py,710,medido
 tests/unit/test_a_mascara_nintendo_pro_atravessa_a_casa.py,830,medido
-tests/unit/test_a_mascara_persiste_ate_ela_mudar.py,770,medido
+tests/unit/test_a_mascara_persiste_ate_o_usuario_mudar.py,770,medido
 tests/unit/test_a_mascara_segue_o_estado.py,950,medido
 tests/unit/test_a_mascara_sobrevive_ao_script_do_ge.py,600,medido
 tests/unit/test_a_matriz_do_daemon_e_uma_so.py,540,medido
@@ -323,7 +323,7 @@ tests/unit/test_a_medicao_das_decisoes_sem_prova_morde.py,11475,medido
 tests/unit/test_a_mesa_de_medicao.py,5710,medido
 tests/unit/test_a_mesa_de_quatro_sobe_no_daemon.py,4300,medido
 tests/unit/test_a_mesa_e_cega_ao_transporte.py,483,medido
-tests/unit/test_a_mesa_guarda_o_que_ela_declarou.py,630,medido
+tests/unit/test_a_mesa_guarda_o_que_foi_declarado.py,630,medido
 tests/unit/test_a_mesa_le_o_barramento.py,289,medido
 tests/unit/test_a_mesa_vazia_nao_para_o_laco_do_servico.py,1570,medido
 tests/unit/test_a_mesma_lingua_01_o_nome_do_vpad_segue_a_fila.py,640,medido
@@ -515,7 +515,7 @@ tests/unit/test_arvore_errada_01_o_censo_lia_o_apps_que_a_steam_nao_le.py,610,me
 tests/unit/test_arvore_errada_02_o_migrate_escrevia_onde_a_steam_nao_le.py,590,medido
 tests/unit/test_as_abas_vivas_falam_com_o_daemon_certo.py,389,medido
 tests/unit/test_as_actions_do_ci_andam_na_mesma_versao.py,329,medido
-tests/unit/test_as_bancadas_vivas_abrem_a_pagina_que_prometem.py,333,medido
+tests/unit/test_os_ensaios_vivos_abrem_a_pagina_que_prometem.py,333,medido
 tests/unit/test_as_bordas_do_som_dizem_o_controle.py,1080,medido
 tests/unit/test_as_capacidades_genericas_da_porta.py,7360,medido
 tests/unit/test_as_capturas_de_radio_nascem_fechadas.py,19660,medido
@@ -530,7 +530,7 @@ tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py,620,medido
 tests/unit/test_as_duas_reguas_vazias_dizem_que_nao_mediram.py,1538,medido
 tests/unit/test_as_faixas_dizem_quem_briga_com_cada_aparelho.py,4280,medido
 tests/unit/test_as_fotos_acompanham_a_versao.py,450,medido
-tests/unit/test_as_frases_que_a_bancada_achou.py,900,medido
+tests/unit/test_as_frases_que_o_ensaio_achou.py,900,medido
 tests/unit/test_as_imersoes_de_gatilho_de_hoje_entram_na_regua.py,1030,medido
 tests/unit/test_as_imersoes_novas_de_arma_golpe_e_motor.py,950,medido
 tests/unit/test_as_lampadas_do_jogador_seguem_a_mesa.py,820,medido
@@ -546,7 +546,7 @@ tests/unit/test_as_quatro_pernas_de_todo_campo_do_perfil.py,309,medido
 tests/unit/test_as_regras_do_som_valem_no_wireplumber_da_distro.py,794,medido
 tests/unit/test_as_solucoes_nos_lancadores.py,930,medido
 tests/unit/test_as_telas_de_16_10_no_webkit.py,19980,medido
-tests/unit/test_as_telas_que_ela_pediu_em_16_10.py,850,medido
+tests/unit/test_as_telas_pedidas_em_16_10.py,850,medido
 tests/unit/test_as_tres_reguas_veem_svg_e_comprimido.py,462,medido
 tests/unit/test_as_tres_secoes_da_acessibilidade_chegam_ao_controle.py,800,medido
 tests/unit/test_as_versoes_que_a_casa_mediu.py,328,medido
@@ -571,7 +571,7 @@ tests/unit/test_backend_multi_controller.py,10880,medido
 tests/unit/test_backend_no_device_resilient.py,2650,medido
 tests/unit/test_backend_output_target.py,4470,medido
 tests/unit/test_backend_report_throttle.py,810,medido
-tests/unit/test_bancada_nomeia_coluna_que_o_csv_nao_tem.py,427,medido
+tests/unit/test_ensaio_nomeia_coluna_que_o_csv_nao_tem.py,427,medido
 tests/unit/test_barra_muda_01_o_sinal_que_nao_le_a_lampada.py,900,medido
 tests/unit/test_bateria_no_journal.py,2710,medido
 tests/unit/test_bateria_que_pula_01_a_voz_nao_e_a_carga.py,570,medido
@@ -650,7 +650,7 @@ tests/unit/test_controle_ligado_que_o_sistema_nao_adotou.py,760,medido
 tests/unit/test_controles_o_acelerometro_chega.py,580,medido
 tests/unit/test_controller.py,2510,medido
 tests/unit/test_controllers_json_lock.py,560,medido
-tests/unit/test_coop_bancada_de_queda_do_primario.py,860,medido
+tests/unit/test_coop_ensaio_de_queda_do_primario.py,860,medido
 tests/unit/test_coop_calibracao_sem_io_no_loop.py,2260,medido
 tests/unit/test_coop_numeracao_sem_colisao.py,1020,medido
 tests/unit/test_coop_optout_migracao.py,690,medido
@@ -888,7 +888,7 @@ tests/unit/test_lugar_a_mesa_e2_descoberta_unificada.py,570,medido
 tests/unit/test_lugar_a_mesa_numero_de_jogador_nao_se_repete.py,700,medido
 tests/unit/test_luz_cega_e8_o_berco_nao_vaza.py,1660,medido
 tests/unit/test_luz_do_jogador_bate_com_o_fonte.py,423,medido
-tests/unit/test_mapa_a_bancada_de_mentira.py,640,medido
+tests/unit/test_mapa_o_ensaio_de_mentira.py,640,medido
 tests/unit/test_mapa_combinacao_enderecos.py,317,medido
 tests/unit/test_mapa_da_mesa_fala_a_mesma_lingua.py,620,medido
 tests/unit/test_mapa_da_mesa_sobrevive_a_versao.py,680,medido
@@ -1019,7 +1019,7 @@ tests/unit/test_o_bluez_fora_do_dpkg_avisa.py,363,medido
 tests/unit/test_o_bluez_nao_manda_apagar_o_cache.py,1757,medido
 tests/unit/test_o_bluez_tem_um_dono.py,14000,medido
 tests/unit/test_o_boot_entrega_o_ps_do_perfil.py,670,medido
-tests/unit/test_o_boot_restaura_o_perfil_que_ela_escolheu.py,680,medido
+tests/unit/test_o_boot_restaura_o_perfil_escolhido.py,680,medido
 tests/unit/test_o_botao_alterna_repete_e_entende_toque_longo.py,790,medido
 tests/unit/test_o_botao_chega_ao_jogo_como_ele_e.py,910,medido
 tests/unit/test_o_botao_cinza_diz_a_razao.py,1630,medido
@@ -1067,7 +1067,7 @@ tests/unit/test_o_cartao_da_steam_nao_narra.py,780,medido
 tests/unit/test_o_cartao_diz_se_o_som_tem_para_onde_ir.py,980,medido
 tests/unit/test_o_cartao_do_controle_nao_tem_o_botao_da_luz.py,820,medido
 tests/unit/test_o_cartao_do_controle_que_chega_reabre.py,960,medido
-tests/unit/test_o_cartao_do_externo_mostra_o_que_ela_declarou.py,950,medido
+tests/unit/test_o_cartao_do_externo_mostra_o_que_foi_declarado.py,950,medido
 tests/unit/test_o_casamento_das_dez.py,1220,medido
 tests/unit/test_o_censo_de_coleta_segue_a_arvore.py,913,medido
 tests/unit/test_o_censo_dos_lancadores_le_a_biblioteca.py,590,medido
@@ -1091,7 +1091,7 @@ tests/unit/test_o_comecar_guarda_o_zero_de_cada_controle.py,1490,medido
 tests/unit/test_o_conectar_abre_inteiro_toda_vez.py,2940,medido
 tests/unit/test_o_conectar_e_um_interruptor.py,5780,medido
 tests/unit/test_o_conectar_pareia_no_adaptador_escolhido.py,1160,medido
-tests/unit/test_o_conectar_segue_a_caixa_que_ela_abriu.py,5600,medido
+tests/unit/test_o_conectar_segue_a_caixa_aberta.py,5600,medido
 tests/unit/test_o_conftest_roda_onde_o_produto_nao_esta_instalado.py,518,medido
 tests/unit/test_o_conselho_de_atualizar_serve_a_esta_instalacao.py,3040,medido
 tests/unit/test_o_contador_do_que_o_jogo_manda.py,301,medido
@@ -1127,7 +1127,7 @@ tests/unit/test_o_despachante_serve_as_dez.py,1180,medido
 tests/unit/test_o_destino_da_mira_que_nao_anda.py,920,medido
 tests/unit/test_o_device_ks_alcanca_o_lancador.py,660,medido
 tests/unit/test_o_diario_avisa_uma_vez_e_a_configuracao_ilegivel_nao_se_perde.py,880,medido
-tests/unit/test_o_diario_da_modificacao_tem_teto_enquanto_ela_roda.py,780,medido
+tests/unit/test_o_diario_da_modificacao_tem_teto_enquanto_roda.py,780,medido
 tests/unit/test_o_diario_do_daemon_cabe_em_mil_linhas_por_dia.py,25390,medido
 tests/unit/test_o_diario_do_radio.py,15570,medido
 tests/unit/test_o_diario_escreve_o_traceback_sem_os_locais.py,540,medido
@@ -1321,7 +1321,7 @@ tests/unit/test_o_mapa_mostra_a_cadeia_usb_e_o_registro.py,1420,medido
 tests/unit/test_o_mapa_nao_guarda_fato_derrubado.py,751,medido
 tests/unit/test_o_mapa_nunca_encolhe.py,332,medido
 tests/unit/test_o_mapa_promete_a_cor_do_plastico_pelo_cabo.py,600,medido
-tests/unit/test_o_mapa_que_ela_corrige_na_tela.py,13640,medido
+tests/unit/test_o_mapa_corrigido_na_tela.py,13640,medido
 tests/unit/test_o_mapa_separa_divida_de_decisao.py,2019,medido
 tests/unit/test_o_mapear_le_o_barramento_fora_do_fio_da_janela.py,1310,medido
 tests/unit/test_o_mapear_lista_o_que_ja_foi_mapeado.py,3160,medido
@@ -1489,12 +1489,12 @@ tests/unit/test_o_quarto_botao_do_alto_falante.py,1050,medido
 tests/unit/test_o_que_a_unit_chama_o_pacote_leva.py,311,medido
 tests/unit/test_o_que_cada_botao_faz_tem_campo.py,650,medido
 tests/unit/test_o_que_chega_ao_jogo.py,780,medido
-tests/unit/test_o_que_e_da_bancada_fica_na_bancada.py,935,medido
+tests/unit/test_o_que_e_do_ensaio_fica_no_ensaio.py,935,medido
 tests/unit/test_o_que_e_do_computador_nao_muda_com_o_jogo.py,1760,medido
 tests/unit/test_o_que_era_do_zsh_mora_no_hefesto.py,1798,medido
 tests/unit/test_o_que_se_muda_vale_para_o_perfil_ativo.py,1040,medido
 tests/unit/test_o_que_so_a_janela_ligava_tem_verbo_no_terminal.py,2070,medido
-tests/unit/test_o_que_vai_a_quem_usa_nao_conhece_a_pasta_da_bancada.py,536,medido
+tests/unit/test_o_que_vai_a_quem_usa_nao_conhece_a_pasta_do_ensaio.py,536,medido
 tests/unit/test_o_radio_diz_por_que_nao_tem_ponte.py,800,medido
 tests/unit/test_o_ramo_inteiro_do_governador_cala_a_vaga_longe.py,560,medido
 tests/unit/test_o_rapido_so_repete_o_que_mudou.py,2089,medido
@@ -1503,7 +1503,7 @@ tests/unit/test_o_reaplicar_nunca_apaga_o_que_o_usuario_pos.py,700,medido
 tests/unit/test_o_recado_de_sucesso_pousa_no_cartao.py,8100,medido
 tests/unit/test_o_receptor_2_4g_na_aba_conexoes.py,319,medido
 tests/unit/test_o_receptor_2_4g_se_reconhece_e_se_ve_sofrer.py,940,medido
-tests/unit/test_o_recibo_declara_a_bancada_de_cada_foto.py,316,medido
+tests/unit/test_o_recibo_declara_o_ensaio_de_cada_foto.py,316,medido
 tests/unit/test_o_recibo_do_proton_viaja_em_todo_formato.py,4775,medido
 tests/unit/test_o_recibo_so_nasce_do_verde.py,5079,medido
 tests/unit/test_o_reconectar_nao_diz_nada.py,910,medido
@@ -1542,7 +1542,7 @@ tests/unit/test_o_salvar_devolve_todo_campo_do_perfil.py,620,medido
 tests/unit/test_o_salvar_do_rodape_nao_recusa_pelo_teto_da_vibracao.py,840,medido
 tests/unit/test_o_salvar_e_o_aplicar_leem_so_o_perfil.py,1050,medido
 tests/unit/test_o_salvar_leva_a_acessibilidade.py,690,medido
-tests/unit/test_o_salvar_nao_apaga_o_que_ela_configurou.py,1020,medido
+tests/unit/test_o_salvar_nao_apaga_o_que_foi_configurado.py,1020,medido
 tests/unit/test_o_salvar_nao_congela_a_paleta_automatica.py,640,medido
 tests/unit/test_o_salvar_reaplica_no_controle.py,820,medido
 tests/unit/test_o_secure_boot_se_le_sem_mokutil.py,525,medido
@@ -1721,7 +1721,7 @@ tests/unit/test_p1_um_dono_so_para_o_perfil_que_esta_valendo.py,760,medido
 tests/unit/test_p3_alvo_sem_dono.py,640,medido
 tests/unit/test_p3_o_salvar_solta_a_thread_e_para_de_prometer.py,710,medido
 tests/unit/test_p4_alvo_ausente_nao_vira_broadcast.py,4400,medido
-tests/unit/test_p5_os_presets_de_programa_eram_esta_bancada.py,1120,medido
+tests/unit/test_p5_os_presets_de_programa_eram_este_ensaio.py,1120,medido
 tests/unit/test_p7_remover_diz_que_esta_apagando_o_que_vale.py,670,medido
 tests/unit/test_p8_o_aviso_de_radio_fragil_chega_na_aba_perfis.py,700,medido
 tests/unit/test_packaging_ativacao_deb.py,335,medido
@@ -1769,7 +1769,7 @@ tests/unit/test_ponte_escada_laco_01_quem_sobe_a_escada.py,790,medido
 tests/unit/test_ponte_gravada_no_launch.py,730,medido
 tests/unit/test_ponte_steam_input_01_a_lista_que_so_preservava.py,1720,medido
 tests/unit/test_por_unidade_01_todas_as_abas.py,1550,medido
-tests/unit/test_portao_a_bancada_nao_deixa_orfao.py,436,medido
+tests/unit/test_portao_o_ensaio_nao_deixa_orfao.py,436,medido
 tests/unit/test_portao_a_grafia_do_nome_morde.py,6750,medido
 tests/unit/test_portao_a_lista_de_portoes_e_uma_so.py,741,medido
 tests/unit/test_portao_a_maiuscula_decorativa_morde.py,970,medido
@@ -1941,7 +1941,7 @@ tests/unit/test_subsystem_udp.py,570,medido
 tests/unit/test_system_check.py,540,medido
 tests/unit/test_t03_o_conselho_que_serve_para_esta_instalacao.py,760,medido
 tests/unit/test_t04_o_proton_nao_comemora_o_que_recusou.py,640,medido
-tests/unit/test_t07_a_frase_que_ela_derrubou_nao_volta.py,13223,medido
+tests/unit/test_t07_a_frase_derrubada_nao_volta.py,13223,medido
 tests/unit/test_t10_o_prontuario_ganha_um_chamador.py,620,medido
 tests/unit/test_t12_o_codigo_morto_da_aba_sistema_nao_volta.py,357,medido
 tests/unit/test_t15_a_allowlist_tem_um_caminho_so.py,680,medido

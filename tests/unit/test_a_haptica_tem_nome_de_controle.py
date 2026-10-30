@@ -717,7 +717,7 @@ _PELO_COMECO = re.compile(r"(começa com|começam com|outra com|nem com|ou com) 
 
 
 def test_o_gesto_cita_a_haptica_como_a_lista_mostra(assentos: _Assentos) -> None:
-    """O irmão de ``test_a_bancada_fala_a_forma_a`` para o terceiro nó do controle."""
+    """O irmão de ``test_o_ensaio_fala_a_forma_a`` para o terceiro nó do controle."""
     arquivos = (
         RAIZ / "docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md",
         RAIZ / "docs/method/2026-09-07-O-COMO-DAS-21-o-gesto-exato-de-cada-linha.md",

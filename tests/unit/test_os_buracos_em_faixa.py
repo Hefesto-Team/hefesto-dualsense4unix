@@ -23,7 +23,7 @@ from hefesto_dualsense4unix.daemon.subsystems.coop import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
 from tests.unit import test_o_jogo_espera_a_carta_do_lugar_guardado as bancada_mod
-from tests.unit.test_coop_bancada_de_queda_do_primario import _LeitorDeSecundario
+from tests.unit.test_coop_ensaio_de_queda_do_primario import _LeitorDeSecundario
 from tests.unit.test_o_buraco_de_quem_saiu_se_fecha_no_jogo import _as_mesas_do_produto
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F401
     NOVO,

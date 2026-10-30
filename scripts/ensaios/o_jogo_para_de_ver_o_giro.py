@@ -46,7 +46,7 @@ Uso:
 
     scripts/ensaios/o_jogo_para_de_ver_o_giro.py --so-medir          # só lê
     scripts/ensaios/o_jogo_para_de_ver_o_giro.py --so-medir --lib <caminho>
-    scripts/bancada.sh reservar "ensaio do sensor"                   # e só então:
+    scripts/ensaio.sh reservar "ensaio do sensor"                   # e só então:
     scripts/ensaios/o_jogo_para_de_ver_o_giro.py --segundos 3
 
 ``--jogador P1..P4`` (O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01, degraus 1 e 2) é a outra
@@ -54,7 +54,7 @@ sonda: SDL3 com o HIDAPI LIGADO, como o Vita3K o tem. Abre SÓ o vpad daquele jo
 pelo serial (o `HID_UNIQ` do `hidraw` que o SDL dá) e conferido pelo par `(st_dev, st_ino)`,
 porque nome e GUID são IGUAIS nos quatro. Duas fases (parado, com o dedo), os contadores de
 cada vpad antes, durante e depois, e um laudo por item; rc 3 quando reprova. **Escreve no
-aparelho** (o driver PS5 do HIDAPI escreve ao abrir): exige `scripts/bancada.sh exigir`,
+aparelho** (o driver PS5 do HIDAPI escreve ao abrir): exige `scripts/ensaio.sh exigir`,
 `--lib` de uma libSDL3 e recusa `--so-medir`. `--hidapi 0` existe só para a mordida.
 
 ``--so-medir`` não chama o daemon, força ``SDL_JOYSTICK_HIDAPI=0`` e
@@ -1394,7 +1394,7 @@ def _o_jogador(args: argparse.Namespace) -> int:
     if isinstance(bib, str) or bib.api != 3 or bib.compat:
         print("RECUSO: --jogador mede o SDL3; a biblioteca dada não é uma libSDL3")
         return 2
-    exigir = subprocess.run(["bash", str(RAIZ / "scripts" / "bancada.sh"), "exigir"],
+    exigir = subprocess.run(["bash", str(RAIZ / "scripts" / "ensaio.sh"), "exigir"],
                             capture_output=True, text=True, check=False)
     if exigir.returncode != 0:
         print("RECUSO: a bancada está tomada por outra reserva; esperar é a resposta")

@@ -289,7 +289,7 @@ endereçam o índice 0 (`daemon/udp_server.py:327-344`).
 - A régua do pad promete 5 ms e mede 500 ms; a cura depende do nome interno
   `UInput._find_device` do python-evdev, com `evdev>=1.6` sem teto.
 - Fatos derrubados de pé: a `A-FAIXA-NA-MESA-FORA-DE-ORDEM-01` ainda diz «pad
-  degradado»; `scripts/bancada_do_radio.py:18-26` chama o `poll.tick` de
+  degradado»; `scripts/ensaio_do_radio.py:18-26` chama o `poll.tick` de
   instrumento do dano.
 
 ## 8. A autoria no versionado (eixo 08, cinco altos)

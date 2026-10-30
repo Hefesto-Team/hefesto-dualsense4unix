@@ -65,7 +65,7 @@ import re
 import sys
 from pathlib import Path
 
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+from hefesto_dualsense4unix.interface.frases_banidas import (
     PALAVRAS_BANIDAS,
     palavra_banida_em,
     primeiro_trecho_banido,

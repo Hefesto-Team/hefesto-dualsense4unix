@@ -1,7 +1,7 @@
 """As seis regras de topologia — o que cada uma acusa, e o que ela CALA."""
 from __future__ import annotations
 
-from tests.unit import bancada_das_ordens as bancada
+from tests.unit import ensaio_das_ordens as bancada
 import pytest
 
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens

@@ -80,7 +80,7 @@ zona = "TELA"
 razao = "os geradores das dez abas: a frase nasce aqui e vai para o HTML."
 
 [[regra]]
-caminho = "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py"
+caminho = "src/hefesto_dualsense4unix/interface/frases_banidas.py"
 zona = "TELA"
 razao = "a lista de palavras que a tela não diz é parte do texto da tela."
 

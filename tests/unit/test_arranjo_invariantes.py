@@ -581,7 +581,7 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
 
 def test_a_palavra_que_ela_baniu_nao_esta_na_tela_do_mapa() -> None:
     """A palavra saiu da TELA, e é na tela que se mede — não numa lista de pares."""
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+    from hefesto_dualsense4unix.interface.frases_banidas import (
         texto_visivel_no_produto,
     )
 
@@ -809,7 +809,7 @@ _ENTRADAS_COM_CAMINHO = 8
 def _bancada_do_gabinete_dela() -> object:
     """A `Bancada` do produto: o desenho DO USUÁRIO sobre a leitura de 25/08 às 02h30."""
     from hefesto_dualsense4unix.integrations import mapa_das_portas
-    from tests.unit.test_mapa_a_bancada_de_mentira import (
+    from tests.unit.test_mapa_o_ensaio_de_mentira import (
         bancada_de_agora,
         mapa_dela,
     )

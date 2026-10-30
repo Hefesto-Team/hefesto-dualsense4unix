@@ -22,7 +22,7 @@ exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK e o WebKit")
 
 import hefesto_vivo as hv
 
-from hefesto_dualsense4unix.interface import frases_que_ela_baniu as fb
+from hefesto_dualsense4unix.interface import frases_banidas as fb
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 

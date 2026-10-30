@@ -17,7 +17,7 @@ cada medida está no próprio texto, e os de 07 a 10 registram medidas de 26/09.
 | 07 | [O engasgo e as camadas Vulkan](07-o-engasgo-e-as-camadas-vulkan.md) | o engasgo periódico do Sackboy e a «cura» por camada Vulkan, que nunca teve medição de cura |
 | 08 | [A háptica pelo rádio](08-a-haptica-pelo-radio.md) | por que a vibração do PRAGMATA não chegou ao controle pelo Bluetooth, e a cura do portão «quem joga» |
 | 09 | [As Conexões](09-as-conexoes.md) | as quatro rodadas que levaram a aba 08, o «Mapa das Conexões» e o «Aplicar» do rodapé ao produto |
-| 10 | [O mapa que ela corrige](10-o-mapa-que-ela-corrige.md) | por que o «Mapa das Conexões» identificou errado as entradas USB de uma máquina real, e o que a tela ganhou para corrigir |
+| 10 | [O mapa que ela corrige](10-o-mapa-corrigido-na-tela.md) | por que o «Mapa das Conexões» identificou errado as entradas USB de uma máquina real, e o que a tela ganhou para corrigir |
 | 11 | [O Freestyle](11-o-freestyle.md) | a tabela do ultra e o Freestyle por cima dos perfis de jogo, e por que nada disso entrou no `dev` |
 
 ## Como ler

@@ -345,7 +345,7 @@ def test_a_pagina_da_linha_de_comando_cita_os_verbos_novos() -> None:
 
 
 def test_o_passthrough_diz_do_jogo_sem_frase_banida(monkeypatch: pytest.MonkeyPatch) -> None:
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import FRASES_BANIDAS
+    from hefesto_dualsense4unix.interface.frases_banidas import FRASES_BANIDAS
 
     _com_cliente(monkeypatch, resposta={"status": "ok", "passthrough": True})
     resultado = _rodar("rumble", "passthrough", "on")

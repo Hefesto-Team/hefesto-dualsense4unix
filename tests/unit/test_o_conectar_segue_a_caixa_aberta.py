@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.integrations import diario_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
-from tests.unit.test_a_caixa_fica_onde_ela_abriu import CHIP, _cartao
+from tests.unit.test_a_caixa_fica_onde_foi_aberta import CHIP, _cartao
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     Bancada,
     BuscaDePe,

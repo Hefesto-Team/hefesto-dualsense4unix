@@ -13,7 +13,7 @@ from hefesto_dualsense4unix.interface.folha_da_casa import (
     FOLHA_DA_CASA,
     seletores_escondidos,
 )
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+from hefesto_dualsense4unix.interface.frases_banidas import (
     palavra_banida_em,
     texto_visivel,
     texto_visivel_no_produto,

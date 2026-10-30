@@ -50,7 +50,7 @@ COMO ESTES TESTES MORDEM
   nunca foi ensaiada".
 - Tire a coluna `ponte` do cabeçalho de `docs/data/ensaios.csv`: o primeiro
   teste reprova, e o portão dos escritores reprova junto.
-- Redigite as pontes na `bancada_do_mapa.py` em vez de importá-las: o teste do dono
+- Redigite as pontes na `ensaio_do_mapa.py` em vez de importá-las: o teste do dono
   único reprova, nomeando a chave copiada.
 """
 
@@ -63,7 +63,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 CADERNO = RAIZ / "docs" / "data" / "ensaios.csv"
-BANCADA = RAIZ / "scripts" / "bancada_do_mapa.py"
+BANCADA = RAIZ / "scripts" / "ensaio_do_mapa.py"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
 
@@ -185,7 +185,7 @@ def test_afirmacao_sem_ponte_nao_discrimina_nada() -> None:
 def test_carrega_por_lado_sem_ponte_nao_perde_ensaio() -> None:
     """Sem `ponte`, o comportamento é o de sempre — ninguém some.
 
-    `bancada_do_mapa.py` (duas vezes), `gerar-mapa.py` e `check_paridade_transporte.py`
+    `ensaio_do_mapa.py` (duas vezes), `gerar-mapa.py` e `check_paridade_transporte.py`
     chamam sem o parâmetro. Se o padrão passasse a filtrar, os quatro
     devolveriam menos ensaios calados — e lista vazia é justamente o que o
     portão lê como "não há ensaio nenhum".

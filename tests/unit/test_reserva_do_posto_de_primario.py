@@ -6,7 +6,7 @@ import io
 import pytest
 
 from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
-from tests.unit.test_coop_bancada_de_queda_do_primario import (
+from tests.unit.test_coop_ensaio_de_queda_do_primario import (
     UNIQ_A,
     UNIQ_B,
     Bancada,

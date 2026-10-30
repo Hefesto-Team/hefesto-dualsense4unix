@@ -81,7 +81,7 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     relogio_do_lugar_guardado,
 )
 from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
-from tests.unit.test_coop_bancada_de_queda_do_primario import (
+from tests.unit.test_coop_ensaio_de_queda_do_primario import (
     _FakeHandle,
     _LeitorDeSecundario,
     _LeitorDoPrimario,

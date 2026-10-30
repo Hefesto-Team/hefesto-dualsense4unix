@@ -1,7 +1,7 @@
 """Os dois módulos de barramento passam a falar do mesmo aparelho pelo mesmo nome."""
 from __future__ import annotations
 
-from tests.unit.test_mapa_a_bancada_de_mentira import bancada_de_agora
+from tests.unit.test_mapa_o_ensaio_de_mentira import bancada_de_agora
 
 
 def test_o_caminho_do_adaptador_bate_com_o_do_censo() -> None:

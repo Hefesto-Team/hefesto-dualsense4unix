@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bancada_do_radio.py — o CONDUTOR da sentada do rádio, 19/09/2026.
+"""ensaio_do_radio.py — o CONDUTOR da sentada do rádio, 19/09/2026.
 
 A ENCOMENDA É DO USUÁRIO: *"Prepara todos os testes, deixa tudo pronto (…) pra em
 uma sentada eu conseguir fazer todos os testes sem perdermos muito tempo. Pra
@@ -31,12 +31,12 @@ formato: uma medição que mora em arquivo próprio não é lida por ninguém.
 
 USO::
 
-    python3 scripts/bancada_do_radio.py estado        # a fotografia de partida
-    python3 scripts/bancada_do_radio.py taxa 6        # a taxa de tique, N segundos
-    python3 scripts/bancada_do_radio.py dano hci0     # liga scan e mede — devolve
-    python3 scripts/bancada_do_radio.py bonds         # os bonds dobrados + o gesto
-    python3 scripts/bancada_do_radio.py limpar hci0 44:46:48:00:00:03
-    python3 scripts/bancada_do_radio.py controles     # quem está de pé, onde
+    python3 scripts/ensaio_do_radio.py estado        # a fotografia de partida
+    python3 scripts/ensaio_do_radio.py taxa 6        # a taxa de tique, N segundos
+    python3 scripts/ensaio_do_radio.py dano hci0     # liga scan e mede — devolve
+    python3 scripts/ensaio_do_radio.py bonds         # os bonds dobrados + o gesto
+    python3 scripts/ensaio_do_radio.py limpar hci0 44:46:48:00:00:03
+    python3 scripts/ensaio_do_radio.py controles     # quem está de pé, onde
 """
 
 from __future__ import annotations
@@ -363,7 +363,7 @@ def etapa_bonds() -> int:
     for mac, hcis in sorted(dobrados.items()):
         for h in sorted(hcis):
             print(f"    # tirar do {h}:")
-            print(f"    python3 scripts/bancada_do_radio.py limpar {h} {_mascarar(mac)}")
+            print(f"    python3 scripts/ensaio_do_radio.py limpar {h} {_mascarar(mac)}")
     print("\n  Ele apaga o bond em disco e o cache da origem na mesma execução;")
     print("  o RemoveDevice do BlueZ já tira o [ServiceRecords] do cache.")
     print("  " + "─" * 58 + "\n")

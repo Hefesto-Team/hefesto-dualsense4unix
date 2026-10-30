@@ -9,7 +9,7 @@ from hefesto_dualsense4unix.integrations.mapa_das_portas import (
     vizinhas_de_verdade,
 )
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
-from tests.unit.test_mapa_a_bancada_de_mentira import (
+from tests.unit.test_mapa_o_ensaio_de_mentira import (
     bancada_de_agora,
     mapa_dela,
 )

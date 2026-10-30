@@ -59,7 +59,7 @@ unidade, e os dois juntos fecham a afirmação.
 
 A BANCADA É DO USUÁRIO
 -----------------
-Escrever no aparelho exige a bancada. O ensaio chama `scripts/bancada.sh exigir`
+Escrever no aparelho exige a bancada. O ensaio chama `scripts/ensaio.sh exigir`
 sozinho e PARA com `rc=2` se ela estiver tomada — nunca contorna por outro
 caminho, que é como se inventa medição falsa.
 
@@ -137,9 +137,9 @@ def _par_da_conta(degrau: str, base: int) -> tuple[int, int, float, float]:
 
 
 def _exigir_bancada() -> bool:
-    """`scripts/bancada.sh exigir` — rc≠0 é ESPERAR, nunca contornar."""
+    """`scripts/ensaio.sh exigir` — rc≠0 é ESPERAR, nunca contornar."""
     proc = subprocess.run(
-        ["bash", str(RAIZ / "scripts" / "bancada.sh"), "exigir"],
+        ["bash", str(RAIZ / "scripts" / "ensaio.sh"), "exigir"],
         capture_output=True,
         text=True,
     )

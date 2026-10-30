@@ -2,11 +2,11 @@
 
 O CodeQL abriu `py/bad-tag-filter` em onze réguas desta casa: a regex de `<script>` não via
 `</script >`, nem `</SCRIPT>` sem a bandeira, nem o comentário com quebra de linha ou fechado em
-`--!>`. A cura é UMA leitura só, em `frases_que_ela_baniu` (`trechos_mudos`, `sem_o_mudo`,
+`--!>`. A cura é UMA leitura só, em `frases_banidas` (`trechos_mudos`, `sem_o_mudo`,
 `roteiros_de`), que pergunta ao parser da biblioteca onde o navegador fecha cada coisa.
 
 A MORDIDA: devolva a regex velha a qualquer um dos arquivos da lista (ou tire o parser de
-`frases_que_ela_baniu`) e uma das duas metades reprova — a dos casos, ou a do fonte.
+`frases_banidas`) e uma das duas metades reprova — a dos casos, ou a do fonte.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import pathlib
 
 import pytest
 
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+from hefesto_dualsense4unix.interface.frases_banidas import (
     roteiros_de,
     sem_o_mudo,
     trechos_mudos,
@@ -94,9 +94,9 @@ LIDOS_PELO_PARSER = (
     "scripts/check_a_maiuscula_decorativa.py",
     "scripts/check_a_tela_nao_confessa.py",
     "src/hefesto_dualsense4unix/interface/aba10.py",
-    "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py",
+    "src/hefesto_dualsense4unix/interface/frases_banidas.py",
     "tests/unit/test_a_aba_lancadores_diz_a_verdade.py",
-    "tests/unit/test_a_bancada_fala_a_tela_da_onda_6a.py",
+    "tests/unit/test_o_ensaio_fala_a_tela_da_onda_6a.py",
     "tests/unit/test_a_vibracao_nao_manda_num_botao_que_nao_existe.py",
     "tests/unit/test_o_mapa_do_controle_pisca_e_segue_a_troca.py",
     "tests/unit/test_o_rotulo_da_entrada_tem_um_dono.py",
@@ -133,7 +133,7 @@ def test_nenhuma_regua_da_lista_le_script_por_regex() -> None:
     """Prova da D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER."""
     assert _regex_de_script() == [], (
         "uma régua voltou a ler `<script>` por regex — o CodeQL acusa `py/bad-tag-filter`; "
-        "use `trechos_mudos`, `sem_o_mudo` ou `roteiros_de` de `frases_que_ela_baniu`"
+        "use `trechos_mudos`, `sem_o_mudo` ou `roteiros_de` de `frases_banidas`"
     )
 
 

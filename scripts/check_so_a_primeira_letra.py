@@ -11,7 +11,7 @@ palavra INTEIRA em maiúscula; esta pega a INICIAL maiúscula no meio da frase.
 O QUE ELA LÊ
 ------------
 O texto que a pessoa lê nas dez abas — a leitura do produto é a de
-`frases_que_ela_baniu.texto_visivel_no_produto`, com o `<style>`, o `<script>`,
+`frases_banidas.texto_visivel_no_produto`, com o `<style>`, o `<script>`,
 os comentários e o `<title>` do documento fora (o recorte é o da régua da caixa
 alta, `_so_a_tela`) — nas páginas publicadas e, com `--bancada`, no `mockup/`.
 E lê também os três mapas que as abas abrem (`MAPAS`: o das portas, o do controle e
@@ -151,7 +151,7 @@ def nomes_das_abas(paginas: list[pathlib.Path]) -> set[str]:
 def frases(pagina: str) -> list[tuple[int, str]]:
     """`(linha, frase)` de cada trecho que a pessoa lê, cortado onde um rótulo começa."""
     import check_a_maiuscula_decorativa as irma
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+    from hefesto_dualsense4unix.interface.frases_banidas import (
         texto_visivel_no_produto,
     )
 

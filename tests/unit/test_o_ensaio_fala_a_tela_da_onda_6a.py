@@ -13,7 +13,7 @@ from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core.controller import OutputSpec
 from hefesto_dualsense4unix.interface import onde
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+from hefesto_dualsense4unix.interface.frases_banidas import sem_o_mudo
 from hefesto_dualsense4unix.interface.pacotes.camada import PAGINAS_DA_SECAO_DOS_CONTROLES
 
 _RAIZ = Path(__file__).resolve().parents[2]

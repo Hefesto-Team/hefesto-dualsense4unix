@@ -83,7 +83,7 @@ import pytest
 
 
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+from hefesto_dualsense4unix.interface.frases_banidas import sem_o_mudo
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINAS = (

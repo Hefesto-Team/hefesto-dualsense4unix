@@ -2,7 +2,7 @@
 
 O arquivo único levava 217 s sozinho (A-JANELA-ABERTA-CABE-NA-PARTE-01): o tempo é o do
 relógio do produto, e cada cenário abre o piloto oculto de verdade. Partido em cinco, o
-ajudante mora aqui, sem prefixo `test_` (como `bancada_das_ordens.py` e `mesa_do_mockup.py`),
+ajudante mora aqui, sem prefixo `test_` (como `ensaio_das_ordens.py` e `mesa_do_mockup.py`),
 e cada arquivo de teste traz só as fixtures dele. O `scripts/rodar-a-suite.sh` conta este
 módulo como carga do WebKit (o `_gtk` o pede): quem o importa roda em processo próprio.
 """

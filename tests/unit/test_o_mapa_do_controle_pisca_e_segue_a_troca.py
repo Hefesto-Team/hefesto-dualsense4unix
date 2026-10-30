@@ -26,7 +26,7 @@ exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, monta, onde, pacotes
 from hefesto_dualsense4unix.interface.pacotes import a13_mapa_do_controle as a13
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+from hefesto_dualsense4unix.interface.frases_banidas import sem_o_mudo
 from hefesto_dualsense4unix.interface.pacotes import perfil
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]

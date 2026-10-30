@@ -15,7 +15,7 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     FONTE_PADRAO,
     FONTE_SFX,
 )
-from tests.unit import bancada_do_som_junto as bancada
+from tests.unit import ensaio_do_som_junto as bancada
 
 _P1 = "aa:bb:cc:00:00:b1"
 _P2 = "aa:bb:cc:00:00:b2"

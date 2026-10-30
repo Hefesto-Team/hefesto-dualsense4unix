@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bancada_do_mapa.py — a superfície de MEDIÇÃO do mapa de canais."""
+"""ensaio_do_mapa.py — a superfície de MEDIÇÃO do mapa de canais."""
 from __future__ import annotations
 
 import csv
@@ -15,7 +15,7 @@ except ModuleNotFoundError as e:      # pragma: no cover
     raise SystemExit(
         f"falta {e.name}. A bancada NÃO é dependência do produto — instale só nela:\n"
         "    .venv/bin/pip install -e \".[bancada]\"\n"
-        "    .venv/bin/streamlit run scripts/bancada_do_mapa.py"
+        "    .venv/bin/streamlit run scripts/ensaio_do_mapa.py"
     ) from e
 
 AQUI = Path(__file__).resolve().parent

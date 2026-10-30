@@ -1133,7 +1133,7 @@ class Sessao:
         """Reserva a bancada antes de escrever (01 §3.2); ocupada é recusa, nunca contorno."""
         if self.bancada_reservada:
             return
-        bancada = RAIZ / "scripts" / "bancada.sh"
+        bancada = RAIZ / "scripts" / "ensaio.sh"
         if not bancada.is_file():
             self.dizer("  (esta instalação não tem o semáforo da bancada: sigo sem reserva, declarado)")
             return
@@ -1151,7 +1151,7 @@ class Sessao:
 
     def liberar_a_bancada(self) -> None:
         if self.bancada_reservada:
-            self.maquina.rodar(["bash", str(RAIZ / "scripts" / "bancada.sh"), "liberar"], 10.0)
+            self.maquina.rodar(["bash", str(RAIZ / "scripts" / "ensaio.sh"), "liberar"], 10.0)
             self.bancada_reservada = False
 
 

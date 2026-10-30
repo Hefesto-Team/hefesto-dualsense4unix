@@ -18,7 +18,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 
 from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+from hefesto_dualsense4unix.interface.frases_banidas import (
     FRASES_BANIDAS,
     primeiro_trecho_banido,
 )

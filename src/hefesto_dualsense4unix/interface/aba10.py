@@ -1384,7 +1384,7 @@ def _conferir(html: str) -> None:
                "e permite alterar a largura da coluna» é a descrição dela do "
                "gesto, e sem o cursor não há gesto a achar")
 
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import roteiros_de
+    from hefesto_dualsense4unix.interface.frases_banidas import roteiros_de
 
     roteiro = next((corpo for atributos, corpo in roteiros_de(html) if not atributos), None)
     exigir(roteiro is not None,

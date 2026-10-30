@@ -26,7 +26,7 @@ import re
 import pytest
 
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina, pagina_do_mapa
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import roteiros_de
+from hefesto_dualsense4unix.interface.frases_banidas import roteiros_de
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"

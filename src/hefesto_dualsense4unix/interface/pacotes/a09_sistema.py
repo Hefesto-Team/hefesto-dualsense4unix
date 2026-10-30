@@ -2445,7 +2445,7 @@ def _diario() -> str:
     """As últimas :data:`LINHAS_DO_DIARIO` linhas do registro da unit, mascaradas."""
     import subprocess
 
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import citar
+    from hefesto_dualsense4unix.interface.frases_banidas import citar
     from hefesto_dualsense4unix.utils import identidade
 
     unidade = identidade.atual().unit_daemon

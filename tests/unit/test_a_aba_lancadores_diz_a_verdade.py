@@ -1415,7 +1415,7 @@ def test_a_lista_vazia_da_steam_nao_ocupa_um_pixel(desenho):
     A MORDIDA: devolva a frase a `desenho_dos_lancadores.LISTA_VAZIA` e a
     primeira asserção reprova.
     """
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import trechos_mudos
+    from hefesto_dualsense4unix.interface.frases_banidas import trechos_mudos
 
     lida = desenho.Leitura(com_wrapper=("1",), instalados=1)
     fora = desenho.valores_do_cartao(desenho.cartao_da_steam(lida))["steam-fora"]

@@ -12,7 +12,7 @@ que a mesa o lê (`mesa_viva._declaracao_do_disco`):
   face, as duas pela MESMA fonte da mesa (`mesa_viva.cor_declarada` e `familia_dos_botoes`);
 * o que o usuário não declarou não desenha nada (campo sem informação não mostra nada);
 * a decisão do item 3: a família declarada vale também para o DualSense, e o PS continua no
-  logo (a régua é a `test_a_cor_e_os_botoes_que_ela_declarou_seguem_o_controle`).
+  logo (a régua é a `test_a_cor_e_os_botoes_declarados_seguem_o_controle`).
 """
 from __future__ import annotations
 

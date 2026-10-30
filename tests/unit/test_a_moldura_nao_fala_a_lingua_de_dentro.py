@@ -15,7 +15,7 @@ PORTAO = RAIZ / "scripts" / "check_a_janela_nao_confessa.py"
 O_QUE_ELE_LE = (
     "scripts/check_a_janela_nao_confessa.py",
     "scripts/check_a_tela_nao_confessa.py",
-    "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py",
+    "src/hefesto_dualsense4unix/interface/frases_banidas.py",
     "src/hefesto_dualsense4unix/interface/hefesto_vivo.py",
     "src/hefesto_dualsense4unix/interface/janela.py",
     "src/hefesto_dualsense4unix/app/tray.py",
@@ -150,7 +150,7 @@ def test_a_isencao_da_bancada_e_lida_e_nao_digitada(arvore: pathlib.Path) -> Non
 
 def test_a_lista_de_palavras_banidas_vem_do_dono(arvore: pathlib.Path) -> None:
     """Se o dono da lista sumir, o portão PARA — não segue com uma peneira a menos."""
-    dono = arvore / "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py"
+    dono = arvore / "src/hefesto_dualsense4unix/interface/frases_banidas.py"
     dono.write_text("# o dono da lista mudou de nome\n", encoding="utf-8")
 
     r = _rodar(arvore)

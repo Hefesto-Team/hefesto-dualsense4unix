@@ -226,7 +226,7 @@ def test_a_aba_nao_le_mais_o_active_profile_cru() -> None:
 
         ativar               este arquivo, ``test_ativar_recusa_o_mesmo_perfil…``
         remover              este arquivo, ``test_remover_recusa_o_perfil_que_vale…``
-        pacote               ``test_a_aba_perfis_nomeia_o_alvo_que_ela_vai_apagar``
+        pacote               ``test_a_aba_perfis_nomeia_o_alvo_que_vai_apagar``
                              — ``…_o_marcador_que_existe_continua_valendo``
         _perfil_do_editor    idem — ``…_o_editor_abre_no_perfil_que_o_disco_diz…``
         voltar_a_de_ontem    idem — ``…_acha_o_perfil_e_manda_reaplicar`` (os dois

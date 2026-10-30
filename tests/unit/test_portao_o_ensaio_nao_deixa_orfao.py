@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "scripts" / "bancada.sh"
+BANCADA = RAIZ / "scripts" / "ensaio.sh"
 
 _UMA_HORA = 3600
 

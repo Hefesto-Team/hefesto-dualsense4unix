@@ -100,7 +100,7 @@ def seletores_escondidos(folha: str | None = None) -> tuple[str, ...]:
             + ", ".join(repr(s) for s in desconhecidos)
             + " e quem lê esta lista só sabe honrar `.classe`, `#id` e `tag`. "
             "ENSINE A RÉGUA antes de publicar a regra: "
-            "`interface/frases_que_ela_baniu.texto_visivel_no_produto` conta "
+            "`interface/frases_banidas.texto_visivel_no_produto` conta "
             "como VISÍVEL tudo o que não souber esconder, e foi assim que o "
             "`--palavra mesa --publicado` acusou 34 ocorrências que o produto "
             "nunca mostrou."

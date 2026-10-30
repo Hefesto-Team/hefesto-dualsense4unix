@@ -63,7 +63,7 @@ tray = [
 cosmic = [
     "jeepney>=0.8",
 ]
-# O formulário do mapa de canais (`scripts/bancada_do_mapa.py`); não é dependência do produto.
+# O formulário do mapa de canais (`scripts/ensaio_do_mapa.py`); não é dependência do produto.
 bancada = [
     "streamlit>=1.30",
     "pandas>=2.0",

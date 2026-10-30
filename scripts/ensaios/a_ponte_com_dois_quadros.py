@@ -26,7 +26,7 @@ chave (qual rodada foi qual) vai ao ``--saida``, e uma linha curta por rodada.
 SEM ``--escrever``, monta os dois arranjos em seco e mostra os blocos e o CRC. COM
 ``--escrever``, RECUSA nesta ordem: o daemon no ar (ele escreve no mesmo hidraw), sem
 ``--exigir-mac`` conferido, o controle no cabo, sem ``--eu-estou-sentindo`` (rc=3) e a
-bancada tomada (``scripts/bancada.sh exigir``). Nenhum endereço é impresso nem gravado.
+bancada tomada (``scripts/ensaio.sh exigir``). Nenhum endereço é impresso nem gravado.
 
 OS INTERRUPTORES (trocar X por Y na bancada sem editar código)
 --------------------------------------------------------------
@@ -337,7 +337,7 @@ def escrever_no_aparelho(args: argparse.Namespace) -> int:
     if not args.eu_estou_sentindo:
         print("PARADO ANTES DE ESCREVER: acrescente --eu-estou-sentindo com a mão dela no controle")
         return 3
-    proc = subprocess.run(["bash", str(_RAIZ / "scripts" / "bancada.sh"), "exigir"],
+    proc = subprocess.run(["bash", str(_RAIZ / "scripts" / "ensaio.sh"), "exigir"],
                           capture_output=True, text=True, check=False)
     if proc.returncode != 0:
         print("RECUSO: a bancada está tomada por outra reserva; esperar é a resposta")

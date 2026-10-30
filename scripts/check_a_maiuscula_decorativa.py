@@ -54,7 +54,7 @@ O QUE ELE NÃO LÊ, E É DECISÃO
 
 QUEM DECIDE O QUE É "LIDO NO PRODUTO" NÃO É ESTE ARQUIVO
 ---------------------------------------------------------
-É ``interface.frases_que_ela_baniu.texto_visivel_no_produto``, que já é o dono
+É ``interface.frases_banidas.texto_visivel_no_produto``, que já é o dono
 dessa leitura — inclusive do que a folha do piloto ESCONDE (o bilhete de
 projeto da `.nota`). Uma segunda cópia dessa lógica aqui seria o defeito que
 esta casa mais paga: o mesmo valor com dois donos, respondendo números
@@ -128,7 +128,7 @@ def _branco(texto: str) -> str:
 
 def _so_a_tela(pagina: str) -> str:
     """A página sem o `<style>`, o `<script>`, os comentários e o `<title>` dela."""
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+    from hefesto_dualsense4unix.interface.frases_banidas import sem_o_mudo
 
     limpo = sem_o_mudo(pagina)
     limpo = _VALOR_DE_MAQUINA.sub(lambda m: _branco(m.group(0)), limpo)
@@ -175,7 +175,7 @@ DIVIDA: dict[str, tuple[str, str]] = {}
 
 def _palavras(pagina: str) -> dict[str, list[tuple[int, str]]]:
     """`{PALAVRA: [(linha, trecho), …]}` do que a pessoa lê no produto."""
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+    from hefesto_dualsense4unix.interface.frases_banidas import (
         texto_visivel_no_produto,
     )
 

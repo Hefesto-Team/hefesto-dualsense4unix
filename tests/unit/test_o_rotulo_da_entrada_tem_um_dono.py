@@ -14,7 +14,7 @@ Duas metades, como a sprint pede:
     gerador injeta (``PALAVRA_DA_ENTRADA`` e ``PALAVRA_NA_FRASE``).
 (b) PELO COMPORTAMENTO: a Sugestão, a ordem, a linha de Rádio e Adaptadores, o
     «Já mapeadas», a recusa do governador. O cabeçalho do editor e o plugue
-    são medidos no WebKit, em ``test_o_mapa_que_ela_corrige_na_tela``.
+    são medidos no WebKit, em ``test_o_mapa_corrigido_na_tela``.
 
 A MORDIDA: devolva ao ``ler_o_mapa`` o nome cru do lugar e o
 ``f"{PALAVRA_DA_ENTRADA} {numero}"`` — o «Já mapeadas» volta a dizer «2»
@@ -36,7 +36,7 @@ from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina, onde
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import roteiros_de
+from hefesto_dualsense4unix.interface.frases_banidas import roteiros_de
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, lugar_de, migrar_o_documento
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     PALAVRA_DA_ENTRADA,

@@ -25,7 +25,7 @@ def corpo_visivel(nome: str) -> str:
     corte = bruto.find('<div class="nota"')
     if corte > 0:
         bruto = bruto[:corte]
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+    from hefesto_dualsense4unix.interface.frases_banidas import sem_o_mudo
 
     return re.sub(r"<[^>]+>", " ", sem_o_mudo(bruto))
 

@@ -29,7 +29,7 @@ nada vai ao aparelho. COM ``--escrever``, ele RECUSA, nesta ordem:
 3. o controle no cabo (o ``0x36`` é do rádio);
 4. sem ``--eu-estou-ouvindo`` (rc=3): o ensaio é escrever com o ouvido e a
    mão do usuário do outro lado;
-5. a bancada tomada por outra reserva (``scripts/bancada.sh exigir`` passa
+5. a bancada tomada por outra reserva (``scripts/ensaio.sh exigir`` passa
    só com ela LIVRE: quem reservou mede, e o ensaio não escreve por cima).
 
 O RETORNO DO ``os.write()`` NÃO É A MEDIÇÃO: o kernel aceita a entrega que o
@@ -171,9 +171,9 @@ def daemon_no_ar() -> bool:
 
 
 def _exigir_bancada() -> tuple[bool, str]:
-    """``scripts/bancada.sh exigir`` — rc≠0 é ESPERAR, nunca contornar."""
+    """``scripts/ensaio.sh exigir`` — rc≠0 é ESPERAR, nunca contornar."""
     proc = subprocess.run(
-        ["bash", os.path.join(_RAIZ, "scripts", "bancada.sh"), "exigir"],
+        ["bash", os.path.join(_RAIZ, "scripts", "ensaio.sh"), "exigir"],
         capture_output=True,
         text=True,
         check=False,

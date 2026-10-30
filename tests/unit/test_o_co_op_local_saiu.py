@@ -11,7 +11,7 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions import trigger_specs
 from hefesto_dualsense4unix.interface import onde
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+from hefesto_dualsense4unix.interface.frases_banidas import (
     texto_visivel_no_produto,
 )
 from hefesto_dualsense4unix.profiles import estilos_de_jogo, loader

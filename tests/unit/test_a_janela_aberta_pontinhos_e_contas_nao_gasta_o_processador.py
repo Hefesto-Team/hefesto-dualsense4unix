@@ -359,7 +359,7 @@ def test_r3_o_select_recusado_volta_ao_valor_do_daemon() -> None:
 @pytest.fixture
 def funil(monkeypatch: pytest.MonkeyPatch) -> Any:
     import hefesto_vivo as hv
-    from hefesto_dualsense4unix.interface import frases_que_ela_baniu as fb
+    from hefesto_dualsense4unix.interface import frases_banidas as fb
 
     chamadas: list[str] = []
     real = fb.primeiro_trecho_banido

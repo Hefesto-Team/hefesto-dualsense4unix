@@ -14,7 +14,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     carregar_maquina,
     gravar_maquina,
 )
-from tests.unit.test_mapa_a_bancada_de_mentira import bancada_de_agora, mapa_dela
+from tests.unit.test_mapa_o_ensaio_de_mentira import bancada_de_agora, mapa_dela
 
 PARES_DO_MOCKUP: dict[str, str] = {
     "1": "2", "2": "1",

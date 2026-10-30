@@ -17,7 +17,7 @@ O QUE ELE LÊ, A CADA SEGUNDO
 ----------------------------
 - **o ``state_full``** do daemon, pelo cliente de IPC da casa, COM PRAZO: um
   ``state_full`` que não responde no segundo vale «-» naquele segundo, nunca
-  0. (O ``cli.cmd_tray._chamar`` que a ``bancada_do_radio.py`` usa espera sem
+  0. (O ``cli.cmd_tray._chamar`` que a ``ensaio_do_radio.py`` usa espera sem
   prazo; com o laço do serviço parado, o instrumento pararia junto.) Por
   controle: o jogador, o modelo, o transporte, o adaptador, ``hz_movimento``,
   ``hz_voz``, o mudo, a bateria e ``connected``; da mesa, o jogo da Steam e o

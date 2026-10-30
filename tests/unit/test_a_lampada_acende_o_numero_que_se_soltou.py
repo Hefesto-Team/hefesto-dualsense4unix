@@ -26,7 +26,7 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     make_auto_output_provider,
     prazo_do_lugar_guardado,
 )
-from tests.unit.test_coop_bancada_de_queda_do_primario import _FakeHandle
+from tests.unit.test_coop_ensaio_de_queda_do_primario import _FakeHandle
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     P1,
     P2,

@@ -250,7 +250,7 @@ def test_a_marca_nao_e_digitada_em_lugar_nenhum_da_interface() -> None:
 
 def test_a_palavra_mesa_nao_entra_no_cartao_do_externo() -> None:
     """Ordem de produto, no mesmo fôlego da escolha do frame."""
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+    from hefesto_dualsense4unix.interface.frases_banidas import (
         primeiro_trecho_banido,
     )
 

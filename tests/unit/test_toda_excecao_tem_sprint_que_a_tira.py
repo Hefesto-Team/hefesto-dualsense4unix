@@ -300,7 +300,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "o piso que só sobe, e não uma folga"),
     "tests/unit/test_a_fala_de_tela_alcanca_a_interface_nova.py::RAIZES_ATE_HOJE": (
         "as raízes de tela de hoje, um conjunto que só cresce"),
-    "tests/unit/test_a_frase_que_ela_baniu_nao_chega_a_tela.py::ISENTOS_INTEIROS": (
+    "tests/unit/test_a_frase_banida_nao_chega_a_tela.py::ISENTOS_INTEIROS": (
         "o dono da lista de frases banidas: os trechos são o dado"),
     "tests/unit/test_a_porta_que_a_casa_construiu_01.py::EXCECOES": (
         "arquivos que citam o nó e não o abrem, conferidos um a um"),
@@ -352,7 +352,7 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "tests/unit/test_o_reconnect_da_linha_de_comando_saiu.py::APOSENTADOS": (
         "os dois campos que saíram do `DaemonConfig` com a opção --reconnect: a régua exige que "
         "eles NÃO existam, não isenta caso nenhum"),
-    "tests/unit/test_t07_a_frase_que_ela_derrubou_nao_volta.py::ARQUIVOS_ISENTOS": (
+    "tests/unit/test_t07_a_frase_derrubada_nao_volta.py::ARQUIVOS_ISENTOS": (
         "a nota datada que registra a morte da frase"),
     "tests/unit/test_todo_gesto_que_grava_esta_protegido.py::ISENTOS": (
         "gestos idempotentes, medidos por nome em 03/09/2026"),

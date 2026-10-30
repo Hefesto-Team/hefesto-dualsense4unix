@@ -32,7 +32,7 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 from hefesto_dualsense4unix.integrations.virtual_pad import CAMINHO_XBOX
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
-from tests.unit.test_coop_bancada_de_queda_do_primario import _LeitorDeSecundario
+from tests.unit.test_coop_ensaio_de_queda_do_primario import _LeitorDeSecundario
 from tests.unit.test_dois_vpads_nunca_tem_o_mesmo_mac import (
     KernelDoHidPlaystation,
     kernel_de_mentira,

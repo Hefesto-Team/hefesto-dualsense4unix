@@ -110,7 +110,7 @@ def _paginas() -> list[pathlib.Path]:
 def _visivel_sem_a_ajuda(pagina: str) -> str:
     """O que a janela mostra, com o `title` junto e sem o conteúdo dos `?`."""
     from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
-    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import _ler
+    from hefesto_dualsense4unix.interface.frases_banidas import _ler
 
     return " ".join(_ler(pagina, (*seletores_escondidos(), ".ajuda")).split())
 

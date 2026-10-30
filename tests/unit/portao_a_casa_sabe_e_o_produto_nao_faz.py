@@ -950,7 +950,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "test_o_censo_dos_lancadores_le_a_biblioteca.py`, 13 casos com lar de "
         "mentira; arrancar o leitor do Heroic reprova oito."
     ),
-    "interface/frases_que_ela_baniu.py::texto_visivel_no_produto": (
+    "interface/frases_banidas.py::texto_visivel_no_produto": (
         "06/09/2026, A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01 — é a irmã de "
         "`texto_visivel` e não é promessa pela MESMA razão: o produto não lê a "
         "própria página, ele a ESCREVE. A diferença entre as duas é o que a "
@@ -965,7 +965,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "dois sentidos — arrancar a folha devolve as 34, e apagar a tela "
         "inteira reprova em `test_a_leitura_do_produto_nao_apaga_a_tela`."
     ),
-    "interface/frases_que_ela_baniu.py::texto_visivel": (
+    "interface/frases_banidas.py::texto_visivel": (
         "06/09/2026, A-PALAVRA-MESA-SAI-01 — é a LEITURA de uma régua, e o "
         "produto nunca lê a própria página: ele a ESCREVE. Quem chama são o "
         "portão `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py` e o "
@@ -978,7 +978,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`innerText` do Chrome, e o `test_o_stripper_nao_engole_a_dica_nem_"
         "inventa_tamanho` a morde."
     ),
-    "interface/frases_que_ela_baniu.py::roteiros_de": (
+    "interface/frases_banidas.py::roteiros_de": (
         "24/10/2026, A-LEITURA-DOS-ROTEIROS-E-DE-REGUA-E-NAO-PROMESSA-01 — é a "
         "terceira leitura da régua pelo `html.parser` (OS-ALERTAS-DO-CODEQL-"
         "ZERAM-01, `e86a522e8`), irmã de `texto_visivel`, e não é promessa "

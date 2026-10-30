@@ -10,7 +10,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import fontes_de_captura
-from tests.unit.bancada_do_som_junto import (
+from tests.unit.ensaio_do_som_junto import (
     HDMI,
     P1,
     P2,

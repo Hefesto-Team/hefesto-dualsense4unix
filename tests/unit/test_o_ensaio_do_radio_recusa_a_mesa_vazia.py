@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
-CONDUTOR = RAIZ / "scripts" / "bancada_do_radio.py"
+CONDUTOR = RAIZ / "scripts" / "ensaio_do_radio.py"
 
 
 def _rodar(*args: str) -> subprocess.CompletedProcess[str]:
@@ -24,7 +24,7 @@ def test_o_condutor_existe_e_tem_ajuda() -> None:
     assert CONDUTOR.is_file()
     fim = _rodar("--help")
     assert fim.returncode == 0
-    assert "bancada_do_radio" in fim.stdout
+    assert "ensaio_do_radio" in fim.stdout
 
 
 def test_a_etapa_desconhecida_recusa_em_vez_de_calar() -> None:

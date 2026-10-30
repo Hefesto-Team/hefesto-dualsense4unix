@@ -730,7 +730,7 @@ class TestAProsaQueVaiPararNaTela:
     @pytest.mark.parametrize("pasta", [PAGINAS, BANCADA])
     def test_a_pagina_04_nao_fala_do_botao_que_saiu(self, pasta: Path) -> None:
         """NAS DUAS LEITURAS, e a diferença entre elas é o ponto."""
-        from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+        from hefesto_dualsense4unix.interface.frases_banidas import (
             texto_visivel,
             texto_visivel_no_produto,
         )
@@ -761,7 +761,7 @@ class TestAProsaQueVaiPararNaTela:
 
     def test_a_legenda_nao_narra_commit_nem_cita_decisao_dela(self) -> None:
         """A tela não é changelog — regra, 07/09/2026."""
-        from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+        from hefesto_dualsense4unix.interface.frases_banidas import (
             texto_visivel,
         )
 

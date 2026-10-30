@@ -3,7 +3,7 @@
 
 ELE NASCEU EM 01/09/2026, e a escada de releases o previa pelo nome:
 o registro «A-ESCADA-DE-RELEASES» de 24/08/2026, seção *0.9.5 — o rádio para
-de mentir*, declarava *"arquivo a nascer: `scripts/check_bancada_de_bt.py`"*.
+de mentir*, declarava *"arquivo a nascer: `scripts/check_ensaio_de_bt.py`"*.
 Sem ele, o degrau dela não tinha como ser conferido por ninguém — só descrito.
 
 O DEGRAU É DO USUÁRIO, na palavra de produto: *"quando terminarmos a bancada do specs em

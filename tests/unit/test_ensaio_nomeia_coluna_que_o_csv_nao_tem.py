@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "scripts" / "bancada_do_mapa.py"
+BANCADA = RAIZ / "scripts" / "ensaio_do_mapa.py"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ENSAIOS = RAIZ / "docs" / "data" / "ensaios.csv"
 
@@ -43,7 +43,7 @@ def _constantes_de_texto() -> dict[str, str]:
 
 
 def _importado_de_scripts(nome: str) -> list[str] | None:
-    """O valor de `nome`, quando o `bancada_do_mapa.py` o IMPORTA de `scripts/`."""
+    """O valor de `nome`, quando o `ensaio_do_mapa.py` o IMPORTA de `scripts/`."""
     for no in ast.walk(_arvore()):
         if not isinstance(no, ast.ImportFrom) or not no.module:
             continue
@@ -87,7 +87,7 @@ def _lista_literal(nome: str) -> list[str]:
                 colunas.append(constantes[item.id])
             else:
                 pytest.fail(
-                    f"`{nome}` em bancada_do_mapa.py deixou de ser uma lista de nomes "
+                    f"`{nome}` em ensaio_do_mapa.py deixou de ser uma lista de nomes "
                     "literais; este teste não consegue mais lê-la por AST"
                 )
         return colunas
@@ -124,7 +124,7 @@ def _dict_do_column_config() -> ast.Dict:
         for kw in no.keywords:
             if kw.arg == "column_config" and isinstance(kw.value, ast.Dict):
                 return kw.value
-    pytest.fail("não achei o `column_config` do `st.data_editor` em bancada_do_mapa.py")
+    pytest.fail("não achei o `column_config` do `st.data_editor` em ensaio_do_mapa.py")
 
 
 def _chaves_do_column_config() -> list[str]:
@@ -189,7 +189,7 @@ def _campos_do_ensaio() -> list[str]:
                 for c in no.value.keys
                 if isinstance(c, ast.Constant) and isinstance(c.value, str)
             ]
-    pytest.fail("não achei o dicionário `novo` do formulário de ensaio em bancada_do_mapa.py")
+    pytest.fail("não achei o dicionário `novo` do formulário de ensaio em ensaio_do_mapa.py")
 
 
 def test_o_que_a_bancada_edita_existe_no_mapa_de_canais() -> None:
@@ -290,7 +290,7 @@ def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
         "gravação regrava a coluna com o que voltou da grade — o que não está em "
         "`options` não tem como voltar:\n"
         + "\n".join(orfaos)
-        + f"\n\nsome cada valor à lista citada em bancada_do_mapa.py — como {MAPA.name} é "
+        + f"\n\nsome cada valor à lista citada em ensaio_do_mapa.py — como {MAPA.name} é "
         "quem manda, é a lista que se ajusta ao dado, nunca o contrário"
     )
 
@@ -339,7 +339,7 @@ def _opcoes_da_lista_de_mentira(celula: str) -> list[str]:
             )
             fixos = _lista_literal(no.value.args[0].id)  # type: ignore[attr-defined]
             return _funcao_da_bancada(no.value.func.id)(fixos, ["", "funciona", celula, celula])
-    pytest.fail("não achei `ESTADOS` em bancada_do_mapa.py")
+    pytest.fail("não achei `ESTADOS` em ensaio_do_mapa.py")
 
 
 _ENDERECO_DE_LINHA = re.compile(r"[A-Za-z0-9_/-]+\.(?:py|c|h|md|csv|html|sh):\d+")

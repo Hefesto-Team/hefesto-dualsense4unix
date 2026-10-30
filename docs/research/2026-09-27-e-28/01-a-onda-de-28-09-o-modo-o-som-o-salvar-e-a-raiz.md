@@ -239,7 +239,7 @@ para 27 entradas:
   (linhas 3209 e 3212) viram `env HEFESTO_NA_TELA=1 … run.sh --gui`; o
   lançador da bandeja usa `${HEFESTO_NA_TELA:-1}`, para a bancada poder
   desligar com `=0`. O `run.sh` não declara a variável (há régua que reprova);
-- a bancada do mapa vai para `scripts/bancada_do_mapa.py`, com as dependências
+- a bancada do mapa vai para `scripts/ensaio_do_mapa.py`, com as dependências
   num extra `bancada` (`pyproject.toml:68`), fora do `[dev]` e do CI;
 - o lançador da mesa de medição vai para `scripts/mesa-de-medicao.sh`, e não
   `validar-mesa.sh`: o prefixo `validar-` é forma de portão, e o portão

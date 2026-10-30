@@ -812,7 +812,7 @@ def test_o_subcomando_que_cai_no_meio_e_recusa_e_nunca_vermelho(
     estado = estado_da_mesa(caminho="xbox", backend="uinput")
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos=pads_uinput_xbox(ob),
-        ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado), "bancada.sh": ""},
+        ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado), "ensaio.sh": ""},
     )
     original = maquina.chamar
 
@@ -1025,7 +1025,7 @@ def _rodar_a_troca(ob: ModuleType, tmp_path: Path, bancada: str | None) -> tuple
     estado = estado_da_mesa(caminho="xbox", backend="uinput")
     ensaios = {"quem_e_quem.py": quem_e_quem_json(ob, estado)}
     if bancada is not None:
-        ensaios["bancada.sh"] = bancada
+        ensaios["ensaio.sh"] = bancada
     maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uinput_xbox(ob),
                             ensaios=ensaios)
     saida = tmp_path / "saida"
@@ -1044,7 +1044,7 @@ def test_a_troca_de_modo_reserva_a_bancada_antes_de_escrever(
 
     _rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "livre", bancada="")
     rodados = [Path(a[1]).name + " " + a[2] for a in maquina.rodados if len(a) > 2]
-    assert "bancada.sh exigir" in rodados and "bancada.sh liberar" in rodados
+    assert "ensaio.sh exigir" in rodados and "ensaio.sh liberar" in rodados
     assert [m for m, _p in maquina.chamados if m == "gamepad.emulation.set"]
     (sessao,) = sessoes(saida)
     assert (sessao / "ensaios" / "quem_e_quem.txt").is_file()
@@ -1059,7 +1059,7 @@ def test_o_reinicio_assenta_quando_a_mesa_do_comeco_volta_em_todo_modo(
     maquina = fazer_maquina(
         ob, estado, tmp_path / "config", dispositivos="",
         diario=[linha_do_diario(1.0, "daemon_starting")],
-        ensaios={"bancada.sh": "", "--user": ""},
+        ensaios={"ensaio.sh": "", "--user": ""},
     )
     saida = tmp_path / "saida"
     ob.executar(["--saida", str(saida), SUB_DA_SESSAO, "--boot"], maquina)

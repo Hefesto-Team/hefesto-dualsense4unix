@@ -24,7 +24,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 FIXTURE = (
-    RAIZ / "tests" / "fixtures" / "perfis" / "jogo_ficticio-carimbo-que-ela-desmente.json"
+    RAIZ / "tests" / "fixtures" / "perfis" / "jogo_ficticio-carimbo-desmentido.json"
 )
 APPID = 9900099
 EPOCH = 1000

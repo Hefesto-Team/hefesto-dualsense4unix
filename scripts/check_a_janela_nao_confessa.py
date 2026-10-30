@@ -39,7 +39,7 @@ Duas das quatro peneiras são LIDAS de quem já as possui, e não copiadas:
 * a **forma de confissão** vem de ``check_a_tela_nao_confessa.FORMA`` — por
   ``import``, porque é irmão nesta pasta e não custa dependência nenhuma;
 * as **palavras que ela baniu** vêm de
-  ``interface/frases_que_ela_baniu.PALAVRAS_BANIDAS`` — por AST, porque importar
+  ``interface/frases_banidas.PALAVRAS_BANIDAS`` — por AST, porque importar
   o módulo puxaria o pacote inteiro e o CI roda este arquivo no ``python3``
   pelado.
 
@@ -161,7 +161,7 @@ IDS: tuple[tuple[str, str], ...] = (
 
 def palavras_que_ela_baniu() -> tuple[str, ...]:
     """`PALAVRAS_BANIDAS`, lida do DONO por AST — nunca copiada para cá."""
-    dono = FONTE / "interface" / "frases_que_ela_baniu.py"
+    dono = FONTE / "interface" / "frases_banidas.py"
     arvore = ast.parse(dono.read_text(encoding="utf-8"))
     for no in ast.walk(arvore):
         if isinstance(no, ast.AnnAssign) and isinstance(no.target, ast.Name):
