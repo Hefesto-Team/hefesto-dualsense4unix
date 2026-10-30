@@ -33,24 +33,35 @@ def caminho(mod_id: str, opcao_id: str, lugares: Any) -> Path:
     return Path(lugares.dados) / mod_id / f"{opcao_id}{SUFIXO}"
 
 
-def _ler_pequeno(alvo: Path, teto: int) -> bytes:
-    """Os bytes de um arquivo comum até ``teto``; o resto é a recusa dita."""
+_NAO_LEU = "O arquivo não pôde ser lido."
+
+
+def _bytes_ou_recusa(alvo: Path, teto: int) -> bytes | str:
+    """Os bytes de um arquivo comum até ``teto``, ou a frase da recusa."""
     try:
         modo = alvo.stat()
     except OSError:
-        raise InstalacaoRecusadaError("O arquivo não pôde ser lido.") from None
+        return _NAO_LEU
     if not stat.S_ISREG(modo.st_mode):
-        raise InstalacaoRecusadaError("Escolha um arquivo comum.")
+        return "Escolha um arquivo comum."
     if modo.st_size > teto:
-        raise InstalacaoRecusadaError(f"O arquivo passa de {teto // 1024} KB.")
+        return f"O arquivo passa de {teto // 1024} KB."
     try:
         with alvo.open("rb") as arquivo:
             dados = arquivo.read(teto + 1)
     except OSError:
-        raise InstalacaoRecusadaError("O arquivo não pôde ser lido.") from None
+        return _NAO_LEU
     if len(dados) > teto:
-        raise InstalacaoRecusadaError(f"O arquivo passa de {teto // 1024} KB.")
+        return f"O arquivo passa de {teto // 1024} KB."
     return dados
+
+
+def _ler_pequeno(alvo: Path, teto: int) -> bytes:
+    """Os bytes de um arquivo comum até ``teto``; o resto é a recusa dita."""
+    lido = _bytes_ou_recusa(alvo, teto)
+    if isinstance(lido, str):
+        raise InstalacaoRecusadaError(lido)
+    return lido
 
 
 def _medidas_do_jpeg(dados: bytes) -> tuple[int, int] | None:
@@ -198,10 +209,8 @@ def tirar(manifesto: Any, opcao_id: str, lugares: Any) -> None:
 
 
 def _copia(mod_id: str, opcao_id: str, lugares: Any, teto: int) -> bytes | None:
-    try:
-        return _ler_pequeno(caminho(mod_id, opcao_id, lugares), teto)
-    except InstalacaoRecusadaError:
-        return None
+    lido = _bytes_ou_recusa(caminho(mod_id, opcao_id, lugares), teto)
+    return lido if isinstance(lido, bytes) else None
 
 
 def ler_o_tema(mod_id: str, opcao_id: str, lugares: Any) -> str:

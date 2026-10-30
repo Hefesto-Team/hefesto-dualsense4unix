@@ -14,7 +14,9 @@ MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
   ``test_o_destaque_ilegivel_nao_liga_e_o_tema_fica``;
 - o ``herda`` lido da antiga desligada (``ligadas`` ignorado) reprova
   ``test_a_antiga_desligada_nao_passa_o_que_guardava``;
-- o ``_levar_o_meu_css`` arrancado reprova ``test_o_meu_css_da_antiga_vai_para_a_nova``.
+- o ``_levar_o_meu_css`` arrancado reprova ``test_o_meu_css_da_antiga_vai_para_a_nova``;
+- o ``_copia`` que deixa a recusa subir reprova
+  ``test_a_copia_que_nao_se_le_nao_pinta_nem_derruba``.
 """
 from __future__ import annotations
 
@@ -198,6 +200,20 @@ def test_a_copia_da_logo_trocada_a_mao_nao_pinta(lg: Lugares, nova: Manifesto,
                                                  tmp_path: Path) -> None:
     importados.importar(nova, "logo", _arquivo(tmp_path, "logo.png", _png()), lg)
     importados.caminho(NOVA, "logo", lg).write_bytes(b'<svg onload="x()"/>')
+    assert tm.tema_da_casa(lg).css == ""
+
+
+@pytest.mark.parametrize("estraga", ["pasta", "grande"])
+def test_a_copia_que_nao_se_le_nao_pinta_nem_derruba(lg: Lugares, nova: Manifesto,
+                                                     tmp_path: Path, estraga: str) -> None:
+    importados.importar(nova, "logo", _arquivo(tmp_path, "logo.png", _png()), lg)
+    copia = importados.caminho(NOVA, "logo", lg)
+    copia.unlink()
+    if estraga == "pasta":
+        copia.mkdir()
+    else:
+        copia.write_bytes(_png() + b"\x00" * importados.TAMANHO_DA_LOGO)
+    assert importados.css_da_logo(NOVA, "logo", lg) == ""
     assert tm.tema_da_casa(lg).css == ""
 
 
