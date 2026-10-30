@@ -2,8 +2,10 @@
 (O-GERENCIADOR-DE-TEMA-E-A-EXTENSAO-DE-FABRICA-01).
 
 A opção ``importar`` vira «Importar» sem arquivo e «Trocar» e «Tirar» com ele; o nome do arquivo
-mora só na dica, nunca como texto embaixo. A opção ``css`` ganha «Importar» ao lado de «Editar o
-meu CSS». Extensões FALSAS num lar de mentira; o seletor de arquivo é o da ponte de mentira.
+mora só na dica, nunca como texto embaixo. A opção ``css`` ganha «Importar» ao lado de «Editar».
+A janela da extensão que pinta o tema (bloco ``tema`` preenchido) leva os grupos em abas, como
+a da Lovense, e a chave do grupo vira a bolinha da aba; a das outras continua nos cartões.
+Extensões FALSAS num lar de mentira; o seletor de arquivo é o da ponte de mentira.
 
 MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
 
@@ -12,7 +14,9 @@ MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
   ``test_com_arquivo_trocar_e_tirar_e_o_nome_na_dica``;
 - o ``_notas_do_tema`` devolvendo vazio reprova ``test_o_destaque_ilegivel_aparece_na_linha_dele``;
 - o ``escolher_arquivo`` ignorado (o gesto importa sempre o mesmo caminho) reprova
-  ``test_o_gesto_importa_o_escolhido_e_cancelar_nao_fala``.
+  ``test_o_gesto_importa_o_escolhido_e_cancelar_nao_fala``;
+- o ``em_abas`` arrancado da chamada do ``_montar_a_janela_da_extensao`` reprova
+  ``test_a_janela_do_tema_vai_em_abas_como_a_da_lovense``.
 """
 from __future__ import annotations
 
@@ -146,3 +150,23 @@ def test_o_destaque_ilegivel_aparece_na_linha_dele(a07: Any, lg: Lugares,
     opcoes.guardar(manifesto, "cor_de_destaque", "#50fa7b", lg)
     a07._montar_a_janela_da_extensao(NOVA)
     assert "ky-recusa" not in a07._MEXIDA.html_mod
+
+
+def test_a_janela_do_tema_vai_em_abas_como_a_da_lovense(a07: Any, lg: Lugares,
+                                                        tmp_path: Path) -> None:
+    _ligada(lg, _pasta(tmp_path, _manifesto()))
+    a07._montar_a_janela_da_extensao(NOVA)
+    html = a07._MEXIDA.html_mod
+    assert 'class="ac-card mj-abas" style="--n:4"' in html and "ky-grade" not in html
+    rotulos = re.findall(r'<label for="mj-aba-\d">([^<]+)', html)
+    assert rotulos == ["Cores", "Destaque", "Janela", "CSS"]
+    assert f'data-v="{NOVA}:destaque"' in html and 'id="mod-chave-da-aba-1"' in html
+
+
+def test_a_extensao_que_nao_e_tema_segue_nos_cartoes() -> None:
+    opcoes = [exp.OpcaoDaJanela("m", "a", "A", "ligado", False, grupo="Um"),
+              exp.OpcaoDaJanela("m", "b", "B", "ligado", False, grupo="Dois")]
+    assert "mj-abas" not in exp.modificacao_miolo_html("M", opcoes, mod="m")
+    assert "mj-abas" in exp.modificacao_miolo_html("M", opcoes, mod="m", em_abas=True)
+    um = exp.modificacao_miolo_html("M", opcoes[:1], mod="m", em_abas=True)
+    assert "mj-abas" not in um and "ac-card" in um

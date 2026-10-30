@@ -1597,7 +1597,8 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
         estado=estado, parar_tudo=manifesto.parar_tudo, chave=chave,
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
-        porque=item.porque, **_pecas_da_janela(manifesto, mod_id))
+        porque=item.porque, em_abas=bool(manifesto.tema),
+        **_pecas_da_janela(manifesto, mod_id))
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1791,7 +1792,7 @@ def _criar_o_css_da_modificacao(mod_id: str) -> pathlib.Path:
 
 @gesto("07-lancadores.html", exp.GESTO_DO_CSS, grava="_criar_o_css_da_modificacao")
 def editar_o_css_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Editar o meu CSS»: o ``meu.css`` da extensão nasce com o exemplo, se ainda não existe, e
+    """«Editar»: o ``meu.css`` da extensão nasce com o exemplo, se ainda não existe, e
     abre no editor do sistema. Salvar o aplica na janela, sem reabrir (o vigia é o do tema)."""
     _MEXIDA.armada = ()
     mod_id, _, opcao_id = _id_do_clique(o, exp.GESTO_DO_CSS).partition(":")

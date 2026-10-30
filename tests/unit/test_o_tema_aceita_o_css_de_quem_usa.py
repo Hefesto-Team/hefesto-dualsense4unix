@@ -327,7 +327,7 @@ def test_a_janela_traz_o_botao_a_chave_e_a_nota_da_recusa(lar: Any, ctx: Any) ->
     a07 = _a07()
     _instalada(lar)
     janela = a07.configurar_modificacao(ctx, {"v": "tema-x"}, _Ponte())["blocos"]["#mod-janela"]
-    assert "Usar o meu CSS" in janela and "Editar o meu CSS" in janela
+    assert "Usar o meu CSS" in janela and ">Editar</button>" in janela
     assert 'data-gesto="editar-o-css-da-modificacao" data-v="tema-x:meu_css"' in janela
     assert "ky-recusa" not in janela
     _escrever(lar, "\n.a{background:url(x)}")

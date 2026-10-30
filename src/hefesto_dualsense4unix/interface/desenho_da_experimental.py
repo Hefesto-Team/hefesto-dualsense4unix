@@ -330,7 +330,7 @@ class OpcaoDaJanela(NamedTuple):
 
 
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
-ROTULO_DO_CSS = "Editar o meu CSS"
+ROTULO_DO_CSS = "Editar"
 GESTO_DE_IMPORTAR = "importar-na-modificacao"
 GESTO_DE_TIRAR = "tirar-da-modificacao"
 ROTULO_DE_IMPORTAR = "Importar"
@@ -1137,16 +1137,16 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
                            livre: LivreAoVivo | None = None, controles: str = "",
-                           armada: Sequence[str] = ()) -> str:
-    """O conteúdo da janela de uma extensão: um cartão por grupo e «Para» no topo; toda escolha
-    grava no clique, sem rodapé.
+                           armada: Sequence[str] = (), em_abas: bool = False) -> str:
+    """O conteúdo da janela de uma extensão: um cartão por grupo (em abas com ``em_abas``, a que
+    pinta o tema) e «Para» no topo; toda escolha grava no clique, sem rodapé.
 
-    Cada opção vira uma linha do cartão do grupo dela. ``agora`` (com ``estado``) é a coluna
-    «Agora»; ``parar_tudo`` põe o «Parar tudo» no topo, e ``chave`` (o valor guardado da opção
-    ``chave`` do manifesto) a chave Ligado/Desligado, que desligada apaga as ações. Com ``agora``,
-    as ações, os ``aparelhos`` ou o ``livre``, é o arranjo C: a coluna à esquerda e os grupos em
-    abas (``aba`` é a aberta); ``em_curso`` e ``armada`` são as ações que esperam, ``livre`` a
-    faixa de baixo e ``controles`` a aba dos controles.
+    ``agora`` (com ``estado``) é a coluna «Agora»; ``parar_tudo`` põe o «Parar tudo» no topo, e
+    ``chave`` (o valor guardado da opção ``chave`` do manifesto) a chave Ligado/Desligado, que
+    desligada apaga as ações. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é o
+    arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` e
+    ``armada`` são as ações que esperam, ``livre`` a faixa de baixo e ``controles`` a aba dos
+    controles.
     """
     parar = (chave_da_extensao_html(mod, chave) if chave is not None and mod
              else parar_tudo_html(mod) if parar_tudo and mod else "")
@@ -1173,7 +1173,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
                           processo=processo, porque=porque, faixa=faixa, gestao=gestao)
-    corpo = _cartoes_das_opcoes(opcoes) if opcoes else vazio
+    corpo = ((_abas_das_opcoes(opcoes, aba, mod) if em_abas else _cartoes_das_opcoes(opcoes))
+             if opcoes else vazio)
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}
