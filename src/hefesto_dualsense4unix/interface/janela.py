@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import signal
 import sys
 import time
@@ -28,6 +29,7 @@ from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     tamanho_guardado,
     tamanho_que_cabe,
 )
+from hefesto_dualsense4unix.mods import meu_css as _meu_css  # noqa: E402
 from hefesto_dualsense4unix.mods import tema as _tema_das_mods  # noqa: E402
 from hefesto_dualsense4unix.utils import area_de_transferencia as _area  # noqa: E402
 from hefesto_dualsense4unix.utils import identidade as _identidade  # noqa: E402
@@ -169,6 +171,52 @@ def css_da_cor_da_barra(folha_do_tema: str) -> str:
         return ""
     return (f"headerbar {{ background: {fundo}; color: {letra}; }}\n"
             f"button {{ color: {letra}; }}\n")
+
+
+_VAR = re.compile(r"var\(\s*(--[\w-]+)\s*(?:,\s*([^()]*))?\)")
+
+
+def _cores_para_a_barra(folha_do_tema: str) -> dict[str, str]:
+    casa = _tokens_da_casa_ou_nada()
+    try:
+        apelidos = _tema_das_mods.apelidos_da_casa()
+    except OSError:
+        apelidos = {}
+    tokens = _tema_das_mods.tokens_da_folha(folha_do_tema) if folha_do_tema else {}
+    return _tema_das_mods.valores_pintados(casa, tokens, apelidos)
+
+
+def css_da_barra_de_quem_usa(meu_css: str, folha_do_tema: str = "") -> str:
+    """O CSS de quem usa que vale na barra da janela: as regras ``headerbar`` dele, com cada
+    ``var(--token)`` trocado pela cor do tema em uso. A declaração que o GTK não entende fica de
+    fora, sozinha, e a frase vai ao diário (uma vez): o resto vale, e a janela abre igual."""
+    regras = _meu_css.regras_da_janela(meu_css)
+    if not regras:
+        _dizer_uma_vez("barra", ())
+        return ""
+    cores = _cores_para_a_barra(folha_do_tema)
+    aceitas: list[str] = []
+    recusadas: list[str] = []
+    for seletor, declaracao in regras:
+        texto = _VAR.sub(lambda m: cores.get(m.group(1)) or (m.group(2) or "").strip(),
+                         declaracao)
+        regra = f"{seletor} {{ {texto}; }}"
+        try:
+            Gtk.CssProvider().load_from_data(regra.encode("utf-8"))
+        except GLib.Error as erro:
+            recusadas.append(f"A barra da janela não aplica «{declaracao}»: {erro.message}")
+            continue
+        aceitas.append(regra)
+    _dizer_uma_vez("barra", tuple(recusadas))
+    return "\n".join(aceitas)
+
+
+def vestir_a_barra_de_quem_usa(provedor: Any, meu_css: str, folha_do_tema: str = "") -> str:
+    """Põe no ``provedor`` (o da tela, na prioridade de usuário) o CSS de quem usa da barra, e
+    devolve o texto. Vazio devolve a barra ao padrão."""
+    texto = css_da_barra_de_quem_usa(meu_css, folha_do_tema)
+    provedor.load_from_data(texto.encode("utf-8"))
+    return texto
 
 
 def _tokens_da_casa_ou_nada() -> dict[str, str]:
@@ -427,6 +475,7 @@ def montar_a_barra(
         botao.set_relief(Gtk.ReliefStyle.NONE)
         botao.set_tooltip_text(dica)
         botao.get_style_context().add_class("titlebutton")
+        botao.get_style_context().add_class(gesto)
         vestir_o_nome_acessivel(botao, dica)
         botao.connect("clicked", ao_gesto, gesto)
         botoes[gesto] = botao
@@ -670,6 +719,7 @@ class JanelaDaAba:
         self._cor_da_barra = Gtk.CssProvider()
         self._cor_da_barra.load_from_data(
             css_da_cor_da_barra(self.ponte.tema_de_cores).encode("utf-8"))
+        self._barra_de_quem_usa = Gtk.CssProvider()
         self.tamanho_aplicado: int | None = None
         self.tamanho_escolhido = TAMANHO_PADRAO
         self._dica_cedida: tuple[int, int] | None = None
@@ -709,6 +759,10 @@ class JanelaDaAba:
                 lado=self._lado,
             )
             self._barra = barra
+            vestir_a_barra_de_quem_usa(self._barra_de_quem_usa, self.ponte.meu_css,
+                                       self.ponte.tema_de_cores)
+            Gtk.StyleContext.add_provider_for_screen(
+                barra.get_screen(), self._barra_de_quem_usa, Gtk.STYLE_PROVIDER_PRIORITY_USER)
             self.janela.set_titlebar(barra)
             self.janela.connect("window-state-event", self._a_barra_se_refaz)
             self.janela.connect("window-state-event", self._o_tamanho_mudou)
@@ -878,6 +932,7 @@ class JanelaDaAba:
         a janela."""
         self.ponte.trocar_o_tema(folha_do_tema, meu_css)
         self._cor_da_barra.load_from_data(css_da_cor_da_barra(folha_do_tema).encode("utf-8"))
+        vestir_a_barra_de_quem_usa(self._barra_de_quem_usa, self.ponte.meu_css, folha_do_tema)
         escura = pedir_a_variante(folha_do_tema)
         print(f"[janela] tema: {'ligado' if folha_do_tema else 'desligado'}, variante "
               f"{'escura' if escura else 'clara'}, css de quem usa "

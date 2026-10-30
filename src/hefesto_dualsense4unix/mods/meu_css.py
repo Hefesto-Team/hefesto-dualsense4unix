@@ -5,6 +5,7 @@ Livre (layout e cor), lida do ``<dados>/<id>/meu.css`` da extensão de tema que 
 entra. O recusado não se aplica: o log tem a frase longa, e a tela, a curta com a linha. O WebKit
 só deixa a folha de usuário vencer a da página com ``!important``: cada declaração sai daqui com
 ele (menos em ``@keyframes``).
+A regra ``headerbar`` vale também na barra da janela, que é GTK (:func:`regras_da_janela`).
 """
 from __future__ import annotations
 
@@ -36,6 +37,16 @@ _NAO_LEU_CURTA = "Não abriu"
 _MUITO_GRANDE = "Passa de 16 KB"
 _NAO_E_COMUM = "Não é arquivo comum"
 _IMPORTANTE = re.compile(r"\s*!\s*important\s*$", re.I)
+_DA_JANELA = re.compile(r"^headerbar(?![\w-])", re.I)
+_PROPRIEDADE_DA_JANELA = re.compile(
+    r"^(?:color|background(?:-color|-image)?|box-shadow|text-shadow|-gtk-icon-shadow"
+    r"|border(?:-(?:top|right|bottom|left))?(?:-(?:color|style|width))?"
+    r"|border(?:-(?:top|bottom)-(?:left|right))?-radius|outline(?:-(?:color|style|width|offset))?"
+    r"|(?:padding|margin)(?:-(?:top|right|bottom|left))?|min-(?:width|height)"
+    r"|font(?:-(?:family|size|weight|style))?|letter-spacing"
+    r"|transition(?:-(?:property|duration|timing-function|delay))?)$", re.I)
+_MEDIDA = re.compile(r"(-?\d*\.?\d+)\s*(px|r?em)\b", re.I)
+_TETO_DA_MEDIDA = {"px": 48.0, "em": 3.0, "rem": 3.0}
 _ARROBA = re.compile(r"@([\w-]+)")
 
 
@@ -68,6 +79,7 @@ EXEMPLO = """\
 
 :root { --green: #1d7a3c; }
 .quadro { border-radius: 2px; }
+headerbar button.fechar { background: var(--red); border-radius: 50%; }
 */
 """
 
@@ -120,6 +132,7 @@ class _Leitor:
 
     def __init__(self, limpo: str) -> None:
         self.t = limpo
+        self.na_janela = False
 
     def linha(self, indice: int) -> int:
         return self.t.count("\n", 0, indice) + 1
@@ -185,6 +198,12 @@ class _Leitor:
             raise self.recusar(abre, "tem uma chave sem seletor antes", "sem seletor")
         interno = "quadros-declaracoes" if modo == "quadros" else "declaracoes"
         achado = _ARROBA.match(cabeca)
+        if achado is None and modo == "regras" and _seletores_da_janela(cabeca):
+            self.na_janela = True
+            try:
+                return f"{cabeca}{{{self.reescrever(abre + 1, fecha, interno)}}}"
+            finally:
+                self.na_janela = False
         if achado is not None:
             nome = achado.group(1).lower()
             if nome in _QUADROS:
@@ -210,8 +229,85 @@ class _Leitor:
                 onde, f"tem «{texto[:30]}», que não é uma declaração (nome: valor)",
                 "não é declaração")
         valor = _IMPORTANTE.sub("", valor).strip()
+        if self.na_janela:
+            self._conferir_na_janela(onde, nome.strip().lower(), valor)
         marca = "" if modo == "quadros-declaracoes" else " !important"
         return f"{nome.strip()}:{valor}{marca};"
+
+
+    def _conferir_na_janela(self, onde: int, nome: str, valor: str) -> None:
+        if not _PROPRIEDADE_DA_JANELA.match(nome):
+            raise self.recusar(onde, f"pede «{nome}» na barra da janela, que só aceita cor, fundo, "
+                                     "borda, cantos, sombra, espaço e letra", f"{nome} na barra")
+        if nome == "color" and "transparent" in valor.lower():
+            raise self.recusar(onde, "deixa a letra da barra invisível", "letra invisível")
+        for numero, unidade in _MEDIDA.findall(valor):
+            medida = float(numero)
+            if medida < 0 and nome.startswith(("margin", "padding")):
+                raise self.recusar(onde, "empurra os botões da barra para fora", "medida negativa")
+            if abs(medida) > _TETO_DA_MEDIDA[unidade.lower()]:
+                raise self.recusar(onde, f"pede {numero}{unidade} na barra da janela, e o teto é "
+                                         "48px (3em)", "grande demais")
+
+
+def _seletores_da_janela(cabeca: str) -> list[str]:
+    return [s.strip() for s in cabeca.split(",") if _DA_JANELA.match(s.strip())]
+
+
+def _fim_da_chave(texto: str, abre: int) -> int:
+    fundo, i, n = 0, abre, len(texto)
+    while i < n:
+        c = texto[i]
+        if c in "\"'":
+            fim = texto.find(c, i + 1)
+            i = n if fim < 0 else fim
+        elif c == "{":
+            fundo += 1
+        elif c == "}":
+            fundo -= 1
+            if fundo == 0:
+                return i
+        i += 1
+    return n
+
+
+def _declaracoes(corpo: str) -> list[str]:
+    saida: list[str] = []
+    inicio, parenteses, aspas = 0, 0, ""
+    for i, c in enumerate(corpo):
+        if aspas:
+            aspas = "" if c == aspas else aspas
+        elif c in "\"'":
+            aspas = c
+        elif c == "(":
+            parenteses += 1
+        elif c == ")":
+            parenteses = max(0, parenteses - 1)
+        elif c == ";" and parenteses == 0:
+            saida.append(corpo[inicio:i])
+            inicio = i + 1
+    saida.append(corpo[inicio:])
+    return [d.strip() for d in saida if d.strip()]
+
+
+def regras_da_janela(folha: str) -> tuple[tuple[str, str], ...]:
+    """O que vale na barra da janela: cada par (seletor, declaração), sem ``!important``, das
+    regras do topo da ``folha`` (já aplicada) cujo seletor começa por ``headerbar``."""
+    saida: list[tuple[str, str]] = []
+    i, n = 0, len(folha)
+    while i < n:
+        abre = folha.find("{", i)
+        if abre < 0:
+            break
+        fecha = _fim_da_chave(folha, abre)
+        cabeca = folha[i:abre].strip()
+        seletores = [] if cabeca.startswith("@") else _seletores_da_janela(cabeca)
+        if seletores:
+            seletor = ", ".join(seletores)
+            saida.extend((seletor, _IMPORTANTE.sub("", d).strip())
+                         for d in _declaracoes(folha[abre + 1:fecha]))
+        i = fecha + 1
+    return tuple(saida)
 
 
 def aplicar(texto: str) -> str:
@@ -262,4 +358,4 @@ def ler(mod_id: str, lugares: Any) -> FolhaDeQuemUsa:
 
 
 __all__ = ["EXEMPLO", "NOME_DO_ARQUIVO", "TAMANHO_MAXIMO", "CssRecusadoError", "FolhaDeQuemUsa",
-           "aplicar", "caminho", "garantir", "ler"]
+           "aplicar", "caminho", "garantir", "ler", "regras_da_janela"]

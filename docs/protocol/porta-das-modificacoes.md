@@ -550,6 +550,14 @@ O botão «Editar o meu CSS» cria o arquivo com um exemplo comentado e o abre n
 não o toca, e o `mod remover` o deixa no disco (diz onde) para a extensão reinstalada o encontrar; desligar a opção ou
 a extensão tira o CSS na hora. Com mais de uma extensão assim, vale a ligada por último.
 
+A regra do topo cujo seletor começa por `headerbar` vale também na barra da janela, que é GTK e fica fora da página
+(`regras_da_janela` em `meu_css.py`; `vestir_a_barra_de_quem_usa` em `interface/janela.py`, num provedor da tela na
+prioridade de usuário). Os botões têm as classes `fechar`, `minimizar` e `maximizar`; o título e o subtítulo, as do
+GTK (`.title`, `.subtitle`). `var(--token)` vira a cor do tema em uso. Na barra só entram cor, fundo, borda, cantos,
+sombra, espaço e letra, até 48px (3em), sem medida negativa e sem letra `transparent`: a régua recusa o resto com a
+linha, como na página. A declaração que o GTK não entende fica de fora sozinha (a frase vai ao log), e desligar a
+opção devolve a barra do sistema na hora.
+
 ## A extensão que substitui outra
 
 O campo `substitui` do manifesto é a lista dos `id` das extensões de quem esta toma o lugar (sem repetir, na
