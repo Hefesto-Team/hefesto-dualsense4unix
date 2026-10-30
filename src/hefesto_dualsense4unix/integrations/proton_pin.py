@@ -1693,7 +1693,7 @@ def onde_o_heroic_ve_o_pino(pasta: Path, pino: str, *, conf: dict[str, str], com
 
     O Heroic nativo usa o da Steam quando ele está lá; a caixa do Flatpak só vê a própria
     ``tools/proton``. Sem nenhum dos dois, o do conf sai do tarball conferido do cache para a
-    ``tools/proton`` da casa, sem rede (``extrair``). Nunca levanta.
+    ``tools/proton`` da casa, sem rede (``extrair``). A extração que falha levanta ``OSError``.
     """
     for nome in dict.fromkeys((pino, conf["name"])):
         achado = _onde_ja_esta(pasta, nome, compat)
@@ -1702,11 +1702,8 @@ def onde_o_heroic_ve_o_pino(pasta: Path, pino: str, *, conf: dict[str, str], com
     if not extrair or not (cache / f"{conf['name']}.tar.gz").is_file():
         return None
     proprio = pasta / "tools" / "proton"
-    try:
-        proprio.mkdir(parents=True, exist_ok=True)
-        ensure_pinned_proton(conf, compat_dir=proprio, cache_dir=cache, downloader=None)
-    except OSError:
-        return None
+    proprio.mkdir(parents=True, exist_ok=True)
+    ensure_pinned_proton(conf, compat_dir=proprio, cache_dir=cache, downloader=None)
     return proprio / conf["name"] if pinned_proton_installed(conf["name"], proprio) else None
 
 
@@ -1720,17 +1717,17 @@ def quem_usa_o_proton(home: Path | None = None) -> tuple[str, ...]:
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     quem: list[str] = []
-    with contextlib.suppress(Exception):
+    try:
         if steam_root_ou_recusa(home).raiz is not None:
             quem.append("Steam")
-    with contextlib.suppress(Exception):
         if censo.pastas_que_existem("Heroic", home):
             quem.append("Heroic")
-    with contextlib.suppress(Exception):
-        quem += [e.bloco.rotulo for e in censo.lancadores_das_extensoes()
-                 if e.bloco.fixador is not None]
-    with contextlib.suppress(Exception):
-        quem += [v.nome for v in censo.lancadores_que_viraram_extensao(home) if v.proton]
+    except OSError as erro:
+        print(f"[proton-pin] não consegui ler {erro.filename or 'a pasta'}: {erro.strerror}",
+              file=sys.stderr)
+    quem += [e.bloco.rotulo for e in censo.lancadores_das_extensoes()
+             if e.bloco.fixador is not None]
+    quem += [v.nome for v in censo.lancadores_que_viraram_extensao(home) if v.proton]
     return tuple(dict.fromkeys(quem))
 
 
@@ -1770,19 +1767,23 @@ def apontar_os_lancadores_para_o_pino(
         return censo.FixadoNoLancador()
     total = 0
     fora: list[censo.ForaDoPino] = []
-    with contextlib.suppress(Exception):
-        for pasta in censo.pastas_que_existem("Heroic", home):
+    try:
+        pastas = censo.pastas_que_existem("Heroic", home)
+    except OSError:
+        pastas = ()
+        fora.append(censo.ForaDoPino("heroic", "", censo.PORQUE_ILEGIVEL))
+    for pasta in pastas:
+        try:
             pino_dir = onde_o_heroic_ve_o_pino(pasta, pino, conf=conf, compat=compat,
                                                cache=cache, extrair=escrever)
-            feito = censo.fixar_o_heroic(pasta, pino_dir, escrever=escrever)
-            total += feito.reescritas
-            fora.extend(feito.fora)
+        except OSError:
+            pino_dir = None
+        feito = censo.fixar_o_heroic(pasta, pino_dir, escrever=escrever)
+        total += feito.reescritas
+        fora.extend(feito.fora)
     cuidadas: set[str] = set()
     pelo_proton = censo.viraram_extensao_pelo_proton()
-    extensoes: tuple[censo.LancadorDaExtensao, ...] = ()
-    with contextlib.suppress(Exception):
-        extensoes = censo.lancadores_das_extensoes()
-    for ext in extensoes:
+    for ext in censo.lancadores_das_extensoes():
         bloco = ext.bloco
         if bloco.fixador is not None and escrever:
             cuidadas.add(bloco.chave)
@@ -1796,17 +1797,15 @@ def apontar_os_lancadores_para_o_pino(
         porque = censo.PORQUE_AINDA_NAO if bloco.fixador else censo.PORQUE_SEM_FIXADOR
         if bloco.leitor is not None:
             cuidadas.add(bloco.chave)
-            with contextlib.suppress(Exception):
-                lida = censo.ler_por_processo(bloco.leitor)
-                fora.extend(censo.fora_do_pino_nos_jogos(bloco.chave, lida.jogos, pino,
-                                                         porque=porque))
+            lida = censo.ler_por_processo(bloco.leitor)
+            fora.extend(censo.fora_do_pino_nos_jogos(bloco.chave, lida.jogos, pino,
+                                                     porque=porque))
         elif bloco.chave in pelo_proton and bloco.fixador is None:
             cuidadas.add(bloco.chave)
             fora.append(censo.ForaDoPino(bloco.chave, "", porque))
-    with contextlib.suppress(Exception):
-        for antigo in censo.lancadores_que_viraram_extensao(home):
-            if antigo.proton and antigo.chave not in cuidadas:
-                fora.append(censo.ForaDoPino(antigo.chave, "", censo.PORQUE_SEM_A_EXTENSAO))
+    for antigo in censo.lancadores_que_viraram_extensao(home):
+        if antigo.proton and antigo.chave not in cuidadas:
+            fora.append(censo.ForaDoPino(antigo.chave, "", censo.PORQUE_SEM_A_EXTENSAO))
     return censo.FixadoNoLancador(total, tuple(fora))
 
 

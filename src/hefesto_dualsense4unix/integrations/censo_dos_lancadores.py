@@ -536,10 +536,9 @@ def nativos_do_heroic(pasta: Path) -> frozenset[str]:
     """As chaves dos jogos que o Heroic instalou na versão Linux: eles não rodam por Proton."""
     nativos: set[str] = set()
     for arq in _REGISTROS_DO_HEROIC:
-        with contextlib.suppress(Exception):
-            registro, _existe, _erros = _registro_do_heroic(pasta, arq)
-            nativos.update(chave for chave, dado in registro.items()
-                           if str(dado.get("platform", "")).casefold() == "linux")
+        registro, _existe, _erros = _registro_do_heroic(pasta, arq)
+        nativos.update(chave for chave, dado in registro.items()
+                       if str(dado.get("platform", "")).casefold() == "linux")
     return frozenset(nativos)
 
 

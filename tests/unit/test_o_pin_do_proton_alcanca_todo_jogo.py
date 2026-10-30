@@ -205,6 +205,24 @@ def test_so_medir_nao_escreve_e_diz_quem_esta_fora(lar: Path, conf: dict[str, st
         censo.ForaDoPino("heroic", "", censo.PORQUE_SEM_O_PINO)}
 
 
+def test_o_que_nao_se_le_ou_nao_se_extrai_e_dito(lar: Path, conf: dict[str, str],
+                                                 monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mordida: a pasta que não se lê e a extração que falha não somem da aba em silêncio."""
+    _jogo_do_heroic(lar / NATIVO, "abc", _proton("/outro"))
+
+    def _sem_disco(*_a: object, **_k: object) -> None:
+        raise PermissionError(13, "Permissão negada")
+
+    monkeypatch.setattr(pp, "ensure_pinned_proton", _sem_disco)
+    assert _apontar(lar, conf).fora == (
+        censo.ForaDoPino("heroic", "", censo.PORQUE_SEM_O_PINO),)
+
+    monkeypatch.setattr(censo, "pastas_que_existem", _sem_disco)
+    assert _apontar(lar, conf).fora == (
+        censo.ForaDoPino("heroic", "", censo.PORQUE_ILEGIVEL),)
+    assert pp.quem_usa_o_proton(lar) == ()
+
+
 FIXADOR = textwrap.dedent("""\
     import json, os, pathlib
     jogos = pathlib.Path(os.environ["HOME"]) / ".config/lutris/games"
