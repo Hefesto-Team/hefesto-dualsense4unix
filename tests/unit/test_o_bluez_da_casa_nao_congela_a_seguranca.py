@@ -195,7 +195,7 @@ def test_so_um_upgrade_para_o_backport_conta_como_base(tmp_path: Path) -> None:
 
 
 def test_a_checagem_de_versao_chama_a_da_distro(tmp_path: Path) -> None:
-    """Ela entra no mesmo check que o doctor já roda, sem passo a mais no `main`."""
+    """A conferência entra no mesmo check que o doctor já roda, sem passo a mais no `main`."""
     env = _ambiente(
         tmp_path,
         instalado=BACKPORT,

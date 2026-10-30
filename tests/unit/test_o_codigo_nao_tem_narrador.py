@@ -1,10 +1,10 @@
 """O-CODIGO-SEM-NARRADOR-01: o código e a prosa do produto não têm narrador.
 
 Docstring e documento falam do que o código faz e do porquê técnico. Não dizem quem
-conduziu o trabalho, não chamam o usuário de «ela» e não contam a conversa em que a decisão
+conduziu o trabalho, não chamam o usuário por pronome e não contam a conversa em que a decisão
 nasceu. Três réguas, e todas mordem:
 
-1. nenhum nome de arquivo versionado leva a palavra «dela»;
+1. nenhum nome de arquivo versionado leva o pronome possessivo do usuário;
 2. nenhuma colocação de narrador ou de processo volta a texto versionado;
 3. as regras do ``scripts/neutralizar-o-texto.py`` já não acham nada para trocar.
 
@@ -36,6 +36,7 @@ _REL = "relatório" + r"s? d[eo]s? " + "agentes?"
 _EU = "EU TINHA " + "(?:MEDIDO|ESCRITO)"
 _ME = "me " + "corrigiu"
 _LEG = "LEGENDA DO " + "MOCKUP"
+_DO_USUARIO = "de" + "la"
 
 NARRADOR = re.compile(
     rf"\b[Qq]{_QUEM[1:]}\b|\b[Cc]{_COORD[1:]}(?:a|es)?\b|\b[Cc]{_DUVIDA[1:]}s?\b"
@@ -99,11 +100,11 @@ def _texto_de_todos() -> dict[str, str]:
 
 
 def nomes_com_do_usuario(caminhos: list[str]) -> list[str]:
-    """Os caminhos em que algum nome de arquivo ou de pasta tem a palavra «dela»."""
+    """Os caminhos em que algum nome de arquivo ou de pasta tem o pronome possessivo do usuário."""
     achados = []
     for caminho in caminhos:
         pedacos = re.split(r"[^A-Za-zÀ-ÿ]+", caminho)
-        if "dela" in [p.lower() for p in pedacos]:
+        if _DO_USUARIO in [p.lower() for p in pedacos]:
             achados.append(caminho)
     return achados
 
@@ -142,7 +143,7 @@ def test_as_regras_do_script_nao_acham_mais_nada_para_trocar() -> None:
         check=False,
     )
     assert corrida.returncode == 0, (
-        "o «dela» que aponta para a pessoa voltou: rode `scripts/neutralizar-o-texto.py "
+        "o pronome que aponta para a pessoa voltou: rode `scripts/neutralizar-o-texto.py "
         f"--aplicar`. Saída: {corrida.stdout.strip()[-300:]}"
     )
 
@@ -183,7 +184,7 @@ class TestMorde:
         ],
     )
     def test_cada_alternativa_do_narrador_tem_a_sua_isca(self, frase: str) -> None:
-        """A isca é só um atalho: toda alternativa de ``NARRADOR`` passa por ela e é achada."""
+        """A isca é só um atalho: toda alternativa de ``NARRADOR`` passa pela isca e é achada."""
         assert [t for _, t in achados_de_narrador({"src/x.py": f"# {frase} aqui\n"})] != []
 
     def test_o_arquivo_sem_isca_nao_entra_na_expressao(self) -> None:
@@ -199,24 +200,23 @@ class TestMorde:
         assert achados_de_narrador(texto) == []
 
     def test_o_nome_com_do_usuario_e_achado(self) -> None:
-        assert nomes_com_do_usuario(["tests/unit/test_a_regra_do_usuario.py"]) == [
-            "tests/unit/test_a_regra_do_usuario.py"
-        ]
+        caminho = f"tests/unit/test_a_regra_{_DO_USUARIO}.py"
+        assert nomes_com_do_usuario([caminho]) == [caminho]
         assert nomes_com_do_usuario(["tests/unit/test_o_modelo_de_delaware.py"]) == []
 
     def test_o_script_troca_o_do_usuario_que_aponta_para_a_pessoa(self) -> None:
         if not SCRIPT.exists():
             pytest.skip("o script não veio para esta árvore")
         modulo = _carregar_o_script()
-        troca = modulo.reescrever_prosa("# a ordem dela de 19/09 manda")
+        troca = modulo.reescrever_prosa(f"# a ordem {_DO_USUARIO} de 19/09 manda")
         assert troca == "# a ordem de 19/09 manda"
-        assert "dela" not in modulo.reescrever_prosa("# a máquina dela não tem rádio")
-        gramatical = "# a função devolve o valor dela mesma"
+        assert _DO_USUARIO not in modulo.reescrever_prosa(f"# a máquina {_DO_USUARIO} sem rádio")
+        gramatical = f"# a função devolve o valor {_DO_USUARIO} mesma"
         assert modulo.reescrever_prosa(gramatical) == gramatical
 
 
 def test_o_script_acha_o_do_usuario_em_comentario_e_em_docstring_e_deixa_o_codigo() -> None:
-    """O atalho do script (texto sem «dela» nem se examina) não pode esconder o que ele troca."""
+    """O atalho do script (texto sem o pronome nem se examina) não pode esconder o que ele troca."""
     if not SCRIPT.exists():
         pytest.skip("o script não veio para esta árvore")
     modulo = _carregar_o_script()

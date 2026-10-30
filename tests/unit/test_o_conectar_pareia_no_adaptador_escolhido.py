@@ -1,16 +1,13 @@
 """O «Conectar» pareia no adaptador ABERTO, e em nenhum outro —
 O-RADIO-CONECTA-ONDE-O-USUARIO-MANDA-01.
 
-Os relatos dela de 26/09/2026, com três DualSense e três adaptadores:
-
-    *«controle conectado ainda cliquei na guia de conexão no botão
-    correspondente a esquerda e ele ainda assim conectou no da direita. Não
-    respeitaw nem a guia selecionada no radio e adaptadores e nem o botão
-    correspondente ao Conectar.»* <!-- noqa-acento: citação literal -->
+Os relatos de 26/09/2026, com três DualSense e três adaptadores: com um controle conectado, o
+clique na guia do adaptador da Esquerda e no Conectar correspondente ainda conectava no da
+Direita; nem a guia escolhida nem o botão Conectar eram respeitados.
 
 E a decisão de produto, às 04h: *«No adaptador aberto (a Esquerda)»*.
 
-MEDIDO no ``radio-diario.jsonl`` dela: os oito «Conectar» da madrugada abriram
+MEDIDO no ``radio-diario.jsonl``: os oito «Conectar» da madrugada abriram
 a busca no ``hci0``, qualquer que fosse o adaptador aberto — o destino era o da
 D8, e o chip do «Procurando» morava num painel que o próprio «Conectar» abria
 com a busca já de pé noutro adaptador.
@@ -163,7 +160,7 @@ class Ensaio:
 
 
 def preparar_o_diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A trava e o diário numa pasta de teste — nunca os dela, em ``/run``."""
+    """A trava e o diário numa pasta de teste — nunca os reais, em ``/run``."""
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     caminho = tmp_path / "radio-diario.jsonl"
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(caminho))
@@ -212,7 +209,7 @@ def mundo_da_madrugada() -> rm.RadioDeMentira:
 def o_usuario_segura_ps_create(
     mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho: str,
 ) -> None:
-    """Dois segundos depois de a janela abrir, ela segura PS + Create."""
+    """Dois segundos depois de a janela abrir, quem usa segura PS + Create."""
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(aparelho))
 
 
@@ -312,7 +309,7 @@ def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
 def test_sem_nenhum_aberto_vale_a_escolha_da_central(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com todas as caixas fechadas por ela, o destino é o da D8 — e a caixa"""
+    """Com todas as caixas fechadas à mão, o destino é o da D8 — e a caixa"""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     ensaio = Ensaio(a08, monkeypatch, mundo, relogio)
     try:

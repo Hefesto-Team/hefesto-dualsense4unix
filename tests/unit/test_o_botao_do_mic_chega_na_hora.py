@@ -1,12 +1,12 @@
 """O botão do microfone chega na hora — O-BOTAO-DO-MIC-CHEGA-NA-HORA-01.
 
-O DEFEITO, medido na bancada de 29/09/2026 (~01h38), com os quatro DualSense
+O DEFEITO, medido no ensaio de 29/09/2026 (~01h38), com os quatro DualSense
 no rádio: do dedo à borda (`mic_da_mesa_borda`), 2,108 s, 2,110 s e 2,086 s; e
 a luz do plástico repintando o estado de antes do aperto por ~2,3 s.
 
 A CAUSA: a volta de cada handle lia UM report e dormia o throttle. A fila do
 hidraw é por fd, com 63 posições úteis, e o kernel descarta o report NOVO
-quando ela está cheia. O aparelho entrega centenas por segundo e a volta lia
+quando a fila está cheia. O aparelho entrega centenas por segundo e a volta lia
 ~30: cada report lido tinha 63 voltas de idade (63 x 33 ms ≈ 2,1 s com os
 quatro; 63 x 8,7 ms ≈ 0,55 s com um no cabo, os 547 ms de 04/09).
 
@@ -22,7 +22,7 @@ o modo nasce BLOQUEANTE, como o de `hidapi.Device(path=...)`. O lado C tem a
 fila do kernel (63 vagas, descarta o NOVO) alimentada por um relógio virtual,
 que anda junto com o `time.sleep` e o `time.monotonic` do laço e com o
 `_relogio_da_borda`. Uma leitura sem prazo com a fila vazia bloquearia para
-sempre, e aqui ela LEVANTA (`_LeriaParaSempre`, que o laço não engole).
+sempre, e aqui a leitura LEVANTA (`_LeriaParaSempre`, que o laço não engole).
 """
 
 from __future__ import annotations

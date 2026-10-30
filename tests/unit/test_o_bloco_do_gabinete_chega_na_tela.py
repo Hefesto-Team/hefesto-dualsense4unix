@@ -20,7 +20,7 @@ def test_o_blocos_atravessa_o_normalizar() -> None:
     carga = normalizar({"blocos": {".mm-faces": "<b>mapa</b>", ".mm-lista": "<li>x</li>"}})
     assert "blocos" in carga, (
         "o `blocos` sumiu do `normalizar` — é exatamente o defeito de 02/09/2026: "
-        "o mapa do gabinete dela é montado a cada tique e jogado fora"
+        "o mapa do gabinete é montado a cada tique e jogado fora"
     )
     assert carga["blocos"] == {".mm-faces": "<b>mapa</b>", ".mm-lista": "<li>x</li>"}
 

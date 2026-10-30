@@ -2,7 +2,7 @@
 
 Numa máquina em que o usuário não está no grupo ``input``, abrir o ``/dev/input/event*`` de um
 teclado ou de um pedal falha com ``PermissionError``. O dono da recusa é
-``utils.maquina.abrir_o_aparelho_de_entrada``: ela vira UMA frase, que ensina a liberar. O gesto
+``utils.maquina.abrir_o_aparelho_de_entrada``: a recusa é UMA frase, que ensina a liberar. O gesto
 «Esperar a próxima tecla» da 08 falha o clique com essa frase (o botão pisca, a frase vai ao
 diário), e a ponte do daemon a registra em ``warning``, uma vez por aparelho, em vez de um
 ``info`` a cada procura.
@@ -71,7 +71,7 @@ def test_abrir_sem_permissao_levanta_a_frase(monkeypatch: pytest.MonkeyPatch) ->
 def test_o_gesto_falha_o_clique_com_a_frase_do_dono(
         a08: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """O «Esperar a próxima tecla» recusa com a frase do dono, pela abertura real e por um
-    ``PermissionError`` cru de quem abre no lugar dela."""
+    ``PermissionError`` cru de quem abre no lugar do acionador."""
     _cena(a08, monkeypatch, _declarado())
     monkeypatch.setattr(a08, "_RAIZ_DAS_ENTRADAS", str(_sys_de_mentira(tmp_path / "input")))
     monkeypatch.setattr(evdev, "InputDevice", _recusar)

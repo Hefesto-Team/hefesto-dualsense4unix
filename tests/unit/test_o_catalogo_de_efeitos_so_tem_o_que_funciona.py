@@ -133,12 +133,12 @@ def sequencias() -> dict[str, tuple[Any, ...]]:
 
 def test_cada_luz_de_dado_vivo_muda_com_o_dado_e_nao_e_a_parada(
         sequencias: dict[str, tuple[Any, ...]]) -> None:
-    """As Estrelas cintilam pela semente do controle, e não pela mão: o dado delas é a semente."""
+    """As Estrelas cintilam pela semente do controle, e não pela mão: o dado é a semente."""
     for base, seq in sequencias.items():
         assert len(set(seq)) > 1, f"a luz {base!r} fica num quadro só com o dado mudando"
         sem_o_dado = (_sequencia(base, _com_o_dado, semente=8) if base in O_DADO_E_A_SEMENTE
                       else _sequencia(base, lambda _k: luz.Entrada()))
-        assert seq != sem_o_dado, f"a luz {base!r} não muda com o dado dela"
+        assert seq != sem_o_dado, f"a luz {base!r} não muda com o dado"
 
 
 def test_nenhuma_luz_de_dado_vivo_repete_a_outra(sequencias: dict[str, tuple[Any, ...]]) -> None:

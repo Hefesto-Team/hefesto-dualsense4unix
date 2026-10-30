@@ -23,7 +23,7 @@ perfil no disco do lar de mentira.
 
 A MORDIDA: devolva `"perfil": ctx.state.get("active_profile") or ""` ao retorno
 de `a03_gatilhos.pacote` e esta régua reprova nomeando a 03; tire-o de lá e
-devolva-o só ao de `a04_iluminacao.pacote`, e ela reprova nomeando a 04.
+devolva-o só ao de `a04_iluminacao.pacote`, e a régua reprova nomeando a 04.
 
 NADA AQUI TOCA A MÁQUINA DO USUÁRIO: o `conftest.py` desvia `HOME` e os `XDG_*`, e a
 fixture confere o desvio contra o lar do `passwd` antes de gravar o perfil.
@@ -81,8 +81,8 @@ def perfil_no_disco() -> Iterator[str]:
     lar_real = pathlib.Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
     alvo = profiles_dir(ensure=True).resolve()
     assert not alvo.is_relative_to(lar_real), (
-        f"profiles_dir() caiu DENTRO do lar real dela: {alvo}. Esta régua grava "
-        "perfil e marcadores — sem o desvio do `conftest` ela gravaria no "
+        f"profiles_dir() caiu DENTRO do lar real: {alvo}. Esta régua grava "
+        "perfil e marcadores — sem o desvio do `conftest` a régua gravaria no "
         "~/.config que o daemon vivo está usando agora.")
     save_profile(Profile(name=NO_DISCO, match=MatchManual()), origem="regua")
     sessao.save_last_profile(NO_DISCO)

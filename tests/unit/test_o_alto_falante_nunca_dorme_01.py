@@ -6,21 +6,21 @@ trava a metade do "sempre acordado".
 
 O DEFEITO, MEDIDO NA ORELHA DO USUÁRIO
 ================================
-Bancada de 15/08/2026 23h45 — controle azul (hw 0x00001111) no CABO, card2,
+Ensaio de 15/08/2026 23h45 — controle azul (hw 0x00001111) no CABO, card2,
 teste CEGO. Mesmo arquivo, mesma rota, mesmo volume::
 
-    canal 1 sozinho, nó ocioso ......... ela: "não saiu"
-    os quatro timbres logo depois ...... ela: "saiu no controle"
-    canal 1 sozinho, nó já acordado .... ela: "tuuuuuuuu"
+    canal 1 sozinho, nó ocioso ......... ouvido: não saiu
+    os quatro timbres logo depois ...... ouvido: saiu no controle
+    canal 1 sozinho, nó já acordado .... ouvido: som contínuo
 
 Nada mudou entre as três passadas além do ESTADO DO NÓ. O `pactl list sinks
 short` mostra os sinks do DualSense em ``SUSPENDED`` quando ociosos, e o religar
 do hardware **come o começo do som**. TRÊS leituras da primeira rodada foram
-descartadas por causa disto — o defeito enganou a própria bancada antes de
+descartadas por causa disto — o defeito enganou o próprio ensaio antes de
 enganar o jogo. Ensaio: ``sfx-no-suspenso-come-o-comeco`` em
 ``docs/data/ensaios.csv``.
 
-A CURA, e por que ela é CONFIGURAÇÃO e não um fluxo aquecedor
+A CURA, e por que é CONFIGURAÇÃO e não um fluxo aquecedor
 =============================================================
 MEDIDO no WirePlumber instalado nesta máquina (0.5.12), em
 ``/usr/share/wireplumber/scripts/node/suspend-node.lua:38-45``: ao entrar em
@@ -28,7 +28,7 @@ MEDIDO no WirePlumber instalado nesta máquina (0.5.12), em
 (padrão 5 s) e, **se o valor for ZERO, retorna sem agendar nada**. Quem suspende
 o nó é esse relógio — não a falta de som. Um fluxo aquecedor de 1 LSB manteria o
 nó em RUNNING pagando CPU, um cliente de áudio novo e um fluxo a arbitrar contra
-os três modos que ela quer no fim do projeto; a regra chega no mesmo lugar sem
+os três modos pedidos para o fim do projeto; a regra chega no mesmo lugar sem
 nada disso.
 
 O QUE ESTE ARQUIVO TRAVA
@@ -46,7 +46,7 @@ O QUE ESTE ARQUIVO TRAVA
 
 A semântica do item 1 é verificada executando a regra: o teste reimplementa a
 decisão do ``suspend-node.lua`` (que está citada acima, linha a linha) e
-pergunta a ela, para nomes de nó MEDIDOS nesta máquina, se o nó ainda seria
+pergunta à regra, para nomes de nó MEDIDOS nesta máquina, se o nó ainda seria
 suspenso. Nada aqui toca hardware, áudio, daemon ou rede — roda no CI.
 """
 
@@ -157,7 +157,7 @@ def test_o_sink_do_controle_nao_dorme(sink: str) -> None:
     assert not _vai_dormir(sink), (
         f"o sink {sink} continuaria sendo suspenso pelo WirePlumber depois de "
         f"{PADRAO_DO_WIREPLUMBER_S:.0f}s ocioso: o drop-in {NOME} não põe "
-        f"'{CHAVE} = 0' nele. Medido em 15/08/2026 23h45 na orelha dela — com o "
+        f"'{CHAVE} = 0' nele. Medido em 15/08/2026 23h45 de ouvido — com o "
         "nó suspenso, o começo do som se perde no religar do hardware."
     )
 
@@ -190,7 +190,7 @@ def test_o_microfone_do_controle_continua_dormindo() -> None:
     """De propósito, e não é esquecimento."""
     assert _vai_dormir(FONTE_DO_CONTROLE), (
         f"o {NOME} desligou o sono da ENTRADA do controle ({FONTE_DO_CONTROLE}). "
-        "Um microfone que nunca dorme fica sempre aberto — isso é decisão dela, "
+        "Um microfone que nunca dorme fica sempre aberto — isso é decisão do produto,"
         "não efeito colateral do padrão de nome."
     )
 

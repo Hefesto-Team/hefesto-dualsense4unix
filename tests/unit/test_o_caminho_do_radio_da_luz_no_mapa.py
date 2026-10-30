@@ -233,7 +233,7 @@ def test_o_brilho_e_o_fade_dizem_o_byte_e_o_bit_que_o_valida(
 
 
 def test_a_supressao_do_fluxo_continua_registrada_na_celula_da_cor() -> None:
-    """O que a célula GANHOU não pode ter apagado o que ela já dizia."""
+    """O que a célula GANHOU não pode ter apagado o que a célula já dizia."""
     celula = _por_id()["luz.lightbar.cor@dualsense"]["radio_offset"].lower()
     assert "supress" in celula, (
         "a célula do rádio da cor deixou de registrar que, no report do FLUXO, "
@@ -242,7 +242,7 @@ def test_a_supressao_do_fluxo_continua_registrada_na_celula_da_cor() -> None:
         "report_thread"
     )
     assert "avuls" in celula, (
-        "a célula do rádio da cor deixou de dizer que os bytes que ela nomeia "
-        "são os do 0x31 AVULSO — sem isso ela volta a ser lida como uma "
-        "descrição do report do fluxo, que é o que ela era até 03/09/2026"
+        "a célula do rádio da cor deixou de dizer que os bytes nomeados "
+        "são os do 0x31 AVULSO — sem isso a célula volta a ser lida como uma "
+        "descrição do report do fluxo, que é o que a célula era até 03/09/2026"
     )

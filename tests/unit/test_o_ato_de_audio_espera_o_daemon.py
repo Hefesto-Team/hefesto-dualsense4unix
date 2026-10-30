@@ -1,4 +1,4 @@
-"""O ato de áudio espera o daemon terminar — MEDIDO na bancada."""
+"""O ato de áudio espera o daemon terminar — MEDIDO no aparelho."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def test_o_teto_cabe_o_que_o_daemon_leva() -> None:
     assert teto_ms >= _MEDIDO_MS * 1.5, (
         f"o teto do ato de áudio é {teto_ms:.0f} ms e o daemon leva "
         f"{_MEDIDO_MS} ms medidos. Sem pelo menos 50% de folga, uma máquina "
-        f"mais carregada devolve a frase de três causas que ela leu em 08/09 — "
+        f"mais carregada devolve a frase de três causas lida em 08/09 — "
         f"e o modo de falhar é o pior: não parece um teto, parece um daemon "
         f"quebrado.")
 
@@ -47,7 +47,7 @@ def test_o_ato_de_audio_pede_o_teto_largo(nome: str, args: tuple[Any, ...],
         f"{visto.get('timeout')!r} em vez do teto largo "
         f"({ipc_bridge._TETO_DO_ATO_DE_AUDIO}). Com o teto padrão de 250 ms a "
         f"resposta do daemon chega tarde, o corpo vira `None`, e a tela mostra "
-        f"três causas — nenhuma delas a verdadeira.")
+        f"três causas — nenhuma a verdadeira.")
 
 
 def test_o_teto_padrao_nao_mudou_para_os_outros(

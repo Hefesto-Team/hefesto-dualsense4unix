@@ -137,7 +137,7 @@ def test_o_motor_da_pagina_tambem_deixa_o_pendrive_e_concorda_com_o_python(
 
 
 def test_a_pagina_publicada_tem_a_reserva() -> None:
-    """Publicada em 05/10/2026: a bancada e o produto têm a mesma cura do JavaScript."""
+    """Publicada em 05/10/2026: o desenho e o produto têm a mesma cura do JavaScript."""
     marca = "AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01"
     reserva = "if (ordem.indexOf(a.classe) !== -1) return;"
     assert reserva in pagina_do_mapa.pagina()

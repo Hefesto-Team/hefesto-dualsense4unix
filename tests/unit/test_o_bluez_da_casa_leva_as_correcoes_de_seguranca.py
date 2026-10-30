@@ -3,10 +3,10 @@
 O-BLUEZ-DA-CASA-LEVA-AS-CORRECOES-DE-SEGURANCA-01 (15/10/2026). A revisão 5 do
 backport é o upstream 5.87 com os commits do master que ele não tem (os CVE de
 a2dp, avrcp, sdp-xml e eir, e o ``5bc6aa79`` do uso-depois-de-liberado), e o
-changelog dela escreve duas linhas que o ``scripts/doctor.sh`` lê:
+changelog da revisão escreve duas linhas que o ``scripts/doctor.sh`` lê:
 
 1. «Cobre a segurança da distro até: <versão>» é a base contra a qual a
-   candidata da distro se compara (sem ela, a base é a do ``dpkg.log``);
+   candidata da distro se compara (sem a candidata, a base é a do ``dpkg.log``);
 2. «Leva do upstream: <commits>» deixa o 5.87 da casa passar pelo teto que barra
    o 5.87 de fora.
 
@@ -193,7 +193,7 @@ def test_so_a_entrada_de_cima_conta(tmp_path: Path) -> None:
     futura = (
         "bluez (5.88-0ubuntu0.1~hefesto24.04.6) noble; urgency=medium\n\n"
         "  * sem a linha.\n\n"
-        " -- Bancada <bancada@example.invalid>  Thu, 15 Oct 2026 06:00:00 -0300\n\n"
+        " -- Ensaio <ensaio@example.invalid>  Thu, 15 Oct 2026 06:00:00 -0300\n\n"
     )
     pergunta = '_bluez_linha_do_changelog "Cobre a segurança da distro até"'
     env = _ambiente(tmp_path, pacote=R5, changelog=futura + _entrada_de_cima(R5))

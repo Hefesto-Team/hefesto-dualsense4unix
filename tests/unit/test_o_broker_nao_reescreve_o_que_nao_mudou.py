@@ -1,6 +1,6 @@
 """O-BROKER-NAO-REESCREVE-O-QUE-NAO-MUDOU-01 — o broker só escreve no nó que mudou.
 
-O ACHADO (25/09/2026, medido na bancada, só lendo): a cada 30 s o daemon
+O ACHADO (25/09/2026, medido no aparelho, só lendo): a cada 30 s o daemon
 pede ao broker que re-esconda o hidraw físico e os nós de entrada de cada
 DualSense (o rehide da reconciliação), e o broker fazia `removexattr` da ACL e
 `chmod 0600` em cada nó SEM olhar o estado. Com quatro controles pelo rádio,
@@ -136,7 +136,7 @@ def _chave(mesa: Mesa, caminho: Path) -> str:
 
 
 def _abrir_para_o_usuario(caminho: Path) -> None:
-    """Uma regra que reabre (o `uaccess` do logind): `0660` + a ACL dela."""
+    """Uma regra que reabre (o `uaccess` do logind): `0660` + a ACL de quem usa."""
     caminho.chmod(0o660)
     os.setxattr(caminho, ACL, encode_access_acl(UID))
 
@@ -156,7 +156,7 @@ def _nascer(mesa: Mesa, jogador: str, *, aberto: bool) -> None:
 
 
 def _montar(raiz: Path, *, aberta: bool) -> Mesa:
-    """Os quatro DualSense e o vpad. `aberta`: os 22 nós nascem com a ACL dela."""
+    """Os quatro DualSense e o vpad. `aberta`: os 22 nós nascem com a ACL de quem usa."""
     mesa = Mesa(raiz)
     for pasta in (mesa.dev_input, mesa.sys_hidraw, mesa.sys_input):
         pasta.mkdir(parents=True, exist_ok=True)
@@ -293,7 +293,7 @@ def _fechado(caminho: Path) -> bool:
 
 
 def _aberto_para_o_usuario(caminho: Path) -> bool:
-    """O alvo de abrir: `0660` e a ACL canônica dela, byte a byte."""
+    """O alvo de abrir: `0660` e a ACL canônica de quem usa, byte a byte."""
     try:
         blob = os.getxattr(caminho, ACL)
     except OSError:
@@ -364,7 +364,7 @@ def _resumo(por_volta: list[Counter[str]]) -> str:
 
 
 def _a_regra_que_reabre(mesa: Mesa) -> set[str]:
-    """O hidraw e o event do gamepad do P3 voltam a `0660` com a ACL dela."""
+    """O hidraw e o event do gamepad do P3 voltam a `0660` com a ACL de quem usa."""
     alvos = [mesa.no("P3"), mesa.entradas("P3")[0]]
     for caminho in alvos:
         _abrir_para_o_usuario(caminho)
@@ -405,7 +405,7 @@ class TestR0AMesaAlcancaOKernel:
     def test_a_primeira_volta_escreve_nos_22_nos_e_fecha_todos(
         self, raiz: Path, abrir_inotify: Callable[[Mesa], _Inotify]
     ) -> None:
-        """Os nós nascem abertos para ela (uma regra que reabre), e a primeira"""
+        """Os nós nascem abertos para quem usa (uma regra que reabre), e a primeira"""
         mesa = _montar(raiz, aberta=True)
         diario: list[tuple[str, dict[str, Any]]] = []
         st = _estado(mesa, diario)
@@ -506,7 +506,7 @@ class TestR2AReconvergencia:
 
 
 def _acl_com_dois(uid: int, outro: int) -> bytes:
-    """A ACL dela e a de um segundo uid, no formato do kernel (entradas por tag e id)."""
+    """A ACL de quem usa e a de um segundo uid, no formato do kernel (entradas por tag e id)."""
     indefinido = 0xFFFFFFFF
     entradas = (
         (0x01, 0x06, indefinido),
@@ -621,7 +621,7 @@ class TestR6NaDuvidaEscreve:
         monkeypatch: pytest.MonkeyPatch,
         erro: int,
     ) -> None:
-        """Os quatro já abertos no alvo (`0660` e o blob dela). Sem ler o"""
+        """Os quatro já abertos no alvo (`0660` e o blob de quem usa). Sem ler o"""
         mesa = _montar(raiz, aberta=True)
         ops = _OpsDeArquivo(
             sys_class_hidraw=str(mesa.sys_hidraw),
@@ -676,7 +676,7 @@ class _Proc:
 
 
 def _o_usuario_abre(no: str) -> bool:
-    """O `access(2)` de um processo dela sobre o nó, que na máquina é de root."""
+    """O `access(2)` de um processo de quem usa sobre o nó, que na máquina é de root."""
     try:
         modo = stat.S_IMODE(os.stat(no).st_mode)
     except OSError:

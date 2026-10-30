@@ -417,7 +417,7 @@ def travas_pegas(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 def test_o_reconectar_segura_uma_trava_so_do_disconnect_ao_connect(
     trava_de_mentira: Path, travas_pegas: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Decisão de produto: o «Reconectar controles» entra na trava — e o"""
+    """Decidido: o botão «Reconectar controles» entra na trava — e o"""
     barramento = bm.BarramentoDeMentira()
     barramento.mesa[bm.no_de(bm.CONTROLE)][bd.APARELHO]["Connected"] = True
     dono = bd.DonoVivo(barramento)
@@ -531,7 +531,7 @@ def test_a_janela_pelo_dono_fecha_sozinha_quando_o_tempo_acaba(
 def test_fechar_colhe_os_achados_antes_de_parar_a_busca(
     vivo: bd.DonoVivo, barramento: bm.BarramentoDeMentira, trava_de_mentira: Path
 ) -> None:
-    """Sem a busca, o BlueZ recolhe os aparelhos que ela achou e ninguém pareou:"""
+    """Sem a busca, o BlueZ recolhe os aparelhos que a busca achou e ninguém pareou:"""
     janela = gp.JanelaDeBusca(bm.ADAPTADOR, 5, dono=vivo)
     assert janela.abrir_a_janela() == ""
     tardio = "aa:bb:cc:00:00:55"

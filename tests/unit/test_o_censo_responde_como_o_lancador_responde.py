@@ -103,7 +103,7 @@ def test_o_registro_de_cada_loja_diz_o_instalado(tmp_path: Path) -> None:
 
 
 def test_o_dialogo_aberto_nao_instala(tmp_path: Path) -> None:
-    """A chave no `legendary_install_info.json` (o diálogo de instalar que ela"""
+    """A chave no `legendary_install_info.json` (o diálogo de instalar que quem usa"""
     casa = tmp_path / HEROIC
     _escrever(casa / "store_cache/legendary_library.json", {"library": [
         {"app_name": "baixado", "title": "Baixado", "is_installed": True},
@@ -169,7 +169,7 @@ def test_o_prefixo_dividido_fica_de_ponta_a_ponta(_lar: Path) -> None:
     assert lx._moradores(prefixo.resolve(), casa) == {
         "aaaa1111jogoa", "eeee2222jogoe", "1111111111"}
     assert prefixo.resolve() not in lx.prefixos_excluidos(_lar / ".config"), (
-        "E e G, que ela não excluiu, perderam o device KS")
+        "E e G, que não foram excluídos, perderam o device KS")
 
 
 def _dividido(lar: Path) -> tuple[Path, Path]:
@@ -218,7 +218,7 @@ def test_o_registro_que_nao_responde_nao_tira_ninguem(_lar: Path, forma: str) ->
     assert b.erros, f"{forma}: o censo não disse que não leu o registro"
     assert lx._moradores(prefixo.resolve(), casa) == {"A", "B"}
     assert prefixo.resolve() not in lx.prefixos_excluidos(_lar / ".config"), (
-        f"{forma}: B, que ela não excluiu, perdeu o device KS")
+        f"{forma}: B, que não foi excluído, perdeu o device KS")
 
 
 def test_a_dlc_instalada_depois_da_releitura_nao_e_jogo(tmp_path: Path) -> None:

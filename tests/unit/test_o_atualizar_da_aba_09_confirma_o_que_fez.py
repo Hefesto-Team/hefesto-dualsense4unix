@@ -13,11 +13,11 @@ levantava, o piloto executava o ramo do sucesso
 o serviço parado, o botão trocava de palavra, esperava o teto, voltava ao rótulo
 e afirmava ter feito. **Nenhum byte havia saído.**
 
-O QUE ELA MEDE, E COMO — e a forma é o ponto: **ela chama o gesto e olha o que
+O QUE MEDE, E COMO — e a forma é o ponto: **chama o gesto e olha o que
 ele fez.** Onze réguas desta casa caíram em 26/08 por *digitarem o que deviam
 LER*; nenhuma asserção aqui lê o texto do `a09_sistema.py`.
 
-1. com a ponte recusando **calada** (o caso da bancada, e `_call_checked`
+1. com a ponte recusando **calada** (o caso do ensaio, e `_call_checked`
    devolve `(False, None)` para toda falha de transporte), o gesto levanta
    `RuntimeError` com a frase de reserva do produto;
 2. com a ponte recusando **dizendo** — o daemon respondeu e recusou —, a frase
@@ -32,7 +32,7 @@ NENHUM BYTE VAI AO DAEMON DE QUEM RODA A SUÍTE: a ponte é um dublê, e
 `atualizar` não precisa entrar em `hefesto_vivo.PERIGOSOS` por causa disto.
 
 A MORDIDA: arranque o `if not ok: raise` do gesto e 1, 2 e 4-recusa reprovam;
-a 3 continua verde — é assim que se sabe que ela mede outra coisa.
+a 3 continua verde — é assim que se sabe que a 3 mede outra coisa.
 """
 from __future__ import annotations
 
@@ -85,7 +85,7 @@ def clicar():
 
 
 def test_com_o_servico_mudo_o_botao_recusa_em_vez_de_dizer_pronto(a09, clicar):
-    """O caso da bancada: serviço parado, motivo `None`, e nada de "Pronto.".
+    """O caso do ensaio: serviço parado, motivo `None`, e nada de "Pronto.".
 
     `RuntimeError` é o contrato desta interface para *"o produto recusou, e a
     frase VAI PARA A TELA"* — `hefesto_vivo._recusou_dizendo:2523`. Sem ele o
@@ -95,13 +95,13 @@ def test_com_o_servico_mudo_o_botao_recusa_em_vez_de_dizer_pronto(a09, clicar):
         clicar(PonteQueResponde((False, None)))
 
     assert str(caiu.value) == a09.SEM_RESPOSTA_DO_SERVICO, (
-        "a frase da recusa não é a do produto. Ela tem UM dono "
+        "a frase da recusa não é a do produto. A frase tem UM dono"
         "(`a09_sistema.SEM_RESPOSTA_DO_SERVICO`) porque texto de tela com dois "
         "donos diverge no primeiro dia em que alguém mexe num deles.")
 
 
 def test_quando_o_servico_diz_por_que_recusou_a_tela_mostra_a_frase_dele(a09, clicar):
-    """A frase de reserva é RESERVA — ela não engole o motivo do daemon."""
+    """A frase de reserva é RESERVA — não engole o motivo do daemon."""
     recusa = "o serviço recusou: já há um reload em curso"
     with pytest.raises(RuntimeError) as caiu:
         clicar(PonteQueResponde((False, recusa)))
@@ -141,14 +141,14 @@ def test_a_aba_rele_na_hora_nos_dois_desfechos(a09, clicar, resposta, levanta):
 
 
 def test_a_frase_de_reserva_diz_as_duas_metades(a09):
-    """AS-DUAS-ABAS-FALAM-01, e aqui ela protege contra uma afirmação FALSA."""
+    """AS-DUAS-ABAS-FALAM-01, e aqui a régua protege contra uma afirmação FALSA."""
     frase = a09.SEM_RESPOSTA_DO_SERVICO
 
     assert "pode não ter reaplicado nada" in frase, (
         f"a metade do que NÃO se sabe sumiu da frase: {frase!r}")
     assert "pode ter reaplicado sem me responder" in frase, (
         f"a metade do trabalho-feito-sem-resposta sumiu da frase: {frase!r}. "
-        f"Sem ela a tela volta a afirmar um desfecho que ninguém mediu.")
+        f"Sem a régua a tela volta a afirmar um desfecho que ninguém mediu.")
     assert "de novo" in frase, (
         f"a frase parou de dizer o que fazer: {frase!r}. Clicar de novo é "
         f"seguro — sem `config_overrides` o reload é `replace` do mesmo valor "
@@ -170,7 +170,7 @@ def test_a_porta_nova_continua_esperando_os_quinze_segundos(monkeypatch):
     `daemon.reload` que dá certo voltaria `False` — e a cura desta sprint viraria
     um defeito pior que o original, porque agora o `False` RECUSA na tela.
 
-    Ela mede o número que SAI da ponte, não o que está escrito na tabela.
+    A régua mede o número que SAI da ponte, não o que está escrito na tabela.
     """
     from pacotes import ponte
 
@@ -186,4 +186,4 @@ def test_a_porta_nova_continua_esperando_os_quinze_segundos(monkeypatch):
     assert visto == [15.0], (
         f"`chamar_detalhado('daemon.reload')` esperou {visto!r}. O gesto do "
         f"botão passa por aqui, e 0.25 s é menos que os 9,5 s que o reload "
-        f"leva na máquina dela.")
+        f"leva na máquina de quem usa.")

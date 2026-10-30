@@ -59,7 +59,7 @@ class _Eleitor:
     def eleger_o_controle(self, uniq: str, conectados: list[str]) -> _Resultado:
         del conectados
         if not self._elege_ok:
-            return _Resultado(ok=False, motivo="a bancada recusou de propósito")
+            return _Resultado(ok=False, motivo="o ensaio recusou de propósito")
         self.eleito = uniq
         self.fonte_do_eleito = f"hefesto_mic_{uniq[-6:]}"
         return _Resultado(ok=True, ativo=self.fonte_do_eleito)
@@ -263,7 +263,7 @@ async def _drenar(segundos: float) -> None:
 
 
 async def _apertar(daemon: _Daemon, *uniqs: str) -> None:
-    """Os dois laços do produto no ar, as guardas vencidas, e os apertos dela."""
+    """Os dois laços do produto no ar, as guardas vencidas, e os apertos de quem usa."""
     consumidor = asyncio.create_task(hotkey.mic_button_loop(daemon))
     for _ in range(40):
         await asyncio.sleep(0.005)
@@ -348,7 +348,7 @@ class TestOBotaoLigaEODonoGuarda:
 
         assert await _reconectar(daemon, P4) is True, "o replug calou o P4"
         assert True not in daemon.controller.mudos_escritos(P4), (
-            "o replug escreveu o mudo no firmware do P4 que ela tinha ligado"
+            "o replug escreveu o mudo no firmware do P4 que estava ligado"
         )
 
         novo = _reiniciar(casa)
@@ -356,7 +356,7 @@ class TestOBotaoLigaEODonoGuarda:
             assert await _reconectar(novo, P4) is True
         assert novo.controller.mudos_escritos(P4) == []
         assert not [r for r in registros if r["event"] == "mic_nasce_calado_pelo_controle"], (
-            "o restart disse `mic_nasce_calado_pelo_controle` depois de ela ligar"
+            "o restart disse `mic_nasce_calado_pelo_controle` depois do clique de ligar"
         )
 
     @pytest.mark.asyncio
@@ -378,7 +378,7 @@ class TestOBotaoLigaEODonoGuarda:
         )
         novo = _reiniciar(casa)
         with structlog.testing.capture_logs() as registros:
-            assert await _reconectar(novo, P4) is False, "o restart pôs no ar quem ela calou"
+            assert await _reconectar(novo, P4) is False, "o restart pôs no ar quem estava calado"
         assert novo.controller.mudos_escritos(P4) == [True], (
             "o replug não devolveu o mudo ao firmware que volta aberto"
         )
@@ -449,7 +449,7 @@ class TestUmaMetadeDePeBasta:
         )
         assert casa.mudo_no_dono(P4) is True, "o calar com o canal recusado não foi ao dono"
         novo = _reiniciar(casa)
-        assert await _reconectar(novo, P4) is False, "o restart pôs no ar quem ela calou"
+        assert await _reconectar(novo, P4) is False, "o restart pôs no ar quem estava calado"
         assert novo.controller.mudos_escritos(P4) == [True]
 
 
@@ -458,7 +458,7 @@ class TestOCalarDoDonoSemPerfil:
     async def test_o_calar_do_dono_chega_ao_firmware_sem_perfil_legivel(
         self, casa: Any
     ) -> None:
-        """O ativo não carrega (apagado, ilegível): o calado dela ainda vale."""
+        """O ativo não carrega (apagado, ilegível): o calado ainda vale."""
         daemon = casa.daemon(ativo="Sumiu")
         ato = await hotkey.ligar_o_microfone(daemon, P4, ligado=False)
         await _derrubar(daemon)
@@ -490,7 +490,7 @@ class TestOMudoDoPerfilNaoFalaNoReplug:
         return chamadas, applier
 
     def test_o_global_calado_de_um_perfil_nao_cala_o_controle(self, casa: Any) -> None:
-        """O `pragmata.json` dela tinha `mic.muted: true` no global."""
+        """O `pragmata.json` de quem usa tinha `mic.muted: true` no global."""
         casa.perfil(FREESTYLE, mic={"muted": True, "volume": 70})
         chamadas, applier = self._applier()
         store = StateStore()

@@ -1,9 +1,9 @@
-"""O boot restaura o perfil que ela ativou à mão, com regra de janela ou sem.
+"""O boot restaura o perfil ativado à mão, com regra de janela ou sem.
 
 `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DO-USUARIO`, item 4: o boot não adia mais perfil de
 janela, e o estado público não guarda espera nenhuma. O campo
 `perfil_adiado_por_janela` saiu do `StateStore` em 03/10/2026, sem escritor
-desde a decisão. As duas provas ficam: o Sackboy que ela ativou volta no boot, e
+desde a decisão. As duas provas ficam: o Sackboy ativado à mão volta no boot, e
 sem perfil nenhum o boot responde `None`.
 """
 from __future__ import annotations
@@ -81,7 +81,7 @@ def _salvar_sackboy_do_usuario() -> None:
 async def test_boot_restaura_o_perfil_de_janela_que_o_usuario_escolheu(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """O caso dela, fim a fim: o Sackboy que ela ativou à mão volta no boot."""
+    """O caso de uso, fim a fim: o Sackboy ativado à mão volta no boot."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing import FakeController

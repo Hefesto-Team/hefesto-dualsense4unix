@@ -9,8 +9,8 @@ moldura do Microfone termina num chip (`MUDO` / `ATIVO`, com ícone e risco) e o
 rótulo da moldura do Alto-falante trazia a palavra do canal solta, em peso 400 e
 cinza, com um `·` colado na frente. Era texto ao lado de uma pílula.
 
-**O QUE ESTA RÉGUA MEDE, e por que ela não digita nenhum nome de classe.** Três
-elementos deste rótulo querem a mesma cara de chip, e a geometria dela já vivia
+**O QUE ESTA RÉGUA MEDE, e por que não digita nenhum nome de classe.** Três
+elementos deste rótulo querem a mesma cara de chip, e a geometria já vivia
 DUAS vezes escrita à mão no gerador. Uma régua que digitasse `padding:1px 6px`
 viraria a quarta cópia e divergiria junto com as outras no primeiro ajuste —
 que é exatamente a forma pela qual onze réguas desta casa já caíram. Então:
@@ -20,22 +20,22 @@ que é exatamente a forma pela qual onze réguas desta casa já caíram. Então:
 2. o **que é "cara de chip"** sai da própria página: são as declarações em que o
    chip do microfone e o alarme do alto-falante — os dois que já eram pílula —
    JÁ CONCORDAM. Nada disso é digitado aqui;
-3. o chip do canal tem de casar todas elas;
+3. o chip do canal tem de casar todas;
 4. e a declaração que as escreve tem de ser **UMA**, com os três seletores
    dentro. É o que impede a terceira cópia de nascer de novo.
 
 **A CAIXA NÃO ENTRA NA CONTA, E ISSO CUSTOU UMA VOLTA.** A primeira tentativa
 desta frente subiu a caixa por CSS, para o par ficar idêntico ao do microfone. O
 portão `maiuscula-decorativa` reprovou — e ele carrega a palavra de
-11/09/2026, que cita ESTA palavra pelo nome: *"Leia o cabo e acordado (ambos
-minusculo sem iniciar de forma capitular)."* <!-- noqa-acento: citação literal -->
+11/09/2026, que cita ESTA palavra pelo nome: os dois rótulos, «cabo» e «acordado», ficam em
+minúsculas, sem inicial capitular.
 As duas ordens de produto não brigam: o que o usuário pediu hoje foi o ESTILO, e a caixa do
 chip do microfone não é estilo — é o TEXTO que `mesa_viva.selo_do_mic` devolve.
 `TestACaixaNaoSobe` guarda o lado certo, para que ninguém "complete a
 semelhança" por CSS depois.
 
 **O PIOR DESFECHO DESTA MUDANÇA É UMA PÍLULA CINZA VAZIA**, e é o estado normal
-da bancada: pelo rádio o DualSense não publica placa ALSA, o pacote manda o
+do ensaio: pelo rádio o DualSense não publica placa ALSA, o pacote manda o
 marcador de "não há o que dizer" e uma regra o esconde. Sem fundo isso não se
 via; com fundo, uma regra que deixe de casar põe uma pastilha vazia no cartão de
 TODO controle por rádio. A régua cobra que todo chip que carrega o marcador seja
@@ -88,7 +88,7 @@ COR = ("background", "color", "background-color")
 
 
 def _paginas() -> list[pathlib.Path]:
-    """A bancada e o publicado."""
+    """O desenho e o publicado."""
     return [onde.pagina(PAGINA), onde.pagina(PAGINA, publicado=True)]
 
 
@@ -174,9 +174,9 @@ def _cara_de_chip(doc: str) -> dict[str, str]:
             if p not in COR and alarme.get(p) == v}
 
 
-@pytest.fixture(params=["bancada", "publicado"])
+@pytest.fixture(params=["desenho", "publicado"])
 def pagina(request: pytest.FixtureRequest) -> str:
-    caminho = _paginas()[0 if request.param == "bancada" else 1]
+    caminho = _paginas()[0 if request.param == "desenho" else 1]
     if not caminho.exists():  # pragma: no cover
         pytest.skip(f"{caminho} não existe")
     return _doc(caminho)
@@ -204,7 +204,7 @@ class TestACaraDoChip:
             f"que ele tem é {tem}")
 
     def test_a_cara_do_chip_se_escreve_uma_vez_so(self, pagina: str) -> None:
-        """Três cópias divergem no primeiro ajuste. Esta é a trava contra elas."""
+        """Três cópias divergem no primeiro ajuste. Esta é a trava contra a divergência."""
         classes = [_classe_do_campo(pagina, c) for c in
                    (CAMPO_DO_CHIP_DO_MIC, CAMPO_DO_ALARME,
                     CAMPO_DO_CHIP_DO_CANAL)]
@@ -222,12 +222,12 @@ class TestACaraDoChip:
 
 
 class TestACaixaNaoSobe:
-    """A CARA É A PÍLULA; A CAIXA É O TEXTO — e a caixa é dela desde 11/09."""
+    """A CARA É A PÍLULA; A CAIXA É O TEXTO — e a caixa é a do texto desde 11/09."""
 
     def test_a_caixa_do_chip_do_microfone_e_do_texto_e_nao_do_css(
         self, pagina: str
     ) -> None:
-        """A premissa do caso de baixo, medida — sem ela ele guarda o nada."""
+        """A premissa do caso de baixo, medida — sem a premissa o caso guarda o nada."""
         assert mesa_viva.selo_do_mic(mudo=True, sabemos=True).isupper()
         mic = _estilo(pagina, _classe_do_campo(pagina, CAMPO_DO_CHIP_DO_MIC))
         assert mic.get("text-transform") not in _SOBE_A_CAIXA
@@ -243,7 +243,7 @@ class TestACaixaNaoSobe:
         assert canal.get("text-transform") not in _SOBE_A_CAIXA, (
             f"o chip do canal sobe a caixa por CSS "
             f"({canal.get('text-transform')!r}) — a palavra do daemon é "
-            f"minúscula e é assim que ela a quer na tela desde 11/09/2026")
+            f"minúscula e é assim que a tela a quer desde 11/09/2026")
 
     def test_a_caixa_alta_nao_alcanca_o_alarme(self, pagina: str) -> None:
         """A mesma pergunta para o vizinho, cujas palavras são FRASES."""
@@ -257,7 +257,7 @@ class TestACaixaNaoSobe:
 
 class TestOChipVazio:
     def test_o_marcador_continua_sendo_o_que_o_pacote_manda(self) -> None:
-        """A régua de baixo lê a classe daqui; se o marcador mudar, ela erra."""
+        """A régua de baixo lê a classe daqui; se o marcador mudar, a régua erra."""
         assert a02_controles.NADA_A_DIZER == monta.NADA_A_DIZER
 
     def test_o_chip_vazio_nao_aparece_no_cartao(self, pagina: str) -> None:

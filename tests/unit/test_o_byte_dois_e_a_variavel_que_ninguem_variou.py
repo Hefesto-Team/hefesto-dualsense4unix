@@ -22,7 +22,7 @@ def test_o_terceiro_corpo_traz_o_byte_dois_que_o_ensaio_mediu() -> None:
     pkt = af.montar_com_o_common_preservado(QUADROS, COMMON)
     assert pkt[2] == BT_TAG == 0x10, (
         f"o terceiro corpo saiu com [2]=0x{pkt[2]:02x}; o único valor que esta "
-        "bancada viu o firmware aceitar é 0x10, e os dois arranjos já escrevem "
+        "ensaio viu o firmware aceitar é 0x10, e os dois arranjos já escrevem "
         "0x91 ali — sem variar este byte, a passada é a sétima repetição"
     )
 
@@ -43,7 +43,7 @@ def test_o_common_de_quarenta_e_sete_bytes_sobrevive_em_tres_a_quarenta_e_nove()
     pkt = af.montar_com_o_common_preservado(QUADROS, COMMON)
     vindo = bytes(pkt[af.OFFSET_DO_COMMON : af.OFFSET_DO_COMMON + COMMON_LEN])
     assert vindo == COMMON, (
-        "o `common` não chegou intacto em [3..49] — o envelope que a bancada "
+        "o `common` não chegou intacto em [3..49] — o envelope que o ensaio"
         f"mediu foi desmontado: {vindo[:8].hex()} != {COMMON[:8].hex()}"
     )
 
@@ -137,7 +137,7 @@ def test_o_corpo_que_a_bomba_monta_leva_o_common_do_produto() -> None:
 
 
 def test_a_bomba_sem_estado_manda_o_0x10_neutro() -> None:
-    """Na bancada de 03/10 o ``0x10`` neutro bastou, e sem ele a háptica calou."""
+    """No ensaio de 03/10 o ``0x10`` neutro bastou, e sem ele a háptica calou."""
     report = _bomba(None).um_report()
     assert report is not None
     assert report[11] == af.tag_tlv(BT_TAG), "o 0x10 saiu do quadro"

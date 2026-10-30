@@ -14,7 +14,7 @@ AS MORDIDAS (executadas em 22/10/2026):
    marcador com o serviço parado, e `test_com_o_servico_parado_nada_esta_em_uso_na_tela` reprova;
 3. devolva `"perfil": ativo or "—"` em `pacotes.topo`: o mesmo teste reprova no chip;
 4. tire o `lembrar_o_parar(True)` de `a09_sistema.desligar`: a janela reaberta liga o serviço que
-   ela parou de propósito, e `test_o_parar_da_aba_sistema_segura_o_servico_parado` reprova;
+   o serviço parou de propósito, e `test_o_parar_da_aba_sistema_segura_o_servico_parado` reprova;
 5. tire a chamada a `trazer_o_servico()` de `abrir.abrir`: a janela que vai para a tela abre sem
    trazer o serviço, e `test_a_janela_que_vai_para_a_tela_traz_o_servico` reprova.
 """
@@ -203,7 +203,7 @@ class JanelaDeMentira:
 
 
 def _janela_traz(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Abre a janela com o fio síncrono e diz se ela tentou ligar o serviço."""
+    """Abre a janela com o fio síncrono e diz se a janela tentou ligar o serviço."""
     tentou: list[str] = []
 
     def _ligar() -> bool:

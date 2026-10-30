@@ -1,6 +1,6 @@
 """O `common[42]` é o brilho dos LEDS DE JOGADOR — e o produto manda ali o da BARRA.
 
-MEDIDO POR ELA EM 09/09/2026, na bancada, com um DualSense no cabo e outro no
+MEDIDO EM 09/09/2026, no aparelho, com um DualSense no cabo e outro no
 rádio, mexendo um controle deslizante e olhando o aparelho. Palavra de produto:
 
     "o que o slicer altera não são as cores do lightbar mas os leds que indicam
@@ -68,7 +68,7 @@ def test_a_constante_existe_e_e_o_bit_zero() -> None:
 
 
 def test_o_bit_fica_desligado_enquanto_a_fonte_do_valor_for_a_barra() -> None:
-    """A METADE QUE MORDE — e desde 24/09/2026 ela pergunta ao PRODUTO."""
+    """A METADE QUE MORDE — e desde 24/09/2026 a régua pergunta ao PRODUTO."""
     from pydualsense.enums import Brightness
 
     from hefesto_dualsense4unix.core import ds_output_report as rep
@@ -84,8 +84,8 @@ def test_o_bit_fica_desligado_enquanto_a_fonte_do_valor_for_a_barra() -> None:
     assert common[42] == 0, (
         f"o `common[42]` saiu {common[42]} com o campo próprio no Forte (0): o "
         f"byte voltou a vir do `light.brightness` da pydualsense. Ele é o brilho "
-        f"dos LEDS DE JOGADOR (medido por ela em 09/09/2026), e quem o escolhe é "
-        f"o perfil dela.")
+        f"dos LEDS DE JOGADOR (medido em 09/09/2026), e quem o escolhe é "
+        f"o perfil de quem usa.")
     suprimido = _handle_sem_aparelho(led_gravavel=True)
     suprimido._brilho_das_luzes = 0
     neutro = suprimido._build_common(rumble_asserted=False)

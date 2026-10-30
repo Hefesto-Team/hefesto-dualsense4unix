@@ -32,7 +32,7 @@ FORMAS_QUE_VIRAM_APPID: list[tuple[str, str]] = [
     ("o protocolo `steam://` dos atalhos", "steam://rungameid/851100"),
     ("o número cru, que sempre valeu", "851100"),
     ("a wm_class colada de um journal, que sempre valeu", "steam_app_851100"),
-    ("espaço em volta do que ela colou", "  https://store.steampowered.com/app/851100  "),
+    ("espaço em volta do que se colou", "  https://store.steampowered.com/app/851100  "),
     ("a página de aviso de idade, que é a que a loja abre em jogo adulto",
      "https://store.steampowered.com/agecheck/app/851100/"),
 ]

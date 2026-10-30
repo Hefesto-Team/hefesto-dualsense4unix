@@ -19,7 +19,7 @@ Com o ``./interface`` aberto (que é o piloto da aba Controles dentro de um
 
 Ou seja: a tela afirmava o estado do **desenho** enquanto o disco dizia o
 contrário — o F7 desta casa (*estado velho como padrão*) na pergunta em que ele
-mais dói, porque a resposta que ela precisa é justamente "segue desativado?".
+mais dói, porque a resposta que quem usa precisa é justamente "segue desativado?".
 
 **O QUE FALTAVA NÃO ERA MÉTODO DE IPC.** ``gamepad.emulation.set`` existe
 (``daemon/ipc_server.py``), persiste (``utils/session.save_gamepad_emulation``
@@ -49,7 +49,7 @@ AS SEIS RÉGUAS, E ONDE CADA UMA MORDE
 6. :func:`test_o_disco_lembra_o_desligar_e_o_ligar` — o ciclo inteiro no disco
    de mentira da suíte: desligou → o flag existe; ligou → o flag some.
 
-E duas de forma, sobre o piloto que ela abre
+E duas de forma, sobre o piloto que se abre
 (:func:`test_o_piloto_nao_digita_o_dono_do_modo` e
 :func:`test_o_piloto_aplica_pelo_dono_e_nao_por_ipc_cru`), porque foi assim que
 onze réguas desta casa reprovaram a melhora em vez do defeito, em 26/08:
@@ -129,7 +129,7 @@ def test_todo_passo_que_define_modo_declara_origem_manual() -> None:
             if metodo in definidores:
                 assert params.get("origin") == "manual", (
                     f"{chave!r} → {metodo}: sem origin=manual, o daemon lê o "
-                    "clique dela como automático e pode recusá-lo"
+                    "clique de quem usa como automático e pode recusá-lo"
                 )
 
 
@@ -221,7 +221,7 @@ def test_sem_degrau_e_sem_dono_sao_perguntas_diferentes() -> None:
         "a Navegação TEM escritor — é o que a tira dos sem dono"
     )
     assert "pointclick" not in {c.chave for c in painel.CHIPS_DA_ESCADA}, (
-        "a linha fantasma voltou à tabela. Ela não tem `data-degrau` na página "
+        "a linha fantasma voltou à tabela. A linha não tem `data-degrau` na página "
         "publicada, e o gerador (`aba01.py`) tem trava contra o quinto chip."
     )
 
@@ -255,7 +255,7 @@ def test_a_lembranca_tem_um_lugar_so_e_e_o_do_produto(
         monkeypatch.setattr(session, "load_gamepad_preference", lambda r=resposta: r)
         lembra = painel.modo_lembrado()
         assert lembra.ligado is esperado, f"o dublê disse {resposta}, veio {lembra}"
-        assert lembra.frase, "toda lembrança tem de vir com a frase que ela lê"
+        assert lembra.frase, "toda lembrança tem de vir com a frase que se lê"
 
     monkeypatch.setattr(session, "load_gamepad_preference", lambda: (False, None))
     frase = painel.modo_lembrado().frase
@@ -344,12 +344,12 @@ def test_o_roteiro_das_provas_clica_endereco_que_existe() -> None:
             )
     assert vistos >= 4, (
         f"a régua só achou {vistos} cliques por endereço nos dois roteiros — "
-        "ou a forma mudou, e então ela deixou de medir"
+        "ou a forma mudou, e então a régua deixou de medir"
     )
 
 
 def test_o_interruptor_da_tela_viva_segue_o_daemon_e_nao_o_clique() -> None:
-    """A cura de 31/08, nos dois pilotos — e ela é LIDA, nunca digitada."""
+    """A cura de 31/08, nos dois pilotos — e a cura é LIDA, nunca digitada."""
     if not DESENHO.is_file():
         pytest.skip(f"o desenho da aba Jogar não está nesta árvore: {DESENHO}")
     html = DESENHO.read_text(encoding="utf-8")
@@ -385,7 +385,7 @@ def test_a_aba_jogar_viva_nao_injeta_folha_por_cima_do_desenho() -> None:
     for ato in ("createElement('style')", "head.appendChild"):
         assert ato not in fonte, (
             f"a aba Jogar viva voltou a injetar folha de estilo ({ato}) — o "
-            "estado que faltar se DESENHA no gerador, que é onde ela o vê"
+            "estado que faltar se DESENHA no gerador, que é onde se vê"
         )
 
 

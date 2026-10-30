@@ -18,7 +18,7 @@ MORDIDA (executada em 24/10/2026): com o `_MEXIDA.menu = _MEXIDA.permissoes = mo
 primeiro clique da chave, `test_o_primeiro_clique_na_chave_so_arma_sem_abrir_o_menu` reprova; com a
 regra `position:static` de volta no CSS (e o desenho regerado),
 `test_o_mais_com_as_permissoes_nao_estica_a_fileira` reprova nas quatro medidas (o cartão com
-159 px); sem o `oMenuNoLugar` do `comportamento.js`, ela reprova nas quatro pelo ⋮ fora da janela.
+159 px); sem o `oMenuNoLugar` do `comportamento.js`, reprova nas quatro pelo ⋮ fora da janela.
 """
 
 from __future__ import annotations

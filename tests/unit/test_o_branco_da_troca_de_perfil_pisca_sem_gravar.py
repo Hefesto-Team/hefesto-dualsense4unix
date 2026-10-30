@@ -10,7 +10,7 @@ em «Todos», onde o perfil de destino com a cor global preta não o desfazia.
 
 Backend real, quatro controles: P1 e P2 no cabo (nó da classe LED), P3 e P4 no
 rádio (o `0x31` pelo hidraw). Só a fábrica de perfis é dublê: o `activate`
-dela faz, na luz, o mesmo que o de verdade (solta a camada da usuária e leva a
+do dublê faz, na luz, o mesmo que o de verdade (solta a camada da usuária e leva a
 cor global ao padrão, ou nada quando a global é preta).
 """
 from __future__ import annotations

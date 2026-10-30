@@ -44,7 +44,7 @@ def test_dois_ciclos_deixam_um_backup_por_estado(tmp_path: Path) -> None:
     assert len(backups) == 2, [b.name for b in backups]
     assert len(conteudos) == 2, "dois backups com os MESMOS bytes"
     assert any(b"ESTADO-DO-USUARIO" in c and b"hefesto" not in c for c in conteudos), (
-        "o estado original dela não está entre os backups"
+        "o estado original não está entre os backups"
     )
 
 

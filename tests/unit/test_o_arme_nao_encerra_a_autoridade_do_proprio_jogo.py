@@ -1,6 +1,6 @@
 """O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO-01 — o arme não encerra o próprio jogo.
 
-O que se mediu em 23/10 (a rodada C3 da bancada, a Steam recém-aberta): o tique do sinal
+O que se mediu em 23/10 (a rodada C3 do ensaio, a Steam recém-aberta): o tique do sinal
 viu o próprio Mullet MadJack 43 ms antes do ping do wrapper e a autoridade foi a `game`;
 o arme (`launch_env._encerrar_a_autoridade_do_jogo_que_acabou`) achou `game`, nenhum
 OUTRO jogo vivo e a encerrou como se fosse o resíduo de um jogo que acabou. O jogo

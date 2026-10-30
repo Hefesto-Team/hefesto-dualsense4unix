@@ -2,18 +2,18 @@
 """O AVISO DA VIBRAÇÃO CABE NA ABA — medido no WebKit, na janela do tamanho real.
 
 POR QUE ELE EXISTE, e o defeito foi fotografado em 02/09/2026. A linha de estado
-da aba 05 nasceu no mesmo dia e o aviso mais importante dela — *"a intensidade
+da aba 05 nasceu no mesmo dia e o aviso mais importante da aba — *"a intensidade
 não está chegando a jogo nenhum"* — tinha **211 caracteres**. Na caixa de texto
 da ``.vib-estado``, que mede 1072 px, ele ocupava **1072 px**: quebrava em duas
 sublinhas, o quadro passava a rolar 40 px e a segunda metade ficava **CORTADA**
-pela borda de baixo do miolo. Para ler o aviso inteiro ela tinha de arrastar.
+pela borda de baixo do miolo. Para ler o aviso inteiro era preciso arrastar.
 
 **E o estado não era excepcional:** ``rumble_ff.vpads == 0`` é o da máquina do usuário
 com os dois controles na mesa. O custo caía exatamente sobre a frase que a linha
 existe para dizer.
 
 DECISÃO, 02/09/2026 — *encurtar a frase, em vez de deixar a aba rolar*. E
-ela é uma frase só, com um dono só (``rumble_actions.texto_do_alcance_da_
+a frase é uma só, com um dono só (``rumble_actions.texto_do_alcance_da_
 intensidade``): encurtar ali muda a janela GTK junto, de propósito.
 
 **A FRASE VIROU TRÊS EM 17/09/2026** (RECADO-VPAD-01), e o dono continua um: a
@@ -28,7 +28,7 @@ POR QUE ESTA RÉGUA MEDE NO NAVEGADOR, e não conta caracteres: largura de texto
 não é linear em caracteres — ``"iii"`` e ``"MMM"`` têm o mesmo comprimento e
 larguras diferentes. Um teto de caracteres seria um PROXY, e um proxy fica verde
 sobre a frase larga do dia em que alguém trocar as palavras. Aqui a pergunta é
-feita ao motor que ela vai usar, com a fonte, o CSS e a largura reais.
+feita ao motor que o produto usa, com a fonte, o CSS e a largura reais.
 
 A JANELA É ``Gtk.OffscreenWindow`` de ``interface/janela.TAMANHO_OCULTA`` —
 **importado, nunca digitado**. Ele é o MIOLO da janela do produto: a janela na
@@ -37,7 +37,7 @@ alto, então o que sobra para a página é exatamente ``TAMANHO_OCULTA`` — e u
 ``OffscreenWindow`` não tem barra nenhuma.
 
 DUAS AFIRMAÇÕES DESTA DOCSTRING CAÍRAM EM 04/09/2026, e a régua andava com as
-duas. Ela dizia *"a janela é 1180x757, o ``TAMANHO_NA_TELA``"* e *"medir na
+duas. A docstring dizia *"a janela é 1180x757, o ``TAMANHO_NA_TELA``"* e *"medir na
 ``TAMANHO_OCULTA`` (1180x900) responderia 'não rola' sempre: são 143 px a mais
 de altura"*:
 
@@ -52,9 +52,9 @@ de altura"*:
 
 **QUEM APERTA É A LARGURA**, e era ali que o tamanho errado cobrava: a
 ``.janela`` é ``width:1180px; max-width:100%`` (``topo.html:147``), e num
-viewport de 1180 ela encolhia para 1148 px. A caixa da linha de estado tinha
+viewport de 1180 a janela encolhia para 1148 px. A caixa da linha de estado tinha
 **1087 px** em vez dos 1119 de hoje — a régua cobrava a frase contra uma caixa
-32 px mais estreita que a do produto, e uma frase que coubesse na janela dela
+32 px mais estreita que a do produto, e uma frase que coubesse na janela real
 podia ser reprovada aqui.
 
 AS MORDIDAS:
@@ -62,7 +62,7 @@ AS MORDIDAS:
 * devolva a frase de 211 caracteres em ``texto_do_alcance_da_intensidade`` →
   ``test_o_aviso_nao_e_cortado_pela_borda_do_miolo`` reprova dizendo qual linha
   passou da borda, e ``test_cada_frase_da_linha_cabe_numa_sublinha`` reprova
-  dizendo que ela ocupa 36 px em vez de 18;
+  dizendo que a frase ocupa 36 px em vez de 18;
 * apague o bloco ``#vib-estado`` do pacote → as duas reprovam por linha nenhuma;
 * troque ``TAMANHO_OCULTA`` por ``TAMANHO_NA_TELA`` na :data:`JANELA` →
   ``test_a_regua_mede_o_miolo_da_janela_do_produto`` reprova dizendo que o

@@ -76,7 +76,7 @@ def _envelhecer(caminho: Path) -> None:
 
 @pytest.fixture
 def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """A casa da régua 1, com o `HOME` e os `XDG_*` da usuária apontados para ela."""
+    """A casa da régua 1, com o `HOME` e os `XDG_*` da usuária apontados para essa casa."""
     from hefesto_dualsense4unix.profiles import loader
 
     raiz = tmp_path / "casa"
@@ -246,7 +246,7 @@ class TestAJanelaReleSoOPerfilQueMudou:
                 slo.steam_game_running_appid()
                 assert varreduras[0] == 2, (
                     "o «não há jogo» passou dos 5 s dentro da janela: o dono do "
-                    "evento se armou nela (o negativo vai a 60 s)")
+                    "evento se armou na casa (o negativo vai a 60 s)")
         finally:
             slo.invalidar_varredura_de_proc()
 
@@ -585,7 +585,7 @@ class TestUmPedidoAMaisNoMaximo:
     def test_o_stop_com_uma_foto_pendente_escreve_e_sai_sem_esperar_o_teto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O serviço que sai com uma foto pendente: ela é escrita, e o fio sai"""
+        """O serviço que sai com uma foto pendente: a foto é escrita, e o fio sai"""
         escritas: list[int] = []
         entrou = threading.Event()
         solta = threading.Event()

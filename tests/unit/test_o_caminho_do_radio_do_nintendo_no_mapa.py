@@ -106,7 +106,7 @@ class TestOFonteAindaSustentaOQueOMapaAfirma:
         ]
         escritas = [linha for linha in leituras if re.search(r"->uniq\s*=", linha)]
         assert len(leituras) == len(escritas), (
-            "apareceu uma LEITURA de `uniq` no hid-nintendo. Se ela é a cura da "
+            "apareceu uma LEITURA de `uniq` no hid-nintendo. Se a leitura é a cura da "
             "identidade por rádio, atualize a `radio_ressalva` de "
             "`identidade.req_dev_info.fallback@sn30`: a dívida deixou de existir."
         )
@@ -133,7 +133,7 @@ class TestAArmadilhaDosOitoMilissegundos:
         assert "every 11ms or every 15ms" in fonte_do_driver
         ressalva = mapa["plataforma.taxa_relatorios@sn30"]["radio_ressalva"]
         assert "8 ms" in ressalva and "11ms" in ressalva, (
-            "a armadilha dos 8 ms saiu da `radio_ressalva`. Ela está lá porque "
+            "a armadilha dos 8 ms saiu da `radio_ressalva`. A armadilha está lá porque "
             "o comentário do driver se contradiz onze linhas depois de si mesmo."
         )
 

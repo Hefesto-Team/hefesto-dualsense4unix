@@ -1,7 +1,7 @@
 """O 232% e o custo de 928,4 por controle não voltam aos textos (08/10/2026).
 
 O «232% de uma antena» saiu de uma estimativa do mockup de 23/09: a entrada contada como
-custo fixo e a ponte a quatro fatias. A entrada é elástica e a ponte tira dela, então o número
+custo fixo e a ponte a quatro fatias. A entrada é elástica e a ponte tira da entrada, então o número
 por controle sai de ``Hz = (C_eff - custo das pontes) / 2 / n`` com o custo da ponte a medir
 (``A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01``). Nenhuma régua ligava o texto à constante; esta liga.
 
@@ -41,14 +41,14 @@ PASTAS_QUE_NAO_SE_ANDA = frozenset(
 
 ISENCOES_DE_ARQUIVO: dict[str, str] = {
     "docs/process/sprints/": (
-        "a sprint escreve o defeito que cura e cita o número que manda tirar; o texto dela é "
+        "a sprint escreve o defeito que cura e cita o número que manda tirar; o texto da sprint é"
         "a história da troca, não uma afirmação"),
     "docs/process/estudos/2026-09-23-a-leva-do-radio-os-relatos/": (
         "relato bruto da leva de 23/09, guardado como foi escrito"),
     "docs/process/estudos/2026-09-23-radio/criticos.md": (
         "citação literal de um crítico de 23/09 sobre a mordida circular do P3"),
     "docs/process/estudos/2026-09-23-radio/mapa-do-radio-aprovado-23-09.html": (
-        "cópia do desenho que ela aprovou em 23/09, intocável"),
+        "cópia do desenho aprovado em 23/09, intocável"),
 }
 
 ISENCOES_DE_LINHA: dict[str, tuple[str, str]] = {}
@@ -92,13 +92,13 @@ def varrer(raiz: Path) -> list[str]:
 def test_nenhum_texto_vivo_diz_232_por_cento_nem_928_virgula_4() -> None:
     achados = varrer(RAIZ)
     assert not achados, (
-        "o número que saiu voltou: a entrada é elástica e a ponte tira dela; o número por "
+        "o número que saiu voltou: a entrada é elástica e a ponte tira da entrada; o número por "
         "controle é Hz = (C_eff - custo das pontes) / 2 / n, com o custo a medir "
         "(A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01):\n  " + "\n  ".join(achados))
 
 
 def test_a_regua_morde_o_numero_plantado_e_respeita_as_isencoes(tmp_path: Path) -> None:
-    """A régua não é cega: planta o número e ela o acha; planta na isenção e ela cala."""
+    """A régua não é cega: planta o número e a régua o acha; planta na isenção e a régua cala."""
     pasta = tmp_path / "docs" / "process" / "estudos" / "2026-10-08-o-tato-vivo"
     pasta.mkdir(parents=True)
     estudo = pasta / "ESTUDO.md"

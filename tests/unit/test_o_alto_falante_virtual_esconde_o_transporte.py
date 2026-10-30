@@ -25,7 +25,7 @@ E ele é medido num SERVIDOR DE SOM DE MENTIRA (:class:`ServidorDeSomDeMentira`)
 que guarda o que foi carregado e responde por isso — não num dublê que só
 aceita. Nenhum módulo entra no PipeWire de ninguém.
 
-**Esta régua não é a bancada desta casa.** Os endereços são das faixas
+**Esta régua não é o ensaio desta casa.** Os endereços são das faixas
 sintéticas (`02fe00`, `aabbcc`), e nada aqui depende dos DualSense daqui.
 """
 
@@ -290,7 +290,7 @@ def test_sem_placa_de_som_no_cabo_o_no_nao_nasce_e_a_rota_diz_por_que(
 
 
 def test_no_radio_sem_ponte_a_rota_recusa_com_a_frase() -> None:
-    """A queixa histórica dela: *"na hora do vamos ver a versão de BT não funcionava"*."""
+    """A queixa histórica: na hora do uso, a versão de BT não funcionava."""
     for ponte in (None, lambda: False):
         rota = af.rota_do_no(_UNIQ_P2, af.TRANSPORTE_RADIO, ponte_do_radio=ponte)
         assert rota.tem_rota is False
@@ -382,7 +382,7 @@ def test_a_mascara_nao_entra_em_assinatura_nenhuma_do_dono() -> None:
 def test_um_controle_que_nunca_esteve_aqui_ganha_o_mesmo_no(
     servidor: ServidorDeSomDeMentira,
 ) -> None:
-    """Nenhum passo desta régua depende dos DualSense desta bancada.
+    """Nenhum passo desta régua depende dos DualSense desta máquina de teste.
 
     O `_UNIQ_NUNCA_VISTO` é de outra faixa sintética: pelo rádio, com a ponte
     de pé, ele ganha o nó de nome normal.

@@ -189,7 +189,7 @@ def test_as_tres_palavras_tem_um_dono_so() -> None:
     campo = LedsConfig.model_fields["player_led_brightness"]
     assert typing.get_args(campo.annotation) == tuple(BRILHOS_DAS_LUZES)
     assert campo.default == BRILHO_DAS_LUZES_PADRAO == "fraco", (
-        "todo perfil e todo controle nascem no Fraco — é a decisão dela")
+        "todo perfil e todo controle nascem no Fraco — é a decisão do produto")
     esperado = {"fraco": FRACO, "medio": MEDIO, "forte": FORTE}  # (noqa-acento)
     assert esperado == BRILHOS_DAS_LUZES, (
         "o degrau do firmware é invertido: 0 é o forte e 2 o fraco (medido em "
@@ -488,7 +488,7 @@ def test_o_clique_em_forte_no_p3_grava_so_o_p3_e_chama_so_o_p3() -> None:
 
 
 def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:
-    """A fileira de cada coluna acende a palavra do override dela, ou a do global."""
+    """A fileira de cada coluna acende a palavra do override da coluna, ou a do global."""
     from pacotes import a04_iluminacao as a04
 
     p = {"leds": {"player_led_brightness": "medio"},  # (noqa-acento)
@@ -561,7 +561,7 @@ def test_o_clique_atravessa_a_troca_automatica_e_sai_na_manual(
         == "escreveu"
     gerente.apply(_perfil("fraco"), origin="auto")
     assert _o_aparelho_fica_em(controles[2]) == FORTE, (
-        "a troca automática soltou o degrau que ela clicou")
+        "a troca automática soltou o degrau clicado")
     gerente.apply(_perfil("fraco"), origin="manual")
     assert _o_aparelho_fica_em(controles[2]) == FRACO, (
         "a troca manual não soltou o degrau da camada da usuária")

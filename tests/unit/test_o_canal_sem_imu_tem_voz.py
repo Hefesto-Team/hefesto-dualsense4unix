@@ -23,7 +23,7 @@ O preço já estava escrito, medido, palavra por palavra, desde 19/08/2026 — e
     *"Errar aqui custa um aperto de botão; errar para Xbox custa as dez, e
     custa em silêncio."*
 
-Estava num COMENTÁRIO. **Aviso em comentário ninguém lê**, e um mês depois ela
+Estava num COMENTÁRIO. **Aviso em comentário ninguém lê**, e um mês depois quem usa
 jogou um jogo de movimento e o controle não respondeu. Um canal que alguém lê —
 o journal do launch e o `daemon.state_full` — é a diferença entre o produto
 saber e o produto contar.
@@ -96,7 +96,7 @@ class TestAsDezVemDoMapa:
         do_mapa = _as_dez_do_mapa()
         assert len(do_mapa) == 10, (
             "o mapa deixou de declarar dez linhas com `ponte_alcanca = "
-            f"{pe.ESCADA[0].ponte.chave}`; são elas que justificam o primeiro "
+            f"{pe.ESCADA[0].ponte.chave}`; são essas pontes que justificam o primeiro "
             "degrau da ESCADA, e a conta tem de mudar junto com a prosa de "
             "`integrations/ponte_escada.py`"
         )
@@ -237,13 +237,13 @@ class TestOJournalNomeiaAsDez:
     def test_o_evento_sai_com_as_dez_linhas_nominadas(
         self, borda: _RegistroDeLog
     ) -> None:
-        """A entrega desta frente, vista do journal da bancada."""
+        """A entrega desta frente, vista do journal do ensaio."""
         _materializar(_DaemonFalso())
 
         avisos = borda.avisos(sem_imu.EVENTO)
         assert len(avisos) == 1, (
             "o par «máscara DualSense + caminho Xbox» armou um vpad uinput e o "
-            "journal do launch não disse nada — é o silêncio da queixa dela"
+            "journal do launch não disse nada — é o silêncio da queixa"
         )
         payload = avisos[0]
         assert payload["quantas"] == 10
@@ -252,7 +252,7 @@ class TestOJournalNomeiaAsDez:
             "lista digitada aqui envelhece na primeira feature `uhid` nova"
         )
         assert "movimento.giroscopio.jogo" in payload["linhas"], (
-            "a linha da queixa dela — o controle por movimento — tem de estar "
+            "a linha da queixa — o controle por movimento — tem de estar "
             "nomeada no evento"
         )
         assert payload["jogadores"] == ["1"]
@@ -376,7 +376,7 @@ class TestOStateFullPublicaOCampoNovo:
     async def test_a_escolha_do_usuario_continua_integra_e_o_campo_novo_fala(
         self, servidor: Any
     ) -> None:
-        """A RÉGUA R3, e ela morde dos DOIS lados.
+        """A RÉGUA R3, que morde dos DOIS lados.
 
         As duas afirmações saem da MESMA leitura do `state_full`:
 
@@ -399,8 +399,8 @@ class TestOStateFullPublicaOCampoNovo:
         bloco = await _gamepad_emulation(socket_path)
 
         assert bloco["degraded"] is False, (
-            "o caminho Xbox NÃO é degradação — decisão dela de 14/09/2026 "
-            "(PS-L3-MASCARA-01), e ela não se reabre por esta frente"
+            "o caminho Xbox NÃO é degradação — decisão de 14/09/2026 "
+            "(PS-L3-MASCARA-01), e não se reabre por esta frente"
         )
         assert bloco["dedup_ok"] is True, (
             "o `dedup_status` continua isentando o caminho Xbox; é justamente "
@@ -408,7 +408,7 @@ class TestOStateFullPublicaOCampoNovo:
         )
         assert bloco["canal_sem_imu"] is True, (
             "o jogo vê um DualSense por um canal `uinput` e o `state_full` não "
-            "tem onde dizer isso — é o silêncio que fez a queixa dela chegar "
+            "tem onde dizer isso — é o silêncio que fez a queixa chegar "
             "até aqui"
         )
         assert bloco["canal_sem_imu_linhas"] == list(_as_dez_do_mapa())
@@ -448,7 +448,7 @@ def _perfil(*, caminho: str | None, mascara: str, carimbo: str | None) -> Profil
 
 class TestOAlarmeSoComparaTermoComTermo:
     def test_perfil_sem_caminho_nao_diverge_de_carimbo_nenhum(self) -> None:
-        """O ALARME FALSO DAS 10:45:02, medido no journal da bancada em 17/09/2026."""
+        """O ALARME FALSO DAS 10:45:02, medido no journal do ensaio em 17/09/2026."""
         perfil = _perfil(caminho=None, mascara="xbox", carimbo="dualsense")
 
         assert (

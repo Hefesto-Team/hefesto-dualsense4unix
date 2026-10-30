@@ -17,7 +17,7 @@ escrita no HTML publicado (``08-conexoes.html:1033``): *"a cura certa é um alvo
 de atributo no piloto"*.
 
 **POR QUE NUM WEBKIT DE VERDADE**: o ``escrever()`` é JavaScript, e a única
-forma de saber o que ele faz é rodá-lo no motor que ela vai usar. Reescrevê-lo
+forma de saber o que ele faz é rodá-lo no motor que o produto usa. Reescrevê-lo
 em Python seria testar a reescrita — e a armadilha tem nome nesta casa:
 *"medir contra a biblioteca errada produz alarme convincente e falso"*.
 
@@ -48,7 +48,7 @@ escrever um colorway que não está embutido dá o MESMO cinza do atributo
 apagado. Ou o ``monta.svg()`` deixa de podar, ou a página publica a folha
 inteira uma vez.
 
-AS TRÊS MORDIDAS, e elas RODAM — não estão num comentário:
+AS TRÊS MORDIDAS, e todas RODAM — não estão num comentário:
 
 * :func:`test_a_mordida_do_pintor_sem_o_ramo_a_tela_fica_no_mockup` arranca o
   ramo ``if(alvo === 'atributo')`` do BOOTSTRAP e roda o piloto mutilado no
@@ -60,7 +60,7 @@ AS TRÊS MORDIDAS, e elas RODAM — não estão num comentário:
   existe para não ter;
 * :func:`test_a_mordida_do_travessao_sem_ele_a_regua_acusa_a_pintura_certa`
   arranca a linha do travessão de ``_declarado_neste_elemento`` e a vê chamar de
-  ENDEREÇO MORTO exatamente o caso da bancada — pelo rádio o mapa responde que
+  ENDEREÇO MORTO exatamente o caso do ensaio — pelo rádio o mapa responde que
   a cor do aparelho não se lê, e todo SVG daquele controle é pintado com vazio.
 """
 from __future__ import annotations
@@ -226,9 +226,9 @@ def test_o_atributo_e_escrito_e_o_desenho_troca_de_cor(medido: dict) -> None:
     assert medido["fill_cosmic"] != medido["fill_white"], (
         f"o atributo mudou e a COR não: {medido['fill_cosmic']} → "
         f"{medido['fill_white']}. Um atributo que não repinta o desenho não "
-        f"cumpre a lei — ela olha a tela, não o DOM")
+        f"cumpre a lei — quem usa olha a tela, não o DOM")
     assert medido["fill_white"] == "rgb(237, 238, 240)", (
-        f"o White do mapa dela é #edeef0; a casca ficou {medido['fill_white']}")
+        f"o White do mapa é #edeef0; a casca ficou {medido['fill_white']}")
     assert medido["tem_casca"] is True, (
         "o desenho foi engolido — escrever num `<svg>` pelo ramo padrão apaga "
         "os filhos dele")
@@ -271,7 +271,7 @@ def test_o_colorway_que_a_folha_nao_traz_da_o_mesmo_cinza(medido: dict) -> None:
     assert medido["n6"] == 1, "o atributo foi escrito — a pintura conta"
     assert medido["fill_nao_embutido"] == medido["fill_crua"], (
         "a folha desta página só traz `cosmic-red` e `white`; um "
-        "`galactic-purple` escrito nela tinha de cair no cinza cru")
+        "`galactic-purple` escrito na casca tinha de cair no cinza cru")
 
 
 def test_a_guarda_recusa_o_prefixo_do_piloto_o_estilo_e_o_endereco(
@@ -313,7 +313,7 @@ def test_depois_da_pintura_a_regua_da_produto(medido: dict) -> None:
 
 
 def test_o_vazio_declarado_nao_vira_travessao_na_comparacao() -> None:
-    """O caminho da BANCADA: pelo rádio a cor do aparelho não se lê."""
+    """O caminho do ENSAIO: pelo rádio a cor do aparelho não se lê."""
     campo = regua._Campo(chave="desenho", dono="p1", alvo="atributo", valor="")
     assert regua._declarado_neste_elemento(campo, regua.TRAVESSAO) == ""
 
@@ -340,7 +340,7 @@ def _regua_sem(ramo: re.Pattern[str], quem: str) -> object:
     import types
 
     fonte, quantos = ramo.subn("\n", REGUA.read_text(encoding="utf-8"))
-    assert quantos == 1, f"a mordida não achou {quem} — ela não morde mais nada"
+    assert quantos == 1, f"a mordida não achou {quem} — a mordida não morde mais nada"
     nome = f"regua_mordida_{abs(hash(quem))}"
     modulo = types.ModuleType(nome)
     sys.modules[nome] = modulo
@@ -357,7 +357,7 @@ def test_a_mordida_da_regua_sem_o_ramo_o_usuario_da_produto_sobre_pagina_virgem(
     vereditos = mordida._classificar(cravados, vivos)
     (desenho,) = [v for v in vereditos if v.campo.chave == "desenho"]
     assert desenho.classe == mordida.PRODUTO, (
-        "a mordida não produziu o defeito que ela existe para mostrar")
+        "a mordida não produziu o defeito que existe para mostrar")
 
     curados = regua._classificar(regua._campos_cravados(PAGINA), vivos)
     (certo,) = [v for v in curados if v.campo.chave == "desenho"]
@@ -366,7 +366,7 @@ def test_a_mordida_da_regua_sem_o_ramo_o_usuario_da_produto_sobre_pagina_virgem(
 
 
 def test_a_mordida_do_travessao_sem_ele_a_regua_acusa_a_pintura_certa() -> None:
-    """Arranca a linha do travessão e vê a régua acusar a bancada."""
+    """Arranca a linha do travessão e vê a régua acusar o ensaio."""
     linha = re.compile(
         r'\n    if campo\.alvo == "atributo":\n(?:.*?\n)?'
         r'        return "" if declarado == TRAVESSAO else declarado\n', re.S)

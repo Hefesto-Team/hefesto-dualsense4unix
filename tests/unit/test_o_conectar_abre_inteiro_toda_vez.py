@@ -161,7 +161,7 @@ def test_a_lista_nao_anda_e_recomeca_com_a_busca(
 
 def test_a_busca_e_a_varredura_nao_trocam_a_sala(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A Esquerda passa a varrer e para; uma busca começa e acaba nela: a"""
+    """A Esquerda passa a varrer e para; uma busca começa e acaba na Esquerda: a"""
     _chip(a08, 0)
     tiques = []
     for varrendo, movimentos, busca in (
@@ -189,7 +189,7 @@ def test_a_busca_e_a_varredura_nao_trocam_a_sala(
 
 def test_quem_espera_num_mover_continua_na_sala(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O controle que ela moveu para a Direita, esperando o gesto, é conteúdo"""
+    """O controle movido para a Direita, esperando o gesto, é conteúdo"""
     _ler(a08, monkeypatch)
     campos = _campos(a08, _busca(1, aparelho=rm.uniq(VERMELHO)))
     assert "esperando" in _cartao(campos["radio-sala"], 1).split()
@@ -310,14 +310,14 @@ PASSOS_DO_PAINEL = (
 
 @pytest.fixture(scope="module")
 def painel_no_webkit() -> list[dict[str, Any]]:
-    """A bancada da 08 num WebKit offscreen — o motor que ela usa —, com os"""
+    """O desenho da 08 num WebKit offscreen — o motor do produto —, com os"""
     import json
 
     from hefesto_dualsense4unix.interface import onde
 
     pagina = onde.pagina("08-conexoes.html")
     if not pagina.is_file():
-        pytest.skip("a bancada da 08 não está no disco — rode o gerador")
+        pytest.skip("o desenho da 08 não está no disco — rode o gerador")
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")

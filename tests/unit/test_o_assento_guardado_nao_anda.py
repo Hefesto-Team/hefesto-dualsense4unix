@@ -1,13 +1,13 @@
 """O-ASSENTO-GUARDADO-NAO-ANDA-01 — enquanto o lugar está guardado, ninguém troca de número.
 
-A linha 17 das 21 dela (06/09/2026) é o critério de aceitação: *"o P2 sai por
+A linha 17 das 21 de 06/09/2026 é o critério de aceitação: *"o P2 sai por
 20 segundos, volta como P2, e os outros três não trocam de número"*. Decidida
 em 24/09/2026 (``D-2409-O-ASSENTO-GUARDADO-NAO-ANDA``): dentro
 do prazo do lugar guardado ninguém anda; passado o prazo, a NUM-01 volta (um
 até N entre quem está na mesa).
 
 As classes são as de produção: o registro de identidade, o backend com quatro
-handles (o P1 e o P2 no cabo, o P3 e o P4 no rádio, como na bancada), o
+handles (o P1 e o P2 no cabo, o P3 e o P4 no rádio, como no ensaio), o
 provider da camada automática, a leitura do IPC, o registro dos externos com a
 ponte de presença de verdade, o co-op e o plano do jogo. O único dublê é o
 handle do ``pydualsense`` (o mesmo ``_FakeHandle`` da suíte) e o relógio.
@@ -97,7 +97,7 @@ class Relogio:
 
 @pytest.fixture
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`config_dir` em tmp — nada aqui toca o `controllers.json` dela."""
+    """`config_dir` em tmp — nada aqui toca o `controllers.json` real."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     def fake_config_dir(ensure: bool = False) -> Path:
@@ -189,7 +189,7 @@ TRANSPORTES_DO_P2 = pytest.mark.parametrize(
 
 @pytest.mark.usefixtures("config_isolado")
 class TestALinha17:
-    """A linha 17 dela, literal: o P2 sai por 20 s, volta P2, ninguém anda."""
+    """A linha 17, literal: o P2 sai por 20 s, volta P2, ninguém anda."""
 
     @staticmethod
     def _mesa(transporte_do_p2: str) -> Mesa:
@@ -244,7 +244,7 @@ class TestALinha17:
         """UM dono: o posto do P1 e o lugar dos quatro são a mesma promessa."""
         assert prazo_do_lugar_guardado() == PRIMARIO_RESERVA_SEC
         assert prazo_do_lugar_guardado() > VINTE_SEGUNDOS, (
-            "a linha 17 mede 20 s — o prazo tem de cobrir o gesto dela")
+            "a linha 17 mede 20 s — o prazo tem de cobrir o gesto")
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -336,7 +336,7 @@ class TestQuemNaoGuardaLugar:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOGestoDoUsuarioTrocaSobreOQueOUsuarioVe:
-    """O clique do usuário é TROCA sobre o que ela vê — e ela vê o buraco."""
+    """O clique do usuário é TROCA sobre o que se vê — e se vê o buraco."""
 
     def test_o_3_para_o_p4_troca_o_p3_e_o_p4_e_mais_ninguem(self) -> None:
         mesa = Mesa()
@@ -412,7 +412,7 @@ class TestOGestoDoUsuarioTrocaSobreOQueOUsuarioVe:
 
         IpcHandlersMixin._set_number_locked(ds, ext, P3, 3)
 
-        assert ds.numeros_da_mesa()[P3] == 3, "ela pediu o 3 e a tela mostra outro"
+        assert ds.numeros_da_mesa()[P3] == 3, "o pedido foi o 3 e a tela mostra outro"
         ext.sync_connected([EXTERNO])
         assert ext.peek(EXTERNO) == 4, "o externo não voltou para o lugar trocado"
 
@@ -431,7 +431,7 @@ class TestOGestoDoUsuarioTrocaSobreOQueOUsuarioVe:
         assert ds.numeros_da_mesa() == {P1: 2, P2: 1, P3: 4}, "o P3 andou"
 
     def test_renumerar_solta_o_lugar_guardado(self) -> None:
-        """O "Renumerar agora" é fechar a fila por vontade dela."""
+        """O "Renumerar agora" é fechar a fila por vontade de quem usa."""
         mesa = Mesa()
         mesa.sai(1)
 

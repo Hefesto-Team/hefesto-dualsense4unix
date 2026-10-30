@@ -28,8 +28,8 @@ def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (lar / ".config" / "wireplumber").mkdir(parents=True)
     (lar / ".local" / "share" / "hefesto-dualsense4unix").mkdir(parents=True)
     (estado / "launch_env").mkdir(parents=True)
-    (lar / ".config" / "hefesto-dualsense4unix" / "profiles" / "vitoria.json").write_text(
-        '{"name": "vitoria"}\n', encoding="utf-8"
+    (lar / ".config" / "hefesto-dualsense4unix" / "profiles" / "meu-perfil.json").write_text(
+        '{"name": "meu-perfil"}\n', encoding="utf-8"
     )
     (estado / "launch_env" / "default.env").write_text("A=1\n", encoding="utf-8")
     monkeypatch.setenv("HOME", str(lar))
@@ -61,7 +61,7 @@ def _deltas_das_entradas(antes: dict[str, tuple[int, int, str]],
     segundo delta de uma mudança só, e só onde o disco o conta.
 
     Só sai a MÃE de um CRIADO ou de um APAGADO desta mesma lista: a pasta pesada que encolhe
-    não é mãe de ninguém aqui, e o tamanho dela trocado continua sendo o delta que reprova.
+    não é mãe de ninguém aqui, e o tamanho trocado continua sendo o delta que reprova.
     """
     deltas = canario._deltas_do_canario(antes, depois)
     maes = {str(Path(d[len("CRIADO   "):]).parent) for d in deltas
@@ -134,7 +134,7 @@ def test_o_canario_nao_fica_cego_com_um_filho_pesado_no_lugar(
     _encher(lar / ".config" / "hefesto-dualsense4unix" / "outra-pesada", 3 * TETO)
     _armar(monkeypatch)
     (_estado(lar) / "launch_env" / "default.env").write_text("A=2\n", encoding="utf-8")
-    (lar / ".config/hefesto-dualsense4unix/profiles/vitoria.json").write_text(
+    (lar / ".config/hefesto-dualsense4unix/profiles/meu-perfil.json").write_text(
         '{"name": "outra"}\n', encoding="utf-8"
     )
 
@@ -144,7 +144,7 @@ def test_o_canario_nao_fica_cego_com_um_filho_pesado_no_lugar(
     saida = capsys.readouterr().out
     assert "aviso, não é portão" in saida
     assert "default.env" in saida
-    assert "vitoria.json" in saida
+    assert "meu-perfil.json" in saida
     assert sessao.exitstatus == 1
 
 
@@ -167,7 +167,7 @@ def test_o_pesado_que_nasce_no_meio_e_uma_linha_so(
 def test_a_pasta_que_passa_do_teto_no_meio_e_uma_linha_so(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Cresceu além do teto: um MUDADO, e o que mora nela não vira APAGADO falso."""
+    """Cresceu além do teto: um MUDADO, e o que mora no teto não vira APAGADO falso."""
     lar = _lar_falso(tmp_path, monkeypatch)
     pasta = _estado(lar) / "cresce"
     _encher(pasta, TETO // 2)

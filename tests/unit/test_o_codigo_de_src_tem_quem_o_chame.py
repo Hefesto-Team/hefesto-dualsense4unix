@@ -52,7 +52,7 @@ _FORA_DO_PRODUTO: dict[str, str] = {
     ),
     "interface.regerar": (
         "a volta dos dez geradores contra o mesmo `ds_limpo.svg`; é a porta de entrada da "
-        "bancada do desenho, rodada por quem edita o `mockup/`"
+        "ensaio do desenho, rodada por quem edita o `mockup/`"
     ),
     "interface.ver": (
         "o visor do desenho aprovado dentro do WebKit; a tabela de instrumentos de "
@@ -69,7 +69,7 @@ _FORA_DO_PRODUTO: dict[str, str] = {
         "`scripts/gerar-tabela-de-curvas.py` o usa no portão `curvas`"
     ),
     "integrations.varredura_do_radio": (
-        "instrumento de bancada (`scripts/ensaios/o_travamento_fator_a_fator.py` pergunta "
+        "instrumento de ensaio (`scripts/ensaios/o_travamento_fator_a_fator.py` pergunta "
         "quem varre com ele) e dono das constantes medidas que "
         "`docs/data/orcamento-de-ar.csv` aponta por este caminho, e que "
         "`tests/unit/test_o_orcamento_conta_a_ponte.py` importa de lá"

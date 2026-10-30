@@ -516,7 +516,7 @@ def test_um_aparelho_atras_de_dois_hubs_conhece_a_cadeia_inteira() -> None:
 
 
 def test_energia_entrega_os_tres_numeros_e_nao_afirma_fonte_propria() -> None:
-    """O bit de autoalimentado é DECLARAÇÃO, e nesta bancada ele se contradiz."""
+    """O bit de autoalimentado é DECLARAÇÃO, e nesta máquina de teste ele se contradiz."""
     achados = _por_nome(_censo())
 
     dongle = achados["3-3.1.1"].energia
@@ -640,7 +640,7 @@ def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
 
     escapados = [c for c in ensaio.tocados if not c.startswith("/mentira")]
     assert not escapados, (
-        "a leitura tocou caminhos fora da bancada injetada — "
+        "a leitura tocou caminhos fora da máquina injetada — "
         f"o primeiro é {escapados[0]!r}"
     )
-    assert ensaio.tocados, "nenhum leitor foi chamado: a bancada não provou nada"
+    assert ensaio.tocados, "nenhum leitor foi chamado: o ensaio não provou nada"

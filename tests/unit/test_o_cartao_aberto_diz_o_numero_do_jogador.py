@@ -5,7 +5,7 @@ Pedido de 07/10/2026 (a [45]): o título do cartão aberto da aba Controles diz 
 nome que o usuário deu ao controle ou o «Pn» sem nome; o número é o VIVO (o mesmo das lâmpadas); e a
 Calibrar fala a mesma língua, sem «Player N» nem «Sony».
 
-A régua mede a BANCADA (`mockup/`, `onde.pagina(..., publicado=False)`): o `--publicar` a copia
+A régua mede o DESENHO (`mockup/`, `onde.pagina(..., publicado=False)`): o `--publicar` a copia
 byte a byte e é um passo à parte, então a medida vale antes e depois dele.
 
 AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
@@ -13,9 +13,9 @@ AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
 * tirar o `data-campo="quem-joga"` do `identidade()` da `aba02.py` → a régua 1 reprova;
 * tirar o `.so-aberto{display:none}` do CSS → o nome aparece no cartão fechado (régua 2);
 * tirar o `max-width` do `.card-nome` aberto deixou de reprovar com o piso (20/10/2026): o pior
-  caso cabe sem ele (régua 3, veja a docstring dela);
+  caso cabe sem ele (régua 3, veja a docstring da régua);
 * o pacote da 02 deixar de emitir `jogador` → o número vivo some (4);
-* a 08 voltar a ter uma `dono_na_linha` só dela → a identidade da função reprova (6);
+* a 08 voltar a ter uma `dono_na_linha` própria → a identidade da função reprova (6);
 * a Calibrar voltar ao «Player {jogador}» → a régua 7 reprova;
 * o `.nome b` da Calibrar sem o `inline-flex`, o `.quem-nome` sem o `overflow:hidden` ou o
   `.quem-num` sem o `white-space:pre` → o «• P<n>» some ou cola no nome (régua 7, no WebKit).
@@ -71,7 +71,7 @@ def test_o_cartao_aberto_tem_o_endereco_de_quem_joga_e_do_numero() -> None:
 @pytest.mark.parametrize("aba", [P02])
 def test_o_lugar_vazio_do_desenho_da_o_numero_do_assento(
         aba: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A régua 5 da sprint: o molde do lugar vazio, lido sobre a bancada, dá o número do assento.
+    """A régua 5 da sprint: o molde do lugar vazio, lido sobre o desenho, dá o número do assento.
 
     No produto o assento vazio é pintado pelo molde; sem a chave `jogador` nele, o número
     cai no «—».
@@ -99,7 +99,7 @@ def _pior_caso() -> str:
 
 @pytest.fixture(scope="module")
 def medido() -> dict[str, Any]:
-    """Abre a bancada da 02 e lê o título de cada cartão nas cenas que a sprint pede."""
+    """Abre o desenho da 02 e lê o título de cada cartão nas cenas que a sprint pede."""
     if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
         pytest.skip("sem servidor gráfico — o WebKit não abre")
     try:
@@ -137,7 +137,7 @@ def medido() -> dict[str, Any]:
         tela.executar(por_a_folha)
         fora["sem_nome_p1_aberto"] = titulo(tela, "p1")
         fora["sem_nome_p2_fechado"] = titulo(tela, "p2")
-        escrever(tela, "p2", "quem-joga", "Vitória")
+        escrever(tela, "p2", "quem-joga", "Lia")
         abrir(tela, "c-p2")
         fora["com_nome_p2_aberto"] = titulo(tela, "p2")
         fora["com_nome_p1_fechado"] = titulo(tela, "p1")
@@ -163,7 +163,7 @@ def test_o_cartao_aberto_sem_nome_diz_so_o_numero(medido: dict[str, Any]) -> Non
 def test_o_cartao_aberto_com_nome_diz_o_nome(medido: dict[str, Any]) -> None:
     """MORDIDA: tirar o `.so-aberto`/o `quem` do título — o nome não chega ao aberto."""
     t = medido["com_nome_p2_aberto"]
-    assert t.startswith("Vitória"), t
+    assert t.startswith("Lia"), t
     assert "Starlight Blue" in t and "BT" in t, t
 
 
@@ -171,13 +171,13 @@ def test_o_cartao_fechado_nao_ganha_o_nome(medido: dict[str, Any]) -> None:
     """MORDIDA: tirar o `.so-aberto{display:none}` — o nome aparece também na tira fechada."""
     assert medido["com_nome_p1_fechado"].startswith("P1 "), medido["com_nome_p1_fechado"]
     assert medido["fechado_depois"].startswith("P2 "), medido["fechado_depois"]
-    assert "Vitória" not in medido["fechado_depois"]
+    assert "Lia" not in medido["fechado_depois"]
 
 
 def test_em_todos_os_conectados_dizem_quem_joga_e_os_vazios_nao(medido: dict[str, Any]) -> None:
     """No «Todos» os conectados estão abertos (nome ou «Pn»); os lugares vazios ficam no «Pn •»."""
     p1, p2, p3, p4 = (t.split(" ")[0] for t in medido["todos"])
-    assert (p1, p2) == ("P1", "Vitória"), medido["todos"]
+    assert (p1, p2) == ("P1", "Lia"), medido["todos"]
     assert (p3, p4) == ("Player", "Player"), medido["todos"]
     assert [t.strip() for t in medido["todos"][2:]] == [
         "Player 3 • Desconectado", "Player 4 • Desconectado"], medido["todos"]
@@ -227,7 +227,7 @@ def _ctx(jogadores: tuple[int, ...]) -> pacotes.Contexto:
 
 @pytest.fixture
 def com_o_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O pacote filtra pelo publicado; na régua o que vale é a bancada (antes do `--publicar`)."""
+    """O pacote filtra pelo publicado; na régua o que vale é o desenho (antes do `--publicar`)."""
     doc = _ensaio(P02)
     monkeypatch.setattr(a02, "_ENDERECOS", frozenset(re.findall(r'data-campo="([^"]+)"', doc)))
 
@@ -277,26 +277,26 @@ def test_o_nome_chega_a_02_pelo_alias_que_a_08_le(
 
     from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
 
-    aparelho = types.SimpleNamespace(nome="Vitória", endereco=UNIQS[0].upper(), conectado=True,
+    aparelho = types.SimpleNamespace(nome="Lia", endereco=UNIQS[0].upper(), conectado=True,
                                      icone="input-gaming", classe=None, modalias="")
     monkeypatch.setattr(em_fundo, "_FUNDO", {"bluez": (time.monotonic() + 1e6, ((), (aparelho,)))})
     monkeypatch.setattr(em_fundo, "_FUNDO_EM_VOO", set())
-    assert a02.nomes_de_quem_joga() == nome_do_jogador.nomes_dos_donos() == {MAC_NORM: "Vitória"}
+    assert a02.nomes_de_quem_joga() == nome_do_jogador.nomes_dos_donos() == {MAC_NORM: "Lia"}
     cards = a02.pacote(_ctx((1, 2)))["cards"]
-    assert cards[UNIQS[0]]["quem-joga"] == "Vitória"
+    assert cards[UNIQS[0]]["quem-joga"] == "Lia"
     assert cards[UNIQS[1]]["quem-joga"].startswith("P<span")
 
 
 def test_a_08_e_a_02_usam_a_mesma_regra_de_quem_joga() -> None:
-    """MORDIDA: a 08 voltar a ter a `dono_na_linha` dela — o nome diria uma coisa em cada aba."""
+    """MORDIDA: a 08 voltar a ter a `dono_na_linha` própria — o nome diria uma coisa em cada aba."""
     assert vars(a08)["dono_na_linha"] is monta.dono_na_linha
     assert vars(a02)["dono_na_linha"] is monta.dono_na_linha
 
 
 def test_a_regra_do_nome_ou_do_pn() -> None:
-    nomes = {MAC_NORM: "Vitória"}
-    assert monta.dono_na_linha(nomes, "aa:bb:cc:00:00:01", 2) == "Vitória"
-    assert monta.dono_na_linha(nomes, "AA-BB-CC-00-00-01", 2) == "Vitória"
+    nomes = {MAC_NORM: "Lia"}
+    assert monta.dono_na_linha(nomes, "aa:bb:cc:00:00:01", 2) == "Lia"
+    assert monta.dono_na_linha(nomes, "AA-BB-CC-00-00-01", 2) == "Lia"
     assert monta.dono_na_linha({}, "aa:bb:cc:00:00:01", 2) == "P2"
     assert monta.dono_na_linha({}, "aa:bb:cc:00:00:01", None) == ""
     assert monta.dono_na_linha({}, "aa:bb:cc:00:00:01", True) == ""
@@ -316,15 +316,15 @@ def test_a_calibrar_nao_diz_mais_player_nem_sony() -> None:
 def test_a_calibrar_diz_o_nome_e_o_numero_ou_so_o_numero(monkeypatch: pytest.MonkeyPatch) -> None:
     doc = _ensaio(PCAL)
     monkeypatch.setattr(a11, "_TEM_A_MIRA", True, raising=False)
-    monkeypatch.setattr(a11, "nomes_de_quem_joga", lambda: {MAC_NORM: "Vitória"})
+    monkeypatch.setattr(a11, "nomes_de_quem_joga", lambda: {MAC_NORM: "Lia"})
     mesa = _ctx((1, 2)).mesa
     carga = a11.pacote(_ctx((1, 2)))
     assert carga is not None
     blocos = "".join(str(b) for b in carga["blocos"].values())
     num1 = '<span data-campo="jogador" data-hef-alvo="html">1</span>'
     num2 = '<span data-campo="jogador" data-hef-alvo="html">2</span>'
-    assert re.sub(r"<[^>]+>", "", blocos).count("Vitória • P1") >= 1, blocos[:400]
-    assert f'title="Vitória">Vitória</span><span class="quem-num">{monta.SEPARADOR}P{num1}' in (
+    assert re.sub(r"<[^>]+>", "", blocos).count("Lia • P1") >= 1, blocos[:400]
+    assert f'title="Lia">Lia</span><span class="quem-num">{monta.SEPARADOR}P{num1}' in (
         blocos), blocos[:400]
     assert f">P{num2}<" in blocos or f"P{num2}</b>" in blocos
     assert "Player " not in blocos and "Sony <span" not in blocos
@@ -344,7 +344,7 @@ def test_o_texto_de_quem_joga_com_o_numero() -> None:
 
 @pytest.fixture(scope="module")
 def calibrar_medida() -> dict[str, Any]:
-    """Abre a bancada da Calibrar e põe no 1º cartão o «<nome> • P3» que o pacote manda."""
+    """Abre o desenho da Calibrar e põe no 1º cartão o «<nome> • P3» que o pacote manda."""
     if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
         pytest.skip("sem servidor gráfico — o WebKit não abre")
     try:
@@ -383,7 +383,7 @@ def calibrar_medida() -> dict[str, Any]:
         fora["cartoes"] = tela._cru("document.querySelectorAll('.ctr').length")
         fora["sem_nome_topo"] = tela._cru(
             "Math.round(document.querySelector('.ctr .ctr-topo').getBoundingClientRect().height)")
-        for rotulo, nome in (("comum", "Vitória Maria"), ("longo", NOME_LONGO)):
+        for rotulo, nome in (("comum", "Ana Carolina"), ("longo", NOME_LONGO)):
             quem = monta.quem_joga_com_o_numero({MAC_NORM: nome}, UNIQS[0], 3)
             tela.executar("document.querySelector('.ctr .nome b').innerHTML=" + json.dumps(quem))
             fora[rotulo] = tela._cru(medir)
@@ -395,8 +395,8 @@ def test_a_calibrar_mostra_o_numero_mesmo_com_o_nome_longo(
         calibrar_medida: dict[str, Any], rotulo: str) -> None:
     """O cartão da Calibrar é de uma linha: quem encolhe é o NOME, e o «• P<n>» fica à vista.
 
-    Medido em 07/10/2026 pelo conferente final: num texto só, «Vitória Maria • P3» virava
-    «Vitória Maria …», sem o número.
+    Medido em 07/10/2026 pelo conferente final: num texto só, «Ana Carolina • P3» virava
+    «Ana Carolina …», sem o número.
     MORDIDAS (`calibrar.py`, rodadas em 07/10/2026): tirar o `display:inline-flex` do `.nome b`
     (o texto volta a ser um só, e o corte do `.nome` come o «• P3»), ou o `overflow:hidden` do
     `.quem-nome` (o nome deixa de encolher e empurra o número para fora), ou o `white-space:pre`

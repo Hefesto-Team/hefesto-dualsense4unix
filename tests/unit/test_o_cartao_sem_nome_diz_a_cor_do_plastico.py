@@ -60,8 +60,8 @@ def test_sem_nome_a_08_diz_a_cor_e_sem_cor_o_modelo(
 
 def test_com_nome_o_nome_vence_a_cor(monkeypatch: pytest.MonkeyPatch) -> None:
     colunas = _colunas(("usb", "bt", "usb", "bt"),
-                       {nome_do_jogador.mac(UNIQS[1]): "Vitória"}, monkeypatch)
-    assert colunas[UNIQS[1]]["dono"] == "Vitória"
+                       {nome_do_jogador.mac(UNIQS[1]): "Lia"}, monkeypatch)
+    assert colunas[UNIQS[1]]["dono"] == "Lia"
     assert colunas[UNIQS[0]]["dono"] == "Cosmic Red"
 
 

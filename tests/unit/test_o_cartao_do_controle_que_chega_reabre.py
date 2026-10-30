@@ -7,11 +7,11 @@ lugar sem dono — `data-conectado="nao"` e a classe `off` — e não tinha o pa
 simétrico. Medido no fonte: duas ocorrências de `classList.add('off')` e
 `dataset.conectado = 'nao'`, ZERO de `remove` ou de `'sim'`.  (noqa-acento)
 
-O QUE ISSO FAZIA COM ELA: bastava um controle sair e voltar — ou ligar o segundo
+O QUE ISSO FAZIA COM QUEM USA: bastava um controle sair e voltar — ou ligar o segundo
 controle com a aba já aberta. O cabeçalho passava a contar `2 controles`, o
 pacote mandava a coluna inteira do P2 com bateria, cor e bateria, e o cartão
 continuava fechado: **24 px de altura contra os 358 de um cartão aberto**. O
-dado dela chegava e ficava invisível. Só recarregar a página desfazia.
+dado do P2 chegava e ficava invisível. Só recarregar a página desfazia.
 
 POR QUE O DESENHO NÃO RESOLVIA: o P3 e o P4 nascem com a marca cravada no HTML,
 por decisão de 31/08. Uma marca que o HTML crava e o produto só sabe
@@ -120,7 +120,7 @@ def test_o_cartao_fechado_reabre_quando_o_controle_volta() -> None:
     """É O DEFEITO. O P2 fechou numa volta; na volta seguinte ele tem dono.
 
     Sem o passo `1c` o cartão fica `data-conectado="nao"` para sempre, e é o que
-    ela via: o cabeçalho contando o controle e o cartão em 24 px.
+    se via: o cabeçalho contando o controle e o cartão em 24 px.
     """
     fora = _rodar({"p1": False, "p2": True},
                   {"vazios": [], "ocupados": ["p1", "p2"]})
@@ -170,10 +170,10 @@ def test_o_pacote_diz_quem_tem_dono() -> None:
 
 
 def test_ter_coluna_nao_e_ter_dono() -> None:
-    """A REGRESSÃO DE 03/09/2026, e ela é a razão de o `com_dono` existir.
+    """A REGRESSÃO DE 03/09/2026, que é a razão de o `com_dono` existir.
 
     A primeira versão fazia `ocupados = set(colunas)`. Medido no DOM VIVO com
-    UM controle na bancada: a `03-gatilhos` emite coluna para os QUATRO lugares
+    UM controle no ensaio: a `03-gatilhos` emite coluna para os QUATRO lugares
     — as vazias levam travessão de propósito, para as barras de ajuste nascerem
     no lugar —, e p3 e p4 entraram em `ocupados`. O passo `1c` os REABRIU, e a
     tela passou a dizer `data-conectado="sim"` em dois lugares vazios.

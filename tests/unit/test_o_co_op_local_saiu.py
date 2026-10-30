@@ -27,7 +27,7 @@ CO_OP = re.compile(r"(?i)\bco-?op\b")
 
 RECEITA_QUE_SAIU = estilos_de_jogo.Estilo(
     "coop", "Co-op local", "SimpleRigid", "balanceado", (0, 0, 255), 1.0,
-    "quatro na mesa: a família é a paleta canônica de jogador, que é a que ela "
+    "quatro na mesa: a família é a paleta canônica de jogador, que é a que se "
     "já conhece de olhar")
 
 MESA = [
@@ -73,7 +73,7 @@ def test_a_aba_perfis_nao_digita_a_conta_dos_estilos() -> None:
     achado = re.search(r"Os (\w+) de fábrica não se editam", ensaio)
     if achado:
         assert _LIDO.get(achado.group(1)) == len(estilos_de_jogo.DE_FABRICA), (
-            f"a bancada diz «{achado.group(1)}» de fábrica e o motor tem "
+            f"o desenho diz «{achado.group(1)}» de fábrica e o motor tem "
             f"{len(estilos_de_jogo.DE_FABRICA)}")
     assert len(estilos_de_jogo.DE_FABRICA) == len(estilos_de_jogo.ESTILOS) - 1, (
         "o Personalizado é o único estilo que não é de fábrica")
@@ -119,7 +119,7 @@ def test_o_perfil_que_recebeu_o_coop_fica_com_os_ajustes_e_sem_estilo(
 
     MORDIDA: acrescente a `_maybe_seed_presets` uma "migração" que reescreva o
     perfil (tirar as cores da família do co-op, por exemplo) — o arquivo deixa de
-    ser byte a byte o de antes, e os ajustes dela se perdem.
+    ser byte a byte o de antes, e os ajustes de quem usa se perdem.
     """
     arquivo, bruto, gravado = _o_perfil_que_recebeu_o_coop()
 

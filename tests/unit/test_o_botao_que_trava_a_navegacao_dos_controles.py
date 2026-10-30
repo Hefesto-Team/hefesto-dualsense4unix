@@ -1,7 +1,7 @@
 """O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01 — as réguas (26/10/2026).
 
-O pedido: «Temos que ter um botão pra impedir a navegação interna dos controles. Vi que vira um
-caos.» <!-- noqa-acento: citação literal --> A escolha foi a (c), as duas juntas:
+O pedido: um botão que impede a navegação interna dos controles, que vira um caos.
+A escolha foi a (c), as duas juntas:
 
 * o botão na moldura de TODA aba, que escreve a ``ligada`` do mesmo ``navegacao_interna.flag``;
 * destravada, só um controle navega por vez (quem mexe primeiro, pelo botão, pelo analógico ou
@@ -353,4 +353,4 @@ def test_27_o_desenho_de_toda_aba_traz_o_botao(aba: str) -> None:
     raiz = Path(hefesto_dualsense4unix.__file__).resolve().parents[2]
     pagina = (raiz / "mockup" / aba).read_text(encoding="utf-8")
     assert pagina.count('data-gesto="travar-navegacao"') == 1, (
-        f"{aba} sem o botão da moldura (regere a aba: o topo.html entra por ela)")
+        f"{aba} sem o botão da moldura (regere a aba: o topo.html entra pela aba)")

@@ -16,7 +16,7 @@ controle seguia com o que tinha, e os arquivos dos jogos só mudavam no próximo
 
 A PONTE É UM DUBLÊ QUE ANOTA A ORDEM (`tests/unit/ponte_do_rodape.py`, com as
 respostas na forma do daemon), e o rádio é o leitor de mentira da casa (o
-`busctl` da máquina nunca é chamado; a suíte não alcança o BlueZ dela).
+`busctl` da máquina nunca é chamado; a suíte não alcança o BlueZ da máquina).
 
 AS MORDIDAS (medidas na entrega, cada uma reprova a régua que a nomeia):
 
@@ -278,7 +278,7 @@ def test_a_volta_que_falha_nao_derruba_o_aplicar(tocados: list[str]) -> None:
 
 
 def test_o_importar_termina_com_a_volta(tmp_path: Path, tocados: list[str]) -> None:
-    """A resposta 44 dela: todo botão do rodapé que grava perfil termina igual."""
+    """A resposta 44: todo botão do rodapé que grava perfil termina igual."""
     chamadas = _importar(tmp_path)
     assert loader.arquivo_do_perfil("Veio de fora") is not None, "o Importar não gravou"
     assert chamadas == A_VOLTA, f"o «Importar» não deu a volta: {chamadas}"

@@ -2,7 +2,7 @@
 
 O passo «Censo de coleta» do lint-test comparava o tamanho da coleta com um número escrito
 num dia (o piso 8100, de 15/08); a árvore foi de 472 a 1.668 módulos e o número ficou 65%
-abaixo dela, de modo que qualquer módulo podia sumir sem o passo ver. O julgamento mora em
+abaixo da raiz, de modo que qualquer módulo podia sumir sem o passo ver. O julgamento mora em
 `scripts/check_a_coleta_sem_gtk.py` (`julgar`), módulo a módulo, e o `ci.yml` o chama; aqui
 ele é medido sobre saídas de coleta sintéticas e, de ponta a ponta, sobre um projeto de
 verdade com um `collect_ignore` plantado.

@@ -1,24 +1,24 @@
 """O CAMINHO DE UM JOGO NÃO VAZA PARA O SEGUINTE — O-CAMINHO-NAO-VAZA-01.
 
-Decisão, 17/09/2026, ao ver a causa: *"puts aqui é fogo kkkkkkkkkkk,
-deveria ficar só pra aquele jogo do perfil não? mas ótima descoberta"*.
+Decisão de 17/09/2026, ao ver a causa: a escolha de modo de um perfil deveria valer só para o
+jogo daquele perfil.
 
-A QUEIXA, e ela é de quem estava jogando: *"joguei um jogo com controle por
-movimento e na hora do vamos ver o controle não deu resposta (pragmata)"*.
+A QUEIXA, de quem estava jogando: num jogo com controle por movimento (o PRAGMATA), o
+controle não respondeu na hora do uso.
 
 O DEFEITO, medido no disco do usuário em 17/09/2026 — três perfis opinam um caminho
 (`dont_scream.json` e `future_knight.json` pedem `"xbox"`,
 `sackboytm_a_big_adventure.json` pede `"dualsense"`), o `pragmata.json` não tem
-sequer seção `mode`, e o `gamepad_caminho.flag` diz `dualsense`. Ela nunca
+sequer seção `mode`, e o `gamepad_caminho.flag` diz `dualsense`. O usuário nunca
 escolheu xbox como regra da casa: escolheu para UM jogo. Mas o apply do perfil
 carimbava esse `"xbox"` em `config.gamepad_caminho` e o start seguinte — o do
 jogo que NÃO opina — herdava dali. O PRAGMATA abria em uinput, e com o canal
 uinput vão embora as dez linhas do mapa que só existem no caminho DualSense, a
-IMU entre elas: `virtual_pad.quer_uhid` devolve False, `start_motion_reader` sai
+IMU entre essas linhas: `virtual_pad.quer_uhid` devolve False, `start_motion_reader` sai
 na primeira linha e o jogo recebe giroscópio neutro para sempre, sem erro e sem
 uma linha de log que explique.
 
-A CURA são DOIS SLOTS onde havia um, e cada régua abaixo morde um pedaço dela:
+A CURA são DOIS SLOTS onde havia um, e cada régua abaixo morde um pedaço da cura:
 
 - `config.gamepad_caminho_global` — a escolha do usuário, a que vale em todo jogo. Só
   o gesto manual escreve, e o boot a relê de `gamepad_caminho.flag`. É o ÚNICO
@@ -39,7 +39,7 @@ AS DUAS MORDIDAS, e são o código que estava na árvore até 17/09:
 POR QUE AS DUAS ASSERÇÕES, e não só o backend: backend certo com reader mudo já
 aconteceu nesta casa. Cada régua confere o canal E o espelho de motion de pé.
 
-Bancada hermética: faixa forjada `aa:bb:cc:00:00:*` (regra do anonimato — nada
+Ensaio hermético: faixa forjada `aa:bb:cc:00:00:*` (regra do anonimato — nada
 de MAC real em arquivo versionado), nenhum `/dev/uinput`, nenhum `/dev/uhid`,
 nenhum aparelho, nenhum GTK, nenhuma janela.
 """
@@ -107,12 +107,12 @@ class _EvdevFalso:
         raise NotImplementedError
 
 
-def _daemon(*, escolha_dela: str | None = None) -> Any:
+def _daemon(*, escolha_global: str | None = None) -> Any:
     """Daemon dublado com a máscara DualSense e o backend real liberando uhid.
 
-    `escolha_dela` é `config.gamepad_caminho_global`: o que O usuário escolheu para
-    valer em todo jogo. ``None`` = ela nunca escolheu, que é o caso da bancada
-    do PRAGMATA — o `gamepad_caminho.flag` dela diz `dualsense`, e nenhum dos
+    `escolha_global` é `config.gamepad_caminho_global`: o que O usuário escolheu para
+    valer em todo jogo. ``None`` = o usuário nunca escolheu, que é o caso medido
+    do PRAGMATA — o `gamepad_caminho.flag` diz `dualsense`, e nenhum dos
     dois valores pode fazer um jogo sem opinião cair em uinput.
     """
     controller = SimpleNamespace(
@@ -127,7 +127,7 @@ def _daemon(*, escolha_dela: str | None = None) -> Any:
             gamepad_flavor="dualsense",
             gamepad_emulation_enabled=False,
             gamepad_caminho=None,
-            gamepad_caminho_global=escolha_dela,
+            gamepad_caminho_global=escolha_global,
             coop_enabled=True,
             rumble_active=None,
         ),
@@ -224,7 +224,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         _o_jogo_que_opina(daemon)
 
         assert daemon.config.gamepad_caminho_global is None, (
-            "um perfil escreveu a escolha GLOBAL dela — daqui todo jogo sem "
+            "um perfil escreveu a escolha GLOBAL de quem usa — daqui todo jogo sem "
             "opinião passa a herdar o `xbox` de UM jogo"
         )
 
@@ -256,17 +256,14 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         pronto que a sprint escreve: *"perfil sem `mode` sobe em `uhid` com a
         máscara `dualsense`, mesmo com o arquivo global dizendo `xbox`"*.
 
-        NOTA DATADA — 19/09/2026, E ELA CADUCA UMA RÉGUA DE 17/09. Este teste
+        NOTA DATADA — 19/09/2026, QUE CADUCA UMA RÉGUA DE 17/09. Este teste
         chamava-se `test_a_escolha_global_do_usuario_continua_valendo_para_quem_nao_opina`
         e exigia o CONTRÁRIO: com o global em `xbox`, um jogo sem opinião tinha
         de subir em `uinput`. Era certo enquanto a herança fosse a cura — a
         O-CAMINHO-NAO-VAZA-01 mudou a FONTE da herança e o vazamento voltou por
         outra porta, porque o arquivo global é escrito por TODO gesto manual.
 
-        A decisão de produto, ao ver a causa:
-
-            *"sim tudo dualsense, tudo ligado mascara dualsense por default mas
-            esse vazamento me preocupa"*  <!-- noqa-acento: citação literal -->
+        A decisão de produto, ao ver a causa: tudo em DualSense por padrão, sem vazamento.
 
         Enquanto um start sem opinião herdar de QUALQUER lugar, existe um lugar
         a envenenar. O caminho DualSense é o que tem todas as features, e é o
@@ -276,7 +273,7 @@ class TestOJogoSeguinteNaoHerdaOCanal:
         — é o que a tela mostra como escolha do usuário. O que mudou é que ninguém
         NASCE dele, e é isso que esta régua mede.
         """
-        daemon = _daemon(escolha_dela="xbox")
+        daemon = _daemon(escolha_global="xbox")
 
         _o_jogo_que_nao_opina(daemon)
 

@@ -46,17 +46,17 @@ FORA: dict[str, str] = {
     "version": "é a versão do formato, não um ajuste",
     "match": "decide QUANDO o perfil entra (a seleção), não o que ele aplica",
     "priority": "decide QUEM ganha na seleção, não o que ele aplica",
-    "ponte": "é o carimbo da escada do lançamento, lido por ela no jogo",
+    "ponte": "é o carimbo da escada do lançamento, lido pela escada no jogo",
     "teclado_emulado": "é lido na entrada da Navegação, pelo arranjo do desktop",
     "estilo": "é lido pelo motor do tato vivo a cada segundo, não pelo aplicar",
-    "receita_do_tato": "é o desvio da bancada, lido pelo motor do tato vivo",
+    "receita_do_tato": "é o desvio do ensaio, lido pelo motor do tato vivo",
     "meus_toques": "é lido pelo motor do tato vivo a cada segundo, não pelo aplicar",
     "criado_em": "é a data em que o arquivo nasceu, lida pela lista da aba Perfis",
     "alvo": "é onde o perfil vale, lido pela aba Perfis; nenhum motor o lê ainda",
     "evento": "é o momento que chama o perfil nos eventos; nenhum motor o lê ainda",
     "evento_comando": "é o comando do «Meu comando»; nenhum motor o lê ainda",
     "nome_do_jogo": "é o nome que o editor mostra no campo «Nome do jogo»; nenhum motor o lê",
-    "modificado_em": "é a data da última mudança dela, lida pela lista da aba Perfis",
+    "modificado_em": "é a data da última mudança do perfil, lida pela lista da aba Perfis",
     "controles_modo": "é a escolha do botão «Modo automático» da aba Controles, lida pela tela",
 }
 FORA_POR_CONTROLE: dict[str, str] = {}
@@ -218,15 +218,15 @@ def test_o_aplicar_nao_e_escolha_nem_liga_o_freestyle() -> None:
     loader.save_profile(_o_perfil_inteiro(), origem="régua")
     store = StateStore()
     gerente, _chegou = _gerente(_ControleQueAnota(), store)
-    session.save_last_profile("A Escolha Dela")
+    session.save_last_profile("A Escolha Feita")
     session.lembrar_o_ultimo_jogo("O Último Jogo")
     sessao_antes = session._session_path().read_bytes()
     ultimo_antes = session._ultimo_jogo_path().read_bytes()
 
     gerente.reaplicar(NOME)
 
-    assert session.load_last_profile() == "A Escolha Dela", (
-        "o «Aplicar» gravou a escolha dela")
+    assert session.load_last_profile() == "A Escolha Feita", (
+        "o «Aplicar» gravou a escolha")
     assert session._session_path().read_bytes() == sessao_antes, "o «Aplicar» mexeu no session.json"
     assert session._ultimo_jogo_path().read_bytes() == ultimo_antes, (
         "o «Aplicar» mexeu no ultimo_jogo.json")
@@ -271,7 +271,7 @@ def test_o_profile_reaplicar_do_gesto_arma_a_trava_da_troca_a_mao() -> None:
         "o «Aplicar» não armou a trava da troca à mão (ou armou com prazo)")
     (_args, kwargs), = chegou["mode_applier"]
     assert kwargs["origin"] == "manual", (
-        "o «Aplicar» é gesto dela: a R-04 vale igual à da ativação")
+        "o «Aplicar» é gesto de quem usa: a R-04 vale igual à da ativação")
 
 
 def test_o_profile_reaplicar_sem_o_gesto_nao_prende() -> None:

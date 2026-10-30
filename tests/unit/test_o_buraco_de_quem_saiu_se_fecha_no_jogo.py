@@ -1,7 +1,7 @@
 """O-ASSENTO-GUARDADO-NAO-ANDA-03 — passado o prazo, o jogo fecha o buraco junto com a tela.
 
 Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026), com o jogo
-na autoridade o prazo para, e o buraco fecha no «Renumerar agora» dela.
+na autoridade o prazo para, e o buraco fecha no «Renumerar agora».
 """
 from __future__ import annotations
 
@@ -97,16 +97,16 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
 
 
 class MesaHonesta(MesaDoJogo):
-    """A bancada da O-ASSENTO-02 com os vpads da fábrica REAL, contra o kernel de mentira.
+    """O ensaio da O-ASSENTO-02 com os vpads da fábrica REAL, contra o kernel de mentira.
 
-    O-VPAD-DO-P1-NAO-REPETE-O-MAC-01. O ``_VpadDaMesa`` da bancada recebe o MAC
+    O-VPAD-DO-P1-NAO-REPETE-O-MAC-01. O ``_VpadDaMesa`` do ensaio recebe o MAC
     de uma conta feita pela régua e nasce sempre: um vpad que o kernel recusaria
     seguia movendo boneco, e a colisão só aparecia porque a invariante a
     procurava. Aqui cada vpad — o do posto e os dos secundários — nasce por
     ``virtual_pad.make_virtual_pad``, com o ``_try_uhid`` e o
     ``UhidDualSense.start`` de verdade, e quem diz se ele fica de pé é o
     :class:`KernelDoHidPlaystation`. Recusado, o produto cai no ``uinput``, como
-    cairia na bancada, e a cada tique a bancada confere que o kernel não
+    cairia no ensaio, e a cada tique o ensaio confere que o kernel não
     recusou ninguém.
 
     O jogo vê o pad ``uhid`` morrer quando o kernel de mentira recebe o
@@ -164,13 +164,13 @@ class MesaHonesta(MesaDoJogo):
         return pad
 
     def _morreu(self, pad: Any) -> None:
-        """O pad desta bancada saiu do ar: o jogo vê a morte uma vez só."""
+        """O pad deste ensaio saiu do ar: o jogo vê a morte uma vez só."""
         if getattr(pad, "vivo", False) and any(v is pad for v in self.vpads):
             pad.vivo = False
             self.jogo.morreu(pad)
 
     def conferir_invariantes(self) -> None:
-        """As da bancada, sobre os vpads que TÊM MAC — e o kernel não recusou ninguém."""
+        """As do ensaio, sobre os vpads que TÊM MAC — e o kernel não recusou ninguém."""
         todos = self.vpads
         self.vpads = [v for v in todos if getattr(v, "backend", None) == "uhid"]
         try:
@@ -201,7 +201,7 @@ def montar_honesto(
 
 
 def _sai_e_volta_tarde(ensaio: MesaDoJogo, uniq: str, *, para: str | None = None) -> None:
-    """``uniq`` sai, ela renumera depois do prazo, e ele volta com o jogo aberto (D-3009)."""
+    """``uniq`` sai, quem usa renumera depois do prazo, e ele volta com o jogo aberto (D-3009)."""
     via = para if para is not None else ensaio.mesa.transporte_de(uniq)
     ensaio.mesa.levantar(uniq)
     _o_prazo_passa_e_o_usuario_renumera(ensaio, 0.0)
@@ -310,7 +310,7 @@ class TestPassadoOPrazoOJogoFechaOBuraco:
         _o_prazo_passa_e_o_usuario_renumera(ensaio, 0.0)
         assert ensaio.a_tela() == {
             u: n + 1 for n, u in enumerate(u for u in UNIQS[:quantos] if u != UNIQS[1])
-        }, "a tela não fechou a fila no gesto dela"
+        }, "a tela não fechou a fila no gesto de quem usa"
         for uniq in UNIQS[2:quantos]:
             assert ensaio.vpad_de(uniq) is vpads_de_antes[uniq], (
                 f"{uniq} renasceu antes de a lâmpada mudar"
@@ -369,7 +369,7 @@ class TestAVoltaTardiaDoP1:
     """O P1 que volta depois do prazo: o número na tela, o boneco que o jogo deu.
 
     D-3009 (02/10/2026): com o jogo aberto, «depois do prazo» é depois do
-    «Renumerar agora» dela — o prazo sozinho não solta o lugar.
+    «Renumerar agora» — o prazo sozinho não solta o lugar.
     """
 
     @staticmethod
@@ -467,7 +467,7 @@ class TestAVoltaTardiaDoP1:
         de: str,
         para: str,
     ) -> None:
-        """A linha 3 como ela a faz: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
+        """A linha 3 como quem usa a faz: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
         ensaio = montar_honesto(monkeypatch, kernel, quantos, de)
         trocar_a_mascara_do_p1(ensaio)
         assert ensaio.vpad_do_p1.mac == vpad_mac(P1, 1), "o posto nasceu com o MAC do P1"

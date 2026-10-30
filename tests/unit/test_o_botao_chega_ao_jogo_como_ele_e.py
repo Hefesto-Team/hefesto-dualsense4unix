@@ -18,14 +18,14 @@ trancam:
   bordas, quem entrega ao jogo compara, e o pad `uhid` guarda o aperto até ele
   sair num report.
 
-O QUE A MEDIDA DERRUBOU NA RÉGUA 2 DA SPRINT: ela dizia que, no `uinput`, «o
+O QUE A MEDIDA DERRUBOU NA RÉGUA 2 DA SPRINT: a régua dizia que, no `uinput`, «o
 código escrito é o que o físico mandou». Não é, e não deve ser, na máscara
 Xbox: o SDL lê o X da Xbox no `BTN_X` (o mesmo número do `BTN_NORTH`), e o
 quadrado do físico chega como `BTN_WEST`. O lado esperado da régua 2 é o botão
 que o JOGO lê, pela regra do SDL para o VID que o pad mostra
 (`_esperado_codigo_que_o_jogo_le`). Pela mesma regra a máscara DualSense do
 `uinput` (VID da Sony) escreve o quadrado e o triângulo como o `hid-playstation`
-(A-MASCARA-DUALSENSE-DO-UINPUT-SEGUE-O-VID-01, régua 2b): a tabela dela é a
+(A-MASCARA-DUALSENSE-DO-UINPUT-SEGUE-O-VID-01, régua 2b): a tabela da régua é a
 posicional, nascida do leitor do físico (réguas 6 e 7).
 
 A MEDIDA ANTES DA CURA, com este arquivo sobre o `src/` do `c3db67ca6`: 46
@@ -494,7 +494,7 @@ def _modulo_do_uinput_com_o_leitor(mapa: dict[str, str]) -> Any:
 
 def test_regua_6_a_tabela_das_mascaras_de_vid_sony_nasce_do_leitor() -> None:
     """Troque dois botões no `evdev_reader.BOTOES_DO_LEITOR` e a tabela da DualSense e a
-    da Nintendo acompanham: ela nasce do leitor do físico, não é digitada.
+    da Nintendo acompanham: a tabela nasce do leitor do físico, não é digitada.
 
     Mordida: a tabela digitada no `uinput_gamepad.py` (as 11 entradas, em
     literal) reprova aqui, porque a cópia do módulo não segue o leitor trocado."""

@@ -253,7 +253,7 @@ def test_regua_6_no_assentamento_o_aperto_nao_vai_ao_jogo() -> None:
 
 
 def test_a_espera_tem_o_contrato_da_que_o_usuario_substitui() -> None:
-    """Sem aperto, o prazo acaba em `asyncio.TimeoutError`; com a parada, ela"""
+    """Sem aperto, o prazo acaba em `asyncio.TimeoutError`; com a parada, a espera"""
 
     async def cenario() -> None:
         daemon = SimpleNamespace()

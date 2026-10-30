@@ -41,7 +41,7 @@ def _hex(uniq: str) -> str:
 
 @pytest.mark.parametrize("alheio", [CANAL_DO_VIZINHO, PONTE_DO_VIZINHO, BLUEZ_DO_VIZINHO])
 def test_o_no_do_vizinho_sozinho_na_lista_nao_e_dele(alheio: str) -> None:
-    """A cena do journal: uma fonte na lista, um controle conectado, e ela é do outro."""
+    """A cena do journal: uma fonte na lista, um controle conectado, e a fonte é do outro."""
     assert escolher_fonte([alheio], DELE, [DELE]) is None, (
         f"o um-para-um entregou {alheio} ao controle errado"
     )
@@ -498,7 +498,7 @@ def test_o_no_velho_de_quem_esta_pedido_cai_como_sobra() -> None:
 
     OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01: nenhum nó nosso nasce mais com o rabo
     hex. Se o varredor o protegesse por ser «do controle que está pedido», ele
-    ficaria para sempre ao lado do canal novo, e a lista de entradas dela teria dois
+    ficaria para sempre ao lado do canal novo, e a lista de entradas do app teria dois
     «Microfone do Controle N». Sem escritor, cai na segunda varredura.
     """
     servidor = _Servidor()

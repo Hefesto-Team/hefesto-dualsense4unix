@@ -1,14 +1,14 @@
 """O-CABO-ASSUME-DO-RADIO-01 — o controle do rádio que ganha cabo passa para o cabo.
 
-Ela, 25/09/2026: plugou no USB um controle que estava pelo rádio, e ele
-*«segue conectado no modo bt mas agora segue carregando»*. A decisão de produto:
+Em 25/09/2026, um controle que estava pelo rádio foi plugado no USB e seguiu
+conectado pelo rádio, só carregando. A decisão de produto:
 **passa para o cabo**, com o mesmo número e sem o jogo perder o controle; tirou
-o cabo, volta pelo rádio. <!-- noqa-acento: citação literal -->
+o cabo, volta pelo rádio.
 
 O QUE FOI MEDIDO ANTES DA CURA (e que esta régua reproduz)
 =========================================================
 
-Na bancada, 19:42 de 25/09, o kernel recusou o HID do cabo::
+No ensaio, 19:42 de 25/09, o kernel recusou o HID do cabo::
 
     playstation 0003:054C:0CE6.001B: Duplicate device found for MAC address …
     playstation 0003:054C:0CE6.001B: probe with driver playstation failed with error -17
@@ -20,7 +20,7 @@ camadas, medidas no caminho real do backend: com os DOIS nós visíveis ele
 ficava com o que o hidapi listasse primeiro, e com o rádio saindo e o cabo
 entrando num tique só ele ficava com o handle do nó MORTO do rádio.
 
-A BANCADA
+O ENSAIO
 =========
 
 Código de produto de verdade: o ``PyDualSenseController`` (``connect``,
@@ -44,9 +44,9 @@ Os dublês, e por que nenhum é mais frouxo que o real:
   (``RemoveDevice``) nem existe nele, e a régua estouraria se o produto o
   pedisse.
 
-O nó hidraw da bancada não mora em ``/dev``: o ``hidraw_path`` do produto só
+O nó hidraw do ensaio não mora em ``/dev``: o ``hidraw_path`` do produto só
 devolve ``/dev/hidraw*``, e assim nenhum leitor de movimento, broker ou vpad
-uhid abre um nó da bancada.
+uhid abre um nó do ensaio.
 
 AS MORDIDAS (25/09/2026, cada uma devolvida com o md5 conferido) estão no fim
 da sprint, em «O que foi feito».
@@ -184,7 +184,7 @@ class Kernel:
         self.presos[ap["uniq"]] = inst
         (self.raiz / inst / "driver").write_text("playstation", encoding="utf-8")
         ap["evdev"] = f"/dev/input/event{self._evento}"
-        ap["hidraw"] = f"/bancada/hidraw{self._hidraw}".encode()
+        ap["hidraw"] = f"/ensaio/hidraw{self._hidraw}".encode()
         self._evento += 1
         self._hidraw += 1
 
@@ -595,7 +595,7 @@ MATRIZ = pytest.mark.parametrize(
 
 
 def _transportes(quantos: int, posicao: int, outros: str) -> tuple[str, ...]:
-    """A mesa com o controle da `posicao` no RÁDIO (é o caso dela) e os outros como a matriz diz."""
+    """A mesa com o controle da `posicao` no RÁDIO (o caso medido) e os outros como a matriz diz."""
     base = list(OUTROS[outros][:quantos])
     base[posicao] = "bt"
     return tuple(base)
@@ -814,7 +814,7 @@ class TestOCaboAssume:
     def test_a_troca_que_nao_termina_solta_o_jogador_no_prazo(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, posicao: int, caso: str
     ) -> None:
-        """Conferência de 25/09: a troca espera o PRAZO dela, e não para sempre.
+        """Conferência de 25/09: a troca espera o PRAZO, e não para sempre.
 
         Vencida a troca, o lugar guardado espera no vpad parado enquanto o
         registro e o jogo seguram (D-2410, como o posto do P1); o jogo que
@@ -1193,7 +1193,7 @@ class TestOLacoAcordaPeloCabo:
         assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
         assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
         mesa.kernel.conectar(UNIQS[1], "usb")
-        assert mesa.kernel.nodes == nos_antes, "a bancada criou nó para o cabo recusado"
+        assert mesa.kernel.nodes == nos_antes, "o ensaio criou nó para o cabo recusado"
         assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is True
         assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
 
@@ -1356,7 +1356,7 @@ class _DaemonDoLaco:
 
 
 def _derrubar_no_ensaio(mesa: MesaDoCabo, uniq: str) -> tuple[bool, str]:
-    """O `derrubar_o_radio` de verdade, falando com o :class:`BlueZ` da bancada."""
+    """O `derrubar_o_radio` de verdade, falando com o :class:`BlueZ` do ensaio."""
     return _DERRUBAR_REAL(uniq, leitor=mesa.bluez)
 
 

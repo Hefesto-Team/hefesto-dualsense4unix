@@ -156,7 +156,7 @@ def test_repete_toca_enquanto_segura_e_a_volta_que_comecou_acaba() -> None:
     saida = _tocar(store, P1, seguro, 200)
     voltas = _subidas(saida, "cross")
     assert voltas >= 2, f"segurar não repetiu a sequência: {voltas} volta(s)"
-    assert _subidas(saida, "r1") == voltas, "uma volta começada tem de acabar, com o R1 dela"
+    assert _subidas(saida, "r1") == voltas, "uma volta começada tem de acabar, com o R1 da volta"
     assert _subidas(saida, "cross", de=1.5) == 0, "soltou o botão e a sequência seguiu tocando"
 
 

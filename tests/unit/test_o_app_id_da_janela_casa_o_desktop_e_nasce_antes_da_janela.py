@@ -2,10 +2,10 @@
 
 A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01 (item 2, 05/10/2026). O ícone do app sumiu do
 dock e a hipótese era «o `set_prgname` vem depois da janela, ou o app_id não bate com o `.desktop`».
-MEDIDO na janela viva dela (cliente `ext_foreign_toplevel_list_v1`, só leitura): o app_id é
+MEDIDO na janela viva (cliente `ext_foreign_toplevel_list_v1`, só leitura): o app_id é
 `hefesto-dualsense4unix`, o casador do dock (a reimplementação do `find_app_by_id` do
-`appid_sonda.py`) o casa por `StartupWMClass` com o `.desktop` dela, e o GTK resolve o ícone no
-tema dela e no hicolor. A hipótese caiu; o contrato medido fica guardado aqui para não regredir:
+`appid_sonda.py`) o casa por `StartupWMClass` com o `.desktop`, e o GTK resolve o ícone no
+tema e no hicolor. A hipótese caiu; o contrato medido fica guardado aqui para não regredir:
 
 * no Wayland nativo o app_id é o prgname (`wm_instance`) e tem de ser o nome do `.desktop`;
 * no XWayland o segundo campo do WM_CLASS é a classe (`wm_class`) e tem de ser o `StartupWMClass`;

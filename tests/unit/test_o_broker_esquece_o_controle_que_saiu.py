@@ -1,6 +1,6 @@
 """O-BROKER-ESQUECE-O-CONTROLE-QUE-SAIU-01 — a lease é do aparelho, e não do nome.
 
-A bancada de 29/09 (S.3, 03:44 e 03:55): os quatro DualSense no rádio, os
+O ensaio de 29/09 (S.3, 03:44 e 03:55): os quatro DualSense no rádio, os
 quatro pads `uhid`, e o doctor acusando de FÍSICO cinco nós de entrada que eram
 do pad do P2. O quinto nome do `status` do broker era o `hidraw6`, que o
 vermelho (o P1) usava até sair às 02:50:06. O primário que sai só reserva o
@@ -94,7 +94,7 @@ class Mesa:
         `cabo` (DualSense físico pelo USB real), `edge` (o Edge pelo cabo),
         `pad` (o nosso pad `uhid` do modo DualSense) ou `teclado` (um HID
         qualquer pelo rádio). O físico nasce `0600` sem ACL (a regra da cura)
-        salvo `aberto`; o pad e o teclado nascem abertos para ela.
+        salvo `aberto`; o pad e o teclado nascem abertos para quem usa.
         """
         seq = self._seq
         self._seq += 1
@@ -390,7 +390,7 @@ class TestONomeSome:
     def test_o_eof_nao_pede_nada_ao_fs_pelo_nome_que_sumiu(
         self, mesa: Mesa, no_nasce_fechado: bool
     ) -> None:
-        """A poda roda também no EOF: sem ela, o `_repouso` pedia `hide` (ou"""
+        """A poda roda também no EOF: sem a poda, o `_repouso` pedia `hide` (ou"""
         mesa.nascer("hidraw5", "radio", 2)
         mesa.nascer(O_DO_P1, "radio", 1)
         st, ops, _diario = _estado(mesa, no_nasce_fechado=no_nasce_fechado)
@@ -523,7 +523,7 @@ class TestSysfsMudoNaoPoda:
         assert _podas(diario) == []
 
     def test_mudo_no_pedido_nao_sabe_o_aparelho_e_fica(self, mesa: Mesa) -> None:
-        """O pai guardado `None` quer dizer «não sei qual aparelho ela escondeu»."""
+        """O pai guardado `None` quer dizer «não sei qual aparelho se escondeu»."""
         mesa.nascer(O_DO_P1, "radio", 1)
         ops = _Mudavel(
             sys_class_hidraw=str(mesa.sys_hidraw),
@@ -543,7 +543,7 @@ class TestSysfsMudoNaoPoda:
 
 class TestODonoDaPergunta:
     def test_o_broker_de_producao_sabe_perguntar(self) -> None:
-        """Régua de dono, e não da palavra: sem ela, um dublê sem a pergunta"""
+        """Régua de dono, e não da palavra: sem a pergunta, um dublê sem a pergunta"""
         st = BrokerState(allowed_uid=UID)
         assert isinstance(st._ops, FsAclOps)
         assert callable(getattr(st._ops, "pai_hid_do_no", None))

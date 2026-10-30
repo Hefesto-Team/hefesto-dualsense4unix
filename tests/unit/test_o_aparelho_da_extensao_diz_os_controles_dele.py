@@ -146,7 +146,7 @@ def test_tres_aparelhos_dao_dois_cartoes_cada_um_com_os_seus(janela: Any, ctx: A
 def test_sem_aparelho_com_controles_a_aba_fica_vazia_e_o_primeiro_a_enche(
         janela: Any, ctx: Any) -> None:  # noqa: F811
     """A aba nasce do manifesto (O-ESTADO-DO-APARELHO-SE-VE-IGUAL-EM-TODA-A-JANELA-DA-EXTENSAO-01):
-    sem aparelho com controle ela mostra a linha vazia, e o tique a enche sem refazer a janela."""
+    sem aparelho com controle a aba mostra a linha vazia, e o tique a enche sem refazer a janela."""
     a07, instalar, abrir = janela
     instalar(**_pecas())
     sem = [{k: v for k, v in ap.items() if k != "controles"} for ap in _aparelhos()]
@@ -168,7 +168,7 @@ def test_sem_aparelho_com_controles_a_aba_fica_vazia_e_o_primeiro_a_enche(
 ])
 def test_a_aba_dos_controles_vem_por_ultimo_ou_no_lugar_da_opcao(
         janela: Any, ctx: Any, grupo: str, abas: list[str]) -> None:  # noqa: F811
-    """A aba nova fica depois das opções, como a Luz no arranjo C; a de uma opção fica onde ela
+    """A aba nova fica depois das opções, como a Luz no arranjo C; a de uma opção fica onde já
     está, e a ordem das abas escolhida em 19/10 não muda."""
     _a07, instalar, abrir = janela
     instalar(**{**_pecas_geridas(), "aparelhos_controles": {"grupo": grupo}})

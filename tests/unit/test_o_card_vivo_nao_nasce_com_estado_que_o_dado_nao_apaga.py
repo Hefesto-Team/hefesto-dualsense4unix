@@ -1,26 +1,26 @@
 """O card VIVO não nasce pintado com estado que o dado não possa apagar.
 
-A QUEIXA QUE ISTO CURA — 19/09/2026, palavras de produto: *"o botão r2 fica sempre
-pressionado isso pra todos os controles"*.  <!-- noqa-acento: citação literal -->
+A QUEIXA QUE ISTO CURA — 19/09/2026: o botão R2 aparecia sempre pressionado, em todos os
+controles.
 
 O DEFEITO, MEDIDO: o gerador da aba Controles dava a classe `plast` (a cor do
 plástico) às três peças que o desenho original destaca — ``cross``, ``l2`` e
-``r2`` — sempre que elas nasciam APAGADAS. E a ponte da tela só acende e apaga
+``r2`` — sempre que essas peças nasciam APAGADAS. E a ponte da tela só acende e apaga
 UMA classe, a que `data-hef-classe` nomeia, com `on` por padrão
 (`hefesto_vivo.BOOTSTRAP`, ramo `classe`: ``el.dataset.hefClasse || 'on'``).
 Nenhum dado vivo desligava `plast`, então a peça ficava pintada para sempre.
-No Cosmic Red dela o `--plastico` é rosa — a mesma cor do `.gb.on` —, e o R2
+No Cosmic Red o `--plastico` é rosa — a mesma cor do `.gb.on` —, e o R2
 lia como apertado com o controle parado na mesa. Nos lugares P2-P4, que nascem
 sem nada apertado, eram TRÊS peças.
 
 É A SEGUNDA METADE DE UMA CURA DE 03/09/2026, que deu `data-campo` aos glifos
 para o dado poder apagar a classe `on` — e deixou `plast` com o mesmo defeito.
 
-A REGRA QUE ESTA RÉGUA GUARDA, e ela é geral: **um elemento que o piloto pinta
+A REGRA QUE ESTA RÉGUA GUARDA, e é geral: **um elemento que o piloto pinta
 pelo alvo `classe` só pode nascer com a classe que esse piloto apaga.** Toda
 outra classe dele é ESTRUTURA (`gb`, o que dá forma), nunca ESTADO.
 
-ONDE ELA MORDE: devolva o ternário do `plast` a `interface/aba02.py::grade` e
+ONDE MORDE: devolva o ternário do `plast` a `interface/aba02.py::grade` e
 rode o gerador — os dezesseis glifos de cada card voltam a nascer com a cor da
 peça, e esta régua reprova nomeando a página, o glifo e a classe.
 """
@@ -47,13 +47,13 @@ _GLIFO = re.compile(
 
 
 def _paginas() -> list[pathlib.Path]:
-    """A bancada e o publicado."""
+    """O desenho e o publicado."""
     return [onde.pagina(PAGINA), onde.pagina(PAGINA, publicado=True)]
 
 
-@pytest.fixture(params=["bancada", "publicado"])
+@pytest.fixture(params=["desenho", "publicado"])
 def pagina(request: pytest.FixtureRequest) -> str:
-    caminho = _paginas()[0 if request.param == "bancada" else 1]
+    caminho = _paginas()[0 if request.param == "desenho" else 1]
     if not caminho.exists():  # pragma: no cover
         pytest.skip(f"{caminho} não existe")
     return caminho.read_text(encoding="utf-8")

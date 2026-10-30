@@ -375,11 +375,11 @@ def test_a_busca_do_hefesto_nao_e_outro_programa(
         ligar(ensaio, parada, onde)
         campos = ensaio.tique()
         cena = dict(a08._CENA_NA_TELA)
-        assert campos["radio-varrendo"] == ["", "", ""], "a busca dela virou «outro programa»"
-        assert cena["destino_da_central"] == sem_busca, "a D8 da tela fugiu da busca dela"
+        assert campos["radio-varrendo"] == ["", "", ""], "a busca do usuário virou «outro programa»"
+        assert cena["destino_da_central"] == sem_busca, "a D8 da tela fugiu da busca de quem usa"
         ensaio.relogio.agora += cr.VALIDADE_DOS_ADAPTADORES_S
         assert id_da_tela(ensaio.central.escolher_destino() or "") == sem_busca, (
-            "a D8 da central fugiu da busca dela")
+            "a D8 da central fugiu da busca de quem usa")
 
         mundo._mudar(rm.HCIS[outro], bd.ADAPTADOR, "Discovering", True)
         esperado = ["", "", ""]
@@ -481,7 +481,7 @@ def test_a_busca_acabada_nao_responde_ocupado_nem_fica_publicada(
     """O fio fecha o movimento da busca ANTES de largar a ``_busca`` (o ``finally``
     da janela): nesse vão o «Procurar» desligado lia a busca ainda de pé com o
     movimento já acabado e respondia «ocupado». Sem movimento em curso não há
-    busca publicada, e quem espera por ela a vê apagada."""
+    busca publicada, e quem espera pela busca a vê apagada."""
     ensaio, _parada = montar(a08, monkeypatch)
     central = ensaio.central
     try:

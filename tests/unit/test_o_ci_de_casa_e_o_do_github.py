@@ -653,7 +653,7 @@ def test_o_job_que_e_plano_de_outro_nao_roda_sozinho_ao_lado_dele(mundo: Mundo) 
         "o deb rodou o próprio act ao lado do que o cobre"
     )
     chamadas = [ln for ln in mundo.log("deb-install-smoke").splitlines() if ln.startswith("ARGS:")]
-    assert len(chamadas) == 2, "o deb-install-smoke roda as duas pernas, e o deb vai dentro delas"
+    assert len(chamadas) == 2, "o deb-install-smoke roda as duas pernas, e o deb vai nas duas"
     r = mundo.rodar("--job", "deb,deb-install-smoke", FAKE_FALHA="deb-install-smoke")
     assert r.returncode == 1 and "2 vermelho(s)" in r.stdout.strip().splitlines()[-1]
 

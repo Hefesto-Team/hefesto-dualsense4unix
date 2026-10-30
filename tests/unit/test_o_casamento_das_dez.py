@@ -56,7 +56,7 @@ def test_o_instrumento_acha_os_tres_vocabularios(casamento):
     """`data-campo`, `data-papel` e `data-hef` — as dez páginas usam os três."""
     campos, _ = casamento.do_html("10-perfis.html")
     assert len(campos) >= 14, (
-        f"a Perfis tem {len(campos)} endereços e ela endereça por `data-hef` — "
+        f"a Perfis tem {len(campos)} endereços e endereça por `data-hef` — "
         f"se caiu para 3, a régua voltou a contar só `data-campo`.")
     campos5, _ = casamento.do_html("05-vibracao.html")
     assert len(campos5) >= 10, "a Vibração endereça por `data-papel`"

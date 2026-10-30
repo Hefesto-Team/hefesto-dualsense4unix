@@ -31,9 +31,9 @@ AS NOVE, e a mordida de cada uma (arrancada à mão, vista reprovar, devolvida):
    jogo da do cliente Steam de mesmo nome de fio. Mordida: tirar o ``pid`` da
    chave do ``@hw`` na sonda.
 
-As réguas 3, 4 e 6 trazem a mordida também dentro do arquivo, porque ela se
+As réguas 3, 4 e 6 trazem a mordida também dentro do arquivo, porque a mordida se
 faz sem editar código: um ``monkeypatch`` arranca a cura, e a régua mostra
-que depende dela.
+que depende da mordida.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """D-2909-O-CHIADO-DO-ANALOGICO-VAI-AO-JOGO — a régua da decisão.
 
-A bancada de 29/09/2026 mediu quatro DualSense parados na mesa: todo eixo que
+O ensaio de 29/09/2026 mediu quatro DualSense parados na mesa: todo eixo que
 se mexeu trocou 1 unidade em 255 (o repouso cai na fronteira entre dois
 valores do conversor, e o aparelho publica a troca). A decisão, por
 delegação, é que **o pad repete o byte do aparelho**: o Hefesto não põe filtro

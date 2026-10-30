@@ -24,7 +24,7 @@ TAMANHO_DO_DEGRAU_0X32 = 142
 
 
 def linha_do_mapa(ident: str) -> dict[str, str]:
-    """A linha do CSV com este `id`, ou falha dizendo que ela sumiu."""
+    """A linha do CSV com este `id`, ou falha dizendo que a linha sumiu."""
     with MAPA.open(encoding="utf-8", newline="") as fonte:
         for linha in csv.DictReader(fonte):
             if linha["id"] == ident:

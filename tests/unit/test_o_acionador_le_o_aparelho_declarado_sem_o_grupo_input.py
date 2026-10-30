@@ -7,7 +7,7 @@ identidade do aparelho, e o broker serve o fd, só de leitura, do nó daquele ap
 outro, sem mexer na permissão do nó. O doctor mede só o declarado.
 
 A régua nunca abre o ``/dev/input`` nem o ``/sys`` da máquina: os dois são pastas de mentira, e o
-broker é o ``BrokerState`` de verdade sobre elas.
+broker é o ``BrokerState`` de verdade sobre essas peças.
 """
 from __future__ import annotations
 

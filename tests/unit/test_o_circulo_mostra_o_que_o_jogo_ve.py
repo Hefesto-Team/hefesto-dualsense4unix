@@ -6,7 +6,7 @@ círculo do cartão pintava só a mão. O pad guarda o último envio (`eixos_no_
 aponta. A testemunha do jogo é o que o NÓ recebeu (o `ABS_X` escrito no uinput, o byte
 do report do uhid), e a da tela é o número escrito nesta régua.
 
-As mordidas de cada régua estão na docstring dela.
+As mordidas de cada régua estão na docstring de cada uma.
 """
 
 from __future__ import annotations

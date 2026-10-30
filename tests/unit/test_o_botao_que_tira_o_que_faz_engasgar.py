@@ -137,16 +137,16 @@ def test_o_botao_existe_na_pagina_que_o_produto_serve() -> None:
         "acione na tela.")
     assert any(ROTULO_DO_INTERRUPTOR in ln for ln in linhas), (
         f"o interruptor não diz mais {ROTULO_DO_INTERRUPTOR!r} — se o rótulo mudou, "
-        "quem decide é ela, e a palavra nova entra aqui e no gerador juntas.")
+        "quem decide é o desenho, e a palavra nova entra aqui e no gerador juntas.")
     dicas = [html.unescape(achado.group(1)) for ln in linhas
              if (achado := re.search(r'data-dica="([^"]*)"', ln))]
     assert any("Vulkan" in dica for dica in dicas), (
-        "o interruptor perdeu a dica que diz que ele corrige o Vulkan. Ela é o que separa "
+        "o interruptor perdeu a dica que diz que ele corrige o Vulkan. A dica é o que separa"
         "'tirei o quê?' de um clique às cegas num ajuste que mexe no prefixo do jogo.")
 
 
 def _as_duas_paginas() -> list[Path]:
-    """O desenho (o que ela aprova) e o publicado (o que a tela carrega)."""
+    """O desenho (o que se aprova) e o publicado (o que a tela carrega)."""
     import importlib.util
 
     from hefesto_dualsense4unix.interface import onde

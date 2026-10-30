@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """A RÉGUA DO CLIQUE DO ANALÓGICO — e do terceiro estado que o produto não via.
 
-POR QUE ELA EXISTE. `data-campo="l3"` e `data-campo="r3"` estão na página da aba
+POR QUE EXISTE. `data-campo="l3"` e `data-campo="r3"` estão na página da aba
 Controles desde o primeiro desenho, e até 02/09/2026 **ninguém os pintava**.
 Medido pelo `casamento.medir("02-controles.html")` na ponta de `dev`
 (2b219284): `vazios: ['l3', 'r3']` — a tela tinha onde e não havia quem
 mandasse. Um endereço sem pintor não dá erro: `querySelector` acha o elemento,
 o pacote não emite a chave, e o rótulo do mockup fica lá para sempre.
 
-O QUE ELA COBRA, e o item 3 é o que dói:
+O QUE COBRA, e o item 3 é o que dói:
 
 1. os dois endereços recebem valor quando há leitura;
 2. o clicado se distingue do solto;
 3. **sem leitor, o valor é o travessão — nunca "solto".** `inputs` é `None`
    para todo controle que não seja o primário nem tenha retrato vivo do co-op
-   (`daemon/ipc_handlers.py:2466-2470`), e foi assim que a bancada estava
+   (`daemon/ipc_handlers.py:2466-2470`), e foi assim que o desenho estava
    medida em 02/09/2026 às 04:23:
 
        uniq aabbcc000001 · bt  · is_primary True  · inputs presente · buttons []
@@ -31,7 +31,7 @@ O QUE ELA COBRA, e o item 3 é o que dói:
    Eram três — `l2`, `r2` e `via` —, e os três entravam na conta de
    `cobertura.pintados` sem escrever um pixel.
 
-A MORDIDA está escrita em cada teste, no lugar onde ela reprova.
+A MORDIDA está escrita em cada teste, no lugar onde reprova.
 """
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def desenho(a02):
 
     A seta aponta para o produto por medição: o
     `portao_a_casa_sabe_e_o_produto_nao_faz` poda os `abaNN.py` da conta por
-    serem BANCADA, e importar o gerador de dentro do pacote arrasta a bancada
+    serem DESENHO, e importar o gerador de dentro do pacote arrasta o desenho
     para o fecho de produção — em 02/09/2026 isso acendeu três lápides de
     `interface/monta.py` e reprovou o portão. Quem lê é o gerador.
     """
@@ -169,7 +169,7 @@ def test_a_aba_controles_nao_emite_para_endereco_que_a_pagina_nao_tem():
     assert ainda_esperando == ESPERAM_A_PUBLICACAO, (
         f"a declaração diz que {list(ESPERAM_A_PUBLICACAO)} esperam o "
         f"`--publicar`, e hoje só {list(ainda_esperando)} estão órfãos. Ou a "
-        f"publicação aconteceu e a lista ficou para trás, ou ela foi escrita "
+        f"publicação aconteceu e a lista ficou para trás, ou a lista foi escrita "
         f"antes da hora — nos dois casos a declaração parou de dizer a verdade.")
 
 
@@ -185,7 +185,7 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
     do_piloto = set(_re.findall(r'data-campo="([^"]+)"', monta.fita("todos")))
 
     so_de_leitura = {
-        "card-aberto": "grupo de rádio: pintar reabriria o card que ela fechou",
+        "card-aberto": "grupo de rádio: pintar reabriria o card que quem usa fechou",
     }
     sobrando = sorted(set(m["vazios"]) - do_piloto - set(so_de_leitura))
     assert sobrando == [], (

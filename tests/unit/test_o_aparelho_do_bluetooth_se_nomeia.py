@@ -5,7 +5,7 @@ O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01 (13/10/2026). O que a 
 * a linha do aparelho que nem o ``Icon``, nem a ``Class``, nem a ``Appearance`` nomeiam leva o
   «?» que abre a grade «O que é este aparelho?», e a linha com tipo (dado ou escolhido) não leva;
 * a grade tem as nove palavras do desenho, e cada uma grava um valor que o ``maquina.json`` aceita;
-* o gesto ``aparelho-tipo`` guarda a escolha pelo ENDEREÇO do aparelho que a tela tem agora, e ela
+* o gesto ``aparelho-tipo`` guarda a escolha pelo ENDEREÇO do aparelho da tela de agora, e a escolha
   vence a adivinhação a cada leitura, no aparelho conectado e no desligado, e SOBREVIVE à releitura
   do disco;
 * a escolha «Outro» também vale: o aparelho deixa de perguntar e não vira «Acessório» pelo enlace.
@@ -13,8 +13,8 @@ O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01 (13/10/2026). O que a 
 MORDIDAS: tirar a leitura da escolha (``_tipo_que_o_usuario_disse``) reprova a sobrevivência e a
 vitória
 sobre a adivinhação; tirar o ``tipo_do_usuario`` do teste do enlace devolve o «Acessório» ao «Outro»
-dela;
-tirar o «?» do ``_linha_sem_tipo`` reprova a linha; tirar o ``data-alvo`` do «?» reprova a bancada.
+de quem usa;
+tirar o «?» do ``_linha_sem_tipo`` reprova a linha; tirar o ``data-alvo`` do «?» reprova o ensaio.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from hefesto_dualsense4unix.utils import maquina
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 ENSAIO = RAIZ / "mockup" / "08-conexoes.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
-ARQUIVOS = [pytest.param(ENSAIO, id="bancada"), pytest.param(PUBLICADA, id="publicada")]
+ARQUIVOS = [pytest.param(ENSAIO, id="ensaio"), pytest.param(PUBLICADA, id="publicada")]
 
 ENDERECO = "AA:BB:CC:00:00:E2"
 ADAPTADOR = "/org/bluez/hci0"

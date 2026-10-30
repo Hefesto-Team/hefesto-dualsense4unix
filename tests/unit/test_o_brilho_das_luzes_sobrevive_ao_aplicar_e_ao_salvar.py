@@ -19,7 +19,7 @@ Fraco, porque a pílula pergunta ao daemon vivo. Dos seis gestos da aba 04 que
 gravam no perfil, só este morria no «Aplicar» — e a varredura da seção 2, que
 mede os seis, achou a outra metade da classe no «Salvar»: o tom, a caixa
 `#RRGGBB` e o interruptor «Cores automáticas» gravam a cor com o número para o
-qual ela foi escolhida (`lightbar_para_o_numero`), e o «Salvar» a regravava
+qual a cor foi escolhida (`lightbar_para_o_numero`), e o «Salvar» a regravava
 sem ele. Sem o número a cor é `LEGADO`, e o tom do número de outro controle
 virava fóssil na troca seguinte.
 
@@ -71,7 +71,7 @@ class _PonteDaAba(viva._Ponte):
 
     O interruptor «Cores automáticas» grava o perfil e o reaplica
     (`profile.switch`, depois `launch_env.refresh`). A ponte da A-04 recusa as
-    duas, e sem elas a varredura da seção 2 não sabia clicar nele.
+    duas, e sem essas peças a varredura da seção 2 não sabia clicar nele.
     """
 
     def profile_switch(self, nome: str) -> bool:
@@ -236,17 +236,17 @@ def test_o_tom_regravado_pelo_salvar_nao_vira_fossil(mesa_de, via: str) -> None:
         f"o «Salvar» tirou do disco o número do tom: {mesa.disco(NOME, 4)}")
     mesa.trocar(NOME, "manual")
     assert mesa.luz(4) == _na(tom, BRILHO_GLOBAL), (
-        f"o tom que ela escolheu virou fóssil depois do «Salvar»: o P4 acende {mesa.luz(4)}")
+        f"o tom escolhido virou fóssil depois do «Salvar»: o P4 acende {mesa.luz(4)}")
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco(mesa_de, via: str) -> None:
-    """A cor que muda só no daemon fica fora do disco, e a dela fica com o número dela.
+    """A cor que muda só no daemon fica fora do disco, e a escolhida fica com o número do controle.
 
     O P4 escolhe o tom do número 2 (o disco guarda o número 4 com ele); depois
     a luz dele muda só no daemon — é a camada da mão que atravessa a troca
     automática de perfil. Até 27/09 o «Salvar» gravava a cor viva, e a régua
-    cobrava que ela fosse sem o número da antiga. Desde 27/09 o Salvar lê o
+    cobrava que a cor fosse sem o número da antiga. Desde 27/09 o Salvar lê o
     disco (`D-2709-O-SALVAR-LE-O-PERFIL`): a cor e o número que ficam são os
     que o clique no tom gravou. A regra da procedência (a cor nova não leva o
     número da antiga) continua medida no dono, o `with_controller_leds`
@@ -271,7 +271,7 @@ def test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco(mesa_de, via: str) -> N
     assert tuple(leds.lightbar) == tom, (
         f"o «Salvar» gravou a cor que mudou só no aparelho: {leds}")
     assert leds.lightbar_para_o_numero == 4, (
-        f"o «Salvar» perdeu o número do tom que ela escolheu: {leds}")
+        f"o «Salvar» perdeu o número do tom escolhido: {leds}")
 
 
 @pytest.fixture

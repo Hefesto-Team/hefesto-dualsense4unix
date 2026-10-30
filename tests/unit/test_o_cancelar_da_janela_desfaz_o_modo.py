@@ -17,7 +17,7 @@ MORDIDAS (25/10/2026 e 28/10/2026, executadas sobre a cura e devolvidas):
 - o ``mudar_o_modo`` que não volta ao modo de antes na recusa reprova a recusa (a barra e a janela);
 - o gesto do modo que ignora a resposta reprova a recusa (nada levanta);
 - o X sem o ``data-gesto`` reprova o HTML e o WebKit;
-- a porta sem a conferência do id da ação reprova os três casos dela, e o supervisor que não passa
+- a porta sem a conferência do id da ação reprova os seus três casos, e o supervisor que não passa
   as ações à porta reprova o caso dele.
 """
 

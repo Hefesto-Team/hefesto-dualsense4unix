@@ -101,7 +101,7 @@ def test_a_tabela_traduz_o_binding_em_cada_familia(familia: str) -> None:
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == NOMES_MEDIDOS[familia], (
         f"o nome do binding em {familia} mudou. Os três foram MEDIDOS em "
-        "29/08/2026 (apt nesta bancada; dnf e pacman na lista de arquivos do "
+        "29/08/2026 (apt nesta máquina de teste; dnf e pacman na lista de arquivos do "
         "pacote, conferindo o `WebKit2-4.1.typelib` lá dentro). Nome de pacote "
         "inferido é o que esta casa reprova desde a queda da família zypper"
     )
@@ -121,7 +121,7 @@ def test_o_censo_pede_o_binding() -> None:
     linha = _linha_do_censo(CANONICO)
     assert linha is not None, (
         "o binding do WebKit saiu do censo `_DEPS_DE_SISTEMA`: voltou a ser "
-        "instalação à mão, contra a regra dela — toda cura entra no install, "
+        "instalação à mão, contra a regra da casa — toda cura entra no install, "
         "sem flag"
     )
     _, criticidade, checagem, razao = linha.split("|")
@@ -151,7 +151,7 @@ def test_o_comentario_da_rota_adiada_saiu_porque_a_decisao_foi_tomada() -> None:
     while inicio > 0 and linhas[inicio - 1].strip().startswith("#"):
         inicio -= 1
     acima = "\n".join(linhas[inicio:alvo]).lower()
-    assert "vira `obrigatoria`" not in acima and "enquanto a decisão não é dela" not in acima, (
+    assert "vira `obrigatoria`" not in acima, (
         "o comentário acima da linha do binding voltou a dizer que a troca para "
         "`obrigatoria` ainda é futura: a decisão foi tomada e o texto velho "
         "obriga a próxima pessoa a escolher entre duas afirmações"

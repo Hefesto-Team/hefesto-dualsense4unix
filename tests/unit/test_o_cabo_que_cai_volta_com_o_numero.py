@@ -141,7 +141,7 @@ echo "roda: ${pedido}" >>"${registro}"
 BASH_ENV="${HEFESTO_TESTE_KERNEL:?}" "$@"
 rc=$?
 # A PAUSA DA RÉGUA: depois da N-ésima passada, o trabalho do religar fica
-# parado aqui — com a trava na mão — até a régua dizer que siga. É onde ela põe
+# parado aqui — com a trava na mão — até a régua dizer que siga. É onde a régua põe
 # o aviso de OUTRO controle no meio do trabalho, sem depender do relógio.
 if [[ -n "${HEFESTO_TESTE_PAUSA_DEPOIS_DE:-}" ]] \
       && (( $(grep -c '^roda: ' "${registro}") == HEFESTO_TESTE_PAUSA_DEPOIS_DE )); then
@@ -195,7 +195,7 @@ def _ambiente_limpo() -> dict[str, str]:
 
 
 class Ensaio:
-    """O ``/sys`` de mentira da bancada, e a corrente do religar ligada nele."""
+    """O ``/sys`` de mentira do ensaio, e a corrente do religar ligada nele."""
 
     def __init__(self, tmp_path: Path, *, esperas: str = "0 0 0", regras: bool = True) -> None:
         self.tmp = tmp_path
@@ -445,7 +445,7 @@ class Mesa:
 
 @pytest.fixture
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """``config_dir`` em tmp — nada aqui toca o ``controllers.json`` dela."""
+    """``config_dir`` em tmp — nada aqui toca o ``controllers.json`` real."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     config = tmp_path / "config"
@@ -547,7 +547,7 @@ def test_as_esperas_cabem_no_lugar_guardado() -> None:
     prazo = prazo_do_lugar_guardado()
     assert len(ESPERAS) == _teto_do_religar()
     assert ATRASO_DO_KERNEL + ESPERAS[0] + CADEIA + POLL < prazo, (
-        "com a HID perdida mais rápida da mesa dela (23 s), a primeira passada "
+        "com a HID perdida mais rápida da mesa medida (23 s), a primeira passada "
         "já não devolve o controle dentro do prazo"
     )
     assert sum(ESPERAS) + CADEIA + POLL < prazo, "a última passada cai fora do prazo"

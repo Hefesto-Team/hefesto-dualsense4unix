@@ -46,7 +46,7 @@ def _entrada(uniq: str, slot: int, transporte: str, *, calado: bool) -> dict[str
 
 @pytest.fixture(autouse=True)
 def renovacao_parada(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A renovação da camada 1 não sai nem pousa: o fio dela limpa o `_SONO` de quem lê."""
+    """A renovação da camada 1 não sai nem pousa: o fio da renovação limpa o `_SONO` de quem lê."""
     monkeypatch.setattr(a02, "_CAMADA_1_QUANDO", [float("inf")])
     monkeypatch.setattr(a02, "_CAMADA_1_SELO", [a02._CAMADA_1_SELO[0] + 1])
 
@@ -97,7 +97,7 @@ def test_o_canal_parado_ou_tocando_e_ativo_nos_dois_transportes(canal: Any, sono
 
 
 def test_calar_pelo_som_desliga_e_soltar_ativa(canal: Any) -> None:
-    """O `♪` é o único que desliga, e desliga SÓ o cartão que ela calou."""
+    """O `♪` é o único que desliga, e desliga SÓ o cartão que se calou."""
     canal({uniq: audio_saida.CANAL_DORMINDO for uniq, _, _ in MESA_DA_MATRIZ})
     so_o_cabo = _cartoes(calados=frozenset({CONTROLE_2}))
     assert so_o_cabo["p2"]["alto-canal"] == mesa_viva.DESLIGADO

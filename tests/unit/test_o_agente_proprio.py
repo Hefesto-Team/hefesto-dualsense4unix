@@ -1,4 +1,4 @@
-"""O agente de pareamento é NOSSO para o que ela inicia — R5, BLUEZ-UM-DONO-01."""
+"""O agente de pareamento é NOSSO para o que o Hefesto inicia — R5, BLUEZ-UM-DONO-01."""
 
 from __future__ import annotations
 

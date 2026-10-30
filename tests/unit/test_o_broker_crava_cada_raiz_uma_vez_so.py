@@ -1,12 +1,12 @@
-"""O broker crava cada raiz do sistema uma vez só, na constante dela.
+"""O broker crava cada raiz do sistema uma vez só, na constante da raiz.
 
 Em 25/10/2026 (`da0fbc48b`), `"/sys/class/bluetooth"` aparecia 7 vezes no broker,
 `"/sys/class/input"` 4 e `"/dev"` 7, cada uma como padrão de um parâmetro: até sete lugares para a
 mesma raiz divergir no processo root que decide o que se expõe ao jogo. A sprint
 O-BROKER-CRAVA-CADA-RAIZ-DO-SISTEMA-UMA-VEZ-SO-01 deu a cada raiz uma constante de módulo, e todo
-padrão a lê. A régua lê a árvore de sintaxe do broker e conta, por raiz, o caminho que começa nela
+padrão a lê. A régua lê a árvore de sintaxe do broker e conta o caminho de cada raiz
 em qualquer texto fora das docstrings (a constante, o padrão de um parâmetro, o começo de uma
-f-string, um recado): só a constante dela fica.
+f-string, um recado): só a constante da raiz fica.
 
 O broker não importa o pacote (o install copia só ele e ele roda no python3 do sistema), logo as
 constantes moram nele, e não num dono do pacote.
@@ -65,7 +65,7 @@ def _continuacoes(arvore: ast.Module) -> set[int]:
 
 
 def raizes_cravadas(fonte: str) -> dict[str, list[int]]:
-    """A constante de cada raiz e as linhas em que o texto dela aparece, fora das docstrings."""
+    """A constante de cada raiz e as linhas em que o texto da raiz aparece, fora das docstrings."""
     arvore = ast.parse(fonte)
     docs, continua = _docstrings(arvore), _continuacoes(arvore)
     achados: dict[str, list[int]] = {}
@@ -125,7 +125,7 @@ def test_cada_raiz_so_aparece_na_constante_do_usuario() -> None:
             for nome, linhas in raizes_cravadas(fonte).items()}
     fora = {nome: linhas for nome, linhas in fora.items() if linhas}
     assert fora == {}, (
-        "a raiz cravada fora da constante dela no broker (linhas): "
+        "a raiz cravada fora da constante da raiz no broker (linhas): "
         + "; ".join(f"leia `{nome}` em {linhas}" for nome, linhas in sorted(fora.items())))
 
 

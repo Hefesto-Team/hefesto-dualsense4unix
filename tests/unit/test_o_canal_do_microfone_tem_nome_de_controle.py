@@ -88,7 +88,7 @@ PACTL_PEDIDO: list[list[str]] = []
 
 @pytest.fixture(autouse=True)
 def _mesa_limpa(monkeypatch):
-    """Mesa limpa E BOCA FECHADA — nenhum teste fala com o PipeWire dela."""
+    """Mesa limpa E BOCA FECHADA — nenhum teste fala com o PipeWire da máquina."""
     PACTL_PEDIDO.clear()
     SourceDeMentira.vivas = []
     monkeypatch.setattr(canal, "_rodar_pactl", lambda argv: PACTL_PEDIDO.append(argv) or True)
@@ -304,7 +304,7 @@ def test_o_leitor_leva_as_propriedades_uma_por_argv() -> None:
 
 
 def test_fechar_mata_o_leitor_antes_de_derrubar_o_no() -> None:
-    """A ordem: um `parec` vivo sem nó para onde mandar continua gravando ela."""
+    """A ordem: um `parec` vivo sem nó para onde mandar continua gravando."""
     vivos: list[ProcessoDeMentira] = []
 
     def lancar(argv: list[str]) -> ProcessoDeMentira:
@@ -377,7 +377,7 @@ def test_o_pedaco_do_cabo_tem_a_duracao_do_quadro_do_radio() -> None:
 
 
 def test_o_pedaco_acompanha_o_formato_do_no_e_nunca_desalinha_a_amostra() -> None:
-    """Meia amostra s16 no fifo desalinha tudo o que vem depois dela."""
+    """Meia amostra s16 no fifo desalinha tudo o que vem depois."""
     quadro = canal_bt.MIC_BYTES_POR_AMOSTRA
     for taxa, canais in ((48000, 1), (48000, 2), (16000, 1), (44100, 2)):
         pedaco = canal.pedaco_do_bombeador(taxa_hz=taxa, canais=canais)
@@ -401,7 +401,7 @@ def test_um_descarte_no_cabo_nao_custa_mais_voz_que_um_no_radio(tmp_path) -> Non
         "UM BYTE de voz — o cabo descarta o que caberia")
     assert perdido <= canal_bt.MIC_BYTES_POR_QUADRO, (
         f"um descarte no CABO levou {perdido} B de voz, e no rádio leva "
-        f"{canal_bt.MIC_BYTES_POR_QUADRO} B — é a assimetria que a frase dela "
+        f"{canal_bt.MIC_BYTES_POR_QUADRO} B — é a assimetria que a frase "
         "«ficar limpo igual o do mic no bt» aponta")
 
 
@@ -470,7 +470,7 @@ def test_o_app_do_usuario_no_canal_novo_continua_contando_como_ouvinte(tmp_path)
         props={"application.name": "OBS Studio", "application.process.id": "4242"},
     )
     assert e_stream_do_hefesto(stream, tmp_path) is False, (
-        "o Hefesto confundiu o app DELA consigo mesmo, porque o nome do NÓ tem "
+        "o Hefesto confundiu o app de quem usa consigo mesmo, porque o nome do NÓ tem "
         "a palavra hefesto dentro — a luz do microfone nunca acenderia")
 
 
@@ -527,7 +527,7 @@ def test_a_regra_0_cobre_os_quatro_chamadores_de_uma_vez() -> None:
 
 
 def test_o_canal_nasce_mudo_e_o_produto_desmuta() -> None:
-    """MEDIDO na bancada em 06/09/2026, com PipeWire 1.6.8::"""
+    """MEDIDO no aparelho em 06/09/2026, com PipeWire 1.6.8::"""
     source = canal.abrir(P1, "P1", fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
     assert source is not None
     assert ["pactl", "set-source-mute", canal.nome_do_canal(P1), "0"] in PACTL_PEDIDO, (

@@ -164,7 +164,7 @@ def test_o_arquivo_do_mesmo_tique_aparece_passada_a_margem(
 def test_dentro_da_margem_o_laco_serve_a_roupa_guardada_e_o_jogo_nao_sai_de_roupas(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relogio: _Relogio
 ) -> None:
-    """O suspeito AINDA SERVE a leitura guardada: sem ela o jogo sairia de `roupas`.
+    """O suspeito AINDA SERVE a leitura guardada: sem a leitura guardada o jogo sairia de `roupas`.
 
     MORDIDA: o suspeito devolver `None` tira o jogo de `roupas` na consulta do laço.
     """
@@ -191,9 +191,9 @@ def test_dentro_da_margem_o_laco_serve_a_roupa_guardada_e_o_jogo_nao_sai_de_roup
 def test_o_arquivo_que_chega_durante_a_leitura_tambem_e_visto(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relogio: _Relogio
 ) -> None:
-    """A chave sai DEPOIS da leitura: o arquivo que chega no meio entra nela sem entrar na leitura.
+    """A chave sai DEPOIS da leitura: o arquivo que chega no meio entra na chave e não na leitura.
 
-    O instante em que a leitura COMEÇOU, tirado antes dela, fecha o vão: a pasta dele é mais nova
+    O instante em que a leitura COMEÇOU, tirado antes, fecha o vão: a pasta dele é mais nova
     que o começo, logo a leitura é suspeita, e a consulta seguinte (a leitura lenta já passou da
     margem) a refaz. MORDIDA: tirar o instante DEPOIS da leitura deixa o `0df2` para sempre.
     """
@@ -207,7 +207,7 @@ def test_o_arquivo_que_chega_durante_a_leitura_tambem_e_visto(
         return lido
 
     monkeypatch.setattr(rj, "_ler_o_disco", _lenta_com_chegada)
-    assert rj.roupa_do_jogo(raiz)[0] == "0df2", "a leitura não viu o arquivo que chegou depois dela"
+    assert rj.roupa_do_jogo(raiz)[0] == "0df2", "a leitura não viu o arquivo que chegou depois"
     monkeypatch.setattr(rj, "_ler_o_disco", real)
 
     assert rj.roupa_do_jogo(raiz)[0] == "0ce6"

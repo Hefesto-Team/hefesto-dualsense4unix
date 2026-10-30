@@ -164,7 +164,7 @@ def test_depois_do_ajuste_de_aba_a_janela_com_perfil_troca() -> None:
 def test_depois_do_aplicar_a_janela_que_nao_e_jogo_nao_tira_o_perfil() -> None:
     """D-1410-O-APLICAR-SEGURA: o «Aplicar» segura até o próximo gesto ou outro jogo.
 
-    O Kodi e o navegador têm perfil, mas não são jogo: em foco, não passam por cima do que ela
+    O Kodi e o navegador têm perfil, mas não são jogo: em foco, não passam por cima do que quem usa
     aplicou. É o outro lado da régua do ajuste de aba. MORDIDA: troque o
     ``elif reaplicacao and prender`` do ``_ativar`` por ``elif False`` e o Kodi tira o «fliperama».
     """

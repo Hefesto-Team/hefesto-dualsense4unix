@@ -119,7 +119,7 @@ def _servidor(tmp_path: Path, *, nativo: bool = False, com_perfil: bool = True) 
                          socket_path=tmp_path / "lado.sock", daemon=daemon)
     daemon._ipc_server = servidor
     if com_perfil:
-        perfil = Profile(name="Bancada", match=MatchAny(type="any"))
+        perfil = Profile(name="Ensaio", match=MatchAny(type="any"))
         save_profile(perfil)
         gerente.apply_movimento(perfil)
         servidor.store.set_active_profile(perfil.name)
@@ -133,7 +133,7 @@ def _mira_set(servidor: Any, **params: Any) -> dict[str, Any]:
 def _movimento(uniq: str) -> Any:
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
-    dele = (load_profile("Bancada").controllers or {}).get(_CHAVE[uniq])
+    dele = (load_profile("Ensaio").controllers or {}).get(_CHAVE[uniq])
     return getattr(dele, "movimento", None)
 
 
@@ -194,7 +194,7 @@ def test_o_primeiro_clique_no_lado_junta_o_perfil_dividido(perfis: Path, tmp_pat
 
     servidor = _servidor(tmp_path)
     dividido = ProfileMovimentoConfig(destino=_DIR, acelerometro=_ESQ)
-    perfil = Profile(name="Bancada", match=MatchAny(type="any"),
+    perfil = Profile(name="Ensaio", match=MatchAny(type="any"),
                      controllers={_CHAVE[_P1]: ControllerOverrides(movimento=dividido)})
     save_profile(perfil)
     servidor.profile_manager.apply_movimento(perfil)
@@ -237,7 +237,7 @@ def test_o_nativo_recusa_o_lado_e_nada_vai_ao_disco(perfis: Path, tmp_path: Path
 
     servidor = _servidor(tmp_path, nativo=True)
     assert _mira_set(servidor, uniq=_P2, lado=_ESQ)["status"] == "nativo"
-    assert not load_profile("Bancada").controllers
+    assert not load_profile("Ensaio").controllers
 
 
 def test_o_lado_torto_e_recusado(perfis: Path, tmp_path: Path) -> None:
@@ -310,7 +310,7 @@ def _ctx(entradas: list[dict[str, Any]], nativo: bool = False) -> Any:
 
 @pytest.fixture
 def com_o_ensaio(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O pacote filtra pelo publicado; a régua lê a bancada (antes do `--publicar`)."""
+    """O pacote filtra pelo publicado; a régua lê o desenho (antes do `--publicar`)."""
     import pacotes.a02_controles as a02
     import pacotes.a11_calibrar_sensores as a11
 
@@ -417,11 +417,11 @@ def test_o_gesto_do_lado_recusa_no_nativo_e_o_lado_torto() -> None:
 
 
 def test_nenhuma_pagina_emite_o_gesto_inclinacao() -> None:
-    """O chip «Inclinação» aposentou: nenhuma página da bancada o emite, e o pacote não o atende."""
+    """O chip «Inclinação» aposentou: nenhuma página do desenho o emite, e o pacote não o atende."""
     import pacotes
 
     paginas = sorted((_RAIZ / "mockup").glob("*.html"))
-    assert len(paginas) >= 11, "a bancada sumiu — régua cega"
+    assert len(paginas) >= 11, "o desenho sumiu — régua cega"
     emitem = [p.name for p in paginas if 'data-gesto="inclinacao"' in p.read_text("utf-8")]
     assert emitem == [], emitem
     assert pacotes.gesto_da_pagina("02-controles.html", "inclinacao") is None

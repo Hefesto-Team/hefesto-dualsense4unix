@@ -3,7 +3,7 @@
 O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01 (04/10/2026), com a A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01
 absorvida. O usuário pediu: *«clicar num dispositivo não oferece modificá-lo ou identificá-lo»*.
 
-A página sob prova é a da BANCADA (``publicado=False``): o painel novo só vira o produto no
+A página sob prova é a do ENSAIO (``publicado=False``): o painel novo só vira o produto no
 ``--publicar`` da costura, depois do olho de quem confere. TUDO É DE MENTIRA: barramento
 ``usb9``,
 caminhos ``9-*``, ``maquina.json`` no ``tmp_path``.
@@ -109,10 +109,10 @@ def test_o_aparelho_chega_a_pagina_com_o_modelo_e_o_que_a_maquina_ve(disco: Path
     assert "USB 2.0" in teclado["etiquetas"]
     assert "tipoDeclarado" not in teclado and "nomeDeclarado" not in teclado
 
-    assert ee.declarar_o_aparelho("1111:0001", tipo="mouse", apelido="O teclado dela").gravou
+    assert ee.declarar_o_aparelho("1111:0001", tipo="mouse", apelido="O teclado de casa").gravou
     depois = {a["nome"]: a for a in _ler(_teclado(), _placa())["aparelhos"]}["Teclado de prova"]
-    assert depois["tipoDeclarado"] == "mouse" and depois["nomeDeclarado"] == "O teclado dela"
-    assert depois["cor"] != teclado["cor"], "o tipo que ela disse não decide a cor"
+    assert depois["tipoDeclarado"] == "mouse" and depois["nomeDeclarado"] == "O teclado de casa"
+    assert depois["cor"] != teclado["cor"], "o tipo declarado não decide a cor"
 
 
 def test_o_tipo_que_o_usuario_diz_so_pesa_no_motor_quando_a_maquina_nao_leu_a_classe(
@@ -125,7 +125,7 @@ def test_o_tipo_que_o_usuario_diz_so_pesa_no_motor_quando_a_maquina_nao_leu_a_cl
     assert tipos == {"3333:0003": "wifi", "1111:0001": "mouse"}
     ensaio = mapa_das_portas.mesa_do_motor(_mapa(), _censo(_teclado(), _placa()), tipos)
     classes = {a.id: a.classe for a in ensaio.mesa.aparelhos}
-    assert classes["9-5"] == "wifi", "a placa sem classe não ganhou o tipo que ela disse"
+    assert classes["9-5"] == "wifi", "a placa sem classe não ganhou o tipo declarado"
     assert classes["9-1"] == "teclado", "o tipo dito venceu o que o kernel mede"
 
 
@@ -137,12 +137,12 @@ def test_a_velocidade_dita_so_vale_na_entrada_vazia(disco: Path) -> None:
     )
     ensaio = mapa_das_portas.mesa_do_motor(mapa, _censo(_teclado()))
     usb = {e.n: e.usb for f in ensaio.mesa.faces for e in f.entradas}
-    assert usb["1"] == 2, "ela disse 3.0, mas há um teclado a 480M nela: vale a medida"
-    assert usb["2"] == 3, "na entrada vazia a máquina não sabe: vale o que ela disse"
+    assert usb["1"] == 2, "o declarado é 3.0, mas há um teclado a 480M na porta: vale a medida"
+    assert usb["2"] == 3, "na entrada vazia a máquina não sabe: vale o declarado"
 
 
 def test_a_entrada_sem_lugar_aparece_fora_do_plano(disco: Path) -> None:
-    """O «Salvar» do Mapear com o lugar vazio numera a entrada, e ela some do mapa: agora não."""
+    """O «Salvar» do Mapear com o lugar vazio numera a entrada, que não some mais do mapa."""
     assert gravar_maquina({"mapa": _mapa(sem_lugar=True).model_dump(mode="json")})
     dado = _ler(_teclado())
     fileira = next((f for f in dado["faces"] if f.get("semLugar")), None)
@@ -263,7 +263,7 @@ def _na_pagina(passos: list[str]) -> tuple[list[Any], list[dict[str, Any]]]:
 
 
 def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str, Any]]]:
-    """A página da BANCADA num WebKit fora da tela, com o BOOTSTRAP do piloto."""
+    """A página do ENSAIO num WebKit fora da tela, com o BOOTSTRAP do piloto."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre a página num WebKit")

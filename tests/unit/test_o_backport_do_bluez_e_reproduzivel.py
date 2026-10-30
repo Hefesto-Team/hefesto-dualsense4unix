@@ -223,12 +223,12 @@ def _tar_xz(destino: Path, arquivos: dict[str, bytes]) -> None:
 _CONTROL = b"""Source: bluez
 Section: admin
 Priority: optional
-Maintainer: Bancada <bancada@example.invalid>
+Maintainer: Ensaio <ensaio@example.invalid>
 Standards-Version: 4.6.0
 
 Package: bluez
 Architecture: any
-Description: bancada do backport
+Description: ensaio do backport
  fonte sintetica para o teste do preparo
 
 Package: bluez-hcidump
@@ -239,9 +239,9 @@ Description: o hcidump que a 5.87 tirou
 
 _CHANGELOG_RESOLUTE = b"""bluez (5.85-4ubuntu0.1) resolute; urgency=medium
 
-  * bancada: o empacotamento de onde o backport parte.
+  * ensaio: o empacotamento de onde o backport parte.
 
- -- Bancada <bancada@example.invalid>  Mon, 22 Jun 2026 17:52:31 +0800
+ -- Ensaio <ensaio@example.invalid>  Mon, 22 Jun 2026 17:52:31 +0800
 """
 
 
@@ -377,7 +377,7 @@ def test_duas_corridas_do_preparo_dao_a_mesma_arvore(ensaio):
 
 
 def _origem(env: dict[str, str]) -> str:
-    """O ORIGEM.txt que a última revisão escreve, lido do BASELINE da bancada."""
+    """O ORIGEM.txt que a última revisão escreve, lido do BASELINE do ensaio."""
     base = _baseline(Path(env["HEFESTO_BLUEZ_BASELINE"]))
     linhas = [
         f"versao={ALVO}",

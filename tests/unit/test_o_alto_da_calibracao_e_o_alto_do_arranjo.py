@@ -11,12 +11,12 @@ ARRANJO = RAIZ / "src/hefesto_dualsense4unix/integrations/arranjo_da_mesa.py"
 
 
 def test_o_alto_e_o_hub_e_nao_a_escrivaninha() -> None:
-    """A face "alta" é a do hub — a escrivaninha é o oposto dela no produto."""
+    """A face "alta" é a do hub — a escrivaninha é o oposto do hub no produto."""
     assert cal.FACE_QUE_E_ALTO == cal.FACE_HUB, (
         f"`FACE_QUE_E_ALTO` aponta para {cal.FACE_QUE_E_ALTO!r}. O produto "
         f"define `alto` como *acima da linha das cabeças* "
         f"(`maquina.FaceDeclarada`) e contrapõe a escrivaninha ao alto do rack "
-        f"(`arranjo_da_mesa`): a resposta dela seria lida ao contrário, e o "
+        f"(`arranjo_da_mesa`): a resposta seria lida ao contrário, e o "
         f"conselho do arranjo sairia invertido.")
     assert cal.FACE_QUE_E_ALTO != cal.FACE_MESA
 
@@ -44,5 +44,5 @@ def test_o_arranjo_continua_dizendo_que_o_alto_e_o_hub() -> None:
         "o motor do arranjo deixou de contar o `alto` pelo hub — se a "
         "definição mudou, `calibrar_entradas.FACE_QUE_E_ALTO` muda junto")
     assert "na altura da escrivaninha, não no alto do rack" in fonte, (
-        "sumiu a frase que contrapõe a escrivaninha ao alto do rack — era ela "
+        "sumiu a frase que contrapõe a escrivaninha ao alto do rack — era essa frase"
         "que provava que as duas são coisas OPOSTAS no produto")

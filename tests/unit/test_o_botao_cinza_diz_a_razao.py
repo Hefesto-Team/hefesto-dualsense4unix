@@ -116,9 +116,9 @@ def test_a_folha_entra_nas_dez_paginas_do_ensaio() -> None:
     sem_a_peca = [p.name for p in paginas
                   if ".btn.apagado" not in p.read_text(encoding="utf-8")]
     assert not sem_a_peca, (
-        "estas páginas da bancada não têm a peça do botão cinza:\n  "
+        "estas páginas do desenho não têm a peça do botão cinza:\n  "
         + "\n  ".join(sem_a_peca)
-        + "\nRODE os geradores: `monta.CSS_FOLHA` mudou e a bancada ficou para "
+        + "\nRODE os geradores: `monta.CSS_FOLHA` mudou e o desenho ficou para"
           "trás.")
 
 

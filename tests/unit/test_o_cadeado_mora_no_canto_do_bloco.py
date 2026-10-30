@@ -17,7 +17,7 @@ POR QUE GEOMETRIA, e não a ordem no fonte
 ------------------------------------------
 A régua que o gerador tinha media a ORDEM no arquivo  (noqa-acento: verbo medir)
 — *"o cadeado vem depois de
-`so-desligado`"* — e por isso REPROVOU esta mudança como se fosse defeito. Ela
+`so-desligado`"* — e por isso REPROVOU esta mudança como se fosse defeito. A régua
 respondia sobre a ordem do fonte, não sobre o lugar na tela. Aqui a pergunta é
 feita ao motor: *onde esta caixa está desenhada, em pixels, dentro do bloco?*
 
@@ -25,8 +25,8 @@ O GESTO NÃO PODE MUDAR, e é metade desta régua
 -----------------------------------------------
 Mudança de POSIÇÃO que muda comportamento é mudança escondida. Por isso os casos
 vêm em par: um mede onde a trava está, o outro mede que o `data-gesto`, o
-`data-campo`, o alvo de pintura e a dica continuam os mesmos — e que ela nasce
-APAGADA, porque acendê-la no desenho afirmaria uma escolha do usuário que ela não fez.
+`data-campo`, o alvo de pintura e a dica continuam os mesmos — e que a trava nasce
+APAGADA, porque acendê-la no desenho afirmaria uma escolha que o usuário não fez.
 
 A LÍNGUA MUDOU EM 19/09/2026 E ESTA RÉGUA FOI ATRÁS (`TRAVA-PILULA-01`)
 -----------------------------------------------------------------------
@@ -37,7 +37,7 @@ estados e o produto tem três"*. O que esta régua mediu deixou de existir, e ca
 medida foi reapontada para o que existe HOJE:
 
 ===========================  =======================  ==========================
-o que ela mediu               o que virou              por quê
+o que se mediu                o que virou              por quê
 ===========================  =======================  ==========================
 `cad.querySelector(input)`    o próprio `.cadeado`     não há mais `<input>`
 `caixa.dataset.hefAlvo`       `classe` (era `marcado`) o alvo trocou com a tag
@@ -48,7 +48,7 @@ o que ela mediu               o que virou              por quê
 
 **O `NaN` ERA UM VERDE DISFARÇADO DE VERMELHO, e vale anotar:**
 `parseFloat('normal')` é `NaN`, e `NaN == 1` é falso — a régua reprovava. Se a
-comparação fosse `!= 2` ela teria PASSADO sobre uma medida que não existe. Medir
+comparação fosse `!= 2` a régua teria PASSADO sobre uma medida que não existe. Medir
 quebra de linha pelas caixas de um `Range` sobre o nó de texto responde a
 pergunta de verdade, e em qualquer `display`.
 
@@ -180,7 +180,7 @@ def medido(request: pytest.FixtureRequest) -> dict:
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     pagina = PAGINAS[request.param]
     assert pagina.is_file(), (
-        f"{pagina} não existe — a aba Jogar é o alvo desta régua, e sem ela "
+        f"{pagina} não existe — a aba Jogar é o alvo desta régua, e sem a aba "
         f"todos os casos passariam por ausência")
 
     from playwright.sync_api import sync_playwright
@@ -213,7 +213,7 @@ def test_o_cadeado_esta_na_linha_do_titulo(medido: dict) -> None:
     """Na linha do título, e não no miolo — que é o que o tira de "quinto modo"."""
     assert medido["na_linha_do_titulo"], (
         "o cadeado não está no `.quadro-topo`. Embaixo dos modos ele lê como um "
-        "quinto modo — foi o que ela viu.")
+        "quinto modo — foi o que se viu.")
     assert not medido["dentro_do_corpo"], (
         "o cadeado está dentro do `.quadro-corpo`, isto é, no miolo do bloco.")
 
@@ -244,7 +244,7 @@ def test_o_cadeado_nao_empurrou_a_linha_do_titulo(medido: dict) -> None:
 def test_o_cadeado_fica_fora_das_duas_secoes_do_interruptor(medido: dict) -> None:
     """`so-ligado` e `so-desligado` trocam com o Hefesto; o cadeado vale nos dois.
 
-    Dentro de uma delas a caixa sumiria justamente no Modo Nativo, onde a troca
+    Dentro de um desses a caixa sumiria justamente no Modo Nativo, onde a troca
     automática de perfil continua valendo — e sumiria em SILÊNCIO. Era o
     requisito que a régua velha do gerador defendia, e ele não mudou; o que
     mudou foi como se mede.
@@ -272,7 +272,7 @@ def test_o_gesto_do_cadeado_atravessou_a_mudanca(medido: dict) -> None:
         f"o alvo de pintura virou {medido['alvo']!r}; a trava é uma pílula "
         f"desde 19/09, e quem acende pílula é o alvo `classe`")
     assert medido["classe_que_acende"] == "ligada", (
-        f"a classe da pintura virou {medido['classe_que_acende']!r}; sem ela o "
+        f"a classe da pintura virou {medido['classe_que_acende']!r}; sem a classe o "
         f"piloto acende `on`, e a folha desta aba pinta `.cadeado.ligada`")
     assert medido["acende_quando"] == CADEADO_LIGADO, (
         f"a pílula acende com {medido['acende_quando']!r} e o dono emite "
@@ -282,7 +282,7 @@ def test_o_gesto_do_cadeado_atravessou_a_mudanca(medido: dict) -> None:
 
 
 def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
-    """O rótulo e a dica continuam os que ela já leu — não se reescreve texto dela."""
+    """O rótulo e a dica continuam os que quem usa já leu — texto de tela não se reescreve aqui."""
     from hefesto_dualsense4unix.interface.pacotes.a01_jogar import CADEADO_ROTULO
 
     assert medido["rotulo"] == CADEADO_ROTULO, (
@@ -294,7 +294,7 @@ def test_a_palavra_e_a_da_janela_antiga(medido: dict) -> None:
 def test_o_cadeado_nasce_apagado(medido: dict) -> None:
     """Destravado é o padrão do produto; acendê-lo afirmaria uma escolha do usuário."""
     assert medido["aceso_de_nascenca"] is False, (
-        "o cadeado nasce aceso — o desenho afirmaria uma escolha que ela não fez")
+        "o cadeado nasce aceso — o desenho afirmaria uma escolha que ninguém fez")
 
 
 def test_o_clique_no_rotulo_chega_ao_dono_do_gesto() -> None:
@@ -327,7 +327,7 @@ def test_o_clique_no_rotulo_chega_ao_dono_do_gesto() -> None:
     assert [r["tipo"] for r in recados] == ["click", "click"], (
         f"a trava emitiu {[r['tipo'] for r in recados]!r}. O gesto "
         f"`a01_jogar.cadeado` filtra por `click` porque um `<button>` não emite "
-        f"`change` — um `change` aqui quer dizer que a caixa voltou, e com ela "
+        f"`change` — um `change` aqui quer dizer que a caixa voltou, e com a caixa "
         f"a dupla entrega do mesmo gesto")
     assert [r["no_proprio_cadeado"] for r in recados] == [True, False], (
         f"a régua está medindo a si mesma: {recados!r}. O primeiro clique tem "

@@ -2,8 +2,8 @@
 
 O DEFEITO, medido na sessão do usuário de 28/09/2026 (00h15 a 00h52)
 --------------------------------------------------------------
-Três bordas do botão do microfone do branco que ela não deu (00:18:40,
-00:22:15 e 00:22:17). Ela: *«eu não apertei o botão do Mic»*. Cada uma
+Três bordas do botão do microfone do branco que ninguém deu (00:18:40,
+00:22:15 e 00:22:17), sem ninguém apertar o botão do microfone. Cada uma
 elegeu o microfone da máquina e **gravou o perfil do usuário**.
 
 A causa estava escrita no leitor: a borda era contada pelo bit `MIC_MUTE` de
@@ -167,7 +167,7 @@ def test_o_bit_de_estado_virando_com_o_botao_parado_nao_e_borda(transporte: str)
         _segurar(h, transporte, status=LIVRE)
     assert _seq(backend, _QUATRO[0]) == 0, (
         "o bit de estado do microfone virou seis vezes com o botão parado, e "
-        "virou gesto dela — é o toque fantasma que gravou o perfil"
+        "virou gesto de quem usa — é o toque fantasma que gravou o perfil"
     )
 
 
@@ -216,13 +216,13 @@ def test_o_eco_da_nossa_escrita_nao_e_borda(transporte: str) -> None:
     _segurar(h, transporte, status=LIVRE)
     h.set_microphone_mute(True)
     _segurar(h, transporte, status=MUDO)
-    assert _seq(backend, _QUATRO[0]) == 0, "o eco da nossa escrita virou gesto dela"
+    assert _seq(backend, _QUATRO[0]) == 0, "o eco da nossa escrita virou gesto de quem usa"
 
     h.set_microphone_mute(True)
     _segurar(h, transporte, status=MUDO)
     _apertar(h, transporte, antes=MUDO, depois=LIVRE)
     _apertar(h, transporte, antes=LIVRE, depois=MUDO)
-    assert _seq(backend, _QUATRO[0]) == 2, "um aperto dela foi engolido como eco"
+    assert _seq(backend, _QUATRO[0]) == 2, "um aperto de verdade foi engolido como eco"
 
 
 def test_o_quadro_de_audio_do_radio_nao_aperta_o_botao() -> None:

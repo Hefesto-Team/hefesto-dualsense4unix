@@ -1,4 +1,4 @@
-"""O desfazer do Proton fixado e do Vulkan não é da tela e segue vivo fora dela.
+"""O desfazer do Proton fixado e do Vulkan não é da tela e segue vivo fora da tela.
 
 OS-GESTOS-SEM-ELEMENTO-DAS-ABAS-SISTEMA-E-CONEXOES-SAEM-01 (17/10/2026): os gestos `fixar-proton`
 e `corrigir-vulkan` destravavam e devolviam; o interruptor das correções não desfaz nenhum dos
@@ -27,7 +27,7 @@ def test_o_uninstall_chama_o_unlock_do_proton_pin() -> None:
 
 
 def test_o_proton_pin_tem_o_unlock_e_ele_chega_ao_destravador() -> None:
-    """A opção existe e o comando dela chama `unlock_games_from_pinned_proton`."""
+    """A opção existe e o comando da opção chama `unlock_games_from_pinned_proton`."""
     fonte = Path(proton_pin.__file__).read_text(encoding="utf-8")
     assert '"--unlock"' in fonte, "o `proton_pin.py` perdeu a opção `--unlock`"
     corpo = fonte[fonte.index("def _cmd_unlock("):]

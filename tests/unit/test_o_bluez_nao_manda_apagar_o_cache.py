@@ -52,7 +52,7 @@ def test_nenhum_guia_script_ou_modulo_manda_apagar_o_cache_do_bluez() -> None:
 
 
 def test_a_regua_enxerga_o_conselho_antigo() -> None:
-    """A régua não pode ser cega: o texto que ela existe para barrar tem de casar."""
+    """A régua não pode ser cega: o texto que a régua existe para barrar tem de casar."""
     antigo = "sudo rm -f /var/lib/bluetooth/*/cache/<ENDERECO_DO_CONTROLE>"
     assert _acha(antigo) == [antigo]
     assert _acha("busctl call org.bluez /org/bluez/hci0 org.bluez.Adapter1 RemoveDevice o /x") == []
@@ -98,7 +98,7 @@ def test_a_regua_da_premissa_enxerga_a_frase_antiga_ate_quebrada() -> None:
     """A régua não pode ser cega: a frase velha casa, inclusive partida em duas linhas."""
     assert _acha_a_premissa("desfazer o pareamento, apagar o cache SDP e parear") != []
     assert _acha_a_premissa("o cache sozinho\n   envenena o pareamento seguinte") != []
-    assert _acha_a_premissa("# Sem ela o pareamento novo\n# nasce com SDP vazio") != []
+    assert _acha_a_premissa("# Sem o cache o pareamento novo\n# nasce com SDP vazio") != []
     assert _acha_a_premissa("  /* desfazer, apagar o\n     * cache SDP e parear */") != []
     assert _acha_a_premissa(
         'print("  (o bond E o cache SDP saem — o cache sozinho")\n'

@@ -106,7 +106,7 @@ y = 1 + \\
     2  # depois da barra
 s = "um # que é texto"
 t = 'outro # também'
-u = f"{x!r} # f-string {os.sep}"  # e o comentário dela
+u = f"{x!r} # f-string {os.sep}"  # e o comentário da linha
 v = """docstring # fica"""
 
 

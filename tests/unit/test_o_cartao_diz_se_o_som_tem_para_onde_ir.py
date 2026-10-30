@@ -49,7 +49,7 @@ def _entrada(**mais: Any) -> dict[str, Any]:
 
 def _cards(entradas: list[dict[str, Any]], mesa: list[dict[str, Any]], *,
            state: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Os cards que o pacote monta, por `uniq`, com os endereços da bancada ligados."""
+    """Os cards que o pacote monta, por `uniq`, com os endereços do ensaio ligados."""
     from pacotes import Contexto
 
     antes = mod._ENDERECOS
@@ -283,7 +283,7 @@ class TestOsSelosNoCartao:
 
 
 class TestOQuartoSeloSaiuDaTela:
-    """A ordem de produto, e ela vale para a tela inteira:"""
+    """A ordem de produto vale para a tela inteira."""
 
     def test_a_celula_do_mapa_so_vira_com_a_prova(self) -> None:
         """**A METADE QUE IMPEDE A CURA DE VIRAR MENTIRA.**"""
@@ -295,7 +295,7 @@ class TestOQuartoSeloSaiuDaTela:
                 "`medido` — virar sem a medição é mentir ao contrário")
             return
         assert celula["por_que_nao_aciona"] not in CAUSA_DE_FORA, (
-            "a causa deixou de ser NOSSA no mapa — se ela mudou de dono, a "
+            "a causa deixou de ser NOSSA no mapa — se a causa mudou de dono, a "
             "medição tem de vir junto")
 
     def test_o_pacote_nao_declara_mais_a_frase(self) -> None:
@@ -303,21 +303,21 @@ class TestOQuartoSeloSaiuDaTela:
         for morto in ("RESSALVA_DO_ALTO_NO_RADIO", "ressalva_do_transporte",
                       "lado_do_mapa", "CHAVE_DO_ALTO_FALANTE"):
             assert not hasattr(mod, morto), (
-                f"`{morto}` voltou ao pacote — ela mandou a tela calar sobre "
+                f"`{morto}` voltou ao pacote — a decisão mandou a tela calar sobre "
                 f"esta dívida em 07/09/2026")
 
     def test_o_cartao_nao_confessa_no_radio(self) -> None:
         """O cartão não confessa dívida nossa no rádio — 07/09/2026."""
         card = _card(_entrada(transport="bt"))
         assert "alto-ressalva" not in card, (
-            "a ressalva do alto-falante voltou ao cartão — ela saiu inteira em "
-            "22/09/2026, por ordem dela, e a página não tem mais o endereço")
+            "a ressalva do alto-falante voltou ao cartão — a ressalva saiu inteira em "
+            "22/09/2026, por decisão de produto, e a página não tem mais o endereço")
         assert not any("Hefesto" in str(v) for k, v in card.items()
                        if str(k).startswith("alto-")), (
             "o cartão voltou a confessar dívida nossa no rádio")
 
     def test_os_gestos_nao_apagam_por_uma_divida_nossa(self) -> None:
-        """A dívida é NOSSA: apagar quatro gestos por ela é empurrá-la para ela."""
+        """A dívida é NOSSA: apagar quatro gestos por causa da dívida é empurrá-la para quem usa."""
         rota = FATOS["audio.alto_falante.rota@dualsense"]["radio"]
         assert isinstance(rota, dict) and rota["aciona"] == "sim"
         card = _card(_entrada(transport="bt"))
@@ -338,12 +338,12 @@ class TestODesenho:
         assert "Canal dormindo" not in doc
 
     def test_os_dois_transportes_mostram_ativo(self) -> None:
-        """A cena é o caso normal, e ela vale no cabo E no rádio — 23/09/2026.
+        """A cena é o caso normal, e vale no cabo E no rádio — 23/09/2026.
 
         FATO ERRADO, SUBSTITUÍDO: esta régua cobrava que o controle do rádio
         não mostrasse pílula nenhuma, porque o DualSense não publica placa ALSA
         por rádio. A conclusão caiu em 10/09/2026, quando o produto passou a
-        publicar o nó de som por controle (`hefesto_som_<hex6>`), e a foto dela
+        publicar o nó de som por controle (`hefesto_som_<hex6>`), e a foto da cena
         de 23/09 mostra a pílula no controle do rádio. A MATRIZ da sprint vale
         para a cena também: a regra não é só do cabo.
 
@@ -470,7 +470,7 @@ class TestOMicrofoneSemFonte:
 
     @pytest.mark.parametrize("publicado", [False, True])
     def test_a_moldura_do_microfone_tem_endereco_proprio(self, publicado: bool) -> None:
-        """Na bancada e no publicado: cada moldura de som lê o seu `data-apagado`."""
+        """No desenho e no publicado: cada moldura de som lê o seu `data-apagado`."""
         doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
         mics = re.findall(r'<div class="moldura"[^>]*data-bloco="microfone"[^>]*>', doc)
         altos = re.findall(r'<div class="moldura"[^>]*data-bloco="alto-falante"[^>]*>',

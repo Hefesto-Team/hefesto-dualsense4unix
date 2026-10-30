@@ -201,7 +201,7 @@ def test_a_procedencia_declara_so_a_fonte(brinquedo: Path) -> None:
     p = carimbo_da_casa.procedencia(raiz=brinquedo)
     assert set(p) == {"commit"}, (
         f"`procedencia()` devolve {sorted(p)}; esperado ['commit'].\n"
-        "Toda chave a mais aqui vira texto no rodapé das páginas geradas. Se ela "
+        "Toda chave a mais aqui vira texto no rodapé das páginas geradas. Se a chave "
         "descrever a MESA de quem gerou — o estado da árvore, o nome da branch "
         "— o tamanho do arquivo passa a depender de onde alguém apertou o botão "
         "(ver o docstring de `procedencia()`)."
@@ -210,7 +210,7 @@ def test_a_procedencia_declara_so_a_fonte(brinquedo: Path) -> None:
     assert inteiro.startswith(p["commit"]) and p["commit"] != "?", (
         f"`procedencia()` leu o commit {p['commit']!r}, que não é um prefixo do "
         f"HEAD do brinquedo ({inteiro!r}) — a régua não está falando com o "
-        "repositório que ela montou."
+        "repositório que a própria régua montou."
     )
 
 

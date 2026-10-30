@@ -1,6 +1,6 @@
 """O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01 — a escolha do usuário carimba a ponte.
 
-Medido no diário de 01/10 (Pro Jank Footy): às 19h04 ela trocou o modo para
+Medido no diário de 01/10 (Pro Jank Footy): às 19h04 o modo foi trocado para
 Xbox pela janela, o escritor único gravou `mode.caminho="xbox"` e deixou o
 carimbo `dualsense` onde a escada o tinha posto; às 19h17 o serviço avisou
 `ponte_confirmada_diverge_do_perfil` sobre a escolha do usuário. Havia dois
@@ -14,11 +14,11 @@ wrapper lançou e que ainda roda. Fora de jogo, nada de carimbo. E a escada não
 rebaixa a escolha do usuário para «silêncio» nem para «gesto» quando a ponte é a
 mesma (`ProfileManager.confirmar_ponte`).
 
-A BANCADA: o `Daemon` é o real, os perfis moram no `XDG_CONFIG_HOME` do teste
+O ENSAIO: o `Daemon` é o real, os perfis moram no `XDG_CONFIG_HOME` do teste
 (o `conftest` isola), e só a borda que diz «há jogo do wrapper vivo» e «este
 jogo está na allowlist do Steam Input» é dublada (`launch_env`). O disco é lido
 pelo `loader`, nunca pelo retorno do escritor. A MORDIDA de cada régua está no
-docstring dela.
+docstring da régua.
 """
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ def test_a_escolha_carimba(jogo_vivo: dict[str, object]) -> None:
     assert perfil.ponte is not None
     par = (perfil.ponte.gamepad_flavor, perfil.ponte.confirmada_por)
     assert par == ("xbox", "escolha_dela"), (
-        f"a escolha dela trocou o modo e o carimbo seguiu {par!r}: o aviso das 19h17")
+        f"a escolha de quem usa trocou o modo e o carimbo seguiu {par!r}: o aviso das 19h17")
     assert perfil.ponte.kind == "gamepad" and perfil.ponte.steam_input is False
     assert _divergencia(JOGO) is None, f"o perfil diverge do carimbo: {_divergencia(JOGO)}"
 
@@ -138,7 +138,7 @@ def test_o_steam_input_vivo_vai_no_carimbo(jogo_vivo: dict[str, object]) -> None
     """O jogo na allowlist do Steam Input: o carimbo leva `steam_input=True`.
 
     É a mesma pergunta que a escada faz (`appid in steam_input_appids()`); sem
-    ela, o carimbo nasceria divergente no termo `steam_input`.
+    a pergunta, o carimbo nasceria divergente no termo `steam_input`.
     """
     jogo_vivo["allowlist"] = {APPID}
     _perfil_do_jogo_carimbado_por_silencio()
@@ -220,9 +220,9 @@ def test_a_escolha_repetida_conserta_o_carimbo_divergente(
 ) -> None:
     """O modo já em Xbox e o carimbo em DualSense (o disco das 19h04 a 19h18).
 
-    Ela escolhe Xbox de novo: o modo não muda, e o carimbo se alinha. Sem isto,
+    Quem usa escolhe Xbox de novo: o modo não muda, e o carimbo se alinha. Sem isto,
     um perfil que já divergiu antes da cura seguiria divergente até a volta
-    dela ao modo antigo, que foi como o aviso sumiu em 01/10.
+    ao modo antigo, que foi como o aviso sumiu em 01/10.
     """
     _perfil_do_jogo_carimbado_por_silencio()
     perfil = _no_disco(JOGO)
@@ -310,7 +310,7 @@ def test_a_escada_nao_desfaz_a_escolha(
     assert perfil.ponte is not None
     assert (perfil.ponte.gamepad_flavor, perfil.ponte.confirmada_por) == (
         "xbox", "escolha_dela"), (
-        f"a escada regravou a escolha dela como {perfil.ponte.confirmada_por!r}")
+        f"a escada regravou a escolha de quem usa como {perfil.ponte.confirmada_por!r}")
     assert _versoes(JOGO) == versoes, "a escada gravou uma versão sem nada a mudar"
 
 

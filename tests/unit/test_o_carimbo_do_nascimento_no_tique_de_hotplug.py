@@ -60,7 +60,7 @@ def como_o_backend_escreve(uniq: str) -> str:
 
     NÃO é cosmético, e por isso está aqui em cima com nome próprio. As duas
     metades desta casa escrevem o mesmo MAC de jeitos diferentes, e isso está
-    MEDIDO na bancada em 25/08/2026:
+    MEDIDO no aparelho em 25/08/2026:
 
     * o sysfs devolve ``HID_UNIQ=a0:fa:9c:…`` — COM os dois-pontos (lido no
       ``uevent`` do DualSense do cabo desta máquina);
@@ -68,7 +68,7 @@ def como_o_backend_escreve(uniq: str) -> str:
       (``nos_hidraw_por_uniq`` → ``_key_to_uniq`` → ``a0fa9c…``).
 
     Um fixture que devolvesse a grafia do sysfs onde o produto lê a do backend
-    seria régua falsa: ela aprovaria um casamento que em produção não acontece
+    seria régua falsa: aprovaria um casamento que em produção não acontece
     NUNCA. Foi assim que o carimbo do nascimento passou de 22/08 a 25/08
     "entregue" e sem carimbar nada na máquina do usuário.
     """
@@ -81,7 +81,7 @@ _MAPA_DO_ENSAIO: dict[str, str] = {
 
 
 def _leituras_do_ensaio() -> list[sb.Leitura]:
-    """O que o lado de DIAGNÓSTICO do módulo responde para a bancada inteira."""
+    """O que o lado de DIAGNÓSTICO do módulo responde para a máquina inteira."""
     return sb.veredito_do_nascimento(
         instancias=_instancias_do_ensaio(), nascimentos=_nascimentos_do_ensaio()
     )
@@ -312,7 +312,7 @@ def _carimbar(daemon: Any, agora: float = 0.0) -> int:
 
 @pytest.fixture()
 def ensaio_no_sysfs(monkeypatch):
-    """Faz o `instancias_dualsense` do daemon devolver a bancada de 22/08."""
+    """Faz o `instancias_dualsense` do daemon devolver a máquina de 22/08."""
     vivas: list[sb.Instancia] = _instancias_do_ensaio()
 
     def _enumerar(*_a: object, **_k: object) -> list[sb.Instancia]:
@@ -381,7 +381,7 @@ class TestOTiqueDeHotplugCarimba:
         def _bomba(**_k: object) -> list[sb.Leitura]:
             raise AssertionError(
                 "o Modo Nativo leu o diário — e ali o diário NÃO tem a linha do "
-                "escritor, porque o produto não sonda por regra dela"
+                "escritor, porque o produto não sonda por regra de quem usa"
             )
 
         monkeypatch.setattr(cx, "veredito_do_nascimento", _bomba)
@@ -432,7 +432,7 @@ class TestOTiqueDeHotplugCarimba:
 class TestOCarimboSoFalaDosControlesDoProduto:
     """O sysfs enumera TODO DualSense da máquina. Carimbar um que o produto não
     abriu falaria de um controle que a tela nem lista — e faria a suíte, que
-    roda na bancada com quatro controles ligados, pagar `journalctl`."""
+    roda na máquina de teste com quatro controles ligados, pagar `journalctl`."""
 
     def test_sem_handle_aberto_nem_o_sysfs_e_lido(self, monkeypatch) -> None:
         leituras: list[int] = []
@@ -534,7 +534,7 @@ class TestOTiqueDeHotplugChamaOCarimbo:
 
 
 class TestODiarioENoRecorte:
-    """MEDIDO 22/08/2026 no diário de quinze dias dela: a leitura da unit do"""
+    """MEDIDO 22/08/2026 no diário de quinze dias: a leitura da unit do"""
 
     def test_a_leitura_do_diario_leva_o_recorte(self, monkeypatch) -> None:
         vistos: list[list[str]] = []

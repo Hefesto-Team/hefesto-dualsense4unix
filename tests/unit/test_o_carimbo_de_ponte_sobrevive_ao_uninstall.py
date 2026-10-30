@@ -95,7 +95,7 @@ def _carimbo_de(caminho: Path) -> dict[str, object] | None:
 
 class TestOCarimboSobreviveAoUninstall:
     def test_o_padrao_preserva_o_carimbo_inteiro(self, tmp_path: Path) -> None:
-        """O caminho que ela vai percorrer: `./uninstall.sh` sem flag nenhuma."""
+        """O caminho que quem usa percorre: `./uninstall.sh` sem flag nenhuma."""
         alvo = _grava_perfil(tmp_path, "jogo_de_teste")
 
         r = _roda_bloco(tmp_path, keep_config=1)

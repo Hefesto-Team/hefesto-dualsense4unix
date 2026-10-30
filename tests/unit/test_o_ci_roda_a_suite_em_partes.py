@@ -11,7 +11,7 @@ A cura é do desenho do YAML, e esta régua o confere:
 1. o passo da suíte do `lint-test` é o `scripts/rodar-a-suite.sh` (nenhum job roda `tests/unit`
    inteiro num processo só);
 2. as faixas do `gtk-real` cobrem as partes de 00 à última, sem furo e sem repetição;
-3. cada perna escreve a cobertura e os logs num nome que só ela tem (dois nomes iguais num
+3. cada perna escreve a cobertura e os logs num nome só seu (dois nomes iguais num
    `upload-artifact` reprovam a segunda perna);
 4. a cobertura de cada faixa é SOMADA antes de o piso cobrar (o piso de 70 é da suíte inteira);
 5. nenhum `parametrize` de `tests/` usa o texto de um arquivo como valor sem `ids=`: o id do teste
@@ -187,7 +187,7 @@ def test_o_ci_roda_a_suite_em_partes_e_as_pernas_cobrem_as_24() -> None:
 
 
 def test_a_regua_le_as_24_partes_e_as_quatro_faixas() -> None:
-    """Sem isto a régua de cima passaria sobre uma matriz que ela não leu."""
+    """Sem isto a régua de cima passaria sobre uma matriz que não leu."""
     assert _partes_do_script() == 24
     assert len(_faixas(_jobs()["gtk-real"])) == 4
 
