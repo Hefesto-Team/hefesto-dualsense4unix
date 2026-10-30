@@ -557,7 +557,8 @@ def instalar(
         if a_substituir:
             from hefesto_dualsense4unix.mods import opcoes
 
-            opcoes.herdar(manifesto, a_substituir, lg)
+            opcoes.herdar(manifesto, a_substituir, lg, ligadas=antigas_ligadas)
+            _levar_o_meu_css(lg, manifesto, a_substituir)
         registro = ler_registro(lg.registro)
         registro[manifesto.id] = entrada
         gravar_registro(lg.registro, registro)
@@ -589,6 +590,21 @@ def _parar_as_substituidas(lg: Lugares, ids: Sequence[str]) -> list[str]:
                 f"«{antiga.nome}», que esta extensão substitui, não parou; não troquei nada."
             )
     return ligadas
+
+
+def _levar_o_meu_css(lg: Lugares, manifesto: Manifesto, ids: Sequence[str]) -> None:
+    """O ``meu.css`` da substituída vai para a nova que aceita o CSS e ainda não tem o seu: o
+    arquivo é da pessoa, e a troca de extensão não o deixa para trás."""
+    destino = meu_css.caminho(manifesto.id, lg)
+    if manifesto.opcao_do_css is None or destino.exists():
+        return
+    for mod_id in ids:
+        origem = meu_css.caminho(mod_id, lg)
+        if origem.is_file() and not origem.is_symlink():
+            destino.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(origem, destino)
+            os.chmod(destino, 0o600)
+            return
 
 
 def _mandar_embora(lg: Lugares, manifesto: Manifesto, ids: Sequence[str]) -> None:
