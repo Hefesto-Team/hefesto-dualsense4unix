@@ -347,12 +347,12 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     **É A METADE DE DESENHO QUE A ONDA1-D2 DEIXOU COM ENDEREÇO**, e a decisão
     é de produto, de 04/09/2026, dita fora das três opções que estavam postas:
 
-        "os slcers do botão esquerdo e direito (forte e  # noqa-acento: citação
-         fraco) se multiplicam (interagem com os botões economia, moderado,
-         máximo, se eu tiver 150% do perfil de vibração e as duas linhas
-         estiverem 100 entao a vibração dos 2 será 150%, mas se so a do motor
-         fraco tiver 100 e a outrqa 50% então será 150 em um e 75% no outro
-         entende?"
+        os deslizantes do motor esquerdo e do direito (forte e fraco) se
+        multiplicam com os botões Economia, Padrão e Máximo: com 150% no perfil
+        de vibração e as duas linhas em 100, a vibração dos dois é 150%; com só
+        a do motor fraco em 100 e a outra em 50%, é 150% em um e 75% no
+        outro.
+
 
     `efetivo(motor) = degrau(coluna) x barra(motor)`, e a conta mora num lugar
     só, do lado do daemon (`gamepad._mults_por_motor`). Esta linha é o primeiro
@@ -381,7 +381,7 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
     **O ENDEREÇO DE PINTURA É NOVO DE PROPÓSITO** (`barra-e`/`barra-e-pct`), e
     os velhos (`motor-e`, `motor-e-pct`) continuam sendo emitidos pelo pacote.
     É a PONTE DE PUBLICAÇÃO, e a razão é a mesma do `forca-pct`: a página que
-    ela ABRE hoje ainda tem a linha de leitura, e publicar é ato dela. Reusar o
+    se abre hoje ainda tem a linha de leitura, e publicar é ato de quem aprova. Reusar o
     nome velho para o significado novo faria o produto pintar um multiplicador
     dentro de uma barra de 0 a 255 — a mentira que esta aba mais persegue.
 
@@ -409,9 +409,9 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
 def _linha_da_haptica(valor, ligado, vazio=False):
     """A linha «Sensor háptico»: interruptor · trilho de 0 a 100 · número · `%` e a luz.
 
-    Desde 02/10/2026 ela mora na faixa que era do Personalizado, logo abaixo da
+    Desde 02/10/2026 a linha mora na faixa que era do Personalizado, logo abaixo da
     Força (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01); o nome é o
-    dela, «Sensor háptico». A luz «no ar» é a bolinha depois do `%`, acesa pelo
+    do produto, «Sensor háptico». A luz «no ar» é a bolinha depois do `%`, acesa pelo
     `haptica_no_ar` do `state_full`.
 
     O mesmo desenho das linhas dos motores, com gesto próprio (`haptica`,
@@ -530,7 +530,7 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
 
     RECUSA QUANDO A ÂNCORA SOME, pelas duas vias — `monta.troca` para o `<svg>`
     e a contagem para a folha. É a lição do `str.replace` que não casava: um
-    endereço que não entra no HTML é uma pintura que não acontece, e ela é
+    endereço que não entra no HTML é uma pintura que não acontece, e isso é
     silenciosa dos dois lados.
     """
     quem = f"aba05 · _endereca_a_cor({pref!r})"
@@ -571,7 +571,7 @@ def _coluna(c, e=None, conectado=None):
     (`a05_vibracao` emite para os QUATRO lugares de propósito) e o piloto fazia
     `raiz.querySelectorAll('[data-campo="…"]')` dentro do bloco daquele
     `data-controle` (`hefesto_vivo._pintar`, passo 2). **Sem endereço, o dado
-    dela chegava e não tinha onde pousar**: o P3 e o P4 continuavam dizendo
+    chegava e não tinha onde pousar**: o P3 e o P4 continuavam dizendo
     `P3 • Desconectado` com travessão em tudo, com os aparelhos ligados.
 
     Medido na página publicada de 06/09, contando `data-campo` por
@@ -586,15 +586,15 @@ def _coluna(c, e=None, conectado=None):
     dois ramos envelheceu sem o outro**, quatro vezes em dois dias, sem uma
     linha de erro.
 
-    `conectado` DECIDE DUAS COISAS, e só elas:
+    `conectado` DECIDE DUAS COISAS, e só as duas:
 
     a) **a marca do cartão** — `class="ctrl off"`, `data-conectado="nao"` e o
        `title`. São as MESMAS marcas que o piloto põe num lugar que esvazia ao
        vivo (`_pintar`, passo 1b) e TIRA quando o controle chega (passo 1c). É o
        que faz o lugar reabrir sozinho, sem regerar nada. A classe `vazia`
        morreu com esta fusão justamente por isso: **o piloto não a conhece**, e
-       um cartão que nascesse com ela ficaria cinza para sempre, agora com o
-       dado dela chegando por baixo.
+       um cartão que nascesse com a classe ficaria cinza para sempre, agora com o
+       dado chegando por baixo.
     b) **o valor INICIAL de cada campo** — o travessão nos números, nenhum
        degrau aceso, nenhum punho tremendo e nenhum `data-colorway`. Quem some
        da tela são os WIDGETS, e quem os some é a folha
@@ -606,7 +606,7 @@ def _coluna(c, e=None, conectado=None):
     4 controles a mostra ainda mas cinza igual vc fez na aba jogar."* A coluna
     continua na tela, com as sete linhas na mesma altura, o nome dizendo a
     POSIÇÃO e o ESTADO (nunca o do plástico) e o travessão no lugar do ajuste.
-    O que mudou é que agora ela tem ONDE receber o controle que chega.
+    O que mudou é que agora o cartão tem ONDE receber o controle que chega.
     """
     if conectado is None:
         conectado = c.get("conectado", True)
@@ -709,7 +709,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>A Força da vibração é só o trilho</b> (18/10): saíram os botões de degrau, e ficou o trilho de 0 a 200% com a porcentagem e o ícone do DualSense. Abaixo de 100% abaixa a vibração; acima, reforça a fraca, até o máximo do motor. A linha ficou mais baixa e o desenho do controle ganhou o espaço. A <b>Sensor háptico</b> tem a bolinha verde acesa quando a háptica está chegando ao controle, e o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só.</li>
     <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
     <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem a sua barra de Força. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
-    <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
+    <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. As lâmpadas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
     <li><b>Um bloco só</b> — as duas áreas viraram uma tabela do mesmo quadro.</li>
     <li><b>Motor esquerdo e direito são o que ATIVA o lado durante o jogo</b> — o interruptor de cada lado, e o desenho mostra qual punho treme.</li>
     <li><b>A barra de Força vai de 0 a {TETO_DA_FORCA}%</b>, de 5 em 5 — o controle não tem nível de 150%, e os {TETO_DA_FORCA}% do trilho já existiam.</li>
@@ -717,10 +717,10 @@ LEGENDA = f'''<div class="nota">
 
   <h2>O que passou a vir do mapa, e deixou de ser digitado</h2>
   <ul>
-    <li><b>Os quatro controles</b> saem de <code>monta.MESA</code> — nome, jogador, plástico e transporte. A aba não sabe contar até quatro: ela percorre a lista.</li>
+    <li><b>Os quatro controles</b> saem de <code>monta.MESA</code> — nome, jogador, plástico e transporte. A aba não sabe contar até quatro: percorre a lista.</li>
     <li><b>As cores</b> saem de <code>cor_da_zona()</code>, que lê o <code>&lt;style&gt;</code> gerado por <code>gerar_cores_do_dualsense.py</code> a partir de <code>docs/data/cores-do-dualsense.csv</code>. Não há um hexadecimal de plástico escrito nesta aba.</li>
     <li><b>Os dois motores</b> saem de <code>docs/data/pecas-do-dualsense.csv</code>: o id no desenho (<code>{ESQ["id"]}</code> e <code>{DIR["id"]}</code>), o glifo de cada um, o nome e a nota que vira dica.</li>
-    <li><b>O padrão das lâmpadas</b> continua vindo do produto (<code>core/led_control.py</code>): P1 é a do meio e o P3 é <code>135</code> — não <code>234</code>, que era o que estava digitado no mockup. Ele não é desenhado nesta aba (elas saíram, por tamanho), e segue desenhado na Iluminação.</li>
+    <li><b>O padrão das lâmpadas</b> continua vindo do produto (<code>core/led_control.py</code>): P1 é a do meio e o P3 é <code>135</code> — não <code>234</code>, que era o que estava digitado no mockup. Ele não é desenhado nesta aba (as lâmpadas saíram, por tamanho), e segue desenhado na Iluminação.</li>
   </ul>
 
   <h2>A sua dúvida sobre os motores, respondida</h2>
@@ -784,7 +784,7 @@ def _conferir(doc):
     exigir("ctrl vazia" not in corpo,
            "a classe `vazia` voltou ao cartão — o piloto tira a `off` e o "
            "`data-conectado`, e não conhece a `vazia`: o lugar ficaria cinza "
-           "para sempre com o dado dela chegando por baixo")
+           "para sempre com o dado chegando por baixo")
     exigir(len(blocos) == len(MESA),
            f"a régua não achou as {len(MESA)} colunas: {sorted(blocos)}")
     for c in vazios:
@@ -807,7 +807,7 @@ def _conferir(doc):
                f"para um aparelho que não está na mesa")
     exigir('.vib .ctrl[data-conectado="nao"]:not(' not in doc,
            "voltou uma exceção ao `[data-conectado=\"nao\"]` na folha desta "  # (noqa-acento)
-           "aba — ela separa o lugar que NASCE vazio do que esvazia ao vivo, e "
+           "aba — a exceção separa o lugar que NASCE vazio do que esvazia ao vivo, e "
            "duas caras para o mesmo estado na mesma tela é o que esta aba mais "
            "persegue")
     exigir(corpo.count('class="trilho arrasta"') == len(MESA) * (1 + len(LADOS) + 1),
@@ -832,19 +832,19 @@ def _conferir(doc):
     cena = textos_do_estado(CENA_DO_ESTADO)
     exigir(cena == [],
            f"a cena do estado voltou a acender linha permanente: {cena} — a "
-           f"decisão dela de 07/09/2026 é que, com a mesa quieta, não há texto "
+           f"decisão de 07/09/2026 é que, com a mesa quieta, não há texto "
            f"nenhum sob a grade")
     exigir('id="vib-estado"></div>' in corpo,
            "a faixa de estado não nasce vazia no desenho — com a mesa quieta "
-           "ela não tem o que dizer, e o que estiver ali é prosa cravada")
+           "a faixa não tem o que dizer, e o que estiver ali é prosa cravada")
     exigir(".vib-estado:empty{display:none}" in doc,
-           "sumiu a regra que esconde a faixa vazia: sem ela a faixa vira uma "
+           "sumiu a regra que esconde a faixa vazia: sem a regra a faixa vira uma "
            "tira de nada debaixo da grade")
     _com_pedidos = {"rumble_policy": "economia",
                     "rumble_ff": {"plays": 12, "nao_nulos": 12, "vpads": 1}}
     exigir(textos_do_estado(_com_pedidos) == [],
            f"a faixa voltou a falar sobre o que o JOGO pediu: "
-           f"{textos_do_estado(_com_pedidos)} — ela saiu por ordem dela em "
+           f"{textos_do_estado(_com_pedidos)} — a faixa saiu por ordem de "
            f"07/09/2026")
     for sigla, _m, _k in LADOS:
         exigir(corpo.count(f'data-campo="treme-{sigla}"') == len(MESA),
@@ -881,7 +881,7 @@ def _conferir(doc):
     exigir(len(por_papel.get("intensidade", [])) == len(MESA),
            f"as barras 'Personalizado' arrastáveis não são {len(MESA)} "
            f"(achei {len(por_papel.get('intensidade', []))}) — a de cada lugar "
-           f"tem de ser um `<input type=range>`, senão o clique dela chega "
+           f"tem de ser um `<input type=range>`, senão o clique chega "
            f"ao pacote sem número")
     for tag in por_papel.get("intensidade", []):
         exigir(f'max="{TETO_DA_FORCA}"' in tag,
@@ -922,7 +922,7 @@ def _conferir(doc):
             exigir(f'data-campo="barra-{sigla}"' in tag,
                    f"a barra do motor {sigla!r} não usa o endereço novo "
                    f"`barra-{sigla}` — `motor-{sigla}-pct` é a LEITURA de 0 a "
-                   f"255 da página publicada, e escrever nela um multiplicador "
+                   f"255 da página publicada, e escrever ali um multiplicador "
                    f"põe o cursor no lugar errado")
     for tag in de_motor:
         exigir(f'max="{TETO_DO_MOTOR}"' in tag,
@@ -936,7 +936,7 @@ def _conferir(doc):
     for morto in ('data-campo="trava"', '<span class="sec-rot">Estado'):
         exigir(morto not in corpo,
                f"{morto!r} voltou à aba 05 — a faixa de estado saiu em "
-               f"05/09/2026 por decisão dela: *'remove ela não faz sentido'*")
+               f"05/09/2026 por decisão de produto: a faixa não fazia sentido")
     exigir("--r-estado" not in doc,
            "`--r-estado` voltou à folha da aba 05 — a faixa cuja altura ele "
            "reservava saiu em 05/09/2026, e altura guardada para linha que não "
@@ -962,7 +962,7 @@ def _conferir(doc):
             _valores = _re.findall(r'<option value="([^"]+)"[^>]*>([^<]+)</option>', opcoes)
             exigir(tuple(v for v, _r in _valores) == tuple(escolhas)
                    and [r for _v, r in _valores] == [rotulos[c] for c in escolhas],
-                   f"as opções de {gesto!r} não são as da lista do produto, na ordem dela")
+                   f"as opções de {gesto!r} não são as da lista do produto, na ordem da lista")
             exigir(_valores[:2] == [("do_estilo", "Do estilo"), ("sem_efeito", "Sem efeito")],
                    f"a lista {gesto!r} não abre com «Do estilo» e «Sem efeito»")
     exigir("grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)" in doc
@@ -973,8 +973,8 @@ def _conferir(doc):
            'o rótulo "Testar agora" saiu da coluna de rótulos — sem ele não há '
            "onde a dica morar")
     exigir(_testar is not None and DICA_DOS_VALORES_QUE_PASSAM in _testar.group(1),
-           'a nota do Testar não está na dica do "Testar agora" — a 05-Q2 dela é '
-           '*"As duas na dica"*')
+           'a nota do Testar não está na dica do "Testar agora" — a 05-Q2 manda '
+           'as duas na dica')
     exigir(corpo.count(DICA_DOS_VALORES_QUE_PASSAM) == 1,
            "a nota do Testar aparece mais de uma vez na mesma tela")
     exigir('class="seg"' not in corpo and "data-forca=" not in corpo,
@@ -1017,15 +1017,15 @@ def _conferir(doc):
                    f"{MESA[0]['pref']} — faltam {sorted(_padrao - _dele)} e "
                    f"sobram {sorted(_dele - _padrao)}. O piloto pinta dentro do "
                    f"bloco daquele `data-controle`: um endereço a menos é dado "
-                   f"dela chegando sem ter onde pousar; um a mais é pintura que "
+                   f"chegando sem ter onde pousar; um a mais é pintura que "
                    f"nunca acontece")
         exigir(len(_padrao) >= 14,
                f"a régua dos quatro lugares mede {len(_padrao)} endereços e "
-               f"eram 14 em 06/09 — ela ficou verde por VACUIDADE, que é o "
+               f"eram 14 em 06/09 — a régua ficou verde por VACUIDADE, que é o "
                f"jeito de esta guarda deixar de guardar")
 
     if falhas:
-        raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "
+        raise SystemExit("ERRO em 05-vibracao — decisão desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 

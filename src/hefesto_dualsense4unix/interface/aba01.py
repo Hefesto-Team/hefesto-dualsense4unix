@@ -240,7 +240,7 @@ CSS_DAS_ABAS += f"""  {LUGAR_VAZIO_ABERTO}{{height:auto !important;padding:0 0 8
 
 
 def _tabela_das_cores():
-    """As 28 cores dela, publicadas UMA vez — 03/09/2026, e é a lei de produto."""
+    """As 28 cores do DualSense, publicadas UMA vez — 03/09/2026, e é a lei de produto."""
     achou = _BLOCO_DAS_CORES.search(monta.DS)
     if not achou:
         raise SystemExit(
@@ -303,17 +303,17 @@ def cartao(c, bateria=None):
     """Um cartão da fileira: desenho na cor do plástico, rótulo e as máscaras.
 
     `bateria` é o único argumento, e existe porque a carga é o **único dado
-    inventado** desta aba (a legenda o declara desde 26/08): no mockup ela vem
+    inventado** desta aba (a legenda o declara desde 26/08): no mockup a carga vem
     da tabela `BATERIA`, e na aba viva vem do `state_full`. Sem este argumento
     a mesa viva de cinco controles levantaria `KeyError` no `p5` — no meio da
     remontagem, com a tela do usuário na frente.
 
 
-    A MÁSCARA NÃO É DIGITADA. Ela sai de `monta.MESA[...]["mascara"]`, que é a
+    A MÁSCARA NÃO É DIGITADA. Sai de `monta.MESA[...]["mascara"]`, que é a
     mesma fonte que a Controles e a Conexões leem — e foi a divergência que a
     versão à mão criou: a 01 mostrava `P2 = DualSense` e `P3 = Xbox 360` contra
     o `P2 = Xbox 360` / `P3 = DualSense` da MESA, porque a fonte única existia e
-    a tela de referência ficava de fora dela.
+    a tela de referência ficava de fora.
 
     OS ENDEREÇOS (29/08/2026, e o vocabulário é o do `aba02.py:379`)
     ----------------------------------------------------------------
@@ -331,7 +331,7 @@ def cartao(c, bateria=None):
     A PELE, E O `title` QUE SAIU (03/09/2026, IDENTIDADE-VEM-DE-CIMA-01)
     --------------------------------------------------------------------
     O cartão trazia DUAS identidades cravadas, e as duas nomeavam o controle do
-    desenho enquanto a fita do topo já nomeava o dela:
+    desenho enquanto a fita do topo já nomeava o do usuário:
 
         style="--plastico:#ae335a"                        → a borda Cosmic Red
         title="Sony • Player 1 • Cosmic Red • USB"        → a dica Cosmic Red
@@ -370,7 +370,7 @@ def cartao(c, bateria=None):
           for(const el of achar(raiz, k)) escrever(el, v);
 
     ``achar(raiz, k)`` procura ``data-campo="k"`` DENTRO do bloco. Sem endereço
-    o dado dela chegava e não tinha onde pousar — zero escrito e zero erro, que
+    o dado chegava e não tinha onde pousar — zero escrito e zero erro, que
     é o modo de falhar que esta casa persegue. Medido no publicado de hoje:
     **9 endereços no P1 e no P2, 4 no P3 e no P4** — e os 4 eram o desenho e os
     três chips de máscara, os únicos dois que já tinham sido curados um a um
@@ -428,7 +428,7 @@ def frase_das_mascaras():
     """"P1 e P3 em DualSense, o P2 em Xbox 360 e o P4 em Nintendo Pro" — da MESA.
 
     A frase estava digitada na legenda e repetia o erro dos chips. Escrita aqui,
-    ela não tem como discordar deles.
+    a frase não tem como discordar deles.
     """
     partes = []
     for m in MASCARAS:
@@ -489,7 +489,7 @@ def _campo_do_chip(m):
     **CUSTO ZERO DE PIXEL, e foi o que decidiu.** `data-campo` está em
     `scripts/check_o_desenho_aprovado.INVISIVEIS`, e a classe acesa continua
     sendo a MESMA ``on``. A alternativa — uma marca visual distinta para o Steam
-    Input — exige CSS novo e `--publicar 01`, que é ato dela (§7 D-2).
+    Input — exige CSS novo e `--publicar 01`, que é ato de quem aprova o desenho (§7 D-2).
     """
     return (CAMPO_DO_STEAM_INPUT if m["chave"] == "steam" else CAMPO_DO_MODO)
 
@@ -591,7 +591,7 @@ LEGENDA = f'''<div class="nota">
     <li><b>A fileira plana virou DOIS NÍVEIS</b> — sua palavra, 31/08:
       <span class="marca">"vamos desconfundir isso que tal? Hefesto Ligado/Desligado (…) Modo
       Hefesto se Ligado Abre as seções de Modo"</span>. A pergunta que abriu isto também é sua
-      — <span class="marca">"qual a diferença de nativo pra dualsense?"</span> —, e ela era
+      — <span class="marca">"qual a diferença de nativo pra dualsense?"</span> —, e a pergunta era
       boa: a tela punha os dois na <b>mesma</b> fileira, como alternativas do mesmo tipo. Não
       são. <b>Nativo é o Hefesto FORA do meio</b>; os outros são jeitos de ele <b>estar</b> no
       meio. Agora a tela mostra isso: em cima o interruptor, embaixo o que ele abre.</li>
@@ -602,9 +602,9 @@ LEGENDA = f'''<div class="nota">
       decide de verdade é o <b>modo</b>, e é só ele que fica no quadro.
       <br>A gramática é a da <b>fita</b> do topo da janela (<span class="marca">"{monta.ROTULO_DA_FITA}
       [Todos] [P1 · o plástico · USB]…"</span>): rótulo deitado, a fileira do que se escolhe, sem
-      moldura, acima do que ela governa. O "Hefesto" nasce no <b>mesmo x</b> de "Quando o jogo
+      moldura, acima do que governa. O "Hefesto" nasce no <b>mesmo x</b> de "Quando o jogo
       abrir" e "Conectado agora" — os três títulos da aba numa coluna só.
-      <br><b>E ela DEVOLVEU altura em vez de custar</b>, que era o risco: o quadro perdeu a linha
+      <br><b>E a fileira DEVOLVEU altura em vez de custar</b>, que era o risco: o quadro perdeu a linha
       do interruptor e a divisória que a separava dos modos (63px), e o que subiu custa 50 (a
       fileira de 36 mais o passo de 14 do miolo). Saldo <b>−13px</b>: o miolo pedia <b>514</b> de
       542 e passou a pedir <b>501</b>; a folga foi de <b>28</b> para <b>41px</b>, nas duas
@@ -616,7 +616,7 @@ LEGENDA = f'''<div class="nota">
       Nativo</b> (<code>MODE_NATIVE</code>), que <b>lê</b> (o mesmo <code>mode_of_state</code>)
       e <b>escreve</b> (<code>apply_mode('native')</code>, em <code>painel.ESCRITOR_DOS_MODOS</code>).
       Parar o Hefesto inteiro continua sendo <b>"Parar o serviço"</b>, na Sistema — e o verbo
-      é escolha dela de 31/08: <i>parar</i> é o que o <code>systemctl stop</code> faz e é o par
+      é escolha de 31/08: <i>parar</i> é o que o <code>systemctl stop</code> faz e é o par
       de <i>Ligado</i>; <i>encerrar</i> sugeria fim definitivo, e o serviço volta no próximo
       login.</li>
     <li><b>O chip que se chamava "Hefesto" virou "Sony DualSense"</b> — ele sempre foi
@@ -627,13 +627,13 @@ LEGENDA = f'''<div class="nota">
       <b>segundo</b> degrau que o produto tenta, e nenhum chip o nomeava. Era exatamente o que
       a conferência dos degraus denunciava: <span class="marca">"um degrau real não
       tem chip na tela"</span>. Agora tem.</li>
-    <li><b>Os algarismos saíram, e é decisão dela de 31/08</b> — a tela escrevia
+    <li><b>Os algarismos saíram, e é decisão de 31/08</b> — a tela escrevia
       <b>③ Steam Input</b>, o produto o tenta em <b>quarto</b>
       (<code>ponte_escada.indice_do_degrau + 1</code> = 4) e esta legenda prometia que o número
-      ERA esse índice. Os três não podiam estar certos, e a causa é a própria decisão dela do
+      ERA esse índice. Os três não podiam estar certos, e a causa é a própria decisão do
       mesmo dia: o terceiro degrau é o <b>Nativo</b>, que saiu da fileira para virar o
       interruptor <b>Desligado</b>. Havia três saídas — numerar <i>1 · 2 · 4</i> com o buraco do
-      3, numerar pela posição na tela (e esta linha passar a mentir), ou tirar os números. Ela
+      3, numerar pela posição na tela (e esta linha passar a mentir), ou tirar os números. A escolha
       tirou. <b>A ordem não se perdeu</b>: está na dica de cada modo e na do quadro
       <b>Quando o jogo abrir</b>.</li>
     <li><b>A máscara virou POR CONTROLE</b> — decisão sua, 28/08. Três opções e
@@ -657,7 +657,7 @@ LEGENDA = f'''<div class="nota">
       estado do produto podia acendê-lo) nem <b>escritor</b> (não há método de IPC que fixe um
       degrau). <b>O mecanismo ficou</b>: tentar na ordem e parar quando acerta é o que o produto
       já faz sozinho, e está dito na dica.</li>
-    <li><b>A fita ficou viva, e agora ela tem alvo</b> — era a contradição que esta legenda
+    <li><b>A fita ficou viva, e agora a fita tem alvo</b> — era a contradição que esta legenda
       declarava em aberto: a fita dizia <span class="marca">"vai para o controle escolhido
       aqui"</span> numa aba em que nada era por controle. A máscara resolveu isso. O cartão
       do alvo leva o <b>mesmo realce do chip escolhido</b>, para os dois lerem como uma
@@ -674,13 +674,13 @@ LEGENDA = f'''<div class="nota">
       <br><b>Navegação</b> é o caso do meio, e é bom: o <b>modo</b> tem dono e funciona hoje
       (<code>apply_mode('desktop')</code>), e desde 17/09 ele
       <b>carrega o seu perfil</b> ao entrar — o mouse, as teclas, os botões e a função do
-      teclado que você gravou na aba Navegação. O <b>PS + R3</b> para nela e entra pela mesma
-      porta. O que ela não é, e por isso leva traço no lugar do algarismo, é degrau da escada
-      automática: a ordem em que o Hefesto tenta sozinho não passa por ela.
+      teclado que você gravou na aba Navegação. O <b>PS + R3</b> para ali e entra pela mesma
+      porta. O que a Navegação não é, e por isso leva traço no lugar do algarismo, é degrau da escada
+      automática: a ordem em que o Hefesto tenta sozinho não passa por esse chip.
       <br>Nenhum chip desta fileira entra <b>marcado</b> hoje. A marca continua desenhada —
       borda tracejada, cor explícita e cursor de "não clique", e nada de <code>opacity</code>,
       porque a lição da fita inerte é que a opacidade some com o texto e cega toda régua de
-      contraste —, e ela está pronta para a próxima fileira que precisar dela.</li>
+      contraste —, e a marca está pronta para a próxima fileira que precisar.</li>
     <li><b>Quatro controles ligados, um cartão cada</b> — a lista é a <code>MESA</code> do <code>monta.py</code>: não há "quatro" escrito num laço, e o número do jogador é campo, não a posição na fila. Continua sendo só a peça, com o <b>SVG pequeno na cor do plástico</b> — o card completo é da aba Controles.</li>
     <li><b>A borda e a cor vêm do mapa</b> — a cor do plástico sai do <code>cores-do-dualsense.csv</code> pela folha que o gerador escreveu dentro do desenho. Não está digitada aqui.</li>
     <li><b>As cinco lâmpadas do jogador ficam apagadas neste cartão</b> — medido de novo hoje,
@@ -689,7 +689,7 @@ LEGENDA = f'''<div class="nota">
       precisaria de ~460px — os quatro somariam 1840px numa fileira que tem 1163px. Quem diz
       o número aqui é o rótulo <b>Player N</b>; o padrão das luzes, desenhado grande, está na
       <b>Iluminação</b>.</li>
-    <li><b>O botão do canto do bloco Modo (era "Trava o perfil ativo") mora na linha do título</b> — como o "Banco de provas" da Navegação. Embaixo dos modos ela lia como um quinto modo, e não é modo: é uma trava sobre o perfil. O rótulo é palavra dela de 11/09; o mecanismo, que era o rótulo antigo, passou para a dica no ponteiro do mouse.</li>
+    <li><b>O botão do canto do bloco Modo (era "Trava o perfil ativo") mora na linha do título</b> — como o "Banco de provas" da Navegação. Embaixo dos modos o botão lia como um quinto modo, e não é modo: é uma trava sobre o perfil. O rótulo é palavra de 11/09; o mecanismo, que era o rótulo antigo, passou para a dica no ponteiro do mouse.</li>
     <li><b>"Reconciliar jogadores" virou "Reconectar Controles"</b>.</li>
     <li><b>A área de avisos tem espaço reservado</b> e <b>conta quantos são</b>. Antes, três banners disputavam a linha e o primeiro escondia os outros. A barra vertical que a separa dos cartões agora vai até embaixo — era um toco de um terço, porque a coluna tomava a altura do único aviso.</li>
     <li><b>Nenhum ícone <b>?</b> na aba</b> — cada frase é uma dica curta, no mouse ou no foco, e os alvos de clique têm 24 px.</li>
@@ -717,7 +717,7 @@ LEGENDA = f'''<div class="nota">
       DualSense, Point And Click"</span>; eu pus <b>Sony DualSense · Xbox · Steam Input</b>,
       que é a ordem <b>medida</b> em que o produto tenta
       (<code>ponte_escada.ESCADA</code>): a DualSense primeiro porque <b>dez</b> linhas do
-      <code>mapa-controles.csv</code> só chegam ao jogo por ela, e o Steam Input por último
+      <code>mapa-controles.csv</code> só chegam ao jogo pela DualSense, e o Steam Input por último
       porque é o único que exige <b>fechar a Steam, reabrir a Steam e reabrir o jogo</b>. Sem os
       algarismos, <b>a ordem da fileira é a única coisa que ainda diz o que o produto tenta
       primeiro</b> — trocá-la para a sua ordem passaria a afirmar que o Hefesto começa pelo Steam
@@ -786,7 +786,7 @@ LEGENDA = f'''<div class="nota">
       adaptativo nem gatilho analógico (ZL/ZR são digitais) — 99 linhas do
       <code>mapa-controles.csv</code>. Nada disso é aviso para esta tela: máscara não é
       adoção. A máscara Nintendo Pro faz o <b>seu DualSense</b> aparecer como um Pro para o
-      jogo; ela não faz o Hefesto adotar um Pro.</li>
+      jogo; a máscara não faz o Hefesto adotar um Pro.</li>
   </ul>
 
   <h2>Ainda é sua a palavra</h2>
@@ -799,7 +799,7 @@ LEGENDA = f'''<div class="nota">
       máscara no <code>ensaios.csv</code>, e a régua que a provaria está escrita na própria
       sprint <b>sem dono</b>. Hoje quem entrega o mic ao jogo é a prioridade do WirePlumber,
       que é cega à máscara — o que <b>estreita</b> o buraco e ninguém sabe quanto. É uma
-      sprint de bancada, e ela não está na fila.</li>
+      sprint de ensaio, e não está na fila.</li>
   </ul>
 </div>
 
@@ -892,7 +892,7 @@ def _ancestrais(html: str, classe: str) -> set[str] | None:
       SVGs dos quatro controles, e são centenas. O `HTMLParser` chama
       `handle_startendtag`, cujo padrão dispara `handle_starttag` **e**
       `handle_endtag`: com a `<path/>` fora da lista de vazias, isso EMPILHA uma
-      vez e DESEMPILHA uma vez — mas com ela dentro, só desempilha, e a pilha
+      vez e DESEMPILHA uma vez — mas com a `<path/>` dentro, só desempilha, e a pilha
       desce abaixo do zero. Por isso ele é sobrescrito: uma tag que abre e fecha
       no mesmo ponto não é ancestral de ninguém.
     """
@@ -1002,20 +1002,20 @@ def _conferir(doc):
 
     tira = doc.split('<div class="tira">', 1)[-1].split("</div>", 1)[0]
     exigir('href="02-controles.html"' not in tira and ">Controles<" not in tira,
-           "a Controles voltou à fita das abas: ela mora na Jogar")
+           "a Controles voltou à fita das abas: a escolha mora na Jogar")
     exigir(len(re.findall(r'class="aba[ "]', tira)) == len(monta.ABAS) == 9,
            "a fita das abas não tem as nove")
     exigir('class="conectado"' not in doc and 'data-campo="conta-b"' not in doc,
            "o contador «● N USB · N BT» voltou ao cabeçalho")
     exigir(f"{len(monta.CONECTADOS)} controles:" not in doc,
-           "o «N controles:» voltou ao cabeçalho — ela o tirou em 22/09")
+           "o «N controles:» voltou ao cabeçalho — saiu em 22/09")
 
     for frase in FRASES_BANIDAS:
         exigir(frase not in corpo, f"um texto voltou a alarmar sem medição: {frase!r}")
 
     _por_campo = collections.Counter(_campo_do_chip(m) for m in MODOS + DO_DESLIGADO)
     exigir("steam" not in {m["chave"] for m in MODOS},
-           "o Steam Input voltou a ser modo do Ligado — ela o tirou de lá em "
+           "o Steam Input voltou a ser modo do Ligado — saiu de lá em "
            "08/10/2026 («Steam Input sai de Ligado»)")
     exigir(_por_campo[CAMPO_DO_STEAM_INPUT] == 1,
            f"o chip do Steam Input não tem campo próprio: esperava 1 chip em "
@@ -1085,7 +1085,7 @@ def _conferir(doc):
            "voltou regra de pintura que decide por `[title]` (ou a `.degradou`)")
 
     if falhas:
-        raise SystemExit("ERRO em 01-jogar — decisão dela desfeita:\n  "
+        raise SystemExit("ERRO em 01-jogar — decisão desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
     aba02._conferir(doc, "01-jogar")
 

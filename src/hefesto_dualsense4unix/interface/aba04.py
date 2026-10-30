@@ -238,7 +238,7 @@ CSS = """  .luz-grade{
   .tira-luz.dir{box-shadow:3px 0 12px 1px currentColor}
   .tira-luz.incerta{border:1px dashed var(--comment)}
 
-     O QUE SOBRA É A MOLDURA DE LEITURA, e ela é a de antes da LUZES-01, com as
+     O QUE SOBRA É A MOLDURA DE LEITURA, a de antes da LUZES-01, com as
      medidas de então: 56x20, que é o que as cinco lâmpadas de `monta.luzinhas`
      pedem — 5 de 6px, dois vãos de 4 e o `padding-bottom:3px` que centra o
      desenho na moldura do touchpad. As cinco lâmpadas em si são pintadas por
@@ -310,12 +310,12 @@ def coluna(c):
     dizendo "P3 · Desconectado" com travessão em tudo.
 
     O ENDEREÇO DO BLOCO JÁ TINHA SIDO CURADO EM 03/09 — o `data-controle` no
-    lugar vazio, decisão de produto: *"tem que aparecer desligado enquanto não tem
-    nenhum controle. A partir do momento que tiver, ele aparece o controle
-    devidamente conectado. Se isso não ocorre com os 4 controles em cada aba,
-    então temos que construir isso e garantir isso."* Faltava a outra metade:
+    lugar vazio, decisão do produto: o lugar aparece desligado enquanto não tem
+    nenhum controle e, a partir do momento em que tiver, mostra o controle
+    devidamente conectado; isso vale para os 4 controles em cada aba, e o
+    que faltar se constrói e se garante. Faltava a outra metade:
     o endereço do bloco diz ONDE, e o `data-campo` diz O QUÊ. Sem os dois o
-    piloto acha a coluna e não acha um só campo dentro dela.
+    piloto acha a coluna e não acha um só campo dentro da coluna.
 
     POR QUE UMA FUNÇÃO SÓ, e não duas curadas em paralelo: **duas funções que
     duplicam estrutura foi exatamente o que produziu este defeito.** Os campos
@@ -330,7 +330,7 @@ def coluna(c):
     1. **a classe e o atributo** — `ctrl` / `ctrl vazia`, `data-conectado`
        `sim` / `nao`. Quem os tira quando o controle chega é o piloto, no passo  (noqa-acento: `nao` é o VALOR do atributo, não a palavra)
        `1c`; o `data-conectado` é a marca que ele vira nos DOIS sentidos, e é
-       por ela que a folha das dez (`topo.html`) acende o desenho de novo.
+       por essa marca que a folha das dez (`topo.html`) acende o desenho de novo.
     2. **o TEXTO inicial de cada campo** — o valor do desenho, ou o travessão.
        Nenhum valor cravado sobra num lugar sem dono: nem `data-colorway`, nem
        a cor do plástico no `style`, nem a largura da barra de brilho. Valor
@@ -338,7 +338,7 @@ def coluna(c):
     3. **os widgets que carregam GESTO** — a guia de tons, o puxador do brilho
        e os dois botões de Opções (eram quatro até 11/09/2026: o campo de cor
        do fim da fileira saiu com a poda de `FORA_DA_GUIA`). Estes são a
-       exceção, e ela é decisão de produto: *um lugar sem aparelho não oferece gesto
+       exceção, e são decisão do produto: *um lugar sem aparelho não oferece gesto
        nenhum* (a régua §4 abaixo, e a razão medida está no bloco `.ctrl[data-conectado="nao"]`
        do CSS — os dez endereços dessa coluna levantam `o clique não disse em
        qual controle`, e a tela só recebe `RuntimeError`).
@@ -349,7 +349,7 @@ def coluna(c):
     coluna passa a mostrar identidade, cor, brilho, a fileira de jogador e a
     tira de luz (as duas últimas voltam inteiras, porque são blocos de alvo
     `html` que o pacote reescreve), mas a guia de cores, o trilho e os dois
-    botões só aparecem no recarregar. Fechar isso é decisão de tela — dela — e
+    botões só aparecem no recarregar. Fechar isso é decisão de tela, de quem aprova o desenho, e
     pede ou o piloto sabendo materializar widget, ou o lugar vazio nascendo com
     eles escondidos por CSS, que é o que o bloco `.ctrl[data-conectado="nao"]` já faz para a
     coluna que ESVAZIA.
@@ -586,7 +586,7 @@ def _conferir(doc):
 
     for coluna_html in _cada_coluna(grade)[0]:
         exigir("cel-brilho" in coluna_html,
-               "a régua do lugar vazio não alcança as células da coluna — ela "
+               "a régua do lugar vazio não alcança as células da coluna — a régua "
                "voltou a dar verde sobre o desenho, que é onde nunca houve "
                "ajuste nenhum")
         for tag in re.findall(r"<[a-z]+[^>]*data-gesto=[^>]*>", coluna_html):
@@ -611,7 +611,7 @@ def _conferir(doc):
                "escolhido")
         exigir('class="puxador"' in coluna_html and 'value="0"' in coluna_html,
                "o puxador do lugar vazio não nasce em zero — brilho cravado "
-               "num lugar sem dono é o brilho do MOCKUP na tela dela")
+               "num lugar sem dono é o brilho do MOCKUP na tela de quem usa")
         exigir("style=\"width:" not in coluna_html,
                "a barra de brilho do lugar vazio nasceu com largura")
     for curto, longo in ((">LEDs</div>", "Disposição de LEDs"),
@@ -619,7 +619,7 @@ def _conferir(doc):
         exigir(curto in corpo, f"o rótulo curto sumiu: {curto!r}")
         exigir(longo not in corpo, f"o rótulo longo voltou: {longo!r}")
     exigir("Voltar ao automático" not in corpo,
-           "o rótulo longo que ela mandou encurtar em 31/08 voltou à tela")
+           "o rótulo longo que se mandou encurtar em 31/08 voltou à tela")
 
     exigir(len(re.findall(r'class="tom on com-dono"', corpo))
            == len(monta_.CONECTADOS),
@@ -639,7 +639,7 @@ def _conferir(doc):
     do_mapa = len(set(re.findall(r'svg\[data-colorway="([a-z0-9-]+)"\]',
                                  monta_.DS)))
     exigir(modelos == do_mapa,
-           f"a página conhece {modelos} modelos e o mapa dela tem {do_mapa}")
+           f"a página conhece {modelos} modelos e o mapa tem {do_mapa}")
     for alvo in sorted(set(re.findall(r"url\(#([a-zA-Z0-9_-]+)\)", doc))):
         exigir(f'id="{alvo}"' in doc,
                f"a folha aponta para `url(#{alvo})` e a página não tem esse id "
@@ -660,13 +660,13 @@ def _conferir(doc):
            "com `data-governa` na grade (base comum das abas, 13/10/2026)")
     exigir('class="luz-do-jogo"' not in corpo,
            "a frase da luz do jogo voltou embaixo das colunas — o botão do modo a "
-           "substituiu (pedido dela de 06/10/2026)")
+           "substituiu (pedido de 06/10/2026)")
     exigir('class="' + "ajuda" not in corpo and ">?<" not in corpo,
-           "o «?» voltou à tela — as frases moram no `data-dica` (ordem dela de 14/10/2026)")
+           "o «?» voltou à tela — as frases moram no `data-dica` (ordem de 14/10/2026)")
 
     exigir('data-campo="luz-ressalva"' not in colunas,
-           "a linha de ressalva voltou à célula dos LEDs — ela saiu por ordem "
-           "dela em 07/09/2026 (*'o que eu não quero é frase da steam ou "
+           "a linha de ressalva voltou à célula dos LEDs — saiu por ordem "
+           "de 07/09/2026 (nenhuma frase da Steam nem de "
            "outras'*), e a razão da barra apagada continua no `title` das duas "
            "tiras, escrita pela `dica_da_luz` a cada tique")
     from hefesto_dualsense4unix.core.led_control import (
@@ -683,31 +683,31 @@ def _conferir(doc):
     for coluna_html in _cada_coluna(grade)[1]:
         pilulas = re.search(r'<div class="brilhos"[^>]*>(.*?)</div>', coluna_html, re.S)
         exigir(bool(pilulas), "uma coluna conectada perdeu as pílulas do brilho "
-               "das luzes — a decisão dela de 24/09/2026 as põe na linha LEDs")
+               "das luzes — a decisão de 24/09/2026 as põe na linha LEDs")
         if not pilulas:
             continue
         gestos = re.findall(r'data-gesto="([^"]+)"', pilulas.group(1))
         exigir(set(gestos) == {_pacote04.GESTO_DO_BRILHO_DAS_LUZES},
                f"as pílulas do brilho oferecem {sorted(set(gestos))} — o único "
-               f"gesto delas é {_pacote04.GESTO_DO_BRILHO_DAS_LUZES!r}")
+               f"gesto das pílulas é {_pacote04.GESTO_DO_BRILHO_DAS_LUZES!r}")
         palavras = re.findall(r'data-luzes="([^"]+)"', pilulas.group(1))
         exigir(palavras == list(BRILHOS_DAS_LUZES),
                f"as pílulas do brilho dizem {palavras} — são as três da decisão "
-               f"dela, na ordem da tela: {list(BRILHOS_DAS_LUZES)}")
+               f"de 24/09, na ordem da tela: {list(BRILHOS_DAS_LUZES)}")
         acesa = re.findall(r'<button class="on"[^>]*data-luzes="([^"]+)"',
                            pilulas.group(1))
         exigir(acesa == [BRILHO_DAS_LUZES_PADRAO],
                f"a pílula acesa do desenho é {acesa} — todo controle nasce no "
-               f"{BRILHO_DAS_LUZES_PADRAO!r}, e é isso que a bancada mostra")
+               f"{BRILHO_DAS_LUZES_PADRAO!r}, e é isso que o mockup mostra")
     for bloco in re.findall(
             r'<div class="cel-leds">(.*?)<div class="brilhos"',
             "\n".join(_cada_coluna(grade)[1]), re.S):
         exigir('class="luzinhas"' in bloco,
                "as cinco lâmpadas do indicador sumiram da célula dos LEDs — "
-               "sem elas a coluna deixa de replicar a linha `Jogador`")
+               "sem as lâmpadas a coluna deixa de replicar a linha `Jogador`")
         exigir(bloco.count('class="tira-luz') == 2,
-               "a barra de luz deixou de ter as DUAS tiras — elas são o "
-               "desenho original, e ela mandou que ficassem")
+               "a barra de luz deixou de ter as DUAS tiras — as duas são o "
+               "desenho original, e a ordem foi que ficassem")
 
     exigir('class="hex' not in colunas and 'data-gesto="reenviar"' not in colunas,
            "o hexadecimal voltou à tela: ele é a dica da célula Cor (16/10)")
@@ -730,15 +730,15 @@ def _conferir(doc):
         exigir(esperado in leds.group(1),
                f"as cinco lâmpadas do P{n} não desenham o padrão do número {n} "
                f"— a célula LEDs deixou de replicar a linha `Jogador`, que é o "
-               f"que ela mandou em 07/09/2026")
+               f"que se mandou em 07/09/2026")
 
     exigir("Todos no automático" not in topo,
-           "o botão de escopo global voltou à faixa do título — ela mandou "
+           "o botão de escopo global voltou à faixa do título — a ordem foi "
            "tirar os três cantos que falavam de automático em 07/09/2026, e "
            "deixar só o interruptor")
     exigir(">Automático</button>" not in corpo,
            "o botão `Automático` voltou à célula Opções — ele saiu com a "
-           "ordem dela de 07/09/2026, e o gesto saiu no mesmo commit")
+           "ordem de 07/09/2026, e o gesto saiu no mesmo commit")
     exigir(">Desligar</button>" not in corpo,
            "o botão «Desligar» voltou — a lista Efeito tem «Sem efeito» no lugar (14/10/2026)")
     exigir(corpo.count('class="g4-efeito"') == len(MESA)
@@ -755,7 +755,7 @@ def _conferir(doc):
     exigir(corpo.count(f'class="g4-efeito-dica" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
                        'data-hef-alvo="atributo" data-hef-atributo="data-dica"') == len(MESA)
            and "g4-dica-do-efeito" not in doc,
-           "a frase do efeito voltou para a tela: ela é a dica da lista (16/10), uma por lugar")
+           "a frase do efeito voltou para a tela: a frase é a dica da lista (16/10), uma por lugar")
     exigir("sem-piscar" not in doc and "Sem piscar" not in doc,
            "o «Sem piscar» voltou à aba: ele saiu em 16/10, a «Luz fixa» já é a luz parada")
     exigir('class="quadro criar"' not in corpo and "Criar efeitos novos" not in corpo
@@ -786,7 +786,7 @@ def _conferir(doc):
         faltam = sorted(referencia - campos)
         sobram = sorted(campos - referencia)
         exigir(not faltam,
-               f"o lugar {pref} não tem onde pousar {faltam} — o dado dela "
+               f"o lugar {pref} não tem onde pousar {faltam} — o dado "
                f"chega e o piloto não acha o campo dentro do bloco")
         exigir(not sobram,
                f"o lugar {pref} tem endereço que o lugar cheio não tem "
@@ -795,7 +795,7 @@ def _conferir(doc):
     fora = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#00FFFF")
     exigir((*_pacote04.FORA_DA_GUIA, "#00FFFF") == fora,
            f"a poda da guia mudou sem esta régua saber: o pacote tira "
-           f"{tuple(_pacote04.FORA_DA_GUIA)} e o desenho dela de 14/10/2026 tira {fora} — a guia "
+           f"{tuple(_pacote04.FORA_DA_GUIA)} e o desenho de 14/10/2026 tira {fora} — a guia "
            f"é UMA fileira com as oito cores de jogador")
     exigir(len(CRUS_DA_GUIA) == 8, f"a guia tem {len(CRUS_DA_GUIA)} cores, e o desenho tem oito")
     exigir(CRUS_DA_GUIA[0] == "#FFFFFF", f"a primeira casa é {CRUS_DA_GUIA[0]}, e o desenho pede o branco")
@@ -803,14 +803,14 @@ def _conferir(doc):
         exigir(f'data-hex="{h}"' not in corpo,
                f"o tom {h} voltou à fileira — a guia é só das oito cores de jogador")
     exigir('<input type="color"' not in grade,
-           "a casa hachurada do fim da fileira voltou — e o gesto dela morreu "
-           "junto em 11/09/2026, então ela seria um clique sem resposta")
+           "a casa hachurada do fim da fileira voltou — e o gesto da casa morreu "
+           "junto em 11/09/2026, então a casa seria um clique sem resposta")
     exigir(grade.count('class="tom') == len(MESA) * len(CRUS_DA_GUIA),
            f"a fileira não tem {len(CRUS_DA_GUIA)} casas em cada um dos "
            f"{len(MESA)} lugares da grade")
 
     if falhas:
-        raise SystemExit("ERRO em 04-iluminacao — decisão dela desfeita:\n  "
+        raise SystemExit("ERRO em 04-iluminacao — decisão desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
