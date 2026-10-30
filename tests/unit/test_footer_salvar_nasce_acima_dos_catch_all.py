@@ -1,4 +1,4 @@
-"""O "Salvar Perfil" do rodapé nasce ACIMA dos "vale sempre" dela.
+"""O "Salvar Perfil" do rodapé nasce ACIMA dos "vale sempre" de quem usa.
 
 PERFIL-NASCE-CERTO-01, a meia-entrega que faltava ao caminho do rodapé. Medido em
 30/07/2026: a aba Perfis já calculava a prioridade
@@ -6,9 +6,9 @@ PERFIL-NASCE-CERTO-01, a meia-entrega que faltava ao caminho do rodapé. Medido 
 chamava `draft.to_profile(nome)` sem prioridade. Quando o `to_profile` passou a
 delegar ao default do ESQUEMA para "chamador sem opinião", esse default é `0`
 (`profiles/schema.py`) — e o perfil recém-salvo passou a nascer ABAIXO dos
-catch-all que ela tem em disco.
+catch-all que o usuário tem em disco.
 
-O disco do usuário em 30/07, medido: `fallback` 0, `vitoria` 0, `meu_perfil` 1,
+O disco do usuário em 30/07, medido: `fallback` 0, `viajante` 0, `meu_perfil` 1,
 `Pragmata` 5, `Pragmata2` 5. Com prioridade 0 o perfil novo perde para três
 deles; e o desempate final é a ordem alfabética do nome do arquivo, então nem o
 empate salvava. É a queixa crônica de que a configuração do usuário nunca é
@@ -19,7 +19,7 @@ O módulo NÃO importa a GUI no topo, de propósito. `app.actions.profiles_actio
 puxa `gi` na primeira linha útil, e importar isso aqui derrubava a COLETA inteira
 no CI headless — foi exatamente o que reprovou o `ci.yml` da tag v0.4.0 e, com
 ele, o guarda que impede publicar em cima de CI vermelho. A guarda
-`exigir_gi_real()` de módulo resolveria o erro e custaria caro: ela pula o
+`exigir_gi_real()` de módulo resolveria o erro e custaria caro: pula o
 arquivo TODO, e metade destes testes (os que leem o fonte) não precisa de GTK
 nenhum e é justamente a que protege a regressão.
 
@@ -72,7 +72,7 @@ def _regra(nome: str, prioridade: int) -> Profile:
 
 DISCO_DO_USUARIO = [
     _catch_all("fallback", 0),
-    _catch_all("vitoria", 0),
+    _catch_all("viajante", 0),
     _catch_all("meu_perfil", 1),
     _catch_all("Pragmata", 5),
     _catch_all("Pragmata2", 5),
@@ -88,7 +88,7 @@ def test_prioridade_calculada_vence_todo_catch_all_do_disco_do_usuario() -> None
 
     catch_alls = [p.priority for p in DISCO_DO_USUARIO if p.e_catch_all]
     assert prioridade > max(catch_alls), (
-        f"perfil novo nasceria em {prioridade} e o maior catch-all dela é "
+        f"perfil novo nasceria em {prioridade} e o maior catch-all de quem usa é "
         f"{max(catch_alls)} — ele perderia a disputa que deveria ganhar"
     )
     _, folga = _mixin_e_folga()
@@ -102,12 +102,12 @@ def test_o_default_do_esquema_seria_pior_que_o_calculo() -> None:
 
     assert default_do_esquema <= max(catch_alls), (
         "este teste pressupõe que o default do esquema NÃO vence os catch-all "
-        "dela; se o esquema mudou, o cálculo do rodapé precisa ser revisto"
+        "de quem usa; se o esquema mudou, o cálculo do rodapé precisa ser revisto"
     )
     perdedores = [
         p.name for p in DISCO_DO_USUARIO if p.e_catch_all and p.priority > default_do_esquema
     ]
-    assert perdedores, "o default do esquema deveria perder para algum catch-all dela"
+    assert perdedores, "o default do esquema deveria perder para algum catch-all de quem usa"
 
 
 def test_sem_cache_o_calculo_nao_explode_e_da_a_folga() -> None:

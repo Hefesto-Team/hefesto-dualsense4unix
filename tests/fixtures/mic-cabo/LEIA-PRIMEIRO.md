@@ -10,7 +10,7 @@ prova viva nesta casa: `tests/unit/test_o_microfone_padrao_no_cabo.py` digitava
 iec958-stereo-input: Digital Input (S/PDIF) (type: SPDIF, priority: 0, availability unknown)
 ```
 
-e ela já divergia do vivo — e, em 20/09, divergia duas vezes: com o UCM desta
+e a gravação já divergia do vivo — e, em 20/09, divergia duas vezes: com o UCM desta
 casa instalado (`HAPTICA-NATIVA-01`), a porta de captura do DualSense no cabo
 **nem se chama mais assim**. Ninguém viu, porque uma fixture digitada não
 reclama.
@@ -29,7 +29,7 @@ reclama.
 derivado do endereço do controle, e endereço não entra em arquivo versionado.
 
 **O QUE NÃO ESTÁ AQUI, e por quê.** Quatro casos que as réguas precisam medir
-não existem nesta bancada, e por isso **nascem no `tmp_path` do pytest, de uma
+não existem na máquina de teste, e por isso **nascem no `tmp_path` do pytest, de uma
 subtração ou de um acréscimo DECLARADO sobre uma gravação desta pasta** — nunca
 de um arquivo digitado à mão e guardado aqui, que é o defeito que esta pasta
 existe para matar:
@@ -55,5 +55,5 @@ esta pasta existe para matar.**
 **E UMA DIFERENÇA QUE NÃO É SUA, para você não a caçar:** o `pre-commit` desta
 casa tira o espaço no fim da linha. O `pactl` emite exatamente uma linha assim
 por bloco de source (`Flags: … LATENCY `), então um `diff` entre a gravação
-crua e o que está aqui acusa **essa** linha, e só ela. Não é o mundo que mudou;
+crua e o que está aqui acusa **essa** linha, e só essa. Não é o mundo que mudou;
 é o gancho. Nenhum parser desta pasta lê esse espaço.

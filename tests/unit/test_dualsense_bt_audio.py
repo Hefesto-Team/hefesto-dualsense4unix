@@ -691,13 +691,13 @@ def test_o_microfone_do_controle_nasce_no_ar_e_a_recusa_o_cala() -> None:
 
     A ordem de produto o derrubou: *"todos os controles tem que nascer com tudo mic,
     giroscopio e afins"*. O preço do desenho antigo tinha sido medido na mesma
-    manhã — dos quatro DualSense da bancada, DOIS não tinham microfone,
+    manhã — dos quatro DualSense da máquina de teste, DOIS não tinham microfone,
     porque ninguém sabia que era preciso declarar, e a aba respondia *"o
     sistema não vê um microfone neste controle"*.
 
     **O que a linha antiga protegia não sumiu: mudou de dono.** Era a ausência
     que calava, e ausência não é escolha de ninguém — agora é a RECUSA, que é
-    um `false` no disco, sobrevive ao boot e é a primeira forma que ela tem de
+    um `false` no disco, sobrevive ao boot e é a primeira forma que quem usa tem de
     dizer "não quero" em vez de só "não pedi".
     """
     from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (

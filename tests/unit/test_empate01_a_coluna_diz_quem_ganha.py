@@ -39,13 +39,13 @@ def _mesa_do_usuario() -> list[Profile]:
         _perfil(
             "Pragmata2", 85, MatchCriteria(window_class=["steam_app_3357650"])
         ),
-        _catch_all("vitoria", 0),
+        _catch_all("viajante", 0),
     ]
 
 
 class TestOTextoDaColuna:
     def test_nenhum_sempre_anuncia_disputa(self) -> None:
-        """Os quatro `any` da bancada dizem «Só quando eu escolher»: nenhum entra sozinho."""
+        """Os quatro `any` do ensaio dizem «Só quando eu escolher»: nenhum entra sozinho."""
         perfis = _mesa_do_usuario()
         for perfil in perfis:
             if perfil.match.type == "any":
@@ -94,7 +94,7 @@ class TestAColunaEspelhaOManager:
         )
         return None if escolhido is None else escolhido.name
 
-    @pytest.mark.parametrize("incumbente", ["Pragmata2", "vitoria", None])
+    @pytest.mark.parametrize("incumbente", ["Pragmata2", "viajante", None])
     def test_o_manager_nao_elege_sempre_e_a_coluna_nao_anuncia(
         self, monkeypatch: pytest.MonkeyPatch, incumbente: str | None
     ) -> None:
@@ -127,7 +127,7 @@ class TestOTooltip:
         )
 
         class _Store:
-            active_profile = "vitoria"
+            active_profile = "viajante"
 
         gerente = ProfileManager(controller=None, store=_Store())
         escolhido, motivo = gerente.select_for_window_ex(

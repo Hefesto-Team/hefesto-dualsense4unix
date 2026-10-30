@@ -107,7 +107,7 @@ def test_disco_saudavel_fica_calado() -> None:
 
 
 def test_catch_all_acima_de_especifico_e_erro() -> None:
-    """`vitoria` (any/100) vencendo o perfil do jogo é a armadilha original."""
+    """`viajante` (any/100) vencendo o perfil do jogo é a armadilha original."""
     achados = _de(
         verificar_perfis(
             [

@@ -1,4 +1,4 @@
-"""mesa_do_mockup.py — a bancada, do jeito que o mockup a declara.
+"""mesa_do_mockup.py — a máquina de teste, do jeito que o mockup a declara.
 
 Transcrição das constantes de
 ``mockup/mapa-das-portas.html`` (a página viva que o gerador escreve):

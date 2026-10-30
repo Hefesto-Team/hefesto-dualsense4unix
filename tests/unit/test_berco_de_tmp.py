@@ -113,7 +113,7 @@ def test_arquivo_real_do_usuario_ao_lado_do_berco_nao_e_tocado(
     do_usuario.write_bytes(b"PNG-de-mentira-mas-do-usuario")
     outra = tmp_falso / "tmpzzzzzzzz"
     outra.mkdir()
-    (outra / "perfil-do-usuario.json").write_text('{"name": "vitoria"}', encoding="utf-8")
+    (outra / "perfil-do-usuario.json").write_text('{"name": "viajante"}', encoding="utf-8")
     parecido = tmp_falso / "hefesto-berco-de-outra-coisa"
     parecido.mkdir()
     (parecido / "importante.txt").write_text("não apague", encoding="utf-8")
@@ -124,7 +124,7 @@ def test_arquivo_real_do_usuario_ao_lado_do_berco_nao_e_tocado(
     assert not nosso.exists()
     assert do_usuario.read_bytes() == b"PNG-de-mentira-mas-do-usuario"
     assert (outra / "perfil-do-usuario.json").read_text(encoding="utf-8") == (
-        '{"name": "vitoria"}'
+        '{"name": "viajante"}'
     )
     assert (parecido / "importante.txt").read_text(encoding="utf-8") == "não apague"
 
@@ -144,7 +144,7 @@ def test_sessao_verde_e_sem_resto_nao_imprime_nada(
 def test_sessao_vermelha_preserva_o_berco(
     tmp_falso: Path, sessao: _SessaoFalsa, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Quando a suíte cai, o que ela deixou pode ser prova. Guardar é barato:"""
+    """Quando a suíte cai, o que deixou pode ser prova. Guardar é barato:"""
     berco_mod._armar_berco(sessao)
     nosso = berco_mod.berco()
     assert nosso is not None
@@ -227,7 +227,7 @@ def test_nome_que_nao_e_berco_nunca_e_alvo(tmp_falso: Path, nome: str) -> None:
 
 
 def test_link_simbolico_nunca_e_seguido(tmp_falso: Path, tmp_path: Path) -> None:
-    """Um link chamado `hefesto-berco-<pid morto>` apontando para a config dela"""
+    """Um link chamado `hefesto-berco-<pid morto>` apontando para a config de quem usa"""
     de_verdade = tmp_path / "config-do-usuario"
     de_verdade.mkdir()
     (de_verdade / "perfil.json").write_text("{}", encoding="utf-8")
@@ -285,7 +285,7 @@ def test_o_basetemp_do_pytest_fica_fora_do_berco(tmp_path: Path) -> None:
 
 
 def test_a_arvore_congelada_nasce_dentro_do_berco() -> None:
-    """Os 3 `hefesto-arvore-congelada-*` achados no `/tmp` dela em 07/08 são"""
+    """Os 3 `hefesto-arvore-congelada-*` achados no `/tmp` da máquina de teste em 07/08 são"""
     nosso = _berco_vivo()
     congelada = berco_mod.arvore_congelada()
     assert nosso in congelada.parents

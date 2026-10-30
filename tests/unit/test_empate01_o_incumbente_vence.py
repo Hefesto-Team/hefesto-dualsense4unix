@@ -58,7 +58,7 @@ class TestOCasoRealDosDoisPragmata:
 
         assert escolhido is not None
         assert escolhido.name == "Pragmata2", (
-            "o perfil que ela deixou ativo foi derrubado por um empate que "
+            "o perfil que quem usa deixou ativo foi derrubado por um empate que "
             "ninguém escolheu: pragmata.json vem antes de pragmata2.json no "
             "glob, e era só isso que decidia"
         )
@@ -199,7 +199,7 @@ class TestOEmpateDeixaDeSerMudo:
 
         empates = [kw for evento, kw in registros if evento == "profile_select_empate_resolvido"]
         assert len(empates) == 1, (
-            "a seleção roda a 2 Hz e o empate dela é permanente — sem dedup "
+            "a seleção roda a 2 Hz e o empate é permanente — sem dedup "
             "isto viraria milhares de linhas por hora no journal"
         )
         assert empates[0]["vencedor"] == "Pragmata2"

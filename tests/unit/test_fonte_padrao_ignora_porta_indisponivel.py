@@ -88,7 +88,7 @@ class TestPortaIndisponivel:
         r = _fonte("_source_porta_ativa_indisponivel", ONBOARD, entrada=LISTA_EM_JSON)
         assert r.returncode == 0, (
             "as três portas da onboard estão `not available` e a ativa é uma "
-            f"delas — tinha de reprovar. stderr={r.stderr!r}"
+            f"das duas — tinha de reprovar. stderr={r.stderr!r}"
         )
 
     def test_dualsense_com_availability_unknown_e_usavel(self) -> None:

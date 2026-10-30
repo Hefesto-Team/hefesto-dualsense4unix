@@ -7,11 +7,11 @@ quatro DualSense de pé. Por isso `scripts/bt_ponte_privilegiada.sh` ganhou o
 quarto gancho de teste, `HEFESTO_BT_BIN`: uma pasta posta NA FRENTE do `PATH`,
 de onde saem o `busctl` e o `bluetoothctl` que ele chama.
 
-Com ela, o barramento que responde é o desta pasta — respostas lidas de
+Com a pasta, o barramento que responde é o desta pasta — respostas lidas de
 arquivo, nenhuma chamada de D-Bus, nenhum adaptador tocado. O gancho é inerte
 sob sudo, como os outros três (contenção 3 do cabeçalho do script).
 
-**Este módulo não é um arquivo de teste** — é a bancada que dois arquivos de
+**Este módulo não é um arquivo de teste** — é o dublê que dois arquivos de
 teste usam: o da ponte (`test_a_ponte_devolve_os_candidatos.py`) e o do módulo
 Python que a chama (`test_o_gesto_de_pareamento.py`). Escrevê-la duas vezes
 deixaria duas verdades sobre o mesmo barramento, e o segundo arquivo passaria a
@@ -85,7 +85,7 @@ sleep "${seg}"
 
 
 def ainda_varrendo(raiz: Path) -> bool:
-    """A janela de mentira ainda está de pé AGORA? Pergunta ao processo dela."""
+    """A janela de mentira ainda está de pé AGORA? Pergunta ao seu processo."""
     marcador = raiz / "varrendo"
     try:
         texto = marcador.read_text(encoding="utf-8").strip()

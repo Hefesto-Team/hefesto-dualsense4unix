@@ -13,8 +13,8 @@ Ou seja: a cura existia e o portão que reprova não a usava. É a família
 *"a casa sabe e o produto não faz"* dentro da própria régua.
 
 O QUE ESTÁ EM JOGO. Foi a faixa ``aabbcc`` vazando para o ``controllers.json``
-vivo dela que empurrou os quatro DualSense REAIS para os slots 1, 6, 7 e 8
-(T-06, medido na bancada em 23/08/2026). E a poluição foi encontrada, em
+vivo da máquina de teste que empurrou os quatro DualSense REAIS para os slots 1, 6, 7 e 8
+(T-06, medido em 23/08/2026). E a poluição foi encontrada, em
 25/08, num arquivo de **backup** — exatamente a classe que este varredor não
 enxergava.
 """
@@ -80,7 +80,7 @@ def test_arvore_limpa_continua_verde(tmp_path: Path) -> None:
 
 
 def test_pasta_ignorada_continua_ignorada(tmp_path: Path) -> None:
-    """`tests/` é onde a faixa sintética É legítima — e o backup dela também."""
+    """`tests/` é onde a faixa sintética É legítima — e o seu backup também."""
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "controllers.json.bak").write_text(
         LINHA_SUJA, encoding="utf-8"

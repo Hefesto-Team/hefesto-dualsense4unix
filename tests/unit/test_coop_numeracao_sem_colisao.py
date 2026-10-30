@@ -1,6 +1,6 @@
 """R-13 (auditoria 23/07) — a numeração de jogador para de colidir.
 
-A queixa de uso: *"dois 'player 2' e dois 'player 1' em vez de 1, 2, 3, 4"*.
+O defeito de uso: dois «player 2» e dois «player 1» em vez de 1, 2, 3, 4.
 
 Estado medido em 23/07: os EXTERNOS ocupam os slots 1 (Pro Nintendo) e 3
 (8BitDo); o DualSense branco é slot 2. O co-op numera por conta própria — 1 no
@@ -71,7 +71,7 @@ class TestPisoDosExternos:
         assert piso == 2
 
     def test_coop_com_secundarios_empurra_os_externos(self) -> None:
-        """O caso dela: co-op com 2 DualSense usa 1 e 2 — externo começa em 3."""
+        """O caso medido: co-op com 2 DualSense usa 1 e 2 — externo começa em 3."""
         piso = _piso({"branco": 2, "roxo": 1}, _CoopFalso(ativo=True, secundarios=1))
         assert piso >= 2
 
@@ -203,7 +203,7 @@ class TestOMacDoVpadSegueOAparelho:
 
 
 class TestACuraChegaAoProduto:
-    """De nada adianta a função certa se a identidade não chega até ela."""
+    """De nada adianta a função certa se a identidade não chega até a função."""
 
     def _fabrica(self, monkeypatch: Any, identity: str | None) -> Any:
         from hefesto_dualsense4unix.integrations import uhid_gamepad, virtual_pad

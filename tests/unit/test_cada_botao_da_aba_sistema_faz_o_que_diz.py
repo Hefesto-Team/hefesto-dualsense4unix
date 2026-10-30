@@ -402,9 +402,9 @@ def test_a_dica_do_interruptor_nao_promete_o_que_nao_faz():
         assert promessa not in dica, dica
 
 
-@pytest.mark.parametrize("publicado", [True, False], ids=["publicado", "bancada"])
+@pytest.mark.parametrize("publicado", [True, False], ids=["publicado", "mockup"])
 def test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma(a09, publicado):
-    """D-OS-PLUGINS-APARECEM-ONDE-AGEM, dela, em `docs/data/decisoes-de-produto.csv`.
+    """D-OS-PLUGINS-APARECEM-ONDE-AGEM, em `docs/data/decisoes-de-produto.csv`.
 
     MORDIDA: devolva o `item_cinza("Ver os plugins", …)` ao gerador e publique.
     """

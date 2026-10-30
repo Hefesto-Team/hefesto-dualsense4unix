@@ -20,7 +20,7 @@ def _pendencia(**sobrescreve: object) -> Pendencia:
     base: dict[str, object] = {
         "aberta_em": "2026-08-24",
         "prazo_dias": 30,
-        "quem_fecha": "a bancada, com o aparelho na mão",
+        "quem_fecha": "o ensaio, com o aparelho na mão",
         "o_que_falta": "o conteúdo do payload",
     }
     base.update(sobrescreve)
@@ -135,7 +135,7 @@ _COPIAS_DECLARADAS: dict[str, str] = {
     ),
     "interface/aba02.py": (
         "03/09/2026 — a conta é a mesma, o CONTRATO não. Esta devolve "
-        "`f\"{v:.1f}\".replace(\".\", \",\").removesuffix(\",0\")`: ela "
+        "`f\"{v:.1f}\".replace(\".\", \",\").removesuffix(\",0\")`: "
         "APAGA a casa decimal quando é zero, porque a aba Controles põe o "
         "número dentro de uma frase (\"2 controles\", e não \"2,0\"). "
         "`formata_pt_br` promete SEMPRE uma casa, e é essa promessa que o "

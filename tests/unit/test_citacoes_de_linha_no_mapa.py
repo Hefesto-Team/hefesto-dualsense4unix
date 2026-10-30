@@ -149,7 +149,7 @@ def test_extensao_que_ninguem_listou_nasce_coberta(arvore: Path, relativo: str) 
 
     A conferência da O-MAPA-OUVE-AS-RESPOSTAS-DE-24-09-01 achou as 35 citações
     de `assets/modprobe.d/*.conf` do mapa FORA do portão — `conf` não estava na
-    lista de extensões — e uma delas além do fim do arquivo. A cura não
+    lista de extensões — e uma além do fim do arquivo. A cura não
     acrescentou `conf` à lista: a lista saiu, e quem decide o que se cobra é a
     RESOLUÇÃO, como já decidia para o caminho. MORDA ASSIM: devolva a lista
     digitada a `EXTENSOES` e os quatro casos passam calados.
@@ -209,7 +209,7 @@ def test_a_forma_curta_no_csv_fica_calada(arvore: Path) -> None:
                      "a das 01:51:25 passou 27 s depois da recusa às 01:50:58")
     saida = rodar(arvore, "--all")
     assert saida.returncode == 0, (
-        "o portão resolveu uma forma curta dentro da célula e acusou por ela — "
+        "o portão resolveu uma forma curta dentro da célula e acusou pela forma curta — "
         f"hora de relógio viraria endereço podre. Disse: {saida.stdout!r}")
 
 

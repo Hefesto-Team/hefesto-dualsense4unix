@@ -84,7 +84,7 @@ def test_arquivo_de_subpasta_passado_a_mao_nao_e_descartado(tmp_path: Path) -> N
 
 
 def test_md_de_fora_da_canonica_continua_recusado(tmp_path: Path) -> None:
-    """O alcance cresce para BAIXO da pasta vigiada, e não para fora dela."""
+    """O alcance cresce para BAIXO da pasta vigiada, e não para fora."""
     raiz = monta_arvore(tmp_path)
     (raiz / "docs" / "process").mkdir(parents=True, exist_ok=True)
     fora = raiz / "docs" / "process" / "sprint-velha.md"

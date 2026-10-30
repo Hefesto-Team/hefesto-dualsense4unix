@@ -1,6 +1,6 @@
 """Cada faixa tem dono — CADA-FAIXA-TEM-DONO-01, na régua por aparelho do desenho 1.
 
-Nenhuma régua confere a saída contra ela mesma: a entrada é uma cena de mentira, e o
+Nenhuma régua confere a saída contra si mesma: a entrada é uma cena de mentira, e o
 esperado sai da entrada (dos evitados de cada adaptador, do padrão de frequências, das
 classes do `:root` da página gerada).
 """
@@ -174,7 +174,7 @@ def test_uma_linha_por_aparelho_com_os_canais_dele() -> None:
 
 
 def _fala(no: No) -> str:
-    """O que a linha diz a quem não vê a cor: o texto, os `aria-label` e os `title` dela."""
+    """O que a linha diz a quem não vê a cor: o texto, os `aria-label` e os `title` da linha."""
     partes = [no.dito()]
 
     def andar(n: No) -> None:

@@ -27,7 +27,7 @@ Bluetooth não muda o report do Pro, ao contrário do DualSense.
 
 Este arquivo NÃO mede o fio: ele não sabe se o report chega por rádio. Ele
 guarda a metade que é NOSSA — se o report chega e a tradução some, o dedo do usuário
-não vira nada no jogo, e a suíte inteira continua verde. Medir o fio é bancada.
+não vira nada no jogo, e a suíte inteira continua verde. Medir o fio é ensaio no aparelho.
 
 MORDE? Apague uma linha do `BUTTON_MAP` (ou o corpo do `_refresh_dpad_buttons`)
 e estes testes reprovam nomeando o botão que sumiu.

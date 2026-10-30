@@ -491,7 +491,7 @@ def test_esquecer_duas_vezes_desfaz_na_ordem_certa(raizes: m.Raizes, tmp_path: P
 
 
 def test_o_devolver_a_seco_nao_toca_em_nada(raizes: m.Raizes, tmp_path: Path) -> None:
-    """O passo em que ela LÊ o que vai ser sobrescrito não pode sobrescrever."""
+    """O passo que LÊ o que vai ser sobrescrito não pode sobrescrever."""
     plantar_a_mesa(raizes, 3, "misto", True)
     sistema = SistemaDeMentira()
     m.guardar(raizes, m.CONTROLES, sistema)

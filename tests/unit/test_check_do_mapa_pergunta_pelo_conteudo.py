@@ -22,7 +22,7 @@ LINHAS_DO_BRINQUEDO = 3
 
 @pytest.fixture
 def arvore(tmp_path: Path) -> Path:
-    """Uma árvore de brinquedo, já com o `specs.html` recém-gerado nela."""
+    """Uma árvore de brinquedo, já com o `specs.html` recém-gerado."""
     (tmp_path / "scripts").mkdir()
     (tmp_path / "docs" / "data").mkdir(parents=True)
     (tmp_path / "assets" / "control-svg").mkdir(parents=True)
@@ -131,7 +131,7 @@ def test_mexer_no_csv_do_mapa_faz_o_check_reprovar(arvore: Path) -> None:
 
 
 def test_pagina_divergente_com_mtime_mais_novo_e_acusada(arvore: Path) -> None:
-    """O CORAÇÃO: é o defeito que aconteceu de verdade, na árvore dela."""
+    """O CORAÇÃO: é o defeito que aconteceu de verdade, na árvore de quem usava."""
     alvo = pagina(arvore)
     texto = alvo.read_text(encoding="utf-8")
     assert "rede contra regressão" in texto
@@ -142,7 +142,7 @@ def test_pagina_divergente_com_mtime_mais_novo_e_acusada(arvore: Path) -> None:
     saida = confere(arvore)
     assert saida.returncode == 1, (
         "a página publicada divergia das fontes e o portão passou porque o "
-        f"mtime dela era o mais novo. Disse: {saida.stdout!r}")
+        f"mtime do arquivo era o mais novo. Disse: {saida.stdout!r}")
     assert "outra coisa qualquer" in saida.stderr, (
         "o erro não mostra QUAL linha divergiu")
 

@@ -24,7 +24,7 @@ MAC_DE_MENTIRA = "AA:BB:CC:00:00:FF"
 
 
 def _ensaio_do_radio(tmp_path: Path, valor: str | None, *, com_conf: bool) -> dict:
-    """Monta a bancada da checagem de energia do rádio em `tmp_path`."""
+    """Monta o ensaio da checagem de energia do rádio em `tmp_path`."""
     parametro = tmp_path / "enable_autosuspend"
     if valor is not None:
         parametro.write_text(valor + "\n", encoding="utf-8")
@@ -89,7 +89,7 @@ def test_energia_das_portas_fica_certa_com_todas_em_on(tmp_path: Path) -> None:
 
 
 def test_energia_das_portas_pede_atencao_com_uma_em_auto(tmp_path: Path) -> None:
-    """Uma porta em `auto` é queda na certa para o que estiver nela."""
+    """Uma porta em `auto` é queda na certa para o que estiver ali."""
     _porta(tmp_path, "1-1", "on")
     _porta(tmp_path, "1-2", "auto")
 
@@ -108,7 +108,7 @@ def test_energia_das_portas_nao_sabe_sem_porta_legivel(tmp_path: Path) -> None:
 
 
 def test_energia_das_portas_ignora_interface_usb(tmp_path: Path) -> None:
-    """`1-3:1.0` é interface, não aparelho — ela não tem `idVendor`."""
+    """`1-3:1.0` é interface, não aparelho — não tem `idVendor`."""
     _porta(tmp_path, "1-1", "on")
     interface = tmp_path / "1-1:1.0" / "power"
     interface.mkdir(parents=True)
@@ -382,7 +382,7 @@ def test_o_censo_carrega_o_veredito_e_sobrevive_ao_json(tmp_path: Path) -> None:
 
 
 def _radio_e_portas(tmp_path: Path) -> dict:
-    """Bancada mínima para `exame()` — todas as raízes dentro de `tmp_path`."""
+    """Ensaio mínimo para `exame()` — todas as raízes dentro de `tmp_path`."""
     ensaio = _ensaio_do_radio(tmp_path / "radio", None, com_conf=False)
     (tmp_path / "radio").mkdir(parents=True, exist_ok=True)
     portas = tmp_path / "usb"
@@ -400,7 +400,7 @@ def _radio_e_portas(tmp_path: Path) -> dict:
 def test_com_as_raizes_injetadas_nada_do_sistema_real_e_lido(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """A proteção da foto: com bancada falsa, `/sys`, `/etc` e `/proc` ficam intactos."""
+    """A proteção da foto: com ensaio falso, `/sys`, `/etc` e `/proc` ficam intactos."""
     abertos: list[str] = []
     original_texto = Path.read_text
     original_lista = Path.iterdir

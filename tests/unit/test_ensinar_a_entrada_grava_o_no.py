@@ -168,7 +168,7 @@ def test_as_recusas_dizem_a_frase_do_dono(
     antes = disco.read_bytes()
     with pytest.raises(ValueError, match=frase):
         ee.ensinar_a_entrada(numero, caminho, lidas=_lidas(carregar_maquina(), **plugados))
-    assert disco.read_bytes() == antes, "uma recusa escreveu no disco dela"
+    assert disco.read_bytes() == antes, "uma recusa escreveu no disco de quem usa"
 
 
 def test_ligacoes_demais_recusa(disco: Path) -> None:

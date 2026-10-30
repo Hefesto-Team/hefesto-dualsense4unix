@@ -5,8 +5,8 @@ INÍCIO NÃO MENTE-01 — **I5** e a metade de transporte da **I9**.
 **I5.** A Início não desenhava um único controle externo e não lia
 ``state["external"]`` (§2.2g). Com dois DualSense e um 8BitDo na mesa, esta aba
 dizia *"2 controles = 2 jogadores"* enquanto a aba Configurações mostrava TRÊS
-cards. Era a pergunta de produto — *"o produto funciona com 4 controles ao mesmo
-tempo?"* — respondida com **não, a primeira tela nem os enxerga**.
+cards. Era a pergunta de produto, se o produto funciona com 4 controles ao mesmo
+tempo — respondida com **não, a primeira tela nem os enxerga**.
 
 **I9 (metade de transporte).** Quatro dialetos para o mesmo fato na mesma
 janela (§2.2h): a Início dizia ``USB``/``BT``, os externos ``cabo``/``BT``, a
@@ -19,14 +19,14 @@ O QUE FICOU DE FORA, E POR QUÊ (não é esquecimento)
 
 * **as outras três superfícies** (``external_controllers.transport_label``,
   ``config/secao_mesa.py``, e a Status) são de outros donos nesta leva. A régua
-  que as cobra existe abaixo e está ``xfail(strict=True)``: no dia em que elas
-  falarem a mesma língua, ela PASSA e o strict reprova, obrigando quem integrar
+  que as cobra existe abaixo e está ``xfail(strict=True)``: no dia em que as três
+  falarem a mesma língua, a régua PASSA e o strict reprova, obrigando quem integrar
   a apagar o xfail;
 * **o texto do aviso de grab** estava bloqueado por aqui e **nasceu em
   25/08/2026**, quando a ``ESCONDE-SÓ-O-HIDRAW-01`` fechou e mediu o que o jogo
   continua vendo: o `hide` age em UMA superfície (`hidraw`) e o mesmo controle
   mora em TRÊS — `event*` e `js*` seguem alcançáveis. O `EVIOCGRAB` é o que
-  impede o físico de produzir entrada nelas, então com ele recusado a
+  impede o físico de produzir entrada por esses nós, então com ele recusado a
   duplicação não é hipótese, é o que sobra. Ver `TestOAvisoDeGrabFalaComOUsuario`
   abaixo;
 * **a palavra "primário"** no subtítulo do card continua. É o outro jargão que
@@ -188,9 +188,9 @@ class TestAContaDaMesaContaQuemEstaNaMesa:
     def test_o_state_full_de_hoje_nao_publica_external(self) -> None:
         """A hipótese 3 do §2.5, RESOLVIDA — e por isso vira teste.
 
-        Ela dizia: *"que o daemon publica `external` quando há um externo na
-        mesa. Aqui ele veio `null` com a mesa vazia, o que não distingue 'não
-        há' de 'não publica'."* Distingue agora, por leitura de código: o
+        A hipótese dizia que o daemon publica `external` quando há um externo na
+        mesa, e que aqui ele veio `null` com a mesa vazia, o que não distingue «não
+        há» de «não publica». Distingue agora, por leitura de código: o
         handler do `state_full` nunca escreve essa chave — quem a escreve é o
         `controller.list`, e só sob `{"external": true}`.
 
@@ -239,7 +239,7 @@ class TestOCardFalaALinguaDoMapa:
         assert home_actions.palavra_do_transporte("thunderbolt") == "thunderbolt"
 
     def test_ausencia_de_transporte_nao_vira_interrogacao(self) -> None:
-        """`"?"` é a tela encolhendo os ombros. Ela tem de dizer o que não sabe."""
+        """`"?"` é a tela encolhendo os ombros. A tela tem de dizer o que não sabe."""
         assert (
             home_actions.palavra_do_transporte(None)
             == home_actions.PALAVRA_DE_TRANSPORTE_DESCONHECIDO

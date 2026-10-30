@@ -81,7 +81,7 @@ def _sim(valor: str) -> bool:
 
 
 def _hospedeira_da_copia(unit: str) -> Hospedeira:
-    """O sandbox da hospedeira lido da cópia versionada da unit dela."""
+    """O sandbox da hospedeira lido da cópia versionada da sua unit."""
     diretivas = _diretivas_do_service((DE_TERCEIROS / unit).read_text(encoding="utf-8"))
     return Hospedeira(
         unit=unit,
@@ -92,7 +92,7 @@ def _hospedeira_da_copia(unit: str) -> Hospedeira:
 
 
 def _sandbox_vivo(unit: str) -> Hospedeira | None:
-    """O sandbox da unit segundo o systemd desta máquina, ou None se ela não está carregada."""
+    """O sandbox da unit segundo o systemd desta máquina, ou None se não está carregada."""
     proc = subprocess.run(
         ["systemctl", "show", unit, "-p", "LoadState", "-p", "ProtectSystem",
          "-p", "PrivateTmp", "-p", "StateDirectory"],
@@ -260,7 +260,7 @@ def _caminhos_escritos(texto: str) -> set[str]:
 
 
 def _sob(caminho: str, raiz: str) -> bool:
-    """`caminho` é a própria `raiz` ou está dentro dela."""
+    """`caminho` é a própria `raiz` ou está dentro da raiz."""
     raiz = raiz.rstrip("/")
     return caminho == raiz or caminho.startswith(raiz + "/")
 

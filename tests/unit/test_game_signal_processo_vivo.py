@@ -33,7 +33,7 @@ PROC_STEAM_SEM_JOGO = {
 
 @pytest.fixture(autouse=True)
 def _sem_foto_herdada() -> Any:
-    """A varredura tem memória de 5 s (BG-03) e ela sobrevive ao teste."""
+    """A varredura tem memória de 5 s (BG-03) e a memória sobrevive ao teste."""
     slo.invalidar_varredura_de_proc()
     yield
     slo.invalidar_varredura_de_proc()
@@ -155,7 +155,7 @@ def test_steam_viva_nao_e_jogo(
 def test_jogo_vivo_sem_marker_nenhum_e_evidencia(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """O caso dela, medido em 31/07: **o jogo não passa pelo wrapper**."""
+    """O caso medido em 31/07: **o jogo não passa pelo wrapper**."""
     _launch_env(monkeypatch, tmp_path)
     _sem_perfis(monkeypatch)
     _proc_falso(

@@ -53,7 +53,7 @@ class TestAChaveDoDisco:
 
 class TestATabelaDeCores:
     def test_o_ensaio_e_o_produto_leem_o_mesmo_mapa(self) -> None:
-        """Nenhum dos dois guarda cópia digitada — os dois leem o CSV dela."""
+        """Nenhum dos dois guarda cópia digitada — os dois leem o mesmo CSV."""
         fonte = (RAIZ / "scripts" / "ensaios" / "cor_do_plastico.py").read_text(
             encoding="utf-8"
         )
@@ -80,7 +80,7 @@ class TestATabelaDeCores:
         """Casca ``SEM-HEX`` (camuflado, iridescente, arte) não vira hexa inventado."""
         assert set(TONS) < set(NOMES_DE_FABRICA)
         assert "06" not in TONS and "ZC" not in TONS
-        assert TONS["05"] == "#7eb8d4", "o casca_esq do Starlight Blue no mapa dela"
+        assert TONS["05"] == "#7eb8d4", "o casca_esq do Starlight Blue no mapa"
 
     def test_codigo_fora_da_tabela_devolve_nada(self) -> None:
         assert cor_do_codigo("ZZ") is None
@@ -118,7 +118,7 @@ class TestOPretoNaoSome:
         assert saturacao(borda) < saturacao(TONS["01"]), (
             f"o preto do plástico virou {borda}, mais saturado que o "
             f"{TONS['01']} de origem — é a subida de luminosidade em HLS "
-            "voltando, e ela devolve azul elétrico."
+            "voltando, e devolve azul elétrico."
         )
 
     def test_toda_cor_da_tabela_se_le_sobre_o_card(self) -> None:

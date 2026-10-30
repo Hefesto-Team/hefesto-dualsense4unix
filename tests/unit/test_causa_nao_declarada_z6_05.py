@@ -118,7 +118,7 @@ def test_a_causa_nao_depende_do_de_onde_sei(tmp_path: Path) -> None:
     passou = rodar(com_causa, tmp_path / "com-causa")
     assert "causa-nao-declarada" not in passou.stdout, (
         "a causa declarada num lado inferido reprovou — a regra 16 passou a "
-        f"cobrar o `de_onde_sei`, que não é a pergunta dela:\n{passou.stdout}"
+        f"cobrar o `de_onde_sei`, que não é a sua pergunta:\n{passou.stdout}"
     )
 
     sem_causa = monta_arvore(

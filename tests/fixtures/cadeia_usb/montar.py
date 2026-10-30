@@ -82,10 +82,10 @@ class SysDeMentira:
         return self.dados["base"].get(Path(syspath).name, {}).get(propriedade)  # type: ignore[no-any-return]
 
     def montar(self) -> None:
-        """Monta a forma numa geração nova e troca o barramento para ela de uma vez.
+        """Monta a forma numa geração nova e troca o barramento para a geração de uma vez.
 
         O ouvido relê numa thread enquanto o caso muda o ``/sys``. Apagar e refazer no lugar
-        abria uma janela sem aparelho nenhum, e a releitura que caía nela registrava todos como
+        abria uma janela sem aparelho nenhum, e a releitura que caía na janela registrava todos como
         «saiu»; no ``/sys`` de verdade cada aparelho sai sozinho. A troca é o ``rename`` de um
         link, e a geração velha fica no disco para quem ainda a lê.
         """

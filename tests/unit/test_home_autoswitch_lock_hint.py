@@ -2,7 +2,7 @@
 
 `autoswitch_locked` (hoje `freestyle_ligado`) só existia na GUI como o marcador de um checkbox
 (`_render_home`, `set_active`). Na máquina do usuário a flag estava ligada desde
-24/07 20:42 e o que ela via era outra coisa: "o modo jogo não ativa", "os
+24/07 20:42 e o que o usuário via era outra coisa: "o modo jogo não ativa", "os
 perfis não mudam". Ninguém relê uma caixinha de 16 px depois de marcá-la.
 
 A frase é gerada por uma função PURA (mesmo desenho de `vpad_degradation_text`
@@ -20,8 +20,8 @@ eles proibiam RENOMEAR. Quem trocasse o nome da função pura, ou da variável
 local `lock_hint`, via quatro testes vermelhos sem ter mudado comportamento
 algum. Agora a aba é MONTADA e RENDERIZADA de verdade contra um GTK de mentira
 (`_WidgetFalso`, que obedece à regra do `show_all` do GTK3) e a fiação é
-observada: a função pura foi chamada com o estado, e o que ela devolveu chegou
-ao rótulo. O nome dela não aparece em nenhuma string.
+observada: a função pura foi chamada com o estado, e o que devolveu chegou
+ao rótulo. O nome da função não aparece em nenhuma string.
 """
 from __future__ import annotations
 
@@ -55,9 +55,9 @@ class TestDecisaoPura:
     def test_travado_nomeia_o_perfil_que_ficou(self) -> None:
         """'o perfil não troca sozinho' sem dizer QUAL perfil é meia"""
         texto = autoswitch_lock_text(
-            {"freestyle_ligado": True, "active_profile": "vitoria"}
+            {"freestyle_ligado": True, "active_profile": "viajante"}
         )
-        assert "vitoria" in texto
+        assert "viajante" in texto
 
     def test_travado_sem_perfil_ativo_nao_inventa_nome(self) -> None:
         texto = autoswitch_lock_text(
@@ -209,7 +209,7 @@ class TestEstadoDoDaemonCarregaOCampo:
 
     Medido no payload de verdade (`daemon.status` e `daemon.state_full` de um
     daemon montado com controle falso), e não no texto do handler: o que
-    interessa é o que sai na resposta, por qualquer caminho que ela seja
+    interessa é o que sai na resposta, por qualquer caminho que seja
     montada. O fecho é a própria função pura consumindo o payload — se o campo
     sumir de um dos dois, a aba fica muda e o teste diz qual dos dois.
     """
@@ -233,15 +233,15 @@ class TestEstadoDoDaemonCarregaOCampo:
     async def test_status_e_state_full_expoem_freestyle_ligado(self) -> None:
         daemon, handlers = self._handlers()
         daemon.store.set_freestyle_ligado(True)
-        daemon.store.set_active_profile("vitoria")
+        daemon.store.set_active_profile("viajante")
 
         for nome in ("_handle_daemon_status", "_handle_daemon_state_full"):
             payload = await getattr(handlers, nome)({})
             assert "freestyle_ligado" in payload, f"{nome} não expõe o cadeado"
             assert "active_profile" in payload, f"{nome} não expõe o perfil ativo"
             assert payload["freestyle_ligado"] is True, nome
-            assert payload["active_profile"] == "vitoria", nome
-            assert "vitoria" in autoswitch_lock_text(payload), nome
+            assert payload["active_profile"] == "viajante", nome
+            assert "viajante" in autoswitch_lock_text(payload), nome
 
     @pytest.mark.asyncio
     async def test_destravado_chega_como_false_nos_dois(self) -> None:

@@ -1,7 +1,6 @@
 """BERÇO-DE-TMP-01, a cauda do `$HOME` (24/08/2026).
 
-A sprint mãe (`docs/process/sprints/
-2026-08-07-BERCO-DE-TMP-01-a-suite-nao-suja-a-config-dela-suja-o-tmp.md`)
+A sprint mãe (BERCO-DE-TMP-01, de 07/08/2026)
 curou o `/tmp` e deixou aberto, em *"O que fica ABERTO"*: *"`utils/i18n.py` e
 `core/system_check.py` continuam lendo o `$HOME` real sob teste, e o `HOME`
 continua não isolado no autouse"*.
@@ -78,6 +77,6 @@ def test_i18n_fallback_de_home_fica_dentro_do_isolamento(tmp_path: Path) -> None
     assert fallback_de_home == Path.home() / ".local" / "share" / "locale"
     assert str(fallback_de_home).startswith(str(tmp_path)), (
         f"o candidato de fallback de i18n é {fallback_de_home}, fora do HOME "
-        "isolado — um source-install real do dev vazaria o catálogo dela "
+        "isolado — um source-install real do dev vazaria o catálogo de quem usa "
         "para dentro da suíte."
     )

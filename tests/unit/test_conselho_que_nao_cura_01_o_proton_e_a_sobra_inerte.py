@@ -237,7 +237,7 @@ def _lar_do_wrapper(
 
 class TestASobraForaDaArvoreViva:
     def test_sobra_sem_wrapper_nao_e_acusada_de_ser_nossa(self, tmp_path: Path) -> None:
-        """O retrato do vdf dela: o órfão carrega a linha VKD3D, não a nossa."""
+        """O retrato do vdf medido: o órfão carrega a linha VKD3D, não a nossa."""
         lar = _lar_do_wrapper(
             tmp_path,
             viva={"316790": f"{WRAPPER} %command%"},
@@ -317,7 +317,7 @@ class TestOLacoEntreOInstallEOAviso:
     "morta",
     [
         "o censo as conta como cobertura",
-        "é delas que vem o falso conforto do censo",
+        "é dessas linhas que vem o falso conforto do censo",
     ],
 )
 def test_as_frases_derrubadas_sairam_do_fonte(morta: str) -> None:

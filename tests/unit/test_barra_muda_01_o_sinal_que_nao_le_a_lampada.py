@@ -202,7 +202,7 @@ class TestONascimentoVemDoUdev:
         ) == {}
 
     def test_mais_velha_que_a_janela_do_diario_fica_de_fora(self, monkeypatch) -> None:
-        """O diário do daemon só é lido na janela; antes dela o escritor não se sabe.
+        """O diário do daemon só é lido na janela; antes da janela o escritor não se sabe.
 
         Prova da D-0810-O-NASCIMENTO-DA-CONEXAO-VEM-DO-UDEV.
         """
@@ -288,7 +288,7 @@ class TestAMascara:
 
 
 class TestOPrognostico:
-    """A função que guarda o botão. Sem ela, a cura vira gesto desperdiçado."""
+    """A função que guarda o botão. Sem a função, a cura vira gesto desperdiçado."""
 
     def test_mesa_suja_recusa_a_hora(self) -> None:
         confianca, _porque, pids = sb.limpo_para_conectar(
@@ -412,6 +412,6 @@ class TestOCasamentoPorJanela:
         casados = sb.casar_escritores(nascimentos, deteccoes)
         sujos = {chave for chave, nasc in casados.items() if nasc.sujo}
         assert sujos == {"0028", "0029", "002a", "002b"}, (
-            "as duas instâncias que ela reconectou às 19:51 têm de sair LIMPAS — "
-            "foram elas que acenderam e obedeceram ao ciano."
+            "as duas instâncias reconectadas às 19:51 têm de sair LIMPAS — "
+            "foram as duas que acenderam e obedeceram ao ciano."
         )

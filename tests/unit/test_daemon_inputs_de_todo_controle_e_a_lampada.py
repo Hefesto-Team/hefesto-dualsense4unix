@@ -14,7 +14,7 @@ A medição, com os dois DualSense do usuário e o daemon vivo, lendo
     + coop.sync ....................... as duas seguem o número
 
 A causa, lida no código: com `coop_enabled=True` a camada do co-op fica ACIMA
-do override por-uniq no merge do backend, e ela só é republicada por
+do override por-uniq no merge do backend, e só é republicada por
 `_apply_coop_player_leds`, que roda no FIM de um ciclo CHEIO de `sync()`. E o
 `sync()` só faz o ciclo cheio quando `self._watch.poll() or activated or
 grab_degraded or vpad_morto or retry_needed or force` — **renumerar não é
@@ -24,7 +24,7 @@ VELHA, e ficava assim até o próximo hotplug.
 
 **A cura mora no DONO, não em quem clica.** A aba 04 tinha ganhado um contorno
 próprio (um ramo que chama `coop.sync` quando o co-op está mandando); com a
-linha no handler, a **janela GTK antiga fica curada junto** — o cabeçalho dela
+linha no handler, a **janela GTK antiga fica curada junto** — o seu cabeçalho
 tem exatamente o mesmo defeito e nenhum dos dois lados acendia.
 
 **E o defeito era GÊMEO:** `identity.renumber` escreve a MESMA fila e tinha o

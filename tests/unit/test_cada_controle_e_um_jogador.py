@@ -46,7 +46,7 @@ def test_nada_no_mundo_de_perfis_le_um_coop_de_perfil() -> None:
 
 
 def test_a_tela_nao_oferece_a_escolha() -> None:
-    """Nem no gerador, nem no HTML que ela clica."""
+    """Nem no gerador, nem no HTML clicado."""
     from hefesto_dualsense4unix.interface import onde
 
     culpados: list[str] = []

@@ -168,7 +168,7 @@ def test_espelho_do_deb_com_glob_proprio_defasado_falha(fake_repo: Path) -> None
 
 
 def test_espelho_do_deb_fora_da_lista_unica_falha(fake_repo: Path) -> None:
-    """Com a lista única declarada, o espelho ainda pode ser desligado dela —"""
+    """Com a lista única declarada, o espelho ainda pode ser desligado da lista —"""
     (fake_repo / "scripts" / "build_deb.sh").write_text(
         "UDEV_RULES_GLOBS=(\n"
         "    assets/72-*.rules\n"
@@ -856,7 +856,7 @@ def test_comentario_do_manifesto_nao_satisfaz_a_regra_de_par(
 
 
 def test_simbolico_ausente_falha(fake_repo: Path) -> None:
-    """Sem o arquivo, a bandeja dela cai no ícone colorido — e ninguém vê."""
+    """Sem o arquivo, a bandeja de quem usa cai no ícone colorido — e ninguém vê."""
     (fake_repo / "assets" / "simbolico" / "hefesto-dualsense4unix-symbolic.svg").unlink()
     result = run_check(fake_repo)
     assert result.returncode == 1

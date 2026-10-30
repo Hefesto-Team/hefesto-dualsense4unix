@@ -1,14 +1,14 @@
 """DESLIGAR-COM-A-STEAM-ABERTA-DEVOLVE-O-CONTROLE-AO-USUARIO-01 — a entrega religa o driver HID.
 
-A bancada de 23/10/2026 (rodadas A8 a A11): com a Steam aberta ANTES de desligar
+O ensaio de 23/10/2026 (rodadas A8 a A11): com a Steam aberta ANTES de desligar
 o Hefesto, a entrega do broker (só a ACL e o modo do nó) não a faz abrir o
-DualSense de novo: ela enumerou o físico com o nó fechado (``0600 root``, a
+DualSense de novo: a Steam enumerou o físico com o nó fechado (``0600 root``, a
 regra 73) e não volta a um aparelho que já conhece, nem com a ACL nova nem com
-um evento sintético do udev. Só o nó que NASCE de novo volta à lista dela, e
+um evento sintético do udev. Só o nó que NASCE de novo volta à lista da Steam, e
 quem o recria é soltar e prender o driver HID (``unbind``/``bind`` com o id do
 pai HID do ``hidraw``).
 
-A cura, no broker: na transição da PRIMEIRA entrega (e só nela), ele solta e
+A cura, no broker: na transição da PRIMEIRA entrega (e só nessa), ele solta e
 prende o driver de cada DualSense físico entregue. A mesa é a do arquivo
 vizinho (``/sys`` e ``/dev`` de mentira em ``tmp_path``, o ``BrokerState`` e o
 ``FsAclOps`` de produção); aqui ganha o ``driver`` de cada pai HID e o diretório
@@ -447,7 +447,7 @@ class TestAUnit:
 
 def test_o_estado_recebe_a_raiz_dos_drivers(mesa: Mesa, tmp_path: Path) -> None:
     """O ``BrokerState`` repassa a raiz ao ``FsAclOps`` que ele cria (a unit
-    nunca precisa dela: o padrão é o ``/sys/bus/hid/drivers``)."""
+    nunca precisa da raiz: o padrão é o ``/sys/bus/hid/drivers``)."""
     st = BrokerState(
         allowed_uid=os.getuid(),
         sys_class_hidraw=str(mesa.sys_hidraw),

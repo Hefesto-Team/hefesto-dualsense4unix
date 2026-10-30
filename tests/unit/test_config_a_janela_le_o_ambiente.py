@@ -27,7 +27,7 @@ def _theme() -> Any:
 
 
 def test_a_declaracao_composta_do_pop_os_e_gnome() -> None:
-    """`pop:GNOME` é GNOME. É o que esta bancada mede num Pop!_OS."""
+    """`pop:GNOME` é GNOME. É o que esta máquina de teste mede num Pop!_OS."""
     assert ambiente_normalizado("pop:GNOME") == "gnome"
 
 
@@ -64,7 +64,7 @@ def test_a_leitura_crua_de_uma_sessao_muda_e_vazia() -> None:
 
 
 def test_a_correcao_do_usuario_vence_a_deteccao(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Se ela disser que é GNOME, é GNOME — mesmo numa sessão que grita COSMIC."""
+    """Se o ambiente disser que é GNOME, é GNOME — mesmo numa sessão que grita COSMIC."""
     monkeypatch.setattr(
         ambiente_mod, "load_gui_prefs", lambda: {CHAVE_AMBIENTE: "gnome"}
     )

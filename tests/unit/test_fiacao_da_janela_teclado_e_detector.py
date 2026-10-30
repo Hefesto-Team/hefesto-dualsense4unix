@@ -5,10 +5,10 @@ Três queixas medidas, três portões:
 
 1. **EMULACAO-NO-JOGO-01/E1.** O único interruptor da aba dizia "Emular
    mouse+teclado" e governava só o mouse — o teclado emulado não tinha
-   interruptor nenhum. Foi por isso que ela concluiu, com razão, que estar "com
+   interruptor nenhum. Foi por isso que o usuário concluiu, com razão, que estar "com
    o modo mouse teclado desligado" não deveria mandar Alt+Tab dentro do jogo.
 2. **EMULACAO-NO-JOGO-01/E2.** A tela ensinava "segure o botão PS", e o hold do
-   PS vem desligado de fábrica por decisão registrada. Ela seguiu a tela e o
+   PS vem desligado de fábrica por decisão registrada. O usuário seguiu a tela e o
    gesto não fez nada.
 3. **JANELA-CEGA-01.** O ``state_full`` publica o estado do detector de janela
    desde 28/07 e nenhuma aba lia: "o perfil não troca quando eu abro o jogo"
@@ -16,7 +16,7 @@ Três queixas medidas, três portões:
 
 Os portões de estrutura leem o XML do Glade e a árvore de sintaxe do Python —
 rodam na CI sem GTK e ainda assim mordem quando alguém reescreve o texto. Os
-portões de TEXTO chamam as duas funções puras, que são o miolo do que ela vê.
+portões de TEXTO chamam as duas funções puras, que são o miolo do que o usuário vê.
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ class TestOsDoisInterruptores:
         (`daemon/subsystems/hotkey.py`, `_aplicar_ponte`) chama
         `daemon.set_keyboard_emulation(True)`, que persiste por padrão
         (`daemon/protocols.py`) — o interruptor passou a poder estar virado
-        quando ela entra na aba.
+        quando o usuário entra na aba.
 
         A régua é `set_keyboard_emulation(`, não `keyboard.emulation.set`: o
         segundo é o nome do método IPC e NÃO pega a chamada em processo, e foi
@@ -83,7 +83,7 @@ class TestOsDoisInterruptores:
         assert '"_refresh_keyboard_switch",' in fonte, (
             "o gesto PS + R3 escreve a `keyboard_emulation.flag` em "
             f"{len(chamadas)} ponto(s) de `hotkey.py`, e o agregador que relê "
-            "o interruptor perdeu a chave: ela vê a posição de antes do gesto"
+            "o interruptor perdeu a chave: o usuário vê a posição de antes do gesto"
         )
 
 

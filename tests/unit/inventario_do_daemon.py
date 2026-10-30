@@ -22,8 +22,8 @@ reclama.**
 
 MUDOU DE CASA EM 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): morava em
 `src/hefesto_dualsense4unix/interface/pacotes/daemon.py`, e o `casa-sabe` a
-contava como promessa do produto sem caminho. Ela é instrumento de RÉGUA: o
-produto não precisa dela para recusar o método que o daemon não atende, porque o
+contava como promessa do produto sem caminho. É instrumento de RÉGUA: o
+produto não precisa do inventário para recusar o método que o daemon não atende, porque o
 dono já recusa na hora — `daemon/ipc_server.py` responde `método desconhecido`
 (`CODE_METHOD_NOT_FOUND`) sem esperar tempo de socket nenhum. E ler o fonte do
 daemon em tempo de execução seria a segunda verdade que mente no caso que mais

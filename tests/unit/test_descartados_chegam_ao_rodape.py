@@ -44,9 +44,9 @@ ROTULO_DA_MESA = secao_mesa.TITULO
 
 @pytest.fixture
 def arquivo(tmp_path: Path) -> Path:
-    """O ``maquina.json`` desta bancada — e a prova de que ele não é o dela."""
+    """O ``maquina.json`` deste ensaio — e a prova de que ele não é o de quem roda."""
     caminho = caminho_da_maquina()
-    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp da bancada"
+    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp do ensaio"
     return caminho
 
 
@@ -175,7 +175,7 @@ def test_o_embrulho_de_duas_pontas_continua_valendo(
 ) -> None:
     """``machine_declare`` segue devolvendo ``(ok, motivo)`` — contrato de quem já chama.
 
-    A função está no ``__all__``, e trocar a aridade dela quebraria todo
+    A função está no ``__all__``, e trocar a sua aridade quebraria todo
     chamador que não fosse migrado na mesma leva. Aditivo é a regra desta
     fronteira.
     """

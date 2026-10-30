@@ -227,7 +227,7 @@ async def test_hotplug_tardio_promove_o_vpad_exatamente_uma_vez(
         assert len(chamadas) == 1, "offline→online tem que promover exatamente 1x"
         assert str(chamadas[0]["thread"]).startswith("hefesto-hid"), (
             "a promoção deve rodar via _run_blocking (executor) — síncrona no "
-            "event loop ela congelaria o input por até UHID_BIND_TIMEOUT_S"
+            "event loop congelaria o input por até UHID_BIND_TIMEOUT_S"
         )
         assert chamadas[0]["lock_depth"] == 1, (
             "a promoção deve segurar o _emu_lock (serializada com os toggles "

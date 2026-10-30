@@ -171,7 +171,7 @@ def test_gesto_manual_ipc_carimba_lock_e_limpa_origem(daemon: Daemon) -> None:
 def test_cenario_journal_policy_max_reporta_o_mult_da_politica(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Cenário exato do journal 2026-07-18 19:59:48: perfil `vitoria` com
+    """Cenário exato do journal 2026-07-18 19:59:48: perfil `viajante` com
     `rumble.policy=max` ativado em passthrough ocioso. O log dizia
     `profile_rumble_policy_applied mult=0.7 policy=max` (o campo carregava o
     custom_mult default) e o state_full expunha `rumble_mult_applied=0.7`

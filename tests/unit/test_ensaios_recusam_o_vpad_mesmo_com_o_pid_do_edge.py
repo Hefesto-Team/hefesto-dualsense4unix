@@ -16,7 +16,7 @@ some do `IGNORE_DEVICES` do SDL sem levar o físico junto
 (`integrations/uhid_gamepad.py`, `VPAD_PRODUCT`).
 
 O pino já está frouxo: **o Edge REAL existe**, o terceiro instrumento da mesma
-bancada já aceita os dois PIDs (`ensaio_rumble_em_par.DUALSENSE_PIDS =
+máquina de teste já aceita os dois PIDs (`ensaio_rumble_em_par.DUALSENSE_PIDS =
 (0x0CE6, 0x0DF2)`), e "fazer os três concordarem" é uma limpeza que qualquer um
 faria de boa-fé numa tarde. No dia em que alguém acrescentar `0x0DF2` aqui, sem
 a régua os dois passam a aceitar o vpad — que tem força-feedback e engole o
@@ -25,12 +25,12 @@ que é a pior categoria de defeito de instrumento desta casa.
 
 Por isso o desenho destes testes: eles abrem o filtro de PID de propósito
 (`monkeypatch` no PID, exatamente a mudança que a pessoa faria) e exigem que a
-recusa continue de pé. É a rede que desarma a bomba antes de ela ser armada — e
+recusa continue de pé. É a rede que desarma a bomba antes de ser armada — e
 o teste continua valendo mesmo depois de alguém armá-la.
 
 E DOS DOIS LADOS
 ----------------
-A cura errada e óbvia seria recusar tudo que mora sob `/devices/virtual/`. Ela
+A cura errada e óbvia seria recusar tudo que mora sob `/devices/virtual/`. Isso
 reintroduz a armadilha paga em 11/08/2026: com BlueZ ≥ 5.73 o bluetoothd cria o
 HID dos controles Bluetooth FÍSICOS por `/dev/uhid`, no mesmíssimo lugar do
 nosso vpad. Por isso cada arquivo tem também o teste do controle de rádio

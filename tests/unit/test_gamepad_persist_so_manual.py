@@ -113,7 +113,7 @@ def test_start_por_perfil_nao_reescreve_o_flavor(
 def test_start_manual_reescreve_o_flavor(
     flag: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A contraparte: quando ELA escolhe, a escolha tem de persistir."""
+    """A contraparte: quando QUEM USA escolhe, a escolha tem de persistir."""
     save_gamepad_emulation(True, "xbox")
     daemon = _DaemonFalso()
 

@@ -152,7 +152,7 @@ def test_catch_all_com_modo_gamepad_continua_vetado_com_a_janela_inteira(
         monkeypatch,
         [
             Profile(
-                name="vitoria",
+                name="viajante",
                 priority=0,
                 match=MatchAny(),
                 mode=ProfileModeConfig(kind="gamepad"),

@@ -327,7 +327,7 @@ class TestOGestoQueServeParaCadaLayout:
 
 
 class TestAsDuasCopiasNaoPodemDivergir:
-    """DUPLICAÇÃO DECLARADA — e um portão em cima dela."""
+    """DUPLICAÇÃO DECLARADA — e um portão em cima."""
 
     def test_a_frase_de_fora_do_checkout_e_a_mesma_nos_dois_lugares(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -480,7 +480,7 @@ class TestOGestoTemNomeEAsDuasCopiasNaoDivergem:
         assert _gesto_do_produto(tmp_path, "desconhecido") == _CONSELHO_GENERICO
 
     def test_no_checkout_nada_mudou(self, tmp_path: Path) -> None:
-        """A cura não podia piorar o caso que já funcionava — o dela."""
+        """A cura não podia piorar o caso que já funcionava — o da máquina de teste."""
         assert _formato_visto_pelo_doctor(tmp_path, "checkout") == "checkout"
         assert _frase(DOCTOR, "conselho_de_instalacao") == "rode ./install.sh"
         assert (
@@ -545,7 +545,7 @@ def _defeitos_de_junta(frase: str) -> list[str]:
 
 
 class TestOAparteNaoQuebraAGramatica:
-    """A armadilha que já custou sete frases, conferida onde ela aparece."""
+    """A armadilha que já custou sete frases, conferida onde aparece."""
 
     @pytest.mark.parametrize("formato", ["checkout", "debian", "desconhecido"])
     def test_as_frases_renderizadas_nao_tem_junta_torta(

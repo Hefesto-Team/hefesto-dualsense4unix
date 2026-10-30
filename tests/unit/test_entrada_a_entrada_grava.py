@@ -194,7 +194,7 @@ def test_responder_grava_na_hora(boot_1: SysfsDeMentira, disco: Path) -> None:
     documento = carregar_maquina()
     assert documento.mapa.faces[0].nome == ee.FACE_FRENTE
     assert documento.mapa.faces[0].portas == ["1", "2"]
-    assert documento.mapa.faces[0].perto is True, "a frente é a face perto (fato dela)"
+    assert documento.mapa.faces[0].perto is True, "a frente é a face perto (fato declarado)"
     assert documento.mapa.portas["2"].caminho == "3-4.2"
     assert maquina.entrada_do_lugar(documento, f"pci-{PCI_B}-usb-0:4.2") == "2"
     assert laco.estado()["estado"] == ee.FIM
@@ -252,7 +252,7 @@ def test_o_hub_usb3_chega_pelos_dois_lados_e_e_uma_pergunta_so(
 
 
 def _mapear(sysfs: SysfsDeMentira, bus: int, devpath: str, face: str) -> ee.Gravacao:
-    """Ela pluga, abre a cerimônia, responde e tira o cabo."""
+    """Quem usa pluga, abre a cerimônia, responde e tira o cabo."""
     nome = sysfs.plugar(bus, devpath, DUALSENSE)
     laco = _laco(sysfs)
     assert laco.comecar()["pergunta"]["caminho"] == nome
@@ -327,7 +327,7 @@ def test_os_leitores_de_hoje_e_o_mapa_das_portas_leem_o_que_o_usuario_gravou(
 def test_a_entrada_numerada_na_outra_janela_nao_vira_pergunta(
     boot_1: SysfsDeMentira, disco: Path
 ) -> None:
-    """O desenho de hoje (``mapa``, pelo caminho) é a ponte com o que ela já"""
+    """O desenho de hoje (``mapa``, pelo caminho) é a ponte com o que quem usa já"""
     maquina.gravar_maquina(
         {
             "mapa": {
@@ -342,7 +342,7 @@ def test_a_entrada_numerada_na_outra_janela_nao_vira_pergunta(
 
 
 def test_o_adaptador_na_entrada_numerada_nao_herda_o_numero() -> None:
-    """A entrada 9 que ela numerou não dá nome ao adaptador plugado nela: era a"""
+    """A entrada 9 numerada por quem usa não dá nome ao adaptador plugado ali: era a"""
     lugar = f"pci-{PCI_B}-usb-0:4.1.4"
     adaptador = bd.AdaptadorDoBluez("/org/bluez/hci0", "hci0", "aa:bb:cc:00:00:01", lugar=lugar)
     documento = MaquinaConfig.model_validate(
@@ -515,14 +515,14 @@ def _gravar_direto(lugar: str, caminho: str, face: str) -> ee.Gravacao:
 
 
 def test_responder_de_novo_a_mesma_face_nao_embaralha_a_fileira(disco: Path) -> None:
-    """A ordem da fileira é o desenho dela: confirmar a face de uma porta já"""
+    """A ordem da fileira é o desenho de quem usa: confirmar a face de uma porta já"""
     for degrau in ("1", "2", "3"):
         lugar = f"pci-{PCI_B}-usb-0:4.{degrau}"
         assert _gravar_direto(lugar, f"3-4.{degrau}", ee.FACE_FRENTE).gravou
     assert _gravar_direto(f"pci-{PCI_B}-usb-0:4.1", "3-4.1", ee.FACE_FRENTE).entrada == "1"
 
     fileira = {f.nome: f.portas for f in carregar_maquina().mapa.faces}
-    assert fileira[ee.FACE_FRENTE] == ["1", "2", "3"], "a fileira dela foi embaralhada"
+    assert fileira[ee.FACE_FRENTE] == ["1", "2", "3"], "a fileira declarada foi embaralhada"
 
 
 def test_o_hub_que_chega_com_o_dualsense_dentro_e_a_porta_do_hub(
@@ -659,7 +659,7 @@ def test_a_extensao_fica_no_quadrado_de_quem_a_hospeda(disco: Path) -> None:
 
 
 def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
-    """O rótulo de um campo vai para a barra de status dela quando o campo é
+    """O rótulo de um campo vai para a barra de status da janela quando o campo é
     (D-A-PALAVRA-ENTRADA)
     """
     from hefesto_dualsense4unix.app import ipc_bridge

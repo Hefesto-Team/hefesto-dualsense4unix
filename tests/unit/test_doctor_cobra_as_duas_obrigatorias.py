@@ -152,7 +152,7 @@ class TestOhDoctorCobraOLoaderSVG:
         assert _rodar("check_loader_svg") == 0
 
     def test_a_mordida_sem_o_loader_reprova(self) -> None:
-        """E ela mede o EFEITO, não o catálogo."""
+        """E a régua mede o EFEITO, não o catálogo."""
         if not _tem_loader_svg():
             pytest.skip("esta máquina não carrega SVG — não há loader a aferir")
         alvos = _existe(

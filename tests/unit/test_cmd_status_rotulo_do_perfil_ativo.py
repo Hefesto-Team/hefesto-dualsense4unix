@@ -11,7 +11,7 @@ async def _status_falso() -> dict[str, object]:
     return {
         "connected": True,
         "transport": "usb",
-        "active_profile": "vitoria",
+        "active_profile": "viajante",
         "battery_pct": 80,
     }
 

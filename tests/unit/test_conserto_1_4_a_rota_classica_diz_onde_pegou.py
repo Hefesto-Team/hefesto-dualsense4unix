@@ -164,7 +164,7 @@ class TestDefeitoBARotaClassicaDiziaVazioTendoEscrito:
 
 
 class TestOQueARotaClassicaSeRecusaAAfirmar:
-    """O outro lado da cura: onde ela devolve vazio, e por quê."""
+    """O outro lado da cura: onde devolve vazio, e por quê."""
 
     @pytest.mark.asyncio
     async def test_em_modo_nativo_nao_diz_aplicado(self, tmp_path: Path) -> None:

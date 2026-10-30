@@ -8,8 +8,8 @@ cabo. O do rádio não publicava fonte nenhuma, e quem recusava eram duas travas
 NOSSAS — a env de opt-in e a declaração `uniq` a `uniq` no `maquina.json`.
 
 **A LEITURA QUE A §2 DA SPRINT OBRIGA, e é o que estes testes protegem.** As
-duas travas protegiam UMA razão — *"a ponte é um gesto explícito"* — e ela
-continua valendo. O que caducou foi a ALAVANCA: elas negavam o CANAL para
+duas travas protegiam UMA razão — a ponte é um gesto explícito — e a razão
+continua valendo. O que caducou foi a ALAVANCA: as travas negavam o CANAL para
 evitar a CAPTURA, e o cabo prova que os dois são separáveis (medido em
 03/09/2026: a source do cabo existe e está `SUSPENDED`, publicada e sem
 capturar). Então a trava virou automática, e o critério é o do cabo — PROCURA.
@@ -72,7 +72,7 @@ def _config(**campos: Any) -> Any:
 
 @pytest.fixture(autouse=True)
 def sem_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A env é o caminho à mão e vale por TODOS — ligada, ela apaga a medida."""
+    """A env é o caminho à mão e vale por TODOS — ligada, apaga a medida."""
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
 
 
@@ -91,7 +91,7 @@ class TestORegistro:
         assert registro.abertos() == frozenset()
 
     def test_o_pedido_acorda_quem_dorme(self) -> None:
-        """Sem isto o canal esperaria a varredura inteira depois do toque dela."""
+        """Sem isto o canal esperaria a varredura inteira depois do toque de quem usa."""
         registro = RegistroDePedidosDeCanal()
         registro.novidade.clear()
         registro.pedir(UM)
@@ -136,7 +136,7 @@ class TestORegistro:
 
 class TestAsDuasMetades:
     def test_sem_pedido_a_mesa_do_radio_ganha_canal(self) -> None:
-        """**A INVERSÃO — 18/09/2026**, e é aqui que ela se vê melhor."""
+        """**A INVERSÃO — 18/09/2026**, e é aqui que se vê melhor."""
         subsystem = BtMicSubsystem(registro=RegistroDePedidosDeCanal())
         config = _config()
         assert subsystem.is_enabled(config) is True
@@ -150,7 +150,7 @@ class TestAsDuasMetades:
         assert [n.uniq for n in subsystem.alvos([_No(UM), _No(DOIS)])] == [DOIS]
 
     def test_a_recusa_vence_o_pedido_porque_o_interruptor_manda(self) -> None:
-        """A REGRA DA CASA, e ela NÃO mudou com a inversão — só mudou de lado."""
+        """A REGRA DA CASA, e NÃO mudou com a inversão — só mudou de lado."""
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
         subsystem._config = _config(bt_mic_recusados=lambda: frozenset({UM}))
@@ -191,7 +191,7 @@ class TestAVidaDoPedido:
         assert registro.abertos() == frozenset({DOIS})
 
     def test_desligar_no_aplicar_vence_o_pedido(self) -> None:
-        """O interruptor do card é o gesto mais explícito que ela tem."""
+        """O interruptor do card é o gesto mais explícito que quem usa tem."""
         registro = RegistroDePedidosDeCanal()
         subsystem = BtMicSubsystem(registro=registro)
         recusados: set[str] = set()
@@ -238,7 +238,7 @@ class TestOGancho:
         assert elm.pedir_canal(UM) is False
 
     def test_o_pedidor_que_explode_nao_derruba_o_gesto(self) -> None:
-        """O toque no botão dela não pode virar traceback no laço do daemon."""
+        """O toque no botão de quem usa não pode virar traceback no laço do daemon."""
 
         def _explode(_uniq: str) -> bool:
             raise RuntimeError("o registro sumiu")
@@ -292,7 +292,7 @@ class _Pactl:
 
 @pytest.fixture()
 def ensaio(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
-    """A bancada: um `pactl` dublado e o script que DECLARA as duas flags."""
+    """O ensaio: um `pactl` dublado e o script que DECLARA as duas flags."""
     dublê = _Pactl()
     script = tmp_path / "fix_wireplumber_default_source.sh"
     script.write_text(
@@ -356,7 +356,7 @@ class TestPontaAPonta:
     def test_quando_ninguem_atende_a_recusa_e_a_de_sempre(
         self, ensaio: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """NENHUMA FRASE NOVA — ela recusou a premissa do recado, não o texto."""
+        """NENHUMA FRASE NOVA — a decisão recusou a premissa do recado, não o texto."""
         monkeypatch.setattr(elm, "fontes_de_captura_agora", list)
 
         resultado = elm.EleitorDeMicrofone().eleger_o_controle(UM, [UM])

@@ -205,6 +205,6 @@ def o_pactl_aceita_os_volumes(valores: Sequence[str]) -> bool:
     Ele recusa o comando inteiro (``Inconsistent volume specification.``, rc 1,
     antes de falar com o servidor) quando os canais misturam unidades: ``100%``
     com ``2.0000`` não passa. O dublê que aceita tudo deixou o portão dos
-    motores do cabo preso fechado de 14/10 até a rodada 1 da bancada.
+    motores do cabo preso fechado de 14/10 até a rodada 1 do ensaio no aparelho.
     """
     return len({_unidade_do_volume(v) for v in valores}) <= 1

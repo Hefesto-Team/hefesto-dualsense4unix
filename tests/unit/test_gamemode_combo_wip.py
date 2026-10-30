@@ -46,7 +46,7 @@ def test_default_combo_gamemode_e_ps_options() -> None:
 
 
 def test_combo_gamemode_funciona_com_long_press_desligado() -> None:
-    """Config da Vitória: ps_long_press_ms=0 (modo-jogo só por combo)."""
+    """Config de quem usa: ps_long_press_ms=0 (modo-jogo só por combo)."""
     calls: list[str] = []
     hm = HotkeyManager(
         on_ps_long_press=lambda: calls.append("toggle"),

@@ -3,9 +3,9 @@
 **O defeito, medido em 25/08/2026.** `zero_motors_on_mode_exit`
 (`daemon/subsystems/rumble.py`) é a cura HARM-16: ao SAIR de um modo, quem
 dirigia os motores some no meio de uma vibração e ninguém zera o hardware — o
-reassert do poll loop é no-op justamente em passthrough. A guarda dela era
+reassert do poll loop é no-op justamente em passthrough. A sua guarda era
 `if daemon.config.rumble_active is not None: return`, escrita para não desfazer
-o gesto da usuária quando ela FIXA um par pela aba.
+o gesto do usuário quando FIXA um par pela aba.
 
 `rumble.stop` — o botão "Parar" — grava `(0, 0)`, **que também não é `None`**.
 Logo, depois de UM clique em "Parar" na sessão, sair de um modo deixava de zerar
@@ -20,7 +20,7 @@ entrega fecha a porta que ficou aberta, com o mesmo teste que
 
 **O que morde:** devolver a guarda antiga (`par is not None`) reprova os dois
 primeiros testes. E o terceiro existe para que a cura não vire o defeito
-oposto — zerar sempre desfaria o par não-nulo que ela fixou.
+oposto — zerar sempre desfaria o par não-nulo fixado.
 """
 from __future__ import annotations
 
@@ -82,7 +82,7 @@ def _rumbles(fc: FakeController) -> list[tuple[int, int]]:
 
 @pytest.mark.asyncio
 async def test_o_parar_da_aba_nao_desarma_a_saida_de_modo(servidor: Any) -> None:
-    """O gesto que a usuária faz, na ordem em que ela o faz."""
+    """O gesto que o usuário faz, na ordem em que o faz."""
     server, daemon, fc = servidor
 
     r = await server._handle_rumble_stop({})
@@ -94,7 +94,7 @@ async def test_o_parar_da_aba_nao_desarma_a_saida_de_modo(servidor: Any) -> None
 
     assert _rumbles(fc) == [(0, 0)], (
         "a saída de modo tem de zerar os motores mesmo com o silêncio fixado "
-        "pelo «Parar»: zerar É o gesto dela, palavra por palavra"
+        "pelo «Parar»: zerar É o gesto do usuário, palavra por palavra"
     )
 
 

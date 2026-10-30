@@ -259,7 +259,7 @@ def test_schema_antigo_nao_ressuscita_pelo_save_do_outro_lado(
 ) -> None:
     """R-23: bump de schema descarta o arquivo INTEIRO, não meio arquivo.
 
-    Falha-sem (achado ao simular o `controllers.json` real dela): cada
+    Falha-sem (achado ao simular o `controllers.json` real da máquina de teste): cada
     `_save_locked` faz read-modify-write PRESERVANDO o namespace do outro
     registro. Num bump de versão, o primeiro save carimbava `version` NOVA
     por cima do namespace VELHO do outro lado — a numeração que o `load`
@@ -523,7 +523,7 @@ def test_externo_sem_mac_gui_bate_com_led_do_tick(
 def test_externo_nao_rouba_o_slot_1_dos_dualsense_presentes(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """R-24: reproduz o "não existe Controle 1" MEDIDO no controllers.json dela.
+    """R-24: reproduz o "não existe Controle 1" MEDIDO no controllers.json da máquina de teste.
 
     Estado ao vivo (25/07): `externals: {<Pro>: 1}` e `slots: {<DS>: 2, <DS>:
     3}` — o Pro Nintendo USB segurava o slot 1 e os dois DualSense exibiam 2 e
@@ -794,7 +794,7 @@ def test_identity_for_entry_e_a_mesma_chave_da_deduplicacao(
 def test_dois_clones_degradados_recebem_slots_e_leds_distintos(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
-    """O sintoma dela: os dois Nintendo-class exibiam o MESMO número de jogador."""
+    """O sintoma medido: os dois Nintendo-class exibiam o MESMO número de jogador."""
     node_pro = "/dev/input/event30"
     node_clone = "/dev/input/event34"
     _donos(monkeypatch, {node_pro: DONO_PRO, node_clone: DONO_CLONE})
@@ -1137,7 +1137,7 @@ def _imu_entry(uniq: str | None, hidraw: str | None, *, bus: str = "usb") -> dic
 
 @pytest.fixture()
 def oui_nintendo_forjada() -> str:
-    """A faixa forjada `aabbcc`, e a GUARDA de que ela é exercitada de verdade."""
+    """A faixa forjada `aabbcc`, e a GUARDA de que é exercitada de verdade."""
     from hefesto_dualsense4unix.core.linhagem_nintendo import e_pro_genuino
 
     assert e_pro_genuino(
@@ -1214,7 +1214,7 @@ class TestExternalImuEnabler:
     def test_backoff_no_maximo_duas_tentativas_espacadas(
         self, oui_nintendo_forjada: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Falha nunca vira loop: no máximo 2 tentativas, ≥2s entre elas."""
+        """Falha nunca vira loop: no máximo 2 tentativas, ≥2s entre uma e outra."""
         import hefesto_dualsense4unix.core.external_leds as leds_mod
 
         tentativas: list[float] = []

@@ -5,7 +5,7 @@
     "só tem 1 controle conectado ainda assim aparece no canto superior direito
      0 usb  1 bt deveria mostrar só o que tá conectado que é 1 bt nesse caso"
 
-Ela REFINA a decisão de 06/09 e não a contradiz. Aquela escolheu a PALAVRA —
+Esta régua REFINA a decisão de 06/09 e não a contradiz. Aquela escolheu a PALAVRA —
 ``USB``/``BT`` em vez de ``cabo``/``rádio``, porque *"2 cabo · 0 rádio"* não é
 português, e é a única exceção declarada em ``docs/A-LINGUA-DESTA-CASA``. Esta
 escolhe o que se OMITE. A palavra continua a mesma, e a régua de 06/09
@@ -16,7 +16,7 @@ de produto sem uma vírgula de mudança.
 
 * ``mesa_viva.texto_da_contagem`` — o que o piloto pinta a cada tique;
 * ``interface/monta.py`` — o que fica gravado no esqueleto das dez páginas, e
-  que é o que ela vê no PRIMEIRO QUADRO, antes do primeiro tique chegar.
+  que é o que quem usa vê no PRIMEIRO QUADRO, antes do primeiro tique chegar.
 
 Enquanto cada um formatava por conta própria, uma mudança num deles deixava o
 outro dizendo outra coisa — e o defeito aparece no lugar mais visível possível:
@@ -67,7 +67,7 @@ def test_a_mesa_do_usuario_do_dia_da_decisao() -> None:
     assert prefixo == "● 1 controle: "
     assert conta == "1 BT"
     assert "0 USB" not in conta, (
-        "o `0 USB ·` voltou ao cabeçalho — é a queixa dela de 17/09/2026"
+        "o `0 USB ·` voltou ao cabeçalho — é o defeito medido em 17/09/2026"
     )
 
 
@@ -95,7 +95,7 @@ def _o_desenho_sem_contador() -> bool:
 
     raiz = pathlib.Path(__file__).resolve().parents[2]
     paginas = sorted((raiz / "mockup").glob("[01][0-9]-*.html"))
-    assert paginas, "a bancada sumiu — régua cega"
+    assert paginas, "o mockup sumiu — régua cega"
     return all('class="conectado"' not in p.read_text(encoding="utf-8") for p in paginas)
 
 

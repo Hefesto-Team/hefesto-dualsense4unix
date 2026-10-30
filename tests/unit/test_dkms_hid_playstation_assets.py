@@ -575,7 +575,7 @@ class TestReadmeHonesto:
         assert "6 de 6 abortos de probe retentaram e NENHUM foi salvo" in corrido, (
             "a nota tem que trazer o NÚMERO que reprovou a hipótese"
         )
-        assert "00:17:04" in README, "e a medição que explica POR QUE ela não podia curar"
+        assert "00:17:04" in README, "e a medição que explica POR QUE o módulo não podia curar"
 
     def test_readme_nao_apaga_a_hipotese_antiga(self) -> None:
         assert "que `feature_retries=2` de fato cura" in README, (
@@ -583,7 +583,7 @@ class TestReadmeHonesto:
         )
         assert README.index("que `feature_retries=2` de fato cura") < README.index(
             "NOTA DATADA (09/08/2026)"
-        ), "a nota datada vem DEPOIS da hipótese que ela derruba"
+        ), "a nota datada vem DEPOIS da hipótese que derruba"
 
     def test_readme_nao_manda_mais_aumentar_o_numero_de_tentativas(self) -> None:
         conselho_caducado = (

@@ -64,7 +64,7 @@ def test_o_caderno_escreve_com_a_vigia_viva(tmp_path: Path) -> None:
         assert conteudo.strip(), (
             "o caderno está VAZIO com a vigia viva — é o defeito da "
             "CADERNO-QUE-NÃO-ESCREVE-01. O `awk` está bufferizando a ENTRADA e "
-            "nem executa o bloco. Custo medido na máquina dela: 120 linhas de "
+            "nem executa o bloco. Custo medido na máquina de teste: 120 linhas de "
             "banner contra 723 eventos no journal."
         )
         assert "[JOYCON]" in conteudo, f"faltou a etiqueta [JOYCON]: {conteudo!r}"
@@ -92,7 +92,7 @@ def test_a_escolha_do_awk_e_medida_e_nao_assumida() -> None:
     texto = SCRIPT.read_text(encoding="utf-8")
     assert "_escolher_awk()" in texto, "a função que MEDE o awk sumiu"
     assert "-W interactive 'BEGIN { exit 0 }'" in texto, (
-        "a sonda que testa o `-W interactive` sumiu — sem ela a opção passa a ser "
+        "a sonda que testa o `-W interactive` sumiu — sem a sonda a opção passa a ser "
         "assumida, e quebra onde o `awk` for o gawk."
     )
 

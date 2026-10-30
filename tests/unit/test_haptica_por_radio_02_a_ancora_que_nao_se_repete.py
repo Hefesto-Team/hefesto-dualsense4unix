@@ -21,11 +21,11 @@ rádio que não dependem da máquina do usuário, e por isso chegariam a qualque
 
 As réguas de subsystem usam o ``EndpointDeHaptica`` DE VERDADE contra um
 servidor de som de mentira: é o ``sysfs.path`` que chega ao servidor que o jogo
-lê, e é ele que se mede. Nada toca o PipeWire dela; os ``uniq`` são da faixa
+lê, e é ele que se mede. Nada toca o PipeWire de quem roda; os ``uniq`` são da faixa
 sintética ``aa:bb:cc``.
 
 LIMITE DECLARADO: é fiação e conta. A prova com o jogo aberto e o escritor
-único é bancada, e está pendente.
+único é ensaio no aparelho, e está pendente.
 
 **POR APARELHO DESDE 02/10/2026** (A-HAPTICA-E-POR-APARELHO-01): de 28/09 a
 02/10 o endpoint foi um por LUGAR (P1 a P4), e voltou a ser um por DualSense,

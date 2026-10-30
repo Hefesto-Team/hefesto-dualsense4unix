@@ -624,7 +624,7 @@ class TestCamada2PerfilDaPlaca:
         assert ativo == "output:analog-surround-40+input:analog-stereo"
         assert alvo.endswith("input:iec958-stereo"), (
             "o ativo esta `available: no`; a cura tem de propor o disponivel "
-            f"em vez de declarar vitoria. Veio alvo={alvo!r}"
+            f"em vez de declarar sucesso. Veio alvo={alvo!r}"
         )
 
     def test_a_placa_onboard_nao_e_confundida(self) -> None:

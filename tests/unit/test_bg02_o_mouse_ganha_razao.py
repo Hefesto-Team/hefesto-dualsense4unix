@@ -1,11 +1,11 @@
 """BG-02 — o daemon aprende a dizer NÃO, e o mouse ganha razão.
 
-*"Ela liga o mouse pelo controle, o cursor não anda, e a aba não diz por quê."*
+Quem usa liga o mouse pelo controle, o cursor não anda, e a aba não diz por quê.
 
 As três razões reais o produto conhecia UMA A UMA e não contava nenhuma: o
-interruptor desligado, a permissão de `/dev/uinput` (sem ela o device não sobe)
+interruptor desligado, a permissão de `/dev/uinput` (sem a permissão o device não sobe)
 e o modo jogo. O bloco `mouse_emulation` do `state_full` publicava três chaves —
-`enabled`, `speed`, `scroll_speed` — e nenhuma delas responde "por que o cursor
+`enabled`, `speed`, `scroll_speed` — e nenhuma responde "por que o cursor
 está parado".
 
 Do lado da janela o texto já estava pronto e MORTO: a tabela
@@ -134,7 +134,7 @@ async def test_a_mordida_o_state_full_diz_por_que_o_cursor_nao_anda() -> None:
 
     Arrancar `bloqueio`/`despachando` do `_mouse_emulation_payload` faz o
     `state_full` voltar a publicar só `enabled: true` — que, com o cursor
-    parado, é a tela afirmando o contrário do que ela está vendo.
+    parado, é a tela afirmando o contrário do que quem usa está vendo.
     """
     daemon = Daemon(controller=FakeController(transport="usb"))
     daemon.config.mouse_emulation_enabled = True
@@ -148,7 +148,7 @@ async def test_a_mordida_o_state_full_diz_por_que_o_cursor_nao_anda() -> None:
         f"o `mouse_emulation` do state_full não publica {sorted(faltando)} — o "
         "cursor está parado com o interruptor em pé e a aba não tem o que dizer"
     )
-    assert bloco["enabled"] is True, "o interruptor dela continua em pé"
+    assert bloco["enabled"] is True, "o interruptor de quem usa continua em pé"
     assert bloco["device_ativo"] is False
     assert bloco["despachando"] is False
     assert bloco["bloqueio"] == "sem_device", (
@@ -240,7 +240,7 @@ async def test_a_rota_speed_only_tambem_diz_o_motivo_quando_falha() -> None:
     assert res["status"] == "failed"
     assert res.get("bloqueio") == "sem_device", (
         "a rota speed-only recusou sem motivo — a mesma mudez de antes, no "
-        "caminho que ela usa arrastando o controle deslizante"
+        "caminho do controle deslizante arrastado"
     )
     assert d.velocidades == [(9, None)]
 

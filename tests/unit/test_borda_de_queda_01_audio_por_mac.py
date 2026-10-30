@@ -216,7 +216,7 @@ class _ControleDoLaco:
 
 
 class _DaemonDoLaco:
-    """Daemon de bancada para o `reconnect_loop`: só o que o laço realmente usa."""
+    """Daemon de ensaio para o `reconnect_loop`: só o que o laço realmente usa."""
 
     def __init__(self, controller: _ControleDoLaco, voltas_ate_parar: int) -> None:
         self.controller = controller
@@ -291,5 +291,5 @@ async def test_o_laco_ve_a_queda_e_a_volta_que_o_agregado_escondia(
     )
     assert reaplicacoes == [P2], (
         f"a volta do Controle 2 reaplicou o som em {reaplicacoes} — o volume "
-        "dela tinha de voltar no controle que voltou, e em nenhum outro"
+        "de quem usa tinha de voltar no controle que voltou, e em nenhum outro"
     )

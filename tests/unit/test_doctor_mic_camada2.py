@@ -283,7 +283,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
     17/09, nem a `[In] Mic` do UCM DESTA CASA em 20/09.
 
     **O FURO, declarado:** esta régua mede o TEXTO de três leituras, não o
-    aparelho. Ela prova que o elemento existe e está fora do caminho do
+    aparelho. Prova que o elemento existe e está fora do caminho do
     PipeWire; **não** prova que ele afeta a captura. Quem ler o verde daqui
     como «o microfone está bom» leu errado.
     """
@@ -477,7 +477,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
 
         Este é o arquivo que o `assets/ucm/DualSense-HiFi.conf` PRECISARIA ter
         para o ganho entrar no caminho — e é a forma que a cura vai tomar no
-        dia em que ela decidir ligá-lo.
+        dia em que o produto decidir ligá-lo.
         """
         alvo = tmp_path / "porta-ucm-que-liga.txt"
         alvo.write_text(
@@ -504,7 +504,7 @@ class TestAPortaDeCapturaAlcancaOGanho:
         a pôr no deslizante — logo não há nada «fora de alcance», e reprovar
         aí seria inventar defeito numa placa que não tem o que ligar.
 
-        **Por que DERIVADO e não gravado:** medido nesta bancada em 20/09/2026,
+        **Por que DERIVADO e não gravado:** medido nesta máquina de teste em 20/09/2026,
         as três placas desta máquina não têm um só elemento de captura com
         `cswitch` e sem `cvolume` (placa 0: só `pswitch`; placa 1: `cvolume
         cswitch`; placa 2, o DualSense: `cvolume … cswitch …`). O caso existe
@@ -693,12 +693,12 @@ check_mic_ganho_de_captura
         pôde sair daqui: quem o guarda é a gravação
         `tests/fixtures/mic-cabo/porta-ucm-mic-2026-09-20.txt`, medida por
         `TestAPortaDeCapturaAlcancaOGanho::test_o_estado_de_hoje_reprova` —
-        que continua cobrando `fora == "sim"` sobre ela.
+        que continua cobrando `fora == "sim"` sobre a porta.
 
         **O QUE A MORDIDA ARRANCA:** apague as duas linhas de
         `assets/ucm/DualSense-HiFi.conf` e este teste reprova com o WARN de
         volta, nomeando a porta e o elemento. É a mordida que a §8 da sprint
-        pede, e ela foi feita antes de esta redação entrar.
+        pede, e foi feita antes de esta redação entrar.
 
         O `PASS` continua dizendo, dentro dele mesmo, que não é um veredito
         sobre a qualidade do áudio: verde aqui nunca significou «o microfone
@@ -714,7 +714,7 @@ check_mic_ganho_de_captura
         )
         assert "[In] Mic" in saida, "a frase nomeia a porta ativa"
         assert "'Headset'" in saida, "e nomeia o elemento que passou a alcançar"
-        assert "FAIL" not in saida, "nunca FAIL: a cura é decisão dela"
+        assert "FAIL" not in saida, "nunca FAIL: a cura é decisão de quem usa"
         assert "qualidade do áudio" in saida, (
             "a ressalva mora na própria linha, senão o verde é lido como "
             f"«o microfone está bom». Veio {saida!r}"

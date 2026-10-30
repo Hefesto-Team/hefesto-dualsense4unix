@@ -13,17 +13,17 @@ memória, entregue pelos argumentos injetáveis que o produto expõe (`listar`,
 `ler`, `real`) — o molde é `test_o_censo_le_o_barramento_inteiro.py`. Duas
 razões, e a segunda é a que importa:
 
-1. a bancada de quem roda não é a bancada de quem escreveu. Um teste contra o
+1. a máquina de quem roda não é a máquina de quem escreveu. Um teste contra o
    `/sys` real passaria aqui e mediria outra coisa na máquina seguinte;
 2. o mesmo ponto de injeção é o que protege a FOTO da janela de calibração.
    `test_nenhum_caminho_do_sys_real_e_tocado` é o que segura essa porta.
 
-A BANCADA DE MENTIRA
+O GABINETE DE MENTIRA
 ---------------------
 
 Copiada da medição desta casa em 25/08/2026, com caminhos `/mentira`. Sem o hub
-externo (que ela desplugou às 02h36) são **22 nós** e **15 buracos**, que é o
-número real da bancada::
+externo (desplugado às 02h36) são **22 nós** e **15 buracos**, que é o
+número real da máquina de teste::
 
     usb1  480 Mbps   10 nós   usb1-port1 .. usb1-port10
         port3   configured  device=1-3   panel=right  h=left  v=lower   teclado
@@ -40,9 +40,9 @@ número real da bancada::
 kernel decodifica: é a prova medida de que a frente do gabinete não é dedutível,
 e por isso o lugar tem de ser declarado.
 
-Com o hub (`Bancada(com_hub=True)`) entram `3-1` em `usb3-port1` e mais quatro
+Com o hub (`com_hub=True`) entram `3-1` em `usb3-port1` e mais quatro
 nós `3-1-port1..4`, um deles com `3-1.2` dentro — 26 nós e 19 buracos. O hub
-**não publica `speed`**, e é assim que a bancada exercita o terceiro estado de
+**não publica `speed`**, e é assim que o gabinete de mentira exercita o terceiro estado de
 `Furo.rapido`: "não sei".
 """
 from __future__ import annotations
@@ -303,7 +303,7 @@ def test_o_par_2_0_e_3_0_e_um_furo_so() -> None:
         f"separados: {furo.nos}"
     )
     assert len(lista) == 15, (
-        f"a mesa dela tem 15 buracos e 22 nós; contei {len(lista)} — "
+        f"a máquina de teste tem 15 buracos e 22 nós; contei {len(lista)} — "
         "sinal de que o `peer` não agrupou"
     )
 
@@ -314,7 +314,7 @@ def test_entrada_vazia_aparece_com_state_not_attached() -> None:
     por_nome = {entrada.no: entrada for entrada in entradas}
 
     assert "usb1-port5" in por_nome, (
-        "a entrada vazia sumiu da lista — sem ela a calibração não tem o que "
+        "a entrada vazia sumiu da lista — sem a entrada a calibração não tem o que "
         f"mostrar; sobraram {len(entradas)} nós"
     )
     vazia = por_nome["usb1-port5"]
@@ -322,7 +322,7 @@ def test_entrada_vazia_aparece_com_state_not_attached() -> None:
     assert vazia.aparelho == ""
     assert vazia.vazio is True
     assert len(entradas) == 22, (
-        f"a mesa dela publica 22 nós de raiz; contei {len(entradas)}"
+        f"a máquina de teste publica 22 nós de raiz; contei {len(entradas)}"
     )
 
 
@@ -356,7 +356,7 @@ def test_entrada_de_atravessa_o_symlink_do_aparelho() -> None:
 
 
 def test_a_frente_do_gabinete_nao_e_dedutivel() -> None:
-    """As duas entradas da frente dela são IGUAIS nos três campos decodificados."""
+    """As duas entradas da frente da máquina de teste são IGUAIS nos três campos decodificados."""
     por_nome = {entrada.no: entrada for entrada in _entradas()}
     tres_campos = [
         (
@@ -400,7 +400,7 @@ def test_sys_ausente_devolve_lista_vazia_e_nao_levanta() -> None:
 
 
 def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
-    """O portão que protege a foto da janela: a bancada de mentira é total."""
+    """O portão que protege a foto da janela: o gabinete de mentira é total."""
     ensaio = Ensaio(com_hub=True)
     listar_entradas(
         raiz_usb=RAIZ, listar=ensaio.listar, ler=ensaio.ler, real=ensaio.real

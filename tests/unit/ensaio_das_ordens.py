@@ -1,4 +1,4 @@
-"""A bancada de mentira das ordens de serviço — nenhum caminho de `/sys` real."""
+"""O ensaio de mentira das ordens de serviço — nenhum caminho de `/sys` real."""
 from __future__ import annotations
 
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
@@ -166,7 +166,7 @@ def ler_serial(no: str) -> str:
 
 
 def censo(*, sem: tuple[str, ...] = (), mais: tuple[Aparelho, ...] = ()) -> Censo:
-    """A bancada inteira, opcionalmente sem alguns nós e com outros a mais."""
+    """O ensaio inteiro, opcionalmente sem alguns nós e com outros a mais."""
     return Censo(
         aparelhos=tuple(a for a in APARELHOS if a.nome_do_kernel not in sem) + mais
     )

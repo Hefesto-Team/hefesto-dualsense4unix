@@ -61,7 +61,7 @@ def rodar(raiz: Path) -> subprocess.CompletedProcess[str]:
 
 
 def test_fato_caduco_na_pagina_publicada_reprova(tmp_path: Path) -> None:
-    """MORDIDA — o texto da página publicada é o que ela LÊ na tela."""
+    """MORDIDA — o texto da página publicada é o que quem usa LÊ na tela."""
     raiz = monta_arvore(tmp_path)
     raiz.joinpath(*PAGINA_RELATIVA).write_text(
         PAGINA_COM_O_LITERAL, encoding="utf-8"
@@ -147,5 +147,5 @@ def test_as_dez_paginas_reais_estao_no_alcance() -> None:
     faltando = [p.name for p in paginas if p not in vivos]
     assert not faltando, (
         f"as páginas {faltando} não estão entre os arquivos vivos que o portão "
-        "varre — um fato caduco escrito nelas chegaria à tela dela em silêncio"
+        "varre — um fato caduco escrito nas páginas chegaria à tela de quem usa em silêncio"
     )

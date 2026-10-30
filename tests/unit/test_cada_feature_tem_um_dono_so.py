@@ -2,21 +2,21 @@
 
 A fala de 12/10/2026: «Temos que evitar features se repetindo em abas diferentes.»
 
-O mapa `FEATURES` diz, para cada feature, QUEM A ESCREVE: a aba dona e os gestos de escrita dela.
+O mapa `FEATURES` diz, para cada feature, QUEM A ESCREVE: a aba dona e os seus gestos de escrita.
 Dois olhares, e os dois reprovam o mesmo defeito, por caminhos diferentes:
 
-1. **as páginas** (a bancada e a publicada): nenhuma página fora da dona emite um desses gestos
+1. **as páginas** (a do mockup e a publicada): nenhuma página fora da dona emite um desses gestos
    como botão. Selo, dica e texto passam: só `data-gesto` e `data-hef-gesto` contam;
 2. **o registro dos pacotes**: nenhuma página fora da dona atende um desses gestos. Um botão
    escondido, ou um gesto herdado de outra tela, reprova aqui mesmo que a página não o mostre.
 
 E um terceiro, contra a régua cega: a dona emite ou atende ao menos um gesto de cada papel.
 
-A perna «publicada» da Calibrar fica vermelha até o `--publicar` do fecho (a bancada já está
+A perna «publicada» da Calibrar fica vermelha até o `--publicar` do fecho (o mockup já está
 curada): é por desenho, como nas outras réguas de tela.
 
 MORDIDA: devolver o `analogico-lado` ao pacote da Calibrar (`@gesto("calibrar-sensores.html",
-"analogico-lado")`), ou o botão `data-gesto="analogico-lado"` ao gerador dela, reprova.
+"analogico-lado")`), ou o botão `data-gesto="analogico-lado"` ao gerador de outra aba, reprova.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ import monta
 
 PAGINAS = sorted(p.name for p in ENSAIO.glob("*.html") if p.name not in monta.PAGINAS_QUE_SAIRAM)
 ARQUIVOS = [pytest.param(pasta, nome, id=f"{rotulo}-{nome}")
-            for rotulo, pasta in (("bancada", ENSAIO), ("publicada", PUBLICADAS))
+            for rotulo, pasta in (("mockup", ENSAIO), ("publicada", PUBLICADAS))
             for nome in PAGINAS]
 
 
@@ -110,7 +110,7 @@ def test_o_mapa_tem_um_dono_por_gesto() -> None:
     repetidos = {g: d for g, d in _donos_do_gesto().items() if len(d) != 1}
     assert not repetidos, f"gesto com mais de uma dona no mapa: {repetidos}"
     assert {dona for dona, _ in FEATURES.values()} <= set(PAGINAS), (
-        "o mapa cita uma aba que a bancada não tem")
+        "o mapa cita uma aba que o mockup não tem")
 
 
 @pytest.mark.parametrize(("pasta", "nome"), ARQUIVOS)
@@ -126,7 +126,7 @@ def test_o_ensaio_da_dona_emite_o_que_o_mapa_diz() -> None:
     """Contra a régua cega: a dona emite ou atende ao menos um gesto de cada papel."""
     achados = {nome: gestos_da_pagina((ENSAIO / nome).read_text(encoding="utf-8"))
                for nome in PAGINAS}
-    assert len(achados) >= 11 and any(achados.values()), "a bancada sumiu — régua cega"
+    assert len(achados) >= 11 and any(achados.values()), "o mockup sumiu — régua cega"
     sem_nenhum = []
     pacotes = _pacotes()
     for (feature, papel), (dona, gestos) in FEATURES.items():

@@ -1,6 +1,6 @@
-"""O motor serve as três telas que ela já aprovou — ENTRADA-A-ENTRADA-02 (23/09/2026).
+"""O motor serve as três telas já aprovadas — ENTRADA-A-ENTRADA-02 (23/09/2026).
 
-A conferência da ENTRADA-A-ENTRADA-01 achou o maior problema dela: as três telas
+A conferência da ENTRADA-A-ENTRADA-01 achou o maior problema da sprint: as três telas
 da âncora ``#mapear-entrada-a-entrada`` (a página publicada, ``08-conexoes.html``)
 descrevem o fluxo da ``LogicaDaCalibracao`` — uma fase SENTADA sobre os
 aparelhos já plugados e uma fase EM PÉ sobre as entradas vazias —, e o motor
@@ -551,7 +551,7 @@ def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
 def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
     tmp_path: Path, disco: Path
 ) -> None:
-    """A bancada: no ``0000:02:00.0`` o par de ``usb2-port1`` é
+    """O ensaio: no ``0000:02:00.0`` o par de ``usb2-port1`` é
     ``usb1-port5`` (o ``peer``, medido em 23/09). Os dois lados do buraco têm
     ``devpath`` diferente, e o lugar do buraco é o do lado 2.0 — o que o
     DualSense ganha ali.
@@ -801,7 +801,7 @@ def test_a_amarra_confere_o_id_path_inteiro_e_nao_so_o_devpath() -> None:
 def test_o_motor_grava_a_testemunha_e_o_nome_sobrevive_ao_boot_que_troca_os_barramentos(
     tmp_path: Path, disco: Path
 ) -> None:
-    """Mapeada no primeiro boot, a porta 4 do B continua a Entrada dela no"""
+    """Mapeada no primeiro boot, a porta 4 do B continua a sua Entrada no"""
     boot = Gabinete(tmp_path / "boot1", BOOT_1)
     boot.plugar(3, "4", DUALSENSE)
     laco = _laco(boot)
@@ -892,7 +892,7 @@ def test_o_nome_do_adaptador_mora_no_endereco_e_nao_toca_a_entrada(disco: Path) 
     moram em chaves diferentes, e gravar um não mexe no outro.
 
     MORDIDA: faça ``dar_nome_ao_adaptador`` gravar na entrada — a entrada
-    «Sofá» perde o nome dela.
+    «Sofá» perde o nome.
     """
     lugar = _lugar(PCI_A, "3")
     maquina.gravar_maquina({"mapa": {"portas": {"15": {"lugar": lugar, "nome": "Sofá"}}}})
@@ -1084,7 +1084,7 @@ def test_sob_sudo_o_gancho_do_maquina_json_morre(tmp_path: Path) -> None:
         return feito.stdout
 
     assert rodar(SUDO_UID="1000") == "morto", "o gancho do maquina.json sobreviveu ao sudo"
-    assert rodar(SUDO_USER="ela") == "morto"
+    assert rodar(SUDO_USER="fulano") == "morto"
     assert rodar() == str(tmp_path / "maquina.json")
 
 

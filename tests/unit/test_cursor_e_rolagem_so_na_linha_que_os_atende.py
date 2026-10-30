@@ -66,7 +66,7 @@ def test_a_lista_geral_e_a_do_ps_seguem_como_eram() -> None:
 
 @pytest.mark.parametrize("linha", [*LINHAS_DE_BOTAO, *EIXOS])
 def test_a_lista_e_o_resolver_dizem_o_mesmo(linha: str) -> None:
-    """O que a linha oferece tem quem o atenda; o que ela não oferece (e o resolver conhece como
+    """O que a linha oferece tem quem o atenda; o que não oferece (e o resolver conhece como
     de eixo) cai em `sem_dono` ali. A lista e o `resolver` leem a mesma declaração."""
     oferecidos = _tokens(linha)
     for token in sorted(DE_EIXO):
@@ -90,7 +90,7 @@ def test_o_perfil_antigo_com_a_acao_fora_do_lugar_mostra_nada(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
 ) -> None:
     """Cursor num botão, Rolagem no esquerdo, Cursor no direito e uma tecla solta num analógico:
-    o perfil carrega sem migração calada e cada linha mostra «— Nada —», o que ela faz.
+    o perfil carrega sem migração calada e cada linha mostra «— Nada —», o que faz.
     MORDIDA: devolver `acoes.rotulo(token)` em `_o_que_a_linha_mostra` reprova."""
     monkeypatch.syspath_prepend(
         str(pathlib.Path(__file__).resolve().parents[2] / "src/hefesto_dualsense4unix/interface"))
@@ -116,7 +116,7 @@ def test_o_perfil_antigo_com_a_acao_fora_do_lugar_mostra_nada(
 
 
 def test_o_de_fabrica_dos_analogicos_segue_na_lista_deles() -> None:
-    """O de fábrica de cada linha é oferecido por ela: a tela nunca mostra o padrão sem opção."""
+    """O de fábrica de cada linha é oferecido pela linha: a tela nunca mostra o padrão sem opção."""
     padrao = acoes.padrao()
     for linha in (*LINHAS_DE_BOTAO, *EIXOS):
         assert padrao[linha] in _tokens(linha), f"{linha}: o de fábrica não está na lista"

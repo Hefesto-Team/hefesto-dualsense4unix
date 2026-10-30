@@ -1,16 +1,16 @@
 """O alto-falante daquele controle TEM som saindo — o dublê de uma linha.
 
 **Nascido da RADIO-AFOGADO-01, 22/09/2026, e compartilhado de propósito.**
-Naquele dia a ponte do som deixou de subir em silêncio: ela escrevia 100
+Naquele dia a ponte do som deixou de subir em silêncio: escrevia 100
 reports de 334 B por segundo em cada DualSense do rádio, tocasse alguém ou
-não, e com três de pé a bancada caía em 11 a 89 segundos.
+não, e com três de pé a máquina de teste caía em 11 a 89 segundos.
 
 Seis réguas de FIAÇÃO — quem recebe qual `hidraw`, em que ordem a ponte sobe,
-o bit do microfone em cada report — herdaram o mundo de antes: elas chamam
-`_casar_as_pontes` e esperam uma ponte do outro lado. Elas não medem o portão
+o bit do microfone em cada report — herdaram o mundo de antes: chamam
+`_casar_as_pontes` e esperam uma ponte do outro lado. Não medem o portão
 novo (esse tem régua própria,
 ``test_a_ponte_do_som_nao_afoga_o_radio.py``); medem o que a ponte faz DEPOIS
-de existir. Então elas dizem que há som, e seguem medindo o que prometem.
+de existir. Então dizem que há som, e seguem medindo o que prometem.
 
 **O DUBLÊ SÓ ACENDE O ALTO-FALANTE.** O `hefesto_som_<hex6>` responde *"está
 tocando"*; qualquer outro nome — e o endpoint de quatro canais da háptica é

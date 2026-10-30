@@ -15,7 +15,7 @@ Morde em oito alturas:
 5. **replug e zero controles** — o device velho sai, não acumula;
 6. **N controles** — um device por controle no cabo;
 7. **prefixo ocupado** — com o `wineserver` DAQUELE prefixo vivo, não escreve;
-8. **D1, as duas opções do Proton** — elas nascem em TODA variante do
+8. **D1, as duas opções do Proton** — nascem em TODA variante do
    `compose_env`, que é quem o daemon materializa (a seção do fim explica o
    buraco que essa altura fechou, e o que ele deixava passar verde).
 
@@ -174,7 +174,7 @@ def test_sem_dono_entram_as_duas_variantes(tmp_path: Path) -> None:
 
 
 def test_o_dono_nao_e_a_propria_resposta(tmp_path: Path) -> None:
-    """Os nossos blocos saem ANTES da pergunta — senão ela responde a si mesma."""
+    """Os nossos blocos saem ANTES da pergunta — senão a pergunta responde a si mesma."""
     compat = _prefixo(tmp_path, _registro())
     com_usec = ks.Controle(pid=0x0CE6, bus=3, dev=28, usec=5)
     ks.aplicar(compat, controles=[com_usec], proc=tmp_path / "proc", carimbo=1)
@@ -719,7 +719,7 @@ def _toda_variante_do_compose_env() -> list[dict[str, object]]:
 
 
 def test_as_duas_opcoes_da_haptica_nascem_em_toda_variante() -> None:
-    """D1: elas entram com «1» em todo estado, como o preload. Sem `if`."""
+    """D1: as duas entram com «1» em todo estado, como o preload. Sem `if`."""
     from hefesto_dualsense4unix.daemon.launch_env import compose_env
 
     variantes = _toda_variante_do_compose_env()
@@ -729,7 +729,7 @@ def test_as_duas_opcoes_da_haptica_nascem_em_toda_variante() -> None:
         for nome in _LIGADAS_SEMPRE:
             assert env.get(nome) == "1", (
                 f"a variante {estado} saiu sem {nome}=1 — o jogo da Sony abre "
-                "sem o endpoint de 4 canais e a vibração não chega à mão dela"
+                "sem o endpoint de 4 canais e a vibração não chega à mão de quem joga"
             )
 
 
@@ -827,7 +827,7 @@ def test_o_curador_entra_executavel_porque_o_wrapper_exige_isso() -> None:
     corpo = _corpo_da_funcao("assets/hefesto-launch.sh", "curar_audio_ks")
     assert '-x "$curador"' in corpo, (
         "o wrapper deixou de exigir o bit de execução — esta régua mede a "
-        "exigência dele, e ela sumiu"
+        "exigência do wrapper, e a exigência sumiu"
     )
     for fonte, alvo in (
         ("AUDIO_KS_SRC", "AUDIO_KS_TARGET"),

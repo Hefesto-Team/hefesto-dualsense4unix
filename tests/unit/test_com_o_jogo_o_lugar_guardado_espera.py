@@ -5,7 +5,7 @@ o jogo»): com um jogo na autoridade, quem cai ou entra não muda o número de n
 cada um fica com o número que tinha, e o rearranjo acontece quando o jogo solta. O
 «Renumerar agora» continua sendo o gesto do usuário, e vale com o jogo aberto.
 
-**A bancada é a de queda da O-ASSENTO-02** (:class:`MesaDoJogo`): o backend, o co-op e o
+**O ensaio é o de queda da O-ASSENTO-02** (:class:`MesaDoJogo`): o backend, o co-op e o
 registro de verdade, e o jogo visto de FORA (:class:`JogoPorFora`, o lugar de cada vpad
 pela ordem em que ele nasce e morre). Nenhum nó uinput nasce.
 
@@ -70,7 +70,7 @@ def gatilhos(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[str]]:
 
 
 def _volta(ensaio: MesaDoJogo, segundos: float = TIQUE) -> None:
-    """Um tique da bancada e a volta do laço que confere a numeração."""
+    """Um tique do ensaio e a volta do laço que confere a numeração."""
     ensaio.tique(segundos)
     cx.armar_gatilho_da_cor_por_numeracao(ensaio.daemon)  # type: ignore[arg-type]
 

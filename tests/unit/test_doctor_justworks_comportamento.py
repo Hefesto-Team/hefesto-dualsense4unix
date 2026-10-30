@@ -33,8 +33,8 @@ def _extrair_funcao() -> str:
     )
     corpo = proc.stdout
     assert corpo.startswith(f"{FUNCAO}() {{"), (
-        f"não achei a função {FUNCAO} em {DOCTOR} — se ela foi renomeada, o "
-        "detector de JustWorksRepairing perdeu a bancada que o exercita"
+        f"não achei a função {FUNCAO} em {DOCTOR} — se foi renomeada, o "
+        "detector de JustWorksRepairing perdeu o ensaio que o exercita"
     )
     assert corpo.rstrip().endswith("}"), "a extração da função não fechou"
     return corpo
@@ -114,7 +114,7 @@ def test_always_reprova_e_nao_ganha_selo_verde(tmp_path: Path) -> None:
 
 
 def test_confirm_e_aprovado(tmp_path: Path) -> None:
-    """Linha de base: sem ela, um detector que reprova tudo 'passaria' no (A)."""
+    """Linha de base: sem isto, um detector que reprova tudo 'passaria' no (A)."""
     proc = _rodar(tmp_path, _MAIN_CONF["confirm"])
 
     assert "[ OK ]" in proc.stdout
@@ -151,7 +151,7 @@ def test_never_avisa_sem_prometer_o_que_nao_cumpre(tmp_path: Path) -> None:
     assert "never" in proc.stdout
     assert "MAIS restritivo" in proc.stdout
     assert "FORA das sentinelas" in proc.stdout and "DENTRO do bloco" in proc.stdout, (
-        "o aviso voltou a prometer a devolução sem dizer que ela só vale FORA "
+        "o aviso voltou a prometer a devolução sem dizer que a devolução só vale FORA "
         "do bloco — é a promessa falsa no lugar mais provável"
     )
 

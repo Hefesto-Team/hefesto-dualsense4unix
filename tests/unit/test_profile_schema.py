@@ -196,13 +196,13 @@ _MAC_BT = "aabbcc000002"
 class TestControllersMap:
     def test_perfil_antigo_sem_mapa_carrega_com_none(self):
         """Migração: perfil v1 (sem o campo) valida e `controllers` fica None."""
-        p = Profile.model_validate({"name": "vitoria", "match": {"type": "any"}})
+        p = Profile.model_validate({"name": "viajante", "match": {"type": "any"}})
         assert p.controllers is None
 
     def test_mapa_valido_roundtrip(self):
         """O aceite 1 do sprint: o mapa sobrevive a dump→validate sem perda."""
         original = Profile(
-            name="vitoria",
+            name="viajante",
             match=MatchAny(),
             controllers={
                 _MAC_BT: ControllerOverrides(

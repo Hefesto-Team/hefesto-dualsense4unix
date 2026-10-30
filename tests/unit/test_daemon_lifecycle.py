@@ -186,7 +186,7 @@ async def test_daemon_desconecta_no_shutdown():
 
 
 class _ControleQueCaiPeloProbe(FakeController):
-    """A queda pela porta do `is_connected()` — e SÓ por ela. E quem cai não volta."""
+    """A queda pela porta do `is_connected()` — e SÓ por essa porta. E quem cai não volta."""
 
     caiu = False
 
@@ -206,7 +206,7 @@ class _ControleQueCaiPeloProbe(FakeController):
 
 
 class _ControleQueSomeNaLeitura(FakeController):
-    """A leitura que levanta — e SÓ ela.
+    """A leitura que levanta — e SÓ essa leitura.
 
     O `read_state` real não faz E/S (lê o `ds.state` e o snapshot do evdev que as
     threads mantêm), então uma leitura que levanta é defeito de código, e não a
@@ -238,7 +238,7 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
 
     Sem controle na mesa, o daemon não pode seguir dizendo a última leitura
     boa (medido: `connected: true, transport: "bt", battery_pct: 75` com
-    ZERO controles na bancada, ONDA0-Z5 §2.2). O FakeController conecta, lê
+    ZERO controles na máquina de teste, ONDA0-Z5 §2.2). O FakeController conecta, lê
     alguns estados e então "cai" (`disconnect()`, um probe/unplug real) — a
     BORDA tem de escrever `None` no store e apagar `_last_state` uma única
     vez, para que `daemon.status` e `daemon.state_full` parem de repetir

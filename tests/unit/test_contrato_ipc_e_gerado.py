@@ -81,7 +81,7 @@ O `profile.switch` troca o perfil ativo, e é o único com contrato em prosa aqu
 
 @pytest.fixture
 def arvore(tmp_path: Path) -> Path:
-    """Árvore de brinquedo, já com o bloco recém-gerado nela."""
+    """Árvore de brinquedo, já com o bloco recém-gerado."""
     (tmp_path / "scripts").mkdir()
     daemon = tmp_path / "src" / "hefesto_dualsense4unix" / "daemon"
     daemon.mkdir(parents=True)
@@ -156,7 +156,7 @@ def test_o_bloco_recem_gerado_passa_no_check(arvore: Path) -> None:
 def test_o_bloco_traz_o_metodo_o_endereco_do_handler_e_a_contagem(
     arvore: Path,
 ) -> None:
-    """As quatro colunas saem do código, e a contagem sai com elas."""
+    """As quatro colunas saem do código, e a contagem sai junto."""
     texto = documento(arvore).read_text(encoding="utf-8")
     assert "**2 métodos**" in texto, "a contagem gerada sumiu do bloco"
     assert "`rumble.set`" in texto
@@ -170,7 +170,7 @@ def test_metodo_novo_no_dispatcher_faz_o_check_reprovar(arvore: Path) -> None:
     """A MORDIDA do item: é assim que o documento chegou ao estado de 13/08.
 
     Registrar um método e não escrever contrato nenhum era, até hoje, uma
-    operação silenciosa. A partir daqui ela reprova, e o erro nomeia o método.
+    operação silenciosa. A partir daqui reprova, e o erro nomeia o método.
     """
     servidor = arvore / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_server.py"
     servidor.write_text(
@@ -226,7 +226,7 @@ def test_o_bloco_desatualizado_com_mtime_mais_novo_e_acusado(arvore: Path) -> No
 def test_documentar_o_metodo_na_prosa_muda_a_coluna_de_contrato(
     arvore: Path,
 ) -> None:
-    """A coluna que conta a dívida — e ela reage a quem paga a dívida.
+    """A coluna que conta a dívida — e reage a quem paga a dívida.
 
     `rumble.set` nasce `**não**` porque a prosa do brinquedo só cita
     `profile.switch`. Escrever uma linha sobre ele na prosa muda a coluna: o

@@ -3,17 +3,17 @@
 Este arquivo existe por causa de um ensaio que FALHOU, e o modo como ele falhou
 é o desenho inteiro.
 
-12/08/2026, bancada, três DualSense no rádio, Steam viva. A primeira versão do
+12/08/2026, máquina de teste, três DualSense no rádio, Steam viva. A primeira versão do
 gatilho esperava 1,5 s depois de CADA conexão e escrevia só naquele controle:
 `.0034` às 23:55:53, `.0035` às 23:55:54, `.0036` às 23:55:56. Resultado: só o player 4 (o
 controle azul) ficou com a cor; o resto ficou no padrão da Steam.
 
 A leitura (ensaio `gatilho-1500ms-por-controle` em `docs/data/ensaios.csv`): a
-rajada da Steam **não é por controle, é por evento** — cada conexão nova faz ela
+rajada da Steam **não é por controle, é por evento** — cada conexão nova faz a Steam
 repintar todos. Escrever 1,5 s depois do controle A não adianta se o B conecta
 depois. O `.0036` sobreviveu apenas porque ninguém conectou depois dele.
 
-A correção (ensaio `gatilho-escrever-no-silencio`, aceite de produto: *"perfeito"*):
+A correção (ensaio `gatilho-escrever-no-silencio`, aceita como produto em 12/08):
 armar a cada conexão, disparar quando o rádio SOSSEGA, escrever em todos.
 
 O que estes testes travam, e cada um corresponde a uma linha de ensaio:
@@ -56,7 +56,7 @@ def test_sem_conexao_nenhuma_nunca_dispara() -> None:
 
 
 def test_uma_conexao_dispara_depois_do_atraso_e_nao_antes() -> None:
-    """A janela medida: dentro dela a Steam ainda está pintando; depois, silêncio."""
+    """A janela medida: dentro da janela a Steam ainda está pintando; depois, silêncio."""
     gatilho = _gatilho(1.5)
     gatilho.armar(100.0)
 
@@ -105,7 +105,7 @@ def test_desarmar_esquece_a_sequencia_sem_disparar() -> None:
 
 
 def test_o_atraso_padrao_e_o_numero_medido() -> None:
-    """1,5 s é dela e é medido — não é constante de gosto."""
+    """1,5 s é medido — não é constante de gosto."""
     assert ATRASO_APOS_A_ULTIMA_CONEXAO_S == 1.5
 
 

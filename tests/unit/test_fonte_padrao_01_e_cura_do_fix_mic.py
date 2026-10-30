@@ -445,7 +445,7 @@ class TestQuemPodeSerPromovido:
     def test_sem_o_dropin_51_e_sem_marca_ninguem_sabe(self, cenario: Cenario) -> None:
         """CORRIGIDO em 26/08/2026 — DROPIN-AMBIGUO-01, e o produto é que mudou."""
         assert self._rc_prefere(cenario) == 1, (
-            "sem o 51 e sem a marca do gesto, ninguém sabe se ela promoveu o "
+            "sem o 51 e sem a marca do gesto, ninguém sabe se a escolha promoveu o "
             "controle ou se um uninstall desarmou a cura — e adivinhar aqui é "
             "o falso verde que a DROPIN-AMBIGUO-01 derrubou"
         )
@@ -564,7 +564,7 @@ class TestPortaoParaDeAprovarOSintoma:
     def test_sem_fonte_alguma_a_cura_diz_a_consequencia_de_privacidade(
         self, cenario: Cenario
     ) -> None:
-        """O estado em que ela fica NÃO parece defeito."""
+        """O estado em que a máquina fica NÃO parece defeito."""
         cenario.sources_short = "\n".join(
             linha for linha in SOURCES_SHORT.splitlines() if ".monitor" in linha
         ) + "\n"
@@ -606,13 +606,13 @@ class TestCuraDaFontePadrao:
         """CORRIGIDO em 30/07 — este teste afirmava o contrário do próprio
         comentário da fixture que ele usa.
 
-        A `SOURCES_LONGO` diz, três linhas acima dela: *"a onboard tem porta
-        ativa `not available` (nada plugado no jack); a do DualSense tem
-        `availability unknown` — e é ela que gravou pico 4606"*. O raciocínio
+        A `SOURCES_LONGO` diz, três linhas acima da fixture, que a onboard tem porta
+        ativa `not available` (nada plugado no jack); que a do DualSense tem
+        `availability unknown`, e que é a do DualSense que gravou pico 4606. O raciocínio
         estava certo e a afirmação, errada: o teste exigia que a cura elegesse a
         ONBOARD.
 
-        Provado na bancada em 30/07, depois de um `uninstall` + `install`
+        Provado na máquina de teste em 30/07, depois de um `uninstall` + `install`
         limpos: eleger a onboard não gruda. O `pactl set-default-source` aceita,
         o WirePlumber não consegue honrar um nó sem porta usável, reelege
         sozinho e volta para o MONITOR em segundos — com a cura tendo impresso
@@ -628,7 +628,7 @@ class TestCuraDaFontePadrao:
         gravação do DualSense. A premissa é de 30/07, quando o 51 punha a
         entrada do controle em 50, abaixo do monitor. Desde a MONITOR-QUE-VENCE-01
         (08/08) o 51 a põe em 1500, acima de qualquer monitor, e gravar a escolha
-        a empilha no estado do WirePlumber, onde ela vence a webcam plugada
+        a empilha no estado do WirePlumber, onde vence a webcam plugada
         depois. O caso com o 51 virou a régua logo abaixo; este ficou SEM o 51,
         que é onde a gravação ainda é o único jeito de a entrada vencer. A metade
         que ele provava fica de pé nos dois: a onboard nunca é eleita.
@@ -693,7 +693,7 @@ class TestCuraDaFontePadrao:
         eleicoes = [
             c for c in cenario.chamadas() if c.startswith("set-default-source")
         ]
-        assert eleicoes == [], f"a cura atropelou a escolha dela: {eleicoes}"
+        assert eleicoes == [], f"a cura atropelou a escolha de quem usa: {eleicoes}"
 
     def test_sem_nenhuma_captura_a_cura_avisa_e_nao_inventa(
         self, cenario: Cenario

@@ -1,4 +1,4 @@
-"""A cor volta a ser dela — a aba Perfis para de rebaixar o que ela consertou.
+"""A cor volta a ser a escolhida — a aba Perfis para de rebaixar o que foi consertado.
 
 Três entregas da fila crítica dos perfis, todas com evidência datada:
 
@@ -6,13 +6,13 @@ Três entregas da fila crítica dos perfis, todas com evidência datada:
 `base.update({name, priority, match})` que sobrescrevia SEMPRE, com o que
 estivesse nos widgets. Medido no disco do usuário: `Pragmata` era regra de jogo com
 prioridade 100 em 26/07 às 23h40 e amanheceu catch-all em 27/07 às 23h04;
-`vitoria.json` caiu de prioridade 100 para 0. Salvar a cor pela aba Perfis
+`viajante.json` caiu de prioridade 100 para 0. Salvar a cor pela aba Perfis
 gravava de volta a leitura empobrecida da tela.
 
 **PERFIL-NASCE-CERTO-01.** O perfil novo nascia `match:any` e prioridade 0 —
 que é a combinação que garante que ele NUNCA vale num jogo (a R-21 nega
-autoridade a catch-all em janela de jogo) e perde para o catch-all dela em
-todo o resto. E o teto da escala era 100, com o catch-all dela exatamente em
+autoridade a catch-all em janela de jogo) e perde para o catch-all de quem usa em
+todo o resto. E o teto da escala era 100, com esse catch-all exatamente em
 100: não existia número escolhível pela janela que desempatasse.
 
 **EMPATE-01/E-1.** O `fallback` semeado pelo repositório trazia
@@ -21,13 +21,13 @@ alfabeto, de quem tinha opinião melhor.
 
 Hermético: stubs de `gi.repository` quando falta PyGObject, widgets falsos com
 a mesma API por-ID que a aba usa. Nenhum GTK real, nenhum daemon, nenhuma
-escrita no ~/.config dela.
+escrita no ~/.config de quem roda.
 """
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("empate01 a cor volta a ser dela")
+exigir_gi_real("empate01 a cor volta a ser a escolhida")
 
 import json
 import sys

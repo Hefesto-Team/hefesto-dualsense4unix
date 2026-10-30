@@ -285,7 +285,7 @@ def test_o_boot_do_daemon_calado_sem_ucm_conf(
 
 
 def test_o_doctor_roda_a_checagem() -> None:
-    """A função existir não basta: ela tem de estar no `main()` do doctor."""
+    """A função existir não basta: tem de estar no `main()` do doctor."""
     texto = (RAIZ / "scripts" / "doctor.sh").read_text(encoding="utf-8")
     corpo = texto[texto.index("\nmain() {") :]
     corpo = corpo[: corpo.index("\n}\n")]

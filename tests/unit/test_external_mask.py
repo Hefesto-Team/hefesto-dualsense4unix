@@ -3,7 +3,7 @@
 D-2710-O-MODO-E-UM-SO-PARA-TODOS-OS-CONTROLES (27/10/2026): o `controller_masks.json`
 guardava a máscara de CADA controle (MÁSCARA-01, E1). Agora a máscara é a do modo único,
 igual para todos, e o arquivo que sobrar na casa vira o modo uma vez e sai do disco, sem
-perder a escolha: com perfil ativo a migração do perfil já a levou; sem perfil, ela vai ao
+perder a escolha: com perfil ativo a migração do perfil já a levou; sem perfil, a escolha vai ao
 padrão do computador; o pad desligado e o arquivo ilegível ficam onde estão.
 
 MORDIDAS: devolva à `mascara_efetiva` a leitura por identidade (o P2 com outra máscara
@@ -125,7 +125,7 @@ def test_o_arquivo_vazio_so_sai(_casa: Path) -> None:
 
 @pytest.mark.parametrize("conteúdo", ["{", "[]", '{"masks": "sei lá"}'])
 def test_o_arquivo_ilegivel_fica_intocado(_casa: Path, conteúdo: str) -> None:
-    """O que não se lê não se apaga: é o arquivo dela, e ninguém o reescreve."""
+    """O que não se lê não se apaga: é o arquivo de quem usa, e ninguém o reescreve."""
     save_gamepad_emulation(True, "dualsense")
     _casa.mkdir(parents=True, exist_ok=True)
     arquivo = _casa / em.ARQUIVO_DE_MASCARAS_DE_ANTES

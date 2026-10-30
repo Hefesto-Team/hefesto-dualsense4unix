@@ -13,7 +13,7 @@ havia um controle com 75% de bateria e que não havia controle nenhum.
 chamador fora de `tests/`?"* para um símbolo específico — e essa é exatamente a
 forma da mordida que faltou em I1, I2 e I3. O
 `portao_a_casa_sabe_e_o_produto_nao_faz.py` faz a pergunta para a árvore
-inteira, com registro de lacunas conhecidas; aqui ela é feita para os TRÊS
+inteira, com registro de lacunas conhecidas; aqui é feita para os TRÊS
 símbolos desta onda, sem registro nenhum onde se esconder.
 
 POR QUE (a) É `xfail(strict=True)` E NÃO VERMELHO

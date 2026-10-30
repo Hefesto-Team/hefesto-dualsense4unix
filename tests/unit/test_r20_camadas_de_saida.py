@@ -159,7 +159,7 @@ def test_apply_de_perfil_default_auto_preserva_ajuste_manual(
     isolated_profiles_dir: Path,
 ) -> None:
     """Caso ao vivo (queixa 2): perfil catch-all sem overrides, reativado pelo"""
-    save_profile(Profile(name="vitoria", match=MatchAny(),
+    save_profile(Profile(name="viajante", match=MatchAny(),
                          leds=LedsConfig(lightbar=(50, 50, 50))))
     backend, _h1, h2 = _backend()
     backend.apply_output_for(UNIQ_2, OutputSpec(led=(0, 255, 0)))
@@ -167,7 +167,7 @@ def test_apply_de_perfil_default_auto_preserva_ajuste_manual(
     manager = ProfileManager(controller=backend, store=StateStore())
     for _ in range(5):
         manager.apply(
-            Profile(name="vitoria", match=MatchAny(),
+            Profile(name="viajante", match=MatchAny(),
                    leds=LedsConfig(lightbar=(50, 50, 50))),
             origin="autoswitch",
         )
@@ -197,7 +197,7 @@ def test_brilho_only_nao_materializa_cor_global(
     try:
         inst, _n1, n2 = _backend_com_auto()
         profile = Profile(
-            name="vitoria",
+            name="viajante",
             match=MatchAny(),
             leds=LedsConfig(lightbar=(129, 61, 156), lightbar_brightness=1.0),
             controllers={
@@ -227,7 +227,7 @@ def test_escala_de_brilho_convive_com_override_de_cor(
     try:
         inst, n1, n2 = _backend_com_auto()
         profile = Profile(
-            name="vitoria",
+            name="viajante",
             match=MatchAny(),
             leds=LedsConfig(lightbar=(129, 61, 156), lightbar_brightness=1.0),
             controllers={

@@ -109,7 +109,7 @@ def _perfil(
     if auto is not None:
         leds_kwargs["auto_player_colors"] = auto
     return Profile(
-        name="vitoria",
+        name="viajante",
         match=MatchAny(),
         priority=5,
         leds=LedsConfig(**leds_kwargs),
@@ -136,7 +136,7 @@ def test_round_trip_preserva_auto_false_e_mapa_controllers() -> None:
     perfil = _perfil(auto=False, controllers={UNIQ_2: _override_verde_completo()})
     draft = DraftConfig.from_profile(perfil)
 
-    salvo = draft.to_profile("vitoria")
+    salvo = draft.to_profile("viajante")
     assert salvo.leds.auto_player_colors is False
     assert salvo.controllers is not None
     override = salvo.controllers[UNIQ_2]

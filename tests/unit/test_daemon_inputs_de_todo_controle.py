@@ -15,14 +15,14 @@ motion e touchpad abertos e legíveis ao lado.
 STATUS-04, adiado de P1 para P2): *"co-op é DEFAULT ON, o checkbox saiu da UI
 (…) no estado normal da máquina do usuário, TODO secundário já tem reader e o card
 dele já terá inputs só com STATUS-01/02. O buraco real é o modo Nativo (…) e
-emulação-off — cenários em que ela está jogando fullscreen, não olhando a
+emulação-off — cenários em que o usuário está jogando fullscreen, não olhando a
 GUI."* A aposta continua verdadeira: medido em 04/09/2026 com os dois DualSense
 do usuário em USB e co-op ligado, os DOIS controles já traziam `inputs` com giro,
 acelerômetro e touchpad.
 
 **O que caducou foi tratar o buraco como hipotético.** Nos modos em que o co-op
 se desmonta — Nativo, emulação off, suspensão por Steam Input — metade da mesa
-emudece, e são exatamente os modos em que ela está jogando.
+emudece, e são exatamente os modos em que quem usa está jogando.
 
 O que estes testes travam:
 
@@ -30,7 +30,7 @@ O que estes testes travam:
     (o critério de aceite literal do STATUS-04);
   * o reader passivo NUNCA faz `set_grab(True)` — com grab, o daemon vira
     leitor exclusivo e o JOGO deixa de ver o controle: o card acenderia à
-    custa da partida dela;
+    custa da partida;
   * o hub NÃO abre reader de gamepad para controle que o co-op já segura
     (inclusive o pendente de grab): o node está sob `EVIOCGRAB` e o fd
     passivo publicaria os `128` de fábrica como se fossem leitura;

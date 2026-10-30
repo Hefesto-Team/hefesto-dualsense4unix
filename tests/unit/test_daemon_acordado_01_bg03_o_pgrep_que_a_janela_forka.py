@@ -46,7 +46,7 @@ metade 2 sempre contou — **varreduras de `/proc`** — e as duas metades passa
 a falar a mesma língua.
 
 E a régua ganhou uma asserção que o dublê de `subprocess` não podia fazer:
-**quais arquivos o produto abre por pid**. É ela que prova que o `-x steam` do
+**quais arquivos o produto abre por pid**. É essa régua que prova que o `-x steam` do
 `pgrep` continua sendo comparado com o `comm`, e não deduzido do `argv[0]`.
 """
 
@@ -435,5 +435,5 @@ def test_gesto_destrutivo_varre_de_verdade(proc_contado) -> None:
     slo.invalidar_varredura_de_proc()
     assert slo.steam_game_running() is True, (
         "o caminho que vai FECHAR a Steam aceitou um negativo velho — com um "
-        "jogo aberto, esse é o caminho que mata progresso não salvo dela"
+        "jogo aberto, esse é o caminho que mata progresso não salvo de quem joga"
     )

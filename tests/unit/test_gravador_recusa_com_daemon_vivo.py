@@ -9,7 +9,7 @@ imprimir "aplicado" sem ter aplicado.
 
 Isto importa agora porque a captura de Bluetooth (`hid_capture_bt.bin`, que o
 ADR-008 afirma existir desde sempre e nunca existiu) vai ser gravada com o
-controle na mão. Uma captura contaminada é pior que captura nenhuma: ela vira
+controle na mão. Uma captura contaminada é pior que captura nenhuma: vira
 fixture, e a partir dali toda medição herda a mentira.
 
 A MORDIDA, provada em 11/08/2026

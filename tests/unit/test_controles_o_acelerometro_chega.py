@@ -5,7 +5,7 @@ por esta casa a frase de que *"o aparelho não entrega o acelerômetro — nem p
 cabo, nem pelo rádio"*. É falsa, e a medição é de 15/08/2026, nos DOIS
 transportes e em quatro unidades (cabo 1,0095 g e 0,9777 g; rádio 0,9899 g e
 0,9777 g), com o módulo da gravidade como régua absoluta. Refeita em 29/08 com
-dois DualSense no cabo desta bancada: `EVIOCGABS` devolveu `res=8192` nos três
+dois DualSense no cabo da máquina de teste: `EVIOCGABS` devolveu `res=8192` nos três
 eixos dos dois, e o vetor em repouso mediu 0,996 g e 0,992 g.
 
 Quem não entregava era o PRODUTO: o `MotionSensorReader` abria o node dos SEIS

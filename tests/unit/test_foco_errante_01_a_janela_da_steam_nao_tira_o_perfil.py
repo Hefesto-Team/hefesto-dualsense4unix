@@ -1,8 +1,8 @@
 """FOCO-ERRANTE-01 — a janela da Steam levava o perfil do jogo junto.
 
 Nota de 14/10/2026 (D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO): desde então a janela
-de lançador não ativa perfil nenhum, nem o feito para ela, e a pergunta do jogo
-vivo nem chega a ela. A guarda do jogo vivo continua valendo para toda outra
+de lançador não ativa perfil nenhum, nem o feito para essa janela, e a pergunta do jogo
+vivo nem chega lá. A guarda do jogo vivo continua valendo para toda outra
 janela com perfil próprio, e se mede aqui com a Navegação de uma janela que não
 é de lançador (``JANELA_DA_NAVEGACAO``).
 """
@@ -185,7 +185,7 @@ def test_a_janela_do_cliente_steam_nao_troca_o_perfil_com_o_jogo_vivo(
 def test_a_recusa_preserva_o_gatilho_e_a_lightbar_do_jogo(
     perfis_isolados: Path,
 ) -> None:
-    """O que ela PERDIA, no vocabulário do aparelho."""
+    """O que se PERDIA, no vocabulário do aparelho."""
     manager, store = _ensaio(_os_dois_perfis())
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     agora = _entrar_no_jogo(sw, store)
@@ -217,7 +217,7 @@ def test_sem_jogo_vivo_a_janela_com_perfil_proprio_troca_normalmente(
 def test_sem_jogo_vivo_a_janela_da_steam_nao_ativa_a_navegacao_feita_para_o_usuario(
     perfis_isolados: Path,
 ) -> None:
-    """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: a Navegação feita para a Steam não entra por ela."""
+    """D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: a Navegação feita para a Steam não entra pela Steam."""
     manager, store = _ensaio([
         *_os_dois_perfis(),
         _perfil("navegacao_da_steam", janela="steam", prioridade=99),

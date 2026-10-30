@@ -162,13 +162,13 @@ def _razao(fora: Any) -> float:
 
 
 def _teto_da_fase_s(fora: Any, quantos: int) -> float:
-    """O teto de uma fase de `quantos` tiques: `VEZES_O_NOMINAL` o nominal dela."""
+    """O teto de uma fase de `quantos` tiques: `VEZES_O_NOMINAL` o nominal da fase."""
     proprio = getattr(fora, "teto_da_fase_s", None)
     return float(proprio) if proprio else VEZES_O_NOMINAL * _nominal_s(quantos, fora)
 
 
 def _maior_buraco(de: float, tiques: list[float], agora: float) -> float:
-    """O maior intervalo sem tique na fase, contando da abertura dela até agora."""
+    """O maior intervalo sem tique na fase, contando da abertura da fase até agora."""
     marcas = [de, *tiques, agora]
     return max((b - a for a, b in itertools.pairwise(marcas)), default=0.0)
 
@@ -574,7 +574,7 @@ def _parada_pinta_so_as_cargas_inteiras(fora: Any) -> None:
 def _sequencias_no_ar(fora: Any, ticks: list[Any]) -> list[tuple[int, int, float, bool]]:
     """As sequências de tiques pulados por voo: `(início, tamanho, ms no ar, voltou)`.
 
-    O tempo no ar vai do envio da pintura que prendeu a sequência até o último sinal dela no ar:
+    O tempo no ar vai do envio da pintura que prendeu a sequência até o seu último sinal no ar:
     o último tique pulado ou a volta da pintura, o que vier depois. A que nunca voltou conta até
     o fim da corrida. É tempo medido, e não tiques vezes a cadência: na cadência real os tiques
     da abertura saem colados, e dois deles somam 0 ms."""
@@ -607,7 +607,7 @@ def _a_aba_quieta_nao_e_muda(fora: Any) -> None:
                 f"{fora.pagina} ({fora.n} controle(s)), fase {nome}: {tamanho} tique(s) "
                 f"seguido(s) pulado(s) por voo, do {inicio + 1}º ao {inicio + tamanho}º da fase, "
                 f"com a pintura no ar por {ms:.0f} ms"
-                f"{'' if voltou else ' (ela nunca voltou)'}; o teto é um tique do produto, "
+                f"{'' if voltou else ' (a sequência nunca voltou)'}; o teto é um tique do produto, "
                 f"{TIQUE_REAL_MS} ms")
         assert ticks and ticks[-1].produtivos > base, (
             f"{fora.pagina} ({fora.n} controle(s)), fase {nome}: nenhum tique produtivo em "

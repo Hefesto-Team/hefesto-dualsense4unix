@@ -155,7 +155,7 @@ def _state(*controllers: dict[str, Any], **top: Any) -> dict[str, Any]:
         "connected": bool(controllers),
         "transport": "bt",
         "battery_pct": 80,
-        "active_profile": "vitoria",
+        "active_profile": "viajante",
         "native_mode": False,
         "controllers": list(controllers),
     }

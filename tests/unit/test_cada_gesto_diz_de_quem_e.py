@@ -55,7 +55,7 @@ class _Gestos(html.parser.HTMLParser):
 
 
 def _as_dez() -> list[str]:
-    """As abas do produto, de `monta.ABAS`: a Controles saiu e a seção dela mora na Jogar."""
+    """As abas do produto, de `monta.ABAS`: a Controles saiu e a sua seção mora na Jogar."""
     _pacotes()
     import monta
 

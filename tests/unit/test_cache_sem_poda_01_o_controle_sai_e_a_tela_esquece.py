@@ -61,7 +61,7 @@ class _JanelaDeMentira:
 
 @pytest.fixture
 def mesa() -> Any:
-    """Devolve os caches de módulo como estavam. **Sem ela, esta régua envenena.**"""
+    """Devolve os caches de módulo como estavam. **Sem isto, esta régua envenena.**"""
     guardado = {
         "camada1": dict(a02._CAMADA_1), "sono": dict(a02._SONO),
         "quando": a02._CAMADA_1_QUANDO[0],
@@ -313,7 +313,7 @@ def test_a_biblioteca_dos_lancadores_nao_guarda_controle(mesa: Any) -> None:
     sem_mesa = repr(a07.pacote(_ctx()))
 
     assert CANARIO not in com_mesa and P2 not in com_mesa, (
-        "a 07 passou a nomear o controle — e então ela TEM o que podar: "
+        "a 07 passou a nomear o controle — e então a aba TEM o que podar: "
         "registre uma poda com `@poda` neste arquivo")
     assert CANARIO not in sem_mesa and P2 not in sem_mesa, (
         "a vigia congelada devolveu o controle que já saiu da mesa: "

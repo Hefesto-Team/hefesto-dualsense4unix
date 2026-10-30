@@ -120,7 +120,7 @@ class TestInitQueEstouraNaoVazaFd:
         assert devolvido is None, "o timeout tem de continuar devolvendo None"
         assert _fd_foi_devolvido(handle, ESPERA_PELO_EOF), (
             "o fd do handle órfão continua aberto — é o vazamento visto em "
-            "/proc/<pid>/fd na máquina dela"
+            "/proc/<pid>/fd na máquina de quem roda"
         )
 
     def test_init_que_estoura_e_depois_falha_tambem_devolve_o_fd(self) -> None:
@@ -135,7 +135,7 @@ class TestInitQueEstouraNaoVazaFd:
         )
 
     def test_init_rapido_nao_fecha_o_handle_entregue(self) -> None:
-        """O contrapeso, e o teste que protege a bancada: no caminho feliz o"""
+        """O contrapeso, e o teste que protege a máquina: no caminho feliz o"""
         devolvido, handle = self._rodar()
 
         assert devolvido is handle, "o caminho feliz tem de entregar o handle"

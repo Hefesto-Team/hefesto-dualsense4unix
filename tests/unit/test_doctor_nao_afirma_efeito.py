@@ -46,7 +46,7 @@ def _sem_comentarios(texto: str) -> str:
 
 
 def _linha_do_pass(corpo: str) -> str:
-    """A linha do `pass` do check — é ela que o usuário lê como `[ OK ]`."""
+    """A linha do `pass` do check — é a que o usuário lê como `[ OK ]`."""
     for linha in _sem_comentarios(corpo).splitlines():
         nu = linha.strip()
         if nu.startswith("pass "):
@@ -110,7 +110,7 @@ def test_o_check_nao_escreve_no_no(tmp_path: Path) -> None:
 
 
 def test_a_mensagem_que_o_usuario_le_nao_promete_cor(tmp_path: Path) -> None:
-    """A frase RENDERIZADA (não o fonte) é a que ela lê — e ela também não mente."""
+    """A frase RENDERIZADA (não o fonte) é a que o usuário lê — e também não mente."""
     leds = tmp_path / "leds"
     no = leds / "0005:054C:0CE6.0002:rgb:indicator"
     no.mkdir(parents=True)
@@ -137,7 +137,7 @@ def test_a_mensagem_que_o_usuario_le_nao_promete_cor(tmp_path: Path) -> None:
     ).stdout
     for padrao in AFIRMACOES_DE_EFEITO:
         assert not re.search(padrao, saida, re.IGNORECASE), (
-            f"a mensagem que ela lê afirma EFEITO ({padrao!r}):\n  {saida.strip()}"
+            f"a mensagem que o usuário lê afirma EFEITO ({padrao!r}):\n  {saida.strip()}"
         )
     assert any(re.search(m, saida, re.IGNORECASE) for m in MARCAS_DE_HONESTIDADE), (
         f"a mensagem não declara que mediu só permissão:\n  {saida.strip()}"

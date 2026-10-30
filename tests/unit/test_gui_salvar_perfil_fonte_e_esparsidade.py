@@ -7,7 +7,7 @@ Três defeitos que compunham a queixa "as configs que eu faço não impactam":
    Lightbar/Gatilhos/Rumble/Mouse/Teclado gravam EXCLUSIVAMENTE no draft, então
    salvar pela aba Perfis descartava tudo. Pior: `on_profile_save` chama
    `profile_switch` quando o perfil salvo é o ativo → o daemon relia o JSON
-   velho e REVERTIA no hardware a cor/gatilho que ela acabara de ver funcionando.
+   velho e REVERTIA no hardware a cor/gatilho que o usuário acabara de ver funcionando.
 
 2. **Densificação** — `model_dump()` marca os defaults do schema como
    explícitos e perde o `model_fields_set`. Um override por-controle PARCIAL
@@ -40,7 +40,7 @@ MAC = "aabbcc000002"
 def _perfil_com_override_parcial() -> Profile:
     """Perfil cujo override por-controle mexe SÓ no brilho.
 
-    É o gesto real: ela seleciona um DualSense e ajusta só o brilho da lightbar,
+    É o gesto real: o usuário seleciona um DualSense e ajusta só o brilho da lightbar,
     esperando que a COR continue vindo do global/automático.
     """
     return Profile(
@@ -130,7 +130,7 @@ class TestR11SourceNameGateiaAsRegras:
 
         assert novo.match.type == "any", (
             "o perfil novo nasceu com o regex de título do FPS — ele casaria "
-            "com as janelas do FPS e não com o jogo dela"
+            "com as janelas do FPS e não com o jogo de quem usa"
         )
         assert novo.priority != 60
         assert novo.mode is None, "modo do outro perfil não é regra deste"
@@ -147,7 +147,7 @@ class TestR11SourceNameGateiaAsRegras:
         assert salvo.suppress_desktop_emulation is True
 
     def test_mode_configurado_na_aba_perfis_sobrevive_ao_salvar_do_rodape(self) -> None:
-        """O estrago nº 2, na ordem exata de cliques que ela faz."""
+        """O estrago nº 2, na ordem exata de cliques do usuário."""
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
         from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
@@ -164,7 +164,7 @@ class TestR11SourceNameGateiaAsRegras:
 
         salvo = draft_novo.to_profile("FPS")
         assert salvo.mode is not None and salvo.mode.gamepad_flavor == "xbox", (
-            "o rodapé apagou a seção `mode` que ela acabou de configurar"
+            "o rodapé apagou a seção `mode` que o usuário acabou de configurar"
         )
 
     def test_draft_sem_origem_nao_inventa_regra(self) -> None:

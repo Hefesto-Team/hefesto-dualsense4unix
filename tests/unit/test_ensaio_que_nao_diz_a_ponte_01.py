@@ -2,14 +2,14 @@
 
 Irmã da `ENSAIO-QUE-NAO-DIZ-O-DEGRAU-01`, do mesmo dia e da mesma família. O
 `degrau` diz **até onde** a medição foi (o aparelho obedeceu? o jogo recebeu? o
-jogo reagiu?); a `ponte` diz **por onde** ela chegou — máscara DualSense,
+jogo reagiu?); a `ponte` diz **por onde** a medição chegou — máscara DualSense,
 máscara Xbox, modo nativo, ou Steam Input.
 
 **Por que as duas fazem falta juntas.** Metade das linhas `uhid` do
 `mapa-controles.csv` — giroscópio, acelerômetro, os dois pontos do touchpad, o
 clique, o rumble — só existe quando a máscara é a nossa DualSense
 (`integrations/ponte_escada.py`, § *A assimetria, contada no mapa*). Uma medição
-feita pela máscara Xbox não fala por nenhuma delas, e sem a coluna não havia
+feita pela máscara Xbox não fala por nenhuma dessas linhas, e sem a coluna não havia
 onde escrever essa diferença: o casamento ensaio↔célula era
 `(linha_id, transporte)` e nada mais.
 
@@ -19,7 +19,7 @@ cliente segurando o hidraw, não da ponte; `xbox` e `uinput` aparecem zero vezes
 Por isso a coluna nasce vazia em todas as linhas, e por isso o vazio precisa de
 uma regra explícita em vez de um palpite.
 
-A REGRA, e a razão de ela ser ASSIMÉTRICA
+A REGRA, e a razão de ser ASSIMÉTRICA
 -----------------------------------------
 `eliminacao.sustentam_a_ponte`:
 
@@ -100,12 +100,12 @@ def test_o_caderno_tem_a_coluna_ponte_ao_lado_do_degrau() -> None:
     with CADERNO.open(encoding="utf-8", newline="") as fh:
         cabecalho = next(csv.reader(fh))
     assert "ponte" in cabecalho, (
-        "a coluna `ponte` sumiu do caderno. Sem ela não há o que casar, e um "
+        "a coluna `ponte` sumiu do caderno. Sem a coluna não há o que casar, e um "
         "portão que não vê nada passa sempre — o defeito mais caro desta casa."
     )
     assert cabecalho.index("ponte") == cabecalho.index("degrau") + 1, (
         "`ponte` saiu de perto de `degrau`. Os dois são o mesmo tipo de eixo — "
-        "um diz até onde a medição foi, o outro por onde ela chegou — e ficam "
+        "um diz até onde a medição foi, o outro por onde a medição chegou — e ficam "
         "lado a lado por isso."
     )
 
@@ -240,7 +240,7 @@ def test_o_ensaio_importa_as_pontes_em_vez_de_redigitar() -> None:
         for no in ast.walk(arvore)
     )
     assert importa, (
-        "a bancada parou de importar a `ESCADA` de `integrations/ponte_escada`. "
+        "o ensaio parou de importar a `ESCADA` de `integrations/ponte_escada`. "
         "Sem o import, as opções do seletor de ponte viram uma segunda cópia do "
         "vocabulário — e duas cópias divergem no dia em que alguém mexe numa."
     )
@@ -252,7 +252,7 @@ def test_o_ensaio_importa_as_pontes_em_vez_de_redigitar() -> None:
     }
     copiadas = sorted(literais & set(CHAVES_DA_ESCADA))
     assert not copiadas, (
-        f"a bancada redigita a(s) ponte(s) {copiadas} como literal. O dono do "
+        f"o ensaio redigita a(s) ponte(s) {copiadas} como literal. O dono do "
         "vocabulário é `integrations/ponte_escada.py`, e a lista `PONTES` sai "
         "dele — nunca das teclas de quem estiver editando."
     )

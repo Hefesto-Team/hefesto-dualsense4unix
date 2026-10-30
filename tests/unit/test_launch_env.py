@@ -238,7 +238,7 @@ def test_nativo_por_titulo_e_arriscado_e_por_appid_nao():
         kind="native", window_class=("steam_app_1599660",), name="sackboy_nativo"
     )
     gamepad = _perfil(kind="gamepad", title="qualquer", name="jogo")
-    sem_modo = _perfil(kind=None, name="vitoria")
+    sem_modo = _perfil(kind=None, name="viajante")
 
     nomes = launch_env._nativos_fora_da_antecipacao(
         [arriscado, coberto, gamepad, sem_modo]

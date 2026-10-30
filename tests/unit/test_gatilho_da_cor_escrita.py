@@ -1,6 +1,6 @@
-"""GATILHO-DA-COR-01 — a escrita: rota hidraw, TODOS do rádio, e o portão dela.
+"""GATILHO-DA-COR-01 — a escrita: rota hidraw, TODOS do rádio, e o seu portão.
 
-Medido na bancada de 11-12/08/2026, com o olho de quem confere e três DualSense no rádio
+Medido na máquina de teste de 11-12/08/2026, com o olho de quem confere e três DualSense no rádio
 com a Steam viva. As linhas estão em `docs/data/ensaios.csv`.
 
 O QUE ESTE ARQUIVO TRAVA, e cada item é uma medição
@@ -157,7 +157,7 @@ def test_o_cabo_fica_de_fora() -> None:
 
 
 def test_a_cor_e_o_numero_saem_no_MESMO_report() -> None:  # noqa: N802
-    """*"isso vai servir pro player e pro lightbar, certo?"* — dela, 12/08."""
+    """A mesma escrita serve ao número do jogador e à lightbar (pergunta de 12/08)."""
     handle = _Handle("bt")
     desired = _DesiredOutput(
         led=(255, 0, 128), player_leds=(True, False, True, False, True)
@@ -209,7 +209,7 @@ def test_em_modo_nativo_escreve_a_barra_e_o_numero() -> None:
 
 
 def test_o_instrumento_de_isolar_players_tira_o_numero_e_mantem_a_cor() -> None:
-    """LIGHTBAR-ISOLAR-OS-PLAYERS-01: o instrumento dela vale nesta rota também."""
+    """LIGHTBAR-ISOLAR-OS-PLAYERS-01: o instrumento vale nesta rota também."""
     handle = _Handle("bt")
     desired = _DesiredOutput(led=(1, 2, 3), player_leds=(True, True, True, True, True))
     backend = _backend({"aa:bb": handle}, desired={"aa:bb": desired})

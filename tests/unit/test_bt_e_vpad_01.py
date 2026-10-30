@@ -49,7 +49,7 @@ def test_a_fonte_padrao_de_outro_dispositivo_nao_e_confundida() -> None:
     Então a fonte padrão era outra coisa: nesta máquina, o microfone da
     placa-mãe. O botão do microfone DO CONTROLE alternava aquele, e o LED do
     controle acendia para refletir um estado que não era dele. O log de três
-    toques dela mostra a assinatura — sempre o mesmo resultado:
+    toques mostra a assinatura — sempre o mesmo resultado:
 
         20:15:54  mic_hotkey_toggle  muted=True
         20:16:31  mic_hotkey_toggle  muted=True
@@ -73,18 +73,18 @@ def test_o_botao_do_mic_nao_muta_o_aparelho_de_terceiro() -> None:
     """O DEFEITO 1 continua fechado — por CONSTRUÇÃO, e não mais pelo gate.
 
     Este teste exigia a saída **(a)** da sprint: o `mic_button_loop` só agia
-    quando `fonte_padrao_e_o_controle()` respondia sim. Ela caiu em 01/09/2026
+    quando `fonte_padrao_e_o_controle()` respondia sim. A guarda caiu em 01/09/2026
     (MIC-DA-MESA-ELEICAO-01), por decisão de produto e por duas medições:
 
-    1. **A guarda não separava CONTROLES.** Ela pergunta por SUBSTRING
+    1. **A guarda não separava CONTROLES.** Pergunta por SUBSTRING
        "dualsense" (`integrations/audio_control.py`), logo responde *"a fonte
        padrão é ALGUM DualSense"*, nunca *"é ESTE"*. Numa mesa de quatro os
        quatro respondem `True` — e o gesto novo tem endereço.
-    2. **Ela estava escrita de costas para o gesto novo.** Só deixava agir
+    2. **Estava escrita de costas para o gesto novo.** Só deixava agir
        quando a fonte padrão JÁ era o controle, que é exatamente o caso em que
        ELEGER não teria efeito nenhum.
 
-    **O que ela protegia continua protegido, e agora sem gate: o gesto não muta
+    **O que a guarda protegia continua protegido, e agora sem gate: o gesto não muta
     nada.** Ele ELEGE — troca qual fonte é o padrão do sistema. Não há caminho
     por onde o botão do controle silencie o microfone de um terceiro, porque
     não existe mais um `toggle_default_source_mute` no laço.
@@ -337,7 +337,7 @@ def test_bits_de_audio_ligados_com_bytes_zerados_nao_contam() -> None:
 
     assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s, (
         "bits ligados com bytes zerados é KEEPALIVE — replicar isso mandaria "
-        "volume zero ao controle dela"
+        "volume zero ao controle de quem usa"
     )
 
 
@@ -386,7 +386,7 @@ def test_a_amostra_obedece_as_mesmas_guardas_do_carimbo() -> None:
 
 
 def test_a_amostra_nao_sobrevive_ao_stop(tmp_path: Any) -> None:
-    """A amostra morre com o device, como os carimbos que ela acompanha."""
+    """A amostra morre com o device, como os carimbos que acompanha."""
     import os
 
     pad = _vpad_em_jogo()

@@ -8,8 +8,8 @@ travam nasceram do mesmo jeito, e vale escrever por quê:
     verdade quando foi escrito. Em 29/07 a EMULACAO-NO-JOGO-01 acrescentou
     `keyboard_emulation_enabled` — o campo que desliga o teclado emulado dentro
     da partida — e as três frases ficaram falsas no mesmo instante, sem que
-    ninguém tocasse nelas. A ironia é que são as páginas mais HONESTAS do
-    projeto: elas erram por serem específicas, que é o oposto do defeito das
+    ninguém tocasse nas frases. A ironia é que são as páginas mais HONESTAS do
+    projeto: erram por serem específicas, que é o oposto do defeito das
     outras.
 
   - **E3**, o socket: o mesmo caminho tinha três grafias na documentação, e a
@@ -284,5 +284,5 @@ def test_o_adr_do_socket_tem_nota_datada_corrigindo_a_grafia_legada() -> None:
     for esperado in (nome_base, env, "hefesto-dualsense4unix/"):
         assert esperado in depois_da_nota, (
             f"a nota de verificação de {adr} não nomeia `{esperado}` — sem isso "
-            "ela não diz o que o leitor deve usar no lugar."
+            "a nota não diz o que o leitor deve usar no lugar."
         )

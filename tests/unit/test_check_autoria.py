@@ -227,7 +227,7 @@ def test_arquivo_com_o_canario_no_nome_que_entrou_e_saiu_reprova_s12(repo: Path)
 def test_importar_a_regua_nao_desliga_o_refs_replace_de_quem_importa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A régua mede sem `refs/replace` só no git que ela chama: gravado no ambiente ao importar,
+    """A régua mede sem `refs/replace` só no git que chama: gravado no ambiente ao importar,
     o `GIT_NO_REPLACE_OBJECTS` vazava para os testes seguintes do processo (o S4 reprovou no CI)."""
     import importlib.util
 

@@ -53,7 +53,7 @@ def test_license_comeca_no_mit_sem_nada_antes() -> None:
     assert linhas, "LICENSE vazio"
     assert linhas[0] == "MIT License", (
         f"a primeira linha do LICENSE é {linhas[0]!r}, e tinha de ser 'MIT License'. "
-        "Decisão dela de 07/08/2026 (resposta 4): nada antes do texto MIT. "
+        "Decisão de produto de 07/08/2026 (resposta 4): nada antes do texto MIT. "
         "Ressalva de escopo vai para o NOTICE, seção 'ESCOPO DESTE ARQUIVO'."
     )
 
@@ -86,8 +86,8 @@ def test_license_tem_o_texto_mit_canonico_inteiro() -> None:
 def test_notice_tem_a_secao_de_escopo() -> None:
     texto = _texto(NOTICE)
     assert "ESCOPO DESTE ARQUIVO" in texto, (
-        "o NOTICE perdeu a seção 'ESCOPO DESTE ARQUIVO'. Ela é a dona da ressalva "
-        "desde 07/08/2026, e sem ela a ressalva sumiu do repositório inteiro."
+        "o NOTICE perdeu a seção 'ESCOPO DESTE ARQUIVO'. A seção é a dona da ressalva "
+        "desde 07/08/2026, e sem a seção a ressalva sumiu do repositório inteiro."
     )
 
 
@@ -335,10 +335,10 @@ def test_o_notice_diz_se_o_sdist_leva_os_fontes_gpl() -> None:
 
 
 def test_notice_declara_cc0_nas_curvas_proprias() -> None:
-    """Onde as curvas vão viver, está escrito que elas saem em CC0."""
+    """Onde as curvas vão viver, está escrito que saem em CC0."""
     texto = _texto(NOTICE)
     assert "CC0-1.0" in texto, (
-        "o NOTICE não declara a licença das curvas próprias. Decisão dela de "
+        "o NOTICE não declara a licença das curvas próprias. Pela decisão de "
         "07/08/2026 (resposta 2): MIT no código, CC0-1.0 nas curvas."
     )
     assert "docs/protocol/curvas-proprias.md" in texto, (

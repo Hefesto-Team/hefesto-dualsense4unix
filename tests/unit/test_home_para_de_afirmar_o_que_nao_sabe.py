@@ -18,10 +18,10 @@ que cada uma passou a dizer no lugar:
   ao lado era **vazia**: nem que o mecanismo existe, nem que ele parou;
 * **I3 — "você escolheu".** Com a fonte 1 morta, a divergência era sempre
   medida contra a máscara do PERFIL, que entra sozinho pelo autoswitch. A frase
-  acusava a pessoa de um gesto que ela não deu.
+  acusava a pessoa de um gesto que não deu.
 
-O TEXTO de todas elas é **estrutural** e espera o olho de quem confere
-(PROVA-DE-TELA-01). Este arquivo mede o que a tela não pode dizer, e o que ela
+O TEXTO de todas as frases é **estrutural** e espera o olho de quem confere
+(PROVA-DE-TELA-01). Este arquivo mede o que a tela não pode dizer, e o que
 tem de deixar de calar — nunca a redação.
 """
 from __future__ import annotations
@@ -158,7 +158,7 @@ class TestAExcecaoDeSteamInputNaoInventaUmaPonte:
                 codigo.append(f"linha {no.lineno}: atributo .{no.attr}")
 
         assert not codigo, (
-            "a aba Início voltou a LER `vpad_suspenso`, e ela só anda para "
+            "a aba Início voltou a LER `vpad_suspenso`, e a aba só anda para "
             f"False desde 09/08/2026 (VPAD-SUSPENSO-MORTO-01/E1): {codigo}"
         )
 

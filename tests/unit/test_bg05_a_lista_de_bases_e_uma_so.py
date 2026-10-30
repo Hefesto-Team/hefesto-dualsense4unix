@@ -68,7 +68,7 @@ class TestNenhumaListaAMaoSobreviveu:
     def test_o_modulo_inteiro_nao_guarda_uma_segunda_lista(
         self, relativo: str
     ) -> None:
-        """A constante de módulo é a porta dos fundos, e ela fica fechada."""
+        """A constante de módulo é a porta dos fundos, e fica fechada."""
         caminho = RAIZ_DO_PACOTE / relativo
         suspeitas = [
             f"{relativo}:{numero}: {texto}"

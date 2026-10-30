@@ -140,7 +140,7 @@ class TestORamoDaMesaDesconhecida:
         assert resultado["native_bt_fragil_controles"] == []
         assert resultado["native_bt_fragil"] is False, (
             "a lista por controle diz que ninguém está no rádio; o transporte "
-            "do topo não pode passar por cima dela"
+            "do topo não pode passar por cima da lista"
         )
 
     def test_lista_sem_ninguem_conectado_volta_para_a_regra_antiga(self) -> None:
@@ -152,7 +152,7 @@ class TestORamoDaMesaDesconhecida:
             assert resultado["native_bt_fragil_controles"] == []
             assert resultado["native_bt_fragil"] is True, (
                 f"mesa {mesa!r} não diz quem está no rádio — quem responde "
-                "ainda é a regra antiga, e ela diz que o primário está em BT"
+                "ainda é a regra antiga, que diz que o primário está em BT"
             )
 
 
@@ -176,8 +176,8 @@ def _extrair_funcao() -> str:
     )
     corpo = proc.stdout
     assert corpo.startswith(f"{FUNCAO}() {{"), (
-        f"não achei a função {FUNCAO} em {DOCTOR} — se ela foi renomeada, o "
-        "aviso de BT frágil do doctor perdeu a bancada que o exercita"
+        f"não achei a função {FUNCAO} em {DOCTOR} — se foi renomeada, o "
+        "aviso de BT frágil do doctor perdeu o ensaio que o exercita"
     )
     assert corpo.rstrip().endswith("}"), "a extração da função não fechou"
     return corpo
@@ -354,7 +354,7 @@ class TestAMesaDeVerdadeAtravessaOsDoisBancos:
         por gosto: atravessando o servidor com um `daemon` dublado o registry
         não tem sessão nenhuma, `_player_slot_for` devolve `None` (NUMA-05,
         "null honesto > número errado") e a numeração cai no `index + 1` — a
-        lista sairia `[3, 4]` por artefato da bancada, não do produto.
+        lista sairia `[3, 4]` por artefato do ensaio, não do produto.
         """
         from hefesto_dualsense4unix.daemon.ipc_handlers import controles_bt_frageis
 

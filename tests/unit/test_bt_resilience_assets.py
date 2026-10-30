@@ -240,5 +240,5 @@ class TestAlvoBluez587:
         alvo = f"{base.group(1)}~hefesto24.04.{revisao.group(1)}"
         assert f'_BZ_TARGET="{alvo}"' in text, (
             f"o alvo do 3f tem de ser a ÚLTIMA revisão do BASELINE ({alvo}) — é "
-            "ela que o construir_bluez_backport.sh entrega no cache"
+            "é a revisão que o construir_bluez_backport.sh entrega no cache"
         )

@@ -278,7 +278,7 @@ def test_mouse_draft_dirty_default_false() -> None:
 _MAC_BT = "aabbcc000002"
 
 
-def _profile_com_mapa(name: str = "vitoria") -> Profile:
+def _profile_com_mapa(name: str = "viajante") -> Profile:
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
     base = _make_profile(name=name)
@@ -336,11 +336,11 @@ def test_roundtrip_draft_e_loader_ponta_a_ponta(
         loader_module, "profiles_dir", lambda ensure=False: target
     )
 
-    save_profile(_profile_com_mapa(name="vitoria"))
-    draft = DraftConfig.from_profile(load_profile("vitoria"))
+    save_profile(_profile_com_mapa(name="viajante"))
+    draft = DraftConfig.from_profile(load_profile("viajante"))
     novo_leds = draft.leds.model_copy(update={"lightbar_brightness": 50})
     draft = draft.model_copy(update={"leds": novo_leds})
-    path = save_profile(draft.to_profile("vitoria"))
+    path = save_profile(draft.to_profile("viajante"))
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["controllers"][_MAC_BT]["leds"]["lightbar"] == [0, 0, 255]
     assert abs(data["leds"]["lightbar_brightness"] - 0.5) < 0.01

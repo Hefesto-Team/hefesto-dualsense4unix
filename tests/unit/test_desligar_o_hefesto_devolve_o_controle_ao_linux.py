@@ -1,6 +1,6 @@
 """DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 — parar o Hefesto entrega o físico ao sistema.
 
-A bancada de 03/10/2026: com o serviço parado, `/dev/hidraw5` ficava
+O ensaio de 03/10/2026: com o serviço parado, `/dev/hidraw5` ficava
 `root:root 600`, sem ACL de usuário, e nenhum programa da sessão abria o
 DualSense. A regra 73 faz o nó NASCER fechado, e o `_repouso` do broker o
 devolvia a esse estado quando o último cliente saía: o fechado é o repouso de
@@ -160,7 +160,7 @@ class TestPararODaemonEntregaOFisico:
         self, seis: Cena
     ) -> None:
         """MORDIDA: tire a chamada de `tique_da_entrega` (ou o `entregar_ao_linux`
-        dele) e os seis ficam `0600` para sempre, que é a bancada de 03/10.
+        dele) e os seis ficam `0600` para sempre, que é o ensaio de 03/10.
 
         Prova da D-0810-PARAR-O-HEFESTO-DEVOLVE-O-FISICO.
         """
@@ -211,7 +211,7 @@ class TestPararODaemonEntregaOFisico:
 
         seis.tique(0.4)
         assert all(_fechado(c) for c in _tudo_do_aparelho(seis.mesa, "hidraw11")), (
-            "a varredura rodou antes de passar um segundo: ela não pode custar "
+            "a varredura rodou antes de passar um segundo: não pode custar "
             "uma volta do selector a cada pedido")
         seis.tique(0.7)
         assert all(_aberto_para_a_sessao(c) for c in _tudo_do_aparelho(seis.mesa, "hidraw11"))
@@ -410,7 +410,7 @@ class TestOQueNaoMuda:
     def test_a_mordida_sem_o_tique_o_fisico_fica_fechado(
         self, seis: Cena, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A prova de que as réguas acima medem a cura: sem ela, a bancada de 03/10."""
+        """A prova de que as réguas acima medem a cura: sem a cura, o ensaio de 03/10."""
         monkeypatch.setattr(Broker, "tique_da_entrega", lambda self: None)
         _o_daemon_sobe_e_para(seis)
         seis.tique(GRACA * 10)

@@ -253,7 +253,7 @@ async def _laco(
 async def test_a_mordida_comando_nosso_com_a_steam_segurando_repinta_no_silencio(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A CURA, ponta a ponta — e é este teste que reprova se ela for arrancada."""
+    """A CURA, ponta a ponta — e é este teste que reprova se a cura for arrancada."""
     _fatias_curtas(monkeypatch)
     ctrl = _Controller()
     daemon = _StubDaemon(ctrl)

@@ -33,7 +33,7 @@ _SUFIXO_DE_FIXTURE = "c31af7"
 
 
 def _uniq_realista() -> str:
-    """Endereço com OUI REAL desta bancada, montado em tempo de execução."""
+    """Endereço com OUI REAL da máquina de teste, montado em tempo de execução."""
     return "".join(_OUIS_REAIS_OCTETOS[0]) + _SUFIXO_DE_FIXTURE
 
 

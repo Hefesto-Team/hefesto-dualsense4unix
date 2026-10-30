@@ -172,7 +172,7 @@ def test_o_disco_do_usuario_dois_catch_all_nao_prendem_a_emulacao() -> None:
         True, profile=_perfil("sackboy_nativo", catch_all=True)
     )
     daemon.apply_profile_suppression(
-        False, profile=_perfil("vitoria", catch_all=True)
+        False, profile=_perfil("viajante", catch_all=True)
     )
     assert daemon._emulation_suppressed is False
 
@@ -204,7 +204,7 @@ def test_catch_all_nao_reverte_a_politica_de_rumble() -> None:
     assert daemon.config.rumble_policy == "max"
 
     estado = daemon.apply_profile_rumble_policy(
-        None, None, profile=_perfil("vitoria", catch_all=True)
+        None, None, profile=_perfil("viajante", catch_all=True)
     )
 
     assert estado == IGNORADO_CATCH_ALL
@@ -248,7 +248,7 @@ def test_o_lock_de_gesto_manual_continua_vencendo_as_guardas_novas() -> None:
     daemon._emu_manual_ts = lifecycle_mod.time.monotonic()
 
     estado = daemon.apply_profile_rumble_policy(
-        None, None, profile=_perfil("vitoria", catch_all=True)
+        None, None, profile=_perfil("viajante", catch_all=True)
     )
 
     assert estado == ADIADO_LOCK_MANUAL
@@ -291,7 +291,7 @@ def test_relatorio_do_autoswitch_carrega_o_modo_jogo_padrao(
     manager, store = _ensaio(
         [
             _perfil("navegacao", janela="firefox"),
-            _perfil("vitoria", catch_all=True),
+            _perfil("viajante", catch_all=True),
         ]
     )
     sw = AutoSwitcher(
@@ -321,7 +321,7 @@ def test_log_do_autoswitch_reporta_estados_ignorados(
     manager, store = _ensaio(
         [
             _perfil("navegacao", janela="firefox"),
-            _perfil("vitoria", catch_all=True),
+            _perfil("viajante", catch_all=True),
         ]
     )
     sw = AutoSwitcher(

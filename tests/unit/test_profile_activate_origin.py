@@ -55,7 +55,7 @@ async def test_ipc_profile_switch_ativa_com_origin_manual(
 
     host = _Host()
     host.profile_manager = MagicMock()
-    host.profile_manager.activate.return_value = SimpleNamespace(name="vitoria")
+    host.profile_manager.activate.return_value = SimpleNamespace(name="viajante")
     host.store = MagicMock()
     host.daemon = None
     monkeypatch.setattr(
@@ -63,10 +63,10 @@ async def test_ipc_profile_switch_ativa_com_origin_manual(
         lambda _n: None,
     )
 
-    await host._handle_profile_switch({"name": "vitoria"})
+    await host._handle_profile_switch({"name": "viajante"})
 
     host.profile_manager.activate.assert_called_once_with(
-        "vitoria", origin="manual", relatorio=ANY
+        "viajante", origin="manual", relatorio=ANY
     )
 
 
@@ -147,10 +147,10 @@ async def test_restore_de_boot_ativa_com_origin_system(
 ) -> None:
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
 
-    _no_disco("vitoria")
+    _no_disco("viajante")
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_last_profile",
-        lambda: "vitoria",
+        lambda: "viajante",
     )
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.read_active_marker",
@@ -159,7 +159,7 @@ async def test_restore_de_boot_ativa_com_origin_system(
 
     await restore_last_profile(_BootDaemon())  # type: ignore[arg-type]
 
-    assert recording_manager.activations == [("vitoria", "system")]
+    assert recording_manager.activations == [("viajante", "system")]
 
 
 @pytest.mark.asyncio
@@ -170,14 +170,14 @@ async def test_restore_de_boot_le_a_sessao_e_o_marcador_e_so_espelho(
     """O marcador divergente não desvia o boot: a escolha é a do `session.json`."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
 
-    _no_disco("Navegação", "vitoria")
+    _no_disco("Navegação", "viajante")
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_last_profile",
         lambda: "Navegação",
     )
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.read_active_marker",
-        lambda: "vitoria",
+        lambda: "viajante",
     )
 
     await restore_last_profile(_BootDaemon())  # type: ignore[arg-type]

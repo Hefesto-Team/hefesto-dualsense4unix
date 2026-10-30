@@ -49,7 +49,7 @@ nenhum. Não foi a régua que o pegou: foi a ausência de dado.
 
 O QUE ESTES TESTES PROTEGEM DOS DOIS LADOS
 ------------------------------------------
-A cura óbvia e ERRADA seria recusar o que mora sob `/devices/virtual/`. Ela
+A cura óbvia e ERRADA seria recusar o que mora sob `/devices/virtual/`. Isso
 reintroduz a armadilha paga em 11/08/2026: com BlueZ ≥ 5.73 o bluetoothd cria o
 HID dos controles BLUETOOTH FÍSICOS via `/dev/uhid`, no mesmíssimo lugar em que
 mora o nosso vpad — recusar "virtual" recusaria metade da mesa, justo os dois do

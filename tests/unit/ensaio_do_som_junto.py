@@ -1,4 +1,4 @@
-"""A bancada de mentira do nó de som — o `pactl` que ACEITA, GUARDA e LÊ."""
+"""O ensaio de mentira do nó de som — o `pactl` que ACEITA, GUARDA e LÊ."""
 from __future__ import annotations
 
 import json

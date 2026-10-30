@@ -162,7 +162,7 @@ class TestTetoDeParada:
         )
         assert _segundos(achado.group(1)) >= 5, (
             f"`TimeoutStopSec={achado.group(1)}` é apertado demais. A restauração "
-            "de bonds também roda no gancho, e um SIGKILL no meio dela deixa o "
+            "de bonds também roda no gancho, e um SIGKILL no meio da restauração deixa o "
             "storage do BlueZ pela metade — o dano que o salva-vidas existe para "
             "evitar."
         )

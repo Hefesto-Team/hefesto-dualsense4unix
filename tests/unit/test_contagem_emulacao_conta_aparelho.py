@@ -1,11 +1,11 @@
 """CONTAGEM-E-COOP-01 (E2) — a aba Emulação conta APARELHO, não nó.
 
 O campo "Gamepads:" dizia ``len(glob("/dev/input/js*"))`` e chamava aquilo de
-"controles detectados pelo sistema". Medido na bancada em 31/07/2026, com
+"controles detectados pelo sistema". Medido na máquina de teste em 31/07/2026, com
 UM DualSense no cabo, o vpad do Hefesto de pé e a Steam aberta, ele dizia
 **SEIS**::
 
-    js0  Sony … DualSense Wireless Controller          uniq=<MAC dela>
+    js0  Sony … DualSense Wireless Controller          uniq=<MAC real>
     js1  Sony … DualSense … Motion Sensors             uniq=<O MESMO MAC>
     js2  DualSense Wireless Controller (Hefesto P1)   uniq=02:fe:00:00:00:01
     js3  DualSense … (Hefesto P1) Motion Sensors       uniq=<O MESMO>
@@ -13,13 +13,13 @@ UM DualSense no cabo, o vpad do Hefesto de pé e a Steam aberta, ele dizia
     js5  Microsoft X-Box 360 pad 1   /devices/virtual/input/input61/js5
 
 Estes testes não usam o `/sys` da máquina: `classificar_joysticks` recebe os
-atributos já lidos, e é ela que carrega o julgamento. O MAC real dela NÃO
+atributos já lidos, e é a função que carrega o julgamento. O MAC real NÃO
 aparece em lugar nenhum deste arquivo — o portão de anonimato da casa proíbe,
 e a identidade do aparelho é o que importa, não o número.
 
 As três funções são puras — mas o MÓDULO que as hospeda não é: importar
 ``emulation_actions`` puxa o GTK no topo. Por isso a guarda abaixo. Medido no CI
-de 31/07: sem ela, este arquivo era o único que ainda derrubava a COLETA do job
+de 31/07: sem a guarda, este arquivo era o único que ainda derrubava a COLETA do job
 headless, e coleta que morre não vira skip visível, vira módulo sumido.
 
 O lugar certo destes casos passa a ser o job "Interface com GTK REAL", que

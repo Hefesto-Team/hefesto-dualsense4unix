@@ -27,8 +27,8 @@ def _lar_falso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (lar / ".local" / "state" / "hefesto-dualsense4unix" / "launch_env").mkdir(
         parents=True
     )
-    (lar / ".config" / "hefesto-dualsense4unix" / "profiles" / "vitoria.json").write_text(
-        '{"name": "vitoria", "match": {"type": "any"}, "priority": 0}\n',
+    (lar / ".config" / "hefesto-dualsense4unix" / "profiles" / "viajante.json").write_text(
+        '{"name": "viajante", "match": {"type": "any"}, "priority": 0}\n',
         encoding="utf-8",
     )
     (
@@ -65,14 +65,14 @@ def test_escrita_em_perfil_real_vira_delta(
     lar = _lar_falso(tmp_path, monkeypatch)
     antes = canario._fotografar_tudo()
 
-    perfil = lar / ".config/hefesto-dualsense4unix/profiles/vitoria.json"
+    perfil = lar / ".config/hefesto-dualsense4unix/profiles/viajante.json"
     perfil.write_text(
-        '{"name": "vitoria", "match": {"type": "any"}, "priority": 191}\n',
+        '{"name": "viajante", "match": {"type": "any"}, "priority": 191}\n',
         encoding="utf-8",
     )
 
     deltas = canario._deltas_do_canario(antes, canario._fotografar_tudo())
-    assert any("MUDADO" in d and "vitoria.json" in d for d in deltas), deltas
+    assert any("MUDADO" in d and "viajante.json" in d for d in deltas), deltas
 
 
 def test_arquivo_novo_e_apagado_tambem_contam(
@@ -83,11 +83,11 @@ def test_arquivo_novo_e_apagado_tambem_contam(
     antes = canario._fotografar_tudo()
 
     (lar / ".config/wireplumber/52-hefesto.conf").write_text("x\n", encoding="utf-8")
-    (lar / ".config/hefesto-dualsense4unix/profiles/vitoria.json").unlink()
+    (lar / ".config/hefesto-dualsense4unix/profiles/viajante.json").unlink()
 
     deltas = canario._deltas_do_canario(antes, canario._fotografar_tudo())
     assert any(d.startswith("CRIADO") and "52-hefesto.conf" in d for d in deltas), deltas
-    assert any(d.startswith("APAGADO") and "vitoria.json" in d for d in deltas), deltas
+    assert any(d.startswith("APAGADO") and "viajante.json" in d for d in deltas), deltas
 
 
 def test_mtime_sozinho_nao_acusa_ninguem(
@@ -95,7 +95,7 @@ def test_mtime_sozinho_nao_acusa_ninguem(
 ) -> None:
     """Toque de mtime SEM mudança de conteúdo não é delta."""
     lar = _lar_falso(tmp_path, monkeypatch)
-    trava = lar / ".config/hefesto-dualsense4unix/profiles/vitoria.json.lock"
+    trava = lar / ".config/hefesto-dualsense4unix/profiles/viajante.json.lock"
     trava.write_bytes(b"")
     antes = canario._fotografar_tudo()
 
@@ -215,7 +215,7 @@ def test_o_aviso_nao_engole_o_portao(
     (
         lar / ".local/state/hefesto-dualsense4unix/launch_env/default.env"
     ).write_text("mudou\n", encoding="utf-8")
-    (lar / ".config/hefesto-dualsense4unix/profiles/vitoria.json").write_text(
+    (lar / ".config/hefesto-dualsense4unix/profiles/viajante.json").write_text(
         '{"name": "outra-coisa"}\n', encoding="utf-8"
     )
 
@@ -254,9 +254,9 @@ def test_o_aviso_nunca_restaura_nada(
     monkeypatch.setattr(canario, "_CANARIO_FOTO_INICIAL", canario._fotografar_tudo())
     monkeypatch.setattr(canario, "_CANARIO_ARMADO", True)
     alvo = lar / ".local/state/hefesto-dualsense4unix/launch_env/default.env"
-    alvo.write_text("escrita da daemon dela\n", encoding="utf-8")
+    alvo.write_text("escrita do daemon de quem usa\n", encoding="utf-8")
 
     sessao: Any = _SessaoFalsa()
     canario.pytest_sessionfinish(sessao, 0)
 
-    assert alvo.read_text(encoding="utf-8") == "escrita da daemon dela\n"
+    assert alvo.read_text(encoding="utf-8") == "escrita do daemon de quem usa\n"

@@ -1,6 +1,6 @@
 """CONTROLE-QUE-NAO-ENTROU-01 (09/08/2026) — a janela mentia sobre um controle.
 
-Medido na bancada: **dois** DualSense ligados e pareados, e a janela
+Medido na máquina de teste: **dois** DualSense ligados e pareados, e a janela
 mostrava **um**. Em lugar nenhum do produto havia uma pista do porquê — a aba
 Início chegava a escrever *"Nenhum controle conectado."* para um controle que
 estava ligado, pareado e falando com o rádio.
@@ -22,7 +22,7 @@ O que esta suíte trava, em três camadas:
    o TEXTO do script, e o intervalo prometido na tela conferido contra o
    `OnUnitActiveSec` do timer que de fato cumpre a promessa. Dois donos da
    mesma regra fariam a janela prometer uma cura que não vem;
-3. **A tela** — a função pura do texto, o vocabulário (o que ela vê, nunca o
+3. **A tela** — a função pura do texto, o vocabulário (o que quem usa vê, nunca o
    mecanismo) e a fiação nos dois caminhos da aba Status (o tique lento
    acende; o daemon offline apaga).
 
@@ -158,7 +158,7 @@ class TestOPayloadDoDaemon:
 
     A aba Status já mente hoje por outro motivo (`ESTADO-QUE-MENTE-01`: o topo
     do `state_full` é mantido em PARALELO à lista de controles, nunca derivado
-    dela). Este campo novo não pode nascer com o mesmo defeito, então ele é
+    da lista). Este campo novo não pode nascer com o mesmo defeito, então ele é
     lido do sistema a cada chamada, com TTL — nunca de um segundo campo.
     """
 
@@ -263,7 +263,7 @@ class TestOTextoDaTela:
                 "l2cap",
                 "uhid",
             ):
-                assert jargao not in texto, f"jargão na tela dela: {jargao}"
+                assert jargao not in texto, f"jargão na tela de quem usa: {jargao}"
 
 
 class _FakeBanner:

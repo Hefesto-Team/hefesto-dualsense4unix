@@ -1,4 +1,4 @@
-"""DIÁLOGO-QUE-MATA-A-JANELA-01 — o aviso que deixou a janela dela morta (06/08)."""
+"""DIÁLOGO-QUE-MATA-A-JANELA-01 — o aviso que deixou a janela morta (06/08)."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -138,7 +138,7 @@ def test_nenhum_dialogo_bloqueante_fora_do_envelope_da_casa() -> None:
     assert ofensores == {}, (
         "`.run()` bloqueante fora do envelope (DIÁLOGO-QUE-MATA-A-JANELA-01): "
         f"{ofensores} — use `gui_dialogs.executar_dialogo(dialog, nome=...)`. "
-        "Um diálogo que nasce invisível com `run()` cru deixa a janela dela "
+        "Um diálogo que nasce invisível com `run()` cru deixa a janela "
         "morta, e foi o que aconteceu em 06/08/2026 às 20h22"
     )
 
@@ -235,7 +235,7 @@ def test_nenhum_dialogo_modal_e_mostrado_fora_do_envelope() -> None:
     assert ofensores == {}, (
         "diálogo modal mostrado fora do envelope: "
         f"{ofensores} — use `gui_dialogs.mostrar_dialogo_assincrono(...)`. "
-        "Não bloquear não salva: quem prende a janela dela é a modalidade"
+        "Não bloquear não salva: quem prende a janela é a modalidade"
     )
 
 

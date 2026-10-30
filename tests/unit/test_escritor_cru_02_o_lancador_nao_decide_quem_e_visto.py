@@ -40,7 +40,7 @@ class TestAVarreduraAmplaVeAlemDaSteam:
     def test_nada_que_nao_seja_hidraw_atravessa(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A DISCRIÇÃO, e ela é a razão 3 que ficou de pé."""
+        """A DISCRIÇÃO, que é a razão 3 que ficou de pé."""
         _proc_de_mentira(
             tmp_path,
             monkeypatch,

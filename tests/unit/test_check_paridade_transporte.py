@@ -305,7 +305,7 @@ def test_assimetria_nao_declarada_avisa_e_nao_derruba(tmp_path: Path) -> None:
 
 
 def test_lado_mudo_conta_como_assimetria(tmp_path: Path) -> None:
-    """É a forma exata da regressão dela: consolidado no cabo, ninguém olhou o rádio."""
+    """É a forma exata da regressão medida: consolidado no cabo, ninguém olhou o rádio."""
     caminho = monta_arvore(
         tmp_path, [linha_forte(radio_aciona="", radio_de_onde_sei="", teste_que_morde="")]
     )
@@ -649,5 +649,5 @@ def test_quem_escreve_no_caderno_conhece_todas_as_colunas(relativo: str) -> None
         assert lista == cabecalho, (
             f"{relativo} escreve o caderno com as colunas {lista}, e o cabeçalho "
             f"de docs/data/ensaios.csv é {cabecalho}. O `csv.writer` grava por "
-            "POSIÇÃO: uma coluna faltando não estoura, ela empurra todo o resto"
+            "POSIÇÃO: uma coluna faltando não estoura, empurra todo o resto"
         )

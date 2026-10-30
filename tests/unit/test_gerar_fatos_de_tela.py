@@ -8,7 +8,7 @@ reprova."
 
 Os dois testes de mordida rodam contra uma árvore de brinquedo (cabeçalho real
 recortado, poucas linhas) — a árvore de verdade tem 308 linhas e um teste que
-dependesse dela mediria a hora da última regeração, não o portão.
+dependesse da árvore real mediria a hora da última regeração, não o portão.
 """
 from __future__ import annotations
 

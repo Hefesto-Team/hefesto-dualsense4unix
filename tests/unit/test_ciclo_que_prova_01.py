@@ -1,4 +1,4 @@
-"""O desinstalador não apaga os snapshots de pareamento sem ela pedir."""
+"""O desinstalador não apaga os snapshots de pareamento sem quem usa pedir."""
 
 from __future__ import annotations
 

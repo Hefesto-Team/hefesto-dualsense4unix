@@ -160,7 +160,7 @@ class TestEscolhaDoSnapshot:
         assert "CHAVE-NOVA" in texto, "restaurou uma cópia mais velha do que existia"
 
     def test_snapshot_velho_demais_nao_ressuscita_nada(self, tmp_path: Path) -> None:
-        """Bond que ela removeu envelhece para fora da janela; crash volta em segundos."""
+        """Bond que quem usa removeu envelhece para fora da janela; crash volta em segundos."""
         acervo, destino = tmp_path / "acervo", tmp_path / "bluetooth"
         _snapshot(acervo, "20260701-120000", {AZUL: "A1"})
 
@@ -181,7 +181,7 @@ class TestSoNaMorteDoDaemon:
 
         assert proc.returncode == 0
         assert _bonds(destino) == {VERMELHO}, (
-            "restaurou numa parada LIMPA — uma remoção decidida por ela seria desfeita"
+            "restaurou numa parada LIMPA — uma remoção decidida por quem usa seria desfeita"
         )
         assert "parada limpa" in proc.stdout
 
@@ -461,7 +461,7 @@ class TestFiacao:
             )
             assert 'LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"' in texto, (
                 f"{nome} escreve no journal sem destino endereçável — a suíte "
-                f"volta a sujar o journal da máquina dela"
+                f"volta a sujar o journal da máquina de quem usa"
             )
             assert "_registrar()" in texto, f"{nome} não define `_registrar`"
 

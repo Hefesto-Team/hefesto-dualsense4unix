@@ -33,9 +33,9 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
    | rótulos que quebram | 1 (`Custom`) | 3 |
 
    Os três que quebram na árvore de 07/08 têm **20** caracteres cada: "Arma
-   semi-automática", "Vibração por posição" e — depois da decisão de produto — "Arco
-   de flecha (Bow)". Baixar o limite para 19 reprovaria dois rótulos que ela
-   nunca foi convidada a rever e um que ela **acabou de decidir**, então o
+   semi-automática", "Vibração por posição" e, decidido depois no produto, "Arco
+   de flecha (Bow)". Baixar o limite para 19 reprovaria dois rótulos que o produto
+   nunca foi convidado a rever e um que **acabou de decidir**, então o
    número fica em 22 e a verdade fica escrita aqui.
 
    Três armadilhas de medição pagas em 07/08, para ninguém repagar:
@@ -104,7 +104,7 @@ PENDENCIA_DE_PALAVRA: frozenset[str] = frozenset()
 def test_os_dezenove_names_sao_exatamente_os_de_hoje() -> None:
     """Contrato: renomear um `name` faz o perfil do usuário parar de abrir.
 
-    A lista da tela tem onze; as oito chaves que saíram dela seguem lidas (`PRESETS_ANTIGOS`),
+    A lista da tela tem onze; as oito chaves que saíram da lista seguem lidas (`PRESETS_ANTIGOS`),
     e as dezenove juntas são as que um perfil gravado pode citar.
     """
     assert len(PRESETS) == 11
@@ -134,7 +134,7 @@ def test_nenhum_rotulo_esta_dispensado_do_limite() -> None:
     }
     assert dispensados == set(), (
         f"voltou uma isenção de largura: {sorted(dispensados)}. Rótulo que não "
-        "cabe é palavra a decidir com ela, não exceção a esconder no teste"
+        "cabe é palavra a decidir no produto, não exceção a esconder no teste"
     )
     cabem = [spec for spec in (*PRESETS, *PRESETS_ANTIGOS)
              if len(spec.label) <= LIMITE_DE_CARACTERES]
@@ -175,7 +175,7 @@ def test_a_pendencia_de_palavra_nao_cresce_nem_envelhece() -> None:
     assert sorted(PENDENCIA_DE_PALAVRA) == [], (
         "a isenção de palavra fechou em 11/09/2026 e os dezenove rótulos "
         "respondem pelo mesmo limite; acrescentar nome aqui é abrir buraco no "
-        "portão sem decisão dela"
+        "portão sem que o produto decida"
     )
     por_nome = {spec.name: spec.label for spec in PRESETS}
     ja_curados = {

@@ -195,7 +195,7 @@ class TestApplierDoDaemon:
         ]
 
     def test_sem_canal_o_byte_do_microfone_fica_intocado(self) -> None:
-        """O default é a AUSÊNCIA, e ela tem de atravessar até o backend."""
+        """O default é a AUSÊNCIA, e tem de atravessar até o backend."""
         backend = _BackendComAudio()
         backend.connect()
         _daemon(backend).apply_profile_speaker(180, False)

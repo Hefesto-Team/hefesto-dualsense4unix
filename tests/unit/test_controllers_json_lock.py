@@ -20,7 +20,7 @@ retomada):
 Determinizado: o teste de intercalação usa threads REAIS mas a ORDEM é
 forçada por `threading.Event` (barreira) — sem a barreira, o resultado
 dependeria da sorte do agendador do SO (proibido pela regra da casa); com
-ela, a intercalação é SEMPRE a mesma e o resultado é invariante quanto à
+a barreira, a intercalação é SEMPRE a mesma e o resultado é invariante quanto à
 ordem real de execução (a correção vem do lock, não de "quem chegou
 primeiro"). Nenhum ``time.sleep`` real — só espera bloqueante em Event/Lock.
 

@@ -11,7 +11,7 @@ Este módulo trava o INSTRUMENTO, não a cura: `check_input_uaccess` no
 AUSÊNCIA de dado — `core/evdev_reader.py:1154` engole a `PermissionError` num
 `except Exception: continue`, o nó some do mapa de descoberta e o daemon relata
 "esse controle não tem sensor". Sem alguém que confira a permissão e diga o
-nome dela, o defeito é indistinguível de hardware sem sensor.
+nome da permissão, o defeito é indistinguível de hardware sem sensor.
 
 O QUE ESTES TESTES TRAVAM, e por quê:
 
@@ -239,7 +239,7 @@ class TestOVpadNaoRespondePeloFisico:
         r = _roda(tmp_path, env)
         assert "[PASS]" not in r.stdout, (
             "verde sobre o gamepad que NÓS criamos, calado sobre o controle "
-            "dela — foi exatamente o que a primeira versão fez nesta máquina"
+            "de quem usa — foi exatamente o que a primeira versão fez nesta máquina"
         )
         assert "[INFO]" in r.stdout
         assert "virtual" in r.stdout.lower()
@@ -354,7 +354,7 @@ class TestContratoComORestoDaCasa:
         corpo = _extrai_funcao_bash(DOCTOR, "check_udev")
         assert REGRA_NOME in corpo, (
             f"{REGRA_NOME} fora da lista canônica de check_udev — quem instalou "
-            "antes dela fica sem, em silêncio, e o doctor diz [OK]"
+            "antes da regra fica sem, em silêncio, e o doctor diz [OK]"
         )
 
     def test_a_cura_apontada_existe_de_verdade(self) -> None:

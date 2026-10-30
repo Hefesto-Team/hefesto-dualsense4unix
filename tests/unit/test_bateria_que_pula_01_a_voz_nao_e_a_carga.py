@@ -40,7 +40,7 @@ O QUE A CASA JÁ SABIA, E COBRIU PELA METADE
 **16/08/2026** (PS-PRESO-01, quando o botão PS e o do microfone ficaram presos).
 A cura de então cobriu UM consumidor — o ``_captura_status_audio``, que passou a
 conferir antes de ler — e deixou o ``readInput`` de fora. *Quando a cura conhece
-a causa, ela cobre TODOS os chamadores*, e aqui só havia um: ``readInput`` tem um
+a causa, cobre TODOS os chamadores*, e aqui só havia um: ``readInput`` tem um
 único chamador em todo o ``src/``.
 """
 from __future__ import annotations
@@ -141,7 +141,7 @@ class TestAGuardaNoLaco:
         assert e._reports_recusados == 1
 
     def test_a_guarda_nao_congela_o_controle(self) -> None:
-        """O risco que dói na bancada: guarda estrita demais = controle morto."""
+        """O risco que dói no aparelho: guarda estrita demais = controle morto."""
         e = _Espiao()
         for _ in range(50):
             e._consumir_report(_bt_valido())
@@ -185,7 +185,7 @@ class TestACuraEstaLIGADA:
         """MORDIDA: devolver `self.readInput(in_report)` ao laço de `sendReport`."""
         fonte = self._fonte()
         assert "self._consumir_lote(lidos)" in fonte, (
-            "o laço não passa mais pela guarda — a voz dela volta a ser bateria"
+            "o laço não passa mais pela guarda — a voz volta a ser bateria"
         )
         assert "self._consumir_lote((in_report,))" in fonte, (
             "a porta de UM report não passa mais pela guarda do lote"
@@ -213,7 +213,7 @@ class TestACuraEstaLIGADA:
         )
 
     def test_a_captura_de_audio_tambem_passa_pela_guarda(self) -> None:
-        """Ela já conferia por dentro desde 01/09 — agora nem é chamada à toa."""
+        """A guarda já conferia por dentro desde 01/09 — agora nem é chamada à toa."""
         fonte = self._fonte()
         chamadas = [
             linha for linha in fonte.splitlines()
@@ -229,7 +229,7 @@ class TestACuraEstaLIGADA:
         de pé ser anunciado como «entrada muda» — trocaria um defeito por outro.
 
         MORDIDA: mover o `_registrar_leitura_viva()` para dentro do
-        `_consumir_lote`. Desde 29/09/2026 ela conta na drenagem, report a
+        `_consumir_lote`. Desde 29/09/2026 a leitura conta na drenagem, report a
         report, antes de o lote chegar à guarda (`_esvaziar_a_fila`).
         """
         fonte = self._fonte()
@@ -245,7 +245,7 @@ class TestACuraEstaLIGADA:
 
 
 class TestOZeroPorCentoTemDonoProprio:
-    """A segunda causa, e é a única que explica o **0** literal do relato dela."""
+    """A segunda causa, e é a única que explica o **0** literal do relato."""
 
     class _DS:
         def __init__(self, level):
@@ -263,7 +263,7 @@ class TestOZeroPorCentoTemDonoProprio:
         assert PyDualSenseController._read_battery_opt(object()) is None
 
     def test_a_docstring_parou_de_prometer_o_que_nao_fazia(self) -> None:
-        """Ela dizia *"Preserva a distinção 'sem dado ainda' (None) de '0%'"*."""
+        """A docstring prometia preservar a distinção entre «sem dado ainda» (None) e «0%»."""
         import inspect
 
         doc = inspect.getdoc(PyDualSenseController._read_battery_opt) or ""

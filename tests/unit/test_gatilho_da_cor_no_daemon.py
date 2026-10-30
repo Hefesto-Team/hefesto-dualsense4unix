@@ -167,7 +167,7 @@ async def test_conexao_durante_a_espera_readia_e_a_repintura_sai_uma_vez_so(
 async def test_sem_conexao_nova_o_laco_nunca_repinta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Nada de reafirmação periódica — ela recusou essa opção explicitamente."""
+    """Nada de reafirmação periódica — essa opção foi recusada explicitamente."""
     _fatias_curtas(monkeypatch)
     ctrl = _Controller()
     daemon = _StubDaemon(ctrl)

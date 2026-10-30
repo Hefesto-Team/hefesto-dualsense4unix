@@ -35,7 +35,7 @@ def test_existe_uma_flag_explicita_para_devolver_o_bluez_da_distro(
     """O gesto destrutivo continua possível — mas ele tem de ser pedido."""
     assert "--restore-bluez)" in fonte
     assert re.search(r"--restore-bluez\)\s*KEEP_BLUEZ=0", fonte), (
-        "`--restore-bluez` tem de zerar o KEEP_BLUEZ — é ela que devolve o "
+        "`--restore-bluez` tem de zerar o KEEP_BLUEZ — é o restore que devolve o "
         "pacote da distro"
     )
 

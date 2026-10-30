@@ -59,7 +59,7 @@ VAZIO = "_(nenhum ainda)_"
 
 CURVA = {
     "nome": "Tranco curto de teste",
-    "medido_por": "vitoriamaria",
+    "medido_por": "fulano",
     "medido_em": "2026-08-13",
     "controle": "DualSense, cabo",
     "nota": "trava seco no começo e solta sem resíduo; parei aqui porque doeu.",
@@ -129,7 +129,7 @@ def test_gerar_materializa_a_curva_com_a_proveniencia_inteira(
         json.dumps({"curvas": [CURVA]}), encoding="utf-8")
     assert roda(arvore).returncode == 0
     texto = documento(arvore).read_text(encoding="utf-8")
-    for prometido in ("Tranco curto de teste", "vitoriamaria", "2026-08-13",
+    for prometido in ("Tranco curto de teste", "fulano", "2026-08-13",
                       "DualSense, cabo", "`[5, 200, 0, 0, 0, 0, 0]`"):
         assert prometido in texto, f"a tabela gerada não traz {prometido!r}"
     assert VAZIO not in texto

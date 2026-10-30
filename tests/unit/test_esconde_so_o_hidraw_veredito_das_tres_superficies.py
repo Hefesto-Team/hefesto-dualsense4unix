@@ -5,13 +5,13 @@ abaixo com **`pass`** e o texto *"o jogo só vê o vpad"*:
 
 ```
 /dev/hidraw4        crw-------   root:root                 <- escondido
-/dev/input/event21  crw-rw----   + user:<ela>:rw-          <- qualquer processo dela
-/dev/input/js0      crw-rw-r--   + user:<ela>:rw- e other::r--   <- e o mundo inteiro
+/dev/input/event21  crw-rw----   + user:<usuário>:rw-      <- qualquer processo do usuário
+/dev/input/js0      crw-rw-r--   + user:<usuário>:rw- e other::r--   <- e o mundo inteiro
 ```
 
-Os três nós são **o mesmo controle** (medido nesta bancada em 25/08/2026, um
+Os três nós são **o mesmo controle** (medido nesta máquina de teste em 25/08/2026, um
 DualSense no cabo, `0003:054C:0CE6.0009`). O `hide` do broker age numa
-superfície só — `hidraw` — e o veredito lia a contagem dela como resposta a
+superfície só — `hidraw` — e o veredito lia a contagem dessa superfície como resposta a
 uma pergunta sobre três. É a família `O-PORTAO-QUE-NAO-MEDE-O-QUE-PROMETE` no
 pior lugar possível: quem investiga *"por que o Steam mostra controle
 dobrado"* — o terceiro controle do usuário — começava lendo um verde.
@@ -21,7 +21,7 @@ O que estes testes travam:
 - **a cena de hoje sai `warn`, nunca `pass`**, e o aviso NOMEIA os nós de
   entrada abertos: sem o nome, ninguém sabe onde olhar;
 - **as três formas de um nó estar alcançável** são medidas separadamente, cada
-  uma com um teste que só ela faz passar — bit de leitura de `other` (o estado
+  uma com um teste que só essa forma faz passar — bit de leitura de `other` (o estado
   de fábrica do `jsN`), ACL nomeada (o que o `uaccess` dá no login) e grupo do
   nó com a sessão dentro dele (o acidente do grupo `input`, que existe nesta
   máquina e não numa limpa);
@@ -30,7 +30,7 @@ O que estes testes travam:
   o inverso do defeito de 09/08, em que o instrumento deu verde sobre o que
   não tinha olhado;
 - **o `pass` só usa a frase "o jogo só vê o vpad" depois de fechar as TRÊS
-  superfícies** — é a frase que mentia, e ela agora tem preço;
+  superfícies** — é a frase que mentia, e agora tem preço;
 - **a fiação dos NOMES** dos nós escondidos, do `status` do broker até o
   veredito: sem os nomes o sysfs não tem por onde achar as outras duas
   superfícies, e o veredito inteiro degrada para "sem mapa" em silêncio;
@@ -282,7 +282,7 @@ class TestODenominadorEAMesa:
                 )
         assert f"NÃO afirma que {FRASE_ANTIGA}" in r.stdout, (
             "o aviso precisa NEGAR a frase forte em voz alta — quem lê o "
-            f"doctor decide o próximo passo por ela.\n{r.stdout}"
+            f"doctor decide o próximo passo pelo usuário.\n{r.stdout}"
         )
 
     def test_censo_igual_ao_hide_continua_podendo_ser_verde(
@@ -351,7 +351,7 @@ class TestOCensoUsaARegraDoProduto:
 
 
 class TestAsTresFormasDeAlcancar:
-    """Cada forma tem um teste que só ela faz passar — as três foram medidas"""
+    """Cada forma tem um teste que só essa forma faz passar — as três foram medidas"""
 
     def test_bit_de_leitura_de_other_no_joydev(self, tmp_path: Path) -> None:
         """O estado de fábrica do `jsN`: `crw-rw-r--`, legível pelo mundo."""
@@ -364,7 +364,7 @@ class TestAsTresFormasDeAlcancar:
         assert "event21" not in r.stdout
 
     def test_acl_nomeada_do_uaccess_no_evdev(self, tmp_path: Path) -> None:
-        """`user:<ela>:rw-` — o que o login dá, e o que o `hide` tira do hidraw."""
+        """`user:<usuário>:rw-` — o que o login dá, e o que o `hide` tira do hidraw."""
         cena: dict[str, list[Entrada] | None] = {
             "hidraw4": [Entrada("event21", 0o600, acl=True), Entrada("js0", 0o600)]
         }
@@ -560,7 +560,7 @@ class TestOPassNaoAfirmaSobreOQueNaoMediu:
         )
 
     def test_sem_nenhum_sem_mapa_a_frase_forte_continua(self, tmp_path: Path) -> None:
-        """A cura não pode ter custado a conclusão quando ela é VERDADE."""
+        """A cura não pode ter custado a conclusão quando a conclusão é VERDADE."""
         r = _roda(tmp_path, _cena_fechada())
         assert "[PASS]" in r.stdout, r.stdout
         assert "o jogo só vê o vpad" in r.stdout, (

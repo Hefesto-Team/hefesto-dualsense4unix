@@ -3,7 +3,7 @@
 **O que o usuário viu, 27/08/2026**, com os quatro DualSense do usuário no rádio: dois
 acendiam **jogador 1**, um acendia 2, outro acendia 3, e **ninguém acendia 4**.
 
-O journal do daemon guardou a cena inteira, e ela fecha na aritmética. Às
+O journal do daemon guardou a cena inteira, e a cena fecha na aritmética. Às
 15:36:18 saíram quatro ``gatilho_da_cor_escrito`` no mesmo lote, com os padrões
 canônicos de player-LED (``core/led_control.py``)::
 
@@ -16,7 +16,7 @@ Quatro segundos antes (15:36:14) o mesmo lote saíra com **três** controles: o
 1º da fila tinha caído do rádio. O handle dele voltou às 15:36:16 — **antes**
 do próximo ``sync_connected``, que bate a cada 2 s.
 
-## A causa, e ela é de ORDEM, não de conta
+## A causa, e é de ORDEM, não de conta
 
 O provider de identidade (``make_auto_output_provider``) não é uma leitura
 pura: ele ADMITE na mesa o controle que pergunta (atribuição lazy do R-14 §1).
@@ -62,7 +62,7 @@ co-op) e passa a ser ESTRUTURAL, no ponto único onde um endereço vira número
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc:…`` com os octetos 4 e 5
 zerados, a mesma allowlist de ``tests/unit/test_anonimato_de_fixtures.py``. A
-ORDEM reproduz a bancada; os bytes, não.
+ORDEM reproduz o ensaio; os bytes, não.
 """
 from __future__ import annotations
 
@@ -112,7 +112,7 @@ def passar_o_prazo(relogio: Relogio) -> None:
 
 @pytest.fixture
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`config_dir` em tmp — nenhum teste daqui toca o `controllers.json` dela."""
+    """`config_dir` em tmp — nenhum teste daqui toca o `controllers.json` de quem usa."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     def fake_config_dir(ensure: bool = False) -> Path:

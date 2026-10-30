@@ -89,7 +89,7 @@ def test_o_caderno_tem_a_coluna_que_a_regra_le(arvore: Path) -> None:
     with (arvore / "docs/data/ensaios.csv").open(encoding="utf-8", newline="") as fh:
         cab = next(csv.reader(fh))
     assert "degrau" in cab, (
-        "a coluna `degrau` sumiu do caderno. Sem ela a regra "
+        "a coluna `degrau` sumiu do caderno. Sem a coluna a regra "
         "`ensaio-nao-diz-o-degrau` não tem o que ler, e um portão que não vê "
         "nada passa sempre — que é o defeito mais caro desta casa."
     )

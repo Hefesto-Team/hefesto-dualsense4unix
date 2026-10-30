@@ -3,7 +3,7 @@
 Com os quatro nós de entrada do DualSense físico nascendo `0600 root`, o
 daemon perde o `open(path)` do gamepad, do touchpad e dos sensores de
 movimento. Sem outra porta, o cartão do touchpad fica CEGO — é o que a célula
-`toque.touchpad` da bancada existe para acusar. A porta é a do hidraw: o `open`
+`toque.touchpad` do ensaio existe para acusar. A porta é a do hidraw: o `open`
 do broker, que devolve o fd por SCM_RIGHTS.
 
 Esta régua não toca /dev, o sysfs real nem o broker vivo. O `InputDevice` da
@@ -231,7 +231,7 @@ class TestADescobertaAchaOFisicoFechado:
     def test_o_gamepad_fechado_entra_na_descoberta(
         self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O gamepad fechado entra na descoberta, e ela não pede nada ao broker
+        """O gamepad fechado entra na descoberta, e a descoberta não pede nada ao broker
         (O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01, 28/09/2026): vendor,
         produto, endereço e botão de gamepad estão no sysfs. Quem pede o fd é
         o leitor, ao abrir o nó que vai ler. A MORDIDA: faça a descoberta
@@ -301,7 +301,7 @@ class TestADescobertaAchaOFisicoFechado:
 
 class TestOCartaoDoTouchpadNaoFicaCego:
     def test_o_leitor_le_o_dedo_pelo_fd_do_broker(self, mesa: Any) -> None:
-        """A célula `toque.touchpad` da bancada, no nível do leitor."""
+        """A célula `toque.touchpad` do ensaio, no nível do leitor."""
         broker, _ = mesa
         from evdev import ecodes
 

@@ -4,7 +4,7 @@ Os lançadores com caixa além do Heroic (Lutris, RetroArch, Dolphin, mGBA) vira
 19/10/2026 (OS-LANCADORES-ALEM-DA-STEAM-E-DO-HEROIC-VIRAM-EXTENSOES-01). A carona só escreve na
 caixa de uma extensão LIGADA (``cura_por_estrada._extensoes_com_caixa``). As réguas que provam a
 escrita, o desfazer e a camada do jogo seguem as mesmas: o que muda é que o lançador entra pela
-extensão. Este módulo liga as quatro, com os ``id`` e os app ids dos repositórios delas.
+extensão. Este módulo liga as quatro, com os ``id`` e os app ids dos seus repositórios.
 
 Nenhum código de ``src/`` importa este módulo.
 """

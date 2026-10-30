@@ -4,7 +4,7 @@ Queixa, 29/07: *"inicio o jogo e ele quando aperto r1 muda de app ao invés
 de funcionar no jogo"*; e, no mesmo relato, o raciocínio que aponta o defeito —
 com o modo mouse/teclado desligado, isso não deveria impactar. A transcrição
 literal (sem correção de grafia) está na sprint
-a sprint `EMULACAO-NO-JOGO-01`; aqui ela vem acentuada
+a sprint `EMULACAO-NO-JOGO-01`; aqui vem acentuada
 porque o portão de acentuação varre este arquivo.
 
 Não deveria — e o motivo de impactar era que aquele interruptor governa só o
@@ -12,7 +12,7 @@ MOUSE. O teclado emulado não tinha interruptor nenhum (sem gate de criação, s
 flag em disco, sem IPC, sem chave no `state_full`), e a exclusão mútua do poll
 loop era `if not gamepad_dispatched:` — a AUSÊNCIA do vpad lida como PERMISSÃO
 para o desktop entrar, justamente quando a exceção do Steam Input derruba o vpad
-DE PROPÓSITO para o jogo assumir. Medição do journal da bancada: 9 de 9 pressionamentos
+DE PROPÓSITO para o jogo assumir. Medição do journal da máquina de teste: 9 de 9 pressionamentos
 de R1 em 7 dias caíram dentro de `steam_input_vpad_suspenso`, zero fora.
 
 Cada teste aqui MORDE: existe um par "com a cura" / "sem a cura" (ou uma asserção

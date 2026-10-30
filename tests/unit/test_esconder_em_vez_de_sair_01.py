@@ -157,7 +157,7 @@ async def test_com_dois_controles_a_marca_nao_derruba_o_jogador_2(
     )
     assert len(daemon._coop_manager._players) == 1, "o jogador 2 saiu da mesa"
     assert vigia is None, (
-        "nasceu a task-vigia da suspensão — ela só existe para desfazer uma "
+        "nasceu a task-vigia da suspensão — só existe para desfazer uma "
         "suspensão, e a marca não suspende mais nada"
     )
 
@@ -172,7 +172,7 @@ async def test_a_marca_nao_arma_vigia_porque_nao_ha_o_que_devolver(
     vigia = await _encerrar_vigia(daemon)
 
     assert vigia is None
-    assert daemon._tasks == [], "a marca pendurou task no daemon dela"
+    assert daemon._tasks == [], "a marca pendurou task no daemon"
     assert daemon._gamepad_device is not None
 
 
@@ -215,7 +215,7 @@ def test_entrar_no_jogo_marcado_esconde_o_fisico_em_vez_de_expor(
 
     assert daemon.grabs == [True], "soltar o grab é o jogo vendo o físico de novo"
     assert daemon.hides == ["/dev/hidraw0"], "o hidraw do físico tem de sumir"
-    assert daemon.restores == 0, "`restore_all` é a direção contrária da decisão dela"
+    assert daemon.restores == 0, "`restore_all` é a direção contrária da decisão de quem usa"
 
 
 def test_com_dois_controles_esconde_os_dois_fisicos(

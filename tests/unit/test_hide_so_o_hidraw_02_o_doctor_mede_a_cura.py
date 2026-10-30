@@ -168,10 +168,10 @@ class TestAAclQueAMascaraAnula:
 
     def test_a_linha_anulada_pela_mascara_nao_abre(self, tmp_path: Path) -> None:
         """O formato é o do getfacl real (medido com a ACL nomeada e a"""
-        assert not self._alcancavel(tmp_path, "user:ela:rw-\t#effective:---", 0o600)
+        assert not self._alcancavel(tmp_path, "user:fulano:rw-\t#effective:---", 0o600)
 
     def test_a_linha_que_vale_abre(self, tmp_path: Path) -> None:
-        assert self._alcancavel(tmp_path, "user:ela:rw-", 0o660)
+        assert self._alcancavel(tmp_path, "user:fulano:rw-", 0o660)
 
 
 RADIO = "/sys/devices/virtual/misc/uhid/0005:054C:0CE6.0006"

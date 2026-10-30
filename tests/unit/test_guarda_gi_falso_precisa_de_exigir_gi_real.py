@@ -242,12 +242,12 @@ class TestPortaoDoGiFalso:
             "chamar exigir_gi_real() no nível do módulo ANTES do plantio:\n"
             f"{detalhe}\n"
             "Sem GTK, a importação planta a mentira, e os módulos da janela "
-            "construídos sobre ela ficam no processo para o arquivo seguinte. "
+            "construídos sobre o falso ficam no processo para o arquivo seguinte. "
             "O marcador skip_sem_gi_real pula o teste, depois da importação.\n"
             "Cura: chame exigir_gi_real() no TOPO do arquivo, antes do bloco de "
             "imports (GUARDA-GI-REAL-01) — ou troque o stub cru pelo "
             "instalar_stubs_gi(monkeypatch) do tests/conftest.py.\n"
-            "NÃO acrescente o nome à allowlist DIVIDA_GI_FALSO: ela é dívida "
+            "NÃO acrescente o nome à allowlist DIVIDA_GI_FALSO: a allowlist é dívida "
             "medida em 30/07, não permissão para dívida nova."
         )
 

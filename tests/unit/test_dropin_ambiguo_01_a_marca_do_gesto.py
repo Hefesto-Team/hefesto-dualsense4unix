@@ -1,9 +1,9 @@
 """DROPIN-AMBIGUO-01 — a ausência do drop-in era indistinguível de escolha do usuário.
 
 O arquivo `~/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf`
-**não existia** na bancada em 04/08/2026. Sem ele o WirePlumber promoveu o
-DualSense a microfone padrão do sistema, e daí saíram os sintomas que ela
-reportou como *"não funciona nem mic, nem os botões de sons do jogo"*.
+**não existia** na máquina de teste em 04/08/2026. Sem ele o WirePlumber promoveu o
+DualSense a microfone padrão do sistema, e daí saíram os sintomas relatados:
+nem o microfone nem os botões de som do jogo funcionavam.
 
 A causa-raiz é **um estado com dois significados**. O terceiro degrau de
 `doctor.sh:_prefere_mic_do_dualsense` fazia, literalmente:
@@ -214,7 +214,7 @@ class TestOsSinaisExplicitosContinuamValendo:
     def test_a_env_continua_sendo_opt_in(self, maquina: Maquina) -> None:
         env = {"HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": "1"}
         r = maquina.doctor("_prefere_mic_do_dualsense", extra=env)
-        assert r.returncode == 0, "a env explícita dela parou de valer"
+        assert r.returncode == 0, "a env explícita parou de valer"
         saida = maquina.doctor("check_dropin_do_mic_armado", extra=env).stdout
         assert "[ OK ]" in saida, saida
         assert "DUALSENSE_MIC_INTENDED" in saida, (
@@ -271,7 +271,7 @@ class TestAMarcaEDoGesto:
         texto = maquina.marca.read_text(encoding="utf-8")
         assert "gesto=enable-mic" in texto, texto
         assert re.search(r"^data=\S+", texto, re.MULTILINE), (
-            f"a marca precisa do CARIMBO COM DATA — sem ele ela só diz que existe:\n{texto}"
+            f"a marca precisa do CARIMBO COM DATA — sem ele só diz que existe:\n{texto}"
         )
 
     def test_a_data_do_primeiro_pedido_fica(self, maquina: Maquina) -> None:
@@ -286,7 +286,7 @@ class TestAMarcaEDoGesto:
         assert r.returncode == 0, r.stderr
         assert not maquina.marca.exists(), (
             "a marca sobreviveu ao gesto contrário — marca que não se apaga "
-            "virou estado, que é o defeito que ela cura"
+            "virou estado, que é o defeito que a marca cura"
         )
 
     def test_apagar_o_que_nao_existe_e_silencioso(self, maquina: Maquina) -> None:
@@ -347,7 +347,7 @@ class TestOInstaladorEODesinstaladorSabemDaMarca:
         assert 'rm -f "${MARCA_MIC_PEDIDO}"' in TEXTO_UNINSTALL, TEXTO_UNINSTALL[:0]
 
     def test_o_modo_novo_e_so_arquivo(self) -> None:
-        """`--marcar-gesto-do-mic` não pode reiniciar o áudio dela."""
+        """`--marcar-gesto-do-mic` não pode reiniciar o áudio de quem usa."""
         ramo = re.search(
             r"^    marcar-gesto\)\n(?P<c>(?:.*\n)*?)        ;;$", TEXTO_FIX, re.MULTILINE
         )

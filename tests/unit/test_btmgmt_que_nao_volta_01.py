@@ -31,7 +31,7 @@ def test_toda_chamada_a_btmgmt_tem_teto_de_tempo() -> None:
             nuas.append(f"{arq.relative_to(RAIZ)}:{n}: {linha.strip()}")
 
     assert not nuas, (
-        "chamada a `btmgmt` SEM teto de tempo — numa máquina sem adaptador ela "
+        "chamada a `btmgmt` SEM teto de tempo — numa máquina sem adaptador a chamada "
         "não volta, e o install trava para sempre sem dizer por quê:\n  "
         + "\n  ".join(nuas)
         + "\n\nUse `timeout 5 btmgmt ...`. Ver BTMGMT-QUE-NAO-VOLTA-01."

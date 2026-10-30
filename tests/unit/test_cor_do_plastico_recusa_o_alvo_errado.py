@@ -98,7 +98,7 @@ class NoDeMentira:
     """O que `abrir_no_hidraw` devolveria — sem abrir coisa nenhuma."""
 
     fd: int
-    porta: str = "bancada de mentira"
+    porta: str = "porta de mentira"
     motivo: str = "socketpair local; nenhum /dev/hidraw foi aberto"
     fechado: bool = False
 
@@ -386,7 +386,7 @@ def test_radio_sem_radio_a_serio_nao_abre_a_porta(
 
 
 def test_a_familia_do_firmware_nunca_e_escrita(ensaio: Ensaio) -> None:
-    """A D-32 dela: ler a família `0xf0`-`0xf7`, nunca escrever."""
+    """A D-32: ler a família `0xf0`-`0xf7`, nunca escrever."""
     for report_id in COR.FAMILIA_DO_FIRMWARE:
         payload = COR.montar_payload(64)
         payload[0] = report_id
