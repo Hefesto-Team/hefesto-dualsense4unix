@@ -41,7 +41,7 @@ diretório com cinco arquivos. **GRAU: LIDO NA ABI + MEDIDO AQUI.**
 
 A ABI declara mais valores do que o aparelho de teste produziu — `panel` admite as seis
 faces (`top`, `bottom`, `front`, `back`, `left`, `right`) mais `unknown`. Um
-gabinete que só use duas delas não prova que as outras não existam; é por isso
+gabinete que só use duas dessas faces não prova que as outras não existam; é por isso
 que `secao_mesa.py` traduz **as seis**, e não as duas que o desenho previa.
 
 **O que o campo NÃO entrega, e isto é a metade importante:**
@@ -184,7 +184,7 @@ ls /sys/bus/usb/devices/usb*/*/usb*-port*/location                         | wc 
 cat /sys/bus/usb/devices/usb*/*/usb*-port*/location | grep -vc 0x00000000  # 14
 ```
 
-Os quatro sinais são de arquivos diferentes, e **duas delas são do lado do ACPI,
+Os quatro sinais são de arquivos diferentes, e **duas dessas fontes são do lado do ACPI,
 não do lado do USB** — que é o que faz a medição valer. Um quinto sinal
 acompanha na mesma divisão: `connect_type` diz `hotplug` nas 14 e `unknown` nas
 8 (ele vem do `_UPC`, objeto irmão do `_PLD`).
@@ -276,7 +276,7 @@ Essa última é a mais instrutiva: **`location` distingue portas que
 `physical_location` não distingue.** A palavra de 32 bits carrega o grupo e a
 posição do `_PLD`; as três palavras de tela são uma descrição grossa que perde
 essa informação. Quem precisar de identidade usa `location`; quem precisa de
-frase para humano usa as três palavras — e aceita que elas podem apontar para
+frase para humano usa as três palavras — e aceita que as três palavras podem apontar para
 três buracos.
 
 **A única porta unicamente descrita nesta placa é `usb1-port4`

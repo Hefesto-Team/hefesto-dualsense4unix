@@ -17,7 +17,7 @@ duas armadilhas:
    `default.configured.audio.source` (preferência persistida, em
    `~/.local/state/wireplumber/default-nodes`) e o default **ativo** (o que
    `pactl get-default-source` / o `*` no `wpctl status` reportam). A política de
-   seleção só promove uma fonte *configured* se ela estiver **available**. Foi
+   seleção só promove uma fonte *configured* se a fonte estiver **available**. Foi
    observado o `configured` apontando para a onboard enquanto o **ativo**
    permanecia no DualSense.
 

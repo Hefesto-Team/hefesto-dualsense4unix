@@ -15,7 +15,7 @@
 #
 # FATO ERRADO, SUBSTITUÍDO (27/08/2026, à noite). Estas linhas diziam que as
 # cinco cores viviam "dentro do `<style>` do `assets/control-svg/dualsense.svg`".
-# O SVG nunca teve `<style>`: ele é o desenho que ela fez no editor, e a única
+# O SVG nunca teve `<style>`: ele é o desenho que o usuário fez no editor, e a única
 # cor que carrega é `fill="#3a3f4b"` como atributo. Quem fosse consertar o hex
 # procuraria no arquivo errado. O `<style>` que existe ali AGORA é gerado por
 # `scripts/gerar_cores_do_dualsense.py` — e é a cura, não o defeito.
@@ -39,7 +39,7 @@
 # errno 5, e foi o que fez esta casa concluir por quatro dias que o firmware
 # recusava por rádio.
 #
-# AS ZONAS. Dez, e elas são o que um SVG universal precisa (a linha dizia
+# AS ZONAS. Dez, e as zonas são o que um SVG universal precisa (a linha dizia
 #            "oito" e listava dez):
 #   casca_esq   punho e ombro esquerdos   | casca_dir  punho e ombro direitos
 #   painel      a ilha central            | touch      o retângulo do touchpad
@@ -272,7 +272,7 @@ Z6,the-last-of-us,The Last of Us,analogicos,#E4E0D8,FOTO,arte,pesquisa-externa-2
 Z6,the-last-of-us,The Last of Us,gatilhos,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
 Z6,the-last-of-us,The Last of Us,detalhe,#C4A36A,FOTO,arte,pesquisa-externa-27-08,firefly no touch e ícones nos punhos
 ZA,god-of-war-20th,God of War 20th Anniversary,casca_esq,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,SPLIT: branco à esquerda
-ZA,god-of-war-20th,God of War 20th Anniversary,casca_dir,#C41E3A,FOTO,arte,pesquisa-externa-27-08,SPLIT: faixa vermelha à direita até o R1; sem ela é o White
+ZA,god-of-war-20th,God of War 20th Anniversary,casca_dir,#C41E3A,FOTO,arte,pesquisa-externa-27-08,SPLIT: faixa vermelha à direita até o R1; sem a faixa é o White
 ZA,god-of-war-20th,God of War 20th Anniversary,painel,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
 ZA,god-of-war-20th,God of War 20th Anniversary,touch,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,
 ZA,god-of-war-20th,God of War 20th Anniversary,botoes_face,#E4E0D8,FOTO,arte,pesquisa-externa-27-08,

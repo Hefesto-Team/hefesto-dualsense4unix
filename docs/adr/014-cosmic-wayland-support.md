@@ -213,7 +213,7 @@ O fato virou código verificável em
 `integrations/window_detect.backend_ve_nome_do_processo`, com
 `BACKENDS_QUE_VEEM_O_PROCESSO`/`BACKENDS_CEGOS_AO_PROCESSO` ao lado; o teste
 `tests/unit/test_o_nome_do_processo_que_nao_casa.py` confere a tabela contra o
-que cada backend REALMENTE devolve, para ela não envelhecer em silêncio.
+que cada backend REALMENTE devolve, para a tabela não envelhecer em silêncio.
 
 Nada mais desta ADR foi contrariado pelo código nesta passagem: a factory de
 `window_detect.py` decide pelos quatro ramos de ambiente descritos, e a cascata

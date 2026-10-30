@@ -30,7 +30,7 @@ O QUE FOI ALTERADO NESTA CÓPIA VERSIONADA, E SÓ ISTO
    ATENÇÃO ao número: o estudo diz 320 B, e ele está certo — o `cmp` de lá foi
    feito sobre os nós de sysfs, direto. Estes 300 B são o mesmo valor DEPOIS
    do achatamento do coletor, que come os 0x0a (o valor aqui não tem nenhum).
-   O que esta transcrição prova é o que o estudo usa dela: o sha256 é IDÊNTICO
+   O que esta transcrição prova é o que o estudo usa da transcrição: o sha256 é IDÊNTICO
    nos dois aparelhos.
 
 ATRIBUTOS

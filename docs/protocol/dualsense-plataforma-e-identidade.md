@@ -134,7 +134,7 @@ que a ordem de bytes é a que o bluez usa nos arquivos `info`.
 **O passo barato é o `0x09`, não o `0x0A`**: perguntar ao controle a que host
 ele acha que está pareado e comparar com o que o BlueZ acha é leitura pura — o
 driver já a faz em toda probe. O `0x0A` é escrita, e mal formado reescreve o
-pareamento de um controle que ela está usando.
+pareamento de um controle que a probe está usando.
 
 **E ele explica por que a volta sempre foi do lado do BlueZ:** a única porta
 para escrever o par host+chave no controle é o `0x0A`, que não existe por
@@ -241,7 +241,7 @@ enganosa que isso, e essa é a defesa da chave: não se parece com identidade ne
 
 ## 6. O que a internet NÃO sabe
 
-A lista do que não se achou é informação: ela diz onde só o aparelho responde.
+A lista do que não se achou é informação: a lista diz onde só o aparelho responde.
 
 - **O conteúdo dos `0x80`/`0x81` além do serial.** As duas tabelas de terceiro
   dizem literalmente *«please document»*. Este projeto sabe mais desse par do que
@@ -268,7 +268,7 @@ A lista do que não se achou é informação: ela diz onde só o aparelho respon
 
 ## Fontes
 
-Todas fixadas por commit ou revisão — os números de linha só valem nelas.
+Todas fixadas por commit ou revisão — os números de linha só valem nessas revisões.
 
 | fonte | o que sustenta |
 | --- | --- |
@@ -281,7 +281,7 @@ Todas fixadas por commit ou revisão — os números de linha só valem nelas.
 | `assets/dkms/hid-playstation/hid-playstation.c` (cópia DKMS desta árvore) | os `#define`, a ordem da probe, as sementes, o comentário sobre o endereço do host |
 
 O teste que amarra isto ao mapa é
-`tests/unit/test_plataforma_e_identidade_do_dualsense_no_mapa.py`: ela extrai os
+`tests/unit/test_plataforma_e_identidade_do_dualsense_no_mapa.py`: o teste extrai os
 `#define` do driver e cobra que o mapa diga o mesmo, e guarda os dois censos de
 feature report para que uma lista copiada errada apareça em vermelho.
 

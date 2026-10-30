@@ -10,7 +10,7 @@ medidas de ensaio que essa fila pede.
 ## Como ler
 
 - **A sprint e a decisão se citam pelo ID** (`A-PROVA-DO-PAR-NOS-JOGOS-DA-SONY-01`).
-  O texto delas mora nos documentos de processo da casa, que não viajam com o
+  O texto dessas fichas mora nos documentos de processo da casa, que não viajam com o
   clone; o ID é o que se procura lá.
 - **O código se cita por `arquivo:linha`**, e a linha é a de 12/10, **antes** da
   cura do par: as curas moveram linhas. Na dúvida, procure o nome da função.
@@ -89,7 +89,7 @@ dispositivos varridos; é o HID sem áudio no mesmo aparelho que dispara.
 - **O primeiro pad monta o gadget antes de a identidade existir.**
   `src/hefesto_dualsense4unix/integrations/uhid_gamepad.py`, `_vigiar_a_enumeracao`
   (~2457-2477), só registra o gadget `if gadget.identidade` (:2471), e a identidade
-  sai de `pad.identity or ""` (:2431). Sem ela,
+  sai de `pad.identity or ""` (:2431). Sem a identidade,
   `src/hefesto_dualsense4unix/integrations/endpoint_de_haptica.py`
   `ancora_do_gadget` (~256-268) devolve `None`, e `distribuir_ancoras` (~271-325)
   empresta uma interface USB qualquer da máquina. *Nota de 14/10/2026:* o
@@ -222,7 +222,7 @@ tem ao lado o `NN-mudancas.json` com a sua lista de mudanças.
 ### 3.2 A primeira revisão
 
 A montagem inicial ([guardada](paginas/todo-das-abas/rodada-1.html)): 96 mudanças,
-64 delas com escolha, conferidas em 1212x809, 1212x740 e 1918x840, sem rolagem
+64 dessas mudanças com escolha, conferidas em 1212x809, 1212x740 e 1918x840, sem rolagem
 vertical. Entraram as ordens da tarde: um botão só, «Modo automático»; a aba 05
 preenchendo o quadro; a dica do Desligar no menu; uma foto de estado para cada
 mudança que a foto da aba não mostra. A página refeita ficou com 101 mudanças e
@@ -396,7 +396,7 @@ do Ren'Py.
 - existe uma função que enfraquece vibração e gatilho com o microfone aberto (é um
   stub), e o Hefesto não a imita: no Terror a vibração nunca enfraquece pelo
   microfone;
-- nenhum dos três guarda uma tabela «o que cada gênero manda»; ela é nossa.
+- nenhum dos três guarda uma tabela «o que cada gênero manda»; a tabela é nossa.
 
 **As decisões do dia:** Visual novel e Adulto são estilos (não há dado a migrar);
 os acessórios valem nos jogos escolhidos numa caixa de marcar na engrenagem da

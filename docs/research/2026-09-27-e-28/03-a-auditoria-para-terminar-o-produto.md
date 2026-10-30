@@ -36,7 +36,7 @@ conferindo no código, no git e no CI, e tirou deles quinze ações em ordem.
 - A integração estava **um** commit à frente do `dev`, não sete; a cura do
   censo de coleta (`9478461b4`, `078d71806`) já estava no `dev`.
 - O CI do `dev` **não fica verde desde 22/08 às 04h53 UTC** — 61 corridas
-  vermelhas seguidas, de 26/08 a 27/09. Nelas o passo «Censo de coleta»
+  vermelhas seguidas, de 26/08 a 27/09. Nessas corridas o passo «Censo de coleta»
   reprovava e o `Pytest unit` ficava pulado. As sprints `VERDE-NAO-E-PROVA-01`
   («desde 26/09») e `O-CI-DA-DEV-VOLTA-A-VERDE-01` («desde pelo menos 20/09»)
   datavam errado. Na corrida do `137deee9c` o censo passou e o `Pytest unit`
@@ -132,7 +132,7 @@ de história.
   Sem perfil ativo, 5 escritores calam, 10 recusam mandando à aba Perfis e 5
   escritas do daemon viram `sem_perfil`. A posse da
   `O-FREESTYLE-E-UMA-CAMADA-SO-01` cobre 8 dos 24 arquivos que dependem do
-  Freestyle e põe em `nao_toca` o `rodape.py`, que ela quebra. Proposta: uma
+  Freestyle e põe em `nao_toca` o `rodape.py`, que a sprint quebra. Proposta: uma
   sprint antes, `O-DESTINO-DA-GRAVACAO-TEM-UM-DONO-01`, e a do Freestyle em
   duas (A: camada e aplicador; B: o registro de fora do jogo e o fim do
   `freestyle.json`).
@@ -156,7 +156,7 @@ de história.
   Há **cinco receitas** diferentes de gravar um campo entre as abas.
 
 Médios: a economia só vale na ativação e os gestos ao vivo da 03 e da 04
-passam por baixo dela; o alvo de saída do daemon fica preso depois de abrir um
+passam por baixo da ativação; o alvo de saída do daemon fica preso depois de abrir um
 cartão na 08 ou testar na 05, e nada devolve ao «Todos»; o nome dado ao
 controle só aparece na 08 (as outras leem `controles[k].cor`, que ninguém mais
 escreve); a aba Navegação não liga a Navegação e a linha laranja culpa um jogo
@@ -275,7 +275,7 @@ endereçam o índice 0 (`daemon/udp_server.py:327-344`).
   vibração nos quatro (163 × 156, 73 × 71 e 39 × 39 segundos com vibração em
   algum × nos quatro). Regra que sai: relato que mede o que a sprint pede
   reescreve a sprint no mesmo dia.
-- **A conferência dela não mede o aparelho.**
+- **A conferência do usuário não mede o aparelho.**
   `scripts/check_a_conferencia.py` tem 7 linhas; seis leem HTML ou
   código no processo, e a da cor lê a cor *pedida*. O socket é fixo em
   `/run/user/1000`. O `scripts/doctor.sh` tem 90 verificações de ambiente e
@@ -402,7 +402,7 @@ apontam para uma pasta fora do git.
   o preço de fidelidade do giroscópio se a taxa do virtual cair.
 - **Da palavra de produto e do mantenedor, numa pergunta só:** H0, H1 ou H3 para a
   história publicada, juntando a narrativa e o endereço. O pedido de expurgo
-  ao suporte do GitHub é do mantenedor no repositório original, e dela no
+  ao suporte do GitHub é do mantenedor no repositório original, e do usuário no
   fork.
 - **Sem medida ainda:** o dono do buraco na entrada dos virtuais; o custo do
   xalia e da taxa de 250 Hz no wineserver; o par modo Xbox + máscara DualSense

@@ -5,7 +5,7 @@ O QUE ESTE ARQUIVO É
 --------------------
 O bruto irmão — `2026-08-15-TROCA-DE-BRACOS-os-mesmos-quatro-nos-dois-transportes.txt`
 — guarda a mesa antes, a mesa depois e o censo de features depois. Faltavam duas
-corridas do MESMO instante, e sem elas dois números do estudo ficariam sem
+corridas do MESMO instante, e sem as corridas dois números do estudo ficariam sem
 endereço:
 
   - a TAXA DE ENTRADA depois da troca (19:32:42 a 19:33:02), que é a metade
@@ -13,7 +13,7 @@ endereço:
   - o E-8, o feature 0x22 nos quatro aparelhos (19:33:49), que NUNCA rodou
     antes da troca — e é por isso que a metade confundida dele NÃO fecha.
 
-Elas estão aqui inteiras, saída literal dos instrumentos.
+As duas corridas estão aqui inteiras, saída literal dos instrumentos.
 
 PROCEDÊNCIA
 -----------

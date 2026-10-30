@@ -41,7 +41,7 @@ Linhas JSON, uma por evento:
 | `audio` | `t`, `energia` | energia do monitor dos canais 3 e 4 (a ponte já o captura) |
 | `tiro` | `t` | marca explícita de tiro |
 
-Os tiros são as marcas; sem elas, as rajadas de energia do áudio (uma amostra curta por bala,
+Os tiros são as marcas; sem as marcas, as rajadas de energia do áudio (uma amostra curta por bala,
 no PS5, separadas por 80 ms de silêncio); sem nenhum dos dois não há «por tiro», só «por
 segundo», e a saída diz «sem dado». A janela de um tiro vai do instante dele ao do seguinte
 (0,5 s no último).

@@ -69,7 +69,7 @@ executável é o do Wine, nunca o `.exe` do jogo, e o perfil deixa de casar. Se
 um perfil de jogo não entra, este é o primeiro suspeito
 ([troubleshooting.md](troubleshooting.md)).
 
-Para descobrir os valores de uma janela, com ela em foco:
+Para descobrir os valores de uma janela, com a janela em foco:
 
 ```bash
 xprop WM_CLASS                          # clique na janela; o segundo valor é o que vale

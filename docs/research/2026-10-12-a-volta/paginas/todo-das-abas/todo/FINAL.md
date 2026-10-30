@@ -9,7 +9,7 @@ cópias de `rodada-4/` viraram um aviso com o link para cá. A régua é `regua-
 | aba | arquivo | as mudanças, pelo número, e de onde veio cada uma |
 | --- | --- | --- |
 | 01 Jogar | `01-jogar.html` | 1–11 antes; 12 r4 («O jogo vê», que saiu nos ajustes r4); fusão: as vagas 3 e 4 dizem «P3 • Desconectado» |
-| 02 Controles | `02-controles.html` | 1–15 antes; 16 r3; 17 r4 («O que chega», que saiu nos ajustes r4); 18 r4 (alvos e a vaga da q4); a mira virtual da c3; fusão: sem o nome «Vitória» na faixa |
+| 02 Controles | `02-controles.html` | 1–15 antes; 16 r3; 17 r4 («O que chega», que saiu nos ajustes r4); 18 r4 (alvos e a vaga da q4); a mira virtual da c3; fusão: sem nome de pessoa na faixa |
 | 03 Gatilhos | `03-gatilhos.html` | 1–14 antes; 15 r3 (com r3b, q1, c1, n1, n2) |
 | 04 Iluminação | `04-iluminacao.html` | 1–10 antes; 11 r3; fusão: «P3 • Desconectado», o Cosmic Red sem nome de pessoa, a nota da troca só por `#troca` |
 | 05 Vibração | `05-vibracao.html` | 1–11 antes; 12 r3 (com r3b); fusão: «P3 • Desconectado», o Cosmic Red sem nome de pessoa |
@@ -32,7 +32,7 @@ Vence a resposta mais recente: a v3 > as seis > r4 e r3b > r3.
 - **Mapa do controle, o seletor dos moldes:** a r3-21 (os quatro moldes num grupo) e a r4-19/20 (o grupo «Moldes» e,
   abaixo, «Meus perfis» com Orpheus e Maid) mexiam no mesmo seletor. Vence a r4: o grupo «Moldes» com as opções da
   r4 (22) e «Meus perfis» (23); fica o `#sequencia` da r3. A lista `PERFIS` é a da r4, sem o `"square":"Ctrl"` da r3.
-- **Conexões, a linha do giroscópio:** a r4-13 é a mesma ideia da r3-17; entra como 18, e o CSS dela também esconde a
+- **Conexões, a linha do giroscópio:** a r4-13 é a mesma ideia da r3-17; entra como 18, e o CSS da linha também esconde a
   mira no terceiro cartão.
 - **Experimental:** a 34 e a 35 da rodada 4 já eram números da r3; viraram 38 e 39. Os dois `<style>` que caíam no
   mesmo ponto entram juntos.
@@ -41,7 +41,7 @@ Vence a resposta mais recente: a v3 > as seis > r4 e r3b > r3.
 - **A q1 na 03:** a linha do alto não mostra os desconectados; ali não há vaga para dizer «P3 • Desconectado».
 - **A 06:** o «Navega com» só lista os conectados; não há vaga na página.
 - **A 04 rolava (1122 px em 809):** a nota do antes e depois ficava fora da janela; agora só abre por `#troca`.
-- **O nome de pessoa:** «Vitória», «Pedro», «Ana», «Rafa» e «Lia» viraram a cor do plástico de cada controle (05, 02,
+- **O nome de pessoa:** «Pedro», «Ana», «Rafa» e «Lia» viraram a cor do plástico de cada controle (05, 02,
   04, 08, Mapa do rádio); o campo de quem joga nasce vazio, com a dica «Nome de quem joga» (08), e o cartão da Calibrar diz a cor do plástico na linha do nome. No Mapa das
   portas, «Jogador 1» a «Jogador 4» ficam: é o número do jogador, não «Player». A citação sua na nota da 04 («o meu
   controle azul é o player 2») fica, como toda citação sua.

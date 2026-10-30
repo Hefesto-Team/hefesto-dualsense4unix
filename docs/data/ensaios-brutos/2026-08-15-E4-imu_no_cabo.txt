@@ -46,7 +46,7 @@ rádio       0x31       78 B     data[2]   23..28    17..22
 
   medindo 4 controle(s) por 20 s, na MESMA janela.
   >> NÃO mexa nos controles: parados na mesa eles medem a gravidade,
-  >> e é o módulo dela (1 g) que é a régua deste ensaio.
+  >> e é o módulo da gravidade (1 g) que é a régua deste ensaio.
 
   A MEDIDA — módulo do vetor de gravidade, por controle
 

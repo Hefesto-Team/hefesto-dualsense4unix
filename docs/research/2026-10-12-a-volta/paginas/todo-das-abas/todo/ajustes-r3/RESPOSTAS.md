@@ -5,7 +5,7 @@ Rodada 3 respondida em 13/10/2026; ajustes feitos em 14/10/2026 em `todo/` (a p�
 ## r3-03-15
 - **Sprint:** A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01
 - **O pedido:** isto devia ser decidido também pelo Estilo de Jogo.
-- **O que mudou:** A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado. Ela vale para L2 e R2, então ganhou linha própria abaixo de um separador, com «L2 R2» à esquerda e o rótulo na mesma coluna dos de cima.
+- **O que mudou:** A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado. A escolha vale para L2 e R2, então ganhou linha própria abaixo de um separador, com «L2 R2» à esquerda e o rótulo na mesma coluna dos de cima.
 
 ## r3-04-11
 - **Sprint:** A-LUZ-DO-CONTROLE-NAO-PISCA-PARA-QUEM-E-SENSIVEL-A-LUZ-01
@@ -20,7 +20,7 @@ Rodada 3 respondida em 13/10/2026; ajustes feitos em 14/10/2026 em `todo/` (a p�
 ## r3-06-26
 - **Sprint:** A-ABA-NAVEGACAO-DO-TODO-01
 - **O pedido:** A, mas sem o «i»: a dica aparece quando o mouse para sobre a área.
-- **O que mudou:** Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre essa faixa, onde o «i» ficava, e também no foco do teclado nela; some quando o mouse sai. Sobre a tabela ela não acende. Não cobre nenhum campo. A leitura B saiu da página.
+- **O que mudou:** Ficou a leitura A (título «Navegação»), e o «i» saiu. A explicação aparece na faixa do título, ao lado de «Navegação», quando o mouse fica parado meio segundo sobre essa faixa, onde o «i» ficava, e também no foco do teclado na faixa; some quando o mouse sai. Sobre a tabela a tabela não acende. Não cobre nenhum campo. A leitura B saiu da página.
 
 ## r3-07-29
 - **Sprint:** A-ABA-EXPERIMENTAL-DO-TODO-01

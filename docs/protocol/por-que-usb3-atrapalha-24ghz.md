@@ -21,7 +21,7 @@
 > Intel Corporation, white paper, documento **327216-001**, abril de 2012.
 > Publicado também pela USB-IF: <https://www.usb.org/document-library/usb-30-radio-frequency-interference-impact-24-ghz-wireless-devices>
 
-O que ela afirma, e que é o que o produto repete:
+O que a Intel afirma, e que é o que o produto repete:
 
 | afirmação | o que a fonte diz |
 |---|---|

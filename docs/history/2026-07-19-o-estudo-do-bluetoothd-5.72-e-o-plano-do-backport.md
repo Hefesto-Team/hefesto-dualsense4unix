@@ -57,7 +57,7 @@ reconexão HID), curada na via uhid entre 5.74 e 5.79:**
 | b8ad3490a | input/device: Force UHID_DESTROY on error | 5.74 |
 | ea96d7d18 | input/device: Fix not handling IdleTimeout when uhid is in use | 5.74 |
 
-Ressalva: a família é da via uhid, que o 5.72 do noble NÃO usa por default — ela importa porque o
+Ressalva: a família é da via uhid, que o 5.72 do noble NÃO usa por default — a via importa porque o
 backport ativa essa via, e aí é obrigatório ≥5.79 (série completa).
 
 **Fixes que afetam a via HIDP/core diretamente:**

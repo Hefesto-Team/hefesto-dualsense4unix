@@ -15,7 +15,7 @@ PipeWire privado (`XDG_RUNTIME_DIR` próprio), sem tocar o áudio da sessão.
    reinicia o WirePlumber mesmo com o drop-in igual. Dos 13 reinícios do WirePlumber desde 07/10 na máquina medida, pelo
    menos 6 casam com um log de install que diz «WirePlumber reiniciado», e o do caso medido é um deles.
 4. **O cliente que pendura é qualquer um:** a Steam roda `wpctl settings monitor.alsa.enable-external-volume-control`, e
-   ela fica em `do_wait` esperando o `wpctl` para sempre. A Steam não fecha até alguém matar o `wpctl`.
+   a Steam fica em `do_wait` esperando o `wpctl` para sempre. A Steam não fecha até alguém matar o `wpctl`.
 5. **A cura que vale para qualquer usuário é o PipeWire ≥ 1.6.9.** No ensaio do jogo, o `steam.py --fechar` diz
    qual filho prende a Steam, sem matar nada.
 

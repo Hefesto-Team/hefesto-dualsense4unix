@@ -35,7 +35,7 @@ três nomes**, todos do layout curto legado — o projeto se chama
 | unidade `hefesto.service` | `hefesto-dualsense4unix.service` (constante `SERVICE_NORMAL` em `daemon/service_install.py`) |
 
 Ninguém deve digitar esse caminho: `ipc_socket_path()` é a fonte única e o
-`docs/protocol/ipc-unix-socket.md` deriva dela. Quem concatenar a string à mão
+`docs/protocol/ipc-unix-socket.md` deriva da fonte. Quem concatenar a string à mão
 erra o modo fake — ver abaixo.
 
 **Uma coisa que a ADR não previa, e é o motivo de o isolamento ter mudado de

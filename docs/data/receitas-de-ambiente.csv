@@ -2,7 +2,7 @@
 #
 # Dono: `src/hefesto_dualsense4unix/integrations/receitas_de_ambiente.py`.
 # Uma linha = um SINAL no disco do jogo que diz que ele só abre com uma variável
-# de ambiente, a variável, o valor e a PEÇA que ela exige. Sem appid: o produto é
+# de ambiente, a variável, o valor e a PEÇA que a PEÇA exige. Sem appid: o produto é
 # para qualquer computador, e o que identifica o jogo é o que ele traz na pasta.
 #
 # Colunas

@@ -46,7 +46,7 @@ parâmetro `poll_hz` do `run_daemon`).
 
 ## Nota de verificação — 2026-07-31
 
-Esta nota fica porque é ela que impede alguém de "resolver" a ausência
+Esta nota fica porque é a nota que impede alguém de "resolver" a ausência
 forjando bytes. Até 11/08/2026 o terceiro item da Decisão prometia **dois**
 replays determinísticos e dizia que "Testes W1.3 cobrem ambos"; a frase foi
 substituída pelo estado real, e o que segue é a conferência que a derrubou, no
@@ -60,7 +60,7 @@ Nenhum teste aponta para o capture de BT: a única citação de fixture de captu
 na suíte é `tests/unit/test_fake_controller_capture.py`, e a suíte usa o arquivo
 USB. O replay de BT nunca foi coberto porque o insumo nunca esteve aqui.
 
-A fixture **não foi inventada de propósito**. Ela só pode nascer de uma
+A fixture **não foi inventada de propósito**. A fixture só pode nascer de uma
 gravação num DualSense real emparelhado por Bluetooth; forjar bytes sintéticos
 daria um replay que passa e não representa o transporte — o oposto do que um
 capture determinístico serve para fazer. Fica registrada como ausência, e a

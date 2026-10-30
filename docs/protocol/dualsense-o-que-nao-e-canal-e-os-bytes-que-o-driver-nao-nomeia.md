@@ -61,7 +61,7 @@ O mapa registrava, desde 19/08/2026, um buraco medido e honesto na linha
 > nenhum do Hefesto, e enquanto não estiver ninguém pode afirmar que mandar zero
 > ali é inofensivo."*
 
-**As 26 posições agora têm nome.** Elas não são 26 desconhecidas: **24 são
+**As 26 posições agora têm nome.** As posições não são 26 desconhecidas: **24 são
 `reserved` no próprio driver desta máquina, e duas carregam dado vivo.** E as
 doze do meio — que o driver chama `reserved3[12]` — **não são reserva nenhuma**.
 
@@ -123,7 +123,7 @@ criptográfico. A afirmação vem de uma única linhagem de mapeamento e nenhuma
 fonte independente a corrobora aqui. O driver do Linux não lê esses oito bytes,
 e o vpad os zera; se algum jogo os validasse, o vpad já teria quebrado.
 
-**A tarde de ensaio no aparelho que o mapa pedia continua de pé** — o que mudou é que ela
+**A tarde de ensaio no aparelho que o mapa pedia continua de pé** — o que mudou é que a tarde
 agora tem hipótese endereçada para confirmar, em vez de 26 posições cegas.
 
 ---
@@ -157,7 +157,7 @@ campo de giroscópio como `x, y, z`; três mapeamentos públicos independentes
 escrevem a ordem do fio como **X, Z, Y**. Os endereços são os mesmos (corpo
 15-20) e o tamanho é o mesmo; o que muda é qual eixo mora no meio.
 
-**Eu não decido esta.** Ela não é do meu tema — é de quem cuida de movimento — e
+**Eu não decido esta.** A ordem não é do meu tema — é de quem cuida de movimento — e
 decidir por leitura seria trocar o comentário de um driver que funciona pela
 palavra de um documento. O que se pode dizer sem medir: o driver aplica a
 calibração do feature `0x05` na mesma ordem em que lê, então uma troca de rótulo
@@ -234,7 +234,7 @@ um par controle/leitura completo que o driver ignora dos dois lados.
 
 ## 7. A vigia de zumbi — os sinais que o aparelho oferece
 
-A vigia é nossa: ela cruza "HID conectado" com "evdev mudo ou obsoleto". O
+A vigia é nossa: a vigia cruza "HID conectado" com "evdev mudo ou obsoleto". O
 aparelho não tem canal de "estou vivo". Mas oferece **quatro contadores**, e
 três deles nós não lemos:
 
@@ -264,7 +264,7 @@ capturar N reports parado na mesa, e olhar se o corpo 6 anda.
 
 ## 8. O que eu NÃO achei
 
-A lista do que a internet não sabe é informação — ela diz onde só o aparelho
+A lista do que a internet não sabe é informação — a lista diz onde só o aparelho
 responde.
 
 1. **Nenhum canal de IR ou câmera no DualSense.** Busca de código por
@@ -315,6 +315,6 @@ As seis linhas do tema receberam escrita em `docs/data/mapa-controles.csv`, com
 em todas** — nada foi ao aparelho nesta leva.
 
 O teste que amarra este documento ao driver é
-`tests/unit/test_os_bytes_que_o_driver_nao_nomeia.py`: ela calcula os offsets a
+`tests/unit/test_os_bytes_que_o_driver_nao_nomeia.py`: o teste calcula os offsets a
 partir do fonte C compilado nesta máquina e reprova se um número desta página
 divergir dele.

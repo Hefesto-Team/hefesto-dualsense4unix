@@ -209,7 +209,7 @@
       "n": 22,
       "sprint": "A-ABA-MAPA-DO-CONTROLE-DO-TODO-01",
       "o_que_muda": "Os moldes têm os mesmos quatro nomes da aba Navegação: Point and click, Visual novel, Mouse e Mouse e teclado; sai o grupo «Point and click» com «Só mouse», «Teclado e mouse» e Orpheus",
-      "resposta": "confirmação dela de 13/10 (~22h)",
+      "resposta": "confirmação do usuário de 13/10 (~22h)",
       "origem": "rodada 4 (o que faltava desenho)",
       "ancora": "[data-todo=\"22\"]",
       "seletor": "#perfil optgroup[label=\"Moldes\"] option",
@@ -258,11 +258,11 @@
   "fora": [
     {
       "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-      "motivo": "Espera ela; nada nestas páginas."
+      "motivo": "Espera o usuário; nada nestas páginas."
     },
     {
       "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-      "motivo": "Espera ela; nada nestas páginas."
+      "motivo": "Espera o usuário; nada nestas páginas."
     },
     {
       "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
@@ -270,11 +270,11 @@
     },
     {
       "sprint": "I18N-DA-TELA-NOVA-01",
-      "motivo": "Fora da leva; nada de texto novo depende dela."
+      "motivo": "Fora da leva; nada de texto novo depende da leva."
     },
     {
       "sprint": "TRADUZIR-O-PROJETO-01",
-      "motivo": "Fora da leva; nada de texto novo depende dela."
+      "motivo": "Fora da leva; nada de texto novo depende da leva."
     },
     {
       "sprint": "A-ABA-NAVEGACAO-TEM-OS-DOIS-POINT-AND-CLICK-E-A-VELOCIDADE-QUE-FUNCIONA-01",

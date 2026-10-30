@@ -19,7 +19,7 @@ resposta, não empurra evento, não sabe quem pergunta, e cada método vale tudo
 
 ## Decisão
 
-Uma modificação é uma pasta com o manifesto `hefesto-mod.json` na raiz. Quando ela leva código, ele
+Uma modificação é uma pasta com o manifesto `hefesto-mod.json` na raiz. Quando a modificação leva código, ele
 roda como **processo filho do serviço** e fala com o serviço só pela **porta das modificações**, com as
 permissões que a pessoa aceitou.
 
@@ -43,7 +43,7 @@ permissões que a pessoa aceitou.
    - `publicar:jogo.acessorio` e `pedir:luz.pulso`;
    - `bluetooth`, `lancador`, `tema`, `aparelhos` e `jogos`.
 
-   Toda escrita leva o `uniq`, porque escrever em todos é proibido (BROADCAST-PROIBIDO-01). Ela também
+   Toda escrita leva o `uniq`, porque escrever em todos é proibido (BROADCAST-PROIBIDO-01). A escrita também
    nunca entra num canal que o jogo está escrevendo naquele controle. Uma atualização que pede permissão
    nova desliga a modificação até o novo «sim».
 3. **A porta** é `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/mods.sock`, com modo `0600`, e nunca o socket
@@ -58,7 +58,7 @@ permissões que a pessoa aceitou.
      - a raiz é só de leitura e a `HOME` nasce vazia;
      - o código é só de leitura e os dados são graváveis;
      - do diretório de execução da sessão aparece só a porta, com ou sem `XDG_RUNTIME_DIR` no ambiente;
-     - os processos ficam num espaço de PID próprio: o que a modificação abrir morre com ela;
+     - os processos ficam num espaço de PID próprio: o que a modificação abrir morre com a modificação;
      - `--unshare-net` entra quando a rede é `nenhuma`;
      - o barramento do sistema fica escondido sem `bluetooth`, e o `/dev` real fica escondido sem
        `aparelhos`;
@@ -70,7 +70,7 @@ permissões que a pessoa aceitou.
    - Parar é mandar `SIGTERM` ao grupo do PID criado e, no fim do prazo, `SIGKILL`. Nunca por nome. Na
      caixa, o `bwrap` não repassa o sinal: o `SIGTERM` o encerra, e o kernel encerra junto tudo o que
      estava dentro.
-   - A instância isolada (`--fake`, ou qualquer socket de nome próprio) não abre as modificações: ela
+   - A instância isolada (`--fake`, ou qualquer socket de nome próprio) não abre as modificações: a instância
      divide a casa com o serviço de verdade.
 5. **A linha de comando** é `hefesto-dualsense4unix mod instalar|atualizar|listar|permissoes|ligar|desligar|remover`.
    - **De git**, a modificação vem por `git clone --depth 1`, com `GIT_TERMINAL_PROMPT=0` e as
@@ -101,7 +101,7 @@ porque é só ele que o barramento publica.
 
 ## Consequências
 
-- Um `while True` numa modificação gasta o processo dela, não o tique do serviço.
+- Um `while True` numa modificação gasta o processo da modificação, não o tique do serviço.
 - As escritas passam pelos mesmos handlers do IPC (`led.set`, `rumble.set`, `trigger.set`). A política
   de cada canal (Modo Nativo, alvo fora da mesa, teto da vibração) continua com um dono só.
 - O que a caixa garante depende do `bwrap` da máquina. Sem ele, só a porta confere as permissões: o

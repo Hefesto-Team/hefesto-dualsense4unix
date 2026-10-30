@@ -51,7 +51,7 @@ Base: o publicado da `integra/1-11` (`29d620816`), medido com a `FOLHA_DA_CASA` 
 - Origem: `recomendada-a-escolher` (a opção A do BRIEF-T6, o menu do sistema no tema do COSMIC; o «Desligar» é o
   interruptor da aba Jogar, a leitura recomendada da pergunta 1).
 - Forma no mockup: um `<div id="todo-menu-direito" data-todo="N" role="menu">` em `position:fixed`, **aberto por
-  padrão**, como se ela tivesse clicado com o direito num vazio da aba, sem cobrir nada que a cena mostra (03: o
+  padrão**, como se o usuário tivesse clicado com o direito num vazio da aba, sem cobrir nada que a cena mostra (03: o
   vazio embaixo do quadro, em x=724 y=560; 04 e 05: a coluna do P4 desconectado, em x=968, abaixo da linha
   Modelo). O `contextmenu` da página o reposiciona no ponteiro; o clique esquerdo fora ou o Esc fecham. O CSS vai
   num `<style id="todo-menu-css" data-todo="N">` e o roteiro num `<script data-todo="N">`, os dois no fim.
@@ -134,7 +134,7 @@ Medido em 1212x809 com a folha da casa: as três sem rolagem vertical.
   «Voltou»).
 - **Seção ou aba nova numa página com abas no topo** (o «Registro» do mapa):
   - um botão `.modo` a mais, com a grade passando a `repeat(4, 8.5rem)`;
-  - a seção nasce com `hidden`, e o `pintar()` esconde `.palco`, `.painel` e `.legenda` enquanto ela está à
+  - a seção nasce com `hidden`, e o `pintar()` esconde `.palco`, `.painel` e `.legenda` enquanto a seção está à
     vista;
   - a lista rola dentro do quadro, nunca a página.
 

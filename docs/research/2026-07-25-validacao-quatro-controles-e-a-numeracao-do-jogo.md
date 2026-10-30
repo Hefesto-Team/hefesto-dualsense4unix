@@ -140,9 +140,9 @@ implementação, não escolha pendente.
 
 ## A escolha de projeto que isto força
 
-São três saídas, e elas se excluem:
+São três saídas, e as saídas se excluem:
 
-1. **Adotar a numeração do kernel.** Cai por si: ela já coincide com a nossa.
+1. **Adotar a numeração do kernel.** Cai por si: a numeração já coincide com a nossa.
 2. **Manter a nossa e aceitar que o jogo discorde.** É o estado atual, e é
    exatamente a queixa.
 3. **Influenciar o conjunto que o jogo enumera.** Hoje o jogo vê um arranjo
@@ -175,7 +175,7 @@ sobre o controle, não sobre o jogo aberto.
   experimento. O próprio documento da JOGO-01 admite: *"o jogo escolhe quatro
   entre doze, sem critério que possamos prever"*. Sem essa medição, qualquer
   desenho que tente **acertar** a numeração do jogo é chute — e é por isso que a
-  terceira via não tenta: ela controla o **conjunto**, não a ordem.
+  terceira via não tenta: a terceira via controla o **conjunto**, não a ordem.
 - **Não existe alavanca de ordem.** A varredura não achou nenhuma variável de
   ambiente ou canal que informe número de jogador a um jogo. A única alavanca
   real é **negativa**: tirar dispositivo de cena.

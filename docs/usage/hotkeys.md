@@ -1,6 +1,6 @@
 # Atalhos no controle
 
-O Hefesto reconhece combinações com o botão PS. Elas valem com o jogo aberto e
+O Hefesto reconhece combinações com o botão PS. As combinações valem com o jogo aberto e
 sem largar o controle.
 
 **O PS e as combinações valem em qualquer um dos quatro controles.** O gesto
@@ -109,7 +109,7 @@ variáveis de ambiente, e hoje são seis:
 - `HEFESTO_DUALSENSE4UNIX_FAKE` e `HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT`: um
   controle simulado, para desenvolvimento.
 
-Para o serviço ler uma delas, ponha-a no ambiente do systemd do usuário e
+Para o serviço ler uma dessas variáveis, ponha-a no ambiente do systemd do usuário e
 reinicie o serviço:
 
 ```bash

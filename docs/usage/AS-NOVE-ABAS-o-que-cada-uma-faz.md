@@ -58,7 +58,7 @@ Uma coluna por controle, com o L2 e o R2; a fita fica esmaecida.
 
 - **Modo**: dezenove, de Desligado e Rígido a Arco de flecha, Metralhadora,
   Vibração por posição e Montar do zero. A descrição de cada um está na lista.
-- **Efeito pronto**: as curvas de fábrica e, embaixo delas, **Meus efeitos**,
+- **Efeito pronto**: as curvas de fábrica e, embaixo das curvas, **Meus efeitos**,
   as que você guardou com um nome.
 - **Ajustes**: as barras daquele modo (Força, Frequência, curso…).
 - **Guardar** grava a curva da tela com um nome. **Em todos** põe o L2 e o R2
@@ -124,7 +124,7 @@ Uma coluna por controle. O lado que treme acende em laranja.
 - **O exame**: uma linha por achado, com o que foi visto e por que importa:
   energia das entradas, o controle no cabo sozinho no controlador USB, rádios
   por perto na faixa de 2,4 GHz. Um adaptador Bluetooth ao lado de uma entrada
-  USB 3.0 em uso sofre com o ruído que ela faz na mesma faixa, e o exame avisa.
+  USB 3.0 em uso sofre com o ruído que a entrada faz na mesma faixa, e o exame avisa.
 - **Sugestão de Conexão**: o que mover para onde. Nada muda sozinho.
   **Mapear Entradas** e **Examinar Entradas** refazem o mapa e o exame.
 - **Um cartão por controle**: bateria, microfone, som, o modo de conexão, como o

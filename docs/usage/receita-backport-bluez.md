@@ -29,7 +29,7 @@ leva uns três minutos. Depois, rode `./install.sh` de novo.
 | o changelog das revisões | `assets/bluez-backport/debian/changelog.hefesto` | a versão alvo, conferida pelo `dpkg-parsechangelog` |
 
 A revisão 3 e a 4 nasceram sobre o 5.86: as chaves com o sufixo `_R3` e `_R4`
-do `BASELINE` guardam o que difere delas, e o script as lê antes da chave comum.
+do `BASELINE` guardam o que difere das chaves, e o script as lê antes da chave comum.
 
 O empacotamento do 5.85 pede ajustes para servir ao 5.86 e ao 5.87, e o script
 os faz:
@@ -104,7 +104,7 @@ O CVE-2026-19774 (a2dp, `912f5efb0`) já vem no 5.87.
 
 O changelog da revisão escreve duas linhas que o doctor lê:
 
-- `Leva do upstream: <commits>`: com o `5bc6aa79e` nela, o 5.87 da casa passa
+- `Leva do upstream: <commits>`: com o `5bc6aa79e` na revisão, o 5.87 da casa passa
   pelo teto que barra o 5.87 de fora;
 - `Cobre a segurança da distro até: <versão>`: a versão do bluez da distro cujas
   correções a revisão já leva.
@@ -156,7 +156,7 @@ Para levar a correção:
 
 | Opção | O que faz |
 |---|---|
-| (nenhuma) | constrói a última revisão; se ela já está no cache e confere, sai sem baixar nem compilar |
+| (nenhuma) | constrói a última revisão; se a revisão já está no cache e confere, sai sem baixar nem compilar |
 | `--forcar` | reconstrói mesmo pronto |
 | `--sem-unit` | pula o `make check` |
 | `--preparar` | só os passos 1 a 4 |
@@ -211,7 +211,7 @@ ausente, e diz «NÃO MEDIDO»; qualquer outra falha reprova.
 Quem instala é o `./install.sh`. Ele confere as marcas das correções no
 `bluetoothd` que está rodando; se faltar alguma, ou se a versão estiver abaixo
 do alvo, confere o `SHA256SUMS`, grava as versões anteriores em
-`VERSOES-ANTERIORES.txt` (é por elas que o `./uninstall.sh --restore-bluez`
+`VERSOES-ANTERIORES.txt` (é por as versões que o `./uninstall.sh --restore-bluez`
 volta) e instala os três `.deb` juntos. A instalação reinicia o Bluetooth, e os
 controles caem até reconectar.
 

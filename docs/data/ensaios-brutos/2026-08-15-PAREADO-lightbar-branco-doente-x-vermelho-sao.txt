@@ -34,7 +34,7 @@ QUEM É QUEM (não pelo LED — pelo `HID_UNIQ` cruzado com o journal)
   estudo `2026-08-15-A-ESCADA-QUE-RESPONDE...md:28-29`, que foi conferida com o
   olho de quem confere naquele ensaio. O firmware NÃO foi perguntado aqui (o `E7` fez a
   rodada de rádio SECA). Se a cor do plástico for lida do aparelho, confira
-  contra esta tabela antes de acreditar em qualquer conclusão que dependa dela.
+  contra esta tabela antes de acreditar em qualquer conclusão que dependa da tabela.
 
 
 == 1. O DIFF EXAUSTIVO DE SYSFS ==============================================
@@ -96,7 +96,7 @@ O QUE É IDÊNTICO, e vale tanto quanto o que difere:
       /dev/hidraw8: steam(610430) · hefesto-dualsen(615228)
       /dev/hidraw9: steam(610430) · hefesto-dualsen(615228)
     OS MESMOS DOIS PROCESSOS, nos dois nós. Simétrico.
-    (Coerente com "já superamos a Steam": ela está nos dois, e um obedece.)
+    (Coerente com "já superamos a Steam": a Steam está nos dois, e um obedece.)
 
   Os quatro nós físicos estão 0600 root:root — o broker do Hefesto escondendo
   o físico do jogo. Esta medição não fez nenhum `open()` direto.
@@ -178,7 +178,7 @@ Mesma captura, reports de entrada 0x31 (`a1 31 ...`), byte de `status`
 
 == 7. O QUE ESTA MEDIÇÃO NÃO SEPAROU ========================================
 
-Sobraram DUAS diferenças de estado, e elas estão confundidas 1:1 com o
+Sobraram DUAS diferenças de estado, e as duas estão confundidas 1:1 com o
 aparelho — há um exemplar de cada:
 
   (a) power_state: alimentado/completo (são) x descarregando (doente)

@@ -200,9 +200,9 @@ ambiente, não uma:
   da config, sem derrubar o daemon.
 
 Conferido rodando em 22/08/2026: `MetricsSubsystem.is_enabled(DaemonConfig())`
-devolve `True` com a variável em `1`, `False` com ela em `true` e `False` sem
-ela; `_porta_efetiva(9090)` devolve `19199` com a variável de porta em `19199`,
-e `9090` com ela em `abc` ou `70000`.
+devolve `True` com a variável em `1`, `False` com a variável em `true` e `False` sem
+a variável; `_porta_efetiva(9090)` devolve `19199` com a variável de porta em `19199`,
+e `9090` com a variável em `abc` ou `70000`.
 
 **O número que a nota de 25/07 errou, medido:**
 `grep -rn HEFESTO_DUALSENSE4UNIX_METRICS src/` devolve **duas** linhas: a
@@ -210,12 +210,12 @@ constante `ENV_METRICS_PORT`, em `daemon/subsystems/metrics.py`, e a frase do
 verbo `ligar`, em `cli/cmd_metrics.py` (a `ENV_METRICS_ENABLED` saiu em
 03/10/2026). Era zero em 25/07, e foi por isso que aquela nota disse zero.
 
-**Duas metades do veredito antigo continuam de pé, e é por elas que esta nota
+**Duas metades do veredito antigo continuam de pé, e é por essas duas metades que esta nota
 não é uma absolvição:**
 
 1. **Não existe botão.** Nada na árvore escreve as variáveis: nem o
    `install.sh`, nem a unit systemd, nem a janela: nenhum `.service` de
-   `assets/` tem `Environment=` com elas, e `install.sh` não menciona
+   `assets/` tem `Environment=` com as variáveis, e `install.sh` não menciona
    `METRICS`. Fora de `src/` as variáveis só aparecem onde ninguém as exporta —
    documentação, testes e o `%changelog` do pacote Fedora. Quem quiser métricas
    exporta a variável à mão ou põe `Environment=` na unit.

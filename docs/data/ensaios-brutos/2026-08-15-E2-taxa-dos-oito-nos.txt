@@ -2,7 +2,7 @@ T0 do envelope (parede): 2026-08-15 07:43:56.407
 captura de áudio concorrente em T0: 0 processo(s) — arecord/pw-record/parec
    O E-6 do plano usa captura de microfone USB como CARGA no mesmo controlador xHCI,
    então a linha de base do E-2 só pode ser lida como linha de base se esta sonda der 0.
-   Ela conta por NOME de processo, e não por linha de comando: com `pgrep -f` o próprio
+   A sonda conta por NOME de processo, e não por linha de comando: com `pgrep -f` o próprio
    shell que roda a sonda casa o padrão, e a sonda mente sobre o produto (medido às 07:37).
 
 2026-08-15T07:43:56.547197 [info     ] hidraw_broker_lease_open       path=/run/hefesto-hidraw-broker/broker.sock

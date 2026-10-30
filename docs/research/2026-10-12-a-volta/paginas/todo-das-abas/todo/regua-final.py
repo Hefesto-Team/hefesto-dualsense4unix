@@ -3,7 +3,7 @@
 """A régua final dos mockups aprovados: mede as catorze páginas finais de todo/ em três tamanhos, sem janela na tela.
 
 Junta as checagens de ajustes-r3/regua.py e de rodada-4/ajustes/regua.py, apontadas para as páginas finais (a fusão
-de 14/10), e acrescenta duas, em todas as páginas: nenhuma diz «Player N» nem «Vitória» (no texto e nos atributos que
+de 14/10), e acrescenta duas, em todas as páginas: nenhuma diz «Player N» nem «Pedro» (no texto e nos atributos que
 se leem: title, aria-label, value, placeholder, alt, data-dica e data-titulo; comentário não conta), e nenhuma rola.
 
 Uso: regua-final.py [--mordida <nome|js>] ; sai 0 se tudo passa. As mordidas nomeadas estão em MORDIDAS: cada uma
@@ -431,7 +431,7 @@ MORDIDAS_R4 = {
     "legenda-07": _m("var g=document.querySelector('.fz-grade');var s=document.createElement('span');s.className='fz-leg';s.textContent='dois motores';g.appendChild(s);"),
     "letra-07": _m("document.querySelectorAll('.ja-tela.t2 .pc-sub').forEach(function(x){x.style.fontSize='11px';});"),
     "largura-07": _m("document.querySelector('.ja-tela.t2 .t2-segue .ja-op').style.width='70%';"),
-    "nome-calibrar": _m("var m=document.querySelector('.mira');var s=document.createElement('span');s.className='quem';s.textContent='Vitória';m.insertBefore(s,m.firstChild);"),
+    "nome-calibrar": _m("var m=document.querySelector('.mira');var s=document.createElement('span');s.className='quem';s.textContent='Pedro';m.insertBefore(s,m.firstChild);"),
     "q4-player-calibrar": _m("var b=document.querySelector('.controles > .lugar b');b.textContent='Player 3';"),
     "q5-selo": _m("document.querySelectorAll('.mira').forEach(function(m){var d=document.createElement('div');d.className='mira-topo leitura';"
                   "d.innerHTML='<span class=selo-av><span class=p></span>Giroscópio como analógico: desligado</span>';m.insertBefore(d,m.firstChild);});"),
@@ -665,7 +665,7 @@ VAGAS = {"01": 2, "02": 2, "03": 0, "04": 2, "05": 2, "06": 0, "08": 2, "calibra
 JS_GERAL = r"""
 (function(){
   // a letra conta: a citação na nota da 04 («o meu controle azul é o player 2») fica, como toda citação
-  var re=/Player\s*[0-9]|Vitória/,ATR=['title','aria-label','value','placeholder','alt','data-dica','data-titulo'],ditos=[];
+  var re=/Player\s*[0-9]|Pedro/,ATR=['title','aria-label','value','placeholder','alt','data-dica','data-titulo'],ditos=[];
   function nome(e){var c=(typeof e.className==='string'?e.className:'').trim().split(/\s+/).slice(0,2).join('.');return e.tagName.toLowerCase()+(c?'.'+c:'')+(e.id?'#'+e.id:'');}
   if(re.test(document.title))ditos.push(['title',document.title]);
   var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),n;
@@ -692,8 +692,8 @@ JS_GERAL = r"""
 
 MORDIDAS_GERAL = {
     "player-3": _m("var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),n;while((n=w.nextNode())){if(/^P[34]$/.test(n.textContent.trim())){n.textContent='Player 3';break;}}"),
-    "vitoria": _m("var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),n;while((n=w.nextNode())){if(/Cosmic Red/.test(n.textContent)&&!n.parentElement.closest('script,style')){n.textContent=n.textContent.replace('Cosmic Red','Vitória');break;}}"),
-    "vitoria-na-dica": _m("var e=document.querySelector('[data-dica]');e.setAttribute('data-dica','Controle da Vitória');"),
+    "nome-de-pessoa": _m("var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),n;while((n=w.nextNode())){if(/Cosmic Red/.test(n.textContent)&&!n.parentElement.closest('script,style')){n.textContent=n.textContent.replace('Cosmic Red','Pedro');break;}}"),
+    "nome-de-pessoa-na-dica": _m("var e=document.querySelector('[data-dica]');e.setAttribute('data-dica','Controle do Pedro');"),
     "tira-a-38": _m("var j=document.querySelector('[data-todo=\"38\"]');document.querySelector('.miolo, body').appendChild(j);"),
     "certo-verde": _m("document.querySelectorAll('.saude .selo.ok, .gc-est .certo').forEach(function(e){e.style.background='rgb(80,250,123)';e.style.color='rgb(80,250,123)';});"),
     "rola": _m("var d=document.createElement('div');d.style.height='2000px';(document.querySelector('.janela .miolo')||document.body).appendChild(d);"),
@@ -703,7 +703,7 @@ assert len(MORDIDAS) == len(MORDIDAS_R3) + len(MORDIDAS_R4) + len(MORDIDAS_GERAL
 
 
 def medir_geral(nav, mordida: str) -> int:
-    """Nas catorze páginas finais: sem «Player N», sem «Vitória», sem ✓ verde, as vagas como a q4B, sem rolar, sem erro de script."""
+    """Nas catorze páginas finais: sem «Player N», sem «Pedro», sem ✓ verde, as vagas como a q4B, sem rolar, sem erro de script."""
     falhas = 0
     for aba, arq in FINAIS.items():
         for (w, h) in TAMANHOS:
@@ -720,7 +720,7 @@ def medir_geral(nav, mordida: str) -> int:
             if erros:
                 ruins.append(f"erro de script {erros[:2]}")
             if g["ditos"]:
-                ruins.append(f"diz «Player N» ou «Vitória» {g['ditos'][:3]}")
+                ruins.append(f"diz «Player N» ou «Pedro» {g['ditos'][:3]}")
             if g["certos"]:
                 ruins.append(f"um ✓ verde de aviso {g['certos'][:3]}")
             if aba in VAGAS and len(g["vagas"]) != VAGAS[aba]:
@@ -737,7 +737,7 @@ def medir_geral(nav, mordida: str) -> int:
                 falhas += len(ruins)
                 print(f"REPROVA {rot}: " + " | ".join(ruins))
             else:
-                print(f"ok      {rot}: sem «Player N» nem «Vitória», vagas {len(g['vagas'])}, sem rolagem")
+                print(f"ok      {rot}: sem «Player N» nem «Pedro», vagas {len(g['vagas'])}, sem rolagem")
             pg.close()
     return falhas
 

@@ -44,7 +44,7 @@ MORDIDAS = {
     "legenda-07": _m("var g=document.querySelector('.fz-grade');var s=document.createElement('span');s.className='fz-leg';s.textContent='dois motores';g.appendChild(s);"),
     "letra-07": _m("document.querySelectorAll('.ja-tela.t2 .pc-sub').forEach(function(x){x.style.fontSize='11px';});"),
     "largura-07": _m("document.querySelector('.ja-tela.t2 .t2-segue .ja-op').style.width='70%';"),
-    "nome-calibrar": _m("var m=document.querySelector('.mira');var s=document.createElement('span');s.className='quem';s.textContent='Vitória';m.insertBefore(s,m.firstChild);"),
+    "nome-calibrar": _m("var m=document.querySelector('.mira');var s=document.createElement('span');s.className='quem';s.textContent='Pedro';m.insertBefore(s,m.firstChild);"),
     "q4-player-calibrar": _m("var b=document.querySelector('.controles > .lugar b');b.textContent='Player 3';"),
     "q5-selo": _m("document.querySelectorAll('.mira').forEach(function(m){var d=document.createElement('div');d.className='mira-topo leitura';"
                   "d.innerHTML='<span class=selo-av><span class=p></span>Giroscópio como analógico: desligado</span>';m.insertBefore(d,m.firstChild);});"),

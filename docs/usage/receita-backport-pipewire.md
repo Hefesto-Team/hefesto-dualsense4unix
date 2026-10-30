@@ -64,7 +64,7 @@ scripts/construir_pipewire_backport.sh --prova
 ```
 
 Compila só o servidor da árvore montada (um meson mínimo, sem ALSA nem
-Bluetooth), com a cura e sem ela, e roda
+Bluetooth), com a cura e sem a cura, e roda
 `assets/pipewire-backport/prova/reproduzir.sh` nos dois. Cada rodada congela o
 WirePlumber, lança `wpctl settings` e mata o WirePlumber sem responder. O
 servidor é privado: runtime, configuração e D-Bus num diretório temporário, sem
@@ -149,7 +149,7 @@ Steam antes.
 3. Fixe a prioridade do apt. O Pop fixa o repositório dele em 1001, e acima de
    1000 o apt rebaixa: o próximo `apt upgrade` trocaria a 1.6.9 da casa pela
    1.6.8. O arquivo da casa baixa só o PipeWire e o WirePlumber do Pop para 500,
-   e o apt fica com a versão mais nova, a da casa ou a do Pop quando ela passar:
+   e o apt fica com a versão mais nova, a da casa ou a do Pop quando a versão passar:
 
    ```bash
    sudo install -m 0644 assets/pipewire-backport/apt/hefesto-pipewire.pref \

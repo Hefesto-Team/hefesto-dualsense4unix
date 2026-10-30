@@ -1,19 +1,19 @@
 A LIGHTBAR TRAVADA — o cache que sobreviveu à reconexão, pego no ato (16/08/2026 00h30)
 
-O DEFEITO, que ela vinha relatando há dias
+O DEFEITO, que o usuário vinha relatando há dias
 -------------------------------------------
 "o controle no player 2 apresenta bugs aleatórios" — a lightbar dele fica APAGADA
 enquanto o `sysfs` jura que está acesa. Hoje foi capturado ao vivo: os dois vigias
-(o da lightbar a 2 Hz e o do journal) foram ligados ANTES de ela desconectar o
+(o da lightbar a 2 Hz e o do journal) foram ligados ANTES de o usuário desconectar o
 controle, de propósito, porque um defeito que só aparece às vezes não se resolve
 olhando quando ele não está lá.
 
 A LINHA DO TEMPO, do vigia da lightbar
 ---------------------------------------
     00:28:32   8 controles          estado inicial
-    00:28:44   7                    ela desligou o VERMELHO (44:46:48:00:00:03)
+    00:28:44   7                    o usuário desligou o VERMELHO (44:46:48:00:00:03)
     00:28:45   6                    e o vpad dele saiu junto
-    00:30:29   7                    voltou, 1m45 depois (duas tentativas dela)
+    00:30:29   7                    voltou, 1m45 depois (duas tentativas do usuário)
     00:30:29   8                    e o vpad voltou
 
 O QUE O USUÁRIO VIU, E É O QUE O INSTRUMENTO NÃO VÊ
@@ -29,7 +29,7 @@ valor, com o aparelho apagado numa hora e aceso na outra. **O sysfs não sabe o 
 a barra está mostrando.** Quem quiser medir lightbar por sysfs está medindo a
 memória do kernel, não a luz.
 
-A CAUSA, no journal, e ela é literal
+A CAUSA, no journal, e a CAUSA é literal
 -------------------------------------
     coop_player_removed            identity=444648...        <- o controle saiu
     ...
@@ -50,7 +50,7 @@ Isso explica os três sintomas de uma vez: por que parece ALEATÓRIO (depende de
 cache ter sobrevivido), por que RECONECTAR às vezes resolve, e por que o SYSFS
 MENTE (ele concorda com o cache, não com o aparelho).
 
-A HIPÓTESE DELA, e onde o usuário chegou perto
+A HIPÓTESE DO USUÁRIO, e onde o usuário chegou perto
 -----------------------------------------
 "tem muito cara de ser alguma config setada pro player 2 que entra em conflito
 seja com a steam ou seja com os perfis do hefesto". Não é a Steam nem o perfil: é

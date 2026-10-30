@@ -154,7 +154,7 @@
       "ancora_antes": ".g2-gl.g2-r2",
       "ajuste_r3": {
         "pedido": "eu vi agora isso deveria ser decido pelo estilo de jogo também não?",
-        "feito": "A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado. Ela vale para L2 e R2, então ganhou linha própria abaixo de um separador, com «L2 R2» à esquerda e o rótulo na mesma coluna dos de cima."
+        "feito": "A linha «Força do gatilho» virou um seletor por controle, do mesmo tamanho dos de cima, com «Pelo estilo do jogo» como primeira escolha e o padrão; Forte, Média, Fraca e Desligada ficam como escolha fixa. Saíram os quatro botões lado a lado. A escolha vale para L2 e R2, então ganhou linha própria abaixo de um separador, com «L2 R2» à esquerda e o rótulo na mesma coluna dos de cima."
       },
       "ajuste_r3b": {
         "pedido": "não eu tava falando do desenho do lado esquerdio no nome dos controles.aquele lá de cima. Essa linha de força do gatilho não existe pro user. o estilo de jogo determina isso.",
@@ -285,7 +285,7 @@
     },
     {
       "sprint": "CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01",
-      "motivo": "Nenhum dos casos dela cai nesta aba (são das 01, 02, 06, 07, 09, 10 e da Calibrar)."
+      "motivo": "Nenhum dos casos dessa sprint cai nesta aba (são das 01, 02, 06, 07, 09, 10 e da Calibrar)."
     },
     {
       "sprint": "SO-A-PRIMEIRA-LETRA-E-MAIUSCULA-EM-TODA-ABA-01",

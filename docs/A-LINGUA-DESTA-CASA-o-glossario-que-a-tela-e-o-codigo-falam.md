@@ -7,7 +7,7 @@ tinha se espalhado pelo layout nas levas anteriores; ele sai, trocado por
 termos simples para o usuário comum, e «feature» fica. A palavra que nomeava
 a ferramenta saiu em 15/09/2026, por ordem de produto.
 
-**Uma palavra, um significado, e dois registros:** o que a TELA diz (para ela
+**Uma palavra, um significado, e dois registros:** o que a TELA diz (para quem usa
 e para qualquer usuária) e o que a CASA diz (código, sprints, commits). Quando
 os dois divergem, a coluna da tela manda no texto de tela, e a da casa manda no
 nome de arquivo e de função. **Texto de tela não inventa termo: ele vem do
@@ -19,7 +19,7 @@ se acrescenta aqui antes de entrar na tela.
 | na tela | na casa | o que é |
 | --- | --- | --- |
 | **controle** · **P1…P4** (jogador) | `controle`, `assento` (`p1`..`p4`), `uniq` (o endereço, nunca na tela) | um DualSense na mão de alguém; o número é o assento, não o aparelho |
-| **USB** · **BT** | `usb` · `bt` (chave crua); a palavra vem de `home_actions.palavra_do_transporte` | por onde o controle fala com a máquina. **A palavra é de produto, 21/09/2026**, com a janela aberta na frente do usuário: primeiro a caixa («cabo» e «bt» estavam em minúsculas), depois a palavra («USB» e «BT» ficam, por serem melhores que «cabo» e «bt»). Isso REVOGA a I9 de 25/08, que trocara `USB`/`BT` por `cabo`/`rádio` — o que a I9 mediu (quatro dialetos na mesma janela) continua valendo, e o dono segue sendo um só. **O ganho: a tela e o DESENHO passaram a dizer a mesma palavra** — `interface/monta.MESA` sempre disse `USB`/`BT`. **`cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS** (`docs/data/mapa-controles.csv`), que é dado e não tela. A contagem do topo (`2 USB · 0 BT`) deixou de ser exceção: ela é a regra agora |
+| **USB** · **BT** | `usb` · `bt` (chave crua); a palavra vem de `home_actions.palavra_do_transporte` | por onde o controle fala com a máquina. **A palavra é de produto, 21/09/2026**, com a janela aberta na frente do usuário: primeiro a caixa («cabo» e «bt» estavam em minúsculas), depois a palavra («USB» e «BT» ficam, por serem melhores que «cabo» e «bt»). Isso REVOGA a I9 de 25/08, que trocara `USB`/`BT` por `cabo`/`rádio` — o que a I9 mediu (quatro dialetos na mesma janela) continua valendo, e o dono segue sendo um só. **O ganho: a tela e o DESENHO passaram a dizer a mesma palavra** — `interface/monta.MESA` sempre disse `USB`/`BT`. **`cabo`/`rádio` continua sendo a língua do MAPA DE CANAIS** (`docs/data/mapa-controles.csv`), que é dado e não tela. A contagem do topo (`2 USB · 0 BT`) deixou de ser exceção: a contagem é a regra agora |
 | **os controles** · **todos** · **P1 e P2** | `mesa` (só como nome interno: `mesa_viva.py`, `app/mesa.py`) | **"mesa" não entra em texto de tela.** Decisão de produto, 05/09 e 06/09: a palavra sai, a feature fica |
 | **serviço** | `daemon`, `hefesto-dualsense4unix.service` | o que roda por trás, fala com o aparelho e responde à janela |
 | **barra de luz** · **luzes de jogador** · **luz do microfone** | `lightbar`, `player_leds`, `mute_led` | as três luzes do DualSense |
@@ -57,7 +57,7 @@ se acrescenta aqui antes de entrar na tela.
 | **?** (a dica) | `title`, `data-hef-atributo="title"` | a explicação mora aqui; a tela não explica em linha |
 | **dizer as duas metades** | `AS-DUAS-ABAS-FALAM-01` | quando meio ato deu certo, a frase diz o que deu e o que não deu |
 | **chip** (a pílula de fundo cheio no rótulo) | `.selo-ativo`, `.rot .canal`, `.rot .selo-som` da `aba02` | um fato de UMA palavra que se lê de relance; a geometria é UMA declaração para os três, nunca cópia |
-| **ATIVO** · **DESLIGADO** (a pílula do alto-falante) | `mesa_viva.selo_do_alto_falante`, o mudo que o `♪` lê | DESLIGADO só quando ela calou o `♪`; canal parado é ATIVO, no cabo e no rádio. O sono do canal (`audio_saida.CANAL_ACORDADO` / `CANAL_DORMINDO`) é palavra da CASA e não vai à tela — ordem de produto, 23/09/2026 (O-ALTO-FALANTE-DIZ-ATIVO-01) |
+| **ATIVO** · **DESLIGADO** (a pílula do alto-falante) | `mesa_viva.selo_do_alto_falante`, o mudo que o `♪` lê | DESLIGADO só quando a pílula calou o `♪`; canal parado é ATIVO, no cabo e no rádio. O sono do canal (`audio_saida.CANAL_ACORDADO` / `CANAL_DORMINDO`) é palavra da CASA e não vai à tela — ordem de produto, 23/09/2026 (O-ALTO-FALANTE-DIZ-ATIVO-01) |
 
 **Proibido em texto de tela:** `env`, `vdf`, `uinput`, `hidraw`, `MAC`, `uniq`,
 `wrapper_used`, `dedup`, "mesa", "janela do aplicativo", "linha de comando",
@@ -66,7 +66,7 @@ qualquer frase que mande a pessoa procurar um botão ou uma janela que não
 existe, e qualquer alarme sem medição (`frases_banidas.py`).
 
 **ESTA LINHA É O DONO DA LISTA — 11/09/2026, F5-A-REGUA-LE-O-GESTO.** Até esta
-data ela era prosa: `frases_banidas.PALAVRAS_BANIDAS` tinha três palavras
+data a lista era prosa: `frases_banidas.PALAVRAS_BANIDAS` tinha três palavras
 e o glossário tinha onze proibições, e foi por essa fresta que `uinput`
 sobreviveu na dica da Navegação. Agora as duas listas se medem uma contra a
 outra, **nos dois sentidos**, em
@@ -84,7 +84,7 @@ e por isso ficam de fora da conta.
 | --- | --- |
 | **piloto** | `interface/hefesto_vivo.py`: a janela GTK com o `WebKit2.WebView` que pinta o HTML dez vezes por segundo (**tique** = 100 ms) |
 | **pacote** | `interface/pacotes/aNN_*.py`: o que cada aba manda ao piloto por tique, e os **gestos** que o usuário responde |
-| **gerador** · **ensaio** · **publicado** | os geradores `aba01.py`…`aba10.py` de `interface/` escrevem `mockup/` (o ensaio, o que ela olha); `scripts/check_o_desenho_aprovado.py --publicar NN` leva a `interface/paginas/` (o produto). **Publicar é ato do usuário** |
+| **gerador** · **ensaio** · **publicado** | os geradores `aba01.py`…`aba10.py` de `interface/` escrevem `mockup/` (o ensaio, o que o usuário olha); `scripts/check_o_desenho_aprovado.py --publicar NN` leva a `interface/paginas/` (o produto). **Publicar é ato do usuário** |
 | **campo** · **gesto** · **alvo** | `data-campo` (onde o piloto escreve), `data-gesto` (o que o clique chama), `data-hef-alvo` (como escreve: texto, classe, atributo, marcado…) |
 | **dono** | o único lugar que sabe um fato ou uma frase; a tela LÊ do dono, nunca redigita |
 | **motor** | `app/actions/*`, `daemon/` e os donos em `interface/` (`janela`, `cartao_do_controle`, `logica_do_mapa`): o que a tela lê e chama. A janela GTK saiu inteira em 02/10/2026 |
@@ -100,7 +100,7 @@ e por isso ficam de fora da conta.
 * termo que o usuário recusou → some da tela em TODOS os lugares no mesmo dia
   (`scripts/check_regua_de_tela.py` e `frases_banidas.py` são os portões
   que já existem). **A palavra "mesa" ENTROU em 06/09/2026**
-  (A-PALAVRA-MESA-SAI-01): ela mora em `frases_banidas.PALAVRAS_BANIDAS`,
+  (A-PALAVRA-MESA-SAI-01): a palavra mora em `frases_banidas.PALAVRAS_BANIDAS`,
   numa tupla à parte porque palavra se casa por BORDA — `"mesa" in texto` casa
   com *remessa* e com todo nome que a carrega. A régua é
   `tests/unit/test_a_palavra_mesa_nao_chega_a_tela.py`, e o instrumento para

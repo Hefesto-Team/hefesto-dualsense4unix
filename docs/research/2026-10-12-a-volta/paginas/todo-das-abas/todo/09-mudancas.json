@@ -171,11 +171,11 @@
  "fora": [
   {
    "sprint": "NO-MODO-XBOX-TUDO-FUNCIONA-01",
-   "motivo": "Espera ela; nada nestas páginas."
+   "motivo": "Espera o usuário; nada nestas páginas."
   },
   {
    "sprint": "A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01",
-   "motivo": "Espera ela; nada nestas páginas."
+   "motivo": "Espera o usuário; nada nestas páginas."
   },
   {
    "sprint": "A-MIRA-PELO-GIRO-VALE-EM-JOGO-QUE-SO-FALA-XBOX-01",
@@ -183,15 +183,15 @@
   },
   {
    "sprint": "I18N-DA-TELA-NOVA-01",
-   "motivo": "Fora da leva; nada de texto novo depende dela."
+   "motivo": "Fora da leva; nada de texto novo depende da leva."
   },
   {
    "sprint": "TRADUZIR-O-PROJETO-01",
-   "motivo": "Fora da leva; nada de texto novo depende dela."
+   "motivo": "Fora da leva; nada de texto novo depende da leva."
   },
   {
    "sprint": "O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01",
-   "motivo": "Espera ela; o botão segue «Fixar Proton»."
+   "motivo": "Espera o usuário; o botão segue «Fixar Proton»."
   },
   {
    "sprint": "A-CADEIA-USB-SE-RECONHECE-EM-QUALQUER-PC-E-CADA-MUDANCA-VAI-AO-REGISTRO-01",

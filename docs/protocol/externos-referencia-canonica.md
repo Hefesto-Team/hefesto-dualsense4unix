@@ -1219,7 +1219,7 @@ A previsão dizia que dois endereços significariam que a
 está.** A regra casa `ENV{HID_UNIQ}=="e0:f6:b5:*"`, isto é, **só o prefixo de
 OUI do Pro genuíno**, e os dois endereços do clone carregam a OUI da 8BitDo em
 qualquer modo. O risco existe e continua nomeado — mas é para regras que casem o
-**endereço inteiro**, e esta não é uma delas. A dívida 7.3 sai de BAIXA e vira
+**endereço inteiro**, e esta não é uma dessas regras. A dívida 7.3 sai de BAIXA e vira
 **MEDIDA**.
 
 **O que continua sem medição, e é outro item.** O clone **por rádio em modo

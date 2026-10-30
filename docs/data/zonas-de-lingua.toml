@@ -12,7 +12,7 @@
 # --------------------------------------
 # Lista de arquivo envelhece a cada arquivo novo, e esta casa já pagou por
 # isso: a lista de frases de tela de 25/08 era uma enumeração congelada num
-# mundo que acabou — ela cita a ordem das abas "medida do main.glade", e o
+# mundo que acabou — a enumeração cita a ordem das abas "medida do main.glade", e o
 # main.glade saiu do disco em 06/09/2026. Régua LÊ, nunca DIGITA o que devia
 # ler do fonte, e uma regra de caminho é a forma mais fraca de leitura que
 # ainda é leitura.
@@ -32,7 +32,7 @@
 # trabalho declarado na TRADUZIR-O-PROJETO-01 e não foi feito aqui.
 #
 # A ORDEM IMPORTA: vence a PRIMEIRA regra que casa. Por isso o específico vem
-# antes do geral, e o geral de cada pasta vem no fim do bloco dela.
+# antes do geral, e o geral de cada pasta vem no fim do bloco da pasta.
 #
 # Sintaxe do padrão: glob sobre o caminho relativo à raiz, com `*` que não
 # atravessa `/` e `**` que atravessa.
@@ -46,7 +46,7 @@
 # coisa) é decisão da I18N-DA-TELA-NOVA-01, não desta tabela.
 #
 # ENQUANTO ESTA SEÇÃO NÃO EXISTIR COM `atributo` OU `chamada`, a medida da tela
-# se declara INDISPONÍVEL e o piso dela fica em PENDENTE. Ela não devolve zero:
+# se declara INDISPONÍVEL e o piso da tela fica em PENDENTE. A tela não devolve zero:
 # zero se lê como verde, e verde sobre uma medida desligada é o defeito que
 # esta casa mediu em quatro instrumentos diferentes.
 #
@@ -138,7 +138,7 @@ razao = "o método da casa, escrito para a próxima pessoa."
 caminho = "docs/data/**"
 zona = "ENSINA"
 razao = """as planilhas com dono — mapa de canais, paridade, donos de
-comportamento. São dado que ENSINA: as páginas publicadas saem delas."""
+comportamento. São dado que ENSINA: as páginas publicadas saem das planilhas."""
 
 [[regra]]
 caminho = "docs/*.md"
@@ -170,7 +170,7 @@ razao = "exemplo existe para ser lido e copiado por quem integra."
 [[regra]]
 caminho = "assets/**/LEIA-PRIMEIRO.md"
 zona = "ENSINA"
-razao = "a folha que explica a pasta de dado a quem for mexer nela."
+razao = "a folha que explica a pasta de dado a quem for mexer na pasta."
 
 # ---------------------------------------------------------------------------
 # REGISTRA — o que se guarda e não se corrige

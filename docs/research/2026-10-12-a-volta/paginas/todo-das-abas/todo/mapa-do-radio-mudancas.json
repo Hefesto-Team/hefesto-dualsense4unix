@@ -68,7 +68,7 @@
  "fora": [
   {
    "sprint": "O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01",
-   "motivo": "A sprint muda a seção do rádio dentro da aba 08 (é lá que o produto desenha); este desenho de origem não muda por ela."
+   "motivo": "A sprint muda a seção do rádio dentro da aba 08 (é lá que o produto desenha); este desenho de origem não muda por essa sprint."
   },
   {
    "sprint": "O-BOTAO-DIREITO-ABRE-O-MENU-DO-HEFESTO-EM-TODA-ABA-01",

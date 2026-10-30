@@ -24,7 +24,7 @@ própria cura, e a rodada de controle voltando 14/14 verde.
 MAC mascarados na convenção da casa (octetos 4 e 5 zerados). Saída literal do
 instrumento, sem edição além da máscara e dos cabeçalhos de seção.
 
-A MESA, E O QUE ACONTECEU COM ELA
+A MESA, E O QUE ACONTECEU COM A MESA
 ----------------------------------
     aparelho              hw            braço às 22h15    às 22h21
     d4:2f:4b:00:00:d8     0x00001111    RÁDIO             CAIU
@@ -166,7 +166,7 @@ vpad P4 <- 44:46:48:00:00:03  RY    128     128   0     128 129            128 1
   que o kernel já tem — e a seção (2) mostra que o kernel TEM: o `EVIOCGABS`
   daquele nó devolve 124.
 
-  Consequência de produto, e ela é universal, não desta mesa: um eixo que não
+  Consequência de produto, e a consequência é universal, não desta mesa: um eixo que não
   se mexeu desde que o leitor abriu o nó chega ao jogo como centro perfeito,
   seja qual for a posição real. Aqui custou 4 LSB e ninguém sente; num controle
   com stick gasto, ou num que esteja sendo segurado fora do centro no instante
@@ -180,7 +180,7 @@ O ENVELOPE — o corpo do cabo e o corpo do rádio são o mesmo corpo?
 
   Régua: um campo só conta como assimetria de TRANSPORTE se ele se mexe em
   TODAS as unidades de um braço e em NENHUMA do outro. As zonas de stick, giro
-  e acelerômetro saem marcadas como ruído esperado de silício — elas VÃO variar
+  e acelerômetro saem marcadas como ruído esperado de silício — as zonas VÃO variar
   por unidade, e chamá-las de assimetria seria o confundimento braço/unidade.
 
 zona do corpo      offsets  vivo no cabo  vivo no rádio  vivo no vpad  leitura
@@ -198,7 +198,7 @@ reserved3[12]      40..51   2/2           2/2            0/4           vivo nos 
 status[3]          52..54   0/2           0/2            0/4           parado nos dois (em repouso)
 reserved4[8]       55..62   2/2           2/2            0/4           vivo nos DOIS braços
 
-  UMA assimetria de transporte, e ela é num campo que o driver NÃO LÊ:
+  UMA assimetria de transporte, e a assimetria é num campo que o driver NÃO LÊ:
 
   `seq_number` (`corpo[6]`) conta de um em um nas DUAS unidades do CABO — 4 999
   passos nesta janela, todos +1, nenhum pulo, 256 valores distintos — e fica
@@ -252,7 +252,7 @@ vpad P4            (sem)       /dev/input/event275  13      8       idêntico ao
     ABS_X ABS_Y ABS_Z ABS_RX ABS_RY ABS_RZ ABS_HAT0X ABS_HAT0Y
 
   Isto é o conjunto DECLARADO. Saber se o quadrado acende o MESMO bit nos dois
-  braços exige apertar, e apertar é O BLOCO DELA (`--apertar`).
+  braços exige apertar, e apertar é O BLOCO DO USUÁRIO (`--apertar`).
 
 ==============================================================================
 (2) A SEGUNDA RÉGUA DO OFFSET — hidraw contra EVIOCGABS, no mesmo instante

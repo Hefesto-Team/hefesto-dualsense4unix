@@ -1,9 +1,9 @@
 # Vários controles na mesa — o que é canal do aparelho e o que é do host
 
-> Escrito em 03/09/2026, na frente **COMBINAÇÃO** da leva que ela encomendou:
-> *"lançar novo workflow pra agentes procurarem no GitHub tais canais ou tais
-> id (…) como é só informação eles trouxeram e me ajudaram no mapa do
-> controle"*.
+> Escrito em 03/09/2026, na frente **COMBINAÇÃO** da leva encomendada por quem usa:
+> uma busca no GitHub por canais e IDs, que traz só informação para o mapa do
+> controle, sem código de
+> outra pessoa.
 >
 > **Nada aqui foi ao aparelho.** Esta página traz FATO LIDO — em fonte de
 > driver, em fonte de biblioteca pública e em relato de terceiro — com o
@@ -16,7 +16,7 @@
 ## 1. A decisão que vem antes de caçar
 
 A pergunta "dois controles na mesa continuam funcionando?" **não tem
-`report_id`**. Ela não é um canal do DualSense: o aparelho não sabe que existe
+`report_id`**. A pergunta não é um canal do DualSense: o aparelho não sabe que existe
 outro aparelho. Quem sabe é o host — o controlador USB, o adaptador de rádio, o
 BlueZ, o kernel e o nosso daemon.
 
@@ -247,7 +247,7 @@ com o comentário *"0x1F enables all lights, 0x20 changes instantly instead of
 fade"*. Ou seja: **`common[43]` bit `0x20` = aplicar na hora, sem transição**. O
 `hid-playstation` nunca liga esse bit, então o LED de jogador escrito pelo
 kernel **entra com fade** e o escrito pelo Steam **entra seco**. Informação
-nova para este projeto, e ela é visível a olho nu na mesa.
+nova para este projeto, e a diferença é visível a olho nu na mesa.
 
 ### 5.2 O que os outros relataram sobre a instabilidade do número
 
@@ -364,7 +364,7 @@ só existir enquanto alguém está tocando naquele controle
 (`daemon/subsystems/alto_falante.py`); com a mesa parada,
 as escritas vão de 400/s a ZERO.
 
-**O QUE ELA CUSTA, medido no mesmo dia às 17:57:45:** o som começou às `.967`,
+**O QUE ISSO CUSTA, medido no mesmo dia às 17:57:45:** o som começou às `.967`,
 o vigia acordou a volta às `45.162` e a ponte estava de pé às `45.221` —
 **255 ms** do primeiro quadro ao fio, e 318 ms para deitar quando o som acaba.
 
@@ -399,7 +399,7 @@ próprio host está pondo no ar.
 ## 7. O que a busca NÃO achou
 
 Escrito porque a lista do que a internet não sabe diz onde só o aparelho
-responde — e é o que sobra para ela ensaiar.
+responde — e é o que sobra para o usuário ensaiar.
 
 1. **Quantos DualSense cabem num adaptador.** Não há uma única medição pública
    com três ou quatro DualSense de rádio ao mesmo tempo, dizendo o que degrada
@@ -429,4 +429,4 @@ aparelho nesta leva** —, e todo `de_onde_sei` que esta frente escreveu do zero
 
 Teste desta página: `tests/unit/test_mapa_combinacao_enderecos.py`, que
 recalcula os offsets a partir do layout declarado do `common` e os confere
-contra o CSV. Se alguém deslocar um byte no mapa, ela reprova.
+contra o CSV. Se alguém deslocar um byte no mapa, a régua reprova.

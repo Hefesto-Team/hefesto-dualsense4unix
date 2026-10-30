@@ -53,7 +53,7 @@ cuja lâmpada acende 1.
   entra no fim da fila e não rouba o posto. A sprint cita a frase de produto de 27/09,
   23h40: «o led do player 1 não é simbólico».
 - **O número não pula.** `daemon/subsystems/coop.py:1850`
-  (`_numeros_em_duas_passadas`): quem tem carta fica com ela; quem está fora
+  (`_numeros_em_duas_passadas`): quem tem carta fica com a carta; quem está fora
   (troca de transporte) vai para o assento guardado, o mesmo que dá nome ao
   microfone. `coop.py:1881` repinta a lâmpada pela camada do co-op quando o
   número muda, sem hotplug. É o caso do controle que acendia 5 e das lâmpadas
@@ -149,7 +149,7 @@ próprios `pactl` do daemon.
   mesmas respostas; um evento de source = 1 releitura.
 
 A régua exaustiva mede **quem pergunta**, não a palavra: um censo por AST acha
-toda pergunta de leitura em `src/` e exige que ela caia num executor conhecido.
+toda pergunta de leitura em `src/` e exige que a pergunta caia num executor conhecido.
 Pergunta nova de outra sprint que não passe pelo retrato reprova de propósito
 (`tests/unit/test_o_servidor_de_som_tem_um_leitor_so.py`, 42 testes).
 
@@ -157,7 +157,7 @@ Pergunta nova de outra sprint que não passe pelo retrato reprova de propósito
 
 - **O microfone saía do ar rápido demais.** `LEITURAS_SEM_CANAL_ATE_SAIR`
   (`daemon/subsystems/hotkey.py:1531`) conta duas leituras sem canal, e o
-  intervalo entre elas vinha do laço de 2 s. Acordando pelo evento, mediram-se
+  intervalo entre as leituras vinha do laço de 2 s. Acordando pelo evento, mediram-se
   cinco conferências em 40 ms: uma ponte do rádio que refaz o nó tiraria do ar
   um microfone ligado. Agora a conferência roda no máximo uma vez por
   `CANAL_TTL_S` (`hotkey.py:2130`, `_conferir_no_prazo`).
@@ -200,7 +200,7 @@ sha256). Os símbolos da sobreposição saíram e o `rodape.py` foi de 735 para
 monta P1 a P4 (dois no cabo, dois no rádio) com o aparelho divergindo do disco
 em tudo. `tests/unit/test_todo_gesto_que_muda_escolha_grava.py` é exaustiva
 sobre `pacotes.GESTOS`: todo gesto tem um veredito só (`grava=`, protegido,
-grava sem declarar, ou ato, com a razão escrita). Ela importa o piloto, porque
+grava sem declarar, ou ato, com a razão escrita). A régua importa o piloto, porque
 um gesto só entra no registro quando o piloto é importado: sem isso, o
 resultado dependia da ordem dos arquivos.
 
@@ -258,7 +258,7 @@ carga: `select()` no descritor seguido de `readline()` no fluxo com buffer
 puxava o endereço para o buffer, e o laço esperava 60 s por uma linha já lida
 (`tests/unit/test_a_mesa_de_medicao.py`, agora lê em bytes pelo descritor).
 
-**Aviso que a sprint deve a ela.** O `interface.sh` foi pedido pelo usuário em
+**Aviso que a sprint deve a quem usa.** O `interface.sh` foi pedido pelo usuário em
 29/08, para clicar na raiz; a frase de 27/09 não o nomeia. Depois do merge,
 quem abre na tela é o menu, a dock ou `HEFESTO_NA_TELA=1 ./run.sh --gui`; o
 `./run.sh` sozinho abre numa tela invisível, pela guarda `TELA-DO-USUARIO-02`. Entre

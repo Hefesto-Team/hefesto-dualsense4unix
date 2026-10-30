@@ -60,7 +60,7 @@ journalctl -b -k --no-pager | grep -aE 'nintendo|joycon'
 
 Uma linha `exceeded max attempts` sozinha não é a morte; a série é. O
 `hefesto-dualsense4unix doctor` faz essa leitura e avisa quando a acha. Fechar
-a Steam não resolve (a morte acontece sem ela), e o Hefesto não está no caminho:
+a Steam não resolve (a morte acontece sem a Steam), e o Hefesto não está no caminho:
 o `src/` tem mais de uma centena de linhas sobre controles Nintendo e 8BitDo,
 mas as únicas duas escritas em controle externo são a luz de jogador (desligada)
 e a ativação do giroscópio, só no Pro Controller original e só pelo cabo.

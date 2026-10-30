@@ -57,7 +57,7 @@ abaixo é aproximada.
 
 ## A conferência do `#B5CED4`
 
-Ela mediu o controle do usuário e informou `#B5CED4`. Duas bases de nomes de cor
+A conferência mediu o controle do usuário e informou `#B5CED4`. Duas bases de nomes de cor
 publicam, para o nome "Starlight Blue", valores praticamente idênticos:
 `#B5CED3` ([color-name.com](https://www.color-name.com/starlight-blue.color)) e
 `#B5CED4` (CrispEdge). A divergência é **1 unidade no canal azul** — abaixo do

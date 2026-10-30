@@ -5,14 +5,14 @@ Nasceu em 20/09/2026, por ordem de produto, escolhida entre três opções:
 > *"Mover o que as réguas precisam"*
 
 O usuário recusou as outras duas com todas as letras, e as razões ficam aqui porque
-elas são o contrato desta pasta:
+as razões são o contrato desta pasta:
 
 | recusada | por quê |
 | --- | --- |
 | versionar `docs/process/` inteira | são 1.607 arquivos e **77 MB** de prosa; o repositório engordaria com texto que régua nenhuma lê |
 | as réguas pularem sem a pasta | **régua que pula é régua que não mede** — a família de defeito que esta casa mais caçou em 2026 |
 
-## A REGRA DE ENTRADA, e ela é uma só
+## A REGRA DE ENTRADA, e a REGRA é uma só
 
 **Um arquivo mora aqui quando código versionado o LÊ** — `open()`,
 `read_text()`, um `Path` montado até ele. Ser citado em prosa não basta, e
@@ -20,7 +20,7 @@ citação não move arquivo: mover o que é só citado quebra a citação, que �
 defeito que esta pasta existe para não repetir.
 
 O contrário também vale, e é o que a régua cobra: **nada que uma régua lê pode
-morar em `docs/process/`**, porque aquela pasta é `.gitignore:178` — ela não
+morar em `docs/process/`**, porque aquela pasta é `.gitignore:178` — a pasta não
 viaja no clone, não vem numa worktree de trabalho, e some sem avisar.
 
 ## O QUE MEDIU A LISTA

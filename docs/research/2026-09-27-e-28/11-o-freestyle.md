@@ -42,7 +42,7 @@ Duas escolhas foram feitas na rodada:
 - **A vibração no ultra é `max` (1.5), e não `custom` 200%.** Com 200%, metade da faixa satura e a vibração parece constante, que é a queixa de uso de 10/08.
 - **O som ficou fora do asset.** A seção global de alto-falante e microfone, na troca de perfil, só alcança um controle (`_handle_for`, `src/hefesto_dualsense4unix/core/backend_pydualsense.py`). Na chegada do controle, o alto-falante já vai a 102 nos quatro, o microfone nasce aberto e o ganho nasce no topo do firmware.
 
-**O perfil do usuário abaixo do ultra:** na parte global, gatilhos `Off`, luzes do número fracas e vibração `balanceado`. Por controle, o volume do microfone está abaixo do topo nos quatro (de 23 a 64), o brilho da barra em dois, a força do gatilho em dois, e num deles as luzes do número estão fracas e o alto-falante em 101. Os mudos dela (microfone em dois controles, alto-falante em um) ficam, a não ser que ela peça outra coisa. Levar o perfil do usuário ao ultra ficou para um passo à parte, com cópia antes, escrita pelo `save_profile`, modo seco e guarda de `HOME`. No lar de mentira, o modo seco mostrou 18 campos subindo, e o disco do usuário não foi tocado.
+**O perfil do usuário abaixo do ultra:** na parte global, gatilhos `Off`, luzes do número fracas e vibração `balanceado`. Por controle, o volume do microfone está abaixo do topo nos quatro (de 23 a 64), o brilho da barra em dois, a força do gatilho em dois, e num deles as luzes do número estão fracas e o alto-falante em 101. Os mudos do usuário (microfone em dois controles, alto-falante em um) ficam, a não ser que o usuário peça outra coisa. Levar o perfil do usuário ao ultra ficou para um passo à parte, com cópia antes, escrita pelo `save_profile`, modo seco e guarda de `HOME`. No lar de mentira, o modo seco mostrou 18 campos subindo, e o disco do usuário não foi tocado.
 
 **As réguas** (num teste novo, `test_o_freestyle_nasce_no_ultra`, que não entrou), com 14 mordidas de 14:
 
@@ -51,13 +51,13 @@ Duas escolhas foram feitas na rodada:
 - no fio, os quatro controles, por cabo e por BT, recebem o gatilho e as luzes no topo, e a vibração recebe `max`;
 - um perfil de quatro controles só sobe o que está abaixo e não toca cor, rota, forma da curva nem mudo.
 
-Uma das mordidas pegou a própria régua. Ela lia o byte das luzes do número no fluxo, que fica em 0 quando o fluxo não mexe nas luzes; como 0 é «forte», a régua passava com o asset em «fraco». Ela passou a usar o instrumento de `tests/unit/test_o_brilho_das_luzes_de_numero.py`.
+Uma das mordidas pegou a própria régua. A régua lia o byte das luzes do número no fluxo, que fica em 0 quando o fluxo não mexe nas luzes; como 0 é «forte», a régua passava com o asset em «fraco». A régua passou a usar o instrumento de `tests/unit/test_o_brilho_das_luzes_de_numero.py`.
 
 A medida: 63 portões verdes e 1.708 testes do território verdes sob `xvfb-run`.
 
 ## O desenho que veio depois: camada, e não perfil (sprint `O-FREESTYLE-POR-CIMA-01`)
 
-A segunda fala mudou o alvo. O desenho proposto a partir dela:
+A segunda fala mudou o alvo. O desenho proposto a partir dessa fala:
 
 - o perfil do jogo continua ganhando dos perfis comuns;
 - o Modo Freestyle **não é perfil**. É uma camada por cima do perfil que estiver valendo. Ligada, todo campo de intensidade e de liga/desliga vai ao ultra nos quatro controles, por cabo e por BT, e cor, máscara, mapeamento e rota vêm do perfil que vale. Desligada, vale o perfil puro;
@@ -74,4 +74,4 @@ Com isso, o asset no ultra e a decisão `D-2709-O-FREESTYLE-NASCE-NO-ULTRA` pass
 - A seção global de som não alcança os quatro controles na troca de perfil.
 - A háptica não tem campo de força no perfil.
 - A vibração no ultra (`max` contra 200%) é escolha do usuário a confirmar ou derrubar.
-- O perfil «Freestyle» que ela já tem no disco continua abaixo do ultra: nestas rodadas, o disco do usuário não foi tocado.
+- O perfil «Freestyle» que o usuário já tem no disco continua abaixo do ultra: nestas rodadas, o disco do usuário não foi tocado.

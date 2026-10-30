@@ -59,7 +59,7 @@ As escolhas do usuário de 13/10, uma mudança por item, com a origem «escolha 
 
 **O que já estava torto antes da rodada, e como ficou:** a 06 transbordava num quadro e a 07 cortava os Lançadores em 740; as duas ficaram curadas pela rodada. A lista da esquerda da 10 (`.rolo`, 418/358 em 740) já transbordava antes e segue igual. A 04 corta embaixo em 740, também de antes. O sensor háptico da 05 vai de 0 a 200%, e a escolha dos quatro passos não o tocou.
 
-**Conferido sem mudar:** nenhuma página cita o desligar por ociosidade (o desligar é só o gesto do PS por 10 s); os nomes de pessoa «Vitória», «Davi» e «Pedro» já estavam na 08.
+**Conferido sem mudar:** nenhuma página cita o desligar por ociosidade (o desligar é só o gesto do PS por 10 s); os nomes de pessoa já estavam na 08.
 
 ## As ordens de produto de 12/10 (14h40 e 14h52)
 
@@ -359,7 +359,7 @@ A lista por página é a da seção «Rodada 3 (13/10)» acima; as leituras A/B 
 
 - 10 em 740: a lista de perfis mostra 13 de 15 linhas (`.rolo`, 418 contra 358); é lista com rolagem própria.
 - mapa: «Movimento do cursor» corta 3 px no `span.b2-val` em 1212; Galactic Purple e White aparecem conectados, enquanto as outras páginas os mostram desconectados.
-- Os nomes de jogador «Vitória» e «Davi» seguem no desenho; o «olhar» da rodada 2 da 04 cita «P1 • Vitória».
+- Os nomes de jogador seguem no desenho; o «olhar» da rodada 2 da 04 cita o P1 com nome de pessoa.
 - A marca da 07 m34 sobre a `.miolo` deixa uma linha rosa sob as abas.
 
 **Para a costura:** publicar o `index.html` como artifact; a catraca `check_a_origem.py`; o `--publicar` de cada aba no fecho. A fonte em `~/.local/state/hefesto-casa/leva-volta/todo/` não foi mexida. A resposta «botões e letra» (piso de 24 px e de 12 px) é da rodada 4.

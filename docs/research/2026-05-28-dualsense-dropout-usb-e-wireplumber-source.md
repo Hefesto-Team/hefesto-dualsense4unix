@@ -154,7 +154,7 @@ design, usa o que existe.
 ### 3.3 Implicações
 
 1. **O rebaixamento está correto e funciona** — quando há outra fonte
-   *available* (webcam plugada, ou jack onboard com mic), ela vence o DualSense
+   *available* (webcam plugada, ou jack onboard com mic), essa fonte vence o DualSense
    (50) com folga. O sintoma "o controle vira o microfone" some assim que a
    webcam volta.
 2. **"Rebaixar" não pode resolver o caso de escassez.** Se o DualSense é o único

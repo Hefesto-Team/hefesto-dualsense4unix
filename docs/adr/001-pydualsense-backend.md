@@ -4,7 +4,7 @@
 [ADR-020: o backend deixou de ser um só](020-o-backend-deixou-de-ser-um-so.md)
 
 > **Leia o ADR-020 antes de agir sobre esta página.** A decisão abaixo continua
-> valendo, e é ela que permitiu tudo o que veio depois: isolar o backend atrás
+> valendo, e é a decisão que permitiu tudo o que veio depois: isolar o backend atrás
 > de `IController` foi o que deixou o produto crescer sem reescrever o daemon.
 > O que caducou é o **retrato**. Hoje a `pydualsense` é **uma** das camadas que
 > falam com o aparelho, e cuida só do caminho de OUTPUT por hidraw — o INPUT vem

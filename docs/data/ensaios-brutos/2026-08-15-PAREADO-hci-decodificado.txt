@@ -22,7 +22,7 @@ O QUE FOI ALTERADO NESTA CÓPIA VERSIONADA, E SÓ ISTO
 O endereço do adaptador (OUI d8:44:89) recebeu a máscara da casa — octetos 4 e
 5 zerados — nas 2 ocorrências em que ele aparecia por extenso. A linha
 `Index Info: D8:44:89:0..` já vinha elidida pelo próprio `btmon` e, com a
-máscara, o `0` que ela mostra é o octeto 4 mascarado. Nenhum outro byte mudou.
+máscara, o `0` que a máscara mostra é o octeto 4 mascarado. Nenhum outro byte mudou.
 
 Bluetooth monitor ver 5.86
 = Note: Linux version 7.0.11-76070011-generic (x86_64)                 0.451241

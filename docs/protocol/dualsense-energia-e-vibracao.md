@@ -5,7 +5,7 @@
 `energia.bateria.leitura_hefesto` e `vibracao.rumble.frequencia`.
 
 **Grau desta página inteira: `afirmado-no-doc`.** Nada aqui foi ao aparelho.
-Ela existe porque *"como é só informação eles trouxeram"* — o contrato é FATO
+A página existe porque traz só informação, sem código: o contrato é FATO
 com ENDEREÇO, nunca código de outra pessoa. As fontes estão fixadas por commit
 no fim.
 
@@ -54,8 +54,8 @@ seis estados, incluindo os três de erro. Os três códigos de erro são exatame
 os que o driver trata.
 
 **A pydualsense está certa nos dois transportes para ESTE byte**, e vale dizer
-por quê: ela normaliza o envelope antes de indexar (`states` descarta um byte no
-Bluetooth). Ela **não** faz isso para giroscópio e touchpad, que indexam o
+por quê: a pydualsense normaliza o envelope antes de indexar (`states` descarta um byte no
+Bluetooth). A pydualsense **não** faz isso para giroscópio e touchpad, que indexam o
 buffer cru — mas esse não é o assunto desta página, e o produto não depende
 disso.
 
@@ -78,7 +78,7 @@ O que existe no lugar são **dois bits**, e os dois estão no mapa agora:
 | **filtro passa-baixa** dos haptics | 39, bit 0 | `report[40]` | `report[42]` | `valid_flag1` bit 5 |
 | amplitude por motor (não é frequência) | 2 e 3 | `report[3]`, `report[4]` | `report[5]`, `report[6]` | `valid_flag0` bit 0 |
 
-Frequência de verdade neste aparelho é **forma de onda**, e ela entra pelo
+Frequência de verdade neste aparelho é **forma de onda**, e a forma de onda entra pelo
 caminho de **áudio** (canais 3-4 por USB) — outra chave do mapa,
 `vibracao.haptics_vcm`.
 
@@ -173,7 +173,7 @@ a correção está registrada em público.
 
 ## 5. O que a internet NÃO sabe — a lista para o ensaio no aparelho
 
-Estas perguntas não têm resposta em repositório nenhum. Elas só se respondem
+Estas perguntas não têm resposta em repositório nenhum. As perguntas só se respondem
 com o aparelho na mesa:
 
 1. **Qual a frequência, em Hz, de cada emulação.** Ninguém publicou a medida.

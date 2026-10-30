@@ -59,7 +59,7 @@ flatpak run io.github.hefesto_team.hefesto_dualsense4unix
 Ou pelo menu de aplicativos.
 
 Dentro do Flatpak o serviço não é do systemd: ele roda como processo da janela
-e fecha com ela. Para ele subir no login, ponha o comando acima no início
+e fecha com a janela. Para ele subir no login, ponha o comando acima no início
 automático da sua sessão.
 
 | Fora do Flatpak | Dentro do Flatpak |
@@ -102,7 +102,7 @@ sandbox. O diário dos serviços do sistema entra só para leitura. Pelo
 Wi-Fi em uso, para a aba Conexões; nunca varre.
 
 O que continua sem alcançar: a ponte de administrador
-(`bt_ponte_privilegiada.sh`, pelo `sudo`), que não existe no sandbox. Sem ela, o
+(`bt_ponte_privilegiada.sh`, pelo `sudo`), que não existe no sandbox. Sem a ponte, o
 Hefesto do Flatpak não derruba a conexão morta de um controle, e um controle
 esquecido num adaptador pode voltar quando os pareamentos são restaurados.
 

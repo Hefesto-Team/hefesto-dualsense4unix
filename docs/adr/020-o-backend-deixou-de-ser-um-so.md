@@ -7,7 +7,7 @@
 
 O [ADR-001](001-pydualsense-backend.md) escolheu `pydualsense` como **o**
 backend HID e isolou a escolha atrás de uma interface `IController`, *"para
-permitir troca futura sem reescrever daemon"*. Foi a decisão certa — e é ela
+permitir troca futura sem reescrever daemon"*. Foi a decisão certa — e é a decisão
 que tornou possível tudo o que veio depois. Mas quem lê o 001 hoje sai com o
 retrato de um produto que **não existe mais**: uma biblioteca Python falando
 sozinha com o controle.
@@ -40,7 +40,7 @@ suíte. O que caducou não é a arquitetura: é a frase *"o backend é a
 ## Decisão
 
 Registrar, como retrato vigente, que o produto fala com o hardware por **seis
-camadas**, e que nenhuma delas substitui as outras:
+camadas**, e que nenhuma das camadas substitui as outras:
 
 | camada | onde mora | o que o usuário faz, e por que existe |
 |---|---|---|
@@ -53,15 +53,15 @@ camadas**, e que nenhuma delas substitui as outras:
 | **DKMS** | `assets/dkms/` | `hid-nintendo`, `hid-playstation` e `rtw88-usb` patchados. O que morre na probe do driver não tem cura em Python |
 
 E fixar a regra que segue disso: **antes de afirmar que uma feature funciona,
-olhe por qual camada ela passa** — a matriz de canais
-(`docs/data/mapa-controles.csv`, e o `specs.html` que ela gera) existe
+olhe por qual camada a feature passa** — a matriz de canais
+(`docs/data/mapa-controles.csv`, e o `specs.html` que a matriz gera) existe
 exatamente porque a mesma feature tem sorte diferente em cada uma, e por
 transporte.
 
 ## Consequências
 
 - **O [ADR-001](001-pydualsense-backend.md) fica EMENDADO, não superado.** A
-  decisão de isolar o backend atrás de `IController` continua valendo e foi ela
+  decisão de isolar o backend atrás de `IController` continua valendo e foi a decisão
   que permitiu esta migração acontecer sem reescrever o daemon. Quem for lê-lo
   encontra a nota que aponta para cá.
 - **"Trocar de backend" deixou de ser uma operação única.** A pergunta útil

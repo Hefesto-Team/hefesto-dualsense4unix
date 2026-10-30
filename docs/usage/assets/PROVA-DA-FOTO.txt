@@ -12,7 +12,7 @@ origem:  src/hefesto_dualsense4unix/interface/paginas
 vista:   recorte da .janela
 
 # Toda linha destas imagens é PÁGINA DO REPOSITÓRIO fotografada num
-# Chrome headless — nenhuma delas é medição desta ou de qualquer
+# Chrome headless — nenhuma das fotos é medição desta ou de qualquer
 # máquina, e o retratista não fala com o daemon (portão:
 # tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 

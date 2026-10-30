@@ -2,13 +2,13 @@
 
 > ## ATENÇÃO: ATENÇÃO — esta página tem uma nota de verificação de 01/08/2026
 >
-> **A fonte canônica desta tabela MUDOU.** Ela passa a ser
+> **A fonte canônica desta tabela MUDOU.** A tabela passa a ser
 > [`dualsense-referencia-canonica.md`](dualsense-referencia-canonica.md), §4,
 > que decodifica os modos contra a **enum oficial da Sony** (redistribuída pela
 > Valve no Steamworks SDK) e contra três engenharias reversas independentes.
 >
 > A nomenclatura abaixo (`Rigid_A/B/AB`, `Pulse_A/B/AB`) vem de uma engenharia
-> reversa de 2020 e é **opaca**: ela não diz o que o firmware entende. Traduzida:
+> reversa de 2020 e é **opaca**: a nomenclatura não diz o que o firmware entende. Traduzida:
 >
 > | nome aqui | valor | o firmware entende |
 > |---|---|---|
@@ -125,4 +125,4 @@ Acesso raw via `hefesto-dualsense4unix test trigger --raw --mode Pulse_AB --forc
 | 4    | Exposição de `CustomTriggerValue` na CLI | **Exposto via `--raw`** em `hefesto-dualsense4unix test trigger`; presets nomeados continuam o default       |
 
 W2.1 destravado.
-- **Disparo e Pulso, curva B (08/10/2026):** `weapon` e `pulse_b` mandam a arma oficial (`0x25`): `25 24 00 05` nos padrões 2, 5 e 200 (zonas 2 e 5 na máscara, força 5 de 8). O `0x06` que mandavam é a vibração simples (frequência, amplitude, posição), e os três parâmetros da tela caíam nela como 2 batidas por segundo numa posição fora do curso. Início e fim fora do domínio da Sony (início 2 a 7, fim até 8) encostam no limite, sem recusar; força 0 desliga. O Pulso, curva A, manda o arco (`0x22`): `22 84 00 2D`, com a força e o estalo iguais à força da tela. A Semi-automática, o Arco e o Galope mantêm os bytes de 01/08 até a sessão às cegas.
+- **Disparo e Pulso, curva B (08/10/2026):** `weapon` e `pulse_b` mandam a arma oficial (`0x25`): `25 24 00 05` nos padrões 2, 5 e 200 (zonas 2 e 5 na máscara, força 5 de 8). O `0x06` que mandavam é a vibração simples (frequência, amplitude, posição), e os três parâmetros da tela caíam na vibração simples como 2 batidas por segundo numa posição fora do curso. Início e fim fora do domínio da Sony (início 2 a 7, fim até 8) encostam no limite, sem recusar; força 0 desliga. O Pulso, curva A, manda o arco (`0x22`): `22 84 00 2D`, com a força e o estalo iguais à força da tela. A Semi-automática, o Arco e o Galope mantêm os bytes de 01/08 até a sessão às cegas.

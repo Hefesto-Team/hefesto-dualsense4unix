@@ -50,7 +50,7 @@ A tabela abaixo é **gerada** do catálogo (`docs/data/curvas-proprias.json`) po
 `scripts/gerar-tabela-de-curvas.py`, que chama `gerar_tabela_markdown` — a
 função que essa etapa escreveu para este fim e que, MEDIDO em 12/08/2026, ninguém
 chamava. O `--check` do gerador reprova quando o publicado deixa de ser o que o
-catálogo produz. Não a edite à mão: essa foi a proibição daquela etapa, e ela só
+catálogo produz. Não a edite à mão: essa foi a proibição daquela etapa, e a proibição só
 passou a valer no dia em que este chamador nasceu.
 
 <!-- BLOCO GERADO por scripts/gerar-tabela-de-curvas.py — não edite à mão -->
@@ -77,7 +77,7 @@ Ver o `NOTICE`, seção "A LICENÇA DAS CURVAS PRÓPRIAS".
 
 ## O que NÃO está aqui
 
-As curvas dos doze modos "prontos" do DSX. Elas não foram copiadas, e a razão
+As curvas dos doze modos "prontos" do DSX. As curvas não foram copiadas, e a razão
 está no `NOTICE`, seção "O que este projeto deliberadamente NÃO incorporou".
 
 Se algum dia um valor desta tabela coincidir com um deles, será coincidência de

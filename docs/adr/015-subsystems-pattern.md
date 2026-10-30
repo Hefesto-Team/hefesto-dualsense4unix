@@ -39,7 +39,7 @@ daemon/
 ### A lista única (nota de 16/10/2026)
 
 O desenho de abril previa uma classe por subsystem, todas sobre o protocolo `Subsystem`. Só cinco
-delas (`BtMic`, `AltoFalante`, `Conexoes`, `Plugins`, `Metrics`) foram construídas; as outras oito
+dessas classes (`BtMic`, `AltoFalante`, `Conexoes`, `Plugins`, `Metrics`) foram construídas; as outras oito
 (`Poll`, `Ipc`, `Udp`, `Dsu`, `Autoswitch`, `Mouse`, `Gamepad`, `Rumble`) ficavam na lista sem que o
 `Daemon` as usasse, e o `run()` e o `shutdown()` mantinham, cada um, a sua lista escrita à mão.
 Esquecer uma das duas era o defeito: o `BtMic` e o `AltoFalante` nasceram órfãos assim.
@@ -74,7 +74,7 @@ Os métodos privados no `Daemon` são thin wrappers que delegam para as funçõe
    a condição `quando` (se depende da config), a parada e a posição `parar_em` entre as vizinhas.
 3. Não tocar em `Daemon.run()` nem em `connection.shutdown`: eles só percorrem a lista. A régua
    (`tests/unit/test_o_subsystem_sobe_e_desce_por_uma_lista_so.py`) reprova a classe `*Subsystem` que
-   ficar fora da lista e o `_safe_start` escrito fora dela.
+   ficar fora da lista e o `_safe_start` escrito fora da lista.
 4. Criar o teste do gate e da parada em `tests/unit/test_subsystem_<nome>.py`.
 
 ## Consequências
@@ -85,7 +85,7 @@ Os métodos privados no `Daemon` são thin wrappers que delegam para as funçõe
 - `lifecycle.py` reduzido de 677L para ~365L (com backcompat total).
 - Adicionar novo subsystem requer apenas criar o arquivo e acrescentar uma entrada à lista.
 - A ordem de partida e a de parada moram num lugar só: a régua reprova a classe `*Subsystem` fora da
-  lista, o `_safe_start` fora dela e o `_start_*`/`_stop_*` que a lista nomeia sem o `Daemon` ter.
+  lista, o `_safe_start` fora da lista e o `_start_*`/`_stop_*` que a lista nomeia sem o `Daemon` ter.
 
 ### Negativas
 

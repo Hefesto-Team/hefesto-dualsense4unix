@@ -1,7 +1,7 @@
 # Métricas Prometheus
 
 O serviço pode expor métricas no formato do Prometheus em
-`http://127.0.0.1:<porta>/metrics`. Elas vêm desligadas.
+`http://127.0.0.1:<porta>/metrics`. As métricas vêm desligadas.
 
 ## Ligar
 

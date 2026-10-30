@@ -23,7 +23,7 @@ pedido volta ETIMEDOUT aos ~5 s. Com 4 controles, o `winebus` estoura o prazo do
   `patch/BASELINE`). Fora deles, o de fábrica assume.
 - A marca `get_report_sized` (0444, sempre Y) separa o curado do de fábrica. O pad
   a mede ao montar e o `daemon.state_full` a publica. O `doctor` dá `[FAIL]` sem
-  ela.
+  a marca.
 - O install troca o módulo a quente, e a troca é idempotente. Com a marca, não
   toca. Sem a marca, para o daemon, espera o broker soltar os pads, troca e sobe o
   daemon. Com gadget alheio, ou com o módulo preso, não troca e diz «reinicie».
