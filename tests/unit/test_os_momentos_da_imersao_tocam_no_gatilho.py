@@ -1,7 +1,7 @@
 """Os momentos da imersão tocam no gatilho (OS-MOMENTOS-DA-IMERSAO-TOCAM-NO-GATILHO-01).
 
 A imersão escolhida na aba Gatilhos chega ao perfil só como os números do acionamento;
-o motor do tato a reconhece por eles e toca os `momentos` dela (ao apertar, segurando,
+o motor do tato a reconhece por eles e toca os `momentos` da imersão (ao apertar, segurando,
 sempre) no gatilho de cada controle, onde o jogo cala. Tudo com relógio injetado, o
 perfil de mentira e um backend que anota cada bloco e cada fim de sessão.
 

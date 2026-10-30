@@ -163,7 +163,7 @@ async def test_a_emulacao_suspensa_cala_o_analogico(
     monkeypatch: pytest.MonkeyPatch, uinput: _UinputPorDevice,
 ) -> None:
     saiu = await _rodar_o_laco(monkeypatch, uinput, suspensa=True)
-    assert not saiu, f"a supressão que ela ligou deixou o analógico digitar: {saiu}"
+    assert not saiu, f"a supressão que quem usa ligou deixou o analógico digitar: {saiu}"
 
 
 @pytest.mark.asyncio

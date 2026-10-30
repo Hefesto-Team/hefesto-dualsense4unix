@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """AS QUATRO LINHAS DA ABA `09` QUE NENHUMA SPRINT ENCARREGAVA — 06/09/2026.
 
-Elas estavam `FALTA_NO_HTML` no `docs/data/paridade-gtk-html.csv`, e o enunciado
+As quatro estavam `FALTA_NO_HTML` no `docs/data/paridade-gtk-html.csv`, e o enunciado
 de cada uma é a própria linha do CSV:
 
 * **L315** — o botão **"Corrigir modo de execução"**. A aba já RECONHECIA o modo
@@ -47,10 +47,10 @@ A MORDIDA, colada no relato desta frente:
 * tire o `era=era` do `restaurar_de_fabrica` e
   `test_o_restaurar_de_fabrica_adota_o_perfil_como_ativo` reprova — o `.json`
   mudaria no disco e o controle continuaria com o perfil anterior, que é o
-  sintoma que ela leu como *"não está salvando"*;
+  sintoma que quem usa leu como *"não está salvando"*;
 * tire `.so-avulso:not(.mostra){display:none}` do CSS e o GERADOR reprova antes
   desta régua (`aba09.py`, o portão dos dois blocos) — a guarda de lá é mais
-  dura, e é ela que responde.
+  dura, e é a que responde.
 """
 from __future__ import annotations
 
@@ -141,7 +141,7 @@ def test_os_dois_gestos_novos_declaram_o_que_mexem() -> None:
     for nome in ("corrigir-modo", "restaurar-de-fabrica"):
         assert (PAGINA, nome) in pacotes.GESTOS, f"`{nome}` não tem dono"
         assert nome in perigosos, (
-            f"`{nome}` mexe na máquina dela e NÃO está protegido — declare a "
+            f"`{nome}` mexe na máquina de quem usa e NÃO está protegido — declare a "
             'porta no próprio decorador: `@gesto(…, grava="…")`.')
 
 
@@ -151,7 +151,7 @@ def test_a_lista_dos_sem_motor_ficou_vazia() -> None:
         "há gesto declarado sem motor nesta aba, e os cinco fecharam: "
         f"{sorted(a09.SEM_MOTOR)}")
     assert "restaurar-de-fabrica" in a09.DESTRUTIVOS, (
-        "o «Restaurar de fábrica» troca o perfil dela — ele é destrutivo, e sem "
+        "o «Restaurar de fábrica» troca o perfil de quem usa — ele é destrutivo, e sem "
         "estar na lista o `blocos:` nunca repõe o rótulo do consentimento.")
 
 
@@ -195,7 +195,7 @@ def test_o_corrigir_modo_pede_ao_avulso_que_saia_e_sobe_a_unit(
     assert saiu == [4242], "o pid do Hefesto improvisado não foi convidado a sair"
     assert [c[0] for c in comandos] == ["reset-failed", "start"], comandos
     assert fora["recado"] == _daemon.MIGRAR_DEU_CERTO, (
-        "o recibo não é a frase do dono — e ela saiu de dentro do "
+        "o recibo não é a frase do dono — e a frase saiu de dentro do "
         "`_on_migrate_done` hoje justamente para não haver duas.")
 
 
@@ -267,7 +267,7 @@ def test_o_restaurar_de_fabrica_nao_grava_no_primeiro_clique(_preset) -> None:
     fora = a09.restaurar_de_fabrica(
         _ctx(), {"gesto": "restaurar-de-fabrica", "texto": "Restaurar de fábrica"},
         PonteDeMentira())
-    assert _preset == [], "o perfil dela foi restaurado sem consentimento"
+    assert _preset == [], "o perfil de quem usa foi restaurado sem consentimento"
     assert a09.CONFIRMA in str(fora["blocos"])
 
 
@@ -277,7 +277,7 @@ def test_o_restaurar_de_fabrica_adota_o_perfil_como_ativo(
 
     O `era=` é o que faz o reaplicar sair (o `profile.switch` até 01/10/2026:
     reaplicar não é escolha do usuário). Sem ele o `.json` muda no disco e o
-    controle continua com o perfil anterior — o sintoma que ela leu como *"não
+    controle continua com o perfil anterior — o sintoma que quem usa leu como *"não
     está salvando"*.
     """
     from hefesto_dualsense4unix.app.actions import profiles_actions
@@ -334,7 +334,7 @@ def test_o_desenho_tem_os_dois_botoes_novos() -> None:
     pagina = _html()
     for gesto in ("corrigir-modo", "correcoes-automaticas"):
         assert f'data-gesto="{gesto}"' in pagina, (
-            f"o botão de {gesto!r} não está na bancada — rode "
+            f"o botão de {gesto!r} não está no mockup — rode "
             "`src/hefesto_dualsense4unix/interface/aba09.py`.")
 
 
@@ -345,7 +345,7 @@ def test_o_botao_do_modo_improvisado_nasce_escondido() -> None:
     pagina = _html()
     assert ".so-avulso:not(.mostra){display:none}" in pagina, (
         "a regra que esconde o botão do modo improvisado sumiu — ele passa a "
-        "ocupar 30px na coluna do serviço na cena que ela aprovou.")
+        "ocupar 30px na coluna do serviço na cena aprovada.")
     botao = re.search(r'<button class="[^"]*so-avulso[^"]*"[^>]*>', pagina)
     assert botao, "o botão perdeu a classe `so-avulso`"
     for exigido in (f'data-campo="{a09.CAMPO_DO_MODO_AVULSO}"',
@@ -370,7 +370,7 @@ def test_a_declaracao_do_que_espera_a_publicacao_bate_com_a_pagina() -> None:
     A versão anterior cravava UM campo
     (`CAMPO_DO_MODO_AVULSO`) e exigia que ele estivesse fora da página E dentro
     da declaração. O usuário mandou publicar as dez abas para os quatro DualSense
-    aparecerem na bancada, os cinco campos chegaram à página — e a régua passou
+    aparecerem no mockup, os cinco campos chegaram à página — e a régua passou
     a reprovar a publicação que o usuário pediu, em vez de reprovar defeito.
 
     O QUE SOBREVIVE É O INVARIANTE, e ele vale para qualquer campo: **declarar
@@ -388,7 +388,7 @@ def test_a_declaracao_do_que_espera_a_publicacao_bate_com_a_pagina() -> None:
                 if f'data-campo="{campo}"' in publicada]
     assert not mentindo, (
         f"{len(mentindo)} campo(s) declarados em `ESPERA_A_PUBLICACAO` JÁ estão "
-        f"na página publicada: {sorted(mentindo)}. Publicar é ato dela; a "
+        f"na página publicada: {sorted(mentindo)}. Publicar é ato do dono do desenho; a "
         f"declaração é que envelheceu — TIRE a linha de cada um.")
 
 
@@ -407,7 +407,7 @@ LER_A_TELA = r"""
   return JSON.stringify({
     corrigir: b ? {visivel: getComputedStyle(b).display !== 'none',
                    rotulo: (b.textContent || '').trim()} : null,
-    // O VIZINHO QUE SAI NO LUGAR DELE. A pergunta é de PIXEL: quem ela vê é o
+    // O VIZINHO QUE SAI NO LUGAR DELE. A pergunta é de PIXEL: o que se vê é o
     // `.acao` que embrulha o Reiniciar, e é o `display` dele que o CSS troca.
     reiniciar: r ? {visivel: getComputedStyle(r.closest('.acao') || r)
                               .display !== 'none'} : null,
@@ -548,7 +548,7 @@ def na_tela() -> dict:
 
 
 class TestNaTelaViva:
-    """A peça medida onde ela vive: no motor que ela usa."""
+    """A peça medida onde vive: no motor de quem usa."""
 
     def test_o_botao_do_modo_improvisado_aparece_quando_ha_o_que_corrigir(
             self, na_tela: dict) -> None:
@@ -559,7 +559,7 @@ class TestNaTelaViva:
 
     def test_ele_entra_no_lugar_do_reiniciar_e_nao_ao_lado(
             self, na_tela: dict) -> None:
-        """A troca, medida no CSSOM — e ela é de altura e de verdade."""
+        """A troca, medida no CSSOM — e a troca é de altura e de verdade."""
         com = na_tela["com-o-modo"]
         sem = na_tela["sem-o-modo"]
         assert com["reiniciar"]["visivel"] is False, (
@@ -575,7 +575,7 @@ class TestNaTelaViva:
 
     def test_a_aba_nao_rola_por_dentro_com_o_botao_a_mostra(
             self, na_tela: dict) -> None:
-        """O preço final de a coluna crescer, e é o que ela VÊ."""
+        """O preço final de a coluna crescer, e é o que quem usa VÊ."""
         for quando in ("com-o-modo", "sem-o-modo", "depois-do-pouso"):
             assert na_tela[quando]["rola_por_dentro"] == 0, (
                 f"{quando}: o miolo rola {na_tela[quando]['rola_por_dentro']}px "

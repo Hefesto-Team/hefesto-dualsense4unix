@@ -119,7 +119,7 @@ def test_todo_portao_de_scripts_importa_so_o_que_esta_declarado() -> None:
         "`pyproject.toml`:\n  "
         + "\n  ".join(achados)
         + "\n\nÉ a dívida do `playwright` outra vez: quem escreveu tem a "
-        "biblioteca na bancada, e toda árvore nova nasce com o portão vermelho "
+        "biblioteca na máquina, e toda árvore nova nasce com o portão vermelho "
         "sem dizer por quê. Declare no extra `[dev]` (é ferramenta de portão, "
         "não do produto) ou acrescente uma exceção COM MOTIVO em `EXCECOES`."
     )

@@ -239,7 +239,7 @@ def test_a_emulacao_suspensa_solta_a_tecla(desktop: Any) -> None:
 
 
 def test_a_parada_do_daemon_fecha_o_teclado_do_analogico(desktop: Any) -> None:
-    """Parar a EMULAÇÃO DE MOUSE não solta a tecla (ela é do analógico, e o laço a atende sem o
+    """Parar a EMULAÇÃO DE MOUSE não solta a tecla (a tecla é do analógico, e o laço a atende sem o
     mouse); fechar o atendente, na troca de perfil e na parada do daemon, solta e destrói."""
     daemon, mod = desktop
     daemon.config.mouse_emulation_enabled = True
@@ -308,7 +308,7 @@ def test_o_perfil_antigo_com_o_token_fora_da_lista_mostra_o_que_o_botao_faz(
 ) -> None:
     """«Teclas WASD» num botão (e botão do mouse num analógico) carrega sem migração, cai em
     `sem_dono` e a linha mostra «— Nada —», que é o que o botão faz: a opção não existe mais na
-    lista dela, e sem isto o `escrever()` se calaria e a linha seguiria no de fábrica.
+    lista da linha, e sem isto o `escrever()` se calaria e a linha seguiria no de fábrica.
     MORDIDA: devolver `acoes.rotulo(token)` em `_o_que_a_linha_mostra` reprova."""
     import pathlib
 

@@ -3,7 +3,7 @@
 
 Sprint: OS-RESTOS-DO-DESENHO-VELHO-SAEM-DAS-ABAS-03-05-08-01.
 
-Medido em 23/10/2026: a cena de exemplo dos geradores levava o nome da dona da bancada
+Medido em 23/10/2026: a cena de exemplo dos geradores levava o nome de uma pessoa real
 (`monta.MESA`, `"dono"`, e o `DONO_DA_CENA` da 08), e o HTML publicado, a primeira pintura e o
 campo sem dono o mostravam a qualquer usuário; a cena do rádio da 08 lia do desenho congelado
 (`mockup/mapa-do-radio.html`) quatro nomes de pessoa. A 03 importava o glifo da 05, e a `LEGENDA`
@@ -11,7 +11,7 @@ da 08 era código morto.
 
 As réguas leem o fonte e o desenho (o que o `--publicar` copia), nunca o que um gerador devolveu.
 
-MORDIDAS (24/10/2026): devolver o `"dono": "Vitória"` à `monta.MESA`; devolver o
+MORDIDAS (24/10/2026): devolver o `"dono"` com o nome de antes à `monta.MESA`; devolver o
 `from aba05 import GLIFO_DO_CONTROLE` à 03; devolver a `LEGENDA` à 08; devolver o
 `"nome": linha["nome"]` ao controle da cena do rádio; devolver o «Lia» ou o «Davi» aos dois
 controles que não conectaram, na cena do rádio. Cada uma reprova uma régua daqui.

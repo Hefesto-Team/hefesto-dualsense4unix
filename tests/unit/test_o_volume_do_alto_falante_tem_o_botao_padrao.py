@@ -1,8 +1,8 @@
 """O botão «Padrão» do volume do alto-falante (desenho aprovado em 04/10/2026).
 
-O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 2 da seção «A decisão de 04/10». Ela, sobre o volume:
-*«Mesmo do anterior»* (o «Padrão» da vibração). Ligado, o volume do alto-falante deste controle é o
-do JOGO (os 100% de sempre, sem ajuste do Hefesto) e a barra fica verde e travada; desligado, ela
+O-DESLIGADO-DEIXA-O-JOGO-DECIDIR-01, item 2 da seção «A decisão de 04/10». O volume segue o
+«Padrão» da vibração. Ligado, o volume do alto-falante deste controle é o
+do JOGO (os 100% de sempre, sem ajuste) e a barra fica verde e travada; desligado, quem usa
 ajusta, e o volume que tinha escolhido volta. O microfone fica de fora.
 
 Tudo de mentira: o ``XDG_CONFIG_HOME`` no ``tmp_path``, a ponte que confirma, o WebKit fora da tela.
@@ -77,7 +77,7 @@ def test_perfil_sem_secao_com_o_aparelho_nos_cem_por_cento_e_padrao(casa: Any) -
 
     assert a02.volume_em_padrao(_ctx(CEM), P1, (CEM, False)) is True
     assert a02.volume_em_padrao(_ctx(), P1, (volume_do_percentual(60), False)) is False, (
-        "um volume que ela arrastou sem perfil não é Padrão")
+        "um volume que quem usa arrastou sem perfil não é Padrão")
     assert a02.volume_em_padrao(_ctx(None), P1, None) is False, "sem leitura a tela não afirma"
 
 
@@ -231,7 +231,7 @@ def test_sem_perfil_o_clique_desliga_o_padrao_e_o_computador_guarda(casa: Any) -
     assert dele.get("volume_padrao") is False and dele.get("volume") == CEM, (
         f"o clique não ficou no computador: {dele!r}")
     assert a02.volume_em_padrao(_ctx_sem_perfil(), P1, (CEM, False)) is False, (
-        "a tela segue em «Padrão»: a barra fica travada e ela não ajusta o volume")
+        "a tela segue em «Padrão»: a barra fica travada e quem usa não ajusta o volume")
 
 
 def test_sem_perfil_a_tela_destrava_a_barra_e_diz_o_numero(

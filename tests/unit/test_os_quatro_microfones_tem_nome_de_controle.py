@@ -1,7 +1,7 @@
 """Os QUATRO microfones: um nó por controle, com o nome DO USUÁRIO — MIC-OS-QUATRO-01.
 
-A palavra, 08/09/2026 à noite: *"o lance dos 4 mic virtuais via bt pra cada
-controle e cavbo"*.  <!-- noqa-acento: citação literal, palavra por palavra -->
+O pedido, 08/09/2026 à noite: os quatro microfones virtuais, um por controle, no rádio
+e no cabo.
 
 E o NOME é decisão de 09/09/2026 (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
 MICROFONE-DO-CONTROLE-N`, palavra de produto: *"4a"*): **«Microfone do Controle N»**,
@@ -10,7 +10,7 @@ com o número do ASSENTO, como na tela.
 O QUE ESTE ARQUIVO MORDE, e os três são defeitos MEDIDOS nesta árvore
 ---------------------------------------------------------------------
 
-1. **O rótulo dizia o TRANSPORTE e publicava o ENDEREÇO dela.** A ponte
+1. **O rótulo dizia o TRANSPORTE e publicava o ENDEREÇO do controle.** A ponte
    batizava o nó de ``Microfone DualSense BT (aa:bb:cc:…)`` — o MAC do
    controle do usuário na lista de dispositivos de áudio de toda aplicação que abre
    um seletor de microfone.
@@ -108,19 +108,19 @@ def test_o_rotulo_do_no_e_microfone_do_controle_n(numerador_limpo) -> None:  # t
         "Microfone do Controle 2" + _SONY,
         "Microfone do Controle 3" + _SONY,
         "Microfone do Controle 4" + _SONY,
-    ], f"os quatro nós não têm o nome que ela decidiu: {rotulos}"
+    ], f"os quatro nós não têm o nome decidido: {rotulos}"
     assert len(set(rotulos)) == 4, (
-        "dois controles com o MESMO rótulo na lista de entrada dela — o nome "
+        "dois controles com o MESMO rótulo na lista de entrada — o nome "
         "deixa de dizer qual é qual"
     )
 
 
 def test_o_rotulo_nunca_carrega_o_endereco_do_controle(numerador_limpo) -> None:  # type: ignore[no-untyped-def]
-    """O MAC dela não entra na lista de dispositivos de áudio da máquina.
+    """O MAC do controle não entra na lista de dispositivos de áudio da máquina.
 
     **A MORDIDA:** devolva a f-string de antes de 09/09 —
     ``f"Microfone DualSense BT ({uniq})"`` — e esta régua reprova nomeando os
-    dois defeitos que ela carregava: o endereço à mostra e a palavra do
+    dois defeitos que a ponte carregava: o endereço à mostra e a palavra do
     transporte no lugar da palavra de produto.
 
     A varredura é por PEDAÇO do endereço, e não pelo endereço inteiro: um
@@ -191,7 +191,7 @@ def test_a_ponte_do_radio_batiza_o_no_com_o_nome_do_usuario(  # type: ignore[no-
     assert ponte.iniciar() is False
     assert pedidos, "a ponte não pediu o canal por controle"
     assert pedidos[0][1] == "Microfone do Controle 2" + _SONY, (
-        f"a ponte batizou o nó de {pedidos[0][1]!r} — o nome dela não chegou "
+        f"a ponte batizou o nó de {pedidos[0][1]!r} — o nome decidido não chegou "
         "ao produto"
     )
 
@@ -202,7 +202,7 @@ class _NoDeRadio:
 
 
 def test_a_palavra_do_usuario_sobre_o_mic_do_cabo_sobrevive_a_varredura() -> None:
-    """Ela aperta o botão do microfone de um controle NO FIO. A palavra fica."""
+    """Quem usa aperta o botão do microfone de um controle NO FIO. A palavra fica."""
     registro = bt_mic.RegistroDePedidosDeCanal()
     sub = bt_mic.BtMicSubsystem(registro=registro)
     sub._backend = _BackendDaMesa((P1, P2))
@@ -213,7 +213,7 @@ def test_a_palavra_do_usuario_sobre_o_mic_do_cabo_sobrevive_a_varredura() -> Non
     sub._esquecer_quem_saiu_da_mesa([_NoDeRadio(P2)])
 
     assert registro.no_ar() == {_hex(P1): True}, (
-        "a palavra dela sobre o microfone do controle do CABO foi apagada na "
+        "a palavra de quem usa sobre o microfone do controle do CABO foi apagada na "
         "primeira varredura"
     )
     assert _hex(P1) in registro.abertos(), (
@@ -231,7 +231,7 @@ def test_quem_sai_da_mesa_de_verdade_continua_sendo_esquecido() -> None:
     sub._esquecer_quem_saiu_da_mesa([_NoDeRadio(P2)])
 
     assert registro.no_ar() == {}, (
-        "o controle saiu da mesa e a palavra dela sobre ele ficou de pé"
+        "o controle saiu da mesa e a palavra de quem usa sobre ele ficou de pé"
     )
     assert registro.abertos() == frozenset()
 
@@ -295,7 +295,7 @@ def test_sem_toque_do_usuario_o_canal_do_cabo_sobe(  # type: ignore[no-untyped-d
 def test_com_a_recusa_do_usuario_nenhum_canal_do_cabo_sobe(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado
 ) -> None:
-    """O «não» dela continua tirando o canal, como no rádio."""
+    """O «não» de quem usa continua tirando o canal, como no rádio."""
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
     sub._backend = _BackendDaMesa((P1,))
@@ -303,13 +303,13 @@ def test_com_a_recusa_do_usuario_nenhum_canal_do_cabo_sobe(  # type: ignore[no-u
 
     sub._reconciliar_o_cabo([])
 
-    assert dono_dublado["abriu"] == [], "o canal subiu contra a recusa dela"
+    assert dono_dublado["abriu"] == [], "o canal subiu contra a recusa de quem usa"
 
 
 def test_o_toque_do_usuario_ergue_o_canal_do_cabo_com_o_no_alsa(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """Ela liga o microfone de um controle no FIO: o canal com nome dele sobe."""
+    """Quem usa liga o microfone de um controle no FIO: o canal com nome dele sobe."""
     bt.registrar_numerador_de_assento(lambda _u: 1)
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
@@ -345,7 +345,7 @@ def test_o_supervisor_do_cabo_nao_encosta_em_quem_esta_no_radio(  # type: ignore
 def test_o_canal_do_cabo_cai_quando_o_usuario_desliga(  # type: ignore[no-untyped-def]
     monkeypatch, dono_dublado, numerador_limpo
 ) -> None:
-    """A recusa dela derruba o canal — e o `parec` que lia o microfone do usuário."""
+    """A recusa de quem usa derruba o canal — e o `parec` que lia o microfone do usuário."""
     bt.registrar_numerador_de_assento(lambda _u: 1)
     _com_uma_fonte(monkeypatch, [FONTE_DO_CABO])
     sub = bt_mic.BtMicSubsystem(registro=bt_mic.RegistroDePedidosDeCanal())
@@ -358,7 +358,7 @@ def test_o_canal_do_cabo_cai_quando_o_usuario_desliga(  # type: ignore[no-untype
     sub._reconciliar_o_cabo([])
 
     assert dono_dublado["fechou"] == [_hex(P1)], (
-        "ela desligou o microfone e o canal do cabo ficou de pé, com o "
+        "quem usa desligou o microfone e o canal do cabo ficou de pé, com o "
         f"alimentador lendo: {dono_dublado['fechou']}"
     )
     assert sub._canais_do_cabo == {}
@@ -405,7 +405,7 @@ def test_um_controle_desligado_nao_ocupa_assento() -> None:
         "a mesa não é a dos conectados"
     )
     assert sub.numero_do_assento(P1) is None, (
-        "um controle DESLIGADO ganhou assento na mesa dela"
+        "um controle DESLIGADO ganhou assento na mesa de teste"
     )
     assentos = [sub.numero_do_assento(u) for u in (P2, P3, P4)]
     assert assentos == [2, 3, 4], (

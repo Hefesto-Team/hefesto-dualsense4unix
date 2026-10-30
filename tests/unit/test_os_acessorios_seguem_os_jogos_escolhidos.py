@@ -2,9 +2,9 @@
 
 O `perfil.trocou` diz QUAL jogo é (`jogo`), o perfil, o `estilo` e o jogador de cada controle, e
 nunca leva marca; o manifesto declara o `deslizante` (faixa, passo e a posição inicial obrigatória
-dentro dela) e os `jogos`; a janela da extensão desenha o `input[type=range]` e uma caixa por jogo
+na faixa) e os `jogos`; a janela da extensão desenha o `input[type=range]` e uma caixa por jogo
 que tem perfil, e o gesto guarda o valor. A janela dos acessórios do desenho saiu em 19/10/2026 com
-o adulto (a extensão `intiface` desenha a dela pelo manifesto).
+o adulto (a extensão `intiface` desenha a própria pelo manifesto).
 
 MORDIDAS (executadas aqui): o `perfil.trocou` sem `jogo` reprova
 `test_abrir_um_jogo_publica_jogo_perfil_estilo_e_jogador`; o manifesto que aceita o `deslizante`

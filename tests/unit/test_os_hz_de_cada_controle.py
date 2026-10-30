@@ -1,4 +1,4 @@
-"""Os Hz de verdade de cada controle — AR-MEDIDO-01 (23/09/2026), R10 dela."""
+"""Os Hz de verdade de cada controle — AR-MEDIDO-01 (23/09/2026), resposta R10."""
 
 from __future__ import annotations
 

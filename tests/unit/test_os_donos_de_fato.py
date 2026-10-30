@@ -1,7 +1,7 @@
 """ROTA-A + ROTA-C — os donos de fato, e as cinco réguas que têm de morder.
 
 O defeito que estas réguas guardam foi medido em 02/09/2026 com DOIS controles
-na bancada:
+no ensaio:
 
 * **o nome vinha da POSIÇÃO.** Com um controle, o do cabo chamava-se "Starlight
   Blue"; com dois, o MESMO cabo virou "Cosmic Red". O daemon publicava `uniq`,
@@ -43,7 +43,7 @@ def _controle(
 def test_o_controle_que_nao_e_jogador_ainda_tem_numero() -> None:
     """`{"player": None, "player_slot": 2}` é jogador **2**.
 
-    Fora de qualquer `parametrize` de propósito: é o caso medido na bancada e
+    Fora de qualquer `parametrize` de propósito: é o caso medido no ensaio e
     ele não pode se perder numa lista de tuplas onde ninguém o lê.
 
     **E O FATO QUE ELE DERRUBA:** o MAPA e a ROTA-C diziam *"no rádio o `player`
@@ -71,7 +71,7 @@ class TestJogadorDe:
         assert pacotes.jogador_de({"player_slot": 0, "player": 0}) is None
 
     def test_o_slot_vence_o_player(self) -> None:
-        """A ordem é a da GTK, e ela importa quando os dois existem e divergem."""
+        """A ordem é a da GTK, e a ordem importa quando os dois existem e divergem."""
         assert pacotes.jogador_de({"player_slot": 3, "player": 1}) == 3
 
     def test_lixo_no_slot_cai_para_o_player_em_vez_de_estourar(self) -> None:
@@ -101,7 +101,7 @@ def _palavra_do_transporte(chave: str) -> str:
 
     Estas réguas digitavam `USB` e `BT`; desde a `ONDA4-S10-O-TRANSPORTE-01`
     (06/09/2026) o último degrau de `identidade_de` devolve a palavra do
-    glossário. O que elas medem não é a palavra — é que o degrau seja o
+    glossário. O que as réguas medem não é a palavra — é que o degrau seja o
     transporte, e nunca o nome de outro aparelho.
     """
     from hefesto_dualsense4unix.app.actions.home_actions import (
@@ -188,7 +188,7 @@ EXCECOES_DATADAS: dict[str, str] = {
     # fica: nenhuma das duas lê o jogador do controle (medido em 02/09 e 09/09)
     '_jogador_esperando: return "" if c.get("player") is not None else "1"': (
         "a01_jogar.py (04/09/2026) — A EXCEÇÃO MAIS ESTRITA DA LISTA, e a única "
-        "em que trocar por `jogador_de` MATA a feature. Ela não lê o `player` "
+        "em que trocar por `jogador_de` MATA a feature. A exceção não lê o `player` "
         "para saber QUAL jogador é: lê para saber se ele JÁ É jogador. Quem "
         "volta `None` é quem o co-op ainda não promoveu — reservou o índice e "
         "não tem vpad —, e é exatamente esse `None` que acende o `Player N` "
@@ -196,7 +196,7 @@ EXCECOES_DATADAS: dict[str, str] = {
         "APAGAR essa diferença: ele lê `player_slot` antes, e o slot está "
         "preenchido justamente em quem ainda espera. Usá-lo aqui faria o "
         "cartão dizer `Player 2` para um controle que o jogo não recebeu — o "
-        "dano medido na mesa dela em 02/09."
+        "dano medido na mesa de teste em 02/09."
     ),
     'player: n = int(str(o.get("player") or "0"))': (
         "a04_iluminacao.py — lê o `player` do CLIQUE (`o`), não do controle — "
@@ -242,7 +242,7 @@ def _leituras_cruas() -> list[str]:
 
 
 def test_nenhum_pacote_le_player_cru_fora_da_lista_datada() -> None:
-    """RÉGUA 4, e ela NOMEIA função e texto — uma contagem não serviria."""
+    """RÉGUA 4, e NOMEIA função e texto — uma contagem não serviria."""
     novos = [a for a in _leituras_cruas() if a not in EXCECOES_DATADAS]
     assert not novos, (
         f"leitura crua de `player` sem dono: {novos}. Use `pacotes.jogador_de`, "
@@ -255,7 +255,7 @@ def test_a_lista_datada_nao_guarda_fantasma() -> None:
     mortas = sorted(set(EXCECOES_DATADAS) - set(_leituras_cruas()))
     assert not mortas, (
         f"a lista datada guarda exceção que já morreu: {mortas}. Apague a linha "
-        "— a dívida é menor do que ela diz"
+        "— a dívida é menor do que a lista diz"
     )
 
 
@@ -334,7 +334,7 @@ def test_o_state_full_carrega_a_identidade_de_cada_controle(chave: str) -> None:
     handler.enriquecer(entradas)
     for entrada in entradas:
         assert chave in entrada, (
-            f"`{chave}` sumiu de `controllers[]`. Sem ela, `identidade_de` cai no "
+            f"`{chave}` sumiu de `controllers[]`. Sem a chave, `identidade_de` cai no "
             "transporte e o HTML volta a cravar 'Cosmic Red'"
         )
 

@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA BANCADA: os dez geradores RODAM, e o que sai é o desenho de hoje.
+"""A RÉGUA DO DESENHO: os dez geradores RODAM, e o que sai é o desenho de hoje.
 
-POR QUE ELA NASCEU, e o número é o argumento: em 01/09/2026, medidos um a um,
+POR QUE A RÉGUA NASCEU, e o número é o argumento: em 01/09/2026, medidos um a um,
 **os DEZ estavam quebrados**. Nenhum rodava. E ninguém sabia.
 
 O que os quebrou foi um commit só — `4162c208`, o que mudou a interface de
 `layout/` para dentro de `src/`. Ele levou três coisas junto:
 
   * `monta.R` passou de "a raiz do repositório" para "a pasta deste módulo", e
-    com ela `assets/glyphs/` e `docs/data/` foram procurados dentro de
+    com a raiz `assets/glyphs/` e `docs/data/` foram procurados dentro de
     `interface/`. Seis geradores morreram em `FileNotFoundError`;
   * `player_slot_color` saiu do bloco de import do `monta.py` no caminho. Quatro
     geradores morreram em `ImportError`;
   * `aba08` e `aba09` mantiveram um `parents[2]` próprio, que virou `src/`.
 
 POR QUE PORTÃO NENHUM VIU, e é a parte que importa para quem herdar isto: o
-`check_o_desenho_aprovado.py` compara **dois arquivos parados** — a bancada e o
+`check_o_desenho_aprovado.py` compara **dois arquivos parados** — o mockup e o
 publicado. Se o gerador não roda, os dois continuam iguais, e ele fica verde
-para sempre sobre uma bancada que ninguém consegue mais reproduzir. É o mesmo
+para sempre sobre um mockup que ninguém consegue mais reproduzir. É o mesmo
 buraco que deixou a `novo-layout/` divergir 25 KB calada, com outra roupa.
 
-O QUE ELA COBRA, e são duas coisas separadas:
+O QUE A RÉGUA COBRA, e são duas coisas separadas:
 
 1. **RODAR.** Cada gerador termina sem exceção. Isto sozinho teria acusado os
    dez no dia em que caíram.
 2. **REPRODUZIR.** O que sai é byte a byte o que está em `mockup/`. Sem isto, um
-   gerador editado e nunca rodado deixa a bancada para trás — e a próxima pessoa
+   gerador editado e nunca rodado deixa o mockup para trás — e a próxima pessoa
    que o rodar leva um diff que não fez.
 
 O SEGUNDO ACHOU UM DEFEITO VISÍVEL no mesmo dia: `aba03.py` tinha o marcador
@@ -33,8 +33,8 @@ O SEGUNDO ACHOU UM DEFEITO VISÍVEL no mesmo dia: `aba03.py` tinha o marcador
 nasciam com `# noqa-acento` como TEXTO no topo, em letra de título. Está na foto
 de 01/09.
 
-ONDE ELA ESCREVE: num diretório temporário, pelo `HEFESTO_ENSAIO`. Ela **não
-toca** a bancada — que é a razão de aquele desvio existir.
+ONDE A RÉGUA ESCREVE: num diretório temporário, pelo `HEFESTO_ENSAIO`. A régua **não
+toca** o mockup — que é a razão de aquele desvio existir.
 """
 from __future__ import annotations
 
@@ -63,14 +63,14 @@ def test_os_geradores_existem() -> None:
 
 @pytest.fixture(scope="module")
 def ensaio_de_prova(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
-    """Uma bancada de mentira, com as páginas de hoje dentro.
+    """Um mockup de mentira, com as páginas de hoje dentro.
 
     AS PÁGINAS VÃO JUNTO porque alguns geradores CONFEREM a vizinhança: o
     `aba02` recusa se o `calibrar-sensores.html` não estiver ao lado, e está
     certo — um botão que aponta para página inexistente é um botão que mente.
     Uma pasta vazia faria este caso reprovar por um motivo que não é o dele.
     """
-    destino = tmp_path_factory.mktemp("bancada")
+    destino = tmp_path_factory.mktemp("ensaio")
     for p in (RAIZ / "mockup").glob("*.html"):
         shutil.copy2(p, destino / p.name)
     return destino
@@ -102,7 +102,7 @@ def test_o_gerador_roda(nome: str, ensaio_de_prova: pathlib.Path) -> None:
     repassar_a_falta_do_gtk(r)
     assert r.returncode == 0, (
         f"`{nome}` não roda:\n{r.stderr.strip()[-1200:]}\n\n"
-        f"A BANCADA É A FONTE DO DESENHO. Um gerador que não roda congela a aba "
+        f"O MOCKUP É A FONTE DO DESENHO. Um gerador que não roda congela a aba "
         f"dele: o `check_o_desenho_aprovado` continua verde comparando dois "
         f"arquivos parados, e ninguém consegue mais mudar aquela tela.")
 
@@ -132,7 +132,7 @@ def test_o_gerador_reproduz_o_ensaio(nome: str, ensaio_de_prova: pathlib.Path) -
         assert no_ensaio.exists(), f"{gerado.name} saiu do gerador e não está em mockup/"
         assert gerado.read_bytes() == no_ensaio.read_bytes(), (
             f"`{nome}` produz um {gerado.name} DIFERENTE do que está em "
-            f"`mockup/`. O gerador foi editado e nunca rodado — a bancada ficou "
+            f"`mockup/`. O gerador foi editado e nunca rodado — o mockup ficou "
             f"para trás, e a próxima pessoa que o rodar leva um diff que não "
             f"fez.\nRODE `python3 src/hefesto_dualsense4unix/interface/{nome}` e "
             f"olhe o `git diff mockup/`.")

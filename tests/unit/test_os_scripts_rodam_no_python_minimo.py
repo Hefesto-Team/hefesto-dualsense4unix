@@ -61,7 +61,7 @@ def test_todo_script_compila_no_minimo_declarado() -> None:
     versao = ".".join(map(str, minimo))
     assert not quebrados, (
         f"estes arquivos NÃO compilam no Python {versao}, que é o mínimo que o "
-        f"`pyproject.toml` declara suportar (esta bancada roda "
+        f"`pyproject.toml` declara suportar (esta máquina roda "
         f"{'.'.join(map(str, sys.version_info[:2]))}, e por isso não acusa):\n  "
         + "\n  ".join(quebrados)
     )

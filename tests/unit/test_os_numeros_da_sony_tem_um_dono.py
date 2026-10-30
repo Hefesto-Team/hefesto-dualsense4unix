@@ -235,7 +235,7 @@ def test_as_variantes_declaradas_existem_e_nao_sao_a_copia() -> None:
 
 
 COPIAS_DA_CHAMADA = {
-    "cli/cmd_native.py::_call_sync": "é de outra sprint: migra quando ela tocar o `cmd_native`",
+    "cli/cmd_native.py::_call_sync": "é de outra sprint: migra quando o `cmd_native` mudar",
 }
 
 

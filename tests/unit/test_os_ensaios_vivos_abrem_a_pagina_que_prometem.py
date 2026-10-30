@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""As cinco bancadas vivas abrem a página que prometem — e não saem verdes sem ela."""
+"""Os cinco ensaios vivos abrem a página que prometem — e não saem verdes sem a página."""
 from __future__ import annotations
 
 import pathlib
@@ -19,7 +19,7 @@ ENSAIOS = (
 
 
 def _casa(nome: str) -> pathlib.Path:
-    """A pasta da bancada: a interface (a 02) ou a dos pilotos de uma aba só."""
+    """A pasta do ensaio: a interface (a 02) ou a dos pilotos de uma aba só."""
     return INTERFACE if (INTERFACE / nome).is_file() else PILOTOS
 
 
@@ -41,7 +41,7 @@ def test_as_cinco_ensaios_apontam_para_uma_pagina_que_existe() -> None:
     faltam = []
     for nome in ENSAIOS:
         arq = _casa(nome) / nome
-        assert arq.exists(), f"a bancada {nome} sumiu — a lista desta régua envelheceu"
+        assert arq.exists(), f"o ensaio {nome} sumiu — a lista desta régua envelheceu"
         alvo = _caminho_da_pagina(arq.read_text(encoding="utf-8"))
         assert alvo is not None, (
             f"{nome} não declara `PAGINA = …` numa forma que esta régua leia — "
@@ -49,14 +49,14 @@ def test_as_cinco_ensaios_apontam_para_uma_pagina_que_existe() -> None:
         if not alvo.exists():
             faltam.append(f"{nome} -> {alvo}")
     assert not faltam, (
-        "bancada viva apontando para página que não existe:\n  "
+        "ensaio vivo apontando para página que não existe:\n  "
         + "\n  ".join(faltam)
         + "\n\nO sintoma não é erro: é `ERRO DE CARGA`, `voltas: 0` e `rc=0` — "
           "verde sobre uma janela vazia.")
 
 
 def _recusa_a_pagina_ausente(fonte: str) -> bool:
-    """A bancada confere que a página existe e SAI com `rc=2` — pela ÁRVORE."""
+    """O ensaio confere que a página existe e SAI com `rc=2` — pela ÁRVORE."""
     import ast
 
     for no in ast.walk(ast.parse(fonte)):
@@ -80,7 +80,7 @@ def _recusa_a_pagina_ausente(fonte: str) -> bool:
 
 
 def test_as_cinco_ensaios_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
-    """A guarda que faz o `rc` contar. Sem ela, achar o defeito acima é sorte."""
+    """A guarda que faz o `rc` contar. Sem a guarda, achar o defeito acima é sorte."""
     sem_guarda_da_pagina, sem_guarda_da_volta = [], []
     for nome in ENSAIOS:
         fonte = (_casa(nome) / nome).read_text(encoding="utf-8")
@@ -92,5 +92,5 @@ def test_as_cinco_ensaios_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
         f"{sem_guarda_da_pagina} não conferem se a página existe antes de subir "
         "a janela — devolveriam `rc=0` sobre o vazio")
     assert not sem_guarda_da_volta, (
-        f"{sem_guarda_da_volta} não reprovam quando a bancada não deu uma volta "
-        "— uma bancada que não girou não mediu nada, e não sai verde")
+        f"{sem_guarda_da_volta} não reprovam quando o ensaio não deu uma volta "
+        "— um ensaio que não girou não mediu nada, e não sai verde")

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """OS GESTOS DO CONTROLE FAZEM O QUE A TELA DIZ — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01.
 
-A pergunta (29/09): *«Essa aba tá integrada e realmente funciona?»*. Medido
+A pergunta (29/09): a aba está integrada e funciona de verdade? Medido
 no `dev` de 01/10: os seis gestos disparavam, cada um com o ato cravado em
 `start_hotkey_manager`, e a lista ao lado de cada um era desenho sem dono — o
 `maquina.json` recusava o campo, o pacote da 06 declarava `acao-do-gesto` em
 `SEM_GESTO`, e o PS sozinho abria a Steam com o jogo na frente (os 17 toques da
-noite de 01/10, a §14). <!-- noqa-acento: citação literal -->
+noite de 01/10, a §14).
 
 Tudo aqui roda num lar de mentira (o `HOME` e os `XDG_*` da suíte), com
 endereços na faixa sintética da casa, e sem gerenciador nem processo de verdade:
@@ -584,7 +584,7 @@ def test_o_ps_sozinho_so_abre_a_steam_sem_jogo_e_com_o_sexto_na_steam(
 @pytest.mark.parametrize("gesto", list(ag.GESTOS))
 def test_o_nada_cala_os_seis(atendentes: dict[str, list[Any]], gesto: str,
                              monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «— Nada —» vale nos seis gestos (a §14, dela): nenhum atendente é chamado."""
+    """O «— Nada —» vale nos seis gestos (a §14): nenhum atendente é chamado."""
     no_fio: list[str] = []
     original = hotkey._AtosDoGesto._fio
 

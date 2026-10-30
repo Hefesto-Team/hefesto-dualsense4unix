@@ -1,4 +1,4 @@
-"""Os instrumentos de bancada de 09/09 montam o byte certo, no report certo, e só ele."""
+"""Os instrumentos de ensaio de 09/09 montam o byte certo, no report certo, e só ele."""
 
 from __future__ import annotations
 

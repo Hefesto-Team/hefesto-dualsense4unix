@@ -91,7 +91,7 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
 
 
 class _LeitorDoP1QueAperta(_LeitorDoP1):
-    """O leitor do P1 da bancada, que também devolve o que se aperta no nó que ele lê."""
+    """O leitor do P1 do ensaio, que também devolve o que se aperta no nó que ele lê."""
 
     def snapshot(self) -> Any:
         base = super().snapshot()
@@ -133,7 +133,7 @@ class _LeitorDoCoopQueAperta(_LeitorDeSecundario):
 
 
 class MesaDosAtalhos(MesaHonesta):
-    """A bancada honesta, com a mão de quem joga e o gerente de atalhos real."""
+    """O ensaio honesto, com a mão de quem joga e o gerente de atalhos real."""
 
     def __init__(
         self,
@@ -180,7 +180,7 @@ class MesaDosAtalhos(MesaHonesta):
         return lambda: self.disparos.append(nome)
 
     def tique(self, segundos: float = TIQUE) -> None:
-        """Os laços da bancada, e a metade do laço que alimenta o vpad do P1 e os atalhos."""
+        """Os laços do ensaio, e a metade do laço que alimenta o vpad do P1 e os atalhos."""
         for jogador in list(self.coop._players.values()):
             abrir = getattr(jogador.reader, "abrir", None)
             if callable(abrir):
@@ -259,7 +259,7 @@ def _gesto_com_o_laco(ensaio: MesaDosAtalhos, gesto: Any) -> None:
 def armar_o_ato_do_daemon(
     ensaio: MesaDosAtalhos, monkeypatch: pytest.MonkeyPatch
 ) -> SimpleNamespace:
-    """Os atos de verdade do ``Daemon`` no daemon de mentira da bancada."""
+    """Os atos de verdade do ``Daemon`` no daemon de mentira do ensaio."""
     d: Any = ensaio.daemon
     d._emu_lock = threading.Lock()
     d._native_mode = False
@@ -333,7 +333,7 @@ class TestOP2SeguraOsAtalhosNaEspera:
 
         saiu = ensaio.tempo.t
         _fora_dentro_do_prazo(ensaio, P1)
-        assert ensaio.vaga(), "a bancada não abriu a vaga do posto"
+        assert ensaio.vaga(), "o ensaio não abriu a vaga do posto"
         assert ensaio.apertar(P2, "ps", "r3") == ["ponte"], (
             "o P2 apertou PS + R3 com o P1 fora e o modo não trocou"
         )
@@ -395,7 +395,7 @@ class TestOP2SeguraOsAtalhosNaEspera:
     def test_a_volta_pelo_outro_transporte_devolve_os_atalhos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, de: str, para: str,
     ) -> None:
-        """A linha 3 da bancada: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
+        """A linha 3 do ensaio: o P1 sai do cabo e volta pelo rádio (e o inverso)."""
         ensaio = montar_atalhos(monkeypatch, kernel, 4, "usb" if de == "usb" else "bt")
         _fora_dentro_do_prazo(ensaio, P1)
         assert ensaio.apertar(P2, "ps", "r3") == ["ponte"]

@@ -250,7 +250,7 @@ def test_liga_um_liga_outro_e_os_dois_ficam_no_ar(mesa: Any) -> None:
         f"a luz de quem continua no ar apagou: {mesa.backend.leds}"
     )
     assert _eleito(mesa) == P4
-    assert mesa.pipewire.ativo == _canal(P4), "o padrão é o último que ela ligou"
+    assert mesa.pipewire.ativo == _canal(P4), "o padrão é o último que quem usa ligou"
 
 
 def test_os_quatro_da_mesa_do_usuario_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
@@ -277,7 +277,7 @@ def test_os_quatro_da_mesa_do_usuario_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
     assert sorted(p.no.uniq for p in pontes.values()) == sorted(u for u, _ in radio)
     for ponte in pontes.values():
         assert ponte.ditos[-1:] == [True], (
-            f"a ponte de {ponte.no.uniq} não recebeu o pedido dela: {ponte.ditos}"
+            f"a ponte de {ponte.no.uniq} não recebeu o pedido de quem usa: {ponte.ditos}"
         )
     assert mesa.registro.no_ar() == {_n(u): True for u, _ in MESA_DO_USUARIO}, (
         "a varredura apagou a palavra de quem está no cabo"
@@ -376,7 +376,7 @@ def test_a_ponte_de_um_cai_a_luz_dele_apaga_e_o_outro_nao_e_tocado(mesa: Any) ->
     _voltas_do_canal(mesa, 1)
     assert hotkey._no_ar_da_sessao(mesa.daemon).todos() == [P1, P4], (
         "uma leitura sem canal tirou A do ar — a reconexão de rádio derrubaria "
-        "o microfone dela"
+        "o microfone de quem usa"
     )
 
     _voltas_do_canal(mesa, 1)
@@ -392,7 +392,7 @@ def test_a_ponte_de_um_cai_a_luz_dele_apaga_e_o_outro_nao_e_tocado(mesa: Any) ->
 def test_quem_nasce_antes_do_canal_nao_sai_do_ar_esperando_por_ele(mesa: Any) -> None:
     """O segundo controle nasce no ar, e o canal dele sobe segundos depois.
 
-    MEDIDO NO JOURNAL DA BANCADA em 22/09/2026, com dois DualSense no rádio: o P2
+    MEDIDO NO JOURNAL DO ENSAIO em 22/09/2026, com dois DualSense no rádio: o P2
     nasceu no ar às 13:51:53, o laço do canal contou duas faltas e o tirou às
     13:51:56 (`mic_da_mesa_saiu_do_ar_de_fato`), e a fonte dele foi publicada
     às 13:52:01. A palavra foi esquecida, a ponte passou a seguir o ouvinte da

@@ -4,7 +4,7 @@
 guarda as duas metades da cura:
 
 * **Os três portões de página não dependem da rede.** As páginas pediam a fonte ao
-  Google (desde 23/10/2026 ela mora no produto e a página real não pede nada fora da
+  Google (desde 23/10/2026 a fonte mora no produto e a página real não pede nada fora da
   máquina); com a rede fora o ``goto`` esperava o ``load`` por 30 s e REPROVAVA. O ponto
   comum ``scripts/chrome_sem_rede.py`` recusa o que não é local. A régua prova (1) que
   a página abre com uma rede que NUNCA responde, (2) que o instrumento morde
@@ -210,7 +210,7 @@ class TestOsTresPortoesDePaginaPassamPeloPontoComum:
         altura = _modulo_do_script("check_a_altura_do_cartao")
         pagina = altura._onde.pagina("02-controles.html")
         if not pagina.exists():  # pragma: no cover
-            pytest.skip("a página da aba 02 não está na bancada desta árvore")
+            pytest.skip("a página da aba 02 não está no mockup desta árvore")
         altura.medir(pagina, altura.LARGURAS)
         assert [c["uri"].rsplit("/", 1)[-1] for c in chamadas] == (
             ["02-controles.html"] * len(altura.LARGURAS)), chamadas

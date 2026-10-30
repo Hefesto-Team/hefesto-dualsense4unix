@@ -1,4 +1,4 @@
-"""As seis regras de topologia — o que cada uma acusa, e o que ela CALA."""
+"""As seis regras de topologia — o que cada uma acusa, e o que CALA."""
 from __future__ import annotations
 
 from tests.unit import ensaio_das_ordens as ensaio
@@ -9,7 +9,7 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 
 
 def leitura(**campos: object) -> ordens.Leitura:
-    """A bancada inteira como `Leitura`, com o que o teste quiser por cima."""
+    """A máquina de teste inteira como `Leitura`, com o que o teste quiser por cima."""
     base: dict[str, object] = {
         "censo": ensaio.censo(),
         "entradas": ensaio.entradas(),
@@ -69,7 +69,7 @@ def test_r1_cala_quando_o_peer_nao_costura_nada() -> None:
 
 
 def test_r1_nao_chuta_wifi() -> None:
-    """Classe `ff` e sem declaração dela: a ordem NÃO escreve "Wi-Fi"."""
+    """Classe `ff` e sem declaração do usuário: a ordem NÃO escreve "Wi-Fi"."""
     ordem = ordens.radio_largo_no_mesmo_hub(leitura())
     assert ordem is not None
     todo_o_texto = " ".join(
@@ -82,7 +82,7 @@ def test_r1_nao_chuta_wifi() -> None:
 
 
 def test_r1_chama_pelo_nome_que_o_usuario_declarou() -> None:
-    """Declarado por ela, o aparelho passa a ter nome — e é o nome DO USUÁRIO."""
+    """Declarado pelo usuário, o aparelho passa a ter nome — e é o nome DO USUÁRIO."""
     ordem = ordens.radio_largo_no_mesmo_hub(
         leitura(nomes_declarados={"2357:012d": "o adaptador de rede"})
     )
@@ -108,7 +108,7 @@ def test_r2_nao_acusa_a_webcam() -> None:
 
 
 def test_r2_acusa_quando_os_dois_lados_irradiam() -> None:
-    """Dois adaptadores Bluetooth colados no desenho dela: uma ordem."""
+    """Dois adaptadores Bluetooth colados no desenho do usuário: uma ordem."""
     ordem = ordens.dois_radios_colados(
         leitura(
             vizinhas=(("7", "8"),),
@@ -135,7 +135,7 @@ def test_r3_nao_acusa_dongle_de_dongle() -> None:
 
 
 def test_r3_diz_uma_frase_de_portugues_inteira() -> None:
-    """A frase MONTADA, palavra por palavra — e ela nasceu de um defeito meu."""
+    """A frase MONTADA, palavra por palavra — e nasceu de um defeito."""
     for quantos, esperada in (
         (3, "2 de 3 adaptadores BT passam por um hub."),
         (1, "1 de 1 adaptador BT passa por um hub."),
@@ -149,7 +149,7 @@ def test_r3_diz_uma_frase_de_portugues_inteira() -> None:
         assert frase == esperada, (
             f"a frase do R3 saiu {frase!r} e devia ser {esperada!r}. O verbo "
             f"mora num lugar só — o `_plural` conjuga e o sufixo começa na "
-            f"preposição. Foi assim que «chegam passam» chegou à tela dela.")
+            f"preposição. Foi assim que «chegam passam» chegou à tela.")
 
 
 def test_r3_nao_tem_verbo_dobrado_na_frase_que_vai_para_a_tela() -> None:
@@ -161,7 +161,7 @@ def test_r3_nao_tem_verbo_dobrado_na_frase_que_vai_para_a_tela() -> None:
         for b in ("passa", "passam"):
             assert f"{a} {b}" not in texto, (
                 f"a frase do R3 tem «{a} {b}» — dois verbos colados, que é o "
-                f"defeito que ela leu na tela em 19/09: {texto!r}")
+                f"defeito lido na tela em 19/09: {texto!r}")
     assert "passa" in texto or "passam" in texto, (
         f"a frase do R3 perdeu o verbo inteiro: {texto!r}")
 
@@ -250,7 +250,7 @@ def test_r5_r6_falam_quando_o_numero_muda(
 
 
 def test_nenhuma_ordem_publica_serial() -> None:
-    """O serial identifica a unidade dela tão bem quanto o MAC, e a tela é PNG."""
+    """O serial identifica a unidade tão bem quanto o MAC, e a tela é PNG."""
     seriais = set(ensaio.SERIAIS.values())
     for ordem in ordens.catalogo(leitura()):
         texto = " ".join([ordem.acao, ordem.arranjo] + [
@@ -261,7 +261,7 @@ def test_nenhuma_ordem_publica_serial() -> None:
 
 
 def test_nenhuma_ordem_cita_milimetro_nem_altura() -> None:
-    """O GUIA é raciocínio, e ela já disse que não sabe o que isso quer dizer."""
+    """O GUIA é raciocínio, e quem usa já disse que não sabe o que isso quer dizer."""
     proibidas = ("mm", "milímetro", "centímetro", "altura da antena", "visada")
     for ordem in ordens.catalogo(leitura()):
         texto = " ".join(
@@ -281,7 +281,7 @@ def test_nao_medi_e_nao_declarado_sao_frases_diferentes() -> None:
 
 
 def test_sem_desenho_a_acao_diz_o_que_falta_para_apontar() -> None:
-    """Sem mapa a ordem MANDA, e diz exatamente o que falta para ela apontar."""
+    """Sem mapa a ordem MANDA, e diz exatamente o que falta para a ordem apontar."""
     ordem = ordens.radio_largo_no_mesmo_hub(leitura())
     assert ordem is not None
     assert ordens.NAO_DECLARADO in ordem.acao
@@ -300,7 +300,7 @@ def test_com_desenho_a_acao_aponta_o_numero_do_usuario() -> None:
 
 
 def test_a_terceira_linha_existe_sempre() -> None:
-    """`D-LINHA-DO-GANHO-NAO-MEDIDO`: ela nunca mora só no tooltip."""
+    """`D-LINHA-DO-GANHO-NAO-MEDIDO`: a linha nunca mora só no tooltip."""
     for ordem in ordens.catalogo(leitura()):
         assert ordem.ganho_esperado.texto.strip()
         assert len(ordem.linhas) == 3
@@ -327,7 +327,7 @@ def test_duas_ordens_nao_mandam_para_a_mesma_entrada() -> None:
 
 
 def test_com_desenho_e_sem_numero_que_sirva_a_acao_nao_cobra_o_desenho() -> None:
-    """Ela já desenhou: o «use o Mapear Entradas» não volta à ordem."""
+    """O usuário já desenhou: o «use o Mapear Entradas» não volta à ordem."""
     ordem = ordens.dongle_atras_de_hub(leitura(
         entradas_livres_declaradas=("9",),
         ocupante_da_entrada={"9": "3-1.1.3"},

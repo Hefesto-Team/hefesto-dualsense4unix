@@ -10,8 +10,8 @@ roxo**:
 > branco 2, roxo 3, azul 4"*
 
 O que o usuário viu — `vermelho 1, branco 2, roxo 3, azul 4` — é o `controllers.json`
-dela sendo obedecido à risca: a fila GRAVADA tinha essa ordem, de um dia
-qualquer do passado, e a exibição saía dela. A opção (b) que o usuário escolheu troca
+do usuário sendo obedecido à risca: a fila GRAVADA tinha essa ordem, de um dia
+qualquer do passado, e a exibição saía da fila. A opção (b) que o usuário escolheu troca
 a fonte, **sem destruir o gravado**: a fila do momento manda, o gravado
 desempata.
 
@@ -19,11 +19,11 @@ desempata.
 
 Esta decisão reverte em parte DUAS medições desta casa (R-15, de 23/07, e
 R-23, de 25/07 — as duas escritas no cabeçalho de `daemon/subsystems/
-identity.py`). Ela foi escolhida porque paga zero do preço delas, e é
+identity.py`). A (b) foi escolhida porque paga zero do preço das outras, e é
 exatamente esse "zero" que os testes daqui existem para cobrar:
 
 1. **o número segue a ordem de conexão daquele momento** —
-   `TestOCasoDoUsuario`, com a bancada sem tradução;
+   `TestOCasoDoUsuario`, com o ensaio sem tradução;
 2. **a ordem CONGELA quando a mesa fica estável** — `TestCongelarEGravar`.
    Congelar, aqui, é *gravar*: a ordem do momento é escrita na fila
    persistida, e por isso sobrevive ao restart (R-23);
@@ -41,7 +41,7 @@ invariante de contagem (`TestAMesaMistaContinuaFechando`) — o mapa completo
 com Pro Controller e 8BitDo continua sem medição, como a sprint declara.
 
 Nenhum endereço real: faixa forjada `aa:bb:cc:…`, octetos 4 e 5 zerados, a
-mesma allowlist de `test_anonimato_de_fixtures.py`. A ORDEM reproduz a bancada; os bytes, não.
+mesma allowlist de `test_anonimato_de_fixtures.py`. A ORDEM reproduz o ensaio; os bytes, não.
 """
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def gravar_a_fila_do_usuario(tmp: Path, fila: dict[str, int] | None = None) -> None:
-    """Escreve o `controllers.json` no schema vivo, com a fila gravada dela."""
+    """Escreve o `controllers.json` no schema vivo, com a fila gravada do usuário."""
     (tmp / "controllers.json").write_text(
         json.dumps(
             {
@@ -149,7 +149,7 @@ def conectar_um_a_um(
     ordem: tuple[str, ...] = ORDEM_DE_CONEXAO,
     intervalo: float = 60.0,
 ) -> None:
-    """A bancada sendo montada: um controle de cada vez, minutos entre eles."""
+    """A máquina de teste sendo montada: um controle de cada vez, minutos entre eles."""
     na_mesa: list[str] = []
     for uniq in ordem:
         na_mesa.append(uniq)
@@ -158,7 +158,7 @@ def conectar_um_a_um(
 
 
 class TestOCasoDoUsuario:
-    """MORDIDA 1 — o caso dela, sem tradução: quatro controles, uma ordem."""
+    """MORDIDA 1 — o caso do usuário, sem tradução: quatro controles, uma ordem."""
 
     def test_a_fila_gravada_e_a_queixa_do_usuario(self, config_isolado: Path) -> None:
         """Ancoragem: sem isto, o resto do arquivo não prova nada."""
@@ -240,7 +240,7 @@ class TestCongelarEGravar:
     def test_a_mesa_parada_congela_e_a_ordem_do_momento_vira_a_gravada(
         self, config_isolado: Path
     ) -> None:
-        """A mordida: um tick depois da janela, a fila gravada é a dela."""
+        """A mordida: um tick depois da janela, a fila gravada é a do usuário."""
         reg, relogio = self.montar(config_isolado)
         assert not reg.mesa_congelada()
         relogio.avancar(JANELA_MESA_ESTAVEL_SEC)
@@ -440,7 +440,7 @@ class TestOGravadoEDesempate:
 
 
 class TestALampadaEORotuloSeguemJuntos:
-    """A união da MESA-CHEIA-12 não se desfaz — ela só muda de fila.
+    """A união da MESA-CHEIA-12 não se desfaz — só muda de fila.
 
     A cura de 15/08 01h00 pôs `player_indexes()` (o rótulo do card, do
     `state_full`, da CLI) para sair de `numeros_de_jogador()`, a MESMA função

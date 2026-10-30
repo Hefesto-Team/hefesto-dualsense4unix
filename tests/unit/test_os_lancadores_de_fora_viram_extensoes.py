@@ -2,7 +2,7 @@
 
 De fábrica ficam a Steam, o Heroic (Epic · GOG) e o Flatpak (D-1910-O-FLATPAK-FICA-DE-FABRICA). O
 Lutris, o RetroArch, o Dolphin, o mGBA, o Azahar e o KytyPS5 moram cada um no repositório da sua
-extensão, com o leitor dentro dela; o leitor de terceiro nunca roda dentro do serviço (ADR-021). A
+extensão, com o leitor dentro; o leitor de terceiro nunca roda dentro do serviço (ADR-021). A
 extensão de lançador do tipo ``processo`` entrega os jogos pela porta (``lancador.jogos``), e a
 aba 07 os pede ao serviço (``mods.jogos``). Quem tinha o lançador no disco lê na fila que ele virou
 extensão e o endereço; nada se instala sozinho.
@@ -238,7 +238,7 @@ def test_o_jogo_da_extensao_ligada_e_do_cartao_do_usuario(monkeypatch: pytest.Mo
 
 def test_o_achado_por_conteudo_nao_duplica_o_que_virou_extensao(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Medido na bancada de 19/10: o Lutris do Flatpak da máquina virava uma segunda linha."""
+    """Medido no ensaio de 19/10: o Lutris do Flatpak da máquina virava uma segunda linha."""
     from hefesto_dualsense4unix.integrations import jogos_locais as jl
     from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 
@@ -251,4 +251,4 @@ def test_o_achado_por_conteudo_nao_duplica_o_que_virou_extensao(
                                         atalhos=("org.exemplo.Lancador",))
     monkeypatch.setattr(censo, "lancadores_das_extensoes",
                         lambda lugares=None: (censo.LancadorDaExtensao(bloco),))
-    assert a07._achados_por_conteudo() == (), "a extensão ligada e o achado repetiu a linha dela"
+    assert a07._achados_por_conteudo() == (), "a extensão ligada e o achado repetiu a linha"

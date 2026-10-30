@@ -6,7 +6,7 @@ saíam à direita do título (minimizar, maximizar, fechar). O desenho aprovado 
 `Gtk.OffscreenWindow` sob a tela de mentira, e a posição é a alocação que o GTK dá.
 
 Desde 22/10/2026 (O-TEMA-DA-EXTENSAO-ESCOLHE-O-LADO-DOS-BOTOES-DA-JANELA-01) a esquerda é
-escolha da extensão de tema: sem ela o produto segue o lado do sistema (no COSMIC, a direita;
+escolha da extensão de tema: sem a extensão o produto segue o lado do sistema (no COSMIC, a direita;
 `test_o_tema_da_extensao_escolhe_o_lado_dos_botoes.py`). Aqui a sonda liga uma extensão de tema
 que diz `botoes: esquerda`, num `XDG_*` de mentira, e monta a barra no lado que a janela escolhe.
 

@@ -114,7 +114,7 @@ def _seletores_de_som(doc: str) -> list[str]:
             if 'data-bloco="alto-falante"' in seletor]
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["mockup", "publicado"])
 def test_a_02_a_moldura_do_alto_falante_tem_endereco_proprio(publicado: bool) -> None:
     """A folha casa o `data-apagado`, e a moldura o recebe pelo alvo `atributo`."""
     doc = _pagina(PAGINA_02, publicado)
@@ -132,7 +132,7 @@ def test_a_02_a_moldura_do_alto_falante_tem_endereco_proprio(publicado: bool) ->
 DIGITO = re.compile(r"\d")
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["mockup", "publicado"])
 def test_a_09_o_title_do_parar_nao_crava_numero(publicado: bool) -> None:
     """MORDIDA: devolva o `{N}` ao `title` do Parar em `aba09.py` e publique."""
     tags = [t for t in re.findall(r"<button\b[^>]*>", _pagina(PAGINA_09, publicado))

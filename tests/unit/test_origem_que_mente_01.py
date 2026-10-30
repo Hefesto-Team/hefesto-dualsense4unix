@@ -48,7 +48,7 @@ def test_o_setter_nao_tem_default_de_origem(nome: str) -> None:
     p = sig.parameters.get("origin")
     assert p is not None, f"`{nome}` perdeu o parâmetro `origin`"
     assert p.default is inspect.Parameter.empty, (
-        f"`{nome}` voltou a ter default de `origin`. Silêncio vira gesto dela, e "
+        f"`{nome}` voltou a ter default de `origin`. Silêncio vira gesto do usuário, e "
         "um cliente distraído fura o portão JOGO-01 com o jogo aberto."
     )
     assert p.kind is inspect.Parameter.KEYWORD_ONLY, (
@@ -92,11 +92,11 @@ def test_nenhum_handler_ipc_chama_sem_declarar() -> None:
             chamada = trecho[: trecho.index(")")]
             assert "origin=" in chamada, (
                 f"há uma chamada a `{nome}` nos handlers IPC sem `origin=`. "
-                "Silêncio vira gesto dela, e o portão JOGO-01 deixa passar."
+                "Silêncio vira gesto do usuário, e o portão JOGO-01 deixa passar."
             )
 
     assert "origem_do_pedido" in texto, (
-        "sumiu a função que traduz o pedido em origem — sem ela cada handler "
+        "sumiu a função que traduz o pedido em origem — sem a função cada handler "
         "decide por conta própria, e a regra deixa de ter um dono só."
     )
 
@@ -125,7 +125,7 @@ def test_a_janela_declara_o_gesto_do_usuario(arquivo: str) -> None:
             assert '"origin": "manual"' in bloco, (
                 f"em `{arquivo}` há um pedido a `{metodo}` sem "
                 '`"origin": "manual"`. Dentro de um jogo marcado, o daemon vai '
-                "recusar o clique dela — foi assim que o botão 'Jogar pelo "
+                "recusar o clique do usuário — foi assim que o botão 'Jogar pelo "
                 "Hefesto' parou de funcionar em 08/08."
             )
 
@@ -152,7 +152,7 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
     bloco = texto[inicio : texto.index("\n    def ", inicio)]
     assert 'origin="profile"' in bloco, (
         "o `restore_mouse_preference` deixou de se declarar reconciliação. Ele "
-        "restaura preferência persistida, e chamá-lo de gesto dela reabre o "
+        "restaura preferência persistida, e chamá-lo de gesto do usuário reabre o "
         "defeito pelo outro lado."
     )
     assert 'origin="manual"' not in bloco, (
@@ -169,6 +169,6 @@ def test_o_arranjo_do_desktop_declara_a_origem() -> None:
     bloco = trecho[: trecho.index("}") + 1]
     assert '"origin": "manual"' in bloco, (
         "o arranjo do desktop parou de declarar a origem. O silêncio é lido "
-        "como automático, e o gesto dela perde a única porta que atravessa o "
+        "como automático, e o gesto do usuário perde a única porta que atravessa o "
         "lock manual."
     )

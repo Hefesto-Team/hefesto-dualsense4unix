@@ -24,7 +24,7 @@ dos 11 bytes»); não copia código de ninguém.
 Só valem os bits 0 a 9 da máscara: o curso tem dez zonas.
 
 A TABELA DE ISENÇÃO diz o que ainda está errado hoje, efeito por efeito, e com
-o ID da sprint que o cura. Ela só encolhe: uma isenção cujo efeito já saiu certo
+o ID da sprint que o cura. A tabela só encolhe: uma isenção cujo efeito já saiu certo
 reprova (a linha velha se apaga), e um efeito FORA da tabela que falhe reprova.
 """
 
@@ -210,7 +210,7 @@ def _nomes_dos_casos() -> list[str]:
     """Os casos da régua: cada fábrica menos as de fora, mais o perfil aninhado.
 
     Só os NOMES: o efeito nasce dentro do teste, para uma fábrica que passe a
-    recusar os padrões reprovar o caso dela e não a coleta inteira.
+    recusar os padrões reprovar o próprio caso e não a coleta inteira.
     """
     nomes = [nome for nome in PRESET_FACTORIES if nome not in FORA_DA_REGUA]
     return [*nomes, VIBRACAO_ANINHADA]
@@ -437,7 +437,7 @@ def test_a_regua_le_o_bloco_que_o_relatorio_manda(caso: str) -> None:
     """O `bloco_de` da régua é o que o backend põe no relatório, efeito a efeito.
 
     Sem isto a régua leria a própria cópia do layout, e um backend que mudasse
-    de lugar um byte passaria nela.
+    de lugar um byte passaria na régua.
 
     Mordida: pôr a sétima força no byte 4 do `bloco_de`.
     """
@@ -465,7 +465,7 @@ def test_os_blocos_do_roteiro_das_cegas_passam_pela_regua(nome: str) -> None:
 
 def test_os_blocos_do_roteiro_sao_os_dos_padroes_da_tela_no_modo_proprio() -> None:
     """O roteiro não inventa byte: a arma da Semi-automática é a do Disparo com
-    os padrões dela, e o arco e o galope têm os valores da tela."""
+    os padrões do Disparo, e o arco e o galope têm os valores da tela."""
     semi = _SPEC_POR_NOME["SemiAutoGun"]
     inicio, fim, forca = (p.default for p in semi.params)
     assert BLOCOS_DA_SESSAO_AS_CEGAS["SemiAutoGun (arma 0x25)"] == (

@@ -242,7 +242,7 @@ def test_morde_o_paralelo_que_engole_vermelho(tmp_path: Path) -> None:
     repo = _monta(tmp_path, TABELA_DAS_TRES, arquivos=_MORDIDAS["mordida-no-py"], portoes=mutante)
     serie, paralela = _as_duas_corridas(repo)
     assert serie != paralela, (
-        "a régua não viu o paralelo engolir um vermelho: ela não mede o veredito"
+        "a régua não viu o paralelo engolir um vermelho: a régua não mede o veredito"
     )
     assert serie["py-marca"] == "VERMELHO" and paralela["py-marca"] == "ok"
 

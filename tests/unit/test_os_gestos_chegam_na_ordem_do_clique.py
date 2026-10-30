@@ -179,7 +179,7 @@ def test_dois_gestos_que_gravam_o_mesmo_perfil_guardam_as_duas_mudancas(
 
     monkeypatch.setenv(loader.SEED_SKIP_ENV_VAR, "1")
     loader.save_profile(Profile.model_validate(
-        {"name": "Bancada", "match": {"type": "criteria"},
+        {"name": "Ensaio", "match": {"type": "criteria"},
          "rumble": {"policy": "balanceado"}}))
     ler_de_verdade = loader.load_profile
 
@@ -190,7 +190,7 @@ def test_dois_gestos_que_gravam_o_mesmo_perfil_guardam_as_duas_mudancas(
 
     monkeypatch.setattr(loader, "load_profile", ler_devagar)
     p = PonteLenta()
-    ctx = _ctx("Bancada")
+    ctx = _ctx("Ensaio")
     erros: list[BaseException] = []
     um = _clicar(ctx, "intensidade", {"uniq": P1, "valor": "30"}, p, erros)
     outro = _clicar(ctx, "intensidade", {"uniq": P2, "valor": "150"}, p, erros)

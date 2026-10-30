@@ -12,7 +12,7 @@ o volume de um controle ao microfone do outro.
 A CURA É A COSTURA QUE O ESQUEMA PEDE, e o texto dele a nomeia: *"quando o
 applier passar a chamar `fonte_de_captura_do_uniq`, o campo entra aqui"*. A
 função já existe e já foi curada em 03/09 para resolver também o controle no
-RÁDIO — antes ela devolvia ``None`` para qualquer um sem placa de som própria.
+RÁDIO — antes a função devolvia ``None`` para qualquer um sem placa de som própria.
 
 **A METADE QUE IMPORTA É NÃO CAIR PARA A ROTA GLOBAL.** Se o ``uniq`` não
 resolve, escrever na primeira fonte da lista é exatamente o estrago que a linha

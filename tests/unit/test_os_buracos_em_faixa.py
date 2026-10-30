@@ -1,7 +1,7 @@
 """O-ASSENTO-GUARDADO-NAO-ANDA-04 — os 60 arranjos raros também fecham o buraco no jogo.
 
 Desde a D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026), com o jogo
-na autoridade nenhum prazo vence: as bancadas vivas provam que ninguém renasce
+na autoridade nenhum prazo vence: os ensaios vivos provam que ninguém renasce
 por quem saiu, e a matriz de quatro solta os lugares pelo «Renumerar agora».
 """
 from __future__ import annotations
@@ -328,7 +328,7 @@ DEPOIS = 10.0
 
 @pytest.fixture
 def mesa_de_seis(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A bancada de queda com um sexto controle (a mesa de cinco lê ``CHAVE_DE``)."""
+    """O ensaio de queda com um sexto controle (a mesa de cinco lê ``CHAVE_DE``)."""
     monkeypatch.setitem(ensaio_mod.CHAVE_DE, SEXTO, "AA:BB:CC:00:00:06")
     monkeypatch.setattr(coop_mod, "ESPERA_PELA_ORDEM_S", 0.0)
 

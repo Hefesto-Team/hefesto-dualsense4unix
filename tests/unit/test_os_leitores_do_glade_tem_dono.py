@@ -45,20 +45,20 @@ def test_a_aba_05_le_as_duas_frases_do_motor_e_nao_as_digita(
 
     for nome in NO_GLADE:
         assert getattr(aba05, nome) is getattr(vibracao, nome), (
-            f"a aba 05 deixou de LER {nome} de `app/telas/vibracao` — se ela "
+            f"a aba 05 deixou de LER {nome} de `app/telas/vibracao` — se a aba "
             "voltar a digitar o texto, as duas cópias divergem na primeira "
             "edição (RUM-01, o botão 'Devolver ao jogo' que não existia)")
 
 
 def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
-    """A MORDIDA FORTE, e é ela que prova a sprint inteira.
+    """A MORDIDA FORTE, e é a que prova a sprint inteira.
 
     O `gui/main.glade` é **apagado de verdade** numa cópia descartável, e a aba
     05 tem de continuar montando com as duas frases dentro. Nada é remendado: o
     arquivo não existe, e é esse o mundo em que a `GTK-3` vai deixar a árvore.
 
     A cópia leva `src/`, `docs/data` e `assets/` (o que o gerador lê) e a
-    bancada vai para o `tmp_path` pelo `HEFESTO_ENSAIO` — a árvore de quem
+    página vai para o `tmp_path` pelo `HEFESTO_ENSAIO` — a árvore de quem
     roda não recebe um byte.
 
     SEM O GTK REAL, PULA — 27/09/2026. O `aba05.py` chega ao GTK pela tela da
@@ -78,9 +78,9 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
     glade = arvore / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
     if glade.exists():
         glade.unlink()
-    assert not glade.exists(), "a mordida não apagou o glade — ela não mediu nada"
+    assert not glade.exists(), "a mordida não apagou o glade — a mordida não mediu nada"
 
-    ensaio = tmp_path / "bancada"
+    ensaio = tmp_path / "ensaio"
     ensaio.mkdir()
     saida = subprocess.run(
         [sys.executable, "aba05.py"],
@@ -241,7 +241,7 @@ def test_sem_o_glade_o_extrator_para_e_diz_o_que_sumiu(tmp_path: Path) -> None:
         "encolhe em silêncio")
     assert "main.glade" in saida.stderr, "a recusa não nomeia o que sumiu"
     assert "D-0609-GTK-LEVA-INTEIRA" in saida.stderr, (
-        "a recusa não diz POR QUE o arquivo sumiu — sem isso ela vira mais um "
+        "a recusa não diz POR QUE o arquivo sumiu — sem isso a recusa vira mais um "
         "erro de ferramenta para alguém contornar")
     assert "--sem-a-janela" in saida.stderr, "a recusa não diz como seguir"
     assert pot.read_text(encoding="utf-8") == 'msgid "o catálogo de ontem"\nmsgstr ""\n', (
@@ -253,7 +253,7 @@ def test_sem_o_glade_o_extrator_para_e_diz_o_que_sumiu(tmp_path: Path) -> None:
 @pytest.mark.skipif(shutil.which("xgettext") is None,
                     reason="gettext ausente nesta máquina")
 def test_a_bandeira_deixa_o_catalogo_menor_sair_por_escrito(tmp_path: Path) -> None:
-    """`--sem-a-janela` é a saída, e ela DIZ o tamanho do buraco."""
+    """`--sem-a-janela` é a saída, e DIZ o tamanho do buraco."""
     arvore = _arvore_de_extracao(tmp_path, com_glade=False)
     saida = _extrair(arvore, "--sem-a-janela")
     assert saida.returncode == 0, saida.stderr

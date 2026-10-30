@@ -67,7 +67,7 @@ def test_a_tabela_vai_e_volta_do_disco(tmp_path: Path) -> None:
 
 
 def test_a_linha_torta_nao_derruba_as_outras() -> None:
-    """Um erro de digitação dela custa UMA linha, nunca a tabela inteira."""
+    """Um erro de digitação custa UMA linha, nunca a tabela inteira."""
     texto = (
         "# comentário\n"
         "\n"
@@ -136,7 +136,7 @@ def test_o_jogo_sem_a_linha_ganha_a_linha(tmp_path: Path) -> None:
 
 
 def test_aplicar_de_novo_nao_escreve_nada(tmp_path: Path) -> None:
-    """Idempotência: sem ela, o vigia deixaria um backup a cada meia hora."""
+    """Sem idempotência, o vigia deixaria um backup a cada meia hora."""
     vdf = _vdf_de_mentira(tmp_path)
     _tabela(tmp_path, **{APPID: OPCOES})
     opj.aplicar(vdfs=[vdf], config_home=tmp_path)
@@ -200,7 +200,7 @@ def test_o_vigia_aplica_a_tabela_e_o_install_resolve_o_caminho() -> None:
 
 def test_o_cli_lista_define_e_tira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
                                    capsys: pytest.CaptureFixture[str]) -> None:
-    """O caminho que ELA usa no terminal, com o `XDG_CONFIG_HOME` desviado."""
+    """O caminho que QUEM USA usa no terminal, com o `XDG_CONFIG_HOME` desviado."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     assert opj.main(["--definir", APPID, OPCOES]) == 0
     assert opj.main(["--listar"]) == 0
@@ -216,7 +216,7 @@ BASE_DO_STEAMID64 = 76561197960265728
 def _vdf_com_bloco_filho(appid: str = APPID) -> str:
     """O jogo do Sackboy: o bloco `cloud` vem ANTES da `LaunchOptions` dele.
 
-    Medido na `localconfig.vdf` dela em 08/10: 36 dos 73 jogos têm bloco filho
+    Medido na `localconfig.vdf` real em 08/10: 36 dos 73 jogos têm bloco filho
     antes da linha (ou ainda não têm linha). O escritor antigo fechava o jogo no
     `}` do filho e escrevia a opção lá dentro.
     """
@@ -271,7 +271,7 @@ def _valor_escapado(opcoes: str) -> str:
 
 def test_a_linha_perdida_no_bloco_filho_pela_versao_velha_e_alinhada(
         tmp_path: Path) -> None:
-    """O vdf dela JÁ tem a sujeira de 06/10 (`cloud/LaunchOptions`): fica igual à do jogo."""
+    """O vdf real JÁ tem a sujeira de 06/10 (`cloud/LaunchOptions`): fica igual à do jogo."""
     sujo = _vdf_com_bloco_filho().replace(
         '\t\t\t\t\t\t\t"last_sync_state"\t\t"synchronized"\n',
         '\t\t\t\t\t\t\t"last_sync_state"\t\t"synchronized"\n'
@@ -314,7 +314,7 @@ def _duas_contas(home: Path, com_marca: bool) -> tuple[Path, Path]:
 
 @pytest.mark.parametrize("com_marca", [True, False], ids=["MostRecent", "Timestamp"])
 def test_so_a_conta_logada_recebe_a_linha(tmp_path: Path, com_marca: bool) -> None:
-    """Duas contas, o `loginusers.vdf` diz qual é a logada: só a dela é escrita.
+    """Duas contas, o `loginusers.vdf` diz qual é a logada: só a logada é escrita.
 
     ARRANQUE o filtro `so_a_conta_logada` do `aplicar` (escrever em todos) e
     este teste reprova: a conta 111 ganha a linha.

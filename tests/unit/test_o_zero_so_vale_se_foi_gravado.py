@@ -69,7 +69,7 @@ def _servidor(casa: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> An
 
 
 def _medir(servidor: Any, uniq: str) -> dict[str, Any]:
-    """Pede a medida, espera ela acabar e devolve o `zero` do `state_full` do controle."""
+    """Pede a medida, espera a medida acabar e devolve o `zero` do `state_full` do controle."""
 
     async def _a_medida() -> None:
         await servidor._handlers["motion.calibrate"]({"uniq": uniq})
@@ -86,7 +86,7 @@ def _casa_sem_escrita(tmp_path: Path) -> Path:
     casa = tmp_path / "somente-leitura"
     casa.mkdir()
     casa.chmod(0o500)
-    assert not os.access(casa, os.W_OK), "a bancada roda como root: o diretório escreve"
+    assert not os.access(casa, os.W_OK), "a máquina de teste roda como root: o diretório escreve"
     return casa
 
 

@@ -1,6 +1,6 @@
 """Os alvos e a letra crescem, e a interface ganha tamanho (20/10/2026).
 
-O piso é dela (13/10: alvo de 24 px, o WCAG 2.2 critério 2.5.8, e nenhuma letra abaixo de 12 px).
+O piso, de 13/10: alvo de 24 px, o WCAG 2.2 critério 2.5.8, e nenhuma letra abaixo de 12 px.
 A régua mede o que os GERADORES escrevem nas nove abas, não o publicado de ontem, com o Chrome do
 sistema: todo elemento que age, todo título ou rótulo que abre uma dica (o `?` de 17 px é um deles),
 todo texto visível, em quatro vistas e nos estados do acordeão da seção Controles, que
@@ -9,7 +9,7 @@ mora na Jogar desde 28/10/2026 (a 02 saiu do produto; a folha `02-controles` vei
 * **A seção Controles (na Jogar) e a 09 chegam a zero**, em toda vista: a escolha de 20/10
   («Controles: A», «Sistema: A»).
 * **As outras sete abas têm teto declarado** (`TETO_DAS_OUTRAS`): quanto cada uma ainda fica abaixo
-  do piso HOJE. O teto só desce; tela que nasce pequena reprova. Zerar uma delas é o desenho dela,
+  do piso HOJE. O teto só desce; tela que nasce pequena reprova. Zerar uma das sete é o desenho,
   que a sprint seguinte pede (a escolha de 20/10 cobriu só a 02 e a 09).
 * **O tamanho da interface** (`interface_escala`, escrito pela 09) é lido pela janela, que põe o
   zoom no WebView ao abrir e quando o arquivo muda (filho sob `xvfb-run`: a janela do pytest
@@ -117,8 +117,8 @@ def _so_o_arquivo(rota: Any) -> None:
 
 @pytest.fixture(scope="module")
 def geradas(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
-    """As dez abas como os geradores as escrevem hoje, numa bancada de mentira."""
-    ensaio = tmp_path_factory.mktemp("bancada")
+    """As dez abas como os geradores as escrevem hoje, numa pasta de mentira."""
+    ensaio = tmp_path_factory.mktemp("ensaio")
     for pagina in MOCKUP.glob("*.html"):
         shutil.copy(pagina, ensaio / pagina.name)
     ambiente = dict(os.environ, PYTHONPATH=str(RAIZ / "src"), HEFESTO_ENSAIO=str(ensaio))
@@ -500,7 +500,7 @@ _FILHO = textwrap.dedent(
     print("ao-gravar", json.dumps([zoom(1.25), dicas()]), flush=True)
     tela.janela.set_default_size(1918, 840)  # a janela oculta muda pelo tamanho padrão
     print("na-vista-baixa", json.dumps([zoom(1.03), dicas()]), flush=True)
-    # a página nova (trocar de aba e voltar) nasce com a dica do desenho, e o em uso volta a ela
+    # a página nova (trocar de aba e voltar) nasce com a dica do desenho, e o em uso volta à dica
     vezes = len(carregou)
     tela.view.reload()
     bombear(lambda: len(carregou) > vezes)
@@ -555,7 +555,7 @@ def test_a_janela_le_o_tamanho_da_interface(tmp_path: pathlib.Path) -> None:
 
     E o tamanho cede onde não cabe (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01, «Cede onde
     não cabe», 23/10/2026): a janela baixada a 840 px de altura fica em 1,03, o que põe a vista do
-    desenho (1212x809 em CSS) dentro dela, e a dica do botão escolhido diz o tamanho em uso, de
+    desenho (1212x809 em CSS) dentro da janela, e a dica do botão escolhido diz o tamanho em uso, de
     novo na página recarregada; de volta à vista alta, o 1,25 e a dica do desenho voltam.
 
     MORDIDAS: `ignora` (a janela que não pergunta ao arquivo fica em 1,0) e `nao-cede` (o zoom

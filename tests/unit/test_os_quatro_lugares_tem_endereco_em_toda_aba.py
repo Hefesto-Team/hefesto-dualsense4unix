@@ -41,7 +41,7 @@ def test_as_quatro_casas_tem_endereco(onde: str, aba: str,
     assert not faltam, (
         f"{onde}/{aba}.html: os lugares {', '.join(faltam)} não têm "
         "`data-controle`. Eles APARECEM na tela e o produto não tem por onde "
-        "escrever neles quando o controle chegar — que é exatamente o que ela "
+        "escrever neles quando o controle chegar — que é exatamente o que quem usa "
         "mandou garantir em 03/09.")
 
 

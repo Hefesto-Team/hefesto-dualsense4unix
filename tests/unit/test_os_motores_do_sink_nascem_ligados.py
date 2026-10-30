@@ -55,7 +55,7 @@ ZERO_ATRAS = ("Volume: front-left: 65536 / 100% / 0.00 dB,   "
 
 
 def test_os_quarenta_por_cento_sao_levantados() -> None:
-    """O caso medido no cabo dela: 40% nos quatro, e a placa volta CHEIA.
+    """O caso medido no cabo: 40% nos quatro, e a placa volta CHEIA.
 
     OS-QUATRO-EM-HARMONIA-01 (14/10/2026): a frente não se preserva mais. O nó
     ALSA aplica a frente aos motores, e o alto-falante tem volume próprio no

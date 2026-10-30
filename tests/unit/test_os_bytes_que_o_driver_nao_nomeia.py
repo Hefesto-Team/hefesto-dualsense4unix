@@ -7,8 +7,8 @@ publicado sem régua é um número que envelhece calado — foi exatamente assim
 esta casa descobriu, em 31/08/2026, que o portão do mapa é CEGO ao conteúdo das
 colunas sem domínio: um byte de LED trocado de 11 para 47 passou com `rc=0`.
 
-Esta régua fecha essa porta para o documento novo. Ela NÃO confere o que a
-internet disse — isso ninguém pode conferir sem o aparelho. Ela confere a
+Esta régua fecha essa porta para o documento novo. A régua NÃO confere o que a
+internet disse — isso ninguém pode conferir sem o aparelho. A régua confere a
 ÂNCORA: cada offset que o documento publica como sendo `reserved` no driver é
 recalculado A PARTIR DO FONTE C compilado nesta máquina, e comparado com o que
 está escrito na página. Se o driver mudar, ou se alguém editar um número na
@@ -267,7 +267,7 @@ def test_a_camera_ir_do_dualsense_esta_respondida_com_a_razao(linhas_do_tema):
         assert linha[f"{lado}_por_que_nao_aciona"] == "nada-a-acionar", (
             f"`{lado}_por_que_nao_aciona` ficou {linha[f'{lado}_por_que_nao_aciona']!r}: "
             "uma linha que não aciona porque o aparelho NÃO TEM a peça precisa "
-            "nomear a causa, senão a tela pode culpar o nosso código por ela"
+            "nomear a causa, senão a tela pode culpar o nosso código pela falta"
         )
         assert "não-localizado" in (linha[f"{lado}_comando"] or ""), (
             f"`{lado}_comando` perdeu a razão escrita da ausência"

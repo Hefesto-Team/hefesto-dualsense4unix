@@ -2,8 +2,8 @@
 """OS-EFEITOS-QUE-JA-EXISTEM-SE-REDISTRIBUEM-POR-ESTILO-01 — a receita de cada estilo é a da página.
 
 A tabela `S` da página aprovada em 19/10/2026 (`redistribuicao-dos-efeitos.html`) dá a cada estilo o
-R2, o L2, a háptica, os motores, a luz base e a frente da lista. Aqui ela está escrita à mão, sem
-ler o módulo que mede, e as seis réguas comparam o produto com ela.
+R2, o L2, a háptica, os motores, a luz base e a frente da lista. Aqui vai escrita à mão, sem
+ler o módulo que mede, e as seis réguas comparam o produto com a tabela.
 
 As mordidas (arrancar, ver reprovar, devolver conferindo o md5 do arquivo):
 - `TriggersConfig(left=lado, right=lado)` de volta no `_com_o_estilo` (o L2 igual ao R2): a régua 2;

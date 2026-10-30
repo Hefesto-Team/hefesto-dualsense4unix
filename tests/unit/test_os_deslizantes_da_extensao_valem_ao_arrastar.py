@@ -1,6 +1,6 @@
 """Os deslizantes da janela da extensão valem ao arrastar (28/10/2026).
 
-Ela: «os slicers da Lovense aplicam ao soltar». O deslizante gravava só no ``change``, e a extensão
+Os deslizantes da Lovense aplicavam ao soltar. O deslizante gravava só no ``change``, e a extensão
 lia o ``opcoes.json`` a cada segundo: o brinquedo só mudava depois de soltar. Agora o arrastar é um
 gesto vivo que manda ``mods.opcao``; a porta leva ``extensao.opcao`` só à extensão dona, em no
 máximo 20 por segundo, e o soltar continua gravando.

@@ -26,7 +26,7 @@ def _heroic(
     itens: list[dict[str, Any]],
     umu: dict[str, str] | None = None,
 ) -> pathlib.Path:
-    """Uma biblioteca da Epic de mentira, na árvore de flatpak que é a dela."""
+    """Uma biblioteca da Epic de mentira, na árvore de flatpak que é a do usuário."""
     pasta = lar / ".var/app" / HEROIC_ID / "config/heroic"
     alvo = pasta / "store_cache/legendary_library.json"
     alvo.parent.mkdir(parents=True, exist_ok=True)
@@ -138,7 +138,7 @@ def test_quem_nao_tem_chave_nao_e_oferecido_mesmo_instalado(
 def test_o_jogo_do_lancador_vira_oferta_com_a_wm_class_no_value(
     tmp_path: pathlib.Path,
 ) -> None:
-    """A mesma divisão da Steam: `value` é o ENDEREÇO, `label` é o que ela lê."""
+    """A mesma divisão da Steam: `value` é o ENDEREÇO, `label` é o que quem usa lê."""
     _heroic(tmp_path, [BAIXADO, A_ROUPA, SO_NA_CONTA])
 
     ofertas = jl.jogos_dos_lancadores(lar=tmp_path)
@@ -269,7 +269,7 @@ def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
 ) -> None:
     """**A FALTA QUE O USUÁRIO NOMEOU, medida nas três origens de uma vez.**
 
-    O Lutris chega pela extensão dele: o jogo que o leitor dela entrega é do cartão «Lutris».
+    O Lutris chega pela extensão dele: o jogo que o leitor da extensão entrega é do cartão «Lutris».
     """
     _heroic(tmp_path, [BAIXADO])
     _extensao(monkeypatch, CELESTE)
@@ -326,7 +326,7 @@ def test_o_rotulo_nunca_derruba_a_aba_por_causa_de_um_disco_torto(
 def test_o_caderno_releu_o_disco_quando_o_usuario_instalou_o_segundo_jogo(
     tmp_path: pathlib.Path,
 ) -> None:
-    """**A TRAVA MEDIDA CONTRA A PRÓPRIA SAÍDA, e ela atravessou 17 réguas.**"""
+    """**A TRAVA MEDIDA CONTRA A PRÓPRIA SAÍDA, e atravessou 17 réguas.**"""
     jl._NOMES_DAS_JANELAS = None
     _heroic(tmp_path, [BAIXADO])
 
@@ -374,7 +374,7 @@ def test_o_cliente_de_loja_nao_entra_na_lista_de_jogos_e_o_emulador_entra(
 def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**A PONTA, e ela é a queixa de uso — medida nas funções REAIS da aba.**"""
+    """**A PONTA, e é a queixa de uso — medida nas funções REAIS da aba.**"""
     from hefesto_dualsense4unix.interface.pacotes import a10_perfis as a10
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
 

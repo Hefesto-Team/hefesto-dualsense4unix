@@ -31,7 +31,7 @@ PAGINA = "04-iluminacao.html"
 
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
 
-VISTAS = {"janela": TAMANHO_OCULTA, "dela": VISTA_DO_USUARIO}
+VISTAS = {"janela": TAMANHO_OCULTA, "do_usuario": VISTA_DO_USUARIO}
 
 TETO_DO_X = 12.0
 PISO_DO_X = 8.0

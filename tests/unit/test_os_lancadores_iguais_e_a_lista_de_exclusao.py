@@ -85,16 +85,16 @@ def test_a_regua_nao_escreve_na_config_do_usuario(_config_de_mentira: Path) -> N
 
 
 def test_a_exclusao_nunca_toca_na_lista_do_steam_input() -> None:
-    """A CORREÇÃO DE 21/09, e ela tem dois lados."""
-    slo.add_appid_to_steam_input_allowlist("3357650", nota="dela")
+    """A CORREÇÃO DE 21/09, e tem dois lados."""
+    slo.add_appid_to_steam_input_allowlist("3357650", nota="manual")
     assert not hasattr(lx, "migrar_a_lista_velha"), (
-        "a migração da lista do Steam Input voltou — ela desligaria a vibração "
+        "a migração da lista do Steam Input voltou — a migração desligaria a vibração "
         "do PRAGMATA")
     antiga.adicionar("steam_app_3357650", lancador="steam", nome="PRAGMATA")
     assert _nas_listas("3357650")["entrada"] is True
     lx.tirar("steam_app_3357650")
     assert _nas_listas("3357650")["entrada"] is True, (
-        "tirar da exclusão apagou a marca que ELA pôs no Steam Input")
+        "tirar da exclusão apagou a marca que QUEM USA pôs no Steam Input")
     antiga.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     assert _nas_listas(_APPID)["entrada"] is False
 
@@ -109,13 +109,13 @@ def test_tirar_sai_das_duas() -> None:
 
 def test_tirar_nao_apaga_a_escolha_anterior_do_usuario() -> None:
     """ARRANQUE o `if status == "adicionado"` (registre toda lista) e este"""
-    assert slo.marcar_jogo_sem_wrapper(_APPID, nota="dela") == "adicionado"
+    assert slo.marcar_jogo_sem_wrapper(_APPID, nota="manual") == "adicionado"
     antiga.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     (entrada,) = lx.ler()
     assert "atalho" not in entrada.escritas
     lx.tirar(_CHAVE)
     assert _nas_listas(_APPID)["atalho"] is True, (
-        "o «Tirar» apagou uma escolha que ela tinha feito antes da exclusão")
+        "o «Tirar» apagou uma escolha que quem usa tinha feito antes da exclusão")
     assert _nas_listas(_APPID)["pino"] is False
 
 
@@ -156,7 +156,7 @@ def test_destravar_um_jogo_devolve_so_ele(tmp_path: Path, _steam_fechada: None) 
 
 def test_destravar_nao_desfaz_o_proton_que_o_usuario_trocou(
         tmp_path: Path, _steam_fechada: None) -> None:
-    """A regra do desinstalar, recortada: se ela trocou o Proton do jogo DEPOIS"""
+    """A regra do desinstalar, recortada: se quem usa trocou o Proton do jogo DEPOIS"""
     vdf, estado = _pinar(tmp_path, ["1599660"])
     texto = vdf.read_text(encoding="utf-8")
     vdf.write_text(texto.replace(f'"{PIN_NAME}"', '"proton_9"', 2), encoding="utf-8")
@@ -214,7 +214,7 @@ def test_tirar_o_atalho_tira_so_o_jogo_pedido(
     r = slo.tirar_o_atalho_dos_jogos(["1599660"], vdfs=[vdf])
     apps = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
     assert [i["appid"] for i in r["removed"]] == ["1599660"], r
-    assert apps["1599660"] == _DO_USUARIO, "a linha dela não sobreviveu"
+    assert apps["1599660"] == _DO_USUARIO, "a linha do usuário não sobreviveu"
     assert slo.WRAPPER_PREFIX in (apps["1971870"] or ""), "o OUTRO jogo perdeu o atalho"
 
 
@@ -477,7 +477,7 @@ def _o_autoswitch(espiao: _EspiaoDaExclusao) -> AutoSwitcher:
 
 def test_a_janela_excluida_nao_pede_perfil_nem_modo_jogo(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `_na_exclusao` do tique e este teste reprova: o jogo que ela"""
+    """ARRANQUE o `_na_exclusao` do tique e este teste reprova: o jogo que quem usa"""
     monkeypatch.setattr(loader_module, "profiles_dir", lambda ensure=False: tmp_path)
     antiga.adicionar(_JANELA, lancador="steam", nome="Wo Long")
     espiao = _EspiaoDaExclusao()
@@ -714,7 +714,7 @@ def test_tirar_devolve_a_copia_byte_a_byte() -> None:
 
 
 def test_a_volta_nao_passa_por_cima_do_que_o_usuario_mudou() -> None:
-    """Ela trocou o `MANGOHUD` do jogo depois da exclusão: a volta repõe o"""
+    """Quem usa trocou o `MANGOHUD` do jogo depois da exclusão: a volta repõe o"""
     _casa, copia = _heroic_de_mentira(com_copia=True)
     antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     raiz = json.loads(copia.read_text(encoding="utf-8"))
@@ -727,7 +727,7 @@ def test_a_volta_nao_passa_por_cima_do_que_o_usuario_mudou() -> None:
 
 
 def test_a_carona_mantem_a_copia_do_excluido_limpa(tmp_path: Path) -> None:
-    """O Heroic aberto regrava a cópia com o que tinha na memória quando ela"""
+    """O Heroic aberto regrava a cópia com o que tinha na memória quando quem usa"""
     casa, copia = _heroic_de_mentira(com_copia=True)
     antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     raiz = json.loads(copia.read_text(encoding="utf-8"))

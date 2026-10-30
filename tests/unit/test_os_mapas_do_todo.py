@@ -8,7 +8,7 @@ Mordidas (cada uma arrancada, vista reprovar e devolvida):
 
 * devolver o ``<span class="ajuda">`` ao espectro do rádio ou à receita das portas:
   :func:`test_nenhum_dos_dois_mapas_tem_o_interrogacao`;
-* tirar a base comum de um dos dois, ou alterar uma letra dela:
+* tirar a base comum de um dos dois, ou alterar uma letra da base:
   :func:`test_os_dois_mapas_levam_a_base_comum_uma_vez_e_igual_ao_arquivo`;
 * devolver o ``title`` longo de um botão: :func:`test_os_botoes_dizem_a_dica_curta_e_nao_o_title`;
 * pôr de volta um menu do botão direito na página das portas:
@@ -104,7 +104,7 @@ def test_nenhum_dos_dois_mapas_tem_o_interrogacao(nome: str) -> None:
 
 @pytest.mark.parametrize("nome", list(PAGINAS))
 def test_os_dois_mapas_levam_a_base_comum_uma_vez_e_igual_ao_arquivo(nome: str) -> None:
-    """MORDIDA: tire a base de um mapa, ou mude uma letra dela, e esta régua reprova."""
+    """MORDIDA: tire a base de um mapa, ou mude uma letra da base, e esta régua reprova."""
     doc = PAGINAS[nome]
     assert doc.count('<style id="base-comum">') == 1, f"{nome}: o <style> da base"
     assert doc.count('<script id="base-comum">') == 1, f"{nome}: o <script> da base"
@@ -148,7 +148,7 @@ def test_nenhum_title_estatico_longo_ou_com_travessao(nome: str) -> None:
 def test_o_menu_do_botao_direito_e_so_o_da_base() -> None:
     """A página das portas não monta menu seu: o ``contextmenu`` mora só na base comum.
 
-    MORDIDA: ponha um ``addEventListener("contextmenu", …)`` de volta na página e ela reprova.
+    MORDIDA: ponha um ``addEventListener("contextmenu", …)`` de volta na página e a régua reprova.
     """
     na_base = len(re.findall(r"""['"]contextmenu['"]""", BASE_JS))
     assert na_base >= 1, "a base comum perdeu o menu do botão direito"
@@ -199,7 +199,7 @@ def test_as_edicoes_dos_mapas_estao_publicadas_e_a_copia_do_produto_e_a_pagina()
 def _no_webkit_do_ensaio(passos: list[str], ensaio: pathlib.Path) -> list[object]:
     """Abre num WebKit a página das portas que o GERADOR monta agora, como a régua da 08.
 
-    A página é escrita numa bancada de mentira (``HEFESTO_ENSAIO``): quem é medido é o gerador, não
+    A página é escrita numa pasta de mentira (``HEFESTO_ENSAIO``): quem é medido é o gerador, não
     o arquivo de ``mockup/``, que o primeiro teste abaixo confere ser igual ao que ele escreve.
     """
     from tests.unit import test_o_mapa_das_conexoes_cabe_na_aba as vizinha

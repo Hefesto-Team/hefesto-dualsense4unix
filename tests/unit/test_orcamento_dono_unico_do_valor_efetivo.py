@@ -2,7 +2,7 @@
 
 CONFIG-05 (22/08/2026), a outra metade da D-A5. O arquivo irmão
 (`test_orcamento_e_teto_nao_troca.py`) prende a CONTA no daemon; este prende o
-que a tela pode dizer sobre ela, e são três invariantes:
+que a tela pode dizer sobre a conta, e são três invariantes:
 
 1. **A linha "150% · limitado a 30% pelo orçamento" cala quando não sabe.**
    Sem declaração, com o orçamento em Auto (teto móvel) ou com o teto que não
@@ -99,7 +99,7 @@ def test_em_auto_a_linha_cala_porque_o_teto_e_movel() -> None:
 
 
 def test_a_linha_diz_o_pedido_e_o_teto_quando_o_teto_morde() -> None:
-    """O formato aprovado: o que a aba pede, e a que ela chega limitada."""
+    """O formato aprovado: o que a aba pede, e a que chega limitada."""
     texto = texto_do_teto_do_orcamento(RUMBLE_POLICY_MULT["max"], "economia")
     assert texto is not None
     assert "150%" in texto
@@ -214,7 +214,7 @@ class TestOBotaoMostraOQueOUsuarioEscolheu:
         host._maquina_pendente = {"orcamento": {"teto": "max"}}
 
         assert secao_orcamento.orcamento_na_tela(host) == "max", (
-            "o botão desta aba tem de mostrar o que ela acabou de escolher"
+            "o botão desta aba tem de mostrar o que quem usa acabou de escolher"
         )
 
     def test_o_nao_sei_pendente_apaga_o_botao_antigo(self) -> None:

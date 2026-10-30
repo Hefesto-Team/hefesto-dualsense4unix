@@ -18,16 +18,16 @@ lista. Com dois controles ligados, "a primeira" é quem calhou de aparecer
 primeiro no `pactl`, e é isso, e nada mais, que fazia o deslizante do card
 mexer no microfone de outra pessoa.
 
-A regra que ela pede **já estava escrita um arquivo ao lado**: a aplicação de
+A regra pedida **já estava escrita um arquivo ao lado**: a aplicação de
 perfil (`daemon/lifecycle.py`) recusa a queda desde 03/09. Duas réguas sobre a
 mesma pergunta com dois vereditos é como esta casa fabrica divergência
-silenciosa — e a porta que ficara aberta era justamente a que ela CLICA.
+silenciosa — e a porta que ficara aberta era justamente a que quem usa CLICA.
 
 POR QUE ESTA RÉGUA CHAMA O HANDLER, e não a função
 --------------------------------------------------
 `tests/unit/test_mic_da_mesa_cheia_01.py` já mede
-`fonte_de_captura_do_uniq` — e ela estava CERTA o tempo todo. **Quem caiu foi o
-handler**, no `if fonte is None` logo depois dela. Medir de novo a função seria
+`fonte_de_captura_do_uniq` — e a função estava CERTA o tempo todo. **Quem caiu foi o
+handler**, no `if fonte is None` logo depois da função. Medir de novo a função seria
 medir o degrau que nunca quebrou; então aqui se chama
 `_handle_mic_volume_set` e se olha **o que chegou a
 `definir_volume_da_captura` — a source, pelo nome.**
@@ -282,7 +282,7 @@ def test_ninguem_escreve_volume_sem_dizer_em_qual_fonte() -> None:
         assert parametro.kind is inspect.Parameter.KEYWORD_ONLY, funcao.__name__
         assert parametro.default is inspect.Parameter.empty, (
             f"`{funcao.__name__}` voltou a resolver a fonte sozinha quando "
-            "ninguém a declara — e o que ela resolve é a PRIMEIRA da lista")
+            "ninguém a declara — e o que resolve é a PRIMEIRA da lista")
 
     with pytest.raises(TypeError, match="definir_volume_da_captura"):
         audio_control.definir_volume_da_captura(50)  # type: ignore[call-arg]
@@ -361,7 +361,7 @@ def test_sem_fonte_nao_diz_que_o_hefesto_esta_parado() -> None:
 
 
 def test_a_frase_do_sem_fonte_fala_a_lingua_da_tela() -> None:
-    """Nenhum comando, nenhum nome de nó, e nem a palavra que ela baniu."""
+    """Nenhum comando, nenhum nome de nó, e nem a palavra banida."""
     from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
     frase = a02.TEXTO_MIC_SEM_FONTE.lower()

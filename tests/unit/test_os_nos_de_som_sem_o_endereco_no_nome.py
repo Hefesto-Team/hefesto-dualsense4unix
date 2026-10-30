@@ -6,7 +6,7 @@ quatro, o `uniq` cru em dois), e a marca do aparelho, sem chave, voltava ao
 endereço em 27 segundos com a lista dos prefixos da Sony.
 
 A cura: a marca do aparelho é uma HMAC dos doze dígitos com a chave da máquina,
-e um dono só monta cada nome com ela. A escolha que ela gravou no nome velho
+e um dono só monta cada nome com a chave. A escolha que quem usa gravou no nome velho
 de um controle passa ao nome novo DAQUELE controle, uma vez.
 
 Endereços da faixa forjada (`02:fe:`), com os octetos 4 e 5 não nulos, para as
@@ -193,7 +193,7 @@ def test_todo_nome_de_no_de_src_passa_pelo_dono() -> None:
 
 
 def test_a_regua_dos_nomes_acha_o_que_procura() -> None:
-    """A régua 2 contra as formas que ela tem de pegar, para não medir o vazio."""
+    """A régua 2 contra as formas que a régua tem de pegar, para não medir o vazio."""
     fonte = (
         'a = f"hefesto_som_{uniq[-6:]}"\n'
         'b = ["pw-loopback", "--name", f"hefesto-retorno-{self.uniq}"]\n'
@@ -216,7 +216,7 @@ def test_a_marca_tem_a_chave_da_maquina() -> None:
         no_radio = bt.marca_do_aparelho(uniq.upper(), chave=chave_a)
         assert no_cabo == no_radio == bt.marca_do_aparelho(hexa, chave=chave_a)
         assert no_cabo != bt.marca_do_aparelho(uniq, chave=chave_b), (
-            "a marca não depende da chave: ela volta ao endereço fora desta máquina"
+            "a marca não depende da chave: a marca volta ao endereço fora desta máquina"
         )
     marcas = {bt.marca_do_aparelho(u, chave=chave_a) for u in JOGADORES}
     assert len(marcas) == len(JOGADORES), "dois controles com a mesma marca"
@@ -291,7 +291,7 @@ def test_a_escolha_gravada_passa_ao_nome_novo_do_mesmo_controle(wireplumber: Any
 
 
 def test_a_saida_gravada_passa_e_a_escolha_que_nao_e_de_controle_fica(wireplumber: Any) -> None:
-    """A saída gravada num alto-falante de controle passa; a webcam dela não se toca."""
+    """A saída gravada num alto-falante de controle passa; a webcam de quem usa não se toca."""
     p3 = JOGADORES[2]
     gravado = wireplumber.gravado
     gravado[eleicao.CHAVE_DA_SAIDA_GRAVADA] = f"{af.PREFIXO_SINK_DO_SOM}{p3[-8:].replace(':', '')}"
@@ -354,7 +354,7 @@ def _estado_do_wireplumber(pasta: Path) -> Path:
 
 
 def test_o_estado_do_wireplumber_perde_so_as_chaves_nossas(tmp_path: Path) -> None:
-    """Régua 5, a metade do dono. MORDIDA: «nosso» por «contém DualSense» → as dela somem."""
+    """Régua 5, a metade do dono. MORDIDA: «nosso» por «contém DualSense» → as de quem usa somem."""
     from hefesto_dualsense4unix.utils import memoria_dos_controles as m
 
     pasta = _estado_do_wireplumber(tmp_path / "wireplumber")
@@ -403,7 +403,7 @@ def test_o_uninstall_para_o_wireplumber_antes_de_reescrever(tmp_path: Path) -> N
 
     O `systemctl` é um dublê que anota a chamada e o que o estado tinha naquela
     hora: no `stop` as nossas ainda estão lá (a escrita veio depois), no
-    `start` já saíram, e as dela ficam byte a byte.
+    `start` já saíram, e as de quem usa ficam byte a byte.
     """
     import subprocess
 

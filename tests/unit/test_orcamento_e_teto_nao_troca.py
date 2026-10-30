@@ -129,14 +129,14 @@ def test_o_auto_sob_orcamento_economia_nao_oscila() -> None:
 
 
 def test_voltar_para_balanceado_devolve_tudo_sem_reclicar() -> None:
-    """A invariante que dá nome ao arquivo, e ela vale pelas duas pontas."""
+    """A invariante que dá nome ao arquivo, e vale pelas duas pontas."""
     maquina = MaquinaConfig(orcamento=OrcamentoDeclarado(teto="economia"))
     cfg = DaemonConfig()
     cfg.rumble_policy = "max"
     cfg.orcamento_da_mesa = lambda: maquina.orcamento.teto
 
     assert _mult(cfg) == RUMBLE_POLICY_MULT["economia"]
-    assert cfg.rumble_policy == "max", "o teto NÃO reescreve a escolha dela"
+    assert cfg.rumble_policy == "max", "o teto NÃO reescreve a escolha de quem usa"
 
     maquina = MaquinaConfig(orcamento=OrcamentoDeclarado(teto="balanceado"))
     assert _mult(cfg) == RUMBLE_POLICY_MULT["max"]

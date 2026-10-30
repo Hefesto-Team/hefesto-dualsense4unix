@@ -56,7 +56,7 @@ def test_o_mesmo_prefixo_nao_entra_duas_vezes(tmp_path: Path) -> None:
 
 
 def test_a_varredura_nao_levanta_em_disco_hostil(tmp_path: Path) -> None:
-    """NUNCA LEVANTA é contrato da função: ela roda no caminho do lançamento."""
+    """NUNCA LEVANTA é contrato da função: roda no caminho do lançamento."""
     assert cv.prefixos_dos_lancadores(tmp_path / "nao-existe") == []
 
 

@@ -41,7 +41,7 @@ def test_a_semeadura_nao_entrega_genero_nenhum(tmp_path: Path) -> None:
 
     assert copiados == esperado, (
         "a semeadura de fábrica entregou mais que o dono diz: "
-        f"{copiados} — gênero não é perfil (decisão dela, 06/09/2026)"
+        f"{copiados} — gênero não é perfil (decisão de 06/09/2026)"
     )
     assert sorted(p.name for p in destino.glob("*.json")) == esperado
 
@@ -72,8 +72,8 @@ def test_o_genero_intocado_sai_da_lista_e_o_que_o_usuario_editou_fica(
 
     assert resultado.movidos == ("acao.json",), resultado
     assert resultado.do_usuario == ("fps.json",), (
-        "a migração não nomeou o arquivo que ela editou — mexer calado num "
-        f"perfil dela é o defeito que esta régua existe para pegar: {resultado}"
+        "a migração não nomeou o arquivo que quem usa editou — mexer calado num "
+        f"perfil de quem usa é o defeito que esta régua existe para pegar: {resultado}"
     )
     na_lista = sorted(p.name for p in destino.glob("*.json"))
     assert na_lista == ["fps.json"], na_lista
@@ -105,7 +105,7 @@ def test_nenhum_byte_sai_do_disco_e_o_estilo_continua_carregavel(
 def test_o_genero_que_o_produto_reformatou_ainda_conta_como_de_fabrica(
     tmp_path: Path,
 ) -> None:
-    """Bytes diferentes, JSON igual: quem reformatou foi o PRODUTO, não ela."""
+    """Bytes diferentes, JSON igual: quem reformatou foi o PRODUTO, não quem usa."""
     destino = tmp_path / "perfis"
     destino.mkdir(parents=True)
     dados = json.loads((ESTILOS / "corrida.json").read_text(encoding="utf-8"))
@@ -137,7 +137,7 @@ def test_sem_o_asset_de_fabrica_a_migracao_recua_e_diz(
 
 
 def test_a_migracao_dos_generos_e_one_shot(tmp_path: Path) -> None:
-    """Ela devolveu o `acao.json` à lista: a migração não o leva de novo."""
+    """Quem usa devolveu o `acao.json` à lista: a migração não o leva de novo."""
     destino = tmp_path / "perfis"
     destino.mkdir(parents=True)
     (destino / "acao.json").write_bytes((ESTILOS / "acao.json").read_bytes())
@@ -148,7 +148,7 @@ def test_a_migracao_dos_generos_e_one_shot(tmp_path: Path) -> None:
     (destino / "acao.json").write_bytes((ESTILOS / "acao.json").read_bytes())
     segunda = loader.migrar_generos_para_estilos_de_jogo(dest_dir=destino)
 
-    assert segunda.movidos == (), "a migração não é one-shot — ela roda para sempre"
+    assert segunda.movidos == (), "a migração não é one-shot — roda para sempre"
     assert (destino / "acao.json").is_file()
 
 
@@ -170,7 +170,7 @@ def test_o_perfil_de_jogo_enxuga_so_quando_e_o_molde(tmp_path: Path) -> None:
     assert stray["match"]["window_class"] == ["steam_app_1332010"]
     assert stray["priority"] == loader.PRIORIDADE_DO_PERFIL_DE_JOGO
     assert (destino / "peak.json").read_bytes() == peak_antes, (
-        "o perfil com a cor DELA foi reescrito — é exatamente o que ela pediu "
+        "o perfil com a cor DE QUEM USA foi reescrito — é exatamente o que quem usa pediu "
         "para não acontecer: *'ficam se o sistema antigo tiver sido adaptado'*"
     )
 

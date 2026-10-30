@@ -191,7 +191,7 @@ def test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem():
         for nome in sorted(getattr(mod, "PONTE", set())):
             assert hasattr(ponte, nome), (
                 f"{arq.name} chama `ponte.{nome}()` e a ponte não tem essa função. "
-                f"Ela expõe o `app/ipc_bridge.py` — se o nome não está lá, o "
+                f"A ponte expõe o `app/ipc_bridge.py` — se o nome não está lá, o "
                 f"produto não faz isso, e o botão precisa RECUSAR dizendo.")
 
 

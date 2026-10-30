@@ -19,7 +19,7 @@ levanta, o piloto imprime `[gesto falhou]` no stderr e `self.aplicados` não
 recebe nada — mas a prova já foi guardada como "sem efeito". Um gesto que
 RECUSOU DIZENDO cai na mesma lista de um que mentiu.
 
-A CLASSIFICAÇÃO QUE ESTA RÉGUA TRAVA, e é o que ela existe para não deixar
+A CLASSIFICAÇÃO QUE ESTA RÉGUA TRAVA, e é o que a régua existe para não deixar
 regredir:
 
     monte              gestos                          o que a régua cobra
@@ -161,7 +161,7 @@ def test_escolher_aparelho_guarda_na_mao_e_nao_fala_com_o_daemon(pac, a08) -> No
         "pôr na entrada, e o gesto de dois tempos vira dois cliques mudos.")
     assert p.chamadas == [], (
         "escolher passou a gravar. Escolher é estado de TELA: gravar aqui "
-        "poria no `maquina.json` dela uma escolha que ela ainda não confirmou.")
+        "poria no `maquina.json` uma escolha que quem usa ainda não confirmou.")
 
 
 @pytest.mark.parametrize("nome", ["tirar-daqui", "nova-entrada",
@@ -171,7 +171,7 @@ def test_os_quatro_que_gravam_mandam_o_gabinete_inteiro(pac, nome) -> None:
 
     O inteiro, e não um pedaço: as faces são uma LISTA e `fundir_declaracao`
     troca lista inteira em vez de fundir. Meia lista apagaria do disco as faces
-    que ela já tinha.
+    que quem usa já tinha.
     """
     p = PonteDeMentira()
     _gesto(pac, nome)(_ctx(pac), {**CEGO, **DIRIGIDO[nome]}, p)
@@ -185,7 +185,7 @@ def test_os_quatro_que_gravam_mandam_o_gabinete_inteiro(pac, nome) -> None:
         f"seção do `maquina.json`.")
     assert documento["mapa"]["faces"], (
         f"{nome} mandou o mapa SEM FACES. `fundir_declaracao` troca a lista "
-        f"inteira: isto apagaria do disco o gabinete que ela desenhou.")
+        f"inteira: isto apagaria do disco o gabinete que quem usa desenhou.")
 
 
 def test_o_gesto_de_dois_tempos_grava_no_segundo(pac) -> None:
@@ -219,7 +219,7 @@ def test_escolher_entrada_sem_o_primeiro_tempo_recusa_dizendo(pac) -> None:
 def test_os_seis_do_gabinete_estao_declarados_sem_eco(a08, nome) -> None:
     """Medido em 02/09: o `state_full` não publica `mapa` nem `maquina`.
 
-    As chaves de topo do daemon vivo eram 47, e nenhuma delas é o desenho do
+    As chaves de topo do daemon vivo eram 47, e nenhuma é o desenho do
     gabinete. O caminho é `machine_declare` → `_handle_machine_declare` →
     `maquina.json`, e ali ele para. Sem esta declaração, a régua do piloto
     acusa os seis a cada rodada e a lista de defeitos nunca esvazia.
