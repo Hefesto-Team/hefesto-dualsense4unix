@@ -26,7 +26,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     SCROLL_SPEED_MAX,
     SCROLL_SPEED_MIN,
 )
-from hefesto_dualsense4unix.profiles.loader import MOLDES_DE_PERFIL
+from hefesto_dualsense4unix.profiles.loader import MOLDES_DE_PERFIL, moldes_a_vista
 from monta import CONECTADOS, CSS_GLIFO, DADOS_DO_REPO, FIM_DA_ABA, MESA, glifo, monta
 from pacotes.a06_navegacao import (
     DO_PERMITIR,
@@ -293,7 +293,7 @@ def _op(rotulo, corpo, classe=""):
 
 def _perfil_de_ponto():
     moldes = []
-    for m in MOLDES_DE_PERFIL:
+    for m in moldes_a_vista():
         chave = f"molde:{m.chave}"
         marca = " selected" if chave == PADRAO_DO_PONTE else ""
         moldes.append(f'<option value="{chave}"{marca}>{m.nome}</option>')
@@ -752,8 +752,11 @@ def _conferir(doc):
     exigir('id="acessibilidade"' in corpo and "Giroscópio como analógico" in corpo,
            "a janela Acessibilidade perdeu o giroscópio")
     exigir(corpo.count('class="g g') == len(COMBOS), "os gestos do PS não são os do produto")
-    exigir(all(f">{m.nome}</option>" in corpo for m in MOLDES_DE_PERFIL),
+    exigir(all(f">{m.nome}</option>" in corpo for m in moldes_a_vista()),
            "a lista de point and click não traz os moldes do produto")
+    exigir(not [m for m in MOLDES_DE_PERFIL if m not in moldes_a_vista()
+                and f">{m.nome}</option>" in corpo],
+           "a lista de point and click mostra o molde que só aparece com a extensão que o pede")
     exigir(all(f"{o}</option>" in corpo for o in OPCOES_TECLADO),
            "a Função do teclado perdeu uma das quatro opções")
     if falhas:

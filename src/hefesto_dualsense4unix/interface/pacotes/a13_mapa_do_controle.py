@@ -264,6 +264,15 @@ def _molde_da_chave(chave: str) -> Any:
     return loader.MOLDE_POR_CHAVE.get(chave.removeprefix(MOLDE))
 
 
+def _moldes_a_vista() -> tuple[Any, ...]:
+    from hefesto_dualsense4unix.mods.manifesto import estilos_pedidos
+
+    loader = perfil._com_o_src()
+    editando = str(_EDITANDO.get("chave") or "")
+    guardado = editando.removeprefix(MOLDE) if editando.startswith(MOLDE) else None
+    return tuple(loader.moldes_a_vista(estilos_pedidos(), guardado))
+
+
 def _base(ctx: Contexto, chave: str) -> dict[str, tuple[str, str]]:
     """O que a tela mostra ANTES de qualquer edição: `{botão: (ficha, valor)}`."""
     base: dict[str, tuple[str, str]] = {}
@@ -423,10 +432,9 @@ def _usar_em(ctx: Contexto, estado: dict[str, Any]) -> str:
 
 def _opcoes_do_perfil(ctx: Contexto) -> str:
     """O conteúdo de `#perfil`: Navegação, Moldes, Meus perfis e o «+ Novo perfil…»."""
-    loader = perfil._com_o_src()
     moldes = "".join(
         f'<option value="{MOLDE}{m.chave}">{html.escape(m.nome)}</option>'
-        for m in loader.MOLDES_DE_PERFIL)
+        for m in _moldes_a_vista())
     meus = "".join(
         f'<option value="{PERFIL}{html.escape(str(c.get("name") or ""), quote=True)}">'
         f'{html.escape(str(c.get("name") or ""))}</option>'
@@ -603,7 +611,8 @@ def _chave_valida(ctx: Contexto, chave: str) -> bool:
     if chave in (NAV, NOVO):
         return True
     if chave.startswith(MOLDE):
-        return _molde_da_chave(chave) is not None
+        molde = _molde_da_chave(chave)
+        return molde is not None and molde in _moldes_a_vista()
     return chave.startswith(PERFIL) and bool(_cru_da_chave(ctx, chave))
 
 

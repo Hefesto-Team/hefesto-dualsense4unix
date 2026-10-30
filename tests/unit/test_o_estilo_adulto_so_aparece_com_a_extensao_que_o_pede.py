@@ -1,0 +1,242 @@
+"""O estilo Adulto só aparece com a extensão que o pede, instalada e ligada.
+
+O-ESTILO-ADULTO-SO-APARECE-COM-A-EXTENSAO-QUE-O-PEDE-01 (30/10/2026). O manifesto ganha
+``estilos: [chave]`` e o catálogo marca o estilo que só aparece quando pedido
+(``so_quando_pedido``). A tela (a lista do «Estilo de jogo» da Perfis e os moldes da Navegação e
+do Mapa do controle) oferece esse estilo só com uma extensão ligada que o pede; desligada esconde
+igual a desinstalada. O perfil que já guarda o estilo carrega sem erro, o motor segue o arquivo e
+o editor desse perfil o mostra escolhido (D-3010-O-ESTILO-PEDIDO-SO-APARECE-COM-A-EXTENSAO-LIGADA,
+D-3010-O-PERFIL-QUE-GUARDA-O-ESTILO-PEDIDO-O-MANTEM).
+
+MORDIDAS (30/10/2026, executadas sobre a cura e devolvidas):
+
+- o ``estilos_a_vista`` que devolve o catálogo inteiro reprova a lista sem extensão;
+- o ``estilos_pedidos`` sem o ``if not entrada.ligada`` reprova a extensão desligada;
+- o gesto sem a recusa do estilo fora da vista grava o Adulto sem extensão;
+- o ``estilos_a_vista`` sem o guardado tira o Adulto do perfil que já o tem;
+- cada recusa do manifesto arrancada reprova o caso dela;
+- o ``moldes_a_vista`` que devolve todos reprova o molde do Mapa e o da Navegação;
+- o gesto da Navegação sem a recusa grava o molde sem a extensão.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.interface.pacotes import Contexto, a06_navegacao, a10_perfis
+from hefesto_dualsense4unix.interface.pacotes import a13_mapa_do_controle as a13
+from hefesto_dualsense4unix.mods import instalador
+from hefesto_dualsense4unix.mods.manifesto import (
+    Manifesto,
+    ManifestoRecusadoError,
+    estilos_pedidos,
+    ler_manifesto,
+)
+from hefesto_dualsense4unix.profiles import estilos_de_jogo, loader
+from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+
+ADULTO = "adulto"
+ROTULO = "Adulto"
+NOITE = "Noite"
+TARDE = "Tarde"
+BASE: dict[str, Any] = {"id": "pede", "nome": "Pede", "api": ">=2,<3", "tipos": ["tema"],
+                        "tema": {}}
+BASE["versao"] = "1.0.0"  # (noqa-acento)
+BASE["licenca"] = "MIT"  # (noqa-acento)
+
+
+class PonteDeMentira:
+    def profile_switch(self, nome: str) -> bool:
+        return True
+
+    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> bool:
+        return True
+
+    def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
+        return True
+
+    def resultado(self, metodo: str, *a: Any, **kw: Any) -> Any:
+        return {}
+
+
+@pytest.fixture
+def lg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> instalador.Lugares:
+    lugares = instalador.Lugares(codigo=tmp_path / "codigo",  # (noqa-acento)
+                                 dados=tmp_path / "dados", registro=tmp_path / "mods.json",
+                                 estado=tmp_path / "estado.json")
+    monkeypatch.setattr(instalador.Lugares, "do_xdg", classmethod(lambda cls: lugares))
+    for nome, valor in (("_ESCOLHIDO", ""), ("_ARMADO", None), ("_PROCURA", ""),
+                        ("_PINTADO_PARA", ""), ("_ULTIMO_TIQUE", 0.0),
+                        ("_RECUSA_DO_JOGO", ("", ""))):
+        monkeypatch.setattr(a10_perfis, nome, valor, raising=False)
+    monkeypatch.setattr(a13, "_EDITANDO", {}, raising=False)
+    return lugares
+
+
+def _instalada(lg: instalador.Lugares, *, estilos: list[str] | None = None,
+               ligada: bool = True, mod_id: str = "pede") -> None:
+    pasta = lg.codigo / mod_id
+    pasta.mkdir(parents=True, exist_ok=True)
+    manifesto = {**BASE, "id": mod_id, "estilos": [ADULTO] if estilos is None else estilos}
+    (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
+    registro = instalador.ler_registro(lg.registro)
+    registro[mod_id] = instalador.Entrada(
+        id=mod_id, nome="Pede", versao="1.0.0", origem="local", endereco=str(pasta),
+        permissoes_aceitas=[], ligada=ligada, ligada_em="2026-10-30T10:00:00")
+    instalador.gravar_registro(lg.registro, registro)
+
+
+def _ctx() -> Contexto:
+    return Contexto(state={"active_profile": NOITE}, mesa=[], conectados=[], estados={})
+
+
+def _o_disco() -> None:
+    loader.save_profile(Profile(name=NOITE, match=MatchCriteria(window_class=["noite"]),
+                                estilo=ADULTO), origem="régua")
+    loader.save_profile(Profile(name=TARDE, match=MatchCriteria(window_class=["tarde"])),
+                        origem="régua")
+
+
+def _opcoes_do_estilo(nome: str) -> list[tuple[str, str]]:
+    a10_perfis.selecionar(_ctx(), {"hefPerfil": nome}, PonteDeMentira())
+    bloco = a10_perfis.pacote(_ctx())["blocos"][a10_perfis.SELETOR_DOS_ESTILOS]
+    return re.findall(r"<option([^>]*)>([^<]*)</option>", bloco)
+
+
+def _rotulos(opcoes: list[tuple[str, str]]) -> list[str]:
+    return [texto for _atr, texto in opcoes]
+
+
+def _escolhido(opcoes: list[tuple[str, str]]) -> list[str]:
+    return [texto for atr, texto in opcoes if "selected" in atr]
+
+
+def test_o_manifesto_aceita_o_estilo_que_se_pede() -> None:
+    assert Manifesto.model_validate({**BASE, "estilos": [ADULTO]}).estilos == [ADULTO]
+    assert Manifesto.model_validate(BASE).estilos == [], "sem o campo, nenhum pedido"
+
+
+@pytest.mark.parametrize(("estilos", "frase"), [
+    (["boliche"], "«boliche» não é um estilo de jogo"),
+    (["fps"], "o estilo «fps» aparece sempre e não se pede"),
+    ([ADULTO, ADULTO], "estilo repetido"),
+])
+def test_o_manifesto_recusa(tmp_path: Path, estilos: list[str], frase: str) -> None:
+    (tmp_path / "hefesto-mod.json").write_text(json.dumps({**BASE, "estilos": estilos}),
+                                               encoding="utf-8")
+    with pytest.raises(ManifestoRecusadoError, match=re.escape(frase)):
+        ler_manifesto(tmp_path)
+
+
+def test_so_a_extensao_ligada_pede(lg: instalador.Lugares) -> None:
+    """D-3010-O-ESTILO-PEDIDO-SO-APARECE-COM-A-EXTENSAO-LIGADA."""
+    assert estilos_pedidos() == frozenset(), "sem extensão, nada se pede"
+    _instalada(lg, ligada=False)
+    assert estilos_pedidos() == frozenset(), "a desligada esconde igual à desinstalada"
+    _instalada(lg)
+    assert estilos_pedidos() == {ADULTO}
+    _instalada(lg, estilos=[])
+    assert estilos_pedidos() == frozenset(), "o manifesto novo, sem o pedido, esconde de novo"
+
+
+def test_o_manifesto_que_nao_abre_nao_pede(lg: instalador.Lugares) -> None:
+    _instalada(lg)
+    (lg.codigo / "pede" / "hefesto-mod.json").write_text("{", encoding="utf-8")
+    assert estilos_pedidos() == frozenset()
+
+
+def test_o_catalogo_marca_so_o_adulto_e_o_motor_segue_com_ele() -> None:
+    assert {ADULTO} == estilos_de_jogo.PEDIVEIS
+    assert ROTULO not in [e.rotulo for e in estilos_de_jogo.estilos_a_vista()]
+    assert ROTULO in [e.rotulo for e in estilos_de_jogo.estilos_a_vista({ADULTO})]
+    assert ROTULO in [e.rotulo for e in estilos_de_jogo.estilos_a_vista(guardado=ADULTO)]
+    assert estilos_de_jogo.estilo_que_pinta(ADULTO) is estilos_de_jogo.POR_CHAVE[ADULTO]
+
+
+def test_sem_extensao_a_lista_nao_oferece_o_adulto(lg: instalador.Lugares) -> None:
+    _o_disco()
+    opcoes = _opcoes_do_estilo(TARDE)
+    assert ROTULO not in _rotulos(opcoes)
+    assert _rotulos(opcoes)[:2] == ["—", "Nativo"] and _rotulos(opcoes)[-1] == "Personalizado"
+    assert _escolhido(opcoes) == ["—"], "sem estilo guardado, o travessão abre a lista"
+    assert 'data-dica="O jogo decide"' in opcoes[1][0]
+
+
+def test_com_a_extensao_ligada_a_lista_oferece_e_desligada_esconde(
+        lg: instalador.Lugares) -> None:
+    """D-3010-O-ESTILO-PEDIDO-SO-APARECE-COM-A-EXTENSAO-LIGADA."""
+    _o_disco()
+    _instalada(lg)
+    assert ROTULO in _rotulos(_opcoes_do_estilo(TARDE))
+    _instalada(lg, ligada=False)
+    assert ROTULO not in _rotulos(_opcoes_do_estilo(TARDE))
+
+
+def test_o_perfil_que_guarda_o_adulto_carrega_e_o_mostra(lg: instalador.Lugares) -> None:
+    """D-3010-O-PERFIL-QUE-GUARDA-O-ESTILO-PEDIDO-O-MANTEM."""
+    _o_disco()
+    assert loader.load_profile(NOITE).estilo == ADULTO, "a escolha dela não se apaga"
+    opcoes = _opcoes_do_estilo(NOITE)
+    assert _escolhido(opcoes) == [ROTULO], "a tela diz o estilo que o perfil guarda"
+    assert ROTULO not in _rotulos(_opcoes_do_estilo(TARDE)), "o Adulto vazou para outro perfil"
+
+
+def test_o_gesto_recusa_o_adulto_sem_a_extensao(lg: instalador.Lugares) -> None:
+    _o_disco()
+    a10_perfis.selecionar(_ctx(), {"hefPerfil": TARDE}, PonteDeMentira())
+    with pytest.raises(RuntimeError, match="só aparece com a extensão"):
+        a10_perfis.editor_estilo(_ctx(), {"valor": ROTULO}, PonteDeMentira())
+    assert loader.load_profile(TARDE).estilo is None
+
+
+def test_o_gesto_grava_o_adulto_com_a_extensao(lg: instalador.Lugares) -> None:
+    _o_disco()
+    _instalada(lg)
+    a10_perfis.selecionar(_ctx(), {"hefPerfil": TARDE}, PonteDeMentira())
+    a10_perfis.editor_estilo(_ctx(), {"valor": ROTULO}, PonteDeMentira())
+    assert loader.load_profile(TARDE).estilo == ADULTO
+
+
+def test_trocar_o_estilo_do_perfil_sem_a_extensao_tira_o_adulto_da_lista(
+        lg: instalador.Lugares) -> None:
+    """D-3010-O-PERFIL-QUE-GUARDA-O-ESTILO-PEDIDO-O-MANTEM."""
+    _o_disco()
+    a10_perfis.selecionar(_ctx(), {"hefPerfil": NOITE}, PonteDeMentira())
+    a10_perfis.editor_estilo(_ctx(), {"valor": "Terror"}, PonteDeMentira())
+    assert loader.load_profile(NOITE).estilo == "terror"
+    opcoes = _opcoes_do_estilo(NOITE)
+    assert ROTULO not in _rotulos(opcoes) and _escolhido(opcoes) == ["Terror"]
+
+
+def _moldes(html: str) -> list[str]:
+    grupo = re.search(r'<optgroup label="Moldes">(.*?)</optgroup>', html, flags=re.S)
+    return re.findall(r">([^<]+)</option>", grupo.group(1) if grupo else html)
+
+
+def test_o_molde_do_mapa_so_aparece_com_a_extensao(lg: instalador.Lugares) -> None:
+    ctx = _ctx()
+    assert ROTULO not in _moldes(a13._opcoes_do_perfil(ctx))
+    assert not a13._chave_valida(ctx, f"{a13.MOLDE}{ADULTO}")
+    _instalada(lg)
+    assert ROTULO in _moldes(a13._opcoes_do_perfil(ctx))
+    assert a13._chave_valida(ctx, f"{a13.MOLDE}{ADULTO}")
+
+
+def test_o_molde_da_navegacao_so_aparece_com_a_extensao_ou_escolhido(
+        lg: instalador.Lugares) -> None:
+    molde = f"{a06_navegacao.PREFIXO_DO_MOLDE}{ADULTO}"
+    outro = f"{a06_navegacao.PREFIXO_DO_MOLDE}point_and_click"
+    assert ROTULO not in _moldes(a06_navegacao._opcoes_dos_moldes(outro))
+    assert ROTULO in _moldes(a06_navegacao._opcoes_dos_moldes(molde)), (
+        "o molde que ela já escolheu sumiu da lista")
+    with pytest.raises(ValueError, match="só aparece com a extensão"):
+        a06_navegacao.point_and_click_perfil(Contexto(state={}, mesa=[], conectados=[],
+                                                      estados={}),
+                                             {"valor": molde}, PonteDeMentira())
+    _instalada(lg)
+    assert ROTULO in _moldes(a06_navegacao._opcoes_dos_moldes(outro))

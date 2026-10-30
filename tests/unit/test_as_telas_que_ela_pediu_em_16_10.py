@@ -89,8 +89,9 @@ def test_o_quadrante_da_direita_se_chama_opcoes_e_tem_os_tres_de_permitir() -> N
     assert "Perfil jogo - navegação" in op
     moldes = re.findall(r"<option[^>]*>([^<]+)</option>",
                         _pagina("mapa-do-controle.html").split('id="perfil"')[1].split("</select>")[0])
-    for nome in ("Point and click", "Visual novel", "Adulto"):
+    for nome in ("Point and click", "Visual novel"):
         assert nome in moldes, f"o molde «{nome}» saiu da lista do perfil"
+    assert "Adulto" not in moldes, "o molde «Adulto» só aparece com a extensão que o pede"
 
 
 def test_os_gestos_do_ps_se_acrescentam_e_tiram_sem_frase_e_sem_o_ps_sozinho() -> None:

@@ -759,7 +759,7 @@ def main():
         return "\n".join(_linha_da_tela(x, pecas, valores, escolhida)
                          for x in a13.BOTOES_DA_PAGINA if x.lado == lado)
 
-    moldes = "".join(f'<option value="molde:{m.chave}">{m.nome}</option>' for m in loader.MOLDES_DE_PERFIL)
+    moldes = "".join(f'<option value="molde:{m.chave}">{m.nome}</option>' for m in loader.moldes_a_vista())
     perfis = ('<optgroup label="Navegação"><option value="nav">Navegar no computador</option></optgroup>'
               f'<optgroup label="Moldes">{moldes}</optgroup><option value="novo">+ Novo perfil…</option>')
     doc = f'''<!doctype html>

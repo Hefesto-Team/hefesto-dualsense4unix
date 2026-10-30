@@ -422,6 +422,29 @@ SELETOR_DOS_JOGOS = 'datalist[data-hef="editor.jogo.lista"]'
 
 SELETOR_DA_ORDEM = 'ol[data-hef="editor.ordem"]'
 
+SELETOR_DOS_ESTILOS = 'select[data-hef="editor.estilo"]'
+
+
+def _estilos_a_vista(guardado: object) -> tuple[Any, ...]:
+    from hefesto_dualsense4unix.mods.manifesto import estilos_pedidos
+    from hefesto_dualsense4unix.profiles import estilos_de_jogo as receitas
+
+    return receitas.estilos_a_vista(estilos_pedidos(), guardado)
+
+
+def _html_dos_estilos(guardado: object) -> str:
+    """As opções do «Estilo de jogo»: só as que a tela oferece, com o guardado escolhido."""
+    from hefesto_dualsense4unix.profiles import estilos_de_jogo as receitas
+
+    vista = _estilos_a_vista(guardado)
+    chave = receitas.chave_do_catalogo(guardado)
+    nenhum = not any(e.chave == chave for e in vista)
+    linhas = [f'<option value="" disabled{" selected" if nenhum else ""}>—</option>']
+    linhas += [f'<option{" selected" if e.chave == chave else ""}'
+               f'{f" data-dica={chr(34)}{_atr(e.dica_na_lista)}{chr(34)}" * bool(e.dica_na_lista)}'
+               f'>{_texto(e.rotulo)}</option>' for e in vista]
+    return "".join(linhas)
+
 TETO_DA_LISTA_DE_JOGOS = 500
 
 _RECUO = " " * 16
@@ -1034,6 +1057,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             lista, str(bruto.get("lista_vazia") or ""), escolhido_na_lista),
         SELETOR_DOS_JOGOS: _html_dos_jogos(procedencia, foto),
         SELETOR_DA_ORDEM: _html_da_ordem(list(editor.get("ordem") or [])),
+        SELETOR_DOS_ESTILOS: _html_dos_estilos(getattr(alvo, "estilo", None)),
     }
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
@@ -1791,6 +1815,10 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
             f"salvo, e o que vale continua sendo o que está nas abas.")
     nome = _perfil_do_editor(ctx)
     prof = _o_perfil_no_disco(nome)
+    if estilo.chave not in {e.chave for e in _estilos_a_vista(getattr(prof, "estilo", None))}:
+        raise RuntimeError(
+            f"“{escolhido}” só aparece com a extensão que o pede, instalada e ligada. Nada foi "
+            f"salvo, e o que vale continua sendo o que está nas abas.")
     if estilo.chave == "personalizado":
         era = receitas.POR_CHAVE.get(str(getattr(prof, "estilo", "") or ""))
         if era is not estilo:

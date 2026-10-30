@@ -8,6 +8,7 @@ sys.path.insert(0, str(R.parents[1]))
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import (
     ESTILOS as ESTILOS_DO_MOTOR,
 )
+from hefesto_dualsense4unix.profiles.estilos_de_jogo import estilos_a_vista
 from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA
 from hefesto_dualsense4unix.profiles.simple_match import (
     ROTULO_SO_QUANDO_ESCOLHER,
@@ -335,7 +336,7 @@ def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
             f' data-hef-alvo="html"></span></span>')
 
 
-ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
+ESTILOS = [e.rotulo for e in estilos_a_vista()]
 PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
           ("Mortal Kombat online", 88, "Steam · Mortal Kombat 1 · 1971870", False),
           ("Elden Ring", 85, "Steam · Elden Ring · 1245620", False),
@@ -379,7 +380,7 @@ MOMENTOS_DO_DESENHO = [
                     ("programa_aberto", "Programa aberto"), ("hora_marcada", "Hora marcada")]),
     ("Meu", [("meu_comando", "Meu comando")]),
 ]
-DICAS_DOS_ESTILOS = {"Nativo": "O jogo decide"}
+DICAS_DOS_ESTILOS = {e.rotulo: e.dica_na_lista for e in ESTILOS_DO_MOTOR if e.dica_na_lista}
 
 PRI_DO_DESENHO = PERFIS[0][1]
 PERFIL_DO_EDITOR = PERFIS[0][0]
@@ -1180,6 +1181,11 @@ def _conferir(html: str) -> None:
            "substituem")
 
     for e in ESTILOS_DO_MOTOR:
+        if e.so_quando_pedido:
+            exigir(f">{e.rotulo}</option>" not in html,
+                   f"o estilo '{e.rotulo}' só aparece com a extensão que o pede, e o desenho "
+                   f"sem extensão o mostra")
+            continue
         exigir(f">{e.rotulo}</option>" in html,
                f"o estilo '{e.rotulo}' está no motor e não está no `<select>` "
                f"— o gesto saberia aplicá-lo e ela não teria como pedir")

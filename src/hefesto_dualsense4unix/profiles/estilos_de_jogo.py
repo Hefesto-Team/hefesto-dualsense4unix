@@ -215,6 +215,8 @@ class Estilo:
     receita_invisivel: Receita | None = None
     r2: Lado | None = None
     l2: Lado | None = None
+    so_quando_pedido: bool = False
+    dica_na_lista: str = ""
 
     def __post_init__(self) -> None:
         if self.r2 is not None and self.r2.modo != self.gatilho:
@@ -229,7 +231,8 @@ class Estilo:
 
 ESTILOS: tuple[Estilo, ...] = (
     Estilo("nativo", "Nativo", None, "", (0, 0, 0), 0.0,
-           "o jogo decide o gatilho, a vibração, a luz e o toque; o Hefesto não escolhe nada"),
+           "o jogo decide o gatilho, a vibração, a luz e o toque; o Hefesto não escolhe nada",
+           dica_na_lista="O jogo decide"),
     Estilo("fps", "FPS", "Machine", "max", (255, 40, 40), 1.0,
            "o R2 estala em rajada, que é o gesto do gênero, e o L2 tem o peso da mira",
            _respira((("start", 2), ("end", 9), ("strength", 4), ("frequency", 40))),
@@ -262,7 +265,7 @@ ESTILOS: tuple[Estilo, ...] = (
                    luz_ritmo=1, som_quando_o_jogo_cala=False)),
     Estilo("adulto", "Adulto", "Off", "max", (250, 128, 114), 1.0,
            "o gatilho é do jogo; a vibração sobe e a luz fica parada, sem reação a tiro",
-           Receita()),
+           Receita(), so_quando_pedido=True),
     Estilo("terror", "Terror", "Weapon", "max", (215, 30, 55), 0.7,
            "a arma não é confiável e o coração bate na luz e nos motores; a luz baixa não denuncia",
            Receita(duracao_da_vibracao_ms=2 * DURACAO_DE_SEMPRE_MS,
@@ -321,6 +324,15 @@ def chave_do_catalogo(chave: object) -> object:
 
 
 SEM_COR = frozenset({"personalizado", "nativo"})
+
+PEDIVEIS = frozenset(e.chave for e in ESTILOS if e.so_quando_pedido)
+
+
+def estilos_a_vista(pedidos: frozenset[str] | set[str] = frozenset(),
+                    guardado: object = None) -> tuple[Estilo, ...]:
+    """Os estilos que a tela oferece: os de sempre, os pedidos por extensão ligada e o guardado."""
+    fica = set(pedidos) | {chave_do_catalogo(guardado)}
+    return tuple(e for e in ESTILOS if not e.so_quando_pedido or e.chave in fica)
 
 DE_FABRICA: tuple[Estilo, ...] = tuple(e for e in ESTILOS if e.chave != "personalizado")
 

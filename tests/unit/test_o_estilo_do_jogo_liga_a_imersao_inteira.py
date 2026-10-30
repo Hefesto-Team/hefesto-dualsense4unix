@@ -48,6 +48,8 @@ class _Ponte:
 @pytest.fixture
 def disco(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """Um perfil na "pasta" de mentira; o que o gesto grava fica aqui."""
+    monkeypatch.setattr("hefesto_dualsense4unix.mods.manifesto.estilos_pedidos",
+                        lambda *a, **kw: ej.PEDIVEIS)
     guardado: dict[str, Any] = {
         "perfil": Profile(name="Pragmata", match=MatchAny(), priority=40),
         "salvos": [],

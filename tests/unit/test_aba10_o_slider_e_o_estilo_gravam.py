@@ -52,6 +52,8 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a10_perfis, "_ARMADO_REBAIXAR", None, raising=False)
     monkeypatch.setattr(a10_perfis, "_PINTADO_PARA", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ULTIMO_TIQUE", 0.0, raising=False)
+    monkeypatch.setattr("hefesto_dualsense4unix.mods.manifesto.estilos_pedidos",
+                        lambda *a, **kw: estilos_de_jogo.PEDIVEIS)
 
 
 @pytest.fixture
@@ -114,11 +116,17 @@ def test_so_os_campos_de_texto_ficam_fora_do_tique() -> None:
 
 
 def test_o_select_oferece_o_que_o_motor_sabe_aplicar() -> None:
-    """O CONJUNTO, e não uma contagem: uma receita nova não pode ficar fora."""
+    """O CONJUNTO, e não uma contagem: uma receita nova não pode ficar fora.
+
+    O estilo que só uma extensão pede fica fora do desenho; o pacote o acrescenta com ela.
+    """
     html = _bancada()
-    fora = [e.rotulo for e in estilos_de_jogo.ESTILOS
+    fora = [e.rotulo for e in estilos_de_jogo.estilos_a_vista()
             if f">{e.rotulo}</option>" not in html]
     assert not fora, f"o motor conhece e o `<select>` não oferece: {fora}"
+    sobra = [e.rotulo for e in estilos_de_jogo.ESTILOS
+             if e.chave in estilos_de_jogo.PEDIVEIS and f">{e.rotulo}</option>" in html]
+    assert not sobra, f"o desenho sem extensão oferece o que só a extensão pede: {sobra}"
 
 
 def test_o_estilo_grava_gatilho_vibracao_e_uma_cor_por_unidade(

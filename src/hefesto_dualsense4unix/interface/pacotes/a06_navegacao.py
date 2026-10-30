@@ -559,6 +559,26 @@ def _o_point_and_click_de_hoje(ativo: str | None = None) -> str:
     return str(escolha) if escolha else PADRAO_DO_POINT_AND_CLICK
 
 
+BLOCO_DOS_MOLDES = 'select[data-gesto="point-and-click-perfil"] optgroup[label="Moldes"]'
+
+
+def _moldes_a_vista(escolha: str) -> tuple[Any, ...]:
+    from hefesto_dualsense4unix.mods.manifesto import estilos_pedidos
+    from hefesto_dualsense4unix.profiles import loader
+
+    guardado = escolha.removeprefix(PREFIXO_DO_MOLDE) if escolha.startswith(
+        PREFIXO_DO_MOLDE) else None
+    return loader.moldes_a_vista(estilos_pedidos(), guardado)
+
+
+def _opcoes_dos_moldes(escolha: str) -> str:
+    """«Moldes» do seletor de point and click: os que a tela oferece, com a escolha marcada."""
+    return "".join(
+        f'<option value="{PREFIXO_DO_MOLDE}{m.chave}"'
+        f'{" selected" if f"{PREFIXO_DO_MOLDE}{m.chave}" == escolha else ""}>'
+        f'{html.escape(m.nome)}</option>' for m in _moldes_a_vista(escolha))
+
+
 def _opcoes_dos_meus_perfis(ctx: Contexto) -> str:
     """«Meus perfis» do seletor de point and click: os do disco que configuram botão."""
     from . import a13_mapa_do_controle as mapa
@@ -602,6 +622,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         f'[data-bloco="{BLOCO_PARA_QUEM}"]': chips_de_quem_navega(
             _quem_navega(ctx), so_o_primeiro=True),
         f'[data-bloco="{BLOCO_DOS_MEUS_PERFIS}"]': _opcoes_dos_meus_perfis(ctx),
+        BLOCO_DOS_MOLDES: _opcoes_dos_moldes(mesa["point-and-click-perfil"]),
         **{f'[data-bloco="{PREFIXO_DO_ATALHO}{b}"]': f"<option>{html.escape(r)}</option>"
            for b, r in atalhos.items()},
     }
@@ -917,6 +938,10 @@ def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     if valor.startswith(PREFIXO_DO_MOLDE):
         if valor[len(PREFIXO_DO_MOLDE):] not in loader.MOLDE_POR_CHAVE:
             raise ValueError(f"point-and-click-perfil: o molde {valor!r} não existe.")
+        if loader.MOLDE_POR_CHAVE[valor[len(PREFIXO_DO_MOLDE):]] not in _moldes_a_vista(
+                _o_point_and_click_de_hoje(ctx.state.get("active_profile"))):
+            raise ValueError(f"point-and-click-perfil: o molde {valor!r} só aparece com a "
+                             f"extensão que o pede, instalada e ligada.")
     elif not (valor.startswith(PREFIXO_DO_PERFIL) and valor[len(PREFIXO_DO_PERFIL):].strip()):
         raise ValueError(
             f"point-and-click-perfil: {valor!r} não é um molde nem um perfil "

@@ -72,7 +72,7 @@ def test_o_desenho_perde_o_que_a_tela_nova_nao_tem() -> None:
     assert 'class="conta"' not in html, "a contagem de perfis saiu"
 
 
-def test_o_estilo_de_jogo_abre_em_traco_e_oferece_o_nativo_o_visual_novel_e_o_adulto() -> None:
+def test_o_estilo_de_jogo_abre_em_traco_e_oferece_o_nativo_e_o_visual_novel_sem_o_adulto() -> None:
     html = _desenho()
     bloco = html[html.index('data-hef="editor.estilo"'):]
     bloco = bloco[:bloco.index("</select>")]
@@ -80,8 +80,9 @@ def test_o_estilo_de_jogo_abre_em_traco_e_oferece_o_nativo_o_visual_novel_e_o_ad
     rotulos = [texto.strip() for _atributos, texto in opcoes]
     assert rotulos[0] == "—" and "disabled" in opcoes[0][0] and "selected" in opcoes[0][0]
     assert rotulos[1] == "Nativo", "o Nativo abre a lista, logo depois do «—»"
-    assert {"Visual novel", "Adulto", "Point and click", "Terror"} <= set(rotulos)
-    do_produto = [e.rotulo for e in estilos_de_jogo.ESTILOS]
+    assert {"Visual novel", "Point and click", "Terror"} <= set(rotulos)
+    assert "Adulto" not in rotulos, "o Adulto só aparece com a extensão que o pede"
+    do_produto = [e.rotulo for e in estilos_de_jogo.estilos_a_vista()]
     assert rotulos[1:] == do_produto, "a lista do desenho é a do produto, na ordem"
 
 

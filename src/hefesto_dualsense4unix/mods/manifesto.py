@@ -488,6 +488,7 @@ class Manifesto(BaseModel):
     tema: dict[str, Any] | None = None
     aparelhos: list[dict[str, Any]] | None = None
     substitui: list[str] = Field(default_factory=list)
+    estilos: list[str] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
@@ -541,6 +542,20 @@ class Manifesto(BaseModel):
                 raise ValueError(f"substitui: «{mod_id}» está fora da forma de id")
             if mod_id in de_fabrica:
                 raise ValueError(f"substitui: «{mod_id}» vem com o Hefesto e não se substitui")
+        return valor
+
+    @field_validator("estilos")
+    @classmethod
+    def _estilos_que_se_pedem(cls, valor: list[str]) -> list[str]:
+        from hefesto_dualsense4unix.profiles.estilos_de_jogo import PEDIVEIS, POR_CHAVE
+
+        if len(set(valor)) != len(valor):
+            raise ValueError("estilos: estilo repetido")
+        for chave in valor:
+            if chave not in POR_CHAVE:
+                raise ValueError(f"estilos: «{chave}» não é um estilo de jogo")
+            if chave not in PEDIVEIS:
+                raise ValueError(f"estilos: o estilo «{chave}» aparece sempre e não se pede")
         return valor
 
     @model_validator(mode="after")
@@ -736,6 +751,46 @@ def ler_manifesto(pasta: Path, *, exigir_api: bool = True) -> Manifesto:
     return manifesto
 
 
+_PEDIDOS: dict[str, Any] = {"marca": None, "estilos": frozenset()}
+
+
+def _marca_dos_pedidos(lg: Any, registro: dict[str, Any]) -> tuple[Any, ...]:
+    def carimbo(arquivo: Path) -> tuple[int, int]:
+        try:
+            st = arquivo.stat()
+        except OSError:
+            return (0, 0)
+        return (st.st_mtime_ns, st.st_size)
+
+    return (str(lg.codigo), carimbo(lg.registro), *sorted(
+        (e.id, carimbo(lg.codigo / e.id / NOME_DO_MANIFESTO)) for e in registro.values()
+        if e.ligada))
+
+
+def estilos_pedidos(lugares: Any = None) -> frozenset[str]:
+    """Os estilos que as extensões instaladas e ligadas pedem; a desligada não pede nada."""
+    from hefesto_dualsense4unix.mods import instalador
+
+    lg = lugares or instalador.Lugares.do_xdg()
+    try:
+        registro = instalador.ler_registro(lg.registro)
+    except instalador.InstalacaoRecusadaError:
+        return frozenset()
+    marca = _marca_dos_pedidos(lg, registro)
+    if _PEDIDOS["marca"] == marca:
+        return frozenset(_PEDIDOS["estilos"])
+    pedidos: set[str] = set()
+    for entrada in registro.values():
+        if not entrada.ligada:
+            continue
+        try:
+            pedidos.update(ler_manifesto(lg.codigo / entrada.id).estilos)
+        except ManifestoRecusadoError:
+            continue
+    _PEDIDOS.update(marca=marca, estilos=frozenset(pedidos))
+    return frozenset(pedidos)
+
+
 __all__ = [
     "ACAO_DE_LIGAR",
     "ACOES_DA_JANELA",
@@ -764,6 +819,7 @@ __all__ = [
     "Processo",
     "aceita_a_api",
     "endereco_valido",
+    "estilos_pedidos",
     "forma_valida",
     "frase_da_api",
     "ler_manifesto",

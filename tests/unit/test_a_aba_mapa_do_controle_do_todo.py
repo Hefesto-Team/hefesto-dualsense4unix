@@ -30,6 +30,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 MOCKUP = RAIZ / "mockup" / "mapa-do-controle.html"
 _MATCH = {"type": "manual"}
 NOMES_DOS_MOLDES = ["Point and click", "Visual novel", "Adulto", "Mouse", "Mouse e teclado"]
+NOMES_SEM_EXTENSAO = ["Point and click", "Visual novel", "Mouse", "Mouse e teclado"]
 
 
 def _doc() -> str:
@@ -65,8 +66,9 @@ def test_o_perfil_tem_tres_grupos_e_os_moldes_com_o_nome_da_navegacao() -> None:
     assert grupos == ["Navegação", "Moldes"], grupos
     moldes = re.search(r'<optgroup label="Moldes">(.*?)</optgroup>', seletor.group(0), flags=re.S)
     assert moldes
-    assert re.findall(r">([^<]+)</option>", moldes.group(1)) == NOMES_DOS_MOLDES
+    assert re.findall(r">([^<]+)</option>", moldes.group(1)) == NOMES_SEM_EXTENSAO
     assert [m.nome for m in loader.MOLDES_DE_PERFIL] == NOMES_DOS_MOLDES
+    assert [m.nome for m in loader.moldes_a_vista()] == NOMES_SEM_EXTENSAO
 
 
 def test_o_voltar_leva_a_navegacao_e_a_tela_nao_confessa_mesa_nem_jogador() -> None:

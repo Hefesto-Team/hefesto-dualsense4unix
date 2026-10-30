@@ -143,6 +143,7 @@ class MoldeDePerfil:
     button_actions: Mapping[str, str]
     velocidade: int = 8
     rolagem: int = 1
+    so_com_o_estilo: str | None = None
 
 
 MOLDES_DE_PERFIL: tuple[MoldeDePerfil, ...] = (
@@ -154,7 +155,8 @@ MOLDES_DE_PERFIL: tuple[MoldeDePerfil, ...] = (
         "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
     MoldeDePerfil("adulto", "Adulto", {
         "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "square": "KEY_LEFTCTRL",
-        "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
+        "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"},
+        so_com_o_estilo="adulto"),
     MoldeDePerfil("mouse", "Mouse", {
         "cross": "BTN_LEFT", "circle": "BTN_RIGHT",
         "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
@@ -165,6 +167,14 @@ MOLDES_DE_PERFIL: tuple[MoldeDePerfil, ...] = (
 )
 
 MOLDE_POR_CHAVE: dict[str, MoldeDePerfil] = {m.chave: m for m in MOLDES_DE_PERFIL}
+
+
+def moldes_a_vista(pedidos: frozenset[str] | set[str] = frozenset(),
+                   guardado: str | None = None) -> tuple[MoldeDePerfil, ...]:
+    """Os moldes que a tela oferece: o do estilo pedido só com o pedido, ou quando é o guardado."""
+    return tuple(m for m in MOLDES_DE_PERFIL
+                 if m.so_com_o_estilo is None or m.so_com_o_estilo in pedidos
+                 or m.chave == guardado)
 
 
 def perfil_do_molde(chave: str, nome: str, *, prioridade: int = 0) -> Profile:

@@ -9,7 +9,7 @@ com o adulto, para a extensão que o serve). As variantes não escolhidas saíra
 MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema desenho-perfis-07):
 
 * pôr «Freestyle» na lista de estilos -> `test_a_lista_de_estilos_tem_as_duas_marcas_...`;
-* tirar o «Adulto» da lista -> o mesmo;
+* pôr o «Adulto» de volta no desenho sem extensão -> o mesmo;
 * pôr o campo «Nome» de volta no editor -> `test_o_desenho_nao_tem_campo_de_nome_do_perfil`;
 * devolver a frase longa ao rótulo da variante B -> `test_a_variante_b_do_freestyle_cabe_a_940`;
 * deixar a variante de pé depois de o gerador mudar -> `test_as_variantes_de_10_estao_em_dia`.
@@ -84,11 +84,14 @@ def _estilos_da_pagina(html: str) -> list[str]:
 
 
 def test_a_lista_de_estilos_tem_as_duas_marcas_e_nao_tem_freestyle() -> None:
-    """O select de estilo oferece Visual novel e Adulto, abre no travessão e nunca diz Freestyle."""
+    """O select de estilo oferece Visual novel, abre no travessão e nunca diz Freestyle.
+
+    O Adulto só aparece com a extensão que o pede, pelo pacote, e nunca no desenho.
+    """
     html = _ler(DEZ)
     opcoes = _estilos_da_pagina(html)
     assert opcoes[0] == "—", opcoes[:2]
-    assert "Visual novel" in opcoes and "Adulto" in opcoes, opcoes
+    assert "Visual novel" in opcoes and "Adulto" not in opcoes, opcoes
     assert not [o for o in opcoes if "freestyle" in o.lower()], (
         "o Freestyle é o botão do Ultra, nunca um estilo nem um perfil da aba Perfis")
     trecho = html.split('data-hef="editor.estilo"', 1)[1].split("</select>", 1)[0]
