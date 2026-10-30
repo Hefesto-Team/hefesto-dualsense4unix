@@ -2,7 +2,7 @@
 
 A-FABRICA-NOVA-DO-FREESTYLE-ALCANCA-A-COPIA-DE-FABRICA-DE-ONTEM-01 (09/10/2026). A migração
 ``o_freestyle_de_fabrica_nasce_ligado`` só trocava o ``freestyle.json`` que fosse igual a uma
-fábrica de uma tupla escrita à mão, e a fábrica entregue hoje não está nela: na próxima mudança do
+fábrica de uma tupla escrita à mão, e a de hoje não está na tupla: na próxima mudança do
 asset, a cópia intocada de hoje ficaria velha para sempre. A marca já guarda a impressão da fábrica
 que esta máquina recebeu; agora a migração a compara com o arquivo.
 

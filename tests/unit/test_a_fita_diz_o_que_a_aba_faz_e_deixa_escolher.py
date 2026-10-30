@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A FITA `Selecionar:` — que ela diga o que a aba faz, e que deixe escolher."""
+"""A FITA `Selecionar:` — que diga o que a aba faz, e que deixe escolher."""
 from __future__ import annotations
 
 import pathlib
@@ -56,7 +56,7 @@ def test_a_fita_de_leitura_nasce_e_continua_esmaecida(hv, pagina):
     """O que o piloto REPINTA tem de concordar com o que o arquivo publica.
 
     A Jogar não tem a fita desde as abas dos controles (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR):
-    o tique manda a fita vazia às `monta.ABAS_SEM_A_FITA`, e o arquivo dela não publica a `.fita`.
+    o tique manda a fita vazia às `monta.ABAS_SEM_A_FITA`, e o arquivo da Jogar não publica a fita.
     """
     monta = _monta()
     publicado = (RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / pagina)
@@ -84,7 +84,7 @@ def test_a_fita_de_leitura_nasce_e_continua_esmaecida(hv, pagina):
 
 @pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento)
 def test_o_titulo_da_fita_nao_promete_o_que_a_aba_nao_faz(hv, pagina):
-    """O `title` é a frase que ela lê ao passar o rato. Ele segue o `inerte`."""
+    """O `title` é a frase lida ao passar o rato. Ele segue o `inerte`."""
     vivo = hv._fita(MESA, pagina)
     escolhe = _monta().a_fita_escolhe(pagina)
     promete = "vai para o controle escolhido aqui" in vivo
@@ -133,7 +133,7 @@ def test_o_clique_no_chip_move_o_alvo(hv):
         "o clique no chip do P2 não moveu o alvo — é o produto de antes de "
         "05/09/2026, em que o `Selecionar:` mostrava sem deixar escolher")
     hv._escolher_na_fita(_ctx(MESA), {"pref": "p1"}, None)
-    assert hv._pref_escolhido(MESA) == "p1", "e ele volta quando ela clica de volta"
+    assert hv._pref_escolhido(MESA) == "p1", "e ele volta com o clique de volta"
 
 
 def test_a_fita_acende_o_chip_que_o_usuario_escolheu(hv):
@@ -155,7 +155,7 @@ def test_a_escolha_segue_o_aparelho_e_nao_a_posicao(hv):
 
 
 def test_a_escolha_nao_e_apagada_quando_o_controle_sai(hv):
-    """Ela sobrevive à ausência e volta quando o aparelho volta."""
+    """A escolha sobrevive à ausência e volta quando o aparelho volta."""
     hv._escolher_na_fita(_ctx(MESA), {"pref": "p2"}, None)
     assert hv._pref_escolhido([MESA[0]]) == "p1", "sem ele, desenha o que há"
     assert hv._pref_escolhido(MESA) == "p2", "e volta a ser ele quando ele volta"

@@ -209,5 +209,5 @@ def test_nenhum_campo_do_caderno_fica_isento() -> None:
     from tests.unit.test_todo_campo_do_caderno_tem_consumidor import ISENTOS
 
     assert ISENTOS == {}, (
-        "as isenções saíram em 06/10/2026 com as respostas dela; campo novo sem leitor "
+        "as isenções saíram em 06/10/2026 com as respostas de produto; campo novo sem leitor "
         "ganha consumidor ou sai do esquema")

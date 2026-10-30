@@ -10,7 +10,7 @@ O QUE ESTE ARQUIVO TRAVA, e os dois são a mesma família
 incondicional; o `writeReport` do handle escrevia e **jogava fora o retorno**
 do `device.write`. A única conferência que existia
 (``int(escrito) == len(report)``) morava no ramo de fallback — e handle BT
-toma SEMPRE o ramo do `writeReport`, então ela nunca rodava no rádio. Medido
+toma SEMPRE o ramo do `writeReport`, então a conferência nunca rodava no rádio. Medido
 contra o aparelho na mesma noite: o log dizia ``cor=(0,255,0) enviado=True``
 com a barra física APAGADA, e o usuário confirmou com o olho.
 

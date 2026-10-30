@@ -1,6 +1,6 @@
-"""Ela dispensa o aviso do jogo UMA vez, e as quatro telas calam.
+"""Quem usa dispensa o aviso do jogo UMA vez, e as quatro telas calam.
 
-Medido em 05/09/2026: ela clicava "Não perguntar para este jogo" na aba
+Medido em 05/09/2026: o clique em "Não perguntar para este jogo" na aba
 Lançadores e **três outras telas continuavam acusando** — a Início, a Status e a
 coluna Atenção da aba Jogar (`app/actions/jogar/painel.py:358`). As três
 chamavam `wrapper_banner_text` direto, que só olha
@@ -10,13 +10,13 @@ A decisão de produto no mesmo dia (pergunta `07-Q3`): *"as duas recusas calam t
 E o `calados` da 07 antiga já dizia, por escrito, que a conta precisava de um
 dono para a outra metade não a redigitar:
 
-    "ELA É PÚBLICA E TEM NOME PRÓPRIO porque a segunda tela precisa dela. (…)
+    "A CONTA É PÚBLICA E TEM NOME PRÓPRIO porque a segunda tela precisa da conta. (…)
      Está relatado como trabalho de fora desta aba."
 
 A cura cobre TODOS os chamadores, que é a regra desta casa: nasceu
 `home_actions.aviso_do_wrapper`, e as telas passaram a chamá-lo.
 `wrapper_banner_text` continua puro e continua existindo — ele responde "há jogo
-sem wrapper agora?"; o novo responde "há algo a DIZER a ela sobre isso?".
+sem wrapper agora?"; o novo responde "há algo a DIZER a quem usa sobre isso?".
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ def test_o_aviso_aparece_quando_o_usuario_nao_respondeu(monkeypatch):
 def test_o_aviso_cala_quando_o_usuario_ja_respondeu(monkeypatch):
     monkeypatch.setattr(ha, "o_usuario_ja_respondeu_sobre", lambda _a: True)
     assert ha.aviso_do_wrapper(COM_JOGO_SEM_WRAPPER) is None, (
-        "ela dispensou o jogo e a tela continuou acusando"
+        "o jogo foi dispensado e a tela continuou acusando"
     )
 
 
@@ -73,7 +73,7 @@ def test_falha_de_disco_mostra_o_aviso_em_vez_de_escondelo(monkeypatch):
 
 
 def test_as_quatro_telas_chamam_o_dono_novo():
-    """A MORDIDA estrutural: se uma tela voltar ao cru, ela volta a acusar."""
+    """A MORDIDA estrutural: se uma tela voltar ao cru, a tela volta a acusar."""
     import inspect
 
     from hefesto_dualsense4unix.app.actions.jogar import painel

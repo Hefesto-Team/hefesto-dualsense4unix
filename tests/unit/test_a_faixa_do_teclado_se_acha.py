@@ -2,10 +2,10 @@
 
 Antes da cura (medido em 09/10/2026 sobre os mesmos pares): o par de mapas de um receptor que
 salta de canal, o par sem mapa AFH e o par em que nada mudou davam TODOS o mesmo passo ``nada``,
-«Não achei a faixa dele» (na tela, a «Faixa não encontrada · Tentar de novo» que ela viu). Agora a
+«Não achei a faixa dele» (na tela, a «Faixa não encontrada · Tentar de novo»). Agora a
 procura (``receptor_sem_fio.classificar`` e ``Descoberta``) responde a faixa, o salto, a falta de
 mapa ou o mapa parado, sobre os pares guardados em ``tests/fixtures/a_faixa_do_receptor/``
-(sintéticos até a bancada gravar os do teclado do usuário com
+(sintéticos até o ensaio gravar os do teclado do usuário com
 ``scripts/ensaios/a_faixa_do_receptor.py``).
 
 MORDIDAS (arrancar, ver reprovar, devolver):
@@ -21,7 +21,7 @@ MORDIDAS (arrancar, ver reprovar, devolver):
 7. A medida «sem ele» de volta a uma leitura só (sem o ``&`` das leituras até
    ``ESPERA_ATE_O_MAPA_SOLTAR_S``): o par ``solta-devagar`` fica no «mapa parado» (test_11).
 8. A volta à medida «sem ele» sem zerar o ``sem``: a leitura de antes do receptor voltar segura a
-   faixa e ela some do «com» (test_12).
+   faixa, e a faixa some do «com» (test_12).
 
 A medida de 19/10/2026 no receptor 25a7:fa07 (a do diário, ``sem=[18] com=[18]``): com uma leitura
 só, aos 25 s, o mapa ficou igual. A espera do «com» sobe para 120 s, o «sem» fica com o menor mapa

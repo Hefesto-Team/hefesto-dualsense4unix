@@ -1,7 +1,7 @@
 """A cor escolhida acompanha o controle — `D-2909-A-COR-ESCOLHIDA-ACOMPANHA-O-CONTROLE`.
 
-Ela respondeu em 29/09/2026 (~21h40) que a cor de um controle não muda quando a mesa
-se renumera: *«Acompanha o controle»*. A regra de 08/09 dizia o contrário (a cor presa
+Decisão de 29/09/2026 (~21h40): a cor de um controle não muda quando a mesa
+se renumera; acompanha o controle. A regra de 08/09 dizia o contrário (a cor presa
 ao número, fóssil quando o número mudava) e foi a que apagou o laranja e o verde-água
 às 02:51 de 29/09, quando o vermelho caiu e a mesa se renumerou.
 
@@ -139,7 +139,7 @@ class TestNuncaDuasIguais:
         assert saida[UNIQS[0]] != azul, "duas luzes iguais na mesa"
 
     def test_a_escolha_de_outro_numero_tambem_vence_a_automatica(self) -> None:
-        """A mesma cena com a escolha carimbada para um número que já não é o dela."""
+        """A mesma cena com a escolha carimbada para um número que já não é o do controle."""
         azul = player_slot_color(1)
         p1 = PecaDaMesa(uniq=UNIQS[0], pedida=azul, do_numero=azul,
                         procedencia=DA_PALETA, numero=1, do_plastico=azul)
@@ -155,7 +155,7 @@ class TestNuncaDuasIguais:
         """O azul escolhido quando ele era o P1; ele sai, outro vira P1, e ele volta P2.
 
         Sem a cor do plástico (controle que não a informa), a automática é a do número:
-        o novo P1 acende o azul do número 1, e é ela quem cede, não a escolha.
+        o novo P1 acende o azul do número 1, e é a automática quem cede, não a escolha.
         """
         azul = player_slot_color(1)
         p1 = _automatica(UNIQS[0], 1)

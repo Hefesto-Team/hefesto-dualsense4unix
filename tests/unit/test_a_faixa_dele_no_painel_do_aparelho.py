@@ -1,5 +1,5 @@
 """«A FAIXA DELE» no painel do aparelho (desenho 2 aprovado em 04/10/2026; desde 05/10/2026 o
-painel único não a repete, e ela mora só na aba Conexões).
+painel único não a repete, e a faixa mora só na aba Conexões).
 
 O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01, o defeito que o conferente achou: a mini-faixa do painel
 (os 79 canais, pintado é o bom, vazio com a marca de quem o tomou, e a frase «perde para…» ou
@@ -82,7 +82,7 @@ def test_o_dado_do_aparelho_leva_a_faixa_pelo_vid_pid(disco: Any) -> None:  # no
         raise RuntimeError("a leitura do rádio caiu")
 
     dado = arranjo_desta_maquina.para_a_pagina(**fontes, faixas=quebra)
-    assert dado is not None, "a faixa é um extra: o arranjo chega sem ela"
+    assert dado is not None, "a faixa é um extra: o arranjo chega sem a faixa"
     assert all("faixa" not in a for a in dado["aparelhos"])
 
 

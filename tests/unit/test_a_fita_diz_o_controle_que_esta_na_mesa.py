@@ -1,4 +1,4 @@
-"""A FITA DO TOPO — e ela aparece nas DEZ abas, o que multiplica todo defeito.
+"""A FITA DO TOPO — e a fita aparece nas DEZ abas, o que multiplica todo defeito.
 
 O usuário viu e disse, em 02/09/2026: *"o controle identificado em todas ta
 completamente errado"*. Medido no mesmo dia, com os dois controles do usuário na mesa
@@ -93,7 +93,7 @@ def _nome_escrito(chip: str, c: dict[str, Any]) -> str:
 
 
 def test_a_fita_viva_nao_repete_um_nome_do_mockup() -> None:
-    """Com a bancada, nenhum chip pode dizer "Cosmic Red" ou "Starlight Blue"."""
+    """Com o ensaio, nenhum chip pode dizer "Cosmic Red" ou "Starlight Blue"."""
     html = monta.fita(ativo="p1", mesa=MESA_DO_USUARIO)
     for inventado in ("Cosmic Red", "Starlight Blue", "Galactic Purple"):
         assert inventado not in html, (

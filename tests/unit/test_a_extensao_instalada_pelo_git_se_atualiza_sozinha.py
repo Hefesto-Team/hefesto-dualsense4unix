@@ -2,7 +2,7 @@
 
 A sprint é a A-EXTENSAO-INSTALADA-PELO-GIT-SE-ATUALIZA-SOZINHA-01.
 Os repositórios são ``git init`` locais, abertos por ``file://``, num lar de mentira: nenhuma
-prova fala com a rede de fora, com o GitHub nem com o serviço dela.
+prova fala com a rede de fora, com o GitHub nem com o serviço da extensão.
 
 MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
 
@@ -108,7 +108,7 @@ def test_o_commit_novo_do_remoto_se_instala_sozinho_e_a_viva_volta(
             await _ate(lambda: _rodando(sup) and sup.pid_de("exemplo") != pid_velho)
             entrada = ler_registro(lar.registro)["exemplo"]
             assert entrada.versao == "0.2.0" and entrada.ligada
-            assert entrada.intervalo_da_atualizacao_s == 0.2, "o intervalo dela se perdeu"
+            assert entrada.intervalo_da_atualizacao_s == 0.2, "o intervalo da extensão se perdeu"
             assert entrada.versao_esperando == ""
             assert manifesto_instalado("exemplo", lugares=lar).versao == "0.2.0"
         finally:

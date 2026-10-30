@@ -49,7 +49,7 @@ class TestOModuloDeixouDeSerOrfao:
 
 class TestACuraPercorreTodosOsCartoes:
     def test_os_cinco_cartoes_estao_na_lista(self, monkeypatch):
-        """A Steam NÃO entra — ela tem o atalho de inicialização, que é a"""
+        """A Steam NÃO entra — tem o atalho de inicialização, que é a"""
         chaves = [c for c, _ in cpe.cartoes_com_estrada()]
         assert "steam" not in chaves
         assert set(chaves) == {"heroic"}, "de fábrica, só o Heroic tem caixa (19/10/2026)"

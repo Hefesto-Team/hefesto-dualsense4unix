@@ -99,17 +99,17 @@ def test_a_permissao_estreita_basta_para_o_controle(tmp_path) -> None:
 
 
 def test_o_override_do_usuario_soma_e_o_com_exclamacao_tira(tmp_path) -> None:
-    """O que ELA mudou é a resposta mais nova, e o `!` é a única que fecha."""
+    """O que QUEM USA mudou é a resposta mais nova, e o `!` é a única que fecha."""
     _instalar(tmp_path, DOLPHIN, devices="dri")
     _override(tmp_path, DOLPHIN, "[Context]\ndevices=all;\n")
     assert caixa.permissao_de(DOLPHIN, **_lar_de_mentira(tmp_path)).entra, (
-        "o override dela ACRESCENTA, e o `all` que ela pôs não chegou")
+        "o override de quem usa ACRESCENTA, e o `all` acrescentado não chegou")
 
     _instalar(tmp_path, DOLPHIN, devices="all")
     _override(tmp_path, DOLPHIN, "[Context]\ndevices=!all;\n")
     fechada = caixa.permissao_de(DOLPHIN, **_lar_de_mentira(tmp_path))
     assert fechada.estado == caixa.NAO_ENTRA, (
-        "o pacote pede `all`, ela fechou com `!all`, e o produto ainda diz "
+        "o pacote pede `all`, quem usa fechou com `!all`, e o produto ainda diz "
         "que o controle entra — verde sobre uma caixa fechada à mão")
     assert "all" not in fechada.dispositivos
 
@@ -144,7 +144,7 @@ def test_um_cartao_pode_ser_dois_programas_e_os_dois_contam(tmp_path) -> None:
 
     assert ids == (DOLPHIN, MGBA), (
         "o cartão duplo entrou com um programa só — a conta do «Flatpak» "
-        "mente por baixo, que é como ela disse 4 numa máquina com 5")
+        "mente por baixo, que é como a conta disse 4 numa máquina com 5")
 
 
 def test_a_frase_do_cartao_flatpak_conta_e_nomeia(tmp_path) -> None:
@@ -169,7 +169,7 @@ def test_o_ambiente_e_o_do_daemon_filtrado_pela_allowlist(tmp_path) -> None:
     assert env["PROTON_DISABLE_HIDRAW"] == "0x054C/0x0CE6"
     assert env["__GL_SHADER_DISK_CACHE"] == "1"
     assert "LD_PRELOAD" not in env, (
-        "a cura escreveria na configuração dela uma variável que o próprio "
+        "a cura escreveria na configuração de quem usa uma variável que o próprio "
         "wrapper recusa exportar")
 
 
@@ -215,12 +215,12 @@ def test_o_cartao_duplo_ganha_uma_estrada_por_programa(tmp_path) -> None:
 
 @pytest.mark.parametrize("chave", ["flatpak", "steam"])
 def test_quem_nao_tem_estrada_nao_ganha_botao(chave, tmp_path) -> None:
-    """O «Flatpak» é o runtime dos outros e a Steam tem o atalho dela."""
+    """O «Flatpak» é o runtime dos outros e a Steam tem o atalho próprio."""
     assert cura.estradas_do_cartao(chave, ("flatpak",), **_lar_de_mentira(tmp_path)) == ()
 
 
 def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_do_usuario(tmp_path) -> None:
-    """As nossas entram; o `MANGOHUD` dela fica; o resto do arquivo fica."""
+    """As nossas entram; o `MANGOHUD` de quem usa fica; o resto do arquivo fica."""
     _instalar(tmp_path, HEROIC)
     pasta = tmp_path / ".var/app" / HEROIC / "config/heroic"
     pasta.mkdir(parents=True)
@@ -239,7 +239,7 @@ def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_do_usuario(tmp_path) -> Non
     escrito = json.loads((pasta / "config.json").read_text(encoding="utf-8"))
     opcoes = {x["key"]: x["value"]
               for x in escrito["defaultSettings"][cura.CHAVE_DO_HEROIC]}
-    assert opcoes["MANGOHUD"] == "1", "a cura apagou a configuração dela"
+    assert opcoes["MANGOHUD"] == "1", "a cura apagou a configuração de quem usa"
     assert opcoes["SDL_GAMECONTROLLER_IGNORE_DEVICES"] == (
         "0x054c/0x0ce6,0x28de/0x11ff")
     assert "LD_PRELOAD" not in opcoes
@@ -249,7 +249,7 @@ def test_a_cura_do_heroic_escreve_e_preserva_o_que_e_do_usuario(tmp_path) -> Non
 
 
 def test_a_cura_do_override_escreve_no_formato_do_flatpak(tmp_path) -> None:
-    """`chave=valor`, sem espaço — e a seção `[Context]` dela fica intacta."""
+    """`chave=valor`, sem espaço — e a seção `[Context]` do arquivo fica intacta."""
     _instalar(tmp_path, DOLPHIN)
     alvo = _override(tmp_path, DOLPHIN,
                      "[Context]\ndevices=all;\nfilesystems=host;\n\n"
@@ -285,7 +285,7 @@ def test_a_cura_nasce_onde_nao_havia_override(tmp_path) -> None:
 
 
 def test_a_cura_devolve_a_permissao_do_arquivo_do_usuario(tmp_path) -> None:
-    """**MEDIDO PELO CONFERENTE EM 09/09/2026: o clique fechava o arquivo dela.**"""
+    """**MEDIDO PELO CONFERENTE EM 09/09/2026: o clique fechava o arquivo de quem usa.**"""
     import os
     import stat as _stat
 
@@ -302,7 +302,7 @@ def test_a_cura_devolve_a_permissao_do_arquivo_do_usuario(tmp_path) -> None:
         pasta_do_ambiente=_ambiente(tmp_path)))
 
     assert _stat.S_IMODE(do_usuario.stat().st_mode) == 0o644, (
-        "a cura fechou um arquivo de configuração DELA ao escrever nele")
+        "a cura fechou um arquivo de configuração DE QUEM USA ao escrever nele")
     assert do_usuario.stat().st_uid == os.getuid()
     assert _stat.S_IMODE(nasce.stat().st_mode) == 0o644, (
         "o override que NASCEU herdou o 0600 do arquivo temporário em vez da "
@@ -330,7 +330,7 @@ def test_o_recibo_diz_o_nome_do_cartao_e_nao_a_chave(tmp_path) -> None:
 
     assert frase.startswith("Dolphin · mGBA: "), frase
     assert "emuladores" not in frase, (
-        f"a chave interna do cartão foi para a tarja dela: {frase}")
+        f"a chave interna do cartão foi para a tarja: {frase}")
     assert "os 2 programas" in frase and "em cada" in frase, frase
     assert frase.count("3") <= 1, f"a contagem saiu duas vezes: {frase}"
 
@@ -349,8 +349,8 @@ def test_arquivo_ilegivel_recusa_e_nao_e_reescrito(tmp_path) -> None:
             pasta_do_ambiente=_ambiente(tmp_path)))
 
     assert (pasta / "config.json").read_text(encoding="utf-8") == truncado, (
-        "a cura reescreveu um arquivo que ela não conseguiu ler — a "
-        "configuração dela foi para o lixo com uma piscada verde por cima")
+        "a cura reescreveu um arquivo que não conseguiu ler — a "
+        "configuração de quem usa foi para o lixo com uma piscada verde por cima")
 
 
 def test_a_recusa_de_um_programa_nao_deixa_o_outro_escrito(tmp_path) -> None:

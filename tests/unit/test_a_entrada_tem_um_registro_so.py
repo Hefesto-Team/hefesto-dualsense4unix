@@ -52,7 +52,7 @@ ADAPTADOR_DO_MEIO = "aa:bb:cc:00:00:11"
 
 
 def _a_do_usuario_com_os_nomes_dos_adaptadores() -> dict[str, Any]:
-    """A máquina do usuário, com os três adaptadores nomeados como ela os nomeou."""
+    """A máquina do usuário, com os três adaptadores nomeados como foram nomeados."""
     documento = _a_maquina_do_usuario()
     documento["adaptadores"] = {
         "aabbcc000011": {"nome": "Meio"},
@@ -260,7 +260,7 @@ def test_um_boot_com_outra_numeracao_diz_a_mesma_entrada(tmp_path: Path) -> None
     os controladores subiram na ordem inversa, e o DualSense no cabo da Entrada
     7 enumera como ``3-5``. O Mapear, o nome da porta e o motor do arranjo
     dizem a Entrada 7 — e o ``1-5`` deste boot, que é o OUTRO controlador,
-    não é ela."""
+    não é essa entrada."""
     documento = MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_do_usuario()))
     gabinete = Gabinete(tmp_path / "boot2", BOOT_2)
     assert gabinete.plugar(3, "5", DUALSENSE) == "3-5"

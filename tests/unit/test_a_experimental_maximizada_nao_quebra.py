@@ -56,7 +56,7 @@ _NOMES = ("Azahar", "Dolphin", "Buttplug", "KytyPS5", "Lutris", "mGBA", "RetroAr
 
 
 def _extensoes(aberta: int, n: int = len(_NOMES)) -> str:
-    """``n`` linhas como as dela; a de índice ``aberta`` com o ⋮ e as permissões à vista."""
+    """``n`` linhas como as de uso; a de índice ``aberta`` com o ⋮ e as permissões à vista."""
     exts = []
     for i in range(n):
         nome = _NOMES[i % len(_NOMES)] + ("" if i < len(_NOMES) else f" {i + 1}")
@@ -145,7 +145,7 @@ print(json.dumps(saida))
 def _casos() -> dict[str, tuple[int, int, str, str]]:
     casos = {}
     for w, h in VISTAS:
-        casos[f"{w}x{h}-dela"] = (w, h, _fila(10), _extensoes(-1))
+        casos[f"{w}x{h}-uso"] = (w, h, _fila(10), _extensoes(-1))
         casos[f"{w}x{h}-mais"] = (w, h, _fila(17), _extensoes(-1, 12))
         casos[f"{w}x{h}-perm"] = (w, h, _fila(10), _extensoes(len(_NOMES) - 1))
     return casos
@@ -178,18 +178,18 @@ def _sem_rolar_o_miolo(m: dict[str, list[int] | None]) -> None:
 
 def test_a_fila_do_usuario_cabe_inteira_na_maximizada(
         medida: dict[str, dict[str, list[int] | None]]) -> None:
-    """Dez lançadores e a linha do «Adicionar» (a fila dela), na janela maximizada: tudo à vista."""
-    m = medida["1918x840-dela"]
+    """Dez lançadores e a linha do «Adicionar» (a fila de uso), na janela maximizada: tudo visto."""
+    m = medida["1918x840-uso"]
     _sem_rolar_o_miolo(m)
     fila, fila_caixa, novo = _caixas(m, "fila", "fila_caixa", "novo")
-    assert fila[0] <= fila[1] + 1, f"a fila dela rola na maximizada: {m}"
+    assert fila[0] <= fila[1] + 1, f"a fila de uso rola na maximizada: {m}"
     assert novo[1] <= fila_caixa[1] + 1, f"o «Adicionar um lançador» fica escondido: {m}"
 
 
-@pytest.mark.parametrize("caso", [f"{w}x{h}-mais" for w, h in VISTAS] + ["1212x809-dela"])
+@pytest.mark.parametrize("caso", [f"{w}x{h}-mais" for w, h in VISTAS] + ["1212x809-uso"])
 def test_a_fila_que_nao_cabe_rola_por_dentro(
         medida: dict[str, dict[str, list[int] | None]], caso: str) -> None:
-    """Doze extensões e dezoito linhas nas duas vistas, e a fila dela no piso da janela: o miolo
+    """Doze extensões e dezoito linhas nas duas vistas, e a fila de uso no piso da janela: o miolo
     fica parado e a fila rola por dentro até o «Adicionar um lançador»."""
     m = medida[caso]
     _sem_rolar_o_miolo(m)

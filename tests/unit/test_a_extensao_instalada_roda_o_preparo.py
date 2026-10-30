@@ -1,10 +1,10 @@
-"""A extensão instalada pelo Hefesto roda o preparo dela.
+"""A extensão instalada pelo Hefesto roda o próprio preparo.
 
 A sprint é a A-EXTENSAO-INSTALADA-PELO-HEFESTO-RODA-O-PREPARO-DO-USUARIO-01: o campo ``preparar``
 do manifesto é um comando, relativo à pasta da extensão, que o instalador roda fora da caixa,
 como quem usa, depois de trocar o código e antes de ligar. Tudo num lar de mentira (``HOME`` e
 ``XDG_*`` em pasta temporária), com uma extensão de mentira cujo preparo grava um arquivo na
-pasta de dados: nenhuma prova fala com o serviço dela, com a rede nem com extensão de verdade.
+pasta de dados: nenhuma prova fala com o serviço da extensão, com a rede nem com extensão real.
 
 MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
 

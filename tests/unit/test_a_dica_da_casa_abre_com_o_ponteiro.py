@@ -21,10 +21,10 @@ MS_DE_GUARDA = 30000
 def _sem_tela_de_mentira() -> str:
     """A razão para NÃO abrir janela aqui, ou string vazia."""
     if os.environ.get("WAYLAND_DISPLAY"):
-        return ("a sessão gráfica DELA está no ambiente — esta régua abre uma "
-                "janela de verdade e ela tem UMA tela (TELA-DO-USUARIO-01)")
+        return ("a sessão gráfica de quem usa está no ambiente — esta régua abre uma "
+                "janela de verdade e a máquina tem UMA tela (TELA-DO-USUARIO-01)")
     if os.environ.get("HEFESTO_NA_TELA"):
-        return "HEFESTO_NA_TELA está ligado: a janela nasceria na tela dela"
+        return "HEFESTO_NA_TELA está ligado: a janela nasceria na tela de quem usa"
     if not os.environ.get("DISPLAY"):
         return "sem DISPLAY — não há servidor X onde abrir a janela"
     return ""
@@ -225,7 +225,7 @@ def test_a_dica_abre_com_a_mao_parada(com_a_mao_parada: dict[str, Any]) -> None:
     assert estado["camada"], "a camada da dica não está de pé"
     assert estado["aberta"], (
         f"a dica NÃO abriu sobre {m['alvo']['tag']} em {MS_ATE_LER} ms — "
-        f"é a queixa dela de 11/09/2026: {estado}")
+        f"é a queixa de 11/09/2026: {estado}")
     assert estado["largura"] > 40 and estado["altura"] > 12, (
         f"a dica abriu com tamanho de nada: {estado}")
 
@@ -252,7 +252,7 @@ def test_a_dica_aberta_descreve_o_elemento_para_o_leitor_de_tela(
     assert not m["erro"], m["erro"]
     assert m["estado"]["aberta"], m["estado"]
     assert m["estado"]["descritos"] == [m["alvo"]["texto"]], (
-        f"a dica aberta não descreve o elemento dela: {m['estado']['descritos']}")
+        f"a dica aberta não descreve o próprio elemento: {m['estado']['descritos']}")
 
 
 def test_a_dica_nao_atravessa_a_janela(com_a_mao_parada: dict[str, Any]) -> None:
@@ -280,7 +280,7 @@ def test_a_dica_abre_com_a_mao_tremendo(com_a_mao_tremendo: dict[str, Any]) -> N
     m = com_a_mao_tremendo
     assert not m["erro"], m["erro"]
     assert m["estado"]["aberta"], (
-        "a dica não abriu com a mão tremendo — é exatamente o que ela relatou "
+        "a dica não abriu com a mão tremendo — é exatamente o que foi relatado "
         f"como *«não mostram»*: {m['estado']}")
 
 
@@ -419,12 +419,12 @@ def test_o_piloto_instala_a_camada_a_cada_carga() -> None:
 
 
 def test_o_visor_do_desenho_tambem_recebe_a_camada() -> None:
-    """`ver.py` é onde ela OLHA o desenho; ele não pode mostrar outra tela."""
+    """`ver.py` é onde se OLHA o desenho; ele não pode mostrar outra tela."""
     from pathlib import Path
 
     fonte = Path(__file__).resolve().parents[2] / (
         "src/hefesto_dualsense4unix/interface/ver.py")
     texto = fonte.read_text(encoding="utf-8")
     assert "DICA_DA_CASA" in texto and "UserScript" in texto, (
-        "o visor do desenho voltou a usar o popup do sistema, e o que ela olha "
+        "o visor do desenho voltou a usar o popup do sistema, e o que se olha "
         "deixou de ser o que o produto faz")

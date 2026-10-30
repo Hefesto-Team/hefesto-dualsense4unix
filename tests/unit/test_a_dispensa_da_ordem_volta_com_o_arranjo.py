@@ -54,7 +54,7 @@ def test_a_ordem_calada_continua_contada() -> None:
 
 
 def test_o_arranjo_nao_carrega_serial_nem_endereco() -> None:
-    """A tela desta aba vira PNG versionado; o arranjo entra nela."""
+    """A tela desta aba vira PNG versionado; o arranjo entra na tela."""
     from tests.unit import ensaio_das_ordens as ensaio
 
     leitura = ordens.Leitura(censo=ensaio.censo(), entradas=ensaio.entradas())

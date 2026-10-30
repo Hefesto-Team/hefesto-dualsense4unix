@@ -44,7 +44,7 @@ def _roda(raiz: Path, capsys: pytest.CaptureFixture[str], *args: str) -> tuple[i
 
 @pytest.fixture
 def arvore(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> Path:
-    """Um pacote de mentira com UMA docstring de 12 linhas, e o piso já gravado nela."""
+    """Um pacote de mentira com UMA docstring de 12 linhas, e o piso da docstring já gravado."""
     _escreve(tmp_path, "um.py", _docstring(12) + "x = 1\n")
     _escreve(tmp_path, "dois.py", "x = 2\n")
     rc, _ = _roda(tmp_path, capsys, "--aceitar", "docstring-longa", "--razao", "piso do ensaio")

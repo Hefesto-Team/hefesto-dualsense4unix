@@ -669,7 +669,7 @@ def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
 def test_qualquer_carta_que_sai_deixa_os_nomes_certos(
     monkeypatch: pytest.MonkeyPatch, quem_sai: int, transporte: str
 ) -> None:
-    """Sem jogo, o ensaio inteira, e sai qualquer um dos quatro (não só a carta 1)."""
+    """Sem jogo, a mesa inteira, e sai qualquer um dos quatro (não só a carta 1)."""
     ensaio = _a_mesa_do_boot(monkeypatch, FILA_DO_USUARIO, jogo=False, transporte=transporte)
     for _ in range(6):
         ensaio.tique()

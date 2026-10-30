@@ -19,11 +19,11 @@ O QUE A RÉGUA COBRA, e cada item é uma forma de a cura morrer calada:
 * os DOIS endereços saem do pacote em TODO estado — sem isso a frase cravada
   sobrevive na tela, que é o defeito inteiro;
 * a pendência MORRE quando o daemon alcança (a regra é
-  `home_actions.reconciliar_pendente`, e sem ela a faixa promete para sempre);
+  `home_actions.reconciliar_pendente`, e sem essa regra a faixa promete para sempre);
 * o daemon calado NÃO apaga a escolha (o ramo `visivel=False` do motor);
 * a frase é a do produto (`relancar.texto_do_pendente`), não uma cópia — a
   régua troca a função e cobra que o pacote a siga;
-* o rótulo é a palavra que ela LEU na tela, que chega no clique.
+* o rótulo é a palavra LIDA na tela, que chega no clique.
 
 NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.2: a frase SAIU DA
 TELA. Medido no código e em dublê: o chip da fileira pede com
@@ -185,7 +185,7 @@ def test_o_rotulo_e_a_palavra_que_o_usuario_leu_na_tela() -> None:
     aba.hefesto(ctx, {"modo": "native", "texto": "Desligado"}, PonteDeMentira())
     _frase, alvo = faixa(VIVO_DUALSENSE)
     assert alvo == "Desligado", (
-        "a faixa deixou de usar a palavra da tela — ela voltaria a dizer "
+        "a faixa deixou de usar a palavra da tela — voltaria a dizer "
         "'Conexão Nativa (Sony)', que é o léxico da janela GTK e não do desenho")
 
 
@@ -232,10 +232,10 @@ def test_esta_aba_nao_declara_sem_eco_e_diz_por_que() -> None:
 
     Os cinco métodos desta aba mexem em `native_mode`, `gamepad_emulation`,
     `coop` e `controllers[].player`, e as quatro chaves estão no `state_full`.
-    Declarar `SEM_ECO` calaria a régua para sempre sobre um caminho que ela mede.
+    Declarar `SEM_ECO` calaria a régua para sempre sobre um caminho que a régua mede.
     """
     assert not hasattr(aba, "SEM_ECO"), (
-        "a aba Jogar declarou `SEM_ECO` — os gestos dela TÊM eco no `state_full`")
+        "a aba Jogar declarou `SEM_ECO` — os gestos da aba TÊM eco no `state_full`")
     classificados = aba.OS_DOIS_DA_LISTA_DOS_DEZESSEIS
     assert set(classificados) == {"hefesto", "reconectar"}
     for nome, motivo in classificados.items():

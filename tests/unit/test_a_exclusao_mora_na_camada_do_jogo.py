@@ -28,7 +28,7 @@ from tests.unit import a_exclusao_de_antes as antiga
 
 @pytest.fixture(autouse=True)
 def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui as quatro estão ligadas."""
     from tests.unit.as_caixas_das_extensoes import ligar
 
     ligar(monkeypatch)
@@ -182,7 +182,7 @@ def test_o_jogo_do_lutris_sai_pela_camada_dele(_lar: Path) -> None:
             f"Recettear (Lutris Flatpak, excluído) herda da caixa {chave}="
             f"{_PONTE[chave]}: o `.yml` dele não cobre a caixa ({env})")
     assert len(_nossas_na_caixa(_lar)) == 9, "a caixa é de todos os jogos, e foi tocada"
-    assert env.get("MANGOHUD") == "1", "o que é dela no `.yml` ficou"
+    assert env.get("MANGOHUD") == "1", "o que é de quem usa no `.yml` ficou"
 
 
 def test_a_carona_mantem_o_yml_do_excluido(_lar: Path) -> None:
@@ -214,7 +214,7 @@ def test_o_valor_de_cada_chave_e_o_nao_veio_do_leitor(_lar: Path) -> None:
 
 
 def test_com_um_antes_do_usuario_na_caixa_o_yml_leva_o_do_usuario(_lar: Path) -> None:
-    """Ela tinha o cache de shader DESLIGADO na caixa antes do Hefesto: o"""
+    """Quem usa tinha o cache de shader DESLIGADO na caixa antes do Hefesto: o"""
     yml = _lutris_flatpak(_lar)
     caixa = _caixa(_lar)
     caixa.parent.mkdir(parents=True, exist_ok=True)
@@ -401,7 +401,7 @@ def test_sem_o_censo_nada_sai_e_o_diario_diz(_lar: Path) -> None:
 
 def test_a_loja_sem_conta_nao_desliga_o_censo(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A loja em que ela nunca entrou não é biblioteca torta."""
+    """A loja em que ninguém entrou não é biblioteca torta."""
     dividido, casa = _dividido_com_b_fora_do_disco(_lar)
     (casa / "store_cache" / "nile_library.json").write_text("{}")
     assert censo._heroic(casa).erros == [], "a loja sem conta virou erro do censo"
@@ -424,7 +424,7 @@ def test_com_o_censo_torto_o_prefixo_global_segue_somando_quem_esta_instalado(
     assert antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
     assert lx.prefixos_excluidos() == frozenset(), (
         "C, instalado e sem cópia, deixou de morar no prefixo global")
-    assert _o_ks_no(global_, monkeypatch), "C, que ela não excluiu, perdeu o device KS"
+    assert _o_ks_no(global_, monkeypatch), "C, que não foi excluído, perdeu o device KS"
 
 
 def _epic_ligada(raiz: Path) -> bool:
@@ -609,7 +609,7 @@ def test_o_jogo_pelo_wine_fica_com_o_da_caixa(_lar: Path) -> None:
 
 
 def test_o_par_segue_o_wine_do_jogo(_lar: Path) -> None:
-    """Ela troca o Wine do jogo excluído (Proton → Wine) e a carona passa: o"""
+    """Quem usa troca o Wine do jogo excluído (Proton → Wine) e a carona passa: o"""
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
     antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
@@ -632,7 +632,7 @@ def test_o_par_segue_o_wine_do_jogo(_lar: Path) -> None:
 
 
 def test_tirar_da_lista_tira_as_duas(_lar: Path) -> None:
-    """Ela mexe no `.yml` depois da exclusão (a volta passa a ser pelos pares):"""
+    """Quem usa mexe no `.yml` depois da exclusão (a volta passa a ser pelos pares):"""
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
     antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
@@ -645,7 +645,7 @@ def test_tirar_da_lista_tira_as_duas(_lar: Path) -> None:
 
 @pytest.mark.parametrize("onde", ["no-yml", "na-caixa"])
 def test_o_xalia_que_o_usuario_pos_manda(_lar: Path, onde: str) -> None:
-    """Com o `PROTON_USE_XALIA` posto por ela (no `.yml` do jogo, ou na caixa),"""
+    """Com o `PROTON_USE_XALIA` posto por quem usa (no `.yml` do jogo, ou na caixa),"""
     if onde == "no-yml":
         yml = _lutris_flatpak(_lar, yml=_YML_DO_JOGO.replace(
             "    MANGOHUD: '1'\n", "    MANGOHUD: '1'\n    PROTON_USE_XALIA: '1'\n"))

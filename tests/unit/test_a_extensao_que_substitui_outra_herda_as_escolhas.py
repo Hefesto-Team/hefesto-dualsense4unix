@@ -122,7 +122,7 @@ def test_a_escolha_que_a_nova_aceita_passa_e_a_que_nao_aceita_fica_no_padrao(
     nova = instalador.manifesto_instalado(NOVA, lugares=lg)
     valores = opcoes.ler(nova, lg)
     assert valores["porta"] == 21000, "a escolha de id igual e valor aceito passa"
-    assert valores["modo"] == "a", "«b» não é escolha da nova: cai no padrão dela"
+    assert valores["modo"] == "a", "«b» não é escolha da nova: cai no padrão da nova"
     assert valores["so_na_nova"] is True, "a opção que só a nova tem fica no padrão"
     assert "so_na_antiga" not in _guardado(lg, NOVA), "o id que a nova não tem não passa"
     assert "modo" not in _guardado(lg, NOVA), "o valor recusado nem entra no arquivo"
@@ -219,7 +219,7 @@ def test_a_permissao_nova_continua_pedindo_o_sim(
     nova = instalador.ler_registro(lg.registro)[NOVA]
     assert resultado.permissoes_novas == ["ler:botoes"]
     assert nova.permissoes_aceitas == ["ler:estado"], "as da antiga não se somam"
-    assert not nova.ligada, "ligar a que pede permissão nova é do «sim» dela"
+    assert not nova.ligada, "ligar a que pede permissão nova é do «sim» de quem usa"
     nova_manifesto = instalador.manifesto_instalado(NOVA, lugares=lg)
     assert opcoes.ler(nova_manifesto, lg)["porta"] == 21000, "mas as escolhas passam"
     assert ANTIGA not in instalador.ler_registro(lg.registro)

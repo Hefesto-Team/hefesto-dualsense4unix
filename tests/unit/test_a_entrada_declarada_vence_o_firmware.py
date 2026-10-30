@@ -3,14 +3,14 @@
 O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, 26/09/2026. A velocidade vinha só do par
 SuperSpeed (``peer``) que o firmware da placa publica para cada entrada, e o
 ``peer`` não prova o conector: MEDIDO na mesa em que isto nasceu (26/09/2026,
-com ela olhando o gabinete), as duas USB 2.0 pretas de trás têm ``peer``, e a
+com o gabinete à vista), as duas USB 2.0 pretas de trás têm ``peer``, e a
 frente que o gabinete chama de 3.0 está num conector 2.0 da placa. A cura: o
-que ela declara no editor da entrada vence o ``peer``, e um aparelho USB 3
+que se declara no editor da entrada vence o ``peer``, e um aparelho USB 3
 enumerado na entrada vence os dois.
 
 TUDO AQUI É DE MENTIRA E DE NINGUÉM: barramentos ``usb9``/``usb10``, caminhos
 ``9-*``/``10-*``, e o ``maquina.json`` no ``tmp_path`` que o ``conftest``
-desvia. Nada da bancada entra no código: a declaração é dado de quem usa.
+desvia. Nada do ensaio entra no código: a declaração é dado de quem usa.
 
 A MORDIDA (E2 da sprint): arranque a leitura do declarado — o ``declarada`` do
 ``_rapido_do_no`` ou o ``_o_que_o_usuario_declarou_nas_entradas`` do
@@ -89,15 +89,15 @@ def _usb(ensaio: mapa_das_portas.Ensaio) -> dict[str, int]:
 
 
 def test_a_velocidade_declarada_vence_o_par_do_firmware() -> None:
-    """O ``peer`` diz 2.0 na frente e ela diz 3.0: vale o que o usuário disse."""
+    """O ``peer`` diz 2.0 na frente e o usuário diz 3.0: vale o que o usuário disse."""
     sem = _usb(mapa_das_portas.mesa_do_motor(_mapa(), _censo()))
     assert sem == {"1": 2, "5": 3, "7": 3}, f"o firmware de mentira não diz o que devia: {sem}"
 
     com = _usb(mapa_das_portas.mesa_do_motor(
         _mapa(e1={"usb": 3}, e7={"usb": 2}), _censo()))
-    assert com["1"] == 3, "ela disse USB 3.0 na frente, e o par do firmware venceu"
-    assert com["7"] == 2, "ela disse USB 2.0 atrás, e o par do firmware venceu"
-    assert com["5"] == 3, "a entrada que ela não declarou mudou sozinha"
+    assert com["1"] == 3, "a declaração disse USB 3.0 na frente, e o par do firmware venceu"
+    assert com["7"] == 2, "a declaração disse USB 2.0 atrás, e o par do firmware venceu"
+    assert com["5"] == 3, "a entrada não declarada mudou sozinha"
 
 
 def test_o_aparelho_usb3_na_entrada_vence_a_declaracao() -> None:
@@ -158,7 +158,7 @@ def test_declarar_hub_grava_e_a_face_do_hub_volta_ao_reler(disco: Path) -> None:
     assert faces[hub]["daEntrada"] == "5"
     assert len(faces[hub]["portas"]) == arranjo_desta_maquina.ENTRADAS_DO_HUB_DECLARADO
     usb = {p["n"]: p["usb"] for f in veio["faces"] for p in f["portas"]}
-    assert usb["7"] == 2, "a 7 não é preta no desenho, e ela disse USB 2.0"
+    assert usb["7"] == 2, "a 7 não é preta no desenho, e a declaração disse USB 2.0"
     assert veio["declarado"]["5"] == {"liga": "hub"}
 
     assert ee.declarar_a_ligacao("5", None).gravou
@@ -194,7 +194,7 @@ def test_a_entrada_fora_do_mapa_nao_grava(disco: Path) -> None:
         ee.declarar_a_velocidade("7", 4)
     with pytest.raises(ValueError):
         ee.declarar_a_ligacao("7", "mesa")
-    assert disco.read_bytes() == antes, "uma recusa escreveu no disco dela"
+    assert disco.read_bytes() == antes, "uma recusa escreveu no disco de quem usa"
 
 
 def test_os_dois_gestos_gravam_o_que_o_clique_diz(disco: Path) -> None:
@@ -248,7 +248,7 @@ def test_o_mapear_pinta_a_velocidade_declarada_e_oferece_o_hub() -> None:
     assert (por_numero["5"].usb, por_numero["5"].usb_de) == (
         mapa_das_portas.USB_3, mapa_das_portas.USB_PELA_PLACA)
     hub = ee.FACE_DO_HUB_DECLARADO.format(numero="5")
-    assert hub in mapa.lugares, "o Mapear não oferece o hub que ela declarou"
+    assert hub in mapa.lugares, "o Mapear não oferece o hub declarado"
     assert ee._face_aceita(hub, maquina), "o Mapear oferece o hub e recusa gravar nele"
 
 
@@ -405,7 +405,7 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     assert sorted(editor_na_5["gestos"]) == sorted([
         "entrada-o-que-tem:direto@5", "entrada-o-que-tem:hub@5",
         "entrada-velocidade:3@5", "entrada-velocidade:2@5"]), (
-        f"a entrada do mapa dela não leva o gesto ao disco: {editor_na_5['gestos']}")
+        f"a entrada do mapa de quem usa não leva o gesto ao disco: {editor_na_5['gestos']}")
     assert editor_na_5["extensor"] == ["entrada-extensor@5"], editor_na_5["extensor"]
     assert len(sem_esperar["faces"]) == len(entregue["faces"]), (
         f"a página desenhou o hub antes do disco: {sem_esperar['faces']}")
@@ -436,18 +436,18 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     relida, editor_na_51, editor, editor_na_7 = (json.loads(depois[i]) for i in (1, 3, 6, 8))
     assert editor_na_51["gestos"] == [], (
         "a entrada que o desenho monta (5.1) mandaria ao disco uma entrada "
-        "que ela nunca mapeou")
+        "que nunca foi mapeada")
     assert not [m for m in mais if m.get("gesto", "").startswith("entrada-")], mais
     assert ee.FACE_DO_HUB_DECLARADO.format(numero="5") in relida["faces"], (
         f"o hub não voltou ao reler: {relida['faces']}")
-    assert relida["v3"]["7"] is False, "a 7 relida não é preta, e ela disse USB 2.0"
+    assert relida["v3"]["7"] is False, "a 7 relida não é preta, e a declaração disse USB 2.0"
     assert relida["v3"]["5.1"] is True and "5.1a" not in relida["v3"]
     assert "hub" in editor["apertados"], f"o editor da 5 relido: {editor['apertados']}"
     frases = pagina_do_mapa.FRASES_DA_ORIGEM_DA_VELOCIDADE
     assert (editor["origem"] or "").lower() == frases[mapa_das_portas.USB_PELA_PLACA].lower()
     assert (editor_na_7["origem"] or "").lower() == frases[mapa_das_portas.USB_DECLARADA].lower()
     assert exemplo["origem"] is None and editor_na_51["origem"] is None, (
-        "a origem se diz só na entrada do mapa dela")
+        "a origem se diz só na entrada do mapa de quem usa")
 
 
 _HUBS = {"usb1": 480.0, "usb2": 5000.0, "usb3": 480.0, "usb4": 10000.0,
@@ -548,7 +548,7 @@ def test_depois_de_trocar_7_com_8_a_velocidade_foi_com_o_buraco(tmp_path: Path) 
 
 
 def test_as_frases_da_origem_cobrem_as_chaves_do_dono() -> None:
-    """Cada origem que o dono devolve tem a frase do editor — e só elas."""
+    """Cada origem que o dono devolve tem a frase do editor — e só essas."""
     chaves = {mapa_das_portas.USB_PELO_APARELHO, mapa_das_portas.USB_DECLARADA,
               mapa_das_portas.USB_PELA_PLACA, ""}
     frases = pagina_do_mapa.FRASES_DA_ORIGEM_DA_VELOCIDADE

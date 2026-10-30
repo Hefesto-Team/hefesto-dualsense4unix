@@ -14,8 +14,8 @@ Este arquivo é a régua de que os dois defeitos fecharam juntos:
 
 1. o imperativo de uma ordem e as **três** linhas de porquê aparecem no texto de
    um ``Gtk.Label``, **fora de qualquer tooltip**;
-2. a **terceira** linha aparece inclusive quando ela confessa que o ganho não
-   foi medido. É ela que impede raciocínio de se vestir de medição: uma ordem
+2. a **terceira** linha aparece inclusive quando a ordem confessa que o ganho não
+   foi medido. É essa linha que impede raciocínio de se vestir de medição: uma ordem
    que manda mover sem dizer quanto se ganha é honesta; a mesma com o ganho
    escondido é palpite com cara de laudo;
 3. cada linha carrega o **selo de procedência** na tela — sem ele, "USB 3.0
@@ -23,12 +23,12 @@ Este arquivo é a régua de que os dois defeitos fecharam juntos:
    máquina" (conta) leem igual;
 4. a cura de uma conferência SEM ordem também sai do tooltip;
 5. **nenhum serial chega ao markup.** A exigência nasceu quando a tela desta
-   aba virava PNG versionado pelo retratista da janela GTK — que saiu com ela
+   aba virava PNG versionado pelo retratista da janela GTK — que saiu com a janela
    em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`), e o retratista de hoje
    (`src/hefesto_dualsense4unix/interface/olhar.py`) fotografa as páginas HTML,
    não este painel. **A exigência fica**, e não depende de quem fotografa:
    nenhum portão de anonimato varre imagem, e `scripts/check_anonymity.sh` diz
-   por escrito que o serial identifica a unidade dela tão bem quanto o MAC.
+   por escrito que o serial identifica a unidade de quem usa tão bem quanto o MAC.
 
 POR QUE ``Gtk.OffscreenWindow``, E NUNCA ``Gtk.Window``
 --------------------------------------------------------
@@ -37,7 +37,7 @@ Sob Xvfb não há gerenciador de janelas, e uma ``Gtk.Window`` fica 1x1 para
 sempre: os filhos nunca ganham tamanho e o teste passa a medir o servidor X em
 vez do produto. É a armadilha nº 2 de `docs/method/COMO-OLHAR-A-TELA.md`.
 
-A BANCADA NÃO É ESTA MÁQUINA
+O ENSAIO NÃO É ESTA MÁQUINA
 ------------------------------
 
 `ensaio_das_ordens.py` monta o `Censo` e os `NoDeEntrada` à mão, com caminhos
@@ -72,11 +72,11 @@ SERIAL = re.compile(
     "}(?![0-9A-Fa-f])"
 )
 
-SEM_ENSAIO = Path("/bancada/nao-existe")
+SEM_ENSAIO = Path("/ensaio/nao-existe")
 
 
 def _leitura() -> ordens.Leitura:
-    """A bancada de 24/08 como `Leitura` — sem desenho de gabinete nenhum."""
+    """O ensaio de 24/08 como `Leitura` — sem desenho de gabinete nenhum."""
     return ordens.Leitura(censo=ensaio.censo(), entradas=ensaio.entradas())
 
 

@@ -26,7 +26,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A trava e o diário numa pasta de teste — nunca os dela, em ``/run``."""
+    """A trava e o diário numa pasta de teste — nunca os de verdade, em ``/run``."""
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     caminho = tmp_path / "radio-diario.jsonl"
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(caminho))
@@ -183,7 +183,7 @@ def _controle(u: str, adaptador: str, ponte: str | None = None) -> dict[str, Any
 
 
 def _o_usuario_liga_aqui_o_terceiro(onde: dict[str, Any], relogio: _Relogio) -> Any:
-    """Dois no A, um no B: o terceiro do A pergunta, e ela responde «Ligar aqui»."""
+    """Dois no A, um no B: o terceiro do A pergunta, e quem usa responde «Ligar aqui»."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 
     governador = _governador(onde, relogio)
@@ -458,7 +458,7 @@ def test_o_nome_da_porta_tem_um_dono_so() -> None:
 
 
 def test_o_antes_da_edicao_nao_conta_e_o_depois_conta(tmp_path: Path) -> None:
-    """O que a ``Edicao`` tira, e o porquê que o cita, não são donos da porta; o que ela põe, sim.
+    """O que a ``Edicao`` tira, e o porquê que o cita, não são donos da porta; o que põe, sim.
 
     Mordida: tire o ``textos_que_saem`` de ``_composicoes_da_palavra``, e o ``antes`` acusa.
     """
@@ -808,7 +808,7 @@ def test_o_sysfs_ilegivel_do_leitor_de_verdade_tambem_e_nao_sei(
     ilegivel.write_text("", encoding="utf-8")
     monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(ilegivel))
     assert governador.conferir_as_autorizacoes() == 0, (
-        "o /sys ilegível foi lido como «desconectou» e a resposta dela caiu"
+        "o /sys ilegível foi lido como «desconectou» e a resposta caiu"
     )
 
     monkeypatch.setattr(dualsense_bt_audio, "_SYSFS_HIDRAW", str(raiz))

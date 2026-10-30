@@ -404,8 +404,8 @@ def test_o_endereco_que_entrou_depois_do_ref_e_nao_se_leva_e_novo(
 def test_o_endereco_escrito_depois_do_ref_num_documento_que_ja_existia_e_novo(
     repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """O documento existia no ``--desde``, sem a citação; ela entrou depois e não se leva. O citado
-    não mudou: só a conta do endereço no documento diz que é desta mudança."""
+    """O documento existia no ``--desde``, sem a citação; a citação entrou depois e não se leva.
+    O citado não mudou: só a conta do endereço no documento diz que é desta mudança."""
     _escrever_e_commitar(repo, CURTO, "X = dict(\n    a=1,\n)\n", "o curto nasce")
     _escrever_e_commitar(repo, "docs/protocol/fecho.md", "# Fecho\n\nAinda nada.\n", "o doc nasce")
     ref = _commit_de(repo)

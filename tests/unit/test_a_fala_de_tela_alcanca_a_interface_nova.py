@@ -72,8 +72,8 @@ def test_o_alcance_da_regua_so_cresce() -> None:
     assert not perdidas, (
         f"as raízes {perdidas} saíram de `RAIZES_DE_TELA`. Tirar uma raiz é "
         "cegar a régua para uma tela inteira sem que nada acuse — é exatamente "
-        "o defeito que ela passou de 24/08 a 06/09 tendo. Se a pasta mudou de "
-        "nome, troque nos DOIS lugares; se a decisão foi outra, ela tem de "
+        "o defeito que a régua teve de 24/08 a 06/09. Se a pasta mudou de "
+        "nome, troque nos DOIS lugares; se a decisão foi outra, a pasta tem de "
         f"sair também deste arquivo, com data e razão. Hoje: {no_roteiro}"
     )
 
@@ -164,7 +164,7 @@ def _portao_com(
     for antigo, novo in trocas.items():
         assert fonte.count(antigo) == 1, (
             f"a linha {antigo[:60]!r} mudou de forma em {SCRIPT_REAL.name}: sem "
-            "ela esta mordida rodaria com o roteiro intacto e passaria sempre"
+            "a linha, esta mordida rodaria com o roteiro intacto e passaria sempre"
         )
         fonte = fonte.replace(antigo, novo)
     destino = raiz / "scripts" / SCRIPT_REAL.name

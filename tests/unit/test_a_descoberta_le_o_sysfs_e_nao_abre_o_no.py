@@ -552,7 +552,7 @@ def test_o_hub_procura_de_novo_quando_a_pasta_muda_e_acha(registro: Any) -> None
     hub.reconciliar()
 
     assert hub.grab_do_movimento("aa:bb:cc:00:00:04") == "held", (
-        "a peça voltou com o sensor desligado e o nó dela não ficou exclusivo"
+        "a peça voltou com o sensor desligado e o nó da peça não ficou exclusivo"
     )
 
 

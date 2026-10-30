@@ -1,4 +1,4 @@
-"""O estado REAL da máquina da bancada em 23/08/2026, e a cura tem de conviver com ele."""
+"""O estado REAL da máquina do ensaio em 23/08/2026, e a cura tem de conviver com ele."""
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
@@ -82,7 +82,7 @@ def test_a_camada_renomeada_a_mao_esta_ligada_no_registro_e_ausente_no_disco(
 def test_curar_desliga_as_duas_entradas_sem_tocar_nos_arquivos_do_usuario(
     prefixo_do_usuario: Path, tmp_path: Path
 ) -> None:
-    """Instrução explícita: *não desfaça* — é o estado que ela está usando."""
+    """Instrução explícita: *não desfaça* — é o estado em uso."""
     antes = _manifestos_no_disco(prefixo_do_usuario)
     assert antes == {
         "EOSOverlayVkLayer-Win64.json.desligado",
@@ -105,7 +105,7 @@ def test_curar_desliga_as_duas_entradas_sem_tocar_nos_arquivos_do_usuario(
     assert '"C:\\\\windows\\\\system32\\\\winevulkan.json"=dword:00000000' in texto
 
     assert _manifestos_no_disco(prefixo_do_usuario) == antes, (
-        "a cura renomeou/apagou arquivo dentro do prefixo dela — ela só pode "
+        "a cura renomeou/apagou arquivo dentro do prefixo de quem usa — a cura só pode "
         "escrever no system.reg e no backup dele"
     )
 

@@ -13,27 +13,27 @@ dele ficou como o jogo a deixou.
 MEDIDO em 22/08/2026, por varredura de AST sobre ``src/``, ANTES desta leva:
 ``gerente_do_daemon`` tinha UM cliente (``daemon/launch_env.py``) e havia DOZE
 construções diretas de ``ProfileManager`` à mão (treze com a que a própria
-fábrica faz), SEIS delas declarando os sete appliers — cinco rotas de ativação,
+fábrica faz), SEIS declarando os sete appliers — cinco rotas de ativação,
 migradas nesta leva, e o ``connection.py::restore_last_profile``, que declara os
 sete e neutraliza dois de propósito. Uma já tinha derivado —
 ``daemon/lifecycle.py::_reapply_last_profile``, a rota que roda ao desligar o
 Modo Nativo, passava SEIS. **FECHADA em 26/08/2026** (LEVA-1-B): a rota passou
 a vir de ``gerente_do_daemon`` com o embrulho do ``mode`` como único desvio, e
-a entrada dela em :data:`_A_MAO_COM_RAZAO` foi apagada no mesmo commit.
+a entrada da rota em :data:`_A_MAO_COM_RAZAO` foi apagada no mesmo commit.
 
 O QUE ESTE ARQUIVO VIGIA
 ------------------------
 1. **o portão da classe (E3)** — toda construção direta de ``ProfileManager``
    que declare QUALQUER applier precisa de razão escrita em
    :data:`_A_MAO_COM_RAZAO`. Construção sem applier nenhum é legítima por
-   construção: ela não ativa nada (listar perfis, carimbar ponte, a CLI);
+   construção: não ativa nada (listar perfis, carimbar ponte, a CLI);
 2. **a tabela não envelhece calada** — cada entrada tem de continuar batendo,
    nome por nome, com o que a árvore diz. Rota consertada faz a entrada
-   sobrar, e o portão cobra que ela seja APAGADA. É a mesma inversão do
+   sobrar, e o portão cobra que a entrada seja APAGADA. É a mesma inversão do
    ``portao_a_casa_sabe_e_o_produto_nao_faz`` e do ``_SEM_ESCRITOR_HOJE``;
 3. **as cinco rotas convertidas (E2)** entregam, de fato, os sete appliers —
    e a prova é pelo EFEITO: o teste dirige a rota de produção e olha o gerente
-   que ela construiu, nunca a linha de código;
+   que a rota construiu, nunca a linha de código;
 4. **o desvio da allowlist continua de pé** — a fábrica aceita um
    ``mode_applier`` explícito, e ele vence.
 
@@ -41,7 +41,7 @@ POR QUE A RÉGUA É AST, E NÃO UMA LISTA DE ROTAS
 ------------------------------------------------
 Uma lista escrita à mão caduca na próxima rota — que é exatamente como esta
 derivou. O conjunto de acusações é DERIVADO em runtime; o que é escrito à mão
-é a CLASSIFICAÇÃO, e ela é exaustiva: rota nova sem classificação reprova por
+é a CLASSIFICAÇÃO, e a classificação é exaustiva: rota nova sem classificação reprova por
 estar SEM CLASSIFICAÇÃO, não por estar numa denylist.
 
 E a régua conta o NOME do parâmetro, nunca a tupla ``APPLIERS_DO_DAEMON``:
@@ -52,7 +52,7 @@ arrancado. Contagem que se confere sozinha não é contagem.
 PREÇO DECLARADO DESTA RÉGUA, e ele é real: contar NOMES não vê um applier
 passado como ``None`` de propósito. ``daemon/connection.py::restore_last_profile``
 declara os sete e neutraliza dois (``mouse_applier=None`` e ``mode_applier=None``,
-BUG-BOOT-RESTORE-FLIPS-EMULATION-01) — para a varredura ela é "completa". Está
+BUG-BOOT-RESTORE-FLIPS-EMULATION-01) — para a varredura a rota é "completa". Está
 classificada abaixo com essa nota, porque o portão que finge ver o que não vê é
 pior que portão nenhum.
 
@@ -65,7 +65,7 @@ este símbolo?"* — e aqui a pergunta é outra: *"que FORMA tem esta chamada?"*
 Todo sítio de construção é, por definição, um chamador; o grafo não muda
 verdicto nenhum sobre a forma.
 
-O que ela responde e este portão precisa é se a rota está VIVA: uma dívida
+O que a função responde e este portão precisa é se a rota está VIVA: uma dívida
 apontando para módulo morto é paisagem. Por isso ``modulos_alcancados`` entra
 como asserção (``test_toda_rota_que_constroi_o_gerente_esta_viva``) e nada
 mais. MEDIDO em 22/08/2026, DEPOIS desta leva: as oito construções de
@@ -229,7 +229,7 @@ def _construcoes() -> list[Construcao]:
 
 
 def test_a_lista_de_appliers_bate_com_o_dataclass() -> None:
-    """A régua é o CONSTRUTOR, nunca a tupla que ela mesma confere."""
+    """A régua é o CONSTRUTOR, nunca a tupla que a própria régua confere."""
     do_dataclass = {
         nome
         for nome in inspect.signature(ProfileManager).parameters
@@ -257,7 +257,7 @@ def test_toda_construcao_com_applier_tem_razao_escrita() -> None:
             f"  - {c.endereco}: {sorted(c.appliers)}" for c in sem_classificacao
         )
         + "\n\nUse `hefesto_dualsense4unix.profiles.manager.gerente_do_daemon` — "
-        "ela traz os sete appliers de uma fonte só. Se esta rota tem razão "
+        "a fábrica traz os sete appliers de uma fonte só. Se esta rota tem razão "
         "MEDIDA para divergir, a razão vira parâmetro nomeado da fábrica (com o "
         "porquê no docstring) e a rota entra em `_A_MAO_COM_RAZAO` com data e "
         "endereço.\n"
@@ -266,10 +266,10 @@ def test_toda_construcao_com_applier_tem_razao_escrita() -> None:
 
 
 def test_a_tabela_nao_envelhece_calada() -> None:
-    """Rota consertada faz a entrada SOBRAR, e o portão cobra que ela saia.
+    """Rota consertada faz a entrada SOBRAR, e o portão cobra que a entrada saia.
 
     É a inversão do `portao_a_casa_sabe_e_o_produto_nao_faz`: a classificação
-    é escrita à mão, mas ela é conferida contra a árvore a cada rodada. Sem
+    é escrita à mão, mas é conferida contra a árvore a cada rodada. Sem
     isto a dívida da E1 vira paisagem no dia em que alguém a consertar.
 
     Mordida: apagar um applier da entrada de
@@ -332,7 +332,7 @@ def test_a_razao_e_uma_razao() -> None:
         )
         assert _DATA.search(razao.motivo), (
             f"a razão de {rotulo} não tem data (DD/MM/AAAA). Sem data ninguém "
-            "sabe se ela envelheceu."
+            "sabe se a razão envelheceu."
         )
 
 
@@ -358,7 +358,7 @@ def test_a_fabrica_nao_tem_saco_generico() -> None:
 
 
 class _DaemonEspiao:
-    """Daemon de bancada com os sete appliers e nada mais."""
+    """Daemon de ensaio com os sete appliers e nada mais."""
 
     def __init__(self) -> None:
         self.controller = SimpleNamespace()
@@ -428,7 +428,7 @@ def _confere(gerente: Any, daemon: _DaemonEspiao, rota: str) -> None:
     assert not faltando, (
         f"a rota {rota} construiu um gerente sem {faltando}.\n"
         "Applier ausente NÃO levanta: a seção é ignorada em silêncio, e o "
-        "defeito só aparece no aparelho dela."
+        "defeito só aparece no aparelho de quem usa."
     )
     assert gerente.keyboard_device_provider is not None, (
         f"a rota {rota} perdeu o provider lazy do teclado — o gerente nasce "
@@ -484,7 +484,7 @@ def test_rota_start_autoswitch_recebe_os_sete(
 
 
 def test_rota_do_ciclo_por_hotkey_recebe_os_sete() -> None:
-    """PS+D-pad — o gesto que ela usa DENTRO do jogo, com o controle na mão."""
+    """PS+D-pad — o gesto usado DENTRO do jogo, com o controle na mão."""
     from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
         build_profile_cycle_callback,
     )

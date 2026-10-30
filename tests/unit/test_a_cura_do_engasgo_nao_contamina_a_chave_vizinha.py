@@ -79,7 +79,7 @@ def test_a_leitura_ve_duas_entradas_distintas_com_o_mesmo_caminho(
 def test_o_mesmo_manifesto_nas_duas_chaves_nao_contamina_a_outra(
     prefixo: Path, tmp_path: Path
 ) -> None:
-    """Só a entrada LIGADA muda. A vizinha, já desligada, fica no valor dela."""
+    """Só a entrada LIGADA muda. A vizinha, já desligada, fica no próprio valor."""
     registro = prefixo / "pfx" / "system.reg"
     assert _valores(registro) == {"64": "00000000", "32": _VALOR_VIZINHO}
 

@@ -115,13 +115,13 @@ def test_data_que_nao_e_iso_nao_entra(quando: str) -> None:
 
 
 def test_a_hora_nao_entra_junto_com_a_data() -> None:
-    """Hora não muda decisão nenhuma do produto, e é rotina dela num arquivo"""
+    """Hora não muda decisão nenhuma do produto, e é rotina de quem usa num arquivo"""
     with pytest.raises(ValidationError):
         OrdemDispensada(quando="2026-08-25 03:14", arranjo="3-1.4")
 
 
 def test_a_assinatura_nao_aceita_serial_nem_endereco() -> None:
-    """A MORDIDA DO ANONIMATO: doze hex é a forma de um serial, e ela não passa."""
+    """A MORDIDA DO ANONIMATO: doze hex é a forma de um serial, e um serial não passa."""
     with pytest.raises(ValidationError):
         OrdemDispensada(arranjo="d0f1a2b3c4d5")
     with pytest.raises(ValidationError):

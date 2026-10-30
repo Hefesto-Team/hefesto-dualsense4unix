@@ -1,6 +1,6 @@
-"""A cor que ela escolhe VAI AO DISCO — e o trilho de brilho para de reescalá-la.
+"""A cor escolhida VAI AO DISCO — e o trilho de brilho para de reescalá-la.
 
-**A QUEIXA DE USO, na bancada de 09/09/2026**, e o usuário contou as duas metades como
+**A QUEIXA DE USO, no ensaio de 09/09/2026**, e o usuário contou as duas metades como
 uma coisa só:
 
     o controle branco oscilava entre a cor escolhida e o azul, e o deslizante estava estranho.
@@ -12,12 +12,12 @@ arquivo versionado)::
 
     <o branco>: {"leds": {"lightbar_brightness": 0.49}}
 
-A cor que ela tinha escolhido não estava ali. Não estava em lugar nenhum:
+A cor escolhida não estava ali. Não estava em lugar nenhum:
 `_escrever_a_cor` mandava ao daemon (`led_set_detalhado`) e parava. O daemon a
 guarda na camada VIVA por-uniq, que some no primeiro evento que faça o
 resolvedor reler o perfil — replug, `profile.switch`, reaplicação. O que sobra
 embaixo é a camada automática (`player_slot_color(1)` = `#0000FF`) ou o global
-dela (`#2850B4`). **Os dois são azuis**, e é o azul que ela via voltar.
+do perfil (`#2850B4`). **Os dois são azuis**, e é o azul que se via voltar.
 
 **E O TRILHO ERA A MESMA RAIZ.** Sem cor no disco, o gesto `brilho` só podia
 adivinhar a cor pela luz ACESA — que vem pós-escala (D8) — e `cor_escolhida` só
@@ -137,7 +137,7 @@ def test_clicar_num_tom_grava_a_cor_no_override_do_usuario(pac, a04):
 
     **A MORDIDA:** tire a chamada de `_guardar_a_cor_no_perfil` do fim de
     `_escrever_a_cor` e o `lightbar` volta a ser `None` — o disco fica como
-    estava na bancada, e a cor só vive na camada volátil do daemon.
+    estava no ensaio, e a cor só vive na camada volátil do daemon.
     """
     caminho = _semear("regua", campos={"lightbar_brightness": 0.49})
     assert _cor_no_disco(caminho) is None, "o semeado tem de nascer SEM cor"
@@ -167,7 +167,7 @@ def test_a_cor_gravada_leva_a_procedencia_do_numero_de_hoje(pac, a04):
 
 
 def test_gravar_a_cor_preserva_o_brilho_que_ja_estava(pac, a04):
-    """A fusão é POR CAMPO — o override dela tinha só o brilho, e ele fica."""
+    """A fusão é POR CAMPO — o override tinha só o brilho, e ele fica."""
     caminho = _semear("regua", campos={"lightbar_brightness": 0.49})
     a04.cor(_ctx(pac), {"uniq": UNIQ, "hex": "FF8000",
                         "tipo": "button", "evento": "click"}, PonteDeMentira())
@@ -188,7 +188,7 @@ def test_desligar_a_barra_tambem_grava(pac, a04):
 
 
 def test_o_trilho_de_brilho_nao_grava_cor(pac, a04):
-    """Ele não escolhe cor, e gravar ali congelaria uma cor que ela não pediu."""
+    """Ele não escolhe cor, e gravar ali congelaria uma cor que ninguém pediu."""
     caminho = _semear("regua", campos={"lightbar_brightness": 0.5})
     a04.brilho(_ctx(pac), {"uniq": UNIQ, "valor": "70",
                            "tipo": "input", "evento": "change"}, PonteDeMentira())
@@ -216,7 +216,7 @@ def test_o_trilho_manda_a_cor_do_disco_e_nao_a_luz_acesa(pac, a04):
 
 
 def test_arrastar_dez_vezes_nao_escurece_a_cor(pac, a04):
-    """A prova do acúmulo, e ela é o que o usuário viu: a barra morrendo no preto."""
+    """A prova do acúmulo, que é o que o usuário viu: a barra morrendo no preto."""
     _semear("regua", campos={"lightbar": list(FORA_DA_GUIA),
                              "lightbar_brightness": 0.5})
     aceso = [20, 40, 90]
@@ -247,7 +247,7 @@ def test_perfil_ativo_sem_arquivo_no_disco_nao_derruba_o_gesto(pac, a04):
 
     O daemon pode nomear um perfil que o disco não tem
     (`FileNotFoundError: perfil não encontrado`). A cor já chegou ao plástico
-    dela; levantar aqui poria um cartão de recusa sobre um ato que aconteceu.
+    do controle; levantar aqui poria um cartão de recusa sobre um ato que aconteceu.
 
     **A MORDIDA:** tire o `try/except OSError` de `_guardar_a_cor_no_perfil` e
     esta linha reprova com `FileNotFoundError` — foi assim que sete réguas

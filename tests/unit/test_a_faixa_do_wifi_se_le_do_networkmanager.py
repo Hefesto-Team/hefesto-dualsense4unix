@@ -153,5 +153,5 @@ def test_nunca_varre_e_nunca_le_o_ssid_nem_o_endereco(tmp_path: Path) -> None:
 
 
 def test_sob_a_suite_o_barramento_de_verdade_nao_abre() -> None:
-    """Sem barramento por argumento, a guarda do `bluez_dbus` vale: a suíte não lê a rede dela."""
+    """Sem barramento por argumento, a guarda do `bluez_dbus` vale: a suíte não lê a rede real."""
     assert fw.ler_as_redes() is None

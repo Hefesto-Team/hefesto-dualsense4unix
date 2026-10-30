@@ -9,10 +9,10 @@ A causa está no contrato do kernel: o `hid-playstation` escreve
 `if (ds->update_mic_mute)` (`assets/dkms/hid-playstation/hid-playstation.c`
 :1538-1540, armado em :1631-1640) — nunca em regime. Largar o byte com a luz
 acesa (ou, sob a LUZ-DO-MIC, PISCANDO em `2`/`3`) deixa a mentira no plástico
-até ela apertar o mudo.
+até alguém apertar o mudo.
 
 **POR QUE ESTAS RÉGUAS CONTAM REPORTS ESCRITOS, E NÃO ESTADOS MONTADOS.** Esta
-é a armadilha inteira desta peça, e ela dá VERDE sobre uma cura morta. O
+é a armadilha inteira desta peça, e dá VERDE sobre uma cura morta. O
 `sendReport` amostra o estado desejado na PRÓPRIA thread e só escreve quando o
 buffer muda; marcar o valor real e soltar em seguida colapsa nos dois, e o
 valor real nunca sai pelo fio. Uma régua que chamasse `_build_common` à mão
@@ -22,9 +22,9 @@ handle tem um `device` de mentira que guarda cada `write`, e o que se afirma é
 sobre os bytes que chegaram nele: quantos reports saíram, em que ordem, e com
 que valor no `common[8]`.
 
-A MORDIDA de cada régua está escrita no docstring dela, e a de todas é a mesma
+A MORDIDA de cada régua está escrita no próprio docstring, e a de todas é a mesma
 raiz: tirar a chamada a `_repintar_antes_de_soltar` de
-`PyDualSenseController.set_microphone_led`. Com ela arrancada, nenhum report sai
+`PyDualSenseController.set_microphone_led`. Com a chamada arrancada, nenhum report sai
 e as sete réguas de escrita reprovam — provado em 03/09/2026.
 """
 

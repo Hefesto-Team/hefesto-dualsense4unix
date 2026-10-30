@@ -57,7 +57,7 @@ def mesa_com_hub_e_tres_aparelhos() -> Censo:
 
 
 def test_as_quatro_palavras_sao_as_que_o_usuario_carimbou() -> None:
-    """Verbatim do carimbo dela de 25/08/2026, às ~03h55, vendo o mockup."""
+    """Verbatim do carimbo de 25/08/2026, às ~03h55, vendo o mockup."""
     from hefesto_dualsense4unix.interface.calibracao_das_entradas import FACES
 
     assert FACES == (
@@ -78,18 +78,18 @@ def test_nenhuma_face_e_mais_longa_do_que_a_maior_que_o_usuario_aprovou() -> Non
         assert len(face) <= teto, (
             f"o rótulo {face!r} tem {len(face)} caracteres e o teto é {teto} "
             f"(o de {calibrar_entradas.FACE_HUB!r}). Acima disso ele quebra em "
-            "duas linhas dentro do botão, que é o defeito que ela reportou em "
+            "duas linhas dentro do botão, que é o defeito reportado em "
             "31/08/2026 — escolha um sinônimo mais curto."
         )
 
 
 def test_nenhuma_face_diz_mesa() -> None:
-    """A palavra saiu da tela em 05/09/2026, ordem de produto."""
+    """A palavra saiu da tela em 05/09/2026, por decisão do produto."""
     from hefesto_dualsense4unix.interface import calibracao_das_entradas as calibrar_entradas
 
     for face in calibrar_entradas.FACES:
         assert "mesa" not in face.lower(), (
-            f"a face {face!r} diz a palavra que ela mandou tirar da tela em "
+            f"a face {face!r} diz a palavra tirada da tela em "
             "05/09/2026 — o termo é 'objeto' ou o sinônimo que couber"
         )
 

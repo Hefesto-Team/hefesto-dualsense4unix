@@ -54,7 +54,7 @@ PAGINAS = sorted(
 
 
 def _com_a_base(texto: str, js: str = JS_DA_BASE) -> str:
-    """A página com a base dada no lugar da que ela embute (uma `<script id="base-comum">`)."""
+    """A página com a base dada no lugar da que embute (uma `<script id="base-comum">`)."""
     texto, n = re.subn(
         r'(<script id="base-comum">\n).*?(</script>)',
         lambda m: m.group(1) + js + m.group(2), texto, count=1, flags=re.S)
@@ -305,7 +305,7 @@ def _foco_no_webkit(tmp_path: pathlib.Path, js: str = JS_DA_BASE) -> dict[str, A
 
     if (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("HEFESTO_NA_TELA")
             or not os.environ.get("DISPLAY")):
-        pytest.skip("sem o X de mentira: o WebKit abriria na tela dela ou não abriria")
+        pytest.skip("sem o X de mentira: o WebKit abriria na tela de quem usa ou não abriria")
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre o WebKit da camada da dica")

@@ -24,7 +24,7 @@ class TestAFabricaNaoCasaComALoja:
             assert casa.is_dir(), f"uma casa da fábrica sumiu: {casa}"
         presets = sorted(p for casa in CASAS_DE_FABRICA for p in casa.glob("*.json"))
         assert len(presets) >= 9, (
-            f"a fábrica tem só {len(presets)} presets — se ela encolheu, este "
+            f"a fábrica tem só {len(presets)} presets — se a fábrica encolheu, este "
             "teste passou a medir menos do que promete. Confira antes de "
             "baixar o piso."
         )
@@ -44,10 +44,10 @@ class TestAFabricaNaoCasaComALoja:
             )
             + "\n\nUma janela invisível do steamwebhelper ativa este perfil no "
             "meio da partida — foram treze trocas em 54 minutos na máquina "
-            "dela. Decisão D-STEAM-SAI-DA-NAVEGACAO, 22/08/2026: as classes da "
+            "de teste. Decisão D-STEAM-SAI-DA-NAVEGACAO, 22/08/2026: as classes da "
             "loja saem do preset de desktop.\n"
             "Se um preset PRECISA mesmo casar com a loja, ele não é preset de "
-            "desktop — e a exceção é decisão dela, não do código."
+            "desktop — e a exceção é decisão de produto, não do código."
         )
 
     def test_navegacao_continua_casando_com_os_navegadores(self) -> None:
@@ -65,6 +65,6 @@ class TestAFabricaNaoCasaComALoja:
         """Guarda do instrumento: uma régua cega passaria verde para sempre."""
         assert e_janela_do_cliente_steam(classe), (
             f"a régua do produto não reconhece {classe!r} como janela do "
-            "cliente Steam. Enquanto ela não reconhecer, o portão desta "
+            "cliente Steam. Enquanto a régua não reconhecer, o portão desta "
             "suíte está VERDE sem medir nada."
         )

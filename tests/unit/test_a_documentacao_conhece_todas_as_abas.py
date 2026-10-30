@@ -83,7 +83,7 @@ def test_toda_imagem_que_a_documentacao_publica_existe() -> None:
     assert achados, (
         "nenhuma referência de imagem encontrada nos documentos. Se eles "
         "mudaram de nome, esta régua tem de aprender os nomes novos — sem "
-        "isso ela fica verde sobre coisa nenhuma."
+        "isso a régua fica verde sobre coisa nenhuma."
     )
 
     quebradas = [

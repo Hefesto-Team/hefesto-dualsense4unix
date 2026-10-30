@@ -37,12 +37,12 @@ def _dicas_do_botao(doc: str) -> list[str]:
     return achados
 
 
-@pytest.mark.parametrize("alvo", [ENSAIO, PUBLICADO], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("alvo", [ENSAIO, PUBLICADO], ids=["ensaio", "publicado"])
 def test_a_dica_do_botao_do_microfone_diz_o_retorno(alvo: pathlib.Path) -> None:
     """MORDIDA: devolva «O 🎙 cala o microfone e apaga a luz vermelha» à dica do botão.
 
     O «?» do Microfone saiu no todo de 15/10/2026: a explicação mora na dica do próprio 🎙, e
-    ela diz o que ele faz HOJE (o retorno), nunca que ele cala o microfone.
+    a dica diz o que ele faz HOJE (o retorno), nunca que ele cala o microfone.
     """
     if alvo == PUBLICADO and _a_jogar_esta_em_trabalho():
         pytest.skip("a Jogar está declarada em trabalho: o publicado é o desenho "
@@ -58,7 +58,7 @@ def test_a_dica_do_botao_do_microfone_diz_o_retorno(alvo: pathlib.Path) -> None:
             f"a dica não diz o que o 🎙 faz hoje: {dica[:160]}")
 
 
-@pytest.mark.parametrize("alvo", [ENSAIO, PUBLICADO], ids=["bancada", "publicado"])
+@pytest.mark.parametrize("alvo", [ENSAIO, PUBLICADO], ids=["ensaio", "publicado"])
 def test_o_microfone_nao_tem_ponto_de_interrogacao(alvo: pathlib.Path) -> None:
     """MORDIDA: devolva o `ponto_de_interrogacao` ao cabeçalho do microfone."""
     if alvo == PUBLICADO and _a_jogar_esta_em_trabalho():

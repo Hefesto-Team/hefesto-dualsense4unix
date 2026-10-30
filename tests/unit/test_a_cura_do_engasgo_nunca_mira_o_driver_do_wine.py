@@ -80,7 +80,7 @@ def test_nome_parecido_com_o_driver_nao_e_o_driver_mas_ainda_assim_e_recusado(
 
 
 def test_a_recusa_do_driver_e_por_nome_inteiro_e_nao_por_substring() -> None:
-    """Anticircularidade das duas listas acima: elas têm de discordar."""
+    """Anticircularidade das duas listas acima: as duas têm de discordar."""
     assert cv._e_o_driver(r"C:\windows\system32\winevulkan.json") is True
     assert cv._e_o_driver(r"C:\Jogo\notwinevulkan.json") is False
     assert cv.dono_preservado(r"C:\Jogo\EOSOverlayVkLayer-Win64.json") is None

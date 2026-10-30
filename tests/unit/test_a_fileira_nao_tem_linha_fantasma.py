@@ -2,8 +2,8 @@
 
 O defeito que esta régua fecha: `painel.CHIPS_DA_ESCADA` tinha CINCO linhas e a
 página publicada tem QUATRO `data-degrau`. A quinta — `pointclick` — saiu do
-desenho em 31/08/2026 por ordem de produto (*"nos mockups tira o point and click e
-deixa só o navegação."*) e ficou dezessete dias viva na tabela, envenenando
+desenho em 31/08/2026 por decisão de produto (nos mockups, só a navegação fica, sem o point
+and click) e ficou dezessete dias viva na tabela, envenenando
 a conta dos chips sem dono, que devolvia um chip que a tela não mostra.
 
 NOTA DE 15/10/2026 (A-ABA-JOGAR-DO-TODO-01, opção A do BRIEF-T2, decidida por nós duas): a
@@ -11,7 +11,7 @@ tela voltou a ter um chip «Point and click», agora SÓ no Ligado, e a «Navega
 Desligado. É o mesmo modo `desktop` dos dois lados, então a tabela segue com UMA linha para
 ele (`navegacao`) e o `pointclick` é só o nome do lado do Ligado (`CHIP_DO_POINT_AND_CLICK`):
 a pergunta 2 o aceita por essa chave, e por nenhuma outra. A decisão de 31/08 continua
-valendo para o que ela cobrava: nenhuma linha da tabela fica sem lugar na tela. Desde 28/10/2026
+valendo para o que cobrava: nenhuma linha da tabela fica sem lugar na tela. Desde 28/10/2026
 o chip «Point and click» saiu da fileira (é estilo de jogo), e a pergunta 2 não aceita chave
 fora da tabela.
 
@@ -20,7 +20,7 @@ SÃO DUAS PERGUNTAS, e confundi-las é o defeito inteiro:
     1. toda chave de `CHIPS_DA_ESCADA` tem `data-degrau` na página publicada;
     2. toda chave da página está em `CHIPS_DA_ESCADA`.
 
-POR QUE ELA É NECESSÁRIA AO LADO DA TRAVA DE `aba01.py`, e é regra desta casa
+POR QUE A RÉGUA É NECESSÁRIA AO LADO DA TRAVA DE `aba01.py`, e é regra desta casa
 ter duas réguas independentes sobre dois objetos: aquela mede a PÁGINA (*"o
 Point And Click voltou à fileira"*) e ficava **verde com a linha morta viva na
 tabela**, que é o estado que atravessou os dezessete dias.
@@ -96,7 +96,7 @@ def test_a_regua_dos_chips_sem_dono_devolve_vazio() -> None:
 
 
 def test_o_gerador_continua_recusando_o_point_and_click_na_fileira_errada() -> None:
-    """A trava de `aba01.py` fica de pé, e ela mede OUTRA COISA: cada lado com o seu."""
+    """A trava de `aba01.py` fica de pé, e mede OUTRA COISA: cada lado com o seu."""
     fonte = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "aba01.py"
     ).read_text(encoding="utf-8")

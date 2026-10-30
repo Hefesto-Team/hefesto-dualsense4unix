@@ -182,7 +182,7 @@ def test_nenhum_getattr_de_src_aponta_para_nome_que_ninguem_define(
 def test_orfao_declarado_que_ganhou_dono_perde_a_declaracao(
     censo: tuple[dict[str, list[Any]], dict[str, list[Any]]],
 ) -> None:
-    """Declaração velha é pior que nenhuma: ela silencia a régua sobre um fato"""
+    """Declaração velha é pior que nenhuma: silencia a régua sobre um fato"""
     _, definicoes = censo
     voltaram = {
         nome: definicoes[nome] for nome in ORFAOS_DECLARADOS if nome in definicoes
@@ -198,7 +198,7 @@ def test_orfao_declarado_que_ganhou_dono_perde_a_declaracao(
             + "\n".join(linhas)
             + "\n\nA declaração descreve um mundo que acabou. Tire o nome de "
             "`ORFAOS_DECLARADOS` e leve junto a lápide que o explica — quem "
-            "repõe a peça é quem apaga a nota que dizia por que ela faltava."
+            "repõe a peça é quem apaga a nota que dizia por que a peça faltava."
         )
 
 

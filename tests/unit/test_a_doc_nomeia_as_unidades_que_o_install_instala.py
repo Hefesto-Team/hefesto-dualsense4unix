@@ -31,12 +31,12 @@ def test_o_extrator_acha_alguma_coisa() -> None:
 
 
 def test_toda_unidade_de_usuario_esta_documentada() -> None:
-    """A tabela do `instalacao.md` tem de nomear cada uma delas."""
+    """A tabela do `instalacao.md` tem de nomear cada unidade."""
     texto = INSTALACAO.read_text(encoding="utf-8")
     faltando = sorted(u for u in unidades_de_usuario(INSTALL) if u not in texto)
     assert not faltando, (
         f"o install.sh deixa {len(faltando)} unidade(s) de usuário que a "
-        f"documentação não nomeia: {', '.join(faltando)}. Elas ficam RODANDO na "
+        f"documentação não nomeia: {', '.join(faltando)}. Essas unidades ficam RODANDO na "
         "máquina de quem instalou — e o vigia do Steam Input em particular "
         "desfaz, sozinho e depois, escolhas que a pessoa fez na Steam"
     )
@@ -63,14 +63,14 @@ def test_o_vigia_do_steam_input_nao_e_descrito_como_gesto_unico() -> None:
     )
     ausentes = [u for u in gatilhos if u not in texto]
     assert not ausentes, (
-        f"a página não nomeia {', '.join(ausentes)}. Sem os dois gatilhos, ela "
+        f"a página não nomeia {', '.join(ausentes)}. Sem os dois gatilhos, a página "
         "volta a descrever o Steam Input OFF como um gesto da instalação — e o "
         "vigia reaplica a cada 30 min e a cada saída da Steam"
     )
 
 
 def test_a_lista_vem_do_install_e_nao_de_uma_lista_a_mao(tmp_path: Path) -> None:
-    """A validação da régua: ela tem de ver uma unidade que só existe no falso."""
+    """A validação da régua: a régua tem de ver uma unidade que só existe no falso."""
     falso = tmp_path / "install.sh"
     falso.write_text(
         'USER_UNIT_DIR="${HOME}/.config/systemd/user"\n'
@@ -81,5 +81,5 @@ def test_a_lista_vem_do_install_e_nao_de_uma_lista_a_mao(tmp_path: Path) -> None
     assert unidades_de_usuario(falso) == {"hefesto-inventada.timer"}
     assert "hefesto-inventada.timer" not in unidades_de_usuario(INSTALL), (
         "a régua devolveu a unidade inventada lendo o install.sh de verdade — "
-        "ela está devolvendo uma lista fixa em vez de ler o arquivo"
+        "a régua está devolvendo uma lista fixa em vez de ler o arquivo"
     )

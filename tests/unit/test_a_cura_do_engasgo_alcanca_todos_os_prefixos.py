@@ -106,7 +106,7 @@ def test_curar_todos_mexe_no_desconhecido_e_deixa_o_preservado(casa: Path) -> No
 
 
 def test_devolver_deixa_o_registro_byte_a_byte_como_estava(casa: Path) -> None:
-    """Reversível SEM terminal é requisito dela — e reversível é byte a byte."""
+    """Reversível SEM terminal é requisito do produto — e reversível é byte a byte."""
     registro = (
         casa / ".steam" / "steam" / "steamapps" / "compatdata" / "222" / "pfx"
         / "system.reg"
@@ -129,7 +129,7 @@ def test_a_cura_e_idempotente(casa: Path) -> None:
 
 
 def test_o_gancho_nao_desfaz_o_que_o_usuario_devolveu(casa: Path) -> None:
-    """Ela devolveu de propósito: o jogo seguinte NÃO pode desligar de novo."""
+    """Quem usa devolveu de propósito: o jogo seguinte NÃO pode desligar de novo."""
     raiz = casa / ".steam" / "steam" / "steamapps" / "compatdata" / "222"
     cv.curar_todos(casa)
     cv.curar_todos(casa, religar=True)
@@ -334,11 +334,11 @@ def test_o_install_materializa_o_curador_sem_flag(tmp_path: Path) -> None:
 
 
 def test_o_uninstall_devolve_antes_de_apagar_o_curador() -> None:
-    """Simetria: o que mexemos no dado dela volta, e volta ANTES do curador sair."""
+    """Simetria: o que mexemos no dado de quem usa volta, e volta ANTES do curador sair."""
     texto = (RAIZ / "uninstall.sh").read_text(encoding="utf-8")
     devolucao = texto.index("--devolver")
     remocao = texto.index('rm -f "${CAMADAS_TARGET}"')
     assert devolucao < remocao, (
         "o uninstall apagaria o curador antes de devolver as sobreposições — "
-        "ela ficaria sem produto E sem as camadas"
+        "quem usa ficaria sem produto E sem as camadas"
     )
