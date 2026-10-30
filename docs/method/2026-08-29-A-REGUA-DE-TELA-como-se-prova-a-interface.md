@@ -34,7 +34,7 @@ GTK3. Isso a torna **dirigível por dentro**:
 Os dois sentidos fechados é o que separa "o clique saiu" de "o clique foi
 ouvido" — e essa diferença é o defeito inteiro do §4.3.
 
-**A régua é `scripts/regua_de_tela.py`.** Ela embrulha isso num vocabulário
+**A régua é `scripts/regua_de_tela.py`.** A régua embrulha isso num vocabulário
 síncrono: cada pergunta bombeia o laço GLib até a resposta chegar, então quem
 escreve o teste não lida com *callback* nem *thread*, e não perde o tempo real —
 que é onde a interface vive.
@@ -48,7 +48,7 @@ Esta é a primeira decisão de toda régua nova, e escolher errado dá verde fal
 | | **`olhar.py` e as réguas de `src/hefesto_dualsense4unix/interface/`** | **`scripts/regua_de_tela.py`** |
 |---|---|---|
 | motor | Playwright dirigindo **Chromium** | **WebKitGTK** dentro de uma janela GTK |
-| alvo | o **mockup**, arquivo `file://` | o **motor que ela vai usar**, com o piloto e o daemon vivo |
+| alvo | o **mockup**, arquivo `file://` | o **motor que o usuário vai usar**, com o piloto e o daemon vivo |
 | alcança `:hover`, arrastar, roda do rato, foco por teclado | **sim** | não |
 | alcança a ponte tela → Python → eco | não | **sim** |
 | alcança `postMessage`, estado do produto, IPC | não | **sim** |
@@ -147,7 +147,7 @@ dos quatro é pego ali e não na tela do usuário.
 ## 4. Os sete defeitos que esta casa já pagou
 
 Cada um vira um caso de régua. A coluna da direita é a asserção que o teria
-pegado — e, onde já existe, onde ela está.
+pegado — e, onde já existe, onde a asserção está.
 
 ### 4.1 O `or 128` — o extremo do analógico virava o centro
 
@@ -233,19 +233,19 @@ usados. `campo` e `mudo` entraram nessa lista em 29/08 — e a falta deles era o
 mesmo buraco do §4.3: *uma régua que não toca um endereço não pode reprovar quem
 o quebrar.*
 
-### 4.5 A guarda de carga que matava a janela quando ela clicava numa aba
+### 4.5 A guarda de carga que matava a janela quando o usuário clicava numa aba
 
 Na primeira vez que o usuário abriu o piloto, **a janela fechou sozinha depois de ~12
 segundos** — o tempo de o usuário clicar em "Conexões". A tira do mockup é um `<a
-href="08-conexoes.html">`, ou seja ela **navega de verdade**; o `load-changed`
+href="08-conexoes.html">`, ou seja a tira **navega de verdade**; o `load-changed`
 dispara outra vez, e a guarda de carga — que existe para pegar carga **falha** —
 leu navegação legítima como erro fatal.
 
 **A régua:** distinguir *"a primeira carga não confirmou"* de *"a página mudou
 porque alguém clicou"*. A guarda continua valendo para a primeira carga, que é
-onde ela protege; sair da aba só **pausa a pintura**.
+onde a guarda protege; sair da aba só **pausa a pintura**.
 
-> **A lição, e ela vale para toda cura de robustez:** uma guarda que trata o
+> **A lição, e a lição vale para toda cura de robustez:** uma guarda que trata o
 > caminho normal como falha é pior que guarda nenhuma — matou a tela do usuário para
 > relatar um sucesso. O mesmo padrão apareceu no `DONOS_DOS_GESTOS`, onde um
 > `KeyError` cru derrubava a janela inteira para relatar um dono desconhecido.
@@ -270,20 +270,20 @@ conta escrita**, em voz alta, mesmo enquanto a cura não é aplicada (a cura mud
 ### 4.7 A régua de pop-up que comparava o rodapé com a viewport do navegador
 
 As três pop-ups da Navegação **nunca tinham sido medidas**, e as duas réguas
-existentes eram cegas a elas por motivos **diferentes** — o que é pior que uma
+existentes eram cegas a essas pop-ups por motivos **diferentes** — o que é pior que uma
 cegueira só, porque cada uma parecia cobrir o que a outra não cobria: a `regua.py`
 carrega a página **sem fragmento**, e a pop-up só aparece em `:target`; a
 `regua_estados.py` varre `.miolo, .miolo *`, e a pop-up nasce **irmã** da
 `.janela`, fora do miolo.
 
 E quando alguém finalmente as mediu, mediu **contra o errado**: a pop-up é
-`position:fixed`, logo ela se centra nos 1920×1080 do navegador — e não nos
+`position:fixed`, logo a pop-up se centra nos 1920×1080 do navegador — e não nos
 1180×757 da `.janela` desenhada, que é a janela do produto. **Medir contra a
 viewport daria verde numa caixa de 1000 px que no produto ficaria com 243 px
 para fora.**
 
 **A régua:** medir contra a `.janela` da própria página e projetar a caixa
-centrada nela. *Onde está:* `regua_popup.py`, que já traz `--morde`.
+centrada na `.janela`. *Onde está:* `regua_popup.py`, que já traz `--morde`.
 
 > **A lição, e é a mais cara das sete:** *duas réguas verdes não são cobertura —
 > podem ser dois pontos cegos que se acham cobertos.* Antes de acreditar num
@@ -294,7 +294,7 @@ centrada nela. *Onde está:* `regua_popup.py`, que já traz `--morde`.
 
 ## 5. A regra que vale para toda régua nova
 
-### 5.1 Ela tem de MORDER
+### 5.1 A régua tem de MORDER
 
 **Um teste que passa com a cura arrancada não testa nada.** Arranque, veja
 reprovar, devolva — e escreva o resultado, porque o número da mordida é o que
@@ -329,7 +329,7 @@ que a régua da aba Controles se provou:
 > escreve bem — procura o nome no arquivo inteiro e acha no comentário. Uma
 > régua que lê fonte tem de olhar **linha de código**, não o texto todo.
 
-### 5.2 Ela tem de VIVER NO TEMPO
+### 5.2 A régua tem de VIVER NO TEMPO
 
 Uma ação acontece aos 3 s e a consequência aos 5. **Uma régua que roda o tique
 UMA VEZ mede um instante, não um comportamento** — foi assim que uma leva
@@ -339,7 +339,7 @@ Daí `esperar_ate`, `avancar` e `aos`. E daí `esperar_ate` **reprovar** no
 estouro em vez de devolver `False`: quem escreveu o teste esqueceria de conferir,
 e o silêncio viraria verde.
 
-### 5.3 Ela tem de exigir um PISO
+### 5.3 A régua tem de exigir um PISO
 
 `contar(sel)` devolvendo `0` é resposta **legítima**. Medido em 29/08: uma
 leitura caiu no instante em que outra leva regerava o `02-controles.html`, e a
@@ -353,10 +353,10 @@ coisa sobre o conteúdo.
 A régua da aba Controles pula, nomeando o motivo, sem servidor gráfico, sem
 WebKit ou sem o mockup. **Pulo lido como verde é o mesmo verde falso de sempre**,
 e hoje ele quase aconteceu: apontada para a cópia de `novo-layout/` da própria
-árvore `interface/nova`, ela **pulou** com
+árvore `interface/nova`, a cópia **pulou** com
 `ModuleNotFoundError: No module named 'mesa_viva'` — porque aquela cópia é de
-28/08 03:09 e não tem o piloto. Ela só passa porque o instrumento varre as
-árvores que o `git` declara e escolhe **a mais nova**, que hoje é a dela.
+28/08 03:09 e não tem o piloto. A cópia só passa porque o instrumento varre as
+árvores que o `git` declara e escolhe **a mais nova**, que hoje é a a do usuário.
 Quem contar pulos como aprovação vai declarar cobertura sobre uma árvore que não
 tem o que medir.
 
@@ -366,7 +366,7 @@ tem o que medir.
 
 **`novo-layout/` é `.gitignore:108`.** Medido: o `git` conhece **0 arquivo** lá
 dentro e **0 commit de toda a história** tocou a pasta. É a mesma cicatriz
-estrutural do arquivo de contrato desta casa, e ela tem três consequências que
+estrutural do arquivo de contrato desta casa, e a cicatriz tem três consequências que
 decidem o endereço de todo instrumento novo:
 
 1. **Não viaja em worktree.** `git worktree add` não copia arquivo ignorado.
@@ -375,7 +375,7 @@ decidem o endereço de todo instrumento novo:
    portão do §7 diz isso em vez de fingir cobertura.
 3. **Não entra no CI.**
 
-Por isso `scripts/regua_de_tela.py` nasceu em `scripts/` e a régua dela em
+Por isso `scripts/regua_de_tela.py` nasceu em `scripts/` e a régua do instrumento em
 `tests/unit/`. **Instrumento permanente é versionado; ferramenta de mockup pode
 ficar onde o mockup está.**
 
@@ -391,7 +391,7 @@ régua_de_tela: 2 cópias de '02'; uso a mais nova.
 ```
 
 Para fixar o alvo — e **toda mordida tem de fixar** —, use a variável de
-ambiente `HEFESTO_NOVO_LAYOUT`: quando ela está posta, é a **única** raiz.
+ambiente `HEFESTO_NOVO_LAYOUT`: quando a variável está posta, é a **única** raiz.
 
 ---
 
@@ -422,7 +422,7 @@ reação seria `--no-verify`.
   worktree ligada o `.git` é um **arquivo** (`gitdir: …`), esse caminho não pode
   existir, o teste `[ -x ]` é falso e a delegação não acontece — **em silêncio**.
   Cai fora o gancho inteiro, não só este portão. O conserto é de uma linha e é
-  **dela**, porque o arquivo é global e vale para todo repositório do usuário;
+  **do usuário**, porque o arquivo é global e vale para todo repositório do usuário;
   `check_regua_de_tela.py --diagnostico` imprime o estado da árvore e o patch.
 
   **E o patch sozinho não fecha a história — medido ao integrar.** O
@@ -468,7 +468,7 @@ e número de árvore em movimento não repete.
   E `playwright` não está no `pyproject.toml`, em extra nenhum.
 
 **A leitura honesta:** a metade que é texto e dado funciona; a metade que é tela
-está sendo construída agora, e este documento é o começo dela, não o fim.
+está sendo construída agora, e este documento é o começo da metade, não o fim.
 
 ---
 
@@ -476,8 +476,8 @@ está sendo construída agora, e este documento é o começo dela, não o fim.
 
 1. Escolhi o instrumento certo? (§2 — promessa do desenho × promessa do produto)
 2. A régua mora em `tests/unit/` ou `scripts/`, e não em `novo-layout/`? (§6)
-3. Ela exige um **piso** antes de afirmar qualquer coisa? (§5.3)
-4. Ela **vive no tempo** — espera a consequência, não fotografa o instante? (§5.2)
+3. A régua exige um **piso** antes de afirmar qualquer coisa? (§5.3)
+4. A régua **vive no tempo** — espera a consequência, não fotografa o instante? (§5.2)
 5. Se é comportamento: usei `clicar_e_ouvir`, e não só `clicar`? (§4.3)
 6. Endereço por `data-*`, nunca por classe de estilo? (§4.4)
 7. Declarei o **referencial** de toda medida? (§4.7)

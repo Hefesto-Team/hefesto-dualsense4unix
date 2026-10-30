@@ -57,7 +57,7 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 > **NOTA DATADA — 12/08/2026: duas linhas da tabela ganharam condição, e as duas
 > condições foram medidas com quatro DualSense (dois no cabo, dois
 > no rádio).** Nenhuma das duas é diferença **de transporte** — e é por isso que
-> elas moram numa nota e não viraram coluna nova.
+> as duas moram numa nota e não viraram coluna nova.
 >
 > **1. A lightbar por rádio depende de QUEM tinha o `hidraw` aberto na probe.**
 > Com a Steam viva no instante em que o controle sobe, a cor escrita pela rota
@@ -88,11 +88,11 @@ Confundir (c) com (b) faz sumir um recurso que existe.
 
 Tudo o mais é paridade. Estas três não são:
 
-> **NOTA DATADA — 15/08/2026, 19h: a TROCA DE BRAÇOS, e por que ela vale mais
+> **NOTA DATADA — 15/08/2026, 19h: a TROCA DE BRAÇOS, e por que a troca vale mais
 > que qualquer linha nova nesta página.** Até essa hora, **toda** comparação
 > cabo × rádio do Hefesto comparava **aparelhos diferentes** ao mesmo tempo que
 > comparava **transportes** — inclusive as medições que sustentam esta seção.
-> Ela desplugou os dois do cabo e religou por rádio, plugou os dois do rádio no
+> O usuário desplugou os dois do cabo e religou por rádio, plugou os dois do rádio no
 > cabo, e os **mesmos quatro** aparelhos passaram pelos **dois** braços com
 > minutos de diferença. O que a inversão fixou, e antes só se podia atribuir a
 > *"um braço"*:
@@ -153,13 +153,13 @@ vpad, depois reabre.
 > 03/08 caem dentro dessa faixa, e é por isso que o método antigo **fica**: ele
 > mostrou primeiro que o rádio não é 1000 Hz, é uma contagem de bytes, e
 > corrobora a nova por um caminho que não compartilha nenhum instrumento com
-> ela.
+> a medição nova.
 >
-> **O que a medição nova acrescenta é a instabilidade, e ela é o achado:** a
+> **O que a medição nova acrescenta é a instabilidade, e a instabilidade é o achado:** a
 > taxa caiu de ~334 para ~55 Hz entre duas janelas consecutivas, sem que nada
 > mudasse. O p05 do intervalo é teimosamente 1255 us (~797 Hz **instantâneos**)
 > enquanto o p95 chega a 187 ms — **o fluxo é em rajadas**, e o que varia é o
-> silêncio entre elas. **O rádio não tem taxa típica**: quem citar um número só
+> silêncio entre as rajadas. **O rádio não tem taxa típica**: quem citar um número só
 > está citando uma janela. Números completos em
 > [o driver `hid-playstation` por dentro](driver-hid-playstation.md), seção 6.
 
@@ -265,13 +265,13 @@ Ordenado por (impacto ÷ custo):
   Esta linha ficou cinco dias mandando alguém consertar o que já estava
   consertado — que é o custo de leitura que este projeto combateu em 21/08. **Foi
   a fonte do erro de 03/08 registrado no topo deste documento**, e é só isso
-  que continua verdade sobre ela;
+  que continua verdade sobre a fonte;
 - **`README.md`** publicava um número para o mic por BT medido sob uma condição
   que deixou de existir quatro minutos depois — **caducou em 07/08/2026** e
   saiu do README (Z6-09, 24/08/2026, no commit que criou
   `docs/data/caducos.csv`). **Fechado no mesmo dia, e não pela ausência:** a
   medição das taxas novas, feita horas depois, entrou e o README
-  ficou com elas — ver a nota logo abaixo. As duas frentes nasceram do mesmo
+  ficou com as taxas — ver a nota logo abaixo. As duas frentes nasceram do mesmo
   commit-base e não se viram; a escolha entre as duas redações foi do usuário,
   24/08/2026;
 - **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não

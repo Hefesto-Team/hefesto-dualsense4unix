@@ -150,7 +150,7 @@ variável em rajadas, de ~38 a ~392 Hz entre janelas consecutivas — a canônic
 | SDL | **não.** Não há ajuste de taxa para PS5 em `SDL_hidapi_ps5.c` |
 | `nondebug/dualsense`, `dsremap` | **não citam** |
 
-**A fonte que parecia discordar, e por que ela não discorda:** a página de
+**A fonte que parecia discordar, e por que a fonte não discorda:** a página de
 solução de problemas do DS4Windows diz que o ajuste *BT Poll Rate* *"applies to
 DS4 and DualSense controllers on Bluetooth"*. Mas **os textos do próprio
 programa dizem o contrário**: o rótulo é `DS4BTPollRate` = *"DS4 BT Poll
@@ -167,7 +167,7 @@ sobre a mesa.
 **Consequência para o mapa:** a linha `plataforma.taxa_relatorios.botao` nunca
 poderá ter `report_id`, porque não há report a citar. Um botão de taxa na
 interface só pode **MEDIR**, nunca **COMANDAR**. Isso é decisão de
-classificação, e ela fica escrita para a próxima pessoa não caçar o report.
+classificação, e a decisão fica escrita para a próxima pessoa não caçar o report.
 
 ### O que existe é POLÍTICA DE HOST — e um número bateu duas vezes
 
@@ -233,7 +233,7 @@ pilha Bluetooth acordada depois de 500 ms de silêncio.
 **Acrescentado em 03/09/2026, na mesma leva, depois de uma segunda varredura.**
 As fontes das seções acima são todas *clientes* do aparelho: falam com ele por
 cima de um kernel que já resolveu o vínculo. Existe uma veia que ninguém neste
-repositório tinha citado, e ela é melhor para esta pergunta: **os hosts
+repositório tinha citado, e a veia é melhor para esta pergunta: **os hosts
 Bluetooth escritos do zero para um Raspberry Pi Pico W.**
 
 | projeto | o que é |
@@ -268,7 +268,7 @@ controle, **ou** escrever um output `0x31` pelo canal de interrupção — e o
 segundo funciona mesmo com o CRC errado, que é o que torna a frase do SDL uma
 queixa e não uma receita.
 
-**Grau: `afirmado-no-doc`, fonte única, e ela é forte porque é uma fonte
+**Grau: `afirmado-no-doc`, fonte única, e a fonte é forte porque é uma fonte
 dizendo algo CONTRA o próprio interesse** — o SDL preferiria poder cutucar a
 pilha sem trocar o modo, e escreve que não pode.
 
@@ -299,7 +299,7 @@ aparelho.
 
 Este projeto já sabe as três sementes e já mediu, em 27/08, que **escrever**
 feature por rádio pede `0x53`. O que estes projetos acrescentam é a **razão
-mecânica**, e ela explica as quatro de uma vez.
+mecânica**, e a razão explica as quatro de uma vez.
 
 O `DS5Dongle` põe `0xA2` como **primeiro byte do pacote na rede** antes de todo
 report de saída (`src/bt.cpp:846-850`), e o gabarito de CRC do mesmo arquivo
@@ -354,7 +354,7 @@ aparelho: quem ensaiar isso desliga um controle de verdade.
 
 ## 6. O QUE A INTERNET NÃO SABE
 
-Esta lista é entrega tanto quanto a de cima: ela diz onde **só o aparelho
+Esta lista é entrega tanto quanto a de cima: a lista diz onde **só o aparelho
 responde**, e é o que sobra para o ensaio no aparelho.
 
 1. **Ninguém mediu o teto de escrita do DualSense.** Não achei uma única fonte
@@ -388,7 +388,7 @@ responde**, e é o que sobra para o ensaio no aparelho.
 
 ## As fontes, com endereço
 
-| fonte | o que ela sustenta aqui |
+| fonte | o que a fonte sustenta aqui |
 |---|---|
 | `libsdl-org/SDL` — `src/joystick/hidapi/SDL_hidapi_ps5.c` | os dois comentários do gatilho (`:426-429`, `:434-437`); a detecção de modo por tamanho (`:405-422`); o cabeçalho e o CRC do `0x31` (`:1100-1121`); os 48 B do cabo (`:1107-1109`); o keepalive sem CRC (`:814-830`) e o `BLUETOOTH_DISCONNECT_TIMEOUT_MS = 500` (`:44`) |
 | wiki do SDL3 — `SDL_HINT_JOYSTICK_ENHANCED_REPORTS` | a troca é de mão única até desligar o controle |

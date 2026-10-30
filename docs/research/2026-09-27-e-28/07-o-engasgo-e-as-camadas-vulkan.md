@@ -35,7 +35,7 @@ O que se mediu, em 26/09/2026, sobre o engasgo periódico do Sackboy e a «cura�
 Recalculado do dado cru por três contas independentes, com o critério «quadro
 acima da mediana móvel + 12 ms» e os primeiros 90 s descartados:
 
-| | `00-39-24`: camada LIGADA | `01-15-43`: camada DESLIGADA, ela jogando |
+| | `00-39-24`: camada LIGADA | `01-15-43`: camada DESLIGADA, o usuário jogando |
 |---|---|---|
 | duração | 29,8 min | 35,9 min |
 | picos por minuto no regime | 70–72 | 112, depois 141–146 a partir do min 12 |
@@ -65,7 +65,7 @@ acima da mediana móvel + 12 ms» e os primeiros 90 s descartados:
 
 ### 2.2 O que o A/B não provou
 
-- **As sessões não são comparáveis:** ela só jogava na desligada, as fases eram
+- **As sessões não são comparáveis:** o usuário só jogava na desligada, as fases eram
   outras, e o jogo foi fechado e reaberto entre as duas.
 - **A noite não é o caminho de 26/09.** Nas seis aberturas de 23/08 o daemon
   ligou a exceção do Steam Input (`steam_input_excecao_ativada`,
@@ -120,7 +120,7 @@ binários:
   lançamento, antes de o jogo nascer.
 - O próprio manifesto da camada da Epic exige a variável
   `EOS_OVERLAY_ENABLE_VULKAN_WIN64=1` (`enable_environment`). Nem um carregador da
-  Khronos a ligaria sem ela.
+  Khronos a ligaria sem a variável.
 
 **A exceção, que impede dizer «em jogo nenhum».** O Proton prevê o carregador
 oficial (`nativevulkanloader`, e o `PROTON_DLL_COPY` copia o `vulkan-1.dll` para o
@@ -138,7 +138,7 @@ devolveu; ligada até 20/09 23:00:39, quando o gancho a desligou de novo para um
 sessão de 4,0 min; depois, com o jogo fechado, o botão a alternou três vezes e a
 deixou ligada; desligada desde 21/09 13:09:24. A sessão de 14/09, de 26,9 min com
 a camada desligada, não teve queixa de engasgo (ausência de queixa, não prova de
-cura), e as duas queixas (07/09 e 26/09) vieram com ela desligada:
+cura), e as duas queixas (07/09 e 26/09) vieram com a camada desligada:
 
 - 07/09, 12:39: a correção do Vulkan não estava funcionando.
 - 26/09, 14:33: o problema, resolvido ou quase com a descoberta da camada Vulkan, parecia ter voltado.
@@ -185,7 +185,7 @@ memória, não o metrônomo, que foi medido depois).
 
 **O que o binário diz (MEDIDO por desmontagem).** A biblioteca de áudio do pad
 embutida no jogo escolhe o ramo pelo PID e só conhece `05C4` e `0CE6`; o imediato
-`0DF2` aparece zero vezes nela, e um `054C:0DF2` cai no `else`, sem abrir o áudio.
+`0DF2` aparece zero vezes na biblioteca, e um `054C:0DF2` cai no `else`, sem abrir o áudio.
 Quem reconhece o `0DF2` é o plugin `RawInput` da Unreal. Em 26/09, porém, os
 botões apareciam como Sony e a vibração fina funcionava (RELATO): o device KS,
 com PID `0CE6`, pode ser o que alcança o ramo de áudio (INFERIDO). Qual dos IDs a
@@ -208,7 +208,7 @@ O texto registrado aqui é o de 26/09.
 ### 6.1 A Steam nasce fora do serviço
 
 Em 26/09 a Steam aberta pelo botão PS rodava no cgroup do serviço do daemon
-(MEDIDO), e com ela o jogo (INFERIDO forte, pela herança do cgroup): nice 5,
+(MEDIDO), e com a Steam o jogo (INFERIDO forte, pela herança do cgroup): nice 5,
 `OOMScoreAdjust=200` e `KillMode=control-group`, e um restart do daemon (o install
 faz um) matava a Steam e o jogo. A mecânica «o jogo perde CPU para o compositor»
 caiu: o compositor fica em outro grupo de CPU.
@@ -248,7 +248,7 @@ produto em uso repinta o exame com a linha própria.
 
 - **Decisão:** `D-2609-A-DICA-DO-VULKAN-NAO-PROMETE-CURA` (por delegação): a dica diz
   o que o ligável faz e que não cura engasgo; o rótulo «Corrigir Vulkan», que é
-  dela, fica e vai à sessão dos desenhos.
+  do usuário, fica e vai à sessão dos desenhos.
 - **A dica de 26/09** (`c3877af12`): *«Tira as sobreposições Vulkan que cada jogo
   deixa registradas dentro do Proton e guarda cópia. Quase nunca muda a imagem, e
   não cura engasgo. Desligar devolve o que foi tirado.»* «que cada jogo deixa»
@@ -323,7 +323,7 @@ produto em uso repinta o exame com a linha própria.
 - **A Steam fora do serviço, no aparelho:** falta ler o cgroup, o nice e o oom da
   primeira Steam aberta pelo PS depois do install; o systemd abaixo do 250 não foi
   medido; e, como a Steam aberta pelo PS agora sobrevive ao restart do install, o
-  risco da `STEAM-NO-FISICO-01` vale para ela (INFERIDO).
+  risco da `STEAM-NO-FISICO-01` vale para a Steam (INFERIDO).
 - **Variáveis de ferramenta do terminal de quem roda o install chegam à Steam
   reaberta por ele** (`install.sh` roda `--reabrir-steam` pelo `Popen`), inclusive
   um token: o `ambiente_limpo` tira as de interpretador, e não essa classe. Tirá-la
@@ -340,4 +340,4 @@ produto em uso repinta o exame com a linha própria.
   não foram tocados.
 - **As horas lisas de «sábado, 01/08»** não estão no log da Steam: a sessão longa
   daquela semana é de 02/08 (127,3 min), sem o `hefesto-launch` e antes dos ajustes
-  de 12 e 14/08. Que caminho o jogo via nela não se sabe.
+  de 12 e 14/08. Que caminho o jogo via na sessão não se sabe.

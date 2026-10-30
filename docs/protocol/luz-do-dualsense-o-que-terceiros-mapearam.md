@@ -38,14 +38,14 @@ do próprio DualSense, não leitura de ninguém.
 
 O envelope de rádio põe **três** bytes antes do bloco: `report_id`, `seq_tag`,
 `tag` (`hid-playstation.c:351-355`). Então `common[43]` cai em `report[46]`. A
-soma de 3 não é dedução: ela já estava **medida** no mapa, em
+soma de 3 não é dedução: a soma já estava **medida** no mapa, em
 `luz.led_microfone` (`common[8] = report[11]`, 02/09/2026).
 
 > **CONTRADIÇÃO, e o driver vence.** O `ReportOut31` do Game Controller
 > Collective Wiki mostra só **dois** bytes de envelope (`ReportID` + um byte de
 > `SeqNo`/flags). Isso poria `common[43]` em `report[45]`. O driver desta
 > máquina diz três, e a medição do LED do microfone do Hefesto confirma três.
-> **A wiki está curta em um byte.** É o único ponto em que ela diverge do
+> **A wiki está curta em um byte.** É o único ponto em que a wiki diverge do
 > driver em tudo que li.
 
 ---
@@ -103,7 +103,7 @@ sugerida é `(HardwareInfo & 0x00FFFF00) == 0x00000400`, lido do **feature repor
    `ds->player_leds_state`, a RAM do driver — continua dizendo que só o 5 está
    aceso.
 3. **Os cinco padrões canônicos são palíndromos** (4, 10, 21, 27, 31). Por isso
-   a diferença **não aparece em uso normal**. Ela aparece em bitmask
+   a diferença **não aparece em uso normal**. A diferença aparece em bitmask
    assimétrico — que é exatamente o que um banco de provas faz.
 
 **Grau: `afirmado-no-doc`, FONTE ÚNICA.** Procurei segunda fonte independente e
@@ -137,11 +137,11 @@ E nenhum deles carrega campo de LED, em **quatro leituras independentes**:
 | DualSense-Windows (`DS5_Input.cpp`) | idem | não |
 
 O único campo de saída que a wiki diz voltar espelhado é o `HostTimestamp`
-(byte 32), e ela registra a mesma limitação para os gatilhos: *"there is no way
+(byte 32), e a wiki registra a mesma limitação para os gatilhos: *"there is no way
 to read the full parameters of the current trigger effect back from the
 controller"*.
 
-**Conclusão, e ela é um fato negativo com endereço:** por HID não há canal de
+**Conclusão, e a wiki é um fato negativo com endereço:** por HID não há canal de
 leitura de LED. A célula do mapa ganhou `—` e a razão, em vez de ficar vazia —
 célula vazia faz a próxima pessoa caçar de novo.
 
@@ -248,8 +248,8 @@ fonte; agora tem duas.
 | carpikes/ds4-tools, `ds5-calibration-tool.py:143,152` | corrobora o `0x80` sub-comando 3 (NVS lock/unlock) | <!-- ref-externa: arquivo do projeto carpikes/ds4-tools, lido pela web; não é, e não deve ser, versionado nesta árvore -->
 
 **O teste que sustenta o que entrou no mapa:**
-`tests/unit/test_luz_do_jogador_bate_com_o_fonte.py`. Ela não redigita o byte 43
+`tests/unit/test_luz_do_jogador_bate_com_o_fonte.py`. A régua não redigita o byte 43
 — **calcula** o offset somando os campos da `struct` do driver, e **lê** os
-report ids dos `#define`. Mordida provada em cinco arrancadas, uma delas no
+report ids dos `#define`. Mordida provada em cinco arrancadas, uma das arrancadas no
 próprio fonte do driver (`reserved3[2]` → `[3]`), que é a que prova que o teste
 lê em vez de repetir.

@@ -8,14 +8,14 @@ o máximo de qualidade de informação?"*
 **O que este arquivo é:** o caminho barato até as specs. Ele custa ~6 mil tokens
 e ensina a ler o mapa, a consultá-lo por chave e a saber quando parar de confiar
 nele. **O que ele não é:** um resumo do mapa. Nada aqui substitui a prosa das
-células — ele te dá o endereço dela.
+células — ele te dá o endereço da prosa.
 
 **A conta que justifica este arquivo.** Até hoje havia duas portas: ler o CSV
 inteiro (<!--@caracteres-do-mapa-->1.506.808<!--/--> caracteres em células,
 ~<!--@tokens-do-mapa-->377<!--/--> mil tokens) ou não ler nada. O
 veredito por lado das <!--@linhas-do-mapa-->326<!--/--> linhas, sem uma linha de prosa, custa 27.828
 caracteres — **4,2%**. A porta barata sempre existiu; faltava alguém dizer onde
-ela fica.
+a porta fica.
 
 ---
 
@@ -43,7 +43,7 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 | `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->130.646<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
 | `docs/protocol/paridade-bluetooth-versus-cabo.md` | <!--@bytes:docs/protocol/paridade-bluetooth-versus-cabo.md-->18.353<!--/--> | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
 | `docs/method/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/method/METODO-DE-ISOLAMENTO.md-->63.930<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
-| `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->104.812<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->350<!--/-->. |
+| `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->104.812<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — a docstring vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->350<!--/-->. |
 | `scripts/eliminacao.py` | <!--@bytes:scripts/eliminacao.py-->7.434<!--/--> | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
 | `scripts/ensaio_do_mapa.py` | <!--@bytes:scripts/ensaio_do_mapa.py-->11.489<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
 
@@ -93,7 +93,7 @@ cabo e rádio respondidos lado a lado na mesma linha. As que importam para decid
   `*_detalhe` — **a prosa**. É onde mora o que salva trabalho, e é o que este
   documento existe para te ajudar a ler **sob demanda, pela chave**.
 
-**Não confie na coluna `transporte`.** Ela tem seis valores e nenhum deles é o
+**Não confie na coluna `transporte`.** A coluna tem seis valores e nenhum deles é o
 transporte de hoje: `ambos` (<!--@mapa-transporte-ambos-->45<!--/-->) e `cabo+rádio` (<!--@mapa-transporte-cabo-radio-->77<!--/-->) são o mesmo valor com duas
 grafias, e `sem linha no v1` (<!--@mapa-transporte-sem-linha-v1-->169<!--/--> linhas, metade do mapa) é marca de migração,
 não transporte. Quem responde por transporte são os pares `cabo_*` / `radio_*`.
@@ -102,7 +102,7 @@ não transporte. Quem responde por transporte são os pares `cabo_*` / `radio_*`
 
 ## 3. As duas réguas, em um minuto
 
-São **duas perguntas diferentes**, e por isso duas colunas. Elas se confundem
+São **duas perguntas diferentes**, e por isso duas colunas. As colunas se confundem
 porque até 15/08/2026 se chamavam `confianca` e `grau` — nomes que não diziam o
 que mediam. Os domínios são fechados e o portão reprova valor fora deles.
 
@@ -165,7 +165,7 @@ Leia as duas casas em negrito e você entendeu o mapa:
 O portão já cobra o eixo de ponte no mesmo espírito, na regra 15
 (`ponte-nao-declarada`): das **16 linhas que alcançam o jogo por `uhid`**, 10
 declaram `ponte_alcanca`, e as **4 que têm afirmação forte estão todas entre
-elas**. A regra só cobra ponte de quem afirma forte — as outras 6 vazias não são
+essas 10**. A regra só cobra ponte de quem afirma forte — as outras 6 vazias não são
 falha, são censo que ninguém respondeu.
 
 **Afirmação forte** é `aciona=sim` **e** `de_onde_sei=medido`. **Grau forte** é
@@ -212,7 +212,7 @@ são perguntas diferentes — mas se você ler "O APARELHO OBEDECEU" no mapa e
 
 **Cole isto e rode da raiz do repositório.** Ele responde "esta feature está
 medida?" e, junto, diz **quanta prosa existe** naquela linha — para você decidir
-se paga por ela.
+se paga por a linha.
 
 ```python
 import csv
@@ -275,7 +275,7 @@ for x in csv.DictReader(open("docs/data/ensaios.csv", encoding="utf-8")):
 **A tabela cabo x rádio inteira, que cabe em 3.447 caracteres** (medido rodando
 o trecho abaixo em 22/08/2026)**:** só **<!--@mapa-divergem-aciona-->40<!--/--> das <!--@linhas-do-mapa-->326<!--/--> linhas** têm
 `cabo_aciona != radio_aciona`. O mapa paga 26 colunas espelhadas em todas as 308
-para uma distinção que existe em <!--@mapa-pct-divergem-aciona-->12,3<!--/-->% delas.
+para uma distinção que existe em <!--@mapa-pct-divergem-aciona-->12,3<!--/-->% das linhas.
 
 ```python
 import csv
@@ -312,7 +312,7 @@ esteja o documento onde ele aparece.
 **Termos que ainda colidem — não invente a resposta, é decisão de produto:**
 
 - `transporte` = `ambos` **ou** `cabo+rádio` (<!--@mapa-transporte-ambos-->45<!--/--> e <!--@mapa-transporte-cabo-radio-->77<!--/--> linhas, mesmo sentido). A
-  coluna não tem domínio declarado, então o portão não vê. Não filtre por ela.
+  coluna não tem domínio declarado, então o portão não vê. Não filtre por essa coluna.
 - `provado_por` (mapa, <!--@mapa-com-provado-por-->87<!--/--> linhas:
   `aparelho` <!--@mapa-provado-aparelho-->45<!--/-->, `fonte-do-driver`
   <!--@mapa-provado-fonte-do-driver-->26<!--/-->, `olho-do-usuario`
@@ -360,12 +360,12 @@ Um esqueleto que parecesse completo seria pior que nenhum. **Vá à prosa quando
 - a linha tem `nota` (**<!--@mapa-com-nota-->248<!--/--> linhas**) — é onde ficam as notas datadas, e a regra
   da casa é que **decisão medida não se apaga**;
 - os dois lados divergem (**<!--@mapa-divergem-aciona-->40<!--/--> linhas**) — leia `assimetria_declarada`, ou saiba
-  que ela está vazia em <!--@mapa-divergem-sem-declarar-->3<!--/--> delas.
+  que a coluna está vazia em <!--@mapa-divergem-sem-declarar-->3<!--/--> dessas linhas.
 
 **Duas prosas que já salvaram medição neste mês**, para você entender o que está
 em jogo antes de achar que a ressalva é enfeite: uma célula dizia "nada foi
 enviado a aparelho nenhum" e caducou no mesmo dia; outra guardava a observação
-dela de 02/08 sobre o alto-falante — que quase foi enfraquecida por achar
+do usuário de 02/08 sobre o alto-falante — que quase foi enfraquecida por achar
 que não estava medido, porque mediu outra coisa (ausência de placa ALSA no
 rádio) e concluiu demais.
 
@@ -434,11 +434,11 @@ segue é medição, para o usuário decidir.
 | `nota`: os blocos "POR QUE ESTA LINHA EXISTE", repetidos entre linhas irmãs | 16.050 chars de eco | **Eu não tocaria por referência.** Esses blocos são justamente os que explicam por que a célula está vazia, e é na linha isolada — achada por `grep`, não por leitura sequencial — que a próxima pessoa cai. Se for encolher, o caminho é a fonte guardar a **chave do bloco** e o gerador expandir; nunca um `ver nota-familia:coop` no que se lê. |
 | `cabo_ressalva`, `radio_ressalva`, `*_evidencia` (repetição entre linhas diferentes) | 12% a 20% | **Não tocar.** Ali a repetição é contexto de célula, não boilerplate. |
 
-Para calibrar: a coluna `nota` tem 122.766 caracteres em 225 células. Delas,
+Para calibrar: a coluna `nota` tem 122.766 caracteres em 225 células. Dessas células,
 30.711 são células byte a byte idênticas a outra, e o eco por trecho (blocos de
 60 caracteres ou mais, separados por ` · `) soma 38.057. **Só a linha 1 desta
 tabela é corte; as outras são reorganização — a informação que chega ao leitor
-não muda em nenhuma delas.**
+não muda em nenhuma dessas linhas.**
 
 ---
 
@@ -451,7 +451,7 @@ não muda em nenhuma delas.**
 3. Consulte por chave com o código da seção 5. Nunca dê `Read` no CSV, e nunca
    abra o `specs.html`.
 4. Quando a célula tiver grau forte, ensaio ou nota, **a prosa é obrigatória** —
-   e ela é o motivo de este projeto não repetir trabalho já pago.
+   e a prosa é o motivo de este projeto não repetir trabalho já pago.
 
 ## POR QUE O GRÃO É `(chave, controle)`, com `cabo_*` e `radio_*` na mesma linha
 

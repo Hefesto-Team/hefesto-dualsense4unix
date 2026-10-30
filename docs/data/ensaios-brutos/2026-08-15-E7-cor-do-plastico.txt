@@ -66,7 +66,7 @@ O RESULTADO
 
   O QUE ISSO *NÃO* PROVA: que hardware_version sirva de fonte de cor. Não
   serve, e a sprint já mediu por quê (o byte Variation é 0x00 nos quatro; o
-  que varia é a revisão de placa). A âncora conferiu a leitura; ela não a
+  que varia é a revisão de placa). A âncora conferiu a leitura; a âncora não a
   substitui.
 
 OS CONTROLES CONTINUAM SÃOS
@@ -613,14 +613,14 @@ MASCARAS APLICADAS NESTE ARQUIVO (a tela mostrou o valor inteiro):
 ##                                                                          ##
 ##############################################################################
 
-POR QUE ESTA RODADA EXISTE, E O QUE SÓ ELA PODIA DECIDIR
+POR QUE ESTA RODADA EXISTE, E O QUE SÓ O USUÁRIO PODIA DECIDIR
 --------------------------------------------------------
 A rodada de 14h47 (acima) leu a cor de DOIS controles — os dois que estavam no
 cabo naquela hora. Os outros dois estavam no rádio, e o rádio RECUSOU a escrita
 com EIO. A afirmação que se podia fazer era "a cor sai em 2 de 2", que é bem
-mais fraca do que ela parece.
+mais fraca do que a afirmação parece.
 
-Às 19h ela TROCOU OS BRAÇOS. Os dois que nunca tinham sido medidos foram para o
+Às 19h o usuário TROCOU OS BRAÇOS. Os dois que nunca tinham sido medidos foram para o
 fio. Esta rodada os mede, e com isso a afirmação passa a valer em 4 de 4.
 
   aparelho              hw            14h47      22h09
@@ -646,7 +646,7 @@ dia, e só o transporte mudando. O veredicto:
 O que continua NÃO decidido, e a honestidade importa: QUEM recusa — o firmware
 do controle, ou a pilha HIDP/L2CAP do BlueZ. `EIO` não distingue os dois, e
 nenhuma leitura desta rodada distingue tampouco. Nenhuma escrita nova foi
-enviada a controle nenhum por rádio: a autorização dela desta noite cobria os
+enviada a controle nenhum por rádio: a autorização do usuário desta noite cobria os
 DOIS DO CABO, e só eles.
 
 A PROCEDÊNCIA, DE NOVO (a régua é declarada a cada rodada, não uma vez)
@@ -867,10 +867,10 @@ MASCARAS APLICADAS NESTE ARQUIVO (a tela mostrou o valor inteiro):
             Os caracteres 5 e 6 — a COR, que e o objeto do ensaio — estao entre os preservados.
 
 ==============================================================================
-O FECHAMENTO — 4 DE 4, E OS QUATRO CONCORDAM COM O NOME QUE ELA USA
+O FECHAMENTO — 4 DE 4, E OS QUATRO CONCORDAM COM O NOME QUE O USUÁRIO USA
 ==============================================================================
 
-  aparelho              hw            código  o firmware diz     ela chama de
+  aparelho              hw            código  o firmware diz     o usuário chama de
   --------------------  ------------  ------  -----------------  ------------
   14:3a:9a:00:00:ab     0x00000711    00      White              BRANCO
   44:46:48:00:00:03     0x00000811    02      Cosmic Red         VERMELHO
@@ -886,14 +886,14 @@ O QUE ISTO **NÃO** AUTORIZA A DIZER, e é o cuidado que a universalidade pede
    tentativas. A cor é `medido` no CABO em 4 de 4, e `medido-negativo` no
    RÁDIO em 1 de 1. São duas afirmações, e escrever "a cor funciona" sem o
    transporte ao lado é a mentira mais fácil desta linha.
-2. **Quatro cores distintas é a amostra dela, não uma propriedade do produto.**
+2. **Quatro cores distintas é a amostra desta rodada, não uma propriedade do produto.**
    Duas unidades da MESMA cor devolvem o MESMO código — a cor é um RÓTULO
    humano, não um identificador. Quem for usá-la para nomear jogador tem de
-   saber que ela colide no dia em que o usuário comprar um par igual. O que NÃO
+   saber que a cor colide no dia em que o usuário comprar um par igual. O que NÃO
    colide está em `identidade.req_dev_info@dualsense`, e é o MAC.
-3. **`n = 4` é amostra.** Nenhuma linha acima diz "todo DualSense": elas dizem
+3. **`n = 4` é amostra.** Nenhuma linha acima diz "todo DualSense": as linhas dizem
    quatro unidades, com o `hardware_version` de cada uma nomeado, para que a
-   próxima que discordar possa ser apontada pelo número da placa dela.
+   próxima que discordar possa ser apontada pelo número da placa da placa.
 
 MASCARAS APLICADAS NESTA SEGUNDA RODADA (a tela mostrou o valor inteiro):
   MAC ..... octetos 4 e 5 zerados (máscara da casa)

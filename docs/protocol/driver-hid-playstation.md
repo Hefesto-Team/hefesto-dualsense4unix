@@ -32,7 +32,7 @@ mais que esta página usa muito:
 é o mesmo que **MEDIDO AQUI**, dito com o instrumento no nome. A canônica traz a
 mesma equivalência.
 
-## A fonte, e por que ela vale mais que o mainline
+## A fonte, e por que a fonte vale mais que o mainline
 
 **GRAU: FONTE DESTA MÁQUINA.**
 
@@ -218,7 +218,7 @@ Este bloco é idêntico nos dois transportes; só o cabeçalho muda.
 | 46 | 47 | 49 | `lightbar_blue` | sim |
 
 Os offsets batem com a tabela da canônica §2, campo a campo. O que a canônica
-não tinha é a **última coluna**, e ela é o assunto da seção 6 desta página.
+não tinha é a **última coluna**, e a coluna é o assunto da seção 6 desta página.
 
 **O achado que a tabela esconde:** os gatilhos adaptativos moram inteiramente
 dentro de `reserved2[27]`. A canônica §4 os coloca em `common[10..31]` — 11
@@ -254,7 +254,7 @@ honesto: *"Tag must be set. Exact meaning is unclear."*
 
 **CRC-32** (`:136-138`, `:795-803`, `:1436-1443`): três sementes, prefixadas ao
 buffer antes do `crc32_le` — entrada `0xA1`, saída `0xA2`, feature `0xA3`. A
-canônica §7 já registra as três com grau ALTA; aqui elas ficam com **FONTE
+canônica §7 já registra as três com grau ALTA; aqui as sementes ficam com **FONTE
 DESTA MÁQUINA**.
 
 A struct `dualsense_output_report` (`:373-384`) é só um despachante: guarda
@@ -264,7 +264,7 @@ escreve em `common` sem saber por onde vai sair.
 ### 1.4. Os report IDs que o driver conhece — e os oito que ele ignora
 
 **GRAU: LIDO NO FONTE** (= FONTE DESTA MÁQUINA) para tudo desta subseção, mais
-uma linha **LIDO NO DESCRITOR** onde ela está marcada.
+uma linha **LIDO NO DESCRITOR** onde a linha está marcada.
 
 Esta subseção existe por causa de uma medição de 15/08/2026 registrada na
 [canônica](dualsense-referencia-canonica.md), em *"Os reports de saída por
@@ -305,11 +305,11 @@ nos quatro DualSense do usuário, por rádio. O silêncio é do driver, não do 
    desce pelo `ll_driver` do transporte e **não passa por este driver em momento
    nenhum**.
 
-**A consequência, e ela é a razão de esta subseção existir:** a escada
+**A consequência, e a consequência é a razão de esta subseção existir:** a escada
 `0x32`-`0x39` é **território inteiro do espaço de usuário**. O driver não abre
 esses IDs, não os fecha, e não os vê.
 
-**A diferença para os gatilhos adaptativos, e ela importa:** os gatilhos ficaram
+**A diferença para os gatilhos adaptativos, e a diferença importa:** os gatilhos ficaram
 de fora por **omissão declarada** — o autor escreveu na `linux-input` por que os
 deixou de fora, e a canônica §1.2 cita a frase. Para os oito degraus **não há
 declaração nenhuma**: há **silêncio**. Silêncio não é o mesmo que decisão
@@ -536,7 +536,7 @@ São escritas de userspace, bit a bit, pelos nós individuais. O sysfs é um
 
 > Isto é a mesma armadilha que a canônica dos externos já registra em outro
 > aparelho — "valor gravado no `sysfs` NÃO é prova de que alguma luz acendeu"
-> ([externos](externos-referencia-canonica.md)). Aqui ela fica provada pelo
+> ([externos](externos-referencia-canonica.md)). Aqui a armadilha fica provada pelo
 > fonte, para o DualSense, com a linha exata.
 
 ## 4. A numeração de player LEDs — a contradição, resolvida
@@ -634,7 +634,7 @@ alerta que tratá-los como calibração corrompe a unidade.
 
 `dualsense_get_calibration_data`, `:1149-1272`. O parse está em `:1176-1192`,
 todos `get_unaligned_le16` sobre `buf`, e todos com sinal (`short`). **Este
-layout é a lacuna que a canônica §5 deixou aberta** — ela documenta o tamanho e
+layout é a lacuna que a canônica §5 deixou aberta** — a canônica documenta o tamanho e
 a imutabilidade, não os campos.
 
 | offset | variável no fonte |
@@ -751,7 +751,7 @@ comportamento:
   BlueZ no caminho;
 - **todas** as falhas que `__ps_get_report` detecta são repetidas — erro de
   transporte, transferência curta, report ID errado, CRC ruim —, porque
-  qualquer uma delas descreve uma transferência que não chegou inteira.
+  qualquer uma das falhas descreve uma transferência que não chegou inteira.
 
 Ler feature report é operação pura, sem efeito colateral; repetir é seguro.
 
@@ -825,7 +825,7 @@ Cinco janelas de 8 a 10 s, no mesmo controle, sem tocar nele:
 
 Três leituras honestas:
 
-1. **A taxa por rádio não é estável.** Ela caiu de ~334 Hz para ~55 Hz entre
+1. **A taxa por rádio não é estável.** A taxa caiu de ~334 Hz para ~55 Hz entre
    duas janelas consecutivas de 8 s, no mesmo controle, sem nenhuma mudança que
    eu tenha feito.
 2. **O fluxo é em rajadas.** O p05 do intervalo é teimosamente **1255 us**
@@ -842,7 +842,7 @@ Três leituras honestas:
 > **398,3 e 400,2 Hz** — três adaptadores, duas safras, todos dentro de 0,6 %
 > de 800.
 >
-> Isso não derruba a tabela acima: **reconcilia** com ela, e por dois caminhos
+> Isso não derruba a tabela acima: **reconcilia** com a tabela, e por dois caminhos
 > que já estavam escritos nesta página.
 >
 > * o p05 **teimosamente 1255 us** de TODAS as janelas — o número que a leitura
@@ -1022,5 +1022,5 @@ apagada; cada uma precisa da sua nota datada.
    seção mede o aparelho; a **seção 1.4** desta página fecha o outro lado, que é
    o que o driver sabe disso — **seis IDs, e nenhum dos oito degraus**. Onde as
    duas se tocam, a regra do projeto vale: o driver vence sobre o que o **Linux**
-   manda, e o aparelho vence sobre o que o **firmware** faz. Aqui elas não
-   divergem; elas falam de coisas diferentes.
+   manda, e o aparelho vence sobre o que o **firmware** faz. Aqui as duas não
+   divergem; as duas falam de coisas diferentes.

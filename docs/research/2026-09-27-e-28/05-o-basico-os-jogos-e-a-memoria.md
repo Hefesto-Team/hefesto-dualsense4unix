@@ -25,7 +25,7 @@ O protocolo `o_basico` (sprint `O-BASICO-MEDIDO-01`) pode nascer dos ensaios que
 
 O que o protocolo tem de resolver, medido:
 
-- **As sondas não viajam.** Tudo o que o protocolo usava morava numa pasta ignorada pelo git, e o pacote não leva `scripts/ensaios` (`packaging/arch/PKGBUILD` instala uma lista sem ela). Proposta: as sondas passam a ser versionadas em `scripts/`, a saída vai para o diretório de estado do usuário (`XDG_STATE_HOME`), e o protocolo entra como `hefesto-dualsense4unix basico`, achado pelo mesmo `encontrar_arquivo_do_repo` do doctor.
+- **As sondas não viajam.** Tudo o que o protocolo usava morava numa pasta ignorada pelo git, e o pacote não leva `scripts/ensaios` (`packaging/arch/PKGBUILD` instala uma lista sem a pasta). Proposta: as sondas passam a ser versionadas em `scripts/`, a saída vai para o diretório de estado do usuário (`XDG_STATE_HOME`), e o protocolo entra como `hefesto-dualsense4unix basico`, achado pelo mesmo `encontrar_arquivo_do_repo` do doctor.
 - **No modo Xbox o lado do jogo fica cego.** O `comum.descobrir_aparelhos` (`scripts/ensaios/comum.py`) só varre `/sys/class/hidraw`, e o `src/hefesto_dualsense4unix/integrations/no_do_vpad.py` recusa nome repetido; os três pads uinput homônimos saem com `per_vpad[].evdev = None`. O `uinput_gamepad._create_device` não passa `phys`, e o pad sai com o `py-evdev-uinput` padrão. Proposta: nascer com `phys="hefesto-vpad/<n>"`, dono `A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01`; até lá, casar pad e jogador por um pulso de FF lido no delta de `per_vpad[].ff_nao_nulo_count`.
 - **Quase toda escrita pelo IPC deixa estado.** `led.set`, `trigger.set` e `led.player_set` com `uniq` entram na camada da usuária, que sobrevive a hotplug e vence todo perfil automático; o `trigger.reset` com `uniq` grava `trigger_off()` pela mesma porta. O `gamepad.mask.set` e o PS + R3 gravam no perfil ativo. Logo, a volta do subcomando `saidas` é o reinício do daemon, declarado; a régua é zero `override_do_perfil_cedeu_ao_ajuste_manual` no primeiro jogo depois. O `state_full` não publica essa camada; proposta: `controllers[].camada_da_usuaria`.
 - **O `led.auto_release` não faz nada desde 14/09** (`7e426bd3b`): o `_handle_led_auto_release` (`src/hefesto_dualsense4unix/daemon/ipc_handlers.py:1211`) só registra no diário e devolve `ok`. A docstring ficou; é fato errado a tirar.
@@ -56,19 +56,19 @@ O roteiro: PRAGMATA (3357650) no modo DualSense, Future Knight (4235410) no Xbox
 - o `o_jogo_para_de_ver_o_giro --so-medir` força `SDL_JOYSTICK_HIDAPI=0` e mede o SDL pelo evdev, não o hidraw que o Proton usa;
 - o resumo lia só a primeira e a última amostra, e cruzava pads recriados no delta de `per_vpad`.
 
-**O que o ensaio sem ela não prova:** o sinal (tiro, mira, voz). Não há IPC de entrada no pad e a Forja não estava compilada. A noite prova a corrente: fluxos, contadores, nós seguros, o silêncio pelo rádio.
+**O que o ensaio sem o usuário não prova:** o sinal (tiro, mira, voz). Não há IPC de entrada no pad e a Forja não estava compilada. A noite prova a corrente: fluxos, contadores, nós seguros, o silêncio pelo rádio.
 
 **O que se descartou:** comparar o PRAGMATA (DualSense) com o Future Knight (Xbox) muda jogo, engine, modo, máscaras e perfil de uma vez. Mede-se cada modo, não a diferença; a comparação no mesmo jogo é o PS + R3, por último, porque cada aperto recria os pads com o jogo aberto (o gesto do usuário fura o R-04: `ORIGENS_GESTO_DO_USUARIO`, `src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:94`).
 
 **Anonimato.** O `state_full` expõe o serial de fábrica inteiro (17 caracteres), que o mascarador da noite não cobria; o diário do jogo trouxe 7 linhas com o nome da ponte de som com os octetos 4 e 5 à mostra, e os perfis copiados crus traziam 4 identidades cada. Regra que fica: a cópia byte a byte de restauração vai para pasta privada 0700; na medida, só o sha256 e a cópia mascarada.
 
-**A noite deve rodar como unidade do `systemd --user`.** O terminal da sessão gráfica morre com ela; o `systemd --user` tem linger e atravessou as três quedas de 27/09.
+**A noite deve rodar como unidade do `systemd --user`.** O terminal da sessão gráfica morre com a sessão; o `systemd --user` tem linger e atravessou as três quedas de 27/09.
 
 ## 4. O produto em qualquer máquina
 
 Sprint `O-PRODUTO-EM-QUALQUER-MAQUINA-01`: treze lacunas e uma escada de prova sem outra máquina (P0 retrato; P1 install em lar de mentira; P2 primeira pintura; P3 contêiner; P4 VM com passagem USB; P5 segunda conta; P6 outro chip). As altas:
 
-- **O microfone pelo rádio nasce ligado sobre um patch de kernel que só esta máquina carrega.** Com microfone em `None`, «o microfone LIGA» (`src/hefesto_dualsense4unix/utils/maquina.py:441`). Sem o patch 0003 do `hid-playstation` (não está no upstream), o driver lê o quadro de áudio como estado de gamepad: desliga o microfone e mexe cursor e teclado (medido em 10/09). O doctor não tem check desse DKMS. Proposta: o 0003 expõe uma marca só de leitura, o daemon só põe o microfone no ar com ela, o patch vai ao linux-input (`O-MICROFONE-DO-RADIO-PERGUNTA-AO-DRIVER-01`, proposta).
+- **O microfone pelo rádio nasce ligado sobre um patch de kernel que só esta máquina carrega.** Com microfone em `None`, «o microfone LIGA» (`src/hefesto_dualsense4unix/utils/maquina.py:441`). Sem o patch 0003 do `hid-playstation` (não está no upstream), o driver lê o quadro de áudio como estado de gamepad: desliga o microfone e mexe cursor e teclado (medido em 10/09). O doctor não tem check desse DKMS. Proposta: o 0003 expõe uma marca só de leitura, o daemon só põe o microfone no ar com a marca, o patch vai ao linux-input (`O-MICROFONE-DO-RADIO-PERGUNTA-AO-DRIVER-01`, proposta).
 - **O BlueZ que segura quatro no rádio não chega a máquina nenhuma.** O passo 3f do `install.sh` só consome o backport já construído; um Pop!_OS novo recebe o 5.72, sem o `hefesto-0002` (a cura da queda de 22/09). Sem dpkg, o doctor diz «info». Proposta: publicar os `.deb` no release, e warn fora do dpkg; o install segue sem construir o backport sozinho (824 MB e restart do bluetoothd).
 - **Todo número do rádio foi medido num chip só**, três TP-Link UB500 Realtek (`2357:0604`); nenhum é interno. `N_MAX_PONTES = 2` é «Provisório» (`src/hefesto_dualsense4unix/integrations/radio_da_mesa.py:363`), e o doctor não diz o modelo. Proposta: teto por modelo, 2 como piso (`O-RADIO-CONHECE-O-CHIP-01`, proposta).
 
@@ -88,9 +88,9 @@ As médias, em uma linha cada:
 
 ## 5. O ensaio da memória (ensaio 5 do engasgo)
 
-O ensaio 5 da `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01` mede a memória com o PRAGMATA no menu em três voltas: com a afinação de memória da máquina, sem ela, e sem ela e sem o daemon. A ordem de produto para o ensaio: usar o MangoHud na Steam, sem deixar nada encerrar o terminal nem a interface gráfica.
+O ensaio 5 da `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01` mede a memória com o PRAGMATA no menu em três voltas: com a afinação de memória da máquina, sem a afinação, e sem a afinação e sem o daemon. A ordem de produto para o ensaio: usar o MangoHud na Steam, sem deixar nada encerrar o terminal nem a interface gráfica.
 
-**A afinação da máquina não é do Hefesto, e «sem ela» não é o padrão do kernel.** O ensaio tem um arquivo de sysctl próprio (swappiness 180, page-cluster 0, `watermark_scale_factor` 200, `watermark_boost_factor` 0, `vfs_cache_pressure` 200, `min_free_kbytes` 524288, `extfrag_threshold` 100), nascido do `NVRM: Out of memory` em memória de sistema. Sem ele, a máquina volta aos valores do Pop (swappiness 180 e page-cluster 0 do zram, `watermark_scale_factor` 125, `min_free_kbytes` ≈ 162885) e do kernel (`vfs_cache_pressure` 100, `extfrag_threshold` 500). Só quatro chaves mudam de fato. Um serviço de manutenção da máquina roda `sysctl --system` sem condição a cada hora (pula a rodada com jogo da Steam aberto), religa parte das unidades paradas e o próprio timer se o achar desabilitado; o gancho do apt roda o mesmo script mesmo com o timer parado. Nada do Hefesto reescreve `vm.*` sozinho.
+**A afinação da máquina não é do Hefesto, e «sem a afinação» não é o padrão do kernel.** O ensaio tem um arquivo de sysctl próprio (swappiness 180, page-cluster 0, `watermark_scale_factor` 200, `watermark_boost_factor` 0, `vfs_cache_pressure` 200, `min_free_kbytes` 524288, `extfrag_threshold` 100), nascido do `NVRM: Out of memory` em memória de sistema. Sem ele, a máquina volta aos valores do Pop (swappiness 180 e page-cluster 0 do zram, `watermark_scale_factor` 125, `min_free_kbytes` ≈ 162885) e do kernel (`vfs_cache_pressure` 100, `extfrag_threshold` 500). Só quatro chaves mudam de fato. Um serviço de manutenção da máquina roda `sysctl --system` sem condição a cada hora (pula a rodada com jogo da Steam aberto), religa parte das unidades paradas e o próprio timer se o achar desabilitado; o gancho do apt roda o mesmo script mesmo com o timer parado. Nada do Hefesto reescreve `vm.*` sozinho.
 
 **O MangoHud pela Launch Option, sem desenhar:**
 
@@ -128,5 +128,5 @@ O resultado do ensaio não entrou neste registro.
 - O `led.auto_release` morto e a camada da usuária fora do `state_full`.
 - O `phys` do pad uinput e o mascarador único.
 - As quatro sprints propostas do §4 (`O-MICROFONE-DO-RADIO-PERGUNTA-AO-DRIVER-01`, `O-RADIO-CONHECE-O-CHIP-01`, `AS-VERSOES-QUE-A-CASA-MEDIU-01`, `A-MAQUINA-LIMPA-01`), não criadas.
-- Dela: instalar qemu/ovmf e ceder um adaptador e um controle à VM; um adaptador de outro chip; a segunda conta; o cabo e a volta pelo rádio (o controle volta sozinho em 60 s sem o PS?); se o pino do Proton vale também para o Heroic; o serial inteiro no «Copiar».
+- Do usuário: instalar qemu/ovmf e ceder um adaptador e um controle à VM; um adaptador de outro chip; a segunda conta; o cabo e a volta pelo rádio (o controle volta sozinho em 60 s sem o PS?); se o pino do Proton vale também para o Heroic; o serial inteiro no «Copiar».
 - Se o `MANGOHUD` atravessa o atalho até o jogo, e o resultado do ensaio da memória.

@@ -11,9 +11,9 @@ custa nada; no dia em que alguém precisa ler `hidraw` cru — porque o
 `EVIOCGRAB` do co-op silencia o evdev físico para leitor externo — custa a
 tarde inteira.
 
-> **A regra de leitura desta página.** Onde ela diz *corpo*, o offset é
+> **A regra de leitura desta página.** Onde a página diz *corpo*, o offset é
 > relativo ao **começo do corpo do report**, que não é o começo do buffer. Onde
-> ela diz *absoluto*, é o índice no buffer que o `hidraw` entrega, contando o
+> a página diz *absoluto*, é o índice no buffer que o `hidraw` entrega, contando o
 > byte de id. As duas formas aparecem porque as fontes usam as duas, e
 > confundi-las é o erro mais comum deste assunto.
 
@@ -103,7 +103,7 @@ quatro bits vê o D-pad neutro como "cima+baixo apertados".
 **O acréscimo do DualSense Edge, e ele vem de UMA fonte só.** O `pydualsense`,
 sob `if self.is_edge`, lê também `buttons[2]` bit4 = L4, bit5 = R4, bit6 = L5 e
 bit7 = R5. O driver desta máquina define **três** máscaras para esse byte
-(`hid-playstation.c:170-172`) e nenhuma delas alcança os bits 4-7 — de modo que
+(`hid-playstation.c:170-172`) e nenhuma das máscaras alcança os bits 4-7 — de modo que
 **as costas de um Edge não chegam por evdev nesta máquina**. É lacuna do
 driver, não do aparelho, e ninguém do Hefesto tem um Edge para conferir.
 
@@ -111,7 +111,7 @@ driver, não do aparelho, e ninguém do Hefesto tem um Edge para conferir.
 
 ## 3. As fontes, e o que cada uma acrescenta
 
-| fonte | o que ela é | o que ela acrescenta aqui |
+| fonte | o que a fonte é | o que a fonte acrescenta aqui |
 |---|---|---|
 | `hid-playstation.c` desta árvore | o driver **compilado nesta máquina** | é a referência; vence as outras onde houver disputa |
 | `libsdl-org/SDL` `f443c429` `src/joystick/hidapi/SDL_hidapi_ps5.c:72-133` | a camada que os jogos usam | comenta o offset de **cada** campo; nomeia dois campos que o driver chama `reserved` |
@@ -159,7 +159,7 @@ cru pode ancorar os sticks primeiro e decidir o resto pelo tamanho do quadro.
 
 ---
 
-## 5. O feedback de gatilho — endereço de fonte única, e ela erra o vizinho
+## 5. O feedback de gatilho — endereço de fonte única, e a fonte erra o vizinho
 
 A canônica já dizia, em *«Leitura de estado — recurso que ninguém usa aqui»*,
 que o **nibble alto** de um byte de status por gatilho conta o que o gatilho
@@ -258,7 +258,7 @@ O ciclo mora em `0x82` (comando) / `0x83` (confirmação). Cada passo devolve um
 E os doze podem ser escritos à mão: `SET_FEATURE 0x80` com
 `[12, 1, lo, hi, lo, hi, …]` — vinte e seis bytes.
 
-### A família de fábrica inteira, e por que ela não é de qualquer ferramenta
+### A família de fábrica inteira, e por que a família não é de qualquer ferramenta
 
 O `0x80`/`0x81` é **uma família**, e metade da família mexe no aparelho:
 
@@ -322,4 +322,4 @@ Razer Wolverine V2 Pro, Razer Kitsune, Razer Raiju V3 Pro
 o layout que bate com o driver, campo a campo.
 
 Fica registrado porque a contradição é convincente e falsa — e este arquivo
-existe, em parte, para que a próxima pessoa não gaste a manhã nela.
+existe, em parte, para que a próxima pessoa não gaste a manhã na contradição.

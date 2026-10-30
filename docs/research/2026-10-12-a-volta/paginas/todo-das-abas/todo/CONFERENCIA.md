@@ -74,13 +74,13 @@ Seis mudanças novas, com a origem «ordem de produto de 12/10» na página (eti
 
 ## Volta 2 (12/10 tarde)
 
-Conferente que corrige. Medido em Chrome sem janela, em 1212x809 e 1680x840 (o tamanho da foto do usuário de 14h49). As fotos e a página foram refeitas: 101 mudanças, 28 fotos de estado, nenhuma imagem quebrada, nenhum «Não aparece na foto». O `respostas.json` dela não mudou (mesmo md5 antes e depois) e o bloco da página é igual a ele. A cópia de antes desta volta está em `leva-volta/todo-antes-da-volta2/`.
+Conferente que corrige. Medido em Chrome sem janela, em 1212x809 e 1680x840 (o tamanho da foto do usuário de 14h49). As fotos e a página foram refeitas: 101 mudanças, 28 fotos de estado, nenhuma imagem quebrada, nenhum «Não aparece na foto». O `respostas.json` do usuário não mudou (mesmo md5 antes e depois) e o bloco da página é igual a ele. A cópia de antes desta volta está em `leva-volta/todo-antes-da-volta2/`.
 
 **O que o montador entregou e segue de pé**
 
 - Ordem 1: o botão único «Modo automático» está nas cinco abas (01-7, 02-7, 03-3, 04-3, 05-4), e na 01 ocupa o lugar do Modo Freestyle. As fotos do botão ligado mostram o que fica apagado em cada aba.
 - Ordem 4: na 05 as linhas se repartem e não sobra vão (05-5), nos dois tamanhos.
-- Ordem 5: o Desligar do menu tem dica. Conferi no código: a bandeja não tem um item «Desligar»; o «Desligado» dela (`app/tray.py` → `cmd_tray._definir_o_modo(False)` → `plano_do_modo(MODE_NATIVE)`) é o mesmo plano da aba Jogar, e o serviço segue de pé. O «Parar o serviço» é outro item.
+- Ordem 5: o Desligar do menu tem dica. Conferi no código: a bandeja não tem um item «Desligar»; o «Desligado» da bandeja (`app/tray.py` → `cmd_tray._definir_o_modo(False)` → `plano_do_modo(MODE_NATIVE)`) é o mesmo plano da aba Jogar, e o serviço segue de pé. O «Parar o serviço» é outro item.
 - Ordem 6: a régua de 24 px segue em todas as páginas que a tinham.
 - Ordem 7: os 20 itens sem foto ganharam foto de estado com a marca numerada (janela aberta, sub-aba, lista aberta, seção expandida, rolagem da janela, dica do menu).
 
@@ -115,7 +115,7 @@ Anotado para o próximo bloco, fora destas ordens:
 2. **«Vibração está faltando, guia Controles».**
    - A) A vibração faltava na aba Controles: fica o quadro novo (02-8) e também o botão da 05.
    - B) Faltava o controle de modo na 05: fica só o 05-4 e o 02-8 sai.
-   - C) Era outra coisa: ela diz qual.
+   - C) Era outra coisa: o usuário diz qual.
 3. **A cor e o nome do botão.**
    - A) Ciano nos dois estados, «Modo automático» (feito; a regra é só a primeira letra maiúscula).
    - B) Cinza quando desligado, como o Freestyle, e cor só ao ligar.
@@ -214,7 +214,7 @@ Conflitos:
 - «No Modo Nativo» virou «No modo nativo».
 - Mudança 10 nova: a aba «Meus toques» da janela Acessórios só lê (valores e o link «Mudar na aba Vibração», que leva à 05). Clicado no Chrome sem janela: a página abre a 05.
 - Por baixo: o motor dos acessórios (Buttplug, gestos do PS, a volta no controle e na luz), o prontuário e as marcas do gesto. Fora: reaplicar, receita do jogo e servidor DSU, que não têm tela.
-- Fica em dúvida: a aba Touchpad da janela ainda tem a «Leitura» (Pelos lados/Mistura) editável, que repete a da 05; mantive porque ela diz qual motor de qual aparelho, o que é da janela.
+- Fica em dúvida: a aba Touchpad da janela ainda tem a «Leitura» (Pelos lados/Mistura) editável, que repete a da 05; mantive porque a «Leitura» diz qual motor de qual aparelho, o que é da janela.
 - Os dados da Steam são de demonstração (Sackboy e Resident Evil Village).
 
 Conflitos:
@@ -247,12 +247,12 @@ Conflitos:
 
 Conflitos:
 
-- 1: Opção A do BRIEF-T5 aplicada; B e C seguem com ela.
+- 1: Opção A do BRIEF-T5 aplicada; B e C seguem com o usuário.
 - 3: O padrão ligado é nosso, a validar.
 - 4: O padrão ligado vem da AS-CONFIGURACOES-CHEGAM-AO-JOGO-NOVO-QUANDO-A-STEAM-FECHA-01 (P4); a validar.
 - 8: BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09.
 - 9: O lugar é desenho nosso; os outros montadores deixaram o controle para a 09.
-- 10: Opção 1 da sprint (24 px); as outras opções seguem com ela.
+- 10: Opção 1 da sprint (24 px); as outras opções seguem com o usuário.
 ## 10
 
 12 mudanças, 7 recomendadas a escolher; 11 por baixo, 6 fora.
@@ -266,12 +266,12 @@ Conflitos:
 
 - 2: A ordem e a largura das colunas são nossas, e os nomes também: o usuário pediu «Data de Criação» e «Data de Modificação» (12/10); o todo usa «Criado em» e «Modificado em», mais curtos. As duas colunas entram no lugar de «Preferência» e «Funciona em», como o usuário pediu; com isso sai o rótulo «Só quando eu escolher» da coluna «Funciona em» (ESCOLHAS de 08/10, SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01): o pedido de 12/10 é o mais novo e vence.
 - 3: BRIEF-T4 opção A aplicada. O nome «Freestyle» é recusado por baixo.
-- 4: Resolvido na conferência: o todo é o depois de todas as sprints, e a P10 (O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01) dá o motor do Eventos; o chip fica habilitado e sai o «Chega com as extensões.», que confessava dívida. A pergunta 2 do BRIEF-T4 (apagado agora ou só quando funcionar) segue com ela para o produto de antes da P10.
+- 4: Resolvido na conferência: o todo é o depois de todas as sprints, e a P10 (O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01) dá o motor do Eventos; o chip fica habilitado e sai o «Chega com as extensões.», que confessava dívida. A pergunta 2 do BRIEF-T4 (apagado agora ou só quando funcionar) segue com o usuário para o produto de antes da P10.
 - 7: Na fds, commit 5fa799d63.
 - 8: O lugar no select é do usuário.
 - 9: A opção A «escolhida em 09/10» só aparece no BRIEF-T3 e no BRIEF-T7; não achei a frase de produto em outro lugar.
 - 10: BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09.
-- 11: Opção 1 da sprint (24 px); as outras opções seguem com ela.
+- 11: Opção 1 da sprint (24 px); as outras opções seguem com o usuário.
 - 12: Regra de produto de 05/10 (primeira maiúscula em toda tela), como no mapa-das-portas, mudança 7.
 ## calibrar-sensores
 
@@ -282,9 +282,9 @@ Conflitos:
 
 Conflitos:
 
-- 1: Opção recomendada do BRIEF-T7 (a 02 é a dona); a outra segue com ela.
+- 1: Opção recomendada do BRIEF-T7 (a 02 é a dona); a outra segue com o usuário.
 - 2: BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09.
-- 3: Opção 1 da sprint (24 px); as outras opções seguem com ela.
+- 3: Opção 1 da sprint (24 px); as outras opções seguem com o usuário.
 ## mapa-das-portas
 
 9 mudanças, 8 recomendadas a escolher; 8 por baixo, 3 fora.
@@ -311,7 +311,7 @@ Conflitos:
 - 1: BRIEF-T3 opção A aplicada. O Mouse/Teclado é escolhido na aba Navegação (um dono só); aqui ele só se lê.
 - 3: O formato da exportação é pergunta de produto.
 - 4: BRIEF-T6: menu do sistema (A, aplicado) ou desenhado (B); o Desligar é o interruptor da aba Jogar (aplicado) ou o Parar do serviço da 09.
-- 5: Opção 1 da sprint (24 px); as outras opções seguem com ela.
+- 5: Opção 1 da sprint (24 px); as outras opções seguem com o usuário.
 ## mapa-do-radio
 
 2 mudanças, 0 recomendadas a escolher; 2 por baixo, 4 fora.
@@ -351,9 +351,9 @@ A lista por página é a da seção «Rodada 3 (13/10)» acima; as leituras A/B 
 3. 07 e 07 B: o «Quando» cortava «Os jogos que eu escolher» (defeito anterior, copiado para a extensão nova do celular). A coluna vai de 196 para 230 px e a lista de 150 para 180.
 4. 08, janela do acionador: «Cross» e «Circle» viraram «Cruz» e «Círculo». O controle que foi para outro aparelho passa a ser o White, porque o cabeçalho mostra o Cosmic Red no USB.
 5. 04 em 1212x740: a aba rolava 68 px por dentro e escondia «Criar efeitos novos» (anterior). Na janela baixa o desenho do controle encolhe e o passo entre as linhas cai de 10 para 8. Com o «Sem piscar» ligado, o «lento» do Piscar cortava o efeito criado: o campo do nome cede 28 px.
-6. As fotos de 06 m27 e do mapa m21 mostram a lista dos moldes aberta, e o texto de 07 m31 e m32 troca o «dela» ambíguo por «a extensão».
+6. As fotos de 06 m27 e do mapa m21 mostram a lista dos moldes aberta, e o texto de 07 m31 e m32 troca o pronome ambíguo por «a extensão».
 
-**A mordida:** sem a regra `.ext-quando .ext-sel{max-width:180px}` a régua acusa o corte (171 contra 148) nos três tamanhos; sem o `@media (max-height:780px)` da 04, ela acusa a `.miolo` rolando (617 contra 549) em 740. As duas voltaram.
+**A mordida:** sem a regra `.ext-quando .ext-sel{max-width:180px}` a régua acusa o corte (171 contra 148) nos três tamanhos; sem o `@media (max-height:780px)` da 04, a régua acusa a `.miolo` rolando (617 contra 549) em 740. As duas voltaram.
 
 **Já era assim antes, fica anotado:**
 

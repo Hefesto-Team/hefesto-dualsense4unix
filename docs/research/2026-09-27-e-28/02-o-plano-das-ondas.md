@@ -19,7 +19,7 @@ Cada sprint ganhou uma classe: **código** (código e régua, sem a mão do usu�
 
 | onda | o que anda | a razão |
 |---|---|---|
-| 1 | `O-MODO-XBOX-NAO-E-QUEDA-02` (G), `NO-MODO-XBOX-TUDO-FUNCIONA-01` (GG), `O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01`, `O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01` (GG), `O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01`, `VERDE-NAO-E-PROVA-01`, `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01`, `A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01`, `A-RAIZ-SO-COM-O-PRODUTO-01`, `A-CAIXA-FICA-ONDE-O-USUARIO-ABRIU-01`, `O-PUSH-SO-COM-O-RECIBO-DOS-PORTOES-01`, a parte (e) da `A-TRAVA-DA-MAQUINA-DO-USUARIO-01` e a antiga `O-CI-DA-DEV-VOLTA-A-VERDE-01` | a -02 por decisão; a NO-MODO-XBOX junto, porque a posse é disjunta e o código não usa nada que a -02 cria (as duas sobem no mesmo install); a parte (e) da A-TRAVA se aplica antes do despacho, porque a A-RAIZ depende dela |
+| 1 | `O-MODO-XBOX-NAO-E-QUEDA-02` (G), `NO-MODO-XBOX-TUDO-FUNCIONA-01` (GG), `O-SALVAR-E-O-APLICAR-LEEM-O-PERFIL-01`, `O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01` (GG), `O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01`, `VERDE-NAO-E-PROVA-01`, `O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01`, `A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01`, `A-RAIZ-SO-COM-O-PRODUTO-01`, `A-CAIXA-FICA-ONDE-O-USUARIO-ABRIU-01`, `O-PUSH-SO-COM-O-RECIBO-DOS-PORTOES-01`, a parte (e) da `A-TRAVA-DA-MAQUINA-DO-USUARIO-01` e a antiga `O-CI-DA-DEV-VOLTA-A-VERDE-01` | a -02 por decisão; a NO-MODO-XBOX junto, porque a posse é disjunta e o código não usa nada que a -02 cria (as duas sobem no mesmo install); a parte (e) da A-TRAVA se aplica antes do despacho, porque a A-RAIZ depende da A-TRAVA |
 | 2 | `O-FREESTYLE-E-UMA-CAMADA-SO-01`, `A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01`, `A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01`, `O-BASICO-MEDIDO-01` (GG), `O-PRODUTO-EM-QUALQUER-MAQUINA-01` (GG), `TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01`, `A-ENTRADA-TEM-UM-REGISTRO-SO-01`, `O-README-E-OS-TEXTOS-DE-GENTE-01`, `AS-PAGINAS-DE-PAINEL-SAEM-DO-GIT-01` e o resto da VERDE | as que leem o que a onda 1 cria (o dono do modo, o leitor único do som, o `o_modo_no_ar`, a raiz nova), e as que esperavam um arquivo ocupado na onda 1 (o `hotkey.py`, o `a08_conexoes.py`) |
 | 3 | `O-CODIGO-NAO-NOMEIA-A-FERRAMENTA-01`, `AS-PAGINAS-DE-USO-FALAM-COM-QUEM-USA-01`, os restos da O-BASICO e da O-PRODUTO, e, em cópia de ensaio, a `A-TRAVA-DA-MAQUINA-DO-USUARIO-01` (partes a e c) e a `A-VIGIA-DAS-TRAVAS-01` | o código de produto parou na onda 2 |
 | 4 | `A-AUTORIA-SE-MEDE-PELA-LISTA-DE-QUEM-PODE-01`, o resto da USO, e os ganchos `O-DESPACHANTE-DAS-REGRAS-DA-CASA-01`, `O-RASTRO-BARRADO-NO-ATO-01`, `OS-GANCHOS-DO-GIT-NAO-ENSINAM-O-CONTORNO-01` | a régua da autoria só fica verde com o nível 1 da NAO-NOMEIA zerado na ponta |
@@ -27,7 +27,7 @@ Cada sprint ganhou uma classe: **código** (código e régua, sem a mão do usu�
 | 6 | `AS-CITACOES-DE-COMMIT-SEGUEM-O-MAPA-01` (parte 1), `O-FEITO-SO-COM-A-PROVA-01` e `A-GUARDA-FECHA-A-PORTA-01` (esta para antes do gesto do usuário) | toda sprint anterior pode apagar texto que cita commit |
 | 7 | `AS-REFERENCIAS-DA-FERRAMENTA-SAEM-DA-MESA-01`, `A-HISTORIA-REESCRITA-UMA-VEZ-SO-01` e `O-GITHUB-SEM-RASTRO-FORA-DO-GIT-01` | refs limpas antes da reescrita; a reescrita para antes do push forçado, e os rulesets só depois dele |
 
-A `A-GUARDA-FECHA-A-PORTA-01` não se instala pela leva: quem arma a trava é ela, no terminal dela, porque uma trava armada por quem ela vigia é uma trava que esse mesmo processo desarma.
+A `A-GUARDA-FECHA-A-PORTA-01` não se instala pela leva: quem arma a trava é o usuário, no terminal do usuário, porque uma trava armada por quem o usuário vigia é uma trava que esse mesmo processo desarma.
 
 ### As dependências lógicas que decidem a ordem
 
@@ -50,7 +50,7 @@ O plano tinha **41 colisões e uma violação de `nao_toca`**. O verificador do 
 
 As dez correções:
 
-1. **Uma sprint ficou fora.** A `O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01`, escrita à 01h23 de 28/09, trata do toque fantasma no botão do microfone, que grava o perfil e muda o microfone padrão. Na onda 1 ela colidia com a SOM no `luz_do_mic.py`. Entra na onda 2 com os itens 1 a 3, e o item 4 (`loader.py`) fica para a onda 3.
+1. **Uma sprint ficou fora.** A `O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01`, escrita à 01h23 de 28/09, trata do toque fantasma no botão do microfone, que grava o perfil e muda o microfone padrão. Na onda 1 a sprint colidia com a SOM no `luz_do_mic.py`. Entra na onda 2 com os itens 1 a 3, e o item 4 (`loader.py`) fica para a onda 3.
 2. **A O-FEITO recebeu um arquivo que declara não tocar**: um gancho de fora do repositório que é da O-ENDERECO.
 3. **Faltava posse à -02.** O primário é escolhido em `_recompute_primary` (`src/hefesto_dualsense4unix/core/backend_pydualsense.py`), pela «1ª chave de inserção». Esse arquivo e o `daemon/subsystems/poll.py` entram na onda 1. O item 5 (o PS em **qualquer** controle, não só no que acende o «1») precisa do `hotkey.py` e vai para a onda 3.
 4. **O CI do `dev` estava vermelho**, e a `O-CI-DA-DEV-VOLTA-A-VERDE-01` não era «só ler». A corrida 36359321758, sobre `400a1257e`, deu:
@@ -65,13 +65,13 @@ As dez correções:
    | ENGASGO | os dois do uninstall, a aba 09 e os 6 erros do botão do Vulkan |
    | -02 | o do ciclo de vida do daemon |
    | SALVAR | a recusa da aba 06 |
-   | VERDE | três da classe dela |
+   | VERDE | três da classe da sprint |
    | TODO-PROGRAMA | dois do `gesto_de_pareamento.py` |
    | O-CI | o resto e o `ci.yml` |
 
    Com isso, o CI verde só fecha no fim da onda 2.
 5. **A NO-MODO-XBOX e a `ROTEADOR-DE-ENTRADA-01` eram a mesma cura.** A ROTEADOR foi absorvida. O giroscópio em mira já existia; no Xbox só se confere que vale. O touchpad e o acelerômetro como fonte esperam o mapa de fontes e destinos, que é decisão de produto, e viram entrada condicional na onda 3.
-6. **Faltava posse à FREESTYLE**: os leitores do `autoswitch_locked` que ela substitui, que são `state_store.py`, `lifecycle.py`, `ipc_bridge.py`, `home_actions.py`, `a10_perfis.py` e `connection.py`.
+6. **Faltava posse à FREESTYLE**: os leitores do `autoswitch_locked` que a FREESTYLE substitui, que são `state_store.py`, `lifecycle.py`, `ipc_bridge.py`, `home_actions.py`, `a10_perfis.py` e `connection.py`.
 7. **O mascarador que a O-BASICO exige não tinha sprint.** Sem ele, «nenhuma linha sai verde». Nasceu a `O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01`, na onda 2.
 8. **As cessões só existiam no plano.** Das 41 colisões, 13 eram cessões que o frontmatter não dizia, e quem implementa lê o frontmatter.
 9. **Três contratos na mesma onda**, com código em comum e nenhum arquivo em comum:
@@ -130,5 +130,5 @@ Três sprints paradas colidiram com a posse ampliada e ganharam `depois_de`. O v
 - **Sprints que a auditoria pede e ninguém escreveu**: o destino, as camadas e o aplicar, antes da FREESTYLE. O plano segue o arquivo da sprint, revisto pela palavra de produto de 27/09.
 - **O que depende de outros**:
   - de um mantenedor: o passo 10 da A-RAIZ, o secret da autoria, o escopo da reescrita e os rulesets;
-  - dela: os gestos de prova, o diff dos dotfiles e do self-heal, a senha, a remoção do aplicativo instalado no GitHub e armar a guarda.
+  - Do usuário: os gestos de prova, o diff dos dotfiles e do self-heal, a senha, a remoção do aplicativo instalado no GitHub e armar a guarda.
 - **Os derivados se regeram na costura de cada lote**: `docs/specs.html`, as contagens do `docs/data/LEIA-PRIMEIRO.md` e as fotos. Sem isso, as réguas de frescor reprovam a integração.

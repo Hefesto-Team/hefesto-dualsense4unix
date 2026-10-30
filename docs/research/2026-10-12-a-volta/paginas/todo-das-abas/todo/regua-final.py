@@ -538,7 +538,7 @@ JS_PEDIDO_R4 = r"""
     [['38','os jogos'],['39','a força']].forEach(function(p){var e=document.querySelector('[data-todo="'+p[0]+'"]');
       if(!e)falta.push(p[1]+' sumiu');else{if(!ac||!ac.contains(e))falta.push(p[1]+' fora do diálogo da engrenagem');
         if(e.closest('.ext-lista'))falta.push(p[1]+' está na lista de extensões');}});
-    // fusão (14/10): na página final a Lovense é uma extensão só (r3-07-29); a engrenagem das formas dela abre os acessórios
+    // fusão (14/10): na página final a Lovense é uma extensão só (r3-07-29); a engrenagem das formas da Lovense abre os acessórios
     var eg=document.querySelector('#lovense .lv-linha .ext-conf[href="#acessorios"]');if(!eg)falta.push('a engrenagem das formas da Lovense não abre o diálogo dos acessórios');
     if(!document.querySelector('#t2:checked'))falta.push('a aba «O que seguem» não abriu');
     var t2=document.querySelector('.ja-tela.t2');

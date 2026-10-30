@@ -17,13 +17,13 @@
 
 ## 0. Como ler
 
-### 0.1 As três fontes, e elas não têm o mesmo peso
+### 0.1 As três fontes, e as três não têm o mesmo peso
 
 | marca | o que significa |
 |---|---|
 | **[DRIVER-AQUI]** | lido no fonte do módulo instalado nesta máquina. Verdade local, verificável agora |
 | **[MAINLINE]** | trecho que os patches do projeto **não** tocam, logo é o `hid-nintendo` de origem |
-| **[COMUNIDADE]** | engenharia reversa pública (dekuNukem e derivados). O driver a cita como fonte, e ela **já foi refutada neste projeto em pelo menos um número** |
+| **[COMUNIDADE]** | engenharia reversa pública (dekuNukem e derivados). O driver a cita como fonte, e a engenharia reversa **já foi refutada neste projeto em pelo menos um número** |
 | **[MEDIDO 11/08]** | medido no hardware do projeto hoje, com o método descrito na seção 9 |
 
 Graus de confiança: **ALTA**, **MÉDIA**, **SEM PROVA** — a mesma escala da
@@ -338,7 +338,7 @@ Confere com o que está aceso agora — o controle do rádio no padrão 0
 
 ---
 
-## 4. A quinta lâmpada — confirmada, e ela não é um quinto jogador
+## 4. A quinta lâmpada — confirmada, e a lâmpada não é um quinto jogador
 
 **Confirmado pelo fonte: `:blue:player-5` é o LED HOME.** O driver registra o
 `home_led` com o nome de função `LED_FUNCTION_PLAYER5`
@@ -350,7 +350,7 @@ Confere com o que está aceso agora — o controle do rádio no padrão 0
 Isto **confirma** o que `docs/protocol/externos-referencia-canonica.md` já
 afirmava na seção 3.6, agora com o `arquivo:linha`. Grau **ALTA**.
 
-**O que ela é fisicamente:** o anel de luz sob o botão Home do Pro Controller.
+**O que a lâmpada é fisicamente:** o anel de luz sob o botão Home do Pro Controller.
 Escala **0 a 15** porque o `0x38` é um programa de PWM; o Linux manda uma
 versão curta de 5 bytes (`hid-nintendo.c:1242`):
 
@@ -425,7 +425,7 @@ Cada relatório de entrada carrega **três amostras**, little-endian,
 | 8 | `gyro_y` |
 | 10 | `gyro_z` |
 
-Dentro do `struct joycon_input_report` (`hid-nintendo.c:603`) elas começam no
+Dentro do `struct joycon_input_report` (`hid-nintendo.c:603`) as amostras começam no
 **offset 13**, logo após `id`(0), `timer`(1), `bat_con`(2),
 `button_status`(3-5), `left_stick`(6-8), `right_stick`(9-11),
 `vibrator_report`(12). Total do bloco de IMU: **36 bytes**, terminando no 48.
@@ -494,7 +494,7 @@ O 8BitDo por cabo cai no ramo de **15 ms**, exatamente o que o comentário
 declara para Pro Controller por USB. E os 4,99 ms por amostra batem com o
 *"usually 5ms apart"* do mesmo comentário. Grau **ALTA**.
 
-**A ressalva honesta, e ela é grande:** os dois controles não estavam no mesmo
+**A ressalva honesta, e a ressalva é grande:** os dois controles não estavam no mesmo
 transporte. **Não posso separar "clone" de "cabo" com esta medição.** O que
 está provado é que o 8BitDo por cabo entrega 15 ms; se o Pro genuíno por cabo
 entrega o mesmo (o esperado) é conclusão por analogia, não medição. Fica
@@ -600,7 +600,7 @@ Com `usb_probe_degrade=Y` (ligado agora), um controle que não responde
 Bluetooth uma falha significa link degradado, e fingir que o controle respondeu
 seria mentira — lá a cura é `bt_probe_retries`.
 
-**Ressalva de leitura, e ela é o gancho da seção 6.4:** eu **não** consigo
+**Ressalva de leitura, e a ressalva é o gancho da seção 6.4:** eu **não** consigo
 dizer, do estado atual, se a identidade do 8BitDo veio real ou sintetizada. A
 linha que diferencia (`falling back to a synthesized identity`) sai no `dmesg`
 do probe, e o probe dele é anterior ao buffer que consegui ler. Grau **SEM
@@ -620,7 +620,7 @@ PROVA** para qual dos dois caminhos foi tomado hoje.
   devolve zero linhas.
 
 Isto já está documentado em `docs/data/mapa-controles.csv` e no estudo de 07/08
-sobre a cobertura do install. **Esta página não redescobre a dívida — ela
+sobre a cobertura do install. **Esta página não redescobre a dívida — a página
 acrescenta as três medições que faltavam para fechá-la.**
 
 **Medição 1 — a marca está viva no `hidraw`, agora:**
@@ -646,7 +646,7 @@ baseada nele pode marcar um controle por rádio, hoje ou nunca.
 **O que seria preciso para distinguir os dois em runtime:**
 
 1. **Por cabo — barato, e o produto já está com a chave na mão.** Ler
-   `HEFESTO_CONTROLLER_VARIANT` **do nó `hidraw`**, onde ela está persistida.
+   `HEFESTO_CONTROLLER_VARIANT` **do nó `hidraw`**, onde a chave está persistida.
    `core/external_leds.py` já resolve o caminho do `hidraw` para o device
    (`hid_instance_for_hidraw`), então o leitor é uma consulta a mais no
    caminho que já existe. Alternativa sem udev: ler `bcdDevice` subindo do
@@ -724,7 +724,7 @@ que "acender as cinco lâmpadas" pelo sysfs, que custa cinco subcomandos
 
 Duas observações que só aparecem lendo o C:
 
-1. **A janela válida de 8 a 17 ms é a mesma nos dois transportes** — e ela
+1. **A janela válida de 8 a 17 ms é a mesma nos dois transportes** — e a janela
    abraça de propósito tanto o ramo de 11 ms quanto o de 15 ms. O driver foi
    escrito sabendo que a taxa varia.
 2. **`joycon_enforce_subcmd_rate` (`hid-nintendo.c:981`) espera por relatório
@@ -769,7 +769,7 @@ Honestidade primeiro, porque cada linha aqui é trabalho de outra sessão.
 
 ## 9. Notas de instrumento
 
-**O método da seção 5.4 foi validado antes de eu acreditar nela.** Registro o
+**O método da seção 5.4 foi validado antes de eu acreditar no método.** Registro o
 caminho porque a primeira tentativa estava errada e teria produzido um número
 convincente e falso.
 
@@ -788,7 +788,7 @@ convincente e falso.
   8 ms declarado como refutado.
 
 **Sobre ler `dmesg`:** as linhas de IMU citadas na seção 5.4 são
-`hid_warn_ratelimited` — elas só existem porque o link estava perdendo pacote.
+`hid_warn_ratelimited` — as linhas só existem porque o link estava perdendo pacote.
 Num link limpo o `avg_delta` não aparece no log, e a rota B passa a ser a única
 disponível sem `hidraw`.
 
@@ -812,7 +812,7 @@ ordem inversa, como o `BASELINE` ensina.
 
 **Comunidade.** dekuNukem, *Nintendo Switch Reverse Engineering* — citado pelo
 próprio driver em `hid-nintendo.c:116` como origem dos `#define` de report. Toda
-afirmação que vem daí está marcada **[COMUNIDADE]**, e ao menos uma delas (a
+afirmação que vem daí está marcada **[COMUNIDADE]**, e ao menos uma dessas afirmações (a
 taxa de 8 ms por Bluetooth) **está refutada neste projeto**.
 
 **Páginas irmãs, que esta não repete:**

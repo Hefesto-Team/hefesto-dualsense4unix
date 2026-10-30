@@ -2,7 +2,7 @@
 
 As quatro rodadas de 26/09/2026 que levaram a aba 08 (Conexões), o «Mapa das Conexões» e o «Aplicar» do rodapé ao produto: o que se mediu, a causa, a cura e o que ficou aberto.
 
-Cada rodada teve uma implementação e uma conferência independente, que refez as mordidas, achou o que faltava e curou na mesma branch. Onde a conferência mudou um número da implementação, vale o dela.
+Cada rodada teve uma implementação e uma conferência independente, que refez as mordidas, achou o que faltava e curou na mesma branch. Onde a conferência mudou um número da implementação, vale o da conferência.
 
 | rodada | sprints |
 |---|---|
@@ -13,7 +13,7 @@ Cada rodada teve uma implementação e uma conferência independente, que refez 
 
 ## 1. O Mapear congelava a janela
 
-**A causa.** O tique da 08 chamava o `estado()` e o `olhar()` do Mapear no fio do GTK. Os dois leem o censo do barramento, que lê `product` e `bMaxPower` sob o lock do aparelho. Com o kernel enumerando o DualSense, cada leitura esperava segundos: em repouso ela custa 8 ms, e enumerando, de 3 a 15 s.
+**A causa.** O tique da 08 chamava o `estado()` e o `olhar()` do Mapear no fio do GTK. Os dois leem o censo do barramento, que lê `product` e `bMaxPower` sob o lock do aparelho. Com o kernel enumerando o DualSense, cada leitura esperava segundos: em repouso a leitura custa 8 ms, e enumerando, de 3 a 15 s.
 
 **Medido no piloto oculto, com um `/sys` de mentira preso por 6 s e um coração do GTK a cada 50 ms:**
 
@@ -32,7 +32,7 @@ Cada rodada teve uma implementação e uma conferência independente, que refez 
 
 **O que a conferência achou.** Tirar a leitura da trava desfez a fila entre gestos, e a própria cura abriu três regressões:
 
-- um «Já chega por hoje» clicado durante a leitura era desfeito quando ela voltava;
+- um «Já chega por hoje» clicado durante a leitura era desfeito quando a leitura voltava;
 - o «Não sei onde fica» mandava a resposta para a pergunta seguinte e gravava errado no `maquina.json`;
 - um Salvar antes da primeira foto fazia o `-71` do log sumir da sessão. A leitura do log ganhou marca própria, `_storm_lido`.
 
@@ -72,7 +72,7 @@ Régua: `tests/unit/test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar.py`
 - a meia chave sai no daemon, com a janela fechada. `_fechar_sem_chegar` tira só a chave que o Pair deste movimento criou no destino: a que está `Paired`, sem `Connected` e fora do `HID_PHYS` (`_esquecer_a_meia_chave`);
 - o nome do controle mora em `ControleDeclarado.nome`, no `maquina.json`, com até 248 bytes, gravado por `gravar_o_nome_do_controle` (`src/hefesto_dualsense4unix/utils/maquina.py`), que nunca levanta. A central aprende o nome por observação em `cuidar_dos_nomes()`, a cada 2 s. Só a mudança num objeto já visto conta como renomear, e o objeto que aparece recebe o nome guardado. Isso cobre também quem renomeia por fora do produto. Só controle grava: fone e teclado seguem com o nome no pareamento.
 
-A conferência da `-02` achou um objeto sem chave, criado no mesmo caminho antes da volta seguinte, lido como «o usuário apagou o nome»: o nome saía do disco. «Apagou» passou a valer só em objeto com `pareado is True`. E oito curas que nenhuma régua mordia ganharam régua. Entre elas estão as guardas de `Connected` e de `HID_PHYS`, sem as quais sairia a chave de um controle no ar.
+A conferência da `-02` achou um objeto sem chave, criado no mesmo caminho antes da volta seguinte, lido como «o usuário apagou o nome»: o nome saía do disco. «Apagou» passou a valer só em objeto com `pareado is True`. E oito curas que nenhuma régua mordia ganharam régua. Entre as curas estão as guardas de `Connected` e de `HID_PHYS`, sem as quais sairia a chave de um controle no ar.
 
 Réguas: `tests/unit/test_o_pareamento_que_nao_chega_devolve_os_botoes.py` e `tests/unit/test_o_nome_do_aparelho_volta_na_reconexao.py`, 81 funções ao todo, parametrizadas nos três adaptadores e nos seis pares.
 
@@ -87,13 +87,13 @@ Réguas: `tests/unit/test_o_pareamento_que_nao_chega_devolve_os_botoes.py` e `te
 
 Os dois chegam pelos gestos `entrada-o-que-tem` e `entrada-velocidade` do pacote novo `src/hefesto_dualsense4unix/interface/pacotes/a12_mapa_das_portas.py`, e quem os escreve são `declarar_a_ligacao` e `declarar_a_velocidade`, em `src/hefesto_dualsense4unix/integrations/entrada_a_entrada.py`. A velocidade tem um dono só, `velocidade_da_entrada` (`src/hefesto_dualsense4unix/integrations/mapa_das_portas.py`), em três degraus: primeiro o aparelho USB 3 medido, depois a velocidade declarada, depois o par da placa. O hub declarado desenha 4 entradas (`ENTRADAS_DO_HUB_DECLARADO`, `src/hefesto_dualsense4unix/interface/arranjo_desta_maquina.py`).
 
-A conferência achou que nenhuma régua clicava: três mordidas passavam verdes, entre elas «quem nunca declarou nada não grava nunca». Por isso escreveu a régua que percorre, no WebKit, o clique, a mensagem do piloto, o pacote, o disco e a página relida. Também devolveu «Leitura de Exemplo · 24/08/2026» ao cabeçalho, só quando a página mostra o gabinete de exemplo. Sem essa linha, quem nunca mapeou via os aparelhos de outra pessoa sem aviso nenhum, o que era a volta do defeito de 11/09.
+A conferência achou que nenhuma régua clicava: três mordidas passavam verdes, entre as mordidas «quem nunca declarou nada não grava nunca». Por isso escreveu a régua que percorre, no WebKit, o clique, a mensagem do piloto, o pacote, o disco e a página relida. Também devolveu «Leitura de Exemplo · 24/08/2026» ao cabeçalho, só quando a página mostra o gabinete de exemplo. Sem essa linha, quem nunca mapeou via os aparelhos de outra pessoa sem aviso nenhum, o que era a volta do defeito de 11/09.
 
 **A `-02` fechou o que a `-01` deixou:**
 
 - o «Examinar» relê a máquina. O gesto `reexaminar` devolve o arranjo; o piloto o tira da resposta (`_o_arranjo_relido`, em `src/hefesto_dualsense4unix/interface/hefesto_vivo.py`) e o entrega pela mesma porta da abertura. Isso vale só em `mapa-das-portas.html`, porque na 08 `arranjo` é nome de campo. A primeira entrega também saiu do fio da janela;
 - o id do aparelho deixou de ser o caminho. `identidades` (`src/hefesto_dualsense4unix/interface/arranjo_desta_maquina.py`) é um blake2s com sal do processo sobre o serial e o modelo, e nada do id vai a disco. A conferência achou dois erros e os curou guardando `id → (caminho, modelo)` e pondo o modelo na semente do caminho. O primeiro: um receptor parado virava «Mudou de Lugar» quando o gêmeo sem serial chegava ou saía, porque o modelo deixava de ser único. O segundo: outro modelo que chegava no caminho de quem saiu herdava o id. Na cena medida, «4 Aparelhos Mudaram de Lugar» (um deles falso) virou 3;
-- o «Hub» fica cinza onde há aparelho direto que não é hub, e a Sugestão nunca manda um aparelho para dentro do hub desenhado. Antes ela chegava a dizer «Mova o Dongle Bluetooth da Entrada 5 para a 5.4»;
+- o «Hub» fica cinza onde há aparelho direto que não é hub, e a Sugestão nunca manda um aparelho para dentro do hub desenhado. Antes a Sugestão chegava a dizer «Mova o Dongle Bluetooth da Entrada 5 para a 5.4»;
 - a ponta do extensor grava como `{filha_de: N, …}` e herda a velocidade da mãe. «Direto» na mãe apaga a ponta que só o editor escreveu.
 
 Réguas: `tests/unit/test_a_entrada_declarada_vence_o_firmware.py` (11 testes) e `tests/unit/test_o_examinar_diz_quem_mudou_de_lugar.py` (20 testes). Parte deles roda no WebKit, sob `xvfb-run`.

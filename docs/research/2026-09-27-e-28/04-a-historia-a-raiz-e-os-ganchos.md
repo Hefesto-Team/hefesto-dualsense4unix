@@ -10,7 +10,7 @@ O que se mediu em 27/09/2026 sobre o rastro de ferramenta de automação no GitH
 ## 1. A barra de contribuidores
 
 **O que se viu:** a barra «Contributors» do repositório lista três contas, e uma
-delas é a conta da ferramenta de automação. Nenhum outro instrumento do GitHub
+das contas é a conta da ferramenta de automação. Nenhum outro instrumento do GitHub
 concorda: a API REST, o Insights recalculado no dia e o GraphQL dos autores e
 coautores dos 3.919 commits do `dev` dão **duas pessoas** (3.680 e 239 commits).
 
@@ -45,7 +45,7 @@ leva o `dev` junto, sem ganho nenhum.
 O chamado ao suporte pede quatro coisas: desreferenciar as PRs afetadas (64 se
 houver reescrita, 2 se não houver), rodar o GC, apagar as visões em cache dos topos
 velhos e reconstruir os contribuidores. Vai uma vez só, depois da reescrita, se
-ela acontecer. A verificação é o fragmento da barra devolver só duas contas.
+a reescrita acontecer. A verificação é o fragmento da barra devolver só duas contas.
 
 ## 2. O rastro que sobra em público, fora da barra
 
@@ -220,10 +220,10 @@ tag anotada, committer, nome do autor e ramo de voo.
   pre-push. Cura: `git fetch --prune` e `fetch.prune true`. A conferência mostrou
   que tirar o `--not --remotes` barra o push legítimo de merge com commits de
   outras pessoas; a medida certa é contra o que o servidor tem (`git ls-remote`).
-- **`refs/replace`:** gancho e portão leem através delas, e o push leva o
+- **`refs/replace`:** gancho e portão leem através das refs, e o push leva o
   original. Cura: `GIT_NO_REPLACE_OBJECTS=1` em todo gancho e régua.
 - **As refs de checkpoint da ferramenta** nascem com os ganchos desligados; um
-  gancho `reference-transaction` não as segura (rc=0). Um diretório de refs dela
+  gancho `reference-transaction` não as segura (rc=0). Um diretório de refs da ferramenta
   somente leitura (`chmod 555`) segura (rc=128), sem afetar commit, gc, fetch ou
   clone.
 - **O gancho do repositório, encadeado pelo global, não roda em worktree**, e a
@@ -236,7 +236,7 @@ tag anotada, committer, nome do autor e ramo de voo.
   regera páginas e faz `git add` sozinho; a proposta que vale é o gancho global
   rodar o script de autoria da árvore quando ele existe e reprovar com «política
   não medida» quando falta.
-- **HOME desviado** apaga os ganchos globais e mantém a identidade (ela vem do
+- **HOME desviado** apaga os ganchos globais e mantém a identidade (a identidade vem do
   `.git/config`).
 - **A mensagem de bloqueio do pre-push ensinava `--no-verify`**; o aviso de
   formato do commit-msg saía em 100% dos commits (no `dev` desde 20/09, 1.306 de
@@ -247,7 +247,7 @@ tag anotada, committer, nome do autor e ramo de voo.
 
 **A régua de autoria proposta** (`A-AUTORIA-SE-MEDE-PELA-LISTA-DE-QUEM-PODE-01`):
 a autoria se confere pelo `.mailmap`, que é a lista de quem pode assinar, sem
-nomear ninguém de fora. A conferência derrubou três partes dela:
+nomear ninguém de fora. A conferência derrubou três partes da régua:
 
 - **a lista de termos em hash se reverte** com um dicionário de 50 palavras (19 de
   21 no nível 1, 20 de 20 no nível 2, em menos de 1 s), porque o sal mora no
@@ -269,7 +269,7 @@ ramo de fecho. Ele é a única trava que alcança outra máquina e sessões na n
 
 ## 7. Os ganchos da ferramenta de automação
 
-Esta parte mede a configuração da ferramenta, que mora fora do repositório. Ela
+Esta parte mede a configuração da ferramenta, que mora fora do repositório. A ferramenta
 fica registrada aqui porque os defeitos que o usuário deixou passar estão no produto e
 na história.
 
@@ -337,7 +337,7 @@ fluxo legítimo, 19 contornos funcionam e 7 corrompem dado:
 - a regra de sprint feita barrava nota em 371 de 377 sprints feitas. Vale só na
   **transição** para `feita`;
 - a checagem no fim de uma sessão filha media a árvore principal: 260 de 300
-  delas têm o diretório de trabalho ali, e trabalham noutra por caminho absoluto;
+  dessas sessões têm o diretório de trabalho ali, e trabalham noutra por caminho absoluto;
 - a cobrança no fim da resposta pesaria em 13% dos turnos (195 de 1.502); fica
   uma semana só registrando antes de ligar.
 
@@ -350,7 +350,7 @@ eventos dos vazamentos seguem recusados. Cinco processos por comando somam 60 a
 e `OS-GANCHOS-DO-GIT-NAO-ENSINAM-O-CONTORNO-01` → em paralelo
 `A-SENHA-SO-PASSA-PELO-ASKPASS-01`, `O-ENDERECO-NUNCA-CHEGA-A-CONVERSA-01` e
 `A-ARVORE-TEM-UMA-SESSAO-SO-01` → `O-FEITO-SO-COM-A-PROVA-01` (uma semana em
-registro) → `A-GUARDA-FECHA-A-PORTA-01`, armada pela mantenedora no terminal dela;
+registro) → `A-GUARDA-FECHA-A-PORTA-01`, armada pela mantenedora no terminal da mantenedora;
 daí em diante, mudar trava é gesto do usuário. Fora das ondas:
 `O-PUSH-SO-COM-O-RECIBO-DOS-PORTOES-01` (depois da autoria) e
 `O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01` (depois da
@@ -359,7 +359,7 @@ daí em diante, mudar trava é gesto do usuário. Fora das ondas:
 ## O que ficou aberto
 
 - **Reescrever ou não a história** (A, B ou C), e a redação da tabela de frases:
-  decisão dos mantenedores. Com ela, o número de PRs no chamado ao suporte.
+  decisão dos mantenedores. Com a redação, o número de PRs no chamado ao suporte.
 - **O chamado ao suporte do GitHub** e a reconferência da barra.
 - **Apagar as execuções do Actions** com o texto antigo, o fork pessoal, as tags e
   releases antigas; o destino do `Hefesto-Team/Forja` e do aplicativo instalado na
@@ -377,7 +377,7 @@ daí em diante, mudar trava é gesto do usuário. Fora das ondas:
   grava o commit): hipótese, não medida.
 - **A pré-condição de fora:** uma linha de `tests/conftest.py` pertence a sprints
   de outra leva (`VERDE-NAO-E-PROVA-01`, `O-CI-DA-DEV-VOLTA-A-VERDE-01`,
-  `RELEASE-NO-CLONE-LIMPO-01`); sem ela limpa, a régua de autoria não fica verde.
+  `RELEASE-NO-CLONE-LIMPO-01`); sem essa linha limpa, a régua de autoria não fica verde.
 - **Nos ganchos, só a instalação mede:** se a troca da saída de um comando chega
   ao texto lido e à tela, a entrada do evento de criação de worktree, e o cwd de
   uma sessão filha numa worktree de rodada.

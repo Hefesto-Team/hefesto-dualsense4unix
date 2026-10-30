@@ -28,7 +28,7 @@ NDJSON UTF-8 (V2-3): uma requisição ou resposta por linha, terminada por `\n`.
 
 ## Todos os métodos — esta lista é GERADA do dispatcher
 
-Não a edite: ela sai do dicionário `_handlers` de `daemon/ipc_server.py` por
+Não a edite: a lista sai do dicionário `_handlers` de `daemon/ipc_server.py` por
 `scripts/gerar-contrato-ipc.py`, e o `--check` dele reprova quando o publicado
 deixa de ser o que o código produz. A razão de ser gerada está escrita no
 cabeçalho do gerador e é curta: a contagem de métodos sem contrato já saiu 15,
@@ -36,7 +36,7 @@ cabeçalho do gerador e é curta: a contagem de métodos sem contrato já saiu 1
 reproduzem não se escreve à mão.
 
 A coluna **Contrato em prosa** diz se o método aparece em alguma outra parte
-deste documento. `**não**` é dívida, e a lista abaixo é o único lugar onde ela
+deste documento. `**não**` é dívida, e a lista abaixo é o único lugar onde a lista
 aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
@@ -123,7 +123,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 ## Métodos v1 — os parâmetros e o retorno
 
 Escrita à mão, e continua sendo: parâmetro e retorno não se derivam do
-dispatcher. Ela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
+dispatcher. A tabela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 
 | Método              | Parâmetros                                    | Retorno                                |
 |---------------------|-----------------------------------------------|----------------------------------------|
@@ -179,7 +179,7 @@ ainda valem, vazia quando o controle não tem ajuste próprio.
 ### `aplicado_em` e `guardado_em` — o que a resposta AFIRMA
 
 Os quatro comandos de saída por-MAC (`trigger.set`, `trigger.reset`, `led.set`,
-`led.player_set`) devolvem **duas listas de MAC**, e a diferença entre elas é a
+`led.player_set`) devolvem **duas listas de MAC**, e a diferença entre as listas é a
 diferença que a janela precisava para parar de mentir:
 
 | campo | quer dizer | a tela diz |
@@ -261,7 +261,7 @@ antiga) publica `null`.
 |----------------------|----------------------------------------------------|----------------------------------------------------------------|
 | `rumble.motores.set` | `{uniq?: str, forte_pct?: 0-100, fraco_pct?: 0-100, haptica_pct?: 0-100, efeito_haptico?: str, efeito_imersao?: str}` | `{status, uniq, perfil, gravado, forte_pct, fraco_pct, haptica_pct, efeito_haptico, efeito_imersao}` |
 
-Decisão, 04/09/2026. **A barra não é um comando: é POLÍTICA**, e ela
+Decisão, 04/09/2026. **A barra não é um comando: é POLÍTICA**, e a barra
 MULTIPLICA o degrau da coluna — `efetivo(motor) = degrau x barra(motor)`. Com o
 degrau em `Máximo` (150 %), barra fraca 100 % e barra forte 50 %, o motor fraco
 recebe 150 % e o forte 75 %.
@@ -282,7 +282,7 @@ um `save` troca a data do arquivo e faz o daemon reaplicar o perfil.
 `status` pode ser `"ok"`, `"sem_controle"` (mesa vazia), `"sem_endereco"` (o
 alvo não é um MAC de peça de plástico) ou `"sem_perfil"`; os três últimos vêm
 com `motivo`. A faixa 0-100 é recusada na BORDA do esquema, com a frase que
-EXPLICA por que a barra não passa de 100 — ela é o segundo fator, e quem
+EXPLICA por que a barra não passa de 100 — a barra é o segundo fator, e quem
 amplifica é o degrau.
 
 **A leitura de volta é o `state_full`**: `rumble_motores` traz `{uniq:
@@ -390,7 +390,7 @@ vir um report atrás da escrita — não é o eco do que foi mandado.
 - `mic_mudo` — o que o firmware **declara** agora (leitura de verdade);
 - `mic_mudo_desejado` — **quem manda**: `true`/`false` = o hefesto está
   afirmando esse valor em todo report; `null` = a posse é do kernel. A chave só
-  aparece quando o backend sabe respondê-la. Sem ela a tela não tem como
+  aparece quando o backend sabe respondê-la. Sem a chave a tela não tem como
   escolher entre "aperte o botão do controle" e "desmute pela janela" — as duas
   frases descrevem `mic_mudo: true`, e só uma resolve.
 
@@ -600,7 +600,7 @@ O motor é `integrations/central_do_radio.py`: pareia no destino, confere pelo
 Sem `aparelho` é o «Conectar»: a busca abre no adaptador da D8 (mais vaga de ponte; no
 empate, menos controles; quem varre por último), e nada pareia sem o clique do usuário: com
 `aparelho` que a janela viu, no destino da busca, é o «Parear» do usuário; o «Parear de Novo» pede o mesmo antes de a janela ver o aparelho, que esteja fora do ar em todo adaptador, e o `Pair` só sai quando a janela o vê. Sem `destino`, a escolha automática do destino escolhe
-também no mover. `status: "ocupado"` é a recusa, e ela tem duas causas: OUTRO
+também no mover. `status: "ocupado"` é a recusa, e a recusa tem duas causas: OUTRO
 movimento está em curso, ou outro motor segurou a trava do rádio por mais de 5 s.
 Um por vez vale também para o arrastar e para o «Conectar». Nos dois casos o botão treme e nada mudou. O mesmo
 pedido feito de novo devolve o mesmo movimento, e não uma recusa.
@@ -625,7 +625,7 @@ aparelho está aberta, ou `null`.
 
 Valor absoluto, como o `freestyle.set`. Ligada, é o «Conectar» sem aparelho no
 `destino` (sem ele, a D8), até o usuário desligar ou até o teto de 120 s; com a busca
-de pé noutro adaptador, ela vai para o `destino`. Desligada, a janela fecha
+de pé noutro adaptador, a busca vai para o `destino`. Desligada, a janela fecha
 agora, e o movimento acaba em `desligada`, que não é falha (a tela não faz «Não
 Conectou» dele). Pedir o estado que já vale responde `ok` sem tocar no rádio. A
 resposta traz a `busca` que ficou valendo; `status` diferente de `ok` é a
@@ -695,7 +695,7 @@ virtual, lado, destino, toque, inclinacao, sensibilidade, zona_morta_graus_s,
 gatilho, inverter_horizontal, inverter_vertical, inclinacao_parada,
 mesmo_parado}` — o que vale AGORA para aquela peça
 (`ligada` e `destino` são o giro; `toque` e `inclinacao`, os outros dois, e
-`inclinacao` diz o analógico que ela move, como no pedido; `virtual` é o chip
+`inclinacao` diz o analógico que a inclinação move, como no pedido; `virtual` é o chip
 aceso, com o giro ou a inclinação num analógico, e `lado` é o lado que ele
 acende), pela mesma pergunta que o tique faz (`roteador_de_movimento.da_peca`),
 e os números mesmo com a mira apagada. `inclinacao_parada` é verdadeiro
@@ -832,7 +832,7 @@ autoswitch por janela, hotkey PS+D-pad):
 - **a entrada na Navegação** (`desktop.arranjo.apply` e o PS + R3) liga o mouse
   sempre, com as velocidades do perfil ou da flag de sessão
   (D-2909-A-NAVEGACAO-LIGA-O-MOUSE); o «Status do Modo» (`desktop.status.set`)
-  o desliga enquanto ela estiver lá, e com `origin: manual` grava o `enabled`
+  o desliga enquanto a Navegação estiver lá, e com `origin: manual` grava o `enabled`
   da seção `mouse` e o `teclado_emulado` no perfil ativo;
 - **restore no boot**: a seção `mouse` do
   último perfil NÃO é reaplicada — o estado da emulação no boot vem dos **flags
@@ -841,7 +841,7 @@ autoswitch por janela, hotkey PS+D-pad):
   cada boot. O perfil ainda restaura triggers/LEDs/teclado;
 - `suppress_desktop_emulation: true` → modo-jogo ligado (equivale a
   `daemon.emulation.suppress`); trocar para um perfil sem o campo libera a
-  supressão **somente se ela veio de perfil** — um toggle manual da usuária
+  supressão **somente se a supressão veio de perfil** — um toggle manual da usuária
   (hotkey/GUI/CLI) nunca é revertido por perfil, e qualquer toggle manual há
   menos de 30 s congela a supressão (mesma janela do lock de perfil manual).
 

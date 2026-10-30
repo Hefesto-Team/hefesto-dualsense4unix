@@ -1,15 +1,15 @@
 IDENTIDADE NOS DOIS TRANSPORTES — existe crachá que não peça escrita? (15/08/2026, 22h12)
 
-A PERGUNTA, E ELA É DELA
-------------------------
-Textual, 15/08/2026: "nos 4 controles via cabo e bt vamos ter sempre
-identificado né?"
+A PERGUNTA DE QUEM USA
+----------------------
+Em 15/08/2026, quem usa perguntou se os 4 controles, por cabo e por rádio,
+ficam sempre identificados.
 
 Traduzida para uma pergunta que uma máquina responde: existe um identificador
 que (a) distingue as 4 unidades, (b) é LEGÍVEL nos DOIS transportes, e (c) não
 exige escrita nenhuma?
 
-Ela importa porque a COR não responde isso. A cor distingue, mas custa um
+A pergunta importa porque a COR não responde isso. A cor distingue, mas custa um
 SET_FEATURE 0x80 — e o rádio recusou esse SET com EIO em 15/08. Um produto que
 só sabe quem é o controle quando ele está no fio não "sempre identifica".
 
@@ -24,7 +24,7 @@ PROCEDÊNCIA
   mesa ........... 2 no cabo, 2 no rádio, DEPOIS da troca de braços das 19h
   máscara ........ mais larga que a da casa, e de propósito: o 0x09, o 0x0b e
                    o 0x22 carregam MAC em BINÁRIO e INVERTIDO. Seis bytes em
-                   hexadecimal são o endereço dela tanto quanto os seis pares
+                   hexadecimal são o endereço da unidade tanto quanto os seis pares
                    separados por dois-pontos. O instrumento varre o buffer
                    atrás dos seis bytes de TODO MAC conhecido — os quatro
                    controles e o adaptador do host —, nas duas ordens, e zera
@@ -142,7 +142,7 @@ RESUMO: 5 candidato(s) passam nos três critérios: 0x05, 0x09, 0x0b, 0x20, 0x22
 (2) A RODADA DAS 22h20 — A MESA CAIU NO MEIO. NÃO É MEDIÇÃO, É REGISTRO.
 ==============================================================================
 
-Esta rodada é preservada por duas razões, e nenhuma delas é o resultado dela:
+Esta rodada é preservada por duas razões, e nenhuma das razões é o resultado da rodada:
 
   1. É a PROVA DE QUE A CURA DA MÁSCARA MORDE. Repare no `c4 00 00 89 44 d8`
      das linhas do cabo: o endereço do adaptador saiu mascarado pelo próprio
@@ -181,7 +181,7 @@ A CAUSA — e a primeira resposta que eu escrevi aqui estava ERRADA:
   existe e é real; ele só não é o que aconteceu aqui.
 
   O QUE ISSO GANHA, de graça: esta é a TERCEIRA configuração de braços do dia,
-  e com ela CADA UM dos quatro controles já passou pelos DOIS transportes.
+  e com essa configuração CADA UM dos quatro controles já passou pelos DOIS transportes.
   Nenhum deles é "o do cabo" ou "o do rádio".
 
 O QUE ISSO **NÃO** MUDA: nada da rodada das 22h12. O usuário fechou às 22:12:52, com
@@ -191,7 +191,7 @@ nada sobre o aparelho, ele não está mais lá" —, e é por isso que os veredi
 deste arquivo saem da rodada das 22h12 e nenhum sai desta.
 
 O QUE ISSO CUSTA, e é honesto dizer: a mesa 2+2 não pode ser remontada sem
-ela. Religar controle de rádio é o botão PS, e isso é a mão do usuário.
+o usuário. Religar controle de rádio é o botão PS, e isso é a mão do usuário.
 
 ==============================================================================
   identidade_nos_dois_transportes.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
@@ -286,7 +286,7 @@ contagem:
                 MAC. Tire o MAC e o que sobra é metadado de placa.
 
   0x20  (64 B)  **É ONDE A CONTAGEM ENGANA.** Os 19 primeiros bytes são a data
-                e a hora de compilação do firmware em ASCII, e elas COLIDEM EM
+                e a hora de compilação do firmware em ASCII, e as datas COLIDEM EM
                 PARES nesta mesa:
                     " Jul  4 2025 10:10:32"  ->  a0:fa:9c  E  14:3a:9a
                     " Jul  4 2025 10:38:40"  ->  d4:2f:4b  E  44:46:48
@@ -319,11 +319,11 @@ root, sem abrir hidraw, sem broker e sem disputar nada com o daemon. Os reports
 0x09/0x0b/0x22 servem para CONFIRMAR que o sysfs não está inventando — e essa
 confirmação, agora, está feita nos dois braços.
 
-A ARMADILHA QUE ESTA MESA ESCONDE, E ELA É EXATAMENTE A DA UNIVERSALIDADE
+A ARMADILHA QUE ESTA MESA ESCONDE, E A ARMADILHA É EXATAMENTE A DA UNIVERSALIDADE
 --------------------------------------------------------------------------
 Os quatro controles do usuário são de QUATRO revisões de placa diferentes (0x0710,
 0x0711, 0x0811, 0x1111) e de QUATRO cores diferentes. É a amostra mais
-favorável possível — e é justamente por isso que ela esconde a colisão: nesta
+favorável possível — e é justamente por isso que a amostra esconde a colisão: nesta
 mesa, `hardware_version` "distingue 4 em 4", e a cor também. Num PC qualquer,
 com dois DualSense brancos comprados no mesmo dia, os dois colidem no mesmo
 instante. A única coluna que continua distinguindo é o MAC.
