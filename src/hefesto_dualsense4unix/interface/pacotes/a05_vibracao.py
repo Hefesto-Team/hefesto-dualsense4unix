@@ -54,7 +54,7 @@ def _plastico_do_item(controle: dict[str, Any]) -> str:
     seria a segunda lista de cores que o `docs/data/cores-do-dualsense.csv`
     existe para não ter.
 
-    VAZIO É RESPOSTA, e é a mais comum na bancada: pelo rádio o mapa de canais
+    VAZIO É RESPOSTA, e é a mais comum no ensaio: pelo rádio o mapa de canais
     diz `identidade.cor_do_aparelho = não`, o `LeitorDeCor` guarda `None`, e o
     item chega com `cor = ""`. Devolver `""` faz o pintor APAGAR a variável — a
     moldura cai no tom neutro em vez de ficar com a cor do desenho.
@@ -79,8 +79,8 @@ def teto_da_barra() -> int:
     """O 100% da barra "Personalizado", em pontos percentuais. Hoje: **200**.
 
     **DECISÃO, 03/09/2026:** *"0 a 200%, e grava na hora."* A barra deixou
-    de ser leitura e virou um `<input type=range>` que ela arrasta
-    (:func:`intensidade`), e o teto do que ela pode PEDIR é o do multiplicador
+    de ser leitura e virou um `<input type=range>` que o usuário arrasta
+    (:func:`intensidade`), e o teto do que se pode PEDIR é o do multiplicador
     personalizado — não o do degrau `Máximo`.
 
     O NÚMERO NÃO SE DIGITA, e o dono é o esquema do perfil:
@@ -93,7 +93,7 @@ def teto_da_barra() -> int:
     Aquela função é o teto da ESCADA — o quanto o degrau mais alto pede —, e
     continua sendo o que a janela estável desenha. Esta é o teto do que se pode
     ARRASTAR. Enquanto a barra era leitura os dois coincidiam; a partir do
-    momento em que ela arrasta, deixaram de coincidir, e usar o da escada faria
+    momento em que o usuário arrasta, deixaram de coincidir, e usar o da escada faria
     a barra encher aos 150% e ficar cheia até os 200 — escondendo um quarto do
     que o produto aceita.
 
@@ -184,7 +184,7 @@ def _perfil_ativo(ctx: Contexto) -> dict[str, Any]:
     a única fonte que existe. Um perfil é um JSON de alguns kB; dois tiques por
     segundo cabem.
 
-    **DEVOLVE O ARQUIVO INTEIRO, E NÃO SÓ O `controllers` — 04/09/2026.** Ela
+    **DEVOLVE O ARQUIVO INTEIRO, E NÃO SÓ O `controllers` — 04/09/2026.** A função
     era `_overrides_do_perfil`, e devolvia só aquele bloco; a ressalva da mesa
     em `Auto` (:func:`_ressalva_da_mesa`) precisa do bloco `rumble` do MESMO
     arquivo, e duas funções abrindo o mesmo JSON no mesmo tique seriam duas
@@ -211,7 +211,7 @@ def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str
 
     **É A METADE QUE VIVE NO TEMPO da cura de 04/09/2026.** A outra é o recado
     do clique (:func:`_aplicar_a_forca`), e as duas não se substituem: o recado
-    dura :data:`hefesto_vivo.SEGUNDOS_DO_RECADO` e fala do gesto que ela acabou
+    dura :data:`hefesto_vivo.SEGUNDOS_DO_RECADO` e fala do gesto que o usuário acabou
     de fazer; ESTA linha fica na tela **enquanto a condição existir** — inclusive
     para quem abrir a aba amanhã, sem ter clicado nada, e vir quatro degraus
     acesos que o motor não obedece.
@@ -231,7 +231,7 @@ def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str
 
     A CONTAGEM É DA MESA VIVA, e não do arquivo: um perfil pode guardar a
     opinião de dez controles que não estão na sala, e avisar sobre eles seria
-    alarme sobre um aparelho que ela não tem na mão. Quem conta são os `uniq`
+    alarme sobre um aparelho que o usuário não tem na mão. Quem conta são os `uniq`
     que estão na mesa AGORA, nas duas grafias — pelo mesmo motivo de
     :func:`_forca_da_coluna`: um perfil editado à mão traz `aa:bb:…` e o disco
     canoniza para doze hexa só quando alguém o CARREGA.
@@ -253,14 +253,14 @@ def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str
         return ""
     return (f"a força geral está no automático, e por isso a força própria de "
             f"{quantos} controle(s) fica guardada sem chegar ao motor. Escolha "
-            f"Economia, Padrão ou Máximo e elas voltam a valer.")
+            f"Economia, Padrão ou Máximo e as forças voltam a valer.")
 
 
 def _quanto_multiplica(pct: dict[str, Any], barra: int | None) -> str:
     """A frase que diz o efetivo deste motor — `barra x degrau`.
 
-    **VIBRA-MULT-01, 09/09/2026.** Ela responde, sem um clique, a pergunta que
-    a queixa de uso fazia: *"o motor esquerdo está multiplicando pela força?"*.
+    **VIBRA-MULT-01, 09/09/2026.** A leitura responde, sem um clique, a pergunta que
+    a queixa de uso fazia: o motor esquerdo está multiplicando pela força?
 
     CALA QUANDO NÃO SABE, que é a regra desta casa para campo sem informação:
     sem degrau conhecido (uma política fora das cinco) não há produto a
@@ -298,16 +298,16 @@ def _texto_da_barra(valor: int, padrao: bool) -> str:
 def _barras_dos_motores(state: dict[str, Any], uniq: str) -> dict[str, int]:
     """``{"e": forte_pct, "d": fraco_pct}`` DESTE controle, do `state_full`.
 
-    **É A METADE QUE LÊ DE VOLTA** o que :func:`motor` grava — e sem ela a aba
-    desenha a barra onde ela ESTAVA, não onde ela está. A fonte é
-    `state_full.rumble_motores`, publicada pela ONDA1-D2 em 04/09/2026, e ela é
+    **É A METADE QUE LÊ DE VOLTA** o que :func:`motor` grava — e sem essa a aba
+    desenha a barra onde o motor ESTAVA, não onde está. A fonte é
+    `state_full.rumble_motores`, publicada pela ONDA1-D2 em 04/09/2026, e é
     **o mesmo mapa que `apply_game_rumble` multiplica**
     (`gamepad._motores_do_perfil_ativo`, memoizado pelo nome do perfil). Ler o
     disco aqui por conta própria poderia pintar um número que o motor não está
     usando — que é o "aplicado" falso que esta casa passou 04/09 arrancando.
 
     **O PADRÃO NÃO SE DIGITA:** a peça sem opinião **não entra no mapa** (mesma
-    disciplina do `set_rumble_scales`), e o valor dela chega ao lado, em
+    disciplina do `set_rumble_scales`), e o valor da escrita chega ao lado, em
     `rumble_motor_pct_padrao`. Escrever `100` aqui seria a segunda cópia do
     `MOTOR_PCT_PADRAO` do esquema — e a segunda diverge no dia em que a primeira
     mudar.
@@ -348,7 +348,7 @@ def _forca_propria(overrides: dict[str, Any], uniq: str) -> tuple[str, Any] | No
     controle e um degrau que o Hefesto está usando porque a mesa manda.
 
     A REGRA É A DO PRODUTO, e é um campo só: `policy` escrita no override vence;
-    sem ela, herda. É o mesmo desvio de `app/draft_config.effective_rumble_for`
+    sem a escrita, herda. É o mesmo desvio de `app/draft_config.effective_rumble_for`
     e de `profiles/manager._controllers_to_rumble_scales`.
     """
     dele = overrides.get(_chave_no_perfil(uniq)) or overrides.get(uniq) or {}
@@ -360,17 +360,17 @@ def _forca_propria(overrides: dict[str, Any], uniq: str) -> tuple[str, Any] | No
 
 def _forca_da_coluna(overrides: dict[str, Any], uniq: str,
                      state: dict[str, Any]) -> tuple[str, Any]:
-    """`(policy, custom_mult)` que ESTA coluna está pedindo — dela, ou da mesa.
+    """`(policy, custom_mult)` que ESTA coluna está pedindo — a própria, ou a da mesa.
 
     **É A METADE QUE PINTA da decisão de 03/09/2026** — *"construir por
     controle"*. A outra é :func:`_gravar_a_forca`, e sem esta a tela mentiria
     logo depois do primeiro clique: o override vai para o PERFIL, o
     `state_full` continua publicando só o `rumble_policy` da mesa, e as quatro
-    colunas voltariam a acender o mesmo degrau um tique depois de ela escolher
+    colunas voltariam a acender o mesmo degrau um tique depois de o usuário escolher
     quatro diferentes.
 
     A PRECEDÊNCIA É A DO PRODUTO, campo por campo: override com `policy`
-    escrita vence; sem ela, herda o global. É a mesma regra de
+    escrita vence; sem a escrita, herda o global. É a mesma regra de
     `app/draft_config.effective_rumble_for` e de
     `profiles/manager._controllers_to_rumble_scales` — os dois desviam por
     `cfg.rumble is None` e por `"policy" not in model_fields_set`.
@@ -386,9 +386,9 @@ def _forca_da_coluna(overrides: dict[str, Any], uniq: str,
 
 def _forca_em_vigor(overrides: dict[str, Any], uniq: str,
                     state: dict[str, Any]) -> tuple[str, Any, bool]:
-    """`(policy, custom_mult, é dela?)` — **o dono único de "qual degrau vale"**.
+    """`(policy, custom_mult, é própria?)` — **o dono único de "qual degrau vale"**.
 
-    **NASCEU DA VIBRA-ACESA-01, 17/09/2026, e o defeito que ela fecha é de
+    **NASCEU DA VIBRA-ACESA-01, 17/09/2026, e o defeito que fecha é de
     DUPLICIDADE.** A mesma pergunta tinha duas bocas: `pacote_da_coluna`
     repetia o desvio de :func:`_forca_propria` na própria linha em que montava a
     coluna, e :func:`_forca_da_coluna` o montava de novo para o gesto. As duas
@@ -402,7 +402,7 @@ def _forca_em_vigor(overrides: dict[str, Any], uniq: str,
     ajuste geral — são coisas diferentes e tinham a mesma cara.
 
     A REGRA É A DO PRODUTO, e continua sendo um campo só: override com `policy`
-    escrita vence; sem ela, herda o global. É o mesmo desvio de
+    escrita vence; sem a escrita, herda o global. É o mesmo desvio de
     `app/draft_config.effective_rumble_for` e de
     `profiles/manager._controllers_to_rumble_scales`.
     """
@@ -419,7 +419,7 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
 
     A CONTA NÃO NASCE AQUI. `app/telas/vibracao._pedido_da_politica` é a mesma
     linha da janela estável (`rumble_actions._pintar_a_linha_do_teto:537`) —
-    `custom_mult if policy == "custom" else _POLICY_MULT.get(policy)` — e ela
+    `custom_mult if policy == "custom" else _POLICY_MULT.get(policy)` — e a conta
     recebe um dicionário com as duas chaves. Passar `{"rumble_policy": …,
     "rumble_mult_applied": …}` **não é forjar um estado**: são os nomes que o
     daemon dá aos mesmos dois valores, e para `custom` o `rumble_mult_applied`
@@ -428,7 +428,7 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
     não ter.
 
     ESTA FUNÇÃO SUCEDE A `_pct_do_pedido`, e herda a medição que a decidiu —
-    ela sai daqui inteira porque é decisão medida, não número errado.
+    a nota sai daqui inteira porque é decisão medida, não número errado.
 
     **O NÚMERO ESTAVA MORTO, e a medição é de 03/09/2026, contra o daemon
     do usuário.** `pacote_da_coluna` montava esta barra a partir de
@@ -444,7 +444,7 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
     O daemon obedeceu as quatro vezes — a política mudou —, e o número que a
     tela mostra **não se moveu uma vez**. Com `rumble_policy='balanceado'`
     (multiplicador 1,0) a aba escrevia `70%`, pintava o trilho em 46,7% e
-    deixava o `Máx` apagado no `max`. A própria dica dela, duas linhas acima na
+    deixava o `Máx` apagado no `max`. A própria dica do degrau, duas linhas acima na
     mesma tela, promete o contrário: *"Economia 30% · Balanceado 100% · Máximo
     150%"*.
 
@@ -475,7 +475,7 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `app/telas/vibracao.pacote_da_mesa` — a camada do PRODUTO.
 
-    ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA, e é o `casa-sabe` que a denunciou:
+    A FUNÇÃO JÁ EXISTIA E NUNCA TINHA SIDO LIGADA, e é o `casa-sabe` que a denunciou:
     `app/telas/vibracao.py` tinha funções públicas — `pacote_da_mesa`,
     `pacote_da_coluna`, `degraus_da_forca`, `motores_do_controle`,
     `teto_da_barra` — e **nenhuma tinha chamador em produção**. O portão as
@@ -483,7 +483,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     à remontagem e ao eco do clique (`estado_da_coluna`, `gesto_do_clique`)
     saíram em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01).
 
-    Ela é MAIS COMPLETA que o que este pacote tinha: devolve a largura da barra
+    É MAIS COMPLETA que o que este pacote tinha: devolve a largura da barra
     já em `%` (`pct.w`), o número formatado, o `sabe` que distingue "zero" de
     "não sei", a cor do plástico e o `treme` por motor. Reescrever isso era a
     duplicação que a pergunta de 01/09 pegou — *"não estamos refazendo do
@@ -494,7 +494,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     calcular o valor é do produto.
 
     A ÚNICA CONTA QUE NÃO VEM DO `pacote_da_mesa` é a barra do multiplicador, e
-    ela vem de outra função do MESMO módulo do produto — ver
+    vem de outra função do MESMO módulo do produto — ver
     :func:`_pct_da_coluna`, com as quatro medições que a decidiram.
 
     O NOME `forca` NÃO SAI MAIS DAQUI — 02/09/2026, e a razão está fotografada.
@@ -505,7 +505,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     `"balanceado"` em DEZ elementos por tique:
 
     * os quatro botões perdiam o rótulo — "Economia", "Balanceado", "Máximo" e
-      "Auto" viraram os quatro a mesma palavra, e ela deixa de poder escolher;
+      "Auto" viraram os quatro a mesma palavra, e o usuário deixa de poder escolher;
     * a linha do "Personalizado" é um `<div>` com filhos, e `textContent`
       **apaga os filhos**: o trilho, o número e o "Máx" sumiam da tela — junto
       com os endereços `forca-pct` e `mult`, que a pintura seguinte já não
@@ -725,10 +725,10 @@ _BATEU_EM: dict[str, float] = {}
 def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> dict[str, Batimento]:
     """Diz ao daemon, a cada segundo, que a janela ainda segura os motores DE CADA teste.
 
-    NASCEU DA ORDEM, 15/09/2026: *"o testar e parar é sobre o teste naquele
-    momento isso nao interfere in game"*  (noqa-acento: citação literal). O
+    NASCEU DA ORDEM, 15/09/2026: o testar e o parar são sobre o teste naquele
+    momento, e isso não interfere no jogo. O
     "Testar" tira os motores do jogo e os devolve no "Parar" — e fechar a
-    janela, trocar de aba ou a janela morrer deixava o jogo mudo até ela voltar
+    janela, trocar de aba ou a janela morrer deixava o jogo mudo até a janela voltar
     e clicar. O daemon solta o par que ninguém rebate
     (`TETO_DO_RUMBLE_FIXADO_S`); o batimento é o que diz *"ainda estou aqui"*.
 
@@ -855,11 +855,11 @@ def _par_das_barras(
     segunda é a razão de a primeira nunca ter aparecido:
 
     1. **Esta função lia duas chaves que o daemon não publica no bloco de onde
-       ela lia.** `last_weak` e `last_strong` moram no TOPO do `rumble_ff`
+       a função lia.** `last_weak` e `last_strong` moram no TOPO do `rumble_ff`
        (`daemon/ipc_handlers.py:2067`), e o que chegava aqui era um bloco de
        `per_vpad`, que não tem nem uma nem outra. As duas leituras davam `0`
        sempre, o `if` caía sempre no :data:`PAR_DE_TESTE`, e o "Testar" mandava
-       `(160, 220)` **fizesse ela o que fizesse com as barras**. Medido com a
+       `(160, 220)` **fizesse o usuário o que fizesse com as barras**. Medido com a
        barra esquerda em ZERO: `rumble.set(160, 220)` — o motor que o usuário mandou
        calar tremia igual ao outro.
     2. **O caminho do rumble FIXADO não aplica a barra.**
@@ -871,7 +871,7 @@ def _par_das_barras(
        aplicam **um fator só, o degrau, igual nos dois motores**. Mesmo com a
        leitura curada, arrastar a barra não mudaria uma vírgula na mão do usuário.
 
-    **O QUE ESTA FUNÇÃO FAZ, e o que ela NÃO faz.** Ela reduz o par de teste
+    **O QUE ESTA FUNÇÃO FAZ, e o que NÃO faz.** Reduz o par de teste
     pela barra de cada motor, e **só isso**. O degrau continua sendo do daemon
     nos três andares em que ele já morava — a política global em
     `apply_rumble_policy`, a escala por controle em
@@ -883,17 +883,17 @@ def _par_das_barras(
     **É PROVISÓRIO — decisão de produto.** A cura que cobre TODOS os chamadores é do
     lado do daemon (`_handle_rumble_set` e `reassert_rumble` passando por
     `_mults_por_motor`), e os dois arquivos não são da posse desta sprint. Sem
-    ela, `hef test rumble` e o "Testar" da janela GTK continuam sem a barra —
+    a função, `hef test rumble` e o "Testar" da janela GTK continuam sem a barra —
     está na entrega, com as linhas nomeadas.
 
     A INVERSÃO É A ARMADILHA DESTE ASSUNTO: `weak` é o motor da DIREITA (`d`) e
     `strong` o da ESQUERDA (`e`) — `core/backend_pydualsense.py:2634` faz
-    `setLeftMotor(eff_strong)`. A tradução não se digita aqui: ela é de
+    `setLeftMotor(eff_strong)`. A tradução não se digita aqui: é de
     `app/telas/vibracao.LADO_PARA_MOTOR`, e :func:`_barras_dos_motores` já
     devolve o mapa na língua da tela.
 
     `acabou_de_gravar` É O ARRASTE QUE AINDA NÃO VOLTOU: o `ctx` de um gesto é
-    o tique ANTERIOR à gravação, então reenviar lendo só o `state` faria ela
+    o tique ANTERIOR à gravação, então reenviar lendo só o `state` faria a função
     sentir o valor de antes do arraste — o "ao vivo" atrasado em um tique. Quem
     grava sabe o que gravou e diz.
     """
@@ -961,7 +961,7 @@ def _uniq(o: dict[str, Any]) -> str:
     conectado** (`mesa_viva.mesa_do_estado` → `app/mesa.py`, que filtra
     `connected`); logo, para um controle que caiu, a tradução não acha nada e o
     gesto chega com o assento e **sem** `uniq`. **O clique DISSE em qual
-    controle** — a coluna existe na tela, e o usuário clicou dentro dela.
+    controle** — a coluna existe na tela, e o usuário clicou dentro.
 
     A CURA MORA AQUI, e não dentro de um gesto, porque são TRÊS os
     chamadores: :func:`_mirar` (que serve `testar` e `parar`),
@@ -971,7 +971,7 @@ def _uniq(o: dict[str, Any]) -> str:
 
     O CLIQUE SOLTO CONTINUA COM A FRASE DE SEMPRE: sem `controle` não há coluna,
     e é a frase de quem chama que ensina o que fazer ("clique o botão dentro da
-    coluna…"). Ela varia por gesto de propósito — a do `forca` fala em degrau, a
+    coluna…"). A frase varia por gesto de propósito — a do `forca` fala em degrau, a
     do `motor` fala em barra —, e por isso continua com eles.
     """
     uniq = str(o.get("uniq") or "")
@@ -1000,8 +1000,8 @@ TOM_DO_RECIBO = "recibo"
 FATO_DO_AJUSTE_GERAL = "voltou ao ajuste geral"
 
 FRASE_DA_MESA_EM_AUTO = (
-    "guardei esta força, mas ela não chega ao motor enquanto a força geral "
-    "estiver no automático. Escolha Economia, Padrão ou Máximo e ela vale."
+    "guardei esta força, mas não chega ao motor enquanto a força geral "
+    "estiver no automático. Escolha Economia, Padrão ou Máximo e a força vale."
 )
 
 FRASE_DO_QUE_A_COLUNA_MOSTRA = (
@@ -1026,12 +1026,12 @@ def _fator_no_motor(global_do_perfil: Any, policy: str | None,
 def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
                      policy: str, custom: float | None = None
                      ) -> dict[str, Any] | None:
-    """Grava a força daquele controle **e diz o que aconteceu com ela**.
+    """Grava a força daquele controle **e diz o que aconteceu com a força**.
 
     **É A CURA DO SILÊNCIO DE 04/09/2026**, e o defeito tinha esta forma: o
     gesto gravava no perfil, voltava sem levantar, e o piloto anotava
     `("aplicou", "")`. Nos casos em que a escolha **não vira nada** — ou vira
-    algo que a coluna não vai mostrar — ela clicava, nada mudava na tela, e não
+    algo que a coluna não vai mostrar — o usuário clicava, nada mudava na tela, e não
     havia uma letra explicando. É a família de defeito que esta casa persegue:
     *grava e não aplica, sem uma palavra*.
 
@@ -1065,9 +1065,9 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     clicado foi o `Auto`, a razão de a coluna mostrar outra coisa tem dono e
     nome no produto — `rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL`, a
     oração RUM-3 que a janela estável diz desde 25/08 no MESMO caso. O que a
-    faixa mostra é a metade do FATO dela (:data:`FATO_DO_AJUSTE_GERAL`, as
+    faixa mostra é a metade do FATO do ajuste (:data:`FATO_DO_AJUSTE_GERAL`, as
     palavras de produto na `05-Q4`), e a régua exige que essa metade continue DENTRO
-    da oração do produto — o dia em que ele renomear o "ajuste geral", ela
+    da oração do produto — o dia em que ele renomear o "ajuste geral", a faixa
     reprova. Para os outros degraus a causa é outra — a escolha não DIVERGE da
     força geral —, e essa frase nasce aqui porque só este caminho a produz.
 
@@ -1080,9 +1080,9 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     devolver a coluna ao ajuste geral calado é o silêncio que esta função
     existe para curar. Inalcançável pelo piloto não é o mesmo que enfeite.
 
-    **A FRASE SAIU DO CARTÃO E FOI PARA A FAIXA — 05-Q4 dela, 06/09/2026:**
-    *"Linha embaixo da grade (…) nomeando a coluna (`P2 · voltou ao ajuste
-    geral`) e some logo depois; nada se mexe dentro das colunas"*. Fora do
+    **A FRASE SAIU DO CARTÃO E FOI PARA A FAIXA — 05-Q4, 06/09/2026:**
+    uma linha embaixo da grade nomeando a coluna (`P2 · voltou ao ajuste
+    geral`), que some logo depois; nada se mexe dentro das colunas. Fora do
     cartão a frase perde o endereço — uma linha embaixo da grade fala das
     quatro colunas ao mesmo tempo —, e por isso as três passam por
     :func:`_na_faixa`, que põe o `P{jogador}` na frente. O prefixo é de UM
@@ -1090,9 +1090,9 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     em que alguém acrescentasse um.
 
     **OS TRÊS AVISOS DEIXARAM DE SER `RuntimeError` — 04/09/2026, decisão [04]
-    dela (D-01), e é uma correção de SIGNIFICADO, não de forma.** Até esta manhã
+    (D-01), e é uma correção de SIGNIFICADO, não de forma.** Até esta manhã
     eles subiam como recusa, com a nota escrita aqui de que *"o `RuntimeError`
-    não quer dizer 'recusei' — é o único canal que chega ao cartão dela hoje"*.
+    não quer dizer 'recusei' — é o único canal que chega ao cartão hoje"*.
     A frase estava certa e caducou no mesmo dia: a ONDA0-P construiu o canal de
     SUCESSO (`hefesto_vivo._deu_certo_dizendo`), e um gesto que devolva
     ``{"recado": "…"}`` manda a própria frase.
@@ -1134,7 +1134,7 @@ def _na_faixa(ctx: Contexto, uniq: str, frase: str) -> str:
 
 
 def _nome_do_degrau(chave: str) -> str:
-    """O nome que ela LÊ no botão, a partir da chave do produto.
+    """O nome que o usuário LÊ no botão, a partir da chave do produto.
 
     OS RÓTULOS NÃO SE DIGITAM: `rumble_actions.ROTULOS_DO_ORCAMENTO` é a cópia
     pública do `_POLICY_LABEL` que a janela estável usa nos toasts desta mesma
@@ -1144,7 +1144,7 @@ def _nome_do_degrau(chave: str) -> str:
 
     **NÃO SE IMPORTA O `aba05` PARA ISTO**, e a razão é medida: o gerador roda
     `_conferir()` no corpo do módulo (`aba05.py`, última linha) — importá-lo
-    aqui faria toda carga do pacote LER o desenho da bancada e, num desenho em
+    aqui faria toda carga do pacote LER o desenho do mockup e, num desenho em
     trabalho, levantar `SystemExit` no meio da aba. O dono do rótulo é o
     produto, e o produto não tem esse efeito colateral.
 
@@ -1216,20 +1216,20 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     O CAMINHO DE DISCO É O DA ABA PERFIS (`pacotes/rodape.salvar`):
     `load_profile` → `DraftConfig.from_profile` → o método acima →
     `to_profile(nome, priority=…)` → `perfil.gravar_e_reaplicar`. A `priority`
-    vai junto porque `to_profile` a recebe de fora; sem ela o perfil do usuário
+    vai junto porque `to_profile` a recebe de fora; sem a escala o perfil do usuário
     perderia a ordem de casamento — é o `BUG-FOOTER-SAVE-DROPS-SECTIONS-01`,
     nomeado no próprio `to_profile`.
 
     NADA MUDOU = NADA GRAVA, e não é economia: regravar um perfil idêntico
     troca a data do arquivo e faz o daemon reaplicá-lo, e um `profile.switch`
     no meio de uma partida não é de graça. É a mesma guarda do
-    `a08_conexoes._com_o_teto`. Ela também é o que torna inócuo o clique DOBRADO
+    `a08_conexoes._com_o_teto`. A régua também é o que torna inócuo o clique DOBRADO
     da barra arrastável — ver :func:`intensidade`.
 
     A BORDA RECUSA, E A FRASE DE PRODUTO VAI PARA A TELA. Um `uniq` degenerado
     (`000000…`, o broadcast, o MAC forjado que dois clones compartilham) ou um
     multiplicador fora de `[0, RUMBLE_CUSTOM_MULT_MAX]` faz o esquema levantar
-    com a razão escrita — e é ela que sobe como `RuntimeError`, em vez de um
+    com a razão escrita — e é essa que sobe como `RuntimeError`, em vez de um
     traço de pydantic. Repetir a lista de recusas aqui a faria envelhecer na
     primeira que o produto acrescentasse.
     """
@@ -1240,7 +1240,7 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     if not chave:
         raise RuntimeError(
             "este controle não tem um endereço fixo, e sem ele o perfil não "
-            "sabe guardar a força só dele — amanhã ela cairia em outro "
+            "sabe guardar a força só dele — amanhã a força cairia em outro "
             "aparelho.")
 
     loader = _perfil._com_o_src()
@@ -1284,7 +1284,7 @@ def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     DECISÃO, 03/09/2026, e são as palavras de produto. Até ontem esta linha era
     LEITURA: um `<div>` sem `value`, e o gesto dos degraus a recusava com um
-    `ValueError` que **não chegava à tela** — para ela, arrastar não fazia nada
+    `ValueError` que **não chegava à tela** — para o usuário, arrastar não fazia nada
     e não explicava nada.
 
     O TETO É DO ESQUEMA (:func:`teto_da_barra`, do `RUMBLE_CUSTOM_MULT_MAX`), e
@@ -1292,10 +1292,10 @@ def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     (`aba05._trilho_arrastavel`). Aqui ele não se confere de novo: quem recusa
     o que passa do teto é a BORDA do esquema, e :func:`_gravar_a_forca` sobe a
     frase de produto. Uma segunda checagem aqui seria a segunda régua do mesmo
-    número, e é ela que envelhece.
+    número, e é esse que envelhece.
 
-    A DIVISÃO POR 100 É A ÚNICA CONTA, e ela é de unidade: a tela fala em
-    pontos percentuais (o que ela lê ao lado da barra) e o perfil guarda o
+    A DIVISÃO POR 100 É A ÚNICA CONTA, e é de unidade: a tela fala em
+    pontos percentuais (o que o usuário lê ao lado da barra) e o perfil guarda o
     multiplicador (`custom_mult`, 0 a 2). É a mesma tradução que
     `_pedido_da_politica` faz na volta.
 
@@ -1326,7 +1326,7 @@ def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
 @gesto("05-vibracao.html", "motor", grava="rumble_motores_set")
 def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A barra de UM motor daquele controle: **0 a 100, e ela MULTIPLICA o degrau.**"""
+    """A barra de UM motor daquele controle: **0 a 100, e MULTIPLICA o degrau.**"""
     uniq = _uniq(o)
     if not uniq:
         raise RuntimeError(
@@ -1407,7 +1407,7 @@ def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A linha «Háptica por áudio»: o trilho grava o ganho, o interruptor liga e desliga.
 
     UM GESTO para as duas peças da linha, e o que as separa é o `valor`: o
-    trilho manda o número dela (0 a 100); o interruptor é um botão, e chega sem
+    trilho manda o número (0 a 100); o interruptor é um botão, e chega sem
     número. É o par das linhas dos motores, sem campo booleano à parte:
     desligar grava 0, ligar devolve o padrão do dono (`haptica_pct_padrao`, do
     `state_full`), e o aceso é a leitura da barra acima de zero.
@@ -1598,7 +1598,7 @@ def _padrao_neste_controle(
 def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Parar": corta a vibração DAQUELE controle AGORA e devolve a mão dele ao jogo.
 
-    SÃO DUAS COISAS, e nesta aba elas são um botão só — a dica publicada diz
+    SÃO DUAS COISAS, e nesta aba são um botão só — a dica publicada diz
     *"Parar corta a vibração dele agora e devolve a mão ao jogo"*. O pedido leva
     o `uniq`: o par dos outros controles em teste segue de pé (03/10/2026).
 

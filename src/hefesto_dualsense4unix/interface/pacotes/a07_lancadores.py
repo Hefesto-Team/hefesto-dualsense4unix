@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """O pacote da aba `07` Lançadores — a aba que era desenho inteiro.
 
-A DECISÃO DE PRODUTO QUE ABRIU ESTA ABA, e ela CADUCOU outra, de um dia antes:
+A DECISÃO DE PRODUTO QUE ABRIU ESTA ABA, que CADUCOU outra, de um dia antes:
 
-    01/09/2026 — *"a única que não faremos, só deixamos o botão levando pra
-    ela, é a de lançadores."*
+    01/09/2026 — a única aba que não se faria, com só o botão levando para a
+    janela antiga, era a de lançadores.
 
-    02/09/2026 — *"não daria para incluir G e F aqui? (…) temos um mapa
-    funcional disso no gtk. a estrutura sim, validar de fato eu poderia
-    somente juntos com ele."*   <!-- noqa-acento: citação literal -->
+    02/09/2026 — incluir G e F aqui, porque a GTK tem um mapa funcional
+    disso; a estrutura sim, e a validação de fato só junto com o mapa da
+    GTK.
 
 A `F` é esta aba (o registro «ROTA-F-a-aba-lancadores» de 02/09/2026).
-A segunda decisão vale, e ela traz a razão: **o GTK tem o mapa funcional** —
+A segunda decisão vale, e traz a razão: **o GTK tem o mapa funcional** —
 `sentinela_do_wrapper`, `prontuario_dos_jogos`, `carona_do_wrapper` e
 `launch_wrapper_dialog` já sabiam responder o que esta tela pergunta. A primeira
 fica registrada com data nas duas réguas que a codificavam
@@ -42,7 +42,7 @@ perdeu"*). Às 15h a mesma leitura dava 63 e zero reparáveis. A Steam comeu a
 linha de novo entre as duas medições, e **nada a repôs**: a carona
 (`carona_do_wrapper.pegar_carona_no_gesto`) nunca migrou para a interface nova
 — `grep -rn carona_do_wrapper src/hefesto_dualsense4unix/interface/` devolve só
-comentário. Enquanto ela não abrir esta aba e clicar em Consertar, o jogo fica
+comentário. Enquanto o usuário não abrir esta aba e clicar em Consertar, o jogo fica
 sem o atalho. Está relatado como trabalho de fora desta aba.
 
 O QUE MUDOU EM 02/09, À TARDE, e é a diferença entre duas perguntas
@@ -50,7 +50,7 @@ O QUE MUDOU EM 02/09, À TARDE, e é a diferença entre duas perguntas
 Os cinco cartões sem censo diziam `NÃO SEI` por CONSTANTE: o pacote escrevia
 sempre a mesma palavra, e a tela não podia diferir *"o produto mediu e não
 sabe"* de *"ninguém pintou"*. **São duas perguntas, e o produto responde uma
-delas de graça:**
+das funções de graça:**
 
     "sei ler a biblioteca deste lançador?"   não, em nenhum dos cinco
     "este lançador está instalado aqui?"     SIM, e é um `stat` por candidato
@@ -94,7 +94,7 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     integrations/lista_de_exclusao                       a lista de exclusão
     integrations/jogos_locais.pastas_de_atalhos          onde moram os `.desktop`
     integrations/steam_launch_options.WRAPPER_LAUNCH     a linha à mostra
-    app/actions/launch_wrapper_dialog.load_dismissed_appids  quem ela dispensou
+    app/actions/launch_wrapper_dialog.load_dismissed_appids  quem o usuário dispensou
     app/actions/launch_wrapper_dialog.extract_steam_appid    o jogo em foco
     daemon/launch_env.launch_session_appid               1º degrau da escada
     daemon/launch_env.read_last_run_marker               3º degrau da escada
@@ -114,9 +114,9 @@ cada tique e que a GTK vira banner em DUAS abas, sem clique nenhum. `grep -rn
 wrapper_used src/hefesto_dualsense4unix/interface/` só achava o dublê de
 perfis. Junto vieram as duas metades que faltavam do mesmo assunto: o botão que
 DISPENSA o aviso (a lista existia e só a GTK a escrevia) e o caminho para
-`with_steam_closed`, sem o qual o `Consertar` recusa sempre na bancada.
+`with_steam_closed`, sem o qual o `Consertar` recusa sempre no ensaio.
 
-`carona_do_wrapper.passada()` responderia parte disto — mas ela ESCREVE no
+`carona_do_wrapper.passada()` responderia parte disto — mas ESCREVE no
 `localconfig.vdf` quando há o que repor, e uma PINTURA que escreve em disco a
 cada tique é a coisa mais perigosa que esta aba poderia fazer. A pintura usa o
 CENSO (read-only, seguro com a Steam aberta — e é por isso que ele é uma camada
@@ -124,9 +124,9 @@ separada do reparo); quem chama o caminho que escreve é o gesto "Consertar" e,
 desde 03/09/2026, a :class:`_VigiaDaSteam` que esse gesto arma quando é adiado
 — nunca a pintura, e nunca sem um clique do usuário antes.
 
-E ELA FOI A ÚLTIMA METADE QUE FALTAVA: com a Steam aberta o `Consertar` recusa
+E FOI A ÚLTIMA METADE QUE FALTAVA: com a Steam aberta o `Consertar` recusa
 dizendo *"Feche a Steam e eu reponho"*, e até 03/09 **nada reperguntava** — a
-tela prometia e ela é que tinha de lembrar. A janela velha cumpre essa frase
+tela prometia e o usuário é que tinha de lembrar. A janela velha cumpre essa frase
 desde 16/08 com um tique de `INTERVALO_DA_VIGIA_S`; a página cumpre agora com o
 mesmo tique, a mesma frase e o mesmo desligador.
 
@@ -146,8 +146,8 @@ O tique do piloto é de 100 ms. Ler 40 ms de disco a cada tique seria 40% do
 orçamento gasto relendo um arquivo que muda uma vez por semana; o prontuário
 sequer cabe. (A 500 ms, que era o tique até 04/09/2026, isso já custava 8% — a
 cura vale MAIS agora, não menos.) Por isso a leitura vive na :class:`_Vigia`: a pintura NUNCA
-bloqueia, uma thread refaz a conta quando ela passa de :data:`TTL_S`, e o
-prontuário só sai do lugar quando ela clica em "Ver o que impede".
+bloqueia, uma thread refaz a conta quando passa de :data:`TTL_S`, e o
+prontuário só sai do lugar quando o usuário clica em "Ver o que impede".
 """
 from __future__ import annotations
 
@@ -310,9 +310,9 @@ def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
 def _atalhos_que_tem_linha_propria() -> set[str]:
     """Os atalhos que já têm linha na fila: o da extensão ligada e o do que virou extensão.
 
-    Medido na bancada de 19/10/2026: com o Lutris no Flatpak da máquina, o achado por conteúdo
+    Medido no ensaio de 19/10/2026: com o Lutris no Flatpak da máquina, o achado por conteúdo
     punha uma linha «Lutris» genérica ao lado da linha da migração (e, com a extensão ligada, ao
-    lado da linha dela). O lançador que virou extensão fala por uma linha só.
+    lado da própria linha). O lançador que virou extensão fala por uma linha só.
     """
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
@@ -338,16 +338,16 @@ def _onde_estao_os_lancadores(
     *"quais jogos ele tem"*, nem *"os controles chegam neles"*. Responder a
     estreita com honestidade vale mais que calar as três.
 
-    A STEAM ENTROU EM 02/09, e ela era a AUSÊNCIA que custava: a busca percorria
+    A STEAM ENTROU EM 02/09, e era a AUSÊNCIA que custava: a busca percorria
     `SEM_FONTE`, que é a lista de *"não sei ler a biblioteca dele"* — e a Steam
-    não está nela porque o produto LÊ a biblioteca do usuário. Só que ter censo do
+    não está ali porque o produto LÊ a biblioteca do usuário. Só que ter censo do
     interior não responde se o lançador está aqui, e o cartão da Steam nascia
     com `presente=True` cravado. Numa casa de mentira sem Steam nenhuma o topo
     dizia **"1 encontrado"** e o cartão acendia o selo verde `CHEGAM`. Agora a
     lista percorrida é :func:`desenho.procurados`, que devolve os de fábrica
     **mais** o que o usuário declarou.
 
-    UM PROCURADOR SÓ, E É ESTE — 08/09/2026. O lançador que ela acrescenta pelo
+    UM PROCURADOR SÓ, E É ESTE — 08/09/2026. O lançador que o usuário acrescenta pelo
     botão de registro não ganha busca própria: ele entra na MESMA lista,
     com os MESMOS três campos, e é achado pelas MESMAS duas buscas. Um segundo
     caminho seria a assimetria que produz duas respostas para a mesma pergunta —
@@ -364,7 +364,7 @@ def _onde_estao_os_lancadores(
     O CUSTO É UM `stat` POR CANDIDATO, e nenhum `glob`: são seis lançadores,
     dezesseis `stem` no total e quatro pastas nesta máquina — 64 verificações de
     existência, contra as centenas de arquivos que um `glob("*.desktop")`
-    abriria. Ainda assim ela roda pela :class:`_Vigia`, fora do tique: disco é
+    abriria. Ainda assim a busca roda pela :class:`_Vigia`, fora do tique: disco é
     disco, e o orçamento do tique é de 100 ms para a janela inteira.
 
     NUNCA LEVANTA. Um `PATH` estranho ou uma pasta sem permissão devolve
@@ -373,11 +373,11 @@ def _onde_estao_os_lancadores(
 
     O `onde` É O CAMINHO INTEIRO, e isso é o que a frase prometia. A docstring
     do `DIZ_ACHEI` (a frase saiu da tela em 11/09 e o nome em 21/09/2026) dizia
-    que dizer ONDE *"é o que deixa ela conferir a resposta sem acreditar em
-    mim"* — e o código tinha
+    que dizer ONDE «é o que deixa o usuário conferir a resposta sem acreditar em
+    mim» — e o código tinha
     o caminho na mão e o jogava fora: `shutil.which` já devolve
     `/usr/bin/flatpak` e a linha o trocava por `PATH/flatpak`, uma notação que
-    ela não pode `ls`. O mesmo no laço das pastas: ele sabe em QUAL das quatro
+    o produto não pode `ls`. O mesmo no laço das pastas: ele sabe em QUAL das quatro
     pastas o arquivo estava e guardava só o `stem`. Numa máquina com o Heroic
     nativo **e** o Heroic por Flatpak, o cartão não dizia qual dos dois achou.
     """
@@ -477,7 +477,7 @@ def _ler_do_disco() -> desenho.Leitura:
     `anotar=False` NÃO É ZELO: o `censo_do_wrapper` com `anotar=True` grava o
     `wrapper-visto.json`, que é a memória que separa *"perdeu o wrapper"* de
     *"nunca teve"*. Uma PINTURA que anotasse transformaria todo jogo novo em
-    "já visto" antes de ela ver o aviso uma única vez — e a regressão do
+    "já visto" antes de o usuário ver o aviso uma única vez — e a regressão do
     Pragmata, que essa memória existe para nomear, ficaria muda para sempre.
 
     A PRESENÇA DOS LANÇADORES FICA FORA DO `try` DO CENSO, e de propósito: a
@@ -485,7 +485,7 @@ def _ler_do_disco() -> desenho.Leitura:
     perguntas independentes tratadas como uma só, e é assim que uma tela inteira
     cai por causa de um arquivo.
 
-    E DESDE QUE A STEAM ENTROU NA BUSCA, essa ordem passou a valer para ela
+    E DESDE QUE A STEAM ENTROU NA BUSCA, essa ordem passou a valer para a Steam
     também: o ramo de erro devolve `onde_estao=onde_estao`, então o cartão da
     Steam sabe dizer "não achei" mesmo com o vdf ilegível — e sabe **não** dizer
     isso quando o erro prova que o arquivo existe (ver
@@ -581,8 +581,8 @@ def _com_os_da_porta(onde_estao: tuple[tuple[str, str], ...],
                      da_porta: dict[str, object]) -> tuple[tuple[str, str], ...]:
     """O cartão de extensão que entregou jogos pela porta conta como achado.
 
-    A extensão é o lançador: o programa dela pode não ter atalho nem comando nesta máquina (um
-    lançador que mora na rede, um script), e a lista que ela entregou é a prova de que ele está
+    A extensão é o lançador: o programa pode não ter atalho nem comando nesta máquina (um
+    lançador que mora na rede, um script), e a lista entregue é a prova de que ele está
     aqui. O ``onde`` diz de onde veio, em palavra de tela.
     """
     nomes = {x.chave: x.nome for x in declarados if x.pela_porta}
@@ -651,7 +651,7 @@ def _titulo_que_casa(titulo: str) -> str:
 
 
 def _biblioteca_da_extensao(item: desenho.SemCenso) -> Any:
-    """A biblioteca do lançador da extensão: a do leitor dela ou a que ela entregou pela porta."""
+    """A biblioteca do lançador da extensão: a do próprio leitor ou a entregue pela porta."""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     if item.leitor is None and item.pela_porta:
@@ -772,7 +772,7 @@ def _resposta(lida: desenho.Leitura | None,
 
 @registrar("07-lancadores.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
-    """A aba inteira, e ela NÃO depende de controle nenhum."""
+    """A aba inteira, e NÃO depende de controle nenhum."""
     carga = _resposta(VIGIA.agora(), ctx.state)
     valores = carga["mesa"]
     fora: dict[str, Any] = dict(valores)
@@ -791,23 +791,23 @@ ABERTO = "aberto"
 def a_escada_do_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
     """`(appid, "aberto"|"fechado")` — as TRÊS evidências da GTK, nesta ordem.
 
-    ELA É A DA JANELA VELHA, e a ordem vem de lá: `daemon_actions`
+    A ORDEM É A DA JANELA VELHA, e a ordem vem de lá: `daemon_actions`
     (`_appid_do_jogo_ativo`) já respondia esta pergunta com as três, da mais
     forte para a mais tolerante, e a interface nova usava UMA.
 
     1. `launch_env.launch_session_appid()` — jogo lançado PELO wrapper e ainda
        vivo (marker no disco + pid vivo). Autoritativa e imune a alt-tab, que é
-       exatamente o que acontece aqui: para clicar nesta aba ela SAI do jogo;
+       exatamente o que acontece aqui: para clicar nesta aba o usuário SAI do jogo;
     2. `window_detect_last_class` do estado do daemon, traduzida pelo
        `extract_steam_appid` do lembrete. Cobre o jogo aberto SEM o wrapper —
        o que a primeira, por construção, não alcança;
     3. o marker `last_run` cru — o ÚLTIMO jogo lançado pelo wrapper, **mesmo já
        fechado**. É o caso que a GTK documenta com todas as letras: *"o jogo
-       não funcionou, ela fechou, e só então veio reclamar"*.
+       não funcionou, o usuário fechou, e só então veio reclamar"*.
 
     QUEM A USA: a lista da escolha do jogo (o aberto, ou o último, nasce
-    marcado) e a aba Jogar. Com uma evidência só, a do jogo RODANDO enquanto ela
-    clica na janela do Hefesto, a escada falharia justamente quando ela saiu do
+    marcado) e a aba Jogar. Com uma evidência só, a do jogo RODANDO enquanto o usuário
+    clica na janela do Hefesto, a escada falharia justamente quando o usuário saiu do
     jogo para clicar.
 
     A ESCADA É DAQUI E O ESTADO VEM DE FORA: a GTK faz uma chamada de IPC no
@@ -853,7 +853,7 @@ def abrir_o_criar_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
 
 
 def _criar_o_perfil_de(ctx: Contexto, p: Any, jogo: desenho.JogoParaEscolher) -> str:
-    """Cria o perfil do jogo pela aba Perfis e devolve a frase de produto."""
+    """Cria o perfil do jogo pela aba Perfis e devolve a frase do produto."""
     from . import a10_perfis
 
     titulo = _ESCOLHA.titulos.get(jogo.chave, "")
@@ -887,9 +887,9 @@ def _sem_acento(texto: str) -> str:
 def chave_do_rotulo(rotulo: str) -> str:
     """A chave de um lançador novo, a partir do nome que o usuário deu.
 
-    ELA VIRA ATRIBUTO DE HTML (`data-lancador`, e o prefixo de todo `data-campo`
+    O NOME VIRA ATRIBUTO DE HTML (`data-lancador`, e o prefixo de todo `data-campo`
     do cartão), então a forma é a que `maquina._CHAVE_DE_LANCADOR` cobra:
-    minúscula, sem acento, sem espaço. Fabricá-la aqui é o que poupa ELA de
+    minúscula, sem acento, sem espaço. Fabricá-la aqui é o que poupa o usuário de
     digitar um identificador — o que a tela pede é o NOME.
 
     DEVOLVE `""` QUANDO NÃO SOBRA NADA (um rótulo só de pontuação), e quem chama
@@ -979,7 +979,7 @@ def _o_que_o_usuario_digitou(o: dict[str, Any]) -> tuple[str, str]:
 
 @gesto("07-lancadores.html", desenho.ADICIONAR, grava="machine_declare")
 def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Localizar este Lançador» — ela diz ONDE ele está, e o cartão acende.
+    """«Localizar este Lançador» — o usuário diz ONDE ele está, e o cartão acende.
 
     ELE NÃO INSTALA NADA, e o cartão já explicava por quê antes de este gesto
     existir: *"Instalado de outro jeito (um AppImage solto, por exemplo) ele não
@@ -995,12 +995,12 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     :func:`onde_isso_esta` procura antes, com as MESMAS duas buscas do
     procurador. Se não acha, o gesto recusa dizendo o que procurou. Um declarado
     que a busca nunca acha é um cartão «NÃO LOCALIZADO» permanente — a tela
-    mentindo sobre uma coisa que ela mesma declarou.
+    mentindo sobre uma coisa que o usuário mesmo declarou.
 
     **A CHAVE REPETIDA ENSINA, NÃO DUPLICA** (ver :func:`desenho.procurados`).
     Pelo botão de um cartão isso é o ato inteiro. Pelo botão GLOBAL não é: ali
-    ela quis um lançador NOVO, e um nome que por acaso caia sobre um cartão de
-    fábrica faria o rótulo dela ser descartado em silêncio. Esse caso recusa
+    o usuário quis um lançador NOVO, e um nome que por acaso caia sobre um cartão de
+    fábrica faria o rótulo dado ser descartado em silêncio. Esse caso recusa
     dizendo qual cartão já responde por aquele nome.
 
     O `machine.declare` E NÃO UMA ESCRITA DAQUI: o `maquina.json` tem UM
@@ -1103,7 +1103,7 @@ def _achar_o_que_o_usuario_apontou(alvo: str) -> tuple[str, str, str]:
 
     **E A RECUSA ESTÁ CERTA, não é aspereza:** um atalho fora das quatro pastas
     é um lançador que a busca nunca acharia — o cartão diria «NÃO LOCALIZADO»
-    para sempre sobre uma coisa que ela mesma acabou de apontar. É a mesma regra
+    para sempre sobre uma coisa que o usuário mesmo acabou de apontar. É a mesma regra
     de `onde_isso_esta`: *não se grava o que não está no disco onde o produto
     procura*.
     """
@@ -1130,7 +1130,7 @@ def _pastas_de_atalhos_para_a_frase() -> tuple[str, ...]:
 @gesto("07-lancadores.html", desenho.PROCURAR_O_ARQUIVO, grava="machine_declare")
 def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
                        ) -> dict[str, Any] | None:
-    """«Escolher o arquivo…» — ela aponta o `.desktop` com o mouse.
+    """«Escolher o arquivo…» — o usuário aponta o `.desktop` com o mouse.
 
     **DECISÃO, 09/09/2026, a opção (C):** *"Ou no Máximo Localizar o
     lançador. aí eu mesmo abro a tela e procuro o .desktop."* — o campo de
@@ -1142,9 +1142,9 @@ def procurar_o_arquivo(ctx: Contexto, o: dict[str, Any], p: Any
     rodapé. O pacote continua PURO — quem importa GTK é o piloto —, e é por
     isso que a régua o prova com um dublê.
 
-    **CANCELAR NÃO É ERRO NEM NOTÍCIA**, e o `None` explícito diz isso: ela
+    **CANCELAR NÃO É ERRO NEM NOTÍCIA**, e o `None` explícito diz isso: o usuário
     fechou o diálogo, nada mudou, e a tela não fala. Um `RuntimeError` aqui
-    acenderia a tarja laranja de 30 s por um clique que ela mesma desfez.
+    acenderia a tarja laranja de 30 s por um clique que o usuário mesmo desfez.
 
     **COM A JANELA OCULTA NÃO HÁ DIÁLOGO**, e é de propósito: uma
     `Gtk.OffscreenWindow` não tem onde pôr um modal, e abrir um sem pai o
@@ -1564,7 +1564,7 @@ def _notas_do_tema(manifesto: Any, mod_id: str) -> dict[str, str]:
 
 
 def _retrato_do_tema(manifesto: Any) -> Any:
-    """O tema da extensão para a janela dela, ou ``None`` quando ela não pinta tema."""
+    """O tema da extensão para a própria janela, ou ``None`` quando não pinta tema."""
     from hefesto_dualsense4unix.mods import retrato_do_tema
 
     if "tema" not in manifesto.tipos or not manifesto.tema:
@@ -1673,7 +1673,7 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
 
 @gesto("07-lancadores.html", "configurar-modificacao")
 def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """A engrenagem da extensão: a janela com as opções que o manifesto dela declara.
+    """A engrenagem da extensão: a janela com as opções que o manifesto declara.
 
     A coluna «Agora» nasce com o estado lido aqui (o gesto roda em thread) e segue pela ponte.
     """
@@ -1940,7 +1940,7 @@ def _guardar_a_opcao_da_modificacao(item: _Instalada, valores: dict[str, Any]) -
 
 
 def _jogos_com_a_caixa(marcados: list[str], jogo: str) -> list[str]:
-    """A lista com a caixa virada: o jogo sai se estava nela, entra no fim se não estava."""
+    """A lista com a caixa virada: o jogo sai se estava ali, entra no fim se não estava."""
     if not jogo:
         raise RuntimeError("Qual jogo? O clique não disse. Nada foi guardado.")
     if jogo in marcados:
@@ -1983,7 +1983,7 @@ def mais_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 
 
 def _repintar_a_conf_da(mod_id: str) -> None:
-    """A janela «Configurar» aberta acompanha o ⋮: o da extensão dela, ou o do próprio lançador.
+    """A janela «Configurar» aberta acompanha o ⋮: o da extensão, ou o do próprio lançador.
 
     O lançador que vem com o Hefesto manda a chave dele no ⋮ (o menu é o apagado). Removida a
     extensão, o lançador sai junto: a confirmação da janela já a fechou (``href="#"``).
@@ -2001,7 +2001,7 @@ def _repintar_a_conf_da(mod_id: str) -> None:
 
 
 def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
-    """Atualiza ou remove. Remover apaga o código e os dados dela: pede o segundo clique.
+    """Atualiza ou remove. Remover apaga o código e os dados da extensão: pede o segundo clique.
 
     O primeiro clique em Remover troca o botão por «Confirmar remoção» e devolve ``None``.
     """
@@ -2020,7 +2020,7 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
                 _MEXIDA.vistas[mod_id] = (*sorted(feito.manifesto.permissoes), aviso)
                 _MEXIDA.menu = _MEXIDA.permissoes = mod_id
                 _MEXIDA.remover = ""
-            extra = (" Ela pede permissão nova: ligue-a de novo para aceitar."
+            extra = (" A extensão pede permissão nova: ligue-a de novo para aceitar."
                      if feito.permissoes_novas else "")
             return (f"{nome} atualizada para a versão {feito.entrada.versao}."
                     f"{_saiu(feito.substituidas, nomes)}{extra}")
@@ -2082,7 +2082,7 @@ def instalar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     forma = o.get("forma") or {}
     origem = str(forma.get("mod-endereco") or "").strip()
     if not origem:
-        raise RuntimeError("Digite o endereço da extensão, ou escolha a pasta dela.")
+        raise RuntimeError("Digite o endereço da extensão, ou escolha a pasta.")
     recado = _instalar_a_modificacao(origem)
     return {**_a_pintura_agora(ctx), "recado": recado}
 
@@ -2090,7 +2090,7 @@ def instalar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
 @gesto("07-lancadores.html", "escolher-arquivo-da-modificacao", grava="_instalar_a_modificacao")
 def escolher_arquivo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any
                                     ) -> dict[str, Any] | None:
-    """«Escolher a pasta…»: ela aponta o ``hefesto-mod.json`` e a pasta dele é instalada.
+    """«Escolher a pasta…»: o usuário aponta o ``hefesto-mod.json`` e a pasta dele é instalada.
 
     Cancelar não é erro: o seletor devolve vazio e a tela não fala.
     """
@@ -2168,7 +2168,7 @@ def resolver_todos_os_impedimentos(ctx: Contexto, o: dict[str, Any], p: Any) -> 
 
 
 def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
-    """O miolo da janela «Configurar», com o que o produto sabe do lançador e o rascunho dela."""
+    """O miolo da janela «Configurar», com o que o produto sabe do lançador e o rascunho."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import lancadores_com_jogos
     from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
 
@@ -2245,7 +2245,7 @@ def configurar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 
 @gesto("07-lancadores.html", exp.GESTO_DE_ESCOLHER)
 def escolher_o_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Escolher o arquivo…» da janela «Configurar»: o atalho apontado vai ao rascunho dela.
+    """«Escolher o arquivo…» da janela «Configurar»: o atalho apontado vai ao rascunho.
 
     A busca é a mesma do «Adicionar um lançador» (um atalho fora das pastas de aplicativos
     recusa); quem grava é o Guardar. Cancelar o seletor não é erro: a tela não fala.
@@ -2437,7 +2437,7 @@ class _Viva:
             self._zerar(mod)
 
     def com_o_modo(self, mod: str, modo: str | None) -> None:
-        """O modo que a janela de ``mod`` mostra, a cada vez que ela se monta."""
+        """O modo que a janela de ``mod`` mostra, a cada vez que se monta."""
         with self._trava:
             self._da(mod)
             self.modo = modo
@@ -2527,7 +2527,7 @@ class _Viva:
         """O modo novo vale na hora, como um soltar nele: a barra faz o que ele faz e, depois de um
         arrastar, a extensão recebe o soltar com o valor de agora e o modo novo. ``None`` quando
         o modo não mudou ou nada foi arrastado nesta janela. O soltar que não chega à extensão
-        (recusado, ou ela fora da porta) devolve a barra e o modo ao que eram."""
+        (recusado, ou a extensão fora da porta) devolve a barra e o modo ao que eram."""
         with self._trava:
             self._da(mod)
             if modo == self.modo:
@@ -2549,7 +2549,7 @@ class _Viva:
             return resposta
 
     def sem_a_extensao(self, mod: str, modo: str) -> None:
-        """A extensão fora da porta não segura modo nenhum (ao voltar, ela lê o guardado): a barra
+        """A extensão fora da porta não segura modo nenhum (ao voltar, lê o guardado): a barra
         faz o ``modo`` sem mandar nada."""
         with self._trava:
             self._da(mod)
@@ -2656,7 +2656,7 @@ def _formas_da_opcao(manifesto: Any, opcao: Any, valores: dict[str, Any]) -> tup
 
 def _livre_primeiro(manifesto: Any, valores: dict[str, Any]) -> list[tuple[str, Any]]:
     """Os valores com o ``livre`` na frente: o ``por_botao`` que usa uma forma gravada agora só
-    passa depois que ela está no disco."""
+    passa depois que o modo está no disco."""
     livre = manifesto.opcao_livre if manifesto else None
     return sorted(valores.items(), key=lambda par: livre is None or par[0] != livre.id)
 
@@ -2677,7 +2677,7 @@ def _estado_da_janela(manifesto: Any) -> dict[str, Any] | None:
 
 
 def _aba_dos_controles(manifesto: Any) -> str:
-    """A aba dos controles dos aparelhos (``aparelhos_controles.grupo``), ou vazio sem ela."""
+    """A aba dos controles dos aparelhos (``aparelhos_controles.grupo``), ou vazio sem a aba."""
     return str(manifesto.aparelhos_controles.grupo) if manifesto.aparelhos_controles else ""
 
 
@@ -2815,7 +2815,7 @@ def _nao_esta_rodando(mod_id: str) -> str:
 
 
 def _a_recusa_do_soltar(resposta: tuple[bool, str | None, Any] | None) -> str | None:
-    """Por que o soltar não chegou à extensão (a frase do serviço, ou vazio quando ela está fora
+    """Por que o soltar não chegou à extensão (a frase do serviço, ou vazio com a extensão fora
     da porta); ``None`` quando chegou, ou quando nada foi mandado."""
     if resposta is None:
         return None
@@ -2826,7 +2826,7 @@ def _a_recusa_do_soltar(resposta: tuple[bool, str | None, Any] | None) -> str | 
 
 
 def _o_modo_na_extensao(mod_id: str, opcao_id: str, modo: str, p: Any) -> str | None:
-    """O ``modo`` do livre na barra e na extensão. Fora da porta, ela volta lendo o guardado: a
+    """O ``modo`` do livre na barra e na extensão. Fora da porta, volta lendo o guardado: a
     barra segue o modo sem acusar recusa. Devolve a frase da recusa de verdade, ou ``None``."""
     porque = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, opcao_id, modo, p))
     if porque == "":
@@ -2838,7 +2838,7 @@ def _o_modo_na_extensao(mod_id: str, opcao_id: str, modo: str, p: Any) -> str | 
 def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
     """O Cancelar (e o reabrir) devolve à extensão o modo guardado do ``livre``, pelo mesmo
     caminho que aplica: o soltar com ele, só quando o modo vivo difere. Devolve a frase da recusa,
-    ou ``None`` quando nada havia a desfazer, a extensão recebeu ou ela está fora da porta."""
+    ou ``None`` quando nada havia a desfazer, a extensão recebeu ou está fora da porta."""
     from hefesto_dualsense4unix.mods import opcoes
 
     item = _a_instalada_ou_nada(mod_id)
@@ -2853,7 +2853,7 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
 
 @gesto("07-lancadores.html", exp.GESTO_DA_ABA)
 def aba_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """A aba trocada na janela da extensão: ela fica a aberta ao redesenhar, e a ação armada
+    """A aba trocada na janela da extensão: a aba fica a aberta ao redesenhar, e a ação armada
     desarma. Age no ``change`` do rádio; o clique que o precede não pinta nada."""
     mod_id, aba = _partes_do_clique(o, exp.GESTO_DA_ABA, 2)
     if str(o.get("evento") or "") != "change" or _MEXIDA.mod != mod_id:
@@ -2868,7 +2868,7 @@ def aba_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
 @gesto("07-lancadores.html", exp.GESTO_DO_CANCELAR)
 def cancelar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O X da janela da extensão (o Esc clica o X): fecha. Toda escolha já está gravada; o modo do
-    ``livre`` volta ao guardado na extensão, e a recusa dela aparece."""
+    ``livre`` volta ao guardado na extensão, e a recusa da extensão aparece."""
     _MEXIDA.armada = ()
     mod_id = _id_do_clique(o, exp.GESTO_DO_CANCELAR)
     recusa = _desfazer_o_modo(mod_id, p)
