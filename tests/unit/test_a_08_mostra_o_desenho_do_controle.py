@@ -1,7 +1,7 @@
 """A-08-MOSTRA-O-DESENHO-DO-CONTROLE-E-O-HUB-PERGUNTA-A-ENTRADA-01, item 1: o desenho no quadrado.
 
-Ela, 08/10/2026: *«temos os svgs deles no repo já (…) colocamos eles nos quadrados de cada
-controle.»*
+A decisão de 08/10/2026: os SVGs dos modelos que já estão no repositório vão para o quadrado de cada
+controle.
 A linha do controle de fora ganha o desenho do modelo (desenho nosso: a arte que a casa já trazia
 não tem origem nem licença registradas) e o nome do modelo vai para a dica do quadrado, não para o
 corpo da linha.

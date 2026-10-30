@@ -231,7 +231,7 @@ def test_a_coluna_diz_o_que_o_controle_recebe(disco: Disco, caso: str, grafia: s
 
 def test_o_nascimento_e_perguntado_ao_esquema(disco: Disco,
                                               monkeypatch: pytest.MonkeyPatch) -> None:
-    """Se o nascimento mudar no esquema, a aba muda junto — ela não o digita."""
+    """Se o nascimento mudar no esquema, a aba muda junto — não o digita."""
     from hefesto_dualsense4unix.profiles import schema
 
     monkeypatch.setattr(schema, "MODO_DE_NASCIMENTO_DO_GATILHO", "Feedback")
@@ -239,7 +239,7 @@ def test_o_nascimento_e_perguntado_ao_esquema(disco: Disco,
     nome = disco("jogo-sem-secao")
     mentiras = _conferir(nome, _ctx(nome))
     assert not mentiras, (
-        "o nascimento do gatilho mudou no esquema e a aba não acompanhou — ela "
+        "o nascimento do gatilho mudou no esquema e a aba não acompanhou — a aba "
         "está digitando o modo em vez de perguntar ao dono:\n  "
         + "\n  ".join(mentiras))
 

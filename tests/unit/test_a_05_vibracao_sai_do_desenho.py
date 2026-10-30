@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """05 · Vibração — a aba pior da casa, medida pela régua do mockup.
 
-O NÚMERO QUE ESTA RÉGUA GUARDA, medido em 03/09/2026 com a bancada (um
+O NÚMERO QUE ESTA RÉGUA GUARDA, medido em 03/09/2026 com o ensaio (um
 DualSense White no cabo e um Galactic Purple no rádio), pelo
 ``hefesto_vivo.py --prova-de-mockup --voltas-por-aba 6``::
 
     antes    45 campos ·  25 PRODUTO ·  0 RÓTULO · 20 MOCKUP ·  55% pronto
     depois   47 campos ·  35 PRODUTO ·  8 RÓTULO ·  4 MOCKUP ·  91% pronto
 
-OS VINTE ERAM TRÊS FAMÍLIAS, e o ponto desta régua é que elas NÃO recebem o
+OS VINTE ERAM TRÊS FAMÍLIAS, e o ponto desta régua é que as famílias NÃO recebem o
 mesmo tratamento — dar a mesma marca às três seria maquiar:
 
 * **8 x ``forca``** (os quatro degraus, nas duas colunas) — **DÍVIDA, e fechou.**
@@ -40,7 +40,7 @@ A MORDIDA: troque o ``mult-pos`` do plano do ``a05_vibracao.pacote`` por um núm
 
 DESDE 20/10/2026 a «Força» é o trilho de 0 a 200%, sem os botões de degrau
 (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01): a família dos 8 x
-``forca`` acima é história, e as réguas dela saíram. A régua mede a página PUBLICADA, que perde
+``forca`` acima é história, e as réguas do campo saíram. A régua mede a página PUBLICADA, que perde
 os botões no ``--publicar 05`` da costura.
 """
 from __future__ import annotations
@@ -70,7 +70,7 @@ def regua():
 
 @pytest.fixture(scope="module")
 def cravados(regua):
-    """Os campos do arquivo da BANCADA, em ordem de documento."""
+    """Os campos do arquivo do ENSAIO, em ordem de documento."""
     import onde
 
     arq = onde.pagina(PAGINA, publicado=True)
@@ -123,7 +123,7 @@ def _a_tela_depois_da_pintura(regua, cravados, declarados):
     Quem o pacote NÃO declara fica como está no arquivo, sem selo — que é o
     caso dos quatro rótulos e das duas molduras dos lugares vazios.
 
-    O ALVO `plastico` É A EXCEÇÃO, e ela É O ACHADO DESTA FRENTE: o
+    O ALVO `plastico` É A EXCEÇÃO, e É O ACHADO DESTA FRENTE: o
     `escrever()` do piloto o escreve numa PROPRIEDADE DE CSS
     (`el.style.setProperty('--plastico', …)`), então o texto do elemento não se
     mexe — mas ele ganha o selo da visita, como todo alvo. `_declarado_neste_
@@ -182,7 +182,7 @@ def test_o_cursor_da_forca_sai_do_produto(regua, vereditos, declarados):
 
 
 ROTULOS = {
-    "parar": "o texto do botão, decidido por ela em 30/08 para NÃO mudar",
+    "parar": "o texto do botão, decidido em 30/08 para NÃO mudar",
 }
 
 
@@ -201,7 +201,7 @@ def test_os_oito_rotulos_estao_declarados(regua, vereditos):
 
 
 def test_a_marca_de_rotulo_nao_alcanca_dado(regua, cravados):
-    """A PARCÍMONIA, e ela é o que separa a categoria do esconderijo."""
+    """A PARCÍMONIA é o que separa a categoria do esconderijo."""
     import pacotes
 
     marcados = [c for c in cravados if c.rotulo]
@@ -248,7 +248,7 @@ def test_as_quatro_molduras_continuam_cobradas(regua, vereditos):
     régua existe para que o número continue subindo quando a régua do mockup
     aprender o alvo que falta.
 
-    AS QUATRO DIZEM `plastico` DESDE 07/09/2026, e duas delas diziam `desenho`.
+    AS QUATRO DIZEM `plastico` DESDE 07/09/2026, e duas diziam `desenho`.
     A diferença não era desenho: o lugar VAZIO era um cartão à parte, com
     `data-hef="desenho"` e NENHUM `data-campo` — então a régua o lia pelo nome
     do container. Com os dois ramos fundidos (`aba05._coluna`), a moldura do

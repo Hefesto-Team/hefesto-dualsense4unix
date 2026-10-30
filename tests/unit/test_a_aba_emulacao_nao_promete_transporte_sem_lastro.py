@@ -22,7 +22,7 @@ tela: `movimento.giroscopio.jogo@dualsense` e `luz.lightbar.cor@dualsense` têm
 POR QUE UM PORTÃO NOVO, SE A Z6 JÁ ENTREGOU UM
 ===============================================
 `scripts/validar-fala-de-tela.py` (Z6, 24/08) compara `Fala.afirma` com a
-coluna `aciona` — e só com ela. Para esta célula `aciona` vale `sim` nos dois
+coluna `aciona` — e só com a coluna. Para esta célula `aciona` vale `sim` nos dois
 lados: **a régua da Z6 licenciaria a frase forte**, porque a dúvida não está em
 `aciona`, está em `de_onde_sei` e em `ate_onde_foi` (vazio no rádio). Régua que
 não alcança o defeito não é redundância a remover; é o motivo de haver a
@@ -43,15 +43,15 @@ R3 (E9, o ponteiro): quando um texto desta aba cita um controle entre aspas
    nomeada tem de ser a aba onde ele mora. A frase antiga mandava *"use a
    exceção por jogo em «Steam Input» na aba Emulação"* — nesta aba há só
    "Verificar" e "Desligar Steam Input", que LEEM a allowlist; quem a escreve é
-   a caixinha `profile_steam_input_check`, da aba **Perfis**. E o rótulo dela
+   a caixinha `profile_steam_input_check`, da aba **Perfis**. E o rótulo da caixinha
    também mudou: a sprint ainda o chama de "Este jogo não funciona", e desde a
-   ESCONDER-EM-VEZ-DE-SAIR-01 (09/08/2026, decisão de produto) ele é "Esconder os
+   ESCONDER-EM-VEZ-DE-SAIR-01 (09/08/2026, decisão do produto) ele é "Esconder os
    controles físicos neste jogo". Por isso R3 lê o rótulo do glade em vez de
    comparar com uma constante: a próxima renomeação reprova sozinha.
 
 AS TRÊS FONTES SÃO INDEPENDENTES
 =================================
-O CSV (o que está medido), o `gui/main.glade` (o que ela lê) e o bloco de
+O CSV (o que está medido), o `gui/main.glade` (o que a aba lê) e o bloco de
 declaração de `app/actions/emulation_actions.py` (a amarra entre os dois). O
 bloco é lido por **AST**, nunca importado: `emulation_actions` puxa GTK, e um
 runner sem GTK transformaria `ImportError` em "zero declarações encontradas" —

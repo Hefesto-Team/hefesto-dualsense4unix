@@ -31,7 +31,7 @@ def test_sem_congelado_no_ensaio_da_08() -> None:
         [sys.executable, str(REGUA), "--ensaio", "--aba", "08"],
         capture_output=True, text=True, cwd=str(RAIZ), check=False)
     assert saida.returncode == 0, (
-        "a `08-conexoes` voltou a ter identidade congelada na bancada:\n"
+        "a `08-conexoes` voltou a ter identidade congelada no ensaio:\n"
         + saida.stdout + saida.stderr)
 
 
@@ -43,7 +43,7 @@ def test_os_enderecos_da_identidade_existem_no_ensaio() -> None:
                      'data-campo="radio-sala" data-hef-alvo="html"',
                      'data-campo="aparelhos" data-hef-alvo="html"'):
         assert endereco in html, (
-            f"o endereço `{endereco}` sumiu da bancada da 08 — sem ele o produto "
+            f"o endereço `{endereco}` sumiu do ensaio da 08 — sem ele o produto "
             f"não tem onde escrever, e a tela volta ao desenho")
 
 

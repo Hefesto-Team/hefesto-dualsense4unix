@@ -68,7 +68,7 @@ def _mesa(*cores: str) -> list[dict[str, Any]]:
 
 
 def test_a_cor_do_plastico_mora_onde_o_pintor_alcanca() -> None:
-    """Todo `--plastico` da bancada está num elemento com `data-campo`.
+    """Todo `--plastico` do ensaio está num elemento com `data-campo`.
 
     E ELE NÃO PODE ESTAR NO `<div class="ctrl">`, que é a RAIZ da coluna: o
     pintor procura os campos com `raiz.querySelectorAll` (`hefesto_vivo.achar`),
@@ -111,7 +111,7 @@ def test_a_moldura_pede_o_alvo_da_cor_uma_vez_por_coluna_conectada() -> None:
     quatro DualSense do usuário na mesa: o daemon publicava os quatro, o pacote
     mandava as quatro colunas e o P3 e o P4 ficavam no travessão, porque o
     piloto pinta procurando `data-campo` DENTRO do bloco daquele
-    `data-controle`. Sem endereço, o dado dela chega e não tem onde pousar.
+    `data-controle`. Sem endereço, o dado do controle chega e não tem onde pousar.
 
     O QUE SEPARA OS DOIS ESTADOS PASSOU A SER O VALOR, e não o endereço: o
     `style="--plastico:…"` só nasce em quem tem aparelho. Um lugar vazio não tem
@@ -130,13 +130,13 @@ def test_a_moldura_pede_o_alvo_da_cor_uma_vez_por_coluna_conectada() -> None:
         and a.get("data-hef-alvo") == "plastico"
     ]
     vestem = [a for a in enderecadas if "--plastico" in a.get("style", "")]
-    assert colunas, "a bancada da 05 não tem uma coluna de controle sequer"
+    assert colunas, "o ensaio da 05 não tem uma coluna de controle sequer"
     assert vivas and len(vivas) < len(colunas), (
         f"a mesa do desenho deixou de ter lugar vivo E lugar vazio "
         f"({len(vivas)} de {len(colunas)}) — esta régua compara os dois")
     assert len(enderecadas) == len(colunas), (
         f"{len(colunas)} lugares e {len(enderecadas)} molduras com o endereço "
-        "da cor — um lugar sem endereço é dado dela chegando sem onde pousar")
+        "da cor — um lugar sem endereço é dado chegando sem onde pousar")
     assert len(vestem) == len(vivas), (
         f"{len(vivas)} colunas conectadas e {len(vestem)} molduras com a cor "
         "cravada — o lugar vazio não pode AFIRMAR um plástico que não tem")
@@ -190,7 +190,7 @@ def test_o_chip_da_fita_tem_dono_e_cala_a_cor_que_nao_veio() -> None:
     sem cor lida pintaria uma borda que ninguém leu — que é o defeito desta onda
     inteira, e é a regra de produto: campo sem informação não mostra nada.
 
-    Com o recorte velho a própria régua se contradizia: ela exigia dois chips
+    Com o recorte velho a própria régua se contradizia: exigia dois chips
     **e** que o segundo não tivesse cor, e o segundo era justamente o que a
     classe deixava de fora. Duas coisas que não podem ser verdade juntas — e o
     merge do dia deixou esta função vermelha no `dev`.
@@ -234,7 +234,7 @@ def test_a_fita_viva_nao_desiste_quando_a_cor_nao_veio() -> None:
     )
     assert 'c.get("cor")' not in codigo, (
         "a guarda que desiste da fita quando falta uma cor voltou ao `_fita` — "
-        "e com ela volta o mockup na tela dela")
+        "e com o endereço volta o mockup na tela de quem usa")
 
 
 def test_todo_alvo_que_a_pagina_pede_o_pintor_sabe_escrever() -> None:
@@ -246,7 +246,7 @@ def test_todo_alvo_que_a_pagina_pede_o_pintor_sabe_escrever() -> None:
     sabidos.add("texto")
 
     assert "plastico" in pedidos, (
-        "a bancada da 05 deixou de pedir o alvo da cor do plástico")
+        "o ensaio da 05 deixou de pedir o alvo da cor do plástico")
     assert pedidos <= sabidos, (
         f"a página pede alvo que o pintor não escreve: {sorted(pedidos - sabidos)}")
 

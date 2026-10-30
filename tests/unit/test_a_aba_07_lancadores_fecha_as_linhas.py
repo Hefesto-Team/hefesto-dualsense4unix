@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """AS QUATRO DECISÕES DA ABA LANÇADORES, cobradas uma a uma.
 
-Elas são do PO, 04/09/2026
+As decisões são do PO, 04/09/2026
 (o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026 §2,
 `07-lancadores`), e a sprint que as executa é a `ONDA2-07-LANCADORES-01`:
 
     [01] o reparo manual sem caminho   a linha à mostra, SÓ no estado em que
                                        o cartão já diz «linha intocável» (o
                                        botão «Copiar a linha» saiu em 21/09)
-    [02] a frase que manda a um botão  ela para de nomear lugar. **O texto tem
+    [02] a frase que manda a um botão  a frase para de nomear lugar. **O texto tem
          inexistente                   UM dono para as duas telas, e ele NÃO é
                                        desta posse** — o que esta régua cobra é
                                        que a aba não escreva uma SEGUNDA frase
@@ -22,14 +22,14 @@ Em 18/10/2026 a [02] e a [03] saíram da aba com a 07 antiga: a Experimental nã
 do jogo aberto (ele segue na coluna Atenção da Jogar, por `home_actions`), e as réguas
 dele saíram daqui.
 
-O QUE ELAS CURAM, e cada uma é um defeito medido:
+O QUE AS DECISÕES CURAM, e cada uma é um defeito medido:
 
 * a tela prometia um **reparo manual** e não oferecia caminho nenhum para
   fazê-lo — **não existia UM botão de copiar em toda a interface nova**;
 * a frase do aviso manda copiar as opções *"na aba Sistema"*, e a aba Sistema
   da interface nova tem doze botões e **nenhum copia coisa alguma**;
 * o *"Não usar neste jogo"* — a lista que o produto INTEIRO respeita no
-  reparo — **não calava tela nenhuma**: ela tirava o jogo de propósito e o
+  reparo — **não calava tela nenhuma**: tirava o jogo de propósito e o
   aviso voltava toda vez que ele abrisse;
 * o cartão dizia `22 jogos instalados` e, uma linha abaixo, *"o atalho está no
   lugar em 63 jogos da sua biblioteca"* — as duas verdadeiras, e nada na tela
@@ -144,7 +144,7 @@ def test_o_estado_intocavel_traz_a_linha_a_mostra(desenho, linha_do_motor):
         "reparo manual» e a tela ficaria sem o que copiar")
     assert desenho._e(linha_do_motor) in corpo, (
         "o bloco à mostra não traz a linha do motor. Uma linha diferente da "
-        "que o produto grava faria ela colar à mão uma opção que o Hefesto "
+        "que o produto grava faria quem usa colar à mão uma opção que o Hefesto "
         "não reconhece depois.")
 
 
@@ -171,7 +171,7 @@ def test_o_produto_enche_a_linha_com_a_constante_do_motor(
     monkeypatch.setattr(sw, "frase_do_aviso", lambda _c: "")
     lida = a07._ler_do_disco()
     assert lida.linha == linha_do_motor, (
-        f"`_ler_do_disco` devolveu linha={lida.linha!r}. Ela tem de ser a "
+        f"`_ler_do_disco` devolveu linha={lida.linha!r}. A linha tem de ser a "
         f"constante do motor: é a MESMA que o reparo grava no vdf e a MESMA "
         f"que o botão da janela velha copia.")
 

@@ -10,13 +10,13 @@ linha por cima::
     .luz-grade .ctrl .cel-acoes .btn{display:none}
 
 `Automático` e `Desligar` sumiram das DUAS colunas CONECTADAS — de 220x34 para
-0x0, medido em Chrome de verdade. **São os botões que ela usa.** A suíte inteira
+0x0, medido em Chrome de verdade. **São os botões que quem usa usa.** A suíte inteira
 foi rodada antes e depois: 13 falhas antes, 13 depois, lista idêntica.
 **NENHUMA RÉGUA REPROVOU.**
 
-REPRODUZIDO NESTA BANCADA antes de escrever a cura, com a mesma linha por cima::
+REPRODUZIDO NESTE ENSAIO antes de escrever a cura, com a mesma linha por cima::
 
-    p1 (cheio)  auto 0x0 · apagar 0x0     ← e ela precisa dos dois
+    p1 (cheio)  auto 0x0 · apagar 0x0     ← e o cheio precisa dos dois
     p2 (cheio)  auto 0x0 · apagar 0x0     ← idem
     p3 (vazio)  auto 0x0 · apagar 0x0
     p4 (vazio)  auto 0x0 · apagar 0x0
@@ -25,7 +25,7 @@ REPRODUZIDO NESTA BANCADA antes de escrever a cura, com a mesma linha por cima::
 
 1. **A COBERTURA ERA DE UM LADO SÓ.** As réguas desta aba cobravam o
    ``display:none`` no lugar VAZIO. Uma cura que esconde DEMAIS passa por todas
-   elas, porque esconder demais satisfaz "está escondido no vazio".
+   as réguas, porque esconder demais satisfaz "está escondido no vazio".
 2. **A AUTO-CHECAGEM DA ABA NÃO RODA NA INTEGRAÇÃO.** O ``aba04._conferir`` tem
    quatorze seções, e a §4 cobre exatamente estes botões — mas ele só é chamado
    dentro de ``if __name__ == "__main__"`` (``aba04.py``, no rodapé). Roda quando
@@ -35,7 +35,7 @@ REPRODUZIDO NESTA BANCADA antes de escrever a cura, com a mesma linha por cima::
 3. **A REDE DA CASA NÃO ALCANÇA ESTA ABA**, e isto é estrutural — ver
    ``test_a_rede_da_casa_nao_cobre_esta_aba``, no fim deste arquivo.
 
-**ELA LÊ, NÃO DIGITA.** Nenhum seletor de CSS está afirmado aqui. A régua gera a
+**A RÉGUA LÊ, NÃO DIGITA.** Nenhum seletor de CSS está afirmado aqui. A régua gera a
 página pelo gerador de verdade, abre no Chrome e pergunta ao MOTOR o que ele
 desenha e quem recebe o clique (``elementFromPoint``). Uma regra digitada aqui
 mediria este arquivo, e não a tela — é a família de defeito que esta casa pagou
@@ -54,11 +54,11 @@ onze vezes em 26/08.
 E OS DOIS PASSOS DO PILOTO, porque o estado inicial pode ser sorte e não regra:
 a régua faz o que ``hefesto_vivo`` faz nos passos ``1c`` e ``1b`` — vira a marca
 ``data-conectado`` **sem recarregar a página** — e cobra que os gestos do P3
-apareçam e os do P1 sumam no mesmo tique. É o estado da bancada, que está com
+apareçam e os do P1 sumam no mesmo tique. É o estado do ensaio, que está com
 os quatro DualSense agora. O piloto vira marca e escreve campo; ele não
 materializa widget.
 
-**A EXCEÇÃO DECLARADA ERA A CAIXA DO HEXADECIMAL**, e ela saiu em 16/10/2026 com a caixa: o
+**A EXCEÇÃO DECLARADA ERA A CAIXA DO HEXADECIMAL**, e saiu em 16/10/2026 com a caixa: o
 hexadecimal virou dica da célula Cor, o travessão é um ``.nada`` como nas outras células, e
 nenhum gesto fica à vista num lugar vazio. ``GESTOS_QUE_FICAM_A_VISTA`` ficou vazio.
 
@@ -74,7 +74,7 @@ A MORDIDA, e foi feita antes de o arquivo entrar:
         ``.off``.
   (iii) a do piloto — troque a chave por ``.vazia``:
         ``test_o_passo_1c_do_piloto_devolve_o_gesto_sem_recarregar`` reprova, e
-        só ela: o lugar que GANHA controle ficaria sem guia de cores para
+        só a guia: o lugar que GANHA controle ficaria sem guia de cores para
         sempre, que é o defeito que a leva de 07/09 acabou de fechar.
 """
 from __future__ import annotations
@@ -228,9 +228,9 @@ def test_a_pagina_tem_os_quatro_lugares_e_gestos_em_todos(medido: dict) -> None:
     assert sorted(nasce) == ["p1", "p2", "p3", "p4"], (
         f"a grade não tem os quatro lugares endereçados: {sorted(nasce)}")
     assert sorted(_lugares(nasce, "sim")) == ["p1", "p2"], (
-        f"a mesa desta bancada tem dois conectados: {nasce}")
+        f"a mesa deste ensaio tem dois conectados: {nasce}")
     assert sorted(_lugares(nasce, "nao")) == ["p3", "p4"], (  # (noqa-acento)
-        f"a mesa desta bancada tem dois lugares vazios: {nasce}")
+        f"a mesa deste ensaio tem dois lugares vazios: {nasce}")
     for quem, dado in nasce.items():
         assert dado["gestos"], (
             f"{quem} não tem um `data-gesto` sequer no HTML — o lugar que "
@@ -274,7 +274,7 @@ def test_o_lugar_cheio_oferece_todos_os_gestos(medido: dict) -> None:
         assert dado["gestos"], f"{quem} está conectado e não tem gesto nenhum"
         for g in dado["gestos"]:
             assert g["oferecido"], _acusar(
-                quem, g, "um lugar COM aparelho não entrega este clique — ela "
+                quem, g, "um lugar COM aparelho não entrega este clique — quem usa "
                          "vê o controle na tela e o botão não responde")
 
 
@@ -290,8 +290,8 @@ def test_o_passo_1c_do_piloto_devolve_o_gesto_sem_recarregar(
                  and g["gesto"] not in GESTOS_QUE_FICAM_A_VISTA]
         assert not mudos, (
             f"{quem} ganhou um controle e continua sem oferecer "
-            f"{[g['gesto'] for g in mudos]} — ela teria de RECARREGAR a página "
-            f"para trocar a cor desse controle, e a página é ela quem abre")
+            f"{[g['gesto'] for g in mudos]} — quem usa teria de RECARREGAR a página "
+            f"para trocar a cor desse controle, e quem abre a página é quem usa")
 
 
 def test_o_passo_1b_do_piloto_recolhe_o_gesto_sem_recarregar(
@@ -313,7 +313,7 @@ def test_a_celula_de_leds_nao_tem_gesto(medido: dict) -> None:
                          and g["gesto"] != GESTO_DO_BRILHO_DAS_LUZES]
             assert not na_celula, (
                 f"[{estado}] {quem} tem gesto na célula dos LEDs "
-                f"({[g['gesto'] for g in na_celula]}) — o desenho dela é de "
+                f"({[g['gesto'] for g in na_celula]}) — o desenho aprovado é de "
                 f"leitura desde 07/09/2026, e as cinco lâmpadas espelham o "
                 f"número sem escolha própria; o único gesto da faixa é o do "
                 f"brilho (24/09/2026)")

@@ -20,7 +20,7 @@ linha de cima da seleção de player, e replica o que tem lá. Esse é o contrat
     a linha de ressalva     saiu   (`data-campo="luz-ressalva"`)
 
 **AS QUATRO LINHAS DE PARIDADE REABREM COMO DECISÃO DE PRODUTO, e a distinção é o
-ponto:** o produto não as perdeu por descuido — ela dispensou o controle manual
+ponto:** o produto não as perdeu por descuido — a decisão dispensou o controle manual
 do desenho. A quinta (`csv:148`, "Voltar todos ao automático") FICA, e é o que
 os três primeiros testes deste arquivo continuam provando: o `auto-todos` veio
 na mesma sprint e não foi tocado pela ordem.
@@ -29,9 +29,9 @@ na mesma sprint e não foi tocado pela ordem.
 
 1. a célula acende o padrão do NÚMERO daquela coluna, perguntado ao dono
    (`monta.luzinhas` ← `core/led_control.player_led_pattern`);
-2. ela não oferece gesto nenhum — nem na coluna cheia, nem na vazia.
+2. a célula não oferece gesto nenhum — nem na coluna cheia, nem na vazia.
 
-**A MORDIDA DA SEGUNDA É A QUE IMPORTA**, e ela mede uma AUSÊNCIA: ponha um
+**A MORDIDA DA SEGUNDA É A QUE IMPORTA**, e mede uma AUSÊNCIA: ponha um
 `<button data-gesto="luzes">` dentro da `.cel-leds` de `aba04.coluna` e a régua
 do gesto reprova — a receita inteira, com os dois degraus e o que devolver
 depois, está em `test_a_celula_de_leds_nao_oferece_gesto_nenhum`. Uma régua de
@@ -163,9 +163,8 @@ def _clique(**extra) -> dict:
 def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
     """O usuário mandou tirar os três cantos que falavam de automático — 07/09/2026.
 
-        *"Olha na real sai todos. Deixa só lá o de cima mesmo o tongle. E aí vai
-         servir pra dizer. O jogo é que escolhe quais serão as cores de todos os
-         controles."*
+    Saíram todos; fica só o interruptor de cima, porque quem escolhe as cores
+    de todos os controles é o jogo.
 
     OS DOIS TESTES QUE MORAVAM AQUI mediam o gesto de escopo GLOBAL da faixa do
     título, campo a campo contra o gêmeo da janela estável, e o `profile_switch`
@@ -186,7 +185,7 @@ def test_o_gesto_de_escopo_global_saiu_do_pacote(pac, a04):
     for morto in ("auto-todos", "auto"):
         assert morto not in vivos, (
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
-            f"ela mandou tirar os dois em 07/09/2026, e a poda acompanha a peça")
+            f"a decisão de 07/09/2026 tirou os dois, e a poda acompanha a peça")
     for orfao in ("_leds_sem", "_perfil_ativo_ou_recusa"):
         assert not hasattr(a04, orfao), (
             f"`{orfao}` ficou no pacote sem chamador — ele só existia para o "
@@ -209,7 +208,7 @@ def test_a_faixa_do_titulo_tem_um_morador_so():
         topo = texto.split('<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
         assert "Todos no automático" not in topo, (
             f"o botão de escopo global voltou à faixa do título em "
-            f"{caminho.name} — ela mandou tirar os três cantos que falavam de "
+            f"{caminho.name} — a decisão tirou os três cantos que falavam de "
             f"automático em 07/09/2026")
     topo = onde.pagina(PAGINA).read_text(encoding="utf-8").split(
         '<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
@@ -220,7 +219,7 @@ def test_a_faixa_do_titulo_tem_um_morador_so():
 
 
 def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
-    """*"sai todos"* alcançou a célula Opções de cada coluna — e só ela."""
+    """A retirada alcançou a célula Opções de cada coluna — e só essa célula."""
     from hefesto_dualsense4unix.interface import onde
 
     for caminho in (onde.pagina(PAGINA), onde.PUBLICADO / PAGINA):
@@ -240,7 +239,7 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
 
 
 def _grade() -> str:
-    """A grade das colunas da página da BANCADA — o desenho de hoje."""
+    """A grade das colunas da página do ENSAIO — o desenho de hoje."""
     import re
 
     from hefesto_dualsense4unix.interface import onde
@@ -287,8 +286,8 @@ def test_as_cinco_lampadas_desenham_o_padrao_do_numero_da_coluna():
         f"mesa tem {len(monta.CONECTADOS)}")
     for n, bloco in celulas:
         assert monta.luzinhas(n) in bloco, (
-            f"a célula LEDs do P{n} não desenha o padrão do número {n} — ela "
-            f"deixou de replicar a linha `Jogador`, que é o que ela mandou em "
+            f"a célula LEDs do P{n} não desenha o padrão do número {n} — a célula "
+            f"deixou de replicar a linha `Jogador`, que é o que a decisão mandou em "
             f"07/09/2026")
 
 
@@ -296,7 +295,7 @@ def test_a_celula_de_leds_nao_oferece_gesto_nenhum():
     """As lâmpadas MOSTRAM o número; quem o escolhe é a linha `Jogador`."""
     for n, bloco in _celulas_de_leds(_grade()):
         assert "data-gesto=" not in bloco, (
-            f"a célula LEDs do P{n} voltou a oferecer gesto — ela é desenho de "
+            f"a célula LEDs do P{n} voltou a oferecer gesto — a célula é desenho de "
             f"leitura desde 07/09/2026")
         assert "<button" not in bloco, (
             f"a célula LEDs do P{n} ganhou um `<button>` — mesmo sem gesto, um "
@@ -322,7 +321,7 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
     for morto in ("luzes", "desenho-de", "reenviar-desenho"):
         assert morto not in vivos, (
             f"o gesto `{morto}` voltou ao pacote sem o widget que o oferecia — "
-            f"um gesto que a tela não alcança é código morto, e ela mandou "
+            f"um gesto que a tela não alcança é código morto, e a decisão mandou "
             f"remover a botoeira inteira em 07/09/2026")
     assert vivos == {"cor", "apagar", "brilho", "player", "modo-da-luz",
                      "brilho-luzes", "efeito-da-luz"}, (
@@ -330,17 +329,17 @@ def test_os_tres_gestos_da_botoeira_sairam_do_pacote(pac, a04):
 
 
 def test_o_piso_da_aba_desceu_com_a_ordem_do_usuario(a04):
-    """A ÚNICA vez em que o piso desce, e ela tem nome, razão e data."""
+    """A ÚNICA vez em que o piso desce, e tem nome, razão e data."""
     assert a04.PISO_DA_ABA == 7, (
         f"o piso da aba é {a04.PISO_DA_ABA}. Ele desceu DUAS vezes em "
-        f"07/09/2026, nas duas ordens dela — 11 para 8 com a botoeira das "
+        f"07/09/2026, nas duas ordens de produto — 11 para 8 com a botoeira das "
         f"lâmpadas, 8 para 6 com os dois botões do automático — e subiu UMA em "
-        f"24/09/2026, 6 para 7, com as pílulas do brilho das luzes que ela "
+        f"24/09/2026, 6 para 7, com as pílulas do brilho das luzes que a decisão "
         f"decidiu; subiu de 7 para 9 em 14/10/2026 com a lista Efeito e o criar "
-        f"efeitos do desenho dela, e de 9 para 10 em 15/10/2026 com o interruptor «Sem piscar»; "
-        f"desceu de 10 para 8 em 16/10/2026, quando ela tirou o «Sem piscar» e a caixa do "
+        f"efeitos do desenho, e de 9 para 10 em 15/10/2026 com o interruptor «Sem piscar»; "
+        f"desceu de 10 para 8 em 16/10/2026, quando saíram o «Sem piscar» e a caixa do "
         f"hexadecimal, que reenviava; desceu de 8 para 7 em 28/10/2026, com o «Criar efeitos "
-        f"novos» que saiu do desenho aprovado em 27/10. Cada degrau pede a palavra dela")
+        f"novos» que saiu do desenho aprovado em 27/10. Cada degrau pede que o produto decida")
 
 
 def test_a_linha_de_ressalva_saiu_da_celula_de_leds():

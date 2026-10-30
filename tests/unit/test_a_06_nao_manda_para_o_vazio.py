@@ -114,7 +114,7 @@ def test_as_vinte_e_uma_linhas_saem_do_perfil(monkeypatch, tmp_path):
     mesa = a06_navegacao.pacote(ctx)["mesa"]
     assert mesa["acao-cross"] == "Esc", (
         "a linha do X saiu do de fábrica, e o perfil manda `KEY_ESC` — a tela "
-        "estaria mostrando o desenho no lugar da escolha dela.")
+        "estaria mostrando o desenho no lugar da escolha de quem usa.")
     assert mesa["acao-square"] == "Esc"
     assert mesa["acao-l3"] == "Teclado na tela"
 
@@ -201,7 +201,7 @@ def test_o_nome_do_botao_e_o_do_motor_e_nao_uma_segunda_tabela():
 
 
 def test_o_produto_nunca_esta_a_frente_do_desenho():
-    """Endereço no publicado que a bancada não tem = alguém editou o produto."""
+    """Endereço no publicado que o ensaio não tem = alguém editou o produto."""
     a_mais = _enderecos(publicado=True) - _enderecos(publicado=False) - SAIU_DO_TOPO_EM_27_10
     assert not a_mais, (
         f"{sorted(a_mais)} existe na página publicada e não no desenho de hoje.")

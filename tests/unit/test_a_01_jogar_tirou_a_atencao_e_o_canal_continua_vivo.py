@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A coluna Atenção saiu da Jogar — e as dez fontes NÃO saíram com ela."""
+"""A coluna Atenção saiu da Jogar — e as dez fontes NÃO saíram com a coluna."""
 from __future__ import annotations
 
 import pathlib
@@ -37,11 +37,11 @@ def _ctx(state: dict[str, Any] | None = None) -> Contexto:
 
 
 def test_a_faixa_da_atencao_saiu_das_duas_paginas() -> None:
-    """Nem na bancada nem no publicado — e o publicado é o que ela abre."""
+    """Nem no ensaio nem no publicado — e o publicado é o que quem usa abre."""
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
             encoding="utf-8")
-        onde_ = "publicado" if publicado else "bancada"
+        onde_ = "publicado" if publicado else "ensaio"
         assert 'class="col-atencao"' not in corpo, f"{onde_}: a faixa voltou"
         assert 'class="aviso-item' not in corpo, f"{onde_}: as linhas voltaram"
         assert 'data-lista="avisos"' not in corpo, f"{onde_}: a lista voltou"
@@ -55,7 +55,7 @@ def test_o_botao_que_o_usuario_mandou_deixar_ficou() -> None:
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
             encoding="utf-8")
-        onde_ = "publicado" if publicado else "bancada"
+        onde_ = "publicado" if publicado else "ensaio"
         assert corpo.count('data-gesto="reconectar"') == 1, (
             f"{onde_}: o botão Reconectar Controles não está exatamente uma vez")
         botao = re.search(r'data-gesto="reconectar"[^>]*>(.*?)</button>', corpo, re.S)
@@ -89,7 +89,7 @@ def test_o_travessao_solto_dos_externos_morreu() -> None:
     qualquer um dos DOIS `return` de `_html_dos_externos`. Aqui a cobrança é a
     da TELA — o que a página publicada mostra entre os cartões e o botão.
 
-    Desde 28/10/2026 a vaga mora na seção Controles (`.quadro.estica`), e o CSS dela esconde o
+    Desde 28/10/2026 a vaga mora na seção Controles (`.quadro.estica`), e o CSS da seção esconde o
     `.nada` e deixa a vaga em `display:contents`.
     """
     import monta
@@ -114,7 +114,7 @@ def test_as_onze_fontes_continuam_de_pe_e_com_porta_propria() -> None:
 def test_a_porta_do_canal_e_uma_so() -> None:
     """A porta do canal é UMA: quem chama as fontes é só o `a01_jogar`.
 
-    As fontes perderam a tela em 07/09 e voltaram a ela em 28/09 pela aba Sistema, que as recebe por
+    As fontes perderam a tela em 07/09 e voltaram em 28/09 pela aba Sistema, que as recebe por
     `coluna_de_atencao` (`a09_sistema._avisos_do_produto`) e não as chama uma a
     uma: uma segunda aba chamando a fonte direto seria o segundo dono da mesma
     linha.

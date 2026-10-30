@@ -29,7 +29,7 @@ LARGURAS = ((1212, 809), (1918, 840), (1212, 740))
 
 
 def _doc(texto: str | None = None) -> str:
-    """O desenho sem estilo e sem script: o que a pessoa vê e o que ela aciona."""
+    """O desenho sem estilo e sem script: o que a pessoa vê e o que aciona."""
     bruto = texto if texto is not None else MOCKUP.read_text(encoding="utf-8")
     return re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "", bruto, flags=re.S)
 
@@ -152,7 +152,7 @@ def test_a_janela_da_extensao_com_tres_grupos_vai_em_duas_colunas(navegador, lar
     ``.ky-grade:has(> .ac-card:nth-child(3))`` do mockup e a grade volta a uma coluna.
 
     Desde 22/10/2026 o exemplo da página é o arranjo C (a extensão declara ``agora``); a janela de
-    quem não declara entra no lugar dela, com a folha da página."""
+    quem não declara entra no lugar da extensão, com a folha da página."""
     sys.path.insert(0, str(INTERFACE))
     import desenho_da_experimental as exp
 
@@ -714,12 +714,12 @@ def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_do_usuario(lar, ctx, mo
     monkeypatch.setattr(a07, "_a_instalada", lambda mod_id: item)
     a07.mais_da_modificacao(ctx, {"v": "toque", "onde": exp.ONDE_DA_CONF}, _Ponte())
     assert a07._MEXIDA.menu == "toque" and a07._MEXIDA.menu_na_conf
-    assert a07._extensao_de(item).menu == "", "o ⋮ da janela abriu também o da linha, atrás dela"
+    assert a07._extensao_de(item).menu == "", "o ⋮ da janela abriu também o da linha, atrás"
     ver = "toque:" + exp.ACOES_DO_MENU[1][0]
     a07.mais_da_modificacao(ctx, {"v": ver, "onde": exp.ONDE_DA_CONF}, _Ponte())
     assert a07._extensao_de(item).menu == "", "o «Ver permissões» da janela abriu o da linha"
     a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
-    assert a07._extensao_de(item).menu, "o ⋮ da linha não abre mais o menu dela"
+    assert a07._extensao_de(item).menu, "o ⋮ da linha não abre mais o menu da linha"
     assert not a07._MEXIDA.menu_na_conf
 
 

@@ -52,7 +52,7 @@ def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Pat
 
 @pytest.fixture(autouse=True)
 def _o_cache_da_camada_1_comeca_vazio() -> Any:
-    """Esta régua mede o MÓDULO, então ela garante o estado do módulo."""
+    """Esta régua mede o MÓDULO, então garante o estado do módulo."""
     from pacotes import a02_controles as a02
 
     antes = dict(a02._CAMADA_1)

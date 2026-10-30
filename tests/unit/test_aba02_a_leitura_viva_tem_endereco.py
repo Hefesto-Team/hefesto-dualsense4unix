@@ -102,7 +102,7 @@ def a02():
 
 @pytest.fixture()
 def ctx(a02):
-    """O `Contexto` da bancada, com a BANCADA como lista de endereços válidos."""
+    """O `Contexto` do ensaio, com o ENSAIO como lista de endereços válidos."""
     from pacotes import Contexto
 
     desenho = ENSAIO.read_text(encoding="utf-8")
@@ -182,7 +182,7 @@ def test_o_zero_do_analogico_e_o_extremo_e_nao_o_centro(a02):
     """O `or 128` transformaria o talo à esquerda no repouso — erro de 128.
 
     É o defeito que `mesa_viva._eixo_do_analogico` mediu e curou em 29/08, e
-    ele é alcançável na bancada: o `absinfo` dos dois DualSense dá `min=0`.
+    ele é alcançável no ensaio: o `absinfo` dos dois DualSense dá `min=0`.
     """
     v = a02.leitura_viva({"inputs": {"lx": 0, "ly": 0}})
     assert v["xy-l"].startswith("X:  0"), v["xy-l"]
@@ -217,7 +217,7 @@ def test_a_cor_da_barra_sai_do_dono_e_nao_daqui(a02):
 def test_sem_leitor_tudo_volta_ao_repouso_e_nao_ao_desenho(a02):
     """O `_reset_inputs_render` da GTK, linha por linha.
 
-    Vale para METADE da bancada agora: o daemon só publica `inputs` para o
+    Vale para METADE do ensaio agora: o daemon só publica `inputs` para o
     `is_primary`, e o card do outro mostrava três glifos acesos, L2 em 200/255
     e seis eixos com número.
     """

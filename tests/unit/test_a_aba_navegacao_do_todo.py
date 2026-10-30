@@ -23,7 +23,7 @@ JANELAS_QUE_SAIRAM = ("definicoes-mouse", "teclas-do-teclado", "remapeamento", "
 
 
 def _doc() -> str:
-    """O desenho sem estilo e sem script: o que a pessoa vê e o que ela aciona."""
+    """O desenho sem estilo e sem script: o que a pessoa vê e o que aciona."""
     bruto = MOCKUP.read_text(encoding="utf-8")
     return re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "", bruto, flags=re.S)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A aba Jogar LÊ o que mostra — o interruptor, o chip, a máscara e os avisos.
 
-POR QUE ESTA RÉGUA EXISTE, e o que ela mede foi fotografado em 02/09/2026 e
+POR QUE ESTA RÉGUA EXISTE, e o que mede foi fotografado em 02/09/2026 e
 remedido no daemon do usuário em 03/09. Com ``native_mode false`` e
 ``gamepad_emulation.enabled false`` — logo ``mode_of_state`` = **desktop** — a
 página publicada mostrava, ao mesmo tempo:
@@ -91,7 +91,7 @@ def _com_mesa(state: dict[str, Any], por_aparelho: dict[str, str] | None = None,
     """Um contexto com mesa VIVA — a máscara passou a ser de cada cartão.
 
     A mesa sai de `mesa_viva.mesa_do_estado`, que é o dono do valor por
-    aparelho: ela lê `gamepad_emulation.por_aparelho` e cai na máscara da
+    aparelho: a aba lê `gamepad_emulation.por_aparelho` e cai na máscara da
     sessão para quem não escolheu. Montá-la à mão aqui seria escrever a regra
     de herança uma segunda vez, e a de cá envelheceria sozinha.
     """
@@ -216,24 +216,24 @@ def test_o_aviso_do_jogo_sem_atalho_acende_na_coluna(duas_listas_vazias: Any) ->
 
 
 def test_o_ensaio_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
-    """A BANCADA desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03."""
+    """O ENSAIO desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03."""
     if str(RAIZ / "scripts" / "tela") not in sys.path:
         sys.path.insert(0, str(RAIZ / "scripts" / "tela"))
     jogar_vivo = pytest.importorskip(
-        "jogar_vivo", reason="a bancada precisa do Gtk/WebKit do sistema")
+        "jogar_vivo", reason="o ensaio precisa do Gtk/WebKit do sistema")
     assert jogar_vivo.PAGINA.exists(), (
-        f"a bancada da aba Jogar abre {jogar_vivo.PAGINA}, que não existe — "
-        "ela mede o vazio e sai verde")
+        f"o ensaio da aba Jogar abre {jogar_vivo.PAGINA}, que não existe — "
+        "a régua mede o vazio e sai verde")
     assert jogar_vivo.PAGINA.samefile(onde.PUBLICADO / "01-jogar.html"), (
-        f"a bancada abre {jogar_vivo.PAGINA}, e não a página que esta aba publica")
+        f"o ensaio abre {jogar_vivo.PAGINA}, e não a página que esta aba publica")
 
 
 def test_a_coluna_atencao_sai_das_fontes_da_gtk(monkeypatch: Any) -> None:
     """Troca `painel.avisos_do_estado` e cobra que os avisos venham de lá.
 
     As seis fontes de `painel.AVISOS_DA_TELA` já existiam em `home_actions` e
-    quem as chamava era a BANCADA (`scripts/tela/jogar_vivo.py`). O produto
-    mostrava, no lugar delas, o Check-up da aba Conexões — dois conjuntos
+    quem as chamava era o ENSAIO (`scripts/tela/jogar_vivo.py`). O produto
+    mostrava, no lugar das colunas, o Check-up da aba Conexões — dois conjuntos
     disjuntos, e o da GTK era o que respondia pelas perguntas desta tela.
     """
     monkeypatch.setattr(
@@ -307,7 +307,7 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
         pytest.skip("01-jogar está declarada em trabalho no `mockup/DIVERGENCIAS.md`: "
                     "o produto recebe no `--publicar`, que é ato da costura")
     if publicado and _atras_so_por_endereco():
-        pytest.skip("o produto está atrás da bancada SÓ POR ENDEREÇO — nenhum "
+        pytest.skip("o produto está atrás do ensaio SÓ POR ENDEREÇO — nenhum "
                     "pixel mudou. Fecha com: scripts/check_o_desenho_aprovado.py "
                     "--publicar-enderecos 01")
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
@@ -323,16 +323,16 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
     for campo, quantos in esperado.items():
         achei = corpo.count(f'data-campo="{campo}" data-hef-alvo="classe"')
         assert achei == quantos, (
-            f"{'publicado' if publicado else 'bancada'}: o endereço {campo!r} "
+            f"{'publicado' if publicado else 'ensaio'}: o endereço {campo!r} "
             f"aparece {achei} vezes e deviam ser {quantos}")
     cliques = corpo.count('data-gesto="mascara"')
     assert cliques == 0, (
-        f"{'publicado' if publicado else 'bancada'}: o clique da máscara do cartão "
+        f"{'publicado' if publicado else 'ensaio'}: o clique da máscara do cartão "
         f"voltou em {cliques} chips, e a máscara saiu da Jogar com o cartão")
 
 
 def test_todo_endereco_que_o_pacote_emite_existe_na_pagina() -> None:
-    """A régua nos DOIS sentidos — sem ela, o pacote emite para o vazio."""
+    """A régua nos DOIS sentidos — sem a régua, o pacote emite para o vazio."""
     fora = aba.pacote(_ctx(VIVO_NAVEGACAO))
     for publicado in (True, False) if _em_trabalho() else (True,):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
@@ -349,13 +349,13 @@ def test_a_cena_da_coluna_atencao_continua_com_um_aviso() -> None:
     for publicado in (False, True):
         corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(
             encoding="utf-8")
-        onde_ = "publicado" if publicado else "bancada"
+        onde_ = "publicado" if publicado else "ensaio"
         for morto in ('class="aviso-item', 'class="col-atencao"',
                       'class="conta-avisos"',
                       'data-campo="aviso-vivo"', 'data-campo="atencao-conta"'):
             assert morto not in corpo, f"{onde_}: a coluna Atenção voltou ({morto!r})"
         assert corpo.count('data-gesto="reconectar"') == 1, (
-            f"{onde_}: o botão Reconectar Controles sumiu — ele é o que ela "
+            f"{onde_}: o botão Reconectar Controles sumiu — ele é o que quem usa "
             f"mandou DEIXAR, e uma régua que só proíbe passaria sem ele")
 
 

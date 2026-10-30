@@ -23,7 +23,7 @@
 * **[03] a frase da Prioridade que o usuário aprovou**, agora no desenho, amarrada ao
   produto por leitura.
 
-* **[04] o campo do jogo se corrige** depois que ela sai dele.
+* **[04] o campo do jogo se corrige** depois que o foco sai dele.
 
 * **[05] a tira do desfecho ganhou a segunda linha**, que é onde mora a metade
   que avisa.
@@ -82,7 +82,7 @@ def _celulas_da_guarda(html: str) -> list[tuple[int, str]]:
             secao = re.search(r'data-hef-secao="([^"]+)"', celula)
             assert secao is not None, (
                 f"uma célula de `guarda.secao` na linha {linha} não diz QUAL "
-                f"seção ela é (`data-hef-secao`) — sem isso a coluna só pode "
+                f"seção a coluna é (`data-hef-secao`) — sem isso a coluna só pode "
                 f"ser lida pela posição, e é a posição que estava sob suspeita")
             fora.append((linha, secao.group(1)))
     return fora
@@ -141,7 +141,7 @@ def _distribuir(valores: list[Any], celulas: list[tuple[int, str]]) -> list[bool
     ]
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicada"])
 def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
         publicado: bool, monkeypatch: pytest.MonkeyPatch) -> None:
     """A régua que faltava a T-04: a DISTRIBUIÇÃO, e não só a emissão."""
@@ -177,7 +177,7 @@ def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
         + "\n  ".join(errados))
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicada"])
 def test_a_linha_sem_controle_na_mesa_apaga_a_coluna_inteira(publicado: bool) -> None:
     """As linhas que sobram do desenho não guardam o que o MOCKUP cravou."""
     fora = _emitido(_perfil({MESA[0]["uniq"]: ["leds", "triggers", "rumble",
@@ -194,7 +194,7 @@ def test_a_linha_sem_controle_na_mesa_apaga_a_coluna_inteira(publicado: bool) ->
         f"que não está na mesa")
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicada"])
 def test_a_tabela_da_guarda_nao_tem_celula_fora_das_linhas(publicado: bool) -> None:
     """Uma célula `guarda.secao` fora do `<tbody>` desloca a coluna INTEIRA."""
     html = _pagina(publicado)
@@ -230,13 +230,13 @@ def test_a_marca_e_a_frase_moram_no_ensaio(classe: str, estado: str,
     """As duas metades de cada marca existem no desenho, e a dica nasce VAZIA."""
     html = _pagina(publicado=False)
     marca = re.search(rf'<span class="{classe}"[^>]*>', html)
-    assert marca is not None, f"a marca `{classe}` não está na bancada"
+    assert marca is not None, f"a marca `{classe}` não está no ensaio"
     assert f'data-hef="{estado}"' in marca.group(0)
     assert 'data-hef-alvo="classe"' in marca.group(0)
     assert (f'<span class="dica" data-hef="{frase}" data-hef-alvo="html">'
             f'</span>') in html, (
         f"a dica de `{classe}` não é um `{frase}` vazio — ou o endereço sumiu, "
-        f"ou o desenho passou a cravar uma frase que é dado do perfil dela")
+        f"ou o desenho passou a cravar uma frase que é dado do perfil de quem usa")
 
 
 def test_a_marca_acende_exatamente_quando_a_frase_existe() -> None:
@@ -280,7 +280,7 @@ def test_o_seletor_travado_tem_onde_pousar_o_travessao(gerador: Any) -> None:
 
 
 def test_a_exigencia_do_pragmata_chega_a_esta_tela() -> None:
-    """O caso medido com ela jogando, e ele não tinha endereço nenhum até hoje.
+    """O caso medido com o jogo rodando, e ele não tinha endereço nenhum até hoje.
 
     MORDIDA: faça `_exigencia_para_esta_tela` devolver `""` sempre e esta régua
     reprova.
@@ -299,15 +299,15 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
     """Ele não existe nesta interface, e a frase não pode mandar ninguém a ele.
 
     A frase do produto está CERTA na janela GTK (`main.glade:2275` tem o
-    interruptor com esse nome). Aqui ela seria a tela mandando a um lugar que
+    interruptor com esse nome). Aqui a frase seria a tela mandando a um lugar que
     não existe — decisão [02] do PO: *"Isso é fato errado e se substitui."*
 
     **O ARGUMENTO DESTA DOCSTRING CADUCOU EM 06/09/2026 — ONDA5-10-01, decisão
-    10-Q2 dela.** Ele dizia que a frase *"precisa de um fim que esta tela
-    alcança"*, e o fim que ela alcançava era mandar usar
+    10-Q2.** Ele dizia que a frase *"precisa de um fim que esta tela
+    alcança"*, e o fim que a frase alcançava era mandar usar
     ``hefesto-dualsense4unix profile`` na linha de comando. A palavra de produto sobre
     isso foi ***"Isso é erro do produto."*** — **o fim agora é o FATO**, e para
-    aí. A régua não mudou uma linha: ela sempre comparou contra a CONSTANTE, e
+    aí. A régua não mudou uma linha: sempre comparou contra a CONSTANTE, e
     é por isso que continua verde com um fim novo. Quem cobra que o fim não
     volte a mandar ninguém para fora é
     ``test_a_tela_nao_manda_o_usuario_para_fora_do_produto``.
@@ -321,7 +321,7 @@ def test_o_modo_avancado_nao_chega_a_esta_tela() -> None:
         window_class=["steam_app_3357650"], process_name=["PRAGMATA.exe"]))
     frase = str(_emitido(prof)["editor.jogo.exigencia"])
     assert "Modo avançado" not in frase, (
-        f"a tela manda ela ligar um “Modo avançado” que esta interface não "
+        f"a tela manda quem usa ligar um “Modo avançado” que esta interface não "
         f"tem: {frase!r}")
     assert frase.endswith(a10_perfis.FIM_DA_EXIGENCIA_AQUI), (
         f"a frase não termina no caminho que ESTA tela alcança: {frase!r}")
@@ -351,7 +351,7 @@ def test_o_matcher_nao_nomeia_botao_de_tela_nenhuma() -> None:
     assert daqui.startswith(do_produto), (
         f"esta aba deixou de partir do fato do produto: {daqui!r}")
     assert daqui.endswith(a10_perfis.FIM_DA_EXIGENCIA_AQUI), (
-        f"esta aba deixou de somar o caminho dela: {daqui!r}")
+        f"esta aba deixou de somar o caminho do perfil: {daqui!r}")
 
 
 def test_nenhuma_pagina_desta_interface_oferece_o_modo_avancado() -> None:
@@ -432,7 +432,7 @@ def test_o_campo_nunca_volta_vazio_da_correcao(
         ctx, {"valor": "Cyberpunk2077.exe", "evento": "change"}, None)
     assert resposta is not None
     assert resposta["mesa"]["editor.jogo"] == "Cyberpunk2077.exe", (
-        "a correção apagou o que ela digitou")
+        "a correção apagou o que foi digitado")
 
 
 def test_a_tira_do_desfecho_tem_duas_linhas_reservadas() -> None:
@@ -450,7 +450,7 @@ def test_a_tira_do_desfecho_tem_duas_linhas_reservadas() -> None:
     assert "white-space:nowrap" not in corpo, (
         f"o `nowrap` voltou, e com ele a frase continua numa linha só: {corpo}")
     assert "visibility:hidden" in corpo, (
-        f"a tira vazia deixou de se esconder — ela apareceria como uma faixa em "
+        f"a tira vazia deixou de se esconder — apareceria como uma faixa em "
         f"branco em toda tela sem recado: {corpo}")
     assert "height:0" in corpo and "margin-top:0" in corpo, (
         f"a tira VAZIA voltou a reservar espaço: {corpo}")
@@ -469,7 +469,7 @@ def test_a_altura_reservada_e_a_conta_das_linhas_que_a_tira_mostra() -> None:
     assert numero["height"] == numero["line-height"] * numero["-webkit-line-clamp"], (
         f"a tira acesa reserva {numero['height']}px para "
         f"{numero['-webkit-line-clamp']} linha(s) de {numero['line-height']}px "
-        f"— ou ela corta o aviso, ou sobra espaço morto sobre a lista")
+        f"— ou a tira corta o aviso, ou sobra espaço morto sobre a lista")
 
 
 FORMAS_FORA_DO_DICIONARIO = ("game", "steam_game", "janela")
@@ -486,7 +486,7 @@ def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
 
     escrito = from_simple_choice("janela", "GrimFandango")
     assert list(escrito.window_class) == ["GrimFandango"], (
-        f"a escrita não guardou a classe como ela veio: {escrito!r}")
+        f"a escrita não guardou a classe como veio: {escrito!r}")
     assert detect_simple_preset(escrito) == "janela", (
         f"a leitura não reconhece o que a escrita gravou: "
         f"{detect_simple_preset(escrito)!r} — o perfil abriria travado")
@@ -573,7 +573,7 @@ def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
 
     ausente = a10_perfis._jogo_reconhecido("999999")
     assert ausente == (jogos_locais.MSG_FORA_DA_MAQUINA, False), (
-        f"o jogo que ela ainda vai comprar é ROTINA, não alerta: {ausente!r}")
+        f"o jogo que quem usa ainda vai comprar é ROTINA, não alerta: {ausente!r}")
 
     malformado = "store.steampowered.com/app/"
     assert jogos_locais.parece_endereco(malformado), (
@@ -588,7 +588,7 @@ def test_o_rotulo_do_jogo_separa_a_rotina_do_erro(
         f"campo vazio é silêncio, e alerta em campo em branco é ruído: {vazio!r}")
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicada"])
 def test_o_rotulo_do_jogo_saiu_da_pagina_e_do_pacote(publicado: bool) -> None:
     """15/10/2026: o rótulo e o alerta do jogo saíram da aba; o pacote para de pintá-los no vazio.
 
@@ -615,7 +615,7 @@ def test_a_tira_diz_a_metade_curta(monkeypatch: pytest.MonkeyPatch) -> None:
 
     **E A PREMISSA DA SPRINT CAIU AO SER MEDIDA.** A ONDA5-10-02 dizia que DUAS
     frases do produto passavam do teto *por serem longas* — 212 e ~290
-    caracteres. Elas não passam: o que estoura é o NÚMERO DE JOGOS, porque
+    caracteres. Os nomes não passam: o que estoura é o NÚMERO DE JOGOS, porque
     `steam_launch_options.lista_de_jogos` não tem teto. Com a frase de ativação
     grudada, a forma longa cabe até DOIS jogos e a curta até CINCO. A escolha
     do usuário continua certa e continua tendo trabalho; o que mudou foi a razão.
@@ -650,13 +650,13 @@ def test_a_tira_diz_a_metade_curta(monkeypatch: pytest.MonkeyPatch) -> None:
 
     teto = _teto_da_tira()
     assert len(f"{ativacao} · {longa}") > teto, (
-        "a semente desta régua deixou de estourar o teto — ela mede a cura "
+        "a semente desta régua deixou de estourar o teto — a régua mede a cura "
         "contra um caso que já cabia, e daria verde sobre nada")
     assert len(na_tira) <= teto, (
         f"a tira recebeu {len(na_tira)} caracteres e cabem {teto}: o fim da "
         f"frase — que é o que diz «vou repor assim que…» — sai com reticências")
     assert sw.AVISO_DA_REGRESSAO.strip() not in na_tira, (
-        "o aviso continua no texto da tira; a decisão 10-Q5 dela é que ele SAIA "
+        "o aviso continua no texto da tira; a decisão 10-Q5 é que ele SAIA "
         "daqui")
 
     resultado = carona.passada()
@@ -736,7 +736,7 @@ def test_o_campo_do_jogo_nao_grava_por_tecla(
         a10_perfis.editor_jogo(ctx, {"valor": "1599660", "evento": evento}, None)
         assert not gravados, (
             f"um evento `{evento}` gravou o perfil no disco — com o `input` "
-            f"ligado, isso é uma gravação por TECLA que ela digita")
+            f"ligado, isso é uma gravação por TECLA digitada")
 
     for aberto in ({"valor": "1599660", "evento": "change"},
                    {"valor": "1599660"}):

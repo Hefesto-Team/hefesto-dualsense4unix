@@ -156,7 +156,7 @@ def test_a_pagina_do_ensaio_nao_tem_os_tres_que_sairam() -> None:
     """MORDIDA: rode o gerador com o botão devolvido (`aba08.py`) e regenere o mockup."""
     pagina = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
     achados = _gestos(pagina) & set(SAIRAM)
-    assert not achados, f"a bancada voltou a desenhar {sorted(achados)}"
+    assert not achados, f"o ensaio voltou a desenhar {sorted(achados)}"
     assert set(VOLTARAM) <= _gestos(pagina), "o desenho perdeu o botão do hub ou a pergunta"
 
 

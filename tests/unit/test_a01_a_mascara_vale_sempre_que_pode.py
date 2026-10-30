@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A máscara: ela vale sempre que PODE valer, e a tela para de ficar calada.
+"""A máscara vale sempre que PODE valer, e a tela para de ficar calada.
 
 A QUEIXA É DO USUÁRIO, 04/09/2026, e é a primeira da lista:
 
@@ -15,15 +15,15 @@ O QUE FOI MEDIDO — e esta régua tranca cada fato:
    escolha do usuário JÁ vale sempre que pode valer** — o motor estava pronto;
 2. o que faltava era a TELA dizer isso. Fora do modo `gamepad` não existe vpad,
    então o clique era aceito, gravado, e não mudava nada que se visse — que é
-   exatamente o que ela sente como *"não funciona"*;
+   exatamente o que quem usa sente como algo que não funciona;
 3. o chip **Nintendo Pro** recusa em TODO modo: `mascaras_validas()` devolve
    `{dualsense, xbox}`. Um botão que nunca funciona não pode parecer que
    funciona.
 
-AS DUAS CURAS SÃO DIFERENTES DE PROPÓSITO, e a diferença é a D-03 dela lida com
+AS DUAS CURAS SÃO DIFERENTES DE PROPÓSITO, e a diferença é a D-03 lida com
 cuidado (*"cinza antes, com a razão na dica"*):
 
-    a máscara fora do modo jogo   → RESSALVA. Ela PODE escolher agora, e a
+    a máscara fora do modo jogo   → RESSALVA. Quem usa PODE escolher agora, e a
                                     escolha vale quando o vpad nascer. Apagar o
                                     chip diria "você não pode escolher", que é
                                     falso — e trocaria a queixa de uso por outra
@@ -32,7 +32,7 @@ cuidado (*"cinza antes, com a razão na dica"*):
                                     cinza é a verdade.
 
 NOTA DATADA — 13/09/2026, JOGAR-A-FAIXA-QUE-PULA-01 §3.1: a RESSALVA saiu da
-tela (*"em todas as abas da interface"*, TELA-CALADA-01). O motor que ela
+tela (em todas as abas da interface, TELA-CALADA-01). O motor que a régua
 anunciava continua trancado aqui; o que mudou de contrato é a metade 2.
 
 NOTA DATADA — 28/10/2026, A-JOGAR-SE-PUBLICA-COM-OS-CONTROLES-E-A-02-SAI-01: o chip da
@@ -70,7 +70,7 @@ def test_a_escolha_da_mascara_persiste_e_vale_na_criacao_do_vpad() -> None:
 
 
 def test_o_produto_diz_quais_mascaras_ele_monta() -> None:
-    """A lista não se digita: ela sai do catálogo do vpad.
+    """A lista não se digita: sai do catálogo do vpad.
 
     A MORDIDA: troque `mascaras_montaveis()` por um literal
     `{"DualSense", "Xbox 360"}` e a régua ainda passa hoje — mas o gerador
@@ -88,7 +88,7 @@ def test_o_produto_diz_quais_mascaras_ele_monta() -> None:
 
 
 def test_a_mascara_nao_consta_mais_como_botao_sem_dono() -> None:
-    """Ela tinha dono desde 03/09, e o arquivo listava os dois ao mesmo tempo."""
+    """A constante tinha dono desde 03/09, e o arquivo listava os dois ao mesmo tempo."""
     assert "mascara" not in aba.BOTOES_SEM_DONO, (
         "o `mascara` voltou aos BOTOES_SEM_DONO — e ele tem dono: "
         "`gamepad.mask.set` recebe `uniq` desde 03/09/2026")

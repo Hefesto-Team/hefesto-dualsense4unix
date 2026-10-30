@@ -42,7 +42,7 @@ VERMELHO = (255, 0, 0)
 
 
 def _doc() -> str:
-    """O desenho sem estilo, script e comentário: o que a pessoa vê e o que ela aciona."""
+    """O desenho sem estilo, script e comentário: o que a pessoa vê e o que aciona."""
     bruto = MOCKUP.read_text(encoding="utf-8")
     sem_comentario = re.sub(r"<!--.*?-->", "", bruto, flags=re.S)
     return re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "", sem_comentario, flags=re.S)

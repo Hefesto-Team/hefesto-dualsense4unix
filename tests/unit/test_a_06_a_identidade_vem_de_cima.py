@@ -10,7 +10,7 @@ A LEI É DO USUÁRIO, 03/09/2026:
 (A frase elidida — *"Cada feature faz referência ao controle conectado"* — está
 inteira em `docs/process/sprints/arquivados/`, na
 `2026-09-03-IDENTIDADE-VEM-DE-CIMA-01-a-fita-manda-nas-dez-abas.md`.
-Ela sai daqui porque a palavra de produto vem sem o acento e o portão `acentuacao`
+A frase sai daqui porque a palavra de produto vem sem o acento e o portão `acentuacao`
 varre este arquivo; a elisão é honesta e a fonte fica apontada.)
 
 O QUE ESTA ABA MOSTRAVA, medido em 03/09/2026 com os dois controles do usuário na
@@ -24,9 +24,9 @@ botões, todos ao lado de um cabeçalho que já contava certo::
 
 `scripts/check_identidade_vem_de_cima.py --ensaio --aba 06` contava **16**
 valores congelados. Esta régua é a metade que roda no CI — sem GTK, sem display
-e sem daemon — e ela cobra as DUAS coisas que o número 16 não separa:
+e sem daemon — e cobra as DUAS coisas que o número 16 não separa:
 
-1. **o endereço existe** na bancada, em cada lugar onde a aba diz identidade;
+1. **o endereço existe** no ensaio, em cada lugar onde a aba diz identidade;
 2. **o pacote escreve nele** — e escreve o que LEU, não o que o desenho cravou.
 
 O segundo é o que distingue uma frente honesta de uma que só maquia: um
@@ -34,7 +34,7 @@ O segundo é o que distingue uma frente honesta de uma que só maquia: um
 igualmente mentindo. Aqui o pacote é chamado com uma mesa de mentira que
 DISCORDA do desenho em tudo, e o que ele emite tem de ser a mesa, não o mockup.
 
-E ELA COBRA O SILÊNCIO, que é regra de produto: *campo sem informação não mostra
+E A RÉGUA COBRA O SILÊNCIO, que é regra de produto: *campo sem informação não mostra
 nada*. Pelo rádio a cor do plástico não se lê (o mapa de canais responde
 `identidade.cor_do_aparelho` · `radio_aciona = não`), e o controle sem cor tem
 de sair da tela **sem cor** — nunca com a do desenho.

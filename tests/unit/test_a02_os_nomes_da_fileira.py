@@ -47,7 +47,7 @@ def test_o_desenho_diz_a_palavra_do_usuario_em_todos_os_cartoes(rota: str) -> No
 
     assert vistos, (
         f"o botão `{rota}` sumiu do desenho: nenhum `data-rota={rota}` com "
-        f"rótulo na bancada")
+        f"rótulo no ensaio")
     assert set(vistos) == {DO_USUARIO[rota]}, (
         f"o botão `{rota}` diz {sorted(set(vistos))} e o nome do todo de "
         f"15/10 é {DO_USUARIO[rota]!r}")
@@ -68,7 +68,7 @@ def test_o_botao_de_espera_nao_voltou() -> None:
     vivo = re.sub(r"<!--.*?-->|/\*.*?\*/", "", doc, flags=re.S)
     assert EM_ESPERA not in vivo, (
         f"o rótulo de espera {EM_ESPERA!r} voltou à TELA; o ato mudou e o "
-        f"nome dela é {DO_USUARIO['nada']!r}")
+        f"nome certo é {DO_USUARIO['nada']!r}")
 
 
 def test_os_nomes_de_ontem_sairam_da_tela() -> None:
@@ -107,12 +107,12 @@ def test_a_fileira_tem_os_tres_botoes_no_mesmo_numero_de_cartoes() -> None:
 
 @pytest.mark.parametrize("rota", ["jogo", "nada", "pc"])
 def test_o_nome_interno_nao_chega_ao_botao(rota: str) -> None:
-    """A tela nunca diz «sfx» nem «mix» — é metade da correção dela."""
+    """A tela nunca diz «sfx» nem «mix» — é metade da correção."""
     for rotulo in _rotulos(_ensaio(), rota):
         for interno in NOMES_INTERNOS:
             assert interno not in rotulo, (
                 f"o botão `{rota}` diz {rotulo!r}, e {interno!r} é nome "
-                f"interno — a tela fala a língua dela")
+                f"interno — a tela fala a língua de quem usa")
 
 
 @pytest.mark.parametrize("rota", sorted(DO_USUARIO))
@@ -131,7 +131,7 @@ def test_o_gerador_guarda_a_palavra_do_usuario(rota: str) -> None:
 
 
 def test_o_gerador_e_o_desenho_nao_divergiram() -> None:
-    """A bancada é o que o gerador escreveu — e as duas envelhecem juntas."""
+    """O ensaio é o que o gerador escreveu — e as duas envelhecem juntas."""
     import aba02
 
     doc = _ensaio()

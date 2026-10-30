@@ -19,8 +19,8 @@ O QUE ESTAVA NA TELA DO USUÁRIO, fotografado em 03/09/2026 com dois controles n
     moldura em volta (CRAVADA) vermelha — o Cosmic Red do mockup
 
 A moldura é como esta aba diz de quem é a luz (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`),
-e ela estava dizendo o nome de um controle que não estava na mesa. Era a maior
-das 39 identidades congeladas da bancada desta aba — e as outras 33 estão aqui
+e a tela estava dizendo o nome de um controle que não estava na mesa. Era a maior
+das 39 identidades congeladas do ensaio desta aba — e as outras 33 estão aqui
 também: as dicas que nomeavam o controle do desenho e o antes/depois do rodapé.
 
 O QUE ESTES TESTES COBREM, e cada um tem a mordida escrita:
@@ -69,7 +69,7 @@ BRANCO = "#e4e0d8"
 
 @pytest.fixture
 def carga():
-    """O pacote da `04`, com a bancada."""
+    """O pacote da `04`, com o ensaio."""
     import pacotes
 
     def montar(mesa=None, conectados=None):
@@ -86,7 +86,7 @@ def carga():
 
 @pytest.fixture
 def ensaio():
-    """O HTML da bancada — o desenho de HOJE, que é o que ela olha."""
+    """O HTML do ensaio — o desenho de HOJE, que é o que quem usa olha."""
     import onde
 
     return onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
@@ -108,7 +108,7 @@ def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(ensaio):
     E SÃO AS QUATRO MOLDURAS desde 07/09/2026, não as duas conectadas. Esta
     conta dizia `== 2`, e assim **media o defeito**: o lugar que nascia vazio  (noqa-acento)
     saía sem endereço nenhum, e a moldura do P3 que chegasse depois ficaria no
-    cinza para sempre — o dado dela chegando sem onde pousar. O `style` com a
+    cinza para sempre — o dado de quem usa chegando sem onde pousar. O `style` com a
     cor CRAVADA continua só nos conectados, e é a segunda asserção que o cobra:
     endereço nos quatro, valor só em quem tem aparelho.
 
@@ -128,7 +128,7 @@ def test_a_moldura_tem_endereco_e_nao_tem_cor_cravada(ensaio):
     cravadas = [m for m in molduras if "--plastico" in m]
     assert not cravadas, (
         f"a cor do plástico voltou a ser cravada na moldura: {cravadas}. "
-        f"O que está escrito ali é o controle do MOCKUP, e é o que a tela dela "
+        f"O que está escrito ali é o controle do MOCKUP, e é o que a tela de quem usa "
         f"mostrava em volta de um controle branco.")
 
 
@@ -144,7 +144,7 @@ def test_a_folha_le_a_borda_de_currentcolor_e_o_desenho_nao_herda(ensaio):
 
 
 def test_o_pacote_manda_a_cor_da_casca_do_controle_da_mesa(carga):
-    """O White dela chega à coluna como `#e4e0d8`."""
+    """O White chega à coluna como `#e4e0d8`."""
     import monta
 
     col = carga()["colunas"][NO_CABO["uniq"]]
@@ -227,7 +227,7 @@ def test_o_anel_nao_repete_o_endereco_da_fileira():
 
 
 def test_o_antes_e_depois_nomeia_quem_esta_na_mesa(carga):
-    """O exemplo da troca é o caso REAL dela, com os controles REAIS.
+    """O exemplo da troca é o caso REAL de uso, com os controles REAIS.
 
     Ele era escrito com a `MESA` do desenho — dois nomes de mockup num rodapé
     que o produto renderiza, e dezesseis `--plastico` cravados.
@@ -242,7 +242,7 @@ def test_o_antes_e_depois_nomeia_quem_esta_na_mesa(carga):
     for do_mockup in ("Cosmic Red", "Starlight Blue", "Galactic Purple"):
         assert do_mockup not in html, (
             f"o antes/depois do rodapé ainda nomeia {do_mockup!r} — um controle "
-            f"que não está na mesa dela.")
+            f"que não está na mesa de quem usa.")
     assert html.count('class="troca-item') == 4, (
         "o antes e o depois têm de mostrar os DOIS controles, nas duas linhas.")
     assert 'data-hef="troca.item"' in html, (
@@ -278,7 +278,7 @@ def test_o_gerador_e_o_produto_desenham_a_mesma_secao_de_troca(ensaio):
     from pacotes import a04_iluminacao as pac
 
     assert pac.secao_da_troca(monta.MESA, recuo="    ") in ensaio, (
-        "o rodapé da bancada deixou de sair de `secao_da_troca` — há uma "
+        "o rodapé do ensaio deixou de sair de `secao_da_troca` — há uma "
         "segunda escrita da mesma seção.")
 
 
@@ -303,7 +303,7 @@ def test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle(ensaio, nome):
     assert not culpadas, (
         f"{len(culpadas)} dica(s) congelada(s) do miolo nomeiam {nome!r}, que é "
         f"um controle do DESENHO: {culpadas[:2]}. `title` é atributo e o piloto "
-        f"não tem alvo para atributo — o que está escrito ali fica na tela dela.")
+        f"não tem alvo para atributo — o que está escrito ali fica na tela de quem usa.")
 
 
 def test_a_dica_do_jogador_diz_a_regra_e_nao_o_exemplo(ensaio):
@@ -311,7 +311,7 @@ def test_a_dica_do_jogador_diz_a_regra_e_nao_o_exemplo(ensaio):
     corpo = _miolo(ensaio)
     dica = corpo.split("o número do jogador a este controle", 1)[-1][:600]
     assert "os dois trocarem" in dica, (
-        "a dica do Jogador parou de dizer a REGRA da troca — sem ela, a pessoa "
+        "a dica do Jogador parou de dizer a REGRA da troca — sem a regra, a pessoa "
         "clica um número de outro sem saber o que vai acontecer")
     nomeados = [nome for nome in _nomes_do_desenho() if nome in dica]
     assert not nomeados, (

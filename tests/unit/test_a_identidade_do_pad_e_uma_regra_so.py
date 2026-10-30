@@ -4,7 +4,7 @@ A regra (docs/protocol/a-identidade-do-pad-virtual.md): o pad veste o `0ce6` só
 jogo nomeia o DualSense comum, não nomeia o Edge e nada no caminho dele pede o Edge (a
 biblioteca Sony, o Modo Xbox, o Steam Input, a Launch Option que esconde o `0ce6`). Em todo
 outro caso, o Edge. A régua confere a regra em todas as combinações de sinais, nos três jogos
-da bancada de 22/10/2026, e que a decisão mora num lugar só.
+do ensaio de 22/10/2026, e que a decisão mora num lugar só.
 """
 from __future__ import annotations
 

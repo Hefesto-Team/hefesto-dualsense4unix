@@ -6,7 +6,7 @@ todas as configs naquele perfil e salvar se lembra disso quando eu for jogar o
 jogo e no dia seguinte e por diante."*
 
 O QUE FOI MEDIDO ANTES DE ESCREVER UMA LINHA, no ciclo inteiro (perfil no disco
-→ ela mexe na aba 06 → Salvar do rodapé → relê o disco), em `HOME` de mentira:
+→ quem usa mexe na aba 06 → Salvar do rodapé → relê o disco), em `HOME` de mentira:
 
     mouse.speed         11 → 11   SOBREVIVE   (o rodapé já o levava, ace94b9f)
     mouse.scroll_speed   4 →  4   SOBREVIVE
@@ -21,7 +21,7 @@ Salvar devolvia o valor VELHO, por cima da escolha do usuário, sem uma palavra.
 E O CAMINHO DO CLIQUE NÃO EXISTIA PARA NENHUM DOS DOIS (decisão D2 do
 o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
 fechar a janela depois de arrastar a barra perdia a escolha, calada. O requisito
-dela é DURABILIDADE — *"no dia seguinte e por diante"* —, não o gesto de salvar.
+é DURABILIDADE — no dia seguinte e por diante —, não o gesto de salvar.
 
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 
@@ -176,11 +176,11 @@ def _zerar_a_memoria(a06) -> None:
 
 
 def test_a_barra_do_cursor_grava_no_perfil(pac, a06):
-    """Ela arrasta para 11 e fecha a janela. No dia seguinte o perfil diz 11."""
+    """Arrastar para 11 e fechar a janela. No dia seguinte o perfil diz 11."""
     _semear("regua", speed=3)
     a06.vel_cursor(_ctx(pac), {"valor": "11"}, PonteDeMentira())
     assert _disco()["speed"] == 11, (
-        "a velocidade do cursor não chegou ao disco: ela arrastou a barra, "
+        "a velocidade do cursor não chegou ao disco: a barra foi arrastada, "
         "fechou a janela, e o perfil devolveu a de ontem")
 
 
@@ -213,7 +213,7 @@ def test_a_barra_apara_na_faixa_do_dono_antes_de_gravar(pac, a06):
 
 
 def test_a_lista_do_teclado_grava_teclado_emulado(pac, a06):
-    """Ela escolhe "Desativado", e o perfil passa a dizer `False`."""
+    """Escolher "Desativado", e o perfil passa a dizer `False`."""
     _semear("regua", teclado=True)
     a06.teclado(_ctx(pac), {"valor": a06.TECLADO_DESATIVADO}, PonteDeMentira())
     assert _disco()["teclado"] is False
@@ -301,7 +301,7 @@ def test_o_click_depois_do_change_nao_grava_de_novo(pac, a06):
 
     O guarda é a IGUALDADE e não um relógio: a segunda passagem encontra o
     perfil já dizendo `11` e `_secao_do_mouse` devolve `None`. Isso é mais forte
-    que uma janela de tempo — cobre também ela arrastar a barra e voltar ao
+    que uma janela de tempo — cobre também arrastar a barra e voltar ao
     valor de origem.
 
     A MORDIDA: faça `_secao_do_mouse` devolver sempre a seção (tire o
@@ -314,7 +314,7 @@ def test_o_click_depois_do_change_nao_grava_de_novo(pac, a06):
     a06.vel_cursor(_ctx(pac), {"valor": "11"}, PonteDeMentira())
     assert _quantos_backups() == depois_do_change, (
         "o `click` que o navegador manda depois do `change` gravou uma segunda "
-        "vez — cada arraste da barra dela custaria duas escritas no disco")
+        "vez — cada arraste da barra custaria duas escritas no disco")
     assert _disco()["speed"] == 11
 
 
@@ -362,7 +362,7 @@ def test_a_barra_nao_manda_o_daemon_reaplicar_o_perfil(pac, a06, gesto, carga):
     """Nenhum `profile.switch` sai daqui, e o preço de mandar está medido.
 
     `perfil.gravar_e_reaplicar` termina em `profile_switch`, que reaplica o
-    perfil INTEIRO — e a barra de luz que ela DESLIGOU acende de novo (medido em
+    perfil INTEIRO — e a barra de luz DESLIGADA acende de novo (medido em
     03/09 no `a03_gatilhos`, repetido em 04/09 no trilho de brilho da 04). Numa
     BARRA seria pior: cada passo do arraste desfaria o que o usuário mexeu nas outras
     abas e ainda não salvou.
@@ -375,7 +375,7 @@ def test_a_barra_nao_manda_o_daemon_reaplicar_o_perfil(pac, a06, gesto, carga):
     pac.gesto_da_pagina(PAGINA, gesto)(_ctx(pac), carga, ponte)
     assert "profile.switch" not in ponte.metodos, (
         f"o gesto `{gesto}` mandou o daemon reaplicar o perfil inteiro — um "
-        f"arraste de barra desfaria a cor que ela acabou de escolher na aba 04")
+        f"arraste de barra desfaria a cor que quem usa acabou de escolher na aba 04")
 
 
 def test_sem_perfil_ativo_a_velocidade_vai_ao_computador(pac, a06):

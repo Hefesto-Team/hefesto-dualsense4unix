@@ -17,15 +17,15 @@ cinco gestos de som da aba 02 → reler o arquivo::
     volume/alto-falante chamadas: ['speaker_set']               controllers: None
     rota/jogo           chamadas: ['speaker_set']               controllers: None
 
-Os cinco chegavam ao aparelho e NENHUM chegava ao disco. Ela mexia no volume do
+Os cinco chegavam ao aparelho e NENHUM chegava ao disco. Quem usa mexia no volume do
 microfone do P2, e no dia seguinte o número era o de ontem.
 
 É PERSISTÊNCIA NO CLIQUE — a decisão D2 de 05/09
 (o registro «AS-TRES-DECISOES-DO-PERFIL-medidas-e-decididas» de 05/09/2026):
-o requisito dela é DURABILIDADE, não o gesto de salvar, e só a escrita no clique
+o requisito é DURABILIDADE, não o gesto de salvar, e só a escrita no clique
 sobrevive a fechar a janela sem clicar em nada.
 
-**E ELA GRAVA SEM MANDAR REAPLICAR** — a diferença medida com o
+**E A ESCRITA GRAVA SEM MANDAR REAPLICAR** — a diferença medida com o
 ``_gravar_a_forca`` da aba Vibração: lá a escolha só chega ao motor PELA
 ativação do perfil; aqui o aparelho já está no valor, e
 ``ProfileManager.activate`` faz ``load_profile`` a cada ativação
@@ -58,7 +58,7 @@ Cada uma foi executada, e a frase entre parênteses é a que a régua devolveu:
   ``test_o_pedido_recusado_nao_chega_ao_disco``;
 * levantar quando NÃO há perfil ativo, em vez de sair calado — reprova
   ``test_sem_perfil_ativo_o_gesto_funciona_e_fica_calado`` **e as oito réguas
-  vizinhas** que já mediam este mundo (ver aquele caso: foram elas que
+  vizinhas** que já mediam este mundo (ver aquele caso: foram as vizinhas que
   corrigiram o desenho desta cura, e nenhuma foi afrouxada);
 * trocar ``loader.save_profile`` por ``perfil.gravar_e_reaplicar`` — reprova
   ``test_o_mudo_do_microfone_vira_override_no_perfil``, que conta o que o gesto
@@ -92,7 +92,7 @@ P2 = "aa:bb:cc:00:00:02"
 CHAVE_P1 = "aabbcc000001"
 CHAVE_P2 = "aabbcc000002"
 
-NOME = "Bancada"
+NOME = "Ensaio"
 
 
 class Ponte:
@@ -192,7 +192,7 @@ def _bytes_do_perfil() -> bytes:
 def test_o_mudo_do_microfone_nao_vai_ao_perfil(casa: Any) -> None:
     """O 🎙 daquele card cala DAQUELE controle, e o perfil não é tocado.
 
-    O-MUDO-E-DO-CONTROLE-01 (28/09/2026), resposta 9 dela: o mudo é do
+    O-MUDO-E-DO-CONTROLE-01 (28/09/2026), resposta 9: o mudo é do
     controle e vale em todo jogo. Quem o grava é o ATO, no daemon, no
     `maquina.json`; a tela só pede o ato.
 
@@ -281,7 +281,7 @@ def test_a_rota_nao_derruba_o_volume_que_o_usuario_escolheu(casa: Any) -> None:
 def test_o_pedido_recusado_nao_chega_ao_disco(casa: Any) -> None:
     """SÓ SE GRAVA O QUE O DAEMON CONFIRMOU.
 
-    Um pedido recusado que fosse ao disco seria a tela decidindo por ela: o
+    Um pedido recusado que fosse ao disco seria a tela decidindo por quem usa: o
     número no arquivo passaria a contradizer o aparelho, e a ativação seguinte
     reimporia o que nunca pegou.
 
@@ -368,7 +368,7 @@ def test_o_botao_do_sistema_nao_entra_por_peca(casa: Any) -> None:
 def test_sem_perfil_ativo_o_gesto_funciona_e_fica_calado(casa: Any) -> None:
     """RÉGUA INVERTIDA EM 05/09/2026, e quem a inverteu foram OITO já escritas.
 
-    ELA NASCEU DIZENDO O CONTRÁRIO — *"sem perfil ativo ele AVISA em vez de
+    A RÉGUA NASCEU DIZENDO O CONTRÁRIO — *"sem perfil ativo ele AVISA em vez de
     calar"* —, e a primeira versão desta cura levantava um `RuntimeError` aqui.
     Rodadas as vizinhas, OITO reprovaram
     (`test_a_aba_02_controles_fecha_as_linhas.py`, quatro, e
@@ -376,7 +376,7 @@ def test_sem_perfil_ativo_o_gesto_funciona_e_fica_calado(casa: Any) -> None:
     mundo com daemon e controle e SEM perfil, e todas medem que o gesto que dá
     certo não levanta.
 
-    ELAS ESTAVAM CERTAS, e a razão é a regra de 02/09: *"é aviso, não
+    AS VIZINHAS ESTAVAM CERTAS, e a razão é a regra de 02/09: *"é aviso, não
     estado"*. "Não há perfil ativo" é ESTADO PARADO — o chip `Perfil ativo` do
     cabeçalho o mostra o tempo todo, e está na foto desta aba. Repeti-lo como
     recado de 30 s a cada clique de som é estado disfarçado de aviso, e o preço
@@ -386,7 +386,7 @@ def test_sem_perfil_ativo_o_gesto_funciona_e_fica_calado(casa: Any) -> None:
     E o ramo é raro: medido no `state_full` VIVO da máquina do usuário, o daemon
     publica `active_profile: 'meu_perfil'` — este caminho é o do daemon parado.
 
-    MORDIDA: devolver o `raise` — esta régua reprova, e com ela as oito
+    MORDIDA: devolver o `raise` — esta régua reprova, e as oito
     vizinhas.
     """
     antes = _bytes_do_perfil()
@@ -431,12 +431,12 @@ def test_a_rota_sem_volume_nenhum_avisa_em_vez_de_gravar_meia_secao(
     clique em "Sons do jogo" escreve o byte da rota e não tem número nenhum
     para guardar junto — nem do disco nem do tique.
 
-    GRAVAR ASSIM MESMO SERIA A ARMADILHA 1 DA SOM-02 escrita no arquivo dela:
+    GRAVAR ASSIM MESMO SERIA A ARMADILHA 1 DA SOM-02 escrita no arquivo do usuário:
     uma seção sem volume manda ZERO ao firmware e tranca o alto-falante em
     zero, e nem o próprio botão o solta depois.
 
     MORDIDA: trocar o `raise RuntimeError(SOM_SEM_VOLUME_PARA_GUARDAR)` por um
-    `return` — a frase some, e ela deixa de saber que a rota não vai durar.
+    `return` — a frase some, e quem usa deixa de saber que a rota não vai durar.
     """
     from pacotes.a02_controles import SOM_SEM_VOLUME_PARA_GUARDAR
 
@@ -453,7 +453,7 @@ def test_a_rota_sem_volume_nenhum_avisa_em_vez_de_gravar_meia_secao(
         "sobre guardar, é uma recusa disfarçada")
     assert _perfil_do_disco().get("controllers") in (None, {}), (
         "uma seção de alto-falante sem volume foi ao disco: a próxima ativação "
-        "manda ZERO ao firmware e tranca o alto-falante dela")
+        "manda ZERO ao firmware e tranca o alto-falante do usuário")
 
 
 def test_gravar_o_som_nao_derruba_o_resto_do_perfil(casa: Any) -> None:

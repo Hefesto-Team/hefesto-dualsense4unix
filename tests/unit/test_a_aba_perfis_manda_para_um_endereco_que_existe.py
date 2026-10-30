@@ -1,4 +1,4 @@
-"""A ABA PERFIS: o que ela manda tem onde cair, e o cabeçalho não é do usuário.
+"""A ABA PERFIS: o que a aba manda tem onde cair, e o cabeçalho não é do usuário.
 
 POR QUE ESTA RÉGUA EXISTE, e o motivo é um erro de MEDIÇÃO, não de código —
 02/09/2026:
@@ -9,16 +9,16 @@ POR QUE ESTA RÉGUA EXISTE, e o motivo é um erro de MEDIÇÃO, não de código 
     ``interface/paginas/10-perfis.html`` e zero em ``mockup/10-perfis.html``.
 
     Três réguas chamavam esse valor de *"o chip Perfil ativo"* e provavam nele
-    uma cura do marcador órfão. Ficavam verdes sem tocar em nada que ela veja: o
+    uma cura do marcador órfão. Ficavam verdes sem tocar em nada que quem usa veja: o
     chip é ``<span class="pa-nome" data-campo="perfil">`` (o mesmo nas duas
     páginas), mora no ``topo.html`` — que é das DEZ abas — e quem o pinta é
     ``pacotes.topo()``, com ``ctx.state.get("active_profile")`` CRU.
 
 A PERGUNTA QUE ESTA RÉGUA FAZ POR ESCRITO, e que ninguém tinha feito:
-**este valor tem endereço na página PUBLICADA?** Se não tem, o que ela vê não
+**este valor tem endereço na página PUBLICADA?** Se não tem, o que quem usa vê não
 mudou — por mais verde que esteja a suíte.
 
-AS QUATRO COISAS QUE ELA COBRA:
+AS QUATRO COISAS QUE A RÉGUA COBRA:
 
 1. toda chave emitida tem endereço na página, ou está declarada em
    ``a10_perfis.SEM_ENDERECO`` com a razão medida;
@@ -107,7 +107,7 @@ def _emitidas(carga: dict[str, Any]) -> set[str]:
     return fora
 
 
-@pytest.mark.parametrize("publicado", [False, True], ids=["bancada", "publicada"])
+@pytest.mark.parametrize("publicado", [False, True], ids=["ensaio", "publicada"])
 def test_toda_chave_emitida_tem_endereco_ou_esta_declarada(
     disco: list[Any], publicado: bool,
 ) -> None:
@@ -120,7 +120,7 @@ def test_toda_chave_emitida_tem_endereco_ou_esta_declarada(
               - espera)
     assert not orfaos, (
         f"o pacote da 10 manda {sorted(orfaos)} e a página "
-        f"{'publicada' if publicado else 'da bancada'} não tem onde pôr.\n"
+        f"{'publicada' if publicado else 'do ensaio'} não tem onde pôr.\n"
         "Ou o gerador marca o campo, ou a chave entra em `SEM_ENDERECO` com a "
         "razão medida. Emitir para o vazio não aparece na tela nem no portão — "
         "e um valor sem endereço já foi usado como PROVA de uma cura de tela.")
@@ -150,7 +150,7 @@ def test_esta_aba_nao_emite_os_campos_do_cabecalho(disco: list[Any]) -> None:
     A REGRA É MEDIDA e está escrita em ``a09_sistema.pacote``: *"um pacote de
     aba só emite endereço DAQUELA página. O que é de todas é do dono
     compartilhado, e um nome curto e genérico (`perfil`, `conta`, `estado`) é do
-    dono compartilhado até prova contrária."* Ela nasceu de uma foto: a aba
+    dono compartilhado até prova contrária."* A regra nasceu de uma foto: a aba
     Sistema emitia ``perfil`` com o rótulo do perfil de BATERIA, chegava antes
     do ``setdefault`` e o cabeçalho inteiro virava travessão.
 
@@ -184,7 +184,7 @@ def test_o_chip_do_topo_ainda_mostra_o_nome_cru_e_isso_e_divida(
     **AS DUAS CONSEQUÊNCIAS, medidas pelo caminho do piloto:**
 
         daemon diz               chip na tela             linhas realçadas
-        "Perfil Que Ela Apagou"  "Perfil Que Ela Apagou"  []
+        "Perfil Apagado"         "Perfil Apagado"         []
         "sackboy"                "sackboy"                ["Sackboy"]
 
     A primeira é o marcador órfão sobrevivendo no lugar mais visível da tela. A
@@ -199,8 +199,8 @@ def test_o_chip_do_topo_ainda_mostra_o_nome_cru_e_isso_e_divida(
     resolvido (``"—"`` e ``"Sackboy"``), apague este parágrafo e a nota que
     ficou em ``_valendo``.
     """
-    orfao = _como_o_piloto_pinta(_ctx("Perfil Que Ela Apagou"))
-    assert orfao["mesa"]["perfil"] == "Perfil Que Ela Apagou", (
+    orfao = _como_o_piloto_pinta(_ctx("Perfil Apagado"))
+    assert orfao["mesa"]["perfil"] == "Perfil Apagado", (
         "o chip parou de nomear o órfão — a dívida foi paga; atualize esta "
         "régua e a nota de `a10_perfis._valendo`.")
 

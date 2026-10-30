@@ -1,6 +1,6 @@
 """A Navegação Interna nasce ligada, a lista dá a volta e quem escolhe ganha o anel oposto.
 
-A-NAVEGACAO-INTERNA-NASCE-LIGADA-01, com os pedidos de 19/10/2026 na bancada: a lista do
+A-NAVEGACAO-INTERNA-NASCE-LIGADA-01, com os pedidos de 19/10/2026 no ensaio: a lista do
 efeito volta ao primeiro depois do último, e o controle dentro da lista ganha uma borda a mais,
 na cor oposta à do plástico.
 

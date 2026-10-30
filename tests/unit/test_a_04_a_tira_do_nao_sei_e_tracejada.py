@@ -12,7 +12,7 @@ que as separava era o `title`, e quem não passa o mouse não vê.
 SÃO TRÊS ESTADOS, e o motor já os distinguia: `rotulo_lightbar` responde por
 CINCO ramos, e o primeiro retorno é o discriminador — a cor devolvida é *"a
 BASE do accent"* e vem preenchida nos dois ramos em que o próprio motor avisa
-que ela pode não estar no plástico (Nativo e Steam). Ler a base como "há luz?"
+que a luz pode não estar no plástico (Nativo e Steam). Ler a base como "há luz?"
 colapsa dois estados; foi o que a `a02_controles` mediu com sonda em 02/09.
 
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
@@ -22,7 +22,7 @@ O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 3. o desenho da incerta e o da apagada deixaram de ser iguais;
 4. a incerta nunca sai sem estilo de linha — o PISO contra a tira branca;
 5. o estado tem endereço próprio, e ele vem DEPOIS do `luz` no dicionário;
-6. a folha da bancada desenha o contorno, e com o `!important` que ele precisa.
+6. a folha do ensaio desenha o contorno, e com o `!important` que ele precisa.
 """
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def carga():
 
 @pytest.fixture
 def ensaio():
-    """O HTML da bancada — o desenho de HOJE, que é o que ela olha."""
+    """O HTML do ensaio — o desenho de HOJE, que é o que quem usa olha."""
     import onde
 
     return onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
@@ -125,7 +125,7 @@ def test_a_frase_da_apagada_e_perguntada_ao_motor_e_nao_digitada(a04):
 
     fonte = pathlib.Path(a04.__file__).read_text(encoding="utf-8")
     assert "from .a02_controles import ROTULO_DA_LUZ_APAGADA" in fonte, (
-        "a frase da apagada deixou de ser perguntada ao dono. Ela não se "
+        "a frase da apagada deixou de ser perguntada ao dono. A frase não se "
         "digita: `a02_controles.ROTULO_DA_LUZ_APAGADA` já a resolveu para a "
         "aba irmã, perguntando ao motor com a entrada mínima.")
     comparam = [linha for linha in fonte.splitlines()
@@ -147,7 +147,7 @@ def test_a_incerta_e_a_apagada_deixaram_de_ser_a_mesma_tira(a04):
     assert na_classe in incerta, (
         "a tira do 'não sei' perdeu a classe que a folha desenha tracejada.")
     assert na_classe not in apagada, (
-        "a tira APAGADA ganhou o tracejado do desconhecido — ela é um FATO que "
+        "a tira APAGADA ganhou o tracejado do desconhecido — a apagada é um FATO que "
         "o motor afirma, e não uma dúvida.")
 
 
@@ -194,12 +194,12 @@ def test_a_tira_carrega_o_endereco_do_estado_nas_duas_paginas(a04, ensaio):
     marca = (f'data-campo="{a04.ENDERECO_DA_INCERTA}" data-hef-alvo="classe" '
              f'data-hef-classe="{a04.CLASSE_DA_INCERTA}"')
     assert ensaio.count(marca) == 4, (
-        f"a bancada tem {ensaio.count(marca)} tiras endereçadas; são duas "
+        f"o ensaio tem {ensaio.count(marca)} tiras endereçadas; são duas "
         f"colunas conectadas, duas tiras cada.")
 
 
 def test_a_folha_desenha_o_contorno_e_so_o_contorno(ensaio):
-    """O tracejado é CONTORNO, e nunca cor nova — ordem de produto."""
+    """O tracejado é CONTORNO, e nunca cor nova — a regra é do produto."""
     regra = ensaio.split(".tira-luz.incerta{", 1)
     assert len(regra) == 2, "a folha perdeu a regra do tracejado."
     corpo = regra[1].split("}", 1)[0]

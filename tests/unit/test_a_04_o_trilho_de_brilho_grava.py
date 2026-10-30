@@ -1,11 +1,11 @@
 """O trilho de brilho da aba Iluminação passa a GRAVAR — decisão, 03/09/2026.
 
 Perguntada se mexer no brilho grava o perfil na hora ou espera o "Salvar
-Perfil", ela respondeu **"Grava na hora"**.
+Perfil", a resposta foi **"Grava na hora"**.
 
 O QUE HAVIA ATÉ HOJE, e está fotografado no `docs/data/paridade-gtk-html.csv`:
 o trilho JÁ ERA DESENHADO como slider — a regra `.cheio::after` punha um knob de
-12px na ponta da barra roxa — e **não fazia nada**. Ela via `100%`, arrastava, e
+12px na ponta da barra roxa — e **não fazia nada**. Quem usa via `100%`, arrastava, e
 o número não mudava. A linha do CSV o chamava de *"a maior falta desta aba"*,
 com a contagem: `publicado = cor(16) apagar(2) auto(2) player(8)`; nenhum de
 brilho em lugar nenhum.
@@ -31,7 +31,7 @@ O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
    04/09/2026: quando não há cor a reacender o brilho VAI ao disco, e o gesto
    avisa pelo canal de SUCESSO da D-01, com a frase curta que o usuário escolheu;
 7. o gesto está em `hefesto_vivo.PERIGOSOS` — uma régua não arrasta o brilho
-   dela para provar que sabe clicar.
+   do usuário para provar que sabe clicar.
 
 O LAR É DE MENTIRA. O `conftest` desvia `HOME` e os quatro `XDG_*`; estes testes
 escrevem perfil de verdade, com `save_profile`, dentro dele — que é a única
@@ -145,7 +145,7 @@ def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nasce_em_zero(a04):
 
     corpo = (onde.ENSAIO / PAGINA).read_text(encoding="utf-8")
     vivas = corpo.count('data-gesto="brilho"')
-    assert vivas >= 1, "a bancada não oferece o trilho de brilho a controle nenhum"
+    assert vivas >= 1, "o ensaio não oferece o trilho de brilho a controle nenhum"
     assert corpo.count('type="range"') - corpo.count('data-linha="ritmo"') == vivas, (
         "há `type=\"range\"` sem `data-gesto=\"brilho\"` na página — um polegar "
         "que se arrasta e não chega a gesto nenhum")
@@ -166,7 +166,7 @@ def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nasce_em_zero(a04):
             "sem o polegar na tela, e só recarregar a página desfaz")
         assert 'value="0"' in bloco, (
             "o trilho do lugar VAZIO não nasce em zero — brilho cravado num "
-            "lugar sem dono é o brilho do MOCKUP na tela dela")
+            "lugar sem dono é o brilho do MOCKUP na tela de quem usa")
         assert 'style="width:' not in bloco, (
             "a barra de brilho do lugar VAZIO nasceu com largura")
 
@@ -205,7 +205,7 @@ def test_o_que_o_disco_grava_e_o_que_a_coluna_le(pac, a04):
     LIA o override, e lia com a string CRUA (`dict.get(uniq)`); a escrita tem de
     canonizar, porque é o que o esquema exige. Ler numa forma e gravar noutra
     grava no `aabbcc000001` e imprime o global — para sempre, e sem uma linha de
-    erro: ela arrasta, o número volta ao velho no tique seguinte, e o gesto
+    erro: quem usa arrasta, o número volta ao velho no tique seguinte, e o gesto
     parece não funcionar.
 
     A MORDIDA: tire o `chave_do_override` da LEITURA (volte ao
@@ -245,7 +245,7 @@ def test_arrastar_para_o_mesmo_lugar_nao_regrava(pac):
 
 
 def test_o_aparelho_recebe_a_cor_pedida_com_o_brilho_novo(pac):
-    """Aplicar é a outra metade de "grava na hora" — e ela vai pelo caminho único.
+    """Aplicar é a outra metade de "grava na hora" — e vai pelo caminho único.
 
     O `led.set` LEVA A COR e o `brightness`; não há um IPC de "só o brilho". É o
     mesmo que a janela GTK faz ao soltar o `GtkScale`

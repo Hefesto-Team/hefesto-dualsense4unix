@@ -3,16 +3,15 @@
 
 A LEI, e é do usuário (03/09/2026):
 
-    "se no topo tá mostrando controle white player 1, então cada aba vai usar
-    os controles lá de cima. Não mistura com a info dos mockups. Cada feature
-    faz referencia ao controle conectado.   <!-- noqa-acento: citação -->
-    Por isso temos o mapa pra servir como variável de identificação"
+    Se o topo mostra o controle White como jogador 1, cada aba usa os
+    controles de cima e não mistura com os dados dos mockups. Cada feature
+    se refere ao controle conectado, e o mapa serve de identificação.
 
 O QUE ESTAVA NA TELA, medido em 03/09/2026 com os DOIS controles do usuário na mesa
 (um no cabo, um no rádio), na foto da `07-lancadores`:
 
     cabeçalho   2 controles: 1 USB · 1 BT      <- certo, lido do aparelho
-    fita        P1 · Cosmic Red · USB          <- o MOCKUP, e ela não tem esse
+    fita        P1 · Cosmic Red · USB          <- o MOCKUP, e a mesa não tem esse
                 P2 · Starlight Blue · BT       <- o MOCKUP
 
 A `07-lancadores` tinha SEIS valores de identidade congelados
@@ -20,7 +19,7 @@ A `07-lancadores` tinha SEIS valores de identidade congelados
 fita: dois `--plastico`, dois nomes de colorway no texto e dois no `title`.
 
 POR QUE ELES ESTAVAM LÁ: `monta()` injeta a fita chamando `fita(inerte=True)`
-SEM `mesa`, e nesse caminho ela cai nos `CONECTADOS` do desenho. A página
+SEM `mesa`, e nesse caminho a aba cai nos `CONECTADOS` do desenho. A página
 estática nasce, portanto, nomeando dois controles que esta máquina não tem — e
 `hefesto_vivo._fita` desistia de repintá-la (devolve `""` quando QUALQUER
 controle está sem cor, e o JS só troca o bloco `if(p.fita)`), de modo que o
@@ -29,7 +28,7 @@ desenho sobrevivia inteiro na tela.
 A CURA DESTA ABA tem duas metades, e uma sem a outra não anda:
 
 1. o GERADOR tira da página os chips que nomeiam controle. A página estática não
-   sabe nada dos controles do usuário, e a regra é a dela — *campo sem informação não
+   sabe nada dos controles do usuário, e a regra é a do produto — *campo sem informação não
    mostra nada*. Fica o `Selecionar:` e o chip `Todos`, que são ESTRUTURA;
 2. o PACOTE escreve os chips com a mesa VIVA, por `blocos[".fita"]`. **Sem esta
    metade, a primeira seria maquiagem**: zeraria a régua e deixaria a fita vazia.
@@ -43,7 +42,7 @@ POSIÇÃO na mesa, não a identidade do aparelho — *"O p1 ou p2 reflete o play
 jogador."*
 
 A SEGUNDA METADE FOI EMBORA EM 06/09/2026 (ONDA5-07-01), e a razão é que a
-PRIMEIRA premissa caiu antes dela: a desistência do `hefesto_vivo._fita`
+PRIMEIRA premissa caiu antes da segunda: a desistência do `hefesto_vivo._fita`
 descrita acima — *"devolve `""` quando QUALQUER controle está sem cor"* — foi
 curada em 03/09, e desde então o piloto repinta a fita viva em toda mesa que
 tenha alguém. Com as duas metades vivas ficaram **dois donos** no mesmo
@@ -111,7 +110,7 @@ def ctx():
 
 
 def _ensaio() -> str:
-    """A página da BANCADA — o desenho de HOJE, não o congelado."""
+    """A página do ENSAIO — o desenho de HOJE, não o congelado."""
     from hefesto_dualsense4unix.interface import onde
 
     caminho = onde.pagina(PAGINA)
@@ -140,7 +139,7 @@ def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
     chips = _chips(_fita_da_07(MESA_COM_UM_SEM_COR))
     assert len(chips) == 3, (
         f"esperava `Todos` + dois controles, saíram {len(chips)}. Uma fita que "
-        f"perde chip esconde controle da mesa dela.")
+        f"perde chip esconde controle da mesa.")
 
     do_radio = chips[2]
     assert "--plastico" not in do_radio, (
@@ -149,7 +148,7 @@ def test_o_chip_sem_cor_lida_nao_inventa_cor(a07) -> None:
     assert SEM_LEITURA_DE_COR not in do_radio, (
         f"o chip escreveu {SEM_LEITURA_DE_COR!r} na tela. `mesa_do_estado` "
         f"usa esse texto quando o leitor não conhece a peça — ele é a AUSÊNCIA "
-        f"de leitura, e a regra dela é não mostrar nada:\n{do_radio}")
+        f"de leitura, e a regra é não mostrar nada:\n{do_radio}")
     assert "P2" in do_radio and _palavra("bt") in do_radio, (
         f"o chip perdeu o jogador ou o transporte, que a leitura TROUXE. Calar "
         f"sobre o que se sabe é o defeito oposto, e igualmente caro:\n{do_radio}")
@@ -206,7 +205,7 @@ def test_a_fita_da_mesa_vazia_tambem_e_do_piloto(a07, monkeypatch) -> None:
     blocos = a07.pacote(vazia).get("blocos") or {}
     assert SELETOR_DA_FITA not in blocos, (
         f"com a mesa VAZIA esta aba voltou a escrever a fita — segundo dono, e "
-        f"o que ela escreve é `Selecionar:` sobre nada:\n{blocos[SELETOR_DA_FITA]}")
+        f"o que a fita escreve é `Selecionar:` sobre nada:\n{blocos[SELETOR_DA_FITA]}")
 
     fita = hefesto_vivo._fita([], "07-lancadores.html")
     assert 'class="fita' in fita, "o piloto se calou com a mesa vazia"
@@ -218,7 +217,7 @@ def test_a_fita_da_mesa_vazia_tambem_e_do_piloto(a07, monkeypatch) -> None:
 
 
 def test_o_ensaio_da_07_nao_tem_identidade_congelada() -> None:
-    """A régua da aba, na bancada: ZERO."""
+    """A régua da aba, no ensaio: ZERO."""
     sem_prosa = re.sub(r"<!--.*?-->|/\*.*?\*/", " ", _ensaio(), flags=re.S)
     achados = [c for c in _colorways() if c in sem_prosa]
     assert not achados, (
@@ -236,9 +235,9 @@ def test_a_fita_do_ensaio_so_tem_estrutura() -> None:
     assert bloco, "não achei a fita na página — a régua ficaria verde sobre nada"
     chips = _chips(bloco.group(0))
     assert len(chips) == 1 and "Todos" in chips[0], (
-        f"a fita da bancada tem {len(chips)} chip(s), e só o `Todos` é "
+        f"a fita do ensaio tem {len(chips)} chip(s), e só o `Todos` é "
         f"estrutura. Os outros nomeiam controle que esta página não conhece:\n"
         f"{bloco.group(0)}")
     assert "Selecionar:" in bloco.group(0), (
-        "a fita perdeu o rótulo `Selecionar:` — ele é do desenho dela e não "
+        "a fita perdeu o rótulo `Selecionar:` — ele é do desenho aprovado e não "
         "tem nada com identidade de aparelho")

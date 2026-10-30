@@ -1,12 +1,11 @@
-"""A queixa 15 dela, em forma de régua — e ela é sobre uma frase INVERTIDA.
+"""A queixa 15, em forma de régua — e é sobre uma frase INVERTIDA.
 
-<!-- noqa-acento: citação literal -->
-*"esse aviso nao devia aparecer pq era pra funcionar em ambos ne"*  # noqa-acento: citação
+O aviso dizia que o microfone virtual não devia valer só num transporte.
 
-O aviso que ela leu na aba 02, disparado pelo botão "Virtual" do microfone:
+O aviso que aparecia na aba 02, disparado pelo botão "Virtual" do microfone:
 
     "Só vale no rádio. Pelo cabo o microfone deste controle é uma placa de som
-     USB e não passa por esta ponte — ele já funciona sem ela."
+     USB e não passa por esta ponte — ele já funciona sem a ponte."
 
 **A FÍSICA ESTAVA CERTA E A CONCLUSÃO DE PRODUTO, ERRADA.** O
 `docs/data/mapa-controles.csv` diz o contrário linha por linha:
@@ -16,7 +15,7 @@ O aviso que ela leu na aba 02, disparado pelo botão "Virtual" do microfone:
 
 Quem é PARCIAL no microfone é o RÁDIO. A frase promovia o transporte mais fraco
 e recusava o mais forte — e o que "não vale no cabo" nunca foi a feature: é uma
-IMPLEMENTAÇÃO dela, a `PonteMicBluetooth`. A frase deu à ponte o nome da
+IMPLEMENTAÇÃO da ponte, a `PonteMicBluetooth`. A frase deu à ponte o nome da
 capacidade.
 
 O botão «Virtual | Nativo» saiu da aba 02 (decisão de 02/10/2026, um microfone
@@ -47,7 +46,7 @@ def _linha_do_csv(chave: str) -> dict[str, str]:
 
 
 def test_o_csv_diz_que_quem_e_parcial_no_microfone_e_o_radio() -> None:
-    """A medição que derruba a frase. Se ela mudar, esta régua muda junto."""
+    """A medição que derruba a frase. Se a medição mudar, esta régua muda junto."""
     for chave in ("audio.microfone", "audio.microfone.mudo"):
         linha = _linha_do_csv(chave)
         assert linha["cabo_aciona"] == "sim", (
@@ -67,7 +66,7 @@ def test_o_alto_falante_age_pelo_radio_e_o_canal_continua_declarado() -> None:
         "pelo `0x32` provaram o canal em 10/09 e 18/09")
     assert linha["cabo_canal"] != linha["radio_canal"]
     assert linha["assimetria_declarada"].strip(), (
-        "a assimetria de CANAL do alto-falante perdeu a declaração — sem ela o "
+        "a assimetria de CANAL do alto-falante perdeu a declaração — sem a declaração o "
         "portão de paridade não sabe por que cabo e rádio usam canais diferentes"
     )
 
@@ -89,5 +88,5 @@ def test_a_aba_02_nao_condiciona_mais_o_microfone_ao_transporte() -> None:
                      "não passa por esta ponte"):
         assert proibida not in textos, (
             f"{proibida!r} voltou aos textos da aba 02 — é a frase invertida da "
-            f"queixa 15 dela"
+            f"queixa 15"
         )

@@ -33,7 +33,7 @@ def _ctx(state: dict[str, Any]) -> Contexto:
 
 
 def _acesas(fora: list[dict[str, str]]) -> tuple[list[str], list[str]]:
-    """Os selos e os textos da lista, na ordem em que ela os devolveu."""
+    """Os selos e os textos da lista, na ordem em que a lista os devolveu."""
     return [a["selo"] for a in fora], [a["texto"] for a in fora]
 
 
@@ -146,7 +146,7 @@ def test_o_pacote_da_09_passa_o_exame_pelos_avisos() -> None:
 
     Medido pelo FONTE, e não pelo pacote inteiro: ele pergunta ao `systemctl`,
     ao disco e ao Proton, e cada dublê a mais é uma chance de a régua medir o
-    dublê. O que se cobra aqui é a costura; o que ela faz, as duas acima.
+    dublê. O que se cobra aqui é a costura; o que a função faz, as duas acima.
 
     A MORDIDA: troque `_html_do_exame(_com_os_avisos(exame, ctx))` por
     `_html_do_exame(exame)` e esta régua reprova.

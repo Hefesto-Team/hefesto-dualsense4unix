@@ -13,7 +13,7 @@ A-ABA-CONEXOES-DO-TODO-01 (13/10/2026). O que a régua prova, e a mordida que a 
   devolver o ``gc-perfil`` ou o ``est-mira`` ao cartão;
 * a vaga sem controle diz «P3 • Desconectado».
 
-A publicada acompanha o desenho no ``--publicar`` do fecho: a perna dela desta régua fica vermelha
+A publicada acompanha o desenho no ``--publicar`` do fecho: a perna publicada fica vermelha
 até lá, por desenho.
 """
 
@@ -30,11 +30,11 @@ PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.htm
 GERADOR = RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py"
 CARTAO = RAIZ / "src/hefesto_dualsense4unix/interface/conexoes.py"
 
-ARQUIVOS = [pytest.param(ENSAIO, id="bancada"), pytest.param(PUBLICADA, id="publicada")]
+ARQUIVOS = [pytest.param(ENSAIO, id="ensaio"), pytest.param(PUBLICADA, id="publicada")]
 
 
 def _doc(arquivo: pathlib.Path) -> str:
-    """O desenho sem estilo e sem comentário: o que a pessoa vê e o que ela aciona."""
+    """O desenho sem estilo e sem comentário: o que a pessoa vê e o que aciona."""
     bruto = arquivo.read_text(encoding="utf-8")
     sem_comentario = re.sub(r"<!--.*?-->", "", bruto, flags=re.S)
     return re.sub(r"<style\b[^>]*>.*?</style>", "", sem_comentario, flags=re.S)

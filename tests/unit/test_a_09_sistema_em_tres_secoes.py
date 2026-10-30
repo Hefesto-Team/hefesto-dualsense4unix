@@ -261,7 +261,7 @@ def test_o_ver_detalhes_saiu_da_pagina_e_do_contrato() -> None:
 
 
 def test_a_linha_do_registro_dobra_e_nao_sai_pela_direita() -> None:
-    """A linha do journal tem uns 200 caracteres: com `pre` ela saía cortada."""
+    """A linha do journal tem uns 200 caracteres: com `pre` saía cortada."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     regra = re.search(r"\n\s*\.log\{([^}]*)\}", pagina)
     assert regra, "a regra do painel do registro sumiu da página"
@@ -307,7 +307,7 @@ def test_o_ambiente_diz_o_nome_de_tela_em_qualquer_computador(a09, variaveis,
 
 @skip_sem_gi_real
 def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
-    """A dica é estática na página publicada: ela não pode contar controles."""
+    """A dica é estática na página publicada: não pode contar controles."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert not re.search(r"Vale para os \d+ controles", pagina)
     frases = ("Vale para todos; cada controle pode ter o seu em Conexões",

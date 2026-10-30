@@ -11,7 +11,7 @@ O `#7EB8D4` é o `--luz` que o gerador CRAVA no `<g id="il-p1-lightbar">`: a cor
 do MOCKUP, parada na tela do usuário debaixo de uma caixa que já dizia `#0000FF`. A
 mesma célula afirmando duas cores — e quem olha lê o desenho antes do número.
 
-AS CINCO LÂMPADAS ERAM PIOR: elas não acendiam **nenhuma**. `--led-apagado` e
+AS CINCO LÂMPADAS ERAM PIOR: não acendiam **nenhuma**. `--led-apagado` e
 `--led-aceso` são declarados em `.luzinhas` (`monta.CSS_LUZINHAS`), que é o
 indicador PEQUENO da célula LEDs; as regras do desenho pintam `<rect>` dentro do
 SVG, e `.luzinhas` é uma FOLHA da árvore, não um ancestral. As duas variáveis
@@ -84,7 +84,7 @@ def pacote04():
 
 @pytest.fixture
 def carga():
-    """O pacote da `04`, com a bancada e os conectados que se pedir."""
+    """O pacote da `04`, com o ensaio e os conectados que se pedir."""
     import pacotes
 
     def montar(conectados=None):
@@ -123,7 +123,7 @@ def test_o_par_nao_e_declarado_so_em_luzinhas(pacote04):
     """O escopo é `.luz-grade`, e não `.luzinhas` — é isso que estava errado."""
     assert pacote04.ESCOPO_DO_DESENHO == ".luz-grade", (
         f"o escopo da folha do desenho virou {pacote04.ESCOPO_DO_DESENHO!r}; a "
-        f"grade é quem envolve os SVGs, e é ela que tem de declarar o par.")
+        f"grade é quem envolve os SVGs, e é a grade que tem de declarar o par.")
     assert ".luzinhas" not in pacote04.tokens_da_luz(), (
         "a folha voltou a declarar o par em `.luzinhas`, que é o indicador "
         "pequeno — as lâmpadas do desenho grande não descem dele.")
@@ -234,7 +234,7 @@ def test_o_pacote_manda_a_folha_da_luz_no_bloco_publicado(carga, pacote04):
 
     O `id` diz "plastico" porque foi o casco que o pariu — e ele fica, porque
     **já está publicado**. Um `<style id="luz-viva">` novo só chegaria à tela
-    do usuário no dia em que ela mandasse publicar a 04, e até lá a barra continuaria
+    do usuário no dia em que a 04 fosse publicada, e até lá a barra continuaria
     com a cor do mockup.
 
     A MORDIDA: tire o `+ folha_da_luz(...)` do `blocos` e este teste reprova; e
@@ -285,11 +285,11 @@ def test_a_cor_da_barra_e_a_que_o_motor_afirma(carga):
 
 
 def test_o_ensaio_declara_o_par_no_escopo_do_desenho():
-    """O HTML da bancada — o que ELA olha — traz a declaração na folha da página."""
+    """O HTML do ensaio — o que quem usa olha — traz a declaração na folha da página."""
     import onde
     from pacotes import a04_iluminacao as a04
 
     ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     assert a04.tokens_da_luz() in ensaio.replace("\n", ""), (
-        "a folha da bancada não declara o par das lâmpadas no escopo do "
-        "desenho — as cinco saem iguais no arquivo que ela abre.")
+        "a folha do ensaio não declara o par das lâmpadas no escopo do "
+        "desenho — as cinco saem iguais no arquivo que quem usa abre.")

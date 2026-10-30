@@ -1,4 +1,4 @@
-"""A lupa, o duplo clique e a coluna que ela arrasta — PERFIS-LIMPA-01."""
+"""A lupa, o duplo clique e a coluna que se arrasta — PERFIS-LIMPA-01."""
 
 from __future__ import annotations
 
@@ -127,7 +127,7 @@ def test_o_duplo_clique_recusa_uma_coluna_que_nao_ordena(
 
 def test_a_seta_acende_so_na_coluna_escolhida(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Uma seta acesa por vez, e o valor dela diz o SENTIDO."""
+    """Uma seta acesa por vez, e o valor da seta diz o SENTIDO."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     gui_prefs.guardar_ordem_da_tabela(TABELA, "modificado", "desc")
     assert a10_perfis._seta_da_coluna("modificado") == "↓"
@@ -137,7 +137,7 @@ def test_a_seta_acende_so_na_coluna_escolhida(
 
 def test_a_largura_volta_depois_de_fechar_e_reabrir(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Ela arrasta, a janela fecha, a janela abre — e a coluna está onde ela deixou.
+    """Arrastar, fechar a janela, abrir a janela — e a coluna está onde foi deixada.
 
     O `load_gui_prefs` de uma SEGUNDA leitura é o que representa a reabertura: o
     valor não está em memória de módulo nenhuma, ele está no disco.
@@ -151,7 +151,7 @@ def test_a_largura_volta_depois_de_fechar_e_reabrir(
 
 def test_o_piso_da_coluna_impede_que_o_usuario_suma(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Uma coluna arrastada a 3px some, e ela não tem onde pegar de novo."""
+    """Uma coluna arrastada a 3px some, e não tem onde pegar de novo."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     assert gui_prefs.guardar_largura_de_coluna(TABELA, "nome", 3) == gui_prefs.PISO_DA_COLUNA
     assert gui_prefs.guardar_largura_de_coluna(TABELA, "nome", 9999) == gui_prefs.TETO_DA_COLUNA
@@ -177,8 +177,8 @@ def test_mordida_1_arrancar_a_gravacao_da_largura_reprova(
 
     A cura arrancada é `save_gui_prefs` — o gesto passa a fazer tudo o que fazia
     (aparar, devolver o número, pintar) MENOS gravar. É o defeito mais caro
-    desta família, porque a tela continua certa: a coluna fica onde ela a
-    deixou, e só na próxima abertura ela descobre que nada foi lembrado.
+    desta família, porque a tela continua certa: a coluna fica onde foi
+    deixada, e só na próxima abertura se descobre que nada foi lembrado.
     """
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr(gui_prefs, "save_gui_prefs", lambda _p: None)
@@ -229,7 +229,7 @@ def test_os_dois_gestos_nao_perderam_o_nome_ao_virar_icone() -> None:
 
 
 def test_os_tres_gestos_novos_tem_dono() -> None:
-    """Um `data-hef-gesto` sem `@gesto` atrás responde CALADO no stdout dela."""
+    """Um `data-hef-gesto` sem `@gesto` atrás responde CALADO no stdout do piloto."""
     from hefesto_dualsense4unix.interface import pacotes
 
     for nome in ("procurar", "ordenar", "largura-da-coluna"):

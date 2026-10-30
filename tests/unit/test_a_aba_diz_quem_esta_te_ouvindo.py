@@ -14,8 +14,8 @@ a aba Controle               QUEM está ouvindo, por escrito
 ===========================  ==============================================
 
 A primeira metade é do `daemon/subsystems/luz_do_mic.py`, e quem a guarda é o
-`test_a_luz_do_mic_diz_quem_te_escuta.py`. **Esta régua é da SEGUNDA**, e ela
-existe porque a primeira criou o buraco: com a luz acesa nos dois casos, ela
+`test_a_luz_do_mic_diz_quem_te_escuta.py`. **Esta régua é da SEGUNDA**, e
+existe porque a primeira criou o buraco: com a luz acesa nos dois casos, a luz
 sozinha deixou de distinguir *"ligado"* de *"ligado e alguém te ouvindo"* —
 alguém tem de dizer a diferença, por escrito.
 
@@ -86,7 +86,7 @@ class TestOIpcPublica:
 
 
 class TestAPalavraTemUmDono:
-    """Uma cópia só das palavras, e ela cabe numa linha."""
+    """Uma cópia só das palavras, e cabe numa linha."""
 
     def test_a_sala_vazia_vira_a_frase_que_faltava(self) -> None:
         """**A FRASE SAIU EM 21/09/2026, E ESTA RÉGUA VIROU DE LADO.**"""
@@ -94,7 +94,7 @@ class TestAPalavraTemUmDono:
 
         assert mesa_viva.frase_de_quem_te_ouve([]) == ""
         assert mesa_viva.NINGUEM_TE_OUVE == "", (
-            "a frase do estado vazio voltou — ela gasta uma linha do cartão "
+            "a frase do estado vazio voltou — gasta uma linha do cartão "
             "para dizer o que o selo «ATIVO» já diz")
 
     def test_a_ausencia_nao_vira_frase(self) -> None:
@@ -177,7 +177,7 @@ class TestOPacoteEmite:
         if "mic-ressalva" in a02._enderecos_da_pagina():  # pragma: no cover
             import pytest
 
-            pytest.skip("ela publicou a aba 02 — a condição já caiu")
+            pytest.skip("a aba 02 foi publicada — a condição já caiu")
         campos = self._campos(
             {"mic_mudo": False, "canal_ativo": True, "ouvintes_do_mic": []},
             publicada=False)
@@ -223,7 +223,7 @@ class TestOGeradorTemOEndereco:
         if not pagina.exists():  # pragma: no cover
             import pytest
 
-            pytest.skip("a bancada não está nesta árvore")
+            pytest.skip("o ensaio não está nesta árvore")
         html = pagina.read_text(encoding="utf-8")
         assert 'data-campo="mic-ressalva"' in html
         assert 'class="ressalva" data-campo="mic-ressalva"' in html

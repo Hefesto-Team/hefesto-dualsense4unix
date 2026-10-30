@@ -82,7 +82,7 @@ def test_o_clique_marca_a_linha_dele_e_desmarca_as_outras() -> None:
     linhas = _linhas(_pacote(["Primeiro", "Segundo", "Terceiro"], ativo="Segundo"))
 
     assert _marcada(linhas) == ["Terceiro"], (
-        "a marca de ESCOLHIDA tem de estar na linha clicada, e só nela")
+        "a marca de ESCOLHIDA tem de estar na linha clicada, e só na linha clicada")
     assert sum('aria-selected="false"' in x for x in linhas) == 2
 
 
@@ -106,7 +106,7 @@ def test_os_tres_estados_saem_diferentes_do_python() -> None:
 
     Os dois primeiros COINCIDEM na abertura da aba, e é por isso que os três
     precisam existir: ``_escolhido()`` sincroniza o escolhido com o ativo
-    enquanto ela não clicou em nada, então o estado inicial é o combinado. Uma
+    enquanto nada foi clicado, então o estado inicial é o combinado. Uma
     tela que desenhasse só dois estados faria o combinado parecer "só ativo" —
     e a queixa de uso voltaria no primeiro clique.
 
@@ -128,7 +128,7 @@ def test_os_tres_estados_saem_diferentes_do_python() -> None:
         "tem como distingui-los:\n" + "\n".join(f"  {k}: {v}"
                                                 for k, v in forma.items()))
     assert 'class="ativo"' in forma["ativo+escolhido"], (
-        "o combinado perdeu a classe `ativo` — e com ela a régua do realce, "
+        "o combinado perdeu a classe `ativo` — e com a classe a régua do realce, "
         "`test_a_lista_de_perfis_cabe_inteira.py:159`, que procura a SUBSTRING "
         '`class="ativo"`')
 
@@ -141,14 +141,14 @@ def test_a_marca_sobrevive_a_repintura() -> None:
 
     for i, linhas in enumerate(saidas):
         assert _marcada(linhas) == ["Terceiro"], (
-            f"a marca sumiu no tique {i + 1} de 10 — ela não vem do Python")
+            f"a marca sumiu no tique {i + 1} de 10 — a marca não vem do Python")
     assert len(set(map(tuple, saidas))) == 1, (
         "o `<tbody>` sai diferente de um tique para o outro; o `blocos` o "
         "reescreveria para sempre e apagaria o `:hover` da linha sob o mouse")
 
 
 def test_a_marca_muda_de_linha_quando_o_usuario_clica_noutra() -> None:
-    """Ela clica no ``Terceiro``, depois no ``Primeiro`` — a marca acompanha."""
+    """Um clique no ``Terceiro``, depois no ``Primeiro`` — a marca acompanha."""
     nomes = ["Primeiro", "Segundo", "Terceiro"]
     _clicar("Terceiro")
     assert _marcada(_linhas(_pacote(nomes, ativo="Segundo"))) == ["Terceiro"]
@@ -203,7 +203,7 @@ def test_o_desenho_marca_a_linha_que_o_editor_abriu() -> None:
 
 
 def test_a_folha_pinta_os_tres_estados() -> None:
-    """Três regras, três estados. Sem elas o DOM sabe e a tela do usuário não mostra."""
+    """Três regras, três estados. Sem as regras o DOM sabe e a tela do usuário não mostra."""
     html = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     folha = re.sub(r"/\*.*?\*/", "", html, flags=re.S)
 
@@ -215,7 +215,7 @@ def test_a_folha_pinta_os_tres_estados() -> None:
     faltando = [k for k, v in exigidas.items() if v not in folha]
     assert not faltando, (
         f"a folha não desenha {faltando} — o estado existe no DOM e não chega "
-        f"aos olhos dela")
+        f"aos olhos de quem usa")
 
     assert ("box-shadow:inset 3px 0 0 var(--green),"
             "inset 6px 0 0 var(--purple)" in folha.replace("\n", "")

@@ -22,7 +22,7 @@ produto não chamava:
     `secao_exame.reexaminar` / `app.py:1180`   o exame COMPLETO ao ENTRAR na aba
     `interface.conexoes.texto_da_contagem`       "2 controles • 1 USB • 1 BT"
     `interface.conexoes.Controle.texto_da_bateria`  o `%` e o travessão
-    `secao_mesa._linha_declarada:671`          pré-selecionar o que ela gravou
+    `secao_mesa._linha_declarada:671`          pré-selecionar o que quem usa gravou
     `secao_exame._desenhar_o_que_fazer`        as ordens vêm antes das conferências
 
 O QUINTO DONO ESTAVA QUEBRADO, e o teste
@@ -64,7 +64,7 @@ def _pacote():  # type: ignore[no-untyped-def]
 
 def _uma_ordem(acao: str = "Leve o adaptador para uma entrada do computador.",
                destino: str = ""):  # type: ignore[no-untyped-def]
-    """Uma `Ordem` do produto, montada com os campos que ela TEM."""
+    """Uma `Ordem` do produto, montada com os campos que a `Ordem` TEM."""
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
         DERIVADO_DA_CONTA,
         MEDIDO_AQUI,
@@ -113,8 +113,8 @@ def test_a_ordem_de_servico_e_da_maquina_do_usuario() -> None:
     assert ordem.destino in card, (
         f"o cartão não traz o destino da ordem viva. Saiu: {card[:200]!r}")
     assert FRASE_DO_MOCKUP not in card, (
-        "a frase cravada no mockup voltou ao cartão — é uma INSTRUÇÃO para ela "
-        "mexer no gabinete, sobre entradas que a máquina dela pode não ter")
+        "a frase cravada no mockup voltou ao cartão — é uma INSTRUÇÃO para quem usa "
+        "mexer no gabinete, sobre entradas que a máquina pode não ter")
     assert ordem.ganho_esperado.texto not in card, (
         f"{ordem.ganho_esperado.texto!r} voltou à coluna visível — ele mora no `?` "
         f"da linha do exame desde 13/09/2026")
@@ -203,7 +203,7 @@ def test_o_exame_de_entrada_nao_corre_na_thread_do_tique() -> None:
     assert onde, "o exame de entrada não correu de jeito nenhum"
     assert onde[0] != threading.current_thread().name, (
         f"o exame completo correu na thread de quem pediu ({onde[0]!r}) — no "
-        "produto essa é a thread que pinta, e ela ficaria parada até o teto do "
+        "produto essa é a thread que pinta, e a thread ficaria parada até o teto do "
         "`busctl`")
 
 
@@ -233,15 +233,15 @@ def test_o_exame_de_entrada_e_uma_vez_so_mesmo_falhando() -> None:
 
     assert len(vezes) == 1, (
         f"cinco tiques dispararam {len(vezes)} exames. Quem rearma é o botão "
-        "**Examinar Portas**, que é gesto dela — nunca a falha")
+        "**Examinar Portas**, que é gesto de quem usa — nunca a falha")
 
 
 def test_a_sala_pinta_o_que_o_usuario_ja_declarou() -> None:
     p = _pacote()
     na_tela = p._sala_na_tela(_DeclaracaoFalsa("acima", "com_gente"))
     assert na_tela == {"sala-altura": "acima", "sala-visada": "com_gente"}, (
-        f"o pacote não devolveu as duas respostas dela: {na_tela!r}. Sem elas a "
-        "tela diz que ninguém respondeu, e ela clica de novo")
+        f"o pacote não devolveu as duas respostas: {na_tela!r}. Sem as respostas a "
+        "tela diz que ninguém respondeu, e quem usa clica de novo")
 
 
 def test_o_none_da_sala_nao_acende_o_nao_sei() -> None:
@@ -253,7 +253,7 @@ def test_o_none_da_sala_nao_acende_o_nao_sei() -> None:
         "não acende nenhum dos três botões")
     assert p._ID_NAO_SEI not in na_tela.values(), (
         "o pacote emitiu o id do 'Não sei'. Ele existe só para tirar o terceiro "
-        "botão do modo booleano do `escrever()`; emiti-lo é afirmar por ela")
+        "botão do modo booleano do `escrever()`; emiti-lo é afirmar por quem usa")
 
 
 def test_os_tres_botoes_da_sala_tem_o_seu_proprio_quando() -> None:
@@ -288,7 +288,7 @@ class _ItemFalso:
 def test_as_ordens_vem_antes_das_conferencias() -> None:
     """A regra é do produto — `secao_exame._desenhar_o_que_fazer`.
 
-    O desenho tem CINCO blocos de exame e o exame completo desta bancada
+    O desenho tem CINCO blocos de exame e o exame completo deste ensaio
     devolve SETE itens. Sem a ordenação, as duas que sobram são exatamente as
     duas que ACUSAM, e a tira fica com cinco CERTO.
     """
@@ -332,7 +332,7 @@ def test_a_bateria_sem_leitura_vira_o_travessao_do_produto() -> None:
 def test_a_contagem_e_do_dono() -> None:
     """A frase inteira vem de `interface.conexoes.texto_da_contagem`.
 
-    Ela SAIU DO CANTO DA GESTÃO em 26/09/2026, a pedido; o dono segue
+    O canto SAIU DA GESTÃO em 26/09/2026, a pedido; o dono segue
     escrevendo a frase para quem a mostra."""
     from hefesto_dualsense4unix.interface import conexoes as tela
 
@@ -371,7 +371,7 @@ def _ctx():  # type: ignore[no-untyped-def]
 
 
 def test_o_pacote_liga_os_cinco_enderecos() -> None:
-    """A METADE QUE MORDE, e ela é a ligação — não a peça.
+    """A METADE QUE MORDE é a ligação — não a peça.
 
     MEDIDO EM 03/09/2026, arrancando as quatro curas de uma vez: com
     `"bateria": c.get("battery_pct")` de volta no `pacote()`, os outros quatro
@@ -413,7 +413,7 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
     vazios não havia nenhum.
 
     AGORA SÃO OS QUATRO LUGARES, e a régua LÊ o tamanho da mesa em vez de o
-    cravar: no dia em que a bancada mudar de tamanho, o número que ela cobra
+    cravar: no dia em que o ensaio mudar de tamanho, o número que a régua cobra
     muda junto. Um literal aqui é a mesma dívida que o `2` era — uma régua que
     mede o mundo do dia em que foi escrita.
     """
@@ -425,7 +425,7 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
     for campo, quantos in esperado.items():
         achados = html.count(f'data-campo="{campo}"')
         assert achados == quantos, (
-            f"`data-campo=\"{campo}\"` aparece {achados}x na bancada e o pacote "
+            f"`data-campo=\"{campo}\"` aparece {achados}x no ensaio e o pacote "
             f"o emite esperando {quantos}. Endereço que não existe faz o "
             "`achar()` do piloto escrever ZERO, calado — foi assim que `via`, "
             "`bateria`, `ponte` e `fragil` somaram à cobertura sem chegar à tela")

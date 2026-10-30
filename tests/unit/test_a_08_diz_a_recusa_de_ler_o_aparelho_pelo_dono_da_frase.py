@@ -74,7 +74,7 @@ def test_o_dono_da_abertura_levanta_a_recusa_com_a_frase_do_usuario(
         maquina.abrir_o_aparelho_de_entrada("event7")
     assert str(recusa.value) == _frase(nome)
     assert isinstance(recusa.value, PermissionError) is isinstance(erro, PermissionError), (
-        "a recusa do dono mudou de família: o doctor e a ponte separam a permissão por ela")
+        "a recusa do dono mudou de família: o doctor e a ponte separam a permissão pela família")
 
 
 @pytest.mark.parametrize(("erro", "nome"), RECUSAS, ids=IDS)

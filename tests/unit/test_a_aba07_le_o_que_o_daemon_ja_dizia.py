@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """A RÉGUA DA PARIDADE DA ABA 07 — o que a GTK faz VIVO e o HTML jogava fora.
 
-POR QUE ELA NASCEU, e o número é de 03/09/2026: das 30 features medidas na área
+POR QUE A RÉGUA NASCEU, e o número é de 03/09/2026: das 30 features medidas na área
 de lançadores, **13 faltavam no HTML** e o padrão era um só nas dez abas — *o
 que tem GESTO migrou; o que é LEITURA AO VIVO não*. Esta régua cobra as quatro
-que esta frente fechou, e cada uma delas é PONTE: a função já existia na GTK e
+que esta frente fechou, e cada uma é PONTE: a função já existia na GTK e
 a interface nova não a chamava.
 
     o que a GTK faz                         quem responde agora no HTML
@@ -58,7 +58,7 @@ def a07():
 
 
 def test_a_escada_alcanca_o_jogo_que_o_usuario_ja_fechou(a07, monkeypatch):
-    """O caso REAL do botão: o jogo não funcionou, ela fechou, e só então veio."""
+    """O caso REAL do botão: o jogo não funcionou, quem usa fechou, e só então veio."""
     from hefesto_dualsense4unix.daemon import launch_env
 
     monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)

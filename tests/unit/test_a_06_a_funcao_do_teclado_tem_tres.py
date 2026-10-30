@@ -75,7 +75,7 @@ def ctx():
 
 
 def test_as_tres_palavras_do_usuario_estao_no_desenho():
-    """O gerador e o pacote falam a MESMA lista, e ela é a dela."""
+    """O gerador e o pacote falam a MESMA lista, e é a do produto."""
     import aba06
     from pacotes import a06_navegacao as mod
 
@@ -84,7 +84,7 @@ def test_as_tres_palavras_do_usuario_estao_no_desenho():
         f"o desenho oferece {aba06.OPCOES_TECLADO} e o pacote fala outra "
         "língua — a lista pararia de ser pintada sem uma linha de erro.")
     assert aba06.TECLADO_PADRAO == mod.TECLADO_SO_FORA, (
-        "a lista não nasce no padrão que ela escolheu")
+        "a lista não nasce no padrão escolhido")
 
 
 def test_o_desenho_nasce_no_padrao_do_usuario():
@@ -155,11 +155,11 @@ def test_toda_opcao_que_a_tela_oferece_tem_resposta(ctx, publicado):
         else:
             assert ponte.chamadas, f"{rotulo!r}: aceitou o clique e não chamou nada"
     assert not mudos, (
-        f"a lista {'publicada' if publicado else 'da bancada'} oferece "
-        f"{mudos} e o gesto levanta clique-inválido nelas. A frase de um "
-        "`ValueError` NÃO chega ao cartão dela — `hefesto_vivo._recusou_dizendo` "
+        f"a lista {'publicada' if publicado else 'do ensaio'} oferece "
+        f"{mudos} e o gesto levanta clique-inválido nessas opções. A frase de um "
+        "`ValueError` NÃO chega ao cartão — `hefesto_vivo._recusou_dizendo` "
         "leva só a do `RuntimeError`, porque clique-inválido fala com quem "
-        "programa. Então ela clica e nada acontece, sem uma palavra do porquê.")
+        "programa. Então quem usa clica e nada acontece, sem uma palavra do porquê.")
 
 
 @pytest.mark.parametrize("publicado", OS_DOIS_MUNDOS)
@@ -199,7 +199,7 @@ def test_o_pacote_olha_mesmo_a_pagina_que_o_piloto_carrega():
     visto = mod._o_que_a_pagina_oferece()
     assert visto == frozenset(_opcoes(True)), (
         f"o pacote enxerga {sorted(visto)} e a página que o piloto carrega "
-        f"oferece {_opcoes(True)}. Um leitor cego devolve a palavra dela em "
+        f"oferece {_opcoes(True)}. Um leitor cego devolve a palavra escolhida em "
         "qualquer página, e volta o campo que afirma o contrário.")
 
 
@@ -220,7 +220,7 @@ def test_a_pintura_sem_duble_casa_com_a_pagina_do_produto():
 
 @pytest.mark.parametrize("publicado", OS_DOIS_MUNDOS)
 def test_a_palavra_que_a_tela_diz_e_a_que_o_clique_devolve(ctx, publicado, monkeypatch):
-    """A IDA E VOLTA: o que a linha AFIRMA e o que o clique nela FAZ são o mesmo."""
+    """A IDA E VOLTA: o que a linha AFIRMA e o que o clique na linha FAZ são o mesmo."""
     from pacotes import a06_navegacao as mod
 
     import pacotes
@@ -235,7 +235,7 @@ def test_a_palavra_que_a_tela_diz_e_a_que_o_clique_devolve(ctx, publicado, monke
         assert ponte.chamadas == [("keyboard.emulation.set", {"enabled": ligado})], (
             f"com o teclado {'ligado' if ligado else 'desligado'} a tela diz "
             f"{palavra!r}, e clicar nessa mesma palavra manda "
-            f"{ponte.chamadas} — a linha afirma um estado e o clique nela faz "
+            f"{ponte.chamadas} — a linha afirma um estado e o clique na linha faz "
             "outro.")
 
 
@@ -245,13 +245,13 @@ def test_a_travessia_acabou_e_nao_deixou_lapide():
 
     assert not hasattr(mod, "SINONIMOS_ATE_A_PUBLICACAO"), (
         "`SINONIMOS_ATE_A_PUBLICACAO` voltou. Ele só se justifica enquanto a "
-        "bancada e o publicado divergirem nos rótulos — e neste caso ele vem "
+        "ensaio e o publicado divergirem nos rótulos — e neste caso ele vem "
         "com a régua que o apaga no dia da publicação, como a anterior tinha.")
-    for mundo, publicado in (("publicada", True), ("bancada", False)):
+    for mundo, publicado in (("publicada", True), ("ensaio", False)):
         texto = " ".join(_opcoes(publicado)).lower()
         for palavra in mod._ESCOLHA:
             assert palavra in texto, (
                 f"o gesto entende {palavra!r} e a página {mundo} não a oferece "
                 f"({_opcoes(publicado)}) — ou é tradução sem prazo, ou é a "
-                "bancada tendo andado sem ninguém perguntar o que a tela dela "
+                "ensaio tendo andado sem ninguém perguntar o que a tela de quem usa "
                 "mostra hoje.")

@@ -106,7 +106,7 @@ def test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma(
         adaptadores=lambda: (Adaptador(interface="hci9"),),
     )
     _mapear_tres(mesa, fluxo)
-    assert len(gravacoes) == 3, "cada gesto dela é UMA gravação: número, face, lugar e nome juntos"
+    assert len(gravacoes) == 3, "cada gesto é UMA gravação: número, face, lugar e nome juntos"
     assert all(set(g) == {"mapa"} for g in gravacoes), gravacoes
 
     documento = carregar_maquina()
@@ -129,7 +129,7 @@ def test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma(
 def test_o_controle_que_ja_estava_no_cabo_nao_e_a_porta_da_vez(
     mesa: Gabinete, disco: Path
 ) -> None:
-    """A mesa de quatro: dois controles já no cabo não viram «a porta dela»."""
+    """A mesa de quatro: dois controles já no cabo não viram «a porta do dongle»."""
     mesa.plugar(1, "5", DUALSENSE)
     mesa.plugar(1, "6", DUALSENSE)
     fluxo = _fluxo(mesa)
@@ -233,7 +233,7 @@ def test_a_revisita_so_troca_o_que_o_usuario_trocou(mesa: Gabinete, disco: Path)
     faces = {f.nome: f.portas for f in carregar_maquina().mapa.faces}
     assert faces[ee.LUGAR_TOPO] == ["2"] and faces[ee.LUGAR_FRENTE] == ["1"]
     assert faces[ee.LUGAR_HUB] == ["3"]
-    assert faces[ee.LUGAR_TRASEIRA] == [], "a face de antes fica, vazia — é o desenho dela"
+    assert faces[ee.LUGAR_TRASEIRA] == [], "a face de antes fica, vazia — é o desenho do mapa"
 
     mesa.plugar(1, "5", DUALSENSE)
     foto = fluxo.olhar()
@@ -362,7 +362,7 @@ def test_um_gravador_so_no_dono() -> None:
 def test_o_lugar_e_universal_e_o_do_usuario_continua_aceito(mesa: Gabinete, disco: Path) -> None:
     assert len(set(ee.LUGARES_DA_PORTA)) == len(ee.LUGARES_DA_PORTA) == 7
     for antigo in (ee.FACE_FRENTE, ee.FACE_ATRAS, ee.FACE_HUB):
-        assert antigo in ee.LUGARES_DA_PORTA, "a grafia de antes fica, ou a face dela fica órfã"
+        assert antigo in ee.LUGARES_DA_PORTA, "a grafia de antes fica, ou a face da porta fica órfã"
 
     fluxo = _fluxo(mesa)
     fluxo.comecar()
@@ -375,11 +375,11 @@ def test_o_lugar_e_universal_e_o_do_usuario_continua_aceito(mesa: Gabinete, disc
     documento = carregar_maquina()
     assert documento.mapa.portas["1"].nome == "só o nome, porta nova"
     assert documento.mapa.portas["1"].lugar == lugar_de(PCI_A, "5")
-    assert not documento.mapa.faces, "sem o «onde fica», o produto não inventa face por ela"
+    assert not documento.mapa.faces, "sem o «onde fica», o produto não inventa face pela porta"
     assert fluxo.gravar(lugar=ee.FACE_ESCRIVANINHA).gravou, "a quarta resposta de antes"
     assert carregar_maquina().mapa.portas["1"].nome == "só o nome, porta nova"
     assert fluxo.estado()["lugares"] == [*ee.LUGARES_DA_PORTA, ee.FACE_ESCRIVANINHA], (
-        "a face que ela já tem continua escolhível para a próxima porta"
+        "a face que a porta já tem continua escolhível para a próxima porta"
     )
     assert fluxo.gravar(chave="1", lugar=ee.FACE_ESCRIVANINHA).gravou
     with pytest.raises(RuntimeError):
@@ -400,7 +400,7 @@ def test_a_porta_que_o_usuario_so_nomeou_e_do_mapa_e_se_renomeia(
         censo=mesa.ler(), entradas=mesa.entradas(), storm=STORM, adaptadores=()
     )
     dongle = mapa.porta(lugar_do_dongle)
-    assert dongle is not None, "a porta que ela só nomeou sumiu do mapa"
+    assert dongle is not None, "a porta que só foi nomeada sumiu do mapa"
     assert (dongle.nome, dongle.numero, dongle.ocupada) == ("Dongle azul", "1", False)
     assert dongle.nos == ("3-4-port1", "4-4-port1")
     mesa.tirar("3-4")
@@ -497,7 +497,7 @@ def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None
 
 
 def test_renomear_pela_lista_nao_troca_a_testemunha(mesa: Gabinete, disco: Path) -> None:
-    """Um pendrive no lado 3.x da porta 2 não vira a testemunha dela.
+    """Um pendrive no lado 3.x da porta 2 não vira a testemunha da porta.
 
     Renomear e reposicionar pela lista não provam nada do buraco: o aparelho que
     estiver nele agora pode só existir no lado 3.x (``2-1``), e o buraco da

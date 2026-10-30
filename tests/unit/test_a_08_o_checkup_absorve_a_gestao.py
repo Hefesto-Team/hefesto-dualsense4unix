@@ -146,7 +146,7 @@ def test_o_dono_mostra_o_nome_ou_p_n() -> None:
     from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
     pac = _pac()
     u = UNIQS[0]
-    assert pac.dono_na_linha({nome_do_jogador.mac(u): "Vitória"}, u, 1) == "Vitória"
+    assert pac.dono_na_linha({nome_do_jogador.mac(u): "Sala"}, u, 1) == "Sala"
     assert pac.dono_na_linha({}, u, 3) == "P3"
 
 

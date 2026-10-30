@@ -1,7 +1,7 @@
 """O 🎙 confessa DE QUEM era o microfone, e o alto-falante volta a confirmar com som.
 
 A-CONFISSAO-NO-BOTAO-01 (06/09/2026). As duas linhas nasceram do laudo da
-paridade e vieram para hoje por causa da bancada de QUATRO desta noite: com um
+paridade e vieram para hoje por causa do ensaio de QUATRO desta noite: com um
 controle na mesa, nenhuma das duas dói.
 
 AS DUAS METADES QUE ESTA RÉGUA MEDE
@@ -237,7 +237,7 @@ def test_o_mudo_nao_acusa_quando_honrou_nem_quando_nao_sabe(
     `frase_do_alvo_do_mic` devolve `""` para `True` e para `None` de propósito, e
     o terceiro caso é o daemon DESTA árvore: o corpo de `mic.canal.set` não traz
     `por_uniq` (ver a régua-estopim, abaixo). Acusar por ausência de notícia
-    poria no cartão dela um erro que ninguém mediu — e calaria o botão do
+    poria no cartão um erro que ninguém mediu — e calaria o botão do
     microfone em todo clique, com o daemon fazendo a coisa certa.
 
     MORDIDA: troque a condição por `alvo_honrado(corpo) is not True` e os três
@@ -256,16 +256,16 @@ def test_o_mudo_nao_acusa_quando_honrou_nem_quando_nao_sabe(
 
 
 def test_a_frase_da_confissao_e_a_do_dono(casa: Any) -> None:
-    """A frase não se digita: ela vem de `frase_do_alvo_do_mic`.
+    """A frase não se digita: vem de `frase_do_alvo_do_mic`.
 
     ESTA RÉGUA NÃO REPETE O TEXTO, e é a regra da casa: quem digita a frase mede
     a PALAVRA e não o ATO, e passa a dar verde no dia em que o dono mudar de
-    opinião sem o gesto mudar junto. O que ela cobra é a IDENTIDADE com o que o
+    opinião sem o gesto mudar junto. O que a régua cobra é a IDENTIDADE com o que o
     dono devolve.
 
-    **E ELA GUARDA O CONFLITO QUE ESTA LEVA ACHOU:** a frase do dono começa
+    **E A RÉGUA GUARDA O CONFLITO QUE ESTA LEVA ACHOU:** a frase do dono começa
     falando de VOLUME, porque nasceu para o deslizante. Dita depois de um clique
-    no 🎙, nomeia um gesto que ela não fez. Enquanto o daemon não responder
+    no 🎙, nomeia um gesto que quem usa não fez. Enquanto o daemon não responder
     `por_uniq` neste caminho, a frase é inerte; o dia em que responder, a palavra
     é de produto — e quem cobra isso é a régua-estopim abaixo.
     """
@@ -281,12 +281,12 @@ def test_a_frase_da_confissao_e_a_do_dono(casa: Any) -> None:
 
 
 def test_a_metade_do_ato_continua_falando_antes_da_confissao(casa: Any) -> None:
-    """As duas perguntas são diferentes, e a ordem delas é medida.
+    """As duas perguntas são diferentes, e a ordem entre as duas é medida.
 
     `frase_do_ato_do_microfone` responde QUAL METADE faltou (o canal foi eleito e
     o firmware ficou represado · o firmware obedeceu e não há canal);
     `frase_do_alvo_do_mic` responde DE QUEM era o microfone. Com as duas
-    disponíveis quem fala é a primeira — ela descreve o que o daemon acabou de
+    disponíveis quem fala é a primeira — a que descreve o que o daemon acabou de
     relatar, e a segunda fala de um alvo que, nesse corpo, nem chegou a ser
     tocado.
     """
@@ -320,8 +320,8 @@ def test_o_ato_do_microfone_ainda_nao_diz_de_quem_e_o_microfone() -> None:
     assert "por_uniq" not in corpo, (
         "`mic.canal.set` passou a dizer DE QUEM foi o microfone. A confissão do "
         "gesto `mudo` deixou de ser inerte — e a frase do dono fala de VOLUME. "
-        "Antes de deixar isto chegar à tela dela, a frase precisa da palavra "
-        "dela: ver `TEXTO_MIC_ALVO_NAO_HONRADO` e a entrega da "
+        "Antes de deixar isto chegar à tela, a frase precisa de decisão "
+        "de produto: ver `TEXTO_MIC_ALVO_NAO_HONRADO` e a entrega da "
         "A-CONFISSAO-NO-BOTAO-01"
     )
 
@@ -342,7 +342,7 @@ def test_os_tres_gestos_do_alto_falante_confirmam_com_som(
 
     assert som == [(SINK, None)], (
         f"o gesto {gesto!r} não confirmou com som: {som!r}. O registrador de "
-        f"volume não tem leitura de volta hoje — sem o som ela mexe e não tem "
+        f"volume não tem leitura de volta hoje — sem o som quem usa mexe e não tem "
         f"como saber que a mudança valeu"
     )
 
@@ -408,14 +408,14 @@ def test_o_som_que_falha_nao_derruba_o_volume(
 def test_a_chave_do_usuario_desliga_o_som_e_o_gesto_nao_recusa(
     casa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MORDIDA 3 da sprint, e ela roda o motor DE VERDADE — sem tocar nada.
+    """MORDIDA 3 da sprint, e roda o motor DE VERDADE — sem tocar nada.
 
     A chave é do motor (`audio_saida.som_ligado`, o primeiro dos sete degraus), e
     o gesto não inventa uma segunda: ele chama `tocar_confirmacao` sem opinião
     sobre `ligado`. Com a chave desligada o motor sai calado, e o clique continua
     valendo.
 
-    OS DOIS ESPIÕES SÃO A REDE DE SEGURANÇA, e não enfeite: **a bancada desta
+    OS DOIS ESPIÕES SÃO A REDE DE SEGURANÇA, e não enfeite: **o ensaio desta
     sprint é `false`**. Se a cura deixasse de respeitar a chave, o `_rodar_tocador`
     seria chamado — e aqui ele é um espião, não o `paplay`. Nenhum som sai da
     suíte, nem por engano.
@@ -439,7 +439,7 @@ def test_a_chave_do_usuario_desliga_o_som_e_o_gesto_nao_recusa(
         PonteQueDizDeQuem())
 
     assert passos == [], (
-        f"com a chave dela DESLIGADA o produto foi ao sistema de áudio: "
+        f"com a chave DESLIGADA o produto foi ao sistema de áudio: "
         f"{passos!r}"
     )
     assert _do_controle(CHAVE_P1).get("speaker", {}).get("volume") is not None, (
@@ -455,16 +455,16 @@ def _seletor_do_piloto(*_a: Any, **_k: Any) -> None:
 class TestAGuardaDaMaquinaDoUsuario:
     """**Sem a janela de pé, o som não nasce — e o defeito que isto cura foi medido.**
 
-    Medido na bancada em 06/09/2026, com a cura do som já escrita: a régua irmã
+    Medido no ensaio em 06/09/2026, com a cura do som já escrita: a régua irmã
     `test_a02_som_e_sensor_falam_quando_recusam.py` dubla o `pactl` e devolve uma
     lista com um sink de DualSense. O `escolher_sink` casa por REGRA (o
     um-para-um: uma fonte, um controle na mesa), o motor encontra o sink "na
     lista viva" — que é de mentira — e segue para o `paplay`, **que não está
-    dublado**. A suíte tocava som no alto-falante do controle do usuário, com ela
+    dublado**. A suíte tocava som no alto-falante do controle do usuário, com a
     trabalhando.
 
     **A guarda-mãe do `audio_saida` não alcança este caso, e é de propósito:**
-    ela confere o sink contra a lista viva, e numa régua a lista viva é de
+    a escala confere o sink contra a lista viva, e numa régua a lista viva é de
     mentira. Quem sabe que ninguém clicou é a camada de cima.
     """
 
@@ -476,13 +476,13 @@ class TestAGuardaDaMaquinaDoUsuario:
         from pacotes import ponte as _ponte
 
         assert not _ponte.dentro_da_janela(), (
-            "a régua acha que há janela de pé — sem isso ela não mede nada"
+            "a régua acha que há janela de pé — sem isso a régua não mede nada"
         )
         correu = threading.Event()
         a02._fora_do_voo(correu.set)
         assert not correu.wait(0.3), (
             "o som nasceu SEM janela: numa régua com `pactl` dublado isto chega "
-            "ao `paplay` e toca no alto-falante do controle dela"
+            "ao `paplay` e toca no alto-falante do controle do usuário"
         )
 
         monkeypatch.setattr(_ponte, "escolher_arquivo", _seletor_do_piloto)
@@ -490,7 +490,7 @@ class TestAGuardaDaMaquinaDoUsuario:
         a02._fora_do_voo(correu.set)
         assert correu.wait(3.0), (
             "com a janela de pé o som deixou de nascer — a guarda passou a "
-            "desligar o produto em vez de proteger a máquina dela"
+            "desligar o produto em vez de proteger a máquina de quem usa"
         )
 
     def test_o_cenario_que_tocava_som_de_verdade(

@@ -44,7 +44,7 @@ def _modelos_do_mapa() -> set[str]:
 def test_todo_desenho_da_aba_tem_o_endereco_do_colorway() -> None:
     """Nenhum `<svg>` da linha nasce sem por onde o produto trocar a cor."""
     tags = DESENHO_DA_LINHA.findall(_html())
-    assert tags, "a bancada da 08 não tem mais nenhum desenho `.ds-mini`"
+    assert tags, "o ensaio da 08 não tem mais nenhum desenho `.ds-mini`"
     for tag in tags:
         assert 'data-hef-alvo="atributo"' in tag, (
             f"um desenho da 08 perdeu o alvo de atributo — sem ele o "
@@ -65,7 +65,7 @@ def test_so_uma_folha_de_cores_e_o_usuario_nao_esta_dentro_de_um_desenho() -> No
     folhas = FOLHA.findall(_html())
     assert len(folhas) == 1, (
         f"a 08 tem {len(folhas)} folhas de cores: "
-        f"{[i for i, _ in folhas]}. Ela é UMA, da página.")
+        f"{[i for i, _ in folhas]}. A folha é UMA, da página.")
     ident, _css = folhas[0]
     assert ident == "cores-do-dualsense-folha", (
         f"a folha da 08 está dentro de um desenho (`id={ident}`) — o `svg()` "
@@ -77,17 +77,17 @@ def test_todo_modelo_do_mapa_do_usuario_tem_regra_na_pagina() -> None:
     declarados = set(REGRA_DE_COLORWAY.findall(_html()))
     faltam = _modelos_do_mapa() - declarados
     assert not faltam, (
-        f"faltam {len(faltam)} modelos do mapa dela na folha da 08: "
+        f"faltam {len(faltam)} modelos do mapa na folha da 08: "
         f"{sorted(faltam)[:6]}… Quem tiver um deles vê um controle cinza.")
 
 
 def test_a_hachura_e_os_gradientes_chegam_junto_com_a_folha() -> None:
-    """Toda tinta que a folha REFERENCIA existe na página, com o `id` que ela cita."""
+    """Toda tinta que a folha REFERENCIA existe na página, com o `id` que a folha cita."""
     html = _html()
     _ident, css = FOLHA.search(html).groups()  # type: ignore[union-attr]
     citados = set(re.findall(r"url\(#([^)]+)\)", css))
     assert citados, (
-        "a folha da 08 não cita tinta nenhuma por `url(#…)` — se o mapa dela "
+        "a folha da 08 não cita tinta nenhuma por `url(#…)` — se o mapa "
         "deixou de usar hachura, esta régua perdeu o sujeito")
     for ident in sorted(citados):
         assert f'id="{ident}"' in html, (
@@ -115,7 +115,7 @@ def test_a_folha_nao_e_digitada_no_gerador() -> None:
 
 
 def _ctx(cor_do_p2: str = "galactic-purple") -> Any:
-    """A bancada: o White no cabo, e um no rádio com a cor variável."""
+    """O ensaio: o White no cabo, e um no rádio com a cor variável."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     p1, p2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
@@ -165,7 +165,7 @@ def test_o_modelo_sem_hex_medido_nao_derruba_a_aba() -> None:
     sem_hex = [m for m in sorted(_modelos_do_mapa())
                if not monta.cor_da_zona(m).startswith("#")]
     assert sem_hex, (
-        "nenhum modelo do mapa usa a hachura — se ela mediu os 28, esta régua "
+        "nenhum modelo do mapa usa a hachura — se os 28 foram medidos, esta régua "
         "perdeu o alvo e vira teste sem sujeito")
     for modelo in sem_hex:
         colunas = _pacote().pacote(_ctx(cor_do_p2=modelo))["colunas"]
@@ -177,7 +177,7 @@ def test_o_modelo_sem_hex_medido_nao_derruba_a_aba() -> None:
                 f"certa para ele, e o SVG sabe desenhá-la")
             assert c["plastico"] == "", (
                 f"a barra recebeu {c['plastico']!r} para `{modelo}` — uma "
-                f"hachura não é uma cor, e `tinta_legivel` morre com ela")
+                f"hachura não é uma cor, e `tinta_legivel` morre com a hachura")
 
 
 def test_todo_modelo_que_o_pacote_pode_emitir_e_pintavel() -> None:
@@ -210,5 +210,5 @@ def test_o_ensaio_da_08_nao_tem_mais_cor_cravada() -> None:
         [sys.executable, str(REGUA), "--ensaio", "--aba", "08"],
         capture_output=True, text=True, cwd=str(RAIZ), check=False)
     assert saida.returncode == 0, (
-        "a `08-conexoes` voltou a ter cor de aparelho cravada na bancada:\n"
+        "a `08-conexoes` voltou a ter cor de aparelho cravada no ensaio:\n"
         + saida.stdout + saida.stderr)

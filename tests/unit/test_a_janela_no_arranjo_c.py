@@ -261,7 +261,7 @@ def test_a_vaga_da_conexoes_pinta_o_que_a_leitura_em_fundo_trouxe(monkeypatch) -
 @pytest.mark.parametrize("com_agora", [True, False], ids=["arranjo-c", "cartoes"])
 def test_os_toques_cabem_sem_corte_nos_dois_arranjos(navegador, larg, alt, com_agora) -> None:  # noqa: F811
     """A linha do toque encolhe a onda e a lista: no cartão da janela sem ``agora`` (meia
-    largura), os 19 botões cortavam a lista da direita (medido na bancada de 22/10/2026).
+    largura), os 19 botões cortavam a lista da direita (medido no ensaio de 22/10/2026).
     MORDIDA: devolva ``flex:none`` à ``.onda`` e ``width:120px`` à lista do ``.tql``."""
     sys.path.insert(0, str(INTERFACE))
     import desenho_da_experimental as exp
@@ -292,7 +292,7 @@ def test_os_toques_cabem_sem_corte_nos_dois_arranjos(navegador, larg, alt, com_a
 @pytest.mark.parametrize(("larg", "alt"), [(1212, 809), (1600, 840)])
 def test_a_janela_nao_muda_de_tamanho_ao_trocar_de_aba(navegador, larg, alt) -> None:  # noqa: F811
     """Cada aba clicada deixa a janela na mesma caixa: com a tela de cada aba no próprio tamanho,
-    a janela centrada subia e descia até 147 px e as abas fugiam do clique (bancada de 22/10/2026).
+    a janela centrada subia e descia até 147 px e as abas fugiam do clique (ensaio de 22/10/2026).
     MORDIDA: devolva ``display:none``/``display:block`` às ``.mj-tela`` no lugar da
     ``visibility``."""
     sys.path.insert(0, str(INTERFACE))

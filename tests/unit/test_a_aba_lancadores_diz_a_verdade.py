@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A RÉGUA DA ABA LANÇADORES: o que ela AFIRMA tem de vir de uma medição."""
+"""A RÉGUA DA ABA LANÇADORES: o que a aba AFIRMA tem de vir de uma medição."""
 from __future__ import annotations
 
 import pathlib
@@ -90,7 +90,7 @@ def _ensaio() -> str:
 
 
 def _pagina_publicada() -> str:
-    """O publicado: desde 18/10/2026, a Experimental, o mesmo desenho da bancada."""
+    """O publicado: desde 18/10/2026, a Experimental, o mesmo desenho do ensaio."""
     return _pagina(publicado=True)
 
 
@@ -177,7 +177,7 @@ def test_nenhum_lancador_sem_fonte_afirma_que_os_controles_chegam(desenho):
 
 
 def test_os_cinco_lancadores_ganharam_leitor_de_biblioteca():
-    """**ESTA RÉGUA VIROU DO AVESSO em 09/09/2026, e era o que ela pedia.**"""
+    """**ESTA RÉGUA VIROU DO AVESSO em 09/09/2026, e era o que a queixa pedia.**"""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     sem_leitor = [n for n in ("Heroic",) if not censo.sabe_ler(n)]
@@ -185,7 +185,7 @@ def test_os_cinco_lancadores_ganharam_leitor_de_biblioteca():
     assert sem_leitor == [], (
         f"estes lançadores perderam o leitor de biblioteca: {sem_leitor}. Sem "
         f"leitor o cartão volta a dizer `NÃO SEI` sobre um programa instalado, "
-        f"que é o que ela chamou de «a aba lançadores tá identificando nada».")
+        f"que é a queixa de que a aba Lançadores não identificava nada.")
 
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as des
 
@@ -251,9 +251,9 @@ def test_a_pintura_nunca_grava_o_registro_de_wrapper_visto(a07, monkeypatch):
     a07._ler_do_disco()
     assert vistos, "ninguém chamou o censo — a régua mediria o vazio"
     assert set(vistos) == {False}, (
-        f"a leitura da tela pediu `anotar={vistos}`. Com `True` ela GRAVA o "
+        f"a leitura da tela pediu `anotar={vistos}`. Com `True` a leitura GRAVA o "
         f"`wrapper-visto.json` a cada tique, e todo jogo novo vira 'já visto' "
-        f"antes de ela ver o aviso uma única vez.")
+        f"antes de quem usa ver o aviso uma única vez.")
 
 
 def test_o_tique_nao_bloqueia_no_disco(a07, ctx, monkeypatch):
@@ -280,10 +280,10 @@ def test_esta_regua_nao_alcanca_a_biblioteca_do_usuario():
     real = str(pathlib.Path.home())
     for caminho in (sw.caminho_do_registro(), slo.sem_wrapper_path()):
         assert not str(caminho).startswith(real + "/.local"), (
-            f"a régua escreveria em {caminho}, que é o estado DELA")
+            f"a régua escreveria em {caminho}, que é o estado REAL")
     assert slo.discover_vdfs() == [], (
         "a régua enxerga um `localconfig.vdf` de verdade — o isolamento do "
-        "`conftest` caiu, e um teste desta aba passaria a ler a biblioteca dela")
+        "`conftest` caiu, e um teste desta aba passaria a ler a biblioteca real")
 
 
 def test_o_piso_de_gestos_da_aba_so_sobe(a07):
@@ -355,7 +355,7 @@ def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
         "separar 'procurei e não achei' de 'ainda não procurei'")
     assert achei.diz == desenho.contador_html(0), (
         f"o cartão do lançador ACHADO diz outra coisa além do contador: "
-        f"{achei.diz!r}. Ela o calou em 11/09 e deu a ele o contador em 21/09")
+        f"{achei.diz!r}. A decisão o calou em 11/09 e deu a ele o contador em 21/09")
     assert nao_achei.diz and nao_procurei.diz, (
         "o cartão calado tinha de ser SÓ o do achado — os outros dois estados "
         "precisam da frase, porque neles o selo sozinho não diz o que fazer")
@@ -382,7 +382,7 @@ def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
                         else "Abrir o lançador")
             assert esperado in html, (
                 f"o cartão {cartao.chave!r} em {estado!r} (selo {cartao.selo!r}) "
-                f"não oferece «{esperado}» — ela não decidiu isso. A fileira é: "
+                f"não oferece «{esperado}» — isso não foi decidido. A fileira é: "
                 f"{html!r}")
             assert 'data-gesto="' in html, (
                 f"o botão do cartão {cartao.chave!r} em {estado!r} ficou sem "
@@ -392,7 +392,7 @@ def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
                 assert "Abrir o lançador" not in html, (
                     f"o cartão {cartao.chave!r} que NÃO localizou oferece «Abrir "
                     f"o lançador» — o produto não sabe abrir o que não achou, e "
-                    f"ela pediu o contrário")
+                    f"a decisão pediu o contrário")
             elif estado == "ainda não procurei":
                 for rotulo in (desenho.ADICIONAR_ROTULO,
                                desenho.APONTAR_ROTULO):
@@ -405,7 +405,7 @@ def test_todo_cartao_tem_botao_nos_tres_estados_e_o_do_ausente_e_outro(desenho):
                     f"o cartão {cartao.chave!r} em {estado!r} (selo "
                     f"{cartao.selo!r}) não oferece "
                     f"«{desenho.APONTAR_ROTULO}» — se o que o Hefesto achou "
-                    f"não é o que ela quer, não há por onde trocar, e a recusa "
+                    f"não é o que quem usa quer, não há por onde trocar, e a recusa "
                     f"do botão global volta a mandar clicar no vazio")
                 assert desenho.ADICIONAR_ROTULO not in html, (
                     f"o cartão {cartao.chave!r} em {estado!r} diz "
@@ -464,17 +464,17 @@ def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
     assert do_cartao != global_, (
         f"os dois botões voltaram a dizer a mesma coisa ({do_cartao!r}): um é "
         f"«ele está aqui, te mostro onde» e o outro é «tem um que você não "
-        f"conhece». Ela pediu um sinônimo justamente para separá-los.")
+        f"conhece». O sinônimo foi pedido justamente para separá-los.")
     assert do_cartao == "Localizar este lançador", (
-        f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão dela é "
+        f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão é "
         f"'Localizar este lançador' — a palavra do SELO daquele cartão")
     assert global_ == desenho.TELA_DO_NOVO_TITULO, (
         f"o botão global diz {global_!r} e a tela que ele abre se chama "
-        f"{desenho.TELA_DO_NOVO_TITULO!r}. Decisão dela de 11/09/2026: um nome "
+        f"{desenho.TELA_DO_NOVO_TITULO!r}. Decisão de 11/09/2026: um nome "
         f"por tela — quem clica tem de chegar onde o botão prometeu")
     assert desenho.APONTAR_ROTULO == "Outro caminho", (
         f"o rótulo do cartão LOCALIZADO é {desenho.APONTAR_ROTULO!r}, e a "
-        f"decisão dela é 'Outro caminho' (21/09/2026)")
+        f"decisão é 'Outro caminho' (21/09/2026)")
     assert desenho.APONTAR_DICA == "Apontar outro caminho para este lançador"
     assert len({do_cartao, global_, desenho.APONTAR_ROTULO}) == 3, (
         "dois dos três rótulos de registro voltaram a dizer a mesma coisa — "
@@ -495,7 +495,7 @@ def test_o_titulo_da_tela_de_registro_nao_contradiz_o_botao_que_a_abriu(desenho)
     """A CAIXA É UMA E OS CAMINHOS SÃO DOIS — e o título não pode ser de um só."""
     titulo = desenho.TELA_DO_NOVO_TITULO
     assert "novo" not in titulo.lower(), (
-        f"o título da caixa é {titulo!r}. A caixa é UMA e chega-se a ela por "
+        f"o título da caixa é {titulo!r}. A caixa é UMA e chega-se à caixa por "
         f"dois caminhos: aberta pelo botão de um cartão que JÁ existe, um "
         f"título com «novo» contradiz a linha logo abaixo, que diz o nome "
         f"daquele cartão.")
@@ -511,14 +511,14 @@ def test_o_titulo_da_tela_de_registro_nao_contradiz_o_botao_que_a_abriu(desenho)
     assert "RetroArch" in do_cartao, (
         "a tela aberta pelo botão de um cartão não diz de qual cartão")
     assert desenho.NOVO_SEM_ALVO in desenho.tela_do_registro_html(), (
-        "a tela aberta pelo botão global perdeu a linha que diz o que ela é")
+        "a tela aberta pelo botão global perdeu a linha que diz o que a tela é")
 
     for nome in ("Steam", "RetroArch", "Dolphin · mGBA"):
         linha = desenho.NOVO_PARA_O_CARTAO.format(nome=nome)
         assert not linha.lower().startswith(("o ", "a ")), linha
         assert f" o {nome}" not in linha and f" a {nome}" not in linha, (
             f"a linha voltou a pôr artigo antes do nome do cartão: {linha!r}. "
-            f"Os nomes têm gêneros diferentes e um deles vem do teclado dela — "
+            f"Os nomes têm gêneros diferentes e um deles vem do teclado de quem usa — "
             f"adivinhar o artigo é palpite na tela.")
 
 
@@ -556,7 +556,7 @@ def test_a_lista_da_steam_nunca_vira_travessao_em_estado_nenhum(desenho):
     os dois ramos de saída antecipada de `cartao_da_steam` — a primeira meia
     volta e a Steam ilegível — devolviam `fora=""` com `tem_lista=True`. O
     `escrever()` do bootstrap troca vazio por `—` **antes** de despachar o alvo
-    `html`, e o da Steam ilegível é PERMANENTE: justo a tela em que ela precisa
+    `html`, e o da Steam ilegível é PERMANENTE: justo a tela em que quem usa precisa
     ler uma mensagem, com um traço mudo pendurado embaixo.
 
     A MORDIDA: tire o `fora=SEM_LISTA` de qualquer um dos dois ramos e este
@@ -647,7 +647,7 @@ def test_a_leitura_carrega_os_dispensados_e_as_pontes_da_fonte_certa(
     `pontes_confirmadas()` → `jogos_instalados()`  o carimbo mente o número
     ==========================================  ===========================
 
-    A terceira é a pior: ela REINTRODUZ o defeito que a aba nasceu para matar —
+    A terceira é a pior: REINTRODUZ o defeito que a aba nasceu para matar —
     um número no carimbo que não responde à pergunta do carimbo.
     """
     _pastas_falsas(monkeypatch, tmp_path)
@@ -709,10 +709,10 @@ def test_a_steam_ausente_nao_afirma_que_os_controles_chegam(a07, desenho,
 
     lida = a07._ler_do_disco()
     assert dict(lida.onde_estao).get("steam") == "", (
-        f"a busca não procurou a Steam: {dict(lida.onde_estao)}. O cartão dela "
+        f"a busca não procurou a Steam: {dict(lida.onde_estao)}. O cartão da Steam "
         f"volta a afirmar por constante.")
     assert not lida.viu_a_biblioteca, (
-        "o dublê deixou passar uma biblioteca — a régua mediria a bancada")
+        "o dublê deixou passar uma biblioteca — a régua mediria o ensaio")
 
     cartao = desenho.cartao_da_steam(lida)
     assert cartao.selo == "off", (
@@ -743,7 +743,7 @@ def test_a_steam_sem_procura_e_sem_biblioteca_nao_conta_como_encontrada(desenho)
 def test_a_steam_que_esta_aqui_continua_respondendo_pelo_censo(a07, desenho,
                                                                monkeypatch,
                                                                tmp_path):
-    """A BANCADA não pode mudar: achada, o cartão volta a ser o de sempre."""
+    """O ENSAIO não pode mudar: achada, o cartão volta a ser o de sempre."""
     _pastas_falsas(monkeypatch, tmp_path, "steam")
     lida = desenho.Leitura(
         com_wrapper=("1", "2"), instalados=2,
@@ -806,9 +806,9 @@ def _publicada(com_a_legenda: bool = False) -> str:
         return doc
     if _FIM_DA_ABA not in doc:
         pytest.fail(
-            f"a marca da legenda sumiu de {PAGINA}: sem ela esta régua mediria "
+            f"a marca da legenda sumiu de {PAGINA}: sem a marca esta régua mediria "
             f"a anotação junto com a aba, e a prosa que descreve uma palavra de "
-            f"tela viraria a primeira ocorrência dela")
+            f"tela viraria a primeira ocorrência da marca")
     return doc.split(_FIM_DA_ABA, 1)[0]
 
 
@@ -816,15 +816,15 @@ def test_o_selo_do_nao_localizado_e_a_palavra_do_usuario(desenho):
     """A PALAVRA É DE PRODUTO, e este é o ÚNICO lugar que a digita."""
     assert desenho.SELOS["off"] == "NÃO LOCALIZADO", (
         f"o selo do estado 'procurei e não achei' diz "
-        f"{desenho.SELOS['off']!r}, e a palavra dela é 'NÃO LOCALIZADO'")
+        f"{desenho.SELOS['off']!r}, e a palavra decidida é 'NÃO LOCALIZADO'")
 
 
 def test_nao_ha_cartao_da_epic_e_o_heroic_e_a_porta_das_duas_lojas(desenho):
-    """A DECISÃO É DE PRODUTO, E É A SEGUNDA — 08/09/2026, e ela desfaz a primeira."""
+    """A DECISÃO É DE PRODUTO, E É A SEGUNDA — 08/09/2026, e desfaz a primeira."""
     chaves = [x.chave for x in desenho.EMBUTIDOS]
     assert "epic" not in chaves, (
-        f"a Epic voltou a ter cartão: {chaves}. Ela decidiu o contrário depois "
-        f"de ver o cartão pronto — e o argumento dela é medido: quem entrega o "
+        f"a Epic voltou a ter cartão: {chaves}. A decisão foi o contrário depois "
+        f"de ver o cartão pronto — e o argumento é medido: quem entrega o "
         f"jogo da Epic aqui é o Heroic, então os dois cartões procurariam o "
         f"MESMO programa em disco e o segundo só repetiria a resposta do "
         f"primeiro.")
@@ -833,9 +833,9 @@ def test_nao_ha_cartao_da_epic_e_o_heroic_e_a_porta_das_duas_lojas(desenho):
     for loja in ("Epic", "GOG"):
         assert loja in heroic.nome, (
             f"o rótulo do Heroic é {heroic.nome!r} e não nomeia a {loja}. Com o "
-            f"cartão da Epic fora por decisão dela, este rótulo é o ÚNICO lugar "
+            f"cartão da Epic fora por decisão de produto, este rótulo é o ÚNICO lugar "
             f"da tela onde aquela loja aparece — tirá-lo daqui apaga a loja da "
-            f"interface inteira, que é o oposto do que ela pediu.")
+            f"interface inteira, que é o oposto do que foi pedido.")
 
     for frase in (desenho.DIZ_NAO_ACHEI, desenho.DIZ_SEM_FONTE):
         assert "Epic" not in frase, (
@@ -846,7 +846,7 @@ def test_nao_ha_cartao_da_epic_e_o_heroic_e_a_porta_das_duas_lojas(desenho):
 
 def test_o_lancador_declarado_entra_no_cartao(desenho, a07, monkeypatch,
                                               tmp_path):
-    """O QUE ELA ACRESCENTA VIRA CARTÃO, e passa pelo MESMO procurador."""
+    """O QUE QUEM USA ACRESCENTA VIRA CARTÃO, e passa pelo MESMO procurador."""
     from hefesto_dualsense4unix.utils.maquina import gravar_maquina
 
     pasta = _pastas_falsas(monkeypatch, tmp_path, "org.ryujinx.Ryujinx")
@@ -855,7 +855,7 @@ def test_o_lancador_declarado_entra_no_cartao(desenho, a07, monkeypatch,
 
     declarados = a07._declarados()
     assert [x.chave for x in declarados] == ["ryujinx"], (
-        f"o que ela declarou não voltou do disco: {declarados}. Sem isto o "
+        f"o que foi declarado não voltou do disco: {declarados}. Sem isto o "
         f"cartão nunca aparece, e nada na tela diz por quê.")
 
     onde = dict(a07._onde_estao_os_lancadores(declarados))
@@ -868,7 +868,7 @@ def test_o_lancador_declarado_entra_no_cartao(desenho, a07, monkeypatch,
     assert "ryujinx" in cartoes, f"o declarado não virou cartão: {sorted(cartoes)}"
     assert cartoes["ryujinx"].nome == "Ryujinx" and cartoes["ryujinx"].presente
     assert desenho.REMOVER_ROTULO in desenho.acoes_html(cartoes["ryujinx"]), (
-        "o cartão declarado não tem como sair — a lista dela vira lixo "
+        "o cartão declarado não tem como sair — a lista declarada vira lixo "
         "permanente, e a única saída seria editar o `maquina.json` à mão")
 
     assert gravar_maquina({"lancadores": {"ryujinx": None}})
@@ -878,7 +878,7 @@ def test_o_lancador_declarado_entra_no_cartao(desenho, a07, monkeypatch,
 
 
 def test_o_declarado_com_a_chave_de_um_de_fabrica_ensina_o_cartao(desenho):
-    """CHAVE REPETIDA NÃO VIRA SEGUNDO CARTÃO — ela soma à busca do primeiro."""
+    """CHAVE REPETIDA NÃO VIRA SEGUNDO CARTÃO — soma à busca do primeiro."""
     ensino = desenho.SemCenso("heroic", "O Meu Heroic",
                               ("meu-heroic",), ("/opt/heroic",),
                               declarado=True)
@@ -889,12 +889,12 @@ def test_o_declarado_com_a_chave_de_um_de_fabrica_ensina_o_cartao(desenho):
         f"MESMO `data-campo`, e o piloto pintaria o valor de um nos dois.")
     ra = next(x for x in lista if x.chave == "heroic")
     assert "meu-heroic" in ra.atalhos and "/opt/heroic" in ra.comandos, (
-        "o que ela ensinou não entrou na busca do cartão de fábrica")
+        "o que foi ensinado não entrou na busca do cartão de fábrica")
     assert "com.heroicgameslauncher.hgl" in ra.atalhos, (
-        "o ensino dela APAGOU a busca de fábrica — quem ensina soma, não troca")
+        "o ensino APAGOU a busca de fábrica — quem ensina soma, não troca")
     assert ra.nome == "Heroic (Epic · GOG)", (
-        "o rótulo de fábrica foi trocado pelo dela: aquele nome é desenho que "
-        "ela aprovou, e o que este botão acrescenta é ONDE procurar")
+        "o rótulo de fábrica foi trocado pelo ensinado: aquele nome é desenho "
+        "aprovado, e o que este botão acrescenta é ONDE procurar")
     assert ra.declarado, (
         "o cartão ensinado não sabe que foi ensinado, e por isso não oferece o "
         "«Tirar daqui» — o ensino ficaria sem desfazer")
@@ -914,13 +914,13 @@ def test_a_tela_de_registro_chega_a_pagina_publicada(desenho):
     assert f'data-hef-forma="{desenho.TELA_DO_NOVO}"' in doc, (
         "o «Adicionar» não pede a forma: o ouvinte do piloto manda o valor do "
         "elemento CLICADO, e o botão é outro elemento — sem isto ele chegaria "
-        "ao Python sem uma letra do que ela digitou")
+        "ao Python sem uma letra do que foi digitado")
     for campo in (desenho.NOVO_ROTULO, desenho.NOVO_ALVO):
         assert f'data-linha="{campo}"' in doc, (
             f"o campo {campo!r} não está na tela publicada")
         assert f'data-campo="{campo}"' not in doc, (
             f"o campo {campo!r} ganhou `data-campo`: o piloto o repintaria dez "
-            f"vezes por segundo por cima do que ela está digitando")
+            f"vezes por segundo por cima do que quem usa está digitando")
 
 
 def _fileira_publicada(chave: str) -> tuple[str, ...]:
@@ -962,7 +962,7 @@ def test_o_registro_nao_grava_o_que_nao_esta_no_disco(a07, ctx, desenho):
         "rotulo": "O Shell", "comandos": ["/bin/sh"]}}}], (
         f"o gesto não gravou o que ESTÁ no disco: {p.chamadas}")
     assert "/bin/sh" in r["recado"], (
-        f"o recibo não diz ONDE — sem o caminho ela tem de acreditar em mim: "
+        f"o recibo não diz ONDE — sem o caminho quem usa tem de acreditar em mim: "
         f"{r['recado']!r}")
 
 
@@ -977,12 +977,12 @@ def test_o_botao_do_cartao_diz_a_tela_para_qual_lancador(a07, ctx, desenho):
 
     a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
     assert a07._PARA_QUEM == "", (
-        "o botão GLOBAL herdou o alvo do clique anterior — ela pediu um "
-        "lançador novo e a tela diria o nome de um cartão que ela não escolheu")
+        "o botão GLOBAL herdou o alvo do clique anterior — o pedido era um "
+        "lançador novo e a tela diria o nome de um cartão que ninguém escolheu")
 
 
 def test_o_schema_recusa_um_declarado_que_a_busca_nunca_acharia():
-    """A SEGUNDA GUARDA, e ela alcança o que o gesto não alcança."""
+    """A SEGUNDA GUARDA, e alcança o que o gesto não alcança."""
     from hefesto_dualsense4unix.utils.maquina import gravar_maquina
 
     for nome, decl in (
@@ -1050,12 +1050,12 @@ def test_o_campo_que_esta_aba_criou_tem_rotulo_de_tela():
     ESTA RÉGUA NASCEU DE UMA REGRESSÃO MEDIDA — 08/09/2026. O campo entrou no
     `MaquinaConfig` com o botão de registro e **não ganhou rótulo de tela** em
     `app/ipc_bridge.py`. Sem ele, `_rotulos_dos_descartados` cai no
-    `rotulos.get(campo, campo)` e a barra de status dela mostra a palavra crua
+    `rotulos.get(campo, campo)` e a barra de status da janela mostra a palavra crua
     `lancadores` no dia em que o documento em disco trouxer o campo corrompido.
 
     **E OS PORTÕES FICARAM VERDES**: quem cobrava isso era
     `test_descartados_chegam_ao_rodape.py`, que não está no `portoes.sh` nem no
-    `ci.yml`. A régua irmã continua sendo a autoritativa — ela cobre o schema
+    `ci.yml`. A régua irmã continua sendo a autoritativa — cobre o schema
     INTEIRO, campo a campo, e reprova rótulo sobrando. Esta cobre o campo que a
     ABA criou, e mora aqui pela razão de sempre: quem acrescenta o campo paga o
     rótulo, e paga na régua que ele já roda.
@@ -1069,17 +1069,17 @@ def test_o_campo_que_esta_aba_criou_tem_rotulo_de_tela():
         "o campo saiu do schema — a régua estaria medindo o vazio")
     rotulo = ipc_bridge._rotulos_dos_descartados({"descartados": ["lancadores"]})
     assert rotulo and rotulo[0] != "lancadores", (
-        f"o campo que esta aba criou chega à barra de status dela como a "
+        f"o campo que esta aba criou chega à barra de status da janela como a "
         f"palavra CRUA do JSON: {rotulo!r}. O rótulo mora em "
         f"`ipc_bridge._ROTULOS_SEM_SECAO`.")
     assert "ançador" in rotulo[0], (
         f"o rótulo do `lancadores` é {rotulo[0]!r} e não nomeia o que se perde. "
         f"A frase do rodapé diz «isto o Hefesto não entendeu e descartou: …», e "
-        f"quem lê precisa saber que perdeu onde os lançadores dela estão.")
+        f"quem lê precisa saber que perdeu onde os lançadores estão.")
 
 
 def test_a_recusa_serve_os_estados_do_cartao_publicado(a07, desenho):
-    """A frase cita um botão QUE ESTÁ ACESO NA FILEIRA publicada — nos estados dela."""
+    """A frase cita um botão QUE ESTÁ ACESO NA FILEIRA publicada — nos estados do cartão."""
     config = desenho.CONFIGURAR_ROTULO
     identificar = desenho.IDENTIFICAR_ROTULO
 
@@ -1096,7 +1096,7 @@ def test_a_recusa_serve_os_estados_do_cartao_publicado(a07, desenho):
             assert not citados, (
                 f"estado {estado!r}: a fileira acesa é {fileira} e a recusa manda "
                 f"clicar em {citados} — nenhum deles está aceso. A tela não manda "
-                f"clicar onde não há nada; sem botão, ela diz o fato e para.")
+                f"clicar onde não há nada; sem botão, a frase diz o fato e para.")
             continue
         assert citados == [esperado], (
             f"estado {estado!r}: a fileira acesa é {fileira} e a recusa cita "
@@ -1140,13 +1140,13 @@ def test_o_tirar_daqui_alcanca_os_seis_cartoes(desenho):
     sem_desensinar = [x.chave for x in desenho.EMBUTIDOS
                       if tirar not in fileira(x.chave, True)]
     assert not sem_desensinar, (
-        f"{sem_desensinar} tem declaração dela e NÃO oferece «{tirar}». O que "
-        f"ela ensinou fica gravado para sempre — e o caminho errado junto.")
+        f"{sem_desensinar} tem declaração de quem usa e NÃO oferece «{tirar}». O que "
+        f"foi ensinado fica gravado para sempre — e o caminho errado junto.")
 
     fingem = [x.chave for x in desenho.EMBUTIDOS
               if tirar in fileira(x.chave, False)]
     assert not fingem, (
-        f"{fingem} oferece «{tirar}» sem ela ter declarado nada. Um botão que "
+        f"{fingem} oferece «{tirar}» sem ninguém ter declarado nada. Um botão que "
         f"não tem o que desfazer é um botão que finge — a mesma regra que tirou "
         f"o «Tirar daqui» dos cinco cartões não ensinados.")
 
@@ -1161,7 +1161,7 @@ def test_o_nome_descartado_e_dito(a07, ctx, desenho, monkeypatch):
 
     recado = str((fora or {}).get("recado") or "")
     assert "A MINHA STEAM DE TESTE" in recado, (
-        f"ela digitou um nome, o produto gravou outro e não disse: {recado!r}. "
+        f"quem usa digitou um nome, o produto gravou outro e não disse: {recado!r}. "
         f"Um campo que a tela oferece e o produto descarta é um campo que finge.")
     assert "Steam" in recado, (
         f"o recado não diz com que nome o cartão ficou: {recado!r}")
@@ -1176,7 +1176,7 @@ def test_o_nome_igual_nao_vira_recado(a07, ctx, desenho):
 
     recado = str((fora or {}).get("recado") or "")
     assert "não entrou" not in recado, (
-        f"ela digitou o mesmo nome do cartão e a tela avisou de um descarte que "
+        f"quem usa digitou o mesmo nome do cartão e a tela avisou de um descarte que "
         f"não houve: {recado!r}")
 
 
@@ -1184,7 +1184,7 @@ _SELOS_QUE_DIZEM_QUE_ESTA_BOM = ("ok", "localizado")
 
 
 def test_cartao_que_nao_declara_defeito_nao_oferece_conserto(desenho):
-    """A RÉGUA QUE NÃO EXISTIA — e é a que ELA fez em 09/09/2026, olhando a tela."""
+    """A RÉGUA QUE NÃO EXISTIA — e é a que nasceu em 09/09/2026, olhando a tela."""
     de_fabrica = [x.chave for x in desenho.EMBUTIDOS]
     onde = tuple((k, f"/usr/bin/{k}") for k in de_fabrica)
     estados = {
@@ -1217,7 +1217,7 @@ def test_cartao_que_nao_declara_defeito_nao_oferece_conserto(desenho):
         + "\n\nO selo diz que está tudo bem, a moldura diz que está tudo bem, e "
           "embaixo disso o produto oferece consertar. Uma cura oferecida onde a "
           "tela não declarou defeito nenhum lê-se como cura de coisa nenhuma — "
-          "é a palavra dela, de 09/09/2026.")
+          "é a decisão de 09/09/2026.")
 
 
 def test_a_steam_com_jogo_sem_o_atalho_continua_declarando_o_defeito(desenho):
@@ -1291,18 +1291,18 @@ def test_o_seletor_grava_o_desktop_que_o_usuario_apontou(a07, ctx, desenho,
     assert p.pedidos, "o gesto não chegou a abrir o seletor do sistema"
     _titulo, padrao, sugestao = p.pedidos[0]
     assert padrao == "*.desktop", (
-        f"o seletor abriu sem filtro de `.desktop`: {padrao!r} — ela pediu para "
+        f"o seletor abriu sem filtro de `.desktop`: {padrao!r} — o pedido foi "
         f"apontar o atalho, não para caçá-lo entre todos os arquivos do disco")
     assert sugestao == str(pasta), (
         f"o seletor abriu em {sugestao!r} e não na pasta de atalhos {str(pasta)!r} "
-        f"— duas das quatro pastas dela ficam dentro de `~/.local`, que um "
+        f"— duas das quatro pastas de quem usa ficam dentro de `~/.local`, que um "
         f"seletor aberto no `$HOME` com ocultos desligados NÃO mostra")
     assert p.chamadas == [{"lancadores": {
         "ryujinx": {"rotulo": "Ryujinx",
                     "atalhos": ["org.ryujinx.Ryujinx"]}}}], (
         f"o gesto não gravou a agulha que a busca casa: {p.chamadas}")
     assert str(atalho) in fora["recado"], (
-        f"o recibo não diz ONDE — sem o caminho, ela teria de acreditar em mim: "
+        f"o recibo não diz ONDE — sem o caminho, quem usa teria de acreditar em mim: "
         f"{fora['recado']!r}")
 
 
@@ -1324,7 +1324,7 @@ def test_o_seletor_recusa_o_desktop_fora_das_pastas_em_que_o_produto_procura(
     assert "fora das pastas" in frase, (
         f"a recusa não diz o que está errado — a PASTA: {frase!r}")
     assert "Confira o caminho" not in frase, (
-        f"a recusa mandou conferir um caminho que ela APONTOU com o mouse: "
+        f"a recusa mandou conferir um caminho APONTADO com o mouse: "
         f"{frase!r}")
     assert p.chamadas == [], (
         f"o produto GRAVOU um lançador que a busca dele nunca acharia: "
@@ -1333,7 +1333,7 @@ def test_o_seletor_recusa_o_desktop_fora_das_pastas_em_que_o_produto_procura(
 
 def test_cancelar_o_seletor_nao_e_erro_nem_noticia(a07, ctx, desenho,
                                                    tmp_path, monkeypatch):
-    """Ela fechou o diálogo. Nada mudou, e a tela NÃO FALA."""
+    """O diálogo fechou. Nada mudou, e a tela NÃO FALA."""
     _com_lar_de_mentira(monkeypatch, tmp_path)
     p = _Seletor(None)
     a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
@@ -1371,7 +1371,7 @@ def test_o_seletor_declara_que_mexe_na_maquina_do_usuario(a07, desenho):
 
     **A MORDIDA:** tire o `grava="machine_declare"` do decorador e esta régua
     reprova; a `--prova-gesto` passaria a clicar num botão que abre um diálogo
-    do sistema (ou, com a janela oculta, a gravar no `maquina.json` dela).
+    do sistema (ou, com a janela oculta, a gravar no `maquina.json` real).
     """
     import pacotes
 
@@ -1399,19 +1399,19 @@ def test_a_recusa_do_registro_nunca_confessa_divida_nossa(a07, desenho):
                 acusadas.append(f"{estado}: …{confissao}… → {frase!r}")
 
     assert not acusadas, (
-        "a recusa confessa dívida NOSSA na tela dela:\n  " + "\n  ".join(acusadas)
-        + "\n\nDecisão dela, 07/09/2026: a dívida vai para o mapa "
+        "a recusa confessa dívida NOSSA na tela de quem usa:\n  " + "\n  ".join(acusadas)
+        + "\n\nDecisão de 07/09/2026: a dívida vai para o mapa "
           "(`docs/data/paridade-gtk-html.csv`), nunca para a tela. Ou o buraco "
           "fecha, ou ele fica no mapa — a tela não o conta.")
 
 
 def test_a_lista_vazia_da_steam_nao_ocupa_um_pixel(desenho):
-    """*"isso na steam essa frase tem que sumir pra nivelarmos a altura do bloco
-    da styeam com demais."* — ela, 22/09/2026.
+    """Na Steam essa frase some, para nivelar a altura do bloco da Steam com os
+    demais (22/09/2026).
 
     A lista vazia era a frase «Nada pendente, e você não tirou nem dispensou
     nenhum jogo.» embaixo de uma linha, e só o cartão da Steam pagava os 28 px.
-    Agora ela é SÓ um comentário HTML: o navegador não desenha nada, e o
+    Agora a frase é SÓ um comentário HTML: o navegador não desenha nada, e o
     `:empty` da `.lanc-fora` ignora comentário — a borda e a margem somem
     junto. Um espaço em volta do comentário já quebraria o `:empty`.
 

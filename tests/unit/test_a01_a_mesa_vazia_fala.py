@@ -25,7 +25,7 @@ from pacotes import a01_jogar as aba
 def test_sem_daemon_a_aba_nao_afirma_que_a_mesa_esta_vazia() -> None:
     """`conectados` vazio pode ser "não há" ou "ninguém respondeu".
 
-    É a mesma guarda do `_estado_da_tela`, e ela é a armadilha desta aba:
+    É a mesma guarda do `_estado_da_tela`, e é a armadilha desta aba:
     escrever "nenhum controle na mesa" sobre um tique sem resposta é a tela
     afirmando o que não leu. Com o serviço parado a mesa também não escreve que ele parou
     (20/10/2026): o Status em Desligado é o único sinal.
@@ -39,5 +39,5 @@ def test_sem_daemon_a_aba_nao_afirma_que_a_mesa_esta_vazia() -> None:
 
 
 def test_o_numero_de_lugares_se_le_do_desenho() -> None:
-    """Cravar `4` poria nesta frase o mesmo defeito que ela denuncia."""
+    """Cravar `4` poria nesta frase o mesmo defeito que a frase denuncia."""
     assert aba.lugares_da_mesa() == len(monta.MESA)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""As duas decisões da aba Jogar que a ONDA2-01 fecha, e a que ela NÃO fecha.
+"""As duas decisões da aba Jogar que a ONDA2-01 fecha, e a que a onda NÃO fecha.
 
 NOTA DATADA, 28/10/2026: o esmaecido do «Player N» do cartão saiu com o cartão
 (A-JOGAR-SE-PUBLICA-COM-OS-CONTROLES-E-A-02-SAI-01); a seção Controles escreve o número sem ele.
@@ -113,8 +113,8 @@ def test_um_clique_grava_uma_vez_so_no_disco_do_usuario() -> None:
     ctx = _ctx([], freestyle_ligado=False)
     aba.cadeado(ctx, {"evento": "change"}, p)
     assert p.chamadas == [], (
-        "o `change` gravou: um gesto na trava grava DUAS vezes no disco dela se "
-        "a caixa voltar, e o filtro é a única coisa entre ela e as duas")
+        "o `change` gravou: um gesto na trava grava DUAS vezes no disco de quem usa se "
+        "a caixa voltar, e o filtro é a única coisa entre o disco e as duas")
 
     aba.cadeado(ctx, {"evento": "click"}, p)
     assert len(p.chamadas) == 1, (
@@ -138,7 +138,7 @@ def test_o_cadeado_confirma_em_verde() -> None:
         aba.cadeado(_ctx([], freestyle_ligado=False), {"evento": "click"}, p)
     assert str(caiu.value) == aba.CADEADO_RECUSA, (
         f"a recusa disse {str(caiu.value)!r} — a frase é a da janela antiga, e "
-        f"texto de tela novo é palavra dela")
+        f"texto de tela novo é decisão do produto")
     assert p.chamadas, "o gesto recusou sem sequer tentar escrever"
 
     p = _PonteDeMentira(cadeado=RuntimeError("o socket recusou"))
@@ -173,17 +173,17 @@ def test_o_cadeado_esta_publicado() -> None:
                  if 'data-gesto="cadeado"' in linha]
     assert len(onde_esta) == 1, (
         f"a caixa do cadeado aparece {len(onde_esta)} vez(es) na página "
-        f"publicada ({alvo}). Zero quer dizer que ela NÃO está no que o produto "
-        f"renderiza — e aí o gesto está ligado a um botão que ela não tem como "
+        f"publicada ({alvo}). Zero quer dizer que a trava NÃO está no que o produto "
+        f"renderiza — e aí o gesto está ligado a um botão que quem usa não tem como "
         f"clicar; mais de uma, que o clique tem dois endereços iguais")
 
     fonte = inspect.getsource(aba.cadeado).lower()
     assert "mockup" not in fonte, (
         f"o fonte do gesto `cadeado` ainda manda quem lê procurar a caixa na "
-        f"bancada — e ela está PUBLICADA, em {alvo}:{onde_esta[0]}, que é o "
+        f"ensaio — e a trava está PUBLICADA, em {alvo}:{onde_esta[0]}, que é o "
         f"arquivo que o piloto abre. Fato errado se SUBSTITUI: o que fica "
         f"escrito é a razão de o `--prova-gesto` não clicar esta caixa, que é "
-        f"`PERIGOSOS` (o gesto grava preferência dela no disco)")
+        f"`PERIGOSOS` (o gesto grava preferência de quem usa no disco)")
 
 
 @pytest.mark.skipif(not pathlib.Path("/usr/bin/google-chrome").exists()
@@ -194,18 +194,18 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
 
     O quadro **Modo** tem duas seções que se trocam com o interruptor
     (`.so-ligado` e `.so-desligado`), e a troca automática de PERFIL vale nas
-    duas. Uma trava aninhada dentro de uma delas sumiria na outra posição — e
+    duas. Uma trava aninhada dentro de uma das duas sumiria na outra posição — e
     sumiria em SILÊNCIO: nenhuma contagem de `data-campo` vê isso, porque o
     endereço continua no arquivo.
 
     **É a diferença entre a ordem no arquivo e o aninhamento no DOM**, e só o
-    navegador responde por ela: a régua pergunta ao `getComputedStyle` nas DUAS
+    navegador responde pela régua: a régua pergunta ao `getComputedStyle` nas DUAS
     posições do interruptor.
 
     **O SELETOR PERDEU A TAG EM 19/09** (`TRAVA-PILULA-01`): ele dizia
     `label.cadeado`, e a trava virou `<button class="cadeado">`. Um seletor com
     a tag velha casa ZERO elemento, e a régua passou a reprovar pela guarda de
-    vácuo logo abaixo — que é exatamente o que ela existe para fazer. A classe
+    vácuo logo abaixo — que é exatamente o que a régua existe para fazer. A classe
     é o endereço; a tag, não.
 
     A MORDIDA: mova o `<button class="cadeado">` para dentro do
@@ -262,7 +262,7 @@ def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
     junto.
 
     **POR QUE O ALVO ENTRA NESTA RÉGUA:** se alguém reusar `.cartao.alvo` para o
-    primário, o defeito só aparece no dia em que ela editar a fita com um
+    primário, o defeito só aparece no dia em que quem usa editar a fita com um
     controle que não é o primário — tarde, e na tela do usuário. Aqui aparece agora: o
     pacote não emite `alvo` nenhum, e quem o escreve é o piloto.
 
@@ -285,7 +285,7 @@ def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
     for uniq, campos in (fora["cartoes"] or {}).items():
         assert "alvo" not in campos, (
             f"o cartão {uniq} passou a emitir `alvo` — o alvo de edição da fita "
-            "é escolha dela, escrita pelo piloto, e não fato do serviço")
+            "é escolha de quem usa, escrita pelo piloto, e não fato do serviço")
 
 
 def test_so_o_true_literal_acende_o_marcador() -> None:
@@ -307,7 +307,7 @@ def test_o_servico_calado_para_de_afirmar_e_nao_escreve() -> None:
     assert fora["hef-posicao"] == "desligado", (
         "o interruptor não disse Desligado com o serviço calado")
     assert fora["modo-aceso"] == "", "um chip da fileira acendeu sem estado"
-    assert fora["cadeado"] == TRAVESSAO, "o cadeado afirmou uma escolha dela"
+    assert fora["cadeado"] == TRAVESSAO, "o cadeado afirmou uma escolha de quem usa"
     assert "mesa-frase" not in fora, "a frase da mesa voltou com o cartão que saiu"
     assert not fora["cartoes"], "um cartão foi afirmado sem estado"
 
@@ -338,7 +338,7 @@ def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
     for frase in minhas:
         assert " mesa " not in f" {frase.lower()} ", (
             f'a palavra "mesa" entrou numa frase desta aba: {frase!r}. Decisão '
-            f"dela, 06/09: o termo sai da tela e entra o simples")
+            f"de produto, 06/09: o termo sai da tela e entra o simples")
 
 
 def _daemon_que_grava(ativo: str | None) -> Any:
@@ -358,13 +358,13 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
     """Passo 1 — o caminho clicado na 01 é o que a aba 10 lê. UM dono, duas telas.
 
     Linha 5 do CSV: *"nada. `_ESCOLHA`/`_ROTULO` são dicionários de módulo lidos
-    só dentro do próprio arquivo"*, e a consequência: *"ela escolhe 'Xbox' na 01,
+    só dentro do próprio arquivo"*, e a consequência: quem usa escolhe 'Xbox' na 01,
     clica em 'Salvar Perfil' na 10, e o perfil grava a máscara que estava no
-    disco — a escolha do usuário não entra."*
+    disco — a escolha do usuário não entra.
 
     **QUEM GRAVA É O DAEMON** desde a O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01
     (29/09/2026): a janela gravava depois da resposta, e com quatro controles a
-    troca passava do teto dela. As duas metades da estrada, medidas aqui:
+    troca passava do teto do perfil. As duas metades da estrada, medidas aqui:
 
     1. o chip «Xbox» pede o caminho à porta que grava — `gamepad.emulation.set`
        com `origin: "manual"`, que o handler traduz em `grava_o_modo="ipc"`;
@@ -406,7 +406,7 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
     lido = perfis_web._pacote_do_editor(loader.load_profile(nome))["modo"]
     assert lido == "gamepad", (
         f"a aba 10 continua vendo {lido!r} depois de o daemon gravar o «Xbox» — "
-        f"a escolha dela não atravessou as duas telas")
+        f"a escolha de quem usa não atravessou as duas telas")
     modo = loader.load_profile(nome).mode
     assert modo is not None and modo.caminho == "xbox", (
         f"o caminho não entrou na seção `mode`: {modo!r}")
@@ -415,7 +415,7 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
 
 
 def test_a_escrita_no_perfil_nunca_levanta(monkeypatch) -> None:
-    """Ela vem DEPOIS de o aparelho trocar — e não pode falhar.
+    """A gravação vem DEPOIS de o aparelho trocar — e não pode falhar.
 
     Uma exceção aqui transformaria uma troca de modo bem-sucedida em recusa:
     o setter do daemon devolveria erro sobre um vpad que já trocou.
@@ -447,7 +447,7 @@ def test_sem_perfil_ativo_nao_se_inventa_um() -> None:
     O FREESTYLE ESTÁ NO DISCO DE PROPÓSITO: é o nome padrão que um escritor
     que «cai num nome» escolheria. A régua lê a pasta que o `loader` usa (a do
     lar de mentira do conftest), e não uma pasta que nenhum escritor alcança.
-    Até 29/09 ela olhava um `tmp_path` que o `loader` nunca via (ele importa
+    Até 29/09 a régua olhava um `tmp_path` que o `loader` nunca via (ele importa
     `profiles_dir` por nome, e o desvio no módulo de origem não o alcança), e
     passava com o escritor gravando no Freestyle.
 
@@ -594,7 +594,7 @@ def no_webkit() -> dict:
     """Abre o piloto DE VERDADE, oculto, e clica a caixa nos TRÊS desfechos.
 
     Linear: cada passo espera a CONDIÇÃO que o próximo precisa, com prazo, e o que estoura o
-    prazo diz qual condição não veio. Só a piscada (e o apagar dela) é medida SEM derrubar o
+    prazo diz qual condição não veio. Só a piscada (e o apagar da piscada) é medida SEM derrubar o
     roteiro: é o que a primeira régua afirma, e as outras duas precisam dos cliques seguintes.
     """
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
@@ -666,7 +666,7 @@ def no_webkit() -> dict:
         return lido
 
     def exigir(condicao: Any, o_que: str, prazo_s: float = PRAZO_DA_TELA_S) -> None:
-        """Condição que o roteiro precisa para seguir: sem ela, a prova está pela metade."""
+        """Condição que o roteiro precisa para seguir: sem a condição, a prova está pela metade."""
         if not girar_ate(condicao, o_que, prazo_s):
             pytest.fail(" | ".join(fora["sem_prazo"]))
 
@@ -740,11 +740,11 @@ def test_o_verde_do_cadeado_no_webkit_e_do_servico(no_webkit: dict) -> None:
     assert certo["verde"], (
         "o serviço confirmou e a caixa não piscou — é o gesto desta aba cujo "
         "efeito não aparece em lugar nenhum da tela, e sem a piscada ele "
-        f"responde ao clique dela com nada ({no_webkit['sem_prazo']})")
+        f"responde ao clique com nada ({no_webkit['sem_prazo']})")
     assert certo["contorno_larg"] != "0px", (
         f"a classe entrou e a folha não pegou: `outline-width` "
         f"{certo['contorno_larg']!r}. É a diferença entre a régua verde e o "
-        f"olho dela vendo alguma coisa")
+        f"olho de quem usa vendo alguma coisa")
 
     assert not no_webkit["depois-da-piscada"]["verde"], (
         f"a piscada não apagou sozinha: {no_webkit['sem_prazo']}")

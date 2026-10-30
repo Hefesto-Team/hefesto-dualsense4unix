@@ -1,4 +1,4 @@
-"""As queixas 7 e 8 dela — os botões do alto-falante e os quatro de sensor."""
+"""As queixas 7 e 8 — os botões do alto-falante e os quatro de sensor."""
 from __future__ import annotations
 
 import pathlib
@@ -117,7 +117,7 @@ class TestATodoOSomDoPC:
         no rádio não publica sink nenhum, e o `mapa-controles.csv` diz o mesmo do
         outro lado — `audio.alto_falante`, `radio_aciona=não`.
 
-        RECUSAR AQUI É A RESPOSTA CERTA, e ela vem ANTES do `speaker.set`:
+        RECUSAR AQUI É A RESPOSTA CERTA, e a recusa vem ANTES do `speaker.set`:
         escrever o byte deixaria o firmware roteado para um canal que o sistema
         não alimenta, com o botão aceso.
         """
@@ -137,7 +137,7 @@ class TestATodoOSomDoPC:
     def test_sons_do_jogo_devolve_a_saida_e_nao_trava_sem_memoria(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A volta existe, e a falta dela não invalida o clique."""
+        """A volta existe, e a falta da volta não invalida o clique."""
         pactl = PactlDeMentira(sinks=[OUTRO, SINK], padrao=SINK)
         memoria = {"v": OUTRO}
         rota = audio_saida.RotaDeSaida(

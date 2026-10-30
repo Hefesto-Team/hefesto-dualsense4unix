@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA QUE DECIDE: com um DUBLÊ, nenhum campo da 06 pode ficar indecidível.
 
-O BURACO QUE ELA FECHA, medido em 02/09/2026. A `--prova-de-mockup` classifica
+O BURACO QUE A RÉGUA FECHA, medido em 02/09/2026. A `--prova-de-mockup` classifica
 cada campo da tela em três montes:
 
     PRODUTO      o valor mudou em relação ao cravado no arquivo publicado
@@ -25,11 +25,11 @@ abrir janela:
 Um `INDECIDIVEL` aqui é a régua confessando que aquele endereço continua sem
 decisão — e nomeia qual. Zero é a única saída aceitável.
 
-O QUE ESTA RÉGUA **NÃO** PROVA, e ela diz: que a tela acompanhou. Isso é do
+O QUE ESTA RÉGUA **NÃO** PROVA, e diz: que a tela acompanhou. Isso é do
 piloto, e foi medido em 02/09 com o mesmo dublê, pela `--prova-de-mockup` com a
 fila reduzida à 06:
 
-    bancada (2 controles)   produto  1 · mockup 0 · indecidível 28
+    ensaio (2 controles)   produto  1 · mockup 0 · indecidível 28
 
 Aqui fica a metade que roda no CI, sem GTK, sem display e sem daemon.
 
@@ -87,7 +87,7 @@ class _CorLida:
     """O que `integrations.cor_do_plastico` devolve: um código e um nome.
 
     `mesa_viva.mesa_do_estado` lê os dois por `getattr`, e é do CÓDIGO que sai o
-    `colorway` — a tradução é do CSV dela (`mesa_viva.CORES`), nunca digitada
+    `colorway` — a tradução é do CSV do produto (`mesa_viva.CORES`), nunca digitada
     aqui. Por isso o dublê declara o código, e não o slug.
     """
 
@@ -237,7 +237,7 @@ OS_DOIS_MUNDOS = [
 
 
 def _opcoes_da_pagina(publicado: bool, chave: str) -> set[str] | None:
-    """As `<option>` daquele `<select>`, na bancada ou no publicado."""
+    """As `<option>` daquele `<select>`, no ensaio ou no publicado."""
     import onde
 
     doc = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
@@ -282,7 +282,7 @@ def _faixa_da_pagina(publicado: bool, chave: str) -> tuple[int, int] | None:
 def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
     """As 22 escolhas do dublê têm de ser oferecidas pela lista daquela linha."""
     cravados, declarados = _no_mundo_de(monkeypatch, publicado)
-    onde_estou = "publicada" if publicado else "da bancada"
+    onde_estou = "publicada" if publicado else "do ensaio"
     conferidos: set[str] = set()
     for campo in cravados:
         if campo.alvo != "valor":
@@ -334,7 +334,7 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
 def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     """Os 14 campos que NÃO são `<select>` têm de dizer o que o dublê mandou.
 
-    O BURACO QUE ELA FECHA, medido em 02/09/2026 (corretivo). As duas metades
+    O BURACO QUE A RÉGUA FECHA, medido em 02/09/2026 (corretivo). As duas metades
     acima reduzem ao mesmo predicado — *o declarado é diferente do cravado* — e
     LIXO também é diferente: com todo valor trocado por `'LIXO — ISTO NÃO É DADO'` as
     duas passam, com o mesmo veredito de sempre. Quem pegava lixo era só
@@ -349,12 +349,12 @@ def test_os_sete_campos_de_texto_dizem_o_que_o_duble_diz(sob_o_duble):
     sem escrever a guarda teria deixado sete campos sem defesa contra valor
     destruidor — o oposto do que a linha do número diz.
 
-    O QUE ELA COBRA, e a distinção é a razão de ela existir: **o esperado sai do
+    O QUE A RÉGUA COBRA, e a distinção é a razão de a régua existir: **o esperado sai do
     DUBLÊ, não do pacote**. Nada aqui chama `a06_navegacao` para descobrir a
     resposta — a contagem sai de `CONTROLES`, os números saem de `ESTADO`, o par
     via/papel de cada cartão sai do `transport`/`is_primary`, e a cor e o nome de
     cada modelo saem de `CORES_LIDAS` traduzidas pelos donos do dado
-    (`mesa_viva.CORES`, que é o CSV dela, e `monta.cor_da_zona`, que lê o SVG).
+    (`mesa_viva.CORES`, que é o CSV do produto, e `monta.cor_da_zona`, que lê o SVG).
     Uma régua que perguntasse ao pacote o que esperar do pacote é a forma de
     instrumento falso que esta casa mais achou.
 

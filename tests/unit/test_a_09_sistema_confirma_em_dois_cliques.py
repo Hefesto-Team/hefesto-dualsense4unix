@@ -203,7 +203,7 @@ def test_a_janela_do_consentimento_e_a_da_aba_que_ja_confirma(a09):
 
 
 def test_o_tique_repoe_o_rotulo_quando_o_prazo_passa(a09, ctx):
-    """Ela armou e saiu: o botão TEM de voltar a dizer o que o desenho diz."""
+    """Armou e saiu: o botão TEM de voltar a dizer o que o desenho diz."""
     a09.desligar(ctx, _clique("Parar o serviço"), None)
     assert a09.pacote(ctx)["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09.CONFIRMA
 
@@ -277,7 +277,7 @@ def test_ligar_e_um_clique_so_e_desarma_a_trava_do_religa(a09, ctx_parado, janel
     assert janela.atos() == ["start"]
     assert janela._user_stopped_daemon is False, (
         "ligou e não desarmou o `_user_stopped_daemon` — o autostart continuaria "
-        "respeitando um desligamento que ela acabou de desfazer.")
+        "respeitando um desligamento que quem usa acabou de desfazer.")
     assert carga["blocos"]
 
 
@@ -343,7 +343,7 @@ def test_o_interruptor_da_jogar_liga_o_servico_so_no_ligado(monkeypatch, modo, l
 
 
 def test_o_ato_de_ligar_tem_um_dono_so(monkeypatch):
-    """A aba Jogar não reescreve o `systemctl` — ela chama o dono.
+    """A aba Jogar não reescreve o `systemctl` — chama o dono.
 
     Duas cópias deste ato se afastariam: uma desarmaria o `_user_stopped_daemon`
     e a outra não, e o daemon voltaria a morrer no próximo F5 por um caminho e

@@ -37,9 +37,9 @@ DOCUMENTO_COM_UM_CAMPO_RUIM: dict[str, Any] = {
 
 @pytest.fixture
 def arquivo(tmp_path: Path) -> Path:
-    """O ``maquina.json`` desta bancada — e a prova de que ele não é o dela."""
+    """O ``maquina.json`` deste ensaio — e a prova de que ele não é o real."""
     caminho = caminho_da_maquina()
-    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp da bancada"
+    assert tmp_path in caminho.parents, f"{caminho} escapou do tmp do ensaio"
     caminho.parent.mkdir(parents=True, exist_ok=True)
     return caminho
 

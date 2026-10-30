@@ -1,15 +1,12 @@
 """MIC-NA-TELA-01 — o que sobrou quando o 🎙 trocou de ATO.
 
 **ESTE ARQUIVO MEDIA UM BOTÃO QUE NÃO EXISTE MAIS — 21/09/2026.** Ele guardava
-os três estados da LUZ DO PLÁSTICO no 🎙, pedido em 10/09. Em 21/09 ela
-trocou o ato do mesmo botão:
-
-    "SE EU ATIVAR COM UM CLICK E ELE FICAR VERDE ELE TÁ ATIVADO E SEGUE ASSIM
-     ATÉ EU DESATIVAR CLICANDO NOVAMENTE E ELE FICANDO CINZA. POR DEFAULT
-     SEGUE DESLIGADO"
+os três estados da LUZ DO PLÁSTICO no 🎙, pedido em 10/09. Em 21/09 a decisão
+trocou o ato do mesmo botão: um clique ativa e o botão fica verde; outro
+desativa e ele fica cinza; o padrão é desligado.
 
 Os dois não cabem num elemento só, e a aritmética é do usuário: o microfone nasce
-ATIVO (ordem de 18/09), então a luz deixaria o botão verde **sem ela ter
+ATIVO (ordem de 18/09), então a luz deixaria o botão verde **sem quem usa ter
 clicado** — o contrário exato do que o usuário mandou. Saíram com o ato o campo
 `mic-botao-estado`, o tradutor `mesa_viva.estado_do_botao_do_mic`, as duas
 palavras de CSS e as réguas que os mediam.
@@ -22,11 +19,9 @@ do gerador, vale para qualquer coisa que o botão venha a vestir.
 Quem mede a trava nova é `test_o_mic_alterna_e_fica.py`.
 
 O enunciado antigo, para quem for ler o histórico:
-
-**O pedido, 10/09/2026:** *"vamos lá na interface invertemos o botão mic
-ele aceso (vai indicar que agora tá gravando audio, ele captando audio vai
-ficar no estado de piscando (guia visual pro leigo que pegar o controle de
-primeira))"*.  <!-- noqa-acento: citação literal -->
+**O pedido, 10/09/2026:** inverter o botão do mic: aceso indica que está
+gravando, e piscando enquanto capta, como guia visual para quem pega o
+controle pela primeira vez.
 
 ## O QUE ESTA RÉGUA TRAVA, e o principal não é o CSS
 

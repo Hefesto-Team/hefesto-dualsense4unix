@@ -1,6 +1,6 @@
 """A régua do defeito D3: nenhum endereço da aba Gatilhos fica sem quem escreva.
 
-O DEFEITO, medido em 02/09/2026 com a bancada (dois controles, perfil
+O DEFEITO, medido em 02/09/2026 com o ensaio (dois controles, perfil
 `meu_perfil`, `triggers.left = {mode: 'Off', params: []}` e o mesmo à direita) e
 fotografado com o piloto oculto:
 
@@ -18,9 +18,9 @@ deixou na página nunca eram endereçadas.
 
 **A REGRA QUE ESTA RÉGUA CRAVA:** *um endereço que a página tem e o pacote não
 escreve continua mostrando o desenho.* Não é o pacote que decide quantas casas
-existem — é a página, e é dela que a contagem sai.
+existem — é a página, e é da página que a contagem sai.
 
-O QUE ELA MORDE, e os quatro já aconteceram:
+O QUE A RÉGUA MORDE, e os quatro já aconteceram:
 
 * voltar a pintar só `len(spec.params)` casas   → `test_o_modo_sem_ajuste_apaga_as_casas`
 * deixar UM `data-campo` da página sem escritor → `test_nenhum_endereco_da_pagina_fica_sem_dono`
@@ -119,7 +119,7 @@ def _bloco(a03, r, pref, sigla):
     """O HTML da caixa de ajustes daquela coluna, do `blocos` que o pacote devolve."""
     chave = f'[data-controle="{pref}"] .ajustes.{sigla}'
     assert chave in r["blocos"], (
-        f"o pacote não emitiu a caixa de ajustes de {pref}·{sigla}. Sem ela a "
+        f"o pacote não emitiu a caixa de ajustes de {pref}·{sigla}. Sem a caixa a "
         f"coluna fica com as barras que o gerador desenhou — é o defeito D3, e "
         f"o que saiu foi: {sorted(r['blocos'])}")
     return str(r["blocos"][chave])
@@ -153,7 +153,7 @@ def test_o_lugar_vazio_recusa_dizendo_que_esta_vazio(a03):
     Os dois casos chegavam ao gesto idênticos — o clique sem controle e o
     clique numa coluna vazia — e saíam com a mesma frase, que culpava o
     instrumento. A página publicada deixa os campos de P3 e P4 abertos com
-    `data-conectado="nao"` ao lado; a trava de forma foi para a bancada, e esta
+    `data-conectado="nao"` ao lado; a trava de forma foi para o ensaio, e esta
     é a de fundo.
     """
     with pytest.raises(RuntimeError) as vazio:
@@ -238,7 +238,7 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             f"mostrando o desenho — é o ENDEREÇO MORTO da régua do mockup.")
         assert not [k for k in col if k.startswith("aj-")], (
             f"{pref} recebeu {sorted(k for k in col if k.startswith('aj-'))}. A "
-            f"coluna vazia do desenho não tem barra de ajuste nenhuma — ela traz "
+            f"coluna vazia do desenho não tem barra de ajuste nenhuma — o desenho traz "
             f"'Este modo não tem o que ajustar.' —, e emitir `aj-*` ali é se dar "
             f"nota por escrever no vazio.")
         assert {"imersao-e", "imersao-d", a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO} <= set(col), (
@@ -300,7 +300,7 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
         "um efeito num lugar onde não há aparelho.")
     assert sem_ele["imersao-e"] in ("", "—"), (
         f"o lugar vazio devolveu {sem_ele['imersao-e']!r}. Ele mostra o "
-        "travessão desde a decisão dela de 02/09")
+        "travessão desde a decisão de produto de 02/09")
 
 
 class _PonteQueRecusa:
@@ -339,7 +339,7 @@ def test_a_recusa_do_daemon_chega_na_lingua_da_tela(a03, gesto_, clique, cru, es
         fn(ctx, dict(clique, uniq=FALSO["uniq"]), ponte)
     assert str(recusa.value) == esperado, (
         f"a tela receberia {str(recusa.value)!r}. A tradução tem dono desde a "
-        f"HARM-19 — `triggers_actions.humanizar_erro_gatilho` — e ela usa os "
+        f"HARM-19 — `triggers_actions.humanizar_erro_gatilho` — e a função usa os "
         f"MESMOS rótulos que o `<select>` desta aba mostra.")
     assert ponte.chamadas, "o gesto nem chegou ao daemon"
 
@@ -381,7 +381,7 @@ def test_o_travessao_espera_a_publicacao_do_usuario(a03):
 
 
 def test_o_travessao_esta_no_desenho_de_hoje(a03):
-    """A BANCADA oferece `—` nos dois campos de escolha, e ele é `disabled`."""
+    """O ENSAIO oferece `—` nos dois campos de escolha, e ele é `disabled`."""
     from hefesto_dualsense4unix.interface import onde
 
     ensaio = onde.pagina(PAGINA).read_text(encoding="utf-8")
@@ -391,7 +391,7 @@ def test_o_travessao_esta_no_desenho_de_hoje(a03):
     campos = len(re.findall(r"<select(?![^>]*data-linha)", miolo))
     assert quantos == campos, (
         f"{quantos} campos oferecem `—` e há {campos} campos de "
-        f"escolha na bancada. O que não oferece não pode receber o vazio.")
+        f"escolha no ensaio. O que não oferece não pode receber o vazio.")
 
 
 def test_a_regua_do_css_nao_le_o_proprio_comentario(a03):

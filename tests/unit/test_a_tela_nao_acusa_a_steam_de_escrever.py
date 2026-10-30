@@ -1,7 +1,7 @@
 """LUZ-CEGA-01/E2 — o card diz o que o campo MEDE, e não o que ele deduz.
 
 O `lightbar_disputada` está CERTO: medido com `fuser`, a Steam segura os oito
-`hidraw` da bancada (quatro DualSense + quatro vpads nossos). O que estava
+`hidraw` do ensaio (quatro DualSense + quatro vpads nossos). O que estava
 errado era a frase que a tela derivava dele — *"a Steam também escreve nesta
 barra"* —, porque **segurar não é escrever**, e o fio já disse quem escreve:
 

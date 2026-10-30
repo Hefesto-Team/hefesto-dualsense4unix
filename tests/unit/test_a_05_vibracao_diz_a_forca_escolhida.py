@@ -17,7 +17,7 @@ dois controles na mesa (um no cabo, um por rádio).
 
    O daemon obedeceu as quatro vezes. O número que a tela mostra **não se moveu
    uma vez** — ficou em ``70%``, com a coluna acendendo "Balanceado", cujo
-   multiplicador é ``1,0``. A dica dela, duas linhas acima na mesma tela,
+   multiplicador é ``1,0``. A dica do botão, duas linhas acima na mesma tela,
    promete *"Balanceado 100%, como o jogo pediu"*. A tela se contradizia sozinha,
    e o ``Máx`` nunca acendia nem no "Máximo".
 
@@ -39,7 +39,7 @@ dois controles na mesa (um no cabo, um por rádio).
 3. **FRASES DA JANELA ESTÁVEL NÃO TINHAM ATRAVESSADO** — o teto da mesa (nos
    quatro tooltips de degrau) e a nota do card "Testar motores". Eram TRÊS até
    05/09/2026: a dos 5 segundos explicava o Modo Auto, que saiu desta tela por
-   decisão de produto. Elas são LIDAS, nunca redigitadas — uma segunda cópia de texto
+   decisão de produto. As frases são LIDAS, nunca redigitadas — uma segunda cópia de texto
    de tela diverge na primeira edição.
 
    **E O DONO MUDOU DE CASA EM 06/09/2026.** A fonte era o ``gui/main.glade``;
@@ -61,8 +61,8 @@ AS MORDIDAS, todas com ``cp`` para devolver:
   (``pacotes.despachar``): devolva a ``Thread`` solta por clique →
   ``test_os_gestos_chegam_na_ordem_do_clique`` reprova.
 
-ONDE ELA MEDE: na **BANCADA**, que é onde o gerador escreve e onde os endereços
-existem. A página publicada só os recebe no ``--publicar 05``, que é ato dela.
+ONDE A RÉGUA MEDE: no **ENSAIO**, que é onde o gerador escreve e onde os endereços
+existem. A página publicada só os recebe no ``--publicar 05``, que é ato de quem coordena.
 """
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ PAR_NO_FISICO = (0, 200)
 
 
 def _estado(policy: str = "balanceado", *, per_vpad: list | None = None) -> dict:
-    """Um ``state_full`` de mentira com o multiplicador PRESO, como o dela."""
+    """Um ``state_full`` de mentira com o multiplicador PRESO, como o real."""
     return {
         "rumble_policy": policy,
         "rumble_mult_applied": APLICADO_PRESO,
@@ -127,7 +127,7 @@ def ensaio() -> str:
     import onde
 
     arq = onde.pagina(PAGINA)
-    assert arq.exists(), f"a bancada não tem {PAGINA} — rode `python3 aba05.py`"
+    assert arq.exists(), f"o ensaio não tem {PAGINA} — rode `python3 aba05.py`"
     return arq.read_text(encoding="utf-8")
 
 
@@ -140,7 +140,7 @@ def _bloco_do_lugar(html: str, pref: str) -> str:
         achado = re.search(r'data-controle="(p\d+)"', pedaco.split(">", 1)[0])
         if achado and achado.group(1) == pref:
             return pedaco
-    raise AssertionError(f"a bancada não tem o lugar {pref!r}")
+    raise AssertionError(f"o ensaio não tem o lugar {pref!r}")
 
 
 def test_o_multiplicador_e_o_pedido_do_degrau() -> None:
@@ -161,7 +161,7 @@ def test_o_multiplicador_e_o_pedido_do_degrau() -> None:
 
 
 def test_o_multiplicador_nao_e_o_campo_preso() -> None:
-    """A régua que separa a cura do defeito, e ela é uma só linha."""
+    """A régua que separa a cura do defeito, e é uma só linha."""
     preso = f"{round(APLICADO_PRESO * 100)}"
     escritos = {
         degrau: {col["mult"] for col in _pacote(degrau)["colunas"].values()}
@@ -171,7 +171,7 @@ def test_o_multiplicador_nao_e_o_campo_preso() -> None:
         f"a aba voltou a mostrar o multiplicador PRESO ({preso}) — {escritos}")
     assert len({tuple(v) for v in escritos.values()}) > 1, (
         "os quatro degraus escreveram o MESMO número: o valor não acompanha a "
-        f"escolha dela — {escritos}")
+        f"escolha de quem usa — {escritos}")
 
 
 def test_o_cursor_da_barra_acompanha_o_pedido() -> None:
@@ -207,12 +207,12 @@ def test_o_desenho_tem_endereco_para_os_dois_punhos(ensaio) -> None:
     cura de defeito medido com os quatro DualSense do usuário na mesa: o lugar VAZIO
     era um cartão à parte, sem um único ``data-campo``, e o ``treme-e``/
     ``treme-d`` que o pacote emite para os QUATRO lugares chegava sem ter onde
-    pousar. Contar ``colunas vivas`` era medir o desenho, não a bancada.
+    pousar. Contar ``colunas vivas`` era medir o desenho, não o ensaio.
     """
     from hefesto_dualsense4unix.interface import aba05
     lugares = len(aba05.MESA)
     assert ensaio.count("data-controle=\"p") == lugares, (
-        f"a bancada não tem os {lugares} lugares — não há o que medir")
+        f"o ensaio não tem os {lugares} lugares — não há o que medir")
     for sigla in ("e", "d"):
         alvo = (f'data-campo="treme-{sigla}" data-hef-alvo="classe"'
                 f' data-hef-classe="acesa"')
@@ -257,7 +257,7 @@ def test_o_pacote_emite_o_tremor_que_o_produto_calculou() -> None:
 
 
 def test_a_mesa_parada_nao_acende_punho_nenhum() -> None:
-    """``vpads == 0`` é o estado corrente da bancada, e nele nada treme."""
+    """``vpads == 0`` é o estado corrente do ensaio, e nele nada treme."""
     for uniq, col in _pacote()["colunas"].items():
         assert col["treme-e"] == "" and col["treme-d"] == "", (
             f"a coluna {uniq} acendeu um punho com a mesa parada: {col}")
@@ -277,8 +277,8 @@ def test_as_frases_da_janela_estavel_estao_na_aba(ensaio) -> None:
     que o "Testar" passa pelo degrau antes de chegar ao controle.
 
     **ERAM TRÊS ATÉ 05/09/2026.** A terceira era *"Espera 5 segundos antes de
-    trocar de faixa"*, e ela explicava o Modo Auto — que saiu desta tela por
-    decisão de produto (*"segue os três modos sempre"*, ver `aba05.FORCA`).
+    trocar de faixa"*, e explicava o Modo Auto — que saiu desta tela por
+    decisão de produto (os três modos seguem sempre, ver `aba05.FORCA`).
 
     **E A FONTE MUDOU EM 06/09/2026** (`GTK-3`, primeira volta): a régua lia o
     XML da janela, que está saindo. Quem responde agora é `app/telas/vibracao`,
@@ -333,7 +333,7 @@ class _PonteDeMentira:
 
 
 def test_o_testar_fica_ligado_e_so_o_parar_desliga() -> None:
-    """O "Testar" é ESTADO, não pulso — e quem o encerra é ela."""
+    """O "Testar" é ESTADO, não pulso — e quem o encerra é quem usa."""
     import pacotes
     from pacotes import a05_vibracao as a05
 
@@ -359,7 +359,7 @@ def test_o_testar_fica_ligado_e_so_o_parar_desliga() -> None:
     pacotes.gesto_da_pagina(PAGINA, "parar")(ctx, {"uniq": UNIQS[0]}, _PonteDeMentira())
     assert a05.em_teste() == frozenset(), (
         "o Parar não apagou a marca — o próximo arraste de barra "
-        "ressuscitaria o tremor de um teste que ela encerrou")
+        "ressuscitaria o tremor de um teste que quem usa encerrou")
 
 
 def test_a_barra_so_refresca_o_controle_que_esta_em_teste() -> None:
@@ -408,7 +408,7 @@ MEDIDA = """
 
 @pytest.fixture(scope="module")
 def no_webkit() -> dict:
-    """Abre a BANCADA num WebKit offscreen, pinta ``treme`` e lê as classes."""
+    """Abre o ENSAIO num WebKit offscreen, pinta ``treme`` e lê as classes."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")

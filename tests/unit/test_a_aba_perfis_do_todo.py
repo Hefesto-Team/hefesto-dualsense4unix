@@ -277,7 +277,7 @@ def test_o_nome_do_jogo_mostra_o_nome_e_grava_o_numero(
         lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """O rótulo do lado saiu: o campo diz «Pragmata», e escrever o nome grava o jogo da Steam.
 
-    Medido na bancada (15/10/2026): o campo «Nome do jogo» mostrava `3357650` e mais nada.
+    Medido no ensaio (15/10/2026): o campo «Nome do jogo» mostrava `3357650` e mais nada.
     """
     from hefesto_dualsense4unix.profiles.simple_match import simple_extra
 
@@ -300,7 +300,7 @@ def test_o_nome_do_jogo_mostra_o_nome_e_grava_o_numero(
 def test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo(lar: Path) -> None:
     """A classe `on` vem do pacote; o `:has(ol:empty)` não se recalcula no WebKitGTK.
 
-    Medido na bancada (15/10/2026): com «Pragmata» e «Pragmata online», os dois `<li>` chegavam ao
+    Medido no ensaio (15/10/2026): com «Pragmata» e «Pragmata online», os dois `<li>` chegavam ao
     `<ol>` e o bloco seguia `display:none`, pois o `:has` ficou com a leitura do `<ol>` vazio.
     """
     _guardar("Pragmata", 30, "steam_app_3357650")
@@ -483,7 +483,7 @@ def test_o_rotulo_cabe_com_todas_as_colunas_gravadas(tela: Any) -> None:
 def test_todo_bloco_do_pacote_acha_um_lugar_na_pagina(tela: Any) -> None:
     """Cada seletor de `blocos` casa UM elemento da página: sem casar, a pintura cai no vazio.
 
-    Medido na bancada (15/10/2026): o «Qual vale primeiro» de um perfil sozinho no jogo seguia
+    Medido no ensaio (15/10/2026): o «Qual vale primeiro» de um perfil sozinho no jogo seguia
     mostrando «Mortal Kombat» e «Mortal Kombat online», os dois do desenho.
     """
     seletores = (a10_perfis.SELETOR_DA_LISTA, a10_perfis.SELETOR_DOS_JOGOS,
@@ -498,7 +498,7 @@ def test_todo_bloco_do_pacote_acha_um_lugar_na_pagina(tela: Any) -> None:
 def test_o_comando_tem_linha_propria_so_no_meu_comando(tela: Any) -> None:
     """Com «Eventos», o comando só aparece no momento «Meu comando», numa linha própria e larga.
 
-    Medido na bancada (15/10/2026): o comando dividia a linha com o momento e ficava com 22 px.
+    Medido no ensaio (15/10/2026): o comando dividia a linha com o momento e ficava com 22 px.
     Desde 19/10 ele mora em `.so-comando`, revelada pelo `:has` do `<option>` escolhido (o motor
     do produto, o WebKitGTK, entende o seletor): some em «Cena» e tem a linha toda em «Meu comando».
     """

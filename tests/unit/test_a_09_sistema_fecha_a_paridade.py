@@ -3,13 +3,13 @@
 
 Esta régua mede as OITO features que a fila da paridade
 (`docs/data/paridade-gtk-html.csv`, as linhas com `aba == "09-sistema"`) dizia
-faltar e que passaram a existir. Ela é o par do CSV: a linha lá afirma
+faltar e que passaram a existir. A régua é o par do CSV: a linha lá afirma
 ``IGUAL``, e é aqui que a afirmação se sustenta no comportamento — não no
 símbolo.
 
-**POR QUE ELA PRECISOU EXISTIR, e é um achado sobre a régua da paridade.** A
+**POR QUE A RÉGUA PRECISOU EXISTIR, e é um achado sobre a régua da paridade.** A
 regra 6 do `check_paridade_gtk_html.py` (`divida-fechada`) procura o símbolo da
-GTK no TEXTO dos arquivos do lado HTML. Ela não distingue CHAMADA de PROSA:
+GTK no TEXTO dos arquivos do lado HTML. A régua não distingue CHAMADA de PROSA:
 quatro linhas do CSV foram promovidas a ``DIFERENTE`` em 03/09 porque alguém
 escreveu o nome da função da GTK dentro de um **comentário** deste pacote.
 Medido, arquivo a arquivo, nesta frente:
@@ -35,7 +35,7 @@ O QUE CADA BLOCO COBRA, e a MORDIDA de cada um está no docstring do teste:
 3. **o exame tem as OITO fontes da janela antiga**, e as duas condicionais
    entram quando falam;
 4. **`ver-detalhes` NÃO obedece à trava** — a única da camada do produto que
-   este pacote desobedece, e ela é declarada (o `ver-plugins`, que recusava
+   este pacote desobedece, e a exceção é declarada (o `ver-plugins`, que recusava
    dizendo, saiu da aba em 13/09/2026 — SISTEMA-BOTOES-01);
 5. **`atualizar` relê a aba**, que é a metade que o botão de mesmo nome faz na
    janela antiga.
@@ -172,7 +172,7 @@ def test_cada_estado_da_matriz_chega_ao_valor_da_tela(a09, estado):
     daemon respondeu, logo está de pé, e um `offline` da matriz vira
     `online_avulso`. Esse desempate é comportamento querido e tem régua própria
     (`test_a_09_sistema_sai_do_desenho.test_o_daemon_que_responde_nao_e_chamado_de_desligado`);
-    o que se mede AQUI é a travessia dos quatro até o valor da tela, e ela
+    o que se mede AQUI é a travessia dos quatro até o valor da tela, e a travessia
     precisa da matriz passando limpo. Medido: com `ESTADO` na mão, o caso
     `offline` chega como `'Ligado, em modo improvisado'` — certo, e não é o que
     esta linha pergunta.
@@ -236,7 +236,7 @@ def test_o_interruptor_do_autostart_sai_do_systemd_e_nao_do_desenho(a09, ctx, mo
 
 
 def test_o_perfil_de_bateria_aceso_sai_do_disco(a09, ctx):
-    """`bateria-perfil` é a CHAVE que o produto grava, e ela vem de `perfil_na_tela`.
+    """`bateria-perfil` é a CHAVE que o produto grava, e vem de `perfil_na_tela`.
 
     O valor pintado é comparado pelo `data-hef-quando` de cada botão, que o
     gerador escreve a partir do mesmo `PERFIS`. Uma régua que digitasse
@@ -273,10 +273,10 @@ def test_o_painel_em_repouso_e_o_systemctl_status_e_nao_um_traco(a09, ctx):
 
 def test_o_ultimo_pedido_vence_o_repouso_ate_o_proximo_clique(a09, ctx):
     """Quem clicou em "Ver …" continua lendo o que pediu, tique após tique."""
-    a09._para_o_painel("o que ela pediu")
+    a09._para_o_painel("o que foi pedido")
     primeiro = a09.pacote(ctx)["registro-texto"]
     segundo = a09.pacote(ctx)["registro-texto"]
-    assert primeiro == segundo == "o que ela pediu"
+    assert primeiro == segundo == "o que foi pedido"
     a09._limpar_o_painel()
 
 

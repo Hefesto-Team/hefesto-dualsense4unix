@@ -1,13 +1,13 @@
 """A aba Perfis parou de anunciar um perfil e agir sobre outro.
 
 TRÊS DEFEITOS DE COMPORTAMENTO, reproduzidos em 02/09/2026 com **33 perfis** no
-disco (o número dela) e dublê de ponte — nada foi ao daemon.
+disco (o número de verdade) e dublê de ponte — nada foi ao daemon.
 
 1. **O Remover anunciava um alvo e apagava outro.** O armamento sempre foi por
    perfil (``remover`` exige ``_ARMADO[0] == nome``), mas o RÓTULO olhava só o
    relógio. A sequência inteira, medida passo a passo, está na docstring de
    ``a10_perfis._rotulo_do_remover``: **um único passo difere**, e é aquele em
-   que ela clica noutra linha — o botão continua prometendo apagar o Pragmata
+   que quem usa clica noutra linha — o botão continua prometendo apagar o Pragmata
    enquanto o próximo clique arma o Sackboy.
 
    **FATO ERRADO, SUBSTITUÍDO — 02/09/2026.** Este parágrafo dizia *"três
@@ -22,8 +22,8 @@ disco (o número dela) e dublê de ponte — nada foi ao daemon.
 2. **O marcador ÓRFÃO virava o alvo dos gestos e matava o realce.**
    ``resolve_boot_profile`` declara na própria docstring que *"só resolve NOMES
    — não valida se o perfil carrega"*, e o que ele devolvia ia cru para o realce
-   da lista e para "Voltar à de ontem". Com o marcador em "Perfil Que Ela
-   Apagou", o gesto mirava um arquivo que não existe.
+   da lista e para "Voltar à de ontem". Com o marcador em "Perfil
+   Apagado", o gesto mirava um arquivo que não existe.
 
    **FATO ERRADO, SUBSTITUÍDO — 02/09/2026.** Este parágrafo dizia que o nome
    órfão virava *"nome na tela"*, no chip "Perfil ativo", e havia aqui uma régua
@@ -31,7 +31,7 @@ disco (o número dela) e dublê de ponte — nada foi ao daemon.
    lendo ``fora["ativo"]``. **``ativo`` não é o chip e não tem endereço em
    página nenhuma** — o chip é ``data-campo="perfil"``, do ``topo.html``, e quem
    o pinta é ``pacotes.topo()`` com o ``active_profile`` CRU. A cura desta aba
-   nunca chegou a ele, e a régua ficava verde sem tocar o que ela vê. A dívida
+   nunca chegou a ele, e a régua ficava verde sem tocar o que quem usa vê. A dívida
    tem régua própria e o ``ativo`` deixou de ser emitido — ver
    ``test_a_aba_perfis_manda_para_um_endereco_que_existe.py``.
 
@@ -149,7 +149,7 @@ def _realcadas(fora: dict[str, Any]) -> list[str]:
 def test_o_rotulo_para_de_perguntar_quando_o_usuario_troca_de_linha(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Armado o Pragmata, ela clica no Sackboy: o botão volta a dizer "Remover"."""
+    """Armado o Pragmata, um clique no Sackboy: o botão volta a dizer "Remover"."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, None)
     ctx, ponte = _ctx(), PonteDeMentira()
@@ -194,7 +194,7 @@ def test_o_marcador_orfao_nao_acende_linha_nenhuma(
 ) -> None:
     """Perfil renomeado ou apagado por fora: nenhuma linha da lista se acende."""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
-    _o_marcador_diz(monkeypatch, "Perfil Que Ela Apagou")
+    _o_marcador_diz(monkeypatch, "Perfil Apagado")
     ctx = _ctx()
     assert a10_perfis._valendo(ctx) == "", (
         "o nome órfão saiu de `_valendo` — ele não casa com nenhum dos perfis "
@@ -207,10 +207,10 @@ def test_o_marcador_orfao_nao_vira_alvo_de_gesto(
 ) -> None:
     """A outra metade, e é a que a tentativa anterior deixou aberta: a TELA"""
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
-    _o_marcador_diz(monkeypatch, "Perfil Que Ela Apagou")
+    _o_marcador_diz(monkeypatch, "Perfil Apagado")
     ctx = _ctx()
     alvo = a10_perfis._perfil_do_editor(ctx)
-    assert alvo != "Perfil Que Ela Apagou", "o marcador órfão virou alvo de gesto"
+    assert alvo != "Perfil Apagado", "o marcador órfão virou alvo de gesto"
     assert [alvo] == _aberto_no_editor(a10_perfis.pacote(ctx)), (
         f"o gesto mira {alvo!r} e o editor mostra outro perfil")
 
@@ -262,7 +262,7 @@ def test_lista_vazia_nao_desarma_a_guarda_do_perfil_que_vale(
     voltaria a apagar o perfil que está valendo.
 
     **ESTA RÉGUA NÃO MORDIA — corrigido em 02/09/2026, e o defeito era duplo.**
-    Ela cravava ``_ESCOLHIDO = "meu_perfil"`` antes de chamar, e
+    A régua cravava ``_ESCOLHIDO = "meu_perfil"`` antes de chamar, e
     ``_perfil_do_editor`` é ``_ESCOLHIDO or _valendo(ctx)``: o ``or``
     curto-circuitava e ``_valendo`` **nem rodava**. Com a mordida declarada
     aplicada, o arquivo inteiro dava ``13 passed``. Sem o ``_ESCOLHIDO``, o
@@ -318,7 +318,7 @@ def test_voltar_a_de_ontem_acha_o_perfil_e_manda_reaplicar(
     assert ("profile_reaplicar", ("Sackboy",)) in ponte.chamadas, (
         "o perfil restaurado é o que está valendo e o daemon não foi avisado")
     assert not any(nome == "profile_switch" for nome, _ in ponte.chamadas), (
-        "o desfazer ativou o perfil À MÃO: ele viraria a escolha dela")
+        "o desfazer ativou o perfil À MÃO: ele viraria a escolha de quem usa")
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 

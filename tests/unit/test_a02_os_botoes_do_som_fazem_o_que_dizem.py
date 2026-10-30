@@ -53,7 +53,7 @@ class Ponte:
 
 @pytest.fixture(autouse=True)
 def _o_cache_da_camada_1_comeca_vazio() -> Any:
-    """Esta régua mede o MÓDULO, então ela garante o estado do módulo."""
+    """Esta régua mede o MÓDULO, então garante o estado do módulo."""
     from pacotes import a02_controles as a02
 
     antes = dict(a02._CAMADA_1)
@@ -70,7 +70,7 @@ def _o_cache_da_camada_1_comeca_vazio() -> Any:
 
 @pytest.fixture
 def casa(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Path:
-    """Um lar de mentira com um perfil ativo. Nada dela é tocado."""
+    """Um lar de mentira com um perfil ativo. Nada do lar real é tocado."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile

@@ -62,16 +62,16 @@ def test_as_cinco_de_coluna_entraram_em_avisos_da_tela() -> None:
         "painel.aviso_da_origem_do_modo",
     ):
         assert esperado in nomes, (
-            f"{esperado} saiu de `AVISOS_DA_TELA` — a linha do CSV que ela fecha "
+            f"{esperado} saiu de `AVISOS_DA_TELA` — a linha do CSV que o aviso fecha "
             f"voltou a ser FALTA_NO_HTML, e a coluna Atenção parou de dizer o "
             f"que o daemon publica.")
     assert callable(getattr(aba, "_aviso_da_divergencia_de_mascara", None)), (
-        "a divergência de máscara saiu do pacote da aba — ela é a quinta, e "
+        "a divergência de máscara saiu do pacote da aba — é a quinta, e "
         "mora aqui e não na tupla do painel porque volta em markup do Pango")
 
 
 def test_a_divergencia_nao_aponta_de_app_para_a_janela() -> None:
-    """O PORTÃO QUE MOVEU ESTA FONTE, e a régua guarda a razão de ela ter mudado."""
+    """O PORTÃO QUE MOVEU ESTA FONTE, e a régua guarda a razão de a fonte ter mudado."""
     fonte = pathlib.Path(painel.__file__).read_text(encoding="utf-8")
     assert "interface.sistema" not in fonte, (
         "`app/actions/jogar/painel.py` voltou a apontar para a janela GTK. "
@@ -197,7 +197,7 @@ def test_a_divergencia_de_mascara_chega_a_coluna() -> None:
     assert frase, "a divergência de máscara não chegou à coluna Atenção"
     assert "Pragmata" in frase, "a frase não nomeou o perfil que pediu a máscara"
     assert "você escolheu" not in frase, (
-        "a frase acusou um gesto dela sobre uma máscara que o PERFIL pediu — "
+        "a frase acusou um gesto de quem usa sobre uma máscara que o PERFIL pediu — "
         "é o defeito que a I3 tirou da tela")
 
 
@@ -270,7 +270,7 @@ def test_as_duas_origens_cabem_na_mesma_linha() -> None:
     [
         ({}, "o estado normal não tem origem de perfil nenhuma"),
         ({"native_mode": True, "native_mode_origin": "manual"},
-         "origem manual é ELA ligando, e a tela não pode chamar isso de perfil"),
+         "origem manual é QUEM USA ligando, e a tela não pode chamar isso de perfil"),
         ({"native_mode": False, "native_mode_origin": "profile"},
          "a origem sobrevive ao modo no store; sem o modo de pé não há o que dizer"),
         ({"mode_from_profile": "native"},
@@ -314,7 +314,7 @@ def test_os_dois_passos_vao_na_ordem_e_o_numero_novo_nao_vira_recado() -> None:
         "lista que ainda não está completa")
     assert fora is None, (
         f"a numeração mudou e o gesto voltou com {fora!r} — o número novo "
-        f"aparece no cartão, e a decisão dela é não dizer nada")
+        f"aparece no cartão, e a decisão de produto é não dizer nada")
 
 
 def test_a_recusa_por_jogo_aberto_nao_e_falha_nem_recado() -> None:
@@ -327,7 +327,7 @@ def test_a_recusa_por_jogo_aberto_nao_e_falha_nem_recado() -> None:
 
 
 def test_a_numeracao_ja_compacta_nao_vira_recado() -> None:
-    """"Já estava compacta" é a AUSÊNCIA de notícia — o caso do print dela."""
+    """"Já estava compacta" é a AUSÊNCIA de notícia — o caso do print de uso."""
     p = _PonteQueResponde({
         "coop.sync": {"players": 2},
         "identity.renumber": {"ok": True, "renumbered": {}},

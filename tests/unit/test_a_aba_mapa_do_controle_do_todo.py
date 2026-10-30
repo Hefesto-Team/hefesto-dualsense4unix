@@ -34,7 +34,7 @@ NOMES_SEM_EXTENSAO = ["Point and click", "Visual novel", "Mouse", "Mouse e tecla
 
 
 def _doc() -> str:
-    """O desenho sem estilo, script e comentário: o que a pessoa vê e o que ela aciona."""
+    """O desenho sem estilo, script e comentário: o que a pessoa vê e o que aciona."""
     bruto = MOCKUP.read_text(encoding="utf-8")
     sem_comentario = re.sub(r"<!--.*?-->", "", bruto, flags=re.S)
     return re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "", sem_comentario, flags=re.S)
@@ -124,7 +124,7 @@ def test_a_tela_cabe_sem_rolagem_vertical() -> None:
 def test_cada_molde_nasce_um_perfil_valido_so_manual_com_o_mouse_ligado(molde: Any) -> None:
     prof = loader.perfil_do_molde(molde.chave, molde.nome)
     assert isinstance(prof, Profile)
-    assert prof.match.type == "manual", "o molde nasce sem jogo: ela o entrega a um jogo depois"
+    assert prof.match.type == "manual", "o molde nasce sem jogo: depois se entrega a um jogo"
     assert prof.mouse is not None and prof.mouse.enabled
     assert prof.button_actions == dict(molde.button_actions)
 

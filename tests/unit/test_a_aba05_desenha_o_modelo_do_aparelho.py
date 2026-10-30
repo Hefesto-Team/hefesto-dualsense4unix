@@ -31,7 +31,7 @@ PARAMETRO = "data-hef-atributo"
 
 
 def modelos_do_mapa() -> set[str]:
-    """Os 28 `id` do CSV dela — `white`, `cosmic-red`, `ghost-of-yotei`…"""
+    """Os 28 `id` do CSV — `white`, `cosmic-red`, `ghost-of-yotei`…"""
     linhas = [
         linha
         for linha in CORES_CSV.read_text(encoding="utf-8").splitlines()
@@ -53,7 +53,7 @@ class _Pagina(HTMLParser):
     """Os elementos com a PILHA de ancestrais, e o texto de cada `<style>`.
 
     A pilha é o que responde *este `<svg>` está dentro de um lugar vazio?* — a
-    pergunta que separa o controle que a mesa tem do lugar que ela não tem. Uma
+    pergunta que separa o controle que a mesa tem do lugar que a mesa não tem. Uma
     régua que olhasse só a tag à esquerda erraria: entre o
     `<div class="ctrl off" data-conectado="nao">` e o `<svg>` há a moldura.
     """
@@ -111,7 +111,7 @@ def _desenhos(html: str) -> list[tuple[dict[str, str], bool]]:
     A MARCA DO LUGAR VAZIO MUDOU EM 07/09/2026: era a classe `vazia`, e passou a
     ser a dupla `class="ctrl off"` + `data-conectado="nao"` — as MESMAS marcas
     que o piloto põe e TIRA (`hefesto_vivo._pintar`, passos 1b e 1c). A `vazia`
-    morreu porque o piloto não a conhece: um cartão que nascesse com ela ficaria
+    morreu porque o piloto não a conhece: um cartão que nascesse com a classe ficaria
     cinza para sempre depois que o controle chegasse.
 
     E A LEITURA TEM DE SEGUIR A MARCA. Procurar `"vazia" in heranca` aqui
@@ -150,7 +150,7 @@ def _mesa(*cores: str) -> list[dict[str, Any]]:
 def test_todo_desenho_de_controle_pede_o_alvo_de_atributo() -> None:
     """Os quatro `<svg>` da mesa trazem o par alvo/parâmetro, e o nome certo."""
     desenhos = _desenhos(_ensaio())
-    assert desenhos, "a bancada da 05 não tem um desenho de controle sequer"
+    assert desenhos, "o ensaio da 05 não tem um desenho de controle sequer"
 
     sem_endereco = [a.get("data-colorway") for a, _v in desenhos
                     if a.get("data-campo") != "colorway"]
@@ -211,12 +211,12 @@ def test_a_pagina_publica_os_28_modelos_do_usuario() -> None:
     html = _ensaio()
     esperados = modelos_do_mapa()
     assert len(esperados) >= 28, (
-        f"o mapa dela encolheu para {len(esperados)} modelos")
+        f"o mapa encolheu para {len(esperados)} modelos")
 
     declarados = set(re.findall(r'svg\[data-colorway="([^"]+)"\]', html))
     faltam = esperados - declarados
     assert not faltam, (
-        f"a página não publica {len(faltam)} dos modelos dela: {sorted(faltam)}"
+        f"a página não publica {len(faltam)} dos modelos do mapa: {sorted(faltam)}"
         " — escrever um deles no `data-colorway` não casaria regra nenhuma e o"
         " desenho cairia no cinza cru")
 
@@ -227,7 +227,7 @@ def test_a_pagina_publica_os_28_modelos_do_usuario() -> None:
     so_um = re.sub(r'svg\[data-colorway="(?!cosmic-red)[^"]+"\][^\n]*\n', "", html)
     assert modelos_do_mapa() - set(
         re.findall(r'svg\[data-colorway="([^"]+)"\]', so_um)), (
-        "a régua não acusa uma página com um modelo só — ela não mede nada")
+        "a régua não acusa uma página com um modelo só — não mede nada")
 
 
 def test_a_tinta_dos_modelos_por_url_existe_na_pagina() -> None:
@@ -279,7 +279,7 @@ def test_o_modelo_emitido_e_um_dos_do_mapa_do_usuario() -> None:
         colunas = a05_vibracao.pacote(ctx).get("colunas") or {}
         emitido = colunas[mesa[0]["uniq"]].get("colorway")
         assert emitido in conhecidos, (
-            f"o pacote emitiu {emitido!r}, que não é um modelo do mapa dela")
+            f"o pacote emitiu {emitido!r}, que não é um modelo do mapa")
 
 
 def test_o_pintor_sabe_escrever_atributo() -> None:

@@ -175,7 +175,7 @@ def test_o_glifo_da_pausa_desmente_o_desenho(a09, ctx):
 def test_o_interruptor_do_autostart_e_dado(a09, ctx, monkeypatch):
     """A chave "Ligar junto com o computador" recebe o que `is-enabled` responde.
 
-    ATÉ 03/09/2026 ELA ERA UM LITERAL DE GERAÇÃO (`AUTOSTART_LIGADO = True`), e
+    ATÉ 03/09/2026 O VALOR ERA UM LITERAL DE GERAÇÃO (`AUTOSTART_LIGADO = True`), e
     `NAO_CHEGA_NA_TELA` a segurava dizendo que *"a pintura não tem alvo de
     classe"*. O piloto ganhou o alvo `classe` em 02/09; a nota tinha caducado.
 
@@ -199,7 +199,7 @@ def test_o_interruptor_do_autostart_e_dado(a09, ctx, monkeypatch):
     p = a09.pacote(ctx)
     assert p["hefesto-autostart"] is False, (
         "com `is-enabled` respondendo `disabled` a chave tem de APAGAR. Hoje "
-        "ela acerta por coincidência nesta máquina, e é isso que este teste "
+        "o literal acerta por coincidência nesta máquina, e é isso que este teste "
         "existe para não deixar voltar.")
 
     monkeypatch.setattr(a09, "_autostart", lambda: None)
@@ -295,7 +295,7 @@ def test_o_prontuario_de_sete_segundos_nunca_roda_no_tique(a09, monkeypatch):
                     "chega ao exame e a linha some para sempre.")
     assert chamou[0].get("examinar") is False, (
         "a releitura voltou a varrer os executáveis de todo jogo instalado. "
-        f"Ela pediu o censo com {chamou[0]!r}, e o `examinar=True` é o que fez o "
+        f"O pacote pediu o censo com {chamou[0]!r}, e o `examinar=True` é o que fez o "
         "tique da 09 custar 1.329 ms num teto de 100 — treze vezes o teto, com "
         "a mesa parada. Esta tela lê UM campo do censo, e ele não depende de "
         "ler executável nenhum (`prontuario_dos_jogos.py:429`).")
@@ -321,7 +321,7 @@ def test_decisao_2_o_nome_curto_na_tela_e_o_inteiro_na_dica(a09):
     saida = a09._com_quem_esta_na_frente("Ligado", vendo)
     assert saida is not None
     assert ">CosmicTerm</span>" in saida, (
-        f"a tela mostra o nome inteiro e ela pediu o CURTO: {saida!r}")
+        f"a tela mostra o nome inteiro e a decisão pediu o CURTO: {saida!r}")
     assert 'title="com.system76.CosmicTerm"' in saida, (
         f"o nome INTEIRO tem de estar na dica: {saida!r}")
 
@@ -329,7 +329,7 @@ def test_decisao_2_o_nome_curto_na_tela_e_o_inteiro_na_dica(a09):
 
 
 def test_o_nome_da_janela_so_aparece_com_o_detector_vendo(a09):
-    """`window_detect_last_class` é STICKY, e fora do `vendo` ela é de horas atrás."""
+    """`window_detect_last_class` é STICKY, e fora do `vendo` é de horas atrás."""
     cego = {**ESTADO, "window_detect_seeing": False,
             "window_detect_last_class": "Hefesto-Dualsense4Unix"}
     assert a09._quem_esta_na_frente(cego) == "", (
@@ -352,7 +352,7 @@ def test_decisao_3_o_aviso_do_process_name_nao_aparece(a09):
     for palavra in ("process_name", "texto_do_processo_que_nao_casa",
                     "nome do processo"):
         assert palavra not in pag, (
-            f"a página traz {palavra!r}. A decisão 3 dela, de 03/09/2026, é que "
+            f"a página traz {palavra!r}. A decisão 3, de 03/09/2026, é que "
             "o aviso do `process_name` NÃO deve aparecer.")
 
 
@@ -361,7 +361,7 @@ def test_decisao_10_o_serial_de_fabrica_aparece_inteiro(a09, ctx):
     texto = a09.pacote(ctx)[a09.REGISTRO]
     assert a09.ROTULO_DA_IDENTIDADE in texto
     assert SERIAL_DE_MENTIRA in texto, (
-        "o serial saiu cortado, e ela pediu INTEIRO.")
+        "o serial saiu cortado, e a decisão pediu INTEIRO.")
     antes_do_diario = texto.split(a09.ROTULO_DO_DIARIO, 1)[0]
     assert SERIAL_DE_MENTIRA in antes_do_diario, texto
     assert a09.SEM_SERIAL_LIDO in texto, (
@@ -373,7 +373,7 @@ def test_o_serial_nao_vaza_para_as_outras_nove_paginas():
     """*"SÓ na aba Sistema"* — e o resto do produto continua sem mostrá-lo.
 
     A régua olha os PACOTES, não as páginas: o serial é dado do `state_full`, e
-    quem poderia levá-lo à tela é quem escreve nela.
+    quem poderia levá-lo à tela é quem escreve na tela.
     """
     pasta = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes"
     culpados = [
@@ -381,7 +381,7 @@ def test_o_serial_nao_vaza_para_as_outras_nove_paginas():
         if p.name != "a09_sistema.py" and '"serial"' in p.read_text(encoding="utf-8")
     ]
     assert not culpados, (
-        f"{culpados} leem o serial de fábrica. A decisão 10 dela o restringe à "
+        f"{culpados} leem o serial de fábrica. A decisão 10 o restringe à "
         "aba Sistema, que é a de diagnóstico.")
 
 

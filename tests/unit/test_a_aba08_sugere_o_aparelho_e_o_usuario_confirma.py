@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A TELA SUGERE O APARELHO, E ELA CONFIRMA — e nada é gravado sem o toque dela."""
+"""A TELA SUGERE O APARELHO, E O USUÁRIO CONFIRMA — e nada é gravado sem o toque dele."""
 from __future__ import annotations
 
 import pathlib
@@ -74,13 +74,13 @@ def _com_o_censo(a08, monkeypatch, por_no: dict[str, tuple[str, str]]) -> None:
 
 
 def test_a_palavra_do_kernel_que_ja_e_a_do_usuario_vira_sugestao(a08, monkeypatch):
-    """"Teclado" (kernel) e "Teclado" (lista dela) casam sem tabela nenhuma."""
+    """"Teclado" (kernel) e "Teclado" (lista de respostas) casam sem tabela nenhuma."""
     _com_o_censo(a08, monkeypatch, {"/sys/x": ("Teclado", "lido")})
     assert a08._sugestao_do_vizinho("/sys/x", _rotulos(a08)) == "Teclado"
 
 
 def test_a_camera_do_kernel_vira_a_webcam_do_usuario(a08, monkeypatch):
-    """O caso que ELA respondeu, e o único da tabela que a bancada exercita."""
+    """O caso que o usuário respondeu, e o único da tabela que o ensaio exercita."""
     _com_o_censo(a08, monkeypatch, {"/sys/cam": ("Câmera", "lido")})
     assert a08._sugestao_do_vizinho("/sys/cam", _rotulos(a08)) == "Webcam"
 
@@ -92,8 +92,8 @@ def test_a_sugestao_nunca_sai_como_resposta(a08):
     assert sugerida != "Teclado"
     assert "Teclado" in sugerida
     assert sugerida not in _rotulos(a08), (
-        "a sugestão caiu em cima de uma resposta da lista dela — o gesto a "
-        "gravaria no `maquina.json` como se ela tivesse respondido")
+        "a sugestão caiu em cima de uma resposta da lista — o gesto a "
+        "gravaria no `maquina.json` como se o usuário tivesse respondido")
 
 
 def test_a_moldura_sai_da_pergunta_e_nao_e_digitada(a08):
@@ -110,7 +110,7 @@ def test_a_classe_ff_nao_sugere_nada(a08, monkeypatch):
 
 
 def test_a_palavra_sem_par_na_lista_do_usuario_nao_vira_sugestao(a08, monkeypatch):
-    """"Impressora" o kernel diz; a lista dela não a tem. Então não há sugestão."""
+    """"Impressora" o kernel diz; a lista de respostas não a tem. Então não há sugestão."""
     _com_o_censo(a08, monkeypatch, {"/sys/p": ("Impressora", "lido")})
     assert a08._sugestao_do_vizinho("/sys/p", _rotulos(a08)) == ""
 
@@ -127,11 +127,11 @@ def test_toda_sugestao_possivel_cabe_na_lista_do_usuario(a08):
     """O destino de cada equivalência EXISTE em `_TIPOS_DE_RADIO`."""
     rotulos = _rotulos(a08)
     fora = sorted(d for d in a08._SUGESTAO_DO_KERNEL.values() if d not in rotulos)
-    assert fora == [], f"destino que a lista dela não oferece: {fora}"
+    assert fora == [], f"destino que a lista de respostas não oferece: {fora}"
 
 
 def test_o_conjunto_das_perguntas_sugeridas_cobre_a_lista_inteira(a08):
-    """Toda resposta da lista dela tem a sua pergunta sugerida reconhecida."""
+    """Toda resposta da lista tem a sua pergunta sugerida reconhecida."""
     pergunta = a08._a_pergunta()
     sugeridas = a08._perguntas_sugeridas()
     for rotulo in _rotulos(a08):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O DESENHO DA 04 VESTE O APARELHO — e o mapa dela cabe inteiro na página.
+"""O DESENHO DA 04 VESTE O APARELHO — e o mapa do produto cabe inteiro na página.
 
 A LEI, de 03/09/2026:
 
@@ -7,7 +7,7 @@ A LEI, de 03/09/2026:
     controle identificado no canto superior, a partir do mapa de cores já catalogado,
     e não de valores cravados no desenho. Cada pessoa pode ter um modelo diferente.
 
-O DEFEITO ESTAVA FOTOGRAFADO antes desta régua existir. Com a bancada — um
+O DEFEITO ESTAVA FOTOGRAFADO antes desta régua existir. Com o ensaio — um
 White no cabo e um Galactic Purple no rádio — a `04-iluminacao` mostrava, com
 três centímetros entre uma coisa e a outra::
 
@@ -24,7 +24,7 @@ SÃO QUATRO METADES, e cada uma sem as outras não pinta nada:
 
 1. o ENDEREÇO existe no desenho, com o alvo que escreve ATRIBUTO — é o
    `data-colorway` que escolhe o modelo na folha de cores;
-2. a FOLHA da página conhece os VINTE E OITO do mapa dela, e não os quatro do
+2. a FOLHA da página conhece os VINTE E OITO do mapa, e não os quatro do
    desenho — `monta._so_o_colorway` guarda dentro de cada SVG só as regras do
    modelo pedido, e escrever `galactic-purple` num SVG que só conhece
    `starlight-blue` dá o cinza neutro de um desenho sem identidade;
@@ -32,7 +32,7 @@ SÃO QUATRO METADES, e cada uma sem as outras não pinta nada:
    `url(#…)`, e um `url()` que não acha alvo pinta NADA em silêncio;
 4. o PACOTE escreve o colorway que leu, e **cala** o que ninguém leu.
 
-NENHUMA DELAS DIGITA O QUE DEVIA LER: os modelos esperados saem do
+NENHUMA DAS RÉGUAS DIGITA O QUE DEVIA LER: os modelos esperados saem do
 `ds_limpo.svg`, que é onde `scripts/gerar_cores_do_dualsense.py` escreve o
 `docs/data/cores-do-dualsense.csv`; os alvos do pintor saem do próprio
 `hefesto_vivo.py`; e o HTML sai do gerador, nunca de uma cópia colada aqui.
@@ -140,9 +140,9 @@ def test_o_desenho_de_cada_coluna_conectada_pede_o_alvo_do_atributo() -> None:
         and a.get("data-hef-atributo") == "data-colorway"
     ]
 
-    assert conectadas, "a bancada da 04 não tem uma coluna de controle sequer"
+    assert conectadas, "o ensaio da 04 não tem uma coluna de controle sequer"
 
-    assert declarados, "nenhum `<svg>` da bancada declara `data-campo=desenho`"
+    assert declarados, "nenhum `<svg>` do ensaio declara `data-campo=desenho`"
     assert len(vestidos) == len(declarados), (
         f"{len(declarados)} desenhos declarados e só {len(vestidos)} com o "
         "endereço COMPLETO — um `data-campo=desenho` sem `data-hef-alvo` faz o "
@@ -157,7 +157,7 @@ def test_o_desenho_de_cada_coluna_conectada_pede_o_alvo_do_atributo() -> None:
 
 
 def test_a_pagina_conhece_todos_os_modelos_que_o_usuario_mapeou() -> None:
-    """Os colorways da página são os do mapa dela, e o bloco aparece UMA vez."""
+    """Os colorways da página são os do mapa, e o bloco aparece UMA vez."""
     html = ENSAIO.read_text(encoding="utf-8")
     assert html.count('id="cores-do-dualsense"') == 1, (
         "as cores do mapa não estão UMA vez na página — ou voltaram para dentro "
@@ -167,18 +167,18 @@ def test_a_pagina_conhece_todos_os_modelos_que_o_usuario_mapeou() -> None:
     do_mapa = _modelos_do_mapa()
     assert do_mapa, "o `ds_limpo.svg` não traz colorway nenhum — mapa vazio"
     assert na_pagina == do_mapa, (
-        "a página não conhece o mapa dela inteiro. Falta: "
+        "a página não conhece o mapa inteiro. Falta: "
         f"{sorted(do_mapa - na_pagina)}; sobra: {sorted(na_pagina - do_mapa)}")
 
 
 def test_todo_fundo_que_a_folha_pede_existe_na_pagina() -> None:
-    """Nenhum `url(#id)` da página aponta para um id que ela não tem."""
+    """Nenhum `url(#id)` da página aponta para um id que a página não tem."""
     html = ENSAIO.read_text(encoding="utf-8")
     ids = set(re.findall(r'id="([^"]+)"', html))
     pedidos = set(re.findall(r"url\(#([a-zA-Z0-9_-]+)\)", html))
     orfaos = sorted(pedidos - ids)
     assert not orfaos, (
-        f"a página pede fundos que ela não tem: {orfaos} — o modelo que usa "
+        f"a página pede fundos que não tem: {orfaos} — o modelo que usa "
         "cada um deles pinta NADA, sem erro e sem aviso")
 
 
@@ -222,11 +222,11 @@ def test_o_pacote_nao_manda_o_desenho_para_quem_nao_sabe_receber(monkeypatch) ->
     for uniq, vals in colunas.items():
         assert a04_iluminacao.CAMPO_DO_DESENHO not in vals, (
             f"a coluna {uniq} recebeu o colorway com a pintura fora de alcance — "
-            "é assim que o desenho vira uma palavra na tela dela")
+            "é assim que o desenho vira uma palavra na tela de quem usa")
 
 
 def test_nenhum_alvo_da_04_chega_ao_pintor_sem_ele_saber_escrever() -> None:
-    """Todo `data-hef-alvo` da bancada, ou o pintor escreve, ou a guarda barra."""
+    """Todo `data-hef-alvo` do ensaio, ou o pintor escreve, ou a guarda barra."""
     pedidos = {
         a["data-hef-alvo"] for _t, a in _elementos(ENSAIO) if a.get("data-hef-alvo")
     }
@@ -234,7 +234,7 @@ def test_nenhum_alvo_da_04_chega_ao_pintor_sem_ele_saber_escrever() -> None:
     sabidos.add("texto")
 
     assert a04_iluminacao.ALVO_DO_DESENHO in pedidos, (
-        "a bancada da 04 deixou de pedir o alvo do atributo — o desenho voltou "
+        "o ensaio da 04 deixou de pedir o alvo do atributo — o desenho voltou "
         "a ser o do mockup")
     desconhecidos = pedidos - sabidos
     assert desconhecidos <= {a04_iluminacao.ALVO_DO_DESENHO}, (

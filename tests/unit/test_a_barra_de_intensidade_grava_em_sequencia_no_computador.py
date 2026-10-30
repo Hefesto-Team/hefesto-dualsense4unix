@@ -1,6 +1,6 @@
 """A barra de intensidade, arrastada VÁRIAS vezes, grava no computador — inclusive a 0.
 
-Achado na bancada de 03/10/2026 (18h10, Freestyle ativo): a barra do P1 arrastada a
+Achado no ensaio de 03/10/2026 (18h10, Freestyle ativo): a barra do P1 arrastada a
 `0` falhou duas vezes com *«custom_mult só é válido com policy='custom' (policy=None)»*
 e a tela mostrou os `0%` que não gravou.
 

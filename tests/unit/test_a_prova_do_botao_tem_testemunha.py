@@ -1,6 +1,6 @@
 """A PROVA DO BOTÃO TEM TESTEMUNHA — A-PROVA-DO-BOTAO-TEM-TESTEMUNHA-01, 29/09/2026.
 
-Na bancada de 29/09, um laço de 0,1 s leu 1.767 vezes o `state_full` com os
+No ensaio de 29/09, um laço de 0,1 s leu 1.767 vezes o `state_full` com os
 botões vazios nos quatro cartões, e o vazio foi lido como «a tela não viu».
 Não havia aperto dentro do laço: a aba Controles estava fora da tela e o
 primeiro da ordem não apertou nada. O defeito era da PROVA — um zero sem aperto

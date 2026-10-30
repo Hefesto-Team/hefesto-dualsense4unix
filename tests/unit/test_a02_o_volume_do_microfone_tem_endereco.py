@@ -31,7 +31,7 @@ def sem_tocar_o_pipewire_da_maquina() -> Any:
     2. a leitura fica no módulo para a régua SEGUINTE. Medido em 12/09/2026:
        com este arquivo antes de `test_a02_a_fonte_do_som_ganha_gesto.py`, duas
        daquelas caíram — `aceso_da_fileira` passou a ler a camada 1 REAL em vez
-       de cair no `rota_na_tela`, que é o caminho que elas medem. E caíram
+       de cair no `rota_na_tela`, que é o caminho que as réguas medem. E caíram
        **de forma intermitente**, porque depende de a thread voltar antes ou
        depois da asserção: a pior forma de vermelho que esta casa conhece.
 

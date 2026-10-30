@@ -38,29 +38,29 @@ consegue ver:
    volta, as duas colunas irmãs continuam acabando no mesmo `y` nos dois
    estados, e o botão troca de palavra DURANTE a espera e volta inteiro.
 
-POR QUE A CAMADA 3 ABRE O DESENHO E NÃO O PUBLICADO: **publicar é ato dela**, e
+POR QUE A CAMADA 3 ABRE O DESENHO E NÃO O PUBLICADO: **publicar é ato de quem coordena**, e
 a [01] move dois pixels (o rótulo e o da espera). A régua aponta o
 `onde.PUBLICADO` para
-uma cópia da bancada num diretório temporário — que é o desenho de HOJE — em vez
+uma cópia do ensaio num diretório temporário — que é o desenho de HOJE — em vez
 de dar verde sobre a página congelada, a armadilha mais cara do
 `COMO-OLHAR-A-TELA.md`.
 
 A MORDIDA (colada no relato desta frente):
 
 * apague `fora.update(razoes_do_cinza(ctx))` do `pacote()` e a camada 1 reprova
-  nomeando as três chaves que sumiram — e com elas o botão que ficaria cinza
+  nomeando as três chaves que sumiram — e com as chaves o botão que ficaria cinza
   para sempre;
 * troque um `item_cinza(...)` por `item(...)` no gerador e a régua 7 dele
   reprova antes mesmo de a página existir;
 * tire o `em_voo=EM_VOO_ATUALIZAR` do gerador e a aba inteira cai no `import
   aba09`, com o `SystemExit` da régua 9 dele — **a camada 3 nunca chega a
   medir**, porque a página não é escrita. Medido em 06/09/2026; a guarda do
-  gerador é mais dura que esta régua, e é ela que responde;
+  gerador é mais dura que esta régua, e é a régua do gerador que responde;
 * tire a palavra "atalhos" da `DICA_ATUALIZAR` e a camada 2 reprova nomeando a
   dica que voltou a esconder o trabalho caro;
 * troque só o VALOR de `ROTULO_ATUALIZAR` e as duas linhas que o comparam com
   `aba09.ROTULO_ATUALIZAR` continuam VERDES — medido. Quem morde é a linha que
-  cobra a palavra de produto LITERAL, logo abaixo delas.
+  cobra a decisão do produto LITERAL, logo abaixo das camadas.
 """
 from __future__ import annotations
 
@@ -109,7 +109,7 @@ def _com_a_leitura(monkeypatch: pytest.MonkeyPatch, status: str,
                    pausado: bool | None) -> Contexto:
     """Desvia SÓ a leitura cara; quem decide continua sendo o produto.
 
-    `aba_sistema.travas()` é uma função PURA de `Leitura`, e é ela que produz a
+    `aba_sistema.travas()` é uma função PURA de `Leitura`, e é a função que produz a
     frase. Dublá-la seria medir o dublê; dublar `_leitura` é dar-lhe a entrada
     e deixar a conta acontecer.
     """
@@ -139,7 +139,7 @@ class TestOPacoteEmiteARazao:
         vazias = [k for k, v in fora.items() if not v]
         assert not vazias, (
             f"com o serviço desligado estes continuam clicáveis: {vazias}. A "
-            "conta é de `aba_sistema.travas()`, e ela tranca os três.")
+            "conta é de `aba_sistema.travas()`, e a função tranca os três.")
 
     def test_a_chave_vem_mesmo_vazia(
             self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -233,10 +233,10 @@ class TestODesenhoCarregaAPeca:
         emitidos = set(normalizar(dict(a09.pacote(ctx)))["mesa"])
         esperados = (no_desenho & emitidos) - publicada
         assert set(a09.ESPERA_A_PUBLICACAO) == esperados, (
-            "a declaração `ESPERA_A_PUBLICACAO` divergiu do disco: ela diz "
+            "a declaração `ESPERA_A_PUBLICACAO` divergiu do disco: a declaração diz "
             f"{sorted(a09.ESPERA_A_PUBLICACAO)} e o que o pacote emite, o "
             f"desenho tem e a publicada não tem é {sorted(esperados)}. Se a aba "
-            "foi publicada, TIRE a declaração — ela já não descreve nada.")
+            "foi publicada, TIRE a declaração — já não descreve nada.")
 
     @skip_sem_gi_real
     def test_o_par_de_sufixos_nao_diverge(self) -> None:
@@ -297,13 +297,13 @@ class TestODesenhoCarregaAPeca:
         assert rotulo == aba09.ROTULO_ATUALIZAR, rotulo
         assert f'data-hef-em-voo="{aba09.EM_VOO_ATUALIZAR}"' in atributos
         assert rotulo == "Atualizar", (
-            f"o botão diz {rotulo!r}. Ela mandou manter 'Atualizar' — *\"Segue "
-            "fazendo os dois. Com mesmo nome\"*, 09-Q1, 05/09/2026 —, "
+            f"o botão diz {rotulo!r}. A decisão manteve 'Atualizar' — os dois "
+            "gestos seguem, com o mesmo nome, 09-Q1, 05/09/2026 —, "
             "revertendo a recomendação de 04/09 que o rebatizava pela metade "
             "cara.")
         assert 'data-hef-em-voo="Atualizando…"' in atributos, (
-            f"o rótulo da espera não é o dela: {atributos!r}. Na 09-Q3 ela "
-            "escreveu *\"o botão diz Atualizando…\"*.")
+            f"o rótulo da espera não é o decidido: {atributos!r}. Na 09-Q3 o "
+            "botão diz «Atualizando…».")
 
     def test_a_dica_do_reload_parou_de_negar_o_trabalho_caro(self) -> None:
         import re
@@ -349,10 +349,10 @@ LER_A_TELA = r"""
   const fim = (el) => el ? Math.round(el.getBoundingClientRect().bottom) : null;
   return JSON.stringify({
     botoes: botoes,
-    // AS DUAS COLUNAS IRMÃS, medidas onde elas ACABAM.
+    // AS DUAS COLUNAS IRMÃS, medidas onde ACABAM.
     fim_do_estado: fim(est),
     fim_da_acao: fim(acao),  // (noqa-acento) `acao` é nome de variável do JS
-    // E A ALTURA DA FAIXA. Ela é o que o `?` faria crescer se virasse fileira —
+    // E A ALTURA DA FAIXA. A faixa é o que o `?` faria crescer se virasse fileira —
     // e o `align-items:stretch` do `.par2` ESCONDE isso de quem só compara os
     // dois fins: a coluna irmã estica junto, os dois `bottom` continuam iguais,
     // e o que muda é a faixa INTEIRA empurrando o resto da aba para baixo.
@@ -361,7 +361,7 @@ LER_A_TELA = r"""
     reaplicar: rea ? {
       rotulo: (rea.textContent || '').trim(),
       em_voo: rea.classList.contains('hef-em-voo'),
-      // A PISCADA DO "DEU CERTO" (05/09/2026, decisão de produto na `03-Q4`). Ela é o
+      // A PISCADA DO "DEU CERTO" (05/09/2026, decisão do produto na `03-Q4`). A piscada é o
       // que responde no lugar da frase quando o gesto não trouxe notícia — ver
       // `test_o_gesto_que_da_certo_pisca_no_botao`.
       deu_certo: rea.classList.contains('hef-deu-certo'),
@@ -535,7 +535,7 @@ def na_tela() -> dict:
 
 
 class TestNaTelaViva:
-    """A peça medida onde ela vive: no motor que ela usa."""
+    """A peça medida onde vive: no motor que a usa."""
 
     def test_a_razao_acende_o_cinza_e_veste_o_aria(self, na_tela: dict) -> None:
         do_produto = na_tela["do_produto"]["com_razao"]
@@ -572,12 +572,12 @@ class TestNaTelaViva:
         com = na_tela["com-razao"]["altura_da_faixa"]
         sem = na_tela["sem-razao"]["altura_da_faixa"]
         assert com == sem, (
-            f"a faixa mede {com}px com a razão e {sem}px sem ela — "
+            f"a faixa mede {com}px com a razão e {sem}px sem a razão — "
             f"{abs(com - sem)}px que a razão cobrou de altura.")
 
     def test_a_aba_nao_passa_a_rolar_por_dentro_com_os_tres_cinzas(
             self, na_tela: dict) -> None:
-        """O preço final de a faixa crescer, e é o que ela VÊ."""
+        """O preço final de a faixa crescer, e é o que quem usa VÊ."""
         for quando in ("com-razao", "sem-razao"):
             assert na_tela[quando]["rola_por_dentro"] == 0, (
                 f"{quando}: o miolo rola {na_tela[quando]['rola_por_dentro']}px "
@@ -613,7 +613,7 @@ class TestNaTelaViva:
         recados = na_tela["depois-do-pouso"]["recados"]
         assert not recados, (
             "o gesto não trouxe notícia e a tela falou mesmo assim — a palavra "
-            f"nova é o que a decisão dela tirou: {recados}")
+            f"nova é o que a decisão tirou: {recados}")
 
     def test_a_peca_nao_mexe_no_numero_de_enderecos_da_pagina(
             self, na_tela: dict) -> None:

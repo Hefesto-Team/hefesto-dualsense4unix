@@ -6,9 +6,9 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
 `2026-09-04-ONDA2-04-ILUMINACAO-01-o-interruptor-de-verdade-e-a-cor-que-se-grava-ao-desligar`:
 
     [01] a razão do tracejado    uma linha só quando há ressalva          (D-02)
-         ↑ CADUCOU EM 07/09/2026, por ordem de produto: *"o que eu não quero é frase
-           da steam ou outras"*. A linha saiu da célula `LEDs`, e as cinco
-           réguas que a mediam saíram com ela — ver
+         ↑ CADUCOU EM 07/09/2026, por decisão do produto: sem frase
+           da Steam ou de outros. A linha saiu da célula `LEDs`, e as cinco
+           réguas que a mediam saíram com a linha — ver
            `test_a_04_as_lampadas_espelham_o_numero`, que guarda a AUSÊNCIA.
            A razão do tracejado continua no `title` das duas tiras.
     [02] o automático do perfil  interruptor DE VERDADE na aba            (D-13)
@@ -20,13 +20,13 @@ A fonte é o registro «O-PO-DECIDE-as-54-e-os-sete-conflitos» de 04/09/2026,
            dica da célula Cor; reenviar é clicar a amostra acesa (gesto `cor`).
     [04] o brilho guardado       uma frase curta
 
-**A DE PESO É A [02], E ELA VEIO CONTRA A RECOMENDAÇÃO ESCRITA.** A lista desta
+**A DE PESO É A [02], E VEIO CONTRA A RECOMENDAÇÃO ESCRITA.** A lista desta
 aba propunha que o botão só MOSTRASSE o estado do automático, e que mudá-lo
 continuasse na aba Perfis (conflito C-4). O usuário escolheu o interruptor, aceitou o
-custo declarado (~30 px) e aceitou a consequência que ele abre — com estas
-palavras: *"ok aceito o caminho"*. **Desligar GRAVA a cor de cada controle no
-ato**, para cumprir a regra de 03/09 (*"nenhuma cor dos controles nunca
-pode ser a mesma"*) sem o produto nunca dizer não a ela.
+custo declarado (~30 px) e aceitou a consequência que ele abre.
+**Desligar GRAVA a cor de cada controle no
+ato**, para cumprir a regra de 03/09 (nenhuma cor dos controles pode
+ser a mesma) sem o produto nunca recusar a escolha.
 
 O QUE ESTE ARQUIVO MEDE, com a mordida escrita em cada caso:
 
@@ -168,7 +168,7 @@ def _do_disco(caminho) -> dict:
 
 
 def _mudanca(**extra) -> dict:
-    """O clique que o piloto manda quando ela MEXE num `<input>`: o `change`.
+    """O clique que o piloto manda quando quem usa MEXE num `<input>`: o `change`.
 
     Os dois campos são do BOOTSTRAP e chegam em todo clique — `tipo` é o
     `tagName` do alvo e `evento` é o `ev.type`. Escrevê-los aqui é o que separa
@@ -257,11 +257,11 @@ def test_ir_ao_personalizado_grava_a_cor_de_cada_controle(pac, a04):
         cores[chave] = tuple(dele["leds"]["lightbar"])
     assert cores[CHAVE_UM] != cores[CHAVE_DOIS], (
         f"os dois controles ficaram com a MESMA cor ({cores}) — é exatamente a "
-        f"regra dela que a gravação existe para cumprir")
+        f"regra que a gravação existe para cumprir")
 
 
 def test_a_cor_gravada_e_a_que_estava_acesa(pac, a04):
-    """E ela é a PEDIDA, não a publicada — a diferença é o brilho."""
+    """E a cor é a PEDIDA, não a publicada — a diferença é o brilho."""
     from hefesto_dualsense4unix.core.led_control import LedSettings
 
     caminho = _semear(automatico=True, brilho=0.5)
@@ -272,7 +272,7 @@ def test_a_cor_gravada_e_a_que_estava_acesa(pac, a04):
     gravada = _do_disco(caminho)["controllers"][CHAVE_UM]["leds"]["lightbar"]
     assert tuple(gravada) == (0, 255, 0), (
         f"gravou {tuple(gravada)} — a cor guardada é a PEDIDA, e a 50% de "
-        f"brilho o daemon publica a metade dela")
+        f"brilho o daemon publica a metade da cor")
 
 
 def test_sem_cor_conhecida_grava_a_do_automatico_e_nunca_o_preto(pac, a04):
@@ -281,7 +281,7 @@ def test_sem_cor_conhecida_grava_a_do_automatico_e_nunca_o_preto(pac, a04):
     Nos estados em que o motor não afirma cor (a Steam com o `fd`, Nativo, cor
     desconhecida) o que o Automático estava dando é a cor do plástico daquele
     controle (ou a do número, sem plástico conhecido). Um preto aqui apagaria a
-    barra dela por um clique no par.
+    barra da cor por um clique no par.
 
     A MORDIDA: troque a queda por `(0, 0, 0)` e esta linha reprova.
     """
@@ -307,12 +307,12 @@ def test_ir_ao_automatico_nao_apaga_cor_nenhuma(pac, a04):
     assert disco["leds"]["auto_player_colors"] is True
     assert disco["leds"]["modo"] == AUTOMATICO
     assert tuple(disco["controllers"][CHAVE_UM]["leds"]["lightbar"]) == (7, 8, 9), (
-        "o Automático apagou a cor que ela tinha escolhido para o controle — a "
+        "o Automático apagou a cor que quem usa tinha escolhido para o controle — a "
         "escolha fica no disco para o Personalizado devolver")
 
 
 def test_o_gesto_reaplica_o_perfil(pac, a04):
-    """Metade do gesto, e sem ela ele é o botão que aceita o toque e não age."""
+    """Metade do gesto, e sem a metade ele é o botão que aceita o toque e não age."""
     _semear(automatico=True)
     p = PonteDeMentira()
     a04.modo_da_luz(_ctx(pac), _pedido("personalizado"), p)
@@ -457,7 +457,7 @@ def test_no_repouso_a_linha_nao_cobra_pixel_e_a_aba_nao_rola(pagina_no_chrome):
 
 
 def test_o_brilho_guardado_diz_uma_frase_curta_e_nao_recusa(pac, a04):
-    """Decisão [04] dela, entre a frase inteira, a curta e o silêncio."""
+    """Decisão [04], entre a frase inteira, a curta e o silêncio."""
     caminho = _semear()
     disputado = dict(P1, lightbar_disputada=True)
     ctx = _ctx(pac, conectados=[disputado])
@@ -498,7 +498,7 @@ def test_a_frase_curta_carrega_a_causa_do_motor(pac, a04):
 
 
 def test_a_pasta_de_perfis_desta_regua_e_de_mentira():
-    """A guarda de vacuidade, e ela é a mais importante deste arquivo."""
+    """A guarda de vacuidade, e é a mais importante deste arquivo."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     conftest = next(m for nome, m in sys.modules.items()

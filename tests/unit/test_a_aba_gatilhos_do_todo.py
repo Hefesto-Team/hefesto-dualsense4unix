@@ -86,12 +86,12 @@ _PROMESSA_DE_TEMPO = re.compile(
 
 
 def _o_tempo_vale_em_todo_modo(i: imersao.Imersao) -> bool:
-    """Todo modo em que ela se oferece tem momento que o motor toca."""
+    """Todo modo em que a opção se oferece tem momento que o motor toca."""
     return bool(i.momentos) and all(imersao.momentos_no_modo(i, m) for m in i.ajustes)
 
 
 def test_a_dica_diz_o_tempo_so_onde_o_motor_o_toca_em_todo_modo() -> None:
-    """A dica vai à tela: o tempo só se promete onde os momentos valem em todo modo dela."""
+    """A dica vai à tela: o tempo só se promete onde os momentos valem em todo modo da opção."""
     erradas = {i.chave: i.dica for i in imersao.IMERSOES
                if bool(_PROMESSA_DE_TEMPO.search(i.dica)) != _o_tempo_vale_em_todo_modo(i)}
     assert not erradas, erradas
@@ -118,12 +118,12 @@ def test_a_ordem_com_estilo_poe_as_dele_na_frente() -> None:
 
 
 def _desenho() -> str:
-    """O desenho (`mockup/`), que é o que o gerador escreve e ela aprova."""
+    """O desenho (`mockup/`), que é o que o gerador escreve e quem coordena aprova."""
     return (RAIZ / "mockup" / PAGINA).read_text(encoding="utf-8")
 
 
 def _o_que_se_le() -> str:
-    """O desenho sem o estilo e sem o script: só o que a pessoa vê e o que ela aciona."""
+    """O desenho sem o estilo e sem o script: só o que a pessoa vê e o que aciona."""
     return re.sub(r"<(style|script)>.*?</\1>", "", _desenho(), flags=re.S)
 
 
@@ -152,7 +152,7 @@ def test_o_desenho_traz_as_palavras_da_decisao_e_nenhuma_das_que_sairam() -> Non
 def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
     """Sem `data-hef-forma` o gesto chega sem as barras e recusa («não consegui ler a área»).
 
-    Achado na bancada de tela: o Sentir foi clicado e o daemon de mentira não recebeu nada.
+    Achado no ensaio de tela: o Sentir foi clicado e o daemon de mentira não recebeu nada.
     """
     doc = _o_que_se_le()
     assert doc.count('id="criar-gatilhos"') == 1
@@ -200,7 +200,7 @@ def test_a_imersao_se_reconhece_pelos_numeros_e_o_que_ninguem_conhece_fica_em_br
 
 
 def test_o_efeito_criado_e_da_imersao_e_entra_na_lista_unica_em_seus_efeitos(a03) -> None:
-    """22/10/2026: sem tipo a escolher; tudo o que ela cria é um efeito do gatilho, em «Seus»."""
+    """22/10/2026: sem tipo a escolher; tudo o que se cria é um efeito do gatilho, em «Seus»."""
     forma = {"partir": "Rigid", "nome": "Recuo da régua",
              "inicio": "3", "fim": "9", "forca": "5", "freq": "40"}
     a03.criar_efeito_dos_gatilhos(None, {"forma": forma}, None)
@@ -303,7 +303,7 @@ def test_sentir_devolve_o_que_vale_depois_do_toque_e_nao_o_de_antes(a03, monkeyp
 def test_as_barras_cobrem_so_o_que_o_modo_tem(a03) -> None:
     fora = a03._ajustes_da_criacao("Resistance", {"inicio": "9", "forca": "8", "freq": "255"})
     assert fora and all(n in FAIXAS["Resistance"] for n in fora), fora
-    assert "frequency" not in fora, "a Resistência não tem frequência: a barra não faz nada nela"
+    assert "frequency" not in fora, "a Resistência não tem frequência: a barra não faz nada"
     cheio = a03._ajustes_da_criacao("Machine", {"forca": "8", "freq": "255"})
     for nome, valor in cheio.items():
         assert valor <= FAIXAS["Machine"][nome][1], (nome, valor)

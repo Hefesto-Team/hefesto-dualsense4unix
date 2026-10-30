@@ -8,8 +8,8 @@ a 200% (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), 
 saiu com eles; ficam o «Testar agora» e o «Parar».
 
 A régua mede no WebKit, na janela do tamanho do produto (`TAMANHO_OCULTA`,
-importado), a página da BANCADA (`mockup/05-vibracao.html`) pintada pelo pacote
-da aba: o `--publicar` copia a bancada byte a byte e é um passo à parte, então a
+importado), a página do ENSAIO (`mockup/05-vibracao.html`) pintada pelo pacote
+da aba: o `--publicar` copia o ensaio byte a byte e é um passo à parte, então a
 medida vale antes e depois dele.
 
 AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
@@ -106,7 +106,7 @@ def _carga() -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def medido() -> dict[str, Any]:
-    """Abre a bancada da aba num WebKit offscreen, pinta a carga e mede o DOM."""
+    """Abre o ensaio da aba num WebKit offscreen, pinta a carga e mede o DOM."""
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")

@@ -5,7 +5,7 @@
 
 O gesto `player` da aba Iluminação chamava `identity.number.set` e parava aí.
 Isso troca o NÚMERO EXIBIDO; as cinco lâmpadas brancas do DualSense não vêm
-com ele. Medido na bancada, com os dois controles ligados e o daemon vivo,
+com ele. Medido no ensaio, com os dois controles ligados e o daemon vivo,
 lendo `/sys/class/leds` a cada passo::
 
     estado de partida            slot=2 → lâmpadas do 2 · slot=1 → do 1
@@ -28,7 +28,7 @@ fáceis de fundir num só por engano:
 * co-op fora → o desenho por `uniq`, com o padrão do número de AGORA, para o
   alvo E para o parceiro da troca.
 
-A MORDIDA, e ela está escrita nos testes um a um: tire a chamada de
+A MORDIDA está escrita nos testes um a um: tire a chamada de
 `_acender_o_numero` do gesto e sete testes reprovam; troque o `player_led_pattern`
 por um literal e o teste da tabela reprova; funda os dois ramos e o do co-op
 reprova dizendo que escreveu override debaixo de quem manda.
@@ -133,7 +133,7 @@ def test_o_clique_no_jogador_escreve_o_desenho_das_cinco_lampadas(pac):
 
     assert "player_leds_set_detalhado" in p.nomes(), (
         "o clique no jogador NÃO escreveu as cinco lâmpadas — só trocou o "
-        "número. É a queixa dela de 04/09/2026, de volta.")
+        "número. É a queixa de 04/09/2026, de volta.")
     assert (P1, (False, True, False, True, False)) in p.desenhos(), (
         f"o controle clicado não recebeu o desenho do Player 2. Foi: "
         f"{p.desenhos()}")
@@ -212,7 +212,7 @@ def test_com_o_coop_mandando_o_gesto_reconcilia_em_vez_de_escrever(pac):
         f"{p.chamadas}")
     assert "player_leds_set_detalhado" not in p.nomes(), (
         "com o co-op mandando, o gesto escreveu o override por-uniq — a "
-        "escrita que a mesa dela mediu como INERTE (o daemon diz `aplicado` e "
+        "escrita que a máquina de teste mediu como INERTE (o daemon diz `aplicado` e "
         "a lâmpada não muda).")
 
 
@@ -267,7 +267,7 @@ def test_a_frase_feliz_e_perguntada_ao_dono_e_nao_digitada(pac):
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/pacotes"
                     "/a04_iluminacao.py").read_text(encoding="utf-8")
     assert "Desenho das luzes" not in fonte, (
-        "a frase do desenho das cinco luzes foi DIGITADA no pacote. Ela é de "
+        "a frase do desenho das cinco luzes foi DIGITADA no pacote. A frase é de "
         "`lightbar_actions._msg_do_desenho`; pergunte a ele.")
 
 
@@ -279,7 +279,7 @@ def test_a_aba_iluminacao_nao_declara_sem_eco(pac):
     de ida: não há canal de leitura de LED de jogador em transporte nenhum,
     `docs/data/mapa-controles.csv`) — mas **publica `player_slot`**, e é ele
     que este gesto muda, nos DOIS controles da troca. O eco existe; declarar
-    `SEM_ECO` calaria a régua para sempre sobre um caminho que ela mede.
+    `SEM_ECO` calaria a régua para sempre sobre um caminho que a régua mede.
 
     MORDIDA: acrescente `SEM_ECO = ("player",)` ao pacote. Este teste reprova —
     e a régua do aparelho deixaria de acusar o dia em que a renumeração parasse

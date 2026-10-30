@@ -5,7 +5,7 @@
 `ponte.chamar`, que devolve `bool` e joga fora o corpo. Um
 `{"status": "failed", "bloqueio": "sem_device"}` — que o daemon manda desde
 25/08 (`ipc_handlers._handle_mouse_emulation_set`) — voltava `True`, o gesto
-seguia adiante, e ela não via uma palavra.
+seguia adiante, e quem usa não via uma palavra.
 
 O produto já tinha as duas peças e ninguém as chamava:
 
@@ -85,7 +85,7 @@ def _ctx(**mouse: object):
 
 @pytest.mark.parametrize("bloqueio", sorted(BLOQUEIO_DO_MOUSE_EM_PORTUGUES))
 def test_a_velocidade_recusada_diz_por_que(bloqueio: str) -> None:
-    """A frase é a do produto, inteira — e ela chega ao cartão dela.
+    """A frase é a do produto, inteira — e chega ao cartão do controle.
 
     `RuntimeError` é o contrato: `hefesto_vivo._recusou_dizendo` leva ao cartão
     a frase de um `RuntimeError` e NÃO a de um `ValueError`, que fala com quem
@@ -182,7 +182,7 @@ def test_dois_arrastes_mandam_os_dois_numeros() -> None:
 
 
 def test_a_barra_nao_consulta_o_tique() -> None:
-    """O número vem do polegar dela, e o estado do daemon não entra na conta."""
+    """O número vem do polegar de quem usa, e o estado do daemon não entra na conta."""
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()

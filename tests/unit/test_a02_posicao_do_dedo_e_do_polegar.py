@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""A POSIÇÃO DO PONTINHO — a queixa de uso, e a régua que ela deixa.
+"""A POSIÇÃO DO PONTINHO — a queixa de uso, e a régua que a queixa deixa.
 
 A QUEIXA É DO USUÁRIO, 04/09/2026, com dois DualSense na mesa (um no cabo, um no
 rádio, os dois validados): *"não funciona o touch, analogicos"*.
 
-E ela estava certa nos dois. O DADO CHEGAVA INTEIRO — `daemon/sensor_hub.py`
+E a queixa estava certa nos dois. O DADO CHEGAVA INTEIRO — `daemon/sensor_hub.py`
 publica o bloco `touchpad` com as cinco chaves juntas (`touching`, `x`, `y`,
 `width`, `height`) e o `inputs` com `lx`/`ly`/`rx`/`ry` — e morria no
 `style=` de linha do desenho, que o produto não alcançava.
 
 A PRIMEIRA CURA (04/09) foi uma folha endereçada, `posicao-css`, trocada
-inteira a cada tique. Ela moveu os pontinhos e repintava a janela toda dez vezes
+inteira a cada tique. A cura moveu os pontinhos e repintava a janela toda dez vezes
 por segundo: 37,7% de um núcleo no WebKit, medido na banca em 25/09/2026.
 
 A CURA DE HOJE (A-JANELA-ABERTA-NAO-GASTA-O-PROCESSADOR-01) é o alvo `posicao`:
@@ -27,7 +27,7 @@ O QUE ESTA RÉGUA MEDE, e o que cada teste MORDE está escrito no teste:
 3. **o desenho continua no desenho** — o P1 do mockup mostra, lido pela régua
    do mockup, o exemplo que o desenho cravou.
 
-O QUE ELA NÃO MEDE: o WebKit calculando o `left`. Isso é da régua no tempo
+O QUE A RÉGUA NÃO MEDE: o WebKit calculando o `left`. Isso é da régua no tempo
 (`test_a_janela_aberta_pontinhos_e_contas_nao_gasta_o_processador.py`, R5), que abre o piloto.
 """
 from __future__ import annotations
@@ -65,7 +65,7 @@ def a02():
 
 @pytest.fixture(scope="module")
 def pagina() -> str:
-    """A página da BANCADA — o desenho de hoje, que é o que ela olha."""
+    """A página do ENSAIO — o desenho de hoje, que é o que quem usa olha."""
     from hefesto_dualsense4unix.interface import onde
 
     return onde.pagina("02-controles.html").read_text(encoding="utf-8")

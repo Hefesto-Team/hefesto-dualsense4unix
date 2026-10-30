@@ -72,7 +72,7 @@ def _ctx(entry: dict[str, Any] | None = None, **extra: Any) -> Contexto:
 
 
 def _enderecos_do_ensaio() -> frozenset[str]:
-    """Todo `data-campo` do DESENHO de hoje — e a bancada é onde ele mora."""
+    """Todo `data-campo` do DESENHO de hoje — e o ensaio é onde ele mora."""
     doc = onde.pagina("01-jogar.html").read_text(encoding="utf-8")
     import re as _re
     return frozenset(_re.findall(r'data-campo="([^"]+)"', doc))
@@ -103,7 +103,7 @@ FACES = [
      "nós pedimos mudo; a face do desejo diz calado"),
     ({**NO_AR, "mic_mudo_desejado": None}, ATIVO,
      "`None` é 'a posse é do kernel' — um fato sobre QUEM MANDA, não sobre o "
-     "mudo, e tratá-lo como ausência deixaria a mesa dela inteira em `—`"),
+     "mudo, e tratá-lo como ausência deixaria a mesa inteira em `—`"),
     ({}, NAO_SEI, "nenhuma face lida"),
     ({"mic_mudo": False}, NAO_SEI, "o canal ainda não foi perguntado"),
     ({"mic_mudo": True}, MUDO,
@@ -116,7 +116,7 @@ FACES = [
 @pytest.mark.parametrize("audio, esperado, porque", FACES)
 def test_o_selo_le_as_quatro_faces(audio: dict[str, Any], esperado: str,
                                    porque: str) -> None:
-    """ATIVO só quando as quatro concordam — a D-12 dela, virada em régua."""
+    """ATIVO só quando as quatro concordam — a D-12, virada em régua."""
     assert a02.selo_composto(audio) == esperado, porque
 
 
@@ -160,7 +160,7 @@ ESTADOS_DA_LUZ = [
 def test_os_rotulos_sao_perguntados_ao_motor_e_diferentes() -> None:
     """As três chaves da tabela saem de `rotulo_lightbar`, e são três.
 
-    ELA É O QUE IMPEDE A TABELA DE ENVELHECER CALADA: no dia em que o motor
+    ESTA RÉGUA IMPEDE A TABELA DE ENVELHECER CALADA: no dia em que o motor
     trocar uma frase, a chave deixa de casar e a palavra volta a ser o
     travessão. Esta régua reprova ANTES disso, porque cobra que as três
     entradas mínimas produzam três rótulos distintos e que os três estejam
@@ -207,7 +207,7 @@ def test_a_frase_inteira_vai_para_o_hover(
 ) -> None:
     """O `title` da linha recebe a frase do MOTOR, palavra por palavra.
 
-    É a outra metade da decisão [02] — *"frase inteira no hover"* —, e sem ela
+    É a outra metade da decisão [02] — frase inteira no hover —, e sem essa metade
     a palavra curta seria uma perda de informação em vez de uma tradução.
 
     MORDE: devolva `luz_porque` a `""` e os três casos reprovam.
@@ -223,7 +223,7 @@ def test_com_a_cor_conhecida_o_hover_explica_de_quem_e_a_cor() -> None:
 
 
 def test_a_razao_do_microfone_e_a_do_motor() -> None:
-    """A frase do `?` é a MESMA que o gesto levanta — e não uma cópia dela."""
+    """A frase do `?` é a MESMA que o gesto levanta — e não uma cópia da frase."""
     from hefesto_dualsense4unix.interface.cartao_do_controle import acao_mic
 
     sem_leitura = {**BASE, "audio": {}}
@@ -290,7 +290,7 @@ def test_o_byte_do_pc_com_a_saida_no_controle_acende_pc() -> None:
 
 
 def test_o_desacordo_nao_vira_mais_frase_no_cartao() -> None:
-    """A ressalva do alto-falante SAIU — 22/09/2026, ordem de produto."""
+    """A ressalva do alto-falante SAIU — 22/09/2026, a regra é do produto."""
     _com_camada_1(byte=BYTE_PC, sink_do_controle=SINK, sink_padrao="hdmi")
     campos = _card({"speaker": {"volume": 102, "muted": False, "rota": BYTE_PC}})
     assert "alto-ressalva" not in campos, campos.get("alto-ressalva")
@@ -387,7 +387,7 @@ def test_honrado_e_nao_sei_nao_confessam(por_uniq: bool | None) -> None:
     """*"Não sei" não é "não honrei"* — inventar a confissão por ausência de
     notícia acusaria o produto de um erro que ninguém mediu.
 
-    É a regra do próprio dono (`frase_do_alvo_do_mic`), e ela vale para o
+    É a regra do próprio dono (`frase_do_alvo_do_mic`), e vale para o
     daemon velho que não publica o campo.
     """
     corpo: dict[str, Any] = {"status": "ok", "fonte": "ds", "volume": 42}
@@ -452,7 +452,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
   // `cor` do piloto escreve, e mede duas coisas: (1) a borda do próprio cartão é
   // o hexa do `--plastico` dele, que a régua lê de uma sonda e não de uma lista;
   // (2) nenhum elemento colado na beirada do cartão tomou o vermelho — o anel de
-  // 1px por dentro foi o que ela leu como «borda nas cores do lightbar».
+  // 1px por dentro foi o que se leu como «borda nas cores do lightbar».
   const sonda = document.createElement('i');
   document.body.appendChild(sonda);
   const rgb = (cor) => { sonda.style.color = ''; sonda.style.color = cor;
@@ -484,7 +484,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
     botao_tem_disabled: botao.hasAttribute('disabled'),
     porque_sem: porque_sem, porque_com: porque_com, porque_dica: porque_dica,
     casco: casco, bordas: bordas,
-    // UM ELEMENTO POR CARTÃO: a barra de luz, no quadro com o nome dela.
+    // UM ELEMENTO POR CARTÃO: a barra de luz, no quadro com o nome do controle.
     luz_cor_no_card: card.querySelectorAll('[data-campo="luz-cor"]').length,
     radio_alvo: card.querySelector('.radio-mesa').dataset.hefAlvo,
     radio_campo: card.querySelector('.radio-mesa').dataset.campo,
@@ -495,7 +495,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
 
 @pytest.fixture(scope="module")
 def desenhado() -> dict[str, Any]:
-    """O que o Chrome desenha na página da BANCADA — uma abertura para todos."""
+    """O que o Chrome desenha na página do ENSAIO — uma abertura para todos."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     from playwright.sync_api import sync_playwright
@@ -548,7 +548,7 @@ def test_a_borda_do_cartao_tem_a_cor_do_plastico(desenhado: dict[str, Any]) -> N
             f"há elemento colado na beirada do cartão com a cor da barra de luz "
             f"({b['colados']}): é ele que se lê como a borda")
     assert desenhado["luz_cor_no_card"] == 1, (
-        "a barra de luz do cartão perdeu o endereço `luz-cor`: o quadro dela "
+        "a barra de luz do cartão perdeu o endereço `luz-cor`: o quadro da barra "
         "deixa de ser pintado")
 
 
@@ -561,7 +561,7 @@ def test_o_acordeao_publica_o_decimo_alvo(desenhado: dict[str, Any]) -> None:
 def test_o_nada_a_dizer_nao_divergiu_do_da_folha() -> None:
     """A cópia declarada do `monta.NADA_A_DIZER` — e a régua que a segura.
 
-    O pacote NÃO PODE importar `monta`: ele é bancada, e importá-lo de dentro
+    O pacote NÃO PODE importar `monta`: ele é ensaio, e importá-lo de dentro
     de um pacote arrasta o gerador para o fecho de produção — o
     `portao_a_casa_sabe_e_o_produto_nao_faz` já reprovou exatamente isso em
     02/09, nomeando três lápides. Um TESTE pode, porque teste não é fecho de
@@ -590,7 +590,7 @@ O_SOM_EM_TRES_ESTADOS = r"""
   };
   const borda = () => getComputedStyle(botao).borderTopColor;
   // AS TRÊS PALAVRAS SÃO AS DO DONO (`mesa_viva.ATIVO`/`DESLIGADO` e o
-  // travessão de `SEM_LEITOR`). Elas estão digitadas aqui porque este trecho é
+  // travessão de `SEM_LEITOR`). As palavras estão digitadas aqui porque este trecho é
   // JAVASCRIPT que roda no navegador, longe do import do Python — e é por isso
   // que a asserção lá embaixo lê `mesa_viva`: se o dono mudar a palavra de
   // novo, a régua reprova com a divergência na cara, em vez de medir nada.
@@ -619,7 +619,7 @@ O_SOM_EM_TRES_ESTADOS = r"""
   // estado do microfone é o selo ao lado, que é vivo.
   // O SELETOR MUDOU EM 20/09/2026, e não é afrouxamento: o 🎙 deixou de ter
   // `data-mudo` porque deixou de CALAR (ordem de produto), e procurá-lo por ali
-  // devolvia lista vazia — a régua mediria o nada e passaria. O que ela mede
+  // devolvia lista vazia — a régua mediria o nada e passaria. O que a régua mede
   // continua igual: a cor não vem do gerador, e o endereço vivo está lá.
   const mics = [...document.querySelectorAll('.mudo-i[data-gesto="mic-retorno"]')]
     .map(m => ({classe: m.className, campo: m.dataset.campo || '',
@@ -648,7 +648,7 @@ O_SOM_EM_TRES_ESTADOS = r"""
 
 @pytest.fixture(scope="module")
 def som() -> dict[str, Any]:
-    """A bancada aberta no Chrome, com o piloto de verdade pintando dentro."""
+    """O ensaio aberto no Chrome, com o piloto de verdade pintando dentro."""
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     from playwright.sync_api import sync_playwright
@@ -696,10 +696,10 @@ def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
     assert som["vermelho"] not in (por_valor["ATIVO"]["borda"],
                                    por_valor[mesa_viva.DESLIGADO]["borda"],
                                    por_valor["—"]["borda"]), (
-        "o ♪ voltou a pintar a cor da falha sobre um estado que ela escolheu")
+        "o ♪ voltou a pintar a cor da falha sobre um estado que quem usa escolheu")
     assert not som["on_na_folha"], (
         "`.mudo-i.on` continua na folha sem nenhum escritor — CSS de elemento "
-        "que ninguém mais escreve é promessa esperando alguém tropeçar nela")
+        "que ninguém mais escreve é promessa esperando alguém tropeçar na promessa")
 
 
 @skip_sem_gi_real
@@ -741,17 +741,17 @@ def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
 @skip_sem_gi_real
 def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
     """A mentira vermelha do 🎙 saiu — e o que a substituiu é um sinal VIVO."""
-    assert som["mics"], "a régua não achou 🎙 nenhum — ela mediria o vazio"
+    assert som["mics"], "a régua não achou 🎙 nenhum — mediria o vazio"
     for i, m in enumerate(som["mics"], start=1):
         assert m["classe"].strip() == "mudo-i", (
             f"o 🎙 do card {i} nasceu com a classe {m['classe']!r} — é a cor "
-            f"que o GERADOR escreveu, e ela vale para sempre")
+            f"que o GERADOR escreveu, e vale para sempre")
         assert m["borda"] != som["vermelho"], (
             f"o 🎙 do card {i} continua vermelho sobre um aparelho que ninguém "
             f"leu")
         assert m["campo"] == "mic-retorno", (
             f"o 🎙 do card {i} está com o campo {m['campo']!r} — sem o endereço "
-            f"vivo, o verde do retorno que ela pediu não tem quem o escreva")
+            f"vivo, o verde do retorno pedido não tem quem o escreva")
     assert len({m["borda"] for m in som["mics"]}) == 1, (
         "os 🎙 dos dois cards pintam bordas diferentes sem o produto ter dito "
         "nada sobre nenhum dos dois")
@@ -771,10 +771,10 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
 
 
 def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
-    """A decisão 02-Q6 dela não muda: **sem botão novo no cartão.**"""
+    """A decisão 02-Q6 não muda: **sem botão novo no cartão.**"""
     for proibido in (">Soltar<", ">Liberar<", ">Devolver<"):
         assert proibido not in a02_gerador.MIOLO, (
-            f"um botão {proibido} nasceu no cartão — ela decidiu que ele fica "
+            f"um botão {proibido} nasceu no cartão — a decisão é que ele fica "
             f"fora, com aviso")
 
 
@@ -872,7 +872,7 @@ def test_o_cabecalho_do_cartao_pergunta_a_palavra_ao_dono(
 def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:
     """O defeito vivo que a costura da ONDA B abriu, e que esta sprint fecha.
 
-    Um controle sem nome lido — a bancada pelo rádio é exatamente este caso —
+    Um controle sem nome lido — o ensaio pelo rádio é exatamente este caso —
     faz `identidade_de` cair no ÚLTIMO degrau, que é o transporte. O cabeçalho
     tem lugar próprio para o transporte, então esse degrau vira AUSÊNCIA: o
     desenho escreve `P2 • — • rádio`.
@@ -882,9 +882,9 @@ def test_o_transporte_nao_aparece_duas_vezes_no_cabecalho() -> None:
     **`P2 • rádio • rádio`** com as duas palavras na mesma língua depois de o
     `via` ser curado.
 
-    MORDE: volte a comparar `nome_na_tela == via_na_tela` e ela reprova só no
+    MORDE: volte a comparar `nome_na_tela == via_na_tela` e a régua reprova só no
     dia em que as duas línguas voltarem a divergir; volte a comparação a uma
-    PALAVRA ESCRITA (`"rádio"`, `"BT"`) e ela reprova agora.
+    PALAVRA ESCRITA (`"rádio"`, `"BT"`) e a régua reprova agora.
     """
     for transporte in ("usb", "bt"):
         card = _card({"transport": transporte, "modelo": "", "nome_declarado": ""})
@@ -916,18 +916,18 @@ A_LINHA_DO_GIRO_NA_TELA = r"""
   const sem = {display: getComputedStyle(v).display,
                alt_da_faixa: faixa.getBoundingClientRect().height};
   v.setAttribute('aria-label', marca);
-  // E ELA NÃO PODE VAZAR — com A FRASE MAIS LARGA QUE O DONO SABE MONTAR, que
+  // E A FRASE NÃO PODE VAZAR — com A FRASE MAIS LARGA QUE O DONO SABE MONTAR, que
   // entra por argumento em vez de ser inventada aqui.
   //
   // O QUE SE MEDE É A ALTURA DE UMA LINHA, e não a da caixa: a caixa não cresce
   // de qualquer jeito (o `flex:0 0 var(--h-acao)` da faixa é fixo e o
-  // `min-width:0` segura a largura), então uma régua sobre ela passa COM A CURA
+  // `min-width:0` segura a largura), então uma régua sobre a frase passa COM A CURA
   // ARRANCADA — medido em 06/09/2026, e foi assim que a primeira versão desta
   // régua não mediu nada. Sem o `nowrap` a frase que o dono monta HOJE quebra em
   // DUAS linhas dentro de um cabeçalho de uma só: 14px viram 28px.
   //
   // E `'x'.repeat(400)` NÃO SERVE DE SONDA: uma corrida de caracteres sem
-  // espaço não tem onde quebrar, então ela fica numa linha com ou sem a cura.
+  // espaço não tem onde quebrar, então a frase fica numa linha com ou sem a cura.
   // A ALTURA SE MEDE NO DE FORA — 11/09/2026. O recorte subiu para ele (A3-050),
   // e o de dentro voltou a ser `inline`: `scrollHeight` de um elemento em linha
   // é 0, e uma régua que o lesse daria verde sobre qualquer quebra.
@@ -940,7 +940,7 @@ A_LINHA_DO_GIRO_NA_TELA = r"""
   // então tirar o `nowrap` não muda um pixel — medido em 06/09/2026, e foi
   // assim que a primeira versão desta régua passou com a cura arrancada pela
   // SEGUNDA vez. O vão não é constante: ele encolhe com o nome do plástico, com
-  // a máscara e com a largura da janela dela.
+  // a máscara e com a largura da janela.
   const largura_do_vao = v.getBoundingClientRect().width;
   v.style.flex = '0 0 120px';
   const esticado = {faixa: cx(faixa), no_jogo: cx(v), texto: cx(t),

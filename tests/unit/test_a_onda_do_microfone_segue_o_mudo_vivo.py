@@ -110,7 +110,7 @@ def _divergencias(texto: str) -> list[str]:
 
 @pytest.mark.parametrize("nome", PAGINAS_COM_CARTAO)
 def test_o_ensaio_nao_crava_estado_no_que_o_produto_pinta(nome: str) -> None:
-    """Em cada página da bancada, a classe de fora do endereço é a mesma em todo cartão."""
+    """Em cada página do ensaio, a classe de fora do endereço é a mesma em todo cartão."""
     texto = (MOCKUP / nome).read_text(encoding="utf-8")
     assert _divergencias(texto) == []
 
@@ -167,7 +167,7 @@ MUDO = mesa_viva.selo_do_mic(True, True)
 
 
 def _card(audio: dict[str, Any]) -> dict[str, Any]:
-    """Os campos do card, com os endereços da BANCADA (é lá que o mudo nasce)."""
+    """Os campos do card, com os endereços do ENSAIO (é lá que o mudo nasce)."""
     doc = onde.pagina("02-controles.html").read_text(encoding="utf-8")
     a02._ENDERECOS = frozenset(re.findall(r'data-campo="([^"]+)"', doc))
     try:

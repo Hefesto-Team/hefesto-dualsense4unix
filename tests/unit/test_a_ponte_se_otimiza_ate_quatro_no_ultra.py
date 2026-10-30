@@ -1,7 +1,7 @@
 """A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01: o limite de pontes sai da capacidade.
 
 O ``n_max`` de cada adaptador é ``piso((C_eff - 250 x n) / custo da ponte)``, nunca acima do teto
-que sobreviveu na bancada (``N_MAX_PONTES``); o degrau do meio cede a TAXA da ponte de vibração
+que sobreviveu no ensaio (``N_MAX_PONTES``); o degrau do meio cede a TAXA da ponte de vibração
 antes de cortar qualquer ponte inteira; o chip do mapa do rádio diz N/M com a mesma conta. Régua
 pura, sobre a tabela sintética e a gravada da ``A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01``.
 
@@ -93,7 +93,7 @@ def test_1b_a_tabela_sintetica_e_a_gravada_dao_o_m_da_formula() -> None:
 
 
 def test_2_o_interruptor_desligado_devolve_o_teto(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert rm.N_MAX_PELA_CAPACIDADE is False, "liga só depois da bancada medir o custo da ponte"
+    assert rm.N_MAX_PELA_CAPACIDADE is False, "liga só depois do ensaio medir o custo da ponte"
     assert rm.n_max_do_adaptador(4, ar=rm.AR_DO_ADAPTADOR_ATRAS_DO_HUB) == rm.N_MAX_PONTES
     assert rm.n_max_do_adaptador(4, ligado=True, ar=rm.AR_DO_ADAPTADOR_ATRAS_DO_HUB) == 1
     monkeypatch.setattr(rm, "N_MAX_PELA_CAPACIDADE", True)

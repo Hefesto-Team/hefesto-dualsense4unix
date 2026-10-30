@@ -114,7 +114,7 @@ def test_o_mais_n_cala_quando_tudo_cabe(pacote, cena) -> None:
 
 
 def test_os_quatro_que_mais_pesam_aparecem_e_o_resto_espera_sem_mais_n(pacote, cena) -> None:
-    """Os quatro que mais pesam aparecem; o próximo entra quando ela ignora ou resolve um
+    """Os quatro que mais pesam aparecem; o próximo entra quando quem usa ignora ou resolve um
     (desenho aprovado de 05/10/2026: sem «mais N»)."""
     nao_certos = [i for i in cena if i.estado != "certo"]
     assert len(nao_certos) == 4, "a cena precisa de quatro achados para medir a fileira"
@@ -125,7 +125,7 @@ def test_os_quatro_que_mais_pesam_aparecem_e_o_resto_espera_sem_mais_n(pacote, c
 
 
 def test_a_coluna_sem_a_lista_continua_sendo_so_o_card(pacote) -> None:
-    """`_html_das_dicas()` sem cena é o que ela era: só as ordens que o tique pintou."""
+    """`_html_das_dicas()` sem cena é o que sempre foi: só as ordens que o tique pintou."""
     pacote._ORDENS_NA_TELA = ()
     assert "cd-cura" not in pacote._html_das_dicas()
 
@@ -177,10 +177,10 @@ def test_o_rodape_do_mapa_vem_do_dono() -> None:
 
     fonte = pathlib.Path(aba08.__file__).read_text(encoding="utf-8")
     assert GRAVA_NO_CLIQUE not in fonte, (
-        "`aba08.py` voltou a DIGITAR a frase do clique — ela tem dono, e o "
+        "`aba08.py` voltou a DIGITAR a frase do clique — a frase tem dono, e o "
         "gerador a lê por `MAPA[\"GRAVA_NO_CLIQUE\"]`")
     assert aba08.MAPA["GRAVA_NO_CLIQUE"] == GRAVA_NO_CLIQUE, (
-        "o `MAPA` do gerador deixou de carregar a frase — sem ela no conjunto "
+        "o `MAPA` do gerador deixou de carregar a frase — sem a frase no conjunto "
         "do `_constantes`, renomear no produto some da tela em silêncio")
 
 
@@ -199,7 +199,7 @@ def test_o_exame_nao_manda_procurar_um_botao_que_nao_existe() -> None:
         f"{len(citam(html))} dica(s) ainda mandam procurar um botão que não existe")
     mordida = html.replace('title="', f'title="{aba08.VER_IGNORADAS} ', 1)
     assert citam(mordida), (
-        "a dica que cita o botão passou pela régua: ela não lê o que a tela mostra")
+        "a dica que cita o botão passou pela régua: a régua não lê o que a tela mostra")
 
 
 def test_a_frase_nova_diz_o_que_o_produto_faz() -> None:
@@ -213,7 +213,7 @@ def test_a_frase_nova_diz_o_que_o_produto_faz() -> None:
 
 
 def test_o_campo_do_nome_do_adaptador_tem_gesto(pacote) -> None:
-    """Ela digita e o produto tem onde ouvir — o defeito da §3 desta aba.
+    """Quem usa digita e o produto tem onde ouvir — o defeito da §3 desta aba.
 
     DESDE 23/09/2026 o campo é o `input.lugar-nome` do cartão de cada adaptador
     (TRANSPLANTE-DA-SECAO-01), e o gesto grava pelo dono do nome do adaptador
@@ -310,13 +310,13 @@ def mesa(pacote):
 
 
 def _dispensa_a_primeira(cena) -> dict[str, str]:
-    """`{chave: arranjo}` da primeira ordem da cena — LIDO dela, não digitado."""
+    """`{chave: arranjo}` da primeira ordem da cena — LIDO da cena, não digitado."""
     ordem = next(i.ordem for i in cena if i.ordem is not None)
     return {ordem.chave: ordem.arranjo}
 
 
 def test_a_ordem_calada_continua_na_tira(pacote, cena, mesa) -> None:
-    """08-Q5 — a linha que ela calou **não sai da lista**."""
+    """08-Q5 — a linha calada **não sai da lista**."""
     mesa(cena, _dispensa_a_primeira(cena))
     tira = pacote._itens_da_tela()
     assert len(tira) == len(cena), (
@@ -328,7 +328,7 @@ def test_a_ordem_calada_continua_na_tira(pacote, cena, mesa) -> None:
 
 
 def test_a_ordem_calada_com_arranjo_vazio_nao_cala(pacote, cena, mesa) -> None:
-    """A borda do arranjo vazio, e ela é o preço do desfazer.
+    """A borda do arranjo vazio, e é o preço do desfazer.
 
     O desfazer grava `arranjo=""` na mesma chave, e `Ordem.arranjo` tem `""` por
     PADRÃO. Sem o `and arranjo` da guarda, uma ordem viva sem assinatura casaria
@@ -359,7 +359,7 @@ def test_o_exame_nao_devolve_a_ordem_calada(pacote, cena, mesa) -> None:
     assert calada in [i.chave for i in pacote._itens_da_tela()], (
         "a cena não tem a linha calada na tira — o teste não mede nada")
     assert calada not in [i["chave"] for i in pacote._exame()], (
-        "o exame devolveu a ordem que ela calou na Conexões")
+        "o exame devolveu a ordem calada na Conexões")
 
 
 def test_a_linha_que_voltou_apaga_a_tinta(pacote, cena, mesa) -> None:
@@ -392,10 +392,10 @@ def test_o_desenho_esmaece_a_dica_calada_e_o_botao_de_voltar_responde(pacote, ce
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
     assert re.search(r"\.cartao-dica\.calada[^{]*\{[^}]*opacity", html), (
-        "a folha não ESMAECE a dica calada — ela ficaria igual à que fala")
+        "a folha não ESMAECE a dica calada — ficaria igual à que fala")
     assert not re.search(r"\.cartao-dica\.calada[^{]*\{[^}]*display:none", html), (
-        "a dica calada SOME em vez de esmaecer — a decisão dela diz que ela "
-        "*continua no lugar dela*, e uma dica que some é a tela que esconde")
+        "a dica calada SOME em vez de esmaecer — a decisão diz que a dica "
+        "*continua no lugar*, e uma dica que some é a tela que esconde")
     mesa(cena, _dispensa_a_primeira(cena))
     coluna = _coluna(pacote, cena)
     calada = re.search(r'<section class="cartao-dica [^"]*calada.*?</section>', coluna, re.S)
@@ -452,7 +452,7 @@ def test_o_mesmo_gesto_desfaz(pacote, cena, mesa) -> None:
         assert pacote._calada(cena[posicao]), "o primeiro clique não calou"
         assert gravado[-1][ordem.chave]["arranjo"] == ordem.arranjo
         assert gravado[-1][ordem.chave]["quando"], (
-            "a dispensa foi gravada sem data — `quando` é o que diz quando ela "
+            "a dispensa foi gravada sem data — `quando` é o que diz quando a dispensa "
             "decidiu")
 
         gesto(None, {"v": str(posicao)}, _Ponte())
@@ -493,7 +493,7 @@ def test_a_recusa_do_disco_nao_cala_a_linha(pacote, cena, mesa) -> None:
 
 
 def test_o_ignorar_numa_conferencia_continua_recusando_dizendo(pacote, cena, mesa) -> None:
-    """Nada se perdeu: uma conferência não tem arranjo, e o ⊘ nela recusa."""
+    """Nada se perdeu: uma conferência não tem arranjo, e o ⊘ na conferência recusa."""
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
     mesa(cena, {})
@@ -536,11 +536,11 @@ def _ctx_de_alvo(pacote, indice, quantos=2):
 
 
 def test_o_alvo_de_saida_e_lido_de_volta_do_daemon(pacote) -> None:
-    """Ela clica "só este" no P2 e a tela passa a apontar para ele.
+    """Um clique em "só este" no P2 e a tela passa a apontar para ele.
 
     O DEFEITO QUE ISTO FECHA: o gesto `alvo` escrevia `controller.target.set`, o
     daemon obedecia, e no tique seguinte o acordeão continuava aberto no P1 — o
-    `checked` do desenho. A fita do topo junto, porque o destaque dela vem das
+    `checked` do desenho. A fita do topo junto, porque o destaque da fita vem das
     regras `body:has(#gc-pN:checked)` do gerador.
 
     MORDE: devolva a leitura ao índice CRU (`lugares[indice + 1]`, sem passar
@@ -584,7 +584,7 @@ def test_a_lista_do_alvo_vai_em_todo_tique_inclusive_vazia(pacote) -> None:
     controle de antes é a tela mentindo sobre para onde a saída vai.
 
     A RÉGUA PASSA PELO `pacote()`, E NÃO PELO HELPER — 06/09/2026, e a primeira
-    versão dela não provava nada: perguntar direto a `_alvo_de_saida` deixa a
+    versão anterior não provava nada: perguntar direto a `_alvo_de_saida` deixa a
     emissão de fora, que é justamente onde a chave pode sumir. A mordida que
     embrulhou a linha do `pacote()` num condicional passou VERDE por isso.
 
@@ -618,7 +618,7 @@ def test_o_desenho_tem_um_endereco_por_radio_do_acordeao() -> None:
 def test_o_aviso_do_controle_nao_adotado_vem_do_dono(pacote) -> None:
     """A frase é `status_actions.texto_de_controle_nao_adotado`, palavra por palavra.
 
-    MORDE: escreva a frase aqui no pacote e ela deixa de acompanhar o dono —
+    MORDE: escreva a frase aqui no pacote e a frase deixa de acompanhar o dono —
     que é quem sabe de quantos em quantos minutos o produto tenta sozinho
     (`MINUTOS_ENTRE_TENTATIVAS`, lido da unit do systemd).
     """

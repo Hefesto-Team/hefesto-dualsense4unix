@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """A RÉGUA DOS QUATRO SILÊNCIOS DA ABA VIBRAÇÃO — 04/09/2026.
 
-O ENUNCIADO É DO USUÁRIO, e são quatro palavras — <!-- noqa-acento: literal -->
-*"vibração nem funciona tambem"*.  <!-- noqa-acento: citação -->
-Citação não se corrige: o que o usuário escreveu é o que o usuário escreveu.
+O ENUNCIADO É DO USUÁRIO: a vibração não funcionava.
 
 O que estava calado, medido nesta árvore com o daemon do usuário vivo e dois
 DualSense no cabo:
@@ -19,7 +17,7 @@ DualSense no cabo:
 2. **AS DUAS RECUSAS DO "Testar"/"Parar" ERAM `ValueError`.** O contrato do
    piloto é explícito — `hefesto_vivo._recusou_dizendo` leva `RuntimeError` ao
    CARTÃO daquele controle e deixa `ValueError` no `stderr` de quem lançou a
-   janela. As frases existiam desde 02/09 e **nunca chegaram aos olhos dela**.
+   janela. As frases existiam desde 02/09 e **nunca chegaram aos olhos de quem usa**.
 3. **O `forca` GRAVAVA E VOLTAVA CALADO nos casos em que a escolha não fica.**
    `draft_config.with_controller_rumble` LIMPA o override em três casos (igual
    ao global do perfil, `policy=None`, `auto`), e a coluna sem override cai no
@@ -68,13 +66,13 @@ class PonteDeMentira:
     """Guarda o que foi pedido, na ordem. NUNCA fala com o daemon de verdade.
 
     `mira` decide o que `chamar("controller.target.set", …)` responde — é o
-    interruptor da mordida do caso 1: com ela em `False`, o gesto tem de PARAR
+    interruptor da mordida do caso 1: com o interruptor em `False`, o gesto tem de PARAR
     ali, e o `rumble.set` não pode aparecer nas chamadas.
 
     `recusas` É O DUBLÊ SABENDO RECUSAR, e ele existe porque **todo dublê tem de
     saber dizer não**: um que só responde `(True, None)` nunca exercita o
     caminho de erro, e a régua fica verde sobre a frase que ninguém leu. Ele
-    mapeia o NOME da função da ponte para o par `(ok, motivo)` que ela devolve —
+    mapeia o NOME da função da ponte para o par `(ok, motivo)` que a função devolve —
     e o par importa: as `*_checked` do `ipc_bridge` devolvem `(ok, motivo)`, com
     o motivo já traduzido em frase de tela. Um dublê que respondesse `False`
     seco faria a régua medir o normalizador em vez da frase.
@@ -103,7 +101,7 @@ class PonteDeMentira:
         return registrar
 
 
-def _perfil_de_verdade(nome: str = "Bancada", **campos: Any) -> Any:
+def _perfil_de_verdade(nome: str = "Ensaio", **campos: Any) -> Any:
     """Um `Profile` DE VERDADE — o esquema é metade do que esta régua mede."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -151,7 +149,7 @@ def disco(monkeypatch):
     return estado, gravados
 
 
-def _ctx(pac, *, policy_da_mesa: str = "balanceado", ativo: str = "Bancada"):
+def _ctx(pac, *, policy_da_mesa: str = "balanceado", ativo: str = "Ensaio"):
     """A mesa com UM controle, e o `rumble_policy` que o daemon publica."""
     return pac.Contexto(
         state={"active_profile": ativo, "rumble_policy": policy_da_mesa,
@@ -175,7 +173,7 @@ def test_o_pedido_recusado_pelo_daemon_nao_acende_o_teste(pac, a05) -> None:
     O pedido leva o `uniq`, e quem sabe se o controle está na mesa é o daemon
     (`recusado_alvo_ausente`). A resposta chega como `(False, motivo)` e o
     gesto a levanta como `RuntimeError`, que é o único canal que chega ao
-    cartão dela.
+    cartão do controle.
 
     MORDIDA: apague o `if not ok: raise` de `a05_vibracao.testar` — o gesto
     marca o controle em teste sem o daemon ter vibrado nada, e este caso reprova.
@@ -256,7 +254,7 @@ def test_os_quatro_gestos_dizem_a_causa_certa(pac, nome) -> None:
         f"{nome} recusou com {frase!r} — e o fato é que o controle daquela "
         f"coluna caiu entre o clique e agora")
     assert "não disse em qual controle" not in frase, (
-        f"{nome} culpa o clique dela: {frase!r}. O clique DISSE — veio com "
+        f"{nome} culpa o clique de quem usa: {frase!r}. O clique DISSE — veio com "
         f"`controle=p2`, e a coluna existe na tela")
     assert p.chamadas == [], (
         f"{nome} recusou e falou com o daemon assim mesmo ({p.nomes}) — sem "
@@ -273,7 +271,7 @@ def test_o_clique_sem_coluna_continua_dizendo_que_nao_tem_alvo(pac, nome) -> Non
 
     frase = str(recusa.value)
     assert "dentro da coluna" in frase, (
-        f"{nome} perdeu a instrução do clique solto — sem ela a recusa não diz "
+        f"{nome} perdeu a instrução do clique solto — sem a instrução a recusa não diz "
         f"o que fazer: {frase!r}")
     assert "se desligou" not in frase, (
         f"{nome} diz que um controle caiu, e o clique não nomeou nenhum: "
@@ -299,7 +297,7 @@ def test_o_parar_diz_o_motivo_do_daemon_e_nao_um_palpite(pac) -> None:
 
 
 def test_o_testar_diz_o_motivo_do_daemon_e_nao_um_palpite(pac) -> None:
-    """A IRMÃ, e ela estava CERTA e SEM RÉGUA — medido em 05/09/2026."""
+    """A IRMÃ estava CERTA e SEM RÉGUA — medido em 05/09/2026."""
     recusa_do_daemon = ("o Modo Nativo está no comando: o jogo fala com o motor "
                         "por fora do Hefesto")
     p = PonteDeMentira(recusas={"rumble_set_checked": (False, recusa_do_daemon)})
@@ -348,7 +346,7 @@ def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
     )
 
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade()
+    estado["Ensaio"] = _perfil_de_verdade()
     p = PonteDeMentira()
 
     _gesto(pac, "intensidade")(_ctx(pac), {"uniq": UNIQ, "valor": "150"}, p)
@@ -359,7 +357,7 @@ def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
     assert escalas == {CHAVE: 1.5}, (
         f"o que chega ao motor é {escalas}, e devia ser o fator 1,5 dos 150% "
         f"sobre o `balanceado` que o daemon assume sem opinião global. Um mapa "
-        f"vazio aqui é a escolha dela guardada e ignorada — o defeito que esta "
+        f"vazio aqui é a escolha de quem usa guardada e ignorada — o defeito que esta "
         f"aba inteira persegue")
     assert "profile_reaplicar" in p.nomes, (
         f"gravou e não mandou reaplicar ({p.nomes}) — o perfil novo só chegaria "
@@ -375,11 +373,11 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
     bateria a cada tique. Era o `a05_vibracao.SEM_DONO["forca:global-em-auto"]`,
     que dizia *"o que falta é a tela AVISAR"*.
 
-    E A PROVA TEM DOIS LADOS: a escolha é gravada (ela não se perde) **e** a
-    escala sai vazia (ela não chega ao motor). Sem os dois, o caso seria
+    E A PROVA TEM DOIS LADOS: a escolha é gravada (não se perde) **e** a
+    escala sai vazia (não chega ao motor). Sem os dois, o caso seria
     indistinguível de "não gravou".
 
-    **E ELE DEIXOU DE SER UMA RECUSA — 04/09/2026, decisão [04] dela (D-01):**
+    **E ELE DEIXOU DE SER UMA RECUSA — 04/09/2026, decisão [04] (D-01):**
     o gesto devolve `{"recado": …}`, porque a gravação ACONTECEU. Ver a nota em
     `_aplicar_a_forca`.
 
@@ -392,7 +390,7 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
     )
 
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "auto"})
+    estado["Ensaio"] = _perfil_de_verdade(rumble={"policy": "auto"})
 
     volta = _gesto(pac, "intensidade")(_ctx(pac, policy_da_mesa="economia"),
                                        {"uniq": UNIQ, "valor": "30"},
@@ -401,7 +399,7 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
         f"o clique voltou a ser silencioso sobre uma escolha que o motor nunca "
         f"vê: {volta!r}")
 
-    assert gravados, "a escolha não foi gravada — ela se perderia de vez"
+    assert gravados, "a escolha não foi gravada — se perderia de vez"
     prof = gravados[0]
     assert (prof.controllers or {}).get(CHAVE) is not None, (
         "o override não ficou no perfil: com a mesa fora do Auto ele tem de "
@@ -414,7 +412,7 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
 def test_a_barra_arrastada_grava_e_o_multiplicador_chega(pac, disco) -> None:
     """A barra "Personalizado": 0 a 200%, e o número vira fator.
 
-    A DIVISÃO POR 100 É A ÚNICA CONTA, e ela é de unidade: a tela fala em
+    A DIVISÃO POR 100 É A ÚNICA CONTA, e é de unidade: a tela fala em
     pontos percentuais e o perfil guarda o multiplicador (`custom_mult`, 0 a 2).
 
     MORDIDA: em `a05_vibracao.intensidade`, mande `custom=pontos` em vez de
@@ -426,7 +424,7 @@ def test_a_barra_arrastada_grava_e_o_multiplicador_chega(pac, disco) -> None:
     )
 
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade()
+    estado["Ensaio"] = _perfil_de_verdade()
 
     _gesto(pac, "intensidade")(_ctx(pac), {"uniq": UNIQ, "valor": "150"},
                                PonteDeMentira())
@@ -444,8 +442,8 @@ def test_a_linha_de_estado_confessa_a_mesa_em_auto(a05) -> None:
     """Quem abre a aba amanhã vê o aviso, sem ter clicado nada.
 
     AS DUAS METADES NÃO SE SUBSTITUEM. O recado do clique dura os segundos do
-    depósito de recados do piloto e fala do gesto que ela acabou de fazer; esta
-    linha fica **enquanto a condição existir**. Sem ela, quem abrisse a aba no
+    depósito de recados do piloto e fala do gesto que quem usa acabou de fazer; esta
+    linha fica **enquanto a condição existir**. Sem a linha, quem abrisse a aba no
     dia seguinte veria quatro degraus acesos que o motor não obedece, e nada
     dizendo por quê.
 
@@ -483,7 +481,7 @@ def test_a_ressalva_entra_na_linha_do_produto_e_nao_num_bloco_novo(
                        "controllers": {CHAVE: {"rumble": {"policy": "max"}}}})
 
     r = a05.pacote(pac.Contexto(
-        state={"active_profile": "Bancada", "rumble_policy": "auto"},
+        state={"active_profile": "Ensaio", "rumble_policy": "auto"},
         mesa=[{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
                "via": "USB", "cor": "starlight-blue"}],
         conectados=[{"uniq": UNIQ, "connected": True, "transport": "usb",

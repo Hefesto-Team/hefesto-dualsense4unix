@@ -1,7 +1,7 @@
 """A aba Toques cabe na janela sem rolagem.
 
 A-TOQUES-CABE-NA-JANELA-SEM-ROLAGEM-01 (26/10/2026, D-2610-A-TOQUES-EM-TRES-COLUNAS). A lista com
-glifo (``.tq-lista``) usa quantas colunas couberem, três na largura da bancada, com linhas de
+glifo (``.tq-lista``) usa quantas colunas couberem, três na largura do ensaio, com linhas de
 30 px e a Força embaixo; nenhuma aba da janela rola, e nenhum seletor fica cortado.
 
 MORDIDAS (26/10/2026, executadas sobre a cura e devolvidas):
@@ -128,6 +128,6 @@ def test_o_ensaio_tem_tres_colunas(medidas: dict[str, Any]) -> None:
 
 
 def test_o_seletor_da_terceira_coluna_se_alcanca(medidas: dict[str, Any]) -> None:
-    """O quadrado é o terceiro botão: na bancada ele mora na terceira coluna e o clique o acha."""
+    """O quadrado é o terceiro botão: no ensaio ele mora na terceira coluna e o clique o acha."""
     terceira = medidas["{}x{}".format(*ENSAIO)]["terceira"]
     assert terceira == {"coluna": 2, "alcancavel": True}, terceira

@@ -1,4 +1,4 @@
-"""O brilho viaja com a cor, e a tela deixa de mostrar uma cor que ela não pediu.
+"""O brilho viaja com a cor, e a tela deixa de mostrar uma cor que ninguém pediu.
 
 TRÊS DEFEITOS, UMA RAIZ — medidos em 03/09/2026. A raiz é o contrato do daemon,
 e ele estava escrito o tempo todo em `daemon/ipc_handlers.py`, no bloco
@@ -10,7 +10,7 @@ e ele estava escrito o tempo todo em `daemon/ipc_handlers.py`, no bloco
 A aba `04` lia esse `lightbar_rgb` como se fosse a cor ESCOLHIDA. Com o brilho
 em 50% e o azul do P1, o daemon publica `#00007F`, e a mesma coluna::
 
-    a caixa `#RRGGBB`   dizia `#00007F`, uma cor que ela nunca pediu
+    a caixa `#RRGGBB`   dizia `#00007F`, uma cor que ninguém pediu
     a marca dos 8 tons  APAGAVA em todos — os `data-hef-quando` do HTML são os
                         oito CHEIOS (`#0000FF`…), e nenhum casa com `#00007F`
     a tira              pintava o hex CRU (o `tom_da_casa` só conhece os oito
@@ -20,14 +20,14 @@ E O QUARTO, que é de ESCRITA e o pior deles: o gesto `cor` chamava
 `p.led_set(rgb, uniq=uniq)` **sem `brightness`**. O `_payload_led_set` só põe o
 campo quando ele é passado, e o `led.set` do daemon diz *"Ausente ou inválido ->
 assume 1.0"*. Ou seja: a coluna mostrava `50%` e o fio levava 100% — um clique
-num tom DESFAZIA o brilho que ela tinha escolhido na janela GTK, sem uma palavra
+num tom DESFAZIA o brilho escolhido na janela GTK, sem uma palavra
 na tela. A GTK manda o brilho em toda escrita (`lightbar_actions.py:656`).
 
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 
 1. `brilho_do_controle` lê o override antes do global, e `None` é "não sei";
 2. `cor_escolhida` devolve os OITO tons da guia em qualquer brilho — a marca
-   sobrevive; e devolve a EFETIVA quando ninguém sabe de que pedido ela veio;
+   sobrevive; e devolve a EFETIVA quando ninguém sabe de que pedido a cor veio;
 3. a tira volta ao tom da casa em vez do hex cru;
 4. o gesto `cor` manda o `brightness` — a mordida do defeito de escrita;
 5. o `apagar` e o `auto` mandam pela mesma porta, e o `auto` na ordem certa;
@@ -111,14 +111,14 @@ def test_o_brilho_le_o_override_antes_do_global(a04):
 
 
 def test_os_oito_tons_voltam_inteiros_em_qualquer_brilho(a04):
-    """A marca da cor escolhida sobrevive ao brilho — e é isso que ela vê."""
+    """A marca da cor escolhida sobrevive ao brilho — e é isso que quem usa vê."""
     for brilho in (0.9, 0.82, 0.5, 0.25, 0.1):
         for tom in a04.tons_da_guia():
             acesa = a04._com_o_brilho(tom, brilho)
             assert a04.cor_escolhida(acesa, brilho) == tom, (
                 f"a {brilho:.0%} o tom {a04._hex(tom)} acende "
                 f"{a04._hex(acesa)} e a tela não soube voltar dele — a marca "
-                f"dos oito botões apaga, e ela deixa de ver qual cor escolheu.")
+                f"dos oito botões apaga, e quem usa deixa de ver qual cor escolheu.")
 
 
 def test_a_cor_livre_volta_como_esta_no_plastico(a04):
@@ -137,11 +137,11 @@ def test_a_cem_por_cento_e_sem_brilho_nada_se_mexe(a04):
 
 
 def test_a_conta_do_brilho_e_a_do_produto(a04):
-    """`_com_o_brilho` é `LedSettings.apply_brightness`, e não uma cópia dela.
+    """`_com_o_brilho` é `LedSettings.apply_brightness`, e não uma cópia da função.
 
     A MORDIDA: troque o corpo por `round(c * b)` — que é a conta "natural" que
     alguém escreveria — e esta linha reprova, porque o produto TRUNCA. É a mesma
-    conta do `_handle_led_set` do daemon, e é dela que depende a varredura ser
+    conta do `_handle_led_set` do daemon, e é dessa conta que depende a varredura ser
     exata.
     """
     from hefesto_dualsense4unix.core.led_control import LedSettings
@@ -181,7 +181,7 @@ def test_o_gesto_da_cor_manda_o_brilho_do_perfil(a04, ctx, monkeypatch):
     assert args == ((255, 128, 0),)
     assert kw.get("brightness") == pytest.approx(0.5), (
         f"a cor saiu com brightness={kw.get('brightness')!r}. Sem o campo, o "
-        f"`led.set` assume 1.0 e o clique DESFAZ o brilho que ela escolheu.")
+        f"`led.set` assume 1.0 e o clique DESFAZ o brilho que quem usa escolheu.")
     assert kw.get("uniq") == UNIQ
 
 
@@ -292,7 +292,7 @@ def test_guardado_vira_frase_no_cartao_do_usuario(a04, ctx, monkeypatch):
     with pytest.raises(RuntimeError) as erro:
         fn(ctx, {"controle": "p1", "uniq": UNIQ, "hex": "#0000FF"}, p)
     assert GUARDADO in str(erro.value), (
-        f"a frase foi {str(erro.value)!r}, e ela tem de ser a do produto — a "
+        f"a frase foi {str(erro.value)!r}, e tem de ser a do produto — a "
         f"mesma que a janela GTK diz neste mesmo evento.")
     assert _MOTIVO_NATIVO not in str(erro.value)
 
@@ -353,10 +353,10 @@ def test_o_pacote_emite_a_cor_pedida_e_nao_a_escurecida(a04, monkeypatch):
 
     assert coluna["hex"] == "#0000FF", (
         f'a caixa diz {coluna["hex"]!r}, que é a cor PÓS-brilho do daemon — '
-        f"uma cor que ela nunca pediu, e que nenhum dos oito tons casa.")
+        f"uma cor que ninguém pediu, e que nenhum dos oito tons casa.")
     assert coluna["brilho"] == "50%"
     assert "background:#7EB8D4" in coluna["luz"], (
-        "a tira não voltou ao tom da casa: com o hex cru ela acende uma cor "
+        "a tira não voltou ao tom da casa: com o hex cru a tira acende uma cor "
         "que a guia não mostra em lugar nenhum.")
     assert "opacity:0.5" in coluna["luz"], (
         "o brilho sumiu do desenho. Ele entra UMA vez, na opacidade — e a "

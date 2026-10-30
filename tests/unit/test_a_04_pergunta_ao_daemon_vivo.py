@@ -335,7 +335,7 @@ def _reaplicar(mesa: MesaViva, caminho: str) -> None:
 @pytest.mark.parametrize("caminho", CAMINHOS)
 @pytest.mark.parametrize("n", [1, 2], ids=["P1-sem-cor", "P2-laranja"])
 def test_o_desligar_sobrevive_a_reaplicar_o_perfil(mesa_de, n, caminho, via):
-    """O controle «Desligado» fica apagado em todo caminho, e a cor dela fica no disco.
+    """O controle «Desligado» fica apagado em todo caminho, e a cor do controle fica no disco.
 
     **AS MORDIDAS:** devolva o preto como a cor gravada do «Desligar» (o
     `_guardar_a_cor_no_perfil` no ramo `apagando`) e a troca manual, o boot
@@ -409,7 +409,7 @@ def test_o_aplicar_diz_o_brilho_da_cor_que_acendeu(mesa_de):
 
     NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01). Esta régua
     dizia que o brilho atravessava a troca automática para OUTRO perfil: o
-    o «Aplicar» antigo escrevia a cor na camada dela, que a troca automática não
+    o «Aplicar» antigo escrevia a cor na camada do aplicar, que a troca automática não
     solta. O «Aplicar» passou a ser a cadeia da ativação, a cor vai na camada
     do perfil, e o perfil seguinte manda na dele (`D-1409`, o perfil aplica
     tudo). O que fica medido é o que o daemon diz da cor que o «Aplicar»
@@ -431,7 +431,7 @@ def test_o_aplicar_diz_o_brilho_da_cor_que_acendeu(mesa_de):
 
 
 def test_o_brilho_da_cor_so_explica_a_mesma_cor(mesa_de):
-    """O carimbo vale enquanto o override guardar a MESMA cor, e morre com ela."""
+    """O carimbo vale enquanto o override guardar a MESMA cor, e morre com a cor."""
     from hefesto_dualsense4unix.core.controller import OutputSpec
 
     mesa = mesa_de()
@@ -497,7 +497,7 @@ def test_o_todos_do_led_set_publica_o_brilho_de_cada_um(mesa_de, via):
     """O `led.set` sem `uniq` («Todos», a CLI) carimba o brilho nos quatro.
 
     O broadcast escreve a cor na camada da usuária de CADA conectado
-    (`_registrar_em_todos`), e ela atravessa a troca automática como a do
+    (`_registrar_em_todos`), e a cor atravessa a troca automática como a do
     clique numa coluna: o brilho viaja junto, ou o daemon diria «não sei» sobre
     a cor que acabou de acender.
 

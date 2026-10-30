@@ -10,7 +10,7 @@ A LEI, e é do usuário (03/09/2026):
 
 O DESENHO GRANDE já vestia o aparelho desde 03/09 de manhã — o `data-colorway`
 com o alvo `atributo`, e a folha das cores com os vinte e oito modelos do mapa
-dela. O que sobrava na `04-iluminacao` eram **doze `--plastico:#hex`** em dois
+do produto. O que sobrava na `04-iluminacao` eram **doze `--plastico:#hex`** em dois
 lugares, e os dois pareciam curados sem estar:
 
     4  o anelzinho do dono, dentro de cada botão da fileira de números
@@ -23,12 +23,12 @@ faria `el.textContent = "#e35b8c"` dentro do anel. Os dois contavam com o pai:
 a fileira é reescrita inteira pelo alvo `html`, e a seção da troca pelo
 `blocos:`. Nenhuma das duas coisas se lê no HTML — a primeira é do pai, e a
 segunda mora no JavaScript —, então para as duas réguas desta casa aquilo era
-cor congelada, e era acusado com razão pela letra dela: *"um pai endereçado não
-dá ao filho o direito de trazer cor congelada"*.
+cor congelada, e era acusado com razão pela letra da régua: um pai endereçado não
+dá ao filho o direito de trazer cor congelada.
 
 A CURA É O PAR COMPLETO: endereço próprio (`players.dono.N`, um por número, e
 `troca.item`) mais `data-hef-alvo="plastico"`, e o pacote emitindo o valor. O
-que ela ganha: o anel e o item passam a deixar o **selo da visita**, que é o
+que a página ganha: o anel e o item passam a deixar o **selo da visita**, que é o
 único fato que a tela não mostra — que o piloto esteve ali com um valor.
 
 MEDIDO NO WEBKIT DESTA MÁQUINA, com uma mesa forçada a **Nova Pink** e **Astro
@@ -122,16 +122,16 @@ def test_o_ensaio_da_04_nao_crava_nenhuma_cor_de_aparelho() -> None:
 
 
 def test_todo_plastico_da_04_tem_o_alvo_que_o_alcanca() -> None:
-    """Todo `--plastico:#hex` da bancada mora num elemento que o produto reescreve.
+    """Todo `--plastico:#hex` do ensaio mora num elemento que o produto reescreve.
 
-    ESTA É A OUTRA METADE DA PRIMEIRA, e ela é escrita ao contrário de
+    ESTA É A OUTRA METADE DA PRIMEIRA, e é escrita ao contrário de
     propósito: aquela pergunta ao portão *"há achado?"*; esta varre o HTML e
     exige, de cada elemento que carrega a cor, o par endereço + alvo. Se alguém
     afrouxar o portão, esta continua acusando; se alguém mudar o nome do alvo,
     aquela continua acusando. Duas réguas independentes é o que revela.
 
-    A ÚNICA ISENÇÃO É A `.fita`, e ela é LIDA do portão — nunca digitada aqui.
-    `hefesto_vivo.pintar` troca o `outerHTML` dela inteiro a cada tique, com o
+    A ÚNICA ISENÇÃO É A `.fita`, e é LIDA do portão — nunca digitada aqui.
+    `hefesto_vivo.pintar` troca o `outerHTML` da fita inteiro a cada tique, com o
     que `monta.fita(mesa=…)` monta da mesa VIVA; um chip com `--plastico` ali é
     o que o PRODUTO acabou de escrever. Uma segunda lista neste arquivo seria a
     segunda maneira de divergir em silêncio.

@@ -22,7 +22,7 @@ ABAS = sorted(p.name for p in onde.paginas(publicado=True)
 
 FRASE_LONGA = (
     "Perfil “Mortal Kombat 1” ativado — a carona da Steam foi reposta na Opção "
-    "de Inicialização do jogo, e sem ela, no Bluetooth, o jogo tende a não "
+    "de Inicialização do jogo, e sem a opção, no Bluetooth, o jogo tende a não "
     "enxergar controle nenhum. São 33 perfis no disco.")
 
 O_VAO = """
@@ -62,7 +62,7 @@ A_TIRA = """
 
 
 def _no_chrome(pagina: pathlib.Path, script: str, *args: object) -> object:
-    """Abre a página publicada no Chrome do sistema e devolve o que ela mediu."""
+    """Abre a página publicada no Chrome do sistema e devolve o que a página mediu."""
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as pw:
@@ -82,7 +82,7 @@ def tira() -> dict:
     medido = _no_chrome(
         onde.pagina("10-perfis.html", publicado=True), A_TIRA, FRASE_LONGA)
     assert medido, (
-        "a `.desfecho` sumiu da página publicada — sem ela o canal do desfecho "
+        "a `.desfecho` sumiu da página publicada — sem a faixa o canal do desfecho "
         "não existe, e esta régua ficaria verde por ausência")
     return dict(medido)
 
@@ -96,7 +96,7 @@ def test_a_tira_vazia_nao_ocupa_um_pixel(tira: dict) -> None:
         f"{vazia['altura'] + vazia['folga']}px de banda morta debaixo do título "
         f"'Perfis', em toda tela sem recado")
     assert vazia["visivel"] == "hidden", (
-        "a tira vazia ficou VISÍVEL — ela apareceria como uma faixa em branco "
+        "a tira vazia ficou VISÍVEL — apareceria como uma faixa em branco "
         "em toda tela sem recado")
 
 
@@ -110,7 +110,7 @@ def test_a_aba10_nao_e_mais_a_unica_com_vao_entre_o_titulo_e_o_corpo() -> None:
     fora = {a: v for a, v in medidos.items() if v > piso}
     assert not fora, (
         f"a(s) aba(s) {fora} reservam espaço entre o título do quadro e o corpo "
-        f"que as outras não reservam (o piso das dez é {piso}px). Ela chamou "
+        f"que as outras não reservam (o piso das dez é {piso}px). Quem usa chamou "
         f"isso de 'espaço vertical bizarro desnecessário no título' em 05/09.")
 
 
@@ -119,7 +119,7 @@ def test_a_tira_acesa_volta_as_duas_linhas_de_antes(tira: dict) -> None:
     acesa = tira["acesa"]
     assert acesa["visivel"] == "visible", (
         "a tira com recado continuou invisível — o desfecho de todo gesto que "
-        "escreve no disco dela voltaria ao silêncio")
+        "escreve no disco de quem usa voltaria ao silêncio")
     assert acesa["altura"] == 30 and acesa["folga"] == 7, (
         f"a tira acesa mede {acesa['altura']}px de altura e {acesa['folga']}px "
         f"de folga; eram 30 e 7 antes de a banda vazia sair. A cura da banda "

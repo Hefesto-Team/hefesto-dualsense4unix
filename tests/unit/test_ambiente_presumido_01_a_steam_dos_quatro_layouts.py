@@ -30,7 +30,7 @@ _LAYOUTS = {
 
 
 def _vdf_com_steam_input_ligado(appid: str) -> str:
-    """`localconfig.vdf` de bancada no formato REAL (tabs literais)."""
+    """`localconfig.vdf` de ensaio no formato REAL (tabs literais)."""
     return (
         '"UserLocalConfigStore"\n{\n\t"apps"\n\t{\n'
         f'\t\t"{appid}"\n\t\t{{\n\t\t\t"UseSteamControllerConfig"\t\t"2"\n\t\t}}\n'
@@ -39,7 +39,7 @@ def _vdf_com_steam_input_ligado(appid: str) -> str:
 
 
 def _casa_com_steam(home: Path, relativo: str, appid: str = _SACKBOY) -> Path:
-    """HOME de bancada com UMA Steam no layout pedido, jogo instalado e SI ligado."""
+    """HOME de ensaio com UMA Steam no layout pedido, jogo instalado e SI ligado."""
     raiz = home / relativo
     (raiz / "userdata/123/config").mkdir(parents=True)
     (raiz / "userdata/123/config/localconfig.vdf").write_text(

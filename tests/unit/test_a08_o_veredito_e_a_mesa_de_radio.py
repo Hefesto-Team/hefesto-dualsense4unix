@@ -41,7 +41,7 @@ def _ordem(chave: str, arranjo: str):  # type: ignore[no-untyped-def]
 
 
 def test_a_frase_do_veredito_e_a_do_dono() -> None:
-    """A frase NÃO nasce no pacote: ela é de `ordens_da_mesa.cabecalho()`."""
+    """A frase NÃO nasce no pacote: é de `ordens_da_mesa.cabecalho()`."""
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import cabecalho
 
     p = _pacote()
@@ -65,11 +65,11 @@ def test_a_cor_e_a_do_pior_achado() -> None:
         assert saiu[endereco] == "", (
             f"`{endereco}` acendeu junto com o `problema`. Um instante com dois "
             f"acesos deixa o que está QUEBRADO com a cor do que só podia estar "
-            f"melhor, que é a confusão que ela mandou desfazer em 02/09.")
+            f"melhor, que é a confusão que a decisão de 02/09 mandou desfazer.")
 
 
 def test_o_veredito_nao_diz_nada_a_mudar_com_uma_linha_grave() -> None:
-    """A MORDIDA da cicatriz `6fffd547`, e ela é a razão de a função existir."""
+    """A MORDIDA da cicatriz `6fffd547`, que é a razão de a função existir."""
     from hefesto_dualsense4unix.app.actions.config.secao_exame import FRASE_DO_SELO
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import cabecalho
 
@@ -82,7 +82,7 @@ def test_o_veredito_nao_diz_nada_a_mudar_com_uma_linha_grave() -> None:
         f"voltando: o verde convivendo com o vermelho na mesma seção.")
     assert saiu["veredito"] == FRASE_DO_SELO["problema"], (
         "quando o estado das linhas vence o do cabeçalho, a frase tem de ser a "
-        "do estado — e ela também tem dono (`secao_exame.FRASE_DO_SELO`)")
+        "do estado — e a frase também tem dono (`secao_exame.FRASE_DO_SELO`)")
 
 
 def test_o_que_o_usuario_calou_nao_segura_a_cor() -> None:
@@ -103,7 +103,7 @@ def test_o_que_o_usuario_calou_nao_segura_a_cor() -> None:
     assert com_ordem["veredito-atencao"] == "atencao", (  # (noqa-acento)
         "com a ordem aberta o topo tinha de estar em `atencao`")  # (noqa-acento)
     assert calada["veredito-atencao"] == "", (
-        "a ordem que ela dispensou continuou segurando o topo em laranja — o ⊘ "
+        "a ordem dispensada continuou segurando o topo em laranja — o ⊘ "
         "grava e a tela não muda, que é a definição de botão morto")
 
 
@@ -111,7 +111,7 @@ def test_a_linha_de_veredito_saiu_da_tela() -> None:
     """A LINHA SAIU — 26/09/2026, pedido com a janela maximizada."""
     html = ENSAIO.read_text()
     assert 'class="veredito"' not in html, (
-        "a linha de veredito voltou ao desenho — ela saiu a pedido dela")
+        "a linha de veredito voltou ao desenho — a linha saiu a pedido")
     saiu = _pacote().pacote(_ctx())
     assert "veredito" not in saiu, (
         "o `pacote()` emite `veredito` para um endereço que a tela não tem")

@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO REUSO NA ABA CONTROLES — e das três regras que ela reescrevia errado.
+"""A RÉGUA DO REUSO NA ABA CONTROLES — e das três regras que a aba reescrevia errado.
 
-POR QUE ELA EXISTE. LEI 0 da migração, palavra em 02/09/2026:
-
-    *"no gtk eu já deixei praticamente tudo pronto, estamos adaptando e migrando
-    o que fizemos na versão estável pra ela funcionar no html. Não temos que
-    recriar nada."*
+POR QUE A RÉGUA EXISTE. LEI 0 da migração, decisão de 02/09/2026: o GTK já
+deixou quase tudo pronto, e a migração adapta para o HTML o que a versão
+estável faz, sem recriar nada.
 
 `interface/cartao_do_controle.py` tem **26 funções públicas de módulo** — 5.951
 linhas de texto de tela que a GTK já provou. Medido em 02/09/2026, a interface
 nova alcançava DUAS (`rotulo_lightbar`, pela aba Iluminação, e
 `texto_degradacao`, pelo `pacotes/__init__.py`), e **esta aba, a mais servida
-das dez, chamava ZERO**. Ela reescrevia à mão o que o motor já sabia — e três
+das dez, chamava ZERO**. A aba reescrevia à mão o que o motor já sabia — e três
 das reescritas estavam ERRADAS.
 
 O QUE CADA UMA CUSTAVA, medido com os DOIS controles do usuário na mesa (um `usb`, um
@@ -26,7 +24,7 @@ O QUE CADA UMA CUSTAVA, medido com os DOIS controles do usuário na mesa (um `us
    **EMITIA, e não MOSTRAVA** (medido em 02/09/2026, contra a primeira redação
    deste arquivo): o `alto-estado` é `hidden` na página publicada e o `escrever`
    do piloto não toca esse atributo — o número ia para um vão invisível. O
-   defeito é real e latente; dizer que chegou aos olhos dela é a afirmação
+   defeito é real e latente; dizer que chegou aos olhos de quem usa é a afirmação
    forte que esta casa cobra prova.
 2. **"0%" sobre um alto-falante que ninguém mediu.** `sp.get('volume', 0)`
    transformava AUSÊNCIA em zero. O daemon só publica `speaker` depois do
@@ -47,13 +45,13 @@ O QUE CADA UMA CUSTAVA, medido com os DOIS controles do usuário na mesa (um `us
 A MORDIDA de cada caso está escrita no teste que a cobra.
 
 O QUE ESTA RÉGUA **NÃO** MEDE, e é declarado para não virar verde por vacuidade:
-ela não mede TEXTO de código. A auditoria do selo do microfone (02/09/2026)
+a régua não mede TEXTO de código. A auditoria do selo do microfone (02/09/2026)
 mostrou o preço de medir fonte com `inspect.getsource`: *"trocar `mic_sabemos`
 por `True` deixa o controle caído voltando a pintar ATIVO com a régua VERDE"*.
 A asserção estrutural é de IDENTIDADE de objeto
 (`a02.speaker_do_entry is controller_card.speaker_do_entry`) — reimplementar a
 função localmente quebra a identidade, e nenhuma reescrita de comentário a
-afeta. **Ela cobre os CINCO nomes desde 02/09/2026**: cobria dois, e a
+afeta. **A régua cobre os CINCO nomes desde 02/09/2026**: cobria dois, e a
 auditoria mediu o buraco — clonar `texto_volume` dentro do pacote passava nos
 15 testes e no `ruff`.
 """
@@ -246,7 +244,7 @@ def test_a_cor_de_fonte_desconhecida_nao_vira_preto(pac, a02):
     sysfs sem escrita nossa pode ser o azul-kernel brilhando neste exato
     momento"*.
 
-    **A PALAVRA MUDOU EM 04/09/2026 — decisão [02] dela**, e o que esta régua
+    **A PALAVRA MUDOU EM 04/09/2026 — decisão [02]**, e o que esta régua
     mede não: *"palavra curta no lugar do travessão, frase inteira no hover"*.
     Os três "não sei" dividiam um `—` só e diziam coisas diferentes; agora cada
     um tem a sua palavra, e a frase inteira vai no `luz-porque`. O que continua
@@ -323,7 +321,7 @@ def test_com_a_steam_segurando_o_fd_a_tela_nao_afirma_a_cor_crua(pac, a02):
 
 
 def test_o_rotulo_da_apagada_e_perguntado_ao_motor(a02, motor):
-    """A frase da barra apagada não é digitada nesta aba — ela é PERGUNTADA.
+    """A frase da barra apagada não é digitada nesta aba — é PERGUNTADA.
 
     Das quatro frases de `rotulo_lightbar`, só `ROTULO_LIGHTBAR_SEGURADA` é
     constante exportada. Digitar as outras aqui seria a cópia muda que a LEI 0
@@ -331,7 +329,7 @@ def test_o_rotulo_da_apagada_e_perguntado_ao_motor(a02, motor):
     "apagada" e "não sei" com a régua verde.
 
     ESTE TESTE É O QUE TRANCA A PERGUNTA. Ele cobra que a resposta seja uma
-    frase de verdade e que ela seja DIFERENTE das outras três — se a ordem dos
+    frase de verdade e que seja DIFERENTE das outras três — se a ordem dos
     ramos do motor mudar e a sondagem cair no ramo errado, a igualdade acusa.
 
     MORDE: digitar `ROTULO_DA_LUZ_APAGADA = "Lightbar: apagada"` continua
@@ -359,11 +357,11 @@ def test_o_backend_uhid_diz_dualsense(pac, a02):
     `virtual_pad._try_uhid` recusa o uhid para saída Xbox — *"Xbox não é
     trabalho do uhid"*, o `hid_playstation` só faz bind em produto Sony —, e é
     por isso que `home_actions.mascara_viva` pode afirmar a máscara a partir do
-    backend. A aba não podia: ela procurava `uhid` numa tabela cujas chaves são
+    backend. A aba não podia: procurava `uhid` numa tabela cujas chaves são
     `dualsense` e `xbox`, e o `.get` com padrão devolvia `—` calado.
 
     NOTA DATADA (28/10/2026): o `mascara` do cartão saiu com a aba Controles (o modo único mostra a
-    máscara na Jogar), e a régua passa a medir a regra no dono dela, `mascara_viva`.
+    máscara na Jogar), e a régua passa a medir a regra no dono, `mascara_viva`.
 
     MORDE: devolver `NOME_DA_MASCARA.get(c.get("vpad_backend") or "", "—")`
     reprova aqui com `'—' != 'DualSense'`.
@@ -405,7 +403,7 @@ def test_inputs_com_leitura_e_sem_touchpad_nao_e_sem_toque(pac, a02):
     de o `state_full` ser pedido a chave ainda não existe — 24 das 60 amostras
     de 02/09/2026.
 
-    A palavra saiu do cartão com o desenho do todo (15/10/2026); ela segue no dono,
+    A palavra saiu do cartão com o desenho do todo (15/10/2026); segue no dono,
     `dedos_do_controle`, e o ponto do cartão não acende sem leitura.
 
     MORDE: voltar ao `e.get("touchpad") or {}` reprova aqui com `'Sem toque'`.
@@ -451,9 +449,9 @@ def test_o_bloco_que_a_recusa_protegia_o_daemon_nao_publica():
     o produto — quem monta a chave é `daemon/sensor_hub.py`, num literal com as
     CINCO chaves juntas (o `_o_toque`, que a `leitura` e o `toque_visto` usam).
 
-    ESTA RÉGUA MEDE O DAEMON, e não o pacote: ela lê o fonte do dono da chave e
+    ESTA RÉGUA MEDE O DAEMON, e não o pacote: lê o fonte do dono da chave e
     exige que as cinco nasçam no mesmo dicionário. Se alguém partir aquele
-    literal em dois — que é o único jeito de o estado passar a existir —, ela
+    literal em dois — que é o único jeito de o estado passar a existir —, a régua
     reprova e manda reabrir a discussão, em vez de deixar a tela dizer "não
     sei" sobre um dedo que o daemon está vendo.
 
@@ -508,7 +506,7 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
     reimplementar `speaker_do_entry` dentro deste arquivo faz o `is` falhar, e
     nenhuma reescrita de comentário o afeta.
 
-    ELA PROMETIA CINCO E TRANCAVA DOIS — auditoria de 02/09/2026. O docstring
+    A RÉGUA PROMETIA CINCO E TRANCAVA DOIS — auditoria de 02/09/2026. O docstring
     dizia *"reprova aqui nomeando qual"* e as asserções eram duas
     (`speaker_do_entry` e `rotulo_lightbar`); `texto_volume` e `mascara_viva`
     ficavam de fora, e são justamente as duas cujo COMPORTAMENTO um clone local
@@ -559,7 +557,7 @@ DO_ENSAIO = tuple(sorted(_campos_do_arquivo(ENSAIO) - _campos_do_arquivo(PUBLICA
 
 @pytest.fixture()
 def com_a_pagina_publicada(a02):
-    """Finge que ela já publicou: a página passa a ter os quatro endereços."""
+    """Finge a publicação: a página passa a ter os quatro endereços."""
     antes = a02._ENDERECOS
     a02._ENDERECOS = frozenset(antes or ()) | frozenset(DO_ENSAIO)
     yield
@@ -569,8 +567,8 @@ def com_a_pagina_publicada(a02):
 def test_o_pacote_so_emite_endereco_que_a_pagina_tem(pac, a02):
     """Toda chave emitida tem onde pousar na página que o piloto ABRE.
 
-    A BANCADA É DO USUÁRIO. O gerador escreve em `mockup/`, e o produto só recebe
-    pelo `--publicar 02`, que é ato dela. Emitir antes põe as chaves em
+    O ENSAIO É DO USUÁRIO. O gerador escreve em `mockup/`, e o produto só recebe
+    pelo `--publicar 02`, que é ato de quem coordena. Emitir antes põe as chaves em
     `casamento.medir(...)["orfaos"]`, e quem reprova é
     `test_o_clique_do_analogico_tem_dono::test_a_aba_controles_nao_emite_para_
     endereco_que_a_pagina_nao_tem` — **não** o `test_o_casamento_das_dez`, que
@@ -581,9 +579,9 @@ def test_o_pacote_so_emite_endereco_que_a_pagina_tem(pac, a02):
 
     A PERGUNTA É `emitido ⊆ página`, e não *"os quatro nomes de hoje estão
     fora?"* — auditoria de 02/09/2026. A redação anterior afirmava um NEGATIVO
-    sobre quatro endereços NOMEADOS, e por isso ficava verde só enquanto ela
+    sobre quatro endereços NOMEADOS, e por isso ficava verde só enquanto a página
     **não** publicasse: simulada a publicação (um `data-campo="alto-num"`
-    acrescentado à página publicada), ela reprovava com a frase *"o pacote
+    acrescentado à página publicada), a régua reprovava com a frase *"o pacote
     emitiu ['alto-num'] para uma página que não os tem"* — que afirma o
     contrário do que aconteceu, e manda quem herdar procurar um órfão que não
     existe. **O contrato é o mesmo nos dois mundos**, e esta forma o diz.
@@ -597,7 +595,7 @@ def test_o_pacote_so_emite_endereco_que_a_pagina_tem(pac, a02):
     orfaos = sorted(k for k in d if k not in tem)
     assert not orfaos, (
         f"o pacote emitiu {orfaos} e a página publicada não tem onde pô-los — "
-        f"órfãos. Se ela acabou de publicar, o gerador é que ficou para trás.")
+        f"órfãos. Se a página acabou de ser publicada, o gerador é que ficou para trás.")
 
 
 def test_publicada_a_pagina_o_volume_e_a_curva_medida(pac, a02,
@@ -626,7 +624,7 @@ def test_publicada_a_pagina_o_retangulo_da_luz_diz_o_que_o_campo_diz(
 
     FOTOGRAFADO em 02/09/2026 às 19h, com os dois controles do usuário: o `luz-hex`
     dizia `#0000FF` (o `lightbar_rgb` vivo do P1) e o retângulo logo abaixo
-    estava no `#7EB8D4` que o mockup cravou. **A régua do mockup não vê** — ela
+    estava no `#7EB8D4` que o mockup cravou. **A régua do mockup não vê** — a régua
     conta `data-campo`, e o retângulo não tinha nenhum: `02-controles` deu
     `23 campos · 23 PRODUTO · 0 MOCKUP` nessa mesma foto.
 
@@ -664,7 +662,7 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 PAGINAS_COM_O_PONTO = [
     (rotulo, caminho)
-    for rotulo, caminho in (("bancada", ENSAIO), ("publicada", PUBLICADA))
+    for rotulo, caminho in (("ensaio", ENSAIO), ("publicada", PUBLICADA))
     if 'data-campo="touch-ponto"' in caminho.read_text(encoding="utf-8")
 ]
 
@@ -677,7 +675,7 @@ O_QUE_O_NAVEGADOR_DESENHA = r"""
     const aceso_na_cena = el.classList.contains('on');
     // A CLASSE É A DO PRODUTO: `data-hef-alvo="classe"` faz o piloto pôr `on`
     // no elemento (o ramo `classe` do `escrever`, em `hefesto_vivo.py`). Aqui
-    // ela é posta e tirada à mão, porque o que se mede é a FOLHA, não o piloto
+    // a classe é posta e tirada à mão, porque o que se mede é a FOLHA, não o piloto
     // — e a cena volta como estava, para a leitura seguinte não herdar isto.
     el.classList.remove('on');
     const sem_a_classe = getComputedStyle(el).opacity;
@@ -707,7 +705,7 @@ def test_ha_pagina_com_o_ponto_para_medir():
     """Sem esta linha, a régua abaixo some inteira e ninguém percebe."""
     assert PAGINAS_COM_O_PONTO, (
         'nenhuma das duas páginas tem `data-campo="touch-ponto"` — ou o '
-        "gerador perdeu o endereço, ou a bancada ficou para trás. Rode "
+        "gerador perdeu o endereço, ou o ensaio ficou para trás. Rode "
         "`python3 src/hefesto_dualsense4unix/interface/aba02.py`.")
 
 
@@ -717,7 +715,7 @@ def test_ha_pagina_com_o_ponto_para_medir():
     "arquivo", [c for _, c in PAGINAS_COM_O_PONTO],
     ids=[r for r, _ in PAGINAS_COM_O_PONTO])
 def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
-    """A classe DECIDE (0 sem ela, 1 com ela) e a cena fixa não se contradiz."""
+    """A classe DECIDE (0 sem a classe, 1 com a classe) e a cena fixa não se contradiz."""
     from hefesto_dualsense4unix.interface.sensores import texto_toques
 
     from playwright.sync_api import sync_playwright
@@ -744,8 +742,8 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
     mudos = [d for d in medido if d["sem_a_classe"] != "0"]
     assert not mudos, (
         f"em {arquivo.name} o ponto do touchpad continua desenhado SEM a classe "
-        f"`on`: {mudos}. Decisão dela, item 15: *\"o pontinho do touchpad só "
-        f"aparece quando há toque\"* — com o CSS já aceso, a classe não acende "
+        f"`on`: {mudos}. Decisão de produto, item 15: o pontinho do touchpad só "
+        f"aparece quando há toque — com o CSS já aceso, a classe não acende "
         f"nada e a tela diz \"{sem_toque}\" com o ponto na superfície")
 
     apagados = [d for d in medido if d["com_a_classe"] != "1"]

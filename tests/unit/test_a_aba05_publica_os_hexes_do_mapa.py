@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A folha dos 28 da 05 carrega os HEXES do CSV dela — não só os 28 nomes."""
+"""A folha dos 28 da 05 carrega os HEXES do CSV — não só os 28 nomes."""
 from __future__ import annotations
 
 import csv
@@ -59,7 +59,7 @@ def _folha(html: str) -> dict[str, dict[str, str]]:
 
 
 def _esperado(zonas: dict[str, dict[str, str]], coluna: str) -> str:
-    """O que a folha tem de dizer para aquela zona: o hex dela, ou a hachura."""
+    """O que a folha tem de dizer para aquela zona: o hex da zona, ou a hachura."""
     linha = zonas.get(coluna)
     if linha is None:
         return ""
@@ -77,7 +77,7 @@ def _partida(zonas: dict[str, dict[str, str]]) -> bool:
 def test_cada_zona_dos_28_traz_o_hex_do_csv_do_usuario() -> None:
     """As oito zonas sólidas dos 28 modelos, comparadas com o CSV linha a linha."""
     folha, mapa = _folha(_pagina()), _mapa_do_usuario()
-    assert len(mapa) >= 28, f"o mapa dela encolheu para {len(mapa)} modelos"
+    assert len(mapa) >= 28, f"o mapa encolheu para {len(mapa)} modelos"
 
     divergem: list[str] = []
     conferidas = 0
@@ -94,16 +94,16 @@ def test_cada_zona_dos_28_traz_o_hex_do_csv_do_usuario() -> None:
             conferidas += 1
             if visto.replace("\\#", "#").upper() != esperado.upper():
                 divergem.append(
-                    f"{ident}.{zona}: a página diz {visto!r} e o CSV dela diz "
+                    f"{ident}.{zona}: a página diz {visto!r} e o CSV diz "
                     f"{esperado!r} (coluna `{coluna}`)")
 
     possiveis = sum(1 for zonas in mapa.values() for coluna in ZONA_DA_COLUNA.values()
                     if coluna in zonas)
     assert conferidas == possiveis >= 200, (
         f"a régua conferiu {conferidas} de {possiveis} zonas com linha no CSV — "
-        "ela deixou de medir o que prometia, que é pior que reprovar")
+        "a régua deixou de medir o que prometia, que é pior que reprovar")
     assert not divergem, (
-        f"{len(divergem)} zona(s) da folha não são o mapa dela:\n  "
+        f"{len(divergem)} zona(s) da folha não são o mapa:\n  "
         + "\n  ".join(divergem[:20]))
 
 
@@ -125,22 +125,22 @@ def test_nenhuma_variavel_da_folha_sai_vazia() -> None:
 
 
 def test_os_modelos_que_o_desenho_nao_tem_resolvem_do_mapa_do_usuario() -> None:
-    """Nova Pink, Astro Bot e Sterling Silver: o hex é o dela, e é ÚNICO."""
+    """Nova Pink, Astro Bot e Sterling Silver: o hex é o do mapa, e é ÚNICO."""
     folha, mapa = _folha(_pagina()), _mapa_do_usuario()
     desenhados = set(re.findall(r'<svg[^>]*\sdata-colorway="([^"]+)"', _pagina()))
-    assert desenhados, "a bancada da 05 não desenha controle nenhum"
+    assert desenhados, "o ensaio da 05 não desenha controle nenhum"
 
     das_quatro = {folha[d].get("casca-solida-crua", "").upper()
                   for d in desenhados if d in folha}
     for ident in FORA_DO_DESENHO:
         assert ident not in desenhados, (
-            f"{ident} passou a ser um dos modelos DESENHADOS na bancada — "
+            f"{ident} passou a ser um dos modelos DESENHADOS no ensaio — "
             "esta régua precisa de um modelo que o desenho não tenha")
         assert ident in folha, f"a página não publica {ident}"
         visto = folha[ident].get("casca-solida-crua", "").upper()
         esperado = _esperado(mapa[ident], "casca_esq").upper()
         assert visto == esperado, (
-            f"{ident}: a página diz {visto!r} e o mapa dela diz {esperado!r}")
+            f"{ident}: a página diz {visto!r} e o mapa diz {esperado!r}")
         assert visto not in das_quatro, (
             f"{ident} tem a mesma casca de um dos modelos do desenho "
             f"({visto}) — na tela ele seria indistinguível deles")
@@ -176,12 +176,12 @@ def test_o_sem_hex_do_csv_vira_hachura_e_nao_uma_cor_inventada() -> None:
             if visto != HACHURA:
                 errados.append(f"{ident}.{zona}: {visto!r}")
     assert quantos, (
-        "nenhum SEM-HEX no mapa dela — esta régua deixou de ter o que medir")
+        "nenhum SEM-HEX no mapa — esta régua deixou de ter o que medir")
     assert not errados, f"SEM-HEX que virou cor na página: {errados}"
 
 
 def test_a_zona_sem_linha_no_csv_nao_toma_emprestada_uma_cor_do_usuario() -> None:
-    """Onde o mapa dela tem buraco, a página diz "não medi" — de um jeito só."""
+    """Onde o mapa tem buraco, a página diz "não medi" — de um jeito só."""
     folha, mapa = _folha(_pagina()), _mapa_do_usuario()
     marcadores: set[str] = set()
     buracos: list[str] = []
@@ -193,7 +193,7 @@ def test_a_zona_sem_linha_no_csv_nao_toma_emprestada_uma_cor_do_usuario() -> Non
             marcadores.add(folha.get(ident, {}).get(f"{zona}-crua", "").upper())
 
     assert buracos, (
-        "o mapa dela não tem mais buraco nenhum — esta régua perdeu o alvo, e a "
+        "o mapa não tem mais buraco nenhum — esta régua perdeu o alvo, e a "
         "notícia é boa: apague-a e diga por quê")
     assert len(marcadores) == 1, (
         f"a casa diz 'não medi' de {len(marcadores)} jeitos diferentes "
@@ -207,7 +207,7 @@ def test_a_zona_sem_linha_no_csv_nao_toma_emprestada_uma_cor_do_usuario() -> Non
         if (linha.get("hex") or "").strip()
     }
     assert marcador and marcador not in do_usuario, (
-        f"o marcador de 'não medi' é {marcador!r}, que é uma cor do mapa dela — "
+        f"o marcador de 'não medi' é {marcador!r}, que é uma cor do mapa — "
         "a folha estaria afirmando uma cor amostrada onde não há medição")
 
 
@@ -216,7 +216,7 @@ def test_a_casca_partida_sai_em_gradiente_de_duas_metades() -> None:
     html = _pagina()
     folha, mapa = _folha(html), _mapa_do_usuario()
     partidas = [i for i, z in sorted(mapa.items()) if _partida(z)]
-    assert partidas, "nenhuma casca partida no mapa dela — nada a medir"
+    assert partidas, "nenhuma casca partida no mapa — nada a medir"
 
     for ident in partidas:
         crua = folha.get(ident, {}).get("casca-crua", "").replace("\\#", "#")
@@ -235,7 +235,7 @@ def test_a_casca_partida_sai_em_gradiente_de_duas_metades() -> None:
         assert paradas[0][0] == paradas[1][0], (
             f"{ident}: as duas paradas estão em offsets diferentes "
             f"({paradas[0][0]} e {paradas[1][0]}) — isso é uma transição, e a "
-            "casca dela é um corte")
+            "casca do modelo é um corte")
         assert paradas[0][1].lower() != paradas[1][1].lower(), (
             f"{ident}: as duas metades saíram da MESMA cor "
             f"({paradas[0][1]}) — a casca partida deixou de ser partida")
@@ -276,7 +276,7 @@ def test_a_variavel_que_pinta_sai_da_crua_pela_conta_do_dono() -> None:
                     f"{limpo!r} dá {esperado!r}")
 
     assert conferidas >= 200, (
-        f"a régua conferiu só {conferidas} variáveis de tinta — ela deixou de "
+        f"a régua conferiu só {conferidas} variáveis de tinta — deixou de "
         "medir o que promete, que é pior que reprovar")
     assert not divergem, (
         f"{len(divergem)} variável(is) que PINTAM não saem da crua pela conta "

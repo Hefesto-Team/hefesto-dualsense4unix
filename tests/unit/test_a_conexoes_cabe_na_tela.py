@@ -3,7 +3,7 @@
 A-CONEXOES-CABE-NA-TELA-SEM-REPETIR-E-SEM-TEXTO-DEMAIS-01 (05/10/2026), o desenho aprovado
 (``docs/process/estudos/2026-10-05-a-conexoes-enxuta/DESENHO-APROVADO.md``). A régua do desenho era
 o ``medir_ajustado.py`` (21 vistas num Chrome); esta é a do produto: as mesmas vistas no WebKit,
-na página que o produto renderiza depois do ``--publicar`` e, enquanto ele não roda, na bancada.
+na página que o produto renderiza depois do ``--publicar`` e, enquanto ele não roda, no ensaio.
 
 TUDO É DE MENTIRA: as páginas num WebKit fora da tela, com o pintor do piloto; nada chega a daemon.
 
@@ -133,7 +133,7 @@ def test_o_ponto_verde_diz_tudo_certo_e_o_vermelho_diz_o_problema_so_no_tooltip(
 
 
 def test_o_mapa_fala_em_frase_e_sem_primeira_pessoa() -> None:
-    """O Mapa da bancada não põe Maiúscula Em Toda Palavra no fim da pintura, e as frases que o
+    """O Mapa do ensaio não põe Maiúscula Em Toda Palavra no fim da pintura, e as frases que o
     desenho aprovado reescreveu estão lá (o que o ``emTitulo`` desfaria na tela)."""
     pagina = pagina_do_mapa.pagina()
     assert 'emTitulo(document.querySelector(".pagina"))' not in pagina, (

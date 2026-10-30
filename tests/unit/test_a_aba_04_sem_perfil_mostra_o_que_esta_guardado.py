@@ -89,7 +89,7 @@ def _ctx_dos_dois():
 
 
 def test_a_aba_pinta_o_brilho_de_cada_controle_sem_perfil_no_cabo_e_no_radio(a04):
-    """A tela inteira: cada coluna mostra o brilho que o computador guardou PARA ELA."""
+    """A tela inteira: cada coluna mostra o brilho que o computador guardou PARA A COLUNA."""
     for uniq, _via, _plastico, pct in DOIS:
         _guardar_sem_perfil(lambda prof, u=uniq, v=pct: a04._com_o_brilho_gravado(prof, u, v),
                             uniq=uniq)
