@@ -65,7 +65,7 @@ EXTERNOS_POR_PASTA = ("Pro2/", "SwitchMode/", "SN30ProPlus/", "xpadneo/",
 FORA_DO_GIT: dict[str, str] = {
     "docs/process/": (
         "os arquivos de estudo e de metalinguagem. Saíram do git em 15/09/2026 "
-        "por ordem dela; continuam no disco dela e do André."
+        "por ordem de quem mantém; continuam só no disco de quem mantém."
     ),
 }
 
@@ -98,7 +98,7 @@ def conferir_fora_do_git(raiz: Path) -> list[str]:
                 f"    e o git rastreia {quantos} arquivo(s) dentro dele. Ou a\n"
                 "    decisão foi desfeita — e a linha sai daqui, para as\n"
                 "    citações voltarem a ser conferidas —, ou alguém versionou\n"
-                "    de volta o que ela mandou tirar."
+                "    de volta o que se mandou tirar."
             )
     return problemas
 
@@ -110,7 +110,7 @@ _ESTUDIO = (
 )
 
 _REGUAS = (
-    "régua da JANELA, apagada em 06/09/2026 (GTK-3) com a superfície que ela "
+    "régua da JANELA, apagada em 06/09/2026 (GTK-3) com a superfície que "
     "media. O veredito de cada uma, uma a uma, está em "  # (noqa-acento)
     "`docs/process/agentes/2026-09-06/GTK-3-segunda-volta.md`."
 )
@@ -161,15 +161,15 @@ APOSENTADOS: dict[str, str] = {
     ),
     "tests/unit/test_a_aba_perfis_na_foto.py": (
         "montava a aba Perfis da JANELA a partir do `.glade` e conferia que a "
-        "foto dela não perguntava ao daemon. Apagada em 08/09/2026 — o widget "
-        "que ela montava saiu com a janela em 06/09 (GTK-3). O fato do "
+        "foto da aba não perguntava ao daemon. Apagada em 08/09/2026 — o widget "
+        "que a régua montava saiu com a janela em 06/09 (GTK-3). O fato do "
         "anonimato ficou, medido sobre o retratista de hoje, em "
         "`tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py`."
     ),
     "tests/unit/test_a_foto_do_cabecalho_prova_o_alvo.py": (
         "media a fita 'Ajustes vão para:' no `header_bar` da JANELA, que ficava "  # (noqa-acento)
         "fora do recorte de toda foto de aba. Apagada em 08/09/2026 — não há "
-        "`header_bar` nem `main_notebook`. O que ela cobrava do lado da "
+        "`header_bar` nem `main_notebook`. O que a régua cobrava do lado da "
         "documentação (as duas fotos existem e o `interface.md` as publica) é "
         "hoje `test_toda_imagem_que_a_documentacao_publica_existe`, que mede o "
         "documento inteiro em vez de duas imagens nomeadas."
@@ -196,7 +196,7 @@ APOSENTADOS: dict[str, str] = {
         "escrito: os cinco estados do produto de hoje seguem sem foto de prova."
     ),
     "tests/unit/test_retrato_dos_dialogos_nao_vaza_dado_real.py": (
-        "impedia o retratista dos DIÁLOGOS de publicar os perfis dela. Apagada "
+        "impedia o retratista dos DIÁLOGOS de publicar os perfis de quem usa. Apagada "
         "em 08/09/2026 com `scripts/gui-captura/retratar_dialogos.py`, que saiu "
         "em 06/09 — sem gerador não há o que travar. As cinco imagens que ele "
         "produziu continuam publicadas no `interface.md` como registro datado, "
@@ -231,7 +231,7 @@ def conferir_aposentados(raiz: Path) -> list[str]:
                 f"    ({razao})\n"
                 "    e EXISTE nesta árvore. Ou a remoção foi desfeita — e a linha sai\n"
                 "    daqui, para as citações voltarem a ser conferidas —, ou alguém\n"
-                "    recriou o que a decisão dela mandou apagar."
+                "    recriou o que a decisão mandou apagar."
             )
     return problemas
 

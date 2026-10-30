@@ -742,7 +742,7 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
 def _apaga_as_aspas_da_string(
     mascarado: list[str], texto: str, inicio: tuple[int, int], fim: tuple[int, int]
 ) -> None:
-    """As aspas que abrem e fecham a string saem da máscara: as que sobram são de dentro dela."""
+    """As aspas que abrem e fecham a string saem da máscara: as que sobram são de dentro da string."""
     prefixo = len(texto) - len(texto.lstrip("rbuRBUfF"))
     aspas = 3 if texto[prefixo:prefixo + 3] in ('"""', "'''") else 1
     (lin_ini, col_ini), (lin_fim, col_fim) = inicio, fim

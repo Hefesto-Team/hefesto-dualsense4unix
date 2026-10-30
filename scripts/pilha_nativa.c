@@ -8,7 +8,7 @@
  * e levanta o sinal de novo. Aqui sai a pilha da linha que falhou e, com o
  * `eu-stack`, a de todas; então o sinal volta ao padrão e o processo morre
  * com o mesmo número. O construtor também tira a biblioteca do `LD_PRELOAD`:
- * os filhos do pytest nascem sem ela.
+ * os filhos do pytest nascem sem a biblioteca.
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -137,7 +137,7 @@ __attribute__((constructor)) static void armar(void) {
     sai_do_ambiente();
     int copia = fcntl(STDERR_FILENO, F_DUPFD_CLOEXEC, 3);
     if (copia >= 0) saida = copia;
-    /* A primeira chamada carrega a libgcc_s; no tratador ela já está aqui. */
+    /* A primeira chamada carrega a libgcc_s; no tratador já está aqui. */
     backtrace(um, 1);
     const char *caminho = getenv("HEFESTO_EU_STACK");
     if (caminho == NULL) caminho = "/usr/bin/eu-stack";

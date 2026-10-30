@@ -146,7 +146,7 @@ def _levar_linha(linha: int, hunks: list[tuple[int, int, int, int]]) -> int | No
 def levar(
     raiz: Path, relativo: str, a: int, b: int, nomes: set[str], *, historico: int = HISTORICO
 ) -> tuple[int, int] | None:
-    """A faixa ``a-b`` de ``relativo``, levada para onde o trecho que ela prometia está hoje."""
+    """A faixa ``a-b`` de ``relativo``, levada para onde o trecho prometido está hoje."""
     atual = (raiz / relativo).read_text(encoding="utf-8", errors="replace").splitlines()
     if _contem(atual, a, b, nomes, relativo):
         return a, b
@@ -339,7 +339,7 @@ def com_promessa(raiz: Path) -> list[Citacao]:
 
 
 def _regua_do_src(raiz: Path) -> ModuleType | None:
-    """A régua das citações de `src/` (um teste), carregada como módulo; ``None`` sem ela."""
+    """A régua das citações de `src/` (um teste), carregada como módulo; ``None`` sem a régua."""
     src = raiz / "src" / "hefesto_dualsense4unix"
     regua = raiz / "tests" / "unit" / "test_portao_o_par_com_metade_ligada.py"
     if not regua.is_file() or not src.is_dir():
@@ -398,7 +398,7 @@ def podres_do_src(raiz: Path) -> tuple[list[Citacao], list[str]]:
 def curtas_do_src(raiz: Path) -> list[Citacao]:
     """A forma curta ``:N`` em prosa de `src/`, presa à citação inteira antes, na mesma linha.
 
-    A régua de `src/` só lê ``alvo.py:N`` com o arquivo; a curta (``e `:3989```) escapava dela
+    A régua de `src/` só lê ``alvo.py:N`` com o arquivo; a curta (``e `:3989```) escapava da régua
     e ficava para trás quando a inteira, ao lado, era reapontada.
     """
     modulo = _regua_do_src(raiz)
@@ -479,14 +479,14 @@ citado. Os úteis são os de ``_caracteres_uteis``: sem marcação sem atributo,
 PROFUNDIDADE_DA_SEGUNDA_CHANCE = 2
 """Quantas voltas a segunda chance dá para trás: o endereço que uma varredura ou um reapontamento em
 massa deixou tem o endereço de ANTES dele; se a entrada desse também veio de uma varredura, a volta
-seguinte olha o de antes dela, até este limite. Além dele, vai à mão."""
+seguinte olha o de antes desse, até este limite. Além dele, vai à mão."""
 
 A_SEGUNDA_CHANCE_ATRAVESSA_A_MASSA_QUE_MUDOU_O_TRECHO = True
 """Se a segunda chance atravessa o reapontamento em massa que mudou o TRECHO citado (o endereço de
 depois, no commit da massa, não tem o bloco que o de antes tinha na entrada dele). Esse commit pode ter
 CORRIGIDO um endereço que nasceu errado, e levar o de antes para a frente desfaria a correção; ou pode
 ter errado (o `719e58a46`), e o de antes é o certo. O texto não separa os dois casos sem a pista ao
-lado. Com ``False``, a trava manda esses à mão. Decisão de 09/10/2026, a validar por ela: fica
+lado. Com ``False``, a trava manda esses à mão. Decisão de 09/10/2026, a validar: fica
 ``True`` até a amostra da costura (60 da segunda chance, limiar escrito antes) decidir."""
 
 _TAG_COM_ATRIBUTO = re.compile(r"<[A-Za-z][A-Za-z0-9-]*\s+[^<>/\s][^<>]*>")
@@ -635,7 +635,7 @@ def _achar(
     ``md`` lê como o validador lê `docs/protocol`; ``csv``, como lê as planilhas; ``py``, os
     comentários e docstrings de `src/` (a citação inteira, com ou sem crase, e a curta).
 
-    Em ``csv`` a curta fica presa à inteira MAIS PRÓXIMA antes dela na mesma célula
+    Em ``csv`` a curta fica presa à inteira MAIS PRÓXIMA antes da curta na mesma célula
     (``val.ancora_da_curta``: outro arquivo nomeado entre as duas a solta), e só é devolvida se
     essa âncora resolve (``resolve``) num arquivo do repositório: a que não resolve não é nossa, e
     nunca cai numa âncora mais antiga.
@@ -727,15 +727,15 @@ def _modo_de(documento: Path) -> str:
 _ATE_O_FIM_DO_CAMPO = re.compile(r"[^,\r\n]*")
 
 Celula = tuple[str, int, list[int] | None]
-"""``(texto lido, início no texto cru, mapa)``. O ``mapa`` dá, para cada letra do texto lido, o lugar
-dela no texto cru; ``None`` quando as duas coincidem (campo sem aspas)."""
+"""``(texto lido, início no texto cru, mapa)``. O ``mapa`` dá, para cada letra do texto lido, o seu lugar
+no texto cru; ``None`` quando as duas coincidem (campo sem aspas)."""
 
 
 def _registros_do_csv(texto: str) -> Iterator[list[Celula]]:
     """Os registros do CSV como o ``csv.reader`` os lê, cada célula com o seu lugar no texto CRU.
 
     O leitor do ``csv`` não diz onde a célula começa: aspas dobradas (``""``), vírgula e quebra de
-    linha dentro dela mudam o deslocamento. A troca por posição precisa do cru.
+    linha dentro da célula mudam o deslocamento. A troca por posição precisa do cru.
     """
     i, n = 0, len(texto)
     while i < n:
@@ -1210,7 +1210,7 @@ def levar_crua(
             None,
             (
                 f"o commit {sha[:9]}, que reescreveu o endereço num documento que já existia, tocou "
-                f"{cat.arquivos(sha)} arquivos: foi uma varredura, e ela não prova onde a linha estava"
+                f"{cat.arquivos(sha)} arquivos: foi uma varredura, e a varredura não prova onde a linha estava"
             ),
         )
     if not documento_nasceu_no_commit and reescritos >= REESCRITA_EM_MASSA:
@@ -1408,8 +1408,8 @@ def _a_massa_mudou_o_trecho(
     """Por que o commit ``sha`` (a massa) mudou o trecho citado, ou ``""`` se ele só o levou.
 
     Compara o bloco do endereço de antes (``antes``) no commit em que ELE entrou (``sha2``) com o
-    bloco do endereço que a massa deixou (``endereco``) no commit dela. Iguais: a massa só acompanhou
-    o código. Diferentes: ela trocou o que se citava, o que pode ter sido uma correção.
+    bloco do endereço que a massa deixou (``endereco``) no commit da massa. Iguais: a massa só acompanhou
+    o código. Diferentes: a massa trocou o que se citava, o que pode ter sido uma correção.
     """
     achado = _ENDERECO_CANONICO.fullmatch(endereco)
     velho, depois = cat.linhas(sha2, relativo), cat.linhas(sha, relativo)
@@ -1427,7 +1427,7 @@ def _a_massa_mudou_o_trecho(
 
 
 def _desde(base: int) -> Callable[[int], int]:
-    """O mapa de uma linha de markdown: a posição na linha mais o início dela no texto."""
+    """O mapa de uma linha de markdown: a posição na linha mais o início da linha no texto."""
     return lambda i: base + i
 
 
@@ -1586,7 +1586,7 @@ def _trocar(texto: str, velho: str, novo: str) -> tuple[str, int]:
 
 
 def _trocar_curta(texto: str, cit: Citacao, endereco: str) -> tuple[str, int]:
-    """Troca a forma curta ``:N`` SÓ nos trechos em que ela está escrita (``cit.trechos``).
+    """Troca a forma curta ``:N`` SÓ nos trechos em que está escrita (``cit.trechos``).
 
     O trecho é o lugar da curta no texto cru: um ``:N`` igual, ancorado a outro arquivo, na mesma
     linha ou na mesma célula, não é tocado. Um trecho que não mostra mais a curta velha (o texto já
@@ -1867,15 +1867,15 @@ def main(argv: list[str] | None = None) -> int:
             "(dezenas de endereços do mesmo documento num commit) deixou vai à mão: ele foi "
             "calculado, e não prova onde a linha estava. A forma curta (`:N`, `:N-M`) vale em .md, "
             "em .csv (solta, depois de vírgula, ponto-e-vírgula, `e` ou `(`) e em prosa de `src/`: "
-            "anda com a inteira MAIS PRÓXIMA antes dela, na mesma linha ou célula, só se essa "
-            "âncora é um arquivo do repositório, e a troca é pelo lugar onde ela está escrita. "
+            "anda com a inteira MAIS PRÓXIMA antes da curta, na mesma linha ou célula, só se essa "
+            "âncora é um arquivo do repositório, e a troca é pelo lugar onde a curta está escrita. "
             "SEGUNDA CHANCE: antes de mandar à mão o endereço que uma varredura ou um "
             "reapontamento em massa deixou, o script lê no diff do documento, naquele commit, o "
             "endereço de ANTES da mesma linha, acha a entrada dele e leva o bloco daquela entrada: "
             "se o endereço de hoje já o tem, fica no lugar; se ele existe intacto e único em outro "
             "lugar, anda; senão fica à mão. Sem par (no CSV, de registro e de célula; no resto, "
             "de linha: contagem desigual de linhas ou de endereços, ou faixa de outra largura), sem "
-            "a entrada de antes, ou se ela também veio de uma varredura mais de "
+            "a entrada de antes, ou se essa entrada também veio de uma varredura mais de "
             f"{PROFUNDIDADE_DA_SEGUNDA_CHANCE} voltas atrás, fica à mão sem chute. Com "
             "A_SEGUNDA_CHANCE_ATRAVESSA_A_MASSA_QUE_MUDOU_O_TRECHO = False, fica à mão também o "
             "endereço que a varredura deixou num trecho diferente do de antes (pode ter sido "

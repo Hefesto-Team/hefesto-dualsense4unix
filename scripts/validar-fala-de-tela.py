@@ -697,7 +697,7 @@ def valida_piso_da_regua(medido: dict[str, int], piso: dict[str, int]) -> list[s
         problemas.append(
             f"{nome}: a régua mede {agora} e o piso é {piso[nome]} — "
             f"{_O_QUE_O_PISO_MEDE.get(nome, nome)}. A régua ENCOLHEU: alguém "
-            "apagou, renomeou ou despromoveu o que ela enxergava. NÃO baixe o "
+            "apagou, renomeou ou despromoveu o que a régua enxergava. NÃO baixe o "
             "piso para ficar verde — descubra o que encolheu"
         )
     return problemas

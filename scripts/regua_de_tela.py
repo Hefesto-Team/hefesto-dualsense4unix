@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""régua_de_tela — dirigir a interface nova POR DENTRO, e perguntar a ela."""
+"""régua_de_tela — dirigir a interface nova POR DENTRO, e perguntar à própria interface."""
 from __future__ import annotations
 
 import argparse
@@ -37,7 +37,7 @@ O_QUE_ELE_NAO_FAZ = (
     "foco por teclado ficam de fora — para `:hover` o instrumento certo é o "
     "olhar.py (Playwright) sobre o mockup",
     "não vê o que o WebKit PINTOU: `medir` lê a geometria do DOM, não os pixels. "
-    "Cor errada por CSS mal calculado passa; use `foto()` e o olho dela",
+    "Cor errada por CSS mal calculado passa; use `foto()` e o olho de quem confere",
     "não alcança widget GTK — só o que está DENTRO do WebView. A tira, a barra "
     "de título e qualquer diálogo GTK ficam fora do alcance",
     "não roda sem servidor gráfico: `Gtk.OffscreenWindow` ainda precisa de um "
@@ -86,7 +86,7 @@ class ErroDeJS(ErroDeRegua):
 
 
 class CargaFalhou(ErroDeRegua):
-    """A página não é a página — e quem diz isso é ela mesma."""
+    """A página não é a página — e quem diz isso é a própria página."""
 
 
 class MockupAusente(ErroDeRegua):
@@ -161,7 +161,7 @@ PASTAS_DAS_ABAS = ("mockup", "src/hefesto_dualsense4unix/interface/paginas")
 
 
 def _paginas_da_raiz(raiz: pathlib.Path) -> list[pathlib.Path]:
-    """As páginas de aba de uma raiz, em todas as casas que ela tiver."""
+    """As páginas de aba de uma raiz, em todas as casas que a raiz tiver."""
     fora: list[pathlib.Path] = []
     for pasta in PASTAS_DAS_ABAS:
         alvo = raiz / pasta

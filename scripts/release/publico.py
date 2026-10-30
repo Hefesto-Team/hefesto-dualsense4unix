@@ -14,7 +14,7 @@ bloco, um trecho cercado no corpo da sprint:
     ```
 
 (o frontmatter da sprint é estrito e não aceita campo novo; o corpo, sim). Uma linha que começa com espaço
-continua o campo anterior. `muda` vira a linha do CHANGELOG e o corpo da issue; `pronto` é o critério dela.
+continua o campo anterior. `muda` vira a linha do CHANGELOG e o corpo da issue; `pronto` é o critério da issue.
 
 A RÉGUA: todo campo passa pelas palavras que o texto público não pode ter (as de `check_texto_publico.py`,
 mais as do trabalho em equipe: mesa, agente, leva, worktree), pelo VAZAMENTO (`vazamentos`: endereço de

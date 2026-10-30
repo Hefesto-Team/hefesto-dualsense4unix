@@ -338,7 +338,7 @@ _ferramentas_que_faltam_ao_nome_do_lugar() {
 
 install_bt_resilience_host() {
     if [[ "${SKIP_UDEV}" -eq 1 ]]; then
-        printf '      resiliência do bluetoothd pulada (--no-udev) — sem os alvos, as regras 82 e 83 ficam INERTES pelo TEST== delas\n'
+        printf '      resiliência do bluetoothd pulada (--no-udev) — sem os alvos, as regras 82 e 83 ficam INERTES pelo seu TEST==\n'
         return 0
     fi
     if ! command -v sudo >/dev/null 2>&1; then
@@ -391,7 +391,7 @@ install_bt_resilience_host() {
         printf '      restauro AUTOMÁTICO de bonds armado: se o bluetoothd morrer, os bonds que\n'
         printf '        ele comeu voltam sozinhos antes do próximo start (aditivo; nunca por cima\n'
         printf '        de chave viva). Nada a digitar, nenhum sudo.\n'
-        printf '      as regras udev 82 e 83 acharam os alvos do RUN+= delas (no-sniff na borda + snapshot na conexão)\n'
+        printf '      as regras udev 82 e 83 acharam os seus alvos do RUN+= (no-sniff na borda + snapshot na conexão)\n'
         printf '      vale no próximo restart do bluetoothd; captura forense é OPT-IN: bt_crash_capture.sh --on\n'
     else
         warn "resiliência do bluetoothd instalada PARCIALMENTE — confira as mensagens acima"
@@ -709,7 +709,7 @@ install_dkms_uhid_host() {
            && printf '%s' "${_v}" | sudo tee /sys/module/uhid/parameters/backpressure >/dev/null 2>&1; then
             printf '      módulo patchado JÁ carregado — contrapressão ligada a quente (vale já, sem recarregar o uhid)\n'
         else
-            warn "não consegui ligar a contrapressão a quente — ela vale no próximo boot, pela conf do modprobe.d"
+            warn "não consegui ligar a contrapressão a quente — vale no próximo boot, pela conf do modprobe.d"
         fi
     else
         printf '      o de fábrica está carregado — o patchado entra no PRÓXIMO BOOT (recarregar o uhid derrubaria todo HID por Bluetooth)\n'

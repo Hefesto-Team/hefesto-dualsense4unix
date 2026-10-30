@@ -13,8 +13,8 @@ try:
     import streamlit as st
 except ModuleNotFoundError as e:      # pragma: no cover
     raise SystemExit(
-        f"falta {e.name}. A bancada NÃO é dependência do produto — instale só nela:\n"
-        "    .venv/bin/pip install -e \".[bancada]\"\n"
+        f"falta {e.name}. O formulário de ensaio NÃO é dependência do produto — instale só o extra:\n"
+        "    .venv/bin/pip install -e \".[ensaio]\"\n"
         "    .venv/bin/streamlit run scripts/ensaio_do_mapa.py"
     ) from e
 
@@ -43,7 +43,7 @@ QUEM = ["", "ci", "bancada", "olho-do-usuario",
         "aparelho", "fonte-do-driver", "descritor", "instrumento"]
 LADOS = {"cabo": "cabo_", "rádio": "radio_"}
 
-st.set_page_config(page_title="Hefesto · bancada de medição", layout="wide")
+st.set_page_config(page_title="Hefesto · formulário de ensaio", layout="wide")
 
 
 @st.cache_data
@@ -68,7 +68,7 @@ def estados_do_mapa(fixos: list[str], celulas: Iterable[str]) -> list[str]:
 
 ESTADOS = estados_do_mapa(ESTADOS_FIXOS, df["estado_hoje"])
 
-st.title("Bancada de medição")
+st.title("Formulário de ensaio")
 st.caption(
     f"{len(df)} linhas · a régua é o degrau de cada lado "
     "(`cabo_ate_onde_foi` / `radio_ate_onde_foi`): "

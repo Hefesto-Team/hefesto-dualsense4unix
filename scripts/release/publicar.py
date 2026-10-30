@@ -4,7 +4,7 @@
   publicar.py TAG --repo DONO/NOME --pasta DIST --notas ARQUIVO [--exigir PADRÃO...] [--conferir]
 
 POR QUE ASSIM: a release imutável (`seguranca.releases_imutaveis` de `.github/repositorio.yml`) trava os
-arquivos e a tag da versão no instante em que ela é publicada, e o GitHub nunca devolve uma tag que já foi
+arquivos e a tag da versão no instante em que a versão é publicada, e o GitHub nunca devolve uma tag que já foi
 de uma release imutável. Apagar e recriar a versão (o que o fluxo antigo fazia a cada re-execução) deixa de
 existir: o rascunho aceita arquivo trocado (`--clobber`), a publicada não aceita nada.
 

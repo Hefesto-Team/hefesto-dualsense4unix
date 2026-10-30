@@ -34,19 +34,19 @@ DISPENSAS = {
     ],
     "03-gatilhos.html": [
         ("conteúdo das colunas",
-         "27/08, ela: 'Nenhuma. Talvez a régua tenha que ser ajustada por aba.' "
+         "27/08: nenhuma divergência real; a régua pede ajuste por aba. "
          "L2 e R2 mostram as barras do MODO escolhido, e modos diferentes têm "
          "números de barra diferentes. Igualar a altura seria inventar espaço."),
     ],
     "04-iluminacao.html": [
         ("conteúdo das colunas",
-         "27/08, ela: 'Nenhuma.' O desenho do controle ocupa as DUAS linhas do "
+         "27/08: nenhuma divergência real. O desenho do controle ocupa as DUAS linhas do "
          "grid — a régua o compara com a fileira de cima e acusa um vão que é "
          "só a segunda linha. Falso positivo estrutural.\n"
          "         MAS a dispensa cobria também um vão REAL de 34px no pé da "
-         "fileira de baixo, e a frase 'ela aprovou vendo' que estava aqui era "
-         "FALSA: ela voltou no mesmo dia — 'os elementos estão muito mal "
-         "distribuídos'. O vão foi curado na ALTURA (a fileira de números "
+         "fileira de baixo, e a aprovação que estava declarada aqui era "
+         "FALSA: no mesmo dia a distribuição dos elementos voltou como "
+         "defeito. O vão foi curado na ALTURA (a fileira de números "
          "passou a valer os 70px da caixa de LEDs); sobram 17px, que são a "
          "distância entre o pé de um botão flutuante e a borda de uma caixa."),
     ],
@@ -63,7 +63,7 @@ SONDA = r"""
   // a CONTENT BOX do miolo — comparar com a border box acusava o próprio padding.
   // `clientWidth` e não `getBoundingClientRect().width`: a border box INCLUI a
   // barra de rolagem (e o gutter que o `scrollbar-gutter:stable` reserva), e a
-  // largura tirada dela dava 15px a mais do que o filho pode ocupar. Em 27/08,
+  // largura tirada da janela dava 15px a mais do que o filho pode ocupar. Em 27/08,
   // com o gutter ligado, isso reprovou as DEZ abas de uma vez — o defeito era da
   // regua, não do desenho.
   const mr  = {x:_b.x+parseFloat(cs.paddingLeft), width:mio.clientWidth
@@ -71,7 +71,7 @@ SONDA = r"""
   const o = {erros:[], m:{}};
 
   o.m.janela_larg = R(j.width);
-  // A ALTURA entra na régua em 27/08: ela media de 530 a 1032 nas dez abas e o  (noqa-acento: "media" aqui é o imperfeito de MEDIR, não "média" de cálculo)
+  // A ALTURA entra na régua em 27/08: a altura ia de 530 a 1032 nas dez abas e o  (noqa-acento: "media" aqui é o imperfeito de MEDIR, não "média" de cálculo)
   // rodapé pulava meia tela a cada clique na tira. "Sair clicando entre as abas
   // causa muito desconforto, pq muda tudo."
   o.m.janela_alt  = R(j.height);
@@ -83,7 +83,7 @@ SONDA = r"""
 
   // O QUE ROLA POR DENTRO, E QUANTO DELE NINGUÉM VÊ.
   //
-  // RÉGUA NOVA em 27/08/2026 (à noite), e ela nasceu de um buraco medido: as dez
+  // RÉGUA NOVA em 27/08/2026 (à noite), nascida de um buraco medido: as dez
   // abas davam `passa_da_dobra = 0` e três escondiam conteúdo. O motivo é que
   // "passa da dobra" mede a JANELA — e a janela tem 757px em todas as dez. A
   // rolagem estava POR DENTRO do miolo e das caixas: na Conexões, DOIS quadros
@@ -212,7 +212,7 @@ SONDA = r"""
     const porCol={};
     // ONDE O TEXTO COMECA, não onde a caixa comeca: `padding-left` empurra o
     // conteúdo sem mover a caixa, e foi assim que uma mordida de 11px passou
-    // inteira por esta regua. Ela ve o TEXTO; a regua tem de ver o mesmo.
+    // inteira por esta regua. Quem olha ve o TEXTO; a regua tem de ver o mesmo.
     ts.forEach(e=>{ const x=R(e.getBoundingClientRect().x
                               + parseFloat(getComputedStyle(e).paddingLeft));
       // agrupa por coluna: titulos a menos de 40px um do outro sao da mesma coluna
@@ -348,7 +348,7 @@ if __name__ == "__main__":
         for x in avisos:
             print(x)
         for x, _motivo in dispensados:
-            print(f"   – dispensado por ela: {x}")
+            print(f"   – dispensado: {x}")
         for x in e[:16]:
             print("   ✗", x)
         if not e:

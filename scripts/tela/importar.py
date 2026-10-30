@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""O CAMINHO DE VOLTA: lê o SVG que ela arrumou e traz para o mapa."""
+"""O CAMINHO DE VOLTA: lê o SVG arrumado no editor e traz para o mapa."""
 import csv, io, pathlib, re, subprocess, sys
 
 import sys as _sys, pathlib as _pathlib
@@ -116,11 +116,11 @@ def caixas(caminho):
             let b; try{ b=g.getBBox(); }catch(e){ return; }
             if(!b.width && !b.height) return;
             // A CAIXA NO ESPAÇO DO SVG, não no espaço local do grupo.
-            // Ela fez o L1 e o L2 espelhando os direitos com uma matriz; lendo o
+            // O L1 e o L2 nasceram espelhando os direitos com uma matriz; lendo o
             // bbox local, os dois voltavam com as coordenadas do LADO DIREITO —
             // e o CSV teria gravado o L1 em cima do R1.
             // do espaço LOCAL do grupo para o espaço do viewBox: a tela é a
-            // única referência comum, e as duas pontas se cancelam nela.
+            // única referência comum, e as duas pontas se cancelam na tela.
             const m = raiz.getScreenCTM().inverse().multiply(g.getScreenCTM());
             const pt = (x,y) => { const p=raiz.createSVGPoint(); p.x=x; p.y=y;
                                   return p.matrixTransform(m); };

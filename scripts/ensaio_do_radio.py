@@ -10,7 +10,7 @@ POR QUE SUBCOMANDOS, E NÃO UM ASSISTENTE INTERATIVO
 ---------------------------------------------------
 A `a_folha_dos_ensaios` é uma folha que **o usuário** dirige, com deslizantes. Aqui é
 o contrário: **o script** dispara cada etapa, quem usa faz o gesto físico e reporta. Um assistente interativo obrigaria a ler prompt no terminal enquanto
-tem o controle na mão — que é o que esta bancada existe para evitar.
+tem o controle na mão — que é o que este ensaio existe para evitar.
 
 Então cada etapa é um subcomando que roda, mede e volta. Sem `input()`.
 
@@ -26,7 +26,7 @@ controle.
 
 O CADERNO É O DA CASA
 ----------------------
-`docs/data/ensaios.csv`, versionado, mesmas colunas. A bancada não inventa
+`docs/data/ensaios.csv`, versionado, mesmas colunas. O ensaio não inventa
 formato: uma medição que mora em arquivo próprio não é lida por ninguém.
 
 USO::
@@ -162,7 +162,7 @@ def etapa_estado() -> int:
     print("\n  ESTADO DE PARTIDA\n  " + "─" * 58)
     adps = _adaptadores()
     if not adps:
-        print("  nenhum adaptador Bluetooth — não há bancada de rádio a fazer.")
+        print("  nenhum adaptador Bluetooth — não há ensaio de rádio a fazer.")
         return 1
     print(f"\n  ADAPTADORES ({len(adps)})")
     for h in adps:
@@ -213,8 +213,8 @@ def etapa_dano(alvo: str, segundos: float = 8.0, cruzado: bool = False) -> int:
     if os.environ.get("PYTEST_CURRENT_TEST") and \
             os.environ.get("HEFESTO_ENSAIO_PODE_TOCAR_O_RADIO") != "1":
         print("\n  RECUSADO: esta etapa LIGA a varredura num adaptador vivo, e")
-        print("  quem a chamou está dentro da suíte. O rádio dela não é bancada")
-        print("  de teste — o daemon reage e regrava o estado na máquina dela.")
+        print("  quem a chamou está dentro da suíte. O rádio de quem usa não é")
+        print("  máquina de teste — o daemon reage e regrava o estado na máquina.")
         print("  Escape declarado: HEFESTO_ENSAIO_PODE_TOCAR_O_RADIO=1\n")
         return 7
 
@@ -358,7 +358,7 @@ def etapa_bonds() -> int:
         return 0
 
     print(f"\n  {len(dobrados)} CONTROLE(S) COM CHAVE EM MAIS DE UM ADAPTADOR.")
-    print("  A ESCOLHA É DELA: em qual adaptador cada um deve ficar.")
+    print("  A ESCOLHA É DE QUEM USA: em qual adaptador cada um deve ficar.")
     print("  O gesto, para o que SAI (um por adaptador de origem):\n")
     for mac, hcis in sorted(dobrados.items()):
         for h in sorted(hcis):
@@ -426,7 +426,7 @@ def etapa_limpar(alvo: str, mac_pedido: str) -> int:
 
 
 def etapa_controles() -> int:
-    """Quem está de pé, e por onde — o que ela precisa confirmar antes de medir."""
+    """Quem está de pé, e por onde — o que se confirma antes de medir."""
     from hefesto_dualsense4unix.cli.cmd_tray import _chamar
 
     estado = _chamar("daemon.state_full") or {}

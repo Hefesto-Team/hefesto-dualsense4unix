@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """o_basico.py — o protocolo do básico: a conferência do APARELHO.
 
-O-BASICO-MEDIDO-01 (28/09/2026), a ação 8 da auditoria de 27/09. A meta é a
-dela: *qualquer pessoa com um COSMIC, rádio, cabo e DualSense reproduz isso*.
+O-BASICO-MEDIDO-01 (28/09/2026), a ação 8 da auditoria de 27/09. A meta é
+esta: *qualquer pessoa com um COSMIC, rádio, cabo e DualSense reproduz isso*.
 Por isso ele é versionado, o pacote o leva, e nenhum caminho que ele mesmo lê
 ou escreve fica sob a pasta de estudos (que o git ignora).
 
@@ -10,13 +10,13 @@ Orquestra os instrumentos de ``scripts/ensaios/`` sem reescrevê-los. Todo
 subcomando segue o MESMO contrato:
 
 1. **abre a sessão:** a pasta de saída, o ``daemon.state_full`` e a fotografia
-   dos arquivos dela (``sha256`` e a cópia byte a byte numa pasta privada,
-   0700, SEMPRE fora da pasta de saída — também quando ela é a padrão);
+   dos arquivos de quem usa (``sha256`` e a cópia byte a byte numa pasta privada,
+   0700, SEMPRE fora da pasta de saída — também quando a saída é a padrão);
 2. **mira por ``uniq`` e fala por jogador:** a tela e os arquivos dizem ``P1`` a
    ``P4``, nunca o endereço;
 3. **declara o que mexe**, com o antes e o depois;
 4. **relista a mesa no fim** (os ``uniq``, o transporte, o adaptador e os pads)
-   e sai com ``rc=2`` se ela mudou no meio;
+   e sai com ``rc=2`` se a mesa mudou no meio;
 5. **confere a volta:** os ``sha256`` e os campos do estado que um passo que
    escreve pode deixar para trás. Diferença é ``rc=2``;
 6. **toda saída vai para arquivo por UM mascarador**, o dono da casa
@@ -25,7 +25,7 @@ subcomando segue o MESMO contrato:
 7. **grava o ``caderno-proposto.csv``** nas colunas de ``docs/data/ensaios.csv``.
 
 rc: ``0`` verde · ``1`` vermelho · ``2`` recusado (a mesa mudou, o estado não
-voltou, a bancada está tomada, falta um pré-requisito) · ``3`` não sei (algum
+voltou, o aparelho está tomado, falta um pré-requisito) · ``3`` não sei (algum
 «não medido», ou nada verde nem vermelho).
 
 O QUE ELE NUNCA FAZ: abrir janela, jogo ou Steam; ``pkill``; pausar o daemon;
@@ -37,7 +37,7 @@ Uso::
     o_basico.py sessao [--bpftrace]      # só lê (a sonda pede sudo)  # (noqa-acento: o nome do subcomando é o do protocolo)
     o_basico.py eixos [--trocar-modo dualsense|xbox]
     o_basico.py entrada | movimento      # só leem
-    o_basico.py saidas | som | haptica   # ESCREVEM; exigem a bancada; devolvem
+    o_basico.py saidas | som | haptica   # ESCREVEM; exigem a reserva; devolvem
     o_basico.py tudo-junto
     o_basico.py --veredito [PASTA]
 """
@@ -356,7 +356,7 @@ _CHAVE_DO_HW = re.compile(r"@hw\[(?P<chave>[^\]]+)\]\s*=")
 
 
 def ordem_da_chave_do_hw(sonda: str) -> list[str]:
-    """Os campos da chave do `@hw` na sonda, na ordem em que ela os grava."""
+    """Os campos da chave do `@hw` na sonda, na ordem em que a sonda os grava."""
     achado = _CHAVE_DO_HW.search(sonda)
     if achado is None:
         return []
@@ -870,7 +870,7 @@ class Maquina:
             dispositivo.close()
 
     def gravar_som(self, fonte: str, segundos: float) -> list[int]:
-        """Amostras mono de ``fonte``, com latência explícita (sem ela o gravador atrasa 2 s)."""
+        """Amostras mono de ``fonte``, com latência explícita (sem a latência o gravador atrasa 2 s)."""
         if not self.existe("parec"):
             return []
         try:
@@ -916,7 +916,7 @@ def pasta_privada() -> Path:
 
 
 def pasta_das_copias() -> Path:
-    """Onde mora a cópia CRUA dos arquivos dela: irmã da saída padrão, nunca dentro dela."""
+    """Onde mora a cópia CRUA dos arquivos de quem usa: irmã da saída padrão, nunca dentro."""
     return pasta_privada().with_name("o-basico-copias")
 
 
@@ -1023,7 +1023,7 @@ class Sessao:
         return True
 
     def fotografar(self, *, copiar: bool = False) -> dict[str, str]:
-        """O ``sha256`` dos arquivos dela; com ``copiar``, a cópia byte a byte na pasta privada."""
+        """O ``sha256`` dos arquivos de quem usa; com ``copiar``, a cópia byte a byte na pasta privada."""
         base = self.maquina.config_do_usuario()
         achados: dict[str, str] = {}
         for padrao in ARQUIVOS_DO_USUARIO:
@@ -1130,23 +1130,23 @@ class Sessao:
 
 
     def reservar_o_ensaio(self) -> None:
-        """Reserva a bancada antes de escrever (01 §3.2); ocupada é recusa, nunca contorno."""
+        """Reserva o aparelho antes de escrever (01 §3.2); ocupada é recusa, nunca contorno."""
         if self.ensaio_reservado:
             return
         ensaio = RAIZ / "scripts" / "ensaio.sh"
         if not ensaio.is_file():
-            self.dizer("  (esta instalação não tem o semáforo da bancada: sigo sem reserva, declarado)")
+            self.dizer("  (esta instalação não tem o semáforo do aparelho: sigo sem reserva, declarado)")
             return
         rc, texto = self.maquina.rodar(["bash", str(ensaio), "exigir"], 10.0)
         if rc != 0:
-            raise Recusa("a bancada está tomada: " + texto.strip().splitlines()[-1] if texto.strip() else "a bancada está tomada")
+            raise Recusa("o aparelho está tomado: " + texto.strip().splitlines()[-1] if texto.strip() else "o aparelho está tomado")
         rc, texto = self.maquina.rodar(
             ["bash", str(ensaio), "reservar", f"o_basico {self.sub}", "--horas", "1"],
             10.0,
             {"HEFESTO_ENSAIO_PID": str(os.getpid())},
         )
         if rc != 0:
-            raise Recusa("não consegui reservar a bancada: " + texto.strip())
+            raise Recusa("não consegui reservar o aparelho: " + texto.strip())
         self.ensaio_reservado = True
 
     def liberar_o_ensaio(self) -> None:
@@ -1300,7 +1300,7 @@ def sub_retrato(s: Sessao, a: argparse.Namespace) -> None:
 
     _linha_da_bateria(s, mesa)
     _linhas_da_maquina(s)
-    _passo(s, "os arquivos dela", "todos", "—", REGISTRO,
+    _passo(s, "os arquivos de quem usa", "todos", "—", REGISTRO,
            f"{len(s.sha_antes)} arquivo(s) fotografados (sha256 e cópia privada)",
            comando="sha256 de ~/.config/hefesto-dualsense4unix")
 
@@ -1569,7 +1569,7 @@ def _subir_as_sondas(
 
 
 def _colher_sonda(s: Sessao, processo: Any, segundos: float) -> str | None:
-    """A saída de uma sonda; None quando ela não subiu (a razão é o texto dela)."""
+    """A saída de uma sonda; None quando não subiu (a razão é o seu texto)."""
     if isinstance(processo, str):
         return None
     return s.maquina.colher(processo, segundos + 30.0)
@@ -2173,7 +2173,7 @@ def _linha_da_luz(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> dict[str, dic
         concorda_a_cor = isinstance(luz, list) and list(luz) == list(c.get("lightbar_rgb") or [])
         concorda_o_numero = fisico.get("led_jogador") == c.get("player")
         if concorda_a_cor and concorda_o_numero:
-            veredito, porque = VERDE, "o sysfs e o estado concordam na cor e no número (o plástico é do olho dela)"
+            veredito, porque = VERDE, "o sysfs e o estado concordam na cor e no número (o plástico é do olho de quem confere)"
         else:
             veredito = VERMELHO
             porque = (f"o sysfs diz {luz} e P{fisico.get('led_jogador')}; o estado diz "
@@ -2543,7 +2543,7 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
 
 _ESPERA_A_HAPTICA = (
     "não medido: espera a parte 1 da A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01 "
-    "(sem ela o portão do evdev fecha a ponte sem jogo; 01 §9)"
+    "(sem a parte 1 o portão do evdev fecha a ponte sem jogo; 01 §9)"
 )
 
 
@@ -2597,7 +2597,7 @@ def sub_movimento(s: Sessao, a: argparse.Namespace) -> None:
         _a_posse_do_jogo(s, mesa, per_vpad)
     else:
         _passo(s, "o pad no Proton (a posse)", "todos", "—", NAO_SE_APLICA, "sem jogo aberto")
-    _passo(s, "o touchpad com o dedo", "todos", "—", NAO_COBERTO, "é da mão dela: um deslizar por controle")
+    _passo(s, "o touchpad com o dedo", "todos", "—", NAO_COBERTO, "é da mão de quem usa: um deslizar por controle")
 
 
 def _a_posse_do_jogo(s: Sessao, mesa: Sequence[Mapping[str, Any]], per_vpad: Mapping[int, Mapping[str, Any]]) -> None:

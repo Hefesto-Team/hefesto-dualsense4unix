@@ -65,7 +65,7 @@ achar o barramento::
     HID_PHYS=hefesto-vpad          <-- nós    HID_PHYS=<MAC do adaptador>
     HID_UNIQ=02:fe:00:00:00:01     <-- nós    HID_UNIQ=<MAC do controle>
 
-E ela NÃO usa "é virtual", que reintroduziria a armadilha paga em 11/08 (ver
+E a régua NÃO usa "é virtual", que reintroduziria a armadilha paga em 11/08 (ver
 `inventario`): os dois controles do rádio também moram sob
 `/sys/devices/virtual/misc/uhid/`, e recusá-los seria recusar metade da mesa.
 

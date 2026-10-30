@@ -2,7 +2,7 @@
 set -uo pipefail
 _ajuda() {
   cat <<'AJUDA'
-portoes.sh — A LISTA DE PORTÕES DESTA CASA, e ela é UMA SÓ.
+portoes.sh — A LISTA DE PORTÕES DESTA CASA, e é UMA SÓ.
 
 Uso:
   scripts/portoes.sh              a leva inteira (rápidos + completos)
@@ -110,16 +110,16 @@ TABELA
 
 _DIVERGENCIAS() {
   cat <<'DIV'
-FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
-FORA-DO-LOCAL|scripts/banco_de_prova/sonda.sh|06/10/2026, O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01 (parte 0): é a sonda do kernel do runner (carrega uhid e hid_playstation, cria um gadget USB e roda o install.sh com sudo), só em workflow_dispatch. Cria aparelho no kernel: na máquina dela mexeria no que ela usa.
+FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina de quem usa mexeria no sistema vivo.
+FORA-DO-LOCAL|scripts/banco_de_prova/sonda.sh|06/10/2026, O-FORJA-E-O-BANCO-DE-PROVA-DO-HEFESTO-01 (parte 0): é a sonda do kernel do runner (carrega uhid e hid_playstation, cria um gadget USB e roda o install.sh com sudo), só em workflow_dispatch. Cria aparelho no kernel: na máquina de quem usa mexeria no que está em uso.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
-FORA-DO-CI|scripts/check_o_endereco_em_toda_forma.py|27/09/2026, O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01: pergunta à máquina dela os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
+FORA-DO-CI|scripts/check_o_endereco_em_toda_forma.py|27/09/2026, O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01: pergunta à máquina de quem usa os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
 FORA-DO-LOCAL|pre-commit|13/10/2026, O-TEXTO-ENXUTO-SE-CORRIGE-NO-ATO-01: o .pre-commit-config.yaml roda em casa pelo gancho do git (scripts/hooks/pre-commit, item 6), com o mesmo framework do job «pre-commit» do CI, quando ele está na máquina; esta tabela não o repete. Medido no mesmo dia: o framework não está nesta máquina, e o gancho global do git só encadeia o .git/hooks/pre-commit de árvore com .git pasta, o que nenhuma worktree tem.
 ARGUMENTO-DO-EVENTO|scripts/check_paridade_transporte.py|10/10/2026: além do censo pelo nome, o `mapa-de-canais` o chama com `--exigir-id-estavel --contra <ref>`, e o ref é o do evento (o `before` do push, a base do PR), que só o passo anterior do job calcula.
 ARGUMENTO-DO-EVENTO|scripts/check_a_origem.py|10/10/2026: no CI ele recebe `--base` com a faixa do evento (o `BASE_DA_FAIXA` do passo), e em casa mede contra o `dev`.
 ARGUMENTO-DO-EVENTO|scripts/check_autoria.py|10/10/2026: o `autoria.yml` o chama com as refs do evento (`historia origin/dev origin/main <tags>`, `arvore "$REV"`, o texto do PR), que só o runner tem.
 ARGUMENTO-DO-EVENTO|scripts/check_a_coleta_sem_gtk.py|10/10/2026: no CI ele julga (`--julgar`) a coleta que o próprio passo acabou de gravar sem o `gi`; em casa ele coleta sozinho, com o `gi` e o `cairo` bloqueados.
-FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em casa ela roda no fecho, com a máquina livre, depois dos portões (a lista «Antes de fechar qualquer leva»): toca nós uinput de verdade e leva quarenta minutos. No CI é o job gtk-real, com o GTK real.
+FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em casa roda no fecho, com a máquina livre, depois dos portões (a lista «Antes de fechar qualquer leva»): toca nós uinput de verdade e leva quarenta minutos. No CI é o job gtk-real, com o GTK real.
 DIV
 }
 

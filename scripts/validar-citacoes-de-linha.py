@@ -54,7 +54,7 @@ ele a régua não via."""
 CURTA_CSV = re.compile(
     r"(?:[,;(]|(?<![A-Za-z0-9_])e)\s*`?(?P<vao>:(?P<a>\d+)(?:-(?P<b>\d+))?)(?!\w)")
 """A forma curta numa célula (``:N`` ou ``:N-M`` depois de vírgula, ponto-e-vírgula, ``e`` ou
-abre-parêntese): o arquivo é o da citação inteira mais próxima ANTES dela, na MESMA célula. A
+abre-parêntese): o arquivo é o da citação inteira mais próxima ANTES da curta, na MESMA célula. A
 gramática é a do ``_CURTA_DE_CSV`` do `reapontar-citacoes.py`, que a leva junto quando o código anda."""
 
 NOME_DE_ARQUIVO = re.compile(
@@ -68,7 +68,7 @@ curta (`backend.py:1735`, depois «em `coop.py`, `:1511`»: o `:1511` é do `coo
 def ancora_da_curta(celula: str, inteiras: list[re.Match[str]], vao: int) -> re.Match[str] | None:
     """A inteira a que a curta escrita em ``vao`` se prende, ou ``None``.
 
-    É a inteira mais próxima ANTES dela na mesma célula, desde que nenhum OUTRO arquivo seja
+    É a inteira mais próxima ANTES da curta na mesma célula, desde que nenhum OUTRO arquivo seja
     nomeado entre as duas: «`a.py:10` (…) no laço de `b.py`, `:20`» cita o `b.py`, e prender o
     `:20` ao `a.py` acusaria (e levaria) um endereço que nunca foi do `a.py`. O nome do mesmo
     arquivo no meio não solta a curta. Quem lê e quem leva a curta perguntam aqui: o validador e o
@@ -106,7 +106,7 @@ class Achado:
     motivo: str
     contexto: str = ""
     curta: bool = False
-    """Escrita na forma curta ``:N``, presa à inteira da célula: o ``endereco`` diz o arquivo dela."""
+    """Escrita na forma curta ``:N``, presa à inteira da célula: o ``endereco`` diz o seu arquivo."""
     forma: bool = False
     """A queixa é da FORMA da citação (o nome vizinho, o caminho curto, a curta no código), e não do
     lugar: o código não andou, e o `reapontar-citacoes.py` não a leva; só a mão a cura."""
@@ -182,7 +182,7 @@ def casa_o_nome(nome: str, corpo: list[str], primeira: int, ultima: int, sufixo:
 
     Inteiro: ``cor`` não casa em ``cores``, e no HTML ``est`` não casa em ``est-mic``. Fora de
     comentário: o ``#`` do ``.py``, o ``<!-- -->`` do HTML e o ``//`` e o ``/* */`` do JS não
-    contam, e a docstring e a cadeia contam, porque a prosa da tela mora nelas. É o dono do
+    contam, e a docstring e a cadeia contam, porque a prosa da tela mora nas duas. É o dono do
     casamento: o ``_contem`` do `reapontar-citacoes.py` pergunta aqui.
     """
     if nome not in "\n".join(corpo[primeira - 1:ultima]):
@@ -211,13 +211,13 @@ def _ligacoes_por_linha(texto: str) -> frozenset[tuple[str, int]]:
 
 
 DISTANCIA_DO_VIZINHO = 1
-"""A citação de UMA linha reprova se o nome que ela promete casa também a esta distância dela.
+"""A citação de UMA linha reprova se o nome que promete casa também a esta distância da linha citada.
 
 Medido em 25/10/2026 sobre as 610 citações de linha única com nome prometido do ``--all``: 14 casavam
 o nome na linha de cima ou na de baixo, 13 a duas linhas e 5 a três. Das 14, seis prometem o nome que
 a própria linha liga (cinco ``def`` cujo decorador ``@gesto`` repete o nome acima, e uma atribuição),
 e ficam isentas; as outras oito eram de `docs/data/paridade-gtk-html.csv` e passaram a prometer o
-nome que só a linha delas tem. Com o nome na vizinha, uma linha inserida ou tirada acima deixa a
+nome que só a linha citada tem. Com o nome na vizinha, uma linha inserida ou tirada acima deixa a
 citação verde no lugar errado: o deslocamento de uma linha é o caso de toda costura, e é ele que a
 régua pega. A promessa com o nome a duas linhas já reprova nesse deslocamento de uma (a linha que
 desce para o lugar da citada não tem o nome); só o de duas a escaparia, e o N=2 reprovaria também
@@ -227,7 +227,7 @@ três linhas do `mapa-controles.csv`, que não é desta régua de posse."""
 def vizinha_com_o_nome(corpo: list[str], linha: int, nome: str, sufixo: str) -> int | None:
     """A linha vizinha (a ``DISTANCIA_DO_VIZINHO``) em que ``nome`` também casa, ou ``None``.
 
-    O nome que o ``.py`` LIGA na própria linha (o ``def``, a ``class``, a atribuição) é dela só: a
+    O nome que o ``.py`` LIGA na própria linha (o ``def``, a ``class``, a atribuição) é só dessa linha: a
     linha vizinha que o repete (o decorador, o uso logo abaixo) não é ele, e uma linha a mais acima
     leva a citação para fora da ligação, onde a régua reprova.
     """
@@ -267,7 +267,7 @@ def confere_endereco(
     """As três perguntas, para UM endereço.
 
     ``curta``: o ``achado`` é uma forma curta (o grupo ``vao`` é o ``:N``); o ``arquivo`` vem da
-    inteira antes dela, e o nome prometido se procura em volta do ``:N``.
+    inteira antes da curta, e o nome prometido se procura em volta do ``:N``.
     """
     alvo = resolve(arquivo, raiz)
     if alvo is None:
@@ -309,7 +309,7 @@ def confere_endereco(
                     origem, linha, endereco,
                     f"`{nome}` casa também na linha {vizinha}, vizinha da citada: com uma linha "
                     "a mais ou a menos acima a citação segue verde no lugar errado; prometa o "
-                    "nome que só a linha citada tem (o `def`, a classe, a chave ou a cadeia dela)",
+                    "nome que só a linha citada tem (o `def`, a classe, a chave ou a cadeia da linha)",
                     contexto, curta, forma=True))
     if alvo.suffix == ".py" and achado.group("b"):
         for nome in nomes:
@@ -412,7 +412,7 @@ class Trecho:
     texto: str
     marcos: tuple[tuple[int, int], ...]
     """``(letra do texto, linha do arquivo)`` onde cada pedaço começa, e cada quebra de linha da cadeia
-    de três aspas: a linha de uma letra é a do último marco antes dela."""
+    de três aspas: a linha de uma letra é a do último marco antes da letra."""
 
     def linha_de(self, letra: int) -> int:
         return self.marcos[bisect.bisect_right([m[0] for m in self.marcos], letra) - 1][1]
@@ -545,7 +545,7 @@ CELULAS_DE_ENDERECO_PURO: dict[str, tuple[tuple[str, ...], str]] = {
         "`caminho:N (`nome`)` (`NOME_PROMETIDO`), e a crua continua aceita: o `--novas` não a exige"),
 }
 """As colunas de planilha que são lista de endereço por formato, com o motivo. O ``--novas`` não
-exige o nome nelas, porque o leitor dono da coluna aceita as duas formas; o ``--all`` confere o
+exige o nome nessas colunas, porque o leitor dono da coluna aceita as duas formas; o ``--all`` confere o
 nome que a célula prometer."""
 
 
@@ -786,7 +786,7 @@ def varrer_novas_do_codigo(raiz: Path, pe: str) -> tuple[list[Achado], int]:
             achados.append(Achado(
                 relativo, linha, f"`{escrita}`",
                 "citação de linha NOVA sem nome prometido: escreva o nome que está na linha "
-                "citada logo depois dela, (`nome`), e o `reapontar-citacoes.py` a leva quando o "
+                "citada logo depois da citação, (`nome`), e o `reapontar-citacoes.py` a leva quando o "
                 "código andar"))
     return achados, reescritas
 

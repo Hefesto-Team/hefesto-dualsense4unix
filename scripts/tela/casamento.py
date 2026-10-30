@@ -6,7 +6,7 @@ abriu a aba Jogar com um pacote de cinco valores e pintou **UM**. Nada acusou �
 `querySelector` de um endereço que não existe devolve `null`, a pintura escreve
 zero, e zero passa por "nada mudou".
 
-O defeito tinha uma forma só, e ela é estrutural: **os endereços da página e as
+O defeito tinha uma forma só, e estrutural: **os endereços da página e as
 chaves do pacote foram escolhidos separadamente.** O pacote da Jogar emite
 `mascara`; a página tem `data-campo="identidade"`. As duas palavras dizem a
 mesma coisa e nenhuma máquina sabia disso.

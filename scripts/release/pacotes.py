@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""pacotes.py — os arquivos de pacote de cada distribuição, na versão da tag e com o hash do tarball dela.
+"""pacotes.py — os arquivos de pacote de cada distribuição, na versão da tag e com o hash do seu tarball.
 
   pacotes.py preparar --numero V --tarball ARQ --saida DIR   copia o PKGBUILD, o .spec, o control e o nix para
                                                              DIR, conferindo a versão e gravando o hash no PKGBUILD
   pacotes.py abrir-pr --numero V --pasta DIR --repos LISTA   abre o PR de atualização em cada repositório de pacote
 
-A versão dos quatro arquivos já foi gravada, no commit da release, pelo `versao.py gravar`: aqui ela só é
+A versão dos quatro arquivos já foi gravada, no commit da release, pelo `versao.py gravar`: aqui só é
 CONFERIDA contra a tag (um arquivo de pacote com outra versão reprova). O que a tag ainda não tinha é o hash do
-tarball que o GitHub gera dela (`/archive/vV.tar.gz`, o mesmo endereço do `source=` do PKGBUILD), e é
+tarball que o GitHub gera da tag (`/archive/vV.tar.gz`, o mesmo endereço do `source=` do PKGBUILD), e é
 ele que `preparar` grava na cópia. O Nix compila da árvore local (`src = ../..`) e não leva hash de tarball.
 
 `abrir-pr` recebe uma lista `DONO/NOME[:distro]` separada por vírgula (a distro é arch, fedora, debian ou nix; o

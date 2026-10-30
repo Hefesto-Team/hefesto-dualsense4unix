@@ -111,7 +111,7 @@ printf 'a mesa está em: %s\n' "$ENDERECO"
 
 if [ "$ABRIR" = 1 ]; then
   (xdg-open "$ENDERECO" >/dev/null 2>&1 || true) &
-  printf 'abri na tela dela. Ctrl-C para fechar o servidor.\n'
+  printf 'abri na tela de quem usa. Ctrl-C para fechar o servidor.\n'
 else
   printf 'sem abrir (--sem-abrir). Ctrl-C para fechar o servidor.\n'
 fi

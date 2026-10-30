@@ -91,7 +91,7 @@ LADOS = ("cabo", "radio")
 def sustentam_a_ponte(ensaios: list[dict], ponte: str) -> list[dict]:
     """Dos `ensaios`, os que sustentam uma afirmação sobre `ponte`.
 
-    A REGRA, escrita por extenso porque ela é assimétrica de propósito
+    A REGRA, escrita por extenso porque é assimétrica de propósito
     (ENSAIO-QUE-NAO-DIZ-A-PONTE-01, 20/08/2026):
 
     - **ensaio de `ponte` VAZIA sustenta afirmação de QUALQUER ponte.** Vazio
@@ -105,7 +105,7 @@ def sustentam_a_ponte(ensaios: list[dict], ponte: str) -> list[dict]:
 
     Note que "vazio sustenta qualquer ponte" NÃO é o mesmo que "vazio serve para
     tudo": é a leitura mais generosa possível de um ensaio que não declarou, e
-    ela vale só enquanto ninguém declara. Quem quiser exigir declaração explícita
+    vale só enquanto ninguém declara. Quem quiser exigir declaração explícita
     o faz na sua própria regra, como o portão faz com os degraus de ENTRADA.
 
     `ponte` vazia aqui quer dizer "a afirmação também não declarou ponte", e aí

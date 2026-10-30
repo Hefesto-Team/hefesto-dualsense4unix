@@ -13,7 +13,7 @@ alguma depois de aplicar; 2 o arquivo não vale, a conta não é a certa ou o se
 deixou medir (o que não se mediu nunca sai como verde).
 
 Há coisas que o GitHub só mede e não deixa criar por API (as categorias das Discussions, o grafo
-de dependências, a saúde da comunidade, a edição de uma vista de projeto): elas entram no
+de dependências, a saúde da comunidade, a edição de uma vista de projeto): entram no
 `--conferir` como diferença e, no `--aplicar`, ficam como «sobrou» com o que fazer à mão, nunca
 como verde.
 """
@@ -318,7 +318,7 @@ def _validar_ruleset(r: Any) -> list[str]:
 
 
 def _validar_ramo_padrao(ramo: Any) -> list[str]:
-    """O ramo padrão é decisão declarada: sem ela o primeiro push é quem decide."""
+    """O ramo padrão é decisão declarada: sem a declaração, o primeiro push é quem decide."""
     if ramo is None:
         return ["configuração.ramo_padrao: falta declarar"]
     if not isinstance(ramo, str) or not RAMO_VALIDO.fullmatch(ramo) or ".." in ramo:
@@ -713,7 +713,7 @@ class Contexto:
         """Recusa (como «sem medida») o que só existe em organização, quando o dono é pessoa."""
         _, u = self.gh.ler(f"users/{self.dono}")
         if (u or {}).get("type") != "Organization":
-            raise ErroDeServidor(f"«{self.dono}» não é uma organização; isto só existe nelas")
+            raise ErroDeServidor(f"«{self.dono}» não é uma organização; isto só existe em organização")
 
 
 def so_mede(falta: str, como: str) -> Acao:
@@ -1362,7 +1362,7 @@ def avisos_da_release(c: Contexto) -> list[str]:
     A publicação no PyPI usa o publicador de confiança (OIDC): o PyPI só aceita o repositório depois de quem
     mantém registrar nele o dono, o repositório, o fluxo `release.yml` e o ambiente `pypi`, e a API do PyPI não
     deixa ler nem fazer esse registro. O que o repositório guarda do gesto é a variável `PYPI_PUBLISH`, que só
-    vale «true» depois dele (o job `pypi` do `release.yml` pergunta por ela): sem a variável, o gesto não foi feito.
+    vale «true» depois dele (o job `pypi` do `release.yml` pergunta pela variável): sem a variável, o gesto não foi feito.
     """
     if "release" not in c.dados:
         return []

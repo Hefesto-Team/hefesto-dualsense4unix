@@ -11,21 +11,21 @@ A sprint pede um portão que reprove quando:
 A REGRA DA MINÚSCULA MORREU COM A JANELA — 06/09/2026, sprint `GTK-3`
 ----------------------------------------------------------------------
 
-Ela era "regra do `.glade`, e só dele", e o porquê continua escrito acima de
+A regra 1 era "regra do `.glade`, e só dele", e o porquê continua escrito acima de
 `DIVIDA_DA_PALAVRA_01_PY`: no XML, `<property name="label">` era sempre um
 rótulo INTEIRO, e "começa em maiúscula?" tinha resposta. Nos DOIS corpos que
 sobram — Python e HTML — o mesmo lugar recebe PEDAÇO, e a pergunta só é
 respondível depois que os pedaços viram um rótulo. Quem a responde é
 `tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py`, que monta a aba
 de verdade. Com o `gui/main.glade` fora da árvore não sobrou um só corpo de
-texto onde a regra 1 fosse respondível, e ela saiu com o arquivo que a
+texto onde a regra 1 fosse respondível, e a regra saiu com o arquivo que a
 sustentava — junto com `EXCECOES_DE_MINUSCULA`, que só listava rótulos dele.
 
 O ALCANCE, declarado: DOIS corpos de texto de tela.
 
 1. as PÁGINAS PUBLICADAS da interface nova
    (`src/hefesto_dualsense4unix/interface/paginas/*.html`), onde mora o texto
-   DECLARATIVO da tela que ela abre — o herdeiro direto do `.glade`;
+   DECLARATIVO da tela que a interface abre — o herdeiro direto do `.glade`;
 2. o texto de tela MONTADO EM PYTHON em `src/hefesto_dualsense4unix/app/`,
    lido por AST — nunca por expressão regular sobre a linha.
 
@@ -50,14 +50,14 @@ mordida está escrita em `tests/unit/test_a_palavra_de_tela_da_interface_nova.py
 — pôr um termo banido numa página faz este portão reprovar nomeando arquivo e
 linha.
 
-**E ESTE PORTÃO NÃO SUBSTITUI A RÉGUA IRMÃ, nem ela a ele.** Aqui a leitura é
+**E ESTE PORTÃO NÃO SUBSTITUI A RÉGUA IRMÃ, nem a irmã a ele.** Aqui a leitura é
 ESTÁTICA e roda na camada `--rapido`, sem navegador, a cada fechamento de leva;
 lá (`test_a_palavra_de_tela_da_interface_nova.py`) a página é ABERTA e o DOM é
 lido depois dos cliques, que é o único lugar onde o texto escrito por
 `<script>` aparece — em 05/09/2026 uma varredura estática de
 `mapa-das-portas.html` contou ZERO e a página tinha CATORZE, todas dentro do
 `<script>`. Cada uma alcança o que a outra não vê, e a lista de termos é UMA
-SÓ: `JARGAO_BANIDO`, aqui, importado por ela.
+SÓ: `JARGAO_BANIDO`, aqui, importado pela irmã.
 
 O item 2 entrou em 23/08/2026, e ele é o conserto de um buraco MEDIDO. Até
 aqui o portão lia um arquivo só, e o docstring dizia que rótulo montado em
@@ -73,7 +73,7 @@ PALAVRA-01 aposentou primeiro.
 COMO O FALSO POSITIVO É EVITADO, e esta é a regra que decide se o portão
 sobrevive. A pergunta "esta string aparece na tela?" NÃO é respondida pela
 forma da string, nem pelo nome da variável, nem por estar em MAIÚSCULA. É
-respondida por FLUXO: uma string é texto de tela quando ela CHEGA A UM
+respondida por FLUXO: uma string é texto de tela quando CHEGA A UM
 ESCOADOURO DE TELA — argumento de `set_label`/`set_text`/`set_markup`/
 `set_tooltip_text`/`set_title`/`add_button`, de `_()` (gettext), de um
 construtor de widget com texto (`Gtk.Label(label=...)`), ou de um dos ajudantes
@@ -89,7 +89,7 @@ com o portão verde, dias depois de o mesmo termo ser banido no rótulo. Ligar
 `ESCOADOUROS_DE_RECIBO` levou o alcance de `app/` de 344 rótulos (288 únicos)
 para 420 (363).
 
-Consequência, e é ela que mantém o portão calado sobre o que não é tela:
+Consequência, e é isto que mantém o portão calado sobre o que não é tela:
 chave de dicionário, id de widget, nome de sinal, valor de enum, caminho de
 `/dev`, nome de variável e mensagem de log NÃO chegam a escoadouro nenhum, e o
 portão nunca os vê. `MODE_DESKTOP = "desktop"`, `UINPUT_DEV = "/dev/uinput"` e
@@ -609,7 +609,7 @@ def mostrar_criterio() -> None:
         "chega a escoadouro."
     )
     print()
-    print("Regra 1 (minúscula) MORREU COM A JANELA em 06/09/2026: ela era do")
+    print("Regra 1 (minúscula) MORREU COM A JANELA em 06/09/2026: era do")
     print("  `.glade`, onde o rótulo era inteiro. Em Python e em HTML o texto")
     print("  chega em PEDAÇO, e quem confere maiúscula no rótulo COMPOSTO é")
     print("  tests/unit/test_config_a_palavra_de_tela_da_aba_montada.py.")

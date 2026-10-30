@@ -17,7 +17,7 @@ Uso: scripts/purge.sh [opções]
 Descontaminação TOTAL do Hefesto - DualSense4Unix: remove todas as formas de
 instalação que possam ter sido misturadas no mesmo host (nativo + .deb +
 Flatpak + AppImage + applet COSMIC). Por padrão PRESERVA a config do usuário
-(perfis/sessão/preferências) e faz um backup dela antes.
+(perfis/sessão/preferências) e faz um backup antes.
 
 Opções:
   --yes, -y           não pergunta nada (assume sim)

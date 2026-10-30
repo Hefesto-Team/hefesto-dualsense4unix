@@ -35,7 +35,7 @@ que já fez `test trigger --raw` imprimir "aplicado" sem ter aplicado.
 Por isso o gravador agora RECUSA rodar com o daemon de pé, e diz o comando de
 parar e o de trazer de volta. `--com-o-daemon-vivo` desarma a recusa para quem
 tiver razão para isso, e carimba o header da captura com a ressalva, para que
-nenhuma medição futura acredite nela sem saber.
+nenhuma medição futura acredite na captura sem saber.
 
 A PORTA, DECLARADA — 15/08/2026 (A-PORTA-QUE-A-CASA-CONSTRUIU-01)
 =================================================================
@@ -44,7 +44,7 @@ Este gravador **não abre `/dev/hidraw*` por conta própria**: quem abre é o
 por `open()` direto, e não pelo broker — e com o co-op ligado o físico está
 escondido (`0600`, sem ACL), então o `connect()` falha por permissão e não por
 falta de controle. O gravador declara a porta ANTES de tentar, e carimba o
-header da captura com ela: uma fixture que não diz por onde foi gravada não
+header da captura com a porta: uma fixture que não diz por onde foi gravada não
 pode ser comparada com outra.
 """
 from __future__ import annotations

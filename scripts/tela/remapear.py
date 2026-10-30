@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Devolve ids e agrupamentos ao SVG que ELA editou, sem tocar na geometria."""
+"""Devolve ids e agrupamentos ao SVG editado, sem tocar na geometria."""
 import pathlib, re, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))

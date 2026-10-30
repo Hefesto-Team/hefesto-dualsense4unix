@@ -11,7 +11,7 @@ Cada página carrega, no alto, o cabeçalho da fonte, e no fim a linha «corrija
   gerar.py --saida DIR --conferir   diz o que mudaria e sai 1 se mudaria alguma coisa
 
 Os filtros de publicação rodam sobre o texto GERADO (`filtros_de_publicacao.py`): a página que
-reprova não sobe (os links dos outros para ela voltam ao arquivo no repositório), e a fonte é
+reprova não sobe (os links dos outros para a página voltam ao arquivo no repositório), e a fonte é
 corrigida. Saídas: 0 limpo; 1 houve página segurada, ou `--conferir` achou diferença; 2 a saída é
 recusada (a árvore de origem, ou uma pasta com arquivos que não é Wiki); 3 um filtro não pôde medir
 (nada é escrito: o que não dá para medir reprova).
@@ -408,7 +408,7 @@ class Resultado:
 
 def gerar(raiz: Path, *, fora: dict[str, str] | None = None, lar: Path | None = None,
           filtrar: bool = True) -> Resultado:
-    """Monta, filtra, e refaz sem as páginas barradas até estabilizar (os links delas voltam ao repositório)."""
+    """Monta, filtra, e refaz sem as páginas barradas até estabilizar (os seus links voltam ao repositório)."""
     seguradas: dict[str, list[str]] = {}
     for _ in range(4):
         wiki = montar(raiz, fora=fora, seguradas=set(seguradas))
@@ -452,7 +452,7 @@ def diferenca(esperado: dict[str, bytes], no_disco: dict[str, bytes]) -> list[st
 def recusa_da_saida(pasta: Path, raiz: Path) -> str | None:
     """Por que `pasta` não pode receber a Wiki, ou None. A escrita apaga o que a Wiki não leva.
 
-    A saída nunca é a árvore de onde a Wiki nasce (nem uma pasta acima dela), e uma pasta que já
+    A saída nunca é a árvore de onde a Wiki nasce (nem uma pasta acima), e uma pasta que já
     tem arquivos só é Wiki se tem a página de início ou a barra lateral: um `--saida` trocado não
     apaga o repositório de ninguém.
     """

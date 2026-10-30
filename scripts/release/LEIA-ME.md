@@ -14,7 +14,7 @@ git tag v0.9.5 && git push origin v0.9.5             # a tag dispara o .github/w
 ```
 
 A série (`0.9.5`, ou `4` para seguir do `v4.0.0`) é a linha `release.serie` de `.github/repositorio.yml`: `feat` e `fix`
-sobem o mesmo número, o primeiro depois dela (0.9.5 -> 0.9.5.1 -> 0.9.5.2). Nenhum número
+sobem o mesmo número, o primeiro depois da série (0.9.5 -> 0.9.5.1 -> 0.9.5.2). Nenhum número
 é escolhido à mão, e `docs`, `test` e `chore` sozinhos não lançam nada.
 
 O que entra na seção do CHANGELOG, sem repetir linha:
@@ -32,7 +32,7 @@ O que entra na seção do CHANGELOG, sem repetir linha:
    arquivos e só então é publicada (`publicar.py`). A release imutável trava a versão ao publicar: apagar e recriar a
    versão deixou de existir, e a correção de uma versão publicada é a versão seguinte.
 5. `pypi` (ambiente `pypi`, só com a variável `PYPI_PUBLISH` igual a `true`).
-6. `pacotes`: os arquivos do `PKGBUILD`, do `.spec`, do `control` e do Nix na versão da tag, com o hash do tarball dela,
+6. `pacotes`: os arquivos do `PKGBUILD`, do `.spec`, do `control` e do Nix na versão da tag, com o hash do tarball da tag,
    num artefato; com a variável `PACOTES_REPOS` (`DONO/NOME[:distro]`, separados por vírgula) e o segredo
    `PACOTES_TOKEN`, também abre o PR de atualização em cada repositório de pacote.
 
@@ -52,4 +52,4 @@ gh attestation verify NOME-DO-ARQUIVO --repo Hefesto-Team/hefesto-dualsense4unix
   `PYPI_PUBLISH` com o valor `true`. Enquanto a variável não existir, `scripts/github/aplicar.py --conferir` avisa no
   detalhe («aviso: release: o publicador de confiança do PyPI não está registrado…»).
 - **O AUR e o Flathub** são contas de quem mantém: o artefato `pacotes-<versão>` traz os arquivos prontos, e a primeira
-  publicação lá é à mão. Depois dela, um repositório de pacote hospedado no GitHub entra em `PACOTES_REPOS`.
+  publicação lá é à mão. Depois da primeira, um repositório de pacote hospedado no GitHub entra em `PACOTES_REPOS`.

@@ -36,7 +36,7 @@ _precisa() {
     command -v qemu-img >/dev/null 2>&1 || falta+=(qemu-utils)
     [[ -r "${OVMF_CODE}" ]] || falta+=(ovmf)
     if (( ${#falta[@]} )); then
-        printf 'faltam %s nesta máquina — é o pedido 1 da sprint (quem instala é ela)\n' "${falta[*]}" >&2
+        printf 'faltam %s nesta máquina — é o pedido 1 da sprint (quem instala é quem usa)\n' "${falta[*]}" >&2
         exit 3
     fi
 }
@@ -128,7 +128,7 @@ PYEOF
     passar)
         bus="${1:?hostbus}"; addr="${2:?hostaddr}"; id="${3:?um id para devolver depois}"
         [[ "${4:-}" == "--sei-que-tira" ]] || {
-            echo "passar um aparelho o TIRA do daemon dela até a devolução; repita com --sei-que-tira" >&2
+            echo "passar um aparelho o TIRA do daemon de quem usa até a devolução; repita com --sei-que-tira" >&2
             exit 2; }
         _qmp "{\"execute\": \"device_add\", \"arguments\": {\"driver\": \"usb-host\", \"bus\": \"xhci.0\", \"hostbus\": ${bus}, \"hostaddr\": ${addr}, \"id\": \"${id}\"}}" >/dev/null
         echo "aparelho ${bus}:${addr} na VM como «${id}» — devolva com: p4-vm.sh devolver ${id}"

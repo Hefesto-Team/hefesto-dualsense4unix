@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sistema_viva.py — a aba SISTEMA viva: o desenho dela com a máquina do usuário.
+"""sistema_viva.py — a aba SISTEMA viva: o desenho da aba com a máquina do usuário.
 
 O mockup aprovado rodando num `WebKit2.WebView` dentro de uma janela GTK3
 (`D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`), pintado pelo que o
@@ -15,7 +15,7 @@ AS DUAS MORDIDAS, e as duas são as do piloto da aba Controles:
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
                           mockup ("Ligado", "Sim — e continua depois de
                           reiniciar", "Os 4
-                          controles", "8 linhas"). Se ela mostrar a máquina
+                          controles", "8 linhas"). Se a tela mostrar a máquina
                           do usuário, o dado não está vindo do Python.
     --arranca-enderecos   apaga os `data-id` que o `aba09.py` escreve: a pintura
                           tem de DESABAR. Se não desabar, os endereços não
@@ -35,7 +35,7 @@ Python, são registrados com o dono declarado em
 que AGE é o `atualizar`, e ele só relê — nenhum perfil do usuário é tocado, nenhum
 `systemctl start/stop/restart` é disparado, nenhum byte vai a aparelho.
 
-A TRADUÇÃO NÃO MORA AQUI. Ela é produto e mora em
+A TRADUÇÃO NÃO MORA AQUI. É produto e mora em
 `hefesto_dualsense4unix.interface.sistema` — versionado, medido por `ruff` e
 `mypy`, e viajando em worktree. O que sobra aqui é a JANELA, o TIQUE e as
 LEITURAS de verdade (soquete, `systemctl`, disco), que é justamente o que uma
@@ -103,7 +103,7 @@ def _status_do_daemon() -> str | None:
 
     O `_daemon_status` do produto cruza três: `is-active`, `is-enabled` e o
     `is_alive(pid)` do arquivo de pid. As três estão aqui, e a matriz é a mesma
-    — mas ela vive em `daemon_actions.DaemonActionsMixin`, que é método de
+    — mas a matriz vive em `daemon_actions.DaemonActionsMixin`, que é método de
     classe GTK e não se importa sem a janela inteira. **Este é um segundo
     leitor da mesma regra, e está declarado como tal:** o dia em que a
     MIGRA-SISTEMA-01 enxertar o WebView no lugar do Glade, a regra passa a ter
@@ -207,7 +207,7 @@ window.HEF = (function(){
   // pintura que não pintava nada.
   //
   // E o `textContent` só vai em FOLHA SEM FILHO: num container ele APAGA os
-  // filhos e força layout — é a armadilha da pintura, e ela continua sendo
+  // filhos e força layout — é a armadilha da pintura, e continua sendo
   // deste arquivo porque é da ABA, não da ponte.
   function txt(el,v){ if(!el) return 0; if(el.textContent !== v) el.textContent = v; return 1; }
   function cls(el,c,on){ if(!el) return 0; el.classList.toggle(c, !!on); return 1; }
@@ -269,7 +269,7 @@ window.HEF = (function(){
     // ler — deixar "desligado" no lugar de "não sei" é mentira pela posição.
     //
     // A marca do "não sei" é OPACIDADE INLINE, e é de propósito: uma classe
-    // nova (`.chave.nao-sei`) exigiria CSS que o desenho dela não tem, e
+    // nova (`.chave.nao-sei`) exigiria CSS que o desenho da aba não tem, e
     // acrescentar CSS é mudar o que o usuário aprovou. O inline marca só o estado que
     // o mockup nunca desenhou, e a dica diz por quê.
     const ch = end('hefesto-autostart');
@@ -287,8 +287,8 @@ window.HEF = (function(){
     // ausência NÃO afunda "Tudo ligado" (a nota de `PERFIL_POR_TETO`, em
     // `secao_orcamento`). Num `<select>` isso é `selectedIndex = -1` — a caixa
     // fica vazia, que é a forma de dizer "ninguém escolheu" sem escolher por
-    // ela. Deixar a opção do desenho marcada seria a tela afirmando uma escolha
-    // que ela não fez.
+    // quem usa. Deixar a opção do desenho marcada seria a tela afirmando uma escolha
+    // que ninguém fez.
     const sel = end('bateria-perfil');
     if(sel){
       if(p.perfil === null){ if(sel.selectedIndex !== -1) sel.selectedIndex = -1; }

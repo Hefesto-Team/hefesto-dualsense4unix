@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""perfis_vivos.py — a aba Perfis VIVA: o desenho dela com os perfis do disco.
+"""perfis_vivos.py — a aba Perfis VIVA: o desenho da aba com os perfis do disco.
 
 O mockup aprovado rodando num `WebKit2.WebView` dentro de uma janela GTK3
 (`D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`), com os perfis vindo
 do DISCO e o perfil ativo vindo do daemon. **Esta é a aba menos dependente do
-daemon das dez**: o que ela pinta sai de `profiles/loader.load_all_profiles`, e
+daemon das dez**: o que a aba pinta sai de `profiles/loader.load_all_profiles`, e
 só o nome do perfil ativo e a mesa de controles precisam do IPC.
 
     perfis_vivos.py                        # a janela, na tela
@@ -15,7 +15,7 @@ AS DUAS MORDIDAS, as mesmas do piloto da aba Controles:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
                           mockup (14 perfis, "Mortal Kombat" ativo, quatro
-                          controles). Se ela mostrar os perfis do usuário, o dado não
+                          controles). Se a tela mostrar os perfis do usuário, o dado não
                           está vindo do Python.
     --arranca-enderecos   apaga os `data-hef` que o `aba10.py` escreve: a
                           pintura tem de DESABAR. Se não desabar, os endereços
@@ -28,7 +28,7 @@ E o resto:
                           do usuário têm nome de jogo, e uma foto versionada com eles
                           seria a biblioteca do usuário num PNG. (A mesma razão do
                           `retratar_abas._PERFIS_DA_FOTO`, que fazia isto na
-                          JANELA GTK e saiu com ela em 06/09/2026 — a razão
+                          JANELA GTK e saiu com a janela em 06/09/2026 — a razão
                           ficou, e o dublê aqui é quem a carrega agora.)
     --do-disco            lê os perfis do usuário de verdade (`load_all_profiles`).
                           Não fotografe com isto ligado.
@@ -50,7 +50,7 @@ dentro de uma PÁGINA.** Num `Gtk.TreeView` um perfil chamado `<b>x</b>` é o
 texto `<b>x</b>`; numa página, é markup. Por isso nenhuma linha desta tela é
 montada por concatenação de HTML: o ajudante CLONA o `<tr>` que o `aba10.py`
 escreveu e preenche cada endereço por `textContent`. O desenho continua com um
-dono só, e nenhum caractere dela atravessa a fronteira como marcação.
+dono só, e nenhum caractere do usuário atravessa a fronteira como marcação.
 """
 from __future__ import annotations
 
@@ -134,7 +134,7 @@ window.HEF = (function(){
   // OS DOIS MOLDES, TIRADOS DA PRÓPRIA PÁGINA. É isto que faz o desenho ter UM
   // dono: a linha que a tela usa é a que o `aba10.py` escreveu, clonada — nunca
   // uma segunda cópia escrita aqui. E é também o que impede injeção: nada de
-  // `innerHTML` com texto dela em lugar nenhum.
+  // `innerHTML` com texto do usuário em lugar nenhum.
   const moldeDoPerfil  = (q('[data-hef="perfis.lista"] tr')  || {cloneNode:()=>null}).cloneNode(true);
   const moldeDaGuarda  = (q('[data-hef="guarda.linhas"] tr') || {cloneNode:()=>null}).cloneNode(true);
   const corpoDaLista   = q('[data-hef="perfis.lista"]');
@@ -556,9 +556,9 @@ def main() -> int:
                    help="dispara cliques sintéticos e prova o eco")
     p.add_argument("--duble", default=str(pathlib.Path(__file__).with_name("perfis-duble.json")),
                    help="JSON com {perfis, state} — o PADRÃO, para a foto não "
-                        "levar a biblioteca dela")
+                        "levar a biblioteca de quem usa")
     p.add_argument("--do-disco", action="store_true",
-                   help="lê os perfis DELA de verdade (load_all_profiles). "
+                   help="lê os perfis DO USUÁRIO de verdade (load_all_profiles). "
                         "Não fotografe com isto ligado")
     p.add_argument("--do-daemon", action="store_true",
                    help="pergunta o perfil ativo e a mesa ao daemon mesmo com --duble")

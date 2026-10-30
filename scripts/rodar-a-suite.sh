@@ -358,7 +358,7 @@ elif [ -n "$LOTE" ]; then
   echo "recibo: um lote não deixa recibo — ele não é a suíte"
   echo
 elif [ -z "$so_esta" ]; then
-  echo "recibo: esta corrida não deixa recibo — ela leva argumentos a mais (SUITE_PYTEST_ARGS)"
+  echo "recibo: esta corrida não deixa recibo — leva argumentos a mais (SUITE_PYTEST_ARGS)"
   echo
 fi
 pilha=""

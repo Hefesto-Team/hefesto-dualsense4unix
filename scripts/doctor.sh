@@ -616,11 +616,11 @@ check_hid_playstation_probe_abortado() {
             tw="$(systemctl is-active hefesto-bt-health-watchdog.timer 2>/dev/null || true)"
         fi
         if [[ "${tw}" == "active" ]]; then
-            info "a vigia hefesto-bt-health-watchdog.timer está ativa e chama esse mesmo rebind de 2 em 2 minutos — se o controle voltar sozinho em até 2 min, foi ela"
+            info "a vigia hefesto-bt-health-watchdog.timer está ativa e chama esse mesmo rebind de 2 em 2 minutos — se o controle voltar sozinho em até 2 min, foi a vigia"
         else
-            warn "a vigia que chamaria o rebind sozinha (hefesto-bt-health-watchdog.timer) está ${tw:-ausente} — sem ela o controle órfão só volta à mão; ligue: sudo systemctl enable --now hefesto-bt-health-watchdog.timer"
+            warn "a vigia que chamaria o rebind sozinha (hefesto-bt-health-watchdog.timer) está ${tw:-ausente} — sem a vigia o controle órfão só volta à mão; ligue: sudo systemctl enable --now hefesto-bt-health-watchdog.timer"
         fi
-        info "não é hardware (tese vetada por ela, por escrito, depois de dias perdidos nela): é contenção — dois DualSense subindo no mesmo adaptador com ~1 s de diferença; o segundo perde o canal de controle L2CAP e o BlueZ desiste no teto de 3 s (hidp_report_req_timeout). Cadeia medida: assets/dkms/hid-playstation/README.md:65-117"
+        info "não é hardware (a tese do hardware foi descartada por escrito, depois de dias perdidos): é contenção — dois DualSense subindo no mesmo adaptador com ~1 s de diferença; o segundo perde o canal de controle L2CAP e o BlueZ desiste no teto de 3 s (hidp_report_req_timeout). Cadeia medida: assets/dkms/hid-playstation/README.md:65-117"
         return
     fi
 
@@ -1098,7 +1098,7 @@ fix_default_source_monitor() {
         info "  esta cura só sabe eleger outra fonte de captura — sem nenhuma, o que resolve é conectar um mic, uma webcam com mic, ou o DualSense"
         return 0
     fi
-    _dualsense_por_falta_com_o_51 "${alvo}" "${prefere}" && { info "  não gravo ${alvo} como fonte padrão: com o drop-in 51 o WirePlumber a elege sozinho acima de qualquer monitor, e gravada ela venceria a próxima webcam plugada"; return 0; }
+    _dualsense_por_falta_com_o_51 "${alvo}" "${prefere}" && { info "  não gravo ${alvo} como fonte padrão: com o drop-in 51 o WirePlumber a elege sozinho acima de qualquer monitor, e gravada venceria a próxima webcam plugada"; return 0; }
     if pactl set-default-source "${alvo}" 2>/dev/null; then
         pass "fonte padrão trocada do monitor para a entrada ${alvo}"
     else
@@ -1691,7 +1691,7 @@ print("erros=" + str(len(d.get("erros") or [])))
     if [[ "${jogo}" == "1" ]]; then
         como="há um JOGO aberto — o reparo fica para quando a Steam fechar (fechá-la agora mataria o jogo)"
     elif [[ "${steam}" == "1" ]]; then
-        como="a Steam está aberta — o Hefesto repõe assim que ela fechar (com ela viva a edição seria engolida na saída)"
+        como="a Steam está aberta — o Hefesto repõe assim que a Steam fechar (com a Steam viva a edição seria engolida na saída)"
     fi
 
     if [[ -n "${regressao}" ]]; then
@@ -2290,7 +2290,7 @@ PY
         "faltam:?")
             info "o contrato do pad em USB não se deixou ler" ;;
         faltam:*)
-            warn "o kernel não traz ${saida#faltam:} — o pad virtual nasce uhid, sem porta USB própria, e fica sem a háptica por áudio no rádio (no cabo ela segue pela placa do controle); com os módulos instalados para este kernel, reinicie o hefesto-hidraw-broker (ele os carrega)" ;;
+            warn "o kernel não traz ${saida#faltam:} — o pad virtual nasce uhid, sem porta USB própria, e fica sem a háptica por áudio no rádio (no cabo a háptica segue pela placa do controle); com os módulos instalados para este kernel, reinicie o hefesto-hidraw-broker (ele os carrega)" ;;
         *)
             info "contrato do pad em USB não conferido (o pacote não está ao alcance do python ${py})" ;;
     esac
@@ -2725,7 +2725,7 @@ check_bluez_justworks_repairing() {
             fail "${etc_bt}/main.conf tem uma linha que o parser do bluetoothd (GKeyFile) RECUSA, e uma linha recusada invalida o ARQUIVO INTEIRO: o BlueZ fica sem config nenhuma — nem JustWorksRepairing, nem FastConnectable, nem o que já estava configurado ali. Veja qual linha é e conserte-a à mão: bash ${dono} verificar"
             ;;
         never)
-            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' do Hefesto (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO deixe o Hefesto reescrever o valor: 'sudo bash ${dono} aplicar' rebaixa para 'confirm'$(so_no_checkout "— e o ./install.sh também"). E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
+            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' do Hefesto (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO deixe o Hefesto reescrever o valor: 'sudo bash ${dono} aplicar' rebaixa para 'confirm'$(so_no_checkout "— e o ./install.sh também"). E confira ONDE a sua linha está: FORA das sentinelas do hefesto a linha é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco a linha é reescrita junto com o bloco e não volta (só o backup guarda)"
             ;;
         *)
             warn "JustWorksRepairing=${valor} no main.conf — o Hefesto instala 'confirm'; se o valor não foi escolha sua, $(conselho_de_instalacao)"
@@ -2960,7 +2960,7 @@ check_bt_radio() {
             [[ -z "${adp}" ]] && continue
             disc="$(_dbus_bt_prop "${adp}" org.bluez.Adapter1 Discovering)"
             if [[ "${disc}" == "true" ]]; then
-                warn "adaptador ${adp##*/} em modo de busca (Discovering: yes) com controle BT conectado nele — MEDIDO: a busca derruba de 32,5% a 43,4% dos pacotes do controle que está NESTE adaptador (19/09/2026, duas corridas). Feche a tela de Bluetooth do cosmic-settings (a busca é do adaptador em que você ENTROU, não da lista) e espere ~21 s: ela continua varrendo depois de a janela fechar"
+                warn "adaptador ${adp##*/} em modo de busca (Discovering: yes) com controle BT conectado nele — MEDIDO: a busca derruba de 32,5% a 43,4% dos pacotes do controle que está NESTE adaptador (19/09/2026, duas corridas). Feche a tela de Bluetooth do cosmic-settings (a busca é do adaptador em que você ENTROU, não da lista) e espere ~21 s: a busca continua depois de a janela fechar"
             fi
         done <<<"$(printf '%s' "${adps_com_controle}" | sort -u)"
     fi
@@ -3061,7 +3061,7 @@ if sobra > 0:
         case "${marca}" in
             porta) info "  -71 em ${texto}" ;;
             parada_hid) vigia="${vigia:-${HEFESTO_DOCTOR_VIGIA_DO_REBIND:-$(systemctl is-active hefesto-bt-health-watchdog.timer 2>/dev/null || true)}}"; if [[ "${vigia}" == "active" ]]; then warn "${texto}. O Hefesto tenta religá-lo sozinho a cada 2 minutos, até três vezes; se esta linha continuar, tire e ponha o cabo desse controle, e se ele cair de novo ali, troque de entrada"; else warn "${texto}. A vigia que o religaria sozinha (hefesto-bt-health-watchdog.timer) está ${vigia:-ausente}: tire e ponha o cabo desse controle, e se ele cair de novo ali, troque de entrada; para o Hefesto voltar a religá-lo sozinho, ligue: sudo systemctl enable --now hefesto-bt-health-watchdog.timer"; fi ;;
-            parada_vazia) warn "${texto}. Se o controle ou o adaptador BT ainda está encaixado nela, tire e ponha: o kernel só volta a olhar essa entrada quando algo é encaixado de novo" ;;
+            parada_vazia) warn "${texto}. Se o controle ou o adaptador BT ainda está encaixado nessa entrada, tire e ponha: o kernel só volta a olhar essa entrada quando algo é encaixado de novo" ;;
             hub) warn "${texto}. É o suspeito a trocar primeiro: tire um dos aparelhos desse hub e ligue direto numa entrada do computador, ou troque o hub (de preferência um com fonte própria)" ;;
             naosei) info "${texto}" ;;
         esac
@@ -3426,7 +3426,7 @@ _pw_gesto_da_cura() {
         if _pw_no_pop_24_04; then
             so_no_checkout "(./install.sh, passo 3f-bis, ou a receita: docs/usage/receita-backport-pipewire.md)"
         else
-            printf ' (a cura vem da distro: sudo apt upgrade, quando ela entregar a 1.6.9)'
+            printf ' (a cura vem da distro: sudo apt upgrade, quando a distro entregar a 1.6.9)'
         fi
         return 0
     fi
@@ -3489,7 +3489,7 @@ check_bluez_backport_version() {
             if _bluez_a_casa_leva_o_5bc6aa79 "${ver}"; then
                 pass "bluez ${ver}${origem} é o backport do Hefesto, que leva a correção 5bc6aa79 do uso-depois-de-liberado do 5.87 (a linha «Leva do upstream» do changelog dele)"
             else
-                warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O backport do Hefesto é o 5.87 com o 5bc6aa79$(so_no_checkout "(./install.sh, passo 3f)")."
+                warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se a versão já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O backport do Hefesto é o 5.87 com o 5bc6aa79$(so_no_checkout "(./install.sh, passo 3f)")."
             fi
             ;;
         old)
@@ -3534,7 +3534,7 @@ check_trava_do_radio() {
         return
     fi
     if [[ ! -d "${pasta}" ]]; then
-        warn "a trava comum do rádio está instalada mas ${pasta} não existe — ela nasce no boot; para agora: sudo systemd-tmpfiles --create ${conf}"
+        warn "a trava comum do rádio está instalada mas ${pasta} não existe — a pasta nasce no boot; para agora: sudo systemd-tmpfiles --create ${conf}"
         return
     fi
     if [[ -w "${pasta}" ]]; then
@@ -3881,7 +3881,7 @@ if alvo is not None:
 PY
 )"
     if [[ -n "${envenenada}" ]]; then
-        fail "${envenenada} é uma pasta que um instalador antigo do Hefesto criou antes de existir Steam aqui (só tem o Proton pinado dentro): com ela no caminho, a Steam adota ${HOME}/.steam como casa e o Hefesto deixa de achá-la. Com a Steam FECHADA, rode: mv \"${envenenada}\" \"${envenenada}.sobra-do-hefesto\" — na próxima abertura a Steam recria o atalho, e o vigia da Steam reextrai o Proton pinado do cache"
+        fail "${envenenada} é uma pasta que um instalador antigo do Hefesto criou antes de existir Steam aqui (só tem o Proton pinado dentro): com essa pasta no caminho, a Steam adota ${HOME}/.steam como casa e o Hefesto deixa de achá-la. Com a Steam FECHADA, rode: mv \"${envenenada}\" \"${envenenada}.sobra-do-hefesto\" — na próxima abertura a Steam recria o atalho, e o vigia da Steam reextrai o Proton pinado do cache"
         return
     fi
     if [[ ! -f "${HOME}/.steam/steam/config/config.vdf" \
@@ -5169,7 +5169,7 @@ check_perms_soft() {
         if [[ -z "${_rules_nossas}" ]]; then
             info "  as regras do Hefesto NÃO estão instaladas aqui — então nada devolve esses nós ao esperado; $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")."
         elif [[ "${_culpado_tardio}" -eq 1 ]]; then
-            info "  ATENÇÃO: a regra acima roda DEPOIS das do Hefesto (ou usa 'MODE:='), então ela vence — os nós dos controles também ficam abertos."
+            info "  ATENÇÃO: a regra acima roda DEPOIS das do Hefesto (ou usa 'MODE:='), então essa regra vence — os nós dos controles também ficam abertos."
         else
             info "  os aparelhos do Hefesto não são afetados: a regra deles roda depois e os devolve ao esperado (o controle físico 0600, aberto pelo broker; o virtual 0660+uaccess)."
         fi
@@ -5545,7 +5545,7 @@ check_hefesto_hid_playstation_dkms() {
         warn "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}), e o driver do Hefesto não se constrói nele de propósito (patch/BASELINE); o de fábrica segue. Para o microfone voltar, inicie um kernel dessa lista ou espere o Hefesto conferir este"
     elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
          && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ); then
-        warn "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita, e sem ela o driver do Hefesto não se instala: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+        warn "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita, e sem a chave o driver do Hefesto não se instala: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
     elif ! command -v dkms >/dev/null 2>&1; then
         warn "${efeito} — falta o dkms (e os headers do kernel) para construir o driver do Hefesto: instale os dois e $(conselho_de_instalacao)"
     else
@@ -5723,7 +5723,7 @@ check_wifi_powersave() {
             desliga="sudo ${ferr} ${ligadas%% *} power off"
             ;;
     esac
-    local agora="nenhuma interface Wi-Fi USB rtw88 com ela ligada agora"
+    local agora="nenhuma interface Wi-Fi USB rtw88 com a economia ligada agora"
     [[ -n "${ferr}" ]] || agora="sem iw nem iwconfig, cada interface não se confere"
     local nosso="/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
 
@@ -5731,7 +5731,7 @@ check_wifi_powersave() {
         warn "o conf de uma versão anterior do hefesto (${nosso}) tira a economia de energia de TODO Wi-Fi, e não só do adaptador rtw88 USB — rode o install de novo"
     elif [[ "${val}" == "2" && "${src}" == "${nosso}" ]]; then
         if [[ -n "${ligadas}" ]]; then
-            warn "o conf do hefesto desliga a economia de energia do Wi-Fi USB rtw88 (wifi.powersave=2), mas ${ligadas} ainda está com ela LIGADA — rode o install de novo, ou: ${desliga} (vale na hora, não reconecta)"
+            warn "o conf do hefesto desliga a economia de energia do Wi-Fi USB rtw88 (wifi.powersave=2), mas ${ligadas} ainda está com a economia LIGADA — rode o install de novo, ou: ${desliga} (vale na hora, não reconecta)"
         else
             pass "economia de energia do Wi-Fi USB rtw88 desligada (wifi.powersave=2 via o conf.d do hefesto; ${agora})"
         fi
@@ -5740,7 +5740,7 @@ check_wifi_powersave() {
     elif _doctor_tem_bateria; then
         info "adaptador Wi-Fi USB rtw88 num computador com bateria: o install deixa a economia de energia ligada, para a carga durar"
     elif [[ -n "${ligadas}" ]]; then
-        warn "economia de energia do Wi-Fi USB rtw88 LIGADA em ${ligadas} (${src:-sem wifi.powersave configurado}) — esse adaptador cai com ela; o install do hefesto a desliga sem reconectar"
+        warn "economia de energia do Wi-Fi USB rtw88 LIGADA em ${ligadas} (${src:-sem wifi.powersave configurado}) — esse adaptador cai com a economia ligada; o install do hefesto a desliga sem reconectar"
     elif [[ -z "${val}" ]]; then
         info "NetworkManager sem wifi.powersave configurado (default do driver/firmware vale); o install do hefesto grava o conf que desliga a economia do Wi-Fi USB rtw88"
     elif [[ "${val}" == "3" ]]; then
@@ -6012,7 +6012,7 @@ _gesto_da_trava_do_pino() {
     elif _o_vigia_recusou_o_pino; then
         printf '%s' "o vigia da Steam foi instalado sem o passo do pino (--no-proton-pin, ou um instalador anterior a 18/09/2026); para travar, $(conselho_de_instalacao)"
     else
-        printf '%s' "rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando ela sai)"
+        printf '%s' "rode: scripts/doctor.sh --fix (trava com a Steam fechada; o vigia da Steam também trava sozinho quando a Steam sai)"
     fi
 }
 

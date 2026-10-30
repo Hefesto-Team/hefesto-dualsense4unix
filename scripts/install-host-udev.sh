@@ -216,7 +216,7 @@ if [[ "${BROKER_INSTALL_OK}" -ne 1 ]]; then
         else
             REGRA_DO_NO_SRC=""
             echo "AVISO: não foi possível gerar a variante aberta da ${REGRA_DO_NO};" >&2
-            echo "       ela NÃO será instalada (fechá-la sem broker travaria o controle)." >&2
+            echo "       a variante NÃO será instalada (fechá-la sem broker travaria o controle)." >&2
         fi
     else
         REGRA_DO_NO_SRC=""
@@ -266,7 +266,7 @@ fi
 echo ""
 if [[ "${BTRES_INSTALL_OK}" -eq 0 ]]; then
     echo "AVISO: este formato não traz os alvos do RUN+= das regras 82 e 83."
-    echo "       As duas regras vão para o disco e ficam INERTES (o TEST== delas não acha"
+    echo "       As duas regras vão para o disco e ficam INERTES (o seu TEST== não acha"
     echo "       o alvo): o Pro Controller genuíno não perde o sniff na borda da conexão,"
     echo "       e o snapshot de bonds não é disparado quando um controle Bluetooth chega."
     echo "       Para ganhar as duas curas: clone o repositório e rode ./install.sh (sem"

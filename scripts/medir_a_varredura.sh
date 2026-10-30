@@ -53,7 +53,7 @@ done
 case "${quantos_varreram}" in
     0)
         printf '  NENHUM adaptador varreu durante a corrida.\n'
-        printf '  A tela não chegou a abrir, ou ela só varre quando se pede\n'
+        printf '  A tela não chegou a abrir, ou só varre quando se pede\n'
         printf '  («Adicionar aparelho»). Repita clicando no botão de procurar.\n'
         ;;
     1)
@@ -79,7 +79,7 @@ case "${quantos_varreram}" in
         ;;
     *)
         printf '  VARREU %s DE %s:%s\n\n' "${quantos_varreram}" "${#ADPS[@]}" "${quais}"
-        printf '  Há uma REGRA de escolha, e ela é o achado. Prováveis: só os\n'
+        printf '  Há uma REGRA de escolha, e a regra é o achado. Prováveis: só os\n'
         printf '  `Powered`, ou só os sem link ativo. Meça de novo com um\n'
         printf '  controle conectado e depois sem — a diferença nomeia a regra.\n'
         ;;

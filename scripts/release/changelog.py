@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""changelog.py — a seção da versão nasce do que foi fechado, e as notas da release saem dela.
+"""changelog.py — a seção da versão nasce do que foi fechado, e as notas da release saem da seção.
 
   changelog.py montar VERSAO [--data D]   monta `## [VERSAO] — D` no CHANGELOG.md
   changelog.py notas VERSAO [--repo R]    escreve as notas da release (a seção e como conferir o que se baixa)
@@ -11,7 +11,7 @@ O QUE ENTRA na seção, nesta ordem e sem repetir linha (nem uma que uma versão
   3. o título dos PRs que entraram desde a última tag (os commits `feat`, `fix` e `perf` que terminam em
      `(#N)`), na mesma régua. Título com palavra da casa não entra, e a saída o avisa.
 
-Quem lê as sprints é a máquina de quem mantém o projeto: elas moram em `docs/process/sprints/` (e `arquivados/`),
+Quem lê as sprints é a máquina de quem mantém o projeto: as sprints moram em `docs/process/sprints/` (e `arquivados/`),
 que não viaja ao GitHub. Sem essa pasta, entram só as duas outras fontes. A série e a última tag são as do
 `versao.py`; a data da seção é a do AppStream (`versao.py gravar --data`), e a régua
 `check_version_consistency.py` confere as duas.
@@ -122,7 +122,7 @@ def do_sprints(raiz: Path, desde: dt.date | None, avisos: list[str]) -> list[tup
         ident = frontmatter_diz(texto, "sprint") or arq.stem
         bloco = publico.extrair(texto)
         if bloco is None:
-            avisos.append(f"aviso: {ident} fechou em {quando:%d/%m/%Y} sem bloco `publico`; ela não entra no CHANGELOG")
+            avisos.append(f"aviso: {ident} fechou em {quando:%d/%m/%Y} sem bloco `publico`; a sprint não entra no CHANGELOG")
             continue
         erros = publico.validar(bloco, raiz)
         if erros:

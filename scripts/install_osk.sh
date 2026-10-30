@@ -134,7 +134,7 @@ gravar_sentinela() {
     mkdir -p "${dir}" 2>/dev/null || return 0
     {
         printf '# gravado por scripts/install_osk.sh — NÃO editar à mão.\n'
-        printf '# É o que distingue "o install não instalou" de "ela removeu depois".\n'
+        printf '# É o que distingue "o install não instalou" de "quem usa removeu depois".\n'
         printf 'resultado=%s\n' "${resultado}"
         printf 'pacote=%s\n'    "${pacote}"
         printf 'binario=%s\n'   "${binario}"

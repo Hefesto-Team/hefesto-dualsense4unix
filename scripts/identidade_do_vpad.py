@@ -4,7 +4,7 @@
 POR QUE ESTE MÓDULO EXISTE (VPAD-NO-ESPELHO-01, 12/08/2026)
 -----------------------------------------------------------
 A pergunta *"este nó é um gamepad virtual do próprio produto?"* estava escrita
-TRÊS vezes, uma por instrumento de bancada, e as três respondiam coisas
+TRÊS vezes, uma por instrumento de ensaio, e as três respondiam coisas
 diferentes:
 
 - `ensaio_rumble_em_par.py` respondia **errado**: aceitava mirar nos quatro
@@ -23,13 +23,13 @@ próprio produto — e a medição sai falsa **sem avisar**, porque o vpad tem
 força-feedback e aceita o efeito calado, sem que motor nenhum gire.
 
 Reusar em vez de reimplementar é regra desta casa, e a razão é esta: duas
-leituras do mesmo dado são duas réguas, e uma delas envelhece calada. O
+leituras do mesmo dado são duas réguas, e uma envelhece calada. O
 precedente de forma é `scripts/eliminacao.py`, importado pelo `gerar-mapa.py`
 com `sys.path.insert(0, <dir deste arquivo>)`.
 
-O QUE A RÉGUA OLHA, E O QUE ELA SE RECUSA A OLHAR
---------------------------------------------------
-Ela pergunta **de quem é o device** antes de perguntar **o que ele diz ser**.
+O QUE A RÉGUA OLHA, E O QUE SE RECUSA A OLHAR
+---------------------------------------------
+A régua pergunta **de quem é o device** antes de perguntar **o que ele diz ser**.
 
 O critério é o que o PRODUTO carimba de propósito no `UHID_CREATE2`
 (`src/hefesto_dualsense4unix/integrations/uhid_gamepad.py::_create2_event`) e
@@ -43,7 +43,7 @@ que o kernel republica no `uevent` do device HID pai::
     HID_PHYS=hefesto-vpad      <-- nós   HID_PHYS=<MAC do adaptador>
     HID_UNIQ=02:fe:00:00:00:01 <-- nós   HID_UNIQ=<MAC do controle>
 
-O que ela **NÃO** olha, e é o ponto todo:
+O que a régua **NÃO** olha, e é o ponto todo:
 
 - **barramento, VID e PID** — os três são exatamente o que o vpad forja bem.
   Ele existe para se passar por um DualSense Edge no cabo, e consegue;

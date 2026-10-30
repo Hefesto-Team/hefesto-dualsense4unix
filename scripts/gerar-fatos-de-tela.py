@@ -58,7 +58,7 @@ def checar_fronteira(colunas_permitidas: frozenset[str]) -> None:
     if intrusas:
         raise ValueError(
             "checar_fronteira: coluna(s) de PROSA na allowlist de emissão do "
-            f"gerador de fatos de tela: {sorted(intrusas)}. Prosa de bancada "
+            f"gerador de fatos de tela: {sorted(intrusas)}. Prosa de ensaio "
             "não vira frase de tela por geração automática — ver PAREAMENTO-01, "
             "'A FRONTEIRA QUE SALVA A PROPOSTA'."
         )
@@ -155,7 +155,7 @@ Fonte: {CSV_RELATIVO}. Regenerar: python3 scripts/gerar-fatos-de-tela.py
 
 Só as colunas DERIVÁVEIS entram aqui (existe, aceita, aciona, de_onde_sei,
 ate_onde_foi, por_que_nao_aciona, canal) — a fronteira DERIVA x NAO DERIVA da
-PAREAMENTO-01. Prosa de bancada (rotulo, *_detalhe, *_ressalva, nota,
+PAREAMENTO-01. Prosa de ensaio (rotulo, *_detalhe, *_ressalva, nota,
 estado_hoje, *_feature_v1, *_evidencia) fica no CSV, de propósito: NAO vira
 frase de tela por geração automática.
 

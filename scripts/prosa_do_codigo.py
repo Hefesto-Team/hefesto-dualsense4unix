@@ -47,7 +47,7 @@ qual cadeia é docstring, o ``tokenize`` diz qual ``#`` abre comentário.
 FALHA PARA O LADO SEGURO
 -------------------------
 Arquivo que não parseia devolve o texto CRU. Uma régua que emudece por causa de
-um ``.py`` a meio caminho de uma edição é pior que uma que exagera: ela dá verde
+um ``.py`` a meio caminho de uma edição é pior que uma que exagera: dá verde
 sobre o que não leu.
 """
 
@@ -82,7 +82,7 @@ def _inicio_das_linhas(fonte: str) -> list[int]:
 
 
 def _docstrings(arvore: ast.AST) -> list[ast.Constant]:
-    """As docstrings — e só elas, nunca toda cadeia de texto."""
+    """As docstrings — e só as docstrings, nunca toda cadeia de texto."""
     fora: list[ast.Constant] = []
     for no in ast.walk(arvore):
         if not isinstance(no, (ast.Module, ast.ClassDef,

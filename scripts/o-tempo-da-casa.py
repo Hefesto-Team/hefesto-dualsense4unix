@@ -10,9 +10,9 @@ Três medidas, lidas dos registros que o fecho e o rápido já deixam em ``$CASA
 * ``completo-parede-s``: a parede do último ``portoes.sh`` completo (``fecho/portoes-*.out``).
 
 Tempo é ruído: cada medida leva uma ``folga`` em porcento no caderno
-(``docs/data/tempos-da-casa.json``). Dentro dela nada muda. Acima dela reprova, e só passa com
+(``docs/data/tempos-da-casa.json``). Dentro da folga nada muda. Acima, reprova, e só passa com
 ``Tempo: <medida> <razão>`` na mensagem de um commit da faixa da leva (a razão é obrigatória).
-Abaixo dela, o piso desce. O piso mora no motor de ``scripts/catraca.py``.
+Abaixo, o piso desce. O piso mora no motor de ``scripts/catraca.py``.
 
 ``--fechar`` é o passo do fecho: paga a subida com o trailer, desce o piso que desceu além da folga
 e AVISA (rc 0) a medida que ficou sem dado; ``--fechar --conferir`` diz o que faria, sem gravar.
@@ -68,7 +68,7 @@ def _sem_casa(o_que: str) -> Censo:
 
 
 def _corrida(texto: str) -> str:
-    """A marca da corrida que a parte traz; sem ela, o cabeçalho (que já separa as partições)."""
+    """A marca da corrida que a parte traz; sem a marca, o cabeçalho (que já separa as partições)."""
     if m := _MARCA.search(texto):
         return f"árvore {m[1]}, {m[2]} arquivos, partição {m[3]}"
     if m := _CABECALHO.search(texto):
@@ -173,14 +173,14 @@ def medidas_da(casa: Path | None) -> tuple[Medida, ...]:
 
 
 class CatracaDoTempo(Catraca):
-    """O motor, com a folga: tempo é ruído, e o piso só se mexe fora dela."""
+    """O motor, com a folga: tempo é ruído, e o piso só se mexe fora da folga."""
 
     def folga(self, nome: str) -> int:
         bruto = self._ler_caderno().get("medidas", {}).get(nome, {})
         valor = bruto.get("folga")
         if isinstance(valor, bool) or not isinstance(valor, int) or valor < 0:
             raise CatracaTorta(
-                f"«{nome}» não tem `folga` (porcento inteiro) no caderno: sem ela a catraca do tempo "
+                f"«{nome}» não tem `folga` (porcento inteiro) no caderno: sem a folga, a catraca do tempo "
                 "reprovaria o ruído ou deixaria passar tudo.")
         return valor
 

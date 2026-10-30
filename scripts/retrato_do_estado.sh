@@ -103,7 +103,7 @@ retratar() {
         bash -c "id -Gn | tr ' ' '\n' | sort"
     _capturar "${raiz}/61-state.txt" "arquivos de estado do produto" \
         bash -c "ls -1 ~/.local/state/hefesto-dualsense4unix/ 2>/dev/null | sort"
-    _capturar "${raiz}/62-config.txt" "configuração dela (só nomes — o conteúdo é dela)" \
+    _capturar "${raiz}/62-config.txt" "configuração de quem usa (só nomes — o conteúdo é de quem usa)" \
         bash -c "ls -1 ~/.config/hefesto-dualsense4unix/ 2>/dev/null | sort"
     _capturar "${raiz}/63-salva-vidas.txt" "snapshots de pareamento (o que o uninstall não pode levar)" \
         bash -c "ls -1 /var/lib/hefesto-dualsense4unix/bt-bonds/ 2>/dev/null | sort | tail -20"
@@ -182,7 +182,7 @@ comparar() {
         "52-pacote:instalação Python"
         "60-grupos:grupos do usuário"
         "61-state:estado do produto"
-        "62-config:configuração dela"
+        "62-config:configuração de quem usa"
         "63-salva-vidas:snapshots de pareamento"
         "70-audio-cards:cards de áudio"
         "71-audio-perfis:perfis de áudio"

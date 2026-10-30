@@ -1,11 +1,11 @@
-# O ROTEIRO DA BANCADA — quatro DualSense, por cabo e por rádio
+# O ROTEIRO DO ENSAIO — quatro DualSense, por cabo e por rádio
 
-As 21 linhas que a bancada de medição lê (`scripts/mesa_de_medicao.py`) para
+As 21 linhas que a mesa de medição lê (`scripts/mesa_de_medicao.py`) para
 montar a folha que se preenche na mesa. **Cada linha tem PASSA/REPROVA**, e é
 a aceitação do produto com quatro controles na mesa: dois no cabo, dois no
 rádio.
 
-Este arquivo é a FONTE da bancada. Mudar uma linha da tabela muda o que a
+Este arquivo é a FONTE do ensaio. Mudar uma linha da tabela muda o que a
 folha cobra — e a régua acha a seção pelo TÍTULO, nunca pelo número de linha.
 
 ## 2. O ROTEIRO (60 min) — cada linha tem PASSA/REPROVA e a sprint antiga que fala disso
@@ -34,14 +34,14 @@ folha cobra — e a régua acha a seção pelo TÍTULO, nunca pelo número de li
 | 20 | Mudo no rádio: o botão do microfone do P3 | P1: não pode mudar · P2: não pode mudar · P3: é ESTE que muta, pelo rádio · P4: não pode mudar | o mudo obedece e o cartão diz | MIC-BT-DONO-01 |
 | 21 | Luz no rádio: uma cor no P4 | P1: não pode mudar de cor · P2: não pode mudar de cor · P3: não pode mudar de cor · P4: é ESTE que muda, pelo rádio | obedece | LUZ-NO-RADIO-01 |
 
-**A COLUNA "o que cada controle faz" NASCEU EM 07/09/2026**, e é do usuário: *"cada controle sirva para testarmos variações daquilo e o esperado. vou dar um exemplo do lightbar. Controle A, não liga, o b cor azul. o c, tá conectado no rosa, o y vai conectar azul (…) por isso dois controles dois bt e dois no cabo. Pra batermos de vez o controle que temos do hardware."* Cada linha do roteiro deixou de ser UM gesto repetido quatro vezes e passou a ser **quatro condições do mesmo experimento**, medidas lado a lado — é o que faz uma diferença entre cabo e rádio aparecer sem ninguém repetir o teste. A mesa de medição lê esta coluna.
+**A COLUNA "o que cada controle faz" NASCEU EM 07/09/2026**: cada controle serve para testar uma variação do mesmo gesto e o seu esperado (na barra de luz, por exemplo: um não liga, outro fica azul, outro já está conectado no rosa, outro conecta azul), com dois controles no rádio e dois no cabo, para fechar de vez o que o hardware faz.
 
 **As linhas 13-21 são a ACEITAÇÃO DO PRODUTO** (06/09, arrumação da leva): a
-definição de pronto dela — *"migrar tudo do gtk pro html, adaptando o html pra
-funcionar pra 4 controles, cada perfil vivo, todas as features funcionando pra
-cabo e radio, e cada aba se lembrando das configs de cada controle dentro do
-perfil sem que eu precise aplicar ou salvar em cada aba e por fim tudo
-funcionando (incluindo a aba de lançadores), de conexão e afins"* — dita em
+definição de pronto — tudo migrado do GTK para o HTML, o HTML adaptado para
+quatro controles, cada perfil vivo, todas as features funcionando no cabo e no
+rádio, cada aba lembrando as configurações de cada controle dentro do perfil
+sem aplicar nem salvar aba por aba, e tudo funcionando, inclusive a aba de
+lançadores e a de conexão — dita em
 gestos do usuário, um por sprint das ondas G-J. Cada sprint dessas constrói com dublê
 e deixa AQUI a sua linha de prova (`D-0609-O-ENSAIO-PROVA-NAO-BLOQUEIA`).
 
@@ -52,15 +52,15 @@ e deixa AQUI a sua linha de prova (`D-0609-O-ENSAIO-PROVA-NAO-BLOQUEIA`).
 SPECS-A-PROCEDENCIA-01, e o `ensaios.csv` só ganha linha do que o usuário viu.
 
 A coluna da direita é **quem já mediu**, não quem executa: o que reprovar
-ganha sprint nova, escrita no molde de 05/09 e com a medição desta bancada como
-§1. O item 11 é o único que não é dos quatro: entra aqui porque o usuário mandou
-(*"deixa pras últimas etapas da 24h mas ainda nessas 24"*).
+ganha sprint nova, escrita no molde de 05/09 e com a medição deste ensaio como
+§1. O item 11 é o único que não é dos quatro: entra aqui por pedido, nas últimas
+etapas da janela de 24 h.
 
 
 ### As seis seções das 21
 
-As 21 não são uma fila plana: elas se agrupam pelo que MEDEM, e é assim que a
-bancada anda — fecha uma seção, passa à seguinte. A tabela abaixo é a fonte
+As 21 não são uma fila plana: se agrupam pelo que MEDEM, e é assim que o
+ensaio anda — fecha uma seção, passa à seguinte. A tabela abaixo é a fonte
 disso, e **a mesa de medição a lê**; a seção de uma linha não se digita na
 página. O agrupamento é o da especificação da mesa (§4), de 06/09/2026.
 

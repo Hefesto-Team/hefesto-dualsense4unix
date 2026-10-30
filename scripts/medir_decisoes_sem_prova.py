@@ -95,7 +95,7 @@ COLISOES_DECLARADAS = {
     ),
     "D-0609-GTK-LEVA-INTEIRA": (
         "É de PRODUTO: a decisão tira a janela GTK inteira do disco, e quinze "
-        "funções de teste medem o que sobrou — entre elas "
+        "funções de teste medem o que sobrou — entre as quinze "
         "`test_modo_que_nao_controla_01.py::"
         "test_a_descricao_do_desktop_aponta_para_uma_aba_que_existe`. A "
         "triagem a chama de processo porque a palavra «leva» está no id e na "
@@ -111,7 +111,7 @@ COLISOES_DECLARADAS = {
         "duas frases na tela. A triagem a chama de processo porque a `escolha` "
         "menciona «sprints» ao registrar de onde a redação veio, e as palavras "
         "da própria decisão — «Altura da antena», «Linha de visada» — não "
-        "estão em vocabulário nenhum. Alargar o de produto para caber nelas "
+        "estão em vocabulário nenhum. Alargar o de produto para caber nos dois "
         "seria ajustar a régua ao caso; a colisão fica declarada porque é o "
         "segundo caso a mostrar que o classificador não tem como decidir."
     ),
@@ -332,7 +332,7 @@ def citadas_fora_de_tests(ids, raiz: pathlib.Path) -> dict[str, list[str]]:
 
 
 def triagem(linha) -> str:
-    """A triagem da MEDIÇÃO 2 — e ela devolve «indecidível» de propósito."""
+    """A triagem da MEDIÇÃO 2 — e devolve «indecidível» de propósito."""
     texto = " \n ".join(linha.get(c, "") for c in CAMPOS_DA_TRIAGEM)
     processo = bool(PALAVRA_DE_PROCESSO.search(texto))
     produto = bool(PALAVRA_DE_PRODUTO.search(texto))
@@ -441,9 +441,9 @@ def _laudo(m: dict, nominal: bool) -> None:
         print(f"    {ident}")
     print("  e o furo maior, medido no caso que a sprint escolheu:")
     print("    D-AUDIO-E-GIRO-NASCEM-LIGADOS tinha citação dentro de tests/")
-    print("    desde 2026-09-04 (608bafc17) — e em 2026-09-17 ela abriu o")
+    print("    desde 2026-09-04 (608bafc17) — e em 2026-09-17 quem usa abriu o")
     print("    produto e o microfone estava mudo. Treze dias de verde sobre")
-    print("    um defeito que ela já tinha pedido três vezes.")
+    print("    um defeito já pedido três vezes.")
     print(f"  por isso os baldes são «{BALDE_DENTRO}», «{BALDE_CABECALHO}» e")
     print(f"  «{BALDE_SEM}». Nenhum deles diz «implementada».")
     print()
@@ -501,7 +501,7 @@ def main(argv=None) -> int:
 
     if m["regua_perdida"]:
         print(f"VERMELHO: {len(m['regua_perdida'])} decisão(ões) do piso "
-              f"perderam a régua que apontava para elas:")
+              f"perderam a régua que apontava para cada uma:")
         for ident in m["regua_perdida"]:
             print(f"  {ident}")
         print()
@@ -516,7 +516,7 @@ def main(argv=None) -> int:
         for ident in m["colisoes_nao_declaradas"]:
             print(f"  {ident} -> {m['onde'].get(ident, [])[:2]}")
         print()
-        print("Régua apontada para ela é prova de que é de PRODUTO. Ou o "
+        print("Régua apontada para a decisão é prova de que é de PRODUTO. Ou o "
               "vocabulário de processo está largo demais, ou a colisão entra "
               "em COLISOES_DECLARADAS com a razão escrita.")
         return 1
@@ -527,7 +527,7 @@ def main(argv=None) -> int:
         for ident in m["declaracoes_orfas"]:
             print(f"  {ident} — tire a linha de COLISOES_DECLARADAS")
         print()
-        print("Declaração que sobrevive ao próprio caso vira propaganda: ela "
+        print("Declaração que sobrevive ao próprio caso vira propaganda: "
               "isenta uma colisão futura que ninguém olhou.")
         return 1
 
@@ -540,7 +540,7 @@ def main(argv=None) -> int:
     print("E VERDE AQUI NÃO QUER DIZER FEITO. Este instrumento mede onde o id "
           "APARECE. A medição 3 tem a data: D-AUDIO-E-GIRO-NASCEM-LIGADOS "
           "esteve citada em tests/ por treze dias com o microfone mudo no "
-          "produto dela.")
+          "produto de quem usa.")
     return 0
 
 

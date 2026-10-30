@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""jogar_vivo.py — a aba JOGAR VIVA: o desenho dela com a bancada.
+"""jogar_vivo.py — a aba JOGAR VIVA: o desenho da aba com o aparelho de verdade.
 
 A segunda das dez, e a primeira depois do piloto. O mockup aprovado
 (`src/hefesto_dualsense4unix/interface/paginas/01-jogar.html`) num `WebKit2.WebView` dentro de uma janela GTK3
@@ -14,7 +14,7 @@ AS DUAS MORDIDAS, as mesmas do piloto e pelo mesmo motivo:
 
     --sem-ponte           desliga a ponte: a tela tem de ficar na cena FIXA do
                           mockup (quatro controles, "Jogar pelo Hefesto",
-                          "1 aviso"). Se ela mostrar a bancada, o dado não
+                          "1 aviso"). Se a tela mostrar os aparelhos reais, o dado não
                           está vindo do daemon.
     --arranca-enderecos   apaga os `data-*` que o `aba01.py` escreve: a pintura
                           tem de DESABAR.
@@ -26,7 +26,7 @@ O QUE ESTE ARQUIVO NÃO REESCREVE, e é a metade do trabalho
   `hefesto_dualsense4unix.interface.janela` — de todas as dez abas, com as
   quatro armadilhas do WebKit2 4.1 pagas lá.
 * **A mesa** (um item por controle, com cor, transporte, jogador e máscara) é de
-  `mesa_viva.mesa_do_estado`, que já é o dono dela para a Controles e para a
+  `mesa_viva.mesa_do_estado`, que já é o dono da mesa para a Controles e para a
   fita.
 * **O HTML de cartão e de chip de fita** é do gerador do mockup
   (`aba01.cartao`, `monta.fita`) — nunca de HTML escrito aqui. É o que faz esta
@@ -106,7 +106,7 @@ ENSAIO = onde.ENSAIO / "01-jogar.html"
 
 
 def pagina_de(args: Any) -> pathlib.Path:
-    """De onde esta bancada lê a página: o publicado, ou o desenho de hoje."""
+    """De onde este ensaio lê a página: o publicado, ou o desenho de hoje."""
     return ENSAIO if getattr(args, "ensaio", False) else PAGINA
 
 
@@ -124,7 +124,7 @@ DONOS_DOS_GESTOS = {
     "SOBE sozinha, mas ninguém a fixa pela tela: não há método de IPC que diga "
     "'use este degrau'. Dos QUATRO chips, nenhum está sem dono desde 17/09/2026 "
     "(a régua é `tests/unit/test_a_fileira_nao_tem_linha_fantasma.py`); a "
-    "Navegação tem escritor sem ser degrau da escada, e o PS + R3 para nela pelo "
+    "Navegação tem escritor sem ser degrau da escada, e o PS + R3 para na Navegação pelo "
     "`hotkey.CICLO_DE_PONTES`, que é outro objeto. MIGRA-JOGAR-07.",
     "mascara": "gamepad.emulation.set (daemon/ipc_handlers.py) pela ponte "
     "app/ipc_bridge — MAS ele NÃO aceita `uniq`: a máscara viva é uma só para a "
@@ -141,7 +141,7 @@ DONOS_DOS_GESTOS = {
     "rodape": "Aplicar/Salvar/Importar têm dono (app/actions/footer_actions.py: "
     "on_save_profile, on_import_profile). EXPORTAR NÃO TEM — "
     "não existe handler no src/ nem botão no main.glade. Nesta leva nenhum é "
-    "chamado: 'Salvar perfil' GRAVA NO DISCO DELA, e esta leva não escreve.",
+    "chamado: 'Salvar perfil' GRAVA NO DISCO DE QUEM USA, e esta leva não escreve.",
 }
 
 SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço "
@@ -227,14 +227,14 @@ window.HEF = (function(){
   }
   function cartao(uniq){ return q('.cartao[data-controle="'+uniq+'"]'); }
 
-  // A POSIÇÃO DO INTERRUPTOR — E ELA SEGUE O DAEMON, NÃO O CLIQUE (31/08/2026).
+  // A POSIÇÃO DO INTERRUPTOR — QUE SEGUE O DAEMON, NÃO O CLIQUE (31/08/2026).
   //
   // O mockup deixou de usar `<button>` na fileira de modos: agora são dois
   // `radio` escondidos com `<label>` por cima, que é como as dez abas abrem
   // seção sem uma linha de JavaScript. O `ev.preventDefault()` do `ligarGestos`
   // era inofensivo num `<button>`; num `<label>` ele IMPEDE o rádio de mudar.
   //
-  // A CURA NÃO É TIRAR O `preventDefault`, e nesta aba menos ainda: ela não
+  // A CURA NÃO É TIRAR O `preventDefault`, e nesta aba menos ainda: a aba não
   // aplica NADA (o cabeçalho o diz — o único método pronunciado é
   // `daemon.state_full`). Se o clique abrisse a seção sozinho, a tela mostraria
   // "Modo nativo" com o daemon em `gamepad` — o F7 desta casa. Quem move o
@@ -307,7 +307,7 @@ window.HEF = (function(){
       n += cls(s,'on', s.dataset.degrau===p.degrau);
       n += inerte(s, !!p.degraus_travados[s.dataset.degrau], p.degraus_travados[s.dataset.degrau]);
     }
-    // A PENDÊNCIA. O espaço dela é RESERVADO no desenho (a legenda o diz), então
+    // A PENDÊNCIA. O seu espaço é RESERVADO no desenho (a legenda o diz), então
     // o que muda é a visibilidade, nunca o `display` — tirá-la do fluxo faria a
     // tela pular, que é o defeito que o espaço reservado existe para não ter.
     const pend = q('[data-campo="pendente"]');
@@ -377,9 +377,9 @@ window.HEF = (function(){
     }
     // A NAVEGAÇÃO TEM OS DOIS ENDEREÇOS — `data-degrau="navegacao"` E
     // `data-modo="desktop"` —, e é o `data-ligado` acima que decide qual ouvinte
-    // ela ganha: o laço dos modos passa primeiro e a marca, e este `continue` a
-    // deixa de fora. MEDIDO em 31/08: clicar nela produz UM gesto, `modo:
-    // desktop`, que é o dono real dela (`apply_mode('desktop')`) — e não um
+    // a fatia ganha: o laço dos modos passa primeiro e a marca, e este `continue` a
+    // deixa de fora. MEDIDO em 31/08: clicar na fatia produz UM gesto, `modo:
+    // desktop`, que é o seu dono real (`apply_mode('desktop')`) — e não um
     // segundo gesto `degrau` que ninguém atende (não há IPC que fixe degrau).
     // O desfecho está certo; a razão é frágil. Se alguém trocar a marca por uma
     // por laço, a Navegação passa a mandar dois gestos, e o segundo é órfão.
@@ -692,7 +692,7 @@ class Janela:
         """`{uniq: carga}` — e a carga que o daemon não deu vira `"— "`.
 
         No mockup a bateria é o ÚNICO dado inventado (a legenda o declara). Aqui
-        ela vem do `state_full`, e quando não vem, é traço: um "0%" seria a tela
+        a bateria vem do `state_full`, e quando não vem, é traço: um "0%" seria a tela
         afirmando bateria vazia num controle recém-plugado, que é o defeito que
         `_format_controller_subtitle` já evita no card antigo.
         """
@@ -872,7 +872,7 @@ def main() -> int:
     p.add_argument("--ensaio", action="store_true",
                    help="lê o desenho de HOJE (`mockup/01-jogar.html`) em vez da "
                         "página publicada — para clicar e fotografar o que ainda "
-                        "espera o OK dela. NÃO publica nada.")
+                        "espera o OK do desenho. NÃO publica nada.")
     args = p.parse_args()
 
     alvo = pagina_de(args)

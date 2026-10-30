@@ -314,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     for prefixo, quantos in relato:
         if quantos:
             print(f"Só relato: {quantos} entrada(s) `{prefixo}*` — quem cria não é "
-                  "esta suíte; a decisão de apagar é dela.")
+                  "esta suíte; a decisão de apagar é de quem usa.")
 
     return 0
 

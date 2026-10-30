@@ -10,7 +10,7 @@
 A SÉRIE mora numa linha de `.github/repositorio.yml` (`release: serie: "0.9.5"`): é o prefixo das versões que
 esta série numera. `feat`, `fix` e `perf` sobem o MESMO número, o primeiro depois do prefixo (0.9.5 -> 0.9.5.1
 -> 0.9.5.2); `docs`, `test`, `chore` e afins sozinhos não lançam nada. Mudança incompatível (`!` ou
-`BREAKING CHANGE`) sobe igual e sai no resumo, para quem mantém decidir se ela pede série nova. Trocar a
+`BREAKING CHANGE`) sobe igual e sai no resumo, para quem mantém decidir se a mudança pede série nova. Trocar a
 série é trocar a linha: nenhum número é escolhido à mão.
 
 Os alvos são os que o `scripts/check_version_consistency.py` já confere (a lista é a dele, lida de lá),

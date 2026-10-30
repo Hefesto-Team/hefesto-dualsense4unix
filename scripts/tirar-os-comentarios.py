@@ -5,7 +5,7 @@ Quem diz o que é comentário e o que é diretiva é o portão, ``check_codigo_s
 só corta. A diretiva fica na forma nua; a linha que sobra só com espaço some; o bloco que sai não deixa
 mais linhas em branco seguidas do que havia de cada lado dele.
 
-A prova, por arquivo, antes de gravar (sem ela o arquivo fica como estava e sai na conta dos recusados):
+A prova, por arquivo, antes de gravar (sem a prova o arquivo fica como estava e sai na conta dos recusados):
 
 * ``.py``: o ``ast.dump`` igual antes e depois;
 * ``.sh``: o ``bash -n`` verde e o corpo que o próprio bash imprime (``declare -f`` de uma função que
@@ -433,9 +433,9 @@ def _js_em_string(conteudo: str) -> bool:
 
 
 def limpar_string_de_pagina(conteudo: str) -> str:
-    """O miolo de uma string de gerador sem o comentário de CSS, de HTML e, se ela é JS, o de JS.
+    """O miolo de uma string de gerador sem o comentário de CSS, de HTML e, se a string é JS, o de JS.
 
-    O que a string não fecha (um ``/*`` sem ``*/`` dentro dela) fica como está.
+    O que a string não fecha (um ``/*`` sem ``*/`` dentro da string) fica como está.
     """
     if not _ABRE_PAGINA.search(conteudo):
         return conteudo
@@ -633,7 +633,7 @@ _FUNCOES_DE_REGEX = {"compile", "sub", "subn", "search", "match", "fullmatch", "
 
 
 def _padroes_de_regex(texto: str) -> set[int]:
-    """O início de cada string que é o padrão de uma chamada do ``re``: ela é regex, nunca página."""
+    """O início de cada string que é o padrão de uma chamada do ``re``: é regex, nunca página."""
     inicios = [0] + [m.end() for m in re.finditer("\n", texto)]
     linhas = texto.split("\n")
     saida = set()
@@ -718,7 +718,7 @@ def aplicar_strings(arquivos: list[str], raiz: Path, gravar: bool) -> int:
 
     A string que é um comentário HTML inteiro e nada mais é um valor, não um comentário de página: o
     produto a escreve num campo vivo como o vazio que não desenha nada (o ``:empty`` o ignora e o
-    ``escrever()`` não o troca por travessão), ou a compara como âncora. Ela fica.
+    ``escrever()`` não o troca por travessão), ou a compara como âncora. A string fica.
     """
     for rel in arquivos:
         caminho = raiz / rel
@@ -750,7 +750,7 @@ def aplicar_strings(arquivos: list[str], raiz: Path, gravar: bool) -> int:
 
 
 def _sem_a_string_vazia(texto: str, ini: int, fim: int, miolo_ini: int, miolo_fim: int) -> str:
-    """O texto sem a string que ficou vazia: a linha dela, ou ela e o ``+`` vizinho; senão, só o miolo."""
+    """O texto sem a string que ficou vazia: a sua linha, ou a string e o ``+`` vizinho; senão, só o miolo."""
     linha_ini = texto.rfind("\n", 0, ini) + 1
     linha_fim = texto.find("\n", fim)
     linha_fim = len(texto) if linha_fim == -1 else linha_fim

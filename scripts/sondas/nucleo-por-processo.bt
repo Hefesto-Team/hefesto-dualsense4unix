@@ -8,7 +8,7 @@
 // jogo, a Steam, o daemon e o teclado na tela.
 //
 // A régua `tests/unit/test_o_basico_o_contrato.py` lê a chave do `@hw` DESTE
-// arquivo: tirar o `pid` dela reprova.
+// arquivo: tirar o `pid` da chave reprova.
 //
 // Chaves: [arquivo,] pid, comm[, minor, bytes|cmd]. Só lê (kprobes).
 kprobe:uhid_char_write

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Exporta o controle como SVG ORGANIZADO, para ela arrumar no editor."""
+"""Exporta o controle como SVG ORGANIZADO, para arrumar no editor."""
 import pathlib, re, csv, sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 import mapa
@@ -11,7 +11,7 @@ FONTE = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
 
 
 def svg_para_editar() -> pathlib.Path:
-    """O SVG que ela abre no Inkscape — resolvido na CHAMADA, nunca no import."""
+    """O SVG que se abre no Inkscape — resolvido na CHAMADA, nunca no import."""
     return pathlib.Path.home() / "Imagens" / "dualsense-para-editar.svg"
 
 linhas = [l for l in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
@@ -124,7 +124,7 @@ _CASCA = _cor("cosmic-red")
 ESTILO = f"""  <style>
     /* Tudo PREENCHIDO — foi a decisão em 27/08. Os paths são faixas e anéis:
        traçá-los faz cada aresta virar dois fios.
-       A COR É A DO COSMIC RED, lida do desenho — não digitada. Ela é só para
+       A COR É A DO COSMIC RED, lida do desenho — não digitada. É só para
        você enxergar enquanto edita; quem manda na cor final é
        `docs/data/cores-do-dualsense.csv`. */
     .peca      {{ fill: {_CASCA}; stroke: none; }}

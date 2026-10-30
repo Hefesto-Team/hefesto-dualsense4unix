@@ -14,16 +14,16 @@ chega a quem vai reproduzir.
 |---|---|---|---|
 | P0 | nada (o retrato) | as variáveis desta máquina | `o_basico.py retrato`, da `O-BASICO-MEDIDO-01` |
 | P1 | o HOME | o plano de usuária; a prova de que o ensaio não escreve | `p1-lar-vazio.sh` |
-| P2 | a interface num HOME vazio, sem aparelho | a primeira pintura das dez abas | a bancada de tela em lar de mentira, da casa |
+| P2 | a interface num HOME vazio, sem aparelho | a primeira pintura das dez abas | o ensaio de tela em lar de mentira, da casa |
 | P3 | a distro e o pip | o install como usuária, o `evdev` do pip, o `dkms build -k`, a receita do BlueZ, a sobra do uninstall | `p3-conteiner.sh` |
 | P4 | o sistema inteiro, depois um aparelho por vez | cabo, rádio, pareamento do zero, Secure Boot, a Steam instalada depois | `p4-vm.sh` |
-| P5 | o usuário (segunda conta) | o broker com outro uid; o `uaccess` sem o grupo `input` | só com ela: troca a tela do usuário |
+| P5 | o usuário (segunda conta) | o broker com outro uid; o `uaccess` sem o grupo `input` | só com o usuário presente: troca a sua tela |
 | P6 | o chip do adaptador | o teto de pontes por chip | só com um adaptador de outro fabricante |
 
 ## P0, o retrato
 
 É o `o_basico.py retrato` da `O-BASICO-MEDIDO-01`. Além do que ele já grava,
-entram as variáveis que a bancada escondia (a C19 da contraprova e a L7):
+entram as variáveis que a máquina de teste escondia (a C19 da contraprova e a L7):
 
 - o pai do `cosmic-osk` (ele é de toda sessão COSMIC: a vibração nula a ~20 por
   segundo por pad, e a classe da queda da sessão, são de qualquer pessoa);
@@ -46,12 +46,12 @@ já instalado, o BlueZ curado). Isso se anota, não é defeito.
 
 ## P2 — a primeira pintura
 
-A receita é a bancada de tela em lar de mentira da casa (o piloto
+A receita é o ensaio de tela em lar de mentira da casa (o piloto
 `hefesto_vivo.py` com `--oculta`, Xvfb e D-Bus próprios, um daemon de
 mentira). Duas variantes do daemon de mentira: zero controles, e um só pelo
 rádio, sem nome. Abre as dez abas e grava o texto de cada uma. **Espera-se:**
-nenhuma ocorrência de nome de pessoa, de «bancada» ou de cor de plástico de
-alguém; a frase do estado vazio; zero `Traceback` no log da interface do lar.
+nenhuma ocorrência de nome de pessoa, do posto de ensaio de alguém ou de cor
+de plástico de alguém; a frase do estado vazio; zero `Traceback` no log da interface do lar.
 
 ## P3 — `p3-conteiner.sh`
 
@@ -83,7 +83,7 @@ medidas: o `debian:12` continua sendo o portão duro.
 
 A VM KVM **sem janela** (`-display none`), dirigida pelo QMP; cada tela vem
 por `foto` para um PNG. Precisa de `qemu-system-x86`, `qemu-utils` e `ovmf`
-— o pedido 1 dela. Sem eles, o script diz isso e sai.
+— o pedido 1 da sprint. Sem eles, o script diz isso e sai.
 
 - **P4a — cabo.** Pop!_OS COSMIC novo, o install com a árvore servida do
   host, e um DualSense passado pelo cabo (`passar <hostbus> <hostaddr> <id>
@@ -106,7 +106,7 @@ por `foto` para um PNG. Precisa de `qemu-system-x86`, `qemu-utils` e `ovmf`
 - **P4d — a Steam instalada depois.** A nativa e a do Flathub, cada uma
   instalada depois do Hefesto, na ordem de produto: reiniciar o daemon, fechar o
   Hefesto, sair da Steam, e então abrir, validar e anotar. O C21: o ambiente
-  que a bancada abre é o do `systemd --user`, e não o da sessão COSMIC; a volta
+  que o ensaio abre é o do `systemd --user`, e não o da sessão COSMIC; a volta
   declara qual usou, e compara só os NOMES com os da Steam aberta pelo ícone.
 
 **O que sai da VM com endereço de aparelho** passa pelo mascarador antes do
@@ -116,8 +116,8 @@ e o `hefesto-<palavra>-<6 hex>`). Sem ele, o `guardar` recusa.
 
 ## O que não se faz
 
-- o daemon real num lar de mentira, com o dela parado: não vale o risco (o
-  broker aceita o uid dela, a central do rádio e os nomes do BlueZ são estado
+- o daemon real num lar de mentira, com o do usuário parado: não vale o risco (o
+  broker aceita o seu uid, a central do rádio e os nomes do BlueZ são estado
   do sistema). P2 e P4 cobrem o que ele cobriria;
 - contêiner com `--privileged`, `--device` ou a árvore de trabalho montada;
 - VM com janela na tela do usuário;

@@ -18,17 +18,17 @@ Agora a cor é DADO. Três arquivos, um dono cada, e este script os cruza:
 
     docs/data/cores-do-dualsense.csv   modelo + zona -> hex        (as CORES)
     docs/data/pecas-do-dualsense.csv   peça -> zona                (as PEÇAS)
-    assets/control-svg/dualsense.svg   o desenho dela              (a GEOMETRIA)
+    assets/control-svg/dualsense.svg   o desenho do controle       (a GEOMETRIA)
 
 O que ele escreve no SVG, e SÓ isto:
 
   * `class="z-<zona>"` em cada grupo de peça, e `z-simbolos` nos quatro glifos da
-    face — as zonas nomeadas, legíveis também na árvore do editor dela;
+    face — as zonas nomeadas, legíveis também na árvore do editor de SVG;
   * um `<defs id="cores-do-dualsense">` com a hachura do SEM-HEX, os gradientes
     das cascas de duas cores, e o `<style>` dos 28 modelos.
 
 **Ele não toca em geometria.** Nenhum `d`, nenhum `transform`, nenhum `x/y`. É
-por isso que ele pode rodar depois de todo `importar.py` sem risco: o que ela
+por isso que ele pode rodar depois de todo `importar.py` sem risco: o que se
 desenha volta intacto, e as zonas são reaplicadas por cima.
 
     scripts/gerar_cores_do_dualsense.py            gera
@@ -165,10 +165,9 @@ def gerar_defs(mods: dict[str, dict[str, dict[str, str]]]) -> str:
 def legivel(tinta: str) -> str:
     """A mesma cor, clareada só o quanto for preciso para se ver no fundo escuro.
 
-    **ELA REPAROU, e o defeito era este** (27/08/2026): com a cor pintando zona
-    por zona, *"os glifos, borda do touchpad, caixa de som, botão de microfone,
-    analógico (…) botões de share e options, glifos dos botões da face"* sumiram
-    do desenho no Cosmic Red. E estava CERTO pelo dado: naquele modelo o painel,
+    **O DEFEITO VISTO EM 27/08/2026:** com a cor pintando zona por zona, os
+    glifos, a borda do touchpad, a caixa de som, o botão do microfone, os
+    analógicos, share e options e os glifos da face sumiam do desenho no Cosmic Red. E estava CERTO pelo dado: naquele modelo o painel,
     o touch, os analógicos e os símbolos são `#1A1A1C` — **preto**. O que o dado
     não sabia é que **este desenho é de LINHA sobre fundo escuro**: preto sobre
     `#282a36` dá razão de contraste **1,22**, e a peça deixa de existir.
@@ -195,7 +194,7 @@ def tintas_do_modelo(
     e `--z-<zona>` é a cor **legível** (ver `legivel`), que é a que pinta.
 
     `casca` é a única que pode não ser uma cor: quando as duas metades diferem,
-    ela é o gradiente de corte duro. `casca_solida` acompanha, com o hex da
+    é o gradiente de corte duro. `casca_solida` acompanha, com o hex da
     metade esquerda, para quem precisa de UMA cor — a borda de identidade da
     peça, o traço que arredonda o bico do punho, o chip da fita.
     """
@@ -234,10 +233,10 @@ def gerar_style(
 ) -> tuple[str, list[str]]:
     """As regras dos 28 modelos: primeiro as VARIÁVEIS, depois quem as usa.
 
-    O rodeio pela variável não é enfeite. Sem ela, quem precisa da cor fora de um
+    O rodeio pela variável não é enfeite. Sem a variável, quem precisa da cor fora de um
     `fill` — o traço que arredonda o bico do punho, a borda que diz a identidade
     da peça, o chip da fita — teria de reescrever a tabela inteira, e voltaríamos
-    à duplicata que este gerador existe para matar. Com ela, todo consumidor lê
+    à duplicata que este gerador existe para matar. Com a variável, todo consumidor lê
     `var(--z-casca-solida)` e a fonte continua sendo o CSV.
     """
     linhas = ['  <style id="cores-do-dualsense-folha">']

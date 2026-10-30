@@ -25,7 +25,7 @@ _json() {
 _hhmm() { date -d "@$1" '+%d/%m %H:%M' 2>/dev/null || echo "$1"; }
 
 _avaliar() {
-  [ -r "$ARQ" ] || { echo "LIVRE — ninguém reservou a bancada."; return 1; }
+  [ -r "$ARQ" ] || { echo "LIVRE — ninguém reservou o aparelho."; return 1; }
 
   local pid quem motivo desde expira
   pid="$(_json pid)"; quem="$(_json quem)"; motivo="$(_json motivo)"
@@ -62,7 +62,7 @@ _reservar() {
   done
 
   if _avaliar >/dev/null; then
-    echo "RECUSADO — a bancada já está reservada:" >&2
+    echo "RECUSADO — o aparelho já está reservado:" >&2
     _avaliar >&2
     exit 1
   fi
@@ -82,7 +82,7 @@ _reservar() {
 }
 JSON
   echo "RESERVADA por $(id -un) (PID ${pid}) até $(_hhmm "$expira") — ${motivo}"
-  echo "O teto é a rede, não o 'liberar': se você morrer, a bancada volta sozinha."
+  echo "O teto é a rede, não o 'liberar': se você morrer, a reserva se solta sozinha."
 }
 
 case "${1:-status}" in
@@ -90,7 +90,7 @@ case "${1:-status}" in
   status)   _avaliar >/dev/null; _avaliar; exit 0 ;;
   exigir)
     if _avaliar >/dev/null; then
-      echo "BANCADA OCUPADA — você NÃO passa daqui." >&2
+      echo "APARELHO OCUPADO — você NÃO passa daqui." >&2
       _avaliar >&2
       echo "Espere, e DIGA na entrega que está esperando. Não contorne por outro" >&2
       echo "caminho: é assim que se inventa medição falsa." >&2

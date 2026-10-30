@@ -9,8 +9,8 @@ install_usb_quirk.sh — alavanca de boot que PRESERVA o áudio do DualSense.
     áudio USB inteiro do controle (sem mic E sem fone do jack). Opt-in via
     install_udev.sh --disable-usb-audio.
   - ESTE script: aplica o quirk usbcore.quirks=054c:0ce6:gn
-    (g=DELAY_INIT, n=DELAY_CTRL_MSG), que ESPAÇA a rajada do probe para ela
-    não tombar o link — o áudio AINDA enumera, só mais devagar. PRESERVA o
+    (g=DELAY_INIT, n=DELAY_CTRL_MSG), que ESPAÇA a rajada do probe para a
+    rajada não tombar o link — o áudio AINDA enumera, só mais devagar. PRESERVA o
     mic e o fone do jack do DualSense. Validado A/B + ao vivo 2026-06-26.
     CAVEAT: preserva o áudio no nível do KERNEL (sem storm); com os WP 52/53
     instalados o nó segue suprimido no PipeWire até removê-los ou definir

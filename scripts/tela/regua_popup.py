@@ -64,7 +64,7 @@ SONDA = r"""
     if (rolavel && (dv > 2 || dh > 2))
       rolam.push({quem, vao: R(e.clientHeight), conteudo: R(e.scrollHeight),  // (noqa-acento): chave do JSON que o Python lê em r['conteudo']
                   esconde: R(dv), lado: R(dh)});
-    // ROLAGEM DE LADO é sempre defeito: numa tabela ela esconde a segunda
+    // ROLAGEM DE LADO é sempre defeito: numa tabela a rolagem esconde a segunda
     // coluna atrás de uma barra que quase ninguém procura.
     if (rolavel && dh > 2)
       erros.push(`"${quem}" rola DE LADO: ${R(e.scrollWidth)}px de conteúdo em `
@@ -94,13 +94,13 @@ SONDA = r"""
     // para fora de um `overflow:auto` NÃO pinta: ele está recortado, e a pessoa
     // o alcança rolando. Contá-lo inflava o envelope com o próprio conteúdo que
     // o teto de altura existe para esconder, e a conta reprovava a pop-up por
-    // ela ter conteúdo — que é o contrário do que ela promete medir.
+    // ter conteúdo — que é o contrário do que a conta promete medir.
     // MEDIDO em 29/08 na `#mapear-entradas`: envelope de 756,5px de altura
     // contra a janela de 757, a meio pixel de um vermelho falso; com a correção,
     // 717 — a altura da caixa, que é o que ele deve ser.
     //
-    // A `.dica` É A EXCEÇÃO, E ELA TEM DE SER: ela abre para fora de propósito e
-    // não responde pela conta 4, então se ela também saísse do envelope uma dica
+    // A `.dica` É A EXCEÇÃO, E TEM DE SER: abre para fora de propósito e
+    // não responde pela conta 4, então se a dica também saísse do envelope uma dica
     // dentro da `.moldura` ficaria invisível às DUAS contas. Foi exatamente esse
     // o defeito que esta régua pegou nesta pop-up, e ele tem de continuar pego.
     if (!cortado || deProposito)
@@ -125,7 +125,7 @@ SONDA = r"""
   //         POR CIMA do que vem depois. Medido na mordida do teto de 400px: na
   //         Point-and-click a tabela transborda a moldura em 34,1px e cai
   //         inteira sobre as linhas de Velocidade, com a caixa intacta e nada
-  //         para fora dela. Sem esta conta a régua dava VERDE nessa mordida.
+  //         para fora da caixa. Sem esta conta a régua dava VERDE nessa mordida.
   //         Só conta quem está EM FLUXO (o `.dica` e o `.confirma` são
   //         posicionados, e sobrepor é o trabalho deles) e cujo pai não corta:
   //         pai que corta já responde pelas contas de rolagem e de recorte.
@@ -154,8 +154,8 @@ SONDA = r"""
   //          conta 6, porque o tamanho não tem nada com o defeito: um ancestral
   //          com `overflow:auto` RECORTA todo descendente absoluto, role ou não,
   //          e a dica sai cortada mesmo cabendo folgada na janela. É a cicatriz
-  //          que o `CSS_POPUP` já traz escrita — "não há uma só dica dentro
-  //          dela" — e que era regra de comentário sem régua nenhuma atrás.
+  //          que o `CSS_POPUP` já traz escrita — não há uma só dica dentro
+  //          da pop-up — e que era regra de comentário sem régua nenhuma atrás.
   //          MEDIDO em 29/08: a `#mapear-entradas` nasceu com quatro dicas
   //          dentro da `.moldura`; a conta 6 pegou porque somavam 762,5px de
   //          envelope, e teria deixado passar a que sobrasse sozinha (747,8).
@@ -165,8 +165,8 @@ SONDA = r"""
     if (!corta) return;
     const quem = (corta.className || corta.tagName).toString().split(' ')[0];
     erros.push(`uma "${cfg.foraDeProposito}" mora dentro de "${quem}", que CORTA: `
-             + `overflow recorta todo descendente absoluto, role ou não, e ela `
-             + `aparece cortada. O lugar dela é fora do que rola.`);
+             + `overflow recorta todo descendente absoluto, role ou não, e a dica `
+             + `aparece cortada. O lugar da dica é fora do que rola.`);
   });
 
   // ---- 6: o ENVELOPE (caixa + o que abre para fora) cabe na janela?

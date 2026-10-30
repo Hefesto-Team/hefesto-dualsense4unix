@@ -24,7 +24,7 @@ azul "== quem está de pé =="
 mapfile -t PIDS < <(pids_da_steam | sort -un)
 if [[ "${#PIDS[@]}" -eq 0 ]]; then
     falhou "Steam não está aberta — abra-a (e um jogo, se puder) e rode de novo."
-    info "Sem ela não há ambiente para ler, e a pergunta continua em aberto."
+    info "Sem a Steam não há ambiente para ler, e a pergunta continua em aberto."
     exit 2
 fi
 for p in "${PIDS[@]}"; do
@@ -49,7 +49,7 @@ for p in "${PIDS[@]}"; do
 done
 [[ "${achou_allow}" -eq 0 ]] && {
     ok "a variável não está exportada em nenhum processo"
-    info "Sem ela, allow_steam_virtual_gamepad fica no default do SDL."
+    info "Sem a variável, allow_steam_virtual_gamepad fica no default do SDL."
     info "ATENÇÃO: isto NÃO prova que a cura age — prova que a Steam não a"
     info "desligou explicitamente. O default do SDL decide o resto."
 }

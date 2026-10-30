@@ -13,7 +13,7 @@ Uso:
     --apply-quiet edita SÓ se a Steam NÃO estiver rodando; se estiver, ADIA
                   (loga e sai 0) sem fechar a Steam. Usado pelo guard (path/timer)
                   para nunca matar a Steam no meio de um jogo — a reescrita
-                  acontece quando a Steam já saiu (que é quando ela grava o vdf).
+                  acontece quando a Steam já saiu (que é quando a Steam grava o vdf).
     --status      só relata o estado atual (PSSupport / SwitchSupport /
                   UseSteamControllerConfig) em cada .vdf. Não modifica nada.
 AJUDA
@@ -182,7 +182,7 @@ ligar_ponte_da_allowlist() {
         return 0
     fi
     if steam_running; then
-        log "ponte: Steam viva — não escrevo agora (a saída dela engoliria)"
+        log "ponte: Steam viva — não escrevo agora (a saída da Steam engoliria)"
         return 0
     fi
     local saida

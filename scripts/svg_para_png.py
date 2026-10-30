@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""svg_para_png.py — rasteriza o SVG dela com o MOTOR QUE ELA VÊ."""
+"""svg_para_png.py — rasteriza o SVG do desenho com o MOTOR QUE O PRODUTO USA."""
 from __future__ import annotations
 
 import pathlib

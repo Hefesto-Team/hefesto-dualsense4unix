@@ -114,9 +114,9 @@ ROTEIRO: tuple[Condicao, ...] = (
         chave="base",
         rotulo="LINHA DE BASE — os bits como o produto manda hoje",
         deltas=(),
-        previsao="vibra (é o que ela sente todo dia)",
+        previsao="vibra (é o que se sente todo dia)",
         o_que_prova=(
-            "prova que a bancada está de pé com o daemon PARADO. Se não vibrar "
+            "prova que o ensaio está de pé com o daemon PARADO. Se não vibrar "
             "aqui, nada abaixo vale: o problema é o link, não os bits."
         ),
         registros=_todos_os_registros_da_base(),
@@ -587,8 +587,8 @@ def escolher_condicoes(chaves: list[str] | None) -> tuple[Condicao, ...]:
 def modo_seco(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> int:
     """O ensaio inteiro SEM tocar no aparelho: os bytes, os flags, a parada.
 
-    É o que dá para testar sem hardware — e é o que se roda antes de chamar
-    ela para a bancada.
+    É o que dá para testar sem hardware — e é o que se roda antes do ensaio
+    no aparelho.
     """
     ensaio = Ensaio(fisico=fisico, base=base, seco=True)
     print("  MODO SECO: nada é aberto, nada é escrito, o daemon segue de pé.")
@@ -600,9 +600,9 @@ def modo_seco(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> int:
             print(f"    caderno ....... {suspeito} · presente={'sim' if presente else 'não'}")
         print()
     print("=" * 78)
-    print("  A parada acima é a mesma que roda na bancada — inclusive no Ctrl+C.")
+    print("  A parada acima é a mesma que roda no aparelho — inclusive no Ctrl+C.")
     print("  O que só o APARELHO responde: se o motor gira. Nenhuma linha deste")
-    print("  modo prova vibração; elas provam o que o instrumento MANDA.")
+    print("  modo prova vibração; as linhas provam o que o instrumento MANDA.")
     print("=" * 78)
     return 0
 
@@ -626,7 +626,7 @@ def modo_parar(fisico: Fisico, base: bytearray) -> int:
         return 4
     finally:
         ensaio.fechar()
-    print("  Sequência de parada mandada. Confirme com ela que o controle está mudo.")
+    print("  Sequência de parada mandada. Confirme com a mão que o controle está mudo.")
     return 0
 
 
@@ -638,7 +638,7 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
         print("  Enquanto o ensaio roda, o Hefesto está DESLIGADO: sem perfil, sem")
         print("  vibração de jogo, sem keepalive.")
         print()
-        print("  Rode de novo com --confirmo-parar-o-daemon, com ela na bancada.")
+        print("  Rode de novo com --confirmo-parar-o-daemon, com o controle na mão.")
         return 2
 
     estava_ativo = daemon_ativo()
@@ -726,7 +726,7 @@ def modo_ensaio(fisico: Fisico, base: bytearray, args: argparse.Namespace) -> in
 
     contador = [0]
     linhas: list[list[str]] = []
-    fonte = f"bancada {datetime.now():%d/%m} — bits do rumble, daemon parado"
+    fonte = f"ensaio {datetime.now():%d/%m} — bits do rumble, daemon parado"
     linha_id = args.linha_id or "vibracao.rumble.esquerdo@dualsense"
     lado = {"bluetooth": "radio", "cabo": "cabo"}.get(fisico.transporte, "")
     for condicao, resultado, nota in respostas:
@@ -768,7 +768,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="montar a base SEM supressão de LED (não é o estado normal)")
     ap.add_argument("--sem-mexer-nos-gatilhos", action="store_true", dest="poupar_gatilhos",
                     help="apaga a autorização de gatilho (flag0 0x0C) da base — o pulso "
-                         "deixa de desligar os efeitos de gatilho dela")
+                         "deixa de desligar os efeitos de gatilho da base")
     ap.add_argument("--condicao", action="append", default=None, dest="condicoes",
                     choices=[c.chave for c in ROTEIRO],
                     help="roda só estas condições (repetível). Sem isto, roda o "

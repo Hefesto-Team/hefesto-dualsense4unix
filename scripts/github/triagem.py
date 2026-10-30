@@ -5,7 +5,7 @@
   triagem.py --evento EVENTO.json --repo DONO/NOME --aplicar   faz, pelo `gh` (o `GH_TOKEN` vem do fluxo)
 
 Quem a chama é `.github/workflows/rotulos.yml`, a cada issue aberta ou editada. A decisão é uma
-função pura (`decidir`): o corpo da issue e os rótulos dela entram, e sai o que pôr, o que tirar e
+função pura (`decidir`): o corpo da issue e os seus rótulos entram, e sai o que pôr, o que tirar e
 se há o que comentar.
 """
 from __future__ import annotations

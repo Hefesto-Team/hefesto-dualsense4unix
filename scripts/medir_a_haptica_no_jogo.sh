@@ -90,7 +90,7 @@ echo "════════════════════════�
 if [ "$falhas" -eq 0 ]; then
   echo "A CORRENTE ESTÁ FECHADA — os três sinais automáticos batem."
   echo
-  echo "FALTA O QUARTO, e ele é dela: O JOGO VIBRA?"
+  echo "FALTA O QUARTO, e ele é de quem joga: O JOGO VIBRA?"
   echo "Nenhum destes três prova que a vibração CHEGOU à mão."
 else
   echo "$falhas sinal(is) fora do lugar — a corrente está aberta."

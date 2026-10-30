@@ -519,7 +519,7 @@ _marca_do_gesto_gravar() {
     {
         printf '# MARCA DO GESTO — DROPIN-AMBIGUO-01\n'
         printf '#\n'
-        printf '# Este arquivo diz: "o microfone do DualSense é escolha DELA".\n'
+        printf '# Este arquivo diz: o microfone do DualSense é escolha de quem usa.\n'
         printf '# Sem ele, a ausência do drop-in 51 não distingue a promoção\n'
         printf '# explícita da cura que um uninstall desarmou — e o doctor dava\n'
         printf '# [OK] no meio do defeito. Ele é escrito pelo GESTO de ligar o\n'
