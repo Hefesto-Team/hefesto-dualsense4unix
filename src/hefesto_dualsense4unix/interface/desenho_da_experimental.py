@@ -331,6 +331,11 @@ class OpcaoDaJanela(NamedTuple):
 
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
 ROTULO_DO_CSS = "Editar o meu CSS"
+GESTO_DE_IMPORTAR = "importar-na-modificacao"
+GESTO_DE_TIRAR = "tirar-da-modificacao"
+ROTULO_DE_IMPORTAR = "Importar"
+ROTULO_DE_TROCAR = "Trocar"
+ROTULO_DE_TIRAR = "Tirar"
 
 
 OPCOES_DO_DESENHO = (
@@ -400,9 +405,12 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
                  f'<span class="txt">{texto}</span></span>')
         if o.tipo == "ligado":
             return chave
+        importar = _botao_de_importar(o, ROTULO_DE_IMPORTAR)
         editar = (f'<button class="btn mini" data-gesto="{GESTO_DO_CSS}" '
                   f'data-v="{_a(o.mod)}:{_a(o.id)}">{ROTULO_DO_CSS}</button>')
-        return f"{editar}{chave}"
+        return f"{importar}{editar}{chave}"
+    if o.tipo == "importar":
+        return _controle_de_importar(o)
     if o.tipo == "cor":
         return (f'<input class="ext-cor-in" type="color" {alvo} '
                 f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
@@ -425,6 +433,22 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
                 f'aria-label="{_a(o.rotulo)}">')
     return (f'<input class="ext-num" type="text" inputmode="decimal" {alvo} '
             f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
+
+
+def _botao_de_importar(o: OpcaoDaJanela, rotulo: str, dica: str = "") -> str:
+    dica_ = f' data-dica="{_a(dica)}"' if dica else ""
+    return (f'<button class="btn mini" data-gesto="{GESTO_DE_IMPORTAR}" '
+            f'data-v="{_a(o.mod)}:{_a(o.id)}"{dica_}>{rotulo}</button>')
+
+
+def _controle_de_importar(o: OpcaoDaJanela) -> str:
+    """«Importar» sem arquivo; com ele, «Trocar» e «Tirar», e o nome do arquivo na dica."""
+    nome = o.valor if isinstance(o.valor, str) else ""
+    if not nome:
+        return _botao_de_importar(o, ROTULO_DE_IMPORTAR)
+    return (f"{_botao_de_importar(o, ROTULO_DE_TROCAR, nome)}"
+            f'<button class="btn mini" data-gesto="{GESTO_DE_TIRAR}" '
+            f'data-v="{_a(o.mod)}:{_a(o.id)}" data-dica="{_a(nome)}">{ROTULO_DE_TIRAR}</button>')
 
 
 def _jogos_da_opcao(o: OpcaoDaJanela) -> str:

@@ -1547,6 +1547,21 @@ def _seguir_o_meu_css(instaladas: Sequence[_Instalada]) -> None:
         _montar_a_janela_da_extensao(_MEXIDA.mod, item)
 
 
+def _notas_do_tema(manifesto: Any, mod_id: str) -> dict[str, str]:
+    """A recusa do tema e a do destaque, na linha da opção que os escolhe, quando o tema que vale
+    na casa é o desta extensão."""
+    from hefesto_dualsense4unix.mods import tema
+
+    if "tema" not in manifesto.tipos or not manifesto.tema:
+        return {}
+    casa = tema.tema_da_casa(_lugares())
+    if casa.de != mod_id:
+        return {}
+    pares = ((manifesto.tema.get(tema.CHAVE_DA_OPCAO_DA_COR), casa.recusa),
+             (manifesto.tema.get(tema.CHAVE_DO_DESTAQUE), casa.recusa_do_destaque))
+    return {str(opcao): frase for opcao, frase in pares if opcao and frase}
+
+
 def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) -> None:
     """O miolo da janela de opções: o valor guardado de cada opção."""
     from hefesto_dualsense4unix.mods import opcoes
@@ -1558,13 +1573,14 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     valores = guardados = opcoes.ler(manifesto, _lugares())
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
+    notas = _notas_do_tema(manifesto, mod_id)
     aparecem = opcoes.aparecem(manifesto, valores)
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
         escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,
         maximo=x.maximo or 0, passo=x.passo or 1,
         jogos=jogos if x.tipo == "jogos" else (),
-        nota=nota if x.tipo == "css" else "",
+        nota=notas.get(x.id) or (nota if x.tipo == "css" else ""),
         formas=_formas_da_opcao(manifesto, x, valores),
         botoes=x.botoes_da_janela if x.tipo == "por_botao" else (),
         modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "",
@@ -1784,6 +1800,62 @@ def editar_o_css_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dic
     if opcao is None or opcao.id != opcao_id:
         raise RuntimeError("Esta extensão não aceita o CSS de quem usa. Nada foi aberto.")
     _abrir_no_editor(_criar_o_css_da_modificacao(mod_id))
+    return _a_pintura_agora(ctx)
+
+
+TITULO_DO_IMPORTAR = {"css": "Escolha o CSS para importar", "tema": "Escolha o tema para importar",
+                      "logo": "Escolha a logo para importar"}
+FILTRO_DO_IMPORTAR = {"css": "*.css", "tema": "*.css", "logo": "*"}
+
+
+def _opcao_de_importar(o: dict[str, Any], gesto_: str, *tipos: str) -> tuple[_Instalada, Any]:
+    mod_id, _, opcao_id = _id_do_clique(o, gesto_).partition(":")
+    item = _a_instalada(mod_id)
+    declaradas = item.manifesto.opcoes if item.manifesto else ()
+    opcao = next((x for x in declaradas if x.id == opcao_id and x.tipo in tipos), None)
+    if opcao is None:
+        raise RuntimeError("Esta extensão não importa arquivo nessa opção. Nada foi alterado.")
+    return item, opcao
+
+
+def _importar_na_modificacao(item: _Instalada, opcao_id: str, origem: str) -> str:
+    from hefesto_dualsense4unix.mods import importados
+
+    with _dizendo_a_recusa():
+        return importados.importar(item.manifesto, opcao_id, pathlib.Path(origem), _lugares())
+
+
+def _tirar_da_modificacao(item: _Instalada, opcao_id: str) -> None:
+    from hefesto_dualsense4unix.mods import importados
+
+    with _dizendo_a_recusa():
+        importados.tirar(item.manifesto, opcao_id, _lugares())
+
+
+@gesto("07-lancadores.html", exp.GESTO_DE_IMPORTAR, grava="_importar_na_modificacao")
+def importar_na_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Importar»: o arquivo escolhido passa pela régua do formato da opção e a cópia fica nos
+    dados da extensão. Cancelar não é erro: o seletor devolve vazio e a tela não fala."""
+    _MEXIDA.armada = ()
+    item, opcao = _opcao_de_importar(o, exp.GESTO_DE_IMPORTAR, "importar", "css")
+    formato = "css" if opcao.tipo == "css" else str(opcao.formato)
+    caminho = p.escolher_arquivo(TITULO_DO_IMPORTAR[formato], padrao=FILTRO_DO_IMPORTAR[formato])
+    if not caminho:
+        return None
+    nome = _importar_na_modificacao(item, opcao.id, str(caminho))
+    _MEXIDA.aba = opcao.grupo or ""
+    _montar_a_janela_da_extensao(item.entrada.id)
+    return {**_a_pintura_agora(ctx), "recado": f"Importado: {nome}."}
+
+
+@gesto("07-lancadores.html", exp.GESTO_DE_TIRAR, grava="_tirar_da_modificacao")
+def tirar_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Tirar»: apaga a cópia importada, e a opção volta a vazia."""
+    _MEXIDA.armada = ()
+    item, opcao = _opcao_de_importar(o, exp.GESTO_DE_TIRAR, "importar")
+    _tirar_da_modificacao(item, opcao.id)
+    _MEXIDA.aba = opcao.grupo or ""
+    _montar_a_janela_da_extensao(item.entrada.id)
     return _a_pintura_agora(ctx)
 
 
@@ -2244,6 +2316,7 @@ SEM_ECO: tuple[str, ...] = (
            desenho.ADICIONAR, desenho.PROCURAR_O_ARQUIVO,
            "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",
            "mais-da-modificacao", "instalar-modificacao", "escolher-arquivo-da-modificacao",
+           exp.GESTO_DE_IMPORTAR, exp.GESTO_DE_TIRAR,
            exp.GESTO_DO_PARAR, exp.GESTO_DA_CHAVE_DA_EXTENSAO,
            exp.GESTO_DE_ESCOLHER,
            exp.GESTO_DO_GUARDAR_LANCADOR,
