@@ -180,3 +180,15 @@ def chave_de_maquina(entry: dict[str, Any]) -> str | None:
     if limpo.startswith("02"):
         return None
     return limpo
+
+
+def ganha_controle_virtual(entry: dict[str, Any]) -> bool:
+    """O Pro Controller e o 8BitDo ganham controle virtual, como o DualSense.
+
+    D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL. O 8BitDo no modo X-input fala como Xbox e
+    chega sem endereço: dele não se sabe a marca, e ele segue nativo.
+    """
+    marca = brand_of(entry)
+    if marca == MARCA_8BITDO:
+        return True
+    return marca == MARCA_NINTENDO and friendly_type(entry).startswith("Pro Controller")

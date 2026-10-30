@@ -3260,6 +3260,23 @@ def seguir_o_p1_uma_vez(
     contexto.depois.append(_PassoDoP1(chave, passo))
 
 
+def vibrar_o_externo(
+    daemon: DaemonProtocol, motor: Any, uniq: str, weak: int, strong: int
+) -> tuple[int, int] | None:
+    """O rumble do jogo no controle de fora, pelo nó dele, com a força do controle que recebe."""
+    try:
+        mult_fraco, mult_forte = _mults_por_motor(daemon, time.monotonic(), uniq)
+    except Exception:
+        mult_fraco = mult_forte = 1.0
+    par = (
+        max(0, min(255, round(weak * mult_fraco))),
+        max(0, min(255, round(strong * mult_forte))),
+    )
+    if not motor.vibrar(*par):
+        return None
+    return par
+
+
 __all__ = [
     "DESFECHOS_EMULACAO_ATIVA",
     "EMU_APLICADO",
@@ -3315,5 +3332,6 @@ __all__ = [
     "stop_motion_reader",
     "sync_steam_input_exception",
     "upgrade_primary_vpad_to_uhid",
+    "vibrar_o_externo",
     "vpad_vivo",
 ]

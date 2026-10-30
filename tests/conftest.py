@@ -1595,6 +1595,23 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _nenhum_controle_de_fora_da_mesa_dela_entra_no_coop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O co-op de um caso não adota o Pro Controller nem o 8BitDo que estiverem plugados nela.
+
+    D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL: sem isto, o ``sync`` de qualquer caso de co-op
+    varria o ``/dev/input`` de verdade, pedia ao broker o esconderijo do hidraw do controle dela
+    e o agarrava. O caso que mede o externo devolve a lista dele por cima desta.
+    """
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems import coop
+    except ModuleNotFoundError:
+        return
+    monkeypatch.setattr(coop, "externos_que_ganham_virtual", dict)
+
+
+@pytest.fixture(autouse=True)
 def _nenhum_registro_de_identidade_atravessa() -> Iterator[None]:
     """SINGLETON-QUE-ATRAVESSA-01 — o `identity._registry` morre com o caso."""
     _descartar_registro_de_identidade()

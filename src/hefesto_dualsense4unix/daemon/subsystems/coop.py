@@ -136,6 +136,7 @@ class _SecondaryPlayer:
     cedido_ao_primario: bool = False
     motion_reader: Any = None
     a_espera: bool = False
+    externo: bool = False
 
 
 class CoopManager:
@@ -170,6 +171,8 @@ class CoopManager:
         self._ultima_recriacao: tuple[Any, ...] | None = None
         self._ordem_travada = False
         self._p1_espera_o_jogo = False
+        self._esconderijo: dict[str, bool | None] = {}
+        self._hidraw_dos_externos: dict[str, str] = {}
 
     def should_be_active(self) -> bool:
         """True se o co-op deve estar ativo agora (flag + gamepad + 2+ controles)."""
@@ -463,6 +466,9 @@ class CoopManager:
             for mac, path in discover_dualsense_evdevs().items()
             if mac != primary
         }
+        dualsenses = set(want)
+        externos = self._externos_escondidos(externos_que_ganham_virtual())
+        want.update(externos)
         desired_flavor = self._flavor()
         desired_caminho = self._caminho()
         desired_roupa = self._roupa() if self._players else None
@@ -510,8 +516,8 @@ class CoopManager:
 
         for mac in self._na_ordem_da_carta(want):
             if mac not in self._players:
-                self._spawn_player(mac, want[mac])
-        self._publicar_a_mesa({*want, primary})
+                self._spawn_player(mac, want[mac], externo=mac in externos)
+        self._publicar_a_mesa({*dualsenses, primary})
 
         self._apply_coop_player_leds()
 
@@ -895,7 +901,74 @@ class CoopManager:
             return numero
         return fallback
 
-    def _spawn_player(self, identity: str, path: str) -> None:
+    def _externos_escondidos(
+        self, externos: Mapping[str, tuple[str, str | None]]
+    ) -> dict[str, str]:
+        """Identidade -> nó evdev de cada controle de fora cujo hidraw o broker já escondeu."""
+        for chave in [c for c in self._esconderijo if c not in externos and c not in self._players]:
+            self._soltar_o_esconderijo(chave)
+        prontos: dict[str, str] = {}
+        for chave, (no, hidraw) in externos.items():
+            if chave not in self._esconderijo:
+                self._pedir_o_esconderijo(chave, hidraw)
+            if self._esconderijo.get(chave):
+                prontos[chave] = no
+        return prontos
+
+    def _pedir_o_esconderijo(self, chave: str, hidraw: str | None) -> None:
+        """O hidraw do controle de fora sai do jogo antes de o pad virtual dele nascer."""
+        if not hidraw:
+            self._esconderijo[chave] = False
+            logger.info("coop_externo_sem_hidraw_fica_nativo", identity=chave)
+            return
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            broker_call_nonblocking,
+            broker_client_for,
+        )
+
+        self._esconderijo[chave] = None
+        self._hidraw_dos_externos[chave] = hidraw
+        client = broker_client_for(self._daemon)
+
+        def _esconder() -> None:
+            escondeu = False
+            try:
+                escondeu = bool(client.hide(hidraw))
+            finally:
+                if chave not in self._esconderijo:
+                    if escondeu:
+                        client.restore(hidraw)
+                else:
+                    self._esconderijo[chave] = escondeu
+                    self._retry_spawn = True
+                    if not escondeu:
+                        logger.info(
+                            "coop_externo_fica_nativo_sem_esconderijo",
+                            identity=chave,
+                            hidraw=hidraw,
+                        )
+
+        broker_call_nonblocking(self._daemon, _esconder)
+
+    def _soltar_o_esconderijo(self, chave: str) -> None:
+        """O hidraw do controle de fora volta ao jogo (só o que foi escondido)."""
+        escondido = self._esconderijo.pop(chave, None)
+        hidraw = self._hidraw_dos_externos.pop(chave, None)
+        if not escondido or not hidraw:
+            return
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(self._daemon)
+            broker_call_nonblocking(self._daemon, lambda: client.restore(hidraw))
+
+    def _e_externo(self, identity: str) -> bool:
+        return bool(getattr(self._players.get(identity), "externo", False))
+
+    def _spawn_player(self, identity: str, path: str, *, externo: bool = False) -> None:
         """Cria um jogador secundário para o controle `identity` no node `path`.
 
         BUG-COOP-GRAB-PENDING-VPAD-01: o vpad SÓ nasce com grab CONFIRMADO
@@ -921,9 +994,10 @@ class CoopManager:
             evdev_path=path,
             reader=reader,
             player_index=self._next_player_index(),
+            externo=externo,
         )
         self._players[identity] = player
-        if not identity.startswith("path:"):
+        if not identity.startswith("path:") and not externo:
             from hefesto_dualsense4unix.integrations import pad_usb
 
             pad_usb.anotar_pad_a_caminho(identity, _PAD_A_CAMINHO_S)
@@ -981,6 +1055,8 @@ class CoopManager:
         """
         daemon = self._daemon
         dono = self._players.get(identity)
+        if dono is not None and getattr(dono, "externo", False):
+            return self._ralo_do_rumble_do_externo(identity, dono)
 
         def _sink(weak: int, strong: int) -> None:
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
@@ -998,6 +1074,26 @@ class CoopManager:
             vpad = getattr(self._players.get(identity), "vpad", None)
             efetivo = apply_game_rumble(daemon, weak, strong, target_uniq=target, vpad=vpad)
             anotar_rumble_no_vpad(vpad, efetivo)
+
+        return _sink
+
+    def _ralo_do_rumble_do_externo(
+        self, identity: str, dono: _SecondaryPlayer
+    ) -> Callable[[int, int], None]:
+        """O rumble do jogo no pad virtual do controle de fora vai ao nó dele."""
+        from hefesto_dualsense4unix.core.motor_do_no import MotorDoNo
+
+        daemon = self._daemon
+        motor = MotorDoNo(dono.reader)
+
+        def _sink(weak: int, strong: int) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                anotar_rumble_no_vpad,
+                vibrar_o_externo,
+            )
+
+            efetivo = vibrar_o_externo(daemon, motor, identity, weak, strong)
+            anotar_rumble_no_vpad(dono.vpad, efetivo)
 
         return _sink
 
@@ -1267,7 +1363,7 @@ class CoopManager:
 
     def _calibration_pronta(self, identity: str) -> tuple[bool, bytes | None]:
         """`(resolvida?, calibração)` do jogador pelo CACHE — R-22."""
-        if identity.startswith("path:"):
+        if identity.startswith("path:") or self._e_externo(identity):
             return True, None
         cache = calibration_cache(self._daemon)
         hit = cache.get(identity)
@@ -1292,7 +1388,7 @@ class CoopManager:
 
     def _prefetch_calibration(self, identity: str) -> None:
         """Esquenta o cache do 0x05 de um jogador recém-registrado (R-22)."""
-        if identity.startswith("path:"):
+        if identity.startswith("path:") or self._e_externo(identity):
             return
         if identity in self._calib_sem_leitura or identity in self._calib_prazo:
             return
@@ -1366,7 +1462,7 @@ class CoopManager:
         if getattr(vpad, "backend", None) != "uhid":
             return
         identity = player.identity
-        if identity.startswith("path:"):
+        if identity.startswith("path:") or self._e_externo(identity):
             return
         hidraw_fn = getattr(self._daemon.controller, "hidraw_path", None)
         if not callable(hidraw_fn):
@@ -1416,7 +1512,7 @@ class CoopManager:
         """Hide do físico do jogador — SÓ com vpad confirmado E VIVO (BROKER-01)."""
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
 
-        if not vpad_vivo(player.vpad):
+        if self._e_externo(player.identity) or not vpad_vivo(player.vpad):
             return
         with contextlib.suppress(Exception):
             if self._daemon.is_native_mode():
@@ -1470,6 +1566,7 @@ class CoopManager:
         player = self._players.pop(identity, None)
         if player is None:
             return
+        externo = bool(getattr(player, "externo", False))
         from hefesto_dualsense4unix.integrations import pad_usb
 
         pad_usb.pad_decidido(identity)
@@ -1480,7 +1577,9 @@ class CoopManager:
         if self._nascendo is not None and self._nascendo[0] == identity:
             self._nascendo[2].descartar()
             self._nascendo = None
-        if not player.cedido_ao_primario:
+        if externo:
+            self._soltar_o_esconderijo(identity)
+        elif not player.cedido_ao_primario:
             self._broker_restore_player(identity)
         with contextlib.suppress(Exception):
             player.reader.set_grab(False)
@@ -1493,7 +1592,7 @@ class CoopManager:
         calado = player.cedido_ao_primario and recolher_calado()
         if calado:
             logger.info("coop_cedido_recolhido_sem_parada", identity=identity)
-        else:
+        elif not externo:
             self._zerar_rumble_do_jogador(identity)
         if player.vpad is not None:
             if calado:
@@ -2188,6 +2287,8 @@ class CoopManager:
         """Desmonta todos os secundários (solta grab, fecha uinput) e restaura"""
         for key in list(self._players):
             self._teardown_player(key)
+        for chave in list(self._esconderijo):
+            self._soltar_o_esconderijo(chave)
         self._revert_player_leds()
         self._led_indisponivel = frozenset()
         self._discover_falhou = False
@@ -2876,6 +2977,34 @@ def anotar_o_nascimento(daemon: Any, ms: float | None) -> None:
         bump("vpad.nascimento_ms_total", round(ms))
     except Exception as exc:
         logger.debug("vpad_nascimento_nao_contado", err=str(exc))
+
+
+def externos_que_ganham_virtual() -> dict[str, tuple[str, str | None]]:
+    """Identidade -> (nó evdev, hidraw) de cada Pro Controller e 8BitDo na mesa."""
+    from hefesto_dualsense4unix.core.evdev_reader import ESPECIE_EXTERNAL, discover_gamepads
+
+    return os_que_ganham_virtual(discover_gamepads(especie=ESPECIE_EXTERNAL))
+
+
+def os_que_ganham_virtual(vistos: Iterable[Any]) -> dict[str, tuple[str, str | None]]:
+    """Dos controles de fora vistos, os que entram no co-op com pad virtual.
+
+    D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL: o Pro Controller e o 8BitDo entram como o
+    DualSense, com o pad virtual e a mesma cadeia (os acionadores, o perfil, o mapa posicional
+    do leitor). Só o que se identifica pelo endereço: o clone com o endereço sintético do
+    ``hid-nintendo`` não tem chave que sobreviva ao replug, e segue nativo.
+    """
+    from hefesto_dualsense4unix.app.actions.external_controllers import ganha_controle_virtual
+    from hefesto_dualsense4unix.core.evdev_reader import ESPECIE_EXTERNAL
+
+    return {
+        gp.identidade: (gp.evdev_path, gp.hidraw)
+        for gp in vistos
+        if gp.especie == ESPECIE_EXTERNAL
+        and len(gp.identidade) == 12
+        and all(c in "0123456789abcdef" for c in gp.identidade)
+        and ganha_controle_virtual(gp.como_entrada_de_inventario())
+    }
 
 
 def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:

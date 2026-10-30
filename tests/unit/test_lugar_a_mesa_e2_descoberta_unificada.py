@@ -490,11 +490,16 @@ def test_reencontro_do_dualsense_segue_igual_e_sem_alvo_nao_adota_ninguem(
     )
 
 
-def test_a_e2_nao_adota_ninguem_o_coop_segue_fechado_em_dualsense() -> None:
+def test_o_coop_so_adota_externo_pela_porta_da_decisao() -> None:
     """O veto de 19/07 (*"externo não ganha controle virtual"*) foi ADIADO COM
     CONDIÇÃO, não derrubado: enquanto a máscara por controle não existir, ele
     vale. A E2 entrega a descoberta e o normalizador; quem promove jogador
     continua vendo só DualSense.
+
+    NOTA DE 30/10/2026: o veto caiu pela palavra de produto («Sim, ganham virtual»,
+    D-3010-OS-EXTERNOS-GANHAM-CONTROLE-VIRTUAL). O co-op passa a ver o Pro
+    Controller e o 8BitDo, e só por uma porta: a ``externos_que_ganham_virtual``,
+    que filtra pela marca. A descoberta dos DualSense segue fechada neles.
 
     Portão de TEXTO de propósito: a recaída aqui não é um valor errado, é uma
     linha nova no `want` — e ela passaria em qualquer teste de comportamento
@@ -504,7 +509,11 @@ def test_a_e2_nao_adota_ninguem_o_coop_segue_fechado_em_dualsense() -> None:
     fonte = coop.read_text(encoding="utf-8")
 
     assert "discover_dualsense_evdevs()" in fonte
-    assert "discover_gamepads" not in fonte, (
-        "o co-op passou a enxergar externos — isso é a E3, e ela precisa dela"
+    assert fonte.count("discover_gamepads(") == 1, (
+        "o co-op passou a enxergar externos por fora da porta da D-3010"
     )
+    porta = fonte[fonte.index("def externos_que_ganham_virtual"):]
+    porta = porta[: porta.index("\ndef ", 1)]
+    assert "discover_gamepads(" in porta
+    assert "os_que_ganham_virtual(" in porta
     assert "discover_external_gamepads" not in fonte
