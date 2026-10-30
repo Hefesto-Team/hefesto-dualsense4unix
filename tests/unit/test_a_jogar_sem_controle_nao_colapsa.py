@@ -1,10 +1,10 @@
 """A-JOGAR-SEM-CONTROLE-NAO-COLAPSA-01 — a Jogar sem nenhum controle ocupa o lugar do cartão.
 
-Medido em 30/10/2026 nos prints dela: com a mesa vazia, o cartão do P1 aberto colapsava na faixa
+Medido em 30/10/2026 nos prints de uso: com a mesa vazia, o cartão do P1 aberto colapsava na faixa
 de 24 px com «Player 1 • Desconectado», e as quatro abas ficavam encostadas no alto. A cura
 (D-3010-A-JOGAR-VAZIA-E-O-LUGAR-DO-CARTAO) dá ao lugar vazio aberto a altura do cartão de um
 controle, tracejado, com o disco do número no meio e nenhuma palavra. A altura é a do corpo do
-próprio cartão, montado e invisível: ela segue a largura da janela e o Status, como o cartão.
+próprio cartão, montado e invisível: a altura segue a largura da janela e o Status, como o cartão.
 """
 from __future__ import annotations
 

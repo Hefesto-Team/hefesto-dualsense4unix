@@ -25,14 +25,14 @@ def test_o_run_nao_forca_xwayland_por_conta_propria() -> None:
         "o escape sumiu — quem precisar de XWayland ficou sem caminho")
     assert "COSMIC" not in sem_comentario.upper().replace("COSMIC_", ""), (
         "o `run.sh` voltou a decidir o backend pelo NOME DA SESSÃO. Isso não é "
-        "opt-in: é a máquina dela sob XWayland de novo, e com ela o tema do "
+        "opt-in: é a máquina de quem usa sob XWayland de novo, e com o XWayland o tema do "
         "portal que o GTK3 não lê ali.")
     assert "HEFESTO_DUALSENSE4UNIX_XWAYLAND" in sem_comentario, (
         "o opt-in explícito saiu do `run.sh`")
 
 
 def test_o_opt_in_e_uma_variavel_que_se_declara() -> None:
-    """`…_XWAYLAND=1` liga; a ausência dela NÃO liga nada."""
+    """`…_XWAYLAND=1` liga; a ausência da variável NÃO liga nada."""
     bloco = _bloco_da_gui()
     m = re.search(
         r'if \[\[ "\$\{HEFESTO_DUALSENSE4UNIX_XWAYLAND:-\}" == "1" \]\]', bloco)
@@ -43,7 +43,7 @@ def test_o_opt_in_e_uma_variavel_que_se_declara() -> None:
 
 
 def test_o_install_nao_poe_x11_no_desktop_sem_a_flag() -> None:
-    """O `.desktop` do menu dela e o lançador do tray dizem a MESMA coisa."""
+    """O `.desktop` do menu e o lançador do tray dizem a MESMA coisa."""
     t = INSTALL.read_text(encoding="utf-8")
     m = re.search(r'if \[\[ "\$\{FORCE_XWAYLAND\}" -eq 1 \]\]; then\n'
                   r'\s*_EXEC_LINE="env GDK_BACKEND=x11 (.*?)"\n'

@@ -555,7 +555,7 @@ def test_o_firmware_recebe_a_forca_absoluta_e_nao_o_fator_relativo_da_peca() -> 
 def _perfil(**campos: object):
     from hefesto_dualsense4unix.profiles.schema import Profile
 
-    return Profile.model_validate({"name": "Bancada", "match": {"type": "any"}, **campos})
+    return Profile.model_validate({"name": "Ensaio", "match": {"type": "any"}, **campos})
 
 
 def test_a_intensidade_do_gatilho_mora_no_controle_e_o_dump_sem_o_usuario_e_o_de_antes() -> None:

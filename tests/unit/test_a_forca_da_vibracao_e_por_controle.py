@@ -12,11 +12,11 @@ DUAS DECISÕES DE PRODUTO, no mesmo dia, e esta régua mede as duas:
 2. **"0 a 200%, e grava na hora."** A barra "Personalizado" era LEITURA — um
    `<div>` sem `value`, cujo clique o gesto recusava com um `ValueError` que
    **não chega à tela** — e virou um `<input type=range>` que grava
-   `policy="custom"` com o `custom_mult` que ela arrastou.
+   `policy="custom"` com o `custom_mult` arrastado.
 
-POR QUE ELA PRECISA DE ARQUIVO PRÓPRIO, e não de linhas em
+POR QUE A RÉGUA PRECISA DE ARQUIVO PRÓPRIO, e não de linhas em
 `a05_vibracao.PROVAS`: aquela régua passa um dublê de ponte e cobra QUAL função
-dela foi chamada. Estes dois gestos exigem **perfil ativo** — que o `ctx` dela
+da aba foi chamada. Estes dois gestos exigem **perfil ativo** — que o `ctx` daquela régua
 não tem — e o que eles mudam PRIMEIRO é o disco; o `profile.reaplicar` vem depois.
 Uma prova que só olhasse a ponte diria que eles funcionam mesmo com o que foi
 para o arquivo errado. É a mesma razão que tirou o `teto-da-vibracao` das provas
@@ -28,7 +28,7 @@ mandaria isso ao daemon do usuário, que está vivo com um DualSense no cabo. To
 `uniq` daqui vem da faixa sintética `aa:bb:cc:00:00:01` — há dois portões de
 anonimato que reprovam o contrário.
 
-O QUE ELA COBRA, e cada item é um jeito diferente de a tela ou o disco mentir:
+O QUE A RÉGUA COBRA, e cada item é um jeito diferente de a tela ou o disco mentir:
 
  1. o trilho arrastado vira override SÓ daquele controle;
  2. a chave gravada é a NORMALIZADA — a mesma com que o backend casa o fator;
@@ -38,7 +38,7 @@ O QUE ELA COBRA, e cada item é um jeito diferente de a tela ou o disco mentir:
  6. a barra arrastada grava `custom` com o multiplicador em 0-2;
  7. o teto é o do esquema, e passar dele RECUSA DIZENDO;
  8. sem perfil ativo, e sem controle, a recusa é `RuntimeError` — a única que
-    chega ao cartão dela;
+    chega ao cartão;
  9. o teto da barra tem UM dono, e o gerador lê o mesmo;
 10. a PINTURA mostra o que está no disco, e não o degrau da mesa;
 11. o `mult-pos` é o número cru, e não a largura do trilho;
@@ -89,7 +89,7 @@ class PonteDeMentira:
         return True
 
 
-def _perfil_de_verdade(nome: str = "Bancada", **campos: Any) -> Any:
+def _perfil_de_verdade(nome: str = "Ensaio", **campos: Any) -> Any:
     """Um `Profile` DE VERDADE — o esquema é metade do que esta régua mede."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -139,7 +139,7 @@ def disco(monkeypatch):
     return estado, gravados
 
 
-def _ctx(pac, ativo: str = "Bancada"):
+def _ctx(pac, ativo: str = "Ensaio"):
     return pac.Contexto(
         state={"active_profile": ativo, "rumble_policy": "balanceado"},
         mesa=[],
@@ -160,7 +160,7 @@ def test_o_trilho_arrastado_vira_override_so_daquele_controle(
     é gravado no perfil e o override do P1 não existe.
     """
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
+    estado["Ensaio"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
     p = PonteDeMentira()
 
     arraste(_ctx(pac), {"uniq": UNIQ, "valor": "30"}, p)
@@ -175,7 +175,7 @@ def test_o_trilho_arrastado_vira_override_so_daquele_controle(
     assert dele.rumble.custom_mult == pytest.approx(0.3), f"gravou {dele.rumble!r}"
     assert CHAVE_B not in (prof.controllers or {}), (
         "o clique numa coluna escreveu no controle da OUTRA — é exatamente o "
-        "defeito que a decisão dela existe para curar")
+        "defeito que a decisão existe para curar")
     assert prof.rumble.policy == "balanceado", (
         f"o clique da coluna mudou o degrau da MESA para "
         f"{prof.rumble.policy!r} — os quatro controles voltariam a andar juntos")
@@ -186,7 +186,7 @@ def test_a_chave_gravada_e_a_que_o_motor_casa(pac, arraste, disco) -> None:
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade()
+    estado["Ensaio"] = _perfil_de_verdade()
     arraste(_ctx(pac), {"uniq": UNIQ, "valor": "150"}, PonteDeMentira())
 
     chaves = sorted((gravados[0].controllers or {}).keys() if gravados
@@ -200,7 +200,7 @@ def test_o_valor_igual_ao_global_nao_vira_override(
 
     A razão é aritmética e é do produto: `_controllers_to_rumble_scales` calcula
     `mult / base` e DESCARTA o fator 1,0. Guardar o override só deixaria no
-    arquivo dela uma opinião que o motor ignora — e que a próxima ativação teria
+    arquivo de quem usa uma opinião que o motor ignora — e que a próxima ativação teria
     de reaplicar.
 
     MORDIDA: em `_gravar_a_forca`, troque `draft.with_controller_rumble(...)`
@@ -208,13 +208,13 @@ def test_o_valor_igual_ao_global_nao_vira_override(
     passa a guardar o `custom` de 0,5 sob a chave do P1.
     """
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "custom", "custom_mult": 0.5})
+    estado["Ensaio"] = _perfil_de_verdade(rumble={"policy": "custom", "custom_mult": 0.5})
 
     arraste(_ctx(pac), {"uniq": UNIQ, "valor": "50"}, PonteDeMentira())
 
     assert not gravados, (
         f"gravou {len(gravados)} vez(es) um override igual ao global — o motor "
-        f"o ignora, e o arquivo dela fica com lixo")
+        f"o ignora, e o arquivo de quem usa fica com lixo")
 
 
 def test_o_segundo_arraste_igual_nao_regrava(pac, arraste, disco) -> None:
@@ -229,7 +229,7 @@ def test_o_segundo_arraste_igual_nao_regrava(pac, arraste, disco) -> None:
     dois `profile_reaplicar`.
     """
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade(
+    estado["Ensaio"] = _perfil_de_verdade(
         rumble={"policy": "balanceado"},
         controllers={CHAVE: {"rumble": {"policy": "custom", "custom_mult": 0.3}}})
     p = PonteDeMentira()
@@ -244,7 +244,7 @@ def test_o_segundo_arraste_igual_nao_regrava(pac, arraste, disco) -> None:
 def test_a_barra_arrastada_grava_o_multiplicador(pac, arraste, disco) -> None:
     """175% na barra vira `policy="custom"` com `custom_mult=1.75`."""
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
+    estado["Ensaio"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
 
     arraste(_ctx(pac), {"uniq": UNIQ, "valor": "175"}, PonteDeMentira())
 
@@ -263,7 +263,7 @@ def test_o_teto_da_barra_e_o_do_esquema(a05) -> None:
 
 
 def test_o_teto_recusa_dizendo_em_vez_de_gravar(pac, arraste, disco) -> None:
-    """210% não entra no disco, e a recusa chega ao CARTÃO dela.
+    """210% não entra no disco, e a recusa chega ao CARTÃO.
 
     Quem recusa é a BORDA do esquema (`RumbleDraft`, `le=RUMBLE_CUSTOM_MULT_MAX`)
     — não uma checagem escrita no gesto, que envelheceria na primeira mudança do
@@ -274,16 +274,16 @@ def test_o_teto_recusa_dizendo_em_vez_de_gravar(pac, arraste, disco) -> None:
     este caso reprova, porque o `ValidationError` do pydantic sobe cru. Ele é
     subclasse de `ValueError`, e `ValueError` é justamente o tipo que
     `hefesto_vivo._recusou_dizendo` NÃO leva ao cartão: a recusa iria para o
-    `stderr` de quem lançou a janela, e para ela o arraste não faria nada.
+    `stderr` de quem lançou a janela, e para quem usa o arraste não faria nada.
 
     MEDIDO, E A NOTA IMPORTA: trocar o `RumbleDraft.model_validate` por
     `model_copy` **não** reprova este caso — a borda de baixo
     (`ControllerRumbleOverride`) pega o 2,1 do mesmo jeito. O `model_validate`
     não é a única trava; ele é a trava mais PERTO do número, e o que ganha é a
-    frase (ela nomeia `custom_mult` em vez de um campo de `Profile`).
+    frase (nomeia `custom_mult` em vez de um campo de `Profile`).
     """
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade()
+    estado["Ensaio"] = _perfil_de_verdade()
 
     with pytest.raises(RuntimeError):
         arraste(_ctx(pac), {"uniq": UNIQ, "valor": "210"}, PonteDeMentira())
@@ -295,7 +295,7 @@ def test_o_teto_recusa_dizendo_em_vez_de_gravar(pac, arraste, disco) -> None:
     {"uniq": "", "valor": "150"},
 ])
 def test_a_recusa_do_trilho_e_runtime_error(pac, arraste, clique) -> None:
-    """`ValueError` fica no `stderr` de quem lançou a janela; ela não o lê."""
+    """`ValueError` fica no `stderr` de quem lançou a janela; quem usa não o lê."""
     with pytest.raises(RuntimeError):
         arraste(_ctx(pac), clique, PonteDeMentira())
 
@@ -327,7 +327,7 @@ def test_a_coluna_mostra_o_override_do_disco_e_nao_o_degrau_da_mesa(a05) -> None
     """O `state_full` não publica override nenhum — a fonte é o perfil.
 
     Sem esta metade, a tela voltaria a acender o mesmo degrau nas quatro colunas
-    um tique depois de ela escolher quatro diferentes.
+    um tique depois de escolhidos quatro diferentes.
 
     MORDIDA: em `a05_vibracao._forca_da_coluna`, devolva sempre o global — este
     caso reprova, porque o P1 passa a dizer `balanceado` com `economia` no disco.
@@ -396,7 +396,7 @@ def test_o_gesto_que_grava_fica_de_fora_da_prova() -> None:
         [_Gesto(nome)], {nome}, "05-vibracao.html", hefesto_vivo.PERIGOSOS)
     assert nome in pulados and nome not in vistos, (
         f"a prova clicaria `{nome}` na Vibração — e esse clique grava no perfil "
-        f"dela, sem diálogo e sem perguntar")
+        f"de quem usa, sem diálogo e sem perguntar")
 
 
 def test_o_fator_que_chega_ao_motor_e_o_da_conta_do_produto(
@@ -405,10 +405,10 @@ def test_o_fator_que_chega_ao_motor_e_o_da_conta_do_produto(
     from hefesto_dualsense4unix.profiles.manager import _controllers_to_rumble_scales
 
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
+    estado["Ensaio"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
     arraste(_ctx(pac), {"uniq": UNIQ, "valor": "30"}, PonteDeMentira())
 
     prof = gravados[0]
     escalas = _controllers_to_rumble_scales(prof.controllers, prof.rumble)
     assert escalas == pytest.approx({CHAVE: 0.3}), (
-        f"o motor receberia {escalas} — a escolha dela é 30% da força")
+        f"o motor receberia {escalas} — a escolha é 30% da força")

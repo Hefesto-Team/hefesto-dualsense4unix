@@ -2,11 +2,11 @@
 
 A graça de 0,5 s depois do bind do vpad (`_GAME_REPLICA_GRACE_S`) existe para
 filtrar o player-LED e a luz que o `hid_playstation` escreve na sonda
-(`f95107f9d`). Ela jogava fora também o gatilho que o jogo mandasse UMA vez
+(`f95107f9d`). A graça jogava fora também o gatilho que o jogo mandasse UMA vez
 nesse meio segundo; e o dedup pelo último ENTREGUE, com os 4 ms do limite de
 taxa, comia o `X → Off → X` de quem rearma a arma.
 
-As escolhas que a bancada decide moram em constante e interruptor:
+As escolhas que o ensaio decide moram em constante e interruptor:
 `HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO` (`guarda`/`descarta`),
 `HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO_S` (o prazo) e
 `HEFESTO_DUALSENSE4UNIX_REPLICA_DO_GATILHO` (`sequencia`/`coalescido`).
@@ -266,7 +266,7 @@ class TestASequenciaDoGatilho:
     def test_o_rearme_passa_pelo_bloco_de_antes_mesmo_com_a_fila_cheia(
         self, fake_uhid: _FakeFd
     ) -> None:
-        """A volta ao bloco que o físico tem passa pelo diferente que veio antes dela."""
+        """A volta ao bloco que o físico tem passa pelo diferente que veio antes da volta."""
         sinks = _Sinks()
         pad, clock = _pad_depois_da_graca(fake_uhid, sinks)
         _jogo_manda(fake_uhid, pad, _edge_report(flag0=0x04, trigger_r=_BLOCO_R))

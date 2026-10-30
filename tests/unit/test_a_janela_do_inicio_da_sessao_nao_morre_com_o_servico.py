@@ -5,7 +5,7 @@ lançador, que desprende a janela com `setsid nohup … &` e sai na hora. O `set
 cria sessão nova mas NÃO tira o processo do cgroup da unit; com o padrão
 `KillMode=control-group`, o systemd recolhe o cgroup inteiro quando a unit
 termina, e a janela recém-nascida morre. Aberta pelo dock, pela bandeja ou pelo
-terminal ela nasce em outro escopo e fica de pé: só a porta do início da sessão
+terminal a janela nasce em outro escopo e fica de pé: só a porta do início da sessão
 passava por aqui.
 
 MORDIDA: tirar o `KillMode=process` da unit (ou pô-lo de volta em

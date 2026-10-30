@@ -13,7 +13,7 @@ MORDIDAS (cada uma reprova um caso): voltar o `destroy` a `Gtk.main_quit` direto
 folga; tirar `fechar_por_sinal` do `main()`; ligar o SIGHUP que o `nohup` deixou ignorado.
 
 A janela de verdade (com barra) só nasce num filho sob `xvfb-run` e sem o `WAYLAND_DISPLAY`
-(`na_janela_de_verdade`): no processo do pytest ela iria ao compositor de quem roda.
+(`na_janela_de_verdade`): no processo do pytest a janela iria ao compositor de quem roda.
 """
 
 from __future__ import annotations

@@ -4,7 +4,7 @@
 deixou de seguir o posto: o jogo toca no endpoint de cada controle e o que toca
 ali chega a ele, sem votação de quem mexeu nem de quem o evdev lê. A matriz de
 174 casos que provava «vibra o controle que dirige o boneco» saiu junto com o
-portão que ela guardava. Ficam aqui as réguas do que o co-op ainda responde:
+portão que guardava. Ficam aqui as réguas do que o co-op ainda responde:
 ``CoopManager.quem_alimenta_cada_vpad``.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5

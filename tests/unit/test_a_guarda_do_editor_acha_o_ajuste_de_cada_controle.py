@@ -27,7 +27,7 @@ FORMAS_DO_MESMO_SERIAL = ["aabbcc000001", "aa:bb:cc:00:00:01", "AA:BB:CC:00:00:0
 
 
 def _perfil() -> Profile:
-    return Profile(name="Bancada", match=MatchAny(),
+    return Profile(name="Ensaio", match=MatchAny(),
                    controllers={SERIAL: ControllerOverrides(leds={})})
 
 
@@ -54,7 +54,7 @@ def test_a_linha_fala_pela_cor_do_plastico(monkeypatch: pytest.MonkeyPatch) -> N
     perfil = _perfil()
     monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [perfil])
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
-    ctx = Contexto(state={"active_profile": "Bancada"}, mesa=list(mesa),
+    ctx = Contexto(state={"active_profile": "Ensaio"}, mesa=list(mesa),
                    conectados=list(mesa), estados={})
     fora = a10_perfis.pacote(ctx)
     nomes = fora["guarda.nome"]

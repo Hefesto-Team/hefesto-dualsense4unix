@@ -48,7 +48,7 @@ def test_a_deteccao_nao_acredita_so_no_sinalizador(monkeypatch: pytest.MonkeyPat
     )
     assert comum.o_tema_e_escuro() is True, (
         "com o tema `adw-gtk3-dark` e `prefer-dark` False — o caso medido na "
-        "máquina dela — a folha tem de se pintar de ESCURO"
+        "máquina de teste — a folha tem de se pintar de ESCURO"
     )
 
 
@@ -102,5 +102,5 @@ def test_toda_folha_usa_o_dono_e_nenhuma_decide_sozinha(folha: str) -> None:
     assert "pintar_fundo_solido" in fonte, f"{folha} não usa o dono do fundo"
     assert "gtk-application-prefer-dark-theme" not in fonte, (
         f"{folha} voltou a decidir o tema pelo sinalizador — é o defeito de "
-        f"10/09/2026, e ele deixa o rótulo do botão ilegível na máquina dela"
+        f"10/09/2026, e ele deixa o rótulo do botão ilegível na máquina de quem usa"
     )

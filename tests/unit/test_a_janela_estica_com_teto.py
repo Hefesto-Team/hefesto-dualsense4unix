@@ -5,17 +5,17 @@ DECISÃO, 08/09/2026, com o produto instalado e os quatro DualSense na mesa.
 O que o usuário disse foi o sintoma: *"o background fica completamente preto"*.
 
 MEDIDO, NÃO ERA FALTA DE FUNDO. O `body` do `topo.html` já pinta `#11121a`; o
-que ela via era a cor da casa, só que MUITA — a `.janela` parava em 1180px
+que se via era a cor da casa, só que MUITA — a `.janela` parava em 1180px
 enquanto a janela maximizada tem ~1900, deixando ~360px de casa de cada lado. A
 recomendação foi levada ao usuário e o usuário aprovou: *"eu confio em vc, manda ver"*.
 
-O QUE ESTA RÉGUA GUARDA, e o que ela deliberadamente NÃO guarda
+O QUE ESTA RÉGUA GUARDA, e o que deliberadamente NÃO guarda
 ----------------------------------------------------------------
-Ela guarda a DECISÃO: **estica, com teto**. As três metades disso são
+A régua guarda a DECISÃO: **estica, com teto**. As três metades disso são
 mensuráveis e estão aqui — cresce com a janela, para num teto, e continua
 encolhendo até o piso.
 
-Ela NÃO crava o 1600 como dogma. O número é hipótese com razão escrita, e a
+A régua NÃO crava o 1600 como dogma. O número é hipótese com razão escrita, e a
 razão está no `topo.html`: as dez páginas foram medidas em 1180, 1400, 1600 e
 1900, nada quebrou em nenhuma, a coluna por jogador da Gatilhos ganhou **46%**
 (228 -> 333px) e o preço de leitura dobrou em vez de triplicar. Quem remedir e
@@ -36,7 +36,7 @@ A MORDIDA
 ---------
 Troque `width:min(100%,1600px)` por `width:1180px` no `interface/topo.html`,
 regere e publique. Cai o primeiro caso, com o desenho parado em 1180 numa janela
-de 1600 — que é a sobra que ela fotografou. Troque por `width:100%` e cai o
+de 1600 — que é a sobra fotografada. Troque por `width:100%` e cai o
 segundo, o do teto.
 """
 from __future__ import annotations
@@ -131,17 +131,17 @@ def test_o_desenho_acompanha_a_janela(medido: dict) -> None:
                if r[MEIO]["largura"] != MEIO - RESPIRO}
     assert not parados, (
         f"numa janela de {MEIO}px o desenho destas abas parou antes da borda: "
-        f"{parados}. É a sobra que ela fotografou — *'o background fica "
-        f"completamente preto'* —, e o preto é a cor da casa aparecendo demais.")
+        f"{parados}. É a sobra fotografada — o fundo fica "
+        f"todo preto —, e o preto é a cor da casa aparecendo demais.")
 
 
 def test_o_desenho_para_no_teto(medido: dict) -> None:
-    """E ele PARA: esticar sem limite alonga a linha até ela deixar de se ler."""
+    """E ele PARA: esticar sem limite alonga a linha até a linha deixar de se ler."""
     sem_teto = {n: r[ACIMA_DO_TETO]["largura"] for n, r in _nossas(medido).items()
                 if r[ACIMA_DO_TETO]["largura"] > ACIMA_DO_TETO - RESPIRO - 1}
     assert not sem_teto, (
         f"numa janela de {ACIMA_DO_TETO}px estas abas foram até a borda: "
-        f"{sem_teto}. A decisão dela é esticar COM TETO.")
+        f"{sem_teto}. A decisão é esticar COM TETO.")
     tetos = {r[ACIMA_DO_TETO]["largura"] for r in _nossas(medido).values()}
     assert len(tetos) == 1, (
         f"as abas pararam em larguras diferentes: {sorted(tetos)}. O teto mora "
@@ -158,7 +158,7 @@ def test_no_piso_a_janela_entrega_o_desenho_inteiro(medido: dict) -> None:
               if r[PISO]["largura"] != PISO - RESPIRO}
     assert not curtas, (
         f"no piso de {PISO}px o desenho não ficou com os {PISO - RESPIRO}px que "
-        f"ela aprovou: {curtas}")
+        f"foram aprovados: {curtas}")
 
 
 def test_nenhuma_aba_rola_de_lado_nem_perde_caixa(medido: dict) -> None:

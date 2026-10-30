@@ -3,16 +3,15 @@
 
 MEDIDA NOVA, 09/10/2026 (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01). A régua de
 08/09 dizia o contrário: «o marcado é cinza como os demais», a pedido na aba
-Gatilhos (*"conseguimos deixar ele cinza como os demais?"*, citação, sem o
-acento onde faltava). Em 29/09 ela revogou o cinza: *"a cor de todos os botões do
-Selecionar deveriam estar acesas e com as bordas corretas"* (noqa-acento: citação
-literal). Quem leu o pedido de 08/09 certo foi esta régua; o que mudou foi o
+Gatilhos (o pedido era deixar o marcado cinza como os demais). Em 29/09 o cinza
+foi revogado: todos os botões do Selecionar ficam acesos e com as bordas corretas.
+Quem leu o pedido de 08/09 certo foi esta régua; o que mudou foi o
 pedido. O que NÃO mudou: numa aba que não escolhe, ninguém se destaca sozinho, e o
 chip não leva a lugar nenhum (sem endereço de clique).
 
-O QUE ELA MEDE, e por que é a COR COMPUTADA
+O QUE A RÉGUA MEDE, e por que é a COR COMPUTADA
 --------------------------------------------
-Ela abre as páginas do DESENHO (``mockup/``, que o gerador reescreve; o publicado
+A régua abre as páginas do DESENHO (``mockup/``, que o gerador reescreve; o publicado
 só muda no ``--publicar`` da costura) num Chrome de verdade e pergunta ao motor o que
 ele desenha. **Nenhuma cor está escrita aqui.** A comparação é entre chips da MESMA
 fita: cada um contra os irmãos, no fundo, na cor do texto e no peso da letra. A borda
@@ -21,8 +20,8 @@ fica de fora de propósito: cada controle leva a do seu plástico.
 Uma régua que lesse o texto do CSS mediria o arquivo que a cura editou, e daria
 verde sobre a própria edição. É a família de defeito que esta casa mais paga.
 
-A prova de que ela ENXERGA o aceso: ``test_o_apagado_tem_outra_cara`` tira o ``on``
-de um chip e exige que a cara mude. Sem ela, «todos iguais» passaria também sobre
+A prova de que a régua ENXERGA o aceso: ``test_o_apagado_tem_outra_cara`` tira o ``on``
+de um chip e exige que a cara mude. Sem essa prova, «todos iguais» passaria também sobre
 uma folha que apagasse tudo.
 
 A MORDIDA
@@ -156,7 +155,7 @@ def test_o_apagado_tem_outra_cara() -> None:
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     alvo = DESENHO / "03-gatilhos.html"
-    assert alvo.is_file(), f"{alvo} sumiu — é a aba em que ela viu o defeito"
+    assert alvo.is_file(), f"{alvo} sumiu — é a aba em que o defeito foi visto"
 
     from playwright.sync_api import sync_playwright
 

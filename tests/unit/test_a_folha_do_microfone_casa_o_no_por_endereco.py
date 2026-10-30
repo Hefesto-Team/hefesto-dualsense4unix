@@ -94,7 +94,7 @@ def test_o_martelo_so_bate_o_que_o_usuario_assumiu_e_a_porta_so_abre_ai(folha, m
 
     monkeypatch.setattr(folha, "Escritor", EscritorDeMentira)
     controle = folha.ControleNaFolha(AlvoDeMentira(MAC_DO_CABO, folha.CABO))
-    assert controle.escritor is None, "a porta abriu antes de ela assumir"
+    assert controle.escritor is None, "a porta abriu antes de a folha assumir"
 
     controle.escrever_byte(0x20)
     for _ in range(5):
@@ -300,7 +300,7 @@ def test_a_folha_diz_com_todas_as_letras_quando_falta_o_par(folha):
 
 
 def test_a_tabela_tem_as_seis_linhas_com_id_unico_e_forma_conhecida(folha):
-    """Pergunta nova é LINHA nova: a folha se monta desta tabela, e só dela."""
+    """Pergunta nova é LINHA nova: a folha se monta desta tabela, e só desta."""
     ids = [linha.id for linha in folha.LINHAS]
     assert len(ids) == len(set(ids)) == 6
     formas = {"leitura", "pedido", "pico", "byte", "campo", "resposta"}

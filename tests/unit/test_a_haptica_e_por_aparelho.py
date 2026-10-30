@@ -3,7 +3,7 @@
 A palavra de 29/09, ~21h55, à pergunta da háptica de P1 a P4: *«todas as
 features são um por aparelho. sempre.»* De 28/09 a 02/10 o endpoint de quatro
 canais era um por LUGAR (a ``D-2909-A-HAPTICA-TEM-UM-ENDPOINT-POR-LUGAR``, que
-ela revogou): o número que andava trocava a ponte e o laço de quem se sentava
+foi revogada): o número que andava trocava a ponte e o laço de quem se sentava
 ali. Agora é um por DualSense da mesa, nos dois transportes, com o nome, a
 âncora e o rótulo DELE; a marca do nome é um resumo da chave do controle, e não
 o rabo do endereço.
@@ -24,7 +24,7 @@ verdade. Os ``uniq`` são da faixa sintética.
 LIMITE DECLARADO: é fiação e conta. Se o Wine aceita o rótulo renovado com o
 fluxo aberto, se o registro de um aparelho ausente quebra algum jogo, e a
 vibração na mão de quem troca de número com o jogo aberto são o passo 0 da
-sprint, de bancada, e são do usuário.
+sprint, de ensaio, e são do usuário.
 """
 
 from __future__ import annotations

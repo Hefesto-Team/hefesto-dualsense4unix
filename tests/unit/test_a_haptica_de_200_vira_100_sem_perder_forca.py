@@ -39,7 +39,7 @@ _QUATRO = tuple(f"aabbcc00000{n}" for n in (1, 2, 3, 4))
 
 def _perfil_velho(pct: int) -> dict[str, object]:
     return {
-        "name": "Bancada",
+        "name": "Ensaio",
         "match": {"type": "any"},
         "controllers": {u: {"rumble": {"haptica_pct": pct}} for u in _QUATRO},
     }
@@ -80,12 +80,12 @@ def test_as_duas_chaves_juntas_sao_recusadas() -> None:
 
 
 def test_o_historico_velho_devolvido_sai_convertido(perfis: Path) -> None:  # noqa: F811
-    save_profile(Profile(name="Bancada", match=MatchAny()))
-    pasta = historico_dir("bancada", ensure=True)
+    save_profile(Profile(name="Ensaio", match=MatchAny()))
+    pasta = historico_dir("ensaio", ensure=True)
     (pasta / "20261001T000000_000000.json").write_text(
         json.dumps(_perfil_velho(200)), encoding="utf-8")
-    restaurar_do_historico("Bancada", "20261001T000000_000000")
-    devolvido = loader_module.load_profile("Bancada")
+    restaurar_do_historico("Ensaio", "20261001T000000_000000")
+    devolvido = loader_module.load_profile("Ensaio")
     rumble = (devolvido.controllers or {})[_QUATRO[0]].rumble
     assert rumble is not None and rumble.haptica == 100
     assert _fator_no_laco(devolvido, _QUATRO[0]) == pytest.approx(2.0)
@@ -120,11 +120,11 @@ def test_o_ipc_de_100_grava_100_e_chega_ao_fator_2(
 
     dono = GanhoDaHaptica()
     monkeypatch.setattr(mod, "GANHO", dono)
-    save_profile(Profile(name="Bancada", match=MatchAny()))
-    corpo = _grava_ipc(_Handlers(ativo="Bancada", primario=BRANCO), uniq=BRANCO,
+    save_profile(Profile(name="Ensaio", match=MatchAny()))
+    corpo = _grava_ipc(_Handlers(ativo="Ensaio", primario=BRANCO), uniq=BRANCO,
                        haptica_pct=100)
     assert corpo["status"] == "ok" and corpo["haptica_pct"] == 100
-    dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[BRANCO]
+    dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[BRANCO]
     assert dele.rumble is not None and dele.rumble.haptica == 100
     assert dono.fator(BRANCO) == pytest.approx(2.0)
     assert dono.pct_que_vale(BRANCO) == 100

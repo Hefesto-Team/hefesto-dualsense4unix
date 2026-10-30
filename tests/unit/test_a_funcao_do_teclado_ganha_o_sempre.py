@@ -138,7 +138,7 @@ def test_a_supressao_do_usuario_cala_o_sempre_com_o_jogo_aberto() -> None:
         _emulation_suppressed=True, _suppress_from_profile=False,
         _dispatch_keyboard_emulation=lambda botoes: chamadas.append(frozenset(botoes)))
     sub_mouse.despachar_no_jogo(daemon, None, frozenset({"cross"}), no_jogo=True)
-    assert chamadas == [], "o teclado digitou com a emulação suspensa por ela"
+    assert chamadas == [], "o teclado digitou com a emulação suspensa pelo clique"
 
     daemon._emulation_suppressed = False
     sub_mouse.despachar_no_jogo(daemon, None, frozenset({"cross"}), no_jogo=True)

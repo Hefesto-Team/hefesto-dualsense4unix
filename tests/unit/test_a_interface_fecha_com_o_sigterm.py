@@ -1,11 +1,11 @@
 """A interface fecha com o SIGTERM e com o SIGHUP, pelo mesmo caminho do «Fechar».
 
-Medido em 19/10/2026 na bancada: um `kill -TERM` no processo da interface escreveu
+Medido em 19/10/2026 no ensaio: um `kill -TERM` no processo da interface escreveu
 `[janela] fechou: sinal SIGTERM` no diário e o processo ficou em `futex_do_wait` até o
 `kill -9`. A linha prova que o tratador correu no laço do GLib; a espera veio depois do
 laço. O «Fechar» e o Alt+F4 sempre saíram, e a diferença entre os caminhos era uma: eles
 destroem a janela (o WebView e o contexto de GL dele) ainda dentro do laço, e o sinal só
-pedia `Gtk.main_quit`, deixando a janela viva para o fim do intérprete. No processo dela o
+pedia `Gtk.main_quit`, deixando a janela viva para o fim do intérprete. No processo da janela o
 WebView tem contexto de GL na placa de vídeo, e o fim do intérprete com ele vivo é onde a
 espera mora; no Xvfb não há esse contexto, e por isso o prazo daqui passa com ou sem a cura.
 
@@ -15,9 +15,9 @@ MORDIDA: voltar o `_chegou_o_sinal` a `anotar_o_fim` + `Gtk.main_quit` (sem pass
 
 O mesmo sinal chega de novo depois do laço, e o processo tem de sair com rc 0. Medido no runner
 ubuntu-26.04 (GLib 2.88) em 28/10/2026, por `strace`: a fonte que devolvia `False` se desligava, a
-GLib voltava o SIGTERM ao `SIG_DFL`, e uma thread dela relançava o sinal pendente com `tgkill`; o
+GLib voltava o SIGTERM ao `SIG_DFL`, e uma thread da GLib relançava o sinal pendente com `tgkill`; o
 `abrir` voltava 0 e o python morria com 143. A GLib 2.80 não relança, e o segundo sinal é o que faz
-a régua morder nela também. MORDIDA: o `_chegou_o_sinal` volta a devolver `False`, e os dois
+a régua morder na 2.80 também. MORDIDA: o `_chegou_o_sinal` volta a devolver `False`, e os dois
 casos do caminho reprovam («o mesmo sinal, depois do laço, matou o processo»).
 
 Tudo roda num filho sob `xvfb-run`, num lar de mentira (HOME, XDG e o barramento de sistema

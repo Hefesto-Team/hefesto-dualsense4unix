@@ -25,8 +25,8 @@ def test_a_trava_le_o_ambiente(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setenv(SEM_JANELA_NA_TELA, "1")
     assert janela_proibida_na_tela() is True, (
-        "a trava não viu a variável — se ela lê o ambiente só na importação, "
-        "toda leva de trabalho volta a abrir janela na tela dela"
+        "a trava não viu a variável — se a trava lê o ambiente só na importação, "
+        "toda leva de trabalho volta a abrir janela na tela de quem usa"
     )
 
     monkeypatch.setenv(SEM_JANELA_NA_TELA, "   ")
@@ -56,7 +56,7 @@ def test_o_construtor_escolhe_a_oculta_quando_o_ambiente_proibe() -> None:
         for dentro in ast.walk(init)
     )
     assert chama, (
-        "o CONSTRUTOR da janela não chama a trava. Ela pode estar definida no "
+        "o CONSTRUTOR da janela não chama a trava. A trava pode estar definida no "
         "módulo e não ser usada — que é a forma preferida desta casa de "
         "fabricar cura de mentira, e o portão `casa-sabe` existe por isso"
     )
@@ -72,7 +72,7 @@ def test_o_construtor_escolhe_a_oculta_quando_o_ambiente_proibe() -> None:
     linha_da_janela = fonte[: fonte.index("self.janela = Gtk.Window(")].count("\n") + 1
     assert linha_da_trava < linha_da_janela, (
         "a trava é consultada DEPOIS de a janela na tela já ter sido "
-        "construída — nesse ponto ela não impede nada"
+        "construída — nesse ponto a trava não impede nada"
     )
 
 
@@ -83,14 +83,14 @@ def test_sem_a_variavel_o_produto_abre_como_sempre() -> None:
     ).read_text(encoding="utf-8")
 
     assert "if not oculta and janela_proibida_na_tela():" in fonte, (
-        "a guarda deixou de exigir as DUAS condições. Sem o `not oculta` ela "
+        "a guarda deixou de exigir as DUAS condições. Sem o `not oculta` a guarda "
         "reescreve o pedido de quem já pediu oculta (inofensivo); sem a "
-        "variável, ela cala a janela do produto (que é o oposto da cura)"
+        "variável, a guarda cala a janela do produto (que é o oposto da cura)"
     )
 
 
 def test_o_visor_recusa_em_vez_de_abrir_escondido() -> None:
-    """`ver.py` existe para ela OLHAR. Escondê-lo devolveria sucesso que mente."""
+    """`ver.py` existe para se OLHAR. Escondê-lo devolveria sucesso que mente."""
     import os
 
     from tests.conftest import repassar_a_falta_do_gtk
@@ -163,7 +163,7 @@ def test_nenhum_teste_mostra_janela_na_importacao() -> None:
 
     assert not culpados, (
         "estes testes mandam MOSTRAR janela no corpo do módulo, e o pytest "
-        "importa todo arquivo só para coletar — a janela aparece na tela dela "
+        "importa todo arquivo só para coletar — a janela aparece na tela de quem usa "
         f"antes de um teste sequer rodar: {culpados}. "
         "Mova para dentro de uma função, ou use `Gtk.OffscreenWindow`."
     )
@@ -181,10 +181,10 @@ def test_o_cenario_de_janela_roda_isolado() -> None:
         fonte = arquivo.read_text(encoding="utf-8")
         assert '"xvfb-run"' in fonte, (
             f"{nome} abre janela de verdade e deixou de rodar sob `xvfb-run` — "
-            "sem display próprio ela nasce NA TELA DELA"
+            "sem display próprio a janela nasce NA TELA DE QUEM USA"
         )
         assert 'ambiente.pop("WAYLAND_DISPLAY", None)' in fonte, (
             f"{nome} deixou de remover o WAYLAND_DISPLAY do subprocesso: com "
-            "ele no ambiente o GTK fala com o compositor dela, e o `xvfb-run` "
+            "ele no ambiente o GTK fala com o compositor de quem usa, e o `xvfb-run` "
             "vira enfeite"
         )

@@ -77,7 +77,7 @@ def test_o_livre_com_ou_sem_modos_nao_diz_que_nao_tem_opcoes(janela: Any, livre:
     assert VAZIO not in html, "a janela diz que não há opções acima do que o Guardar grava"
     assert 'class="mj-faixa"' in html
     assert ("mj-modos" in html) is bool(livre.get("modos"))
-    assert '<div class="ja-opcoes"></div>' not in html, "sem opção, a coluna delas não nasce oca"
+    assert '<div class="ja-opcoes"></div>' not in html, "sem opção, a coluna não nasce oca"
 
 
 def test_sem_nada_a_ajustar_a_janela_diz_que_nao_tem_opcoes(janela: Any) -> None:  # noqa: F811
@@ -133,9 +133,9 @@ def test_a_barra_apagada_nao_e_vermelha() -> None:
     css = (pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
            / "interface" / "experimental" / "experimental.css").read_text(encoding="utf-8")
     regras = re.findall(r"#mod-janela \.mj-trilho\.fora [^{]*\{[^}]*\}", css)
-    assert len(regras) == 2, "a barra apagada e o número dela"
+    assert len(regras) == 2, "a barra apagada e o número da barra"
     rastro = re.findall(r"#mod-janela \.mj-faixa:has\(> \.mj-trilho\.fora\) "
                         r"\.mj-rastro:not\(\.gravando\) polyline \{[^}]*\}", css)
-    assert len(rastro) == 1, "o rastro da barra apagada segue rosa por cima dela"
+    assert len(rastro) == 1, "o rastro da barra apagada segue rosa por cima da barra"
     regras += rastro
     assert all("pink" not in r and "red" not in r and "vermelho" not in r for r in regras)

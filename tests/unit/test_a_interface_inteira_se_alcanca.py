@@ -4,12 +4,12 @@ Três contratos, medidos no Chrome sobre os DESENHOS (`mockup/`), em todas as p�
 
 1. TUDO O QUE O MOUSE ALCANÇA TEM PARADA NO TAB. Todo `data-gesto`, `data-hef-gesto`, link e
    botão visível tem `tabIndex >= 0`: o chip da fita, o grau da régua, a alça de uma coluna.
-2. A NAVEGAÇÃO INTERNA ENXERGA O MESMO QUE O MOUSE. O seletor dela (`NAV_INSTALAR`) pega todo
+2. A NAVEGAÇÃO INTERNA ENXERGA O MESMO QUE O MOUSE. O seletor (`NAV_INSTALAR`) pega todo
    link e botão visível (a barra das abas, o «Voltar» da calibração), e uma tela fechada não
    conta como janela aberta: nenhuma página nasce com `popup` sem caixa dentro, que suprimia o
    R1 e o L1 e deixava a página inteira fora do alcance do controle.
-3. A TELA POR CIMA É UM DIÁLOGO. Aberta por âncora, o foco entra nela, nenhuma caixa da
-   Navegação fica atrás dela, o Tab fica dentro e o Esc fecha.
+3. A TELA POR CIMA É UM DIÁLOGO. Aberta por âncora, o foco entra no diálogo, nenhuma caixa da
+   Navegação fica atrás do diálogo, o Tab fica dentro e o Esc fecha.
 4. O TECLADO ACIONA. Enter e Espaço clicam o gesto que não é botão, e o Esc devolve o foco a
    quem abriu a tela; o O do controle, que fecha pela navegação, também.
 

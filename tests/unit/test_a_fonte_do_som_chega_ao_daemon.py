@@ -1,6 +1,6 @@
 """O-BOTAO-ENTREGA-O-QUE-PROMETE-01 — a camada 1 tem caminho até o aparelho.
 
-**O DEFEITO QUE ESTE ARQUIVO EXISTE PARA MATAR, medido com o ouvido dela** —
+**O DEFEITO QUE ESTE ARQUIVO EXISTE PARA MATAR, medido de ouvido** —
 20/09/2026, 04:30. Os quatro DualSense estavam com o botão do meio da fileira
 da saída de som aceso, e um tom contínuo no sink padrão saiu **só na TV**:
 
@@ -17,7 +17,7 @@ ativo — ou antes de o "Salvar" acontecer — a resposta honesta dele é `{}`, 
 nó fica com `FONTE_PADRAO`, e o clique do usuário não move uma nota de som.
 
 A CURA É UM CAMINHO NOVO, NÃO UM SEGUNDO DONO: `speaker.set` passou a aceitar
-`fonte`, o subsystem guarda a escolha VIVA e ela vence o perfil. O perfil
+`fonte`, o subsystem guarda a escolha VIVA e a escolha viva vence o perfil. O perfil
 continua sendo onde a escolha DURA — as duas gravações não competem, porque a
 de sessão é memória e a de disco é registro.
 
@@ -198,7 +198,7 @@ class _SemVolumeConhecido(_Backend):
 def test_a_recusa_da_posse_nao_leva_a_escolha_da_camada_1_junto(
     sub: AltoFalanteSubsystem,
 ) -> None:
-    """Ela escolhe a fonte e o mudo no mesmo clique; o mudo é recusado."""
+    """Quem usa escolhe a fonte e o mudo no mesmo clique; o mudo é recusado."""
     h = _Handlers(sub)
     h.controller = _SemVolumeConhecido()  # type: ignore[assignment]
 

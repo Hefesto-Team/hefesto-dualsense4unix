@@ -245,7 +245,7 @@ class _Ponte:
 @pytest.fixture
 def janela(lar: Any, ctx: Any, tmp_path: pathlib.Path,  # noqa: F811
            monkeypatch: pytest.MonkeyPatch) -> Any:
-    """Instala extensões de tema com as peças e abre a janela de uma delas."""
+    """Instala extensões de tema com as peças e abre a janela de uma das extensões."""
     a07 = _o_pacote()
     monkeypatch.setattr(a07, "_AGORA", a07._Agora())
     monkeypatch.setattr(a07, "_VIVA", a07._Viva())

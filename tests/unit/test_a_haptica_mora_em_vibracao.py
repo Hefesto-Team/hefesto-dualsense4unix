@@ -1,6 +1,6 @@
 """A háptica mora em Vibração — A-HAPTICA-MORA-EM-VIBRACAO-E-O-ICONE-DO-APP-VOLTA-01 (item 1).
 
-Ela, 04/10/2026: «háptico deveria aparecer na seção de vibração». A háptica são os dois atuadores,
+Decisão de 04/10/2026: a háptica aparece na seção de vibração. A háptica são os dois atuadores,
 mesmo viajando como áudio por dentro. O dono é ``docs/data/pecas-do-dualsense.csv`` (a coluna
 ``regiao``). O mapa do controle deixou de desenhar os sensores e os motores (15/10/2026: a página
 é a tela de configurar os botões), e quem desenha a háptica agora é a aba Vibração.

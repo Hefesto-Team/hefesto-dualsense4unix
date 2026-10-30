@@ -1,11 +1,11 @@
-"""A janela e a bandeja que a troca no fim do jogo reabre nascem fora da unidade dela.
+"""A janela e a bandeja que a troca no fim do jogo reabre nascem fora da unidade da troca.
 
 Queixa de 29/10/2026: a janela mostrava a página velha horas depois do install. Medido no
 `interface.log` e no diário: todo install da noite teve um jogo aberto, então a janela ficou com o
 código velho até a troca no fim do jogo; a troca reabriu a janela às 02:10:32 e às 08:49:29, e a
 unidade `hefesto-troca-no-fim-do-jogo` terminou dois segundos depois, levando junto a janela nova,
-que era filha dela por `Popen`. Sobrava a janela velha que ela abrisse depois, ou nenhuma. Provado
-vivo no mesmo dia: dentro de uma unidade do `systemd-run`, o filho por `Popen` morre com ela, e o
+que era filha da unidade por `Popen`. Sobrava a janela velha aberta depois, ou nenhuma. Provado
+vivo no mesmo dia: numa unidade do `systemd-run`, o filho por `Popen` morre com a unidade, e o
 aberto por `fora_do_servico.abrir` segue de pé.
 
 A régua roda a `recarregar` de verdade, como se estivesse dentro da unidade da troca, com o

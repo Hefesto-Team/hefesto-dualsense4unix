@@ -3,14 +3,14 @@
 A conferência da A-FORJA-VALIDA-O-SOM-01 achou: o endpoint de háptica aparecia
 na lista de saídas de som do sistema como «DualSense <hex6> (háptica)», com o
 rabo do endereço do controle no rótulo — e, com o P3 e o P4 no BT, a célula
-``mapa-audio.saida_dedicada.payload_do_degrau-cabo`` da bancada contava quatro
+``mapa-audio.saida_dedicada.payload_do_degrau-cabo`` do ensaio contava quatro
 placas DualSense onde pede duas.
 
 A DECISÃO, pelo padrão de produto (a forma A de 23/09 vale para
 tudo que o Hefesto publica; nada de endereço na tela), está DIGITADA aqui de
 propósito: «Háptica do Controle N (DualSense Wireless Controller)», com o
 número do jogador, republicado quando o número muda. A régua lê a decisão, não
-o dono: mude o dono sem mudar a decisão e ela reprova.
+o dono: mude o dono sem mudar a decisão e a régua reprova.
 
 A HISTÓRIA DO NÓ, que mudou duas vezes: até 28/09 ele era um por controle no
 rádio, com o nome pelo rabo do endereço; de 28/09 a 02/10 foi um por LUGAR
@@ -24,17 +24,17 @@ O QUE O JOGO LÊ NÃO PODE MUDAR, e a medição está na seção 3: os casamento
 GE-Proton11-7 sobre o ``drv_id`` do endpoint (a descrição), transcritos do
 fonte com os 182 patches ``proton-ds5-haptic`` aplicados, dão o mesmo
 resultado para o rótulo velho e para o novo. A identidade (nome do nó, VID,
-PID, âncora) é a mesma — e é o USB ``054c:0ce6`` dela que faz o nome que o jogo
+PID, âncora) é a mesma — e é o USB ``054c:0ce6`` do nó que faz o nome que o jogo
 lê ser o do produto, com qualquer rótulo.
 
 Nada aqui toca o servidor de som de ninguém: o ``pactl`` é um dublê com estado,
-MAIS estrito que o ``pactl`` de mentira da bancada de tela (aquele aceita tudo
+MAIS estrito que o ``pactl`` de mentira do ensaio de tela (aquele aceita tudo
 calado); os ``uniq`` são da faixa sintética ``aa:bb:cc``.
 
 AS MORDIDAS, uma por afirmação, e cada uma foi vista reprovar:
 
 1. devolva ``device.description='DualSense {marca} (háptica)'`` em
-   ``propriedades_do_endpoint`` → o endereço volta ao rótulo e a bancada conta
+   ``propriedades_do_endpoint`` → o endereço volta ao rótulo e o ensaio conta
    quatro;
 2. tire ``*campos_do_nome()`` de ``propriedades_do_endpoint`` → o ``drv_id``
    do monitor fica com 64 caracteres, sem nome de reserva;
@@ -44,7 +44,7 @@ AS MORDIDAS, uma por afirmação, e cada uma foi vista reprovar:
    renasce debaixo de um jogo aberto;
 5. tire a leitura de ``rotulo_no_ar`` da adoção → o nó que o restart herdou
    nunca perde o nome de antes;
-6. devolva o passo da bancada que só nomeia «Alto-falante do Controle» → a
+6. devolva o passo do ensaio que só nomeia «Alto-falante do Controle» → a
    conta volta a dar quatro;
 7. tire o ``device.product.id`` de ``propriedades_do_endpoint`` → o gravador do
    device KS (``audio_ks_dualsense.endpoints_de_mentira``) deixa de achar o
@@ -566,7 +566,7 @@ def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos: _Assent
 
 
 def test_a_ponte_em_modo_haptica_segura_o_rotulo(mesa: _Mesa, assentos: _Assentos) -> None:
-    """A ponte deste controle mandando a háptica segura o nó — ela lê o monitor dele."""
+    """A ponte deste controle mandando a háptica segura o nó — a ponte lê o monitor dele."""
     from types import MappingProxyType
 
     mesa.volta()

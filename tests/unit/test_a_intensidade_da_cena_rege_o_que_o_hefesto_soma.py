@@ -5,7 +5,7 @@ A-INTENSIDADE-DA-CENA-REGE-O-QUE-O-HEFESTO-SOMA-01 (22/10/2026).
 A energia do som do jogo e as bordas do rumble e do dedo andam por uma média lenta; a intensidade
 cai em calma, tensa ou combate, com histerese e quatro segundos de permanência, e a faixa gradua
 o toque do tiro, o padrão dos motores, o corpo e o ritmo da luz que respira. O par do jogo (o
-degrau do dedo) não muda em faixa nenhuma. A graduação nasce desligada (a bancada liga); aqui ela
+degrau do dedo) não muda em faixa nenhuma. A graduação nasce desligada (o ensaio liga); aqui
 liga por parâmetro. Nada toca o aparelho: o pad, o leitor e o alto-falante são de mentira, o
 motor é o de produção.
 """

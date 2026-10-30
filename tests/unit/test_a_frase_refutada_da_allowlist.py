@@ -1,16 +1,16 @@
-"""O portão da frase que a medição dela derrubou pela metade.
+"""O portão da frase que a medição derrubou pela metade.
 
 *"O Hefesto sai da frente"* — e as irmãs *"sai de cena"*, *"sai do caminho"*,
 *"se cala"* — era como a casa inteira descrevia o que acontece quando um jogo
 entra na allowlist do Steam Input. Em 06/08/2026, das 19:34 às 19:56, com um
-DualSense físico e três jogos abertos, **ela** mediu o contrário da metade que
+DualSense físico e três jogos abertos, a medição mostrou o contrário da metade que
 importa — a sprint `CONTROLE-SONY-MEDIDO-01`, em `docs/process/sprints/`,
 seção *A INVERSÃO*, **grau MEDIDO**:
 
 - o Hefesto **entrega a ENTRADA** — solta o grab, desfaz o esconde-esconde do
   hidraw e recolhe o gamepad virtual, que é o que acaba com o controle dobrado;
 - e **mantém a SAÍDA inteira** — com o Mullet Mad Jack aberto, os gatilhos que
-  ela aplicou seguraram **duros** e o vermelho **dela** ficou na lightbar.
+  foram aplicados seguraram **duros** e o vermelho escolhido ficou na lightbar.
 
 O mecanismo é estrutural, não sorte: os oito chamadores de
 `steam_input_excecao_ativa` estão todos em `daemon/subsystems/gamepad.py`, e
@@ -74,14 +74,14 @@ três, apontando arquivo e linha:
 - ``"os jogos em que o Hefesto sai da frente"`` de volta ao `--help` do
   `gamepad steam-input` -> `cmd_steam.py:10`.
 
-**A quarta arrancada é a que valeu mais**, e ela reprovou o portão antes de
+**A quarta arrancada é a que valeu mais**, e reprovou o portão antes de
 reprovar o código: arrancou-se a **escapatória** (a citação da sprint da
 NOTA DATADA de `daemon_actions.py` foi apagada) e o portão **passou** — porque a marca
 ``"A INVERSÃO"``, comparada sem caixa, casava com o ``"da inversão"`` que a
 paráfrase deixou para trás. A marca frouxa saiu da lista, a arrancada foi
 refeita e aí sim o portão reprovou a nota que explica o defeito
 (`daemon_actions.py:368`). É a metade condicional funcionando: a nota datada só
-vale enquanto **citar** a medição, e não enquanto apenas falar dela.
+vale enquanto **citar** a medição, e não enquanto apenas falar da medição.
 """
 from __future__ import annotations
 
@@ -190,9 +190,9 @@ def test_nenhum_arquivo_do_produto_afirma_que_o_hefesto_sai_da_frente() -> None:
             rel = arquivo.relative_to(RAIZ)
             culpados.append(f"{rel}:{numero}: {trecho!r}")
     assert not culpados, (
-        "a frase que ela refutou em 06/08/2026 voltou ao produto. Na allowlist "
-        "o Hefesto entrega a ENTRADA e MANTÉM A SAÍDA — os gatilhos dela "
-        "seguraram e a cor dela ficou (CONTROLE-SONY-MEDIDO-01, seção A "
+        "a frase refutada em 06/08/2026 voltou ao produto. Na allowlist "
+        "o Hefesto entrega a ENTRADA e MANTÉM A SAÍDA — os gatilhos "
+        "seguraram e a cor ficou (CONTROLE-SONY-MEDIDO-01, seção A "
         "INVERSÃO). Diga o que de fato acontece, ou cite a medição ao lado:\n  "
         + "\n  ".join(culpados)
     )
@@ -206,12 +206,12 @@ def test_nenhum_arquivo_do_produto_afirma_que_o_hefesto_sai_da_frente() -> None:
         "o Hefesto saiu da frente dele, e por isso P2 saiu do co-op",
         "os jogos em que o Hefesto sai da frente",
         "a allowlist é opt-in de 'o Hefesto sai de cena neste jogo'",
-        "nos dois jogos dela o Hefesto sai de cena de propósito",
+        "nos dois jogos o Hefesto sai de cena de propósito",
         "o Hefesto sai do caminho inclusive retirando o gamepad virtual",
         "o jogo da allowlist rodando com o Hefesto fora do caminho",
         "é a lista dos jogos em que o Hefesto se cala",
         "neste jogo o Hefesto para de atuar",
-        "a emulação não foi desligada, ela SAIU DA FRENTE deste jogo",
+        "a emulação não foi desligada, SAIU DA FRENTE deste jogo",
     ],
 )
 def test_o_portao_pega_a_frase_em_todas_as_formas_que_a_casa_escreveu(

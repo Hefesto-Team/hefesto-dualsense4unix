@@ -20,7 +20,7 @@ o caminho de erro, e é ele que prova que uma leitura que FALHOU não apaga a
 lista boa — a confusão que esta casa chama de *ausência de notícia lida como
 sucesso*.
 
-**SEM APARELHO NA BANCADA.** Não havia Nintendo Pro nem 8BitDo na mesa em
+**SEM APARELHO NO ENSAIO.** Não havia Nintendo Pro nem 8BitDo na mesa em
 06/09/2026 (medido em `/sys/bus/hid/devices`: só `054C:0CE6` e `054C:0DF2`,
 os dois Sony). A prova de aparelho fica para a `MESA-DE-QUATRO-01`; o que se
 mede aqui é o caminho inteiro do payload até o HTML, com o payload que o daemon
@@ -130,7 +130,7 @@ def test_a_jogar_apaga_a_secao_quando_nao_ha_externo() -> None:
     A MORDIDA: devolva `""` em qualquer um dos DOIS `return` de
     `_html_dos_externos` e esta régua reprova. **São dois de propósito** — a
     saída curta (`if not ctx.externos`) é o caminho que a máquina do usuário percorre,
-    e curar só o de baixo deixa o travessão exatamente onde ela o viu. Foi o que
+    e curar só o de baixo deixa o travessão exatamente onde foi visto. Foi o que
     aconteceu na primeira volta desta cura.
     """
     import monta
@@ -162,7 +162,7 @@ def test_a_jogar_avisa_a_armadilha_do_driver_so_no_nintendo() -> None:
 
 
 def test_a_jogar_nao_inventa_cor_de_plastico_para_o_externo() -> None:
-    """A folha das 28 cores é dos DualSense — um 8BitDo não tem linha nela.
+    """A folha das 28 cores é dos DualSense — um 8BitDo não tem linha na folha.
 
     Uma borda colorida aqui seria a tela afirmando um modelo que ninguém mediu,
     que é a mesma regra que faz `_cor_do_plastico` devolver `""`.
@@ -215,7 +215,7 @@ def test_as_duas_abas_dizem_a_mesma_coisa_do_mesmo_aparelho() -> None:
 
 
 def test_as_duas_paginas_do_ensaio_tem_onde_escrever() -> None:
-    """O `data-campo` com alvo `html` está nas duas páginas da bancada."""
+    """O `data-campo` com alvo `html` está nas duas páginas do ensaio."""
     for arquivo, campo, publicado in (("01-jogar.html", "externos", True),
                                       ("08-conexoes.html", "externos-lista", False)):
         texto = onde.pagina(arquivo, publicado=publicado).read_text()
@@ -328,7 +328,7 @@ def test_a_resposta_sem_a_chave_external_esvazia_a_lista() -> None:
 
 
 def test_o_contexto_do_tique_carrega_os_externos_lidos() -> None:
-    """**A MORDIDA QUE FALTAVA, e ela reprovou a primeira régua desta sprint.**"""
+    """**A MORDIDA QUE FALTAVA, que reprovou a primeira régua desta sprint.**"""
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     p = _PilotoDeMentira()

@@ -233,7 +233,7 @@ def test_r2_a_diferenca_desce_chave_a_chave() -> None:
 
 
 def test_r2_a_carga_inteira_sai_a_cada_dez_tiques() -> None:
-    """Parada, a aba recebe a carga inteira de 10 em 10 tiques, e nada entre elas."""
+    """Parada, a aba recebe a carga inteira de 10 em 10 tiques, e nada entre as cargas."""
     _eu, mandar = _mandador()
     carga = {"mesa": {"a": "1"}, "fita": "", "alvo": ""}
     saidas = [mandar(copy.deepcopy(carga)) for _ in range(40)]

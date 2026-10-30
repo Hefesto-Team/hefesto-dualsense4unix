@@ -2,7 +2,7 @@
 
 A trava da lista de exclusão que não veio no prazo é uma resposta, e quem chama
 a recebe com a causa: a carona diz «a trava não veio» (não «não havia
-lançador»), a janela espera o prazo dela, e a lista devolve `"ocupada"` e
+lançador»), a janela espera o prazo da trava, e a lista devolve `"ocupada"` e
 `"ilegivel"` em vez de um `"erro"` só. Outro processo segura a trava de verdade.
 """
 from __future__ import annotations
@@ -195,7 +195,7 @@ def test_a_carona_com_a_trava_escreve_e_diz_onde(_lar: Path) -> None:
 
 def test_o_servico_le_a_carona_como_sequencia(
         _lar: Path, _trava_presa: subprocess.Popen[str]) -> None:
-    """O `list(estradas)` do diário do serviço segue valendo, com a trava e sem ela."""
+    """O `list(estradas)` do diário do serviço segue valendo, com a trava e sem a trava."""
     assert isinstance(cpe.curar_todas_as_estradas(espera=0.2), tuple)
     assert list(cpe.curar_todas_as_estradas()) == []
 

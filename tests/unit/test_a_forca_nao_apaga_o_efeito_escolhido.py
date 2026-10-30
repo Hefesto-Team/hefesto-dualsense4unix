@@ -30,7 +30,7 @@ def _perfil(rumble_global: str = "balanceado", **dele: Any) -> Any:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     return Profile.model_validate({
-        "name": "Bancada",
+        "name": "Ensaio",
         "match": {"type": "criteria"},
         "rumble": {"policy": rumble_global},
         "controllers": {CHAVE: {"rumble": dele}},

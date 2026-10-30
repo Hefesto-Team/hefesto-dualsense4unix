@@ -189,7 +189,7 @@ def test_o_montador_do_bloqueio_continua_tendo_um_dono_so() -> None:
         f"{_MONTADOR} deixou de montar o `bloqueio` por ramos ({dentro}) — a "
         "régua deste portão presume que é ele quem decide o valor. Se a "
         "decisão mudou de dono outra vez, reaponte `_MONTADOR` para o novo; "
-        "se ela se ESPALHOU por dois lugares, o defeito é esse, e é o que "
+        "se a decisão se ESPALHOU por dois lugares, o defeito é esse, e é o que "
         "esta asserção existe para pegar."
     )
 

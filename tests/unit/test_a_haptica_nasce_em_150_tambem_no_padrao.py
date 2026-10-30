@@ -1,7 +1,7 @@
 """A-HAPTICA-NASCE-EM-150-TAMBEM-NO-PADRAO-01 (22/10/2026): no Padrão a háptica chega ao fator 1,5.
 
 A escolha do usuário nas perguntas do chat: «150% também no Padrão». O ganho que vale em Padrão é o
-de fábrica (`HAPTICA_PCT_PADRAO`), e não mais o fator 1,0 de antes; o que ela guardou na barra
+de fábrica (`HAPTICA_PCT_PADRAO`), e não mais o fator 1,0 de antes; o que se guardou na barra
 espera, como as barras dos motores, e volta com a Economia ou o Máximo. Desde 27/10/2026 a barra
 vai de 0 a 100 e o fator 1,5 é o 75 (D-2710-A-HAPTICA-VAI-DE-0-A-100-COM-O-MESMO-FATOR).
 

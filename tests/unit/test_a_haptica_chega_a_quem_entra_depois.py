@@ -612,7 +612,7 @@ def test_os_endpoints_de_nome_velho_caem_na_primeira_volta(mesa: _Mesa) -> None:
 
 
 def test_o_endpoint_do_ensaio_nao_e_orfao(mesa: _Mesa) -> None:
-    """O nó que a bancada montou pelo ensaio não é resto de processo nenhum."""
+    """O nó que o ensaio montou pelo ensaio não é resto de processo nenhum."""
     props = " ".join(f"{k}={v}" for k, v in _SONY.items())
     mesa.servidor(["pactl", "load-module", "module-null-sink",
                    f"sink_name={eh.MOLDE_DO_NOME.format(marca='0000c9')}", "channels=4",
@@ -949,7 +949,7 @@ def test_o_p1_que_espera_o_posto_fica_com_o_endpoint_e_o_laco_religa(
 
     O pad do P1 só desce por ``stop_gamepad_emulation``; com o jogo, o posto
     espera o aparelho (``coop.o_posto_do_p1_espera``) e o gadget segue registrado
-    nele. É a mesma identidade que o jogo guardou, e o endpoint fica com ela,
+    nele. É a mesma identidade que o jogo guardou, e o endpoint fica com a mesma,
     como o do estacionado: P1 a P4, sem ramo de jogador.
 
     MORDIDA: a mesma do cabo (``a_porta_e_dele`` fora de ``_aparelhos_de_pe``).

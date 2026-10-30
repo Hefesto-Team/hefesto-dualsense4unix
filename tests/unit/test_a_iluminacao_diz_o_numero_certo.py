@@ -26,12 +26,12 @@ AS RÉGUAS DAQUI, e cada uma nasceu de uma coisa que a tela fazia:
 3. o brilho chega com o ``%``, porque a caixa ao lado da barra é de texto;
 4. a fileira dos quatro números é viva, e a dica não nomeia controle que não
    está na mesa;
-5. a célula LEDs é um DESENHO — a palavra ``Aceso`` escrita nela apagava as duas
+5. a célula LEDs é um DESENHO — a palavra ``Aceso`` escrita na célula apagava as duas
    tiras e as cinco lâmpadas, e foi fotografado na tela do usuário em 02/09/2026;
 6. a tira APAGADA não acende: um ``color:`` vazio deixava o halo
    ``currentColor`` herdar o ``--fg`` e a barra desligada saía BRANCA, mais
    forte que a acesa;
-7. a fileira tem ONZE casas e nenhuma porta de cor fora dela — 11/09/2026,
+7. a fileira tem ONZE casas e nenhuma porta de cor fora da fileira — 11/09/2026,
    ordem de produto. O que morava aqui era a régua do seletor de cores do sistema
    (*ABRIR não é APLICAR*): ele saiu da guia, e com ele a segunda porta do
    gesto ``cor``. A medição que o justificava não se perdeu — mora na docstring
@@ -147,7 +147,7 @@ def test_a_barra_recebe_numero_e_a_caixa_recebe_texto():
     O D7 fotografado em 02/09 tem duas metades: a caixa dizia `1` (o `1.0` do
     disco escrito cru) e o `100` era impresso DENTRO do trilho, porque a página
     não trazia `data-hef-alvo="largura"`. Esta régua guarda a primeira metade; a
-    segunda é o atributo, e ela mora na régua do desenho.
+    segunda é o atributo, que mora na régua do desenho.
     """
     import pacotes
 
@@ -156,7 +156,7 @@ def test_a_barra_recebe_numero_e_a_caixa_recebe_texto():
     col = pacotes.pacote_da_pagina("04-iluminacao.html", ctx)["colunas"][DO_RADIO["uniq"]]
     assert not isinstance(col["brilho-pct"], str), (
         "a largura da barra tem de ser número: o JS escreve `t + '%'`.")
-    assert isinstance(col["brilho"], str), "a caixa é texto, e o `%` é dela."
+    assert isinstance(col["brilho"], str), "a caixa é texto, e o `%` é da caixa."
 
 
 def _dica_do_botao(fileira: str, n: int) -> str:
@@ -210,9 +210,9 @@ def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
     A MORDIDA: troque `n > quantos` por `False` em `um_botao_de_player` e as
     três linhas abaixo reprovam com a dica "— livre." de volta.
 
-    A DICA DIZ SÓ O NÚMERO DESDE 13/09/2026 (FRASES-E-DICAS-01). Até ali ela
+    A DICA DIZ SÓ O NÚMERO DESDE 13/09/2026 (FRASES-E-DICAS-01). Até ali a dica
     colava a frase da recusa, e a mesma frase chegava à tela como dica flutuante
-    e como a caixa laranja da foto dela no índice da leva
+    e como a caixa laranja da foto no índice da leva
     (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19). O cinza e o
     `aria-disabled` dizem que o número não cabe.
     """
@@ -223,7 +223,7 @@ def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
         assert f'data-player="{n}" data-dica="Player {n}">' in fileira, (
             f"o botão {n} fora da mesa não diz só o número: {fileira}")
     assert _MOTIVOS_NUMERO["numero_fora_da_mesa"] not in fileira, (
-        "a frase da recusa voltou à dica do número fora — ela chegaria à tela "
+        "a frase da recusa voltou à dica do número fora — chegaria à tela "
         "como dica flutuante")
     assert fileira.count('class="fora" aria-disabled="true"') == 3, (
         "os três botões fora da mesa têm de se LER apagados, e não só na dica: "
@@ -233,7 +233,7 @@ def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
 
 
 def test_com_a_mesa_cheia_nenhum_numero_fica_fora(colunas):
-    """A GUARDA da cura acima — sem ela, apagar botões seria a correção EXCESSIVA."""
+    """A GUARDA da cura acima — sem a guarda, apagar botões seria a correção EXCESSIVA."""
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
 
     fileira = colunas()[DO_RADIO["uniq"]]["players"]
@@ -296,7 +296,7 @@ def test_o_html_publicado_e_o_ensaio_concordam_sobre_o_endereco():
     publicado = onde.pagina("04-iluminacao.html", publicado=True).read_text(
         encoding="utf-8")
     piso, teto = len(monta.CONECTADOS), len(monta.MESA)
-    for lado, texto in (("bancada", ensaio), ("publicado", publicado)):
+    for lado, texto in (("ensaio", ensaio), ("publicado", publicado)):
         for quem, agulha in (
                 ("a fileira de jogador", 'data-campo="players" data-hef-alvo="html"'),
                 ("a barra de brilho", 'data-campo="brilho-pct" data-hef-alvo="largura"')):
@@ -304,14 +304,14 @@ def test_o_html_publicado_e_o_ensaio_concordam_sobre_o_endereco():
             assert piso <= n <= teto, (
                 f"o {lado} tem {quem} endereçada em {n} lugar(es); a mesa tem "
                 f"{piso} conectado(s) e {teto} lugares. Abaixo do piso, o dado "
-                f"dela chega e não tem onde pousar; acima do teto, há endereço "
+                f"do lugar chega e não tem onde pousar; acima do teto, há endereço "
                 f"repetido.")
         assert 'data-campo="player-1"' not in texto, (
             f"o {lado} ficou com os dois endereços: o da fileira e os dos "
             f"botões. Dois donos para o mesmo lugar é o que este projeto "
             f"persegue.")
     assert ensaio.count('data-campo="brilho-pct" data-hef-alvo="largura"') == teto, (
-        "a bancada deixou de endereçar a barra de brilho nos quatro lugares — "
+        "o ensaio deixou de endereçar a barra de brilho nos quatro lugares — "
         "o lugar que ganha um controle volta a não ter onde pousar o brilho")
 
 
@@ -329,7 +329,7 @@ def test_a_luz_e_desenho_e_nao_palavra(colunas):
 
 
 def test_o_endereco_da_luz_esta_nas_duas_paginas():
-    """`luz` na bancada E no publicado — **a espera acabou em 02/09/2026**.
+    """`luz` no ensaio E no publicado — **a espera acabou em 02/09/2026**.
 
     O QUE ESTE TESTE COBRAVA, e o próprio texto dele mandava apagar no dia em
     que acontecesse: enquanto o produto dissesse `data-campo="aceso"`, o pacote
@@ -337,7 +337,7 @@ def test_o_endereco_da_luz_esta_nas_duas_paginas():
     desenho. Ele exigia, com todas as letras, `'data-campo="luz"' not in
     publicado`.
 
-    **ELA PUBLICOU** (`6f289554`, *"o usuário mandou publicar as sete"*), e o
+    **FOI PUBLICADO** (`6f289554`, as sete páginas), e o
     publicado passou a ter o endereço novo. A asserção da espera ficou VERMELHA
     no `dev` desde então — medido em 03/09/2026, antes de qualquer mudança
     desta frente: `grep -c 'data-campo="luz"' paginas/04-iluminacao.html` = 2.
@@ -349,7 +349,7 @@ def test_o_endereco_da_luz_esta_nas_duas_paginas():
     o gerador, e a primeira asserção reprova.
 
     E A CONTA DEIXOU DE SER `== 2` EM 07/09/2026, pela mesma razão de
-    `test_o_html_publicado_e_o_ensaio_concordam_sobre_o_endereco`: a bancada e
+    `test_o_html_publicado_e_o_ensaio_concordam_sobre_o_endereco`: o ensaio e
     o publicado andam em gerações diferentes, e desde a função única do
     `aba04.py` o lugar que nasce vazio também carrega o endereço da luz. O que
     vale nos dois lados é o piso (toda coluna conectada) e o teto (a mesa).
@@ -359,7 +359,7 @@ def test_o_endereco_da_luz_esta_nas_duas_paginas():
 
     piso, teto = len(monta.CONECTADOS), len(monta.MESA)
     for onde_esta, doc in (
-            ("a bancada", onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")),
+            ("o ensaio", onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")),
             ("o publicado", onde.pagina("04-iluminacao.html", publicado=True)
              .read_text(encoding="utf-8"))):
         n = doc.count('data-campo="luz" data-hef-alvo="html"')
@@ -394,11 +394,11 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
 
     ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     assert ensaio.count('data-campo="tons" data-hef-alvo="html"') == 4, (
-        "a guia de cores voltou a não ter endereço de estado — ou ela deixou "
+        "a guia de cores voltou a não ter endereço de estado — ou a guia deixou "
         "de nascer nos QUATRO lugares, e o P3 que ganha um controle volta a "
         "ficar sem onde trocar a cor.")
     assert ensaio.count('class="tom') == 4 * len(pac.tons_da_guia()), (
-        "a bancada e `tons_da_guia()` discordam sobre quantos tons a guia tem")
+        "o ensaio e `tons_da_guia()` discordam sobre quantos tons a guia tem")
 
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
@@ -414,7 +414,7 @@ def test_o_ensaio_perdeu_a_dica_congelada_da_celula_de_leds():
     assert '<div class="aceso" data-campo="luz" data-hef-alvo="html">' in ensaio, (
         "a célula de LEDs voltou a carregar atributo cravado pelo gerador.")
     assert " aceso:" not in ensaio, (
-        "a palavra que ela mandou tirar voltou ao desenho.")
+        "a palavra tirada por decisão de produto voltou ao desenho.")
     import monta
     from pacotes import a04_iluminacao as pac
 
@@ -451,7 +451,7 @@ def test_um_numero_que_o_ensaio_nunca_teve_nao_congela_a_aba():
     dicionário: medido em 02/09/2026, `monta.luzinhas(9)` → `KeyError: 9`.
 
     Enquanto só o gerador a chamava o número era 1..4 e ninguém via. Uma
-    exceção aqui não deixaria de pintar UM campo: ela derrubaria a pintura da
+    exceção aqui não deixaria de pintar UM campo: derrubaria a pintura da
     aba inteira. Sem padrão conhecido o indicador sai VAZIO, que é o honesto.
     """
     import monta
@@ -513,7 +513,7 @@ def test_a_tira_nao_acende_sob_steam_e_no_nativo_mostra_a_cor(colunas):
 
     `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base é a
     ÚLTIMA COR CONHECIDA — devolvida **também** no estado em que o próprio
-    motor avisa que ela pode não estar no plástico::
+    motor avisa que a cor pode não estar no plástico::
 
         lightbar_disputada  → ("a Steam tem este controle aberto", rgb)
 
@@ -604,7 +604,7 @@ def test_a_frase_da_disputa_e_a_do_motor(colunas):
     """`recado` vem de `controller_card.rotulo_lightbar`, e não da mão.
 
     O texto que estava aqui dizia *"A Steam tem este controle aberto: a cor
-    publicada é a PEDIDA…"* — escrito à mão, quando o motor já tem a frase e ela
+    publicada é a PEDIDA…"* — escrito à mão, quando o motor já tem a frase e a frase
     é constante (`ROTULO_LIGHTBAR_SEGURADA`) justamente para que o teste possa
     cobrar a propriedade em vez de decorar o texto.
     """
@@ -625,7 +625,7 @@ def test_o_recado_conhece_os_estados_que_a_mao_nao_conhecia(colunas):
     numa cor conhecida, o Nativo não tem o que ressalvar.
 
     ONDE A FRASE MORA, desde 02/09/2026: no `title` das TRÊS peças do desenho,
-    dentro do `luz`. Ela era emitida num `data-campo="recado"` que NENHUMA das
+    dentro do `luz`. A frase era emitida num `data-campo="recado"` que NENHUMA das
     duas páginas tem — o único órfão que o `casamento.py` acusava nesta aba, e
     invisível à régua do mockup, que varre os endereços do ARQUIVO.
 
@@ -695,8 +695,8 @@ def test_o_botao_por_controle_do_automatico_saiu_com_o_widget():
 
     assert pacotes.gesto_da_pagina("04-iluminacao.html", "auto") is None, (
         "o gesto do botão POR CONTROLE voltou ao pacote sem o widget que o "
-        "oferecia — ela mandou tirar os dois botões do automático em "
-        "07/09/2026, e a poda acompanha a peça")
+        "oferecia — a decisão de 07/09/2026 tirou os dois botões do automático, "
+        "e a poda acompanha a peça")
 
     mudo = {k: v for k, v in DO_CABO.items() if k != "lightbar_rgb"}
     ctx = pacotes.Contexto(state={"active_profile": "regua"}, mesa=list(MESA),
@@ -745,7 +745,7 @@ def test_o_hex_torto_recusa_com_a_razao_do_motor():
 
 
 def test_a_casa_hachurada_saiu_e_o_gesto_nao_aceita_cor_sem_tom():
-    """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, ordem de produto."""
+    """A segunda porta do gesto `cor` morreu inteira — 11/09/2026, decisão do produto."""
     import onde
 
     ensaio = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
@@ -921,7 +921,7 @@ def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
         assert outra in str(p.erro), (
             f"o gesto {gesto!r} disse {str(p.erro)!r} com o motor dizendo "
             f"outra coisa — a frase foi COPIADA para dentro do pacote, e no "
-            f"dia em que a GTK mudar a dela as duas telas divergem.")
+            f"dia em que a GTK mudar a frase as duas telas divergem.")
 
 
 def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
@@ -980,10 +980,10 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
                 f"página desfaz.")
     assert doc.count('<span class="nada">—</span>\n          </div>') >= 2, (
         "a célula `Opções` da coluna viva perdeu o travessão escondido: quando "
-        "ela esvaziar, a linha fica em BRANCO enquanto o P3 e o P4 mostram —.")
+        "a célula esvaziar, a linha fica em BRANCO enquanto o P3 e o P4 mostram —.")
     assert '.luz-grade .ctrl[data-conectado="sim"] .cel-acoes .nada{display:none}' in doc, (
         "a regra que esconde o travessão da coluna VIVA sumiu, ou voltou a "
-        "medir o NASCIMENTO: sem ela o lugar que ganha um controle mostra o "
-        "travessão ao lado dos dois botões, e sem a ressalva ela apaga o "
+        "medir o NASCIMENTO: sem a regra o lugar que ganha um controle mostra o "
+        "travessão ao lado dos dois botões, e sem a ressalva a regra apaga o "
         "travessão do P3/P4 parados — as duas regressões, medidas em 03/09 e "
         "em 07/09/2026.")

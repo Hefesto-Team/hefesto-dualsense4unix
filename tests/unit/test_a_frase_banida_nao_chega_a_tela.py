@@ -128,11 +128,11 @@ def test_a_trava_da_pintura_so_sobe_depois_da_carga_serializada() -> None:
 
 
 def test_a_guarda_estatica_continua_de_pe_e_le_a_lista() -> None:
-    """E ela não pode voltar a DIGITAR a lista — foi assim que divergiu."""
+    """E a guarda não pode voltar a DIGITAR a lista — foi assim que divergiu."""
     fonte = (INTERFACE / "aba01.py").read_text(encoding="utf-8")
     assert "for frase in FRASES_BANIDAS:" in fonte, (
         "o `_conferir` voltou a digitar as frases; com duas cópias, uma "
-        "quarta frase banida entraria só numa delas."
+        "quarta frase banida entraria só numa das cópias."
     )
     for frase in FRASES_BANIDAS:
         assert re.search(rf'"{re.escape(frase)}"[,)]', fonte) is None, (
@@ -158,20 +158,20 @@ def test_nenhuma_banida_vive_no_fonte() -> None:
         "frase banida VIVA no fonte — NENHUM ALARME SEM MEDIÇÃO:\n  "
         + "\n  ".join(achados)
         + "\n\nAs duas isenções são declaradas no topo deste arquivo, com a "
-        "razão de cada uma. Uma terceira precisa da palavra dela."
+        "razão de cada uma. Uma terceira precisa de decisão do produto."
     )
 
 
 def test_a_guarda_do_fonte_reprova_o_dono_da_lista_sem_a_isencao() -> None:
-    """A MORDIDA da guarda nova, e ela é feita, não afirmada."""
+    """A MORDIDA da guarda nova, feita, não afirmada."""
     sem_isencao = _ocorrencias_no_fonte(isentos_inteiros={})
     dono = [a for a in sem_isencao if a.startswith(
         "src/hefesto_dualsense4unix/interface/frases_banidas.py:")]
     achadas = {a.split(" literal ")[1] for a in dono if " literal " in a}
     assert achadas == {repr(f) for f in FRASES_BANIDAS}, (
         f"sem a isenção a régua achou {sorted(achadas)} como literal no dono "
-        f"da lista, e a lista tem {list(FRASES_BANIDAS)}. Se ela não acha nem "
-        f"o dono, ela não está lendo os literais de ninguém.\n  "
+        f"da lista, e a lista tem {list(FRASES_BANIDAS)}. Se a régua não acha nem "
+        f"o dono, não está lendo os literais de ninguém.\n  "
         + "\n  ".join(dono)
     )
 
@@ -186,7 +186,7 @@ FRASE_DO_GERADOR = "os gatilhos ficam duros como no PS5."
 
 
 def test_o_buraco_do_terceiro_trecho_estava_aberto_e_fechou() -> None:
-    """A MORDIDA do passo 3, e ela mede o buraco em vez de contá-lo."""
+    """A MORDIDA do passo 3, que mede o buraco em vez de contá-lo."""
     lista_velha = ("derrubam o controle", "resultado é ZERO", "duros como no PS5")
 
     def busca(frases: tuple[str, ...], texto: str) -> str | None:

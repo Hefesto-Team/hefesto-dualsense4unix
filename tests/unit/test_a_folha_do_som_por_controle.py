@@ -272,7 +272,7 @@ def test_listar_nao_abre_no_nem_escreve_byte(folha, espiao, capsys):
 
 def test_oculta_nao_abre_no_e_imprime_a_forma_de_toda_linha(folha, espiao, capsys):
     assert folha.main(["--oculta"]) == 0
-    assert espiao == [], "a régua abriu porta no aparelho — ela roda sem ela na frente"
+    assert espiao == [], "a régua abriu porta no aparelho — a régua roda sem o aparelho na frente"
     saida = capsys.readouterr().out
     for linha in folha.LINHAS:
         assert f"LINHAS PROPOSTAS — {linha.titulo}" in saida
@@ -280,7 +280,7 @@ def test_oculta_nao_abre_no_e_imprime_a_forma_de_toda_linha(folha, espiao, capsy
 
 
 def test_a_porta_abre_na_primeira_escrita_e_nunca_no_construtor(folha, monkeypatch):
-    """A cura de (6), medida onde ela mora: a `Coluna` nasce sem porta."""
+    """A cura de (6), medida onde mora: a `Coluna` nasce sem porta."""
     pedidos: list[str] = []
 
     class _No:

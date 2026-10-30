@@ -392,7 +392,7 @@ class TestNenhumaJanelaPodeNascerDaqui:
         assert not achadas, f"o backend passou a poder desenhar: {achadas}"
 
     def test_a_unica_interface_que_ele_liga_e_a_do_cosmic(self) -> None:
-        """Uma ligação, e ela está declarada numa constante só."""
+        """Uma ligação, declarada numa constante só."""
         assert cosmic_toplevel._INTERFACE == "zcosmic_toplevel_info_v1"
         codigo = _codigo_sem_prosa(_FONTE)
         assert codigo.count("_WL_REGISTRY_BIND") == 2
@@ -500,7 +500,7 @@ class TestADesculpaDoDoctorCaiu:
         assert "Limitação do compositor (COSMIC exigiria" not in texto
 
     def test_o_doctor_pergunta_pelo_protocolo_do_cosmic(self) -> None:
-        """Não basta tirar a desculpa: tem de haver a MEDIÇÃO no lugar dela."""
+        """Não basta tirar a desculpa: tem de haver a MEDIÇÃO no lugar da desculpa."""
         doctor = _FONTE.parents[4] / "scripts" / "doctor.sh"
         texto = doctor.read_text(encoding="utf-8")
         assert "window_backends.cosmic_toplevel" in texto

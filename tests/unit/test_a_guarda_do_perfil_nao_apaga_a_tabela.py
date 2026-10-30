@@ -101,7 +101,7 @@ def _perfil_de_regua() -> Any:
     O DISCO NÃO SERVE, e a medição é de 02/09/2026: no lar de mentira do
     `conftest.py`, `load_all_profiles()` devolve **zero** perfis nesta suíte —
     a semeadura dos presets não roda aqui. (A nota em `a10_perfis.PROVAS`
-    afirma nove; ela vale no processo em que a semeadura já correu, não neste.)
+    afirma nove; vale no processo em que a semeadura já correu, não neste.)
     Uma régua que dependesse disso daria verde por vacuidade: sem perfil,
     `pacote_da_aba` devolve `guarda=[]` e a tabela nunca é medida.
     """

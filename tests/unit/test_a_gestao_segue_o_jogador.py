@@ -22,8 +22,8 @@ tela, e este arquivo guarda as três.
 
 POR QUE NUM WEBKIT DE VERDADE: quem decide qual chip acende é a cascata, com
 `:has()` e `:checked`, e reimplementá-la em Python seria medir a reimplementação.
-A pergunta vai ao `getComputedStyle` do mesmo WebKitGTK que a janela dela usa,
-numa `Gtk.OffscreenWindow` (ela tem UMA tela).
+A pergunta vai ao `getComputedStyle` do mesmo WebKitGTK que a janela usa,
+numa `Gtk.OffscreenWindow` (a máquina tem UMA tela).
 
 A RÉGUA NÃO DIGITA A MESA: o estado do daemon passa pelos donos do produto —
 `mesa_viva.mesa_do_estado` (quem é `p3`), `a08_conexoes._alvo_de_saida` (qual
@@ -39,7 +39,7 @@ MORDIDAS (todas rodadas em 24/09/2026):
 * a mordida da posição também roda DENTRO da régua, na mesma ida ao motor
   (:func:`test_a_regua_morde_a_regra_por_posicao`): as regras da página saem e
   entram as de antes, e o mesmo roteiro tem de acusar;
-* devolva «no rádio»/«no cabo» a uma frase da 08, ou a um dos donos que ela
+* devolva «no rádio»/«no cabo» a uma frase da 08, ou a um dos donos que a 08
   pinta, e o caso daquela frase reprova nomeando-a — inclusive o aviso do
   externo Nintendo no BT (`external_controllers.nintendo_bt_warning`), que a
   conferência achou fora da lista medida;
@@ -104,7 +104,7 @@ def _estado(jogadores: tuple[int, ...], alvo: int | str) -> dict[str, Any]:
 
 
 def _cenas() -> list[dict[str, Any]]:
-    """As 47 cenas: toda mesa não vazia dos quatro lugares, com cada alvo dela."""
+    """As 47 cenas: toda mesa não vazia dos quatro lugares, com cada alvo da mesa."""
     from hefesto_dualsense4unix.interface import mesa_viva, monta
     from hefesto_dualsense4unix.interface.pacotes import Contexto, a08_conexoes
 
@@ -213,7 +213,7 @@ def _confere(cena: dict[str, Any], lida: dict[str, Any]) -> str | None:
 
 @pytest.fixture(scope="module")
 def medido() -> dict[str, Any]:
-    """Abre a bancada num WebKit offscreen, instala o pintor e roda as cenas."""
+    """Abre o ensaio num WebKit offscreen, instala o pintor e roda as cenas."""
 
     exigir_gi_real("a Gestão da 08 no WebKit")
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
@@ -274,7 +274,7 @@ def medido() -> dict[str, Any]:
 
 
 def test_o_chip_aceso_e_o_do_jogador_aberto_em_toda_mesa(medido: dict[str, Any]) -> None:
-    """As 47 cenas: cada mesa não vazia dos quatro lugares, com cada alvo dela."""
+    """As 47 cenas: cada mesa não vazia dos quatro lugares, com cada alvo da mesa."""
     queixas = [q for c, lida in zip(medido["cenas"], medido["lido"], strict=True)
                if (q := _confere(c, lida))]
     assert not queixas, "\n".join(queixas)
@@ -393,11 +393,11 @@ def test_a_pagina_nao_nomeia_o_transporte_na_lingua_do_mapa() -> None:
 
 
 def test_a_frase_de_fora_da_posse_continua_la() -> None:
-    """A exceção de posse só vale enquanto a frase existe: curada, ela sai daqui."""
+    """A exceção de posse só vale enquanto a frase existe: curada, a frase sai daqui."""
     texto = " ".join(_frases_da_pagina()).lower()
     for frase in DE_OUTRA_POSSE:
         assert frase in texto, (
-            f"«{frase}» saiu da 08 — tire-a de `DE_OUTRA_POSSE`, que ela não "
+            f"«{frase}» saiu da 08 — tire-a de `DE_OUTRA_POSSE`, que a frase não "
             f"precisa mais de exceção")
 
 
@@ -501,7 +501,6 @@ _A_PROIBICAO_QUE_CAIU = (
     "mandou um byte de áudio por rádio",
     "não escrever, em lugar nenhum",
     "não funciona, e não há ponte",
-    "até a orelha dela decidir",
 )
 
 

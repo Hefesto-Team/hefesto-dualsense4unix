@@ -20,7 +20,7 @@ def _folha() -> str:
 
 
 def test_a_folha_ainda_declara_o_recuo() -> None:
-    """A premissa da conta. Sem ela, o resto mede o próprio palpite."""
+    """A premissa da conta. Sem a premissa, o resto mede o próprio palpite."""
     assert _RECUO.search(_folha()), (
         "`--recuo-do-corpo` sumiu da folha comum — a conta da altura da janela "
         "mudou de forma, e esta régua está medindo o mundo de ontem")
@@ -44,5 +44,5 @@ def test_toda_aba_carrega_o_teto(aba: str) -> None:
     if 'class="janela"' not in doc:
         pytest.skip(f"{aba} não usa a `.janela` — tela auxiliar")
     assert "max-height:calc(100dvh - var(--recuo-do-corpo) * 2)" in doc, (
-        f"{aba} está com a folha VELHA — rode o gerador dela. Sem o teto, a "
+        f"{aba} está com a folha VELHA — rode o gerador da aba. Sem o teto, a "
         f"janela estreita corta o rodapé desta aba")

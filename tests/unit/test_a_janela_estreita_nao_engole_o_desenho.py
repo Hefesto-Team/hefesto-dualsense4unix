@@ -48,7 +48,7 @@ except (ImportError, ValueError) as _erro:  # pragma: no cover
 
 
 class Tamanho(NamedTuple):
-    """Uma janela para medir, com a razão de ela estar na lista."""
+    """Uma janela para medir, com a razão de a janela estar na lista."""
 
     rotulo: str
     largura: int
@@ -68,8 +68,8 @@ TAMANHOS: tuple[Tamanho, ...] = (
         "estreita",
         940,
         ALTURA_DO_DESENHO,
-        "a largura da FOTO DELA de 04/09/2026 — 272 px a menos que o desenho. "
-        "É a janela em que ela escreveu 'tela do layout quebra direto'",
+        "a largura da FOTO de 04/09/2026 — 272 px a menos que o desenho. "
+        "É a janela em que o layout quebrava direto",
     ),
     Tamanho(
         "baixa",
@@ -120,7 +120,7 @@ MEDIDA = r"""
   // a frase no `<span class="no-jogo">` de fora (é lá que mora o alvo
   // `atributo` do piloto) e recorta no `.no-jogo-t` de dentro; lendo só o
   // próprio elemento, a régua acusava sumiço sobre uma frase que o hover
-  // devolve. A subida para no `.janela`: acima dela é a página, não o desenho.
+  // devolve. A subida para no `.janela`: acima do `.janela` é a página, não o desenho.
   function tituloAlcancavel(el){
     for (var p = el; p; p = p.parentElement){
       // `data-dica` é o `title` da base comum (A-BASE-COMUM-DAS-ABAS-01): a dica da casa abre
@@ -242,7 +242,7 @@ MEDIDA = r"""
                 rola_y: de.scrollHeight - de.clientHeight},
     // A LETRA VAI JUNTO DA MEDIDA. As dez abas trazem 'Space Grotesk' e
     // 'JetBrains Mono' do pacote (`@font-face` no topo de cada página): sem
-    // elas o motor cai na pilha de sistema, a largura de todo texto muda, e um
+    // as fontes o motor cai na pilha de sistema, a largura de todo texto muda, e um
     // vermelho desta régua passaria a significar outra coisa.
     letra: (typeof document.fonts === 'undefined') ? null : {
       estado: document.fonts.status,
@@ -400,7 +400,7 @@ def test_a_pagina_abriu_inteira_e_no_tamanho_pedido(medido, aba, rotulo):
         f"{aba} em {rotulo}: a janela perdeu {faltando}. A página abriu pela "
         "metade, ou o desenho mudou de vocabulário")
     assert isinstance(lido.get("selects_apertados"), list), (
-        f"{aba} em {rotulo}: a medida dos `<select>` não voltou, e sem ela o "
+        f"{aba} em {rotulo}: a medida dos `<select>` não voltou, e sem a medida o "
         "artigo 4 passa sem olhar para campo nenhum")
 
 
@@ -415,7 +415,7 @@ def test_os_campos_de_escolha_existem_para_serem_medidos(medido):
 
 @pytest.mark.parametrize("aba", ABAS)
 def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
-    """A LINHA DE BASE, e ela é mais dura que o artigo 2: nem reticência.
+    """A LINHA DE BASE, mais dura que o artigo 2: nem reticência.
 
     A prova da D-2110-A-FRASE-DA-EXTENSAO-CORTA-COM-A-DICA.
     """
@@ -428,7 +428,7 @@ def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
                       if str(c["peca"].get("titulo") or "").startswith(comeco)]
         assert conhecidos, (
             f"{aba}: «{comeco}…» deixou de ser cortada no tamanho do desenho — a "
-            "cura entrou, e a linha dela sai de `CORTE_CONHECIDO_NO_DESENHO`. "
+            "cura entrou, e a linha sai de `CORTE_CONHECIDO_NO_DESENHO`. "
             f"({razao})")
         cortados = [c for c in cortados if c not in conhecidos]
     assert not cortados, (
@@ -559,7 +559,7 @@ def test_com_quatro_controles_o_nome_do_perfil_ativo_fica_a_vista(
     e o nome guarda um piso de 3em dentro da pílula.
 
     MORDIDAS (26/10/2026): o ``topo.html`` de ``08a6ff5ac`` reprova com o nome em 0 px; tirar o
-    ``min-width:min-content`` da pílula reprova com o nome passando da borda dela.
+    ``min-width:min-content`` da pílula reprova com o nome passando da borda da pílula.
 
     Prova da D-2610-O-ROTULO-DO-PERFIL-ATIVO-CEDE-ANTES-DO-NOME.
     """
@@ -636,7 +636,7 @@ CONTADOR_DE_VOLTA = r"""
 
 
 def test_a_mordida_da_letra_larga_ve_o_corte_que_a_comum_nao_ve() -> None:
-    """A passada larga morde: com o contador de volta no topo, a régua dela acusa o chip cortado.
+    """A passada larga morde: com o contador de volta no topo, a régua larga acusa o chip cortado.
 
     O contador «● N USB · N BT» saiu do topo com a
     A-ABA-JOGAR-JUNTA-OS-CONTROLES-E-O-MODO-GERE-TUDO-01. Posto de volta pelo teste, a linha da 03

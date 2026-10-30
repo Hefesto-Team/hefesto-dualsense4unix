@@ -76,12 +76,12 @@ def test_so_o_alvo_nao_honrado_produz_frase(honrado: bool | None) -> None:
 
 
 def test_a_frase_do_alvo_nao_honrado_e_a_confissao() -> None:
-    """E ela diz as DUAS coisas: o que aconteceu e o que NÃO aconteceu."""
+    """E a frase diz as DUAS coisas: o que aconteceu e o que NÃO aconteceu."""
     frase = frase_do_alvo_do_mic(False)
     assert frase == TEXTO_MIC_ALVO_NAO_HONRADO
     assert "OUTRO controle" in frase, "a confissão não diz o que aconteceu"
     assert "não mudou" in frase, (
-        "a confissão não diz o que NÃO aconteceu — sem isso ela deixa a "
+        "a confissão não diz o que NÃO aconteceu — sem isso a frase deixa a "
         "dúvida de o perfil ter sido gravado errado"
     )
 

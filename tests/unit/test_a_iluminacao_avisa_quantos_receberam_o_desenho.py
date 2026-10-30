@@ -13,10 +13,10 @@ HTML **ler** os dois e pôr a frase no canal de recado verde (6,0 s).
    `return 0` cravado, com a razão escrita: nesta aba todo gesto leva `uniq`,
    e com alvo por controle a própria GTK devolve 0. O valor estava certo; o
    MÉTODO estava errado — ele afirmava sozinho uma conta que tem dono, e uma
-   constante não erra junto com o dono, ela só para de concordar. Agora o
+   constante não erra junto com o dono, só para de concordar. Agora o
    `_Janela` carrega os dois degraus (`_edit_uniq`, `_uniqs_conectados`) e a
    conta é a do dono, sobre os mesmos dados. **A resposta de hoje continua 0** —
-   a diferença é que ela passou a ser medida.
+   a diferença é que a resposta passou a ser medida.
 
 2. **O AVISO ERA ENGOLIDO, e por construção.** `_cobrar_a_frase_do_desenho`
    pergunta ao dono o que ele diria no caminho FELIZ e compara com o que ele diz
@@ -27,7 +27,7 @@ HTML **ler** os dois e pôr a frase no canal de recado verde (6,0 s).
    teria pegado em N controles e a tela não diria nada. É a L12 —
    *"nada na tela avisava"* — reaparecendo do lado HTML, um degrau adiante.
 
-**A PORTA DO "TODOS" É A DO PRÓPRIO MÓDULO, e é por isso que ela se abre aqui
+**A PORTA DO "TODOS" É A DO PRÓPRIO MÓDULO, e é por isso que a porta se abre aqui
 com a função do produto e não com um dublê.** `_janela_do_desfecho(ctx, "")`
 monta um `_Janela` com o alvo em "Todos" — `definir_alvo` é quem sabe que `uniq`
 vazio quer dizer isso —, e é literalmente o que o docstring do `_Janela` mandava
@@ -187,7 +187,7 @@ def test_o_aviso_e_a_frase_do_dono_e_nenhuma_silaba_nasce_aqui(a04, pac, dono):
 
 
 def test_o_pacote_nao_digita_o_texto_do_aviso(a04):
-    """O fonte cita o NOME da constante e nunca o texto dela."""
+    """O fonte cita o NOME da constante e nunca o texto da constante."""
     fonte = pathlib.Path(a04.__file__).read_text(encoding="utf-8")
     assert "_AVISO_MESMO_DESENHO_NOS_QUATRO" in fonte, (
         "o pacote deixou de citar o dono do texto — é o `sinal` que o CSV da "
@@ -265,14 +265,14 @@ def _os_que_escrevem_desenho(a04, pac):
     """Os caminhos de escrita de desenho desta aba, com o clique de cada.
 
     **ERAM CINCO E HOJE É UM** — 07/09/2026. `luzes`, `desenho-de` (nos dois
-    ramos) e `reenviar-desenho` saíram com a botoeira, por ordem de produto: *"só
-    olhar a linha de cima da seleção de player e replicar o que tem lá."* O que
+    ramos) e `reenviar-desenho` saíram com a botoeira, por decisão de produto: basta
+    olhar a linha de cima, a da seleção de player, e replicar o que tem lá. O que
     sobra é o `player`, que escreve o desenho de CARONA na renumeração — e era
     justamente essa carona que a LUZES-01 existia para tornar dispensável.
 
     **A LISTA CONTINUA SENDO LISTA, e o `parametrize` continua sendo
     `parametrize`.** A razão da regra desta casa de 05/09 não mudou — *quando a
-    cura conhece a causa, ela cobre TODOS os chamadores* —, e um dia em que esta
+    cura conhece a causa, cobre TODOS os chamadores* —, e um dia em que esta
     aba ganhe um segundo caminho de escrita, ele entra aqui e a régua o cobre
     sozinha. Trocar a lista por uma chamada solta pouparia três linhas e
     devolveria à próxima pessoa o trabalho de descobrir que a régua existia.

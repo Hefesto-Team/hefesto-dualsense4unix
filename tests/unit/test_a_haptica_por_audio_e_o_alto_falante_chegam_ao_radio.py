@@ -260,7 +260,7 @@ def test_a_voz_nos_canais_da_frente_do_endpoint_nao_e_haptica(sala: Mesa) -> Non
     """Som na frente do endpoint não vibra nada: o ouvido dos motores lê os traseiros.
 
     Desde O-SOM-QUE-O-JOGO-MANDA-AO-CONTROLE-TOCA-TAMBEM-PELO-RADIO-01 a frente
-    é SOM e vai ao alto-falante pelo rádio; o que ela nunca vira é vibração.
+    é SOM e vai ao alto-falante pelo rádio; o que nunca vira é vibração.
     """
     endpoint = no_do(P3)
     sala.fonte(endpoint).quadro = FRENTE
@@ -307,7 +307,7 @@ def test_o_alto_falante_calado_e_a_haptica_que_chega_sem_derrubar_a_ponte(sala: 
 
 
 class _PonteQueConta:
-    """A ponte que só se deixa contar: o que se conta aqui é quantas vezes ela troca."""
+    """A ponte que só se deixa contar: o que se conta aqui é quantas vezes a ponte troca."""
 
     criadas: ClassVar[list[Any]] = []
 
@@ -387,7 +387,7 @@ def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
     )(4096)
     mundo.mesa.volta(*controles)
     assert mundo.sub._pontes[_X1].leva is True, (
-        "o fluxo mudo do alto-falante segurou a ponte, e o rumble ficou sem ela"
+        "o fluxo mudo do alto-falante segurou a ponte, e o rumble ficou sem a ponte"
     )
     af.fonte_que_ouve(lambda n: VOZ * (n // 4), som)(1920)
     mundo.mesa.volta(*controles)
