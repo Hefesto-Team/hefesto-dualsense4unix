@@ -14,7 +14,7 @@ encanamento sob suspeita fora do exercício.
 
 Os payloads de resposta são LITERAIS: copiados dos handlers do daemon
 (``_handle_trigger_set``, ``_handle_led_set``, ``_handle_mic_volume_set`` …) e
-conferidos contra a bancada viva em 23/08/2026. O de mesa vazia é o medido:
+conferidos contra o daemon vivo da máquina de teste em 23/08/2026. O de mesa vazia é o medido:
 ``{"status": "ok", "aplicado_em": [], "guardado_em": []}`` — ZERO destino, com a
 aba Gatilhos dizendo "aplicado".
 

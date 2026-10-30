@@ -11,7 +11,7 @@ pode atravessar:
 1. **no lançamento** — jogo COM carimbo não vê escada nenhuma (regressão pura
    seria o produto mexer no que já funcionava); jogo SEM carimbo e sem `mode`
    ganha o primeiro degrau; jogo com `mode` continua mandando;
-2. **no gesto `PS + R3`** — o gesto SEMPRE troca (é vontade dela), e o laço
+2. **no gesto `PS + R3`** — o gesto SEMPRE troca (é vontade de quem usa), e o laço
    aprende com ele que o degrau de pé não funcionou;
 3. **no silêncio** — passado o prazo com o jogo VIVO, carimba uma vez; com o
    jogo fechado, NUNCA.
@@ -159,7 +159,7 @@ class TestNoLancamento:
         assert [m.gamepad_flavor for m, _p, _o in daemon.aplicados] == ["xbox"]
         tentativa = pt.em_curso(daemon)
         assert tentativa is not None
-        assert tentativa.degrau.ponte.mascara == "xbox", "o degrau DELA, não o 0"
+        assert tentativa.degrau.ponte.mascara == "xbox", "o degrau ESCOLHIDO, não o 0"
 
     def test_com_jogo_vivo_o_lancamento_nao_arma_sozinho(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
@@ -174,7 +174,7 @@ class TestNoLancamento:
         assert resultado is not None
         assert resultado["armado"] is False
         assert resultado["escada"] == pt.COMECO_JOGO_VIVO
-        assert daemon.aplicados == [], "a escada pagou o R-04 sem ela pedir"
+        assert daemon.aplicados == [], "a escada pagou o R-04 sem o usuário pedir"
         assert pt.em_curso(daemon) is None
 
     def test_o_lancamento_nao_carimba_nada(
@@ -317,7 +317,7 @@ class TestOGesto:
             "premissa: depois de `xbox`, o ciclo livre é `mouse_teclado`"
         )
         assert d.pedidos == [(False, None, "manual", None)], (
-            "o aperto dela foi comido, ou o gesto entrou em Modo Nativo"
+            "o aperto do usuário foi comido, ou o gesto entrou em Modo Nativo"
         )
         assert pt.em_curso(d) is None, "a tentativa tinha de ser encerrada"
         guardado = pt.gesto_em_curso(d)
@@ -430,7 +430,7 @@ class TestOSilencio:
     def test_jogo_fechado_no_meio_da_escada_nao_carimba_nada(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Ninguém confirmou nada. Silêncio com o jogo fechado não é ela"""
+        """Ninguém confirmou nada. Silêncio com o jogo fechado não é o usuário"""
         save_profile(_perfil(), origem="teste")
         d = _DaemonFalso()
         _abrir_tentativa(d, pe.ESCADA[1], agora=0.0)
@@ -446,7 +446,7 @@ class TestOSilencio:
     def test_passado_o_silencio_com_o_jogo_vivo_o_produto_carimba(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """*"Se ela para de apertar, a ponte atual é a que pegou."*"""
+        """Se quem usa para de apertar, a ponte atual é a que pegou."""
         save_profile(_perfil(), origem="teste")
         d = _DaemonFalso(authority="game")
         _abrir_tentativa(d, pe.ESCADA[1], agora=0.0)
@@ -476,7 +476,7 @@ class TestOSilencio:
     def test_depois_de_confirmada_a_escada_nunca_mais_roda_naquele_jogo(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O fim da história dela: *"nunca mais precisa fazer isso NESSE"""
+        """O fim da história: *"nunca mais precisa fazer isso NESSE"""
         save_profile(_perfil(), origem="teste")
         d = _DaemonFalso(authority="game")
         _abrir_tentativa(d, pe.ESCADA[1], agora=0.0)
@@ -527,7 +527,7 @@ class TestAsFronteiras:
         tentativa = pt.em_curso(d)
         assert tentativa is not None
         assert tentativa.degrau == pe.ESCADA[0]
-        assert d.pedidos == [], "algum relógio recriou o vpad dela sozinho"
+        assert d.pedidos == [], "algum relógio recriou o vpad do usuário sozinho"
 
     def test_sem_perfil_nao_carimba_e_nao_inventa_arquivo(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch

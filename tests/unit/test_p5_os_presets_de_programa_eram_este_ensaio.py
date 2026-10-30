@@ -1,4 +1,4 @@
-"""P5 — os três botões de programa cobriam DOZE programas, e eram os desta bancada."""
+"""P5 — os três botões de programa cobriam DOZE programas, e eram os desta máquina de teste."""
 from __future__ import annotations
 
 import pytest

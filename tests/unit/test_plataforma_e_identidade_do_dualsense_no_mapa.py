@@ -1,6 +1,6 @@
 """A régua das seis linhas de PLATAFORMA e IDENTIDADE do DualSense.
 
-Ela nasceu em 03/09/2026, na leva que foi caçar em repositório de terceiro o que
+A régua nasceu em 03/09/2026, na leva que foi caçar em repositório de terceiro o que
 falta no mapa da Sony — e o risco dessa leva tem nome: **um número copiado
 errado passa por todo portão desta casa**. O `check_paridade_transporte.py` diz
 isso na própria docstring: ele é cego ao CONTEÚDO das colunas sem domínio, e um
@@ -9,10 +9,10 @@ isso na própria docstring: ele é cego ao CONTEÚDO das colunas sem domínio, e
 Esta régua fecha metade desse buraco, e só a metade que dá para fechar sem
 aparelho: os report IDs e os tamanhos que o mapa cita para a PROBE e para a
 IDENTIDADE do DualSense têm um DONO nesta árvore — os `#define` do
-`hid-playstation` compilado nesta máquina. A régua não guarda número nenhum: ela
+`hid-playstation` compilado nesta máquina. A régua não guarda número nenhum:
 lê o dono e cobra que o mapa diga o mesmo.
 
-O que ela NÃO alcança, dito na cara: o layout do `0x09` (onde está o endereço do
+O que a régua NÃO alcança, dito na cara: o layout do `0x09` (onde está o endereço do
 host) e a existência do `0x0A` vêm de fonte externa, e nenhum `#define` local os
 sustenta. Para esses, a régua cobra apenas que a AFIRMAÇÃO continue lá, escrita —
 porque o defeito que mais custou nesta casa não foi o número errado, foi a

@@ -22,7 +22,7 @@ from tests.unit.test_por_unidade_01_todas_as_abas import (
 
 
 class _StoreComTrava(_StoreSemTrava):
-    """A trava manual de áudio ARMADA — ela acabou de mexer no mic na mão."""
+    """A trava manual de áudio ARMADA — quem usa acabou de mexer no mic na mão."""
 
     manual_override_categories: tuple[str, ...] = ("audio",)
 

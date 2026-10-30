@@ -7,7 +7,7 @@ em `core/backend_pydualsense.py`: no fim de todo `connect()`, o estrangulamento
 do laço de OUTPUT de cada handle vira `REPORT_THREAD_THROTTLE_SEC * N` (capado
 em `REPORT_THREAD_THROTTLE_MAX_SEC`), onde `N` é o número de controles abertos.
 
-O comentário da própria constante diz o que ela previne, com todas as letras:
+O comentário da própria constante diz o que previne, com todas as letras:
 *"Com 2+ controles são 2+ threads saturando o controlador USB compartilhado — e
 o adaptador Bluetooth vive no MESMO controlador (família do storm), degradando o
 link BT (`DualSense input CRC's check failed`) e matando o output do controle
@@ -17,7 +17,7 @@ saída do controle no rádio**.
 
 POR QUE ELE EXISTE, e o que ele NÃO prova
 -----------------------------------------
-Em 12/08/2026, com os controles na bancada, os dois lados foram MEDIDOS e
+Em 12/08/2026, com os controles na máquina de teste, os dois lados foram MEDIDOS e
 gravados em `docs/data/ensaios.csv`: `comb-cabo-radio-saida-2212` (+ o irmão de
 rádio) — FF disparado no cabo e no rádio na MESMA janela, os dois vibraram
 iguais; e `comb-dois-no-radio-saida-2235` — os DOIS controles do rádio

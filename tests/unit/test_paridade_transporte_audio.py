@@ -36,7 +36,7 @@ def test_o_volume_do_alto_falante_sai_no_byte_certo_nos_dois(
 def test_o_preamp_sai_no_byte_certo_nos_dois(
     ds5_de_ensaio: Any, transporte: EnvelopeDeTransporte
 ) -> None:
-    """SOM-ROTA-01: sem o common[37] o deslizante dela vale 40% do curso."""
+    """SOM-ROTA-01: sem o common[37] o deslizante de quem usa vale 40% do curso."""
     ds5_de_ensaio.set_audio_volumes(speaker=0xC0, preamp=rep.SP_PREAMP_GAIN_PADRAO)
     common = transporte.extrair_common(ds5_de_ensaio.prepareReport())
 

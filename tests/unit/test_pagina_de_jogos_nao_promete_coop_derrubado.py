@@ -1,4 +1,4 @@
-"""A página que ela lê não pode dizer que a exceção de Steam Input mata o co-op."""
+"""A página que o usuário lê não pode dizer que a exceção de Steam Input mata o co-op."""
 from __future__ import annotations
 
 import re
@@ -44,7 +44,7 @@ def test_a_pagina_nao_promete_perda_de_coop():
 
 
 def test_a_pagina_diz_que_o_coop_continua():
-    """E o oposto: ela tem de afirmar, sem rodeio, que o co-op sobrevive."""
+    """E o oposto: a página tem de afirmar, sem rodeio, que o co-op sobrevive."""
     texto = (_raiz() / PAGINA).read_text(encoding="utf-8")
     assert "co-op continua funcionando" in texto.lower(), (
         f"{PAGINA} não afirma que o co-op continua funcionando nos jogos com "

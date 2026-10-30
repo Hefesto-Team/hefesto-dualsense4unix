@@ -1,6 +1,6 @@
 """Um tique CEGO não derruba a exceção de Steam Input no meio da partida.
 
-PARTIDA-PICOTADA-01 (08/08/2026). O defeito, MEDIDO no journal da bancada: entre
+PARTIDA-PICOTADA-01 (08/08/2026). O defeito, MEDIDO no journal da máquina de teste: entre
 01:43 e 03:03, com o Sackboy aberto e dois DualSense no cabo, o gamepad virtual
 foi suspenso e retomado **oito vezes**. Cada retomada custa uma recriação de
 vpad, e cada recriação derruba o jogador 2 do co-op
@@ -15,7 +15,7 @@ janela CRUA e tratar "não sei" como "o jogo saiu":
 
     01:44:42.859  autoswitch_janela_propria_ignorada wm_class=Hefesto-Dualsense4Unix
     01:44:43.116  steam_input_excecao_encerrada
-    01:44:43.387  gamepad_emulation_started          <- ela abriu a janela do Hefesto
+    01:44:43.387  gamepad_emulation_started          <- a janela do Hefesto abriu
 
 O contraste que fecha a conta: no sábado 01-02/08, jogando horas com três
 controles, foram **15** quedas de vpad em **48 h**. Em 08/08 foram **12 em
@@ -94,12 +94,12 @@ def test_tique_cego_nao_derruba_a_excecao(crua: str | None, tmp_path: Path) -> N
 
 
 def test_janela_do_proprio_hefesto_nao_derruba_a_excecao(tmp_path: Path) -> None:
-    """Ela abrir a janela do Hefesto não pode picotar a partida."""
+    """Abrir a janela do Hefesto não pode picotar a partida."""
     from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
 
     for classe in sorted(OWN_GUI_WM_CLASSES):
         assert _perguntar(classe, CLASSE_DO_JOGO, tmp_path) == SACKBOY, (
-            f"a janela do próprio Hefesto ({classe!r}) derrubou a exceção — ela "
+            f"a janela do próprio Hefesto ({classe!r}) derrubou a exceção — a janela "
             "não pode perder o jogador 2 por abrir a configuração."
         )
 

@@ -6,11 +6,11 @@ A cura chamada `keepalive neutro` (GUERRA-01 item 2), em
 `core/backend_pydualsense.py:_build_common`. Sem rumble NOSSO ativo, os bits que
 autorizam vibração têm de sair DESLIGADOS do report — para que o firmware
 conserve o motor que outro dono (um jogo por EV_FF, o Steam Input por hidraw)
-deixou girando. Sem ela, cada report de keepalive matava a vibração alheia.
+deixou girando. Sem a cura, cada report de keepalive matava a vibração alheia.
 
 POR QUE ELE EXISTE, e o que ele NÃO prova
 -----------------------------------------
-Em 11/08/2026, com quatro DualSense na bancada (dois no cabo, dois no rádio),
+Em 11/08/2026, com quatro DualSense na máquina de teste (dois no cabo, dois no rádio),
 o sintoma que esta cura previne foi medido de novo, com variável única e ida e
 volta: com o daemon VIVO, 40 s de força-feedback por evdev produziram um único
 pulso no controle do rádio e NADA no do cabo; com o daemon PARADO, os mesmos 40 s
@@ -19,9 +19,9 @@ saíram contínuos nos dois. Registrado em `docs/data/ensaios.csv`
 
 Este arquivo NÃO reproduz aquele defeito — ele é de unidade, e o defeito mora no
 encontro de dois escritores com o firmware. O que ele faz é impedir que a cura
-seja removida sem alguém perceber: a premissa dela (o firmware conserva o motor
+seja removida sem alguém perceber: a sua premissa (o firmware conserva o motor
 quando os bits de autorização saem desligados) continua sendo a próxima coisa a
-medir na bancada, e enquanto isso a cura fica presa por teste.
+medir no ensaio no aparelho, e enquanto isso a cura fica presa por teste.
 
 MORDE? Arranque o bloco `if not rumble_asserted:` de `_build_common` e estes
 testes reprovam nos dois transportes.

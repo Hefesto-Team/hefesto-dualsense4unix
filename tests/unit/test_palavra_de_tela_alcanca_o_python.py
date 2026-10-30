@@ -1,4 +1,4 @@
-"""O portão da palavra de tela enxerga a aba montada em Python — e só ela."""
+"""O portão da palavra de tela enxerga a aba montada em Python — e só essa."""
 from __future__ import annotations
 
 import ast
@@ -146,7 +146,7 @@ def montar(host, logger, botao, caixa):
 def test_a_mesma_palavra_fora_da_tela_faz_o_portao_calar(
     tmp_path: Path, validador: Any, nomes_de_tela: set[str]
 ) -> None:
-    """A metade que CALA — e ela é a que decide se o portão sobrevive."""
+    """A metade que CALA — e é a que decide se o portão sobrevive."""
     alvo = tmp_path / "modulo_sem_tela.py"
     alvo.write_text(MODULO_SEM_TELA, encoding="utf-8")
 
@@ -184,7 +184,7 @@ def test_a_divida_de_app_que_sumir_reprova_pedindo_para_apagar(validador: Any) -
 
 
 def test_a_arvore_de_hoje_passa_no_portao(validador: Any) -> None:
-    """`--all` verde, com a dívida de 23/08/2026 declarada e nada além dela."""
+    """`--all` verde, com a dívida de 23/08/2026 declarada e nada além."""
     assert validador.main(["--all"]) == 0
 
 

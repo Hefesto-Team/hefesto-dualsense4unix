@@ -37,7 +37,7 @@ ID_DA_LINHA = "luz.lightbar.cor@dualsense"
 
 
 def monta_arvore(tmp_path: Path, fonte_do_teste: str, alvo: str) -> Path:
-    """Uma árvore mínima: o mapa com UMA linha forte, e o teste que ela aponta."""
+    """Uma árvore mínima: o mapa com UMA linha forte, e o teste que a linha aponta."""
     pasta_de_testes = tmp_path / "tests" / "unit"
     pasta_de_testes.mkdir(parents=True, exist_ok=True)
     (pasta_de_testes / "test_alvo.py").write_text(fonte_do_teste, encoding="utf-8")
@@ -116,7 +116,7 @@ def test_corpo_inerte_em_todas_as_formas_reprova(
     "decorador",
     [
         "@pytest.mark.skip",
-        '@pytest.mark.skip(reason="a bancada não está livre")',
+        '@pytest.mark.skip(reason="a máquina de teste não está livre")',
         '@pytest.mark.skipif(True, reason="desligado e pronto")',
     ],
 )
@@ -165,7 +165,7 @@ def test_modulo_desligado_por_pytestmark_nao_e_mordida(tmp_path: Path) -> None:
 
 
 def test_classe_desligada_desliga_o_metodo(tmp_path: Path) -> None:
-    """`@pytest.mark.skip` na classe alcança todo método dela."""
+    """`@pytest.mark.skip` na classe alcança todo método da classe."""
     fonte = (
         "import pytest\n\n\n"
         "@pytest.mark.skip\n"

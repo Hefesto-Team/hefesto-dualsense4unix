@@ -34,7 +34,7 @@ def test_a_tela_de_hoje_passa(regua, capsys):
             f"a dívida `{gesto}` está declarada e não sai nomeada — é uma "
             f"dívida em silêncio, que é o que esta régua existe para impedir")
         assert sprint in saida, (
-            f"a dívida `{gesto}` sai sem a dona; sem ela ninguém sabe onde o "
+            f"a dívida `{gesto}` sai sem a dona; sem a dona ninguém sabe onde o "
             f"fecho está escrito")
 
 
@@ -262,7 +262,7 @@ def test_a_leitura_do_fonte_resolve_literal_constante_importada_e_atributo(regua
 
 
 def test_o_gesto_que_a_leitura_nao_resolve_reprova(regua, tmp_path, monkeypatch, capsys):
-    """Nome montado em tempo de execução é um gesto que a régua não vê: ela diz, não cala."""
+    """Nome montado em tempo de execução é um gesto que a régua não vê: a régua diz, não cala."""
     pasta, src = _fonte(tmp_path, {
         "pk/pacotes/a01_x.py": (
             'PAGINA = "01-x.html"\n'

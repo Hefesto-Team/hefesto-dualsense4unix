@@ -1,4 +1,4 @@
-"""A página que ela lê não pode voltar a negar o botão de desfazer."""
+"""A página que o usuário lê não pode voltar a negar o botão de desfazer."""
 from __future__ import annotations
 
 import ast

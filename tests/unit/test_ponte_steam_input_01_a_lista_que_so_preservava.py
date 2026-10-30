@@ -38,7 +38,7 @@ def _vdf(
     (`Software/Valve/Steam/apps`); a de baixo é a que guarda o
     `UseSteamControllerConfig` (`UserLocalConfigStore/apps`), com o
     `SteamController_PSSupport` como IRMÃ logo depois — exatamente a ordem
-    medida no arquivo dela em 19/08/2026, inclusive o detalhe de a irmã vir
+    medida no arquivo da máquina de teste em 19/08/2026, inclusive o detalhe de a irmã vir
     DEPOIS do `}` que fecha a árvore.
 
     Em `viva`, o valor `None` significa "o bloco do app existe, mas sem a
@@ -118,7 +118,7 @@ class TestAListaLiga:
         assert pulados == [(_SACKBOY, ponte.JA_LIGADO)]
 
     def test_nada_alem_do_alvo_e_tocado(self) -> None:
-        """O `localconfig.vdf` guarda a biblioteca inteira dela."""
+        """O `localconfig.vdf` guarda a biblioteca inteira do usuário."""
         texto = _vdf(
             canonica={"999": "sh -c foo %command%"},
             viva={_SACKBOY: "0", "888": "0"},
@@ -131,7 +131,7 @@ class TestAListaLiga:
 
 class TestAArvoreViva:
     def test_a_chave_mora_na_outra_arvore(self) -> None:
-        """Medido em 19/08/2026 no `localconfig.vdf` dela.
+        """Medido em 19/08/2026 no `localconfig.vdf` da máquina de teste.
 
         As três árvores `apps` do arquivo, e onde cada chave estava::
 
@@ -304,7 +304,7 @@ class TestOProntuarioLigado:
         )
 
     def test_a_excecao_inerte_deixou_de_ser_manual(self) -> None:
-        """Era `automatica=False` com a cura mandando ELA clicar na Steam."""
+        """Era `automatica=False` com a cura mandando O USUÁRIO clicar na Steam."""
         estorvo = Estorvo(EXCECAO_INERTE)
         assert estorvo.automatica
         assert "Ligue o Steam Input" not in estorvo.a_cura
@@ -336,7 +336,7 @@ class TestOProntuarioLigado:
         )
         lista = tmp_path / ".config/hefesto-dualsense4unix/steam_input_apps.txt"
         lista.parent.mkdir(parents=True)
-        lista.write_text(f"# bancada\n{_SACKBOY}\n", encoding="utf-8")
+        lista.write_text(f"# ensaio\n{_SACKBOY}\n", encoding="utf-8")
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
         monkeypatch.setattr(ponte, "steam_running", lambda: False)
         monkeypatch.setattr(ponte, "steam_game_running", lambda: False)
@@ -411,7 +411,7 @@ class TestOGuardaConstroiAPonte:
         )
         lista = home / ".config/hefesto-dualsense4unix/steam_input_apps.txt"
         lista.parent.mkdir(parents=True)
-        lista.write_text(f"# bancada\n{_SACKBOY}\n", encoding="utf-8")
+        lista.write_text(f"# ensaio\n{_SACKBOY}\n", encoding="utf-8")
 
         stubs = tmp_path / "stubs"
         stubs.mkdir()

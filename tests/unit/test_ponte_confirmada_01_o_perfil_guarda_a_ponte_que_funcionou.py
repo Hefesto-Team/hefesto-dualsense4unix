@@ -298,7 +298,7 @@ class TestOProntuarioSabeAPonte:
         assert [e.chave for e in ficha.estorvos] == [pdj.SEM_WRAPPER]
 
     def test_a_ponte_que_mudou_vira_estorvo_nomeado(self) -> None:
-        """Ela tirou o jogo da lista de exceções; a ponte confirmada usava-a."""
+        """Quem usa tirou o jogo da lista de exceções; a ponte confirmada usava-a."""
         ficha = pdj.Prontuario(
             appid=_DONT_SCREAM,
             nome="DON'T SCREAM",
@@ -312,7 +312,7 @@ class TestOProntuarioSabeAPonte:
         assert ficha.veredito == pdj.IMPEDIDO
         estorvo = next(e for e in ficha.estorvos if e.chave == pdj.PONTE_DIVERGENTE)
         assert estorvo.automatica is False, (
-            "repor a lista de exceções é gesto DELA — o produto não desfaz"
+            "repor a lista de exceções é gesto DO USUÁRIO — o produto não desfaz"
         )
         assert "CONFIRMADA" in estorvo.o_que
 

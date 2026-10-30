@@ -308,7 +308,7 @@ def test_toda_declaracao_do_evento_tem_chamador_direto_no_ci() -> None:
 
 
 def test_listar_imprime_a_mesma_tabela_que_o_script_roda() -> None:
-    """`--listar` é a superfície que este teste lê; se ela mentir, o teste mente."""
+    """`--listar` é a superfície que este teste lê; se mentir, o teste mente."""
     saida = subprocess.run(
         ["bash", str(PORTOES_SH), "--listar"],
         check=True,
@@ -407,7 +407,7 @@ def test_o_que_so_roda_no_ci_ainda_reprova_sem_fora_do_local() -> None:
     assert len(queixas) == 1
     assert "scripts/validar-caducos.py" in queixas[0] and "RODA NO CI" in queixas[0]
     sh, ci = _duble(
-        _DUAS, ["FORA-DO-LOCAL|scripts/validar-caducos.py|mexe no sistema vivo da máquina dela"],
+        _DUAS, ["FORA-DO-LOCAL|scripts/validar-caducos.py|mexe no sistema vivo da máquina"],
         [_PELO_NOME, caducos],
     )
     assert confere(sh, ci) == []
@@ -503,7 +503,7 @@ def test_o_so_sem_id_sai_rc_2(portoes_de_mentira: Path) -> None:
 
 
 def test_o_so_nunca_abre_o_recibo_da_camada_completa(portoes_de_mentira: Path) -> None:
-    """O recibo certifica a camada completa INTEIRA; um `--so` roda uma parte dela."""
+    """O recibo certifica a camada completa INTEIRA; um `--so` roda uma parte."""
     import shutil
 
     shutil.copy2(RAIZ / "scripts" / "recibo_da_medida.py", portoes_de_mentira / "scripts")

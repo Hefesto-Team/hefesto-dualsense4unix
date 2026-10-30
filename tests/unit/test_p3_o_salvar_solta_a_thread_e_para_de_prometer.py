@@ -5,7 +5,7 @@ mesma linha de código, e o botão VIZINHO já tinha os dois curados:
 
 **A thread.** `on_profile_save` chamava `profile_switch()` — síncrono — na
 thread do GTK. O handler `profile.switch` levou **~1,2 s MEDIDOS no journal
-da bancada**, número escrito no comentário de `on_profile_activate`, e foi por ele
+da máquina de teste**, número escrito no comentário de `on_profile_activate`, e foi por ele
 que o **Ativar** virou `call_async` na ATIVAR-NAO-MENTE-01. O Salvar ficou.
 
 **A promessa.** `profile_switch()` devolve um booleano cujo significado a
@@ -98,7 +98,7 @@ class TestAFraseDoSalvar:
         assert "vibração" in com_recusa
 
     def test_com_tudo_recusado_a_frase_diz_que_nada_chegou(self) -> None:
-        """O caso mais caro: o lock manual dela recusa a troca inteira."""
+        """O caso mais caro: o lock manual do usuário recusa a troca inteira."""
         frase = pa.mensagem_do_salvar(
             "Sackboy", reaplicou=True, result=RECUSA_TOTAL
         )

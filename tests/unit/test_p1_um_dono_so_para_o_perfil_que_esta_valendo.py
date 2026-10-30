@@ -14,7 +14,7 @@ nenhuma janela aberta, nenhum byte escrito:
     aba No jogo  lê o daemon  -> vazio
 
 A aba Perfis está certa e sozinha: a cura é da PERFIL-ATUAL-01 (10/08), e o
-comentário dela já nomeava o caso — *"não é o `active_profile` do daemon
+comentário daquela cura já nomeava o caso — *"não é o `active_profile` do daemon
 quando ele está vazio, que é o caso VIVO da máquina do usuário"*. As outras três
 nunca receberam essa cura.
 
@@ -25,8 +25,8 @@ confundindo "não sei" com "não há", e é a mesma disciplina que
 `secao_controles.py` já aplica ("um 'não sei' não pode virar aviso").
 
 **O que este arquivo NÃO cobre, e é de propósito:** as abas Status
-(`status_actions.py`) e "No jogo" (`widgets/painel_no_jogo.py`). Elas são de
-outra frente nesta leva — a fiação delas ao dono está registrada no relatório
+(`status_actions.py`) e "No jogo" (`widgets/painel_no_jogo.py`). São de
+outra frente nesta leva — a sua fiação ao dono está registrada no relatório
 como tarefa aberta, com o endereço exato. Travá-las aqui pintaria de vermelho
 o trabalho de quem ainda nem começou.
 """
@@ -48,7 +48,7 @@ DAEMON_SEM_NOME: dict[str, Any] = {"active_profile": None, "freestyle_ligado": T
 
 @pytest.fixture
 def marcador_no_disco(monkeypatch: pytest.MonkeyPatch) -> str:
-    """O `active_profile.txt` dela, sem tocar no disco do usuário."""
+    """O `active_profile.txt` do ensaio, sem tocar no disco do usuário."""
     monkeypatch.setattr(pa, "perfil_que_o_usuario_ativou", lambda: "Sackboy")
     return "Sackboy"
 

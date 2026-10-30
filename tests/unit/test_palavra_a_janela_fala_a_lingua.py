@@ -75,7 +75,7 @@ def _comeca_em_minuscula(texto: str) -> bool:
 
 @pytest.mark.parametrize("arquivo", [EMULACAO_PY, MOUSE_PY], ids=["emulacao", "mouse"])
 def test_texto_de_estado_nao_comeca_em_minuscula(arquivo: Path) -> None:
-    """Ela lê "ligado"/"desligado"/"daemon offline" no meio de uma frase."""
+    """Quem usa lê "ligado"/"desligado"/"daemon offline" no meio de uma frase."""
     culpados = [
         _sem_markup(t) for t in _textos_de_tela(arquivo) if _comeca_em_minuscula(_sem_markup(t))
     ]

@@ -206,6 +206,6 @@ def test_prerm_usa_o_nome_real_do_modulo_da_gui() -> None:
         )
     assert any("abrir_interface" in p for p in padroes_pkill), (
         "o prerm não mata a TELA: sem um padrão que case o lançador de hoje, "
-        "ela sobrevive ao `apt remove` segurando arquivos já apagados — que é "
+        "o processo sobrevive ao `apt remove` segurando arquivos já apagados — que é "
         "o PACKAGING-PRERM-PKILL-MODULO-ERRADO-01 de novo."
     )

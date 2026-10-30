@@ -94,7 +94,7 @@ def test_vpad_que_nao_subiu_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
     assert "gamepad virtual" in texto, "a frase tem de dizer o que falta"
     assert "aqui embaixo" in texto.lower(), (
         "sem dizer o que a intensidade AINDA faz, o aviso vira 'não serve para "
-        "nada' — que é falso: ela vale para a vibração fixada"
+        "nada' — que é falso: a política vale para a vibração fixada"
     )
 
 

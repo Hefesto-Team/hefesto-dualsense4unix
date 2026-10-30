@@ -33,7 +33,7 @@ class TestOInstrumentoConcordaComOProduto:
     def test_o_deslocamento_do_common_foi_medido_no_builder(
         self, transporte: EnvelopeDeTransporte
     ) -> None:
-        """O offset não está escrito na fixture — ela o acha dentro do report."""
+        """O offset não está escrito na fixture — a fixture o acha dentro do report."""
         report = transporte.montar(COMMON_MARCADO)
         inicio = transporte.deslocamento_do_common
         assert bytes(report[inicio : inicio + rep.COMMON_LEN]) == COMMON_MARCADO

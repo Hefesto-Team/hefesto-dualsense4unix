@@ -7,10 +7,10 @@ Os dois relatos:
 
 > "talvez o nome da seção devesse mudar também"
 
-O achado: a expectativa dela — *escolho o player e o cabeçalho acompanha* — era
+O achado: a expectativa de uso — *escolho o player e o cabeçalho acompanha* — era
 IRREALIZÁVEL por construção. Não existia, em lugar nenhum do projeto, comando
 que atribuísse um número de jogador a um controle; só o ``identity.renumber``,
-que compacta TODOS preservando a ordem relativa e mora na aba Início. Ela
+que compacta TODOS preservando a ordem relativa e mora na aba Início. Quem usava
 clicava num controle de APARÊNCIA (o desenho das 5 luzinhas) esperando mudar
 IDENTIDADE, e o rótulo da tela prometia exatamente isso.
 

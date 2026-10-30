@@ -279,7 +279,7 @@ def test_a_guarda_mata_a_primeira_carga_errada(tmp_path: pathlib.Path) -> None:
 def test_a_guarda_nao_mata_quando_o_usuario_clica_na_tira(
     banca: Banca, tmp_path: pathlib.Path
 ) -> None:
-    """O defeito de 29/08: a janela dela fechou sozinha em ~12 s."""
+    """O defeito de 29/08: a janela fechou sozinha em ~12 s."""
     vizinha = tmp_path / "vizinha.html"
     vizinha.write_text(PAGINA.format(titulo="Hefesto — aba CONEXÕES"), encoding="utf-8")
     assert banca.carregou == 1 and banca.janela.na_aba
@@ -306,7 +306,7 @@ def test_voltar_para_a_aba_religa_a_pintura(banca: Banca, pagina: pathlib.Path) 
     assert bombear(lambda: bool(banca.saiu))
     banca.janela.view.load_uri(pagina.as_uri())
     assert bombear(lambda: banca.carregou == 2), (
-        "voltar para a aba tem de religar a pintura — sem isso a tela dela fica "
+        "voltar para a aba tem de religar a pintura — sem isso a tela fica "
         "parada depois de um passeio pela tira"
     )
     assert not banca.falhou
@@ -322,7 +322,7 @@ def test_a_folha_da_casa_esconde_a_nota_e_desenha_o_select(banca: Banca) -> None
 def test_a_mordida_da_folha_sem_o_usuario_o_select_volta_ao_tema_do_sistema(
     pagina: pathlib.Path,
 ) -> None:
-    """A MORDIDA da folha: sem ela, os dois valores mudam."""
+    """A MORDIDA da folha: sem a folha, os dois valores mudam."""
     b = Banca(pagina, folha=None)
     b.esperar_a_carga()
     try:
@@ -332,6 +332,6 @@ def test_a_mordida_da_folha_sem_o_usuario_o_select_volta_ao_tema_do_sistema(
         )
         assert (
             b.ler("getComputedStyle(document.getElementById('uma-caixa')).appearance") != "none"
-        ), "sem a folha, o select continuou sem `appearance` — a cura não era dela"
+        ), "sem a folha, o select continuou sem `appearance` — a cura não era a folha"
     finally:
         b.fechar()

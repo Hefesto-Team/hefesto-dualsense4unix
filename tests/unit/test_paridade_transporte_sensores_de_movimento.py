@@ -43,7 +43,7 @@ def _no(nome: str, uniq: str, bus: int, path: str) -> str:
 
 
 def _mesa_de_dois(marcador: str) -> list[str]:
-    """A bancada: um controle no cabo e um no rádio, com o nó `marcador`."""
+    """O ensaio: um controle no cabo e um no rádio, com o nó `marcador`."""
     if marcador == "Motion Sensors":
         usb, bt = NOME_MOTION_USB, NOME_MOTION_BT
     else:
@@ -55,7 +55,7 @@ def _mesa_de_dois(marcador: str) -> list[str]:
 
 
 def _sem_open(caminho: Any) -> Any:
-    raise AssertionError(f"a descoberta abriu {caminho}: ela lê o sysfs e não abre o nó")
+    raise AssertionError(f"a descoberta abriu {caminho}: a descoberta lê o sysfs e não abre o nó")
 
 
 def _com_a_mesa(marcador: str) -> Any:
@@ -91,7 +91,7 @@ def test_a_descoberta_do_no_acha_o_do_radio_igual_ao_do_cabo(
     assert achados == esperado, (
         f"a descoberta do nó «{marcador}» não devolveu os dois transportes: "
         f"{achados} — o nó do rádio existe e tem os mesmos eixos (medido em "
-        "03/09/2026 na mesa dela, bus 0x05)"
+        "03/09/2026 na máquina de teste, bus 0x05)"
     )
 
 
@@ -162,11 +162,11 @@ def test_o_mapa_guarda_o_caminho_do_radio_desta_area(chave: str, controle: str) 
 def test_o_mapa_conta_o_portao_do_segundo_controle_e_o_codigo_ainda_bate() -> None:
     """O PORTÃO FOI CURADO em 04/09/2026, e esta régua virou junto.
 
-    Ela nasceu em 03/09 guardando o achado — *"o `daemon.state_full` publica
+    A régua nasceu em 03/09 guardando o achado — *"o `daemon.state_full` publica
     `inputs: null` para todo controle que não é o primário"* — e cobrando que
-    o mapa e o código dissessem a mesma coisa. A terceira asserção dela era
+    o mapa e o código dissessem a mesma coisa. A sua terceira asserção era
     `'entry["inputs"] = None' in fonte`, e a mensagem já dizia o que fazer no
-    dia em que ela reprovasse: *"Se o portão foi curado, ótimo — e então o mapa
+    dia em que reprovasse: *"Se o portão foi curado, ótimo — e então o mapa
     mente: reescreva a `radio_ressalva`"*. Foi o que aconteceu (STATUS-04), e
     é o que este commit faz.
 
@@ -189,7 +189,7 @@ def test_o_mapa_conta_o_portao_do_segundo_controle_e_o_codigo_ainda_bate() -> No
     assert "_inputs_passivos" in ressalva, (
         "a `radio_ressalva` de `movimento.giroscopio@dualsense` não conta mais "
         "COMO o portão foi curado. Se a cura foi revertida, o mapa tem de voltar "
-        "a descrever o defeito — e as três que apontam para ela também "
+        "a descrever o defeito — e as três que apontam para essa ressalva também "
         "(`movimento.acelerometro@dualsense`, `toque.touchpad@dualsense`, "
         "`toque.touchpad.cursor@dualsense`)"
     )
@@ -202,9 +202,9 @@ def test_o_mapa_conta_o_portao_do_segundo_controle_e_o_codigo_ainda_bate() -> No
     assert "def _inputs_passivos" in fonte, (
         "`_inputs_passivos` sumiu de daemon/ipc_handlers.py: a TERCEIRA fonte de "
         "`inputs` era o que dava sensores ao segundo controle fora do co-op. Sem "
-        "ela o card volta a mostrar '—' em silêncio — reescreva a "
+        "essa fonte o card volta a mostrar '—' em silêncio — reescreva a "
         "`radio_ressalva` de `movimento.giroscopio@dualsense` e as três que "
-        "apontam para ela"
+        "apontam para essa linha"
     )
     assert "not isinstance(inputs, dict)" in fonte, (
         "a desistência de `_merge_sensores` mudou de forma; confira se o segundo "

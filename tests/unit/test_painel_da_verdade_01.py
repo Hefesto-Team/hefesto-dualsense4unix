@@ -114,7 +114,7 @@ def test_o_daemon_publica_o_carimbo_e_sobrevive_a_vpad_sem_ele() -> None:
     O vpad pode ser um `uinput` (que não tem hidraw e não tem o que carimbar)
     ou um dublê. O saneador devolve `{}` nesses casos, e descarta valores
     não-numéricos — o payload vira JSON, e um valor exótico aqui derrubaria a
-    serialização inteira por causa do campo menos importante dela.
+    serialização inteira por causa do seu campo menos importante.
 
     Mordida: trocar o `_visto_ha_s` por `vp.visto_ha_s` direto no
     `ipc_handlers`. As duas últimas asserções levantam AttributeError.

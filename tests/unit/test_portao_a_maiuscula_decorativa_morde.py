@@ -47,9 +47,9 @@ def test_o_none_e_o_lowercase_nao_sao_defeito():
 
 
 def test_o_comentario_que_cita_a_regra_nao_e_a_regra():
-    """A armadilha de prosa desta casa, e ela já custou seis levas."""
+    """A armadilha de prosa desta casa, que já custou seis levas."""
     folha = ("/* aqui morava uma regra que subia a caixa:\n"
-             "   .fita .chip .via{text-transform:uppercase} — e ela saiu */\n"
+             "   .fita .chip .via{text-transform:uppercase} — e a regra saiu */\n"
              ".fita .chip .via{color:red}")
 
     assert not regua._folha(_pagina(cabeca=folha)), (
@@ -114,7 +114,7 @@ def test_a_palavra_decorativa_ao_lado_do_selo_continua_pega():
 
 
 def test_o_span_de_selo_citado_no_style_nao_apaga_a_pagina():
-    """A CICATRIZ DESTA RÉGUA, e ela é do próprio dia em que nasceu."""
+    """A CICATRIZ DESTA RÉGUA, e é do próprio dia em que nasceu."""
     folha = '/* o gerador emitia <span class="lanc-selo localizado">, e nada casava */'
     achadas = regua._palavras(_pagina(cabeca=folha, corpo="<p>oi</p>"))
 
@@ -122,7 +122,7 @@ def test_o_span_de_selo_citado_no_style_nao_apaga_a_pagina():
 
 
 def test_a_sigla_e_o_modelo_nao_reprovam():
-    """A caixa alta é a grafia PRÓPRIA delas — escrevê-las de outro jeito é erro."""
+    """A caixa alta é a grafia PRÓPRIA dessas palavras — escrevê-las de outro jeito é erro."""
     assert regua._legitima("USB") and regua._legitima("BT")
     assert regua._legitima("AX211"), "modelo de aparelho não é palavra"
     assert not regua._legitima("INTEIRO")
@@ -136,7 +136,7 @@ def test_a_cor_e_o_endereco_saem_pela_forma_inteira():
     assert "FF" not in achadas and "AA" not in achadas, achadas
     assert "ESTE" in achadas, "a régua apagou mais do que o valor de máquina"
     assert not regua._legitima("DA"), (
-        "«DA» voltou a passar por código de máquina — é preposição, e ela "
+        "«DA» voltou a passar por código de máquina — é preposição, e "
         "aparece em «BOTÕES DA FACE», que é dívida declarada")
 
 

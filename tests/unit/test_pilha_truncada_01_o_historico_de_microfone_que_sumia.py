@@ -4,7 +4,7 @@ MEDIDO em 06/08/2026, no WirePlumber 0.5.12 instalado nesta máquina.
 
 `remove_configured_dualsense` existia para tirar UMA entrada do state do
 WirePlumber (a fonte padrão persistida que aponta para o mic do controle), e o
-comentário dela prometia *"preserva o resto do state"*. O que estava escrito
+comentário da função prometia *"preserva o resto do state"*. O que estava escrito
 era::
 
     sed -i.bak '/^default\\.configured\\.audio\\.source=.*[Dd]ual[Ss]ense/Id'
@@ -23,10 +23,10 @@ independentes: é uma PILHA CONTÍGUA, lida assim em
       index = index + 1
     until v == nil                      -- PARA no primeiro buraco
 
-Daí os DOIS defeitos da mesma linha, os dois presentes no state real dela:
+Daí os DOIS defeitos da mesma linha, os dois presentes no state real da máquina de teste:
 
 - base NÃO é o DualSense (o caso de hoje) -> o `sed` não casa nada e a função é
-  um NO-OP: as entradas do DualSense que ela existe para tirar ficam onde
+  um NO-OP: as entradas do DualSense que a função existe para tirar ficam onde
   estavam;
 - base É o DualSense -> casa, apaga a base, e a leitura para na primeira volta:
   `.0` e `.1` ficam inalcançáveis e o histórico INTEIRO some.
@@ -131,7 +131,7 @@ class TestOHistoricoSobrevive:
         """O defeito que destruía: apagar a base tornava `.0` e `.1` órfãs."""
         lidas = _fontes(_pilha(STATE_BASE_E_O_CONTROLE, home))
         assert lidas == [ONBOARD, WEBCAM], (
-            "o histórico de preferência de microfone dela foi truncado: o "
+            "o histórico de preferência de microfone do usuário foi truncado: o "
             f"WirePlumber leria {lidas}"
         )
 

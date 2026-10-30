@@ -99,7 +99,7 @@ def test_sem_a_variavel_o_import_escapa_da_arvore(worktree: Path) -> None:
         return
     onde = Path(r.stdout.strip()).resolve()
     assert not str(onde).startswith(str(worktree.resolve())), (
-        "sem PYTHONPATH o import caiu DENTRO do worktree — então esta bancada "
+        "sem PYTHONPATH o import caiu DENTRO do worktree — então este ensaio "
         "não reproduz a armadilha, e a régua de cima passaria de qualquer jeito. "
         "Confira se o venv ainda tem o editable install."
     )
@@ -112,7 +112,7 @@ def test_o_despachante_ignora_o_envrc_pelo_exclude_local() -> None:
     assert "info/exclude" in texto, (
         "o despachante não ignora o .envrc-voo pelo exclude LOCAL do worktree. "
         "Sem isso, ou ele suja todo `git status` de agente, ou um `git add -A` o "
-        "commita com o caminho da máquina dela dentro."
+        "commita com o caminho da máquina dentro."
     )
 
 

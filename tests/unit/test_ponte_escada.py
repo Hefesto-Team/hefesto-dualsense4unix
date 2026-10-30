@@ -188,7 +188,7 @@ class TestOQueConfirmaEOQueNao:
         )
 
     def test_jogo_fechado_no_meio_da_escada_nao_confirma_nada(self) -> None:
-        """Ela foi embora — isso não é ela aprovando a ponte."""
+        """Quem usa foi embora — isso não é aprovar a ponte."""
         assert (
             pe.confirmacao_por_silencio(
                 ponte_atual=pe.ESCADA[1].ponte,
@@ -238,7 +238,7 @@ class TestUmaGavetaSO:
         }
 
     def test_a_escada_nao_grava_em_disco(self) -> None:
-        """Nenhuma porta de escrita: a gaveta é o perfil, e ela tem dono."""
+        """Nenhuma porta de escrita: a gaveta é o perfil, e o perfil tem dono."""
         publicado = set(pe.__all__)
         assert not {n for n in publicado if "livro" in n or "gravar" in n}
         assert not hasattr(pe, "gravar_livro")

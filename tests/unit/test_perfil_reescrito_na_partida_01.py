@@ -100,7 +100,7 @@ def _daemon() -> Daemon:
 def test_ativacao_manual_seguida_de_tique_com_o_mesmo_candidato_nao_reativa(
     perfis_isolados: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A MORDIDA do item 1: ela escolhe o perfil na mão, o autoswitch tica com"""
+    """A MORDIDA do item 1: quem usa escolhe o perfil na mão, o autoswitch tica com"""
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_last_profile",
         lambda _nome: None,

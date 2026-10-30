@@ -29,7 +29,7 @@ def _config(policy: str, custom_mult: float = 1.0) -> DaemonConfig:
 
 
 def _atributo_do_trilho(nome: str) -> float:
-    """`max`/`min` do trilho da Intensidade, na TELA QUE ELA USA."""
+    """`max`/`min` do trilho da Intensidade, na TELA QUE O USUÁRIO USA."""
     pagina = (
         Path(__file__).resolve().parents[2]
         / "src" / "hefesto_dualsense4unix"
@@ -88,7 +88,7 @@ def test_amplificar_satura_em_255_e_nunca_da_a_volta(bruto: int) -> None:
 
 
 def test_o_caminho_do_rumble_fixado_tambem_satura() -> None:
-    """O rumble que ELA fixa passa pela mesma conta — e satura igual."""
+    """O rumble que O USUÁRIO fixa passa pela mesma conta — e satura igual."""
     daemon = MagicMock()
     daemon.config = _config("max")
     daemon.config.rumble_active = (200, 30)

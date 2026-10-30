@@ -80,7 +80,7 @@ def _fonte_de_fabrica(tmp_path: Path) -> Path:
 
 
 def test_o_perfil_do_usuario_muda_de_nome_sem_perder_uma_linha(disco: Path) -> None:
-    """O caso dela, fim a fim: renomeia e o conteúdo sai idêntico."""
+    """O caso medido, fim a fim: renomeia e o conteúdo sai idêntico."""
     _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)
 
     assert migrate_default_profile_name(disco) == NOME_DO_PADRAO
@@ -98,7 +98,7 @@ def test_o_arquivo_antigo_fica_no_disco_e_some_da_lista(disco: Path) -> None:
     migrate_default_profile_name(disco)
 
     backup = disco / BACKUP_DO_PADRAO
-    assert backup.is_file(), "o perfil antigo dela não pode simplesmente sumir"
+    assert backup.is_file(), "o perfil antigo do usuário não pode simplesmente sumir"
     assert json.loads(backup.read_text(encoding="utf-8")) == PERFIL_DO_USUARIO
     assert not (disco / ARQUIVO_ANTIGO_DO_PADRAO).exists()
     assert sorted(p.name for p in disco.glob("*.json")) == [ARQUIVO_DO_PADRAO]
@@ -153,7 +153,7 @@ def test_a_sessao_que_aponta_outro_perfil_nao_e_tocada(
 
 
 def test_recusa_quando_o_usuario_ja_tem_um_perfil_personalizado(disco: Path) -> None:
-    """Ela mesma criou um perfil com o nome do padrão. Sobrescrever destruiria dado."""
+    """O próprio usuário criou um perfil com o nome do padrão. Sobrescrever destruiria dado."""
     do_usuario = {"name": NOME_DO_PADRAO, "version": 1, "match": {"type": "any"},
             "priority": 42}
     _grava(disco, ARQUIVO_ANTIGO_DO_PADRAO, PERFIL_DO_USUARIO)

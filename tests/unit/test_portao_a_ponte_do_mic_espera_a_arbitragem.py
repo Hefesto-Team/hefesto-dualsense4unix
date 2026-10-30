@@ -21,12 +21,12 @@ razão e data. A terceira porta reprova. A janela alcançando a ponte reprova. E
 dia em que a arbitragem chegar, ele reprova também — para o registro sair daqui
 em vez de apodrecer verde.
 
-AS TRÊS MEDIÇÕES, e nenhuma delas é uma frase
-----------------------------------------------
+AS TRÊS MEDIÇÕES, e nenhuma é uma frase
+--------------------------------------
 1. **A arbitragem existe?** Medida no COMPORTAMENTO do `BrokerState` real: duas
    conexões pedem `open` do MESMO nó. Hoje as duas são servidas com um fd cru e
    nada na resposta as distingue — `_cmd_open` diz, textual, que *"`open` NÃO
-   altera lease/refcount"*. A régua sabe dizer "existe" também: ela é exercida
+   altera lease/refcount"*. A régua sabe dizer "existe" também: é exercida
    contra um broker dublê que RECUSA o segundo pedido (armadilha A2 — régua que
    só sabe passar não é régua).
 2. **Quantas portas sobem a ponte?** Varredura de AST sobre `src/`: quem importa
@@ -64,13 +64,13 @@ _QUEM_SOBE_A_PONTE = frozenset(
 
 _PORTAS_DECLARADAS: dict[str, str] = {
     "daemon/subsystems/bt_mic.py": (
-        "a porta do PRODUTO. Gate: `DaemonConfig.bt_mic_uniqs` (o que ela ligou "
+        "a porta do PRODUTO. Gate: `DaemonConfig.bt_mic_uniqs` (o que quem usa ligou "
         "no card, via `maquina.json`) ou `HEFESTO_DUALSENSE4UNIX_BT_MIC=1`. "
-        "Entrou em 22/08/2026 a pedido dela, e o preço 5.a não estava na mesa — "
+        "Entrou em 22/08/2026 por escolha de produto, e o preço 5.a não estava na mesa — "
         "ver a nota datada de 23/08 no topo da sprint QUATRO-MICROFONES-01."
     ),
     "cli/cmd_mic.py": (
-        "a porta À MÃO (`mic bt`). Desde 25/08/2026 ela ARBITRA na entrada: lê "
+        "a porta À MÃO (`mic bt`). Desde 25/08/2026 ARBITRA na entrada: lê "
         "`daemon.state_full` -> `bt_mic.uniqs` e não sobe ponte em cima de quem "
         "já tem uma. Fecha o sentido CLI -> daemon; o outro sentido é o 5.a."
     ),
@@ -186,8 +186,8 @@ def test_a_ponte_nao_ganhou_porta_nova():
         f"5.a) não existe: {', '.join(novas)}.\n"
         "Duas portas no mesmo controle são dois donos da sequência do report "
         "0x32 — o quadro do estudo 2026-08-16-O-PS-PRESO. Se a porta é "
-        "deliberada, ela entra em `_PORTAS_DECLARADAS` com razão e data, e o "
-        "preço vai à mesa dela antes."
+        "deliberada, entra em `_PORTAS_DECLARADAS` com razão e data, e o "
+        "preço vai à mesa antes."
     )
     assert not sumidas, (
         f"porta declarada que não existe mais: {', '.join(sumidas)}. Dívida que "
@@ -205,7 +205,7 @@ def test_a_janela_nao_alcanca_a_ponte():
         "a JANELA passou a alcançar a ponte do microfone: "
         f"{', '.join(dentro_da_janela)}.\n"
         "A janela declara no `maquina.json` e o daemon é quem sobe — é o que "
-        "mantém o gesto fora do processo que ela clica."
+        "mantém o gesto fora do processo que quem usa clica."
     )
 
 

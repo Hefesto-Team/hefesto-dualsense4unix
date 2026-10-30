@@ -143,7 +143,7 @@ async def test_o_ciclo_sobrevive_ao_jogo_que_abre_e_fecha(lar: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_o_perfil_renomeado_continua_voltando_no_boot(lar: Path) -> None:
-    """A metade A e a metade B no MESMO teste — é onde elas se quebram."""
+    """A metade A e a metade B no MESMO teste — é onde as duas se quebram."""
     import json
 
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile

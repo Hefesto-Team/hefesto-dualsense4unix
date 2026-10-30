@@ -1,6 +1,6 @@
 """P4 (23/08/2026) — alvo que saiu da mesa NÃO vira "todos".
 
-O defeito, medido: ela mira o Controle 2 no cabeçalho, o Controle 2 desliga
+O defeito, medido: quem usa mira o Controle 2 no cabeçalho, o Controle 2 desliga
 (bateria, botão PS, rádio), e o próximo gesto de output — vibração, cor,
 gatilho, LED de jogador — caía no **broadcast histórico**. Em co-op, que nesta
 casa é sempre ligado, isso é a mão de OUTRA pessoa sacudindo no meio da
@@ -200,7 +200,7 @@ def mesa(tmp_path: Path) -> _Mesa:
 
 
 class TestOExemplar:
-    """O gesto medido: mira o 2, o 2 desliga, ela clica "Testar"."""
+    """O gesto medido: mira o 2, o 2 desliga, quem usa clica "Testar"."""
 
     @pytest.mark.asyncio
     async def test_o_rumble_nao_vai_para_os_outros_tres(self, mesa: _Mesa) -> None:
@@ -404,7 +404,7 @@ class TestAReplicaDoJogoContinuaChegando:
             if outro == tres:
                 continue
             assert mesa.motores_de(outro) == [], (
-                f"{outro} recebeu a réplica do jogo sem ser o alvo dela"
+                f"{outro} recebeu a réplica do jogo sem ser o alvo escolhido"
             )
 
     def test_mesa_de_um_controle_so_continua_vibrando(self, mesa: _Mesa) -> None:

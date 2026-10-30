@@ -35,7 +35,7 @@ def test_o_inventario_de_hoje_passa(regua, capsys):
 
 
 def test_cada_falta_tem_um_custo_so_e_ele_nao_se_soma(regua):
-    """A regra que a sprint deixa, e ela é sobre a FRASE, não sobre o número."""
+    """A regra que a sprint deixa, e é sobre a FRASE, não sobre o número."""
     for gesto, (custo, _dona, _razao) in regua.A_PROVA_QUE_FALTA.items():
         assert custo in regua.CUSTOS, f"{gesto} tem custo fora do vocabulário"
 
@@ -160,7 +160,7 @@ def test_morde_o_degrau_que_desceu_no_mapa(regua, monkeypatch, capsys):
 
     `luz.lightbar.cor@dualsense` responde por QUATRO gestos da tela (`cor`,
     `brilho`, `apagar` e o par `modo-da-luz`; o `reenviar` saiu em 16/10/2026). Baixar um
-    único lado dela tem de derrubar os quatro de uma vez — e nenhum está declarado,
+    único lado tem de derrubar os quatro de uma vez — e nenhum está declarado,
     porque hoje os cinco chegaram.
     """
     monkeypatch.setattr(
@@ -174,7 +174,7 @@ def test_morde_o_degrau_que_desceu_no_mapa(regua, monkeypatch, capsys):
 
 
 def test_morde_o_degrau_que_subiu_no_mapa(regua, monkeypatch, capsys):
-    """MORDIDA 6b — a rota sobe no rádio e a declaração dela fica velha."""
+    """MORDIDA 6b — a rota sobe no rádio e a sua declaração fica velha."""
     monkeypatch.setattr(
         regua, "_linhas_do_mapa",
         _mapa_com(regua, "audio.alto_falante.rota", "radio",
@@ -210,7 +210,7 @@ def test_o_destino_nao_se_move_mexendo_na_regua(regua, monkeypatch):
 
     assert antes == depois
     assert antes["sensor"] == regua.GRAU_JOGO_REAGIU, (
-        "a feature que termina no jogo perdeu o destino dela")
+        "a feature que termina no jogo perdeu o destino")
 
 
 def test_o_destino_se_move_mexendo_no_mapa(regua):
