@@ -1,10 +1,10 @@
 """O nó e a ponte do som não nascem depois do stop.
 
 Sprint O-NO-E-A-PONTE-DO-SOM-NAO-NASCEM-DEPOIS-DO-STOP-01. Quem cria (a volta
-de reconciliação) e quem derruba (o stop) partilham uma porta: com ela
+de reconciliação) e quem derruba (o stop) partilham uma porta: com essa porta
 fechada, o gerenciador não ergue nó, e o que a volta sobe depois do `_parar`
 desce no mesmo passo, sem entrar nos dicionários. As réguas prendem a volta
-num `Event` para o stop cair no meio dela. Nada de servidor de som de
+num `Event` para o stop cair no meio da volta. Nada de servidor de som de
 verdade: o nó, a ponte e o ouvido são dublês que contam o que subiram e o
 que desceram.
 """
@@ -63,7 +63,7 @@ class _NoDeMentira:
 
 
 class _PonteDeMentira:
-    """A ponte do rádio: o hidraw e a vaga ficam presos enquanto ela está no ar."""
+    """A ponte do rádio: o hidraw e a vaga ficam presos enquanto a ponte está no ar."""
 
     criadas: ClassVar[list[_PonteDeMentira]] = []
 
@@ -105,7 +105,7 @@ class _Ouvido:
 
 
 class _Governador:
-    """O governador com a forma real: toda ponte do rádio pede a vaga dela."""
+    """O governador com a forma real: toda ponte do rádio pede a própria vaga."""
 
     ao_autorizar: Any = None
 
@@ -155,11 +155,11 @@ def _controles() -> list[Any]:
 def test_a_volta_que_passa_do_join_nao_ergue_no_nem_ponte(
     mesa: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A volta presa no `pactl` passa dos 2 s do `join`, e o stop segue sem ela.
+    """A volta presa no `pactl` passa dos 2 s do `join`, e o stop segue sem a volta.
 
     P1 e P2 no cabo, P3 e P4 no rádio. A volta fica presa na fonte do monitor
     do P3, antes de subir a ponte; o stop passa do `join` e, já descendo o que
-    tinha, solta a volta e espera que ela acabe. Ela não pode deixar ponte nos
+    tinha, solta a volta e espera que a volta acabe. A volta não pode deixar ponte nos
     dicionários nem mandar o servidor erguer nó. MORDIDAS: tirar o teste de
     `_parar` em `_casar_as_pontes` deixa a ponte do P3 e a do P4; tirar o
     `fechar()` do começo do `stop` faz o gerenciador erguer os quatro nós,

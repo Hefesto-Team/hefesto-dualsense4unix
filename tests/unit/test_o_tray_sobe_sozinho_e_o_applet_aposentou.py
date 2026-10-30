@@ -27,7 +27,7 @@ def _chaves(texto: str) -> dict[str, str]:
 def test_o_autostart_do_tray_existe_versionado() -> None:
     assert AUTOSTART.is_file(), (
         f"{AUTOSTART.relative_to(RAIZ)} não existe. Sem ele o `install.sh` não "
-        "tem o que copiar, e a barra dela fica vazia depois de o applet sair."
+        "tem o que copiar, e a barra de quem usa fica vazia depois de o applet sair."
     )
 
 
@@ -37,7 +37,7 @@ def test_o_autostart_chama_o_tray_e_nao_a_janela() -> None:
     assert "--tray" in exec_, (
         f"o Exec= do autostart é {exec_!r} e não pede o tray. Um autostart que "
         "abre a JANELA faria a interface inteira nascer a cada login — na "
-        "frente dela."
+        "frente de quem usa."
     )
     assert "@RAIZ@" in exec_, (
         "o arquivo versionado tem de trazer @RAIZ@; caminho de máquina aqui "
@@ -64,7 +64,7 @@ def test_o_install_escreve_o_autostart() -> None:
     texto = INSTALL.read_text(encoding="utf-8")
     assert '_AUTOSTART_TARGET="${_AUTOSTART_DIR}/${APP_ID}-tray.desktop"' in texto, (
         "o install.sh não escreve o autostart do tray. Tirar o applet sem isto "
-        "deixa a barra dela vazia."
+        "deixa a barra de quem usa vazia."
     )
     assert "${ROOT_DIR}/packaging/${APP_ID}-tray.desktop" in texto, (
         "o install.sh tem de COPIAR o arquivo versionado, e não escrever um "
@@ -165,7 +165,7 @@ def test_o_applet_parado_e_recado_e_nunca_falha() -> None:
     trecho = corpo.split("APPLET_DESKTOP", 1)[-1]
     assert "fail " not in trecho, (
         "um applet aposentado parado no disco não pode derrubar o diagnóstico "
-        "dela — o recado é `info`, com a linha para remover."
+        "de quem usa — o recado é `info`, com a linha para remover."
     )
     assert "./uninstall.sh" in trecho, (
         "o recado tem de dizer COMO remover; binário parado não se anuncia."
@@ -187,9 +187,9 @@ def test_a_flag_sai_antes_de_o_wipe_comecar() -> None:
     texto = UNINSTALL.read_text(encoding="utf-8")
     saida = texto.index('if [[ "${SO_O_APPLET}" -eq 1 ]]; then')
     for marco, porque in (
-        ('log "parando daemon', "o daemon dela seria parado"),
+        ('log "parando daemon', "o daemon de quem usa seria parado"),
         ('log "matando processos hefesto', "os processos seriam mortos"),
-        ("removendo ${path}", "os arquivos dela sairiam do disco"),
+        ("removendo ${path}", "os arquivos de quem usa sairiam do disco"),
     ):
         onde = texto.index(marco)
         assert saida < onde, (
@@ -201,7 +201,7 @@ def test_a_flag_sai_antes_de_o_wipe_comecar() -> None:
 def test_a_flag_e_o_wipe_usam_a_mesma_funcao() -> None:
     texto = UNINSTALL.read_text(encoding="utf-8")
     assert texto.count("remover_o_applet() {") == 1, (
-        "duas definições de remover_o_applet — uma delas vai divergir"
+        "duas definições de remover_o_applet — uma das duas vai divergir"
     )
     chamadas = len(
         [
@@ -226,7 +226,7 @@ def test_o_painel_so_e_derrubado_se_o_applet_estiver_na_lista() -> None:
     )
     guarda = corpo.split("killall cosmic-panel", 1)[0]
     assert "esta_na_lista" in guarda, (
-        "o painel dela é derrubado CEGO: bastava o binário existir. Na máquina "
-        "dela o applet nunca esteve na lista, então não há fantasma a limpar — "
+        "o painel de quem usa é derrubado CEGO: bastava o binário existir. Na máquina "
+        "de teste o applet nunca esteve na lista, então não há fantasma a limpar — "
         "e derrubar o painel de quem está usando a máquina é caro."
     )

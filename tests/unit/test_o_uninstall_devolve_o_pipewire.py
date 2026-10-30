@@ -410,5 +410,5 @@ def test_o_ensaio_com_a_flag_so_descreve_e_deixa_a_casa_igual(tmp_path: Path) ->
         "FARIA:" in linha and "rm -f /etc/apt/preferences.d/hefesto-pipewire" in linha
         for linha in r.stdout.splitlines()
     )
-    assert faria_a_trava == trava_existe, "o plano tem de dizer a trava quando ela existe"
+    assert faria_a_trava == trava_existe, "o plano tem de dizer a trava quando a trava existe"
     assert "PipeWire" in r.stdout, "o passo do PipeWire não falou no ensaio"

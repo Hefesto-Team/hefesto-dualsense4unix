@@ -117,7 +117,7 @@ def test_o_rotulo_da_fita_fica_mesmo_sem_o_todos() -> None:
 
 
 def test_o_desenho_do_usuario_nao_se_mexe() -> None:
-    """A bancada tem DOIS na mesa, então o `Todos` continua lá, byte a byte."""
+    """O mockup tem DOIS na mesa, então o `Todos` continua lá, byte a byte."""
     assert len(monta.CONECTADOS) > 1, "a mesa do desenho encolheu — releia esta cura"
     assert _tem_todos(monta.fita(ativo="todos"))
 
@@ -155,7 +155,7 @@ def test_o_casamento_com_os_radios_nao_para_com_um_controle() -> None:
 def test_o_indice_do_alvo_na_fita_conta_o_todos_so_quando_ele_existe() -> None:
     """`jogar_vivo._indice_na_fita` acendia `chips[1]` numa fita de um chip.
 
-    A função é lida pelo JS da bancada (`chips[i].classList.toggle('on', …)`), e
+    A função é lida pelo JS do mockup (`chips[i].classList.toggle('on', …)`), e
     um índice fora da fita é ninguém aceso com a régua dizendo "clicou".
 
     MORDIDA: force o `start=1` e o caso de UM reprova.
@@ -164,7 +164,7 @@ def test_o_indice_do_alvo_na_fita_conta_o_todos_so_quando_ele_existe() -> None:
     if tela not in sys.path:
         sys.path.insert(0, tela)
     jogar_vivo = pytest.importorskip(
-        "jogar_vivo", reason="a bancada da 01 pede gi/Gtk, que nem toda árvore tem")
+        "jogar_vivo", reason="o ensaio vivo da 01 pede gi/Gtk, que nem toda árvore tem")
 
     class _Falso:
         alvo: str | None = None

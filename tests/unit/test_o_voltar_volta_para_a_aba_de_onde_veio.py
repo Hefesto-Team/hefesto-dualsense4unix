@@ -1,4 +1,4 @@
-"""O «← Voltar» do mapa do controle volta para a aba de onde ela veio."""
+"""O «← Voltar» do mapa do controle volta para a aba de onde se veio."""
 from __future__ import annotations
 
 import importlib.util
@@ -17,7 +17,7 @@ LINK = f'href="{MAPA}"'
 
 
 def _declaradas() -> set[str]:
-    """As páginas em trabalho na bancada, perguntado ao portão `desenho-aprovado`."""
+    """As páginas em trabalho no mockup, perguntado ao portão `desenho-aprovado`."""
     alvo = RAIZ / "scripts/check_o_desenho_aprovado.py"
     spec = importlib.util.spec_from_file_location("check_desenho_do_voltar", alvo)
     assert spec is not None and spec.loader is not None
@@ -158,7 +158,7 @@ def test_o_mapa_aberto_direto_vai_para_a_reserva(viagens) -> None:
 
 
 def test_o_voltar_volta_para_uma_aba_que_nao_e_a_reserva(viagens) -> None:
-    """A origem que distingue a lista de volta da reserva: sem ela, a régua de"""
+    """A origem que distingue a lista de volta da reserva: sem a origem, a régua de"""
     origem = _fora_da_reserva()
     reg = viagens.get("(endereço)", {})
     assert reg.get("link") == "clicou" and reg.get("voltar") == "clicou", (

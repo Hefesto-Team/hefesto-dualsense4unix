@@ -69,7 +69,7 @@ def test_abrir_painel_chama_o_lancador_instalado_e_nao_a_arvore() -> None:
 def test_o_estado_vem_do_state_full_e_nao_do_status() -> None:
     """`daemon.status` não traz a lista de controles.
 
-    O tray pinta dela o «Ligado/Desligado» e o «Parar/Ativar». Medido em 19/09
+    O tray pinta daí o «Ligado/Desligado» e o «Parar/Ativar». Medido em 19/09
     na máquina do usuário: o estado completo devolveu perfil, bateria e a lista.
     """
     from hefesto_dualsense4unix.cli import cmd_tray
@@ -91,7 +91,7 @@ def test_o_ipc_silencia_em_vez_de_levantar() -> None:
 
 
 def test_o_apptray_espera_o_watcher_no_cosmic() -> None:
-    """A peça que faz o ícone aparecer, e ela é do `AppTray`."""
+    """A peça que faz o ícone aparecer, e a peça é do `AppTray`."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/app/tray.py").read_text(
         encoding="utf-8")
     assert "_desktop_is_cosmic" in fonte and "_start_deferred" in fonte, (

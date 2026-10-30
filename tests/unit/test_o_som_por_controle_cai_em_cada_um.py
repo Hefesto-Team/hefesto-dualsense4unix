@@ -1,18 +1,17 @@
 """SOM-POR-CONTROLE-01 — o mix ou o SFX, caindo em CADA controle.
 
-**O pedido, 08/09/2026, à noite:** *"o lance dos 4 mic virtuais via bt pra
-cada controle e cavbo e os somns seja hdmi completo seja o canal do sfx caindo
-pra cada controle. nao esquece disso."*  <!-- noqa-acento: citação -->
+**O pedido, 08/09/2026:** os quatro microfones virtuais e o som, o HDMI completo ou o canal dos
+efeitos, caem em cada controle, no cabo e no rádio.
 
 O QUE ESTE ARQUIVO MEDE, e o que ele NÃO mede
 ----------------------------------------------
 Mede o NOSSO lado: o nome do nó, o `sink_name`, a rota, a fonte e o ciclo de
 vida — tudo com dublê, sem um byte de PCM e sem um `pactl` de verdade. **Não
 mede som**: que o alto-falante do P2 toque o que entrou no nó do P2 é a orelha
-do usuário, na bancada, e está declarado na entrega.
+do usuário, no ensaio no aparelho, e está declarado na entrega.
 
 A MEDIÇÃO QUE ORIGINOU A SPRINT, refeita em 09/09/2026 às 19h55 com os QUATRO
-DualSense na bancada (dois no cabo, dois no rádio), por
+DualSense na máquina de teste (dois no cabo, dois no rádio), por
 `scripts/ensaios/os_nos_de_som_por_controle.py`, que é leitura pura::
 
     saída padrão .... alsa_output.pci-…hdmi-stereo
@@ -31,17 +30,17 @@ nesta árvore, e nenhuma era "faltou código":
    `daemon/connection.py` devolve zero. Ele era órfão *de propósito*: sem
    `module-loopback`, o nó publicado é um sumidouro, e há régua que trava esse
    par (`test_o_no_de_som_nao_nasce_sumidouro.py`);
-2. **e o nome não era o dela.** Mesmo ligado, o nó nasceria
+2. **e o nome não era o do usuário.** Mesmo ligado, o nó nasceria
    `Alto-falante · P1` com `sink_name=hefesto_alto_falante_p1` — e o
    instrumento procura «Alto-falante do Controle N» e `hefesto_som_<hex6>`.
    Eram DOIS `sink_name` para o mesmo nó, e o produto publica o segundo.
 
-Esta sprint mata a causa 1 (a rota existe) e a causa 2 (o nome é o dela). A
+Esta sprint mata a causa 1 (a rota existe) e a causa 2 (o nome é o do usuário). A
 terceira — as três linhas do registro — está fora da posse e vai na entrega.
 
 **UM DONO SÓ, DESDE 28/09/2026** (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01): as
 réguas das seções 1 a 4 mediam o plano da janela (`app/audio_saida.
-plano_de_publicacao`), que ninguém executava, e ele saiu. Elas medem agora o
+plano_de_publicacao`), que ninguém executava, e ele saiu. As réguas medem agora o
 dono do nó: `alto_falante_bt.rota_do_no`, `argv_das_rotas` e
 `SinkVirtualPipeWire`, com o `pactl` de mentira que guarda cada argv.
 """
@@ -103,7 +102,7 @@ class _Gravador:
 
 
 def _runner_de_leitura(*, com_placa: bool = True) -> Any:
-    """O `pactl` de LEITURA da bancada de mentira: dois DualSense no cabo."""
+    """O `pactl` de LEITURA da máquina de mentira: dois DualSense no cabo."""
     curto = (
         f"62\t{_HDMI}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
         f"134584\t{_SINK_P1}\tPipeWire\ts16le 4ch 48000Hz\tIDLE\n"
@@ -196,7 +195,7 @@ def test_o_sink_name_e_o_do_aparelho_e_nao_o_do_assento() -> None:
 
 
 def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_do_ensaio: None) -> None:
-    """O *«HDMI completo»* dela: o que a TV recebe, o controle recebe junto."""
+    """O *«HDMI completo»*: o que a TV recebe, o controle recebe junto."""
     linhas = _no_de_pe(_UNIQ_P1, fonte=som.FONTE_MIX).linhas
 
     assert len(linhas) == 3, linhas
@@ -230,7 +229,7 @@ def test_um_em_mix_e_outro_em_sfx_ao_mesmo_tempo(usb_do_ensaio: None) -> None:
 
 
 def test_o_mix_nao_troca_a_origem_pelo_destino() -> None:
-    """Trocar as duas pontas manda o som do controle para a televisão dela."""
+    """Trocar as duas pontas manda o som do controle para a televisão de quem usa."""
     argv = " ".join(som.argv_para_ligar_o_mix(som.nome_do_sink(_UNIQ_P1), f"{_HDMI}.monitor"))
     assert f"source={_HDMI}.monitor" in argv
     assert f"sink={som.nome_do_sink(_UNIQ_P1)}" in argv
@@ -284,7 +283,7 @@ def test_o_no_sobe_o_loopback_junto_com_o_sink() -> None:
 
 
 def test_a_rota_cai_antes_do_no_e_so_a_que_ele_subiu() -> None:
-    """Um loopback cuja ponta some é módulo órfão no PipeWire dela."""
+    """Um loopback cuja ponta some é módulo órfão no PipeWire de quem usa."""
     gravador = _Gravador()
     no = som.SinkVirtualPipeWire(
         uniq=_UNIQ_P1,
@@ -376,7 +375,7 @@ def test_a_mesa_inteira_vai_para_quem_resolve_o_sink(
 
     `escolher_sink` desempata pelo dispositivo USB, e para isso precisa da
     lista inteira. MORDIDA: passe `(uniq,)` em vez da mesa e esta asserção cai
-    — e na bancada o som do P2 sai no alto-falante do P1.
+    — e no aparelho o som do P2 sai no alto-falante do P1.
     """
     mesas: list[tuple[str, ...]] = []
 
@@ -604,7 +603,7 @@ def test_a_palavra_do_transporte_nao_troca_a_frase(palavra: str) -> None:
     **ACHADO NA PASSADA SECA de 09/09/2026, com os quatro DualSense do usuário na
     mesa.** `ControleNaLista.transporte` diz `"rádio"` (a palavra da tela) e
     `app/audio_saida` diz `"bt"` (a do `state_full`). Com a comparação de texto
-    contra UMA delas, os dois controles do rádio caíam no ramo do CABO e ela
+    contra UMA das duas, os dois controles do rádio caíam no ramo do CABO e a tela
     lia *"Reconecte o cabo do controle"* — sobre um controle sem cabo nenhum.
 
     MORDIDA: volte `e_radio(transporte)` para `transporte == TRANSPORTE_RADIO` e
@@ -627,7 +626,7 @@ def test_o_cabo_continua_sendo_cabo_nas_duas_grafias() -> None:
 def test_as_tres_contas_do_mesmo_rotulo_viraram_uma() -> None:
     """HAVIA TRÊS contas para o mesmo «Controle N». Sobrou uma — 12/09/2026.
 
-    TRES-CONTAS-PARA-UM-NUMERO-01, e o defeito que a originou foi medido na bancada em 09/09 às
+    TRES-CONTAS-PARA-UM-NUMERO-01, e o defeito que a originou foi medido no aparelho em 09/09 às
     22h, com os quatro DualSense ligados::
 
         pactl list sources → Description: Microfone do Controle 2  ← o daemon
@@ -640,7 +639,7 @@ def test_as_tres_contas_do_mesmo_rotulo_viraram_uma() -> None:
     `player_slot` é a ordem da FILA DE CHEGADA e a conta velha era a ordem dos
     HANDLES. Com os quatro na mesa as duas listas são diferentes — `[4,1,3,2]`
     contra `[1,2,3,4]` —, e é o MESMO par de listas que o portão
-    `test_mesa_cheia_11_a_janela_conta_quatro` mediu no payload real dela.
+    `test_mesa_cheia_11_a_janela_conta_quatro` mediu no payload real.
 
     AS TRÊS CONTAS, medidas aqui uma contra a outra sobre a MESMA mesa:
 
@@ -648,7 +647,7 @@ def test_as_tres_contas_do_mesmo_rotulo_viraram_uma() -> None:
         `daemon/ipc_handlers._numero_de_exibicao`     a MESMA, do lado do daemon
         `*.numero_do_assento`                         a dos NÓS DE SOM
 
-    A terceira deixou de ser uma conta: ela pergunta o `player_slot` ao dono —
+    A terceira deixou de ser uma conta: pergunta o `player_slot` ao dono —
     o `identity_registry` — e entrega a entrada à regra da casa.
 
     MORDIDA: tire o `daemon=self._daemon` de um dos dois `numero_do_assento` (ou
@@ -672,7 +671,7 @@ def test_as_tres_contas_do_mesmo_rotulo_viraram_uma() -> None:
 
     publicado = _payload_do_ipc(mesa, daemon)
     assert [e["player_slot"] for e in publicado] == [4, 1, 3, 2], (
-        "a fila de chegada não chegou ao payload; sem ela esta régua não mede "
+        "a fila de chegada não chegou ao payload; sem a fila esta régua não mede "
         f"divergência nenhuma: {[e['player_slot'] for e in publicado]}"
     )
 
@@ -695,7 +694,7 @@ def test_a_entrada_que_ja_traz_o_slot_nao_e_perguntada_de_novo() -> None:
     O caminho de produção é o contrário — `describe_controllers()` NÃO devolve
     `player_slot`, e é por isso que `base.numero_do_assento_na_mesa` vai pedi-lo
     ao registro. Mas quem passar a esta função uma entrada JÁ publicada (a do
-    payload do IPC) não pode ter o valor dela atropelado: um segundo caminho de
+    payload do IPC) não pode ter o próprio valor atropelado: um segundo caminho de
     leitura sobre o mesmo campo é como nasce a divergência que esta sprint
     fechou.
 
@@ -734,7 +733,7 @@ def test_o_controle_desligado_nao_ganha_nome_mesmo_com_lugar_na_fila() -> None:
     sub._backend = _backend(mesa)
 
     assert sub.numero_do_assento(p1) is None, (
-        "um controle DESLIGADO ganhou nome de nó na lista de som dela"
+        "um controle DESLIGADO ganhou nome de nó na lista de som"
     )
     for uniq in (p2, p3, p4):
         tem_nome = sub.numero_do_assento(uniq) is not None

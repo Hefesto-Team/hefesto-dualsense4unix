@@ -30,7 +30,7 @@ UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
 
-def _perfil(nome: str = "Bancada", **campos: Any) -> Any:
+def _perfil(nome: str = "Ensaio", **campos: Any) -> Any:
     """Um `Profile` DE VERDADE — o esquema é metade do que esta régua mede."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -50,7 +50,7 @@ def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     profiles_dir().mkdir(parents=True, exist_ok=True)
-    for nome in ("regua", "Bancada"):
+    for nome in ("regua", "Ensaio"):
         if not (profiles_dir() / f"{nome.lower()}.json").exists():
             loader.save_profile(Profile(name=nome, match=MatchManual()),
                                 origem="regua")
@@ -122,7 +122,7 @@ def test_a_ativacao_do_perfil_publica_as_escalas_no_backend() -> None:
     assert fc.publicadas == [{CHAVE: pytest.approx(0.3)}], (
         f"a ativação publicou {fc.publicadas!r} no backend. Sem o mapa, o "
         f"`escala_de` do funil não tem fator e o motor recebe a força inteira — o "
-        f"perfil dela mudaria no disco e o aparelho não.")
+        f"perfil de quem usa mudaria no disco e o aparelho não.")
 
 
 def _pagina_publicada() -> str:
@@ -177,18 +177,18 @@ def _texto_visivel(bruto: bytes) -> str:
 
 
 def test_o_desenho_do_usuario_so_mudou_no_que_esta_declarado() -> None:
-    """A bancada e o publicado dizem as MESMAS PALAVRAS, byte a byte.
+    """O mockup e o publicado dizem as MESMAS PALAVRAS, byte a byte.
 
     **ESTE CASO ENCOLHEU EM 03/09/2026, e a razão é a sprint
     `IDENTIDADE-VEM-DE-CIMA-01`.** Ele exigia igualdade byte a byte entre a
-    bancada e o publicado, descontada UMA cura nomeada (o quarto selo). A
+    mockup e o publicado, descontada UMA cura nomeada (o quarto selo). A
     sprint da identidade mudou a FORMA de três coisas nesta aba — a cor do
     plástico saiu de um `--plastico` inline e virou a tinta de um `<i>` de 3px;
     a régua do rádio ganhou um recipiente com endereço; a lista de aparelhos
-    ganhou o dela —, e nenhuma delas move um pixel.
+    ganhou o próprio —, e nenhuma das três move um pixel.
 
     **UMA LISTA DE DESCONTOS QUE CRESCE A CADA SPRINT NÃO É RÉGUA, É DIÁRIO.**
-    Ela ficaria verde por construção — cada leva acrescentaria a própria linha
+    A régua ficaria verde por construção — cada leva acrescentaria a própria linha
     —, que é o defeito que esta casa chama de *régua que digita o que devia
     ler*. Então ele passou a medir o que continua sendo verdade e o que ele
     consegue ler sem lista nenhuma: **as palavras da tela.**
@@ -199,27 +199,27 @@ def test_o_desenho_do_usuario_so_mudou_no_que_esta_declarado() -> None:
     O QUE ELE DEIXOU DE PEGAR, e está dito porque um buraco calado é pior que
     um buraco: uma COR mudada, uma medida de CSS, um bloco movido. Quem cobre
     isso são dois outros, e os dois estão ligados: o portão `desenho-aprovado`
-    reprova QUALQUER divergência entre bancada e publicado que não esteja
-    declarada em `mockup/DIVERGENCIAS.md` — e a declaração é o que ela lê antes
+    reprova QUALQUER divergência entre mockup e publicado que não esteja
+    declarada em `mockup/DIVERGENCIAS.md` — e a declaração é o que se lê antes
     de publicar —, e a `scripts/check_identidade_vem_de_cima.py` cobra que
     nenhuma cor de plástico fique congelada na página.
 
     **O NOME PROMETIA O QUE O CORPO NÃO FAZIA — corrigido em 03/09/2026.** Ele
     se chama *"só mudou no que está DECLARADO"* e nunca abriu a declaração:
     exigia igualdade de texto sempre, e por isso ficava vermelho no instante em
-    que alguém fazia a coisa certa — adiantar a bancada e declarar a divergência
+    que alguém fazia a coisa certa — adiantar o mockup e declarar a divergência
     em `mockup/DIVERGENCIAS.md`, que é o processo desta casa. Reprovava o
     processo, não o defeito.
 
     Em 03/09 a `08-conexoes` foi declarada duas vezes (o `MIGRA-08-01`, com dez
     endereços de pintura, e o desenho do controle que passou a vestir o
-    aparelho), e a declaração diz o que ela vê hoje sem publicar. A régua passou
+    aparelho), e a declaração diz o que a aba mostra hoje sem publicar. A régua passou
     a ler a MESMA fonte que o portão `desenho-aprovado` lê — `declaradas()`, do
     próprio script —, e a cobrar cada caso no seu estado:
 
     * **não declarada** → as palavras têm de bater. É a mordida original, e é a
       que pega a palavra trocada de fininho;
-    * **declarada** → a bancada pode estar à frente, e o que se cobra é que a
+    * **declarada** → o mockup pode estar à frente, e o que se cobra é que a
       declaração exista de verdade. Some no dia do `--publicar`, e a igualdade
       volta a ser exigida sozinha.
 
@@ -244,8 +244,8 @@ def test_o_desenho_do_usuario_so_mudou_no_que_esta_declarado() -> None:
 
     if "08-conexoes.html" not in mod.declaradas():
         assert ensaio == publicado, (
-            "a bancada da 08 passou a DIZER uma coisa que o publicado não diz — "
-            "e palavra de tela é decisão dela, não de quem gera a página. Se "
+            "o mockup da 08 passou a DIZER uma coisa que o publicado não diz — "
+            "e palavra de tela é decisão do produto, não de quem gera a página. Se "
             "isso é adiantamento com razão, declare em `mockup/DIVERGENCIAS.md`.")
         return
 
@@ -260,7 +260,7 @@ def test_o_desenho_do_usuario_so_mudou_no_que_esta_declarado() -> None:
 
 
 def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
-    """Bancada à frente do publicado só vale DECLARADA — é o portão do desenho."""
+    """Mockup à frente do publicado só vale DECLARADA — é o portão do desenho."""
     ensaio = (RAIZ / "mockup/08-conexoes.html").read_bytes()
     publicado = (
         RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
@@ -271,12 +271,12 @@ def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
 
     if ensaio == publicado:
         assert not declarada, (
-            "a bancada da 08 e o produto são byte-idênticos, e ainda há uma "
+            "o mockup da 08 e o produto são byte-idênticos, e ainda há uma "
             "seção dizendo que a aba está EM TRABALHO — a lápide sobreviveu à "
             "publicação e vai enganar quem ler o arquivo")
         return
     assert declarada, (
-        "a bancada da 08 andou à frente do publicado e ninguém declarou — o "
+        "o mockup da 08 andou à frente do publicado e ninguém declarou — o "
         "portão `desenho-aprovado` reprova, e com razão")
 
 
@@ -349,4 +349,4 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
     assert saida.stdout.strip() == "False", (
         "o caminho da frase do teto puxou `gi.repository.Gtk` para o processo, "
         "e a linha 1 deste módulo promete `sem GTK` — com três consequências "
-        f"medidas escritas logo abaixo dela. Saída: {saida.stdout!r}")
+        f"medidas escritas logo abaixo da linha 1. Saída: {saida.stdout!r}")

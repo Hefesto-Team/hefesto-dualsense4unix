@@ -15,7 +15,7 @@ AS MORDIDAS (feitas em 02/10/2026, uma por vez, com o md5 conferido na volta):
 1. ``_numero`` lendo ``None`` como 0,0: o azul de leitor perdido vira colapso.
 2. ``resumir`` chaveando pelo ``passo``: a janela «base» com a Steam do usuário cai
    no grupo da base.
-3. a Steam sem olhar o ``HOME``: duas dela; sem a lista ``excluir``: três.
+3. a Steam sem olhar o ``HOME``: duas de quem usa; sem a lista ``excluir``: três.
 4. o controle chaveado pela posição: os números trocam de controle; pelo
    modelo: os dois «White» viram um.
 5. o adaptador escrito pelo endereço, e a interface do Wi-Fi pelo nome: as
@@ -154,7 +154,7 @@ def test_2_o_fator_sai_do_que_a_janela_mediu(inst: Any) -> None:
                   inst.ContextoDaJanela(passo="base"))
     assert com["fatores"]["steam_do_usuario"] == 1
     grupos = inst.resumir([sem, com])
-    assert len(grupos) == 2, "a janela «base» com a Steam dela caiu no grupo da base"
+    assert len(grupos) == 2, "a janela «base» com a Steam de quem usa caiu no grupo da base"
     da_steam = [g for g in grupos if g["fatores"]["steam_do_usuario"] == 1]
     assert len(da_steam) == 1 and da_steam[0]["janelas"] == 1
     assert da_steam[0]["passos"] == ["base"]
@@ -177,8 +177,9 @@ def _processo(raiz: Path, pid: int, argv: list[str], home: str) -> None:
 
 def test_3_a_steam_do_teste_pelo_home(inst: Any, tmp_path: Path) -> None:
     raiz = tmp_path / "proc"
-    do_usuario = "/home/ela"
-    _processo(raiz, 100, ["/home/ela/.local/share/Steam/ubuntu12_32/steam", "-srt-logger-opened"],
+    do_usuario = "/home/usuario"
+    _processo(raiz, 100,
+              ["/home/usuario/.local/share/Steam/ubuntu12_32/steam", "-srt-logger-opened"],
               do_usuario)
     _processo(raiz, 200, ["/tmp/pytest-of-o-usuario/pytest-3/lar0/Steam/ubuntu12_32/steam"],
               "/tmp/pytest-of-o-usuario/pytest-3/lar0")
@@ -376,7 +377,7 @@ def test_9b_o_daemon_que_responde_chega_inteiro(inst: Any) -> None:
     """A outra metade da nona: o ``None`` tem de ser do daemon mudo, e não da porta.
 
     Sem esta, uma porta que sempre devolve ``None`` (o método com outro nome, o
-    cliente chamado errado) passaria na nona, e na bancada TODA janela sairia
+    cliente chamado errado) passaria na nona, e na máquina de teste TODA janela sairia
     «o daemon não respondeu» — o instrumento respondendo sobre a própria porta,
     e não sobre o daemon. O dublê fala o protocolo do soquete (uma linha de
     JSON-RPC de cada lado) e só responde ao ``daemon.state_full``.
@@ -425,7 +426,7 @@ def test_o_laco_da_janela_fecha_uma_linha_por_janela(inst: Any, tmp_path: Path) 
         ar=lambda: {},
         varredura=lambda: Varredura(),
         raiz_proc=str(tmp_path),
-        home_do_usuario="/home/ela",
+        home_do_usuario="/home/usuario",
         excluir=frozenset(),
         banda_do_wifi=lambda _i: None,
         diario_do_kernel=lambda _a, _b: "",

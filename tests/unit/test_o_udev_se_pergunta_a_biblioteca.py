@@ -188,7 +188,7 @@ def _codigo_python(arquivo: Path) -> str:
 
 
 def _codigo_shell(arquivo: Path) -> str:
-    """O shell sem as linhas de comentário nem o rabo `# ...` delas."""
+    """O shell sem as linhas de comentário nem o rabo `# ...` das linhas."""
     linhas = arquivo.read_text(encoding="utf-8", errors="replace").splitlines()
     return "\n".join(_COMENTARIO_DO_SHELL.sub("", linha) for linha in linhas)
 

@@ -3,10 +3,10 @@
 O ``Daemon`` é o de verdade, com o ``_config(...)`` do molde do
 ``test_bt_mic_subsystem_registrado``: ``dsu_enabled=True, dsu_port=0`` e o resto
 desligado. Com os padrões o ``run()`` tentaria o bind em 127.0.0.1:6969, a porta
-do daemon vivo dela, e a 26760 é a porta do servidor dela: nenhum teste aqui
+do daemon vivo de quem usa, e a 26760 é a porta do servidor real: nenhum teste aqui
 toca nas duas. O hub de verdade vem do ``IpcServer`` (molde de
 ``test_a_mira_por_movimento_na_tela``), com a fábrica de ``SensorHub`` trocada
-por uma de dublês, para nenhum nó dela abrir.
+por uma de dublês, para nenhum nó real abrir.
 """
 
 from __future__ import annotations

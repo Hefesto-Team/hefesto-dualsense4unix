@@ -1,7 +1,7 @@
 """O «Testar» com o Efeito imersão escolhido repete o padrão até o «Parar», com as barras ao vivo.
 
 Pedido de 19/10/2026: o teste da vibração e o da háptica ficam até o «Parar», para ajustar em tempo
-real. A háptica tem a régua dela em
+real. A háptica tem a própria régua em
 `test_o_testar_toca_a_forma_escolhida_e_o_fim_do_padrao_poupa_o_par`.
 
 MORDIDAS:

@@ -120,7 +120,7 @@ def test_o_u_hid_h_e_o_de_fabrica() -> None:
 
 
 def test_a_marca_esta_no_fonte() -> None:
-    """Nada mais no sysfs separa o curado do de fábrica: o daemon e o doctor leem por ela."""
+    """Nada mais no sysfs separa o curado do de fábrica: o daemon e o doctor leem pela marca."""
     fonte = (PASTA / "f_hid.c").read_text(encoding="utf-8")
     assert "static bool get_report_sized = true;" in fonte
     assert "module_param(get_report_sized, bool, 0444);" in fonte

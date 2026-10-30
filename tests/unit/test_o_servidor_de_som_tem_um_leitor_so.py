@@ -488,7 +488,7 @@ def test_a_rajada_de_eventos_rele_uma_vez(
 def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
     servidor: Servidor, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O `systemctl --user restart pipewire…` da prova 4, sem o servidor dela."""
+    """O `systemctl --user restart pipewire…` da prova 4, sem o servidor de quem usa."""
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
     from hefesto_dualsense4unix.integrations import alto_falante_bt as afb
 
@@ -845,7 +845,7 @@ def test_escrever_e_conferir_le_o_servidor_e_nao_a_foto() -> None:
     lidas.clear()
     r.escreveu(["pactl", "set-default-source", "hefesto_mic_0000a3"])
     assert r.responder(["pactl", "get-default-source"]) == "hefesto_mic_0000a3\n"
-    assert lidas == [("pactl", "info")], "a escrita não fez o retrato reler o tipo dela"
+    assert lidas == [("pactl", "info")], "a escrita não fez o retrato reler o tipo da fonte"
     assert r.responder(["pactl", "get-default-source"]) == "hefesto_mic_0000a3\n"
     assert lidas == [("pactl", "info")], "releu de novo sem escrita nova"
 

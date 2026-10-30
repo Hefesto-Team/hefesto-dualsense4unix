@@ -3,7 +3,7 @@
 A `vibracao.rumble.passthrough@dualsense` dizia `transporte = só cabo`,
 herança do v1, com `cabo_aciona` e `radio_aciona` em `sim`. O censo lia a
 coluna `transporte` só para contar, e a regra da assimetria compara um lado
-com o outro, nunca com ela. A regra 21 dá dono a essa coerência, para todo
+com o outro, nunca com a coluna. A regra 21 dá dono a essa coerência, para todo
 controle do mapa.
 """
 from __future__ import annotations

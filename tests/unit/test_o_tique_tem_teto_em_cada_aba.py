@@ -312,7 +312,7 @@ def test_quem_fecha_a_janela_durante_a_espera_fecha_o_processo() -> None:
     hv._esperar_o_webkit_comecar(tela, teto_s=3.0)
     espera = time.monotonic() - t0
     laco = _o_laco_que_vem_s(gtk, teto_s=4.0)
-    assert espera < 1.5, f"o «X» não encerrou a espera: ela durou {espera:.2f} s"
+    assert espera < 1.5, f"o «X» não encerrou a espera: a espera durou {espera:.2f} s"
     assert laco < 1.5, (
         f"o pedido de sair se perdeu na espera: o laço que vem durou {laco:.2f} s, "
         "e o processo ficaria pendurado sem janela")

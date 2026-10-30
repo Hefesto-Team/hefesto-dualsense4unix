@@ -132,14 +132,14 @@ async def test_o_shutdown_do_daemon_fecha_o_teclado_na_tela(
     assert _esperar_morrer(pid), (
         f"o teclado na tela (pid={pid}) SOBREVIVEU ao shutdown do daemon — é o "
         "defeito (1) da sprint: o `shutdown` fecha o `_keyboard_device` e passa "
-        "direto pelo `_osk_controller`, e a janela fica na tela dela sem dono")
+        "direto pelo `_osk_controller`, e a janela fica na tela sem dono")
     assert getattr(daemon, "_osk_controller", None) is None, (
         "o shutdown fechou o teclado mas deixou o controlador pendurado no "
         "daemon — o slot tem de zerar como o dos outros subsystems")
 
 
 def test_o_daemon_novo_adota_o_orfao_e_o_r3_fecha(mesa: dict[str, Any]) -> None:
-    """Ela aperta R3 depois de o daemon reiniciar — e o teclado FECHA."""
+    """Quem usa aperta R3 depois de o daemon reiniciar — e o teclado FECHA."""
     antigo = _OSKController()
     antigo.open()
     pid = mesa["nascidos"][0]
@@ -148,7 +148,7 @@ def test_o_daemon_novo_adota_o_orfao_e_o_r3_fecha(mesa: dict[str, Any]) -> None:
     novo = _OSKController()
     assert novo._process is None, "o controlador novo tem de nascer sem processo"
     assert novo.aberto() is True, (
-        "o daemon novo respondeu 'fechado' com o teclado na tela dela — é dessa "
+        "o daemon novo respondeu 'fechado' com o teclado na tela — é dessa "
         "mentira que nascem o R3 que não fecha e o L3 que empilha")
 
     novo.dispatch_token(TOKEN_CLOSE_OSK, "press")
@@ -231,7 +231,7 @@ def test_o_defunto_por_colher_nao_conta_como_teclado_na_tela(
     novo = _OSKController()
     assert novo.aberto() is False, (
         f"o daemon novo adotou um DEFUNTO (pid={pid}): `/proc` e `comm` "
-        "continuam lá, mas não há teclado na tela dela — e o L3 nunca mais "
+        "continuam lá, mas não há teclado na tela — e o L3 nunca mais "
         "abriria nenhum")
     novo.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     assert novo.esperar_os_toques(5.0)

@@ -2,7 +2,7 @@
 
 O ensaio ``scripts/ensaios/o_sinal_em_dois_adaptadores.py`` grava, por segundo, o RSSI da
 varredura em A e em B e o do enlace em A, sem endereço, e recusa com o daemon no ar. A conta lê
-as sessões gravadas (``tests/fixtures/o_sinal_em_dois_adaptadores/``, sintéticas até a bancada
+as sessões gravadas (``tests/fixtures/o_sinal_em_dois_adaptadores/``, sintéticas até o ensaio
 rodar) e diz se as constantes do sinal valem: a faixa ideal, a conversão entre as réguas e a margem
 do Equilibrar. As constantes não mudam nesta sprint; a régua cobra quando a sessão gravada chegar.
 
@@ -186,7 +186,7 @@ def test_6_a_margem_tem_de_cobrir_a_diferenca_entre_os_adaptadores() -> None:
 
 
 def test_7_as_constantes_seguem_a_sessao_gravada() -> None:
-    """Gravada a bancada (``bancada.json``), as constantes do produto têm de conferir com ela."""
+    """As constantes do produto têm de conferir com a sessão gravada no ensaio."""
     assert rm.SINAL_QUE_ATRASA_DBM == -48 and rm.SINAL_QUE_PERDE_APERTO_DBM == -52
     assert pr.MARGEM_DO_SINAL_QUE_COMPENSA_DBM == 8
     gravada = sinal.gravada()

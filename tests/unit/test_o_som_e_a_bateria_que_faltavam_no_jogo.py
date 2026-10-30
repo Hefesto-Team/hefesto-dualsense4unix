@@ -16,7 +16,7 @@ ingame"*:
 
 O segundo é irmão exato do ``forward_jack`` (curado horas antes, na
 ``ORFAOS-QUE-VOLTAM-01``) e tinha os **mesmos dois defeitos** — mas o segundo
-numa forma mais sorrateira, e é ela que este arquivo tranca com mais cuidado:
+numa forma mais sorrateira, e é essa forma que este arquivo tranca com mais cuidado:
 o ``forward_battery`` **chamava** ``_emit_if_changed()``, só que sem
 ``from_reader``. Com ``_motion_streaming`` ligado — que é o estado normal,
 porque é o reader quem liga — o gate devolve ``False`` na primeira linha e nada

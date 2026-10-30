@@ -373,7 +373,7 @@ def test_o_caderno_da_casa_tem_as_tres_medidas_com_folga_e_piso() -> None:
 
 def test_mordida_sem_a_folga_o_ruido_reprova(
         mundo: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com a folga zerada, o mesmo +8% do caso «dentro da folga» reprova: o caso depende dela."""
+    """Com a folga zerada, o mesmo +8% do caso «dentro da folga» reprova: depende da folga."""
     raiz, casa = mundo
     _escreve_casa(casa, suite_s=2600.0)
     assert _roda(raiz, casa) == 0

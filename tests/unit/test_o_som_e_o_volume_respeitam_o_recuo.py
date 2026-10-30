@@ -224,7 +224,7 @@ def test_prazo_estourado_no_volume_cala_o_microfone_e_o_som(
 def test_em_recuo_a_fonte_do_uniq_volta_na_hora(
     recuo: _Relogio, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A pergunta de 715 prazos no journal: em recuo, ela não espera nada."""
+    """A pergunta de 715 prazos no journal: em recuo, a pergunta não espera nada."""
     run = _RunDoServidorMudo(espera_s=1.0)
     monkeypatch.setattr(subprocess, "run", run)
     bt.PACTL.estourou()

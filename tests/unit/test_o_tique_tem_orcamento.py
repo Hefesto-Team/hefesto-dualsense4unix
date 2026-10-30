@@ -198,7 +198,7 @@ def test_o_gather_de_50_ms_nao_atrasa_a_entrada_do_tique(
 def test_a_entrada_vai_antes_da_manutencao_no_mesmo_tique(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No tique em que a identidade vence, o `dispatch` já foi ao jogo quando ela roda."""
+    """No tique em que a identidade vence, o `dispatch` já foi ao jogo quando a identidade roda."""
     _uma_so_fase(monkeypatch, ("identidade", 0.10, 0.0))
     daemon = _DaemonDeLaco(tiques=20)
     ordem: list[str] = []

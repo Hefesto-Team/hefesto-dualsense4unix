@@ -30,7 +30,7 @@ from tests.unit import a_exclusao_de_antes as antiga
 
 @pytest.fixture(autouse=True)
 def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui as quatro estão ligadas."""
     from tests.unit.as_caixas_das_extensoes import ligar
 
     ligar(monkeypatch)
@@ -61,7 +61,7 @@ def _md5(caminho: Path) -> str:
 
 
 def _heroic(lar: Path, jogos: dict[str, dict[str, object] | None]) -> Path:
-    """O Heroic Flatpak com a global dela (`MANGOHUD`) e estes jogos instalados."""
+    """O Heroic Flatpak com a global de quem usa (`MANGOHUD`) e estes jogos instalados."""
     casa = lar / _HEROIC
     (casa / "store_cache").mkdir(parents=True)
     (casa / "GamesConfig").mkdir()
@@ -131,7 +131,7 @@ def test_a_volta_segue_a_global(lar: Path, copia: dict[str, object] | None) -> N
     assert completo, [cpe.frase_do_desfeito(f) for f in feitos]
     ficou = _lista_propria(casa, "A")
     assert ficou is None, (
-        f"A saiu do uninstall com a lista própria {ficou}: não segue mais a global dela")
+        f"A saiu do uninstall com a lista própria {ficou}: não segue mais a global de quem usa")
     arquivo = casa / "GamesConfig" / "A.json"
     assert arquivo.exists() == (copia is not None), (
         "o arquivo que nasceu com a exclusão não saiu" if copia is None
@@ -141,7 +141,7 @@ def test_a_volta_segue_a_global(lar: Path, copia: dict[str, object] | None) -> N
 
 
 def test_o_usuario_mexeu_a_chave_do_usuario_fica(lar: Path) -> None:
-    """MORDIDA: a volta exata sem conferir o «depois» (a chave dela sumiria)."""
+    """MORDIDA: a volta exata sem conferir o «depois» (a chave de quem usa sumiria)."""
     casa = _heroic(lar, {"A": {}})
     _carona(lar)
     antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar)
@@ -153,7 +153,7 @@ def test_o_usuario_mexeu_a_chave_do_usuario_fica(lar: Path) -> None:
     _desfazer(lar)
 
     ficou = dict(_lista_propria(casa, "A") or [])
-    assert ficou.get("DXVK_HUD") == "fps", f"a chave que ela pôs em A sumiu: {ficou}"
+    assert ficou.get("DXVK_HUD") == "fps", f"a chave que quem usa pôs em A sumiu: {ficou}"
     assert ficou.get("MANGOHUD") == "1", ficou
     assert not set(ficou) & _nossas(), (
         f"A ficou com o que a carona ou a exclusão escreveram: {sorted(set(ficou) & _nossas())}")
@@ -218,7 +218,7 @@ def test_sem_pyyaml_o_yml_volta_exato_ou_fica(lar: Path, tmp_path: Path) -> None
         capture_output=True, text=True, timeout=60, check=False, cwd=str(tmp_path))
     assert _md5(ymls["quieto"]) == originais["quieto"], ymls["quieto"].read_text()
     assert _md5(ymls["mexido"]) == mexido, (
-        "o `.yml` que ela mexeu foi regravado sem o PyYAML:\n" + ymls["mexido"].read_text())
+        "o `.yml` que quem usa mexeu foi regravado sem o PyYAML:\n" + ymls["mexido"].read_text())
     assert r.returncode == 1, r.stdout + r.stderr
     linha = next((x for x in r.stdout.splitlines() if ymls["mexido"].name in x), "")
     assert "fica para o desfazer de depois" in linha, r.stdout
@@ -362,7 +362,7 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
     """O uninstall que GUARDA a configuração (o padrão) devolve os jogos e deixa"""
     casa = _heroic(lar, {"A": None})
     ymls = _lutris(lar, {"q": "11"})
-    original = "# o jogo dela\n" + ymls["q"].read_text()
+    original = "# o jogo de quem usa\n" + ymls["q"].read_text()
     ymls["q"].write_text(original)
     _carona(lar)
     assert antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"

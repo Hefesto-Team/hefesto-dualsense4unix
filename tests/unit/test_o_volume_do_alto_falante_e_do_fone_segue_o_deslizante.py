@@ -2,8 +2,8 @@
 
 O byte que sai em `common[4]` (fone) e `common[5]` (alto-falante) é o do deslizante, o MESMO no
 cabo e no rádio. A placa do cabo fica em 100 % (`alto_falante_bt.garantir_a_placa_cheia`, a
-`d61af1907`), e ela não é régua: a placa nos 40 % do WirePlumber (fator 0,064, -23,9 dB) era o
-defeito. Decisão por delegação, 14/10/2026, depois da rodada 1 da bancada: com o desconto da placa
+`d61af1907`), e a placa não é régua: a placa nos 40 % do WirePlumber (fator 0,064, -23,9 dB) era o
+defeito. Decisão por delegação, 14/10/2026, depois da rodada 1 do ensaio: com o desconto da placa
 de antes no byte do cabo (a `76747f07d`), o White no cabo soava «super baixo» e o rádio «alto e
 bom», na mesma posição do deslizante. E no Modo Nativo o laço não escreve
 (FEAT-NATIVE-OUTPUT-MUTE-01), então o som sai no report mínimo dele.

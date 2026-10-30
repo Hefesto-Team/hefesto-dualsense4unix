@@ -24,7 +24,7 @@ Ele adivinhava o modo de cada controle a cada 0,4 s e acordava a volta quando o
 palpite divergia da ponte — e, quando a ponte NÃO PODIA virar o modo dele,
 acordava para sempre, o que pediu a espera da tentativa que falhou (26/09). A
 volta agora acorda pelo aviso (o retrato do som, o toque de quem entra na
-partida) e reconcilia quando o que ELA LEU mudou: os fluxos nos nós dos
+partida) e reconcilia quando o que a VOLTA LEU mudou: os fluxos nos nós dos
 controles do rádio. As réguas abaixo medem essa comparação, com os mesmos
 casos que o vigia tinha, e o dublê segue respondendo SÓ sobre o que foi
 perguntado.
@@ -74,7 +74,7 @@ def test_servidor_mudo_e_duvida_e_nao_silencio() -> None:
 
 
 def test_a_forma_singular_continua_valendo() -> None:
-    """`sink_esta_tocando` passou a ser fachada, e o contrato dela não muda."""
+    """`sink_esta_tocando` passou a ser fachada, e o contrato da função não muda."""
     correr = _pactl_de_mentira(
         sinks="7\thef_p1\td\ts\tRUNNING\n", entradas="31\t7\t180\tp\ts\n"
     )

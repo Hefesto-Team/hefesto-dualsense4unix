@@ -39,13 +39,13 @@ def _frase_que_o_usuario_decidiu() -> str:
             achado = re.search(r'"(.+?)"', linha.get("titulo", ""))
             assert achado, (
                 f"a linha {_ID_DA_DECISAO} do {_DECISOES.name} existe mas o "
-                "`titulo` dela não traz a frase entre aspas — a fonte da frase "
+                "`titulo` da linha não traz a frase entre aspas — a fonte da frase "
                 "de tela mudou de forma e esta régua deixou de saber o que ler"
             )
             return achado.group(1)
     raise AssertionError(
         f"{_ID_DA_DECISAO} não está em {_DECISOES} — a frase que o produto "
-        "publica ficou sem decisão dela por trás"
+        "publica ficou sem decisão de produto por trás"
     )
 
 
@@ -95,7 +95,7 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[dict[str, 
 
 
 def _texto(aviso: dict[str, Any]) -> str:
-    """Título e corpo do aviso colados — é o que ela LÊ no canto da tela."""
+    """Título e corpo do aviso colados — é o que quem usa LÊ no canto da tela."""
     return f"{aviso['summary']} {aviso['body']}".strip()
 
 
@@ -108,7 +108,7 @@ def _avisos_de_abertura(emitidos: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def test_abrir_o_teclado_pelo_controle_avisa_na_tela(
     mesa: dict[str, Any], token: str
 ) -> None:
-    """Ela clica o analógico esquerdo, o teclado abre — e a tela FALA."""
+    """Quem usa clica o analógico esquerdo, o teclado abre — e a tela FALA."""
     controlador = _OSKController()
     controlador.dispatch_token(token, "press")
     assert controlador.esperar_os_toques(5.0)
@@ -121,7 +121,7 @@ def test_abrir_o_teclado_pelo_controle_avisa_na_tela(
     assert len(abertura) == 1, (
         f"o teclado na tela abriu por {token} e a tela emitiu {len(abertura)} "
         "avisos de abertura em vez de 1 — foi o silêncio deste momento que "
-        f"deixou ela vinte minutos sem saber o que abriu. Emitido: "
+        f"deixou quem usa vinte minutos sem saber o que abriu. Emitido: "
         f"{[_texto(a) for a in mesa['emitidos']]}"
     )
 
@@ -141,7 +141,7 @@ def test_o_release_do_analogico_nao_repete_o_aviso(mesa: dict[str, Any]) -> None
 
 
 def test_a_frase_ensina_o_gesto_de_saida(mesa: dict[str, Any]) -> None:
-    """A frase nomeia o R3 — sem isso ela sabe o que abriu e continua presa."""
+    """A frase nomeia o R3 — sem isso quem usa sabe o que abriu e continua presa."""
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     assert controlador.esperar_os_toques(5.0)
@@ -150,13 +150,13 @@ def test_a_frase_ensina_o_gesto_de_saida(mesa: dict[str, Any]) -> None:
     assert abertura, "nenhum aviso de abertura para conferir a frase"
     texto = _texto(abertura[0])
     assert "R3" in texto, (
-        f"a frase publicada não nomeia o R3: {texto!r}. Ela diz o que abriu e "
+        f"a frase publicada não nomeia o R3: {texto!r}. A frase diz o que abriu e "
         "cala sobre como sair — o gesto de saída volta a existir só na "
         "documentação, que é o que ninguém lê com o teclado tapando a tela"
     )
     assert "L3" in texto, (
         f"a frase publicada não nomeia o L3: {texto!r}. Sem dizer QUAL botão "
-        "abriu, ela fica sabendo que há um teclado e não sabe o que apertou"
+        "abriu, quem usa fica sabendo que há um teclado e não sabe o que apertou"
     )
 
 
@@ -169,12 +169,12 @@ def test_a_frase_e_a_que_o_usuario_decidiu(mesa: dict[str, Any]) -> None:
     assert controlador.esperar_os_toques(5.0)
 
     abertura = _avisos_de_abertura(mesa["emitidos"])
-    assert abertura, "nenhum aviso de abertura para comparar com a decisão dela"
+    assert abertura, "nenhum aviso de abertura para comparar com a decisão registrada"
     decidida = _frase_que_o_usuario_decidiu()
     assert _texto(abertura[0]) == decidida, (
-        f"o produto publica {_texto(abertura[0])!r} e a decisão dela diz "
-        f"{decidida!r}. Texto de tela é dela: mude a linha do "
-        "`decisoes-de-produto.csv` COM a palavra dela, ou devolva a frase"
+        f"o produto publica {_texto(abertura[0])!r} e a decisão registrada diz "
+        f"{decidida!r}. Texto de tela tem dono: mude a linha do "
+        "`decisoes-de-produto.csv` COM a decisão registrada, ou devolva a frase"
     )
 
 

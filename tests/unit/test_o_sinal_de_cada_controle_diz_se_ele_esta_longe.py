@@ -1,6 +1,6 @@
 """O sinal de cada controle diz se ele está longe — SINAL-DE-CADA-CONTROLE-01.
 
-A bancada de 03/10/2026: o Hz mistura «adaptador dividido» com «distância», e só o sinal (o
+O ensaio de 03/10/2026: o Hz mistura «adaptador dividido» com «distância», e só o sinal (o
 RSSI do enlace, lido sem root) segue quem se afasta. A cor e a frase saem dos dois números
 JUNTOS, e o Hz se mede contra o que o controle dava naquele adaptador.
 """
@@ -265,7 +265,7 @@ def test_o_mergulho_de_um_segundo_fica_na_tela_com_a_frase_dele(tela_limpa: list
     tela_limpa[0] += 1.0
     nivel, dica = _nivel_e_dica(_cena({"a": {"hz_mov": 280.0, "sinal": -30}}))
     assert (nivel, dica) == (rm.NIVEL_ENGASGA, a08.FRASE_DA_CAUSA[rm.CAUSA_LONGE]), (
-        "melhorou depois de um segundo: a cor tem de segurar, e a frase com ela")
+        "melhorou depois de um segundo: a cor tem de segurar, e a frase com a cor")
     tela_limpa[0] += rm.SEGURA_O_NIVEL_S
     assert _nivel_e_dica(_cena({"a": {"hz_mov": 280.0, "sinal": -30}}))[0] == rm.NIVEL_LISO
 
@@ -433,7 +433,7 @@ def test_sem_leitura_do_sinal_a_ponte_nao_pausa() -> None:
 
 
 def test_a_pausa_pelo_sinal_nao_entra_na_conta_da_fila_do_adaptador() -> None:
-    """``cedendo`` é o que a ponte lê; a fila do governador só vê o que ela mesma mandou ceder."""
+    """``cedendo`` é o que a ponte lê; a fila do governador só vê o que mandou ceder."""
     mesa = _Controles()
     mesa.sinal[12] = -60
     mesa.um_segundo()

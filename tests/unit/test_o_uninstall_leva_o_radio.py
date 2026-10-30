@@ -115,7 +115,7 @@ def test_o_nome_do_lugar_volta_ao_padrao_em_todo_adaptador(tmp_path: Path) -> No
             "hci0": ("Nintendo Sofá", "meu-pc"),
             "hci1": ("Mesa da TV", "meu-pc"),
             "hci2": ("Nintendo meu-pc", "meu-pc"),
-            "hci3": ("Nintendo Nome Dela", "meu-pc"),
+            "hci3": ("Nintendo Nome Próprio", "meu-pc"),
             "hci4": ("Outro Nome", "meu-pc"),
         },
         ["Sofá", "Mesa da TV"],
@@ -130,7 +130,7 @@ def test_o_nome_do_lugar_volta_ao_padrao_em_todo_adaptador(tmp_path: Path) -> No
         + r.stdout
     )
     assert escritas.get("hci2") == "", "«Nintendo » + o nome do sistema é inteiro do Hefesto"
-    assert escritas.get("hci3") == "Nome Dela", (
+    assert escritas.get("hci3") == "Nome Próprio", (
         "um nome que não é do Hefesto tem de ficar — só o prefixo sai:\n" + r.stdout
     )
     assert "hci4" not in escritas, "um nome de terceiro, sem o prefixo, não é tocado"
@@ -182,7 +182,7 @@ def test_o_nome_de_fabrica_do_bluez_com_numero_volta_ao_padrao(tmp_path: Path) -
 
 
 def test_o_lugar_com_acento_volta_ao_padrao_e_nada_sai_escapado(tmp_path: Path) -> None:
-    """O nome dela tem acento, e o `busctl` de verdade o devolve escapado."""
+    """O nome do lugar tem acento, e o `busctl` de verdade o devolve escapado."""
     r = _mesa(
         tmp_path,
         {
@@ -198,7 +198,7 @@ def test_o_lugar_com_acento_volta_ao_padrao_e_nada_sai_escapado(tmp_path: Path) 
     assert escritas.get("hci0") == "", "o lugar com acento ficou no rádio:\n" + r.stdout
     assert escritas.get("hci1") == "", "o lugar com acento, sem prefixo, ficou:\n" + r.stdout
     assert escritas.get("hci2") == "Canto da Tetê", (
-        "o nome que não é do Hefesto tem de voltar como ela o escreveu:\n" + r.stdout
+        "o nome que não é do Hefesto tem de voltar como quem usa o escreveu:\n" + r.stdout
     )
     assert escritas.get("hci3") == "", r.stdout
     assert not any("\\" in valor for valor in escritas.values()), (

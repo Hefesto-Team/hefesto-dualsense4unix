@@ -58,12 +58,12 @@ class TestOsTresNomesNaTela:
         vistos = re.findall(r'data-rota="nada"[^>]*>([^<]*)</button>',
                             self._corpo(alvo))
         assert vistos == [NOME_DO_USUARIO] * MESA, (
-            f"o terceiro botão diz {sorted(set(vistos)) or '[]'} e a palavra "
-            f"dela é {NOME_DO_USUARIO!r}")
+            f"o terceiro botão diz {sorted(set(vistos)) or '[]'} e o nome "
+            f"decidido é {NOME_DO_USUARIO!r}")
         assert NOME_DE_ONTEM not in vistos
 
     def test_o_quarto_voltou_com_o_nome_do_espelho(self, alvo: pathlib.Path) -> None:
-        """**ESTA TRAVA INVERTEU DE SENTIDO em 24/09.** De 21 a 23/09 ela"""
+        """**ESTA TRAVA INVERTEU DE SENTIDO em 24/09.** De 21 a 23/09 a trava"""
         vistos = re.findall(r'data-rota="pc"[^>]*>([^<]*)</button>',
                             self._corpo(alvo))
         assert vistos == [NOME_DO_QUARTO] * MESA, (
@@ -113,7 +113,7 @@ class TestOAtoMudouParaCaberNoNome:
 
 
 class TestAPinturaAcendeOTerceiro:
-    """*A cura escrita e nunca ligada* — e aqui ela tem precedente exato: em"""
+    """*A cura escrita e nunca ligada* — e aqui a cura tem precedente exato: em"""
 
     @pytest.mark.parametrize(
         ("byte", "esperado"),

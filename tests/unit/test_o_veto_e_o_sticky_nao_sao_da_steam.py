@@ -21,8 +21,8 @@ class TestOStickyNaoGuardaANossaJanela:
         store.record_window_detect_read("xlib", "steam_app_1088850")
         store.record_window_detect_read("xlib", NOSSA)
         assert store.window_detect_last_class == "steam_app_1088850", (
-            "a nossa própria janela virou o sticky — é ela que o «Novo» "
-            "lê quando ela clica no botão")
+            "a nossa própria janela virou o sticky — é essa janela que o «Novo» "
+            "lê quando quem usa clica no botão")
 
     def test_a_leitura_crua_continua_dizendo_a_verdade(self):
         """O sticky filtra; a leitura CRUA não pode filtrar."""
@@ -57,7 +57,7 @@ class TestOStickyNaoGuardaANossaJanela:
 
 
 class TestONovoNaoGravaANossaPropriaJanela:
-    """**A OUTRA METADE, no «Novo» — e sem ela a primeira não fecha.**"""
+    """**A OUTRA METADE, no «Novo» — e sem esta a primeira não fecha.**"""
 
     def _ctx(self, **estado):
         from types import SimpleNamespace

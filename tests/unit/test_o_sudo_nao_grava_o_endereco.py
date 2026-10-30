@@ -319,7 +319,7 @@ def test_a_busca_so_manda_o_verbo_e_os_segundos(
 
 
 class _ProcessoVivo:
-    """Uma janela aberta que não roda nada: o ``parear`` só corre dentro dela."""
+    """Uma janela aberta que não roda nada: o ``parear`` só corre dentro da janela."""
 
     def __init__(self) -> None:
         self.stdout = io.StringIO("")
@@ -377,7 +377,7 @@ def test_o_desconectar_do_zumbi_so_manda_o_verbo(
 
 
 class _NomesEmMemoria:
-    """Os nomes dela, sem o ``maquina.json``: esta régua não é sobre eles."""
+    """Os nomes de quem usa, sem o ``maquina.json``: esta régua não é sobre eles."""
 
     def ler(self) -> dict[str, str]:
         return {}
@@ -518,7 +518,7 @@ def test_nenhum_script_python_monta_o_sudo_da_ponte() -> None:
 
 
 def test_a_regua_dos_scripts_python_ve_a_lista_da_ponte() -> None:
-    """A régua acima não mede o vazio: a forma velha da bancada é achada, e o"""
+    """A régua acima não mede o vazio: a forma velha da ponte é achada, e o"""
     velho = 'subprocess.run(["sudo", "-n", ponte, "esquecer", endereco, mac])\n'
     outro = 'subprocess.run(["sudo", "-n", "hcitool", "con"])\n'
     assert _sudo_da_ponte_montado_a_mao(ast.parse(velho)) == [1]

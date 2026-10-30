@@ -5,7 +5,7 @@ Sprint: O-BOTAO-DO-MAPA-DA-08-DIZ-ONDE-ELE-ABRE-01.
 
 Medido em 23/10/2026: o botão «Mapa do controle» da 08 dizia «abre no navegador» e o ícone do mapa
 das entradas, no `mapa-do-radio`, também; as duas ligações vão a uma página do próprio produto, que
-abre na mesma WebView (a interface não tem `decide-policy`, `xdg-open` nem `show_uri` para elas).
+abre na mesma WebView (a interface não tem `decide-policy`, `xdg-open` nem `show_uri`).
 A dica prometia um lugar aonde o clique não vai.
 
 A régua lê o gerador da 08, os desenhos e as páginas publicadas: em toda tag com `href` para uma

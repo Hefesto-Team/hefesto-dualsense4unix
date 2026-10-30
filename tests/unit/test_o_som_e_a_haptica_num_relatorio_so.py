@@ -1,6 +1,6 @@
 """O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01, o primeiro tempo: o formato e o ensaio.
 
-A bancada de 03/10: pelo rádio, cada controle carregou som OU háptica, com dois
+O ensaio de 03/10: pelo rádio, cada controle carregou som OU háptica, com dois
 ou quatro controles por adaptador; a casa usa dois escritores por controle (o
 ``0x35`` do som e o ``0x32`` da háptica), cada um com o seu contador no
 ``0x11``. O fork loteran do DS5Dongle monta um ``0x36`` de 398 B com os quatro
@@ -8,19 +8,19 @@ blocos num relatório só (lido no código, nunca tentado aqui).
 
 No primeiro tempo nasceram o montador do relatório combinado
 (`alto_falante_bt.montar_relatorio_combinado` e o escritor único
-`RelatorioCombinado`) e o ensaio de bancada que prova o formato
+`RelatorioCombinado`) e o ensaio no aparelho que prova o formato
 (`scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`), que recusa com o daemon
-no ar. A bancada provou o formato em 03/10 ~23h15 (som e háptica juntos;
+no ar. O ensaio provou o formato em 03/10 ~23h15 (som e háptica juntos;
 sem o ``0x10`` a háptica cala). No SEGUNDO tempo a ponte passa a ter um
 escritor só: a `BombaDeSomPeloRadio` monta o ``0x36`` com o som e a háptica do
 quadro e o ``0x10`` sempre (as réguas do fim deste arquivo).
 
-A BANCADA: o montador é o real; o relatório é lido por um leitor de cadeia TLV
+O ENSAIO: o montador é o real; o relatório é lido por um leitor de cadeia TLV
 escrito aqui, independente do montador (a tag, o tamanho, o próximo bloco logo
 depois), e o CRC é conferido pelo `bt_crc32` do dono do relatório de saída. O
 ensaio roda pelo `main` real, com a pergunta ao daemon, a lista de controles e
 a abertura do hidraw dubladas na borda. A MORDIDA de cada régua está no
-docstring dela.
+docstring da própria régua.
 """
 from __future__ import annotations
 
@@ -154,7 +154,7 @@ def _carregar_o_ensaio() -> ModuleType:
 
 @pytest.fixture
 def ensaio(monkeypatch: pytest.MonkeyPatch) -> Any:
-    """O ensaio real, com a borda dublada: daemon, lista, bancada e hidraw."""
+    """O ensaio real, com a borda dublada: daemon, lista, reserva do ensaio e hidraw."""
     modulo = _carregar_o_ensaio()
     borda: dict[str, Any] = {"daemon": False, "abriu": [], "escritos": []}
     monkeypatch.setattr(modulo, "daemon_no_ar", lambda: borda["daemon"])
@@ -279,7 +279,7 @@ def test_o_ensaio_recusa_com_o_ensaio_tomada(
     ensaio: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`ensaio.sh exigir` com rc≠0 (outra reserva viva): rc=2 e nada é aberto."""
-    monkeypatch.setattr(ensaio, "_exigir_ensaio", lambda: (False, "BANCADA OCUPADA"))
+    monkeypatch.setattr(ensaio, "_exigir_ensaio", lambda: (False, "ENSAIO OCUPADO"))
 
     assert ensaio.main(ESCREVER) == 2
     assert ensaio.borda["abriu"] == [] and ensaio.borda["escritos"] == []

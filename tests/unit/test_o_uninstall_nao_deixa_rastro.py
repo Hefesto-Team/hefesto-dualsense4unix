@@ -10,7 +10,7 @@ ficavam sem o DualSense físico, e sem o Hefesto para servi-lo. O
 DUAS METADES, e as duas mordem:
 
 1. **O dono de «o que é nosso»** (``integrations/cura_por_estrada``): a escrita
-   anota, o desfazer lê. O que ela pôs fica; o que ela mudou depois fica; o que
+   anota, o desfazer lê. O que quem usa pôs fica; o que mudou depois fica; o que
    estava lá antes volta; o arquivo que nasceu com o Hefesto sai. E a escrita
    usa a mesma conta: a chave nossa que sai do ambiente (o Modo Nativo) sai do
    arquivo.
@@ -48,7 +48,7 @@ from hefesto_dualsense4unix.utils import memoria_dos_controles as m
 
 @pytest.fixture(autouse=True)
 def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui as quatro estão ligadas."""
     from tests.unit.as_caixas_das_extensoes import ligar
 
     ligar(monkeypatch)
@@ -133,7 +133,7 @@ def _opcoes(alvo: Path) -> dict[str, str]:
 def _heroic_copia_para_o_jogo(config: Path, jogo: str, *,
                               do_usuario: list[dict[str, str]] | None = None,
                               ) -> Path:
-    """O que o Heroic faz quando ela muda uma opção de um jogo — pelo fonte dele."""
+    """O que o Heroic faz quando quem usa muda uma opção de um jogo — pelo fonte dele."""
     global_ = json.loads(config.read_text(encoding="utf-8"))["defaultSettings"]
     lista = [dict(x) for x in global_.get("enviromentOptions", [])] + list(do_usuario or [])
     alvo = config.parent / "GamesConfig" / f"{jogo}.json"
@@ -153,7 +153,7 @@ def _lista_do_jogo(alvo: Path) -> list[tuple[str, str]]:
 
 @pytest.fixture
 def mesa(tmp_path: Path) -> dict[str, Path]:
-    """Heroic (Flatpak), Lutris com o override dela, mGBA sem override."""
+    """Heroic (Flatpak), Lutris com o override de quem usa, mGBA sem override."""
     lar = tmp_path / "lar"
     lar.mkdir()
     _instalar_flatpak(lar, MGBA)
@@ -184,10 +184,10 @@ def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_do_usuario(
 
     assert completo
     assert json.loads(heroic.read_text(encoding="utf-8")) == HEROIC_DO_USUARIO, (
-        "o Heroic não voltou a ser o dela: o MANGOHUD e o cache de shader "
-        "desligado são dela, e o resto é nosso")
+        "o Heroic não voltou a ser o de quem usa: o MANGOHUD e o cache de shader "
+        "desligado são de quem usa, e o resto é nosso")
     assert lutris.read_text(encoding="utf-8") == LUTRIS_DO_USUARIO, (
-        "o override do Lutris não voltou byte a byte ao que ela deu à mão")
+        "o override do Lutris não voltou byte a byte ao que quem usa deu à mão")
     assert not mgba.exists(), "o override que nasceu com o Hefesto ficou"
     assert not cura.caminho_do_registro(pasta).exists(), "o registro sobreviveu ao desfazer"
     frases = " ".join(cura.frase_do_desfeito(f) for f in feitos)
@@ -195,7 +195,7 @@ def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_do_usuario(
 
 
 def test_o_valor_de_antes_volta_no_lugar_em_que_estava(mesa: dict[str, Path]) -> None:
-    """A escrita põe o nosso por cima do dela, NA MESMA POSIÇÃO; o desfazer o"""
+    """A escrita põe o nosso por cima do de quem usa, NA MESMA POSIÇÃO; o desfazer o"""
     do_usuario = json.loads(json.dumps(HEROIC_DO_USUARIO))
     do_usuario["defaultSettings"]["enviromentOptions"].reverse()
     mesa["heroic"].write_text(json.dumps(do_usuario, indent=2) + "\n", encoding="utf-8")
@@ -204,7 +204,7 @@ def test_o_valor_de_antes_volta_no_lugar_em_que_estava(mesa: dict[str, Path]) ->
     cura.desfazer_as_estradas([mesa["pasta"]], mesa["lar"])
 
     assert json.loads(mesa["heroic"].read_text(encoding="utf-8")) == do_usuario, (
-        "o valor de antes voltou, mas fora do lugar em que ela o tinha")
+        "o valor de antes voltou, mas fora do lugar em que estava")
 
 
 def test_o_valor_que_o_usuario_mudou_depois_do_hefesto_fica(mesa: dict[str, Path]) -> None:
@@ -219,7 +219,7 @@ def test_o_valor_que_o_usuario_mudou_depois_do_hefesto_fica(mesa: dict[str, Path
 
     opcoes = _opcoes(mesa["heroic"])
     assert opcoes.get("PROTON_DISABLE_HIDRAW") == "0x045e/0x028e", (
-        "o desfazer tirou um valor que ela escreveu depois do Hefesto")
+        "o desfazer tirou um valor que quem usa escreveu depois do Hefesto")
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in opcoes
     assert any("ficaram as que você mudou" in cura.frase_do_desfeito(f) for f in feitos)
 
@@ -290,13 +290,13 @@ def test_arquivo_que_nao_abre_nao_e_reescrito_e_o_registro_fica(
 def test_a_copia_por_jogo_do_heroic_perde_so_o_que_e_nosso(
     tmp_path: Path, nativo: bool, com_registro: bool
 ) -> None:
-    """O Heroic copia a lista global para dentro do jogo em que ela muda uma
+    """O Heroic copia a lista global para dentro do jogo em que quem usa muda uma
     opção, e dali em diante a do jogo vale SOZINHA. Medido no disco do usuário em
     25/09: um jogo com o `IGNORE` e o `DISABLE_HIDRAW` copiados em 22/09. Sem
     o desfazer nas cópias, o uninstall deixa AQUELE jogo sem o DualSense.
 
     Nas duas casas do Heroic, com e sem registro (a instalação de antes dele).
-    O que ela pôs só naquele jogo fica; o `__GL_SHADER_*` da cópia fica (pode
+    O que quem usa pôs só naquele jogo fica; o `__GL_SHADER_*` da cópia fica (pode
     ser a escolha do usuário para o jogo); o jogo cuja lista o usuário escreveu sem nada
     nosso sai byte a byte igual.
 
@@ -329,7 +329,7 @@ def test_a_copia_por_jogo_do_heroic_perde_so_o_que_e_nosso(
         f"a cópia por jogo ficou com o ambiente do Hefesto: {lista}")
     assert lista[0] == ("MANGOHUD", "1") and lista[-1] == ("DXVK_HUD", "fps"), lista
     assert ("__GL_SHADER_DISK_CACHE_SKIP_CLEANUP", "1") in lista, (
-        "a cópia do jogo perdeu uma variável que pode ser a escolha dela para ele")
+        "a cópia do jogo perdeu uma variável que pode ser a escolha de quem usa para ele")
     dado = json.loads(copia.read_text(encoding="utf-8"))
     assert dado["Jogo1"]["wineVersion"]["name"] == "Proton - GE" and dado["explicit"] is False
     assert not copia.read_text(encoding="utf-8").endswith("\n"), (
@@ -339,7 +339,7 @@ def test_a_copia_por_jogo_do_heroic_perde_so_o_que_e_nosso(
 
 
 def test_a_copia_por_jogo_que_nao_abre_segura_o_registro(mesa: dict[str, Path]) -> None:
-    """Uma cópia truncada que CITA uma variável nossa pode estar com ela: o"""
+    """Uma cópia truncada que CITA uma variável nossa pode estar com a variável: o"""
     _curar(mesa["lar"], mesa["pasta"])
     jogos = mesa["heroic"].parent / "GamesConfig"
     jogos.mkdir()
@@ -737,7 +737,7 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
     limpa = _limpa(r, tmp_path)
     assert limpa.returncode == 0, limpa.stdout + limpa.stderr
     assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DO_USUARIO, (
-        "o Heroic dela não voltou a ser o dela")
+        "o Heroic de quem usa não voltou a ser o de antes")
     no_jogo = {k for k, _ in _lista_do_jogo(alvos["jogo"])}
     assert not no_jogo & cura._DO_PRODUTO_SEM_REGISTRO, (
         f"o jogo com opção própria no Heroic ficou com o ambiente do Hefesto: {no_jogo}")

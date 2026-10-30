@@ -14,7 +14,7 @@ e os nós nascem na ordem dos assentos. O controle que sai e volta renasce no
 fim da lista; sem jogo aberto, os que ficaram fora da ordem renascem atrás
 dele, e com jogo aberto nenhum nó é recriado.
 
-O que só a bancada prova (qual endpoint o jogo abre para cada jogador) é do
+O que só o ensaio no aparelho prova (qual endpoint o jogo abre para cada jogador) é do
 ensaio ``scripts/ensaios/o_som_de_cada_pad_no_wine.py``.
 """
 

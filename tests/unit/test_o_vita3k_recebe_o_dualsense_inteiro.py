@@ -27,7 +27,7 @@ from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 
 @pytest.fixture
 def lar(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> pathlib.Path:
-    """Um lar de mentira: nada do `~/.config` dela é lido."""
+    """Um lar de mentira: nada do `~/.config` de quem usa é lido."""
     for nome, sub in (("HOME", ""), ("XDG_DATA_HOME", "share"), ("XDG_CONFIG_HOME", "cfg"),
                       ("XDG_CACHE_HOME", "cache"), ("XDG_STATE_HOME", "st"),
                       ("XDG_DATA_DIRS", "vazio")):
@@ -320,7 +320,7 @@ def test_o_ambiente_da_sonda_do_jogador_liga_o_hidapi_e_nasce_sem_tela(
 def test_a_sonda_recusa_o_que_nao_vale(
         tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str]) -> None:
-    """`--so-medir` não combina com o vpad; sem SDL3 não há o que medir; bancada tomada espera."""
+    """`--so-medir` não combina com o vpad; sem SDL3 não há o que medir; ensaio tomado espera."""
     ensaio = _ensaio()
     lib3 = tmp_path / "libSDL3.so.0"
     lib3.write_bytes(b"")

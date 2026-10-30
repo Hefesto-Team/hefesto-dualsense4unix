@@ -1,20 +1,14 @@
 """O "Testar" da Vibração nunca deixa o jogo mudo — A-TELA-QUE-TRAVA-02.
 
-ORDEM, 15/09/2026, com o controle na mão:
-
-    *"o testar e parar é sobre o teste naquele momento isso nao  (noqa-acento: citação literal)
-     interfere in game. testar eu ligo o status de vibração pra ver se eu
-     concordo como isso vai funcionar. mas clicar em parar é só pra impactar no teste naquele
-     momento e não mutar a vibração in game. em game se eu quiser desligar a
-     vibração do motor esquerdo zero o slicer, no direito o mesmo e de forma
-     geral eu zero no perfil max min e personalizado."*
-     (noqa-acento: citação literal)
+DECISÃO DO PRODUTO, 15/09/2026: o «Parar» do «Testar» encerra só o teste daquele momento e
+nunca cala a vibração no jogo. No jogo, um motor se desliga zerando a barra dele, e a vibração
+    inteira pelo perfil (máximo, mínimo ou personalizado).
 
 O QUE ESTAVA QUEBRADO, e foi medido antes de ser curado: o "Testar" tira os
 motores do jogo (`rumble.passthrough(False)`) e `parar_o_teste()` tinha DOIS
 chamadores — o botão "Parar" e o controle que sai da mesa. **Nenhum deles é
 fechar a janela.** Trocar de aba, fechar a janela ou a janela morrer deixava
-`rumble_passthrough=False` para sempre: o jogo ficava sem vibração até ela
+`rumble_passthrough=False` para sempre: o jogo ficava sem vibração até quem usa
 reabrir a aba Vibração e clicar em "Parar", e nada na tela dizia por quê —
 porque a tela já não estava lá.
 
@@ -34,7 +28,7 @@ O USUÁRIO ESCOLHEU ENTRE QUATRO CAMINHOS e pegou **as duas metades mais a rede*
 O QUE ESTA RÉGUA NÃO COBRE, e está dito para ninguém a ler como mais do que é:
 o teto de verdade mora no daemon (`subsystems/rumble.reassert_rumble`) e é
 medido pela régua dele. Aqui se mede o lado da JANELA — as duas metades — e o
-contrato entre elas.
+contrato entre as duas.
 """
 from __future__ import annotations
 
@@ -196,7 +190,7 @@ def test_o_teto_do_daemon_cabe_em_tres_batimentos() -> None:
     assert cabem >= 3, (
         f"o teto do daemon ({_rumble.TETO_DO_RUMBLE_FIXADO_S}s) cabe só "
         f"{cabem:.1f} batimentos de {a05.SEGUNDOS_ENTRE_BATIMENTOS}s. Com menos "
-        f"de três, um batimento perdido solta o teste na mão dela")
+        f"de três, um batimento perdido solta o teste na mão de quem usa")
 
 
 def test_o_controle_que_sai_da_mesa_desliga_o_teste() -> None:
@@ -234,7 +228,7 @@ def test_o_piloto_larga_ao_trocar_de_pagina_e_ao_sair() -> None:
         "Testar ligado volta a deixar o jogo mudo")
     assert "bater_os_coracoes" in inspect.getsource(hv.Piloto._tique), (
         "o piloto parou de bater o coração — o teto de ociosidade do daemon "
-        "passaria a soltar o teste dela em 3 s, com a janela aberta")
+        "passaria a soltar o teste de quem usa em 3 s, com a janela aberta")
 
 
 @skip_sem_gi_real

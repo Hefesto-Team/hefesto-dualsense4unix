@@ -6,7 +6,7 @@ A própria Steam liga o Steam Input POR JOGO sem escrever
 `autosave` no `configset_controller_ps5.vdf` e pasta `<appid>/`. Medido em
 13/09: em toda abertura de um jogo assim a Steam criou controle virtual, e o
 jogo passou a ver o espelho do Steam Input em vez da máscara da aba Jogar. O
-vigia, o doctor e o prontuário só leem a chave do vdf — e nos jogos medidos ela
+vigia, o doctor e o prontuário só leem a chave do vdf — e nos jogos medidos a chave
 já estava em `"0"` na árvore viva quando a Steam criou o controle virtual: se o
 `"0"` vence a configuração por jogo, só o aparelho responde.
 
@@ -209,7 +209,7 @@ def _montar_lar(raiz: Path) -> dict[str, Path]:
         (configs / appid / "controller_ps5.vdf").write_text('"controller_mappings"\n{\n}\n')
     lista = home / ".config/hefesto-dualsense4unix/steam_input_apps.txt"
     lista.parent.mkdir(parents=True)
-    lista.write_text(f"# bancada\n{_NA_LISTA}\n", encoding="utf-8")
+    lista.write_text(f"# ensaio\n{_NA_LISTA}\n", encoding="utf-8")
     perfil = home / ".config/hefesto-dualsense4unix/profiles/jogo_de_mentira.json"
     perfil.parent.mkdir(parents=True)
     perfil.write_text(
@@ -293,7 +293,7 @@ class TestOLarDeMentira:
     def test_lista_que_existe_e_nao_se_le_zero_escritas(
         self, lar: dict[str, Path]
     ) -> None:
-        """Ler a lista vazia por engano desligaria o jogo que ela pôs lá."""
+        """Ler a lista vazia por engano desligaria o jogo que quem usa pôs lá."""
         lar["lista"].unlink()
         lar["lista"].mkdir()
         foto = _fotografia(lar["home"])

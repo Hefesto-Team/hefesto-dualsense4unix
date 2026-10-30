@@ -9,7 +9,7 @@ declarada em cada entrada (`parar`).
 O que esta régua mede, sempre pelo EFEITO:
 
 1. um `Daemon` de verdade sobe e para, e a sequência das partidas é a da lista e a das
-   paradas é a declarada nela (som e microfone antes do IPC, controle por último);
+   paradas é a declarada na lista (som e microfone antes do IPC, controle por último);
 2. um subsystem de mentira acrescentado SÓ à lista sobe e para sem outra linha;
 3. nenhuma chamada a `_safe_start` mora fora da lista, e o `shutdown` não nomeia subsystem;
 4. a parada que falha não pula a seguinte (o broker solta o cliente com o executor quebrado);

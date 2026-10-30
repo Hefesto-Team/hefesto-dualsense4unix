@@ -76,7 +76,7 @@ def test_quem_nao_declarou_fica_com_o_padrao(tmp_path: Path) -> None:
     assert sub._fonte_do_controle(_P2) == FONTE_PADRAO
     assert mod._fontes_por_controle(nome) == {mod._uniq_de_perfil(_P1): FONTE_MIX}, (
         "um controle sem `fonte` entrou no dicionário — `None` virou palpite, "
-        "e a diferença entre «ela escolheu efeitos» e «ela não escolheu» "
+        "e a diferença entre «escolheu efeitos» e «não escolheu» "
         "desapareceu"
     )
 
@@ -92,7 +92,7 @@ def test_a_grafia_do_uniq_casa_entre_o_sysfs_e_o_perfil(tmp_path: Path) -> None:
 
 
 def test_sem_perfil_ativo_a_resposta_e_o_padrao(tmp_path: Path) -> None:
-    """Ausência é resposta, e ela não pode virar `mix`."""
+    """Ausência é resposta, e não pode virar `mix`."""
     sub = _subsystem(None)
     assert sub._fonte_do_controle(_P1) == FONTE_PADRAO
     assert sub._fontes_do_perfil() == {}
@@ -136,13 +136,13 @@ def test_a_escolha_do_usuario_vale_na_varredura_seguinte(
     )
     ger.reconciliar([ensaio.radio(_P1)])
     no = ger.nos[_P1]
-    assert pactl.loopbacks == [], "o nó nasceu com o mix sem ela ter pedido"
+    assert pactl.loopbacks == [], "o nó nasceu com o mix sem quem usa ter pedido"
 
     ensaio.o_usuario_clica(_P1, FONTE_MIX)
     ger.reconciliar([ensaio.radio(_P1)])
 
     assert pactl.loopbacks == [(f"{ensaio.HDMI}.monitor", no.nome)], (
-        "ela salvou e o nó VIVO continuou com a fonte de antes — "
+        "quem usa salvou e o nó VIVO continuou com a fonte de antes — "
         f"loopbacks de pé: {pactl.loopbacks}"
     )
     assert sub._fonte_do_controle(_P1) == FONTE_MIX
@@ -161,7 +161,7 @@ def test_o_gerenciador_de_producao_recebe_a_fonte_por_controle() -> None:
         ger = sub._gerenciador
         assert ger._fonte_por_controle is not None, (
             "o gerenciador de produção nasceu sem saber a fonte de cada "
-            "controle — o `speaker.fonte` do perfil dela não chega ao nó"
+            "controle — o `speaker.fonte` do perfil ativo não chega ao nó"
         )
         assert ger._fonte_do_no("nao-existe") == FONTE_PADRAO
     finally:

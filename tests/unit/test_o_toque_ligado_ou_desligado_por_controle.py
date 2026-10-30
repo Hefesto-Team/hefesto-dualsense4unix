@@ -447,7 +447,7 @@ def _handlers(*, nativo: bool = False, steam_input: bool = False) -> Any:
 
     class _H(IpcHandlersMixin):
         def __init__(self) -> None:
-            self.store = SimpleNamespace(active_profile="Bancada")
+            self.store = SimpleNamespace(active_profile="Ensaio")
             self.controller = SimpleNamespace(
                 describe_controllers=lambda: [{"connected": True, "uniq": _P1}]
             )
@@ -469,7 +469,7 @@ class TestOMetodoDoIpc:
         from hefesto_dualsense4unix.profiles.loader import save_profile
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
-        save_profile(Profile(name="Bancada", match=MatchAny()))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
         h = _handlers()
 
         corpo = _chamar(h, uniq=_P1, touchpad="desligado")
@@ -481,7 +481,7 @@ class TestOMetodoDoIpc:
         assert corpo["giroscopio"] is True, "o toque mexeu no giro"
         assert REGISTRO.touchpad_ligado(_P1) is False
         assert h._sensor_hub.reconciliou == 1, "o pedido de grab não chegou ao hub"
-        dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {})[
+        dele = (o_que_vale(loader_module.load_profile("Ensaio")).controllers or {})[
             chave_de_sensor(_P1)
         ]
         assert dele.sensores is not None and dele.sensores.touchpad == "desligado"
@@ -491,21 +491,21 @@ class TestOMetodoDoIpc:
         from hefesto_dualsense4unix.profiles.loader import save_profile
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
-        save_profile(Profile(name="Bancada", match=MatchAny()))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
         h = _handlers()
         _chamar(h, uniq=_P1, touchpad="desligado")
         corpo = _chamar(h, uniq=_P1, touchpad="ligado")
 
         assert corpo["touchpad"] == "ligado"
         assert REGISTRO.touchpad_ligado(_P1) is True
-        perfil = o_que_vale(loader_module.load_profile("Bancada"))
+        perfil = o_que_vale(loader_module.load_profile("Ensaio"))
         dele = (perfil.controllers or {}).get(chave_de_sensor(_P1))
         assert dele is None or dele.sensores is None
 
     def test_no_nativo_e_com_o_steam_input_o_jogo_le_o_hidraw(self, perfis: Path) -> None:
         from hefesto_dualsense4unix.profiles.loader import save_profile
 
-        save_profile(Profile(name="Bancada", match=MatchAny()))
+        save_profile(Profile(name="Ensaio", match=MatchAny()))
         assert _chamar(_handlers(nativo=True), uniq=_P1, touchpad="desligado")[
             "touchpad_alcance"
         ] == "hidraw"

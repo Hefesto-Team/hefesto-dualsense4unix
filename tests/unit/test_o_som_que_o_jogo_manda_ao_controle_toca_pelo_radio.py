@@ -9,7 +9,7 @@ toca; pelo rádio ficava mudo.
 
 **A cura:** a frente de cada bloco (512 quadros a 48 kHz) é reamostrada para os
 480 quadros a 45 kHz do som e somada, com saturação, ao PCM do alto-falante
-antes do Opus. Ela é som, não vibração: não passa pelo ganho nem pelo portão da
+antes do Opus. Isso é som, não vibração: não passa pelo ganho nem pelo portão da
 vibração. A decisão da ponte conta a frente com sinal como «som».
 
 Sem aparelho: o PCM é de mentira, o hidraw é um cano. Endereços da faixa

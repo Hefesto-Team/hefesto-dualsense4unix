@@ -155,7 +155,7 @@ def test_o_campo_do_perfil_chega_ao_daemon_mesmo_com_o_lock_manual() -> None:
 
 
 def test_o_campo_sobrevive_ao_disco_e_so_nasce_quando_escolhido() -> None:
-    """Omitido quando `None` (perfil de ontem intacto) e preservado quando ela escolhe."""
+    """Omitido quando `None` (perfil de ontem intacto) e preservado quando quem usa escolhe."""
     sem = Profile(name="a", match=MatchAny()).model_dump(mode="json", exclude_none=True)
     assert "teclado_so_no_jogo" not in sem
     com = Profile(name="a", match=MatchAny(), teclado_so_no_jogo=True)

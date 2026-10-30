@@ -38,7 +38,7 @@ def test_o_censo_le_o_mapa_e_o_driver_e_a_maioria():
 
 
 def test_o_numero_publicado_no_specs_e_o_numero_de_agora():
-    """A régua LÊ os dois lados. Digitar 201 aqui seria a mentira que ela mata."""
+    """A régua LÊ os dois lados. Digitar 201 aqui seria a mentira que a régua mata."""
     mod = _gerador()
     conta = mod.procedencia_do_inferido(mod.le_csv())
     pagina = mod.SAIDA.read_text(encoding="utf-8")

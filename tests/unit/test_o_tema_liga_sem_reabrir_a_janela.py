@@ -9,7 +9,7 @@ escura. Agora a janela vigia o registro e troca as folhas de usuário sem recarr
 pinta o `--panel` e o `--fg` do tema.
 
 A sonda abre uma `PonteDaTela` de verdade num `Gtk.OffscreenWindow`, sob a tela de mentira, e lê o
-fundo que a página pinta depois de cada troca; a marca posta pela página na carga prova que ela
+fundo que a página pinta depois de cada troca; a marca posta pela página na carga prova que a página
 não recarregou.
 
 MORDIDA (executada em 21/10/2026): sem o `remove_all_style_sheets` no `trocar_o_tema`, o tema

@@ -71,7 +71,7 @@ def test_a_dica_do_perfil_de_bateria_nao_promete_mais_que_a_tabela() -> None:
 
     O nome se procura sem a caixa da inicial: desde 09/10/2026 só a primeira
     letra da frase é maiúscula, e o «Giroscópio» da tabela entra na dica como
-    «giroscópio». O que a régua cobra é a linha estar lá, não a caixa dela.
+    «giroscópio». O que a régua cobra é a linha estar lá, não a caixa da letra.
     """
     dica = secao_orcamento.DICAS[secao_orcamento.PERFIL_BATERIA_LONGA]
     for linha in secao_orcamento.LINHAS_DO_TETO:

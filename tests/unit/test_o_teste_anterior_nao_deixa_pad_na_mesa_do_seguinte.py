@@ -11,12 +11,12 @@ desce a casa do pad ``uhid`` sem passar pelo ``stop`` dele, e a
 :class:`JogoPorFora`, com a identidade de quem o co-op já tinha renascido.
 
 A régua: o pad de quem sai, e o de quem renasce atrás dele, parados no tique,
-somem do jogo da bancada, de dois a quatro controles, no cabo, no rádio e na
+somem do jogo do ensaio, de dois a quatro controles, no cabo, no rádio e na
 mesa mista. MORDIDAS: devolva o ``MesaHonesta.__init__`` sem o
-``_parar_na_casa`` da bancada e esta régua reprova com a mensagem da
+``_parar_na_casa`` do ensaio e esta régua reprova com a mensagem da
 ``MesaDoJogo`` («a mesa que o co-op guarda não é a que o jogo vê»); tire o
-``_destruir_o_device`` do ``uhid_gamepad._parar_na_casa`` e ela reprova também,
-porque o jogo da bancada só vê a morte que o kernel de mentira recebeu.
+``_destruir_o_device`` do ``uhid_gamepad._parar_na_casa`` e a régua reprova também,
+porque o jogo do ensaio só vê a morte que o kernel de mentira recebeu.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -51,7 +51,7 @@ def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
 
 
 def _o_jogo_nao_ve(ensaio: MesaHonesta, vpad: object) -> None:
-    assert not getattr(vpad, "vivo", True), "o pad parado segue vivo na bancada"
+    assert not getattr(vpad, "vivo", True), "o pad parado segue vivo no ensaio"
     assert all(v is not vpad for v in ensaio.jogo.ve()[1].values()), (
         f"o jogo segue vendo o pad parado: {ensaio.jogo.ve()[1]}"
     )

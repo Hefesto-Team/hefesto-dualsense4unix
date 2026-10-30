@@ -208,7 +208,7 @@ def _limpar_lab() -> None:
 
 @pytest.mark.skipif(
     os.environ.get("HEFESTO_TESTE_SYSTEMD_VIVO") != "1",
-    reason="cria units no systemd --user da bancada; opt-in",
+    reason="cria units no systemd --user da máquina; opt-in",
 )
 def test_systemd_vivo_a_unidade_entregue_agenda_o_proximo_disparo() -> None:
     """O A/B de 22/08/2026, executável."""

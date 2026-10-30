@@ -15,7 +15,7 @@ MORDIDAS (executadas em 21/10/2026, cada uma vista reprovar e devolvida):
 * sem o `e_o_freestyle` na regra: `test_o_freestyle_nao_e_acusado`;
 * a frase velha da regra ou da ponte: `test_as_frases_dizem_o_gesto_na_cabeca`;
 * o «i» de volta na NOTA do exame: `test_um_glifo_por_selo`;
-* a linha do gamepad de volta sem controle (22/10/2026, ela diz «Nenhum controle ligado» para o
+* a linha do gamepad de volta sem controle (22/10/2026, a linha diz «Nenhum controle ligado» para o
   Status seguir com seis): `test_sem_controle_a_linha_do_gamepad_diz_nenhum_controle`;
 * sem o `longa` na linha que pede ação, ou com a linha longa na altura fixa:
   `test_a_linha_que_pede_acao_quebra_em_vez_de_cortar`.
@@ -130,7 +130,7 @@ def test_o_freestyle_nao_e_acusado() -> None:
         id="ponte"),
 ])
 def test_as_frases_dizem_o_gesto_na_cabeca(frase: Any) -> None:
-    """A tela escreve a cabeça da frase: o nome inteiro e o gesto têm de estar nela."""
+    """A tela escreve a cabeça da frase: o nome inteiro e o gesto têm de estar na cabeça."""
     texto = a09._sem_o_prefixo_da_cura(frase())
     cabeca = a09.frase_curta_do_exame(texto)
     assert "aba Perfis" in cabeca, cabeca

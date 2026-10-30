@@ -130,7 +130,7 @@ class TestAFiacao:
         assert criadas, "o subsystem não construiu ponte nenhuma"
         quer = criadas[0].get("com_microfone")
         assert callable(quer), (
-            "a ponte nasceu com um valor congelado — o gesto dela no botão do "
+            "a ponte nasceu com um valor congelado — o gesto de quem usa no botão do "
             "microfone não alcançaria report nenhum")
 
         vistos: list[str] = []

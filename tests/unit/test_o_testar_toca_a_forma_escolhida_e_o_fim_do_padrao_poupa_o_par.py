@@ -103,7 +103,7 @@ def test_cada_controle_toca_a_sua_forma_em_laco_ate_o_parar(
 
 
 def test_a_volta_do_laco_emenda_no_tocador_de_verdade() -> None:
-    """O tocador real volta ao começo da forma no fim dela, e o «Parar» cala no bloco seguinte."""
+    """O tocador real volta ao começo da forma no fim, e o «Parar» cala no bloco seguinte."""
     tocador = eh.TocadorDoRumble("prova")
     volta = af_sub._amostras_do_teste(formas.ESTALO)
     tocador.tocar_em_laco(volta, "centro", sink="", dono="prova", forma=formas.ESTALO)
@@ -176,7 +176,7 @@ def test_no_radio_a_forma_toca_pelo_tocador_do_controle_do_usuario(
 def test_no_radio_sem_fatia_a_forma_longa_cede_dizendo_e_volta_quando_ha(
     com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    """A Guarda sem fatia livre toca o par e diz; com a fatia de volta ela toca e o par sai."""
+    """A Guarda sem fatia livre toca o par e diz; com a fatia de volta a forma toca e o par sai."""
     controles = _no_radio_os_quatro(com_toque)
     com_toque.mesa.volta(*controles)
     uniq = _QUATRO[2]

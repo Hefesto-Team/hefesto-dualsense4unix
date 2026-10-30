@@ -112,7 +112,7 @@ def test_a_linha_real_passa_pelo_filtro_do_journal(familia: str) -> None:
     assert re.search(_grep_union(), _mensagem(linha), re.IGNORECASE)
     assert re.search(_grep_da_familia(), _mensagem(linha), re.IGNORECASE), (
         f"a família {familia} só passa pelo GREP_UNION por um padrão genérico — "
-        "tirar o genérico cegaria a vigia para ela"
+        "tirar o genérico cegaria a vigia para a família"
     )
 
 
@@ -258,7 +258,7 @@ BANNER_DAS_FAMILIAS = (
 
 
 def test_nao_olhei_nao_e_zero() -> None:
-    """A R2 dela: *«tiveram storm nos dias anteriores»*."""
+    """Os storms dos dias anteriores contam: o exame que não olhou não diz zero."""
     laco = "2026-09-13T01:14:00-03:00 [BT-HCI] Bluetooth: hci0: command 0xfc61 tx timeout"
     antes = storm_doctor.classificar_o_historico([BANNER_DE_20_07, laco])
     assert set(antes) == {"1", "2", "3"}, "a fila cheia, o EAGAIN e o CRC não eram medidos"
@@ -307,7 +307,7 @@ def test_o_fato_nao_usa_palavra_proibida_na_tela() -> None:
 
 
 def test_o_log_de_antes_das_familias_tambem_conta(tmp_path: Path) -> None:
-    """A R2 dela: *«tiveram storm nos dias anteriores»*."""
+    """Os storms dos dias anteriores contam: o exame que não olhou não diz zero."""
     velho = []
     for s in range(0, 30, 3):
         ts = f"2026-09-13T01:14:{s:02d}-03:00"
