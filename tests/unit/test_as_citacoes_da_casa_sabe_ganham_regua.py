@@ -5,7 +5,7 @@ Sprint AS-CITACOES-DA-CASA-SABE-E-AS-DE-LINHA-UNICA-GANHAM-REGUA-01 (25/10/2026)
 - a citação escrita numa cadeia de `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py` reprova
   o `validar-citacoes-de-linha.py` quando o código anda, e o `reapontar-citacoes.py` a leva;
 - cada uma das oito citações de linha única da `docs/data/paridade-gtk-html.csv` cujo nome casava
-  também na linha vizinha reprova com uma linha inserida acima do alvo, e a promessa velha delas
+  também na linha vizinha reprova com uma linha inserida acima do alvo, e a promessa velha
   reprova pela regra do vizinho;
 - a citação crua NOVA numa cadeia da casa-sabe reprova o `--novas`, como a das planilhas, e a crua
   antiga que só mudou de número não.
@@ -214,7 +214,7 @@ OITO = [
      "mockup/08-conexoes.html", "gc-nome", "nome"),
 ]
 """A oitava é a mesma feature da quarta, no publicado. O `ROTULO_DO_CLIQUE` mudou de LINHA (da
-`:1392`, que o repetia na de baixo, para a `:477`, a que o define); o nome velho dela é o mesmo."""
+`:1392`, que o repetia na de baixo, para a `:477`, a que o define); o nome velho é o mesmo."""
 
 
 def _linha_da_celula(aba: str, feature: str, arquivo: str, nome: str) -> int:
@@ -390,7 +390,7 @@ def test_no_codigo_a_massa_nao_da_segunda_chance_e_a_crua_vai_a_mao(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """O mesmo enredo em que a segunda chance leva o documento (nasce certo, o código anda 4, a
-    massa acompanha, o código anda 12): no arquivo de código ela não vale, e as três vão à mão."""
+    massa acompanha, o código anda 12): no arquivo de código não vale, e as três vão à mão."""
     from tests.unit.test_as_citacoes_andam_com_o_codigo import ALVO as ALVO_DA_SEGUNDA_CHANCE
     from tests.unit.test_as_citacoes_andam_com_o_codigo import (
         _escrever_e_commitar,
@@ -422,7 +422,7 @@ def test_no_codigo_a_massa_nao_da_segunda_chance_e_a_crua_vai_a_mao(
 
 def test_a_queixa_de_forma_nao_move_a_citacao(repo: Path) -> None:
     """O nome que casa também na vizinha é queixa de FORMA (o decorador citado, e o `def` logo
-    abaixo com o mesmo nome): o código não andou, e o reapontar não a leva; ela vai à mão."""
+    abaixo com o mesmo nome): o código não andou, e o reapontar não a leva; vai à mão."""
     arquivo = "src/hefesto_dualsense4unix/alvo.py"
     (repo / arquivo).write_text(ALVO_COM_DECORADOR, encoding="utf-8")
     (repo / CASA_SABE).write_text('RAZAO = "sem citação"\n', encoding="utf-8")

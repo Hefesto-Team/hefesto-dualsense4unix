@@ -6,7 +6,7 @@ o registro «O-MAPA-DA-INTERFACE-medido-clicando-e-as-ondas» de 02/09/2026:120`
 declarado como gesto sem eco"*. O FATO está certo. **A causa, não**: o gesto não
 falhava — ele trocava para o perfil que **já estava valendo**.
 
-A CADEIA, e ela é toda de código que já existia:
+A CADEIA é toda de código que já existia:
 
 1. ``pacote()`` roda a cada 500 ms e chama ``_escolhido()``, que grava
    ``_ESCOLHIDO = ativo`` quando ninguém clicou numa linha ainda. É a
@@ -20,14 +20,14 @@ Nada mudou porque **não havia nada a mudar** — e dizer "aplicado" sobre isso 
 a forma exata do "responde calado" que esta casa persegue. A cura é a terceira
 guarda do gesto: recusa DIZENDO, antes de falar com o daemon.
 
-**E A RECUSA NÃO CHEGAVA A ELA — corrigido em 03/09/2026.** A guarda de 02/09
+**E A RECUSA NÃO CHEGAVA A QUEM USA — corrigido em 03/09/2026.** A guarda de 02/09
 levantava ``ValueError``, e ``hefesto_vivo._recusou_dizendo`` pinta tarja **só
 para ``RuntimeError``**: a frase saía no ``stderr`` do processo que lançou a
 janela e mais nada. Medido no produto instalado, clicando "Ativar" com o perfil
 ativo já escolhido — ``[gesto falhou] … já é o perfil que está valendo`` no
 terminal, e ``document.querySelectorAll('.hef-recado')`` com **zero** elementos.
-Ela clicava, o produto recusava com a frase certa, e a tela ficava igual.
-Ou seja: *alguém curou o caminho e provou a cura num caminho que ela não usa* —
+Quem usa clicava, o produto recusava com a frase certa, e a tela ficava igual.
+Ou seja: *alguém curou o caminho e provou a cura num caminho que quem usa não percorre* —
 que é o defeito que o próprio ``_recusou_dizendo`` nomeia no docstring.
 
 AS DUAS MORDIDAS:

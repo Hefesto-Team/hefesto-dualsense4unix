@@ -2,8 +2,8 @@
 
 QUEIXA, 14/09/2026, com os dois controles na mesa:
 
-    *"a interface tá dessincronizada com os controles reais. (o player do
-     controle , o led indicativo do player)"*  (noqa-acento: citação)
+    a interface ficou dessincronizada dos controles reais: o número do jogador e o
+    LED indicativo do jogador.
 
 O QUE ESTAVA QUEBRADO: o `<div class="lampadas">` da aba Controles não tinha
 `data-campo`. Sem endereço, o `achar()` do piloto passa ao largo dele — o HTML
@@ -17,7 +17,7 @@ controle branco não pode ser sempre o player 3), então o número de um mesmo
 aparelho muda entre uma sessão e outra, e muda no replug.
 
 A CURA NÃO INVENTOU DESENHO: quem monta as cinco lâmpadas é `monta.luzinhas`, a
-MESMA função com que o gerador escreveu o HTML, e ela deriva o padrão de
+MESMA função com que o gerador escreveu o HTML, e a função deriva o padrão de
 `core.led_control.player_led_pattern` — o caminho por onde o produto acende as
 luzes de verdade. O pacote a chama com o jogador da mesa.
 
@@ -25,7 +25,7 @@ A RESSALVA CONTINUA DE PÉ, e esta régua não a fecha: o que a tela desenha é 
 padrão DERIVADO do assento, não uma leitura do aparelho. O `state_full` publica
 `player_slot` e **não** `player_leds`; um perfil que escreva as cinco luzes na
 mão pode divergir do desenhado, e a tela não tem como saber. Está dito na dica da
-moldura (`aba02.DICA_LED_JOGADOR`) desde que ela nasceu.
+moldura (`aba02.DICA_LED_JOGADOR`) desde que a dica nasceu.
 """
 from __future__ import annotations
 

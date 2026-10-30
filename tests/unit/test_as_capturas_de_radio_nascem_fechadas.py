@@ -365,7 +365,7 @@ class TestALightbarGravaFechadoLeEApaga:
         assert not braco_limpo.velha.exists()
 
     def test_quem_tem_hidraw_aberto_nao_vira_nenhum(self, braco_limpo: BracoDaLightbar) -> None:
-        """O braço limpo depende desta lista, e ela dizia «(nenhum)» com a Steam listada."""
+        """O braço limpo depende desta lista, e dizia «(nenhum)» com a Steam listada."""
         saida = braco_limpo.resultado.stdout
         assert "hidraw-de-mentira" in saida, saida
         assert "(nenhum)" not in saida, saida
@@ -461,7 +461,7 @@ class TestOW3GravaFechadoLeEApaga:
         assert "Hardware Error: 1" in texto, "o relatório leu a captura antes de apagá-la"
         assert corrida_do_w3.dubles.vizinhos() == [0, 0, 0], (
             "a captura de um braço ainda estava na pasta quando o seguinte começou: "
-            "ela sai depois de lida, não só no fim"
+            "a captura sai depois de lida, não só no fim"
         )
 
     def test_o_relatorio_e_de_quem_chamou_o_sudo(self, corrida_do_w3: CorridaDoW3) -> None:

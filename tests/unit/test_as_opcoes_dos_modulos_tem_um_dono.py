@@ -138,7 +138,7 @@ def test_nenhuma_escrita_a_quente_digita_o_valor_de_uma_opcao_com_dono(
     )
     assert digitadas == [], (
         f"{onde} escreve a quente um valor digitado para opção que a conf possui "
-        f"(pergunte a ela, com o leitor): {digitadas}"
+        f"(pergunte à conf, com o leitor): {digitadas}"
     )
 
 
@@ -158,7 +158,7 @@ def test_nenhuma_fala_digita_opcao_igual_valor_de_uma_opcao_com_dono(
     )
     assert digitadas == [], (
         f"{onde} digita, numa linha que executa, o valor de uma opção que a conf "
-        f"possui — o rótulo pergunta a ela: {digitadas}"
+        f"possui — o rótulo pergunta à conf: {digitadas}"
     )
 
 

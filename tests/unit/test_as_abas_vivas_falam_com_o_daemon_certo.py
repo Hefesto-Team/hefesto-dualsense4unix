@@ -1,4 +1,4 @@
-"""A régua das abas vivas: elas falam com o daemon DESTA casa, e leem DESTA árvore."""
+"""A régua das abas vivas: as abas falam com o daemon DESTA casa, e leem DESTA árvore."""
 from __future__ import annotations
 
 import importlib
@@ -116,7 +116,7 @@ def test_o_socket_e_funcao_e_nao_constante() -> None:
         "`socket_do_daemon()` sumiu — o socket voltou a ser constante?"
     )
     assert not re.search(r"^SOCKET\s*=", fonte, re.M), (
-        "voltou a haver uma constante `SOCKET` no topo: ela congela o nome "
+        "voltou a haver uma constante `SOCKET` no topo: a constante congela o nome "
         "de quem importar primeiro."
     )
 
@@ -129,7 +129,7 @@ def test_a_prova_de_gesto_nao_crava_o_indice_do_card() -> None:
     )
     assert "querySelectorAll('.ctl')[1]" not in codigo, (
         "a prova de gesto voltou a cravar o segundo card: numa mesa de um "
-        "controle ela clica em `null` e passa calada."
+        "controle a prova clica em `null` e passa calada."
     )
     assert "querySelectorAll('.ctl').length-1" in codigo, (
         "a prova de gesto tem de mirar um card que EXISTA em qualquer mesa."

@@ -117,7 +117,7 @@ _COM_SRC = frozenset(
 
 
 class _Recursos(html.parser.HTMLParser):
-    """Tudo que a página PEDE a outra máquina. O que ela só aponta (`<a>`) fica de fora."""
+    """Tudo que a página PEDE a outra máquina. O que a página só aponta (`<a>`) fica de fora."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -412,7 +412,7 @@ def _abrir_sem_rede(
 
 @pytest.fixture(scope="module")
 def cache_morno(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
-    """Uma carga de aquecimento, num lar só dela, monta o registro do GStreamer uma vez: o
+    """Uma carga de aquecimento, num lar próprio, monta o registro do GStreamer uma vez: o
     `AudioContext` é o que pede o registro, e uma página sem ele não o monta."""
     lar = tmp_path_factory.mktemp("lar-morno")
     cache = lar / "cache"

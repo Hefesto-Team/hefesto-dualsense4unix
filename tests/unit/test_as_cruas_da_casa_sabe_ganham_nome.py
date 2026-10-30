@@ -3,7 +3,7 @@
 Sprint AS-CRUAS-DA-CASA-SABE-GANHAM-NOME-E-O-USUARIO-FECHA-O-MYPY-01 (25/10/2026). A citação crua
 (`arquivo:linha` sem nome) que uma varredura ou um reapontamento em massa escreveu o
 `reapontar-citacoes.py` não leva quando o código anda, e cada uma vira trabalho à mão na costura.
-Em 25/10 eram 99 cruas na casa-sabe, 79 delas «à mão». Duas provas, para todo arquivo de
+Em 25/10 eram 99 cruas na casa-sabe, 79 «à mão». Duas provas, para todo arquivo de
 `CODIGO_COM_CITACOES`:
 
 - toda citação de arquivo desta árvore promete um nome (``nomes_prometidos`` não vazio);

@@ -37,7 +37,7 @@ def _vdf_das_tres_arvores(
     solta: dict[str, str] | None = None,
     web: dict[str, str] | None = None,
 ) -> str:
-    """As TRÊS árvores `apps` do arquivo dela, no mesmo aninhamento medido."""
+    """As TRÊS árvores `apps` do arquivo do usuário, no mesmo aninhamento medido."""
     corpo = (
         f'{_TAB}"Software"\n{_TAB}{{\n'
         f'{_TAB * 2}"Valve"\n{_TAB * 2}{{\n'
@@ -125,7 +125,7 @@ class TestOMigrateSoEscreveOndeASteamLe:
         assert slo.WRAPPER_PREFIX in _valores_por_arvore(novo)[CANONICA]["620"]
 
     def test_o_mesmo_appid_nas_duas_arvores_so_ganha_wrapper_na_viva(self) -> None:
-        """O retrato do arquivo dela: o appid existe nas duas árvores."""
+        """O retrato do arquivo do usuário: o appid existe nas duas árvores."""
         texto = _vdf_das_tres_arvores(
             viva={"2358720": LINHA_914}, solta={"2358720": LINHA_914}
         )
@@ -151,7 +151,7 @@ class TestOMigrateSoEscreveOndeASteamLe:
             slo.transform_vdf_text("", "apagar_tudo")
 
     def test_linha_alheia_fora_da_canonica_passa_intacta(self) -> None:
-        """A linha VKD3D dela, sem veneno e sem wrapper, não é nossa para mexer."""
+        """A linha VKD3D do usuário, sem veneno e sem wrapper, não é nossa para mexer."""
         do_usuario = "VKD3D_CONFIG=no_upload_hvv %command%"
         texto = _vdf_das_tres_arvores(solta={"413080": do_usuario})
         for modo in ("migrate", "strip"):

@@ -50,9 +50,9 @@ _REAPPLY_DESIRED = (
 )
 _PERFIL_MANDA = (
     "core/backend_pydualsense.py::_merged_desired_for_key",
-    "o jogo manda enquanto pinta (a ordem dela de 29/09, «o jogo manda e o "
-    "controle obedece»); quando ele solta, a escolha do perfil volta pela "
-    "mesma mescla, e o gesto dela vence até o jogo pintar de novo",
+    "o jogo manda enquanto pinta (decisão de 29/09: o jogo manda e o "
+    "controle obedece); quando ele solta, a escolha do perfil volta pela "
+    "mesma mescla, e o gesto de quem usa vence até o jogo pintar de novo",
 )
 _NAO_CHEGA = "não chega ao controle: é metadado do perfil, não estado do aparelho."
 
@@ -101,11 +101,11 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "hidraw0 e hidraw6). O que sobra de dívida, e é só isto: o veredito "
             "do `escritor_cru` licencia UMA reafirmação no fim da sequência "
             "(GATILHO-DA-COR-01), nunca em regime — repintar durante a partida "
-            "faria a barra piscar entre a cor dela e a do jogo. Se a luz e o "
-            "gatilho dela sobrevivem a uma PARTIDA inteira com o som do Proton "
-            "funcionando é coisa que só ELA pode medir, jogando; a ordem dela "
-            "de 16/09 («o som do Proton TEM de funcionar junto com a luz e o "
-            "gatilho do perfil») fica aberta até essa medição.",
+            "faria a barra piscar entre a cor do perfil e a do jogo. Se a luz e o "
+            "gatilho do perfil sobrevivem a uma PARTIDA inteira com o som do Proton "
+            "funcionando é coisa que só o ensaio no aparelho mede, jogando; a decisão "
+            "de 16/09 (o som do Proton tem de funcionar junto com a luz e o "
+            "gatilho do perfil) fica aberta até essa medição.",
             desde="2026-09-16",
         ),
         INDEPENDE: Cumprida(
@@ -168,7 +168,7 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "a metade de ÁUDIO volta desde a SOM-ROTA-03 "
             "(`reapply_speaker_on_connect` lê `controllers[uniq].speaker`), mas "
             "as outras metades do override por peça — gatilho, luz, mic — não "
-            "têm gancho de replug próprio: elas dependem do "
+            "têm gancho de replug próprio: dependem do "
             "`_reapply_desired`, que reescreve o DESEJADO corrente e não "
             "reconsulta o perfil.",
             desde="2026-09-16",
@@ -303,7 +303,7 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "é consumida pelo `launch_env`, o caminho de LANÇAMENTO — e o "
             "wrapper que o carrega hoje só é plantado nas Opções de "
             "Inicialização da STEAM. Lutris, Heroic e execução direta não "
-            "passam por ele. Ordem dela de 16/09: independe do lançador.",
+            "passam por ele. Decisão de 16/09: independe do lançador.",
             desde="2026-09-16",
         ),
     },
@@ -412,7 +412,7 @@ def _fonte_de(onde: str) -> tuple[Path, str]:
 
 
 def test_toda_secao_do_perfil_responde_as_quatro_pernas() -> None:
-    """Campo novo no esquema dela não entra sem dizer o que acontece no ciclo."""
+    """Campo novo no esquema do perfil não entra sem dizer o que acontece no ciclo."""
     faltam = sorted(set(_CLASSIFICACAO) - set(_PERNAS))
     sobram = sorted(set(_PERNAS) - set(_CLASSIFICACAO))
 
@@ -496,7 +496,7 @@ def test_a_divida_nao_cresce() -> None:
     ],
 )
 def test_o_que_foi_curado_em_16_09_continua_de_pe(campo: str, perna: str) -> None:
-    """As três curas daquele dia viram piso: nenhuma delas pode virar dívida."""
+    """As três curas daquele dia viram piso: nenhuma pode virar dívida."""
     resposta = _PERNAS[campo][perna]
 
     assert isinstance(resposta, Cumprida), (

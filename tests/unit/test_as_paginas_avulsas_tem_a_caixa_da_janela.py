@@ -29,7 +29,7 @@ FOLGA = 2
 
 PISO = (1212, 809)
 
-VISTAS = {"piso": PISO, "dela": olhar.VISTA_DO_USUARIO, "tv-inteira": (olhar.LARG, olhar.ALT),
+VISTAS = {"piso": PISO, "do_usuario": olhar.VISTA_DO_USUARIO, "tv-inteira": (olhar.LARG, olhar.ALT),
           "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
 
 FIM = """() => {
@@ -71,7 +71,7 @@ def medido() -> dict[str, dict[str, Any]]:
     paginas = {nome: onde.pagina(nome) for nome in (ABA, *AVULSAS)}
     faltam = [n for n, p in paginas.items() if not p.exists()]
     assert not faltam, (
-        f"a bancada não tem {faltam} — o caminho mudou? Uma régua de tamanho "
+        f"o ensaio não tem {faltam} — o caminho mudou? Uma régua de tamanho "
         f"que não abre página passa sobre tudo.")
     esconde = "".join(f"{s}{{display:none}}" for s in seletores_escondidos())
 
@@ -115,8 +115,8 @@ def test_a_caixa_da_avulsa_e_a_da_janela(medido: dict[str, Any], vista: str,
                if abs(avulsa["lugar"][k] - aba["lugar"][k]) > FOLGA}
     assert not difere, (
         f"na vista {vista}, a caixa `.{avulsa['caixa']}` de {nome} difere da "
-        f"`.janela` da {ABA} em {difere} (avulsa, aba). A palavra dela, 24/09: "
-        f"*«segue a caixa da janela»*. A caixa mora no `topo.html`, e as "
+        f"`.janela` da {ABA} em {difere} (avulsa, aba). Decisão de 24/09: a avulsa "
+        f"segue a caixa da janela. A caixa mora no `topo.html`, e as "
         f"avulsas a pedem a `caixa_da_janela.moldura()`.")
 
 
@@ -126,8 +126,8 @@ def test_a_avulsa_rola_por_dentro(medido: dict[str, Any], vista: str, nome: str)
     avulsa = medido[vista][nome]
     assert avulsa["passa_da_dobra"] == 0 and not avulsa["rolagem_lateral"], (
         f"na vista {vista}, {nome} rola a PÁGINA ({avulsa['passa_da_dobra']} px "
-        f"abaixo da dobra, lateral={avulsa['rolagem_lateral']}). A palavra dela: "
-        f"*«rolando por dentro»* — quem rola é o `.corpo` da caixa.")
+        f"abaixo da dobra, lateral={avulsa['rolagem_lateral']}). A decisão: rolar "
+        f"por dentro — quem rola é o `.corpo` da caixa.")
     fim = avulsa["fim"]
     assert "erro" not in fim, f"{nome}: {fim['erro']}"
     assert fim["alcancavel"], (
@@ -145,7 +145,7 @@ def test_a_vista_baixa_faz_as_tres_rolarem(medido: dict[str, Any]) -> None:
 
 
 def test_as_tres_pedem_a_caixa_ao_mesmo_dono() -> None:
-    """Mude o teto da `.janela` no esqueleto e a caixa vai junto; tire-a e ela PARA."""
+    """Mude o teto da `.janela` no esqueleto e a caixa vai junto; tire-a e a caixa PARA."""
     import calibrar
 
     import onde

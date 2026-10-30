@@ -79,7 +79,7 @@ def a05() -> Any:
 def _ctx(pac: Any) -> Any:
     """A mesa com os dois controles, um no USB e um no BT."""
     return pac.Contexto(
-        state={"active_profile": "Bancada", "rumble_policy": "max",
+        state={"active_profile": "Ensaio", "rumble_policy": "max",
                "rumble_motor_pct_padrao": 100, "rumble_motores": {}},
         mesa=[
             {"pref": "p1", "jogador": 1, "uniq": P1, "nome": "Régua 1",
@@ -172,7 +172,7 @@ def test_a_contagem_omite_o_transporte_vazio(transportes: list[str], esperada: s
 
 @pytest.mark.parametrize("cru", ["usb", "bt", "bluetooth"])
 def test_a_tabela_da_gestao_diz_o_que_o_dono_diz(cru: str) -> None:
-    """`NOME_DO_TRANSPORTE` é a segunda grafia da tabela do dono — e presa a ela."""
+    """`NOME_DO_TRANSPORTE` é a segunda grafia da tabela do dono — e presa à tabela."""
     assert gestao.NOME_DO_TRANSPORTE[cru] == palavra(cru)
 
 

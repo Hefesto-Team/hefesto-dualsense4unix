@@ -57,7 +57,7 @@ def test_endereco_em_texto_dentro_de_gz_e_pego(tmp_path: Path) -> None:
 
 
 def test_o_mesmo_conteudo_cru_continua_sendo_pego(tmp_path: Path) -> None:
-    """A resposta contrária: sem ela, um portão que reprova TUDO passaria."""
+    """A resposta contrária: sem este caso, um portão que reprova TUDO passaria."""
     conteudo = f"data,adaptador\n2026-08-23,{_ENDERECO}\n".encode()
     r = _rodar(_repo(tmp_path, {"docs/dados.csv": conteudo}))
     assert r.returncode == 1

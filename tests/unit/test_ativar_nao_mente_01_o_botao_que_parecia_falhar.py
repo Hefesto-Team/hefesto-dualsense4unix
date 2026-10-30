@@ -1,31 +1,31 @@
 """ATIVAR-NAO-MENTE-01 — o botão "Ativar" parecia falhar, e não refazia nada.
 
-Três defeitos do MESMO clique, medidos em 05/08 no journal da bancada:
+Três defeitos do MESMO clique, medidos em 05/08 no journal do ensaio:
 
 1. **O timeout.** `on_profile_activate` chamava `call_async` sem `timeout_s`, e
    o default da ponte é o de LEITURA: 250 ms. O handler `profile.switch` do
    daemon leva ~1,2 s (activate + save_active_marker + materialize_launch_env).
    Toda ativação caía em `_on_profile_switch_failure` — *"Falha (daemon
    offline?)"* com o perfil JÁ ativo —, o caminho de sucesso nunca rodava, e
-   ela clicava de novo: cada clique uma ativação real. O applet COSMIC tinha o
+   quem usa clicava de novo: cada clique uma ativação real. O applet COSMIC tinha o
    MESMO defeito, com a mesma constante de leitura.
 
 2. **As abas não eram refeitas.** `on_profile_activate` não chamava refresh
    nenhum. As abas só acompanhavam pelo tique de 2 Hz, e esse caminho
    (`_reconciliar_draft_com_perfil_ativo`) DESISTE quando há edição pendente:
-   com uma cor mexida e não salva, a ativação explícita dela não mudava a tela
-   nunca. Queixa literal: *"o perfil que eu ativei não aplica imediatamente as
-   features das abas"*.
+   com uma cor mexida e não salva, a ativação explícita não mudava a tela
+   nunca. A queixa: o perfil ativado não aplicava na hora as features das
+   abas.
 
 3. **O relatório do daemon ia para o lixo.** A resposta do `profile.switch`
    conta a verdade desde a R-03 (`secoes`), e o callback era
    `lambda _result:` — os únicos leitores no repositório eram testes. O toast
    dizia "Perfil ativado" mesmo quando o lock de gesto manual fizera os
-   appliers descartarem a seção que ela SENTE.
+   appliers descartarem a seção que quem usa SENTE.
 
 Hermético: stubs de `gi.repository` quando falta PyGObject, dublês com a mesma
 API por-ID da aba. Nenhum GTK real, nenhum daemon, nenhuma escrita no
-~/.config dela.
+~/.config do usuário.
 """
 from __future__ import annotations
 
@@ -91,7 +91,7 @@ from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 
 
 RESPOSTA_COM_MODO_ADIADO: dict[str, Any] = {
-    "active_profile": "vitoria",
+    "active_profile": "pessoal",
     "mode_aplicado": False,
     "motivo": "adiado_lock_manual",
     "secoes": {
@@ -101,12 +101,12 @@ RESPOSTA_COM_MODO_ADIADO: dict[str, Any] = {
     },
 }
 RESPOSTA_INTEIRA: dict[str, Any] = {
-    "active_profile": "vitoria",
+    "active_profile": "pessoal",
     "mode_aplicado": True,
     "secoes": {"mouse": "aplicado", "mode": "aplicado"},
 }
 RESPOSTA_SEM_NADA: dict[str, Any] = {
-    "active_profile": "vitoria",
+    "active_profile": "pessoal",
     "mode_aplicado": False,
     "secoes": {"mouse": "falhou", "mode": "adiado_lock_manual"},
 }
@@ -115,7 +115,7 @@ RESPOSTA_SEM_NADA: dict[str, Any] = {
 class _Janela(pa.ProfilesActionsMixin):
     """Só o que o clique em "Ativar" consulta — com os métodos REAIS do mixin."""
 
-    def __init__(self, *, pendente: bool = False, editando: str = "vitoria") -> None:
+    def __init__(self, *, pendente: bool = False, editando: str = "pessoal") -> None:
         self._widgets: dict[str, Any] = {"main_window": object()}
         self._pendente = pendente
         self._active_profile_name = editando
@@ -125,7 +125,7 @@ class _Janela(pa.ProfilesActionsMixin):
         self.recarregou = 0
         self.perguntou: list[tuple[str, str | None]] = []
         self.resposta_descartar = True
-        self.selecionado: str | None = "vitoria"
+        self.selecionado: str | None = "pessoal"
 
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
@@ -162,11 +162,11 @@ class TestOTimeoutDaAtivacao:
 
         def _falso(method: str, params: Any = None, timeout: Any = None) -> Any:
             vistos.append((method, timeout))
-            return {"active_profile": "vitoria"}
+            return {"active_profile": "pessoal"}
 
         monkeypatch.setattr(ipc_bridge, "_run_call", _falso)
 
-        assert ipc_bridge.profile_switch("vitoria") is True
+        assert ipc_bridge.profile_switch("pessoal") is True
         assert vistos == [
             ("profile.switch", ipc_bridge.PROFILE_SWITCH_TIMEOUT_S)
         ]
@@ -174,30 +174,30 @@ class TestOTimeoutDaAtivacao:
 
 class TestAJanelaLeORelatorio:
     def test_tudo_aplicado_mantem_a_frase_de_sempre(self) -> None:
-        assert pa.mensagem_de_ativacao("vitoria", RESPOSTA_INTEIRA) == (
-            "Perfil ativado: vitoria"
+        assert pa.mensagem_de_ativacao("pessoal", RESPOSTA_INTEIRA) == (
+            "Perfil ativado: pessoal"
         )
 
     def test_daemon_sem_relatorio_nao_levanta_suspeita(self) -> None:
         """Daemon antigo, ou o `True` cru da ponte: sem informação, sem alarme."""
-        for resposta in (None, True, {}, {"active_profile": "vitoria"}):
-            assert pa.mensagem_de_ativacao("vitoria", resposta) == (
-                "Perfil ativado: vitoria"
+        for resposta in (None, True, {}, {"active_profile": "pessoal"}):
+            assert pa.mensagem_de_ativacao("pessoal", resposta) == (
+                "Perfil ativado: pessoal"
             )
 
     def test_secao_adiada_aparece_com_o_nome_que_o_usuario_le(self) -> None:
-        """O caso do journal da bancada: o modo ficou de fora e o toast dizia "ativado"."""
-        msg = pa.mensagem_de_ativacao("vitoria", RESPOSTA_COM_MODO_ADIADO)
+        """O caso do journal do ensaio: o modo ficou de fora e o toast dizia "ativado"."""
+        msg = pa.mensagem_de_ativacao("pessoal", RESPOSTA_COM_MODO_ADIADO)
 
-        assert msg != "Perfil ativado: vitoria", (
+        assert msg != "Perfil ativado: pessoal", (
             "a resposta dizia que o MODO não entrou e a janela calou"
         )
         assert "modo" in msg
-        assert "vitoria" in msg
+        assert "pessoal" in msg
         assert "mouse" not in msg, "o que ENTROU não é notícia"
 
     def test_nada_aplicado_diz_o_que_o_rodape_diria(self) -> None:
-        msg = pa.mensagem_de_ativacao("vitoria", RESPOSTA_SEM_NADA)
+        msg = pa.mensagem_de_ativacao("pessoal", RESPOSTA_SEM_NADA)
         assert fa._mensagem_de_aplicacao({"applied": []}) in msg
 
     def test_o_texto_do_que_nao_entrou_e_o_do_rodape(self) -> None:
@@ -205,7 +205,7 @@ class TestAJanelaLeORelatorio:
         relato = pa.relato_da_ativacao(RESPOSTA_COM_MODO_ADIADO)
         assert relato is not None
         assert fa._mensagem_de_aplicacao(relato) in pa.mensagem_de_ativacao(
-            "vitoria", RESPOSTA_COM_MODO_ADIADO
+            "pessoal", RESPOSTA_COM_MODO_ADIADO
         )
 
     def test_o_relato_traduz_secoes_para_applied_e_failed(self) -> None:

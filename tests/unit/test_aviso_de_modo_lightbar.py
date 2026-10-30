@@ -109,11 +109,11 @@ def test_o_aviso_nao_rouba_a_cor_do_usuario() -> None:
     inst.pintar_lightbar_sem_lembrar((255, 0, 0))
 
     assert inst._desired_default.led is None, "o aviso gravou no default"
-    assert inst._desired_by_uniq[UNIQ_CABO].led == ROXO_DO_USUARIO, "o roxo dela sumiu"
+    assert inst._desired_by_uniq[UNIQ_CABO].led == ROXO_DO_USUARIO, "o roxo do usuário sumiu"
 
 
 def test_a_piscada_devolve_a_cor_do_perfil() -> None:
-    """Fim da sequência = a cor dela de volta, nos dois transportes."""
+    """Fim da sequência = a cor do perfil de volta, nos dois transportes."""
     inst, _cabo, radio, node = _backend_com_dois()
     inst._desired_default.led = ROXO_DO_USUARIO
 
@@ -255,7 +255,7 @@ def _sem_thread(monkeypatch: Any) -> None:
 
 
 def test_o_boot_nao_pisca(monkeypatch: Any) -> None:
-    """Um daemon que sobe já em máscara DualSense não pode piscar como se ela
+    """Um daemon que sobe já em máscara DualSense não pode piscar como se quem usa
     tivesse acabado de mexer em alguma coisa."""
     _sem_thread(monkeypatch)
     d = _Daemon(flavor=PONTE_DUALSENSE)
@@ -354,7 +354,7 @@ def test_a_troca_de_mascara_nao_anuncia_mouse_teclado(monkeypatch: Any) -> None:
 
 
 def test_o_release_do_modo_nativo_avisa_mesmo_sem_persist(monkeypatch: Any) -> None:
-    """MORDE a guarda errada. `persist` significa "a PREFERÊNCIA dela mudou"
+    """MORDE a guarda errada. `persist` significa "a PREFERÊNCIA do usuário mudou"
     (R-07: `persist=(origin == "manual")`), não "o vpad vai voltar já".
 
     `lifecycle._release_controller_to_game` desliga a emulação com

@@ -47,7 +47,7 @@ def _ultimo_commit(raiz: Path, *caminhos: str) -> str:
 
 
 def familias_sob(fotos: str) -> tuple[str, ...]:
-    """As famílias de foto que moram em `fotos`, ela inclusive."""
+    """As famílias de foto que moram em `fotos`, inclusive a própria."""
     return tuple(
         f for f in FAMILIAS_DE_FOTO if f == fotos or f.startswith(fotos + "/")
     )
@@ -181,14 +181,14 @@ def test_as_fotos_nao_ficam_atras_do_codigo_da_tela() -> None:
         "tela que pode não existir mais.\n\n"
         f"{COMANDOS_DE_CURA}\n\n"
         "Uma execução, nenhum clique. Se as imagens saírem DIFERENTES, olhe-as "
-        "antes de commitar: mudança de DESENHO é palavra dela "
+        "antes de commitar: mudança de DESENHO pede aprovação "
         "(PROVA-DE-TELA-01), não de quem tirou a foto.\n\n"
         "Se saírem IGUAIS não há o que commitar, e aí é a segunda porta — "
         f"acrescente a `{CONFERIDO}` a linha\n\n"
         f"    {commit_do_codigo}  <data>  <o que você mediu>\n\n"
         "NÃO refotografe só para gerar bytes: a foto carrega o estado VIVO da "
         "máquina de quem a tira (quantos controles na mesa, a cor lida de cada "
-        "um), e commitar a sua troca a mesa dela pela sua, calada."
+        "um), e commitar a sua troca a mesa anterior pela sua, calada."
     )
 
 
@@ -329,7 +329,7 @@ def test_a_foto_da_vista_nao_paga_a_divida_das_dez_do_readme(tmp_path: Path) -> 
     assert uma_familia_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is False, (
         "as dez fotos do README são anteriores à mudança de tela e a régua "
         "disse que estavam em dia. A foto da pasta `maximizada/` pagou a "
-        "dívida delas — o buraco medido em 11/09/2026."
+        "dívida das fotos — o buraco medido em 11/09/2026."
     )
     assert fotos_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is False, (
         "uma família atrasada tem de reprovar por todas: a pergunta do portão "
@@ -369,7 +369,7 @@ def test_a_declaracao_so_vale_para_o_commit_que_o_usuario_nomeia(tmp_path: Path)
 
     assert portao_fechado(raiz, FOTOS, CODIGO_DA_TELA, CONFERIDO) is False, (
         "a segunda porta abriu com uma declaração que NÃO nomeia o commit de "
-        "tela deste repositório. Assim ela deixaria de ser a prova de um gesto "
+        "tela deste repositório. Assim a declaração deixaria de ser a prova de um gesto "
         "e viraria um arquivo que, uma vez criado, cala o portão para sempre."
     )
 

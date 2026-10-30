@@ -27,7 +27,7 @@ def test_fala_de_tela_nao_diz_ok_com_uma_fala_so() -> None:
     assert processo.returncode == 0, processo.stdout + processo.stderr
     ultima = processo.stdout.strip().splitlines()[-1]
     assert not ultima.startswith("OK:"), (
-        "a régua declarou OK sobre um conjunto que ela mesma diz ser de uma "
+        "a régua declarou OK sobre um conjunto que a própria régua diz ser de uma "
         "`Fala`:\n" + ultima
     )
     assert "NÃO MEDIU" in ultima or "QUASE NÃO MEDIU" in ultima, ultima

@@ -9,7 +9,7 @@ Quatro defeitos medidos no conferente do mods-fds (10/10), um caso por defeito:
 3. o ``ligar`` relia o manifesto do disco e aceitava a lista que estivesse lá,
    mesmo diferente da que quem chamou mostrou e ouviu o «sim»;
 4. o ``uninstall.sh`` não conhecia as modificações: o processo vivo seguia de pé
-   e a pasta de dados dela era varrida como «nenhum passo o nomeia».
+   e a pasta de dados da modificação era varrida como «nenhum passo o nomeia».
 
 O uninstall roda DE VERDADE, no lar de mentira da casa (HOME e XDG desviados,
 guarda que sai se vazar, dublês no lugar de tudo o que muda a máquina). O

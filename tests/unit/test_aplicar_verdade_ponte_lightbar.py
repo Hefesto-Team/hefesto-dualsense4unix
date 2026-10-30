@@ -55,7 +55,7 @@ class _Host(LightbarActionsMixin):
 def _host() -> _Host:
     """Host no caminho degradado COR-04: alvo "Todos" e nenhum MAC conhecido."""
     perfil = Profile(
-        name="vitoria",
+        name="pessoal",
         match=MatchAny(),
         priority=5,
         leds=LedsConfig(
@@ -124,7 +124,7 @@ def test_a_regua_do_ramo_aplicado(monkeypatch: pytest.MonkeyPatch) -> None:
     FORMA com que ele sai de lá — `"<assunto> aplicado"` e
     `"<assunto> aplicado em N controles"`. No dia em que aquela frase mudar de
     forma, esta aba deixa de reconhecê-la e passa a mostrar na tela a palavra
-    "aplicado", que ela recusa por medição. Este teste reprova nesse dia, em
+    "aplicado", que a medição recusa. Este teste reprova nesse dia, em
     vez de a divergência sair na tela do usuário.
     """
     corpo_um = {"status": "ok", "aplicado_em": ["a"], "guardado_em": []}

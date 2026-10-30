@@ -259,7 +259,7 @@ def test_o_trecho_de_dentro_da_funcao_nao_e_desta_pergunta(repo: Path) -> None:
 
 
 def test_o_trecho_que_abraca_o_def_de_fora_anda_com_a_funcao(repo: Path) -> None:
-    """As duas primeiras linhas de ``segunda`` (10-11), e uma linha nasce em cima dela."""
+    """As duas primeiras linhas de ``segunda`` (10-11), e uma linha nasce em cima da função."""
     csv = repo / "docs" / "data" / "mapa.csv"
     csv.write_text(
         csv.read_text(encoding="utf-8").replace(
@@ -573,7 +573,7 @@ def test_a_crase_da_linha_de_cima_tambem_e_pista(repo: Path) -> None:
     md = _escrever_e_commitar(
         repo,
         "docs/protocol/quebrada.md",
-        f"# Quebrada\n\n> a figura é a de `segunda`, citada em\n> `{END}:3`, que não é ela.\n",
+        f"# Quebrada\n\n> a figura é a de `segunda`, citada em\n> `{END}:3`, que não é a função.\n",
         "a crase na linha de cima",
     )
     _inserir_no_topo(repo, 4, commitar=True)
@@ -601,7 +601,7 @@ def test_o_endereco_reescrito_numa_varredura_vai_para_a_mao(
 ) -> None:
     """Um commit que mexe em centenas de arquivos e reescreve o endereço de um documento que já
     existia não prova onde a linha estava (foi o `aba02.py:1702`, que a varredura de 02/10 deixou
-    em branco). O documento que NASCE na varredura, esse, foi escrito olhando o código dela."""
+    em branco). O documento que NASCE na varredura, esse, foi escrito olhando o código de então."""
     mod = _script()
     monkeypatch.setattr(mod, "VARREDURA_DE_ARQUIVOS", 3)
     velho = _escrever_e_commitar(
@@ -680,7 +680,7 @@ def test_o_endereco_que_um_reapontamento_em_massa_deixou_anda_pelo_endereco_de_a
     o endereço que ele deixou foi calculado, e a linha dele não prova o que a frase citou.
 
     Medido em 08/10/2026: o 719e58a46 (13/09) reapontou 1629 endereços de uma vez, e 83 das 182
-    trocas desta régua vinham dele; entre elas o `02-controles.html:2358` de uma frase sobre o
+    trocas desta régua vinham dele; entre essas o `02-controles.html:2358` de uma frase sobre o
     quadradinho `--plastico`, que seguia para o link da aba Lançadores. Poucos arquivos tocados:
     a recusa da varredura não o pega. O endereço que ele deixou não anda; o de ANTES dele, que tem
     entrada própria, anda (a segunda chance). O documento que muda UM endereço anda direto.

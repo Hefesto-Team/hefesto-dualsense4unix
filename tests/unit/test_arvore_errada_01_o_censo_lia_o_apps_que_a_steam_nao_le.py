@@ -33,7 +33,7 @@ def _vdf_das_tres_arvores(
     canonica: str,
     outra: str | None = None,
 ) -> str:
-    """O `localconfig.vdf` dela em miniatura: três árvores `apps`, uma boa."""
+    """O `localconfig.vdf` do usuário em miniatura: três árvores `apps`, uma boa."""
     bloco_canonico = _bloco_app(_PRAGMATA, ("LaunchOptions", canonica), recuo="\t\t\t\t")
     bloco_duskfade = _bloco_app(
         _DUSKFADE, ("LaunchOptions", _escapado(WRAPPER_LAUNCH)), recuo="\t\t\t\t"
@@ -131,7 +131,7 @@ class TestOLeitorNaoLeMaisDaArvoreErrada:
 
 class TestOEscritorNaoSujaOQueNaoEDele:
     def test_nao_escreve_na_arvore_da_steam(self) -> None:
-        """A MORDIDA do outro lado: os 11 blocos dela ganharam chave à toa."""
+        """A MORDIDA do outro lado: os 11 blocos do usuário ganharam chave à toa."""
         texto = _vdf_das_tres_arvores(
             canonica=_LINHA_COMIDA,
             outra=None,
@@ -151,7 +151,7 @@ class TestOEscritorNaoSujaOQueNaoEDele:
         assert WRAPPER_PREFIX in read_apps_by_appid(novo)[_PRAGMATA]
 
     def test_repor_preserva_a_variavel_que_o_usuario_pos(self) -> None:
-        """O `VKD3D_CONFIG` dela é cura de crash — o wrapper convive, não come."""
+        """O `VKD3D_CONFIG` do usuário é cura de crash — o wrapper convive, não come."""
         novo, _, _ = apply_wrapper_vdf_text(
             _vdf_das_tres_arvores(canonica=_LINHA_COMIDA)
         )

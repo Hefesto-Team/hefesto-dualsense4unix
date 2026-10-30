@@ -83,7 +83,7 @@ def test_a_carona_leva_o_ambiente_a_copia_do_jogo(tmp_path: Path) -> None:
     for chave, valor in (_MHWILDS, _SONY, _ACELEROMETRO, _IGNORE, _HIDRAW):
         assert pares.get(chave) == valor, (chave, pares)
     assert pares["__GL_SHADER_DISK_CACHE"] == "0", (
-        "o cache de shader é escolha dela PARA AQUELE JOGO, e a carona o trocou")
+        "o cache de shader é escolha do usuário PARA AQUELE JOGO, e a carona o trocou")
     assert pares["MANGOHUD"] == "1"
 
 

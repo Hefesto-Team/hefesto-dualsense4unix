@@ -1,6 +1,6 @@
 """A assinatura de disco NÃO separa o jogo quebrado do que funciona.
 
-Esta é a mordida do censo de 16/08/2026. Ela existe para que ninguém volte a
+Esta é a mordida do censo de 16/08/2026. Existe para que ninguém volte a
 ligar a máscara de gamepad ao que o disco diz, porque o disco não sabe.
 
 O caso que a prova: `Duskfade` (quebrado com máscara DualSense) e

@@ -7,18 +7,18 @@ automática, o máximo que der."*
 Este arquivo trava os três itens que impediam **os quatro jogadores**:
 
   - **AUTO-01.1** — a emulação de gamepad nascia DESLIGADA e o co-op depende
-    dela: numa instalação nova, quatro DualSense plugados alimentavam UM cursor
+    da emulação: numa instalação nova, quatro DualSense plugados alimentavam UM cursor
     só. Agora dois controles na mesa ligam a emulação sozinhos — sem atropelar
-    gesto manual dela nem a decisão persistida em disco;
+    gesto manual de quem usa nem a decisão persistida em disco;
   - **AUTO-01.2** — o co-op não existia na janela (``grep -ci coop main.glade``
     devolvia ZERO): a funcionalidade central do projeto só tinha caminho pela
     linha de comando. Virou um botão, "Preparar co-op", que encadeava modo de
     jogo + co-op + renumeração.
     **NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01:** esse botão SAIU, e a
-    entrega da AUTO-01.2 não foi desfeita: ela foi ao limite. Decisão de produto,
-    tomada mais de uma vez: *"todos e tudo no Hefesto tem que tá com o permitir
-    co-op ligado (…) se eu conecto 4 controles no PC eu espero, com 4 pessoas
-    jogando, que cada um controle o próprio personagem"*. Preparar o co-op
+    entrega da AUTO-01.2 não foi desfeita: foi ao limite. Decisão do produto,
+    tomada mais de uma vez: todo o Hefesto nasce com o co-op permitido; com quatro
+    controles no PC e quatro pessoas jogando, cada uma controla o próprio
+    personagem. Preparar o co-op
     deixou de ser gesto porque o co-op deixou de ser opção — o piso do daemon
     nasce ligado. O que a AUTO-01.2 tinha de insubstituível (o ciclo FORÇADO,
     que alcançava de carona no ``coop.set``) mudou de dono ANTES da remoção:
@@ -28,7 +28,7 @@ Este arquivo trava os três itens que impediam **os quatro jogadores**:
     mesmo gesto entregava máscaras diferentes, e a máscara decide se o jogo
     reconhece o controle.
 
-Invariante que NÃO pode cair junto: gesto manual dela cria trava de 30 s e nada
+Invariante que NÃO pode cair junto: gesto manual de quem usa cria trava de 30 s e nada
 — nem esta automação — mexe no modo nesse período.
 
 Os testes do daemon entram pelo caminho PÚBLICO de verdade (o `Daemon.run()`,
@@ -182,7 +182,7 @@ class TestDoisControlesLigamAEmulacao:
         """A cura, pelo caminho que roda na máquina do usuário: o daemon de pé.
 
         Instalação nova (nenhuma flag em disco), dois DualSense plugados: a
-        emulação sobe sem ninguém abrir terminal nem aba. Sem ela o co-op nunca
+        emulação sobe sem ninguém abrir terminal nem aba. Sem a emulação o co-op nunca
         passa do gate (`CoopManager.should_be_active`) e os dois controles
         alimentam o mesmo cursor.
         """
@@ -214,7 +214,7 @@ class TestDoisControlesLigamAEmulacao:
     async def test_desligado_de_proposito_nunca_e_religado(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O pior desfecho possível seria o produto brigando com ela."""
+        """O pior desfecho possível seria o produto brigando com quem usa."""
         session_mod.save_gamepad_emulation(False)
         d = _daemon(controles=4)
         espiao = _EspiaoDeEmulacao(d)
@@ -228,7 +228,7 @@ class TestDoisControlesLigamAEmulacao:
     async def test_mouse_em_uso_nao_e_derrubado(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Emulação de mouse VIVA = ela está usando o controle como cursor agora."""
+        """Emulação de mouse VIVA = quem usa está com o controle como cursor agora."""
         d = _daemon(controles=2)
         espiao = _EspiaoDeEmulacao(d)
         espiao.bind(monkeypatch)
@@ -496,7 +496,7 @@ class TestUmDonoSoParaAMascara:
         assert params_cli == pela_janela
 
     def test_o_plano_manda_a_mascara_que_o_usuario_escolheu(self) -> None:
-        """O outro lado da regra: escolha explícita dela chega intacta ao daemon."""
+        """O outro lado da regra: escolha explícita do usuário chega intacta ao daemon."""
         passo = mode_transition.plan_mode_transition("gamepad", "dualsense")[-1]
 
         assert passo == (

@@ -74,7 +74,7 @@ def test_dois_dongles_identicos_nao_trocam_de_lugar_entre_si() -> None:
 
 @pytest.mark.usefixtures("sem_a_regra_do_irmao")
 def test_arrancada_a_regra_do_irmao_a_receita_salta_de_cinco_para_sete() -> None:
-    """A MORDIDA: sem ela, dois UB500 idênticos trocam de lugar, sem ganho nenhum."""
+    """A MORDIDA: sem a regra, dois UB500 idênticos trocam de lugar, sem ganho nenhum."""
     mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
     saltou = movimentos(mesa)
     assert len(saltou) == 7, saltou
@@ -129,7 +129,7 @@ def test_ganho_negativo_nao_vira_ordem_de_servico() -> None:
 
 
 def _mesa_do_empate() -> motor.Mesa:
-    """Duas entradas idênticas e um aparelho já numa delas — o empate puro."""
+    """Duas entradas idênticas e um aparelho já numa das duas — o empate puro."""
     faces = (motor.Face(nome="Duas iguais", regiao="pc", entradas=(
         motor.Entrada("1", usb=2, onde="pc"), motor.Entrada("2", usb=2, onde="pc"))),)
     return motor.Mesa(
@@ -214,7 +214,7 @@ def test_ninguem_troca_de_adaptador_sem_baixar_o_pico() -> None:
 
 
 def test_sem_adaptador_nenhum_o_motor_diz_que_nao_cabe() -> None:
-    """A bancada às 02h36 de 25/08: o hub saiu e levou os três dongles."""
+    """O ensaio às 02h36 de 25/08: o hub saiu e levou os três dongles."""
     mesa = mock.mesa_sem_hub()
     assert motor.adaptadores_da_mesa(mesa) == ()
     plano = motor.plano_dos_controles(mock.CONTROLES, motor.adaptadores_da_mesa(mesa))
@@ -241,7 +241,7 @@ def test_todo_aparelho_que_o_mapa_move_a_receita_manda_mover(
 
 @pytest.mark.usefixtures("sem_a_cura_do_mapa")
 def test_arrancada_a_cura_o_mapa_move_tres_aparelhos_que_a_receita_nao_manda() -> None:
-    """A MORDIDA, e ela nomeia os três órfãos, um a um."""
+    """A MORDIDA nomeia os três órfãos, um a um."""
     mesa = mock.mesa()
     aloc = motor.alocacao(mesa.mapa, mesa.leitura)
     orfaos: dict[str, list[str]] = {}
@@ -279,7 +279,7 @@ def test_a_variante_que_tira_a_entrada_de_hoje_diz_por_que_esta_tirando() -> Non
 
 
 def _aplicar(mesa: motor.Mesa, plano: motor.Plano) -> motor.Mesa:
-    """A mesa depois de ela mexer nos cabos: cada entrada do plano vira o caminho."""
+    """A mesa depois de quem usa mexer nos cabos: cada entrada do plano vira o caminho."""
     novo = {n: mesa.leitura[quem] for n, quem in plano.plano.items() if quem in mesa.leitura}
     return mock.mesa(mapa=novo, leitura=mesa.leitura, aparelhos=mesa.aparelhos)
 
@@ -352,7 +352,7 @@ _DE_ONDE_CADA_UMA_VEM: dict[str, set[str]] = {
 
 
 def nomes_que_alimentam(fonte: str, constante: str) -> set[str] | None:
-    """Os nomes de que ``constante`` é feita — ou ``None`` se ela virou literal."""
+    """Os nomes de que ``constante`` é feita — ou ``None`` se a constante virou literal."""
     for no in ast.parse(fonte).body:
         if not isinstance(no, ast.Assign) or len(no.targets) != 1:
             continue
@@ -403,7 +403,7 @@ _CASAS_VERSIONADAS = (_ORIGEM_CONGELADA, _COPIA_DO_PRODUTO)
 
 
 def _o_que_o_gerador_escreve() -> str:
-    """A BANCADA como `pagina_do_mapa` a escreve, agora."""
+    """O ENSAIO como `pagina_do_mapa` a escreve, agora."""
     from hefesto_dualsense4unix.interface import pagina_do_mapa
 
     return pagina_do_mapa.pagina()
@@ -464,7 +464,7 @@ def test_as_duas_casas_versionadas_do_mockup_nao_andam_sozinhas() -> None:
     produto = _o_que_o_produto_recebe()
     no_produto = (raiz / _COPIA_DO_PRODUTO).read_text(encoding="utf-8")
     assert not (_esperando() and no_produto == ensaio and ensaio != produto), (
-        "a cópia do produto já recebeu o desenho que espera a sessão dela — no "
+        "a cópia do produto já recebeu o desenho que espera a sessão de aprovação — no "
         "mesmo commit do `--publicar mapa-das-portas.html`, junte as edições de "
         "`pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO` ao fim de `EDICOES` e "
         "deixe aquela tupla vazia")
@@ -493,14 +493,14 @@ def test_toda_edicao_do_gerador_acha_o_seu_alvo_uma_vez() -> None:
     edicoes = _edicoes()
     assert edicoes, "nenhuma edição — a régua passaria por vacuidade"
     casas = [(edicoes, produto, "cópia do produto"),
-             (edicoes + _esperando(), ensaio, "bancada")]
+             (edicoes + _esperando(), ensaio, "ensaio")]
     for lista, casa, nome_da_casa in casas:
         texto = origem
         vez: list[str] = []
         for edicao in lista:
             assert texto.count(edicao.antes) == 1, (
                 f"edição {len(vez) + 1}: o pedaço aparece "
-                f"{texto.count(edicao.antes)} vez(es) no texto da vez dela, e "
+                f"{texto.count(edicao.antes)} vez(es) no texto da própria vez, e "
                 f"tem de aparecer UMA.\n  motivo declarado: {edicao.porque}")
             texto = texto.replace(edicao.antes, edicao.depois, 1)
             vez.append(texto)
@@ -516,7 +516,7 @@ def test_toda_edicao_do_gerador_acha_o_seu_alvo_uma_vez() -> None:
                 edicao.depois in vez[j - 1] and edicao.depois not in vez[j]
                 for j in range(numero, len(lista)))
             assert consumida, (
-                f"edição {numero}: o que ela escreve aparece "
+                f"edição {numero}: o que a edição escreve aparece "
                 f"{casa.count(edicao.depois)} vez(es) na {nome_da_casa}, e "
                 "nenhuma edição de depois o consumiu. Ou a página não foi "
                 "regerada, ou duas edições escrevem a mesma coisa.\n"
@@ -538,7 +538,7 @@ def test_nenhuma_edicao_mexe_nos_pesos_do_motor() -> None:
         "mais que isso — o seletor ficou cego e a régua passaria por vacuidade")
     assert produto == origem, (
         "os pesos das regras do produto não são os da origem congelada. "
-        "Alguma edição mexeu no que a página DECIDE, não no que ela diz — e o "
+        "Alguma edição mexeu no que a página DECIDE, não no que a página diz — e o "
         f"ouro do `fumaca.js` não veria.\n  origem:  {origem}\n  produto: {produto}")
 
 
@@ -564,7 +564,7 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
         finally:
             pagina_do_mapa.EDICOES = inteiras
         assert sem_uma != produto, (
-            f"arrancar a edição {fora + 1} não mudou a página — ela não faz nada, "
+            f"arrancar a edição {fora + 1} não mudou a página — a edição não faz nada, "
             f"e uma edição que não muda nada é um perdão morto: {inteiras[fora].porque}")
 
     esperando = pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO
@@ -577,7 +577,7 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
         finally:
             pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DO_USUARIO = esperando
         assert sem_uma != ensaio, (
-            f"arrancar a edição que espera {fora + 1} não mudou a bancada — ela "
+            f"arrancar a edição que espera {fora + 1} não mudou o ensaio — a edição "
             f"não faz nada: {esperando[fora].porque}")
 
 
@@ -592,14 +592,14 @@ def test_a_palavra_que_o_usuario_baniu_nao_esta_na_tela_do_mapa() -> None:
     na_origem = banida.findall(
         texto_visivel_no_produto((raiz / _ORIGEM_CONGELADA).read_text(encoding="utf-8")))
     assert na_origem, (
-        "a origem congelada não diz mais a palavra — ou ela foi reescrita (e "
+        "a origem congelada não diz mais a palavra — ou a origem foi reescrita (e "
         "não podia ser), ou este leitor parou de ver o texto da tela. Nos dois "
         "casos a régua abaixo estaria medindo o nada")
     for caminho in (_COPIA_DO_PRODUTO, _REFERENCIA_DO_DESENHO):
         visivel = texto_visivel_no_produto((raiz / caminho).read_text(encoding="utf-8"))
         achados = banida.findall(visivel)
         assert not achados, (
-            f"{caminho}: {len(achados)} ocorrência(s) da palavra que ela baniu "
+            f"{caminho}: {len(achados)} ocorrência(s) da palavra banida "
             f"chegam aos olhos de quem abre — {sorted(set(achados))}")
 
 
@@ -626,9 +626,9 @@ _ASSINATURA_MINIMA = 25
 
 _A_COPIA_DECLARADA: dict[str, str] = {
     "interface/aba08.py": (
-        "A CENA DE BANCADA, e ela não é a tela. O gerador da página `08` monta "
+        "A CENA DE ENSAIO, e a cena não é a tela. O gerador da página `08` monta "
         "um gabinete de mentira para o desenho sair igual em qualquer máquina — "
-        "o motor de verdade precisa de uma `Bancada`, que precisa do censo do "
+        "o motor de verdade precisa de uma `Ensaio`, que precisa do censo do "
         "/sys de quem roda o gerador. A cópia é GUARDADA: `_confere_no_produto` "
         "reprova a geração no dia em que o produto trocar qualquer uma destas "
         "frases, e é isso que a impede de virar segunda verdade. O que o produto "
@@ -637,7 +637,7 @@ _A_COPIA_DECLARADA: dict[str, str] = {
     "interface/pagina_do_mapa.py": (
         "O GERADOR DA PÁGINA, e a frase está lá como ALVO de uma troca, não como "
         "regra. Ele escreve `mapa-das-portas.html` lendo a origem congelada e "
-        "aplicando as `EDICOES`; uma delas troca a palavra que ela baniu dentro "
+        "aplicando as `EDICOES`; uma das edições troca a palavra banida dentro "
         "de uma razão do motor, e para trocar é preciso nomear o que se troca. "
         "A CÓPIA NÃO PODE ENVELHECER EM SILÊNCIO — que é o que esta varredura "
         "existe para impedir: o gerador exige que cada `antes` apareça UMA vez "
@@ -728,7 +728,7 @@ def quem_recalcula_a_nota(fonte: str) -> list[tuple[str, list[int], list[str]]]:
 
 
 def test_nenhuma_frase_do_motor_e_digitada_na_producao() -> None:
-    """A tela mostra o que o motor diz — ela não redigita a razão dele."""
+    """A tela mostra o que o motor diz — a tela não redigita a razão do motor."""
     frases = frases_da_tabela_de_notas() | frases_do_julgamento(
         _FONTE_DO_MOTOR.read_text(encoding="utf-8"))
     assert len(frases) >= 20, (
@@ -743,7 +743,7 @@ def test_nenhuma_frase_do_motor_e_digitada_na_producao() -> None:
     }
     assert not inesperados, (
         "uma segunda cópia da regra do arranjo apareceu na produção — a razão "
-        "do motor está digitada onde ela devia ser CONSUMIDA:\n"
+        "do motor está digitada onde devia ser CONSUMIDA:\n"
         + "\n".join(f"  {arquivo}\n    {copias}"
                     for arquivo, copias in sorted(inesperados.items())))
 
@@ -782,9 +782,9 @@ def test_a_varredura_da_segunda_copia_sabe_recusar() -> None:
 
     consome = (
         "from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor\n"
-        "def veredito_do_quadrado(bancada, numero, escolhido):\n"
-        "    entrada = motor.por_num(bancada.mesa.faces, numero)\n"
-        "    return motor.julgar(entrada, 'bt', bancada.mesa, escolhido)\n"
+        "def veredito_do_quadrado(ensaio, numero, escolhido):\n"
+        "    entrada = motor.por_num(ensaio.mesa.faces, numero)\n"
+        "    return motor.julgar(entrada, 'bt', ensaio.mesa, escolhido)\n"
     )
     assert quem_recalcula_a_nota(consome) == []
 
@@ -809,7 +809,7 @@ _ENTRADAS_COM_CAMINHO = 8
 
 
 def _ensaio_do_gabinete_do_usuario() -> object:
-    """A `Bancada` do produto: o desenho DO USUÁRIO sobre a leitura de 25/08 às 02h30."""
+    """A `Ensaio` do produto: o desenho DO USUÁRIO sobre a leitura de 25/08 às 02h30."""
     from hefesto_dualsense4unix.integrations import mapa_das_portas
     from tests.unit.test_mapa_o_ensaio_de_mentira import (
         ensaio_de_agora,
@@ -858,7 +858,7 @@ def test_arrancado_o_desenho_das_vazias_o_gabinete_perde_os_buracos() -> None:
         mesa = _ensaio_do_gabinete_do_usuario().mesa  # type: ignore[attr-defined]
         desenhadas = motor.todas_as_entradas(mesa.faces)
         assert len(desenhadas) < _ENTRADAS_DESENHADAS, (
-            "a régua passou com a cura arrancada — ela não mede o desenho")
+            "a régua passou com a cura arrancada — a régua não mede o desenho")
         assert not motor.candidatas(mesa, "pc"), (
             "com o desenho podado ainda sobraram candidatas — a régua está "
             "medindo outra coisa")
@@ -903,7 +903,7 @@ def _mapa_declarado_do_mockup() -> object:
 
 
 def _confirmar(entrada: str) -> dict[str, str]:
-    """O 'Já movi' dela, pelo gesto do produto — devolve `entrada -> caminho`."""
+    """O 'Já movi' de quem usa, pelo gesto do produto — devolve `entrada -> caminho`."""
     from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
 
     logica = LogicaDoMapa(_mapa_declarado_do_mockup())  # type: ignore[arg-type]
@@ -917,7 +917,7 @@ def _confirmar(entrada: str) -> dict[str, str]:
 
 
 def test_a_confirmacao_da_ordem_liga_a_entrada() -> None:
-    """O mapa ganha `N -> caminho novo` só quando ela diz que foi para o N."""
+    """O mapa ganha `N -> caminho novo` só quando quem usa diz que foi para o N."""
     mesa_agora = mock.mesa(leitura=mock.LEITURA_AGORA)
     mudou = {m.aparelho.id: m for m in motor.reexame(
         mesa_agora, mock.LEITURA_ANTES, mock.LEITURA_AGORA)}
@@ -945,15 +945,15 @@ def test_a_confirmacao_da_ordem_liga_a_entrada() -> None:
     depois_do_nao = _confirmar(_ENTRADA_ONDE_O_USUARIO_POS)
     novas = sorted(n for n in depois_do_nao if n not in mock.MAPA)
     assert depois_do_nao.get(_ENTRADA_ONDE_O_USUARIO_POS) == _CAMINHO_NOVO_DO_WIFI, (
-        f"ela apontou a entrada {_ENTRADA_ONDE_O_USUARIO_POS} e o mapa aprendeu "
-        f"{novas} — o produto presumiu em vez de gravar o que ela disse")
+        f"quem usa apontou a entrada {_ENTRADA_ONDE_O_USUARIO_POS} e o mapa aprendeu "
+        f"{novas} — o produto presumiu em vez de gravar o que quem usa disse")
     assert _ENTRADA_SUGERIDA not in depois_do_nao, (
         f"o mapa gravou a entrada {_ENTRADA_SUGERIDA}, que o produto sugeriu, "
-        "e ela disse outra — mapa que mente é pior que mapa vazio")
+        "e quem usa disse outra — mapa que mente é pior que mapa vazio")
 
 
 def test_presumir_a_entrada_sugerida_faz_o_mapa_mentir() -> None:
-    """A mordida: gravar a sugerida sem perguntar, e ela ter posto noutra."""
+    """A mordida: gravar a sugerida sem perguntar, e quem usa ter posto noutra."""
     presumido = dict(mock.MAPA)
     presumido[_ENTRADA_SUGERIDA] = _CAMINHO_NOVO_DO_WIFI
     mentindo = mock.mesa(mapa=presumido, leitura=mock.LEITURA_AGORA)

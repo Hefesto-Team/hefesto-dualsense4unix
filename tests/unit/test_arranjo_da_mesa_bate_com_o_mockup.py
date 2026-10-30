@@ -23,7 +23,7 @@ OPCOES = {v.id: v.opcoes for v in motor.VARIANTES}
 
 
 def _mesa(**kw: Any) -> motor.Mesa:
-    """A mesa com as faces da página viva: o ouro vem do `EXEMPLO` dela."""
+    """A mesa com as faces da página viva: o ouro vem do `EXEMPLO` da página."""
     return mock.mesa(faces=mock.FACES_DA_PAGINA_VIVA, **kw)
 
 
@@ -171,7 +171,7 @@ def test_o_que_se_perde_e_a_mesma_frase(variante: str) -> None:
 
 
 def test_a_receita_sem_o_bonus_de_ficar_parado_bate_tambem() -> None:
-    """A regra é PARÂMETRO, e o porte tem de reproduzir os dois valores dela."""
+    """A regra é PARÂMETRO, e o porte tem de reproduzir os dois valores da regra."""
     op = motor.Opcoes(bonus_parado=0)
     plano = como_o_mockup_planeja(motor.planejar(_mesa(), op))
     assert plano == ouro("planejar/sem-bonus-parado")
@@ -352,7 +352,7 @@ def _oraculo_numa_arvore_so_com(pagina: str) -> subprocess.CompletedProcess[str]
 @pytest.mark.skipif(shutil.which("node") is None, reason="node não está nesta máquina")
 def test_o_oraculo_le_a_pagina_viva_e_nao_o_congelado() -> None:
     """O oráculo segue a página que o gerador escreve: sem o congelado por perto, e com um
-    veredito mudado SÓ nela, a resposta muda. O oráculo velho lia o congelado e não via isto."""
+    veredito mudado SÓ ali, a resposta muda. O oráculo velho lia o congelado e não via isto."""
     viva = PAGINA_VIVA.read_text(encoding="utf-8")
     assert viva.count('txt: "Ocupada"') >= 2, "o veredito da prova saiu da página viva"
     limpo = _oraculo_numa_arvore_so_com(viva)

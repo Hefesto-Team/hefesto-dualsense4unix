@@ -217,7 +217,7 @@ def _receptor(ident: str, tipo: str, banda: list[int]) -> dict[str, Any]:
 
 
 def test_a_faixa_medida_do_mouse_do_teclado_e_do_wifi_briga_com_a_do_controle() -> None:
-    """O acréscimo dela de 06/10/2026: o receptor do mouse, o do teclado e o Wi-Fi em 2,4 GHz
+    """O acréscimo de 06/10/2026: o receptor do mouse, o do teclado e o Wi-Fi em 2,4 GHz
     mostram a faixa MEDIDA no mesmo trilho dos controles, e a briga se cruza canal a canal: o
     controle leva a marca de quem tomou cada canal, e cada um deles leva a do controle."""
     cena = _cena(aparelhos=[_ap("c1", "controle")], evitados=[(10, 16), (40, 46), (60, 70)],

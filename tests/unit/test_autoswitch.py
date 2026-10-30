@@ -23,7 +23,7 @@ from hefesto_dualsense4unix.utils import session as _session
 
 
 def _a_escolha_do_usuario(nome: str) -> None:
-    """O último perfil que ela ativou à mão, no `session.json` do lar isolado."""
+    """O último perfil que quem usa ativou à mão, no `session.json` do lar isolado."""
     _session.save_last_profile(nome)
 
 
@@ -203,7 +203,7 @@ def _mk_switcher(
     )
 
 
-def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_vitoria(
+def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_o_pessoal(
     isolated_profiles_dir: Path,
 ):
     """O episódio do journal 2026-07-16 13:07:18 vira teste: perfil de jogo"""
@@ -213,8 +213,8 @@ def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_vitoria(
             match=MatchCriteria(window_class=["steam_app_1599660"]),
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -236,8 +236,8 @@ def test_matchany_nunca_ativado_por_leitura_vazia_ou_unknown(
     isolated_profiles_dir: Path,
 ):
     """Critério 2: com perfil MatchAny salvo, reads `{}` ou unknown NUNCA o"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -261,7 +261,7 @@ def test_fresh_install_desktop_wayland_puro_nao_ativa_matchany(
     isolated_profiles_dir: Path,
 ):
     """Critério 5: fresh-install em desktop Wayland puro (backend cego desde o"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
@@ -301,8 +301,8 @@ def test_unknown_com_titulo_ativa_fallback_apos_debounce(
     isolated_profiles_dir: Path,
 ):
     """Tradeoff residual aceito (armadilha 3 da UX-01, coberto de propósito):"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -312,7 +312,7 @@ def test_unknown_com_titulo_ativa_fallback_apos_debounce(
     sw._tick({"wm_class": "unknown", "wm_name": "Splash sem classe"}, 0.0)
     sw._tick({"wm_class": "unknown", "wm_name": "Splash sem classe"}, 0.6)
 
-    assert sw._current_profile == "vitoria"
+    assert sw._current_profile == "pessoal"
 
 
 def test_buraco_do_debounce_glitch_apos_gap_nao_ativa_na_hora(
@@ -384,8 +384,8 @@ def test_log_info_unavailable_uma_vez_por_episodio(
 async def test_histerese_no_run_loop_mantem_perfil(isolated_profiles_dir: Path):
     """Critério 1 pelo run() REAL: Doom estável → N ticks unknown → mantém"""
     save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -464,8 +464,8 @@ def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
             match=MatchCriteria(window_class=["steam_app_1599660"]),
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -492,8 +492,8 @@ def test_gui_propria_nunca_ativa_fallback_sem_perfil_corrente(
     isolated_profiles_dir: Path,
 ):
     """Sem perfil corrente, encarar a GUI por minutos não ativa o MatchAny —"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -599,8 +599,8 @@ def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
             "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -609,7 +609,7 @@ def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
 
     sw._tick({"wm_class": "firefox"}, 0.0)
     sw._tick({"wm_class": "firefox"}, 0.6)
-    assert sw._current_profile == "vitoria"
+    assert sw._current_profile == "pessoal"
 
     sw._tick({"wm_class": "steam_app_2111190"}, 1.0)
     sw._tick({"wm_class": "steam_app_2111190"}, 1.6)
@@ -622,15 +622,15 @@ def test_sair_do_perfil_de_jogo_para_janela_sem_regra_fica_no_jogo(
     """O alt-tab do jogo para uma janela sem regra: o perfil do jogo fica.
 
     OS-QUATRO-EM-HARMONIA-01, item 4 (14/10/2026): o perfil fica no último jogo
-    até ela mudar ou outro jogo iniciar; a escolha não volta com o tempo.
+    até quem usa mudar ou outro jogo iniciar; a escolha não volta com o tempo.
     """
     save_profile(
         _mk_profile(
             "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -657,8 +657,8 @@ def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
             "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
         )
     )
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
 
     fc = FakeController()
     fc.connect()
@@ -706,8 +706,8 @@ def test_saida_de_catch_all_para_catch_all_nao_paga_o_debounce_longo(
     isolated_profiles_dir: Path,
 ):
     """Só perfil ESPECÍFICO arma o lado lento: quem já está no genérico não tem"""
-    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-    _a_escolha_do_usuario("vitoria")
+    save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
+    _a_escolha_do_usuario("pessoal")
     save_profile(
         _mk_profile("leitura", priority=50, match=MatchCriteria(window_class=["zathura"]))
     )
@@ -719,7 +719,7 @@ def test_saida_de_catch_all_para_catch_all_nao_paga_o_debounce_longo(
 
     sw._tick({"wm_class": "firefox"}, 0.0)
     sw._tick({"wm_class": "firefox"}, 0.6)
-    assert sw._current_profile == "vitoria"
+    assert sw._current_profile == "pessoal"
     assert sw._current_especifico is False
 
     sw._tick({"wm_class": "zathura"}, 1.0)

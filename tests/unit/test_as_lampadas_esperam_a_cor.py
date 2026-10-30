@@ -3,12 +3,12 @@
 DECISÃO, 20/09/2026, verbatim: *"As lâmpadas esperam a cor"*. A razão é
 do produto, e não do código: **o aparelho nunca se contradiz consigo mesmo.**
 
-## O que foi medido, com os quatro DualSense na bancada
+## O que foi medido, com os quatro DualSense no ensaio
 
-Ela desligou o P3 (Cosmic Red) e olhou o P4 (Galactic Purple)::
+Desligado o P3 (Cosmic Red), olhando o P4 (Galactic Purple)::
 
     23:56:17.747  controller_disconnected reason=alvo_sumiu
-          ~4 s    AS LÂMPADAS do aparelho mudam para três   ← vistas por ela
+          ~4 s    AS LÂMPADAS do aparelho mudam para três   ← vistas no ensaio
     23:56:47.765  numeracao_da_mesa_mudou arma o gatilho     +30,0 s
     23:56:49.284  gatilho_da_cor_escrito: rosa → verde       +31,5 s
 
@@ -16,15 +16,15 @@ Por **27 segundos** o mesmo controle mostrava três lâmpadas de Player 3 e a
 barra do Player 4. A palavra de produto, confirmando a predição: *"Rosa e só verde
 meio minuto depois"*.
 
-## O que esta régua mede, e onde ela MORDE
+## O que esta régua mede, e onde MORDE
 
-A cura não está em nenhuma das rotas de escrita — está ANTES delas, no número.
+A cura não está em nenhuma das rotas de escrita — está ANTES das rotas, no número.
 ``numero_da_lampada`` passou a responder pela tabela LIBERADA
-(``_numeros_das_lampadas_locked``), e é ela que alimenta os DOIS campos da
+(``_numeros_das_lampadas_locked``), e é essa tabela que alimenta os DOIS campos da
 camada automática, a cor e o número. Não há caminho em que um avance sem o
 outro.
 
-A MORDIDA é :class:`TestAMordida`, e ela é literal: com a cura arrancada — isto
+A MORDIDA é :class:`TestAMordida`, e é literal: com a cura arrancada — isto
 é, com ``numero_da_lampada`` voltando a responder pela mesa de agora — as
 asserções de :class:`TestOAparelhoNaoSeContradiz` REPROVAM. Régua que passa com
 a cura arrancada não mede nada.
@@ -84,7 +84,7 @@ def passar_o_prazo(relogio: Relogio) -> None:
 
 @pytest.fixture
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`config_dir` em tmp — nada aqui toca o `controllers.json` dela."""
+    """`config_dir` em tmp — nada aqui toca o `controllers.json` do usuário."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     def fake_config_dir(ensure: bool = False) -> Path:
@@ -176,7 +176,7 @@ class TestOQueJaFuncionavaContinua:
     """A hipótese tem de explicar o que já funcionava — regra da casa."""
 
     def test_a_tela_nao_espera_nada(self) -> None:
-        """`numeros_da_mesa` é a mesa de AGORA, e é ela que a tela lê."""
+        """`numeros_da_mesa` é a mesa de AGORA, e é essa mesa que a tela lê."""
         relogio = Relogio()
         reg = mesa_de_quatro(relogio)
         reg.liberar_as_lampadas()
@@ -229,7 +229,7 @@ class TestOQueJaFuncionavaContinua:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestAMordida:
-    """Arranque a cura e veja a régua reprovar. Sem isto, ela não mede nada."""
+    """Arranque a cura e veja a régua reprovar. Sem isto, a régua não mede nada."""
 
     def test_o_caminho_pre_cura_deixa_a_lampada_andar_sozinha(self) -> None:
         """A cura arrancada = `numero_da_lampada` respondendo pela mesa de agora."""

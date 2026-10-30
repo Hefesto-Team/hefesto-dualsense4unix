@@ -4,7 +4,7 @@ O desenho aprovado em 28/10/2026 (D-2810-AS-ABAS-DOS-CONTROLES-NA-JOGAR): na Jog
 «Selecionar:», a fita e o «Todos» saem, e cada controle conectado ganha uma aba no topo do
 cartão. A aba e o cartão se pintam pela mesma regra do plástico, o clique troca o cartão pelo
 mesmo gesto da fita. Desde 29/10/2026 (D-2910-OS-QUATRO-LUGARES-TEM-ABA-NA-JOGAR), o lugar vazio
-também tem aba; desde a D-2910-A-ABA-VAZIA-E-SO-O-NUMERO, ela é só o número, tracejada e sem
+também tem aba; desde a D-2910-A-ABA-VAZIA-E-SO-O-NUMERO, é só o número, tracejada e sem
 clique. Só some quando um externo ocupa o número dele.
 
 AS RÉGUAS:
@@ -12,10 +12,10 @@ AS RÉGUAS:
 1. o desenho (o mockup que o `--publicar 01` leva): sem fita, uma aba por lugar da mesa,
    o vazio apagado e sem gesto, o cheio com o gesto da fita, e todos com o endereço do nome, da
    via e da dica;
-2. a folha do plástico é uma só e pinta a aba com o tom do plástico dela;
+2. a folha do plástico é uma só e pinta a aba com o tom do plástico do controle;
 3. o pacote diz o nome, a via e a dica de cada aba;
 4. o gesto da aba escolhe o controle do cartão;
-5. na tela (WebKit, com o BOOTSTRAP do piloto): as quatro abas sempre, N delas da cor do
+5. na tela (WebKit, com o BOOTSTRAP do piloto): as quatro abas sempre, N da cor do
    plástico e as outras tracejadas e só com o número; o clique troca o cartão; a aba de quem
    sai fica vazia, e o cartão escolhido que sai passa ao seguinte.
 """

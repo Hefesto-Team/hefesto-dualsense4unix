@@ -105,7 +105,7 @@ class TestAutoswitchRespeitaOFreestyle:
     ) -> None:
         """A LOCK-CEDE-01 revogada: o jogo com perfil PRÓPRIO não entra."""
         save_profile(_perfil_do_jogo())
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="pessoal", match=MatchAny(), priority=5))
         store = StateStore()
         store.set_freestyle_ligado(True)
         sw = _switcher_real(store)

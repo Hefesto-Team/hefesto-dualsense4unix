@@ -65,7 +65,7 @@ def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _servidor(tmp_path: Path) -> Any:
-    """O `Daemon` e o `IpcServer` do produto, com o perfil «Bancada» ativo no disco."""
+    """O `Daemon` e o `IpcServer` do produto, com o perfil «Ensaio» ativo no disco."""
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -79,7 +79,7 @@ def _servidor(tmp_path: Path) -> Any:
     servidor = IpcServer(controller=controle, store=daemon.store, profile_manager=gerente,
                          socket_path=tmp_path / "acess.sock", daemon=daemon)
     daemon._ipc_server = servidor
-    perfil = Profile(name="Bancada", match=MatchAny(type="any"))
+    perfil = Profile(name="Ensaio", match=MatchAny(type="any"))
     save_profile(perfil)
     servidor.store.set_active_profile(perfil.name)
     return servidor
@@ -92,7 +92,7 @@ def _chama(servidor: Any, metodo: str, **params: Any) -> dict[str, Any]:
 def _do_disco() -> Any:
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
-    return load_profile("Bancada")
+    return load_profile("Ensaio")
 
 
 def test_os_tres_metodos_estao_no_dicionario_do_servidor(perfis: Path, tmp_path: Path) -> None:
@@ -132,7 +132,7 @@ def test_o_campo_omitido_nao_mexe_no_que_ja_esta(perfis: Path, tmp_path: Path) -
 
 def test_o_pedido_que_o_modelo_recusa_nao_grava(perfis: Path, tmp_path: Path) -> None:
     servidor = _servidor(tmp_path)
-    antes = (perfis / "bancada.json").read_bytes()
+    antes = (perfis / "ensaio.json").read_bytes()
     with pytest.raises(ValueError, match="recusado"):
         _chama(servidor, "perfil.ativacao.set", alternar=["botao_que_nao_existe"])
     with pytest.raises(ValueError, match="não conhece"):
@@ -141,7 +141,7 @@ def test_o_pedido_que_o_modelo_recusa_nao_grava(perfis: Path, tmp_path: Path) ->
         _chama(servidor, "perfil.cursor.set", uniq=_P1, precisao=50)
     with pytest.raises(ValueError, match="exige ao menos"):
         _chama(servidor, "perfil.analogicos.set")
-    assert (perfis / "bancada.json").read_bytes() == antes
+    assert (perfis / "ensaio.json").read_bytes() == antes
 
 
 def test_os_analogicos_e_o_cursor_valem_ao_vivo(perfis: Path, tmp_path: Path) -> None:
@@ -212,7 +212,7 @@ def _ajuste(**campos: Any) -> Any:
 
 def test_a_precisao_reduz_o_passo_de_quem_aperta_o_botao(
         _uinput_que_grava: types.ModuleType) -> None:
-    """O botão da precisão, apertado POR UMA PEÇA, reduz o passo dela e só dela."""
+    """O botão da precisão, apertado POR UMA PEÇA, reduz o passo da peça e só da peça."""
     cursor = _cursor()
     cursor.definir_ajuste(_ajuste(precisao_botao="cross", precisao=30), 1)
     cursor.ajudar(_P1, frozenset({"cross"}), 0, 0, 1.0)

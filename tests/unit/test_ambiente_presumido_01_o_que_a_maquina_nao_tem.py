@@ -104,16 +104,16 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
     1. **A frase lê a chave no NÍVEL ERRADO.** O daemon publica
        `osk_disponivel` DENTRO do bloco `keyboard_emulation`
        (`_keyboard_emulation_payload`), e esta função a procura no TOPO do
-       `state`. Contra os dois `state_full` reais desta bancada — capturados
+       `state`. Contra os dois `state_full` reais deste ensaio — capturados
        com a máquina TENDO teclado na tela (`keyboard_emulation.osk_disponivel
-       == True`) — ela responde *"não consegui ler — o serviço pode estar
+       == True`) — a função responde *"não consegui ler — o serviço pode estar
        desligado"*. Pendurá-la seria pôr uma frase FALSA na tela do usuário;
-    2. **o defeito que ela existia para curar já fechou, por outro caminho.**
+    2. **o defeito que a função existia para curar já fechou, por outro caminho.**
        Em 25/08 (`3ecb470`, N12) `mouse_actions._anotar_teclado_na_tela` passou
        a ler a chave do lugar certo e `input_actions.frase_do_teclado_na_tela`
        a transformar na frase da legenda do L3 — no gancho exato que a lápide
        nomeia. Pendurar esta função ao lado daquela poria DUAS frases sobre o
-       mesmo fato na mesma legenda, uma delas errada.
+       mesmo fato na mesma legenda, uma errada.
 
     Este teste MORDE nos dois sentidos: se alguém consertar o nível da chave
     sem decidir o que fazer com a duplicata, ele reprova e obriga a decisão.
@@ -148,7 +148,7 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
         from hefesto_dualsense4unix.app.actions import input_actions
 
         assert input_actions.frase_do_teclado_na_tela(False), (
-            "a frase do teclado na tela que falta sumiu — se ela saiu de propósito, "
+            "a frase do teclado na tela que falta sumiu — se saiu de propósito, "
             "o gancho ficou vago e `descrever_teclado_na_tela` volta a ser "
             "candidata (depois de consertado o nível da chave)"
         )
@@ -232,7 +232,7 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
     ) -> None:
         """A MORDIDA: sem leitor nenhum em `app/`, o portão acima reprova.
 
-        NOTA DATADA (25/08/2026) — POR QUE ESTA MORDIDA MUDOU DE FORMA. Ela
+        NOTA DATADA (25/08/2026) — POR QUE ESTA MORDIDA MUDOU DE FORMA. A mordida
         apagava UM arquivo (`actions/ambiente_na_tela.py`) e exigia que a
         varredura voltasse a VAZIO. Isso fossilizava uma premissa que era
         verdade em 24/08 e deixou de ser: *"`ambiente_na_tela.py` é o único
@@ -246,7 +246,7 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
         justamente por isso. Um teste que reprova quando o defeito é curado
         duas vezes não estava medindo o defeito.
 
-        **A cura é no TESTE, e ela não afrouxa nada** — ao contrário: a régua
+        **A cura é no TESTE, e não afrouxa nada** — ao contrário: a régua
         antiga só falsificava a PRIMEIRA asserção do portão, e por um caminho
         que dependia de contar leitores. Esta falsifica as DUAS, sem
         depender de quantos leitores existam hoje:

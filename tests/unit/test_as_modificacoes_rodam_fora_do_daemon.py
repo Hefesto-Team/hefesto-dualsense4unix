@@ -2,7 +2,7 @@
 
 Tudo num lar de mentira (``HOME`` e ``XDG_*`` em pasta temporária), com o
 barramento e a porta de verdade e os escritores do serviço por dublê. Nenhuma
-prova fala com o serviço dela, com a rede de fora nem com o GitHub: os
+prova fala com o serviço do usuário, com a rede de fora nem com o GitHub: os
 repositórios são ``git init`` locais, abertos por ``file://``.
 """
 from __future__ import annotations
@@ -436,7 +436,7 @@ def test_o_jogo_escreve_le_a_camada_do_jogo_por_controle() -> None:
 def test_o_assinante_que_nao_le_nao_atrasa_o_tique(curto: Path) -> None:
     """O tique publica o estado e espera o próximo; a modificação assinou e nunca lê.
 
-    A fila do barramento descarta o mais antigo: o tique não espera por ela.
+    A fila do barramento descarta o mais antigo: o tique não espera pela fila.
     Mordida: sem o descarte, a fila cheia segura o tique.
     """
     tique_s = 0.004

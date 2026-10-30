@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""O jogo novo recebe as configurações quando a Steam fecha, sem ela o abrir antes."""
+"""O jogo novo recebe as configurações quando a Steam fecha, sem a Steam o abrir antes."""
 from __future__ import annotations
 
 from pathlib import Path

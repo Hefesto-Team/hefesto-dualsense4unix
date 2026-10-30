@@ -376,7 +376,7 @@ class TestProviderDoDaemon:
         desligado (`test_auto_desligado_devolve_none`), o que acoplava TRÊS
         coisas num flag só: a cor, o NÚMERO do controle e — via reserva de
         slot — a numeração dos EXTERNOS (`_ds_reserve` lê este registro).
-        Com o `fps.json` dela salvo com ``auto_player_colors:false``, o
+        Com o `fps.json` do usuário salvo com ``auto_player_colors:false``, o
         DualSense não ganhava sequer entrada no registro e o 8BitDo recebia um
         número que outro controle já exibia ("dois player 1, dois player 2").
 
@@ -597,7 +597,7 @@ class TestAtivacaoReassertaResolvido:
         inst, n1, n2 = self._backend_com_nos()
         manager = ProfileManager(controller=inst)
         profile = Profile(
-            name="vitoria-fake",
+            name="pessoal-fake",
             match=MatchAny(),
             leds=LedsConfig(lightbar=(129, 61, 156), lightbar_brightness=1.0),
         )

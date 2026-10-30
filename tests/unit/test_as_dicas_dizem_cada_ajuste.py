@@ -100,7 +100,7 @@ def test_a_ordem_com_destino_traz_o_de_para_e_a_calada_vai_para_o_fim(
     )
 
     a08 = _a08()
-    calada = _ordem(R2_DOIS_RADIOS_COLADOS, "Isto ela calou.", arranjo="a2")
+    calada = _ordem(R2_DOIS_RADIOS_COLADOS, "Isto foi calado.", arranjo="a2")
     com = _ordem(R3_DONGLE_ATRAS_DE_HUB, "Mova o adaptador Bluetooth para a Entrada 9",
                  destino="9", arranjo="a1")
     monkeypatch.setattr(a08, "_DISPENSADAS", {R2_DOIS_RADIOS_COLADOS: "a2"})
@@ -122,7 +122,7 @@ def test_a_ordem_com_destino_traz_o_de_para_e_a_calada_vai_para_o_fim(
 ])
 def test_as_duas_pontas_dizem_a_entrada(monkeypatch: pytest.MonkeyPatch, caminho: str,
                                         esperado: str) -> None:
-    """26/09/2026, foto dela: a caixa da esquerda mostrava «4-1.1.4» e a da direita «Entrada 2»."""
+    """26/09/2026, foto: a caixa da esquerda mostrava «4-1.1.4» e a da direita «Entrada 2»."""
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, MaquinaConfig, PortaDeclarada
 
@@ -191,7 +191,7 @@ def test_a_pagina_do_ensaio_tem_as_dicas_e_nao_tem_a_sugestao() -> None:
     assert len(re.findall(r'data-campo="dicas" data-hef-alvo="html"', html)) == 1
     for sobrou in ('class="sugestao"', 'class="ordem-tit"', 'data-campo="ordem"',
                    'class="col-exame"', 'data-campo="exame-calada"'):
-        assert sobrou not in html, f"a bancada ainda tem {sobrou}: o quadro velho não saiu"
+        assert sobrou not in html, f"o ensaio ainda tem {sobrou}: o quadro velho não saiu"
 
 
 def test_o_lugar_que_o_bluez_ainda_nao_nomeou_nao_entra_na_frase() -> None:

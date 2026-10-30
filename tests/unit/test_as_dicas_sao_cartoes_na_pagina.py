@@ -6,7 +6,7 @@ porquê e um botão só por cartão. Desde 05/10/2026 (conjunto «Conexões 3»)
 «mais N». Desde 13/10/2026 (A-ABA-CONEXOES-DO-TODO-01) o ⓘ e o «Ignorar» de texto saíram: o
 porquê vai ao hover do título, e o ignorar é o X no canto do cartão.
 
-TUDO É DE MENTIRA: a bancada ``mockup/08-conexoes.html`` num WebKit fora da tela, com o pintor do
+TUDO É DE MENTIRA: o ensaio ``mockup/08-conexoes.html`` num WebKit fora da tela, com o pintor do
 piloto; o que a página «manda ao produto» fica numa lista, nada chega a daemon algum.
 
 AS MORDIDAS (feitas na sprint): tirar o corte de ``CARTOES_VISIVEIS`` do ``montar`` reprova a
@@ -242,10 +242,10 @@ def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str
 
 def test_cinco_achados_viram_quatro_cartoes_a_vista_sem_mais_n() -> None:
     """Desenho aprovado de 05/10/2026: até quatro, sem «mais N» e sem a linha dos ✓; o quinto
-    entra quando ela ignora ou resolve um."""
+    entra quando quem usa ignora ou resolve um."""
     lidas, _ = _na_pagina([_LER, _pintar({"mesa": {"dicas": _html_de_cinco()}}), _LER])
     antes, _, depois = lidas
-    assert antes["achou"] and not antes["sugestao"], "a bancada ainda tem a caixa velha"
+    assert antes["achou"] and not antes["sugestao"], "o ensaio ainda tem a caixa velha"
     assert depois["cartoes"] == dicas.CARTOES_VISIVEIS == 4, depois
     assert depois["aVista"] == dicas.CARTOES_VISIVEIS, f"à vista: {depois['aVista']}"
     assert depois["mais"] is None, depois

@@ -149,7 +149,7 @@ def test_o_gesto_permitir_navegacao_grava_o_que_cada_botao_diz() -> None:
         try:
             fn(pacotes.Contexto(state={}), {"valor": valor}, _Ponte())
         except (AttributeError, TypeError) as erro:
-            pytest.fail(f"o gesto pediu à ponte o que ela não tem: {erro}")
+            pytest.fail(f"o gesto pediu à ponte o que a ponte não tem: {erro}")
         vistos = [(m, p.get("ligado", p.get("tipo"))) for m, p in pedidos]
         assert vistos == quer, (valor, pedidos)
         assert all("ligada" not in p for _m, p in pedidos), "o Permitir mexeu no liga/desliga"

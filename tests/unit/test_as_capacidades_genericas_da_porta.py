@@ -379,7 +379,7 @@ def test_6_o_leitor_que_chega_depois_nao_recebe_a_borda_de_um_aperto_velho(curto
 
     A extensão que reabre (a vigia depois do «Parar tudo», uma queda) não pode receber, no
     primeiro tique, o ``button.down`` de um botão que já estava apertado: seria um toque que
-    ninguém deu. O primeiro tique dela só guarda.
+    ninguém deu. O primeiro tique só guarda.
     """
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, EventBus(), ["ler:botoes"])

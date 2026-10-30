@@ -41,7 +41,7 @@ def test_toda_citacao_da_07_na_paridade_cai_perto_do_sinal() -> None:
 
 
 def test_o_numero_velho_reprova(tmp_path: Path) -> None:
-    """A mordida: devolver uma citação ao número de antes da cura, e a régua acusa a linha dela."""
+    """A mordida: devolver uma citação ao número de antes da cura, e a régua acusa a linha."""
     texto = CSV.read_text(encoding="utf-8")
     certo = f"{A07_CITADO}:{_linha_do_sinal('pastas = jl.pastas_de_atalhos()')}"
     assert texto.count(certo) == 1, certo
