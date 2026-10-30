@@ -182,7 +182,7 @@ Sprints: `A-RAIZ-SO-COM-O-PRODUTO-01`, `AS-PAGINAS-DE-PAINEL-SAEM-DO-GIT-01`,
   (`tests/unit/test_doc_verdade_02_contagens_derivadas.py`); mudam junto.
 - **O README proposto perdeu** o que só ele ensinava: a variável dos plugins, o
   `systemctl --user` e o `journalctl --user`, o microfone por rádio, o 8BitDo em
-  DirectInput. E nenhum dos dois avisava do Secure Boot, que `install.sh:1621-1629`
+  DirectInput. E nenhum dos dois avisava do Secure Boot, que `install.sh:1623-1631`
   diz deixar a máquina pior do que antes.
 - **CHANGELOG:** 3.927 linhas de diário, com links para a pasta de processo (404 no
   GitHub). Proposta: Keep a Changelog, uma linha por mudança visível, menos de

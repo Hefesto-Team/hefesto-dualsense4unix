@@ -11,6 +11,7 @@ from pathlib import Path
 BASH = shutil.which("bash") or "/bin/bash"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCTOR_PATH = REPO_ROOT / "scripts" / "doctor.sh"
+NM_ASSET = REPO_ROOT / "assets" / "NetworkManager" / "hefesto-wifi-powersave.conf"
 DKMS_CONF_PATH = REPO_ROOT / "assets" / "dkms" / "rtw88-usb" / "dkms.conf"
 
 DOCTOR = DOCTOR_PATH.read_text(encoding="utf-8") if DOCTOR_PATH.exists() else ""
@@ -46,6 +47,7 @@ def _roda_check(
     jornal: str,
     wifi: dict[str, str] | None = None,
     ferramenta: str = "iw",
+    sys_raiz: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Extrai o check, aponta a raiz hardcoded (sysfs/etc) p/ a fixture e"""
     stubs = tmp_path / "bin"
@@ -85,11 +87,14 @@ def _roda_check(
     funcao = funcao.replace(
         "for dir in /usr/sbin /sbin; do", f"for dir in {tmp_path / 'sbin'}; do"
     )
-    corpo = f"{SHIMS}{funcao}\n{nome}\nprintf 'RC=%s\\n' \"$?\"\n"
+    bateria = _extrai_funcao_bash(DOCTOR, "_doctor_tem_bateria")
+    corpo = f"{SHIMS}{bateria}{funcao}\n{nome}\nprintf 'RC=%s\\n' \"$?\"\n"
     script = tmp_path / "cena.sh"
     script.write_text(corpo, encoding="utf-8")
     env = dict(os.environ)
     env["PATH"] = f"{stubs}:/usr/bin:/bin"
+    if sys_raiz is not None:
+        env["HEFESTO_DOCTOR_SYS"] = str(sys_raiz)
     return subprocess.run(
         [BASH, str(script)], capture_output=True, text=True, check=False, env=env
     )
@@ -263,19 +268,31 @@ class TestCheckWifiPowersave:
         jornal: str = "",
         wifi: dict[str, str] | None = None,
         ferramenta: str = "iw",
+        drivers: dict[str, str] | None = None,
+        bateria: bool = False,
     ) -> subprocess.CompletedProcess[str]:
+        sys_raiz = tmp_path / "sys"
+        (sys_raiz / "class" / "net").mkdir(parents=True)
+        for ifc in wifi or {}:
+            driver = sys_raiz / "bus" / "usb" / "drivers" / (drivers or {}).get(ifc, "rtw88_8822bu")
+            driver.mkdir(parents=True, exist_ok=True)
+            dev = sys_raiz / "devices" / ifc
+            dev.mkdir(parents=True)
+            (dev / "driver").symlink_to(driver)
+            (sys_raiz / "class" / "net" / ifc).mkdir()
+            (sys_raiz / "class" / "net" / ifc / "device").symlink_to(dev)
+        if bateria:
+            (sys_raiz / "class" / "power_supply" / "BAT0").mkdir(parents=True)
         return _roda_check(
             tmp_path, "check_wifi_powersave", self.RAIZ, tmp_path / "nm", jornal, wifi,
-            ferramenta,
+            ferramenta, sys_raiz,
         )
 
-    def _conf_do_hefesto(self, tmp_path: Path) -> None:
+    def _conf_do_hefesto(self, tmp_path: Path, texto: str | None = None) -> None:
         confd = tmp_path / "nm" / "conf.d"
         confd.mkdir(parents=True)
         (confd / "hefesto-wifi-powersave.conf").write_text(
-            "[connection.hefesto-wifi-powersave]\n"
-            "match-device=type:wifi\n"
-            "wifi.powersave=2\n",
+            texto if texto is not None else NM_ASSET.read_text(encoding="utf-8"),
             encoding="utf-8",
         )
 
@@ -285,7 +302,7 @@ class TestCheckWifiPowersave:
         (confd / "default-wifi-powersave-on.conf").write_text(
             "[connection]\nwifi.powersave = 3\n", encoding="utf-8"
         )
-        resultado = self._roda(tmp_path)
+        resultado = self._roda(tmp_path, wifi={"wlan0": "off"})
         assert "RC=0" in resultado.stdout, resultado.stderr
         assert "INFO: wifi.powersave=3" in resultado.stdout
         assert "WARN" not in resultado.stdout
@@ -297,19 +314,19 @@ class TestCheckWifiPowersave:
             "[connection]\nwifi.powersave = 3\n", encoding="utf-8"
         )
         resultado = self._roda(tmp_path, wifi={"wlan0": "on"})
-        assert "WARN: economia de energia do Wi-Fi LIGADA em wlan0" in resultado.stdout
+        assert "WARN: economia de energia do Wi-Fi USB rtw88 LIGADA em wlan0" in resultado.stdout
         assert "sem reconectar" in resultado.stdout
 
     def test_conf_do_hefesto_com_a_economia_desligada_e_pass(self, tmp_path: Path) -> None:
         self._conf_do_hefesto(tmp_path)
         resultado = self._roda(tmp_path, wifi={"wlan0": "off"})
-        assert "PASS: economia de energia do Wi-Fi desligada" in resultado.stdout
+        assert "PASS: economia de energia do Wi-Fi USB rtw88 desligada" in resultado.stdout
         assert "WARN" not in resultado.stdout
 
     def test_conf_do_hefesto_sem_interface_wifi_tambem_e_pass(self, tmp_path: Path) -> None:
         self._conf_do_hefesto(tmp_path)
         resultado = self._roda(tmp_path)
-        assert "PASS: economia de energia do Wi-Fi desligada" in resultado.stdout
+        assert "PASS: economia de energia do Wi-Fi USB rtw88 desligada" in resultado.stdout
 
     def test_conf_existe_mas_interface_ainda_ligada_e_warn(self, tmp_path: Path) -> None:
         self._conf_do_hefesto(tmp_path)
@@ -330,16 +347,47 @@ class TestCheckWifiPowersave:
     def test_sem_iw_nem_iwconfig_o_pass_nao_afirma_a_interface(self, tmp_path: Path) -> None:
         self._conf_do_hefesto(tmp_path)
         resultado = self._roda(tmp_path, ferramenta="nenhuma")
-        assert "PASS: economia de energia do Wi-Fi desligada" in resultado.stdout
+        assert "PASS: economia de energia do Wi-Fi USB rtw88 desligada" in resultado.stdout
         assert "sem iw nem iwconfig" in resultado.stdout
         assert "nenhuma interface" not in resultado.stdout
 
     def test_sem_conf_nenhuma_fica_em_info_neutro(self, tmp_path: Path) -> None:
         (tmp_path / "nm").mkdir()
-        resultado = self._roda(tmp_path)
+        resultado = self._roda(tmp_path, wifi={"wlan0": "off"})
         assert "RC=0" in resultado.stdout, resultado.stderr
         assert "INFO: NetworkManager sem wifi.powersave configurado" in resultado.stdout
         assert "WARN" not in resultado.stdout
+
+    def test_sem_rtw88_a_placa_com_economia_nao_e_warn(self, tmp_path: Path) -> None:
+        (tmp_path / "nm").mkdir()
+        resultado = self._roda(tmp_path, wifi={"wlp2s0": "on"}, drivers={"wlp2s0": "iwlwifi"})
+        assert "RC=0" in resultado.stdout, resultado.stderr
+        assert "INFO: nenhum adaptador Wi-Fi USB rtw88 nesta máquina" in resultado.stdout
+        assert "WARN" not in resultado.stdout
+
+    def test_com_bateria_o_rtw88_com_economia_e_info(self, tmp_path: Path) -> None:
+        (tmp_path / "nm").mkdir()
+        resultado = self._roda(tmp_path, wifi={"wlx0": "on"}, bateria=True)
+        assert "INFO: adaptador Wi-Fi USB rtw88 num computador com bateria" in resultado.stdout
+        assert "WARN" not in resultado.stdout
+
+    def test_so_a_interface_rtw88_conta_no_pass(self, tmp_path: Path) -> None:
+        self._conf_do_hefesto(tmp_path)
+        resultado = self._roda(
+            tmp_path, wifi={"wlx0": "off", "wlp2s0": "on"}, drivers={"wlp2s0": "iwlwifi"}
+        )
+        assert "PASS: economia de energia do Wi-Fi USB rtw88 desligada" in resultado.stdout
+        assert "WARN" not in resultado.stdout
+
+    def test_o_conf_velho_de_todo_wifi_e_warn(self, tmp_path: Path) -> None:
+        self._conf_do_hefesto(
+            tmp_path,
+            "[connection.hefesto-wifi-powersave]\nmatch-device=type:wifi\nwifi.powersave=2\n",
+        )
+        resultado = self._roda(tmp_path, wifi={"wlp2s0": "off"}, drivers={"wlp2s0": "iwlwifi"})
+        assert "WARN: o conf de uma versão anterior do hefesto" in resultado.stdout
+        assert "TODO Wi-Fi" in resultado.stdout
+        assert "PASS" not in resultado.stdout
 
     def test_failed_to_leave_lps_state_vira_warn(self, tmp_path: Path) -> None:
         (tmp_path / "nm").mkdir()

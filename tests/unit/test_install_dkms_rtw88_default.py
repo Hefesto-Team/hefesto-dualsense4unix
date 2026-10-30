@@ -278,7 +278,10 @@ class TestUninstallSimetrico:
 
 
 class TestPowersaveEPadrao:
-    """23/10/2026: a economia de energia do Wi-Fi sai no install, em toda máquina."""
+    """23/10/2026: a economia de energia do Wi-Fi sai no install.
+
+    Desde 30/10, só no adaptador rtw88 USB de uma máquina sem bateria.
+    """
 
     def test_nao_existe_mais_flag_de_opt_in_com_efeito(self) -> None:
         assert "WIFI_POWERSAVE_OFF" not in INSTALL, (

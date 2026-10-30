@@ -519,7 +519,7 @@ corridos**.
   terceiro e o quarto passam dos 15 s e caem no uhid; todos saem com o mesmo endereço; 22.155 `ENOMEM`); o
   semáforo pedir as três vagas de uma vez; o `fecho-ate-verde.sh` não repetir vermelho determinístico; o
   `test_os_atalhos_na_espera` sem o `sleep(0.15)` fixo; `hci1` × `hci2`; o resíduo do alto-falante; os fatos
-  errados (`install.sh:3381` diz `interface.hefesto_vivo:main`, o certo é `interface.abrir:entrada`;
+  errados (`install.sh:3427` diz `interface.hefesto_vivo:main`, o certo é `interface.abrir:entrada`;
   `a03_gatilhos.py` diz «6 barras/73», o certo é 4/71); a ordem de tela das 14h40 (um botão só, «Modo
   Automático», nas abas 01 a 05; botões bonitos; a guia de controles na 05; o espaçamento vertical da 05), que vai
   para os mockups do todo; e a foto do estado das 20 mudanças que ficaram fora da foto.

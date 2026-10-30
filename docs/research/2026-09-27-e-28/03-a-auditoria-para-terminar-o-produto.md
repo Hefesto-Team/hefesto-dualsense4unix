@@ -329,12 +329,12 @@ síntese ficou com o eixo 08 contra o 09).
 - **Nenhum release é possível**: `release.yml:303-368` exige o CI verde, que
   não existe desde 22/08.
 - **A interface é dependência dura e ninguém a declara.** O lançador faz
-  `require_version('WebKit2','4.1')` (`hefesto_vivo.py:26`), o `install.sh:793`
+  `require_version('WebKit2','4.1')` (`hefesto_vivo.py:26`), o `install.sh:795`
   a chama de «importante» com razão falsa, e nenhum dos pacotes (Debian, Arch,
   Fedora, Nix) a lista. O AppImage publicado é só a linha de comando.
 - **O que é da bancada vai para toda máquina**: o DKMS rtw88 (com
   `BUILD_EXCLUSIVE_KERNEL` pinado em dois kernels), o vigia do Wi-Fi USB e o
-  `usbcore.autosuspend=-1` global (`install.sh:2430-2442`), sem detectar
+  `usbcore.autosuspend=-1` global (`install.sh:2476-2488`), sem detectar
   hardware.
 - O arquivo de contrato da casa, que é ignorado pelo git, é citado 113 vezes
   em 61 arquivos versionados, e o portão isenta o nome.

@@ -154,7 +154,7 @@ def test_dono_por_helper_de_scripts_que_o_install_chama_passa(
     """Caminho 3: quem instala é o helper, e o install só o chama.
 
     Caso real de `assets/wireplumber/5{1,2,3}-*.conf`, instalados por
-    `scripts/fix_wireplumber_default_source.sh` (install.sh:1139 e :1143).
+    `scripts/fix_wireplumber_default_source.sh` (install.sh:1141 e :1143).
     """
     (repo_com_artefato / "scripts" / "instala_unit.sh").write_text(
         'sudo install -Dm644 "assets/systemd/hefesto-artefato-de-mentira.service" \\\n'

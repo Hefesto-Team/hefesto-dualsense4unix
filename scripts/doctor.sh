@@ -5691,7 +5691,11 @@ check_wifi_powersave() {
         [[ -n "${hit}" ]] && { val="${hit}"; src="${f}"; }
     done
 
-    local ligadas="" ifc ferr="" nome dir desliga=""
+    local ligadas="" ifc ferr="" nome dir desliga="" rtw="" drv
+    for ifc in "${HEFESTO_DOCTOR_SYS:-/sys}"/class/net/*; do
+        drv="$(readlink -f "${ifc}/device/driver" 2>/dev/null)" || continue
+        [[ "${drv##*/}" =~ ^rtw(88)?_[0-9a-z]+u$ ]] && rtw+=" ${ifc##*/} "
+    done
     for nome in iw iwconfig; do
         ferr="$(command -v "${nome}" 2>/dev/null)" && break
         for dir in /usr/sbin /sbin; do
@@ -5702,7 +5706,7 @@ check_wifi_powersave() {
     case "${ferr##*/}" in
         iw)
             while IFS= read -r ifc; do
-                [[ -n "${ifc}" ]] || continue
+                [[ -n "${ifc}" && "${rtw}" == *" ${ifc} "* ]] || continue
                 if "${ferr}" dev "${ifc}" get power_save 2>/dev/null | grep -qi 'power save: *on'; then
                     ligadas+="${ligadas:+ }${ifc}"
                 fi
@@ -5711,7 +5715,7 @@ check_wifi_powersave() {
             ;;
         iwconfig)
             while IFS= read -r ifc; do
-                [[ -n "${ifc}" ]] || continue
+                [[ -n "${ifc}" && "${rtw}" == *" ${ifc} "* ]] || continue
                 if "${ferr}" "${ifc}" 2>/dev/null | grep -qi 'power management: *on'; then
                     ligadas+="${ligadas:+ }${ifc}"
                 fi
@@ -5719,21 +5723,28 @@ check_wifi_powersave() {
             desliga="sudo ${ferr} ${ligadas%% *} power off"
             ;;
     esac
-    local agora="nenhuma interface Wi-Fi com ela ligada agora"
+    local agora="nenhuma interface Wi-Fi USB rtw88 com ela ligada agora"
     [[ -n "${ferr}" ]] || agora="sem iw nem iwconfig, cada interface não se confere"
+    local nosso="/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
 
-    if [[ "${val}" == "2" && "${src}" == "/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf" ]]; then
+    if [[ -r "${nosso}" ]] && grep -q '^[[:space:]]*match-device[[:space:]]*=[[:space:]]*type:wifi' "${nosso}" 2>/dev/null; then
+        warn "o conf de uma versão anterior do hefesto (${nosso}) tira a economia de energia de TODO Wi-Fi, e não só do adaptador rtw88 USB — rode o install de novo"
+    elif [[ "${val}" == "2" && "${src}" == "${nosso}" ]]; then
         if [[ -n "${ligadas}" ]]; then
-            warn "o conf do hefesto desliga a economia de energia do Wi-Fi (wifi.powersave=2), mas ${ligadas} ainda está com ela LIGADA — rode o install de novo, ou: ${desliga} (vale na hora, não reconecta)"
+            warn "o conf do hefesto desliga a economia de energia do Wi-Fi USB rtw88 (wifi.powersave=2), mas ${ligadas} ainda está com ela LIGADA — rode o install de novo, ou: ${desliga} (vale na hora, não reconecta)"
         else
-            pass "economia de energia do Wi-Fi desligada (wifi.powersave=2 via o conf.d do hefesto; ${agora})"
+            pass "economia de energia do Wi-Fi USB rtw88 desligada (wifi.powersave=2 via o conf.d do hefesto; ${agora})"
         fi
+    elif [[ -z "${rtw}" ]]; then
+        info "nenhum adaptador Wi-Fi USB rtw88 nesta máquina: a economia de energia do Wi-Fi fica com a distro ($([[ -n "${val}" ]] && printf 'wifi.powersave=%s' "${val}" || printf 'sem wifi.powersave configurado'))"
+    elif _doctor_tem_bateria; then
+        info "adaptador Wi-Fi USB rtw88 num computador com bateria: o install deixa a economia de energia ligada, para a carga durar"
     elif [[ -n "${ligadas}" ]]; then
-        warn "economia de energia do Wi-Fi LIGADA em ${ligadas} (${src:-sem wifi.powersave configurado}) — histórico de instabilidade em dongles Realtek USB (rtw88); o install do hefesto a desliga sem reconectar"
+        warn "economia de energia do Wi-Fi USB rtw88 LIGADA em ${ligadas} (${src:-sem wifi.powersave configurado}) — esse adaptador cai com ela; o install do hefesto a desliga sem reconectar"
     elif [[ -z "${val}" ]]; then
-        info "NetworkManager sem wifi.powersave configurado (default do driver/firmware vale); o install do hefesto grava o conf que desliga a economia"
+        info "NetworkManager sem wifi.powersave configurado (default do driver/firmware vale); o install do hefesto grava o conf que desliga a economia do Wi-Fi USB rtw88"
     elif [[ "${val}" == "3" ]]; then
-        info "wifi.powersave=3 (LIGA o power save do firmware) via ${src}, e ${agora}; o install do hefesto grava o conf que a desliga"
+        info "wifi.powersave=3 (LIGA o power save do firmware) via ${src}, e ${agora}; o install do hefesto grava o conf que a desliga no Wi-Fi USB rtw88"
     else
         info "wifi.powersave=${val} via ${src}"
     fi

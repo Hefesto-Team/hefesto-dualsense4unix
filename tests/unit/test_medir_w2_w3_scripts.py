@@ -203,7 +203,8 @@ class TestNadaDestrutivoNemPersistente:
 class TestAssetPowersavePadrao:
     def test_conteudo_minimo_da_cura(self) -> None:
         assert "[connection.hefesto-wifi-powersave]" in NM_CONF
-        assert "match-device=type:wifi" in NM_CONF
+        assert "match-device=driver:" in NM_CONF and "driver:rtw88_8822bu," in NM_CONF
+        assert "type:wifi" not in NM_CONF.split("[connection.hefesto-wifi-powersave]", 1)[1]
         assert "wifi.powersave=2" in NM_CONF
 
     def test_nada_alem_da_cura(self) -> None:
@@ -212,14 +213,14 @@ class TestAssetPowersavePadrao:
             for linha in NM_CONF.splitlines()
             if linha.strip() and not linha.strip().startswith("#")
         ]
-        assert efetivas == [
+        assert [efetivas[0], efetivas[2]] == [
             "[connection.hefesto-wifi-powersave]",
-            "match-device=type:wifi",
             "wifi.powersave=2",
-        ], "o conf.d carrega SÓ a cura medida — tuning extra não pega carona"
+        ] and len(efetivas) == 3, "o conf.d carrega SÓ a cura medida — tuning extra não pega carona"
+        assert efetivas[1].startswith("match-device=driver:"), efetivas[1]
 
     def test_asset_diz_que_e_o_padrao_do_install(self) -> None:
-        assert "PADRÃO do install.sh" in NM_CONF
+        assert "PADRÃO do install.sh numa máquina sem bateria com esse adaptador" in NM_CONF
         assert "GATEADO" not in NM_CONF and "SÓ É INSTALADO APÓS" not in NM_CONF, (
             "a premissa do gate por evidência caiu (decisão dela, 23/10/2026)"
         )

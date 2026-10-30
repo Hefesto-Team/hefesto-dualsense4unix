@@ -319,7 +319,7 @@ cliente recebe 25 float32 por segundo, ou seja **100 bytes/s por canal, já
 mastigados**. Do nosso lado sobra um ``struct.unpack`` de quatro bytes.
 
 **Zero dependência nova**, e isso é requisito da PEÇA E: o ``parec`` sai do
-MESMO pacote que o ``pactl`` (``pulseaudio-utils``), que o ``install.sh:504``
+MESMO pacote que o ``pactl`` (``pulseaudio-utils``), que o ``install.sh:506``
 já declara para as três famílias. Do lado Python é só a biblioteca padrão —
 o ``numpy`` NÃO está no ``pyproject.toml`` (vive no ``~/.local`` dela), e
 importá-lo repetiria a dívida do ``playwright``, que ``test_o_install_entrega_a_luz_do_mic`` cobra.

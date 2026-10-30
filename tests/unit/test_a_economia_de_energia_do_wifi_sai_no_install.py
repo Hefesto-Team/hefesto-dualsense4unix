@@ -24,6 +24,9 @@ INSTALL = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
 ASSET = REPO_ROOT / "assets" / "NetworkManager" / "hefesto-wifi-powersave.conf"
 
 FUNCOES = (
+    "_wifi_e_rtw88_usb",
+    "_wifi_powersave_motivo_de_pular",
+    "_wifi_powersave_conf_velho",
     "_wifi_ferramenta",
     "_wifi_interfaces",
     "_wifi_economia_ligada",
@@ -38,7 +41,13 @@ PROIBIDOS = (
     "device reapply",
     "general reload",
 )
-FERRAMENTAS = ("awk", "grep", "cmp", "install", "cat", "mkdir", "dirname", "sed", "true")
+FERRAMENTAS = (
+    "awk", "grep", "cmp", "install", "cat", "mkdir", "dirname", "sed", "true", "readlink", "rm",
+)
+CONF_VELHO = (
+    "[connection.hefesto-wifi-powersave]\nmatch-device=type:wifi\nwifi.powersave=2\n"
+)
+DRIVER_RTW = re.compile(r"^rtw(88)?_[0-9a-z]+u$")
 
 
 def _sem_comentarios(texto: str) -> str:
@@ -63,8 +72,13 @@ class Cena:
     """Uma máquina de mentira: PATH só com dublês, `/etc` e rádio em tmp."""
 
     def __init__(self, base: Path, *, com_iw: bool = True, com_iwconfig: bool = False,
-                 com_sudo: bool = True, iw_no_sbin: bool = False) -> None:
+                 com_sudo: bool = True, iw_no_sbin: bool = False, rtw88_rc: int = 0,
+                 bateria: bool = False) -> None:
         self.base = base
+        self.rtw88_rc = rtw88_rc
+        self.bateria = bateria
+        self.sys = base / "sys"
+        (self.sys / "class" / "net").mkdir(parents=True)
         self.nm = base / "etc" / "NetworkManager"
         self.alvo = self.nm / "conf.d" / "hefesto-wifi-powersave.conf"
         self.chamadas = base / "chamadas.log"
@@ -122,7 +136,14 @@ class Cena:
                 + "fi\n",
             )
 
-    def interface(self, nome: str, economia: str) -> None:
+    def interface(self, nome: str, economia: str, driver: str = "rtw88_8822bu") -> None:
+        drivers = self.sys / "bus" / "usb" / "drivers" / driver
+        drivers.mkdir(parents=True, exist_ok=True)
+        dev = self.sys / "devices" / nome
+        dev.mkdir(parents=True)
+        (dev / "driver").symlink_to(drivers)
+        (self.sys / "class" / "net" / nome).mkdir()
+        (self.sys / "class" / "net" / nome / "device").symlink_to(dev)
         with self.ifaces.open("a", encoding="utf-8") as f:
             f.write(nome + "\n")
         (self.estado / nome).write_text(economia + "\n", encoding="utf-8")
@@ -138,12 +159,19 @@ class Cena:
             '_faria_root() { printf "FARIA-ROOT: %s\\n" "$*"; }\n'
             '_nao_faria() { printf "NAO-FARIA: %s\\n" "$*"; }\n'
             'anotar_reinicio_pendente() { printf "REINICIO-PENDENTE: %s\\n" "$*"; }\n'
+            f"_rtw88_adaptadores_presentes() {{ return {self.rtw88_rc}; }}\n"
+            f"_desempenho_tem_bateria() {{ return {0 if self.bateria else 1}; }}\n"
             f'ROOT_DIR="{REPO_ROOT}"\nDRY_RUN={dry_run}\nSKIP_UDEV={skip_udev}\n'
             f"{funcoes}\naplicar_wifi_powersave_off\nprintf 'RC=0\\n'\n"
         )
         script = self.base / "cena.sh"
         script.write_text(cena, encoding="utf-8")
-        env = {"PATH": str(self.bin), "HOME": str(self.base), "LC_ALL": "C"}
+        env = {
+            "PATH": str(self.bin),
+            "HOME": str(self.base),
+            "LC_ALL": "C",
+            "HEFESTO_NET_SYS": str(self.sys),
+        }
         return subprocess.run(
             [BASH, str(script)], capture_output=True, text=True, check=False, env=env
         )
@@ -360,8 +388,102 @@ class TestOPassoEPadrao:
             for linha in ASSET.read_text(encoding="utf-8").splitlines()
             if linha.strip() and not linha.strip().startswith("#")
         ]
-        assert efetivas == [
-            "[connection.hefesto-wifi-powersave]",
-            "match-device=type:wifi",
-            "wifi.powersave=2",
-        ]
+        assert len(efetivas) == 3, efetivas
+        assert efetivas[0] == "[connection.hefesto-wifi-powersave]"
+        assert efetivas[1].startswith("match-device=")
+        assert efetivas[2] == "wifi.powersave=2"
+
+    def test_o_asset_casa_so_os_drivers_usb_do_rtw88(self) -> None:
+        linha = next(
+            x for x in ASSET.read_text(encoding="utf-8").splitlines()
+            if x.startswith("match-device=")
+        )
+        specs = linha.split("=", 1)[1].split(",")
+        assert specs, linha
+        drivers = []
+        for spec in specs:
+            tipo, _, nome = spec.partition(":")
+            assert tipo == "driver", f"o conf casa por {tipo!r}, e não só pelo driver: {spec}"
+            assert DRIVER_RTW.match(nome), f"{nome} não é um driver USB do rtw88"
+            drivers.append(nome)
+        assert "rtw88_8822bu" in drivers and "rtw_8822bu" in drivers
+        chips = {d.split("_", 1)[1] for d in drivers}
+        assert {f"rtw88_{c}" for c in chips} | {f"rtw_{c}" for c in chips} == set(drivers)
+
+
+class TestSoNoAdaptadorQueCai:
+    def test_sem_rtw88_nao_grava_nem_desliga(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path, rtw88_rc=1)
+        c.interface("wlp2s0", "on", driver="iwlwifi")
+        r = c.roda()
+        assert "RC=0" in r.stdout, r.stderr
+        assert "pulado — nenhum adaptador Wi-Fi USB Realtek (rtw88)" in r.stdout, r.stdout
+        assert not c.alvo.exists()
+        assert c.escritas() == [], c.escritas()
+        assert (c.estado / "wlp2s0").read_text(encoding="utf-8").strip() == "on"
+
+    def test_com_bateria_nao_grava_nem_desliga(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path, bateria=True)
+        c.interface("wlx0", "on")
+        r = c.roda()
+        assert "RC=0" in r.stdout, r.stderr
+        assert "pulado — este computador tem bateria" in r.stdout, r.stdout
+        assert not c.alvo.exists()
+        assert c.escritas() == [], c.escritas()
+
+    def test_kernel_sem_resposta_nao_grava(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path, rtw88_rc=2)
+        c.interface("wlx0", "on")
+        r = c.roda()
+        assert "não consegui perguntar ao kernel" in r.stdout, r.stdout
+        assert not c.alvo.exists() and c.escritas() == []
+
+    def test_so_a_interface_rtw88_perde_a_economia(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path)
+        c.interface("wlp2s0", "on", driver="iwlwifi")
+        c.interface("wlx0", "on", driver="rtw_8822bu")
+        r = c.roda()
+        assert "RC=0" in r.stdout, r.stderr
+        assert c.alvo.read_bytes() == ASSET.read_bytes()
+        assert any(x.endswith("iw dev wlx0 set power_save off") for x in c.log()), c.log()
+        assert not any("wlp2s0 set" in x for x in c.log()), c.log()
+        assert (c.estado / "wlp2s0").read_text(encoding="utf-8").strip() == "on"
+
+    def test_o_conf_velho_sai_onde_o_passo_nao_vale(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path, rtw88_rc=1)
+        c.alvo.parent.mkdir(parents=True)
+        c.alvo.write_text(CONF_VELHO, encoding="utf-8")
+        r = c.roda()
+        assert "RC=0" in r.stdout, r.stderr
+        assert not c.alvo.exists(), r.stdout
+        assert "o conf de uma versão anterior" in r.stdout
+        assert "REINICIO-PENDENTE" in r.stdout
+
+    def test_o_conf_velho_vira_o_novo_onde_o_passo_vale(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path)
+        c.alvo.parent.mkdir(parents=True)
+        c.alvo.write_text(CONF_VELHO, encoding="utf-8")
+        c.interface("wlx0", "off")
+        assert "RC=0" in c.roda().stdout
+        assert c.alvo.read_bytes() == ASSET.read_bytes()
+
+    def test_o_conf_novo_fica_com_o_dongle_fora(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path, rtw88_rc=1)
+        c.alvo.parent.mkdir(parents=True)
+        c.alvo.write_bytes(ASSET.read_bytes())
+        assert "RC=0" in c.roda().stdout
+        assert c.alvo.read_bytes() == ASSET.read_bytes()
+        assert not any(" rm " in x for x in c.log()), c.log()
+
+    def test_o_ensaio_sem_rtw88_diz_por_que_e_o_que_apagaria(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path, rtw88_rc=1)
+        c.alvo.parent.mkdir(parents=True)
+        c.alvo.write_text(CONF_VELHO, encoding="utf-8")
+        r = c.roda(dry_run=1)
+        assert "NAO-FARIA: desligar a economia de energia do Wi-Fi: nenhum adaptador" in r.stdout
+        assert "FARIA-ROOT: apagar" in r.stdout and "versão anterior" in r.stdout
+        assert c.alvo.exists() and c.escritas() == []
+
+    def test_o_uninstall_apaga_o_mesmo_conf(self) -> None:
+        uninstall = (REPO_ROOT / "uninstall.sh").read_text(encoding="utf-8")
+        assert "sudo rm -f /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf" in uninstall

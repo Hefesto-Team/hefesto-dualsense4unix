@@ -163,10 +163,12 @@ Flags:
   --sem-desempenho      responde NÃO ao modo desempenho, sem perguntar. Não
                         escreve nada.
   --wifi-powersave-off  aceita, sem efeito a mais: desligar a economia de energia
-                        do Wi-Fi (conf.d do NetworkManager, wifi.powersave=2, e
-                        `iw dev <if> set power_save off` na hora) é o padrão em
-                        toda máquina com Wi-Fi (passo 3d-bis). NUNCA reconecta a
-                        rede para aplicar. --no-udev pula. uninstall.sh remove.
+                        do Wi-Fi USB Realtek (rtw88) (conf.d do NetworkManager,
+                        wifi.powersave=2, e `iw dev <if> set power_save off` na
+                        hora) é o padrão numa máquina sem bateria que tem esse
+                        adaptador (passo 3d-bis); as outras placas ficam como
+                        estão. NUNCA reconecta a rede para aplicar. --no-udev
+                        pula. uninstall.sh remove.
   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
                         AppIndicator extension, etc) e assume --format=native.
   --no-systemd          pula a unit do daemon por INTEIRO (passo 6 E passo 7a):
@@ -1815,26 +1817,74 @@ _wifi_desliga_economia() {
     esac
 }
 
+_wifi_e_rtw88_usb() {
+    local drv
+    drv="$(readlink -f "${HEFESTO_NET_SYS:-/sys}/class/net/$1/device/driver" 2>/dev/null)" || return 1
+    [[ "${drv##*/}" =~ ^rtw(88)?_[0-9a-z]+u$ ]]
+}
+
+_wifi_powersave_motivo_de_pular() {
+    local rc=0
+    if _desempenho_tem_bateria; then
+        printf 'este computador tem bateria: a economia de energia do Wi-Fi fica ligada, para a carga durar'
+        return 0
+    fi
+    _rtw88_adaptadores_presentes >/dev/null || rc=$?
+    case "${rc}" in
+        0) ;;
+        1) printf 'nenhum adaptador Wi-Fi USB Realtek (rtw88) nesta máquina: a economia de energia do Wi-Fi fica como está (só esse adaptador cai com ela); se plugar um, rode ./install.sh de novo' ;;
+        *) printf 'não consegui perguntar ao kernel se há um adaptador Wi-Fi USB Realtek (rtw88): a economia de energia do Wi-Fi fica como está' ;;
+    esac
+}
+
+_wifi_powersave_conf_velho() {
+    [[ -e "$1" ]] && ! cmp -s "$2" "$1" 2>/dev/null
+}
+
 aplicar_wifi_powersave_off() {
     local alvo="/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
     local asset="${ROOT_DIR}/assets/NetworkManager/hefesto-wifi-powersave.conf"
-    local conf_igual=0 ifc ferramenta=""
+    local conf_igual=0 ifc ferramenta="" motivo=""
     local -a ligadas=()
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+            _nao_faria "nada aqui: --no-udev pula os passos que tocam /etc"
+        else
+            warn "--no-udev ativo — passo de /etc pulado (rode sem --no-udev para aplicar)"
+        fi
+        return 0
+    fi
+    motivo="$(_wifi_powersave_motivo_de_pular)"
+    if [[ -n "${motivo}" ]]; then
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+            _nao_faria "desligar a economia de energia do Wi-Fi: ${motivo}"
+            _wifi_powersave_conf_velho "${alvo}" "${asset}" \
+                && _faria_root "apagar ${alvo}, o conf de uma versão anterior que tirava a economia de todo Wi-Fi"
+            return 0
+        fi
+        printf '      pulado — %s\n' "${motivo}"
+        if _wifi_powersave_conf_velho "${alvo}" "${asset}"; then
+            if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null && sudo rm -f "${alvo}" 2>/dev/null; then
+                printf '      o conf de uma versão anterior, que tirava a economia de todo Wi-Fi, saiu (%s)\n' "${alvo}"
+                anotar_reinicio_pendente "a economia de energia do Wi-Fi de volta ao padrão da distro"
+            else
+                warn "o conf de uma versão anterior tira a economia de todo Wi-Fi; apague: sudo rm -f ${alvo}"
+            fi
+        fi
+        return 0
+    fi
     if cmp -s "${asset}" "${alvo}" 2>/dev/null; then conf_igual=1; fi
     ferramenta="$(_wifi_ferramenta)" || ferramenta=""
     if [[ -n "${ferramenta}" ]]; then
         while IFS= read -r ifc; do
             [[ -n "${ifc}" ]] || continue
+            _wifi_e_rtw88_usb "${ifc}" || continue
             if _wifi_economia_ligada "${ferramenta}" "${ifc}"; then ligadas+=("${ifc}"); fi
         done < <(_wifi_interfaces "${ferramenta}")
     fi
     local sem_ferramenta="sem iw nem iwconfig, a economia de cada interface não se confere agora (o conf vale no próximo boot)"
 
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        if [[ "${SKIP_UDEV}" -eq 1 ]]; then
-            _nao_faria "nada aqui: --no-udev pula os passos que tocam /etc"
-            return 0
-        fi
         if [[ "${conf_igual}" -eq 1 ]]; then
             _nao_faria "gravar ${alvo}: já está igual"
         else
@@ -1848,10 +1898,6 @@ aplicar_wifi_powersave_off() {
         elif [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
             _nao_faria "mexer no Wi-Fi: a economia de energia já está desligada"
         fi
-        return 0
-    fi
-    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
-        warn "--no-udev ativo — passo de /etc pulado (rode sem --no-udev para aplicar)"
         return 0
     fi
     if [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
@@ -1889,7 +1935,7 @@ aplicar_wifi_powersave_off() {
     done
 }
 
-step "3d-bis" "economia de energia do WiFi OFF (conf.d do NetworkManager + na hora)"
+step "3d-bis" "economia de energia do Wi-Fi USB Realtek (rtw88) OFF (conf.d do NetworkManager + na hora; com bateria, fica)"
 aplicar_wifi_powersave_off
 
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
