@@ -160,7 +160,7 @@ os pares de todos.
 `trigger.reset` foi o último dos quatro primeiros a ganhar o parâmetro (25/07) — o botão
 "Desligar" da aba Gatilhos zerava o gatilho dos quatro enquanto o "Aplicar" ao
 lado mandava para um só. Ele grava `Off` na camada `usuaria` só do gatilho
-pedido: a luz e a vibração que ela ajustou em outra aba ficam como estão.
+pedido: a luz e a vibração que o usuário ajustou em outra aba ficam como estão.
 
 ### `led.auto_release` — só registra
 
@@ -242,7 +242,7 @@ depois do número (o nó do `hid_playstation` é 0/1 por lâmpada e não escolhe
 brilho); no rádio, no `0x31` que acende o número. O `flag2` leva só o bit0
 (`SET_PLAYER_LED_BRIGHTNESS`), nunca o 0x02 do LIGHTBAR_SETUP.
 
-Quem chama é a pílula da aba Iluminação, e ela grava a palavra no override do
+Quem chama é a pílula da aba Iluminação, e a pílula grava a palavra no override do
 controle ANTES de chamar: uma troca de perfil reaplica o que o perfil diz, que é
 o que o usuário escolheu.
 
@@ -410,7 +410,7 @@ antes disso qualquer número seria chute.
   **opcional** e a ausência já quer dizer "não mexer"; lá a chave é obrigatória e
   a ausência é erro. Reusar o `null` daria duas leituras para o mesmo payload.
 
-**O que a devolução faz, e o que ela não faz.** Ela devolve o CONTROLE, não o
+**O que a devolução faz, e o que a devolução não faz.** A devolução devolve o CONTROLE, não o
 valor: como não existe leitura desse registrador, ninguém pode saber qual era o
 volume antes de nós, e o firmware fica com o ÚLTIMO número que mandamos até o
 controle desconectar. Nenhum texto do produto pode prometer restauração.
@@ -624,7 +624,7 @@ aparelho está aberta, ou `null`.
 | `radio.busca.set` | `{ligada: bool, destino?: "aa:bb:…"}`      | `{status, busca}`               |
 
 Valor absoluto, como o `freestyle.set`. Ligada, é o «Conectar» sem aparelho no
-`destino` (sem ele, a D8), até ela desligar ou até o teto de 120 s; com a busca
+`destino` (sem ele, a D8), até o usuário desligar ou até o teto de 120 s; com a busca
 de pé noutro adaptador, ela vai para o `destino`. Desligada, a janela fecha
 agora, e o movimento acaba em `desligada`, que não é falha (a tela não faz «Não
 Conectou» dele). Pedir o estado que já vale responde `ok` sem tocar no rádio. A
@@ -745,7 +745,7 @@ fixado (`rumble.TETO_DO_RUMBLE_FIXADO_S`) sem rebate. `status` pode ser `"ok"`,
 `navegacao.interna.set`
 é o «Status da navegação» no tipo Interna (`ligada`) e a lista «Tipo de navegação»
 (`tipo`, que só grava o tipo); exige ao menos um dos dois. A Interna é da máquina e
-não do perfil: trocar de perfil não a desliga, e ela não mexe no mouse.
+não do perfil: trocar de perfil não a desliga, e a Interna não mexe no mouse.
 
 `navegacao.foco` é a janela dizendo que está na frente: um pulso quando ganha ou perde
 o foco, e uma renovação a cada tique da janela com a Interna ligada. Sem renovação por

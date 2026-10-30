@@ -164,7 +164,7 @@ que o ponto do círculo esteja no extremo — não no meio.
 mensagem foi `a tela não escreveu o zero: 'X: 128Y: 128'`.
 
 > A lição que passa desta linha: **`or` com valor numérico é armadilha sempre que
-> o zero for legítimo.** O produto que ela usa há meses estava certo —
+> o zero for legítimo.** O produto que o usuário usa há meses estava certo —
 > `int(inputs.get("lx", 128))`, a forma com *default*, imune ao *falsy*.
 
 ### 4.2 A geometria assimétrica dos sticks
@@ -235,8 +235,8 @@ o quebrar.*
 
 ### 4.5 A guarda de carga que matava a janela quando ela clicava numa aba
 
-Na primeira vez que ela abriu o piloto, **a janela fechou sozinha depois de ~12
-segundos** — o tempo de ela clicar em "Conexões". A tira do mockup é um `<a
+Na primeira vez que o usuário abriu o piloto, **a janela fechou sozinha depois de ~12
+segundos** — o tempo de o usuário clicar em "Conexões". A tira do mockup é um `<a
 href="08-conexoes.html">`, ou seja ela **navega de verdade**; o `load-changed`
 dispara outra vez, e a guarda de carga — que existe para pegar carga **falha** —
 leu navegação legítima como erro fatal.
@@ -258,7 +258,7 @@ não existem, em cinco abas. **O contorno do touchpad nunca apareceu, em motor
 nenhum** — o Chrome falhava calado, e foi a troca para o WebKit que revelou.
 
 **A régua:** contar os filtros que apontam para id inexistente e **deixar a
-conta escrita**, em voz alta, mesmo enquanto a cura não é aplicada (ela muda
+conta escrita**, em voz alta, mesmo enquanto a cura não é aplicada (a cura muda
 1,09% dos pixels do desenho que o usuário aprovou, logo é decisão de produto).
 
 > **A lição:** *referência morta que o motor ignora em silêncio é a classe de
@@ -325,7 +325,7 @@ que a régua da aba Controles se provou:
    *diferente* nas pontas. Reescrito como simetria.
 
 > **O padrão desta casa, e ele já pegou instrumento falso vezes demais:** *a
-> régua confunde a PALAVRA com o ATO.* Ela desliga exatamente quando alguém
+> régua confunde a PALAVRA com o ATO.* A régua desliga exatamente quando alguém
 > escreve bem — procura o nome no arquivo inteiro e acha no comentário. Uma
 > régua que lê fonte tem de olhar **linha de código**, não o texto todo.
 
@@ -434,14 +434,14 @@ reação seria `--no-verify`.
   bloco da régua — o desalinhamento só some quando o ramo mergeia. Quem for
   medir gancho em worktree confira primeiro *qual texto* está sendo executado.
 * **Nenhum gancho pode cobrir o mockup**, pelo §6.2. O portão declara isso no
-  `--diagnostico`; a saída, se ela quiser cobertura ali, é de **versionamento**,
+  `--diagnostico`; a saída, se o usuário quiser cobertura ali, é de **versionamento**,
   não de gancho.
 
 ---
 
 ## 8. O estado do resto — para não confundir "tem régua" com "o CI mede"
 
-Tudo abaixo é de 29/08/2026, na árvore dela. Onde diz **remedido**, a conta foi
+Tudo abaixo é de 29/08/2026, na árvore do usuário. Onde diz **remedido**, a conta foi
 refeita ao escrever este documento; onde diz **medido no HEAD `da75f4cc`**, é a
 medição da leva e não foi repetida — a árvore estava sob escrita de seis levas,
 e número de árvore em movimento não repete.

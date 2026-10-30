@@ -75,7 +75,7 @@ manifesto não confere, e o conselho *"rode ./install.sh"* é exatamente o que
 acabou de rodar sem mudar nada. A saída do `--ensure` é capturada e reimpressa
 inteira por causa disso.
 
-### A trava, e a guarda que ela tem
+### A trava, e a guarda que o usuário tem
 
 `lock_games_to_pinned_proton` escreve o default global `"0"` (prioridade `75`) e
 uma entrada por appid instalado (prioridade `250`) — os valores nativos
@@ -282,13 +282,13 @@ máquina do usuário é idêntico ao publicado hoje, e o `pinned_manifest_ok` é
 
 Nada desta seção foi rodado. O passo 3 em diante toca a máquina do usuário.
 
-### Antes de tudo: as duas perguntas que são dela
+### Antes de tudo: as duas perguntas que são do usuário
 
 1. **A 11-6 entrega hoje o que o pino prometeu?** O som do jogo no alto-falante
    do controle **nunca foi confirmado** nesta casa (§6.3). Se ela ainda não
    ouviu isso funcionar, subir para a 11-7 não arrisca nada medido — e testar a
    promessa uma vez, na 11-6, antes de trocar, vale mais do que qualquer plano.
-2. **Ela quer o 11-7 pelo controle, ou pelo resto?** Pelo controle, o ganho é
+2. **O usuário quer o 11-7 pelo controle, ou pelo resto?** Pelo controle, o ganho é
    nulo para a biblioteca do usuário (§5). Pelo Wayland/overlay, pode ser real.
 
 ### Passo 0 — a foto de antes (read-only, sem risco)

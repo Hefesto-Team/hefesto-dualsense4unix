@@ -62,7 +62,7 @@ flag do report a liga (o byte do bloco sozinho não vale). Mais as três pergunt
 ## O resultado (preenchido por quem mede no aparelho)
 
 O contador imprime as linhas prontas.
-Nenhuma linha foi medida na árvore de desenvolvimento: ela não toca o aparelho nem joga.
+Nenhuma linha foi medida na árvore de desenvolvimento: a árvore não toca o aparelho nem joga.
 
 | jogo | transporte | controle | categoria | total | por segundo | pico em 1 s |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -16,7 +16,7 @@ Esta régua cobra as três, no piloto do produto, com a janela OCULTA:
    `[relato] <página> · <gesto>: <frase>`;
 2. **a recusa também não fica — 13/09/2026, FRASES-E-DICAS-01.** Até ali a recusa
    ficava 30 s no cartão, e só na página em que nascera. A caixa laranja da foto
-   no índice da leva (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha
+   no índice da leva (`2026-09-13-A-TERCEIRA-LISTA-DO-USUARIO-INDICE.md`, linha
    19) era essa recusa, e a recusa saiu: recusa no 🎙 do p1 da 02, navega para a 03,
    volta à 02 — zero recado nas três leituras, e o piloto sem depósito;
 3. **o rodapé não devolve recado.** `rodape._recado` relata e devolve `None`;

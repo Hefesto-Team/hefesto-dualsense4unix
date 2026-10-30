@@ -495,7 +495,7 @@ permite refazer.
 
 **A variável única é o report ID.** O mesmo `common` de 47 bytes, pedindo cor de
 lightbar (`valid_flag1 = 0x04`, RGB em `common[44..46]`), com o envelope BT
-completo, foi mandado por **ids diferentes**. Ela olhando a lightbar do controle
+completo, foi mandado por **ids diferentes**. O usuário olhando a lightbar do controle
 BRANCO, no rádio:
 
 | passo | report | pedido | **o que o usuário viu** | papel |
@@ -517,7 +517,7 @@ descritor: são reports vivos. **GRAU: MEDIDO NO APARELHO.**
 1. **Foram tentados TRÊS ids: `0x31`, `0x32` e `0x39`.** Os degraus `0x33` a
    `0x38` **nunca foram tentados**. Que eles executem é expectativa razoável
    pela forma da escada, e expectativa não é medição — o título desta subseção
-   diz *"os degraus"* e o que ela mediu foram dois deles, acima do `0x31`.
+   diz *"os degraus"* e o que o usuário mediu foram dois deles, acima do `0x31`.
 2. **Foi UM aparelho: o branco** (`hw 0x0711`, BDM-050), por rádio. O outro
    controle que estava no rádio na mesma mesa — o vermelho, `hw 0x0811` — não
    foi tentado. Esta página já mediu, no *censo dos dezessete*, que **o layout
@@ -652,7 +652,7 @@ nossa própria vontade de ter achado mais do que achamos.
 
 ## 3. Áudio — o caso do alto-falante relatado pelo usuário
 
-Ela deu o exemplo: *"Zelda Skyward Sword: o speaker do controle faz os barulhos
+O usuário deu o exemplo: *"Zelda Skyward Sword: o speaker do controle faz os barulhos
 da espada enquanto na tela tem o som normal do jogo"*.
 
 **No PS5** o jogo abre uma **porta de áudio dedicada** ao alto-falante do pad,
@@ -985,7 +985,7 @@ isso **caducou**.
 | *"a escada `0x32`-`0x39` já foi variada"* | **não foi.** Os três arranjos do produto são todos `degrau=0x39`; nove passadas bateram no mesmo degrau |
 | *"faltava o primer `0x31` que ARMA a rota"* | **toca desarmado.** A tag `0x13` do bloco de áudio já endereça o alto-falante |
 
-**A MORDIDA QUE ESTAVA FURADA, e a regra que ela deixa:** a primeira mordida do
+**A MORDIDA QUE ESTAVA FURADA, e a regra que a mordida deixa:** a primeira mordida do
 primer passou por engano — ela tocou sem primer logo depois de uma corrida COM
 primer. **A rota persiste no firmware entre corridas**, então a mordida MEDIA a
 memória do aparelho, não o primer. Refeita com `--desarmar` (um `0x31` pedindo
@@ -1074,7 +1074,7 @@ bt_mic_palavra_do_usuario  ligado=False
 | bordas contadas pelo daemon | ~28/s | **0** |
 | bit estável por | — | **152 segundos** |
 
-Com o microfone no ar e ela falando: *"nao ficou maluco e nao desligou"*. <!-- (noqa-acento: citação literal) -->
+Com o microfone no ar e alguém falando, o microfone não enlouqueceu nem desligou. <!-- -->
 
 **Isso prova a cadeia inteira.** O gating não era reação do firmware ao microfone
 ativo — era o **kernel** mutando e desmutando, a partir de bordas que ele
@@ -1093,7 +1093,7 @@ sintomas de uma vez.
    28/09/2026). O gating do bit não aperta botão nenhum, com ou sem o módulo
    recompilado. A sustentação de 300 ms que fazia esse papel desde 10/09 saiu
    junto: ela olhava a virada do bit, e o bit virava também com a escrita de
-   quem quer que mande no mudo — três bordas que ela não deu, no branco, na
+   quem quer que mande no mudo — três bordas que o usuário não deu, no branco, na
    sessão de 28/09.
 
 **A METADE EM PYTHON JÁ FAZIA A GUARDA CERTA DESDE 16/08/2026** —

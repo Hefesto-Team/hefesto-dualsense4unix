@@ -185,7 +185,7 @@ Dois quadros: as extensões e os lançadores.
 
 - **Extensões**: cada extensão instalada (como o **Lutris** e o **KytyPS5**) tem
   uma chave para ligar e desligar, o ⋮ (Atualizar, Ver permissões, Remover) e a
-  janela das opções que ela declara. **Instalar de um endereço** ou **Escolher a
+  janela das opções que o usuário declara. **Instalar de um endereço** ou **Escolher a
   pasta…** traz uma extensão nova; os endereços das que existem estão no
   [README](../../README.md#extensões).
 - **Lançadores**: uma linha por lançador (**Steam**, **Heroic (Epic · GOG)** e

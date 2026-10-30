@@ -156,7 +156,7 @@ O dialeto do Hefesto, sem índice (`TriggerUpdate [side, mode, …]`,
 `MicLED [state]`, `TriggerThreshold [side, value]`), segue o destino do
 seletor.
 
-## `TriggerThreshold` — o que ela faz (e onde não faz nada)
+## `TriggerThreshold` — o que a chave faz (e onde não faz nada)
 
 No DSX, `TriggerThreshold` **não é um efeito háptico**. É um corte no valor
 ANALÓGICO que o gatilho entrega ao gamepad emulado:

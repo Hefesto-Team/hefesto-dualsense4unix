@@ -131,7 +131,7 @@ lê o feature `0x05` durante o `create`.
 **Por que isto pertence à família COMBINAÇÃO:** a promoção é **estado do
 aparelho, por aparelho**. Um controle promovido não promove o vizinho. Numa mesa
 de quatro, quatro promoções acontecem — e se uma falhar, aquele controle fica no
-`0x01` mínimo e o sintoma que ela vê é *"esse aqui não tem giroscópio"*, não
+`0x01` mínimo e o sintoma que quem usa vê é *"esse aqui não tem giroscópio"*, não
 *"esse aqui não conecta"*.
 
 ### 3.1 O CRC de entrada é o pedágio do rádio — e ele DESCARTA o quadro

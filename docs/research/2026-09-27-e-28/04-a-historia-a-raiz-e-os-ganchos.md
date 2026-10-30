@@ -270,7 +270,7 @@ ramo de fecho. Ele é a única trava que alcança outra máquina e sessões na n
 ## 7. Os ganchos da ferramenta de automação
 
 Esta parte mede a configuração da ferramenta, que mora fora do repositório. Ela
-fica registrada aqui porque os defeitos que ela deixou passar estão no produto e
+fica registrada aqui porque os defeitos que o usuário deixou passar estão no produto e
 na história.
 
 ### O que a madrugada de 26–27/09 deixou passar
@@ -330,7 +330,7 @@ fluxo legítimo, 19 contornos funcionam e 7 corrompem dado:
 - a leitura mascarada de arquivo mudava 363 linhas de 121 arquivos versionados, e
   a edição seguinte não casaria. Só a linha com endereço se mascara;
 - a regra dos recibos recusaria todo push, porque nenhum script escreve recibo.
-  Ela dorme até o `scripts/portoes.sh` e o `scripts/rodar-a-suite.sh` escreverem
+  A regra dorme até o `scripts/portoes.sh` e o `scripts/rodar-a-suite.sh` escreverem
   (`O-PUSH-SO-COM-O-RECIBO-DOS-PORTOES-01`);
 - o disjuntor recusava quem **lê** a causa e destravava com qualquer texto. Passa
   a olhar só o gesto que **roda** (restart, install, Steam, ensaio);

@@ -162,7 +162,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `O-ASSENTO-GUARDADO-NAO-ANDA-02` — O jogo também espera, e o prazo sobrevive à suspensão. *(espera ela)*
 - `O-ASSENTO-GUARDADO-NAO-ANDA-03` — Passado o prazo, o jogo fecha o buraco junto com a tela. *(espera ela)*
 - `O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER…` — A regra do Hefesto é a última a falar do hidraw físico. [ensaio] *(espera ela)*
-- `O-MODO-QUE-NAO-SAI-DO…` — Ela clica no Modo e a tela não muda. [ensaio] *(espera ela)*
+- `O-MODO-QUE-NAO-SAI-DO…` — O usuário clica no Modo e a tela não muda. [ensaio] *(espera ela)*
 - `A-PERDA-DE-AMOSTRAS-DO-MOVIMENTO…` — A perda de amostras do movimento se conta pelo contador do report. *(conjunto ipc)*
 - `O-CONTROLE-E-O-VPAD-DELE…` — O controle e o vpad dele se casam pelo endereço. *(conjunto ipc)*
 - `O-TIQUE-TEM-ORCAMENTO-E-A…` — O tique tem orçamento e a manutenção não para a entrada. *(conjunto legado)*
@@ -215,7 +215,7 @@ parênteses, o destino: o conjunto (ver a seção 5) ou o que espera.
 - `A-PONTE-PAUSADA-DIZ-A-VERDADE…` — A ponte pausada diz a verdade na Conexões. *(no dev: falta o carimbo)*
 - `A-SONDA-DO-BLUEZ-PERGUNTA-SO…` — A sonda do BlueZ pergunta só ao dono, e o ensaio do rádio passa no tipo. *(no dev: falta o carimbo)*
 - `O-CAMINHO-DO-BLUEZ-SO-NO…` — O caminho do BlueZ só no dono. *(no dev: falta o carimbo)*
-- `O-CARTAO-DO-EXTERNO-MOSTRA-O…` — O cartão do controle externo mostra a cor e os glifos que ela declarou. *(no dev: falta o carimbo)*
+- `O-CARTAO-DO-EXTERNO-MOSTRA-O…` — O cartão do controle externo mostra a cor e os glifos que o usuário declarou. *(no dev: falta o carimbo)*
 - `O-DEGRAU-DO-MEIO-E-A…` — O degrau do meio e a frase da faixa se ligam depois da B9. [ensaio] *(conjunto F2-degrau)*
 - `O-ENSAIO-QUE-O-RADIO-PEDE…` — O ENSAIO QUE O RÁDIO PEDE — o índice. [ensaio] *(espera ela)*
 - `A-REPORT-THREAD-SAI-ANTES-DO…` — A report_thread sai antes de o handle fechar. [ensaio] *(espera ela)*
@@ -463,7 +463,7 @@ corridos**.
    depois com `--escrever --backup`): no plano há 119 `depois_de` que apontam para uma onda posterior, todos de
    posse, mais 203 dos dois genéricos; nenhum fica dentro da mesma onda. O único de dado é o v-toque → v-jogos (e as
    telas), e esses estão em série. Depois, `check_colisao_de_sprints.py` com `rc=0`; os args por
-   `montar-conjunto.py`; commit de tudo (agente roda `reset --hard`); dizer a ela quantos agentes voam.
+   `montar-conjunto.py`; commit de tudo (agente roda `reset --hard`); dizer ao usuário quantos agentes voam.
 3. **Durante:** o `vigia-das-levas.sh` só como tarefa de fundo; `estado-das-levas.py wf_…` para o painel; todo
    pytest pelo `vez-do-pytest.sh`, com TMPDIR curto em `/tmp`.
 4. **Quando o limite cortar:** commit `wip` em cada worktree, `retomar-conjunto.py`, workflow novo. Nunca

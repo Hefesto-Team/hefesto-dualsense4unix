@@ -194,7 +194,7 @@ de 41 bytes é calibração da **IMU** (`hid-playstation.c:149-150` e
 `:1149-1192`); o `absinfo` do evdev é a faixa **declarada pelo kernel**, não a
 calibração daquela unidade.
 
-**As duas continuam não respondendo. Existe uma terceira, e ela responde.**
+**As duas continuam não respondendo. Existe uma terceira, e essa responde.**
 
 ### Ler — e é leitura pura
 

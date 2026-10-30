@@ -1,4 +1,4 @@
-# A noite dos quatro controles — o que a validação em hardware provou e o que ela abriu
+# A noite dos quatro controles — o que a validação em hardware provou e o que a validação abriu
 
 > **Por que este documento existe.** Em 25/07/2026 o projeto chegou, pela
 > primeira vez, a quatro controles numerados e funcionando num jogo real. O que
@@ -191,7 +191,7 @@ sobre o controle, não sobre o jogo aberto.
 
 Duas coisas desta sessão merecem ficar como regra:
 
-**O relato de quem usa é evidência, e a leitura dela também.** Foi a mantenedora
+**O relato de quem usa é evidência, e a leitura do usuário também.** Foi a mantenedora
 quem notou a dessincronia entre luz, jogo e interface — nenhum teste da suíte
 chegaria lá, porque os três estão certos isoladamente e só discordam entre si.
 

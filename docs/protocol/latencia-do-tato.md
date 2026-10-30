@@ -59,7 +59,7 @@ sair, por qualquer caminho, manda o relatório de motor zerado.
 
 A tabela é o orçamento de que a vibração, a luz e o som dependem. O ensaio imprime a
 linha pronta; quem mede cola abaixo, com a data. Nenhuma linha foi medida na árvore de
-desenvolvimento: ela não toca o aparelho.
+desenvolvimento: a árvore não toca o aparelho.
 
 | transporte | controle | toques lidos | mediana | p95 | máximo |
 | --- | --- | --- | --- | --- | --- |

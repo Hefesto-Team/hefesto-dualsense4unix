@@ -36,7 +36,7 @@ abaixo é aproximada.
 | `02` | Cosmic Red | `#DA244B` | [color-name.com/cosmic-red](https://www.color-name.com/cosmic-red.color) — nome genérico | `aproximado` |
 | `03` | Nova Pink | `#EE7EA6` | aproximação da descrição ("lado rosa-choque do espectro") — [ComicBook](https://comicbook.com/gaming/news/ps5-controller-colors-nova-pink-starlight-blue-galactic-purple/) | `aproximado` |
 | `04` | Galactic Purple | `#5F4B9B` | aproximação da descrição ("roxo cósmico profundo") — [PS5 Home](https://ps5home.com/all-dualsense-ps5-controller-colours-guide/) | `aproximado` |
-| `05` | Starlight Blue | `#B5CED4` | **medição dela**, 21/08/2026 | `medido` |
+| `05` | Starlight Blue | `#B5CED4` | **medição do usuário**, 21/08/2026 | `medido` |
 | `06` | Grey Camouflage | `#7F8479` | aproximação do cinza de base; **é padrão camuflado, não cor única** | `aproximado` |
 | `07` | Volcanic Red | `#8C2B2E` | aproximação da Deep Earth ("vermelho vulcânico, acabamento metálico") — [PlayStation.Blog](https://blog.playstation.com/2023/09/14/introducing-the-deep-earth-collection-a-new-metallic-colorway-for-ps5-accessories-available-starting-later-this-year/) | `aproximado` |
 | `08` | Sterling Silver | `#A8ADB3` | aproximação da Deep Earth (metálico); o nome genérico `#E2E5E6` é claro demais para este plástico | `aproximado` |
@@ -65,9 +65,9 @@ limiar de percepção, e abaixo do ruído de qualquer amostragem de foto.
 
 **Ressalva honesta:** essa concordância **não é confirmação independente**. As
 duas bases publicam o nome genérico "Starlight Blue", sem qualquer menção ao
-DualSense; se o valor dela veio de uma tabela dessa família, as duas fontes têm
-a mesma ancestralidade e concordar não prova nada sobre o plástico. O valor dela
-fica como está de qualquer forma — a observação dela sobre o aparelho é fonte
+DualSense; se o valor do usuário veio de uma tabela dessa família, as duas fontes têm
+a mesma ancestralidade e concordar não prova nada sobre o plástico. O valor do usuário
+fica como está de qualquer forma — a observação do usuário sobre o aparelho é fonte
 primária nesta casa.
 
 ## Ressalvas por linha

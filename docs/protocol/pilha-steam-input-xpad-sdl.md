@@ -952,7 +952,7 @@ serial distinto), os `hidraw` dos quatro abertos pelo processo (`/proc/<pid>/fd`
 inode), a escrita só no escolhido (`output_count`, `lightbar_replicas` e `player_led_replicas`
 de cada vpad antes, durante e depois), um touchpad de dois dedos, giro e acelerômetro, `|acel|`
 parado em 9,8 ± 0,5 m/s², nenhum intervalo de `sensor_timestamp` acima de 0,1 s (o teto em que
-o Vita3K descarta a amostra) e, com o dedo, eventos de toque e o clique. Ela abre o vpad com o
+o Vita3K descarta a amostra) e, com o dedo, eventos de toque e o clique. A prova abre o vpad com o
 HIDAPI ligado, o que ESCREVE no aparelho: roda só com o aparelho liberado para escrita, e com
 `--hidapi 0` (só para a mordida) o laudo reprova, porque sem HIDAPI o vpad é evdev e não há
 touchpad.
@@ -993,7 +993,7 @@ do nosso vpad — o mesmo GET_REPORT que o probe do driver e o jogo já fazem.
 
 **A permissão decide quem o Proton alcança, e ela é assimétrica:** `hidraw0`
 (o FÍSICO) está `crw------- root root`, sem ACL; `hidraw5` (o VPAD) está
-`crw-rw----` **com** a ACL da sessão. Quem roda como ela abre o segundo e não
+`crw-rw----` **com** a ACL da sessão. Quem roda como o usuário abre o segundo e não
 abre o primeiro. É o mesmo `0600` que a 5-bis.3 já tinha registrado como a
 razão de o físico sumir da lista do HIDAPI da SDL2 clássica.
 
@@ -1161,7 +1161,7 @@ GE-Proton11-6-x86_64 with priority 250"*, 17/09 01:51). O script `proton` dele
 tem três listas por appid que mexem em entrada, e **o PRAGMATA não está em
 nenhuma**. **GRAU: MEDIDO AQUI**, no arquivo instalado:
 
-| variável | o que ela faz | quantos appids | o PRAGMATA? |
+| variável | o que a variável faz | quantos appids | o PRAGMATA? |
 |---|---|---|---|
 | `PROTON_SONY_HIDRAW_XINPUT` | remapeia o `hidraw` Sony para XInput *"para imitar o Xbox"* | 18 | não |
 | `PROTON_SONY_DUALSENSE_AS_DUALSHOCK4` | finge um DS4 em jogos que não sabem DualSense/Edge | 21 | não |
@@ -1431,7 +1431,7 @@ Segue esperando a sessão.
 **Acrescentado em 12/08/2026, e é o achado que fechou dezesseis dias de
 investigação da lightbar por Bluetooth.** Esta página descrevia a Steam como
 **leitora** que cria espelhos. Ela também é **escritora**, no `hidraw` de cada
-DualSense, e o que ela escreve pinta a barra de luz.
+DualSense, e o que a Steam escreve pinta a barra de luz.
 
 Toda esta seção é `MEDIDO AQUI` no ensaio de 11→12/08. O aceite do que a
 **barra fez** é o olho de quem confere, com fala literal em cada linha; a **contagem de

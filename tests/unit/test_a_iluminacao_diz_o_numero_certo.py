@@ -213,7 +213,7 @@ def test_um_numero_acima_da_mesa_nao_se_diz_livre(colunas):
     A DICA DIZ SÓ O NÚMERO DESDE 13/09/2026 (FRASES-E-DICAS-01). Até ali a dica
     colava a frase da recusa, e a mesma frase chegava à tela como dica flutuante
     e como a caixa laranja da foto no índice da leva
-    (`2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`, linha 19). O cinza e o
+    (`2026-09-13-A-TERCEIRA-LISTA-DO-USUARIO-INDICE.md`, linha 19). O cinza e o
     `aria-disabled` dizem que o número não cabe.
     """
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO

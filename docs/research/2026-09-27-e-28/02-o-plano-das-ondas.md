@@ -102,7 +102,7 @@ Quatro dependências que o plano chamou de «só de posse» eram lógicas:
 - O endereço do pad virtual continuava reversível mesmo com o 4.º e o 5.º octetos zerados, porque sobram uns dois candidatos. A sprint decide zerar os quatro bytes do hash.
 - Uma régua que reconfigure o structlog global repetiria a cicatriz de `tests/unit/test_reserva_do_posto_01_os_eventos_falam.py:74-90`. A régua 4 embrulha um logger num buffer em vez disso.
 
-A máscara do serial também passa a ter o produto como dono, como pede a resposta 13 dela: «a tela mostra inteiro; o Copiar leva mascarado».
+A máscara do serial também passa a ter o produto como dono, como pede a resposta 13: «a tela mostra inteiro; o Copiar leva mascarado».
 
 **As cessões escritas no frontmatter.** Foram 31 arquivos de sprint, cada mudança com nota datada de 28/09:
 

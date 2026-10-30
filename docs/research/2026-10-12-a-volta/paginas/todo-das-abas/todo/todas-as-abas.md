@@ -80,7 +80,7 @@ Base: o publicado da `integra/1-11` (`29d620816`), medido com a `FOLHA_DA_CASA` 
 
 ### Os alvos de 24 px (OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01)
 
-- Origem: `recomendada-a-escolher`. A sprint ainda não tem desenho nem recomendação; apliquei a opção 1 dela
+- Origem: `recomendada-a-escolher`. A sprint ainda não tem desenho nem recomendação; apliquei a opção 1
   (alvos de 24 px, a mesma letra), a menor mudança que cumpre o WCAG 2.5.8. A letra mínima de 12 px e o «Tamanho da
   interface» do Sistema ficam para a escolha do usuário.
 - Forma: um bloco só `<style data-todo="N" id="todo-alvos">` no fim do `<head>`, sem mexer nas regras da página:

@@ -42,7 +42,7 @@ A máscara é de cada controle e diz que controle o jogo vê:
 - **Xbox 360**: Y B A X;
 - **Nintendo Pro**: X A B Y, com ZL, ZR, menos e mais.
 
-Ela muda o desenho dos botões que o jogo mostra; o controle na sua mão continua
+A máscara muda o desenho dos botões que o jogo mostra; o controle na sua mão continua
 o mesmo. O **PS + L3** troca a máscara do controle de quem faz o gesto. A
 máscara escolhida fica guardada no controle e passa a valer quando o Hefesto
 volta a entregá-lo ao jogo.

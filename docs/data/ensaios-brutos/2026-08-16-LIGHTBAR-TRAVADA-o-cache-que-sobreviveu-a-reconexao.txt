@@ -50,7 +50,7 @@ Isso explica os três sintomas de uma vez: por que parece ALEATÓRIO (depende de
 cache ter sobrevivido), por que RECONECTAR às vezes resolve, e por que o SYSFS
 MENTE (ele concorda com o cache, não com o aparelho).
 
-A HIPÓTESE DELA, e onde ela chegou perto
+A HIPÓTESE DELA, e onde o usuário chegou perto
 -----------------------------------------
 "tem muito cara de ser alguma config setada pro player 2 que entra em conflito
 seja com a steam ou seja com os perfis do hefesto". Não é a Steam nem o perfil: é

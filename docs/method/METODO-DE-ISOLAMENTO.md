@@ -296,7 +296,7 @@ chute contamina tudo o que vier depois.
       lado. É a **melhoria mais barata e mais forte** que esta casa achou: ele
       transforma *"achei que estava diferente"* em medição, e custa zero
       rodada extra. Ver a seção **O que FUNCIONOU** abaixo.
-- [ ] **C4. Mire UM controle e deixe os outros de testemunha** (ideia dela,
+- [ ] **C4. Mire UM controle e deixe os outros de testemunha** (ideia do usuário,
       12/08). Com quatro na mesa, o alvo por MAC é o controle negativo mais
       forte que existe: se o `uniq` fosse ignorado o comando viraria broadcast,
       e o isolamento seria ilusão. Comando literal na seção
@@ -330,7 +330,7 @@ chute contamina tudo o que vier depois.
       resposta seja **sentida**, não medida. Em 11/08 duas rodadas se perderam
       pedindo "em que instante parou", e a terceira fechou a questão trocando o
       tremor **de lado**: ou muda de mão, ou não muda.
-- [ ] **E2. Ela não vê a janela do comando.** A mensagem "aperte agora" só chega
+- [ ] **E2. O usuário não vê a janela do comando.** A mensagem "aperte agora" só chega
       **depois** que o comando termina. Ou o ensaio roda em segundo plano e ela
       age quando quiser, ou dura o bastante para ela pegar o controle depois de
       ler.
@@ -791,7 +791,7 @@ Cada uma custou tempo real. Nenhuma é hipotética.
 | A-6 | **Colisão de nomes silenciosa** | `getElementById('corpo')` devolveu o `<g>` do SVG, não a tabela; nenhum erro |
 | A-7 | **Só um lado do ensaio** | Seis ensaios "com" e nenhum "sem": zero poder de prova |
 | A-8 | **Pedir cronômetro à mão humana** | Duas rodadas com respostas incompatíveis entre si — e nenhuma delas era erro dela |
-| A-9 | **A janela que ela não vê** | O "aperte agora" só chega depois que o comando terminou |
+| A-9 | **A janela que o usuário não vê** | O "aperte agora" só chega depois que o comando terminou |
 | A-10 | **Confundir controle negativo com prova** | O R2 ficar solto prova que o comando não vazou; **não** prova que o R2 obedece |
 | A-11 | **Supor que o firmware honra os bits** | A cura desliga os bits de autorização e o aparelho obedece aos bytes assim mesmo |
 | A-12 | **O caderno envelhecer sem que ninguém note** | Uma medição que só existe em docstring deixa o `eliminacao.py` acusando um culpado removido há sete dias |
@@ -892,7 +892,7 @@ aqui:** as 41 não são a mesma coisa.
 
 - `identidade.revisao_de_placa@dualsense` não é acionada porque o mapa diz, em
   letras grandes, *"NÃO É A COR"*. Ler aquele nó para nomear jogador daria dois
-  "controles iguais" no dia em que ela comprar um par. **Não acionar é o certo.**
+  "controles iguais" no dia em que o usuário comprar um par. **Não acionar é o certo.**
 - `movimento.imu.perda@dualsense` não é acionada porque a cura está medida e
   nunca foi ligada: o `__le32` de `corpo[11..14]` é contador de reports nos
   **dois** transportes e o produto não o lê em transporte nenhum. **Não acionar
@@ -913,7 +913,7 @@ rádio, onde não chega.
 | `divida` | falta fazer, e há quem queira. **É o que o portão limita** |
 | `decisao-tomada` | não acionar é a escolha, e ela está certa hoje |
 | `nada-a-acionar` | não há feature a acionar: ou o aparelho não oferece, ou a linha é de MEDIÇÃO e `aciona = não` quer dizer *"o fenômeno não aconteceu"*, nunca *"o produto não faz"* |
-| `so-o-usuario-decide` | a pergunta existe, ninguém a respondeu, e a resposta é dela |
+| `so-o-usuario-decide` | a pergunta existe, ninguém a respondeu, e a resposta é |
 
 Retrato de 22/08/2026: **4 dívidas**, 15 decisões, 20 `nada-a-acionar`,
 2 `so-o-usuario-decide`.
@@ -1090,7 +1090,7 @@ para vibrar.
 
 Quatro DualSense: **P2 e P3 no cabo, P1 e P4 no rádio**, identificados pelo
 padrão de LED de jogador lido no fonte do driver
-(`hid-playstation.c:1836-1842`) e conferidos contra a leitura dela — bateram
+(`hid-playstation.c:1836-1842`) e conferidos contra a leitura do usuário — bateram
 quatro de quatro, inclusive o transporte. É o gabarito de como o checklist acima
 se percorre de verdade, e do que cada passo comprou.
 
@@ -1162,7 +1162,7 @@ mede quando a suspeita é da própria régua**.
 | D1 | o contraste, 6 minutos antes, com os MESMOS três: Steam fechada **depois** de eles subirem | só **um** dos três obedeceu. Mesmo controle, mesma revisão, resultados opostos — a variável é quem tinha o hidraw na probe |
 | — | as três revisões de hardware (`0x0710`, `0x1111`, `0x0711`) estavam representadas | a suspeita de revisão de hardware cai **com prova**, não por argumento |
 | D2 | `btmon`, duas capturas de 45 s, uma por braço | **98** pacotes de saída na probe suja contra **6** na limpa (dois por controle, que é o que o driver manda sozinho) — dezesseis vezes mais escrita, e o resultado inverso |
-| D2 | os **timestamps** desses pacotes | a Steam não disputa sempre: ela escreve em **duas rajadas** (t+0→3 s e t+15→18 s) e depois **cala**. A pergunta foi do usuário: *"se medimos quando a steam pinta o lightbar então sabemos quando sobrescrever, não?"* |
+| D2 | os **timestamps** desses pacotes | a Steam não disputa sempre: a Steam escreve em **duas rajadas** (t+0→3 s e t+15→18 s) e depois **cala**. A pergunta foi do usuário: *"se medimos quando a steam pinta o lightbar então sabemos quando sobrescrever, não?"* |
 
 **Limite dito em voz alta, porque não foi medido:** eu contei os pacotes,
 **não decodifiquei** o conteúdo deles. Não sei que report a Steam manda nem se

@@ -787,7 +787,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     ],
     webcam: [
       { n: 12, quando: function (p) { return p.usb === 2; }, selo: "derivado",
-        txt: "entrada preta: ela não usa a velocidade da azul, e a azul faz falta a quem usa" },
+        txt: "entrada preta: a webcam não usa a velocidade da azul, e a azul faz falta a quem usa" },
       { n: 6, quando: function (p) { return p.onde === "pc"; }, selo: "derivado",
         txt: "direta do PC, sem gastar entrada do hub" }
     ],
@@ -1053,7 +1053,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, longe de outro rádio" };
     }
     if (naMao === "webcam") {
-      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que ela não precisa" };
+      if (porta.usb === 3) return { v: "serve", txt: "Serve", porque: "gasta uma entrada azul que a webcam não precisa" };
       return { v: "melhor", txt: "Melhor lugar", porque: "entrada preta, que é o que o usuário pede" };
     }
     return null;

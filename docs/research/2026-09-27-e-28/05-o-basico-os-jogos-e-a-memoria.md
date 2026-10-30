@@ -58,7 +58,7 @@ O roteiro: PRAGMATA (3357650) no modo DualSense, Future Knight (4235410) no Xbox
 
 **O que o ensaio sem ela não prova:** o sinal (tiro, mira, voz). Não há IPC de entrada no pad e a Forja não estava compilada. A noite prova a corrente: fluxos, contadores, nós seguros, o silêncio pelo rádio.
 
-**O que se descartou:** comparar o PRAGMATA (DualSense) com o Future Knight (Xbox) muda jogo, engine, modo, máscaras e perfil de uma vez. Mede-se cada modo, não a diferença; a comparação no mesmo jogo é o PS + R3 dela, por último, porque cada aperto recria os pads com o jogo aberto (o gesto do usuário fura o R-04: `ORIGENS_GESTO_DO_USUARIO`, `src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:94`).
+**O que se descartou:** comparar o PRAGMATA (DualSense) com o Future Knight (Xbox) muda jogo, engine, modo, máscaras e perfil de uma vez. Mede-se cada modo, não a diferença; a comparação no mesmo jogo é o PS + R3, por último, porque cada aperto recria os pads com o jogo aberto (o gesto do usuário fura o R-04: `ORIGENS_GESTO_DO_USUARIO`, `src/hefesto_dualsense4unix/daemon/subsystems/gamepad.py:94`).
 
 **Anonimato.** O `state_full` expõe o serial de fábrica inteiro (17 caracteres), que o mascarador da noite não cobria; o diário do jogo trouxe 7 linhas com o nome da ponte de som com os octetos 4 e 5 à mostra, e os perfis copiados crus traziam 4 identidades cada. Regra que fica: a cópia byte a byte de restauração vai para pasta privada 0700; na medida, só o sha256 e a cópia mascarada.
 

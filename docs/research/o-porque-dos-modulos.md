@@ -392,14 +392,14 @@ Amostrar por JANELAS curtas foi medido e REJEITADO: a partida é barata (45 a
 tremer a leitura da outra peça, e a ligar e desligar o isócrono USB o dia
 inteiro.
 
-## A HISTERESE, e por que ela tem TRÊS degraus
+## A HISTERESE, e por que a histerese tem TRÊS degraus
 
 Sem histerese o pisca vira estroboscópio a cada sílaba. Mas o defeito tem uma
 segunda porta, e ela custou o número desta seção: **a luz também acende
 sozinha, com a sala vazia.** É o mesmo estroboscópio pelo avesso.
 
 **A MEDIÇÃO QUE MANDOU AQUI:** 605 s (15.120 amostras) do mic do DualSense pelo
-cabo, sala como ela deixou, ninguém falando.
+cabo, sala como o usuário deixou, ninguém falando.
 
 =======  ==========  ==========
 quantil  linear      dBFS
@@ -418,7 +418,7 @@ propriamente dito está lá embaixo, no p90 de -38,4 dBFS.
 
 **Por isso subir só a amplitude é a cura errada**, e a grade mede o porquê:
 mesmo a -18 dBFS a luz ainda acende sozinha duas vezes em 605 s, e a essa
-altura ela já perdeu a fala. O que separa impulso de fala não é altura, é
+altura a luz já perdeu a fala. O que separa impulso de fala não é altura, é
 DURAÇÃO. Daí o terceiro degrau:
 
 * **Amplitude para entrar** — :data:`LIMIAR_ENTRA` (-24,0 dBFS). Deixa 11 dB de
@@ -1038,8 +1038,8 @@ O PREÇO… o que caduca é o padrão desligado"*. A decisão nunca foi implemen
 e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez:
 
     *"segue por default mudo. eu preciso lembrar de clicar no icon do mic pra
-    ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento: citação literal)
-    ativado por padrao"*  # (noqa-acento: citação literal), 17/09/2026
+    ativar e ele ser reconhecido. isso deveria ta  #
+    ativado por padrao"*  #, 17/09/2026
 
 **O QUE MUDOU, E O QUE NÃO MUDOU.** Quem diz a palavra na CHEGADA do controle é
 `daemon/subsystems/hotkey.nascer_no_ar`, chamado pelo gancho de conexão
@@ -1135,7 +1135,7 @@ QUEM GANHA PONTE, em três caminhos e nesta ordem (03/09/2026)
 **E DESLIGAR CONTINUA DESLIGANDO.** Tirar a marca do card no "Aplicar" derruba
 a ponte mesmo que houvesse um pedido aberto: o laço vê o `uniq` SAIR da
 declaração e solta o pedido junto (`_soltar_os_que_o_usuario_desmarcou`). Sem isso o
-gesto mais explícito que ela tem — o interruptor — perderia para um toque de
+gesto mais explícito que o usuário tem — o interruptor — perderia para um toque de
 botão feito minutos antes, que é o oposto de quem manda.
 
 O laço de reconciliação vive num `threading.Thread` e DORME num `Event` entre
@@ -1245,7 +1245,7 @@ A FILA DO QUE FALTA, ORDENADA POR CUSTO — medida em 02/09/2026
    cabia aqui porque *"o ``EventTopic.BUTTON_DOWN`` publica ``{"button",
    "pressed"}`` e não carrega uniq, então o laço do mic não tem como saber
    de qual peça veio o toque"*. A frase sobre o ``BUTTON_DOWN`` continua
-   verdadeira e o motivo dela morreu: o gesto do microfone deixou de passar
+   verdadeira e o motivo do usuário morreu: o gesto do microfone deixou de passar
    por ali. **O item mais caro da lista virou o mais barato.**
 
 2. ``giroscopio`` e ``acelerometro`` — **SAÍRAM DA FILA EM 04/09/2026**
@@ -1267,7 +1267,7 @@ A FILA DO QUE FALTA, ORDENADA POR CUSTO — medida em 02/09/2026
 3. ``mode``, e ele é o único da fila com DOIS eixos. O ``mode`` é da SESSÃO
    (decisão, 10/08/2026): existe um só, e o daemon não pode estar em
    dois ao mesmo tempo. **A MÁSCARA do gamepad NÃO está nessa frase** —
-   ela ficou larga demais e ela a reescreveu em 15/08/2026
+   a frase ficou larga demais e foi reescrita em 15/08/2026
    (MÁSCARA-POR-JOGADOR-01): o co-op cria um gamepad virtual por controle e
    cada um carrega o próprio ``flavor``, então a máscara **é do jogador**,
    com a do jogo como padrão herdado.
@@ -1348,7 +1348,7 @@ A cura: o autoswitch e o lançamento (`origin="launch"`) gravam o perfil em
 Freestyle e do jogo em cena e antes da escolha, e o primeiro pad nasce no modo
 dele (`perfil_que_o_boot_restaura`). O gesto do usuário (`gravar_a_escolha`) e o perfil
 apagado (`ProfileManager.delete`) tiram a memória. O `resolve_boot_profile`
-continua sendo a escolha do usuário: a aba Perfis destaca o que ela ativou, não o
+continua sendo a escolha do usuário: a aba Perfis destaca o que o usuário ativou, não o
 do jogo.
 
 **A corrida do boot** (medida às 20h52 de 14/10/2026, com o `dev` `7b5901cca`): o
@@ -1370,7 +1370,7 @@ Nota datada de 01/10/2026, que morava na docstring do `_o_nome_que_o_boot_restau
 ali morava a RESTORE-ESCOPO-01 (22/07), que pulava todo perfil com regra de janela,
 e o Freestyle entrava no lugar (O-MODO-FREESTYLE-03). No disco do usuário isso é
 todo perfil que não é o Freestyle: medido no diário de 28 e 29/09, seis boots com a
-sessão em Pro Jank Footy, e nenhum abriu no perfil que ela tinha ativado. A decisão
+sessão em Pro Jank Footy, e nenhum abriu no perfil que o usuário tinha ativado. A decisão
 de 29/09 revogou a regra para a escolha do usuário.
 
 
@@ -1411,7 +1411,7 @@ appliers recebem a origem `manual` (`D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`).
 `D-1410-O-APLICAR-SEGURA` (14/10/2026): a D-0110 deixava o «Aplicar» sem a trava
 da troca à mão, e com o terminal em foco o autoswitch caía no «sem candidato» e
 devolvia a escolha aos 12 s (`DEFAULT_DEBOUNCE_SAIDA_SEC`), por cima do perfil que
-ela tinha aplicado. Agora o `reaplicar` arma a trava com o mesmo dono do «Ativar»
+o usuário tinha aplicado. Agora o `reaplicar` arma a trava com o mesmo dono do «Ativar»
 (`armar_a_trava_da_mao`), e quem a solta é o mesmo de sempre: o próximo gesto
 dela, outro jogo com perfil em foco, o lançamento de um jogo com perfil
 (`_a_trava_da_mao_segura`, `origin="launch"`). Ele continua sem gravar a escolha
@@ -1449,7 +1449,7 @@ do jogo ligado, onde só o nó do sistema (o cursor) é alcançado.
 Pedido de 07/09/2026: *«o botão Testar tem que ficar em estado de ligado e ir refletindo os slicers ao vivo
 comigo. E se eu clicar em Parar ele para de testar»*. Era um pulso de meio segundo, e o pulso não responde
 *«quanto é 40%?»*: a mão precisa estar no controle enquanto a outra arrasta a barra. O `_refrescar_o_teste`
-reenvia o par a cada mudança de barra, e a mão só volta ao jogo quando ela clica em Parar.
+reenvia o par a cada mudança de barra, e a mão só volta ao jogo quando o usuário clica em Parar.
 
 Um teste por controle (03/10/2026, ela: *«vibração e háptico é por cada controle e precisam funcionar em
 independente. hoje se eu clico em um o outro controle para de ter o efeito»*): o pedido leva o `uniq`
@@ -1691,7 +1691,7 @@ sem a árvore o PNG não existe, e o ícone vem do tema que o pacote instala.
 
 O `gtk-decoration-layout` da sessão do usuário é `close,maximize,minimize:` (em
 `~/.config/gtk-3.0/settings.ini` e no gsettings), e vale para todo aplicativo GTK. **NÃO SE CONSERTA
-AQUI**: um aplicativo que chamasse `set_decoration_layout` ignoraria a escolha global dela. O
+AQUI**: um aplicativo que chamasse `set_decoration_layout` ignoraria a escolha global do usuário. O
 conserto é de UMA LINHA na máquina do usuário.
 
 ### UMA JANELA POR TELA, E O SEGUNDO CLIQUE A TRAZ PARA A FRENTE (28/09/2026)
@@ -1718,8 +1718,8 @@ roda por `runpy.run_module`, depois da identidade.
 
 ### A INTERFACE LÊ O SERVIÇO, E O TRAZ DE VOLTA SE ELE ESTÁ PARADO (22/10/2026)
 
-Ela lê `daemon.state_full` do daemon que estiver no ar. Esta entrada não mexe em socket nem em
-config; o que ela faz pelo serviço é `trazer_o_servico`: o «Sair» da bandeja para o serviço, e a
+A interface lê `daemon.state_full` do daemon que estiver no ar. Esta entrada não mexe em socket nem em
+config; o que o usuário faz pelo serviço é `trazer_o_servico`: o «Sair» da bandeja para o serviço, e a
 janela reaberta pelo dock era um visor de nada, com o Ativar da aba Perfis recusando
 (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01, o `stop` das 20:17 medido no diário). O Parar
 da aba Sistema é escolha e fica: ele deixa a marca `MARCA_DO_PARAR` no runtime da sessão.
@@ -2017,7 +2017,7 @@ Ponte com o jogo está desligada* — porque isso o produto mede e sabe. O que e
 não pode é PROFETIZAR consequência que ninguém mediu. A decisão de 31/08
 vence a recomendação de 04/09, como venceu nas outras sete.
 
-A TERCEIRA GUARDA — 06/09/2026, ONDA5-01-02, e ela lê o **FONTE**:
+A TERCEIRA GUARDA — 06/09/2026, ONDA5-01-02, e a guarda lê o **FONTE**:
 
 As duas guardas de 04/09 param a frase na SAÍDA — o HTML já gerado e o valor a
 caminho do WebView. Nenhuma delas olha de onde a frase VEM, e por isso *"Alguns
@@ -2035,7 +2035,7 @@ outra alcança.
 
 A PALAVRA ENTROU AO LADO DAS FRASES — 06/09/2026, A-PALAVRA-MESA-SAI-01:
 
-Ela, 06/09: *"Falei do termo mesa que é horrível. Mas as levas anteriores
+O usuário, 06/09: *"Falei do termo mesa que é horrível. Mas as levas anteriores
 entraram na pira de usar isso em tudo no layout. O termo sai e coloca-se termos
 simples pro user comum. feature fica."*
 
@@ -2047,7 +2047,7 @@ régua própria: :data:`PALAVRAS_BANIDAS`, casada por borda de palavra.
 DUAS LEITURAS, E A DIFERENÇA É O PRODUTO — 06/09/2026,
 A-REGUA-DA-PALAVRA-VE-O-PRODUTO-01:
 
-`texto_visivel` lê a página CRUA, que é o que ela abre no navegador quando olha
+`texto_visivel` lê a página CRUA, que é o que o usuário abre no navegador quando olha
 o ensaio. O produto renderiza a mesma página com a folha de usuário do piloto
 por cima, e a primeira regra de produto apaga a `.nota` — o bilhete de projeto. Por
 isso há :func:`texto_visivel_no_produto`, que pergunta ao dono da folha o que

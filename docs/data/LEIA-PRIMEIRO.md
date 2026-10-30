@@ -307,7 +307,7 @@ esteja o documento onde ele aparece.
 | `nao-tem` | `DOMINIO_EXISTE`, sem acento | `não-tem` aparece acentuado na prosa das notas; o portão rejeita o acentuado |
 | **mapa** = `docs/data/mapa-controles.csv` (fonte) | — | "specs", "mapa de canais", "CSV". **`specs.html` é o derivado** — editá-lo à mão é o defeito que o `--check` existe para pegar |
 | **caderno** = `docs/data/ensaios.csv` | — | "caderno de ensaios", "caderno de eliminação", "ensaio" — mas *ensaio* também designa `scripts/ensaio_do_mapa.py` e a sessão de medição com hardware na mesa |
-| **alto-falante** | correção dela, 15/08 | "placa de som" foi usado por engano e o usuário mandou desfazer; "speaker" só no nome de constante |
+| **alto-falante** | correção do usuário, 15/08 | "placa de som" foi usado por engano e o usuário mandou desfazer; "speaker" só no nome de constante |
 
 **Termos que ainda colidem — não invente a resposta, é decisão de produto:**
 
@@ -316,10 +316,10 @@ esteja o documento onde ele aparece.
 - `provado_por` (mapa, <!--@mapa-com-provado-por-->87<!--/--> linhas:
   `aparelho` <!--@mapa-provado-aparelho-->45<!--/-->, `fonte-do-driver`
   <!--@mapa-provado-fonte-do-driver-->26<!--/-->, `olho-do-usuario`
-  <!--@mapa-provado-olho-dela-->12<!--/-->, `descritor`
+  <!--@mapa-provado-olho-do-usuario-->12<!--/-->, `descritor`
   <!--@mapa-provado-descritor-->3<!--/-->) e `observado_por` (caderno,
   <!--@caderno-com-observado-por-->251<!--/--> linhas: `olho-do-usuario`
-  <!--@caderno-observado-olho-dela-->144<!--/-->, `ensaio`
+  <!--@caderno-observado-olho-do-usuario-->144<!--/-->, `ensaio`
   <!--@caderno-observado-ensaio-->69<!--/-->, `aparelho`
   <!--@caderno-observado-aparelho-->25<!--/-->) fazem a mesma pergunta com
   vocabulários diferentes. **Quem sustenta o degrau mais alto é o
@@ -425,7 +425,7 @@ implementar combine antes com quem estiver tocando o `gerar-mapa.py`.
 ### Repetição medida no CSV — proposta, e nenhuma linha apagada
 
 A regra é dura e eu a respeitei: **não apaguei uma linha de prosa.** O que
-segue é medição, para ela decidir.
+segue é medição, para o usuário decidir.
 
 | O que se repete | Custo | Meu parecer |
 |---|---:|---|
@@ -472,7 +472,7 @@ devem ser possíveis de serem comparados."*
 
 <!-- O script que fez a migração (`scripts/migrar-mapa-v2.py`) e os retratos  <!-- ref-externa: `scripts/migrar-mapa-v2.py` foi APAGADO em 05/09/2026 (commit f12978c2). A migração que ele fez já está no mapa; a menção é histórica e o portão a cobrava desde ontem, sem ninguém ver. -->
      congelados (`mapa-controles-v1.csv`, `ensaios-v1.csv`) foram APAGADOS em
-     05/09/2026, com a razão dela: "a ideia é termos menos arquivos, se algo
+     05/09/2026, com a razão do usuário: "a ideia é termos menos arquivos, se algo
      vira a v2 deveria ser o mesmo arquivo sobrescrevendo o anterior".
      Rodá-lo de novo escrevia 264 linhas por cima das 308 de hoje, sem backup,
      imprimindo verde. Não se tranca uma arma descarregada: apaga-se. O git os

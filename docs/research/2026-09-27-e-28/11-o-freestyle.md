@@ -69,7 +69,7 @@ Com isso, o asset no ultra e a decisão `D-2709-O-FREESTYLE-NASCE-NO-ULTRA` pass
 ## O que ficou aberto
 
 - **Nada destas duas rodadas está no `dev`.** As duas foram interrompidas: a da tabela durante a conferência, que não devolveu nada, e a da camada ainda no estudo, sem sprint devolvida. Nem o módulo da tabela (`o_ultra`), nem o teste das réguas, nem as decisões `D-2709-O-FREESTYLE-NASCE-NO-ULTRA` e `D-2709-O-FREESTYLE-ANDA-POR-CIMA` existem na árvore.
-- O desenho da camada também não durou. Na tarde de 27/09, `docs/data/decisoes-de-produto.csv` passou a trazer a `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` (sprint `O-FREESTYLE-E-UMA-CAMADA-SO-01`), decidida pelo usuário contra a camada fixa: o Freestyle é um perfil que ela ajusta nas abas, nasce com tudo no ultra e, ligado, o autoswitch não o troca por perfil de jogo nenhum. A decisão também revoga a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`.
+- O desenho da camada também não durou. Na tarde de 27/09, `docs/data/decisoes-de-produto.csv` passou a trazer a `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` (sprint `O-FREESTYLE-E-UMA-CAMADA-SO-01`), decidida pelo usuário contra a camada fixa: o Freestyle é um perfil que o usuário ajusta nas abas, nasce com tudo no ultra e, ligado, o autoswitch não o troca por perfil de jogo nenhum. A decisão também revoga a `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`.
 - O volume de captura do microfone não tem valor por controle no nascimento.
 - A seção global de som não alcança os quatro controles na troca de perfil.
 - A háptica não tem campo de força no perfil.

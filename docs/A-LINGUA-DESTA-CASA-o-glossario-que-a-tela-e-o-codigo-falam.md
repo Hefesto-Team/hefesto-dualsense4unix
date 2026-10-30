@@ -32,14 +32,14 @@ se acrescenta aqui antes de entrar na tela.
 | **Mira Virtual** | `movimento`, `roteador_de_movimento`, o chip `mira` | o giro do controle vira o analógico direito do jogo; na Navegação, o cursor do computador. Por controle, nos quatro; no Modo Nativo o chip fica cinza |
 | **Navega o PC** · **Move o cursor** · **Só a janela** (o cartão da aba Navegação) | `a06_navegacao.linha_do_cartao`, `is_primary`, `move_o_cursor` | o que cada controle faz no computador. **Navega o PC** é o controle que o Hefesto lê para o mouse, o teclado e os gestos — um só. **Move o cursor** é quem não navega, com a Mira Virtual e o Giroscópio acesos na Navegação e o mouse movendo o cursor (`mouse_emulation.despachando`): o giro dele soma no mesmo cursor (A-MIRA-NA-NAVEGACAO-02, 25/09/2026). **Só a janela** é o resto: os analógicos andam só na janela do Hefesto |
 
-## 2. O que ela escolhe
+## 2. O que o usuário escolhe
 
 | na tela | na casa | o que é |
 | --- | --- | --- |
 | **Status: Ligado / Desligado** | `gamepad_emulation.enabled` | o Hefesto no meio, ou fora |
-| **Modo**: *Jogar pelo Hefesto* · *Conexão Nativa (Sony)* · *Controlar o PC* · *Não mexer no modo* | `mode_kind`, `native_mode`, `mouse_emulation` | como o controle chega ao jogo. Os quatro rótulos são dela (06/08) |
+| **Modo**: *Jogar pelo Hefesto* · *Conexão Nativa (Sony)* · *Controlar o PC* · *Não mexer no modo* | `mode_kind`, `native_mode`, `mouse_emulation` | como o controle chega ao jogo. Os quatro rótulos são do usuário (06/08) |
 | **O controle é visto como**: *DualSense* · *Xbox 360* · *Nintendo Pro* | `flavor`, `mascara` | como o JOGO vê o controle. **A máscara não custa feature** (10-Q6): o Hefesto constrói o mecanismo, não descreve a limitação |
-| **perfil** · **Freestyle** (o padrão, o de fora do jogo) | `Profile`, `freestyle.json`, `active_profile` | o arquivo com o que ela tocou; **clicar já aplica e já grava** (D1/D2), e cinco coisas ficam globais (D3) |
+| **perfil** · **Freestyle** (o padrão, o de fora do jogo) | `Profile`, `freestyle.json`, `active_profile` | o arquivo com o que o usuário tocou; **clicar já aplica e já grava** (D1/D2), e cinco coisas ficam globais (D3) |
 | **Estilo de Jogo** | `estilos_de_jogo/` (receitas), motor a construir | gatilho + vibração + luz prontos para um tipo de jogo. **Não é perfil**: ação, aventura, corrida saem da lista de perfis (06/09) |
 | **Funciona em** (o ambiente do perfil) | `match`, `simple_match`, `steam_app_<id>` | quando o perfil entra sozinho: um jogo, uma janela, todos |
 | **atalho de inicialização** | `hefesto-launch`, o wrapper, `LaunchOptions` | a linha que faz o jogo enxergar o controle pelo Hefesto; **reposta de carona** ao Salvar/Aplicar |
@@ -83,8 +83,8 @@ e por isso ficam de fora da conta.
 | termo | o que é |
 | --- | --- |
 | **piloto** | `interface/hefesto_vivo.py`: a janela GTK com o `WebKit2.WebView` que pinta o HTML dez vezes por segundo (**tique** = 100 ms) |
-| **pacote** | `interface/pacotes/aNN_*.py`: o que cada aba manda ao piloto por tique, e os **gestos** que ela responde |
-| **gerador** · **ensaio** · **publicado** | os geradores `aba01.py`…`aba10.py` de `interface/` escrevem `mockup/` (o ensaio, o que ela olha); `scripts/check_o_desenho_aprovado.py --publicar NN` leva a `interface/paginas/` (o produto). **Publicar é ato dela** |
+| **pacote** | `interface/pacotes/aNN_*.py`: o que cada aba manda ao piloto por tique, e os **gestos** que o usuário responde |
+| **gerador** · **ensaio** · **publicado** | os geradores `aba01.py`…`aba10.py` de `interface/` escrevem `mockup/` (o ensaio, o que ela olha); `scripts/check_o_desenho_aprovado.py --publicar NN` leva a `interface/paginas/` (o produto). **Publicar é ato do usuário** |
 | **campo** · **gesto** · **alvo** | `data-campo` (onde o piloto escreve), `data-gesto` (o que o clique chama), `data-hef-alvo` (como escreve: texto, classe, atributo, marcado…) |
 | **dono** | o único lugar que sabe um fato ou uma frase; a tela LÊ do dono, nunca redigita |
 | **motor** | `app/actions/*`, `daemon/` e os donos em `interface/` (`janela`, `cartao_do_controle`, `logica_do_mapa`): o que a tela lê e chama. A janela GTK saiu inteira em 02/10/2026 |

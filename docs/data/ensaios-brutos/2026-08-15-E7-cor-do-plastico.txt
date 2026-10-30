@@ -675,7 +675,7 @@ O COMANDO LITERAL QUE REFAZ ESTA RODADA
    medição lê o valor inteiro no `HID_UNIQ` do `uevent` da própria máquina.)
 
 ==============================================================================
-(2.1) 14:3a:9a:00:00:ab — hw 0x00000711 — CABO — o que ela chama de BRANCO
+(2.1) 14:3a:9a:00:00:ab — hw 0x00000711 — CABO — o que o usuário chama de BRANCO
 ==============================================================================
 ==============================================================================
   cor_do_plastico.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
@@ -771,7 +771,7 @@ MASCARAS APLICADAS NESTE ARQUIVO (a tela mostrou o valor inteiro):
             Os caracteres 5 e 6 — a COR, que e o objeto do ensaio — estao entre os preservados.
 
 ==============================================================================
-(2.2) 44:46:48:00:00:03 — hw 0x00000811 — CABO — o que ela chama de VERMELHO
+(2.2) 44:46:48:00:00:03 — hw 0x00000811 — CABO — o que o usuário chama de VERMELHO
 ==============================================================================
 ==============================================================================
   cor_do_plastico.py   (instrumentos do ensaio 2+2, versão 2026-08-15)
@@ -878,7 +878,7 @@ O FECHAMENTO — 4 DE 4, E OS QUATRO CONCORDAM COM O NOME QUE ELA USA
   d4:2f:4b:00:00:d8     0x00001111    05      Starlight Blue     (azul)
 
 Quatro unidades, quatro códigos DISTINTOS, e ZERO discordância com o nome que
-ela usa no ensaio. A identificação por cor está fechada em 4 de 4 no CABO.
+o usuário usa no ensaio. A identificação por cor está fechada em 4 de 4 no CABO.
 
 O QUE ISTO **NÃO** AUTORIZA A DIZER, e é o cuidado que a universalidade pede
 -----------------------------------------------------------------------------
@@ -889,7 +889,7 @@ O QUE ISTO **NÃO** AUTORIZA A DIZER, e é o cuidado que a universalidade pede
 2. **Quatro cores distintas é a amostra dela, não uma propriedade do produto.**
    Duas unidades da MESMA cor devolvem o MESMO código — a cor é um RÓTULO
    humano, não um identificador. Quem for usá-la para nomear jogador tem de
-   saber que ela colide no dia em que ela comprar um par igual. O que NÃO
+   saber que ela colide no dia em que o usuário comprar um par igual. O que NÃO
    colide está em `identidade.req_dev_info@dualsense`, e é o MAC.
 3. **`n = 4` é amostra.** Nenhuma linha acima diz "todo DualSense": elas dizem
    quatro unidades, com o `hardware_version` de cada uma nomeado, para que a

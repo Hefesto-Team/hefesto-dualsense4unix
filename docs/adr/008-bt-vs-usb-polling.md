@@ -57,7 +57,7 @@ repositório de 31/07/2026:
   `tests/fixtures/` tem só o capture USB e o `__init__.py`.
 
 Nenhum teste aponta para o capture de BT: a única citação de fixture de capture
-na suíte é `tests/unit/test_fake_controller_capture.py`, e ela usa o arquivo
+na suíte é `tests/unit/test_fake_controller_capture.py`, e a suíte usa o arquivo
 USB. O replay de BT nunca foi coberto porque o insumo nunca esteve aqui.
 
 A fixture **não foi inventada de propósito**. Ela só pode nascer de uma

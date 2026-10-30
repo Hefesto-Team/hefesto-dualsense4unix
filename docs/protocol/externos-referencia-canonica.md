@@ -436,7 +436,7 @@ ATENÇÃO — **isto contradiz a leitura "o Pro é o estável"**, e a contradiç
 útil: o **link** do Pro não cai (20h33m sem trocar de instância), mas o **rádio**
 dele está furado o dia inteiro, e piora com a mesa cheia. É a primeira medida
 quantitativa da qualidade do link do Pro que o projeto tem. **É também a explicação
-candidata para o que ela sente** quando a mesa enche.
+candidata para o que o usuário sente** quando a mesa enche.
 
 ### 3.6 Os LEDs — e o que a árvore faz de errado neles
 
@@ -744,7 +744,7 @@ prova é o `hidraw`, que entrega tudo. O `evdev` entra como **confirmação**, n
 como prova.
 
 **E às 19h33 o HID sumiu com o link de pé** — ver a seção 1.2, que é onde essa
-história termina, e onde está o defeito de watchdog que ela abre.
+história termina, e onde está o defeito de watchdog que a história abre.
 
 **A cadência da queda, MEDIDA nas dez subidas deste boot:** intervalos de 41,9 /
 74,8 / 17,9 / 26,6 / 24,0 / **905,4** (a noite inteira, o usuário dormindo) / 47,6 /
@@ -958,7 +958,7 @@ GRAU: **MEDIDO**. Foi esta a `P-2` desta página, e ela está fechada (seção 8
 
 **A consequência para a doutrina, que era a dívida 7.3:** as regras `udev` da
 casa casam por `HID_UNIQ`, isto é, **por endereço**. Como o endereço muda com o
-modo, **toda regra que case o endereço INTEIRO troca de alvo quando ela troca de
+modo, **toda regra que case o endereço INTEIRO troca de alvo quando o aparelho troca de
 modo** — é a armadilha, e ela é real. A `assets/82-nintendo-pro-nosniff.rules`
 **não é uma delas, e não está acertando por sorte:** ela casa
 `ENV{HID_UNIQ}=="e0:f6:b5:*"`, ou seja **só o prefixo de OUI do Pro genuíno**, e
@@ -1145,7 +1145,7 @@ produto se apoiava, sem saber, num grau baixo.
 
 **A consequência, separada em duas, porque só uma é dívida:**
 
-- **regra que case o endereço INTEIRO troca de alvo quando ela troca de modo.**
+- **regra que case o endereço INTEIRO troca de alvo quando o aparelho troca de modo.**
   O risco é real e fica nomeado aqui para quem for escrever a próxima;
 - **regra que case só o prefixo de OUI não troca**, e é o caso da
   `assets/82-nintendo-pro-nosniff.rules`, que casa `ENV{HID_UNIQ}=="e0:f6:b5:*"`
@@ -1313,7 +1313,7 @@ por 10 min com dois controles; **439** com quatro), mas correlação com dois
 controles a menos **e** a tela de Bluetooth aberta **e** o inquiry ativo é
 confundida por três variáveis ao mesmo tempo.
 
-**P0.** **Fechar a tela de Bluetooth do COSMIC** — ela liga o `ISCAN` e consome
+**P0.** **Fechar a tela de Bluetooth do COSMIC** — a tela liga o `ISCAN` e consome
 ar (6.6). Anotar `hciconfig` antes e depois.
 **ANTES.** Contagem de episódios por 10 minutos, com quatro links e `ISCAN`
 ligado (já colhida: 103, 439, 208, 117, 155, 175).

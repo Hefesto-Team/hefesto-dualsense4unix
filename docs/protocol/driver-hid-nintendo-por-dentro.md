@@ -94,7 +94,7 @@ sobre esses pontos é **[MAINLINE]** — vale em qualquer máquina com
 ### 1.2 Os onze parâmetros, e os valores que estão valendo agora
 
 O mainline tem **zero** parâmetros de módulo; a presença de
-`/sys/module/hid_nintendo/parameters/` é, ela mesma, o marcador de "fork
+`/sys/module/hid_nintendo/parameters/` é, o próprio usuário, o marcador de "fork
 carregado" que o doctor usa.
 
 | parâmetro | default do fork | **valendo agora** |

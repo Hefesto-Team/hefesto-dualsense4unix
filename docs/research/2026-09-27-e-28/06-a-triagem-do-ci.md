@@ -175,7 +175,7 @@ Resultado do grupo: de 14 failed + 6 errors na coleta inteira para 0.
 Os grupos leram só o log da perna 3.12. As pernas 3.10 e 3.11 também reprovavam
 `test_toda_citacao_de_linha_em_comentario_de_codigo_confere`. **Causa:** no 3.12
 o `tokenize` parte a f-string em `FSTRING_START/MIDDLE/END`, e a régua deixava
-de ver o texto dela: o 3.12 lia 648 citações, o 3.10 e o 3.11 liam 667. Duas das
+de ver o texto do usuário: o 3.12 lia 648 citações, o 3.10 e o 3.11 liam 667. Duas das
 19 invisíveis tinham envelhecido, em `aba06.py` e `aba10.py`. **Cura:** a régua
 conta o `FSTRING_MIDDLE` como prosa
 (`tests/unit/test_portao_o_par_com_metade_ligada.py:691`), as quatro versões

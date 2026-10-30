@@ -27,7 +27,7 @@ físico não chega ao jogo. Nada se decide por appid, por nome ou por pasta do j
 | Mullet Mad Jack | só os perfis do comum no `global-metadata.dat` | `0ce6` | as três valem |
 
 Nos 43 jogos instalados da biblioteca medida em 22/10/2026, a regra única dá a mesma roupa e a
-mesma fonte da escada anterior, linha a linha: ela muda a forma da decisão, não o resultado.
+mesma fonte da escada anterior, linha a linha: a regra muda a forma da decisão, não o resultado.
 
 ## Por que o Edge é o padrão
 

@@ -47,7 +47,7 @@ do usuário passa a brigar com o clique de quem mede — os dois se quebram.
    impedir.
 
 **O que NUNCA se faz, por conta própria:** os gestos que TROCAM a área de
-trabalho visível. Os dois trocam o que ela está vendo. Só quando ela pedir para
+trabalho visível. Os dois trocam o que o usuário está vendo. Só quando o usuário pedir para
 ver.
 
 **E a irmã desta regra, que já custou uma sessão inteira:** para matar um
@@ -102,7 +102,7 @@ dizia "os três scripts" com cinco no disco.
 
 O `olhar.py` dirige as páginas num Chrome headless e serve para medir layout,
 `:hover` e fotografar o DESENHO. **Ele não alcança o `WebKit2.WebView`** — o
-motor que ela usa de verdade. Quem prova o produto é o piloto, com a ponte JS e
+motor que o usuário usa de verdade. Quem prova o produto é o piloto, com a ponte JS e
 o daemon vivo. São dois instrumentos com alvos diferentes, e o segundo é o que
 fecha uma entrega.
 
@@ -123,7 +123,7 @@ prova abre o piloto e pede o olho de quem confere (PROVA-DE-TELA-01).
 
 O `retratar_dialogos.py` fotografava os **diálogos** de confirmação, que nascem
 por cima e vivem um segundo. A interface nova não tem diálogo GTK modal: o que
-ela usa é o canal de recado das dez páginas, que a foto normal alcança.
+a interface usa é o canal de recado das dez páginas, que a foto normal alcança.
 
 ---
 
@@ -149,7 +149,7 @@ Seja honesto sobre isto ao usá-la:
   sem o fragmento, enquanto o clique num `<a href="…#trocar">` o mantém;
 - **não substitui o olho de quem confere.** A regra da casa
   (PROVA-DE-TELA-01)
-  continua valendo: interface só fecha com ela olhando.
+  continua valendo: interface só fecha com o usuário olhando.
 
 Para *"o que tem nesta aba, e onde?"*, a foto é fiel. É para isso que serve.
 
@@ -431,7 +431,7 @@ existe.
 
 ### O MangoHud escreve ZERO na metade GPU inteira nesta máquina
 
-**MEDIDO em 23/08/2026**, na RTX 4060 dela, num log real de sessão do Sackboy
+**MEDIDO em 23/08/2026**, na RTX 4060 do usuário, num log real de sessão do Sackboy
 (`/tmp/hefesto-mh/*.csv`, 923 linhas de dado):
 
 | coluna | zeros |
@@ -541,7 +541,7 @@ Escrito em 25/08/2026, depois de duas rodadas de mockup jogadas fora por não
 haver regra escrita.
 
 **Quando vale.** Quando a tela vai mudar de forma, não de detalhe — e quando a
-pergunta é *"isso resolve o que eu preciso?"*, que ela responde **vendo**, nunca
+pergunta é *"isso resolve o que eu preciso?"*, que o usuário responde **vendo**, nunca
 lendo. Um mockup em HTML custa horas; uma aba refeita custa dias.
 
 **As cinco regras, e cada uma nasceu de um defeito da mesma noite:**

@@ -72,7 +72,7 @@ Régua: `tests/unit/test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar.py`
 - a meia chave sai no daemon, com a janela fechada. `_fechar_sem_chegar` tira só a chave que o Pair deste movimento criou no destino: a que está `Paired`, sem `Connected` e fora do `HID_PHYS` (`_esquecer_a_meia_chave`);
 - o nome do controle mora em `ControleDeclarado.nome`, no `maquina.json`, com até 248 bytes, gravado por `gravar_o_nome_do_controle` (`src/hefesto_dualsense4unix/utils/maquina.py`), que nunca levanta. A central aprende o nome por observação em `cuidar_dos_nomes()`, a cada 2 s. Só a mudança num objeto já visto conta como renomear, e o objeto que aparece recebe o nome guardado. Isso cobre também quem renomeia por fora do produto. Só controle grava: fone e teclado seguem com o nome no pareamento.
 
-A conferência da `-02` achou um objeto sem chave, criado no mesmo caminho antes da volta seguinte, lido como «ela apagou o nome»: o nome saía do disco. «Apagou» passou a valer só em objeto com `pareado is True`. E oito curas que nenhuma régua mordia ganharam régua. Entre elas estão as guardas de `Connected` e de `HID_PHYS`, sem as quais sairia a chave de um controle no ar.
+A conferência da `-02` achou um objeto sem chave, criado no mesmo caminho antes da volta seguinte, lido como «o usuário apagou o nome»: o nome saía do disco. «Apagou» passou a valer só em objeto com `pareado is True`. E oito curas que nenhuma régua mordia ganharam régua. Entre elas estão as guardas de `Connected` e de `HID_PHYS`, sem as quais sairia a chave de um controle no ar.
 
 Réguas: `tests/unit/test_o_pareamento_que_nao_chega_devolve_os_botoes.py` e `tests/unit/test_o_nome_do_aparelho_volta_na_reconexao.py`, 81 funções ao todo, parametrizadas nos três adaptadores e nos seis pares.
 

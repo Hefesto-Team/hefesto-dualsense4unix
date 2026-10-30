@@ -50,7 +50,7 @@ texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado
 `desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`; `id` (até 40 letras) é o alvo das ações do aparelho e `ligado` (verdadeiro ou falso) é a chave dele, os dois da extensão que gere os aparelhos, e `controles` são os que só aquele aparelho tem (ver «As ações, os aparelhos e o controle livre»). Cada `conexoes[]` é
 `{id, tipo, transporte, estado, motivo}`: `id` (até 40 letras) e `tipo` (até 30) são da extensão, `transporte` é
 `usb`, `bluetooth`, `rede` ou `local`, `estado` é o mesmo dos aparelhos e `motivo` (até 120 letras, ou `null`) diz
-por que ela não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32003`, com a frase).
+por que o aparelho não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32003`, com a frase).
 
 `falhou` é só o que a pessoa tem de consertar: a permissão, o endereço que falta, o aparelho sem suporte, o serviço
 que não abre. O aparelho, o adaptador ou o serviço que só não está ligado ao computador é `desligado`, com o `motivo`
@@ -561,7 +561,7 @@ opção devolve a barra do sistema na hora.
 ## A extensão que substitui outra
 
 O campo `substitui` do manifesto é a lista dos `id` das extensões de quem esta toma o lugar (sem repetir, na
-forma de id, nunca uma das que vêm com o Hefesto, nunca ela mesma). Ao instalar ou atualizar esta, cada uma
+forma de id, nunca uma das que vêm com o Hefesto, nunca o próprio usuário). Ao instalar ou atualizar esta, cada uma
 delas que estiver instalada:
 
 - para (é desligada, e o instalador espera ela parar; a que não para recusa a troca inteira, e as que já tinham

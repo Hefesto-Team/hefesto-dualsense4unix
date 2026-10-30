@@ -110,7 +110,7 @@ o cartão DualSense perde os botões de PlayStation; eles voltam no modo
 DualSense, pelo uhid. A linha da aba Controles («O que o jogo vê deste
 controle») continua mostrando a máscara do cartão, enquanto o jogo passa a ver
 o Xbox 360. Por isso a escolha só pode entrar no registro de decisões **como
-escolha pendente da pergunta 4**, nunca como decisão de produto; se ela escolher a
+escolha pendente da pergunta 4**, nunca como decisão de produto; se o usuário escolher a
 opção (a), a D-1309 ganha nota datada.
 
 **A dívida que ficou em régua.** Se o modo muda com um pad Nintendo de pé, o
@@ -334,7 +334,7 @@ com oito conhecidos, ~10 ms.
   um controle em menos de 1 s; reiniciar o servidor de som e ver «não sei» e a
   reconstrução). O processo da janela continua perguntando direto.
 - **Salvar:** gravar `D-2709-O-SALVAR-LE-O-PERFIL`. O mudo do microfone é do
-  controle (resposta 9 dela: «do controle, vale em todo jogo»), mas ainda mora
+  controle (resposta 9: «do controle, vale em todo jogo»), mas ainda mora
   no perfil, e o `_lembrar_do_som` (`interface/pacotes/a02_controles.py:2177`)
   ainda o grava no perfil ativo em vez de deixá-lo ao daemon. O
   Aplicar leva menos da metade do que a ativação leva (sprint proposta

@@ -51,7 +51,7 @@ dpad_up,D-pad cima,↑,botao,direcional,dpad_up,dpad_up,25.5,38.46,32.5,47,ALTA,
 dpad_right,D-pad direita,→,botao,direcional,dpad_right,dpad_right,30.96,45.46,39.5,52.46,ALTA,,0,-,dpad
 dpad_down,D-pad baixo,↓,botao,direcional,dpad_down,dpad_down,25.5,50.92,32.5,59.46,ALTA,,0,-,dpad
 dpad_left,D-pad esquerda,←,botao,direcional,dpad_left,dpad_left,18.5,45.46,27.04,52.46,ALTA,,0,-,dpad
-l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,32,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.",0,-,gatilhos
+l1,L1,-,botao,ombros,l1,l1,26.31,25.64,37.02,32,ALTA,"Ombro, o de CIMA, e ele ENCOSTA no casco — o usuário, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.",0,-,gatilhos
 r1,R1,-,botao,ombros,r1,r1,91.07,25.62,101.78,32,ALTA,"Ombro, o de CIMA, encostado no casco.",0,-,gatilhos
 l2,L2,gatilho adaptativo esquerdo,gatilho,gatilhos,l2,l2,19.43,28.13,28.02,33.62,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-,gatilhos
 r2,R2,gatilho adaptativo direito,gatilho,gatilhos,r2,r2,100.07,28.11,108.66,33.61,ALTA,"Gatilho adaptativo, e é o de BAIXO.",0,-,gatilhos
@@ -64,7 +64,7 @@ ps,PS,botão home,botao,centro,ps,ps,60.54,59.56,67.59,66.3,ALTA,"O glifo É o b
 mic,Microfone,-,entrada,audio,mic,mic,62.15,68.03,66.7,68.78,ALTA,"O botão de MUDO, e ele é pequeno: a barra de 7x1 que estava aqui virava um risco atravessado no corpo, e o usuário viu — 'essa linha não existe no controle da vida real'.",0,-,painel
 alto-falante,Alto-falante,-,saida,audio,alto-falante,alto-falante,60.1,55.38,68.74,58.22,ALTA,Duas linhas de furos: 5 em cima e 4 embaixo.,0,-,painel
 lightbar,Lightbar,barra de luz|iluminação,luz,luzes,lightbar,lightbar,41.13,30.93,87.07,50.31,ALTA,"Duas tiras que LADEIAM o touchpad e acompanham a borda dele. Uma feature, duas peças: o firmware não as endereça em separado.",0,-,luz
-led-jogador,Indicador de jogador,cinco lâmpadas|posto|assento,luz,luzes,led-jogador,led-jogador,56.71,52.23,72.13,52.9,ALTA,"As cinco lâmpadas montam sobre a BASE do touchpad, como o lightbar monta sobre as laterais — ela, 27/08. É o PADRÃO que diz o número: 1 | vão | 3 | vão | 1.",0,-,luz
+led-jogador,Indicador de jogador,cinco lâmpadas|posto|assento,luz,luzes,led-jogador,led-jogador,56.71,52.23,72.13,52.9,ALTA,"As cinco lâmpadas montam sobre a BASE do touchpad, como o lightbar monta sobre as laterais — o usuário, 27/08. É o PADRÃO que diz o número: 1 | vão | 3 | vão | 1.",0,-,luz
 feat-giroscopio,Giroscópio,gyro,sensor,sensores,giroscopio,feat-giroscopio,7.5,29.46,120.5,101.51,ALTA,"Mede a rotação do CONTROLE INTEIRO — por isso a peça dele é o corpo, e não uma caixa no meio da placa; ela contornou a região na tela, 27/08. 1024 LSB/(graus/s), mais ou menos 2048 graus/s. 250,0 Hz exatos no cabo, medido nesta casa.",0,-,-
 feat-acelerometro,Acelerômetro,accel,sensor,sensores,acelerometro,feat-acelerometro,7.5,29.46,120.5,101.51,ALTA,"Mede a aceleração do CONTROLE INTEIRO, como o giroscópio. 8192 LSB/g, mais ou menos 4 g.",0,-,-
 feat-bateria,Bateria,-,sensor,energia,bateria,feat-bateria,40.86,31.04,87.28,50.4,ALTA,"As DUAS TIRAS DO LIGHTBAR são o medidor, e é o que o aparelho faz: cheias em 100%, apagadas em 0%, piscando vermelho quando está acabando. Decisão de produto, 27/08.",0,-,-

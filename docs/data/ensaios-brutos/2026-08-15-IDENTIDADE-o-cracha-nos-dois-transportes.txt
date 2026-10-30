@@ -184,7 +184,7 @@ A CAUSA — e a primeira resposta que eu escrevi aqui estava ERRADA:
   e com ela CADA UM dos quatro controles já passou pelos DOIS transportes.
   Nenhum deles é "o do cabo" ou "o do rádio".
 
-O QUE ISSO **NÃO** MUDA: nada da rodada das 22h12. Ela fechou às 22:12:52, com
+O QUE ISSO **NÃO** MUDA: nada da rodada das 22h12. O usuário fechou às 22:12:52, com
 o censo de abertura confirmando 2+2 e os quatro respondendo em 1 tentativa. A
 regra 4 da ordem de execução do PLANO-DA-MESA-2-2 é explícita — "não conclua
 nada sobre o aparelho, ele não está mais lá" —, e é por isso que os vereditos

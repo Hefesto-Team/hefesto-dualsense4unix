@@ -194,7 +194,7 @@ roteiro.
 2. Abra a aba Iluminação.
 3. Anote o número de jogador de cada um dos quatro controles.
 4. Anote a cor da barra de luz de cada um dos quatro.
-5. Leia a conta no canto de cima à direita e anote o que ela diz.
+5. Leia a conta no canto de cima à direita e anote o que a conta diz.
 6. Pegue o P3, que é um dos dois do rádio.
 7. Segure o botão PS do P3 — o redondo com o símbolo da PlayStation, no meio de baixo, entre os dois analógicos.
 8. Continue segurando até todas as luzes do P3 apagarem.
@@ -287,7 +287,7 @@ roteiro.
 **Por controle.**
 
 * **P1** — É ESTE que deve tremer. Está no cabo. Mude o degrau da «Força da vibração» só na coluna dele, segure-o, clique em «Testar» na coluna dele, troque o degrau com ele tremendo e sinta a força mudar. No fim, «Parar».
-* **P2** — Não pode tremer. Está no cabo. Deixe-o parado na mesa durante o teste do P1. A coluna dele tem de continuar no degrau que estava — se ela mudou junto com a do P1, o ajuste vazou de um controle para outro.
+* **P2** — Não pode tremer. Está no cabo. Deixe-o parado na mesa durante o teste do P1. A coluna dele tem de continuar no degrau que estava — se a coluna mudou junto com a do P1, o ajuste vazou de um controle para outro.
 * **P3** — Não pode tremer. Está no rádio. Parado na mesa, sem encostar. Se ele tremer, anote que quem tremeu sem ser chamado estava no RÁDIO — é o que separa um defeito do cabo de um defeito do rádio.
 * **P4** — Não pode tremer. Está no rádio. Parado na mesa, sem encostar. Confira também que a coluna dele não trocou de degrau sozinha quando você mexeu na do P1.
 
@@ -639,7 +639,7 @@ roteiro.
 * **P3** — O primeiro do rádio. Só tem de responder dentro do jogo. É o que costuma cair primeiro quando alguma coisa dá errado sem fio, então aperte um botão dele com atenção.
 * **P4** — O segundo do rádio. Só tem de responder dentro do jogo. Se três responderem e ele não, o defeito é do rádio ou do quarto lugar na fila — não da troca de perfil.
 
-**A espera.** O jogo leva minutos para chegar ao menu, nas duas vezes em que você o abre, e você não precisa ficar olhando. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. A troca de perfil acontece sozinha e continua feita quando você voltar — nada se desfaz por você ter saído da frente. Ao voltar da segunda vez, o primeiro lugar a olhar é a barra de luz do P1; se ela já apagou o amarelo, confirme pelo nome em «Perfil ativo», com Alt+Tab para o Hefesto.
+**A espera.** O jogo leva minutos para chegar ao menu, nas duas vezes em que você o abre, e você não precisa ficar olhando. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. A troca de perfil acontece sozinha e continua feita quando você voltar — nada se desfaz por você ter saído da frente. Ao voltar da segunda vez, o primeiro lugar a olhar é a barra de luz do P1; se a barra já apagou o amarelo, confirme pelo nome em «Perfil ativo», com Alt+Tab para o Hefesto.
 
 **A armadilha.** O «Modo Freestyle», na aba Jogar, segura o perfil que está valendo: aceso, janela nenhuma o troca, nem a do jogo com perfil próprio. Confira que ele está apagado antes de começar, para medir a troca automática sem ele no meio. Trocar de perfil pelo «Ativar» segura a troca automática por trinta segundos — o jogo leva mais que isso para abrir, mas não reabra o jogo no mesmo instante. Perfil que «Funciona em» «Só quando eu escolher» nunca conta como o perfil daquele jogo — a troca só acontece com um perfil que nomeia o jogo. O jogo sem o atalho ganha o atalho sozinho quando a Steam fecha, e o passo 13 é o jeito de não esperar — o «Aplicar aos jogos da Steam», da aba Sistema, precisa do jogo fechado. A frase que o «Detectar» escreve no cartão da Steam aparece só por um instante; a lista fica, e é ela que o passo 5 lê. O amarelo é para não esbarrar num tom com X: o verde é a cor automática do P3. E se, ao abrir o jogo, a barra de luz do P1 piscar amarela e mudar, confie no nome em «Perfil ativo», não na luz, e anote: a Steam não disputa mais a barra, e o amarelo que o perfil do jogo guarda para o P1 vence a cor que o jogo mandar. Por fim, o tamanho: este é o teste mais longo dos 21, e é longo de propósito. Ele encadeia quatro coisas que só provam juntas — ver se o jogo tem o atalho, criar o perfil que nomeia o jogo, marcar esse perfil com uma cor que se enxerga de dentro da partida, e só então fechar tudo e abrir de novo para ver a troca acontecer sem a sua mão.
 
@@ -649,7 +649,7 @@ roteiro.
 
 **O que isto prova.** Prova que mandar um controle que já está pareado voltar pelo rádio, pela própria aba Conexões, mostra a espera pelo PS com a contagem, devolve ele ao mesmo lugar — sem abrir um segundo assento para o mesmo controle — e que o «Cancelar» obedece.
 
-**Onde olhar.** Na aba Conexões do Hefesto, na seção «Gestão de controles», que abre com um clique no nome dela. Três coisas ali: a conta no canto da seção (por exemplo «4 controles • 2 USB • 2 BT»), a linha de cada controle («Sony • Player 4 • nome • BT» — o fim da linha diz USB para cabo e BT para rádio) e, dentro da linha aberta de um controle, o botão «A luz não acende». Durante a espera, o mesmo botão passa a dizer «Cancelar», e aparece no cartão dele a linha «▲ Aperte PS no controle · procurando…» com os segundos correndo para trás, a partir de 60.
+**Onde olhar.** Na aba Conexões do Hefesto, na seção «Gestão de controles», que abre com um clique no nome do usuário. Três coisas ali: a conta no canto da seção (por exemplo «4 controles • 2 USB • 2 BT»), a linha de cada controle («Sony • Player 4 • nome • BT» — o fim da linha diz USB para cabo e BT para rádio) e, dentro da linha aberta de um controle, o botão «A luz não acende». Durante a espera, o mesmo botão passa a dizer «Cancelar», e aparece no cartão dele a linha «▲ Aperte PS no controle · procurando…» com os segundos correndo para trás, a partir de 60.
 
 **Os passos.**
 
@@ -840,7 +840,7 @@ roteiro.
 
 1. Abra a aba Iluminação.
 2. Confira na linha «Modelo» que a coluna do P4 termina em BT.
-3. Olhe a barra de luz do P4 no aparelho e anote a cor que ela tem agora.
+3. Olhe a barra de luz do P4 no aparelho e anote a cor que a barra tem agora.
 4. Clique, na linha «Cor» da coluna do P4, num tom sem X e bem diferente da cor de agora — o amarelo, o quinto dos onze, costuma estar livre.
 5. Confira que a barra de luz do P4 virou a cor escolhida na hora.
 6. Confira que as barras de luz do P1, do P2 e do P3 não mudaram.

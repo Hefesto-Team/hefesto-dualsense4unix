@@ -5,7 +5,7 @@
 > **Medido em 04/09/2026, e é o achado maior da leva daquele dia.** As dez
 > frentes de aba entregaram, e **nenhuma publicou** — `git diff` em
 > `src/hefesto_dualsense4unix/interface/paginas/` não mostra **um byte** de
-> mudança. O produto que ela abre continua o de antes.
+> mudança. O produto que o usuário abre continua o de antes.
 >
 > ```
 > cadeado         ensaio=2  publicado=0
@@ -24,7 +24,7 @@
 
 
 **03/09/2026.** Esta casa tinha dois números sobre a interface nova, e os dois
-mediam a interface nova **contra ela mesma**:
+mediam a interface nova **contra o próprio usuário**:
 
 | número | o que compara | o que ele não pode responder |
 | --- | --- | --- |
@@ -114,7 +114,7 @@ que só o HTML tinha, saiu do mapa com o botão. Na mesma recontagem a linha do
 «Aplicar aos jogos» da 09 fechou: o botão já estava publicado.
 
 **A 08 CAIU DE 45% PARA 33% EM 23/09/2026, e a razão é a mesma régua dura.**
-A seção «Rádio e Adaptadores» virou o desenho aprovado dela
+A seção «Rádio e Adaptadores» virou o desenho aprovado
 (TRANSPLANTE-DA-SECAO-01): a tabela dos adaptadores virou cartões, os vizinhos
 viraram selos, a vizinhança passou a ser dita por porta e a ocupação passou a
 ser LIDA do daemon em vez de recalculada — quatro `IGUAL` viraram `DIFERENTE`.
@@ -183,7 +183,7 @@ maior bloco é o `DIFERENTE`.
   `_apply_policy_to_widgets` (`app/actions/rumble_actions.py:532`) fazendo a
   exclusão mútua entre os quatro. No HTML a classe `on` está cravada da cena do
   mockup: com `rumble_policy = 'balanceado'` no daemon, a tela mostra `Máximo`
-  aceso no P1. Ela clica, o daemon obedece, e a tela não muda. **O produto já
+  aceso no P1. O usuário clica, o daemon obedece, e a tela não muda. **O produto já
   sabe disso por escrito** — `SEM_DONO["degrau-aceso"]`
   (`src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:36`) — e o
   pintor já tem o alvo `classe`. Falta o endereço no HTML e a emissão no pacote.
@@ -196,7 +196,7 @@ maior bloco é o `DIFERENTE`.
      medida e o endereço dos dois lados no CSV. Ela não é decisão a preservar:
      é um fato que a medição derrubou. -->
 - **`03-gatilhos` · os números dos 54 parâmetros.** 10 dos 11 modos têm
-  ajuste, e na GTK todos são `Gtk.Scale` que ela arrasta. No desenho do todo
+  ajuste, e na GTK todos são `Gtk.Scale` que o usuário arrasta. No desenho do todo
   (publicado em 15/10/2026) a coluna mostra só o nome do acionamento e o da
   imersão: os números moram no quadro «Criar efeitos novos», quatro barras
   fixas que valem para o modo de partida. O «Montar do zero» saiu da lista, e
@@ -207,7 +207,7 @@ maior bloco é o `DIFERENTE`.
 ### `DIFERENTE` — os dois fazem, e não a mesma coisa
 
 **Quantas são hoje: a coluna `DIFER` da tabela da §2.** É a categoria que mais
-engana, porque a tela não fica vazia: ela responde outra pergunta. E ela
+engana, porque a tela não fica vazia: a tela responde outra pergunta. E ela
 **cresce** enquanto o trabalho anda: das dez linhas que deixaram
 `FALTA_NO_HTML` entre 04/09 de manhã e a tarde, quatro pararam aqui e seis
 foram direto a `IGUAL`.
@@ -221,7 +221,7 @@ foram direto a `IGUAL`.
   botões, combinação livre); o HTML edita `Profile.button_actions` (21 botões,
   lista fechada). Os dois existem e o daemon aplica os dois — mas o
   `apply_button_actions` roda **depois** e reescreve o conjunto inteiro de
-  bindings a partir do de fábrica. **No instante em que ela clica "Guardar" na
+  bindings a partir do de fábrica. **No instante em que o usuário clica "Guardar" na
   tela nova, tudo o que editou na tabela da GTK deixa de valer, em silêncio.**
 - **`01-jogar` · a palavra do transporte.** A GTK diz `cabo` e `rádio`, com
   função dona (`palavra_do_transporte`); o HTML diz `USB` e `BT`, com um `if`
@@ -605,7 +605,7 @@ CSV**: `01-jogar` vai de `13 IGUAL · 1 FALTA · 31%` para `12 · 2 · 29%`,
 `02-controles` de `25 DIFER · 5 FALTA` para `24 · 6`, e `TODAS` de
 `144 · 161 · 29 · 36%` para `143 · 160 · 31 · 36%`.
 
-**A razão:** a terceira lista dela manda as frases de aviso pararem de aparecer
+**A razão:** a terceira lista do usuário manda as frases de aviso pararem de aparecer
 nas abas (o índice), e a
 marca era uma: o asterisco com o motivo da queda no `title`. No WebKit ele nunca
 acendia, porque a camada de dicas tira o `title` e `.degradou[title]` não casava.
@@ -660,7 +660,7 @@ função.
 
 ## Nota de verificação — 25/09/2026, a contagem do exame sai da aba Sistema
 
-`A-09-SISTEMA-EM-TRES-SECOES-01`, os ajustes dela das 22h13: *«Remove esse 8
+`A-09-SISTEMA-EM-TRES-SECOES-01`, os ajustes do usuário das 22h13: *«Remove esse 8
 linhas deixa o espaço vazio»*. A linha da contagem no CSV foi de `SO_NO_HTML`
 para **`IGUAL`**, pelo mesmo caminho do «Ver os plugins» (13/09): nenhum dos
 dois lados conta as linhas do exame, e o sinal é a decisão escrita no pacote

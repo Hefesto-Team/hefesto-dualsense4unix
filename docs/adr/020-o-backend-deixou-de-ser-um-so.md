@@ -42,7 +42,7 @@ suíte. O que caducou não é a arquitetura: é a frase *"o backend é a
 Registrar, como retrato vigente, que o produto fala com o hardware por **seis
 camadas**, e que nenhuma delas substitui as outras:
 
-| camada | onde mora | o que ela faz, e por que existe |
+| camada | onde mora | o que o usuário faz, e por que existe |
 |---|---|---|
 | **hidraw / `pydualsense`** | `core/backend_pydualsense.py` | o caminho de OUTPUT (gatilhos, vibração, luz, LED do mic). Usa uma subclasse fixada (`_PinnedPyDualSense`) que abre **por caminho** de hidraw, para não depender da varredura da biblioteca |
 | **o report OUT montado aqui** | `core/ds_output_report.py` | o buffer `0x02` (USB) e `0x31` (BT) é montado por nós e validado contra o `hid-playstation` do **kernel**, nunca contra a `pydualsense` |

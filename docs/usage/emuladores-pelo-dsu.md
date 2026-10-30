@@ -63,7 +63,7 @@ x = 320, fora da tela). Sem esses campos vale o do DS4, de (100, 50) a (1800,
 4. `Use controller touchpad` DESMARCADO.
 5. `Test` responde em até 8 segundos; `OK` recarrega.
 
-**NÃO rode `Calibration: Configure`**: ela grava como máximo o primeiro ponto
+**NÃO rode `Calibration: Configure`**: o comando grava como máximo o primeiro ponto
 que passa de 100 unidades nos dois eixos, e todo toque além vira x = 320 ou
 y = 240. Se calibrou, feche o Azahar e ponha 1920 e 1080 no ini.
 

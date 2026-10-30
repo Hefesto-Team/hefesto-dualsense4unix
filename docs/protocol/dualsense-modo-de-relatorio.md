@@ -45,7 +45,7 @@ O descritor que este projeto leu em 15/08 **já declarava os dois** (*"INPUT `0x
 **Quatro fontes independentes dizem que é uma leitura de feature — e nomeiam
 TRÊS ids diferentes:**
 
-| fonte | id que ela nomeia | o que ela diz |
+| fonte | id que a fonte nomeia | o que a fonte diz |
 |---|---|---|
 | `libsdl-org/SDL`, `src/joystick/hidapi/SDL_hidapi_ps5.c:426-429` | **`0x09`** (serial/pairing info) | comentário no fonte: *"Read the serial number (Bluetooth address in reverse byte order) — This will also enable enhanced reports over Bluetooth"* |
 | o MESMO arquivo, `:434-437` | **`0x20`** (firmware info) | *"Read the firmware version — This will also enable enhanced reports over Bluetooth"* |
@@ -74,7 +74,7 @@ Native PS mode"*.
 `ps_gamepad_create`** — ou seja, antes de o driver consumir o primeiro report
 de entrada:
 
-| ordem | função | linha | feature que ela lê |
+| ordem | função | linha | feature que a função lê |
 |---|---|---|---|
 | 1ª | `dualsense_get_mac_address` | `:1897` (corpo em `:1309`, pedido em `:1318`) | **`0x09`** (`DS_FEATURE_REPORT_PAIRING_INFO`, `:151`) |
 | 2ª | `dualsense_get_firmware_info` | `:1904` (pedido em `:1285`) | **`0x20`** (`:153`) |

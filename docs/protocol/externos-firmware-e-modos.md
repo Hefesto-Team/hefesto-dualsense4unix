@@ -17,7 +17,7 @@
 
 Esta página **complementa** três que já existem e não repete o que elas provam:
 
-| página | o que ela já responde |
+| página | o que a página já responde |
 |---|---|
 | `docs/usage/troubleshooting-8bitdo.md` | os combos, como identificar o modo agora, e a morte por Bluetooth em modo Switch |
 | `docs/protocol/externos-referencia-canonica.md` | o comportamento observável dos quatro aparelhos, por barramento |
@@ -621,7 +621,7 @@ máquina**, com `Flags = is-bootloader`.
 **Riscos declarados: nenhum aviso formal de brick foi encontrado escrito pela
 8BitDo.** O que existe é operacional e vem de fonte secundária — não desconectar
 durante a gravação, e refazer sem desconectar se falhar. **Grau MÉDIA**, e a
-ausência de aviso formal é ela mesma um dado.
+ausência de aviso formal é o próprio usuário um dado.
 
 **A rede de segurança real, e é de código:** o `fwupd` marca esses aparelhos com
 `REPLUG_MATCH_GUID` porque **o bootloader re-enumera com VID e PID diferentes**
@@ -846,7 +846,7 @@ aqui.
   re-parear e, provavelmente, uma identidade órfã em `controllers.json`;
 - **e cada modo tem o próprio pareamento**, porque o endereço muda com o modo
   (2.7). Um firmware que mexa no serviço HID pode custar isso **vezes o número
-  de modos que ela usa**;
+  de modos que o usuário usa**;
 - **não há downgrade documentado**;
 - e o modo em que ele funciona bem hoje **funciona bem hoje**: o cabo em modo
   Switch está estável, com IMU real e rumble, e o `054c:05c4` por rádio é o

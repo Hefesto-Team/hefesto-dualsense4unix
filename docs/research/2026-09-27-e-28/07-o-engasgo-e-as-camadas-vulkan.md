@@ -156,7 +156,7 @@ cura), e as duas queixas (07/09 e 26/09) vieram com ela desligada:
   «melhorou» por ~13 min.
 - **A hipótese foi escrita como «FORTE» antes de o A/B ser lido.** O A/B só foi lido
   no commit das 03:34 (`5c97e4e32`, *«e o A/B derrubou a hipótese»*); nessa noite
-  ela já tinha pedido a cura «contra o vulcan» para todos os jogos.
+  o usuário já tinha pedido a cura «contra o vulcan» para todos os jogos.
 - **Nenhum outro teste ao vivo mediu nada.** Não houve log por quadro, e as
   sessões logo depois de cada mudança de camada foram de 3,5 e 3,8 min (07/09) e
   4,0 min (20/09), curtas perto do nascimento do defeito (2,3 a 9,8 min em 23/08).
