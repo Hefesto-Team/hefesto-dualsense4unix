@@ -44,6 +44,13 @@ def _entrada(uniq: str, slot: int, transporte: str, *, calado: bool) -> dict[str
     }
 
 
+@pytest.fixture(autouse=True)
+def renovacao_parada(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A renovação da camada 1 não sai nem pousa: o fio dela limpa o `_SONO` de quem lê."""
+    monkeypatch.setattr(a02, "_CAMADA_1_QUANDO", [float("inf")])
+    monkeypatch.setattr(a02, "_CAMADA_1_SELO", [a02._CAMADA_1_SELO[0] + 1])
+
+
 @pytest.fixture
 def canal(monkeypatch: pytest.MonkeyPatch) -> Any:
     """Escreve o sono de cada canal direto no cache — sem thread e sem `pactl`."""
