@@ -9,7 +9,7 @@ ensaio: true
 
 # O COMO das 21 — o gesto exato de cada linha do ensaio
 
-**Encomenda dela, 07/09/2026, verbatim:**
+**Encomenda do usuário, 07/09/2026, verbatim:**
 
 > *"O COMO é obrigatório: escreva o gesto exato que foi aplicado. É isto que se
 > perdia quando a sessão morria. isso aqui me quebra. isso eu espero que o
@@ -26,7 +26,7 @@ tela:
 
 > *"sinceramente não entendi o que diabos é pra fazer aqui."*
 
-Ela estava certa. O COMO saía como `linha do roteiro: 10` mais `passa quando:
+A queixa estava certa. O COMO saía como `linha do roteiro: 10` mais `passa quando:
 mudaram` — o roteiro repetido, não o gesto. Um roteiro escrito em telegrama
 serve a quem o escreveu e a mais ninguém.
 
@@ -38,7 +38,7 @@ tela, o gesto exato na ordem, o que muda em cada um dos quatro, e a armadilha
 que faz o teste dar falso verde.
 
 **Os dois têm donos diferentes de propósito.** O roteiro é do usuário — a decisão do
-que vale medir. O COMO é meu, por pedido explícito dela, e é por isso que mora
+que vale medir. O COMO é meu, por pedido explícito do usuário, e é por isso que mora
 aqui e não lá: se estivesse na mesma tabela, mexer no gesto pareceria mexer na
 decisão.
 
@@ -50,10 +50,10 @@ Mudou uma linha aqui, o próximo `F5` do ensaio mostra o gesto novo.
 Quatorze frentes: sete escreveram, sete conferiram — e a conferência não foi de
 texto, foi de **medição no produto**. Cada conferente foi ver, nos pacotes que
 montam as abas, se o campo citado existe com aquele rótulo. **Um COMO que manda
-olhar um campo inexistente é pior que nenhum COMO**, porque manda ela procurar.
+olhar um campo inexistente é pior que nenhum COMO**, porque manda quem usa procurar.
 
 Onde a fonte não bastava, está escrito *"a fonte não diz"* — declarar a lacuna
-é o certo; inventar um passo faria ela caçar um botão que não existe.
+é o certo; inventar um passo faria quem usa caçar um botão que não existe.
 
 **Reconferido em 24/09/2026**, linha a linha, contra as páginas publicadas, os
 pacotes que as pintam e as fotos do dia: o gesto que tinha caído foi reescrito
@@ -101,7 +101,7 @@ roteiro.
 * **P3** — Ligue este TERCEIRO, e pelo rádio, com um toque curto no PS. Tem de entrar como P3, com BT, e os dois do cabo têm de ficar parados nos números deles.
 * **P4** — Ligue este POR ÚLTIMO, e pelo rádio, com um toque curto no PS. Tem de entrar como P4, com BT, e os três de antes não podem mexer no número nem na cor.
 
-**A armadilha.** Existe um jeito de a fita mentir bonito, e ele já enganou esta casa: quando a tela para de ler os controles de verdade, ela fica mostrando os dois chips do DESENHO — sempre os mesmos dois, «P1 • Cosmic Red • USB» e «P2 • Starlight Blue • BT», com a conta dizendo «1 USB · 1 BT». Se a fita mostrar exatamente esses dois com outra coisa na sua frente, ela não está lendo os seus controles, e o teste não passou nem reprovou — não houve leitura. Duas outras coisas parecem defeito e não são: com um controle só ligado o chip "Todos" não aparece, de propósito; e se a cor do plástico ainda não foi lida, o chip fica sem a borda colorida — isso é a cor faltando, não o número errado.
+**A armadilha.** Existe um jeito de a fita mentir bonito, e ele já enganou esta casa: quando a tela para de ler os controles de verdade, a tela fica mostrando os dois chips do DESENHO — sempre os mesmos dois, «P1 • Cosmic Red • USB» e «P2 • Starlight Blue • BT», com a conta dizendo «1 USB · 1 BT». Se a fita mostrar exatamente esses dois com outra coisa na sua frente, a fita não está lendo os seus controles, e o teste não passou nem reprovou — não houve leitura. Duas outras coisas parecem defeito e não são: com um controle só ligado o chip "Todos" não aparece, de propósito; e se a cor do plástico ainda não foi lida, o chip fica sem a borda colorida — isso é a cor faltando, não o número errado.
 
 ---
 
@@ -143,7 +143,7 @@ roteiro.
 * **P3** — Só o direcional, com os outros três largados na mesa. Só o boneco 3 pode responder — e ele está no rádio, que é onde este defeito costuma aparecer.
 * **P4** — Só os botões de face, com os outros três largados na mesa. Só o boneco 4 pode responder — este é o último a entrar e o mais propenso a nascer sem dono.
 
-**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: o Hefesto entrega os quatro na ordem P1→P4, mas o jogo pode dar os bonecos por quem apertou primeiro. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando. Por último, o «Analógico virtual»: aceso num controle, girá-lo move o analógico do lado escolhido dele no jogo (o direito, se ninguém trocou), e a câmera anda sem polegar nenhum — parece o P2 respondendo pelo controle errado. É por isso que o primeiro passo confere que os quatro começam com ela apagada.
+**A armadilha.** Mexer em dois controles ao mesmo tempo esconde exatamente o defeito que este teste procura. Quando um aparelho está alimentando dois jogadores, os dois bonecos andam JUNTOS — e com as duas mãos ocupadas isso parece que cada dono mexeu no seu. Um de cada vez, com os outros três largados na mesa, é o que revela. E se você mexer no P1 e o boneco 3 responder, não conclua nada olhando só o jogo: o Hefesto entrega os quatro na ordem P1→P4, mas o jogo pode dar os bonecos por quem apertou primeiro. Quem separa os dois é o cartão da aba Controles, e é para isso que ele está nos passos. O analógico direito, em muito jogo, mexe a câmera e não o boneco — conta como resposta do boneco 2 se for a câmera DELE que girou. E os botões de face num menu fazem o menu andar (o ○ costuma voltar), o que parece defeito sem ser: aperte-os com a partida rodando. Por último, o «Analógico virtual»: aceso num controle, girá-lo move o analógico do lado escolhido dele no jogo (o direito, se ninguém trocou), e a câmera anda sem polegar nenhum — parece o P2 respondendo pelo controle errado. É por isso que o primeiro passo confere que os quatro começam com a barra apagada.
 
 ---
 
@@ -151,7 +151,7 @@ roteiro.
 
 **O que isto prova.** Prova que tirar o P1 do cabo e trazê-lo de volta pelo rádio, no meio da partida, não derruba os outros três, não entrega o boneco 1 a outro controle enquanto ele está fora, e devolve a ele o mesmo número de antes.
 
-**Onde olhar.** Três lugares, e o principal não é o controle que você está mexendo. Primeiro, a fita do topo do Hefesto: os chips dos outros três não podem sumir em momento nenhum, e o chip do que voltou tem de dizer P1 de novo, agora terminando em BT no lugar de USB. Segundo, o JOGO: o boneco 1 fica parado enquanto o P1 está fora, e os bonecos 2, 3 e 4 seguem com os donos deles. Terceiro, o próprio aparelho que voltou — as cinco lâmpadas brancas em fileira, embaixo do touchpad: elas dizem o número do jogador pelo CONJUNTO que fica aceso.
+**Onde olhar.** Três lugares, e o principal não é o controle que você está mexendo. Primeiro, a fita do topo do Hefesto: os chips dos outros três não podem sumir em momento nenhum, e o chip do que voltou tem de dizer P1 de novo, agora terminando em BT no lugar de USB. Segundo, o JOGO: o boneco 1 fica parado enquanto o P1 está fora, e os bonecos 2, 3 e 4 seguem com os donos deles. Terceiro, o próprio aparelho que voltou — as cinco lâmpadas brancas em fileira, embaixo do touchpad: as lâmpadas dizem o número do jogador pelo CONJUNTO que fica aceso.
 
 **Os passos.**
 
@@ -204,7 +204,7 @@ roteiro.
 12. Confira nos três que ficaram se a cor da barra de luz continua a mesma.
 13. Confira que nenhum dos três que ficaram está tremendo.
 14. Leia a conta no canto de cima à direita: tem de dizer «2 USB · 1 BT».
-15. Leia a linha «Modelo»: a coluna do P3 tem de dizer «P3 • Desconectado», e nenhum outro controle pode ter se mudado para ela.
+15. Leia a linha «Modelo»: a coluna do P3 tem de dizer «P3 • Desconectado», e nenhum outro controle pode ter se mudado para a coluna.
 16. Registre nesta página a resposta de cada um dos quatro.
 
 **Passa quando.** Os três que continuaram ligados — P1, P2 e P4 — seguem na tela e no aparelho com o mesmo número de jogador e a mesma cor de barra de luz que tinham antes, e nenhum fica vibrando por causa da saída do P3. O lugar que era do P3 aparece como «P3 • Desconectado» e continua assim durante os vinte segundos.
@@ -254,7 +254,7 @@ roteiro.
 * **P3** — É ESTE que religa, e é o único que você toca. Está no rádio. Um toque curto no PS, espere a barra de luz acender e ponha-o de volta na mesa. Tem de voltar como jogador 3.
 * **P4** — Não pode mudar de posto. Está no rádio. Não toque nele. É aqui que se vê se alguém tomou o lugar do P3 enquanto ele estava fora — olhe as lâmpadas dele com atenção.
 
-**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS não dispara nada no Hefesto, e só o toque curto no PS de um controle já ligado abre a Steam. O lugar do P3 fica guardado por trinta segundos — o prazo vale para os quatro lugares, não só para o Jogador 1 —, e dentro dele ninguém troca de número. O prazo corre desde que a coluna dele passou a dizer «P3 • Desconectado»: se você vem direto da linha 4, os vinte segundos de lá gastaram dois terços dele, e sobram uns dez para o toque no PS; se o passo 1 apagou o P3 agora, ele tem os trinta inteiros. Se você passar dos trinta, o P4 terá descido para 3 — e, com o jogo aberto, terá ido ao boneco 3 —; quando o P3 voltar, os dois voltam ao seu, porque quem volta recupera o dele enquanto o Hefesto estiver de pé, e o jogo perde o P4 por cerca de um segundo em cada troca. Se o P3 voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
+**A armadilha.** Religar pelo cabo é outro teste, com resposta possivelmente diferente — ninguém mediu essa ainda. Religue pelo botão PS, com um toque curto: segurar o PS não dispara nada no Hefesto, e só o toque curto no PS de um controle já ligado abre a Steam. O lugar do P3 fica guardado por trinta segundos — o prazo vale para os quatro lugares, não só para o Jogador 1 —, e dentro dele ninguém troca de número. O prazo corre desde que a coluna dele passou a dizer «P3 • Desconectado»: se você vem direto da linha 4, os vinte segundos de lá gastaram dois terços dele, e sobram uns dez para o toque no PS; se o passo 1 apagou o P3 agora, ele tem os trinta inteiros. Se você passar dos trinta, o P4 terá descido para 3 — e, com o jogo aberto, terá ido ao boneco 3 —; quando o P3 voltar, os dois voltam ao seu, porque quem volta recupera o dele enquanto o Hefesto estiver de pé, e o jogo perde o P4 por cerca de um segundo em cada troca. Se o P3 voltar com outro número, isso é achado, não demora sua. E se a Steam estiver aberta, a barra e as lâmpadas do P3 continuam as do Hefesto: o controle de verdade nasce escondido da barra, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo.
 
 ---
 
@@ -327,7 +327,7 @@ roteiro.
 * **P3** — É o único em que você mexe depois do começo. Ponha «Rígido» no Modo do L2 e no do R2, e sinta os dois travarem. No fim, «Desligado» nos dois para sentir que soltam.
 * **P4** — Solte com «Desligado» no começo, como os outros, e depois não toque mais na coluna dele. Aperte o L2 e o R2 antes e depois; tem de continuar leve nas duas vezes.
 
-**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho, e se ela escapar para os quatro você não vê nada — um gatilho solto não muda —, e o teste passa por cima do defeito. O efeito do teste tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P3: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro nem o «Rígido» do P3 se sente chegar, nem um «Rígido» que vazasse para os outros três. A escolha GRAVA no perfil daquele controle, e é por isso que o terceiro passo anota e o último devolve. E não julgue pela tela: o campo Modo continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve na sua mão. Se você não apertar os quatro ANTES, não tem com o que comparar depois — e aí o teste não mede nada.
+**A armadilha.** Não use «Desligado» como o efeito do teste. Ele é a escolha que SOLTA o gatilho, e se a escolha escapar para os quatro você não vê nada — um gatilho solto não muda —, e o teste passa por cima do defeito. O efeito do teste tem de ser um que ENDUREÇA, porque endurecer é o que a mão sente. E é pelo mesmo motivo que os oito gatilhos começam soltos, e não só os do P3: o Freestyle de fábrica nasce com os gatilhos em «Rígido», e num gatilho que já está duro nem o «Rígido» do P3 se sente chegar, nem um «Rígido» que vazasse para os outros três. A escolha GRAVA no perfil daquele controle, e é por isso que o terceiro passo anota e o último devolve. E não julgue pela tela: o campo Modo continua mostrando «Rígido» mesmo se um jogo escrever por cima e o gatilho estiver leve na sua mão. Se você não apertar os quatro ANTES, não tem com o que comparar depois — e aí o teste não mede nada.
 
 ---
 
@@ -335,7 +335,7 @@ roteiro.
 
 **O que isto prova.** Prova que cada controle obedece à cor que você escolheu na coluna dele, inclusive os que estão por rádio, sem mexer na cor dos outros, e que a troca automática de perfil continua valendo depois disso.
 
-**Onde olhar.** Na aba Iluminação do Hefesto. Cada controle tem uma coluna, e a linha «Modelo» diz de quem ela é («P1 • nome • USB»). As linhas, nomeadas na coluna da esquerda, são Controle, Modelo, Cor, Brilho, Jogador, LEDs e Opções. A linha «Cor» tem onze tons, sempre na mesma ordem: azul, vermelho, verde, rosa, amarelo, ciano, laranja, roxo, verde-limão, verde-água e branco. O tom que um OUTRO controle está acendendo aparece com um X, e não se escolhe; o tom escolhido ganha uma borda na cor do plástico. A prova, porém, é no aparelho: a barra de luz é a faixa que acende dos dois lados do touchpad. O perfil que está valendo se lê no alto, à direita, em «Perfil ativo», e ele é igual nas dez abas.
+**Onde olhar.** Na aba Iluminação do Hefesto. Cada controle tem uma coluna, e a linha «Modelo» diz de quem a linha é («P1 • nome • USB»). As linhas, nomeadas na coluna da esquerda, são Controle, Modelo, Cor, Brilho, Jogador, LEDs e Opções. A linha «Cor» tem onze tons, sempre na mesma ordem: azul, vermelho, verde, rosa, amarelo, ciano, laranja, roxo, verde-limão, verde-água e branco. O tom que um OUTRO controle está acendendo aparece com um X, e não se escolhe; o tom escolhido ganha uma borda na cor do plástico. A prova, porém, é no aparelho: a barra de luz é a faixa que acende dos dois lados do touchpad. O perfil que está valendo se lê no alto, à direita, em «Perfil ativo», e ele é igual nas dez abas.
 
 **Os passos.**
 
@@ -357,11 +357,11 @@ roteiro.
 16. Volte ao Hefesto com Alt+Tab.
 17. Confira o «Perfil ativo» no alto da tela: ele tem de ter trocado para o perfil daquele jogo.
 
-**Passa quando.** As quatro barras de luz ficam acesas ao mesmo tempo, cada uma na cor da coluna dela — inclusive as dos dois controles que estão por rádio —, e pintar uma nunca muda a cor de outra. O P3, que ninguém tocou, fica no verde do número dele do começo ao fim, e o P4 volta ao rosa quando você o devolve. E com o jogo na frente o «Perfil ativo» troca sozinho para o perfil dele.
+**Passa quando.** As quatro barras de luz ficam acesas ao mesmo tempo, cada uma na cor da coluna da coluna — inclusive as dos dois controles que estão por rádio —, e pintar uma nunca muda a cor de outra. O P3, que ninguém tocou, fica no verde do número dele do começo ao fim, e o P4 volta ao rosa quando você o devolve. E com o jogo na frente o «Perfil ativo» troca sozinho para o perfil dele.
 
 **Por controle.**
 
-* **P1** — Põe VERMELHO. Passa antes pelo amarelo, porque o vermelho é a cor do P2 até o P2 sair dela. A barra dele tem de acender em cada tom no clique e ficar no vermelho até o fim.
+* **P1** — Põe VERMELHO. Passa antes pelo amarelo, porque o vermelho é a cor do P2 até o P2 sair da cor. A barra dele tem de acender em cada tom no clique e ficar no vermelho até o fim.
 * **P2** — Põe AZUL, que fica livre quando o P1 vai para o amarelo. No instante em que você pintar este, olhe o P1: ele não pode mudar.
 * **P3** — Fica no AUTOMÁTICO: ninguém clica na coluna dele. A barra tem de continuar no verde do número 3 enquanto os outros mudam — e ele está no rádio.
 * **P4** — Põe VERDE — o verde-limão, porque o verde puro é o do P3 e está com X — e depois volta à cor automática dele, o rosa do número 4. É o segundo do rádio: a cor tem de chegar igual à de quem está por cabo.
@@ -408,7 +408,7 @@ roteiro.
 
 **O que isto prova.** Prova que o número da bateria dos quatro controles anda com o tempo, em vez de ficar congelado.
 
-**Onde olhar.** Na aba Controles do Hefesto. Cada controle tem uma linha, e no fim dela vem a palavra Bateria, uma barrinha e o número em porcento, com um ✓ quando está cheio e um raio quando está carregando. Um cartão fica sempre aberto, e o número dele fica na primeira linha do cartão; os outros três ficam nas linhas fechadas — os quatro números aparecem juntos na mesma tela. A linha de cada controle também diz, depois do nome, USB ou BT.
+**Onde olhar.** Na aba Controles do Hefesto. Cada controle tem uma linha, e no fim da linha vem a palavra Bateria, uma barrinha e o número em porcento, com um ✓ quando está cheio e um raio quando está carregando. Um cartão fica sempre aberto, e o número dele fica na primeira linha do cartão; os outros três ficam nas linhas fechadas — os quatro números aparecem juntos na mesma tela. A linha de cada controle também diz, depois do nome, USB ou BT.
 
 **Os passos.**
 
@@ -441,7 +441,7 @@ roteiro.
 
 ## Linha 11 — Som pelo rádio: o ensaio 1 do ensaio, com a orelha do usuário
 
-**O que isto prova.** O som já saiu pelo rádio com a orelha do usuário, em 10/09. O que esta linha prova agora é o resto: que o som mirado no P3 sai SÓ no P3 — não no P4, que está no mesmo rádio, nem na TV —, que mirado na TV ele sai da TV e o P3 cala, e que ela acerta de onde o som sai sem saber para onde ele foi mandado.
+**O que isto prova.** O som já saiu pelo rádio com a orelha do usuário, em 10/09. O que esta linha prova agora é o resto: que o som mirado no P3 sai SÓ no P3 — não no P4, que está no mesmo rádio, nem na TV —, que mirado na TV ele sai da TV e o P3 cala, e que a linha acerta de onde o som sai sem saber para onde ele foi mandado.
 
 **Onde olhar.** O instrumento é o ouvido de quem confere, encostado no alto-falante do próprio controle: são nove furinhos em duas fileiras, no meio da frente do DualSense, logo abaixo e entre os dois analógicos. O volante do teste é a lista de saídas de som — a do tocador, ou a das configurações de Som do sistema —, onde cada controle tem o seu «Alto-falante do Controle N (DualSense Wireless Controller)», com o N igual ao número do jogador. No Hefesto, aba Controles, o cartão do P3: o bloco Alto-falante, com o selo ATIVO, o número do volume e quatro botões — «Efeitos do jogo no controle, áudio do PC no PC» e «Efeitos do jogo e áudio do PC no controle», um sobre o outro, e embaixo, lado a lado, «Tudo no PC e nada no controle» e «Tudo no controle e nada no PC». «PC», nos botões, é a saída do computador — no ensaio, a TV.
 
@@ -467,16 +467,16 @@ roteiro.
 18. Diga, a cada troca, de onde o som está saindo, e peça que anotem se você acertou.
 19. Devolva a saída para a TV.
 
-**Passa quando.** Com a saída no «Alto-falante do Controle 3 (DualSense Wireless Controller)», a música sai do P3 — que está no rádio — e só dele: o P4 fica mudo e a TV não toca. Mirada na TV, ela sai da TV e o P3 cala. No teste de olhos fechados ela acerta as três trocas. E o P1, no cabo, tocou antes: sem isso nada acima vale.
+**Passa quando.** Com a saída no «Alto-falante do Controle 3 (DualSense Wireless Controller)», a música sai do P3 — que está no rádio — e só dele: o P4 fica mudo e a TV não toca. Mirada na TV, a música sai da TV e o P3 cala. No teste de olhos fechados a música acerta as três trocas. E o P1, no cabo, tocou antes: sem isso nada acima vale.
 
 **Por controle.**
 
 * **P1** — No cabo, e é o controle de comparação. Faça nele a primeira escuta: o som tem de sair. Sem isso, o que acontecer no P3 não mede nada.
 * **P2** — Ninguém toca. Não abra o cartão dele e não mexa em volume nenhum.
-* **P3** — No rádio, e é ESTE que tem de receber o som. É nele que ela encosta o ouvido quando a saída é o «Alto-falante do Controle 3 (DualSense Wireless Controller)», e é ele que tem de calar quando a saída vai para a TV.
+* **P3** — No rádio, e é ESTE que tem de receber o som. É nele que quem confere encosta o ouvido quando a saída é o «Alto-falante do Controle 3 (DualSense Wireless Controller)», e é ele que tem de calar quando a saída vai para a TV.
 * **P4** — No rádio, e não pode tocar — é o negativo. Ele está no mesmo tipo de conexão do P3: se a música sair nele com a saída no Controle 3, o som foi para o rádio inteiro e não para UM controle.
 
-**A armadilha.** Se o P1, que está no cabo, não tocar, o teste não mediu nada — pode ser o volume do sistema, o selo em DESLIGADO (o ♪ ao lado do volume é o mudo do alto-falante) ou o botão «Tudo no PC e nada no controle» aceso; conserte isso antes de olhar o P3. Pelo rádio o som pode levar uns segundos para começar depois de cada troca de saída: dê esse tempo antes de responder. Faça com o jogo pausado — pelo rádio, som e vibração dividem o mesmo fio, e um tremor no meio pode picotar o som. E a lista do sistema pode mostrar também a placa de som do próprio controle, com outro nome: a escolha deste teste é sempre o «Alto-falante do Controle N (DualSense Wireless Controller)». O «Tudo no controle e nada no PC» do cartão faz com um clique a mesma troca de saída, mas o volante aqui é a lista de propósito: é nela que se lê o «Alto-falante do Controle N (DualSense Wireless Controller)» que se está medindo, e é ela que quem está com você troca sem você ver. Encostar o ouvido é ato numerado, e vem ANTES da escuta de propósito: quem clica primeiro e encosta depois ouve quando o som já passou.
+**A armadilha.** Se o P1, que está no cabo, não tocar, o teste não mediu nada — pode ser o volume do sistema, o selo em DESLIGADO (o ♪ ao lado do volume é o mudo do alto-falante) ou o botão «Tudo no PC e nada no controle» aceso; conserte isso antes de olhar o P3. Pelo rádio o som pode levar uns segundos para começar depois de cada troca de saída: dê esse tempo antes de responder. Faça com o jogo pausado — pelo rádio, som e vibração dividem o mesmo fio, e um tremor no meio pode picotar o som. E a lista do sistema pode mostrar também a placa de som do próprio controle, com outro nome: a escolha deste teste é sempre o «Alto-falante do Controle N (DualSense Wireless Controller)». O «Tudo no controle e nada no PC» do cartão faz com um clique a mesma troca de saída, mas o volante aqui é a lista de propósito: é na lista que se lê o «Alto-falante do Controle N (DualSense Wireless Controller)» que se está medindo, e é a lista que quem está com você troca sem você ver. Encostar o ouvido é ato numerado, e vem ANTES da escuta de propósito: quem clica primeiro e encosta depois ouve quando o som já passou.
 
 ---
 
@@ -484,7 +484,7 @@ roteiro.
 
 **O que isto prova.** Prova que fechar e reabrir o jogo e a janela do Hefesto não derruba nenhum dos quatro controles nem troca o perfil.
 
-**Onde olhar.** Na faixa de cima da janela do Hefesto, que é igual nas dez abas. À esquerda dela ficam as etiquetas dos controles, uma por controle, com P1 a P4, o nome e USB ou BT. À direita, na mesma faixa, fica «Perfil ativo» com o nome do perfil, e logo antes dele a conta por transporte, no formato «2 USB · 2 BT». E nos aparelhos, as luzes de jogador — a fileirinha de luzinhas logo abaixo do touchpad — têm de continuar acesas no mesmo número.
+**Onde olhar.** Na faixa de cima da janela do Hefesto, que é igual nas dez abas. À esquerda da janela ficam as etiquetas dos controles, uma por controle, com P1 a P4, o nome e USB ou BT. À direita, na mesma faixa, fica «Perfil ativo» com o nome do perfil, e logo antes dele a conta por transporte, no formato «2 USB · 2 BT». E nos aparelhos, as luzes de jogador — a fileirinha de luzinhas logo abaixo do touchpad — têm de continuar acesas no mesmo número.
 
 **Os passos.**
 
@@ -503,7 +503,7 @@ roteiro.
 13. Olhe as luzes de jogador dos quatro e confira que cada um continua no mesmo número.
 14. Mexa um analógico de cada controle, um de cada vez, e veja o jogo responder aos quatro.
 
-**Passa quando.** Depois de reabrir, os quatro continuam lá: quatro etiquetas na faixa de cima, com os mesmos números e os mesmos transportes de antes, a conta dizendo «2 USB · 2 BT», as luzes de jogador nos mesmos números, e cada um respondendo dentro do jogo. E o nome em Perfil ativo é exatamente o mesmo que ela anotou antes de fechar.
+**Passa quando.** Depois de reabrir, os quatro continuam lá: quatro etiquetas na faixa de cima, com os mesmos números e os mesmos transportes de antes, a conta dizendo «2 USB · 2 BT», as luzes de jogador nos mesmos números, e cada um respondendo dentro do jogo. E o nome em Perfil ativo é exatamente o mesmo que você anotou antes de fechar.
 
 **Por controle.**
 
@@ -558,7 +558,7 @@ roteiro.
 * **P3** — Ninguém toca, é a testemunha, fora o «Desligado» do começo e a devolução do fim. Está no rádio, e serve para provar que nenhuma das três mudanças vazou para ele: a barra de luz e os gatilhos dele têm de terminar como começaram.
 * **P4** — Muda a COR, na aba Iluminação: um tom novo na barra. Está no rádio: a cor tem de acender no clique e continuar depois de fechar e reabrir. Os gatilhos dele vão para «Desligado» no começo, como os dos outros, e têm de continuar leves.
 
-**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. O ensaio roda com a Steam fechada; mesmo aberta, ela não apaga mais a barra: o controle de verdade nasce escondido dela, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo. Os oito gatilhos começam em «Desligado», e não só os do P2, porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: num gatilho que já está duro, nem o «Rígido» do P2 se sente chegar, nem um que vazasse para os outros. E é por isso que, depois de reabrir, você aperta os quatro: se a escolha por controle se perdesse ao fechar, os quatro voltariam juntos ao gatilho do perfil inteiro — duros com o Freestyle de fábrica, leves com um perfil em «Desligado» —, e só o par «o P2 duro, os outros três leves» prova que cada um guardou o seu.
+**A armadilha.** POR QUE ESTE TESTE É LONGO: ele é o mesmo teste feito DUAS vezes — três mudanças em três abas antes de fechar a janela, e as três conferidas de novo depois de reabrir. Cortar a segunda metade seria cortar exatamente o que ele prova, que é o perfil sobreviver ao fechar. NÃO TOQUE em «Aplicar» nem em «Salvar perfil», no rodapé, do começo ao fim: são eles que o teste existe para dispensar, e um clique neles apaga a prova. Clique em «Parar» antes de fechar a janela — o «Testar» não para sozinho. Feche só a JANELA do Hefesto, pelo X — não pare o serviço pela aba Sistema: com o serviço parado a luz e o gatilho voltam ao que o aparelho faz sozinho, e o teste reprova sem haver defeito. O ensaio roda com a Steam fechada; mesmo aberta, a Steam não apaga mais a barra: o controle de verdade nasce escondido da barra, e o Hefesto devolve a cor e o número a quem pintar por cima em até um segundo. Um tom com X é a cor de outro controle e não se escolhe. E não confie só na tela dos gatilhos: a tela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — o controle não sabe responder isso, e a prova é o seu dedo. Os oito gatilhos começam em «Desligado», e não só os do P2, porque o Freestyle de fábrica nasce com os gatilhos em «Rígido»: num gatilho que já está duro, nem o «Rígido» do P2 se sente chegar, nem um que vazasse para os outros. E é por isso que, depois de reabrir, você aperta os quatro: se a escolha por controle se perdesse ao fechar, os quatro voltariam juntos ao gatilho do perfil inteiro — duros com o Freestyle de fábrica, leves com um perfil em «Desligado» —, e só o par «o P2 duro, os outros três leves» prova que cada um guardou o seu.
 
 ---
 
@@ -595,7 +595,7 @@ roteiro.
 * **P3** — Não escolha nada nele. Ele também recebe pelo «Em todos», e é o único do rádio nesta rodada. Aperte o L2 e o R2 dele depois do clique.
 * **P4** — Fica desligado durante o clique — é a testemunha. Ligue-o só depois. Se ele nascer com o efeito, o Hefesto guardou o efeito como o de todo mundo, que é o ponto inteiro do teste; se nascer sem, o efeito ficou preso nos três de antes e o teste reprovou.
 
-**A armadilha.** Este teste é longo de propósito, e cortar qualquer ato tira prova: ele mede o mesmo dedo antes e depois em quatro controles, e o quarto só entra na mesa depois do clique — é essa entrada tardia que prova que o efeito virou o de todo mundo, e não uma cópia mandada aos três que estavam lá. O clique em «Em todos» não deixa frase na tela: a confirmação é o Modo das outras colunas mudar, e o dedo. Sem nome em «Perfil ativo» não há onde guardar o efeito de todos, e o controle 4 não vai herdar nada. O «Em todos» também apaga o ajuste próprio que cada controle tinha no L2 e no R2 — é o que ele promete, não defeito. E não decida pelo que a tela dos gatilhos mostra: ela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — sem apertar o L2 e o R2 de cada controle, este teste dá verde sem prova.
+**A armadilha.** Este teste é longo de propósito, e cortar qualquer ato tira prova: ele mede o mesmo dedo antes e depois em quatro controles, e o quarto só entra na mesa depois do clique — é essa entrada tardia que prova que o efeito virou o de todo mundo, e não uma cópia mandada aos três que estavam lá. O clique em «Em todos» não deixa frase na tela: a confirmação é o Modo das outras colunas mudar, e o dedo. Sem nome em «Perfil ativo» não há onde guardar o efeito de todos, e o controle 4 não vai herdar nada. O «Em todos» também apaga o ajuste próprio que cada controle tinha no L2 e no R2 — é o que ele promete, não defeito. E não decida pelo que a tela dos gatilhos mostra: a tela mostra o que o Hefesto mandou, não o que o gatilho está fazendo — sem apertar o L2 e o R2 de cada controle, este teste dá verde sem prova.
 
 ---
 
@@ -612,7 +612,7 @@ roteiro.
 2. Abra pela Steam o jogo que você quer testar.
 3. Volte ao Hefesto com Alt+Tab e clique na aba Lançadores.
 4. Clique em «Detectar o jogo aberto».
-5. Olhe a lista embaixo dos botões do cartão da Steam: se o seu jogo está nela, ele NÃO abre pelo atalho do Hefesto; se não está, abre.
+5. Olhe a lista embaixo dos botões do cartão da Steam: se o seu jogo está na Steam, ele NÃO abre pelo atalho do Hefesto; se não está, abre.
 6. Clique na aba Perfis e clique em «Novo», com o jogo ainda aberto.
 7. Preencha o campo «Nome:» com o nome do jogo.
 8. Confira que o «Nome do Jogo:» traz o seu jogo e que o «Funciona em:» diz «Steam» — se não, clique em «Detectar», ao lado do «Nome do Jogo:», e confira de novo.
@@ -634,14 +634,14 @@ roteiro.
 
 **Por controle.**
 
-* **P1** — É o do cabo que carrega o sinal do perfil: a barra de luz dele fica amarela quando o perfil do jogo entra, e é por ela que você vê a troca acontecer sem sair do jogo. Depois, aperte um botão dele dentro do jogo.
+* **P1** — É o do cabo que carrega o sinal do perfil: a barra de luz dele fica amarela quando o perfil do jogo entra, e é por a barra que você vê a troca acontecer sem sair do jogo. Depois, aperte um botão dele dentro do jogo.
 * **P2** — O outro do cabo. Não recebe cor nova. Só tem de responder dentro do jogo — ele prova que a troca de perfil não derrubou quem estava mudo.
 * **P3** — O primeiro do rádio. Só tem de responder dentro do jogo. É o que costuma cair primeiro quando alguma coisa dá errado sem fio, então aperte um botão dele com atenção.
 * **P4** — O segundo do rádio. Só tem de responder dentro do jogo. Se três responderem e ele não, o defeito é do rádio ou do quarto lugar na fila — não da troca de perfil.
 
 **A espera.** O jogo leva minutos para chegar ao menu, nas duas vezes em que você o abre, e você não precisa ficar olhando. Deixe-o carregando e vá fazer outra coisa; volte quando ouvir o som do menu. A troca de perfil acontece sozinha e continua feita quando você voltar — nada se desfaz por você ter saído da frente. Ao voltar da segunda vez, o primeiro lugar a olhar é a barra de luz do P1; se a barra já apagou o amarelo, confirme pelo nome em «Perfil ativo», com Alt+Tab para o Hefesto.
 
-**A armadilha.** O «Modo Freestyle», na aba Jogar, segura o perfil que está valendo: aceso, janela nenhuma o troca, nem a do jogo com perfil próprio. Confira que ele está apagado antes de começar, para medir a troca automática sem ele no meio. Trocar de perfil pelo «Ativar» segura a troca automática por trinta segundos — o jogo leva mais que isso para abrir, mas não reabra o jogo no mesmo instante. Perfil que «Funciona em» «Só quando eu escolher» nunca conta como o perfil daquele jogo — a troca só acontece com um perfil que nomeia o jogo. O jogo sem o atalho ganha o atalho sozinho quando a Steam fecha, e o passo 13 é o jeito de não esperar — o «Aplicar aos jogos da Steam», da aba Sistema, precisa do jogo fechado. A frase que o «Detectar» escreve no cartão da Steam aparece só por um instante; a lista fica, e é ela que o passo 5 lê. O amarelo é para não esbarrar num tom com X: o verde é a cor automática do P3. E se, ao abrir o jogo, a barra de luz do P1 piscar amarela e mudar, confie no nome em «Perfil ativo», não na luz, e anote: a Steam não disputa mais a barra, e o amarelo que o perfil do jogo guarda para o P1 vence a cor que o jogo mandar. Por fim, o tamanho: este é o teste mais longo dos 21, e é longo de propósito. Ele encadeia quatro coisas que só provam juntas — ver se o jogo tem o atalho, criar o perfil que nomeia o jogo, marcar esse perfil com uma cor que se enxerga de dentro da partida, e só então fechar tudo e abrir de novo para ver a troca acontecer sem a sua mão.
+**A armadilha.** O «Modo Freestyle», na aba Jogar, segura o perfil que está valendo: aceso, janela nenhuma o troca, nem a do jogo com perfil próprio. Confira que ele está apagado antes de começar, para medir a troca automática sem ele no meio. Trocar de perfil pelo «Ativar» segura a troca automática por trinta segundos — o jogo leva mais que isso para abrir, mas não reabra o jogo no mesmo instante. Perfil que «Funciona em» «Só quando eu escolher» nunca conta como o perfil daquele jogo — a troca só acontece com um perfil que nomeia o jogo. O jogo sem o atalho ganha o atalho sozinho quando a Steam fecha, e o passo 13 é o jeito de não esperar — o «Aplicar aos jogos da Steam», da aba Sistema, precisa do jogo fechado. A frase que o «Detectar» escreve no cartão da Steam aparece só por um instante; a lista fica, e é a lista que o passo 5 lê. O amarelo é para não esbarrar num tom com X: o verde é a cor automática do P3. E se, ao abrir o jogo, a barra de luz do P1 piscar amarela e mudar, confie no nome em «Perfil ativo», não na luz, e anote: a Steam não disputa mais a barra, e o amarelo que o perfil do jogo guarda para o P1 vence a cor que o jogo mandar. Por fim, o tamanho: este é o teste mais longo dos 21, e é longo de propósito. Ele encadeia quatro coisas que só provam juntas — ver se o jogo tem o atalho, criar o perfil que nomeia o jogo, marcar esse perfil com uma cor que se enxerga de dentro da partida, e só então fechar tudo e abrir de novo para ver a troca acontecer sem a sua mão.
 
 ---
 
@@ -656,7 +656,7 @@ roteiro.
 1. Abra a aba Conexões.
 2. Clique em «Gestão de controles» para abrir a seção.
 3. Anote a conta no canto da seção: quantos controles, quantos no cabo, quantos no rádio.
-4. Anote a linha de cada um dos quatro controles: o número de Player e se ela termina em USB ou em BT.
+4. Anote a linha de cada um dos quatro controles: o número de Player e se a linha termina em USB ou em BT.
 5. Confira que a linha do P4 termina em BT — este teste só vale com ele no rádio.
 6. Clique na linha do P4 para abri-la.
 7. Clique no botão «A luz não acende», dentro da linha aberta do P4.
@@ -730,7 +730,7 @@ roteiro.
 3. Abra o Hefesto na aba Jogar.
 4. Clique em «Desligado», na linha «Status».
 5. Confira que o quadro «Modo» passou a mostrar «Modo nativo».
-6. Leia a conta no canto de cima à direita e confira que ela diz «2 USB» — se disser mais, algum controle ainda está ligado.
+6. Leia a conta no canto de cima à direita e confira que a conta diz «2 USB» — se disser mais, algum controle ainda está ligado.
 7. Abra o jogo de co-op de sofá agora, depois da troca de modo.
 8. Aperte um botão no P1 e confirme que o jogo responde.
 9. Aperte um botão no P2 e veja se o jogo mostra um segundo jogador ou pede para ele entrar.
@@ -845,7 +845,7 @@ roteiro.
 5. Confira que a barra de luz do P4 virou a cor escolhida na hora.
 6. Confira que as barras de luz do P1, do P2 e do P3 não mudaram.
 7. Espere 15 segundos sem clicar em nada, olhando a barra do P4.
-8. Confira que ela continua na cor escolhida.
+8. Confira que a barra continua na cor escolhida.
 9. Clique no rosa, o quarto tom, na coluna do P4, para devolvê-lo à cor do número dele.
 
 **Passa quando.** A barra de luz do P4 vira a cor escolhida no ato, mesmo ele estando por rádio, e continua nessa cor 15 segundos depois. As barras dos outros três não mudam.
@@ -855,6 +855,6 @@ roteiro.
 * **P1** — Cabo, não pode mudar de cor. Olhe a barra dele antes e depois.
 * **P2** — Cabo, não pode mudar de cor. Olhe a barra dele antes e depois.
 * **P3** — Rádio, não pode mudar de cor — é a testemunha do mesmo tipo de conexão do P4. Se a cor nova acender nele também, o comando foi para o rádio inteiro.
-* **P4** — Rádio, é ESTE. Recebe a cor nova pelo tom da coluna dele, e tem de ficar com ela até você devolvê-lo ao rosa.
+* **P4** — Rádio, é ESTE. Recebe a cor nova pelo tom da coluna dele, e tem de ficar com a coluna até você devolvê-lo ao rosa.
 
 **A armadilha.** O falso verde é escolher uma cor parecida com a que já estava: sem escolha à mão cada barra fica na cor do número do controle, e a do número 4 é rosa — clicando no rosa a barra não muda e não dá para saber se o clique chegou ao aparelho. Escolha uma cor que você reconhece de longe. Um tom com X é a cor de outro controle: o clique nele pisca e nada muda. O falso vermelho é usar a chave «Cores automáticas por controle» em vez do tom da coluna: aquela chave é do perfil inteiro, e desligá-la grava na hora a cor de todos os controles. Trocar para outra janela durante a espera pode trocar o perfil, e o perfil novo traz a cor dele — isso não é a cor voltando atrás; fique com o Hefesto na frente. E «Desligar» apaga a barra: não é o gesto deste teste.

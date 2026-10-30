@@ -146,8 +146,8 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   acessórios, `{uniq, jogador, gesto, valor}`. `gesto` é `sobe`, `desce`, `para`, `perfil_seguinte`,
   `perfil_anterior`, `nivel_ao_vivo` (`valor` de 0 a 1), `surto` ou `camada` (`valor` 1 liga, 0 desliga); nunca um
   botão cru. O «Parar tudo» da janela chega como `para` com `uniq` e `jogador` nulos e `mod`, o `id` da
-  extensão a que se destina; só ela o recebe. A extensão sem `ler:acessorios.gesto` o recebe como
-  `extensao.parar` (`topico` e `nome`), `{mod}`, sem assinar nada, e o prazo dos 300 ms abaixo vale igual. Só existe com a modificação ligada e com aparelho: ela devolve o próprio estado por
+  extensão a que se destina; só a extensão o recebe. A extensão sem `ler:acessorios.gesto` o recebe como
+  `extensao.parar` (`topico` e `nome`), `{mod}`, sem assinar nada, e o prazo dos 300 ms abaixo vale igual. Só existe com a modificação ligada e com aparelho: a modificação devolve o próprio estado por
   `acessorios.estado`, o Hefesto guarda o último e, sem ele (ou sem aparelho, ou quando a conexão cai), PS + R2 é o
   que sempre foi. Enquanto o gesto vale, o R2, o L2, o R1, o L1 e o direcional que o comandam não chegam ao
   jogo, por controle. `ajustes` aceita `limiar_fundo` (50 a 100 %), `acelerador`, `camada`, `camada_s`,
@@ -168,7 +168,7 @@ Cada evento chega como notificação, sem `id`:
 
 `eventos.desassinar` larga cada tópico da lista sem fechar a conexão: as filas dele saem, o encaminhamento e o
 aviso das quedas param, e nada dele chega depois da resposta. Quem larga as `entradas` larga também os `dedos`;
-para seguir com elas sem os dedos, assina de novo sem `dedos`. Sem nenhuma extensão no `movimento` (ou nos
+para seguir com as quedas sem os dedos, assina de novo sem `dedos`. Sem nenhuma extensão no `movimento` (ou nos
 `dedos`), o tique deixa de pedir o leitor de cada controle e ele fecha no prazo da demanda, 5 s; a extensão que
 segue assinada continua recebendo. Um tópico da lista que esta conexão não assinou recusa o pedido inteiro
 (`-32003`), sem largar nenhum.
@@ -259,13 +259,13 @@ quando falta) são opcionais. A linha torta sai sozinha, e as outras ficam.
 O leitor que percorre uma pasta escolhida no emulador (a pasta de jogos que o `.ini` aponta, em qualquer
 disco) imprime o objeto `{"jogos": [...], "pastas": [...]}`: `jogos` é a mesma lista, e `pastas` são os
 caminhos absolutos que ele percorreu, até 64. A data de cada pasta da última leitura entra na assinatura
-das bibliotecas, e o jogo que entra nela faz a leitura sair de novo. A pasta torta (relativa, vazia, com
+das bibliotecas, e o jogo que entra na assinatura faz a leitura sair de novo. A pasta torta (relativa, vazia, com
 byte nulo) sai sozinha; a lista sem o objeto continua valendo.
 
 ### O fixador no manifesto
 
 O Proton fixado vale para todo jogo instalado, de qualquer lançador (D-3010-O-PIN-DO-PROTON-VALE-PARA-TODO-JOGO).
-O Hefesto não conhece o formato da configuração de um lançador que é extensão: quem sabe fixar é ela, pelo
+O Hefesto não conhece o formato da configuração de um lançador que é extensão: quem sabe fixar é a configuração, pelo
 `lancador.fixador`. O vigia da Steam, o install e o «Aplicar soluções» o rodam na mesma caixa do leitor, sem
 rede, com as `fontes` graváveis:
 
@@ -288,7 +288,7 @@ endereço; nada se instala sozinho.
 
 O campo `aviso` (até 400 letras, opcional) é o aviso de uso da extensão: a marca que não a endossa, o jogo
 comprado, a idade. A linha de comando o imprime antes de gravar e pergunta (`--sim` aceita). Na tela, o
-«Instalar» grava a extensão desligada, e o primeiro clique da chave só a arma: ela diz «Aceitar e ligar», com o
+«Instalar» grava a extensão desligada, e o primeiro clique da chave só a arma: a chave diz «Aceitar e ligar», com o
 aviso antes das permissões na dica, sem abrir nada no cartão; o segundo liga. O aviso aceito fica no registro (`aviso_aceito`); a versão nova com outro aviso
 volta a pedir o «sim» do ligar, e a atualização sozinha a deixa esperando o «Atualizar». O «Atualizar» do ⋮ que
 traz permissão ou aviso novo deixa o ⋮ aberto já com a lista, e o próximo clique na chave é o «sim». O serviço
@@ -342,7 +342,7 @@ escrever nada:
   serviço não escreve o zero do fim;
 - as luzinhas medidor, por 2 s depois de cada gesto: `ceil(nível / 2)` lâmpadas, no brilho forte e sem o
   esmaecer (`0x20` do byte 43), e depois o número do jogador. Na camada de uma mão ficam no medidor enquanto
-  ela vale; `para` as apaga;
+  a camada vale; `para` as apaga;
 - o pulso da barra, só com o perfil no estilo «Adulto», `ajustes.pulso_da_barra` ligado e a permissão
   `pedir:luz.pulso`. O `luz.pulso` leva a cor, a `cor_quente` (a cor esquenta com o nível), o `fundo` (a fração
   do brilho no vale, de 0 a 0,5) e o `periodo_s`, que o serviço limita a 1 a 4 s: nunca mais de um ciclo por
@@ -376,7 +376,7 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
   só, não há aba. Ao mudar uma opção a janela reabre na aba da opção. O `ligado` cujo `rotulo` é o nome do
   próprio grupo é a chave da aba: sai da lista e vira a bolinha do rótulo da aba (do título, com um grupo só),
-  verde ligada e cinza desligada, e com ela desligada as linhas da aba ficam apagadas e seguem mexíveis.
+  verde ligada e cinza desligada, e com a aba desligada as linhas da aba ficam apagadas e seguem mexíveis.
 - **`aparece_com`**: `{id: valor}`, a opção só aparece quando cada outra opção do mesmo manifesto vale o que
   se pede: uma `escolha` vale um texto das próprias `escolhas` (ou um da lista, `["A", "B"]`), um `ligado` vale
   `true` ou `false`. Com duas chaves, as duas têm de valer. A opção que aponta para uma escondida também
@@ -408,13 +408,13 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
   `nivel`, `perfil`, `aparelhos` e `conexoes`, sem repetir.
-- **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda a ela o gesto `para` (ou o
+- **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda à extensão o gesto `para` (ou o
   `extensao.parar`, a quem não lê o gesto), e o nível e o perfil ficam guardados.
-- **`chave`** (desde 28/10/2026): o `id` de uma opção `ligado` da própria extensão, sem `aparece_com`. Ela vira a
+- **`chave`** (desde 28/10/2026): o `id` de uma opção `ligado` da própria extensão, sem `aparece_com`. A opção vira a
   chave Ligado/Desligado do topo da janela, sem texto e no lugar do «Parar tudo», e sai das abas de opções. O
-  clique grava a opção na hora, como toda escolha da janela, e ela segue gravada ao reabrir. Desligar manda o
+  clique grava a opção na hora, como toda escolha da janela, e a janela segue gravada ao reabrir. Desligar manda o
   gesto `para`, como o «Parar tudo»; ligar só grava, e a extensão relê as opções. A extensão liga a própria chave
-  pelo `chave.ligar` (desde 28/10/2026, para ligar sozinha no jogo adulto em que funciona); desligar é só da janela. Com ela desligada, os botões de
+  pelo `chave.ligar` (desde 28/10/2026, para ligar sozinha no jogo adulto em que funciona); desligar é só da janela. Com a janela desligada, os botões de
   ação da janela (os da barra e os de cada aparelho), a chave de cada aparelho e os `controles` dele (a luz)
   ficam à vista, apagados e sem gesto. Pede `ler:acessorios.gesto` ou `publicar:acessorios.estado`. A extensão desligada publica
   `ligado: false` e só manda zero aos aparelhos até ser ligada de novo.
@@ -426,12 +426,12 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
   aparelhos, conexoes, ajustes}`. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
   coluna mostra cada pedaço vazio, sem número. Com o `ligado: false` da própria extensão (o «Parar tudo»), o nível
-  e o perfil ficam vazios e as conexões e os aparelhos seguem como ela os publicou, na janela e na aba Conexões. A janela pergunta no máximo duas vezes por segundo, fora do tique,
+  e o perfil ficam vazios e as conexões e os aparelhos seguem como a extensão os publicou, na janela e na aba Conexões. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;
 - `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e
   `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
-  toque de confirmação, e o serviço confere o «parar curto» só da extensão. Volta `{parado}`, falso quando ela não
-  está conectada: o botão então recusa dizendo que ela não está rodando, em vez de piscar o «enviado». Com a
+  toque de confirmação, e o serviço confere o «parar curto» só da extensão. Volta `{parado}`, falso quando a extensão não
+  está conectada: o botão então recusa dizendo que a extensão não está rodando, em vez de piscar o «enviado». Com a
   `chave`, a opção da extensão é gravada desligada antes do gesto, também quando a extensão não está conectada. Recusa
   (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara `parar_tudo` nem a
   `chave`.
@@ -439,7 +439,7 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 ### As ações, os aparelhos e o controle livre
 
 Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar:acessorios.estado` (ou
-`ler:acessorios.gesto`): a resposta da extensão é o estado que ela devolve, e é ele que tira o «Em curso».
+`ler:acessorios.gesto`): a resposta da extensão é o estado que a extensão devolve, e é ele que tira o «Em curso».
 
 - **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?}]`. O `id` é chave (até 32 letras minúsculas, números,
   hífen e sublinhado), o `rotulo` tem até 30 letras, o `grupo` é a aba em que o botão mora (sem ele, a primeira) e o `icone`
@@ -470,9 +470,9 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   `acessorios.estado`. O aparelho com `controles` tem `id`, e leva até 6 deles, `{id, tipo, valor, opcoes?, rotulo?, <!-- noqa-acento: chave do estado -->
   dica?, icone?}`, com ids sem repetição e nenhum igual ao de uma das `aparelhos_acoes` (o clique dos dois chega como a
   mesma `extensao.acao`, com `acao` e `alvo`, e a porta recusa o estado dizendo o id). O `tipo` é `chave` (`valor` verdadeiro ou falso), `paleta` (`opcoes` = <!-- noqa-acento: chave do estado -->
-  `[{id, cor, rotulo?}]`, a `cor` em `#rrggbb` ou uma lista de até 3 delas, desenhada como um ponto em fatias; o
+  `[{id, cor, rotulo?}]`, a `cor` em `#rrggbb` ou uma lista de até 3 cores, desenhada como um ponto em fatias; o
   `rotulo` é a dica do ponto) ou `escolha` (`opcoes` = `[{id, rotulo}]`); a paleta e a escolha levam de 1 a 16
-  opções, e o `valor` delas é o `id` de uma opção ou `null`. O `rotulo` (até 30 letras) nomeia a linha do controle
+  opções, e o `valor` das duas é o `id` de uma opção ou `null`. O `rotulo` (até 30 letras) nomeia a linha do controle
   (a paleta sem ele diz «Cor») e a `dica` (até 120) é a dica dele. O `icone` (só `lampada`, por ora) é o glifo do
   que a chave controla, desenhado antes da chave: é o que a separa da que liga o aparelho; sem ele, a chave leva o
   `rotulo` escrito. A janela desenha naquela aba um cartão por
@@ -483,7 +483,7 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   só aparece quando a extensão o devolve. Um controle torto recusa o estado inteiro, com a frase.
 
 A extensão recebe estes como eventos (`{"method": "evento", "params": {"topico", "nome", "uniq": null,
-"dados"}}`), só ela, sem assinar tópico nenhum:
+"dados"}}`), só a extensão, sem assinar tópico nenhum:
 
 - `extensao.acao` com `dados: {mod, acao, alvo, valor?}`: `alvo` é o `id` do aparelho (ou `null` nas `acoes` da
   janela) e `valor` vem só na chave `ligar` (`true` liga) e nos `controles` do aparelho: a `acao` é o `id` do
@@ -498,7 +498,7 @@ A extensão recebe estes como eventos (`{"method": "evento", "params": {"topico"
 A janela os pede ao serviço por `mods.acao {mod, acao, alvo?, valor?}` (volta `{enviada}`) e
 `mods.livre {mod, id, valor, soltou, modo?}` (volta `{enviado}`; `modo` só no `livre` com `modos`, e sem ele
 vale `"soltar"`) e `mods.opcao {mod, id, valor}` (volta `{enviado}`); os três voltam falso quando a extensão não está
-conectada, e a janela recusa dizendo que ela não está rodando. O serviço recusa (`-32003`, com a frase) a ação
+conectada, e a janela recusa dizendo que a extensão não está rodando. O serviço recusa (`-32003`, com a frase) a ação
 que o manifesto não declara ali (nos aparelhos com `alvo`, na janela sem ele), o controle que o aparelho `alvo`
 não publicou no último estado (ou de um manifesto sem `aparelhos_controles`), o `valor` fora do tipo do
 controle, o `livre` de outro `id`, o `deslizante` que o manifesto não declara ou o valor fora da faixa dele, o `modo` de um `livre` sem `modos` e o `modo` fora dos três. O botão
@@ -562,9 +562,9 @@ opção devolve a barra do sistema na hora.
 
 O campo `substitui` do manifesto é a lista dos `id` das extensões de quem esta toma o lugar (sem repetir, na
 forma de id, nunca uma das que vêm com o Hefesto, nunca o próprio usuário). Ao instalar ou atualizar esta, cada uma
-delas que estiver instalada:
+das extensões que estiver instalada:
 
-- para (é desligada, e o instalador espera ela parar; a que não para recusa a troca inteira, e as que já tinham
+- para (é desligada, e o instalador espera a extensão parar; a que não para recusa a troca inteira, e as que já tinham
   sido desligadas voltam a seguir ligadas);
 - passa as escolhas: a opção de `id` igual cujo valor a nova aceita vai para o `opcoes.json` da nova; a escolha
   já feita na nova vale mais; entre duas antigas, vale a primeira da lista. O modo do `livre` com `modos`

@@ -1,6 +1,6 @@
-# O Proton desta casa — o pino, a subida para o 11-7, e o que ela não entrega
+# O Proton desta casa — o pino, a subida para o 11-7, e o que a subida não entrega
 
-**Medido em 17/09/2026**, na máquina do usuário, sem escrever um byte nela. Estudo:
+**Medido em 17/09/2026**, na máquina do usuário, sem escrever um byte na máquina. Estudo:
 nada aqui foi aplicado. O passo que toca o disco do usuário está na §4 e tem dono
 humano.
 
@@ -57,7 +57,7 @@ O módulo é `src/hefesto_dualsense4unix/integrations/proton_pin.py`, **100%
 stdlib de propósito**: o `uninstall.sh` o roda como script avulso depois de a
 `.venv` já ter sido removida.
 
-### A ordem do `--ensure`, e por que ela é essa
+### A ordem do `--ensure`, e por que a ordem é essa
 
 `ensure_pinned_proton` tenta offline antes de online:
 
@@ -87,13 +87,13 @@ regrava o `config.vdf` ao sair e a edição seria perdida. Recusa devolve `rc=3`
 
 **A guarda de 19/08/2026:** entrada de jogo que já aponta para outra ferramenta
 vira `action="preservado"` — não se atropela escolha do usuário. Nasceu de um estrago
-medido: em 14/08 a trava arrastou três escolhas deliberadas dela para o pino sem
+medido: em 14/08 a trava arrastou três escolhas deliberadas do usuário para o pino sem
 perguntar.
 
 **A memória que faz a subida alcançar os jogos:** `pinos_do_hefesto`, no
-registro. É a lista dos Protons que ESTE produto já pinou. O que está nela é
+registro. É a lista dos Protons que ESTE produto já pinou. O que está na lista é
 nosso e **migra**; qualquer outro valor continua sendo escolha do usuário e é
-preservado. Sem ela, a guarda de 19/08 lê como escolha do usuário o que o próprio
+preservado. Sem a lista, a guarda de 19/08 lê como escolha do usuário o que o próprio
 produto escreveu — que foi exatamente o defeito de 16/09/2026, curado em
 `b3f087baa`.
 
@@ -189,7 +189,7 @@ Wendigo Blue, PEAK, Pro Jank Footy, ORPHEUS e Future Knight.
 | `2369580` | `GE-Proton10-34` | **não está instalado**; ficou no pino de abril |
 
 O `2369580` é o único que merece nota: ele está num pino NOSSO antigo e ficou
-para trás porque o jogo não está instalado. **Se ela reinstalar esse jogo, ele
+para trás porque o jogo não está instalado. **Se quem usa reinstalar esse jogo, ele
 abre no Proton de abril** até que um `--lock` rode de novo. Não é defeito da
 subida; é como o alvo é montado.
 
@@ -235,7 +235,7 @@ Os outros quatro itens são **por appid** e nenhum toca a biblioteca do usuário
 ### O resto da 11-7, e o que dele vale um olho
 
 O grosso do release é **Wine-Wayland com renderização de processo filho** (85
-patches na série), janelamento/fullscreen/cursor, vídeo e overlay da Steam. Ela
+patches na série), janelamento/fullscreen/cursor, vídeo e overlay da Steam. A Steam
 roda COSMIC sob Wayland, então esse é o pedaço que de fato muda o chão embaixo
 dos jogos do usuário. Dois itens são os que eu olharia primeiro se algo estranhar:
 
@@ -268,7 +268,7 @@ sha256 = c5448b76a230384e2d7bc6beb5ccb97bafb7e2c3b6c527cb03a1a546bbcb00a0
 ```
 
 **Como o sha256 foi obtido, e por que ele é confiável:** o tarball foi baixado
-em FLUXO e descartado — nada foi gravado no cache dela —, calculando sha256 e
+em FLUXO e descartado — nada foi gravado no cache do usuário —, calculando sha256 e
 sha512 na mesma passada. O sha512 resultante bate, byte a byte, com o
 `GE-Proton11-7-x86_64.sha512sum` publicado no release. Logo o sha256 acima é do
 tarball autêntico.
@@ -285,7 +285,7 @@ Nada desta seção foi rodado. O passo 3 em diante toca a máquina do usuário.
 ### Antes de tudo: as duas perguntas que são do usuário
 
 1. **A 11-6 entrega hoje o que o pino prometeu?** O som do jogo no alto-falante
-   do controle **nunca foi confirmado** nesta casa (§6.3). Se ela ainda não
+   do controle **nunca foi confirmado** nesta casa (§6.3). Se quem usa ainda não
    ouviu isso funcionar, subir para a 11-7 não arrisca nada medido — e testar a
    promessa uma vez, na 11-6, antes de trocar, vale mais do que qualquer plano.
 2. **O usuário quer o 11-7 pelo controle, ou pelo resto?** Pelo controle, o ganho é
@@ -309,7 +309,7 @@ antes evita um passo pela metade.
 ### Passo 2 — editar o conf, e só ele
 
 Em `assets/proton-pin.conf`, trocar as **três chaves** pelos valores medidos na
-§3. O bloco de prosa acima delas ganha a data e a razão da subida — é o contrato
+§3. O bloco de prosa acima das chaves ganha a data e a razão da subida — é o contrato
 da casa.
 
 Nada mais precisa mudar no código: `proton_major("GE-Proton11-7-x86_64")`
@@ -337,7 +337,7 @@ python3 src/hefesto_dualsense4unix/integrations/proton_pin.py --lock
 ```
 
 **O que isso fará, simulado em 17/09/2026 contra uma CÓPIA do `config.vdf` e do
-registro dela** (`dry_run=True`, nada escrito):
+registro da CÓPIA** (`dry_run=True`, nada escrito):
 
 ```
 status: locked
@@ -397,14 +397,14 @@ que o vdf já não tem.
 ## §5 O risco por jogo
 
 **Procurei decisão datada que amarre algum jogo à 11-6 especificamente. Não
-existe.** O que existe é uma decisão datada de sinal contrário, e ela vale:
+existe.** O que existe é uma decisão datada de sinal contrário, e a decisão vale:
 
 | decisão | data | o que diz |
 | --- | --- | --- |
 | a guarda `preservado` | 19/08/2026 | jogo que já aponta para outra ferramenta **não** é atropelado. Nasceu do estrago de 14/08, em que três escolhas do usuário foram apagadas sem pergunta |
 | o pino sobe para 11-6 | 16/09/2026 | a razão é a **feature** (áudio/haptics no jogo), e o conf declara que o 11-7 saiu no mesmo dia e não foi pinado porque *"o pino é a versão que este projeto validou"* |
 
-A segunda é a que a subida para o 11-7 muda, e ela é explicitamente reversível
+A segunda é a que a subida para o 11-7 muda, e a subida é explicitamente reversível
 por decisão — o próprio conf diz que *"upgrade é SEMPRE deliberado"*. Não há
 jogo com razão escrita para ficar na 11-6.
 
@@ -444,7 +444,7 @@ vazio. **A subida não mexe nessa proteção.**
 
 ---
 
-## §6 O fato que ela citou — e ele precisa de correção
+## §6 O fato que o usuário citou — e ele precisa de correção
 
 > *"só agora na 11.6 que fomos garantir o mic e o som mesmo que por bt"*
 
@@ -512,7 +512,7 @@ continua lá.
 
 ### 6.4 O que a frase de produto acerta
 
-Ela associou 11-6 ao som e ao mic porque as duas coisas aconteceram na mesma
+A frase associou 11-6 ao som e ao mic porque as duas coisas aconteceram na mesma
 semana e a subida do pino foi pedida pelo usuário com o Sackboy aberto, pedindo
 *"sons do jogo sfx, microfone também"*. O pedido é o mesmo; os dois caminhos que
 o atendem é que são dois. **A casa deve os dois — um já entrega por rádio
@@ -531,7 +531,7 @@ do HID com o MMDevice que o jogo abre, e o 11-6 refez esse caminho pelo
 
 **Medido em 17/09/2026:** as palavras `dsound`, `ContainerId` e `MMDevice` não
 aparecem em nenhuma das notas de release do GE-Proton **11-4, 11-5, 11-6 ou
-11-7**. O que elas dizem é:
+11-7**. O que as notas dizem é:
 
 - 11-4: *"Finalized DualShock 4, DualSense, and DualSense Edge haptics,
   controller-speaker audio, and hotplug handling."*
@@ -551,9 +551,9 @@ GE-Proton11-6-x86_64    ContainerId=12  bytes=868499
 
 O pino **velho**, de abril, tem os mesmos 12. São chaves de propriedade de
 dispositivo genéricas do Wine e **não distinguem versão nenhuma** — a presença
-delas não prova nada sobre o que a 11-6 mudou.
+das notas não prova nada sobre o que a 11-6 mudou.
 
-A substância (a feature existe, e é por ela que o pino subiu) fica; o mecanismo
+A substância (a feature existe, e é por a feature que o pino subiu) fica; o mecanismo
 inventado sai e dá lugar às palavras do próprio autor. A sequência certa,
 sourceada, é **11-4 fechou · 11-6 refez a rota e a identidade de endpoint ·
 11-7 rebaseou preservando comportamento**.
@@ -583,18 +583,18 @@ literalmente a linha falsa que o `_cmd_lock` imprimia antes de 16/09, quando os
 
 ## §8 O que NÃO foi medido
 
-- **Nada foi aplicado.** A 11-7 não foi baixada para o cache dela, o conf não
+- **Nada foi aplicado.** A 11-7 não foi baixada para o cache do usuário, o conf não
   mudou de versão, o `config.vdf` não foi tocado. O tarball foi lido em fluxo e
   descartado.
 - **A 11-7 não foi executada.** Nenhum jogo foi aberto, nenhuma sessão de Steam
-  foi iniciada. Tudo o que se afirma sobre o comportamento dela vem da nota do
+  foi iniciada. Tudo o que se afirma sobre o comportamento da 11-7 vem da nota do
   release e do conteúdo do tarball.
 - **A versão de Proton upstream da 11-7 não foi derivada** — a nota não a nomeia
   e eu não a inferi.
 - **A feature da 11-6 continua não confirmada** (§6.3). O ensaio J3 está aberto.
 - **As listas por appid do 11-7 não foram lidas do script `proton` dele** — a §5
-  cruza os 25 appids dela contra o script do **11-6** instalado, e contra os
+  cruza os 25 appids da 11-7 contra o script do **11-6** instalado, e contra os
   appids que a nota do 11-7 declara acrescentar. Ler o `proton` do 11-7 exigiria
   extraí-lo.
-- **O efeito das mudanças de Wayland/overlay da 11-7 sobre o COSMIC dela** é o
+- **O efeito das mudanças de Wayland/overlay da 11-7 sobre o COSMIC do usuário** é o
   risco que sobra, e ele só se mede jogando.

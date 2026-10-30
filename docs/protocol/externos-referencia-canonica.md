@@ -18,7 +18,7 @@ DualSense entendem.**
   não se repetem aqui.
 - **Leitura pura.** Nenhuma escrita em `hidraw`, nenhum serviço reiniciado,
   nenhum controle derrubado. O que só fecha escrevendo no aparelho está na
-  seção 8, como protocolo para ela executar.
+  seção 8, como protocolo para o usuário executar.
 - **Por que este arquivo existe:** o usuário pediu, literal — *"não deveríamos mapear
   a conexão bt dos outros 2, pro e 8bitdo?"*. E a lacuna estava medida: um
   `grep -i -E "nintendo|8bitdo|pro controller|057e"` em `docs/protocol/`
@@ -50,7 +50,7 @@ decisão errada por confundir "documentação de comunidade" com "fato".
 | **MEDIDO AQUI** | conferido nesta máquina na varredura de 07/08, com o comando citado |
 | **MEDIDO 11/08** | conferido nesta máquina em 11/08/2026, com o 8BitDo pelo **cabo** em modo Switch e o Pro genuíno no rádio. Vale o mesmo que MEDIDO AQUI; a data está no rótulo porque a **mesa era outra**, e transporte não atravessa |
 
-### 0.2 As três camadas que esta página separa — e é o motivo de ela existir
+### 0.2 As três camadas que esta página separa — e é o motivo de a página existir
 
 A referência do DualSense separa "a Sony documenta" de "o kernel implementa".
 Aqui a separação é de **três** camadas, e confundi-las já produziu conclusão
@@ -297,7 +297,7 @@ O descritor de 170 bytes declara — MEDIDO AQUI (parser próprio sobre
 `0x21` fora de subcomando. Quem escolhe é o driver, pelo `SET_REPORT_MODE` com
 `data[0] = 0x30`, e **o Linux nunca pede outro modo**. GRAU: ALTA + MEDIDO AQUI.
 
-ATENÇÃO — **a diferença estrutural com o DualSense, e ela é grande:**
+ATENÇÃO — **a diferença estrutural com o DualSense, e a diferença é grande:**
 
 | | Pro Controller | DualSense |
 |---|---|---|
@@ -344,7 +344,7 @@ do código, dado o parâmetro medido).
 
 **O `subcmd_silence_streak_max=3`** (remendo do projeto, ligado aqui) faz o driver
 desistir cedo de um controle mudo. O comentário do próprio remendo traz a
-medição que o justifica, e ela é a medida do custo: **sem ele, UMA escrita de LED
+medição que o justifica, e a medição é a medida do custo: **sem ele, UMA escrita de LED
 num controle calado custa 4 x 25 x 500 ms = 50 segundos segurando o
 `output_mutex`, mais 100 linhas de log, repetido para sempre a cada escrita.**
 GRAU: ALTA (`:883-911`) + MEDIDO AQUI (o parâmetro).
@@ -358,7 +358,7 @@ GRAU: ALTA (`:883-911`) + MEDIDO AQUI (o parâmetro).
 mesmo que o `build_enable_imu_packet` (`core/external_leds.py:124`) monta.
 GRAU: ALTA.
 
-**As escalas, e elas NÃO são as do DualSense:**
+**As escalas, e as escalas NÃO são as do DualSense:**
 
 | | Pro Controller | DualSense |
 |---|---|---|
@@ -376,7 +376,7 @@ converter erra por **2x** no acelerômetro e por cerca de **14x** no giroscópio
 | medida | valor | GRAU |
 |---|---|---|
 | relatórios `0x30` no fio | **89,2/s**, um a cada **11,2 ms** | MEDIDO AQUI (6,0 s de `hidraw` puro) |
-| amostras de IMU por relatório | **3** (usualmente 5 ms entre elas) | ALTA (`:1644-1646`) |
+| amostras de IMU por relatório | **3** (usualmente 5 ms entre as medições) | ALTA (`:1644-1646`) |
 | taxa de amostra esperada | 89,2 x 3 = **268/s** | derivada — e bate com os 267 SYN/s medidos no nó de IMU |
 | `avg_delta` que o kernel **aprende** | **11 ms** em 1460 das 1613 amostras de hoje, com cauda até 22 | MEDIDO AQUI (`journalctl -k \| grep -oP 'avg_delta=\K[0-9]+' \| sort -n \| uniq -c`) |
 
@@ -522,7 +522,7 @@ aceitou, e está registrado para ninguém o redescobrir como surpresa.
   can damage the linear actuators"*. GRAU: MÉDIA — **fonte única, e por isso
   mesmo a ser respeitada, não testada.**
 
-**A consequência que muda a leitura do E-1**, e ela tem nome: **existe um segundo
+**A consequência que muda a leitura do E-1**, e a consequência tem nome: **existe um segundo
 escritor possível da janela de TX do Pro** — qualquer jogo, ou a Steam, via
 `ff_memless` — e ele produziria as **mesmas** linhas de `exceeded max attempts`
 **sem nenhuma escrita do Hefesto no journal**. O E-1 concluiu "não há segundo
@@ -540,7 +540,7 @@ máquina**. Casa com o comentário do kernel, o que não é o mesmo que confirma
 
 O `hid-nintendo` publica **só** `capacity_level` (cinco degraus), mais `status`,
 `present` e `scope`. **Não existe `capacity`**: o vetor de propriedades tem
-quatro entradas e a de percentual não é uma delas. GRAU: ALTA (`:1843-1878`,
+quatro entradas e a de percentual não é uma das entradas. GRAU: ALTA (`:1843-1878`,
 `:2611-2659`) + MEDIDO AQUI (o nó
 `nintendo_switch_controller_battery_0005:057E:2009.0017` existe, e não tem
 arquivo `capacity`).
@@ -572,7 +572,7 @@ compara** com a escala do DualSense.
   aqui (20h33m de pé sem cair), o que não é confirmação.
 - **Quem desligaria é o HOST, por subcomando `0x06` — e o Linux nunca o manda.**
   Ver a tabela de 3.2. É a **única** alavanca real de "desligar o Pro" que
-  existe, e nem o kernel nem o Hefesto a usam. **Se ela algum dia pedir "desligar
+  existe, e nem o kernel nem o Hefesto a usam. **Se quem usa algum dia pedir "desligar
   o controle pelo aplicativo", é por aqui.** GRAU: ALTA para a ausência de
   emissão; MÉDIA para a semântica do subcomando.
 - **O console faz uma coisa que o Linux não faz:** *"Switch always sends `x08
@@ -738,7 +738,7 @@ positivo no mesmo minuto:
 | nó de IMU do Pro | 10 s | 267 SYN/s |
 | nós de sensores dos dois DualSense | 10 s | 155 a 265 SYN/s |
 
-RESSALVA HONESTA, e ela é do instrumento: **o `evdev` suprime `SYN_REPORT`
+RESSALVA HONESTA, e a ressalva é do instrumento: **o `evdev` suprime `SYN_REPORT`
 quando nada muda**, então o zero de `evdev` sozinho **não** prova silêncio. Quem
 prova é o `hidraw`, que entrega tudo. O `evdev` entra como **confirmação**, não
 como prova.
@@ -756,8 +756,8 @@ pageia. GRAU: MEDIDO AQUI.
 compatível com *"o link sobe, o aparelho nunca transmite, e algo derruba um link
 sem tráfego"*. GRAU: **BAIXA** — é hipótese **com mecanismo**, derivada de duas
 medições próprias, sem nenhuma fonte de terceiro. **É falsificável:** se o
-timeout de supervisão dele for da ordem de dezenas de segundos, ela morre; se ele
-estiver mudo **e** o link durar 26 min, ela ganha. E o timeout de supervisão é
+timeout de supervisão dele for da ordem de dezenas de segundos, a hipótese morre; se ele
+estiver mudo **e** o link durar 26 min, a hipótese ganha. E o timeout de supervisão é
 exatamente o que não se lê sem privilégio (8.1).
 
 ### 4.6 A bateria que MENTE
@@ -911,11 +911,11 @@ causa; MEDIDO 11/08 para o número.
 
 ### 5.2 Pelo RÁDIO — continua sem medição, e o preço é um pareamento novo
 
-> **NOTA DATADA — 07/08/2026, e ela continua valendo para o RÁDIO.** Neste
+> **NOTA DATADA — 07/08/2026, e a nota continua valendo para o RÁDIO.** Neste
 > adaptador **não há bond do 8BitDo em modo Switch**: eram quatro bonds em
 > 07/08, e nenhum era ele. **Qualquer medição deste modo pelo rádio começa por
 > um pareamento novo**, e continua sendo o item mais caro desta página. O que
-> caducou é o **alcance** da frase: em 07/08 ela valia para o modo inteiro;
+> caducou é o **alcance** da frase: em 07/08 a frase valia para o modo inteiro;
 > desde 11/08 vale **só para o rádio**, porque o cabo respondeu (5.1).
 
 O que o cabo **não** responde, e por construção:
@@ -945,7 +945,7 @@ driver que pega. **Nenhuma chave sozinha basta: precisa das duas.** GRAU: ALTA.
 
 **O endereço de rádio MUDA com o modo, e isso está medido.** O clone usa
 endereços **diferentes em cada modo**, os dois com a OUI `E4:17:D8`. Duas rotas
-independentes, 17 dias entre elas:
+independentes, 17 dias entre as rotas:
 
 - **25/07** — os bonds do BlueZ no aparelho de teste, dois endereços que só diferem no
   fim, um em modo Switch e outro em `054c:05c4`. Registrado em
@@ -954,13 +954,13 @@ independentes, 17 dias entre elas:
 - **11/08** — o `REQ_DEV_INFO` pelo cabo devolveu, para o modo Switch, **o mesmo
   endereço** que o log daquele dia registrara para aquele modo, sem parear nada.
 
-GRAU: **MEDIDO**. Foi esta a `P-2` desta página, e ela está fechada (seção 8.2).
+GRAU: **MEDIDO**. Foi esta a `P-2` desta página, e a pergunta está fechada (seção 8.2).
 
 **A consequência para a doutrina, que era a dívida 7.3:** as regras `udev` da
 casa casam por `HID_UNIQ`, isto é, **por endereço**. Como o endereço muda com o
 modo, **toda regra que case o endereço INTEIRO troca de alvo quando o aparelho troca de
-modo** — é a armadilha, e ela é real. A `assets/82-nintendo-pro-nosniff.rules`
-**não é uma delas, e não está acertando por sorte:** ela casa
+modo** — é a armadilha, e a armadilha é real. A `assets/82-nintendo-pro-nosniff.rules`
+**não é uma das regras, e não está acertando por sorte:** a regra casa
 `ENV{HID_UNIQ}=="e0:f6:b5:*"`, ou seja **só o prefixo de OUI do Pro genuíno**, e
 os dois endereços medidos do clone carregam a OUI da 8BitDo — em modo nenhum a
 do Pro. **A doutrina de escopo por OUI está certa e agora está medida.**
@@ -996,8 +996,8 @@ linhagens nesta mesa. Nenhum caminho da árvore lê UUIDs de SDP — a identidad
 de `HID_UNIQ`, VID e PID, e está certo.
 
 ATENÇÃO: **`ServicesResolved=false` NÃO implica controle mudo.** O Pro entrega
-89 relatórios por segundo com ela em `false`. **A vigia de zumbi não pode usar
-essa propriedade sozinha como sintoma** — e não usa: ela a combina com "zero
+89 relatórios por segundo com a propriedade em `false`. **A vigia de zumbi não pode usar
+essa propriedade sozinha como sintoma** — e não usa: a propriedade a combina com "zero
 `hidraw`", que é o que salva a heurística de dar falso positivo no Pro. GRAU:
 MEDIDO AQUI.
 
@@ -1060,7 +1060,7 @@ certo; a conclusão é forte demais.** Duas medições a corrigem:
 2. **O `bluetoothd` tenta ativamente conectar ao perfil de entrada.** MEDIDO
    AQUI: `profiles/input/device.c:control_connect_cb() connect to <endereço>:
    Host is down (112)` — 12 ocorrências neste boot, para o Pro, o 8BitDo e um
-   DualSense. Duas delas, às 22:20:58 e 22:21:04 de 06/08, **precedem em segundos
+   DualSense. Duas das ocorrências, às 22:20:58 e 22:21:04 de 06/08, **precedem em segundos
    a subida do Pro às 22:21:11**.
 
 **A leitura correta:** `ReconnectMode=device` quer dizer *"o BlueZ não reconecta
@@ -1149,7 +1149,7 @@ produto se apoiava, sem saber, num grau baixo.
   O risco é real e fica nomeado aqui para quem for escrever a próxima;
 - **regra que case só o prefixo de OUI não troca**, e é o caso da
   `assets/82-nintendo-pro-nosniff.rules`, que casa `ENV{HID_UNIQ}=="e0:f6:b5:*"`
-  — o prefixo do Pro **genuíno**. Ela nunca esteve acertando por sorte. **A
+  — o prefixo do Pro **genuíno**. A regra nunca esteve acertando por sorte. **A
   doutrina de escopo por OUI está certa e agora está MEDIDA.**
 
 **O que sobra, e não é doutrina, é ensaio no aparelho:** o clone **por rádio em modo
@@ -1190,9 +1190,9 @@ falsa.** Está na lista de notas de instrumento pelo mesmo motivo.
 
 **P0.** Roda como root, e **não** derruba nada — é captura passiva. Nada a
 destrancar além de encerrar a captura.
-**ELA.** Nada, além de autorizar o privilégio.
+**O USUÁRIO.** Nada, além de autorizar o privilégio.
 **PREVISÃO.** Se o timeout de supervisão do 8BitDo for da ordem de **dezenas de
-segundos**, a hipótese do ciclo de 26 minutos morre. Se for de **minutos**, ela
+segundos**, a hipótese do ciclo de 26 minutos morre. Se for de **minutos**, a hipótese
 ganha.
 **CONSEQUÊNCIA.** **O projeto nunca soube o timeout de supervisão de nenhum destes
 controles.** Nenhum instrumento da árvore o lê.
@@ -1206,7 +1206,7 @@ fim, um em Switch, outro em `054c:05c4`) e o `REQ_DEV_INFO` pelo cabo em
 **11/08**, que devolveu para o modo Switch o mesmo endereço registrado naquele
 dia. O desenvolvimento está em 5.3.
 
-**Onde ela já estava respondida, e é a lição que custa.** A medição de 25/07
+**Onde a pergunta já estava respondida, e é a lição que custa.** A medição de 25/07
 está em [`docs/usage/troubleshooting-8bitdo.md`](../usage/troubleshooting-8bitdo.md)
 **desde 25/07** — duas semanas antes de esta página abrir a pergunta. Esta
 página perguntou o que o projeto já sabia, em outra página da mesma árvore. Fica
@@ -1254,7 +1254,7 @@ coisa física, ou são cache do kernel sobre hardware que não existe?
 **Por que existe.** É a única linha desta página marcada MÉDIA por **nunca ter
 sido olhada** (4.7), e o custo é o menor de toda a fila.
 
-**ELA.** Olha o controle e diz se há luz colorida ou só os quatro LEDs azuis de
+**O USUÁRIO.** Olha o controle e diz se há luz colorida ou só os quatro LEDs azuis de
 modo. **Cinco segundos.**
 **PREVISÃO.** O SN30 Pro **não tem lightbar RGB**. Se confirmado, todo o caminho
 `ds4` de LED externo é **escrita em nó que não acende**, e isso muda o valor da
@@ -1265,7 +1265,7 @@ E3.
 > existe led de identificação de player nele também, igual o pro controller"*.
 > Os cinco segundos foram gastos e o desfecho está na seção 4.7.
 >
-> **O que RESTA da `P-4`, e ela vira esta pergunta:** *quando o daemon escreve
+> **O que RESTA da `P-4`, e a pergunta vira esta pergunta:** *quando o daemon escreve
 > uma cor conhecida na lightbar do 8BitDo, as quatro luzes do plástico mudam?*
 >
 > - **por que importa:** decide se `write_lightbar_slot` já numera o aparelho
@@ -1288,7 +1288,7 @@ E3.
 > pergunta, com a leitura do driver que a sustenta.
 
 > **NOTA DATADA — 11/08/2026: a `P-4` ganhou uma SEGUNDA lâmpada para perguntar,
-> e ela é de outro modo.** Em modo Switch pelo cabo o clone registra os **cinco**
+> e a lâmpada é de outro modo.** Em modo Switch pelo cabo o clone registra os **cinco**
 > nós do Pro, e o quinto é `<instância>:blue:player-5` com `max_brightness=15`
 > — o **LED HOME**, por `SET_HOME_LIGHT` (`0x38`), não um quinto jogador (3.6 e
 > 5.1). **O nó existe: MEDIDO 11/08. Que o anel de Home do 8BitDo ACENDA
@@ -1322,7 +1322,7 @@ ligado (já colhida: 103, 439, 208, 117, 155, 175).
 **PREVISÃO.** Fechando só a tela, a perda cai **parcialmente**; tirando dois
 controles, cai **para a ordem de dezenas**. Se não cair com nenhum dos dois, a
 causa é outra e a hipótese de contenção morre.
-**ELA.** Nada, além de fechar a tela quando não estiver usando.
+**O USUÁRIO.** Nada, além de fechar a tela quando não estiver usando.
 
 ---
 
@@ -1359,7 +1359,7 @@ varredura acrescentou:
    instrumento que confie no D-Bus para dizer "o controle está lá" mente.
 8. **A tela de Bluetooth aberta muda o rádio.** `Discovering=true` liga o
    `ISCAN` e o inquiry consome ar. Toda medição desta frente tem de declarar se
-   ela estava aberta.
+   a tela estava aberta.
 
 ---
 
@@ -1456,7 +1456,7 @@ E os três pontos em que a página do DualSense **ganha** conteúdo desta:
 > livre: o "Documento irmão" está no cabeçalho daquela página, o contraste das escalas de
 > IMU está na seção 5, e as três sementes de CRC-32 (`0xA2` saída, `0xA1`
 > entrada, `0xA3` feature) ganharam tabela própria na seção 7. Esta seção 11
-> fica como está — ela registra por que a recíproca demorou, e isso não se
+> fica como está — a seção registra por que a recíproca demorou, e isso não se
 > apaga.
 >
 > **A correção:** a taxa do giroscópio vinha sendo citada como *"trabalho aberto"*

@@ -14,7 +14,7 @@ DEPOIS que ele sai do driver e ANTES de o jogo lê-lo.**
 - **Leitura pura — nas seções 0 a 6.** Ali nada foi escrito, nenhum serviço
   reiniciado, nenhum controle derrubado: as medições são `strings(1)`, `grep` e
   leitura de arquivo, com a Steam **fechada**.
-  **A seção 6-bis é de outra natureza, e foi acrescentada em 12/08/2026:** ela é
+  **A seção 6-bis é de outra natureza, e foi acrescentada em 12/08/2026:** a seção é
   ensaio no aparelho, com a Steam **aberta**, escrita no `hidraw`, `btmon` no ar e o olho
   de quem confere como aceite. Cada linha de lá tem ensaio em `docs/data/ensaios.csv`.
   **A seção 5-bis, de 13/09/2026, é sonda só-leitura** com o vpad vivo: nenhuma
@@ -27,7 +27,7 @@ DEPOIS que ele sai do driver e ANTES de o jogo lê-lo.**
   aparelho da Sony), a
   [canônica dos externos](externos-referencia-canonica.md) (Pro e 8BitDo) e a
   [paridade Bluetooth × cabo](paridade-bluetooth-versus-cabo.md) (o transporte).
-  Quando esta página e uma delas discordarem, **cada uma vence no seu escopo**:
+  Quando esta página e uma das três discordarem, **cada uma vence no seu escopo**:
   as outras falam do que o controle entende, esta fala do que a pilha do PC faz
   com ele.
 - **Regra de uso:** esta página vence sobre docstring e comentário — mas só nas
@@ -222,7 +222,7 @@ fuzz 16 e flat 128; gatilhos `0..255` (`0..1023` no Xbox One); direcional
 `led_classdev` para o anel de quatro quadrantes (`xpad_led_probe`,
 `xpad.c:1743`). Um aparelho, um nó, sete eixos.
 
-**A consequência para este projeto, e é ela que custa:** a máscara Xbox 360
+**A consequência para este projeto, e é a consequência que custa:** a máscara Xbox 360
 (`045e:028e`, `integrations/uinput_gamepad.py:58-60`) **não tem onde pôr**
 giroscópio, touchpad, lightbar RGB, gatilhos adaptativos ou bateria. Não é bug
 nosso nem falta de trabalho: é o formato do aparelho que estamos imitando.
@@ -232,7 +232,7 @@ e passa a depender do `hidraw` — que é onde a seção 3 começa.
 
 Essa troca já estava medida na matriz de paridade e nas notas de
 `integrations/uhid_gamepad.py:1-12`; o que faltava era **a explicação escrita**,
-e ela é esta.
+e a explicação é esta.
 
 ### 1.6 O nome que o `xpad` empresta ao mundo
 
@@ -242,7 +242,7 @@ Uma linha da tabela de aparelhos importa fora do driver:
     { 0x045e, 0x028e, "Microsoft X-Box 360 pad", 0, XTYPE_XBOX360 },
 ```
 
-`xpad.c:157`. Guarde a string. Ela reaparece na seção 2 **sem o driver**.
+`xpad.c:157`. Guarde a string. A string reaparece na seção 2 **sem o driver**.
 
 ---
 
@@ -595,7 +595,7 @@ Três leituras, e a terceira é a que importa:
    perde `hidraw`, e com ele rumble, gatilhos e lightbar do jogo. É precisamente
    o que `daemon/launch_env.py:158` proíbe em letras maiúsculas
    (*"NUNCA incluir 0x0DF2"*).
-3. **Ela não pode disparar nesta máquina**: exige `SteamDeck == "1"`, e este PC
+3. **A variável não pode disparar nesta máquina**: exige `SteamDeck == "1"`, e este PC
    não é um Deck. **GRAU: ALTA** — a condição está no fonte, lida.
 
 Fica registrado porque é a única lista da Valve, hoje, que casa com o PID que
@@ -622,7 +622,7 @@ tabela: `controller_list.h:643` mapeia `054c:0df2` para
 
 Um quinto ponto, **medido no binário da máquina de teste** e não no fonte: o banco de
 mapeamentos embutido no `libSDL3.so.0` da Steam tem, para o Edge, **uma única
-entrada, e ela é de Bluetooth**:
+entrada, e a entrada é de Bluetooth**:
 
 ```
 050000004c050000f20d000000010000,DualSense Edge Wireless Controller,...   (bus 0x05 = BT)
@@ -648,7 +648,7 @@ escolhendo, sem saber, o ramo de código que cada jogo reservou ao Edge.
 
 **Balanço honesto:** a escolha do PID Edge continua certa pelo motivo pelo qual
 foi feita (é o que permite ao `IGNORE_DEVICES` separar físico de virtual, e o
-`hid_playstation` registra o vpad como DualSense completo). Ela **não é
+`hid_playstation` registra o vpad como DualSense completo). A escolha **não é
 gratuita**: paga com quatro botões fantasmas, um nome diferente, um caminho de
 rumble diferente e uma taxa declarada quatro vezes maior que a real.
 
@@ -670,7 +670,7 @@ o degrau anterior deixou passar.
 ambiente do processo e o wrapper roda dentro dele, sobrescrevendo com `env(1)`
 as variáveis que exporta. Logo, para as **sete** variáveis da
 `ENV_ALLOWLIST` em `daemon/launch_env.py:90-94`, **o wrapper vence a Steam**. Para qualquer
-outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
+outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma das variáveis, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em
 `assets/hefesto-launch.sh:32-37`); **NÃO MEDIDO** para o valor que a Steam põe.
@@ -686,7 +686,7 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 | `integrations/storm_doctor.py:46` e `:292` | o diagnóstico deixa de acusar aquele appid como conflito |
 | `daemon/launch_env.py:285-316` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
 
-**O que ela NÃO muda mais, e isto é decisão de produto, datada.** Até 09/08 a marca
+**O que a máscara NÃO muda mais, e isto é decisão de produto, datada.** Até 09/08 a marca
 tinha um ramo próprio no arquivo de envs: o jogo marcado recebia um ambiente
 diferente (sem dedup) e o vpad era **suspenso**. A decisão de
 esconder o aparelho em vez de sair
@@ -991,7 +991,7 @@ do nosso vpad — o mesmo GET_REPORT que o probe do driver e o jogo já fazem.
 | 5 | `winebus.sys` do Proton prefere `hidraw` para a família Sony e entrega o device ao lado Windows | o predicado está lido em 3.2; o carimbo, em 5-ter.3 |
 | 6 | o jogo lê o report cru pela `HID.DLL` | as importações estão em 5-ter.4 |
 
-**A permissão decide quem o Proton alcança, e ela é assimétrica:** `hidraw0`
+**A permissão decide quem o Proton alcança, e a permissão é assimétrica:** `hidraw0`
 (o FÍSICO) está `crw------- root root`, sem ACL; `hidraw5` (o VPAD) está
 `crw-rw----` **com** a ACL da sessão. Quem roda como o usuário abre o segundo e não
 abre o primeiro. É o mesmo `0600` que a 5-bis.3 já tinha registrado como a
@@ -1079,7 +1079,7 @@ Duas leituras, e a segunda é uma ressalva:
 2. **Ele o põe numa CLASSE só dele** — `4`, diferente da do DualSense comum. O
    que essa classe muda no motor **não foi lido**: seria preciso desmontar o
    consumidor do `ebx`, ou abrir o jogo. **GRAU: NÃO MEDIDO.** É a linha 11 da
-   seção 7, e ela nasce desta seção.
+   seção 7, e a seção nasce desta seção.
 
 **O jogo ABRIU o nosso vpad, e escreveu nele.** Journal do daemon do usuário, dentro
 da sessão do PRAGMATA (01:39:08 → 01:47:01 de 17/09): às 01:39:38,
@@ -1168,7 +1168,7 @@ nenhuma**. **GRAU: MEDIDO AQUI**, no arquivo instalado:
 | `PROTON_STEAMINPUT_FALLBACK` (+ `PROTON_SONY_HIDRAW_XINPUT`) | para jogos que *"dependem de action manifests do Steam Input"* | 3 | não |
 
 **A terceira lista é a que importa para esta queixa**, e o motivo é de
-parentesco: ela contém **Monster Hunter Wilds (2246340)**, que é a MESMA RE
+parentesco: a lista contém **Monster Hunter Wilds (2246340)**, que é a MESMA RE
 Engine do PRAGMATA. O comentário do GE diz, com todas as letras, que esses
 jogos dependem do Steam Input e precisam da ponte XInput para funcionar; e o
 `localconfig.vdf` da máquina de teste tem `UseSteamControllerConfig = 0` para o PRAGMATA.
@@ -1239,7 +1239,7 @@ o registro canônico é o
 estado da noite de 17/09, §6, e o método de isolamento é o
 [METODO-DE-ISOLAMENTO](../method/METODO-DE-ISOLAMENTO.md).
 
-**Esta seção não escolhe causa.** Ela documenta o caminho do rumble em cada
+**Esta seção não escolhe causa.** A seção documenta o caminho do rumble em cada
 camada para **estreitar a busca** — e derruba um sexto suspeito.
 
 ### 6.1 Os três caminhos, e eles não se parecem
@@ -1430,7 +1430,7 @@ Segue esperando a sessão.
 
 **Acrescentado em 12/08/2026, e é o achado que fechou dezesseis dias de
 investigação da lightbar por Bluetooth.** Esta página descrevia a Steam como
-**leitora** que cria espelhos. Ela também é **escritora**, no `hidraw` de cada
+**leitora** que cria espelhos. A Steam também é **escritora**, no `hidraw` de cada
 DualSense, e o que a Steam escreve pinta a barra de luz.
 
 Toda esta seção é `MEDIDO AQUI` no ensaio de 11→12/08. O aceite do que a
@@ -1444,7 +1444,7 @@ justamente por isso. As linhas de ensaio são
 `btmon-probe-limpa` e `btmon-a-rajada-tem-hora`
 (`docs/data/ensaios.csv:41-51`).
 
-### 6-bis.1 Ela tem o `hidraw` aberto, e com permissão de ESCRITA
+### 6-bis.1 A Steam tem o `hidraw` aberto, e com permissão de ESCRITA
 
 Com o daemon **parado**, `readlink` sobre `/proc/*/fd` mostrou o processo
 `steam` com quatro `hidraw` abertos, e o `/proc/PID/fdinfo` deu o modo:
@@ -1479,7 +1479,7 @@ escrita, e o resultado inverso.**
 se algum deles pede a barra apagada. As capturas daquela noite não existem
 mais (o `/tmp` não passa de um boot); quem continuar grava os dois braços de
 novo com `scripts/capturar_a_probe_da_lightbar.sh`, que desde 25/09/2026 lê os
-`0x31` na hora e não guarda a captura crua — ela pode levar a chave de
+`0x31` na hora e não guarda a captura crua — a captura pode levar a chave de
 pareamento.
 
 ### 6-bis.3 A escrita é em RAJADA, e a rajada tem hora
@@ -1503,14 +1503,14 @@ com a cor pedida (*"só o player 4 que é o controle azul o resto tá no padrão
 steam"*). **Cada conexão nova faz a Steam repintar todos os controles**, não só
 o que chegou.
 
-### 6-bis.4 Em regime ela repinta, não apaga
+### 6-bis.4 Em regime a Steam repinta, não apaga
 
-Correção de leitura, e ela importa: abrindo a Steam com as três barras **já
-acesas** de uma probe limpa, elas **mudaram para as cores padrão da Steam e
+Correção de leitura, e a Steam importa: abrindo a Steam com as três barras **já
+acesas** de uma probe limpa, as barras **mudaram para as cores padrão da Steam e
 continuaram acesas** — *"fizeram a migração de cores padrão da steam. ainda
-ligados"*. A barra estava obedecendo; só que **a ela**.
+ligados"*. A barra estava obedecendo; só que **à Steam**.
 
-**O que a Steam estraga é a PROBE.** Em regime ela é mais um escritor, e perde
+**O que a Steam estraga é a PROBE.** Em regime a PROBE é mais um escritor, e perde
 para quem escrever depois.
 
 ### 6-bis.5 A rota decide quem vence: `hidraw` ganha, `sysfs` perde
@@ -1530,13 +1530,13 @@ a Steam.
 
 **E a vitória não encerra a disputa.** O magenta pegou nos três no instante, mas
 **não durou nos três**: *"dois dos controles ficaram magenta e o branco tá
-vermelho no player 2"* — vermelho é a cor de jogador 2 da Steam, ou seja, ela
+vermelho no player 2"* — vermelho é a cor de jogador 2 da Steam, ou seja, a Steam
 repintou **um** e não os outros dois. **O que decide qual controle a Steam
 repinta não foi medido.**
 
 ### 6-bis.6 O que isto compra, e a ressalva de produto
 
-O desenho que sai daqui é o que ela formulou — *"não podemos colocar um gatilho
+O desenho que sai daqui é o que a ressalva formulou — *"não podemos colocar um gatilho
 pra sempre que a steam aloprar em sequência algo ativa a sobrescrição
 automática?"* — e ele **arma a cada conexão e só dispara quando o rádio
 sossega**, escrevendo então em **todos** os controles pela rota `hidraw`. Com a
@@ -1569,7 +1569,7 @@ pedia para as três primeiras, e ele custou trinta segundos.
 | 1 | a Steam põe `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1`? | **SIM** — está no `environ` do processo do jogo |
 | 2 | logo, o `0x28de/0x11ff` no `IGNORE_DEVICES` age ou é redundante? | **AGE.** Não é redundante — a variável está em 1, então o par esconde mesmo pelo caminho SDL |
 | 6 | em que valor a Steam deixa `SDL_HINT_JOYSTICK_ENHANCED_REPORTS`? | **AUSENTE** do `environ`. A Steam não a escreve; o default da biblioteca é que decide |
-| 13 | a queixa do PRAGMATA se cura com `PROTON_SONY_HIDRAW_XINPUT=1`? | **SIM, e com um preço.** A vibração acorda — 28 pedidos com força, o maior (153,153) de 255, em dois minutos, contra ZERO pedido com força em 35 minutos sem ela. **E o giroscópio morre no jogo.** |
+| 13 | a queixa do PRAGMATA se cura com `PROTON_SONY_HIDRAW_XINPUT=1`? | **SIM, e com um preço.** A vibração acorda — 28 pedidos com força, o maior (153,153) de 255, em dois minutos, contra ZERO pedido com força em 35 minutos sem a vibração. **E o giroscópio morre no jogo.** |
 
 **A linha 13 é a que mais ensina, e o preço dessa linha não é trade-off — é defeito
 de arranjo.** O vpad continuou publicando movimento o tempo todo durante a
@@ -1618,7 +1618,7 @@ do `winedevice`. Prova direta: `HIDIOCGFEATURE` por Python no hidraw de cada pad
   `wLength` (`f_hidg_size_get_report` em `assets/dkms/usb-f-hid/f_hid.c:578`).
   Medido com ele: 41, 20 e 64 bytes em 2 a 6 ms nos 4 pads, nenhum `1053`.
   A marca dele é `/sys/module/usb_f_hid/parameters/get_report_sized`, e o
-  `doctor` dá `[FAIL]` sem ela.
+  `doctor` dá `[FAIL]` sem a marca.
 
 ## 7. O que continua em aberto por falta de medição
 
@@ -1643,7 +1643,7 @@ três linhas de uma vez. É o melhor negócio desta tabela.
 método do Hefesto pede ida **e** volta: tirar o suspeito e ver curar, devolver e
 ver o defeito voltar. A ida está feita (sem a Steam → três de três obedeceram);
 a volta **estava em curso quando dois controles caíram sozinhos do rádio** e o
-ensaio acabou ali. Enquanto ela não existir, o caderno
+ensaio acabou ali. Enquanto a volta não existir, o caderno
 (`scripts/eliminacao.py`) devolve **CONFUSO** para este suspeito, e está certo
 em devolver.
 

@@ -11,11 +11,11 @@
   baixado, nada foi gravado em aparelho nenhum, e nenhum binário de firmware
   entra neste repositório.** O `LICENSE` daqui é MIT e o firmware da 8BitDo e o
   da Nintendo são proprietários; e gravar firmware pode inutilizar o aparelho.
-  **Quem decide atualizar é ela.** Esta página é documentação, e só
+  **Quem decide atualizar é quem usa.** Esta página é documentação, e só
 
 ## Relação com as outras páginas
 
-Esta página **complementa** três que já existem e não repete o que elas provam:
+Esta página **complementa** três que já existem e não repete o que as três provam:
 
 | página | o que a página já responde |
 |---|---|
@@ -30,7 +30,7 @@ cara, com a data.
 
 ## 0. Como ler
 
-### 0.1 As fontes, e elas não têm o mesmo peso
+### 0.1 As fontes, e as fontes não têm o mesmo peso
 
 | marca | o que significa |
 |---|---|
@@ -43,7 +43,7 @@ cara, com a data.
 Graus: **ALTA**, **MÉDIA**, **SEM PROVA** — a mesma escala das outras páginas de
 protocolo.
 
-### 0.2 A resposta curta, para quem só quer ela
+### 0.2 A resposta curta, para quem só quer a resposta
 
 1. **Não falta driver.** Os dois aparelhos são `057E:2009` e caem no mesmo
    `hid_nintendo`; o fork DKMS do projeto serve aos dois, e serve **melhor** ao
@@ -115,7 +115,7 @@ nintendo 0003:057E:2009.0008: using factory cal for IMU
    *"Calibração de fábrica dos sticks"* e *"Calibração de fábrica da IMU"* —
    como `desconhecido`. As duas viram **tem**, por cabo e com prova no log.
 
-**Uma diferença que sobra, e ela NÃO é firmware:** o genuíno diz `using **user**
+**Uma diferença que sobra, e a IMU NÃO é firmware:** o genuíno diz `using **user**
 cal` nos três, o clone diz `using **factory** cal`. Isso é conteúdo de SPI, não
 versão de firmware — a calibração de usuário é o que um console Switch grava
 quando alguém calibra o controle por lá. Atualizar firmware não muda isso;
@@ -134,12 +134,12 @@ Pro 2 for Xbox — que têm **menos** modos e outros IDs.
 
 **Uma coisa já dá para eliminar sem tocar no aparelho:** o **Pro 2 não troca de
 modo por combo**, e sim por uma **chave física de quatro posições** (S/X/D/A) na
-traseira. **[FABRICANTE]**, grau **ALTA**. Como este projeto mediu com ela, em
+traseira. **[FABRICANTE]**, grau **ALTA**. Como este projeto mediu com a chave, em
 03/08/2026, que o modo troca com `Start + A`, **o controle do usuário não é um Pro 2**.
 É SN30 Pro ou SN30 Pro+ — e essa distinção continua aberta, porque o usuário decide
 qual índice de firmware vale (seção 4).
 
-### 2.2 A tabela dos modos, e a correção de vocabulário que ela traz
+### 2.2 A tabela dos modos, e a correção de vocabulário que a correção traz
 
 | modo (nome da 8BitDo) | combo | VID:PID cabo | VID:PID Bluetooth | driver no Linux |
 |---|---|---|---|---|
@@ -156,14 +156,14 @@ X-input e macOS, da wiki do `fwupd` e da tabela cabo/rádio do
 **[FABRICANTE]**, grau **ALTA** — exceto o `045e:02e0` do SN30 Pro (sem "+"),
 que só está confirmado para o Pro+, e fica **MÉDIA**.
 
-> **A CORREÇÃO, e ela é de vocabulário, não de número.**
+> **A CORREÇÃO, e a CORREÇÃO é de vocabulário, não de número.**
 >
 > O que este repositório chama, em toda parte, de **"modo DirectInput/PS4"** é
 > `Start + A` e produz `054c:05c4`. **Na nomenclatura da 8BitDo isso é o modo
 > macOS**, e o "D-input" de verdade é outro combo — `B + Start` — que produz
 > `2dc8:6001`.
 >
-> Os números do repositório estão **certos**: `Start + A` foi medido com ela em
+> Os números do repositório estão **certos**: `Start + A` foi medido com a chave em
 > 03/08, `054c:05c4` foi medido em 25/07, e é o caminho bom por Bluetooth. O que
 > estava errado era o **nome**. E o nome custou uma coisa concreta: enquanto o
 > modo `Start + A` se chamou "DirectInput", **ninguém aqui procurou o modo
@@ -245,7 +245,7 @@ daquele modo. **[MEDIDO 11/08]** para as duas primeiras; **[CÓDIGO]** grau
    há sinal nenhum que o desminta: nem `xpad` nem `hid-microsoft` preenchem
    `uniq` com endereço de fabricante que caia em `_BRAND_BY_OUI`. Grau **ALTA**.
 
-**A correção agradável, e ela contradiz o comentário do próprio código:** por
+**A correção agradável, e a correção contradiz o comentário do próprio código:** por
 CABO, em modo Switch, o `brand_of` **acerta** e devolve "8BitDo". O comentário
 da função supõe `uniq` vazio no USB; o `hid-nintendo` preenche `hdev->uniq` com
 o endereço que o `REQ_DEV_INFO` devolveu (`hid-nintendo.c:2350` e `:2414`), e a
@@ -351,12 +351,12 @@ Se o aparelho não aparecer na saída, a previsão está confirmada.
 com a OUI `E4:17:D8`. O endereço que o `REQ_DEV_INFO` devolveu **hoje pelo
 cabo**, em modo Switch, é `E4:17:D8:00:00:1A` — **o mesmo** que o log do BlueZ
 daquele dia registrou para o modo Switch. Duas rotas independentes, 17 dias
-entre elas, mesmo endereço. **[MEDIDO 11/08]**, grau **ALTA**.
+entre as rotas, mesmo endereço. **[MEDIDO 11/08]**, grau **ALTA**.
 
 > **NOTA DATADA — 11/08/2026.** A `P-2` da
 > `docs/protocol/externos-referencia-canonica.md` (seção 8.2) pergunta *"o
 > 8BitDo troca de endereço ao trocar de modo?"* e a marca como **nunca medida**,
-> grau BAIXA, com um plano de pareamento novo como custo. **Ela já estava
+> grau BAIXA, com um plano de pareamento novo como custo. **A pergunta já estava
 > respondida** na página de uso, medida em 25/07/2026 — e a medição de hoje a
 > corrobora por um terceiro caminho, sem parear nada. Isto não é achado novo: é
 > o projeto sabendo em duas páginas e a terceira não ter sido avisada. Fica aqui
@@ -383,7 +383,7 @@ pública (`dekuNukem/Nintendo_Switch_Reverse_Engineering`), este payload:
 | 11 | `0x01` = usa as cores gravadas na SPI |
 
 **[COMUNIDADE]** para o layout, grau **MÉDIA** — é a mesma fonte que o driver
-credita, e ela já foi refutada neste projeto em pelo menos um número.
+credita, e a fonte já foi refutada neste projeto em pelo menos um número.
 
 E o `joycon_read_info` do fonte instalado (`hid-nintendo.c:2696`) lê **dois** dos
 seis campos:
@@ -558,7 +558,7 @@ coisas são exatamente onde o clone diverge nesta mesa.
   neste projeto (seção 6);
 - **nada sobre sniff Bluetooth.**
 
-**Duas ressalvas grandes, e elas limitam tudo acima:**
+**Duas ressalvas grandes, e as ressalvas limitam tudo acima:**
 
 1. **O espelho do `fwupd` congela em 2020.** Naquele ano a 8BitDo parou de
    publicar os arquivos e passou a servi-los por uma interface fechada. Os
@@ -590,7 +590,7 @@ encontrado.** Há muito relato de instabilidade de pareamento Bluetooth do Pro n
 Linux, mas atribuído a kernel/BlueZ/driver, não a versão de firmware. Prefiro
 dizer "não encontrado" a esticar evidência fraca.
 
-**Prova de que firmware de gamepad PODE mexer no que o host vê**, e ela é do
+**Prova de que firmware de gamepad PODE mexer no que o host vê**, e a prova é do
 lado 8BitDo: a nota oficial do firmware v2.00 do *SN30 Pro for Android* diz que
 **"o serviço HID mudou; os aparelhos conectados precisam ser despareados e
 reconectados"**. **[FABRICANTE]**, grau **ALTA**. É o argumento mais concreto
@@ -670,14 +670,14 @@ Dois pontos que mudam a decisão:
   experimento reversível.
 
 **Não há declaração formal de brick da Nintendo** — a frase sobre assistência
-técnica é o mais perto que ela chega.
+técnica é o mais perto que a frase chega.
 
 ---
 
 ## 6. As divergências medidas, e quais o firmware explica
 
 O projeto tem várias medições em que o clone diverge do genuíno. A pergunta é
-qual delas o **firmware** plausivelmente explica — e onde isso é especulação.
+qual das divergências o **firmware** plausivelmente explica — e onde isso é especulação.
 
 | divergência medida | firmware explica? | grau |
 |---|---|---|
@@ -697,7 +697,7 @@ changelogs da 8BitDo dizem ter mexido (vibração, pareamento, latência). Mas
 são as duas causas medidas aqui. Isso é motivo para **querer a versão**, não
 para prever o resultado de uma atualização.
 
-### 6.1 A medição de IMU de hoje, e o que ela corrige
+### 6.1 A medição de IMU de hoje, e o que a medição corrige
 
 `docs/protocol/driver-hid-nintendo-por-dentro.md`, seção 6.2, afirma **"IMU de
 verdade: sim — 200,5 amostras/s medidas"**. **A taxa sozinha não prova isso** —
@@ -726,7 +726,7 @@ PROVA** para a causa; **ALTA** para o número.
 
 As taxas de hoje (199,4 e 267,2) batem com as de mais cedo (200,5 e 266,1),
 medidas por outra sessão com outro método. **Duas rotas, mesmo número** — é o que
-autoriza acreditar nelas.
+autoriza acreditar nas taxas.
 
 ### 6.2 Uma afirmação do repositório que NÃO se reproduziu hoje
 
@@ -768,7 +768,7 @@ que chega ao **jogo** é indistinguível do genuíno.
 
 ---
 
-## 7. A recomendação, e ela tem um preço na mesa
+## 7. A recomendação, e a recomendação tem um preço na mesa
 
 A pergunta foi *"vale ou não vale atualizar o firmware dos aparelhos do usuário?"*.
 
@@ -793,7 +793,7 @@ a data**, não para atualizar nem para deixar de atualizar.
 ### 7.2 O 8BitDo — NÃO AINDA, e agora há um caminho barato para saber
 
 **Não sei se vale, e digo por quê: não sei em que versão ele está.** Não saber a
-versão instalada torna a tabela da seção 4 inútil para decidir — ela pode listar
+versão instalada torna a tabela da seção 4 inútil para decidir — a seção pode listar
 correções que ele já tem.
 
 **O que mudou com esta página:** até hoje, "descobrir a versão" parecia exigir
@@ -874,7 +874,7 @@ Honestidade primeiro, porque cada linha aqui é trabalho de outra sessão.
    pelo mecanismo de troca de modo; os outros dois só se separam olhando.
 4. **Os modos D-input, X-input e macOS-pelo-cabo.** Tudo o que as seções 2.4,
    2.5 e 2.6 afirmam sobre eles vem dos **módulos e do código instalados nesta
-   máquina**, não do aparelho naqueles modos. **Não pedi para ela trocar de
+   máquina**, não do aparelho naqueles modos. **Não pedi para o usuário trocar de
    modo**, por instrução.
 5. **Se o `fwupd` realmente lê a versão do modelo do aparelho de teste.** O plugin existe, está
    ligado, e os dois PIDs candidatos (`6001` e `6002`) estão na lista. Se o PID
@@ -956,7 +956,7 @@ usados — todos leitura. Nada de `update`, `install` ou `--force`.
 **Da comunidade:**
 
 - `github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering` — o layout da
-  resposta ao subcomando `0x02`. **É a mesma fonte que o driver credita, e ela
+  resposta ao subcomando `0x02`. **É a mesma fonte que o driver credita, e a resposta
   já foi refutada neste projeto em pelo menos um número**;
 - a wiki do `fwupd` sobre controles 8BitDo;
 - `linux-hardware.org` para `2dc8:6001`, `2dc8:6002` e `2dc8:6006`;
@@ -1047,7 +1047,7 @@ aparelho do usuário, pelo cabo e em modo Switch (`scripts/ver_botao.py`):
 | **coração** | `BTN_MODE` | 316 | home |
 | **estrela** | `BTN_Z` | 309 | captura (print) |
 
-**É o mesmo comportamento que ela relata no Switch** — *"o botão coração traz o
+**É o mesmo comportamento que o usuário relata no Switch** — *"o botão coração traz o
 input de home e o botão estrela de print"*. Console e Linux concordam; não há
 divergência de plataforma.
 
@@ -1095,7 +1095,7 @@ segundos e imprimiam "aperte agora" — mas quem opera o terminal só lê essa
 mensagem *depois* que o comando termina. Zero eventos, três vezes, e nenhuma
 conclusão possível.
 
-A cura foi inverter quem dá a partida: `scripts/ver_botao.py` é feito para ELA
+A cura foi inverter quem dá a partida: `scripts/ver_botao.py` é feito para QUEM USA
 rodar, com o retorno na própria tela no instante do aperto. A quarta tentativa
 levou dez segundos. **A lição vale além deste caso:** medição que depende de a
-pessoa agir dentro de uma janela que ela não enxerga não é medição — é sorte.
+pessoa agir dentro de uma janela que a pessoa não enxerga não é medição — é sorte.

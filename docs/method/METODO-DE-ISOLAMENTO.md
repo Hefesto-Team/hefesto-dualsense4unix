@@ -29,7 +29,7 @@ por isso não se renumeram. Pergunta nova entra pelas pontas — foi assim que a
 ### 0. Em QUEM o instrumento está mirando?
 
 - **Acrescentada em:** 13/08/2026, por `VPAD-NO-ESPELHO-01`.
-- **Por que ela é ZERO e não SEIS:** as outras cinco são citadas por número de
+- **Por que a contagem é ZERO e não SEIS:** as outras cinco são citadas por número de
   fora deste arquivo — `scripts/ensaio_rumble_um_bit_por_vez.py:278` diz
   *"Pergunta 2 do método"*. Renumerar invalidaria a citação em silêncio, que é o
   defeito da armadilha `A-12`. A pergunta nova entra **antes** sem empurrar as
@@ -82,7 +82,7 @@ HID dos controles **físicos** de rádio por `/dev/uhid`, no mesmo lugar.
 
 **Se der errado:** anote no ensaio *qual* nó você mirou, com o `HID_PHYS` colado.
 A régua única é `scripts/identidade_do_vpad.py`, importada pelos três ensaios;
-qualquer instrumento novo importa dela em vez de reimplementar.
+qualquer instrumento novo importa da régua em vez de reimplementar.
 
 ### 1. O instrumento briga com o produto?
 
@@ -142,13 +142,13 @@ for d in /sys/class/hidraw/hidraw*; do echo -n "$d "; grep HID_ID "$d/device/uev
 
 ### 4. O que este ensaio pode derrubar?
 
-Escreva a hipótese **antes**, e o que ela prevê para cada lado. Ensaio cuja
+Escreva a hipótese **antes**, e o que a hipótese prevê para cada lado. Ensaio cuja
 resposta não muda nada é passatempo.
 
 ### 5. A hipótese explica o que JÁ funcionava?
 
 Regra da casa. Se a explicação só cobre o defeito e não explica por que aquilo
-funcionava ontem, ou no outro transporte, ela está incompleta — e o que vier
+funcionava ontem, ou no outro transporte, a explicação está incompleta — e o que vier
 depois é contorno, não cura.
 
 ---
@@ -269,7 +269,7 @@ chute contamina tudo o que vier depois.
 - [ ] **A3.** **Que grau esta feature tem hoje?** Se está em `MONTOU`, ninguém
       provou que o aparelho obedece — e essa é a pergunta, não um detalhe. E se
       a feature é da direção de ENTRADA (o jogo lendo o nosso vpad), o grau mais
-      alto da ida não diz nada sobre ela: pergunte pelos degraus da volta.
+      alto da ida não diz nada sobre a entrada: pergunte pelos degraus da volta.
 
 ### B — Provar que a peça responde
 
@@ -331,8 +331,8 @@ chute contamina tudo o que vier depois.
       pedindo "em que instante parou", e a terceira fechou a questão trocando o
       tremor **de lado**: ou muda de mão, ou não muda.
 - [ ] **E2. O usuário não vê a janela do comando.** A mensagem "aperte agora" só chega
-      **depois** que o comando termina. Ou o ensaio roda em segundo plano e ela
-      age quando quiser, ou dura o bastante para ela pegar o controle depois de
+      **depois** que o comando termina. Ou o ensaio roda em segundo plano e quem usa
+      age quando quiser, ou dura o bastante para quem usa pegar o controle depois de
       ler.
 - [ ] **E3. Amplitude máxima na primeira tentativa** (`METODO-01`, 01/08). 15%
       contra 100% quase reprovou uma entrega correta; 0 contra 255 a reabilitou
@@ -372,7 +372,7 @@ chute contamina tudo o que vier depois.
       qual régua usou. A escada inteira, com o critério de cada degrau, está na
       seção *A escada de `ate_onde_foi`*.
 - [ ] **F4. A PODA** (Passo 7): o que foi inocentado pode parar de ser acionado.
-- [ ] **F5. A pergunta que ela faz e que fecha o assunto:** *"o elemento
+- [ ] **F5. A pergunta que quem usa faz e que fecha o assunto:** *"o elemento
       específico que faz ele funcionar de fato está isolado?"* Funcionar **não
       é** saber por quê. Se o elemento passou em tudo acima e você ainda não sabe
       de qual bit, byte ou condição ele depende, escreva isso na ressalva — em
@@ -380,14 +380,14 @@ chute contamina tudo o que vier depois.
 - [ ] **F6. Antes de escrever `não obedece`, pergunte se aquilo é DECISÃO
       DE PRODUTO.** Em 12/08 registrei `não obedece` para o BlueZ não reconectar
       sozinho — e a reconexão automática está desligada **a pedido**, por
-      decisão anterior, tomada por causa dos problemas que ela trazia. O ensaio
+      decisão anterior, tomada por causa dos problemas que a reconexão trazia. O ensaio
       `ps-nao-reconecta-daemon-parado-2242` foi corrigido pelo usuário no mesmo dia.
       O que fica no caderno é o **fato** (`Connectable=false`, `Paired=true`,
       `Bonded=true`, `ReconnectMode=device`, bond intacto), nunca o julgamento.
       Procure em `docs/process/` e na memória de decisões antes de chamar de
       defeito.
 - [ ] **F7. A linha do caderno** — como escrever para o julgador não ser
-      enganado: seção própria abaixo, e ela vale tanto quanto o ensaio.
+      enganado: seção própria abaixo, e a linha vale tanto quanto o ensaio.
 
 ---
 
@@ -396,7 +396,7 @@ chute contamina tudo o que vier depois.
 - **Acrescentado em:** 13/08/2026, depois dos ensaios de 12 e 13/08.
 
 Foi o padrão que dominou a sessão inteira: **em quatro investigações seguidas o
-defeito estava na régua, não no aparelho.** Elas parecem diferentes e são a mesma
+defeito estava na régua, não no aparelho.** As investigações parecem diferentes e são a mesma
 coisa — algo entre você e o fato responde por ele.
 
 Rode isto **antes** de acreditar em qualquer leitura de ensaio — é o único
@@ -410,7 +410,7 @@ comando que vem antes de tudo, porque as outras três formas só se diagnosticam
 Só lê: nem toca no aparelho, nem fala com o daemon. Se a coluna `mirar?` disser
 `SIM` para um nó cujo `HID_PHYS` é `hefesto-vpad`, **pare** — você ia medir o
 espelho do produto. As formas 2 a 4 têm cada uma o seu comando na própria
-seção; a triagem entre elas é uma pergunta só:
+seção; a triagem entre as formas é uma pergunta só:
 
 | o sintoma | a forma |
 |---|---|
@@ -448,7 +448,7 @@ bastava a metade dele.
 **O que isto decide:** se o verde do teste fala da sua lógica ou do hardware de
 quem o roda.
 
-**A cura, e ela tem forma fixa:** a condição de ambiente entra **declarada**, com
+**A cura, e a cura tem forma fixa:** a condição de ambiente entra **declarada**, com
 `monkeypatch`, e some junto com o teste — nunca vira `skipif`, que esconde a
 pergunta em vez de respondê-la.
 
@@ -492,7 +492,7 @@ quando chega — a **MESMA SHA** (`973c92c`) deu `success` e `failure` no CI
 **O que isto decide:** se o vermelho é defeito ou corrida do instrumento. Um
 teste que dá os dois resultados no mesmo commit não está medindo o produto.
 
-**A cura, e ela não afrouxa nada:** a foto **espera a condição** em vez de medir
+**A cura, e a cura não afrouxa nada:** a foto **espera a condição** em vez de medir
 num instante arbitrário — até 3 s, olhando a cada 60 ms; se o foco não vier no
 teto, `tem_foco` sai `False` e o teste reprova como antes.
 
@@ -516,7 +516,7 @@ sed -n '31,50p' scripts/check_packaging_parity.sh   # CORRIDA-DO-PIPEFAIL-01
 máquina do usuário o produtor ganhou 200 de 200; o runner, mais lento, perdeu — e o
 `ci.yml` acusou o `doctor.sh` de não chamar uma função **viva na linha 4493**.
 A cura é **não construir o pipe**: o produtor vai para uma variável e o `grep` lê
-dela por here-string. As outras nove ocorrências de `| grep -q` naquele arquivo
+da variável por here-string. As outras nove ocorrências de `| grep -q` naquele arquivo
 seguem vulneráveis por construção — estão anotadas lá.
 
 **O relógio no lugar do conteúdo** (`A-14`) — o `gerar-mapa.py --check`
@@ -586,14 +586,14 @@ tem de continuar solto.
 outro lado, e o lado não está invertido. Foi assim que
 `gatilho-esq-radio-1216` (12/08) sustentou o grau no rádio, e assim que
 `gatilho-lado-nao-esta-invertido` (11/08) **eliminou uma suspeita na mesma
-rodada em que ela nasceu**.
+rodada em que a suspeita nasceu**.
 
 **Cuidado que já custou** (armadilha `A-10`): o R2 ficar solto prova a
 não-contaminação; **não** prova que o R2 obedece. São dois ensaios.
 
 ### 2. Isolar por MAC — mirar um, deixar os outros de testemunha
 
-Ideia dela, 12/08. O daemon sabe fazer: `_apply_por_uniq`
+Ideia do usuário, 12/08. O daemon sabe fazer: `_apply_por_uniq`
 (`src/hefesto_dualsense4unix/daemon/ipc_handlers.py:639`) aplica **só** no
 controle do MAC pedido, e a GUI usa isso. **O CLI não expõe** — o
 `cmd_trigger` (`src/hefesto_dualsense4unix/cli/cmd_test.py:55-62`) só aceita
@@ -608,7 +608,7 @@ for d in /sys/class/hidraw/hidraw*; do
 done
 ```
 
-Ler essa saída tem uma ordem, e ela foi medida nesta máquina em 13/08 (seis nós):
+Ler essa saída tem uma ordem, e a ordem foi medida nesta máquina em 13/08 (seis nós):
 
 1. **Jogue fora o que nem é controle.** Quatro dos seis eram teclado e mouse
    (`HID_ID=0003:00003554:0000FA09` e `0003:000025A7:0000FA07`) — e são
@@ -714,7 +714,7 @@ flagrou"*. O commit que trouxe a régua para a árvore é o `0b010bd`, carimbado
 ```
 
 **O que isto decide:** se o mapa está afirmando mais do que o ensaio sustenta.
-**É a prova de que a régua vale a pena** — ela cobra de quem a escreveu primeiro.
+**É a prova de que a régua vale a pena** — a régua cobra de quem a escreveu primeiro.
 
 ---
 
@@ -781,7 +781,7 @@ estável** (`A-1`…), para poder ser citada de fora sem depender de posição.
 
 Cada uma custou tempo real. Nenhuma é hipotética.
 
-| ID | Armadilha | Como ela aparece |
+| ID | Armadilha | Como a armadilha aparece |
 |---|---|---|
 | A-1 | **O instrumento disputa o hidraw** | Diz "aplicado" e não aplicou |
 | A-2 | **O daemon vivo é mais velho que o código** | Falta um dado que deveria estar lá |
@@ -790,7 +790,7 @@ Cada uma custou tempo real. Nenhuma é hipotética.
 | A-5 | **Relatório de execução não é prova** | Reportou `aplicado=true` sem ter escrito no arquivo |
 | A-6 | **Colisão de nomes silenciosa** | `getElementById('corpo')` devolveu o `<g>` do SVG, não a tabela; nenhum erro |
 | A-7 | **Só um lado do ensaio** | Seis ensaios "com" e nenhum "sem": zero poder de prova |
-| A-8 | **Pedir cronômetro à mão humana** | Duas rodadas com respostas incompatíveis entre si — e nenhuma delas era erro dela |
+| A-8 | **Pedir cronômetro à mão humana** | Duas rodadas com respostas incompatíveis entre si — e nenhuma das rodadas era erro do usuário |
 | A-9 | **A janela que o usuário não vê** | O "aperte agora" só chega depois que o comando terminou |
 | A-10 | **Confundir controle negativo com prova** | O R2 ficar solto prova que o comando não vazou; **não** prova que o R2 obedece |
 | A-11 | **Supor que o firmware honra os bits** | A cura desliga os bits de autorização e o aparelho obedece aos bytes assim mesmo |
@@ -813,7 +813,7 @@ A `A-5` merece nota: em 10/08 um relatório dizia a cura aplicada e com mordida
 provada, e o arquivo estava intacto. **Conferir o arquivo é parte do método**, não
 desconfiança.
 
-As `A-8` a `A-12` são de 11/08, e três delas são erro meu, registrado de
+As `A-8` a `A-12` são de 11/08, e três das armadilhas são erro meu, registrado de
 propósito:
 
 - **A `A-8` e a `A-9` são de desenho, não de execução.** Quando o ensaio exige da
@@ -822,7 +822,7 @@ propósito:
   sentida**.
 - **A `A-10` aconteceu comigo em pleno registro:** marquei `gatilho.direito` como
   `O APARELHO OBEDECEU` porque o R2 ficou solto enquanto o L2 endurecia. Aquilo
-  provava a não-contaminação, não a obediência do lado direito. Ela pegou.
+  provava a não-contaminação, não a obediência do lado direito. O usuário pegou.
 - **A `A-12` é a mais silenciosa de todas.** O caderno não erra sozinho: ele fica
   certo sobre o dia em que foi escrito. Toda medição que muda um veredito
   **precisa virar linha em `ensaios.csv` no mesmo dia**, ou o instrumento passa a
@@ -867,7 +867,7 @@ As `A-13` a `A-25` são de 12 e 13/08, e a maioria também é erro meu:
 | `ate_onde_foi` | **a escada**, definida na seção seguinte. Cinco degraus, duas direções |
 | `por_que_nao_aciona` | **por que o produto não faz**, quando ele não faz. Seção logo abaixo |
 | `provado_por` | `ci` / `ensaio` / `olho-do-usuario` — só `olho-do-usuario` sustenta *O APARELHO OBEDECEU* e *O JOGO REAGIU* |
-| `provado_em` | a data. Sem ela a prova não vence nunca, e prova que não vence vira mito |
+| `provado_em` | a data. Sem a data a prova não vence nunca, e prova que não vence vira mito |
 | `teste_que_morde` | o nó do pytest que reprova se aquilo quebrar |
 | `mordida_provada_em` | quando alguém **de fato** arrancou a cura e viu reprovar |
 
@@ -880,7 +880,7 @@ Tratar **MONTOU** como **funciona** é a mentira mais cara desta casa.
 
 ## `por_que_nao_aciona` — a coluna que separa dívida de decisão (22/08/2026)
 
-**O problema que ela resolve.** Contado no CSV em 22/08/2026: **41 células**
+**O problema que a coluna resolve.** Contado no CSV em 22/08/2026: **41 células**
 diziam `de_onde_sei = medido` e `aciona = não` — 20 no cabo, 21 no rádio, e 13
 linhas com as duas assim. **São 43 em 07/09/2026** (22 no cabo, 21 no rádio), e
 a recontagem, com o que entrou e o que saiu de cada lado, está no cabeçalho de
@@ -911,14 +911,14 @@ rádio, onde não chega.
 |---|---|
 | *(vazio)* | ninguém respondeu. É o que o portão cobra |
 | `divida` | falta fazer, e há quem queira. **É o que o portão limita** |
-| `decisao-tomada` | não acionar é a escolha, e ela está certa hoje |
+| `decisao-tomada` | não acionar é a escolha, e a escolha está certa hoje |
 | `nada-a-acionar` | não há feature a acionar: ou o aparelho não oferece, ou a linha é de MEDIÇÃO e `aciona = não` quer dizer *"o fenômeno não aconteceu"*, nunca *"o produto não faz"* |
 | `so-o-usuario-decide` | a pergunta existe, ninguém a respondeu, e a resposta é |
 
 Retrato de 22/08/2026: **4 dívidas**, 15 decisões, 20 `nada-a-acionar`,
 2 `so-o-usuario-decide`.
 
-**A régua** é `tests/unit/test_o_mapa_separa_divida_de_decisao.py`, e ela tem
+**A régua** é `tests/unit/test_o_mapa_separa_divida_de_decisao.py`, e a régua tem
 teto: as dívidas não podem passar de quatro. **Subir o teto é confissão, não
 conserto** — pagar uma dívida é baixá-lo no mesmo commit, senão o teto vira
 folga e o portão para de morder.
@@ -970,7 +970,7 @@ escrito**, em duas linhas suas:
 - `movimento.giroscopio.jogo`: *"o repasse está íntegro e o jogo não reage: a
   falha, se existir, é DEPOIS do vpad, e ninguém a localizou"*.
 
-Enquanto isso, o mapa inteiro podia ficar verde **enquanto ela não conseguia
+Enquanto isso, o mapa inteiro podia ficar verde **enquanto o usuário não conseguia
 jogar** — porque nenhuma célula falava do jogo. O desenho dos dois degraus é o
 da sprint `TRES-PORTOES-01`, §7.
 
@@ -1004,13 +1004,13 @@ interessa**, o que quer dizer que nenhum dos dois fecha este degrau como está:
   `winedevice` não está lá.
 
 Quem for fechar `O JOGO RECEBEU` tem de dizer, no ensaio, **qual régua usou** e
-como ela escapa dessas quatro. Um instrumento que não declara isso é o defeito
+como a régua escapa dessas quatro. Um instrumento que não declara isso é o defeito
 mais caro deste projeto repetido: *o instrumento mente mais que o produto*.
 
 #### O critério de `O JOGO REAGIU`, e por que só a mão do usuário o fecha
 
 **Não existe instrumento.** Nenhuma régua desta casa lê o estado interno de um
-jogo Unreal sob Proton, e nenhuma vai ler. O único sensor deste degrau é ela.
+jogo Unreal sob Proton, e nenhuma vai ler. O único sensor deste degrau é quem usa.
 
 É por isso que o gesto **`PS + R3`** não é conveniência de interface: ele é **o
 instrumento de medida** deste degrau. Ele mede sem tirar a mão do controle (um
@@ -1067,7 +1067,7 @@ Registro do que serve de gabarito para os próximos.
 
 Veredicto do caderno, calculado sozinho: `common[3]` (strong) **é a causa** do
 motor esquerdo; `common[2]` (weak), do direito. Grau **O APARELHO OBEDECEU**,
-observado por ela.
+observado por quem usa.
 
 Achado de brinde: o *"trava sem fim"* da `ONDA-U` **não se reproduziu** — o zero
 parou o motor na hora.
@@ -1138,9 +1138,9 @@ custado o dia:
     erro foi meu: eu registrei como medição uma frase que só existia em docstring
     (`cli/cmd_lightbar_reset.py:18-20`). A escavação do journal e dos transcritos
     achou a barra **acesa** no rádio dentro daqueles cinco dias, quatro vezes,
-    três delas com fala literal (ensaios `lightbar-bt-aceso-*`). **O
+    três das vezes com fala literal (ensaios `lightbar-bt-aceso-*`). **O
     docstring seguiu com a frase falsa até 13/08**, quando foi substituído no
-    próprio arquivo — porque enquanto ela ficasse lá, quem lesse o código
+    próprio arquivo — porque enquanto a frase ficasse lá, quem lesse o código
     reencontraria a afirmação que o caderno já tinha derrubado;
   - *"a suspeita viva é tempo desde a conexão"* era **proxy**. O que a instância
     de conexão carregava era **quem estava com o hidraw aberto no instante da
@@ -1176,7 +1176,7 @@ controle.
 
 ### O padrão que apareceu três vezes no mesmo dia
 
-**O produto decide durante a sequência, em vez de esperar ela sossegar.**
+**O produto decide durante a sequência, em vez de esperar a sequência sossegar.**
 Lightbar (a cor é pintada no priming, dentro da rajada), co-op (o `IGNORE` foi
 avaliado três vezes durante a subida dos vpads e **nunca** depois que a cobertura
 ficou completa — o quarto vpad ficou pronto **onze segundos** depois do

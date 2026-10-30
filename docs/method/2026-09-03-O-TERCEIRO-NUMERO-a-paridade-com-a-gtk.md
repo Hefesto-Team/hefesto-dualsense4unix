@@ -1,6 +1,6 @@
 # O TERCEIRO NÚMERO — a paridade com a GTK
 
-> ## ATENÇÃO — ESTE NÚMERO MEDE O ENSAIO, NÃO O QUE ELA ABRE
+> ## ATENÇÃO — ESTE NÚMERO MEDE O ENSAIO, NÃO O QUE QUEM USA ABRE
 >
 > **Medido em 04/09/2026, e é o achado maior da leva daquele dia.** As dez
 > frentes de aba entregaram, e **nenhuma publicou** — `git diff` em
@@ -18,8 +18,8 @@
 > contrário, e *publicação é o olho de quem confere* (PROVA-DE-TELA-01). As dez frentes
 > recusaram publicar porque cada uma move pixel, e pixel é decisão de produto.
 >
-> **A leitura correta da tabela abaixo:** ela diz *"o código sabe fazer"*, não
-> *"ela já tem"*. A distância entre as duas é UMA leva — a de publicação, que
+> **A leitura correta da tabela abaixo:** a tabela diz *"o código sabe fazer"*, não
+> *"a tabela já tem"*. A distância entre as duas é UMA leva — a de publicação, que
 > é do usuário aprovar aba por aba.
 
 
@@ -38,7 +38,7 @@ terceiro número, e ele nasce com dono, com dado e com portão.
 **O número não se escreve nesta linha.** Ele está na tabela da §2, linha
 `TODAS` — gerada da contagem do CSV e conferida pela regra `numero-publicado`.
 
-Aqui havia uma segunda cópia dele, e ela envelheceu: em 04/09/2026 esta linha
+Aqui havia uma segunda cópia dele, e a regra envelheceu: em 04/09/2026 esta linha
 dizia **14%** sobre uma tabela do mesmo arquivo que já dizia **27%**. Os dois
 números estiveram certos — o 14% é o de 03/09 (`79960fdf`), o 27% é o de hoje —
 e o defeito não foi de medição: **era o número ter dois donos, e só um deles ter
@@ -51,7 +51,7 @@ régua.** A cópia sai; o dono fica.
 **396 features**, uma a uma, lendo os dois lados no fonte — a janela GTK
 (`gui/main.glade` + `app/actions/` + `app/widgets/`) contra a interface em HTML
 (`interface/` + `app/telas/`) — e, em oito das dez abas, **rodando o pacote da
-aba contra o daemon vivo dela**, em leitura pura.
+aba contra o daemon vivo do usuário**, em leitura pura.
 
 Uma feature é uma coisa que a tela **faz ou diz**: um botão, um campo que se
 repinta, um aviso que acende sozinho, uma recusa com frase. Cada uma recebeu um
@@ -96,12 +96,12 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
 nomeando a aba que divergiu. Um número publicado que não se pode conferir vira
-folheto, e este é o número que ela vai ler para decidir.
+folheto, e este é o número que quem usa vai ler para decidir.
 
 **Duas correções de fato, e as duas são de 03/09.** O primeiro rascunho desta
 medição publicou **394 features**, e duas `FALTA_NO_HTML` a menos que a conta:
 as abas 08 e 09 contaram uma feature a menos cada uma **no resumo que
-escreveram**, e a lista de features delas — que é o dado — sempre teve **49** e
+escreveram**, e a lista de features das abas — que é o dado — sempre teve **49** e
 **38**, como a tabela acima continua mostrando. E o `01-jogar` publicou **11%**
 onde a divisão daquele dia dava **12%** (5 de 42).
 
@@ -121,10 +121,10 @@ ser LIDA do daemon em vez de recalculada — quatro `IGUAL` viraram `DIFERENTE`.
 E duas ressalvas saíram com a tabela, sem lugar no desenho: o hub em comum e as
 contagens do gabinete, agora `FALTA_NO_HTML` declaradas.
 
-**As duas correções ficam; os valores que elas corrigiram, não.** O total de
+**As duas correções ficam; os valores que as contagens corrigiram, não.** O total de
 `FALTA_NO_HTML` e a paridade da `01-jogar` mudam a cada cura, e quem quiser os
 de hoje lê a tabela, que tem dono. O que não caduca é a lição:
-**o resumo de uma aba não é o dado dela.**
+**o resumo de uma aba não é o dado da aba.**
 
 ---
 
@@ -140,7 +140,7 @@ cumprida: quase nada foi reescrito.
 A leitura viva não migrou quase nada. E **isso não é tela vazia — é tela que
 mente**, porque o que está na página é o valor que o gerador cravou do desenho
 aprovado, e ele fica lá para sempre. Fotografado no HTML publicado, contra o
-daemon vivo dela:
+daemon vivo do usuário:
 
 | a tela diz | o daemon diz |
 | --- | --- |
@@ -151,7 +151,7 @@ daemon vivo dela:
 | degrau `Máximo` aceso na coluna do P1 | `rumble_policy = 'balanceado'` |
 | interruptor do mouse em **Ligado** | `mouse_emulation.enabled = False` |
 | chip `Sony DualSense` aceso, e `Xbox 360` no P2 | `flavor = dualsense` nos dois |
-| barra de luz `#7EB8D4` | o campo ao lado dela diz `#0000FF` |
+| barra de luz `#7EB8D4` | o campo ao lado da barra diz `#0000FF` |
 | o card do P2 mostra tudo isso igual ao P1 | o daemon só publica leitura para o primário |
 
 A causa é uma só e está no vocabulário de endereço: **a página não tem onde pôr
@@ -189,11 +189,11 @@ maior bloco é o `DIFERENTE`.
   pintor já tem o alvo `classe`. Falta o endereço no HTML e a emissão no pacote.
 - **`02-controles` · os 16 glifos.** `_refresh_glyphs` no card da GTK; no HTML,
   três glifos com a classe `on` do mockup, acesos o tempo todo.
-<!-- A LINHA DO BRILHO SAIU DAQUI EM 03/09/2026, e ela era a maior falta
+<!-- A LINHA DO BRILHO SAIU DAQUI EM 03/09/2026, e a LINHA era a maior falta
      desta aba: *"contados os gestos das duas páginas, nenhum de brilho em
      lugar nenhum — o trilho é decoração"*. O trilho passou a GRAVAR (decisão
      de produto, "Grava na hora") e a linha virou `DIFERENTE`, com a diferença
-     medida e o endereço dos dois lados no CSV. Ela não é decisão a preservar:
+     medida e o endereço dos dois lados no CSV. A diferença não é decisão a preservar:
      é um fato que a medição derrubou. -->
 - **`03-gatilhos` · os números dos 54 parâmetros.** 10 dos 11 modos têm
   ajuste, e na GTK todos são `Gtk.Scale` que o usuário arrasta. No desenho do todo
@@ -207,7 +207,7 @@ maior bloco é o `DIFERENTE`.
 ### `DIFERENTE` — os dois fazem, e não a mesma coisa
 
 **Quantas são hoje: a coluna `DIFER` da tabela da §2.** É a categoria que mais
-engana, porque a tela não fica vazia: a tela responde outra pergunta. E ela
+engana, porque a tela não fica vazia: a tela responde outra pergunta. E a tela
 **cresce** enquanto o trabalho anda: das dez linhas que deixaram
 `FALTA_NO_HTML` entre 04/09 de manhã e a tarde, quatro pararam aqui e seis
 foram direto a `IGUAL`.
@@ -252,18 +252,18 @@ neste jogo" (o HTML passa `excluir=`). **Três linhas a NÃO copiar de volta.**
 
 **Quantas são hoje: a coluna `?` da tabela da §2.**
 
-Elas precisam de ensaio: se a lista de 11 modos abre no compositor dela, se o
+As linhas precisam de ensaio: se a lista de 11 modos abre no compositor da lista, se o
 `Automático` de fato larga a luz para o jogo, se o reparo do HTML repõe a linha
-no `.vdf` dela, e se o nome do plástico chega ao cartão. **Ficam registradas como indecidíveis em vez de chutadas** — é a mesma
+no `.vdf` do usuário, e se o nome do plástico chega ao cartão. **Ficam registradas como indecidíveis em vez de chutadas** — é a mesma
 disciplina do `de_onde_sei` do mapa de canais.
 
 ---
 
-## 5. A régua, e por que ela não compara o CSV com ele mesmo
+## 5. A régua, e por que a régua não compara o CSV com ele mesmo
 
 Uma régua que confere o CSV contra o CSV não mede nada. É a família de defeito
 que esta casa mais pagou, e uma frente deste mesmo dia pegou uma régua
-comparando o produto **contra ele mesmo** — ela concordava com a semente errada
+comparando o produto **contra ele mesmo** — a régua concordava com a semente errada
 dos dois lados.
 
 Então **o veredito de cada linha virou uma afirmação sobre o código**,
@@ -299,14 +299,14 @@ e a linha do CSV foi reescrita com o endereço novo lido no código.
 | `numero-publicado` | a tabela da §2 diverge da contagem do CSV |
 | `aposentado-vivo` | arquivo declarado em `APOSENTADOS` que voltou à árvore |
 | `ponte-morta` | uma ponta de `PONTES` sumiu: o par `(aba, feature)` saiu do CSV, ou o `id` saiu do mapa de canais |
-| `transporte-nao-declarado` | a linha AFIRMA paridade e o mapa restringe um transporte do canal embaixo dela — e ela não diz `cabo` nem `rádio` em lugar nenhum |
+| `transporte-nao-declarado` | a linha AFIRMA paridade e o mapa restringe um transporte do canal embaixo da linha — e a linha não diz `cabo` nem `rádio` em lugar nenhum |
 | `ponte-encolheu` | `PONTES` tem menos entradas que `PISO_DAS_PONTES` |
 
-A `sinal-morto` é a régua se auditando: ela pegou **quatro linhas minhas** na
+A `sinal-morto` é a régua se auditando: a régua pegou **quatro linhas minhas** na
 primeira execução, antes de eu ensinar o portão que `data-campo="fragil"` é um
 endereço legítimo *que ainda vai nascer*.
 
-### O que ela NÃO mede, dito na cara
+### O que a régua NÃO mede, dito na cara
 
 Nada aqui abre janela, clica ou toca aparelho. **Um botão que existe nos dois
 lados e está quebrado nos dois passa por este portão sorrindo.** Quem morde isso
@@ -353,14 +353,14 @@ regerar a tabela da §2. Nunca afrouxando a regra no script.
 (`interface/aba02.py` e `interface/mesa_viva.py`) e por **portão nenhum** — o
 achado §5.4 da A-TELA-NOVA-ENTRA-NA-RÉGUA-DO-MAPA-01. Uma linha podia dizer
 `IGUAL` — *a tela nova faz o que a janela fazia* — enquanto o mapa dizia que o
-CANAL embaixo dela só aciona num transporte. Os dois números concordavam consigo
+CANAL embaixo da janela só aciona num transporte. Os dois números concordavam consigo
 mesmos, e ninguém perguntava ao outro.
 
 **Ele INFORMA, nunca VETA.** `D-0609-O-MAPA-INFORMA-NUNCA-VETA`, palavra em
 06/09/2026: o mapa é funcional e real; estava desatualizado por não ter sido
 medido, e, medido, tudo funciona.
 Uma célula `nao-medido` vira **AVISO impresso**, e o `rc` continua ZERO. Quem a
-remede é o ensaio, com o relatório de quem passou por ela
+remede é o ensaio, com o relatório de quem passou por a célula
 (SPECS-A-PROCEDENCIA-01).
 
 **A ponte é declarada, e o veredito NÃO.** As duas planilhas não têm uma palavra
@@ -374,7 +374,7 @@ no cabo"*. Três travas impedem a lista de apodrecer: as duas pontas mortas
 reprovam (`ponte-morta`) e a lista só pode CRESCER (`ponte-encolheu`, comparação
 por `>=`, a forma provada do `PISO_DA_REGUA`).
 
-**As 26 pontes de hoje**, e o que elas encontraram:
+**As 26 pontes de hoje**, e o que as pontes encontraram:
 
 | o que o mapa diz | pontes | o que acontece |
 | --- | --- | --- |
@@ -392,7 +392,7 @@ Não é veto — é a primeira linha da fila de remedição.
 
 ## 7. O que este número diz sobre a fila
 
-Três leituras que a tabela sustenta, e nenhuma delas é opinião. **Quem lê os
+Três leituras que a tabela sustenta, e nenhuma das leituras é opinião. **Quem lê os
 extremos lê a tabela da §2, não este parágrafo** — a lista abaixo diz que TIPO
 de atraso cada aba tem, que é o que não muda a cada cura.
 
@@ -400,9 +400,9 @@ de atraso cada aba tem, que é o que não muda a cada cura.
    a ordem.** A `02-controles` é **leitura viva pura** — o dado existe e a
    página não tem onde pô-lo. A `06-navegacao` **mudou de campo**
    (`Profile.key_bindings` → `Profile.button_actions`), e o câmbio apaga em
-   silêncio o que ela editou na janela antiga; é dívida de MOTOR, e nenhuma
+   silêncio o que o usuário editou na janela antiga; é dívida de MOTOR, e nenhuma
    pintura a fecha. E a `01-jogar` é quase toda **ponte entre dois arquivos que
-   já existem** — 18 das 30 linhas abertas dela caíram no balde `LIGAR` da
+   já existem** — 18 das 30 linhas abertas da aba caíram no balde `LIGAR` da
    triagem de 04/09, a melhor razão entre trabalho e ganho do inventário.
    <!-- O RANKING SAIU DAQUI EM 04/09/2026, e ele estava certo em 03/09: a
         `03-gatilhos` era a mais adiantada com 32% e a `02`, a `06` e a `09` as
@@ -420,7 +420,7 @@ de atraso cada aba tem, que é o que não muda a cada cura.
 3. **UM FATO QUE CAIU EM 04/09/2026, e ele encurtava a fila.** Esta linha dizia
    que quatro campos da 02 (`touch-ponto`, `luz-cor`, `alto-num`,
    `alto-barra`) e o `data-campo="luz"` da 04 esperavam o
-   `scripts/check_o_desenho_aprovado.py --publicar` dela. **Não esperam mais** —
+   `scripts/check_o_desenho_aprovado.py --publicar` do usuário. **Não esperam mais** —
    os cinco estão nas páginas que o produto abre, e as duas páginas são
    byte-idênticas ao mockup:
 
@@ -432,7 +432,7 @@ de atraso cada aba tem, que é o que não muda a cada cura.
      o produto está atrás . 0  (0 em trabalho)
    ```
 
-   **Nenhuma linha desta medição espera o `--publicar` dela.** As treze páginas
+   **Nenhuma linha desta medição espera o `--publicar` do usuário.** As treze páginas
    foram publicadas na madrugada de 04/09.
 
 O que o CSV **não** decide é a ordem. Ele diz onde estão os buracos, com
@@ -444,7 +444,7 @@ A linha `01-jogar` foi de **21% para 24%** e a `TODAS` de 118 para 119 iguais,
 por uma dívida que fechou: *A palavra do transporte no cartão* saiu de
 `DIFERENTE` para `IGUAL`.
 
-O que ela era: `interface/mesa_viva.py` montava a palavra curta com `"USB" if
+O que a palavra era: `interface/mesa_viva.py` montava a palavra curta com `"USB" if
 transporte == "usb" else "BT"`, e o `else` pegava a AUSÊNCIA — um controle cujo
 transporte o daemon não publicasse aparecia na aba 01 como **"BT"**, a tela
 afirmando rádio sobre um campo que ninguém leu. Havia quatro respostas vivas no
@@ -472,11 +472,11 @@ que foi de **24 % para 32 %**: os dois deslizantes de volume (do microfone e do
 alto-falante) existem no ensaio **e na página publicada**, o número e a barra
 do alto-falante saem da curva medida no aparelho, e o hertz do giroscópio
 deixou de ser número de catálogo. As duas abas que **zeraram** os `FALTA` são a
-`06-navegacao` (o botão PS voltou à tabela, reversão dela na 06-Q3) e a
+`06-navegacao` (o botão PS voltou à tabela, reversão da tabela na 06-Q3) e a
 `07-lancadores` (a carona do wrapper chegou ao rodapé).
 
 **VINTE E UMA linhas ficaram `FALTA_NO_HTML` e ganharam a segunda metade `||`
-datada** com o que a medição achou. O padrão delas tem nome, e é o oposto do
+datada** com o que a medição achou. O padrão das linhas tem nome, e é o oposto do
 que a fila costuma supor: **adiamento não é remoção**. As decisões de 06/09
 sobre controles externos, editor avançado de regra, "Mapear Entrada a Entrada"
 e o custo da máscara antes do clique são de **prazo** — a §10 da
@@ -485,13 +485,13 @@ as põe fora das 24 horas e fecha dizendo *"o resto dos FALTA fica na régua, qu
 é onde fila mora"*. Promovê-las a `DIFERENTE` esvaziaria a fila sobre trabalho
 que ninguém fez.
 
-**A régua de `DIFERENTE` que esta leva firmou:** ela exige que o lado HTML
+**A régua de `DIFERENTE` que esta leva firmou:** a régua exige que o lado HTML
 entregue a MESMA RESPOSTA por outro caminho, com endereço. Se a resposta não
 chega à tela, é `FALTA_NO_HTML` — e é por isso que a *linha da verdade* (56) e
 o *"Já movi — reexaminar"* (269) continuam `FALTA` mesmo sendo escolha do usuário: o
-que elas não são é **dívida a pagar**, e isso o `porque` diz.
+que as linhas não são é **dívida a pagar**, e isso o `porque` diz.
 
-## Nota de verificação — 11/09/2026, a linha 384 e o fato que ela derrubou
+## Nota de verificação — 11/09/2026, a linha 384 e o fato que a linha derrubou
 
 `CADEADO-E-O-FATO-01`. A linha **`10-perfis` · "A seção «Modo» do perfil"** saiu
 de `FALTA_NO_HTML` e voltou a **`DIFERENTE`**, e a tabela acima foi **recontada
@@ -591,7 +591,7 @@ e é isso que `DIFERENTE` quer dizer nesta tabela.
 **Fato substituído na mesma linha:** o `porque` dizia que a máscara «sai de
 `painel.CHIPS_DA_ESCADA`». Desde a cura, `CHIPS_DA_ESCADA` nomeia caminhos. A linha
 vizinha, «O modo/máscara escolhidos entram no perfil», continua `DIFERENTE`, e o
-`html_faz` dela deixou de dizer que a máscara é zerada fora do modo jogo.
+`html_faz` da linha deixou de dizer que a máscara é zerada fora do modo jogo.
 
 **A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
 `numero-publicado` nomeando `01-jogar` e `TODAS`.
@@ -710,7 +710,7 @@ defeito.** A soma dos parâmetros escrita no CSV e na §4 era fato errado, e pas
 ## Nota de verificação — 18/10/2026, a 07 antiga sai com a Experimental
 
 `D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU`. A página publicada da 07 é a Experimental, e os
-gestos e pintores da aba antiga, sem elemento nela, saíram do pacote. Três linhas `SO_NO_HTML` saíram,
+gestos e pintores da aba antiga, sem elemento na aba, saíram do pacote. Três linhas `SO_NO_HTML` saíram,
 porque o botão não existe mais em lado nenhum: **«"Procurar de novo"»**, **«Ver quem foi dispensado, e
 desfazer ("Voltar a perguntar")»** e **«"Não usar neste jogo" / "Voltar a usar"»**. Saíram também a
 **lista permanente dos jogos sem o atalho** e o **carimbo das pontes confirmadas**, que só o cartão

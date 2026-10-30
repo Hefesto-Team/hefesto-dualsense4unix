@@ -13,22 +13,22 @@ Este arquivo é isso. Cada linha aqui custou tempo de alguém.
 
 ---
 
-## ANTES DE TUDO: ELA TEM UMA TELA SÓ, E A JANELA NÃO NASCE NELA
+## ANTES DE TUDO: QUEM USA TEM UMA TELA SÓ, E A JANELA NÃO NASCE NA TELA DE QUEM USA
 
-**Regra, 04/09/2026, e ela é sobre o serviço dela, não sobre estética.**
+**Regra, 04/09/2026, e a regra é sobre o serviço do usuário, não sobre estética.**
 A sessão do COSMIC tem **três áreas de trabalho alfinetadas, nesta ordem**: a
-PRIMEIRA é DO USUÁRIO e ela está nela **agora**, trabalhando; a SEGUNDA é de quem
-estiver trabalhando aqui. Uma janela que nasce na dela rouba o foco, e o mouse
+PRIMEIRA é DO USUÁRIO e o usuário está na primeira **agora**, trabalhando; a SEGUNDA é de quem
+estiver trabalhando aqui. Uma janela que nasce na do usuário rouba o foco, e o mouse
 do usuário passa a brigar com o clique de quem mede — os dois se quebram.
 
-**A ORDEM DE PREFERÊNCIA, e ela é dura:**
+**A ORDEM DE PREFERÊNCIA, e a ORDEM é dura:**
 
 1. **Não abrir janela nenhuma.** É quase sempre possível, e é o que as levas de
    03/09 e 04/09 fizeram: `Gtk.OffscreenWindow`, `--oculta`, Playwright em
    `headless`, `interface/olhar.py`. **Se você conseguir medir sem janela, essa
    é a resposta certa** — não há área de trabalho a errar.
 2. **Se a janela for inevitável** (o app de validação, um Playwright que precisa
-   de compositor, um jogo para o ensaio do sensor), ela nasce na SEGUNDA área.
+   de compositor, um jogo para o ensaio do sensor), a janela nasce na SEGUNDA área.
    O auxiliar que a estaciona é da MÁQUINA DO USUÁRIO, não deste repositório: ele vive
    em `~/.config/zsh/scripts/` e os quatro gestos dele — estacionar a janela que
    nascer, abrir um navegador dedicado, mover uma janela já aberta e
@@ -42,8 +42,8 @@ do usuário passa a brigar com o clique de quem mede — os dois se quebram.
    do usuário também quebraria a regra da casa de não ter dois donos do mesmo texto.
 
 3. **Se o auxiliar RECUSAR** estacionar, a resposta é **aceitar a recusa e
-   dizer na entrega**. Não force a variável de ambiente que ele oferece: ela
-   pode jogar a janela em cima dela, que é exatamente o que a regra existe para
+   dizer na entrega**. Não force a variável de ambiente que ele oferece: a variável
+   pode jogar a janela em cima do usuário, que é exatamente o que a regra existe para
    impedir.
 
 **O que NUNCA se faz, por conta própria:** os gestos que TROCAM a área de
@@ -52,8 +52,8 @@ ver.
 
 **E a irmã desta regra, que já custou uma sessão inteira:** para matar um
 processo, **PID conferido com `ps -o pid,ppid,cmd`, nunca padrão de nome.** Em
-04/09/2026 um `pkill -f 'cosmic-comp'` casou com o compositor **dela**, a tela
-caiu e a conversa morreu — ela teve de restaurá-la.
+04/09/2026 um `pkill -f 'cosmic-comp'` casou com o compositor **do usuário**, a tela
+caiu e a conversa morreu — o usuário teve de restaurá-la.
 
 ---
 
@@ -69,7 +69,7 @@ PNG por aba em `docs/usage/assets/aba-NN-*.png`, recortado na moldura da janela
 [`AS-NOVE-ABAS`](../usage/AS-NOVE-ABAS-o-que-cada-uma-faz.md).
 
 O retratista mora dentro do pacote porque depende só do Chrome. O da janela GTK
-(`scripts/gui-captura/`) saiu com ela em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`).
+(`scripts/gui-captura/`) saiu com a janela em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`).
 
 Sem `--doc` ele grava em `/tmp` e não toca no repositório:
 
@@ -95,7 +95,7 @@ os dois é o assunto do `mockup/LEIA-PRIMEIRO.md`.
 
 Esta tabela tem portão: `tests/unit/test_a_tabela_dos_scripts_de_tela.py` confere
 que todo caminho citado aqui EXISTE, que o retratista está nomeado e que o
-número do título bate com o das linhas. Ela já envelheceu calada uma vez —
+número do título bate com o das linhas. A tabela já envelheceu calada uma vez —
 dizia "os três scripts" com cinco no disco.
 
 ### O Playwright não alcança o WebKitGTK
@@ -136,7 +136,7 @@ Seja honesto sobre isto ao usá-la:
 - **a foto recorta na moldura `.janela`** e não mostra o cromo da janela GTK que
   a envolve: a barra de título, os botões de fechar/maximizar e o ícone da dock
   ficam **fora do recorte**. Quem for medir aquilo abre o piloto;
-- **não prova que a janela abre** — prova o que tem dentro dela;
+- **não prova que a janela abre** — prova o que tem dentro da janela;
 - **não vê o que o `<script>` escreve depois de um clique.** A foto é do estado
   INICIAL da página; o que nasce do gesto só aparece com o piloto ou com uma
   régua que clica (`tests/unit/test_a_palavra_de_tela_da_interface_nova.py` é o
@@ -172,11 +172,11 @@ via o `git status` sujar sem nada ter mudado na tela.
 A causa não é "ruído de gradiente": é **transição de CSS**. Um `GtkRadioButton`
 recém-marcado anima a mudança para `:checked` (o tema do sistema traz
 `transition` em `button:checked`), e a foto sai no meio da animação — o ponto
-dela depende do **relógio**, não do desenho. A aba Início era a única afetada
+da animação depende do **relógio**, não do desenho. A aba Início era a única afetada
 porque é a **primeira** fotografada: as outras nove tinham tempo de assentar
 enquanto o laço percorria a tira.
 
-**A cura, e ela vale para qualquer instrumento de captura desta casa:**
+**A cura, e a cura vale para qualquer instrumento de captura desta casa:**
 
 ```python
 Gtk.Settings.get_default().set_property("gtk-enable-animations", False)
@@ -231,7 +231,7 @@ própria.
 ### `GtkProgressBar` desenha o próprio texto CENTRADO
 
 Numa barra larga, o número fica a centenas de pixels de cada borda. Se a barra
-precisa ser larga, o texto sai dela e vira um rótulo ao lado.
+precisa ser larga, o texto sai da barra e vira um rótulo ao lado.
 
 ### `column_homogeneous` dá metades IGUAIS
 
@@ -288,12 +288,12 @@ O que a leitura errada produziu foi um achado inteiro que **nunca existiu**
 duas mensagens de commit. Não houve colisão naquela mesa: o vpad acendia o
 padrão do 1 e o DualSense físico o do 3.
 
-**Quem leu certo foi ela, de olho, sem instrumento** — *"o dualsense branco
+**Quem leu certo foi o usuário, de olho, sem instrumento** — *"o dualsense branco
 dessa vez conectado como player 3"*. A pessoa que USA o produto leu o plástico
 melhor do que quem o escreve leu o `sysfs`.
 
-**A regra, e ela é da mesma família do "medir contra a biblioteca errada":**
-nome de recurso do kernel descreve **onde a lâmpada fica**, não o que ela
+**A regra, e a regra é da mesma família do "medir contra a biblioteca errada":**
+nome de recurso do kernel descreve **onde a lâmpada fica**, não o que a lâmpada
 significa no produto. Antes de usar um nome de `sysfs` como valor de domínio,
 confira contra a tabela do produto que traduz um no outro — aqui,
 `core/led_control.py`. Se não existir essa tabela, o nome não é dado: é
@@ -311,7 +311,7 @@ Registrado em **07/08/2026**, do commit `6e04c57`. **GRAU: MEDIDO.**
 Um medidor formatava a janela de tempo com a data **em português** e a passava
 para o `journalctl --since`. O `journalctl` não entende `ago`, `set`, `dez` — e
 não reclama: ele devolve **zero linha**, que é indistinguível de "não houve
-nenhum evento". Foi daí que saiu a afirmação falsa dita **a ela, ao vivo**, de
+nenhum evento". Foi daí que saiu a afirmação falsa dita **a quem usa, ao vivo**, de
 que *"três controles custam 40 perdas por minuto e dois custam zero"*.
 
 Refeita a medição com instrumento validado, o número **inverte a conclusão**:
@@ -324,7 +324,7 @@ CONECTA-E-DESLIGA-01.
 
 1. **declare o locale.** `LC_ALL=C` no instrumento, ou monte a data com
    `strftime("%Y-%m-%d %H:%M:%S")` — nunca com nome de mês;
-2. **prove a janela contra contagem direta antes de acreditar nela.** Foi assim
+2. **prove a janela contra contagem direta antes de acreditar na janela.** Foi assim
    que o medidor das 20h13 se validou: a contagem do instrumento bateu com a
    contagem à mão do mesmo intervalo, **53 = 53**. Sem essa conferência, um
    instrumento quebrado e uma janela limpa dão a mesma saída.
@@ -353,15 +353,15 @@ indistinguível de ausência de defeito.**
 A casa já pagou por isso **duas vezes**, com custo medido:
 
 - **05-06/08/2026** — o daemon vivo era o PID 1670, de 04/08 23:39:46; as curas
-  de perfil eram de 05/08 00:38:41. Ela trocava de perfil e a cor/gatilho/rumble
-  não entravam. **Era o defeito já curado no disco**, e ela estava olhando para o
+  de perfil eram de 05/08 00:38:41. O usuário trocava de perfil e a cor/gatilho/rumble
+  não entravam. **Era o defeito já curado no disco**, e o usuário estava olhando para o
   produto de anteontem
   (PERFIL-REESCRITO-NA-PARTIDA-01,
   linhas 43-47);
 - **07/08/2026** — o diário da bateria (474 linhas, 49 testes verdes) ficou
   **5h49m** no disco sem escrever **uma linha** no journal, com o controle do usuário
   conectado o tempo todo. Uma noite de medição teria produzido nada, em silêncio.
-  Reiniciado o serviço às 21:34:39 (autorização dela), a primeira amostra saiu
+  Reiniciado o serviço às 21:34:39 (autorização do usuário), a primeira amostra saiu
   35 segundos depois.
 
 **A regra: antes de acreditar em qualquer medição feita pelo daemon, confira o
@@ -394,7 +394,7 @@ Nunca aceite código de saída como prova de que o som saiu no dispositivo certo
 
 ### Régua que pergunta pelo campo errado — ou no lugar errado — produz NÃO-ACHADO convincente
 
-**Esta é a família, e ela é mais cara que qualquer medição individual desta
+**Esta é a família, e a família é mais cara que qualquer medição individual desta
 página.** As outras armadilhas fazem o instrumento dizer um número errado, e
 número errado tem chance de parecer estranho. Esta faz o instrumento dizer
 **"não há nada"** — e "não há nada" nunca parece estranho. Ele parece
@@ -405,7 +405,7 @@ vazia, e **vazio é lido como ausência quando na verdade é erro de endereço.*
 
 Casos reais, todos de 22 e 23/08/2026, e vários são de quem escreveu isto:
 
-| a régua | o que ela devolveu | o que era |
+| a régua | o que a régua devolveu | o que era |
 |---|---|---|
 | `grep` por `trigger` no perfil | *"34 perfis sem gatilho"* — levado à dona da casa | o campo é `triggers`, **no plural** |
 | `find /tmp /home -maxdepth 4` pelos logs de frametime | *"o log por quadro não está no disco; os números não são sustentáveis"* | estavam na pasta temporária da sessão (`…/tmp/mangohud/`), fora das raízes e abaixo do `maxdepth` |
@@ -472,7 +472,7 @@ de MAC não é um fabricante"*, `a75a514`).
 arquivo versionado, a máscara da casa é zerar os octetos 4 e 5
 (`ac:a7:f1:00:00:41`); em fixture, a faixa sintética `aa:bb:cc`. Há portão
 (`scripts/check_anonymity.sh`), e ele não perdoa. **A máscara preserva o último
-octeto de propósito** — é ela que continua separando `…:41` de `…:ce` depois de
+octeto de propósito** — é a máscara que continua separando `…:41` de `…:ce` depois de
 anonimizado.
 
 ### O `environ` do PRIMEIRO processo da árvore da Steam não é o do jogo
@@ -503,7 +503,7 @@ teve de desfazer com nota datada.
 **MEDIDO em 23/08/2026**, num censo das sprints. Três resultados convincentes e
 falsos, os três da mesma família: a régua achou a palavra certa no lugar errado.
 
-| o que a régua fez | o que ela concluiu | o que era |
+| o que a régua fez | o que a régua concluiu | o que era |
 |---|---|---|
 | extraiu a **data** do nome do arquivo como se fosse o apelido da sprint | tudo casava com tudo (`2026-08` está em toda linha) | régua correta: `^\d{4}-\d{2}-\d{2}-([A-ZÀ-Ú][A-Z0-9À-Ú-]*-\d{2})\b`, **e conferir que nenhuma chave extraída parece uma data** |
 | casou a chave por **substring** contra a linha do `SPRINT_ORDER.md` | a linha de `TRES-MODOS-DO-SOM-01` (ABERTA) foi lida contra o arquivo de `SOM-01` (ENTREGUE) → alarme de *"a fila diz aberta e a sprint diz feita"* | `SOM-01` é sufixo de `TRES-MODOS-DO-SOM-01`. Casamento tem de ser da chave INTEIRA, com fronteira |
@@ -522,7 +522,7 @@ que o usuário pede existe em `src/`?* — e nunca com o cabeçalho.
 
 ---
 
-## Ferramentas de sistema, e o que não fazer com elas
+## Ferramentas de sistema, e o que não fazer com essas ferramentas
 
 - **`ydotool` exige `ydotoold` vivo** e só faz `mousemove` **relativo**. Clique
   por coordenada absoluta não existe — e clique cego já desfez configuração
@@ -553,7 +553,7 @@ lendo. Um mockup em HTML custa horas; uma aba refeita custa dias.
 2. **A paleta tem dono único: `scripts/paleta_da_casa.py`**, copiada byte a byte.
    *"O artefato tem de parecer parte do Hefesto, não um site sobre ele."*
 3. **Ponha o dado REAL da máquina do usuário dentro**, medido no dia — não um exemplo.
-   Foi o que fez o mapa de entradas virar conversa: ela reconheceu a própria mesa
+   Foi o que fez o mapa de entradas virar conversa: o usuário reconheceu a própria mesa
    e apontou o erro em segundos.
 4. **A tela mostra o AGORA.** O mockup abria numa leitura antiga do barramento e
    o usuário viu o Wi-Fi numa entrada de onde já o tinha tirado. **Estado velho como

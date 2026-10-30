@@ -4,10 +4,10 @@
 
 - **Levantado em:** 01/08/2026, por duas frentes de pesquisa, e conferido contra
   o código desta árvore
-- **Por que este arquivo existe:** o usuário pediu, literal — *"pode documentar a
-  pesquisa dos agentes e salvar elas permanentemente no projeto como
-  documentação física? E atualizar as demais docs principais pra nunca mais
-  termos essa lacuna de conhecimento no repo?"*
+- **Por que este arquivo existe:** o pedido foi guardar a
+  pesquisa dos agentes de forma permanente no projeto, como
+  documentação física, e atualizar as demais páginas principais para que essa
+  lacuna de conhecimento não se repita no repositório.
 - **Regra de uso:** quando este documento e outro discordarem, **este vence** —
   mas só nas linhas marcadas ALTA. Ver "Como ler os graus de confiança"
 
@@ -53,7 +53,7 @@ foi feita.** São duas metades:
    em `assets/dkms/hid-playstation/patch/BASELINE`. É esse arquivo que as
    linhas **FONTE DESTA MÁQUINA** citam.
 
-**Consequência de grau, e ela derruba linhas que já estiveram escritas aqui:**
+**Consequência de grau, e a regra derruba linhas que já estiveram escritas aqui:**
 grau herdado de *"o kernel tal faz assim"*, sem o fonte na mão, **não é ALTA**.
 Ou se abre o arquivo e se cita a linha — e aí é FONTE DESTA MÁQUINA — ou o grau
 desce.
@@ -67,7 +67,7 @@ Oito afirmações daqui foram confrontadas **linha a linha contra o código dest
 **E a segunda passagem do mesmo dia mudou o que se faz com o que caduca**, por
 decisão de produto: **fato errado se substitui, decisão medida se data.** Número
 errado não guarda decisão nenhuma — mantê-lo ao lado do certo só obriga a
-próxima pessoa a escolher entre duas afirmações, e ela pode escolher errado. O
+próxima pessoa a escolher entre duas afirmações, e a próxima pessoa pode escolher errado. O
 que ganha nota datada é o que, se sumisse, faria alguém repetir trabalho ou
 pagar um custo já pago.
 
@@ -121,7 +121,7 @@ reports de saída — `0x31` a `0x39`, em escada de +64 bytes até 525 — e o
 firmware **executa** o `common` de 47 bytes em pelo menos três deles, medido com
 a lightbar e o olho de quem confere. A seção *"Os reports de saída por transporte — a
 escada `0x31`-`0x39` do rádio"*, logo depois do §2, traz a tabela, o método e o
-envelope. **O que ela NÃO diz** — e a distinção é o ponto — é o que os bytes
+envelope. **O que a tabela NÃO diz** — e a distinção é o ponto — é o que os bytes
 além do `common` carregam: isso continua **não identificado**.
 
 **Documento irmão:**
@@ -167,7 +167,7 @@ SlopeFeedbackParam { startPosition; endPosition; startStrength(1~8); endStrength
 MultiplePositionVibrationParam { frequency(0~255); amplitude[10] (0~8); }
 ```
 
-ATENÇÃO: **Ressalva jurídica, e ela é séria:** o texto é da Sony e está marcado
+ATENÇÃO: **Ressalva jurídica, e a ressalva é séria:** o texto é da Sony e está marcado
 *"SIE CONFIDENTIAL"*. Use como referência de **semântica e faixas**, cite a
 URL — **nunca copie o header para dentro deste repositório.**
 
@@ -267,7 +267,7 @@ forma: `255 & 0x03 = 3`, que deveria piscar lento — e apaga. Logo o firmware
 **valida a faixa**, não mascara bits. Um campo que mascarasse teria acendido.
 
 **Não existe controle de brilho por este byte** — era a hipótese que motivou a
-medição, e ela caiu. Mas o PWM EXISTE no aparelho: o pisca rampa em vez de
+medição, e a medição caiu. Mas o PWM EXISTE no aparelho: o pisca rampa em vez de
 ligar e desligar seco (observado ao vivo). O brilho intermediário é
 fisicamente possível; o que não se sabe é se algum campo o expõe. **Isso é
 pergunta em aberto, não fato.**
@@ -537,8 +537,8 @@ Isto estava **só no código** desta árvore, nunca nesta página. É a forma co
 os reports acima foram montados, e é a única forma que **se sabe funcionar** por
 rádio.
 
-**A ressalva de escopo, e ela é do mesmo tamanho do achado:** o que está medido é que **este
-envelope inteiro funciona**. **Ninguém aqui removeu uma peça de cada vez** para ver qual delas o
+**A ressalva de escopo, e a ressalva é do mesmo tamanho do achado:** o que está medido é que **este
+envelope inteiro funciona**. **Ninguém aqui removeu uma peça de cada vez** para ver qual das peças o
 firmware exige — nem o tag, nem o número de sequência, nem o CRC. Que o tag seja obrigatório vem
 do **comentário do driver da Sony**, não de ensaio do Hefesto. A armadilha desse ensaio está
 nomeada logo abaixo: uma escrita malformada **"dá certo"** para quem olha o valor de retorno. O
@@ -587,11 +587,11 @@ veredito é o olho de quem confere, nunca o valor de retorno da escrita.**
 
 ### O que isto NÃO prova — e a falácia que começa aqui
 
-**A frase honesta, e é ela que deve ser copiada quando alguém citar esta
+**A frase honesta, e é a frase que deve ser copiada quando alguém citar esta
 seção:** *o canal existe, o firmware responde, e o conteúdo do payload ainda não
 foi identificado.* 15/08/2026.
 
-**HIPÓTESE, e só isso:** que os bytes além do `common` sejam áudio. Ela é
+**HIPÓTESE, e só isso:** que os bytes além do `common` sejam áudio. A hipótese é
 **forte** — o controle já está inteiramente servido pelos 47 bytes; não há outra
 função de controle conhecida que precise de 469 bytes adicionais; e o PS5 manda
 som para este mesmo aparelho. Mas é hipótese, e escrever *"descobrimos o áudio
@@ -627,7 +627,7 @@ coisa. A ideia de que a família `0x80`-`0x83` e `0xF0`-`0xF7` *"responde ao que
 foi pedido antes"* vem do caminho da cor, que esta página marca como **caminho
 identificado e NÃO medido por nós**; e **ninguém provocou o `0xF6`** com escrita
 nenhuma. Concluir que ele está vivo porque veio vazio é a **falácia
-do canal que responde** de cabeça para baixo — e ela morde de novo aqui se a
+do canal que responde** de cabeça para baixo — e a falácia morde de novo aqui se a
 deixarmos.
 
 ### O crédito, que não é de quem escreveu esta seção
@@ -644,7 +644,7 @@ da própria medição. De manhã pelo argumento, literal:
 De madrugada pelo aparelho. E a mesa 2+2 — o instrumento sem o qual nenhuma
 linha desta seção existiria — **também foi decisão de produto**.
 
-A regra que ela fixou no mesmo dia, *"tirar os achismos do projeto"*, é a que
+A regra que a decisão fixou no mesmo dia, *"tirar os achismos do projeto"*, é a que
 manda esta seção parar onde parou. A primeira chance de usá-la foi contra a
 nossa própria vontade de ter achado mais do que achamos.
 
@@ -659,7 +659,7 @@ da espada enquanto na tela tem o som normal do jogo"*.
 paralela à saída principal. Não é mixagem: são portas diferentes. O SDK é fechado
 (NDA), mas três reimplementações abertas da `sceAudioOut` concordam no
 identificador (lidas em 12/10/2026; nenhuma declara de onde tirou os números, e
-a concordância entre elas não prova independência, por isso não sobe o grau):
+a concordância entre as reimplementações não prova independência, por isso não sobe o grau):
 
 | o quê | valor | grau | fonte |
 |---|---|---|---|
@@ -791,25 +791,25 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
      controle precisa do nó exposto DURANTE o open), e as citações desceram.
-     As AFIRMAÇÕES não mudaram — só onde elas abrem. O mapa do reaponte foi o
+     As AFIRMAÇÕES não mudaram — só onde as afirmações abrem. O mapa do reaponte foi o
      diff HEAD->árvore linha a linha, e o oráculo foi o próprio
      `scripts/validar-citacoes-de-linha.py --all`: 3285 citações conferidas
      antes e depois, o mesmo número, zero podre. -->
 <!-- ENDEREÇOS REAPONTADOS em 09/09/2026: um ajuste acrescentou a função
      `byte_do_volume_do_microfone` e os dois métodos de posse do `common[6]` ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~57 linhas. As
-     AFIRMAÇÕES não mudaram — só onde elas abrem. O mapa do reaponte foi o diff
+     AFIRMAÇÕES não mudaram — só onde as afirmações abrem. O mapa do reaponte foi o diff
      HEAD->árvore, linha por linha, e o símbolo prometido foi conferido dentro
      de cada faixa nova: reaponte por aritmética foi o que já pôs `:789` no meio
      de um docstring. -->
 <!-- ENDEREÇOS REAPONTADOS em 01/09/2026: um ajuste acrescentou
      a leitura disciplinada do byte de áudio e o contador de bordas ao
      `backend_pydualsense.py`, e as citações de áudio desceram ~59 linhas.
-     As AFIRMAÇÕES não mudaram — só onde elas abrem. -->
+     As AFIRMAÇÕES não mudaram — só onde as afirmações abrem. -->
 <!-- ENDEREÇOS REAPONTADOS em 25/08/2026: um ajuste acrescentou
      `set_primary_change_observer` e a reserva de posto ao
      `backend_pydualsense.py`, e as três citações de áudio desceram ~21 linhas.
-     As AFIRMAÇÕES não mudaram — só onde elas abrem. -->
+     As AFIRMAÇÕES não mudaram — só onde as afirmações abrem. -->
 
 > | rota, `common[7]` bits 4-5 | `core/backend_pydualsense.py:252-267` (`_byte_da_rota`) | **MEDIDO** — com a orelha do usuário em 02/08, rota 3 audível, rota 0 sem fone inaudível |
 >
@@ -986,13 +986,13 @@ isso **caducou**.
 | *"faltava o primer `0x31` que ARMA a rota"* | **toca desarmado.** A tag `0x13` do bloco de áudio já endereça o alto-falante |
 
 **A MORDIDA QUE ESTAVA FURADA, e a regra que a mordida deixa:** a primeira mordida do
-primer passou por engano — ela tocou sem primer logo depois de uma corrida COM
+primer passou por engano — a mordida tocou sem primer logo depois de uma corrida COM
 primer. **A rota persiste no firmware entre corridas**, então a mordida MEDIA a
 memória do aparelho, não o primer. Refeita com `--desarmar` (um `0x31` pedindo
 rota=fone, o padrão de fábrica), o usuário ouviu igual, e só então a hipótese caiu.
 
 > **Mordida que não desfaz o estado da corrida anterior não mede o que promete.
-> O aparelho tem memória, e ela sobrevive ao processo que a escreveu.**
+> O aparelho tem memória, e a corrida sobrevive ao processo que a escreveu.**
 
 O instrumento é `scripts/ensaios/o_som_pelo_035.py`. O produto **já tinha** o
 codificador certo (`integrations/alto_falante_bt.CodificadorOpus`, CBR 160 kbps
@@ -1001,7 +1001,7 @@ enquadramento. O layout vem do `HeadsetPlayMusic` de `awalol/dualsense-bt-haptic
 
 **O QUE ISSO EXIGE DA MÁQUINA:** a `libopus` do sistema (`libopus.so.0`). O
 `install.sh` já a instala — ver `_dep_presente "lib:libopus.so.0"` —, e desde
-10/09 ela é dependência **do alto-falante por rádio também**, não só do microfone.
+10/09 a biblioteca é dependência **do alto-falante por rádio também**, não só do microfone.
 
 **A PONTE ESTÁ NO PRODUTO desde a tarde do mesmo 10/09**. O
 texto acima dizia *"o `alto_falante_bt.py` monta `0x39` a 20 ms; o som de hoje
@@ -1043,7 +1043,7 @@ comprimido. As duas consequências foram medidas:
 | `ds_report->buttons[2]`, bit `DS_BUTTONS2_MIC_MUTE` | oscila com o áudio. Na borda de subida o driver inverte `ds->mic_muted` e escreve `POWER_SAVE_CONTROL_MIC_MUTE` — **desliga o microfone sozinho** |
 | os eixos e os demais botões | recebem valores de áudio: **o cursor e o teclado se mexem sozinhos** |
 
-**A segunda é a "entrada fantasma"**, relatada duas vezes nos ensaios. E ela
+**A segunda é a "entrada fantasma"**, relatada duas vezes nos ensaios. E a entrada fantasma
 explica por que uma medição de 120 s do evdev deu ZERO: naquela corrida o
 microfone não estava no ar, logo não havia quadro de áudio a ser lido como
 botão. *Um zero só derruba a hipótese se a corrida tiver a condição que a
@@ -1081,18 +1081,18 @@ ativo — era o **kernel** mutando e desmutando, a partir de bordas que ele
 inventava lendo áudio Opus como botão. Uma guarda de UMA LINHA curou os DOIS
 sintomas de uma vez.
 
-**AS DUAS CURAS, e elas são de camadas diferentes:**
+**AS DUAS CURAS, e as curas são de camadas diferentes:**
 
 1. **A raiz** — `if (data[1] & DS_INPUT_BT_FLAG_AUDIO) return 0;` no ramo
    Bluetooth do parse (`patch/0003`). **INSTALADA E MEDIDA em 10/09/2026.** O módulo curado entrou pelo DKMS e foi carregado (o `srcversion` em memória foi de `E493EAD26536CF68977110C` para `CFB81A3D4C7FAA41489CCBD`), e os dois sintomas sumiram no mesmo instante.
-   Ela entra pelo caminho normal do `install.sh` (passo 3k);
+   A raiz entra pelo caminho normal do `install.sh` (passo 3k);
 2. **A defesa** — do lado do daemon, o gesto do botão deixou de ser a virada
    do bit `MIC_MUTE` de `status[1]` e passou a ser o próprio BOTÃO
    (`buttons[2]` bit 2), lido do report de ESTADO que já passa pela recusa do
    quadro de áudio (`core/backend_pydualsense.py`, `_registrar_borda_do_mic`,
    28/09/2026). O gating do bit não aperta botão nenhum, com ou sem o módulo
    recompilado. A sustentação de 300 ms que fazia esse papel desde 10/09 saiu
-   junto: ela olhava a virada do bit, e o bit virava também com a escrita de
+   junto: a sustentação olhava a virada do bit, e o bit virava também com a escrita de
    quem quer que mande no mudo — três bordas que o usuário não deu, no branco, na
    sessão de 28/09.
 
@@ -1227,10 +1227,10 @@ direito, o R2 endureceu e o L2 ficou solto — literal: *"r2 duro, l2
 solto"*. A suspeita de que o mapeamento de lado estivesse invertido nasceu numa
 rodada anterior e foi **eliminada na mesma sessão**.
 
-**A ressalva de método, e ela vale mais que o resultado:** numa das rodadas o
+**A ressalva de método, e a ressalva vale mais que o resultado:** numa das rodadas o
 lado que **não** foi autorizado ficou solto, e isso foi registrado, por engano,
 como prova de que ele obedece. Não é. Um gatilho solto prova que o comando
-**não vazou de lado** — é controle negativo, não obediência. Ela pegou o erro.
+**não vazou de lado** — é controle negativo, não obediência. A ressalva pegou o erro.
 
 ### O gatilho chega pelo RÁDIO, e o alvo por MAC é respeitado lá — MEDIDO AQUI em 12/08/2026
 
@@ -1329,7 +1329,7 @@ Gatilhos e a decodificação se confirmou: *"rígido e desligado sem diferença"
 E a medição trouxe DUAS correções ao que estava escrito aqui:
 
 1. **a previsão de que os cinco presets de `0x26` seriam idênticos ERROU.**
-   Ela: *"eles são bem diferentes viu"*. O motivo é instrutivo — os
+   O usuário: *"eles são bem diferentes viu"*. O motivo é instrutivo — os
    `forces[0]`/`forces[1]` desta árvore caíam em cima do bitmask de zonas, e
    cada preset produzia um bitmask ACIDENTAL diferente. Os parâmetros chegam e
    surtem efeito nos modos não oficiais;
@@ -1364,7 +1364,7 @@ SÃO expressáveis.
 > | `vibration()` — `core/trigger_effects.py:403-415` | `PULSE_A` = **`0x22`** (`:42`) | **Bow**, não oficial | `0x26`, o Vibration oficial |
 >
 > Eles ficaram **fora dos dois grupos** da cura: não estão entre os SETE que
-> ela mediu como inertes e que foram corrigidos, nem entre os CINCO que ela
+> o usuário mediu como inertes e que foram corrigidos, nem entre os CINCO que o usuário
 > aprovou pela sensação e cujos bytes viraram dado travado em
 > `tests/unit/test_trigger_canon_01.py`. Caíram no vão.
 >
@@ -1379,7 +1379,7 @@ SÃO expressáveis.
 > **O ensaio que resolve, e ele é o mesmo de 01/08:** aplicar os dois pela aba
 > Gatilhos, com o daemon vivo, e perguntar o que o dedo sente. Se
 > `weapon()` não resistir e `vibration()` não pulsar, é a mesma classe de
-> defeito já curada; se ela gostar do que sente, o nome é que está errado, e
+> defeito já curada; se o usuário gostar do que sente, o nome é que está errado, e
 > a decisão em 01/08 já disse qual vence — *"as duas temos nomes
 > perfeitos, pq essa é a sensação de usar ambas"*.
 
@@ -1564,7 +1564,7 @@ pedia**. Literal: *"dois bt tão magenta... seguem iguais, nenhum mudou"*.
 
 **Uma cor escrita não precisa de keepalive para ficar de pé — QUANDO NÃO HÁ
 OUTRO ESCRITOR.** A condição não é detalhe: é o que o ensaio de fato mediu
-(daemon parado, Steam fechada), e sem ela a frase vira prescrição sem prova.
+(daemon parado, Steam fechada), e sem a condição a frase vira prescrição sem prova.
 Com escritor concorrente a conta se inverte, e o mesmo arranjo mediu isso: a
 Steam repinta na probe (`lightbar-probe-suja-steam`) e a reafirmação passa a ser
 justamente o instrumento com que o produto disputa a barra. O que o ensaio
@@ -1577,7 +1577,7 @@ escritor, **as duas rotas obedecem** — as mesmas barras saíram do magenta esc
 por `0x31` e viraram verde escrito por `sysfs`. A rota `sysfs` **não** é rota
 morta; o que a derrubava era a disputa na probe, não a rota.
 
-**A consequência muda o que se lê de uma barra apagada:** ela **não** é o
+**A consequência muda o que se lê de uma barra apagada:** a barra **não** é o
 aparelho esquecendo a cor. É alguém mandando apagar, ou escrevendo preto. A
 pergunta certa deixa de ser *"por que o controle perdeu a cor?"* e passa a ser
 **quem escreveu, e com que report** — e em 12/08 essa pergunta ganhou um nome
@@ -1586,7 +1586,7 @@ com medição no fio: ver
 
 **Os padrões de player LED — FONTE DESTA MÁQUINA.** A tabela sai do driver, em
 `assets/dkms/hid-playstation/hid-playstation.c:1888-1894`, e o comentário logo
-acima (`:1831-1834`) diz de onde ela vem: *"Behavior on the PlayStation 5
+acima (`:1831-1834`) diz de onde a tabela vem: *"Behavior on the PlayStation 5
 console is to center the player id across the LEDs"*.
 
 | jogador | `player_ids[N]` no fonte | valor | as cinco lâmpadas |
@@ -1685,7 +1685,7 @@ Quem escrever gesto de três dedos para este aparelho escreve código morto.
 `TouchpadReader` lia `ABS_X`/`ABS_Y`/`BTN_TOUCH` — o caminho **single-touch**
 que o kernel emula para o contato principal —, e o segundo dedo morria ali.
 O daemon publicava um ponto, e a aba Controles desenhava um ponto. *O desenho
-não estava errado: ele era fiel a um payload pobre.* A cura foi ler os slots, e ela tem uma regra dentro: **o caminho single-touch de um
+não estava errado: ele era fiel a um payload pobre.* A cura foi ler os slots, e a cura tem uma regra dentro: **o caminho single-touch de um
 nó multitouch é um resumo, não o dado** — quem precisa dos dedos pede os
 slots.
 
@@ -1820,7 +1820,7 @@ Derivada do que o SDL exige no probe e do que os jogos procuram. **ALTA.**
 16. **Não suspenso** quando o jogo enumera — o Wine não enumera sink suspenso
 17. Só USB
 
-> **Acrescentado em 15/08/2026 — o item 17 ganhou medição, e ela é estreita de
+> **Acrescentado em 15/08/2026 — o item 17 ganhou medição, e a medição é estreita de
 > propósito.** Com quatro DualSense na mesa, dois no cabo e dois no rádio,
 > `/proc/asound/cards` mostrou **duas** placas USB Audio: **exatamente os dois do
 > cabo**. Os dois do rádio não expõem placa nenhuma. **GRAU: MEDIDO NO
@@ -1981,7 +1981,7 @@ implementou por aquele desenho entre abril e 15/08/2026 leu lixo com convicção
 | 1 | 11 | `build_date[11]` | ASCII, ex. `Jul  4 2025` |
 | 12 | 8 | `build_time[8]` | ASCII, ex. `10:10:32` |
 | 20 | 2 | `fw_type` (`uint16`) | tipo de firmware |
-| 22 | 2 | `sw_series` (`uint16`) | série de software — é ela que muda o layout do `0x22` |
+| 22 | 2 | `sw_series` (`uint16`) | série de software — é o campo que muda o layout do `0x22` |
 | 24 | 4 | `hardware_info` (`uint32`) | a revisão de placa; ver a nota do `hardware_version` abaixo |
 | 28 | 4 | `firmware_version` (`uint32`) | `0xAABBCCCC` = AA.BB.CCCC |
 | 32 | 12 | `device_info[12]` | **difere por unidade e ninguém no mundo decifrou** — ver abaixo |
@@ -2003,7 +2003,7 @@ Quem for atrás da cor por aqui: é um candidato, não uma resposta.
 
 ### A regra de leitura por rádio — retry e validação de id
 
-**GRAU: MEDIDO AQUI, 15/08/2026.** Esta é a parte que mais custou, e ela derruba
+**GRAU: MEDIDO AQUI, 15/08/2026.** Esta é a parte que mais custou, e a parte derruba
 uma hipótese que já esteve escrita neste projeto.
 
 **O tamanho do buffer não era o problema. O transporte era.** Por rádio o
@@ -2027,7 +2027,7 @@ segundos e voltou vazia, foi timeout de transporte, **não** é feature ausente.
 > a crença nasceu estão em
 > A TROCA DE BRAÇOS.
 
-Daí as duas regras, e nenhuma delas é opcional:
+Daí as duas regras, e nenhuma das regras é opcional:
 
 1. **REPETIR.** Dos quatro aparelhos, **dois responderam na primeira tentativa e
    um só respondeu na quinta**. Ler uma vez e concluir *"o aparelho não tem esse
@@ -2070,7 +2070,7 @@ GET_FEATURE 0x81 -> 64 bytes
 
 Mais os códigos `Z1` a `ZB`, que são edições especiais.
 
-**ESTA TABELA ESTÁ INCOMPLETA, e a contagem é de 29/08/2026:** ela cobre 21
+**ESTA TABELA ESTÁ INCOMPLETA, e a contagem é de 29/08/2026:** a tabela cobre 21
 códigos, e a fonte da verdade das cores do Hefesto — `docs/data/cores-do-dualsense.csv`
 — conhece **28**. Faltam aqui `13` HyperPop Techno Red, `14` HyperPop Remix
 Green, `15` HyperPop Rhythm Blue, `ZC` Ghost of Yōtei, `ZD` Marathon, `ZE`
@@ -2160,7 +2160,7 @@ quatro unidades de quatro cores diferentes):
 
 Escrever *"a cor não existe no aparelho"* seria falso. **E a frase que estava
 aqui — *"o caminho existe, está identificado, e não foi percorrido aqui"* —
-caducou em 27/08/2026 e foi SUBSTITUÍDA em 29/08/2026:** ela é sobra de 15/08,
+caducou em 27/08/2026 e foi SUBSTITUÍDA em 29/08/2026:** a frase é sobra de 15/08,
 quando nada tinha sido enviado, e contradizia a tabela de resultados 60 linhas
 acima **nesta mesma seção**. O caminho FOI percorrido, nos dois transportes.
 
@@ -2199,11 +2199,11 @@ como identidade estável de unidade.
 ## O que continua em aberto por falta de medição — 11/08/2026
 
 Estas cinco linhas **não** foram resolvidas na conferência de 11/08, e nenhuma
-delas se resolve lendo código: cada uma precisa do controle na mão. Estão aqui
+das linhas se resolve lendo código: cada uma precisa do controle na mão. Estão aqui
 juntas porque é assim que se ataca uma de cada vez, com variável única.
 
 **Três perguntas entraram nesta lista em 12/08**, saídas do ensaio de 11→12/08
-e escritas aqui porque nenhuma delas se responde lendo arquivo:
+e escritas aqui porque nenhuma das perguntas se responde lendo arquivo:
 
 | # | pergunta em aberto | o ensaio que a fecha | onde |
 |---|---|---|---|
@@ -2211,7 +2211,7 @@ e escritas aqui porque nenhuma delas se responde lendo arquivo:
 | 7 | os bits são porteiro dos blocos de **LED** e de **áudio**? | o mesmo desenho de troca-de-lado do §2, aplicado a cor e a volume — mudar o valor com o bit desligado e ver se muda | §2 |
 | 8 | **quem** reaplica o efeito de gatilho com período de minutos? | reproduzir a rodada de 120 s do §4 com o daemon parado, e depois com ele vivo | §4 |
 
-A **6** é a que dá lucro, porque ela é a poda — todo bit que se mostrar
+A **6** é a que dá lucro, porque a rodada é a poda — todo bit que se mostrar
 dispensável pode parar de ser escrito, e foi assim que a lightbar encolheu de
 cinco canais para um.
 

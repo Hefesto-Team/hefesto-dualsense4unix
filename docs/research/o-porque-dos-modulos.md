@@ -32,7 +32,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   número (D2). Sem roubo LRU (cortado: YAGNI);
 - R-15 (auditoria 23/07): DENTRO de um boot, número é do MAC e NINGUÉM
   expira. A expiração por "sessão esvaziou" (o ramo ``_saw_connected`` do
-  ``sync_connected``) foi REMOVIDA: ela era assimétrica (só o lado
+  ``sync_connected``) foi REMOVIDA: a expiração era assimétrica (só o lado
   DualSense expirava; o registro dos externos nunca expirou) e trocava
   cor/número de dono conforme a ORDEM DE WAKE — desligar os dois DualSense
   e religar em ordem invertida devolvia o 1 ao que voltasse primeiro. Pior:
@@ -63,7 +63,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
 - NUM-01 (25/07): **o que se persiste deixa de ser um número absoluto**.
   R-15 e R-23 curaram a instabilidade ("cor e número trocavam de dono")
   prendendo o NÚMERO ao endereço para sempre; o preço apareceu medido no
-  ``controllers.json`` dela: com um só DualSense ligado, ele exibia 2 —
+  ``controllers.json`` da instabilidade: com um só DualSense ligado, ele exibia 2 —
   porque o 1 estava RESERVADO a um endereço que não estava na mesa
   ("ninguém aceita ser o jogador 2 de si mesmo"). Os dois requisitos são
   verdadeiros ao mesmo tempo, e a saída é separar os dois conceitos que
@@ -87,7 +87,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
   REVERTE em parte R-15 e R-23, e por isso vem com as duas garantias que
   aquelas auditorias compraram, escritas aqui como invariante:
 
-  - a **FILA DO MOMENTO** (``_chegada``) é o que ordena a exibição. Ela
+  - a **FILA DO MOMENTO** (``_chegada``) é o que ordena a exibição. A fila
     guarda, por key, a **ONDA** em que a casa VIU aquele controle chegar
     (:data:`JANELA_DE_ONDA_SEC`) — não um carimbo de relógio de parede, e
     nada disso vai para o disco;
@@ -116,7 +116,7 @@ lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
 
   O que continua valendo de R-15/R-23, sem asterisco: nada expira, o lugar
   do ausente não é dropado, e o "Renumerar agora" (``compact``) segue sendo
-  o gesto explícito dela;
+  o gesto explícito do usuário;
 .. note::
 
    **"D9" AQUI NÃO É O "D9" DO DESENHO.** Neste módulo ``D9`` é a decisão do
@@ -271,7 +271,7 @@ R-14 (auditoria 23/07) — o automático são DUAS coisas, não uma:
   automático ligado ou desligado. Antes, o provider fazia o early-return do
   flag ANTES de ``slot_for`` e o DualSense simplesmente não ganhava número
   enquanto o perfil tivesse ``auto_player_colors:false`` (o ``fps.json``
-  dela) — sem número no registro, o piso dos externos (``_ds_reserve``)
+  do usuário) — sem número no registro, o piso dos externos (``_ds_reserve``)
   também mentia e a numeração global congelava. Atribuir é identidade;
   desligar o automático é uma opinião sobre APARÊNCIA.
 - **APARÊNCIA** tem dois eixos independentes: ``auto_colors`` (a paleta da
@@ -321,7 +321,7 @@ mastigados**. Do nosso lado sobra um ``struct.unpack`` de quatro bytes.
 **Zero dependência nova**, e isso é requisito da PEÇA E: o ``parec`` sai do
 MESMO pacote que o ``pactl`` (``pulseaudio-utils``), que o ``install.sh:506``
 já declara para as três famílias. Do lado Python é só a biblioteca padrão —
-o ``numpy`` NÃO está no ``pyproject.toml`` (vive no ``~/.local`` dela), e
+o ``numpy`` NÃO está no ``pyproject.toml`` (vive no ``~/.local`` do usuário), e
 importá-lo repetiria a dívida do ``playwright``, que ``test_o_install_entrega_a_luz_do_mic`` cobra.
 
 **O modo de pico entrega o pico VERDADEIRO, e isto é medida, não confiança.**
@@ -337,13 +337,13 @@ Medido em 03/09/2026, e cada linha é uma decisão:
 
 * ``--property=resample.peaks=true`` no argv LIGA o modo de pico — provado pela
   mordida, na MESMA fonte e no mesmo minuto: com a propriedade, ``max =
-  0,013535``; sem ela, ``max = 0,000245`` (-72,2 dBFS), **55 vezes menor** e
+  0,013535``; sem a propriedade, ``max = 0,000245`` (-72,2 dBFS), **55 vezes menor** e
   vinte e cinco vezes abaixo do limiar de entrada. Sem a propriedade a luz
   nunca piscaria, e o defeito seria silencioso: o fluxo abre, as amostras
   chegam, e todas dizem "silêncio".
 * ``--latency-msec=100`` **não é opcional**. Com o fragmento padrão a primeira
   amostra do ``parec`` chega aos **2,006 s** (e ``stdbuf`` não resolve); com a
-  flag, aos 96 ms (mediana de cinco corridas). Sem ela o medidor mede o passado
+  flag, aos 96 ms (mediana de cinco corridas). Sem a flag o medidor mede o passado
   e a luz pisca fora do tempo.
 
 ## O CUSTO, medido com ESTE módulo, por QUATRO réguas independentes
@@ -365,7 +365,7 @@ canais medindo     corrida A   corrida B   corrida C   corrida D
 =================  ==========  ==========  ==========  ==========
 
 **QUATRO canais custam entre 0,33 % e 0,40 % de UM núcleo — no pior caso
-0,025 % das 16 linhas dela.** É esse o número que decide, porque a mesa é de
+0,025 % das 16 linhas da máquina de teste.** É esse o número que decide, porque a mesa é de
 quatro, e ele é estável: quatro medições feitas por réguas escritas
 separadamente caem numa faixa de 0,08 pontos percentuais.
 
@@ -395,7 +395,7 @@ inteiro.
 ## A HISTERESE, e por que a histerese tem TRÊS degraus
 
 Sem histerese o pisca vira estroboscópio a cada sílaba. Mas o defeito tem uma
-segunda porta, e ela custou o número desta seção: **a luz também acende
+segunda porta, e a histerese custou o número desta seção: **a luz também acende
 sozinha, com a sala vazia.** É o mesmo estroboscópio pelo avesso.
 
 **A MEDIÇÃO QUE MANDOU AQUI:** 605 s (15.120 amostras) do mic do DualSense pelo
@@ -459,12 +459,12 @@ acendimentos com histerese completa. É o padrão desta casa: duas réguas, uma
 resposta.
 
 **O QUE CONTINUA NÃO MEDIDO, e é honesto dizer:** a âncora de CIMA. Ninguém
-gerou fala na sala dela a esta hora. A escolha de 120 ms sobre 200 ms veio de
+gerou fala na sala da máquina de teste a esta hora. A escolha de 120 ms sobre 200 ms veio de
 um MODELO de fala (sílabas de 160/200/240 ms com pausas de 120 ms, caindo ao
-piso entre elas): a 200 ms de duração exigida, sílaba nenhuma de 160 ms acende
+piso entre as sílabas): a 200 ms de duração exigida, sílaba nenhuma de 160 ms acende
 a luz em amplitude nenhuma; a 120 ms, uma sílaba de 160 ms acende. O modelo é o
 pior caso — fala conectada não cai ao piso dentro de uma palavra —, mas modelo
-não é medida. **A palavra final é o ensaio com ela**, e é por isso que os
+não é medida. **A palavra final é o ensaio com o usuário**, e é por isso que os
 QUATRO valores são parâmetros do construtor, não constantes cravadas no laço.
 
 ## A TRAVA DE MORTE — um ``parec`` vazado prende o microfone do usuário
@@ -644,7 +644,7 @@ O NOME DO NÓ MUDOU, E O DEFEITO ERA O NOME (06/09/2026)
 --------------------------------------------------------
 A ponte publicava ``hefesto_dualsense_bt_<hex6>`` — o TRANSPORTE no nome do
 microfone. Troque o cabo pelo rádio e o microfone daquele controle mudava de
-nome; um app que fixou o device o perdia. Ela agora publica o canal por
+nome; um app que fixou o device o perdia. A ponte agora publica o canal por
 controle, ``hefesto_mic_<marca>``, pelo dono dele
 (:mod:`integrations.canal_do_microfone`) e pela MESMA
 :meth:`SourceVirtualPipeWire.escrever` por onde o cabo entrega o PCM dele: um
@@ -689,7 +689,7 @@ lugar errado.
 DKMS desta árvore, entregue pelo `install.sh`): o módulo foi carregado em
 10/09/2026 e os dois sintomas sumiram. A régua é
 `tests/unit/test_o_quadro_do_microfone_nao_e_botao.py`,
-e ela trava as duas metades no MESMO bit — porque a metade em Python já fazia a
+e a régua trava as duas metades no MESMO bit — porque a metade em Python já fazia a
 guarda certa desde 16/08/2026 (`core/physical_report_reader.INPUT_FLAG_AUDIO`,
 do PS-PRESO-01). **A casa sabia a resposta numa linguagem e a esquecia na
 outra.**
@@ -703,7 +703,7 @@ o mesmo instrumento na mesma duração::
 
 Com o microfone no ar e alguém falando, o veredito foi que o controle não enlouqueceu
 e o microfone não desligou.
-O que restava provar era a queda do número, e ela caiu.
+O que restava provar era a queda do número, e a queda caiu.
 
 O que a seção media, e continua valendo como medição  # (noqa-acento: verbo/citação)
 -----------------------------------------------------
@@ -743,7 +743,7 @@ centenas de escritas por segundo disputando o link com o `hid-playstation` e
 não compram o problema de volta.
 
 **O «principal suspeito» que esta seção nomeava CAIU em 10/09/2026**, e a
-frase fica registrada porque ela custou uma hipótese: *"existe um SEGUNDO
+frase fica registrada porque a frase custou uma hipótese: *"existe um SEGUNDO
 escritor de 0x31 neste device — o próprio daemon do hefesto, que emite output
 report a 60 Hz"*. O segundo escritor existe, mas não é o nosso daemon: é o
 **kernel**, e ele escreve na borda falsa do botão de mudo. Ver o topo desta
@@ -778,10 +778,10 @@ Invariantes (as mesmas do `app/mic_monitor.py`, pagas com os mesmos incidentes)
 Máscara por APARELHO — de CADA controle, externo ou DualSense (MÁSCARA-01/E1).
 
 *"Como este controle deve aparecer nos jogos?"* — a escolha é de CADA controle,
-e desde 08/09/2026 ela mora no **perfil**.
+e desde 08/09/2026 a escolha mora no **perfil**.
 
 Este módulo é **o registro e a regra de herança**: onde a escolha mora enquanto
-o daemon roda, como ela sobrevive ao reboot, o que ela NÃO promete, e — desde
+o daemon roda, como a escolha sobrevive ao reboot, o que a escolha NÃO promete, e — desde
 15/08/2026 — qual máscara um jogador recebe quando não escolheu nenhuma. Ele não
 adota externo, não cria gamepad virtual, não esconde ninguém do jogo e não
 desenha tela — isso é a `E2`/`E3`/`E4` da MÁSCARA-01 e a `E3` da
@@ -797,7 +797,7 @@ campo é ``profiles.schema.ControllerOverrides.mascara``, e quem o escreve aqui 
 ``profiles.manager.apply_controller_mascaras``, a cada ativação de perfil.
 
 **FATO SUBSTITUÍDO.** O cabeçalho deste módulo dizia que *"a escolha é do
-aparelho, não da configuração de jogo"* e que ela não podia morar no perfil
+aparelho, não da configuração de jogo"* e que a escolha não podia morar no perfil
 porque *"cada troca automática de perfil — cada alt-tab — faria o controle sumir
 e voltar no meio da partida"*. A primeira metade caiu por decisão de produto; a
 segunda **continua medida e não some**: trocar a máscara derruba e recria o
@@ -818,7 +818,7 @@ para valer agora.
 
 A CONSEQUÊNCIA PARA QUEM LER ESTE ARQUIVO NO DISCO: uma entrada de
 ``controller_masks.json`` que o perfil ativo não repita **não sobrevive à
-próxima ativação** — ela é apagada por :meth:`ExternalMaskRegistry.manter_somente`,
+próxima ativação** — a entrada é apagada por :meth:`ExternalMaskRegistry.manter_somente`,
 e aquele controle volta ao padrão. Não é escolha perdida, e não é dado a
 defender. Apagar o arquivo com o daemon parado também não muda máscara nenhuma
 de quem o perfil declara: a próxima ativação o reescreve.
@@ -837,7 +837,7 @@ DE QUEM É A MÁSCARA — DO JOGADOR, DESDE 15/08/2026
 **NOTA DATADA — 15/08/2026 (MÁSCARA-POR-JOGADOR-01).** Até aqui este registro
 não tinha chamador nenhum em ``src/``, e a razão estava escrita em
 ``profiles/schema.py``: *"``mode`` e a máscara do gamepad são da SESSÃO, não da
-peça"* (decisão, 10/08/2026). **Ela reescreveu essa frase em 15/08/2026**:
+peça"* (decisão, 10/08/2026). **A decisão de 15/08/2026 reescreveu essa frase em 15/08/2026**:
 vale só para o ``mode``. A máscara passa a ser **do jogador**, com a máscara do
 jogo como **padrão herdado** — quem não escolheu nada segue o jogo, exatamente
 como um campo em branco de ``ControllerOverrides`` herda a seção global.
@@ -862,7 +862,7 @@ QUEM PERGUNTA, E UMA VEZ SÓ
 virtual, por ``virtual_pad.make_virtual_pad``, e no laço de recriação do co-op
 (:func:`vpad_ficou_para_tras`). Os construtores (``UinputGamepad.for_flavor`` e
 ``UhidDualSense.for_flavor``) vestem a chave que recebem e não releem o registro
-(A-MASCARA-DO-PAD-SE-DECIDE-SO-NA-FABRICA-01, 10/10/2026). A ``identity`` que ela
+(A-MASCARA-DO-PAD-SE-DECIDE-SO-NA-FABRICA-01, 10/10/2026). A ``identity`` que a chave
 precisa chega do ``gamepad.py`` (o primário) e do ``coop.py`` (cada jogador), e a
 escolha do usuário é gravada pela rota ``gamepad.mask.set``.
 
@@ -988,7 +988,7 @@ trava                  de onde veio               o que protegia
                        mic por controle)          INTERRUPTOR do usuário
 =====================  =========================  =============================
 
-**As duas são a MESMA razão em duas roupas**, e ela está escrita abaixo: a
+**As duas são a MESMA razão em duas roupas**, e a razão está escrita abaixo: a
 ponte é um gesto explícito.
 
 **A PERGUNTA QUE A §2 OBRIGA** — *"por que o cabo não precisa da mesma
@@ -1009,13 +1009,13 @@ Medido no ensaio no mesmo dia: sem ouvinte `SUSPENDED`, com um `parec`
 gravando `RUNNING`, e `IDLE` depois que ele sai (`integrations/
 dualsense_bt_audio.ESTADO_COM_OUVINTE`).
 
-**Logo a trava protegia a coisa certa pela alavanca errada** — ela negava o
+**Logo a trava protegia a coisa certa pela alavanca errada** — a trava negava o
 CANAL para evitar a CAPTURA, e o cabo prova que os dois são separáveis. É
 exatamente a distinção que a sprint faz: *"perder o padrão não é perder o
 canal"*. **Hoje a distinção é do PRODUTO, e não só do argumento:** o canal do
 rádio pode existir sem capturar, como o do cabo.
 
-**Então a trava NÃO SAI: ela vira automática, e o critério explícito é o do
+**Então a trava NÃO SAI: a trava vira automática, e o critério explícito é o do
 cabo — PROCURA.** A ponte sobe para o controle cujo canal alguém está tentando
 usar, e o gesto que diz isso já existe e já é do usuário: o botão do microfone, que
 desde 01/09 quer dizer *"eu falo por este controle"*
@@ -1030,7 +1030,7 @@ repouso é uma varredura de sysfs a cada `RECONCILIA_S`.
 
 **ELE SOBE SOZINHO DESDE 17/09/2026, E A RAZÃO DE NÃO SUBIR CADUCOU.** Aqui
 estava escrito, no presente, *"por que ele não sobe SOZINHO, e a razão continua
-de pé"* — privacidade e banda, as duas abaixo. **Ela revogou as duas em
+de pé"* — privacidade e banda, as duas abaixo. **O usuário revogou as duas em
 25/08/2026, por escrito**, em `docs/data/decisoes-de-produto.csv`: a id 37
 (D-AUDIO-E-GIRO-NASCEM-LIGADOS) e a id 38 (D-O-MIC-LIGADO-VALE-NO-RADIO), esta
 com o pedido do usuário: ligado sempre, nos dois transportes, com a tela dizendo
@@ -1046,29 +1046,29 @@ e em 17/09/2026 o usuário pediu a mesma coisa pela TERCEIRA vez:
 (`daemon/connection.nascer_o_microfone_ao_conectar`) — NASCE-LIGADO-MIC-01.
 Nada aqui virou persistência: as portas de saída do latch continuam todas de
 pé, quem sai da mesa perde o pedido e a palavra, e nada volta do disco. O que
-mudou é que a chegada volta a dizer a palavra — e é por isso que ela não
+mudou é que a chegada volta a dizer a palavra — e é por isso que o usuário não
 clicava uma vez, clicava *toda vez*.
 
 **E O SILÊNCIO DO USUÁRIO CONTINUA VENCENDO.** O nascimento recua diante das duas
-formas de ela ter pedido para calar: o mudo daquele controle no `maquina.json`
+formas de o usuário ter pedido para calar: o mudo daquele controle no `maquina.json`
 (a `ProfileManager.o_controle_pede_silencio`, O-MUDO-E-DO-CONTROLE-01) e o bit
 do mudo já aceso no aparelho.
 Sem isso a SOM-MIC-REPLUG-01 — *"o silêncio que o produto promete e não
 entrega"* — voltaria pela porta da frente.
 
-**AS DUAS RAZÕES QUE ELA REVOGOU FICAM ESCRITAS**, porque a segunda continua
+**AS DUAS RAZÕES QUE O USUÁRIO REVOGOU FICAM ESCRITAS**, porque a segunda continua
 sendo a CONTA que diz quantos microfones cabem numa mesa, e porque apagá-las
 deixaria a próxima pessoa sem saber que o padrão desligado já foi política:
 
 1. **Privacidade.** Era: *"um microfone que liga sozinho quando o daemon sobe é
-   inaceitável, por melhor que seja a intenção"*. Revogada por ela — e o que
+   inaceitável, por melhor que seja a intenção"*. Revogada por quem usa — e o que
    sobrou da preocupação é o recuo diante do silêncio pedido, acima.
 2. **Banda do rádio.** Medido ao vivo (2026-07-25, DualSense por BT nesta
    máquina): com o mic desligado o controle entrega ~260 reports de input/s;
    com o mic ligado a MESMA banda passa a carregar ~106 quadros de áudio/s e
    os reports de input caem para ~170/s. O total de pacotes fica igual — o
    áudio não é de graça, ele divide o link. É por isso que a conta é POR
-   ADAPTADOR, e é ela que diz quantos microfones cabem numa mesa.
+   ADAPTADOR, e é a conta que diz quantos microfones cabem numa mesa.
 
    NOTA DATADA — 22/08/2026, decisão de produto. Aqui estava escrito que *"quem usa
    gyro aiming perde resolução de integração (o espelho de motion mira
@@ -1078,14 +1078,14 @@ deixaria a próxima pessoa sem saber que o padrão desligado já foi política:
    ~392 Hz" com o mic DESLIGADO, p95 de intervalo em 187 ms
    (`core/physical_report_reader.py`, "A taxa do rádio é RAJADA"). Um número
    que oscila 55 a 392 não perde resolução por passar a valer 170 de média: a
-   premissa da frase não existia. Ela é a armadilha nº 1 desta casa — medir
+   premissa da frase não existia. A frase é a armadilha nº 1 desta casa — medir
    contra a régua errada produz alarme convincente e falso.
 
-   O que fica: o microfone **não é trade-off contra giroscópio**. O alvo dela,
+   O que fica: o microfone **não é trade-off contra giroscópio**. O alvo da régua,
    textual em 22/08, é *"a mesma experiência do controle da Sony como se
    tivesse jogando no PS5"* — lá tudo funciona junto, e a conta de três
    adaptadores diz que aqui também cabe. O que continua verdadeiro é a conta
-   do link, e ela é o que o orçamento da mesa mede.
+   do link, e a conta é o que o orçamento da mesa mede.
 
 POR CONTROLE, E POR QUE UM `bool` NÃO SERVE (QUATRO-MICROFONES-01, 22/08/2026)
 ------------------------------------------------------------------------------
@@ -1106,7 +1106,7 @@ Três razões, e a terceira é a que fecha a escolha:
   sobrevive a hotplug, a renumeração de jogador e à troca do nó `hidrawN`. O
   número de jogador não sobrevive a nenhum dos três;
 * **eram DOIS conjuntos desde 18/09/2026**, e o segundo é o que a inversão
-  pediu: `bt_mic_uniqs` (quem ela ligou) e `bt_mic_recusados` (quem ela
+  pediu: `bt_mic_uniqs` (quem o usuário ligou) e `bt_mic_recusados` (quem o usuário
   desligou). Até aqui havia um só, e o comentário nesta linha dizia que um
   `false` gravado *"é um valor de catálogo para o silêncio, e é por essa porta
   que o default entra disfarçado de escolha do usuário"*. Isso valia com o default
@@ -1115,7 +1115,7 @@ Três razões, e a terceira é a que fecha a escolha:
   não, e não gravá-lo é que deixaria o produto decidir por cima do usuário;
 * a fonte é **chamável**, nunca uma cópia: o `machine.declare` relê o
   `maquina.json` e REBINDA `daemon._maquina` no "Aplicar" (`ipc_handlers.py`),
-  então uma cópia tirada no boot ficaria velha no instante exato em que ela
+  então uma cópia tirada no boot ficaria velha no instante exato em que o usuário
   acabou de escolher. É o mesmo desenho do `DaemonConfig.orcamento_da_mesa`.
 
 QUEM GANHA PONTE, em três caminhos e nesta ordem (03/09/2026)
@@ -1129,7 +1129,7 @@ QUEM GANHA PONTE, em três caminhos e nesta ordem (03/09/2026)
    `maquina.json`). Continua valendo inteira: quem já marcou um controle
    continua com a ponte de pé sem precisar tocar em botão nenhum;
 3. **a env** `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` — o caminho à mão, que vale para
-   TODOS os controles. É o que ela sempre significou, e quem a exporta está
+   TODOS os controles. É o que a variável sempre significou, e quem a exporta está
    pedindo a mesa inteira de propósito.
 
 **E DESLIGAR CONTINUA DESLIGANDO.** Tirar a marca do card no "Aplicar" derruba
@@ -1176,11 +1176,11 @@ de produto é que tem resposta, e é por controle. As medições que sustentavam
 lista continuam de pé, mas mudaram de papel: não são recusa, são FILA DE
 ENGENHARIA, e estão abaixo com o que falta construir em cada uma.
 
-**A ORDEM, e ela não se inverte:** primeiro o caminho por unidade EXISTIR,
+**A ORDEM, e a ORDEM não se inverte:** primeiro o caminho por unidade EXISTIR,
 depois o campo entrar aqui. Campo que grava e ninguém lê é pior que campo
 nenhum — ele faz a tela prometer: a coluna da aba Perfis acende dizendo
 *"este controle tem ajuste próprio"* sobre um valor que nada aplica. Há
-régua, e ela é exaustiva nos dois sentidos:
+régua, e a régua é exaustiva nos dois sentidos:
 ``tests/unit/test_perfil_por_controle_o_campo_espera_o_caminho.py``
 classifica CADA campo desta classe contra o consumidor por-``uniq`` que o
 lê, e reprova tanto campo sem consumidor quanto consumidor órfão.
@@ -1304,19 +1304,19 @@ A FILA DO QUE FALTA, ORDENADA POR CUSTO — medida em 02/09/2026
 
 4. ``mouse``, ``key_bindings``, ``button_actions``, ``teclado_emulado`` e
    ``suppress_desktop_emulation``. Os cinco esbarram na MESMA medição, e
-   ela continua de pé: ``PyDualSenseController.read_state`` diz, em
+   a medição continua de pé: ``PyDualSenseController.read_state`` diz, em
    comentário de código, que *"INPUT vem SEMPRE do controle PRIMÁRIO"* e
    que a emulação de mouse/teclado/gamepad é **single-controller por
    construção**; o ``Daemon`` tem UM ``_mouse_device`` e UM
    ``_keyboard_device`` (``daemon/lifecycle.py``), alimentados por um
    ``read_state()`` por tique. Guardar por controle é fácil; **fazer valer**
    exige um caminho de ENTRADA por unidade — ler cada peça e despachar para
-   o device dela. É o item mais caro da fila, e é o que destrava os cinco de
+   o device da peça. É o item mais caro da fila, e é o que destrava os cinco de
    uma vez.
 
 5. ``touchpad``. Continua sem campo em lugar nenhum do perfil e sem tela
    aprovada que ofereça interruptor: na aba Controles ele é leitura viva.
-   **É pergunta aberta para ela, não dívida com dono** — inventá-lo aqui
+   **É pergunta aberta para quem usa, não dívida com dono** — inventá-lo aqui
    seria feature nova.
 
 A CONTRADIÇÃO ABERTA, E É DO USUÁRIO — não se fecha escrevendo código
@@ -1326,19 +1326,19 @@ a frente:
 
 - o contrato do topo desta classe: **campo ``None`` = sem opinião**, e
   perfil que não pediu nada não impõe nada;
-- ela, em 18/08/2026, derrubando o princípio geral: *"o perfil tem de
+- o usuário, em 18/08/2026, derrubando o princípio geral: *"o perfil tem de
   guardar tudo"*;
 - ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08): áudio e giroscópio nascem
   **LIGADOS** em todo jogo — que é um default, não uma ausência.
 
-Com "é tudo por controle", os três precisam ser reconciliados POR ELA. Está
+Com "é tudo por controle", os três precisam ser reconciliados POR QUEM USA. Está
 registrado, não resolvido.
 ~~~~
 
 ## o boot e o último jogo (`daemon/connection.py`, `utils/session.py`)
 
 `D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO` (14/10/2026): o perfil do jogo fica depois
-que ele fecha, até ela mudar ou outro jogo iniciar, e o reinício do serviço não é
+que ele fecha, até quem usa mudar ou outro jogo iniciar, e o reinício do serviço não é
 nenhum dos dois. Medido no mesmo dia: o daemon reiniciou e subiu na escolha à mão
 («Lure Of Passion»), com o gamepad desligado, por cima do perfil do último jogo,
 porque a memória dele era só do processo (`AutoSwitcher._perfil_do_ultimo_jogo`).
@@ -1413,7 +1413,7 @@ da troca à mão, e com o terminal em foco o autoswitch caía no «sem candidato
 devolvia a escolha aos 12 s (`DEFAULT_DEBOUNCE_SAIDA_SEC`), por cima do perfil que
 o usuário tinha aplicado. Agora o `reaplicar` arma a trava com o mesmo dono do «Ativar»
 (`armar_a_trava_da_mao`), e quem a solta é o mesmo de sempre: o próximo gesto
-dela, outro jogo com perfil em foco, o lançamento de um jogo com perfil
+do usuário, outro jogo com perfil em foco, o lançamento de um jogo com perfil
 (`_a_trava_da_mao_segura`, `origin="launch"`). Ele continua sem gravar a escolha
 nem o último jogo, que é a parte da D-0110 que fica: o boot não aprende um perfil
 que o usuário não escolheu. **Só o gesto prende** (parte 3, as respostas de produto, 14/10/2026: *«Só o Aplicar prende»*). O funil dos
@@ -1451,7 +1451,7 @@ comigo. E se eu clicar em Parar ele para de testar»*. Era um pulso de meio segu
 *«quanto é 40%?»*: a mão precisa estar no controle enquanto a outra arrasta a barra. O `_refrescar_o_teste`
 reenvia o par a cada mudança de barra, e a mão só volta ao jogo quando o usuário clica em Parar.
 
-Um teste por controle (03/10/2026, ela: *«vibração e háptico é por cada controle e precisam funcionar em
+Um teste por controle (03/10/2026, quem usa: *«vibração e háptico é por cada controle e precisam funcionar em
 independente. hoje se eu clico em um o outro controle para de ter o efeito»*): o pedido leva o `uniq`
 (`rumble_set_checked(..., uniq=...)`), o serviço guarda um par por controle e a aba não mira mais o seletor
 global (`controller.target.set`), que fazia o serviço inteiro seguir o último clique. O Testar de um controle só
@@ -1507,10 +1507,10 @@ A docstring antiga, movida para cá em 15/10/2026 (a do código ficou com o cont
         `Profile.key_bindings`, e vale a mesma frase do esquema: `None` HERDA, `{}`
         seria "nada em botão nenhum", que é outra coisa.
 
-        `key_bindings` É A CAMADA DO MEIO — 06/09/2026, ONDA3-MOTOR-01. Ela existe
+        `key_bindings` É A CAMADA DO MEIO — 06/09/2026, ONDA3-MOTOR-01. A CAMADA existe
         porque o `apply_button_actions` reescreve o conjunto INTEIRO do teclado
         virtual com o que sai daqui, DEPOIS de o `apply_keyboard` ter escrito o que
-        o usuário digitou na janela antiga: sem herdar, todo atalho dela morria na
+        o usuário digitou na janela antiga: sem herdar, todo atalho da janela morria na
         ativação seguinte de qualquer perfil que tivesse `button_actions`. As regras
         e a razão de o `r3` ficar fora estão em :func:`tabela_efetiva` e em
         :data:`DOMINIO_DO_TECLADO`. Omitir o parâmetro é o contrato de antes, byte
@@ -1522,7 +1522,7 @@ A docstring antiga, movida para cá em 15/10/2026 (a do código ficou com o cont
         outro token desliga e viaja em `do_mouse`, e a linha cai em `sem_dono`, porque
         ninguém atende aquela escolha. A exceção são as teclas do analógico
         (:data:`TECLAS_DO_ANALOGICO`): o `TabelaNoJogo` as emite, e a linha tem dono; em
-        botão que não é analógico elas não têm dono. Antes disto o cursor andava qualquer que fosse
+        botão que não é analógico as teclas não têm dono. Antes disto o cursor andava qualquer que fosse
         a escolha, e a tela oferecia a linha sem dono.
 
         OS DOIS GATILHOS SÃO LINHA PRÓPRIA, sem espelho no `cross` e no `triangle`:
@@ -1530,7 +1530,7 @@ A docstring antiga, movida para cá em 15/10/2026 (a do código ficou com o cont
 
 ## As barras e as listas por peça (`app/ipc_bridge.py`, `rumble_motores_set`)
 
-Decisão, 04/09/2026: a barra não manda o par `rumble.set` agora, ela é POLÍTICA e MULTIPLICA o
+Decisão, 04/09/2026: a barra não manda o par `rumble.set` agora, a barra é POLÍTICA e MULTIPLICA o
 degrau da coluna (`efetivo(motor) = degrau x barra(motor)`). O corpo traz `status` (`ok`,
 `sem_controle`, `sem_endereco`, `sem_perfil`), o `motivo` quando recusa, o `perfil` em que gravou, se
 `gravado` de fato (regravar perfil idêntico troca a data do arquivo e faz o daemon reaplicá-lo) e os
@@ -1551,7 +1551,7 @@ Saíram da docstring do módulo em 16/10/2026 (a régua do texto enxuto), com os
 - `jogo.vibracao` o par que o jogo pediu a UM controle e o que chegou aos motores; `jogo.fechou` o jogo em
   cena saiu; `perfil.trocou` o perfil efetivo mudou (estado guardado: quem assina depois recebe o de agora);
 - `acessorios.gesto` o gesto do PS que a modificação de acessórios executa (`sobe`, `desce`, `para`…);
-  `acessorios.estado` o que ela devolve (ligada, nível, perfil, aparelhos), também estado guardado.
+  `acessorios.estado` o que a modificação devolve (ligada, nível, perfil, aparelhos), também estado guardado.
 
 ## A carta de quem não tem lâmpada (`core/backend_pydualsense.py`, `_cartas_locked`; `identity.py`, `numeros_ao_sentar`)
 
@@ -1592,7 +1592,7 @@ são um por sessão), por isso o resolvedor padrão devolve o jogo da sessão e 
 O tema de cores de uma modificação: troca tokens do ``:root``, e só se o texto continua legível.
 
 O produto põe por cima das páginas publicadas uma folha de usuário (``interface/janela.py``); o
-tema é uma segunda folha, depois dela, que só redefine cores. Nada além disso passa:
+tema é uma segunda folha, depois da folha, que só redefine cores. Nada além disso passa:
 
 * a folha é UM bloco ``:root{…}``, sem seletor, sem ``url()``, sem ``@import``: o tema não
   esconde botão nem busca nada fora;
@@ -1621,7 +1621,7 @@ Duas fontes, nesta ordem, e a primeira é a que a foto usa:
 
 1. ``state_full["external"]``, quando o payload o trouxer. **Medido por
    leitura de código em 25/08/2026: o `daemon.state_full` de HOJE não
-   publica essa chave** — ela existe só na resposta de ``controller.list
+   publica essa chave** — a chave existe só na resposta de ``controller.list
    {"external": true}``. Isto resolve a hipótese 3 do §2.5 da sprint ("o
    daemon publica `external` quando há um externo na mesa?"): **não
    publica**, e o `external=null` medido no ensaio não distinguia as duas
@@ -1651,14 +1651,14 @@ GTK por padrão — medido no ensaio em 04/09/2026, com a sessão inteira em esc
 `Gtk.Settings gtk-application-prefer-dark-theme` = `False`.
 
 Sem o pedido, todo widget que o CSS do aplicativo não alcança herda o claro do sistema. Na janela
-do WebKit isso é o defeito que ela fotografou em 04/09: o popup de um `<select>` aberto nasce
+do WebKit isso é o defeito que o usuário fotografou em 04/09: o popup de um `<select>` aberto nasce
 branco, com a linha azul do sistema, no meio de uma interface escura. O popup é desenhado pelo
 WebKit fora da página — CSS de autor não o alcança, e `color-scheme: dark` também não (medido nos
 dois, no WebKitGTK 2.52.6: as duas fotos saíram idênticas, brancas).
 
 A função existe separada porque a regra morava dentro do `apply_theme`, que também carregava o CSS
 Drácula da janela antiga: a janela do WebKit não quer esse CSS, mas quer exatamente esta linha, e
-nasceu sem ela. É o padrão que a casa persegue: a casa sabe e o produto não faz.
+nasceu sem a linha. É o padrão que a casa persegue: a casa sabe e o produto não faz.
 
 ## abrir (`interface/abrir.py`), a entrada que abre a janela
 
@@ -1697,7 +1697,7 @@ conserto é de UMA LINHA na máquina do usuário.
 ### UMA JANELA POR TELA, E O SEGUNDO CLIQUE A TRAZ PARA A FRENTE (28/09/2026)
 
 Clicar duas vezes no ícone abria duas janelas. O modelo *primeira vence* volta aqui (`tomar_a_vez`):
-a janela aberta recebe o pedido pela porta dela (um socket no runtime, NUNCA um sinal: o WebKit toma
+a janela aberta recebe o pedido pela porta da janela (um socket no runtime, NUNCA um sinal: o WebKit toma
 o `SIGUSR1`), vem para a frente e responde; o segundo processo sai com `rc=0` antes de importar o
 GTK. A janela que não responde não segura o clique. O lock é POR TELA (`nome_da_vez`) e só vale
 quando a janela vai para uma tela de verdade (`HEFESTO_NA_TELA=1`, sem `--oculta`).
@@ -1705,7 +1705,7 @@ quando a janela vai para uma tela de verdade (`HEFESTO_NA_TELA=1`, sem `--oculta
 ### A GUARDA DA TELA RODA DENTRO DA ENTRADA, NUNCA NO IMPORT
 
 `garantir_tela_de_mentira` desvia o GTK para um Xvfb próprio quando `HEFESTO_NA_TELA` não vale `1`.
-A entrada do produto (console script) põe o padrão `1` ANTES dela, porque a bandeja que abre o
+A entrada do produto (console script) põe o padrão `1` ANTES da entrada, porque a bandeja que abre o
 painel não declara a variável; o calço da árvore (`run.sh`) não põe, e os instrumentos que o chamam
 seguem na tela de mentira. Em `abrir.py` nada roda no import.
 
@@ -1751,7 +1751,7 @@ rota `gamepad.mask.set` espera esse desfecho pelo mesmo dono da `gamepad.emulati
 a Interna destravada, cada um movia a seleção ao mesmo tempo, e a tela virava um caos. A regra mora no `Navegador` da
 janela, e não no daemon, porque só ele vê as três fontes da navegação: os toques que o daemon conta (o direcional, o
 X, o O, o R1 e o L1) e o analógico esquerdo e o touchpad, que ele lê do `inputs` de cada controle. Uma regra só nos
-toques do daemon deixava o analógico e o dedo de todos andarem juntos, e uma segunda regra na janela brigaria com ela.
+toques do daemon deixava o analógico e o dedo de todos andarem juntos, e uma segunda regra na janela brigaria com a primeira.
 Quem mexe primeiro fica com a navegação até ficar parado por `PRAZO_DO_DONO_S` (3 s), ou até sair; o que os outros
 fazem nesse tempo se perde (não volta depois). O Start fica de fora: ele guarda o perfil de todos, de qualquer
 controle (a escolha de 22/10). A trava (`ligada` falsa, escrita pelo botão da moldura de toda aba pelo
@@ -1768,7 +1768,7 @@ A háptica do cabo passa pelo endpoint do aparelho — A-HAPTICA-E-POR-APARELHO-
 controle, e o registro que o jogo lê (o device KS do prefixo) levava o
 ``BUSNUM-DEVNUM`` DAQUELE aparelho naquele instante: o cabo que chegava com o
 jogo aberto não tinha bloco, e o que caía por ``-71`` e voltava com outro
-``DEVNUM`` ficava com um bloco que não casava mais. E a escolha (b) dela
+``DEVNUM`` ficava com um bloco que não casava mais. E a escolha (b) do usuário
 (``D-2709-A-VIBRACAO-VAI-A-QUEM-TEM-O-CONTROLE``: vibra quem está com o
 controle na mão, no cabo e no rádio) não tinha onde se aplicar no cabo.
 **Caducou em 26/10/2026**: o jogo manda e o controle obedece.
@@ -1835,7 +1835,7 @@ registro de 20 e 25/09, quando o evdev votava.
 
 A `O-ROTULO-QUE-COLIDE-01` leu a queixa como *"dois controles não vibram"* e
 curou a colisão de nomes dos gravadores. A colisão era real e a cura fica — mas
-ela não era a causa. A causa é que **o modo háptica entrava em todo controle
+a cura não era a causa. A causa é que **o modo háptica entrava em todo controle
 cujo endpoint tivesse stream**, e num jogo de um jogador isso não é ninguém
 além de quem segura o controle.
 
@@ -1847,7 +1847,7 @@ A REGRA, decidida pelo usuário entre três opções:
 
     Só o controle que o JOGO está usando entra em modo háptica.
 
-O usuário recusou «só o jogador 1» pensando no jogo de quatro do amigo dela: uma
+O usuário recusou «só o jogador 1» pensando no jogo de quatro do amigo do usuário: uma
 regra fixa no índice 1 quebraria o co-op. *A regra é uma só, e serve às duas
 mesas.*
 
@@ -1902,7 +1902,7 @@ segura o evdev do físico casa pelo próprio ``uniq``, e o tradutor não decide
 nada. Com a máscara Xbox o vpad é ``uinput`` e não carrega ``uniq``: o jogo
 que o lê não entra no conjunto, antes e depois desta cura.
 
-AUSÊNCIA É RESPOSTA, E AQUI ELA TEM LADO
+AUSÊNCIA É RESPOSTA, E AQUI A RESPOSTA TEM LADO
 ========================================
 
 Sem ``/proc`` legível, sem jogo identificável ou sem vpad mapeável, a resposta
@@ -1943,7 +1943,7 @@ do serviço é o «só este» da 08. O registro `("*", …)` é o mesmo coringa 
 o esqueleto das dez, e registrá-la por página seria a mesma linha dez vezes.
 
 A aba de um lugar vazio não chega ao gesto (29/10/2026, D-2910-A-ABA-VAZIA-E-SO-O-NUMERO): desde que os
-quatro lugares têm aba na Jogar, ela é só o número, sem `for` e sem `data-gesto`, e o `aba_do_lugar` do
+quatro lugares têm aba na Jogar, a aba é só o número, sem `for` e sem `data-gesto`, e o `aba_do_lugar` do
 BOOTSTRAP devolve os dois quando um controle chega ao lugar. Por isso a recusa vale para todo `pref` fora da
 mesa: escolher calado o primeiro que sobrou é como a tela passa a mostrar um aparelho e a mexer noutro.
 CADUCOU em 29/10/2026 a D-2910-A-ABA-DO-LUGAR-VAZIO-ABRE-SEM-RECUSA, do mesmo dia, em que a aba vazia se
@@ -1959,7 +1959,7 @@ chamador, com A-PONTE-MORTA-E-O-CONTROLAR-O-PC-SAEM-01):
 
 As linhas do Check-up, em dicionário. **ESTE NOME É CONTRATO.**
 
-A aba Jogar o chama (`a01_jogar._do_exame`): o aviso do cartão dela sai do MESMO exame desta aba
+A aba Jogar o chama (`a01_jogar._do_exame`): o aviso do cartão da aba sai do MESMO exame desta aba
 (*"duas contagens do mesmo fato divergiriam no primeiro achado novo"*). Medido em 01/09/2026: ao
 dividir a função em `_conferencias()` + `_itens_da_tela()` o nome `_exame` sumiu, o `except
 Exception: return []` do `_do_exame` da Jogar transformou o `AttributeError` em **lista vazia**
@@ -1969,7 +1969,7 @@ apagar meia tela de outro, e um `except` largo faz a AUSÊNCIA de dado se ler co
 achado".
 
 **A calada não atravessa** (ONDA5-08-01, 06/09/2026): desde a 08-Q5 a ordem dispensada FICA na
-tira desta aba, em cinza, e a filtragem é daqui; sem ela, calar um alarme na Conexões o deixaria
+tira desta aba, em cinza, e a filtragem é daqui; sem a filtragem, calar um alarme na Conexões o deixaria
 aceso na coluna **Atenção** da Jogar. É aqui e não em `_itens_da_tela` porque a cura cobre TODOS
 os chamadores sem tocar arquivo de outra posse: a pintura desta aba chama `_itens_da_tela()`
 direto, a 08 continua vendo tudo e a 01 só o que fala (regra paga duas vezes em 05/09).
@@ -1992,10 +1992,10 @@ vale para a interface inteira:
 
 As três primeiras frases abaixo alarmavam sobre número que **ensaio nenhum
 deste repositório mede**. Não são erro de gosto: uma frase que assusta sem
-medir custa a confiança dela em todas as outras.
+medir custa a confiança do usuário em todas as outras.
 
-A QUARTA É DE OUTRA FAMÍLIA — 24/09/2026, A-FRASE-DO-RECONECTAR-SAI-01. Ela
-não alarma: NARRA o que a tela já mostra. A razão está ao lado dela, em
+A QUARTA É DE OUTRA FAMÍLIA — 24/09/2026, A-FRASE-DO-RECONECTAR-SAI-01. A QUARTA
+não alarma: NARRA o que a tela já mostra. A razão está ao lado da frase, em
 :data:`FRASES_BANIDAS`.
 
 POR QUE ESTE MÓDULO EXISTE — e é o OITAVO CONFLITO da leva de 04/09/2026,
@@ -2013,17 +2013,17 @@ o funil por onde TODO valor passa a caminho do WebView).
 
 O QUE A DECISÃO [01] AINDA PODE TER, e é a leitura de PO de 04/09/2026: a
 coluna Atenção pode dizer **o estado medido** — *o modo nativo está ligado, a
-Ponte com o jogo está desligada* — porque isso o produto mede e sabe. O que ela
+Ponte com o jogo está desligada* — porque isso o produto mede e sabe. O que a coluna
 não pode é PROFETIZAR consequência que ninguém mediu. A decisão de 31/08
 vence a recomendação de 04/09, como venceu nas outras sete.
 
 A TERCEIRA GUARDA — 06/09/2026, ONDA5-01-02, e a guarda lê o **FONTE**:
 
 As duas guardas de 04/09 param a frase na SAÍDA — o HTML já gerado e o valor a
-caminho do WebView. Nenhuma delas olha de onde a frase VEM, e por isso *"Alguns
+caminho do WebView. Nenhuma das réguas olha de onde a frase VEM, e por isso *"Alguns
 jogos derrubam o controle no meio da partida"* sobreviveu uma semana em
 `app/actions/home_actions.py` com as duas verdes: nada as fazia olhar para lá.
-Pior — uma régua desta casa **exigia que ela ficasse**, como lápide de si
+Pior — uma régua desta casa **exigia que a frase ficasse**, como lápide de si
 mesma. Agora `tests/unit/test_a_frase_banida_nao_chega_a_tela.py`
 (`test_nenhuma_banida_vive_no_fonte`) varre `app/actions/` e `interface/` pelos
 literais e pelos comentários, com duas isenções declaradas: este módulo, que é
