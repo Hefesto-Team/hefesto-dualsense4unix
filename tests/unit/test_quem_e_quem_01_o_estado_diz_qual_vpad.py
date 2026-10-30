@@ -1,6 +1,6 @@
 """QUEM-É-QUEM-01 — o produto diz qual vpad é alimentado por qual controle.
 
-O defeito, medido na bancada de 15/08/2026 com os QUATRO controles do usuário na
+O defeito, medido na máquina de teste em 15/08/2026 com os QUATRO controles do usuário na
 mesa: o `state_full` publicava `coop.players` como um NÚMERO (4), e a pergunta
 *"o vpad do jogador 2 é alimentado por qual controle físico?"* não tinha
 resposta observável. Respondê-la custava apertar botão em cada controle —
@@ -75,7 +75,7 @@ def _daemon_dublado(vpad_p1: Any = None) -> Any:
 
 
 def _mesa_de_quatro() -> CoopManager:
-    """O retrato da bancada: P1 primário + três secundários promovidos."""
+    """O retrato do ensaio: P1 primário + três secundários promovidos."""
     mgr = CoopManager(_daemon_dublado(_VpadDublado(1)))  # type: ignore[arg-type]
     for indice, mac in enumerate((P2, P3, P4), start=2):
         mgr._players[mac] = _jogador(mac, indice, vpad=_VpadDublado(indice))
@@ -151,7 +151,7 @@ class TestOManagerSabeDizerQuemAlimentaQuem:
         """MORDIDA 2 da sprint — a que impede a E1 de virar mentira nova.
 
         Desde a MESA-CHEIA-12 o `player` publicado é a FILA DE CHEGADA, e o
-        nome/`uniq` do vpad carregam o índice de ALOCAÇÃO. Nesta mesa (a dela,
+        nome/`uniq` do vpad carregam o índice de ALOCAÇÃO. Nesta mesa (a medida,
         de 15/08) o controle que a fila numera **2** tem o vpad **P4**.
 
         Arrancar = derivar o `vpad_uniq` do `player` em vez de perguntar ao
@@ -208,7 +208,7 @@ class _Handlers(IpcHandlersMixin):
 
 @pytest.fixture()
 def config_em_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`config_dir` em tmp: este teste NUNCA toca a config dela."""
+    """`config_dir` em tmp: este teste NUNCA toca a config real."""
     monkeypatch.setattr(session, "config_dir", lambda ensure=False: tmp_path)
     return tmp_path
 

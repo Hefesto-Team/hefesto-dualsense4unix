@@ -41,9 +41,9 @@ mutar a árvore de trabalho:
    ``o eixo que não emitiu EV_ABS nenhum desde o open chegou como 128, e o
    kernel dizia 124 no MESMO instante``. Os 8 verdes são de propósito: guardam
    o lado "não invente", e reprovar ali seria exigir a semeadura, não a
-   prudência dela.
+   prudência da semeadura.
 2. **A recusa do `valor == mínimo`** (a armadilha do nó recém-criado).
-   Arrancada só ela: **1 reprova, 13 seguem verdes** —
+   Arrancada só a recusa: **1 reprova, 13 seguem verdes** —
    ``os sticks foram semeados com (0, 0, 0, 0) a partir de um `absinfo.value`
    igual ao MÍNIMO da faixa``. Cada arrancamento reprova SÓ o teste da própria
    cura, e a rodada de controle volta 14/14 verde.
@@ -102,7 +102,7 @@ def _caps_dualsense(
     l2: int = 0,
     r2: int = 0,
 ) -> dict[int, Any]:
-    """As caps daquela unidade no cabo, como a bancada as mediu."""
+    """As caps daquela unidade no cabo, como o ensaio as mediu."""
     return {
         ecodes.EV_KEY: [ecodes.BTN_SOUTH, ecodes.BTN_TL2, ecodes.BTN_TR2],
         ecodes.EV_ABS: [
@@ -126,7 +126,7 @@ def _reader_aberto_em(caps: Any) -> EvdevReader:
 
 
 def test_o_eixo_parado_chega_com_a_posicao_real_e_nao_com_128() -> None:
-    """O caso literal da bancada: `ABS_Y` em 124 no open, sem um único evento."""
+    """O caso literal do ensaio: `ABS_Y` em 124 no open, sem um único evento."""
     reader = _reader_aberto_em(_caps_dualsense())
     snap = reader.snapshot()
     assert snap.ly == 124, (
@@ -227,7 +227,7 @@ def test_stick_no_minimo_declarado_nao_e_semeado() -> None:
         f"os sticks foram semeados com ({snap.lx}, {snap.ly}, {snap.rx}, "
         f"{snap.ry}) a partir de um `absinfo.value` igual ao MÍNIMO da faixa — "
         "que é o valor de um nó que ainda não recebeu report nenhum. Publicar "
-        "isso é um talo FANTASMA que só some quando ela tocar o stick"
+        "isso é um talo FANTASMA que só some quando quem usa tocar o stick"
     )
 
 
@@ -289,7 +289,7 @@ def test_o_hat_do_dpad_nao_vira_stick_na_semeadura() -> None:
 
 
 def test_a_semeadura_e_refeita_a_cada_reabertura() -> None:
-    """Queda + reabertura: o nó novo traz posição nova, e ela manda."""
+    """Queda + reabertura: o nó novo traz posição nova, e a posição nova manda."""
     reader = _reader_aberto_em(_caps_dualsense(ly=124))
     assert reader.snapshot().ly == 124
     reader._reset_on_disconnect()

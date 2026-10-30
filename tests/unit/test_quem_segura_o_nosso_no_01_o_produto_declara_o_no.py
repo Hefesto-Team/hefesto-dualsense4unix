@@ -10,7 +10,7 @@ e hoje há três réguas para o mesmo fato:
 * `scripts/identidade_do_vpad.py` casa pelo **uevent do pai**.
 
 Três leituras do mesmo dado são três réguas, e a lição desta casa é que uma
-delas envelhece calada. E o `game_open` é o caso extremo: ele existe em
+das duas envelhece calada. E o `game_open` é o caso extremo: ele existe em
 `integrations/uhid_gamepad.py` desde a NUMA-02, o daemon o agrega em
 `_any_game_session_open` e ele **nunca saiu por IPC** — a casa sabendo e o
 produto não fazendo.
@@ -146,7 +146,7 @@ class Ensaio:
     def vpad(self, jogador: int, *, event_gamepad: str, hidraw: str) -> None:
         """Um vpad COMPLETO: os três nós de entrada que um DualSense publica.
 
-        A ordem é a que o kernel produz de verdade e é ela que dá a mordida do
+        A ordem é a que o kernel produz de verdade e é essa ordem que dá a mordida do
         desempate: aqui o **touchpad** fica com o menor `eventN`.
         """
         base = int(event_gamepad[len("event") :])
@@ -230,7 +230,7 @@ class TestARegua:
         O vpad forja `054c:0df2` (Edge) no barramento `0003` de propósito e
         forja bem — nesta árvore os dois aparelhos têm o mesmo `HID_ID`. Quem
         casasse por vid/pid e barramento acharia os dois e escolheria o de
-        menor `eventN`, que aqui é o FÍSICO dela.
+        menor `eventN`, que aqui é o FÍSICO.
         """
         edge = ensaio.aparelho(
             id_hid="0003:054C:0DF2.0009",
@@ -421,7 +421,7 @@ class _VpadDublado:
 
 @pytest.fixture()
 def config_em_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`config_dir` em tmp: este teste NUNCA toca a config dela."""
+    """`config_dir` em tmp: este teste NUNCA toca a config real."""
     monkeypatch.setattr(session, "config_dir", lambda ensure=False: tmp_path)
     return tmp_path
 
@@ -430,7 +430,7 @@ def config_em_tmp(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def sysfs_do_ensaio(
     ensaio: Ensaio, monkeypatch: pytest.MonkeyPatch
 ) -> Ensaio:
-    """Aponta a régua do produto para a árvore forjada, e só para ela."""
+    """Aponta a régua do produto para a árvore forjada, e só para essa árvore."""
     monkeypatch.setattr(no_mod, "RAIZ_CLASS_INPUT", str(ensaio.class_input))
     monkeypatch.setattr(no_mod, "RAIZ_DEV_INPUT", str(ensaio.dev_input))
     monkeypatch.setattr(no_mod, "RAIZ_DEV", str(ensaio.dev))

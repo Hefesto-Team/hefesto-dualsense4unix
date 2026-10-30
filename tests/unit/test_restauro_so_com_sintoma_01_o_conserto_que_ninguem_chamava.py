@@ -75,7 +75,7 @@ class Ensaio:
             },
         )
         assert "SUDO-CHAMADO" not in res.stderr, (
-            "a cura gastou sudo num nó que ela já podia escrever:\n" + res.stderr
+            "a cura gastou sudo num nó que já podia escrever:\n" + res.stderr
         )
         return res
 
@@ -251,7 +251,7 @@ class TestACuraAge:
         assert ensaio.modo("hidraw1") == "666", "a decisão da distribuição foi atropelada"
 
     def test_sem_sintoma_a_cura_nao_faz_nada(self, ensaio: Ensaio) -> None:
-        """Pedida a dedo, sem sintoma, ela continua não agindo."""
+        """Pedida a dedo, sem sintoma, a cura continua não agindo."""
         ensaio.no("hidraw0", 0o660, "1234", "5678")
         saida = ensaio.cura()
         assert "não há o que restaurar" in saida, saida
@@ -262,7 +262,7 @@ class TestACuraAge:
         reason="acl (setfacl/getfacl) ausente nesta máquina",
     )
     def test_a_cura_preserva_a_acl_do_uaccess(self, ensaio: Ensaio) -> None:
-        """O uaccess do logind é uma ACL nomeada, e ela tem de sobreviver."""
+        """O uaccess do logind é uma ACL nomeada, e tem de sobreviver."""
         p = ensaio.no("hidraw0", 0o666, "1234", "5678")
         subprocess.run(["setfacl", "-m", "u:nobody:rw", str(p)], check=True, timeout=30)
         ensaio.cura()
@@ -317,7 +317,7 @@ class TestAFiacao:
             alvo = ROOT / nome
             if alvo.exists():
                 assert "restaurar-hidraw-uaccess" not in alvo.read_text(encoding="utf-8"), (
-                    f"{nome} ganhou o restauro — a decisão dela é que ele NÃO entra no install"
+                    f"{nome} ganhou o restauro — o produto decidiu que ele NÃO entra no install"
                 )
 
     def test_o_check_e_a_cura_passam_pelo_mesmo_cano(self) -> None:
@@ -337,12 +337,12 @@ class TestAFiacao:
         assert "_udev_hidraw_rw_estreitas " in corpo
 
     def test_a_cura_nao_escreve_regra_nem_toca_em_etc(self) -> None:
-        """O que ela promete no texto tem de ser o que ela pode fazer no código."""
+        """O que a cura promete no texto tem de ser o que pode fazer no código."""
         corpo = _funcao_inteira("restaurar_hidraw_uaccess")
         codigo = re.sub(r'"[^"]*"', "", corpo)
         assert "chmod o=" in codigo, "o mecanismo declarado sumiu do código"
         for proibido in ("udevadm", "setfacl", "install -D", "/etc/", "tee "):
             assert proibido not in codigo, (
-                f"a cura passou a executar `{proibido}` — o texto promete que ela "
+                f"a cura passou a executar `{proibido}` — o texto promete que a cura "
                 f"só tira o bit de outros:\n{codigo}"
             )

@@ -71,7 +71,7 @@ def test_o_start_fia_a_fonte_no_gerenciador_que_ele_constroi(
     assert ger is not None, "o `start` não construiu gerenciador nenhum"
     assert ger._fonte_por_controle is not None, (
         "o gerenciador do `start` nasceu sem quem lhe diga a fonte — todo nó "
-        "vive no padrão e o clique dela não chega ao som")
+        "vive no padrão e o clique do usuário não chega ao som")
     assert ger._fonte_por_controle(P1) == af.FONTE_MIX, (
         "o fio existe mas não fala com o dono da escolha")
 
@@ -103,7 +103,7 @@ def test_a_escolha_viva_chega_ao_no_sem_passar_pelo_perfil(
     id_do_no = no.module_id
     assert (f"{HDMI}.monitor", no.nome) not in ensaio.loopbacks, (
         "o nó nasceu com o som da máquina dentro sem ninguém ter escolhido — "
-        "`FONTE_PADRAO` é `sfx` por decisão dela, de 08/09")
+        "`FONTE_PADRAO` é `sfx` por decisão de 08/09")
 
     assert sub.escolher_a_fonte(P1, af.FONTE_MIX) is True
     ger.reconciliar([cabo(P1)])

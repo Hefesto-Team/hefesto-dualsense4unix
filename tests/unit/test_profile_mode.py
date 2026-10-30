@@ -220,7 +220,7 @@ class TestR02CatchAllNaoReverte:
     def test_sem_perfil_informado_tambem_nao_reverte(
         self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Fail-safe: caller que não diz quem é não derruba o modo dela."""
+        """Fail-safe: caller que não diz quem é não derruba o modo do usuário."""
         calls = _Calls(daemon)
         calls.bind(monkeypatch)
         daemon.apply_profile_mode(

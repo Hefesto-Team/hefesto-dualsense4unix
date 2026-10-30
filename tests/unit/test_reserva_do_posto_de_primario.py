@@ -1,4 +1,4 @@
-"""RESERVA-DO-POSTO-01 — o instrumento que a medição dela vai usar."""
+"""RESERVA-DO-POSTO-01 — o instrumento que a medição no aparelho vai usar."""
 from __future__ import annotations
 
 import io
@@ -79,9 +79,9 @@ def test_a_constante_de_producao_nao_saiu_do_ensaio() -> None:
     assert PRIMARIO_RESERVA_SEC <= TETO_DE_PRODUCAO_SEC, (
         f"`PRIMARIO_RESERVA_SEC` está em {PRIMARIO_RESERVA_SEC} s — acima do "
         f"teto de produção ({TETO_DE_PRODUCAO_SEC} s), isto é a janela de uma "
-        "SESSÃO DE MEDIÇÃO que escapou para o commit. Ela desliga um controle "
+        "SESSÃO DE MEDIÇÃO que escapou para o commit. Quem usa desliga um controle "
         "e continua com o outro; por todo esse tempo o produto ainda guarda o "
-        "posto para o que ela desligou"
+        "posto para o controle desligado"
     )
 
 
@@ -102,7 +102,7 @@ class TestAVoltaPeloCabo:
         ensaio.sentar(UNIQ_A, transporte="usb")
         ensaio.tique_do_reconnect_loop()
         assert ensaio.inst.get_transport() == "usb", (
-            "a bancada não distingue o cabo do rádio — o `conType` do dublê "
+            "o ensaio não distingue o cabo do rádio — o `conType` do dublê "
             "não chega ao `_detect_transport` do produto"
         )
 
@@ -126,7 +126,7 @@ class TestAVoltaPeloCabo:
 
         assert ensaio.inst.primary_uniq == UNIQ_A, (
             "a caracterização mudou: o deposto que volta pelo cabo NÃO retoma "
-            "mais o posto. Se foi decisão dela (§7.3), este teste e a §6 da "
+            "mais o posto. Se foi decisão de produto (§7.3), este teste e a §6 da "
             "sprint mudam junto"
         )
         assert ensaio.inst.get_transport() == "usb", (

@@ -14,7 +14,7 @@ escritores em cadências diferentes:
 - o **tique lento** (``sync_connected``, ~2,0 s pelo ``lifecycle``)
   SUBSTITUI o conjunto pelo que o backend reporta conectado;
 - a **leitura de cor** (``make_auto_output_provider`` →
-  ``numero_da_lampada`` → ``slot_for(assign=True)``) ADICIONAVA — e ela roda a
+  ``numero_da_lampada`` → ``slot_for(assign=True)``) ADICIONAVA — e essa via roda a
   **10 Hz** enquanto a aba Status está aberta (``resolved_led_for``).
 
 **Medido nesta árvore, 06/09/2026, com quatro endereços na mesa e o terceiro
@@ -26,8 +26,8 @@ marcado ausente pelo tique** — uma única leitura de cor do ausente:
 
 O quarto foi de **3 para 4** e a lightbar dele de **verde para rosa** por
 causa de uma consulta — e o tique o traz de volta a 3 dois segundos depois,
-sem parar, enquanto o controle bounça no rádio. É a frase de produto: *"quando um
-controle pisca, os outros trocam de cor e de número sozinhos, e voltam"*.
+sem parar, enquanto o controle bounça no rádio. Visto de fora: quando um
+controle pisca, os outros trocam de cor e de número sozinhos, e voltam.
 
 A cura NÃO é chamar ``mark_disconnected`` (ele está sem chamador de produção
 **de propósito** — R-15/D2: o lugar na fila sobrevive ao disconnect). O
@@ -42,14 +42,14 @@ READMITE um ausente é só o tique.
 O aceite, e a sprint é explícita: **não se escreve contra o sysfs.**
 ``/sys/class/leds`` mostra o número do KERNEL (medido em 25/07), o Pro
 Nintendo acende TRÊS LEDs para dizer "Jogador 3" e o DualSense usa o padrão
-PS5 — três leituras diferentes, nenhuma casando com o que ela vê. Um teste
+PS5 — três leituras diferentes, nenhuma casando com o que quem usa vê. Um teste
 que leia o sysfs passa com a colisão de pé. Então mede-se **o que o daemon
 AFIRMA**: o ``player_slot`` que o handler IPC publica
 (``_player_slot_for`` → ``slot_for(assign=False)``) e o ``player_leds`` que a
 camada automática resolve — os dois, com quatro entradas.
 
 A trava anti-duplicata já é ESTRUTURAL desde 27/08 (``_numeros_da_mesa_locked``
-nasce de um ``zip`` estritamente crescente). O que faltava era ela ser
+nasce de um ``zip`` estritamente crescente). O que faltava era o número ser
 ALCANÇÁVEL: com a autoadmissão do defeito 1, a tabela mudava debaixo de quem
 já tinha lido. :class:`TestNenhumInstanteComDoisNoMesmoJogador` é a régua que
 tranca as duas metades juntas.
@@ -63,7 +63,7 @@ Régua que só sabe passar não é régua — e o dublê daqui sabe recusar.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc:…`` com os octetos 4 e 5
 zerados, a mesma allowlist de ``tests/unit/test_anonimato_de_fixtures.py``. A
-mesa de quatro reproduz a ORDEM da bancada; os bytes, não.
+mesa de quatro reproduz a ORDEM da máquina de teste; os bytes, não.
 """
 from __future__ import annotations
 
@@ -116,7 +116,7 @@ class Relogio:
 
 @pytest.fixture
 def config_isolado(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`config_dir` em tmp — nenhum teste daqui toca o `controllers.json` dela."""
+    """`config_dir` em tmp — nenhum teste daqui toca o `controllers.json` real."""
     from hefesto_dualsense4unix.utils import xdg_paths
 
     def fake_config_dir(ensure: bool = False) -> Path:
@@ -208,7 +208,7 @@ class TestOSegundoEscritorDeConnected:
     def test_a_leitura_nao_mexe_o_numero_dos_outros(
         self, config_isolado: Path
     ) -> None:
-        """O sintoma dela: oito segundos de aba Status, zero mudança nos vivos."""
+        """O sintoma: oito segundos de aba Status, zero mudança nos vivos."""
         reg = mesa_de_quatro(Relogio())
         provider = make_auto_output_provider(reg)
         o_tique_viu_tres(reg)
@@ -366,7 +366,7 @@ class TestNenhumInstanteComDoisNoMesmoJogador:
     def test_a_geometria_de_27_08_nao_colide_mais_por_construcao(
         self, config_isolado: Path
     ) -> None:
-        """A cena do journal da bancada, e é a única que produz a colisão."""
+        """A cena do journal da máquina de teste, e é a única que produz a colisão."""
         reg = mesa_de_quatro(Relogio())
         inst = backend_com_os_quatro()
         inst.set_auto_output_provider(make_auto_output_provider(reg))

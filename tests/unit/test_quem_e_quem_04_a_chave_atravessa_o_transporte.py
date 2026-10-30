@@ -2,7 +2,7 @@
 
 O REQUISITO DO USUÁRIO, e ele é de produto: o mesmo controle, no cabo e no rádio, tem
 de cair na MESMA memória do perfil. Se o transporte entrar na chave, trocar o
-cabo pelo rádio faz o produto esquecer o ajuste que ela acabou de fazer — e o
+cabo pelo rádio faz o produto esquecer o ajuste que quem usa acabou de fazer — e o
 esquecimento é silencioso, que é o pior desfecho possível para uma memória.
 
 O QUE ESTA RÉGUA MEDE, e as duas pontas são CÓDIGO REAL
@@ -14,7 +14,7 @@ O QUE ESTA RÉGUA MEDE, e as duas pontas são CÓDIGO REAL
   ``daemon.ipc_handlers._norm_uniq``, com que o daemon procura no mapa.
 
 Nenhuma das duas é reproduzida aqui: o teste monta handles dublados e chama o
-``describe_controllers`` de verdade. Elas se encontram porque as DUAS pontas
+``describe_controllers`` de verdade. As duas se encontram porque as DUAS pontas
 chamam o mesmo ``core.sysfs_leds.norm_mac`` — não é coincidência de medição, é
 o mecanismo, e é o mecanismo que se congela. *"4 de 4 numa mesa de quatro
 placas não prova universalidade; o que prova é o mecanismo"*
@@ -23,7 +23,7 @@ placas não prova universalidade; o que prova é o mecanismo"*
 O QUE CAIU DO ENUNCIADO, e o motivo é bom
 -----------------------------------------
 A §3 item 1 mandava o esquema aprender uma SEGUNDA FORMA de chave — a do
-controle sem serial, "com prefixo explícito". **Ela não existe.** A
+controle sem serial, "com prefixo explícito". **Essa via não existe.** A
 ``O-CONTROLE-SEM-MAC-01`` fechou antes (``2b437a43``) e mediu que dos cinco
 crachás candidatos sobra o ``0x09``, que devolve **o endereço de rádio** — é de
 onde o próprio ``hid_playstation`` tira o ``HID_UNIQ``. O crachá não é uma
@@ -33,18 +33,18 @@ do serial (12 hex canônicos, não-vpad). **A porta do perfil já estava aberta*
 e a prova 4 abaixo a atravessa de ponta a ponta em vez de alargá-la.
 
 O que NÃO caiu: as três rejeições medidas da F4 continuam de pé, e agora com
-régua nomeada (prova 5) — antes elas só eram exercidas de longe, em
+régua nomeada (prova 5) — antes só eram exercidas de longe, em
 ``test_profile_schema.py``.
 
 NADA AQUI TOCA APARELHO, DISCO NEM ``~/.config``. Os dois controles são
 sintéticos, na máscara da casa (octetos 4 e 5 zerados): ``aabbcc000002`` e
-``3c9d07000007``. **O segundo não é o que a sprint escreveu**: ela pedia um
+``3c9d07000007``. **O segundo não é o que a sprint escreveu**: a sprint pedia um
 endereço de OUI ``dd:e1:1f``, que os portões ``test-data`` e ``mac-de-fixture``
 recusam — não é faixa forjada desta casa. ``3c9d07`` é, e foi escolhida por
 ser a SEGUNDA faixa sintética, conferida contra o registro IEEE em 22/08
 (``test_uma_faixa_nao_e_um_fabricante.py``): assim os dois controles da prova
 têm OUIs DIFERENTES, que é o que a mesa de dois quer dizer. O segundo existe
-para que a mesa da prova nunca tenha o tamanho da bancada — e toda prova
+para que a mesa da prova nunca tenha o tamanho da máquina de teste — e toda prova
 roda também com **um** controle, que é a mesa mais comum do mundo e a que esta
 casa nunca tem.
 
@@ -59,7 +59,7 @@ AS QUATRO MORDIDAS, e as quatro foram rodadas NO FONTE e desfeitas em 06/09/2026
 2. **colar o transporte no ``uniq``** de ``describe_controllers``
    (``f"{self._key_to_uniq(key)}:{transporte}"``) → **28 de 40 caem**: a
    memória do rádio deixa de encontrar a do cabo, que é em letra o defeito que
-   o requisito dela existe para impedir;
+   o requisito da sprint existe para impedir;
 3. **soltar a guarda do OUI degenerado e a de duplicata** (``schema.py``, os
    dois ``if`` a ``False``) → **7 caem**, e
    ``test_a_mordida_das_tres_rejeicoes`` mostra duas unidades dividindo a
@@ -96,7 +96,7 @@ class _Handle:
 
     Só ``connected`` e ``conType.name`` — a bateria fica ausente de propósito
     (``battery_pct``/``battery_state`` a ``None``), porque esta régua é sobre
-    IDENTIDADE e um dublê que responde demais esconde o que ela mede.
+    IDENTIDADE e um dublê que responde demais esconde o que a régua mede.
     """
 
     def __init__(self, *, connected: bool = True, transport_name: str = "USB") -> None:
@@ -316,7 +316,7 @@ def test_a_rejeicao_da_duplicata_apos_normalizacao(mesa_de_dois: bool) -> None:
 
 def test_a_mordida_das_tres_rejeicoes() -> None:
     """Solte as guardas e duas unidades diferentes dividem a MESMA memória."""
-    cru = {RADIO_GRAFIA: "o ajuste dela", CABO_GRAFIA: "o ajuste de outro dia"}
+    cru = {RADIO_GRAFIA: "o ajuste de hoje", CABO_GRAFIA: "o ajuste de outro dia"}
 
     sem_guarda = {norm_mac(k): v for k, v in cru.items()}
     assert len(sem_guarda) == 1

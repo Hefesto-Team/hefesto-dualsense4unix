@@ -67,7 +67,7 @@ class TestOReplugDevolveOQueOUsuarioGravou:
         assert chamadas[0]["uniq"] == PECA_A
 
     def test_a_peca_vence_a_global_no_replug(self, monkeypatch: Any) -> None:
-        """A MORDIDA: aplicar só a global faz o replug pisar o ajuste dela."""
+        """A MORDIDA: aplicar só a global faz o replug pisar o ajuste do usuário."""
         p = _perfil(
             global_=ProfileSpeakerConfig(volume=102, muted=False, rota=2),
             por_peca={PECA_A: ProfileSpeakerConfig(volume=102, muted=True, rota=3)},

@@ -280,7 +280,7 @@ class TestReleaseNoProtocolo:
     async def test_muted_false_depois_do_release_e_recusado_com_o_caminho(
         self, daemon_vivo: Any
     ) -> None:
-        """MORDIDA da guarda no handler: sem ela não há recusa, só um status."""
+        """MORDIDA da guarda no handler: sem a guarda não há recusa, só um status."""
         env = daemon_vivo
         await _chamar(env.socket, "speaker.set", {"volume": 180, "uniq": MAC1})
         await _chamar(env.socket, "speaker.set", {"release": True, "uniq": MAC1})

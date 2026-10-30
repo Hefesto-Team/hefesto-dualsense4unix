@@ -160,7 +160,7 @@ def test_a_queda_aparece_no_nivel_padrao(journal: io.StringIO) -> None:
 def test_os_tres_eventos_correlacionam_pelo_mesmo_endereco(
     journal: io.StringIO,
 ) -> None:
-    """Os três carregam a chave `key` — é ela que casa reserva com desfecho."""
+    """Os três carregam a chave `key` — é a chave que casa reserva com desfecho."""
     handles = {P2: _HandleFalso(), P1: _HandleFalso()}
     backend = _backend(handles, primario=P1)
     backend._reservar_o_posto_de_primario(P1)

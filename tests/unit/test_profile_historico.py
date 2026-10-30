@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 @pytest.fixture
 def dir_perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Aponta `profiles_dir()` para um tmp — nada toca o ~/.config dela."""
+    """Aponta `profiles_dir()` para um tmp — nada toca o ~/.config real."""
     alvo = tmp_path / "profiles"
     alvo.mkdir()
 
@@ -226,7 +226,7 @@ def _prioridades(nome: str = "pragmata") -> list[int]:
 def test_doze_gravacoes_seguidas_deixam_a_versao_de_antes_do_usuario(
     dir_perfis: Path, relogio: _Relogio
 ) -> None:
-    """A régua da sprint: doze gravações seguidas, e a versão dela fica no disco."""
+    """A régua da sprint: doze gravações seguidas, e a versão do usuário fica no disco."""
     save_profile(_perfil(priority=7))
     relogio.dia = "20260928"
     for prioridade in range(100, 112):
@@ -240,7 +240,7 @@ def test_doze_gravacoes_seguidas_deixam_a_versao_de_antes_do_usuario(
 def test_fora_da_semana_ficam_as_dez_ultimas_e_a_primeira_de_cada_dia(
     dir_perfis: Path, relogio: _Relogio
 ) -> None:
-    """Uma rajada por dia, com mais de uma semana entre elas: só a última fica inteira.
+    """Uma rajada por dia, com mais de uma semana entre as rajadas: só a última fica inteira.
 
     A semana é contada da versão mais nova do histórico. Das rajadas velhas
     sobram a versão de antes de cada uma; a rajada de agora fica por inteiro.

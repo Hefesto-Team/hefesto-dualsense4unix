@@ -7,7 +7,7 @@ do `state_full` VIVO da máquina do usuário no mesmo dia, com o jogo já fechad
     rumble_ff = {"plays": 117, "vpads": 1}
     per_vpad[0] = {"ff_play_count": 117, "output_count": 263, ...}
 
-117 pedidos de vibração e ela sem sentir nada — o que mandaria caçar o defeito
+117 pedidos de vibração e nada sentido na mão — o que mandaria caçar o defeito
 no nosso caminho de saída (sink, política, backend). Só que `ff_play_count` NÃO
 conta pedidos de vibração: o `+= 1` do vpad acontece **antes** de os bytes 2-3
 serem lidos, então a PARADA (motores em zero) conta igual ao pedido. As 117
@@ -15,11 +15,11 @@ podiam ser 117 pedidos de força ZERO, e aí a caça é no jogo — o lado opost
 código.
 
 Uma régua que não distingue as duas causas não é diagnóstico: é um número que
-convence. Estes testes travam a régua nova e o buraco que ela expôs.
+convence. Estes testes travam a régua nova e o buraco que a régua expôs.
 
 O buraco: o gate de vibração olhava só o `valid_flag0`. Existe uma SEGUNDA
 codificação — `COMPATIBLE_VIBRATION2`, bit 0x04 do `valid_flag2` —, o firmware
-2.21+ a usa, e o nome dela já estava em `core/ds_output_report.py`, usado no
+2.21+ a usa, e o seu nome já estava em `core/ds_output_report.py`, usado no
 lado de ESCRITA (`core/backend_pydualsense.py`) e nunca no de leitura. Vibração
 que chegasse assim era descartada em silêncio, e nada no código sabia dizer que
 tinha sido descartada.
@@ -122,7 +122,7 @@ def vpad():
 
 
 def test_parada_conta_como_play_mas_nao_como_pedido(vpad):
-    """O caso EXATO da bancada: `plays` sobe, e o motor nunca mexeria."""
+    """O caso EXATO do ensaio: `plays` sobe, e o motor nunca mexeria."""
     for _ in range(3):
         vpad._handle_output(_evento_de_output(flag0=_V1, weak=0, strong=0))
 

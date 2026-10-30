@@ -2,7 +2,7 @@
 
 O alto-falante do controle tem três camadas de volume. A camada 2 (o
 registrador HID) ganhou controle deslizante na SOM-02; a camada 1 — o sink do
-PipeWire — é quem decide se **sai som**. Com ela muda, ela move o controle, a
+PipeWire — é quem decide se **sai som**. Com a camada 1 muda, quem usa move o controle, a
 barra acompanha, o rótulo vira porcentagem e nada toca: a definição de
 interface mentirosa.
 
@@ -253,7 +253,7 @@ def test_aba_escondida_nao_pergunta_nada_ao_pipewire() -> None:
 
 
 def test_sair_da_aba_apaga_o_selo() -> None:
-    """A leitura da camada 1 não sobrevive à saída da aba: ela é de agora."""
+    """A leitura da camada 1 não sobrevive à saída da aba: é de agora."""
     monitor = _monitor(sink_mute="Mute: yes")
     assert monitor.leitura(_UNIQ) is not None
 

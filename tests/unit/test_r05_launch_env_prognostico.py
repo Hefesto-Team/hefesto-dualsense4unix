@@ -40,7 +40,7 @@ class TestPrognosticoDeBackend:
     def test_flavor_diferente_prognostica_uhid(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O caso dela: global xbox/uinput, perfil pede dualsense."""
+        """O caso medido: global xbox/uinput, perfil pede dualsense."""
         monkeypatch.setattr(
             "hefesto_dualsense4unix.integrations.uhid_gamepad.uhid_available",
             lambda: True,

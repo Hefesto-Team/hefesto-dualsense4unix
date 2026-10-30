@@ -2,22 +2,22 @@
 
 **O defeito que esta régua fecha, numa frase:** a regra que protege o downgrade
 era uma LISTA ESCRITA À MÃO (`profiles/loader.py`,
-``_SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE``), e esquecer de vir até ela não dava
+``_SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE``), e esquecer de vir até a lista não dava
 erro — dava um ``"secao": null`` em TODO save e um binário anterior à seção
 recusando TODOS os perfis do usuário num downgrade, não só os que usam a seção.
 
 **E já aconteceu três vezes**, com registro no próprio arquivo: ``teclado_emulado``
 (24/08/2026, *"não previsto pela sprint"*) e ``button_actions`` (01/09/2026, cujo
-comentário diz em letra *"a terceira vez que ela não foi lembrada"*). As duas
+comentário registra que era a terceira vez que a seção não foi lembrada). As duas
 foram pegas por ACIDENTE, por um teste vizinho (`test_profile_speaker_section.py
 ::test_binario_antigo_ainda_carrega_perfil_salvo_por_este`). Com cinco seções em
 fila — microfone, giroscópio, acelerômetro, máscara, touchpad — seria cinco vezes
 o mesmo acidente.
 
-O QUE ESTA RÉGUA MEDE, e o que ela deliberadamente NÃO mede
------------------------------------------------------------
-Ela mede a FORMA do arquivo e o contrato de declaração. Ela **não** acrescenta
-campo, **não** migra dado e **não** decide o que nasce ligado — isso é dela
+O QUE ESTA RÉGUA MEDE, e o que deliberadamente NÃO mede
+-------------------------------------------------------
+A régua mede a FORMA do arquivo e o contrato de declaração. **Não** acrescenta
+campo, **não** migra dado e **não** decide o que nasce ligado — isso cabe às decisões
 (``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` contra ``D-PERFIL-DE-DESEMPENHO``). A sprint só
 exige que a resposta esteja ESCRITA onde o portão a enxergue.
 
@@ -150,7 +150,7 @@ def test_binario_de_ontem_recusa_a_seca_que_ele_nao_conhece() -> None:
 
 
 class _SecaoInventada(BaseModel):
-    """A seção que a próxima sprint vai acrescentar. Aqui ela é anônima."""
+    """A seção que a próxima sprint vai acrescentar. Aqui é anônima."""
 
     ligado: bool = True
 
@@ -293,7 +293,7 @@ def _queixas_do_portao(
         queixas.append(
             f"{nome}: NASCE DENSO e não está declarado em "
             "_SECOES_DE_TOPO_QUE_NASCEM_DENSAS. Ele é gravado em TODO save e "
-            "um hefesto anterior a ele recusa os perfis dela inteiros. "
+            "um hefesto anterior a ele recusa os perfis do usuário inteiros. "
             "Declare-o com o motivo, ou dê a ele `| None = None`."
         )
     for nome in sorted(declarados - set(modelo.model_fields)):

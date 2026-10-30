@@ -32,7 +32,7 @@ def test_a_receita_do_backport_existe_na_arvore():
     caminho = _raiz_do_repo() / RECEITA
     assert caminho.is_file(), (
         f"{RECEITA} não está na árvore. O install.sh e o doctor.sh mandam lê-la "
-        "quando o backport falta; sem ela, quem levar o produto para outro PC "
+        "quando o backport falta; sem a receita, quem levar o produto para outro PC "
         "recebe uma instrução que não tem como seguir."
     )
     texto = caminho.read_text(encoding="utf-8")

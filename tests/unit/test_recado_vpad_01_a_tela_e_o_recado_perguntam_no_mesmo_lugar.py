@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """RECADO-VPAD-01 — o recado da Vibração não manda ligar o que já está ligado.
 
-O DEFEITO, visto por ela em 17/09/2026: o rodapé da aba Vibração mandava
+O DEFEITO, visto em uso em 17/09/2026: o rodapé da aba Vibração mandava
 *"Ponha o Status em «Ligado» na aba Jogar"* com o Status **já aceso**. A causa
 era a de sempre nesta casa, **duas leituras paralelas da mesma pergunta**: o
 recado perguntava por ``native_mode`` + ``rumble_ff.vpads`` e o interruptor por

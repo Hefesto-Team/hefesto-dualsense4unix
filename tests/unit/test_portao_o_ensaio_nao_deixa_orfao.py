@@ -1,4 +1,4 @@
-"""O PORTÃO DO SEMÁFORO DA BANCADA — e a cicatriz que ele nasce carregando."""
+"""O PORTÃO DO SEMÁFORO DO ENSAIO NO APARELHO — e a cicatriz que ele nasce carregando."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def arq(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def detentor():
-    """Um processo de verdade para segurar a bancada, e para matar depois."""
+    """Um processo de verdade para segurar o aparelho, e para matar depois."""
     proc = subprocess.Popen(["sleep", "300"])
     try:
         yield proc
@@ -71,7 +71,7 @@ def test_reservada_o_exigir_recusa_com_motivo_e_hora(arq: Path, detentor) -> Non
     assert r.returncode == 0, r.stderr
 
     r = _roda("exigir", arq=arq, agora=agora + 60, pid=detentor.pid)
-    assert r.returncode == 1, "bancada reservada e `exigir` deixou passar:\n" + r.stdout + r.stderr
+    assert r.returncode == 1, "aparelho reservado e `exigir` deixou passar:\n" + r.stdout + r.stderr
     tudo = r.stdout + r.stderr
     assert "medição de BT" in tudo, "a recusa não diz o MOTIVO:\n" + tudo
     assert "até" in tudo, "a recusa não diz até QUANDO:\n" + tudo
@@ -95,7 +95,7 @@ def test_detentor_morto_o_ensaio_volta_a_ficar_livre(arq: Path, detentor) -> Non
     assert arq.exists()
     r = _roda("status", arq=arq, agora=agora + 60)
     assert "LIVRE" in r.stdout, (
-        "o detentor morreu e a bancada continua travada — é o trinco que o "
+        "o detentor morreu e o aparelho continua travado — é o trinco que o "
         "desenho manda NÃO construir:\n" + r.stdout + r.stderr
     )
     assert _roda("exigir", arq=arq, agora=agora + 60).returncode == 0
@@ -111,7 +111,7 @@ def test_o_teto_vence_mesmo_com_o_detentor_vivo(arq: Path, detentor) -> None:
     depois = agora + 5 * _UMA_HORA
     r = _roda("status", arq=arq, agora=depois)
     assert "LIVRE" in r.stdout, (
-        "o teto de tempo venceu e a bancada continua travada — é o `btmgmt` sem "
+        "o teto de tempo venceu e o aparelho continua travado — é o `btmgmt` sem "
         "adaptador de novo:\n" + r.stdout + r.stderr
     )
     assert _roda("exigir", arq=arq, agora=depois).returncode == 0
@@ -125,7 +125,7 @@ def test_sem_arquivo_nenhum_o_ensaio_e_livre(arq: Path) -> None:
 
 
 def test_arquivo_ilegivel_e_tratado_como_livre_e_o_diz(arq: Path) -> None:
-    """Estado corrompido não pode travar a bancada em silêncio nem para sempre."""
+    """Estado corrompido não pode travar o aparelho em silêncio nem para sempre."""
     arq.write_text("{ isto não é o formato }", encoding="utf-8")
     r = _roda("status", arq=arq)
     assert "LIVRE" in r.stdout
@@ -149,4 +149,4 @@ def test_o_estado_nao_mora_dentro_da_arvore_versionada() -> None:
         ["git", "ls-files", "hefesto-ensaio.json"],
         capture_output=True, text=True, cwd=RAIZ, check=True,
     ).stdout.strip()
-    assert versionados == "", "o estado da bancada foi versionado: " + versionados
+    assert versionados == "", "o estado do semáforo foi versionado: " + versionados

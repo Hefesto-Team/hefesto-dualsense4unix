@@ -209,7 +209,7 @@ def test_fim_de_sessao_limpa_o_relogio(ensaio) -> None:
 
 
 def test_teto_veio_de_medicao_e_nao_de_palpite() -> None:
-    """A faixa aceitável do teto, e por que ela mudou."""
+    """A faixa aceitável do teto, e por que mudou."""
     assert uhid._RUMBLE_STALE_SEC >= 2.0, (
         "abaixo disto a rede deixa de ser rede e vira cronômetro de efeito — "
         "passaria a cortar vibração sustentada legítima"
@@ -230,7 +230,7 @@ def test_a_parada_do_sdl_e_honrada_em_vez_de_descartada(ensaio) -> None:
     vpad._handle_output(_evento_de_output(0x00, 0, 0, flag1=0x00))
 
     assert vpad.recebido == [(200, 180), (0, 0)], (
-        "a parada do SDL tem de chegar ao motor NA HORA — ela vem com todos "
+        "a parada do SDL tem de chegar ao motor NA HORA — vem com todos "
         "os flags zerados, e era descartada pelo gate de vibração"
     )
 

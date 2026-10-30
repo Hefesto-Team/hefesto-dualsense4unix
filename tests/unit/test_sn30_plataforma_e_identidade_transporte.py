@@ -76,8 +76,8 @@ class TestAsDezCelulasContinuamEscritas:
         for lado, valor in esperado.items():
             assert linha[lado].strip() == valor, (
                 f"{identificador}: `{lado}` era {valor!r} e virou "
-                f"{linha[lado]!r}. Se a mudança é uma medição nova (bancada "
-                "dela), ótimo — mas então ela merece `de_onde_sei = medido` "
+                f"{linha[lado]!r}. Se a mudança é uma medição nova (ensaio "
+                "no aparelho), ótimo — mas então merece `de_onde_sei = medido` "
                 "e um `teste_que_morde` seu, não a queda silenciosa desta "
                 "célula."
             )
@@ -107,7 +107,7 @@ class TestAsDezCelulasContinuamEscritas:
         for lado in lados_desta_leva:
             assert linha[f"{lado}_de_onde_sei"].strip() != "medido", (
                 f"{identificador}: {lado}_de_onde_sei virou `medido` sem "
-                "bancada — esta leva só leu fonte."
+                "ensaio no aparelho — esta leva só leu fonte."
             )
 
     def test_as_quatro_assimetrias_continuam_declaradas(
@@ -136,9 +136,9 @@ class TestAsDezCelulasContinuamEscritas:
                 procedencia = linha[f"{lado}_de_onde_sei"].strip()
                 assert procedencia != DE_ONDE_SEI_FORTE, (
                     f"{linha['id']}: {lado}_de_onde_sei virou "
-                    f"{DE_ONDE_SEI_FORTE!r} sem bancada do SN30 — só o "
+                    f"{DE_ONDE_SEI_FORTE!r} sem ensaio do SN30 — só o "
                     "aparelho na mesa fecha uma linha de combinação, e o "
-                    "ensaio dela mora em `docs/data/ensaios.csv`."
+                    "ensaio mora em `docs/data/ensaios.csv`."
                 )
                 if linha[f"{lado}_aciona"].strip():
                     assert procedencia, (

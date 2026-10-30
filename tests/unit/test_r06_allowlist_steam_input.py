@@ -7,7 +7,7 @@ no `default.env`, que carrega o dedup (`SDL_GAMECONTROLLER_IGNORE_DEVICES` +
 mandando o broker esconder o hidraw do controle físico. Ou seja: o jogo cuja
 via oficial de DualSense é a API Steamworks (`SetDualSenseTriggerEffect`, que
 só funciona com o Steam Input DAQUELE jogo ligado) não achava controle nenhum
-da Sony, e a exceção que ela configurou não mudava absolutamente nada.
+da Sony, e a exceção configurada não mudava absolutamente nada.
 
 Contradição 11 da §5 do plano: R-05 empurra o dedup para os `.env` por appid;
 R-06 exige `.env` SEM dedup para os appids da allowlist. A allowlist é opt-in
@@ -17,19 +17,19 @@ SUPERADO em 25/07 pela JOGO-01 — este arquivo dizia aqui que o preço aceito e
 "para esses appids o jogo passa a ver o físico E o vpad". Não era preço, era o
 defeito: medido com UM DualSense no cabo, o Mullet Mad Jack enumerava js0=vpad
 e js2=físico, dava jogador 1 a um e jogador 2 ao outro, e metade dos comandos
-dela ia para o controle que o jogo não lia. "Opt-in" não significa dois
+de quem jogava ia para o controle que o jogo não lia. "Opt-in" não significa dois
 dispositivos onde existe um controle — significa trocar QUAL dispositivo o jogo
 vê. A JOGO-01 fechou o par: a exceção passou a retirar TAMBÉM o gamepad virtual
 de cena.
 
 NOTA DATADA — 09/08/2026 (ESCONDER-EM-VEZ-DE-SAIR-01, decisão de produto)
 ===================================================================
-**As quatro travas do MECANISMO deste arquivo caducaram, e o desenho delas foi
+**As quatro travas do MECANISMO deste arquivo caducaram, e o seu desenho foi
 invertido, não apagado.** A palavra, de 08/08: *"a allowlist do Steam Input
 NÃO tira o Hefesto da frente"*. O que a matou é uma medição, não uma
 preferência: suspender os gamepads virtuais para curar o controle dobrado
 derruba o jogador 2 junto, porque **o jogador 2 é um gamepad virtual** —
-`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências no journal da bancada em
+`coop_derrubado_pela_excecao_steam_input`, vinte ocorrências no journal da máquina de teste em
 08/08.
 
 A marca passou a significar *"esconda o controle FÍSICO neste jogo"*. Então:
@@ -44,7 +44,7 @@ A marca passou a significar *"esconda o controle FÍSICO neste jogo"*. Então:
 O que NÃO caducou, e por isso segue intacto abaixo: a leitura do
 `steam_input_apps.txt` e a decisão de sessão (`TestAllowlistNoArquivo` e
 `TestSessaoDaExcecao`). QUANDO a marca vale continua sendo exatamente o que o
-R-06 estabeleceu; só mudou O QUE ela faz. O desenho inteiro está em
+R-06 estabeleceu; só mudou O QUE a exceção faz. O desenho inteiro está em
 a sprint `ESCONDER-EM-VEZ-DE-SAIR-01`
 e o outro lado da cura em `test_esconder_em_vez_de_sair_01.py`.
 """
@@ -141,7 +141,7 @@ class TestEnvPorAppidDaAllowlist:
         le.materialize_launch_env(_daemon_falso())
 
         env = _env_do_arquivo(tmp_path / f"steam_app_{MMJ}.env")
-        assert _IGNORE in env, "a env do perfil dela voltou a ser atropelada"
+        assert _IGNORE in env, "a env do perfil do usuário voltou a ser atropelada"
         assert _DISABLE in env
 
 
@@ -270,7 +270,7 @@ class TestModoNativoPorAppid:
 
         assert daemon.grabs == [True], "soltar o grab é o jogo vendo o físico"
         assert daemon.hides == ["/dev/hidraw0"], "o hidraw do físico tem de sumir"
-        assert daemon.restores == 0, "`restore_all` é a direção contrária da dela"
+        assert daemon.restores == 0, "`restore_all` é a direção contrária da escolha do usuário"
         assert gp.steam_input_excecao_ativa(daemon) is True
 
     def test_com_a_marca_ativa_o_broker_reesconde(

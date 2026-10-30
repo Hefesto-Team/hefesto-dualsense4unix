@@ -169,7 +169,7 @@ def test_secao_extra_forbid() -> None:
 
 
 def test_mudo_sem_volume_e_recusado_com_mensagem_que_explica() -> None:
-    """A armadilha 1, barrada na BORDA do esquema: a seção recusa, e o perfil carrega sem ela.
+    """A armadilha 1, barrada na BORDA do esquema: a seção recusa, e o perfil carrega sem a seção.
 
     Desde 28/10 (O-GESTO-DE-SOM-GRAVA-O-SPEAKER-COMPLETO-01) o perfil com `speaker` sem `volume`
     não é recusado inteiro: a seção cai na carga. O mudo sem volume continua sem chegar ao

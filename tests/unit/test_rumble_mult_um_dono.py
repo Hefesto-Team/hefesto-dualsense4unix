@@ -101,7 +101,7 @@ class _ControleQueAnota:
 
 
 def _mesa(bateria: int) -> SimpleNamespace:
-    """Daemon de bancada: config de verdade, store de verdade, backend anotador."""
+    """Daemon de ensaio: config de verdade, store de verdade, backend anotador."""
     store = StateStore()
     store.update_controller_state(
         ControllerState(

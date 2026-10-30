@@ -100,8 +100,8 @@ def test_com_o_servico_parado_o_que_o_usuario_pediu_continua_no_painel(monkeypat
     _camada_levanta(monkeypatch)
     carga = _pergunta_do_restaurar(monkeypatch)
     assert a09.pacote(_ctx())[a09.REGISTRO] == carga["mesa"][a09.REGISTRO]
-    a09._PAINEL[0] = "linha do registro que ela pediu"
-    assert a09.pacote(_ctx())[a09.REGISTRO] == "linha do registro que ela pediu"
+    a09._PAINEL[0] = "linha do registro que o usuário pediu"
+    assert a09.pacote(_ctx())[a09.REGISTRO] == "linha do registro que o usuário pediu"
 
 
 ROTEIRO_09 = """

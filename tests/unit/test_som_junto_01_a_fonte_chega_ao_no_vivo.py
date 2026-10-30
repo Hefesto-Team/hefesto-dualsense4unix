@@ -58,7 +58,7 @@ def test_o_botao_do_meio_chega_ao_no_que_ja_esta_de_pe(
     ger.reconciliar([cabo(P1)])
 
     assert (f"{HDMI}.monitor", no.nome) in ensaio.loopbacks, (
-        "ela clicou «No controle e na TV», o perfil gravou `mix` e o nó vivo "
+        "quem usa clicou «No controle e na TV», o perfil gravou `mix` e o nó vivo "
         f"continuou sem o mix — loopbacks de pé: {ensaio.loopbacks}"
     )
     assert (f"{no.nome}.monitor", SINK_P1) in ensaio.loopbacks, (
@@ -90,7 +90,7 @@ def test_a_volta_para_so_no_controle_derruba_o_mix_e_mantem_a_saida(
     ger.reconciliar([cabo(P1)])
 
     assert ensaio.loopbacks == [(f"{no.nome}.monitor", SINK_P1)], (
-        f"o mix ficou de pé depois de ela desligá-lo: {ensaio.loopbacks}"
+        f"o mix ficou de pé depois de o usuário desligá-lo: {ensaio.loopbacks}"
     )
     assert no.module_id is not None and no.module_id not in ensaio.descarregados
 
@@ -139,7 +139,7 @@ def test_sem_divergencia_a_varredura_nao_mexe_em_nada(
     )
     assert ensaio.carregados == carregados, (
         "a varredura carregou módulo a mais — em uma hora seriam 720 "
-        "`module-loopback` empilhados no servidor de som dela"
+        "`module-loopback` empilhados no servidor de som de quem usa"
     )
     assert ger.nos[P1] is no
 

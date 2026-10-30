@@ -54,7 +54,7 @@ def test_grade_simbolica_16x16(svg: str):
 def test_sem_currentcolor(svg: str):
     assert "currentColor" not in _corpo(svg), (
         "`currentColor` sem contexto de cor resolve para PRETO (medido: "
-        "srgb(0,0,0)) e some no painel escuro dela"
+        "srgb(0,0,0)) e some no painel escuro"
     )
 
 
@@ -66,7 +66,7 @@ def test_uma_cor_so_acromatica_e_clara(svg: str):
     assert r == g == b, f"{cor} não é acromático — 'preto e branco' quer dizer R=G=B"
     assert r >= 0x90, (
         f"{cor} é escuro demais: fora de quem recolore, um glifo escuro fica "
-        "abaixo de 2:1 no painel escuro dela e some"
+        "abaixo de 2:1 no painel escuro e some"
     )
 
 
@@ -100,7 +100,7 @@ def test_o_aro_e_faixa_e_nao_disco(svg: str):
     dentro, fora = raios[0], raios[-1]
     assert dentro >= 0.6 * fora, (
         f"o furo do aro (raio {dentro}) é pequeno demais para o aro (raio "
-        f"{fora}): a essa espessura o aro se fecha e vira mancha no painel dela"
+        f"{fora}): a essa espessura o aro se fecha e vira mancha no painel"
     )
 
 
@@ -139,7 +139,7 @@ def test_instaladores_levam_e_removem_o_simbolico():
         and "${ICON_SIMBOLICO_DIR}/${APP_ID}-symbolic.svg" in ln
     ]
     assert copias, (
-        "install.sh não copia o simbólico para symbolic/apps — a bandeja dela "
+        "install.sh não copia o simbólico para symbolic/apps — a bandeja "
         "cai no ícone colorido e ninguém vê o pedido de 07/08 atendido"
     )
 

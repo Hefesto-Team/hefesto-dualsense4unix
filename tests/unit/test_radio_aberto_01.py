@@ -30,7 +30,7 @@ def test_nenhum_asset_pede_just_works_sempre(asset: Path) -> None:
         "ÚLTIMA recusa do BlueZ ao re-pareamento por Just Works de quem já tem "
         "bond e, com o agente NoInputNoOutput, o caminho termina em injeção de "
         "teclas (RADIO-ABERTO-01). Se uma janela de `always` for mesmo "
-        "necessária, ela tem de ser ARMADA POR GESTO E DESARMADA POR TIMER — "
+        "necessária, a janela tem de ser ARMADA POR GESTO E DESARMADA POR TIMER — "
         "nunca um regime permanente instalado por padrão."
     )
 

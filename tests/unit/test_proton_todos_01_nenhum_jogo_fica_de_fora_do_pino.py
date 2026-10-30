@@ -54,13 +54,13 @@ def test_com_todos_o_jogo_em_outra_ferramenta_migra() -> None:
     )
 
     assert _nomes(novo)["2497900"] == PINO, (
-        "o jogo que apontava para outra ferramenta NÃO migrou com a ordem dela "
+        "o jogo que apontava para outra ferramenta NÃO migrou com a ordem de 17/09 "
         "ligada — é a queixa de 17/09/2026"
     )
     assert mudancas["2497900"]["action"] != "preservado"
     assert mudancas["2497900"]["previous_name"] == "proton_11", (
         "o caminho de volta tem de ficar registrado: o `--unlock` devolve o "
-        "`previous_name`, e sem ele a decisão dela vira via de mão única"
+        "`previous_name`, e sem ele a decisão do usuário vira via de mão única"
     )
 
 
@@ -108,12 +108,12 @@ def test_o_install_pede_todos() -> None:
            re.search(r'PROTON_PIN_PY\}"\s+--lock\s+--todos', texto), (
         "o `install.sh` chama `--lock` sem `--todos`: a guarda `preservado` "
         "volta a valer e jogo com outra ferramenta fica fora do pino, em "
-        "silêncio. É a ordem dela de 17/09/2026"
+        "silêncio. É a ordem de 17/09/2026"
     )
 
 
 def test_a_flag_existe_no_cli() -> None:
-    """E ela tem de estar no `--help`, senão ninguém a encontra."""
+    """E a flag tem de estar no `--help`, senão ninguém a encontra."""
     import subprocess
     import sys
 
@@ -136,7 +136,7 @@ def test_a_regua_sabe_reprovar() -> None:
         atropelar_escolha_do_usuario=True,
     )
     assert _nomes(sem)["2497900"] != _nomes(com)["2497900"], (
-        "a flag não mudou nada — ou ela parou de ser lida, ou o jogo já era "
+        "a flag não mudou nada — ou parou de ser lida, ou o jogo já era "
         "alcançado por outro caminho e esta régua dá verde sobre nada"
     )
 
@@ -208,7 +208,7 @@ class TestAEntradaOrfa:
         )
 
     def test_sem_todos_a_orfa_nao_e_tocada(self) -> None:
-        """A MORDIDA do outro lado — e ela prova que o alcance é da FLAG."""
+        """A MORDIDA do outro lado — e prova que o alcance é da FLAG."""
         original = _vdf({"0": PINO, "1245620": "proton_11"})
 
         novo, mudancas = proton_pin.build_compat_tool_mapping(

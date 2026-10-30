@@ -2,7 +2,7 @@
 
 O QUE ESTE ARQUIVO GUARDA
 =========================
-Duas faces do mesmo defeito, medido em 11/08/2026 com quatro DualSense na bancada (dois no cabo,
+Duas faces do mesmo defeito, medido em 11/08/2026 com quatro DualSense no ensaio (dois no cabo,
 dois no rádio) e o olho de quem confere como aceite.
 
 **Face 1 — os BYTES.** A cura anterior (`keepalive neutro`, GUERRA-01 item 2)
@@ -24,7 +24,7 @@ Aqui se morde o que faltava: **os bytes que vão ao fio**, e quantas vezes.
 **Face 2 — o quadrante silencioso.** Sem gamepad virtual E sem Modo Nativo ao
 mesmo tempo, ninguém protege: o multiplicador de intensidade da GUI não age (ele
 mora no `rumble_sink` do vpad) e o output do daemon não é mutado (só o Modo
-Nativo o muta). O journal da bancada mostrava exatamente isso —
+Nativo o muta). O journal da máquina de teste mostrava exatamente isso —
 `launch_env_materializado ... backends=[] emulacao=False ... native=False` — e o
 produto não contava a ninguém.
 
@@ -33,7 +33,7 @@ reprovar. Foram arrancadas de verdade antes desta leva.
 
 O QUE ESTE ARQUIVO NÃO PROVA, DE PROPÓSITO
 ==========================================
-Que a vibração do jogo sobrevive na mão do usuário. Isso é medição de bancada, e está
+Que a vibração do jogo sobrevive na mão do usuário. Isso é ensaio no aparelho, e está
 em `docs/data/ensaios.csv`. Aqui se prova o que o produto FAZ: para de mandar
 bytes de motor quando não é dono da vibração, e diz em voz alta quando cai no
 quadrante em que ninguém é dono.
@@ -171,7 +171,7 @@ def test_com_rumble_nosso_o_keepalive_continua_para_sempre(
 
     escritos = inst.device.escritos
     assert len(escritos) == _CICLOS, (
-        "o keepalive emudeceu com rumble NOSSO ativo: a vibração dela para de "
+        "o keepalive emudeceu com rumble NOSSO ativo: a vibração de quem joga para de "
         "persistir"
     )
     deslocamento = _DESLOCAMENTO[transporte]

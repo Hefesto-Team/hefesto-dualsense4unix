@@ -286,7 +286,7 @@ def test_os_dois_extremos_do_analogico_sao_simetricos(mesa):
 
 
 def test_o_ponto_vaza_o_mesmo_tanto_nos_dois_extremos(mesa):
-    """A consequência visível da assimetria, dita como ela aparece na tela."""
+    """A consequência visível da assimetria, dita como aparece na tela."""
     tela, cabeca = mesa
     cabeca.pintar(_estado(lx=MINIMO, ly=CENTRO, rx=MAXIMO, ry=CENTRO))
 
@@ -334,7 +334,7 @@ def test_o_gesto_do_som_tem_dono_declarado(mesa):
 
 
 def test_com_a_ponte_a_tela_mostra_a_mesa_e_nao_a_cena_fixa(mesa):
-    """A metade positiva da mordida — sem ela, a negativa não prova nada."""
+    """A metade positiva da mordida — sem a positiva, a negativa não prova nada."""
     tela, _ = mesa
     assert tela.contar(".ctl") == 2, (
         "a ponte pintou e a tela continuou com quatro cartões: o dado não veio "
@@ -348,7 +348,7 @@ def test_sem_a_ponte_a_tela_fica_na_cena_fixa_do_mockup():
     """A MORDIDA: uma aba aberta e nunca tocada tem de ser o desenho.
 
     Quatro controles e o chip «Perfil ativo» sem nome são a cena literal do
-    mockup aprovado. Se esta tela mostrasse a bancada, o dado não estaria vindo
+    mockup aprovado. Se esta tela mostrasse a máquina de teste, o dado não estaria vindo
     da ponte — estaria vindo de algum lugar que ninguém declarou.
 
     O CHIP NASCE COM O QUE O PINTOR ESCREVE SEM PERFIL ATIVO — 13/09/2026

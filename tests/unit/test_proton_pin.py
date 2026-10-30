@@ -339,7 +339,7 @@ def test_remove_restaura_o_nome_anterior_de_entrada_trocada():
 
 
 def test_remove_nao_toca_entrada_que_a_usuaria_mudou_depois_do_lock():
-    """Ela trocou o tool depois do nosso lock = ela assumiu; é dela agora."""
+    """O usuário trocou o tool depois do nosso lock = assumiu; é dele agora."""
     travado, changes = pp.build_compat_tool_mapping(
         _config_vdf(None), tool_name=PIN_NAME, appids=["1599660"]
     )
@@ -632,17 +632,17 @@ def test_o_lock_nao_atropela_o_proton_que_o_usuario_escolheu() -> None:
 
     assert changes["2497900"]["action"] == "preservado", (
         "o lock diz ter feito "
-        f"{changes['2497900']['action']} num jogo em que ela JÁ tinha escolhido "
+        f"{changes['2497900']['action']} num jogo em que o usuário JÁ tinha escolhido "
         "o Proton — foi assim que o DON'T SCREAM perdeu o microfone em 14/08"
     )
     assert changes["2497900"]["previous_name"] == "proton_11"
     assert '"name"\t\t"proton_11"' in texto, (
-        "a linha do Proton DELA foi reescrita no config.vdf: o produto atropelou "
+        "a linha do Proton DO USUÁRIO foi reescrita no config.vdf: o produto atropelou "
         "uma escolha deliberada, que é exatamente o defeito de 14/08"
     )
     corpo = texto.split('"2497900"', 1)[1].split("}", 1)[0]
     assert "GE-Proton10-34" not in corpo, (
-        "o Proton do produto entrou no bloco do jogo dela"
+        "o Proton do produto entrou no bloco do jogo do usuário"
     )
 
 

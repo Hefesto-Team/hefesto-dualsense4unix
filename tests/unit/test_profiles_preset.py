@@ -441,11 +441,10 @@ class TestOsPodadosNaoVoltam:
     )
     def test_o_preset_podado_nao_esta_na_fabrica(self, nome: str) -> None:
         assert not preset_em_alguma_casa(nome), (
-            f"{nome}.json voltou à fábrica. Ele foi podado em 26/08/2026 a "
-            "pedido dela — *\"em termos de perfis de jogo vamos manter os que "
-            "temos ativos apenas\"* —, e nenhum dos três estava ativo no "
-            "disco dela. Devolver um deles é o produto reinstalando um perfil "
-            "que ela já tinha mandado para o histórico."
+            f"{nome}.json voltou à fábrica. Ele foi podado em 26/08/2026 por "
+            "decisão de produto: ficam só os perfis de jogo ativos, e nenhum dos três "
+            "estava ativo no disco medido. Devolver um deles é o produto reinstalando "
+            "um perfil que já tinha ido para o histórico."
         )
 
     def test_a_fabrica_embarca_nove_em_duas_casas(self) -> None:

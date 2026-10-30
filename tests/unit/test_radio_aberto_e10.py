@@ -45,7 +45,7 @@ def _verificar(src_root: Path, ts: str = "20260805-000000") -> subprocess.Comple
 
 
 def test_snapshot_sadio_passa(tmp_path: Path) -> None:
-    """Linha de base — sem ela, um validador que recusa tudo 'passaria'."""
+    """Linha de base — sem isto, um validador que recusa tudo 'passaria'."""
     _snapshot(tmp_path)
     proc = _verificar(tmp_path)
     assert proc.returncode == 0, f"snapshot legítimo recusado: {proc.stderr}"

@@ -1,4 +1,4 @@
-"""QUEM-SEGURA-O-NOSSO-NÓ-03 — a régua do log do Proton, e onde ela mente.
+"""QUEM-SEGURA-O-NOSSO-NÓ-03 — a régua do log do Proton, e onde a régua mente.
 
 O instrumento sob ensaio é `scripts/ensaios/o_jogo_no_log_do_proton.py`, a
 SEGUNDA régua do degrau `O JOGO RECEBEU`. A primeira é a do inode
@@ -19,7 +19,7 @@ importam:
    um log truncado no começo vira `RECEBEU DO NOSSO NÓ`;
 3. **vid/pid não é identidade.** O vpad forja `054c:0df2` (DualSense Edge) de
    propósito, e o Edge existe de verdade. Casar por vid/pid transformaria um
-   Edge dela no nosso vpad.
+   Edge de quem usa no nosso vpad.
 
 ENDEREÇOS: nada de MAC real aqui. Os físicos usam a faixa forjada da casa
 (`aa:bb:cc:`), que os portões de anonimato reconhecem como sintética; os vpads

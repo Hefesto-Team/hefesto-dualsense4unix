@@ -37,7 +37,7 @@ async def test_a_resposta_nao_espera_a_repintura() -> None:
     assert gasto < PRAZO_DO_CLIENTE_S, (
         f"despachar custou {gasto:.3f}s e o cliente espera "
         f"{PRAZO_DO_CLIENTE_S}s — a tela negaria uma troca que aconteceu")
-    assert h.repintou == 0, "a repintura rodou EM LINHA; ela é consequência"
+    assert h.repintou == 0, "a repintura rodou EM LINHA; é consequência"
 
     await asyncio.sleep(REPINTURA_LENTA_S + 0.3)
     assert h.repintou == 1, "a repintura foi despachada e nunca rodou"
@@ -105,13 +105,13 @@ async def test_o_tique_dos_externos_e_agendado_na_thread_do_laco() -> None:
 
     assert d.tiques == 1, (
         "o PASSO 3 não aconteceu — é o `no running event loop` do journal "
-        "dela: os LEDs dos externos não são repintados depois de renumerar")
+        "de uso: os LEDs dos externos não são repintados depois de renumerar")
     assert d.thread_do_tique == thread_do_laco, (
         "o tique rodou na thread do worker; `asyncio.create_task` só vale na "
         "thread do laço")
     assert d.coroutine_rodou, (
         "a coroutine `_sync_external_leds` ficou órfã — é o "
-        "`RuntimeWarning: was never awaited` do journal dela")
+        "`RuntimeWarning: was never awaited` do journal medido")
 
 
 def test_sem_laco_o_passo_tres_ainda_roda_em_linha() -> None:

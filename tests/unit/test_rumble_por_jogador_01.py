@@ -22,7 +22,7 @@ Cinco mordidas, uma por defeito medido:
    é o que este arquivo acrescenta, é a metade "e DIZ" — **a RESPOSTA**. Separar
    *"não fez"* de *"fez e não contou"* é o ponto inteiro da tarefa, e um teste
    que só conta bytes não separa os dois;
-3. **RUM-3** — com uma peça escolhida, clicar "Auto" apaga o override dela
+3. **RUM-3** — com uma peça escolhida, clicar "Auto" apaga o override da peça
    (``with_controller_rumble`` limpa, e a regra está certa: o esquema recusa
    ``auto`` por unidade porque ele escala pela bateria do controle PRINCIPAL).
    O toast dizia só *"Intensidade da vibração: Auto"* — indistinguível do caso
@@ -42,7 +42,7 @@ herdam a guarda de `gi` real e só rodam no job `gtk-real`. A prova de que o
 não importa `gi`.
 
 **Endereços:** faixa sintética ``02:fe:00`` da casa, nunca a ``aabbcc`` — foi a
-`aabbcc` que vazou para o ``controllers.json`` VIVO dela em 23/08.
+`aabbcc` que vazou para o ``controllers.json`` VIVO da máquina de teste em 23/08.
 """
 from __future__ import annotations
 

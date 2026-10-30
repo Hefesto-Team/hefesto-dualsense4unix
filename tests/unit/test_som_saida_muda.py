@@ -1,6 +1,6 @@
 """SOM-SAIDA-MUDA-01: pedir som no controle tem de deixar a saída audível.
 
-MEDIDO com ela em 04/08/2026. O usuário clicou nos dois estados do seletor de canal
+MEDIDO em uso em 04/08/2026. O usuário clicou nos dois estados do seletor de canal
 ("Sons do jogo" e "Todo o som do PC"), o daemon escreveu o byte de rota, o
 `pactl` trocou o sink padrão — e **não saiu som nenhum**.
 
@@ -111,7 +111,7 @@ def _rota(pactl: _Pactl) -> tuple[RotaDeSaida, _Memoria]:
 
 class TestMandarParaOControle:
     def test_mandar_o_som_ao_controle_desmuta_o_destino(self) -> None:
-        """Mordida: mover o sink padrão para um destino mudo é o defeito dela."""
+        """Mordida: mover o sink padrão para um destino mudo é o defeito medido."""
         pactl = _Pactl(mudo=True, padrao=OUTRO)
         rota, _mem = _rota(pactl)
         assert rota.mandar_para_o_controle(SINK) is True

@@ -7,13 +7,13 @@ controle físico — o jogo não via DualSense nenhum. Um status honesto precisa
 medir a segunda pergunta, não deduzi-la da primeira.
 
 - `broker.hidraw_broker.physical_nodes_exposure` mede: cada hidraw de DualSense
-  FÍSICO está legível pelo uid da usuária agora? (varredura read-only, sem
-  root, sem falar com o broker — quem chama roda como ela e é a permissão DO USUÁRIO
+  FÍSICO está legível pelo uid de quem usa agora? (varredura read-only, sem
+  root, sem falar com o broker — quem chama roda como esse usuário e é a permissão DO USUÁRIO
   que decide);
 - a aba Emulação passa a dizer as duas coisas na mesma linha.
 
 NOTA DATADA — 13/09/2026 (RESTOS-DA-ONDA-DOIS-01). A segunda metade caducou em
-duas etapas: a FRASES-E-DICAS-03 tirou a efetiva da tela, e sem ela nada vivo
+duas etapas: a FRASES-E-DICAS-03 tirou a efetiva da tela, e sem a efetiva nada vivo
 lia o valor — a janela GTK desta linha saiu em 06/09 (`D-0609-GTK-LEVA-INTEIRA`),
 e o cartão da Steam na aba 07 só o passava a `markup_status_steam_input`, que o
 ignorava. A leitura da interface virou `_steam_input_excecoes` (só a lista) e

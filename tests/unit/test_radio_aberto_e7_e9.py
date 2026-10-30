@@ -35,8 +35,8 @@ def _arquivos_varridos() -> list[Path]:
 def test_a_politica_existe_e_diz_o_essencial() -> None:
     """E7 — a política escrita, não combinada de boca."""
     assert POLITICA.exists(), (
-        "a política do core sumiu — ela é a única coisa entre um relatório "
-        "upstream e a publicação das chaves de rádio dela"
+        "a política do core sumiu — é a única coisa entre um relatório "
+        "upstream e a publicação das chaves de rádio de quem usa"
     )
     texto = POLITICA.read_text(encoding="utf-8")
     assert "coredumpctl info" in texto, "a política tem de dizer O QUE enviar no lugar"
@@ -67,7 +67,7 @@ def test_ninguem_instrui_a_enviar_o_core() -> None:
 
 
 def test_o_script_de_captura_nao_manda_abrir_o_core_sem_avisar() -> None:
-    """O `--on` é o ponto onde ela lê a instrução — a política tem de estar lá."""
+    """O `--on` é o ponto onde quem roda lê a instrução — a política tem de estar lá."""
     texto = (REPO_ROOT / "scripts" / "bt_crash_capture.sh").read_text(encoding="utf-8")
     assert "coredumpctl info" in texto, (
         "o script sugere o caminho de análise, e o que vai para upstream é o "

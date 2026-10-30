@@ -1,15 +1,10 @@
 """PS-PRESO-01 (16/08/2026) — áudio lido como botão prendeu o MIC e o PS.
 
-**O relato dela**, ao vivo, com o controle na mão::
+**O defeito de uso, ao vivo, com o controle na mão:** o controle passou a teclar
+sem parar e a segurar o botão direito do mouse, e só parou desligado. E, sem
+nenhum botão pressionado, o MIC e o PS apareciam como pressionados.
 
-    "tive que desligar o controler pq o teclado, o mouse (tava teclando sem
-     parar e o botão direito do mouse também), cara, foi muito mas muito
-     estranho, desliguei o controle e parou fiquei com medo"
-
-    "eu não havia pressionado o botão, mas notei outra coisa: o botão de
-     microfone e o ps tava como se eu tivesse pressionado."
-
-**Essa segunda frase é o diagnóstico inteiro.** MIC e PS moram no MESMO byte do
+**Esse segundo sintoma é o diagnóstico inteiro.** MIC e PS moram no MESMO byte do
 `struct dualsense_input_report` (`buttons[2]`, o payload[9]). Dois botões
 vizinhos presos ao mesmo tempo não é botão emperrado — é o byte errado sendo
 lido como botão.

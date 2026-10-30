@@ -1,17 +1,17 @@
 """SOM-ROTA-02 — o alto-falante nasce ROTEADO, não só com volume.
 
-O DEFEITO, medido na bancada em 16/09/2026 com os dois DualSense no cabo e
-ela do lado do controle: o `SOM-SEMPRE-01` (16/08) punha o volume em 100% em
+O DEFEITO, medido no ensaio no aparelho em 16/09/2026 com os dois DualSense no cabo e
+alguém do lado do controle: o `SOM-SEMPRE-01` (16/08) punha o volume em 100% em
 todo controle adotado e deixava a rota de saída em branco **de propósito** —
 `common[7]` carrega também o caminho do microfone, e mexer nele sem opinião
-pareceu decidir por ela.
+pareceu decidir por quem usa.
 
 A premissa caiu: **o default do firmware não é neutro.** Ele é
 `SAIDA_ESTEREO_NO_FONE` (0), o conector de fone — que está vazio. Não escrever
 a rota É escolher o fone. O volume ia inteiro para lugar nenhum:
 
-    rota=None, volume=102, tom de 880 Hz no sink do controle ... ela: nada
-    `speaker.set {"rota": 3}`, o MESMO tom .................... ela: "Saiu som"
+    rota=None, volume=102, tom de 880 Hz no sink do controle ... ouvido: nada
+    `speaker.set {"rota": 3}`, o MESMO tom .................... ouvido: saiu som
 
 Efeito por inteiro: a decisão de 16/08 — *"precisamos setar o som sempre em
 todos os controles no 100%"* — nunca se cumpriu. Cem por cento mandados para
@@ -22,7 +22,7 @@ O VALOR é decisão, 16/09/2026, entre os três botões da aba Controles:
 assim que qualquer controle conectasse.
 
 AS MORDIDAS: devolver `rota=None` à adoção faz o controle nascer no fone de
-novo; e trocar o padrão por 3 cala a televisão dela.
+novo; e trocar o padrão por 3 cala a televisão.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ class TestOAltoFalanteNasceRoteado:
         assert _rota_escrita(handle) == rep.SAIDA_L_FONE_R_ALTO_FALANTE
 
     def test_a_rota_nao_e_o_fone(self) -> None:
-        """Dito pelo efeito: o que a bancada mediu como silêncio não pode voltar."""
+        """Dito pelo efeito: o que o ensaio mediu como silêncio não pode voltar."""
         inst, handle = _backend_com_um_handle()
 
         inst.assumir_volume_padrao_na_adocao(CHAVE, handle)

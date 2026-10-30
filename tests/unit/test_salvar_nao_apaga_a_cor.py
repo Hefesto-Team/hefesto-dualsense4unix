@@ -14,7 +14,7 @@ escolha do usuário.
 
 DESDE 27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar não lê a luz do aparelho
 em estado nenhum: apagada, desconhecida ou acesa noutra cor, o que sai é a
-cor do disco. A cor que ela ESCOLHE vai ao disco no clique do tom
+cor do disco. A cor que o usuário ESCOLHE vai ao disco no clique do tom
 (`a04_iluminacao._guardar_a_cor_no_perfil`), e o «Desligar» grava o brilho
 em 0% e deixa a cor (`D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`).
 
@@ -74,7 +74,7 @@ def _cor_do_controle(prof: Any, uniq: str = UNIQ) -> tuple[int, int, int] | None
 
 @pytest.fixture
 def perfil_com_a_cor_do_usuario(monkeypatch: pytest.MonkeyPatch) -> str:
-    """Um perfil no disco de mentira, com a cor dela guardada."""
+    """Um perfil no disco de mentira, com a cor do usuário guardada."""
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -91,7 +91,7 @@ def test_barra_apagada_nao_grava_cor(perfil_com_a_cor_do_usuario: str) -> None:
     salvo = _salvar(perfil_com_a_cor_do_usuario, _controle((0, 0, 0), acesa=False))
     assert _cor_do_controle(salvo) == COR_DO_USUARIO, (
         "a barra apagada virou cor no disco — é o preto viajando por cima da "
-        "escolha dela")
+        "escolha do usuário")
 
 
 def test_cor_desconhecida_tambem_nao_grava(perfil_com_a_cor_do_usuario: str) -> None:

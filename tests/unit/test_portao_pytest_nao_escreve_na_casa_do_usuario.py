@@ -102,6 +102,6 @@ def test_o_runner_pytest_usa_o_lar() -> None:
     assert linha is not None, "o runner `pytest` sumiu da tabela do portoes.sh"
     assert "_AMBIENTE_DE_MENTIRA" in linha, (
         "o runner `pytest` voltou a rodar com o HOME de quem chamou — em "
-        "21/09/2026 isso zerou o `controller_masks.json` dela e trocou o "
+        "21/09/2026 isso zerou o `controller_masks.json` de quem usa e trocou o "
         "perfil ativo no meio de uma corrida. Ver PORTAO-LAR-01."
     )

@@ -1,6 +1,6 @@
 """R-03 (auditoria 23/07) — o lock de gesto manual ADIA a seção `mode`.
 
-Sintoma medido (queixa 1 da mantenedora): ela mexia na máscara e, em menos de
+Sintoma medido (queixa 1 da auditoria): quem usava mexia na máscara e, em menos de
 30 s, abria o Sackboy. O `mode` do perfil era descartado em silêncio pelo lock
 de gesto manual (`_emu_manual_ts`), a ativação era COMMITADA assim mesmo, o IPC
 respondia sucesso e NADA reaplicava depois — a máscara ficava errada a sessão
@@ -11,7 +11,7 @@ O que este arquivo trava:
   - ativação automática (autoswitch) **adia**: devolve ``adiado_lock_manual`` e
     guarda UMA pendência, sempre sobrescrita, nunca enfileirada;
   - ativação manual (`profile.switch`/PS+D-pad) **fura** o lock e consome o
-    carimbo — o gesto mais novo dela é "ative este perfil";
+    carimbo — o gesto mais novo do usuário é "ative este perfil";
   - o dreno do poll loop aplica UMA vez, e só se o perfil ainda for o mesmo,
     sem gesto manual novo e sem trocar máscara com o jogo na autoridade;
   - o `profile.switch` responde a verdade (`mode_aplicado`/`secoes`).
@@ -139,7 +139,7 @@ def daemon() -> Daemon:
 
 
 def _com_mascara_mexida_agora(daemon: Daemon, relogio: _Relogio) -> None:
-    """Estado inicial da queixa: ela acabou de trocar a máscara na GUI."""
+    """Estado inicial do defeito: quem usa acabou de trocar a máscara na GUI."""
     daemon._emu_manual_ts = relogio.agora
     daemon.config.gamepad_emulation_enabled = True
     daemon._gamepad_device = SimpleNamespace(flavor="xbox")

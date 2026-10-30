@@ -177,7 +177,7 @@ class TestOsTresJeitosDeEstarCerto:
 
         r = roda(repo)
 
-        assert r.returncode == 0, f"o portão cobrou script de bancada:\n{r.stdout}"
+        assert r.returncode == 0, f"o portão cobrou script de ensaio:\n{r.stdout}"
 
     def test_nome_que_nao_existe_em_scripts_nao_e_irmao(self, repo: Path) -> None:
         """Comando de terceiro não é parentesco — cobrá-lo seria inventar defeito."""

@@ -174,7 +174,7 @@ def test_a_ancora_da_lista_de_portoes_continua_de_pe() -> None:
         f"{len(achados)} scripts, "
         f"piso {PISO}: {achados}\n"
         "Se o bloco MUDOU DE LUGAR ou de formato, conserte a âncora deste "
-        "arquivo (CABECALHO e `bloco_de_portoes`) — sem ela a lista derivada "
+        "arquivo (CABECALHO e `bloco_de_portoes`) — sem a regra a lista derivada "
         "nasce vazia e todos os testes daqui passam sem olhar nada.\n"
         "Se um portão SAIU da tabela de propósito, baixe o PISO no mesmo "
         "commit, para que a queda fique escrita em vez de descoberta."
@@ -296,6 +296,6 @@ def test_a_lista_de_lacunas_nao_envelhece_calada() -> None:
             f"a razão de {chave!r} não diz por que o CI não é o lugar dele: {razao!r}"
         )
         assert re.search(r"\d{2}/\d{2}/\d{4}", razao), (
-            f"a lacuna {chave!r} não tem data. Sem data ninguém sabe se ela "
+            f"a lacuna {chave!r} não tem data. Sem data ninguém sabe se a lacuna "
             "envelheceu — e uma lacuna sem idade vira paisagem."
         )

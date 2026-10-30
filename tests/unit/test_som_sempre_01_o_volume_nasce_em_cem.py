@@ -1,15 +1,15 @@
 """SOM-SEMPRE-01 — o volume nasce em 100%, em todo controle, sem ninguém pedir.
 
-**A medição que é o alicerce disto**, feita na bancada na madrugada de
-15-16/08/2026, com o controle azul na mão, no CABO, em teste CEGO (ela relatava
+**A medição que é o alicerce disto**, feita no ensaio no aparelho na madrugada de
+15-16/08/2026, com o controle azul na mão, no CABO, em teste CEGO (quem ouvia relatava
 o que ouvia sem saber o que fora enviado). Três passadas em
 `docs/data/ensaios.csv`, com o MESMO arquivo, a MESMA rota e o MESMO sink::
 
-    sfx-cabo-sem-posse    volume nunca escrito por nós ... ela: "nenhum"      MUDO
-    sfx-cabo-com-posse    `speaker volume 85` ........... ela: "bep bep bep"  SOA
-    sfx-cabo-volume-zero  `speaker volume 0` ............ ela: "mudo"         MUDO
+    sfx-cabo-sem-posse    volume nunca escrito por nós ... ouvido: nenhum    MUDO
+    sfx-cabo-com-posse    `speaker volume 85` ........... ouvido: bep bep    SOA
+    sfx-cabo-volume-zero  `speaker volume 0` ............ ouvido: mudo       MUDO
 
-Nada mais mudou entre elas. A variável é a POSSE dos bytes de volume
+Nada mais mudou entre as três. A variável é a POSSE dos bytes de volume
 (`common[4..7]`): enquanto ninguém a tomava, o alto-falante ficava mudo — e o
 comentário do `_PinnedPyDualSense.__init__` já dizia *"idem, mandando volume
 ZERO em todo report"* desde 25/07 sem que ninguém o tivesse ligado ao silêncio.
@@ -125,7 +125,7 @@ def test_o_fone_vai_junto_porque_ele_manda_por_cima_da_rota() -> None:
 
 
 def test_o_microfone_continua_sem_dono_na_adocao() -> None:
-    """A posse é POR BYTE, e a adoção toma só os que ela precisa."""
+    """A posse é POR BYTE, e a adoção toma só os que precisa."""
     inst, handle = _backend_com_um_handle()
 
     inst.assumir_volume_padrao_na_adocao("AA:BB:CC:00:00:01", handle)
@@ -255,7 +255,7 @@ def test_a_adocao_nao_reescreve_handle_que_ja_estava_na_mesa(
     _connect_com_handles_falsos(inst, monkeypatch, ["AA:BB:CC:00:00:01"])
 
     assert handle._volumes_audio[1] == 60, (
-        "o tique de hotplug reescreveu o volume que ela tinha acabado de "
+        "o tique de hotplug reescreveu o volume que o usuário tinha acabado de "
         "escolher — a adoção é do handle NOVO, não da mesa inteira"
     )
 

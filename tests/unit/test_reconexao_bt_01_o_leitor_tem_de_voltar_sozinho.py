@@ -18,7 +18,7 @@ _NO_DEPOIS = Path("/dev/input/event26")
 
 
 class _DeviceFalso:
-    """Um `InputDevice` de bancada que sabe morrer e renascer noutro nó."""
+    """Um `InputDevice` de ensaio que sabe morrer e renascer noutro nó."""
 
     def __init__(self, caminho: str) -> None:
         self.path = caminho
@@ -65,7 +65,7 @@ def ensaio(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(er_mod, "discover_dualsense_evdevs", lambda: {})
 
     class _AvisoDoEnsaio:
-        """O `/dev/input` desta bancada: muda quando o nó vigente muda."""
+        """O `/dev/input` deste ensaio: muda quando o nó vigente muda."""
 
         def __init__(self) -> None:
             self.visto = estado["no_atual"]

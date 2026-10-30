@@ -520,7 +520,7 @@ class TestAMigracaoAposentadaNaoEMuda:
 
         assert migrados == [], (
             "sem asset não há de onde copiar `match` — a migração não pode "
-            "inventar regra no perfil dela"
+            "inventar regra no perfil do usuário"
         )
         assert caminho.read_text(encoding="utf-8") == antes, (
             "a migração aposentada mexeu no arquivo"

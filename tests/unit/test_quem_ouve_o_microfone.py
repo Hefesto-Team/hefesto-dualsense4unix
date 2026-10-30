@@ -175,7 +175,7 @@ def _falar_pactl(monkeypatch: pytest.MonkeyPatch, respostas: dict[str, tuple[int
 def test_o_elo_com_a_fonte_e_o_indice_e_nao_o_target_object() -> None:
     """Um app SEM `target.object` continua sendo ouvinte da fonte 600.
 
-    Esta é a armadilha central da leitura, e ela é silenciosa: quem casar o
+    Esta é a armadilha central da leitura, e é silenciosa: quem casar o
     stream com a fonte por `target.object` fica verde no teste em que alguém
     passa um device explícito e CEGO para o app que grava da fonte padrão —
     que nesta máquina é o microfone do DualSense.
@@ -379,7 +379,7 @@ def test_a_peca_a_reconhece_o_que_a_peca_b_realmente_declara() -> None:
     """O ENCONTRO das duas peças — e é este teste que impede a luz acesa eterna."""
     nivel = pytest.importorskip(
         "hefesto_dualsense4unix.integrations.nivel_do_microfone",
-        reason="a PEÇA B nasce na mesma leva; sem ela não há junta a medir",
+        reason="a PEÇA B nasce na mesma leva; sem a peça B não há junta a medir",
     )
     props = nivel.propriedades_do_medidor("aabbcc0000ab")
     stream = qom.StreamDeCaptura(indice=4, fonte=600, corked=False, props=props)
@@ -395,7 +395,7 @@ def test_a_peca_c_acha_esta_peca_pelo_endereco_que_o_usuario_guarda() -> None:
         reason="a PEÇA C nasce na mesma leva",
     )
     assert qom.__name__ == luz.MODULO_DE_QUEM_OUVE, (
-        f"a PEÇA C procura a PEÇA A em {luz.MODULO_DE_QUEM_OUVE}, e ela mora em {qom.__name__}"
+        f"a PEÇA C procura a PEÇA A em {luz.MODULO_DE_QUEM_OUVE}, e a peça A mora em {qom.__name__}"
     )
     declarado = luz.NOME_DE_QUEM_OUVE
     nomes = [declarado] if isinstance(declarado, str) else list(declarado)
@@ -579,7 +579,7 @@ def test_o_medidor_da_peca_b_nao_acende_a_luz_sozinho(
 def test_o_alheio_aparece_mesmo_com_o_nosso_medidor_no_ar(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """E a mordida do anterior: excluir o nosso não pode excluir o dela."""
+    """E a mordida do anterior: excluir o nosso não pode excluir o de quem usa."""
     _falar_pactl(
         monkeypatch,
         {

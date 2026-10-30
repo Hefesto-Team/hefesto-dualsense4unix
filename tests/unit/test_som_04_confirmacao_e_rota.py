@@ -5,7 +5,7 @@ leitura**. Depois de mover o controle deslizante nada na tela pode confirmar
 que a mudança valeu, porque o número exibido é o que NÓS mandamos. O som é a
 leitura que falta — e um som que sai no lugar errado é pior que nenhum som.
 
-O FATO que este arquivo inteiro defende, medido nesta bancada em 01/08/2026::
+O FATO que este arquivo inteiro defende, medido nesta máquina de teste em 01/08/2026::
 
     $ paplay --device=nao_existe_mesmo bell.oga ; echo $?
     0
@@ -16,7 +16,7 @@ Os dois tocadores aceitam sink inexistente, saem com ZERO e tocam no sink
 PADRÃO. Com o padrão de produto no HDMI, a "confirmação do alto-falante do controle"
 sairia pela televisão. Por isso a guarda da lista viva de sinks
 (:func:`audio_saida.tocar_confirmacao`) é a cura central, e há um teste só
-para ela.
+para a guarda.
 
 Cada teste diz no docstring qual é a MORDIDA — o que arrancar do produto para
 vê-lo em vermelho. Este arquivo não precisa de GTK: mede o motor, não a tela.
@@ -144,7 +144,7 @@ def test_sink_fora_da_lista_viva_nao_toca_e_avisa() -> None:
 
     `paplay --device=<inexistente>` sai com ZERO e toca no sink PADRÃO. Sem
     conferir o nome contra a lista viva, um sink obsoleto (o controle acabou de
-    sair do cabo) faria a confirmação sair pela televisão dela — o oposto
+    sair do cabo) faria a confirmação sair pela televisão de quem usa — o oposto
     exato do que o clique promete.
 
     Mordida: apagar a linha
@@ -171,9 +171,9 @@ def test_sem_sink_atribuivel_recusa_de_saida_e_sem_tocar_em_nada() -> None:
     Então "não sei qual é o sink" tem de virar recusa, nunca um argumento
     vazio.
 
-    A terceira asserção é a que dá corpo próprio a esta guarda, e ela foi
+    A terceira asserção é a que dá corpo próprio a esta guarda, e foi
     escrita DEPOIS de a primeira versão do teste não morder: sem sink, a
-    recusa é de SAÍDA e não pode custar nem um `pactl`. Sem ela, a guarda
+    recusa é de SAÍDA e não pode custar nem um `pactl`. Sem a recusa, a guarda
     ``if not sink`` seria redundante com a da lista viva (que também recusa
     "", por "" não estar em lista nenhuma) e arrancá-la não produziria
     vermelho nenhum — a definição de cura sem teste.
@@ -213,7 +213,7 @@ def test_argv_do_tocador_recusa_sink_vazio() -> None:
         (
             {"saida_muda": True},
             MOTIVO_SAIDA_MUDA,
-            "com a camada 1 muda o som não sairia e ela leria silêncio",
+            "com a camada 1 muda o som não sairia e quem usa leria silêncio",
         ),
         (
             {"achar": lambda _n: None},
@@ -267,7 +267,7 @@ def test_os_dois_silencios_de_proposito_nao_viram_recado() -> None:
 def test_a_chave_de_desligar_existe_e_e_respeitada() -> None:
     """Entrega 1, regra 6: é preferência, não imposição.
 
-    Ligada por padrão (sem ela não há confirmação nenhuma, que é o defeito que
+    Ligada por padrão (sem a confirmação ligada não há confirmação nenhuma, que é o defeito que
     a leva vem tapar) e desligável sem esperar release nenhuma.
 
     Mordida: ignorar a chave em `tocar_confirmacao` (usar ``ligado=True`` fixo)
@@ -286,8 +286,8 @@ def test_um_som_por_vez_e_nao_um_por_pixel() -> None:
     """Regra 3: arrastar não pode virar rajada. Esta é a camada do MOTOR.
 
     A do widget é o repouso de 250ms (`test_status_som_04_rota.py`); esta é a
-    trava de um som por vez, e ela existe porque o repouso é por widget e o
-    tocador leva ~0,35s — sem ela, um gesto longo enfileiraria processos no
+    trava de um som por vez, e existe porque o repouso é por widget e o
+    tocador leva ~0,35s — sem a trava, um gesto longo enfileiraria processos no
     executor de UMA worker do `ipc_bridge` e os sons chegariam depois do gesto.
 
     Mordida: apagar o ``_tocando.acquire(blocking=False)`` de
@@ -381,7 +381,7 @@ def test_voltar_ao_anterior_devolve_o_sink_do_usuario_e_esquece_a_memoria() -> N
     rota.mandar_para_o_controle(SINK_CONTROLE)
     assert rota.voltar_ao_anterior() is True
 
-    assert pactl.padrao == SINK_HDMI, "a saída dela voltou para onde estava"
+    assert pactl.padrao == SINK_HDMI, "a saída do usuário voltou para onde estava"
     assert memoria.get("anterior", "") == ""
 
 

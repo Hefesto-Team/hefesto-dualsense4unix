@@ -31,7 +31,7 @@ def linhas() -> list[str]:
 
 
 def test_o_arquivo_existe_e_e_numerado_acima_de_73() -> None:
-    """A numeração não é acidente: é ela que decide se `uaccess` funcionaria."""
+    """A numeração não é acidente: é a numeração que decide se `uaccess` funcionaria."""
     assert REGRA.is_file(), (
         "sem esta regra os nós de LED do Pro nascem root:root e a escrita do "
         "daemon falha em silêncio"
@@ -68,6 +68,6 @@ def test_a_regra_nunca_volta_a_depender_de_uaccess(linhas: list[str]) -> None:
     blob = "\n".join(linhas)
     assert "uaccess" not in blob, (
         f"{REGRA.name} é numerada >= {LIMITE_UACCESS}: a TAG uaccess é inerte "
-        "aqui (a 73-seat-late.rules já passou) e substituir o chmod por ela "
+        "aqui (a 73-seat-late.rules já passou) e substituir o chmod pela regra "
         "deixa o LED sem escrita sem que nada acuse"
     )

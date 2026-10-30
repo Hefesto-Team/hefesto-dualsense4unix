@@ -359,7 +359,7 @@ def test_empate_com_perfil_manual_nao_conta() -> None:
 
 @pytest.mark.parametrize("prioridade", [-1, 201, 1000])
 def test_prioridade_fora_da_faixa_e_erro(prioridade: int) -> None:
-    """0-200 é o que o controle da janela oferece; fora dela veio de outro lugar."""
+    """0-200 é o que o controle da janela oferece; fora da faixa veio de outro lugar."""
     achados = _de(
         verificar_perfis(
             [_perfil("pragmata", match=MatchCriteria(window_class=["p"]), priority=prioridade)]

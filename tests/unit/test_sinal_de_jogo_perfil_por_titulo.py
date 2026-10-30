@@ -40,7 +40,7 @@ def _perfis(monkeypatch: pytest.MonkeyPatch, perfis: list[Any]) -> None:
 
 
 def _perfil_coop_local() -> Any:
-    """O formato exato do `coop_local` dela: só título, `mode: gamepad`."""
+    """O formato exato do `coop_local` medido: só título, `mode: gamepad`."""
     from hefesto_dualsense4unix.profiles.schema import (
         MatchCriteria,
         Profile,
@@ -58,7 +58,7 @@ def _perfil_coop_local() -> Any:
 
 
 def _perfil_fps() -> Any:
-    """O formato exato do `fps.json` dela: título E `process_name`."""
+    """O formato exato do `fps.json` medido: título E `process_name`."""
     from hefesto_dualsense4unix.profiles.schema import (
         MatchCriteria,
         Profile,

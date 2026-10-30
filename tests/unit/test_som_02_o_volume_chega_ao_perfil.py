@@ -1,10 +1,10 @@
-"""SOM-02/E4 — o volume que ela ajusta CHEGA ao perfil salvo."""
+"""SOM-02/E4 — o volume que o usuário ajusta CHEGA ao perfil salvo."""
 
 from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("som 02 o volume dela chega ao perfil")
+exigir_gi_real("som 02 o volume chega ao perfil")
 
 from typing import Any, Final
 
@@ -141,7 +141,7 @@ def _perfil(**speaker: Any) -> Profile:
 
 
 def test_perfil_com_rota_volta_para_o_rascunho_ao_abrir() -> None:
-    """Round-trip: o canal salvo reaparece no rascunho, sem virar toque dela."""
+    """Round-trip: o canal salvo reaparece no rascunho, sem virar toque do usuário."""
     draft = DraftConfig.from_profile(_perfil(volume=120, rota=2))
     assert draft.speaker.rota == 2
     assert draft.speaker.dirty is False

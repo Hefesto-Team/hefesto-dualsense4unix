@@ -1,4 +1,4 @@
-"""Regra-cola de udev não viaja sem o alvo do `RUN+=` dela."""
+"""Regra-cola de udev não viaja sem o alvo do seu `RUN+=`."""
 from __future__ import annotations
 
 import re
@@ -110,13 +110,13 @@ def test_o_sentinela_da_regra_da_unit_e_o_execstart_do_usuario() -> None:
         for alvo in sorted(a for a in alvos if not a.startswith(CASA_DOS_ALVOS)):
             execstart = _execstart_da_unit(alvo)
             assert f'TEST=="{execstart}"' in texto, (
-                f"{regra} dá start em {alvo} e o TEST== dela não confere o "
+                f"{regra} dá start em {alvo} e o seu TEST== não confere o "
                 f"ExecStart dessa unit ({execstart}).\n"
                 f"Confira `assets/systemd/{alvo}`: quem mudou de lugar, o "
                 "ExecStart ou o sentinela da regra?"
             )
             assert f'TEST=="{CASA_DAS_UNITS}/{alvo}"' not in texto, (
-                f"{regra} confere o CAMINHO da unit em vez do ExecStart dela. "
+                f"{regra} confere o CAMINHO da unit em vez do seu ExecStart. "
                 "Isso quebra no dia em que um pacote entregar a unit em "
                 "/usr/lib/systemd/system: a regra fica inerte com tudo "
                 "funcionando. O ExecStart está soldado dentro da unit."
@@ -168,7 +168,7 @@ def test_a_camada_do_alvo_alcanca_os_dois_lados_da_cerca() -> None:
     assert "install_bt_resilience_host" in corpos, (
         "`install_bt_resilience_host` sumiu do instalador (procurei no "
         "install.sh e em scripts/lib/camada_de_maquina.sh). Se a camada "
-        "ONDA-R2 voltou a ser um bloco de código de topo, ela voltou a servir "
+        "ONDA-R2 voltou a ser um bloco de código de topo, o bloco voltou a servir "
         "um lado só da cerca — que é o defeito de 22/08/2026."
     )
     por_regiao = regioes()
@@ -194,7 +194,7 @@ def test_o_doctor_avisa_a_regra_cola_sem_alvo() -> None:
     for regra, alvos in sorted(_regras_cola().items()):
         sentinela = sorted({_sentinela_do_alvo(alvo) for alvo in alvos})[0]
         assert any(regra in linha and sentinela in linha for linha in linhas), (
-            f"o doctor não pareia {regra} com o sentinela dela ({sentinela}).\n"
+            f"o doctor não pareia {regra} com o seu sentinela ({sentinela}).\n"
             "Sem esse par ele não sabe dizer 'a regra está instalada e o alvo "
             "não' — que é exatamente o estado que o TEST== torna silencioso."
         )

@@ -79,11 +79,11 @@ class TestOMudoVoltaNoReplug:
         assert estado == "aplicado"
         assert mesa.applier.chamadas, "nada chegou ao aparelho"
         assert mesa.applier.chamadas[-1]["muted"] is True, (
-            "o mudo dela não atravessou o replug — ela volta a ser ouvida sem saber"
+            "o mudo não atravessou o replug — quem usa volta a ser ouvido sem saber"
         )
 
     def test_o_mudo_desligado_nao_e_escrito_no_replug(self, mesa) -> None:
-        """A outra metade da assimetria, e ela protege o LED."""
+        """A outra metade da assimetria, que protege o LED."""
         _dono("aabbcc000003", False)
         m = mesa.com(_perfil(mic={"volume": 70}))
         m.reapply_mic_on_connect(uniq="aabbcc000003")

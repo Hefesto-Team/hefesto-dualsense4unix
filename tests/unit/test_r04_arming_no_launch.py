@@ -72,7 +72,7 @@ class TestArmingPeloMarker:
     def test_launch_fresco_aplica_o_modo_do_perfil(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O caso dela: máscara global xbox, Sackboy com perfil dualsense."""
+        """O caso medido: máscara global xbox, Sackboy com perfil dualsense."""
         _marker(env_dir, appid=APPID, epoch=1000)
         perfil = _perfil()
         monkeypatch.setattr(
@@ -88,8 +88,8 @@ class TestArmingPeloMarker:
         assert mode.gamepad_flavor == "dualsense"
         assert profile is perfil
         assert origin == "launch", (
-            "origem 'launch' NÃO fura o lock manual (R-03): se ela mexeu na "
-            "máscara nos últimos 30 s, o gesto dela é mais novo que o perfil"
+            "origem 'launch' NÃO fura o lock manual (R-03): se o usuário mexeu na "
+            "máscara nos últimos 30 s, o gesto do usuário é mais novo que o perfil"
         )
 
     def test_mesmo_launch_arma_uma_vez_so(
@@ -208,7 +208,7 @@ class TestAllowlistPulaSoAMascara:
     def test_supressao_vai_com_origin_launch(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`origin="launch"` NÃO fura o lock manual (R-03): se ela alternou o"""
+        """`origin="launch"` NÃO fura o lock manual (R-03): se o usuário alternou o"""
         _marker(env_dir, appid=APPID, epoch=1000)
         perfil = _perfil(suprime=True)
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
@@ -258,7 +258,7 @@ class TestAllowlistPulaSoAMascara:
     def test_applier_que_explode_nao_derruba_o_arming(
         self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A supressão é best-effort: falhar nela não pode custar a máscara do"""
+        """A supressão é best-effort: falhar na supressão não pode custar a máscara do"""
         _marker(env_dir, appid=APPID, epoch=1000)
         perfil = _perfil(suprime=True)
         monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())

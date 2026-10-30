@@ -85,7 +85,7 @@ class TestOAlvoVaiPorSerial:
         assert afb.argv_do_gravador("hefesto_som_000003.monitor")[0] == "parec"
 
     def test_a_fonte_vazia_continua_recusada(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A guarda velha não morre com a nova — ela só deixou de ser a única."""
+        """A guarda velha não morre com a nova — só deixou de ser a única."""
         monkeypatch.setattr(afb.shutil, "which", lambda b: f"/usr/bin/{b}")
         assert afb.argv_do_gravador("") == []
 

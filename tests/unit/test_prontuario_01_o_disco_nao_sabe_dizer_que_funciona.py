@@ -104,7 +104,7 @@ class TestNomeiaOQueSabe:
         assert SEM_WRAPPER not in chaves
 
     def test_excecao_inerte_o_caso_do_sackboy(self) -> None:
-        """Ela pôs o jogo na lista, e a lista não estava fazendo nada.
+        """Quem usa pôs o jogo na lista, e a lista não estava fazendo nada.
 
         Medido em 16/08/2026: Sackboy na allowlist com
         `UseSteamControllerConfig = 0`. A lista só PRESERVA o que já estava
@@ -191,7 +191,7 @@ class TestAFraseParaATela:
 
 
 class TestOCensoDeVerdade:
-    """Um HOME de bancada com o layout REAL: três árvores `apps` e um manifesto."""
+    """Um HOME de ensaio com o layout REAL: três árvores `apps` e um manifesto."""
 
     @pytest.fixture()
     def casa(self, tmp_path: Path) -> Path:

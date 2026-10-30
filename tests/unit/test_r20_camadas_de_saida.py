@@ -86,7 +86,7 @@ def _profile(name: str, **kw: Any) -> Profile:
 def test_ativacao_autoswitch_nao_apaga_override_da_usuaria(
     isolated_profiles_dir: Path,
 ) -> None:
-    """O coração do C5: ela ajustou o Controle 2 na GUI; o autoswitch reativa"""
+    """O coração do C5: quem usa ajustou o Controle 2 na GUI; o autoswitch reativa"""
     save_profile(_profile("shooter"))
     backend, _h1, h2 = _backend()
 

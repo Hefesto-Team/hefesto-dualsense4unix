@@ -99,7 +99,7 @@ def _jobs_que_publicam(workflow: dict[str, Any]) -> set[str]:
 def test_bundle_flatpak_carrega_a_versao_no_nome(
     release_workflow: dict[str, Any],
 ) -> None:
-    """O arquivo .flatpak produzido tem de trazer a versão (ou variável dela)."""
+    """O arquivo .flatpak produzido tem de trazer a versão (ou a variável da versão)."""
     shell = _run_concatenado(release_workflow, "flatpak")
     assert "build-bundle" in shell, "o job flatpak não exporta bundle nenhum"
 

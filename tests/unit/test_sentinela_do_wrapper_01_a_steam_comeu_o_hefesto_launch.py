@@ -116,7 +116,7 @@ def test_censo_separa_o_que_perdeu_do_que_nunca_teve(tmp_path: Path, steam_fecha
 
 
 def test_censo_nao_escreve_no_vdf_nem_com_a_steam_aberta(tmp_path: Path, monkeypatch):
-    """A detecção é a camada que vale COM a Steam viva — é quando ela joga."""
+    """A detecção é a camada que vale COM a Steam viva — é quando se joga."""
     for mod in (sw, slo):
         monkeypatch.setattr(mod, "steam_running", lambda: True)
         monkeypatch.setattr(mod, "steam_game_running", lambda: True)
@@ -159,7 +159,7 @@ def test_a_lista_estendida_a_mao_entra_no_reparo(tmp_path: Path, steam_fechada):
 def test_o_que_a_subtracao_nao_alcanca_continua_intocavel(
     tmp_path: Path, steam_fechada
 ):
-    """A frase de reparo manual NÃO morreu — ela deixou de ser o caso comum."""
+    """A frase de reparo manual NÃO morreu — deixou de ser o caso comum."""
     vdf = _escrever(tmp_path, {"999": LINHA_FORA_DO_ALCANCE})
 
     censo = sw.censo_do_wrapper(vdfs=[vdf], registro=_registro(tmp_path, []))
@@ -181,7 +181,7 @@ def test_o_reparo_da_lista_estendida_preserva_o_device_do_usuario(
     assert status == sw.REPARO_FEITO, status
     depois = slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))["999"]
     assert depois.startswith(slo.WRAPPER_PREFIX + " ")
-    assert "0x057e/0x2009" in depois, "o device que ELA escondeu foi jogado fora"
+    assert "0x057e/0x2009" in depois, "o device que O USUÁRIO escondeu foi jogado fora"
     assert "0x054c/0x0ce6" not in depois
 
 
@@ -214,7 +214,7 @@ def test_com_a_steam_aberta_o_aviso_pede_para_fechar_e_explica(
 
 
 def test_sem_faltante_nao_ha_frase(tmp_path: Path, steam_fechada):
-    """Aviso que aparece à toa é aviso que ela aprende a ignorar."""
+    """Aviso que aparece à toa é aviso que se aprende a ignorar."""
     vdf = _escrever(tmp_path, {"111": slo.WRAPPER_LAUNCH})
 
     assert sw.frase_do_aviso(sw.censo_do_wrapper(vdfs=[vdf], registro=tmp_path / "r.json")) == ""
@@ -254,7 +254,7 @@ def test_o_reparo_e_idempotente(tmp_path: Path, steam_fechada):
 
 
 def test_ha_backup_antes_de_escrever(tmp_path: Path, steam_fechada):
-    """O `localconfig.vdf` guarda a biblioteca inteira dela."""
+    """O `localconfig.vdf` guarda a biblioteca inteira do usuário."""
     vdf = _escrever(tmp_path, {PRAGMATA: LINHA_PRAGMATA})
     antes = vdf.read_text(encoding="utf-8")
 
@@ -354,7 +354,7 @@ def test_a_recusa_do_usuario_sobrevive_ao_install(tmp_path: Path, steam_fechada,
     opcoes = slo.read_apps_by_appid(vdf.read_text(encoding="utf-8"))
     assert opcoes[PRAGMATA] == LINHA_PRAGMATA
     assert slo.WRAPPER_PREFIX in (opcoes["111"] or "")
-    assert "escolha dela" in capsys.readouterr().out
+    assert "fora do wrapper por escolha" in capsys.readouterr().out
 
 
 def test_o_censo_anota_quem_tem_o_wrapper_hoje(tmp_path: Path, steam_fechada):
