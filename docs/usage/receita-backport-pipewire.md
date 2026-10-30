@@ -6,7 +6,8 @@ que faz bind num metadata enquanto o WirePlumber sai. A Steam roda
 ([o estudo](../protocol/o-wpctl-pendurado-pelo-metadata.md)). O upstream curou
 na 1.6.9. O Hefesto oferece o PipeWire 1.6.9 e o WirePlumber 0.5.18, as
 estáveis mais novas, com o empacotamento do Pop. O `hefesto-dualsense4unix doctor`
-manda para cá quando o PipeWire da máquina está abaixo da 1.6.9.
+manda para cá quando o PipeWire de um Pop!_OS 24.04 está abaixo da 1.6.9; em
+outra distro, a cura vem dela.
 
 ## Em uma linha
 
@@ -17,7 +18,8 @@ scripts/construir_pipewire_backport.sh
 Constrói o `1.6.9-0~hefesto24.04.1` e o `0.5.18-0~hefesto24.04.1` e entrega os
 `.deb`, com o `SHA256SUMS` e um `ORIGEM.txt`, em
 `~/.cache/hefesto-dualsense4unix/pipewire-backport/`. **Não instala nada e não
-usa sudo.** Quem instala é o `./install.sh`, no passo 3f-bis: ele chama este
+usa sudo.** Quem instala é o `./install.sh`, no passo 3f-bis, e só no Pop!_OS
+24.04 (o empacotamento é o dele; em outra distro o passo fica de fora): ele chama este
 script, confere o `SHA256SUMS`, grava o caminho de volta, fixa a prioridade do
 apt, instala só os pacotes que a máquina já tem e reinicia o som. Com a Steam
 aberta, ele recusa e manda fechá-la pelo menu. A instalação à mão é a de

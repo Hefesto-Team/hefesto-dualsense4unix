@@ -3413,9 +3413,21 @@ _pw_versao_do_upstream() {
     local v="${1#*:}"
     printf '%s' "${v%%-*}"
 }
+_pw_no_pop_24_04() {
+    local os="${HEFESTO_OS_RELEASE:-/etc/os-release}" id="" ver=""
+    if [[ -r "${os}" ]]; then
+        id="$(sed -n 's/^ID=//p' "${os}" | tr -d '"' | head -1)"
+        ver="$(sed -n 's/^VERSION_ID=//p' "${os}" | tr -d '"' | head -1)"
+    fi
+    [[ "${id}" == "pop" && "${ver}" == "24.04" ]]
+}
 _pw_gesto_da_cura() {
     if [[ "$1" == "dpkg" ]]; then
-        so_no_checkout "(./install.sh, passo 3f-bis, ou a receita: docs/usage/receita-backport-pipewire.md)"
+        if _pw_no_pop_24_04; then
+            so_no_checkout "(./install.sh, passo 3f-bis, ou a receita: docs/usage/receita-backport-pipewire.md)"
+        else
+            printf ' (a cura vem da distro: sudo apt upgrade, quando ela entregar a 1.6.9)'
+        fi
         return 0
     fi
     case "$(_dono_do_arquivo "$(command -v pipewire)")" in

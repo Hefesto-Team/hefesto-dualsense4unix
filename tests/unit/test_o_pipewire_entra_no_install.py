@@ -84,8 +84,23 @@ FUNCOES_EXTRAIDAS = (
     "_pw_steam_aberta",
     "_pacotes_a_meio",
     "_avisa_pacote_a_meio",
+    "_pw_da_casa_serve_aqui",
+    "_pw_nome_da_distro",
     "install_pipewire_da_casa",
 )
+
+OS_RELEASE = {
+    "pop-24.04": 'NAME="Pop!_OS"\nVERSION_ID="24.04"\nID=pop\nID_LIKE="ubuntu debian"\n'
+    'PRETTY_NAME="Pop!_OS 24.04 LTS"\n',
+    "pop-22.04": 'NAME="Pop!_OS"\nVERSION_ID="22.04"\nID=pop\nID_LIKE="ubuntu debian"\n'
+    'PRETTY_NAME="Pop!_OS 22.04 LTS"\n',
+    "ubuntu-24.04": 'NAME="Ubuntu"\nVERSION_ID="24.04"\nID=ubuntu\nID_LIKE=debian\n'
+    'PRETTY_NAME="Ubuntu 24.04.3 LTS"\n',
+    "mint-22": 'NAME="Linux Mint"\nVERSION_ID="22"\nID=linuxmint\nID_LIKE="ubuntu debian"\n'
+    'PRETTY_NAME="Linux Mint 22"\n',
+    "fedora-42": 'NAME="Fedora Linux"\nVERSION_ID=42\nID=fedora\n'
+    'PRETTY_NAME="Fedora Linux 42 (Workstation Edition)"\n',
+}
 
 FUNCOES_DUBLADAS = ("step", "warn", "_faria", "_faria_root")
 
@@ -137,6 +152,7 @@ def _correr(
     registro_antigo: str = "",
     outra_arquitetura: dict[str, tuple[str, str, str]] | None = None,
     a_meio: tuple[str, ...] = (),
+    distro: str = "pop-24.04",
 ) -> Corrida:
     maquina = MAQUINA_DO_POP if maquina is None else maquina
     lar = tmp_path / "lar"
@@ -151,6 +167,8 @@ def _correr(
         shutil.copy(RAIZ / rel, raiz / rel)
     diario = tmp_path / "chamadas.log"
     fakes = tmp_path / "fakes"
+    os_release = tmp_path / "os-release"
+    os_release.write_text(OS_RELEASE[distro], encoding="utf-8")
 
     linhas_sums = []
     for pkg, (ver, arch) in ENTREGA.items():
@@ -255,6 +273,7 @@ def _correr(
             "ROOT_DIR": str(raiz),
             "AUTO_YES": "1",
             "DRY_RUN": "1" if dry_run else "0",
+            "_OS_RELEASE": str(os_release),
         },
         capture_output=True,
         text=True,
@@ -273,6 +292,28 @@ def test_instala_so_os_pacotes_ii_e_reinicia_o_som(tmp_path: Path) -> None:
     assert c.chamou("systemctl --user restart pipewire pipewire-pulse wireplumber"), c.chamadas
     assert c.chamou("/etc/apt/preferences.d/hefesto-pipewire"), c.chamadas
     assert c.chamou("construtor "), "o passo não chamou o construtor"
+
+
+@pytest.mark.parametrize("distro", ["ubuntu-24.04", "mint-22", "fedora-42", "pop-22.04"])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_fora_do_pop_24_04_o_pipewire_da_pessoa_fica(
+    tmp_path: Path, distro: str, dry_run: bool
+) -> None:
+    """MORDIDA: sem a guarda do os-release, o Ubuntu constrói e troca o PipeWire dele."""
+    c = _correr(tmp_path, distro=distro, dry_run=dry_run)
+    assert c.rc == 0, c.saida
+    assert "o PipeWire da casa é do Pop!_OS 24.04" in c.saida, c.saida
+    nome = OS_RELEASE[distro].split('PRETTY_NAME="', 1)[1].split('"', 1)[0]
+    assert f"esta máquina é {nome}" in c.saida, c.saida
+    assert "a cura vem da distro" in c.saida, c.saida
+    assert not c.chamadas, c.chamadas
+    assert "FARIA" not in c.saida, c.saida
+
+
+def test_no_pop_24_04_o_ensaio_ainda_mostra_a_troca(tmp_path: Path) -> None:
+    c = _correr(tmp_path, distro="pop-24.04", dry_run=True)
+    assert "Pop!_OS 24.04, e esta máquina" not in c.saida, c.saida
+    assert "FARIA (root)" in c.saida, c.saida
 
 
 def test_o_passo_extraido_leva_toda_funcao_do_install_que_ele_chama() -> None:
@@ -541,6 +582,46 @@ def test_o_aviso_sai_antes_do_mk_build_deps() -> None:
 
 
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
+
+
+def _doctor_no_dpkg(tmp_path: Path, distro: str) -> str:
+    fakes = tmp_path / "fakes"
+    _exe(
+        fakes,
+        "dpkg-query",
+        f'case "${{@: -1}}" in libpipewire-0.3-modules) printf "{PW_POP}" ;; '
+        f'wireplumber) printf "{WP_POP}" ;; *) exit 1 ;; esac\n',
+    )
+    os_release = tmp_path / "os-release"
+    os_release.write_text(OS_RELEASE[distro], encoding="utf-8")
+    r = subprocess.run(
+        [BASH, "-c", 'set --; source "$DOCTOR_SH"; check_pipewire_cura_do_metadata; true'],
+        env={
+            "PATH": f"{fakes}:/usr/bin:/bin",
+            "DOCTOR_SH": str(DOCTOR),
+            "HOME": str(tmp_path),
+            "HEFESTO_OS_RELEASE": str(os_release),
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert r.returncode == 0, r.stderr
+    return r.stdout
+
+
+def test_no_dpkg_fora_do_pop_o_doctor_nao_manda_ao_install(tmp_path: Path) -> None:
+    """MORDIDA: sem a guarda no gesto, o Ubuntu ouve «./install.sh, passo 3f-bis»."""
+    saida = _doctor_no_dpkg(tmp_path, "ubuntu-24.04")
+    assert saida.startswith("[WARN] o PipeWire"), saida
+    assert "a cura vem da distro: sudo apt upgrade" in saida, saida
+    assert "3f-bis" not in saida and "receita" not in saida, saida
+
+
+def test_no_pop_24_04_o_doctor_aponta_o_passo_3f_bis(tmp_path: Path) -> None:
+    saida = _doctor_no_dpkg(tmp_path, "pop-24.04")
+    assert "a cura vem da distro" not in saida, saida
 
 
 def _doctor_fora_do_dpkg(tmp_path: Path, dono: str) -> str:

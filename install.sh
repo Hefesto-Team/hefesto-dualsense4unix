@@ -2256,6 +2256,21 @@ _pw_steam_aberta() {
         || pgrep -u "$(id -u)" -x steamwebhelper >/dev/null 2>&1
 }
 
+_pw_da_casa_serve_aqui() {
+    local os="${_OS_RELEASE:-/etc/os-release}" id="" ver=""
+    if [[ -r "${os}" ]]; then
+        id="$(sed -n 's/^ID=//p' "${os}" | tr -d '"' | head -1)"
+        ver="$(sed -n 's/^VERSION_ID=//p' "${os}" | tr -d '"' | head -1)"
+    fi
+    [[ "${id}" == "pop" && "${ver}" == "24.04" ]]
+}
+
+_pw_nome_da_distro() {
+    local os="${_OS_RELEASE:-/etc/os-release}" nome=""
+    [[ -r "${os}" ]] && nome="$(sed -n 's/^PRETTY_NAME=//p' "${os}" | tr -d '"' | head -1)"
+    printf '%s' "${nome:-uma distro sem /etc/os-release}"
+}
+
 install_pipewire_da_casa() {
     local baseline="${ROOT_DIR}/assets/pipewire-backport/BASELINE"
     local pref="${ROOT_DIR}/assets/pipewire-backport/apt/hefesto-pipewire.pref"
@@ -2281,6 +2296,11 @@ install_pipewire_da_casa() {
             return 0
             ;;
     esac
+    if ! _pw_da_casa_serve_aqui; then
+        warn "o PipeWire da casa é do Pop!_OS 24.04, e esta máquina é $(_pw_nome_da_distro): o PipeWire dela fica como está"
+        printf '      sem a 1.6.9, a Steam pode não fechar depois de o som reiniciar; a cura vem da distro (o doctor avisa quando chegar)\n'
+        return 0
+    fi
     printf '      o PipeWire desta máquina é o %s, sem a cura do metadata; a casa tem o %s e o WirePlumber %s\n' \
         "$(_pw_versao_ii libpipewire-0.3-modules)" "${alvo_pw}" "${alvo_wp}"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
