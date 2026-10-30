@@ -10,6 +10,7 @@ from hefesto_dualsense4unix.integrations import censo_do_gabinete as cg
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho, Censo
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import NoDeEntrada
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, Mesa
+from hefesto_dualsense4unix.utils import nomes_gravados as ng
 
 
 _MOLDE = """Handle 0x{handle:04X}, DMI type 8, 9 bytes
@@ -144,7 +145,7 @@ def test_placa_sem_tabela_8_nao_inventa_gabinete(texto, apelido):
         "de_onde_sei": cg.NAO_RESPONDEU,
     }, apelido
     assert censo["contagens"]["divergem"] is False, apelido
-    assert censo["contagens"]["precisa_da_palavra_dela"] is True, apelido
+    assert censo["contagens"][ng.PERGUNTA_PENDENTE] is True, apelido
 
 
 def test_zero_conectores_nao_e_a_mesma_coisa_que_nao_perguntei():
@@ -181,7 +182,7 @@ def test_quando_as_contas_batem_nao_ha_divergencia_a_declarar():
     """A outra metade da régua: precisa saber ficar CALADA."""
     contagens = cg.declarar_divergencia(firmware=15, soquetes=22, buracos=15)
     assert contagens["divergem"] is False
-    assert contagens["precisa_da_palavra_dela"] is True
+    assert contagens[ng.PERGUNTA_PENDENTE] is True
 
 
 def test_uma_fonte_sozinha_nao_diverge_de_nada():
@@ -228,7 +229,7 @@ def _censo_com_a_palavra_do_usuario():
         {"nome": "traseira", "entradas": 6, "de_onde_sei": cg.DECLARADO_PELO_USUARIO},
         {"nome": "frente", "entradas": 2, "de_onde_sei": cg.DECLARADO_PELO_USUARIO},
     ]
-    antigo["contagens"]["declarado_por_ela"] = {
+    antigo["contagens"][ng.CONTAGEM_DO_USUARIO] = {
         "valor": 8,
         "de_onde_sei": cg.DECLARADO_PELO_USUARIO,
     }
@@ -241,9 +242,9 @@ def test_o_install_nao_apaga_o_que_o_usuario_ensinou():
     novo = censo_deste_ensaio(dmidecode="")
     herdado = cg.preservar_o_que_o_usuario_disse(novo, antigo, dict(PLACA_DESTE_ENSAIO))
     assert len(herdado["faces"]) == 2
-    assert herdado["contagens"]["declarado_por_ela"]["valor"] == 8
-    assert herdado["contagens"]["declarado_por_ela"]["de_onde_sei"] == cg.DECLARADO_PELO_USUARIO
-    assert herdado["contagens"]["precisa_da_palavra_dela"] is False
+    assert herdado["contagens"][ng.CONTAGEM_DO_USUARIO]["valor"] == 8
+    assert herdado["contagens"][ng.CONTAGEM_DO_USUARIO]["de_onde_sei"] == cg.DECLARADO_PELO_USUARIO
+    assert herdado["contagens"][ng.PERGUNTA_PENDENTE] is False
     assert herdado["de_onde_sei"] == cg.NAO_RESPONDEU
 
 
@@ -290,8 +291,42 @@ def test_o_que_o_firmware_disse_vem_com_selo():
         assert conector["de_onde_sei"] == cg.LIDO_DO_FIRMWARE
 
 
+def _gravado_com_os_nomes_antigos(tmp_path):
+    """O ``gabinete.json`` de antes de 30/10/2026: as chaves e o selo com os nomes antigos."""
+    chave = {novo: antigo for antigo, novo in ng.CHAVES_DO_GABINETE.items()}
+    selo = {novo: antigo for antigo, novo in ng.VALORES_DO_GABINETE.items()}
+    censo = _censo_com_a_palavra_do_usuario()
+    contagens = censo["contagens"]
+    contagens[chave[ng.CONTAGEM_DO_USUARIO]] = {
+        "valor": 8, "de_onde_sei": selo[ng.SELO_DO_USUARIO],
+    }
+    del contagens[ng.CONTAGEM_DO_USUARIO]
+    contagens[chave[ng.PERGUNTA_PENDENTE]] = contagens.pop(ng.PERGUNTA_PENDENTE)
+    for face in censo["faces"]:
+        face["de_onde_sei"] = selo[ng.SELO_DO_USUARIO]
+    arquivo = tmp_path / "gabinete.json"
+    arquivo.write_text(json.dumps(censo, ensure_ascii=False), encoding="utf-8")
+    return arquivo
+
+
+def test_o_gabinete_gravado_com_os_nomes_antigos_se_le_e_se_regrava(tmp_path):
+    """**A MORDIDA.** O nome antigo se lê uma vez, o valor fica, e o disco sai com o nome novo."""
+    arquivo = _gravado_com_os_nomes_antigos(tmp_path)
+    lido = cg.ler_do_disco(str(arquivo))
+    assert lido["contagens"][ng.CONTAGEM_DO_USUARIO] == {
+        "valor": 8, "de_onde_sei": cg.DECLARADO_PELO_USUARIO,
+    }
+    assert cg.contagens_declaradas(lido)[ng.CONTAGEM_DO_USUARIO] == 8
+    assert {face["de_onde_sei"] for face in lido["faces"]} == {cg.DECLARADO_PELO_USUARIO}
+    no_disco = arquivo.read_text(encoding="utf-8")
+    for antigo in (*ng.CHAVES_DO_GABINETE, *ng.VALORES_DO_GABINETE):
+        assert antigo not in no_disco, f"o disco ainda guarda {antigo!r}"
+    assert json.loads(no_disco) == lido
+    assert cg.ler_do_disco(str(arquivo)) == lido
+
+
 def test_o_selo_de_o_usuario_existe_e_o_censo_nunca_o_grava():
-    """``declarado-por-ela`` é do vocabulário, e é da ABA — não deste módulo."""
+    """O selo do que quem usa declarou é do vocabulário, e é da ABA — não deste módulo."""
     assert cg.DECLARADO_PELO_USUARIO in cg.SELOS
     selos = {fato["de_onde_sei"] for _, fato in _todos_os_fatos(censo_deste_ensaio())}
     assert cg.DECLARADO_PELO_USUARIO not in selos

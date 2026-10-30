@@ -9,7 +9,7 @@ tique), e a troca à mão só passava pelo primeiro.
 
 A cura: o escritor único do modo (`Daemon.gravar_o_modo_escolhido` →
 `manager.gravar_o_modo_no_perfil_ativo`) grava o `mode` e o `ponte` NA MESMA
-gravação, com `por=escolha_dela`, quando o perfil que grava é o do jogo que o
+gravação, com `por=escolha_do_usuario`, quando o perfil que grava é o do jogo que o
 wrapper lançou e que ainda roda. Fora de jogo, nada de carimbo. E a escada não
 rebaixa a escolha do usuário para «silêncio» nem para «gesto» quando a ponte é a
 mesma (`ProfileManager.confirmar_ponte`).
@@ -23,6 +23,7 @@ docstring da régua.
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -41,6 +42,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.testing import FakeController
+from hefesto_dualsense4unix.utils import nomes_gravados
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
 APPID = 1234560
@@ -113,7 +115,7 @@ def _escolher_xbox(d: Daemon, *, porta: str = "ipc") -> str | None:
 
 
 def test_a_escolha_carimba(jogo_vivo: dict[str, object]) -> None:
-    """Régua 1: o Xbox escolhido com o jogo valendo carimba `escolha_dela`.
+    """Régua 1: o Xbox escolhido com o jogo valendo carimba `escolha_do_usuario`.
 
     MORDIDA: tire o carimbo de `gravar_o_modo_no_perfil_ativo` (o `ponte` fora
     do `mudou`) e o disco mostra o par `xbox`/`dualsense`, como às 19h17.
@@ -128,7 +130,7 @@ def test_a_escolha_carimba(jogo_vivo: dict[str, object]) -> None:
     assert perfil.mode is not None and perfil.mode.caminho == "xbox"
     assert perfil.ponte is not None
     par = (perfil.ponte.gamepad_flavor, perfil.ponte.confirmada_por)
-    assert par == ("xbox", "escolha_dela"), (
+    assert par == ("xbox", "escolha_do_usuario"), (
         f"a escolha de quem usa trocou o modo e o carimbo seguiu {par!r}: o aviso das 19h17")
     assert perfil.ponte.kind == "gamepad" and perfil.ponte.steam_input is False
     assert _divergencia(JOGO) is None, f"o perfil diverge do carimbo: {_divergencia(JOGO)}"
@@ -239,7 +241,7 @@ def test_a_escolha_repetida_conserta_o_carimbo_divergente(
     _escolher_xbox(d)
 
     assert _divergencia(JOGO) is None
-    assert _no_disco(JOGO).ponte.confirmada_por == "escolha_dela"  # type: ignore[union-attr]
+    assert _no_disco(JOGO).ponte.confirmada_por == "escolha_do_usuario"  # type: ignore[union-attr]
 
 
 def test_o_controle_tambem(jogo_vivo: dict[str, object]) -> None:
@@ -256,7 +258,7 @@ def test_o_controle_tambem(jogo_vivo: dict[str, object]) -> None:
     perfil = _no_disco(JOGO)
     assert perfil.ponte is not None
     assert (perfil.ponte.gamepad_flavor, perfil.ponte.confirmada_por) == (
-        "xbox", "escolha_dela")
+        "xbox", "escolha_do_usuario")
 
 
 def test_todo_modo_leva_o_kind(jogo_vivo: dict[str, object]) -> None:
@@ -270,7 +272,7 @@ def test_todo_modo_leva_o_kind(jogo_vivo: dict[str, object]) -> None:
     perfil = _no_disco(JOGO)
     assert perfil.ponte is not None
     assert (perfil.ponte.kind, perfil.ponte.gamepad_flavor, perfil.ponte.confirmada_por) == (
-        "desktop", None, "escolha_dela")
+        "desktop", None, "escolha_do_usuario")
     assert _divergencia(JOGO) is None
 
 
@@ -278,7 +280,7 @@ def test_todo_modo_leva_o_kind(jogo_vivo: dict[str, object]) -> None:
 def test_a_escada_nao_desfaz_a_escolha(
     jogo_vivo: dict[str, object], gestos: int
 ) -> None:
-    """Régua 5: um tique da escada com a mesma ponte não rebaixa `escolha_dela`.
+    """Régua 5: um tique da escada com a mesma ponte não rebaixa `escolha_do_usuario`.
 
     O caminho medido é o do PS + R3: o escritor carimba na hora, e o gesto fica
     anotado (`ponte_tentativa.gesto_deixou_de_pe`). Depois do silêncio, o tique
@@ -309,7 +311,7 @@ def test_a_escada_nao_desfaz_a_escolha(
     perfil = _no_disco(JOGO)
     assert perfil.ponte is not None
     assert (perfil.ponte.gamepad_flavor, perfil.ponte.confirmada_por) == (
-        "xbox", "escolha_dela"), (
+        "xbox", "escolha_do_usuario"), (
         f"a escada regravou a escolha de quem usa como {perfil.ponte.confirmada_por!r}")
     assert _versoes(JOGO) == versoes, "a escada gravou uma versão sem nada a mudar"
 
@@ -335,3 +337,23 @@ def test_a_escada_ainda_carimba_onde_a_escolha_nao_carimbou(
     perfil = _no_disco(JOGO)
     assert perfil.ponte is not None
     assert (perfil.ponte.gamepad_flavor, perfil.ponte.confirmada_por) == ("xbox", "gesto")
+
+
+def test_o_carimbo_gravado_com_o_nome_antigo_se_le_e_se_regrava() -> None:
+    """**A MORDIDA.** O perfil com o carimbo de antes de 30/10/2026 carrega com o nome novo,
+    a migração o regrava assim, o resto do carimbo fica, e a segunda passada não acha nada."""
+    _perfil_do_jogo_carimbado_por_silencio()
+    arquivo = _arquivo(JOGO)
+    gravado = json.loads(arquivo.read_text(encoding="utf-8"))
+    gravado["ponte"]["confirmada_por"] = nomes_gravados.CARIMBO_DA_ESCOLHA_ANTIGO
+    arquivo.write_text(json.dumps(gravado, ensure_ascii=False), encoding="utf-8")
+
+    assert _no_disco(JOGO).ponte.confirmada_por == "escolha_do_usuario"  # type: ignore[union-attr]
+    assert loader.o_carimbo_da_escolha_ganha_o_nome_novo() == [arquivo.name]
+
+    no_disco = arquivo.read_text(encoding="utf-8")
+    assert nomes_gravados.CARIMBO_DA_ESCOLHA_ANTIGO not in no_disco
+    ponte = json.loads(no_disco)["ponte"]
+    assert ponte == {**gravado["ponte"], "confirmada_por": "escolha_do_usuario"}
+    assert ponte["confirmada_em"] == CARIMBO_DE_ANTES
+    assert loader.o_carimbo_da_escolha_ganha_o_nome_novo() == []

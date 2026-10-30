@@ -26,7 +26,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 from hefesto_dualsense4unix.testing import FakeController
-from hefesto_dualsense4unix.utils import session
+from hefesto_dualsense4unix.utils import nomes_gravados, session
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
 FREESTYLE = loader.NOME_DO_PADRAO
@@ -484,6 +484,20 @@ def test_a_maquina_nova_nasce_acesa_uma_vez_so() -> None:
 
     assert session.migrar_a_escolha_do_usuario() is None
     assert session.load_freestyle_ligado() is False
+
+
+def test_a_marca_gravada_com_o_nome_antigo_se_le_e_passa_ao_nome_novo() -> None:
+    """**A MORDIDA.** A máquina que migrou com a marca antiga não migra de novo, e a marca muda."""
+    base = config_dir(ensure=True)
+    antiga = base / nomes_gravados.MARCA_DA_ESCOLHA_ANTIGA
+    antiga.write_text("done\n", encoding="utf-8")
+    session.save_freestyle_ligado(False)
+
+    assert session.migrar_a_escolha_do_usuario() is None
+
+    assert session.load_freestyle_ligado() is False
+    assert not antiga.exists()
+    assert (base / nomes_gravados.MARCA_DA_ESCOLHA).read_text(encoding="utf-8") == "done\n"
 
 
 def test_sem_sessao_com_perfil_de_jogo_na_pasta_o_botao_nao_acende() -> None:

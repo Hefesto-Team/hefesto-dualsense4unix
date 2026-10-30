@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -9,13 +10,21 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from ..utils.nomes_gravados import (
+    CHAVES_DO_GABINETE,
+    CONTAGEM_DO_USUARIO,
+    PERGUNTA_PENDENTE,
+    SELO_DO_USUARIO,
+    VALORES_DO_GABINETE,
+    renomear,
+)
 from .entradas_do_gabinete import NoDeEntrada, furos, listar_entradas
 
 LIDO_DO_FIRMWARE = "lido-do-firmware"
 
 LIDO_DO_KERNEL = "lido-do-kernel"
 
-DECLARADO_PELO_USUARIO = "declarado-por-ela"
+DECLARADO_PELO_USUARIO = SELO_DO_USUARIO
 
 NAO_RESPONDEU = "nao-respondeu"
 
@@ -268,9 +277,9 @@ def declarar_divergencia(
         "firmware": _talvez(firmware, LIDO_DO_FIRMWARE),
         "kernel_soquetes": _talvez(soquetes, LIDO_DO_KERNEL),
         "kernel_buracos": _talvez(buracos, LIDO_DO_KERNEL),
-        "declarado_por_ela": _fato(None, NAO_RESPONDEU),
+        CONTAGEM_DO_USUARIO: _fato(None, NAO_RESPONDEU),
         "divergem": divergem,
-        "precisa_da_palavra_dela": True,
+        PERGUNTA_PENDENTE: True,
         "pergunta": _pergunta(firmware=firmware, buracos=buracos, divergem=divergem),
     }
 
@@ -363,13 +372,24 @@ def caminho_padrao(*, home: str = "") -> str:
 
 
 def ler_do_disco(caminho: str = "") -> dict[str, object]:
-    """O ``gabinete.json`` que já está lá — ``{}`` quando não há ou não abre."""
+    """O ``gabinete.json`` que já está lá — ``{}`` quando não há ou não abre.
+
+    O arquivo gravado com os nomes de antes de 30/10/2026 se lê uma vez: sai com os nomes
+    novos e se regrava assim, e a leitura seguinte já não acha nome antigo.
+    """
+    alvo = caminho or caminho_padrao()
     try:
-        with open(caminho or caminho_padrao(), encoding="utf-8") as arquivo:
+        with open(alvo, encoding="utf-8") as arquivo:
             lido = json.load(arquivo)
     except (OSError, ValueError):
         return {}
-    return lido if isinstance(lido, dict) else {}
+    if not isinstance(lido, dict):
+        return {}
+    novo, trocou = renomear(lido, CHAVES_DO_GABINETE, VALORES_DO_GABINETE)
+    if trocou:
+        with contextlib.suppress(OSError):
+            gravar(novo, alvo)
+    return novo
 
 
 def preservar_o_que_o_usuario_disse(
@@ -388,8 +408,8 @@ def preservar_o_que_o_usuario_disse(
     contagens = herdado.get("contagens")
     if do_usuario is not None and isinstance(contagens, dict):
         novas = dict(contagens)
-        novas["declarado_por_ela"] = _fato(do_usuario, DECLARADO_PELO_USUARIO)
-        novas["precisa_da_palavra_dela"] = False
+        novas[CONTAGEM_DO_USUARIO] = _fato(do_usuario, DECLARADO_PELO_USUARIO)
+        novas[PERGUNTA_PENDENTE] = False
         herdado["contagens"] = novas
     return herdado
 
@@ -398,7 +418,7 @@ def _do_usuario(censo: dict[str, object]) -> object:
     contagens = censo.get("contagens")
     if not isinstance(contagens, dict):
         return None
-    return _valor(contagens.get("declarado_por_ela"))
+    return _valor(contagens.get(CONTAGEM_DO_USUARIO))
 
 
 def gravar(censo: dict[str, object], caminho: str = "") -> str:
@@ -430,7 +450,7 @@ def resumo(censo: dict[str, object]) -> str:
     return " · ".join(partes)
 
 
-FONTES_DA_CONTAGEM = ("firmware", "kernel_buracos", "declarado_por_ela")
+FONTES_DA_CONTAGEM = ("firmware", "kernel_buracos", CONTAGEM_DO_USUARIO)
 
 
 def contagens_declaradas(censo: dict[str, object]) -> dict[str, int]:
@@ -445,7 +465,7 @@ def contagens_declaradas(censo: dict[str, object]) -> dict[str, int]:
 def pergunta_pendente(censo: dict[str, object]) -> str:
     """A pergunta que a aba tem de fazer — ``""`` quando já houve resposta."""
     contagens = censo.get("contagens")
-    if not isinstance(contagens, dict) or not contagens.get("precisa_da_palavra_dela"):
+    if not isinstance(contagens, dict) or not contagens.get(PERGUNTA_PENDENTE):
         return ""
     pergunta = contagens.get("pergunta")
     return pergunta if isinstance(pergunta, str) else ""

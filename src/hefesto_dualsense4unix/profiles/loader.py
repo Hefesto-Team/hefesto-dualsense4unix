@@ -1052,6 +1052,39 @@ def o_mudo_do_microfone_vai_para_o_controle(
     return levados
 
 
+def o_carimbo_da_escolha_ganha_o_nome_novo(dest_dir: Path | None = None) -> list[str]:
+    """Regrava o carimbo da ponte que um perfil guardou com o nome de antes de 30/10/2026.
+
+    Só o perfil que ainda tem o nome antigo se toca; o seguinte já não o acha, e a migração
+    não precisa de marca.
+    """
+    from hefesto_dualsense4unix.utils.nomes_gravados import (
+        CARIMBO_DA_ESCOLHA,
+        CARIMBO_DA_ESCOLHA_ANTIGO,
+    )
+
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    trocados: list[str] = []
+    for path in sorted(directory.glob("*.json")):
+        dados = _dados_crus_do_perfil(path)
+        ponte = dados.get("ponte") if dados is not None else None
+        if not isinstance(ponte, dict) or ponte.get("confirmada_por") != CARIMBO_DA_ESCOLHA_ANTIGO:
+            continue
+        novo = {**dados, "ponte": {**ponte, "confirmada_por": CARIMBO_DA_ESCOLHA}}
+        try:
+            Profile.model_validate(novo)
+            _atomic_write_json(path, novo)
+        except (ValidationError, OSError, ValueError) as exc:
+            logger.warning(
+                "carimbo_da_escolha_nao_mudou_de_nome", arquivo=path.name, err=str(exc)[:200]
+            )
+            continue
+        trocados.append(path.name)
+    if trocados:
+        logger.info("carimbo_da_escolha_mudou_de_nome", perfis=trocados)
+    return trocados
+
+
 def _maybe_seed_presets() -> None:
     """Dispara a semeadura uma vez por processo, antes da primeira carga."""
     global _seed_attempted
@@ -1080,6 +1113,8 @@ def _maybe_seed_presets() -> None:
             enxugar_perfis_de_jogo()
         with contextlib.suppress(Exception):
             o_mudo_do_microfone_vai_para_o_controle()
+        with contextlib.suppress(Exception):
+            o_carimbo_da_escolha_ganha_o_nome_novo()
     except Exception as exc:
         logger.warning(
             "presets_seed_failed",
@@ -2465,6 +2500,7 @@ __all__ = [
     "migrar_generos_para_estilos_de_jogo",
     "migrate_coop_local_match",
     "migrate_default_profile_name",
+    "o_carimbo_da_escolha_ganha_o_nome_novo",
     "o_freestyle_de_fabrica_nasce_ligado",
     "o_mudo_do_microfone_vai_para_o_controle",
     "o_perfil_de_fora_do_jogo",

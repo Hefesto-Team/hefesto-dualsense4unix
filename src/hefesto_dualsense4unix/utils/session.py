@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.nomes_gravados import MARCA_DA_ESCOLHA, MARCA_DA_ESCOLHA_ANTIGA
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
 logger = get_logger(__name__)
@@ -259,7 +260,7 @@ def esquecer_a_escolha(nome: str | None = None) -> None:
     espelhar_a_escolha()
 
 
-_MARCA_DA_ESCOLHA = ".a_escolha_dela_migrada"
+_MARCA_DA_ESCOLHA = MARCA_DA_ESCOLHA
 _COPIA_DA_SESSAO = "session-antes-da-escolha.json"
 
 
@@ -273,6 +274,16 @@ def _so_o_freestyle_na_pasta() -> bool:
         return False
 
 
+def _a_marca_antiga_ganha_o_nome_novo(base: Path, marca: Path) -> None:
+    """A marca gravada com o nome de antes de 30/10/2026 se lê uma vez e passa ao nome novo."""
+    antiga = base / MARCA_DA_ESCOLHA_ANTIGA
+    with contextlib.suppress(OSError):
+        if antiga.exists() and not marca.exists():
+            os.replace(antiga, marca)
+        antiga.unlink(missing_ok=True)
+        (base / f"{MARCA_DA_ESCOLHA_ANTIGA}.lock").unlink(missing_ok=True)
+
+
 def migrar_a_escolha_do_usuario() -> str | None:
     """Uma vez só, com marca: a máquina nova e a sessão que apontava o Freestyle."""
     import shutil
@@ -282,6 +293,7 @@ def migrar_a_escolha_do_usuario() -> str | None:
     try:
         base = config_dir(ensure=True)
         marca = base / _MARCA_DA_ESCOLHA
+        _a_marca_antiga_ganha_o_nome_novo(base, marca)
         if marca.exists():
             return None
         with FileLock(str(base / f"{_MARCA_DA_ESCOLHA}.lock")):
@@ -305,7 +317,7 @@ def migrar_a_escolha_do_usuario() -> str | None:
     except Exception as exc:
         logger.warning("a_escolha_do_usuario_nao_migrou", err=str(exc))
         return None
-    logger.info("a_escolha_dela_migrada", desfecho=desfecho)
+    logger.info("a_escolha_do_usuario_migrada", desfecho=desfecho)
     return desfecho
 
 

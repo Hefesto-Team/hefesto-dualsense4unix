@@ -2006,7 +2006,7 @@ def gravar_o_modo_no_perfil_ativo(
     `appid_do_jogo` e `steam_input` (O-CARIMBO-DA-PONTE-SEGUE-A-ESCOLHA-DO-USUARIO-01,
     03/10/2026): o jogo que o wrapper lançou e que ainda roda, e se ele está na
     allowlist do Steam Input. Quando o perfil que grava é a regra DESSE jogo, o
-    carimbo vai na mesma gravação, `por=escolha_dela`
+    carimbo vai na mesma gravação, `por=escolha_do_usuario`
     (:func:`_carimbo_da_escolha`): a escolha do usuário é confirmação da ponte naquele
     jogo. Sem isto, o modo mudava e o carimbo ficava na ponte de antes, e o
     serviço avisava `ponte_confirmada_diverge_do_perfil` sobre a escolha do usuário
@@ -2066,7 +2066,7 @@ def _carimbo_da_escolha(
     appid_do_jogo: object,
     steam_input: bool,
 ) -> PonteConfirmada | None:
-    """O carimbo `escolha_dela` que a escolha do modo leva, ou None quando nenhum.
+    """O carimbo `escolha_do_usuario` que a escolha do modo leva, ou None quando nenhum.
 
     None em três casos: não há jogo do wrapper vivo; o perfil que grava não é a
     regra desse jogo (o Freestyle, ou o perfil escolhido fora dele); o carimbo

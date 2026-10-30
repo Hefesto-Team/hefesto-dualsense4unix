@@ -167,7 +167,7 @@ KIND_DESKTOP = "desktop"
 
 POR_GESTO = "gesto"
 POR_SILENCIO = "silencio"
-POR_ESCOLHA_DO_USUARIO = "escolha_dela"
+POR_ESCOLHA_DO_USUARIO = "escolha_do_usuario"
 CONFIRMACOES = frozenset({POR_GESTO, POR_SILENCIO, POR_ESCOLHA_DO_USUARIO})
 
 SUBIR_AGORA = "agora"

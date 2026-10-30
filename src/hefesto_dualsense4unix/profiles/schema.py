@@ -934,7 +934,7 @@ class ProfileModeConfig(BaseModel):
 
 CONFIRMADA_POR_GESTO: Literal["gesto"] = "gesto"
 CONFIRMADA_POR_SILENCIO: Literal["silencio"] = "silencio"
-CONFIRMADA_POR_ESCOLHA: Literal["escolha_dela"] = "escolha_dela"
+CONFIRMADA_POR_ESCOLHA: Literal["escolha_do_usuario"] = "escolha_do_usuario"
 
 
 def _agora_em_iso() -> str:
@@ -991,9 +991,20 @@ class PonteConfirmada(BaseModel):
     gamepad_flavor: MascaraDeGamepad | None = None
     steam_input: bool = False
     confirmada_em: str = Field(default_factory=_agora_em_iso)
-    confirmada_por: Literal["gesto", "silencio", "escolha_dela"] = (
+    confirmada_por: Literal["gesto", "silencio", "escolha_do_usuario"] = (
         CONFIRMADA_POR_GESTO
     )
+
+    @field_validator("confirmada_por", mode="before")
+    @classmethod
+    def _o_carimbo_antigo_le_se_com_o_nome_novo(cls, value: object) -> object:
+        """O carimbo gravado antes de 30/10/2026 vale como o de hoje; o loader o regrava."""
+        from hefesto_dualsense4unix.utils.nomes_gravados import (
+            CARIMBO_DA_ESCOLHA,
+            CARIMBO_DA_ESCOLHA_ANTIGO,
+        )
+
+        return CARIMBO_DA_ESCOLHA if value == CARIMBO_DA_ESCOLHA_ANTIGO else value
 
     @field_validator("confirmada_em")
     @classmethod
